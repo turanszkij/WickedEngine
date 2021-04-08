@@ -653,17 +653,12 @@ namespace wiRenderer
 		wiGraphics::CommandList cmd,
 		BORDEREXPANDSTYLE borderExpand = BORDEREXPAND_DISABLE);
 
-	// Assign texture slots to out of date environemnt probes
-	void ManageEnvProbes(wiScene::Scene& scene);
-	// Invalidate out of date impostors
-	void ManageImpostors(wiScene::Scene& scene);
 	// New decals will be packed into a texture atlas
 	void ManageDecalAtlas(wiScene::Scene& scene);
 	// New lightmapped objects will be packed into global lightmap atlas
 	void ManageLightmapAtlas(wiScene::Scene& scene);
 
 	void PutWaterRipple(const std::string& image, const XMFLOAT3& pos);
-	void ManageWaterRipples();
 	void DrawWaterRipples(const Visibility& vis, wiGraphics::CommandList cmd);
 
 

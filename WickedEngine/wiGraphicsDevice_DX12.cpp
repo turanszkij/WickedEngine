@@ -5957,26 +5957,27 @@ using namespace DX12_Internal;
 		dataSize = std::min((int)buffer->desc.ByteWidth, dataSize);
 		dataSize = (dataSize >= 0 ? dataSize : buffer->desc.ByteWidth);
 
+		auto internal_state_dst = to_internal(buffer);
+
+		GPUAllocation allocation = AllocateGPU(dataSize, cmd);
+		memcpy(allocation.data, data, dataSize);
+
 		if (buffer->desc.Usage == USAGE_DYNAMIC && buffer->desc.BindFlags & BIND_CONSTANT_BUFFER)
 		{
 			// Dynamic buffer will be used from host memory directly:
-			auto internal_state = to_internal(buffer);
-			GPUAllocation allocation = AllocateGPU(dataSize, cmd);
-			memcpy(allocation.data, data, dataSize);
-			internal_state->dynamic[cmd] = allocation;
+			internal_state_dst->dynamic[cmd] = allocation;
 
 			// The proper binding slot is not tracked properly, but instead all the previous bindings are invalidated:
 			descriptors[cmd].dirty_res = true;
-			descriptors[cmd].dirty_root_cbvs_gfx |= internal_state->cbv_mask_gfx[cmd];
-			descriptors[cmd].dirty_root_cbvs_compute |= internal_state->cbv_mask_compute[cmd];
+			descriptors[cmd].dirty_root_cbvs_gfx |= internal_state_dst->cbv_mask_gfx[cmd];
+			descriptors[cmd].dirty_root_cbvs_compute |= internal_state_dst->cbv_mask_compute[cmd];
 		}
 		else
 		{
+			// Contents will be transferred to device memory:
 			assert(active_renderpass[cmd] == nullptr);
 
-			// Contents will be transferred to device memory:
 			auto internal_state_src = to_internal(&GetFrameResources().resourceBuffer[cmd].buffer);
-			auto internal_state_dst = to_internal(buffer);
 
 			D3D12_RESOURCE_BARRIER barrier = {};
 			barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
@@ -5996,11 +5997,9 @@ using namespace DX12_Internal;
 			frame_barriers[cmd].push_back(barrier);
 			barrier_flush(cmd);
 
-			uint8_t* dest = GetFrameResources().resourceBuffer[cmd].allocate(dataSize, 1);
-			memcpy(dest, data, dataSize);
 			GetDirectCommandList(cmd)->CopyBufferRegion(
 				internal_state_dst->resource.Get(), 0,
-				internal_state_src->resource.Get(), GetFrameResources().resourceBuffer[cmd].calculateOffset(dest),
+				internal_state_src->resource.Get(), allocation.offset,
 				dataSize
 			);
 

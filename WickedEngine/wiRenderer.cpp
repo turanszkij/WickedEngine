@@ -3332,7 +3332,7 @@ void RenderImpostors(
 		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 		device->BindResource(VS, instances.buffer, TEXSLOT_ONDEMAND21, cmd);
-		device->BindResource(PS, &textures[TEXTYPE_2D_IMPOSTORARRAY], TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(PS, &vis.scene->impostorArray, TEXSLOT_ONDEMAND0, cmd);
 
 		device->Draw(drawableInstanceCount * 6, 0, cmd);
 
@@ -3668,17 +3668,17 @@ void UpdatePerFrameData(
 		ManageLightmapAtlas(scene);
 	});
 	wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
-		ManageImpostors(scene);
-	});
-	wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
-		ManageEnvProbes(scene);
-	});
-	wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
 		for (auto& x : waterRipples)
 		{
 			x.Update(dt * 60);
 		}
-		ManageWaterRipples();
+		while (
+			!waterRipples.empty() &&
+			(waterRipples.front().params.opacity <= 0 + FLT_EPSILON || waterRipples.front().params.fade == 1)
+			)
+		{
+			waterRipples.pop_front();
+		}
 	});
 
 	// Update Voxelization parameters:
@@ -3753,7 +3753,7 @@ void UpdatePerFrameData(
 	frameCB.g_xFrame_DecalArrayOffset = 0;
 	frameCB.g_xFrame_DecalArrayCount = (uint)vis.visibleDecals.size();
 	frameCB.g_xFrame_EnvProbeArrayOffset = frameCB.g_xFrame_DecalArrayCount;
-	frameCB.g_xFrame_EnvProbeArrayCount = (uint)vis.visibleEnvProbes.size();
+	frameCB.g_xFrame_EnvProbeArrayCount = std::min(vis.scene->envmapCount, (uint)vis.visibleEnvProbes.size());
 	frameCB.g_xFrame_LightArrayOffset = frameCB.g_xFrame_EnvProbeArrayOffset + frameCB.g_xFrame_EnvProbeArrayCount;
 	frameCB.g_xFrame_LightArrayCount = (uint)vis.visibleLights.size();
 	frameCB.g_xFrame_ForceFieldArrayOffset = frameCB.g_xFrame_LightArrayOffset + frameCB.g_xFrame_LightArrayCount;
@@ -3762,9 +3762,9 @@ void UpdatePerFrameData(
 	frameCB.g_xFrame_GlobalEnvProbeIndex = 0;
 	frameCB.g_xFrame_EnvProbeMipCount = 0;
 	frameCB.g_xFrame_EnvProbeMipCount_rcp = 1.0f;
-	if (textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY].IsValid())
+	if (vis.scene->envmapArray.IsValid())
 	{
-		frameCB.g_xFrame_EnvProbeMipCount = textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY].GetDesc().MipLevels;
+		frameCB.g_xFrame_EnvProbeMipCount = vis.scene->envmapArray.GetDesc().MipLevels;
 		frameCB.g_xFrame_EnvProbeMipCount_rcp = 1.0f / (float)frameCB.g_xFrame_EnvProbeMipCount;
 	}
 
@@ -3948,7 +3948,7 @@ void UpdateRenderData(
 		}
 
 		// Write environment probes into entity array:
-		for (size_t i = 0; i < vis.visibleEnvProbes.size(); ++i)
+		for (size_t i = 0; i < std::min((size_t)vis.scene->envmapCount, vis.visibleEnvProbes.size()); ++i)
 		{
 			if (entityCounter == SHADER_ENTITY_COUNT)
 			{
@@ -3965,10 +3965,6 @@ void UpdateRenderData(
 
 			const uint32_t probeIndex = vis.visibleEnvProbes[vis.visibleEnvProbes.size() - 1 - i]; // note: reverse order, for correct blending!
 			const EnvironmentProbeComponent& probe = vis.scene->probes[probeIndex];
-			if (probe.textureIndex < 0)
-			{
-				continue;
-			}
 
 			entityArray[entityCounter] = {}; // zero out!
 			entityArray[entityCounter].layerMask = ~0u;
@@ -4518,15 +4514,6 @@ void PutWaterRipple(const std::string& image, const XMFLOAT3& pos)
 	img.params.quality = QUALITY_ANISOTROPIC;
 	img.params.pivot = XMFLOAT2(0.5f, 0.5f);
 	waterRipples.push_back(img);
-}
-void ManageWaterRipples(){
-	while (
-		!waterRipples.empty() &&
-		(waterRipples.front().params.opacity <= 0 + FLT_EPSILON || waterRipples.front().params.fade == 1)
-		)
-	{
-		waterRipples.pop_front();
-	}
 }
 void DrawWaterRipples(const Visibility& vis, CommandList cmd)
 {
@@ -5304,8 +5291,7 @@ void DrawScene(
 	BindConstantBuffers(VS, cmd);
 	BindConstantBuffers(PS, cmd);
 
-	device->BindResource(PS, &textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, cmd);
-	device->BindResource(PS, &textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, cmd);
+	device->BindResource(PS, &vis.scene->envmapArray, TEXSLOT_ENVMAPARRAY, cmd);
 	device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
 	device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
 	device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
@@ -6115,7 +6101,7 @@ void DrawDebugWorld(
 	}
 
 
-	if (debugEnvProbes && textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY].IsValid())
+	if (debugEnvProbes && scene.envmapArray.IsValid())
 	{
 		device->EventBegin("Debug EnvProbes", cmd);
 		// Envmap spheres:
@@ -6138,7 +6124,7 @@ void DrawDebugWorld(
 			}
 			else
 			{
-				device->BindResource(PS, &textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ONDEMAND0, cmd, textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY].GetDesc().MipLevels + probe.textureIndex);
+				device->BindResource(PS, &scene.envmapArray, TEXSLOT_ONDEMAND0, cmd, scene.envmapArray.GetDesc().MipLevels + probe.textureIndex);
 			}
 
 			device->Draw(2880, 0, cmd); // uv-sphere
@@ -6714,145 +6700,18 @@ void DrawSun(CommandList cmd)
 }
 
 
-static const uint32_t envmapCount = 16;
-static const uint32_t envmapRes = 128;
-static const uint32_t envmapMIPs = 8;
-static Texture envrenderingDepthBuffer;
-static std::vector<RenderPass> renderpasses_envmap;
-vector<uint32_t> probesToRefresh(envmapCount);
-void ManageEnvProbes(Scene& scene)
-{
-	probesToRefresh.clear();
-
-	// reconstruct envmap array status:
-	bool envmapTaken[envmapCount] = {};
-	for (size_t i = 0; i < scene.probes.GetCount(); ++i)
-	{
-		const EnvironmentProbeComponent& probe = scene.probes[i];
-		if (probe.textureIndex >= 0)
-		{
-			envmapTaken[probe.textureIndex] = true;
-		}
-	}
-
-	for (size_t probeIndex = 0; probeIndex < scene.probes.GetCount(); ++probeIndex)
-	{
-		EnvironmentProbeComponent& probe = scene.probes[probeIndex];
-		Entity entity = scene.probes.GetEntity(probeIndex);
-
-		if (probe.textureIndex < 0)
-		{
-			// need to take a free envmap texture slot:
-			bool found = false;
-			for (int i = 0; i < arraysize(envmapTaken); ++i)
-			{
-				if (envmapTaken[i] == false)
-				{
-					envmapTaken[i] = true;
-					probe.textureIndex = i;
-					found = true;
-					break;
-				}
-			}
-			if (!found)
-			{
-				// could not find free slot in envmap array, so skip this probe:
-				continue;
-			}
-		}
-
-		if (!probe.IsDirty())
-		{
-			continue;
-		}
-		if (!probe.IsRealTime())
-		{
-			probe.SetDirty(false);
-		}
-
-		probesToRefresh.push_back((uint32_t)probeIndex);
-	}
-
-	if (!textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY].IsValid())
-	{
-		TextureDesc desc;
-		desc.ArraySize = 6;
-		desc.BindFlags = BIND_DEPTH_STENCIL;
-		desc.CPUAccessFlags = 0;
-		desc.Format = FORMAT_D16_UNORM;
-		desc.Height = envmapRes;
-		desc.Width = envmapRes;
-		desc.MipLevels = 1;
-		desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
-		desc.Usage = USAGE_DEFAULT;
-		desc.layout = IMAGE_LAYOUT_DEPTHSTENCIL;
-
-		device->CreateTexture(&desc, nullptr, &envrenderingDepthBuffer);
-		device->SetName(&envrenderingDepthBuffer, "envrenderingDepthBuffer");
-
-		desc.ArraySize = envmapCount * 6;
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_RENDER_TARGET | BIND_UNORDERED_ACCESS;
-		desc.CPUAccessFlags = 0;
-		desc.Format = FORMAT_R11G11B10_FLOAT;
-		desc.Height = envmapRes;
-		desc.Width = envmapRes;
-		desc.MipLevels = envmapMIPs;
-		desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
-		desc.Usage = USAGE_DEFAULT;
-		desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE;
-
-		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]);
-		device->SetName(&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], "textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY]");
-
-		renderpasses_envmap.resize(envmapCount);
-
-		for (uint32_t i = 0; i < envmapCount; ++i)
-		{
-			int subresource_index;
-			subresource_index = device->CreateSubresource(&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], RTV, i * 6, 6, 0, 1);
-			assert(subresource_index == i);
-
-			RenderPassDesc renderpassdesc;
-			renderpassdesc.attachments.push_back(RenderPassAttachment::RenderTarget(&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], RenderPassAttachment::LOADOP_DONTCARE));
-			renderpassdesc.attachments.back().subresource = subresource_index; 
-			
-			renderpassdesc.attachments.push_back(
-				RenderPassAttachment::DepthStencil(
-					&envrenderingDepthBuffer,
-					RenderPassAttachment::LOADOP_CLEAR
-				)
-			);
-			
-			device->CreateRenderPass(&renderpassdesc, &renderpasses_envmap[subresource_index]);
-		}
-		for (uint32_t i = 0; i < textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY].GetDesc().MipLevels; ++i)
-		{
-			int subresource_index;
-			subresource_index = device->CreateSubresource(&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], SRV, 0, desc.ArraySize, i, 1);
-			assert(subresource_index == i);
-			subresource_index = device->CreateSubresource(&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], UAV, 0, desc.ArraySize, i, 1);
-			assert(subresource_index == i);
-		}
-
-		// debug probe views, individual cubes:
-		for (uint32_t i = 0; i < envmapCount; ++i)
-		{
-			int subresource_index;
-			subresource_index = device->CreateSubresource(&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], SRV, i * 6, 6, 0, -1);
-			assert(subresource_index == textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY].GetDesc().MipLevels + i);
-		}
-	}
-}
 void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 {
+	if (!vis.scene->envmapArray.IsValid())
+		return;
+
 	device->EventBegin("EnvironmentProbe Refresh", cmd);
 	auto range = wiProfiler::BeginRangeGPU("Environment Probe Refresh", cmd);
 
 	BindCommonResources(cmd);
 
 	Viewport vp;
-	vp.Height = envmapRes;
-	vp.Width = envmapRes;
+	vp.Height = vp.Width = (float)vis.scene->envmapArray.desc.Width;
 	device->BindViewports(1, &vp, cmd);
 
 	const float zNearP = vis.camera->zNearP;
@@ -6898,7 +6757,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], TEXSLOT_SKYLUMINANCELUT, cmd);
 
 
-		device->RenderPassBegin(&renderpasses_envmap[probe.textureIndex], cmd);
+		device->RenderPassBegin(&vis.scene->renderpasses_envmap[probe.textureIndex], cmd);
 
 		// Scene will only be rendered if this is a real probe entity:
 		if (entity != INVALID_ENTITY)
@@ -6962,14 +6821,14 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 		MIPGEN_OPTIONS mipopt;
 		mipopt.arrayIndex = probe.textureIndex;
-		GenerateMipChain(textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], MIPGENFILTER_LINEAR, cmd, mipopt);
+		GenerateMipChain(vis.scene->envmapArray, MIPGENFILTER_LINEAR, cmd, mipopt);
 
 		// Filter the enviroment map mip chain according to BRDF:
 		//	A bit similar to MIP chain generation, but its input is the MIP-mapped texture,
 		//	and we generatethe filtered MIPs from bottom to top.
 		device->EventBegin("FilterEnvMap", cmd);
 		{
-			TextureDesc desc = textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY].GetDesc();
+			TextureDesc desc = vis.scene->envmapArray.GetDesc();
 			int arrayIndex = probe.textureIndex;
 
 			device->BindComputeShader(&shaders[CSTYPE_FILTERENVMAP], cmd);
@@ -6980,18 +6839,18 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			{
 				{
 					GPUBarrier barriers[] = {
-						GPUBarrier::Image(&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_UNORDERED_ACCESS, i, arrayIndex * 6 + 0),
-						GPUBarrier::Image(&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_UNORDERED_ACCESS, i, arrayIndex * 6 + 1),
-						GPUBarrier::Image(&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_UNORDERED_ACCESS, i, arrayIndex * 6 + 2),
-						GPUBarrier::Image(&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_UNORDERED_ACCESS, i, arrayIndex * 6 + 3),
-						GPUBarrier::Image(&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_UNORDERED_ACCESS, i, arrayIndex * 6 + 4),
-						GPUBarrier::Image(&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_UNORDERED_ACCESS, i, arrayIndex * 6 + 5),
+						GPUBarrier::Image(&vis.scene->envmapArray, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_UNORDERED_ACCESS, i, arrayIndex * 6 + 0),
+						GPUBarrier::Image(&vis.scene->envmapArray, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_UNORDERED_ACCESS, i, arrayIndex * 6 + 1),
+						GPUBarrier::Image(&vis.scene->envmapArray, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_UNORDERED_ACCESS, i, arrayIndex * 6 + 2),
+						GPUBarrier::Image(&vis.scene->envmapArray, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_UNORDERED_ACCESS, i, arrayIndex * 6 + 3),
+						GPUBarrier::Image(&vis.scene->envmapArray, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_UNORDERED_ACCESS, i, arrayIndex * 6 + 4),
+						GPUBarrier::Image(&vis.scene->envmapArray, IMAGE_LAYOUT_SHADER_RESOURCE, IMAGE_LAYOUT_UNORDERED_ACCESS, i, arrayIndex * 6 + 5),
 					};
 					device->Barrier(barriers, arraysize(barriers), cmd);
 				}
 
-				device->BindUAV(CS, &textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], 0, cmd, i);
-				device->BindResource(CS, &textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_UNIQUE0, cmd, std::max(0, (int)i - 2));
+				device->BindUAV(CS, &vis.scene->envmapArray, 0, cmd, i);
+				device->BindResource(CS, &vis.scene->envmapArray, TEXSLOT_UNIQUE0, cmd, std::max(0, (int)i - 2));
 
 				FilterEnvmapCB cb;
 				cb.filterResolution.x = desc.Width;
@@ -7013,12 +6872,12 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 				{
 					GPUBarrier barriers[] = {
 						GPUBarrier::Memory(),
-						GPUBarrier::Image(&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], IMAGE_LAYOUT_UNORDERED_ACCESS, IMAGE_LAYOUT_SHADER_RESOURCE, i, arrayIndex * 6 + 0),
-						GPUBarrier::Image(&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], IMAGE_LAYOUT_UNORDERED_ACCESS, IMAGE_LAYOUT_SHADER_RESOURCE, i, arrayIndex * 6 + 1),
-						GPUBarrier::Image(&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], IMAGE_LAYOUT_UNORDERED_ACCESS, IMAGE_LAYOUT_SHADER_RESOURCE, i, arrayIndex * 6 + 2),
-						GPUBarrier::Image(&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], IMAGE_LAYOUT_UNORDERED_ACCESS, IMAGE_LAYOUT_SHADER_RESOURCE, i, arrayIndex * 6 + 3),
-						GPUBarrier::Image(&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], IMAGE_LAYOUT_UNORDERED_ACCESS, IMAGE_LAYOUT_SHADER_RESOURCE, i, arrayIndex * 6 + 4),
-						GPUBarrier::Image(&textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], IMAGE_LAYOUT_UNORDERED_ACCESS, IMAGE_LAYOUT_SHADER_RESOURCE, i, arrayIndex * 6 + 5),
+						GPUBarrier::Image(&vis.scene->envmapArray, IMAGE_LAYOUT_UNORDERED_ACCESS, IMAGE_LAYOUT_SHADER_RESOURCE, i, arrayIndex * 6 + 0),
+						GPUBarrier::Image(&vis.scene->envmapArray, IMAGE_LAYOUT_UNORDERED_ACCESS, IMAGE_LAYOUT_SHADER_RESOURCE, i, arrayIndex * 6 + 1),
+						GPUBarrier::Image(&vis.scene->envmapArray, IMAGE_LAYOUT_UNORDERED_ACCESS, IMAGE_LAYOUT_SHADER_RESOURCE, i, arrayIndex * 6 + 2),
+						GPUBarrier::Image(&vis.scene->envmapArray, IMAGE_LAYOUT_UNORDERED_ACCESS, IMAGE_LAYOUT_SHADER_RESOURCE, i, arrayIndex * 6 + 3),
+						GPUBarrier::Image(&vis.scene->envmapArray, IMAGE_LAYOUT_UNORDERED_ACCESS, IMAGE_LAYOUT_SHADER_RESOURCE, i, arrayIndex * 6 + 4),
+						GPUBarrier::Image(&vis.scene->envmapArray, IMAGE_LAYOUT_UNORDERED_ACCESS, IMAGE_LAYOUT_SHADER_RESOURCE, i, arrayIndex * 6 + 5),
 					};
 					device->Barrier(barriers, arraysize(barriers), cmd);
 				}
@@ -7041,11 +6900,15 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 	}
 	else
 	{
-		for (uint32_t probeIndex : probesToRefresh)
+		for (size_t i = 0; i < vis.scene->probes.GetCount(); ++i)
 		{
-			const EnvironmentProbeComponent& probe = vis.scene->probes[probeIndex];
-			Entity entity = vis.scene->probes.GetEntity(probeIndex);
-			render_probe(probe, entity);
+			const EnvironmentProbeComponent& probe = vis.scene->probes[i];
+			if (probe.render_dirty && probe.textureIndex >= 0 && probe.textureIndex < vis.scene->envmapCount)
+			{
+				probe.render_dirty = false;
+				Entity entity = vis.scene->probes.GetEntity(i);
+				render_probe(probe, entity);
+			}
 		}
 	}
 
@@ -7053,76 +6916,10 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 	device->EventEnd(cmd); // EnvironmentProbe Refresh
 }
 
-static const uint32_t maxImpostorCount = 8;
-static const uint32_t impostorTextureArraySize = maxImpostorCount * impostorCaptureAngles * 3;
-static const uint32_t impostorTextureDim = 128;
-static Texture impostorDepthStencil;
-static std::vector<RenderPass> renderpasses_impostor;
-vector<uint32_t> impostorsToRefresh(maxImpostorCount);
-void ManageImpostors(Scene& scene)
-{
-	impostorsToRefresh.clear();
-
-	for (size_t impostorIndex = 0; impostorIndex < std::min((size_t)maxImpostorCount, scene.impostors.GetCount()); ++impostorIndex)
-	{
-		ImpostorComponent& impostor = scene.impostors[impostorIndex];
-		if (!impostor.IsDirty())
-		{
-			continue;
-		}
-		impostor.SetDirty(false);
-
-		impostorsToRefresh.push_back((uint32_t)impostorIndex);
-	}
-
-	if (!impostorsToRefresh.empty() && !textures[TEXTYPE_2D_IMPOSTORARRAY].IsValid())
-	{
-		TextureDesc desc;
-		desc.Width = impostorTextureDim;
-		desc.Height = impostorTextureDim;
-
-		desc.BindFlags = BIND_DEPTH_STENCIL;
-		desc.ArraySize = 1;
-		desc.Format = FORMAT_D16_UNORM;
-		device->CreateTexture(&desc, nullptr, &impostorDepthStencil);
-		device->SetName(&impostorDepthStencil, "impostorDepthStencil");
-
-		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.ArraySize = impostorTextureArraySize;
-		desc.Format = FORMAT_R8G8B8A8_UNORM;
-
-		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_2D_IMPOSTORARRAY]);
-		device->SetName(&textures[TEXTYPE_2D_IMPOSTORARRAY], "ImpostorArray");
-
-		renderpasses_impostor.resize(desc.ArraySize);
-
-		for (uint32_t i = 0; i < desc.ArraySize; ++i)
-		{
-			int subresource_index;
-			subresource_index = device->CreateSubresource(&textures[TEXTYPE_2D_IMPOSTORARRAY], RTV, i, 1, 0, 1);
-			assert(subresource_index == i);
-
-			RenderPassDesc renderpassdesc;
-			renderpassdesc.attachments.push_back(RenderPassAttachment::RenderTarget(&textures[TEXTYPE_2D_IMPOSTORARRAY], RenderPassAttachment::LOADOP_CLEAR));
-			renderpassdesc.attachments.back().subresource = subresource_index;
-
-			renderpassdesc.attachments.push_back(
-				RenderPassAttachment::DepthStencil(
-					&impostorDepthStencil,
-					RenderPassAttachment::LOADOP_CLEAR
-				)
-			);
-			
-			device->CreateRenderPass(&renderpassdesc, &renderpasses_impostor[subresource_index]);
-		}
-	}
-}
 void RefreshImpostors(const Scene& scene, CommandList cmd)
 {
-	if (impostorsToRefresh.empty())
-	{
+	if (!scene.impostorArray.IsValid())
 		return;
-	}
 
 	device->EventBegin("Impostor Refresh", cmd);
 
@@ -7140,9 +6937,12 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 	buff->instancePrev.Create(IDENTITYMATRIX);
 	buff->instanceAtlas.Create(XMFLOAT4(1, 1, 0, 0));
 
-	for (uint32_t impostorIndex : impostorsToRefresh)
+	for (uint32_t impostorIndex = 0; impostorIndex < scene.impostors.GetCount(); ++impostorIndex)
 	{
 		const ImpostorComponent& impostor = scene.impostors[impostorIndex];
+		if (!impostor.render_dirty)
+			continue;
+		impostor.render_dirty = false;
 
 		Entity entity = scene.impostors.GetEntity(impostorIndex);
 		const MeshComponent& mesh = *scene.meshes.GetComponent(entity);
@@ -7150,34 +6950,49 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 		// impostor camera will fit around mesh bounding sphere:
 		const SPHERE boundingsphere = mesh.GetBoundingSphere();
 
-		const GPUBuffer* vbs[] = {
-			mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
-			&mesh.vertexBuffer_UV0,
-			&mesh.vertexBuffer_UV1,
-			&mesh.vertexBuffer_ATL,
-			&mesh.vertexBuffer_COL,
-			&mesh.vertexBuffer_TAN,
-			mem.buffer
-		};
-		uint32_t strides[] = {
-			sizeof(MeshComponent::Vertex_POS),
-			sizeof(MeshComponent::Vertex_TEX),
-			sizeof(MeshComponent::Vertex_TEX),
-			sizeof(MeshComponent::Vertex_TEX),
-			sizeof(MeshComponent::Vertex_COL),
-			sizeof(MeshComponent::Vertex_TAN),
-			sizeof(InstBuf)
-		};
-		uint32_t offsets[] = {
-			0,
-			0,
-			0,
-			0,
-			0,
-			0,
-			mem.offset
-		};
-		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+		ObjectPushConstants push; // used with bindless model only
+
+		const bool bindless = device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS);
+		if (bindless)
+		{
+			push.mesh = device->GetDescriptorIndex(&mesh.descriptor, SRV);
+			push.instances = device->GetDescriptorIndex(mem.buffer, SRV);
+			push.instance_offset = mem.offset;
+		}
+		else
+		{
+			const GPUBuffer* vbs[] = {
+				mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
+				mesh.vertexBuffer_PRE.IsValid() ? &mesh.vertexBuffer_PRE : &mesh.vertexBuffer_POS,
+				&mesh.vertexBuffer_UV0,
+				&mesh.vertexBuffer_UV1,
+				&mesh.vertexBuffer_ATL,
+				&mesh.vertexBuffer_COL,
+				mesh.streamoutBuffer_TAN.IsValid() ? &mesh.streamoutBuffer_TAN : &mesh.vertexBuffer_TAN,
+				mem.buffer
+			};
+			uint32_t strides[] = {
+				sizeof(MeshComponent::Vertex_POS),
+				sizeof(MeshComponent::Vertex_POS),
+				sizeof(MeshComponent::Vertex_TEX),
+				sizeof(MeshComponent::Vertex_TEX),
+				sizeof(MeshComponent::Vertex_TEX),
+				sizeof(MeshComponent::Vertex_COL),
+				sizeof(MeshComponent::Vertex_TAN),
+				sizeof(InstBuf)
+			};
+			uint32_t offsets[] = {
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				mem.offset
+			};
+			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+		}
 
 		device->BindIndexBuffer(&mesh.indexBuffer, mesh.GetIndexFormat(), 0, cmd);
 
@@ -7198,15 +7013,6 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 
 			for (size_t i = 0; i < impostorCaptureAngles; ++i)
 			{
-				int textureIndex = (int)(impostorIndex * impostorCaptureAngles * 3 + prop * impostorCaptureAngles + i);
-				device->RenderPassBegin(&renderpasses_impostor[textureIndex], cmd);
-
-				Viewport viewport;
-				viewport.Height = (float)impostorTextureDim;
-				viewport.Width = (float)impostorTextureDim;
-				device->BindViewports(1, &viewport, cmd);
-
-
 				CameraComponent impostorcamera;
 				impostorcamera.SetCustomProjectionEnabled(true);
 				TransformComponent camera_transform;
@@ -7225,6 +7031,15 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 
 				UpdateCameraCB(impostorcamera, impostorcamera, impostorcamera, cmd);
 
+
+				int textureIndex = (int)(impostorIndex * impostorCaptureAngles * 3 + prop * impostorCaptureAngles + i);
+				device->RenderPassBegin(&scene.renderpasses_impostor[textureIndex], cmd);
+
+				Viewport viewport;
+				viewport.Height = (float)scene.impostorTextureDim;
+				viewport.Width = (float)scene.impostorTextureDim;
+				device->BindViewports(1, &viewport, cmd);
+
 				for (auto& subset : mesh.subsets)
 				{
 					if (subset.indexCount == 0)
@@ -7233,12 +7048,20 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 					}
 					const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
-					device->BindConstantBuffer(VS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
-					device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
+					if (bindless)
+					{
+						push.material = device->GetDescriptorIndex(&material.constantBuffer, SRV);
+						device->PushConstants(&push, sizeof(push), cmd);
+					}
+					else
+					{
+						device->BindConstantBuffer(VS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
+						device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
 
-					const GPUResource* res[4];
-					material.WriteTextures(res, arraysize(res));
-					device->BindResources(PS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
+						const GPUResource* res[4];
+						material.WriteTextures(res, arraysize(res));
+						device->BindResources(PS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
+					}
 
 					device->DrawIndexedInstanced(subset.indexCount, 1, subset.indexOffset, 0, 0, cmd);
 				}
@@ -9932,8 +9755,7 @@ void Postprocess_RTReflection(
 	device->BindResource(LIB, &resourceBuffers[RBTYPE_ENTITYARRAY], SBSLOT_ENTITYARRAY, cmd);
 	device->BindResource(LIB, &resourceBuffers[RBTYPE_MATRIXARRAY], SBSLOT_MATRIXARRAY, cmd);
 	device->BindResource(LIB, GetVoxelRadianceSecondaryBounceEnabled() ? &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] : &textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELRADIANCE, cmd);
-	device->BindResource(LIB, &textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, cmd);
-	device->BindResource(LIB, &textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, cmd);
+	device->BindResource(LIB, &scene.envmapArray, TEXSLOT_ENVMAPARRAY, cmd);
 	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
 	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
 	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
@@ -10395,7 +10217,7 @@ void Postprocess_RTShadow(
 	device->BindResource(LIB, &resourceBuffers[RBTYPE_ENTITYARRAY], SBSLOT_ENTITYARRAY, cmd);
 	device->BindResource(LIB, &resourceBuffers[RBTYPE_MATRIXARRAY], SBSLOT_MATRIXARRAY, cmd);
 	device->BindResource(LIB, &globalLightmap, TEXSLOT_GLOBALLIGHTMAP, cmd);
-	device->BindResource(LIB, &textures[TEXTYPE_CUBEARRAY_ENVMAPARRAY], TEXSLOT_ENVMAPARRAY, cmd);
+	device->BindResource(LIB, &scene.envmapArray, TEXSLOT_ENVMAPARRAY, cmd);
 	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
 	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
 	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);

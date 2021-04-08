@@ -588,6 +588,7 @@ namespace wiScene
 		XMFLOAT4 color;
 		float fadeThresholdRadius;
 		std::vector<XMFLOAT4X4> instanceMatrices;
+		mutable bool render_dirty = false;
 
 		inline void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
 		inline bool IsDirty() const { return _flags & DIRTY; }
@@ -946,6 +947,7 @@ namespace wiScene
 		XMFLOAT3 position;
 		float range;
 		XMFLOAT4X4 inverseMatrix;
+		mutable bool render_dirty = false;
 
 		inline void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
 		inline void SetRealTime(bool value) { if (value) { _flags |= REALTIME; } else { _flags &= ~REALTIME; } }
@@ -1307,6 +1309,19 @@ namespace wiScene
 		uint32_t writtenQueries[arraysize(queryHeap)] = {};
 		int queryheap_idx = 0;
 		std::atomic<uint32_t> queryAllocator{ 0 };
+
+		static const uint32_t envmapCount = 16;
+		const uint32_t envmapRes = 128;
+		const uint32_t envmapMIPs = 8;
+		wiGraphics::Texture envrenderingDepthBuffer;
+		wiGraphics::Texture envmapArray;
+		std::vector<wiGraphics::RenderPass> renderpasses_envmap;
+
+		static const uint32_t maxImpostorCount = 8;
+		const uint32_t impostorTextureDim = 128;
+		wiGraphics::Texture impostorDepthStencil;
+		wiGraphics::Texture impostorArray;
+		std::vector<wiGraphics::RenderPass> renderpasses_impostor;
 
 		// Update all components by a given timestep (in seconds):
 		//	This is an expensive function, prefer to call it only once per frame!

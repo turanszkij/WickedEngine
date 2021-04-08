@@ -9,7 +9,7 @@ float4 main(PixelInput input) : SV_Target0
 	float3x3 TBN = compute_tangent_frame(N, P, input.uvsets.xy);
 
 	[branch]
-	if (g_xMaterial.uvset_normalMap >= 0)
+	if (GetMaterial().uvset_normalMap >= 0)
 	{
 		float3 bumpColor;
 		NormalMapping(input.uvsets, N, TBN, bumpColor);

@@ -6518,31 +6518,31 @@ using namespace Vulkan_Internal;
 		{
 			return;
 		}
-		auto internal_state = to_internal(buffer);
 
 		dataSize = std::min((int)buffer->desc.ByteWidth, dataSize);
 		dataSize = (dataSize >= 0 ? dataSize : buffer->desc.ByteWidth);
 
+		auto internal_state_dst = to_internal(buffer);
+
+		GPUAllocation allocation = AllocateGPU(dataSize, cmd);
+		memcpy(allocation.data, data, dataSize);
 
 		if (buffer->desc.Usage == USAGE_DYNAMIC && buffer->desc.BindFlags & BIND_CONSTANT_BUFFER)
 		{
 			// Dynamic buffer will be used from host memory directly:
-			GPUAllocation allocation = AllocateGPU(dataSize, cmd);
-			memcpy(allocation.data, data, dataSize);
-			internal_state->dynamic[cmd] = allocation;
+			internal_state_dst->dynamic[cmd] = allocation;
 			GetFrameResources().descriptors[cmd].dirty = true;
 		}
 		else
 		{
 			// Contents will be transferred to device memory:
-
-			// barrier to transfer:
-
 			assert(active_renderpass[cmd] == nullptr); // must not be inside render pass
+
+			auto internal_state_src = to_internal(&GetFrameResources().resourceBuffer[cmd].buffer);
 
 			VkBufferMemoryBarrier barrier = {};
 			barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-			barrier.buffer = internal_state->resource;
+			barrier.buffer = internal_state_dst->resource;
 			barrier.srcAccessMask = 0;
 			if (buffer->desc.BindFlags & BIND_CONSTANT_BUFFER)
 			{
@@ -6576,24 +6576,21 @@ using namespace Vulkan_Internal;
 			frame_bufferBarriers[cmd].push_back(barrier);
 			barrier_flush(cmd);
 
-			// issue data copy:
-			uint8_t* dest = GetFrameResources().resourceBuffer[cmd].allocate(dataSize, 1);
-			memcpy(dest, data, dataSize);
-
 			VkBufferCopy copyRegion = {};
 			copyRegion.size = dataSize;
-			copyRegion.srcOffset = GetFrameResources().resourceBuffer[cmd].calculateOffset(dest);
+			copyRegion.srcOffset = (VkDeviceSize)allocation.offset;
 			copyRegion.dstOffset = 0;
 
-			vkCmdCopyBuffer(GetDirectCommandList(cmd), 
-				std::static_pointer_cast<Buffer_Vulkan>(GetFrameResources().resourceBuffer[cmd].buffer.internal_state)->resource,
-				internal_state->resource, 1, &copyRegion);
-
-
+			vkCmdCopyBuffer(
+				GetDirectCommandList(cmd),
+				internal_state_src->resource,
+				internal_state_dst->resource,
+				1,
+				&copyRegion
+			);
 
 			// reverse barrier:
 			std::swap(barrier.srcAccessMask, barrier.dstAccessMask);
-
 			frame_bufferBarriers[cmd].push_back(barrier);
 
 		}

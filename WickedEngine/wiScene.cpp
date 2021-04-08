@@ -2762,11 +2762,69 @@ namespace wiScene
 	}
 	void Scene::RunImpostorUpdateSystem(wiJobSystem::context& ctx)
 	{
+		if (impostors.GetCount() > 0 && !impostorArray.IsValid())
+		{
+			GraphicsDevice* device = wiRenderer::GetDevice();
+
+			TextureDesc desc;
+			desc.Width = impostorTextureDim;
+			desc.Height = impostorTextureDim;
+
+			desc.BindFlags = BIND_DEPTH_STENCIL;
+			desc.ArraySize = 1;
+			desc.Format = FORMAT_D16_UNORM;
+			desc.layout = IMAGE_LAYOUT_DEPTHSTENCIL;
+			device->CreateTexture(&desc, nullptr, &impostorDepthStencil);
+			device->SetName(&impostorDepthStencil, "impostorDepthStencil");
+
+			desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+			desc.ArraySize = maxImpostorCount * impostorCaptureAngles * 3;
+			desc.Format = FORMAT_R8G8B8A8_UNORM;
+			desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE;
+
+			device->CreateTexture(&desc, nullptr, &impostorArray);
+			device->SetName(&impostorArray, "impostorArray");
+
+			renderpasses_impostor.resize(desc.ArraySize);
+
+			for (uint32_t i = 0; i < desc.ArraySize; ++i)
+			{
+				int subresource_index;
+				subresource_index = device->CreateSubresource(&impostorArray, RTV, i, 1, 0, 1);
+				assert(subresource_index == i);
+
+				RenderPassDesc renderpassdesc;
+				renderpassdesc.attachments.push_back(
+					RenderPassAttachment::RenderTarget(
+						&impostorArray,
+						RenderPassAttachment::LOADOP_CLEAR
+					)
+				);
+				renderpassdesc.attachments.back().subresource = subresource_index;
+
+				renderpassdesc.attachments.push_back(
+					RenderPassAttachment::DepthStencil(
+						&impostorDepthStencil,
+						RenderPassAttachment::LOADOP_CLEAR,
+						RenderPassAttachment::STOREOP_DONTCARE
+					)
+				);
+
+				device->CreateRenderPass(&renderpassdesc, &renderpasses_impostor[subresource_index]);
+			}
+		}
+
 		wiJobSystem::Dispatch(ctx, (uint32_t)impostors.GetCount(), 1, [&](wiJobArgs args) {
 
 			ImpostorComponent& impostor = impostors[args.jobIndex];
 			impostor.aabb = AABB();
 			impostor.instanceMatrices.clear();
+
+			if (impostor.IsDirty())
+			{
+				impostor.SetDirty(false);
+				impostor.render_dirty = true;
+			}
 		});
 	}
 	void Scene::RunObjectUpdateSystem(wiJobSystem::context& ctx)
@@ -2997,10 +3055,102 @@ namespace wiScene
 	{
 		assert(probes.GetCount() == aabb_probes.GetCount());
 
-		wiJobSystem::Dispatch(ctx, (uint32_t)probes.GetCount(), small_subtask_groupsize, [&](wiJobArgs args) {
+		if (!envmapArray.IsValid()) // even when zero probes, this will be created, since sometimes only the sky will be rendered into it
+		{
+			GraphicsDevice* device = wiRenderer::GetDevice();
 
-			EnvironmentProbeComponent& probe = probes[args.jobIndex];
-			Entity entity = probes.GetEntity(args.jobIndex);
+			TextureDesc desc;
+			desc.ArraySize = 6;
+			desc.BindFlags = BIND_DEPTH_STENCIL;
+			desc.CPUAccessFlags = 0;
+			desc.Format = FORMAT_D16_UNORM;
+			desc.Height = envmapRes;
+			desc.Width = envmapRes;
+			desc.MipLevels = 1;
+			desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
+			desc.Usage = USAGE_DEFAULT;
+			desc.layout = IMAGE_LAYOUT_DEPTHSTENCIL;
+
+			device->CreateTexture(&desc, nullptr, &envrenderingDepthBuffer);
+			device->SetName(&envrenderingDepthBuffer, "envrenderingDepthBuffer");
+
+			desc.ArraySize = envmapCount * 6;
+			desc.BindFlags = BIND_SHADER_RESOURCE | BIND_RENDER_TARGET | BIND_UNORDERED_ACCESS;
+			desc.CPUAccessFlags = 0;
+			desc.Format = FORMAT_R11G11B10_FLOAT;
+			desc.Height = envmapRes;
+			desc.Width = envmapRes;
+			desc.MipLevels = envmapMIPs;
+			desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
+			desc.Usage = USAGE_DEFAULT;
+			desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE;
+
+			device->CreateTexture(&desc, nullptr, &envmapArray);
+			device->SetName(&envmapArray, "envmapArray");
+
+			renderpasses_envmap.resize(envmapCount);
+
+			for (uint32_t i = 0; i < envmapCount; ++i)
+			{
+				int subresource_index;
+				subresource_index = device->CreateSubresource(&envmapArray, RTV, i * 6, 6, 0, 1);
+				assert(subresource_index == i);
+
+				RenderPassDesc renderpassdesc;
+				renderpassdesc.attachments.push_back(
+					RenderPassAttachment::RenderTarget(&envmapArray,
+						RenderPassAttachment::LOADOP_DONTCARE
+					)
+				);
+				renderpassdesc.attachments.back().subresource = subresource_index;
+
+				renderpassdesc.attachments.push_back(
+					RenderPassAttachment::DepthStencil(
+						&envrenderingDepthBuffer,
+						RenderPassAttachment::LOADOP_CLEAR,
+						RenderPassAttachment::STOREOP_DONTCARE
+					)
+				);
+
+				device->CreateRenderPass(&renderpassdesc, &renderpasses_envmap[subresource_index]);
+			}
+			for (uint32_t i = 0; i < envmapArray.desc.MipLevels; ++i)
+			{
+				int subresource_index;
+				subresource_index = device->CreateSubresource(&envmapArray, SRV, 0, desc.ArraySize, i, 1);
+				assert(subresource_index == i);
+				subresource_index = device->CreateSubresource(&envmapArray, UAV, 0, desc.ArraySize, i, 1);
+				assert(subresource_index == i);
+			}
+
+			// debug probe views, individual cubes:
+			for (uint32_t i = 0; i < envmapCount; ++i)
+			{
+				int subresource_index;
+				subresource_index = device->CreateSubresource(&envmapArray, SRV, i * 6, 6, 0, -1);
+				assert(subresource_index == envmapArray.desc.MipLevels + i);
+			}
+		}
+
+		// reconstruct envmap array status:
+		bool envmapTaken[envmapCount] = {};
+		for (size_t i = 0; i < probes.GetCount(); ++i)
+		{
+			EnvironmentProbeComponent& probe = probes[i];
+			if (probe.textureIndex >= 0 && probe.textureIndex < envmapCount)
+			{
+				envmapTaken[probe.textureIndex] = true;
+			}
+			else
+			{
+				probe.textureIndex = -1;
+			}
+		}
+
+		for (size_t probeIndex = 0; probeIndex < probes.GetCount(); ++probeIndex)
+		{
+			EnvironmentProbeComponent& probe = probes[probeIndex];
+			Entity entity = probes.GetEntity(probeIndex);
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 
 			probe.position = transform.GetPosition();
@@ -3014,10 +3164,32 @@ namespace wiScene
 			XMStoreFloat3(&scale, S);
 			probe.range = std::max(scale.x, std::max(scale.y, scale.z)) * 2;
 
-			AABB& aabb = aabb_probes[args.jobIndex];
+			AABB& aabb = aabb_probes[probeIndex];
 			aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
 			aabb = aabb.transform(transform.world);
-		});
+
+			if (probe.IsDirty() || probe.IsRealTime())
+			{
+				probe.SetDirty(false);
+				probe.render_dirty = true;
+			}
+
+			if (probe.render_dirty && probe.textureIndex < 0)
+			{
+				// need to take a free envmap texture slot:
+				bool found = false;
+				for (int i = 0; i < arraysize(envmapTaken); ++i)
+				{
+					if (envmapTaken[i] == false)
+					{
+						envmapTaken[i] = true;
+						probe.textureIndex = i;
+						found = true;
+						break;
+					}
+				}
+			}
+		}
 	}
 	void Scene::RunForceUpdateSystem(wiJobSystem::context& ctx)
 	{
