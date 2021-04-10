@@ -3705,7 +3705,7 @@ void UpdatePerFrameData(
 
 	wiJobSystem::Wait(ctx);
 
-	if (scene.BVH_invalid)
+	if (!device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING) && scene.BVH_invalid)
 	{
 		scene.BVH.Update(scene);
 	}
