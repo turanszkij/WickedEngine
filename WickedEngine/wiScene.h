@@ -624,11 +624,11 @@ namespace wiScene
 
 		// Non-serialized attributes:
 
-		XMFLOAT4 globalLightMapMulAdd = XMFLOAT4(0, 0, 0, 0);
 		wiGraphics::Texture lightmap;
 		wiGraphics::RenderPass renderpass_lightmap_clear;
 		wiGraphics::RenderPass renderpass_lightmap_accumulate;
-		uint32_t lightmapIterationCount = 0;
+		mutable uint32_t lightmapIterationCount = 0;
+		wiRectPacker::rect_xywh lightmap_rect = {};
 
 		XMFLOAT3 center = XMFLOAT3(0, 0, 0);
 		float impostorFadeThresholdRadius;
@@ -994,7 +994,6 @@ namespace wiScene
 		XMFLOAT3 front;
 		XMFLOAT3 position;
 		float range;
-		XMFLOAT4 atlasMulAdd;
 		XMFLOAT4X4 world;
 
 		std::shared_ptr<wiResource> texture;
@@ -1324,6 +1323,18 @@ namespace wiScene
 		wiGraphics::Texture impostorDepthStencil;
 		wiGraphics::Texture impostorArray;
 		std::vector<wiGraphics::RenderPass> renderpasses_impostor;
+
+		static const int atlasClampBorder = 1;
+
+		wiGraphics::Texture lightmap;
+		std::vector<wiRectPacker::rect_xywh*> lightmap_rects;
+		std::atomic<uint32_t> lightmap_rect_allocator{ 0 };
+		mutable std::atomic_bool lightmap_repack_needed{ false };
+		mutable std::atomic_bool lightmap_refresh_needed{ false };
+
+		wiGraphics::Texture decalAtlas;
+		mutable bool decal_repack_needed{ false };
+		std::unordered_map<std::shared_ptr<wiResource>, wiRectPacker::rect_xywh> packedDecals;
 
 		// Update all components by a given timestep (in seconds):
 		//	This is an expensive function, prefer to call it only once per frame!

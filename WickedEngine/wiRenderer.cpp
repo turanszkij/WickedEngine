@@ -144,16 +144,6 @@ wiSpinLock deferredMIPGenLock;
 std::vector<std::pair<std::shared_ptr<wiResource>, bool>> deferredMIPGens;
 
 
-static const int atlasClampBorder = 1;
-
-static Texture decalAtlas;
-static unordered_map<std::shared_ptr<wiResource>, wiRectPacker::rect_xywh> packedDecals;
-
-Texture globalLightmap;
-unordered_map<const void*, wiRectPacker::rect_xywh> packedLightmaps;
-
-
-
 
 void SetDevice(std::shared_ptr<GraphicsDevice> newDevice)
 {
@@ -2175,12 +2165,6 @@ void LoadBuffers()
 
 	{
 		TextureDesc desc;
-		desc.Width = 1;
-		desc.Height = 1;
-		desc.Format = FORMAT_R11G11B10_FLOAT;
-		desc.BindFlags = BIND_SHADER_RESOURCE;
-		device->CreateTexture(&desc, nullptr, &globalLightmap);
-
 		desc.BindFlags = BIND_SHADER_RESOURCE;
 		desc.Format = FORMAT_R8_UNORM;
 		desc.Height = 16;
@@ -2632,14 +2616,10 @@ void ClearWorld(Scene& scene)
 
 	waterRipples.clear();
 
-	scene.BVH.Clear();
-
 	deferredMIPGenLock.lock();
 	deferredMIPGens.clear();
 	deferredMIPGenLock.unlock();
 
-	packedDecals.clear();
-	packedLightmaps.clear();
 }
 
 static const uint32_t CASCADE_COUNT = 3;
@@ -2871,6 +2851,8 @@ void RenderMeshes(
 			BindConstantBuffers(DS, cmd);
 		}
 
+		const TextureDesc& lightmap_desc = vis.scene->lightmap.GetDesc();
+
 		// Do we need to bind every common buffers or just a reduced amount for this pass?
 		const bool commonVBRequest =
 			!IsWireRender() && (
@@ -3007,7 +2989,31 @@ void RenderMeshes(
 					break;
 				case INSTANCETYPE_MATRIX_USERDATA_ATLAS:
 					((volatile Instance_MATRIX_USERDATA_ATLAS*)instances.data)[instanceCount].instance.Create(worldMatrix, instance.color, dither, frustum_index, instance.emissiveColor);
-					((volatile Instance_MATRIX_USERDATA_ATLAS*)instances.data)[instanceCount].instanceAtlas.Create(instance.globalLightMapMulAdd);
+					{
+						XMFLOAT4 lightMapMulAdd;
+						if (instance.lightmap.IsValid())
+						{
+							auto rect = instance.lightmap_rect;
+
+							// eliminate border expansion:
+							rect.x += Scene::atlasClampBorder;
+							rect.y += Scene::atlasClampBorder;
+							rect.w -= Scene::atlasClampBorder * 2;
+							rect.h -= Scene::atlasClampBorder * 2;
+
+							lightMapMulAdd = XMFLOAT4(
+								(float)rect.w / (float)lightmap_desc.Width,
+								(float)rect.h / (float)lightmap_desc.Height,
+								(float)rect.x / (float)lightmap_desc.Width,
+								(float)rect.y / (float)lightmap_desc.Height
+							);
+						}
+						else
+						{
+							lightMapMulAdd = XMFLOAT4(0, 0, 0, 0);
+						}
+						((volatile Instance_MATRIX_USERDATA_ATLAS*)instances.data)[instanceCount].instanceAtlas.Create(lightMapMulAdd);
+					}
 					break;
 				case INSTANCETYPE_MATRIX_USERDATA_MATRIXPREV:
 					((volatile Instance_MATRIX_USERDATA_MATRIXPREV*)instances.data)[instanceCount].instance.Create(worldMatrix, instance.color, dither, frustum_index, instance.emissiveColor);
@@ -3654,12 +3660,6 @@ void UpdatePerFrameData(
 	}
 
 	wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
-		ManageDecalAtlas(scene);
-	});
-	wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
-		ManageLightmapAtlas(scene);
-	});
-	wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
 		for (auto& x : waterRipples)
 		{
 			x.Update(dt * 60);
@@ -3930,10 +3930,35 @@ void UpdateRenderData(
 
 			entityArray[entityCounter].SetIndices(matrixCounter, 0);
 			matrixArray[matrixCounter] = XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal.world));
-			matrixArray[matrixCounter].r[0] = XMVectorSetW(matrixArray[matrixCounter].r[0], decal.atlasMulAdd.x);
-			matrixArray[matrixCounter].r[1] = XMVectorSetW(matrixArray[matrixCounter].r[1], decal.atlasMulAdd.y);
-			matrixArray[matrixCounter].r[2] = XMVectorSetW(matrixArray[matrixCounter].r[2], decal.atlasMulAdd.z);
-			matrixArray[matrixCounter].r[3] = XMVectorSetW(matrixArray[matrixCounter].r[3], decal.atlasMulAdd.w);
+
+			XMFLOAT4 atlasMulAdd;
+			if (decal.texture != nullptr)
+			{
+				const TextureDesc& desc = vis.scene->decalAtlas.GetDesc();
+
+				wiRectPacker::rect_xywh rect = vis.scene->packedDecals.at(decal.texture);
+
+				// eliminate border expansion:
+				rect.x += Scene::atlasClampBorder;
+				rect.y += Scene::atlasClampBorder;
+				rect.w -= Scene::atlasClampBorder * 2;
+				rect.h -= Scene::atlasClampBorder * 2;
+
+				atlasMulAdd = XMFLOAT4(
+					(float)rect.w / (float)desc.Width,
+					(float)rect.h / (float)desc.Height,
+					(float)rect.x / (float)desc.Width,
+					(float)rect.y / (float)desc.Height
+				);
+			}
+			else
+			{
+				atlasMulAdd = XMFLOAT4(0, 0, 0, 0);
+			}
+			matrixArray[matrixCounter].r[0] = XMVectorSetW(matrixArray[matrixCounter].r[0], atlasMulAdd.x);
+			matrixArray[matrixCounter].r[1] = XMVectorSetW(matrixArray[matrixCounter].r[1], atlasMulAdd.y);
+			matrixArray[matrixCounter].r[2] = XMVectorSetW(matrixArray[matrixCounter].r[2], atlasMulAdd.z);
+			matrixArray[matrixCounter].r[3] = XMVectorSetW(matrixArray[matrixCounter].r[3], atlasMulAdd.w);
 			matrixCounter++;
 
 			entityCounter++;
@@ -5295,10 +5320,10 @@ void DrawScene(
 		device->BindResource(PS, &vis.scene->weather.skyMap->texture, TEXSLOT_GLOBALENVMAP, cmd);
 	}
 
-	device->BindResource(PS, GetGlobalLightmap(), TEXSLOT_GLOBALLIGHTMAP, cmd);
-	if (decalAtlas.IsValid())
+	device->BindResource(PS, &vis.scene->lightmap, TEXSLOT_GLOBALLIGHTMAP, cmd);
+	if (vis.scene->decalAtlas.IsValid())
 	{
-		device->BindResource(PS, &decalAtlas, TEXSLOT_DECALATLAS, cmd);
+		device->BindResource(PS, &vis.scene->decalAtlas, TEXSLOT_DECALATLAS, cmd);
 	}
 
 	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
@@ -6786,7 +6811,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			if (!renderQueue.empty())
 			{
 				BindShadowmaps(PS, cmd);
-				device->BindResource(PS, GetGlobalLightmap(), TEXSLOT_GLOBALLIGHTMAP, cmd);
+				device->BindResource(PS, &vis.scene->lightmap, TEXSLOT_GLOBALLIGHTMAP, cmd);
 
 				RenderMeshes(vis, renderQueue, RENDERPASS_ENVMAPCAPTURE, RENDERTYPE_ALL, cmd, false, frusta, arraysize(frusta));
 
@@ -7814,284 +7839,26 @@ void RayTraceSceneBVH(const Scene& scene, CommandList cmd)
 }
 
 
-bool repackAtlas_Decal = false;
-void ManageDecalAtlas(Scene& scene)
-{
-	repackAtlas_Decal = false;
-
-	using namespace wiRectPacker;
-
-	// Gather all decal textures:
-	for (size_t i = 0; i < scene.decals.GetCount(); ++i)
-	{
-		const DecalComponent& decal = scene.decals[i];
-
-		if (decal.texture != nullptr && decal.texture->texture.IsValid())
-		{
-			if (packedDecals.find(decal.texture) == packedDecals.end())
-			{
-				// we need to pack this decal texture into the atlas
-				rect_xywh newRect = rect_xywh(0, 0, decal.texture->texture.desc.Width + atlasClampBorder * 2, decal.texture->texture.desc.Height + atlasClampBorder * 2);
-				packedDecals[decal.texture] = newRect;
-
-				repackAtlas_Decal = true;
-			}
-		}
-	}
-
-	// Update atlas texture if it is invalidated:
-	if (repackAtlas_Decal)
-	{
-		vector<rect_xywh*> out_rects(packedDecals.size());
-		int i = 0;
-		for (auto& it : packedDecals)
-		{
-			out_rects[i] = &it.second;
-			i++;
-		}
-
-		std::vector<bin> bins;
-		if (pack(out_rects.data(), (int)packedDecals.size(), 16384, bins))
-		{
-			assert(bins.size() == 1 && "The regions won't fit into the texture!");
-
-			TextureDesc desc;
-			desc.Width = (uint32_t)bins[0].size.w;
-			desc.Height = (uint32_t)bins[0].size.h;
-			desc.MipLevels = 0;
-			desc.ArraySize = 1;
-			desc.Format = FORMAT_R8G8B8A8_UNORM;
-			desc.SampleCount = 1;
-			desc.Usage = USAGE_DEFAULT;
-			desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-			desc.CPUAccessFlags = 0;
-			desc.MiscFlags = 0;
-
-			device->CreateTexture(&desc, nullptr, &decalAtlas);
-			device->SetName(&decalAtlas, "decalAtlas");
-
-			for (uint32_t i = 0; i < decalAtlas.GetDesc().MipLevels; ++i)
-			{
-				int subresource_index;
-				subresource_index = device->CreateSubresource(&decalAtlas, UAV, 0, 1, i, 1);
-				assert(subresource_index == i);
-			}
-		}
-		else
-		{
-			wiBackLog::post("Decal atlas packing failed!");
-		}
-	}
-
-	// Assign atlas buckets to decals:
-	for (size_t i = 0; i < scene.decals.GetCount(); ++i)
-	{
-		DecalComponent& decal = scene.decals[i];
-
-		if (decal.texture != nullptr)
-		{
-			const TextureDesc& desc = decalAtlas.GetDesc();
-
-			rect_xywh rect = packedDecals[decal.texture];
-
-			// eliminate border expansion:
-			rect.x += atlasClampBorder;
-			rect.y += atlasClampBorder;
-			rect.w -= atlasClampBorder * 2;
-			rect.h -= atlasClampBorder * 2;
-
-			decal.atlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height, (float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
-		}
-		else
-		{
-			decal.atlasMulAdd = XMFLOAT4(0, 0, 0, 0);
-		}
-
-	}
-}
 void RefreshDecalAtlas(const Scene& scene, CommandList cmd)
 {
 	using namespace wiRectPacker;
 
-	if (repackAtlas_Decal)
+	if (scene.decal_repack_needed)
 	{
-		for (uint32_t mip = 0; mip < decalAtlas.GetDesc().MipLevels; ++mip)
+		for (uint32_t mip = 0; mip < scene.decalAtlas.GetDesc().MipLevels; ++mip)
 		{
-			for (auto& it : packedDecals)
+			for (auto& it : scene.packedDecals)
 			{
 				if (mip < it.first->texture.desc.MipLevels)
 				{
-					CopyTexture2D(decalAtlas, mip, (it.second.x >> mip) + atlasClampBorder, (it.second.y >> mip) + atlasClampBorder, it.first->texture, mip, cmd, BORDEREXPAND_CLAMP);
+					CopyTexture2D(scene.decalAtlas, mip, (it.second.x >> mip) + Scene::atlasClampBorder, (it.second.y >> mip) + Scene::atlasClampBorder, it.first->texture, mip, cmd, BORDEREXPAND_CLAMP);
 				}
 			}
 		}
+		scene.decal_repack_needed = false;
 	}
 }
 
-bool repackAtlas_Lightmap = false;
-vector<uint32_t> lightmapsToRefresh;
-void ManageLightmapAtlas(Scene& scene)
-{
-	lightmapsToRefresh.clear(); 
-	repackAtlas_Lightmap = false;
-
-	using namespace wiRectPacker;
-
-	// Gather all object lightmap textures:
-	for (size_t objectIndex = 0; objectIndex < scene.objects.GetCount(); ++objectIndex)
-	{
-		ObjectComponent& object = scene.objects[objectIndex];
-		bool refresh = false;
-
-		if (object.lightmap.IsValid() && object.lightmapWidth == 0)
-		{
-			// If we get here, it means that the lightmap GPU texture contains the rendered lightmap, but the CPU-side data was erased.
-			//	In this case, we delete the GPU side lightmap data from the object and the atlas too.
-			packedLightmaps.erase(object.lightmap.internal_state.get());
-			object.lightmap = Texture();
-			repackAtlas_Lightmap = true;
-			refresh = false;
-		}
-
-		if (object.IsLightmapRenderRequested())
-		{
-			scene.InvalidateBVH();
-			refresh = true;
-
-			if (object.lightmapIterationCount == 0)
-			{
-				if (object.lightmap.IsValid())
-				{
-					packedLightmaps.erase(object.lightmap.internal_state.get());
-				}
-
-				{
-					// Unfortunately, fp128 format only correctly downloads from GPU if it is pow2 size:
-					object.lightmapWidth = wiMath::GetNextPowerOfTwo(object.lightmapWidth + 1) / 2;
-					object.lightmapHeight = wiMath::GetNextPowerOfTwo(object.lightmapHeight + 1) / 2;
-				}
-
-				TextureDesc desc;
-				desc.Width = object.lightmapWidth;
-				desc.Height = object.lightmapHeight;
-				desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
-				// Note: we need the full precision format to achieve correct accumulative blending! 
-				//	But the global atlas will have less precision for good bandwidth for sampling
-				desc.Format = FORMAT_R32G32B32A32_FLOAT;
-
-				object.lightmap = Texture();
-				device->CreateTexture(&desc, nullptr, &object.lightmap);
-				device->SetName(&object.lightmap, "objectLightmap");
-
-				RenderPassDesc renderpassdesc;
-
-				renderpassdesc.attachments.push_back(RenderPassAttachment::RenderTarget(&object.lightmap, RenderPassAttachment::LOADOP_CLEAR));
-				
-				object.renderpass_lightmap_clear = RenderPass();
-				device->CreateRenderPass(&renderpassdesc, &object.renderpass_lightmap_clear);
-
-				renderpassdesc.attachments.back().loadop = RenderPassAttachment::LOADOP_LOAD;
-				object.renderpass_lightmap_accumulate = RenderPass();
-				device->CreateRenderPass(&renderpassdesc, &object.renderpass_lightmap_accumulate);
-			}
-			object.lightmapIterationCount++;
-		}
-
-		if (!object.lightmapTextureData.empty() && !object.lightmap.IsValid())
-		{
-			refresh = true;
-			// Create a GPU-side per object lighmap if there is none yet, so that copying into atlas can be done efficiently:
-			object.lightmap = Texture();
-			wiTextureHelper::CreateTexture(object.lightmap, object.lightmapTextureData.data(), object.lightmapWidth, object.lightmapHeight, object.GetLightmapFormat());
-		}
-
-		if (object.lightmap.IsValid())
-		{
-			if (packedLightmaps.find(object.lightmap.internal_state.get()) == packedLightmaps.end())
-			{
-				// we need to pack this lightmap texture into the atlas
-				rect_xywh newRect = rect_xywh(0, 0, object.lightmap.GetDesc().Width + atlasClampBorder * 2, object.lightmap.GetDesc().Height + atlasClampBorder * 2);
-				packedLightmaps[object.lightmap.internal_state.get()] = newRect;
-
-				repackAtlas_Lightmap = true;
-				refresh = true;
-			}
-		}
-
-		if (refresh)
-		{
-			// Push a new object whose lightmap should be copied over to the atlas:
-			lightmapsToRefresh.push_back((uint32_t)objectIndex);
-		}
-
-	}
-
-	// Update atlas texture if it is invalidated:
-	using namespace wiRectPacker;
-	if (repackAtlas_Lightmap && !packedLightmaps.empty())
-	{
-		vector<rect_xywh*> out_rects(packedLightmaps.size());
-		int i = 0;
-		for (auto& it : packedLightmaps)
-		{
-			out_rects[i] = &it.second;
-			i++;
-		}
-
-		std::vector<bin> bins;
-		if (pack(out_rects.data(), (int)packedLightmaps.size(), 16384, bins))
-		{
-			assert(bins.size() == 1 && "The regions won't fit into the texture!");
-
-			TextureDesc desc;
-			desc.Width = (uint32_t)bins[0].size.w;
-			desc.Height = (uint32_t)bins[0].size.h;
-			desc.MipLevels = 1;
-			desc.ArraySize = 1;
-			desc.Format = FORMAT_R11G11B10_FLOAT;
-			desc.SampleCount = 1;
-			desc.Usage = USAGE_DEFAULT;
-			desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-			desc.CPUAccessFlags = 0;
-			desc.MiscFlags = 0;
-
-			device->CreateTexture(&desc, nullptr, &globalLightmap);
-			device->SetName(&globalLightmap, "globalLightmap");
-		}
-		else
-		{
-			wiBackLog::post("Global Lightmap atlas packing failed!");
-		}
-	}
-
-	// Assign atlas buckets to objects:
-	if (!packedLightmaps.empty())
-	{
-		for (size_t i = 0; i < scene.objects.GetCount(); ++i)
-		{
-			ObjectComponent& object = scene.objects[i];
-
-			if (object.lightmap.IsValid() && packedLightmaps.count(object.lightmap.internal_state.get()) > 0)
-			{
-				const TextureDesc& desc = globalLightmap.GetDesc();
-
-				rect_xywh rect = packedLightmaps.at(object.lightmap.internal_state.get());
-
-				// eliminate border expansion:
-				rect.x += atlasClampBorder;
-				rect.y += atlasClampBorder;
-				rect.w -= atlasClampBorder * 2;
-				rect.h -= atlasClampBorder * 2;
-
-				object.globalLightMapMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height, (float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
-			}
-			else
-			{
-				object.globalLightMapMulAdd = XMFLOAT4(0, 0, 0, 0);
-			}
-		}
-	}
-}
 void RenderObjectLightMap(const Scene& scene, const ObjectComponent& object, CommandList cmd)
 {
 	device->EventBegin("RenderObjectLightMap", cmd);
@@ -8102,9 +7869,7 @@ void RenderObjectLightMap(const Scene& scene, const ObjectComponent& object, Com
 
 	const TextureDesc& desc = object.lightmap.GetDesc();
 
-	const uint32_t lightmapIterationCount = std::max(1u, object.lightmapIterationCount) - 1; // ManageLightMapAtlas incremented before refresh
-
-	if (lightmapIterationCount == 0)
+	if (object.lightmapIterationCount == 0)
 	{
 		device->RenderPassBegin(&object.renderpass_lightmap_clear, cmd);
 	}
@@ -8145,13 +7910,13 @@ void RenderObjectLightMap(const Scene& scene, const ObjectComponent& object, Com
 	cb.xTraceResolution.y = desc.Height;
 	cb.xTraceResolution_rcp.x = 1.0f / cb.xTraceResolution.x;
 	cb.xTraceResolution_rcp.y = 1.0f / cb.xTraceResolution.y;
-	XMFLOAT4 halton = wiMath::GetHaltonSequence(lightmapIterationCount); // for jittering the rasterization (good for eliminating atlas border artifacts)
+	XMFLOAT4 halton = wiMath::GetHaltonSequence(object.lightmapIterationCount); // for jittering the rasterization (good for eliminating atlas border artifacts)
 	cb.xTracePixelOffset.x = (halton.x * 2 - 1) * cb.xTraceResolution_rcp.x;
 	cb.xTracePixelOffset.y = (halton.y * 2 - 1) * cb.xTraceResolution_rcp.y;
 	cb.xTracePixelOffset.x *= 1.4f;	// boost the jitter by a bit
 	cb.xTracePixelOffset.y *= 1.4f;	// boost the jitter by a bit
 	cb.xTraceRandomSeed = wiRandom::getRandom(1000000) / 1000000.f;
-	cb.xTraceAccumulationFactor = 1.0f / (lightmapIterationCount + 1.0f); // accumulation factor (alpha)
+	cb.xTraceAccumulationFactor = 1.0f / (object.lightmapIterationCount + 1.0f); // accumulation factor (alpha)
 	cb.xTraceUserData.x = raytraceBounceCount;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_RAYTRACE], &cb, cmd);
 	device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(RaytracingCB), cmd);
@@ -8171,6 +7936,7 @@ void RenderObjectLightMap(const Scene& scene, const ObjectComponent& object, Com
 	}
 
 	device->DrawIndexedInstanced((uint32_t)mesh.indices.size(), 1, 0, 0, 0, cmd);
+	object.lightmapIterationCount++;
 
 	device->RenderPassEnd(cmd);
 
@@ -8178,11 +7944,10 @@ void RenderObjectLightMap(const Scene& scene, const ObjectComponent& object, Com
 }
 void RefreshLightmapAtlas(const Scene& scene, CommandList cmd)
 {
-	if (!lightmapsToRefresh.empty())
+	if (scene.lightmap_refresh_needed.load() || scene.lightmap_repack_needed.load())
 	{
 		auto range = wiProfiler::BeginRangeGPU("Lightmap Processing", cmd);
 
-		// Update GPU scene and BVH data:
 		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
 		{
 			device->BindResource(PS, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
@@ -8193,53 +7958,26 @@ void RefreshLightmapAtlas(const Scene& scene, CommandList cmd)
 		}
 
 		// Render lightmaps for each object:
-		for (uint32_t objectIndex : lightmapsToRefresh)
+		for (uint32_t i = 0; i < scene.objects.GetCount(); ++i)
 		{
-			const ObjectComponent& object = scene.objects[objectIndex];
+			const ObjectComponent& object = scene.objects[i];
 
 			if (object.IsLightmapRenderRequested())
 			{
 				RenderObjectLightMap(scene, object, cmd);
 			}
+
+			if (object.IsLightmapRenderRequested() || scene.lightmap_repack_needed)
+			{
+				// copy object' lightmap into scene's lightmap atlas
+				CopyTexture2D(scene.lightmap, -1, object.lightmap_rect.x + Scene::atlasClampBorder, object.lightmap_rect.y + Scene::atlasClampBorder, object.lightmap, 0, cmd);
+			}
 		}
 
-		if (!packedLightmaps.empty())
-		{
-			device->EventBegin("PackGlobalLightmap", cmd);
-			if (repackAtlas_Lightmap)
-			{
-				// If atlas was repacked, we copy every object lightmap:
-				for (size_t i = 0; i < scene.objects.GetCount(); ++i)
-				{
-					const ObjectComponent& object = scene.objects[i];
-					if (object.lightmap.IsValid())
-					{
-						const auto& rec = packedLightmaps.at(object.lightmap.internal_state.get());
-						CopyTexture2D(globalLightmap, -1, rec.x + atlasClampBorder, rec.y + atlasClampBorder, object.lightmap, 0, cmd);
-					}
-				}
-			}
-			else
-			{
-				// If atlas was not repacked, we only copy refreshed object lightmaps:
-				for (uint32_t objectIndex : lightmapsToRefresh)
-				{
-					const ObjectComponent& object = scene.objects[objectIndex];
-					const auto& rec = packedLightmaps.at(object.lightmap.internal_state.get());
-					CopyTexture2D(globalLightmap, -1, rec.x + atlasClampBorder, rec.y + atlasClampBorder, object.lightmap, 0, cmd);
-				}
-			}
-			device->EventEnd(cmd);
-
-		}
-
+		scene.lightmap_repack_needed.store(false);
+		scene.lightmap_refresh_needed.store(false);
 		wiProfiler::EndRange(range);
 	}
-}
-
-const Texture* GetGlobalLightmap()
-{
-	return &globalLightmap;
 }
 
 void BindCommonResources(CommandList cmd)
@@ -9753,10 +9491,10 @@ void Postprocess_RTReflection(
 	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
 	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], TEXSLOT_SKYLUMINANCELUT, cmd);
 
-	device->BindResource(LIB, GetGlobalLightmap(), TEXSLOT_GLOBALLIGHTMAP, cmd);
-	if (decalAtlas.IsValid())
+	device->BindResource(LIB, &scene.lightmap, TEXSLOT_GLOBALLIGHTMAP, cmd);
+	if (scene.decalAtlas.IsValid())
 	{
-		device->BindResource(LIB, &decalAtlas, TEXSLOT_DECALATLAS, cmd);
+		device->BindResource(LIB, &scene.decalAtlas, TEXSLOT_DECALATLAS, cmd);
 	}
 
 	device->BindResource(LIB, &resourceBuffers[RBTYPE_BLUENOISE_SOBOL_SEQUENCE], TEXSLOT_ONDEMAND1, cmd);
@@ -10208,7 +9946,7 @@ void Postprocess_RTShadow(
 
 	device->BindResource(LIB, &resourceBuffers[RBTYPE_ENTITYARRAY], SBSLOT_ENTITYARRAY, cmd);
 	device->BindResource(LIB, &resourceBuffers[RBTYPE_MATRIXARRAY], SBSLOT_MATRIXARRAY, cmd);
-	device->BindResource(LIB, &globalLightmap, TEXSLOT_GLOBALLIGHTMAP, cmd);
+	device->BindResource(LIB, &scene.lightmap, TEXSLOT_GLOBALLIGHTMAP, cmd);
 	device->BindResource(LIB, &scene.envmapArray, TEXSLOT_ENVMAPARRAY, cmd);
 	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
 	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);

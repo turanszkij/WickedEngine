@@ -5787,6 +5787,9 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::BindPipelineState(const PipelineState* pso, CommandList cmd)
 	{
+		active_cs[cmd] = nullptr;
+		active_rt[cmd] = nullptr;
+
 		size_t pipeline_hash = 0;
 		wiHelper::hash_combine(pipeline_hash, pso->hash);
 		if (active_renderpass[cmd] != nullptr)
@@ -5828,6 +5831,9 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::BindComputeShader(const Shader* cs, CommandList cmd)
 	{
+		active_pso[cmd] = nullptr;
+		active_rt[cmd] = nullptr;
+
 		assert(cs->stage == CS || cs->stage == LIB);
 		if (active_cs[cmd] != cs)
 		{
@@ -6236,6 +6242,8 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd)
 	{
+		active_cs[cmd] = nullptr;
+		active_pso[cmd] = nullptr;
 		prev_pipeline_hash[cmd] = 0;
 		active_rt[cmd] = rtpso;
 

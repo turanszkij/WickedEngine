@@ -651,12 +651,8 @@ namespace wiRenderer
 		const wiGraphics::Texture& dst, int DstMIP, int DstX, int DstY,
 		const wiGraphics::Texture& src, int SrcMIP, 
 		wiGraphics::CommandList cmd,
-		BORDEREXPANDSTYLE borderExpand = BORDEREXPAND_DISABLE);
-
-	// New decals will be packed into a texture atlas
-	void ManageDecalAtlas(wiScene::Scene& scene);
-	// New lightmapped objects will be packed into global lightmap atlas
-	void ManageLightmapAtlas(wiScene::Scene& scene);
+		BORDEREXPANDSTYLE borderExpand = BORDEREXPAND_DISABLE
+	);
 
 	void PutWaterRipple(const std::string& image, const XMFLOAT3& pos);
 	void DrawWaterRipples(const Visibility& vis, wiGraphics::CommandList cmd);
@@ -748,8 +744,6 @@ namespace wiRenderer
 	uint32_t GetRaytracedShadowsSampleCount();
 	void SetScreenSpaceShadowsEnabled(bool value);
 	bool GetScreenSpaceShadowsEnabled();
-
-	const wiGraphics::Texture* GetGlobalLightmap();
 
 	// Gets pick ray according to the current screen resolution and pointer coordinates. Can be used as input into RayIntersectWorld()
 	RAY GetPickRay(long cursorX, long cursorY, const wiScene::CameraComponent& camera = wiScene::GetCamera());

@@ -1250,6 +1250,10 @@ void PaintToolWindow::ConsumeHistoryOperation(wiArchive& archive, bool undo)
 Texture PaintToolWindow::GetEditTextureSlot(const MaterialComponent& material, int* uvset)
 {
 	uint64_t sel = textureSlotComboBox.GetItemUserData(textureSlotComboBox.GetSelected());
+	if (material.textures[sel].resource == nullptr)
+	{
+		return Texture();
+	}
 	if (uvset)
 		*uvset = material.textures[sel].uvset;
 	return material.textures[sel].resource->texture;
