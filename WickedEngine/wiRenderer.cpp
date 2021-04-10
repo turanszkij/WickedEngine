@@ -2633,7 +2633,6 @@ void ClearWorld(Scene& scene)
 	waterRipples.clear();
 
 	scene.BVH.Clear();
-	scene.BVH_invalid = true;
 
 	deferredMIPGenLock.lock();
 	deferredMIPGens.clear();

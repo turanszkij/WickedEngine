@@ -1302,7 +1302,9 @@ namespace wiScene
 
 		wiGPUBVH BVH; // this is for non-hardware accelerated raytracing
 		mutable bool BVH_invalid = false;
-		void InvalidateBVH() { BVH_invalid = true; }
+		void InvalidateBVH() {
+			BVH_invalid = true;
+		}
 
 		wiGraphics::GPUQueryHeap queryHeap[arraysize(ObjectComponent::occlusionQueries)];
 		std::vector<uint64_t> queryResults;
