@@ -1591,6 +1591,21 @@ namespace wiScene
 			}
 		}
 
+		// Update water ripples:
+		for (size_t i = 0; i < waterRipples.size(); ++i)
+		{
+			auto& ripple = waterRipples[i];
+			ripple.Update(dt * 60);
+
+			// Remove inactive ripples:
+			if (ripple.params.opacity <= 0 + FLT_EPSILON || ripple.params.fade >= 1 - FLT_EPSILON)
+			{
+				ripple = waterRipples.back();
+				waterRipples.pop_back();
+				i--;
+			}
+		}
+
 	}
 	void Scene::Clear()
 	{
@@ -1627,6 +1642,7 @@ namespace wiScene
 		TLAS = RaytracingAccelerationStructure();
 		BVH.Clear();
 		packedDecals.clear();
+		waterRipples.clear();
 	}
 	void Scene::Merge(Scene& other)
 	{
@@ -3467,6 +3483,11 @@ namespace wiScene
 		{
 			weather = weathers[0];
 			weather.most_important_light_index = ~0;
+
+			if (weather.IsOceanEnabled() && !ocean.IsValid())
+			{
+				OceanRegenerate();
+			}
 		}
 	}
 	void Scene::RunSoundUpdateSystem(wiJobSystem::context& ctx)
@@ -3507,6 +3528,21 @@ namespace wiScene
 		}
 	}
 
+	void Scene::PutWaterRipple(const std::string& image, const XMFLOAT3& pos)
+	{
+		wiSprite img(image);
+		img.params.enableExtractNormalMap();
+		img.params.blendFlag = BLENDMODE_ADDITIVE;
+		img.anim.fad = 0.01f;
+		img.anim.scaleX = 0.2f;
+		img.anim.scaleY = 0.2f;
+		img.params.pos = pos;
+		img.params.rotation = (wiRandom::getRandom(0, 1000) * 0.001f) * 2 * 3.1415f;
+		img.params.siz = XMFLOAT2(1, 1);
+		img.params.quality = QUALITY_ANISOTROPIC;
+		img.params.pivot = XMFLOAT2(0.5f, 0.5f);
+		waterRipples.push_back(img);
+	}
 
 	XMVECTOR SkinVertex(const MeshComponent& mesh, const ArmatureComponent& armature, uint32_t index, XMVECTOR* N)
 	{

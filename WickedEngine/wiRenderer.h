@@ -654,7 +654,6 @@ namespace wiRenderer
 		BORDEREXPANDSTYLE borderExpand = BORDEREXPAND_DISABLE
 	);
 
-	void PutWaterRipple(const std::string& image, const XMFLOAT3& pos);
 	void DrawWaterRipples(const Visibility& vis, wiGraphics::CommandList cmd);
 
 
@@ -728,7 +727,6 @@ namespace wiRenderer
 	void SetVoxelRadianceRayStepSize(float value);
 	void SetGameSpeed(float value);
 	float GetGameSpeed();
-	void OceanRegenerate(const wiScene::WeatherComponent& weather); // regeenrates ocean if it is already created
 	void SetRaytraceBounceCount(uint32_t bounces);
 	uint32_t GetRaytraceBounceCount();
 	void SetRaytraceDebugBVHVisualizerEnabled(bool value);
@@ -737,7 +735,6 @@ namespace wiRenderer
 	bool GetRaytracedShadowsEnabled();
 	void SetTessellationEnabled(bool value);
 	bool GetTessellationEnabled();
-	bool IsWaterrippleRendering();
 	void SetDisableAlbedoMaps(bool value);
 	bool IsDisableAlbedoMaps();
 	void SetRaytracedShadowsSampleCount(uint32_t value);

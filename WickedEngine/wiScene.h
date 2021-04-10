@@ -10,6 +10,8 @@
 #include "wiResourceManager.h"
 #include "wiSpinLock.h"
 #include "wiGPUBVH.h"
+#include "wiOcean.h"
+#include "wiSprite.h"
 
 #include "wiECS.h"
 #include "wiScene_Decl.h"
@@ -1130,34 +1132,7 @@ namespace wiScene
 		float windWaveSize = 1;
 		float windSpeed = 1;
 
-		struct OceanParameters
-		{
-			// Must be power of 2.
-			int dmap_dim = 512;
-			// Typical value is 1000 ~ 2000
-			float patch_length = 50.0f;
-
-			// Adjust the time interval for simulation.
-			float time_scale = 0.3f;
-			// Amplitude for transverse wave. Around 1.0
-			float wave_amplitude = 1000.0f;
-			// Wind direction. Normalization not required.
-			XMFLOAT2 wind_dir = XMFLOAT2(0.8f, 0.6f);
-			// Around 100 ~ 1000
-			float wind_speed = 600.0f;
-			// This value damps out the waves against the wind direction.
-			// Smaller value means higher wind dependency.
-			float wind_dependency = 0.07f;
-			// The amplitude for longitudinal wave. Must be positive.
-			float choppy_scale = 1.3f;
-
-
-			XMFLOAT3 waterColor = XMFLOAT3(0.0f, 3.0f / 255.0f, 31.0f / 255.0f);
-			float waterHeight = 0.0f;
-			uint32_t surfaceDetail = 4;
-			float surfaceDisplacementTolerance = 2;
-		};
-		OceanParameters oceanParameters;
+		wiOcean::OceanParameters oceanParameters;
 
 		std::string skyMapName;
 		std::string colorGradingMapName;
@@ -1305,12 +1280,14 @@ namespace wiScene
 			BVH_invalid = true;
 		}
 
+		// Occlusion query state:
 		wiGraphics::GPUQueryHeap queryHeap[arraysize(ObjectComponent::occlusionQueries)];
 		std::vector<uint64_t> queryResults;
 		uint32_t writtenQueries[arraysize(queryHeap)] = {};
 		int queryheap_idx = 0;
 		std::atomic<uint32_t> queryAllocator{ 0 };
 
+		// Environment probe cubemap array state:
 		static const uint32_t envmapCount = 16;
 		const uint32_t envmapRes = 128;
 		const uint32_t envmapMIPs = 8;
@@ -1318,23 +1295,35 @@ namespace wiScene
 		wiGraphics::Texture envmapArray;
 		std::vector<wiGraphics::RenderPass> renderpasses_envmap;
 
+		// Impostor texture array state:
 		static const uint32_t maxImpostorCount = 8;
 		const uint32_t impostorTextureDim = 128;
 		wiGraphics::Texture impostorDepthStencil;
 		wiGraphics::Texture impostorArray;
 		std::vector<wiGraphics::RenderPass> renderpasses_impostor;
 
+		// Atlas packing border size in pixels:
 		static const int atlasClampBorder = 1;
 
+		// Lightmap atlas state:
 		wiGraphics::Texture lightmap;
 		std::vector<wiRectPacker::rect_xywh*> lightmap_rects;
 		std::atomic<uint32_t> lightmap_rect_allocator{ 0 };
 		mutable std::atomic_bool lightmap_repack_needed{ false };
 		mutable std::atomic_bool lightmap_refresh_needed{ false };
 
+		// Decal atlas state:
 		wiGraphics::Texture decalAtlas;
 		mutable bool decal_repack_needed{ false };
 		std::unordered_map<std::shared_ptr<wiResource>, wiRectPacker::rect_xywh> packedDecals;
+
+		// Ocean GPU state:
+		wiOcean ocean;
+		void OceanRegenerate() { ocean.Create(weather.oceanParameters); }
+
+		// Simple water ripple sprites:
+		mutable std::vector<wiSprite> waterRipples;
+		void PutWaterRipple(const std::string& image, const XMFLOAT3& pos);
 
 		// Update all components by a given timestep (in seconds):
 		//	This is an expensive function, prefer to call it only once per frame!

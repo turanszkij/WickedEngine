@@ -1346,7 +1346,7 @@ void EditorComponent::Update(float dt)
 						if (wiInput::Down(wiInput::MOUSE_BUTTON_LEFT))
 						{
 							// if water, then put a water ripple onto it:
-							wiRenderer::PutWaterRipple("images/ripple.png", hovered.position);
+							scene.PutWaterRipple("images/ripple.png", hovered.position);
 						}
 					}
 					else if (decalWnd.placementCheckBox.GetCheck() && wiInput::Press(wiInput::MOUSE_BUTTON_LEFT))

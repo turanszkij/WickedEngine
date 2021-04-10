@@ -104,17 +104,15 @@ float Phillips(XMFLOAT2 K, XMFLOAT2 W, float v, float a, float dir_depend)
 
 
 
-wiOcean::wiOcean(const WeatherComponent& weather)
+void wiOcean::Create(const OceanParameters& params)
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
-
-	auto& params = weather.oceanParameters;
 
 	// Height map H(0)
 	int height_map_size = (params.dmap_dim + 4) * (params.dmap_dim + 1);
 	std::vector<XMFLOAT2> h0_data(height_map_size);
 	std::vector<float> omega_data(height_map_size);
-	initHeightMap(weather, h0_data.data(), omega_data.data());
+	initHeightMap(params, h0_data.data(), omega_data.data());
 
 	int hmap_dim = params.dmap_dim;
 	int input_full_size = (hmap_dim + 4) * (hmap_dim + 1);
@@ -223,10 +221,8 @@ wiOcean::wiOcean(const WeatherComponent& weather)
 // Initialize the vector field.
 // wlen_x: width of wave tile, in meters
 // wlen_y: length of wave tile, in meters
-void wiOcean::initHeightMap(const WeatherComponent& weather, XMFLOAT2* out_h0, float* out_omega)
+void wiOcean::initHeightMap(const OceanParameters& params, XMFLOAT2* out_h0, float* out_omega)
 {
-	auto& params = weather.oceanParameters;
-
 	int i, j;
 	XMFLOAT2 K;
 
@@ -267,10 +263,8 @@ void wiOcean::initHeightMap(const WeatherComponent& weather, XMFLOAT2* out_h0, f
 	}
 }
 
-void wiOcean::UpdateDisplacementMap(const WeatherComponent& weather, CommandList cmd) const
+void wiOcean::UpdateDisplacementMap(const OceanParameters& params, CommandList cmd) const
 {
-	auto& params = weather.oceanParameters;
-
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	device->EventBegin("Ocean Simulation", cmd);
@@ -349,10 +343,8 @@ void wiOcean::UpdateDisplacementMap(const WeatherComponent& weather, CommandList
 }
 
 
-void wiOcean::Render(const CameraComponent& camera, const WeatherComponent& weather, CommandList cmd) const
+void wiOcean::Render(const CameraComponent& camera, const OceanParameters& params, CommandList cmd) const
 {
-	auto& params = weather.oceanParameters;
-
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	device->EventBegin("Ocean Rendering", cmd);

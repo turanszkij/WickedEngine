@@ -1151,7 +1151,7 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	// Water ripple rendering:
-	if(wiRenderer::IsWaterrippleRendering())
+	if(!scene->waterRipples.empty())
 	{
 		device->RenderPassBegin(&renderpass_waterripples, cmd);
 

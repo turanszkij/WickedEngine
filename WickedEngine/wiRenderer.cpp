@@ -31,8 +31,6 @@
 #include "shaders/ShaderInterop_Paint.h"
 
 #include <algorithm>
-#include <unordered_map>
-#include <deque>
 #include <array>
 
 using namespace std;
@@ -119,16 +117,12 @@ struct VoxelizedSceneData
 	uint32_t mips = 7;
 } voxelSceneData;
 
-std::unique_ptr<wiOcean> ocean;
-
 Texture shadowMapArray_2D;
 Texture shadowMapArray_Cube;
 Texture shadowMapArray_Transparent_2D;
 Texture shadowMapArray_Transparent_Cube;
 std::vector<RenderPass> renderpasses_shadow2D;
 std::vector<RenderPass> renderpasses_shadowCube;
-
-deque<wiSprite> waterRipples;
 
 std::vector<pair<XMFLOAT4X4, XMFLOAT4>> renderableBoxes;
 std::vector<pair<SPHERE, XMFLOAT4>> renderableSpheres;
@@ -2614,8 +2608,6 @@ void ClearWorld(Scene& scene)
 {
 	scene.Clear();
 
-	waterRipples.clear();
-
 	deferredMIPGenLock.lock();
 	deferredMIPGens.clear();
 	deferredMIPGenLock.unlock();
@@ -3659,20 +3651,6 @@ void UpdatePerFrameData(
 		});
 	}
 
-	wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
-		for (auto& x : waterRipples)
-		{
-			x.Update(dt * 60);
-		}
-		while (
-			!waterRipples.empty() &&
-			(waterRipples.front().params.opacity <= 0 + FLT_EPSILON || waterRipples.front().params.fade == 1)
-			)
-		{
-			waterRipples.pop_front();
-		}
-	});
-
 	// Update Voxelization parameters:
 	if (scene.objects.GetCount() > 0)
 	{
@@ -3689,18 +3667,6 @@ void UpdatePerFrameData(
 		}
 		voxelSceneData.center = center;
 		voxelSceneData.extents = XMFLOAT3(voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize);
-	}
-
-	if (scene.weather.IsOceanEnabled())
-	{
-		if (ocean == nullptr)
-		{
-			ocean = std::make_unique<wiOcean>(scene.weather);
-		}
-	}
-	else if (ocean != nullptr)
-	{
-		ocean.reset();
 	}
 
 	wiJobSystem::Wait(ctx);
@@ -4358,10 +4324,10 @@ void UpdateRenderData(
 	}
 
 	// Compute water simulation:
-	if (vis.scene->weather.IsOceanEnabled() && ocean != nullptr)
+	if (vis.scene->weather.IsOceanEnabled())
 	{
 		range = wiProfiler::BeginRangeGPU("Ocean - Simulate", cmd);
-		ocean->UpdateDisplacementMap(vis.scene->weather, cmd);
+		vis.scene->ocean.UpdateDisplacementMap(vis.scene->weather.oceanParameters, cmd);
 		wiProfiler::EndRange(range);
 	}
 
@@ -4517,21 +4483,6 @@ void OcclusionCulling_Render(const CameraComponent& camera_previous, const Visib
 	wiProfiler::EndRange(range); // Occlusion Culling Render
 }
 
-void PutWaterRipple(const std::string& image, const XMFLOAT3& pos)
-{
-	wiSprite img(image);
-	img.params.enableExtractNormalMap();
-	img.params.blendFlag = BLENDMODE_ADDITIVE;
-	img.anim.fad = 0.01f;
-	img.anim.scaleX = 0.2f;
-	img.anim.scaleY = 0.2f;
-	img.params.pos = pos;
-	img.params.rotation = (wiRandom::getRandom(0, 1000)*0.001f) * 2 * 3.1415f;
-	img.params.siz = XMFLOAT2(1, 1);
-	img.params.quality = QUALITY_ANISOTROPIC;
-	img.params.pivot = XMFLOAT2(0.5f, 0.5f);
-	waterRipples.push_back(img);
-}
 void DrawWaterRipples(const Visibility& vis, CommandList cmd)
 {
 	// remove camera jittering
@@ -4545,7 +4496,7 @@ void DrawWaterRipples(const Visibility& vis, CommandList cmd)
 	XMMATRIX R = XMMatrixLookToLH(XMVectorZero(), dir, XMVector3Cross(vvv, dir));
 
 	device->EventBegin("Water Ripples", cmd);
-	for(auto& x : waterRipples)
+	for(auto& x : vis.scene->waterRipples)
 	{
 		x.params.customRotation = &R;
 		x.params.customProjection = &VP;
@@ -5332,9 +5283,9 @@ void DrawScene(
 		device->BindResource(CS, &vis.scene->TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
 	}
 
-	if (transparent && ocean != nullptr)
+	if (transparent && vis.scene->weather.IsOceanEnabled())
 	{
-		ocean->Render(*vis.camera, vis.scene->weather, cmd);
+		vis.scene->ocean.Render(*vis.camera, vis.scene->weather.oceanParameters, cmd);
 	}
 
 	if (hairparticle)
@@ -12206,7 +12157,6 @@ float GetVoxelRadianceRayStepSize() { return voxelSceneData.rayStepSize; }
 void SetVoxelRadianceRayStepSize(float value) { voxelSceneData.rayStepSize = value; }
 void SetGameSpeed(float value) { GameSpeed = std::max(0.0f, value); }
 float GetGameSpeed() { return GameSpeed; }
-void OceanRegenerate(const WeatherComponent& weather) { if (ocean != nullptr) ocean = std::make_unique<wiOcean>(weather); }
 void SetRaytraceBounceCount(uint32_t bounces)
 {
 	raytraceBounceCount = bounces;
@@ -12238,10 +12188,6 @@ void SetTessellationEnabled(bool value)
 bool GetTessellationEnabled()
 {
 	return tessellationEnabled;
-}
-bool IsWaterrippleRendering()
-{
-	return !waterRipples.empty();
 }
 void SetDisableAlbedoMaps(bool value)
 {
