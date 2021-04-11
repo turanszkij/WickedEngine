@@ -804,10 +804,9 @@ namespace wiScene
 		{
 			dest->vb_tan = device->GetDescriptorIndex(&vertexBuffer_TAN, SRV);
 		}
+		dest->vb_col = device->GetDescriptorIndex(&vertexBuffer_COL, SRV);
 		dest->vb_uv0 = device->GetDescriptorIndex(&vertexBuffer_UV0, SRV);
 		dest->vb_uv1 = device->GetDescriptorIndex(&vertexBuffer_UV1, SRV);
-		dest->vb_bon = device->GetDescriptorIndex(&vertexBuffer_BON, SRV);
-		dest->vb_col = device->GetDescriptorIndex(&vertexBuffer_COL, SRV);
 		dest->vb_atl = device->GetDescriptorIndex(&vertexBuffer_ATL, SRV);
 		dest->vb_pre = device->GetDescriptorIndex(&vertexBuffer_PRE, SRV);
 		dest->blendmaterial1 = terrain_material1_index;

@@ -90,22 +90,17 @@ struct ShaderMesh
 	int ib;
 	int vb_pos_nor_wind;
 	int vb_tan;
-	int vb_uv0;
-
-	int vb_uv1;
-	int vb_bon;
 	int vb_col;
-	int vb_atl;
 
+	int vb_uv0;
+	int vb_uv1;
+	int vb_atl;
 	int vb_pre;
+
+	int subsetbuffer;
 	int blendmaterial1;
 	int blendmaterial2;
 	int blendmaterial3;
-
-	int subsetbuffer;
-	int padding0;
-	int padding1;
-	int padding2;
 };
 
 struct ShaderMeshSubset
@@ -255,10 +250,6 @@ struct ShaderEntity
 static const uint ENTITY_TYPE_DIRECTIONALLIGHT = 0;
 static const uint ENTITY_TYPE_POINTLIGHT = 1;
 static const uint ENTITY_TYPE_SPOTLIGHT = 2;
-//static const uint ENTITY_TYPE_SPHERELIGHT = 3;
-//static const uint ENTITY_TYPE_DISCLIGHT = 4;
-//static const uint ENTITY_TYPE_RECTANGLELIGHT = 5;
-//static const uint ENTITY_TYPE_TUBELIGHT = 6;
 static const uint ENTITY_TYPE_DECAL = 100;
 static const uint ENTITY_TYPE_ENVMAP = 101;
 static const uint ENTITY_TYPE_FORCEFIELD_POINT = 200;
@@ -276,23 +267,6 @@ static const uint TILED_CULLING_THREADSIZE = 8;
 static const uint TILED_CULLING_GRANULARITY = TILED_CULLING_BLOCKSIZE / TILED_CULLING_THREADSIZE;
 
 static const int impostorCaptureAngles = 36;
-
-static const uint MATERIAL_TEXTURE_SLOT_DESCRIPTOR_BASECOLOR = 0;
-static const uint MATERIAL_TEXTURE_SLOT_DESCRIPTOR_NORMAL = 1;
-static const uint MATERIAL_TEXTURE_SLOT_DESCRIPTOR_SURFACE = 2;
-static const uint MATERIAL_TEXTURE_SLOT_DESCRIPTOR_OCCLUSION = 3;
-static const uint MATERIAL_TEXTURE_SLOT_DESCRIPTOR_EMISSIVE = 4;
-static const uint MATERIAL_TEXTURE_SLOT_DESCRIPTOR_COUNT = 5;
-
-static const uint VERTEXBUFFER_DESCRIPTOR_RAW_POS = 0;
-static const uint VERTEXBUFFER_DESCRIPTOR_RAW_TAN = 1;
-static const uint VERTEXBUFFER_DESCRIPTOR_RAW_COL = 1;
-static const uint VERTEXBUFFER_DESCRIPTOR_RAW_COUNT = 2;
-
-static const uint VERTEXBUFFER_DESCRIPTOR_UV_0 = 0;
-static const uint VERTEXBUFFER_DESCRIPTOR_UV_1 = 1;
-static const uint VERTEXBUFFER_DESCRIPTOR_UV_ATL = 2;
-static const uint VERTEXBUFFER_DESCRIPTOR_UV_COUNT = 3;
 
 // These option bits can be read from g_xFrame_Options constant buffer value:
 static const uint OPTION_BIT_TEMPORALAA_ENABLED = 1 << 0;
@@ -470,7 +444,7 @@ CBUFFER(MiscCB, CBSLOT_RENDERER_MISC)
 
 CBUFFER(ForwardEntityMaskCB, CBSLOT_RENDERER_FORWARD_LIGHTMASK)
 {
-	uint2 xForwardLightMask;	// supports indexind 64 lights
+	uint2 xForwardLightMask;	// supports indexing 64 lights
 	uint xForwardDecalMask;		// supports indexing 32 decals
 	uint xForwardEnvProbeMask;	// supports indexing 32 environment probes
 };

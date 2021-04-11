@@ -54,7 +54,7 @@ namespace wiShaderCompiler
 		std::vector<LPCWSTR> args = {
 			L"-res-may-alias",
 			L"-flegacy-macro-expansion",
-			L"-no-legacy-cbuf-layout",
+			//L"-no-legacy-cbuf-layout",
 			//L"-pack-optimized",
 			//L"-all-resources-bound",
 		};
