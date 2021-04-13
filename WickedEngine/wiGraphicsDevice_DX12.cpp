@@ -2330,10 +2330,6 @@ using namespace DX12_Internal;
 		hr = device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&directQueue));
 		assert(SUCCEEDED(hr));
 
-		// Create fences for command queue:
-		hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&frameFence));
-		assert(SUCCEEDED(hr));
-
 
 		// Create swapchain
 		ComPtr<IDXGISwapChain1> _swapChain;
@@ -2429,15 +2425,13 @@ using namespace DX12_Internal;
 		// Create frame-resident resources:
 		for (uint32_t fr = 0; fr < BACKBUFFER_COUNT; ++fr)
 		{
+			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&frames[fr].fence));
+			assert(SUCCEEDED(hr));
 			hr = swapChain->GetBuffer(fr, IID_PPV_ARGS(&backBuffers[fr]));
 			assert(SUCCEEDED(hr));
 		}
 
 		copyAllocator.Create(device);
-
-		hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&directFence));
-		assert(SUCCEEDED(hr));
-		directFenceValue = directFence->GetCompletedValue();
 
 		// Query features:
 
@@ -5443,11 +5437,13 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::SubmitCommandLists()
 	{
+		HRESULT hr;
+
 		// Sync up copy queue:
 		copyAllocator.locker.lock();
 		if(copyAllocator.submitted)
 		{
-			HRESULT hr = directQueue->Wait(copyAllocator.fence.Get(), copyAllocator.fenceValue);
+			hr = directQueue->Wait(copyAllocator.fence.Get(), copyAllocator.fenceValue);
 			assert(SUCCEEDED(hr));
 			copyAllocator.submitted = false;
 		}
@@ -5466,7 +5462,7 @@ using namespace DX12_Internal;
 				query_flush(cmd);
 				barrier_flush(cmd);
 
-				HRESULT hr = GetDirectCommandList(cmd)->Close();
+				hr = GetDirectCommandList(cmd)->Close();
 				assert(SUCCEEDED(hr));
 
 				cmdLists[counter] = GetDirectCommandList(cmd);
@@ -5490,11 +5486,22 @@ using namespace DX12_Internal;
 			}
 
 			directQueue->ExecuteCommandLists(counter, cmdLists);
+
+			hr = directQueue->Signal(GetFrameResources().fence.Get(), 1);
+			assert(SUCCEEDED(hr));
 		}
 
-		// This acts as a barrier, following this we will be using the next frame's resources when calling GetFrameResources()!
+		// From here, we begin a new frame, this affects GetFrameResources()!
 		FRAMECOUNT++;
-		HRESULT hr = directQueue->Signal(frameFence.Get(), FRAMECOUNT);
+
+		if (FRAMECOUNT >= BACKBUFFER_COUNT && GetFrameResources().fence->GetCompletedValue() < 1)
+		{
+			// NULL event handle will simply wait immediately:
+			//	https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12fence-seteventoncompletion#remarks
+			hr = GetFrameResources().fence->SetEventOnCompletion(1, NULL);
+			assert(SUCCEEDED(hr));
+		}
+		hr = GetFrameResources().fence->Signal(0);
 		assert(SUCCEEDED(hr));
 
 		// Descriptor heaps' progress is recorded by the GPU:
@@ -5510,30 +5517,21 @@ using namespace DX12_Internal;
 		hr = directQueue->GetTimestampFrequency(&TIMESTAMP_FREQUENCY);
 		assert(SUCCEEDED(hr));
 
-		// Determine the last frame that we should not wait on:
-		const uint64_t lastFrameToAllowLatency = std::max(uint64_t(BACKBUFFER_COUNT - 1u), FRAMECOUNT) - (BACKBUFFER_COUNT - 1);
-
-		// Wait if too many frames are being incomplete:
-		if (frameFence->GetCompletedValue() < lastFrameToAllowLatency)
-		{
-			// NULL event handle will simply wait immediately:
-			//	https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12fence-seteventoncompletion#remarks
-			hr = frameFence->SetEventOnCompletion(lastFrameToAllowLatency, NULL);
-			assert(SUCCEEDED(hr));
-		}
-
 		allocationhandler->Update(FRAMECOUNT, BACKBUFFER_COUNT);
 
 	}
 
 	void GraphicsDevice_DX12::WaitForGPU()
 	{
-		directFenceValue++;
-		HRESULT hr = directQueue->Signal(directFence.Get(), directFenceValue);
+		ComPtr<ID3D12Fence> fence;
+		HRESULT hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&fence));
 		assert(SUCCEEDED(hr));
-		if (directFence->GetCompletedValue() < directFenceValue)
+
+		hr = directQueue->Signal(fence.Get(), 1);
+		assert(SUCCEEDED(hr));
+		if (fence->GetCompletedValue() < 1)
 		{
-			hr = directFence->SetEventOnCompletion(directFenceValue, NULL);
+			hr = fence->SetEventOnCompletion(1, NULL);
 			assert(SUCCEEDED(hr));
 		}
 	}

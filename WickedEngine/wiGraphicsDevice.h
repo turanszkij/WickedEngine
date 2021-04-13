@@ -64,7 +64,7 @@ namespace wiGraphics
 		virtual void PresentEnd(CommandList cmd) = 0;
 
 		// Begin a new command list for GPU command recording.
-		//	This will be valid until SubmitCommandLists() or StashCommandLists() is called.
+		//	This will be valid until SubmitCommandLists() is called.
 		virtual CommandList BeginCommandList() = 0;
 		// Submit all command list that were used with BeginCommandList before this call.
 		//	This will make every command list to be in "available" state and restarts them

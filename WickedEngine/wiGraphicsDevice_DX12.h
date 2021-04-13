@@ -34,7 +34,6 @@ namespace wiGraphics
 		Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter;
 		Microsoft::WRL::ComPtr<IDXGIFactory6> factory;
 		Microsoft::WRL::ComPtr<ID3D12CommandQueue> directQueue;
-		Microsoft::WRL::ComPtr<ID3D12Fence> frameFence;
 
 		uint32_t backbuffer_index = 0;
 		Microsoft::WRL::ComPtr<ID3D12Resource> backBuffers[BACKBUFFER_COUNT];
@@ -185,13 +184,11 @@ namespace wiGraphics
 		};
 		mutable CopyAllocator copyAllocator;
 
-		Microsoft::WRL::ComPtr<ID3D12Fence> directFence;
-		UINT64 directFenceValue = 0;
-
 		RenderPass dummyRenderpass;
 
 		struct FrameResources
 		{
+			Microsoft::WRL::ComPtr<ID3D12Fence> fence;
 			Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocators[COMMANDLIST_COUNT];
 			Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList4> commandLists[COMMANDLIST_COUNT];
 

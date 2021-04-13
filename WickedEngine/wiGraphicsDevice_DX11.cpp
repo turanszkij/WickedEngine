@@ -1394,12 +1394,20 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiPlatform::window_type window, bool fu
 
 	ComPtr<IDXGIDevice2> pDXGIDevice;
 	hr = device.As(&pDXGIDevice);
+	assert(SUCCEEDED(hr));
+
+	// Ensure that DXGI does not queue more than one frame at a time. This both reduces latency and
+	// ensures that the application will only render after each VSync, minimizing power consumption.
+	hr = pDXGIDevice->SetMaximumFrameLatency(1);
+	assert(SUCCEEDED(hr));
 
 	ComPtr<IDXGIAdapter> pDXGIAdapter;
 	hr = pDXGIDevice->GetParent(__uuidof(IDXGIAdapter), (void**)&pDXGIAdapter);
+	assert(SUCCEEDED(hr));
 
 	ComPtr<IDXGIFactory2> pIDXGIFactory;
-	pDXGIAdapter->GetParent(__uuidof(IDXGIFactory2), (void**)&pIDXGIFactory);
+	hr = pDXGIAdapter->GetParent(__uuidof(IDXGIFactory2), (void**)&pIDXGIFactory);
+	assert(SUCCEEDED(hr));
 
 	if (debuglayer)
 	{
@@ -1463,10 +1471,6 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiPlatform::window_type window, bool fu
 		wiHelper::messageBox("Failed to create a swapchain for the graphics device!", "Error!");
 		wiPlatform::Exit();
 	}
-
-	// Ensure that DXGI does not queue more than one frame at a time. This both reduces latency and
-	// ensures that the application will only render after each VSync, minimizing power consumption.
-	hr = pDXGIDevice->SetMaximumFrameLatency(1);
 
 	D3D11_QUERY_DESC queryDesc = {};
 	queryDesc.Query = D3D11_QUERY_TIMESTAMP_DISJOINT;
