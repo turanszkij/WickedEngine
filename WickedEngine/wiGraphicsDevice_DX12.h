@@ -1,5 +1,6 @@
 #pragma once
 #include "CommonInclude.h"
+#include "wiPlatform.h"
 
 #ifdef _WIN32
 #define WICKEDENGINE_BUILD_DX12

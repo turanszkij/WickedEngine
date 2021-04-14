@@ -1,5 +1,6 @@
 #pragma once
 #include "CommonInclude.h"
+#include "wiPlatform.h"
 
 #ifndef PLATFORM_UWP
 #define WICKEDENGINE_BUILD_VULKAN

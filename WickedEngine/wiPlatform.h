@@ -70,6 +70,25 @@ namespace wiPlatform
 #endif
 	}
 
+	inline float GetWindowDPI(window_type window)
+	{
+		float dpi = 96;
+
+#ifdef PLATFORM_WINDOWS_DESKTOP
+		dpi = (float)GetDpiForWindow(window);
+#endif // WINDOWS_DESKTOP
+
+#ifdef PLATFORM_UWP
+		dpi = winrt::Windows::Graphics::Display::DisplayInformation::GetForCurrentView().LogicalDpi();
+#endif // PLATFORM_UWP
+
+#ifdef PLATFORM_LINUX
+		dpi = 96; // todo
+#endif // PLATFORM_LINUX
+
+		return dpi;
+	}
+
 	inline XMUINT2 GetWindowSize(window_type window)
 	{
 		XMUINT2 size = {};
@@ -96,24 +115,5 @@ namespace wiPlatform
 #endif // PLATFORM_LINUX
 
 		return size;
-	}
-
-	inline float GetWindowDPI(window_type window)
-	{
-		float dpi = 96;
-
-#ifdef PLATFORM_WINDOWS_DESKTOP
-		dpi = (float)GetDpiForWindow(window);
-#endif // WINDOWS_DESKTOP
-
-#ifdef PLATFORM_UWP
-		dpi = winrt::Windows::Graphics::Display::DisplayInformation::GetForCurrentView().LogicalDpi();
-#endif // PLATFORM_UWP
-
-#ifdef PLATFORM_LINUX
-		dpi = 96; // todo
-#endif // PLATFORM_LINUX
-
-		return dpi;
 	}
 }
