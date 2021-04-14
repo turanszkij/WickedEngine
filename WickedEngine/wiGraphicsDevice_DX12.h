@@ -35,7 +35,6 @@ namespace wiGraphics
 		Microsoft::WRL::ComPtr<IDXGIFactory6> factory;
 		Microsoft::WRL::ComPtr<ID3D12CommandQueue> directQueue;
 
-		uint32_t backbuffer_index = 0;
 		Microsoft::WRL::ComPtr<ID3D12Resource> backBuffers[BACKBUFFER_COUNT];
 
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> dispatchIndirectCommandSignature;

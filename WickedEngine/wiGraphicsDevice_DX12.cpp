@@ -2724,7 +2724,7 @@ using namespace DX12_Internal;
 	{
 		auto internal_state = std::make_shared<Texture_DX12>();
 		internal_state->allocationhandler = allocationhandler;
-		internal_state->resource = backBuffers[backbuffer_index];
+		internal_state->resource = backBuffers[swapChain->GetCurrentBackBufferIndex()];
 
 		D3D12_RESOURCE_DESC desc = internal_state->resource->GetDesc();
 		device->GetCopyableFootprints(&desc, 0, 1, 0, &internal_state->footprint, nullptr, nullptr, nullptr);
@@ -5310,7 +5310,7 @@ using namespace DX12_Internal;
 	{
 		D3D12_RESOURCE_BARRIER barrier = {};
 		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-		barrier.Transition.pResource = backBuffers[backbuffer_index].Get();
+		barrier.Transition.pResource = backBuffers[swapChain->GetCurrentBackBufferIndex()].Get();
 		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
@@ -5322,7 +5322,7 @@ using namespace DX12_Internal;
 		const float clearcolor[] = { 0,0,0,1 };
 
 		D3D12_RENDER_PASS_RENDER_TARGET_DESC RTV = {};
-		RTV.cpuDescriptor = backbufferRTV[backbuffer_index];
+		RTV.cpuDescriptor = backbufferRTV[swapChain->GetCurrentBackBufferIndex()];
 		RTV.BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
 		RTV.BeginningAccess.Clear.ClearValue.Color[0] = clearcolor[0];
 		RTV.BeginningAccess.Clear.ClearValue.Color[1] = clearcolor[1];
@@ -5342,7 +5342,7 @@ using namespace DX12_Internal;
 		// Indicate that the back buffer will now be used to present.
 		D3D12_RESOURCE_BARRIER barrier = {};
 		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-		barrier.Transition.pResource = backBuffers[backbuffer_index].Get();
+		barrier.Transition.pResource = backBuffers[swapChain->GetCurrentBackBufferIndex()].Get();
 		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
@@ -5353,7 +5353,6 @@ using namespace DX12_Internal;
 
 		HRESULT hr = swapChain->Present(VSYNC, 0);
 		assert(SUCCEEDED(hr));
-		backbuffer_index = (backbuffer_index + 1) % BACKBUFFER_COUNT;
 
 #if 0
 		D3D12MA::Stats stats = {};
@@ -5364,18 +5363,22 @@ using namespace DX12_Internal;
 
 	CommandList GraphicsDevice_DX12::BeginCommandList()
 	{
+		HRESULT hr;
+
 		CommandList cmd = cmd_count.fetch_add(1);
 		if (GetDirectCommandList(cmd) == nullptr)
 		{
 			// need to create one more command list:
 			assert(cmd < COMMANDLIST_COUNT);
 
-			HRESULT hr;
 			for (uint32_t fr = 0; fr < BACKBUFFER_COUNT; ++fr)
 			{
 				hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&frames[fr].commandAllocators[cmd]));
+				assert(SUCCEEDED(hr));
 				hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, frames[fr].commandAllocators[cmd].Get(), nullptr, IID_PPV_ARGS(&frames[fr].commandLists[cmd]));
+				assert(SUCCEEDED(hr));
 				hr = frames[fr].commandLists[cmd]->Close();
+				assert(SUCCEEDED(hr));
 
 				frames[fr].resourceBuffer[cmd].init(this, 1024 * 1024); // 1 MB starting size
 
@@ -5388,7 +5391,7 @@ using namespace DX12_Internal;
 		}
 
 		// Start the command list in a default state:
-		HRESULT hr = GetFrameResources().commandAllocators[cmd]->Reset();
+		hr = GetFrameResources().commandAllocators[cmd]->Reset();
 		assert(SUCCEEDED(hr));
 		hr = GetDirectCommandList(cmd)->Reset(GetFrameResources().commandAllocators[cmd].Get(), nullptr);
 		assert(SUCCEEDED(hr));
