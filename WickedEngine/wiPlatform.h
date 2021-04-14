@@ -1,4 +1,5 @@
 #pragma once
+#include "CommonInclude.h"
 // This file includes platform, os specific libraries and supplies common platform specific resources
 
 #include <vector>
@@ -44,10 +45,10 @@
 namespace wiPlatform
 {
 #ifdef _WIN32
-#ifndef PLATFORM_UWP
-	using window_type = HWND;
-#else
+#ifdef PLATFORM_UWP
 	using window_type = const winrt::Windows::UI::Core::CoreWindow&;
+#else
+	using window_type = HWND;
 #endif // PLATFORM_UWP
 #elif SDL2
 	using window_type = SDL_Window*;
@@ -67,5 +68,52 @@ namespace wiPlatform
 #ifdef SDL2
 		SDL_Quit();
 #endif
+	}
+
+	inline XMUINT2 GetWindowSize(window_type window)
+	{
+		XMUINT2 size = {};
+
+#ifdef PLATFORM_WINDOWS_DESKTOP
+		RECT rect;
+		GetClientRect(window, &rect);
+		size.x = uint32_t(rect.right - rect.left);
+		size.y = uint32_t(rect.bottom - rect.top);
+#endif // WINDOWS_DESKTOP
+
+#ifdef PLATFORM_UWP
+		float dpi = GetWindowDPI(window);
+		float dpiscale = dpi / 96.f;
+		size.x = uint32_t(window.Bounds().Width * dpiscale);
+		size.y = uint32_t(window.Bounds().Height * dpiscale);
+#endif // PLATFORM_UWP
+
+#ifdef PLATFORM_LINUX
+		int width, height;
+		SDL_GetWindowSize(window, &width, &height);
+		size.x = (uint32_t)width;
+		size.y = (uint32_t)height;
+#endif // PLATFORM_LINUX
+
+		return size;
+	}
+
+	inline float GetWindowDPI(window_type window)
+	{
+		float dpi = 96;
+
+#ifdef PLATFORM_WINDOWS_DESKTOP
+		dpi = (float)GetDpiForWindow(window);
+#endif // WINDOWS_DESKTOP
+
+#ifdef PLATFORM_UWP
+		dpi = winrt::Windows::Graphics::Display::DisplayInformation::GetForCurrentView().LogicalDpi();
+#endif // PLATFORM_UWP
+
+#ifdef PLATFORM_LINUX
+		dpi = 96; // todo
+#endif // PLATFORM_LINUX
+
+		return dpi;
 	}
 }

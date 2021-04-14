@@ -1,6 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiGraphics.h"
+#include "wiPlatform.h"
 #include "wiEvent.h"
 
 #include <memory>
@@ -32,6 +33,9 @@ namespace wiGraphics
 		wiEvent::Handle dpi_change_event = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_DPI, [this](uint64_t userdata) { dpi = int(userdata & 0xFFFF); });
 
 	public:
+		virtual ~GraphicsDevice() = default;
+
+		virtual bool CreateSwapChain(const SwapChainDesc* pDesc, wiPlatform::window_type window, SwapChain* swapChain) const = 0;
 		virtual bool CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer) const = 0;
 		virtual bool CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) const = 0;
 		virtual bool CreateShader(SHADERSTAGE stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) const = 0;
@@ -59,9 +63,6 @@ namespace wiGraphics
 		virtual void SetCommonSampler(const StaticSampler* sam) = 0;
 
 		virtual void SetName(GPUResource* pResource, const char* name) = 0;
-
-		virtual void PresentBegin(CommandList cmd) = 0;
-		virtual void PresentEnd(CommandList cmd) = 0;
 
 		// Begin a new command list for GPU command recording.
 		//	This will be valid until SubmitCommandLists() is called.
@@ -121,6 +122,7 @@ namespace wiGraphics
 
 		///////////////Thread-sensitive////////////////////////
 
+		virtual void RenderPassBegin(const SwapChain* swapchain, CommandList cmd) = 0;
 		virtual void RenderPassBegin(const RenderPass* renderpass, CommandList cmd) = 0;
 		virtual void RenderPassEnd(CommandList cmd) = 0;
 		virtual void BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd) = 0;

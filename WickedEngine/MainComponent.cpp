@@ -72,7 +72,7 @@ void MainComponent::Run()
 	{
 		// Until engine is not loaded, present initialization screen...
 		CommandList cmd = wiRenderer::GetDevice()->BeginCommandList();
-		wiRenderer::GetDevice()->PresentBegin(cmd);
+		wiRenderer::GetDevice()->RenderPassBegin(&swapChain, cmd);
 		wiFontParams params;
 		params.posX = 5.f;
 		params.posY = 5.f;
@@ -84,7 +84,8 @@ void MainComponent::Run()
 			params.posY = screenheight - textheight;
 		}
 		wiFont::Draw(text, params, cmd);
-		wiRenderer::GetDevice()->PresentEnd(cmd);
+		wiRenderer::GetDevice()->RenderPassEnd(cmd);
+		wiRenderer::GetDevice()->SubmitCommandLists();
 		return;
 	}
 
@@ -153,12 +154,13 @@ void MainComponent::Run()
 	}
 
 	CommandList cmd = wiRenderer::GetDevice()->BeginCommandList();
-	wiRenderer::GetDevice()->PresentBegin(cmd);
+	wiRenderer::GetDevice()->RenderPassBegin(&swapChain, cmd);
 	{
 		Compose(cmd);
 		wiProfiler::EndFrame(cmd); // End before Present() so that GPU queries are properly recorded
 	}
-	wiRenderer::GetDevice()->PresentEnd(cmd);
+	wiRenderer::GetDevice()->RenderPassEnd(cmd);
+	wiRenderer::GetDevice()->SubmitCommandLists();
 }
 
 void MainComponent::Update(float dt)
@@ -333,6 +335,7 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 	if (wiRenderer::GetDevice() == nullptr)
 	{
 		bool debugdevice = wiStartupArguments::HasArgument("debugdevice");
+		bool gpuvalidation = wiStartupArguments::HasArgument("gpuvalidation");
 
 		bool use_dx11 = wiStartupArguments::HasArgument("dx11");
 		bool use_dx12 = wiStartupArguments::HasArgument("dx12");
@@ -383,7 +386,7 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 		{
 #ifdef WICKEDENGINE_BUILD_DX12
 			wiRenderer::SetShaderPath(wiRenderer::GetShaderPath() + "hlsl6/");
-			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_DX12>(window, fullscreen, debugdevice));
+			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_DX12>(window, fullscreen, debugdevice, gpuvalidation));
 #endif
 		}
 		else if (use_dx11)
@@ -394,5 +397,13 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 #endif
 		}
 	}
+
+	XMUINT2 windowsize = wiPlatform::GetWindowSize(window);
+
+	SwapChainDesc desc;
+	desc.width = windowsize.x;
+	desc.height = windowsize.y;
+	bool success = wiRenderer::GetDevice()->CreateSwapChain(&desc, window, &swapChain);
+	assert(success);
 }
 

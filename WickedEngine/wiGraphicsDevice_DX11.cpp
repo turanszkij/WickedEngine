@@ -1145,6 +1145,12 @@ namespace DX11_Internal
 	{
 		std::vector<ComPtr<ID3D11Query>> resources;
 	};
+	struct SwapChain_DX11
+	{
+		Microsoft::WRL::ComPtr<IDXGISwapChain1> swapChain;
+		Microsoft::WRL::ComPtr<ID3D11RenderTargetView> renderTargetView;
+		Microsoft::WRL::ComPtr<ID3D11Texture2D> backBuffer;
+	};
 
 	Resource_DX11* to_internal(const GPUResource* param)
 	{
@@ -1169,6 +1175,10 @@ namespace DX11_Internal
 	QueryHeap_DX11* to_internal(const GPUQueryHeap* param)
 	{
 		return static_cast<QueryHeap_DX11*>(param->internal_state.get());
+	}
+	SwapChain_DX11* to_internal(const SwapChain* param)
+	{
+		return static_cast<SwapChain_DX11*>(param->internal_state.get());
 	}
 }
 using namespace DX11_Internal;
@@ -1401,12 +1411,11 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiPlatform::window_type window, bool fu
 	hr = pDXGIDevice->SetMaximumFrameLatency(1);
 	assert(SUCCEEDED(hr));
 
-	ComPtr<IDXGIAdapter> pDXGIAdapter;
-	hr = pDXGIDevice->GetParent(__uuidof(IDXGIAdapter), (void**)&pDXGIAdapter);
+	ComPtr<IDXGIAdapter> DXGIAdapter;
+	hr = pDXGIDevice->GetParent(__uuidof(IDXGIAdapter), (void**)&DXGIAdapter);
 	assert(SUCCEEDED(hr));
 
-	ComPtr<IDXGIFactory2> pIDXGIFactory;
-	hr = pDXGIAdapter->GetParent(__uuidof(IDXGIFactory2), (void**)&pIDXGIFactory);
+	hr = DXGIAdapter->GetParent(__uuidof(IDXGIFactory2), (void**)&DXGIFactory);
 	assert(SUCCEEDED(hr));
 
 	if (debuglayer)
@@ -1434,42 +1443,6 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiPlatform::window_type window, bool fu
 			}
 			d3dDebug->Release();
 		}
-	}
-
-
-	DXGI_SWAP_CHAIN_DESC1 sd = {};
-	sd.Width = RESOLUTIONWIDTH;
-	sd.Height = RESOLUTIONHEIGHT;
-	sd.Format = _ConvertFormat(GetBackBufferFormat());
-	sd.Stereo = false;
-	sd.SampleDesc.Count = 1;
-	sd.SampleDesc.Quality = 0;
-	sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	sd.BufferCount = BACKBUFFER_COUNT;
-	sd.Flags = 0;
-	sd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
-	sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-
-#ifndef PLATFORM_UWP
-	sd.Scaling = DXGI_SCALING_STRETCH;
-
-	DXGI_SWAP_CHAIN_FULLSCREEN_DESC fullscreenDesc;
-	fullscreenDesc.RefreshRate.Numerator = 60;
-	fullscreenDesc.RefreshRate.Denominator = 1;
-	fullscreenDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED; // needs to be unspecified for correct fullscreen scaling!
-	fullscreenDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE;
-	fullscreenDesc.Windowed = !fullscreen;
-	hr = pIDXGIFactory->CreateSwapChainForHwnd(device.Get(), window, &sd, &fullscreenDesc, nullptr, &swapChain);
-#else
-	sd.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
-
-	hr = pIDXGIFactory->CreateSwapChainForCoreWindow(device.Get(), static_cast<IUnknown*>(winrt::get_abi(window)), &sd, nullptr, &swapChain);
-#endif
-
-	if (FAILED(hr))
-	{
-		wiHelper::messageBox("Failed to create a swapchain for the graphics device!", "Error!");
-		wiPlatform::Exit();
 	}
 
 	D3D11_QUERY_DESC queryDesc = {};
@@ -1533,54 +1506,123 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiPlatform::window_type window, bool fu
 
 void GraphicsDevice_DX11::CreateBackBufferResources()
 {
-	HRESULT hr;
+	//HRESULT hr;
 
-	hr = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), &backBuffer);
-	if (FAILED(hr)) {
-		wiHelper::messageBox("BackBuffer creation Failed!", "Error!");
-		wiPlatform::Exit();
-	}
+	//hr = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), &backBuffer);
+	//if (FAILED(hr)) {
+	//	wiHelper::messageBox("BackBuffer creation Failed!", "Error!");
+	//	wiPlatform::Exit();
+	//}
 
-	hr = device->CreateRenderTargetView(backBuffer.Get(), nullptr, &renderTargetView);
-	if (FAILED(hr)) {
-		wiHelper::messageBox("Main Rendertarget creation Failed!", "Error!");
-		wiPlatform::Exit();
-	}
+	//hr = device->CreateRenderTargetView(backBuffer.Get(), nullptr, &renderTargetView);
+	//if (FAILED(hr)) {
+	//	wiHelper::messageBox("Main Rendertarget creation Failed!", "Error!");
+	//	wiPlatform::Exit();
+	//}
 }
 
 void GraphicsDevice_DX11::SetResolution(int width, int height)
 {
-	if ((width != RESOLUTIONWIDTH || height != RESOLUTIONHEIGHT) && width > 0 && height > 0)
-	{
-		RESOLUTIONWIDTH = width;
-		RESOLUTIONHEIGHT = height;
+	//if ((width != RESOLUTIONWIDTH || height != RESOLUTIONHEIGHT) && width > 0 && height > 0)
+	//{
+	//	RESOLUTIONWIDTH = width;
+	//	RESOLUTIONHEIGHT = height;
 
-		backBuffer.Reset();
-		renderTargetView.Reset();
+	//	backBuffer.Reset();
+	//	renderTargetView.Reset();
 
-		HRESULT hr = swapChain->ResizeBuffers(GetBackBufferCount(), width, height, _ConvertFormat(GetBackBufferFormat()), 0);
-		assert(SUCCEEDED(hr));
+	//	HRESULT hr = swapChain->ResizeBuffers(GetBackBufferCount(), width, height, _ConvertFormat(GetBackBufferFormat()), 0);
+	//	assert(SUCCEEDED(hr));
 
-		CreateBackBufferResources();
-	}
+	//	CreateBackBufferResources();
+	//}
 }
 
 Texture GraphicsDevice_DX11::GetBackBuffer()
 {
-	auto internal_state = std::make_shared<Texture_DX11>();
-	internal_state->resource = backBuffer;
+	//auto internal_state = std::make_shared<Texture_DX11>();
+	//internal_state->resource = backBuffer;
 
-	Texture result;
-	result.internal_state = internal_state;
-	result.type = GPUResource::GPU_RESOURCE_TYPE::TEXTURE;
+	//Texture result;
+	//result.internal_state = internal_state;
+	//result.type = GPUResource::GPU_RESOURCE_TYPE::TEXTURE;
 
-	D3D11_TEXTURE2D_DESC desc;
-	backBuffer->GetDesc(&desc);
-	result.desc = _ConvertTextureDesc_Inv(&desc);
+	//D3D11_TEXTURE2D_DESC desc;
+	//backBuffer->GetDesc(&desc);
+	//result.desc = _ConvertTextureDesc_Inv(&desc);
 
-	return result;
+	//return result;
+	return Texture();
 }
 
+bool GraphicsDevice_DX11::CreateSwapChain(const SwapChainDesc* pDesc, wiPlatform::window_type window, SwapChain* swapChain) const
+{
+	auto internal_state = std::make_shared<SwapChain_DX11>();
+	swapChain->internal_state = internal_state;
+	swapChain->desc = *pDesc;
+	HRESULT hr;
+
+	DXGI_SWAP_CHAIN_DESC1 sd = {};
+	sd.Width = pDesc->width;
+	sd.Height = pDesc->height;
+	sd.Format = _ConvertFormat(pDesc->format);
+	sd.Stereo = false;
+	sd.SampleDesc.Count = 1;
+	sd.SampleDesc.Quality = 0;
+	sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	sd.BufferCount = BACKBUFFER_COUNT;
+	sd.Flags = 0;
+	sd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+	sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+
+#ifdef PLATFORM_UWP
+	sd.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
+
+	hr = DXGIFactory->CreateSwapChainForCoreWindow(
+		device.Get(),
+		static_cast<IUnknown*>(winrt::get_abi(window)),
+		&sd,
+		nullptr,
+		&internal_state->swapChain
+	);
+#else
+	sd.Scaling = DXGI_SCALING_STRETCH;
+
+	DXGI_SWAP_CHAIN_FULLSCREEN_DESC fullscreenDesc;
+	fullscreenDesc.RefreshRate.Numerator = 60;
+	fullscreenDesc.RefreshRate.Denominator = 1;
+	fullscreenDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED; // needs to be unspecified for correct fullscreen scaling!
+	fullscreenDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE;
+	fullscreenDesc.Windowed = !pDesc->fullscreen;
+	hr = DXGIFactory->CreateSwapChainForHwnd(
+		device.Get(),
+		window,
+		&sd,
+		&fullscreenDesc,
+		nullptr,
+		&internal_state->swapChain
+	);
+#endif
+
+	if (FAILED(hr))
+	{
+		return false;
+	}
+
+	hr = internal_state->swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), &internal_state->backBuffer);
+	if (FAILED(hr))
+	{
+		return false;
+	}
+
+	hr = device->CreateRenderTargetView(internal_state->backBuffer.Get(), nullptr, &internal_state->renderTargetView);
+	if (FAILED(hr))
+	{
+		return false;
+	}
+
+	return true;
+}
 bool GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer) const
 {
 	auto internal_state = std::make_shared<Resource_DX11>();
@@ -2579,19 +2621,19 @@ void GraphicsDevice_DX11::SetName(GPUResource* pResource, const char* name)
 	internal_state->resource->SetPrivateData(WKPDID_D3DDebugObjectName, (UINT)strlen(name), name);
 }
 
-void GraphicsDevice_DX11::PresentBegin(CommandList cmd)
-{
-	ID3D11RenderTargetView* RTV = renderTargetView.Get();
-	deviceContexts[cmd]->OMSetRenderTargets(1, &RTV, 0);
-	float ClearColor[4] = { 0, 0, 0, 1.0f }; // red,green,blue,alpha
-	deviceContexts[cmd]->ClearRenderTargetView(RTV, ClearColor);
-}
-void GraphicsDevice_DX11::PresentEnd(CommandList cmd)
-{
-	SubmitCommandLists();
-
-	swapChain->Present(VSYNC, 0);
-}
+//void GraphicsDevice_DX11::PresentBegin(CommandList cmd)
+//{
+//	ID3D11RenderTargetView* RTV = renderTargetView.Get();
+//	deviceContexts[cmd]->OMSetRenderTargets(1, &RTV, 0);
+//	float ClearColor[4] = { 0, 0, 0, 1.0f }; // red,green,blue,alpha
+//	deviceContexts[cmd]->ClearRenderTargetView(RTV, ClearColor);
+//}
+//void GraphicsDevice_DX11::PresentEnd(CommandList cmd)
+//{
+//	SubmitCommandLists();
+//
+//	swapChain->Present(VSYNC, 0);
+//}
 
 
 CommandList GraphicsDevice_DX11::BeginCommandList()
@@ -2668,6 +2710,7 @@ CommandList GraphicsDevice_DX11::BeginCommandList()
 	prev_dss[cmd] = {};
 	prev_il[cmd] = {};
 	prev_pt[cmd] = {};
+	swapchains[cmd].clear();
 
 	memset(raster_uavs[cmd], 0, sizeof(raster_uavs[cmd]));
 	raster_uavs_slot[cmd] = {};
@@ -2694,6 +2737,11 @@ void GraphicsDevice_DX11::SubmitCommandLists()
 		assert(SUCCEEDED(hr));
 		immediateContext->ExecuteCommandList(commandLists[cmd].Get(), false);
 		commandLists[cmd].Reset();
+
+		for (auto& swapChain : swapchains[cmd])
+		{
+			swapChain->Present(VSYNC, 0);
+		}
 	}
 	immediateContext->ClearState();
 
@@ -2745,6 +2793,17 @@ void GraphicsDevice_DX11::commit_allocations(CommandList cmd)
 }
 
 
+void GraphicsDevice_DX11::RenderPassBegin(const SwapChain* swapchain, CommandList cmd)
+{
+	auto internal_state = to_internal(swapchain);
+	active_renderpass[cmd] = &dummyrenderpass;
+	swapchains[cmd].push_back(internal_state->swapChain);
+
+	ID3D11RenderTargetView* RTV = internal_state->renderTargetView.Get();
+	deviceContexts[cmd]->OMSetRenderTargets(1, &RTV, 0);
+	float ClearColor[4] = { 0, 0, 0, 1.0f }; // red,green,blue,alpha
+	deviceContexts[cmd]->ClearRenderTargetView(RTV, ClearColor);
+}
 void GraphicsDevice_DX11::RenderPassBegin(const RenderPass* renderpass, CommandList cmd)
 {
 	active_renderpass[cmd] = renderpass;

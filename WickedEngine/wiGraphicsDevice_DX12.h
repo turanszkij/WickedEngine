@@ -1,6 +1,5 @@
 #pragma once
 #include "CommonInclude.h"
-#include "wiPlatform.h"
 
 #ifdef _WIN32
 #define WICKEDENGINE_BUILD_DX12
@@ -35,8 +34,6 @@ namespace wiGraphics
 		Microsoft::WRL::ComPtr<IDXGIFactory6> factory;
 		Microsoft::WRL::ComPtr<ID3D12CommandQueue> directQueue;
 
-		Microsoft::WRL::ComPtr<ID3D12Resource> backBuffers[BACKBUFFER_COUNT];
-
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> dispatchIndirectCommandSignature;
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> drawInstancedIndirectCommandSignature;
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> drawIndexedInstancedIndirectCommandSignature;
@@ -51,8 +48,6 @@ namespace wiGraphics
 		uint32_t dsv_descriptor_size = 0;
 		uint32_t resource_descriptor_size = 0;
 		uint32_t sampler_descriptor_size = 0;
-
-		D3D12_CPU_DESCRIPTOR_HANDLE backbufferRTV[BACKBUFFER_COUNT] = {};
 
 		D3D12_CPU_DESCRIPTOR_HANDLE nullCBV = {};
 		D3D12_CPU_DESCRIPTOR_HANDLE nullSAM = {};
@@ -242,8 +237,6 @@ namespace wiGraphics
 		};
 		DescriptorBinder descriptors[COMMANDLIST_COUNT];
 
-		Microsoft::WRL::ComPtr<IDXGISwapChain3> swapChain;
-
 		std::vector<D3D12_RESOURCE_BARRIER> frame_barriers[COMMANDLIST_COUNT];
 
 		PRIMITIVETOPOLOGY prev_pt[COMMANDLIST_COUNT] = {};
@@ -261,6 +254,8 @@ namespace wiGraphics
 		const ID3D12RootSignature* active_rootsig_compute[COMMANDLIST_COUNT] = {};
 		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
 		SHADING_RATE prev_shadingrate[COMMANDLIST_COUNT] = {};
+		std::vector<Microsoft::WRL::ComPtr<IDXGISwapChain3>> swapchains[COMMANDLIST_COUNT];
+		Microsoft::WRL::ComPtr<ID3D12Resource> active_backbuffer[COMMANDLIST_COUNT];
 
 		struct DeferredPushConstantData
 		{
@@ -288,9 +283,10 @@ namespace wiGraphics
 		std::atomic<CommandList> cmd_count{ 0 };
 
 	public:
-		GraphicsDevice_DX12(wiPlatform::window_type window, bool fullscreen = false, bool debuglayer = false);
+		GraphicsDevice_DX12(wiPlatform::window_type window, bool fullscreen = false, bool debuglayer = false, bool gpuvalidation = false);
 		virtual ~GraphicsDevice_DX12();
 
+		bool CreateSwapChain(const SwapChainDesc* pDesc, wiPlatform::window_type window, SwapChain* swapChain) const override;
 		bool CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer) const override;
 		bool CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) const override;
 		bool CreateShader(SHADERSTAGE stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) const override;
@@ -319,9 +315,6 @@ namespace wiGraphics
 
 		void SetName(GPUResource* pResource, const char* name) override;
 
-		void PresentBegin(CommandList cmd) override;
-		void PresentEnd(CommandList cmd) override;
-
 		CommandList BeginCommandList() override;
 		void SubmitCommandLists() override;
 
@@ -336,6 +329,7 @@ namespace wiGraphics
 
 		///////////////Thread-sensitive////////////////////////
 
+		void RenderPassBegin(const SwapChain* swapchain, CommandList cmd) override;
 		void RenderPassBegin(const RenderPass* renderpass, CommandList cmd) override;
 		void RenderPassEnd(CommandList cmd) override;
 		void BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd) override;

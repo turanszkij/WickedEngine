@@ -1,6 +1,5 @@
 #pragma once
 #include "CommonInclude.h"
-#include "wiPlatform.h"
 
 #if __has_include("d3d11_3.h")
 #define WICKEDENGINE_BUILD_DX11
@@ -23,10 +22,8 @@ namespace wiGraphics
 	protected:
 		D3D_DRIVER_TYPE driverType;
 		D3D_FEATURE_LEVEL featureLevel;
+		Microsoft::WRL::ComPtr<IDXGIFactory2> DXGIFactory;
 		Microsoft::WRL::ComPtr<ID3D11Device> device;
-		Microsoft::WRL::ComPtr<IDXGISwapChain1> swapChain;
-		Microsoft::WRL::ComPtr<ID3D11RenderTargetView> renderTargetView;
-		Microsoft::WRL::ComPtr<ID3D11Texture2D> backBuffer;
 		Microsoft::WRL::ComPtr<ID3D11DeviceContext> immediateContext;
 		Microsoft::WRL::ComPtr<ID3D11DeviceContext> deviceContexts[COMMANDLIST_COUNT];
 		Microsoft::WRL::ComPtr<ID3D11CommandList> commandLists[COMMANDLIST_COUNT];
@@ -34,8 +31,8 @@ namespace wiGraphics
 
 		Microsoft::WRL::ComPtr<ID3D11Query> disjointQueries[BACKBUFFER_COUNT + 3];
 
-		uint32_t	stencilRef[COMMANDLIST_COUNT];
-		XMFLOAT4	blendFactor[COMMANDLIST_COUNT];
+		uint32_t stencilRef[COMMANDLIST_COUNT];
+		XMFLOAT4 blendFactor[COMMANDLIST_COUNT];
 
 		ID3D11VertexShader* prev_vs[COMMANDLIST_COUNT] = {};
 		ID3D11PixelShader* prev_ps[COMMANDLIST_COUNT] = {};
@@ -51,12 +48,14 @@ namespace wiGraphics
 		const DepthStencilState* prev_dss[COMMANDLIST_COUNT] = {};
 		const InputLayout* prev_il[COMMANDLIST_COUNT] = {};
 		PRIMITIVETOPOLOGY prev_pt[COMMANDLIST_COUNT] = {};
+		std::vector<Microsoft::WRL::ComPtr<IDXGISwapChain1>> swapchains[COMMANDLIST_COUNT];
 
 		const PipelineState* active_pso[COMMANDLIST_COUNT] = {};
 		bool dirty_pso[COMMANDLIST_COUNT] = {};
 		void pso_validate(CommandList cmd);
 
 		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
+		RenderPass dummyrenderpass;
 
 		ID3D11UnorderedAccessView* raster_uavs[COMMANDLIST_COUNT][8] = {};
 		uint8_t raster_uavs_slot[COMMANDLIST_COUNT] = {};
@@ -84,6 +83,7 @@ namespace wiGraphics
 	public:
 		GraphicsDevice_DX11(wiPlatform::window_type window, bool fullscreen = false, bool debuglayer = false);
 
+		bool CreateSwapChain(const SwapChainDesc* pDesc, wiPlatform::window_type window, SwapChain* swapChain) const override;
 		bool CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer) const override;
 		bool CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) const override;
 		bool CreateShader(SHADERSTAGE stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) const override;
@@ -103,9 +103,6 @@ namespace wiGraphics
 
 		void SetName(GPUResource* pResource, const char* name) override;
 
-		void PresentBegin(CommandList cmd) override;
-		void PresentEnd(CommandList cmd) override;
-
 		void WaitForGPU() override;
 
 		CommandList BeginCommandList() override;
@@ -119,6 +116,7 @@ namespace wiGraphics
 
 		///////////////Thread-sensitive////////////////////////
 
+		void RenderPassBegin(const SwapChain* swapchain, CommandList cmd) override;
 		void RenderPassBegin(const RenderPass* renderpass, CommandList cmd) override;
 		void RenderPassEnd(CommandList cmd) override;
 		void BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd) override;

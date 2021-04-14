@@ -4,12 +4,14 @@
 #include "wiResourceManager.h"
 #include "wiColor.h"
 #include "wiFadeManager.h"
+#include "wiGraphics.h"
 
 class RenderPath;
 
 class MainComponent
 {
 protected:
+	wiGraphics::SwapChain swapChain;
 	RenderPath* activePath = nullptr;
 	float targetFrameRate = 60;
 	bool frameskip = true;
