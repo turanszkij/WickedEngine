@@ -1420,6 +1420,13 @@ namespace DX12_Internal
 
 		~SwapChain_DX12()
 		{
+			allocationhandler->destroylocker.lock();
+			uint64_t framecount = allocationhandler->framecount;
+			for (auto& x : backBuffers)
+			{
+				allocationhandler->destroyer_resources.push_back(std::make_pair(x, framecount));
+			}
+			allocationhandler->destroylocker.unlock();
 			for (auto& x : backbufferRTV)
 			{
 				allocationhandler->descriptors_rtv.free(x);
@@ -2778,6 +2785,7 @@ using namespace DX12_Internal;
 		else
 		{
 			// Resize swapchain:
+			WaitForGPU();
 			internal_state->backBuffers.clear();
 			for (auto& x : internal_state->backbufferRTV)
 			{
@@ -5379,61 +5387,6 @@ using namespace DX12_Internal;
 		}
 	}
 
-//	void GraphicsDevice_DX12::PresentBegin(CommandList cmd)
-//	{
-//		D3D12_RESOURCE_BARRIER barrier = {};
-//		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-//		barrier.Transition.pResource = backBuffers[swapChain->GetCurrentBackBufferIndex()].Get();
-//		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-//		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-//		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-//		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-//
-//		frame_barriers[cmd].push_back(barrier);
-//		barrier_flush(cmd);
-//
-//		const float clearcolor[] = { 0,0,0,1 };
-//
-//		D3D12_RENDER_PASS_RENDER_TARGET_DESC RTV = {};
-//		RTV.cpuDescriptor = backbufferRTV[swapChain->GetCurrentBackBufferIndex()];
-//		RTV.BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
-//		RTV.BeginningAccess.Clear.ClearValue.Color[0] = clearcolor[0];
-//		RTV.BeginningAccess.Clear.ClearValue.Color[1] = clearcolor[1];
-//		RTV.BeginningAccess.Clear.ClearValue.Color[2] = clearcolor[2];
-//		RTV.BeginningAccess.Clear.ClearValue.Color[3] = clearcolor[3];
-//		RTV.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
-//		GetDirectCommandList(cmd)->BeginRenderPass(1, &RTV, nullptr, D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES);
-//
-//		active_renderpass[cmd] = &dummyRenderpass;
-//	}
-//	void GraphicsDevice_DX12::PresentEnd(CommandList cmd)
-//	{
-//		GetDirectCommandList(cmd)->EndRenderPass();
-//
-//		active_renderpass[cmd] = nullptr;
-//
-//		// Indicate that the back buffer will now be used to present.
-//		D3D12_RESOURCE_BARRIER barrier = {};
-//		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-//		barrier.Transition.pResource = backBuffers[swapChain->GetCurrentBackBufferIndex()].Get();
-//		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-//		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-//		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-//		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-//		frame_barriers[cmd].push_back(barrier);
-//
-//		SubmitCommandLists();
-//
-//		HRESULT hr = swapChain->Present(VSYNC, 0);
-//		assert(SUCCEEDED(hr));
-//
-//#if 0
-//		D3D12MA::Stats stats = {};
-//		allocationhandler->allocator->CalculateStats(&stats);
-//		std::cout << "D3D12MA Stats: " << stats.Total.UsedBytes;
-//#endif
-//	}
-
 	CommandList GraphicsDevice_DX12::BeginCommandList()
 	{
 		HRESULT hr;
@@ -5570,9 +5523,9 @@ using namespace DX12_Internal;
 
 			for (CommandList cmd = 0; cmd < cmd_last; ++cmd)
 			{
-				for (auto& swapChain : swapchains[cmd])
+				for (auto& swapchain : swapchains[cmd])
 				{
-					swapChain->Present(VSYNC, 0);
+					to_internal(swapchain)->swapChain->Present(swapchain->desc.vsync, 0);
 				}
 			}
 		}
@@ -5607,7 +5560,7 @@ using namespace DX12_Internal;
 
 	}
 
-	void GraphicsDevice_DX12::WaitForGPU()
+	void GraphicsDevice_DX12::WaitForGPU() const
 	{
 		ComPtr<ID3D12Fence> fence;
 		HRESULT hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&fence));
@@ -5652,8 +5605,8 @@ using namespace DX12_Internal;
 
 	void GraphicsDevice_DX12::RenderPassBegin(const SwapChain* swapchain, CommandList cmd)
 	{
+		swapchains[cmd].push_back(swapchain);
 		auto internal_state = to_internal(swapchain);
-		swapchains[cmd].push_back(internal_state->swapChain);
 		active_backbuffer[cmd] = internal_state->backBuffers[internal_state->swapChain->GetCurrentBackBufferIndex()];
 
 		D3D12_RESOURCE_BARRIER barrier = {};

@@ -6,6 +6,7 @@
 
 static const int SYSTEM_EVENT_RELOAD_SHADERS = -1;
 static const int SYSTEM_EVENT_CHANGE_RESOLUTION = -2;
+static const int SYSTEM_EVENT_CHANGE_VSYNC = -3;
 static const int SYSTEM_EVENT_CHANGE_DPI = -4;
 static const int SYSTEM_EVENT_THREAD_SAFE_POINT = -5;
 

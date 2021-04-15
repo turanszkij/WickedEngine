@@ -48,7 +48,7 @@ namespace wiGraphics
 		const DepthStencilState* prev_dss[COMMANDLIST_COUNT] = {};
 		const InputLayout* prev_il[COMMANDLIST_COUNT] = {};
 		PRIMITIVETOPOLOGY prev_pt[COMMANDLIST_COUNT] = {};
-		std::vector<Microsoft::WRL::ComPtr<IDXGISwapChain1>> swapchains[COMMANDLIST_COUNT];
+		std::vector<const SwapChain*> swapchains[COMMANDLIST_COUNT];
 
 		const PipelineState* active_pso[COMMANDLIST_COUNT] = {};
 		bool dirty_pso[COMMANDLIST_COUNT] = {};
@@ -103,7 +103,7 @@ namespace wiGraphics
 
 		void SetName(GPUResource* pResource, const char* name) override;
 
-		void WaitForGPU() override;
+		void WaitForGPU() const override;
 
 		CommandList BeginCommandList() override;
 		void SubmitCommandLists() override;

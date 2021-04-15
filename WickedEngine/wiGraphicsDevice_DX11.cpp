@@ -2644,21 +2644,6 @@ void GraphicsDevice_DX11::SetName(GPUResource* pResource, const char* name)
 	internal_state->resource->SetPrivateData(WKPDID_D3DDebugObjectName, (UINT)strlen(name), name);
 }
 
-//void GraphicsDevice_DX11::PresentBegin(CommandList cmd)
-//{
-//	ID3D11RenderTargetView* RTV = renderTargetView.Get();
-//	deviceContexts[cmd]->OMSetRenderTargets(1, &RTV, 0);
-//	float ClearColor[4] = { 0, 0, 0, 1.0f }; // red,green,blue,alpha
-//	deviceContexts[cmd]->ClearRenderTargetView(RTV, ClearColor);
-//}
-//void GraphicsDevice_DX11::PresentEnd(CommandList cmd)
-//{
-//	SubmitCommandLists();
-//
-//	swapChain->Present(VSYNC, 0);
-//}
-
-
 CommandList GraphicsDevice_DX11::BeginCommandList()
 {
 	CommandList cmd = cmd_count.fetch_add(1);
@@ -2761,9 +2746,9 @@ void GraphicsDevice_DX11::SubmitCommandLists()
 		immediateContext->ExecuteCommandList(commandLists[cmd].Get(), false);
 		commandLists[cmd].Reset();
 
-		for (auto& swapChain : swapchains[cmd])
+		for (auto& swapchain : swapchains[cmd])
 		{
-			swapChain->Present(VSYNC, 0);
+			to_internal(swapchain)->swapChain->Present(swapchain->desc.vsync, 0);
 		}
 	}
 	immediateContext->ClearState();
@@ -2784,7 +2769,7 @@ void GraphicsDevice_DX11::SubmitCommandLists()
 	FRAMECOUNT++;
 }
 
-void GraphicsDevice_DX11::WaitForGPU()
+void GraphicsDevice_DX11::WaitForGPU() const
 {
 	immediateContext->Flush();
 
@@ -2818,9 +2803,9 @@ void GraphicsDevice_DX11::commit_allocations(CommandList cmd)
 
 void GraphicsDevice_DX11::RenderPassBegin(const SwapChain* swapchain, CommandList cmd)
 {
-	auto internal_state = to_internal(swapchain);
+	swapchains[cmd].push_back(swapchain);
 	active_renderpass[cmd] = &dummyrenderpass;
-	swapchains[cmd].push_back(internal_state->swapChain);
+	auto internal_state = to_internal(swapchain);
 
 	ID3D11RenderTargetView* RTV = internal_state->renderTargetView.Get();
 	deviceContexts[cmd]->OMSetRenderTargets(1, &RTV, 0);

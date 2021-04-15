@@ -2769,7 +2769,7 @@ using namespace Vulkan_Internal;
 		createInfo.preTransform = internal_state->swapchain_capabilities.currentTransform;
 		createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 		createInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR; // The only one that is always supported
-		if (!VSYNC)
+		if (!pDesc->vsync)
 		{
 			// The immediate present mode is not necessarily supported:
 			for (auto& presentmode : internal_state->swapchain_presentModes)
@@ -5694,65 +5694,6 @@ using namespace Vulkan_Internal;
 		}
 	}
 
-//	void GraphicsDevice_Vulkan::PresentBegin(CommandList cmd)
-//	{
-//		VkResult res = vkAcquireNextImageKHR(
-//			device, swapChain,
-//			0xFFFFFFFFFFFFFFFF,
-//			GetFrameResources().swapchainAcquireSemaphore,
-//			VK_NULL_HANDLE,
-//			&swapChainImageIndex
-//		);
-//		if (res != VK_SUCCESS)
-//		{
-//			// Handle outdated error in acquire.
-//			if (res == VK_SUBOPTIMAL_KHR || res == VK_ERROR_OUT_OF_DATE_KHR)
-//			{
-//				CreateBackBufferResources();
-//				PresentBegin(cmd);
-//				return;
-//			}
-//		}
-//		barrier_flush(cmd);
-//
-//		VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
-//		VkRenderPassBeginInfo renderPassInfo = {};
-//		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-//		renderPassInfo.renderPass = defaultRenderPass;
-//		renderPassInfo.framebuffer = swapChainFramebuffers[swapChainImageIndex];
-//		renderPassInfo.renderArea.offset = { 0, 0 };
-//		renderPassInfo.renderArea.extent = swapChainExtent;
-//		renderPassInfo.clearValueCount = 1;
-//		renderPassInfo.pClearValues = &clearColor;
-//		vkCmdBeginRenderPass(GetDirectCommandList(cmd), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-//
-//	}
-//	void GraphicsDevice_Vulkan::PresentEnd(CommandList cmd)
-//	{
-//		vkCmdEndRenderPass(GetDirectCommandList(cmd));
-//
-//		SubmitCommandLists();
-//
-//		VkPresentInfoKHR presentInfo = {};
-//		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-//
-//		presentInfo.waitSemaphoreCount = 1;
-//		presentInfo.pWaitSemaphores = &frames[swapChainImageIndex].swapchainReleaseSemaphore;
-//
-//		presentInfo.swapchainCount = 1;
-//		presentInfo.pSwapchains = &swapChain;
-//		presentInfo.pImageIndices = &swapChainImageIndex;
-//
-//		VkResult res = vkQueuePresentKHR(presentQueue, &presentInfo);
-//		assert(res == VK_SUCCESS);
-//
-//#if 0
-//		VmaStats stats = {};
-//		vmaCalculateStats(allocationhandler->allocator, &stats);
-//		std::cout << "VMA Stats: " << stats.total.usedBytes;
-//#endif
-//	}
-
 	CommandList GraphicsDevice_Vulkan::BeginCommandList()
 	{
 		VkResult res;
@@ -6010,7 +5951,7 @@ using namespace Vulkan_Internal;
 		copyQueueLock.unlock();
 	}
 
-	void GraphicsDevice_Vulkan::WaitForGPU()
+	void GraphicsDevice_Vulkan::WaitForGPU() const
 	{
 		VkResult res = vkQueueWaitIdle(graphicsQueue);
 		assert(res == VK_SUCCESS);

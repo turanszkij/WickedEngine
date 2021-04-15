@@ -22,10 +22,10 @@ void RendererWindow::Create(EditorComponent* editor)
 	vsyncCheckBox.SetScriptTip("SetVSyncEnabled(opt bool enabled)");
 	vsyncCheckBox.SetPos(XMFLOAT2(x, y += step));
 	vsyncCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	vsyncCheckBox.OnClick([](wiEventArgs args) {
-		wiRenderer::GetDevice()->SetVSyncEnabled(args.bValue);
+	vsyncCheckBox.OnClick([=](wiEventArgs args) {
+		wiEvent::FireEvent(SYSTEM_EVENT_CHANGE_VSYNC, (uint64_t)args.bValue);
 	});
-	vsyncCheckBox.SetCheck(wiRenderer::GetDevice()->GetVSyncEnabled());
+	vsyncCheckBox.SetCheck(editor->main->swapChain.desc.vsync);
 	AddWidget(&vsyncCheckBox);
 
 	occlusionCullingCheckBox.Create("Occlusion Culling: ");

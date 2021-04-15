@@ -16,7 +16,6 @@ namespace wiGraphics
 	{
 	protected:
 		uint64_t FRAMECOUNT = 0;
-		bool VSYNC = true;
 		int RESOLUTIONWIDTH = 0;
 		int RESOLUTIONHEIGHT = 0;
 		bool DEBUGDEVICE = false;
@@ -30,7 +29,6 @@ namespace wiGraphics
 		uint64_t TIMESTAMP_FREQUENCY = 0;
 
 		int dpi = 96;
-		wiEvent::Handle dpi_change_event = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_DPI, [this](uint64_t userdata) { dpi = int(userdata & 0xFFFF); });
 
 	public:
 		virtual ~GraphicsDevice() = default;
@@ -71,11 +69,9 @@ namespace wiGraphics
 		//	This will make every command list to be in "available" state and restarts them
 		virtual void SubmitCommandLists() = 0;
 
-		virtual void WaitForGPU() = 0;
+		virtual void WaitForGPU() const = 0;
 		virtual void ClearPipelineStateCache() {};
 
-		inline bool GetVSyncEnabled() const { return VSYNC; }
-		virtual void SetVSyncEnabled(bool value) { VSYNC = value; }
 		inline uint64_t GetFrameCount() const { return FRAMECOUNT; }
 		inline uint64_t GetFrameIndex() const { return FRAMECOUNT % BACKBUFFER_COUNT; }
 

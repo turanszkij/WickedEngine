@@ -418,5 +418,16 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 		bool success = wiRenderer::GetDevice()->CreateSwapChain(&desc, window, &swapChain);
 		assert(success);
 	});
+
+	swapChainVsyncChangeEvent = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_VSYNC, [this, window](uint64_t userdata) {
+		SwapChainDesc desc = swapChain.desc;
+		desc.vsync = userdata != 0;
+		bool success = wiRenderer::GetDevice()->CreateSwapChain(&desc, window, &swapChain);
+		assert(success);
+	});
+
+	dpiChangeEvent = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_DPI, [this](uint64_t userdata) {
+		dpi = int(userdata & 0xFFFF);
+	});
 }
 

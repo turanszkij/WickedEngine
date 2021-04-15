@@ -255,7 +255,7 @@ namespace wiGraphics
 		const ID3D12RootSignature* active_rootsig_compute[COMMANDLIST_COUNT] = {};
 		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
 		SHADING_RATE prev_shadingrate[COMMANDLIST_COUNT] = {};
-		std::vector<Microsoft::WRL::ComPtr<IDXGISwapChain3>> swapchains[COMMANDLIST_COUNT];
+		std::vector<const SwapChain*> swapchains[COMMANDLIST_COUNT];
 		Microsoft::WRL::ComPtr<ID3D12Resource> active_backbuffer[COMMANDLIST_COUNT];
 
 		struct DeferredPushConstantData
@@ -319,7 +319,7 @@ namespace wiGraphics
 		CommandList BeginCommandList() override;
 		void SubmitCommandLists() override;
 
-		void WaitForGPU() override;
+		void WaitForGPU() const override;
 		void ClearPipelineStateCache() override;
 
 		void SetResolution(int width, int height) override;

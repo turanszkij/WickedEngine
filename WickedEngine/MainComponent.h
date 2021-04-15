@@ -11,8 +11,11 @@ class RenderPath;
 class MainComponent
 {
 protected:
-	wiGraphics::SwapChain swapChain;
 	wiEvent::Handle swapChainResizeEvent;
+	wiEvent::Handle swapChainVsyncChangeEvent;
+
+	int dpi = 96;
+	wiEvent::Handle dpiChangeEvent;
 
 	RenderPath* activePath = nullptr;
 	float targetFrameRate = 60;
@@ -31,6 +34,7 @@ protected:
 
 public:
 	bool is_window_active = true;
+	wiGraphics::SwapChain swapChain;
 
 	// Runs the main engine loop
 	void Run();

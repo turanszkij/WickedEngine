@@ -130,7 +130,7 @@ namespace wiRenderer_BindLua
 		int argc = wiLua::SGetArgCount(L);
 		if (argc > 0)
 		{
-			wiRenderer::GetDevice()->SetVSyncEnabled(wiLua::SGetBool(L, 1));
+			wiEvent::FireEvent(SYSTEM_EVENT_CHANGE_VSYNC, (uint64_t)wiLua::SGetBool(L, 1));
 		}
 		return 0;
 	}
@@ -139,7 +139,10 @@ namespace wiRenderer_BindLua
 		int argc = wiLua::SGetArgCount(L);
 		if (argc > 1)
 		{
-			wiRenderer::GetDevice()->SetResolution(wiLua::SGetInt(L, 1), wiLua::SGetInt(L, 2));
+			uint64_t data = 0;
+			data |= wiLua::SGetInt(L, 1);
+			data |= wiLua::SGetInt(L, 2) << 16;
+			wiEvent::FireEvent(SYSTEM_EVENT_CHANGE_RESOLUTION, data);
 		}
 		else
 		{
