@@ -2707,52 +2707,82 @@ using namespace DX12_Internal;
 
 	bool GraphicsDevice_DX12::CreateSwapChain(const SwapChainDesc* pDesc, wiPlatform::window_type window, SwapChain* swapChain) const
 	{
-		auto internal_state = std::make_shared<SwapChain_DX12>();
+		auto internal_state = std::static_pointer_cast<SwapChain_DX12>(swapChain->internal_state);
+		if (swapChain->internal_state == nullptr)
+		{
+			internal_state = std::make_shared<SwapChain_DX12>();
+		}
 		internal_state->allocationhandler = allocationhandler;
 		swapChain->internal_state = internal_state;
 		swapChain->desc = *pDesc;
 		HRESULT hr;
 
-		ComPtr<IDXGISwapChain1> _swapChain;
+		if (internal_state->swapChain == nullptr)
+		{
+			// Create swapchain:
+			ComPtr<IDXGISwapChain1> _swapChain;
 
-		DXGI_SWAP_CHAIN_DESC1 sd = {};
-		sd.Width = RESOLUTIONWIDTH;
-		sd.Height = RESOLUTIONHEIGHT;
-		sd.Format = _ConvertFormat(GetBackBufferFormat());
-		sd.Stereo = false;
-		sd.SampleDesc.Count = 1;
-		sd.SampleDesc.Quality = 0;
-		sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-		sd.BufferCount = BACKBUFFER_COUNT;
-		sd.Flags = 0;
-		sd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
-		sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+			DXGI_SWAP_CHAIN_DESC1 sd = {};
+			sd.Width = RESOLUTIONWIDTH;
+			sd.Height = RESOLUTIONHEIGHT;
+			sd.Format = _ConvertFormat(GetBackBufferFormat());
+			sd.Stereo = false;
+			sd.SampleDesc.Count = 1;
+			sd.SampleDesc.Quality = 0;
+			sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+			sd.BufferCount = BACKBUFFER_COUNT;
+			sd.Flags = 0;
+			sd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+			sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 
 #ifndef PLATFORM_UWP
-		sd.Scaling = DXGI_SCALING_STRETCH;
+			sd.Scaling = DXGI_SCALING_STRETCH;
 
-		DXGI_SWAP_CHAIN_FULLSCREEN_DESC fullscreenDesc;
-		fullscreenDesc.RefreshRate.Numerator = 60;
-		fullscreenDesc.RefreshRate.Denominator = 1;
-		fullscreenDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED; // needs to be unspecified for correct fullscreen scaling!
-		fullscreenDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE;
-		fullscreenDesc.Windowed = !pDesc->fullscreen;
-		hr = factory->CreateSwapChainForHwnd(directQueue.Get(), window, &sd, &fullscreenDesc, nullptr, &_swapChain);
+			DXGI_SWAP_CHAIN_FULLSCREEN_DESC fullscreenDesc;
+			fullscreenDesc.RefreshRate.Numerator = 60;
+			fullscreenDesc.RefreshRate.Denominator = 1;
+			fullscreenDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED; // needs to be unspecified for correct fullscreen scaling!
+			fullscreenDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE;
+			fullscreenDesc.Windowed = !pDesc->fullscreen;
+			hr = factory->CreateSwapChainForHwnd(directQueue.Get(), window, &sd, &fullscreenDesc, nullptr, &_swapChain);
 #else
-		sd.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
+			sd.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
 
-		hr = factory->CreateSwapChainForCoreWindow(directQueue.Get(), static_cast<IUnknown*>(winrt::get_abi(window)), &sd, nullptr, &_swapChain);
+			hr = factory->CreateSwapChainForCoreWindow(directQueue.Get(), static_cast<IUnknown*>(winrt::get_abi(window)), &sd, nullptr, &_swapChain);
 #endif
 
-		if (FAILED(hr))
-		{
-			return false;
-		}
+			if (FAILED(hr))
+			{
+				return false;
+			}
 
-		hr = _swapChain.As(&internal_state->swapChain);
-		if (FAILED(hr))
+			hr = _swapChain.As(&internal_state->swapChain);
+			if (FAILED(hr))
+			{
+				return false;
+			}
+		}
+		else
 		{
-			return false;
+			// Resize swapchain:
+			for (uint32_t i = 0; i < BACKBUFFER_COUNT; ++i)
+			{
+				internal_state->backBuffers[i] = nullptr;
+
+				if (internal_state->backbufferRTV[i].ptr != 0)
+				{
+					allocationhandler->descriptors_rtv.free(internal_state->backbufferRTV[i]);
+				}
+			}
+
+			hr = internal_state->swapChain->ResizeBuffers(
+				GetBackBufferCount(),
+				pDesc->width,
+				pDesc->height,
+				_ConvertFormat(pDesc->format),
+				0
+			);
+			assert(SUCCEEDED(hr));
 		}
 
 		for (uint32_t i = 0; i < BACKBUFFER_COUNT; ++i)

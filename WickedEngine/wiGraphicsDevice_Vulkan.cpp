@@ -2655,12 +2655,19 @@ using namespace Vulkan_Internal;
 
 	bool GraphicsDevice_Vulkan::CreateSwapChain(const SwapChainDesc* pDesc, wiPlatform::window_type window, SwapChain* swapChain) const
 	{
-		auto internal_state = std::make_shared<SwapChain_Vulkan>();
+		auto internal_state = std::static_pointer_cast<SwapChain_Vulkan>(swapChain->internal_state);
+		if (swapChain->internal_state == nullptr)
+		{
+			internal_state = std::make_shared<SwapChain_Vulkan>();
+		}
 		internal_state->allocationhandler = allocationhandler;
 		swapChain->internal_state = internal_state;
 		swapChain->desc = *pDesc;
 
+		VkResult res;
+
 		// Surface creation:
+		if(internal_state->surface == VK_NULL_HANDLE)
 		{
 #ifdef _WIN32
 			VkWin32SurfaceCreateInfoKHR createInfo = {};
@@ -2668,11 +2675,8 @@ using namespace Vulkan_Internal;
 			createInfo.hwnd = window;
 			createInfo.hinstance = GetModuleHandle(nullptr);
 
-			auto CreateWin32SurfaceKHR = (PFN_vkCreateWin32SurfaceKHR)vkGetInstanceProcAddr(instance, "vkCreateWin32SurfaceKHR");
-
-			if (!CreateWin32SurfaceKHR || CreateWin32SurfaceKHR(instance, &createInfo, nullptr, &internal_state->surface) != VK_SUCCESS) {
-				assert(0);
-			}
+			res = vkCreateWin32SurfaceKHR(instance, &createInfo, nullptr, &internal_state->surface);
+			assert(res == VK_SUCCESS);
 #elif SDL2
 			if (!SDL_Vulkan_CreateSurface(window, instance, &internal_state->surface))
 			{
@@ -2687,7 +2691,7 @@ using namespace Vulkan_Internal;
 		for (const auto& queueFamily : queueFamilies)
 		{
 			VkBool32 presentSupport = false;
-			VkResult res = vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, (uint32_t)familyIndex, internal_state->surface, &presentSupport);
+			res = vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, (uint32_t)familyIndex, internal_state->surface, &presentSupport);
 			assert(res == VK_SUCCESS);
 
 			if (internal_state->presentFamily < 0 && queueFamily.queueCount > 0 && presentSupport)
@@ -2698,8 +2702,9 @@ using namespace Vulkan_Internal;
 
 			familyIndex++;
 		}
+		assert(internal_state->presentFamily == graphicsFamily);
 
-		VkResult res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, internal_state->surface, &internal_state->swapchain_capabilities);
+		res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, internal_state->surface, &internal_state->swapchain_capabilities);
 		assert(res == VK_SUCCESS);
 
 		uint32_t formatCount;
@@ -2777,15 +2782,15 @@ using namespace Vulkan_Internal;
 			}
 		}
 		createInfo.clipped = VK_TRUE;
-		//createInfo.oldSwapchain = internal_state->swapChain;
+		createInfo.oldSwapchain = internal_state->swapChain;
 
 		res = vkCreateSwapchainKHR(device, &createInfo, nullptr, &internal_state->swapChain);
 		assert(res == VK_SUCCESS);
 
-		//if (createInfo.oldSwapchain != VK_NULL_HANDLE)
-		//{
-		//	vkDestroySwapchainKHR(device, createInfo.oldSwapchain, nullptr);
-		//}
+		if (createInfo.oldSwapchain != VK_NULL_HANDLE)
+		{
+			vkDestroySwapchainKHR(device, createInfo.oldSwapchain, nullptr);
+		}
 
 		res = vkGetSwapchainImagesKHR(device, internal_state->swapChain, &imageCount, nullptr);
 		assert(res == VK_SUCCESS);
@@ -2849,10 +2854,15 @@ using namespace Vulkan_Internal;
 			renderPassInfo.dependencyCount = 1;
 			renderPassInfo.pDependencies = &dependency;
 
-			//if (defaultRenderPass != VK_NULL_HANDLE)
-			//{
-			//	allocationhandler->destroyer_renderpasses.push_back(std::make_pair(defaultRenderPass, allocationhandler->framecount));
-			//}
+			{
+				auto renderpass_internal = to_internal(&internal_state->renderpass);
+				if (renderpass_internal != nullptr && renderpass_internal->renderpass != VK_NULL_HANDLE)
+				{
+					allocationhandler->destroyer_renderpasses.push_back(std::make_pair(renderpass_internal->renderpass, allocationhandler->framecount));
+				}
+			}
+
+			internal_state->renderpass = RenderPass();
 			auto renderpass_internal = std::make_shared<RenderPass_Vulkan>();
 			internal_state->renderpass.internal_state = renderpass_internal;
 			internal_state->renderpass.desc.attachments.push_back(RenderPassAttachment::RenderTarget());
@@ -2907,16 +2917,23 @@ using namespace Vulkan_Internal;
 			}
 			res = vkCreateFramebuffer(device, &framebufferInfo, nullptr, &internal_state->swapChainFramebuffers[i]);
 			assert(res == VK_SUCCESS);
-
-
 		}
+
 
 		VkSemaphoreCreateInfo semaphoreInfo = {};
 		semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-		res = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &internal_state->swapchainAcquireSemaphore);
-		assert(res == VK_SUCCESS);
-		res = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &internal_state->swapchainReleaseSemaphore);
-		assert(res == VK_SUCCESS);
+
+		if (internal_state->swapchainAcquireSemaphore == nullptr)
+		{
+			res = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &internal_state->swapchainAcquireSemaphore);
+			assert(res == VK_SUCCESS);
+		}
+
+		if (internal_state->swapchainReleaseSemaphore == nullptr)
+		{
+			res = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &internal_state->swapchainReleaseSemaphore);
+			assert(res == VK_SUCCESS);
+		}
 
 		return true;
 	}
@@ -6043,6 +6060,7 @@ using namespace Vulkan_Internal;
 			VK_NULL_HANDLE,
 			&internal_state->swapChainImageIndex
 		);
+		assert(res == VK_SUCCESS);
 		//if (res != VK_SUCCESS)
 		//{
 		//	// Handle outdated error in acquire.

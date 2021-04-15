@@ -12,6 +12,8 @@ class MainComponent
 {
 protected:
 	wiGraphics::SwapChain swapChain;
+	wiEvent::Handle swapChainResizeEvent;
+
 	RenderPath* activePath = nullptr;
 	float targetFrameRate = 60;
 	bool frameskip = true;

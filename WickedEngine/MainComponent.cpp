@@ -405,5 +405,16 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 	desc.height = windowsize.y;
 	bool success = wiRenderer::GetDevice()->CreateSwapChain(&desc, window, &swapChain);
 	assert(success);
+
+	swapChainResizeEvent = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_RESOLUTION, [this, window](uint64_t userdata) {
+		int width = userdata & 0xFFFF;
+		int height = (userdata >> 16) & 0xFFFF;
+
+		SwapChainDesc desc;
+		desc.width = (uint32_t)width;
+		desc.height = (uint32_t)height;
+		bool success = wiRenderer::GetDevice()->CreateSwapChain(&desc, window, &swapChain);
+		assert(success);
+	});
 }
 

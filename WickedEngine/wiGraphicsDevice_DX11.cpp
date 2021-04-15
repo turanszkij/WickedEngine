@@ -1557,56 +1557,79 @@ Texture GraphicsDevice_DX11::GetBackBuffer()
 
 bool GraphicsDevice_DX11::CreateSwapChain(const SwapChainDesc* pDesc, wiPlatform::window_type window, SwapChain* swapChain) const
 {
-	auto internal_state = std::make_shared<SwapChain_DX11>();
+	auto internal_state = std::static_pointer_cast<SwapChain_DX11>(swapChain->internal_state);
+	if (swapChain->internal_state == nullptr)
+	{
+		internal_state = std::make_shared<SwapChain_DX11>();
+	}
 	swapChain->internal_state = internal_state;
 	swapChain->desc = *pDesc;
 	HRESULT hr;
 
-	DXGI_SWAP_CHAIN_DESC1 sd = {};
-	sd.Width = pDesc->width;
-	sd.Height = pDesc->height;
-	sd.Format = _ConvertFormat(pDesc->format);
-	sd.Stereo = false;
-	sd.SampleDesc.Count = 1;
-	sd.SampleDesc.Quality = 0;
-	sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	sd.BufferCount = BACKBUFFER_COUNT;
-	sd.Flags = 0;
-	sd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
-	sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+	if (internal_state->swapChain == nullptr)
+	{
+		// Create swapchain:
+		DXGI_SWAP_CHAIN_DESC1 sd = {};
+		sd.Width = pDesc->width;
+		sd.Height = pDesc->height;
+		sd.Format = _ConvertFormat(pDesc->format);
+		sd.Stereo = false;
+		sd.SampleDesc.Count = 1;
+		sd.SampleDesc.Quality = 0;
+		sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+		sd.BufferCount = BACKBUFFER_COUNT;
+		sd.Flags = 0;
+		sd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+		sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 
 #ifdef PLATFORM_UWP
-	sd.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
+		sd.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
 
-	hr = DXGIFactory->CreateSwapChainForCoreWindow(
-		device.Get(),
-		static_cast<IUnknown*>(winrt::get_abi(window)),
-		&sd,
-		nullptr,
-		&internal_state->swapChain
-	);
+		hr = DXGIFactory->CreateSwapChainForCoreWindow(
+			device.Get(),
+			static_cast<IUnknown*>(winrt::get_abi(window)),
+			&sd,
+			nullptr,
+			&internal_state->swapChain
+		);
 #else
-	sd.Scaling = DXGI_SCALING_STRETCH;
+		sd.Scaling = DXGI_SCALING_STRETCH;
 
-	DXGI_SWAP_CHAIN_FULLSCREEN_DESC fullscreenDesc;
-	fullscreenDesc.RefreshRate.Numerator = 60;
-	fullscreenDesc.RefreshRate.Denominator = 1;
-	fullscreenDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED; // needs to be unspecified for correct fullscreen scaling!
-	fullscreenDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE;
-	fullscreenDesc.Windowed = !pDesc->fullscreen;
-	hr = DXGIFactory->CreateSwapChainForHwnd(
-		device.Get(),
-		window,
-		&sd,
-		&fullscreenDesc,
-		nullptr,
-		&internal_state->swapChain
-	);
+		DXGI_SWAP_CHAIN_FULLSCREEN_DESC fullscreenDesc;
+		fullscreenDesc.RefreshRate.Numerator = 60;
+		fullscreenDesc.RefreshRate.Denominator = 1;
+		fullscreenDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED; // needs to be unspecified for correct fullscreen scaling!
+		fullscreenDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE;
+		fullscreenDesc.Windowed = !pDesc->fullscreen;
+		hr = DXGIFactory->CreateSwapChainForHwnd(
+			device.Get(),
+			window,
+			&sd,
+			&fullscreenDesc,
+			nullptr,
+			&internal_state->swapChain
+		);
 #endif
 
-	if (FAILED(hr))
+		if (FAILED(hr))
+		{
+			return false;
+		}
+	}
+	else
 	{
-		return false;
+		// Resize swapchain:
+		internal_state->backBuffer.Reset();
+		internal_state->renderTargetView.Reset();
+
+		hr = internal_state->swapChain->ResizeBuffers(
+			GetBackBufferCount(),
+			pDesc->width,
+			pDesc->height,
+			_ConvertFormat(pDesc->format),
+			0
+		);
+		assert(SUCCEEDED(hr));
 	}
 
 	hr = internal_state->swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), &internal_state->backBuffer);
