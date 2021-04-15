@@ -1415,14 +1415,14 @@ namespace DX12_Internal
 	{
 		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
 		Microsoft::WRL::ComPtr<IDXGISwapChain3> swapChain;
-		Microsoft::WRL::ComPtr<ID3D12Resource> backBuffers[GraphicsDevice::GetBackBufferCount()];
-		D3D12_CPU_DESCRIPTOR_HANDLE backbufferRTV[GraphicsDevice::GetBackBufferCount()] = {};
+		std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> backBuffers;
+		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> backbufferRTV;
 
 		~SwapChain_DX12()
 		{
-			for (int i = 0; i < arraysize(backbufferRTV); ++i)
+			for (auto& x : backbufferRTV)
 			{
-				allocationhandler->descriptors_rtv.free(backbufferRTV[i]);
+				allocationhandler->descriptors_rtv.free(x);
 			}
 		}
 	};
@@ -2723,14 +2723,14 @@ using namespace DX12_Internal;
 			ComPtr<IDXGISwapChain1> _swapChain;
 
 			DXGI_SWAP_CHAIN_DESC1 sd = {};
-			sd.Width = RESOLUTIONWIDTH;
-			sd.Height = RESOLUTIONHEIGHT;
-			sd.Format = _ConvertFormat(GetBackBufferFormat());
+			sd.Width = pDesc->width;
+			sd.Height = pDesc->height;
+			sd.Format = _ConvertFormat(pDesc->format);
 			sd.Stereo = false;
 			sd.SampleDesc.Count = 1;
 			sd.SampleDesc.Quality = 0;
 			sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-			sd.BufferCount = BACKBUFFER_COUNT;
+			sd.BufferCount = pDesc->buffercount;
 			sd.Flags = 0;
 			sd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
 			sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
@@ -2744,11 +2744,24 @@ using namespace DX12_Internal;
 			fullscreenDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED; // needs to be unspecified for correct fullscreen scaling!
 			fullscreenDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE;
 			fullscreenDesc.Windowed = !pDesc->fullscreen;
-			hr = factory->CreateSwapChainForHwnd(directQueue.Get(), window, &sd, &fullscreenDesc, nullptr, &_swapChain);
+			hr = factory->CreateSwapChainForHwnd(
+				directQueue.Get(),
+				window,
+				&sd,
+				&fullscreenDesc,
+				nullptr,
+				&_swapChain
+			);
 #else
 			sd.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
 
-			hr = factory->CreateSwapChainForCoreWindow(directQueue.Get(), static_cast<IUnknown*>(winrt::get_abi(window)), &sd, nullptr, &_swapChain);
+			hr = factory->CreateSwapChainForCoreWindow(
+				directQueue.Get(),
+				static_cast<IUnknown*>(winrt::get_abi(window)),
+				&sd,
+				nullptr,
+				&_swapChain
+			);
 #endif
 
 			if (FAILED(hr))
@@ -2765,18 +2778,15 @@ using namespace DX12_Internal;
 		else
 		{
 			// Resize swapchain:
-			for (uint32_t i = 0; i < BACKBUFFER_COUNT; ++i)
+			internal_state->backBuffers.clear();
+			for (auto& x : internal_state->backbufferRTV)
 			{
-				internal_state->backBuffers[i] = nullptr;
-
-				if (internal_state->backbufferRTV[i].ptr != 0)
-				{
-					allocationhandler->descriptors_rtv.free(internal_state->backbufferRTV[i]);
-				}
+				allocationhandler->descriptors_rtv.free(x);
 			}
+			internal_state->backbufferRTV.clear();
 
 			hr = internal_state->swapChain->ResizeBuffers(
-				GetBackBufferCount(),
+				pDesc->buffercount,
 				pDesc->width,
 				pDesc->height,
 				_ConvertFormat(pDesc->format),
@@ -2785,7 +2795,10 @@ using namespace DX12_Internal;
 			assert(SUCCEEDED(hr));
 		}
 
-		for (uint32_t i = 0; i < BACKBUFFER_COUNT; ++i)
+		internal_state->backBuffers.resize(pDesc->buffercount);
+		internal_state->backbufferRTV.resize(pDesc->buffercount);
+
+		for (uint32_t i = 0; i < pDesc->buffercount; ++i)
 		{
 			hr = internal_state->swapChain->GetBuffer(i, IID_PPV_ARGS(&internal_state->backBuffers[i]));
 			assert(SUCCEEDED(hr));

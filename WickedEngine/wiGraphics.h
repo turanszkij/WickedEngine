@@ -688,6 +688,7 @@ namespace wiGraphics
 	{
 		uint32_t width = 0;
 		uint32_t height = 0;
+		uint32_t buffercount = 2;
 		FORMAT format = FORMAT_R10G10B10A2_UNORM;
 		bool fullscreen = false;
 	};

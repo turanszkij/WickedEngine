@@ -403,6 +403,8 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 	SwapChainDesc desc;
 	desc.width = windowsize.x;
 	desc.height = windowsize.y;
+	desc.buffercount = 3;
+	desc.format = FORMAT_R10G10B10A2_UNORM;
 	bool success = wiRenderer::GetDevice()->CreateSwapChain(&desc, window, &swapChain);
 	assert(success);
 
@@ -410,7 +412,7 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 		int width = userdata & 0xFFFF;
 		int height = (userdata >> 16) & 0xFFFF;
 
-		SwapChainDesc desc;
+		SwapChainDesc desc = swapChain.desc;
 		desc.width = (uint32_t)width;
 		desc.height = (uint32_t)height;
 		bool success = wiRenderer::GetDevice()->CreateSwapChain(&desc, window, &swapChain);

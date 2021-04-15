@@ -1577,7 +1577,7 @@ bool GraphicsDevice_DX11::CreateSwapChain(const SwapChainDesc* pDesc, wiPlatform
 		sd.SampleDesc.Count = 1;
 		sd.SampleDesc.Quality = 0;
 		sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-		sd.BufferCount = BACKBUFFER_COUNT;
+		sd.BufferCount = pDesc->buffercount;
 		sd.Flags = 0;
 		sd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
 		sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
@@ -1623,7 +1623,7 @@ bool GraphicsDevice_DX11::CreateSwapChain(const SwapChainDesc* pDesc, wiPlatform
 		internal_state->renderTargetView.Reset();
 
 		hr = internal_state->swapChain->ResizeBuffers(
-			GetBackBufferCount(),
+			pDesc->buffercount,
 			pDesc->width,
 			pDesc->height,
 			_ConvertFormat(pDesc->format),

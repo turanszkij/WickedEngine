@@ -2748,12 +2748,12 @@ using namespace Vulkan_Internal;
 			//BACKBUFFER_FORMAT = FORMAT_B8G8R8A8_UNORM;
 		}
 
-		internal_state->swapChainExtent = { static_cast<uint32_t>(RESOLUTIONWIDTH), static_cast<uint32_t>(RESOLUTIONHEIGHT) };
+		internal_state->swapChainExtent = { pDesc->width, pDesc->height };
 		internal_state->swapChainExtent.width = std::max(internal_state->swapchain_capabilities.minImageExtent.width, std::min(internal_state->swapchain_capabilities.maxImageExtent.width, internal_state->swapChainExtent.width));
 		internal_state->swapChainExtent.height = std::max(internal_state->swapchain_capabilities.minImageExtent.height, std::min(internal_state->swapchain_capabilities.maxImageExtent.height, internal_state->swapChainExtent.height));
 
 
-		uint32_t imageCount = BACKBUFFER_COUNT;
+		uint32_t imageCount = pDesc->buffercount;
 
 		VkSwapchainCreateInfoKHR createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -2794,7 +2794,7 @@ using namespace Vulkan_Internal;
 
 		res = vkGetSwapchainImagesKHR(device, internal_state->swapChain, &imageCount, nullptr);
 		assert(res == VK_SUCCESS);
-		assert(BACKBUFFER_COUNT <= imageCount);
+		assert(pDesc->buffercount <= imageCount);
 		internal_state->swapChainImages.resize(imageCount);
 		res = vkGetSwapchainImagesKHR(device, internal_state->swapChain, &imageCount, internal_state->swapChainImages.data());
 		assert(res == VK_SUCCESS);
