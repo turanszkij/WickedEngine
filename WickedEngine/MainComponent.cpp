@@ -73,12 +73,16 @@ void MainComponent::Run()
 		// Until engine is not loaded, present initialization screen...
 		CommandList cmd = wiRenderer::GetDevice()->BeginCommandList();
 		wiRenderer::GetDevice()->RenderPassBegin(&swapChain, cmd);
+		Viewport viewport;
+		viewport.Width = (float)swapChain.desc.width;
+		viewport.Height = (float)swapChain.desc.height;
+		wiRenderer::GetDevice()->BindViewports(1, &viewport, cmd);
 		wiFontParams params;
 		params.posX = 5.f;
 		params.posY = 5.f;
 		string text = wiBackLog::getText();
 		float textheight = wiFont::textHeight(text, params);
-		float screenheight = wiRenderer::GetDevice()->GetScreenHeight();
+		float screenheight = windowprops.GetLogicalHeight();
 		if (textheight > screenheight)
 		{
 			params.posY = screenheight - textheight;
@@ -156,6 +160,10 @@ void MainComponent::Run()
 	CommandList cmd = wiRenderer::GetDevice()->BeginCommandList();
 	wiRenderer::GetDevice()->RenderPassBegin(&swapChain, cmd);
 	{
+		Viewport viewport;
+		viewport.Width = (float)swapChain.desc.width;
+		viewport.Height = (float)swapChain.desc.height;
+		wiRenderer::GetDevice()->BindViewports(1, &viewport, cmd);
 		Compose(cmd);
 		wiProfiler::EndFrame(cmd); // End before Present() so that GPU queries are properly recorded
 	}
@@ -224,8 +232,8 @@ void MainComponent::Compose(CommandList cmd)
 	{
 		// display fade rect
 		static wiImageParams fx;
-		fx.siz.x = (float)device->GetScreenWidth();
-		fx.siz.y = (float)device->GetScreenHeight();
+		fx.siz.x = windowprops.GetLogicalWidth();
+		fx.siz.y = windowprops.GetLogicalHeight();
 		fx.opacity = fadeManager.opacity;
 		wiImage::Draw(wiTextureHelper::getColor(fadeManager.color), fx, cmd);
 	}
@@ -280,7 +288,7 @@ void MainComponent::Compose(CommandList cmd)
 		}
 		if (infoDisplay.resolution)
 		{
-			ss << "Resolution: " << device->GetResolutionWidth() << " x " << device->GetResolutionHeight() << " (" << device->GetDPI() << " dpi)" << endl;
+			ss << "Resolution: " << windowprops.GetPhysicalWidth() << " x " << windowprops.GetPhysicalHeight() << " (" << windowprops.GetDPI() << " dpi)" << endl;
 		}
 		if (infoDisplay.fpsinfo)
 		{
@@ -318,7 +326,7 @@ void MainComponent::Compose(CommandList cmd)
 
 		if (infoDisplay.colorgrading_helper)
 		{
-			wiImage::Draw(wiTextureHelper::getColorGradeDefault(), wiImageParams(0, 0, 256.0f / device->GetDPIScaling(), 16.0f / device->GetDPIScaling()), cmd);
+			wiImage::Draw(wiTextureHelper::getColorGradeDefault(), wiImageParams(0, 0, 256.0f / windowprops.GetDPIScaling(), 16.0f / windowprops.GetDPIScaling()), cmd);
 		}
 	}
 
@@ -379,55 +387,62 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 		{
 #ifdef WICKEDENGINE_BUILD_VULKAN
 			wiRenderer::SetShaderPath(wiRenderer::GetShaderPath() + "spirv/");
-			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_Vulkan>(window, fullscreen, debugdevice));
+			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_Vulkan>(debugdevice));
 #endif
 		}
 		else if (use_dx12)
 		{
 #ifdef WICKEDENGINE_BUILD_DX12
 			wiRenderer::SetShaderPath(wiRenderer::GetShaderPath() + "hlsl6/");
-			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_DX12>(window, fullscreen, debugdevice, gpuvalidation));
+			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_DX12>(debugdevice, gpuvalidation));
 #endif
 		}
 		else if (use_dx11)
 		{
 #ifdef WICKEDENGINE_BUILD_DX11
 			wiRenderer::SetShaderPath(wiRenderer::GetShaderPath() + "hlsl5/");
-			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_DX11>(window, fullscreen, debugdevice));
+			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_DX11>(debugdevice));
 #endif
 		}
 	}
 
-	XMUINT2 windowsize = wiPlatform::GetWindowSize(window);
+	wiPlatform::GetWindowProperties(window, &windowprops);
+	GetResolutionWidth() = windowprops.GetPhysicalWidth();
+	GetResolutionHeight() = windowprops.GetPhysicalHeight();
+	GetDPI() = windowprops.GetDPI();
 
 	SwapChainDesc desc;
-	desc.width = windowsize.x;
-	desc.height = windowsize.y;
+	desc.width = (uint32_t)windowprops.GetPhysicalWidth();
+	desc.height = (uint32_t)windowprops.GetPhysicalHeight();
 	desc.buffercount = 3;
 	desc.format = FORMAT_R10G10B10A2_UNORM;
 	bool success = wiRenderer::GetDevice()->CreateSwapChain(&desc, window, &swapChain);
 	assert(success);
 
-	swapChainResizeEvent = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_RESOLUTION, [this, window](uint64_t userdata) {
-		int width = userdata & 0xFFFF;
-		int height = (userdata >> 16) & 0xFFFF;
+	swapChainResizeEvent = wiEvent::Subscribe(SYSTEM_EVENT_WINDOW_RESIZE, [this](uint64_t userdata) {
+		wiPlatform::window_type window = (wiPlatform::window_type)userdata;
+		wiPlatform::GetWindowProperties(window, &windowprops);
+		GetResolutionWidth() = windowprops.GetPhysicalWidth();
+		GetResolutionHeight() = windowprops.GetPhysicalHeight();
 
 		SwapChainDesc desc = swapChain.desc;
-		desc.width = (uint32_t)width;
-		desc.height = (uint32_t)height;
-		bool success = wiRenderer::GetDevice()->CreateSwapChain(&desc, window, &swapChain);
+		desc.width = (uint32_t)windowprops.GetPhysicalWidth();
+		desc.height = (uint32_t)windowprops.GetPhysicalHeight();
+		bool success = wiRenderer::GetDevice()->CreateSwapChain(&desc, nullptr, &swapChain);
 		assert(success);
 	});
 
-	swapChainVsyncChangeEvent = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_VSYNC, [&](uint64_t userdata) {
+	swapChainVsyncChangeEvent = wiEvent::Subscribe(SYSTEM_EVENT_SET_VSYNC, [this](uint64_t userdata) {
 		SwapChainDesc desc = swapChain.desc;
 		desc.vsync = userdata != 0;
-		bool success = wiRenderer::GetDevice()->CreateSwapChain(&desc, window, &swapChain);
+		bool success = wiRenderer::GetDevice()->CreateSwapChain(&desc, nullptr, &swapChain);
 		assert(success);
 	});
 
-	dpiChangeEvent = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_DPI, [&](uint64_t userdata) {
-		dpi = int(userdata & 0xFFFF);
+	dpiChangeEvent = wiEvent::Subscribe(SYSTEM_EVENT_WINDOW_DPICHANGED, [this](uint64_t userdata) {
+		wiPlatform::window_type window = (wiPlatform::window_type)userdata;
+		wiPlatform::GetWindowProperties(window, &windowprops);
+		GetDPI() = windowprops.GetDPI();
 	});
 }
 

@@ -1418,6 +1418,9 @@ namespace DX12_Internal
 		std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> backBuffers;
 		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> backbufferRTV;
 
+		Texture dummyTexture;
+		RenderPass renderpass;
+
 		~SwapChain_DX12()
 		{
 			allocationhandler->destroylocker.lock();
@@ -1964,71 +1967,63 @@ using namespace DX12_Internal;
 				DXGI_SAMPLE_DESC sampleDesc = {};
 				sampleDesc.Count = 1;
 				sampleDesc.Quality = 0;
-				if (active_renderpass[cmd] == &dummyRenderpass)
+				for (auto& attachment : active_renderpass[cmd]->desc.attachments)
 				{
-					formats.NumRenderTargets = 1;
-					formats.RTFormats[0] = _ConvertFormat(BACKBUFFER_FORMAT);
-				}
-				else
-				{
-					for (auto& attachment : active_renderpass[cmd]->desc.attachments)
-					{
-						if (attachment.type == RenderPassAttachment::RESOLVE ||
-							attachment.type == RenderPassAttachment::SHADING_RATE_SOURCE ||
-							attachment.texture == nullptr)
-							continue;
+					if (attachment.type == RenderPassAttachment::RESOLVE ||
+						attachment.type == RenderPassAttachment::SHADING_RATE_SOURCE ||
+						attachment.texture == nullptr)
+						continue;
 
-						switch (attachment.type)
+					switch (attachment.type)
+					{
+					case RenderPassAttachment::RENDERTARGET:
+						switch (attachment.texture->desc.Format)
 						{
-						case RenderPassAttachment::RENDERTARGET:
-							switch (attachment.texture->desc.Format)
-							{
-							case FORMAT_R16_TYPELESS:
-								formats.RTFormats[formats.NumRenderTargets] = DXGI_FORMAT_R16_UNORM;
-								break;
-							case FORMAT_R32_TYPELESS:
-								formats.RTFormats[formats.NumRenderTargets] = DXGI_FORMAT_R32_FLOAT;
-								break;
-							case FORMAT_R24G8_TYPELESS:
-								formats.RTFormats[formats.NumRenderTargets] = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-								break;
-							case FORMAT_R32G8X24_TYPELESS:
-								formats.RTFormats[formats.NumRenderTargets] = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
-								break;
-							default:
-								formats.RTFormats[formats.NumRenderTargets] = _ConvertFormat(attachment.texture->desc.Format);
-								break;
-							}
-							formats.NumRenderTargets++;
+						case FORMAT_R16_TYPELESS:
+							formats.RTFormats[formats.NumRenderTargets] = DXGI_FORMAT_R16_UNORM;
 							break;
-						case RenderPassAttachment::DEPTH_STENCIL:
-							switch (attachment.texture->desc.Format)
-							{
-							case FORMAT_R16_TYPELESS:
-								DSFormat = DXGI_FORMAT_D16_UNORM;
-								break;
-							case FORMAT_R32_TYPELESS:
-								DSFormat = DXGI_FORMAT_D32_FLOAT;
-								break;
-							case FORMAT_R24G8_TYPELESS:
-								DSFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
-								break;
-							case FORMAT_R32G8X24_TYPELESS:
-								DSFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
-								break;
-							default:
-								DSFormat = _ConvertFormat(attachment.texture->desc.Format);
-								break;
-							}
+						case FORMAT_R32_TYPELESS:
+							formats.RTFormats[formats.NumRenderTargets] = DXGI_FORMAT_R32_FLOAT;
+							break;
+						case FORMAT_R24G8_TYPELESS:
+							formats.RTFormats[formats.NumRenderTargets] = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+							break;
+						case FORMAT_R32G8X24_TYPELESS:
+							formats.RTFormats[formats.NumRenderTargets] = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
 							break;
 						default:
-							assert(0);
+							formats.RTFormats[formats.NumRenderTargets] = _ConvertFormat(attachment.texture->desc.Format);
 							break;
 						}
-
-						sampleDesc.Count = attachment.texture->desc.SampleCount;
-						sampleDesc.Quality = 0;
+						formats.NumRenderTargets++;
+						break;
+					case RenderPassAttachment::DEPTH_STENCIL:
+						switch (attachment.texture->desc.Format)
+						{
+						case FORMAT_R16_TYPELESS:
+							DSFormat = DXGI_FORMAT_D16_UNORM;
+							break;
+						case FORMAT_R32_TYPELESS:
+							DSFormat = DXGI_FORMAT_D32_FLOAT;
+							break;
+						case FORMAT_R24G8_TYPELESS:
+							DSFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+							break;
+						case FORMAT_R32G8X24_TYPELESS:
+							DSFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
+							break;
+						default:
+							DSFormat = _ConvertFormat(attachment.texture->desc.Format);
+							break;
+						}
+						break;
+					default:
+						assert(0);
+						break;
 					}
+
+					sampleDesc.Count = attachment.texture->desc.SampleCount;
+					sampleDesc.Quality = 0;
 				}
 				stream.stream1.DSFormat = DSFormat;
 				stream.stream1.Formats = formats;
@@ -2205,27 +2200,13 @@ using namespace DX12_Internal;
 
 
 	// Engine functions
-	GraphicsDevice_DX12::GraphicsDevice_DX12(wiPlatform::window_type window, bool fullscreen, bool debuglayer, bool gpuvalidation)
+	GraphicsDevice_DX12::GraphicsDevice_DX12(bool debuglayer, bool gpuvalidation)
 	{
 		capabilities |= GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS;
 		SHADER_IDENTIFIER_SIZE = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
 		TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
 
 		DEBUGDEVICE = debuglayer;
-		FULLSCREEN = fullscreen;
-
-#ifndef PLATFORM_UWP
-		dpi = GetDpiForWindow(window);
-		RECT rect;
-		GetClientRect(window, &rect);
-		RESOLUTIONWIDTH = rect.right - rect.left;
-		RESOLUTIONHEIGHT = rect.bottom - rect.top;
-#else PLATFORM_UWP
-		dpi = (int)winrt::Windows::Graphics::Display::DisplayInformation::GetForCurrentView().LogicalDpi();
-		float dpiscale = GetDPIScaling();
-		RESOLUTIONWIDTH = int(window.Bounds().Width * dpiscale);
-		RESOLUTIONHEIGHT = int(window.Bounds().Height * dpiscale);
-#endif
 
 		HMODULE dxcompiler = wiLoadLibrary("dxcompiler.dll");
 
@@ -2406,7 +2387,7 @@ using namespace DX12_Internal;
 		}
 
 		// Create frame-resident resources:
-		for (uint32_t fr = 0; fr < BACKBUFFER_COUNT; ++fr)
+		for (uint32_t fr = 0; fr < BUFFERCOUNT; ++fr)
 		{
 			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&frames[fr].fence));
 			assert(SUCCEEDED(hr));
@@ -2667,51 +2648,6 @@ using namespace DX12_Internal;
 		WaitForGPU();
 	}
 
-	void GraphicsDevice_DX12::SetResolution(int width, int height)
-	{
-		//if ((width != RESOLUTIONWIDTH || height != RESOLUTIONHEIGHT) && width > 0 && height > 0)
-		//{
-		//	RESOLUTIONWIDTH = width;
-		//	RESOLUTIONHEIGHT = height;
-
-		//	WaitForGPU();
-
-		//	for (int i = 0; i < arraysize(backBuffers); ++i)
-		//	{
-		//		backBuffers[i].Reset();
-		//	}
-
-		//	HRESULT hr = swapChain->ResizeBuffers(GetBackBufferCount(), width, height, _ConvertFormat(GetBackBufferFormat()), 0);
-		//	assert(SUCCEEDED(hr));
-		//	
-		//	for (int i = 0; i < arraysize(backBuffers); ++i)
-		//	{
-		//		uint32_t fr = (GetFrameCount() + i) % BACKBUFFER_COUNT;
-		//		hr = swapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffers[fr]));
-		//		assert(SUCCEEDED(hr));
-
-		//		device->CreateRenderTargetView(backBuffers[fr].Get(), nullptr, backbufferRTV[fr]);
-		//	}
-		//}
-	}
-
-	Texture GraphicsDevice_DX12::GetBackBuffer()
-	{
-		//auto internal_state = std::make_shared<Texture_DX12>();
-		//internal_state->allocationhandler = allocationhandler;
-		//internal_state->resource = backBuffers[swapChain->GetCurrentBackBufferIndex()];
-
-		//D3D12_RESOURCE_DESC desc = internal_state->resource->GetDesc();
-		//device->GetCopyableFootprints(&desc, 0, 1, 0, &internal_state->footprint, nullptr, nullptr, nullptr);
-
-		//Texture result;
-		//result.type = GPUResource::GPU_RESOURCE_TYPE::TEXTURE;
-		//result.internal_state = internal_state;
-		//result.desc = _ConvertTextureDesc_Inv(desc);
-		//return result;
-		return Texture();
-	}
-
 	bool GraphicsDevice_DX12::CreateSwapChain(const SwapChainDesc* pDesc, wiPlatform::window_type window, SwapChain* swapChain) const
 	{
 		auto internal_state = std::static_pointer_cast<SwapChain_DX12>(swapChain->internal_state);
@@ -2764,7 +2700,7 @@ using namespace DX12_Internal;
 
 			hr = factory->CreateSwapChainForCoreWindow(
 				directQueue.Get(),
-				static_cast<IUnknown*>(winrt::get_abi(window)),
+				static_cast<IUnknown*>(winrt::get_abi(*window)),
 				&sd,
 				nullptr,
 				&_swapChain
@@ -2814,6 +2750,11 @@ using namespace DX12_Internal;
 			internal_state->backbufferRTV[i] = allocationhandler->descriptors_rtv.allocate();
 			device->CreateRenderTargetView(internal_state->backBuffers[i].Get(), nullptr, internal_state->backbufferRTV[i]);
 		}
+
+		internal_state->dummyTexture.desc.Format = pDesc->format;
+		internal_state->renderpass = RenderPass();
+		wiHelper::hash_combine(internal_state->renderpass.hash, pDesc->format);
+		internal_state->renderpass.desc.attachments.push_back(RenderPassAttachment::RenderTarget(&internal_state->dummyTexture));
 
 		return true;
 	}
@@ -5397,7 +5338,7 @@ using namespace DX12_Internal;
 			// need to create one more command list:
 			assert(cmd < COMMANDLIST_COUNT);
 
-			for (uint32_t fr = 0; fr < BACKBUFFER_COUNT; ++fr)
+			for (uint32_t fr = 0; fr < BUFFERCOUNT; ++fr)
 			{
 				hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&frames[fr].commandAllocators[cmd]));
 				assert(SUCCEEDED(hr));
@@ -5430,15 +5371,6 @@ using namespace DX12_Internal;
 
 		descriptors[cmd].reset();
 		GetFrameResources().resourceBuffer[cmd].clear();
-
-		D3D12_VIEWPORT vp = {};
-		vp.Width = (float)RESOLUTIONWIDTH;
-		vp.Height = (float)RESOLUTIONHEIGHT;
-		vp.MinDepth = 0.0f;
-		vp.MaxDepth = 1.0f;
-		vp.TopLeftX = 0;
-		vp.TopLeftY = 0;
-		GetDirectCommandList(cmd)->RSSetViewports(1, &vp);
 
 		D3D12_RECT pRects[8];
 		for (uint32_t i = 0; i < 8; ++i)
@@ -5533,7 +5465,7 @@ using namespace DX12_Internal;
 		// From here, we begin a new frame, this affects GetFrameResources()!
 		FRAMECOUNT++;
 
-		if (FRAMECOUNT >= BACKBUFFER_COUNT && GetFrameResources().fence->GetCompletedValue() < 1)
+		if (FRAMECOUNT >= BUFFERCOUNT && GetFrameResources().fence->GetCompletedValue() < 1)
 		{
 			// NULL event handle will simply wait immediately:
 			//	https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12fence-seteventoncompletion#remarks
@@ -5556,7 +5488,7 @@ using namespace DX12_Internal;
 		hr = directQueue->GetTimestampFrequency(&TIMESTAMP_FREQUENCY);
 		assert(SUCCEEDED(hr));
 
-		allocationhandler->Update(FRAMECOUNT, BACKBUFFER_COUNT);
+		allocationhandler->Update(FRAMECOUNT, BUFFERCOUNT);
 
 	}
 
@@ -5607,6 +5539,7 @@ using namespace DX12_Internal;
 	{
 		swapchains[cmd].push_back(swapchain);
 		auto internal_state = to_internal(swapchain);
+		active_renderpass[cmd] = &internal_state->renderpass;
 		active_backbuffer[cmd] = internal_state->backBuffers[internal_state->swapChain->GetCurrentBackBufferIndex()];
 
 		D3D12_RESOURCE_BARRIER barrier = {};
@@ -5631,8 +5564,7 @@ using namespace DX12_Internal;
 		RTV.BeginningAccess.Clear.ClearValue.Color[3] = clearcolor[3];
 		RTV.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
 		GetDirectCommandList(cmd)->BeginRenderPass(1, &RTV, nullptr, D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES);
-		
-		active_renderpass[cmd] = &dummyRenderpass;
+
 	}
 	void GraphicsDevice_DX12::RenderPassBegin(const RenderPass* renderpass, CommandList cmd)
 	{
@@ -5696,10 +5628,11 @@ using namespace DX12_Internal;
 			active_backbuffer[cmd] = nullptr;
 		}
 	}
-	void GraphicsDevice_DX12::BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd) {
+	void GraphicsDevice_DX12::BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd)
+	{
 		assert(rects != nullptr);
-		assert(numRects <= 8);
-		D3D12_RECT pRects[8];
+		assert(numRects <= D3D12_VIEWPORT_AND_SCISSORRECT_MAX_INDEX);
+		D3D12_RECT pRects[D3D12_VIEWPORT_AND_SCISSORRECT_MAX_INDEX];
 		for (uint32_t i = 0; i < numRects; ++i) {
 			pRects[i].bottom = (LONG)rects[i].bottom;
 			pRects[i].left = (LONG)rects[i].left;
@@ -5710,8 +5643,9 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::BindViewports(uint32_t NumViewports, const Viewport* pViewports, CommandList cmd)
 	{
-		assert(NumViewports <= 6);
-		D3D12_VIEWPORT d3dViewPorts[6];
+		assert(pViewports != nullptr);
+		assert(NumViewports <= D3D12_VIEWPORT_AND_SCISSORRECT_MAX_INDEX);
+		D3D12_VIEWPORT d3dViewPorts[D3D12_VIEWPORT_AND_SCISSORRECT_MAX_INDEX];
 		for (uint32_t i = 0; i < NumViewports; ++i)
 		{
 			d3dViewPorts[i].TopLeftX = pViewports[i].TopLeftX;

@@ -143,7 +143,7 @@ namespace wiImage
 		}
 		else
 		{
-			M = M * device->GetScreenProjection();
+			M = M * GetScreenProjection();
 		}
 
 		for (int i = 0; i < 4; ++i)

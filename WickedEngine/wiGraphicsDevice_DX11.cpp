@@ -1335,24 +1335,9 @@ void GraphicsDevice_DX11::pso_validate(CommandList cmd)
 }
 
 // Engine functions
-GraphicsDevice_DX11::GraphicsDevice_DX11(wiPlatform::window_type window, bool fullscreen, bool debuglayer)
+GraphicsDevice_DX11::GraphicsDevice_DX11(bool debuglayer)
 {
 	DEBUGDEVICE = debuglayer;
-	FULLSCREEN = fullscreen;
-
-#ifndef PLATFORM_UWP
-	dpi = GetDpiForWindow(window);
-	RECT rect;
-	GetClientRect(window, &rect);
-	RESOLUTIONWIDTH = rect.right - rect.left;
-	RESOLUTIONHEIGHT = rect.bottom - rect.top;
-#else PLATFORM_UWP
-	dpi = (int)winrt::Windows::Graphics::Display::DisplayInformation::GetForCurrentView().LogicalDpi();
-	float dpiscale = GetDPIScaling();
-	RESOLUTIONWIDTH = int(window.Bounds().Width * dpiscale);
-	RESOLUTIONHEIGHT = int(window.Bounds().Height * dpiscale);
-#endif
-
 
 #ifndef PLATFORM_UWP
 	HMODULE dx11 = LoadLibraryEx(L"d3d11.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
@@ -1521,40 +1506,6 @@ void GraphicsDevice_DX11::CreateBackBufferResources()
 	//}
 }
 
-void GraphicsDevice_DX11::SetResolution(int width, int height)
-{
-	//if ((width != RESOLUTIONWIDTH || height != RESOLUTIONHEIGHT) && width > 0 && height > 0)
-	//{
-	//	RESOLUTIONWIDTH = width;
-	//	RESOLUTIONHEIGHT = height;
-
-	//	backBuffer.Reset();
-	//	renderTargetView.Reset();
-
-	//	HRESULT hr = swapChain->ResizeBuffers(GetBackBufferCount(), width, height, _ConvertFormat(GetBackBufferFormat()), 0);
-	//	assert(SUCCEEDED(hr));
-
-	//	CreateBackBufferResources();
-	//}
-}
-
-Texture GraphicsDevice_DX11::GetBackBuffer()
-{
-	//auto internal_state = std::make_shared<Texture_DX11>();
-	//internal_state->resource = backBuffer;
-
-	//Texture result;
-	//result.internal_state = internal_state;
-	//result.type = GPUResource::GPU_RESOURCE_TYPE::TEXTURE;
-
-	//D3D11_TEXTURE2D_DESC desc;
-	//backBuffer->GetDesc(&desc);
-	//result.desc = _ConvertTextureDesc_Inv(&desc);
-
-	//return result;
-	return Texture();
-}
-
 bool GraphicsDevice_DX11::CreateSwapChain(const SwapChainDesc* pDesc, wiPlatform::window_type window, SwapChain* swapChain) const
 {
 	auto internal_state = std::static_pointer_cast<SwapChain_DX11>(swapChain->internal_state);
@@ -1587,7 +1538,7 @@ bool GraphicsDevice_DX11::CreateSwapChain(const SwapChainDesc* pDesc, wiPlatform
 
 		hr = DXGIFactory->CreateSwapChainForCoreWindow(
 			device.Get(),
-			static_cast<IUnknown*>(winrt::get_abi(window)),
+			static_cast<IUnknown*>(winrt::get_abi(*window)),
 			&sd,
 			nullptr,
 			&internal_state->swapChain
@@ -2682,15 +2633,6 @@ CommandList GraphicsDevice_DX11::BeginCommandList()
 		}
 	}
 
-	D3D11_VIEWPORT vp = {};
-	vp.Width = (float)RESOLUTIONWIDTH;
-	vp.Height = (float)RESOLUTIONHEIGHT;
-	vp.MinDepth = 0.0f;
-	vp.MaxDepth = 1.0f;
-	vp.TopLeftX = 0;
-	vp.TopLeftY = 0;
-	deviceContexts[cmd]->RSSetViewports(1, &vp);
-
 	D3D11_RECT pRects[8];
 	for (uint32_t i = 0; i < 8; ++i)
 	{
@@ -2918,10 +2860,11 @@ void GraphicsDevice_DX11::RenderPassEnd(CommandList cmd)
 	}
 	active_renderpass[cmd] = nullptr;
 }
-void GraphicsDevice_DX11::BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd) {
+void GraphicsDevice_DX11::BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd)
+{
 	assert(rects != nullptr);
-	assert(numRects <= 8);
-	D3D11_RECT pRects[8];
+	assert(numRects <= D3D11_VIEWPORT_AND_SCISSORRECT_MAX_INDEX);
+	D3D11_RECT pRects[D3D11_VIEWPORT_AND_SCISSORRECT_MAX_INDEX];
 	for(uint32_t i = 0; i < numRects; ++i) {
 		pRects[i].bottom = (LONG)rects[i].bottom;
 		pRects[i].left = (LONG)rects[i].left;
@@ -2932,8 +2875,9 @@ void GraphicsDevice_DX11::BindScissorRects(uint32_t numRects, const Rect* rects,
 }
 void GraphicsDevice_DX11::BindViewports(uint32_t NumViewports, const Viewport* pViewports, CommandList cmd)
 {
-	assert(NumViewports <= 6);
-	D3D11_VIEWPORT d3dViewPorts[6];
+	assert(pViewports != nullptr);
+	assert(NumViewports <= D3D11_VIEWPORT_AND_SCISSORRECT_MAX_INDEX);
+	D3D11_VIEWPORT d3dViewPorts[D3D11_VIEWPORT_AND_SCISSORRECT_MAX_INDEX];
 	for (uint32_t i = 0; i < NumViewports; ++i)
 	{
 		d3dViewPorts[i].TopLeftX = pViewports[i].TopLeftX;

@@ -32,5 +32,37 @@ static const XMFLOAT4X4 IDENTITYMATRIX = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0
 #define NOMINMAX
 #define ALIGN_16 void* operator new(size_t i){return _mm_malloc(i, 16);} void operator delete(void* p){_mm_free(p);}
 
+// Global screen size helpers:
+inline int& GetResolutionWidth()
+{
+	static int value = 0;
+	return value;
+}
+inline int& GetResolutionHeight()
+{
+	static int value = 0;
+	return value;
+}
+inline float& GetDPI()
+{
+	static float value = 0;
+	return value;
+}
+inline float GetDPIScaling()
+{
+	return GetDPI() / 96.f;
+}
+inline float GetScreenWidth()
+{
+	return (float)GetResolutionWidth() / GetDPIScaling();
+}
+inline float GetScreenHeight()
+{
+	return (float)GetResolutionHeight() / GetDPIScaling();
+}
+inline XMMATRIX GetScreenProjection()
+{
+	return XMMatrixOrthographicOffCenterLH(0, (float)GetScreenWidth(), (float)GetScreenHeight(), 0, -1, 1);
+}
 
 #endif //WICKEDENGINE_COMMONINCLUDE_H

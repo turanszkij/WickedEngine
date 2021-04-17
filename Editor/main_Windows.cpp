@@ -201,10 +201,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         } 
         break;
 	case WM_SIZE:
-	    wiEvent::FireEvent(SYSTEM_EVENT_CHANGE_RESOLUTION, lParam);
+	    wiEvent::FireEvent(SYSTEM_EVENT_WINDOW_RESIZE, (uint64_t)hWnd);
 	    break;
 	case WM_DPICHANGED:
-        wiEvent::FireEvent(SYSTEM_EVENT_CHANGE_DPI, wParam);
+        wiEvent::FireEvent(SYSTEM_EVENT_WINDOW_DPICHANGED, (uint64_t)hWnd);
 	    break;
 	case WM_HOTKEY:
 		switch (wParam)

@@ -145,9 +145,9 @@ namespace wiGraphics
 			};
 			ResourceFrameAllocator resourceBuffer[COMMANDLIST_COUNT];
 		};
-		FrameResources frames[BACKBUFFER_COUNT];
-		const FrameResources& GetFrameResources() const { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
-		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
+		FrameResources frames[BUFFERCOUNT];
+		const FrameResources& GetFrameResources() const { return frames[GetFrameCount() % BUFFERCOUNT]; }
+		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BUFFERCOUNT]; }
 		inline VkCommandBuffer GetDirectCommandList(CommandList cmd) { return GetFrameResources().commandBuffers[cmd]; }
 
 		std::vector<VkMemoryBarrier> frame_memoryBarriers[COMMANDLIST_COUNT];
@@ -196,7 +196,7 @@ namespace wiGraphics
 		std::vector<StaticSampler> common_samplers;
 
 	public:
-		GraphicsDevice_Vulkan(wiPlatform::window_type window, bool fullscreen = false, bool debuglayer = false);
+		GraphicsDevice_Vulkan(bool debuglayer = false);
 		virtual ~GraphicsDevice_Vulkan();
 
 		bool CreateSwapChain(const SwapChainDesc* pDesc, wiPlatform::window_type window, SwapChain* swapChain) const override;
@@ -233,10 +233,6 @@ namespace wiGraphics
 
 		void WaitForGPU() const override;
 		void ClearPipelineStateCache() override;
-
-		void SetResolution(int width, int height) override;
-
-		Texture GetBackBuffer() override;
 
 		SHADERFORMAT GetShaderFormat() const override { return SHADERFORMAT_SPIRV; }
 
@@ -438,13 +434,13 @@ namespace wiGraphics
 			}
 
 			// Deferred destroy of resources that the GPU is already finished with:
-			void Update(uint64_t FRAMECOUNT, uint32_t BACKBUFFER_COUNT)
+			void Update(uint64_t FRAMECOUNT, uint32_t BUFFERCOUNT)
 			{
 				destroylocker.lock();
 				framecount = FRAMECOUNT;
 				while (!destroyer_images.empty())
 				{
-					if (destroyer_images.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					if (destroyer_images.front().second + BUFFERCOUNT < FRAMECOUNT)
 					{
 						auto item = destroyer_images.front();
 						destroyer_images.pop_front();
@@ -457,7 +453,7 @@ namespace wiGraphics
 				}
 				while (!destroyer_imageviews.empty())
 				{
-					if (destroyer_imageviews.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					if (destroyer_imageviews.front().second + BUFFERCOUNT < FRAMECOUNT)
 					{
 						auto item = destroyer_imageviews.front();
 						destroyer_imageviews.pop_front();
@@ -470,7 +466,7 @@ namespace wiGraphics
 				}
 				while (!destroyer_buffers.empty())
 				{
-					if (destroyer_buffers.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					if (destroyer_buffers.front().second + BUFFERCOUNT < FRAMECOUNT)
 					{
 						auto item = destroyer_buffers.front();
 						destroyer_buffers.pop_front();
@@ -483,7 +479,7 @@ namespace wiGraphics
 				}
 				while (!destroyer_bufferviews.empty())
 				{
-					if (destroyer_bufferviews.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					if (destroyer_bufferviews.front().second + BUFFERCOUNT < FRAMECOUNT)
 					{
 						auto item = destroyer_bufferviews.front();
 						destroyer_bufferviews.pop_front();
@@ -496,7 +492,7 @@ namespace wiGraphics
 				}
 				while (!destroyer_bvhs.empty())
 				{
-					if (destroyer_bvhs.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					if (destroyer_bvhs.front().second + BUFFERCOUNT < FRAMECOUNT)
 					{
 						auto item = destroyer_bvhs.front();
 						destroyer_bvhs.pop_front();
@@ -509,7 +505,7 @@ namespace wiGraphics
 				}
 				while (!destroyer_samplers.empty())
 				{
-					if (destroyer_samplers.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					if (destroyer_samplers.front().second + BUFFERCOUNT < FRAMECOUNT)
 					{
 						auto item = destroyer_samplers.front();
 						destroyer_samplers.pop_front();
@@ -522,7 +518,7 @@ namespace wiGraphics
 				}
 				while (!destroyer_descriptorPools.empty())
 				{
-					if (destroyer_descriptorPools.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					if (destroyer_descriptorPools.front().second + BUFFERCOUNT < FRAMECOUNT)
 					{
 						auto item = destroyer_descriptorPools.front();
 						destroyer_descriptorPools.pop_front();
@@ -535,7 +531,7 @@ namespace wiGraphics
 				}
 				while (!destroyer_descriptorSetLayouts.empty())
 				{
-					if (destroyer_descriptorSetLayouts.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					if (destroyer_descriptorSetLayouts.front().second + BUFFERCOUNT < FRAMECOUNT)
 					{
 						auto item = destroyer_descriptorSetLayouts.front();
 						destroyer_descriptorSetLayouts.pop_front();
@@ -548,7 +544,7 @@ namespace wiGraphics
 				}
 				while (!destroyer_descriptorUpdateTemplates.empty())
 				{
-					if (destroyer_descriptorUpdateTemplates.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					if (destroyer_descriptorUpdateTemplates.front().second + BUFFERCOUNT < FRAMECOUNT)
 					{
 						auto item = destroyer_descriptorUpdateTemplates.front();
 						destroyer_descriptorUpdateTemplates.pop_front();
@@ -561,7 +557,7 @@ namespace wiGraphics
 				}
 				while (!destroyer_shadermodules.empty())
 				{
-					if (destroyer_shadermodules.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					if (destroyer_shadermodules.front().second + BUFFERCOUNT < FRAMECOUNT)
 					{
 						auto item = destroyer_shadermodules.front();
 						destroyer_shadermodules.pop_front();
@@ -574,7 +570,7 @@ namespace wiGraphics
 				}
 				while (!destroyer_pipelineLayouts.empty())
 				{
-					if (destroyer_pipelineLayouts.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					if (destroyer_pipelineLayouts.front().second + BUFFERCOUNT < FRAMECOUNT)
 					{
 						auto item = destroyer_pipelineLayouts.front();
 						destroyer_pipelineLayouts.pop_front();
@@ -587,7 +583,7 @@ namespace wiGraphics
 				}
 				while (!destroyer_pipelines.empty())
 				{
-					if (destroyer_pipelines.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					if (destroyer_pipelines.front().second + BUFFERCOUNT < FRAMECOUNT)
 					{
 						auto item = destroyer_pipelines.front();
 						destroyer_pipelines.pop_front();
@@ -600,7 +596,7 @@ namespace wiGraphics
 				}
 				while (!destroyer_renderpasses.empty())
 				{
-					if (destroyer_renderpasses.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					if (destroyer_renderpasses.front().second + BUFFERCOUNT < FRAMECOUNT)
 					{
 						auto item = destroyer_renderpasses.front();
 						destroyer_renderpasses.pop_front();
@@ -613,7 +609,7 @@ namespace wiGraphics
 				}
 				while (!destroyer_framebuffers.empty())
 				{
-					if (destroyer_framebuffers.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					if (destroyer_framebuffers.front().second + BUFFERCOUNT < FRAMECOUNT)
 					{
 						auto item = destroyer_framebuffers.front();
 						destroyer_framebuffers.pop_front();
@@ -626,7 +622,7 @@ namespace wiGraphics
 				}
 				while (!destroyer_querypools.empty())
 				{
-					if (destroyer_querypools.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					if (destroyer_querypools.front().second + BUFFERCOUNT < FRAMECOUNT)
 					{
 						auto item = destroyer_querypools.front();
 						destroyer_querypools.pop_front();
@@ -639,7 +635,7 @@ namespace wiGraphics
 				}
 				while (!destroyer_bindlessUniformBuffers.empty())
 				{
-					if (destroyer_bindlessUniformBuffers.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					if (destroyer_bindlessUniformBuffers.front().second + BUFFERCOUNT < FRAMECOUNT)
 					{
 						int index= destroyer_bindlessUniformBuffers.front().first;
 						destroyer_bindlessUniformBuffers.pop_front();
@@ -652,7 +648,7 @@ namespace wiGraphics
 				}
 				while (!destroyer_bindlessSampledImages.empty())
 				{
-					if (destroyer_bindlessSampledImages.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					if (destroyer_bindlessSampledImages.front().second + BUFFERCOUNT < FRAMECOUNT)
 					{
 						int index = destroyer_bindlessSampledImages.front().first;
 						destroyer_bindlessSampledImages.pop_front();
@@ -665,7 +661,7 @@ namespace wiGraphics
 				}
 				while (!destroyer_bindlessUniformTexelBuffers.empty())
 				{
-					if (destroyer_bindlessUniformTexelBuffers.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					if (destroyer_bindlessUniformTexelBuffers.front().second + BUFFERCOUNT < FRAMECOUNT)
 					{
 						int index = destroyer_bindlessUniformTexelBuffers.front().first;
 						destroyer_bindlessUniformTexelBuffers.pop_front();
@@ -678,7 +674,7 @@ namespace wiGraphics
 				}
 				while (!destroyer_bindlessStorageBuffers.empty())
 				{
-					if (destroyer_bindlessStorageBuffers.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					if (destroyer_bindlessStorageBuffers.front().second + BUFFERCOUNT < FRAMECOUNT)
 					{
 						int index = destroyer_bindlessStorageBuffers.front().first;
 						destroyer_bindlessStorageBuffers.pop_front();
@@ -691,7 +687,7 @@ namespace wiGraphics
 				}
 				while (!destroyer_bindlessStorageImages.empty())
 				{
-					if (destroyer_bindlessStorageImages.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					if (destroyer_bindlessStorageImages.front().second + BUFFERCOUNT < FRAMECOUNT)
 					{
 						int index = destroyer_bindlessStorageImages.front().first;
 						destroyer_bindlessStorageImages.pop_front();
@@ -704,7 +700,7 @@ namespace wiGraphics
 				}
 				while (!destroyer_bindlessStorageTexelBuffers.empty())
 				{
-					if (destroyer_bindlessStorageTexelBuffers.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					if (destroyer_bindlessStorageTexelBuffers.front().second + BUFFERCOUNT < FRAMECOUNT)
 					{
 						int index = destroyer_bindlessStorageTexelBuffers.front().first;
 						destroyer_bindlessStorageTexelBuffers.pop_front();
@@ -717,7 +713,7 @@ namespace wiGraphics
 				}
 				while (!destroyer_bindlessSamplers.empty())
 				{
-					if (destroyer_bindlessSamplers.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					if (destroyer_bindlessSamplers.front().second + BUFFERCOUNT < FRAMECOUNT)
 					{
 						int index = destroyer_bindlessSamplers.front().first;
 						destroyer_bindlessSamplers.pop_front();
@@ -730,7 +726,7 @@ namespace wiGraphics
 				}
 				while (!destroyer_bindlessAccelerationStructures.empty())
 				{
-					if (destroyer_bindlessAccelerationStructures.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					if (destroyer_bindlessAccelerationStructures.front().second + BUFFERCOUNT < FRAMECOUNT)
 					{
 						int index = destroyer_bindlessAccelerationStructures.front().first;
 						destroyer_bindlessAccelerationStructures.pop_front();

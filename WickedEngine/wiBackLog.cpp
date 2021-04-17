@@ -81,11 +81,11 @@ namespace wiBackLog
 		{
 			pos -= speed;
 		}
-		pos = wiMath::Clamp(pos, -wiRenderer::GetDevice()->GetScreenHeight(), 0);
+		pos = wiMath::Clamp(pos, -GetScreenHeight(), 0);
 	}
 	void Draw(CommandList cmd)
 	{
-		if (pos > -wiRenderer::GetDevice()->GetScreenHeight())
+		if (pos > -GetScreenHeight())
 		{
 			if (!backgroundTex.IsValid())
 			{
@@ -93,11 +93,11 @@ namespace wiBackLog
 				wiTextureHelper::CreateTexture(backgroundTex, colorData, 1, 2);
 			}
 
-			wiImageParams fx = wiImageParams((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight());
+			wiImageParams fx = wiImageParams((float)GetScreenWidth(), (float)GetScreenHeight());
 			fx.pos = XMFLOAT3(0, pos, 0);
-			fx.opacity = wiMath::Lerp(1, 0, -pos / wiRenderer::GetDevice()->GetScreenHeight());
+			fx.opacity = wiMath::Lerp(1, 0, -pos / GetScreenHeight());
 			wiImage::Draw(&backgroundTex, fx, cmd);
-			wiFont::Draw(inputArea, wiFontParams(10, wiRenderer::GetDevice()->GetScreenHeight() - 10, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_BOTTOM), cmd);
+			wiFont::Draw(inputArea, wiFontParams(10, GetScreenHeight() - 10, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_BOTTOM), cmd);
 
 
 			font.SetText(getText());
@@ -105,7 +105,7 @@ namespace wiBackLog
 			{
 				refitscroll = false;
 				float textheight = font.textHeight();
-				float limit = wiRenderer::GetDevice()->GetScreenHeight() * 0.9f;
+				float limit = GetScreenHeight() * 0.9f;
 				if (scroll + textheight > limit)
 				{
 					scroll = limit - textheight;
@@ -115,9 +115,9 @@ namespace wiBackLog
 			font.params.posY = pos + scroll;
 			Rect rect;
 			rect.left = 0;
-			rect.right = (int32_t)wiRenderer::GetDevice()->GetResolutionWidth();
+			rect.right = (int32_t)GetResolutionWidth();
 			rect.top = 0;
-			rect.bottom = int32_t(wiRenderer::GetDevice()->GetResolutionHeight() * 0.9f);
+			rect.bottom = int32_t(GetResolutionHeight() * 0.9f);
 			wiRenderer::GetDevice()->BindScissorRects(1, &rect, cmd);
 			font.Draw(cmd);
 			rect.left = -INT_MAX;

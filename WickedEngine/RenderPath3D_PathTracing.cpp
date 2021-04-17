@@ -18,7 +18,7 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	FORMAT defaultTextureFormat = device->GetBackBufferFormat();
+	FORMAT defaultTextureFormat = FORMAT_R10G10B10A2_UNORM;
 
 	{
 		TextureDesc desc;

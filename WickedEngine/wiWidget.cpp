@@ -95,8 +95,8 @@ void wiWidget::RenderTooltip(const wiGUI* gui, CommandList cmd) const
 
 	if (tooltipTimer > 25)
 	{
-		float screenwidth = wiRenderer::GetDevice()->GetScreenWidth();
-		float screenheight = wiRenderer::GetDevice()->GetScreenHeight();
+		float screenwidth = GetScreenWidth();
+		float screenheight = GetScreenHeight();
 
 		wiFontParams fontProps = wiFontParams(0, 0, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_TOP);
 		fontProps.color = wiColor(25, 25, 25, 255);
@@ -1253,7 +1253,7 @@ void wiComboBox::Render(const wiGUI* gui, CommandList cmd) const
 		initdata.pSysMem = vertices;
 		device->CreateBuffer(&desc, &initdata, &vb_triangle);
 	}
-	const XMMATRIX Projection = device->GetScreenProjection();
+	const XMMATRIX Projection = GetScreenProjection();
 
 	// control-arrow-background
 	wiImageParams fx = sprites[state].params;
@@ -1488,8 +1488,8 @@ void wiWindow::Create(const std::string& name, bool window_controls)
 			this->Scale(XMFLOAT3(scaleDiff.x, scaleDiff.y, 1));
 			this->scale_local = wiMath::Max(this->scale_local, XMFLOAT3(windowcontrolSize * 3, windowcontrolSize * 2, 1)); // don't allow resize to negative or too small
 			// Don't allow control outside of screen:
-			this->translation_local.x = wiMath::Clamp(this->translation_local.x, 0, wiRenderer::GetDevice()->GetScreenWidth() - this->scale_local.x);
-			this->translation_local.y = wiMath::Clamp(this->translation_local.y, 0, wiRenderer::GetDevice()->GetScreenHeight() - windowcontrolSize);
+			this->translation_local.x = wiMath::Clamp(this->translation_local.x, 0, GetScreenWidth() - this->scale_local.x);
+			this->translation_local.y = wiMath::Clamp(this->translation_local.y, 0, GetScreenHeight() - windowcontrolSize);
 			this->AttachTo(saved_parent);
 			});
 		AddWidget(&resizeDragger_UpperLeft);
@@ -1506,8 +1506,8 @@ void wiWindow::Create(const std::string& name, bool window_controls)
 			this->Scale(XMFLOAT3(scaleDiff.x, scaleDiff.y, 1));
 			this->scale_local = wiMath::Max(this->scale_local, XMFLOAT3(windowcontrolSize * 3, windowcontrolSize * 2, 1)); // don't allow resize to negative or too small
 			// Don't allow control outside of screen:
-			this->translation_local.x = wiMath::Clamp(this->translation_local.x, 0, wiRenderer::GetDevice()->GetScreenWidth() - this->scale_local.x);
-			this->translation_local.y = wiMath::Clamp(this->translation_local.y, 0, wiRenderer::GetDevice()->GetScreenHeight() - windowcontrolSize);
+			this->translation_local.x = wiMath::Clamp(this->translation_local.x, 0, GetScreenWidth() - this->scale_local.x);
+			this->translation_local.y = wiMath::Clamp(this->translation_local.y, 0, GetScreenHeight() - windowcontrolSize);
 			this->AttachTo(saved_parent);
 			});
 		AddWidget(&resizeDragger_BottomRight);
@@ -1521,8 +1521,8 @@ void wiWindow::Create(const std::string& name, bool window_controls)
 			this->Detach();
 			this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
 			// Don't allow control outside of screen:
-			this->translation_local.x = wiMath::Clamp(this->translation_local.x, 0, wiRenderer::GetDevice()->GetScreenWidth() - this->scale_local.x);
-			this->translation_local.y = wiMath::Clamp(this->translation_local.y, 0, wiRenderer::GetDevice()->GetScreenHeight() - windowcontrolSize);
+			this->translation_local.x = wiMath::Clamp(this->translation_local.x, 0, GetScreenWidth() - this->scale_local.x);
+			this->translation_local.y = wiMath::Clamp(this->translation_local.y, 0, GetScreenHeight() - windowcontrolSize);
 			this->AttachTo(saved_parent);
 			});
 		AddWidget(&moveDragger);
@@ -2354,7 +2354,7 @@ void wiColorPicker::Render(const wiGUI* gui, CommandList cmd) const
 	const wiColor final_color = GetPickColor();
 	const float angle = hue / 360.0f * XM_2PI;
 
-	const XMMATRIX Projection = device->GetScreenProjection();
+	const XMMATRIX Projection = GetScreenProjection();
 
 	device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CBSLOT_RENDERER_MISC, cmd);
 	device->BindPipelineState(&PSO_colored, cmd);
@@ -2863,7 +2863,7 @@ void wiTreeList::Render(const wiGUI* gui, CommandList cmd) const
 		initdata.pSysMem = vertices;
 		device->CreateBuffer(&desc, &initdata, &vb_triangle);
 	}
-	const XMMATRIX Projection = device->GetScreenProjection();
+	const XMMATRIX Projection = GetScreenProjection();
 
 	// control-list
 	int i = -1;

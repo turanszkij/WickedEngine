@@ -342,7 +342,7 @@ void Initialize()
 	LoadShaders();
 
 
-	static wiEvent::Handle handle2 = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_DPI, [](uint64_t userdata) {
+	static wiEvent::Handle handle2 = wiEvent::Subscribe(SYSTEM_EVENT_WINDOW_DPICHANGED, [](uint64_t userdata) {
 		glyphLock.lock();
 		for (auto& x : glyph_lookup)
 		{
@@ -369,7 +369,7 @@ void UpdatePendingGlyphs()
 		const int borderPadding = 1;
 
 		// Font resolution is upscaled to make it sharper:
-		const float upscaling = std::max(2.0f, wiRenderer::GetDevice()->GetDPIScaling());
+		const float upscaling = std::max(2.0f, GetDPIScaling());
 
 		for (int32_t hash : pendingGlyphs)
 		{
@@ -628,7 +628,7 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 
 		device->BindResource(VS, mem.buffer, 0, cmd);
 
-		XMMATRIX Projection = device->GetScreenProjection();
+		const XMMATRIX Projection = GetScreenProjection();
 
 		if (newProps.shadowColor.getA() > 0)
 		{

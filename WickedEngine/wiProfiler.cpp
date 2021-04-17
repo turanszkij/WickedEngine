@@ -23,7 +23,7 @@ namespace wiProfiler
 	std::mutex lock;
 	range_id cpu_frame;
 	range_id gpu_frame;
-	GPUQueryHeap queryHeap[wiGraphics::GraphicsDevice::GetBackBufferCount() + 1];
+	GPUQueryHeap queryHeap[wiGraphics::GraphicsDevice::GetBufferCount() + 1];
 	std::vector<uint64_t> queryResults;
 	std::atomic<uint32_t> nextQuery{ 0 };
 	uint32_t writtenQueries[arraysize(queryHeap)] = {};

@@ -157,12 +157,3 @@ bool GraphicsDevice::IsFormatStencilSupport(FORMAT value) const
 
 	return false;
 }
-
-float GraphicsDevice::GetScreenWidth() const
-{
-	return (float)GetResolutionWidth() / GetDPIScaling();
-}
-float GraphicsDevice::GetScreenHeight() const
-{
-	return (float)GetResolutionHeight() / GetDPIScaling();
-}

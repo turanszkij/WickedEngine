@@ -1877,26 +1877,11 @@ using namespace Vulkan_Internal;
 	}
 
 	// Engine functions
-	GraphicsDevice_Vulkan::GraphicsDevice_Vulkan(wiPlatform::window_type window, bool fullscreen, bool debuglayer)
+	GraphicsDevice_Vulkan::GraphicsDevice_Vulkan(bool debuglayer)
 	{
 		TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = sizeof(VkAccelerationStructureInstanceKHR);
 
 		DEBUGDEVICE = debuglayer;
-
-		FULLSCREEN = fullscreen;
-
-#ifdef _WIN32
-		dpi = GetDpiForWindow(window);
-		RECT rect;
-		GetClientRect(window, &rect);
-		RESOLUTIONWIDTH = rect.right - rect.left;
-		RESOLUTIONHEIGHT = rect.bottom - rect.top;
-#elif SDL2
-		int width, height;
-		SDL_GetWindowSize(window, &width, &height);
-		RESOLUTIONWIDTH = width;
-		RESOLUTIONHEIGHT = height;
-#endif // _WIN32
 
 		VkResult res;
 
@@ -2300,7 +2285,7 @@ using namespace Vulkan_Internal;
 		assert(res == VK_SUCCESS);
 
 		// Create frame resources:
-		for (uint32_t fr = 0; fr < BACKBUFFER_COUNT; ++fr)
+		for (uint32_t fr = 0; fr < BUFFERCOUNT; ++fr)
 		{
 			// Fence:
 			{
@@ -2626,33 +2611,6 @@ using namespace Vulkan_Internal;
 		}
 	}
 
-	void GraphicsDevice_Vulkan::SetResolution(int width, int height)
-	{
-		//if (width != RESOLUTIONWIDTH || height != RESOLUTIONHEIGHT)
-		//{
-		//	RESOLUTIONWIDTH = width;
-		//	RESOLUTIONHEIGHT = height;
-
-		//	CreateBackBufferResources();
-		//}
-	}
-
-	Texture GraphicsDevice_Vulkan::GetBackBuffer()
-	{
-		//auto internal_state = std::make_shared<Texture_Vulkan>();
-		//internal_state->resource = swapChainImages[swapChainImageIndex];
-
-		//Texture result;
-		//result.type = GPUResource::GPU_RESOURCE_TYPE::TEXTURE;
-		//result.internal_state = internal_state;
-		//result.desc.type = TextureDesc::TEXTURE_2D;
-		//result.desc.Width = swapChainExtent.width;
-		//result.desc.Height = swapChainExtent.height;
-		//result.desc.Format = BACKBUFFER_FORMAT;
-		//return result;
-		return Texture();
-	}
-
 	bool GraphicsDevice_Vulkan::CreateSwapChain(const SwapChainDesc* pDesc, wiPlatform::window_type window, SwapChain* swapChain) const
 	{
 		auto internal_state = std::static_pointer_cast<SwapChain_Vulkan>(swapChain->internal_state);
@@ -2730,7 +2688,7 @@ using namespace Vulkan_Internal;
 		}
 
 		VkSurfaceFormatKHR surfaceFormat = {};
-		surfaceFormat.format = _ConvertFormat(BACKBUFFER_FORMAT);
+		surfaceFormat.format = _ConvertFormat(pDesc->format);
 		bool valid = false;
 
 		for (const auto& format : internal_state->swapchain_formats)
@@ -2745,7 +2703,6 @@ using namespace Vulkan_Internal;
 		if (!valid)
 		{
 			surfaceFormat = { VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
-			//BACKBUFFER_FORMAT = FORMAT_B8G8R8A8_UNORM;
 		}
 
 		internal_state->swapChainExtent = { pDesc->width, pDesc->height };
@@ -2863,6 +2820,7 @@ using namespace Vulkan_Internal;
 			}
 
 			internal_state->renderpass = RenderPass();
+			wiHelper::hash_combine(internal_state->renderpass.hash, internal_state->swapChainImageFormat);
 			auto renderpass_internal = std::make_shared<RenderPass_Vulkan>();
 			internal_state->renderpass.internal_state = renderpass_internal;
 			internal_state->renderpass.desc.attachments.push_back(RenderPassAttachment::RenderTarget());
@@ -5745,18 +5703,6 @@ using namespace Vulkan_Internal;
 		// reset immediate resource allocators:
 		GetFrameResources().resourceBuffer[cmd].clear();
 
-		Viewport viewports[6];
-		for (uint32_t i = 0; i < arraysize(viewports); ++i)
-		{
-			viewports[i].TopLeftX = 0;
-			viewports[i].TopLeftY = 0;
-			viewports[i].Width = (float)RESOLUTIONWIDTH;
-			viewports[i].Height = (float)RESOLUTIONHEIGHT;
-			viewports[i].MinDepth = 0;
-			viewports[i].MaxDepth = 1;
-		}
-		BindViewports(arraysize(viewports), viewports, cmd);
-
 		VkRect2D scissors[8];
 		for (int i = 0; i < arraysize(scissors); ++i)
 		{
@@ -5920,7 +5866,7 @@ using namespace Vulkan_Internal;
 		FRAMECOUNT++;
 
 		// Initiate stalling CPU when GPU is behind by more frames than would fit in the backbuffers:
-		if (FRAMECOUNT >= BACKBUFFER_COUNT)
+		if (FRAMECOUNT >= BUFFERCOUNT)
 		{
 			VkResult res = vkWaitForFences(device, 1, &GetFrameResources().frameFence, true, 0xFFFFFFFFFFFFFFFF);
 			assert(res == VK_SUCCESS);
@@ -5929,7 +5875,7 @@ using namespace Vulkan_Internal;
 			assert(res == VK_SUCCESS);
 		}
 
-		allocationhandler->Update(FRAMECOUNT, BACKBUFFER_COUNT);
+		allocationhandler->Update(FRAMECOUNT, BUFFERCOUNT);
 
 		// Restart transition command buffers:
 		{
@@ -6041,10 +5987,11 @@ using namespace Vulkan_Internal;
 
 		active_renderpass[cmd] = VK_NULL_HANDLE;
 	}
-	void GraphicsDevice_Vulkan::BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd) {
+	void GraphicsDevice_Vulkan::BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd)
+	{
 		assert(rects != nullptr);
-		assert(numRects <= 8);
-		VkRect2D scissors[8];
+		assert(numRects <= 16);
+		VkRect2D scissors[16];
 		for(uint32_t i = 0; i < numRects; ++i) {
 			scissors[i].extent.width = abs(rects[i].right - rects[i].left);
 			scissors[i].extent.height = abs(rects[i].top - rects[i].bottom);
@@ -6055,18 +6002,19 @@ using namespace Vulkan_Internal;
 	}
 	void GraphicsDevice_Vulkan::BindViewports(uint32_t NumViewports, const Viewport* pViewports, CommandList cmd)
 	{
-		assert(NumViewports <= 6);
-		VkViewport viewports[6];
+		assert(pViewports != nullptr);
+		assert(NumViewports <= 16);
+		VkViewport vp[16];
 		for (uint32_t i = 0; i < NumViewports; ++i)
 		{
-			viewports[i].x = pViewports[i].TopLeftX;
-			viewports[i].y = pViewports[i].TopLeftY + pViewports[i].Height;
-			viewports[i].width = pViewports[i].Width;
-			viewports[i].height = -pViewports[i].Height;
-			viewports[i].minDepth = pViewports[i].MinDepth;
-			viewports[i].maxDepth = pViewports[i].MaxDepth;
+			vp[i].x = pViewports[i].TopLeftX;
+			vp[i].y = pViewports[i].TopLeftY + pViewports[i].Height;
+			vp[i].width = pViewports[i].Width;
+			vp[i].height = -pViewports[i].Height;
+			vp[i].minDepth = pViewports[i].MinDepth;
+			vp[i].maxDepth = pViewports[i].MaxDepth;
 		}
-		vkCmdSetViewport(GetDirectCommandList(cmd), 0, NumViewports, viewports);
+		vkCmdSetViewport(GetDirectCommandList(cmd), 0, NumViewports, vp);
 	}
 	void GraphicsDevice_Vulkan::BindResource(SHADERSTAGE stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
 	{

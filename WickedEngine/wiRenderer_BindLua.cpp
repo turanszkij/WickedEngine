@@ -53,12 +53,12 @@ namespace wiRenderer_BindLua
 
 	int GetScreenWidth(lua_State* L)
 	{
-		wiLua::SSetFloat(L, wiRenderer::GetDevice()->GetScreenWidth());
+		wiLua::SSetFloat(L, ::GetScreenWidth());
 		return 1;
 	}
 	int GetScreenHeight(lua_State* L)
 	{
-		wiLua::SSetFloat(L, wiRenderer::GetDevice()->GetScreenHeight());
+		wiLua::SSetFloat(L, ::GetScreenHeight());
 		return 1;
 	}
 
@@ -130,24 +130,13 @@ namespace wiRenderer_BindLua
 		int argc = wiLua::SGetArgCount(L);
 		if (argc > 0)
 		{
-			wiEvent::FireEvent(SYSTEM_EVENT_CHANGE_VSYNC, (uint64_t)wiLua::SGetBool(L, 1));
+			wiEvent::FireEvent(SYSTEM_EVENT_SET_VSYNC, (uint64_t)wiLua::SGetBool(L, 1));
 		}
 		return 0;
 	}
 	int SetResolution(lua_State* L)
 	{
-		int argc = wiLua::SGetArgCount(L);
-		if (argc > 1)
-		{
-			uint64_t data = 0;
-			data |= wiLua::SGetInt(L, 1);
-			data |= wiLua::SGetInt(L, 2) << 16;
-			wiEvent::FireEvent(SYSTEM_EVENT_CHANGE_RESOLUTION, data);
-		}
-		else
-		{
-			wiLua::SError(L, "SetResolution(int width,height) not enough arguments!");
-		}
+		wiLua::SError(L, "SetResolution() is deprecated, now it's handled by window events!");
 		return 0;
 	}
 	int SetDebugLightCulling(lua_State* L)

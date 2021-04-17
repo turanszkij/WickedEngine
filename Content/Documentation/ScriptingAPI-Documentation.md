@@ -106,8 +106,6 @@ You can use the Renderer with the following functions, all of which are in the g
 - SetGameSpeed(float speed)
 - GetScreenWidth() : float result
 - GetScreenHeight() : float result
-- GetRenderWidth() : float result
-- GetRenderHeight(): float result
 - HairParticleSettings(opt int lod0, opt int lod1, opt int lod2)
 - SetShadowProps2D(int resolution, int count)
 - SetShadowPropsCube(int resolution, int count)

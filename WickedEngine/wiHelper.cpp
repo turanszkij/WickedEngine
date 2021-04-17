@@ -70,35 +70,35 @@ namespace wiHelper
 
 	void screenshot(const std::string& name)
 	{
-		std::string directory;
-		if (name.empty())
-		{
-			directory = "screenshots";
-		}
-		else
-		{
-			directory = GetDirectoryFromPath(name);
-		}
+		//std::string directory;
+		//if (name.empty())
+		//{
+		//	directory = "screenshots";
+		//}
+		//else
+		//{
+		//	directory = GetDirectoryFromPath(name);
+		//}
 
-		if (!std::filesystem::create_directory(directory.c_str()))
-		{
-			wiBackLog::post(("Directory couoldn't be created: " + directory).c_str());
-		}
+		//if (!std::filesystem::create_directory(directory.c_str()))
+		//{
+		//	wiBackLog::post(("Directory couoldn't be created: " + directory).c_str());
+		//}
 
-		std::string filename = name;
-		if (filename.empty())
-		{
-			filename = directory + "/sc_" + getCurrentDateTimeAsString() + ".jpg";
-		}
+		//std::string filename = name;
+		//if (filename.empty())
+		//{
+		//	filename = directory + "/sc_" + getCurrentDateTimeAsString() + ".jpg";
+		//}
 
-		bool result = saveTextureToFile(wiRenderer::GetDevice()->GetBackBuffer(), filename);
-		assert(result);
+		//bool result = saveTextureToFile(wiRenderer::GetDevice()->GetBackBuffer(), filename);
+		//assert(result);
 
-		if (result)
-		{
-			std::string msg = "Screenshot saved: " + filename;
-			wiBackLog::post(msg.c_str());
-		}
+		//if (result)
+		//{
+		//	std::string msg = "Screenshot saved: " + filename;
+		//	wiBackLog::post(msg.c_str());
+		//}
 	}
 
 	bool saveTextureToMemory(const wiGraphics::Texture& texture, std::vector<uint8_t>& texturedata)

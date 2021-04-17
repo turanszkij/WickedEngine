@@ -50,8 +50,8 @@ void wiGUIElement::ApplyScissor(const Rect rect, CommandList cmd, bool constrain
 	}
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
-	float scale_x = (float)device->GetResolutionWidth() / (float)device->GetScreenWidth();
-	float scale_y = (float)device->GetResolutionHeight() / (float)device->GetScreenHeight();
+	float scale_x = (float)GetResolutionWidth() / (float)GetScreenWidth();
+	float scale_y = (float)GetResolutionHeight() / (float)GetScreenHeight();
 	scissor.bottom = int32_t((float)scissor.bottom * scale_y);
 	scissor.top = int32_t((float)scissor.top * scale_y);
 	scissor.left = int32_t((float)scissor.left * scale_x);
@@ -111,9 +111,9 @@ void wiGUI::Update(float dt)
 	}
 	priorityChangeQueue.clear();
 
-	scissorRect.bottom = (int32_t)(wiRenderer::GetDevice()->GetScreenHeight());
+	scissorRect.bottom = (int32_t)(GetScreenHeight());
 	scissorRect.left = (int32_t)(0);
-	scissorRect.right = (int32_t)(wiRenderer::GetDevice()->GetScreenWidth());
+	scissorRect.right = (int32_t)(GetScreenWidth());
 	scissorRect.top = (int32_t)(0);
 }
 

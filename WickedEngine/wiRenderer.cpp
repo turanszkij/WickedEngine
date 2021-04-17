@@ -2595,13 +2595,6 @@ void Initialize()
 	SetShadowProps2D(SHADOWRES_2D, SHADOWCOUNT_2D);
 	SetShadowPropsCube(SHADOWRES_CUBE, SHADOWCOUNT_CUBE);
 
-
-	static wiEvent::Handle handle3 = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_RESOLUTION, [](uint64_t userdata) {
-		int width = userdata & 0xFFFF;
-		int height = (userdata >> 16) & 0xFFFF;
-		device->SetResolution(width, height);
-	});
-
 	wiBackLog::post("wiRenderer Initialized");
 }
 void ClearWorld(Scene& scene)
@@ -3678,7 +3671,7 @@ void UpdatePerFrameData(
 
 	// Update CPU-side frame constant buffer:
 	frameCB.g_xFrame_ConstantOne = 1;
-	frameCB.g_xFrame_ScreenWidthHeight = float2((float)device->GetScreenWidth(), (float)device->GetScreenHeight());
+	frameCB.g_xFrame_ScreenWidthHeight = float2((float)GetScreenWidth(), (float)GetScreenHeight());
 	frameCB.g_xFrame_ScreenWidthHeight_rcp = float2(1.0f / frameCB.g_xFrame_ScreenWidthHeight.x, 1.0f / frameCB.g_xFrame_ScreenWidthHeight.y);
 	frameCB.g_xFrame_InternalResolution = float2((float)internalResolution.x, (float)internalResolution.y);
 	frameCB.g_xFrame_InternalResolution_rcp = float2(1.0f / frameCB.g_xFrame_InternalResolution.x, 1.0f / frameCB.g_xFrame_InternalResolution.y);
@@ -5720,7 +5713,7 @@ void DrawDebugWorld(
 		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_LINES], cmd);
 
 		MiscCB sb;
-		XMStoreFloat4x4(&sb.g_xTransform, device->GetScreenProjection());
+		XMStoreFloat4x4(&sb.g_xTransform, GetScreenProjection());
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
 		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
 		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
@@ -11980,8 +11973,8 @@ void Postprocess_NormalsFromDepth(
 
 RAY GetPickRay(long cursorX, long cursorY, const CameraComponent& camera)
 {
-	float screenW = device->GetScreenWidth();
-	float screenH = device->GetScreenHeight();
+	float screenW = GetScreenWidth();
+	float screenH = GetScreenHeight();
 
 	XMMATRIX V = camera.GetView();
 	XMMATRIX P = camera.GetProjection();

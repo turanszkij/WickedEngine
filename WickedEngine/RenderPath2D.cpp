@@ -11,7 +11,7 @@ void RenderPath2D::ResizeBuffers()
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	FORMAT defaultTextureFormat = device->GetBackBufferFormat();
+	FORMAT defaultTextureFormat = FORMAT_R10G10B10A2_UNORM;
 
 	const Texture* dsv = GetDepthStencil();
 	if(dsv != nullptr && (resolutionScale != 1.0f ||  dsv->GetDesc().SampleCount > 1))
@@ -39,8 +39,8 @@ void RenderPath2D::ResizeBuffers()
 		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		desc.Format = defaultTextureFormat;
-		desc.Width = device->GetResolutionWidth();
-		desc.Height = device->GetResolutionHeight();
+		desc.Width = GetResolutionWidth();
+		desc.Height = GetResolutionHeight();
 		device->CreateTexture(&desc, nullptr, &rtFinal);
 		device->SetName(&rtFinal, "rtFinal");
 	}
@@ -98,7 +98,7 @@ void RenderPath2D::Load()
 	if (!resolutionChange_handle.IsValid())
 	{
 		ResizeBuffers();
-		resolutionChange_handle = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_RESOLUTION, [this](uint64_t userdata) {
+		resolutionChange_handle = wiEvent::Subscribe(SYSTEM_EVENT_WINDOW_RESIZE, [this](uint64_t userdata) {
 			ResizeBuffers();
 			ResizeLayout();
 			});
@@ -106,7 +106,7 @@ void RenderPath2D::Load()
 	if (!dpiChange_handle.IsValid())
 	{
 		ResizeLayout();
-		dpiChange_handle = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_DPI, [this](uint64_t userdata) {
+		dpiChange_handle = wiEvent::Subscribe(SYSTEM_EVENT_WINDOW_DPICHANGED, [this](uint64_t userdata) {
 			ResizeLayout();
 			});
 	}
@@ -123,7 +123,7 @@ void RenderPath2D::Update(float dt)
 	if (!resolutionChange_handle.IsValid())
 	{
 		ResizeBuffers();
-		resolutionChange_handle = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_RESOLUTION, [this](uint64_t userdata) {
+		resolutionChange_handle = wiEvent::Subscribe(SYSTEM_EVENT_WINDOW_RESIZE, [this](uint64_t userdata) {
 			ResizeBuffers();
 			ResizeLayout();
 			});
@@ -131,7 +131,7 @@ void RenderPath2D::Update(float dt)
 	if (!dpiChange_handle.IsValid())
 	{
 		ResizeLayout();
-		dpiChange_handle = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_DPI, [this](uint64_t userdata) {
+		dpiChange_handle = wiEvent::Subscribe(SYSTEM_EVENT_WINDOW_DPICHANGED, [this](uint64_t userdata) {
 			ResizeLayout();
 			});
 	}
@@ -549,7 +549,7 @@ XMUINT2 RenderPath2D::GetInternalResolution() const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	return XMUINT2(
-		(uint32_t)ceilf(device->GetResolutionWidth() * resolutionScale),
-		(uint32_t)ceilf(device->GetResolutionHeight() * resolutionScale)
+		(uint32_t)ceilf(GetResolutionWidth() * resolutionScale),
+		(uint32_t)ceilf(GetResolutionHeight() * resolutionScale)
 	);
 }

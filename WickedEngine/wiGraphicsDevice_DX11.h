@@ -29,7 +29,7 @@ namespace wiGraphics
 		Microsoft::WRL::ComPtr<ID3D11CommandList> commandLists[COMMANDLIST_COUNT];
 		Microsoft::WRL::ComPtr<ID3DUserDefinedAnnotation> userDefinedAnnotations[COMMANDLIST_COUNT];
 
-		Microsoft::WRL::ComPtr<ID3D11Query> disjointQueries[BACKBUFFER_COUNT + 3];
+		Microsoft::WRL::ComPtr<ID3D11Query> disjointQueries[BUFFERCOUNT + 3];
 
 		uint32_t stencilRef[COMMANDLIST_COUNT];
 		XMFLOAT4 blendFactor[COMMANDLIST_COUNT];
@@ -81,7 +81,7 @@ namespace wiGraphics
 		std::shared_ptr<EmptyResourceHandle> emptyresource;
 
 	public:
-		GraphicsDevice_DX11(wiPlatform::window_type window, bool fullscreen = false, bool debuglayer = false);
+		GraphicsDevice_DX11(bool debuglayer = false);
 
 		bool CreateSwapChain(const SwapChainDesc* pDesc, wiPlatform::window_type window, SwapChain* swapChain) const override;
 		bool CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer) const override;
@@ -107,10 +107,6 @@ namespace wiGraphics
 
 		CommandList BeginCommandList() override;
 		void SubmitCommandLists() override;
-
-		void SetResolution(int width, int height) override;
-
-		Texture GetBackBuffer() override;
 
 		SHADERFORMAT GetShaderFormat() const override { return SHADERFORMAT_HLSL5; }
 

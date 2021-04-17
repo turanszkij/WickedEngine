@@ -179,8 +179,6 @@ namespace wiGraphics
 		};
 		mutable CopyAllocator copyAllocator;
 
-		RenderPass dummyRenderpass;
-
 		struct FrameResources
 		{
 			Microsoft::WRL::ComPtr<ID3D12Fence> fence;
@@ -203,8 +201,8 @@ namespace wiGraphics
 			};
 			ResourceFrameAllocator resourceBuffer[COMMANDLIST_COUNT];
 		};
-		FrameResources frames[BACKBUFFER_COUNT];
-		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
+		FrameResources frames[BUFFERCOUNT];
+		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BUFFERCOUNT]; }
 		inline ID3D12GraphicsCommandList6* GetDirectCommandList(CommandList cmd) { return (ID3D12GraphicsCommandList6*)GetFrameResources().commandLists[cmd].Get(); }
 
 		struct DescriptorBinder
@@ -284,7 +282,7 @@ namespace wiGraphics
 		std::atomic<CommandList> cmd_count{ 0 };
 
 	public:
-		GraphicsDevice_DX12(wiPlatform::window_type window, bool fullscreen = false, bool debuglayer = false, bool gpuvalidation = false);
+		GraphicsDevice_DX12(bool debuglayer = false, bool gpuvalidation = false);
 		virtual ~GraphicsDevice_DX12();
 
 		bool CreateSwapChain(const SwapChainDesc* pDesc, wiPlatform::window_type window, SwapChain* swapChain) const override;
@@ -321,10 +319,6 @@ namespace wiGraphics
 
 		void WaitForGPU() const override;
 		void ClearPipelineStateCache() override;
-
-		void SetResolution(int width, int height) override;
-
-		Texture GetBackBuffer() override;
 
 		SHADERFORMAT GetShaderFormat() const override { return SHADERFORMAT_HLSL6; }
 
@@ -478,13 +472,13 @@ namespace wiGraphics
 			}
 
 			// Deferred destroy of resources that the GPU is already finished with:
-			void Update(uint64_t FRAMECOUNT, uint32_t BACKBUFFER_COUNT)
+			void Update(uint64_t FRAMECOUNT, uint32_t BUFFERCOUNT)
 			{
 				destroylocker.lock();
 				framecount = FRAMECOUNT;
 				while (!destroyer_allocations.empty())
 				{
-					if (destroyer_allocations.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					if (destroyer_allocations.front().second + BUFFERCOUNT < FRAMECOUNT)
 					{
 						auto item = destroyer_allocations.front();
 						destroyer_allocations.pop_front();
@@ -497,7 +491,7 @@ namespace wiGraphics
 				}
 				while (!destroyer_resources.empty())
 				{
-					if (destroyer_resources.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					if (destroyer_resources.front().second + BUFFERCOUNT < FRAMECOUNT)
 					{
 						destroyer_resources.pop_front();
 						// comptr auto delete
@@ -509,7 +503,7 @@ namespace wiGraphics
 				}
 				while (!destroyer_queryheaps.empty())
 				{
-					if (destroyer_queryheaps.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					if (destroyer_queryheaps.front().second + BUFFERCOUNT < FRAMECOUNT)
 					{
 						destroyer_queryheaps.pop_front();
 						// comptr auto delete
@@ -521,7 +515,7 @@ namespace wiGraphics
 				}
 				while (!destroyer_pipelines.empty())
 				{
-					if (destroyer_pipelines.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					if (destroyer_pipelines.front().second + BUFFERCOUNT < FRAMECOUNT)
 					{
 						destroyer_pipelines.pop_front();
 						// comptr auto delete
@@ -533,7 +527,7 @@ namespace wiGraphics
 				}
 				while (!destroyer_rootSignatures.empty())
 				{
-					if (destroyer_rootSignatures.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					if (destroyer_rootSignatures.front().second + BUFFERCOUNT < FRAMECOUNT)
 					{
 						destroyer_rootSignatures.pop_front();
 						// comptr auto delete
@@ -545,7 +539,7 @@ namespace wiGraphics
 				}
 				while (!destroyer_stateobjects.empty())
 				{
-					if (destroyer_stateobjects.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					if (destroyer_stateobjects.front().second + BUFFERCOUNT < FRAMECOUNT)
 					{
 						destroyer_stateobjects.pop_front();
 						// comptr auto delete
@@ -557,7 +551,7 @@ namespace wiGraphics
 				}
 				while (!destroyer_descriptorHeaps.empty())
 				{
-					if (destroyer_descriptorHeaps.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					if (destroyer_descriptorHeaps.front().second + BUFFERCOUNT < FRAMECOUNT)
 					{
 						destroyer_descriptorHeaps.pop_front();
 						// comptr auto delete
@@ -569,7 +563,7 @@ namespace wiGraphics
 				}
 				while (!destroyer_bindless_res.empty())
 				{
-					if (destroyer_bindless_res.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					if (destroyer_bindless_res.front().second + BUFFERCOUNT < FRAMECOUNT)
 					{
 						int index = destroyer_bindless_res.front().first;
 						destroyer_bindless_res.pop_front();
@@ -582,7 +576,7 @@ namespace wiGraphics
 				}
 				while (!destroyer_bindless_sam.empty())
 				{
-					if (destroyer_bindless_sam.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
+					if (destroyer_bindless_sam.front().second + BUFFERCOUNT < FRAMECOUNT)
 					{
 						int index = destroyer_bindless_sam.front().first;
 						destroyer_bindless_sam.pop_front();

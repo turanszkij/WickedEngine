@@ -13,8 +13,6 @@ class MainComponent
 protected:
 	wiEvent::Handle swapChainResizeEvent;
 	wiEvent::Handle swapChainVsyncChangeEvent;
-
-	int dpi = 96;
 	wiEvent::Handle dpiChangeEvent;
 
 	RenderPath* activePath = nullptr;
@@ -34,6 +32,7 @@ protected:
 
 public:
 	bool is_window_active = true;
+	wiPlatform::WindowProperties windowprops;
 	wiGraphics::SwapChain swapChain;
 
 	// Runs the main engine loop
@@ -91,5 +90,6 @@ public:
 	};
 	// display all-time engine information text
 	InfoDisplayer infoDisplay;
+
 };
 
