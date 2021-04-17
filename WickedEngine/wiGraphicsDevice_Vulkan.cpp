@@ -5932,6 +5932,23 @@ using namespace Vulkan_Internal;
 		allocationhandler->destroylocker.unlock();
 	}
 
+	Texture GraphicsDevice_Vulkan::GetSwapChainTexture(const SwapChain* swapchain) const
+	{
+		auto swapchain_internal = to_internal(swapchain);
+
+		auto internal_state = std::make_shared<Texture_Vulkan>();
+		internal_state->resource = swapchain_internal->swapChainImages[swapchain_internal->swapChainImageIndex];
+
+		Texture result;
+		result.type = GPUResource::GPU_RESOURCE_TYPE::TEXTURE;
+		result.internal_state = internal_state;
+		result.desc.type = TextureDesc::TEXTURE_2D;
+		result.desc.Width = swapchain_internal->swapChainExtent.width;
+		result.desc.Height = swapchain_internal->swapChainExtent.height;
+		result.desc.Format = swapchain->desc.format;
+		return result;
+	}
+
 
 	void GraphicsDevice_Vulkan::RenderPassBegin(const SwapChain* swapchain, CommandList cmd)
 	{

@@ -86,6 +86,8 @@ namespace wiGraphics
 
 		virtual SHADERFORMAT GetShaderFormat() const { return SHADERFORMAT_NONE; }
 
+		virtual Texture GetSwapChainTexture(const SwapChain* swapchain) const = 0;
+
 		///////////////Thread-sensitive////////////////////////
 
 		virtual void RenderPassBegin(const SwapChain* swapchain, CommandList cmd) = 0;

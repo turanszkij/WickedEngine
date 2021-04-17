@@ -35,7 +35,7 @@ namespace wiHelper
 
 	void messageBox(const std::string& msg, const std::string& caption = "Warning!");
 
-	void screenshot(const std::string& name = "");
+	void screenshot(const wiGraphics::SwapChain& swapchain, const std::string& name = "");
 
 	// Save raw pixel data from the texture to memory
 	bool saveTextureToMemory(const wiGraphics::Texture& texture, std::vector<uint8_t>& texturedata);

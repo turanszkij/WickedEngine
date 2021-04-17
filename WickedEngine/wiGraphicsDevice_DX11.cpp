@@ -2730,6 +2730,24 @@ void GraphicsDevice_DX11::WaitForGPU() const
 }
 
 
+Texture GraphicsDevice_DX11::GetSwapChainTexture(const SwapChain* swapchain) const
+{
+	auto swapchain_internal = to_internal(swapchain);
+
+	auto internal_state = std::make_shared<Texture_DX11>();
+	internal_state->resource = swapchain_internal->backBuffer;
+
+	Texture result;
+	result.internal_state = internal_state;
+	result.type = GPUResource::GPU_RESOURCE_TYPE::TEXTURE;
+
+	D3D11_TEXTURE2D_DESC desc;
+	swapchain_internal->backBuffer->GetDesc(&desc);
+	result.desc = _ConvertTextureDesc_Inv(&desc);
+
+	return result;
+}
+
 void GraphicsDevice_DX11::commit_allocations(CommandList cmd)
 {
 	// DX11 needs to unmap allocations before it can execute safely
