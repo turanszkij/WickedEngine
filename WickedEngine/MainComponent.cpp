@@ -387,7 +387,7 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 		{
 #ifdef WICKEDENGINE_BUILD_VULKAN
 			wiRenderer::SetShaderPath(wiRenderer::GetShaderPath() + "spirv/");
-			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_Vulkan>(debugdevice));
+			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_Vulkan>(window, debugdevice));
 #endif
 		}
 		else if (use_dx12)

@@ -196,7 +196,7 @@ namespace wiGraphics
 		std::vector<StaticSampler> common_samplers;
 
 	public:
-		GraphicsDevice_Vulkan(bool debuglayer = false);
+		GraphicsDevice_Vulkan(wiPlatform::window_type window, bool debuglayer = false);
 		virtual ~GraphicsDevice_Vulkan();
 
 		bool CreateSwapChain(const SwapChainDesc* pDesc, wiPlatform::window_type window, SwapChain* swapChain) const override;

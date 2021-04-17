@@ -622,6 +622,7 @@ namespace Vulkan_Internal
 		return VK_FALSE;
 	}
 
+
 	// Memory tools:
 
 	inline size_t Align(size_t uLocation, size_t uAlign)
@@ -931,7 +932,6 @@ namespace Vulkan_Internal
 		VkSurfaceCapabilitiesKHR swapchain_capabilities;
 		std::vector<VkSurfaceFormatKHR> swapchain_formats;
 		std::vector<VkPresentModeKHR> swapchain_presentModes;
-		int presentFamily = -1;
 
 		uint32_t swapChainImageIndex = 0;
 		VkSemaphore swapchainAcquireSemaphore = VK_NULL_HANDLE;
@@ -1877,7 +1877,7 @@ using namespace Vulkan_Internal;
 	}
 
 	// Engine functions
-	GraphicsDevice_Vulkan::GraphicsDevice_Vulkan(bool debuglayer)
+	GraphicsDevice_Vulkan::GraphicsDevice_Vulkan(wiPlatform::window_type window, bool debuglayer)
 	{
 		TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = sizeof(VkAccelerationStructureInstanceKHR);
 
@@ -2185,15 +2185,18 @@ using namespace Vulkan_Internal;
 			int familyIndex = 0;
 			for (const auto& queueFamily : queueFamilies)
 			{
-				if (graphicsFamily < 0 && queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+				if (graphicsFamily < 0 && queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+				{
 					graphicsFamily = familyIndex;
 				}
 
-				if (copyFamily < 0 && queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT) {
+				if (copyFamily < 0 && queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT)
+				{
 					copyFamily = familyIndex;
 				}
 
-				if (computeFamily < 0 && queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT) {
+				if (computeFamily < 0 && queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT)
+				{
 					computeFamily = familyIndex;
 				}
 
@@ -2633,7 +2636,7 @@ using namespace Vulkan_Internal;
 			createInfo.hwnd = window;
 			createInfo.hinstance = GetModuleHandle(nullptr);
 
-			res = vkCreateWin32SurfaceKHR(instance, &createInfo, nullptr, &internal_state->surface);
+			VkResult res = vkCreateWin32SurfaceKHR(instance, &createInfo, nullptr, &internal_state->surface);
 			assert(res == VK_SUCCESS);
 #elif SDL2
 			if (!SDL_Vulkan_CreateSurface(window, instance, &internal_state->surface))
@@ -2645,6 +2648,7 @@ using namespace Vulkan_Internal;
 #endif // _WIN32
 		}
 
+		int presentFamily = -1;
 		int familyIndex = 0;
 		for (const auto& queueFamily : queueFamilies)
 		{
@@ -2652,15 +2656,13 @@ using namespace Vulkan_Internal;
 			res = vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, (uint32_t)familyIndex, internal_state->surface, &presentSupport);
 			assert(res == VK_SUCCESS);
 
-			if (internal_state->presentFamily < 0 && queueFamily.queueCount > 0 && presentSupport)
+			if (presentFamily < 0 && queueFamily.queueCount > 0 && presentSupport)
 			{
-				internal_state->presentFamily = familyIndex;
-				break;
+				presentFamily = familyIndex;
 			}
 
 			familyIndex++;
 		}
-		assert(internal_state->presentFamily == graphicsFamily);
 
 		res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, internal_state->surface, &internal_state->swapchain_capabilities);
 		assert(res == VK_SUCCESS);
@@ -2721,7 +2723,21 @@ using namespace Vulkan_Internal;
 		createInfo.imageExtent = internal_state->swapChainExtent;
 		createInfo.imageArrayLayers = 1;
 		createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-		createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+		uint32_t queueFamilyIndices[] = { (uint32_t)graphicsFamily, (uint32_t)presentFamily };
+
+		if (graphicsFamily != presentFamily)
+		{
+			createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+			createInfo.queueFamilyIndexCount = 2;
+			createInfo.pQueueFamilyIndices = queueFamilyIndices;
+		}
+		else
+		{
+			createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+			createInfo.queueFamilyIndexCount = 0; // Optional
+			createInfo.pQueueFamilyIndices = nullptr; // Optional
+		}
 
 		createInfo.preTransform = internal_state->swapchain_capabilities.currentTransform;
 		createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
