@@ -5349,6 +5349,7 @@ void DrawScene(
 void DrawDebugWorld(
 	const Scene& scene,
 	const CameraComponent& camera,
+	const wiCanvas& canvas,
 	CommandList cmd
 )
 {
@@ -5711,7 +5712,7 @@ void DrawDebugWorld(
 		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_LINES], cmd);
 
 		MiscCB sb;
-		XMStoreFloat4x4(&sb.g_xTransform, GetCanvas().GetProjection());
+		XMStoreFloat4x4(&sb.g_xTransform, canvas.GetProjection());
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
 		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
 		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
@@ -11969,10 +11970,10 @@ void Postprocess_NormalsFromDepth(
 }
 
 
-RAY GetPickRay(long cursorX, long cursorY, const CameraComponent& camera)
+RAY GetPickRay(long cursorX, long cursorY, const wiCanvas& canvas, const CameraComponent& camera)
 {
-	float screenW = GetCanvas().GetLogicalWidth();
-	float screenH = GetCanvas().GetLogicalHeight();
+	float screenW = canvas.GetLogicalWidth();
+	float screenH = canvas.GetLogicalHeight();
 
 	XMMATRIX V = camera.GetView();
 	XMMATRIX P = camera.GetProjection();

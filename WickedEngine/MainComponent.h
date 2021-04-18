@@ -33,8 +33,8 @@ protected:
 
 public:
 	bool is_window_active = true;
-	wiCanvas canvas;
 	wiGraphics::SwapChain swapChain;
+	wiCanvas canvas;
 
 	// Runs the main engine loop
 	void Run();

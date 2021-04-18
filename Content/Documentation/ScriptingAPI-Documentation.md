@@ -104,8 +104,8 @@ You can use the Renderer with the following functions, all of which are in the g
 - GetGameSpeed() : float result
 - SetGamma(float gamma)
 - SetGameSpeed(float speed)
-- GetScreenWidth() : float result
-- GetScreenHeight() : float result
+- GetScreenWidth() : float result  -- (deprecated, use MainComponent::GetCanvas().GetLogicalWidth() instead)
+- GetScreenHeight() : float result  -- (deprecated, use MainComponent::GetCanvas().GetLogicalHeight() instead)
 - HairParticleSettings(opt int lod0, opt int lod1, opt int lod2)
 - SetShadowProps2D(int resolution, int count)
 - SetShadowPropsCube(int resolution, int count)

@@ -5993,7 +5993,12 @@ using namespace Vulkan_Internal;
 		//}
 		barrier_flush(cmd);
 		
-		VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
+		VkClearValue clearColor = {
+			swapchain->desc.clearcolor[0],
+			swapchain->desc.clearcolor[1],
+			swapchain->desc.clearcolor[2],
+			swapchain->desc.clearcolor[3],
+		};
 		VkRenderPassBeginInfo renderPassInfo = {};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 		renderPassInfo.renderPass = to_internal(&internal_state->renderpass)->renderpass;

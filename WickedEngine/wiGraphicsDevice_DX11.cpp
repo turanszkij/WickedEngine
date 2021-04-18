@@ -2769,8 +2769,7 @@ void GraphicsDevice_DX11::RenderPassBegin(const SwapChain* swapchain, CommandLis
 
 	ID3D11RenderTargetView* RTV = internal_state->renderTargetView.Get();
 	deviceContexts[cmd]->OMSetRenderTargets(1, &RTV, 0);
-	float ClearColor[4] = { 0, 0, 0, 1.0f }; // red,green,blue,alpha
-	deviceContexts[cmd]->ClearRenderTargetView(RTV, ClearColor);
+	deviceContexts[cmd]->ClearRenderTargetView(RTV, swapchain->desc.clearcolor);
 }
 void GraphicsDevice_DX11::RenderPassBegin(const RenderPass* renderpass, CommandList cmd)
 {

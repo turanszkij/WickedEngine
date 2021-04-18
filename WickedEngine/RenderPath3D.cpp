@@ -1224,7 +1224,7 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 		wiRenderer::DrawLensFlares(visibility_main, depthBuffer_Copy, cmd);
 	}
 
-	wiRenderer::DrawDebugWorld(*scene, *camera, cmd);
+	wiRenderer::DrawDebugWorld(*scene, *camera, GetCanvas(), cmd);
 
 	device->RenderPassEnd(cmd);
 

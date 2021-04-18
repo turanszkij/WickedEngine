@@ -52,17 +52,6 @@ namespace wiRenderer_BindLua
 		return 1;
 	}
 
-	int GetScreenWidth(lua_State* L)
-	{
-		wiLua::SSetFloat(L, GetCanvas().GetLogicalWidth());
-		return 1;
-	}
-	int GetScreenHeight(lua_State* L)
-	{
-		wiLua::SSetFloat(L, GetCanvas().GetLogicalHeight());
-		return 1;
-	}
-
 	int SetShadowProps2D(lua_State* L)
 	{
 		int argc = wiLua::SGetArgCount(L);
@@ -374,8 +363,8 @@ namespace wiRenderer_BindLua
 			wiLua::RegisterFunc("SetGameSpeed", SetGameSpeed);
 			wiLua::RegisterFunc("GetGameSpeed", GetGameSpeed);
 
-			wiLua::RegisterFunc("GetScreenWidth", GetScreenWidth);
-			wiLua::RegisterFunc("GetScreenHeight", GetScreenHeight);
+			wiLua::RunText("GetScreenWidth = function() return main.GetCanvas().GetLogicalWidth() end");
+			wiLua::RunText("GetScreenHeight = function() return main.GetCanvas().GetLogicalHeight() end");
 
 			wiLua::RegisterFunc("SetShadowProps2D", SetShadowProps2D);
 			wiLua::RegisterFunc("SetShadowPropsCube", SetShadowPropsCube);

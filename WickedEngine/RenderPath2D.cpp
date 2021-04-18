@@ -194,6 +194,8 @@ void RenderPath2D::Render() const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	CommandList cmd = device->BeginCommandList();
+	wiImage::SetCanvas(GetCanvas(), cmd);
+	wiFont::SetCanvas(GetCanvas(), cmd);
 
 	wiRenderer::ProcessDeferredMipGenRequests(cmd);
 

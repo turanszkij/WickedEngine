@@ -1163,7 +1163,7 @@ void EditorComponent::Update(float dt)
 	{
 		// Begin picking:
 		unsigned int pickMask = rendererWnd.GetPickType();
-		RAY pickRay = wiRenderer::GetPickRay((long)currentMouse.x, (long)currentMouse.y);
+		RAY pickRay = wiRenderer::GetPickRay((long)currentMouse.x, (long)currentMouse.y, GetCanvas());
 		{
 			hovered = wiScene::PickResult();
 

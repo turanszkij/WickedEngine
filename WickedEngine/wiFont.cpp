@@ -42,6 +42,8 @@ namespace wiFont_Internal
 	Shader				pixelShader;
 	PipelineState		PSO;
 
+	wiCanvas canvases[COMMANDLIST_COUNT];
+
 	atomic_bool initialized { false };
 
 	Texture texture;
@@ -616,7 +618,7 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 
 		device->BindResource(VS, mem.buffer, 0, cmd);
 
-		const XMMATRIX Projection = GetCanvas().GetProjection();
+		const XMMATRIX Projection = canvases[cmd].GetProjection();
 
 		if (newProps.shadowColor.getA() > 0)
 		{
@@ -645,6 +647,11 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 	}
 
 	UpdatePendingGlyphs();
+}
+
+void SetCanvas(const wiCanvas& canvas, wiGraphics::CommandList cmd)
+{
+	canvases[cmd] = canvas;
 }
 
 void Draw(const char* text, const wiFontParams& params, CommandList cmd)

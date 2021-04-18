@@ -55,6 +55,8 @@ namespace wiFont
 	//	not deleted while the font is in use
 	int AddFontStyle(const std::string& fontName, const uint8_t* data, size_t size);
 
+	void SetCanvas(const wiCanvas& canvas, wiGraphics::CommandList cmd);
+
 	void Draw(const char* text, const wiFontParams& params, wiGraphics::CommandList cmd);
 	void Draw(const wchar_t* text, const wiFontParams& params, wiGraphics::CommandList cmd);
 	void Draw(const std::string& text, const wiFontParams& params, wiGraphics::CommandList cmd);

@@ -73,6 +73,8 @@ void MainComponent::Run()
 		// Until engine is not loaded, present initialization screen...
 		CommandList cmd = wiRenderer::GetDevice()->BeginCommandList();
 		wiRenderer::GetDevice()->RenderPassBegin(&swapChain, cmd);
+		wiImage::SetCanvas(canvas, cmd);
+		wiFont::SetCanvas(canvas, cmd);
 		Viewport viewport;
 		viewport.Width = (float)swapChain.desc.width;
 		viewport.Height = (float)swapChain.desc.height;
@@ -160,6 +162,8 @@ void MainComponent::Run()
 	CommandList cmd = wiRenderer::GetDevice()->BeginCommandList();
 	wiRenderer::GetDevice()->RenderPassBegin(&swapChain, cmd);
 	{
+		wiImage::SetCanvas(canvas, cmd);
+		wiFont::SetCanvas(canvas, cmd);
 		Viewport viewport;
 		viewport.Width = (float)swapChain.desc.width;
 		viewport.Height = (float)swapChain.desc.height;

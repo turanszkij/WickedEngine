@@ -8,6 +8,7 @@ struct wiImageParams;
 
 namespace wiImage
 {
+	void SetCanvas(const wiCanvas& canvas, wiGraphics::CommandList cmd);
 	void Draw(const wiGraphics::Texture* texture, const wiImageParams& params, wiGraphics::CommandList cmd);
 	void SetBackgroundBlurTexture(const wiGraphics::Texture& texture, wiGraphics::CommandList cmd);
 

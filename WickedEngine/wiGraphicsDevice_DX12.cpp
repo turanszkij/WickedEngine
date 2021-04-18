@@ -5571,15 +5571,13 @@ using namespace DX12_Internal;
 		frame_barriers[cmd].push_back(barrier);
 		barrier_flush(cmd);
 		
-		const float clearcolor[] = { 0,0,0,1 };
-		
 		D3D12_RENDER_PASS_RENDER_TARGET_DESC RTV = {};
 		RTV.cpuDescriptor = internal_state->backbufferRTV[internal_state->swapChain->GetCurrentBackBufferIndex()];
 		RTV.BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
-		RTV.BeginningAccess.Clear.ClearValue.Color[0] = clearcolor[0];
-		RTV.BeginningAccess.Clear.ClearValue.Color[1] = clearcolor[1];
-		RTV.BeginningAccess.Clear.ClearValue.Color[2] = clearcolor[2];
-		RTV.BeginningAccess.Clear.ClearValue.Color[3] = clearcolor[3];
+		RTV.BeginningAccess.Clear.ClearValue.Color[0] = swapchain->desc.clearcolor[0];
+		RTV.BeginningAccess.Clear.ClearValue.Color[1] = swapchain->desc.clearcolor[1];
+		RTV.BeginningAccess.Clear.ClearValue.Color[2] = swapchain->desc.clearcolor[2];
+		RTV.BeginningAccess.Clear.ClearValue.Color[3] = swapchain->desc.clearcolor[3];
 		RTV.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
 		GetDirectCommandList(cmd)->BeginRenderPass(1, &RTV, nullptr, D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES);
 

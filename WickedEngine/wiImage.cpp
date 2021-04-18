@@ -36,12 +36,18 @@ namespace wiImage
 	DepthStencilState		depthStencilStates[STENCILMODE_COUNT][STENCILREFMODE_COUNT];
 	PipelineState			imagePSO[IMAGE_SHADER_COUNT][BLENDMODE_COUNT][STENCILMODE_COUNT][STENCILREFMODE_COUNT];
 	Texture					backgroundBlurTextures[COMMANDLIST_COUNT];
+	wiCanvas				canvases[COMMANDLIST_COUNT];
 
 	std::atomic_bool initialized{ false };
 
 	void SetBackgroundBlurTexture(const Texture& texture, CommandList cmd)
 	{
 		backgroundBlurTextures[cmd] = texture;
+	}
+
+	void SetCanvas(const wiCanvas& canvas, wiGraphics::CommandList cmd)
+	{
+		canvases[cmd] = canvas;
 	}
 
 	void Draw(const Texture* texture, const wiImageParams& params, CommandList cmd)
@@ -143,7 +149,7 @@ namespace wiImage
 		}
 		else
 		{
-			M = M * GetCanvas().GetProjection();
+			M = M * canvases[cmd].GetProjection();
 		}
 
 		for (int i = 0; i < 4; ++i)

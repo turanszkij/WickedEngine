@@ -96,6 +96,7 @@ namespace wiLua
 		RunText(wiLua_Globals);
 
 		MainComponent_BindLua::Bind();
+		Canvas_BindLua::Bind();
 		RenderPath_BindLua::Bind();
 		RenderPath2D_BindLua::Bind();
 		LoadingScreen_BindLua::Bind();
