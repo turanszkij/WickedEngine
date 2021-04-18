@@ -340,7 +340,7 @@ void TestsRenderer::Update(float dt)
 			TransformComponent& target = *scene.transforms.GetComponent(ik.target);
 
 			// place ik target on a plane intersected by mouse ray:
-			RAY ray = wiRenderer::GetPickRay((long)wiInput::GetPointer().x, (long)wiInput::GetPointer().y);
+			RAY ray = wiRenderer::GetPickRay((long)wiInput::GetPointer().x, (long)wiInput::GetPointer().y, GetCanvas());
 			XMVECTOR plane = XMVectorSet(0, 0, 1, 0.2f);
 			XMVECTOR I = XMPlaneIntersectLine(plane, XMLoadFloat3(&ray.origin), XMLoadFloat3(&ray.origin) + XMLoadFloat3(&ray.direction) * 10000);
 			target.ClearTransform();
