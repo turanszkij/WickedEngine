@@ -193,6 +193,12 @@ namespace wiGraphics
 
 		std::vector<StaticSampler> common_samplers;
 
+		std::vector<VkSwapchainKHR> submit_swapchains;
+		std::vector<uint32_t> submit_swapChainImageIndices;
+		std::vector<VkPipelineStageFlags> submit_waitStages;
+		std::vector<VkSemaphore> submit_waitSemaphores;
+		std::vector<VkSemaphore> submit_signalSemaphores;
+
 	public:
 		GraphicsDevice_Vulkan(wiPlatform::window_type window, bool debuglayer = false);
 		virtual ~GraphicsDevice_Vulkan();

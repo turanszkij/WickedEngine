@@ -5802,16 +5802,16 @@ using namespace Vulkan_Internal;
 				cmdLists[counter++] = frame.transitionCommandBuffer;
 			}
 
-			std::vector<VkSwapchainKHR> swapchains;
-			std::vector<uint32_t> swapChainImageIndices;
-			std::vector<VkPipelineStageFlags> waitStages;
-			std::vector<VkSemaphore> waitSemaphores;
-			std::vector<VkSemaphore> signalSemaphores;
+			submit_swapchains.clear();
+			submit_swapChainImageIndices.clear();
+			submit_waitStages.clear();
+			submit_waitSemaphores.clear();
+			submit_signalSemaphores.clear();
 
 			if (copyQueueUse)
 			{
-				waitStages.push_back(VK_PIPELINE_STAGE_TRANSFER_BIT);
-				waitSemaphores.push_back(copySemaphore);
+				submit_waitStages.push_back(VK_PIPELINE_STAGE_TRANSFER_BIT);
+				submit_waitSemaphores.push_back(copySemaphore);
 			}
 
 			CommandList cmd_last = cmd_count.load();
@@ -5822,11 +5822,11 @@ using namespace Vulkan_Internal;
 				{
 					auto internal_state = to_internal(swapchain);
 
-					swapchains.push_back(internal_state->swapChain);
-					swapChainImageIndices.push_back(internal_state->swapChainImageIndex);
-					waitStages.push_back(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-					waitSemaphores.push_back(internal_state->swapchainAcquireSemaphore);
-					signalSemaphores.push_back(internal_state->swapchainReleaseSemaphore);
+					submit_swapchains.push_back(internal_state->swapChain);
+					submit_swapChainImageIndices.push_back(internal_state->swapChainImageIndex);
+					submit_waitStages.push_back(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+					submit_waitSemaphores.push_back(internal_state->swapchainAcquireSemaphore);
+					submit_signalSemaphores.push_back(internal_state->swapchainReleaseSemaphore);
 				}
 
 				barrier_flush(cmd);
@@ -5855,25 +5855,25 @@ using namespace Vulkan_Internal;
 			VkSubmitInfo submitInfo = {};
 			submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-			submitInfo.waitSemaphoreCount = (uint32_t)waitSemaphores.size();
-			submitInfo.pWaitSemaphores = waitSemaphores.data();
-			submitInfo.pWaitDstStageMask = waitStages.data();
+			submitInfo.waitSemaphoreCount = (uint32_t)submit_waitSemaphores.size();
+			submitInfo.pWaitSemaphores = submit_waitSemaphores.data();
+			submitInfo.pWaitDstStageMask = submit_waitStages.data();
 			submitInfo.commandBufferCount = counter;
 			submitInfo.pCommandBuffers = cmdLists;
 
-			submitInfo.signalSemaphoreCount = (uint32_t)signalSemaphores.size();
-			submitInfo.pSignalSemaphores = signalSemaphores.data();
+			submitInfo.signalSemaphoreCount = (uint32_t)submit_signalSemaphores.size();
+			submitInfo.pSignalSemaphores = submit_signalSemaphores.data();
 
 			VkResult res = vkQueueSubmit(graphicsQueue, 1, &submitInfo, frame.frameFence);
 			assert(res == VK_SUCCESS);
 
 			VkPresentInfoKHR presentInfo = {};
 			presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-			presentInfo.waitSemaphoreCount = (uint32_t)signalSemaphores.size();
-			presentInfo.pWaitSemaphores = signalSemaphores.data();
-			presentInfo.swapchainCount = (uint32_t)swapchains.size();
-			presentInfo.pSwapchains = swapchains.data();
-			presentInfo.pImageIndices = swapChainImageIndices.data();
+			presentInfo.waitSemaphoreCount = (uint32_t)submit_signalSemaphores.size();
+			presentInfo.pWaitSemaphores = submit_signalSemaphores.data();
+			presentInfo.swapchainCount = (uint32_t)submit_swapchains.size();
+			presentInfo.pSwapchains = submit_swapchains.data();
+			presentInfo.pImageIndices = submit_swapChainImageIndices.data();
 			res = vkQueuePresentKHR(graphicsQueue, &presentInfo);
 			assert(res == VK_SUCCESS);
 		}
