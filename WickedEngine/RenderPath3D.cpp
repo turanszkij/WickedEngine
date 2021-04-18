@@ -559,7 +559,14 @@ void RenderPath3D::Update(float dt)
 		wiRenderer::UpdateVisibility(visibility_reflection);
 	}
 
-	wiRenderer::UpdatePerFrameData(*scene, visibility_main, frameCB, GetInternalResolution(), dt);
+	wiRenderer::UpdatePerFrameData(
+		*scene,
+		visibility_main,
+		frameCB,
+		GetInternalResolution(),
+		GetCanvas(),
+		dt
+	);
 
 	if (wiRenderer::GetTemporalAAEnabled())
 	{

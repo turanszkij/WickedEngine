@@ -158,6 +158,7 @@ namespace wiRenderer
 		const Visibility& vis,
 		FrameCB& frameCB,
 		XMUINT2 internalResolution,
+		const wiCanvas& canvas,
 		float dt
 	);
 	// Updates the GPU state according to the previously called UpdatePerFrameData()
