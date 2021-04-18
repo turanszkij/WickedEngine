@@ -32,38 +32,4 @@ static const XMFLOAT4X4 IDENTITYMATRIX = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0
 #define NOMINMAX
 #define ALIGN_16 void* operator new(size_t i){return _mm_malloc(i, 16);} void operator delete(void* p){_mm_free(p);}
 
-struct wiCanvas
-{
-	int width = 0;
-	int height = 0;
-	float dpi = 96;
-
-	inline void init(int width, int height, float dpi)
-	{
-		this->width = width;
-		this->height = height;
-		this->dpi = dpi;
-	}
-
-	inline float GetDPI() const { return dpi; }
-	inline float GetDPIScaling() const { return GetDPI() / 96.f; }
-	// Returns native resolution width in pixels:
-	inline int GetPhysicalWidth() const { return width; }
-	// Returns native resolution height in pixels:
-	inline int GetPhysicalHeight() const { return height; }
-	// Returns the width of the window with DPI scaling applied (subpixel size):
-	inline float GetLogicalWidth() const { return GetPhysicalWidth() / GetDPIScaling(); }
-	// Returns the height of the window with DPI scaling applied (subpixel size):
-	inline float GetLogicalHeight() const { return GetPhysicalHeight() / GetDPIScaling(); }
-	inline XMMATRIX GetProjection() const
-	{
-		return XMMatrixOrthographicOffCenterLH(0, (float)GetLogicalWidth(), (float)GetLogicalHeight(), 0, -1, 1);
-	}
-};
-inline wiCanvas& GetCanvas()
-{
-	static wiCanvas canvas;
-	return canvas;
-}
-
 #endif //WICKEDENGINE_COMMONINCLUDE_H

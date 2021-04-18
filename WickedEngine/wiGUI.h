@@ -1,25 +1,14 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
-#include "wiScene.h"
+#include "wiIntersect.h"
+#include "wiCanvas.h"
 
 #include <list>
 
 class wiWidget;
 
-class wiGUIElement : public wiScene::TransformComponent
-{
-protected:
-	void ApplyScissor(const wiGraphics::Rect rect, wiGraphics::CommandList cmd, bool constrain_to_parent = true) const;
-public:
-	wiGraphics::Rect scissorRect;
-
-	wiGUIElement* parent = nullptr;
-	void AttachTo(wiGUIElement* parent);
-	void Detach();
-};
-
-class wiGUI : public wiGUIElement
+class wiGUI
 {
 	friend class wiWidget;
 private:

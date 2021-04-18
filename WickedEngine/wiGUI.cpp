@@ -6,59 +6,6 @@
 using namespace std;
 using namespace wiGraphics;
 
-void wiGUIElement::AttachTo(wiGUIElement* parent)
-{
-	this->parent = parent;
-
-	this->parent->UpdateTransform();
-	XMMATRIX B = XMMatrixInverse(nullptr, XMLoadFloat4x4(&parent->world));
-
-	MatrixTransform(B);
-	UpdateTransform();
-	UpdateTransform_Parented(*parent);
-}
-void wiGUIElement::Detach()
-{
-	this->parent = nullptr;
-	ApplyTransform();
-}
-void wiGUIElement::ApplyScissor(const Rect rect, CommandList cmd, bool constrain_to_parent) const
-{
-	Rect scissor = rect;
-
-	if (constrain_to_parent && parent != nullptr)
-	{
-		wiGUIElement* recurse_parent = parent;
-		while (recurse_parent != nullptr)
-		{
-			scissor.bottom = std::min(scissor.bottom, recurse_parent->scissorRect.bottom);
-			scissor.top = std::max(scissor.top, recurse_parent->scissorRect.top);
-			scissor.left = std::max(scissor.left, recurse_parent->scissorRect.left);
-			scissor.right = std::min(scissor.right, recurse_parent->scissorRect.right);
-
-			recurse_parent = recurse_parent->parent;
-		}
-	}
-
-	if (scissor.left > scissor.right)
-	{
-		scissor.left = scissor.right;
-	}
-	if (scissor.top > scissor.bottom)
-	{
-		scissor.top = scissor.bottom;
-	}
-
-	GraphicsDevice* device = wiRenderer::GetDevice();
-	float scale_x = (float)GetCanvas().GetPhysicalWidth() / (float)GetCanvas().GetLogicalWidth();
-	float scale_y = (float)GetCanvas().GetPhysicalHeight() / (float)GetCanvas().GetLogicalHeight();
-	scissor.bottom = int32_t((float)scissor.bottom * scale_y);
-	scissor.top = int32_t((float)scissor.top * scale_y);
-	scissor.left = int32_t((float)scissor.left * scale_x);
-	scissor.right = int32_t((float)scissor.right * scale_x);
-	device->BindScissorRects(1, &scissor, cmd);
-}
-
 void wiGUI::Update(float dt)
 {
 	if (!visible)
@@ -110,11 +57,6 @@ void wiGUI::Update(float dt)
 		}
 	}
 	priorityChangeQueue.clear();
-
-	scissorRect.bottom = (int32_t)(GetCanvas().GetLogicalHeight());
-	scissorRect.left = (int32_t)(0);
-	scissorRect.right = (int32_t)(GetCanvas().GetLogicalWidth());
-	scissorRect.top = (int32_t)(0);
 }
 
 void wiGUI::Render(CommandList cmd) const
@@ -124,25 +66,32 @@ void wiGUI::Render(CommandList cmd) const
 		return;
 	}
 
-	wiRenderer::GetDevice()->EventBegin("GUI", cmd);
+	Rect scissorRect;
+	scissorRect.bottom = (int32_t)(GetCanvas().GetPhysicalHeight());
+	scissorRect.left = (int32_t)(0);
+	scissorRect.right = (int32_t)(GetCanvas().GetPhysicalWidth());
+	scissorRect.top = (int32_t)(0);
+
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
+	device->EventBegin("GUI", cmd);
 	for (auto it = widgets.rbegin(); it != widgets.rend(); ++it)
 	{
 		const wiWidget* widget = (*it);
 		if (widget != activeWidget)
 		{
-			ApplyScissor(scissorRect, cmd);
+			device->BindScissorRects(1, &scissorRect, cmd);
 			widget->Render(this, cmd);
 		}
 	}
 	if (activeWidget != nullptr)
 	{
 		// Active widget is always on top!
-		ApplyScissor(scissorRect, cmd);
+		device->BindScissorRects(1, &scissorRect, cmd);
 		activeWidget->Render(this, cmd);
 	}
 
-	ApplyScissor(scissorRect, cmd);
-
+	device->BindScissorRects(1, &scissorRect, cmd);
 	if (activeWidget == nullptr)
 	{
 		for (auto& x : widgets)
@@ -151,7 +100,7 @@ void wiGUI::Render(CommandList cmd) const
 		}
 	}
 
-	wiRenderer::GetDevice()->EventEnd(cmd);
+	device->EventEnd(cmd);
 }
 
 void wiGUI::AddWidget(wiWidget* widget)
@@ -159,7 +108,6 @@ void wiGUI::AddWidget(wiWidget* widget)
 	if (widget != nullptr)
 	{
 		assert(std::find(widgets.begin(), widgets.end(), widget) == widgets.end()); // don't attach one widget twice!
-		widget->AttachTo(this);
 		widgets.push_back(widget);
 	}
 }

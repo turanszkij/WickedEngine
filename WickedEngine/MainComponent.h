@@ -6,6 +6,7 @@
 #include "wiFadeManager.h"
 #include "wiGraphics.h"
 #include "wiEvent.h"
+#include "wiCanvas.h"
 
 class RenderPath;
 
@@ -45,14 +46,14 @@ public:
 	inline RenderPath* GetActivePath(){ return activePath; }
 
 	// Set the desired target framerate for the FixedUpdate() loop (default = 60)
-	void	setTargetFrameRate(float value) { targetFrameRate = value; }
+	void setTargetFrameRate(float value) { targetFrameRate = value; }
 	// Get the desired target framerate for the FixedUpdate() loop
-	float	getTargetFrameRate() const { return targetFrameRate; }
+	float getTargetFrameRate() const { return targetFrameRate; }
 	// Set the desired behaviour of the FixedUpdate() loop (default = true)
 	//	enabled		: the FixedUpdate() loop will run at targetFrameRate frequency
 	//	disabled	: the FixedUpdate() loop will run every frame only once.
-	void	setFrameSkip(bool enabled) { frameskip = enabled; }
-	void	setFrameRateLock(bool enabled) { framerate_lock = enabled; }
+	void setFrameSkip(bool enabled) { frameskip = enabled; }
+	void setFrameRateLock(bool enabled) { framerate_lock = enabled; }
 
 	// This is where the critical initializations happen (before any rendering or anything else)
 	virtual void Initialize();

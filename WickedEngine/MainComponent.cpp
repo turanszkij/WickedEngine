@@ -410,9 +410,7 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 		}
 	}
 
-	wiPlatform::WindowProperties windowprops;
-	wiPlatform::GetWindowProperties(window, &windowprops);
-	canvas.init(windowprops.width, windowprops.height, windowprops.dpi);
+	canvas.init(window);
 	GetCanvas() = canvas;
 
 	SwapChainDesc desc;
@@ -425,9 +423,7 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 
 	swapChainResizeEvent = wiEvent::Subscribe(SYSTEM_EVENT_WINDOW_RESIZE, [this](uint64_t userdata) {
 		wiPlatform::window_type window = (wiPlatform::window_type)userdata;
-		wiPlatform::WindowProperties windowprops;
-		wiPlatform::GetWindowProperties(window, &windowprops);
-		canvas.init(windowprops.width, windowprops.height, windowprops.dpi);
+		canvas.init(window);
 		GetCanvas() = canvas;
 
 		SwapChainDesc desc = swapChain.desc;
@@ -446,9 +442,7 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 
 	dpiChangeEvent = wiEvent::Subscribe(SYSTEM_EVENT_WINDOW_DPICHANGED, [this](uint64_t userdata) {
 		wiPlatform::window_type window = (wiPlatform::window_type)userdata;
-		wiPlatform::WindowProperties windowprops;
-		wiPlatform::GetWindowProperties(window, &windowprops);
-		canvas.init(windowprops.width, windowprops.height, windowprops.dpi);
+		canvas.init(window);
 		GetCanvas() = canvas;
 	});
 }

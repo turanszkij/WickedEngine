@@ -149,7 +149,13 @@ namespace wiImage
 		}
 		else
 		{
-			M = M * canvases[cmd].GetProjection();
+			const wiCanvas& canvas = canvases[cmd];
+			// Asserts will check that a proper canvas was set for this cmd with wiImage::SetCanvas()
+			//	The canvas must be set to have dpi aware rendering
+			assert(canvas.width > 0);
+			assert(canvas.height > 0);
+			assert(canvas.dpi > 0);
+			M = M * canvas.GetProjection();
 		}
 
 		for (int i = 0; i < 4; ++i)

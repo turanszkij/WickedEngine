@@ -1086,6 +1086,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\dxcapi.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiCanvas.h">
+      <Filter>ENGINE\System</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">

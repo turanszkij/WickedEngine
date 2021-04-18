@@ -618,7 +618,13 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 
 		device->BindResource(VS, mem.buffer, 0, cmd);
 
-		const XMMATRIX Projection = canvases[cmd].GetProjection();
+		const wiCanvas& canvas = canvases[cmd];
+		// Asserts will check that a proper canvas was set for this cmd with wiImage::SetCanvas()
+		//	The canvas must be set to have dpi aware rendering
+		assert(canvas.width > 0);
+		assert(canvas.height > 0);
+		assert(canvas.dpi > 0);
+		const XMMATRIX Projection = canvas.GetProjection();
 
 		if (newProps.shadowColor.getA() > 0)
 		{

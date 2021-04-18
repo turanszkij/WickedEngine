@@ -26,7 +26,7 @@ struct wiEventArgs
 	uint64_t userdata;
 };
 
-class wiWidget : public wiGUIElement
+class wiWidget : public wiScene::TransformComponent
 {
 	friend class wiGUI;
 public:
@@ -51,6 +51,7 @@ protected:
 	WIDGETSTATE state = IDLE;
 	void Activate();
 	void Deactivate();
+	void ApplyScissor(const wiGraphics::Rect rect, wiGraphics::CommandList cmd, bool constrain_to_parent = true) const;
 
 public:
 	wiWidget();
@@ -83,6 +84,11 @@ public:
 	XMFLOAT3 scale = XMFLOAT3(1, 1, 1);
 
 	Hitbox2D hitBox;
+	wiGraphics::Rect scissorRect;
+
+	wiWidget* parent = nullptr;
+	void AttachTo(wiWidget* parent);
+	void Detach();
 
 	static void Initialize();
 };

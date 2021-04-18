@@ -253,6 +253,68 @@ wiColor wiWidget::GetColor() const
 	return wiColor::fromFloat4(sprites[GetState()].params.color);
 }
 
+void wiWidget::AttachTo(wiWidget* parent)
+{
+	this->parent = parent;
+
+	if (parent != nullptr)
+	{
+		parent->UpdateTransform();
+		XMMATRIX B = XMMatrixInverse(nullptr, XMLoadFloat4x4(&parent->world));
+		MatrixTransform(B);
+	}
+
+	UpdateTransform();
+
+	if (parent != nullptr)
+	{
+		UpdateTransform_Parented(*parent);
+	}
+}
+void wiWidget::Detach()
+{
+	if (parent != nullptr)
+	{
+		parent = nullptr;
+		ApplyTransform();
+	}
+}
+void wiWidget::ApplyScissor(const Rect rect, CommandList cmd, bool constrain_to_parent) const
+{
+	Rect scissor = rect;
+
+	if (constrain_to_parent && parent != nullptr)
+	{
+		wiWidget* recurse_parent = parent;
+		while (recurse_parent != nullptr)
+		{
+			scissor.bottom = std::min(scissor.bottom, recurse_parent->scissorRect.bottom);
+			scissor.top = std::max(scissor.top, recurse_parent->scissorRect.top);
+			scissor.left = std::max(scissor.left, recurse_parent->scissorRect.left);
+			scissor.right = std::min(scissor.right, recurse_parent->scissorRect.right);
+
+			recurse_parent = recurse_parent->parent;
+		}
+	}
+
+	if (scissor.left > scissor.right)
+	{
+		scissor.left = scissor.right;
+	}
+	if (scissor.top > scissor.bottom)
+	{
+		scissor.top = scissor.bottom;
+	}
+
+	GraphicsDevice* device = wiRenderer::GetDevice();
+	float scale = GetCanvas().GetDPIScaling();
+	scissor.bottom = int32_t((float)scissor.bottom * scale);
+	scissor.top = int32_t((float)scissor.top * scale);
+	scissor.left = int32_t((float)scissor.left * scale);
+	scissor.right = int32_t((float)scissor.right * scale);
+	device->BindScissorRects(1, &scissor, cmd);
+}
+
 namespace wiWidget_Internal
 {
 	void LoadShaders()
@@ -1487,9 +1549,6 @@ void wiWindow::Create(const std::string& name, bool window_controls)
 			this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
 			this->Scale(XMFLOAT3(scaleDiff.x, scaleDiff.y, 1));
 			this->scale_local = wiMath::Max(this->scale_local, XMFLOAT3(windowcontrolSize * 3, windowcontrolSize * 2, 1)); // don't allow resize to negative or too small
-			// Don't allow control outside of screen:
-			this->translation_local.x = wiMath::Clamp(this->translation_local.x, 0, GetCanvas().GetLogicalWidth() - this->scale_local.x);
-			this->translation_local.y = wiMath::Clamp(this->translation_local.y, 0, GetCanvas().GetLogicalHeight() - windowcontrolSize);
 			this->AttachTo(saved_parent);
 			});
 		AddWidget(&resizeDragger_UpperLeft);
@@ -1505,9 +1564,6 @@ void wiWindow::Create(const std::string& name, bool window_controls)
 			scaleDiff.y = (scale.y + args.deltaPos.y) / scale.y;
 			this->Scale(XMFLOAT3(scaleDiff.x, scaleDiff.y, 1));
 			this->scale_local = wiMath::Max(this->scale_local, XMFLOAT3(windowcontrolSize * 3, windowcontrolSize * 2, 1)); // don't allow resize to negative or too small
-			// Don't allow control outside of screen:
-			this->translation_local.x = wiMath::Clamp(this->translation_local.x, 0, GetCanvas().GetLogicalWidth() - this->scale_local.x);
-			this->translation_local.y = wiMath::Clamp(this->translation_local.y, 0, GetCanvas().GetLogicalHeight() - windowcontrolSize);
 			this->AttachTo(saved_parent);
 			});
 		AddWidget(&resizeDragger_BottomRight);
@@ -1520,9 +1576,6 @@ void wiWindow::Create(const std::string& name, bool window_controls)
 			auto saved_parent = this->parent;
 			this->Detach();
 			this->Translate(XMFLOAT3(args.deltaPos.x, args.deltaPos.y, 0));
-			// Don't allow control outside of screen:
-			this->translation_local.x = wiMath::Clamp(this->translation_local.x, 0, GetCanvas().GetLogicalWidth() - this->scale_local.x);
-			this->translation_local.y = wiMath::Clamp(this->translation_local.y, 0, GetCanvas().GetLogicalHeight() - windowcontrolSize);
 			this->AttachTo(saved_parent);
 			});
 		AddWidget(&moveDragger);
@@ -1587,6 +1640,16 @@ void wiWindow::Update(wiGUI* gui, float dt)
 	moveDragger.Update(gui, dt);
 	resizeDragger_UpperLeft.Update(gui, dt);
 	resizeDragger_BottomRight.Update(gui, dt);
+
+	// Don't allow moving outside of screen:
+	{
+		auto saved_parent = parent;
+		Detach();
+		translation_local.x = wiMath::Clamp(translation_local.x, 0, GetCanvas().GetLogicalWidth() - scale_local.x);
+		translation_local.y = wiMath::Clamp(translation_local.y, 0, GetCanvas().GetLogicalHeight() - windowcontrolSize);
+		AttachTo(saved_parent);
+		SetDirty();
+	}
 
 	wiWidget::Update(gui, dt);
 

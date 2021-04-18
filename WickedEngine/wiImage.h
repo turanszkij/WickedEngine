@@ -3,15 +3,22 @@
 #include "wiGraphicsDevice.h"
 #include "wiEnums.h"
 #include "wiColor.h"
+#include "wiCanvas.h"
 
 struct wiImageParams;
 
 namespace wiImage
 {
+	// Set canvas to handle DPI-aware image rendering (applied to all image rendering commands on this CommandList)
 	void SetCanvas(const wiCanvas& canvas, wiGraphics::CommandList cmd);
-	void Draw(const wiGraphics::Texture* texture, const wiImageParams& params, wiGraphics::CommandList cmd);
+
+	// Set a background texture (applied to all image rendering commands on this CommandList)
 	void SetBackgroundBlurTexture(const wiGraphics::Texture& texture, wiGraphics::CommandList cmd);
 
+	// Draw the specified texture with the specified parameters
+	void Draw(const wiGraphics::Texture* texture, const wiImageParams& params, wiGraphics::CommandList cmd);
+
+	// Initialize the image renderer
 	void Initialize();
 };
 

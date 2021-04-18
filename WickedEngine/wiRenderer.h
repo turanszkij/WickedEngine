@@ -5,6 +5,7 @@
 #include "wiScene.h"
 #include "wiECS.h"
 #include "wiIntersect.h"
+#include "wiCanvas.h"
 #include "shaders/ShaderInterop_Renderer.h"
 
 #include <memory>
