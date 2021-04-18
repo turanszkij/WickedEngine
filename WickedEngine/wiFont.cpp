@@ -342,18 +342,6 @@ void Initialize()
 	LoadShaders();
 
 
-	static wiEvent::Handle handle2 = wiEvent::Subscribe(SYSTEM_EVENT_WINDOW_DPICHANGED, [](uint64_t userdata) {
-		glyphLock.lock();
-		for (auto& x : glyph_lookup)
-		{
-			pendingGlyphs.insert(x.first);
-		}
-		glyph_lookup.clear();
-		rect_lookup.clear();
-		glyphLock.unlock();
-	});
-
-
 	wiBackLog::post("wiFont Initialized");
 	initialized.store(true);
 }
@@ -369,7 +357,7 @@ void UpdatePendingGlyphs()
 		const int borderPadding = 1;
 
 		// Font resolution is upscaled to make it sharper:
-		const float upscaling = std::max(2.0f, GetDPIScaling());
+		const float upscaling = 2.0f;
 
 		for (int32_t hash : pendingGlyphs)
 		{
@@ -628,7 +616,7 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 
 		device->BindResource(VS, mem.buffer, 0, cmd);
 
-		const XMMATRIX Projection = GetScreenProjection();
+		const XMMATRIX Projection = GetCanvas().GetProjection();
 
 		if (newProps.shadowColor.getA() > 0)
 		{

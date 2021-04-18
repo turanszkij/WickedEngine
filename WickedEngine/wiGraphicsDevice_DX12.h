@@ -322,7 +322,7 @@ namespace wiGraphics
 
 		SHADERFORMAT GetShaderFormat() const override { return SHADERFORMAT_HLSL6; }
 
-		Texture GetSwapChainTexture(const SwapChain* swapchain) const override;
+		Texture GetBackBuffer(const SwapChain* swapchain) const override;
 
 		///////////////Thread-sensitive////////////////////////
 

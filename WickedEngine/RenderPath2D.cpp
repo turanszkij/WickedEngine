@@ -39,8 +39,8 @@ void RenderPath2D::ResizeBuffers()
 		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		desc.Format = defaultTextureFormat;
-		desc.Width = GetResolutionWidth();
-		desc.Height = GetResolutionHeight();
+		desc.Width = GetCanvas().GetPhysicalWidth();
+		desc.Height = GetCanvas().GetPhysicalHeight();
 		device->CreateTexture(&desc, nullptr, &rtFinal);
 		device->SetName(&rtFinal, "rtFinal");
 	}
@@ -549,7 +549,7 @@ XMUINT2 RenderPath2D::GetInternalResolution() const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	return XMUINT2(
-		(uint32_t)ceilf(GetResolutionWidth() * resolutionScale),
-		(uint32_t)ceilf(GetResolutionHeight() * resolutionScale)
+		(uint32_t)ceilf(GetCanvas().GetPhysicalWidth() * resolutionScale),
+		(uint32_t)ceilf(GetCanvas().GetPhysicalHeight() * resolutionScale)
 	);
 }

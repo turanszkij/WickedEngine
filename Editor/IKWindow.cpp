@@ -72,7 +72,7 @@ void IKWindow::Create(EditorComponent* editor)
 		});
 	AddWidget(&iterationCountSlider);
 
-	Translate(XMFLOAT3((float)GetScreenWidth() - 740, 150, 0));
+	Translate(XMFLOAT3((float)GetCanvas().GetLogicalWidth() - 740, 150, 0));
 	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);

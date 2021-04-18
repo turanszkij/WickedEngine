@@ -53,12 +53,12 @@ namespace wiRenderer_BindLua
 
 	int GetScreenWidth(lua_State* L)
 	{
-		wiLua::SSetFloat(L, ::GetScreenWidth());
+		wiLua::SSetFloat(L, GetCanvas().GetLogicalWidth());
 		return 1;
 	}
 	int GetScreenHeight(lua_State* L)
 	{
-		wiLua::SSetFloat(L, ::GetScreenHeight());
+		wiLua::SSetFloat(L, GetCanvas().GetLogicalHeight());
 		return 1;
 	}
 

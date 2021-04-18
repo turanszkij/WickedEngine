@@ -143,7 +143,7 @@ namespace wiImage
 		}
 		else
 		{
-			M = M * GetScreenProjection();
+			M = M * GetCanvas().GetProjection();
 		}
 
 		for (int i = 0; i < 4; ++i)

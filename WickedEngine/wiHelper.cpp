@@ -88,7 +88,7 @@ namespace wiHelper
 			filename = directory + "/sc_" + getCurrentDateTimeAsString() + ".jpg";
 		}
 
-		bool result = saveTextureToFile(wiRenderer::GetDevice()->GetSwapChainTexture(&swapchain), filename);
+		bool result = saveTextureToFile(wiRenderer::GetDevice()->GetBackBuffer(&swapchain), filename);
 		assert(result);
 
 		if (result)

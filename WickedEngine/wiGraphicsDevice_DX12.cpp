@@ -5535,7 +5535,7 @@ using namespace DX12_Internal;
 		allocationhandler->destroylocker.unlock();
 	}
 
-	Texture GraphicsDevice_DX12::GetSwapChainTexture(const SwapChain* swapchain) const
+	Texture GraphicsDevice_DX12::GetBackBuffer(const SwapChain* swapchain) const
 	{
 		auto swapchain_internal = to_internal(swapchain);
 

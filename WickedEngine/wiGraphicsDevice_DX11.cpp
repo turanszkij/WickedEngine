@@ -2730,7 +2730,7 @@ void GraphicsDevice_DX11::WaitForGPU() const
 }
 
 
-Texture GraphicsDevice_DX11::GetSwapChainTexture(const SwapChain* swapchain) const
+Texture GraphicsDevice_DX11::GetBackBuffer(const SwapChain* swapchain) const
 {
 	auto swapchain_internal = to_internal(swapchain);
 

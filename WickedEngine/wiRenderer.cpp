@@ -3671,7 +3671,7 @@ void UpdatePerFrameData(
 
 	// Update CPU-side frame constant buffer:
 	frameCB.g_xFrame_ConstantOne = 1;
-	frameCB.g_xFrame_ScreenWidthHeight = float2((float)GetScreenWidth(), (float)GetScreenHeight());
+	frameCB.g_xFrame_ScreenWidthHeight = float2((float)GetCanvas().GetLogicalWidth(), (float)GetCanvas().GetLogicalHeight());
 	frameCB.g_xFrame_ScreenWidthHeight_rcp = float2(1.0f / frameCB.g_xFrame_ScreenWidthHeight.x, 1.0f / frameCB.g_xFrame_ScreenWidthHeight.y);
 	frameCB.g_xFrame_InternalResolution = float2((float)internalResolution.x, (float)internalResolution.y);
 	frameCB.g_xFrame_InternalResolution_rcp = float2(1.0f / frameCB.g_xFrame_InternalResolution.x, 1.0f / frameCB.g_xFrame_InternalResolution.y);
@@ -5713,7 +5713,7 @@ void DrawDebugWorld(
 		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_LINES], cmd);
 
 		MiscCB sb;
-		XMStoreFloat4x4(&sb.g_xTransform, GetScreenProjection());
+		XMStoreFloat4x4(&sb.g_xTransform, GetCanvas().GetProjection());
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
 		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
 		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
@@ -11973,8 +11973,8 @@ void Postprocess_NormalsFromDepth(
 
 RAY GetPickRay(long cursorX, long cursorY, const CameraComponent& camera)
 {
-	float screenW = GetScreenWidth();
-	float screenH = GetScreenHeight();
+	float screenW = GetCanvas().GetLogicalWidth();
+	float screenH = GetCanvas().GetLogicalHeight();
 
 	XMMATRIX V = camera.GetView();
 	XMMATRIX P = camera.GetProjection();

@@ -196,7 +196,7 @@ void PaintToolWindow::Create(EditorComponent* editor)
 	colorPicker.SetPos(XMFLOAT2(10, y += step));
 	AddWidget(&colorPicker);
 
-	Translate(XMFLOAT3((float)GetScreenWidth() - 550, 50, 0));
+	Translate(XMFLOAT3((float)GetCanvas().GetLogicalWidth() - 550, 50, 0));
 	SetVisible(false);
 }
 
@@ -207,8 +207,8 @@ void PaintToolWindow::Update(float dt)
 	rot -= dt;
 	// by default, paint tool is on center of screen, this makes it easy to tweak radius with GUI:
 	XMFLOAT2 posNew;
-	posNew.x = GetScreenWidth() * 0.5f;
-	posNew.y = GetScreenHeight() * 0.5f;
+	posNew.x = GetCanvas().GetLogicalWidth() * 0.5f;
+	posNew.y = GetCanvas().GetLogicalHeight() * 0.5f;
 	if (editor->GetGUI().HasFocus() || wiBackLog::isActive() || entity == INVALID_ENTITY)
 	{
 		pos = posNew;
@@ -253,7 +253,7 @@ void PaintToolWindow::Update(float dt)
 	const XMMATRIX VP = camera.GetViewProjection();
 	const XMVECTOR MUL = XMVectorSet(0.5f, -0.5f, 1, 1);
 	const XMVECTOR ADD = XMVectorSet(0.5f, 0.5f, 0, 0);
-	const XMVECTOR SCREEN = XMVectorSet((float)GetScreenWidth(), (float)GetScreenHeight(), 1, 1);
+	const XMVECTOR SCREEN = XMVectorSet((float)GetCanvas().GetLogicalWidth(), (float)GetCanvas().GetLogicalHeight(), 1, 1);
 	const XMVECTOR F = camera.GetAt();
 
 	switch (mode)

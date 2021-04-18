@@ -562,7 +562,7 @@ void MeshWindow::Create(EditorComponent* editor)
 	});
 	AddWidget(&morphTargetSlider);
 
-	Translate(XMFLOAT3((float)GetScreenWidth() - 1000, 80, 0));
+	Translate(XMFLOAT3((float)GetCanvas().GetLogicalWidth() - 1000, 80, 0));
 	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);

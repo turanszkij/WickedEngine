@@ -83,7 +83,7 @@ void SpringWindow::Create(EditorComponent* editor)
 		});
 	AddWidget(&windSlider);
 
-	Translate(XMFLOAT3((float)GetScreenWidth() - 700, 80, 0));
+	Translate(XMFLOAT3((float)GetCanvas().GetLogicalWidth() - 700, 80, 0));
 	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);

@@ -385,7 +385,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	AddWidget(&chromaticaberrationSlider);
 
 
-	Translate(XMFLOAT3((float)GetScreenWidth() - 500, 80, 0));
+	Translate(XMFLOAT3((float)GetCanvas().GetLogicalWidth() - 500, 80, 0));
 	SetVisible(false);
 
 }

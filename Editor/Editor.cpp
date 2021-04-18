@@ -130,14 +130,14 @@ void Editor::Initialize()
 
 void EditorLoadingScreen::Load()
 {
-	font = wiSpriteFont("Loading...", wiFontParams(GetScreenWidth()*0.5f, GetScreenHeight()*0.5f, 36,
+	font = wiSpriteFont("Loading...", wiFontParams(GetCanvas().GetLogicalWidth()*0.5f, GetCanvas().GetLogicalHeight()*0.5f, 36,
 		WIFALIGN_CENTER, WIFALIGN_CENTER));
 	AddFont(&font);
 
 	sprite = wiSprite("images/logo_small.png");
 	sprite.anim.opa = 1;
 	sprite.anim.repeatable = true;
-	sprite.params.pos = XMFLOAT3(GetScreenWidth()*0.5f, GetScreenHeight()*0.5f - font.textHeight(), 0);
+	sprite.params.pos = XMFLOAT3(GetCanvas().GetLogicalWidth()*0.5f, GetCanvas().GetLogicalHeight()*0.5f - font.textHeight(), 0);
 	sprite.params.siz = XMFLOAT2(128, 128);
 	sprite.params.pivot = XMFLOAT2(0.5f, 1.0f);
 	sprite.params.quality = QUALITY_LINEAR;
@@ -148,9 +148,9 @@ void EditorLoadingScreen::Load()
 }
 void EditorLoadingScreen::Update(float dt)
 {
-	font.params.posX = GetScreenWidth()*0.5f;
-	font.params.posY = GetScreenHeight()*0.5f;
-	sprite.params.pos = XMFLOAT3(GetScreenWidth()*0.5f, GetScreenHeight()*0.5f - font.textHeight(), 0);
+	font.params.posX = GetCanvas().GetLogicalWidth()*0.5f;
+	font.params.posY = GetCanvas().GetLogicalHeight()*0.5f;
+	sprite.params.pos = XMFLOAT3(GetCanvas().GetLogicalWidth()*0.5f, GetCanvas().GetLogicalHeight()*0.5f - font.textHeight(), 0);
 
 	LoadingScreen::Update(dt);
 }
@@ -260,8 +260,8 @@ void EditorComponent::ResizeLayout()
 
 	// GUI elements scaling:
 
-	float screenW = GetScreenWidth();
-	float screenH = GetScreenHeight();
+	float screenW = GetCanvas().GetLogicalWidth();
+	float screenH = GetCanvas().GetLogicalHeight();
 
 	XMFLOAT2 option_size = XMFLOAT2(100, 34);
 	float x = screenW - option_size.x;

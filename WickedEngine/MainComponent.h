@@ -32,7 +32,7 @@ protected:
 
 public:
 	bool is_window_active = true;
-	wiPlatform::WindowProperties windowprops;
+	wiCanvas canvas;
 	wiGraphics::SwapChain swapChain;
 
 	// Runs the main engine loop

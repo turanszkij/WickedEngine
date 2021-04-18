@@ -33,7 +33,7 @@ void NameWindow::Create(EditorComponent* editor)
 	});
 	AddWidget(&nameInput);
 
-	Translate(XMFLOAT3((float)GetScreenWidth() - 450, 200, 0));
+	Translate(XMFLOAT3((float)GetCanvas().GetLogicalWidth() - 450, 200, 0));
 	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);

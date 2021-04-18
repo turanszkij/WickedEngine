@@ -5948,7 +5948,7 @@ using namespace Vulkan_Internal;
 		allocationhandler->destroylocker.unlock();
 	}
 
-	Texture GraphicsDevice_Vulkan::GetSwapChainTexture(const SwapChain* swapchain) const
+	Texture GraphicsDevice_Vulkan::GetBackBuffer(const SwapChain* swapchain) const
 	{
 		auto swapchain_internal = to_internal(swapchain);
 

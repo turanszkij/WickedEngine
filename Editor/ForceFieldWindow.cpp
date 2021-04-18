@@ -109,7 +109,7 @@ void ForceFieldWindow::Create(EditorComponent* editor)
 
 
 
-	Translate(XMFLOAT3((float)GetScreenWidth() - 720, 50, 0));
+	Translate(XMFLOAT3((float)GetCanvas().GetLogicalWidth() - 720, 50, 0));
 	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);

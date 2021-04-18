@@ -82,7 +82,7 @@ void MainComponent::Run()
 		params.posY = 5.f;
 		string text = wiBackLog::getText();
 		float textheight = wiFont::textHeight(text, params);
-		float screenheight = windowprops.GetLogicalHeight();
+		float screenheight = canvas.GetLogicalHeight();
 		if (textheight > screenheight)
 		{
 			params.posY = screenheight - textheight;
@@ -232,8 +232,8 @@ void MainComponent::Compose(CommandList cmd)
 	{
 		// display fade rect
 		static wiImageParams fx;
-		fx.siz.x = windowprops.GetLogicalWidth();
-		fx.siz.y = windowprops.GetLogicalHeight();
+		fx.siz.x = canvas.GetLogicalWidth();
+		fx.siz.y = canvas.GetLogicalHeight();
 		fx.opacity = fadeManager.opacity;
 		wiImage::Draw(wiTextureHelper::getColor(fadeManager.color), fx, cmd);
 	}
@@ -288,7 +288,7 @@ void MainComponent::Compose(CommandList cmd)
 		}
 		if (infoDisplay.resolution)
 		{
-			ss << "Resolution: " << windowprops.GetPhysicalWidth() << " x " << windowprops.GetPhysicalHeight() << " (" << windowprops.GetDPI() << " dpi)" << endl;
+			ss << "Resolution: " << canvas.GetPhysicalWidth() << " x " << canvas.GetPhysicalHeight() << " (" << canvas.GetDPI() << " dpi)" << endl;
 		}
 		if (infoDisplay.fpsinfo)
 		{
@@ -326,7 +326,7 @@ void MainComponent::Compose(CommandList cmd)
 
 		if (infoDisplay.colorgrading_helper)
 		{
-			wiImage::Draw(wiTextureHelper::getColorGradeDefault(), wiImageParams(0, 0, 256.0f / windowprops.GetDPIScaling(), 16.0f / windowprops.GetDPIScaling()), cmd);
+			wiImage::Draw(wiTextureHelper::getColorGradeDefault(), wiImageParams(0, 0, 256.0f / canvas.GetDPIScaling(), 16.0f / canvas.GetDPIScaling()), cmd);
 		}
 	}
 
@@ -406,14 +406,14 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 		}
 	}
 
+	wiPlatform::WindowProperties windowprops;
 	wiPlatform::GetWindowProperties(window, &windowprops);
-	GetResolutionWidth() = windowprops.GetPhysicalWidth();
-	GetResolutionHeight() = windowprops.GetPhysicalHeight();
-	GetDPI() = windowprops.GetDPI();
+	canvas.init(windowprops.width, windowprops.height, windowprops.dpi);
+	GetCanvas() = canvas;
 
 	SwapChainDesc desc;
-	desc.width = (uint32_t)windowprops.GetPhysicalWidth();
-	desc.height = (uint32_t)windowprops.GetPhysicalHeight();
+	desc.width = (uint32_t)canvas.GetPhysicalWidth();
+	desc.height = (uint32_t)canvas.GetPhysicalHeight();
 	desc.buffercount = 3;
 	desc.format = FORMAT_R10G10B10A2_UNORM;
 	bool success = wiRenderer::GetDevice()->CreateSwapChain(&desc, window, &swapChain);
@@ -421,13 +421,14 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 
 	swapChainResizeEvent = wiEvent::Subscribe(SYSTEM_EVENT_WINDOW_RESIZE, [this](uint64_t userdata) {
 		wiPlatform::window_type window = (wiPlatform::window_type)userdata;
+		wiPlatform::WindowProperties windowprops;
 		wiPlatform::GetWindowProperties(window, &windowprops);
-		GetResolutionWidth() = windowprops.GetPhysicalWidth();
-		GetResolutionHeight() = windowprops.GetPhysicalHeight();
+		canvas.init(windowprops.width, windowprops.height, windowprops.dpi);
+		GetCanvas() = canvas;
 
 		SwapChainDesc desc = swapChain.desc;
-		desc.width = (uint32_t)windowprops.GetPhysicalWidth();
-		desc.height = (uint32_t)windowprops.GetPhysicalHeight();
+		desc.width = (uint32_t)canvas.GetPhysicalWidth();
+		desc.height = (uint32_t)canvas.GetPhysicalHeight();
 		bool success = wiRenderer::GetDevice()->CreateSwapChain(&desc, nullptr, &swapChain);
 		assert(success);
 	});
@@ -441,8 +442,10 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 
 	dpiChangeEvent = wiEvent::Subscribe(SYSTEM_EVENT_WINDOW_DPICHANGED, [this](uint64_t userdata) {
 		wiPlatform::window_type window = (wiPlatform::window_type)userdata;
+		wiPlatform::WindowProperties windowprops;
 		wiPlatform::GetWindowProperties(window, &windowprops);
-		GetDPI() = windowprops.GetDPI();
+		canvas.init(windowprops.width, windowprops.height, windowprops.dpi);
+		GetCanvas() = canvas;
 	});
 }
 

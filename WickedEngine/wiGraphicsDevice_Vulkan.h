@@ -236,7 +236,7 @@ namespace wiGraphics
 
 		SHADERFORMAT GetShaderFormat() const override { return SHADERFORMAT_SPIRV; }
 
-		Texture GetSwapChainTexture(const SwapChain* swapchain) const override;
+		Texture GetBackBuffer(const SwapChain* swapchain) const override;
 
 		///////////////Thread-sensitive////////////////////////
 
