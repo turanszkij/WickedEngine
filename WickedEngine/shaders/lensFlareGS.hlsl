@@ -84,7 +84,7 @@ void main(point InVert p[1], inout TriangleStream<VertextoPixel> triStream)
 	default:break;
 	};
 
-	flareSize /= GetScreenResolution();
+	flareSize /= GetInternalResolution();
 
 	float referenceDepth = saturate(1 - xSunPos.z);
 

@@ -3671,8 +3671,6 @@ void UpdatePerFrameData(
 
 	// Update CPU-side frame constant buffer:
 	frameCB.g_xFrame_ConstantOne = 1;
-	frameCB.g_xFrame_ScreenWidthHeight = float2((float)GetCanvas().GetLogicalWidth(), (float)GetCanvas().GetLogicalHeight());
-	frameCB.g_xFrame_ScreenWidthHeight_rcp = float2(1.0f / frameCB.g_xFrame_ScreenWidthHeight.x, 1.0f / frameCB.g_xFrame_ScreenWidthHeight.y);
 	frameCB.g_xFrame_InternalResolution = float2((float)internalResolution.x, (float)internalResolution.y);
 	frameCB.g_xFrame_InternalResolution_rcp = float2(1.0f / frameCB.g_xFrame_InternalResolution.x, 1.0f / frameCB.g_xFrame_InternalResolution.y);
 	frameCB.g_xFrame_Gamma = GetGamma();
