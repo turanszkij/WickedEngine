@@ -187,12 +187,12 @@ uint32_t wiEmittedParticle::GetMemorySizeInBytes() const
 
 void wiEmittedParticle::UpdateCPU(const TransformComponent& transform, float dt)
 {
+	CreateSelfBuffers();
+
 	if (IsPaused())
 		return;
 
 	emit = std::max(0.0f, emit - floorf(emit));
-
-	CreateSelfBuffers();
 
 	center = transform.GetPosition();
 

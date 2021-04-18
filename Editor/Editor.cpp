@@ -670,7 +670,8 @@ void EditorComponent::Load()
 		wiHelper::FileDialog(params, [this](std::string fileName) {
 			wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 				std::string filename = fileName;
-				if (filename.substr(filename.length() - 8).compare(".wiscene") != 0)
+				std::string extension = wiHelper::GetExtensionFromFileName(filename);
+				if (extension.compare("wiscene"))
 				{
 					filename += ".wiscene";
 				}
