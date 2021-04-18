@@ -5,6 +5,7 @@
 #include "wiColor.h"
 #include "wiFadeManager.h"
 #include "wiGraphics.h"
+#include "wiEvent.h"
 
 class RenderPath;
 

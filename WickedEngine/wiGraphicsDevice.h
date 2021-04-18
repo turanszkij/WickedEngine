@@ -2,9 +2,6 @@
 #include "CommonInclude.h"
 #include "wiGraphics.h"
 #include "wiPlatform.h"
-#include "wiEvent.h"
-
-#include <memory>
 
 namespace wiGraphics
 {

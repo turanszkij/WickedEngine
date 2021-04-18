@@ -8,8 +8,6 @@
 
 #ifdef WICKEDENGINE_BUILD_DX12
 #include "wiGraphicsDevice.h"
-#include "wiSpinLock.h"
-#include "wiContainers.h"
 #include "wiGraphicsDevice_SharedInternals.h"
 
 #include <dxgi1_6.h>

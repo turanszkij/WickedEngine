@@ -9,6 +9,7 @@
 #include "wiEmittedParticle.h"
 #include "wiHairParticle.h"
 #include "wiIntersect_BindLua.h"
+#include "wiEvent.h"
 
 using namespace std;
 using namespace wiECS;

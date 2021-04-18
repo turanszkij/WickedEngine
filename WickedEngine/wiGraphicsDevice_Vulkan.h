@@ -8,8 +8,6 @@
 
 #ifdef WICKEDENGINE_BUILD_VULKAN
 #include "wiGraphicsDevice.h"
-#include "wiSpinLock.h"
-#include "wiContainers.h"
 #include "wiGraphicsDevice_SharedInternals.h"
 
 #ifdef _WIN32
