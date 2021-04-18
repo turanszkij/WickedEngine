@@ -702,7 +702,7 @@ namespace wiScene
 					if (!lensFlareNames[i].empty())
 					{
 						lensFlareNames[i] = dir + lensFlareNames[i];
-						lensFlareRimTextures[i] = wiResourceManager::Load(dir + lensFlareNames[i], wiResourceManager::IMPORT_RETAIN_FILEDATA);
+						lensFlareRimTextures[i] = wiResourceManager::Load(lensFlareNames[i], wiResourceManager::IMPORT_RETAIN_FILEDATA);
 					}
 				}
 			});
