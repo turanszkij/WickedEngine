@@ -12,20 +12,21 @@ using namespace wiGraphics;
 using namespace wiScene;
 
 
-void RenderPath3D_PathTracing::ResizeBuffers()
+void RenderPath3D_PathTracing::ResizeBuffers(const wiCanvas& canvas)
 {
-	RenderPath2D::ResizeBuffers(); // we don't need to use any buffers from RenderPath3D, so skip those
+	RenderPath2D::ResizeBuffers(canvas); // we don't need to use any buffers from RenderPath3D, so skip those
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
+	XMUINT2 internalResolution = GetInternalResolution(canvas);
 	FORMAT defaultTextureFormat = FORMAT_R10G10B10A2_UNORM;
 
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE | BIND_RENDER_TARGET;
 		desc.Format = FORMAT_R32G32B32A32_FLOAT;
-		desc.Width = GetInternalResolution().x;
-		desc.Height = GetInternalResolution().y;
+		desc.Width = internalResolution.x;
+		desc.Height = internalResolution.y;
 		device->CreateTexture(&desc, nullptr, &traceResult);
 		device->SetName(&traceResult, "traceResult");
 	}
@@ -33,8 +34,8 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 		TextureDesc desc;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.Format = defaultTextureFormat;
-		desc.Width = GetInternalResolution().x;
-		desc.Height = GetInternalResolution().y;
+		desc.Width = internalResolution.x;
+		desc.Height = internalResolution.y;
 		device->CreateTexture(&desc, nullptr, &rtPostprocess_LDR[0]);
 		device->SetName(&rtPostprocess_LDR[0], "rtPostprocess_LDR[0]");
 
@@ -64,7 +65,7 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 	sam = -1;
 }
 
-void RenderPath3D_PathTracing::Update(float dt)
+void RenderPath3D_PathTracing::Update(const wiCanvas& canvas, float dt)
 {
 	setOcclusionCullingEnabled(false);
 
@@ -107,10 +108,10 @@ void RenderPath3D_PathTracing::Update(float dt)
 		scene->InvalidateBVH();
 	}
 
-	RenderPath3D::Update(dt);
+	RenderPath3D::Update(canvas, dt);
 }
 
-void RenderPath3D_PathTracing::Render() const
+void RenderPath3D_PathTracing::Render(const wiCanvas& canvas) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	wiJobSystem::context ctx;
@@ -183,12 +184,12 @@ void RenderPath3D_PathTracing::Render() const
 		}
 	});
 
-	RenderPath2D::Render();
+	RenderPath2D::Render(canvas);
 
 	wiJobSystem::Wait(ctx);
 }
 
-void RenderPath3D_PathTracing::Compose(CommandList cmd) const
+void RenderPath3D_PathTracing::Compose(const wiCanvas& canvas, CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -204,5 +205,5 @@ void RenderPath3D_PathTracing::Compose(CommandList cmd) const
 
 	device->EventEnd(cmd);
 
-	RenderPath2D::Compose(cmd);
+	RenderPath2D::Compose(canvas, cmd);
 }

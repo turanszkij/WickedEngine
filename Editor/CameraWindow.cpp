@@ -190,7 +190,7 @@ void CameraWindow::Create(EditorComponent* editor)
 	SetEntity(INVALID_ENTITY);
 
 
-	Translate(XMFLOAT3((float)GetCanvas().GetLogicalWidth() - 720, 100, 0));
+	Translate(XMFLOAT3((float)editor->main->canvas.GetLogicalWidth() - 720, 100, 0));
 	SetVisible(false);
 }
 

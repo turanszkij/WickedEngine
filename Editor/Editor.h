@@ -31,7 +31,7 @@ private:
 	wiSpriteFont font;
 public:
 	void Load() override;
-	void Update(float dt) override;
+	void Update(const wiCanvas& canvas, float dt) override;
 };
 
 class Editor;
@@ -117,16 +117,16 @@ public:
 	void ChangeRenderPath(RENDERPATH path);
 	const wiGraphics::Texture* GetGUIBlurredBackground() const override { return renderPath->GetGUIBlurredBackground(); }
 
-	void ResizeBuffers() override;
-	void ResizeLayout() override;
+	void ResizeBuffers(const wiCanvas& canvas) override;
+	void ResizeLayout(const wiCanvas& canvas) override;
 	void Load() override;
 	void Start() override;
 	void PreUpdate() override;
 	void FixedUpdate() override;
-	void Update(float dt) override;
+	void Update(const wiCanvas& canvas, float dt) override;
 	void PostUpdate() override;
-	void Render() const override;
-	void Compose(wiGraphics::CommandList cmd) const override;
+	void Render(const wiCanvas& canvas) const override;
+	void Compose(const wiCanvas& canvas, wiGraphics::CommandList cmd) const override;
 
 
 	enum EDITORSTENCILREF

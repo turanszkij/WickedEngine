@@ -48,9 +48,7 @@ void RendererWindow::Create(EditorComponent* editor)
 		if (editor->resolutionScale != args.fValue)
 		{
 			editor->renderPath->resolutionScale = args.fValue;
-			editor->renderPath->ResizeBuffers();
 			editor->resolutionScale = args.fValue;
-			editor->ResizeBuffers();
 		}
 	});
 	AddWidget(&resolutionScaleSlider);
@@ -365,7 +363,6 @@ void RendererWindow::Create(EditorComponent* editor)
 		default:
 			break;
 		}
-		editor->ResizeBuffers();
 	});
 	MSAAComboBox.SetSelected(0);
 	MSAAComboBox.SetTooltip("Multisampling Anti Aliasing quality. ");

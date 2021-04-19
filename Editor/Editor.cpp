@@ -130,14 +130,13 @@ void Editor::Initialize()
 
 void EditorLoadingScreen::Load()
 {
-	font = wiSpriteFont("Loading...", wiFontParams(GetCanvas().GetLogicalWidth()*0.5f, GetCanvas().GetLogicalHeight()*0.5f, 36,
+	font = wiSpriteFont("Loading...", wiFontParams(0, 0, 36,
 		WIFALIGN_CENTER, WIFALIGN_CENTER));
 	AddFont(&font);
 
 	sprite = wiSprite("images/logo_small.png");
 	sprite.anim.opa = 1;
 	sprite.anim.repeatable = true;
-	sprite.params.pos = XMFLOAT3(GetCanvas().GetLogicalWidth()*0.5f, GetCanvas().GetLogicalHeight()*0.5f - font.textHeight(), 0);
 	sprite.params.siz = XMFLOAT2(128, 128);
 	sprite.params.pivot = XMFLOAT2(0.5f, 1.0f);
 	sprite.params.quality = QUALITY_LINEAR;
@@ -146,13 +145,13 @@ void EditorLoadingScreen::Load()
 
 	LoadingScreen::Load();
 }
-void EditorLoadingScreen::Update(float dt)
+void EditorLoadingScreen::Update(const wiCanvas& canvas, float dt)
 {
-	font.params.posX = GetCanvas().GetLogicalWidth()*0.5f;
-	font.params.posY = GetCanvas().GetLogicalHeight()*0.5f;
-	sprite.params.pos = XMFLOAT3(GetCanvas().GetLogicalWidth()*0.5f, GetCanvas().GetLogicalHeight()*0.5f - font.textHeight(), 0);
+	font.params.posX = canvas.GetLogicalWidth()*0.5f;
+	font.params.posY = canvas.GetLogicalHeight()*0.5f;
+	sprite.params.pos = XMFLOAT3(canvas.GetLogicalWidth()*0.5f, canvas.GetLogicalHeight()*0.5f - font.textHeight(), 0);
 
-	LoadingScreen::Update(dt);
+	LoadingScreen::Update(canvas, dt);
 }
 
 
@@ -188,22 +187,22 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	postprocessWnd = PostprocessWindow();
 	postprocessWnd.Create(this);
 	gui.AddWidget(&postprocessWnd);
-
-	ResizeBuffers();
 }
 
-void EditorComponent::ResizeBuffers()
+void EditorComponent::ResizeBuffers(const wiCanvas& canvas)
 {
-	RenderPath2D::ResizeBuffers();
+	RenderPath2D::ResizeBuffers(canvas);
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	bool hr;
 
 	if(renderPath != nullptr && renderPath->GetDepthStencil() != nullptr)
 	{
+		XMUINT2 internalResolution = GetInternalResolution(canvas);
+
 		TextureDesc desc;
-		desc.Width = GetInternalResolution().x;
-		desc.Height = GetInternalResolution().y;
+		desc.Width = internalResolution.x;
+		desc.Height = internalResolution.y;
 
 		desc.Format = FORMAT_R8_UNORM;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
@@ -254,14 +253,14 @@ void EditorComponent::ResizeBuffers()
 	}
 
 }
-void EditorComponent::ResizeLayout()
+void EditorComponent::ResizeLayout(const wiCanvas& canvas)
 {
-	RenderPath2D::ResizeLayout();
+	RenderPath2D::ResizeLayout(canvas);
 
 	// GUI elements scaling:
 
-	float screenW = GetCanvas().GetLogicalWidth();
-	float screenH = GetCanvas().GetLogicalHeight();
+	float screenW = canvas.GetLogicalWidth();
+	float screenH = canvas.GetLogicalHeight();
 
 	XMFLOAT2 option_size = XMFLOAT2(100, 34);
 	float x = screenW - option_size.x;
@@ -989,7 +988,7 @@ void EditorComponent::FixedUpdate()
 
 	renderPath->FixedUpdate();
 }
-void EditorComponent::Update(float dt)
+void EditorComponent::Update(const wiCanvas& canvas, float dt)
 {
 	wiProfiler::range_id profrange = wiProfiler::BeginRangeCPU("Editor Update");
 
@@ -1163,7 +1162,7 @@ void EditorComponent::Update(float dt)
 	{
 		// Begin picking:
 		unsigned int pickMask = rendererWnd.GetPickType();
-		RAY pickRay = wiRenderer::GetPickRay((long)currentMouse.x, (long)currentMouse.y, GetCanvas());
+		RAY pickRay = wiRenderer::GetPickRay((long)currentMouse.x, (long)currentMouse.y, canvas);
 		{
 			hovered = wiScene::PickResult();
 
@@ -1664,7 +1663,7 @@ void EditorComponent::Update(float dt)
 		}
 	}
 
-	translator.Update();
+	translator.Update(canvas);
 
 	if (translator.IsDragEnded())
 	{
@@ -1692,9 +1691,9 @@ void EditorComponent::Update(float dt)
 
 	wiProfiler::EndRange(profrange);
 
-	RenderPath2D::Update(dt);
+	RenderPath2D::Update(canvas, dt);
 
-	renderPath->Update(dt);
+	renderPath->Update(canvas, dt);
 }
 void EditorComponent::PostUpdate()
 {
@@ -1702,7 +1701,7 @@ void EditorComponent::PostUpdate()
 
 	renderPath->PostUpdate();
 }
-void EditorComponent::Render() const
+void EditorComponent::Render(const wiCanvas& canvas) const
 {
 	Scene& scene = wiScene::GetScene();
 
@@ -1828,7 +1827,7 @@ void EditorComponent::Render() const
 
 	paintToolWnd.DrawBrush();
 
-	renderPath->Render();
+	renderPath->Render(canvas);
 
 	// Selection outline:
 	if(renderPath->GetDepthStencil() != nullptr && !translator.selected.empty())
@@ -1877,12 +1876,12 @@ void EditorComponent::Render() const
 		device->EventEnd(cmd);
 	}
 
-	RenderPath2D::Render();
+	RenderPath2D::Render(canvas);
 
 }
-void EditorComponent::Compose(CommandList cmd) const
+void EditorComponent::Compose(const wiCanvas& canvas, CommandList cmd) const
 {
-	renderPath->Compose(cmd);
+	renderPath->Compose(canvas, cmd);
 
 	if (cinemaModeCheckBox.GetCheck())
 	{
@@ -2206,7 +2205,7 @@ void EditorComponent::Compose(CommandList cmd) const
 		translator.Draw(camera, cmd);
 	}
 
-	RenderPath2D::Compose(cmd);
+	RenderPath2D::Compose(canvas, cmd);
 }
 
 void EditorComponent::PushToSceneGraphView(wiECS::Entity entity, int level)

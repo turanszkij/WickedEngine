@@ -72,7 +72,7 @@ void LayerWindow::Create(EditorComponent* editor)
 	});
 	AddWidget(&enableNoneButton);
 
-	Translate(XMFLOAT3((float)GetCanvas().GetLogicalWidth() - 450, 300, 0));
+	Translate(XMFLOAT3((float)editor->main->canvas.GetLogicalWidth() - 450, 300, 0));
 	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);

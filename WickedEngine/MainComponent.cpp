@@ -189,7 +189,7 @@ void MainComponent::Update(float dt)
 
 	if (GetActivePath() != nullptr)
 	{
-		GetActivePath()->Update(dt);
+		GetActivePath()->Update(canvas, dt);
 		GetActivePath()->PostUpdate();
 	}
 
@@ -215,7 +215,7 @@ void MainComponent::Render()
 
 	if (GetActivePath() != nullptr)
 	{
-		GetActivePath()->Render();
+		GetActivePath()->Render(canvas);
 	}
 
 	wiProfiler::EndRange(range); // Render
@@ -227,7 +227,7 @@ void MainComponent::Compose(CommandList cmd)
 
 	if (GetActivePath() != nullptr)
 	{
-		GetActivePath()->Compose(cmd);
+		GetActivePath()->Compose(canvas, cmd);
 	}
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
@@ -411,7 +411,6 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 	}
 
 	canvas.init(window);
-	GetCanvas() = canvas;
 
 	SwapChainDesc desc;
 	desc.width = (uint32_t)canvas.GetPhysicalWidth();
@@ -424,7 +423,6 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 	swapChainResizeEvent = wiEvent::Subscribe(SYSTEM_EVENT_WINDOW_RESIZE, [this](uint64_t userdata) {
 		wiPlatform::window_type window = (wiPlatform::window_type)userdata;
 		canvas.init(window);
-		GetCanvas() = canvas;
 
 		SwapChainDesc desc = swapChain.desc;
 		desc.width = (uint32_t)canvas.GetPhysicalWidth();
@@ -443,7 +441,6 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 	dpiChangeEvent = wiEvent::Subscribe(SYSTEM_EVENT_WINDOW_DPICHANGED, [this](uint64_t userdata) {
 		wiPlatform::window_type window = (wiPlatform::window_type)userdata;
 		canvas.init(window);
-		GetCanvas() = canvas;
 	});
 }
 

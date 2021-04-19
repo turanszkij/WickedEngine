@@ -49,10 +49,3 @@ struct wiCanvas
 		return XMMatrixOrthographicOffCenterLH(0, (float)GetLogicalWidth(), (float)GetLogicalHeight(), 0, -1, 1);
 	}
 };
-
-// Global helper to get access to a "main" canvas
-inline wiCanvas& GetCanvas()
-{
-	static wiCanvas canvas;
-	return canvas;
-}

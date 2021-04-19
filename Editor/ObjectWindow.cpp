@@ -792,7 +792,7 @@ void ObjectWindow::Create(EditorComponent* editor)
 	AddWidget(&colorPicker);
 
 
-	Translate(XMFLOAT3((float)GetCanvas().GetLogicalWidth() - 720, 120, 0));
+	Translate(XMFLOAT3((float)editor->main->canvas.GetLogicalWidth() - 720, 120, 0));
 	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);

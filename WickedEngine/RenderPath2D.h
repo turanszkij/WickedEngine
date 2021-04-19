@@ -1,7 +1,6 @@
 #pragma once
 #include "RenderPath.h"
 #include "wiGUI.h"
-#include "wiEvent.h"
 
 #include <string>
 
@@ -41,21 +40,18 @@ private:
 	wiGraphics::RenderPass renderpass_final;
 
 	wiGUI GUI;
-	wiEvent::Handle resolutionChange_handle;
-	wiEvent::Handle dpiChange_handle;
+	float dpi = 0;
 
 public:
-	// create resolution dependant resources, such as render targets
-	virtual void ResizeBuffers();
-	// update resolution dependent elements, such as elements dependent on current monitor DPI
-	virtual void ResizeLayout() {}
+	// create resolution dependent resources, such as render targets
+	virtual void ResizeBuffers(const wiCanvas& canvas);
+	// update DPI dependent elements, such as GUI elements, sprites
+	virtual void ResizeLayout(const wiCanvas& canvas) {}
 
-	void Load() override;
-	void Start() override;
-	void Update(float dt) override;
+	void Update(const wiCanvas& canvas, float dt) override;
 	void FixedUpdate() override;
-	void Render() const override;
-	void Compose(wiGraphics::CommandList cmd) const override;
+	void Render(const wiCanvas& canvas) const override;
+	void Compose(const wiCanvas& canvas, wiGraphics::CommandList cmd) const override;
 
 	const wiGraphics::Texture& GetRenderResult() const { return rtFinal; }
 	virtual const wiGraphics::Texture* GetDepthStencil() const { return nullptr; }
@@ -83,6 +79,12 @@ public:
 	wiGUI& GetGUI() { return GUI; }
 
 	float resolutionScale = 1.0f;
-	virtual XMUINT2 GetInternalResolution() const;
+	XMUINT2 GetInternalResolution(const wiCanvas& canvas) const
+	{
+		return XMUINT2(
+			uint32_t((float)canvas.GetPhysicalWidth() * resolutionScale),
+			uint32_t((float)canvas.GetPhysicalHeight() * resolutionScale)
+		);
+	}
 };
 

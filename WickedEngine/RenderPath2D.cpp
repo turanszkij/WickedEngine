@@ -7,7 +7,7 @@
 using namespace wiGraphics;
 
 
-void RenderPath2D::ResizeBuffers()
+void RenderPath2D::ResizeBuffers(const wiCanvas& canvas)
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -39,8 +39,8 @@ void RenderPath2D::ResizeBuffers()
 		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		desc.Format = defaultTextureFormat;
-		desc.Width = GetCanvas().GetPhysicalWidth();
-		desc.Height = GetCanvas().GetPhysicalHeight();
+		desc.Width = canvas.GetPhysicalWidth();
+		desc.Height = canvas.GetPhysicalHeight();
 		device->CreateTexture(&desc, nullptr, &rtFinal);
 		device->SetName(&rtFinal, "rtFinal");
 	}
@@ -92,51 +92,26 @@ void RenderPath2D::ResizeBuffers()
 
 }
 
-void RenderPath2D::Load()
+void RenderPath2D::Update(const wiCanvas& canvas, float dt)
 {
-	// ideally, this would happen here, under loading screen
-	if (!resolutionChange_handle.IsValid())
+	XMUINT2 internalResolution = GetInternalResolution(canvas);
+
+	if (
+		rtFinal.desc.Width != canvas.width ||
+		rtFinal.desc.Height != canvas.height ||
+		internalResolution.x != canvas.width * resolutionScale ||
+		internalResolution.y != canvas.height * resolutionScale)
 	{
-		ResizeBuffers();
-		resolutionChange_handle = wiEvent::Subscribe(SYSTEM_EVENT_WINDOW_RESIZE, [this](uint64_t userdata) {
-			ResizeBuffers();
-			ResizeLayout();
-			});
+		dpi = 0;
+		ResizeBuffers(canvas);
 	}
-	if (!dpiChange_handle.IsValid())
+	if (dpi != canvas.dpi)
 	{
-		ResizeLayout();
-		dpiChange_handle = wiEvent::Subscribe(SYSTEM_EVENT_WINDOW_DPICHANGED, [this](uint64_t userdata) {
-			ResizeLayout();
-			});
+		dpi = canvas.dpi;
+		ResizeLayout(canvas);
 	}
 
-	RenderPath::Load();
-}
-void RenderPath2D::Start()
-{
-	RenderPath::Start();
-}
-void RenderPath2D::Update(float dt)
-{
-	// this is last resort, if Load() wasn't called
-	if (!resolutionChange_handle.IsValid())
-	{
-		ResizeBuffers();
-		resolutionChange_handle = wiEvent::Subscribe(SYSTEM_EVENT_WINDOW_RESIZE, [this](uint64_t userdata) {
-			ResizeBuffers();
-			ResizeLayout();
-			});
-	}
-	if (!dpiChange_handle.IsValid())
-	{
-		ResizeLayout();
-		dpiChange_handle = wiEvent::Subscribe(SYSTEM_EVENT_WINDOW_DPICHANGED, [this](uint64_t userdata) {
-			ResizeLayout();
-			});
-	}
-
-	GetGUI().Update(GetCanvas(), dt);
+	GetGUI().Update(canvas, dt);
 
 	for (auto& x : layers)
 	{
@@ -161,7 +136,7 @@ void RenderPath2D::Update(float dt)
 		}
 	}
 
-	RenderPath::Update(dt);
+	RenderPath::Update(canvas, dt);
 }
 void RenderPath2D::FixedUpdate()
 {
@@ -190,12 +165,12 @@ void RenderPath2D::FixedUpdate()
 
 	RenderPath::FixedUpdate();
 }
-void RenderPath2D::Render() const
+void RenderPath2D::Render(const wiCanvas& canvas) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	CommandList cmd = device->BeginCommandList();
-	wiImage::SetCanvas(GetCanvas(), cmd);
-	wiFont::SetCanvas(GetCanvas(), cmd);
+	wiImage::SetCanvas(canvas, cmd);
+	wiFont::SetCanvas(canvas, cmd);
 
 	wiRenderer::ProcessDeferredMipGenRequests(cmd);
 
@@ -301,13 +276,13 @@ void RenderPath2D::Render() const
 	}
 	wiRenderer::GetDevice()->EventEnd(cmd);
 
-	GetGUI().Render(GetCanvas(), cmd);
+	GetGUI().Render(canvas, cmd);
 
 	device->RenderPassEnd(cmd);
 
-	RenderPath::Render();
+	RenderPath::Render(canvas);
 }
-void RenderPath2D::Compose(CommandList cmd) const
+void RenderPath2D::Compose(const wiCanvas& canvas, CommandList cmd) const
 {
 	wiImageParams fx;
 	fx.enableFullScreen();
@@ -315,7 +290,7 @@ void RenderPath2D::Compose(CommandList cmd) const
 
 	wiImage::Draw(&rtFinal, fx, cmd);
 
-	RenderPath::Compose(cmd);
+	RenderPath::Compose(canvas, cmd);
 }
 
 
@@ -544,14 +519,4 @@ void RenderPath2D::CleanLayers()
 		x.items.clear();
 		x.items = itemsToRetain;
 	}
-}
-
-
-XMUINT2 RenderPath2D::GetInternalResolution() const
-{
-	GraphicsDevice* device = wiRenderer::GetDevice();
-	return XMUINT2(
-		(uint32_t)ceilf(GetCanvas().GetPhysicalWidth() * resolutionScale),
-		(uint32_t)ceilf(GetCanvas().GetPhysicalHeight() * resolutionScale)
-	);
 }

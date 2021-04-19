@@ -212,7 +212,7 @@ void TransformWindow::Create(EditorComponent* editor)
 		});
 	AddWidget(&szInput);
 
-	Translate(XMFLOAT3((float)GetCanvas().GetLogicalWidth() - 750, 100, 0));
+	Translate(XMFLOAT3((float)editor->main->canvas.GetLogicalWidth() - 750, 100, 0));
 	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);
