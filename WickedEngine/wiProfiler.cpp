@@ -7,7 +7,7 @@
 #include "wiTextureHelper.h"
 #include "wiHelper.h"
 
-#include <sstream>
+#include <string>
 #include <unordered_map>
 #include <stack>
 #include <mutex>
@@ -216,10 +216,13 @@ namespace wiProfiler
 		lock.unlock();
 	}
 
-	void DrawData(float x, float y, CommandList cmd)
+	void DrawData(const wiCanvas& canvas, float x, float y, CommandList cmd)
 	{
 		if (!ENABLED || !initialized)
 			return;
+
+		wiImage::SetCanvas(canvas, cmd);
+		wiFont::SetCanvas(canvas, cmd);
 
 		stringstream ss("");
 		ss.precision(2);

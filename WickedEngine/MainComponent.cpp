@@ -198,7 +198,7 @@ void MainComponent::Update(float dt)
 
 void MainComponent::FixedUpdate()
 {
-	wiBackLog::Update(GetCanvas());
+	wiBackLog::Update(canvas);
 	wiLua::FixedUpdate();
 
 	if (GetActivePath() != nullptr)
@@ -334,9 +334,9 @@ void MainComponent::Compose(CommandList cmd)
 		}
 	}
 
-	wiProfiler::DrawData(4, 120, cmd);
+	wiProfiler::DrawData(canvas, 4, 120, cmd);
 
-	wiBackLog::Draw(GetCanvas(), cmd);
+	wiBackLog::Draw(canvas, cmd);
 
 	wiProfiler::EndRange(range); // Compose
 }
