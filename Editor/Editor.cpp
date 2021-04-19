@@ -145,13 +145,13 @@ void EditorLoadingScreen::Load()
 
 	LoadingScreen::Load();
 }
-void EditorLoadingScreen::Update(const wiCanvas& canvas, float dt)
+void EditorLoadingScreen::Update(float dt)
 {
 	font.params.posX = canvas.GetLogicalWidth()*0.5f;
 	font.params.posY = canvas.GetLogicalHeight()*0.5f;
 	sprite.params.pos = XMFLOAT3(canvas.GetLogicalWidth()*0.5f, canvas.GetLogicalHeight()*0.5f - font.textHeight(), 0);
 
-	LoadingScreen::Update(canvas, dt);
+	LoadingScreen::Update(dt);
 }
 
 
@@ -189,16 +189,19 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	gui.AddWidget(&postprocessWnd);
 }
 
-void EditorComponent::ResizeBuffers(const wiCanvas& canvas)
+void EditorComponent::ResizeBuffers()
 {
-	RenderPath2D::ResizeBuffers(canvas);
+	RenderPath2D::ResizeBuffers();
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	bool hr;
 
+	renderPath->canvas = canvas;
+	renderPath->ResizeBuffers();
+
 	if(renderPath != nullptr && renderPath->GetDepthStencil() != nullptr)
 	{
-		XMUINT2 internalResolution = GetInternalResolution(canvas);
+		XMUINT2 internalResolution = GetInternalResolution();
 
 		TextureDesc desc;
 		desc.Width = internalResolution.x;
@@ -253,9 +256,9 @@ void EditorComponent::ResizeBuffers(const wiCanvas& canvas)
 	}
 
 }
-void EditorComponent::ResizeLayout(const wiCanvas& canvas)
+void EditorComponent::ResizeLayout()
 {
-	RenderPath2D::ResizeLayout(canvas);
+	RenderPath2D::ResizeLayout();
 
 	// GUI elements scaling:
 
@@ -988,7 +991,7 @@ void EditorComponent::FixedUpdate()
 
 	renderPath->FixedUpdate();
 }
-void EditorComponent::Update(const wiCanvas& canvas, float dt)
+void EditorComponent::Update(float dt)
 {
 	wiProfiler::range_id profrange = wiProfiler::BeginRangeCPU("Editor Update");
 
@@ -1691,9 +1694,10 @@ void EditorComponent::Update(const wiCanvas& canvas, float dt)
 
 	wiProfiler::EndRange(profrange);
 
-	renderPath->Update(canvas, dt);
+	RenderPath2D::Update(dt);
 
-	RenderPath2D::Update(canvas, dt);
+	renderPath->canvas = canvas;
+	renderPath->Update(dt);
 }
 void EditorComponent::PostUpdate()
 {
@@ -1701,7 +1705,7 @@ void EditorComponent::PostUpdate()
 
 	renderPath->PostUpdate();
 }
-void EditorComponent::Render(const wiCanvas& canvas) const
+void EditorComponent::Render() const
 {
 	Scene& scene = wiScene::GetScene();
 
@@ -1827,7 +1831,7 @@ void EditorComponent::Render(const wiCanvas& canvas) const
 
 	paintToolWnd.DrawBrush();
 
-	renderPath->Render(canvas);
+	renderPath->Render();
 
 	// Selection outline:
 	if(renderPath->GetDepthStencil() != nullptr && !translator.selected.empty())
@@ -1876,12 +1880,12 @@ void EditorComponent::Render(const wiCanvas& canvas) const
 		device->EventEnd(cmd);
 	}
 
-	RenderPath2D::Render(canvas);
+	RenderPath2D::Render();
 
 }
-void EditorComponent::Compose(const wiCanvas& canvas, CommandList cmd) const
+void EditorComponent::Compose(CommandList cmd) const
 {
-	renderPath->Compose(canvas, cmd);
+	renderPath->Compose(cmd);
 
 	if (cinemaModeCheckBox.GetCheck())
 	{
@@ -2205,7 +2209,7 @@ void EditorComponent::Compose(const wiCanvas& canvas, CommandList cmd) const
 		translator.Draw(camera, cmd);
 	}
 
-	RenderPath2D::Compose(canvas, cmd);
+	RenderPath2D::Compose(cmd);
 }
 
 void EditorComponent::PushToSceneGraphView(wiECS::Entity entity, int level)

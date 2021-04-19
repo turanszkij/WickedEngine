@@ -8,12 +8,12 @@
 
 using namespace wiGraphics;
 
-void RenderPath3D::ResizeBuffers(const wiCanvas& canvas)
+void RenderPath3D::ResizeBuffers()
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	FORMAT defaultTextureFormat = FORMAT_R10G10B10A2_UNORM;
-	XMUINT2 internalResolution = GetInternalResolution(canvas);
+	XMUINT2 internalResolution = GetInternalResolution();
 
 	camera->CreatePerspective((float)internalResolution.x, (float)internalResolution.y, camera->zNearP, camera->zFarP);
 	
@@ -522,7 +522,7 @@ void RenderPath3D::ResizeBuffers(const wiCanvas& canvas)
 		wiRenderer::CreateRTShadowResources(rtshadowResources, internalResolution);
 	}
 
-	RenderPath2D::ResizeBuffers(canvas);
+	RenderPath2D::ResizeBuffers();
 }
 
 void RenderPath3D::PreUpdate()
@@ -530,14 +530,14 @@ void RenderPath3D::PreUpdate()
 	camera_previous = *camera;
 }
 
-void RenderPath3D::Update(const wiCanvas& canvas, float dt)
+void RenderPath3D::Update(float dt)
 {
 	if (rtGbuffer[GBUFFER_COLOR].desc.SampleCount != msaaSampleCount)
 	{
-		ResizeBuffers(canvas);
+		ResizeBuffers();
 	}
 
-	RenderPath2D::Update(canvas, dt);
+	RenderPath2D::Update(dt);
 
 	if (getSceneUpdateEnabled())
 	{
@@ -564,7 +564,7 @@ void RenderPath3D::Update(const wiCanvas& canvas, float dt)
 		wiRenderer::UpdateVisibility(visibility_reflection);
 	}
 
-	XMUINT2 internalResolution = GetInternalResolution(canvas);
+	XMUINT2 internalResolution = GetInternalResolution();
 
 	wiRenderer::UpdatePerFrameData(
 		*scene,
@@ -590,7 +590,7 @@ void RenderPath3D::Update(const wiCanvas& canvas, float dt)
 	std::swap(depthBuffer_Copy, depthBuffer_Copy1);
 }
 
-void RenderPath3D::Render(const wiCanvas& canvas) const
+void RenderPath3D::Render() const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	wiJobSystem::context ctx;
@@ -910,7 +910,7 @@ void RenderPath3D::Render(const wiCanvas& canvas) const
 
 	// Transparents, post processes, etc:
 	cmd = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [this, cmd, canvas](wiJobArgs args) {
+	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -928,17 +928,17 @@ void RenderPath3D::Render(const wiCanvas& canvas) const
 
 		RenderSceneMIPChain(cmd);
 
-		RenderTransparents(canvas, cmd);
+		RenderTransparents(cmd);
 
 		RenderPostprocessChain(cmd);
 		});
 
-	RenderPath2D::Render(canvas);
+	RenderPath2D::Render();
 
 	wiJobSystem::Wait(ctx);
 }
 
-void RenderPath3D::Compose(const wiCanvas& canvas, CommandList cmd) const
+void RenderPath3D::Compose(CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -957,7 +957,7 @@ void RenderPath3D::Compose(const wiCanvas& canvas, CommandList cmd) const
 		wiImage::Draw(&debugUAV, fx, cmd);
 	}
 
-	RenderPath2D::Compose(canvas, cmd);
+	RenderPath2D::Compose(cmd);
 }
 
 void RenderPath3D::RenderFrameSetUp(CommandList cmd) const
@@ -1161,7 +1161,7 @@ void RenderPath3D::RenderSceneMIPChain(CommandList cmd) const
 	device->EventEnd(cmd);
 	wiProfiler::EndRange(range);
 }
-void RenderPath3D::RenderTransparents(const wiCanvas& canvas, CommandList cmd) const
+void RenderPath3D::RenderTransparents(CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 

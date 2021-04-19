@@ -159,10 +159,10 @@ public:
 	virtual void RenderLightShafts(wiGraphics::CommandList cmd) const;
 	virtual void RenderVolumetrics(wiGraphics::CommandList cmd) const;
 	virtual void RenderSceneMIPChain(wiGraphics::CommandList cmd) const;
-	virtual void RenderTransparents(const wiCanvas& canvas, wiGraphics::CommandList cmd) const;
+	virtual void RenderTransparents(wiGraphics::CommandList cmd) const;
 	virtual void RenderPostprocessChain(wiGraphics::CommandList cmd) const;
 
-	void ResizeBuffers(const wiCanvas& canvas) override;
+	void ResizeBuffers() override;
 
 	wiScene::CameraComponent* camera = &wiScene::GetCamera();
 	wiScene::CameraComponent camera_previous;
@@ -261,8 +261,8 @@ public:
 	virtual void setMSAASampleCount(uint32_t value) { msaaSampleCount = value; }
 
 	void PreUpdate() override;
-	void Update(const wiCanvas& canvas, float dt) override;
-	void Render(const wiCanvas& canvas) const override;
-	void Compose(const wiCanvas& canvas, wiGraphics::CommandList cmd) const override;
+	void Update(float dt) override;
+	void Render() const override;
+	void Compose(wiGraphics::CommandList cmd) const override;
 };
 

@@ -46,14 +46,14 @@ private:
 
 public:
 	// create resolution dependent resources, such as render targets
-	virtual void ResizeBuffers(const wiCanvas& canvas);
+	virtual void ResizeBuffers();
 	// update DPI dependent elements, such as GUI elements, sprites
-	virtual void ResizeLayout(const wiCanvas& canvas) {}
+	virtual void ResizeLayout() {}
 
-	void Update(const wiCanvas& canvas, float dt) override;
+	void Update(float dt) override;
 	void FixedUpdate() override;
-	void Render(const wiCanvas& canvas) const override;
-	void Compose(const wiCanvas& canvas, wiGraphics::CommandList cmd) const override;
+	void Render() const override;
+	void Compose(wiGraphics::CommandList cmd) const override;
 
 	const wiGraphics::Texture& GetRenderResult() const { return rtFinal; }
 	virtual const wiGraphics::Texture* GetDepthStencil() const { return nullptr; }
@@ -81,7 +81,7 @@ public:
 	wiGUI& GetGUI() { return GUI; }
 
 	float resolutionScale = 1.0f;
-	XMUINT2 GetInternalResolution(const wiCanvas& canvas) const
+	XMUINT2 GetInternalResolution() const
 	{
 		return XMUINT2(
 			uint32_t((float)canvas.GetPhysicalWidth() * resolutionScale),

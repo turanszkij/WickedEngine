@@ -19,15 +19,15 @@ void Tests::Initialize()
 	infoDisplay.resolution = true;
 	infoDisplay.heap_allocation_counter = true;
 
-	renderer.main = this;
+	renderer.canvas = canvas;
 	renderer.Load();
 
 	ActivatePath(&renderer);
 }
 
-void TestsRenderer::ResizeLayout(const wiCanvas& canvas)
+void TestsRenderer::ResizeLayout()
 {
-    RenderPath3D::ResizeLayout(canvas);
+    RenderPath3D::ResizeLayout();
 
 	float screenW = canvas.GetLogicalWidth();
 	float screenH = canvas.GetLogicalHeight();
@@ -141,8 +141,8 @@ void TestsRenderer::Load()
 		transform.UpdateTransform();
 		wiScene::GetCamera().TransformCamera(transform);
 
-		float screenW = main->canvas.GetLogicalWidth();
-		float screenH = main->canvas.GetLogicalHeight();
+		float screenW = canvas.GetLogicalWidth();
+		float screenH = canvas.GetLogicalHeight();
 
 		// Based on combobox selection, start the appropriate test:
 		switch (args.iValue)
@@ -302,7 +302,7 @@ void TestsRenderer::Load()
 
     RenderPath3D::Load();
 }
-void TestsRenderer::Update(const wiCanvas& canvas, float dt)
+void TestsRenderer::Update(float dt)
 {
 	switch (testSelector.GetSelected())
 	{
@@ -366,7 +366,7 @@ void TestsRenderer::Update(const wiCanvas& canvas, float dt)
 	break;
 	}
 
-    RenderPath3D::Update(canvas, dt);
+    RenderPath3D::Update(dt);
 }
 
 void TestsRenderer::RunJobSystemTest()
@@ -437,8 +437,8 @@ void TestsRenderer::RunJobSystemTest()
 
 	static wiSpriteFont font;
 	font = wiSpriteFont(ss.str());
-	font.params.posX = main->canvas.GetLogicalWidth() / 2;
-	font.params.posY = main->canvas.GetLogicalHeight() / 2;
+	font.params.posX = canvas.GetLogicalWidth() / 2;
+	font.params.posY = canvas.GetLogicalHeight() / 2;
 	font.params.h_align = WIFALIGN_CENTER;
 	font.params.v_align = WIFALIGN_CENTER;
 	font.params.size = 24;
@@ -452,8 +452,8 @@ void TestsRenderer::RunFontTest()
 	font.SetText("This is Arial, size 32 wiFont");
 	font_upscaled.SetText("This is Arial, size 14 wiFont, but upscaled to 32");
 
-	font.params.posX = main->canvas.GetLogicalWidth() / 2.0f;
-	font.params.posY = main->canvas.GetLogicalHeight() / 6.0f;
+	font.params.posX = canvas.GetLogicalWidth() / 2.0f;
+	font.params.posY = canvas.GetLogicalHeight() / 6.0f;
 	font.params.size = 32;
 
 	font_upscaled.params = font.params;
@@ -510,7 +510,7 @@ void TestsRenderer::RunFontTest()
 	font_colored.params.h_align = WIFALIGN_CENTER;
 	font_colored.params.v_align = WIFALIGN_TOP;
 	font_colored.params.size = 26;
-	font_colored.params.posX = main->canvas.GetLogicalWidth() / 2;
+	font_colored.params.posX = canvas.GetLogicalWidth() / 2;
 	font_colored.params.posY = font_japanese.params.posY + font_japanese.textHeight();
 	font_colored.SetText("Colored font");
 	AddFont(&font_colored);
@@ -518,8 +518,8 @@ void TestsRenderer::RunFontTest()
 void TestsRenderer::RunSpriteTest()
 {
 	const float step = 30;
-	const float screenW = main->canvas.GetLogicalWidth();
-	const float screenH = main->canvas.GetLogicalHeight();
+	const float screenW = canvas.GetLogicalWidth();
+	const float screenH = canvas.GetLogicalHeight();
 	const XMFLOAT3 startPos = XMFLOAT3(screenW * 0.3f, screenH * 0.2f, 0);
 	wiImageParams params;
 	params.pos = startPos;
@@ -894,8 +894,8 @@ void TestsRenderer::RunNetworkTest()
 	sender.join();
 	receiver.join();
 
-	font.params.posX = main->canvas.GetLogicalWidth() / 2;
-	font.params.posY = main->canvas.GetLogicalHeight() / 2;
+	font.params.posX = canvas.GetLogicalWidth() / 2;
+	font.params.posY = canvas.GetLogicalHeight() / 2;
 	font.params.h_align = WIFALIGN_CENTER;
 	font.params.v_align = WIFALIGN_CENTER;
 	font.params.size = 24;

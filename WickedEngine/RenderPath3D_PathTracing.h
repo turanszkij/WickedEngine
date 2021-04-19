@@ -13,12 +13,12 @@ protected:
 
 	wiGraphics::RenderPass renderpass_debugbvh;
 
-	void ResizeBuffers(const wiCanvas& canvas) override;
+	void ResizeBuffers() override;
 
 public:
 	const wiGraphics::Texture* GetDepthStencil() const override { return nullptr; };
 
-	void Update(const wiCanvas& canvas, float dt) override;
-	void Render(const wiCanvas& canvas) const override;
-	void Compose(const wiCanvas& canvas, wiGraphics::CommandList cmd) const override;
+	void Update(float dt) override;
+	void Render() const override;
+	void Compose(wiGraphics::CommandList cmd) const override;
 };

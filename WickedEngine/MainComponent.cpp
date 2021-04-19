@@ -41,6 +41,11 @@ void MainComponent::Initialize()
 
 void MainComponent::ActivatePath(RenderPath* component, float fadeSeconds, wiColor fadeColor)
 {
+	if (component != nullptr)
+	{
+		component->canvas = canvas;
+	}
+
 	// Fade manager will activate on fadeout
 	fadeManager.Clear();
 	fadeManager.Start(fadeSeconds, fadeColor, [this, component]() {
@@ -119,6 +124,11 @@ void MainComponent::Run()
 
 		fadeManager.Update(dt);
 
+		if (GetActivePath() != nullptr)
+		{
+			GetActivePath()->canvas = canvas;
+		}
+
 		// Fixed time update:
 		auto range = wiProfiler::BeginRangeCPU("Fixed Update");
 		{
@@ -189,7 +199,7 @@ void MainComponent::Update(float dt)
 
 	if (GetActivePath() != nullptr)
 	{
-		GetActivePath()->Update(canvas, dt);
+		GetActivePath()->Update(dt);
 		GetActivePath()->PostUpdate();
 	}
 
@@ -215,7 +225,7 @@ void MainComponent::Render()
 
 	if (GetActivePath() != nullptr)
 	{
-		GetActivePath()->Render(canvas);
+		GetActivePath()->Render();
 	}
 
 	wiProfiler::EndRange(range); // Render
@@ -227,7 +237,7 @@ void MainComponent::Compose(CommandList cmd)
 
 	if (GetActivePath() != nullptr)
 	{
-		GetActivePath()->Compose(canvas, cmd);
+		GetActivePath()->Compose(cmd);
 	}
 
 	GraphicsDevice* device = wiRenderer::GetDevice();

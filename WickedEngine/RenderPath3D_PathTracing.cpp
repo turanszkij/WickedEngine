@@ -12,13 +12,13 @@ using namespace wiGraphics;
 using namespace wiScene;
 
 
-void RenderPath3D_PathTracing::ResizeBuffers(const wiCanvas& canvas)
+void RenderPath3D_PathTracing::ResizeBuffers()
 {
-	RenderPath2D::ResizeBuffers(canvas); // we don't need to use any buffers from RenderPath3D, so skip those
+	RenderPath2D::ResizeBuffers(); // we don't need to use any buffers from RenderPath3D, so skip those
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	XMUINT2 internalResolution = GetInternalResolution(canvas);
+	XMUINT2 internalResolution = GetInternalResolution();
 	FORMAT defaultTextureFormat = FORMAT_R10G10B10A2_UNORM;
 
 	{
@@ -65,7 +65,7 @@ void RenderPath3D_PathTracing::ResizeBuffers(const wiCanvas& canvas)
 	sam = -1;
 }
 
-void RenderPath3D_PathTracing::Update(const wiCanvas& canvas, float dt)
+void RenderPath3D_PathTracing::Update(float dt)
 {
 	setOcclusionCullingEnabled(false);
 
@@ -108,10 +108,10 @@ void RenderPath3D_PathTracing::Update(const wiCanvas& canvas, float dt)
 		scene->InvalidateBVH();
 	}
 
-	RenderPath3D::Update(canvas, dt);
+	RenderPath3D::Update(dt);
 }
 
-void RenderPath3D_PathTracing::Render(const wiCanvas& canvas) const
+void RenderPath3D_PathTracing::Render() const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	wiJobSystem::context ctx;
@@ -184,12 +184,12 @@ void RenderPath3D_PathTracing::Render(const wiCanvas& canvas) const
 		}
 	});
 
-	RenderPath2D::Render(canvas);
+	RenderPath2D::Render();
 
 	wiJobSystem::Wait(ctx);
 }
 
-void RenderPath3D_PathTracing::Compose(const wiCanvas& canvas, CommandList cmd) const
+void RenderPath3D_PathTracing::Compose(CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -205,5 +205,5 @@ void RenderPath3D_PathTracing::Compose(const wiCanvas& canvas, CommandList cmd) 
 
 	device->EventEnd(cmd);
 
-	RenderPath2D::Compose(canvas, cmd);
+	RenderPath2D::Compose(cmd);
 }

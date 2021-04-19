@@ -8,11 +8,9 @@ class TestsRenderer : public RenderPath3D
 	wiComboBox testSelector;
 	wiECS::Entity ik_entity = wiECS::INVALID_ENTITY;
 public:
-	MainComponent* main = nullptr;
-
 	void Load() override;
-	void Update(const wiCanvas& canvas, float dt) override;
-	void ResizeLayout(const wiCanvas& canvas) override;
+	void Update(float dt) override;
+	void ResizeLayout() override;
 
 	void RunJobSystemTest();
 	void RunFontTest();

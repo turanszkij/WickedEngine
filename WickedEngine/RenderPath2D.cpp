@@ -7,7 +7,7 @@
 using namespace wiGraphics;
 
 
-void RenderPath2D::ResizeBuffers(const wiCanvas& canvas)
+void RenderPath2D::ResizeBuffers()
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -92,10 +92,8 @@ void RenderPath2D::ResizeBuffers(const wiCanvas& canvas)
 
 }
 
-void RenderPath2D::Update(const wiCanvas& canvas, float dt)
+void RenderPath2D::Update(float dt)
 {
-	XMUINT2 internalResolution = GetInternalResolution(canvas);
-
 	if (
 		rtFinal.desc.Width != canvas.GetPhysicalWidth() ||
 		rtFinal.desc.Height != canvas.GetPhysicalHeight() ||
@@ -104,12 +102,12 @@ void RenderPath2D::Update(const wiCanvas& canvas, float dt)
 	{
 		current_resolutionscale = resolutionScale;
 		current_dpi = 0; // invalidate layout
-		ResizeBuffers(canvas);
+		ResizeBuffers();
 	}
 	if (current_dpi != canvas.dpi)
 	{
 		current_dpi = canvas.dpi;
-		ResizeLayout(canvas);
+		ResizeLayout();
 	}
 
 	GetGUI().Update(canvas, dt);
@@ -137,7 +135,7 @@ void RenderPath2D::Update(const wiCanvas& canvas, float dt)
 		}
 	}
 
-	RenderPath::Update(canvas, dt);
+	RenderPath::Update(dt);
 }
 void RenderPath2D::FixedUpdate()
 {
@@ -166,7 +164,7 @@ void RenderPath2D::FixedUpdate()
 
 	RenderPath::FixedUpdate();
 }
-void RenderPath2D::Render(const wiCanvas& canvas) const
+void RenderPath2D::Render() const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	CommandList cmd = device->BeginCommandList();
@@ -281,9 +279,9 @@ void RenderPath2D::Render(const wiCanvas& canvas) const
 
 	device->RenderPassEnd(cmd);
 
-	RenderPath::Render(canvas);
+	RenderPath::Render();
 }
-void RenderPath2D::Compose(const wiCanvas& canvas, CommandList cmd) const
+void RenderPath2D::Compose(CommandList cmd) const
 {
 	wiImageParams fx;
 	fx.enableFullScreen();
@@ -291,7 +289,7 @@ void RenderPath2D::Compose(const wiCanvas& canvas, CommandList cmd) const
 
 	wiImage::Draw(&rtFinal, fx, cmd);
 
-	RenderPath::Compose(canvas, cmd);
+	RenderPath::Compose(cmd);
 }
 
 
