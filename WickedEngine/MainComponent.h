@@ -33,6 +33,8 @@ protected:
 	int fps_avg_counter = 0;
 
 public:
+	virtual ~MainComponent() = default;
+
 	bool is_window_active = true;
 	wiGraphics::SwapChain swapChain;
 	wiCanvas canvas;

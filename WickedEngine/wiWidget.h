@@ -1,6 +1,5 @@
 #pragma once
 #include "CommonInclude.h"
-#include "wiGUI.h"
 #include "wiColor.h"
 #include "wiGraphicsDevice.h"
 #include "wiIntersect.h"
@@ -28,7 +27,6 @@ struct wiEventArgs
 
 class wiWidget : public wiScene::TransformComponent
 {
-	friend class wiGUI;
 public:
 	enum WIDGETSTATE
 	{
@@ -46,15 +44,11 @@ protected:
 	std::string scriptTip;
 	bool enabled = true;
 	bool visible = true;
-	bool priority_change = true;
-
 	WIDGETSTATE state = IDLE;
-	void Activate();
-	void Deactivate();
-	void ApplyScissor(const wiGraphics::Rect rect, wiGraphics::CommandList cmd, bool constrain_to_parent = true) const;
 
 public:
 	wiWidget();
+	virtual ~wiWidget() = default;
 
 	const std::string& GetName() const;
 	void SetName(const std::string& value);
@@ -73,9 +67,9 @@ public:
 	void SetColor(wiColor color, WIDGETSTATE state = WIDGETSTATE_COUNT);
 	wiColor GetColor() const;
 
-	virtual void Update(wiGUI* gui, float dt);
-	virtual void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const = 0;
-	virtual void RenderTooltip(const wiGUI* gui, wiGraphics::CommandList cmd) const;
+	virtual void Update(const wiCanvas& canvas, float dt);
+	virtual void Render(const wiCanvas& canvas, wiGraphics::CommandList cmd) const = 0;
+	virtual void RenderTooltip(const wiCanvas& canvas, wiGraphics::CommandList cmd) const;
 
 	wiSprite sprites[WIDGETSTATE_COUNT];
 	wiSpriteFont font;
@@ -85,10 +79,18 @@ public:
 
 	Hitbox2D hitBox;
 	wiGraphics::Rect scissorRect;
+	bool priority_change = true;
 
 	wiWidget* parent = nullptr;
 	void AttachTo(wiWidget* parent);
 	void Detach();
+
+	void Activate();
+	void Deactivate();
+	virtual void ResetState();
+
+	void ApplyScissor(const wiCanvas& canvas, const wiGraphics::Rect rect, wiGraphics::CommandList cmd, bool constrain_to_parent = true) const;
+	Hitbox2D GetPointerHitbox() const;
 
 	static void Initialize();
 };
@@ -106,8 +108,8 @@ protected:
 public:
 	void Create(const std::string& name);
 
-	void Update(wiGUI* gui, float dt ) override;
-	void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
+	void Update(const wiCanvas& canvas, float dt ) override;
+	void Render(const wiCanvas& canvas, wiGraphics::CommandList cmd) const override;
 
 	void OnClick(std::function<void(wiEventArgs args)> func);
 	void OnDragStart(std::function<void(wiEventArgs args)> func);
@@ -122,8 +124,8 @@ protected:
 public:
 	void Create(const std::string& name);
 
-	void Update(wiGUI* gui, float dt ) override;
-	void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
+	void Update(const wiCanvas& canvas, float dt ) override;
+	void Render(const wiCanvas& canvas, wiGraphics::CommandList cmd) const override;
 };
 
 // Text input box
@@ -149,8 +151,8 @@ public:
 	static void AddInput(const char inputChar);
 	static void DeleteFromInput();
 
-	void Update(wiGUI* gui, float dt) override;
-	void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
+	void Update(const wiCanvas& canvas, float dt) override;
+	void Render(const wiCanvas& canvas, wiGraphics::CommandList cmd) const override;
 
 	void OnInputAccepted(std::function<void(wiEventArgs args)> func);
 };
@@ -178,9 +180,9 @@ public:
 	float GetValue() const;
 	void SetRange(float start, float end);
 
-	void Update(wiGUI* gui, float dt ) override;
-	void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
-	void RenderTooltip(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
+	void Update(const wiCanvas& canvas, float dt ) override;
+	void Render(const wiCanvas& canvas, wiGraphics::CommandList cmd) const override;
+	void RenderTooltip(const wiCanvas& canvas, wiGraphics::CommandList cmd) const override;
 
 	void OnSlide(std::function<void(wiEventArgs args)> func);
 };
@@ -199,8 +201,8 @@ public:
 	void SetCheck(bool value);
 	bool GetCheck() const;
 
-	void Update(wiGUI* gui, float dt ) override;
-	void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
+	void Update(const wiCanvas& canvas, float dt ) override;
+	void Render(const wiCanvas& canvas, wiGraphics::CommandList cmd) const override;
 
 	void OnClick(std::function<void(wiEventArgs args)> func);
 };
@@ -252,8 +254,8 @@ public:
 	uint64_t GetItemUserData(int index) const;
 	size_t GetItemCount() const { return items.size(); }
 
-	void Update(wiGUI* gui, float dt ) override;
-	void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
+	void Update(const wiCanvas& canvas, float dt ) override;
+	void Render(const wiCanvas& canvas, wiGraphics::CommandList cmd) const override;
 
 	void OnSelect(std::function<void(wiEventArgs args)> func);
 };
@@ -268,7 +270,8 @@ protected:
 	wiButton resizeDragger_BottomRight;
 	wiButton moveDragger;
 	wiLabel label;
-	std::list<wiWidget*> childrenWidgets;
+	std::list<wiWidget*> widgets;
+	std::vector<wiWidget*> priorityChangeQueue;
 	bool minimized = false;
 public:
 	void Create(const std::string& name, bool window_controls = true);
@@ -277,14 +280,16 @@ public:
 	void RemoveWidget(wiWidget* widget);
 	void RemoveWidgets();
 
-	void Update(wiGUI* gui, float dt ) override;
-	void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
-	void RenderTooltip(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
+	void Update(const wiCanvas& canvas, float dt ) override;
+	void Render(const wiCanvas& canvas, wiGraphics::CommandList cmd) const override;
+	void RenderTooltip(const wiCanvas& canvas, wiGraphics::CommandList cmd) const override;
 
 	void SetVisible(bool value) override;
 	void SetEnabled(bool value) override;
 	void SetMinimized(bool value);
 	bool IsMinimized() const;
+
+	void ResetState() override;
 };
 
 // HSV-Color Picker
@@ -314,8 +319,8 @@ protected:
 public:
 	void Create(const std::string& name, bool window_controls  = true);
 
-	void Update(wiGUI* gui, float dt ) override;
-	void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
+	void Update(const wiCanvas& canvas, float dt ) override;
+	void Render(const wiCanvas& canvas, wiGraphics::CommandList cmd) const override;
 
 	wiColor GetPickColor() const;
 	void SetPickColor(wiColor value);
@@ -374,8 +379,8 @@ public:
 	int GetItemCount() const { return (int)items.size(); }
 	const Item& GetItem(int index) const;
 
-	void Update(wiGUI* gui, float dt) override;
-	void Render(const wiGUI* gui, wiGraphics::CommandList cmd) const override;
+	void Update(const wiCanvas& canvas, float dt) override;
+	void Render(const wiCanvas& canvas, wiGraphics::CommandList cmd) const override;
 
 	void OnSelect(std::function<void(wiEventArgs args)> func);
 };

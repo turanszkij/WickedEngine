@@ -8,6 +8,8 @@ private:
 	uint32_t layerMask = 0xFFFFFFFF;
 
 public:
+	virtual ~RenderPath() = default;
+
 	// load resources in background (for example behind loading screen)
 	virtual void Load() {}
 	// called when RenderPath gets activated

@@ -42,7 +42,7 @@ namespace wiBackLog
 	{
 		scroll += dir;
 	}
-	void Update() 
+	void Update(const wiCanvas& canvas)
 	{
 		if (wiInput::Press(wiInput::KEYBOARD_BUTTON_HOME))
 		{
@@ -81,11 +81,11 @@ namespace wiBackLog
 		{
 			pos -= speed;
 		}
-		pos = wiMath::Clamp(pos, -GetCanvas().GetLogicalHeight(), 0);
+		pos = wiMath::Clamp(pos, -canvas.GetLogicalHeight(), 0);
 	}
-	void Draw(CommandList cmd)
+	void Draw(const wiCanvas& canvas, CommandList cmd)
 	{
-		if (pos > -GetCanvas().GetLogicalHeight())
+		if (pos > -canvas.GetLogicalHeight())
 		{
 			if (!backgroundTex.IsValid())
 			{
@@ -93,11 +93,11 @@ namespace wiBackLog
 				wiTextureHelper::CreateTexture(backgroundTex, colorData, 1, 2);
 			}
 
-			wiImageParams fx = wiImageParams((float)GetCanvas().GetLogicalWidth(), (float)GetCanvas().GetLogicalHeight());
+			wiImageParams fx = wiImageParams((float)canvas.GetLogicalWidth(), (float)canvas.GetLogicalHeight());
 			fx.pos = XMFLOAT3(0, pos, 0);
-			fx.opacity = wiMath::Lerp(1, 0, -pos / GetCanvas().GetLogicalHeight());
+			fx.opacity = wiMath::Lerp(1, 0, -pos / canvas.GetLogicalHeight());
 			wiImage::Draw(&backgroundTex, fx, cmd);
-			wiFont::Draw(inputArea, wiFontParams(10, GetCanvas().GetLogicalHeight() - 10, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_BOTTOM), cmd);
+			wiFont::Draw(inputArea, wiFontParams(10, canvas.GetLogicalHeight() - 10, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_BOTTOM), cmd);
 
 
 			font.SetText(getText());
@@ -105,7 +105,7 @@ namespace wiBackLog
 			{
 				refitscroll = false;
 				float textheight = font.textHeight();
-				float limit = GetCanvas().GetLogicalHeight() * 0.9f;
+				float limit = canvas.GetLogicalHeight() * 0.9f;
 				if (scroll + textheight > limit)
 				{
 					scroll = limit - textheight;
@@ -115,9 +115,9 @@ namespace wiBackLog
 			font.params.posY = pos + scroll;
 			Rect rect;
 			rect.left = 0;
-			rect.right = (int32_t)GetCanvas().GetPhysicalWidth();
+			rect.right = (int32_t)canvas.GetPhysicalWidth();
 			rect.top = 0;
-			rect.bottom = int32_t(GetCanvas().GetPhysicalHeight() * 0.9f);
+			rect.bottom = int32_t(canvas.GetPhysicalHeight() * 0.9f);
 			wiRenderer::GetDevice()->BindScissorRects(1, &rect, cmd);
 			font.Draw(cmd);
 			rect.left = -INT_MAX;

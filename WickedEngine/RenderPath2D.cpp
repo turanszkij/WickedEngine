@@ -136,7 +136,7 @@ void RenderPath2D::Update(float dt)
 			});
 	}
 
-	GetGUI().Update(dt);
+	GetGUI().Update(GetCanvas(), dt);
 
 	for (auto& x : layers)
 	{
@@ -301,7 +301,7 @@ void RenderPath2D::Render() const
 	}
 	wiRenderer::GetDevice()->EventEnd(cmd);
 
-	GetGUI().Render(cmd);
+	GetGUI().Render(GetCanvas(), cmd);
 
 	device->RenderPassEnd(cmd);
 
