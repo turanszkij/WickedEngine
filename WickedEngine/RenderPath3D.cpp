@@ -532,7 +532,7 @@ void RenderPath3D::PreUpdate()
 
 void RenderPath3D::Update(const wiCanvas& canvas, float dt)
 {
-	if (GetLastPostprocessRT()->desc.SampleCount != msaaSampleCount)
+	if (rtGbuffer[GBUFFER_COLOR].desc.SampleCount != msaaSampleCount)
 	{
 		ResizeBuffers(canvas);
 	}
