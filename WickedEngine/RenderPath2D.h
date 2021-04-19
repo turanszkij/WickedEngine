@@ -40,7 +40,9 @@ private:
 	wiGraphics::RenderPass renderpass_final;
 
 	wiGUI GUI;
-	float dpi = 0;
+
+	float current_resolutionscale = 0;
+	float current_dpi = 0;
 
 public:
 	// create resolution dependent resources, such as render targets

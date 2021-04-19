@@ -97,17 +97,18 @@ void RenderPath2D::Update(const wiCanvas& canvas, float dt)
 	XMUINT2 internalResolution = GetInternalResolution(canvas);
 
 	if (
-		rtFinal.desc.Width != canvas.width ||
-		rtFinal.desc.Height != canvas.height ||
-		internalResolution.x != canvas.width * resolutionScale ||
-		internalResolution.y != canvas.height * resolutionScale)
+		rtFinal.desc.Width != canvas.GetPhysicalWidth() ||
+		rtFinal.desc.Height != canvas.GetPhysicalHeight() ||
+		current_resolutionscale != resolutionScale
+		)
 	{
-		dpi = 0;
+		current_resolutionscale = resolutionScale;
+		current_dpi = 0; // invalidate layout
 		ResizeBuffers(canvas);
 	}
-	if (dpi != canvas.dpi)
+	if (current_dpi != canvas.dpi)
 	{
-		dpi = canvas.dpi;
+		current_dpi = canvas.dpi;
 		ResizeLayout(canvas);
 	}
 

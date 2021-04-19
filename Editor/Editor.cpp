@@ -1691,9 +1691,9 @@ void EditorComponent::Update(const wiCanvas& canvas, float dt)
 
 	wiProfiler::EndRange(profrange);
 
-	RenderPath2D::Update(canvas, dt);
-
 	renderPath->Update(canvas, dt);
+
+	RenderPath2D::Update(canvas, dt);
 }
 void EditorComponent::PostUpdate()
 {
