@@ -5,12 +5,12 @@
 // The canvas specifies a DPI-aware positioning area
 struct wiCanvas
 {
-	int width = 0;
-	int height = 0;
+	uint32_t width = 0;
+	uint32_t height = 0;
 	float dpi = 96;
 
 	// Create a canvas from physical measurements
-	inline void init(int width, int height, float dpi = 96)
+	inline void init(uint32_t width, uint32_t height, float dpi = 96)
 	{
 		this->width = width;
 		this->height = height;
@@ -21,7 +21,7 @@ struct wiCanvas
 	{
 		wiPlatform::WindowProperties windowprops;
 		wiPlatform::GetWindowProperties(window, &windowprops);
-		init(windowprops.width, windowprops.height, windowprops.dpi);
+		init((uint32_t)windowprops.width, (uint32_t)windowprops.height, windowprops.dpi);
 	}
 
 	// How many pixels there are per inch
@@ -31,11 +31,11 @@ struct wiCanvas
 	// Returns native resolution width in pixels:
 	//	Use this for texture allocations
 	//	Use this for scissor, viewport
-	inline int GetPhysicalWidth() const { return width; }
+	inline uint32_t GetPhysicalWidth() const { return width; }
 	// Returns native resolution height in pixels:
 	//	Use this for texture allocations
 	//	Use this for scissor, viewport
-	inline int GetPhysicalHeight() const { return height; }
+	inline uint32_t GetPhysicalHeight() const { return height; }
 	// Returns the width with DPI scaling applied (subpixel size):
 	//	Use this for logic and positioning elements on screen
 	inline float GetLogicalWidth() const { return GetPhysicalWidth() / GetDPIScaling(); }

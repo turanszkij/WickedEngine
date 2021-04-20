@@ -137,7 +137,7 @@ protected:
 
 	void OnWindowSizeChanged(CoreWindow const& sender, WindowSizeChangedEventArgs const& /*args*/)
 	{
-		wiEvent::FireEvent(SYSTEM_EVENT_WINDOW_RESIZE, (uint64_t)&sender);
+		main.SetWindow(&sender);
 	}
 
 	void OnVisibilityChanged(CoreWindow const& /*sender*/, VisibilityChangedEventArgs const& args)
@@ -166,7 +166,7 @@ protected:
 
 	void OnDpiChanged(DisplayInformation const& sender, IInspectable const& /*args*/)
 	{
-		wiEvent::FireEvent(SYSTEM_EVENT_WINDOW_DPICHANGED, (uint64_t)&sender);
+		main.SetWindow(&CoreWindow::GetForCurrentThread());
 	}
 
 	void OnDisplayContentsInvalidated(DisplayInformation const& /*sender*/, IInspectable const& /*args*/)

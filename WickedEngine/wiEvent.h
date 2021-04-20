@@ -4,11 +4,9 @@
 #include <memory>
 #include <functional>
 
-static const int SYSTEM_EVENT_RELOAD_SHADERS = -1;
-static const int SYSTEM_EVENT_WINDOW_RESIZE = -2;
-static const int SYSTEM_EVENT_WINDOW_DPICHANGED = -4;
+static const int SYSTEM_EVENT_THREAD_SAFE_POINT = -1;
+static const int SYSTEM_EVENT_RELOAD_SHADERS = -2;
 static const int SYSTEM_EVENT_SET_VSYNC = -3;
-static const int SYSTEM_EVENT_THREAD_SAFE_POINT = -5;
 
 namespace wiEvent
 {

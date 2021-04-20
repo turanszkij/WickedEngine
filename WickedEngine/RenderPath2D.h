@@ -41,8 +41,8 @@ private:
 
 	wiGUI GUI;
 
-	float current_resolutionscale = 0;
-	float current_dpi = 0;
+	XMUINT2 current_buffersize{};
+	float current_layoutscale{};
 
 public:
 	// create resolution dependent resources, such as render targets

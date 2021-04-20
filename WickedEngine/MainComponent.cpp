@@ -425,34 +425,18 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 	canvas.init(window);
 
 	SwapChainDesc desc;
-	desc.width = (uint32_t)canvas.GetPhysicalWidth();
-	desc.height = (uint32_t)canvas.GetPhysicalHeight();
+	desc.width = canvas.GetPhysicalWidth();
+	desc.height = canvas.GetPhysicalHeight();
 	desc.buffercount = 3;
 	desc.format = FORMAT_R10G10B10A2_UNORM;
 	bool success = wiRenderer::GetDevice()->CreateSwapChain(&desc, window, &swapChain);
 	assert(success);
-
-	swapChainResizeEvent = wiEvent::Subscribe(SYSTEM_EVENT_WINDOW_RESIZE, [this](uint64_t userdata) {
-		wiPlatform::window_type window = (wiPlatform::window_type)userdata;
-		canvas.init(window);
-
-		SwapChainDesc desc = swapChain.desc;
-		desc.width = (uint32_t)canvas.GetPhysicalWidth();
-		desc.height = (uint32_t)canvas.GetPhysicalHeight();
-		bool success = wiRenderer::GetDevice()->CreateSwapChain(&desc, nullptr, &swapChain);
-		assert(success);
-	});
 
 	swapChainVsyncChangeEvent = wiEvent::Subscribe(SYSTEM_EVENT_SET_VSYNC, [this](uint64_t userdata) {
 		SwapChainDesc desc = swapChain.desc;
 		desc.vsync = userdata != 0;
 		bool success = wiRenderer::GetDevice()->CreateSwapChain(&desc, nullptr, &swapChain);
 		assert(success);
-	});
-
-	dpiChangeEvent = wiEvent::Subscribe(SYSTEM_EVENT_WINDOW_DPICHANGED, [this](uint64_t userdata) {
-		wiPlatform::window_type window = (wiPlatform::window_type)userdata;
-		canvas.init(window);
 	});
 }
 

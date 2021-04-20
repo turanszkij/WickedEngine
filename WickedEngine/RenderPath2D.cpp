@@ -9,8 +9,8 @@ using namespace wiGraphics;
 
 void RenderPath2D::ResizeBuffers()
 {
-	current_resolutionscale = resolutionScale;
-	current_dpi = 0; // invalidate layout
+	current_buffersize = GetInternalResolution();
+	current_layoutscale = 0; // invalidate layout
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -96,20 +96,18 @@ void RenderPath2D::ResizeBuffers()
 }
 void RenderPath2D::ResizeLayout()
 {
-	current_dpi = canvas.dpi;
+	current_layoutscale = canvas.GetDPIScaling();
 }
 
 void RenderPath2D::Update(float dt)
 {
-	if (
-		rtFinal.desc.Width != canvas.GetPhysicalWidth() ||
-		rtFinal.desc.Height != canvas.GetPhysicalHeight() ||
-		current_resolutionscale != resolutionScale
-		)
+	XMUINT2 internalResolution = GetInternalResolution();
+
+	if (current_buffersize.x != internalResolution.x || current_buffersize.y != internalResolution.y)
 	{
 		ResizeBuffers();
 	}
-	if (current_dpi != canvas.dpi)
+	if (current_layoutscale != canvas.GetDPIScaling())
 	{
 		ResizeLayout();
 	}
