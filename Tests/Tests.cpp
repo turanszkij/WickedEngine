@@ -19,7 +19,7 @@ void Tests::Initialize()
 	infoDisplay.resolution = true;
 	infoDisplay.heap_allocation_counter = true;
 
-	renderer.canvas = canvas;
+	renderer.init(canvas);
 	renderer.Load();
 
 	ActivatePath(&renderer);
@@ -29,8 +29,8 @@ void TestsRenderer::ResizeLayout()
 {
     RenderPath3D::ResizeLayout();
 
-	float screenW = canvas.GetLogicalWidth();
-	float screenH = canvas.GetLogicalHeight();
+	float screenW = GetLogicalWidth();
+	float screenH = GetLogicalHeight();
 	label.SetPos(XMFLOAT2(screenW / 2.f - label.scale.x / 2.f, screenH * 0.95f));
 }
 void TestsRenderer::Load()
@@ -141,8 +141,8 @@ void TestsRenderer::Load()
 		transform.UpdateTransform();
 		wiScene::GetCamera().TransformCamera(transform);
 
-		float screenW = canvas.GetLogicalWidth();
-		float screenH = canvas.GetLogicalHeight();
+		float screenW = GetLogicalWidth();
+		float screenH = GetLogicalHeight();
 
 		// Based on combobox selection, start the appropriate test:
 		switch (args.iValue)
@@ -341,7 +341,7 @@ void TestsRenderer::Update(float dt)
 			TransformComponent& target = *scene.transforms.GetComponent(ik.target);
 
 			// place ik target on a plane intersected by mouse ray:
-			RAY ray = wiRenderer::GetPickRay((long)wiInput::GetPointer().x, (long)wiInput::GetPointer().y, canvas);
+			RAY ray = wiRenderer::GetPickRay((long)wiInput::GetPointer().x, (long)wiInput::GetPointer().y, *this);
 			XMVECTOR plane = XMVectorSet(0, 0, 1, 0.2f);
 			XMVECTOR I = XMPlaneIntersectLine(plane, XMLoadFloat3(&ray.origin), XMLoadFloat3(&ray.origin) + XMLoadFloat3(&ray.direction) * 10000);
 			target.ClearTransform();
@@ -437,8 +437,8 @@ void TestsRenderer::RunJobSystemTest()
 
 	static wiSpriteFont font;
 	font = wiSpriteFont(ss.str());
-	font.params.posX = canvas.GetLogicalWidth() / 2;
-	font.params.posY = canvas.GetLogicalHeight() / 2;
+	font.params.posX = GetLogicalWidth() / 2;
+	font.params.posY = GetLogicalHeight() / 2;
 	font.params.h_align = WIFALIGN_CENTER;
 	font.params.v_align = WIFALIGN_CENTER;
 	font.params.size = 24;
@@ -452,8 +452,8 @@ void TestsRenderer::RunFontTest()
 	font.SetText("This is Arial, size 32 wiFont");
 	font_upscaled.SetText("This is Arial, size 14 wiFont, but upscaled to 32");
 
-	font.params.posX = canvas.GetLogicalWidth() / 2.0f;
-	font.params.posY = canvas.GetLogicalHeight() / 6.0f;
+	font.params.posX = GetLogicalWidth() / 2.0f;
+	font.params.posY = GetLogicalHeight() / 6.0f;
 	font.params.size = 32;
 
 	font_upscaled.params = font.params;
@@ -510,7 +510,7 @@ void TestsRenderer::RunFontTest()
 	font_colored.params.h_align = WIFALIGN_CENTER;
 	font_colored.params.v_align = WIFALIGN_TOP;
 	font_colored.params.size = 26;
-	font_colored.params.posX = canvas.GetLogicalWidth() / 2;
+	font_colored.params.posX = GetLogicalWidth() / 2;
 	font_colored.params.posY = font_japanese.params.posY + font_japanese.textHeight();
 	font_colored.SetText("Colored font");
 	AddFont(&font_colored);
@@ -518,8 +518,8 @@ void TestsRenderer::RunFontTest()
 void TestsRenderer::RunSpriteTest()
 {
 	const float step = 30;
-	const float screenW = canvas.GetLogicalWidth();
-	const float screenH = canvas.GetLogicalHeight();
+	const float screenW = GetLogicalWidth();
+	const float screenH = GetLogicalHeight();
 	const XMFLOAT3 startPos = XMFLOAT3(screenW * 0.3f, screenH * 0.2f, 0);
 	wiImageParams params;
 	params.pos = startPos;
@@ -894,8 +894,8 @@ void TestsRenderer::RunNetworkTest()
 	sender.join();
 	receiver.join();
 
-	font.params.posX = canvas.GetLogicalWidth() / 2;
-	font.params.posY = canvas.GetLogicalHeight() / 2;
+	font.params.posX = GetLogicalWidth() / 2;
+	font.params.posY = GetLogicalHeight() / 2;
 	font.params.h_align = WIFALIGN_CENTER;
 	font.params.v_align = WIFALIGN_CENTER;
 	font.params.size = 24;
