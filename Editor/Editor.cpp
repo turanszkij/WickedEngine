@@ -191,6 +191,7 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 
 void EditorComponent::ResizeBuffers()
 {
+	canvas = main->canvas;
 	RenderPath2D::ResizeBuffers();
 
 	GraphicsDevice* device = wiRenderer::GetDevice();

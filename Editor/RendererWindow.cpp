@@ -363,6 +363,7 @@ void RendererWindow::Create(EditorComponent* editor)
 		default:
 			break;
 		}
+		editor->ResizeBuffers();
 	});
 	MSAAComboBox.SetSelected(0);
 	MSAAComboBox.SetTooltip("Multisampling Anti Aliasing quality. ");
