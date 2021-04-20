@@ -2,7 +2,7 @@
 #include "CommonInclude.h"
 #include "wiPlatform.h"
 
-// The canvas specifies a DPI-aware positioning area
+// The canvas specifies a DPI-aware drawing area
 struct wiCanvas
 {
 	uint32_t width = 0;
@@ -15,6 +15,11 @@ struct wiCanvas
 		this->width = width;
 		this->height = height;
 		this->dpi = dpi;
+	}
+	// Copy canvas from other canvas
+	inline void init(const wiCanvas& other)
+	{
+		*this = other;
 	}
 	// Create the canvas straight from window handle
 	inline void init(wiPlatform::window_type window)
@@ -37,10 +42,10 @@ struct wiCanvas
 	//	Use this for scissor, viewport
 	inline uint32_t GetPhysicalHeight() const { return height; }
 	// Returns the width with DPI scaling applied (subpixel size):
-	//	Use this for logic and positioning elements on screen
+	//	Use this for logic and positioning drawable elements
 	inline float GetLogicalWidth() const { return GetPhysicalWidth() / GetDPIScaling(); }
 	// Returns the height with DPI scaling applied (subpixel size):
-	//	Use this for logic and positioning elements on screen
+	//	Use this for logic and positioning drawable elements
 	inline float GetLogicalHeight() const { return GetPhysicalHeight() / GetDPIScaling(); }
 	// Returns projection matrix that maps logical to physical space
 	//	Use this to render to a graphics viewport

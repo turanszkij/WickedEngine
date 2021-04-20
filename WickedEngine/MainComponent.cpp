@@ -43,7 +43,7 @@ void MainComponent::ActivatePath(RenderPath* component, float fadeSeconds, wiCol
 {
 	if (component != nullptr)
 	{
-		component->canvas = canvas;
+		component->init(canvas);
 	}
 
 	// Fade manager will activate on fadeout
@@ -128,7 +128,7 @@ void MainComponent::Run()
 
 		if (GetActivePath() != nullptr)
 		{
-			GetActivePath()->canvas = canvas;
+			GetActivePath()->init(canvas);
 		}
 
 		// Fixed time update:
@@ -166,7 +166,6 @@ void MainComponent::Run()
 	{
 		// If the application is not active, disable Update loops:
 		deltaTimeAccumulator = 0;
-		wiInput::Update(window); // still flush the input events so they don't just accumulate
 	}
 
 	CommandList cmd = wiRenderer::GetDevice()->BeginCommandList();

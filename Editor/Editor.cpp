@@ -147,9 +147,9 @@ void EditorLoadingScreen::Load()
 }
 void EditorLoadingScreen::Update(float dt)
 {
-	font.params.posX = canvas.GetLogicalWidth()*0.5f;
-	font.params.posY = canvas.GetLogicalHeight()*0.5f;
-	sprite.params.pos = XMFLOAT3(canvas.GetLogicalWidth()*0.5f, canvas.GetLogicalHeight()*0.5f - font.textHeight(), 0);
+	font.params.posX = GetLogicalWidth()*0.5f;
+	font.params.posY = GetLogicalHeight()*0.5f;
+	sprite.params.pos = XMFLOAT3(GetLogicalWidth()*0.5f, GetLogicalHeight()*0.5f - font.textHeight(), 0);
 
 	LoadingScreen::Update(dt);
 }
@@ -191,13 +191,13 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 
 void EditorComponent::ResizeBuffers()
 {
-	canvas = main->canvas;
+	init(main->canvas);
 	RenderPath2D::ResizeBuffers();
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	bool hr;
 
-	renderPath->canvas = canvas;
+	renderPath->init(*this);
 	renderPath->ResizeBuffers();
 
 	if(renderPath->GetDepthStencil() != nullptr)
@@ -263,8 +263,8 @@ void EditorComponent::ResizeLayout()
 
 	// GUI elements scaling:
 
-	float screenW = canvas.GetLogicalWidth();
-	float screenH = canvas.GetLogicalHeight();
+	float screenW = GetLogicalWidth();
+	float screenH = GetLogicalHeight();
 
 	XMFLOAT2 option_size = XMFLOAT2(100, 34);
 	float x = screenW - option_size.x;
@@ -1166,7 +1166,7 @@ void EditorComponent::Update(float dt)
 	{
 		// Begin picking:
 		unsigned int pickMask = rendererWnd.GetPickType();
-		RAY pickRay = wiRenderer::GetPickRay((long)currentMouse.x, (long)currentMouse.y, canvas);
+		RAY pickRay = wiRenderer::GetPickRay((long)currentMouse.x, (long)currentMouse.y, *this);
 		{
 			hovered = wiScene::PickResult();
 
@@ -1667,7 +1667,7 @@ void EditorComponent::Update(float dt)
 		}
 	}
 
-	translator.Update(canvas);
+	translator.Update(*this);
 
 	if (translator.IsDragEnded())
 	{
@@ -1697,7 +1697,6 @@ void EditorComponent::Update(float dt)
 
 	RenderPath2D::Update(dt);
 
-	renderPath->canvas = canvas;
 	renderPath->Update(dt);
 }
 void EditorComponent::PostUpdate()

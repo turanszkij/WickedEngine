@@ -571,7 +571,7 @@ void RenderPath3D::Update(float dt)
 		visibility_main,
 		frameCB,
 		internalResolution,
-		canvas,
+		*this,
 		dt
 	);
 
@@ -1238,7 +1238,7 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 		wiRenderer::DrawLensFlares(visibility_main, depthBuffer_Copy, cmd);
 	}
 
-	wiRenderer::DrawDebugWorld(*scene, *camera, canvas, cmd);
+	wiRenderer::DrawDebugWorld(*scene, *camera, *this, cmd);
 
 	device->RenderPassEnd(cmd);
 

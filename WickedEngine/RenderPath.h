@@ -3,14 +3,12 @@
 #include "wiGraphicsDevice.h"
 #include "wiCanvas.h"
 
-class RenderPath
+class RenderPath : public wiCanvas
 {
 private:
 	uint32_t layerMask = 0xFFFFFFFF;
 
 public:
-	wiCanvas canvas;
-
 	virtual ~RenderPath() = default;
 
 	// load resources in background (for example behind loading screen)

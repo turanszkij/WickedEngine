@@ -84,8 +84,8 @@ public:
 	XMUINT2 GetInternalResolution() const
 	{
 		return XMUINT2(
-			uint32_t((float)canvas.GetPhysicalWidth() * resolutionScale),
-			uint32_t((float)canvas.GetPhysicalHeight() * resolutionScale)
+			uint32_t((float)GetPhysicalWidth() * resolutionScale),
+			uint32_t((float)GetPhysicalHeight() * resolutionScale)
 		);
 	}
 };

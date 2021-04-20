@@ -42,8 +42,8 @@ void RenderPath2D::ResizeBuffers()
 		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		desc.Format = defaultTextureFormat;
-		desc.Width = canvas.GetPhysicalWidth();
-		desc.Height = canvas.GetPhysicalHeight();
+		desc.Width = GetPhysicalWidth();
+		desc.Height = GetPhysicalHeight();
 		device->CreateTexture(&desc, nullptr, &rtFinal);
 		device->SetName(&rtFinal, "rtFinal");
 	}
@@ -96,7 +96,7 @@ void RenderPath2D::ResizeBuffers()
 }
 void RenderPath2D::ResizeLayout()
 {
-	current_layoutscale = canvas.GetDPIScaling();
+	current_layoutscale = GetDPIScaling();
 }
 
 void RenderPath2D::Update(float dt)
@@ -107,12 +107,12 @@ void RenderPath2D::Update(float dt)
 	{
 		ResizeBuffers();
 	}
-	if (current_layoutscale != canvas.GetDPIScaling())
+	if (current_layoutscale != GetDPIScaling())
 	{
 		ResizeLayout();
 	}
 
-	GetGUI().Update(canvas, dt);
+	GetGUI().Update(*this, dt);
 
 	for (auto& x : layers)
 	{
@@ -170,8 +170,8 @@ void RenderPath2D::Render() const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	CommandList cmd = device->BeginCommandList();
-	wiImage::SetCanvas(canvas, cmd);
-	wiFont::SetCanvas(canvas, cmd);
+	wiImage::SetCanvas(*this, cmd);
+	wiFont::SetCanvas(*this, cmd);
 
 	wiRenderer::ProcessDeferredMipGenRequests(cmd);
 
@@ -277,7 +277,7 @@ void RenderPath2D::Render() const
 	}
 	wiRenderer::GetDevice()->EventEnd(cmd);
 
-	GetGUI().Render(canvas, cmd);
+	GetGUI().Render(*this, cmd);
 
 	device->RenderPassEnd(cmd);
 
