@@ -7712,20 +7712,24 @@ void RayTraceScene(
 	CommandList cmd
 )
 {
-	device->EventBegin("RayTraceScene", cmd);
-	auto range = wiProfiler::BeginRangeGPU("RayTraceScene", cmd);
-
-	const TextureDesc& desc = output.GetDesc();
-
 	// Set up tracing resources:
 	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
 	{
+		if (!scene.TLAS.IsValid())
+		{
+			return;
+		}
 		device->BindResource(CS, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
 	}
 	else
 	{
 		scene.BVH.Bind(CS, cmd);
 	}
+
+	device->EventBegin("RayTraceScene", cmd);
+	auto range = wiProfiler::BeginRangeGPU("RayTraceScene", cmd);
+
+	const TextureDesc& desc = output.GetDesc();
 
 	if (scene.weather.skyMap != nullptr)
 	{

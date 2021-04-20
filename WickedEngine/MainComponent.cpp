@@ -110,6 +110,8 @@ void MainComponent::Run()
 
 	wiProfiler::BeginFrame();
 
+	wiInput::Update(window);
+
 	deltaTime = float(std::max(0.0, timer.elapsed() / 1000.0));
 	timer.record();
 
@@ -158,15 +160,13 @@ void MainComponent::Run()
 		// Variable-timed update:
 		Update(dt);
 
-		wiInput::Update();
-
 		Render();
 	}
 	else
 	{
 		// If the application is not active, disable Update loops:
 		deltaTimeAccumulator = 0;
-		wiInput::Update(); // still flush the input events so they don't just accumulate
+		wiInput::Update(window); // still flush the input events so they don't just accumulate
 	}
 
 	CommandList cmd = wiRenderer::GetDevice()->BeginCommandList();
@@ -353,6 +353,8 @@ void MainComponent::Compose(CommandList cmd)
 
 void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 {
+	this->window = window;
+
 	// User can also create a graphics device if custom logic is desired, but they must do before this function!
 	if (wiRenderer::GetDevice() == nullptr)
 	{

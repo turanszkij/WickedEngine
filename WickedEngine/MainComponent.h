@@ -38,6 +38,7 @@ public:
 	bool is_window_active = true;
 	wiGraphics::SwapChain swapChain;
 	wiCanvas canvas;
+	wiPlatform::window_type window;
 
 	// Runs the main engine loop
 	void Run();
