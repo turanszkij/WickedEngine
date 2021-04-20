@@ -1675,6 +1675,8 @@ void wiWindow::Update(const wiCanvas& canvas, float dt)
 
 	Hitbox2D pointerHitbox = GetPointerHitbox();
 
+	wiWidget* topmostWidget = nullptr;
+
 	bool focus = false;
 	for (auto& widget : widgets)
 	{
@@ -1688,9 +1690,9 @@ void wiWindow::Update(const wiCanvas& canvas, float dt)
 		if (widget->priority_change)
 		{
 			widget->priority_change = false;
-			if (!focus)
+			if (topmostWidget == nullptr)
 			{
-				priorityChangeQueue.push_back(widget);
+				topmostWidget = widget;
 			}
 		}
 
@@ -1704,15 +1706,11 @@ void wiWindow::Update(const wiCanvas& canvas, float dt)
 		}
 	}
 
-	for (auto& widget : priorityChangeQueue)
+	if (topmostWidget != nullptr)
 	{
-		if (std::find(widgets.begin(), widgets.end(), widget) != widgets.end()) // only add back to widgets if it's still there!
-		{
-			widgets.remove(widget);
-			widgets.push_front(widget);
-		}
+		widgets.remove(topmostWidget);
+		widgets.push_front(topmostWidget);
 	}
-	priorityChangeQueue.clear();
 
 	if (IsMinimized())
 	{

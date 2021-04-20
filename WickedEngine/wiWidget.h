@@ -271,7 +271,6 @@ protected:
 	wiButton moveDragger;
 	wiLabel label;
 	std::list<wiWidget*> widgets;
-	std::vector<wiWidget*> priorityChangeQueue;
 	bool minimized = false;
 public:
 	void Create(const std::string& name, bool window_controls = true);

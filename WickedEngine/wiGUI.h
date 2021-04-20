@@ -10,7 +10,6 @@ class wiGUI
 {
 private:
 	std::list<wiWidget*> widgets;
-	std::vector<wiWidget*> priorityChangeQueue;
 	bool focus = false;
 	bool visible = true;
 public:
