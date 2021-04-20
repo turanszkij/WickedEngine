@@ -199,7 +199,7 @@ void EditorComponent::ResizeBuffers()
 	renderPath->canvas = canvas;
 	renderPath->ResizeBuffers();
 
-	if(renderPath != nullptr && renderPath->GetDepthStencil() != nullptr)
+	if(renderPath->GetDepthStencil() != nullptr)
 	{
 		XMUINT2 internalResolution = GetInternalResolution();
 

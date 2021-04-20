@@ -24,8 +24,6 @@ public:
 	//Set a function that should be called when the loading finishes
 	//use std::bind( YourFunctionPointer )
 	void onFinished(std::function<void()> finishFunction);
-	//Get percentage of finished loading tasks (values 0-100)
-	int getPercentageComplete();
 	//See if the loading is currently running
 	bool isActive();
 

@@ -9,6 +9,9 @@ using namespace wiGraphics;
 
 void RenderPath2D::ResizeBuffers()
 {
+	current_resolutionscale = resolutionScale;
+	current_dpi = 0; // invalidate layout
+
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	FORMAT defaultTextureFormat = FORMAT_R10G10B10A2_UNORM;
@@ -91,6 +94,10 @@ void RenderPath2D::ResizeBuffers()
 	}
 
 }
+void RenderPath2D::ResizeLayout()
+{
+	current_dpi = canvas.dpi;
+}
 
 void RenderPath2D::Update(float dt)
 {
@@ -100,13 +107,10 @@ void RenderPath2D::Update(float dt)
 		current_resolutionscale != resolutionScale
 		)
 	{
-		current_resolutionscale = resolutionScale;
-		current_dpi = 0; // invalidate layout
 		ResizeBuffers();
 	}
 	if (current_dpi != canvas.dpi)
 	{
-		current_dpi = canvas.dpi;
 		ResizeLayout();
 	}
 

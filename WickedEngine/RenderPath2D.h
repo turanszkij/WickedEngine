@@ -48,7 +48,7 @@ public:
 	// create resolution dependent resources, such as render targets
 	virtual void ResizeBuffers();
 	// update DPI dependent elements, such as GUI elements, sprites
-	virtual void ResizeLayout() {}
+	virtual void ResizeLayout();
 
 	void Update(float dt) override;
 	void FixedUpdate() override;
