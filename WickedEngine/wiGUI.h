@@ -4,12 +4,12 @@
 #include "wiCanvas.h"
 #include "wiWidget.h"
 
-#include <list>
+#include <vector>
 
 class wiGUI
 {
 private:
-	std::list<wiWidget*> widgets;
+	std::vector<wiWidget*> widgets;
 	bool focus = false;
 	bool visible = true;
 public:

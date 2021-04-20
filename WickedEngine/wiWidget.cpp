@@ -40,9 +40,14 @@ void wiWidget::Update(const wiCanvas& canvas, float dt)
 		return;
 	}
 
+	if (force_disable)
+	{
+		state = IDLE;
+	}
+
 	hitBox = Hitbox2D(XMFLOAT2(translation.x, translation.y), XMFLOAT2(scale.x, scale.y));
 
-	if (GetState() != WIDGETSTATE::ACTIVE && !tooltip.empty() && GetPointerHitbox().intersects(hitBox))
+	if (!force_disable && GetState() != WIDGETSTATE::ACTIVE && !tooltip.empty() && GetPointerHitbox().intersects(hitBox))
 	{
 		tooltipTimer++;
 	}
@@ -75,7 +80,7 @@ void wiWidget::Update(const wiCanvas& canvas, float dt)
 		sprites[i].params.pos.y = translation.y;
 		sprites[i].params.siz.x = scale.x;
 		sprites[i].params.siz.y = scale.y;
-		sprites[i].params.fade = IsEnabled() ? 0.0f : 0.5f;
+		sprites[i].params.fade = enabled ? 0.0f : 0.5f;
 	}
 	font.params.posX = translation.x;
 	font.params.posY = translation.y;
@@ -207,7 +212,7 @@ void wiWidget::SetEnabled(bool val)
 }
 bool wiWidget::IsEnabled() const
 {
-	return enabled && visible;
+	return enabled && visible && !force_disable;
 }
 void wiWidget::SetVisible(bool val)
 {
@@ -230,11 +235,6 @@ void wiWidget::Activate()
 void wiWidget::Deactivate()
 {
 	state = DEACTIVATING;
-	tooltipTimer = 0;
-}
-void wiWidget::ResetState()
-{
-	state = IDLE;
 	tooltipTimer = 0;
 }
 void wiWidget::SetColor(wiColor color, WIDGETSTATE state)
@@ -838,7 +838,8 @@ void wiSlider::Update(const wiCanvas& canvas, float dt)
 	}
 	valueInputField.font.params.color = this->font.params.color;
 	valueInputField.font.params.shadowColor = this->font.params.shadowColor;
-	valueInputField.SetEnabled(IsEnabled());
+	valueInputField.SetEnabled(enabled);
+	valueInputField.force_disable = force_disable;
 	valueInputField.Update(canvas, dt);
 
 	if (IsEnabled())
@@ -924,7 +925,7 @@ void wiSlider::Update(const wiCanvas& canvas, float dt)
 	sprites_knob[state].params.pos.y = translation.y + 2;
 	sprites_knob[state].params.siz.y = scale.y - 4;
 	sprites_knob[state].params.pivot = XMFLOAT2(0.5f, 0);
-	sprites_knob[state].params.fade = IsEnabled() ? 0.0f : 0.5f;
+	sprites_knob[state].params.fade = sprites[state].params.fade;
 }
 void wiSlider::Render(const wiCanvas& canvas, CommandList cmd) const
 {
@@ -1600,7 +1601,15 @@ void wiWindow::AddWidget(wiWidget* widget)
 }
 void wiWindow::RemoveWidget(wiWidget* widget)
 {
-	widgets.remove(widget);
+	for (auto& x : widgets)
+	{
+		if (x == widget)
+		{
+			x = widgets.back();
+			widgets.pop_back();
+			break;
+		}
+	}
 }
 void wiWindow::RemoveWidgets()
 {
@@ -1612,6 +1621,10 @@ void wiWindow::Update(const wiCanvas& canvas, float dt)
 	{
 		return;
 	}
+
+	moveDragger.force_disable = force_disable;
+	resizeDragger_UpperLeft.force_disable = force_disable;
+	resizeDragger_BottomRight.force_disable = force_disable;
 
 	moveDragger.Update(canvas, dt);
 	resizeDragger_UpperLeft.Update(canvas, dt);
@@ -1672,25 +1685,23 @@ void wiWindow::Update(const wiCanvas& canvas, float dt)
 
 	Hitbox2D pointerHitbox = GetPointerHitbox();
 
-	wiWidget* topmostWidget = nullptr;
+	uint32_t priority = 0;
 
 	bool focus = false;
 	for (auto& widget : widgets)
 	{
+		widget->force_disable = force_disable || focus;
 		widget->Update(canvas, dt);
-
-		if (focus)
-		{
-			widget->ResetState();
-		}
+		widget->force_disable = false;
 
 		if (widget->priority_change)
 		{
 			widget->priority_change = false;
-			if (topmostWidget == nullptr)
-			{
-				topmostWidget = widget;
-			}
+			widget->priority = priority++;
+		}
+		else
+		{
+			widget->priority = ~0u;
 		}
 
 		if (widget->IsVisible() && widget->hitBox.intersects(pointerHitbox))
@@ -1703,11 +1714,9 @@ void wiWindow::Update(const wiCanvas& canvas, float dt)
 		}
 	}
 
-	if (topmostWidget != nullptr)
-	{
-		widgets.remove(topmostWidget);
-		widgets.push_front(topmostWidget);
-	}
+	std::sort(widgets.begin(), widgets.end(), [](const wiWidget* a, const wiWidget* b) {
+		return a->priority < b->priority;
+		});
 
 	if (IsMinimized())
 	{
@@ -1777,10 +1786,15 @@ void wiWindow::Render(const wiCanvas& canvas, CommandList cmd) const
 	wiColor color = GetColor();
 
 	// body
-	if (!IsMinimized())
+	wiImageParams fx(translation.x - 2, translation.y - 2, scale.x + 4, scale.y + 4, wiColor(0, 0, 0, 100));
+	if (IsMinimized())
 	{
-		wiImageParams fx(translation.x - 2, translation.y - 2, scale.x + 4, scale.y + 4, wiColor(0, 0, 0, 100));
-		wiImage::Draw(wiTextureHelper::getWhite(), fx, cmd); // simple shadow under the window
+		fx.siz.y = windowcontrolSize + 4;
+		wiImage::Draw(wiTextureHelper::getWhite(), fx, cmd); // shadow
+	}
+	else
+	{
+		wiImage::Draw(wiTextureHelper::getWhite(), fx, cmd); // shadow
 		sprites[state].Draw(cmd);
 	}
 
@@ -1851,14 +1865,6 @@ void wiWindow::SetMinimized(bool value)
 bool wiWindow::IsMinimized() const
 {
 	return minimized;
-}
-void wiWindow::ResetState()
-{
-	wiWidget::ResetState();
-	for (auto& x : widgets)
-	{
-		x->ResetState();
-	}
 }
 
 

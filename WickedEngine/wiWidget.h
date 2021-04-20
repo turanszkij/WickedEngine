@@ -8,7 +8,7 @@
 #include "wiSpriteFont.h"
 
 #include <string>
-#include <list>
+#include <vector>
 #include <functional>
 
 struct wiEventArgs
@@ -79,7 +79,6 @@ public:
 
 	Hitbox2D hitBox;
 	wiGraphics::Rect scissorRect;
-	bool priority_change = true;
 
 	wiWidget* parent = nullptr;
 	void AttachTo(wiWidget* parent);
@@ -87,12 +86,15 @@ public:
 
 	void Activate();
 	void Deactivate();
-	virtual void ResetState();
 
 	void ApplyScissor(const wiCanvas& canvas, const wiGraphics::Rect rect, wiGraphics::CommandList cmd, bool constrain_to_parent = true) const;
 	Hitbox2D GetPointerHitbox() const;
 
 	static void Initialize();
+
+	bool priority_change = true;
+	uint32_t priority = 0;
+	bool force_disable = false;
 };
 
 // Clickable, draggable box
@@ -270,7 +272,7 @@ protected:
 	wiButton resizeDragger_BottomRight;
 	wiButton moveDragger;
 	wiLabel label;
-	std::list<wiWidget*> widgets;
+	std::vector<wiWidget*> widgets;
 	bool minimized = false;
 public:
 	void Create(const std::string& name, bool window_controls = true);
@@ -287,8 +289,6 @@ public:
 	void SetEnabled(bool value) override;
 	void SetMinimized(bool value);
 	bool IsMinimized() const;
-
-	void ResetState() override;
 };
 
 // HSV-Color Picker

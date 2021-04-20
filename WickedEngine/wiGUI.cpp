@@ -15,25 +15,23 @@ void wiGUI::Update(const wiCanvas& canvas, float dt)
 	XMFLOAT4 pointer = wiInput::GetPointer();
 	Hitbox2D pointerHitbox = Hitbox2D(XMFLOAT2(pointer.x, pointer.y), XMFLOAT2(1, 1));
 
-	wiWidget* topmostWidget = nullptr;
+	uint32_t priority = 0;
 
 	focus = false;
 	for (auto& widget : widgets)
 	{
+		widget->force_disable = focus;
 		widget->Update(canvas, dt);
-
-		if (focus)
-		{
-			widget->ResetState();
-		}
+		widget->force_disable = false;
 
 		if (widget->priority_change)
 		{
 			widget->priority_change = false;
-			if (topmostWidget == nullptr)
-			{
-				topmostWidget = widget;
-			}
+			widget->priority = priority++;
+		}
+		else
+		{
+			widget->priority = ~0u;
 		}
 
 		if (widget->IsVisible() && widget->hitBox.intersects(pointerHitbox))
@@ -46,12 +44,9 @@ void wiGUI::Update(const wiCanvas& canvas, float dt)
 		}
 	}
 
-	// Topmost widget will be moved to the front:
-	if (topmostWidget != nullptr)
-	{
-		widgets.remove(topmostWidget);
-		widgets.push_front(topmostWidget);
-	}
+	std::sort(widgets.begin(), widgets.end(), [](const wiWidget* a, const wiWidget* b) {
+		return a->priority < b->priority;
+		});
 }
 
 void wiGUI::Render(const wiCanvas& canvas, CommandList cmd) const
@@ -98,10 +93,14 @@ void wiGUI::AddWidget(wiWidget* widget)
 
 void wiGUI::RemoveWidget(wiWidget* widget)
 {
-	if (widget != nullptr)
+	for (auto& x : widgets)
 	{
-		widget->Detach();
-		widgets.remove(widget);
+		if (x == widget)
+		{
+			x = widgets.back();
+			widgets.pop_back();
+			break;
+		}
 	}
 }
 
