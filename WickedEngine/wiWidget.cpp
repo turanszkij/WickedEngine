@@ -1007,7 +1007,6 @@ void wiCheckBox::Update(const wiCanvas& canvas, float dt)
 
 		Hitbox2D pointerHitbox = GetPointerHitbox();
 
-		bool clicked = false;
 		// hover the button
 		if (pointerHitbox.intersects(hitBox))
 		{
@@ -1021,28 +1020,26 @@ void wiCheckBox::Update(const wiCanvas& canvas, float dt)
 		{
 			if (state == FOCUS)
 			{
-				// activate
-				clicked = true;
-			}
-		}
-
-		if (wiInput::Down(wiInput::MOUSE_BUTTON_LEFT))
-		{
-			if (state == DEACTIVATING)
-			{
-				// Keep pressed until mouse is released
 				Activate();
 			}
 		}
 
-		if (clicked)
+		if (state == DEACTIVATING)
 		{
-			SetCheck(!GetCheck());
-			wiEventArgs args;
-			args.clickPos = pointerHitbox.pos;
-			args.bValue = GetCheck();
-			onClick(args);
-			Activate();
+			if (wiInput::Down(wiInput::MOUSE_BUTTON_LEFT))
+			{
+				// Keep pressed until mouse is released
+				Activate();
+			}
+			else
+			{
+				// Deactivation event
+				SetCheck(!GetCheck());
+				wiEventArgs args;
+				args.clickPos = pointerHitbox.pos;
+				args.bValue = GetCheck();
+				onClick(args);
+			}
 		}
 	}
 
