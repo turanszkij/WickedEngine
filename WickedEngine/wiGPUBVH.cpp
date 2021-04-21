@@ -14,7 +14,6 @@
 #include <set>
 #endif // BVH_VALIDATE
 
-using namespace std;
 using namespace wiGraphics;
 using namespace wiScene;
 using namespace wiECS;
@@ -91,7 +90,7 @@ void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene)
 
 	if (repackAtlas)
 	{
-		vector<rect_xywh*> out_rects(storedTextures.size());
+		std::vector<rect_xywh*> out_rects(storedTextures.size());
 		int i = 0;
 		for (auto& it : storedTextures)
 		{
@@ -609,8 +608,6 @@ namespace wiGPUBVH_Internal
 {
 	void LoadShaders()
 	{
-		string SHADERPATH = wiRenderer::GetShaderPath();
-
 		wiRenderer::LoadShader(CS, computeShaders[CSTYPE_BVH_PRIMITIVES], "bvh_primitivesCS.cso");
 		wiRenderer::LoadShader(CS, computeShaders[CSTYPE_BVH_HIERARCHY], "bvh_hierarchyCS.cso");
 		wiRenderer::LoadShader(CS, computeShaders[CSTYPE_BVH_PROPAGATEAABB], "bvh_propagateaabbCS.cso");

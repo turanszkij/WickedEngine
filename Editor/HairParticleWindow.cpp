@@ -2,7 +2,6 @@
 #include "HairParticleWindow.h"
 #include "Editor.h"
 
-using namespace std;
 using namespace wiECS;
 using namespace wiScene;
 

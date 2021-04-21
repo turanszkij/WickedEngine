@@ -33,7 +33,6 @@
 #include <algorithm>
 #include <array>
 
-using namespace std;
 using namespace wiGraphics;
 using namespace wiScene;
 using namespace wiECS;
@@ -124,9 +123,9 @@ Texture shadowMapArray_Transparent_Cube;
 std::vector<RenderPass> renderpasses_shadow2D;
 std::vector<RenderPass> renderpasses_shadowCube;
 
-std::vector<pair<XMFLOAT4X4, XMFLOAT4>> renderableBoxes;
-std::vector<pair<SPHERE, XMFLOAT4>> renderableSpheres;
-std::vector<pair<CAPSULE, XMFLOAT4>> renderableCapsules;
+std::vector<std::pair<XMFLOAT4X4, XMFLOAT4>> renderableBoxes;
+std::vector<std::pair<SPHERE, XMFLOAT4>> renderableSpheres;
+std::vector<std::pair<CAPSULE, XMFLOAT4>> renderableCapsules;
 std::vector<RenderableLine> renderableLines;
 std::vector<RenderableLine2D> renderableLines2D;
 std::vector<RenderablePoint> renderablePoints;
@@ -938,7 +937,7 @@ bool LoadShader(SHADERSTAGE stage, Shader& shader, const std::string& filename, 
 		}
 	}
 
-	vector<uint8_t> buffer;
+	std::vector<uint8_t> buffer;
 	if (wiHelper::FileRead(shaderbinaryfilename, buffer))
 	{
 		return device->CreateShader(stage, buffer.data(), buffer.size(), &shader);

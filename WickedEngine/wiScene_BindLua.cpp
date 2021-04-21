@@ -6,7 +6,6 @@
 #include "Texture_BindLua.h"
 #include "wiIntersect_BindLua.h"
 
-using namespace std;
 using namespace wiECS;
 using namespace wiScene;
 using namespace wiIntersect_BindLua;
@@ -42,7 +41,7 @@ int LoadModel(lua_State* L)
 			// Overload 1: thread safe version
 			if (argc > 1)
 			{
-				string fileName = wiLua::SGetString(L, 2);
+				std::string fileName = wiLua::SGetString(L, 2);
 				fileName = wiLua::GetScriptPath() + fileName;
 				XMMATRIX transform = XMMatrixIdentity();
 				if (argc > 2)
@@ -70,7 +69,7 @@ int LoadModel(lua_State* L)
 		else
 		{
 			// Overload 2: global scene version
-			string fileName = wiLua::SGetString(L, 1);
+			std::string fileName = wiLua::SGetString(L, 1);
 			fileName = wiLua::GetScriptPath() + fileName;
 			XMMATRIX transform = XMMatrixIdentity();
 			if (argc > 1)
@@ -406,7 +405,7 @@ int Scene_BindLua::Entity_FindByName(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		string name = wiLua::SGetString(L, 1);
+		std::string name = wiLua::SGetString(L, 1);
 
 		Entity entity = scene->Entity_FindByName(name);
 
@@ -1145,7 +1144,7 @@ int NameComponent_BindLua::SetName(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		string name = wiLua::SGetString(L, 1);
+		std::string name = wiLua::SGetString(L, 1);
 		*component = name;
 	}
 	else

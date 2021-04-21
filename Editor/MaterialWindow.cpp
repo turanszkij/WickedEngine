@@ -4,7 +4,6 @@
 
 #include <sstream>
 
-using namespace std;
 using namespace wiGraphics;
 using namespace wiECS;
 using namespace wiScene;

@@ -14,20 +14,19 @@
 #include <mutex>
 #include <deque>
 
-using namespace std;
 using namespace wiGraphics;
 
 
 namespace wiBackLog
 {
 	bool enabled = false;
-	deque<string> stream;
-	deque<string> history;
+	std::deque<std::string> stream;
+	std::deque<std::string> history;
 	const float speed = 50.0f;
 	unsigned int deletefromline = 500;
 	float pos = -FLT_MAX;
 	float scroll = 0;
-	string inputArea;
+	std::string inputArea;
 	int historyPos = 0;
 	wiSpriteFont font;
 	wiSpinLock logLock;
@@ -129,10 +128,10 @@ namespace wiBackLog
 	}
 
 
-	string getText() 
+	std::string getText()
 	{
 		logLock.lock();
-		string retval;
+		std::string retval;
 		for (auto& x : stream)
 		{
 			retval += x;
@@ -150,7 +149,7 @@ namespace wiBackLog
 	void post(const char* input) 
 	{
 		logLock.lock();
-		string str;
+		std::string str;
 		str = input;
 		str += '\n';
 		stream.push_back(str);

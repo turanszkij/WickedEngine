@@ -4,8 +4,6 @@
 
 #include <sstream>
 
-using namespace std;
-
 const char RenderPath2D_BindLua::className[] = "RenderPath2D";
 
 Luna<RenderPath2D_BindLua>::FunctionType RenderPath2D_BindLua::methods[] = {
@@ -304,10 +302,10 @@ int RenderPath2D_BindLua::GetLayers(lua_State* L)
 	RenderPath2D* ccomp = dynamic_cast<RenderPath2D*>(component);
 	if (ccomp != nullptr)
 	{
-		stringstream ss("");
+		std::stringstream ss("");
 		for (auto& x : ccomp->layers)
 		{
-			ss << x.name << endl;
+			ss << x.name << std::endl;
 		}
 		wiLua::SSetString(L, ss.str());
 		return 1;

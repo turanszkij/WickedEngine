@@ -4,8 +4,6 @@
 
 #include <sstream>
 
-using namespace std;
-
 namespace wiBackLog_BindLua
 {
 	int backlog_clear(lua_State* L)
@@ -17,7 +15,7 @@ namespace wiBackLog_BindLua
 	{
 		int argc = wiLua::SGetArgCount(L);
 
-		stringstream ss("");
+		std::stringstream ss("");
 
 		for (int i = 1; i <= argc; i++)
 		{

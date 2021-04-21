@@ -11,7 +11,6 @@
 #include "wiIntersect_BindLua.h"
 #include "wiEvent.h"
 
-using namespace std;
 using namespace wiECS;
 using namespace wiGraphics;
 using namespace wiScene;
@@ -317,7 +316,7 @@ namespace wiRenderer_BindLua
 		int argc = wiLua::SGetArgCount(L);
 		if (argc > 1)
 		{
-			string name = wiLua::SGetString(L, 1);
+			std::string name = wiLua::SGetString(L, 1);
 			Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 2);
 			if (v)
 			{

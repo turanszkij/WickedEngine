@@ -25,7 +25,6 @@
 #include <sstream>
 #include <algorithm>
 
-using namespace std;
 using namespace wiGraphics;
 
 void MainComponent::Initialize()
@@ -87,7 +86,7 @@ void MainComponent::Run()
 		wiFontParams params;
 		params.posX = 5.f;
 		params.posY = 5.f;
-		string text = wiBackLog::getText();
+		std::string text = wiBackLog::getText();
 		float textheight = wiFont::textHeight(text, params);
 		float screenheight = canvas.GetLogicalHeight();
 		if (textheight > screenheight)
@@ -254,7 +253,7 @@ void MainComponent::Compose(CommandList cmd)
 	// Draw the information display
 	if (infoDisplay.active)
 	{
-		stringstream ss("");
+		std::stringstream ss("");
 		if (infoDisplay.watermark)
 		{
 			ss << "Wicked Engine " << wiVersion::GetVersionString() << " ";
@@ -297,11 +296,11 @@ void MainComponent::Compose(CommandList cmd)
 			{
 				ss << "[debugdevice]";
 			}
-			ss << endl;
+			ss << std::endl;
 		}
 		if (infoDisplay.resolution)
 		{
-			ss << "Resolution: " << canvas.GetPhysicalWidth() << " x " << canvas.GetPhysicalHeight() << " (" << canvas.GetDPI() << " dpi)" << endl;
+			ss << "Resolution: " << canvas.GetPhysicalWidth() << " x " << canvas.GetPhysicalHeight() << " (" << canvas.GetDPI() << " dpi)" << std::endl;
 		}
 		if (infoDisplay.fpsinfo)
 		{
@@ -318,20 +317,20 @@ void MainComponent::Compose(CommandList cmd)
 			}
 
 			ss.precision(2);
-			ss << fixed << 1.0f / displaydeltatime << " FPS" << endl;
+			ss << std::fixed << 1.0f / displaydeltatime << " FPS" << std::endl;
 		}
 		if (infoDisplay.heap_allocation_counter)
 		{
-			ss << "Heap allocations per frame: " << number_of_allocs.load() << endl;
+			ss << "Heap allocations per frame: " << number_of_allocs.load() << std::endl;
 			number_of_allocs.store(0);
 		}
 
 #ifdef _DEBUG
-		ss << "Warning: This is a [DEBUG] build, performance will be slow!" << endl;
+		ss << "Warning: This is a [DEBUG] build, performance will be slow!" << std::endl;
 #endif
 		if (wiRenderer::GetDevice()->IsDebugDevice())
 		{
-			ss << "Warning: Graphics is in [debugdevice] mode, performance will be slow!" << endl;
+			ss << "Warning: Graphics is in [debugdevice] mode, performance will be slow!" << std::endl;
 		}
 
 		ss.precision(2);

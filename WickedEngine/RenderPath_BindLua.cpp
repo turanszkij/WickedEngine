@@ -1,7 +1,5 @@
 #include "RenderPath_BindLua.h"
 
-using namespace std;
-
 const char RenderPath_BindLua::className[] = "RenderPath";
 
 Luna<RenderPath_BindLua>::FunctionType RenderPath_BindLua::methods[] = {

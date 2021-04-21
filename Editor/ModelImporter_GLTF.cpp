@@ -15,7 +15,6 @@
 #include <sstream>
 #include <unordered_map>
 
-using namespace std;
 using namespace wiGraphics;
 using namespace wiScene;
 using namespace wiECS;
@@ -99,7 +98,7 @@ namespace tinygltf
 		if (image->uri.empty())
 		{
 			// Force some image resource name:
-			stringstream ss;
+			std::stringstream ss;
 			do {
 				ss.str("");
 				ss << "gltfimport_" << wiRandom::getRandom(INT_MAX) << ".png";
@@ -143,7 +142,7 @@ struct LoaderState
 {
 	tinygltf::Model gltfModel;
 	Scene* scene;
-	unordered_map<int, Entity> entityMap;  // node -> entity
+	std::unordered_map<int, Entity> entityMap;  // node -> entity
 };
 
 // Recursively loads nodes and resolves hierarchy:
@@ -255,9 +254,9 @@ void LoadNode(int nodeIndex, Entity parent, LoaderState& state)
 
 void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 {
-	string directory = wiHelper::GetDirectoryFromPath(fileName);
-	string name = wiHelper::GetFileNameFromPath(fileName);
-	string extension = wiHelper::toUpper(wiHelper::GetExtensionFromFileName(name));
+	std::string directory = wiHelper::GetDirectoryFromPath(fileName);
+	std::string name = wiHelper::GetFileNameFromPath(fileName);
+	std::string extension = wiHelper::toUpper(wiHelper::GetExtensionFromFileName(name));
 
 
 	tinygltf::TinyGLTF loader;
@@ -620,7 +619,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			mesh.subsets.back().indexOffset = (uint32_t)indexOffset;
 			mesh.subsets.back().indexCount = (uint32_t)indexCount;
 
-			mesh.subsets.back().materialID = scene.materials.GetEntity(max(0, prim.material));
+			mesh.subsets.back().materialID = scene.materials.GetEntity(std::max(0, prim.material));
 			MaterialComponent* material = scene.materials.GetComponent(mesh.subsets.back().materialID);
 
 			uint32_t vertexOffset = (uint32_t)mesh.vertex_positions.size();
@@ -675,7 +674,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 
 			for (auto& attr : prim.attributes)
 			{
-				const string& attr_name = attr.first;
+				const std::string& attr_name = attr.first;
 				int attr_data = attr.second;
 
 				const tinygltf::Accessor& accessor = state.gltfModel.accessors[attr_data];
@@ -810,7 +809,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				{
 					for (auto& attr : prim.targets[i])
 					{
-						const string& attr_name = attr.first;
+						const std::string& attr_name = attr.first;
 						int attr_data = attr.second;
 
 						const tinygltf::Accessor& accessor = state.gltfModel.accessors[attr_data];
@@ -873,7 +872,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 	}
 
 	// Create transform hierarchy, assign objects, meshes, armatures, cameras:
-	const tinygltf::Scene &gltfScene = state.gltfModel.scenes[max(0, state.gltfModel.defaultScene)];
+	const tinygltf::Scene &gltfScene = state.gltfModel.scenes[std::max(0, state.gltfModel.defaultScene)];
 	for (size_t i = 0; i < gltfScene.nodes.size(); i++)
 	{
 		LoadNode(gltfScene.nodes[i], rootEntity, state);
@@ -949,8 +948,8 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				{
 					float time = ((float*)data)[j];
 					animationdata.keyframe_times[j] = time;
-					animationcomponent.start = min(animationcomponent.start, time);
-					animationcomponent.end = max(animationcomponent.end, time);
+					animationcomponent.start = std::min(animationcomponent.start, time);
+					animationcomponent.end = std::max(animationcomponent.end, time);
 				}
 
 			}

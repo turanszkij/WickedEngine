@@ -13,7 +13,6 @@
 #include <mutex>
 #include <atomic>
 
-using namespace std;
 using namespace wiGraphics;
 
 namespace wiProfiler
@@ -224,26 +223,26 @@ namespace wiProfiler
 		wiImage::SetCanvas(canvas, cmd);
 		wiFont::SetCanvas(canvas, cmd);
 
-		stringstream ss("");
+		std::stringstream ss("");
 		ss.precision(2);
-		ss << "Frame Profiler Ranges:" << endl << "----------------------------" << endl;
+		ss << "Frame Profiler Ranges:" << std::endl << "----------------------------" << std::endl;
 
 		// Print CPU ranges:
 		for (auto& x : ranges)
 		{
 			if (x.second.IsCPURange())
 			{
-				ss << x.second.name << ": " << fixed << x.second.time << " ms" << endl;
+				ss << x.second.name << ": " << std::fixed << x.second.time << " ms" << std::endl;
 			}
 		}
-		ss << endl;
+		ss << std::endl;
 
 		// Print GPU ranges:
 		for (auto& x : ranges)
 		{
 			if (!x.second.IsCPURange())
 			{
-				ss << x.second.name << ": " << fixed << x.second.time << " ms" << endl;
+				ss << x.second.name << ": " << std::fixed << x.second.time << " ms" << std::endl;
 			}
 		}
 

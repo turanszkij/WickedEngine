@@ -4,7 +4,6 @@
 
 #include <sstream>
 
-using namespace std;
 using namespace wiECS;
 using namespace wiScene;
 
@@ -756,16 +755,16 @@ void EmitterWindow::UpdateData()
 	NameComponent* name = scene.names.GetComponent(entity);
 	NameComponent* meshName = scene.names.GetComponent(emitter->meshID);
 
-	stringstream ss("");
+	std::stringstream ss("");
 	ss.precision(2);
-	ss << "Emitter Mesh: " << (meshName != nullptr ? meshName->name : "NO EMITTER MESH") << " (" << emitter->meshID << ")" << endl;
-	ss << "Memort Budget: " << emitter->GetMemorySizeInBytes() / 1024.0f / 1024.0f << " MB" << endl;
-	ss << endl;
+	ss << "Emitter Mesh: " << (meshName != nullptr ? meshName->name : "NO EMITTER MESH") << " (" << emitter->meshID << ")" << std::endl;
+	ss << "Memort Budget: " << emitter->GetMemorySizeInBytes() / 1024.0f / 1024.0f << " MB" << std::endl;
+	ss << std::endl;
 
 	auto data = emitter->GetStatistics();
-	ss << "Alive Particle Count = " << data.aliveCount << endl;
-	ss << "Dead Particle Count = " << data.deadCount << endl;
-	ss << "GPU Emit count = " << data.realEmitCount << endl;
+	ss << "Alive Particle Count = " << data.aliveCount << std::endl;
+	ss << "Dead Particle Count = " << data.deadCount << std::endl;
+	ss << "GPU Emit count = " << data.realEmitCount << std::endl;
 
 	infoLabel.SetText(ss.str());
 

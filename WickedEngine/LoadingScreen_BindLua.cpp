@@ -1,7 +1,5 @@
 #include "LoadingScreen_BindLua.h"
 
-using namespace std;
-
 const char LoadingScreen_BindLua::className[] = "LoadingScreen";
 
 Luna<LoadingScreen_BindLua>::FunctionType LoadingScreen_BindLua::methods[] = {
@@ -35,7 +33,7 @@ int LoadingScreen_BindLua::AddLoadingTask(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		string task = wiLua::SGetString(L, 1);
+		std::string task = wiLua::SGetString(L, 1);
 		LoadingScreen* loading = dynamic_cast<LoadingScreen*>(component);
 		if (loading != nullptr)
 		{
@@ -55,7 +53,7 @@ int LoadingScreen_BindLua::OnFinished(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		string task = wiLua::SGetString(L, 1);
+		std::string task = wiLua::SGetString(L, 1);
 		LoadingScreen* loading = dynamic_cast<LoadingScreen*>(component);
 		if (loading != nullptr)
 		{

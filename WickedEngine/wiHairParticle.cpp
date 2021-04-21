@@ -13,7 +13,6 @@
 #include "wiBackLog.h"
 #include "wiEvent.h"
 
-using namespace std;
 using namespace wiGraphics;
 
 namespace wiScene

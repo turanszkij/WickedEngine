@@ -9,7 +9,6 @@
 #include <algorithm>
 #include <vector>
 
-using namespace std;
 using namespace wiGraphics;
 using namespace wiScene;
 

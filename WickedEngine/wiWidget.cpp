@@ -11,7 +11,6 @@
 
 #include <sstream>
 
-using namespace std;
 using namespace wiGraphics;
 using namespace wiScene;
 
@@ -153,8 +152,8 @@ void wiWidget::SetName(const std::string& value)
 {
 	if (value.length() <= 0)
 	{
-		static atomic<uint32_t> widgetID{ 0 };
-		stringstream ss("");
+		static std::atomic<uint32_t> widgetID{ 0 };
+		std::stringstream ss("");
 		ss << "widget_" << widgetID.fetch_add(1);
 		name = ss.str();
 	}
@@ -164,7 +163,7 @@ void wiWidget::SetName(const std::string& value)
 	}
 
 }
-const string wiWidget::GetText() const
+const std::string wiWidget::GetText() const
 {
 	return font.GetTextA();
 }
@@ -492,19 +491,19 @@ void wiButton::Render(const wiCanvas& canvas, CommandList cmd) const
 	sprites[state].Draw(cmd);
 	font.Draw(cmd);
 }
-void wiButton::OnClick(function<void(wiEventArgs args)> func)
+void wiButton::OnClick(std::function<void(wiEventArgs args)> func)
 {
 	onClick = move(func);
 }
-void wiButton::OnDragStart(function<void(wiEventArgs args)> func)
+void wiButton::OnDragStart(std::function<void(wiEventArgs args)> func)
 {
 	onDragStart = move(func);
 }
-void wiButton::OnDrag(function<void(wiEventArgs args)> func)
+void wiButton::OnDrag(std::function<void(wiEventArgs args)> func)
 {
 	onDrag = move(func);
 }
-void wiButton::OnDragEnd(function<void(wiEventArgs args)> func)
+void wiButton::OnDragEnd(std::function<void(wiEventArgs args)> func)
 {
 	onDragEnd = move(func);
 }
@@ -588,13 +587,13 @@ void wiTextInputField::SetValue(const std::string& newValue)
 }
 void wiTextInputField::SetValue(int newValue)
 {
-	stringstream ss("");
+	std::stringstream ss("");
 	ss << newValue;
 	font.SetText(ss.str());
 }
 void wiTextInputField::SetValue(float newValue)
 {
-	stringstream ss("");
+	std::stringstream ss("");
 	ss << newValue;
 	font.SetText(ss.str());
 }
@@ -728,19 +727,19 @@ void wiTextInputField::Render(const wiCanvas& canvas, CommandList cmd) const
 	}
 
 }
-void wiTextInputField::OnInputAccepted(function<void(wiEventArgs args)> func)
+void wiTextInputField::OnInputAccepted(std::function<void(wiEventArgs args)> func)
 {
 	onInputAccepted = move(func);
 }
 void wiTextInputField::AddInput(const char inputChar)
 {
-	string value_new = font_input.GetTextA();
+	std::string value_new = font_input.GetTextA();
 	value_new.push_back(inputChar);
 	font_input.SetText(value_new);
 }
 void wiTextInputField::DeleteFromInput()
 {
-	string value_new = font_input.GetTextA();
+	std::string value_new = font_input.GetTextA();
 	if (!value_new.empty())
 	{
 		value_new.pop_back();
@@ -768,7 +767,7 @@ void wiSlider::Create(float start, float end, float defaultValue, float step, co
 	valueInputField.SetTooltip("Enter number to modify value even outside slider limits. Enter \"reset\" to reset slider to initial state.");
 	valueInputField.SetValue(end);
 	valueInputField.OnInputAccepted([this, start, end, defaultValue](wiEventArgs args) {
-		if (args.sValue.compare("reset") != string::npos)
+		if (args.sValue.compare("reset") != std::string::npos)
 		{
 			this->value = defaultValue;
 			this->start = start;
@@ -951,7 +950,7 @@ void wiSlider::RenderTooltip(const wiCanvas& canvas, wiGraphics::CommandList cmd
 	wiWidget::RenderTooltip(canvas, cmd);
 	valueInputField.RenderTooltip(canvas, cmd);
 }
-void wiSlider::OnSlide(function<void(wiEventArgs args)> func)
+void wiSlider::OnSlide(std::function<void(wiEventArgs args)> func)
 {
 	onSlide = move(func);
 }
@@ -1071,7 +1070,7 @@ void wiCheckBox::Render(const wiCanvas& canvas, CommandList cmd) const
 	}
 
 }
-void wiCheckBox::OnClick(function<void(wiEventArgs args)> func)
+void wiCheckBox::OnClick(std::function<void(wiEventArgs args)> func)
 {
 	onClick = move(func);
 }
@@ -1405,7 +1404,7 @@ void wiComboBox::Render(const wiCanvas& canvas, CommandList cmd) const
 		}
 	}
 }
-void wiComboBox::OnSelect(function<void(wiEventArgs args)> func)
+void wiComboBox::OnSelect(std::function<void(wiEventArgs args)> func)
 {
 	onSelect = move(func);
 }
@@ -1473,7 +1472,7 @@ void wiComboBox::SetSelectedByUserdata(uint64_t userdata)
 		}
 	}
 }
-string wiComboBox::GetItemText(int index) const
+std::string wiComboBox::GetItemText(int index) const
 {
 	if (index >= 0)
 	{
@@ -2636,7 +2635,7 @@ void wiColorPicker::FireEvents()
 	args.color = GetPickColor();
 	onColorChanged(args);
 }
-void wiColorPicker::OnColorChanged(function<void(wiEventArgs args)> func)
+void wiColorPicker::OnColorChanged(std::function<void(wiEventArgs args)> func)
 {
 	onColorChanged = move(func);
 }
@@ -2993,7 +2992,7 @@ void wiTreeList::Render(const wiCanvas& canvas, CommandList cmd) const
 			font.params.color, font.params.shadowColor), cmd);
 	}
 }
-void wiTreeList::OnSelect(function<void(wiEventArgs args)> func)
+void wiTreeList::OnSelect(std::function<void(wiEventArgs args)> func)
 {
 	onSelect = move(func);
 }
