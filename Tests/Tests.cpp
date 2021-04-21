@@ -124,7 +124,7 @@ void TestsRenderer::Load()
 	testSelector.OnSelect([=](wiEventArgs args) {
 
 		// Reset all state that tests might have modified:
-		wiEvent::FireEvent(SYSTEM_EVENT_SET_VSYNC, 1ull);
+		wiEvent::SetVSync(true);
 		wiRenderer::SetToDrawGridHelper(false);
 		wiRenderer::SetTemporalAAEnabled(false);
 		wiRenderer::ClearWorld(wiScene::GetScene());
@@ -211,7 +211,7 @@ void TestsRenderer::Load()
 			RunSpriteTest();
 			break;
 		case 14:
-			wiEvent::FireEvent(SYSTEM_EVENT_SET_VSYNC, 0ull); // turn off vsync if we can to accelerate the baking
+			wiEvent::SetVSync(false); // turn off vsync if we can to accelerate the baking
 			wiRenderer::SetTemporalAAEnabled(true);
 			wiScene::LoadModel("../Content/models/lightmap_bake_test.wiscene", XMMatrixTranslation(0, 0, 4));
 			break;

@@ -119,7 +119,7 @@ namespace wiRenderer_BindLua
 		int argc = wiLua::SGetArgCount(L);
 		if (argc > 0)
 		{
-			wiEvent::FireEvent(SYSTEM_EVENT_SET_VSYNC, (uint64_t)wiLua::SGetBool(L, 1));
+			wiEvent::SetVSync(wiLua::SGetBool(L, 1));
 		}
 		return 0;
 	}
