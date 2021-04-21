@@ -165,7 +165,6 @@ namespace wiGraphics
 				queue->ExecuteCommandLists(1, commandlists);
 
 				cmd.target = fenceValue.fetch_add(1);
-				queue->Signal(fence.Get(), cmd.target);
 
 				locker.lock();
 				worklist.push_back(cmd);
@@ -175,6 +174,8 @@ namespace wiGraphics
 			uint64_t flush()
 			{
 				locker.lock();
+
+				queue->Signal(fence.Get(), submit_wait);
 
 				// free up the finished command lists:
 				uint64_t completed_fence_value = fence->GetCompletedValue();
