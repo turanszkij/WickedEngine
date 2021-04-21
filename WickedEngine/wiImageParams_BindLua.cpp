@@ -19,6 +19,7 @@ Luna<wiImageParams_BindLua>::FunctionType wiImageParams_BindLua::methods[] = {
 	lunamethod(wiImageParams_BindLua, IsDrawRect2Enabled),
 	lunamethod(wiImageParams_BindLua, IsMirrorEnabled),
 	lunamethod(wiImageParams_BindLua, IsBackgroundBlurEnabled),
+	lunamethod(wiImageParams_BindLua, IsBackgroundEnabled),
 
 	lunamethod(wiImageParams_BindLua, SetPos),
 	lunamethod(wiImageParams_BindLua, SetSize),
@@ -42,6 +43,8 @@ Luna<wiImageParams_BindLua>::FunctionType wiImageParams_BindLua::methods[] = {
 	lunamethod(wiImageParams_BindLua, DisableMirror),
 	lunamethod(wiImageParams_BindLua, EnableBackgroundBlur),
 	lunamethod(wiImageParams_BindLua, DisableBackgroundBlur),
+	lunamethod(wiImageParams_BindLua, EnableBackground),
+	lunamethod(wiImageParams_BindLua, DisableBackground),
 	{ NULL, NULL }
 };
 Luna<wiImageParams_BindLua>::PropertyType wiImageParams_BindLua::properties[] = {
@@ -125,7 +128,12 @@ int wiImageParams_BindLua::IsMirrorEnabled(lua_State* L)
 }
 int wiImageParams_BindLua::IsBackgroundBlurEnabled(lua_State* L)
 {
-	wiLua::SSetBool(L, params.isBackgroundBlurEnabled());
+	wiLua::SSetBool(L, params.isBackgroundEnabled());
+	return 1;
+}
+int wiImageParams_BindLua::IsBackgroundEnabled(lua_State* L)
+{
+	wiLua::SSetBool(L, params.isBackgroundEnabled());
 	return 1;
 }
 
@@ -396,12 +404,22 @@ int wiImageParams_BindLua::DisableMirror(lua_State* L)
 }
 int wiImageParams_BindLua::EnableBackgroundBlur(lua_State* L)
 {
-	params.enableBackgroundBlur();
+	params.enableBackground();
 	return 0;
 }
 int wiImageParams_BindLua::DisableBackgroundBlur(lua_State* L)
 {
-	params.disableBackgroundBlur();
+	params.disableBackground();
+	return 0;
+}
+int wiImageParams_BindLua::EnableBackground(lua_State* L)
+{
+	params.enableBackground();
+	return 0;
+}
+int wiImageParams_BindLua::DisableBackground(lua_State* L)
+{
+	params.disableBackground();
 	return 0;
 }
 

@@ -10,7 +10,6 @@
 
 #include <atomic>
 
-using namespace std;
 using namespace wiGraphics;
 
 namespace wiImage
