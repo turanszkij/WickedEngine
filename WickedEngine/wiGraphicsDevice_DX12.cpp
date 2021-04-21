@@ -2170,13 +2170,16 @@ using namespace DX12_Internal;
 		if (pushconstants[cmd].size > 0)
 		{
 			auto pso_internal = to_internal(active_pso[cmd]);
-			GetDirectCommandList(cmd)->SetGraphicsRoot32BitConstants(
-				pso_internal->bindpoint_rootconstant,
-				pushconstants[cmd].size / sizeof(uint32_t),
-				pushconstants[cmd].data,
-				0
-			);
-			pushconstants[cmd].size = 0;
+			if (pso_internal->rootconstants.Constants.Num32BitValues > 0)
+			{
+				GetDirectCommandList(cmd)->SetGraphicsRoot32BitConstants(
+					pso_internal->bindpoint_rootconstant,
+					pso_internal->rootconstants.Constants.Num32BitValues,
+					pushconstants[cmd].data,
+					0
+				);
+				pushconstants[cmd].size = 0;
+			}
 		}
 	}
 	void GraphicsDevice_DX12::predispatch(CommandList cmd)
@@ -2188,13 +2191,16 @@ using namespace DX12_Internal;
 		if (pushconstants[cmd].size > 0)
 		{
 			auto cs_internal = to_internal(active_cs[cmd]);
-			GetDirectCommandList(cmd)->SetComputeRoot32BitConstants(
-				cs_internal->bindpoint_rootconstant,
-				pushconstants[cmd].size / sizeof(uint32_t),
-				pushconstants[cmd].data,
-				0
-			);
-			pushconstants[cmd].size = 0;
+			if (cs_internal->rootconstants.Constants.Num32BitValues > 0)
+			{
+				GetDirectCommandList(cmd)->SetComputeRoot32BitConstants(
+					cs_internal->bindpoint_rootconstant,
+					cs_internal->rootconstants.Constants.Num32BitValues,
+					pushconstants[cmd].data,
+					0
+				);
+				pushconstants[cmd].size = 0;
+			}
 		}
 	}
 

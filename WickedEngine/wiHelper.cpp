@@ -396,7 +396,7 @@ namespace wiHelper
 #ifdef SDL_FILESYSTEM_UNIX
 		std::string filepath = fileName;
 		std::replace(filepath.begin(), filepath.end(), '\\', '/');
-		ifstream file(filepath, ios::binary | ios::ate);
+		std::ifstream file(filepath, std::ios::binary | std::ios::ate);
 #else
 		std::ifstream file(fileName, std::ios::binary | std::ios::ate);
 #endif // SDL_FILESYSTEM_UNIX
