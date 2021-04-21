@@ -40,12 +40,8 @@ namespace wiGraphics
 		int computeFamily = -1;
 		VkQueue graphicsQueue = VK_NULL_HANDLE;
 		VkQueue computeQueue = VK_NULL_HANDLE;
-		std::vector<VkQueueFamilyProperties> queueFamilies;
-
 		VkQueue copyQueue = VK_NULL_HANDLE;
-		mutable std::mutex copyQueueLock;
-		mutable bool copyQueueUse = false;
-		VkSemaphore copySemaphore = VK_NULL_HANDLE;
+		std::vector<VkQueueFamilyProperties> queueFamilies;
 
 		VkPhysicalDeviceProperties2 properties2 = {};
 		VkPhysicalDeviceVulkan11Properties properties_1_1 = {};
@@ -85,18 +81,197 @@ namespace wiGraphics
 		VkImageView		nullImageViewCubeArray = VK_NULL_HANDLE;
 		VkImageView		nullImageView3D = VK_NULL_HANDLE;
 
+		struct CopyAllocator
+		{
+			VkDevice device = VK_NULL_HANDLE;
+			VkQueue queue = VK_NULL_HANDLE;
+			uint32_t queueFamily = 0;
+			VkSemaphore semaphore = VK_NULL_HANDLE;
+			std::atomic<uint64_t> fenceValue{};
+			std::mutex locker;
+
+			struct CopyCMD
+			{
+				VkCommandPool commandPool = VK_NULL_HANDLE;
+				VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
+				uint64_t target = 0;
+				GPUBuffer uploadbuffer;
+			};
+			std::vector<CopyCMD> freelist;
+			std::vector<CopyCMD> worklist;
+			std::vector<VkCommandBuffer> submit_cmds;
+			uint64_t submit_wait = 0;
+
+			void Create(VkDevice device, VkQueue queue, uint32_t queueFamily)
+			{
+				this->device = device;
+				this->queue = queue;
+				this->queueFamily = queueFamily;
+
+				VkSemaphoreTypeCreateInfo timelineCreateInfo = {};
+				timelineCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
+				timelineCreateInfo.pNext = nullptr;
+				timelineCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
+				timelineCreateInfo.initialValue = fenceValue.fetch_add(1);
+
+				VkSemaphoreCreateInfo createInfo = {};
+				createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+				createInfo.pNext = &timelineCreateInfo;
+				createInfo.flags = 0;
+
+				vkCreateSemaphore(device, &createInfo, nullptr, &semaphore);
+			}
+			void Destroy()
+			{
+				vkQueueWaitIdle(queue);
+				for (auto& x : freelist)
+				{
+					vkDestroyCommandPool(device, x.commandPool, nullptr);
+				}
+				vkDestroySemaphore(device, semaphore, nullptr);
+			}
+
+			CopyCMD allocate(uint32_t staging_size = 0)
+			{
+				locker.lock();
+
+				// create a new command list if there are no free ones:
+				if (freelist.empty())
+				{
+					CopyCMD cmd;
+
+					VkCommandPoolCreateInfo poolInfo = {};
+					poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+					poolInfo.queueFamilyIndex = queueFamily;
+					poolInfo.flags = 0;
+
+					VkResult res = vkCreateCommandPool(device, &poolInfo, nullptr, &cmd.commandPool);
+					assert(res == VK_SUCCESS);
+
+					VkCommandBufferAllocateInfo commandBufferInfo = {};
+					commandBufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+					commandBufferInfo.commandBufferCount = 1;
+					commandBufferInfo.commandPool = cmd.commandPool;
+					commandBufferInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+
+					res = vkAllocateCommandBuffers(device, &commandBufferInfo, &cmd.commandBuffer);
+					assert(res == VK_SUCCESS);
+
+					freelist.push_back(cmd);
+				}
+
+				CopyCMD cmd = freelist.back();
+				if (cmd.uploadbuffer.desc.ByteWidth < staging_size)
+				{
+					// Try to search for a staging buffer that is good:
+					for (size_t i = 0; i < freelist.size(); ++i)
+					{
+						if (freelist[i].uploadbuffer.desc.ByteWidth >= staging_size)
+						{
+							cmd = freelist[i];
+							std::swap(freelist[i], freelist.back());
+							break;
+						}
+					}
+				}
+				freelist.pop_back();
+				locker.unlock();
+
+				// begin command list in valid state:
+				VkResult res = vkResetCommandPool(device, cmd.commandPool, 0);
+				assert(res == VK_SUCCESS);
+
+				VkCommandBufferBeginInfo beginInfo = {};
+				beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+				beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+				beginInfo.pInheritanceInfo = nullptr;
+
+				res = vkBeginCommandBuffer(cmd.commandBuffer, &beginInfo);
+				assert(res == VK_SUCCESS);
+
+				return cmd;
+			}
+			void submit(CopyCMD cmd)
+			{
+				VkResult res = vkEndCommandBuffer(cmd.commandBuffer);
+				assert(res == VK_SUCCESS);
+
+				cmd.target = fenceValue.fetch_add(1);
+
+				// It was very slow in Vulkan to submit the copies immediately
+				//	In Vulkan, the submit is not thread safe, so it had to be locked
+				//	Instead, the submits are batched and performed in flush() function
+				locker.lock();
+				worklist.push_back(cmd);
+				submit_cmds.push_back(cmd.commandBuffer);
+				submit_wait = std::max(submit_wait, cmd.target);
+				locker.unlock();
+			}
+			uint64_t flush()
+			{
+				locker.lock();
+				if (!submit_cmds.empty())
+				{
+					VkSubmitInfo submitInfo = {};
+					submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+					submitInfo.commandBufferCount = (uint32_t)submit_cmds.size();
+					submitInfo.pCommandBuffers = submit_cmds.data();
+					submitInfo.pSignalSemaphores = &semaphore;
+					submitInfo.signalSemaphoreCount = 1;
+
+					VkTimelineSemaphoreSubmitInfo timelineInfo = {};
+					timelineInfo.sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO;
+					timelineInfo.pNext = nullptr;
+					timelineInfo.waitSemaphoreValueCount = 0;
+					timelineInfo.pWaitSemaphoreValues = nullptr;
+					timelineInfo.signalSemaphoreValueCount = 1;
+					timelineInfo.pSignalSemaphoreValues = &submit_wait;
+
+					submitInfo.pNext = &timelineInfo;
+
+					VkResult res = vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
+					assert(res == VK_SUCCESS);
+
+					submit_cmds.clear();
+				}
+				else
+				{
+					submit_wait = 0;
+				}
+
+				// free up the finished command lists:
+				uint64_t completed_fence_value;
+				VkResult res = vkGetSemaphoreCounterValue(device, semaphore, &completed_fence_value);
+				assert(res == VK_SUCCESS);
+				for (size_t i = 0; i < worklist.size(); ++i)
+				{
+					if (worklist[i].target <= completed_fence_value)
+					{
+						freelist.push_back(worklist[i]);
+						worklist[i] = worklist.back();
+						worklist.pop_back();
+						i--;
+					}
+				}
+
+				locker.unlock();
+
+				return submit_wait;
+			}
+		};
+		mutable CopyAllocator copyAllocator;
+
+		mutable std::mutex transitionLocker;
+		mutable std::vector<VkImageMemoryBarrier> transitions;
+
 		struct FrameResources
 		{
 			VkFence frameFence = VK_NULL_HANDLE;
 			VkCommandPool commandPools[COMMANDLIST_COUNT] = {};
 			VkCommandBuffer commandBuffers[COMMANDLIST_COUNT] = {};
 
-			VkCommandPool copyCommandPool = VK_NULL_HANDLE;
-			VkCommandBuffer copyCommandBuffer = VK_NULL_HANDLE;
-
 			VkCommandPool transitionCommandPool = VK_NULL_HANDLE;
 			VkCommandBuffer transitionCommandBuffer = VK_NULL_HANDLE;
-			mutable std::vector<VkImageMemoryBarrier> loadedimagetransitions;
 
 			struct DescriptorBinder
 			{
@@ -197,6 +372,7 @@ namespace wiGraphics
 		std::vector<uint32_t> submit_swapChainImageIndices;
 		std::vector<VkPipelineStageFlags> submit_waitStages;
 		std::vector<VkSemaphore> submit_waitSemaphores;
+		std::vector<uint64_t> submit_waitValues;
 		std::vector<VkSemaphore> submit_signalSemaphores;
 
 	public:
