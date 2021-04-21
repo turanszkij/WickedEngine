@@ -234,10 +234,6 @@ namespace wiGraphics
 
 					submit_cmds.clear();
 				}
-				else
-				{
-					submit_wait = 0;
-				}
 
 				// free up the finished command lists:
 				uint64_t completed_fence_value;
@@ -254,9 +250,11 @@ namespace wiGraphics
 					}
 				}
 
+				uint64_t value = submit_wait;
+				submit_wait = 0;
 				locker.unlock();
 
-				return submit_wait;
+				return value;
 			}
 		};
 		mutable CopyAllocator copyAllocator;
