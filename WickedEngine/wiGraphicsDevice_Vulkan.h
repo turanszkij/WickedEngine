@@ -87,7 +87,7 @@ namespace wiGraphics
 			VkQueue queue = VK_NULL_HANDLE;
 			uint32_t queueFamily = 0;
 			VkSemaphore semaphore = VK_NULL_HANDLE;
-			std::atomic<uint64_t> fenceValue{};
+			uint64_t fenceValue = 0;
 			std::mutex locker;
 
 			struct CopyCMD
@@ -112,7 +112,7 @@ namespace wiGraphics
 				timelineCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
 				timelineCreateInfo.pNext = nullptr;
 				timelineCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
-				timelineCreateInfo.initialValue = fenceValue.fetch_add(1);
+				timelineCreateInfo.initialValue = 0;
 
 				VkSemaphoreCreateInfo createInfo = {};
 				createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -196,12 +196,11 @@ namespace wiGraphics
 				VkResult res = vkEndCommandBuffer(cmd.commandBuffer);
 				assert(res == VK_SUCCESS);
 
-				cmd.target = fenceValue.fetch_add(1);
-
 				// It was very slow in Vulkan to submit the copies immediately
 				//	In Vulkan, the submit is not thread safe, so it had to be locked
 				//	Instead, the submits are batched and performed in flush() function
 				locker.lock();
+				cmd.target = ++fenceValue;
 				worklist.push_back(cmd);
 				submit_cmds.push_back(cmd.commandBuffer);
 				submit_wait = std::max(submit_wait, cmd.target);
@@ -264,7 +263,7 @@ namespace wiGraphics
 
 		struct FrameResources
 		{
-			VkFence frameFence = VK_NULL_HANDLE;
+			VkFence fence = VK_NULL_HANDLE;
 			VkCommandPool commandPools[COMMANDLIST_COUNT] = {};
 			VkCommandBuffer commandBuffers[COMMANDLIST_COUNT] = {};
 

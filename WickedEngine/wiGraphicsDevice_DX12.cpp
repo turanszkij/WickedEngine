@@ -5407,15 +5407,17 @@ using namespace DX12_Internal;
 	{
 		HRESULT hr;
 
-		uint64_t copy_sync = copyAllocator.flush();
-		if (copy_sync > 0)
+		// Submit current frame:
 		{
-			hr = graphicsQueue->Wait(copyAllocator.fence.Get(), copy_sync);
-			assert(SUCCEEDED(hr));
-		}
+			auto& frame = GetFrameResources();
 
-		// Execute deferred command lists:
-		{
+			uint64_t copy_sync = copyAllocator.flush();
+			if (copy_sync > 0)
+			{
+				hr = graphicsQueue->Wait(copyAllocator.fence.Get(), copy_sync);
+				assert(SUCCEEDED(hr));
+			}
+
 			ID3D12CommandList* cmdLists[COMMANDLIST_COUNT];
 			CommandList cmds[COMMANDLIST_COUNT];
 			uint32_t counter = 0;
@@ -5452,7 +5454,7 @@ using namespace DX12_Internal;
 
 			graphicsQueue->ExecuteCommandLists(counter, cmdLists);
 
-			hr = graphicsQueue->Signal(GetFrameResources().fence.Get(), 1);
+			hr = graphicsQueue->Signal(frame.fence.Get(), 1);
 			assert(SUCCEEDED(hr));
 
 			for (CommandList cmd = 0; cmd < cmd_last; ++cmd)
@@ -5467,31 +5469,36 @@ using namespace DX12_Internal;
 		// From here, we begin a new frame, this affects GetFrameResources()!
 		FRAMECOUNT++;
 
-		if (FRAMECOUNT >= BUFFERCOUNT && GetFrameResources().fence->GetCompletedValue() < 1)
+		// Begin next frame:
 		{
-			// NULL event handle will simply wait immediately:
-			//	https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12fence-seteventoncompletion#remarks
-			hr = GetFrameResources().fence->SetEventOnCompletion(1, NULL);
+			auto& frame = GetFrameResources();
+
+			// Initiate stalling CPU when GPU is not yet finished with next frame:
+			if (FRAMECOUNT >= BUFFERCOUNT && frame.fence->GetCompletedValue() < 1)
+			{
+				// NULL event handle will simply wait immediately:
+				//	https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12fence-seteventoncompletion#remarks
+				hr = frame.fence->SetEventOnCompletion(1, NULL);
+				assert(SUCCEEDED(hr));
+			}
+			hr = frame.fence->Signal(0);
 			assert(SUCCEEDED(hr));
+
+			// Descriptor heaps' progress is recorded by the GPU:
+			descriptorheap_res.fenceValue = descriptorheap_res.allocationOffset.load();
+			hr = graphicsQueue->Signal(descriptorheap_res.fence.Get(), descriptorheap_res.fenceValue);
+			assert(SUCCEEDED(hr));
+			descriptorheap_res.cached_completedValue = descriptorheap_res.fence->GetCompletedValue();
+			descriptorheap_sam.fenceValue = descriptorheap_sam.allocationOffset.load();
+			hr = graphicsQueue->Signal(descriptorheap_sam.fence.Get(), descriptorheap_sam.fenceValue);
+			assert(SUCCEEDED(hr));
+			descriptorheap_sam.cached_completedValue = descriptorheap_sam.fence->GetCompletedValue();
+
+			hr = graphicsQueue->GetTimestampFrequency(&TIMESTAMP_FREQUENCY);
+			assert(SUCCEEDED(hr));
+
+			allocationhandler->Update(FRAMECOUNT, BUFFERCOUNT);
 		}
-		hr = GetFrameResources().fence->Signal(0);
-		assert(SUCCEEDED(hr));
-
-		// Descriptor heaps' progress is recorded by the GPU:
-		descriptorheap_res.fenceValue = descriptorheap_res.allocationOffset.load();
-		hr = graphicsQueue->Signal(descriptorheap_res.fence.Get(), descriptorheap_res.fenceValue);
-		assert(SUCCEEDED(hr));
-		descriptorheap_res.cached_completedValue = descriptorheap_res.fence->GetCompletedValue();
-		descriptorheap_sam.fenceValue = descriptorheap_sam.allocationOffset.load();
-		hr = graphicsQueue->Signal(descriptorheap_sam.fence.Get(), descriptorheap_sam.fenceValue);
-		assert(SUCCEEDED(hr));
-		descriptorheap_sam.cached_completedValue = descriptorheap_sam.fence->GetCompletedValue();
-
-		hr = graphicsQueue->GetTimestampFrequency(&TIMESTAMP_FREQUENCY);
-		assert(SUCCEEDED(hr));
-
-		allocationhandler->Update(FRAMECOUNT, BUFFERCOUNT);
-
 	}
 
 	void GraphicsDevice_DX12::WaitForGPU() const

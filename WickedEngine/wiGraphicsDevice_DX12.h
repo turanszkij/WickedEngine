@@ -73,7 +73,7 @@ namespace wiGraphics
 			Microsoft::WRL::ComPtr<ID3D12Device5> device;
 			Microsoft::WRL::ComPtr<ID3D12CommandQueue> queue;
 			Microsoft::WRL::ComPtr<ID3D12Fence> fence;
-			std::atomic<uint64_t> fenceValue{};
+			uint64_t fenceValue = 0;
 			std::mutex locker;
 
 			struct CopyCMD
@@ -99,12 +99,12 @@ namespace wiGraphics
 				HRESULT hr = device->CreateCommandQueue(&copyQueueDesc, IID_PPV_ARGS(&queue));
 				assert(SUCCEEDED(hr));
 
-				hr = device->CreateFence(fenceValue.fetch_add(1), D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&fence));
+				hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&fence));
 				assert(SUCCEEDED(hr));
 			}
 			void Destroy()
 			{
-				uint64_t value = fenceValue.fetch_add(1);
+				uint64_t value = ++fenceValue;
 				HRESULT hr = queue->Signal(fence.Get(), value);
 				assert(SUCCEEDED(hr));
 				hr = fence->SetEventOnCompletion(value, nullptr);
@@ -164,9 +164,8 @@ namespace wiGraphics
 				};
 				queue->ExecuteCommandLists(1, commandlists);
 
-				cmd.target = fenceValue.fetch_add(1);
-
 				locker.lock();
+				cmd.target = ++fenceValue;
 				worklist.push_back(cmd);
 				submit_wait = std::max(submit_wait, cmd.target);
 				locker.unlock();

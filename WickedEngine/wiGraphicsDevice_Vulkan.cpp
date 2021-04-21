@@ -2303,7 +2303,7 @@ using namespace Vulkan_Internal;
 				VkFenceCreateInfo fenceInfo = {};
 				fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 				//fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-				VkResult res = vkCreateFence(device, &fenceInfo, nullptr, &frames[fr].frameFence);
+				VkResult res = vkCreateFence(device, &fenceInfo, nullptr, &frames[fr].fence);
 				assert(res == VK_SUCCESS);
 			}
 
@@ -2514,7 +2514,7 @@ using namespace Vulkan_Internal;
 
 		for (auto& frame : frames)
 		{
-			vkDestroyFence(device, frame.frameFence, nullptr);
+			vkDestroyFence(device, frame.fence, nullptr);
 			for (auto& commandPool : frame.commandPools)
 			{
 				vkDestroyCommandPool(device, commandPool, nullptr);
@@ -5679,18 +5679,19 @@ using namespace Vulkan_Internal;
 	}
 	void GraphicsDevice_Vulkan::SubmitCommandLists()
 	{
-		uint64_t copy_sync = copyAllocator.flush();
+		VkResult res;
 
-		// Execute deferred command lists:
+		// Submit current frame:
 		{
-			VkCommandBuffer cmdLists[COMMANDLIST_COUNT];
+			auto& frame = GetFrameResources();
+			VkCommandBuffer cmdLists[COMMANDLIST_COUNT + 1]; // +1 : space for transition command buffer
 			uint32_t counter = 0;
 
 			// Transitions:
 			transitionLocker.lock();
 			{
 				vkCmdPipelineBarrier(
-					GetFrameResources().transitionCommandBuffer,
+					frame.transitionCommandBuffer,
 					VK_PIPELINE_STAGE_TRANSFER_BIT,
 					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 					0,
@@ -5701,10 +5702,10 @@ using namespace Vulkan_Internal;
 				);
 				transitions.clear();
 
-				VkResult res = vkEndCommandBuffer(GetFrameResources().transitionCommandBuffer);
+				res = vkEndCommandBuffer(frame.transitionCommandBuffer);
 				assert(res == VK_SUCCESS);
 
-				cmdLists[counter++] = GetFrameResources().transitionCommandBuffer;
+				cmdLists[counter++] = frame.transitionCommandBuffer;
 			}
 			transitionLocker.unlock();
 
@@ -5715,6 +5716,7 @@ using namespace Vulkan_Internal;
 			submit_waitValues.clear();
 			submit_signalSemaphores.clear();
 
+			uint64_t copy_sync = copyAllocator.flush();
 			if (copy_sync > 0)
 			{
 				submit_waitStages.push_back(VK_PIPELINE_STAGE_TRANSFER_BIT);
@@ -5740,7 +5742,7 @@ using namespace Vulkan_Internal;
 
 				barrier_flush(cmd);
 
-				VkResult res = vkEndCommandBuffer(GetCommandList(cmd));
+				res = vkEndCommandBuffer(GetCommandList(cmd));
 				assert(res == VK_SUCCESS);
 
 				cmdLists[counter++] = GetCommandList(cmd);
@@ -5783,7 +5785,7 @@ using namespace Vulkan_Internal;
 
 			submitInfo.pNext = &timelineInfo;
 
-			VkResult res = vkQueueSubmit(graphicsQueue, 1, &submitInfo, GetFrameResources().frameFence);
+			res = vkQueueSubmit(graphicsQueue, 1, &submitInfo, frame.fence);
 			assert(res == VK_SUCCESS);
 
 			VkPresentInfoKHR presentInfo = {};
@@ -5800,32 +5802,35 @@ using namespace Vulkan_Internal;
 		// From here, we begin a new frame, this affects GetFrameResources()!
 		FRAMECOUNT++;
 
-		// Initiate stalling CPU when GPU is behind by more frames than would fit in the backbuffers:
-		if (FRAMECOUNT >= BUFFERCOUNT)
-		{
-			VkResult res = vkWaitForFences(device, 1, &GetFrameResources().frameFence, true, 0xFFFFFFFFFFFFFFFF);
-			assert(res == VK_SUCCESS);
-
-			res = vkResetFences(device, 1, &GetFrameResources().frameFence);
-			assert(res == VK_SUCCESS);
-		}
-
-		allocationhandler->Update(FRAMECOUNT, BUFFERCOUNT);
-
-		// Restart transition command buffers:
+		// Begin next frame:
 		{
 			auto& frame = GetFrameResources();
 
-			VkResult res = vkResetCommandPool(device, frame.transitionCommandPool, 0);
-			assert(res == VK_SUCCESS);
+			// Initiate stalling CPU when GPU is not yet finished with next frame:
+			if (FRAMECOUNT >= BUFFERCOUNT)
+			{
+				res = vkWaitForFences(device, 1, &frame.fence, true, 0xFFFFFFFFFFFFFFFF);
+				assert(res == VK_SUCCESS);
 
-			VkCommandBufferBeginInfo beginInfo = {};
-			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-			beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-			beginInfo.pInheritanceInfo = nullptr; // Optional
+				res = vkResetFences(device, 1, &frame.fence);
+				assert(res == VK_SUCCESS);
+			}
 
-			res = vkBeginCommandBuffer(frame.transitionCommandBuffer, &beginInfo);
-			assert(res == VK_SUCCESS);
+			allocationhandler->Update(FRAMECOUNT, BUFFERCOUNT);
+
+			// Restart transition command buffers:
+			{
+				res = vkResetCommandPool(device, frame.transitionCommandPool, 0);
+				assert(res == VK_SUCCESS);
+
+				VkCommandBufferBeginInfo beginInfo = {};
+				beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+				beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+				beginInfo.pInheritanceInfo = nullptr; // Optional
+
+				res = vkBeginCommandBuffer(frame.transitionCommandBuffer, &beginInfo);
+				assert(res == VK_SUCCESS);
+			}
 		}
 	}
 
