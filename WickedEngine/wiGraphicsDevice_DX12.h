@@ -31,7 +31,7 @@ namespace wiGraphics
 		Microsoft::WRL::ComPtr<ID3D12Device5> device;
 		Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter;
 		Microsoft::WRL::ComPtr<IDXGIFactory6> factory;
-		Microsoft::WRL::ComPtr<ID3D12CommandQueue> directQueue;
+		Microsoft::WRL::ComPtr<ID3D12CommandQueue> graphicsQueue;
 
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> dispatchIndirectCommandSignature;
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> drawInstancedIndirectCommandSignature;
@@ -221,7 +221,7 @@ namespace wiGraphics
 		};
 		FrameResources frames[BUFFERCOUNT];
 		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BUFFERCOUNT]; }
-		inline ID3D12GraphicsCommandList6* GetDirectCommandList(CommandList cmd) { return (ID3D12GraphicsCommandList6*)GetFrameResources().commandLists[cmd].Get(); }
+		inline ID3D12GraphicsCommandList6* GetCommandList(CommandList cmd) { return (ID3D12GraphicsCommandList6*)GetFrameResources().commandLists[cmd].Get(); }
 
 		struct DescriptorBinder
 		{

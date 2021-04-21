@@ -1571,7 +1571,7 @@ using namespace Vulkan_Internal;
 		}
 
 		vkCmdBindDescriptorSets(
-			device->GetDirectCommandList(cmd),
+			device->GetCommandList(cmd),
 			bindPoint,
 			pipelineLayout,
 			0,
@@ -1759,7 +1759,7 @@ using namespace Vulkan_Internal;
 		}
 		assert(pipeline != VK_NULL_HANDLE);
 
-		vkCmdBindPipeline(GetDirectCommandList(cmd), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+		vkCmdBindPipeline(GetCommandList(cmd), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 	}
 
 	void GraphicsDevice_Vulkan::barrier_flush(CommandList cmd)
@@ -1820,7 +1820,7 @@ using namespace Vulkan_Internal;
 				}
 
 				vkCmdPipelineBarrier(
-					GetDirectCommandList(cmd),
+					GetCommandList(cmd),
 					srcStage,
 					dstStage,
 					0,
@@ -1847,7 +1847,7 @@ using namespace Vulkan_Internal;
 			if (pso_internal->pushconstants.size > 0)
 			{
 				vkCmdPushConstants(
-					GetDirectCommandList(cmd),
+					GetCommandList(cmd),
 					pso_internal->pipelineLayout,
 					pso_internal->pushconstants.stageFlags,
 					pso_internal->pushconstants.offset,
@@ -1870,7 +1870,7 @@ using namespace Vulkan_Internal;
 			if (cs_internal->pushconstants.size > 0)
 			{
 				vkCmdPushConstants(
-					GetDirectCommandList(cmd),
+					GetCommandList(cmd),
 					cs_internal->pipelineLayout_cs,
 					cs_internal->pushconstants.stageFlags,
 					cs_internal->pushconstants.offset,
@@ -5601,7 +5601,7 @@ using namespace Vulkan_Internal;
 		VkResult res;
 
 		CommandList cmd = cmd_count.fetch_add(1);
-		if (GetDirectCommandList(cmd) == VK_NULL_HANDLE)
+		if (GetCommandList(cmd) == VK_NULL_HANDLE)
 		{
 			// need to create one more command list:
 			assert(cmd < COMMANDLIST_COUNT);
@@ -5655,10 +5655,10 @@ using namespace Vulkan_Internal;
 			scissors[i].extent.width = 65535;
 			scissors[i].extent.height = 65535;
 		}
-		vkCmdSetScissor(GetDirectCommandList(cmd), 0, arraysize(scissors), scissors);
+		vkCmdSetScissor(GetCommandList(cmd), 0, arraysize(scissors), scissors);
 
 		float blendConstants[] = { 1,1,1,1 };
-		vkCmdSetBlendConstants(GetDirectCommandList(cmd), blendConstants);
+		vkCmdSetBlendConstants(GetCommandList(cmd), blendConstants);
 
 		prev_pipeline_hash[cmd] = 0;
 		active_pso[cmd] = nullptr;
@@ -5740,10 +5740,10 @@ using namespace Vulkan_Internal;
 
 				barrier_flush(cmd);
 
-				VkResult res = vkEndCommandBuffer(GetDirectCommandList(cmd));
+				VkResult res = vkEndCommandBuffer(GetCommandList(cmd));
 				assert(res == VK_SUCCESS);
 
-				cmdLists[counter++] = GetDirectCommandList(cmd);
+				cmdLists[counter++] = GetCommandList(cmd);
 
 				for (auto& x : pipelines_worker[cmd])
 				{
@@ -5923,7 +5923,7 @@ using namespace Vulkan_Internal;
 		renderPassInfo.renderArea.extent = internal_state->swapChainExtent;
 		renderPassInfo.clearValueCount = 1;
 		renderPassInfo.pClearValues = &clearColor;
-		vkCmdBeginRenderPass(GetDirectCommandList(cmd), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+		vkCmdBeginRenderPass(GetCommandList(cmd), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 		
 	}
 	void GraphicsDevice_Vulkan::RenderPassBegin(const RenderPass* renderpass, CommandList cmd)
@@ -5933,11 +5933,11 @@ using namespace Vulkan_Internal;
 		active_renderpass[cmd] = renderpass;
 
 		auto internal_state = to_internal(renderpass);
-		vkCmdBeginRenderPass(GetDirectCommandList(cmd), &internal_state->beginInfo, VK_SUBPASS_CONTENTS_INLINE);
+		vkCmdBeginRenderPass(GetCommandList(cmd), &internal_state->beginInfo, VK_SUBPASS_CONTENTS_INLINE);
 	}
 	void GraphicsDevice_Vulkan::RenderPassEnd(CommandList cmd)
 	{
-		vkCmdEndRenderPass(GetDirectCommandList(cmd));
+		vkCmdEndRenderPass(GetCommandList(cmd));
 
 		active_renderpass[cmd] = VK_NULL_HANDLE;
 	}
@@ -5952,7 +5952,7 @@ using namespace Vulkan_Internal;
 			scissors[i].offset.x = std::max(0, rects[i].left);
 			scissors[i].offset.y = std::max(0, rects[i].top);
 		}
-		vkCmdSetScissor(GetDirectCommandList(cmd), 0, numRects, scissors);
+		vkCmdSetScissor(GetCommandList(cmd), 0, numRects, scissors);
 	}
 	void GraphicsDevice_Vulkan::BindViewports(uint32_t NumViewports, const Viewport* pViewports, CommandList cmd)
 	{
@@ -5968,7 +5968,7 @@ using namespace Vulkan_Internal;
 			vp[i].minDepth = pViewports[i].MinDepth;
 			vp[i].maxDepth = pViewports[i].MaxDepth;
 		}
-		vkCmdSetViewport(GetDirectCommandList(cmd), 0, NumViewports, vp);
+		vkCmdSetViewport(GetCommandList(cmd), 0, NumViewports, vp);
 	}
 	void GraphicsDevice_Vulkan::BindResource(SHADERSTAGE stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
 	{
@@ -6069,7 +6069,7 @@ using namespace Vulkan_Internal;
 			vb_strides[cmd][i] = 0;
 		}
 
-		vkCmdBindVertexBuffers(GetDirectCommandList(cmd), static_cast<uint32_t>(slot), static_cast<uint32_t>(count), vbuffers, voffsets);
+		vkCmdBindVertexBuffers(GetCommandList(cmd), static_cast<uint32_t>(slot), static_cast<uint32_t>(count), vbuffers, voffsets);
 
 		if (hash != vb_hash[cmd])
 		{
@@ -6082,17 +6082,17 @@ using namespace Vulkan_Internal;
 		if (indexBuffer != nullptr)
 		{
 			auto internal_state = to_internal(indexBuffer);
-			vkCmdBindIndexBuffer(GetDirectCommandList(cmd), internal_state->resource, (VkDeviceSize)offset, format == INDEXFORMAT_16BIT ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
+			vkCmdBindIndexBuffer(GetCommandList(cmd), internal_state->resource, (VkDeviceSize)offset, format == INDEXFORMAT_16BIT ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
 		}
 	}
 	void GraphicsDevice_Vulkan::BindStencilRef(uint32_t value, CommandList cmd)
 	{
-		vkCmdSetStencilReference(GetDirectCommandList(cmd), VK_STENCIL_FRONT_AND_BACK, value);
+		vkCmdSetStencilReference(GetCommandList(cmd), VK_STENCIL_FRONT_AND_BACK, value);
 	}
 	void GraphicsDevice_Vulkan::BindBlendFactor(float r, float g, float b, float a, CommandList cmd)
 	{
 		float blendConstants[] = { r, g, b, a };
-		vkCmdSetBlendConstants(GetDirectCommandList(cmd), blendConstants);
+		vkCmdSetBlendConstants(GetCommandList(cmd), blendConstants);
 	}
 	void GraphicsDevice_Vulkan::BindShadingRate(SHADING_RATE rate, CommandList cmd)
 	{
@@ -6164,7 +6164,7 @@ using namespace Vulkan_Internal;
 			}
 
 			vkCmdSetFragmentShadingRateKHR(
-				GetDirectCommandList(cmd),
+				GetCommandList(cmd),
 				&fragmentSize,
 				combiner
 			);
@@ -6202,7 +6202,7 @@ using namespace Vulkan_Internal;
 		if (!internal_state->bindlessSets.empty())
 		{
 			vkCmdBindDescriptorSets(
-				GetDirectCommandList(cmd),
+				GetCommandList(cmd),
 				VK_PIPELINE_BIND_POINT_GRAPHICS,
 				internal_state->pipelineLayout,
 				internal_state->bindlessFirstSet,
@@ -6240,12 +6240,12 @@ using namespace Vulkan_Internal;
 
 			if (cs->stage == CS)
 			{
-				vkCmdBindPipeline(GetDirectCommandList(cmd), VK_PIPELINE_BIND_POINT_COMPUTE, internal_state->pipeline_cs);
+				vkCmdBindPipeline(GetCommandList(cmd), VK_PIPELINE_BIND_POINT_COMPUTE, internal_state->pipeline_cs);
 
 				if (!internal_state->bindlessSets.empty())
 				{
 					vkCmdBindDescriptorSets(
-						GetDirectCommandList(cmd),
+						GetCommandList(cmd),
 						VK_PIPELINE_BIND_POINT_COMPUTE,
 						internal_state->pipelineLayout_cs,
 						internal_state->bindlessFirstSet,
@@ -6261,7 +6261,7 @@ using namespace Vulkan_Internal;
 				if (!internal_state->bindlessSets.empty())
 				{
 					vkCmdBindDescriptorSets(
-						GetDirectCommandList(cmd),
+						GetCommandList(cmd),
 						VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
 						internal_state->pipelineLayout_cs,
 						internal_state->bindlessFirstSet,
@@ -6277,56 +6277,56 @@ using namespace Vulkan_Internal;
 	void GraphicsDevice_Vulkan::Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd)
 	{
 		predraw(cmd);
-		vkCmdDraw(GetDirectCommandList(cmd), static_cast<uint32_t>(vertexCount), 1, startVertexLocation, 0);
+		vkCmdDraw(GetCommandList(cmd), static_cast<uint32_t>(vertexCount), 1, startVertexLocation, 0);
 	}
 	void GraphicsDevice_Vulkan::DrawIndexed(uint32_t indexCount, uint32_t startIndexLocation, uint32_t baseVertexLocation, CommandList cmd)
 	{
 		predraw(cmd);
-		vkCmdDrawIndexed(GetDirectCommandList(cmd), static_cast<uint32_t>(indexCount), 1, startIndexLocation, baseVertexLocation, 0);
+		vkCmdDrawIndexed(GetCommandList(cmd), static_cast<uint32_t>(indexCount), 1, startIndexLocation, baseVertexLocation, 0);
 	}
 	void GraphicsDevice_Vulkan::DrawInstanced(uint32_t vertexCount, uint32_t instanceCount, uint32_t startVertexLocation, uint32_t startInstanceLocation, CommandList cmd)
 	{
 		predraw(cmd);
-		vkCmdDraw(GetDirectCommandList(cmd), static_cast<uint32_t>(vertexCount), static_cast<uint32_t>(instanceCount), startVertexLocation, startInstanceLocation);
+		vkCmdDraw(GetCommandList(cmd), static_cast<uint32_t>(vertexCount), static_cast<uint32_t>(instanceCount), startVertexLocation, startInstanceLocation);
 	}
 	void GraphicsDevice_Vulkan::DrawIndexedInstanced(uint32_t indexCount, uint32_t instanceCount, uint32_t startIndexLocation, uint32_t baseVertexLocation, uint32_t startInstanceLocation, CommandList cmd)
 	{
 		predraw(cmd);
-		vkCmdDrawIndexed(GetDirectCommandList(cmd), static_cast<uint32_t>(indexCount), static_cast<uint32_t>(instanceCount), startIndexLocation, baseVertexLocation, startInstanceLocation);
+		vkCmdDrawIndexed(GetCommandList(cmd), static_cast<uint32_t>(indexCount), static_cast<uint32_t>(instanceCount), startIndexLocation, baseVertexLocation, startInstanceLocation);
 	}
 	void GraphicsDevice_Vulkan::DrawInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
 	{
 		predraw(cmd);
 		auto internal_state = to_internal(args);
-		vkCmdDrawIndirect(GetDirectCommandList(cmd), internal_state->resource, (VkDeviceSize)args_offset, 1, (uint32_t)sizeof(IndirectDrawArgsInstanced));
+		vkCmdDrawIndirect(GetCommandList(cmd), internal_state->resource, (VkDeviceSize)args_offset, 1, (uint32_t)sizeof(IndirectDrawArgsInstanced));
 	}
 	void GraphicsDevice_Vulkan::DrawIndexedInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
 	{
 		predraw(cmd);
 		auto internal_state = to_internal(args);
-		vkCmdDrawIndexedIndirect(GetDirectCommandList(cmd), internal_state->resource, (VkDeviceSize)args_offset, 1, (uint32_t)sizeof(IndirectDrawArgsIndexedInstanced));
+		vkCmdDrawIndexedIndirect(GetCommandList(cmd), internal_state->resource, (VkDeviceSize)args_offset, 1, (uint32_t)sizeof(IndirectDrawArgsIndexedInstanced));
 	}
 	void GraphicsDevice_Vulkan::Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd)
 	{
 		predispatch(cmd);
-		vkCmdDispatch(GetDirectCommandList(cmd), threadGroupCountX, threadGroupCountY, threadGroupCountZ);
+		vkCmdDispatch(GetCommandList(cmd), threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 	}
 	void GraphicsDevice_Vulkan::DispatchIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
 	{
 		predispatch(cmd);
 		auto internal_state = to_internal(args);
-		vkCmdDispatchIndirect(GetDirectCommandList(cmd), internal_state->resource, (VkDeviceSize)args_offset);
+		vkCmdDispatchIndirect(GetCommandList(cmd), internal_state->resource, (VkDeviceSize)args_offset);
 	}
 	void GraphicsDevice_Vulkan::DispatchMesh(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd)
 	{
 		predraw(cmd);
-		vkCmdDrawMeshTasksNV(GetDirectCommandList(cmd), threadGroupCountX * threadGroupCountY * threadGroupCountZ, 0);
+		vkCmdDrawMeshTasksNV(GetCommandList(cmd), threadGroupCountX * threadGroupCountY * threadGroupCountZ, 0);
 	}
 	void GraphicsDevice_Vulkan::DispatchMeshIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
 	{
 		predraw(cmd);
 		auto internal_state = to_internal(args);
-		vkCmdDrawMeshTasksIndirectNV(GetDirectCommandList(cmd), internal_state->resource, (VkDeviceSize)args_offset,1,sizeof(IndirectDispatchArgs));
+		vkCmdDrawMeshTasksIndirectNV(GetCommandList(cmd), internal_state->resource, (VkDeviceSize)args_offset,1,sizeof(IndirectDispatchArgs));
 	}
 	void GraphicsDevice_Vulkan::CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd)
 	{
@@ -6350,7 +6350,7 @@ using namespace Vulkan_Internal;
 				copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				copy.imageSubresource.layerCount = 1;
 				vkCmdCopyBufferToImage(
-					GetDirectCommandList(cmd),
+					GetCommandList(cmd),
 					internal_state_src->staging_resource,
 					internal_state_dst->resource,
 					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -6368,7 +6368,7 @@ using namespace Vulkan_Internal;
 				copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				copy.imageSubresource.layerCount = 1;
 				vkCmdCopyImageToBuffer(
-					GetDirectCommandList(cmd),
+					GetCommandList(cmd),
 					internal_state_src->resource,
 					VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 					internal_state_dst->staging_resource,
@@ -6423,7 +6423,7 @@ using namespace Vulkan_Internal;
 				copy.dstSubresource.layerCount = dst_desc.ArraySize;
 				copy.dstSubresource.mipLevel = 0;
 
-				vkCmdCopyImage(GetDirectCommandList(cmd),
+				vkCmdCopyImage(GetCommandList(cmd),
 					internal_state_src->resource, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 					internal_state_dst->resource, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 					1, &copy
@@ -6443,7 +6443,7 @@ using namespace Vulkan_Internal;
 			copy.dstOffset = 0;
 			copy.size = (VkDeviceSize)std::min(src_desc.ByteWidth, dst_desc.ByteWidth);
 
-			vkCmdCopyBuffer(GetDirectCommandList(cmd),
+			vkCmdCopyBuffer(GetCommandList(cmd),
 				internal_state_src->resource,
 				internal_state_dst->resource,
 				1, &copy
@@ -6523,7 +6523,7 @@ using namespace Vulkan_Internal;
 			copyRegion.dstOffset = 0;
 
 			vkCmdCopyBuffer(
-				GetDirectCommandList(cmd),
+				GetCommandList(cmd),
 				internal_state_src->resource,
 				internal_state_dst->resource,
 				1,
@@ -6544,10 +6544,10 @@ using namespace Vulkan_Internal;
 		switch (heap->desc.type)
 		{
 		case GPU_QUERY_TYPE_OCCLUSION_BINARY:
-			vkCmdBeginQuery(GetDirectCommandList(cmd), internal_state->pool, index, 0);
+			vkCmdBeginQuery(GetCommandList(cmd), internal_state->pool, index, 0);
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION:
-			vkCmdBeginQuery(GetDirectCommandList(cmd), internal_state->pool, index, VK_QUERY_CONTROL_PRECISE_BIT);
+			vkCmdBeginQuery(GetCommandList(cmd), internal_state->pool, index, VK_QUERY_CONTROL_PRECISE_BIT);
 			break;
 		}
 	}
@@ -6558,11 +6558,11 @@ using namespace Vulkan_Internal;
 		switch (heap->desc.type)
 		{
 		case GPU_QUERY_TYPE_TIMESTAMP:
-			vkCmdWriteTimestamp(GetDirectCommandList(cmd), VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, internal_state->pool, index);
+			vkCmdWriteTimestamp(GetCommandList(cmd), VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, internal_state->pool, index);
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION_BINARY:
 		case GPU_QUERY_TYPE_OCCLUSION:
-			vkCmdEndQuery(GetDirectCommandList(cmd), internal_state->pool, index);
+			vkCmdEndQuery(GetCommandList(cmd), internal_state->pool, index);
 			break;
 		}
 	}
@@ -6798,7 +6798,7 @@ using namespace Vulkan_Internal;
 		VkAccelerationStructureBuildRangeInfoKHR* pRangeInfo = ranges.data();
 
 		vkCmdBuildAccelerationStructuresKHR(
-			GetDirectCommandList(cmd),
+			GetCommandList(cmd),
 			1,
 			&info,
 			&pRangeInfo
@@ -6811,7 +6811,7 @@ using namespace Vulkan_Internal;
 
 		BindComputeShader(rtpso->desc.shaderlibraries.front().shader, cmd);
 
-		vkCmdBindPipeline(GetDirectCommandList(cmd), VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, to_internal(rtpso)->pipeline);
+		vkCmdBindPipeline(GetCommandList(cmd), VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, to_internal(rtpso)->pipeline);
 	}
 	void GraphicsDevice_Vulkan::DispatchRays(const DispatchRaysDesc* desc, CommandList cmd)
 	{
@@ -6842,7 +6842,7 @@ using namespace Vulkan_Internal;
 		callable.stride = desc->callable.stride;
 
 		vkCmdTraceRaysKHR(
-			GetDirectCommandList(cmd),
+			GetCommandList(cmd),
 			&raygen,
 			&miss,
 			&hitgroup,
@@ -6887,14 +6887,14 @@ using namespace Vulkan_Internal;
 			label.color[1] = 0;
 			label.color[2] = 0;
 			label.color[3] = 1;
-			vkCmdBeginDebugUtilsLabelEXT(GetDirectCommandList(cmd), &label);
+			vkCmdBeginDebugUtilsLabelEXT(GetCommandList(cmd), &label);
 		}
 	}
 	void GraphicsDevice_Vulkan::EventEnd(CommandList cmd)
 	{
 		if (vkCmdEndDebugUtilsLabelEXT != nullptr)
 		{
-			vkCmdEndDebugUtilsLabelEXT(GetDirectCommandList(cmd));
+			vkCmdEndDebugUtilsLabelEXT(GetCommandList(cmd));
 		}
 	}
 	void GraphicsDevice_Vulkan::SetMarker(const char* name, CommandList cmd)
@@ -6908,7 +6908,7 @@ using namespace Vulkan_Internal;
 			label.color[1] = 0;
 			label.color[2] = 0;
 			label.color[3] = 1;
-			vkCmdInsertDebugUtilsLabelEXT(GetDirectCommandList(cmd), &label);
+			vkCmdInsertDebugUtilsLabelEXT(GetCommandList(cmd), &label);
 		}
 	}
 

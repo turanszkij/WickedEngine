@@ -321,7 +321,7 @@ namespace wiGraphics
 		FrameResources frames[BUFFERCOUNT];
 		const FrameResources& GetFrameResources() const { return frames[GetFrameCount() % BUFFERCOUNT]; }
 		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BUFFERCOUNT]; }
-		inline VkCommandBuffer GetDirectCommandList(CommandList cmd) { return GetFrameResources().commandBuffers[cmd]; }
+		inline VkCommandBuffer GetCommandList(CommandList cmd) { return GetFrameResources().commandBuffers[cmd]; }
 
 		std::vector<VkMemoryBarrier> frame_memoryBarriers[COMMANDLIST_COUNT];
 		std::vector<VkImageMemoryBarrier> frame_imageBarriers[COMMANDLIST_COUNT];
