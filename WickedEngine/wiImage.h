@@ -13,7 +13,7 @@ namespace wiImage
 	void SetCanvas(const wiCanvas& canvas, wiGraphics::CommandList cmd);
 
 	// Set a background texture (applied to all image rendering commands on this CommandList)
-	void SetBackgroundBlurTexture(const wiGraphics::Texture& texture, wiGraphics::CommandList cmd);
+	void SetBackground(const wiGraphics::Texture& texture, wiGraphics::CommandList cmd);
 
 	// Draw the specified texture with the specified parameters
 	void Draw(const wiGraphics::Texture* texture, const wiImageParams& params, wiGraphics::CommandList cmd);
@@ -67,7 +67,7 @@ struct wiImageParams
 		MIRROR = 1 << 2,
 		EXTRACT_NORMALMAP = 1 << 3,
 		FULLSCREEN = 1 << 4,
-		BACKGROUND_BLUR = 1 << 5,
+		BACKGROUND = 1 << 5,
 	};
 	uint32_t _flags = EMPTY;
 
@@ -133,7 +133,7 @@ struct wiImageParams
 	constexpr bool isMirrorEnabled() const { return _flags & MIRROR; }
 	constexpr bool isExtractNormalMapEnabled() const { return _flags & EXTRACT_NORMALMAP; }
 	constexpr bool isFullScreenEnabled() const { return _flags & FULLSCREEN; }
-	constexpr bool isBackgroundBlurEnabled() const { return _flags & BACKGROUND_BLUR; }
+	constexpr bool isBackgroundEnabled() const { return _flags & BACKGROUND; }
 
 	// enables draw rectangle for base texture (cutout texture outside draw rectangle)
 	void enableDrawRect(const XMFLOAT4& rect) { _flags |= DRAWRECT; drawRect = rect; }
@@ -146,8 +146,8 @@ struct wiImageParams
 	// enable full screen override. It just draws texture onto the full screen, disabling any other setup except sampler and stencil)
 	void enableFullScreen() { _flags |= FULLSCREEN; }
 	// enable background blur, which samples a background screen texture on a specified mip level on transparent areas instead of alpha blending
-	//	the background tex should be bound to resource slot: TEXSLOT_IMAGE_BACKGROUND beforehand!
-	void enableBackgroundBlur() { _flags |= BACKGROUND_BLUR; }
+	//	the background tex should be bound with wiImage::SetBackground() beforehand
+	void enableBackground() { _flags |= BACKGROUND; }
 
 	// disable draw rectangle for base texture (whole texture will be drawn, no cutout)
 	void disableDrawRect() { _flags &= ~DRAWRECT; }
@@ -160,7 +160,7 @@ struct wiImageParams
 	// disable full screen override
 	void disableFullScreen() { _flags &= ~FULLSCREEN; }
 	// disable background blur
-	void disableBackgroundBlur() { _flags &= ~BACKGROUND_BLUR; }
+	void disableBackground() { _flags &= ~BACKGROUND; }
 
 
 	wiImageParams() 

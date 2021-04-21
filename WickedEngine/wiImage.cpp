@@ -21,8 +21,8 @@ namespace wiImage
 		IMAGE_SHADER_STANDARD,
 		IMAGE_SHADER_SEPARATENORMALMAP,
 		IMAGE_SHADER_MASKED,
-		IMAGE_SHADER_BACKGROUNDBLUR,
-		IMAGE_SHADER_BACKGROUNDBLUR_MASKED,
+		IMAGE_SHADER_BACKGROUND,
+		IMAGE_SHADER_BACKGROUND_MASKED,
 		IMAGE_SHADER_FULLSCREEN,
 		IMAGE_SHADER_COUNT
 	};
@@ -35,14 +35,14 @@ namespace wiImage
 	RasterizerState			rasterizerState;
 	DepthStencilState		depthStencilStates[STENCILMODE_COUNT][STENCILREFMODE_COUNT];
 	PipelineState			imagePSO[IMAGE_SHADER_COUNT][BLENDMODE_COUNT][STENCILMODE_COUNT][STENCILREFMODE_COUNT];
-	Texture					backgroundBlurTextures[COMMANDLIST_COUNT];
+	Texture					backgroundTextures[COMMANDLIST_COUNT];
 	wiCanvas				canvases[COMMANDLIST_COUNT];
 
 	std::atomic_bool initialized{ false };
 
-	void SetBackgroundBlurTexture(const Texture& texture, CommandList cmd)
+	void SetBackground(const Texture& texture, CommandList cmd)
 	{
-		backgroundBlurTextures[cmd] = texture;
+		backgroundTextures[cmd] = texture;
 	}
 
 	void SetCanvas(const wiCanvas& canvas, wiGraphics::CommandList cmd)
@@ -102,7 +102,7 @@ namespace wiImage
 			PushConstantsImage push;
 			push.texture_base_index = device->GetDescriptorIndex(texture, SRV);
 			push.texture_mask_index = device->GetDescriptorIndex(params.maskMap, SRV);
-			push.texture_background_index = device->GetDescriptorIndex(&backgroundBlurTextures[cmd], SRV);
+			push.texture_background_index = device->GetDescriptorIndex(&backgroundTextures[cmd], SRV);
 			push.sampler_index = device->GetDescriptorIndex(sampler);
 			device->PushConstants(&push, sizeof(push), cmd);
 		}
@@ -110,7 +110,7 @@ namespace wiImage
 		{
 			device->BindResource(PS, texture, TEXSLOT_IMAGE_BASE, cmd);
 			device->BindResource(PS, params.maskMap, TEXSLOT_IMAGE_MASK, cmd);
-			device->BindResource(PS, &backgroundBlurTextures[cmd], TEXSLOT_IMAGE_BACKGROUND, cmd);
+			device->BindResource(PS, &backgroundTextures[cmd], TEXSLOT_IMAGE_BACKGROUND, cmd);
 			device->BindSampler(PS, sampler, SSLOT_ONDEMAND0, cmd);
 		}
 
@@ -209,7 +209,7 @@ namespace wiImage
 		IMAGE_SHADER targetShader;
 		const bool NormalmapSeparate = params.isExtractNormalMapEnabled();
 		const bool Mask = params.maskMap != nullptr;
-		const bool background_blur = params.isBackgroundBlurEnabled();
+		const bool background_blur = params.isBackgroundEnabled();
 		if (NormalmapSeparate)
 		{
 			targetShader = IMAGE_SHADER_SEPARATENORMALMAP;
@@ -220,7 +220,7 @@ namespace wiImage
 			{
 				if (background_blur)
 				{
-					targetShader = IMAGE_SHADER_BACKGROUNDBLUR_MASKED;
+					targetShader = IMAGE_SHADER_BACKGROUND_MASKED;
 				}
 				else
 				{
@@ -231,7 +231,7 @@ namespace wiImage
 			{
 				if (background_blur)
 				{
-					targetShader = IMAGE_SHADER_BACKGROUNDBLUR;
+					targetShader = IMAGE_SHADER_BACKGROUND;
 				}
 				else
 				{
@@ -261,8 +261,8 @@ namespace wiImage
 		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_STANDARD], "imagePS.cso");
 		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_SEPARATENORMALMAP], "imagePS_separatenormalmap.cso");
 		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_MASKED], "imagePS_masked.cso");
-		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_BACKGROUNDBLUR], "imagePS_backgroundblur.cso");
-		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_BACKGROUNDBLUR_MASKED], "imagePS_backgroundblur_masked.cso");
+		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_BACKGROUND], "imagePS_backgroundblur.cso");
+		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_BACKGROUND_MASKED], "imagePS_backgroundblur_masked.cso");
 		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_FULLSCREEN], "screenPS.cso");
 
 

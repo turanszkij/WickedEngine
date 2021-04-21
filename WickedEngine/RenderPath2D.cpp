@@ -177,7 +177,7 @@ void RenderPath2D::Render() const
 
 	if (GetGUIBlurredBackground() != nullptr)
 	{
-		wiImage::SetBackgroundBlurTexture(*GetGUIBlurredBackground(), cmd);
+		wiImage::SetBackground(*GetGUIBlurredBackground(), cmd);
 	}
 
 	// Special care for internal resolution, because stencil buffer is of internal resolution, 

@@ -29,7 +29,7 @@ wiWidget::wiWidget()
 	for (int i = IDLE; i < WIDGETSTATE_COUNT; ++i)
 	{
 		sprites[i].params.blendFlag = BLENDMODE_OPAQUE;
-		sprites[i].params.enableBackgroundBlur();
+		sprites[i].params.enableBackground();
 	}
 }
 
