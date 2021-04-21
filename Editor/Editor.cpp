@@ -1169,12 +1169,6 @@ void EditorComponent::Update(float dt)
 		{
 			hovered = wiScene::PickResult();
 
-			// Try to pick objects-meshes:
-			if (pickMask & PICK_OBJECT)
-			{
-				hovered = wiScene::Pick(pickRay, pickMask);
-			}
-
 			if (pickMask & PICK_LIGHT)
 			{
 				for (size_t i = 0; i < scene.lights.GetCount(); ++i)
@@ -1332,6 +1326,18 @@ void EditorComponent::Update(float dt)
 				}
 			}
 
+			if (pickMask & PICK_OBJECT && hovered.entity == INVALID_ENTITY)
+			{
+				// Object picking only when mouse button down, because it can be slow with high polycount
+				if (
+					wiInput::Down(wiInput::MOUSE_BUTTON_LEFT) ||
+					wiInput::Down(wiInput::MOUSE_BUTTON_RIGHT) ||
+					paintToolWnd.GetMode() != PaintToolWindow::MODE_DISABLED
+					)
+				{
+					hovered = wiScene::Pick(pickRay, pickMask);
+				}
+			}
 		}
 
 		// Interactions only when paint tool is disabled:
