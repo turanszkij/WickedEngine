@@ -4,7 +4,6 @@
 
 #include "wiGraphicsDevice_SharedInternals.h"
 #include "wiHelper.h"
-#include "wiMath.h"
 #include "wiBackLog.h"
 
 #include "Utility/dx12/d3dx12.h"
