@@ -97,9 +97,8 @@ namespace wiGraphics
 				HRESULT hr = device->CreateCommandQueue(&copyQueueDesc, IID_PPV_ARGS(&queue));
 				assert(SUCCEEDED(hr));
 
-				hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&fence));
+				hr = device->CreateFence(fenceValue.fetch_add(1), D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&fence));
 				assert(SUCCEEDED(hr));
-				fenceValue = fence->GetCompletedValue();
 			}
 
 			CopyCMD allocate(uint32_t staging_size = 0)
@@ -136,15 +135,14 @@ namespace wiGraphics
 						}
 					}
 				}
+				freelist.pop_back();
+				locker.unlock();
 
 				// begin command list in valid state:
 				HRESULT hr = cmd.commandAllocator->Reset();
 				assert(SUCCEEDED(hr));
 				hr = static_cast<ID3D12GraphicsCommandList*>(cmd.commandList.Get())->Reset(cmd.commandAllocator.Get(), nullptr);
 				assert(SUCCEEDED(hr));
-
-				freelist.pop_back();
-				locker.unlock();
 
 				return cmd;
 			}
