@@ -84,6 +84,8 @@ namespace wiGraphics
 				GPUBuffer uploadbuffer;
 			};
 			std::vector<CopyCMD> freelist;
+			std::vector<CopyCMD> worklist;
+			uint64_t submit_wait = 0;
 
 			void Create(Microsoft::WRL::ComPtr<ID3D12Device5> device)
 			{
@@ -98,6 +100,14 @@ namespace wiGraphics
 				assert(SUCCEEDED(hr));
 
 				hr = device->CreateFence(fenceValue.fetch_add(1), D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&fence));
+				assert(SUCCEEDED(hr));
+			}
+			void Destroy()
+			{
+				uint64_t value = fenceValue.fetch_add(1);
+				HRESULT hr = queue->Signal(fence.Get(), value);
+				assert(SUCCEEDED(hr));
+				hr = fence->SetEventOnCompletion(value, nullptr);
 				assert(SUCCEEDED(hr));
 			}
 
@@ -157,13 +167,32 @@ namespace wiGraphics
 				cmd.target = fenceValue.fetch_add(1);
 				queue->Signal(fence.Get(), cmd.target);
 
-				// CPU wait immediately:
-				HRESULT hr = fence->SetEventOnCompletion(cmd.target, nullptr);
-				SUCCEEDED(hr);
-
 				locker.lock();
-				freelist.push_back(cmd);
+				worklist.push_back(cmd);
+				submit_wait = std::max(submit_wait, cmd.target);
 				locker.unlock();
+			}
+			uint64_t flush()
+			{
+				locker.lock();
+
+				// free up the finished command lists:
+				uint64_t completed_fence_value = fence->GetCompletedValue();
+				for (size_t i = 0; i < worklist.size(); ++i)
+				{
+					if (worklist[i].target <= completed_fence_value)
+					{
+						freelist.push_back(worklist[i]);
+						worklist[i] = worklist.back();
+						worklist.pop_back();
+						i--;
+					}
+				}
+
+				uint64_t value = submit_wait;
+				submit_wait = 0;
+				locker.unlock();
+				return value;
 			}
 		};
 		mutable CopyAllocator copyAllocator;

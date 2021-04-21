@@ -2651,6 +2651,7 @@ using namespace DX12_Internal;
 	GraphicsDevice_DX12::~GraphicsDevice_DX12()
 	{
 		WaitForGPU();
+		copyAllocator.Destroy();
 	}
 
 	bool GraphicsDevice_DX12::CreateSwapChain(const SwapChainDesc* pDesc, wiPlatform::window_type window, SwapChain* swapChain) const
@@ -5405,6 +5406,13 @@ using namespace DX12_Internal;
 	void GraphicsDevice_DX12::SubmitCommandLists()
 	{
 		HRESULT hr;
+
+		uint64_t copy_sync = copyAllocator.flush();
+		if (copy_sync > 0)
+		{
+			hr = directQueue->Wait(copyAllocator.fence.Get(), copy_sync);
+			assert(SUCCEEDED(hr));
+		}
 
 		// Execute deferred command lists:
 		{
