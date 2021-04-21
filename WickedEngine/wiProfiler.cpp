@@ -12,6 +12,7 @@
 #include <stack>
 #include <mutex>
 #include <atomic>
+#include <sstream>
 
 using namespace wiGraphics;
 
