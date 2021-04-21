@@ -49,6 +49,7 @@ void RendererWindow::Create(EditorComponent* editor)
 		{
 			editor->renderPath->resolutionScale = args.fValue;
 			editor->resolutionScale = args.fValue;
+			editor->ResizeBuffers();
 		}
 	});
 	AddWidget(&resolutionScaleSlider);

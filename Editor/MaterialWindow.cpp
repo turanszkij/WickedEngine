@@ -621,7 +621,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	AddWidget(&colorPicker);
 
 
-	Translate(XMFLOAT3((float)editor->main->canvas.GetLogicalWidth() - 880, 120, 0));
+	Translate(XMFLOAT3((float)editor->GetLogicalWidth() - 880, 120, 0));
 	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);
