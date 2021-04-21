@@ -3020,7 +3020,6 @@ using namespace DX12_Internal;
 			pTexture->desc.MipLevels = (uint32_t)log2(std::max(pTexture->desc.Width, pTexture->desc.Height)) + 1;
 		}
 
-
 		// Issue data copy on request:
 		if (pInitialData != nullptr)
 		{
@@ -5406,16 +5405,6 @@ using namespace DX12_Internal;
 	void GraphicsDevice_DX12::SubmitCommandLists()
 	{
 		HRESULT hr;
-
-		// Sync up copy queue:
-		copyAllocator.locker.lock();
-		if(copyAllocator.submitted)
-		{
-			hr = directQueue->Wait(copyAllocator.fence.Get(), copyAllocator.fenceValue);
-			assert(SUCCEEDED(hr));
-			copyAllocator.submitted = false;
-		}
-		copyAllocator.locker.unlock();
 
 		// Execute deferred command lists:
 		{

@@ -73,9 +73,8 @@ namespace wiGraphics
 			Microsoft::WRL::ComPtr<ID3D12Device5> device;
 			Microsoft::WRL::ComPtr<ID3D12CommandQueue> queue;
 			Microsoft::WRL::ComPtr<ID3D12Fence> fence;
-			uint64_t fenceValue = 0;
+			std::atomic<uint64_t> fenceValue{};
 			std::mutex locker;
-			bool submitted = false;
 
 			struct CopyCMD
 			{
@@ -85,7 +84,6 @@ namespace wiGraphics
 				GPUBuffer uploadbuffer;
 			};
 			std::vector<CopyCMD> freelist;
-			std::deque<CopyCMD> worklist;
 
 			void Create(Microsoft::WRL::ComPtr<ID3D12Device5> device)
 			{
@@ -107,13 +105,6 @@ namespace wiGraphics
 			CopyCMD allocate(uint32_t staging_size = 0)
 			{
 				locker.lock();
-
-				// pop the finished command lists if there are any:
-				while (!worklist.empty() && worklist.front().target <= fence->GetCompletedValue())
-				{
-					freelist.push_back(worklist.front());
-					worklist.pop_front();
-				}
 
 				// create a new command list if there are no free ones:
 				if (freelist.empty())
@@ -165,13 +156,15 @@ namespace wiGraphics
 				};
 				queue->ExecuteCommandLists(1, commandlists);
 
-				locker.lock();
-				submitted = true;
-
-				cmd.target = ++fenceValue;
+				cmd.target = fenceValue.fetch_add(1);
 				queue->Signal(fence.Get(), cmd.target);
 
-				worklist.push_back(cmd);
+				// CPU wait immediately:
+				HRESULT hr = fence->SetEventOnCompletion(cmd.target, nullptr);
+				SUCCEEDED(hr);
+
+				locker.lock();
+				freelist.push_back(cmd);
 				locker.unlock();
 			}
 		};
