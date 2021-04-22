@@ -249,6 +249,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
     
 	float4 H;
 	float3 L;
+	float jitter;
 	if (roughness > 0.05f)
 	{
 		float3x3 tangentBasis = GetTangentBasis(N);
@@ -314,18 +315,18 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #endif
         
 		L = reflect(-V, H.xyz);
+		jitter = InterleavedGradientNoise(DTid.xy, g_xFrame_FrameCount);
 	}
 	else
 	{
 		H = float4(N.xyz, 1.0f);
 		L = reflect(-V, H.xyz);
+		jitter = 0;
 	}
     
 	float2 hitPixel = float2(0.0f, 0.0f);
 	float3 hitPoint = float3(0.0f, 0.0f, 0.0f);
 	float iterations = 0.0f;
-
-	float jitter = InterleavedGradientNoise(DTid.xy, g_xFrame_FrameCount);
 
 	bool hit = ScreenSpaceRayTrace(P, L, jitter, roughness, hitPixel, hitPoint, iterations);
 

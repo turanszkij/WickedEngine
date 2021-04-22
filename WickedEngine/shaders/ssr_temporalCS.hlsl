@@ -96,6 +96,13 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 {
     const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
 
+	const float roughness = texture_gbuffer1.SampleLevel(sampler_point_clamp, uv, 0).a;
+	if (roughness < 0.05)
+	{
+		output[DTid.xy] = resolve_current[DTid.xy];
+		return;
+	}
+
 	const float2 velocity = texture_gbuffer2.SampleLevel(sampler_point_clamp, uv, 0).xy;
 	const float2 prevUV = uv + velocity;
 	if (!is_saturated(prevUV))
