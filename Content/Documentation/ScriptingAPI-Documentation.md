@@ -36,13 +36,14 @@ This is a reference and explanation of Lua scripting features in Wicked Engine.
 		11. [ObjectComponent](#objectcomponent)
 		12. [InverseKinematicsComponent](#inversekinematicscomponent)
 		13. [SpringComponent](#springcomponent)
-	10. [High Level Interface](#high-level-interface)
+	10. [Canvas](#canvas)
+	11. [High Level Interface](#high-level-interface)
 		1. [MainComponent](#maincomponent)
 		2. [RenderPath](#renderpath)
 			1. [RenderPath2D](#renderpath2d)
 			2. [RenderPath3D](#renderpath3d)
 			3. [LoadingScreen](#loadingscreen)
-	11. [Input](#input)
+	12. [Input](#input)
 		
 ## Introduction and usage
 Scripting in Wicked Engine is powered by Lua, meaning that the user can make use of the 
@@ -594,6 +595,15 @@ Enables jiggle effect on transforms such as bones for example.
 - SetDamping(float value)
 - SetWindAffection(float value)
 
+## Canvas
+This is used to describe a drawable area
+- GetDPI() -- pixels per inch
+- GetDPIScaling() -- scaling factor between physical and logical size
+- GetPhysicalWidth() -- width in pixels
+- GetPhysicalHeight() -- height in pixels
+- GetLogicalWidth() -- width in dpi scaled units
+- GetLogicalHeight() -- height in dpi scaled units
+
 ## High Level Interface
 ### MainComponent
 This is the main entry point and manages the lifetime of the application. Even though it is called a component, it is not part of the entity-component system
@@ -608,6 +618,7 @@ This is the main entry point and manages the lifetime of the application. Even t
 - SetInfoDisplay(bool active)
 - SetWatermarkDisplay(bool active)
 - SetFPSDisplay(bool active)
+- GetCanvas() : Canvas canvas
 - [outer]SetProfilerEnabled(bool enabled)
 
 ### RenderPath
