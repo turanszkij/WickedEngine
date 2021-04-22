@@ -13,9 +13,7 @@ class RenderPath;
 class MainComponent
 {
 protected:
-	wiEvent::Handle swapChainResizeEvent;
 	wiEvent::Handle swapChainVsyncChangeEvent;
-	wiEvent::Handle dpiChangeEvent;
 
 	RenderPath* activePath = nullptr;
 	float targetFrameRate = 60;

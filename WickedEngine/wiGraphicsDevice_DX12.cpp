@@ -5338,10 +5338,11 @@ using namespace DX12_Internal;
 		HRESULT hr;
 
 		CommandList cmd = cmd_count.fetch_add(1);
+		assert(cmd < COMMANDLIST_COUNT);
+
 		if (GetCommandList(cmd) == nullptr)
 		{
 			// need to create one more command list:
-			assert(cmd < COMMANDLIST_COUNT);
 
 			for (uint32_t fr = 0; fr < BUFFERCOUNT; ++fr)
 			{

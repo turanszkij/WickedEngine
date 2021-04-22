@@ -5601,10 +5601,11 @@ using namespace Vulkan_Internal;
 		VkResult res;
 
 		CommandList cmd = cmd_count.fetch_add(1);
+		assert(cmd < COMMANDLIST_COUNT);
+
 		if (GetCommandList(cmd) == VK_NULL_HANDLE)
 		{
 			// need to create one more command list:
-			assert(cmd < COMMANDLIST_COUNT);
 
 			for (auto& frame : frames)
 			{

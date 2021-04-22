@@ -2598,10 +2598,11 @@ void GraphicsDevice_DX11::SetName(GPUResource* pResource, const char* name)
 CommandList GraphicsDevice_DX11::BeginCommandList()
 {
 	CommandList cmd = cmd_count.fetch_add(1);
+	assert(cmd < COMMANDLIST_COUNT);
+
 	if (deviceContexts[cmd] == nullptr)
 	{
 		// need to create one more command list:
-		assert(cmd < COMMANDLIST_COUNT);
 
 		HRESULT hr = device->CreateDeferredContext(0, &deviceContexts[cmd]);
 		assert(SUCCEEDED(hr));
