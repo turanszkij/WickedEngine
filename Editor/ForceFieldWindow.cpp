@@ -109,7 +109,7 @@ void ForceFieldWindow::Create(EditorComponent* editor)
 
 
 
-	Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 720, 50, 0));
+	Translate(XMFLOAT3((float)editor->GetLogicalWidth() - 720, 50, 0));
 	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);

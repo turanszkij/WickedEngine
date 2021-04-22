@@ -72,7 +72,7 @@ void LayerWindow::Create(EditorComponent* editor)
 	});
 	AddWidget(&enableNoneButton);
 
-	Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 450, 300, 0));
+	Translate(XMFLOAT3((float)editor->GetLogicalWidth() - 450, 300, 0));
 	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);

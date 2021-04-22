@@ -30,6 +30,7 @@ public:
 	int IsDrawRect2Enabled(lua_State* L);
 	int IsMirrorEnabled(lua_State* L);
 	int IsBackgroundBlurEnabled(lua_State* L);
+	int IsBackgroundEnabled(lua_State* L);
 
 	int SetPos(lua_State* L);
 	int SetSize(lua_State* L);
@@ -53,6 +54,8 @@ public:
 	int DisableMirror(lua_State* L);
 	int EnableBackgroundBlur(lua_State* L);
 	int DisableBackgroundBlur(lua_State* L);
+	int EnableBackground(lua_State* L);
+	int DisableBackground(lua_State* L);
 
 	static void Bind();
 };

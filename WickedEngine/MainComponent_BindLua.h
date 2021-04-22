@@ -3,6 +3,27 @@
 #include "wiLuna.h"
 #include "MainComponent.h"
 
+class Canvas_BindLua
+{
+public:
+	wiCanvas canvas;
+	static const char className[];
+	static Luna<Canvas_BindLua>::FunctionType methods[];
+	static Luna<Canvas_BindLua>::PropertyType properties[];
+
+	Canvas_BindLua(const wiCanvas& canvas) : canvas(canvas) {}
+	Canvas_BindLua(lua_State* L) {}
+
+	int GetDPI(lua_State* L);
+	int GetDPIScaling(lua_State* L);
+	int GetPhysicalWidth(lua_State* L);
+	int GetPhysicalHeight(lua_State* L);
+	int GetLogicalWidth(lua_State* L);
+	int GetLogicalHeight(lua_State* L);
+
+	static void Bind();
+};
+
 class MainComponent_BindLua
 {
 private:
@@ -24,6 +45,8 @@ public:
 	int SetWatermarkDisplay(lua_State *L);
 	int SetFPSDisplay(lua_State *L);
 	int SetResolutionDisplay(lua_State *L);
+
+	int GetCanvas(lua_State* L);
 
 	static void Bind();
 };

@@ -36,13 +36,14 @@ This is a reference and explanation of Lua scripting features in Wicked Engine.
 		11. [ObjectComponent](#objectcomponent)
 		12. [InverseKinematicsComponent](#inversekinematicscomponent)
 		13. [SpringComponent](#springcomponent)
-	10. [High Level Interface](#high-level-interface)
+	10. [Canvas](#canvas)
+	11. [High Level Interface](#high-level-interface)
 		1. [MainComponent](#maincomponent)
 		2. [RenderPath](#renderpath)
 			1. [RenderPath2D](#renderpath2d)
 			2. [RenderPath3D](#renderpath3d)
 			3. [LoadingScreen](#loadingscreen)
-	11. [Input](#input)
+	12. [Input](#input)
 		
 ## Introduction and usage
 Scripting in Wicked Engine is powered by Lua, meaning that the user can make use of the 
@@ -104,10 +105,8 @@ You can use the Renderer with the following functions, all of which are in the g
 - GetGameSpeed() : float result
 - SetGamma(float gamma)
 - SetGameSpeed(float speed)
-- GetScreenWidth() : float result
-- GetScreenHeight() : float result
-- GetRenderWidth() : float result
-- GetRenderHeight(): float result
+- GetScreenWidth() : float result  -- (deprecated, use MainComponent::GetCanvas().GetLogicalWidth() instead)
+- GetScreenHeight() : float result  -- (deprecated, use MainComponent::GetCanvas().GetLogicalHeight() instead)
 - HairParticleSettings(opt int lod0, opt int lod1, opt int lod2)
 - SetShadowProps2D(int resolution, int count)
 - SetShadowPropsCube(int resolution, int count)
@@ -596,6 +595,15 @@ Enables jiggle effect on transforms such as bones for example.
 - SetDamping(float value)
 - SetWindAffection(float value)
 
+## Canvas
+This is used to describe a drawable area
+- GetDPI() -- pixels per inch
+- GetDPIScaling() -- scaling factor between physical and logical size
+- GetPhysicalWidth() -- width in pixels
+- GetPhysicalHeight() -- height in pixels
+- GetLogicalWidth() -- width in dpi scaled units
+- GetLogicalHeight() -- height in dpi scaled units
+
 ## High Level Interface
 ### MainComponent
 This is the main entry point and manages the lifetime of the application. Even though it is called a component, it is not part of the entity-component system
@@ -610,6 +618,7 @@ This is the main entry point and manages the lifetime of the application. Even t
 - SetInfoDisplay(bool active)
 - SetWatermarkDisplay(bool active)
 - SetFPSDisplay(bool active)
+- GetCanvas() : Canvas canvas
 - [outer]SetProfilerEnabled(bool enabled)
 
 ### RenderPath

@@ -1,157 +1,85 @@
 #include "wiGUI.h"
-#include "wiWidget.h"
 #include "wiRenderer.h"
 #include "wiInput.h"
+#include "wiIntersect.h"
 
-using namespace std;
 using namespace wiGraphics;
 
-void wiGUIElement::AttachTo(wiGUIElement* parent)
-{
-	this->parent = parent;
-
-	this->parent->UpdateTransform();
-	XMMATRIX B = XMMatrixInverse(nullptr, XMLoadFloat4x4(&parent->world));
-
-	MatrixTransform(B);
-	UpdateTransform();
-	UpdateTransform_Parented(*parent);
-}
-void wiGUIElement::Detach()
-{
-	this->parent = nullptr;
-	ApplyTransform();
-}
-void wiGUIElement::ApplyScissor(const Rect rect, CommandList cmd, bool constrain_to_parent) const
-{
-	Rect scissor = rect;
-
-	if (constrain_to_parent && parent != nullptr)
-	{
-		wiGUIElement* recurse_parent = parent;
-		while (recurse_parent != nullptr)
-		{
-			scissor.bottom = std::min(scissor.bottom, recurse_parent->scissorRect.bottom);
-			scissor.top = std::max(scissor.top, recurse_parent->scissorRect.top);
-			scissor.left = std::max(scissor.left, recurse_parent->scissorRect.left);
-			scissor.right = std::min(scissor.right, recurse_parent->scissorRect.right);
-
-			recurse_parent = recurse_parent->parent;
-		}
-	}
-
-	if (scissor.left > scissor.right)
-	{
-		scissor.left = scissor.right;
-	}
-	if (scissor.top > scissor.bottom)
-	{
-		scissor.top = scissor.bottom;
-	}
-
-	GraphicsDevice* device = wiRenderer::GetDevice();
-	float scale_x = (float)device->GetResolutionWidth() / (float)device->GetScreenWidth();
-	float scale_y = (float)device->GetResolutionHeight() / (float)device->GetScreenHeight();
-	scissor.bottom = int32_t((float)scissor.bottom * scale_y);
-	scissor.top = int32_t((float)scissor.top * scale_y);
-	scissor.left = int32_t((float)scissor.left * scale_x);
-	scissor.right = int32_t((float)scissor.right * scale_x);
-	device->BindScissorRects(1, &scissor, cmd);
-}
-
-void wiGUI::Update(float dt)
+void wiGUI::Update(const wiCanvas& canvas, float dt)
 {
 	if (!visible)
 	{
 		return;
 	}
 
-	XMFLOAT4 _p = wiInput::GetPointer();
-	pointerpos.x = _p.x;
-	pointerpos.y = _p.y;
-	pointerhitbox = Hitbox2D(pointerpos, XMFLOAT2(1, 1));
+	XMFLOAT4 pointer = wiInput::GetPointer();
+	Hitbox2D pointerHitbox = Hitbox2D(XMFLOAT2(pointer.x, pointer.y), XMFLOAT2(1, 1));
 
-	if (activeWidget != nullptr)
-	{
-		if (!activeWidget->IsEnabled() || !activeWidget->IsVisible())
-		{
-			// deactivate active widget if it became invisible or disabled
-			DeactivateWidget(activeWidget);
-		}
-	}
+	uint32_t priority = 0;
 
 	focus = false;
 	for (auto& widget : widgets)
 	{
-		// the contained child widgets will be updated by the containers
-		widget->Update(this, dt);
-
-		if (widget->IsVisible() && widget->hitBox.intersects(pointerhitbox))
-		{
-			// hitbox can only intersect with one element (avoid detecting multiple overlapping elements)
-			pointerhitbox.pos = XMFLOAT2(-FLT_MAX, -FLT_MAX);
-			pointerhitbox.siz = XMFLOAT2(0, 0);
-			focus = true;
-		}
+		widget->force_disable = focus;
+		widget->Update(canvas, dt);
+		widget->force_disable = false;
 
 		if (widget->priority_change)
 		{
 			widget->priority_change = false;
-			priorityChangeQueue.push_back(widget);
+			widget->priority = priority++;
 		}
-	}
-
-	for (auto& widget : priorityChangeQueue)
-	{
-		if (std::find(widgets.begin(), widgets.end(), widget) != widgets.end()) // only add back to widgets if it's still there!
+		else
 		{
-			widgets.remove(widget);
-			widgets.push_front(widget);
+			widget->priority = ~0u;
+		}
+
+		if (widget->IsVisible() && widget->hitBox.intersects(pointerHitbox))
+		{
+			focus = true;
+		}
+		if (widget->GetState() > wiWidget::IDLE)
+		{
+			focus = true;
 		}
 	}
-	priorityChangeQueue.clear();
 
-	scissorRect.bottom = (int32_t)(wiRenderer::GetDevice()->GetScreenHeight());
-	scissorRect.left = (int32_t)(0);
-	scissorRect.right = (int32_t)(wiRenderer::GetDevice()->GetScreenWidth());
-	scissorRect.top = (int32_t)(0);
+	std::sort(widgets.begin(), widgets.end(), [](const wiWidget* a, const wiWidget* b) {
+		return a->priority < b->priority;
+		});
 }
 
-void wiGUI::Render(CommandList cmd) const
+void wiGUI::Render(const wiCanvas& canvas, CommandList cmd) const
 {
 	if (!visible)
 	{
 		return;
 	}
 
-	wiRenderer::GetDevice()->EventBegin("GUI", cmd);
+	Rect scissorRect;
+	scissorRect.bottom = (int32_t)(canvas.GetPhysicalHeight());
+	scissorRect.left = (int32_t)(0);
+	scissorRect.right = (int32_t)(canvas.GetPhysicalWidth());
+	scissorRect.top = (int32_t)(0);
+
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
+	device->EventBegin("GUI", cmd);
+	// Rendering is back to front:
 	for (auto it = widgets.rbegin(); it != widgets.rend(); ++it)
 	{
 		const wiWidget* widget = (*it);
-		if (widget != activeWidget)
-		{
-			ApplyScissor(scissorRect, cmd);
-			widget->Render(this, cmd);
-		}
+		device->BindScissorRects(1, &scissorRect, cmd);
+		widget->Render(canvas, cmd);
 	}
-	if (activeWidget != nullptr)
+
+	device->BindScissorRects(1, &scissorRect, cmd);
+	for (auto& x : widgets)
 	{
-		// Active widget is always on top!
-		ApplyScissor(scissorRect, cmd);
-		activeWidget->Render(this, cmd);
+		x->RenderTooltip(canvas, cmd);
 	}
 
-	ApplyScissor(scissorRect, cmd);
-
-	if (activeWidget == nullptr)
-	{
-		for (auto& x : widgets)
-		{
-			x->RenderTooltip(this, cmd);
-		}
-	}
-
-	wiRenderer::GetDevice()->EventEnd(cmd);
+	device->EventEnd(cmd);
 }
 
 void wiGUI::AddWidget(wiWidget* widget)
@@ -159,17 +87,20 @@ void wiGUI::AddWidget(wiWidget* widget)
 	if (widget != nullptr)
 	{
 		assert(std::find(widgets.begin(), widgets.end(), widget) == widgets.end()); // don't attach one widget twice!
-		widget->AttachTo(this);
 		widgets.push_back(widget);
 	}
 }
 
 void wiGUI::RemoveWidget(wiWidget* widget)
 {
-	if (widget != nullptr)
+	for (auto& x : widgets)
 	{
-		widget->Detach();
-		widgets.remove(widget);
+		if (x == widget)
+		{
+			x = widgets.back();
+			widgets.pop_back();
+			break;
+		}
 	}
 }
 
@@ -185,33 +116,6 @@ wiWidget* wiGUI::GetWidget(const std::string& name)
 	return nullptr;
 }
 
-void wiGUI::ActivateWidget(wiWidget* widget)
-{
-	widget->priority_change = false;
-	priorityChangeQueue.push_back(widget);
-
-	if (activeWidget == nullptr)
-	{
-		activeWidget = widget;
-		activeWidget->Activate();
-	}
-}
-void wiGUI::DeactivateWidget(wiWidget* widget)
-{
-	widget->Deactivate();
-	if (activeWidget == widget)
-	{
-		activeWidget = nullptr;
-	}
-}
-const wiWidget* wiGUI::GetActiveWidget() const
-{
-	return activeWidget;
-}
-bool wiGUI::IsWidgetDisabled(wiWidget* widget)
-{
-	return (activeWidget != nullptr && activeWidget != widget);
-}
 bool wiGUI::HasFocus()
 {
 	if (!visible)

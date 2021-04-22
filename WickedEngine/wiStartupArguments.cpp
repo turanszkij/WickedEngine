@@ -6,24 +6,22 @@
 #include <iterator>
 #include <set>
 
-using namespace std;
-
 namespace wiStartupArguments
 {
-	set<string> params;
+	std::set<std::string> params;
 
 	void Parse(const wchar_t* args)
 	{
-		wstring from = args;
-		string to;
+		std::wstring from = args;
+		std::string to;
 		wiHelper::StringConvert(from, to);
 
-		istringstream iss(to);
+		std::istringstream iss(to);
 
 		params =
 		{
-			istream_iterator<string>{iss},
-			istream_iterator<string>{}
+			std::istream_iterator<std::string>{iss},
+			std::istream_iterator<std::string>{}
 		};
 
 	}

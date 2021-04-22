@@ -258,7 +258,7 @@ public:
 	constexpr void setOcclusionCullingEnabled(bool value) { occlusionCullingEnabled = value; }
 	constexpr void setSceneUpdateEnabled(bool value) { sceneUpdateEnabled = value; }
 
-	virtual void setMSAASampleCount(uint32_t value) { if (msaaSampleCount != value) { msaaSampleCount = value; ResizeBuffers(); } }
+	virtual void setMSAASampleCount(uint32_t value) { msaaSampleCount = value; }
 
 	void PreUpdate() override;
 	void Update(float dt) override;

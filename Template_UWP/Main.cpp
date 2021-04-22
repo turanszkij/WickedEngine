@@ -87,7 +87,7 @@ public:
         m_logicalWidth = window.Bounds().Width;
         m_logicalHeight = window.Bounds().Height;
 
-		main.SetWindow(window);
+		main.SetWindow(&window);
 	}
 
     void Load(winrt::hstring const &) noexcept
@@ -134,14 +134,7 @@ protected:
 
     void OnWindowSizeChanged(CoreWindow const & sender, WindowSizeChangedEventArgs const & /*args*/)
     {
-        m_logicalWidth = sender.Bounds().Width;
-        m_logicalHeight = sender.Bounds().Height;
-
-		float dpiscale = wiRenderer::GetDevice()->GetDPIScaling();
-		uint64_t data = 0;
-		data |= int(m_logicalWidth * dpiscale);
-		data |= int(m_logicalHeight * dpiscale) << 16;
-		wiEvent::FireEvent(SYSTEM_EVENT_CHANGE_RESOLUTION, data);
+		main.SetWindow(&sender);
     }
 
     void OnVisibilityChanged(CoreWindow const & /*sender*/, VisibilityChangedEventArgs const & args)
@@ -170,9 +163,7 @@ protected:
 
     void OnDpiChanged(DisplayInformation const & sender, IInspectable const & /*args*/)
     {
-        m_DPI = sender.LogicalDpi();
-
-		wiEvent::FireEvent(SYSTEM_EVENT_CHANGE_DPI, (int)m_DPI);
+		main.SetWindow(&CoreWindow::GetForCurrentThread());
     }
 
     void OnDisplayContentsInvalidated(DisplayInformation const & /*sender*/, IInspectable const & /*args*/)

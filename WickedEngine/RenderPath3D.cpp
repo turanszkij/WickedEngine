@@ -12,7 +12,7 @@ void RenderPath3D::ResizeBuffers()
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	FORMAT defaultTextureFormat = device->GetBackBufferFormat();
+	FORMAT defaultTextureFormat = FORMAT_R10G10B10A2_UNORM;
 	XMUINT2 internalResolution = GetInternalResolution();
 
 	camera->CreatePerspective((float)internalResolution.x, (float)internalResolution.y, camera->zNearP, camera->zFarP);
@@ -532,6 +532,11 @@ void RenderPath3D::PreUpdate()
 
 void RenderPath3D::Update(float dt)
 {
+	if (rtGbuffer[GBUFFER_COLOR].desc.SampleCount != msaaSampleCount)
+	{
+		ResizeBuffers();
+	}
+
 	RenderPath2D::Update(dt);
 
 	if (getSceneUpdateEnabled())
@@ -559,13 +564,22 @@ void RenderPath3D::Update(float dt)
 		wiRenderer::UpdateVisibility(visibility_reflection);
 	}
 
-	wiRenderer::UpdatePerFrameData(*scene, visibility_main, frameCB, GetInternalResolution(), dt);
+	XMUINT2 internalResolution = GetInternalResolution();
+
+	wiRenderer::UpdatePerFrameData(
+		*scene,
+		visibility_main,
+		frameCB,
+		internalResolution,
+		*this,
+		dt
+	);
 
 	if (wiRenderer::GetTemporalAAEnabled())
 	{
 		const XMFLOAT4& halton = wiMath::GetHaltonSequence(wiRenderer::GetDevice()->GetFrameCount() % 256);
-		camera->jitter.x = (halton.x * 2 - 1) / (float)GetInternalResolution().x;
-		camera->jitter.y = (halton.y * 2 - 1) / (float)GetInternalResolution().y;
+		camera->jitter.x = (halton.x * 2 - 1) / (float)internalResolution.x;
+		camera->jitter.y = (halton.y * 2 - 1) / (float)internalResolution.y;
 	}
 	else
 	{
@@ -939,7 +953,8 @@ void RenderPath3D::Compose(CommandList cmd) const
 
 	if (wiRenderer::GetDebugLightCulling() || wiRenderer::GetVariableRateShadingClassificationDebug())
 	{
-		wiImage::Draw(&debugUAV, wiImageParams((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight()), cmd);
+		fx.enableFullScreen();
+		wiImage::Draw(&debugUAV, fx, cmd);
 	}
 
 	RenderPath2D::Compose(cmd);
@@ -1223,7 +1238,7 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 		wiRenderer::DrawLensFlares(visibility_main, depthBuffer_Copy, cmd);
 	}
 
-	wiRenderer::DrawDebugWorld(*scene, *camera, cmd);
+	wiRenderer::DrawDebugWorld(*scene, *camera, *this, cmd);
 
 	device->RenderPassEnd(cmd);
 

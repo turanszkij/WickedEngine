@@ -1,7 +1,6 @@
 #include "wiSpriteFont.h"
 #include "wiHelper.h"
 
-using namespace std;
 using namespace wiGraphics;
 
 void wiSpriteFont::FixedUpdate()
@@ -31,22 +30,22 @@ float wiSpriteFont::textHeight() const
 	return wiFont::textHeight(text, params);
 }
 
-void wiSpriteFont::SetText(const string& value)
+void wiSpriteFont::SetText(const std::string& value)
 {
 	wiHelper::StringConvert(value, text);
 }
-void wiSpriteFont::SetText(const wstring& value)
+void wiSpriteFont::SetText(const std::wstring& value)
 {
 	text = value;
 }
 
-string wiSpriteFont::GetTextA() const
+std::string wiSpriteFont::GetTextA() const
 {
-	string retVal;
+	std::string retVal;
 	wiHelper::StringConvert(text, retVal);
 	return retVal;
 }
-const wstring& wiSpriteFont::GetText() const
+const std::wstring& wiSpriteFont::GetText() const
 {
 	return text;
 }

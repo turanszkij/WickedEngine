@@ -684,6 +684,16 @@ namespace wiGraphics
 		uint32_t _flags = FLAG_EMPTY;
 		std::vector<RenderPassAttachment> attachments;
 	};
+	struct SwapChainDesc
+	{
+		uint32_t width = 0;
+		uint32_t height = 0;
+		uint32_t buffercount = 2;
+		FORMAT format = FORMAT_R10G10B10A2_UNORM;
+		bool fullscreen = false;
+		bool vsync = true;
+		float clearcolor[4] = { 0,0,0,1 };
+	};
 	struct IndirectDrawArgsInstanced
 	{
 		uint32_t VertexCountPerInstance = 0;
@@ -809,6 +819,13 @@ namespace wiGraphics
 		RenderPassDesc desc;
 
 		const RenderPassDesc& GetDesc() const { return desc; }
+	};
+
+	struct SwapChain : public GraphicsDeviceChild
+	{
+		SwapChainDesc desc;
+
+		const SwapChainDesc& GetDesc() const { return desc; }
 	};
 
 

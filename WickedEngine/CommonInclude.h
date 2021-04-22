@@ -32,5 +32,4 @@ static const XMFLOAT4X4 IDENTITYMATRIX = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0
 #define NOMINMAX
 #define ALIGN_16 void* operator new(size_t i){return _mm_malloc(i, 16);} void operator delete(void* p){_mm_free(p);}
 
-
 #endif //WICKEDENGINE_COMMONINCLUDE_H

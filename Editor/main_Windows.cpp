@@ -4,8 +4,6 @@
 
 #include <fstream>
 
-using namespace std;
-
 #define MAX_LOADSTRING 100
 
 // Global Variables:
@@ -119,9 +117,9 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    int x = CW_USEDEFAULT, y = 0, w = CW_USEDEFAULT, h = 0;
    bool fullscreen = false;
    bool borderless = false;
-   string voidStr = "";
+   std::string voidStr = "";
 
-   ifstream file("config.ini");
+   std::ifstream file("config.ini");
    if (file.is_open())
    {
 	   int enabled;
@@ -201,17 +199,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         } 
         break;
 	case WM_SIZE:
-	    wiEvent::FireEvent(SYSTEM_EVENT_CHANGE_RESOLUTION, lParam);
-	    break;
 	case WM_DPICHANGED:
-        wiEvent::FireEvent(SYSTEM_EVENT_CHANGE_DPI, wParam);
+		editor.SetWindow(hWnd);
 	    break;
 	case WM_HOTKEY:
 		switch (wParam)
 		{
 		case PRINTSCREEN:
 			{
-				wiHelper::screenshot();
+				wiHelper::screenshot(editor.swapChain);
 			}
 			break;
 		default:

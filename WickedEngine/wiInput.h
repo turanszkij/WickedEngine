@@ -1,5 +1,6 @@
 #pragma once
 #include "CommonInclude.h"
+#include "wiPlatform.h"
 #include "wiColor.h"
 
 #include <vector>
@@ -110,7 +111,7 @@ namespace wiInput
 	void Initialize();
 
 	// call once per frame
-	void Update();
+	void Update(wiPlatform::window_type window);
 
 	const MouseState& GetMouseState();
 	

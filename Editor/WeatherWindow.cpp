@@ -4,7 +4,6 @@
 
 #include <thread>
 
-using namespace std;
 using namespace wiECS;
 using namespace wiScene;
 using namespace wiGraphics;

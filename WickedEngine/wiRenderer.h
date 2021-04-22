@@ -5,6 +5,7 @@
 #include "wiScene.h"
 #include "wiECS.h"
 #include "wiIntersect.h"
+#include "wiCanvas.h"
 #include "shaders/ShaderInterop_Renderer.h"
 
 #include <memory>
@@ -157,6 +158,7 @@ namespace wiRenderer
 		const Visibility& vis,
 		FrameCB& frameCB,
 		XMUINT2 internalResolution,
+		const wiCanvas& canvas,
 		float dt
 	);
 	// Updates the GPU state according to the previously called UpdatePerFrameData()
@@ -220,6 +222,7 @@ namespace wiRenderer
 	void DrawDebugWorld(
 		const wiScene::Scene& scene,
 		const wiScene::CameraComponent& camera,
+		const wiCanvas& canvas,
 		wiGraphics::CommandList cmd
 	);
 	// Draw Soft offscreen particles.
@@ -743,7 +746,7 @@ namespace wiRenderer
 	bool GetScreenSpaceShadowsEnabled();
 
 	// Gets pick ray according to the current screen resolution and pointer coordinates. Can be used as input into RayIntersectWorld()
-	RAY GetPickRay(long cursorX, long cursorY, const wiScene::CameraComponent& camera = wiScene::GetCamera());
+	RAY GetPickRay(long cursorX, long cursorY, const wiCanvas& canvas, const wiScene::CameraComponent& camera = wiScene::GetCamera());
 
 
 	// Add box to render in next frame. It will be rendered in DrawDebugWorld()

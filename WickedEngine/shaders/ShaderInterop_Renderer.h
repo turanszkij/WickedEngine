@@ -284,8 +284,8 @@ static const uint OPTION_BIT_SHADOW_MASK = 1 << 9;
 
 CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 {
-	float2		g_xFrame_ScreenWidthHeight;
-	float2		g_xFrame_ScreenWidthHeight_rcp;
+	float2		g_xFrame_CanvasSize;
+	float2		g_xFrame_CanvasSize_rcp;
 
 	float2		g_xFrame_InternalResolution;
 	float2		g_xFrame_InternalResolution_rcp;

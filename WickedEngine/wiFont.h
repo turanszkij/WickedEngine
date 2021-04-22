@@ -2,6 +2,7 @@
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
 #include "wiColor.h"
+#include "wiCanvas.h"
 
 #include <string>
 
@@ -54,6 +55,9 @@ namespace wiFont
 	//	NOTE: When loading font with this method, the developer must ensure that font data is
 	//	not deleted while the font is in use
 	int AddFontStyle(const std::string& fontName, const uint8_t* data, size_t size);
+
+	// Set canvas for the CommandList to handle DPI-aware font rendering
+	void SetCanvas(const wiCanvas& canvas, wiGraphics::CommandList cmd);
 
 	void Draw(const char* text, const wiFontParams& params, wiGraphics::CommandList cmd);
 	void Draw(const wchar_t* text, const wiFontParams& params, wiGraphics::CommandList cmd);

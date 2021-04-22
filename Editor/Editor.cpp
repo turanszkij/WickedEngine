@@ -10,7 +10,6 @@
 #include <cmath>
 #include <filesystem>
 
-using namespace std;
 using namespace wiGraphics;
 using namespace wiRectPacker;
 using namespace wiScene;
@@ -56,8 +55,8 @@ winrt::fire_and_forget uwp_copy_assets()
 	// Objects3D/WickedEngine
 	auto destfolder = co_await location.CreateFolderAsync(L"WickedEngine", CreationCollisionOption::OpenIfExists);
 
-	string rootdir = std::filesystem::current_path().string() + "\\";
-	wstring wstr;
+	std::string rootdir = std::filesystem::current_path().string() + "\\";
+	std::wstring wstr;
 
 	// scripts:
 	{
@@ -116,7 +115,6 @@ void Editor::Initialize()
 	infoDisplay.resolution = true;
 	infoDisplay.heap_allocation_counter = true;
 
-	wiRenderer::GetDevice()->SetVSyncEnabled(true);
 	wiRenderer::SetOcclusionCullingEnabled(true);
 
 	loader.Load();
@@ -131,14 +129,13 @@ void Editor::Initialize()
 
 void EditorLoadingScreen::Load()
 {
-	font = wiSpriteFont("Loading...", wiFontParams(wiRenderer::GetDevice()->GetScreenWidth()*0.5f, wiRenderer::GetDevice()->GetScreenHeight()*0.5f, 36,
+	font = wiSpriteFont("Loading...", wiFontParams(0, 0, 36,
 		WIFALIGN_CENTER, WIFALIGN_CENTER));
 	AddFont(&font);
 
 	sprite = wiSprite("images/logo_small.png");
 	sprite.anim.opa = 1;
 	sprite.anim.repeatable = true;
-	sprite.params.pos = XMFLOAT3(wiRenderer::GetDevice()->GetScreenWidth()*0.5f, wiRenderer::GetDevice()->GetScreenHeight()*0.5f - font.textHeight(), 0);
 	sprite.params.siz = XMFLOAT2(128, 128);
 	sprite.params.pivot = XMFLOAT2(0.5f, 1.0f);
 	sprite.params.quality = QUALITY_LINEAR;
@@ -149,9 +146,9 @@ void EditorLoadingScreen::Load()
 }
 void EditorLoadingScreen::Update(float dt)
 {
-	font.params.posX = wiRenderer::GetDevice()->GetScreenWidth()*0.5f;
-	font.params.posY = wiRenderer::GetDevice()->GetScreenHeight()*0.5f;
-	sprite.params.pos = XMFLOAT3(wiRenderer::GetDevice()->GetScreenWidth()*0.5f, wiRenderer::GetDevice()->GetScreenHeight()*0.5f - font.textHeight(), 0);
+	font.params.posX = GetLogicalWidth()*0.5f;
+	font.params.posY = GetLogicalHeight()*0.5f;
+	sprite.params.pos = XMFLOAT3(GetLogicalWidth()*0.5f, GetLogicalHeight()*0.5f - font.textHeight(), 0);
 
 	LoadingScreen::Update(dt);
 }
@@ -189,22 +186,26 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	postprocessWnd = PostprocessWindow();
 	postprocessWnd.Create(this);
 	gui.AddWidget(&postprocessWnd);
-
-	ResizeBuffers();
 }
 
 void EditorComponent::ResizeBuffers()
 {
+	init(main->canvas);
 	RenderPath2D::ResizeBuffers();
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	bool hr;
 
-	if(renderPath != nullptr && renderPath->GetDepthStencil() != nullptr)
+	renderPath->init(*this);
+	renderPath->ResizeBuffers();
+
+	if(renderPath->GetDepthStencil() != nullptr)
 	{
+		XMUINT2 internalResolution = GetInternalResolution();
+
 		TextureDesc desc;
-		desc.Width = GetInternalResolution().x;
-		desc.Height = GetInternalResolution().y;
+		desc.Width = internalResolution.x;
+		desc.Height = internalResolution.y;
 
 		desc.Format = FORMAT_R8_UNORM;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
@@ -261,8 +262,8 @@ void EditorComponent::ResizeLayout()
 
 	// GUI elements scaling:
 
-	float screenW = wiRenderer::GetDevice()->GetScreenWidth();
-	float screenH = wiRenderer::GetDevice()->GetScreenHeight();
+	float screenW = GetLogicalWidth();
+	float screenH = GetLogicalHeight();
 
 	XMFLOAT2 option_size = XMFLOAT2(100, 34);
 	float x = screenW - option_size.x;
@@ -712,7 +713,7 @@ void EditorComponent::Load()
 		wiHelper::FileDialog(params, [&](std::string fileName) {
 			wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 				main->loader.addLoadingFunction([=](wiJobArgs args) {
-					string extension = wiHelper::toUpper(wiHelper::GetExtensionFromFileName(fileName));
+					std::string extension = wiHelper::toUpper(wiHelper::GetExtensionFromFileName(fileName));
 
 					if (!extension.compare("WISCENE")) // engine-serialized
 					{
@@ -808,33 +809,33 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&helpButton);
 
 	{
-		stringstream ss("");
-		ss << "Help:" << endl;
-		ss << "Move camera: WASD, or Contoller left stick or D-pad" << endl;
-		ss << "Look: Middle mouse button / arrow keys / controller right stick" << endl;
-		ss << "Select: Right mouse button" << endl;
-		ss << "Place decal, interact with water: Left mouse button when nothing is selected" << endl;
-		ss << "Camera speed: SHIFT button or controller R2/RT" << endl;
-		ss << "Camera up: E, down: Q" << endl;
-		ss << "Duplicate entity: Ctrl + D" << endl;
-		ss << "Select All: Ctrl + A" << endl;
-		ss << "Undo: Ctrl + Z" << endl;
-		ss << "Redo: Ctrl + Y" << endl;
-		ss << "Copy: Ctrl + C" << endl;
-		ss << "Paste: Ctrl + V" << endl;
-		ss << "Delete: DELETE button" << endl;
-		ss << "Place Instances: Ctrl + Shift + Left mouse click (place clipboard onto clicked surface)" << endl;
-		ss << "Script Console / backlog: HOME button" << endl;
-		ss << endl;
-		ss << "You can find sample scenes in the models directory. Try to load one." << endl;
-		ss << "You can also import models from .OBJ, .GLTF, .GLB files." << endl;
-		ss << "You can find a program configuration file at Editor/config.ini" << endl;
-		ss << "You can find sample LUA scripts in the scripts directory. Try to load one." << endl;
-		ss << "You can find a startup script at Editor/startup.lua (this will be executed on program start)" << endl;
-		ss << endl << "For questions, bug reports, feedback, requests, please open an issue at:" << endl;
-		ss << "https://github.com/turanszkij/WickedEngine" << endl;
-		ss << endl << "Devblog: https://wickedengine.net/" << endl;
-		ss << "Discord: https://discord.gg/CFjRYmE" << endl;
+		std::stringstream ss("");
+		ss << "Help:" << std::endl;
+		ss << "Move camera: WASD, or Contoller left stick or D-pad" << std::endl;
+		ss << "Look: Middle mouse button / arrow keys / controller right stick" << std::endl;
+		ss << "Select: Right mouse button" << std::endl;
+		ss << "Interact with water: Left mouse button when nothing is selected" << std::endl;
+		ss << "Camera speed: SHIFT button or controller R2/RT" << std::endl;
+		ss << "Camera up: E, down: Q" << std::endl;
+		ss << "Duplicate entity: Ctrl + D" << std::endl;
+		ss << "Select All: Ctrl + A" << std::endl;
+		ss << "Undo: Ctrl + Z" << std::endl;
+		ss << "Redo: Ctrl + Y" << std::endl;
+		ss << "Copy: Ctrl + C" << std::endl;
+		ss << "Paste: Ctrl + V" << std::endl;
+		ss << "Delete: DELETE button" << std::endl;
+		ss << "Place Instances: Ctrl + Shift + Left mouse click (place clipboard onto clicked surface)" << std::endl;
+		ss << "Script Console / backlog: HOME button" << std::endl;
+		ss << std::endl;
+		ss << "You can find sample scenes in the models directory. Try to load one." << std::endl;
+		ss << "You can also import models from .OBJ, .GLTF, .GLB files." << std::endl;
+		ss << "You can find a program configuration file at Editor/config.ini" << std::endl;
+		ss << "You can find sample LUA scripts in the scripts directory. Try to load one." << std::endl;
+		ss << "You can find a startup script at Editor/startup.lua (this will be executed on program start)" << std::endl;
+		ss << std::endl << "For questions, bug reports, feedback, requests, please open an issue at:" << std::endl;
+		ss << "https://github.com/turanszkij/WickedEngine" << std::endl;
+		ss << std::endl << "Devblog: https://wickedengine.net/" << std::endl;
+		ss << "Discord: https://discord.gg/CFjRYmE" << std::endl;
 
 		helpLabel.Create("HelpLabel");
 		helpLabel.SetText(ss.str());
@@ -1092,7 +1093,7 @@ void EditorComponent::Update(float dt)
 		if (cameraWnd.fpsCheckBox.GetCheck())
 		{
 			// FPS Camera
-			const float clampedDT = min(dt, 0.1f); // if dt > 100 millisec, don't allow the camera to jump too far...
+			const float clampedDT = std::min(dt, 0.1f); // if dt > 100 millisec, don't allow the camera to jump too far...
 
 			const float speed = ((wiInput::Down(wiInput::KEYBOARD_BUTTON_LSHIFT) ? 10.0f : 1.0f) + rightTrigger.x * 10.0f) * cameraWnd.movespeedSlider.GetValue() * clampedDT;
 			static XMVECTOR move = XMVectorSet(0, 0, 0, 0);
@@ -1164,15 +1165,9 @@ void EditorComponent::Update(float dt)
 	{
 		// Begin picking:
 		unsigned int pickMask = rendererWnd.GetPickType();
-		RAY pickRay = wiRenderer::GetPickRay((long)currentMouse.x, (long)currentMouse.y);
+		RAY pickRay = wiRenderer::GetPickRay((long)currentMouse.x, (long)currentMouse.y, *this);
 		{
 			hovered = wiScene::PickResult();
-
-			// Try to pick objects-meshes:
-			if (pickMask & PICK_OBJECT)
-			{
-				hovered = wiScene::Pick(pickRay, pickMask);
-			}
 
 			if (pickMask & PICK_LIGHT)
 			{
@@ -1331,6 +1326,18 @@ void EditorComponent::Update(float dt)
 				}
 			}
 
+			if (pickMask & PICK_OBJECT && hovered.entity == INVALID_ENTITY)
+			{
+				// Object picking only when mouse button down, because it can be slow with high polycount
+				if (
+					wiInput::Down(wiInput::MOUSE_BUTTON_LEFT) ||
+					wiInput::Down(wiInput::MOUSE_BUTTON_RIGHT) ||
+					paintToolWnd.GetMode() != PaintToolWindow::MODE_DISABLED
+					)
+				{
+					hovered = wiScene::Pick(pickRay, pickMask);
+				}
+			}
 		}
 
 		// Interactions only when paint tool is disabled:
@@ -1414,7 +1421,7 @@ void EditorComponent::Update(float dt)
 				if (!translator.selected.empty() && wiInput::Down(wiInput::KEYBOARD_BUTTON_LSHIFT))
 				{
 					// Union selection:
-					list<wiScene::PickResult> saved = translator.selected;
+					std::list<wiScene::PickResult> saved = translator.selected;
 					translator.selected.clear(); 
 					for (const wiScene::PickResult& picked : saved)
 					{
@@ -1665,7 +1672,7 @@ void EditorComponent::Update(float dt)
 		}
 	}
 
-	translator.Update();
+	translator.Update(*this);
 
 	if (translator.IsDragEnded())
 	{
@@ -2404,7 +2411,7 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 			{
 				size_t count;
 				archive >> count;
-				vector<Entity> deletedEntities(count);
+				std::vector<Entity> deletedEntities(count);
 				for (size_t i = 0; i < count; ++i)
 				{
 					archive >> deletedEntities[i];
@@ -2431,7 +2438,7 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 			{
 				// Read selections states from archive:
 
-				list<wiScene::PickResult> selectedBEFORE;
+			std::list<wiScene::PickResult> selectedBEFORE;
 				size_t selectionCountBEFORE;
 				archive >> selectionCountBEFORE;
 				for (size_t i = 0; i < selectionCountBEFORE; ++i)
@@ -2446,7 +2453,7 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 					selectedBEFORE.push_back(sel);
 				}
 
-				list<wiScene::PickResult> selectedAFTER;
+				std::list<wiScene::PickResult> selectedAFTER;
 				size_t selectionCountAFTER;
 				archive >> selectionCountAFTER;
 				for (size_t i = 0; i < selectionCountAFTER; ++i)

@@ -6,7 +6,6 @@
 
 #include <sstream>
 
-using namespace std;
 using namespace wiECS;
 using namespace wiScene;
 
@@ -562,7 +561,7 @@ void MeshWindow::Create(EditorComponent* editor)
 	});
 	AddWidget(&morphTargetSlider);
 
-	Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 1000, 80, 0));
+	Translate(XMFLOAT3((float)editor->GetLogicalWidth() - 1000, 80, 0));
 	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);
@@ -586,12 +585,12 @@ void MeshWindow::SetEntity(Entity entity)
 	{
 		const NameComponent& name = *scene.names.GetComponent(entity);
 
-		stringstream ss("");
-		ss << "Mesh name: " << name.name << endl;
-		ss << "Vertex count: " << mesh->vertex_positions.size() << endl;
-		ss << "Index count: " << mesh->indices.size() << endl;
-		ss << "Subset count: " << mesh->subsets.size() << endl;
-		ss << endl << "Vertex buffers: ";
+		std::stringstream ss("");
+		ss << "Mesh name: " << name.name << std::endl;
+		ss << "Vertex count: " << mesh->vertex_positions.size() << std::endl;
+		ss << "Index count: " << mesh->indices.size() << std::endl;
+		ss << "Subset count: " << mesh->subsets.size() << std::endl;
+		ss << std::endl << "Vertex buffers: ";
 		if (mesh->vertexBuffer_POS.IsValid()) ss << "position; ";
 		if (mesh->vertexBuffer_UV0.IsValid()) ss << "uvset_0; ";
 		if (mesh->vertexBuffer_UV1.IsValid()) ss << "uvset_1; ";
@@ -602,7 +601,7 @@ void MeshWindow::SetEntity(Entity entity)
 		if (mesh->vertexBuffer_TAN.IsValid()) ss << "tangent; ";
 		if (mesh->streamoutBuffer_POS.IsValid()) ss << "streamout_position; ";
 		if (mesh->streamoutBuffer_TAN.IsValid()) ss << "streamout_tangents; ";
-		if (mesh->IsTerrain()) ss << endl << endl << "Terrain will use 4 blend materials and blend by vertex colors, the default one is always the subset material and uses RED vertex color channel mask, the other 3 are selectable below.";
+		if (mesh->IsTerrain()) ss << std::endl << std::endl << "Terrain will use 4 blend materials and blend by vertex colors, the default one is always the subset material and uses RED vertex color channel mask, the other 3 are selectable below.";
 		meshInfoLabel.SetText(ss.str());
 
 		terrainCheckBox.SetCheck(mesh->IsTerrain());

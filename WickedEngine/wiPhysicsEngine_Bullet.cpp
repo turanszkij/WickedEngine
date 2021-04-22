@@ -14,7 +14,6 @@
 #include <mutex>
 #include <memory>
 
-using namespace std;
 using namespace wiECS;
 using namespace wiScene;
 

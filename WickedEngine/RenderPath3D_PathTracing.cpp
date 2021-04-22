@@ -18,14 +18,15 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	FORMAT defaultTextureFormat = device->GetBackBufferFormat();
+	XMUINT2 internalResolution = GetInternalResolution();
+	FORMAT defaultTextureFormat = FORMAT_R10G10B10A2_UNORM;
 
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE | BIND_RENDER_TARGET;
 		desc.Format = FORMAT_R32G32B32A32_FLOAT;
-		desc.Width = GetInternalResolution().x;
-		desc.Height = GetInternalResolution().y;
+		desc.Width = internalResolution.x;
+		desc.Height = internalResolution.y;
 		device->CreateTexture(&desc, nullptr, &traceResult);
 		device->SetName(&traceResult, "traceResult");
 	}
@@ -33,8 +34,8 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 		TextureDesc desc;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.Format = defaultTextureFormat;
-		desc.Width = GetInternalResolution().x;
-		desc.Height = GetInternalResolution().y;
+		desc.Width = internalResolution.x;
+		desc.Height = internalResolution.y;
 		device->CreateTexture(&desc, nullptr, &rtPostprocess_LDR[0]);
 		device->SetName(&rtPostprocess_LDR[0], "rtPostprocess_LDR[0]");
 

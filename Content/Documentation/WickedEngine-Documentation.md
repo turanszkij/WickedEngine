@@ -41,6 +41,7 @@ This is a reference for the C++ features of Wicked Engine
 	4. [wiInitializer](#wiinitializer)
 	5. [wiPlatform](#wiplatform)
 	6. [wiEvent](#wievent)
+	7. [wiCanvas](#wicanvas)
 3. [Graphics](#graphics)
 	1. [wiGraphics](#wigraphics)
 		1. [GraphicsDevice](#wigraphicsdevice)
@@ -170,6 +171,7 @@ The high level interface consists of classes that allow for extending the engine
 ### MainComponent
 [[Header]](../../WickedEngine/MainComponent.h) [[Cpp]](../../WickedEngine/MainComponent.cpp)
 This is the main runtime component that has the Run() function. It should be included in the application entry point while calling Run() in an infinite loop. <br/>
+The user should call the SetWindow() function to associate it with a window of the operating system. This window will be used to render to.<br/>
 The MainComponent has many uses that the user is not necessarily interested in. The most important part is that it manages the RenderPaths. There can be one active RenderPath at a time, which will be updated and rendered to the screen every frame. However, because a RenderPath is a highly customizable class, there is no limitation what can be done within the RenderPath, for example supporting multiple concurrent RenderPaths if required. RenderPaths can be switched wit ha Fade out screen easily. Loading Screen can be activated as an active Renderpath and it will load and switch to an other RenderPath if desired. A RenderPath can be simply activated with the MainComponent::ActivatePath() function.<br/>
 The MainComponent does the following every frame while it is running:<br/>
 1. FixedUpdate() <br/>
@@ -183,7 +185,7 @@ Calls Compose for the active RenderPath
 
 ### RenderPath
 [[Header]](../../WickedEngine/RenderPath.h)
-This is an empty base class that can be activated with a MainComponent. It calls its Start(), Update(), FixedUpdate(), Render(), Compose(), Stop() functions as needed. Override this to perform custom gameplay or rendering logic. <br/>
+This is an empty base class that can be activated with a MainComponent. It calls its Start(), Update(), FixedUpdate(), Render(), Compose(), Stop() functions as needed. Override this to perform custom gameplay or rendering logic. The RenderPath inherits from [wiCanvas](#wicanvas), and the canvas properties will be set by the [MainComponent](#maincomponent) when the RenderPath was activated, and while the RenderPath is active. <br/>
 The order in which the functions are executed every frame: <br/>
 1. PreUpdate() <br/>
 This will be called once per frame before any script that calls Update().
@@ -412,6 +414,10 @@ The first argument is the event id, that says which events to invoke.
 The second argument will be passed to the subscribed event's userdata parameter.
 All events that are subsribed to the specified event id will run immediately at the time of the call of FireEvent. The order of execution among events is the order of which they were subscribed.
 
+### wiCanvas
+[[Header]](../../WickedEngine/wiCanvas.h)
+The canvas specifies a DPI-aware drawing area. Use the GetLogical... functions to get parameters with DPI aware scale factors applied. Use the GetPhysical... functions to get the real pixel counts.
+
 
 ## Graphics
 Everything related to rendering graphics will be discussed below
@@ -434,7 +440,7 @@ Functions like `CreateTexture()`, `CreateBuffer()`, etc. can be used to create c
 Resources will be destroyed automatically by the graphics device when they are no longer used.
 
 ##### Work submission
-Rendering commands that expect a `CommandList` as a parameter are not executed immediately. They will be recorded into command lists and submitted to the GPU for execution upon calling the `PresentEnd()` function. The `CommandList` is a simple handle that associates rendering commands to a CPU execution timeline. The `CommandList` is not thread safe, so every `CommandList` can be used by a single CPU thread at a time to record commands. In a multithreading scenario, each CPU thread should have its own `CommandList`. `CommandList`s can be retrieved from the [GraphicsDevice](#graphicsdevice) by calling `GraphicsDevice::BeginCommandList()` that will return a `CommandList` handle that is free to be used from that point by the calling thread. All such handles will be in use until `SubmitCommandLists()` or `PresentEnd()` was called, where GPU submission takes place. The command lists will be submitted in the order they were retrieved with `GraphicsDevice::BeginCommandList()`. The order of submission correlates with the order of actual GPU execution. For example:
+Rendering commands that expect a `CommandList` as a parameter are not executed immediately. They will be recorded into command lists and submitted to the GPU for execution upon calling the `SubmitCommandLists()` function. The `CommandList` is a simple handle that associates rendering commands to a CPU execution timeline. The `CommandList` is not thread safe, so every `CommandList` can be used by a single CPU thread at a time to record commands. In a multithreading scenario, each CPU thread should have its own `CommandList`. `CommandList`s can be retrieved from the [GraphicsDevice](#graphicsdevice) by calling `GraphicsDevice::BeginCommandList()` that will return a `CommandList` handle that is free to be used from that point by the calling thread. All such handles will be in use until `SubmitCommandLists()` or `PresentEnd()` was called, where GPU submission takes place. The command lists will be submitted in the order they were retrieved with `GraphicsDevice::BeginCommandList()`. The order of submission correlates with the order of actual GPU execution. For example:
 
 ```cpp
 CommandList cmd1 = device->BeginCommandList();
@@ -446,32 +452,17 @@ Render_Shadowmaps(cmd1); // CPU executes these commands second
 //...
 
 CommandList cmd_present = device->BeginCommandList();
-device->PresentBegin(cmd_present);
-// ...
-device->PresentEnd(cmd_present); // CPU submits work for GPU
+
+device->SubmitCommandLists(cmd_present); // CPU submits work for GPU
 // The GPU will execute the Render_Shadowmaps() commands first, then the Read_Shadowmaps() commands second
-// The GPU will execute the commands between PresentBegin() and PresentEnd() last.
-// PresentEnd displays the final image (render command executed between PresentBegin and PresentEnd) to the screen
 ```
 
-In specific circumstances, when outputting the final image to the screen is not immediately required, the `SubmitCommandLists()` option can also be used to submit and execute GPU work:
-
-```cpp
-CommandList cmd1 = device->BeginCommandList();
-CommandList cmd2 = device->BeginCommandList();
-
-// Record something with command lists...
-
-device->SubmitCommandLists(); // CPU submits work for GPU
-// The GPU will execute commands recorded with cmd1, then cmd2
-```
-
-When submitting command lists with `SubmitCommandLists()` or `PresentEnd()`, the CPU can be blocked in cases when there is too much GPU work submitted already that didn't finish.
+When submitting command lists with `SubmitCommandLists()`, the CPU thread can be blocked in cases when there is too much GPU work submitted already that didn't finish. It's not appropriate to start recording new command lists until `SubmitCommandLists()` finished.
 
 Furthermore, the `BeginCommandList()` is thread safe, so the user can call it from worker threads if ordering between command lists is not a requirement (such as when they are producing workloads that are independent of each other).
 
 ##### Presenting to the screen
-The `PresentBegin()` and `PresentEnd()` functions are used to prepare for rendering to the back buffer. When the `PresentBegin()` is called, the back buffer will be set as the current active render target or render pass. This means, that rendering commands will draw directly to the screen. This is generally used to draw textures that were previously rendered to, or 2D GUI elements. For example, the `RenderPath3D::Compose()` function is used in the [High Level Interface](#high-level-interface) to draw the results of the `RenderPath3D::Render()`, and the [GUI](#gui) elements. The rendering commands executed between `PresentBegin()` and `PresentEnd()` are still executed by the GPU in the command list beginning order described in the topic: [Work submission](#work-submission).
+To present to the screen (an operating system window), first create a SwapChain with the `CreateSwapChain()` function that will be associated with a window. The SwapChain acts as a special kind of [RenderPass](#render-passes), so there is a `BeginRenderPass()` function with an overload that accepts a SwapChain parameter instead of a RenderPass. Simply use this `BeginRenderPass()` and `EndRenderPass()` to draw to the SwapChain. The final presentation will happen when calling `SubmitCommandLists()`.
 
 ##### Resource binding
 The resource binding model is based on DirectX 11. That means, resources are bound to slot numbers that are simple integers. This makes it easy to share binding information between shaders and C++ code, just define the bind slot number as global constants in [shared header files](#shaderinterop). For sharing, the bind slot numbers can be easily defined as compile time constants using:
@@ -847,11 +838,12 @@ This is widely used to make code straight forward and easy to add new objects, w
 
 ### wiImage
 [[Header]](../../WickedEngine/wiImage.h) [[Cpp]](../../WickedEngine/wiImage.cpp)
-This can render images to the screen in a simple manner. You can draw an image to the screen with a simple one liner:
+This can render images to the screen in a simple manner. You can draw an image like this:
 ```cpp
+wiImage::SetCanvas(canvas, cmd); // setting the canvas area is required to set the drawing area and perform DPI scaling (the canvas will remain for the duration of the command list)
 wiImage::Draw(myTexture, wiImageParams(10, 20, 256, 128), cmd);
 ```
-The example will draw a 2D texture image to the position (10, 20), with a size of 256 x 128 pixels to the screen (or the curernt render pass). There are a lot of other parameters to customize the rendered image, for more information see wiImageParams structure.
+The example will draw a 2D texture image to the position (10, 20), with a size of 256 x 128 pixels to the current render pass. There are a lot of other parameters to customize the rendered image, for more information see wiImageParams structure.
 - wiImageParams <br/>
 Describe all parameters of how and where to draw the image on the screen.
 
@@ -859,6 +851,7 @@ Describe all parameters of how and where to draw the image on the screen.
 [[Header]](../../WickedEngine/wiFont.h) [[Cpp]](../../WickedEngine/wiFont.cpp)
 This can render fonts to the screen in a simple manner. You can render a font as simple as this:
 ```cpp
+wiFont::SetCanvas(canvas, cmd); // setting the canvas area is required to set the drawing area and perform DPI scaling (the canvas will remain for the duration of the command list)
 wiFont::Draw("write this!", wiFontParams(10, 20), cmd);
 ```
 Which will write the text <i>write this!</i> to 10, 20 pixel position onto the screen. There are many other parameters to describe the font's position, size, color, etc. See the wiFontParams structure for more details.
@@ -872,7 +865,7 @@ The wiFont can load and render .ttf (TrueType) fonts. The default arial font sty
 GPU driven emitter particle system, used to draw large amount of camera facing quad billboards. Supports simulation with force fields and fluid simulation based on Smooth Particle Hydrodynamics computation.
 
 ### wiHairParticle
-[[Header]](../../WickedEngine/wiHairParticle.h) [[Cpp]](../../WickedEngine/wiHaorParticle.cpp)
+[[Header]](../../WickedEngine/wiHairParticle.h) [[Cpp]](../../WickedEngine/wiHairParticle.cpp)
 GPU driven particles that are attached to a mesh surface. It can be used to render vegetation. It participates in force fields simulation.
 
 ### wiOcean

@@ -212,7 +212,7 @@ void TransformWindow::Create(EditorComponent* editor)
 		});
 	AddWidget(&szInput);
 
-	Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 750, 100, 0));
+	Translate(XMFLOAT3((float)editor->GetLogicalWidth() - 750, 100, 0));
 	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);

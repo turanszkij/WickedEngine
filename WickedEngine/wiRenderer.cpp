@@ -33,7 +33,6 @@
 #include <algorithm>
 #include <array>
 
-using namespace std;
 using namespace wiGraphics;
 using namespace wiScene;
 using namespace wiECS;
@@ -124,9 +123,9 @@ Texture shadowMapArray_Transparent_Cube;
 std::vector<RenderPass> renderpasses_shadow2D;
 std::vector<RenderPass> renderpasses_shadowCube;
 
-std::vector<pair<XMFLOAT4X4, XMFLOAT4>> renderableBoxes;
-std::vector<pair<SPHERE, XMFLOAT4>> renderableSpheres;
-std::vector<pair<CAPSULE, XMFLOAT4>> renderableCapsules;
+std::vector<std::pair<XMFLOAT4X4, XMFLOAT4>> renderableBoxes;
+std::vector<std::pair<SPHERE, XMFLOAT4>> renderableSpheres;
+std::vector<std::pair<CAPSULE, XMFLOAT4>> renderableCapsules;
 std::vector<RenderableLine> renderableLines;
 std::vector<RenderableLine2D> renderableLines2D;
 std::vector<RenderablePoint> renderablePoints;
@@ -938,7 +937,7 @@ bool LoadShader(SHADERSTAGE stage, Shader& shader, const std::string& filename, 
 		}
 	}
 
-	vector<uint8_t> buffer;
+	std::vector<uint8_t> buffer;
 	if (wiHelper::FileRead(shaderbinaryfilename, buffer))
 	{
 		return device->CreateShader(stage, buffer.data(), buffer.size(), &shader);
@@ -2595,13 +2594,6 @@ void Initialize()
 	SetShadowProps2D(SHADOWRES_2D, SHADOWCOUNT_2D);
 	SetShadowPropsCube(SHADOWRES_CUBE, SHADOWCOUNT_CUBE);
 
-
-	static wiEvent::Handle handle3 = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_RESOLUTION, [](uint64_t userdata) {
-		int width = userdata & 0xFFFF;
-		int height = (userdata >> 16) & 0xFFFF;
-		device->SetResolution(width, height);
-	});
-
 	wiBackLog::post("wiRenderer Initialized");
 }
 void ClearWorld(Scene& scene)
@@ -3612,6 +3604,7 @@ void UpdatePerFrameData(
 	const Visibility& vis,
 	FrameCB& frameCB,
 	XMUINT2 internalResolution,
+	const wiCanvas& canvas,
 	float dt
 )
 {
@@ -3678,8 +3671,8 @@ void UpdatePerFrameData(
 
 	// Update CPU-side frame constant buffer:
 	frameCB.g_xFrame_ConstantOne = 1;
-	frameCB.g_xFrame_ScreenWidthHeight = float2((float)device->GetScreenWidth(), (float)device->GetScreenHeight());
-	frameCB.g_xFrame_ScreenWidthHeight_rcp = float2(1.0f / frameCB.g_xFrame_ScreenWidthHeight.x, 1.0f / frameCB.g_xFrame_ScreenWidthHeight.y);
+	frameCB.g_xFrame_CanvasSize = float2(canvas.GetLogicalWidth(), canvas.GetLogicalHeight());
+	frameCB.g_xFrame_CanvasSize_rcp = float2(1.0f / frameCB.g_xFrame_CanvasSize.x, 1.0f / frameCB.g_xFrame_CanvasSize.y);
 	frameCB.g_xFrame_InternalResolution = float2((float)internalResolution.x, (float)internalResolution.y);
 	frameCB.g_xFrame_InternalResolution_rcp = float2(1.0f / frameCB.g_xFrame_InternalResolution.x, 1.0f / frameCB.g_xFrame_InternalResolution.y);
 	frameCB.g_xFrame_Gamma = GetGamma();
@@ -5358,6 +5351,7 @@ void DrawScene(
 void DrawDebugWorld(
 	const Scene& scene,
 	const CameraComponent& camera,
+	const wiCanvas& canvas,
 	CommandList cmd
 )
 {
@@ -5720,7 +5714,7 @@ void DrawDebugWorld(
 		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_LINES], cmd);
 
 		MiscCB sb;
-		XMStoreFloat4x4(&sb.g_xTransform, device->GetScreenProjection());
+		XMStoreFloat4x4(&sb.g_xTransform, canvas.GetProjection());
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
 		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
 		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
@@ -7717,20 +7711,24 @@ void RayTraceScene(
 	CommandList cmd
 )
 {
-	device->EventBegin("RayTraceScene", cmd);
-	auto range = wiProfiler::BeginRangeGPU("RayTraceScene", cmd);
-
-	const TextureDesc& desc = output.GetDesc();
-
 	// Set up tracing resources:
 	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
 	{
+		if (!scene.TLAS.IsValid())
+		{
+			return;
+		}
 		device->BindResource(CS, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
 	}
 	else
 	{
 		scene.BVH.Bind(CS, cmd);
 	}
+
+	device->EventBegin("RayTraceScene", cmd);
+	auto range = wiProfiler::BeginRangeGPU("RayTraceScene", cmd);
+
+	const TextureDesc& desc = output.GetDesc();
 
 	if (scene.weather.skyMap != nullptr)
 	{
@@ -11978,10 +11976,10 @@ void Postprocess_NormalsFromDepth(
 }
 
 
-RAY GetPickRay(long cursorX, long cursorY, const CameraComponent& camera)
+RAY GetPickRay(long cursorX, long cursorY, const wiCanvas& canvas, const CameraComponent& camera)
 {
-	float screenW = device->GetScreenWidth();
-	float screenH = device->GetScreenHeight();
+	float screenW = canvas.GetLogicalWidth();
+	float screenH = canvas.GetLogicalHeight();
 
 	XMMATRIX V = camera.GetView();
 	XMMATRIX P = camera.GetProjection();

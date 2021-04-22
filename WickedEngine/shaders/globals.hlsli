@@ -59,9 +59,6 @@ inline float GetSunEnergy() { return g_xFrame_SunEnergy; }
 inline float3 GetHorizonColor() { return g_xFrame_Horizon.rgb; }
 inline float3 GetZenithColor() { return g_xFrame_Zenith.rgb; }
 inline float3 GetAmbientColor() { return g_xFrame_Ambient.rgb; }
-inline float2 GetScreenResolution() { return g_xFrame_ScreenWidthHeight; }
-inline float GetScreenWidth() { return g_xFrame_ScreenWidthHeight.x; }
-inline float GetScreenHeight() { return g_xFrame_ScreenWidthHeight.y; }
 inline float2 GetInternalResolution() { return g_xFrame_InternalResolution; }
 inline float GetTime() { return g_xFrame_Time; }
 inline uint2 GetTemporalAASampleRotation() { return uint2((g_xFrame_TemporalAASampleRotation >> 0u) & 0x000000FF, (g_xFrame_TemporalAASampleRotation >> 8) & 0x000000FF); }

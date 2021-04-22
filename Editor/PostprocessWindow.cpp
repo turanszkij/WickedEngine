@@ -4,7 +4,6 @@
 
 #include <thread>
 
-using namespace std;
 using namespace wiGraphics;
 
 
@@ -239,7 +238,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	AddWidget(&motionBlurStrengthSlider);
 
 	depthOfFieldCheckBox.Create("DepthOfField: ");
-	depthOfFieldCheckBox.SetTooltip("Enable Depth of field effect. Additional focus and strength setup required.");
+	depthOfFieldCheckBox.SetTooltip("Enable Depth of field effect. Requires additional camera setup: focal length and aperture size.");
 	depthOfFieldCheckBox.SetScriptTip("RenderPath3D::SetDepthOfFieldEnabled(bool value)");
 	depthOfFieldCheckBox.SetSize(XMFLOAT2(hei, hei));
 	depthOfFieldCheckBox.SetPos(XMFLOAT2(x, y += step));
@@ -385,7 +384,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	AddWidget(&chromaticaberrationSlider);
 
 
-	Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 500, 80, 0));
+	Translate(XMFLOAT3((float)editor->GetLogicalWidth() - 500, 80, 0));
 	SetVisible(false);
 
 }
