@@ -1,6 +1,7 @@
 /*-------------------------------------------------------------------------------------
  *
  * Copyright (c) Microsoft Corporation
+ * Licensed under the MIT license
  *
  *-------------------------------------------------------------------------------------*/
 
@@ -94,8 +95,8 @@ typedef interface DirectMLTensorFlowCreatorID DirectMLTensorFlowCreatorID;
 
 
 /* header files for imported files */
-#include "oaidl.h"
-#include "ocidl.h"
+#include "OAIdl.h"
+#include "OCIdl.h"
 #include "d3d11on12.h"
 
 #ifdef __cplusplus
@@ -108,7 +109,7 @@ extern "C"{
 
 #include <winapifamily.h>
 #pragma region Desktop Family
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_APP | WINAPI_PARTITION_GAMES)
 typedef 
 enum D3D12_COMPATIBILITY_SHARED_FLAGS
     {
@@ -632,7 +633,7 @@ EXTERN_C const IID IID_DirectMLTensorFlowCreatorID;
 /* interface __MIDL_itf_d3d12compatibility_0000_0006 */
 /* [local] */ 
 
-#endif /* WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) */
+#endif /* WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_APP | WINAPI_PARTITION_GAMES) */
 #pragma endregion
 DEFINE_GUID(IID_ID3D12CompatibilityDevice,0x8f1c0e3c,0xfae3,0x4a82,0xb0,0x98,0xbf,0xe1,0x70,0x82,0x07,0xff);
 DEFINE_GUID(IID_D3D11On12CreatorID,0xedbf5678,0x2960,0x4e81,0x84,0x29,0x99,0xd4,0xb2,0x63,0x0c,0x4e);

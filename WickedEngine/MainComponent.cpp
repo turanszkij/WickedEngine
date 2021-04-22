@@ -109,8 +109,6 @@ void MainComponent::Run()
 
 	wiProfiler::BeginFrame();
 
-	wiInput::Update(window);
-
 	deltaTime = float(std::max(0.0, timer.elapsed() / 1000.0));
 	timer.record();
 
@@ -166,6 +164,8 @@ void MainComponent::Run()
 		// If the application is not active, disable Update loops:
 		deltaTimeAccumulator = 0;
 	}
+
+	wiInput::Update(window);
 
 	CommandList cmd = wiRenderer::GetDevice()->BeginCommandList();
 	wiRenderer::GetDevice()->RenderPassBegin(&swapChain, cmd);

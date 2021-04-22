@@ -1,6 +1,7 @@
 //
 // DXCore Interface
-// Copyright (C) Microsoft Corporation. All rights reserved.
+// Copyright (C) Microsoft Corporation.
+// Licensed under the MIT license.
 //
 
 #ifndef __dxcore_interface_h__

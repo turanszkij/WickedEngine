@@ -5586,7 +5586,7 @@ using namespace Vulkan_Internal;
 				info.objectHandle = (uint64_t)to_internal((const RaytracingAccelerationStructure*)pResource)->resource;
 			}
 
-			if (info.objectHandle == VK_NULL_HANDLE)
+			if (info.objectHandle == (uint64_t)VK_NULL_HANDLE)
 			{
 				return;
 			}

@@ -1,6 +1,7 @@
 /*-------------------------------------------------------------------------------------
  *
  * Copyright (c) Microsoft Corporation
+ * Licensed under the MIT license
  *
  *-------------------------------------------------------------------------------------*/
 
@@ -8,7 +9,7 @@
 /* this ALWAYS GENERATED file contains the definitions for the interfaces */
 
 
- /* File created by MIDL compiler version 8.01.0624 */
+ /* File created by MIDL compiler version 8.01.0625 */
 
 
 
@@ -444,8 +445,8 @@ typedef interface ID3D12GraphicsCommandList6 ID3D12GraphicsCommandList6;
 
 
 /* header files for imported files */
-#include "oaidl.h"
-#include "ocidl.h"
+#include "OAIdl.h"
+#include "OCIdl.h"
 #include "dxgicommon.h"
 #include "dxgiformat.h"
 #include "d3dcommon.h"
@@ -2079,7 +2080,8 @@ enum D3D12_FEATURE
         D3D12_FEATURE_PROTECTED_RESOURCE_SESSION_TYPES	= 34,
         D3D12_FEATURE_D3D12_OPTIONS8	= 36,
         D3D12_FEATURE_D3D12_OPTIONS9	= 37,
-        D3D12_FEATURE_D3D12_OPTIONS10	= 39
+        D3D12_FEATURE_D3D12_OPTIONS10	= 39,
+        D3D12_FEATURE_D3D12_OPTIONS11	= 40
     } 	D3D12_FEATURE;
 
 typedef 
@@ -2341,7 +2343,9 @@ enum D3D12_SHADER_CACHE_SUPPORT_FLAGS
         D3D12_SHADER_CACHE_SUPPORT_LIBRARY	= 0x2,
         D3D12_SHADER_CACHE_SUPPORT_AUTOMATIC_INPROC_CACHE	= 0x4,
         D3D12_SHADER_CACHE_SUPPORT_AUTOMATIC_DISK_CACHE	= 0x8,
-        D3D12_SHADER_CACHE_SUPPORT_DRIVER_MANAGED_CACHE	= 0x10
+        D3D12_SHADER_CACHE_SUPPORT_DRIVER_MANAGED_CACHE	= 0x10,
+        D3D12_SHADER_CACHE_SUPPORT_SHADER_CONTROL_CLEAR	= 0x20,
+        D3D12_SHADER_CACHE_SUPPORT_SHADER_SESSION_DELETE	= 0x40
     } 	D3D12_SHADER_CACHE_SUPPORT_FLAGS;
 
 DEFINE_ENUM_FLAG_OPERATORS( D3D12_SHADER_CACHE_SUPPORT_FLAGS );
@@ -2524,6 +2528,11 @@ typedef struct D3D12_FEATURE_DATA_D3D12_OPTIONS10
     _Out_  BOOL VariableRateShadingSumCombinerSupported;
     _Out_  BOOL MeshShaderPerPrimitiveShadingRateSupported;
     } 	D3D12_FEATURE_DATA_D3D12_OPTIONS10;
+
+typedef struct D3D12_FEATURE_DATA_D3D12_OPTIONS11
+    {
+    _Out_  BOOL AtomicInt64OnDescriptorHeapResourceSupported;
+    } 	D3D12_FEATURE_DATA_D3D12_OPTIONS11;
 
 typedef struct D3D12_RESOURCE_ALLOCATION_INFO
     {
@@ -4372,10 +4381,6 @@ EXTERN_C const IID IID_ID3D12Heap;
 
 
 
-
-
-
-
 #endif 	/* __ID3D12Heap_INTERFACE_DEFINED__ */
 
 
@@ -4591,10 +4596,6 @@ EXTERN_C const IID IID_ID3D12Resource;
 
 
 #endif 	/* C style interface */
-
-
-
-
 
 
 
@@ -5317,18 +5318,6 @@ EXTERN_C const IID IID_ID3D12DescriptorHeap;
 
 
 #endif 	/* C style interface */
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -8351,10 +8340,6 @@ EXTERN_C const IID IID_ID3D12CommandQueue;
 
 
 
-
-
-
-
 #endif 	/* __ID3D12CommandQueue_INTERFACE_DEFINED__ */
 
 
@@ -9074,18 +9059,6 @@ EXTERN_C const IID IID_ID3D12Device;
 
 
 #endif 	/* C style interface */
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -11564,10 +11537,6 @@ EXTERN_C const IID IID_ID3D12ProtectedResourceSession;
 
 
 
-
-
-
-
 #endif 	/* __ID3D12ProtectedResourceSession_INTERFACE_DEFINED__ */
 
 
@@ -12262,10 +12231,6 @@ EXTERN_C const IID IID_ID3D12Device4;
 
 
 
-
-
-
-
 #endif 	/* __ID3D12Device4_INTERFACE_DEFINED__ */
 
 
@@ -12482,10 +12447,6 @@ EXTERN_C const IID IID_ID3D12SwapChainAssistant;
 
 
 #endif 	/* C style interface */
-
-
-
-
 
 
 
@@ -15888,10 +15849,6 @@ EXTERN_C const IID IID_ID3D12ProtectedResourceSession1;
 
 
 
-
-
-
-
 #endif 	/* __ID3D12ProtectedResourceSession1_INTERFACE_DEFINED__ */
 
 
@@ -17542,10 +17499,6 @@ EXTERN_C const IID IID_ID3D12Device8;
 
 
 
-
-
-
-
 #endif 	/* __ID3D12Device8_INTERFACE_DEFINED__ */
 
 
@@ -17953,10 +17906,6 @@ EXTERN_C const IID IID_ID3D12Resource2;
 
 
 #endif 	/* C style interface */
-
-
-
-
 
 
 
@@ -20137,10 +20086,6 @@ EXTERN_C const IID IID_ID3D12ShaderCacheSession;
 
 
 #endif 	/* C style interface */
-
-
-
-
 
 
 

@@ -1,6 +1,7 @@
 //////////////////////////////////////////////////////////////////////////////
 //
-//  Copyright (c) Microsoft Corporation.  All rights reserved.
+//  Copyright (c) Microsoft Corporation.
+//  Licensed under the MIT license.
 //
 //  File:       D3D12Shader.h
 //  Content:    D3D12 Shader Types and APIs
@@ -186,6 +187,7 @@ typedef struct _D3D12_SHADER_INPUT_BIND_DESC
 #define D3D_SHADER_REQUIRES_RESOURCE_DESCRIPTOR_HEAP_INDEXING                               0x02000000
 #define D3D_SHADER_REQUIRES_SAMPLER_DESCRIPTOR_HEAP_INDEXING                                0x04000000
 #define D3D_SHADER_REQUIRES_WAVE_MMA                                                        0x08000000
+#define D3D_SHADER_REQUIRES_ATOMIC_INT64_ON_DESCRIPTOR_HEAP_RESOURCE                        0x10000000
 
 typedef struct _D3D12_LIBRARY_DESC
 {

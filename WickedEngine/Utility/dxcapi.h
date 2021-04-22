@@ -511,6 +511,17 @@ struct IDxcValidator : public IUnknown {
     ) = 0;
 };
 
+CROSS_PLATFORM_UUIDOF(IDxcValidator2, "458e1fd1-b1b2-4750-a6e1-9c10f03bed92")
+struct IDxcValidator2 : public IDxcValidator {
+  // Validate a shader.
+  virtual HRESULT STDMETHODCALLTYPE ValidateWithDebug(
+    _In_ IDxcBlob *pShader,                       // Shader to validate.
+    _In_ UINT32 Flags,                            // Validation flags.
+    _In_opt_ DxcBuffer *pOptDebugBitcode,         // Optional debug module bitcode to provide line numbers
+    _COM_Outptr_ IDxcOperationResult **ppResult   // Validation output status, buffer, and errors
+    ) = 0;
+};
+
 CROSS_PLATFORM_UUIDOF(IDxcContainerBuilder, "334b1f50-2292-4b35-99a1-25588d8c17fe")
 struct IDxcContainerBuilder : public IUnknown {
   virtual HRESULT STDMETHODCALLTYPE Load(_In_ IDxcBlob *pDxilContainerHeader) = 0;                // Loads DxilContainer to the builder
