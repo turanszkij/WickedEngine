@@ -155,7 +155,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
     case WM_SIZE:
     case WM_DPICHANGED:
-		tests.SetWindow(hWnd);
+		if (tests.is_window_active)
+			tests.SetWindow(hWnd);
         break;
 	case WM_CHAR:
 		switch (wParam)
