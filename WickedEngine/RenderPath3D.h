@@ -105,6 +105,7 @@ public:
 
 	wiGraphics::Texture debugUAV; // debug UAV can be used by some shaders...
 	wiRenderer::TiledLightResources tiledLightResources;
+	wiRenderer::TiledLightResources tiledLightResources_planarReflection;
 	wiRenderer::LuminanceResources luminanceResources;
 	wiRenderer::SSAOResources ssaoResources;
 	wiRenderer::MSAOResources msaoResources;

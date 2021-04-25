@@ -205,7 +205,7 @@ void wiWidget::SetEnabled(bool val)
 {
 	if (enabled != val)
 	{
-		priority_change |= val;
+		priority_change = val;
 		enabled = val;
 	}
 }

@@ -7262,7 +7262,7 @@ void ComputeTiledLightCulling(
 
 		device->BindResource(CS, &res.tileFrustums, TEXSLOT_ONDEMAND0, cmd);
 
-		if (GetDebugLightCulling())
+		if (GetDebugLightCulling() && debugUAV.IsValid())
 		{
 			device->BindComputeShader(&shaders[GetAdvancedLightCulling() ? CSTYPE_LIGHTCULLING_ADVANCED_DEBUG : CSTYPE_LIGHTCULLING_DEBUG], cmd);
 			device->BindUAV(CS, &debugUAV, 3, cmd);
@@ -11497,6 +11497,8 @@ void Postprocess_DepthPyramid(
 {
 	device->EventBegin("Postprocess_DepthPyramid", cmd);
 	auto range = wiProfiler::BeginRangeGPU("Depth Pyramid", cmd);
+
+	BindCommonResources(cmd);
 
 	const TextureDesc& desc = lineardepth.GetDesc();
 
