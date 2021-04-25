@@ -602,8 +602,18 @@ void RenderPath3D::Render() const
 
 	// Preparing the frame:
 	cmd = device->BeginCommandList();
+	CommandList cmd_prepareframe = cmd;
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 		RenderFrameSetUp(cmd);
+		});
+
+	// Acceleration structures:
+	cmd = device->BeginCommandList(QUEUE_COMPUTE);
+	device->WaitCommandList(cmd, cmd_prepareframe);
+	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
+
+		wiRenderer::UpdateRaytracingAccelerationStructures(*scene, cmd);
+
 		});
 
 	static const uint32_t drawscene_flags =
@@ -682,8 +692,6 @@ void RenderPath3D::Render() const
 		}
 
 		wiRenderer::Postprocess_DepthPyramid(depthBuffer_Copy, rtLinearDepth, cmd);
-
-		wiRenderer::UpdateRaytracingAccelerationStructures(*scene, cmd);
 
 		RenderAO(cmd);
 
