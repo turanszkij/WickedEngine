@@ -158,6 +158,7 @@ void RenderPath3D::ResizeBuffers()
 		desc.Format = FORMAT_R32G32B32A32_UINT;
 		desc.Width = internalResolution.x;
 		desc.Height = internalResolution.y;
+		desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
 		device->CreateTexture(&desc, nullptr, &rtShadow);
 		device->SetName(&rtShadow, "rtShadow");
 	}
