@@ -405,7 +405,7 @@ namespace wiGraphics
 
 		void SetName(GPUResource* pResource, const char* name) override;
 
-		CommandList BeginCommandList() override;
+		CommandList BeginCommandList(QUEUE_TYPE queue = QUEUE_GRAPHICS) override;
 		void SubmitCommandLists() override;
 
 		void WaitForGPU() const override;

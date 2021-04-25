@@ -2332,13 +2332,22 @@ using namespace DX12_Internal;
 		hr = D3D12MA::CreateAllocator(&allocatorDesc, &allocationhandler->allocator);
 		assert(SUCCEEDED(hr));
 
-		// Create command queue
-		D3D12_COMMAND_QUEUE_DESC queueDesc = {};
-		queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-		queueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
-		queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-		queueDesc.NodeMask = 0;
-		hr = device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&graphicsQueue));
+		queues[QUEUE_GRAPHICS].desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+		queues[QUEUE_GRAPHICS].desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+		queues[QUEUE_GRAPHICS].desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+		queues[QUEUE_GRAPHICS].desc.NodeMask = 0;
+		hr = device->CreateCommandQueue(&queues[QUEUE_GRAPHICS].desc, IID_PPV_ARGS(&queues[QUEUE_GRAPHICS].queue));
+		assert(SUCCEEDED(hr));
+		hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&queues[QUEUE_GRAPHICS].fence));
+		assert(SUCCEEDED(hr));
+
+		queues[QUEUE_COMPUTE].desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+		queues[QUEUE_COMPUTE].desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+		queues[QUEUE_COMPUTE].desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+		queues[QUEUE_COMPUTE].desc.NodeMask = 0;
+		hr = device->CreateCommandQueue(&queues[QUEUE_COMPUTE].desc, IID_PPV_ARGS(&queues[QUEUE_COMPUTE].queue));
+		assert(SUCCEEDED(hr));
+		hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&queues[QUEUE_COMPUTE].fence));
 		assert(SUCCEEDED(hr));
 
 
@@ -2394,8 +2403,11 @@ using namespace DX12_Internal;
 		// Create frame-resident resources:
 		for (uint32_t fr = 0; fr < BUFFERCOUNT; ++fr)
 		{
-			hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&frames[fr].fence));
-			assert(SUCCEEDED(hr));
+			for (int queue = 0; queue < QUEUE_COUNT; ++queue)
+			{
+				hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&frames[fr].fence[queue]));
+				assert(SUCCEEDED(hr));
+			}
 		}
 
 		copyAllocator.Create(device);
@@ -2694,7 +2706,7 @@ using namespace DX12_Internal;
 			fullscreenDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE;
 			fullscreenDesc.Windowed = !pDesc->fullscreen;
 			hr = factory->CreateSwapChainForHwnd(
-				graphicsQueue.Get(),
+				queues[QUEUE_GRAPHICS].queue.Get(),
 				window,
 				&sd,
 				&fullscreenDesc,
@@ -2705,7 +2717,7 @@ using namespace DX12_Internal;
 			sd.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
 
 			hr = factory->CreateSwapChainForCoreWindow(
-				graphicsQueue.Get(),
+				queues[QUEUE_GRAPHICS].queue.Get(),
 				static_cast<IUnknown*>(winrt::get_abi(*window)),
 				&sd,
 				nullptr,
@@ -5333,12 +5345,14 @@ using namespace DX12_Internal;
 		}
 	}
 
-	CommandList GraphicsDevice_DX12::BeginCommandList()
+	CommandList GraphicsDevice_DX12::BeginCommandList(QUEUE_TYPE queue)
 	{
 		HRESULT hr;
 
 		CommandList cmd = cmd_count.fetch_add(1);
 		assert(cmd < COMMANDLIST_COUNT);
+		cmd_meta[cmd].queue = queue;
+		cmd_meta[cmd].waits.clear();
 
 		if (GetCommandList(cmd) == nullptr)
 		{
@@ -5346,27 +5360,27 @@ using namespace DX12_Internal;
 
 			for (uint32_t fr = 0; fr < BUFFERCOUNT; ++fr)
 			{
-				hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&frames[fr].commandAllocators[cmd]));
+				hr = device->CreateCommandAllocator(queues[queue].desc.Type, IID_PPV_ARGS(&frames[fr].commandAllocators[cmd][queue]));
 				assert(SUCCEEDED(hr));
-				hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, frames[fr].commandAllocators[cmd].Get(), nullptr, IID_PPV_ARGS(&frames[fr].commandLists[cmd]));
+				hr = device->CreateCommandList(0, queues[queue].desc.Type, frames[fr].commandAllocators[cmd][queue].Get(), nullptr, IID_PPV_ARGS(&frames[fr].commandLists[cmd][queue]));
 				assert(SUCCEEDED(hr));
-				hr = frames[fr].commandLists[cmd]->Close();
+				hr = frames[fr].commandLists[cmd][queue]->Close();
 				assert(SUCCEEDED(hr));
 
 				frames[fr].resourceBuffer[cmd].init(this, 1024 * 1024); // 1 MB starting size
 
 				std::wstringstream wss;
 				wss << "cmd" << cmd;
-				frames[fr].commandLists[cmd]->SetName(wss.str().c_str());
+				frames[fr].commandLists[cmd][queue]->SetName(wss.str().c_str());
 			}
 
 			descriptors[cmd].init(this);
 		}
 
 		// Start the command list in a default state:
-		hr = GetFrameResources().commandAllocators[cmd]->Reset();
+		hr = GetFrameResources().commandAllocators[cmd][queue]->Reset();
 		assert(SUCCEEDED(hr));
-		hr = GetCommandList(cmd)->Reset(GetFrameResources().commandAllocators[cmd].Get(), nullptr);
+		hr = GetCommandList(cmd)->Reset(GetFrameResources().commandAllocators[cmd][queue].Get(), nullptr);
 		assert(SUCCEEDED(hr));
 
 		ID3D12DescriptorHeap* heaps[2] = {
@@ -5378,15 +5392,18 @@ using namespace DX12_Internal;
 		descriptors[cmd].reset();
 		GetFrameResources().resourceBuffer[cmd].clear();
 
-		D3D12_RECT pRects[8];
-		for (uint32_t i = 0; i < 8; ++i)
+		if (queue == QUEUE_GRAPHICS)
 		{
-			pRects[i].bottom = INT32_MAX;
-			pRects[i].left = INT32_MIN;
-			pRects[i].right = INT32_MAX;
-			pRects[i].top = INT32_MIN;
+			D3D12_RECT pRects[8];
+			for (uint32_t i = 0; i < 8; ++i)
+			{
+				pRects[i].bottom = INT32_MAX;
+				pRects[i].left = INT32_MIN;
+				pRects[i].right = INT32_MAX;
+				pRects[i].top = INT32_MIN;
+			}
+			GetCommandList(cmd)->RSSetScissorRects(8, pRects);
 		}
-		GetCommandList(cmd)->RSSetScissorRects(8, pRects);
 
 		prev_pt[cmd] = PRIMITIVETOPOLOGY::UNDEFINED;
 		prev_pipeline_hash[cmd] = 0;
@@ -5415,13 +5432,15 @@ using namespace DX12_Internal;
 			uint64_t copy_sync = copyAllocator.flush();
 			if (copy_sync > 0)
 			{
-				hr = graphicsQueue->Wait(copyAllocator.fence.Get(), copy_sync);
-				assert(SUCCEEDED(hr));
+				// All user queues synced with copy allocator:
+				for (auto& x : queues)
+				{
+					hr = x.queue->Wait(copyAllocator.fence.Get(), copy_sync);
+					assert(SUCCEEDED(hr));
+				}
 			}
 
-			ID3D12CommandList* cmdLists[COMMANDLIST_COUNT];
-			CommandList cmds[COMMANDLIST_COUNT];
-			uint32_t counter = 0;
+			QUEUE_TYPE submit_queue = QUEUE_COUNT;
 
 			CommandList cmd_last = cmd_count.load();
 			cmd_count.store(0);
@@ -5433,9 +5452,64 @@ using namespace DX12_Internal;
 				hr = GetCommandList(cmd)->Close();
 				assert(SUCCEEDED(hr));
 
-				cmdLists[counter] = GetCommandList(cmd);
-				cmds[counter] = cmd;
-				counter++;
+				const CommandListMetadata& meta = cmd_meta[cmd];
+				if (submit_queue == QUEUE_COUNT)
+				{
+					submit_queue = meta.queue;
+				}
+				for (auto& wait : meta.waits) // wait breaks submit batch
+				{
+					if (queues[submit_queue].submit_count > 0)
+					{
+						// submit previous cmd batch:
+						queues[submit_queue].queue->ExecuteCommandLists(
+							queues[submit_queue].submit_count,
+							queues[submit_queue].submit_cmds
+						);
+						queues[submit_queue].submit_count = 0;
+					}
+
+					// signal status in case any future waits needed:
+					hr = queues[submit_queue].queue->Signal(
+						queues[submit_queue].fence.Get(),
+						FRAMECOUNT * COMMANDLIST_COUNT + (uint64_t)cmd
+					);
+					assert(SUCCEEDED(hr));
+
+					// record wait for signal on a previous submit:
+					const CommandListMetadata& wait_meta = cmd_meta[wait];
+					hr = queues[meta.queue].queue->Wait(
+						queues[wait_meta.queue].fence.Get(),
+						FRAMECOUNT * COMMANDLIST_COUNT + (uint64_t)wait
+					);
+					assert(SUCCEEDED(hr));
+
+					submit_queue = meta.queue;
+				}
+				if (meta.queue != submit_queue) // new queue type breaks submit batch
+				{
+					// submit previous cmd batch:
+					if (queues[submit_queue].submit_count > 0)
+					{
+						queues[submit_queue].queue->ExecuteCommandLists(
+							queues[submit_queue].submit_count,
+							queues[submit_queue].submit_cmds
+						);
+						queues[submit_queue].submit_count = 0;
+					}
+
+					// signal status in case any future waits needed:
+					hr = queues[submit_queue].queue->Signal(
+						queues[submit_queue].fence.Get(),
+						FRAMECOUNT * COMMANDLIST_COUNT + (uint64_t)cmd
+					);
+					assert(SUCCEEDED(hr));
+
+					submit_queue = meta.queue;
+				}
+
+				assert(submit_queue < QUEUE_COUNT);
+				queues[submit_queue].submit_cmds[queues[submit_queue].submit_count++] = GetCommandList(cmd);
 
 				for (auto& x : pipelines_worker[cmd])
 				{
@@ -5453,10 +5527,21 @@ using namespace DX12_Internal;
 				pipelines_worker[cmd].clear();
 			}
 
-			graphicsQueue->ExecuteCommandLists(counter, cmdLists);
+			// submit last cmd batch:
+			assert(submit_queue < QUEUE_COUNT);
+			assert(queues[submit_queue].submit_cmds > 0);
+			queues[submit_queue].queue->ExecuteCommandLists(
+				queues[submit_queue].submit_count,
+				queues[submit_queue].submit_cmds
+			);
+			queues[submit_queue].submit_count = 0;
 
-			hr = graphicsQueue->Signal(frame.fence.Get(), 1);
-			assert(SUCCEEDED(hr));
+			// Mark the completion of queues for this frame:
+			for (int queue = 0; queue < QUEUE_COUNT; ++queue)
+			{
+				hr = queues[queue].queue->Signal(frame.fence[queue].Get(), 1);
+				assert(SUCCEEDED(hr));
+			}
 
 			for (CommandList cmd = 0; cmd < cmd_last; ++cmd)
 			{
@@ -5475,27 +5560,30 @@ using namespace DX12_Internal;
 			auto& frame = GetFrameResources();
 
 			// Initiate stalling CPU when GPU is not yet finished with next frame:
-			if (FRAMECOUNT >= BUFFERCOUNT && frame.fence->GetCompletedValue() < 1)
+			for (int queue = 0; queue < QUEUE_COUNT; ++queue)
 			{
-				// NULL event handle will simply wait immediately:
-				//	https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12fence-seteventoncompletion#remarks
-				hr = frame.fence->SetEventOnCompletion(1, NULL);
-				assert(SUCCEEDED(hr));
+				if (FRAMECOUNT >= BUFFERCOUNT && frame.fence[queue]->GetCompletedValue() < 1)
+				{
+					// NULL event handle will simply wait immediately:
+					//	https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12fence-seteventoncompletion#remarks
+					hr = frame.fence[queue]->SetEventOnCompletion(1, NULL);
+					assert(SUCCEEDED(hr));
+				}
+				hr = frame.fence[queue]->Signal(0);
 			}
-			hr = frame.fence->Signal(0);
 			assert(SUCCEEDED(hr));
 
 			// Descriptor heaps' progress is recorded by the GPU:
 			descriptorheap_res.fenceValue = descriptorheap_res.allocationOffset.load();
-			hr = graphicsQueue->Signal(descriptorheap_res.fence.Get(), descriptorheap_res.fenceValue);
+			hr = queues[QUEUE_GRAPHICS].queue->Signal(descriptorheap_res.fence.Get(), descriptorheap_res.fenceValue);
 			assert(SUCCEEDED(hr));
 			descriptorheap_res.cached_completedValue = descriptorheap_res.fence->GetCompletedValue();
 			descriptorheap_sam.fenceValue = descriptorheap_sam.allocationOffset.load();
-			hr = graphicsQueue->Signal(descriptorheap_sam.fence.Get(), descriptorheap_sam.fenceValue);
+			hr = queues[QUEUE_GRAPHICS].queue->Signal(descriptorheap_sam.fence.Get(), descriptorheap_sam.fenceValue);
 			assert(SUCCEEDED(hr));
 			descriptorheap_sam.cached_completedValue = descriptorheap_sam.fence->GetCompletedValue();
 
-			hr = graphicsQueue->GetTimestampFrequency(&TIMESTAMP_FREQUENCY);
+			hr = queues[QUEUE_GRAPHICS].queue->GetTimestampFrequency(&TIMESTAMP_FREQUENCY);
 			assert(SUCCEEDED(hr));
 
 			allocationhandler->Update(FRAMECOUNT, BUFFERCOUNT);
@@ -5505,15 +5593,19 @@ using namespace DX12_Internal;
 	void GraphicsDevice_DX12::WaitForGPU() const
 	{
 		ComPtr<ID3D12Fence> fence;
-		HRESULT hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&fence));
+		HRESULT hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
 		assert(SUCCEEDED(hr));
 
-		hr = graphicsQueue->Signal(fence.Get(), 1);
-		assert(SUCCEEDED(hr));
-		if (fence->GetCompletedValue() < 1)
+		for (auto& queue : queues)
 		{
-			hr = fence->SetEventOnCompletion(1, NULL);
+			hr = queue.queue->Signal(fence.Get(), 1);
 			assert(SUCCEEDED(hr));
+			if (fence->GetCompletedValue() < 1)
+			{
+				hr = fence->SetEventOnCompletion(1, NULL);
+				assert(SUCCEEDED(hr));
+			}
+			fence->Signal(0);
 		}
 	}
 	void GraphicsDevice_DX12::ClearPipelineStateCache()
@@ -5563,6 +5655,11 @@ using namespace DX12_Internal;
 		return result;
 	}
 
+	void GraphicsDevice_DX12::WaitCommandList(CommandList cmd, CommandList wait_for)
+	{
+		assert(wait_for < cmd); // command list cannot wait for future command list!
+		cmd_meta[cmd].waits.push_back(wait_for);
+	}
 	void GraphicsDevice_DX12::RenderPassBegin(const SwapChain* swapchain, CommandList cmd)
 	{
 		swapchains[cmd].push_back(swapchain);

@@ -2069,11 +2069,6 @@ void LoadBuffers()
 	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_FRAME]);
 	device->SetName(&constantBuffers[CBTYPE_FRAME], "FrameCB");
 
-	bd.ByteWidth = sizeof(CameraCB);
-	bd.BindFlags = BIND_CONSTANT_BUFFER;
-	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_CAMERA]);
-	device->SetName(&constantBuffers[CBTYPE_CAMERA], "CameraCB");
-
 
 	bd.ByteWidth = sizeof(ShaderEntity) * SHADER_ENTITY_COUNT;
 	bd.BindFlags = BIND_SHADER_RESOURCE;
@@ -2095,6 +2090,10 @@ void LoadBuffers()
 	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 	bd.MiscFlags = 0;
 	bd.BindFlags = BIND_CONSTANT_BUFFER;
+
+	bd.ByteWidth = sizeof(CameraCB);
+	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_CAMERA]);
+	device->SetName(&constantBuffers[CBTYPE_CAMERA], "CameraCB");
 
 	bd.ByteWidth = sizeof(MiscCB);
 	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_MISC]);

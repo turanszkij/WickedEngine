@@ -5596,7 +5596,7 @@ using namespace Vulkan_Internal;
 		}
 	}
 
-	CommandList GraphicsDevice_Vulkan::BeginCommandList()
+	CommandList GraphicsDevice_Vulkan::BeginCommandList(QUEUE_TYPE queue)
 	{
 		VkResult res;
 
