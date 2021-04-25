@@ -8440,6 +8440,7 @@ void CreateSSAOResources(SSAOResources& res, XMUINT2 resolution)
 	desc.Width = (resolution.x + 1) / 2;
 	desc.Height = (resolution.y + 1) / 2;
 	desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
+	desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
 	device->CreateTexture(&desc, nullptr, &res.temp0);
 	device->CreateTexture(&desc, nullptr, &res.temp1);
 }
@@ -8640,7 +8641,7 @@ void CreateMSAOResources(MSAOResources& res, XMUINT2 resolution)
 	saved_desc.Width = resolution.x;
 	saved_desc.Height = resolution.y;
 	saved_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-	saved_desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE;
+	saved_desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
 
 	const uint32_t bufferWidth = saved_desc.Width;
 	const uint32_t bufferWidth1 = (bufferWidth + 1) / 2;
@@ -9122,6 +9123,7 @@ void CreateRTAOResources(RTAOResources& res, XMUINT2 resolution)
 	desc.Width = (resolution.x + 1) / 2;
 	desc.Height = (resolution.y + 1) / 2;
 	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+	desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
 	device->CreateTexture(&desc, nullptr, &res.temp);
 	device->SetName(&res.temp, "rtao_temp");
 
@@ -9613,6 +9615,7 @@ void CreateSSRResources(SSRResources& res, XMUINT2 resolution)
 	cast_desc.Height = (resolution.y + 1) / 2;
 	cast_desc.Format = FORMAT_R16G16B16A16_FLOAT;
 	cast_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+	cast_desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
 	device->CreateTexture(&cast_desc, nullptr, &res.texture_raytrace);
 
 	TextureDesc buffer_desc;
@@ -9621,6 +9624,7 @@ void CreateSSRResources(SSRResources& res, XMUINT2 resolution)
 	buffer_desc.Height = resolution.y;
 	buffer_desc.Format = FORMAT_R16G16B16A16_FLOAT;
 	buffer_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+	buffer_desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
 	device->CreateTexture(&buffer_desc, nullptr, &res.texture_resolve);
 	device->CreateTexture(&buffer_desc, nullptr, &res.texture_temporal[0]);
 	device->CreateTexture(&buffer_desc, nullptr, &res.texture_temporal[1]);
@@ -9843,6 +9847,7 @@ void CreateRTShadowResources(RTShadowResources& res, XMUINT2 resolution)
 	desc.Height = (resolution.y + 1) / 2;
 	desc.Format = FORMAT_R32G32B32A32_UINT;
 	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+	desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
 	device->CreateTexture(&desc, nullptr, &res.temp);
 	device->SetName(&res.temp, "rtshadow_temp");
 
@@ -10027,6 +10032,7 @@ void CreateScreenSpaceShadowResources(ScreenSpaceShadowResources& res, XMUINT2 r
 	desc.Height = (resolution.y + 1) / 2;
 	desc.Format = FORMAT_R32G32B32A32_UINT;
 	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+	desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
 	device->CreateTexture(&desc, nullptr, &res.temp);
 	device->SetName(&res.temp, "screenspaceshadow_temp");
 }

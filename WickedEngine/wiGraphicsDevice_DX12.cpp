@@ -658,6 +658,8 @@ namespace DX12_Internal
 			return D3D12_RESOURCE_STATE_DEPTH_READ;
 		case wiGraphics::IMAGE_LAYOUT_SHADER_RESOURCE:
 			return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+		case wiGraphics::IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE:
+			return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 		case wiGraphics::IMAGE_LAYOUT_UNORDERED_ACCESS:
 			return D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
 		case wiGraphics::IMAGE_LAYOUT_COPY_SRC:
@@ -686,6 +688,8 @@ namespace DX12_Internal
 			return D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
 		case wiGraphics::BUFFER_STATE_SHADER_RESOURCE:
 			return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+		case wiGraphics::BUFFER_STATE_SHADER_RESOURCE_COMPUTE:
+			return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 		case wiGraphics::BUFFER_STATE_UNORDERED_ACCESS:
 			return D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
 		case wiGraphics::BUFFER_STATE_COPY_SRC:
@@ -2138,13 +2142,20 @@ using namespace DX12_Internal;
 		auto& barriers = frame_barriers[cmd];
 		if (!barriers.empty())
 		{
-			// Remove NOP barriers:
 			for (size_t i = 0; i < barriers.size(); ++i)
 			{
 				auto& barrier = barriers[i];
 				if (barrier.Type == D3D12_RESOURCE_BARRIER_TYPE_TRANSITION &&
+					cmd_meta[cmd].queue > QUEUE_GRAPHICS)
+				{
+					// Only graphics queue can do pixel shader state:
+					barrier.Transition.StateBefore &= ~D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+					barrier.Transition.StateAfter &= ~D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+				}
+				if (barrier.Type == D3D12_RESOURCE_BARRIER_TYPE_TRANSITION &&
 					barrier.Transition.StateBefore == barrier.Transition.StateAfter)
 				{
+					// Remove NOP barriers:
 					barrier = barriers.back();
 					barriers.pop_back();
 					i--;
@@ -2341,7 +2352,7 @@ using namespace DX12_Internal;
 		hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&queues[QUEUE_GRAPHICS].fence));
 		assert(SUCCEEDED(hr));
 
-		queues[QUEUE_COMPUTE].desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+		queues[QUEUE_COMPUTE].desc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
 		queues[QUEUE_COMPUTE].desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
 		queues[QUEUE_COMPUTE].desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 		queues[QUEUE_COMPUTE].desc.NodeMask = 0;

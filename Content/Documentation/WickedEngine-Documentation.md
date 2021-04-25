@@ -478,6 +478,8 @@ device->SubmitCommandLists(); // execute all of the above
 
 The `WaitCommandList()` function is a GPU wait operation, so it will not block CPU execution. Furthermore, it is not required to use this between two `CommandList`s that are on the same queue, because the synchronization between those is implicit.
 
+Important: The `IMAGE_LAYOUT_SHADER_RESOURCE` and `BUFFER_STATE_SHADER_RESOURCE` states cannot be used on the compute queue. The device could convert these to `IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE` and `BUFFER_STATE_SHADER_RESOURCE_COMPUTE` respectively while issuing `Barrier()` commands. However, the starting resource state must be correctly specified, because those cannot be converted. Consider always choosing a `_SHADER_RESOURCE_COMPUTE` starting resource state if the resource is goig to be used in a compute queue, and transition them to regular `SHADER_RESOURCE` only before the resource is going to be used in a pixel shader. The graphics queue with compute commands doesn't have this limitation however.
+
 ##### Presenting to the screen
 To present to the screen (an operating system window), first create a SwapChain with the `CreateSwapChain()` function that will be associated with a window. The SwapChain acts as a special kind of [RenderPass](#render-passes), so there is a `BeginRenderPass()` function with an overload that accepts a SwapChain parameter instead of a RenderPass. Simply use this `BeginRenderPass()` and `EndRenderPass()` to draw to the SwapChain. The final presentation will happen when calling `SubmitCommandLists()`.
 

@@ -435,6 +435,7 @@ namespace Vulkan_Internal
 		case wiGraphics::IMAGE_LAYOUT_DEPTHSTENCIL_READONLY:
 			return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 		case wiGraphics::IMAGE_LAYOUT_SHADER_RESOURCE:
+		case wiGraphics::IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE:
 			return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		case wiGraphics::IMAGE_LAYOUT_UNORDERED_ACCESS:
 			return VK_IMAGE_LAYOUT_GENERAL;
@@ -491,6 +492,7 @@ namespace Vulkan_Internal
 			flags |= VK_ACCESS_SHADER_READ_BIT;
 			break;
 		case wiGraphics::IMAGE_LAYOUT_SHADER_RESOURCE:
+		case wiGraphics::IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE:
 			flags |= VK_ACCESS_SHADER_READ_BIT;
 			break;
 		case wiGraphics::IMAGE_LAYOUT_UNORDERED_ACCESS:
@@ -532,6 +534,7 @@ namespace Vulkan_Internal
 			flags |= VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
 			break;
 		case wiGraphics::BUFFER_STATE_SHADER_RESOURCE:
+		case wiGraphics::BUFFER_STATE_SHADER_RESOURCE_COMPUTE:
 			flags |= VK_ACCESS_SHADER_READ_BIT;
 			flags |= VK_ACCESS_UNIFORM_READ_BIT;
 			break;
