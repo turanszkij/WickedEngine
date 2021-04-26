@@ -2246,6 +2246,7 @@ using namespace Vulkan_Internal;
 				queueCreateInfo.queueCount = 1;
 				queueCreateInfo.pQueuePriorities = &queuePriority;
 				queueCreateInfos.push_back(queueCreateInfo);
+				families.push_back((uint32_t)queueFamily);
 			}
 
 			VkDeviceCreateInfo createInfo = {};
@@ -2955,7 +2956,16 @@ using namespace Vulkan_Internal;
 
 		bufferInfo.flags = 0;
 
-		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		if (families.size() > 1)
+		{
+			bufferInfo.sharingMode = VK_SHARING_MODE_CONCURRENT;
+			bufferInfo.queueFamilyIndexCount = (uint32_t)families.size();
+			bufferInfo.pQueueFamilyIndices = families.data();
+		}
+		else
+		{
+			bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		}
 
 
 
@@ -3178,7 +3188,16 @@ using namespace Vulkan_Internal;
 			imageInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 		}
 
-		imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		if (families.size() > 1)
+		{
+			imageInfo.sharingMode = VK_SHARING_MODE_CONCURRENT;
+			imageInfo.queueFamilyIndexCount = (uint32_t)families.size();
+			imageInfo.pQueueFamilyIndices = families.data();
+		}
+		else
+		{
+			imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		}
 
 		switch (pTexture->desc.type)
 		{

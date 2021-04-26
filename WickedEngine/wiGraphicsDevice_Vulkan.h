@@ -39,6 +39,7 @@ namespace wiGraphics
 		int graphicsFamily = -1;
 		int computeFamily = -1;
 		int copyFamily = -1;
+		std::vector<uint32_t> families;
 		VkQueue graphicsQueue = VK_NULL_HANDLE;
 		VkQueue computeQueue = VK_NULL_HANDLE;
 		VkQueue copyQueue = VK_NULL_HANDLE;
