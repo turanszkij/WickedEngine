@@ -2191,31 +2191,67 @@ using namespace Vulkan_Internal;
 			vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
 
 			// Query base queue families:
-			const uint32_t familyMask = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT;
 			int familyIndex = 0;
 			for (const auto& queueFamily : queueFamilies)
 			{
-				if ((queueFamily.queueFlags & familyMask) && queueFamily.queueCount >= 3)
+				if (graphicsFamily < 0 && queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
 				{
-					family = familyIndex;
-					break;
+					graphicsFamily = familyIndex;
+				}
+
+				if (copyFamily < 0 && queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT)
+				{
+					copyFamily = familyIndex;
+				}
+
+				if (computeFamily < 0 && queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT)
+				{
+					computeFamily = familyIndex;
 				}
 
 				familyIndex++;
 			}
-			assert(family >= 0);
 
-			float priorities[] = { 1,1,1 };
-			VkDeviceQueueCreateInfo queueCreateInfo = {};
-			queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-			queueCreateInfo.queueFamilyIndex = family;
-			queueCreateInfo.queueCount = arraysize(priorities);
-			queueCreateInfo.pQueuePriorities = priorities;
+			// Now try to find dedicated compute and transfer queues:
+			familyIndex = 0;
+			for (const auto& queueFamily : queueFamilies)
+			{
+				if (queueFamily.queueCount > 0 &&
+					queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT &&
+					!(queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) &&
+					!(queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT)
+					) {
+					copyFamily = familyIndex;
+				}
+
+				if (queueFamily.queueCount > 0 &&
+					queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT &&
+					!(queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+					) {
+					computeFamily = familyIndex;
+				}
+
+				familyIndex++;
+			}
+
+			std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+			std::set<int> uniqueQueueFamilies = { graphicsFamily, copyFamily, computeFamily };
+
+			float queuePriority = 1.0f;
+			for (int queueFamily : uniqueQueueFamilies)
+			{
+				VkDeviceQueueCreateInfo queueCreateInfo = {};
+				queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+				queueCreateInfo.queueFamilyIndex = queueFamily;
+				queueCreateInfo.queueCount = 1;
+				queueCreateInfo.pQueuePriorities = &queuePriority;
+				queueCreateInfos.push_back(queueCreateInfo);
+			}
 
 			VkDeviceCreateInfo createInfo = {};
 			createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-			createInfo.queueCreateInfoCount = 1;
-			createInfo.pQueueCreateInfos = &queueCreateInfo;
+			createInfo.queueCreateInfoCount = (uint32_t)queueCreateInfos.size();
+			createInfo.pQueueCreateInfos = queueCreateInfos.data();
 			createInfo.pEnabledFeatures = nullptr;
 			createInfo.pNext = &features2;
 			createInfo.enabledExtensionCount = static_cast<uint32_t>(enabled_deviceExtensions.size());
@@ -2236,9 +2272,9 @@ using namespace Vulkan_Internal;
 
 			volkLoadDevice(device);
 
-			vkGetDeviceQueue(device, family, 0, &graphicsQueue);
-			vkGetDeviceQueue(device, family, 1, &computeQueue);
-			vkGetDeviceQueue(device, family, 2, &copyQueue);
+			vkGetDeviceQueue(device, graphicsFamily, 0, &graphicsQueue);
+			vkGetDeviceQueue(device, computeFamily, 0, &computeQueue);
+			vkGetDeviceQueue(device, copyFamily, 0, &copyQueue);
 		}
 
 		// queues:
@@ -2280,7 +2316,7 @@ using namespace Vulkan_Internal;
 		res = vmaCreateAllocator(&allocatorInfo, &allocationhandler->allocator);
 		assert(res == VK_SUCCESS);
 
-		copyAllocator.Create(device, copyQueue, family);
+		copyAllocator.Create(device, copyQueue, copyFamily);
 
 		// Create frame resources:
 		for (uint32_t fr = 0; fr < BUFFERCOUNT; ++fr)
@@ -2298,7 +2334,7 @@ using namespace Vulkan_Internal;
 			{
 				VkCommandPoolCreateInfo poolInfo = {};
 				poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-				poolInfo.queueFamilyIndex = family;
+				poolInfo.queueFamilyIndex = graphicsFamily;
 				poolInfo.flags = 0; // Optional
 
 				res = vkCreateCommandPool(device, &poolInfo, nullptr, &frames[fr].transitionCommandPool);
@@ -2676,8 +2712,6 @@ using namespace Vulkan_Internal;
 		createInfo.imageArrayLayers = 1;
 		createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 		createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-		createInfo.queueFamilyIndexCount = family; // Optional
-		createInfo.pQueueFamilyIndices = nullptr; // Optional
 
 		createInfo.preTransform = internal_state->swapchain_capabilities.currentTransform;
 		createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
@@ -5596,7 +5630,18 @@ using namespace Vulkan_Internal;
 			{
 				VkCommandPoolCreateInfo poolInfo = {};
 				poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-				poolInfo.queueFamilyIndex = family;
+				switch (queue)
+				{
+				case wiGraphics::QUEUE_GRAPHICS:
+					poolInfo.queueFamilyIndex = graphicsFamily;
+					break;
+				case wiGraphics::QUEUE_COMPUTE:
+					poolInfo.queueFamilyIndex = computeFamily;
+					break;
+				default:
+					assert(0); // queue type not handled
+					break;
+				}
 				poolInfo.flags = 0; // Optional
 
 				res = vkCreateCommandPool(device, &poolInfo, nullptr, &frame.commandPools[cmd][queue]);

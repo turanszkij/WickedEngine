@@ -35,11 +35,51 @@ namespace wiGraphics
 	    VkDebugUtilsMessengerEXT debugUtilsMessenger = VK_NULL_HANDLE;
 		VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 		VkDevice device = VK_NULL_HANDLE;
-		int family = -1;
+		std::vector<VkQueueFamilyProperties> queueFamilies;
+		int graphicsFamily = -1;
+		int computeFamily = -1;
+		int copyFamily = -1;
 		VkQueue graphicsQueue = VK_NULL_HANDLE;
 		VkQueue computeQueue = VK_NULL_HANDLE;
 		VkQueue copyQueue = VK_NULL_HANDLE;
-		std::vector<VkQueueFamilyProperties> queueFamilies;
+
+		VkPhysicalDeviceProperties2 properties2 = {};
+		VkPhysicalDeviceVulkan11Properties properties_1_1 = {};
+		VkPhysicalDeviceVulkan12Properties properties_1_2 = {};
+		VkPhysicalDeviceAccelerationStructurePropertiesKHR acceleration_structure_properties = {};
+		VkPhysicalDeviceRayTracingPipelinePropertiesKHR raytracing_properties = {};
+		VkPhysicalDeviceFragmentShadingRatePropertiesKHR fragment_shading_rate_properties = {};
+		VkPhysicalDeviceMeshShaderPropertiesNV mesh_shader_properties = {};
+
+		VkPhysicalDeviceFeatures2 features2 = {};
+		VkPhysicalDeviceVulkan11Features features_1_1 = {};
+		VkPhysicalDeviceVulkan12Features features_1_2 = {};
+		VkPhysicalDeviceAccelerationStructureFeaturesKHR acceleration_structure_features = {};
+		VkPhysicalDeviceRayTracingPipelineFeaturesKHR raytracing_features = {};
+		VkPhysicalDeviceRayQueryFeaturesKHR raytracing_query_features = {};
+		VkPhysicalDeviceFragmentShadingRateFeaturesKHR fragment_shading_rate_features = {};
+		VkPhysicalDeviceMeshShaderFeaturesNV mesh_shader_features = {};
+
+		std::vector<VkDynamicState> pso_dynamicStates;
+		VkPipelineDynamicStateCreateInfo dynamicStateInfo = {};
+
+		VkBuffer		nullBuffer = VK_NULL_HANDLE;
+		VmaAllocation	nullBufferAllocation = VK_NULL_HANDLE;
+		VkBufferView	nullBufferView = VK_NULL_HANDLE;
+		VkSampler		nullSampler = VK_NULL_HANDLE;
+		VmaAllocation	nullImageAllocation1D = VK_NULL_HANDLE;
+		VmaAllocation	nullImageAllocation2D = VK_NULL_HANDLE;
+		VmaAllocation	nullImageAllocation3D = VK_NULL_HANDLE;
+		VkImage			nullImage1D = VK_NULL_HANDLE;
+		VkImage			nullImage2D = VK_NULL_HANDLE;
+		VkImage			nullImage3D = VK_NULL_HANDLE;
+		VkImageView		nullImageView1D = VK_NULL_HANDLE;
+		VkImageView		nullImageView1DArray = VK_NULL_HANDLE;
+		VkImageView		nullImageView2D = VK_NULL_HANDLE;
+		VkImageView		nullImageView2DArray = VK_NULL_HANDLE;
+		VkImageView		nullImageViewCube = VK_NULL_HANDLE;
+		VkImageView		nullImageViewCubeArray = VK_NULL_HANDLE;
+		VkImageView		nullImageView3D = VK_NULL_HANDLE;
 
 		struct CommandQueue
 		{
@@ -105,44 +145,6 @@ namespace wiGraphics
 			}
 
 		} queues[QUEUE_COUNT];
-
-		VkPhysicalDeviceProperties2 properties2 = {};
-		VkPhysicalDeviceVulkan11Properties properties_1_1 = {};
-		VkPhysicalDeviceVulkan12Properties properties_1_2 = {};
-		VkPhysicalDeviceAccelerationStructurePropertiesKHR acceleration_structure_properties = {};
-		VkPhysicalDeviceRayTracingPipelinePropertiesKHR raytracing_properties = {};
-		VkPhysicalDeviceFragmentShadingRatePropertiesKHR fragment_shading_rate_properties = {};
-		VkPhysicalDeviceMeshShaderPropertiesNV mesh_shader_properties = {};
-
-		VkPhysicalDeviceFeatures2 features2 = {};
-		VkPhysicalDeviceVulkan11Features features_1_1 = {};
-		VkPhysicalDeviceVulkan12Features features_1_2 = {};
-		VkPhysicalDeviceAccelerationStructureFeaturesKHR acceleration_structure_features = {};
-		VkPhysicalDeviceRayTracingPipelineFeaturesKHR raytracing_features = {};
-		VkPhysicalDeviceRayQueryFeaturesKHR raytracing_query_features = {};
-		VkPhysicalDeviceFragmentShadingRateFeaturesKHR fragment_shading_rate_features = {};
-		VkPhysicalDeviceMeshShaderFeaturesNV mesh_shader_features = {};
-
-		std::vector<VkDynamicState> pso_dynamicStates;
-		VkPipelineDynamicStateCreateInfo dynamicStateInfo = {};
-
-		VkBuffer		nullBuffer = VK_NULL_HANDLE;
-		VmaAllocation	nullBufferAllocation = VK_NULL_HANDLE;
-		VkBufferView	nullBufferView = VK_NULL_HANDLE;
-		VkSampler		nullSampler = VK_NULL_HANDLE;
-		VmaAllocation	nullImageAllocation1D = VK_NULL_HANDLE;
-		VmaAllocation	nullImageAllocation2D = VK_NULL_HANDLE;
-		VmaAllocation	nullImageAllocation3D = VK_NULL_HANDLE;
-		VkImage			nullImage1D = VK_NULL_HANDLE;
-		VkImage			nullImage2D = VK_NULL_HANDLE;
-		VkImage			nullImage3D = VK_NULL_HANDLE;
-		VkImageView		nullImageView1D = VK_NULL_HANDLE;
-		VkImageView		nullImageView1DArray = VK_NULL_HANDLE;
-		VkImageView		nullImageView2D = VK_NULL_HANDLE;
-		VkImageView		nullImageView2DArray = VK_NULL_HANDLE;
-		VkImageView		nullImageViewCube = VK_NULL_HANDLE;
-		VkImageView		nullImageViewCubeArray = VK_NULL_HANDLE;
-		VkImageView		nullImageView3D = VK_NULL_HANDLE;
 
 		struct CopyAllocator
 		{
