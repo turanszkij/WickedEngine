@@ -9,6 +9,14 @@ namespace wiGraphics
 	static const CommandList COMMANDLIST_COUNT = 32;
 	static const CommandList INVALID_COMMANDLIST = COMMANDLIST_COUNT;
 
+	enum QUEUE_TYPE
+	{
+		QUEUE_GRAPHICS,
+		QUEUE_COMPUTE,
+
+		QUEUE_COUNT,
+	};
+
 	class GraphicsDevice
 	{
 	protected:
@@ -55,7 +63,7 @@ namespace wiGraphics
 
 		// Begin a new command list for GPU command recording.
 		//	This will be valid until SubmitCommandLists() is called.
-		virtual CommandList BeginCommandList() = 0;
+		virtual CommandList BeginCommandList(QUEUE_TYPE queue = QUEUE_GRAPHICS) = 0;
 		// Submit all command list that were used with BeginCommandList before this call.
 		//	This will make every command list to be in "available" state and restarts them
 		virtual void SubmitCommandLists() = 0;
@@ -63,7 +71,7 @@ namespace wiGraphics
 		virtual void WaitForGPU() const = 0;
 		virtual void ClearPipelineStateCache() {};
 
-		inline uint64_t GetFrameCount() const { return FRAMECOUNT; }
+		constexpr uint64_t GetFrameCount() const { return FRAMECOUNT; }
 
 		inline bool CheckCapability(GRAPHICSDEVICE_CAPABILITY capability) const { return capabilities & capability; }
 
@@ -74,12 +82,12 @@ namespace wiGraphics
 
 		static constexpr uint32_t GetBufferCount() { return BUFFERCOUNT; }
 
-		inline bool IsDebugDevice() const { return DEBUGDEVICE; }
+		constexpr bool IsDebugDevice() const { return DEBUGDEVICE; }
 
-		inline size_t GetShaderIdentifierSize() const { return SHADER_IDENTIFIER_SIZE; }
-		inline size_t GetTopLevelAccelerationStructureInstanceSize() const { return TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE; }
-		inline uint32_t GetVariableRateShadingTileSize() const { return VARIABLE_RATE_SHADING_TILE_SIZE; }
-		inline uint64_t GetTimestampFrequency() const { return TIMESTAMP_FREQUENCY; }
+		constexpr size_t GetShaderIdentifierSize() const { return SHADER_IDENTIFIER_SIZE; }
+		constexpr size_t GetTopLevelAccelerationStructureInstanceSize() const { return TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE; }
+		constexpr uint32_t GetVariableRateShadingTileSize() const { return VARIABLE_RATE_SHADING_TILE_SIZE; }
+		constexpr uint64_t GetTimestampFrequency() const { return TIMESTAMP_FREQUENCY; }
 
 		virtual SHADERFORMAT GetShaderFormat() const { return SHADERFORMAT_NONE; }
 
@@ -87,6 +95,7 @@ namespace wiGraphics
 
 		///////////////Thread-sensitive////////////////////////
 
+		virtual void WaitCommandList(CommandList cmd, CommandList wait_for) {}
 		virtual void RenderPassBegin(const SwapChain* swapchain, CommandList cmd) = 0;
 		virtual void RenderPassBegin(const RenderPass* renderpass, CommandList cmd) = 0;
 		virtual void RenderPassEnd(CommandList cmd) = 0;

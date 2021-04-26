@@ -49,6 +49,7 @@ This is a reference for the C++ features of Wicked Engine
 			2. [Creating resources](#creating-resources)
 			3. [Destroying resources](#destroying-resources)
 			4. [Work submission](#work-submission)
+				1. [Async compute](#async-compute)
 			5. [Presenting to the screen](#presenting-to-the-screen)
 			6. [Resource binding](#resource-binding)
 			6. [Bindless resources](#bindless-resources)
@@ -460,6 +461,24 @@ device->SubmitCommandLists(cmd_present); // CPU submits work for GPU
 When submitting command lists with `SubmitCommandLists()`, the CPU thread can be blocked in cases when there is too much GPU work submitted already that didn't finish. It's not appropriate to start recording new command lists until `SubmitCommandLists()` finished.
 
 Furthermore, the `BeginCommandList()` is thread safe, so the user can call it from worker threads if ordering between command lists is not a requirement (such as when they are producing workloads that are independent of each other).
+
+###### Async compute
+Async workload can be performed on the compute queue with `CommandList` granularity. The `BeginCommandList()` function has an optional `QUEUE_TYPE` parameter, which can be specified to execute the command list on the specified queue. By default, if no such parameter is specified, the work will be executed on the main graphics queue (`QUEUE_GRAPHICS`), serially to other such graphics work. In case the graphics device or API doesn't support async compute (such as DX11), then the `QUEUE_GRAPHICS` will be assumed. The main graphics queue can execute both graphics and compute work, but the `QUEUE_COMPUTE` can only execute compute work. Two queues can also be synchronized with `CommandList` granularity, with the `WaitCommandList()` function. This function inserts a dependency barrier before the first parameter command list, that synchronizes with the second parameter command list. For example:
+
+```cpp
+CommandList cmd0 = device->BeginCommandList(QUEUE_GRAPHICS);
+CommandList cmd1 = device->BeginCommandList(QUEUE_COMPUTE);
+device->WaitCommandList(cmd1, cmd0); // cmd1 waits for cmd0 to finish
+CommandList cmd2 = device->BeginCommandList(QUEUE_GRAPHICS); // cmd2 doesn't wait, it runs async with cmd1
+CommandList cmd3 = device->BeginCommandList(QUEUE_GRAPHICS);
+device->WaitCommandList(cmd3, cmd1); // cmd3 waits for cmd1 to finish
+
+device->SubmitCommandLists(); // execute all of the above
+```
+
+The `WaitCommandList()` function is a GPU wait operation, so it will not block CPU execution. Furthermore, it is not required to use this between two `CommandList`s that are on the same queue, because the synchronization between those is implicit.
+
+Important: The `IMAGE_LAYOUT_SHADER_RESOURCE` and `BUFFER_STATE_SHADER_RESOURCE` states cannot be used on the compute queue. The device could convert these to `IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE` and `BUFFER_STATE_SHADER_RESOURCE_COMPUTE` respectively while issuing `Barrier()` commands. However, the starting resource state must be correctly specified, because those cannot be converted. Consider always choosing a `_SHADER_RESOURCE_COMPUTE` starting resource state if the resource is goig to be used in a compute queue, and transition them to regular `SHADER_RESOURCE` only before the resource is going to be used in a pixel shader. The graphics queue with compute commands doesn't have this limitation however.
 
 ##### Presenting to the screen
 To present to the screen (an operating system window), first create a SwapChain with the `CreateSwapChain()` function that will be associated with a window. The SwapChain acts as a special kind of [RenderPass](#render-passes), so there is a `BeginRenderPass()` function with an overload that accepts a SwapChain parameter instead of a RenderPass. Simply use this `BeginRenderPass()` and `EndRenderPass()` to draw to the SwapChain. The final presentation will happen when calling `SubmitCommandLists()`.

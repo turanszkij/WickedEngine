@@ -35,13 +35,14 @@ namespace wiGraphics
 	    VkDebugUtilsMessengerEXT debugUtilsMessenger = VK_NULL_HANDLE;
 		VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 		VkDevice device = VK_NULL_HANDLE;
+		std::vector<VkQueueFamilyProperties> queueFamilies;
 		int graphicsFamily = -1;
-		int copyFamily = -1;
 		int computeFamily = -1;
+		int copyFamily = -1;
+		std::vector<uint32_t> families;
 		VkQueue graphicsQueue = VK_NULL_HANDLE;
 		VkQueue computeQueue = VK_NULL_HANDLE;
 		VkQueue copyQueue = VK_NULL_HANDLE;
-		std::vector<VkQueueFamilyProperties> queueFamilies;
 
 		VkPhysicalDeviceProperties2 properties2 = {};
 		VkPhysicalDeviceVulkan11Properties properties_1_1 = {};
@@ -81,6 +82,71 @@ namespace wiGraphics
 		VkImageView		nullImageViewCubeArray = VK_NULL_HANDLE;
 		VkImageView		nullImageView3D = VK_NULL_HANDLE;
 
+		struct CommandQueue
+		{
+			VkQueue queue = VK_NULL_HANDLE;
+			VkSemaphore semaphore = VK_NULL_HANDLE;
+			std::vector<VkSwapchainKHR> submit_swapchains;
+			std::vector<uint32_t> submit_swapChainImageIndices;
+			std::vector<VkPipelineStageFlags> submit_waitStages;
+			std::vector<VkSemaphore> submit_waitSemaphores;
+			std::vector<uint64_t> submit_waitValues;
+			std::vector<VkSemaphore> submit_signalSemaphores;
+			std::vector<uint64_t> submit_signalValues;
+			std::vector<VkCommandBuffer> submit_cmds;
+
+			void submit(VkFence fence)
+			{
+				VkSubmitInfo submitInfo = {};
+				submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+				submitInfo.commandBufferCount = (uint32_t)submit_cmds.size();
+				submitInfo.pCommandBuffers = submit_cmds.data();
+
+				submitInfo.waitSemaphoreCount = (uint32_t)submit_waitSemaphores.size();
+				submitInfo.pWaitSemaphores = submit_waitSemaphores.data();
+				submitInfo.pWaitDstStageMask = submit_waitStages.data();
+
+				submitInfo.signalSemaphoreCount = (uint32_t)submit_signalSemaphores.size();
+				submitInfo.pSignalSemaphores = submit_signalSemaphores.data();
+
+				VkTimelineSemaphoreSubmitInfo timelineInfo = {};
+				timelineInfo.sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO;
+				timelineInfo.pNext = nullptr;
+				timelineInfo.waitSemaphoreValueCount = (uint32_t)submit_waitValues.size();
+				timelineInfo.pWaitSemaphoreValues = submit_waitValues.data();
+				timelineInfo.signalSemaphoreValueCount = (uint32_t)submit_signalValues.size();
+				timelineInfo.pSignalSemaphoreValues = submit_signalValues.data();
+
+				submitInfo.pNext = &timelineInfo;
+
+				VkResult res = vkQueueSubmit(queue, 1, &submitInfo, fence);
+				assert(res == VK_SUCCESS);
+
+				if (!submit_swapchains.empty())
+				{
+					VkPresentInfoKHR presentInfo = {};
+					presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+					presentInfo.waitSemaphoreCount = (uint32_t)submit_signalSemaphores.size();
+					presentInfo.pWaitSemaphores = submit_signalSemaphores.data();
+					presentInfo.swapchainCount = (uint32_t)submit_swapchains.size();
+					presentInfo.pSwapchains = submit_swapchains.data();
+					presentInfo.pImageIndices = submit_swapChainImageIndices.data();
+					res = vkQueuePresentKHR(queue, &presentInfo);
+					assert(res == VK_SUCCESS);
+				}
+
+				submit_swapchains.clear();
+				submit_swapChainImageIndices.clear();
+				submit_waitStages.clear();
+				submit_waitSemaphores.clear();
+				submit_waitValues.clear();
+				submit_signalSemaphores.clear();
+				submit_signalValues.clear();
+				submit_cmds.clear();
+			}
+
+		} queues[QUEUE_COUNT];
+
 		struct CopyAllocator
 		{
 			VkDevice device = VK_NULL_HANDLE;
@@ -119,7 +185,8 @@ namespace wiGraphics
 				createInfo.pNext = &timelineCreateInfo;
 				createInfo.flags = 0;
 
-				vkCreateSemaphore(device, &createInfo, nullptr, &semaphore);
+				VkResult res = vkCreateSemaphore(device, &createInfo, nullptr, &semaphore);
+				assert(res == VK_SUCCESS);
 			}
 			void Destroy()
 			{
@@ -263,9 +330,9 @@ namespace wiGraphics
 
 		struct FrameResources
 		{
-			VkFence fence = VK_NULL_HANDLE;
-			VkCommandPool commandPools[COMMANDLIST_COUNT] = {};
-			VkCommandBuffer commandBuffers[COMMANDLIST_COUNT] = {};
+			VkFence fence[QUEUE_COUNT] = {};
+			VkCommandPool commandPools[COMMANDLIST_COUNT][QUEUE_COUNT] = {};
+			VkCommandBuffer commandBuffers[COMMANDLIST_COUNT][QUEUE_COUNT] = {};
 
 			VkCommandPool transitionCommandPool = VK_NULL_HANDLE;
 			VkCommandBuffer transitionCommandBuffer = VK_NULL_HANDLE;
@@ -318,7 +385,17 @@ namespace wiGraphics
 		FrameResources frames[BUFFERCOUNT];
 		const FrameResources& GetFrameResources() const { return frames[GetFrameCount() % BUFFERCOUNT]; }
 		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BUFFERCOUNT]; }
-		inline VkCommandBuffer GetCommandList(CommandList cmd) { return GetFrameResources().commandBuffers[cmd]; }
+
+		struct CommandListMetadata
+		{
+			QUEUE_TYPE queue = {};
+			std::vector<CommandList> waits;
+		} cmd_meta[COMMANDLIST_COUNT];
+
+		inline VkCommandBuffer GetCommandList(CommandList cmd)
+		{
+			return GetFrameResources().commandBuffers[cmd][cmd_meta[cmd].queue];
+		}
 
 		std::vector<VkMemoryBarrier> frame_memoryBarriers[COMMANDLIST_COUNT];
 		std::vector<VkImageMemoryBarrier> frame_imageBarriers[COMMANDLIST_COUNT];
@@ -365,13 +442,6 @@ namespace wiGraphics
 
 		std::vector<StaticSampler> common_samplers;
 
-		std::vector<VkSwapchainKHR> submit_swapchains;
-		std::vector<uint32_t> submit_swapChainImageIndices;
-		std::vector<VkPipelineStageFlags> submit_waitStages;
-		std::vector<VkSemaphore> submit_waitSemaphores;
-		std::vector<uint64_t> submit_waitValues;
-		std::vector<VkSemaphore> submit_signalSemaphores;
-
 	public:
 		GraphicsDevice_Vulkan(wiPlatform::window_type window, bool debuglayer = false);
 		virtual ~GraphicsDevice_Vulkan();
@@ -405,7 +475,7 @@ namespace wiGraphics
 
 		void SetName(GPUResource* pResource, const char* name) override;
 
-		CommandList BeginCommandList() override;
+		CommandList BeginCommandList(QUEUE_TYPE queue = QUEUE_GRAPHICS) override;
 		void SubmitCommandLists() override;
 
 		void WaitForGPU() const override;
@@ -417,6 +487,7 @@ namespace wiGraphics
 
 		///////////////Thread-sensitive////////////////////////
 
+		void WaitCommandList(CommandList cmd, CommandList wait_for) override;
 		void RenderPassBegin(const SwapChain* swapchain, CommandList cmd) override;
 		void RenderPassBegin(const RenderPass* renderpass, CommandList cmd) override;
 		void RenderPassEnd(CommandList cmd) override;

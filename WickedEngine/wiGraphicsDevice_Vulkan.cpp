@@ -435,6 +435,7 @@ namespace Vulkan_Internal
 		case wiGraphics::IMAGE_LAYOUT_DEPTHSTENCIL_READONLY:
 			return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 		case wiGraphics::IMAGE_LAYOUT_SHADER_RESOURCE:
+		case wiGraphics::IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE:
 			return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		case wiGraphics::IMAGE_LAYOUT_UNORDERED_ACCESS:
 			return VK_IMAGE_LAYOUT_GENERAL;
@@ -491,6 +492,7 @@ namespace Vulkan_Internal
 			flags |= VK_ACCESS_SHADER_READ_BIT;
 			break;
 		case wiGraphics::IMAGE_LAYOUT_SHADER_RESOURCE:
+		case wiGraphics::IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE:
 			flags |= VK_ACCESS_SHADER_READ_BIT;
 			break;
 		case wiGraphics::IMAGE_LAYOUT_UNORDERED_ACCESS:
@@ -532,6 +534,7 @@ namespace Vulkan_Internal
 			flags |= VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
 			break;
 		case wiGraphics::BUFFER_STATE_SHADER_RESOURCE:
+		case wiGraphics::BUFFER_STATE_SHADER_RESOURCE_COMPUTE:
 			flags |= VK_ACCESS_SHADER_READ_BIT;
 			flags |= VK_ACCESS_UNIFORM_READ_BIT;
 			break;
@@ -2243,17 +2246,15 @@ using namespace Vulkan_Internal;
 				queueCreateInfo.queueCount = 1;
 				queueCreateInfo.pQueuePriorities = &queuePriority;
 				queueCreateInfos.push_back(queueCreateInfo);
+				families.push_back((uint32_t)queueFamily);
 			}
 
 			VkDeviceCreateInfo createInfo = {};
 			createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-
-			createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
+			createInfo.queueCreateInfoCount = (uint32_t)queueCreateInfos.size();
 			createInfo.pQueueCreateInfos = queueCreateInfos.data();
-
 			createInfo.pEnabledFeatures = nullptr;
 			createInfo.pNext = &features2;
-
 			createInfo.enabledExtensionCount = static_cast<uint32_t>(enabled_deviceExtensions.size());
 			createInfo.ppEnabledExtensionNames = enabled_deviceExtensions.data();
 
@@ -2273,9 +2274,32 @@ using namespace Vulkan_Internal;
 			volkLoadDevice(device);
 
 			vkGetDeviceQueue(device, graphicsFamily, 0, &graphicsQueue);
-			vkGetDeviceQueue(device, copyFamily, 0, &copyQueue);
 			vkGetDeviceQueue(device, computeFamily, 0, &computeQueue);
+			vkGetDeviceQueue(device, copyFamily, 0, &copyQueue);
 		}
+
+		// queues:
+		{
+			queues[QUEUE_GRAPHICS].queue = graphicsQueue;
+			queues[QUEUE_COMPUTE].queue = computeQueue;
+
+			VkSemaphoreTypeCreateInfo timelineCreateInfo = {};
+			timelineCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
+			timelineCreateInfo.pNext = nullptr;
+			timelineCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
+			timelineCreateInfo.initialValue = 0;
+
+			VkSemaphoreCreateInfo createInfo = {};
+			createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+			createInfo.pNext = &timelineCreateInfo;
+			createInfo.flags = 0;
+
+			res = vkCreateSemaphore(device, &createInfo, nullptr, &queues[QUEUE_GRAPHICS].semaphore);
+			assert(res == VK_SUCCESS);
+			res = vkCreateSemaphore(device, &createInfo, nullptr, &queues[QUEUE_COMPUTE].semaphore);
+			assert(res == VK_SUCCESS);
+		}
+
 
 		allocationhandler = std::make_shared<AllocationHandler>();
 		allocationhandler->device = device;
@@ -2298,12 +2322,12 @@ using namespace Vulkan_Internal;
 		// Create frame resources:
 		for (uint32_t fr = 0; fr < BUFFERCOUNT; ++fr)
 		{
-			// Fence:
+			for (int queue = 0; queue < QUEUE_COUNT; ++queue)
 			{
 				VkFenceCreateInfo fenceInfo = {};
 				fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 				//fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-				VkResult res = vkCreateFence(device, &fenceInfo, nullptr, &frames[fr].fence);
+				VkResult res = vkCreateFence(device, &fenceInfo, nullptr, &frames[fr].fence[queue]);
 				assert(res == VK_SUCCESS);
 			}
 
@@ -2511,13 +2535,25 @@ using namespace Vulkan_Internal;
 	{
 		VkResult res = vkQueueWaitIdle(graphicsQueue);
 		assert(res == VK_SUCCESS);
+		res = vkQueueWaitIdle(computeQueue);
+		assert(res == VK_SUCCESS);
+		res = vkQueueWaitIdle(copyQueue);
+		assert(res == VK_SUCCESS);
+
+		for (auto& queue : queues)
+		{
+			vkDestroySemaphore(device, queue.semaphore, nullptr);
+		}
 
 		for (auto& frame : frames)
 		{
-			vkDestroyFence(device, frame.fence, nullptr);
-			for (auto& commandPool : frame.commandPools)
+			for (int queue = 0; queue < QUEUE_COUNT; ++queue)
 			{
-				vkDestroyCommandPool(device, commandPool, nullptr);
+				vkDestroyFence(device, frame.fence[queue], nullptr);
+				for (int cmd = 0; cmd < COMMANDLIST_COUNT; ++cmd)
+				{
+					vkDestroyCommandPool(device, frame.commandPools[cmd][queue], nullptr);
+				}
 			}
 			vkDestroyCommandPool(device, frame.transitionCommandPool, nullptr);
 
@@ -2676,21 +2712,7 @@ using namespace Vulkan_Internal;
 		createInfo.imageExtent = internal_state->swapChainExtent;
 		createInfo.imageArrayLayers = 1;
 		createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-
-		uint32_t queueFamilyIndices[] = { (uint32_t)graphicsFamily, (uint32_t)presentFamily };
-
-		if (graphicsFamily != presentFamily)
-		{
-			createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-			createInfo.queueFamilyIndexCount = 2;
-			createInfo.pQueueFamilyIndices = queueFamilyIndices;
-		}
-		else
-		{
-			createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-			createInfo.queueFamilyIndexCount = 0; // Optional
-			createInfo.pQueueFamilyIndices = nullptr; // Optional
-		}
+		createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
 		createInfo.preTransform = internal_state->swapchain_capabilities.currentTransform;
 		createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
@@ -2934,7 +2956,16 @@ using namespace Vulkan_Internal;
 
 		bufferInfo.flags = 0;
 
-		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		if (families.size() > 1)
+		{
+			bufferInfo.sharingMode = VK_SHARING_MODE_CONCURRENT;
+			bufferInfo.queueFamilyIndexCount = (uint32_t)families.size();
+			bufferInfo.pQueueFamilyIndices = families.data();
+		}
+		else
+		{
+			bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		}
 
 
 
@@ -3057,10 +3088,6 @@ using namespace Vulkan_Internal;
 					barrier.dstAccessMask |= VK_ACCESS_SHADER_WRITE_BIT;
 				}
 
-				// transfer queue-ownership from copy to graphics:
-				barrier.srcQueueFamilyIndex = copyFamily;
-				barrier.dstQueueFamilyIndex = graphicsFamily;
-
 				vkCmdPipelineBarrier(
 					cmd.commandBuffer,
 					VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -3161,7 +3188,16 @@ using namespace Vulkan_Internal;
 			imageInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 		}
 
-		imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		if (families.size() > 1)
+		{
+			imageInfo.sharingMode = VK_SHARING_MODE_CONCURRENT;
+			imageInfo.queueFamilyIndexCount = (uint32_t)families.size();
+			imageInfo.pQueueFamilyIndices = families.data();
+		}
+		else
+		{
+			imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		}
 
 		switch (pTexture->desc.type)
 		{
@@ -5596,12 +5632,14 @@ using namespace Vulkan_Internal;
 		}
 	}
 
-	CommandList GraphicsDevice_Vulkan::BeginCommandList()
+	CommandList GraphicsDevice_Vulkan::BeginCommandList(QUEUE_TYPE queue)
 	{
 		VkResult res;
 
 		CommandList cmd = cmd_count.fetch_add(1);
 		assert(cmd < COMMANDLIST_COUNT);
+		cmd_meta[cmd].queue = queue;
+		cmd_meta[cmd].waits.clear();
 
 		if (GetCommandList(cmd) == VK_NULL_HANDLE)
 		{
@@ -5611,19 +5649,30 @@ using namespace Vulkan_Internal;
 			{
 				VkCommandPoolCreateInfo poolInfo = {};
 				poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-				poolInfo.queueFamilyIndex = graphicsFamily;
+				switch (queue)
+				{
+				case wiGraphics::QUEUE_GRAPHICS:
+					poolInfo.queueFamilyIndex = graphicsFamily;
+					break;
+				case wiGraphics::QUEUE_COMPUTE:
+					poolInfo.queueFamilyIndex = computeFamily;
+					break;
+				default:
+					assert(0); // queue type not handled
+					break;
+				}
 				poolInfo.flags = 0; // Optional
 
-				res = vkCreateCommandPool(device, &poolInfo, nullptr, &frame.commandPools[cmd]);
+				res = vkCreateCommandPool(device, &poolInfo, nullptr, &frame.commandPools[cmd][queue]);
 				assert(res == VK_SUCCESS);
 
 				VkCommandBufferAllocateInfo commandBufferInfo = {};
 				commandBufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 				commandBufferInfo.commandBufferCount = 1;
-				commandBufferInfo.commandPool = frame.commandPools[cmd];
+				commandBufferInfo.commandPool = frame.commandPools[cmd][queue];
 				commandBufferInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 
-				res = vkAllocateCommandBuffers(device, &commandBufferInfo, &frame.commandBuffers[cmd]);
+				res = vkAllocateCommandBuffers(device, &commandBufferInfo, &frame.commandBuffers[cmd][queue]);
 				assert(res == VK_SUCCESS);
 
 				frame.resourceBuffer[cmd].init(this, 1024 * 1024); // 1 MB starting size
@@ -5631,7 +5680,7 @@ using namespace Vulkan_Internal;
 			}
 		}
 
-		res = vkResetCommandPool(device, GetFrameResources().commandPools[cmd], 0);
+		res = vkResetCommandPool(device, GetFrameResources().commandPools[cmd][queue], 0);
 		assert(res == VK_SUCCESS);
 
 		VkCommandBufferBeginInfo beginInfo = {};
@@ -5639,7 +5688,7 @@ using namespace Vulkan_Internal;
 		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 		beginInfo.pInheritanceInfo = nullptr; // Optional
 
-		res = vkBeginCommandBuffer(GetFrameResources().commandBuffers[cmd], &beginInfo);
+		res = vkBeginCommandBuffer(GetFrameResources().commandBuffers[cmd][queue], &beginInfo);
 		assert(res == VK_SUCCESS);
 
 		// reset descriptor allocators:
@@ -5648,18 +5697,21 @@ using namespace Vulkan_Internal;
 		// reset immediate resource allocators:
 		GetFrameResources().resourceBuffer[cmd].clear();
 
-		VkRect2D scissors[8];
-		for (int i = 0; i < arraysize(scissors); ++i)
+		if (queue == QUEUE_GRAPHICS)
 		{
-			scissors[i].offset.x = 0;
-			scissors[i].offset.y = 0;
-			scissors[i].extent.width = 65535;
-			scissors[i].extent.height = 65535;
-		}
-		vkCmdSetScissor(GetCommandList(cmd), 0, arraysize(scissors), scissors);
+			VkRect2D scissors[8];
+			for (int i = 0; i < arraysize(scissors); ++i)
+			{
+				scissors[i].offset.x = 0;
+				scissors[i].offset.y = 0;
+				scissors[i].extent.width = 65535;
+				scissors[i].extent.height = 65535;
+			}
+			vkCmdSetScissor(GetCommandList(cmd), 0, arraysize(scissors), scissors);
 
-		float blendConstants[] = { 1,1,1,1 };
-		vkCmdSetBlendConstants(GetCommandList(cmd), blendConstants);
+			float blendConstants[] = { 1,1,1,1 };
+			vkCmdSetBlendConstants(GetCommandList(cmd), blendConstants);
+		}
 
 		prev_pipeline_hash[cmd] = 0;
 		active_pso[cmd] = nullptr;
@@ -5680,16 +5732,18 @@ using namespace Vulkan_Internal;
 	}
 	void GraphicsDevice_Vulkan::SubmitCommandLists()
 	{
+		transitionLocker.lock();
 		VkResult res;
 
 		// Submit current frame:
 		{
 			auto& frame = GetFrameResources();
-			VkCommandBuffer cmdLists[COMMANDLIST_COUNT + 1]; // +1 : space for transition command buffer
-			uint32_t counter = 0;
+
+			QUEUE_TYPE submit_queue = QUEUE_COUNT;
 
 			// Transitions:
-			transitionLocker.lock();
+			bool submit_transitions = false;
+			if(!transitions.empty())
 			{
 				vkCmdPipelineBarrier(
 					frame.transitionCommandBuffer,
@@ -5706,47 +5760,71 @@ using namespace Vulkan_Internal;
 				res = vkEndCommandBuffer(frame.transitionCommandBuffer);
 				assert(res == VK_SUCCESS);
 
-				cmdLists[counter++] = frame.transitionCommandBuffer;
+				submit_transitions = true;
 			}
-			transitionLocker.unlock();
-
-			submit_swapchains.clear();
-			submit_swapChainImageIndices.clear();
-			submit_waitStages.clear();
-			submit_waitSemaphores.clear();
-			submit_waitValues.clear();
-			submit_signalSemaphores.clear();
 
 			uint64_t copy_sync = copyAllocator.flush();
-			if (copy_sync > 0)
-			{
-				submit_waitStages.push_back(VK_PIPELINE_STAGE_TRANSFER_BIT);
-				submit_waitSemaphores.push_back(copyAllocator.semaphore);
-				submit_waitValues.push_back(copy_sync);
-			}
 
 			CommandList cmd_last = cmd_count.load();
 			cmd_count.store(0);
 			for (CommandList cmd = 0; cmd < cmd_last; ++cmd)
 			{
-				for (auto& swapchain : prev_swapchains[cmd])
-				{
-					auto internal_state = to_internal(swapchain);
-
-					submit_swapchains.push_back(internal_state->swapChain);
-					submit_swapChainImageIndices.push_back(internal_state->swapChainImageIndex);
-					submit_waitStages.push_back(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-					submit_waitSemaphores.push_back(internal_state->swapchainAcquireSemaphore);
-					submit_waitValues.push_back(0); // not a timeline semaphore
-					submit_signalSemaphores.push_back(internal_state->swapchainReleaseSemaphore);
-				}
-
 				barrier_flush(cmd);
 
 				res = vkEndCommandBuffer(GetCommandList(cmd));
 				assert(res == VK_SUCCESS);
 
-				cmdLists[counter++] = GetCommandList(cmd);
+				const CommandListMetadata& meta = cmd_meta[cmd];
+				if (submit_queue == QUEUE_COUNT) // start first batch
+				{
+					submit_queue = meta.queue;
+				}
+				if (submit_queue != meta.queue || !meta.waits.empty()) // new queue type or wait breaks submit batch
+				{
+					// New batch signals its last cmd:
+					queues[submit_queue].submit_signalSemaphores.push_back(queues[submit_queue].semaphore);
+					queues[submit_queue].submit_signalValues.push_back(FRAMECOUNT * COMMANDLIST_COUNT + (uint64_t)cmd);
+					queues[submit_queue].submit(VK_NULL_HANDLE);
+					submit_queue = meta.queue;
+
+					for (auto& wait : meta.waits)
+					{
+						// record wait for signal on a previous submit:
+						const CommandListMetadata& wait_meta = cmd_meta[wait];
+						queues[submit_queue].submit_waitStages.push_back(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+						queues[submit_queue].submit_waitSemaphores.push_back(queues[wait_meta.queue].semaphore);
+						queues[submit_queue].submit_waitValues.push_back(FRAMECOUNT * COMMANDLIST_COUNT + (uint64_t)wait);
+					}
+				}
+
+				if (copy_sync > 0)
+				{
+					queues[submit_queue].submit_waitStages.push_back(VK_PIPELINE_STAGE_TRANSFER_BIT);
+					queues[submit_queue].submit_waitSemaphores.push_back(copyAllocator.semaphore);
+					queues[submit_queue].submit_waitValues.push_back(copy_sync);
+					copy_sync = 0;
+				}
+
+				if (submit_transitions)
+				{
+					queues[submit_queue].submit_cmds.push_back(frame.transitionCommandBuffer);
+					submit_transitions = false;
+				}
+
+				for (auto& swapchain : prev_swapchains[cmd])
+				{
+					auto internal_state = to_internal(swapchain);
+
+					queues[submit_queue].submit_swapchains.push_back(internal_state->swapChain);
+					queues[submit_queue].submit_swapChainImageIndices.push_back(internal_state->swapChainImageIndex);
+					queues[submit_queue].submit_waitStages.push_back(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+					queues[submit_queue].submit_waitSemaphores.push_back(internal_state->swapchainAcquireSemaphore);
+					queues[submit_queue].submit_waitValues.push_back(0); // not a timeline semaphore
+					queues[submit_queue].submit_signalSemaphores.push_back(internal_state->swapchainReleaseSemaphore);
+					queues[submit_queue].submit_signalValues.push_back(0); // not a timeline semaphore
+				}
+
+				queues[submit_queue].submit_cmds.push_back(GetCommandList(cmd));
 
 				for (auto& x : pipelines_worker[cmd])
 				{
@@ -5764,40 +5842,11 @@ using namespace Vulkan_Internal;
 				pipelines_worker[cmd].clear();
 			}
 
-			VkSubmitInfo submitInfo = {};
-			submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-			submitInfo.commandBufferCount = counter;
-			submitInfo.pCommandBuffers = cmdLists;
-
-			submitInfo.waitSemaphoreCount = (uint32_t)submit_waitSemaphores.size();
-			submitInfo.pWaitSemaphores = submit_waitSemaphores.data();
-			submitInfo.pWaitDstStageMask = submit_waitStages.data();
-
-			submitInfo.signalSemaphoreCount = (uint32_t)submit_signalSemaphores.size();
-			submitInfo.pSignalSemaphores = submit_signalSemaphores.data();
-
-			VkTimelineSemaphoreSubmitInfo timelineInfo = {};
-			timelineInfo.sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO;
-			timelineInfo.pNext = nullptr;
-			timelineInfo.waitSemaphoreValueCount = (uint32_t)submit_waitValues.size();
-			timelineInfo.pWaitSemaphoreValues = submit_waitValues.data();
-			timelineInfo.signalSemaphoreValueCount = 0;
-			timelineInfo.pSignalSemaphoreValues = nullptr;
-
-			submitInfo.pNext = &timelineInfo;
-
-			res = vkQueueSubmit(graphicsQueue, 1, &submitInfo, frame.fence);
-			assert(res == VK_SUCCESS);
-
-			VkPresentInfoKHR presentInfo = {};
-			presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-			presentInfo.waitSemaphoreCount = (uint32_t)submit_signalSemaphores.size();
-			presentInfo.pWaitSemaphores = submit_signalSemaphores.data();
-			presentInfo.swapchainCount = (uint32_t)submit_swapchains.size();
-			presentInfo.pSwapchains = submit_swapchains.data();
-			presentInfo.pImageIndices = submit_swapChainImageIndices.data();
-			res = vkQueuePresentKHR(graphicsQueue, &presentInfo);
-			assert(res == VK_SUCCESS);
+			// final submits with fences:
+			for (int queue = 0; queue < QUEUE_COUNT; ++queue)
+			{
+				queues[queue].submit(frame.fence[queue]);
+			}
 		}
 
 		// From here, we begin a new frame, this affects GetFrameResources()!
@@ -5810,11 +5859,14 @@ using namespace Vulkan_Internal;
 			// Initiate stalling CPU when GPU is not yet finished with next frame:
 			if (FRAMECOUNT >= BUFFERCOUNT)
 			{
-				res = vkWaitForFences(device, 1, &frame.fence, true, 0xFFFFFFFFFFFFFFFF);
-				assert(res == VK_SUCCESS);
+				for (int queue = 0; queue < QUEUE_COUNT; ++queue)
+				{
+					res = vkWaitForFences(device, 1, &frame.fence[queue], true, 0xFFFFFFFFFFFFFFFF);
+					assert(res == VK_SUCCESS);
 
-				res = vkResetFences(device, 1, &frame.fence);
-				assert(res == VK_SUCCESS);
+					res = vkResetFences(device, 1, &frame.fence[queue]);
+					assert(res == VK_SUCCESS);
+				}
 			}
 
 			allocationhandler->Update(FRAMECOUNT, BUFFERCOUNT);
@@ -5833,6 +5885,7 @@ using namespace Vulkan_Internal;
 				assert(res == VK_SUCCESS);
 			}
 		}
+		transitionLocker.unlock();
 	}
 
 	void GraphicsDevice_Vulkan::WaitForGPU() const
@@ -5888,6 +5941,12 @@ using namespace Vulkan_Internal;
 	}
 
 
+	void GraphicsDevice_Vulkan::WaitCommandList(CommandList cmd, CommandList wait_for)
+	{
+		CommandListMetadata& wait_meta = cmd_meta[wait_for];
+		assert(wait_for < cmd); // command list cannot wait for future command list!
+		cmd_meta[cmd].waits.push_back(wait_for);
+	}
 	void GraphicsDevice_Vulkan::RenderPassBegin(const SwapChain* swapchain, CommandList cmd)
 	{
 		auto internal_state = to_internal(swapchain);

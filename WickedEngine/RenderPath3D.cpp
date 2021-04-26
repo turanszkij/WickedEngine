@@ -148,6 +148,7 @@ void RenderPath3D::ResizeBuffers()
 		desc.Format = FORMAT_R8_UNORM;
 		desc.Width = internalResolution.x;
 		desc.Height = internalResolution.y;
+		desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
 		device->CreateTexture(&desc, nullptr, &rtAO);
 		device->SetName(&rtAO, "rtAO");
 	}
@@ -157,6 +158,7 @@ void RenderPath3D::ResizeBuffers()
 		desc.Format = FORMAT_R32G32B32A32_UINT;
 		desc.Width = internalResolution.x;
 		desc.Height = internalResolution.y;
+		desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
 		device->CreateTexture(&desc, nullptr, &rtShadow);
 		device->SetName(&rtShadow, "rtShadow");
 	}
@@ -267,7 +269,7 @@ void RenderPath3D::ResizeBuffers()
 		device->CreateTexture(&desc, nullptr, &depthBuffer_Main);
 		device->SetName(&depthBuffer_Main, "depthBuffer_Main");
 
-		desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE;
+		desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
 		desc.Format = FORMAT_R32_FLOAT;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.SampleCount = 1;
@@ -307,6 +309,7 @@ void RenderPath3D::ResizeBuffers()
 		desc.Width = internalResolution.x;
 		desc.Height = internalResolution.y;
 		desc.MipLevels = 6;
+		desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
 		device->CreateTexture(&desc, nullptr, &rtLinearDepth);
 		device->SetName(&rtLinearDepth, "rtLinearDepth");
 
@@ -599,8 +602,19 @@ void RenderPath3D::Render() const
 
 	// Preparing the frame:
 	cmd = device->BeginCommandList();
+	CommandList cmd_prepareframe = cmd;
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 		RenderFrameSetUp(cmd);
+		});
+
+	// Acceleration structures:
+	//	async compute parallel with depth prepass
+	cmd = device->BeginCommandList(QUEUE_COMPUTE); 
+	device->WaitCommandList(cmd, cmd_prepareframe);
+	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
+
+		wiRenderer::UpdateRaytracingAccelerationStructures(*scene, cmd);
+
 		});
 
 	static const uint32_t drawscene_flags =
@@ -615,6 +629,7 @@ void RenderPath3D::Render() const
 
 	// Main camera depth prepass + occlusion culling:
 	cmd = device->BeginCommandList();
+	CommandList cmd_maincamera_prepass = cmd;
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
@@ -651,7 +666,11 @@ void RenderPath3D::Render() const
 		});
 
 	// Main camera compute effects:
-	cmd = device->BeginCommandList();
+	//	(async compute, parallel to "shadow maps" and "update textures",
+	//	must finish before "main scene opaque color pass")
+	cmd = device->BeginCommandList(QUEUE_COMPUTE);
+	device->WaitCommandList(cmd, cmd_maincamera_prepass);
+	CommandList cmd_maincamera_compute_effects = cmd;
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
@@ -856,6 +875,7 @@ void RenderPath3D::Render() const
 
 	// Main camera opaque color pass:
 	cmd = device->BeginCommandList();
+	device->WaitCommandList(cmd, cmd_maincamera_compute_effects);
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
@@ -867,6 +887,21 @@ void RenderPath3D::Render() const
 			camera_reflection,
 			cmd
 		);
+
+		// This can't run in "main camera compute effects" async compute,
+		//	because it depends on shadow maps, and envmaps
+		if (getRaytracedReflectionEnabled())
+		{
+			wiRenderer::Postprocess_RTReflection(
+				rtreflectionResources,
+				*scene,
+				depthBuffer_Copy,
+				depthBuffer_Copy1,
+				GetGbuffer_Read(),
+				rtSSR,
+				cmd
+			);
+		}
 
 		device->RenderPassBegin(&renderpass_main, cmd);
 
@@ -962,6 +997,7 @@ void RenderPath3D::Compose(CommandList cmd) const
 	if (wiRenderer::GetDebugLightCulling() || wiRenderer::GetVariableRateShadingClassificationDebug())
 	{
 		fx.enableFullScreen();
+		fx.blendFlag = BLENDMODE_PREMULTIPLIED;
 		wiImage::Draw(&debugUAV, fx, cmd);
 	}
 
@@ -974,8 +1010,6 @@ void RenderPath3D::RenderFrameSetUp(CommandList cmd) const
 
 	device->BindResource(CS, &depthBuffer_Copy1, TEXSLOT_DEPTH, cmd);
 	wiRenderer::UpdateRenderData(visibility_main, frameCB, cmd);
-
-	wiRenderer::UpdateRaytracingAccelerationStructures(*scene, cmd);
 }
 
 void RenderPath3D::RenderAO(CommandList cmd) const
@@ -1038,19 +1072,7 @@ void RenderPath3D::RenderAO(CommandList cmd) const
 }
 void RenderPath3D::RenderSSR(CommandList cmd) const
 {
-	if (getRaytracedReflectionEnabled())
-	{
-		wiRenderer::Postprocess_RTReflection(
-			rtreflectionResources,
-			*scene,
-			depthBuffer_Copy,
-			depthBuffer_Copy1,
-			GetGbuffer_Read(),
-			rtSSR, 
-			cmd
-		);
-	}
-	else if (getSSREnabled())
+	if (getSSREnabled() && !getRaytracedReflectionEnabled())
 	{
 		wiRenderer::Postprocess_SSR(
 			ssrResources,

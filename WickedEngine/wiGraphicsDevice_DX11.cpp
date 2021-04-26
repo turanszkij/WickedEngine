@@ -2595,7 +2595,7 @@ void GraphicsDevice_DX11::SetName(GPUResource* pResource, const char* name)
 	internal_state->resource->SetPrivateData(WKPDID_D3DDebugObjectName, (UINT)strlen(name), name);
 }
 
-CommandList GraphicsDevice_DX11::BeginCommandList()
+CommandList GraphicsDevice_DX11::BeginCommandList(QUEUE_TYPE queue)
 {
 	CommandList cmd = cmd_count.fetch_add(1);
 	assert(cmd < COMMANDLIST_COUNT);

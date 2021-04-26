@@ -290,6 +290,7 @@ namespace wiGraphics
 		IMAGE_LAYOUT_DEPTHSTENCIL,				// depth stencil, write enabled
 		IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,		// depth stencil, read only
 		IMAGE_LAYOUT_SHADER_RESOURCE,			// shader resource, read only
+		IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE,	// shader resource, read only, non-pixel shader
 		IMAGE_LAYOUT_UNORDERED_ACCESS,			// shader resource, write enabled
 		IMAGE_LAYOUT_COPY_SRC,					// copy from
 		IMAGE_LAYOUT_COPY_DST,					// copy to
@@ -303,6 +304,7 @@ namespace wiGraphics
 		BUFFER_STATE_CONSTANT_BUFFER,			// constant buffer, read only
 		BUFFER_STATE_INDIRECT_ARGUMENT,			// argument buffer to DrawIndirect() or DispatchIndirect()
 		BUFFER_STATE_SHADER_RESOURCE,			// shader resource, read only
+		BUFFER_STATE_SHADER_RESOURCE_COMPUTE,	// shader resource, read only, non-pixel shader
 		BUFFER_STATE_UNORDERED_ACCESS,			// shader resource, write enabled
 		BUFFER_STATE_COPY_SRC,					// copy from
 		BUFFER_STATE_COPY_DST,					// copy to
