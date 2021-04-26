@@ -6,9 +6,6 @@
 #include "shaders/ResourceMapping.h"
 #include "wiProfiler.h"
 
-#include "wiInput.h"
-static bool async_compute = true;
-
 using namespace wiGraphics;
 
 void RenderPath3D::ResizeBuffers()
@@ -603,11 +600,6 @@ void RenderPath3D::Render() const
 	wiJobSystem::context ctx;
 	CommandList cmd;
 
-	if (wiInput::Press(wiInput::KEYBOARD_BUTTON_F1))
-	{
-		async_compute = !async_compute;
-	}
-
 	// Preparing the frame:
 	cmd = device->BeginCommandList();
 	CommandList cmd_prepareframe = cmd;
@@ -616,8 +608,8 @@ void RenderPath3D::Render() const
 		});
 
 	// Acceleration structures:
-	cmd = device->BeginCommandList(async_compute ? QUEUE_COMPUTE : QUEUE_GRAPHICS);
-	if(async_compute)
+	//	async compute parallel with depth prepass
+	cmd = device->BeginCommandList(QUEUE_COMPUTE); 
 	device->WaitCommandList(cmd, cmd_prepareframe);
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
@@ -676,8 +668,7 @@ void RenderPath3D::Render() const
 	// Main camera compute effects:
 	//	(async compute, parallel to "shadow maps" and "update textures",
 	//	must finish before "main scene opaque color pass")
-	cmd = device->BeginCommandList(async_compute ? QUEUE_COMPUTE : QUEUE_GRAPHICS);
-	if(async_compute)
+	cmd = device->BeginCommandList(QUEUE_COMPUTE);
 	device->WaitCommandList(cmd, cmd_maincamera_prepass);
 	CommandList cmd_maincamera_compute_effects = cmd;
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
@@ -884,7 +875,6 @@ void RenderPath3D::Render() const
 
 	// Main camera opaque color pass:
 	cmd = device->BeginCommandList();
-	if(async_compute)
 	device->WaitCommandList(cmd, cmd_maincamera_compute_effects);
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
@@ -1007,16 +997,8 @@ void RenderPath3D::Compose(CommandList cmd) const
 	if (wiRenderer::GetDebugLightCulling() || wiRenderer::GetVariableRateShadingClassificationDebug())
 	{
 		fx.enableFullScreen();
+		fx.blendFlag = BLENDMODE_PREMULTIPLIED;
 		wiImage::Draw(&debugUAV, fx, cmd);
-	}
-
-	if (async_compute)
-	{
-		wiFont::Draw("asyncc", wiFontParams(100,200,45), cmd);
-	}
-	else
-	{
-		wiFont::Draw("graphx", wiFontParams(100,200,45), cmd);
 	}
 
 	RenderPath2D::Compose(cmd);
