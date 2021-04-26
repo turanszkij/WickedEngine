@@ -31,14 +31,6 @@ namespace wiGraphics
 		Microsoft::WRL::ComPtr<ID3D12Device5> device;
 		Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter;
 		Microsoft::WRL::ComPtr<IDXGIFactory6> factory;
-		struct CommandQueue
-		{
-			D3D12_COMMAND_QUEUE_DESC desc = {};
-			Microsoft::WRL::ComPtr<ID3D12CommandQueue> queue;
-			Microsoft::WRL::ComPtr<ID3D12Fence> fence;
-			ID3D12CommandList* submit_cmds[COMMANDLIST_COUNT] = {};
-			uint32_t submit_count = 0;
-		} queues[QUEUE_COUNT];
 
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> dispatchIndirectCommandSignature;
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> drawInstancedIndirectCommandSignature;
@@ -74,6 +66,15 @@ namespace wiGraphics
 		D3D12_CPU_DESCRIPTOR_HANDLE nullUAV_texture3d = {};
 
 		std::vector<D3D12_STATIC_SAMPLER_DESC> common_samplers;
+
+		struct CommandQueue
+		{
+			D3D12_COMMAND_QUEUE_DESC desc = {};
+			Microsoft::WRL::ComPtr<ID3D12CommandQueue> queue;
+			Microsoft::WRL::ComPtr<ID3D12Fence> fence;
+			ID3D12CommandList* submit_cmds[COMMANDLIST_COUNT] = {};
+			uint32_t submit_count = 0;
+		} queues[QUEUE_COUNT];
 
 		struct CopyAllocator
 		{

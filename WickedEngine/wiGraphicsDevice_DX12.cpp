@@ -5468,36 +5468,7 @@ using namespace DX12_Internal;
 				{
 					submit_queue = meta.queue;
 				}
-				for (auto& wait : meta.waits) // wait breaks submit batch
-				{
-					if (queues[submit_queue].submit_count > 0)
-					{
-						// submit previous cmd batch:
-						queues[submit_queue].queue->ExecuteCommandLists(
-							queues[submit_queue].submit_count,
-							queues[submit_queue].submit_cmds
-						);
-						queues[submit_queue].submit_count = 0;
-					}
-
-					// signal status in case any future waits needed:
-					hr = queues[submit_queue].queue->Signal(
-						queues[submit_queue].fence.Get(),
-						FRAMECOUNT * COMMANDLIST_COUNT + (uint64_t)cmd
-					);
-					assert(SUCCEEDED(hr));
-
-					// record wait for signal on a previous submit:
-					const CommandListMetadata& wait_meta = cmd_meta[wait];
-					hr = queues[meta.queue].queue->Wait(
-						queues[wait_meta.queue].fence.Get(),
-						FRAMECOUNT * COMMANDLIST_COUNT + (uint64_t)wait
-					);
-					assert(SUCCEEDED(hr));
-
-					submit_queue = meta.queue;
-				}
-				if (meta.queue != submit_queue) // new queue type breaks submit batch
+				if (meta.queue != submit_queue || !meta.waits.empty()) // new queue type or wait breaks submit batch
 				{
 					// submit previous cmd batch:
 					if (queues[submit_queue].submit_count > 0)
@@ -5517,6 +5488,17 @@ using namespace DX12_Internal;
 					assert(SUCCEEDED(hr));
 
 					submit_queue = meta.queue;
+
+					for (auto& wait : meta.waits)
+					{
+						// record wait for signal on a previous submit:
+						const CommandListMetadata& wait_meta = cmd_meta[wait];
+						hr = queues[submit_queue].queue->Wait(
+							queues[wait_meta.queue].fence.Get(),
+							FRAMECOUNT * COMMANDLIST_COUNT + (uint64_t)wait
+						);
+						assert(SUCCEEDED(hr));
+					}
 				}
 
 				assert(submit_queue < QUEUE_COUNT);
