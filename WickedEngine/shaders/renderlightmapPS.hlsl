@@ -301,8 +301,7 @@ float4 main(Input input) : SV_TARGET
 		else
 		{
 			// Calculate chances of reflection types:
-			const float3 F = F_Schlick(surface.f0, saturate(dot(-ray.Direction, surface.N)));
-			const float specChance = dot(F, 0.333f);
+			const float specChance = dot(surface.F, 0.333f);
 
 			roulette = rand(seed, uv);
 			if (roulette < specChance)
@@ -310,7 +309,7 @@ float4 main(Input input) : SV_TARGET
 				// Specular reflection
 				const float3 R = reflect(ray.Direction, surface.N);
 				ray.Direction = lerp(R, SampleHemisphere_cos(R, seed, uv), surface.roughnessBRDF);
-				energy *= F / specChance;
+				energy *= surface.F / specChance;
 			}
 			else
 			{

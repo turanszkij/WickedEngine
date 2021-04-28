@@ -116,7 +116,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 #endif // RTAPI
 
 		surface.P = ray.Origin;
-		surface.V = normalize(g_xCamera_CamPos - surface.P);
+		surface.V = -ray.Direction;
 		surface.update();
 
 		float3 current_energy = energy;
@@ -152,8 +152,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			}
 			else
 			{
-				const float3 F = F_Schlick(surface.f0, saturate(dot(-ray.Direction, surface.N)));
-				const float specChance = dot(F, 0.333);
+				const float specChance = dot(surface.F, 0.333);
 
 				roulette = rand(seed, uv);
 				if (roulette < specChance)
@@ -161,7 +160,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 					// Specular reflection
 					const float3 R = reflect(ray.Direction, surface.N);
 					ray.Direction = lerp(R, SampleHemisphere_cos(R, seed, uv), surface.roughnessBRDF);
-					energy *= F / specChance;
+					energy *= surface.F / specChance;
 				}
 				else
 				{

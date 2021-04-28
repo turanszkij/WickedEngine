@@ -7,7 +7,6 @@
 #include "wiMath.h"
 #include "wiTextureHelper.h"
 #include "wiEnums.h"
-#include "wiRandom.h"
 #include "wiRectPacker.h"
 #include "wiBackLog.h"
 #include "wiProfiler.h"
@@ -7740,7 +7739,7 @@ void RayTraceScene(
 		device->BindResource(CS, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
 	}
 
-	const XMFLOAT4& halton = wiMath::GetHaltonSequence((int)device->GetFrameCount());
+	const XMFLOAT4& halton = wiMath::GetHaltonSequence(accumulation_sample);
 	RaytracingCB cb;
 	cb.xTracePixelOffset = XMFLOAT2(halton.x, halton.y);
 	cb.xTraceAccumulationFactor = 1.0f / ((float)accumulation_sample + 1.0f);
@@ -7750,7 +7749,7 @@ void RayTraceScene(
 	cb.xTraceResolution_rcp.y = 1.0f / cb.xTraceResolution.y;
 	cb.xTraceUserData.x = raytraceBounceCount;
 	cb.xTraceUserData.y = accumulation_sample;
-	cb.xTraceRandomSeed = wiRandom::getRandom(1000000) / 1000000.f;
+	cb.xTraceRandomSeed = cb.xTraceAccumulationFactor;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_RAYTRACE], &cb, cmd);
 	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(RaytracingCB), cmd);
 
@@ -7863,9 +7862,9 @@ void RenderObjectLightMap(const Scene& scene, const ObjectComponent& object, Com
 	cb.xTracePixelOffset.y = (halton.y * 2 - 1) * cb.xTraceResolution_rcp.y;
 	cb.xTracePixelOffset.x *= 1.4f;	// boost the jitter by a bit
 	cb.xTracePixelOffset.y *= 1.4f;	// boost the jitter by a bit
-	cb.xTraceRandomSeed = wiRandom::getRandom(1000000) / 1000000.f;
 	cb.xTraceAccumulationFactor = 1.0f / (object.lightmapIterationCount + 1.0f); // accumulation factor (alpha)
 	cb.xTraceUserData.x = raytraceBounceCount;
+	cb.xTraceRandomSeed = cb.xTraceAccumulationFactor;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_RAYTRACE], &cb, cmd);
 	device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(RaytracingCB), cmd);
 	device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(RaytracingCB), cmd);
