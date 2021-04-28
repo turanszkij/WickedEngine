@@ -9,6 +9,7 @@
 #ifdef WICKEDENGINE_BUILD_DX12
 #include "wiGraphicsDevice.h"
 #include "wiGraphicsDevice_SharedInternals.h"
+#include "wiMath.h"
 
 #include <dxgi1_6.h>
 #include <wrl/client.h> // ComPtr
@@ -78,7 +79,7 @@ namespace wiGraphics
 
 		struct CopyAllocator
 		{
-			Microsoft::WRL::ComPtr<ID3D12Device5> device;
+			GraphicsDevice_DX12* device = nullptr;
 			Microsoft::WRL::ComPtr<ID3D12CommandQueue> queue;
 			Microsoft::WRL::ComPtr<ID3D12Fence> fence;
 			uint64_t fenceValue = 0;
@@ -90,118 +91,18 @@ namespace wiGraphics
 				Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList;
 				uint64_t target = 0;
 				GPUBuffer uploadbuffer;
+				void* data = nullptr;
+				ID3D12Resource* upload_resource = nullptr;
 			};
-			std::vector<CopyCMD> freelist;
-			std::vector<CopyCMD> worklist;
-			uint64_t submit_wait = 0;
+			std::vector<CopyCMD> freelist; // available
+			std::vector<CopyCMD> worklist; // in progress
+			uint64_t submit_wait = 0; // last submit wait value
 
-			void Create(Microsoft::WRL::ComPtr<ID3D12Device5> device)
-			{
-				this->device = device;
-
-				D3D12_COMMAND_QUEUE_DESC copyQueueDesc = {};
-				copyQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
-				copyQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
-				copyQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-				copyQueueDesc.NodeMask = 0;
-				HRESULT hr = device->CreateCommandQueue(&copyQueueDesc, IID_PPV_ARGS(&queue));
-				assert(SUCCEEDED(hr));
-
-				hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&fence));
-				assert(SUCCEEDED(hr));
-			}
-			void Destroy()
-			{
-				uint64_t value = ++fenceValue;
-				HRESULT hr = queue->Signal(fence.Get(), value);
-				assert(SUCCEEDED(hr));
-				hr = fence->SetEventOnCompletion(value, nullptr);
-				assert(SUCCEEDED(hr));
-			}
-
-			CopyCMD allocate(uint32_t staging_size = 0)
-			{
-				locker.lock();
-
-				// create a new command list if there are no free ones:
-				if (freelist.empty())
-				{
-					CopyCMD cmd;
-
-					HRESULT hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS(&cmd.commandAllocator));
-					assert(SUCCEEDED(hr));
-					hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, cmd.commandAllocator.Get(), nullptr, IID_PPV_ARGS(&cmd.commandList));
-					assert(SUCCEEDED(hr));
-
-					hr = static_cast<ID3D12GraphicsCommandList*>(cmd.commandList.Get())->Close();
-					assert(SUCCEEDED(hr));
-
-					freelist.push_back(cmd);
-				}
-
-				CopyCMD cmd = freelist.back();
-				if (cmd.uploadbuffer.desc.ByteWidth < staging_size)
-				{
-					// Try to search for a staging buffer that is good:
-					for (size_t i = 0; i < freelist.size(); ++i)
-					{
-						if (freelist[i].uploadbuffer.desc.ByteWidth >= staging_size)
-						{
-							cmd = freelist[i];
-							std::swap(freelist[i], freelist.back());
-							break;
-						}
-					}
-				}
-				freelist.pop_back();
-				locker.unlock();
-
-				// begin command list in valid state:
-				HRESULT hr = cmd.commandAllocator->Reset();
-				assert(SUCCEEDED(hr));
-				hr = static_cast<ID3D12GraphicsCommandList*>(cmd.commandList.Get())->Reset(cmd.commandAllocator.Get(), nullptr);
-				assert(SUCCEEDED(hr));
-
-				return cmd;
-			}
-			void submit(CopyCMD cmd)
-			{
-				static_cast<ID3D12GraphicsCommandList*>(cmd.commandList.Get())->Close();
-				ID3D12CommandList* commandlists[] = {
-					cmd.commandList.Get()
-				};
-				queue->ExecuteCommandLists(1, commandlists);
-
-				locker.lock();
-				cmd.target = ++fenceValue;
-				worklist.push_back(cmd);
-				submit_wait = std::max(submit_wait, cmd.target);
-				locker.unlock();
-			}
-			uint64_t flush()
-			{
-				locker.lock();
-
-				queue->Signal(fence.Get(), submit_wait);
-
-				// free up the finished command lists:
-				uint64_t completed_fence_value = fence->GetCompletedValue();
-				for (size_t i = 0; i < worklist.size(); ++i)
-				{
-					if (worklist[i].target <= completed_fence_value)
-					{
-						freelist.push_back(worklist[i]);
-						worklist[i] = worklist.back();
-						worklist.pop_back();
-						i--;
-					}
-				}
-
-				uint64_t value = submit_wait;
-				submit_wait = 0;
-				locker.unlock();
-				return value;
-			}
+			void init(GraphicsDevice_DX12* device);
+			void destroy();
+			CopyCMD allocate(uint32_t staging_size);
+			void submit(CopyCMD cmd);
+			uint64_t flush();
 		};
 		mutable CopyAllocator copyAllocator;
 
@@ -266,9 +167,8 @@ namespace wiGraphics
 			};
 
 			void init(GraphicsDevice_DX12* device);
-
 			void reset();
-			void validate(bool graphics, CommandList cmd);
+			void flush(bool graphics, CommandList cmd);
 		};
 		DescriptorBinder descriptors[COMMANDLIST_COUNT];
 

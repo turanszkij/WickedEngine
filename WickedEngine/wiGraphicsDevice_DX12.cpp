@@ -1489,6 +1489,128 @@ using namespace DX12_Internal;
 
 	// Allocators:
 
+	void GraphicsDevice_DX12::CopyAllocator::init(GraphicsDevice_DX12* device)
+	{
+		this->device = device;
+
+		D3D12_COMMAND_QUEUE_DESC copyQueueDesc = {};
+		copyQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
+		copyQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+		copyQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+		copyQueueDesc.NodeMask = 0;
+		HRESULT hr = device->device->CreateCommandQueue(&copyQueueDesc, IID_PPV_ARGS(&queue));
+		assert(SUCCEEDED(hr));
+
+		hr = device->device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&fence));
+		assert(SUCCEEDED(hr));
+	}
+	void GraphicsDevice_DX12::CopyAllocator::destroy()
+	{
+		uint64_t value = ++fenceValue;
+		HRESULT hr = queue->Signal(fence.Get(), value);
+		assert(SUCCEEDED(hr));
+		hr = fence->SetEventOnCompletion(value, nullptr);
+		assert(SUCCEEDED(hr));
+	}
+	GraphicsDevice_DX12::CopyAllocator::CopyCMD GraphicsDevice_DX12::CopyAllocator::allocate(uint32_t staging_size)
+	{
+		locker.lock();
+
+		// create a new command list if there are no free ones:
+		if (freelist.empty())
+		{
+			CopyCMD cmd;
+
+			HRESULT hr = device->device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS(&cmd.commandAllocator));
+			assert(SUCCEEDED(hr));
+			hr = device->device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, cmd.commandAllocator.Get(), nullptr, IID_PPV_ARGS(&cmd.commandList));
+			assert(SUCCEEDED(hr));
+
+			hr = static_cast<ID3D12GraphicsCommandList*>(cmd.commandList.Get())->Close();
+			assert(SUCCEEDED(hr));
+
+			freelist.push_back(cmd);
+		}
+
+		CopyCMD cmd = freelist.back();
+		if (cmd.uploadbuffer.desc.ByteWidth < staging_size)
+		{
+			// Try to search for a staging buffer that can fit the request:
+			for (size_t i = 0; i < freelist.size(); ++i)
+			{
+				if (freelist[i].uploadbuffer.desc.ByteWidth >= staging_size)
+				{
+					cmd = freelist[i];
+					std::swap(freelist[i], freelist.back());
+					break;
+				}
+			}
+		}
+		freelist.pop_back();
+		locker.unlock();
+
+		// If no buffer was found that fits the data, create one:
+		if (cmd.uploadbuffer.desc.ByteWidth < staging_size)
+		{
+			GPUBufferDesc uploaddesc;
+			uploaddesc.ByteWidth = wiMath::GetNextPowerOfTwo(staging_size);
+			uploaddesc.Usage = USAGE_STAGING;
+			bool upload_success = device->CreateBuffer(&uploaddesc, nullptr, &cmd.uploadbuffer);
+			assert(upload_success);
+
+			cmd.upload_resource = to_internal(&cmd.uploadbuffer)->resource.Get();
+			CD3DX12_RANGE readRange(0, 0);
+			HRESULT hr = cmd.upload_resource->Map(0, &readRange, &cmd.data);
+			assert(SUCCEEDED(hr));
+		}
+
+		// begin command list in valid state:
+		HRESULT hr = cmd.commandAllocator->Reset();
+		assert(SUCCEEDED(hr));
+		hr = static_cast<ID3D12GraphicsCommandList*>(cmd.commandList.Get())->Reset(cmd.commandAllocator.Get(), nullptr);
+		assert(SUCCEEDED(hr));
+
+		return cmd;
+	}
+	void GraphicsDevice_DX12::CopyAllocator::submit(CopyCMD cmd)
+	{
+		static_cast<ID3D12GraphicsCommandList*>(cmd.commandList.Get())->Close();
+		ID3D12CommandList* commandlists[] = {
+			cmd.commandList.Get()
+		};
+		queue->ExecuteCommandLists(1, commandlists);
+
+		locker.lock();
+		cmd.target = ++fenceValue;
+		worklist.push_back(cmd);
+		submit_wait = std::max(submit_wait, cmd.target);
+		locker.unlock();
+	}
+	uint64_t GraphicsDevice_DX12::CopyAllocator::flush()
+	{
+		locker.lock();
+
+		queue->Signal(fence.Get(), submit_wait);
+
+		// free up the finished command lists:
+		uint64_t completed_fence_value = fence->GetCompletedValue();
+		for (size_t i = 0; i < worklist.size(); ++i)
+		{
+			if (worklist[i].target <= completed_fence_value)
+			{
+				freelist.push_back(worklist[i]);
+				worklist[i] = worklist.back();
+				worklist.pop_back();
+				i--;
+			}
+		}
+
+		uint64_t value = submit_wait;
+		submit_wait = 0;
+		locker.unlock();
+		return value;
+	}
+
 	void GraphicsDevice_DX12::FrameResources::ResourceFrameAllocator::init(GraphicsDevice_DX12* device, size_t size)
 	{
 		this->device = device;
@@ -1582,7 +1704,7 @@ using namespace DX12_Internal;
 		memset(UAV_index, -1, sizeof(UAV_index));
 		memset(SAM, 0, sizeof(SAM));
 	}
-	void GraphicsDevice_DX12::DescriptorBinder::validate(bool graphics, CommandList cmd)
+	void GraphicsDevice_DX12::DescriptorBinder::flush(bool graphics, CommandList cmd)
 	{
 		auto pso_internal = graphics ? to_internal(device->active_pso[cmd]) : to_internal(device->active_cs[cmd]);
 
@@ -2175,7 +2297,7 @@ using namespace DX12_Internal;
 	{
 		pso_validate(cmd);
 
-		descriptors[cmd].validate(true, cmd);
+		descriptors[cmd].flush(true, cmd);
 
 		if (pushconstants[cmd].size > 0)
 		{
@@ -2196,7 +2318,7 @@ using namespace DX12_Internal;
 	{
 		barrier_flush(cmd);
 
-		descriptors[cmd].validate(false, cmd);
+		descriptors[cmd].flush(false, cmd);
 
 		if (pushconstants[cmd].size > 0)
 		{
@@ -2421,7 +2543,7 @@ using namespace DX12_Internal;
 			}
 		}
 
-		copyAllocator.Create(device);
+		copyAllocator.init(this);
 
 		// Query features:
 
@@ -2674,7 +2796,7 @@ using namespace DX12_Internal;
 	GraphicsDevice_DX12::~GraphicsDevice_DX12()
 	{
 		WaitForGPU();
-		copyAllocator.Destroy();
+		copyAllocator.destroy();
 	}
 
 	bool GraphicsDevice_DX12::CreateSwapChain(const SwapChainDesc* pDesc, wiPlatform::window_type window, SwapChain* swapChain) const
@@ -2862,29 +2984,14 @@ using namespace DX12_Internal;
 		// Issue data copy on request:
 		if (pInitialData != nullptr)
 		{
-			GPUBufferDesc uploaddesc;
-			uploaddesc.ByteWidth = pDesc->ByteWidth;
-			uploaddesc.Usage = USAGE_STAGING;
+			auto cmd = copyAllocator.allocate(pDesc->ByteWidth);
 
-			auto cmd = copyAllocator.allocate(uploaddesc.ByteWidth);
-			if (cmd.uploadbuffer.desc.ByteWidth < uploaddesc.ByteWidth)
-			{
-				bool upload_success = CreateBuffer(&uploaddesc, nullptr, &cmd.uploadbuffer);
-				assert(upload_success);
-			}
-
-			ID3D12Resource* upload_resource = to_internal(&cmd.uploadbuffer)->resource.Get();
-
-			void* pData;
-			CD3DX12_RANGE readRange(0, 0);
-			hr = upload_resource->Map(0, &readRange, &pData);
-			assert(SUCCEEDED(hr));
-			memcpy(pData, pInitialData->pSysMem, pDesc->ByteWidth);
+			memcpy(cmd.data, pInitialData->pSysMem, pDesc->ByteWidth);
 
 			cmd.commandList->CopyBufferRegion(
 				internal_state->resource.Get(),
 				0,
-				upload_resource,
+				cmd.upload_resource,
 				0,
 				pDesc->ByteWidth
 			);
@@ -3060,30 +3167,14 @@ using namespace DX12_Internal;
 			std::vector<UINT> numRows(dataCount);
 			device->GetCopyableFootprints(&desc, 0, dataCount, 0, layouts.data(), numRows.data(), rowSizesInBytes.data(), &RequiredSize);
 
-			GPUBufferDesc uploaddesc;
-			uploaddesc.ByteWidth = (uint32_t)RequiredSize;
-			uploaddesc.Usage = USAGE_STAGING;
-
-			auto cmd = copyAllocator.allocate(uploaddesc.ByteWidth);
-			if (cmd.uploadbuffer.desc.ByteWidth < uploaddesc.ByteWidth)
-			{
-				bool upload_success = CreateBuffer(&uploaddesc, nullptr, &cmd.uploadbuffer);
-				assert(upload_success);
-			}
-
-			ID3D12Resource* upload_resource = to_internal(&cmd.uploadbuffer)->resource.Get();
-
-			void* pData;
-			CD3DX12_RANGE readRange(0, 0);
-			hr = upload_resource->Map(0, &readRange, &pData);
-			assert(SUCCEEDED(hr));
+			auto cmd = copyAllocator.allocate((uint32_t)RequiredSize);
 
 			for (uint32_t i = 0; i < dataCount; ++i)
 			{
 				if (rowSizesInBytes[i] > (SIZE_T)-1)
 					continue;
 				D3D12_MEMCPY_DEST DestData = {};
-				DestData.pData = (void*)((UINT64)pData + layouts[i].Offset);
+				DestData.pData = (void*)((UINT64)cmd.data + layouts[i].Offset);
 				DestData.RowPitch = (SIZE_T)layouts[i].Footprint.RowPitch;
 				DestData.SlicePitch = (SIZE_T)layouts[i].Footprint.RowPitch * (SIZE_T)numRows[i];
 				MemcpySubresource(&DestData, &data[i], (SIZE_T)rowSizesInBytes[i], numRows[i], layouts[i].Footprint.Depth);
@@ -3092,7 +3183,7 @@ using namespace DX12_Internal;
 			for (UINT i = 0; i < dataCount; ++i)
 			{
 				CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state->resource.Get(), i);
-				CD3DX12_TEXTURE_COPY_LOCATION Src(upload_resource, layouts[i]);
+				CD3DX12_TEXTURE_COPY_LOCATION Src(cmd.upload_resource, layouts[i]);
 				cmd.commandList->CopyTextureRegion(
 					&Dst,
 					0,
@@ -5890,7 +5981,7 @@ using namespace DX12_Internal;
 
 			res.BufferLocation = internal_state->gpu_address + (D3D12_GPU_VIRTUAL_ADDRESS)offset;
 			res.Format = (format == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT);
-			res.SizeInBytes = indexBuffer->desc.ByteWidth;
+			res.SizeInBytes = indexBuffer->desc.ByteWidth - offset;
 		}
 		GetCommandList(cmd)->IASetIndexBuffer(&res);
 	}

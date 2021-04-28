@@ -1000,6 +1000,173 @@ using namespace Vulkan_Internal;
 
 	// Allocators:
 
+	void GraphicsDevice_Vulkan::CopyAllocator::init(GraphicsDevice_Vulkan* device)
+	{
+		this->device = device;
+
+		VkSemaphoreTypeCreateInfo timelineCreateInfo = {};
+		timelineCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
+		timelineCreateInfo.pNext = nullptr;
+		timelineCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
+		timelineCreateInfo.initialValue = 0;
+
+		VkSemaphoreCreateInfo createInfo = {};
+		createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+		createInfo.pNext = &timelineCreateInfo;
+		createInfo.flags = 0;
+
+		VkResult res = vkCreateSemaphore(device->device, &createInfo, nullptr, &semaphore);
+		assert(res == VK_SUCCESS);
+	}
+	void GraphicsDevice_Vulkan::CopyAllocator::destroy()
+	{
+		vkQueueWaitIdle(device->copyQueue);
+		for (auto& x : freelist)
+		{
+			vkDestroyCommandPool(device->device, x.commandPool, nullptr);
+		}
+		vkDestroySemaphore(device->device, semaphore, nullptr);
+	}
+	GraphicsDevice_Vulkan::CopyAllocator::CopyCMD GraphicsDevice_Vulkan::CopyAllocator::allocate(uint32_t staging_size)
+	{
+		locker.lock();
+
+		// create a new command list if there are no free ones:
+		if (freelist.empty())
+		{
+			CopyCMD cmd;
+
+			VkCommandPoolCreateInfo poolInfo = {};
+			poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+			poolInfo.queueFamilyIndex = device->copyFamily;
+			poolInfo.flags = 0;
+
+			VkResult res = vkCreateCommandPool(device->device, &poolInfo, nullptr, &cmd.commandPool);
+			assert(res == VK_SUCCESS);
+
+			VkCommandBufferAllocateInfo commandBufferInfo = {};
+			commandBufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+			commandBufferInfo.commandBufferCount = 1;
+			commandBufferInfo.commandPool = cmd.commandPool;
+			commandBufferInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+
+			res = vkAllocateCommandBuffers(device->device, &commandBufferInfo, &cmd.commandBuffer);
+			assert(res == VK_SUCCESS);
+
+			freelist.push_back(cmd);
+		}
+
+		CopyCMD cmd = freelist.back();
+		if (cmd.uploadbuffer.desc.ByteWidth < staging_size)
+		{
+			// Try to search for a staging buffer that can fit the request:
+			for (size_t i = 0; i < freelist.size(); ++i)
+			{
+				if (freelist[i].uploadbuffer.desc.ByteWidth >= staging_size)
+				{
+					cmd = freelist[i];
+					std::swap(freelist[i], freelist.back());
+					break;
+				}
+			}
+		}
+		freelist.pop_back();
+		locker.unlock();
+
+		// If no buffer was found that fits the data, create one:
+		if (cmd.uploadbuffer.desc.ByteWidth < staging_size)
+		{
+			GPUBufferDesc uploaddesc;
+			uploaddesc.ByteWidth = wiMath::GetNextPowerOfTwo(staging_size);
+			uploaddesc.Usage = USAGE_STAGING;
+			bool upload_success = device->CreateBuffer(&uploaddesc, nullptr, &cmd.uploadbuffer);
+			assert(upload_success);
+
+			VmaAllocation upload_allocation = to_internal(&cmd.uploadbuffer)->allocation;
+			cmd.data = upload_allocation->GetMappedData();
+			assert(cmd.data != nullptr);
+			cmd.upload_resource = to_internal(&cmd.uploadbuffer)->resource;
+		}
+
+		// begin command list in valid state:
+		VkResult res = vkResetCommandPool(device->device, cmd.commandPool, 0);
+		assert(res == VK_SUCCESS);
+
+		VkCommandBufferBeginInfo beginInfo = {};
+		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+		beginInfo.pInheritanceInfo = nullptr;
+
+		res = vkBeginCommandBuffer(cmd.commandBuffer, &beginInfo);
+		assert(res == VK_SUCCESS);
+
+		return cmd;
+	}
+	void GraphicsDevice_Vulkan::CopyAllocator::submit(CopyCMD cmd)
+	{
+		VkResult res = vkEndCommandBuffer(cmd.commandBuffer);
+		assert(res == VK_SUCCESS);
+
+		// It was very slow in Vulkan to submit the copies immediately
+		//	In Vulkan, the submit is not thread safe, so it had to be locked
+		//	Instead, the submits are batched and performed in flush() function
+		locker.lock();
+		cmd.target = ++fenceValue;
+		worklist.push_back(cmd);
+		submit_cmds.push_back(cmd.commandBuffer);
+		submit_wait = std::max(submit_wait, cmd.target);
+		locker.unlock();
+	}
+	uint64_t GraphicsDevice_Vulkan::CopyAllocator::flush()
+	{
+		locker.lock();
+		if (!submit_cmds.empty())
+		{
+			VkSubmitInfo submitInfo = {};
+			submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+			submitInfo.commandBufferCount = (uint32_t)submit_cmds.size();
+			submitInfo.pCommandBuffers = submit_cmds.data();
+			submitInfo.pSignalSemaphores = &semaphore;
+			submitInfo.signalSemaphoreCount = 1;
+
+			VkTimelineSemaphoreSubmitInfo timelineInfo = {};
+			timelineInfo.sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO;
+			timelineInfo.pNext = nullptr;
+			timelineInfo.waitSemaphoreValueCount = 0;
+			timelineInfo.pWaitSemaphoreValues = nullptr;
+			timelineInfo.signalSemaphoreValueCount = 1;
+			timelineInfo.pSignalSemaphoreValues = &submit_wait;
+
+			submitInfo.pNext = &timelineInfo;
+
+			VkResult res = vkQueueSubmit(device->copyQueue, 1, &submitInfo, VK_NULL_HANDLE);
+			assert(res == VK_SUCCESS);
+
+			submit_cmds.clear();
+		}
+
+		// free up the finished command lists:
+		uint64_t completed_fence_value;
+		VkResult res = vkGetSemaphoreCounterValue(device->device, semaphore, &completed_fence_value);
+		assert(res == VK_SUCCESS);
+		for (size_t i = 0; i < worklist.size(); ++i)
+		{
+			if (worklist[i].target <= completed_fence_value)
+			{
+				freelist.push_back(worklist[i]);
+				worklist[i] = worklist.back();
+				worklist.pop_back();
+				i--;
+			}
+		}
+
+		uint64_t value = submit_wait;
+		submit_wait = 0;
+		locker.unlock();
+
+		return value;
+	}
+
 	void GraphicsDevice_Vulkan::FrameResources::ResourceFrameAllocator::init(GraphicsDevice_Vulkan* device, size_t size)
 	{
 		this->device = device;
@@ -1189,7 +1356,7 @@ using namespace Vulkan_Internal;
 		memset(UAV_index, -1, sizeof(UAV_index));
 		memset(SAM, 0, sizeof(SAM));
 	}
-	void GraphicsDevice_Vulkan::FrameResources::DescriptorBinder::validate(bool graphics, CommandList cmd)
+	void GraphicsDevice_Vulkan::FrameResources::DescriptorBinder::flush(bool graphics, CommandList cmd)
 	{
 		if (!dirty)
 			return;
@@ -1842,7 +2009,7 @@ using namespace Vulkan_Internal;
 	{
 		pso_validate(cmd);
 
-		GetFrameResources().descriptors[cmd].validate(true, cmd);
+		GetFrameResources().descriptors[cmd].flush(true, cmd);
 
 		if (pushconstants[cmd].size > 0)
 		{
@@ -1865,7 +2032,7 @@ using namespace Vulkan_Internal;
 	{
 		barrier_flush(cmd);
 
-		GetFrameResources().descriptors[cmd].validate(false, cmd);
+		GetFrameResources().descriptors[cmd].flush(false, cmd);
 
 		if (pushconstants[cmd].size > 0)
 		{
@@ -2317,7 +2484,7 @@ using namespace Vulkan_Internal;
 		res = vmaCreateAllocator(&allocatorInfo, &allocationhandler->allocator);
 		assert(res == VK_SUCCESS);
 
-		copyAllocator.Create(device, copyQueue, copyFamily);
+		copyAllocator.init(this);
 
 		// Create frame resources:
 		for (uint32_t fr = 0; fr < BUFFERCOUNT; ++fr)
@@ -2563,7 +2730,7 @@ using namespace Vulkan_Internal;
 			}
 		}
 
-		copyAllocator.Destroy();
+		copyAllocator.destroy();
 
 		for (auto& x : pso_layout_cache)
 		{
@@ -3008,24 +3175,9 @@ using namespace Vulkan_Internal;
 		// Issue data copy on request:
 		if (pInitialData != nullptr)
 		{
-			GPUBufferDesc uploaddesc;
-			uploaddesc.ByteWidth = pDesc->ByteWidth;
-			uploaddesc.Usage = USAGE_STAGING;
+			auto cmd = copyAllocator.allocate(pDesc->ByteWidth);
 
-			auto cmd = copyAllocator.allocate(uploaddesc.ByteWidth);
-			if (cmd.uploadbuffer.desc.ByteWidth < uploaddesc.ByteWidth)
-			{
-				bool upload_success = CreateBuffer(&uploaddesc, nullptr, &cmd.uploadbuffer);
-				assert(upload_success);
-			}
-
-			VkBuffer upload_resource = to_internal(&cmd.uploadbuffer)->resource;
-			VmaAllocation upload_allocation = to_internal(&cmd.uploadbuffer)->allocation;
-
-			void* pData = upload_allocation->GetMappedData();
-			assert(pData != nullptr);
-
-			memcpy(pData, pInitialData->pSysMem, pBuffer->desc.ByteWidth);
+			memcpy(cmd.data, pInitialData->pSysMem, pBuffer->desc.ByteWidth);
 
 			{
 				auto& frame = GetFrameResources();
@@ -3057,7 +3209,7 @@ using namespace Vulkan_Internal;
 
 				vkCmdCopyBuffer(
 					cmd.commandBuffer,
-					upload_resource,
+					cmd.upload_resource,
 					internal_state->resource,
 					1,
 					&copyRegion
@@ -3261,22 +3413,7 @@ using namespace Vulkan_Internal;
 		// Issue data copy on request:
 		if (pInitialData != nullptr)
 		{
-			GPUBufferDesc uploaddesc;
-			uploaddesc.ByteWidth = (uint32_t)internal_state->allocation->GetSize();
-			uploaddesc.Usage = USAGE_STAGING;
-
-			auto cmd = copyAllocator.allocate(uploaddesc.ByteWidth);
-			if (cmd.uploadbuffer.desc.ByteWidth < uploaddesc.ByteWidth)
-			{
-				bool upload_success = CreateBuffer(&uploaddesc, nullptr, &cmd.uploadbuffer);
-				assert(upload_success);
-			}
-
-			VkBuffer upload_resource = to_internal(&cmd.uploadbuffer)->resource;
-			VmaAllocation upload_allocation = to_internal(&cmd.uploadbuffer)->allocation;
-
-			void* pData = upload_allocation->GetMappedData();
-			assert(pData != nullptr);
+			auto cmd = copyAllocator.allocate((uint32_t)internal_state->allocation->GetSize());
 
 			std::vector<VkBufferImageCopy> copyRegions;
 
@@ -3293,7 +3430,7 @@ using namespace Vulkan_Internal;
 				{
 					cpysize /= 4;
 				}
-				uint8_t* cpyaddr = (uint8_t*)pData + cpyoffset;
+				uint8_t* cpyaddr = (uint8_t*)cmd.data + cpyoffset;
 				memcpy(cpyaddr, subresourceData.pSysMem, cpysize);
 
 				VkBufferImageCopy copyRegion = {};
@@ -3348,7 +3485,7 @@ using namespace Vulkan_Internal;
 					1, &barrier
 				);
 
-				vkCmdCopyBufferToImage(cmd.commandBuffer, upload_resource, internal_state->resource, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, (uint32_t)copyRegions.size(), copyRegions.data());
+				vkCmdCopyBufferToImage(cmd.commandBuffer, cmd.upload_resource, internal_state->resource, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, (uint32_t)copyRegions.size(), copyRegions.data());
 
 				copyAllocator.submit(cmd);
 
