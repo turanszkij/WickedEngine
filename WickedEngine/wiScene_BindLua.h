@@ -167,6 +167,12 @@ namespace wiScene_BindLua
 		int SetNearPlane(lua_State* L);
 		int GetFarPlane(lua_State* L);
 		int SetFarPlane(lua_State* L);
+		int GetFocalLength(lua_State* L);
+		int SetFocalLength(lua_State* L);
+		int GetApertureSize(lua_State* L);
+		int SetApertureSize(lua_State* L);
+		int GetApertureShape(lua_State* L);
+		int SetApertureShape(lua_State* L);
 		int GetView(lua_State* L);
 		int GetProjection(lua_State* L);
 		int GetViewProjection(lua_State* L);

@@ -24,9 +24,7 @@ private:
 	float exposure = 1.0f;
 	float bloomThreshold = 1.0f;
 	float motionBlurStrength = 100.0f;
-	float dofFocus = 2.0f;
 	float dofStrength = 10.0f;
-	float dofAspect = 1.0f;
 	float sharpenFilterAmount = 0.28f;
 	float outlineThreshold = 0.2f;
 	float outlineThickness = 1.0f;
@@ -37,6 +35,8 @@ private:
 	float chromaticAberrationAmount = 2.0f;
 	uint32_t screenSpaceShadowSampleCount = 16;
 	float screenSpaceShadowRange = 1;
+	float eyeadaptionKey = 0.115f;
+	float eyeadaptionRate = 1;
 
 	AO ao = AO_DISABLED;
 	bool fxaaEnabled = false;
@@ -51,7 +51,7 @@ private:
 	bool lightShaftsEnabled = false;
 	bool lensFlareEnabled = true;
 	bool motionBlurEnabled = false;
-	bool depthOfFieldEnabled = false;
+	bool depthOfFieldEnabled = true;
 	bool eyeAdaptionEnabled = false;
 	bool sharpenFilterEnabled = false;
 	bool outlineEnabled = false;
@@ -105,6 +105,7 @@ public:
 
 	wiGraphics::Texture debugUAV; // debug UAV can be used by some shaders...
 	wiRenderer::TiledLightResources tiledLightResources;
+	wiRenderer::TiledLightResources tiledLightResources_planarReflection;
 	wiRenderer::LuminanceResources luminanceResources;
 	wiRenderer::SSAOResources ssaoResources;
 	wiRenderer::MSAOResources msaoResources;
@@ -180,9 +181,7 @@ public:
 	constexpr float getExposure() const { return exposure; }
 	constexpr float getBloomThreshold() const { return bloomThreshold; }
 	constexpr float getMotionBlurStrength() const { return motionBlurStrength; }
-	constexpr float getDepthOfFieldFocus() const { return dofFocus; }
 	constexpr float getDepthOfFieldStrength() const { return dofStrength; }
-	constexpr float getDepthOfFieldAspect() const { return dofAspect; }
 	constexpr float getSharpenFilterAmount() const { return sharpenFilterAmount; }
 	constexpr float getOutlineThreshold() const { return outlineThreshold; }
 	constexpr float getOutlineThickness() const { return outlineThickness; }
@@ -193,6 +192,8 @@ public:
 	constexpr float getChromaticAberrationAmount() const { return chromaticAberrationAmount; }
 	constexpr uint32_t getScreenSpaceShadowSampleCount() const { return screenSpaceShadowSampleCount; }
 	constexpr float getScreenSpaceShadowRange() const { return screenSpaceShadowRange; }
+	constexpr float getEyeAdaptionKey() const { return eyeadaptionKey; }
+	constexpr float getEyeAdaptionRate() const { return eyeadaptionRate; }
 
 	constexpr bool getAOEnabled() const { return ao != AO_DISABLED; }
 	constexpr AO getAO() const { return ao; }
@@ -222,9 +223,7 @@ public:
 	constexpr void setExposure(float value) { exposure = value; }
 	constexpr void setBloomThreshold(float value){ bloomThreshold = value; }
 	constexpr void setMotionBlurStrength(float value) { motionBlurStrength = value; }
-	constexpr void setDepthOfFieldFocus(float value){ dofFocus = value; }
 	constexpr void setDepthOfFieldStrength(float value) { dofStrength = value; }
-	constexpr void setDepthOfFieldAspect(float value){ dofAspect = value; }
 	constexpr void setSharpenFilterAmount(float value) { sharpenFilterAmount = value; }
 	constexpr void setOutlineThreshold(float value) { outlineThreshold = value; }
 	constexpr void setOutlineThickness(float value) { outlineThickness = value; }
@@ -235,6 +234,8 @@ public:
 	constexpr void setChromaticAberrationAmount(float value) { chromaticAberrationAmount = value; }
 	constexpr void setScreenSpaceShadowSampleCount(uint32_t value) { screenSpaceShadowSampleCount = value; }
 	constexpr void setScreenSpaceShadowRange(float value) { screenSpaceShadowRange = value; }
+	constexpr void setEyeAdaptionKey(float value) { eyeadaptionKey = value; }
+	constexpr void setEyeAdaptionRate(float value) { eyeadaptionRate = value; }
 
 	constexpr void setAO(AO value) { ao = value; }
 	constexpr void setSSREnabled(bool value){ ssrEnabled = value; }
@@ -258,7 +259,7 @@ public:
 	constexpr void setOcclusionCullingEnabled(bool value) { occlusionCullingEnabled = value; }
 	constexpr void setSceneUpdateEnabled(bool value) { sceneUpdateEnabled = value; }
 
-	virtual void setMSAASampleCount(uint32_t value) { if (msaaSampleCount != value) { msaaSampleCount = value; ResizeBuffers(); } }
+	virtual void setMSAASampleCount(uint32_t value) { msaaSampleCount = value; }
 
 	void PreUpdate() override;
 	void Update(float dt) override;

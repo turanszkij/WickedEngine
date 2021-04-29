@@ -23,10 +23,9 @@
 #include <winrt/Windows.Devices.Input.h>
 #endif // PLATFORM_UWP
 
-using namespace std;
-
 namespace wiInput
 {
+	wiPlatform::window_type window = nullptr;
 
 #ifdef _WIN32
 #ifndef PLATFORM_UWP
@@ -88,8 +87,9 @@ namespace wiInput
 		initialized.store(true);
 	}
 
-	void Update()
+	void Update(wiPlatform::window_type _window)
 	{
+		window = _window;
 		if (!initialized.load())
 		{
 			return;
@@ -115,7 +115,7 @@ namespace wiInput
 
 #ifndef PLATFORM_UWP
 		// Since raw input doesn't contain absolute mouse position, we get it with regular winapi:
-		HWND hWnd = GetActiveWindow();
+		HWND hWnd = window;
 		POINT p;
 		GetCursorPos(&p);
 		ScreenToClient(hWnd, &p);
@@ -685,7 +685,7 @@ namespace wiInput
 		auto iter = inputs.find(input);
 		if (iter == inputs.end())
 		{
-			inputs.insert(make_pair(input, 0));
+			inputs.insert(std::make_pair(input, 0));
 			return true;
 		}
 		if (iter->second == 0)
@@ -705,7 +705,7 @@ namespace wiInput
 		auto iter = inputs.find(input);
 		if (iter == inputs.end())
 		{
-			inputs.insert(make_pair(input, 0));
+			inputs.insert(std::make_pair(input, 0));
 			return false;
 		}
 		else if ((!continuous && iter->second == frames) || (continuous && iter->second >= frames))
@@ -722,7 +722,7 @@ namespace wiInput
 	{
 #ifdef _WIN32
 #ifndef PLATFORM_UWP
-		HWND hWnd = GetActiveWindow();
+		HWND hWnd = window;
 		const float dpiscaling = (float)GetDpiForWindow(hWnd) / 96.0f;
 		POINT p;
 		p.x = (LONG)(props.x * dpiscaling);

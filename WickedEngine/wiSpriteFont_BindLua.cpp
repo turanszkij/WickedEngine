@@ -3,8 +3,6 @@
 #include "CommonInclude.h"
 #include "Vector_BindLua.h"
 
-using namespace std;
-
 const char wiSpriteFont_BindLua::className[] = "SpriteFont";
 
 Luna<wiSpriteFont_BindLua>::FunctionType wiSpriteFont_BindLua::methods[] = {
@@ -39,7 +37,7 @@ wiSpriteFont_BindLua::wiSpriteFont_BindLua(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		string text = wiLua::SGetString(L, 1);
+		std::string text = wiLua::SGetString(L, 1);
 		font.SetText(text);
 	}
 }
@@ -50,7 +48,7 @@ int wiSpriteFont_BindLua::SetStyle(lua_State* L)
 	int argc = wiLua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		string name = wiLua::SGetString(L, 1);
+		std::string name = wiLua::SGetString(L, 1);
 		font.params.style = wiFont::AddFontStyle(name.c_str());
 	}
 	else

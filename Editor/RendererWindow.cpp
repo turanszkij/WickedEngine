@@ -22,10 +22,10 @@ void RendererWindow::Create(EditorComponent* editor)
 	vsyncCheckBox.SetScriptTip("SetVSyncEnabled(opt bool enabled)");
 	vsyncCheckBox.SetPos(XMFLOAT2(x, y += step));
 	vsyncCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	vsyncCheckBox.OnClick([](wiEventArgs args) {
-		wiRenderer::GetDevice()->SetVSyncEnabled(args.bValue);
+	vsyncCheckBox.OnClick([=](wiEventArgs args) {
+		wiEvent::SetVSync(args.bValue);
 	});
-	vsyncCheckBox.SetCheck(wiRenderer::GetDevice()->GetVSyncEnabled());
+	vsyncCheckBox.SetCheck(editor->main->swapChain.desc.vsync);
 	AddWidget(&vsyncCheckBox);
 
 	occlusionCullingCheckBox.Create("Occlusion Culling: ");
@@ -48,7 +48,6 @@ void RendererWindow::Create(EditorComponent* editor)
 		if (editor->resolutionScale != args.fValue)
 		{
 			editor->renderPath->resolutionScale = args.fValue;
-			editor->renderPath->ResizeBuffers();
 			editor->resolutionScale = args.fValue;
 			editor->ResizeBuffers();
 		}

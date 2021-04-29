@@ -154,10 +154,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         break;
     case WM_SIZE:
-        wiEvent::FireEvent(SYSTEM_EVENT_CHANGE_RESOLUTION, lParam);
-        break;
     case WM_DPICHANGED:
-        wiEvent::FireEvent(SYSTEM_EVENT_CHANGE_DPI, wParam);
+		if (tests.is_window_active)
+			tests.SetWindow(hWnd);
         break;
 	case WM_CHAR:
 		switch (wParam)

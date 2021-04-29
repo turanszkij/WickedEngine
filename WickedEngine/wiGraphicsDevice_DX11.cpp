@@ -3,7 +3,6 @@
 #ifdef WICKEDENGINE_BUILD_DX11
 
 #include "wiHelper.h"
-#include "ResourceMapping.h"
 #include "wiBackLog.h"
 
 #pragma comment(lib,"dxguid.lib")
@@ -1146,6 +1145,12 @@ namespace DX11_Internal
 	{
 		std::vector<ComPtr<ID3D11Query>> resources;
 	};
+	struct SwapChain_DX11
+	{
+		Microsoft::WRL::ComPtr<IDXGISwapChain1> swapChain;
+		Microsoft::WRL::ComPtr<ID3D11RenderTargetView> renderTargetView;
+		Microsoft::WRL::ComPtr<ID3D11Texture2D> backBuffer;
+	};
 
 	Resource_DX11* to_internal(const GPUResource* param)
 	{
@@ -1170,6 +1175,10 @@ namespace DX11_Internal
 	QueryHeap_DX11* to_internal(const GPUQueryHeap* param)
 	{
 		return static_cast<QueryHeap_DX11*>(param->internal_state.get());
+	}
+	SwapChain_DX11* to_internal(const SwapChain* param)
+	{
+		return static_cast<SwapChain_DX11*>(param->internal_state.get());
 	}
 }
 using namespace DX11_Internal;
@@ -1326,24 +1335,9 @@ void GraphicsDevice_DX11::pso_validate(CommandList cmd)
 }
 
 // Engine functions
-GraphicsDevice_DX11::GraphicsDevice_DX11(wiPlatform::window_type window, bool fullscreen, bool debuglayer)
+GraphicsDevice_DX11::GraphicsDevice_DX11(bool debuglayer)
 {
 	DEBUGDEVICE = debuglayer;
-	FULLSCREEN = fullscreen;
-
-#ifndef PLATFORM_UWP
-	dpi = GetDpiForWindow(window);
-	RECT rect;
-	GetClientRect(window, &rect);
-	RESOLUTIONWIDTH = rect.right - rect.left;
-	RESOLUTIONHEIGHT = rect.bottom - rect.top;
-#else PLATFORM_UWP
-	dpi = (int)winrt::Windows::Graphics::Display::DisplayInformation::GetForCurrentView().LogicalDpi();
-	float dpiscale = GetDPIScaling();
-	RESOLUTIONWIDTH = int(window.Bounds().Width * dpiscale);
-	RESOLUTIONHEIGHT = int(window.Bounds().Height * dpiscale);
-#endif
-
 
 #ifndef PLATFORM_UWP
 	HMODULE dx11 = LoadLibraryEx(L"d3d11.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
@@ -1395,12 +1389,19 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiPlatform::window_type window, bool fu
 
 	ComPtr<IDXGIDevice2> pDXGIDevice;
 	hr = device.As(&pDXGIDevice);
+	assert(SUCCEEDED(hr));
 
-	ComPtr<IDXGIAdapter> pDXGIAdapter;
-	hr = pDXGIDevice->GetParent(__uuidof(IDXGIAdapter), (void**)&pDXGIAdapter);
+	// Ensure that DXGI does not queue more than one frame at a time. This both reduces latency and
+	// ensures that the application will only render after each VSync, minimizing power consumption.
+	hr = pDXGIDevice->SetMaximumFrameLatency(1);
+	assert(SUCCEEDED(hr));
 
-	ComPtr<IDXGIFactory2> pIDXGIFactory;
-	pDXGIAdapter->GetParent(__uuidof(IDXGIFactory2), (void**)&pIDXGIFactory);
+	ComPtr<IDXGIAdapter> DXGIAdapter;
+	hr = pDXGIDevice->GetParent(__uuidof(IDXGIAdapter), (void**)&DXGIAdapter);
+	assert(SUCCEEDED(hr));
+
+	hr = DXGIAdapter->GetParent(__uuidof(IDXGIFactory2), (void**)&DXGIFactory);
+	assert(SUCCEEDED(hr));
 
 	if (debuglayer)
 	{
@@ -1428,46 +1429,6 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiPlatform::window_type window, bool fu
 			d3dDebug->Release();
 		}
 	}
-
-
-	DXGI_SWAP_CHAIN_DESC1 sd = {};
-	sd.Width = RESOLUTIONWIDTH;
-	sd.Height = RESOLUTIONHEIGHT;
-	sd.Format = _ConvertFormat(GetBackBufferFormat());
-	sd.Stereo = false;
-	sd.SampleDesc.Count = 1;
-	sd.SampleDesc.Quality = 0;
-	sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	sd.BufferCount = BACKBUFFER_COUNT;
-	sd.Flags = 0;
-	sd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
-	sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-
-#ifndef PLATFORM_UWP
-	sd.Scaling = DXGI_SCALING_STRETCH;
-
-	DXGI_SWAP_CHAIN_FULLSCREEN_DESC fullscreenDesc;
-	fullscreenDesc.RefreshRate.Numerator = 60;
-	fullscreenDesc.RefreshRate.Denominator = 1;
-	fullscreenDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED; // needs to be unspecified for correct fullscreen scaling!
-	fullscreenDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE;
-	fullscreenDesc.Windowed = !fullscreen;
-	hr = pIDXGIFactory->CreateSwapChainForHwnd(device.Get(), window, &sd, &fullscreenDesc, nullptr, &swapChain);
-#else
-	sd.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
-
-	hr = pIDXGIFactory->CreateSwapChainForCoreWindow(device.Get(), static_cast<IUnknown*>(winrt::get_abi(window)), &sd, nullptr, &swapChain);
-#endif
-
-	if (FAILED(hr))
-	{
-		wiHelper::messageBox("Failed to create a swapchain for the graphics device!", "Error!");
-		wiPlatform::Exit();
-	}
-
-	// Ensure that DXGI does not queue more than one frame at a time. This both reduces latency and
-	// ensures that the application will only render after each VSync, minimizing power consumption.
-	hr = pDXGIDevice->SetMaximumFrameLatency(1);
 
 	D3D11_QUERY_DESC queryDesc = {};
 	queryDesc.Query = D3D11_QUERY_TIMESTAMP_DISJOINT;
@@ -1530,54 +1491,112 @@ GraphicsDevice_DX11::GraphicsDevice_DX11(wiPlatform::window_type window, bool fu
 
 void GraphicsDevice_DX11::CreateBackBufferResources()
 {
+	//HRESULT hr;
+
+	//hr = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), &backBuffer);
+	//if (FAILED(hr)) {
+	//	wiHelper::messageBox("BackBuffer creation Failed!", "Error!");
+	//	wiPlatform::Exit();
+	//}
+
+	//hr = device->CreateRenderTargetView(backBuffer.Get(), nullptr, &renderTargetView);
+	//if (FAILED(hr)) {
+	//	wiHelper::messageBox("Main Rendertarget creation Failed!", "Error!");
+	//	wiPlatform::Exit();
+	//}
+}
+
+bool GraphicsDevice_DX11::CreateSwapChain(const SwapChainDesc* pDesc, wiPlatform::window_type window, SwapChain* swapChain) const
+{
+	auto internal_state = std::static_pointer_cast<SwapChain_DX11>(swapChain->internal_state);
+	if (swapChain->internal_state == nullptr)
+	{
+		internal_state = std::make_shared<SwapChain_DX11>();
+	}
+	swapChain->internal_state = internal_state;
+	swapChain->desc = *pDesc;
 	HRESULT hr;
 
-	hr = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), &backBuffer);
-	if (FAILED(hr)) {
-		wiHelper::messageBox("BackBuffer creation Failed!", "Error!");
-		wiPlatform::Exit();
-	}
-
-	hr = device->CreateRenderTargetView(backBuffer.Get(), nullptr, &renderTargetView);
-	if (FAILED(hr)) {
-		wiHelper::messageBox("Main Rendertarget creation Failed!", "Error!");
-		wiPlatform::Exit();
-	}
-}
-
-void GraphicsDevice_DX11::SetResolution(int width, int height)
-{
-	if ((width != RESOLUTIONWIDTH || height != RESOLUTIONHEIGHT) && width > 0 && height > 0)
+	if (internal_state->swapChain == nullptr)
 	{
-		RESOLUTIONWIDTH = width;
-		RESOLUTIONHEIGHT = height;
+		// Create swapchain:
+		DXGI_SWAP_CHAIN_DESC1 sd = {};
+		sd.Width = pDesc->width;
+		sd.Height = pDesc->height;
+		sd.Format = _ConvertFormat(pDesc->format);
+		sd.Stereo = false;
+		sd.SampleDesc.Count = 1;
+		sd.SampleDesc.Quality = 0;
+		sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+		sd.BufferCount = pDesc->buffercount;
+		sd.Flags = 0;
+		sd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+		sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 
-		backBuffer.Reset();
-		renderTargetView.Reset();
+#ifdef PLATFORM_UWP
+		sd.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
 
-		HRESULT hr = swapChain->ResizeBuffers(GetBackBufferCount(), width, height, _ConvertFormat(GetBackBufferFormat()), 0);
-		assert(SUCCEEDED(hr));
+		hr = DXGIFactory->CreateSwapChainForCoreWindow(
+			device.Get(),
+			static_cast<IUnknown*>(winrt::get_abi(*window)),
+			&sd,
+			nullptr,
+			&internal_state->swapChain
+		);
+#else
+		sd.Scaling = DXGI_SCALING_STRETCH;
 
-		CreateBackBufferResources();
+		DXGI_SWAP_CHAIN_FULLSCREEN_DESC fullscreenDesc;
+		fullscreenDesc.RefreshRate.Numerator = 60;
+		fullscreenDesc.RefreshRate.Denominator = 1;
+		fullscreenDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED; // needs to be unspecified for correct fullscreen scaling!
+		fullscreenDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE;
+		fullscreenDesc.Windowed = !pDesc->fullscreen;
+		hr = DXGIFactory->CreateSwapChainForHwnd(
+			device.Get(),
+			window,
+			&sd,
+			&fullscreenDesc,
+			nullptr,
+			&internal_state->swapChain
+		);
+#endif
+
+		if (FAILED(hr))
+		{
+			return false;
+		}
 	}
+	else
+	{
+		// Resize swapchain:
+		internal_state->backBuffer.Reset();
+		internal_state->renderTargetView.Reset();
+
+		hr = internal_state->swapChain->ResizeBuffers(
+			pDesc->buffercount,
+			pDesc->width,
+			pDesc->height,
+			_ConvertFormat(pDesc->format),
+			0
+		);
+		assert(SUCCEEDED(hr));
+	}
+
+	hr = internal_state->swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), &internal_state->backBuffer);
+	if (FAILED(hr))
+	{
+		return false;
+	}
+
+	hr = device->CreateRenderTargetView(internal_state->backBuffer.Get(), nullptr, &internal_state->renderTargetView);
+	if (FAILED(hr))
+	{
+		return false;
+	}
+
+	return true;
 }
-
-Texture GraphicsDevice_DX11::GetBackBuffer()
-{
-	auto internal_state = std::make_shared<Texture_DX11>();
-	internal_state->resource = backBuffer;
-
-	Texture result;
-	result.internal_state = internal_state;
-	result.type = GPUResource::GPU_RESOURCE_TYPE::TEXTURE;
-
-	D3D11_TEXTURE2D_DESC desc;
-	backBuffer->GetDesc(&desc);
-	result.desc = _ConvertTextureDesc_Inv(&desc);
-
-	return result;
-}
-
 bool GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer) const
 {
 	auto internal_state = std::make_shared<Resource_DX11>();
@@ -2576,28 +2595,14 @@ void GraphicsDevice_DX11::SetName(GPUResource* pResource, const char* name)
 	internal_state->resource->SetPrivateData(WKPDID_D3DDebugObjectName, (UINT)strlen(name), name);
 }
 
-void GraphicsDevice_DX11::PresentBegin(CommandList cmd)
-{
-	ID3D11RenderTargetView* RTV = renderTargetView.Get();
-	deviceContexts[cmd]->OMSetRenderTargets(1, &RTV, 0);
-	float ClearColor[4] = { 0, 0, 0, 1.0f }; // red,green,blue,alpha
-	deviceContexts[cmd]->ClearRenderTargetView(RTV, ClearColor);
-}
-void GraphicsDevice_DX11::PresentEnd(CommandList cmd)
-{
-	SubmitCommandLists();
-
-	swapChain->Present(VSYNC, 0);
-}
-
-
-CommandList GraphicsDevice_DX11::BeginCommandList()
+CommandList GraphicsDevice_DX11::BeginCommandList(QUEUE_TYPE queue)
 {
 	CommandList cmd = cmd_count.fetch_add(1);
+	assert(cmd < COMMANDLIST_COUNT);
+
 	if (deviceContexts[cmd] == nullptr)
 	{
 		// need to create one more command list:
-		assert(cmd < COMMANDLIST_COUNT);
 
 		HRESULT hr = device->CreateDeferredContext(0, &deviceContexts[cmd]);
 		assert(SUCCEEDED(hr));
@@ -2629,15 +2634,6 @@ CommandList GraphicsDevice_DX11::BeginCommandList()
 		}
 	}
 
-	D3D11_VIEWPORT vp = {};
-	vp.Width = (float)RESOLUTIONWIDTH;
-	vp.Height = (float)RESOLUTIONHEIGHT;
-	vp.MinDepth = 0.0f;
-	vp.MaxDepth = 1.0f;
-	vp.TopLeftX = 0;
-	vp.TopLeftY = 0;
-	deviceContexts[cmd]->RSSetViewports(1, &vp);
-
 	D3D11_RECT pRects[8];
 	for (uint32_t i = 0; i < 8; ++i)
 	{
@@ -2665,6 +2661,7 @@ CommandList GraphicsDevice_DX11::BeginCommandList()
 	prev_dss[cmd] = {};
 	prev_il[cmd] = {};
 	prev_pt[cmd] = {};
+	swapchains[cmd].clear();
 
 	memset(raster_uavs[cmd], 0, sizeof(raster_uavs[cmd]));
 	raster_uavs_slot[cmd] = {};
@@ -2691,6 +2688,11 @@ void GraphicsDevice_DX11::SubmitCommandLists()
 		assert(SUCCEEDED(hr));
 		immediateContext->ExecuteCommandList(commandLists[cmd].Get(), false);
 		commandLists[cmd].Reset();
+
+		for (auto& swapchain : swapchains[cmd])
+		{
+			to_internal(swapchain)->swapChain->Present(swapchain->desc.vsync, 0);
+		}
 	}
 	immediateContext->ClearState();
 
@@ -2709,12 +2711,8 @@ void GraphicsDevice_DX11::SubmitCommandLists()
 
 	FRAMECOUNT++;
 }
-void GraphicsDevice_DX11::StashCommandLists()
-{
-	cmd_count.store(0);
-}
 
-void GraphicsDevice_DX11::WaitForGPU()
+void GraphicsDevice_DX11::WaitForGPU() const
 {
 	immediateContext->Flush();
 
@@ -2733,6 +2731,24 @@ void GraphicsDevice_DX11::WaitForGPU()
 }
 
 
+Texture GraphicsDevice_DX11::GetBackBuffer(const SwapChain* swapchain) const
+{
+	auto swapchain_internal = to_internal(swapchain);
+
+	auto internal_state = std::make_shared<Texture_DX11>();
+	internal_state->resource = swapchain_internal->backBuffer;
+
+	Texture result;
+	result.internal_state = internal_state;
+	result.type = GPUResource::GPU_RESOURCE_TYPE::TEXTURE;
+
+	D3D11_TEXTURE2D_DESC desc;
+	swapchain_internal->backBuffer->GetDesc(&desc);
+	result.desc = _ConvertTextureDesc_Inv(&desc);
+
+	return result;
+}
+
 void GraphicsDevice_DX11::commit_allocations(CommandList cmd)
 {
 	// DX11 needs to unmap allocations before it can execute safely
@@ -2746,6 +2762,16 @@ void GraphicsDevice_DX11::commit_allocations(CommandList cmd)
 }
 
 
+void GraphicsDevice_DX11::RenderPassBegin(const SwapChain* swapchain, CommandList cmd)
+{
+	swapchains[cmd].push_back(swapchain);
+	active_renderpass[cmd] = &dummyrenderpass;
+	auto internal_state = to_internal(swapchain);
+
+	ID3D11RenderTargetView* RTV = internal_state->renderTargetView.Get();
+	deviceContexts[cmd]->OMSetRenderTargets(1, &RTV, 0);
+	deviceContexts[cmd]->ClearRenderTargetView(RTV, swapchain->desc.clearcolor);
+}
 void GraphicsDevice_DX11::RenderPassBegin(const RenderPass* renderpass, CommandList cmd)
 {
 	active_renderpass[cmd] = renderpass;
@@ -2852,10 +2878,11 @@ void GraphicsDevice_DX11::RenderPassEnd(CommandList cmd)
 	}
 	active_renderpass[cmd] = nullptr;
 }
-void GraphicsDevice_DX11::BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd) {
+void GraphicsDevice_DX11::BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd)
+{
 	assert(rects != nullptr);
-	assert(numRects <= 8);
-	D3D11_RECT pRects[8];
+	assert(numRects <= D3D11_VIEWPORT_AND_SCISSORRECT_MAX_INDEX);
+	D3D11_RECT pRects[D3D11_VIEWPORT_AND_SCISSORRECT_MAX_INDEX];
 	for(uint32_t i = 0; i < numRects; ++i) {
 		pRects[i].bottom = (LONG)rects[i].bottom;
 		pRects[i].left = (LONG)rects[i].left;
@@ -2866,8 +2893,9 @@ void GraphicsDevice_DX11::BindScissorRects(uint32_t numRects, const Rect* rects,
 }
 void GraphicsDevice_DX11::BindViewports(uint32_t NumViewports, const Viewport* pViewports, CommandList cmd)
 {
-	assert(NumViewports <= 6);
-	D3D11_VIEWPORT d3dViewPorts[6];
+	assert(pViewports != nullptr);
+	assert(NumViewports <= D3D11_VIEWPORT_AND_SCISSORRECT_MAX_INDEX);
+	D3D11_VIEWPORT d3dViewPorts[D3D11_VIEWPORT_AND_SCISSORRECT_MAX_INDEX];
 	for (uint32_t i = 0; i < NumViewports; ++i)
 	{
 		d3dViewPorts[i].TopLeftX = pViewports[i].TopLeftX;

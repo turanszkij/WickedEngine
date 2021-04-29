@@ -4,16 +4,15 @@
 #include "wiMath.h"
 #include "wiIntersect.h"
 #include "wiRandom.h"
-#include "ResourceMapping.h"
+#include "shaders/ResourceMapping.h"
 #include "wiArchive.h"
-#include "ShaderInterop.h"
+#include "shaders/ShaderInterop.h"
 #include "wiTextureHelper.h"
 #include "wiScene.h"
-#include "ShaderInterop_HairParticle.h"
+#include "shaders/ShaderInterop_HairParticle.h"
 #include "wiBackLog.h"
 #include "wiEvent.h"
 
-using namespace std;
 using namespace wiGraphics;
 
 namespace wiScene
@@ -189,6 +188,7 @@ void wiHairParticle::UpdateGPU(const MeshComponent& mesh, const MaterialComponen
 	hcb.xHairFrameStart = frameStart;
 	hcb.xHairTexMul = float2(1.0f / (float)hcb.xHairFramesXY.x, 1.0f / (float)hcb.xHairFramesXY.y);
 	hcb.xHairAspect = (float)std::max(1u, desc.Width) / (float)std::max(1u, desc.Height);
+	hcb.xHairLayerMask = layerMask;
 	device->UpdateBuffer(&cb, &hcb, cmd);
 
 	// Simulate:

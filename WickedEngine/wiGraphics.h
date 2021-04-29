@@ -25,6 +25,23 @@ namespace wiGraphics
 		LIB,
 		SHADERSTAGE_COUNT,
 	};
+	enum SHADERFORMAT
+	{
+		SHADERFORMAT_NONE,
+		SHADERFORMAT_HLSL5,
+		SHADERFORMAT_HLSL6,
+		SHADERFORMAT_SPIRV,
+	};
+	enum SHADERMODEL
+	{
+		SHADERMODEL_5_0,
+		SHADERMODEL_6_0,
+		SHADERMODEL_6_1,
+		SHADERMODEL_6_2,
+		SHADERMODEL_6_3,
+		SHADERMODEL_6_4,
+		SHADERMODEL_6_5,
+	};
 	enum PRIMITIVETOPOLOGY
 	{
 		UNDEFINED,
@@ -273,6 +290,7 @@ namespace wiGraphics
 		IMAGE_LAYOUT_DEPTHSTENCIL,				// depth stencil, write enabled
 		IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,		// depth stencil, read only
 		IMAGE_LAYOUT_SHADER_RESOURCE,			// shader resource, read only
+		IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE,	// shader resource, read only, non-pixel shader
 		IMAGE_LAYOUT_UNORDERED_ACCESS,			// shader resource, write enabled
 		IMAGE_LAYOUT_COPY_SRC,					// copy from
 		IMAGE_LAYOUT_COPY_DST,					// copy to
@@ -286,6 +304,7 @@ namespace wiGraphics
 		BUFFER_STATE_CONSTANT_BUFFER,			// constant buffer, read only
 		BUFFER_STATE_INDIRECT_ARGUMENT,			// argument buffer to DrawIndirect() or DispatchIndirect()
 		BUFFER_STATE_SHADER_RESOURCE,			// shader resource, read only
+		BUFFER_STATE_SHADER_RESOURCE_COMPUTE,	// shader resource, read only, non-pixel shader
 		BUFFER_STATE_UNORDERED_ACCESS,			// shader resource, write enabled
 		BUFFER_STATE_COPY_SRC,					// copy from
 		BUFFER_STATE_COPY_DST,					// copy to
@@ -667,6 +686,16 @@ namespace wiGraphics
 		uint32_t _flags = FLAG_EMPTY;
 		std::vector<RenderPassAttachment> attachments;
 	};
+	struct SwapChainDesc
+	{
+		uint32_t width = 0;
+		uint32_t height = 0;
+		uint32_t buffercount = 2;
+		FORMAT format = FORMAT_R10G10B10A2_UNORM;
+		bool fullscreen = false;
+		bool vsync = true;
+		float clearcolor[4] = { 0,0,0,1 };
+	};
 	struct IndirectDrawArgsInstanced
 	{
 		uint32_t VertexCountPerInstance = 0;
@@ -794,6 +823,13 @@ namespace wiGraphics
 		const RenderPassDesc& GetDesc() const { return desc; }
 	};
 
+	struct SwapChain : public GraphicsDeviceChild
+	{
+		SwapChainDesc desc;
+
+		const SwapChainDesc& GetDesc() const { return desc; }
+	};
+
 
 	struct RaytracingAccelerationStructureDesc
 	{
@@ -863,6 +899,14 @@ namespace wiGraphics
 		{
 			struct Instance
 			{
+				enum FLAGS
+				{
+					FLAG_EMPTY = 0,
+					FLAG_TRIANGLE_CULL_DISABLE = 1 << 0,
+					FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE = 1 << 1,
+					FLAG_FORCE_OPAQUE = 1 << 2,
+					FLAG_FORCE_NON_OPAQUE = 1 << 3,
+				};
 				XMFLOAT3X4 transform;
 				uint32_t InstanceID : 24;
 				uint32_t InstanceMask : 8;

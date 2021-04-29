@@ -39,12 +39,9 @@ set(SHADERS_CS
 		"skinningCS.hlsl"
 		"skinningCS_LDS.hlsl"
 		"resolveMSAADepthStencilCS.hlsl"
-		"raytrace_shadeCS.hlsl"
-		"raytrace_tilesortCS.hlsl"
-		"raytrace_kickjobsCS.hlsl"
-		"raytrace_launchCS.hlsl"
 		"paint_textureCS.hlsl"
-		"raytrace_closesthitCS.hlsl"
+		"raytraceCS.hlsl"
+		"raytraceCS_rtapi.hlsl"
 		"oceanUpdateDisplacementMapCS.hlsl"
 		"oceanUpdateGradientFoldingCS.hlsl"
 		"oceanSimulatorCS.hlsl"
@@ -175,6 +172,7 @@ set(SHADERS_PS
 		"shadowPS_water.hlsl"
 		"shadowPS_alphatest.hlsl"
 		"renderlightmapPS.hlsl"
+		"renderlightmapPS_rtapi.hlsl"
 		"raytrace_debugbvhPS.hlsl"
 		"outlinePS.hlsl"
 		"oceanSurfaceSimplePS.hlsl"
@@ -317,7 +315,7 @@ function(Generate_Shaders_SPIRV SHADERS_SRC_LIST SHADER_TYPE)
 		get_filename_component(FILE_NAME ${Shader} NAME_WLE)
 		
 		set(SPIRV_OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/${SPIRV_OUTPUT_DIR}/${FILE_NAME}.cso")
-		set(SPIRV_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/../${Shader}")
+		set(SPIRV_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/${Shader}")
 		
 		# Only do this for shaders that are missing or updated (very slow re-config otherwise)
 		file(TIMESTAMP "${SPIRV_SOURCE}" NEWTIMESTAMP)
@@ -327,21 +325,17 @@ function(Generate_Shaders_SPIRV SHADERS_SRC_LIST SHADER_TYPE)
 			set(${Shader}-LASTMOD ${NEWTIMESTAMP} CACHE INTERNAL "")
 		
 			message(STATUS "CALCULATING DEPENDENCIES FOR SHADER ${SHADER_TYPE} ${FILE_NAME}")
-			if(${SHADER_TYPE} STREQUAL lib)
-				set(VK_VERSION "vulkan1.2")
-			else()
-				set(VK_VERSION "vulkan1.1")
-			endif()
+			set(VK_VERSION "vulkan1.2")
 
 			set(COMMAND_PARAMS ${DXC_TARGET}
 					"${SPIRV_SOURCE}"
 					-T "${SHADER_TYPE}_6_5"
-					-I "${CMAKE_CURRENT_SOURCE_DIR}/../"
+					-I "${CMAKE_CURRENT_SOURCE_DIR}/"
 					-D SPIRV
 					#-all-resources-bound
 					#-pack-optimized
 					-res-may-alias
-					#-no-legacy-cbuf-layout
+					-no-legacy-cbuf-layout
 					-spirv
 					-fspv-target-env=${VK_VERSION}
 					-fvk-use-dx-layout
@@ -352,7 +346,6 @@ function(Generate_Shaders_SPIRV SHADERS_SRC_LIST SHADER_TYPE)
 					-fvk-u-shift 2000 0
 					-fvk-s-shift 3000 0
 					#-fspv-extension=KHR
-					-Vd #DISABLE VALIDATION: There is currently a validation bug with raytracing RayTCurrent()!!!
 					)
 
 			# Determine include dependencies (recursively)
@@ -401,89 +394,3 @@ Generate_Shaders_SPIRV(SHADERS_LIB lib)
 add_custom_target(Shaders_SPIRV DEPENDS ${SPIRV_BINARY_FILES})
 set_property(TARGET "Shaders_SPIRV" PROPERTY FOLDER "Shaders")
 
-
-if (WIN32)
-	# Legacy Shader Model 5 for DirectX11
-	set(LEGACY_SHADER_SOURCES)
-	function(Generate_Shaders_Legacy SHADERS_SRC_LIST SHADER_TYPE)
-		foreach (Shader IN LISTS ${SHADERS_SRC_LIST})
-			get_filename_component(FILE_NAME ${Shader} NAME_WLE)
-
-			set(SHADER_OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}//${FILE_NAME}.cso")
-			set(SHADER_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/../${Shader}")
-
-			set(COMMAND_PARAMS "fxc"
-				"${SHADER_SOURCE}"
-				/T "${SHADER_TYPE}_5_0"
-				/I "${CMAKE_CURRENT_SOURCE_DIR}/../"
-				/E "main"
-				/nologo
-				/Qstrip_reflect
-				/Qstrip_debug
-				/Fo ${SHADER_OUTPUT}
-			)
-			
-			add_custom_command(
-					OUTPUT ${SHADER_OUTPUT}
-					COMMAND ${COMMAND_PARAMS}
-					DEPENDS ${SHADER_SOURCE}
-			)
-			list(APPEND LEGACY_SHADER_BINARY_FILES ${SHADER_OUTPUT})
-		endforeach()
-		set(LEGACY_SHADER_BINARY_FILES ${LEGACY_SHADER_BINARY_FILES} PARENT_SCOPE)
-
-	endfunction()
-
-	Generate_Shaders_Legacy(SHADERS_VS vs)
-	Generate_Shaders_Legacy(SHADERS_HS hs)
-	Generate_Shaders_Legacy(SHADERS_DS ds)
-	Generate_Shaders_Legacy(SHADERS_GS gs)
-	Generate_Shaders_Legacy(SHADERS_PS ps)
-	Generate_Shaders_Legacy(SHADERS_CS cs)
-	add_custom_target(Shaders_Legacy DEPENDS ${LEGACY_SHADER_BINARY_FILES})
-	set_property(TARGET "Shaders_Legacy" PROPERTY FOLDER "Shaders")
-
-	# DXC (Shader Model 6.0+ for DirectX12)
-	set(DXC_OUTPUT_DIR hlsl6)
-	function(Generate_Shaders_DXC SHADERS_SRC_LIST SHADER_TYPE)
-		foreach (Shader IN LISTS ${SHADERS_SRC_LIST})
-			get_filename_component(FILE_NAME ${Shader} NAME_WLE)
-
-			set(DXC_OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/${DXC_OUTPUT_DIR}/${FILE_NAME}.cso")
-			set(DXC_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/../${Shader}")
-			set(COMMAND_PARAMS ${DXC_TARGET}
-					"${DXC_SOURCE}"
-					-T "${SHADER_TYPE}_6_5"
-					-I "${CMAKE_CURRENT_SOURCE_DIR}/../"
-					-D HLSL6
-					#-all-resources-bound
-					#-pack-optimized
-					-res-may-alias
-					#-no-legacy-cbuf-layout
-					-flegacy-macro-expansion
-					-Fo ${DXC_OUTPUT}
-			)
-			
-			add_custom_command(
-					OUTPUT ${DXC_OUTPUT}
-					COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_SOURCE_DIR}/${DXC_OUTPUT_DIR}/"
-					COMMAND ${COMMAND_PARAMS}
-					DEPENDS ${DXC_SOURCE}
-			)
-			list(APPEND DXC_BINARY_FILES ${DXC_OUTPUT})
-		endforeach()
-
-		set(DXC_BINARY_FILES ${DXC_BINARY_FILES} PARENT_SCOPE)
-	endfunction()
-
-	Generate_Shaders_DXC(SHADERS_VS vs)
-	Generate_Shaders_DXC(SHADERS_HS hs)
-	Generate_Shaders_DXC(SHADERS_DS ds)
-	Generate_Shaders_DXC(SHADERS_GS gs)
-	Generate_Shaders_DXC(SHADERS_PS ps)
-	Generate_Shaders_DXC(SHADERS_CS cs)
-	Generate_Shaders_DXC(SHADERS_LIB lib)
-
-	add_custom_target(Shaders_DXC DEPENDS ${DXC_BINARY_FILES})
-	set_property(TARGET "Shaders_DXC" PROPERTY FOLDER "Shaders")
-endif ()

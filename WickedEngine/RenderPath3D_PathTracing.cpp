@@ -4,7 +4,7 @@
 #include "wiHelper.h"
 #include "wiTextureHelper.h"
 #include "wiSprite.h"
-#include "ResourceMapping.h"
+#include "shaders/ResourceMapping.h"
 #include "wiProfiler.h"
 #include "wiScene.h"
 
@@ -18,14 +18,15 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	FORMAT defaultTextureFormat = device->GetBackBufferFormat();
+	XMUINT2 internalResolution = GetInternalResolution();
+	FORMAT defaultTextureFormat = FORMAT_R10G10B10A2_UNORM;
 
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE | BIND_RENDER_TARGET;
 		desc.Format = FORMAT_R32G32B32A32_FLOAT;
-		desc.Width = GetInternalResolution().x;
-		desc.Height = GetInternalResolution().y;
+		desc.Width = internalResolution.x;
+		desc.Height = internalResolution.y;
 		device->CreateTexture(&desc, nullptr, &traceResult);
 		device->SetName(&traceResult, "traceResult");
 	}
@@ -33,8 +34,8 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 		TextureDesc desc;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.Format = defaultTextureFormat;
-		desc.Width = GetInternalResolution().x;
-		desc.Height = GetInternalResolution().y;
+		desc.Width = internalResolution.x;
+		desc.Height = internalResolution.y;
 		device->CreateTexture(&desc, nullptr, &rtPostprocess_LDR[0]);
 		device->SetName(&rtPostprocess_LDR[0], "rtPostprocess_LDR[0]");
 
@@ -59,8 +60,6 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 
 		device->CreateRenderPass(&desc, &renderpass_debugbvh);
 	}
-
-	wiRenderer::CreateRayBuffers(rayBuffers, GetInternalResolution().x * GetInternalResolution().y);
 
 	// also reset accumulation buffer state:
 	sam = -1;
@@ -104,6 +103,11 @@ void RenderPath3D_PathTracing::Update(float dt)
 	}
 	sam++;
 
+	if (sam == 0)
+	{
+		scene->InvalidateBVH();
+	}
+
 	RenderPath3D::Update(dt);
 }
 
@@ -119,10 +123,7 @@ void RenderPath3D_PathTracing::Render() const
 
 		wiRenderer::UpdateRenderData(visibility_main, frameCB, cmd);
 
-		if (sam == 0)
-		{
-			wiRenderer::BuildSceneBVH(*scene, cmd);
-		}
+		wiRenderer::UpdateRaytracingAccelerationStructures(*scene, cmd);
 	});
 
 	// Main scene:
@@ -148,7 +149,7 @@ void RenderPath3D_PathTracing::Render() const
 			vp.Height = (float)traceResult.GetDesc().Height;
 			device->BindViewports(1, &vp, cmd);
 
-			wiRenderer::RayTraceSceneBVH(cmd);
+			wiRenderer::RayTraceSceneBVH(*scene, cmd);
 
 			device->RenderPassEnd(cmd);
 		}
@@ -156,8 +157,7 @@ void RenderPath3D_PathTracing::Render() const
 		{
 			auto range = wiProfiler::BeginRangeGPU("Traced Scene", cmd);
 
-			wiRenderer::GenerateScreenRayBuffers(rayBuffers, *camera, GetInternalResolution().x, GetInternalResolution().y, cmd);
-			wiRenderer::RayTraceScene(*scene, rayBuffers, &traceResult, sam, cmd);
+			wiRenderer::RayTraceScene(*scene, traceResult, sam, cmd);
 
 
 			wiProfiler::EndRange(range); // Traced Scene
@@ -165,13 +165,11 @@ void RenderPath3D_PathTracing::Render() const
 
 		wiRenderer::Postprocess_Tonemap(
 			traceResult,
-			*wiTextureHelper::getColor(wiColor::Gray()),
-			*wiTextureHelper::getBlack(),
 			rtPostprocess_LDR[0],
 			cmd,
 			getExposure(),
-			false,
-			nullptr
+			getDitherEnabled(),
+			getColorGradingEnabled() ? (scene->weather.colorGradingMap == nullptr ? nullptr : &scene->weather.colorGradingMap->texture) : nullptr
 		);
 
 		// GUI Background blurring:
@@ -180,7 +178,7 @@ void RenderPath3D_PathTracing::Render() const
 			device->EventBegin("GUI Background Blur", cmd);
 			wiRenderer::Postprocess_Downsample4x(rtPostprocess_LDR[0], rtGUIBlurredBackground[0], cmd);
 			wiRenderer::Postprocess_Downsample4x(rtGUIBlurredBackground[0], rtGUIBlurredBackground[2], cmd);
-			wiRenderer::Postprocess_Blur_Gaussian(rtGUIBlurredBackground[2], rtGUIBlurredBackground[1], rtGUIBlurredBackground[2], cmd);
+			wiRenderer::Postprocess_Blur_Gaussian(rtGUIBlurredBackground[2], rtGUIBlurredBackground[1], rtGUIBlurredBackground[2], cmd, -1, -1, true);
 			device->EventEnd(cmd);
 			wiProfiler::EndRange(range);
 		}

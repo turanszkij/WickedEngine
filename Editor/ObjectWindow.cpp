@@ -710,7 +710,7 @@ void ObjectWindow::Create(EditorComponent* editor)
 			x->SetLightmapRenderRequest(true);
 		}
 
-		wiRenderer::InvalidateBVH();
+		scene.InvalidateBVH();
 
 	});
 	AddWidget(&generateLightmapButton);
@@ -792,7 +792,7 @@ void ObjectWindow::Create(EditorComponent* editor)
 	AddWidget(&colorPicker);
 
 
-	Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 720, 120, 0));
+	Translate(XMFLOAT3((float)editor->GetLogicalWidth() - 720, 120, 0));
 	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);

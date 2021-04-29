@@ -4,15 +4,15 @@ backlog_post("Begin script: test_script.lua");
 
 
 -- Load a model:
-local parent = LoadModel("../models/teapot.wiscene");
-LoadModel("../models/cameras.wiscene");
+local parent = LoadModel("../Content/models/teapot.wiscene");
+LoadModel("../Content/models/cameras.wiscene");
 
 -- Load camera sample script:
-dofile("../scripts/camera_animation_repeat.lua");
+dofile("../Content/scripts/camera_animation_repeat.lua");
 ToggleCameraAnimation();
 
 -- Load an image:
-local sprite = Sprite("../images/logo_small.png");
+local sprite = Sprite("../logo_small.png");
 sprite.SetParams(ImageParams(100,100,128,128));
 -- Set this image as renderable to the active component:
 local component = main.GetActivePath();

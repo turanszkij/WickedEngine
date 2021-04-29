@@ -4,10 +4,9 @@
 #include <memory>
 #include <functional>
 
-static const int SYSTEM_EVENT_RELOAD_SHADERS = -1;
-static const int SYSTEM_EVENT_CHANGE_RESOLUTION = -2;
-static const int SYSTEM_EVENT_CHANGE_DPI = -4;
-static const int SYSTEM_EVENT_THREAD_SAFE_POINT = -5;
+static const int SYSTEM_EVENT_THREAD_SAFE_POINT = -1;
+static const int SYSTEM_EVENT_RELOAD_SHADERS = -2;
+static const int SYSTEM_EVENT_SET_VSYNC = -3;
 
 namespace wiEvent
 {
@@ -20,4 +19,12 @@ namespace wiEvent
 	Handle Subscribe(int id, std::function<void(uint64_t)> callback);
 	void Subscribe_Once(int id, std::function<void(uint64_t)> callback);
 	void FireEvent(int id, uint64_t userdata);
+
+
+	// helper event wrappers can be placed below:
+	inline void SetVSync(bool enabled)
+	{
+		wiEvent::FireEvent(SYSTEM_EVENT_SET_VSYNC, enabled ? 1ull : 0ull);
+	}
 }
+

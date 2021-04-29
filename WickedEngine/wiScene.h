@@ -4,11 +4,14 @@
 #include "wiIntersect.h"
 #include "wiEmittedParticle.h"
 #include "wiHairParticle.h"
-#include "ShaderInterop_Renderer.h"
+#include "shaders/ShaderInterop_Renderer.h"
 #include "wiJobSystem.h"
 #include "wiAudio.h"
 #include "wiResourceManager.h"
 #include "wiSpinLock.h"
+#include "wiGPUBVH.h"
+#include "wiOcean.h"
+#include "wiSprite.h"
 
 #include "wiECS.h"
 #include "wiScene_Decl.h"
@@ -220,6 +223,7 @@ namespace wiScene
 		// Non-serialized attributes:
 		wiGraphics::GPUBuffer constantBuffer;
 		uint32_t layerMask = ~0u;
+		mutable bool dirty_buffer = false;
 
 		// User stencil value can be in range [0, 15]
 		inline void SetUserStencilRef(uint8_t value)
@@ -238,7 +242,7 @@ namespace wiScene
 		inline void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
 		inline bool IsDirty() const { return _flags & DIRTY; }
 
-		inline void SetCastShadow(bool value) { if (value) { _flags |= CAST_SHADOW; } else { _flags &= ~CAST_SHADOW; } }
+		inline void SetCastShadow(bool value) { SetDirty(); if (value) { _flags |= CAST_SHADOW; } else { _flags &= ~CAST_SHADOW; } }
 		inline void SetReceiveShadow(bool value) { SetDirty(); if (value) { _flags &= ~DISABLE_RECEIVE_SHADOW; } else { _flags |= DISABLE_RECEIVE_SHADOW; } }
 		inline void SetOcclusionEnabled_Primary(bool value) { SetDirty(); if (value) { _flags |= OCCLUSION_PRIMARY; } else { _flags &= ~OCCLUSION_PRIMARY; } }
 		inline void SetOcclusionEnabled_Secondary(bool value) { SetDirty(); if (value) { _flags |= OCCLUSION_SECONDARY; } else { _flags &= ~OCCLUSION_SECONDARY; } }
@@ -314,9 +318,8 @@ namespace wiScene
 			DOUBLE_SIDED = 1 << 1,
 			DYNAMIC = 1 << 2,
 			TERRAIN = 1 << 3,
-			DIRTY_MORPH = 1 << 4,
-			DIRTY_BINDLESS = 1 << 5,
-			DIRTY_BLAS = 1 << 6,
+			_DEPRECATED_DIRTY_MORPH = 1 << 4,
+			_DEPRECATED_DIRTY_BINDLESS = 1 << 5,
 		};
 		uint32_t _flags = RENDERABLE;
 
@@ -380,25 +383,31 @@ namespace wiScene
 		wiGraphics::GPUBuffer subsetBuffer;
 
 		wiGraphics::RaytracingAccelerationStructure BLAS;
+		enum BLAS_STATE
+		{
+			BLAS_STATE_NEEDS_REBUILD,
+			BLAS_STATE_NEEDS_REFIT,
+			BLAS_STATE_COMPLETE,
+		};
+		mutable BLAS_STATE BLAS_state = BLAS_STATE_NEEDS_REBUILD;
 
 		// Only valid for 1 frame material component indices:
 		int terrain_material1_index = -1;
 		int terrain_material2_index = -1;
 		int terrain_material3_index = -1;
 
-		std::vector<ShaderMeshSubset> shadersubsets;
+		mutable bool dirty_morph = false;
+		mutable bool dirty_bindless = true;
 
 		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
 		inline void SetDoubleSided(bool value) { if (value) { _flags |= DOUBLE_SIDED; } else { _flags &= ~DOUBLE_SIDED; } }
 		inline void SetDynamic(bool value) { if (value) { _flags |= DYNAMIC; } else { _flags &= ~DYNAMIC; } }
 		inline void SetTerrain(bool value) { if (value) { _flags |= TERRAIN; } else { _flags &= ~TERRAIN; } }
-		inline void SetDirtyMorph(bool value = true) { if (value) { _flags |= DIRTY_MORPH; } else { _flags &= ~DIRTY_MORPH; } }
-
+		
 		inline bool IsRenderable() const { return _flags & RENDERABLE; }
 		inline bool IsDoubleSided() const { return _flags & DOUBLE_SIDED; }
 		inline bool IsDynamic() const { return _flags & DYNAMIC; }
 		inline bool IsTerrain() const { return _flags & TERRAIN; }
-		inline bool IsDirtyMorph() const { return _flags & DIRTY_MORPH; }
 
 		inline float GetTessellationFactor() const { return tessellationFactor; }
 		inline wiGraphics::INDEXBUFFER_FORMAT GetIndexFormat() const { return vertex_positions.size() > 65535 ? wiGraphics::INDEXFORMAT_32BIT : wiGraphics::INDEXFORMAT_16BIT; }
@@ -581,6 +590,7 @@ namespace wiScene
 		XMFLOAT4 color;
 		float fadeThresholdRadius;
 		std::vector<XMFLOAT4X4> instanceMatrices;
+		mutable bool render_dirty = false;
 
 		inline void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
 		inline bool IsDirty() const { return _flags & DIRTY; }
@@ -616,11 +626,11 @@ namespace wiScene
 
 		// Non-serialized attributes:
 
-		XMFLOAT4 globalLightMapMulAdd = XMFLOAT4(0, 0, 0, 0);
 		wiGraphics::Texture lightmap;
 		wiGraphics::RenderPass renderpass_lightmap_clear;
 		wiGraphics::RenderPass renderpass_lightmap_accumulate;
-		uint32_t lightmapIterationCount = 0;
+		mutable uint32_t lightmapIterationCount = 0;
+		wiRectPacker::rect_xywh lightmap_rect = {};
 
 		XMFLOAT3 center = XMFLOAT3(0, 0, 0);
 		float impostorFadeThresholdRadius;
@@ -632,7 +642,7 @@ namespace wiScene
 
 		// occlusion result history bitfield (32 bit->32 frame history)
 		uint32_t occlusionHistory = ~0;
-		int occlusionQueries[wiGraphics::GraphicsDevice::GetBackBufferCount() + 1];
+		int occlusionQueries[wiGraphics::GraphicsDevice::GetBufferCount() + 1];
 
 		inline bool IsOccluded() const
 		{
@@ -885,6 +895,9 @@ namespace wiScene
 		float zNearP = 0.1f;
 		float zFarP = 800.0f;
 		float fov = XM_PI / 3.0f;
+		float focal_length = 1;
+		float aperture_size = 0;
+		XMFLOAT2 aperture_shape = XMFLOAT2(1, 1);
 
 		// Non-serialized attributes:
 		XMFLOAT3 Eye = XMFLOAT3(0, 0, 0);
@@ -936,6 +949,7 @@ namespace wiScene
 		XMFLOAT3 position;
 		float range;
 		XMFLOAT4X4 inverseMatrix;
+		mutable bool render_dirty = false;
 
 		inline void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
 		inline void SetRealTime(bool value) { if (value) { _flags |= REALTIME; } else { _flags &= ~REALTIME; } }
@@ -982,7 +996,6 @@ namespace wiScene
 		XMFLOAT3 front;
 		XMFLOAT3 position;
 		float range;
-		XMFLOAT4 atlasMulAdd;
 		XMFLOAT4X4 world;
 
 		std::shared_ptr<wiResource> texture;
@@ -1119,34 +1132,7 @@ namespace wiScene
 		float windWaveSize = 1;
 		float windSpeed = 1;
 
-		struct OceanParameters
-		{
-			// Must be power of 2.
-			int dmap_dim = 512;
-			// Typical value is 1000 ~ 2000
-			float patch_length = 50.0f;
-
-			// Adjust the time interval for simulation.
-			float time_scale = 0.3f;
-			// Amplitude for transverse wave. Around 1.0
-			float wave_amplitude = 1000.0f;
-			// Wind direction. Normalization not required.
-			XMFLOAT2 wind_dir = XMFLOAT2(0.8f, 0.6f);
-			// Around 100 ~ 1000
-			float wind_speed = 600.0f;
-			// This value damps out the waves against the wind direction.
-			// Smaller value means higher wind dependency.
-			float wind_dependency = 0.07f;
-			// The amplitude for longitudinal wave. Must be positive.
-			float choppy_scale = 1.3f;
-
-
-			XMFLOAT3 waterColor = XMFLOAT3(0.0f, 3.0f / 255.0f, 31.0f / 255.0f);
-			float waterHeight = 0.0f;
-			uint32_t surfaceDetail = 4;
-			float surfaceDisplacementTolerance = 2;
-		};
-		OceanParameters oceanParameters;
+		wiOcean::OceanParameters oceanParameters;
 
 		std::string skyMapName;
 		std::string colorGradingMapName;
@@ -1278,12 +1264,8 @@ namespace wiScene
 		enum FLAGS
 		{
 			EMPTY = 0,
-			UPDATE_ACCELERATION_STRUCTURES = 1 << 0,
 		};
 		uint32_t flags = EMPTY;
-
-		constexpr void SetUpdateAccelerationStructuresEnabled(bool value){ if (value) { flags |= UPDATE_ACCELERATION_STRUCTURES; } else { flags &= ~UPDATE_ACCELERATION_STRUCTURES; } }
-		constexpr bool IsUpdateAccelerationStructuresEnabled() const { return flags & UPDATE_ACCELERATION_STRUCTURES; }
 
 		wiSpinLock locker;
 		AABB bounds;
@@ -1291,16 +1273,57 @@ namespace wiScene
 		WeatherComponent weather;
 		wiGraphics::RaytracingAccelerationStructure TLAS;
 		std::vector<uint8_t> TLAS_instances;
-		std::vector<wiECS::Entity> BLAS_builds;
 
-		std::mutex cmd_locker;
-		wiGraphics::CommandList cmd = wiGraphics::INVALID_COMMANDLIST; // for gpu data updates
+		wiGPUBVH BVH; // this is for non-hardware accelerated raytracing
+		mutable bool BVH_invalid = false;
+		void InvalidateBVH() {
+			BVH_invalid = true;
+		}
 
+		// Occlusion query state:
 		wiGraphics::GPUQueryHeap queryHeap[arraysize(ObjectComponent::occlusionQueries)];
 		std::vector<uint64_t> queryResults;
 		uint32_t writtenQueries[arraysize(queryHeap)] = {};
 		int queryheap_idx = 0;
 		std::atomic<uint32_t> queryAllocator{ 0 };
+
+		// Environment probe cubemap array state:
+		static const uint32_t envmapCount = 16;
+		const uint32_t envmapRes = 128;
+		const uint32_t envmapMIPs = 8;
+		wiGraphics::Texture envrenderingDepthBuffer;
+		wiGraphics::Texture envmapArray;
+		std::vector<wiGraphics::RenderPass> renderpasses_envmap;
+
+		// Impostor texture array state:
+		static const uint32_t maxImpostorCount = 8;
+		const uint32_t impostorTextureDim = 128;
+		wiGraphics::Texture impostorDepthStencil;
+		wiGraphics::Texture impostorArray;
+		std::vector<wiGraphics::RenderPass> renderpasses_impostor;
+
+		// Atlas packing border size in pixels:
+		static const int atlasClampBorder = 1;
+
+		// Lightmap atlas state:
+		wiGraphics::Texture lightmap;
+		std::vector<wiRectPacker::rect_xywh*> lightmap_rects;
+		std::atomic<uint32_t> lightmap_rect_allocator{ 0 };
+		mutable std::atomic_bool lightmap_repack_needed{ false };
+		mutable std::atomic_bool lightmap_refresh_needed{ false };
+
+		// Decal atlas state:
+		wiGraphics::Texture decalAtlas;
+		mutable bool decal_repack_needed{ false };
+		std::unordered_map<std::shared_ptr<wiResource>, wiRectPacker::rect_xywh> packedDecals;
+
+		// Ocean GPU state:
+		wiOcean ocean;
+		void OceanRegenerate() { ocean.Create(weather.oceanParameters); }
+
+		// Simple water ripple sprites:
+		mutable std::vector<wiSprite> waterRipples;
+		void PutWaterRipple(const std::string& image, const XMFLOAT3& pos);
 
 		// Update all components by a given timestep (in seconds):
 		//	This is an expensive function, prefer to call it only once per frame!

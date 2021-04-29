@@ -1,7 +1,7 @@
 #include "wiGPUSortLib.h"
 #include "wiRenderer.h"
 #include "wiResourceManager.h"
-#include "ShaderInterop_GPUSortLib.h"
+#include "shaders/ShaderInterop_GPUSortLib.h"
 #include "wiEvent.h"
 
 using namespace wiGraphics;

@@ -9,8 +9,8 @@
 #include "wiEmittedParticle.h"
 #include "wiHairParticle.h"
 #include "wiIntersect_BindLua.h"
+#include "wiEvent.h"
 
-using namespace std;
 using namespace wiECS;
 using namespace wiGraphics;
 using namespace wiScene;
@@ -48,17 +48,6 @@ namespace wiRenderer_BindLua
 	int GetGameSpeed(lua_State* L)
 	{
 		wiLua::SSetFloat(L, wiRenderer::GetGameSpeed());
-		return 1;
-	}
-
-	int GetScreenWidth(lua_State* L)
-	{
-		wiLua::SSetFloat(L, wiRenderer::GetDevice()->GetScreenWidth());
-		return 1;
-	}
-	int GetScreenHeight(lua_State* L)
-	{
-		wiLua::SSetFloat(L, wiRenderer::GetDevice()->GetScreenHeight());
 		return 1;
 	}
 
@@ -130,21 +119,13 @@ namespace wiRenderer_BindLua
 		int argc = wiLua::SGetArgCount(L);
 		if (argc > 0)
 		{
-			wiRenderer::GetDevice()->SetVSyncEnabled(wiLua::SGetBool(L, 1));
+			wiEvent::SetVSync(wiLua::SGetBool(L, 1));
 		}
 		return 0;
 	}
 	int SetResolution(lua_State* L)
 	{
-		int argc = wiLua::SGetArgCount(L);
-		if (argc > 1)
-		{
-			wiRenderer::GetDevice()->SetResolution(wiLua::SGetInt(L, 1), wiLua::SGetInt(L, 2));
-		}
-		else
-		{
-			wiLua::SError(L, "SetResolution(int width,height) not enough arguments!");
-		}
+		wiLua::SError(L, "SetResolution() is deprecated, now it's handled by window events!");
 		return 0;
 	}
 	int SetDebugLightCulling(lua_State* L)
@@ -335,13 +316,13 @@ namespace wiRenderer_BindLua
 		int argc = wiLua::SGetArgCount(L);
 		if (argc > 1)
 		{
-			string name = wiLua::SGetString(L, 1);
+			std::string name = wiLua::SGetString(L, 1);
 			Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 2);
 			if (v)
 			{
 				XMFLOAT3 pos;
 				XMStoreFloat3(&pos, v->vector);
-				wiRenderer::PutWaterRipple(name, pos);
+				wiScene::GetScene().PutWaterRipple(wiLua::GetScriptPath() + name, pos);
 			}
 			else
 				wiLua::SError(L, "PutWaterRipple(String imagename, Vector position) argument is not a Vector!");
@@ -381,8 +362,8 @@ namespace wiRenderer_BindLua
 			wiLua::RegisterFunc("SetGameSpeed", SetGameSpeed);
 			wiLua::RegisterFunc("GetGameSpeed", GetGameSpeed);
 
-			wiLua::RegisterFunc("GetScreenWidth", GetScreenWidth);
-			wiLua::RegisterFunc("GetScreenHeight", GetScreenHeight);
+			wiLua::RunText("GetScreenWidth = function() return main.GetCanvas().GetLogicalWidth() end");
+			wiLua::RunText("GetScreenHeight = function() return main.GetCanvas().GetLogicalHeight() end");
 
 			wiLua::RegisterFunc("SetShadowProps2D", SetShadowProps2D);
 			wiLua::RegisterFunc("SetShadowPropsCube", SetShadowPropsCube);

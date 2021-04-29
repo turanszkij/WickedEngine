@@ -9,6 +9,7 @@
 #include "wiSpinLock.h"
 #include "wiHelper.h"
 #include "wiRenderer.h"
+#include "wiBackLog.h"
 
 #include <functional>
 #include <unordered_map>
@@ -289,6 +290,10 @@ namespace wiScene
 		{
 			dest->options |= SHADERMATERIAL_OPTION_BIT_RECEIVE_SHADOW;
 		}
+		if (IsCastingShadow())
+		{
+			dest->options |= SHADERMATERIAL_OPTION_BIT_CAST_SHADOW;
+		}
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
 		dest->texture_basecolormap_index = device->GetDescriptorIndex(textures[BASECOLORMAP].GetGPUResource(), SRV);
@@ -422,7 +427,7 @@ namespace wiScene
 		    if (!targets.empty())
 		    {
 				vertex_positions_morphed.resize(vertex_positions.size());
-				SetDirtyMorph();
+				dirty_morph = true;
 		    }
 
 			std::vector<Vertex_POS> vertices(vertex_positions.size());
@@ -725,7 +730,7 @@ namespace wiScene
 
 		if (wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		{
-			_flags |= DIRTY_BLAS;
+			BLAS_state = BLAS_STATE_NEEDS_REBUILD;
 
 			RaytracingAccelerationStructureDesc desc;
 			desc.type = RaytracingAccelerationStructureDesc::BOTTOMLEVEL;
@@ -740,21 +745,6 @@ namespace wiScene
 				desc._flags |= RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_TRACE;
 			}
 
-#if 0
-			// Flattened subsets:
-			desc.bottomlevel.geometries.emplace_back();
-			auto& geometry = desc.bottomlevel.geometries.back();
-			geometry.type = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::TRIANGLES;
-			geometry.triangles.vertexBuffer = streamoutBuffer_POS.IsValid() ? streamoutBuffer_POS : vertexBuffer_POS;
-			geometry.triangles.indexBuffer = indexBuffer;
-			geometry.triangles.indexFormat = GetIndexFormat();
-			geometry.triangles.indexCount = (uint32_t)indices.size();
-			geometry.triangles.indexOffset = 0;
-			geometry.triangles.vertexCount = (uint32_t)vertex_positions.size();
-			geometry.triangles.vertexFormat = FORMAT_R32G32B32_FLOAT;
-			geometry.triangles.vertexStride = sizeof(MeshComponent::Vertex_POS);
-#else
-			// One geometry per subset:
 			for (auto& subset : subsets)
 			{
 				desc.bottomlevel.geometries.emplace_back();
@@ -769,7 +759,6 @@ namespace wiScene
 				geometry.triangles.vertexFormat = FORMAT_R32G32B32_FLOAT;
 				geometry.triangles.vertexStride = sizeof(MeshComponent::Vertex_POS);
 			}
-#endif
 
 			bool success = device->CreateRaytracingAccelerationStructure(&desc, &BLAS);
 			assert(success);
@@ -778,7 +767,7 @@ namespace wiScene
 
 		if(device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
 		{
-			_flags |= DIRTY_BINDLESS;
+			dirty_bindless = true;
 
 			GPUBufferDesc desc;
 			desc.BindFlags = BIND_SHADER_RESOURCE;
@@ -815,10 +804,9 @@ namespace wiScene
 		{
 			dest->vb_tan = device->GetDescriptorIndex(&vertexBuffer_TAN, SRV);
 		}
+		dest->vb_col = device->GetDescriptorIndex(&vertexBuffer_COL, SRV);
 		dest->vb_uv0 = device->GetDescriptorIndex(&vertexBuffer_UV0, SRV);
 		dest->vb_uv1 = device->GetDescriptorIndex(&vertexBuffer_UV1, SRV);
-		dest->vb_bon = device->GetDescriptorIndex(&vertexBuffer_BON, SRV);
-		dest->vb_col = device->GetDescriptorIndex(&vertexBuffer_COL, SRV);
 		dest->vb_atl = device->GetDescriptorIndex(&vertexBuffer_ATL, SRV);
 		dest->vb_pre = device->GetDescriptorIndex(&vertexBuffer_PRE, SRV);
 		dest->blendmaterial1 = terrain_material1_index;
@@ -1200,9 +1188,10 @@ namespace wiScene
 
 	void ObjectComponent::ClearLightmap()
 	{
+		lightmap = Texture();
+		lightmap_rect = {};
 		lightmapWidth = 0;
 		lightmapHeight = 0;
-		globalLightMapMulAdd = XMFLOAT4(0, 0, 0, 0);
 		lightmapIterationCount = 0; 
 		lightmapTextureData.clear();
 		SetLightmapRenderRequest(false);
@@ -1398,15 +1387,6 @@ namespace wiScene
 		this->dt = dt;
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
-		if (dt > 0)
-		{
-			cmd = device->BeginCommandList();
-			BLAS_builds.clear();
-		}
-		else
-		{
-			cmd = INVALID_COMMANDLIST;
-		}
 
 		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		{
@@ -1506,7 +1486,7 @@ namespace wiScene
 		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		{
 			// Recreate top level acceleration structure if the object count changed:
-			if (dt > 0 && objects.GetCount() > 0 && objects.GetCount() != TLAS.desc.toplevel.count)
+			if (objects.GetCount() > 0 && objects.GetCount() != TLAS.desc.toplevel.count)
 			{
 				RaytracingAccelerationStructureDesc desc;
 				desc._flags = RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD;
@@ -1524,10 +1504,107 @@ namespace wiScene
 			}
 		}
 
-		if (cmd != INVALID_COMMANDLIST)
+		if (lightmap_refresh_needed.load())
 		{
-			device->StashCommandLists();
+			InvalidateBVH();
 		}
+		if (lightmap_repack_needed.load())
+		{
+			std::vector<wiRectPacker::bin> bins;
+			if (wiRectPacker::pack(lightmap_rects.data(), (int)lightmap_rect_allocator.load(), 16384, bins))
+			{
+				assert(bins.size() == 1 && "The regions won't fit into the texture!");
+
+				TextureDesc desc;
+				desc.Width = (uint32_t)bins[0].size.w;
+				desc.Height = (uint32_t)bins[0].size.h;
+				desc.MipLevels = 1;
+				desc.ArraySize = 1;
+				desc.Format = FORMAT_R11G11B10_FLOAT;
+				desc.SampleCount = 1;
+				desc.Usage = USAGE_DEFAULT;
+				desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+				desc.CPUAccessFlags = 0;
+				desc.MiscFlags = 0;
+
+				device->CreateTexture(&desc, nullptr, &lightmap);
+				device->SetName(&lightmap, "Scene::lightmap");
+			}
+			else
+			{
+				wiBackLog::post("Global Lightmap atlas packing failed!");
+			}
+		}
+		if (!lightmap.IsValid())
+		{
+			// In case no lightmaps, still create a dummy texture
+			TextureDesc desc;
+			desc.Width = 1;
+			desc.Height = 1;
+			desc.Format = FORMAT_R11G11B10_FLOAT;
+			desc.BindFlags = BIND_SHADER_RESOURCE;
+			device->CreateTexture(&desc, nullptr, &lightmap);
+		}
+
+		// Update atlas texture if it is invalidated:
+		if (decal_repack_needed)
+		{
+			std::vector<wiRectPacker::rect_xywh*> out_rects(packedDecals.size());
+			int i = 0;
+			for (auto& it : packedDecals)
+			{
+				out_rects[i] = &it.second;
+				i++;
+			}
+
+			std::vector<wiRectPacker::bin> bins;
+			if (wiRectPacker::pack(out_rects.data(), (int)packedDecals.size(), 16384, bins))
+			{
+				assert(bins.size() == 1 && "The regions won't fit into the texture!");
+
+				TextureDesc desc;
+				desc.Width = (uint32_t)bins[0].size.w;
+				desc.Height = (uint32_t)bins[0].size.h;
+				desc.MipLevels = 0;
+				desc.ArraySize = 1;
+				desc.Format = FORMAT_R8G8B8A8_UNORM;
+				desc.SampleCount = 1;
+				desc.Usage = USAGE_DEFAULT;
+				desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+				desc.CPUAccessFlags = 0;
+				desc.MiscFlags = 0;
+
+				device->CreateTexture(&desc, nullptr, &decalAtlas);
+				device->SetName(&decalAtlas, "Scene::decalAtlas");
+
+				for (uint32_t i = 0; i < decalAtlas.GetDesc().MipLevels; ++i)
+				{
+					int subresource_index;
+					subresource_index = device->CreateSubresource(&decalAtlas, UAV, 0, 1, i, 1);
+					assert(subresource_index == i);
+				}
+			}
+			else
+			{
+				wiBackLog::post("Decal atlas packing failed!");
+			}
+		}
+
+		// Update water ripples:
+		for (size_t i = 0; i < waterRipples.size(); ++i)
+		{
+			auto& ripple = waterRipples[i];
+			ripple.Update(dt * 60);
+
+			// Remove inactive ripples:
+			if (ripple.params.opacity <= 0 + FLT_EPSILON || ripple.params.fade >= 1 - FLT_EPSILON)
+			{
+				ripple = waterRipples.back();
+				waterRipples.pop_back();
+				i--;
+			}
+		}
+
 	}
 	void Scene::Clear()
 	{
@@ -1562,6 +1639,9 @@ namespace wiScene
 		springs.Clear();
 
 		TLAS = RaytracingAccelerationStructure();
+		BVH.Clear();
+		packedDecals.clear();
+		waterRipples.clear();
 	}
 	void Scene::Merge(Scene& other)
 	{
@@ -2309,7 +2389,7 @@ namespace wiScene
 						target_mesh->targets[j].weight = wiMath::Lerp(target_mesh->targets[j].weight, animation.morph_weights_temp[j], t);
 					}
 
-					target_mesh->SetDirtyMorph(true);
+					target_mesh->dirty_morph = true;
 				}
 
 			}
@@ -2623,7 +2703,7 @@ namespace wiScene
 
 			if (mesh.streamoutBuffer_POS.IsValid() && mesh.vertexBuffer_PRE.IsValid())
 			{
-				mesh._flags |= MeshComponent::DIRTY_BINDLESS;
+				mesh.dirty_bindless = true;
 				std::swap(mesh.streamoutBuffer_POS, mesh.vertexBuffer_PRE);
 			}
 
@@ -2637,7 +2717,7 @@ namespace wiScene
 					{
 						auto& geometry = mesh.BLAS.desc.bottomlevel.geometries[subsetIndex];
 						uint32_t flags = geometry._flags;
-						if (material->IsAlphaTestEnabled() || (material->GetRenderTypes() & RENDERTYPE_TRANSPARENT))
+						if (material->IsAlphaTestEnabled() || (material->GetRenderTypes() & RENDERTYPE_TRANSPARENT) || !material->IsCastingShadow())
 						{
 							geometry._flags &= ~RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
 						}
@@ -2647,23 +2727,20 @@ namespace wiScene
 						}
 						if (flags != geometry._flags)
 						{
-							mesh._flags |= MeshComponent::DIRTY_BLAS;
+							mesh.BLAS_state = MeshComponent::BLAS_STATE_NEEDS_REBUILD;
 						}
 						if (mesh.streamoutBuffer_POS.IsValid())
 						{
-							mesh._flags |= MeshComponent::DIRTY_BLAS;
+							mesh.BLAS_state = MeshComponent::BLAS_STATE_NEEDS_REBUILD;
 							geometry.triangles.vertexBuffer = mesh.streamoutBuffer_POS;
 						}
 					}
 					subsetIndex++;
 				}
 
-				if (IsUpdateAccelerationStructuresEnabled() && cmd != INVALID_COMMANDLIST && (mesh._flags & MeshComponent::DIRTY_BLAS))
+				if (mesh.dirty_morph)
 				{
-					mesh._flags &= ~MeshComponent::DIRTY_BLAS;
-					locker.lock();
-					BLAS_builds.push_back(entity);
-					locker.unlock();
+					mesh.BLAS_state = MeshComponent::BLAS_STATE_NEEDS_REBUILD;
 				}
 			}
 
@@ -2677,7 +2754,7 @@ namespace wiScene
 						int index = device->GetDescriptorIndex(&mat->constantBuffer, SRV);
 						if (mesh.terrain_material1_index != index)
 						{
-							mesh._flags |= MeshComponent::DIRTY_BINDLESS;
+							mesh.dirty_bindless = true;
 							mesh.terrain_material1_index = index;
 						}
 					}
@@ -2690,7 +2767,7 @@ namespace wiScene
 						int index = device->GetDescriptorIndex(&mat->constantBuffer, SRV);
 						if (mesh.terrain_material2_index != index)
 						{
-							mesh._flags |= MeshComponent::DIRTY_BINDLESS;
+							mesh.dirty_bindless = true;
 							mesh.terrain_material2_index = index;
 						}
 					}
@@ -2703,46 +2780,15 @@ namespace wiScene
 						int index = device->GetDescriptorIndex(&mat->constantBuffer, SRV);
 						if (mesh.terrain_material3_index != index)
 						{
-							mesh._flags |= MeshComponent::DIRTY_BINDLESS;
+							mesh.dirty_bindless = true;
 							mesh.terrain_material3_index = index;
 						}
 					}
 				}
 			}
 
-			if (cmd != INVALID_COMMANDLIST && device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS) && mesh._flags & MeshComponent::DIRTY_BINDLESS)
-			{
-				mesh._flags &= ~MeshComponent::DIRTY_BINDLESS;
-
-				ShaderMesh shadermesh;
-				mesh.WriteShaderMesh(&shadermesh);
-
-				int mesh_descriptor = device->GetDescriptorIndex(&mesh.descriptor, SRV);
-
-				mesh.shadersubsets.resize(mesh.subsets.size());
-				int j = 0;
-				for (auto& x : mesh.subsets)
-				{
-					ShaderMeshSubset& shadersubset = mesh.shadersubsets[j++];
-					shadersubset.indexOffset = x.indexOffset;
-					shadersubset.indexCount = x.indexCount;
-					shadersubset.mesh = mesh_descriptor;
-
-					const MaterialComponent* material = materials.GetComponent(x.materialID);
-					if (material != nullptr)
-					{
-						shadersubset.material = device->GetDescriptorIndex(&material->constantBuffer, SRV);
-					}
-				}
-
-				cmd_locker.lock();
-				device->UpdateBuffer(&mesh.descriptor, &shadermesh, cmd);
-				device->UpdateBuffer(&mesh.subsetBuffer, mesh.shadersubsets.data(), cmd);
-				cmd_locker.unlock();
-			}
-
 			// Update morph targets if needed:
-			if (cmd != INVALID_COMMANDLIST && mesh.IsDirtyMorph() && !mesh.targets.empty())
+			if (mesh.dirty_morph && !mesh.targets.empty())
 			{
 			    XMFLOAT3 _min = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX);
 			    XMFLOAT3 _max = XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
@@ -2775,11 +2821,6 @@ namespace wiScene
 			    }
 
 			    mesh.aabb = AABB(_min, _max);
-
-				mesh.SetDirtyMorph(false);
-				cmd_locker.lock();
-				wiRenderer::GetDevice()->UpdateBuffer(&mesh.vertexBuffer_POS, mesh.vertex_positions_morphed.data(), cmd);
-				cmd_locker.unlock();
 			}
 
 		});
@@ -2817,30 +2858,87 @@ namespace wiScene
 				material.engineStencilRef = STENCILREF_CUSTOMSHADER;
 			}
 
-			if (cmd != INVALID_COMMANDLIST && material.IsDirty())
+			if (material.IsDirty())
 			{
 				material.SetDirty(false);
-				ShaderMaterial shadermaterial;
-				material.WriteShaderMaterial(&shadermaterial);
-				cmd_locker.lock();
-				wiRenderer::GetDevice()->UpdateBuffer(&material.constantBuffer, &shadermaterial, cmd);
-				cmd_locker.unlock();
+				material.dirty_buffer = true;
 			}
 
 		});
 	}
 	void Scene::RunImpostorUpdateSystem(wiJobSystem::context& ctx)
 	{
+		if (impostors.GetCount() > 0 && !impostorArray.IsValid())
+		{
+			GraphicsDevice* device = wiRenderer::GetDevice();
+
+			TextureDesc desc;
+			desc.Width = impostorTextureDim;
+			desc.Height = impostorTextureDim;
+
+			desc.BindFlags = BIND_DEPTH_STENCIL;
+			desc.ArraySize = 1;
+			desc.Format = FORMAT_D16_UNORM;
+			desc.layout = IMAGE_LAYOUT_DEPTHSTENCIL;
+			device->CreateTexture(&desc, nullptr, &impostorDepthStencil);
+			device->SetName(&impostorDepthStencil, "impostorDepthStencil");
+
+			desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+			desc.ArraySize = maxImpostorCount * impostorCaptureAngles * 3;
+			desc.Format = FORMAT_R8G8B8A8_UNORM;
+			desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE;
+
+			device->CreateTexture(&desc, nullptr, &impostorArray);
+			device->SetName(&impostorArray, "impostorArray");
+
+			renderpasses_impostor.resize(desc.ArraySize);
+
+			for (uint32_t i = 0; i < desc.ArraySize; ++i)
+			{
+				int subresource_index;
+				subresource_index = device->CreateSubresource(&impostorArray, RTV, i, 1, 0, 1);
+				assert(subresource_index == i);
+
+				RenderPassDesc renderpassdesc;
+				renderpassdesc.attachments.push_back(
+					RenderPassAttachment::RenderTarget(
+						&impostorArray,
+						RenderPassAttachment::LOADOP_CLEAR
+					)
+				);
+				renderpassdesc.attachments.back().subresource = subresource_index;
+
+				renderpassdesc.attachments.push_back(
+					RenderPassAttachment::DepthStencil(
+						&impostorDepthStencil,
+						RenderPassAttachment::LOADOP_CLEAR,
+						RenderPassAttachment::STOREOP_DONTCARE
+					)
+				);
+
+				device->CreateRenderPass(&renderpassdesc, &renderpasses_impostor[subresource_index]);
+			}
+		}
+
 		wiJobSystem::Dispatch(ctx, (uint32_t)impostors.GetCount(), 1, [&](wiJobArgs args) {
 
 			ImpostorComponent& impostor = impostors[args.jobIndex];
 			impostor.aabb = AABB();
 			impostor.instanceMatrices.clear();
+
+			if (impostor.IsDirty())
+			{
+				impostor.SetDirty(false);
+				impostor.render_dirty = true;
+			}
 		});
 	}
 	void Scene::RunObjectUpdateSystem(wiJobSystem::context& ctx)
 	{
 		assert(objects.GetCount() == aabb_objects.GetCount());
+
+		lightmap_rects.resize(objects.GetCount());
+		lightmap_rect_allocator.store(0);
 
 		parallel_bounds.clear();
 		parallel_bounds.resize((size_t)wiJobSystem::DispatchGroupCount((uint32_t)objects.GetCount(), small_subtask_groupsize));
@@ -2969,7 +3067,7 @@ namespace wiScene
 						object.prev_transform_index = -1;
 					}
 
-					if (IsUpdateAccelerationStructuresEnabled() && TLAS.IsValid())
+					if (TLAS.IsValid())
 					{
 						GraphicsDevice* device = wiRenderer::GetDevice();
 						RaytracingAccelerationStructureDesc::TopLevel::Instance instance = {};
@@ -2984,8 +3082,72 @@ namespace wiScene
 						instance.InstanceMask = 1;
 						instance.bottomlevel = mesh->BLAS;
 
+						if (XMVectorGetX(XMMatrixDeterminant(W)) > 0)
+						{
+							// There is a mismatch between object space winding and BLAS winding:
+							//	https://docs.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_raytracing_instance_flags
+							instance.Flags = RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE;
+						}
+
 						void* dest = (void*)((size_t)TLAS_instances.data() + (size_t)args.jobIndex * device->GetTopLevelAccelerationStructureInstanceSize());
 						device->WriteTopLevelAccelerationStructureInstance(&instance, dest);
+					}
+
+					// lightmap things:
+					if (dt > 0)
+					{
+						if (object.IsLightmapRenderRequested() && dt > 0)
+						{
+							if (!object.lightmap.IsValid())
+							{
+								{
+									// Unfortunately, fp128 format only correctly downloads from GPU if it is pow2 size:
+									object.lightmapWidth = wiMath::GetNextPowerOfTwo(object.lightmapWidth + 1) / 2;
+									object.lightmapHeight = wiMath::GetNextPowerOfTwo(object.lightmapHeight + 1) / 2;
+								}
+
+								TextureDesc desc;
+								desc.Width = object.lightmapWidth;
+								desc.Height = object.lightmapHeight;
+								desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
+								// Note: we need the full precision format to achieve correct accumulative blending! 
+								//	But the global atlas will have less precision for good bandwidth for sampling
+								desc.Format = FORMAT_R32G32B32A32_FLOAT;
+
+								GraphicsDevice* device = wiRenderer::GetDevice();
+								device->CreateTexture(&desc, nullptr, &object.lightmap);
+								device->SetName(&object.lightmap, "object.lightmap");
+
+								RenderPassDesc renderpassdesc;
+
+								renderpassdesc.attachments.push_back(RenderPassAttachment::RenderTarget(&object.lightmap, RenderPassAttachment::LOADOP_CLEAR));
+
+								device->CreateRenderPass(&renderpassdesc, &object.renderpass_lightmap_clear);
+
+								renderpassdesc.attachments.back().loadop = RenderPassAttachment::LOADOP_LOAD;
+								device->CreateRenderPass(&renderpassdesc, &object.renderpass_lightmap_accumulate);
+							}
+							lightmap_refresh_needed.store(true);
+						}
+
+						if (!object.lightmapTextureData.empty() && !object.lightmap.IsValid())
+						{
+							// Create a GPU-side per object lighmap if there is none yet, so that copying into atlas can be done efficiently:
+							wiTextureHelper::CreateTexture(object.lightmap, object.lightmapTextureData.data(), object.lightmapWidth, object.lightmapHeight, object.GetLightmapFormat());
+						}
+
+						if (object.lightmap.IsValid())
+						{
+							if (object.lightmap_rect.w == 0)
+							{
+								// we need to pack this lightmap texture into the atlas
+								object.lightmap_rect = wiRectPacker::rect_xywh(0, 0, object.lightmap.GetDesc().Width + atlasClampBorder * 2, object.lightmap.GetDesc().Height + atlasClampBorder * 2);
+								lightmap_repack_needed.store(true); // will need to repack all in this case!
+							}
+							// lightmap rects' state is always updated, in case one needs repacking
+							uint32_t alloc = lightmap_rect_allocator.fetch_add(1);
+							lightmap_rects[alloc] = &object.lightmap_rect;
+						}
 					}
 				}
 
@@ -3025,10 +3187,10 @@ namespace wiScene
 	{
 		assert(decals.GetCount() == aabb_decals.GetCount());
 
-		wiJobSystem::Dispatch(ctx, (uint32_t)decals.GetCount(), small_subtask_groupsize, [&](wiJobArgs args) {
-
-			DecalComponent& decal = decals[args.jobIndex];
-			Entity entity = decals.GetEntity(args.jobIndex);
+		for (size_t i = 0; i < decals.GetCount(); ++i)
+		{
+			DecalComponent& decal = decals[i];
+			Entity entity = decals.GetEntity(i);
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 			decal.world = transform.world;
 
@@ -3044,7 +3206,7 @@ namespace wiScene
 			XMStoreFloat3(&scale, S);
 			decal.range = std::max(scale.x, std::max(scale.y, scale.z)) * 2;
 
-			AABB& aabb = aabb_decals[args.jobIndex];
+			AABB& aabb = aabb_decals[i];
 			aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
 			aabb = aabb.transform(transform.world);
 
@@ -3053,16 +3215,120 @@ namespace wiScene
 			decal.emissive = material.GetEmissiveStrength();
 			decal.texture = material.textures[MaterialComponent::BASECOLORMAP].resource;
 			decal.normal = material.textures[MaterialComponent::NORMALMAP].resource;
-		});
+
+			// atlas part is not thread safe:
+			if (decal.texture != nullptr && decal.texture->texture.IsValid())
+			{
+				if (packedDecals.find(decal.texture) == packedDecals.end())
+				{
+					// we need to pack this decal texture into the atlas
+					wiRectPacker::rect_xywh newRect = wiRectPacker::rect_xywh(0, 0, decal.texture->texture.desc.Width + atlasClampBorder * 2, decal.texture->texture.desc.Height + atlasClampBorder * 2);
+					packedDecals[decal.texture] = newRect;
+					decal_repack_needed = true;
+				}
+			}
+		}
 	}
 	void Scene::RunProbeUpdateSystem(wiJobSystem::context& ctx)
 	{
 		assert(probes.GetCount() == aabb_probes.GetCount());
 
-		wiJobSystem::Dispatch(ctx, (uint32_t)probes.GetCount(), small_subtask_groupsize, [&](wiJobArgs args) {
+		if (!envmapArray.IsValid()) // even when zero probes, this will be created, since sometimes only the sky will be rendered into it
+		{
+			GraphicsDevice* device = wiRenderer::GetDevice();
 
-			EnvironmentProbeComponent& probe = probes[args.jobIndex];
-			Entity entity = probes.GetEntity(args.jobIndex);
+			TextureDesc desc;
+			desc.ArraySize = 6;
+			desc.BindFlags = BIND_DEPTH_STENCIL;
+			desc.CPUAccessFlags = 0;
+			desc.Format = FORMAT_D16_UNORM;
+			desc.Height = envmapRes;
+			desc.Width = envmapRes;
+			desc.MipLevels = 1;
+			desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
+			desc.Usage = USAGE_DEFAULT;
+			desc.layout = IMAGE_LAYOUT_DEPTHSTENCIL;
+
+			device->CreateTexture(&desc, nullptr, &envrenderingDepthBuffer);
+			device->SetName(&envrenderingDepthBuffer, "envrenderingDepthBuffer");
+
+			desc.ArraySize = envmapCount * 6;
+			desc.BindFlags = BIND_SHADER_RESOURCE | BIND_RENDER_TARGET | BIND_UNORDERED_ACCESS;
+			desc.CPUAccessFlags = 0;
+			desc.Format = FORMAT_R11G11B10_FLOAT;
+			desc.Height = envmapRes;
+			desc.Width = envmapRes;
+			desc.MipLevels = envmapMIPs;
+			desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
+			desc.Usage = USAGE_DEFAULT;
+			desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE;
+
+			device->CreateTexture(&desc, nullptr, &envmapArray);
+			device->SetName(&envmapArray, "envmapArray");
+
+			renderpasses_envmap.resize(envmapCount);
+
+			for (uint32_t i = 0; i < envmapCount; ++i)
+			{
+				int subresource_index;
+				subresource_index = device->CreateSubresource(&envmapArray, RTV, i * 6, 6, 0, 1);
+				assert(subresource_index == i);
+
+				RenderPassDesc renderpassdesc;
+				renderpassdesc.attachments.push_back(
+					RenderPassAttachment::RenderTarget(&envmapArray,
+						RenderPassAttachment::LOADOP_DONTCARE
+					)
+				);
+				renderpassdesc.attachments.back().subresource = subresource_index;
+
+				renderpassdesc.attachments.push_back(
+					RenderPassAttachment::DepthStencil(
+						&envrenderingDepthBuffer,
+						RenderPassAttachment::LOADOP_CLEAR,
+						RenderPassAttachment::STOREOP_DONTCARE
+					)
+				);
+
+				device->CreateRenderPass(&renderpassdesc, &renderpasses_envmap[subresource_index]);
+			}
+			for (uint32_t i = 0; i < envmapArray.desc.MipLevels; ++i)
+			{
+				int subresource_index;
+				subresource_index = device->CreateSubresource(&envmapArray, SRV, 0, desc.ArraySize, i, 1);
+				assert(subresource_index == i);
+				subresource_index = device->CreateSubresource(&envmapArray, UAV, 0, desc.ArraySize, i, 1);
+				assert(subresource_index == i);
+			}
+
+			// debug probe views, individual cubes:
+			for (uint32_t i = 0; i < envmapCount; ++i)
+			{
+				int subresource_index;
+				subresource_index = device->CreateSubresource(&envmapArray, SRV, i * 6, 6, 0, -1);
+				assert(subresource_index == envmapArray.desc.MipLevels + i);
+			}
+		}
+
+		// reconstruct envmap array status:
+		bool envmapTaken[envmapCount] = {};
+		for (size_t i = 0; i < probes.GetCount(); ++i)
+		{
+			EnvironmentProbeComponent& probe = probes[i];
+			if (probe.textureIndex >= 0 && probe.textureIndex < envmapCount)
+			{
+				envmapTaken[probe.textureIndex] = true;
+			}
+			else
+			{
+				probe.textureIndex = -1;
+			}
+		}
+
+		for (size_t probeIndex = 0; probeIndex < probes.GetCount(); ++probeIndex)
+		{
+			EnvironmentProbeComponent& probe = probes[probeIndex];
+			Entity entity = probes.GetEntity(probeIndex);
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 
 			probe.position = transform.GetPosition();
@@ -3076,10 +3342,32 @@ namespace wiScene
 			XMStoreFloat3(&scale, S);
 			probe.range = std::max(scale.x, std::max(scale.y, scale.z)) * 2;
 
-			AABB& aabb = aabb_probes[args.jobIndex];
+			AABB& aabb = aabb_probes[probeIndex];
 			aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
 			aabb = aabb.transform(transform.world);
-		});
+
+			if (probe.IsDirty() || probe.IsRealTime())
+			{
+				probe.SetDirty(false);
+				probe.render_dirty = true;
+			}
+
+			if (probe.render_dirty && probe.textureIndex < 0)
+			{
+				// need to take a free envmap texture slot:
+				bool found = false;
+				for (int i = 0; i < arraysize(envmapTaken); ++i)
+				{
+					if (envmapTaken[i] == false)
+					{
+						envmapTaken[i] = true;
+						probe.textureIndex = i;
+						found = true;
+						break;
+					}
+				}
+			}
+		}
 	}
 	void Scene::RunForceUpdateSystem(wiJobSystem::context& ctx)
 	{
@@ -3152,6 +3440,13 @@ namespace wiScene
 
 			wiEmittedParticle& emitter = emitters[args.jobIndex];
 			Entity entity = emitters.GetEntity(args.jobIndex);
+
+			const LayerComponent* layer = layers.GetComponent(entity);
+			if (layer != nullptr)
+			{
+				emitter.layerMask = layer->GetLayerMask();
+			}
+
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 			emitter.UpdateCPU(transform, dt);
 		});
@@ -3159,10 +3454,16 @@ namespace wiScene
 		wiJobSystem::Dispatch(ctx, (uint32_t)hairs.GetCount(), small_subtask_groupsize, [&](wiJobArgs args) {
 
 			wiHairParticle& hair = hairs[args.jobIndex];
+			Entity entity = hairs.GetEntity(args.jobIndex);
+
+			const LayerComponent* layer = layers.GetComponent(entity);
+			if (layer != nullptr)
+			{
+				hair.layerMask = layer->GetLayerMask();
+			}
 
 			if (hair.meshID != INVALID_ENTITY)
 			{
-				Entity entity = hairs.GetEntity(args.jobIndex);
 				const MeshComponent* mesh = meshes.GetComponent(hair.meshID);
 
 				if (mesh != nullptr)
@@ -3181,6 +3482,11 @@ namespace wiScene
 		{
 			weather = weathers[0];
 			weather.most_important_light_index = ~0;
+
+			if (weather.IsOceanEnabled() && !ocean.IsValid())
+			{
+				OceanRegenerate();
+			}
 		}
 	}
 	void Scene::RunSoundUpdateSystem(wiJobSystem::context& ctx)
@@ -3221,6 +3527,21 @@ namespace wiScene
 		}
 	}
 
+	void Scene::PutWaterRipple(const std::string& image, const XMFLOAT3& pos)
+	{
+		wiSprite img(image);
+		img.params.enableExtractNormalMap();
+		img.params.blendFlag = BLENDMODE_ADDITIVE;
+		img.anim.fad = 0.01f;
+		img.anim.scaleX = 0.2f;
+		img.anim.scaleY = 0.2f;
+		img.params.pos = pos;
+		img.params.rotation = (wiRandom::getRandom(0, 1000) * 0.001f) * 2 * 3.1415f;
+		img.params.siz = XMFLOAT2(1, 1);
+		img.params.quality = QUALITY_ANISOTROPIC;
+		img.params.pivot = XMFLOAT2(0.5f, 0.5f);
+		waterRipples.push_back(img);
+	}
 
 	XMVECTOR SkinVertex(const MeshComponent& mesh, const ArmatureComponent& armature, uint32_t index, XMVECTOR* N)
 	{

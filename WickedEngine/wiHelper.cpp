@@ -33,12 +33,11 @@
 #include "Utility/portable-file-dialogs.h"
 #endif // _WIN32
 
-using namespace std;
 
 namespace wiHelper
 {
 
-	string toUpper(const std::string& s)
+	std::string toUpper(const std::string& s)
 	{
 		std::string result;
 		std::locale loc;
@@ -55,7 +54,7 @@ namespace wiHelper
 #ifndef PLATFORM_UWP
 		MessageBoxA(GetActiveWindow(), msg.c_str(), caption.c_str(), 0);
 #else
-		wstring wmessage, wcaption;
+		std::wstring wmessage, wcaption;
 		StringConvert(msg, wmessage);
 		StringConvert(caption, wcaption);
 		// UWP can only show message box on main thread:
@@ -68,22 +67,19 @@ namespace wiHelper
 #endif // _WIN32
 	}
 
-	void screenshot(const std::string& name)
+	void screenshot(const wiGraphics::SwapChain& swapchain, const std::string& name)
 	{
 		std::string directory;
 		if (name.empty())
 		{
-			directory = "screenshots";
+			directory = std::filesystem::current_path().string() + "/screenshots";
 		}
 		else
 		{
 			directory = GetDirectoryFromPath(name);
 		}
 
-		if (!std::filesystem::create_directory(directory.c_str()))
-		{
-			wiBackLog::post(("Directory couoldn't be created: " + directory).c_str());
-		}
+		DirectoryCreate(directory);
 
 		std::string filename = name;
 		if (filename.empty())
@@ -91,7 +87,7 @@ namespace wiHelper
 			filename = directory + "/sc_" + getCurrentDateTimeAsString() + ".jpg";
 		}
 
-		bool result = saveTextureToFile(wiRenderer::GetDevice()->GetBackBuffer(), filename);
+		bool result = saveTextureToFile(wiRenderer::GetDevice()->GetBackBuffer(&swapchain), filename);
 		assert(result);
 
 		if (result)
@@ -234,7 +230,7 @@ namespace wiHelper
 			}
 		};
 
-		string extension = wiHelper::toUpper(fileExtension);
+		std::string extension = wiHelper::toUpper(fileExtension);
 		if (!extension.compare("JPG") || !extension.compare("JPEG"))
 		{
 			write_result = stbi_write_jpg_to_func(func, &filedata, (int)desc.Width, (int)desc.Height, 4, texturedata.data(), 100);
@@ -259,7 +255,7 @@ namespace wiHelper
 		return write_result != 0;
 	}
 
-	bool saveTextureToFile(const wiGraphics::Texture& texture, const string& fileName)
+	bool saveTextureToFile(const wiGraphics::Texture& texture, const std::string& fileName)
 	{
 		using namespace wiGraphics;
 		TextureDesc desc = texture.GetDesc();
@@ -275,7 +271,7 @@ namespace wiHelper
 	{
 		using namespace wiGraphics;
 
-		string ext = GetExtensionFromFileName(fileName);
+		std::string ext = GetExtensionFromFileName(fileName);
 		std::vector<uint8_t> filedata;
 		if (saveTextureToMemoryFile(texturedata, desc, ext, filedata))
 		{
@@ -285,7 +281,7 @@ namespace wiHelper
 		return false;
 	}
 
-	string getCurrentDateTimeAsString()
+	std::string getCurrentDateTimeAsString()
 	{
 		time_t t = std::time(nullptr);
 		struct tm time_info;
@@ -294,12 +290,12 @@ namespace wiHelper
 #else
 		localtime(&t);
 #endif
-		stringstream ss("");
+		std::stringstream ss("");
 		ss << std::put_time(&time_info, "%d-%m-%Y %H-%M-%S");
 		return ss.str();
 	}
 
-	void SplitPath(const std::string& fullPath, string& dir, string& fileName)
+	void SplitPath(const std::string& fullPath, std::string& dir, std::string& fileName)
 	{
 		size_t found;
 		found = fullPath.find_last_of("/\\");
@@ -307,31 +303,31 @@ namespace wiHelper
 		fileName = fullPath.substr(found + 1);
 	}
 
-	string GetFileNameFromPath(const std::string& fullPath)
+	std::string GetFileNameFromPath(const std::string& fullPath)
 	{
 		if (fullPath.empty())
 		{
 			return fullPath;
 		}
 
-		string ret, empty;
+		std::string ret, empty;
 		SplitPath(fullPath, empty, ret);
 		return ret;
 	}
 
-	string GetDirectoryFromPath(const std::string& fullPath)
+	std::string GetDirectoryFromPath(const std::string& fullPath)
 	{
 		if (fullPath.empty())
 		{
 			return fullPath;
 		}
 
-		string ret, empty;
+		std::string ret, empty;
 		SplitPath(fullPath, ret, empty);
 		return ret;
 	}
 
-	string GetExtensionFromFileName(const string& filename)
+	std::string GetExtensionFromFileName(const std::string& filename)
 	{
 		size_t idx = filename.rfind('.');
 
@@ -343,6 +339,18 @@ namespace wiHelper
 
 		// No extension found
 		return "";
+	}
+
+	std::string ReplaceExtension(const std::string& filename, const std::string& extension)
+	{
+		size_t idx = filename.rfind('.');
+
+		if (idx != std::string::npos)
+		{
+			return filename.substr(0, idx + 1) + extension;
+		}
+
+		return filename;
 	}
 
 	void MakePathRelative(const std::string& rootdir, std::string& path)
@@ -367,15 +375,30 @@ namespace wiHelper
 		//}
 	}
 
+	void MakePathAbsolute(std::string& path)
+	{
+		std::filesystem::path filepath = path;
+		std::filesystem::path absolute = std::filesystem::absolute(path);
+		if (!absolute.empty())
+		{
+			path = absolute.string();
+		}
+	}
+
+	void DirectoryCreate(const std::string& path)
+	{
+		std::filesystem::create_directories(path);
+	}
+
 	bool FileRead(const std::string& fileName, std::vector<uint8_t>& data)
 	{
 #ifndef PLATFORM_UWP
 #ifdef SDL_FILESYSTEM_UNIX
 		std::string filepath = fileName;
 		std::replace(filepath.begin(), filepath.end(), '\\', '/');
-		ifstream file(filepath, ios::binary | ios::ate);
+		std::ifstream file(filepath, std::ios::binary | std::ios::ate);
 #else
-		ifstream file(fileName, ios::binary | ios::ate);
+		std::ifstream file(fileName, std::ios::binary | std::ios::ate);
 #endif // SDL_FILESYSTEM_UNIX
 		if (file.is_open())
 		{
@@ -390,7 +413,7 @@ namespace wiHelper
 		using namespace winrt::Windows::Storage;
 		using namespace winrt::Windows::Storage::Streams;
 		using namespace winrt::Windows::Foundation;
-		wstring wstr;
+		std::wstring wstr;
 		std::filesystem::path filepath = fileName;
 		filepath = std::filesystem::absolute(filepath);
 		StringConvert(filepath.string(), wstr);
@@ -452,10 +475,10 @@ namespace wiHelper
 		}
 
 #ifndef PLATFORM_UWP
-		ofstream file(fileName, ios::binary | ios::trunc);
+		std::ofstream file(fileName, std::ios::binary | std::ios::trunc);
 		if (file.is_open())
 		{
-			file.write((const char*)data, (streamsize)size);
+			file.write((const char*)data, (std::streamsize)size);
 			file.close();
 			return true;
 		}
@@ -464,7 +487,7 @@ namespace wiHelper
 		using namespace winrt::Windows::Storage;
 		using namespace winrt::Windows::Storage::Streams;
 		using namespace winrt::Windows::Foundation;
-		wstring wstr;
+		std::wstring wstr;
 		std::filesystem::path filepath = fileName;
 		filepath = std::filesystem::absolute(filepath);
 		StringConvert(filepath.string(), wstr);
@@ -519,56 +542,8 @@ namespace wiHelper
 
 	bool FileExists(const std::string& fileName)
 	{
-#ifndef PLATFORM_UWP
-		ifstream file(fileName);
-		bool exists = file.is_open();
-		file.close();
+		bool exists = std::filesystem::exists(fileName);
 		return exists;
-#else
-		using namespace winrt::Windows::Storage;
-		using namespace winrt::Windows::Foundation;
-		string directory = GetDirectoryFromPath(fileName);
-		string name = GetFileNameFromPath(fileName);
-		wstring wdir, wname;
-		StringConvert(directory, wdir);
-		StringConvert(name, wname);
-		bool success = false;
-
-		auto async_helper = [&]() -> IAsyncAction {
-			try
-			{
-				auto folder = co_await StorageFolder::GetFolderFromPathAsync(wdir);
-				auto item = co_await folder.TryGetItemAsync(wname);
-				if (item)
-				{
-					success = true;
-				}
-			}
-			catch (winrt::hresult_error const& ex)
-			{
-				switch (ex.code())
-				{
-				case E_ACCESSDENIED:
-					wiBackLog::post(("Opening file failed: " + fileName + " | Reason: Permission Denied!").c_str());
-					break;
-				default:
-					break;
-				}
-			}
-
-		};
-
-		if (winrt::impl::is_sta_thread())
-		{
-			std::thread([&] { async_helper().get(); }).join(); // can't block coroutine from ui thread
-		}
-		else
-		{
-			async_helper().get();
-		}
-
-		return success;
-#endif
 	}
 
 	void FileDialog(const FileDialogParams& params, std::function<void(std::string fileName)> onSuccess)
@@ -664,7 +639,7 @@ namespace wiHelper
 
 				for (auto& x : params.extensions)
 				{
-					wstring wstr;
+					std::wstring wstr;
 					StringConvert(x, wstr);
 					wstr = L"." + wstr;
 					picker.FileTypeFilter().Append(wstr);
@@ -677,8 +652,8 @@ namespace wiHelper
 					auto futureaccess = StorageApplicationPermissions::FutureAccessList();
 					futureaccess.Clear();
 					futureaccess.Add(file);
-					wstring wstr = file.Path().data();
-					string str;
+					std::wstring wstr = file.Path().data();
+					std::string str;
 					StringConvert(wstr, str);
 
 					onSuccess(str);
@@ -690,12 +665,12 @@ namespace wiHelper
 				FileSavePicker picker;
 				picker.SuggestedStartLocation(PickerLocationId::Objects3D);
 
-				wstring wdesc;
+				std::wstring wdesc;
 				StringConvert(params.description, wdesc);
 				winrt::Windows::Foundation::Collections::IVector<winrt::hstring> extensions{ winrt::single_threaded_vector<winrt::hstring>() };
 				for (auto& x : params.extensions)
 				{
-					wstring wstr;
+					std::wstring wstr;
 					StringConvert(x, wstr);
 					wstr = L"." + wstr;
 					extensions.Append(wstr);
@@ -708,8 +683,8 @@ namespace wiHelper
 					auto futureaccess = StorageApplicationPermissions::FutureAccessList();
 					futureaccess.Clear();
 					futureaccess.Add(file);
-					wstring wstr = file.Path().data();
-					string str;
+					std::wstring wstr = file.Path().data();
+					std::string str;
 					StringConvert(wstr, str);
 					onSuccess(str);
 				}
@@ -771,9 +746,9 @@ namespace wiHelper
 		ss << "const uint8_t " << dataName << "[] = {";
 		for (size_t i = 0; i < size; ++i)
 		{
-			ss << (uint32_t)data[i] << ", ";
+			ss << (uint32_t)data[i] << ",";
 		}
-		ss << "};" << endl;
+		ss << "};" << std::endl;
 		return FileWrite(dst_filename, (uint8_t*)ss.str().c_str(), ss.str().length());
 	}
 
@@ -814,10 +789,10 @@ namespace wiHelper
 			MultiByteToWideChar(CP_UTF8, 0, from, -1, &to[0], num);
 		}
 #else
-		int num = 0; // TODO
-		const char * message = "int StringConvert(const char* from, wchar_t* to) not implemented";
-		std::cerr << message << std::endl;
-		throw std::runtime_error(message);
+		std::string sfrom = from;
+		std::wstring wto = std::wstring(sfrom.begin(), sfrom.end());
+		std::wmemcpy(to, wto.c_str(), wto.length());
+		int num = wto.length();
 #endif // _WIN32
 		return num;
 	}
@@ -831,10 +806,10 @@ namespace wiHelper
 			WideCharToMultiByte(CP_UTF8, 0, from, -1, &to[0], num, NULL, NULL);
 		}
 #else
-		int num = 0; // TODO
-		const char * message = "int StringConvert(const wchar_t* from, char* to) not implemented";
-		std::cerr << message << std::endl;
-		throw std::runtime_error(message);
+		std::wstring wfrom = from;
+		std::string sto = std::string(wfrom.begin(), wfrom.end());
+		std::strcpy(to, sto.c_str());
+		int num = sto.length();
 #endif // _WIN32
 		return num;
 	}
@@ -847,12 +822,12 @@ namespace wiHelper
 	void Spin(float milliseconds)
 	{
 		milliseconds /= 1000.0f;
-		chrono::high_resolution_clock::time_point t1 = chrono::high_resolution_clock::now();
+		std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
 		double ms = 0;
 		while (ms < milliseconds)
 		{
-			chrono::high_resolution_clock::time_point t2 = chrono::high_resolution_clock::now();
-			chrono::duration<double> time_span = chrono::duration_cast<chrono::duration<double>>(t2 - t1);
+			std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
+			std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
 			ms = time_span.count();
 		}
 	}

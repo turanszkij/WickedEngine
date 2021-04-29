@@ -702,7 +702,7 @@ namespace wiScene
 					if (!lensFlareNames[i].empty())
 					{
 						lensFlareNames[i] = dir + lensFlareNames[i];
-						lensFlareRimTextures[i] = wiResourceManager::Load(dir + lensFlareNames[i], wiResourceManager::IMPORT_RETAIN_FILEDATA);
+						lensFlareRimTextures[i] = wiResourceManager::Load(lensFlareNames[i], wiResourceManager::IMPORT_RETAIN_FILEDATA);
 					}
 				}
 			});
@@ -749,6 +749,13 @@ namespace wiScene
 			archive >> zFarP;
 			archive >> fov;
 
+			if (archive.GetVersion() >= 65)
+			{
+				archive >> focal_length;
+				archive >> aperture_size;
+				archive >> aperture_shape;
+			}
+
 			SetDirty();
 		}
 		else
@@ -759,6 +766,13 @@ namespace wiScene
 			archive << zNearP;
 			archive << zFarP;
 			archive << fov;
+
+			if (archive.GetVersion() >= 65)
+			{
+				archive << focal_length;
+				archive << aperture_size;
+				archive << aperture_shape;
+			}
 		}
 	}
 	void EnvironmentProbeComponent::Serialize(wiArchive& archive, EntitySerializer& seri)

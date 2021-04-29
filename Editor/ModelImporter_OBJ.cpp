@@ -8,7 +8,6 @@
 #include <istream>
 #include <streambuf>
 
-using namespace std;
 using namespace wiGraphics;
 using namespace wiScene;
 using namespace wiECS;
@@ -74,13 +73,13 @@ static const bool transform_to_LH = true;
 
 void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 {
-	string directory = wiHelper::GetDirectoryFromPath(fileName);
-	string name = wiHelper::GetFileNameFromPath(fileName);
+	std::string directory = wiHelper::GetDirectoryFromPath(fileName);
+	std::string name = wiHelper::GetFileNameFromPath(fileName);
 
 	tinyobj::attrib_t obj_attrib;
-	vector<tinyobj::shape_t> obj_shapes;
-	vector<tinyobj::material_t> obj_materials;
-	string obj_errors;
+	std::vector<tinyobj::shape_t> obj_shapes;
+	std::vector<tinyobj::material_t> obj_materials;
+	std::string obj_errors;
 
 	std::vector<uint8_t> filedata;
 	bool success = wiHelper::FileRead(fileName, filedata);
@@ -105,7 +104,7 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 	if (success)
 	{
 		// Load material library:
-		vector<Entity> materialLibrary = {};
+		std::vector<Entity> materialLibrary = {};
 		for (auto& obj_material : obj_materials)
 		{
 			Entity materialEntity = scene.Entity_CreateMaterial(obj_material.name);
@@ -117,7 +116,7 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 			material.emissiveColor.x = obj_material.emission[0];
 			material.emissiveColor.y = obj_material.emission[1];
 			material.emissiveColor.z = obj_material.emission[2];
-			material.emissiveColor.w = max(obj_material.emission[0], max(obj_material.emission[1], obj_material.emission[2]));
+			material.emissiveColor.w = std::max(obj_material.emission[0], std::max(obj_material.emission[1], obj_material.emission[2]));
 			//material.refractionIndex = obj_material.ior;
 			material.metalness = obj_material.metallic;
 			material.textures[MaterialComponent::NORMALMAP].name = obj_material.normal_texname;
@@ -164,8 +163,8 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 
 			object.meshID = meshEntity;
 
-			unordered_map<int, int> registered_materialIndices = {};
-			unordered_map<size_t, uint32_t> uniqueVertices = {};
+			std::unordered_map<int, int> registered_materialIndices = {};
+			std::unordered_map<size_t, uint32_t> uniqueVertices = {};
 
 			for (size_t i = 0; i < shape.mesh.indices.size(); i += 3)
 			{
@@ -210,7 +209,7 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 						);
 					}
 
-					int materialIndex = max(0, shape.mesh.material_ids[i / 3]); // this indexes the material library
+					int materialIndex = std::max(0, shape.mesh.material_ids[i / 3]); // this indexes the material library
 					if (registered_materialIndices.count(materialIndex) == 0)
 					{
 						registered_materialIndices[materialIndex] = (int)mesh.subsets.size();

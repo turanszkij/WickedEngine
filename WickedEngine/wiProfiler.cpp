@@ -7,13 +7,13 @@
 #include "wiTextureHelper.h"
 #include "wiHelper.h"
 
-#include <sstream>
+#include <string>
 #include <unordered_map>
 #include <stack>
 #include <mutex>
 #include <atomic>
+#include <sstream>
 
-using namespace std;
 using namespace wiGraphics;
 
 namespace wiProfiler
@@ -23,7 +23,7 @@ namespace wiProfiler
 	std::mutex lock;
 	range_id cpu_frame;
 	range_id gpu_frame;
-	GPUQueryHeap queryHeap[wiGraphics::GraphicsDevice::GetBackBufferCount() + 1];
+	GPUQueryHeap queryHeap[wiGraphics::GraphicsDevice::GetBufferCount() + 1];
 	std::vector<uint64_t> queryResults;
 	std::atomic<uint32_t> nextQuery{ 0 };
 	uint32_t writtenQueries[arraysize(queryHeap)] = {};
@@ -150,9 +150,6 @@ namespace wiProfiler
 			range.name = name;
 			range.time = 0;
 
-			range.cpuBegin.Start();
-			range.cpuEnd.Start();
-
 			ranges[id] = range;
 		}
 
@@ -219,31 +216,34 @@ namespace wiProfiler
 		lock.unlock();
 	}
 
-	void DrawData(float x, float y, CommandList cmd)
+	void DrawData(const wiCanvas& canvas, float x, float y, CommandList cmd)
 	{
 		if (!ENABLED || !initialized)
 			return;
 
-		stringstream ss("");
+		wiImage::SetCanvas(canvas, cmd);
+		wiFont::SetCanvas(canvas, cmd);
+
+		std::stringstream ss("");
 		ss.precision(2);
-		ss << "Frame Profiler Ranges:" << endl << "----------------------------" << endl;
+		ss << "Frame Profiler Ranges:" << std::endl << "----------------------------" << std::endl;
 
 		// Print CPU ranges:
 		for (auto& x : ranges)
 		{
 			if (x.second.IsCPURange())
 			{
-				ss << x.second.name << ": " << fixed << x.second.time << " ms" << endl;
+				ss << x.second.name << ": " << std::fixed << x.second.time << " ms" << std::endl;
 			}
 		}
-		ss << endl;
+		ss << std::endl;
 
 		// Print GPU ranges:
 		for (auto& x : ranges)
 		{
 			if (!x.second.IsCPURange())
 			{
-				ss << x.second.name << ": " << fixed << x.second.time << " ms" << endl;
+				ss << x.second.name << ": " << std::fixed << x.second.time << " ms" << std::endl;
 			}
 		}
 

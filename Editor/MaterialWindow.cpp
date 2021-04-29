@@ -4,7 +4,6 @@
 
 #include <sstream>
 
-using namespace std;
 using namespace wiGraphics;
 using namespace wiECS;
 using namespace wiScene;
@@ -622,7 +621,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	AddWidget(&colorPicker);
 
 
-	Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 880, 120, 0));
+	Translate(XMFLOAT3((float)editor->GetLogicalWidth() - 880, 120, 0));
 	SetVisible(false);
 
 	SetEntity(INVALID_ENTITY);

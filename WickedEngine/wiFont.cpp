@@ -2,8 +2,8 @@
 #include "wiRenderer.h"
 #include "wiResourceManager.h"
 #include "wiHelper.h"
-#include "ResourceMapping.h"
-#include "ShaderInterop_Font.h"
+#include "shaders/ResourceMapping.h"
+#include "shaders/ShaderInterop_Font.h"
 #include "wiBackLog.h"
 #include "wiTextureHelper.h"
 #include "wiRectPacker.h"
@@ -21,7 +21,6 @@
 #include <vector>
 #include <string>
 
-using namespace std;
 using namespace wiGraphics;
 using namespace wiRectPacker;
 
@@ -42,7 +41,9 @@ namespace wiFont_Internal
 	Shader				pixelShader;
 	PipelineState		PSO;
 
-	atomic_bool initialized { false };
+	wiCanvas canvases[COMMANDLIST_COUNT];
+
+	std::atomic_bool initialized { false };
 
 	Texture texture;
 
@@ -57,8 +58,8 @@ namespace wiFont_Internal
 		uint16_t tc_top;
 		uint16_t tc_bottom;
 	};
-	unordered_map<int32_t, Glyph> glyph_lookup;
-	unordered_map<int32_t, rect_xywh> rect_lookup;
+	std::unordered_map<int32_t, Glyph> glyph_lookup;
+	std::unordered_map<int32_t, rect_xywh> rect_lookup;
 	// pack glyph identifiers to a 32-bit hash:
 	//	height:	10 bits	(height supported: 0 - 1023)
 	//	style:	6 bits	(number of font styles supported: 0 - 63)
@@ -67,29 +68,29 @@ namespace wiFont_Internal
 	constexpr int codefromhash(int64_t hash) { return int((hash >> 16) & 0xFFFF); }
 	constexpr int stylefromhash(int64_t hash) { return int((hash >> 10) & 0x3F); }
 	constexpr int heightfromhash(int64_t hash) { return int((hash >> 0) & 0x3FF); }
-	unordered_set<int32_t> pendingGlyphs;
+	std::unordered_set<int32_t> pendingGlyphs;
 	wiSpinLock glyphLock;
 
 	struct wiFontStyle
 	{
-		string name;
+		std::string name;
 		std::vector<uint8_t> fontBuffer; // only used if loaded from file, need to keep alive
 		stbtt_fontinfo fontInfo;
 		int ascent, descent, lineGap;
-		void Create(const string& newName, const uint8_t* data, size_t size)
+		void Create(const std::string& newName, const uint8_t* data, size_t size)
 		{
 			name = newName;
 			int offset = stbtt_GetFontOffsetForIndex(data, 0);
 
 			if (!stbtt_InitFont(&fontInfo, data, offset))
 			{
-				string error = "Failed to load font: " + name + " (file was unrecognized, it must be a .ttf file)";
+				std::string error = "Failed to load font: " + name + " (file was unrecognized, it must be a .ttf file)";
 				wiBackLog::post(error.c_str());
 			}
 
 			stbtt_GetFontVMetrics(&fontInfo, &ascent, &descent, &lineGap);
 		}
-		void Create(const string& newName)
+		void Create(const std::string& newName)
 		{
 			if (wiHelper::FileRead(newName, fontBuffer))
 			{
@@ -97,7 +98,7 @@ namespace wiFont_Internal
 			}
 			else
 			{
-				string error = "Failed to load font: " + name + " (file could not be opened)";
+				std::string error = "Failed to load font: " + name + " (file could not be opened)";
 				wiBackLog::post(error.c_str());
 			}
 		}
@@ -342,18 +343,6 @@ void Initialize()
 	LoadShaders();
 
 
-	static wiEvent::Handle handle2 = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_DPI, [](uint64_t userdata) {
-		glyphLock.lock();
-		for (auto& x : glyph_lookup)
-		{
-			pendingGlyphs.insert(x.first);
-		}
-		glyph_lookup.clear();
-		rect_lookup.clear();
-		glyphLock.unlock();
-	});
-
-
 	wiBackLog::post("wiFont Initialized");
 	initialized.store(true);
 }
@@ -369,7 +358,7 @@ void UpdatePendingGlyphs()
 		const int borderPadding = 1;
 
 		// Font resolution is upscaled to make it sharper:
-		const float upscaling = std::max(2.0f, wiRenderer::GetDevice()->GetDPIScaling());
+		const float upscaling = 2.0f;
 
 		for (int32_t hash : pendingGlyphs)
 		{
@@ -405,7 +394,7 @@ void UpdatePendingGlyphs()
 		pendingGlyphs.clear();
 
 		// This reference array will be used for packing:
-		vector<rect_xywh*> out_rects;
+		std::vector<rect_xywh*> out_rects;
 		out_rects.reserve(rect_lookup.size());
 		for (auto& it : rect_lookup)
 		{
@@ -425,7 +414,7 @@ void UpdatePendingGlyphs()
 			const float inv_height = 1.0f / bitmapHeight;
 
 			// Create the CPU-side texture atlas and fill with transparency (0):
-			vector<uint8_t> bitmap(size_t(bitmapWidth) * size_t(bitmapHeight));
+			std::vector<uint8_t> bitmap(size_t(bitmapWidth) * size_t(bitmapHeight));
 			std::fill(bitmap.begin(), bitmap.end(), 0);
 
 			// Iterate all packed glyph rectangles:
@@ -628,7 +617,13 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 
 		device->BindResource(VS, mem.buffer, 0, cmd);
 
-		XMMATRIX Projection = device->GetScreenProjection();
+		const wiCanvas& canvas = canvases[cmd];
+		// Asserts will check that a proper canvas was set for this cmd with wiImage::SetCanvas()
+		//	The canvas must be set to have dpi aware rendering
+		assert(canvas.width > 0);
+		assert(canvas.height > 0);
+		assert(canvas.dpi > 0);
+		const XMMATRIX Projection = canvas.GetProjection();
 
 		if (newProps.shadowColor.getA() > 0)
 		{
@@ -659,6 +654,11 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 	UpdatePendingGlyphs();
 }
 
+void SetCanvas(const wiCanvas& canvas, wiGraphics::CommandList cmd)
+{
+	canvases[cmd] = canvas;
+}
+
 void Draw(const char* text, const wiFontParams& params, CommandList cmd)
 {
 	size_t text_length = strlen(text);
@@ -677,11 +677,11 @@ void Draw(const wchar_t* text, const wiFontParams& params, CommandList cmd)
 	}
 	Draw_internal(text, text_length, params, cmd);
 }
-void Draw(const string& text, const wiFontParams& params, CommandList cmd)
+void Draw(const std::string& text, const wiFontParams& params, CommandList cmd)
 {
 	Draw_internal(text.c_str(), text.length(), params, cmd);
 }
-void Draw(const wstring& text, const wiFontParams& params, CommandList cmd)
+void Draw(const std::wstring& text, const wiFontParams& params, CommandList cmd)
 {
 	Draw_internal(text.c_str(), text.length(), params, cmd);
 }
@@ -694,11 +694,11 @@ float textWidth(const wchar_t* text, const wiFontParams& params)
 {
 	return textWidth_internal(text, params);
 }
-float textWidth(const string& text, const wiFontParams& params)
+float textWidth(const std::string& text, const wiFontParams& params)
 {
 	return textWidth_internal(text.c_str(), params);
 }
-float textWidth(const wstring& text, const wiFontParams& params)
+float textWidth(const std::wstring& text, const wiFontParams& params)
 {
 	return textWidth_internal(text.c_str(), params);
 }
@@ -711,11 +711,11 @@ float textHeight(const wchar_t* text, const wiFontParams& params)
 {
 	return textHeight_internal(text, params);
 }
-float textHeight(const string& text, const wiFontParams& params)
+float textHeight(const std::string& text, const wiFontParams& params)
 {
 	return textHeight_internal(text.c_str(), params);
 }
-float textHeight(const wstring& text, const wiFontParams& params)
+float textHeight(const std::wstring& text, const wiFontParams& params)
 {
 	return textHeight_internal(text.c_str(), params);
 }

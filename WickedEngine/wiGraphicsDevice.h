@@ -1,9 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiGraphics.h"
-#include "wiEvent.h"
-
-#include <memory>
+#include "wiPlatform.h"
 
 namespace wiGraphics
 {
@@ -11,27 +9,30 @@ namespace wiGraphics
 	static const CommandList COMMANDLIST_COUNT = 32;
 	static const CommandList INVALID_COMMANDLIST = COMMANDLIST_COUNT;
 
+	enum QUEUE_TYPE
+	{
+		QUEUE_GRAPHICS,
+		QUEUE_COMPUTE,
+
+		QUEUE_COUNT,
+	};
+
 	class GraphicsDevice
 	{
 	protected:
+		static const uint32_t BUFFERCOUNT = 2;
 		uint64_t FRAMECOUNT = 0;
-		bool VSYNC = true;
-		int RESOLUTIONWIDTH = 0;
-		int RESOLUTIONHEIGHT = 0;
 		bool DEBUGDEVICE = false;
-		bool FULLSCREEN = false;
-		FORMAT BACKBUFFER_FORMAT = FORMAT_R10G10B10A2_UNORM;
-		static const uint32_t BACKBUFFER_COUNT = 2;
 		uint32_t capabilities = 0;
 		size_t SHADER_IDENTIFIER_SIZE = 0;
 		size_t TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = 0;
 		uint32_t VARIABLE_RATE_SHADING_TILE_SIZE = 0;
 		uint64_t TIMESTAMP_FREQUENCY = 0;
 
-		int dpi = 96;
-		wiEvent::Handle dpi_change_event = wiEvent::Subscribe(SYSTEM_EVENT_CHANGE_DPI, [this](uint64_t userdata) { dpi = int(userdata & 0xFFFF); });
-
 	public:
+		virtual ~GraphicsDevice() = default;
+
+		virtual bool CreateSwapChain(const SwapChainDesc* pDesc, wiPlatform::window_type window, SwapChain* swapChain) const = 0;
 		virtual bool CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer) const = 0;
 		virtual bool CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) const = 0;
 		virtual bool CreateShader(SHADERSTAGE stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) const = 0;
@@ -60,44 +61,17 @@ namespace wiGraphics
 
 		virtual void SetName(GPUResource* pResource, const char* name) = 0;
 
-		virtual void PresentBegin(CommandList cmd) = 0;
-		virtual void PresentEnd(CommandList cmd) = 0;
-
 		// Begin a new command list for GPU command recording.
-		//	This will be valid until SubmitCommandLists() or StashCommandLists() is called.
-		virtual CommandList BeginCommandList() = 0;
+		//	This will be valid until SubmitCommandLists() is called.
+		virtual CommandList BeginCommandList(QUEUE_TYPE queue = QUEUE_GRAPHICS) = 0;
 		// Submit all command list that were used with BeginCommandList before this call.
 		//	This will make every command list to be in "available" state and restarts them
 		virtual void SubmitCommandLists() = 0;
-		// Returns all command lists to "available" state, but doesn't submit or restart them,
-		// however it sets them to default pipeline state
-		virtual void StashCommandLists() = 0;
 
-		virtual void WaitForGPU() = 0;
+		virtual void WaitForGPU() const = 0;
 		virtual void ClearPipelineStateCache() {};
 
-		inline bool GetVSyncEnabled() const { return VSYNC; }
-		virtual void SetVSyncEnabled(bool value) { VSYNC = value; }
-		inline uint64_t GetFrameCount() const { return FRAMECOUNT; }
-		inline uint64_t GetFrameIndex() const { return FRAMECOUNT % BACKBUFFER_COUNT; }
-
-		// Returns native resolution width of back buffer in pixels:
-		inline int GetResolutionWidth() const { return RESOLUTIONWIDTH; }
-		// Returns native resolution height of back buffer in pixels:
-		inline int GetResolutionHeight() const { return RESOLUTIONHEIGHT; }
-
-		constexpr int GetDPI() const { return dpi; }
-		constexpr float GetDPIScaling() const { return (float)GetDPI() / 96.f; }
-
-		// Returns the width of the screen with DPI scaling applied (subpixel size):
-		float GetScreenWidth() const;
-		// Returns the height of the screen with DPI scaling applied (subpixel size):
-		float GetScreenHeight() const;
-
-
-		virtual void SetResolution(int width, int height) = 0;
-
-		virtual Texture GetBackBuffer() = 0;
+		constexpr uint64_t GetFrameCount() const { return FRAMECOUNT; }
 
 		inline bool CheckCapability(GRAPHICSDEVICE_CAPABILITY capability) const { return capabilities & capability; }
 
@@ -106,22 +80,23 @@ namespace wiGraphics
 		bool IsFormatBlockCompressed(FORMAT value) const;
 		bool IsFormatStencilSupport(FORMAT value) const;
 
-		inline XMMATRIX GetScreenProjection() const
-		{
-			return XMMatrixOrthographicOffCenterLH(0, (float)GetScreenWidth(), (float)GetScreenHeight(), 0, -1, 1);
-		}
-		inline FORMAT GetBackBufferFormat() const { return BACKBUFFER_FORMAT; }
-		static constexpr uint32_t GetBackBufferCount() { return BACKBUFFER_COUNT; }
+		static constexpr uint32_t GetBufferCount() { return BUFFERCOUNT; }
 
-		inline bool IsDebugDevice() const { return DEBUGDEVICE; }
+		constexpr bool IsDebugDevice() const { return DEBUGDEVICE; }
 
-		inline size_t GetShaderIdentifierSize() const { return SHADER_IDENTIFIER_SIZE; }
-		inline size_t GetTopLevelAccelerationStructureInstanceSize() const { return TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE; }
-		inline uint32_t GetVariableRateShadingTileSize() const { return VARIABLE_RATE_SHADING_TILE_SIZE; }
-		inline uint64_t GetTimestampFrequency() const { return TIMESTAMP_FREQUENCY; }
+		constexpr size_t GetShaderIdentifierSize() const { return SHADER_IDENTIFIER_SIZE; }
+		constexpr size_t GetTopLevelAccelerationStructureInstanceSize() const { return TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE; }
+		constexpr uint32_t GetVariableRateShadingTileSize() const { return VARIABLE_RATE_SHADING_TILE_SIZE; }
+		constexpr uint64_t GetTimestampFrequency() const { return TIMESTAMP_FREQUENCY; }
+
+		virtual SHADERFORMAT GetShaderFormat() const { return SHADERFORMAT_NONE; }
+
+		virtual Texture GetBackBuffer(const SwapChain* swapchain) const = 0;
 
 		///////////////Thread-sensitive////////////////////////
 
+		virtual void WaitCommandList(CommandList cmd, CommandList wait_for) {}
+		virtual void RenderPassBegin(const SwapChain* swapchain, CommandList cmd) = 0;
 		virtual void RenderPassBegin(const RenderPass* renderpass, CommandList cmd) = 0;
 		virtual void RenderPassEnd(CommandList cmd) = 0;
 		virtual void BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd) = 0;

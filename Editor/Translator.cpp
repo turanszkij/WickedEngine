@@ -3,7 +3,7 @@
 #include "wiRenderer.h"
 #include "wiInput.h"
 #include "wiMath.h"
-#include "ShaderInterop_Renderer.h"
+#include "shaders/ShaderInterop_Renderer.h"
 #include "wiEvent.h"
 
 using namespace wiGraphics;
@@ -165,7 +165,7 @@ void Translator::Create()
 	}
 }
 
-void Translator::Update()
+void Translator::Update(const wiCanvas& canvas)
 {
 	if (selected.empty())
 	{
@@ -192,7 +192,7 @@ void Translator::Update()
 
 			dist = wiMath::Distance(p, cam.Eye) * 0.05f;
 
-			RAY ray = wiRenderer::GetPickRay((long)pointer.x, (long)pointer.y);
+			RAY ray = wiRenderer::GetPickRay((long)pointer.x, (long)pointer.y, canvas);
 
 			XMVECTOR x, y, z, xy, xz, yz;
 
@@ -323,12 +323,12 @@ void Translator::Update()
 			}
 			plane = XMPlaneFromPointNormal(pos, XMVector3Normalize(planeNormal));
 
-			RAY ray = wiRenderer::GetPickRay((long)pointer.x, (long)pointer.y);
+			RAY ray = wiRenderer::GetPickRay((long)pointer.x, (long)pointer.y, canvas);
 			XMVECTOR rayOrigin = XMLoadFloat3(&ray.origin);
 			XMVECTOR rayDir = XMLoadFloat3(&ray.direction);
 			XMVECTOR intersection = XMPlaneIntersectLine(plane, rayOrigin, rayOrigin + rayDir*cam.zFarP);
 
-			ray = wiRenderer::GetPickRay((long)prevPointer.x, (long)prevPointer.y);
+			ray = wiRenderer::GetPickRay((long)prevPointer.x, (long)prevPointer.y, canvas);
 			rayOrigin = XMLoadFloat3(&ray.origin);
 			rayDir = XMLoadFloat3(&ray.direction);
 			XMVECTOR intersectionPrev = XMPlaneIntersectLine(plane, rayOrigin, rayOrigin + rayDir*cam.zFarP);

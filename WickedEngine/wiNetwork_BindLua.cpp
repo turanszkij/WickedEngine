@@ -2,8 +2,6 @@
 #include "wiNetwork.h"
 #include "wiHelper.h"
 
-using namespace std;
-
 const char wiNetwork_BindLua::className[] = "Network";
 
 Luna<wiNetwork_BindLua>::FunctionType wiNetwork_BindLua::methods[] = {

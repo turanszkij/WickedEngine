@@ -17,6 +17,7 @@ Luna<MainComponent_BindLua>::FunctionType MainComponent_BindLua::methods[] = {
 	lunamethod(MainComponent_BindLua, SetWatermarkDisplay),
 	lunamethod(MainComponent_BindLua, SetFPSDisplay),
 	lunamethod(MainComponent_BindLua, SetResolutionDisplay),
+	lunamethod(MainComponent_BindLua, GetCanvas),
 	{ NULL, NULL }
 };
 Luna<MainComponent_BindLua>::PropertyType MainComponent_BindLua::properties[] = {
@@ -256,6 +257,17 @@ int MainComponent_BindLua::SetResolutionDisplay(lua_State *L)
 	return 0;
 }
 
+int MainComponent_BindLua::GetCanvas(lua_State* L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "GetCanvas() component is empty!");
+		return 0;
+	}
+	Luna<Canvas_BindLua>::push(L, new Canvas_BindLua(component->canvas));
+	return 1;
+}
+
 
 int SetProfilerEnabled(lua_State* L)
 {
@@ -279,5 +291,71 @@ void MainComponent_BindLua::Bind()
 		Luna<MainComponent_BindLua>::Register(wiLua::GetLuaState()); 
 		
 		wiLua::RegisterFunc("SetProfilerEnabled", SetProfilerEnabled);
+	}
+}
+
+
+
+
+
+
+
+
+
+
+const char Canvas_BindLua::className[] = "Canvas";
+
+Luna<Canvas_BindLua>::FunctionType Canvas_BindLua::methods[] = {
+	lunamethod(Canvas_BindLua, GetDPI),
+	lunamethod(Canvas_BindLua, GetDPIScaling),
+	lunamethod(Canvas_BindLua, GetPhysicalWidth),
+	lunamethod(Canvas_BindLua, GetPhysicalHeight),
+	lunamethod(Canvas_BindLua, GetLogicalWidth),
+	lunamethod(Canvas_BindLua, GetLogicalHeight),
+	{ NULL, NULL }
+};
+Luna<Canvas_BindLua>::PropertyType Canvas_BindLua::properties[] = {
+	{ NULL, NULL }
+};
+
+
+int Canvas_BindLua::GetDPI(lua_State* L)
+{
+	wiLua::SSetFloat(L, canvas.GetDPI());
+	return 1;
+}
+int Canvas_BindLua::GetDPIScaling(lua_State* L)
+{
+	wiLua::SSetFloat(L, canvas.GetDPIScaling());
+	return 1;
+}
+int Canvas_BindLua::GetPhysicalWidth(lua_State* L)
+{
+	wiLua::SSetInt(L, canvas.GetPhysicalWidth());
+	return 1;
+}
+int Canvas_BindLua::GetPhysicalHeight(lua_State* L)
+{
+	wiLua::SSetInt(L, canvas.GetPhysicalHeight());
+	return 1;
+}
+int Canvas_BindLua::GetLogicalWidth(lua_State* L)
+{
+	wiLua::SSetFloat(L, canvas.GetLogicalWidth());
+	return 1;
+}
+int Canvas_BindLua::GetLogicalHeight(lua_State* L)
+{
+	wiLua::SSetFloat(L, canvas.GetLogicalHeight());
+	return 1;
+}
+
+void Canvas_BindLua::Bind()
+{
+	static bool initialized = false;
+	if (!initialized)
+	{
+		initialized = true;
+		Luna<Canvas_BindLua>::Register(wiLua::GetLuaState());
 	}
 }

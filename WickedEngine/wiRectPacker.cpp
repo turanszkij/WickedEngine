@@ -2,8 +2,6 @@
 
 #include <algorithm>
 
-using namespace std;
-
 namespace wiRectPacker
 {
 
@@ -139,7 +137,7 @@ namespace wiRectPacker
 		for (int f = 0; f < funcs; ++f) {
 			order[f] = new rect_xywh*[n];
 			memcpy(order[f], v, sizeof(rect_xywh*) * n);
-			sort(order[f], order[f] + n, cmpf[f]);
+			std::sort(order[f], order[f] + n, cmpf[f]);
 		}
 
 		rect_wh min_bin = rect_wh(max_s, max_s);

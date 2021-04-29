@@ -1,6 +1,7 @@
 /*-------------------------------------------------------------------------------------
  *
  * Copyright (c) Microsoft Corporation
+ * Licensed under the MIT license
  *
  *-------------------------------------------------------------------------------------*/
 
@@ -192,8 +193,8 @@ typedef interface ID3D12VideoEncodeCommandList1 ID3D12VideoEncodeCommandList1;
 
 
 /* header files for imported files */
-#include "oaidl.h"
-#include "ocidl.h"
+#include "OAIdl.h"
+#include "OCIdl.h"
 #include "dxgicommon.h"
 #include "d3d12.h"
 
@@ -541,10 +542,6 @@ EXTERN_C const IID IID_ID3D12VideoDecoderHeap;
 
 
 
-
-
-
-
 #endif 	/* __ID3D12VideoDecoderHeap_INTERFACE_DEFINED__ */
 
 
@@ -810,10 +807,6 @@ EXTERN_C const IID IID_ID3D12VideoDecoder;
 
 
 #endif 	/* C style interface */
-
-
-
-
 
 
 
@@ -1223,10 +1216,6 @@ EXTERN_C const IID IID_ID3D12VideoProcessor;
 
 
 #endif 	/* C style interface */
-
-
-
-
 
 
 
@@ -2860,10 +2849,6 @@ EXTERN_C const IID IID_ID3D12VideoMotionEstimator;
 
 
 
-
-
-
-
 #endif 	/* __ID3D12VideoMotionEstimator_INTERFACE_DEFINED__ */
 
 
@@ -3021,10 +3006,6 @@ EXTERN_C const IID IID_ID3D12VideoMotionVectorHeap;
 
 
 #endif 	/* C style interface */
-
-
-
-
 
 
 
@@ -4316,10 +4297,6 @@ EXTERN_C const IID IID_ID3D12VideoExtensionCommand;
 
 
 #endif 	/* C style interface */
-
-
-
-
 
 
 

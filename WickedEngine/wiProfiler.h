@@ -1,7 +1,6 @@
 #pragma once
 #include "wiGraphicsDevice.h"
-
-#include <string>
+#include "wiCanvas.h"
 
 namespace wiProfiler
 {
@@ -23,7 +22,7 @@ namespace wiProfiler
 	void EndRange(range_id id);
 
 	// Renders a basic text of the Profiling results to the (x,y) screen coordinate
-	void DrawData(float x, float y, wiGraphics::CommandList cmd);
+	void DrawData(const wiCanvas& canvas, float x, float y, wiGraphics::CommandList cmd);
 
 	// Enable/disable profiling
 	void SetEnabled(bool value);

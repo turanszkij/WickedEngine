@@ -3,10 +3,8 @@
 
 #include <fstream>
 
-using namespace std;
-
 // this should always be only INCREMENTED and only if a new serialization is implemeted somewhere!
-uint64_t __archiveVersion = 64;
+uint64_t __archiveVersion = 65;
 // this is the version number of which below the archive is not compatible with the current version
 uint64_t __archiveVersionBarrier = 22;
 
@@ -28,13 +26,13 @@ wiArchive::wiArchive(const std::string& fileName, bool readMode) : fileName(file
 				(*this) >> version;
 				if (version < __archiveVersionBarrier)
 				{
-					string ss = "The archive version (" + std::to_string(version) + ") is no longer supported!";
+					std::string ss = "The archive version (" + std::to_string(version) + ") is no longer supported!";
 					wiHelper::messageBox(ss.c_str(), "Error!");
 					Close();
 				}
 				if (version > __archiveVersion)
 				{
-					string ss = "The archive version (" + std::to_string(version) + ") is higher than the program's (" + std::to_string(__archiveVersion) + ")!";
+					std::string ss = "The archive version (" + std::to_string(version) + ") is higher than the program's (" + std::to_string(__archiveVersion) + ")!";
 					wiHelper::messageBox(ss.c_str(), "Error!");
 					Close();
 				}
@@ -92,12 +90,12 @@ bool wiArchive::SaveFile(const std::string& fileName)
 	return wiHelper::FileWrite(fileName, DATA.data(), pos);
 }
 
-const string& wiArchive::GetSourceDirectory() const
+const std::string& wiArchive::GetSourceDirectory() const
 {
 	return directory;
 }
 
-const string& wiArchive::GetSourceFileName() const
+const std::string& wiArchive::GetSourceFileName() const
 {
 	return fileName;
 }

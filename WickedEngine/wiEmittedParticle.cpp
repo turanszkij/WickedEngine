@@ -5,7 +5,7 @@
 #include "wiResourceManager.h"
 #include "wiIntersect.h"
 #include "wiRandom.h"
-#include "ResourceMapping.h"
+#include "shaders/ResourceMapping.h"
 #include "wiArchive.h"
 #include "wiTextureHelper.h"
 #include "wiGPUSortLib.h"
@@ -15,7 +15,6 @@
 
 #include <algorithm>
 
-using namespace std;
 using namespace wiGraphics;
 
 namespace wiScene
@@ -187,12 +186,12 @@ uint32_t wiEmittedParticle::GetMemorySizeInBytes() const
 
 void wiEmittedParticle::UpdateCPU(const TransformComponent& transform, float dt)
 {
+	CreateSelfBuffers();
+
 	if (IsPaused())
 		return;
 
 	emit = std::max(0.0f, emit - floorf(emit));
-
-	CreateSelfBuffers();
 
 	center = transform.GetPosition();
 
@@ -276,6 +275,7 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 		cb.xParticleDrag = drag;
 		XMStoreFloat3(&cb.xParticleVelocity, XMVector3TransformNormal(XMLoadFloat3(&velocity), XMLoadFloat4x4(&transform.world)));
 		cb.xParticleRandomColorFactor = random_color;
+		cb.xEmitterLayerMask = layerMask;
 
 		cb.xEmitterOptions = 0;
 		if (IsSPHEnabled())

@@ -19,6 +19,7 @@ void Tests::Initialize()
 	infoDisplay.resolution = true;
 	infoDisplay.heap_allocation_counter = true;
 
+	renderer.init(canvas);
 	renderer.Load();
 
 	ActivatePath(&renderer);
@@ -28,8 +29,8 @@ void TestsRenderer::ResizeLayout()
 {
     RenderPath3D::ResizeLayout();
 
-	float screenW = wiRenderer::GetDevice()->GetScreenWidth();
-	float screenH = wiRenderer::GetDevice()->GetScreenHeight();
+	float screenW = GetLogicalWidth();
+	float screenH = GetLogicalHeight();
 	label.SetPos(XMFLOAT2(screenW / 2.f - label.scale.x / 2.f, screenH * 0.95f));
 }
 void TestsRenderer::Load()
@@ -123,7 +124,7 @@ void TestsRenderer::Load()
 	testSelector.OnSelect([=](wiEventArgs args) {
 
 		// Reset all state that tests might have modified:
-		wiRenderer::GetDevice()->SetVSyncEnabled(true);
+		wiEvent::SetVSync(true);
 		wiRenderer::SetToDrawGridHelper(false);
 		wiRenderer::SetTemporalAAEnabled(false);
 		wiRenderer::ClearWorld(wiScene::GetScene());
@@ -140,8 +141,8 @@ void TestsRenderer::Load()
 		transform.UpdateTransform();
 		wiScene::GetCamera().TransformCamera(transform);
 
-		float screenW = wiRenderer::GetDevice()->GetScreenWidth();
-		float screenH = wiRenderer::GetDevice()->GetScreenHeight();
+		float screenW = GetLogicalWidth();
+		float screenH = GetLogicalHeight();
 
 		// Based on combobox selection, start the appropriate test:
 		switch (args.iValue)
@@ -166,16 +167,16 @@ void TestsRenderer::Load()
 		}
 		case 1:
 			wiRenderer::SetTemporalAAEnabled(true);
-			wiScene::LoadModel("../models/teapot.wiscene");
+			wiScene::LoadModel("../Content/models/teapot.wiscene");
 			break;
 		case 2:
-			wiScene::LoadModel("../models/emitter_smoke.wiscene");
+			wiScene::LoadModel("../Content/models/emitter_smoke.wiscene");
 			break;
 		case 3:
-			wiScene::LoadModel("../models/emitter_skinned.wiscene");
+			wiScene::LoadModel("../Content/models/emitter_skinned.wiscene");
 			break;
 		case 4:
-			wiScene::LoadModel("../models/hairparticle_torus.wiscene", XMMatrixTranslation(0, 1, 0));
+			wiScene::LoadModel("../Content/models/hairparticle_torus.wiscene", XMMatrixTranslation(0, 1, 0));
 			break;
 		case 5:
 			wiRenderer::SetToDrawGridHelper(true);
@@ -183,18 +184,18 @@ void TestsRenderer::Load()
 			break;
 		case 6:
 			wiRenderer::SetTemporalAAEnabled(true);
-			wiScene::LoadModel("../models/water_test.wiscene", XMMatrixTranslation(0, 1, 0));
+			wiScene::LoadModel("../Content/models/water_test.wiscene", XMMatrixTranslation(0, 1, 0));
 			break;
 		case 7:
 			wiRenderer::SetTemporalAAEnabled(true);
-			wiScene::LoadModel("../models/shadows_test.wiscene", XMMatrixTranslation(0, 1, 0));
+			wiScene::LoadModel("../Content/models/shadows_test.wiscene", XMMatrixTranslation(0, 1, 0));
 			break;
 		case 8:
 			wiRenderer::SetTemporalAAEnabled(true);
-			wiScene::LoadModel("../models/physics_test.wiscene");
+			wiScene::LoadModel("../Content/models/physics_test.wiscene");
 			break;
 		case 9:
-			wiScene::LoadModel("../models/cloth_test.wiscene", XMMatrixTranslation(0, 3, 4));
+			wiScene::LoadModel("../Content/models/cloth_test.wiscene", XMMatrixTranslation(0, 3, 4));
 			break;
 		case 10:
 			RunJobSystemTest();
@@ -204,15 +205,15 @@ void TestsRenderer::Load()
 			break;
 		case 12:
 			wiRenderer::SetTemporalAAEnabled(true);
-			wiScene::LoadModel("../models/volumetric_test.wiscene", XMMatrixTranslation(0, 0, 4));
+			wiScene::LoadModel("../Content/models/volumetric_test.wiscene", XMMatrixTranslation(0, 0, 4));
 			break;
 		case 13:
 			RunSpriteTest();
 			break;
 		case 14:
-			wiRenderer::GetDevice()->SetVSyncEnabled(false); // turn off vsync if we can to accelerate the baking
+			wiEvent::SetVSync(false); // turn off vsync if we can to accelerate the baking
 			wiRenderer::SetTemporalAAEnabled(true);
-			wiScene::LoadModel("../models/lightmap_bake_test.wiscene", XMMatrixTranslation(0, 0, 4));
+			wiScene::LoadModel("../Content/models/lightmap_bake_test.wiscene", XMMatrixTranslation(0, 0, 4));
 			break;
 		case 15:
 			RunNetworkTest();
@@ -236,7 +237,7 @@ void TestsRenderer::Load()
 		case 17:
 		{
 			Scene scene;
-			LoadModel(scene, "../models/girl.wiscene", XMMatrixScaling(0.7f, 0.7f, 0.7f));
+			LoadModel(scene, "../Content/models/girl.wiscene", XMMatrixScaling(0.7f, 0.7f, 0.7f));
 
 			ik_entity = scene.Entity_FindByName("mano_L"); // hand bone in girl.wiscene
 			if (ik_entity != INVALID_ENTITY)
@@ -269,7 +270,7 @@ void TestsRenderer::Load()
 
 		case 18:
 		{
-			wiScene::LoadModel("../models/suzanne.wiscene");
+			wiScene::LoadModel("../Content/models/suzanne.wiscene");
 			wiProfiler::SetEnabled(true);
 			Scene& scene = wiScene::GetScene();
 			scene.Entity_CreateLight("testlight", XMFLOAT3(0, 2, -4), XMFLOAT3(1, 1, 1), 4, 10);
@@ -340,7 +341,7 @@ void TestsRenderer::Update(float dt)
 			TransformComponent& target = *scene.transforms.GetComponent(ik.target);
 
 			// place ik target on a plane intersected by mouse ray:
-			RAY ray = wiRenderer::GetPickRay((long)wiInput::GetPointer().x, (long)wiInput::GetPointer().y);
+			RAY ray = wiRenderer::GetPickRay((long)wiInput::GetPointer().x, (long)wiInput::GetPointer().y, *this);
 			XMVECTOR plane = XMVectorSet(0, 0, 1, 0.2f);
 			XMVECTOR I = XMPlaneIntersectLine(plane, XMLoadFloat3(&ray.origin), XMLoadFloat3(&ray.origin) + XMLoadFloat3(&ray.direction) * 10000);
 			target.ClearTransform();
@@ -436,8 +437,8 @@ void TestsRenderer::RunJobSystemTest()
 
 	static wiSpriteFont font;
 	font = wiSpriteFont(ss.str());
-	font.params.posX = wiRenderer::GetDevice()->GetScreenWidth() / 2;
-	font.params.posY = wiRenderer::GetDevice()->GetScreenHeight() / 2;
+	font.params.posX = GetLogicalWidth() / 2;
+	font.params.posY = GetLogicalHeight() / 2;
 	font.params.h_align = WIFALIGN_CENTER;
 	font.params.v_align = WIFALIGN_CENTER;
 	font.params.size = 24;
@@ -451,8 +452,8 @@ void TestsRenderer::RunFontTest()
 	font.SetText("This is Arial, size 32 wiFont");
 	font_upscaled.SetText("This is Arial, size 14 wiFont, but upscaled to 32");
 
-	font.params.posX = wiRenderer::GetDevice()->GetScreenWidth() / 2.0f;
-	font.params.posY = wiRenderer::GetDevice()->GetScreenHeight() / 6.0f;
+	font.params.posX = GetLogicalWidth() / 2.0f;
+	font.params.posY = GetLogicalHeight() / 6.0f;
 	font.params.size = 32;
 
 	font_upscaled.params = font.params;
@@ -509,7 +510,7 @@ void TestsRenderer::RunFontTest()
 	font_colored.params.h_align = WIFALIGN_CENTER;
 	font_colored.params.v_align = WIFALIGN_TOP;
 	font_colored.params.size = 26;
-	font_colored.params.posX = wiRenderer::GetDevice()->GetScreenWidth() / 2;
+	font_colored.params.posX = GetLogicalWidth() / 2;
 	font_colored.params.posY = font_japanese.params.posY + font_japanese.textHeight();
 	font_colored.SetText("Colored font");
 	AddFont(&font_colored);
@@ -517,8 +518,8 @@ void TestsRenderer::RunFontTest()
 void TestsRenderer::RunSpriteTest()
 {
 	const float step = 30;
-	const float screenW = wiRenderer::GetDevice()->GetScreenWidth();
-	const float screenH = wiRenderer::GetDevice()->GetScreenHeight();
+	const float screenW = GetLogicalWidth();
+	const float screenH = GetLogicalHeight();
 	const XMFLOAT3 startPos = XMFLOAT3(screenW * 0.3f, screenH * 0.2f, 0);
 	wiImageParams params;
 	params.pos = startPos;
@@ -538,7 +539,7 @@ void TestsRenderer::RunSpriteTest()
 
 	// Simple sprite, no animation:
 	{
-		static wiSprite sprite("../images/logo_small.png");
+		static wiSprite sprite("../Content/logo_small.png");
 		sprite.params = params;
 		AddSprite(&sprite);
 
@@ -554,7 +555,7 @@ void TestsRenderer::RunSpriteTest()
 
 	// Simple sprite, fade animation:
 	{
-		static wiSprite sprite("../images/logo_small.png");
+		static wiSprite sprite("../Content/logo_small.png");
 		sprite.params = params;
 		sprite.anim = wiSprite::Anim();
 		sprite.anim.fad = 1.2f; // (you can also do opacity animation with sprite.anim.opa)
@@ -573,7 +574,7 @@ void TestsRenderer::RunSpriteTest()
 
 	// Simple sprite, wobble animation:
 	{
-		static wiSprite sprite("../images/logo_small.png");
+		static wiSprite sprite("../Content/logo_small.png");
 		sprite.params = params;
 		sprite.anim = wiSprite::Anim();
 		sprite.anim.wobbleAnim.amount = XMFLOAT2(0.11f, 0.18f);
@@ -592,7 +593,7 @@ void TestsRenderer::RunSpriteTest()
 
 	// Simple sprite, rotate animation:
 	{
-		static wiSprite sprite("../images/logo_small.png");
+		static wiSprite sprite("../Content/logo_small.png");
 		sprite.params = params;
 		sprite.anim = wiSprite::Anim();
 		sprite.anim.rot = 2.8f;
@@ -611,7 +612,7 @@ void TestsRenderer::RunSpriteTest()
 
 	// Simple sprite, movingtex:
 	{
-		static wiSprite sprite("images/movingtex.png", "../images/logo_small.png"); // first param is the texture we will display (and also scroll here). Second param is a mask texture
+		static wiSprite sprite("images/movingtex.png", "../Content/logo_small.png"); // first param is the texture we will display (and also scroll here). Second param is a mask texture
 		// Don't overwrite all params for this, because we want to keep the mask...
 		sprite.params.pos = params.pos;
 		sprite.params.siz = params.siz;
@@ -893,8 +894,8 @@ void TestsRenderer::RunNetworkTest()
 	sender.join();
 	receiver.join();
 
-	font.params.posX = wiRenderer::GetDevice()->GetScreenWidth() / 2;
-	font.params.posY = wiRenderer::GetDevice()->GetScreenHeight() / 2;
+	font.params.posX = GetLogicalWidth() / 2;
+	font.params.posY = GetLogicalHeight() / 2;
 	font.params.h_align = WIFALIGN_CENTER;
 	font.params.v_align = WIFALIGN_CENTER;
 	font.params.size = 24;

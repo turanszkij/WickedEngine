@@ -4,8 +4,6 @@
 
 #include <fstream>
 
-using namespace std;
-
 #define MAX_LOADSTRING 100
 
 // Global Variables:
@@ -119,9 +117,9 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    int x = CW_USEDEFAULT, y = 0, w = CW_USEDEFAULT, h = 0;
    bool fullscreen = false;
    bool borderless = false;
-   string voidStr = "";
+   std::string voidStr = "";
 
-   ifstream file("config.ini");
+   std::ifstream file("config.ini");
    if (file.is_open())
    {
 	   int enabled;
@@ -201,17 +199,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         } 
         break;
 	case WM_SIZE:
-	    wiEvent::FireEvent(SYSTEM_EVENT_CHANGE_RESOLUTION, lParam);
-	    break;
 	case WM_DPICHANGED:
-        wiEvent::FireEvent(SYSTEM_EVENT_CHANGE_DPI, wParam);
+		if(editor.is_window_active)
+			editor.SetWindow(hWnd);
 	    break;
 	case WM_HOTKEY:
 		switch (wParam)
 		{
 		case PRINTSCREEN:
 			{
-				wiHelper::screenshot();
+				wiHelper::screenshot(editor.swapChain);
 			}
 			break;
 		default:
@@ -248,6 +245,20 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 	case WM_SETFOCUS:
 		editor.is_window_active = true;
+		std::thread([] {
+			wiBackLog::post("[Shader check] Started...");
+			if (wiShaderCompiler::CheckRegisteredShadersOutdated())
+			{
+				wiBackLog::post("[Shader check] Changes detected, initiating reload...");
+				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [](uint64_t userdata) {
+					wiRenderer::ReloadShaders();
+				});
+			}
+			else
+			{
+				wiBackLog::post("[Shader check] All up to date");
+			}
+		}).detach();
 		break;
     case WM_PAINT:
         {

@@ -1,5 +1,6 @@
 #pragma once
 #include "CommonInclude.h"
+#include "wiCanvas.h"
 
 #include <list>
 
@@ -14,7 +15,7 @@ private:
 public:
 	void Create();
 
-	void Update();
+	void Update(const wiCanvas& canvas);
 	void Draw(const wiScene::CameraComponent& camera, wiGraphics::CommandList cmd) const;
 
 	// Attach selection to translator temporarily

@@ -28,8 +28,6 @@
 
 #define WILUA_ERROR_PREFIX "[Lua Error] "
 
-using namespace std;
-
 namespace wiLua
 {
 	struct LuaInternal
@@ -39,11 +37,14 @@ namespace wiLua
 
 		~LuaInternal()
 		{
-			lua_close(m_luaState);
+			if (m_luaState != NULL)
+			{
+				lua_close(m_luaState);
+			}
 		}
 	};
 	LuaInternal luainternal;
-	string script_path;
+	std::string script_path;
 
 	int Internal_DoFile(lua_State* L)
 	{
@@ -57,7 +58,7 @@ namespace wiLua
 			std::vector<uint8_t> filedata;
 			if (wiHelper::FileRead(filename, filedata))
 			{
-				std::string command = string(filedata.begin(), filedata.end());
+				std::string command = std::string(filedata.begin(), filedata.end());
 				int status = luaL_loadstring(L, command.c_str());
 				if (status == 0)
 				{
@@ -70,7 +71,7 @@ namespace wiLua
 					if (str == nullptr)
 						return 0;
 
-					stringstream ss("");
+					std::stringstream ss("");
 					ss << WILUA_ERROR_PREFIX << str;
 					wiBackLog::post(ss.str().c_str());
 					lua_pop(L, 1); // remove error message
@@ -93,6 +94,7 @@ namespace wiLua
 		RunText(wiLua_Globals);
 
 		MainComponent_BindLua::Bind();
+		Canvas_BindLua::Bind();
 		RenderPath_BindLua::Bind();
 		RenderPath2D_BindLua::Bind();
 		LoadingScreen_BindLua::Bind();
@@ -128,17 +130,17 @@ namespace wiLua
 	{
 		return luainternal.m_status != 0;
 	}
-	string GetErrorMsg()
+	std::string GetErrorMsg()
 	{
 		if (Failed()) {
-			string retVal = lua_tostring(luainternal.m_luaState, -1);
+			std::string retVal = lua_tostring(luainternal.m_luaState, -1);
 			return retVal;
 		}
-		return string("");
+		return std::string("");
 	}
-	string PopErrorMsg()
+	std::string PopErrorMsg()
 	{
-		string retVal = lua_tostring(luainternal.m_luaState, -1);
+		std::string retVal = lua_tostring(luainternal.m_luaState, -1);
 		lua_pop(luainternal.m_luaState, 1); // remove error message
 		return retVal;
 	}
@@ -149,7 +151,7 @@ namespace wiLua
 			const char* str = lua_tostring(luainternal.m_luaState, -1);
 			if (str == nullptr)
 				return;
-			stringstream ss("");
+			std::stringstream ss("");
 			ss << WILUA_ERROR_PREFIX << str;
 			wiBackLog::post(ss.str().c_str());
 			lua_pop(luainternal.m_luaState, 1); // remove error message
@@ -161,7 +163,7 @@ namespace wiLua
 		std::vector<uint8_t> filedata;
 		if (wiHelper::FileRead(filename, filedata))
 		{
-			return RunText(string(filedata.begin(), filedata.end()));
+			return RunText(std::string(filedata.begin(), filedata.end()));
 		}
 		return false;
 	}
@@ -274,12 +276,12 @@ namespace wiLua
 		RunText("killProcesses();");
 	}
 
-	string SGetString(lua_State* L, int stackpos)
+	std::string SGetString(lua_State* L, int stackpos)
 	{
 		const char* str = lua_tostring(L, stackpos);
 		if (str != nullptr)
 			return str;
-		return string("");
+		return std::string("");
 	}
 	bool SIsString(lua_State* L, int stackpos)
 	{
@@ -397,7 +399,7 @@ namespace wiLua
 		lua_getinfo(L, "nSl", &ar);
 		int line = ar.currentline;
 
-		stringstream ss("");
+		std::stringstream ss("");
 		ss << WILUA_ERROR_PREFIX << "Line " << line << ": ";
 		if (!error.empty())
 		{

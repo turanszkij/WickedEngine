@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Editor.h"
 #include "PaintToolWindow.h"
-#include "ShaderInterop_Paint.h"
+#include "shaders/ShaderInterop_Paint.h"
 
 #include <sstream>
 #include <cmath>
@@ -196,7 +196,7 @@ void PaintToolWindow::Create(EditorComponent* editor)
 	colorPicker.SetPos(XMFLOAT2(10, y += step));
 	AddWidget(&colorPicker);
 
-	Translate(XMFLOAT3((float)wiRenderer::GetDevice()->GetScreenWidth() - 550, 50, 0));
+	Translate(XMFLOAT3((float)editor->GetLogicalWidth() - 550, 50, 0));
 	SetVisible(false);
 }
 
@@ -207,8 +207,8 @@ void PaintToolWindow::Update(float dt)
 	rot -= dt;
 	// by default, paint tool is on center of screen, this makes it easy to tweak radius with GUI:
 	XMFLOAT2 posNew;
-	posNew.x = wiRenderer::GetDevice()->GetScreenWidth() * 0.5f;
-	posNew.y = wiRenderer::GetDevice()->GetScreenHeight() * 0.5f;
+	posNew.x = editor->GetLogicalWidth() * 0.5f;
+	posNew.y = editor->GetLogicalHeight() * 0.5f;
 	if (editor->GetGUI().HasFocus() || wiBackLog::isActive() || entity == INVALID_ENTITY)
 	{
 		pos = posNew;
@@ -253,7 +253,7 @@ void PaintToolWindow::Update(float dt)
 	const XMMATRIX VP = camera.GetViewProjection();
 	const XMVECTOR MUL = XMVectorSet(0.5f, -0.5f, 1, 1);
 	const XMVECTOR ADD = XMVectorSet(0.5f, 0.5f, 0, 0);
-	const XMVECTOR SCREEN = XMVectorSet((float)wiRenderer::GetDevice()->GetScreenWidth(), (float)wiRenderer::GetDevice()->GetScreenHeight(), 1, 1);
+	const XMVECTOR SCREEN = XMVectorSet((float)editor->GetLogicalWidth(), (float)editor->GetLogicalHeight(), 1, 1);
 	const XMVECTOR F = camera.GetAt();
 
 	switch (mode)
@@ -1250,6 +1250,10 @@ void PaintToolWindow::ConsumeHistoryOperation(wiArchive& archive, bool undo)
 Texture PaintToolWindow::GetEditTextureSlot(const MaterialComponent& material, int* uvset)
 {
 	uint64_t sel = textureSlotComboBox.GetItemUserData(textureSlotComboBox.GetSelected());
+	if (material.textures[sel].resource == nullptr)
+	{
+		return Texture();
+	}
 	if (uvset)
 		*uvset = material.textures[sel].uvset;
 	return material.textures[sel].resource->texture;
