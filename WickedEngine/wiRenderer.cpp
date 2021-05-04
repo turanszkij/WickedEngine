@@ -8557,7 +8557,7 @@ void Postprocess_HBAO(
 
 	// horizontal pass:
 	{
-		device->BindResource(CS, wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(CS, wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND0, cmd);
 		const GPUResource* uavs[] = {
 			&res.temp1,
 		};
@@ -8595,7 +8595,7 @@ void Postprocess_HBAO(
 		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
-		device->BindResource(CS, &res.temp1, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(CS, &res.temp1, TEXSLOT_ONDEMAND0, cmd);
 		const GPUResource* uavs[] = {
 			&res.temp0,
 		};
