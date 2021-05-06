@@ -1288,22 +1288,22 @@ namespace wiScene
 		std::atomic<uint32_t> queryAllocator{ 0 };
 
 		// Environment probe cubemap array state:
-		static const uint32_t envmapCount = 16;
-		const uint32_t envmapRes = 128;
-		const uint32_t envmapMIPs = 8;
+		static constexpr uint32_t envmapCount = 16;
+		static constexpr uint32_t envmapRes = 128;
+		static constexpr uint32_t envmapMIPs = 8;
 		wiGraphics::Texture envrenderingDepthBuffer;
 		wiGraphics::Texture envmapArray;
 		std::vector<wiGraphics::RenderPass> renderpasses_envmap;
 
 		// Impostor texture array state:
-		static const uint32_t maxImpostorCount = 8;
-		const uint32_t impostorTextureDim = 128;
+		static constexpr uint32_t maxImpostorCount = 8;
+		static constexpr uint32_t impostorTextureDim = 128;
 		wiGraphics::Texture impostorDepthStencil;
 		wiGraphics::Texture impostorArray;
 		std::vector<wiGraphics::RenderPass> renderpasses_impostor;
 
 		// Atlas packing border size in pixels:
-		static const int atlasClampBorder = 1;
+		static constexpr int atlasClampBorder = 1;
 
 		// Lightmap atlas state:
 		wiGraphics::Texture lightmap;

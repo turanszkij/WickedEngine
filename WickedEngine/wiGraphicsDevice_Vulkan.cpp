@@ -2425,16 +2425,6 @@ using namespace Vulkan_Internal;
 			createInfo.enabledExtensionCount = static_cast<uint32_t>(enabled_deviceExtensions.size());
 			createInfo.ppEnabledExtensionNames = enabled_deviceExtensions.data();
 
-			if (debuglayer)
-			{
-				createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-				createInfo.ppEnabledLayerNames = validationLayers.data();
-			}
-			else
-			{
-				createInfo.enabledLayerCount = 0;
-			}
-
 			res = vkCreateDevice(physicalDevice, &createInfo, nullptr, &device);
 			assert(res == VK_SUCCESS);
 
@@ -2682,14 +2672,34 @@ using namespace Vulkan_Internal;
 		dynamicStateInfo.dynamicStateCount = (uint32_t)pso_dynamicStates.size();
 		dynamicStateInfo.pDynamicStates = pso_dynamicStates.data();
 
-
-		allocationhandler->bindlessUniformBuffers.init(device, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, properties_1_2.maxDescriptorSetUpdateAfterBindUniformBuffers / 4);
-		allocationhandler->bindlessSampledImages.init(device, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, properties_1_2.maxDescriptorSetUpdateAfterBindSampledImages / 4);
-		allocationhandler->bindlessUniformTexelBuffers.init(device, VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, properties_1_2.maxDescriptorSetUpdateAfterBindSampledImages / 4);
-		allocationhandler->bindlessStorageBuffers.init(device, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, properties_1_2.maxDescriptorSetUpdateAfterBindStorageBuffers / 4);
-		allocationhandler->bindlessStorageImages.init(device, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, properties_1_2.maxDescriptorSetUpdateAfterBindStorageImages / 4);
-		allocationhandler->bindlessStorageTexelBuffers.init(device, VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, properties_1_2.maxDescriptorSetUpdateAfterBindStorageImages / 4);
-		allocationhandler->bindlessSamplers.init(device, VK_DESCRIPTOR_TYPE_SAMPLER, 256);
+		if (features_1_2.descriptorBindingUniformBufferUpdateAfterBind)
+		{
+			allocationhandler->bindlessUniformBuffers.init(device, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, properties_1_2.maxDescriptorSetUpdateAfterBindUniformBuffers / 4);
+		}
+		if (features_1_2.descriptorBindingSampledImageUpdateAfterBind)
+		{
+			allocationhandler->bindlessSampledImages.init(device, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, properties_1_2.maxDescriptorSetUpdateAfterBindSampledImages / 4);
+		}
+		if (features_1_2.descriptorBindingUniformTexelBufferUpdateAfterBind)
+		{
+			allocationhandler->bindlessUniformTexelBuffers.init(device, VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, properties_1_2.maxDescriptorSetUpdateAfterBindSampledImages / 4);
+		}
+		if (features_1_2.descriptorBindingStorageBufferUpdateAfterBind)
+		{
+			allocationhandler->bindlessStorageBuffers.init(device, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, properties_1_2.maxDescriptorSetUpdateAfterBindStorageBuffers / 4);
+		}
+		if (features_1_2.descriptorBindingStorageImageUpdateAfterBind)
+		{
+			allocationhandler->bindlessStorageImages.init(device, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, properties_1_2.maxDescriptorSetUpdateAfterBindStorageImages / 4);
+		}
+		if (features_1_2.descriptorBindingStorageTexelBufferUpdateAfterBind)
+		{
+			allocationhandler->bindlessStorageTexelBuffers.init(device, VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, properties_1_2.maxDescriptorSetUpdateAfterBindStorageImages / 4);
+		}
+		if (features_1_2.descriptorBindingSampledImageUpdateAfterBind)
+		{
+			allocationhandler->bindlessSamplers.init(device, VK_DESCRIPTOR_TYPE_SAMPLER, 256);
+		}
 		if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		{
 			allocationhandler->bindlessAccelerationStructures.init(device, VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 32);
