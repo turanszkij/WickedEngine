@@ -1316,6 +1316,9 @@ namespace DX12_Internal
 		std::vector<D3D12_DESCRIPTOR_RANGE1> resources;
 		std::vector<D3D12_DESCRIPTOR_RANGE1> samplers;
 
+		uint32_t resource_binding_count_unrolled = 0;
+		uint32_t sampler_binding_count_unrolled = 0;
+
 		std::vector<RESOURCEBINDING> resource_bindings;
 
 		std::vector<D3D12_DESCRIPTOR_RANGE1> bindless_res;
@@ -1794,58 +1797,34 @@ using namespace DX12_Internal;
 		//
 		//	The excess amount is essentially equal to the maximum number of descriptors that can be allocated at once.
 
-		uint32_t resources = dirty_res ? (uint32_t)pso_internal->resources.size() : 0;
-		uint32_t samplers = dirty_sam ? (uint32_t)pso_internal->samplers.size() : 0;
-
-		if (resources > 0)
-		{
-			// The reservation is the maximum amount of descriptors that can be allocated once
-			//	It can be increased if needed
-			const uint32_t wrap_reservation = 1000;
-			const uint32_t wrap_effective_size = device->descriptorheap_res.heapDesc.NumDescriptors - BINDLESS_RESOURCE_CAPACITY - wrap_reservation;
-			assert(wrap_reservation > resources); // for correct lockless wrap behaviour
-
-			const uint64_t offset = device->descriptorheap_res.allocationOffset.fetch_add(resources);
-			const uint64_t wrapped_offset = BINDLESS_RESOURCE_CAPACITY + offset % wrap_effective_size;
-			ringOffset_res = (uint32_t)wrapped_offset;
-			const uint64_t wrapped_offset_end = wrapped_offset + resources;
-
-			uint64_t gpu_offset = device->descriptorheap_res.cached_completedValue;
-			uint64_t wrapped_gpu_offset = gpu_offset % wrap_effective_size;
-			while (wrapped_offset < wrapped_gpu_offset && wrapped_offset_end > wrapped_gpu_offset)
-			{
-				assert(device->descriptorheap_res.fenceValue > wrapped_offset_end); // simply not enough space, even with GPU drain
-				gpu_offset = device->descriptorheap_res.fence->GetCompletedValue();
-				wrapped_gpu_offset = gpu_offset % wrap_effective_size;
-			}
-		}
-
-		if (samplers > 0)
-		{
-			// The reservation is the maximum amount of descriptors that can be allocated once
-			//	It can be increased if needed
-			const uint32_t wrap_reservation = 16;
-			const uint32_t wrap_effective_size = device->descriptorheap_sam.heapDesc.NumDescriptors - BINDLESS_SAMPLER_CAPACITY - wrap_reservation;
-			assert(wrap_reservation > samplers); // for correct lockless wrap behaviour
-
-			const uint64_t offset = device->descriptorheap_sam.allocationOffset.fetch_add(samplers);
-			const uint64_t wrapped_offset = BINDLESS_SAMPLER_CAPACITY + offset % wrap_effective_size;
-			ringOffset_sam = (uint32_t)wrapped_offset;
-			const uint64_t wrapped_offset_end = wrapped_offset + samplers;
-
-			uint64_t gpu_offset = device->descriptorheap_sam.cached_completedValue;
-			uint64_t wrapped_gpu_offset = gpu_offset % wrap_effective_size;
-			while (wrapped_offset < wrapped_gpu_offset && wrapped_offset_end > wrapped_gpu_offset)
-			{
-				assert(device->descriptorheap_sam.fenceValue > wrapped_offset_end); // simply not enough space, even with GPU drain
-				gpu_offset = device->descriptorheap_sam.fence->GetCompletedValue();
-				wrapped_gpu_offset = gpu_offset % wrap_effective_size;
-			}
-		}
 
 		// Resources:
-		if (!pso_internal->resources.empty() && dirty_res)
+		if (pso_internal->resource_binding_count_unrolled > 0 && dirty_res)
 		{
+			uint32_t resources = pso_internal->resource_binding_count_unrolled;
+			if (resources > 0)
+			{
+				// The reservation is the maximum amount of descriptors that can be allocated once
+				//	It can be increased if needed
+				const uint32_t wrap_reservation = 1000;
+				const uint32_t wrap_effective_size = device->descriptorheap_res.heapDesc.NumDescriptors - BINDLESS_RESOURCE_CAPACITY - wrap_reservation;
+				assert(wrap_reservation > resources); // for correct lockless wrap behaviour
+
+				const uint64_t offset = device->descriptorheap_res.allocationOffset.fetch_add(resources);
+				const uint64_t wrapped_offset = BINDLESS_RESOURCE_CAPACITY + offset % wrap_effective_size;
+				ringOffset_res = (uint32_t)wrapped_offset;
+				const uint64_t wrapped_offset_end = wrapped_offset + resources;
+
+				uint64_t gpu_offset = device->descriptorheap_res.cached_completedValue;
+				uint64_t wrapped_gpu_offset = gpu_offset % wrap_effective_size;
+				while (wrapped_offset < wrapped_gpu_offset && wrapped_offset_end > wrapped_gpu_offset)
+				{
+					assert(device->descriptorheap_res.fenceValue > wrapped_offset_end); // simply not enough space, even with GPU drain
+					gpu_offset = device->descriptorheap_res.fence->GetCompletedValue();
+					wrapped_gpu_offset = gpu_offset % wrap_effective_size;
+				}
+			}
+
 			dirty_res = false;
 			auto& heap = device->descriptorheap_res;
 			D3D12_GPU_DESCRIPTOR_HANDLE binding_table = heap.start_gpu;
@@ -1854,158 +1833,163 @@ using namespace DX12_Internal;
 			int i = 0;
 			for (auto& x : pso_internal->resources)
 			{
-				D3D12_CPU_DESCRIPTOR_HANDLE dst = heap.start_cpu;
-				uint32_t ringOffset = ringOffset_res++;
-				dst.ptr += ringOffset * device->resource_descriptor_size;
-
 				RESOURCEBINDING binding = pso_internal->resource_bindings[i++];
 
-				switch (x.RangeType)
+				for (UINT descriptor_index = 0; descriptor_index < x.NumDescriptors; ++descriptor_index)
 				{
-				default:
-				case D3D12_DESCRIPTOR_RANGE_TYPE_SRV:
-				{
-					const GPUResource* resource = SRV[x.BaseShaderRegister];
-					const int subresource = SRV_index[x.BaseShaderRegister];
-					if (resource == nullptr || !resource->IsValid())
-					{
-						switch (binding)
-						{
-						case RAWBUFFER:
-						case STRUCTUREDBUFFER:
-						case TYPEDBUFFER:
-							device->device->CopyDescriptorsSimple(1, dst, device->nullSRV_buffer, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-							break;
-						case TEXTURE1D:
-							device->device->CopyDescriptorsSimple(1, dst, device->nullSRV_texture1d, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-							break;
-						case TEXTURE1DARRAY:
-							device->device->CopyDescriptorsSimple(1, dst, device->nullSRV_texture1darray, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-							break;
-						case TEXTURE2D:
-							device->device->CopyDescriptorsSimple(1, dst, device->nullSRV_texture2d, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-							break;
-						case TEXTURE2DARRAY:
-							device->device->CopyDescriptorsSimple(1, dst, device->nullSRV_texture2darray, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-							break;
-						case TEXTURECUBE:
-							device->device->CopyDescriptorsSimple(1, dst, device->nullSRV_texturecube, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-							break;
-						case TEXTURECUBEARRAY:
-							device->device->CopyDescriptorsSimple(1, dst, device->nullSRV_texturecubearray, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-							break;
-						case TEXTURE3D:
-							device->device->CopyDescriptorsSimple(1, dst, device->nullSRV_texture3d, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-							break;
-						case ACCELERATIONSTRUCTURE:
-							device->device->CopyDescriptorsSimple(1, dst, device->nullSRV_accelerationstructure, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-							break;
-						default:
-							assert(0);
-							break;
-						}
-					}
-					else
-					{
-						auto internal_state = to_internal(resource);
+					D3D12_CPU_DESCRIPTOR_HANDLE dst = heap.start_cpu;
+					uint32_t ringOffset = ringOffset_res++;
+					dst.ptr += ringOffset * device->resource_descriptor_size;
 
-						if (resource->IsAccelerationStructure())
+					UINT ShaderRegister = x.BaseShaderRegister + descriptor_index;
+
+					switch (x.RangeType)
+					{
+					default:
+					case D3D12_DESCRIPTOR_RANGE_TYPE_SRV:
+					{
+						const GPUResource* resource = SRV[ShaderRegister];
+						const int subresource = SRV_index[ShaderRegister];
+						if (resource == nullptr || !resource->IsValid())
 						{
-							device->device->CopyDescriptorsSimple(1, dst, internal_state->srv.handle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+							switch (binding)
+							{
+							case RAWBUFFER:
+							case STRUCTUREDBUFFER:
+							case TYPEDBUFFER:
+								device->device->CopyDescriptorsSimple(1, dst, device->nullSRV_buffer, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+								break;
+							case TEXTURE1D:
+								device->device->CopyDescriptorsSimple(1, dst, device->nullSRV_texture1d, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+								break;
+							case TEXTURE1DARRAY:
+								device->device->CopyDescriptorsSimple(1, dst, device->nullSRV_texture1darray, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+								break;
+							case TEXTURE2D:
+								device->device->CopyDescriptorsSimple(1, dst, device->nullSRV_texture2d, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+								break;
+							case TEXTURE2DARRAY:
+								device->device->CopyDescriptorsSimple(1, dst, device->nullSRV_texture2darray, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+								break;
+							case TEXTURECUBE:
+								device->device->CopyDescriptorsSimple(1, dst, device->nullSRV_texturecube, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+								break;
+							case TEXTURECUBEARRAY:
+								device->device->CopyDescriptorsSimple(1, dst, device->nullSRV_texturecubearray, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+								break;
+							case TEXTURE3D:
+								device->device->CopyDescriptorsSimple(1, dst, device->nullSRV_texture3d, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+								break;
+							case ACCELERATIONSTRUCTURE:
+								device->device->CopyDescriptorsSimple(1, dst, device->nullSRV_accelerationstructure, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+								break;
+							default:
+								assert(0);
+								break;
+							}
 						}
 						else
 						{
-							if (subresource < 0)
+							auto internal_state = to_internal(resource);
+
+							if (resource->IsAccelerationStructure())
 							{
 								device->device->CopyDescriptorsSimple(1, dst, internal_state->srv.handle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 							}
 							else
 							{
-								device->device->CopyDescriptorsSimple(1, dst, internal_state->subresources_srv[subresource].handle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+								if (subresource < 0)
+								{
+									device->device->CopyDescriptorsSimple(1, dst, internal_state->srv.handle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+								}
+								else
+								{
+									device->device->CopyDescriptorsSimple(1, dst, internal_state->subresources_srv[subresource].handle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+								}
 							}
 						}
 					}
-				}
-				break;
+					break;
 
-				case D3D12_DESCRIPTOR_RANGE_TYPE_UAV:
-				{
-					const GPUResource* resource = UAV[x.BaseShaderRegister];
-					const int subresource = UAV_index[x.BaseShaderRegister];
-					if (resource == nullptr || !resource->IsValid())
+					case D3D12_DESCRIPTOR_RANGE_TYPE_UAV:
 					{
-						switch (binding)
+						const GPUResource* resource = UAV[ShaderRegister];
+						const int subresource = UAV_index[ShaderRegister];
+						if (resource == nullptr || !resource->IsValid())
 						{
-						case RWRAWBUFFER:
-						case RWSTRUCTUREDBUFFER:
-						case RWTYPEDBUFFER:
-							device->device->CopyDescriptorsSimple(1, dst, device->nullUAV_buffer, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-							break;
-						case RWTEXTURE1D:
-							device->device->CopyDescriptorsSimple(1, dst, device->nullUAV_texture1d, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-							break;
-						case RWTEXTURE1DARRAY:
-							device->device->CopyDescriptorsSimple(1, dst, device->nullUAV_texture1darray, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-							break;
-						case RWTEXTURE2D:
-							device->device->CopyDescriptorsSimple(1, dst, device->nullUAV_texture2d, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-							break;
-						case RWTEXTURE2DARRAY:
-							device->device->CopyDescriptorsSimple(1, dst, device->nullUAV_texture2darray, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-							break;
-						case RWTEXTURE3D:
-							device->device->CopyDescriptorsSimple(1, dst, device->nullUAV_texture3d, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-							break;
-						default:
-							assert(0);
-							break;
-						}
-					}
-					else
-					{
-						auto internal_state = to_internal(resource);
-
-						if (subresource < 0)
-						{
-							device->device->CopyDescriptorsSimple(1, dst, internal_state->uav.handle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+							switch (binding)
+							{
+							case RWRAWBUFFER:
+							case RWSTRUCTUREDBUFFER:
+							case RWTYPEDBUFFER:
+								device->device->CopyDescriptorsSimple(1, dst, device->nullUAV_buffer, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+								break;
+							case RWTEXTURE1D:
+								device->device->CopyDescriptorsSimple(1, dst, device->nullUAV_texture1d, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+								break;
+							case RWTEXTURE1DARRAY:
+								device->device->CopyDescriptorsSimple(1, dst, device->nullUAV_texture1darray, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+								break;
+							case RWTEXTURE2D:
+								device->device->CopyDescriptorsSimple(1, dst, device->nullUAV_texture2d, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+								break;
+							case RWTEXTURE2DARRAY:
+								device->device->CopyDescriptorsSimple(1, dst, device->nullUAV_texture2darray, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+								break;
+							case RWTEXTURE3D:
+								device->device->CopyDescriptorsSimple(1, dst, device->nullUAV_texture3d, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+								break;
+							default:
+								assert(0);
+								break;
+							}
 						}
 						else
 						{
-							device->device->CopyDescriptorsSimple(1, dst, internal_state->subresources_uav[subresource].handle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+							auto internal_state = to_internal(resource);
+
+							if (subresource < 0)
+							{
+								device->device->CopyDescriptorsSimple(1, dst, internal_state->uav.handle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+							}
+							else
+							{
+								device->device->CopyDescriptorsSimple(1, dst, internal_state->subresources_uav[subresource].handle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+							}
 						}
 					}
-				}
-				break;
+					break;
 
-				case D3D12_DESCRIPTOR_RANGE_TYPE_CBV:
-				{
-					const GPUBuffer* buffer = CBV[x.BaseShaderRegister];
-
-					if (buffer == nullptr || !buffer->IsValid())
+					case D3D12_DESCRIPTOR_RANGE_TYPE_CBV:
 					{
-						device->device->CopyDescriptorsSimple(1, dst, device->nullCBV, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-					}
-					else
-					{
-						auto internal_state = to_internal(buffer);
+						const GPUBuffer* buffer = CBV[ShaderRegister];
 
-						if (buffer->desc.Usage == USAGE_DYNAMIC)
+						if (buffer == nullptr || !buffer->IsValid())
 						{
-							GraphicsDevice::GPUAllocation allocation = internal_state->dynamic[cmd];
-							D3D12_CONSTANT_BUFFER_VIEW_DESC cbv;
-							cbv.BufferLocation = to_internal(allocation.buffer)->gpu_address;
-							cbv.BufferLocation += (D3D12_GPU_VIRTUAL_ADDRESS)allocation.offset;
-							cbv.SizeInBytes = (uint32_t)Align((size_t)buffer->desc.ByteWidth, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
-
-							device->device->CreateConstantBufferView(&cbv, dst);
+							device->device->CopyDescriptorsSimple(1, dst, device->nullCBV, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 						}
 						else
 						{
-							device->device->CopyDescriptorsSimple(1, dst, internal_state->cbv.handle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+							auto internal_state = to_internal(buffer);
+
+							if (buffer->desc.Usage == USAGE_DYNAMIC)
+							{
+								GraphicsDevice::GPUAllocation allocation = internal_state->dynamic[cmd];
+								D3D12_CONSTANT_BUFFER_VIEW_DESC cbv;
+								cbv.BufferLocation = to_internal(allocation.buffer)->gpu_address;
+								cbv.BufferLocation += (D3D12_GPU_VIRTUAL_ADDRESS)allocation.offset;
+								cbv.SizeInBytes = (uint32_t)Align((size_t)buffer->desc.ByteWidth, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+
+								device->device->CreateConstantBufferView(&cbv, dst);
+							}
+							else
+							{
+								device->device->CopyDescriptorsSimple(1, dst, internal_state->cbv.handle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+							}
 						}
 					}
-				}
-				break;
+					break;
+					}
 				}
 			}
 
@@ -2020,8 +2004,32 @@ using namespace DX12_Internal;
 		}
 
 		// Samplers:
-		if (!pso_internal->samplers.empty() && dirty_sam)
+		if (pso_internal->sampler_binding_count_unrolled > 0 && dirty_sam)
 		{
+			uint32_t samplers = pso_internal->sampler_binding_count_unrolled;
+			if (samplers > 0)
+			{
+				// The reservation is the maximum amount of descriptors that can be allocated once
+				//	It can be increased if needed
+				const uint32_t wrap_reservation = 16;
+				const uint32_t wrap_effective_size = device->descriptorheap_sam.heapDesc.NumDescriptors - BINDLESS_SAMPLER_CAPACITY - wrap_reservation;
+				assert(wrap_reservation > samplers); // for correct lockless wrap behaviour
+
+				const uint64_t offset = device->descriptorheap_sam.allocationOffset.fetch_add(samplers);
+				const uint64_t wrapped_offset = BINDLESS_SAMPLER_CAPACITY + offset % wrap_effective_size;
+				ringOffset_sam = (uint32_t)wrapped_offset;
+				const uint64_t wrapped_offset_end = wrapped_offset + samplers;
+
+				uint64_t gpu_offset = device->descriptorheap_sam.cached_completedValue;
+				uint64_t wrapped_gpu_offset = gpu_offset % wrap_effective_size;
+				while (wrapped_offset < wrapped_gpu_offset && wrapped_offset_end > wrapped_gpu_offset)
+				{
+					assert(device->descriptorheap_sam.fenceValue > wrapped_offset_end); // simply not enough space, even with GPU drain
+					gpu_offset = device->descriptorheap_sam.fence->GetCompletedValue();
+					wrapped_gpu_offset = gpu_offset % wrap_effective_size;
+				}
+			}
+
 			dirty_sam = false;
 			auto& heap = device->descriptorheap_sam;
 			D3D12_GPU_DESCRIPTOR_HANDLE binding_table = heap.start_gpu;
@@ -2029,19 +2037,24 @@ using namespace DX12_Internal;
 
 			for (auto& x : pso_internal->samplers)
 			{
-				D3D12_CPU_DESCRIPTOR_HANDLE dst = heap.start_cpu;
-				uint32_t ringOffset = ringOffset_sam++;
-				dst.ptr += ringOffset * device->sampler_descriptor_size;
+				for (UINT descriptor_index = 0; descriptor_index < x.NumDescriptors; ++descriptor_index)
+				{
+					D3D12_CPU_DESCRIPTOR_HANDLE dst = heap.start_cpu;
+					uint32_t ringOffset = ringOffset_sam++;
+					dst.ptr += ringOffset * device->sampler_descriptor_size;
 
-				const Sampler* sampler = SAM[x.BaseShaderRegister];
-				if (sampler == nullptr || !sampler->IsValid())
-				{
-					device->device->CopyDescriptorsSimple(1, dst, device->nullSAM, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-				}
-				else
-				{
-					auto internal_state = to_internal(sampler);
-					device->device->CopyDescriptorsSimple(1, dst, internal_state->descriptor.handle, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+					UINT ShaderRegister = x.BaseShaderRegister + descriptor_index;
+
+					const Sampler* sampler = SAM[ShaderRegister];
+					if (sampler == nullptr || !sampler->IsValid())
+					{
+						device->device->CopyDescriptorsSimple(1, dst, device->nullSAM, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+					}
+					else
+					{
+						auto internal_state = to_internal(sampler);
+						device->device->CopyDescriptorsSimple(1, dst, internal_state->descriptor.handle, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+					}
 				}
 			}
 
@@ -3250,7 +3263,7 @@ using namespace DX12_Internal;
 					return;
 				}
 
-				const bool bindless = desc.BindCount > 1 || desc.BindCount == 0;
+				const bool bindless = desc.Space > 0;
 
 				if (desc.Type == D3D_SIT_SAMPLER)
 				{
@@ -3577,6 +3590,15 @@ using namespace DX12_Internal;
 					}
 					internal_state->resources = resources;
 					internal_state->resource_bindings = bindings;
+				}
+
+				for (auto& x : internal_state->resources)
+				{
+					internal_state->resource_binding_count_unrolled += x.NumDescriptors;
+				}
+				for (auto& x : internal_state->samplers)
+				{
+					internal_state->sampler_binding_count_unrolled += x.NumDescriptors;
 				}
 
 				internal_state->bindpoint_rootdescriptor = (uint32_t)params.size();
@@ -3976,6 +3998,15 @@ using namespace DX12_Internal;
 				}
 				internal_state->resources = resources;
 				internal_state->resource_bindings = bindings;
+			}
+
+			for (auto& x : internal_state->resources)
+			{
+				internal_state->resource_binding_count_unrolled += x.NumDescriptors;
+			}
+			for (auto& x : internal_state->samplers)
+			{
+				internal_state->sampler_binding_count_unrolled += x.NumDescriptors;
 			}
 
 			internal_state->bindpoint_rootdescriptor = (uint32_t)params.size();
