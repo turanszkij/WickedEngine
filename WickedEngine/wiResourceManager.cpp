@@ -226,6 +226,12 @@ namespace wiResourceManager
 						break;
 					}
 
+					if (device->IsFormatBlockCompressed(desc.Format))
+					{
+						desc.Width = std::max(4u, desc.Width);
+						desc.Height = std::max(4u, desc.Height);
+					}
+
 					success = device->CreateTexture(&desc, InitData.data(), &resource->texture);
 					device->SetName(&resource->texture, name.c_str());
 				}
