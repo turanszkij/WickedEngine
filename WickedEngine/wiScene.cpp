@@ -818,11 +818,10 @@ namespace wiScene
 	{
 		// Start recalculating normals:
 
-		switch (compute)
-		{
-		case wiScene::MeshComponent::COMPUTE_NORMALS_HARD: 
 		{
 			// Compute hard surface normals:
+
+			// Right now they are always computed even before smooth setting
 
 			std::vector<uint32_t> newIndexBuffer;
 			std::vector<XMFLOAT3> newPositionsBuffer;
@@ -925,6 +924,10 @@ namespace wiScene
 			}
 			indices = newIndexBuffer;
 		}
+
+		switch (compute)
+		{
+		case wiScene::MeshComponent::COMPUTE_NORMALS_HARD: 
 		break;
 
 		case wiScene::MeshComponent::COMPUTE_NORMALS_SMOOTH:
