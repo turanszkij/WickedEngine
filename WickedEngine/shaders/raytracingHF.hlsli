@@ -166,6 +166,7 @@ void EvaluateObjectSurface(
 
 		const float2 UV_normalMap = material.uvset_normalMap == 0 ? uvsets.xy : uvsets.zw;
 		float3 normalMap = bindless_textures[material.texture_normalmap_index].SampleLevel(sampler_linear_wrap, UV_normalMap, 0).rgb;
+		normalMap.b = normalMap.b == 0 ? 1 : normalMap.b; // fix for missing blue channel
 		normalMap = normalMap * 2 - 1;
 		surface.N = normalize(lerp(surface.N, mul(normalMap, TBN), material.normalMapStrength));
 	}
@@ -302,6 +303,7 @@ void EvaluateObjectSurface(
 	{
 		const float2 UV_normalMap = material.uvset_normalMap == 0 ? uvsets.xy : uvsets.zw;
 		float3 normalMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV_normalMap * material.normalMapAtlasMulAdd.xy + material.normalMapAtlasMulAdd.zw, 0).rgb;
+		normalMap.b = normalMap.b == 0 ? 1 : normalMap.b; // fix for missing blue channel
 		normalMap = normalMap.rgb * 2 - 1;
 		const float3x3 TBN = float3x3(tri.tangent, tri.binormal, surface.N);
 		surface.N = normalize(lerp(surface.N, mul(normalMap, TBN), material.normalMapStrength));
