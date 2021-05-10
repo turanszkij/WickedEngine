@@ -199,8 +199,7 @@ inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Li
 			float3 atmosphereTransmittance = 1;
 			if (g_xFrame_Options & OPTION_BIT_REALISTIC_SKY)
 			{
-				AtmosphereParameters Atmosphere = GetAtmosphereParameters();
-				atmosphereTransmittance = GetAtmosphericLightTransmittance(Atmosphere, surface.P, L, texture_transmittancelut);
+				atmosphereTransmittance = GetAtmosphericLightTransmittance(g_xFrame_Atmosphere, surface.P, L, texture_transmittancelut);
 			}
 			
 			float3 lightColor = light.GetColor().rgb * light.GetEnergy() * shadow * atmosphereTransmittance;

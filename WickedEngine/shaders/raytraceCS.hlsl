@@ -211,7 +211,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 					float3 atmosphereTransmittance = 1;
 					if (g_xFrame_Options & OPTION_BIT_REALISTIC_SKY)
 					{
-						AtmosphereParameters Atmosphere = GetAtmosphereParameters();
+						AtmosphereParameters Atmosphere = g_xFrame_Atmosphere;
 						atmosphereTransmittance = GetAtmosphericLightTransmittance(Atmosphere, surface.P, L, texture_transmittancelut);
 					}
 					lightColor *= atmosphereTransmittance;

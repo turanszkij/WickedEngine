@@ -971,6 +971,28 @@ namespace wiScene
 				}
 			}
 
+			if (archive.GetVersion() >= 66)
+			{
+				archive >> skyExposure;
+
+				archive >> atmosphereParameters.bottomRadius;
+				archive >> atmosphereParameters.topRadius;
+				archive >> atmosphereParameters.planetCenter;
+				archive >> atmosphereParameters.rayleighDensityExpScale;
+				archive >> atmosphereParameters.rayleighScattering;
+				archive >> atmosphereParameters.mieDensityExpScale;
+				archive >> atmosphereParameters.mieScattering;
+				archive >> atmosphereParameters.mieExtinction;
+				archive >> atmosphereParameters.mieAbsorption;
+				archive >> atmosphereParameters.absorptionDensity0LayerWidth;
+				archive >> atmosphereParameters.absorptionDensity0ConstantTerm;
+				archive >> atmosphereParameters.absorptionDensity0LinearTerm;
+				archive >> atmosphereParameters.absorptionDensity1ConstantTerm;
+				archive >> atmosphereParameters.absorptionDensity1LinearTerm;
+				archive >> atmosphereParameters.absorptionExtinction;
+				archive >> atmosphereParameters.groundAlbedo;
+			}
+
 		}
 		else
 		{
@@ -1017,6 +1039,28 @@ namespace wiScene
 			if (archive.GetVersion() >= 62)
 			{
 				archive << colorGradingMapName;
+			}
+
+			if (archive.GetVersion() >= 66)
+			{
+				archive << skyExposure;
+
+				archive << atmosphereParameters.bottomRadius;
+				archive << atmosphereParameters.topRadius;
+				archive << atmosphereParameters.planetCenter;
+				archive << atmosphereParameters.rayleighDensityExpScale;
+				archive << atmosphereParameters.rayleighScattering;
+				archive << atmosphereParameters.mieDensityExpScale;
+				archive << atmosphereParameters.mieScattering;
+				archive << atmosphereParameters.mieExtinction;
+				archive << atmosphereParameters.mieAbsorption;
+				archive << atmosphereParameters.absorptionDensity0LayerWidth;
+				archive << atmosphereParameters.absorptionDensity0ConstantTerm;
+				archive << atmosphereParameters.absorptionDensity0LinearTerm;
+				archive << atmosphereParameters.absorptionDensity1ConstantTerm;
+				archive << atmosphereParameters.absorptionDensity1LinearTerm;
+				archive << atmosphereParameters.absorptionExtinction;
+				archive << atmosphereParameters.groundAlbedo;
 			}
 
 		}

@@ -3685,6 +3685,7 @@ void UpdatePerFrameData(
 	frameCB.g_xFrame_Fog = float3(vis.scene->weather.fogStart, vis.scene->weather.fogEnd, vis.scene->weather.fogHeight);
 	frameCB.g_xFrame_Horizon = vis.scene->weather.horizon;
 	frameCB.g_xFrame_Zenith = vis.scene->weather.zenith;
+	frameCB.g_xFrame_SkyExposure = vis.scene->weather.skyExposure;
 	frameCB.g_xFrame_VoxelRadianceMaxDistance = voxelSceneData.maxDistance;
 	frameCB.g_xFrame_VoxelRadianceDataSize = voxelSceneData.voxelsize;
 	frameCB.g_xFrame_VoxelRadianceDataSize_rcp = 1.0f / (float)frameCB.g_xFrame_VoxelRadianceDataSize;
@@ -3809,6 +3810,8 @@ void UpdatePerFrameData(
 	{
 		frameCB.g_xFrame_Options |= OPTION_BIT_SHADOW_MASK;
 	}
+
+	frameCB.g_xFrame_Atmosphere = vis.scene->weather.atmosphereParameters;
 }
 void UpdateRenderData(
 	const Visibility& vis,

@@ -458,7 +458,7 @@ void RenderClouds(float3 rayOrigin, float3 rayDirection, float t, float steps, f
 	float2 coverageWindOffset = g_CoverageWindSpeed * g_AnimationMultiplier * coverageWindDirection * g_xFrame_Time;
 
 	
-	AtmosphereParameters atmosphere = GetAtmosphereParameters();
+	AtmosphereParameters atmosphere = g_xFrame_Atmosphere;
 	
 	float3 sunIlluminance = GetSunColor() * GetSunEnergy();
 	float3 sunDirection = GetSunDirection();
@@ -589,7 +589,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float steps;
 	float stepSize;
     {
-		AtmosphereParameters parameters = GetAtmosphereParameters();
+		AtmosphereParameters parameters = g_xFrame_Atmosphere;
 		
 		float planetRadius = parameters.bottomRadius * SKY_UNIT_TO_M;
 		float3 planetCenterWorld = parameters.planetCenter * SKY_UNIT_TO_M;

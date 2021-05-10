@@ -11,7 +11,7 @@ using namespace wiGraphics;
 void WeatherWindow::Create(EditorComponent* editor)
 {
 	wiWindow::Create("Weather Window");
-	SetSize(XMFLOAT2(660, 520));
+	SetSize(XMFLOAT2(660, 560));
 
 	float x = 180;
 	float y = 20;
@@ -106,6 +106,14 @@ void WeatherWindow::Create(EditorComponent* editor)
 		GetWeather().windRandomness = args.fValue;
 	});
 	AddWidget(&windRandomnessSlider);
+
+	skyExposureSlider.Create(0, 4, 1, 10000, "Sky Exposure: ");
+	skyExposureSlider.SetSize(XMFLOAT2(100, hei));
+	skyExposureSlider.SetPos(XMFLOAT2(x, y += step));
+	skyExposureSlider.OnSlide([&](wiEventArgs args) {
+		GetWeather().skyExposure = args.fValue;
+		});
+	AddWidget(&skyExposureSlider);
 
 	simpleskyCheckBox.Create("Simple sky: ");
 	simpleskyCheckBox.SetTooltip("Simple sky will simply blend horizon and zenith color from bottom to top.");

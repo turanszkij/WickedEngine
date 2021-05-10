@@ -65,8 +65,7 @@ float4 main(Input input) : SV_TARGET
 					float3 atmosphereTransmittance = 1.0;
 					if (g_xFrame_Options & OPTION_BIT_REALISTIC_SKY)
 					{
-						AtmosphereParameters Atmosphere = GetAtmosphereParameters();
-						atmosphereTransmittance = GetAtmosphericLightTransmittance(Atmosphere, surface.P, L, texture_transmittancelut);
+						atmosphereTransmittance = GetAtmosphericLightTransmittance(g_xFrame_Atmosphere, surface.P, L, texture_transmittancelut);
 					}
 					
 					float3 lightColor = light.GetColor().rgb * light.GetEnergy() * atmosphereTransmittance;
