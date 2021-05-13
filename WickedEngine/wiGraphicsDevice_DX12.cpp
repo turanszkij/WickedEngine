@@ -5495,17 +5495,17 @@ using namespace DX12_Internal;
 			{
 				hr = device->CreateCommandAllocator(queues[queue].desc.Type, IID_PPV_ARGS(&frames[fr].commandAllocators[cmd][queue]));
 				assert(SUCCEEDED(hr));
-				hr = device->CreateCommandList(0, queues[queue].desc.Type, frames[fr].commandAllocators[cmd][queue].Get(), nullptr, IID_PPV_ARGS(&frames[fr].commandLists[cmd][queue]));
-				assert(SUCCEEDED(hr));
-				hr = frames[fr].commandLists[cmd][queue]->Close();
-				assert(SUCCEEDED(hr));
 
 				frames[fr].resourceBuffer[cmd].init(this, 1024 * 1024); // 1 MB starting size
 
-				std::wstringstream wss;
-				wss << "cmd" << cmd;
-				frames[fr].commandLists[cmd][queue]->SetName(wss.str().c_str());
 			}
+
+			hr = device->CreateCommandList1(0, queues[queue].desc.Type, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(&commandLists[cmd][queue]));
+			assert(SUCCEEDED(hr));
+
+			std::wstringstream wss;
+			wss << "cmd" << cmd;
+			commandLists[cmd][queue]->SetName(wss.str().c_str());
 
 			descriptors[cmd].init(this);
 		}

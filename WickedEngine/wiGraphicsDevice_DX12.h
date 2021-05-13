@@ -110,7 +110,6 @@ namespace wiGraphics
 		{
 			Microsoft::WRL::ComPtr<ID3D12Fence> fence[QUEUE_COUNT];
 			Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocators[COMMANDLIST_COUNT][QUEUE_COUNT];
-			Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList4> commandLists[COMMANDLIST_COUNT][QUEUE_COUNT];
 
 			struct ResourceFrameAllocator
 			{
@@ -137,9 +136,10 @@ namespace wiGraphics
 			std::vector<CommandList> waits;
 		} cmd_meta[COMMANDLIST_COUNT];
 
+		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList4> commandLists[COMMANDLIST_COUNT][QUEUE_COUNT];
 		inline ID3D12GraphicsCommandList6* GetCommandList(CommandList cmd)
 		{
-			return (ID3D12GraphicsCommandList6*)GetFrameResources().commandLists[cmd][cmd_meta[cmd].queue].Get();
+			return (ID3D12GraphicsCommandList6*)commandLists[cmd][cmd_meta[cmd].queue].Get();
 		}
 
 		struct DescriptorBinder
