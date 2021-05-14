@@ -1503,16 +1503,16 @@ using namespace DX12_Internal;
 		copyQueueDesc.NodeMask = 0;
 		HRESULT hr = device->device->CreateCommandQueue(&copyQueueDesc, IID_PPV_ARGS(&queue));
 		assert(SUCCEEDED(hr));
-
-		hr = device->device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&fence));
-		assert(SUCCEEDED(hr));
 	}
 	void GraphicsDevice_DX12::CopyAllocator::destroy()
 	{
-		uint64_t value = ++fenceValue;
-		HRESULT hr = queue->Signal(fence.Get(), value);
+		ComPtr<ID3D12Fence> fence;
+		HRESULT hr = device->device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
 		assert(SUCCEEDED(hr));
-		hr = fence->SetEventOnCompletion(value, nullptr);
+
+		hr = queue->Signal(fence.Get(), 1);
+		assert(SUCCEEDED(hr));
+		hr = fence->SetEventOnCompletion(1, nullptr);
 		assert(SUCCEEDED(hr));
 	}
 	GraphicsDevice_DX12::CopyAllocator::CopyCMD GraphicsDevice_DX12::CopyAllocator::allocate(uint32_t staging_size)
@@ -1530,6 +1530,9 @@ using namespace DX12_Internal;
 			assert(SUCCEEDED(hr));
 
 			hr = static_cast<ID3D12GraphicsCommandList*>(cmd.commandList.Get())->Close();
+			assert(SUCCEEDED(hr));
+
+			hr = device->device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&cmd.fence));
 			assert(SUCCEEDED(hr));
 
 			freelist.push_back(cmd);
@@ -1577,41 +1580,23 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::CopyAllocator::submit(CopyCMD cmd)
 	{
-		static_cast<ID3D12GraphicsCommandList*>(cmd.commandList.Get())->Close();
+		HRESULT hr;
+
+		cmd.commandList->Close();
 		ID3D12CommandList* commandlists[] = {
 			cmd.commandList.Get()
 		};
 		queue->ExecuteCommandLists(1, commandlists);
+		hr = queue->Signal(cmd.fence.Get(), 1);
+		assert(SUCCEEDED(hr));
+		hr = cmd.fence->SetEventOnCompletion(1, nullptr);
+		assert(SUCCEEDED(hr));
+		hr = cmd.fence->Signal(0);
+		assert(SUCCEEDED(hr));
 
 		locker.lock();
-		cmd.target = ++fenceValue;
-		worklist.push_back(cmd);
-		submit_wait = std::max(submit_wait, cmd.target);
+		freelist.push_back(cmd);
 		locker.unlock();
-	}
-	uint64_t GraphicsDevice_DX12::CopyAllocator::flush()
-	{
-		locker.lock();
-
-		queue->Signal(fence.Get(), submit_wait);
-
-		// free up the finished command lists:
-		uint64_t completed_fence_value = fence->GetCompletedValue();
-		for (size_t i = 0; i < worklist.size(); ++i)
-		{
-			if (worklist[i].target <= completed_fence_value)
-			{
-				freelist.push_back(worklist[i]);
-				worklist[i] = worklist.back();
-				worklist.pop_back();
-				i--;
-			}
-		}
-
-		uint64_t value = submit_wait;
-		submit_wait = 0;
-		locker.unlock();
-		return value;
 	}
 
 	void GraphicsDevice_DX12::FrameResources::ResourceFrameAllocator::init(GraphicsDevice_DX12* device, size_t size)
@@ -5561,17 +5546,6 @@ using namespace DX12_Internal;
 		// Submit current frame:
 		{
 			auto& frame = GetFrameResources();
-
-			uint64_t copy_sync = copyAllocator.flush();
-			if (copy_sync > 0)
-			{
-				// All user queues synced with copy allocator:
-				for (auto& x : queues)
-				{
-					hr = x.queue->Wait(copyAllocator.fence.Get(), copy_sync);
-					assert(SUCCEEDED(hr));
-				}
-			}
 
 			QUEUE_TYPE submit_queue = QUEUE_COUNT;
 

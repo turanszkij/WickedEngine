@@ -81,28 +81,23 @@ namespace wiGraphics
 		{
 			GraphicsDevice_DX12* device = nullptr;
 			Microsoft::WRL::ComPtr<ID3D12CommandQueue> queue;
-			Microsoft::WRL::ComPtr<ID3D12Fence> fence;
-			uint64_t fenceValue = 0;
 			std::mutex locker;
 
 			struct CopyCMD
 			{
 				Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocator;
 				Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList;
-				uint64_t target = 0;
+				Microsoft::WRL::ComPtr<ID3D12Fence> fence;
 				GPUBuffer uploadbuffer;
 				void* data = nullptr;
 				ID3D12Resource* upload_resource = nullptr;
 			};
-			std::vector<CopyCMD> freelist; // available
-			std::vector<CopyCMD> worklist; // in progress
-			uint64_t submit_wait = 0; // last submit wait value
+			std::vector<CopyCMD> freelist;
 
 			void init(GraphicsDevice_DX12* device);
 			void destroy();
 			CopyCMD allocate(uint32_t staging_size);
 			void submit(CopyCMD cmd);
-			uint64_t flush();
 		};
 		mutable CopyAllocator copyAllocator;
 
