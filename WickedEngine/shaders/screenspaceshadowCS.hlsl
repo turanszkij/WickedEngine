@@ -21,7 +21,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	{
 		const uint2 pixel = tile_upperleft + unflatten2D(t, TILE_SIZE);
 		const float2 uv = (pixel + 0.5f) * xPPResolution_rcp;
-		const float depth = texture_depth.SampleLevel(sampler_linear_clamp, uv, 1);
+		const float depth = texture_depth.SampleLevel(sampler_linear_clamp, uv, 0);
 		const float3 position = reconstructPosition(uv, depth);
 		tile_XY[t] = position.xy;
 		tile_Z[t] = position.z;
@@ -89,13 +89,21 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	uint shadow_mask[4] = {0,0,0,0}; // FXC issue: can't dynamically index into uint4, unless unrolling all loops
 	uint shadow_index = 0;
 
-	const float3 rayOrigin = mul(g_xCamera_View, float4(surface.P, 1)).xyz;
+	RayDesc ray;
+	ray.TMin = 0.01;
+	ray.Origin = P;
+
+	const float2 uv = ((float2)DTid.xy + 0.5f) * xPPResolution_rcp.xy;
+
+#ifndef RTSHADOW
+	ray.Origin = mul(g_xCamera_View, float4(ray.Origin, 1)).xyz;
 
 	const float range = xPPParams0.x;
 	const uint samplecount = xPPParams0.y;
 	const float thickness = 0.1;
 	const float stepsize = range / samplecount;
 	const float offset = abs(dither(DTid.xy + GetTemporalAASampleRotation()));
+#endif // RTSHADOW
 
 	[branch]
 	if (g_xFrame_LightArrayCount > 0)
@@ -125,6 +133,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 				[branch]
 				if (entity_index >= first_item && entity_index <= last_item)
 				{
+					shadow_index = entity_index - g_xFrame_LightArrayOffset;
+					if (shadow_index >= MAX_RTSHADOWS)
+						break;
+
 					ShaderEntity light = EntityArray[entity_index];
 
 					if (!light.IsCastingShadow())
@@ -138,7 +150,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 					}
 
 					float3 L;
-					bool has_shadow = false;
+					ray.TMax = 0;
 
 					switch (light.GetType())
 					{
@@ -156,7 +168,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 							[branch]
 							if (light.IsCastingShadow())
 							{
-								has_shadow = true;
+								ray.TMax = FLT_MAX;
 							}
 						}
 					}
@@ -180,7 +192,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 							[branch]
 							if (any(surfaceToLight.NdotL))
 							{
-								has_shadow = true;
+								ray.TMax = dist;
 							}
 						}
 					}
@@ -209,7 +221,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 								[branch]
 								if (SpotFactor > spotCutOff)
 								{
-									has_shadow = true;
+									ray.TMax = dist;
 								}
 							}
 						}
@@ -218,17 +230,75 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 					}
 
 					[branch]
-					if (has_shadow)
+					if (ray.TMax > 0)
 					{
-						const float3 rayDirection = normalize(mul((float3x3)g_xCamera_View, L));
-						float3 rayPos = rayOrigin + rayDirection * stepsize * offset;
-
 						float occlusion = 0;
+
+#ifdef RTSHADOW
+						// true ray traced shadow:
+						float seed = g_xFrame_Time;
+						float3 sampling_offset = float3(rand(seed, uv), rand(seed, uv), rand(seed, uv)) * 2 - 1; // todo: should be specific to light surface
+						ray.Direction = normalize(L + sampling_offset * 0.025);
+
+#ifdef RTAPI
+						RayQuery<
+							RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES
+						> q;
+						q.TraceRayInline(
+							scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
+							0,								// uint RayFlags
+							0xFF,							// uint InstanceInclusionMask
+							ray								// RayDesc Ray
+						);
+						while (q.Proceed())
+						{
+							ShaderMesh mesh = bindless_buffers[q.CandidateInstanceID()].Load<ShaderMesh>(0);
+							ShaderMeshSubset subset = bindless_subsets[mesh.subsetbuffer][q.CandidateGeometryIndex()];
+							ShaderMaterial material = bindless_buffers[subset.material].Load<ShaderMaterial>(0);
+							[branch]
+							if (!material.IsCastingShadow())
+							{
+								continue;
+							}
+							[branch]
+							if (material.texture_basecolormap_index < 0)
+							{
+								q.CommitNonOpaqueTriangleHit();
+								break;
+							}
+
+							Surface surface;
+							EvaluateObjectSurface(
+								mesh,
+								subset,
+								material,
+								q.CandidatePrimitiveIndex(),
+								q.CandidateTriangleBarycentrics(),
+								q.CandidateObjectToWorld3x4(),
+								surface
+							);
+
+							[branch]
+							if (surface.opacity >= material.alphaTest)
+							{
+								q.CommitNonOpaqueTriangleHit();
+								break;
+							}
+						}
+						float shadow = q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ? 0 : 1;
+#else
+						float shadow = TraceRay_Any(newRay, groupIndex) ? 0 : 1;
+#endif // RTAPI
+
+#else
+						// screen space raymarch shadow:
+						ray.Direction = normalize(mul((float3x3)g_xCamera_View, L));
+						float3 rayPos = ray.Origin + ray.Direction * stepsize * offset;
 
 						[loop]
 						for (uint i = 0; i < samplecount; ++i)
 						{
-							rayPos += rayDirection * stepsize;
+							rayPos += ray.Direction * stepsize;
 
 							float4 proj = mul(g_xCamera_Proj, float4(rayPos, 1));
 							proj.xyz /= proj.w;
@@ -253,20 +323,13 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 							}
 						}
 						float shadow = 1 - occlusion;
+#endif // RTSHADOW
 
 						uint mask = uint(saturate(shadow) * 255); // 8 bits
 						uint mask_shift = (shadow_index % 4) * 8;
 						uint mask_bucket = shadow_index / 4;
 						shadow_mask[mask_bucket] |= mask << mask_shift;
 					}
-
-					// (**) cannot detect exactly same contribution as is pixel shaders!
-					//	So we always increment it for shadowed light, even if the
-					//	shadow contribution is not traced
-					//
-					//	This is because in the pixel shader, we will detect the shadow
-					//	contribution more precisely due to more precise surface normals
-					shadow_index++;
 
 				}
 				else if (entity_index > last_item)

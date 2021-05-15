@@ -69,7 +69,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	aoComboBox.AddItem("SSAO");
 	aoComboBox.AddItem("HBAO");
 	aoComboBox.AddItem("MSAO");
-	if (wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+	if (wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
 	{
 		aoComboBox.AddItem("RTAO");
 	}

@@ -521,8 +521,11 @@ void RenderPath3D::ResizeBuffers()
 
 	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 	{
-		wiRenderer::CreateRTAOResources(rtaoResources, internalResolution);
 		wiRenderer::CreateRTReflectionResources(rtreflectionResources, internalResolution);
+	}
+	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
+	{
+		wiRenderer::CreateRTAOResources(rtaoResources, internalResolution);
 		wiRenderer::CreateRTShadowResources(rtshadowResources, internalResolution);
 	}
 

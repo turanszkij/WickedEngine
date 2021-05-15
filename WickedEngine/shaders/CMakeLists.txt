@@ -143,6 +143,8 @@ set(SHADERS_CS
 		"rtshadow_denoise_temporalCS.hlsl"
 		"upsample_bilateral_uint4CS.hlsl"
 		"screenspaceshadowCS.hlsl"
+		"rtshadowCS.hlsl"
+		"rtaoCS.hlsl"
 )
 
 set(SHADERS_PS
@@ -298,9 +300,7 @@ set(SHADERS_DS
 )
 
 set(SHADERS_LIB
-		"rtaoLIB.hlsl"
 		"rtreflectionLIB.hlsl"
-		"rtshadowLIB.hlsl"
 )
 
 

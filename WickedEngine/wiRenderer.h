@@ -433,7 +433,6 @@ namespace wiRenderer
 		wiGraphics::TextureDesc saved_desc;
 		wiGraphics::Texture temp;
 		wiGraphics::Texture temporal[2];
-		wiGraphics::Texture normals;
 	};
 	void CreateRTShadowResources(RTShadowResources& res, XMUINT2 resolution);
 	void Postprocess_RTShadow(

@@ -111,9 +111,6 @@
     <None Include="$(MSBuildThisFileDirectory)bitonicSortHF.hlsli">
       <Filter>HF</Filter>
     </None>
-    <None Include="$(MSBuildThisFileDirectory)rtaoLIB.hlsl">
-      <Filter>LIB</Filter>
-    </None>
     <None Include="$(MSBuildThisFileDirectory)volumetricCloudsHF.hlsli">
       <Filter>HF</Filter>
     </None>
@@ -128,9 +125,6 @@
     </None>
     <None Include="$(MSBuildThisFileDirectory)skyAtmosphere.hlsli">
       <Filter>HF</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)rtshadowLIB.hlsl">
-      <Filter>LIB</Filter>
     </None>
     <None Include="$(MSBuildThisFileDirectory)objectHF_tessellation.hlsli">
       <Filter>HF</Filter>
@@ -972,6 +966,12 @@
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)raytraceCS_rtapi.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)rtshadowCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)rtaoCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>

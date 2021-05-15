@@ -217,6 +217,8 @@ int main(int argc, char* argv[])
 		"rtshadow_denoise_temporalCS.hlsl"							,
 		"upsample_bilateral_uint4CS.hlsl"							,
 		"screenspaceshadowCS.hlsl"									,
+		"rtshadowCS.hlsl"											,
+		"rtaoCS.hlsl"												,
 	};
 
 	shaders[wiGraphics::PS] = {
@@ -380,13 +382,13 @@ int main(int argc, char* argv[])
 	};
 
 	shaders[wiGraphics::LIB] = {
-		"rtaoLIB.hlsl",
 		"rtreflectionLIB.hlsl",
-		"rtshadowLIB.hlsl",
 	};
 
 	minshadermodels["renderlightmapPS_rtapi.hlsl"] = wiGraphics::SHADERMODEL_6_5;
 	minshadermodels["raytraceCS_rtapi.hlsl"] = wiGraphics::SHADERMODEL_6_5;
+	minshadermodels["rtshadowCS.hlsl"] = wiGraphics::SHADERMODEL_6_5;
+	minshadermodels["rtaoCS.hlsl"] = wiGraphics::SHADERMODEL_6_5;
 
 	wiShaderCompiler::Initialize();
 	wiJobSystem::Initialize();
