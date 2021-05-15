@@ -2,6 +2,7 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 #include "raytracingHF.hlsli"
+#include "stochasticSSRHF.hlsli"
 
 STRUCTUREDBUFFER(EntityTiles, uint, TEXSLOT_RENDERPATH_ENTITYTILES);
 
@@ -92,8 +93,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	RayDesc ray;
 	ray.TMin = 0.01;
 	ray.Origin = P;
-
-	const float2 uv = ((float2)DTid.xy + 0.5f) * xPPResolution_rcp.xy;
 
 #ifndef RTSHADOW
 	ray.Origin = mul(g_xCamera_View, float4(ray.Origin, 1)).xyz;
@@ -236,8 +235,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 
 #ifdef RTSHADOW
 						// true ray traced shadow:
-						float seed = g_xFrame_Time;
-						float3 sampling_offset = float3(rand(seed, uv), rand(seed, uv), rand(seed, uv)) * 2 - 1; // todo: should be specific to light surface
+						uint seed = 0;
+						float3 sampling_offset = float3(
+							blue_rand(DTid.xy, seed),
+							blue_rand(DTid.xy, seed),
+							blue_rand(DTid.xy, seed)
+							) * 2 - 1; // todo: should be specific to light surface
 						ray.Direction = normalize(L + sampling_offset * 0.025);
 
 #ifdef RTAPI

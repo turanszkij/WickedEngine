@@ -232,5 +232,16 @@ float BNDSequenceSample(uint2 pixelCoord, uint sampleIndex, uint sampleDimension
 	// Convert to float and return
 	return (value + 0.5f) / 256.0f;
 }
+float blue_rand(in uint2 pixelCoord, inout uint sam)
+{
+	float val = BNDSequenceSample(pixelCoord, g_xFrame_FrameCount, sam);
+	sam++;
+	return val;
+}
+// Get random hemisphere sample in world-space along the normal (cosine-weighted distribution)
+inline float3 blue_SampleHemisphere_cos(in float3 normal, inout uint seed, in uint2 pixel)
+{
+	return mul(hemispherepoint_cos(blue_rand(pixel, seed), blue_rand(pixel, seed)), GetTangentSpace(normal));
+}
 
 #endif // WI_STOCHASTICSSR_HF

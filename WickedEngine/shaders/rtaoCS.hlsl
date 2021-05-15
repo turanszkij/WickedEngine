@@ -2,8 +2,7 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 #include "raytracingHF.hlsli"
-
-TEXTURE2D(texture_normals, float3, TEXSLOT_ONDEMAND0);
+#include "stochasticSSRHF.hlsli"
 
 RWTEXTURE2D(output, unorm float, 0);
 RWTEXTURE2D(output_normals, unorm float3, 1);
@@ -77,9 +76,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	const float3 P = float3(tile_XY[cross_idx[0]], tile_Z[cross_idx[0]]);
 	const float3 N = normalize(cross(p2 - P, p1 - P));
 
-	const float2 uv = ((float2)DTid.xy + 0.5f) * xPPResolution_rcp.xy;
-
-	float seed = g_xFrame_Time;
+	uint seed = 0;
 
 	RayDesc ray;
 	ray.TMin = 0.01;
@@ -90,7 +87,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 
 	for (uint i = 0; i < (uint)rtao_samplecount; ++i)
 	{
-		ray.Direction = normalize(SampleHemisphere_cos(N, seed, uv));
+		ray.Direction = normalize(blue_SampleHemisphere_cos(N, seed, DTid.xy));
 
 #ifdef RTAPI
 		RayQuery<

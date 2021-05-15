@@ -18,7 +18,7 @@ float4 main(Input input) : SV_TARGET
 	surface.N = normalize(input.normal);
 
 	float2 uv = input.uv;
-	float seed = xTraceRandomSeed;
+	float seed = xTraceAccumulationFactor;
 	RayDesc ray;
 	ray.Origin = input.pos3D;
 	ray.Direction = SampleHemisphere_cos(surface.N, seed, uv);

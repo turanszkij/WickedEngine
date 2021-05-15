@@ -19,7 +19,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 	// Compute screen coordinates:
 	float2 uv = float2((pixel + xTracePixelOffset) * xTraceResolution_rcp.xy * 2 - 1) * float2(1, -1);
-	float seed = xTraceRandomSeed;
+	uint seed = xTraceAccumulationFactor;
 
 	// Create starting ray:
 	RayDesc ray = CreateCameraRay(uv);
@@ -346,7 +346,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	}
 
 	// Pre-clear result texture for first bounce and first accumulation sample:
-	if (xTraceUserData.y == 0)
+	if (xTraceSampleIndex == 0)
 	{
 		resultTexture[pixel] = 0;
 	}
