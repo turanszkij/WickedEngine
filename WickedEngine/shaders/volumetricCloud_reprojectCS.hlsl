@@ -25,20 +25,21 @@ inline float HdrWeight4(float3 color, float exposure)
 	return rcp(Luma4(color) * exposure + 4.0f);
 }
 
-float4 clip_aabb(float3 aabb_min, float3 aabb_max, float4 p, float4 q)
+// Different aabb clipping method from eg. SSR temporal, suitable for clouds in this case
+float4 clip_aabb(float4 aabb_min, float4 aabb_max, float4 prev_sample)
 {
-	float3 p_clip = 0.5 * (aabb_max + aabb_min);
-	float3 e_clip = 0.5 * (aabb_max - aabb_min) + 0.00000001f;
+	float4 p_clip = 0.5 * (aabb_max + aabb_min);
+	float4 e_clip = 0.5 * (aabb_max - aabb_min) + 0.00000001f;
 
-	float4 v_clip = q - float4(p_clip, p.w);
-	float3 v_unit = v_clip.xyz / e_clip;
-	float3 a_unit = abs(v_unit);
-	float ma_unit = max(a_unit.x, max(a_unit.y, a_unit.z));
+	float4 v_clip = prev_sample - p_clip;
+	float4 v_unit = v_clip / e_clip;
+	float4 a_unit = abs(v_unit);
+	float ma_unit = max(max(a_unit.x, max(a_unit.y, a_unit.z)), a_unit.w);
 
 	if (ma_unit > 1.0)
-		return float4(p_clip, p.w) + v_clip / ma_unit;
+		return p_clip + v_clip / ma_unit;
 	else
-		return q; // point inside aabb
+		return prev_sample; // point inside aabb
 }
 
 inline void ResolverAABB(Texture2D<float4> currentColor, SamplerState currentSampler, float sharpness, float exposureScale, float AABBScale, float2 uv, float2 texelSize, inout float4 currentMin, inout float4 currentMax, inout float4 currentAverage, inout float4 currentOutput)
@@ -73,6 +74,8 @@ inline void ResolverAABB(Texture2D<float4> currentColor, SamplerState currentSam
                        sampleColors[5] * sampleWeights[5] + sampleColors[6] * sampleWeights[6] + sampleColors[7] * sampleWeights[7] + sampleColors[8] * sampleWeights[8]) / totalWeight;
 #endif
 
+
+#if 0 // Standard clipping
 	
     // Variance Clipping (AABB)
     
@@ -87,7 +90,39 @@ inline void ResolverAABB(Texture2D<float4> currentColor, SamplerState currentSam
 
 	float4 mean = m1 / 9.0;
 	float4 stddev = sqrt((m2 / 9.0) - sqr(mean));
+
+#else // Depth check
+
+	float originalLinearDepth = getLinearDepth(texture_depth.SampleLevel(sampler_point_clamp, uv, 0).r);
+	float validSampleCount = 1.0;
+	
+	float4 m1 = 0.0;
+	float4 m2 = 0.0;
+    [unroll]
+	for (uint x = 0; x < 9; x++)
+	{
+		if (x == 4)
+		{
+			m1 += sampleColors[x];
+			m2 += sampleColors[x] * sampleColors[x];
+		}
+		else
+		{
+			float depth = getLinearDepth(texture_depth.SampleLevel(sampler_point_clamp, uv + (SampleOffset[x] / texelSize), 0).r);
+			if (abs(originalLinearDepth - depth) < 1.5)
+			{
+				m1 += sampleColors[x];
+				m2 += sampleColors[x] * sampleColors[x];
+				validSampleCount += 1.0;
+			}
+		}
+	}
+
+	float4 mean = m1 / validSampleCount;
+	float4 stddev = sqrt((m2 / validSampleCount) - sqr(mean));
         
+#endif
+
 	currentMin = mean - AABBScale * stddev;
 	currentMax = mean + AABBScale * stddev;
 
@@ -169,8 +204,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float4 currentMin, currentMax, currentAverage;
 	ResolverAABB(cloud_current, sampler_point_clamp, 0, temporalExposure, temporalScale, uv, xPPResolution, currentMin, currentMax, currentAverage, current);
 
-	previous = clip_aabb(currentMin.xyz, currentMax.xyz, clamp(currentAverage, currentMin, currentMax), previous);
-    
+	//previous = clip_aabb(currentMin.xyz, currentMax.xyz, clamp(currentAverage, currentMin, currentMax), previous);
+	previous = clip_aabb(currentMin, currentMax, previous);
+
 	float4 result = lerp(previous, current, temporalResponse);
     
 	result = is_saturated(prevUV) ? result : current;
