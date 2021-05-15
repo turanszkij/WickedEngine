@@ -19,14 +19,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 	// Compute screen coordinates:
 	float2 uv = float2((pixel + xTracePixelOffset) * xTraceResolution_rcp.xy * 2 - 1) * float2(1, -1);
-	uint seed = xTraceAccumulationFactor;
+	float seed = xTraceAccumulationFactor;
 
 	// Create starting ray:
 	RayDesc ray = CreateCameraRay(uv);
 
 	// Depth of field setup:
 	float3 focal_point = ray.Origin + ray.Direction * g_xCamera_FocalLength;
-	float3 coc = float3(hemispherepoint_cos(rand(seed, pixel), rand(seed, pixel)).xy, 0);
+	float3 coc = float3(hemispherepoint_cos(rand(seed, uv), rand(seed, uv)).xy, 0);
 	coc.xy *= g_xCamera_ApertureShape.xy;
 	coc = mul(coc, float3x3(cross(g_xCamera_Up, g_xCamera_At), g_xCamera_Up, g_xCamera_At));
 	coc *= g_xCamera_FocalLength;
