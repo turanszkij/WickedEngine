@@ -2715,11 +2715,7 @@ using namespace Vulkan_Internal;
 	}
 	GraphicsDevice_Vulkan::~GraphicsDevice_Vulkan()
 	{
-		VkResult res = vkQueueWaitIdle(graphicsQueue);
-		assert(res == VK_SUCCESS);
-		res = vkQueueWaitIdle(computeQueue);
-		assert(res == VK_SUCCESS);
-		res = vkQueueWaitIdle(copyQueue);
+		VkResult res = vkDeviceWaitIdle(device);
 		assert(res == VK_SUCCESS);
 
 		for (auto& queue : queues)
