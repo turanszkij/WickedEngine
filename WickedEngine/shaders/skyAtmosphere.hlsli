@@ -357,6 +357,15 @@ float3 GetTransmittance(AtmosphereParameters atmosphere, float pHeight, float su
 
 float3 GetAtmosphereTransmittance(float3 worldPosition, float3 worldDirection, AtmosphereParameters atmosphere, Texture2D<float4> transmittanceLutTexture)
 {
+	// If the worldDirection is occluded from this virtual planet, then return.
+	// We do this due to the low resolution LUT, where the stored zenith to horizon never reaches black, to prevent linear interpolation artefacts.
+	// At the most shadowed point of the LUT, pure black with earth shadow is never reached.
+	float2 sol = RaySphereIntersect(worldPosition, worldDirection, float3(0.0f, 0.0f, 0.0f), atmosphere.bottomRadius);
+	if (sol.x > 0.0f || sol.y > 0.0f)
+	{
+		return 0.0f;
+	}
+	
 	float pHeight = length(worldPosition);
 	const float3 UpVector = worldPosition / pHeight;
 	float SunZenithCosAngle = dot(worldDirection, UpVector);
