@@ -446,8 +446,8 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 
 	float		g_xFrame_ShadowKernel2D;
 	float		g_xFrame_ShadowKernelCube;
-	uint		g_xFrame_RaytracedShadowsSampleCount;
 	int			g_xFrame_ObjectShaderSamplerIndex;
+	int			g_xFrame_padding1;
 
 	AtmosphereParameters g_xFrame_Atmosphere;
 };
@@ -495,6 +495,7 @@ CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)
 	float4x4	g_xCamera_PrevVP;		// PrevView*PrevProjection
 	float4x4	g_xCamera_PrevInvVP;	// Inverse(PrevView*PrevProjection)
 	float4x4	g_xCamera_ReflVP;		// ReflectionView*ReflectionProjection
+	float4x4	g_xCamera_Reprojection; // view_projection_inverse_matrix * previous_view_projection_matrix
 
 	float2		g_xCamera_ApertureShape;
 	float		g_xCamera_ApertureSize;

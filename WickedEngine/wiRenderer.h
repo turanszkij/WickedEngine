@@ -433,6 +433,13 @@ namespace wiRenderer
 		wiGraphics::TextureDesc saved_desc;
 		wiGraphics::Texture temp;
 		wiGraphics::Texture temporal[2];
+		wiGraphics::Texture normals;
+
+		mutable int firstframe = 0;
+		wiGraphics::GPUBuffer tiles;
+		wiGraphics::GPUBuffer metadata;
+		wiGraphics::Texture scratch[2];
+		wiGraphics::Texture moments[2];
 	};
 	void CreateRTShadowResources(RTShadowResources& res, XMUINT2 resolution);
 	void Postprocess_RTShadow(
@@ -739,8 +746,6 @@ namespace wiRenderer
 	bool GetTessellationEnabled();
 	void SetDisableAlbedoMaps(bool value);
 	bool IsDisableAlbedoMaps();
-	void SetRaytracedShadowsSampleCount(uint32_t value);
-	uint32_t GetRaytracedShadowsSampleCount();
 	void SetScreenSpaceShadowsEnabled(bool value);
 	bool GetScreenSpaceShadowsEnabled();
 

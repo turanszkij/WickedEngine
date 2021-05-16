@@ -5,7 +5,7 @@
 #include "stochasticSSRHF.hlsli"
 
 RWTEXTURE2D(output, unorm float, 0);
-RWTEXTURE2D(output_normals, unorm float3, 1);
+RWTEXTURE2D(output_normals, float3, 1);
 
 static const uint TILE_BORDER = 1;
 static const uint TILE_SIZE = POSTPROCESS_BLOCKSIZE + TILE_BORDER * 2;

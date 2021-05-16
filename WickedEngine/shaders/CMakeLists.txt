@@ -138,13 +138,15 @@ set(SHADERS_CS
 		"skyAtmosphere_skyViewLutCS.hlsl"
 		"skyAtmosphere_multiScatteredLuminanceLutCS.hlsl"
 		"skyAtmosphere_skyLuminanceLutCS.hlsl"
-		"rtao_denoise_blurCS.hlsl"
-		"rtao_denoise_temporalCS.hlsl"
-		"rtshadow_denoise_temporalCS.hlsl"
 		"upsample_bilateral_uint4CS.hlsl"
 		"screenspaceshadowCS.hlsl"
 		"rtshadowCS.hlsl"
+		"rtshadow_denoise_tileclassificationCS.hlsl"
+		"rtshadow_denoise_filterCS.hlsl"
+		"rtshadow_denoise_temporalCS.hlsl"
 		"rtaoCS.hlsl"
+		"rtao_denoise_blurCS.hlsl"
+		"rtao_denoise_temporalCS.hlsl"
 )
 
 set(SHADERS_PS

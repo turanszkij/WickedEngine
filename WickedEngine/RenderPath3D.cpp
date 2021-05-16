@@ -917,6 +917,8 @@ void RenderPath3D::Render() const
 
 		if (wiRenderer::GetRaytracedShadowsEnabled() || wiRenderer::GetScreenSpaceShadowsEnabled())
 		{
+			GPUBarrier barrier = GPUBarrier::Image(&rtShadow, rtShadow.desc.layout, IMAGE_LAYOUT_SHADER_RESOURCE);
+			device->Barrier(&barrier, 1, cmd);
 			device->BindResource(PS, &rtShadow, TEXSLOT_RENDERPATH_RTSHADOW, cmd);
 		}
 		else
@@ -950,6 +952,12 @@ void RenderPath3D::Render() const
 		}
 
 		device->RenderPassEnd(cmd);
+
+		if (wiRenderer::GetRaytracedShadowsEnabled() || wiRenderer::GetScreenSpaceShadowsEnabled())
+		{
+			GPUBarrier barrier = GPUBarrier::Image(&rtShadow, IMAGE_LAYOUT_SHADER_RESOURCE, rtShadow.desc.layout);
+			device->Barrier(&barrier, 1, cmd);
+		}
 
 		device->EventEnd(cmd);
 		});

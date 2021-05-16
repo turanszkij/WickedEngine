@@ -9,6 +9,11 @@ STRUCTUREDBUFFER(EntityTiles, uint, TEXSLOT_RENDERPATH_ENTITYTILES);
 static const uint MAX_RTSHADOWS = 16;
 RWTEXTURE2D(output, uint4, 0);
 
+#ifdef RTSHADOW
+RWTEXTURE2D(output_normals, float3, 1);
+RWSTRUCTUREDBUFFER(output_tiles, uint, 2);
+#endif // RTSHADOW
+
 static const uint TILE_BORDER = 1;
 static const uint TILE_SIZE = POSTPROCESS_BLOCKSIZE + TILE_BORDER * 2;
 groupshared float2 tile_XY[TILE_SIZE * TILE_SIZE];
@@ -17,6 +22,19 @@ groupshared float tile_Z[TILE_SIZE * TILE_SIZE];
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint groupIndex : SV_GroupIndex)
 {
+#ifdef RTSHADOW
+	uint flatTileIdx = 0;
+	if (GTid.y < 4)
+	{
+		flatTileIdx = flatten2D(Gid.xy * uint2(1, 2) + uint2(0, 0), (xPPResolution + uint2(7, 3)) / uint2(8, 4));
+	}
+	else
+	{
+		flatTileIdx = flatten2D(Gid.xy * uint2(1, 2) + uint2(0, 1), (xPPResolution + uint2(7, 3)) / uint2(8, 4));
+	}
+	output_tiles[flatTileIdx] = 0;
+#endif // RTSHADOW
+
 	const int2 tile_upperleft = Gid.xy * POSTPROCESS_BLOCKSIZE - TILE_BORDER;
 	for (uint t = groupIndex; t < TILE_SIZE * TILE_SIZE; t += POSTPROCESS_BLOCKSIZE * POSTPROCESS_BLOCKSIZE)
 	{
@@ -231,79 +249,74 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 					[branch]
 					if (ray.TMax > 0)
 					{
-						float occlusion = 0;
-
 #ifdef RTSHADOW
 						// true ray traced shadow:
 						uint seed = 0;
 						float shadow = 0;
 
-						for (uint sh = 0; sh < g_xFrame_RaytracedShadowsSampleCount; ++sh)
-						{
-							float3 sampling_offset = float3(
-								blue_rand(DTid.xy, seed),
-								blue_rand(DTid.xy, seed),
-								blue_rand(DTid.xy, seed)
-								) * 2 - 1; // todo: should be specific to light surface
-							ray.Direction = normalize(L + sampling_offset * 0.025);
+						float3 sampling_offset = float3(
+							blue_rand(DTid.xy, seed),
+							blue_rand(DTid.xy, seed),
+							blue_rand(DTid.xy, seed)
+							) * 2 - 1; // todo: should be specific to light surface
+						ray.Direction = normalize(L + sampling_offset * 0.025);
 
 #ifdef RTAPI
-							RayQuery<
-								RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES
-							> q;
-							q.TraceRayInline(
-								scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
-								0,								// uint RayFlags
-								0xFF,							// uint InstanceInclusionMask
-								ray								// RayDesc Ray
-							);
-							while (q.Proceed())
+						RayQuery<
+							RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES
+						> q;
+						q.TraceRayInline(
+							scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
+							0,								// uint RayFlags
+							0xFF,							// uint InstanceInclusionMask
+							ray								// RayDesc Ray
+						);
+						while (q.Proceed())
+						{
+							ShaderMesh mesh = bindless_buffers[q.CandidateInstanceID()].Load<ShaderMesh>(0);
+							ShaderMeshSubset subset = bindless_subsets[mesh.subsetbuffer][q.CandidateGeometryIndex()];
+							ShaderMaterial material = bindless_buffers[subset.material].Load<ShaderMaterial>(0);
+							[branch]
+							if (!material.IsCastingShadow())
 							{
-								ShaderMesh mesh = bindless_buffers[q.CandidateInstanceID()].Load<ShaderMesh>(0);
-								ShaderMeshSubset subset = bindless_subsets[mesh.subsetbuffer][q.CandidateGeometryIndex()];
-								ShaderMaterial material = bindless_buffers[subset.material].Load<ShaderMaterial>(0);
-								[branch]
-								if (!material.IsCastingShadow())
-								{
-									continue;
-								}
-								[branch]
-								if (material.texture_basecolormap_index < 0)
-								{
-									q.CommitNonOpaqueTriangleHit();
-									break;
-								}
-
-								Surface surface;
-								EvaluateObjectSurface(
-									mesh,
-									subset,
-									material,
-									q.CandidatePrimitiveIndex(),
-									q.CandidateTriangleBarycentrics(),
-									q.CandidateObjectToWorld3x4(),
-									surface
-								);
-
-								[branch]
-								if (surface.opacity >= material.alphaTest)
-								{
-									q.CommitNonOpaqueTriangleHit();
-									break;
-								}
+								continue;
 							}
-							shadow += q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ? 0 : 1;
-#else
-							shadow += TraceRay_Any(newRay, groupIndex) ? 0 : 1;
-#endif // RTAPI
+							[branch]
+							if (material.texture_basecolormap_index < 0)
+							{
+								q.CommitNonOpaqueTriangleHit();
+								break;
+							}
+
+							Surface surface;
+							EvaluateObjectSurface(
+								mesh,
+								subset,
+								material,
+								q.CandidatePrimitiveIndex(),
+								q.CandidateTriangleBarycentrics(),
+								q.CandidateObjectToWorld3x4(),
+								surface
+							);
+
+							[branch]
+							if (surface.opacity >= material.alphaTest)
+							{
+								q.CommitNonOpaqueTriangleHit();
+								break;
+							}
 						}
-						shadow /= g_xFrame_RaytracedShadowsSampleCount;
+						shadow = q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ? 0 : 1;
+#else
+						shadow = TraceRay_Any(newRay, groupIndex) ? 0 : 1;
+#endif // RTAPI
 
 #else
 						// screen space raymarch shadow:
 						ray.Direction = normalize(mul((float3x3)g_xCamera_View, L));
 						float3 rayPos = ray.Origin + ray.Direction * stepsize * offset;
 
+						float occlusion = 0;
 						[loop]
 						for (uint i = 0; i < samplecount; ++i)
 						{
@@ -354,4 +367,13 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	}
 
 	output[DTid.xy] = uint4(shadow_mask[0], shadow_mask[1], shadow_mask[2], shadow_mask[3]);
+
+#ifdef RTSHADOW
+	output_normals[DTid.xy] = saturate(N * 0.5 + 0.5);
+
+	uint2 pixel_pos = DTid.xy;
+	int lane_index = (pixel_pos.y % 4) * 8 + (pixel_pos.x % 8);
+	uint bit = (shadow_mask[0] & 0xFF) ? 0 : (1u << lane_index);
+	InterlockedOr(output_tiles[flatTileIdx], bit);
+#endif // RTSHADOW
 }
