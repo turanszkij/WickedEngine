@@ -236,62 +236,68 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 #ifdef RTSHADOW
 						// true ray traced shadow:
 						uint seed = 0;
-						float3 sampling_offset = float3(
-							blue_rand(DTid.xy, seed),
-							blue_rand(DTid.xy, seed),
-							blue_rand(DTid.xy, seed)
-							) * 2 - 1; // todo: should be specific to light surface
-						ray.Direction = normalize(L + sampling_offset * 0.025);
+						float shadow = 0;
+
+						for (uint sh = 0; sh < g_xFrame_RaytracedShadowsSampleCount; ++sh)
+						{
+							float3 sampling_offset = float3(
+								blue_rand(DTid.xy, seed),
+								blue_rand(DTid.xy, seed),
+								blue_rand(DTid.xy, seed)
+								) * 2 - 1; // todo: should be specific to light surface
+							ray.Direction = normalize(L + sampling_offset * 0.025);
 
 #ifdef RTAPI
-						RayQuery<
-							RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES
-						> q;
-						q.TraceRayInline(
-							scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
-							0,								// uint RayFlags
-							0xFF,							// uint InstanceInclusionMask
-							ray								// RayDesc Ray
-						);
-						while (q.Proceed())
-						{
-							ShaderMesh mesh = bindless_buffers[q.CandidateInstanceID()].Load<ShaderMesh>(0);
-							ShaderMeshSubset subset = bindless_subsets[mesh.subsetbuffer][q.CandidateGeometryIndex()];
-							ShaderMaterial material = bindless_buffers[subset.material].Load<ShaderMaterial>(0);
-							[branch]
-							if (!material.IsCastingShadow())
-							{
-								continue;
-							}
-							[branch]
-							if (material.texture_basecolormap_index < 0)
-							{
-								q.CommitNonOpaqueTriangleHit();
-								break;
-							}
-
-							Surface surface;
-							EvaluateObjectSurface(
-								mesh,
-								subset,
-								material,
-								q.CandidatePrimitiveIndex(),
-								q.CandidateTriangleBarycentrics(),
-								q.CandidateObjectToWorld3x4(),
-								surface
+							RayQuery<
+								RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES
+							> q;
+							q.TraceRayInline(
+								scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
+								0,								// uint RayFlags
+								0xFF,							// uint InstanceInclusionMask
+								ray								// RayDesc Ray
 							);
-
-							[branch]
-							if (surface.opacity >= material.alphaTest)
+							while (q.Proceed())
 							{
-								q.CommitNonOpaqueTriangleHit();
-								break;
+								ShaderMesh mesh = bindless_buffers[q.CandidateInstanceID()].Load<ShaderMesh>(0);
+								ShaderMeshSubset subset = bindless_subsets[mesh.subsetbuffer][q.CandidateGeometryIndex()];
+								ShaderMaterial material = bindless_buffers[subset.material].Load<ShaderMaterial>(0);
+								[branch]
+								if (!material.IsCastingShadow())
+								{
+									continue;
+								}
+								[branch]
+								if (material.texture_basecolormap_index < 0)
+								{
+									q.CommitNonOpaqueTriangleHit();
+									break;
+								}
+
+								Surface surface;
+								EvaluateObjectSurface(
+									mesh,
+									subset,
+									material,
+									q.CandidatePrimitiveIndex(),
+									q.CandidateTriangleBarycentrics(),
+									q.CandidateObjectToWorld3x4(),
+									surface
+								);
+
+								[branch]
+								if (surface.opacity >= material.alphaTest)
+								{
+									q.CommitNonOpaqueTriangleHit();
+									break;
+								}
 							}
-						}
-						float shadow = q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ? 0 : 1;
+							shadow += q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ? 0 : 1;
 #else
-						float shadow = TraceRay_Any(newRay, groupIndex) ? 0 : 1;
+							shadow += TraceRay_Any(newRay, groupIndex) ? 0 : 1;
 #endif // RTAPI
+						}
+						shadow /= g_xFrame_RaytracedShadowsSampleCount;
 
 #else
 						// screen space raymarch shadow:
