@@ -254,12 +254,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 						uint seed = 0;
 						float shadow = 0;
 
-						float3 sampling_offset = float3(
-							blue_rand(DTid.xy, seed),
-							blue_rand(DTid.xy, seed),
-							blue_rand(DTid.xy, seed)
-							) * 2 - 1; // todo: should be specific to light surface
-						ray.Direction = normalize(L + sampling_offset * 0.025);
+						ray.Direction = normalize(lerp(L, blue_SampleHemisphere_cos(L, seed, DTid.xy), 0.025));
 
 #ifdef RTAPI
 						RayQuery<

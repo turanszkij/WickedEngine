@@ -146,11 +146,9 @@ float4 main(Input input) : SV_TARGET
 			{
 				float3 shadow = NdotL * energy;
 
-				float3 sampling_offset = float3(rand(seed, uv), rand(seed, uv), rand(seed, uv)) * 2 - 1;
-
 				RayDesc newRay;
 				newRay.Origin = surface.P;
-				newRay.Direction = normalize(L + sampling_offset * 0.025f);
+				newRay.Direction = normalize(lerp(L, SampleHemisphere_cos(L, seed, uv), 0.025f));
 				newRay.TMin = 0.001;
 				newRay.TMax = dist;
 #ifdef RTAPI
