@@ -49,8 +49,8 @@ uint FFX_DNSR_Shadows_GetBitMaskFromPixelPosition(uint2 pixel_pos)
 
 // From ffx_a.h
 
-uint FFX_DNSR_Shadows_BitfieldExtract(uint src, uint off, uint bits) { uint mask = (1 << bits) - 1; return (src >> off) & mask; } // ABfe
-uint FFX_DNSR_Shadows_BitfieldInsert(uint src, uint ins, uint bits) { uint mask = (1 << bits) - 1; return (ins & mask) | (src & (~mask)); } // ABfiM
+uint FFX_DNSR_Shadows_BitfieldExtract(uint src, uint off, uint bits) { uint mask = (1u << bits) - 1; return (src >> off) & mask; } // ABfe
+uint FFX_DNSR_Shadows_BitfieldInsert(uint src, uint ins, uint bits) { uint mask = (1u << bits) - 1; return (ins & mask) | (src & (~mask)); } // ABfiM
 
 //  LANE TO 8x8 MAPPING
 //  ===================
