@@ -378,10 +378,9 @@ namespace wiRenderer
 	struct RTAOResources
 	{
 		wiGraphics::Texture temp;
-		wiGraphics::Texture temporal[2];
 		wiGraphics::Texture normals;
 
-		mutable int firstframe = 0;
+		mutable int frame = 0;
 		wiGraphics::GPUBuffer tiles;
 		wiGraphics::GPUBuffer metadata;
 		wiGraphics::Texture scratch[2];
@@ -440,7 +439,7 @@ namespace wiRenderer
 		wiGraphics::Texture temporal[2];
 		wiGraphics::Texture normals;
 
-		mutable int firstframe = 0;
+		mutable int frame = 0;
 		wiGraphics::GPUBuffer tiles;
 		wiGraphics::GPUBuffer metadata;
 		wiGraphics::Texture scratch[2];

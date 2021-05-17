@@ -596,11 +596,11 @@ void RenderPath3D::Update(float dt)
 
 	if (getAO() != AO_RTAO)
 	{
-		rtaoResources.firstframe = 0;
+		rtaoResources.frame = 0;
 	}
 	if (!wiRenderer::GetRaytracedShadowsEnabled())
 	{
-		rtshadowResources.firstframe = 0;
+		rtshadowResources.frame = 0;
 	}
 
 	std::swap(depthBuffer_Copy, depthBuffer_Copy1);

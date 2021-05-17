@@ -160,7 +160,7 @@ float2 FFX_DNSR_Shadows_GetClosestVelocity(int2 did, float depth)
         closest_velocity = new_velocity;
     }
 
-    return closest_velocity * float2(0.5f, -0.5f);  // from ndc to uv
+	return closest_velocity;
 }
 
 #define KERNEL_RADIUS 8

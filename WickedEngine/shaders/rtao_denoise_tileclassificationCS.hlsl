@@ -13,7 +13,7 @@ RWSTRUCTUREDBUFFER(metadata, uint, 2);
 
 int FFX_DNSR_Shadows_IsFirstFrame()
 {
-	return (int)xPPParams0.w;
+	return xPPParams0.w == 0;
 }
 uint2 FFX_DNSR_Shadows_GetBufferDimensions()
 {
@@ -66,7 +66,7 @@ float FFX_DNSR_Shadows_ReadHistory(float2 history_uv)
 }
 float2 FFX_DNSR_Shadows_ReadVelocity(uint2 did)
 {
-	return texture_gbuffer2[did * 2].xy;
+	return -texture_gbuffer2[did * 2].xy;
 }
 
 void FFX_DNSR_Shadows_WriteReprojectionResults(uint2 did, float2 value)
@@ -88,6 +88,8 @@ bool FFX_DNSR_Shadows_IsShadowReciever(uint2 did)
 	return (depth > 0.0f) && (depth < 1.0f);
 }
 
+
+#define INVERTED_DEPTH_RANGE
 #include "ffx-shadows-dnsr/ffx_denoiser_shadows_tileclassification.h"
 
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]

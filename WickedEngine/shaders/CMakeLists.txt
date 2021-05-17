@@ -147,8 +147,6 @@ set(SHADERS_CS
 		"rtaoCS.hlsl"
 		"rtao_denoise_tileclassificationCS.hlsl"
 		"rtao_denoise_filterCS.hlsl"
-		"rtao_denoise_blurCS.hlsl"
-		"rtao_denoise_temporalCS.hlsl"
 )
 
 set(SHADERS_PS
