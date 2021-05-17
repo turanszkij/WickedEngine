@@ -131,51 +131,25 @@ namespace wiTextureHelper
 
 		// Blue Noise:
 		{
-			const uint32_t layerCount = 256;
-			struct BlueNoiseLayer
-			{
-				uint8_t data[128][128][4] = {};
-			};
-			std::vector<BlueNoiseLayer> blueNoise(layerCount);
+			uint8_t blueNoise[128][128][4] = {};
 
-			SubresourceData initdata[layerCount] = {};
-
-			for (int layer = 0; layer < layerCount; ++layer)
+			for (int x = 0; x < 128; ++x)
 			{
-				for (int x = 0; x < 128; ++x)
+				for (int y = 0; y < 128; ++y)
 				{
-					for (int y = 0; y < 128; ++y)
-					{
-						float const f0 = samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp(x, y, layer, 0);
-						float const f1 = samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp(x, y, layer, 1);
-						float const f2 = samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp(x, y, layer, 2);
-						float const f3 = samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp(x, y, layer, 3);
+					float const f0 = samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp(x, y, 0, 0);
+					float const f1 = samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp(x, y, 0, 1);
+					float const f2 = samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp(x, y, 0, 2);
+					float const f3 = samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp(x, y, 0, 3);
 
-						blueNoise[layer].data[x][y][0] = static_cast<uint8_t>(f0 * 0xFF);
-						blueNoise[layer].data[x][y][1] = static_cast<uint8_t>(f1 * 0xFF);
-						blueNoise[layer].data[x][y][2] = static_cast<uint8_t>(f2 * 0xFF);
-						blueNoise[layer].data[x][y][3] = static_cast<uint8_t>(f3 * 0xFF);
-					}
+					blueNoise[x][y][0] = static_cast<uint8_t>(f0 * 0xFF);
+					blueNoise[x][y][1] = static_cast<uint8_t>(f1 * 0xFF);
+					blueNoise[x][y][2] = static_cast<uint8_t>(f2 * 0xFF);
+					blueNoise[x][y][3] = static_cast<uint8_t>(f3 * 0xFF);
 				}
-
-				initdata[layer].pSysMem = blueNoise[layer].data;
-				initdata[layer].SysMemPitch = 4 * 128;
-				initdata[layer].SysMemSlicePitch = 0;
 			}
 
-
-			TextureDesc texDesc;
-			texDesc.Width = 128;
-			texDesc.Height = 128;
-			texDesc.MipLevels = 1;
-			texDesc.ArraySize = layerCount;
-			texDesc.Format = FORMAT_R8G8B8A8_UNORM;
-			texDesc.CPUAccessFlags = 0;
-			texDesc.SampleCount = 1;
-			texDesc.Usage = USAGE_DEFAULT;
-			texDesc.BindFlags = BIND_SHADER_RESOURCE;
-			texDesc.CPUAccessFlags = 0;
-			device->CreateTexture(&texDesc, initdata, &helperTextures[HELPERTEXTURE_BLUENOISE]);
+			CreateTexture(helperTextures[HELPERTEXTURE_BLUENOISE], (uint8_t*)blueNoise, 128, 128, FORMAT_R8G8B8A8_UNORM);
 			device->SetName(&helperTextures[HELPERTEXTURE_BLUENOISE], "HELPERTEXTURE_BLUENOISE");
 		}
 

@@ -33,7 +33,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	}
 	output_tiles[flatTileIdx] = 0;
 
-	const float2 bluenoise = texture_bluenoise[uint3(DTid.xy % 128, g_xFrame_FrameCount % 256)].rg;
+	const float2 bluenoise = blue_noise(DTid.xy).xy;
 #endif // RTSHADOW
 
 	const int2 tile_upperleft = Gid.xy * POSTPROCESS_BLOCKSIZE - TILE_BORDER;

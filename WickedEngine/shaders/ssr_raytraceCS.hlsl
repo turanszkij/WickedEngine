@@ -258,7 +258,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #ifdef GGX_SAMPLE_VISIBLE
         
 #if 1
-		const float2 bluenoise = texture_bluenoise[uint3(DTid.xy % 128, g_xFrame_FrameCount % 256)].rg;
+		const float2 bluenoise = blue_noise(DTid.xy).xy;
 
 		float2 Xi = bluenoise.xy;
             

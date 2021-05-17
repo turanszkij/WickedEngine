@@ -22,7 +22,7 @@ TEXTURE2DARRAY(texture_shadowarray_transparent_2d, float4, TEXSLOT_SHADOWARRAY_T
 TEXTURECUBEARRAY(texture_shadowarray_transparent_cube, float4, TEXSLOT_SHADOWARRAY_TRANSPARENT_CUBE);
 TEXTURE3D(texture_voxelradiance, float4, TEXSLOT_VOXELRADIANCE);
 TEXTURE2D(texture_sheenlut, float, TEXSLOT_SHEENLUT);
-TEXTURE2DARRAY(texture_bluenoise, float4, TEXSLOT_BLUENOISE);
+TEXTURE2D(texture_bluenoise, float4, TEXSLOT_BLUENOISE);
 STRUCTUREDBUFFER(EntityArray, ShaderEntity, SBSLOT_ENTITYARRAY);
 STRUCTUREDBUFFER(MatrixArray, float4x4, SBSLOT_MATRIXARRAY);
 
@@ -80,6 +80,10 @@ float3 inverseTonemap(float3 x)
 	return x / (1 - x);
 }
 
+inline float4 blue_noise(uint2 pixel)
+{
+	return frac(texture_bluenoise[pixel % 128].rgba + (g_xFrame_FrameCount & 0xFF) * GOLDEN_RATIO);
+}
 
 // Helpers:
 
