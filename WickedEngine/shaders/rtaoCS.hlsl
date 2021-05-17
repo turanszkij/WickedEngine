@@ -2,7 +2,6 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 #include "raytracingHF.hlsli"
-#include "stochasticSSRHF.hlsli"
 
 RWTEXTURE2D(output, unorm float, 0);
 RWTEXTURE2D(output_normals, float3, 1);

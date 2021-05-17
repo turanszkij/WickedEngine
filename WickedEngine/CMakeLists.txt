@@ -97,7 +97,6 @@ add_library(${TARGET_NAME} STATIC
 	wiVersion.cpp
 	wiWidget.cpp
 	wiXInput.cpp
-	wiBlueNoise.cpp
 	wiShaderCompiler.cpp
 )
 

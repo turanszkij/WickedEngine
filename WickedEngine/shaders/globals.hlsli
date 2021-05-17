@@ -22,6 +22,7 @@ TEXTURE2DARRAY(texture_shadowarray_transparent_2d, float4, TEXSLOT_SHADOWARRAY_T
 TEXTURECUBEARRAY(texture_shadowarray_transparent_cube, float4, TEXSLOT_SHADOWARRAY_TRANSPARENT_CUBE);
 TEXTURE3D(texture_voxelradiance, float4, TEXSLOT_VOXELRADIANCE);
 TEXTURE2D(texture_sheenlut, float, TEXSLOT_SHEENLUT);
+TEXTURE2DARRAY(texture_bluenoise, float4, TEXSLOT_BLUENOISE);
 STRUCTUREDBUFFER(EntityArray, ShaderEntity, SBSLOT_ENTITYARRAY);
 STRUCTUREDBUFFER(MatrixArray, float4x4, SBSLOT_MATRIXARRAY);
 
@@ -41,6 +42,7 @@ SAMPLERSTATE(			sampler_objectshader,	SSLOT_OBJECTSHADER	);
 #define SQRT2 1.41421356237309504880
 #define FLT_MAX 3.402823466e+38
 #define FLT_EPSILON 1.192092896e-07
+#define GOLDEN_RATIO 1.6180339887
 
 #define sqr(a)		((a)*(a))
 
@@ -257,6 +259,24 @@ inline float3 SampleHemisphere_uniform(in float3 normal, inout float seed, in fl
 inline float3 SampleHemisphere_cos(in float3 normal, inout float seed, in float2 pixel)
 {
 	return mul(hemispherepoint_cos(rand(seed, pixel), rand(seed, pixel)), GetTangentSpace(normal));
+}
+
+
+// "A Low-Discrepancy Sampler that Distributes Monte Carlo Errors as a Blue Noise in Screen Space" by Heitz et al.
+float BNDSequenceSample(uint2 pixelCoord, uint sampleIndex, uint sampleDimension)
+{
+	return texture_bluenoise[uint3(pixelCoord % 128, sampleIndex % 256)].rgba[sampleDimension % 4];
+}
+float blue_rand(in uint2 pixelCoord, inout uint sam)
+{
+	float val = BNDSequenceSample(pixelCoord, g_xFrame_FrameCount, sam);
+	sam++;
+	return val;
+}
+// Get random hemisphere sample in world-space along the normal (cosine-weighted distribution)
+inline float3 blue_SampleHemisphere_cos(in float3 normal, inout uint seed, in uint2 pixel)
+{
+	return mul(hemispherepoint_cos(blue_rand(pixel, seed), blue_rand(pixel, seed)), GetTangentSpace(normal));
 }
 
 // Reconstructs world-space position from depth buffer

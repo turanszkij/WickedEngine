@@ -2,6 +2,7 @@ set (SOURCE_FILES
 	utility_common.cpp
 	spirv_reflect.c
 	stb_vorbis.c
+	samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp.cpp
 )
 
 if (WIN32)

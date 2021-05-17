@@ -9,6 +9,9 @@
 
 using namespace wiGraphics;
 
+// from Utility/samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp.cpp
+extern float samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp(int pixel_i, int pixel_j, int sampleIndex, int sampleDimension);
+
 namespace wiTextureHelper
 {
 
@@ -19,6 +22,7 @@ namespace wiTextureHelper
 		HELPERTEXTURE_NORMALMAPDEFAULT,
 		HELPERTEXTURE_BLACKCUBEMAP,
 		HELPERTEXTURE_UINT4,
+		HELPERTEXTURE_BLUENOISE,
 		HELPERTEXTURE_COUNT
 	};
 	wiGraphics::Texture helperTextures[HELPERTEXTURE_COUNT];
@@ -27,6 +31,8 @@ namespace wiTextureHelper
 
 	void Initialize()
 	{
+		GraphicsDevice* device = wiRenderer::GetDevice();
+
 		// Random64x64
 		{
 			uint8_t data[64 * 64 * 4];
@@ -39,7 +45,7 @@ namespace wiTextureHelper
 			}
 
 			CreateTexture(helperTextures[HELPERTEXTURE_RANDOM64X64], data, 64, 64);
-			wiRenderer::GetDevice()->SetName(&helperTextures[HELPERTEXTURE_RANDOM64X64], "HELPERTEXTURE_RANDOM64X64");
+			device->SetName(&helperTextures[HELPERTEXTURE_RANDOM64X64], "HELPERTEXTURE_RANDOM64X64");
 		}
 
 		// ColorGradeDefault
@@ -65,7 +71,7 @@ namespace wiTextureHelper
 			}
 
 			CreateTexture(helperTextures[HELPERTEXTURE_COLORGRADEDEFAULT], data, 256, 16);
-			wiRenderer::GetDevice()->SetName(&helperTextures[HELPERTEXTURE_COLORGRADEDEFAULT], "HELPERTEXTURE_COLORGRADEDEFAULT");
+			device->SetName(&helperTextures[HELPERTEXTURE_COLORGRADEDEFAULT], "HELPERTEXTURE_COLORGRADEDEFAULT");
 		}
 
 		// BlackCubemap
@@ -112,15 +118,65 @@ namespace wiTextureHelper
 				pData[cubeMapFaceIndex].SysMemSlicePitch = 0;
 			}
 
-			wiRenderer::GetDevice()->CreateTexture(&texDesc, &pData[0], &helperTextures[HELPERTEXTURE_BLACKCUBEMAP]);
-			wiRenderer::GetDevice()->SetName(&helperTextures[HELPERTEXTURE_BLACKCUBEMAP], "HELPERTEXTURE_BLACKCUBEMAP");
+			device->CreateTexture(&texDesc, &pData[0], &helperTextures[HELPERTEXTURE_BLACKCUBEMAP]);
+			device->SetName(&helperTextures[HELPERTEXTURE_BLACKCUBEMAP], "HELPERTEXTURE_BLACKCUBEMAP");
 		}
 
 		// UINT4:
 		{
 			uint8_t data[16] = {};
 			CreateTexture(helperTextures[HELPERTEXTURE_UINT4], data, 1, 1, FORMAT_R32G32B32A32_UINT);
-			wiRenderer::GetDevice()->SetName(&helperTextures[HELPERTEXTURE_UINT4], "HELPERTEXTURE_UINT4");
+			device->SetName(&helperTextures[HELPERTEXTURE_UINT4], "HELPERTEXTURE_UINT4");
+		}
+
+		// Blue Noise:
+		{
+			const uint32_t layerCount = 256;
+			struct BlueNoiseLayer
+			{
+				uint8_t data[128][128][4] = {};
+			};
+			std::vector<BlueNoiseLayer> blueNoise(layerCount);
+
+			SubresourceData initdata[layerCount] = {};
+
+			for (int layer = 0; layer < layerCount; ++layer)
+			{
+				for (int x = 0; x < 128; ++x)
+				{
+					for (int y = 0; y < 128; ++y)
+					{
+						float const f0 = samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp(x, y, layer, 0);
+						float const f1 = samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp(x, y, layer, 1);
+						float const f2 = samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp(x, y, layer, 2);
+						float const f3 = samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp(x, y, layer, 3);
+
+						blueNoise[layer].data[x][y][0] = static_cast<uint8_t>(f0 * 0xFF);
+						blueNoise[layer].data[x][y][1] = static_cast<uint8_t>(f1 * 0xFF);
+						blueNoise[layer].data[x][y][2] = static_cast<uint8_t>(f2 * 0xFF);
+						blueNoise[layer].data[x][y][3] = static_cast<uint8_t>(f3 * 0xFF);
+					}
+				}
+
+				initdata[layer].pSysMem = blueNoise[layer].data;
+				initdata[layer].SysMemPitch = 4 * 128;
+				initdata[layer].SysMemSlicePitch = 0;
+			}
+
+
+			TextureDesc texDesc;
+			texDesc.Width = 128;
+			texDesc.Height = 128;
+			texDesc.MipLevels = 1;
+			texDesc.ArraySize = layerCount;
+			texDesc.Format = FORMAT_R8G8B8A8_UNORM;
+			texDesc.CPUAccessFlags = 0;
+			texDesc.SampleCount = 1;
+			texDesc.Usage = USAGE_DEFAULT;
+			texDesc.BindFlags = BIND_SHADER_RESOURCE;
+			texDesc.CPUAccessFlags = 0;
+			device->CreateTexture(&texDesc, initdata, &helperTextures[HELPERTEXTURE_BLUENOISE]);
+			device->SetName(&helperTextures[HELPERTEXTURE_BLUENOISE], "HELPERTEXTURE_BLUENOISE");
 		}
 
 		wiBackLog::post("wiTextureHelper Initialized");
@@ -151,6 +207,11 @@ namespace wiTextureHelper
 		return &helperTextures[HELPERTEXTURE_UINT4];
 	}
 
+	const Texture* getBlueNoise()
+	{
+		return &helperTextures[HELPERTEXTURE_BLUENOISE];
+	}
+
 	const Texture* getWhite()
 	{
 		return getColor(wiColor(255, 255, 255, 255));
@@ -178,6 +239,8 @@ namespace wiTextureHelper
 			return &it->second;
 		}
 
+		GraphicsDevice* device = wiRenderer::GetDevice();
+
 		static const int dim = 1;
 		static const int dataLength = dim * dim * 4;
 		uint8_t data[dataLength];
@@ -194,7 +257,7 @@ namespace wiTextureHelper
 		{
 			return nullptr;
 		}
-		wiRenderer::GetDevice()->SetName(&texture, "HELPERTEXTURE_COLOR");
+		device->SetName(&texture, "HELPERTEXTURE_COLOR");
 
 		colorlock.lock();
 		colorTextures[color.rgba] = texture;
