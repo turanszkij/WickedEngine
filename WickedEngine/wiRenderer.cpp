@@ -1305,6 +1305,8 @@ void LoadShaders()
 		wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_RTSHADOW_DENOISE_TEMPORAL], "rtshadow_denoise_temporalCS.cso"); });
 
 		wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_RTAO], "rtaoCS.cso", SHADERMODEL_6_5); });
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_RTAO_DENOISE_TILECLASSIFICATION], "rtao_denoise_tileclassificationCS.cso"); });
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_RTAO_DENOISE_FILTER], "rtao_denoise_filterCS.cso"); });
 		wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_RTAO_DENOISE_BLUR], "rtao_denoise_blurCS.cso"); });
 		wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_RTAO_DENOISE_TEMPORAL], "rtao_denoise_temporalCS.cso"); });
 	}
@@ -9009,6 +9011,30 @@ void CreateRTAOResources(RTAOResources& res, XMUINT2 resolution)
 	desc.Format = FORMAT_R11G11B10_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.normals);
 	device->SetName(&res.normals, "rtao_normals");
+
+	GPUBufferDesc bd;
+	bd.StructureByteStride = sizeof(uint);
+	bd.ByteWidth = bd.StructureByteStride *
+		((desc.Width + 7) / 8) *
+		((desc.Height + 3) / 4);
+	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+	bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+	device->CreateBuffer(&bd, nullptr, &res.tiles);
+	device->SetName(&res.tiles, "rtshadow_tiles");
+	device->CreateBuffer(&bd, nullptr, &res.metadata);
+	device->SetName(&res.metadata, "rtshadow_metadata");
+
+	desc.Format = FORMAT_R16G16_FLOAT;
+	device->CreateTexture(&desc, nullptr, &res.scratch[0]);
+	device->SetName(&res.scratch[0], "rtshadow_scratch[0]");
+	device->CreateTexture(&desc, nullptr, &res.scratch[1]);
+	device->SetName(&res.scratch[1], "rtshadow_scratch[1]");
+
+	desc.Format = FORMAT_R11G11B10_FLOAT;
+	device->CreateTexture(&desc, nullptr, &res.moments[0]);
+	device->SetName(&res.moments[0], "rtshadow_moments[0]");
+	device->CreateTexture(&desc, nullptr, &res.moments[1]);
+	device->SetName(&res.moments[1], "rtshadow_moments[1]");
 }
 void Postprocess_RTAO(
 	const RTAOResources& res,
@@ -9047,8 +9073,12 @@ void Postprocess_RTAO(
 	device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
-	device->BindUAV(CS, &res.temp, 0, cmd);
-	device->BindUAV(CS, &res.normals, 1, cmd);
+	const GPUResource* uavs[] = {
+		&res.temp,
+		&res.normals,
+		&res.tiles
+	};
+	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
 	PostProcessCB cb;
 	cb.xPPResolution.x = desc.Width;
@@ -9058,6 +9088,7 @@ void Postprocess_RTAO(
 	cb.rtao_range = range;
 	cb.rtao_samplecount = (float)samplecount;
 	cb.rtao_power = power;
+	cb.xPPParams0.w = (float)res.firstframe;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
@@ -9065,6 +9096,7 @@ void Postprocess_RTAO(
 		GPUBarrier barriers[] = {
 			GPUBarrier::Image(&res.temp, res.temp.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
 			GPUBarrier::Image(&res.normals, res.normals.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+			GPUBarrier::Buffer(&res.tiles, BUFFER_STATE_SHADER_RESOURCE_COMPUTE, BUFFER_STATE_UNORDERED_ACCESS),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
@@ -9079,8 +9111,8 @@ void Postprocess_RTAO(
 	{
 		GPUBarrier barriers[] = {
 			GPUBarrier::Memory(),
-			GPUBarrier::Image(&res.temp, IMAGE_LAYOUT_UNORDERED_ACCESS, res.temp.desc.layout),
 			GPUBarrier::Image(&res.normals, IMAGE_LAYOUT_UNORDERED_ACCESS, res.normals.desc.layout),
+			GPUBarrier::Buffer(&res.tiles, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE_COMPUTE),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
@@ -9096,6 +9128,163 @@ void Postprocess_RTAO(
 
 	int temporal_output = device->GetFrameCount() % 2;
 	int temporal_history = 1 - temporal_output;
+
+	// Denoise - Tile Classification:
+	{
+		device->EventBegin("Denoise - Tile Classification", cmd);
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTAO_DENOISE_TILECLASSIFICATION], cmd);
+
+		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
+		device->BindResource(CS, &res.normals, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(CS, &res.tiles, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(CS, &res.moments[temporal_history], TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(CS, &res.scratch[1], TEXSLOT_ONDEMAND3, cmd);
+		device->BindResource(CS, &depth_history, TEXSLOT_ONDEMAND4, cmd);
+
+		const GPUResource* uavs[] = {
+			&res.scratch[0],
+			&res.moments[temporal_output],
+			&res.metadata
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&res.scratch[0], res.scratch[0].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+				GPUBarrier::Image(&res.moments[temporal_output], res.moments[temporal_output].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+				GPUBarrier::Buffer(&res.metadata, BUFFER_STATE_SHADER_RESOURCE_COMPUTE, BUFFER_STATE_UNORDERED_ACCESS)
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->Dispatch(
+			(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			1,
+			cmd
+		);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(),
+				GPUBarrier::Image(&res.scratch[0], IMAGE_LAYOUT_UNORDERED_ACCESS, res.scratch[0].desc.layout),
+				GPUBarrier::Image(&res.moments[temporal_output], IMAGE_LAYOUT_UNORDERED_ACCESS, res.moments[temporal_output].desc.layout),
+				GPUBarrier::Buffer(&res.metadata, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE_COMPUTE)
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->EventEnd(cmd);
+	}
+
+	// Denoise - Spatial filtering:
+	{
+		device->EventBegin("Denoise - Filter", cmd);
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTAO_DENOISE_FILTER], cmd);
+
+		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
+		device->BindResource(CS, &res.normals, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(CS, &res.metadata, TEXSLOT_ONDEMAND1, cmd);
+
+		// pass0:
+		{
+			device->BindResource(CS, &res.scratch[0], TEXSLOT_ONDEMAND2, cmd);
+			const GPUResource* uavs[] = {
+				&res.scratch[1],
+				&res.temp
+			};
+			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Image(&res.scratch[1], res.scratch[1].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+
+			cb.xPPParams1.x = 0;
+			cb.xPPParams1.y = 1;
+			device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+			device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+			device->Dispatch(
+				(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+				(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+				1,
+				cmd
+			);
+		}
+
+		// pass1:
+		{
+			device->BindResource(CS, &res.scratch[1], TEXSLOT_ONDEMAND2, cmd);
+			const GPUResource* uavs[] = {
+				&res.scratch[0],
+				&res.temp
+			};
+			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Memory(),
+					GPUBarrier::Image(&res.scratch[1], IMAGE_LAYOUT_UNORDERED_ACCESS, res.scratch[1].desc.layout),
+					GPUBarrier::Image(&res.scratch[0], res.scratch[0].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+
+			cb.xPPParams1.x = 1;
+			cb.xPPParams1.y = 2;
+			device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+			device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+			device->Dispatch(
+				(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+				(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+				1,
+				cmd
+			);
+		}
+
+		// pass2:
+		{
+			device->BindResource(CS, &res.scratch[0], TEXSLOT_ONDEMAND2, cmd);
+			const GPUResource* uavs[] = {
+				&res.scratch[1],
+				&res.temp
+			};
+			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Memory(),
+					GPUBarrier::Image(&res.scratch[0], IMAGE_LAYOUT_UNORDERED_ACCESS, res.scratch[0].desc.layout),
+					GPUBarrier::Image(&res.scratch[1], res.scratch[0].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+
+			cb.xPPParams1.x = 2;
+			cb.xPPParams1.y = 4;
+			device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+			device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+			device->Dispatch(
+				(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+				(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+				1,
+				cmd
+			);
+		}
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(),
+				GPUBarrier::Image(&res.scratch[1], IMAGE_LAYOUT_UNORDERED_ACCESS, res.scratch[0].desc.layout),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->EventEnd(cmd);
+	}
+	res.firstframe++;
 
 	// Temporal pass:
 	{
@@ -9114,14 +9303,15 @@ void Postprocess_RTAO(
 
 		{
 			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&res.temp, IMAGE_LAYOUT_UNORDERED_ACCESS, res.temp.desc.layout),
 				GPUBarrier::Image(&res.temporal[temporal_output], res.temporal[temporal_output].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
 		device->Dispatch(
-			(res.temporal[temporal_output].GetDesc().Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			(res.temporal[temporal_output].GetDesc().Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
 			1,
 			cmd
 		);
@@ -9138,8 +9328,8 @@ void Postprocess_RTAO(
 		device->EventEnd(cmd);
 	}
 
+#if 0
 	{
-
 		device->EventBegin("Blur Denoise", cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTAO_DENOISE_BLUR], cmd);
@@ -9232,6 +9422,7 @@ void Postprocess_RTAO(
 
 		device->EventEnd(cmd);
 	}
+#endif // BLUR DENOISE
 
 	Postprocess_Upsample_Bilateral(res.temporal[temporal_output], lineardepth, output, cmd);
 
@@ -9765,7 +9956,7 @@ void Postprocess_RTShadow(
 	cb.xPPResolution.y = desc.Height;
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	cb.xPPParams0.x = (float)res.firstframe;
+	cb.xPPParams0.w = (float)res.firstframe;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
@@ -10001,8 +10192,8 @@ void Postprocess_RTShadow(
 		}
 
 		device->Dispatch(
-			(res.temporal[temporal_output].GetDesc().Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			(res.temporal[temporal_output].GetDesc().Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
 			1,
 			cmd
 		);

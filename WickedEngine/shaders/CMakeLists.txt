@@ -145,6 +145,8 @@ set(SHADERS_CS
 		"rtshadow_denoise_filterCS.hlsl"
 		"rtshadow_denoise_temporalCS.hlsl"
 		"rtaoCS.hlsl"
+		"rtao_denoise_tileclassificationCS.hlsl"
+		"rtao_denoise_filterCS.hlsl"
 		"rtao_denoise_blurCS.hlsl"
 		"rtao_denoise_temporalCS.hlsl"
 )

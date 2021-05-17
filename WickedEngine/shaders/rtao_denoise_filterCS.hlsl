@@ -10,7 +10,7 @@ STRUCTUREDBUFFER(metadata, uint, TEXSLOT_ONDEMAND1);
 TEXTURE2D(input, float16_t2, TEXSLOT_ONDEMAND2);
 
 RWTEXTURE2D(history, float2, 0);
-RWTEXTURE2D(output, uint4, 1);
+RWTEXTURE2D(output, unorm float, 1);
 
 uint2 FFX_DNSR_Shadows_GetBufferDimensions()
 {
@@ -82,11 +82,7 @@ void main(uint2 gid : SV_GroupID, uint2 gtid : SV_GroupThreadID, uint2 did : SV_
 
 		if (bWriteOutput)
 		{
-			// replace shadow mask with denoised result:
-			uint shadow_mask = output[did].x;
-			shadow_mask &= ~0xFF;
-			shadow_mask |= uint(mean * 255) & 0xFF;
-			output[did].x = shadow_mask;
+			output[did].x = pow(mean, rtao_power);
 		}
 	}
 }

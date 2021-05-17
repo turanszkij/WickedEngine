@@ -219,6 +219,8 @@ int main(int argc, char* argv[])
 		"rtshadow_denoise_filterCS.hlsl"							,
 		"rtshadow_denoise_temporalCS.hlsl"							,
 		"rtaoCS.hlsl"												,
+		"rtao_denoise_tileclassificationCS.hlsl",
+		"rtao_denoise_filterCS.hlsl",
 		"rtao_denoise_blurCS.hlsl"									,
 		"rtao_denoise_temporalCS.hlsl"								,
 	};
@@ -394,6 +396,8 @@ int main(int argc, char* argv[])
 	minshadermodels["rtshadow_denoise_filterCS.hlsl"] = wiGraphics::SHADERMODEL_6_0;
 	minshadermodels["rtshadow_denoise_temporalCS.hlsl"] = wiGraphics::SHADERMODEL_6_0;
 	minshadermodels["rtaoCS.hlsl"] = wiGraphics::SHADERMODEL_6_5;
+	minshadermodels["rtao_denoise_tileclassificationCS.hlsl"] = wiGraphics::SHADERMODEL_6_0;
+	minshadermodels["rtao_denoise_filterCS.hlsl"] = wiGraphics::SHADERMODEL_6_0;
 	minshadermodels["rtao_denoise_blurCS.hlsl"] = wiGraphics::SHADERMODEL_6_0;
 	minshadermodels["rtao_denoise_temporalCS.hlsl"] = wiGraphics::SHADERMODEL_6_0;
 

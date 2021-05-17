@@ -8,7 +8,7 @@ TEXTURE2D(texture_depth_history, float, TEXSLOT_ONDEMAND2);
 
 RWTEXTURE2D(output, unorm float, 0);
 
-static const float temporalResponseMin = 0.9;
+static const float temporalResponseMin = 0.88;
 static const float temporalResponseMax = 1.0f;
 static const float temporalScale = 2.0;
 static const float temporalExposure = 10.0f;

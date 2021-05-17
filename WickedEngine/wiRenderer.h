@@ -380,6 +380,12 @@ namespace wiRenderer
 		wiGraphics::Texture temp;
 		wiGraphics::Texture temporal[2];
 		wiGraphics::Texture normals;
+
+		mutable int firstframe = 0;
+		wiGraphics::GPUBuffer tiles;
+		wiGraphics::GPUBuffer metadata;
+		wiGraphics::Texture scratch[2];
+		wiGraphics::Texture moments[2];
 	};
 	void CreateRTAOResources(RTAOResources& res, XMUINT2 resolution);
 	void Postprocess_RTAO(
@@ -430,7 +436,6 @@ namespace wiRenderer
 	);
 	struct RTShadowResources
 	{
-		wiGraphics::TextureDesc saved_desc;
 		wiGraphics::Texture temp;
 		wiGraphics::Texture temporal[2];
 		wiGraphics::Texture normals;

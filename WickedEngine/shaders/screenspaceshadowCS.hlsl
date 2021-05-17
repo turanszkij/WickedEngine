@@ -369,7 +369,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 
 	uint2 pixel_pos = DTid.xy;
 	int lane_index = (pixel_pos.y % 4) * 8 + (pixel_pos.x % 8);
-	uint bit = (shadow_mask[0] & 0xFF) ? 0 : (1u << lane_index);
+	uint bit = (shadow_mask[0] & 0xFF) ? (1u << lane_index) : 0;
 	InterlockedOr(output_tiles[flatTileIdx], bit);
 #endif // RTSHADOW
 }

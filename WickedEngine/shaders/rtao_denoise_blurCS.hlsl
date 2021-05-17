@@ -10,7 +10,10 @@ TEXTURE2D(texture_normals, float3, TEXSLOT_ONDEMAND1);
 
 RWTEXTURE2D(output, BLUR_FORMAT, 0);
 
+#define BLUR_WIDE
+
 // Calculate gaussian weights online: http://dev.theomader.com/gaussian-kernel-calculator/
+#ifdef BLUR_WIDE
 static const int GAUSS_KERNEL = 33;
 static const float gaussianWeightsNormalized[GAUSS_KERNEL] = {
 	0.004013,
@@ -82,6 +85,31 @@ static const int gaussianOffsets[GAUSS_KERNEL] = {
 	15,
 	16,
 };
+#else
+static const int GAUSS_KERNEL = 9;
+static const float gaussianWeightsNormalized[GAUSS_KERNEL] = {
+	0.004112,
+	0.026563,
+	0.100519,
+	0.223215,
+	0.29118,
+	0.223215,
+	0.100519,
+	0.026563,
+	0.004112
+};
+static const int gaussianOffsets[GAUSS_KERNEL] = {
+	-4,
+	-3,
+	-2,
+	-1,
+	0,
+	1,
+	2,
+	3,
+	4
+};
+#endif // BLUR_WIDE
 
 static const int TILE_BORDER = GAUSS_KERNEL / 2;
 static const int CACHE_SIZE = TILE_BORDER + POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT + TILE_BORDER;
@@ -142,5 +170,5 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 		color += lerp(color2, center_color, max(weight1, weight2)) * gaussianWeightsNormalized[i];
 	}
 
-	output[pixel] = center_color;
+	output[pixel] = color;
 }
