@@ -3433,10 +3433,11 @@ using namespace Vulkan_Internal;
 			uint32_t width = imageInfo.extent.width;
 			uint32_t height = imageInfo.extent.height;
 			uint32_t depth = imageInfo.extent.depth;
+			uint32_t layers = pDesc->ArraySize;
 			for (uint32_t mip = 0; mip < pDesc->MipLevels; ++mip)
 			{
 				const SubresourceData& subresourceData = pInitialData[initDataIdx++];
-				size_t cpysize = subresourceData.SysMemPitch * height * depth;
+				size_t cpysize = subresourceData.SysMemPitch * height * depth * layers;
 				if (IsFormatBlockCompressed(pDesc->Format))
 				{
 					cpysize /= 4;
@@ -3452,7 +3453,7 @@ using namespace Vulkan_Internal;
 				copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				copyRegion.imageSubresource.mipLevel = mip;
 				copyRegion.imageSubresource.baseArrayLayer = 0;
-				copyRegion.imageSubresource.layerCount = 1;
+				copyRegion.imageSubresource.layerCount = layers;
 
 				copyRegion.imageOffset = { 0, 0, 0 };
 				copyRegion.imageExtent = {
