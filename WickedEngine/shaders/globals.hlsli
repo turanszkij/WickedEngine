@@ -261,24 +261,6 @@ inline float3 SampleHemisphere_cos(in float3 normal, inout float seed, in float2
 	return mul(hemispherepoint_cos(rand(seed, pixel), rand(seed, pixel)), GetTangentSpace(normal));
 }
 
-
-// "A Low-Discrepancy Sampler that Distributes Monte Carlo Errors as a Blue Noise in Screen Space" by Heitz et al.
-float BNDSequenceSample(uint2 pixelCoord, uint sampleIndex, uint sampleDimension)
-{
-	return texture_bluenoise[uint3(pixelCoord % 128, sampleIndex % 256)].rgba[sampleDimension % 4];
-}
-float blue_rand(in uint2 pixelCoord, inout uint sam)
-{
-	float val = BNDSequenceSample(pixelCoord, g_xFrame_FrameCount, sam);
-	sam++;
-	return val;
-}
-// Get random hemisphere sample in world-space along the normal (cosine-weighted distribution)
-inline float3 blue_SampleHemisphere_cos(in float3 normal, inout uint seed, in uint2 pixel)
-{
-	return mul(hemispherepoint_cos(blue_rand(pixel, seed), blue_rand(pixel, seed)), GetTangentSpace(normal));
-}
-
 // Reconstructs world-space position from depth buffer
 //	uv		: screen space coordinate in [0, 1] range
 //	z		: depth value at current pixel

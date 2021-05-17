@@ -142,5 +142,5 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 		color += lerp(color2, center_color, max(weight1, weight2)) * gaussianWeightsNormalized[i];
 	}
 
-	output[pixel] = color;
+	output[pixel] = center_color;
 }

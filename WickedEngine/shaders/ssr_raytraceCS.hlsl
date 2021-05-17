@@ -258,25 +258,24 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #ifdef GGX_SAMPLE_VISIBLE
         
 #if 1
-        
-        	float2 Xi;
-            Xi.x = BNDSequenceSample(DTid.xy, g_xFrame_FrameCount, 0);
-			Xi.y = BNDSequenceSample(DTid.xy, g_xFrame_FrameCount, 1);
-            
-			Xi.y = lerp(Xi.y, 0.0f, GGX_IMPORTANCE_SAMPLE_BIAS);
+		const float2 bluenoise = texture_bluenoise[uint3(DTid.xy % 128, g_xFrame_FrameCount % 256)].rg;
 
-			H = ImportanceSampleVisibleGGX(SampleDisk(Xi), roughness, tangentV);
+		float2 Xi = bluenoise.xy;
+            
+		Xi.y = lerp(Xi.y, 0.0f, GGX_IMPORTANCE_SAMPLE_BIAS);
+
+		H = ImportanceSampleVisibleGGX(SampleDisk(Xi), roughness, tangentV);
         
 #else // Old
         
-            // Low-discrepancy sequence
-			uint2 Random = Rand_PCG16(int3((DTid.xy + 0.5f), g_xFrame_FrameCount)).xy;
+        // Low-discrepancy sequence
+		uint2 Random = Rand_PCG16(int3((DTid.xy + 0.5f), g_xFrame_FrameCount)).xy;
             
-			float2 Xi = HammersleyRandom16(1, Random); // SingleSPP
+		float2 Xi = HammersleyRandom16(1, Random); // SingleSPP
             
-			Xi.y = lerp(Xi.y, 0.0f, GGX_IMPORTANCE_SAMPLE_BIAS);
+		Xi.y = lerp(Xi.y, 0.0f, GGX_IMPORTANCE_SAMPLE_BIAS);
             
-			H = ImportanceSampleVisibleGGX(SampleDisk(Xi), roughness, tangentV);
+		H = ImportanceSampleVisibleGGX(SampleDisk(Xi), roughness, tangentV);
         
 #endif
 

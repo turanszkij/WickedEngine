@@ -32,6 +32,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 		flatTileIdx = flatten2D(Gid.xy * uint2(1, 2) + uint2(0, 1), (xPPResolution + uint2(7, 3)) / uint2(8, 4));
 	}
 	output_tiles[flatTileIdx] = 0;
+
+	const float2 bluenoise = texture_bluenoise[uint3(DTid.xy % 128, g_xFrame_FrameCount % 256)].rg;
 #endif // RTSHADOW
 
 	const int2 tile_upperleft = Gid.xy * POSTPROCESS_BLOCKSIZE - TILE_BORDER;
@@ -253,7 +255,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 						uint seed = 0;
 						float shadow = 0;
 
-						ray.Direction = normalize(lerp(L, blue_SampleHemisphere_cos(L, seed, DTid.xy), 0.025));
+						ray.Direction = normalize(lerp(L, mul(hemispherepoint_cos(bluenoise.x, bluenoise.y), GetTangentSpace(L)), 0.025));
 
 #ifdef RTAPI
 						RayQuery<

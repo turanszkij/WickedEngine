@@ -82,64 +82,61 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	ray.TMax = rtao_range;
 	ray.Origin = P;
 
+	const float2 bluenoise = texture_bluenoise[uint3(DTid.xy % 128, g_xFrame_FrameCount % 256)].rg;
+
+	ray.Direction = normalize(mul(hemispherepoint_cos(bluenoise.x, bluenoise.y), GetTangentSpace(N)));
+
 	float shadow = 0;
 
-	for (uint i = 0; i < (uint)rtao_samplecount; ++i)
-	{
-		ray.Direction = normalize(blue_SampleHemisphere_cos(N, seed, DTid.xy));
-
 #ifdef RTAPI
-		RayQuery<
-			RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES
-		> q;
-		q.TraceRayInline(
-			scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
-			0,								// uint RayFlags
-			0xFF,							// uint InstanceInclusionMask
-			ray								// RayDesc Ray
-		);
-		while (q.Proceed())
+	RayQuery<
+		RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES
+	> q;
+	q.TraceRayInline(
+		scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
+		0,								// uint RayFlags
+		0xFF,							// uint InstanceInclusionMask
+		ray								// RayDesc Ray
+	);
+	while (q.Proceed())
+	{
+		ShaderMesh mesh = bindless_buffers[q.CandidateInstanceID()].Load<ShaderMesh>(0);
+		ShaderMeshSubset subset = bindless_subsets[mesh.subsetbuffer][q.CandidateGeometryIndex()];
+		ShaderMaterial material = bindless_buffers[subset.material].Load<ShaderMaterial>(0);
+		[branch]
+		if (!material.IsCastingShadow())
 		{
-			ShaderMesh mesh = bindless_buffers[q.CandidateInstanceID()].Load<ShaderMesh>(0);
-			ShaderMeshSubset subset = bindless_subsets[mesh.subsetbuffer][q.CandidateGeometryIndex()];
-			ShaderMaterial material = bindless_buffers[subset.material].Load<ShaderMaterial>(0);
-			[branch]
-			if (!material.IsCastingShadow())
-			{
-				continue;
-			}
-			[branch]
-			if (material.texture_basecolormap_index < 0)
-			{
-				q.CommitNonOpaqueTriangleHit();
-				break;
-			}
-
-			Surface surface;
-			EvaluateObjectSurface(
-				mesh,
-				subset,
-				material,
-				q.CandidatePrimitiveIndex(),
-				q.CandidateTriangleBarycentrics(),
-				q.CandidateObjectToWorld3x4(),
-				surface
-			);
-
-			[branch]
-			if (surface.opacity >= material.alphaTest)
-			{
-				q.CommitNonOpaqueTriangleHit();
-				break;
-			}
+			continue;
 		}
-		shadow += q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ? 0 : 1;
-#else
-		shadow += TraceRay_Any(newRay, groupIndex) ? 0 : 1;
-#endif // RTAPI
+		[branch]
+		if (material.texture_basecolormap_index < 0)
+		{
+			q.CommitNonOpaqueTriangleHit();
+			break;
+		}
 
+		Surface surface;
+		EvaluateObjectSurface(
+			mesh,
+			subset,
+			material,
+			q.CandidatePrimitiveIndex(),
+			q.CandidateTriangleBarycentrics(),
+			q.CandidateObjectToWorld3x4(),
+			surface
+		);
+
+		[branch]
+		if (surface.opacity >= material.alphaTest)
+		{
+			q.CommitNonOpaqueTriangleHit();
+			break;
+		}
 	}
-	shadow /= rtao_samplecount;
+	shadow = q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ? 0 : 1;
+#else
+	shadow = TraceRay_Any(newRay, groupIndex) ? 0 : 1;
+#endif // RTAPI
 
 	output[DTid.xy] = pow(saturate(shadow), rtao_power);
 	output_normals[DTid.xy] = saturate(N * 0.5 + 0.5);
