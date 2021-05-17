@@ -3638,6 +3638,8 @@ void UpdatePerFrameData(
 	frameCB.g_xFrame_WorldBoundsExtents_rcp.y = 1.0f / frameCB.g_xFrame_WorldBoundsExtents.y;
 	frameCB.g_xFrame_WorldBoundsExtents_rcp.z = 1.0f / frameCB.g_xFrame_WorldBoundsExtents.z;
 
+	frameCB.g_xFrame_BlueNoisePhase = (frameCB.g_xFrame_FrameCount & 0xFF) * 1.6180339887f;
+
 	frameCB.g_xFrame_Options = 0;
 	if (GetTemporalAAEnabled())
 	{

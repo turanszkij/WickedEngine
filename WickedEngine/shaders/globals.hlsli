@@ -82,7 +82,7 @@ float3 inverseTonemap(float3 x)
 
 inline float4 blue_noise(uint2 pixel)
 {
-	return frac(texture_bluenoise[pixel % 128].rgba + (g_xFrame_FrameCount & 0xFF) * GOLDEN_RATIO);
+	return frac(texture_bluenoise[pixel % 128].rgba + g_xFrame_BlueNoisePhase);
 }
 
 // Helpers:

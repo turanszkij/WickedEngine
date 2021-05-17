@@ -447,7 +447,7 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float		g_xFrame_ShadowKernel2D;
 	float		g_xFrame_ShadowKernelCube;
 	int			g_xFrame_ObjectShaderSamplerIndex;
-	int			g_xFrame_padding1;
+	float		g_xFrame_BlueNoisePhase;
 
 	AtmosphereParameters g_xFrame_Atmosphere;
 };
