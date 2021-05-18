@@ -25,7 +25,6 @@ CBUFFER(PostProcessCB, CBSLOT_RENDERER_POSTPROCESS)
 #define ssao_power xPPParams0.z
 
 #define rtao_range ssao_range
-#define rtao_samplecount ssao_samplecount
 #define rtao_power ssao_power
 
 #define rtreflection_range ssao_range

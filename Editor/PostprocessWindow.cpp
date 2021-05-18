@@ -88,8 +88,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 		case RenderPath3D::AO_RTAO:
 			aoRangeSlider.SetEnabled(true); 
 			aoRangeSlider.SetValue(10.0f);
-			aoSampleCountSlider.SetEnabled(true); 
-			aoSampleCountSlider.SetValue(2.0f);
+			aoSampleCountSlider.SetEnabled(false);
 			break;
 		default:
 			aoRangeSlider.SetEnabled(false);
@@ -123,7 +122,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	AddWidget(&aoRangeSlider);
 
 	aoSampleCountSlider.Create(1, 16, 9, 15, "Sample Count: ");
-	aoSampleCountSlider.SetTooltip("Set AO ray count. Only for SSAO and RTAO");
+	aoSampleCountSlider.SetTooltip("Set AO ray count. Only for SSAO");
 	aoSampleCountSlider.SetSize(XMFLOAT2(100, hei));
 	aoSampleCountSlider.SetPos(XMFLOAT2(x + 100, y += step));
 	aoSampleCountSlider.SetValue((float)editor->renderPath->getAOPower());

@@ -397,7 +397,6 @@ namespace wiRenderer
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd,
 		float range = 1.0f,
-		uint32_t samplecount = 16,
 		float power = 2.0f
 	);
 	struct RTReflectionResources

@@ -1083,7 +1083,6 @@ void RenderPath3D::RenderAO(CommandList cmd) const
 				rtAO,
 				cmd,
 				getAORange(),
-				getAOSampleCount(),
 				getAOPower()
 			);
 			break;

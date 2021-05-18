@@ -9041,7 +9041,6 @@ void Postprocess_RTAO(
 	const Texture& output,
 	CommandList cmd,
 	float range,
-	uint32_t samplecount,
 	float power
 )
 {
@@ -9081,7 +9080,6 @@ void Postprocess_RTAO(
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.rtao_range = range;
-	cb.rtao_samplecount = (float)samplecount;
 	cb.rtao_power = power;
 	cb.xPPParams0.w = (float)res.frame;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
