@@ -108,7 +108,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 
 		float result = lerp(current, previous, blendFinal);
 
-		if (shadow_index < 1)
+		if (shadow_index < 4)
 			result = current;
 
 		store_shadow(result, shadow_index, shadow_mask);

@@ -9270,7 +9270,7 @@ void Postprocess_RTAO(
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Memory(),
-				GPUBarrier::Image(&res.scratch[1], IMAGE_LAYOUT_UNORDERED_ACCESS, res.scratch[0].desc.layout),
+				GPUBarrier::Image(&res.scratch[1], IMAGE_LAYOUT_UNORDERED_ACCESS, res.scratch[1].desc.layout),
 				GPUBarrier::Image(&res.temp, IMAGE_LAYOUT_UNORDERED_ACCESS, res.temp.desc.layout),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
@@ -9753,7 +9753,7 @@ void CreateRTShadowResources(RTShadowResources& res, XMUINT2 resolution)
 	device->SetName(&res.normals, "rtshadow_normals");
 
 	GPUBufferDesc bd;
-	bd.StructureByteStride = sizeof(uint);
+	bd.StructureByteStride = sizeof(uint4);
 	bd.ByteWidth = bd.StructureByteStride *
 		((desc.Width + 7) / 8) *
 		((desc.Height + 3) / 4);
@@ -9764,17 +9764,20 @@ void CreateRTShadowResources(RTShadowResources& res, XMUINT2 resolution)
 	device->CreateBuffer(&bd, nullptr, &res.metadata);
 	device->SetName(&res.metadata, "rtshadow_metadata");
 
-	desc.Format = FORMAT_R16G16_FLOAT;
-	device->CreateTexture(&desc, nullptr, &res.scratch[0]);
-	device->SetName(&res.scratch[0], "rtshadow_scratch[0]");
-	device->CreateTexture(&desc, nullptr, &res.scratch[1]);
-	device->SetName(&res.scratch[1], "rtshadow_scratch[1]");
+	for (int i = 0; i < 4; ++i)
+	{
+		desc.Format = FORMAT_R16G16_FLOAT;
+		device->CreateTexture(&desc, nullptr, &res.scratch[i][0]);
+		device->SetName(&res.scratch[i][0], "rtshadow_scratch[i][0]");
+		device->CreateTexture(&desc, nullptr, &res.scratch[i][1]);
+		device->SetName(&res.scratch[i][1], "rtshadow_scratch[i][1]");
 
-	desc.Format = FORMAT_R11G11B10_FLOAT;
-	device->CreateTexture(&desc, nullptr, &res.moments[0]);
-	device->SetName(&res.moments[0], "rtshadow_moments[0]");
-	device->CreateTexture(&desc, nullptr, &res.moments[1]);
-	device->SetName(&res.moments[1], "rtshadow_moments[1]");
+		desc.Format = FORMAT_R11G11B10_FLOAT;
+		device->CreateTexture(&desc, nullptr, &res.moments[i][0]);
+		device->SetName(&res.moments[i][0], "rtshadow_moments[i][0]");
+		device->CreateTexture(&desc, nullptr, &res.moments[i][1]);
+		device->SetName(&res.moments[i][1], "rtshadow_moments[i][1]");
+	}
 }
 void Postprocess_RTShadow(
 	const RTShadowResources& res,
@@ -9872,23 +9875,41 @@ void Postprocess_RTShadow(
 
 		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 		device->BindResource(CS, &res.normals, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(CS, &res.tiles, TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(CS, &res.moments[temporal_history], TEXSLOT_ONDEMAND2, cmd);
-		device->BindResource(CS, &res.scratch[1], TEXSLOT_ONDEMAND3, cmd);
-		device->BindResource(CS, &depth_history, TEXSLOT_ONDEMAND4, cmd);
+		device->BindResource(CS, &depth_history, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(CS, &res.tiles, TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(CS, &res.moments[0][temporal_history], TEXSLOT_ONDEMAND3, cmd);
+		device->BindResource(CS, &res.moments[1][temporal_history], TEXSLOT_ONDEMAND4, cmd);
+		device->BindResource(CS, &res.moments[2][temporal_history], TEXSLOT_ONDEMAND5, cmd);
+		device->BindResource(CS, &res.moments[3][temporal_history], TEXSLOT_ONDEMAND6, cmd);
+		device->BindResource(CS, &res.scratch[0][1], TEXSLOT_ONDEMAND7, cmd);
+		device->BindResource(CS, &res.scratch[1][1], TEXSLOT_ONDEMAND8, cmd);
+		device->BindResource(CS, &res.scratch[2][1], TEXSLOT_ONDEMAND9, cmd);
+		device->BindResource(CS, &res.scratch[3][1], TEXSLOT_ONDEMAND10, cmd);
 
 		const GPUResource* uavs[] = {
-			&res.scratch[0],
-			&res.moments[temporal_output],
-			&res.metadata
+			&res.metadata,
+			&res.scratch[0][0],
+			&res.scratch[1][0],
+			&res.scratch[2][0],
+			&res.scratch[3][0],
+			&res.moments[0][temporal_output],
+			&res.moments[1][temporal_output],
+			&res.moments[2][temporal_output],
+			&res.moments[3][temporal_output],
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&res.scratch[0], res.scratch[0].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
-				GPUBarrier::Image(&res.moments[temporal_output], res.moments[temporal_output].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
-				GPUBarrier::Buffer(&res.metadata, BUFFER_STATE_SHADER_RESOURCE_COMPUTE, BUFFER_STATE_UNORDERED_ACCESS)
+				GPUBarrier::Buffer(&res.metadata, BUFFER_STATE_SHADER_RESOURCE_COMPUTE, BUFFER_STATE_UNORDERED_ACCESS),
+				GPUBarrier::Image(&res.scratch[0][0], res.scratch[0][0].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+				GPUBarrier::Image(&res.scratch[1][0], res.scratch[1][0].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+				GPUBarrier::Image(&res.scratch[2][0], res.scratch[2][0].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+				GPUBarrier::Image(&res.scratch[3][0], res.scratch[3][0].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+				GPUBarrier::Image(&res.moments[0][temporal_output], res.moments[0][temporal_output].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+				GPUBarrier::Image(&res.moments[1][temporal_output], res.moments[1][temporal_output].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+				GPUBarrier::Image(&res.moments[2][temporal_output], res.moments[2][temporal_output].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+				GPUBarrier::Image(&res.moments[3][temporal_output], res.moments[3][temporal_output].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -9896,16 +9917,22 @@ void Postprocess_RTShadow(
 		device->Dispatch(
 			(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
 			(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			1,
+			4, // 4 lights
 			cmd
 		);
 
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Memory(),
-				GPUBarrier::Image(&res.scratch[0], IMAGE_LAYOUT_UNORDERED_ACCESS, res.scratch[0].desc.layout),
-				GPUBarrier::Image(&res.moments[temporal_output], IMAGE_LAYOUT_UNORDERED_ACCESS, res.moments[temporal_output].desc.layout),
-				GPUBarrier::Buffer(&res.metadata, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE_COMPUTE)
+				GPUBarrier::Buffer(&res.metadata, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE_COMPUTE),
+				GPUBarrier::Image(&res.scratch[0][0], IMAGE_LAYOUT_UNORDERED_ACCESS, res.scratch[0][0].desc.layout),
+				GPUBarrier::Image(&res.scratch[1][0], IMAGE_LAYOUT_UNORDERED_ACCESS, res.scratch[1][0].desc.layout),
+				GPUBarrier::Image(&res.scratch[2][0], IMAGE_LAYOUT_UNORDERED_ACCESS, res.scratch[2][0].desc.layout),
+				GPUBarrier::Image(&res.scratch[3][0], IMAGE_LAYOUT_UNORDERED_ACCESS, res.scratch[3][0].desc.layout),
+				GPUBarrier::Image(&res.moments[0][temporal_output], IMAGE_LAYOUT_UNORDERED_ACCESS, res.moments[0][temporal_output].desc.layout),
+				GPUBarrier::Image(&res.moments[1][temporal_output], IMAGE_LAYOUT_UNORDERED_ACCESS, res.moments[1][temporal_output].desc.layout),
+				GPUBarrier::Image(&res.moments[2][temporal_output], IMAGE_LAYOUT_UNORDERED_ACCESS, res.moments[2][temporal_output].desc.layout),
+				GPUBarrier::Image(&res.moments[3][temporal_output], IMAGE_LAYOUT_UNORDERED_ACCESS, res.moments[3][temporal_output].desc.layout),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -9925,15 +9952,24 @@ void Postprocess_RTShadow(
 
 		// pass0:
 		{
-			device->BindResource(CS, &res.scratch[0], TEXSLOT_ONDEMAND2, cmd);
+			device->BindResource(CS, &res.scratch[0][0], TEXSLOT_ONDEMAND2, cmd);
+			device->BindResource(CS, &res.scratch[1][0], TEXSLOT_ONDEMAND3, cmd);
+			device->BindResource(CS, &res.scratch[2][0], TEXSLOT_ONDEMAND4, cmd);
+			device->BindResource(CS, &res.scratch[3][0], TEXSLOT_ONDEMAND5, cmd);
 			const GPUResource* uavs[] = {
-				&res.scratch[1],
+				&res.scratch[0][1],
+				&res.scratch[1][1],
+				&res.scratch[2][1],
+				&res.scratch[3][1],
 				&res.temp
 			};
 			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 			{
 				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&res.scratch[1], res.scratch[1].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+					GPUBarrier::Image(&res.scratch[0][1], res.scratch[0][1].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+					GPUBarrier::Image(&res.scratch[1][1], res.scratch[1][1].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+					GPUBarrier::Image(&res.scratch[2][1], res.scratch[2][1].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+					GPUBarrier::Image(&res.scratch[3][1], res.scratch[3][1].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
@@ -9946,24 +9982,36 @@ void Postprocess_RTShadow(
 			device->Dispatch(
 				(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
 				(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-				1,
+				4, // 4 lights
 				cmd
 			);
 		}
 
 		// pass1:
 		{
-			device->BindResource(CS, &res.scratch[1], TEXSLOT_ONDEMAND2, cmd);
+			device->BindResource(CS, &res.scratch[0][1], TEXSLOT_ONDEMAND2, cmd);
+			device->BindResource(CS, &res.scratch[1][1], TEXSLOT_ONDEMAND3, cmd);
+			device->BindResource(CS, &res.scratch[2][1], TEXSLOT_ONDEMAND4, cmd);
+			device->BindResource(CS, &res.scratch[3][1], TEXSLOT_ONDEMAND5, cmd);
 			const GPUResource* uavs[] = {
-				&res.scratch[0],
+				&res.scratch[0][0],
+				&res.scratch[1][0],
+				&res.scratch[2][0],
+				&res.scratch[3][0],
 				&res.temp
 			};
 			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 			{
 				GPUBarrier barriers[] = {
 					GPUBarrier::Memory(),
-					GPUBarrier::Image(&res.scratch[1], IMAGE_LAYOUT_UNORDERED_ACCESS, res.scratch[1].desc.layout),
-					GPUBarrier::Image(&res.scratch[0], res.scratch[0].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+					GPUBarrier::Image(&res.scratch[0][1], IMAGE_LAYOUT_UNORDERED_ACCESS, res.scratch[0][1].desc.layout),
+					GPUBarrier::Image(&res.scratch[1][1], IMAGE_LAYOUT_UNORDERED_ACCESS, res.scratch[1][1].desc.layout),
+					GPUBarrier::Image(&res.scratch[2][1], IMAGE_LAYOUT_UNORDERED_ACCESS, res.scratch[2][1].desc.layout),
+					GPUBarrier::Image(&res.scratch[3][1], IMAGE_LAYOUT_UNORDERED_ACCESS, res.scratch[3][1].desc.layout),
+					GPUBarrier::Image(&res.scratch[0][0], res.scratch[0][0].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+					GPUBarrier::Image(&res.scratch[1][0], res.scratch[1][0].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+					GPUBarrier::Image(&res.scratch[2][0], res.scratch[2][0].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+					GPUBarrier::Image(&res.scratch[3][0], res.scratch[3][0].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
@@ -9976,24 +10024,36 @@ void Postprocess_RTShadow(
 			device->Dispatch(
 				(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
 				(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-				1,
+				4, // 4 lights
 				cmd
 			);
 		}
 
 		// pass2:
 		{
-			device->BindResource(CS, &res.scratch[0], TEXSLOT_ONDEMAND2, cmd);
+			device->BindResource(CS, &res.scratch[0][0], TEXSLOT_ONDEMAND2, cmd);
+			device->BindResource(CS, &res.scratch[1][0], TEXSLOT_ONDEMAND3, cmd);
+			device->BindResource(CS, &res.scratch[2][0], TEXSLOT_ONDEMAND4, cmd);
+			device->BindResource(CS, &res.scratch[3][0], TEXSLOT_ONDEMAND5, cmd);
 			const GPUResource* uavs[] = {
-				&res.scratch[1],
+				&res.scratch[0][1],
+				&res.scratch[1][1],
+				&res.scratch[2][1],
+				&res.scratch[3][1],
 				&res.temp
 			};
 			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 			{
 				GPUBarrier barriers[] = {
 					GPUBarrier::Memory(),
-					GPUBarrier::Image(&res.scratch[0], IMAGE_LAYOUT_UNORDERED_ACCESS, res.scratch[0].desc.layout),
-					GPUBarrier::Image(&res.scratch[1], res.scratch[0].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+					GPUBarrier::Image(&res.scratch[0][0], IMAGE_LAYOUT_UNORDERED_ACCESS, res.scratch[0][0].desc.layout),
+					GPUBarrier::Image(&res.scratch[1][0], IMAGE_LAYOUT_UNORDERED_ACCESS, res.scratch[1][0].desc.layout),
+					GPUBarrier::Image(&res.scratch[2][0], IMAGE_LAYOUT_UNORDERED_ACCESS, res.scratch[2][0].desc.layout),
+					GPUBarrier::Image(&res.scratch[3][0], IMAGE_LAYOUT_UNORDERED_ACCESS, res.scratch[3][0].desc.layout),
+					GPUBarrier::Image(&res.scratch[0][1], res.scratch[0][0].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+					GPUBarrier::Image(&res.scratch[1][1], res.scratch[1][0].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+					GPUBarrier::Image(&res.scratch[2][1], res.scratch[2][0].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+					GPUBarrier::Image(&res.scratch[3][1], res.scratch[3][0].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
@@ -10006,7 +10066,7 @@ void Postprocess_RTShadow(
 			device->Dispatch(
 				(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
 				(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-				1,
+				4, // 4 lights
 				cmd
 			);
 		}
@@ -10014,7 +10074,10 @@ void Postprocess_RTShadow(
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Memory(),
-				GPUBarrier::Image(&res.scratch[1], IMAGE_LAYOUT_UNORDERED_ACCESS, res.scratch[0].desc.layout),
+				GPUBarrier::Image(&res.scratch[0][1], IMAGE_LAYOUT_UNORDERED_ACCESS, res.scratch[0][1].desc.layout),
+				GPUBarrier::Image(&res.scratch[1][1], IMAGE_LAYOUT_UNORDERED_ACCESS, res.scratch[1][1].desc.layout),
+				GPUBarrier::Image(&res.scratch[2][1], IMAGE_LAYOUT_UNORDERED_ACCESS, res.scratch[2][1].desc.layout),
+				GPUBarrier::Image(&res.scratch[3][1], IMAGE_LAYOUT_UNORDERED_ACCESS, res.scratch[3][1].desc.layout),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}

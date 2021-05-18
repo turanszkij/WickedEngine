@@ -5,12 +5,14 @@
 #define float16_t3 min16float3
 
 TEXTURE2D(normals, float16_t3, TEXSLOT_ONDEMAND0);
-STRUCTUREDBUFFER(metadata, uint, TEXSLOT_ONDEMAND1);
+STRUCTUREDBUFFER(metadata, uint4, TEXSLOT_ONDEMAND1);
 
-TEXTURE2D(input, float16_t2, TEXSLOT_ONDEMAND2);
+TEXTURE2D(input[4], float16_t2, TEXSLOT_ONDEMAND2);
 
-RWTEXTURE2D(history, float2, 0);
-RWTEXTURE2D(output, uint4, 1);
+RWTEXTURE2D(history[4], float2, 0);
+globallycoherent RWTEXTURE2D(output, uint4, 4);
+
+groupshared uint light_index;
 
 uint2 FFX_DNSR_Shadows_GetBufferDimensions()
 {
@@ -47,30 +49,33 @@ bool FFX_DNSR_Shadows_IsShadowReciever(uint2 did)
 
 float16_t2 FFX_DNSR_Shadows_ReadInput(int2 p)
 {
-	return (float16_t2)input[p].xy;
+	return (float16_t2)input[light_index][p].xy;
 }
 
 uint FFX_DNSR_Shadows_ReadTileMetaData(uint p)
 {
-	return metadata[p];
+	return metadata[p][light_index];
 }
 
 #include "ffx-shadows-dnsr/ffx_denoiser_shadows_filter.h"
 
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
-void main(uint2 gid : SV_GroupID, uint2 gtid : SV_GroupThreadID, uint2 did : SV_DispatchThreadID)
+void main(uint3 Gid : SV_GroupID, uint2 gtid : SV_GroupThreadID, uint2 did : SV_DispatchThreadID)
 {
+	light_index = Gid.z;
+	GroupMemoryBarrierWithGroupSync();
+
 	const uint PASS_INDEX = (uint)xPPParams1.x;
 	const uint STEP_SIZE = (uint)xPPParams1.y;
 
 	bool bWriteOutput = false;
-	float2 const results = FFX_DNSR_Shadows_FilterSoftShadowsPass(gid, gtid, did, bWriteOutput, PASS_INDEX, STEP_SIZE);
+	float2 const results = FFX_DNSR_Shadows_FilterSoftShadowsPass(Gid.xy, gtid, did, bWriteOutput, PASS_INDEX, STEP_SIZE);
 
 	if (PASS_INDEX < 2)
 	{
 		if (bWriteOutput)
 		{
-			history[did] = results;
+			history[light_index][did] = results;
 		}
 	}
 	else
@@ -83,10 +88,10 @@ void main(uint2 gid : SV_GroupID, uint2 gtid : SV_GroupThreadID, uint2 did : SV_
 		if (bWriteOutput)
 		{
 			// replace shadow mask with denoised result:
-			uint shadow_mask = output[did].x;
-			shadow_mask &= ~0xFF;
-			shadow_mask |= uint(mean * 255) & 0xFF;
-			output[did].x = shadow_mask;
+			uint shadow_mask = 0;
+			shadow_mask |= (uint(mean * 255) & 0xFF) << (light_index * 8);
+			output[did].x |= shadow_mask;
+			//InterlockedOr(output[did].x, shadow_mask);
 		}
 	}
 }

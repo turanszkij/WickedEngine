@@ -2,14 +2,19 @@
 #include "ShaderInterop_Postprocess.h"
 
 TEXTURE2D(normals, float3, TEXSLOT_ONDEMAND0);
-STRUCTUREDBUFFER(tiles, uint, TEXSLOT_ONDEMAND1);
-TEXTURE2D(moments_prev, float3, TEXSLOT_ONDEMAND2);
-TEXTURE2D(history, float, TEXSLOT_ONDEMAND3);
-TEXTURE2D(texture_depth_history, float, TEXSLOT_ONDEMAND4);
+TEXTURE2D(texture_depth_history, float, TEXSLOT_ONDEMAND1);
+STRUCTUREDBUFFER(tiles, uint4, TEXSLOT_ONDEMAND2);
 
-RWTEXTURE2D(reprojection, float2, 0);
-RWTEXTURE2D(moments, float3, 1);
-RWSTRUCTUREDBUFFER(metadata, uint, 2);
+RWSTRUCTUREDBUFFER(metadata, uint4, 0);
+
+// per-light:
+TEXTURE2D(moments_prev[4], float3, TEXSLOT_ONDEMAND3);
+TEXTURE2D(history[4], float, TEXSLOT_ONDEMAND7);
+
+RWTEXTURE2D(reprojection[4], float2, 1);
+RWTEXTURE2D(moments[4], float3, 5);
+
+groupshared uint light_index;
 
 int FFX_DNSR_Shadows_IsFirstFrame()
 {
@@ -54,15 +59,15 @@ float3 FFX_DNSR_Shadows_ReadNormals(uint2 did)
 }
 uint FFX_DNSR_Shadows_ReadRaytracedShadowMask(uint linear_tile_index)
 {
-	return tiles[linear_tile_index];
+	return tiles[linear_tile_index][light_index];
 }
 float3 FFX_DNSR_Shadows_ReadPreviousMomentsBuffer(int2 history_pos)
 {
-	return moments_prev[history_pos];
+	return moments_prev[light_index][history_pos];
 }
 float FFX_DNSR_Shadows_ReadHistory(float2 history_uv)
 {
-	return history.SampleLevel(sampler_linear_clamp, history_uv, 0);
+	return history[light_index].SampleLevel(sampler_linear_clamp, history_uv, 0);
 }
 float2 FFX_DNSR_Shadows_ReadVelocity(uint2 did)
 {
@@ -71,15 +76,15 @@ float2 FFX_DNSR_Shadows_ReadVelocity(uint2 did)
 
 void FFX_DNSR_Shadows_WriteReprojectionResults(uint2 did, float2 value)
 {
-	reprojection[did] = value;
+	reprojection[light_index][did] = value;
 }
 void FFX_DNSR_Shadows_WriteMoments(uint2 did, float3 value)
 {
-	moments[did] = value;
+	moments[light_index][did] = value;
 }
 void FFX_DNSR_Shadows_WriteMetadata(uint idx, uint mask)
 {
-	metadata[idx] = mask;
+	metadata[idx][light_index] = mask;
 }
 
 bool FFX_DNSR_Shadows_IsShadowReciever(uint2 did)
@@ -95,5 +100,8 @@ bool FFX_DNSR_Shadows_IsShadowReciever(uint2 did)
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
+	light_index = Gid.z;
+	GroupMemoryBarrierWithGroupSync();
+
 	FFX_DNSR_Shadows_TileClassification(groupIndex, Gid.xy);
 }

@@ -441,8 +441,8 @@ namespace wiRenderer
 		mutable int frame = 0;
 		wiGraphics::GPUBuffer tiles;
 		wiGraphics::GPUBuffer metadata;
-		wiGraphics::Texture scratch[2];
-		wiGraphics::Texture moments[2];
+		wiGraphics::Texture scratch[4][2];
+		wiGraphics::Texture moments[4][2];
 	};
 	void CreateRTShadowResources(RTShadowResources& res, XMUINT2 resolution);
 	void Postprocess_RTShadow(

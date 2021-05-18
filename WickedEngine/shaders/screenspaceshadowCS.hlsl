@@ -10,7 +10,7 @@ RWTEXTURE2D(output, uint4, 0);
 
 #ifdef RTSHADOW
 RWTEXTURE2D(output_normals, float3, 1);
-RWSTRUCTUREDBUFFER(output_tiles, uint, 2);
+RWSTRUCTUREDBUFFER(output_tiles, uint4, 2);
 #endif // RTSHADOW
 
 static const uint TILE_BORDER = 1;
@@ -362,14 +362,19 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 		}
 	}
 
-	output[DTid.xy] = uint4(shadow_mask[0], shadow_mask[1], shadow_mask[2], shadow_mask[3]);
-
 #ifdef RTSHADOW
 	output_normals[DTid.xy] = saturate(N * 0.5 + 0.5);
 
-	uint2 pixel_pos = DTid.xy;
-	int lane_index = (pixel_pos.y % 4) * 8 + (pixel_pos.x % 8);
-	uint bit = (shadow_mask[0] & 0xFF) ? (1u << lane_index) : 0;
-	InterlockedOr(output_tiles[flatTileIdx], bit);
+	// pack 4 lights into tile bitmask:
+	int lane_index = (DTid.y % 4) * 8 + (DTid.x % 8);
+	for (uint i = 0; i < 4; ++i)
+	{
+		uint bit = ((shadow_mask[0] >> (i * 8)) & 0xFF) ? (1u << lane_index) : 0;
+		InterlockedOr(output_tiles[flatTileIdx][i], bit);
+	}
+
+	shadow_mask[0] = 0; // clear here, denoiser will write real value of first 4 lights
 #endif // RTSHADOW
+
+	output[DTid.xy] = uint4(shadow_mask[0], shadow_mask[1], shadow_mask[2], shadow_mask[3]);
 }
