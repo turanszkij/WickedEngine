@@ -1099,10 +1099,17 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 				[branch]
 				if (entity_index >= first_item && entity_index <= last_item)
 				{
+					ShaderEntity light = EntityArray[entity_index];
+
+					if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
+					{
+						continue; // static lights will be skipped (they are used in lightmap baking)
+					}
+
 					float shadow_mask = 1;
 #ifdef SHADOW_MASK_ENABLED
 					[branch]
-					if (g_xFrame_Options & OPTION_BIT_SHADOW_MASK)
+					if (g_xFrame_Options & OPTION_BIT_SHADOW_MASK && light.IsCastingShadow())
 					{
 						uint shadow_index = entity_index - g_xFrame_LightArrayOffset;
 						if (shadow_index < 16)
@@ -1118,13 +1125,6 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 						}
 					}
 #endif // SHADOW_MASK_ENABLED
-
-					ShaderEntity light = EntityArray[entity_index];
-
-					if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
-					{
-						continue; // static lights will be skipped (they are used in lightmap baking)
-					}
 
 					switch (light.GetType())
 					{
