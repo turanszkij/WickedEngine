@@ -521,8 +521,11 @@ void RenderPath3D::ResizeBuffers()
 
 	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 	{
-		wiRenderer::CreateRTAOResources(rtaoResources, internalResolution);
 		wiRenderer::CreateRTReflectionResources(rtreflectionResources, internalResolution);
+	}
+	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
+	{
+		wiRenderer::CreateRTAOResources(rtaoResources, internalResolution);
 		wiRenderer::CreateRTShadowResources(rtshadowResources, internalResolution);
 	}
 
@@ -590,6 +593,15 @@ void RenderPath3D::Update(float dt)
 		camera->jitter = XMFLOAT2(0, 0);
 	}
 	camera->UpdateCamera();
+
+	if (getAO() != AO_RTAO)
+	{
+		rtaoResources.frame = 0;
+	}
+	if (!wiRenderer::GetRaytracedShadowsEnabled())
+	{
+		rtshadowResources.frame = 0;
+	}
 
 	std::swap(depthBuffer_Copy, depthBuffer_Copy1);
 }
@@ -914,6 +926,8 @@ void RenderPath3D::Render() const
 
 		if (wiRenderer::GetRaytracedShadowsEnabled() || wiRenderer::GetScreenSpaceShadowsEnabled())
 		{
+			GPUBarrier barrier = GPUBarrier::Image(&rtShadow, rtShadow.desc.layout, IMAGE_LAYOUT_SHADER_RESOURCE);
+			device->Barrier(&barrier, 1, cmd);
 			device->BindResource(PS, &rtShadow, TEXSLOT_RENDERPATH_RTSHADOW, cmd);
 		}
 		else
@@ -947,6 +961,12 @@ void RenderPath3D::Render() const
 		}
 
 		device->RenderPassEnd(cmd);
+
+		if (wiRenderer::GetRaytracedShadowsEnabled() || wiRenderer::GetScreenSpaceShadowsEnabled())
+		{
+			GPUBarrier barrier = GPUBarrier::Image(&rtShadow, IMAGE_LAYOUT_SHADER_RESOURCE, rtShadow.desc.layout);
+			device->Barrier(&barrier, 1, cmd);
+		}
 
 		device->EventEnd(cmd);
 		});
@@ -1063,7 +1083,6 @@ void RenderPath3D::RenderAO(CommandList cmd) const
 				rtAO,
 				cmd,
 				getAORange(),
-				getAOSampleCount(),
 				getAOPower()
 			);
 			break;

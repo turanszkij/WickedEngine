@@ -18,8 +18,6 @@ struct Lighting
 {
 	LightingPart direct;
 	LightingPart indirect;
-	uint4 shadow_mask;
-	uint shadow_index;
 
 	inline void create(
 		in float3 diffuse_direct,
@@ -32,8 +30,6 @@ struct Lighting
 		direct.specular = specular_direct;
 		indirect.diffuse = diffuse_indirect;
 		indirect.specular = specular_indirect;
-		shadow_mask = 1; // fully lit by default
-		shadow_index = 0;
 	}
 };
 
@@ -124,7 +120,7 @@ inline float3 shadowCube(in ShaderEntity light, in float3 L, in float3 Lunnormal
 }
 
 
-inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Lighting lighting)
+inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Lighting lighting, in float shadow_mask = 1)
 {
 	float3 L = light.GetDirection();
 
@@ -134,7 +130,7 @@ inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Li
 	[branch]
 	if (any(surfaceToLight.NdotL_sss))
 	{
-		float3 shadow = 1;
+		float3 shadow = shadow_mask;
 
 		[branch]
 		if (light.IsCastingShadow() && surface.IsReceiveShadow())
@@ -180,17 +176,6 @@ inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Li
 					}
 				}
 			}
-
-#ifdef SHADOW_MASK_ENABLED
-			[branch]
-			if (g_xFrame_Options & OPTION_BIT_SHADOW_MASK)
-			{
-				uint mask_shift = (lighting.shadow_index % 4) * 8;
-				uint mask_bucket = lighting.shadow_index / 4;
-				uint mask = (lighting.shadow_mask[mask_bucket] >> mask_shift) & 0xFF;
-				shadow *= mask / 255.0;
-			}
-#endif // SHADOW_MASK_ENABLED
 		}
 
 		[branch]
@@ -211,22 +196,8 @@ inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Li
 				max(0, lightColor * surfaceToLight.NdotL * BRDF_GetSpecular(surface, surfaceToLight));
 		}
 	}
-
-#ifdef SHADOW_MASK_ENABLED
-	[branch]
-	if (light.IsCastingShadow())
-	{
-		// The shadow contribution for raytraced shadow is detected slightly differently
-		//	in pixel shaders and raytracing step
-		//	So if light is shadowed, we always increment shadow index, even if actual
-		//	contribution might have been skipped.
-		//
-		//	Read more about this in rtshadowLIB.hlsl file (**)
-		lighting.shadow_index++;
-	}
-#endif // SHADOW_MASK_ENABLED
 }
-inline void PointLight(in ShaderEntity light, in Surface surface, inout Lighting lighting)
+inline void PointLight(in ShaderEntity light, in Surface surface, inout Lighting lighting, in float shadow_mask = 1)
 {
 	float3 L = light.position - surface.P;
 	const float dist2 = dot(L, L);
@@ -245,7 +216,7 @@ inline void PointLight(in ShaderEntity light, in Surface surface, inout Lighting
 		[branch]
 		if (any(surfaceToLight.NdotL_sss))
 		{
-			float3 shadow = 1;
+			float3 shadow = shadow_mask;
 
 			[branch]
 			if (light.IsCastingShadow() && surface.IsReceiveShadow())
@@ -257,17 +228,6 @@ inline void PointLight(in ShaderEntity light, in Surface surface, inout Lighting
 				{
 					shadow *= shadowCube(light, L, Lunnormalized);
 				}
-
-#ifdef SHADOW_MASK_ENABLED
-				[branch]
-				if (g_xFrame_Options & OPTION_BIT_SHADOW_MASK)
-				{
-					uint mask_shift = (lighting.shadow_index % 4) * 8;
-					uint mask_bucket = lighting.shadow_index / 4;
-					uint mask = (lighting.shadow_mask[mask_bucket] >> mask_shift) & 0xFF;
-					shadow *= mask / 255.0;
-				}
-#endif // SHADOW_MASK_ENABLED
 			}
 
 			[branch]
@@ -287,22 +247,8 @@ inline void PointLight(in ShaderEntity light, in Surface surface, inout Lighting
 			}
 		}
 	}
-
-#ifdef SHADOW_MASK_ENABLED
-	[branch]
-	if (light.IsCastingShadow())
-	{
-		// The shadow contribution for raytraced shadow is detected slightly differently
-		//	in pixel shaders and raytracing step
-		//	So if light is shadowed, we always increment shadow index, even if actual
-		//	contribution might have been skipped.
-		//
-		//	Read more about this in rtshadowLIB.hlsl file (**)
-		lighting.shadow_index++;
-	}
-#endif // SHADOW_MASK_ENABLED
 }
-inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting lighting)
+inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting lighting, in float shadow_mask = 1)
 {
 	float3 L = light.position - surface.P;
 	const float dist2 = dot(L, L);
@@ -326,7 +272,7 @@ inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting 
 			[branch]
 			if (SpotFactor > spotCutOff)
 			{
-				float3 shadow = 1;
+				float3 shadow = shadow_mask;
 
 				[branch]
 				if (light.IsCastingShadow() && surface.IsReceiveShadow())
@@ -345,17 +291,6 @@ inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting 
 							shadow *= shadowCascade(light, ShPos.xyz, ShTex.xy, 0);
 						}
 					}
-
-#ifdef SHADOW_MASK_ENABLED
-					[branch]
-					if (g_xFrame_Options & OPTION_BIT_SHADOW_MASK)
-					{
-						uint mask_shift = (lighting.shadow_index % 4) * 8;
-						uint mask_bucket = lighting.shadow_index / 4;
-						uint mask = (lighting.shadow_mask[mask_bucket] >> mask_shift) & 0xFF;
-						shadow *= mask / 255.0;
-					}
-#endif // SHADOW_MASK_ENABLED
 				}
 
 				[branch]
@@ -377,20 +312,6 @@ inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting 
 			}
 		}
 	}
-
-#ifdef SHADOW_MASK_ENABLED
-	[branch]
-	if (light.IsCastingShadow())
-	{
-		// The shadow contribution for raytraced shadow is detected slightly differently
-		//	in pixel shaders and raytracing step
-		//	So if light is shadowed, we always increment shadow index, even if actual
-		//	contribution might have been skipped.
-		//
-		//	Read more about this in rtshadowLIB.hlsl file (**)
-		lighting.shadow_index++;
-	}
-#endif // SHADOW_MASK_ENABLED
 }
 
 

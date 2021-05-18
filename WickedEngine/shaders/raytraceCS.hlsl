@@ -19,14 +19,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 	// Compute screen coordinates:
 	float2 uv = float2((pixel + xTracePixelOffset) * xTraceResolution_rcp.xy * 2 - 1) * float2(1, -1);
-	float seed = xTraceRandomSeed;
+	float seed = xTraceAccumulationFactor;
 
 	// Create starting ray:
 	RayDesc ray = CreateCameraRay(uv);
 
 	// Depth of field setup:
 	float3 focal_point = ray.Origin + ray.Direction * g_xCamera_FocalLength;
-	float3 coc = float3(hemispherepoint_cos(rand(seed, pixel), rand(seed, pixel)).xy, 0);
+	float3 coc = float3(hemispherepoint_cos(rand(seed, uv), rand(seed, uv)).xy, 0);
 	coc.xy *= g_xCamera_ApertureShape.xy;
 	coc = mul(coc, float3x3(cross(g_xCamera_Up, g_xCamera_At), g_xCamera_Up, g_xCamera_At));
 	coc *= g_xCamera_FocalLength;
@@ -286,11 +286,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			{
 				float3 shadow = surfaceToLight.NdotL * current_energy;
 
-				float3 sampling_offset = float3(rand(seed, uv), rand(seed, uv), rand(seed, uv)) * 2 - 1; // todo: should be specific to light surface
-
 				RayDesc newRay;
 				newRay.Origin = surface.P;
-				newRay.Direction = normalize(L + sampling_offset * 0.025);
+				newRay.Direction = normalize(lerp(L, SampleHemisphere_cos(L, seed, uv), 0.025));
 				newRay.TMin = 0.001;
 				newRay.TMax = dist;
 #ifdef RTAPI
@@ -346,7 +344,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	}
 
 	// Pre-clear result texture for first bounce and first accumulation sample:
-	if (xTraceUserData.y == 0)
+	if (xTraceSampleIndex == 0)
 	{
 		resultTexture[pixel] = 0;
 	}

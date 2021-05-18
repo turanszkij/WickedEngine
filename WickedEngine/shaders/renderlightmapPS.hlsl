@@ -18,7 +18,7 @@ float4 main(Input input) : SV_TARGET
 	surface.N = normalize(input.normal);
 
 	float2 uv = input.uv;
-	float seed = xTraceRandomSeed;
+	float seed = xTraceAccumulationFactor;
 	RayDesc ray;
 	ray.Origin = input.pos3D;
 	ray.Direction = SampleHemisphere_cos(surface.N, seed, uv);
@@ -146,11 +146,9 @@ float4 main(Input input) : SV_TARGET
 			{
 				float3 shadow = NdotL * energy;
 
-				float3 sampling_offset = float3(rand(seed, uv), rand(seed, uv), rand(seed, uv)) * 2 - 1;
-
 				RayDesc newRay;
 				newRay.Origin = surface.P;
-				newRay.Direction = normalize(L + sampling_offset * 0.025f);
+				newRay.Direction = normalize(lerp(L, SampleHemisphere_cos(L, seed, uv), 0.025f));
 				newRay.TMin = 0.001;
 				newRay.TMax = dist;
 #ifdef RTAPI

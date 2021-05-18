@@ -1065,6 +1065,15 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 	[branch]
 	if (g_xFrame_LightArrayCount > 0)
 	{
+		uint4 shadow_mask_packed = 0;
+#ifdef SHADOW_MASK_ENABLED
+		[branch]
+		if (g_xFrame_Options & OPTION_BIT_SHADOW_MASK)
+		{
+			shadow_mask_packed = texture_rtshadow[surface.pixel];
+		}
+#endif // SHADOW_MASK_ENABLED
+
 		// Loop through light buckets in the tile:
 		const uint first_item = g_xFrame_LightArrayOffset;
 		const uint last_item = first_item + g_xFrame_LightArrayCount - 1;
@@ -1097,21 +1106,41 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 						continue; // static lights will be skipped (they are used in lightmap baking)
 					}
 
+					float shadow_mask = 1;
+#ifdef SHADOW_MASK_ENABLED
+					[branch]
+					if (g_xFrame_Options & OPTION_BIT_SHADOW_MASK && light.IsCastingShadow())
+					{
+						uint shadow_index = entity_index - g_xFrame_LightArrayOffset;
+						if (shadow_index < 16)
+						{
+							uint mask_shift = (shadow_index % 4) * 8;
+							uint mask_bucket = shadow_index / 4;
+							uint mask = (shadow_mask_packed[mask_bucket] >> mask_shift) & 0xFF;
+							if (mask == 0)
+							{
+								continue;
+							}
+							shadow_mask = mask / 255.0;
+						}
+					}
+#endif // SHADOW_MASK_ENABLED
+
 					switch (light.GetType())
 					{
 					case ENTITY_TYPE_DIRECTIONALLIGHT:
 					{
-						DirectionalLight(light, surface, lighting);
+						DirectionalLight(light, surface, lighting, shadow_mask);
 					}
 					break;
 					case ENTITY_TYPE_POINTLIGHT:
 					{
-						PointLight(light, surface, lighting);
+						PointLight(light, surface, lighting, shadow_mask);
 					}
 					break;
 					case ENTITY_TYPE_SPOTLIGHT:
 					{
-						SpotLight(light, surface, lighting);
+						SpotLight(light, surface, lighting, shadow_mask);
 					}
 					break;
 					}
@@ -1821,15 +1850,6 @@ float4 main(PixelInput input) : SV_TARGET
 #ifdef PLANARREFLECTION
 	lighting.indirect.specular += PlanarReflection(surface, bumpColor.rg) * surface.F;
 #endif
-
-
-#ifdef SHADOW_MASK_ENABLED
-	[branch]
-	if (g_xFrame_Options & OPTION_BIT_SHADOW_MASK)
-	{
-		lighting.shadow_mask = texture_rtshadow[surface.pixel];
-	}
-#endif // SHADOW_MASK_ENABLED
 
 
 #ifdef FORWARD

@@ -43,10 +43,9 @@ void RTReflection_Raygen()
 		float3x3 tangentBasis = GetTangentBasis(N);
 		float3 tangentV = mul(tangentBasis, V);
 
+		const float2 bluenoise = blue_noise(DTid.xy).xy;
 
-		float2 Xi;
-		Xi.x = BNDSequenceSample(DTid.xy, g_xFrame_FrameCount, 0);
-		Xi.y = BNDSequenceSample(DTid.xy, g_xFrame_FrameCount, 1);
+		float2 Xi = bluenoise.xy;
 
 		Xi.y = lerp(Xi.y, 0.0f, GGX_IMPORTANCE_SAMPLE_BIAS);
 

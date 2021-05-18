@@ -1071,9 +1071,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\include\spirv\unified1\spirv.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiBlueNoise.h">
-      <Filter>ENGINE\Helpers</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\volk.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
@@ -1832,11 +1829,11 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\spirv_reflect.c">
       <Filter>UTILITY</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiBlueNoise.cpp">
-      <Filter>ENGINE\Helpers</Filter>
-    </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiShaderCompiler.cpp">
       <Filter>ENGINE\Graphics\API</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Utility\samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp.cpp">
+      <Filter>UTILITY</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
