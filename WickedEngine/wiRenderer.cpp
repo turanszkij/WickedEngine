@@ -9778,6 +9778,10 @@ void CreateRTShadowResources(RTShadowResources& res, XMUINT2 resolution)
 		device->CreateTexture(&desc, nullptr, &res.moments[i][1]);
 		device->SetName(&res.moments[i][1], "rtshadow_moments[i][1]");
 	}
+
+	desc.Format = FORMAT_R8G8B8A8_UNORM;
+	device->CreateTexture(&desc, nullptr, &res.denoised);
+	device->SetName(&res.denoised, "rtshadow_denoised");
 }
 void Postprocess_RTShadow(
 	const RTShadowResources& res,
@@ -9961,7 +9965,7 @@ void Postprocess_RTShadow(
 				&res.scratch[1][1],
 				&res.scratch[2][1],
 				&res.scratch[3][1],
-				&res.temp
+				&res.denoised
 			};
 			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 			{
@@ -9970,6 +9974,7 @@ void Postprocess_RTShadow(
 					GPUBarrier::Image(&res.scratch[1][1], res.scratch[1][1].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
 					GPUBarrier::Image(&res.scratch[2][1], res.scratch[2][1].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
 					GPUBarrier::Image(&res.scratch[3][1], res.scratch[3][1].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+					GPUBarrier::Image(&res.denoised, res.denoised.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
@@ -9998,7 +10003,7 @@ void Postprocess_RTShadow(
 				&res.scratch[1][0],
 				&res.scratch[2][0],
 				&res.scratch[3][0],
-				&res.temp
+				&res.denoised
 			};
 			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 			{
@@ -10040,7 +10045,7 @@ void Postprocess_RTShadow(
 				&res.scratch[1][1],
 				&res.scratch[2][1],
 				&res.scratch[3][1],
-				&res.temp
+				&res.denoised
 			};
 			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 			{
@@ -10078,6 +10083,7 @@ void Postprocess_RTShadow(
 				GPUBarrier::Image(&res.scratch[1][1], IMAGE_LAYOUT_UNORDERED_ACCESS, res.scratch[1][1].desc.layout),
 				GPUBarrier::Image(&res.scratch[2][1], IMAGE_LAYOUT_UNORDERED_ACCESS, res.scratch[2][1].desc.layout),
 				GPUBarrier::Image(&res.scratch[3][1], IMAGE_LAYOUT_UNORDERED_ACCESS, res.scratch[3][1].desc.layout),
+				GPUBarrier::Image(&res.denoised, IMAGE_LAYOUT_UNORDERED_ACCESS, res.denoised.desc.layout),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -10096,6 +10102,7 @@ void Postprocess_RTShadow(
 		device->BindResource(CS, &res.temp, TEXSLOT_ONDEMAND0, cmd);
 		device->BindResource(CS, &res.temporal[temporal_history], TEXSLOT_ONDEMAND1, cmd);
 		device->BindResource(CS, &depth_history, TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(CS, &res.denoised, TEXSLOT_ONDEMAND3, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.temporal[temporal_output],

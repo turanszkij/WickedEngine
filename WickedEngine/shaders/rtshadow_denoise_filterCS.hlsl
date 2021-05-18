@@ -10,7 +10,7 @@ STRUCTUREDBUFFER(metadata, uint4, TEXSLOT_ONDEMAND1);
 TEXTURE2D(input[4], float16_t2, TEXSLOT_ONDEMAND2);
 
 RWTEXTURE2D(history[4], float2, 0);
-globallycoherent RWTEXTURE2D(output, uint4, 4);
+RWTEXTURE2D(output, unorm float4, 4);
 
 groupshared uint light_index;
 
@@ -87,11 +87,26 @@ void main(uint3 Gid : SV_GroupID, uint2 gtid : SV_GroupThreadID, uint2 did : SV_
 
 		if (bWriteOutput)
 		{
-			// replace shadow mask with denoised result:
-			uint shadow_mask = 0;
-			shadow_mask |= (uint(mean * 255) & 0xFF) << (light_index * 8);
-			output[did].x |= shadow_mask;
-			//InterlockedOr(output[did].x, shadow_mask);
+#ifdef SPIRV
+			switch (light_index)
+			{
+			default:
+			case 0:
+				output[did].r = mean;
+				break;
+			case 1:
+				output[did].g = mean;
+				break;
+			case 2:
+				output[did].b = mean;
+				break;
+			case 3:
+				output[did].a = mean;
+				break;
+			}
+#else
+			output[did][light_index] = mean;
+#endif
 		}
 	}
 }

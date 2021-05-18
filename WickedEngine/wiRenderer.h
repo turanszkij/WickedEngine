@@ -443,6 +443,7 @@ namespace wiRenderer
 		wiGraphics::GPUBuffer metadata;
 		wiGraphics::Texture scratch[4][2];
 		wiGraphics::Texture moments[4][2];
+		wiGraphics::Texture denoised;
 	};
 	void CreateRTShadowResources(RTShadowResources& res, XMUINT2 resolution);
 	void Postprocess_RTShadow(
