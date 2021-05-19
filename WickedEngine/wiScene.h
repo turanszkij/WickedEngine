@@ -613,7 +613,7 @@ namespace wiScene
 		uint32_t _flags = RENDERABLE | CAST_SHADOW;
 
 		wiECS::Entity meshID = wiECS::INVALID_ENTITY;
-		uint32_t cascadeMask = 0; // which shadow cascades to skip (0: skip none, 1: skip first, etc...)
+		uint32_t cascadeMask = 0; // which shadow cascades to skip from lowest detail to highest detail (0: skip none, 1: skip first, etc...)
 		uint32_t rendertypeMask = 0;
 		XMFLOAT4 color = XMFLOAT4(1, 1, 1, 1);
 		XMFLOAT4 emissiveColor = XMFLOAT4(1, 1, 1, 1);

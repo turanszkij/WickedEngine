@@ -4879,7 +4879,7 @@ void DrawShadowmaps(
 						if (shcams[cascade].frustum.CheckBoxFast(aabb))
 						{
 							const ObjectComponent& object = vis.scene->objects[i];
-							if (object.IsRenderable() && cascade >= object.cascadeMask && object.IsCastingShadow())
+							if (object.IsRenderable() && object.IsCastingShadow() && (cascade < (CASCADE_COUNT - object.cascadeMask)))
 							{
 								Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
 								const LayerComponent* layer = vis.scene->layers.GetComponent(cullable_entity);
@@ -4900,6 +4900,8 @@ void DrawShadowmaps(
 							}
 						}
 					}
+
+					device->RenderPassBegin(&renderpasses_shadow2D[slice + cascade], cmd);
 					if (!renderQueue.empty())
 					{
 						CameraCB cb;
@@ -4915,16 +4917,15 @@ void DrawShadowmaps(
 						vp.MaxDepth = 1.0f;
 						device->BindViewports(1, &vp, cmd);
 
-						device->RenderPassBegin(&renderpasses_shadow2D[slice + cascade], cmd);
 						RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, RENDERTYPE_OPAQUE, cmd);
 						if (GetTransparentShadowsEnabled() && transparentShadowsRequested)
 						{
 							RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd);
 						}
-						device->RenderPassEnd(cmd);
 
 						GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
 					}
+					device->RenderPassEnd(cmd);
 
 				}
 			}
@@ -11175,6 +11176,7 @@ void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resol
 	desc.Width = resolution.x / 2;
 	desc.Height = resolution.y / 2;
 	desc.Format = FORMAT_R16G16B16A16_FLOAT;
+	desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
 	device->CreateTexture(&desc, nullptr, &res.texture_cloudRender);
 	device->SetName(&res.texture_cloudRender, "texture_cloudRender");
 	device->CreateTexture(&desc, nullptr, &res.texture_reproject[0]);
@@ -11213,6 +11215,7 @@ void Postprocess_VolumetricClouds(
 		shape_desc.MipLevels = 6;
 		shape_desc.Format = FORMAT_R8G8B8A8_UNORM;
 		shape_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		shape_desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
 		device->CreateTexture(&shape_desc, nullptr, &texture_shapeNoise);
 		device->SetName(&texture_shapeNoise, "texture_shapeNoise");
 
@@ -11233,6 +11236,7 @@ void Postprocess_VolumetricClouds(
 		detail_desc.MipLevels = 6;
 		detail_desc.Format = FORMAT_R8G8B8A8_UNORM;
 		detail_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		detail_desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
 		device->CreateTexture(&detail_desc, nullptr, &texture_detailNoise);
 		device->SetName(&texture_detailNoise, "texture_detailNoise");
 
@@ -11251,6 +11255,7 @@ void Postprocess_VolumetricClouds(
 		texture_desc.Height = 128;
 		texture_desc.Format = FORMAT_R8G8B8A8_UNORM;
 		texture_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		texture_desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
 		device->CreateTexture(&texture_desc, nullptr, &texture_curlNoise);
 		device->SetName(&texture_curlNoise, "texture_curlNoise");
 
