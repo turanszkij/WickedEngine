@@ -1524,7 +1524,7 @@ void LoadShaders()
 
 		desc.bs = &blendStates[BSTYPE_ADDITIVE];
 		desc.rs = &rasterizers[RSTYPE_FRONT];
-		desc.dss = &depthStencils[DSSTYPE_DEFAULT];
+		desc.dss = &depthStencils[DSSTYPE_HOLOGRAM];
 		desc.pt = TRIANGLELIST;
 
 		PipelineState pso;
@@ -2245,6 +2245,9 @@ void SetUpStates()
 	dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
 	depthStencils[DSSTYPE_DEFAULT] = dsd;
 
+	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
+	depthStencils[DSSTYPE_HOLOGRAM] = dsd;
+
 	dsd.DepthEnable = true;
 	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
 	dsd.DepthFunc = COMPARISON_GREATER;
@@ -2285,8 +2288,6 @@ void SetUpStates()
 	dsd.DepthFunc = COMPARISON_ALWAYS;
 	dsd.StencilEnable = false;
 	depthStencils[DSSTYPE_WRITEONLY] = dsd;
-
-
 
 
 	BlendState bd;
@@ -7812,6 +7813,7 @@ void BindCommonResources(CommandList cmd)
 
 		BindConstantBuffers(stage, cmd);
 
+		device->BindResource(stage, wiTextureHelper::getRandom64x64(), TEXSLOT_RANDOM64X64, cmd);
 		device->BindResource(stage, wiTextureHelper::getBlueNoise(), TEXSLOT_BLUENOISE, cmd);
 	}
 

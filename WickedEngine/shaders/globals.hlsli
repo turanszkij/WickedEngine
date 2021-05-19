@@ -23,6 +23,7 @@ TEXTURECUBEARRAY(texture_shadowarray_transparent_cube, float4, TEXSLOT_SHADOWARR
 TEXTURE3D(texture_voxelradiance, float4, TEXSLOT_VOXELRADIANCE);
 TEXTURE2D(texture_sheenlut, float, TEXSLOT_SHEENLUT);
 TEXTURE2D(texture_bluenoise, float4, TEXSLOT_BLUENOISE);
+TEXTURE2D(texture_random64x64, float4, TEXSLOT_RANDOM64X64);
 STRUCTUREDBUFFER(EntityArray, ShaderEntity, SBSLOT_ENTITYARRAY);
 STRUCTUREDBUFFER(MatrixArray, float4x4, SBSLOT_MATRIXARRAY);
 
