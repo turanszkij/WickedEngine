@@ -41,7 +41,7 @@ namespace wiTextureHelper
 				data[i] = wiRandom::getRandom(0, 255);
 				data[i + 1] = wiRandom::getRandom(0, 255);
 				data[i + 2] = wiRandom::getRandom(0, 255);
-				data[i + 3] = 255;
+				data[i + 3] = wiRandom::getRandom(0, 255);
 			}
 
 			CreateTexture(helperTextures[HELPERTEXTURE_RANDOM64X64], data, 64, 64);
