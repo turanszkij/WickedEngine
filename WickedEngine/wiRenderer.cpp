@@ -7587,7 +7587,9 @@ void RayTraceScene(
 	const Scene& scene,
 	const Texture& output,
 	int accumulation_sample, 
-	CommandList cmd
+	CommandList cmd,
+	const Texture* output_albedo,
+	const Texture* output_normal
 )
 {
 	// Set up tracing resources:
@@ -7640,6 +7642,15 @@ void RayTraceScene(
 	};
 	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
+	if (output_albedo != nullptr)
+	{
+		device->BindUAV(CS, output_albedo, 1, cmd);
+	}
+	if (output_normal != nullptr)
+	{
+		device->BindUAV(CS, output_normal, 2, cmd);
+	}
+
 	device->Dispatch(
 		(desc.Width + RAYTRACING_LAUNCH_BLOCKSIZE - 1) / RAYTRACING_LAUNCH_BLOCKSIZE,
 		(desc.Height + RAYTRACING_LAUNCH_BLOCKSIZE - 1) / RAYTRACING_LAUNCH_BLOCKSIZE,
@@ -7651,7 +7662,7 @@ void RayTraceScene(
 	};
 	device->Barrier(barriers, arraysize(barriers), cmd);
 
-	device->UnbindUAVs(0, arraysize(uavs), cmd);
+	device->UnbindUAVs(0, 3, cmd);
 
 	wiProfiler::EndRange(range);
 	device->EventEnd(cmd); // RayTraceScene

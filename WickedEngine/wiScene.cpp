@@ -1199,12 +1199,70 @@ namespace wiScene
 		lightmapTextureData.clear();
 		SetLightmapRenderRequest(false);
 	}
+
+#if __has_include("OpenImageDenoise/oidn.hpp")
+#define OPEN_IMAGE_DENOISE
+#include "OpenImageDenoise/oidn.hpp"
+#pragma comment(lib,"OpenImageDenoise.lib")
+#pragma comment(lib,"tbb.lib")
+// Also provide OpenImageDenoise.dll and tbb.dll near the exe!
+#endif
 	void ObjectComponent::SaveLightmap()
 	{
 		if (lightmap.IsValid())
 		{
 			bool success = wiHelper::saveTextureToMemory(lightmap, lightmapTextureData);
 			assert(success);
+
+#ifdef OPEN_IMAGE_DENOISE
+			if (success)
+			{
+				std::vector<uint8_t> texturedata_dst(lightmapTextureData.size());
+
+				size_t width = (size_t)lightmapWidth;
+				size_t height = (size_t)lightmapHeight;
+				{
+					// https://github.com/OpenImageDenoise/oidn#c11-api-example
+
+					// Create an Intel Open Image Denoise device
+					static oidn::DeviceRef device = oidn::newDevice();
+					static bool init = false;
+					if (!init)
+					{
+						device.commit();
+						init = true;
+					}
+
+					// Create a denoising filter
+					oidn::FilterRef filter = device.newFilter("RTLightmap");
+					filter.setImage("color", lightmapTextureData.data(), oidn::Format::Float3, width, height, 0, sizeof(XMFLOAT4));
+					filter.setImage("output", texturedata_dst.data(), oidn::Format::Float3, width, height, 0, sizeof(XMFLOAT4));
+					filter.commit();
+
+					// Filter the image
+					filter.execute();
+
+					// Check for errors
+					const char* errorMessage;
+					auto error = device.getError(errorMessage);
+					if (error != oidn::Error::None && error != oidn::Error::Cancelled)
+					{
+						wiBackLog::post((std::string("[OpenImageDenoise error] ") + errorMessage).c_str());
+					}
+				}
+
+				GraphicsDevice* device = wiRenderer::GetDevice();
+
+				SubresourceData initdata;
+				initdata.pSysMem = texturedata_dst.data();
+				initdata.SysMemPitch = uint32_t(sizeof(XMFLOAT4) * width);
+				device->CreateTexture(&lightmap.desc, &initdata, &lightmap);
+
+				lightmapTextureData = std::move(texturedata_dst);
+			}
+			lightmap_rect = {}; // repack into global atlas
+#endif // OPEN_IMAGE_DENOISE
+
 		}
 	}
 	FORMAT ObjectComponent::GetLightmapFormat()

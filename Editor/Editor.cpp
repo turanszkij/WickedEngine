@@ -160,9 +160,13 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	{
 	case EditorComponent::RENDERPATH_DEFAULT:
 		renderPath = std::make_unique<RenderPath3D>();
+		pathTraceTargetSlider.SetVisible(false);
+		pathTraceStatisticsLabel.SetVisible(false);
 		break;
 	case EditorComponent::RENDERPATH_PATHTRACING:
 		renderPath = std::make_unique<RenderPath3D_PathTracing>();
+		pathTraceTargetSlider.SetVisible(true);
+		pathTraceStatisticsLabel.SetVisible(true);
 		break;
 	default:
 		assert(0);
@@ -390,6 +394,12 @@ void EditorComponent::ResizeLayout()
 
 	saveModeComboBox.SetSize(XMFLOAT2(120, 20));
 	saveModeComboBox.SetPos(XMFLOAT2(screenW - 140, 70));
+
+	pathTraceTargetSlider.SetSize(XMFLOAT2(200, 20));
+	pathTraceTargetSlider.SetPos(XMFLOAT2(screenW - 240, 100));
+
+	pathTraceStatisticsLabel.SetSize(XMFLOAT2(240, 60));
+	pathTraceStatisticsLabel.SetPos(XMFLOAT2(screenW - 240, 125));
 
 	sceneGraphView.SetSize(XMFLOAT2(260, 300));
 	sceneGraphView.SetPos(XMFLOAT2(0, screenH - sceneGraphView.scale_local.y));
@@ -924,6 +934,13 @@ void EditorComponent::Load()
 	saveModeComboBox.SetTooltip("Choose whether to embed resources (textures, sounds...) in the scene file when saving, or keep them as separate files");
 	GetGUI().AddWidget(&saveModeComboBox);
 
+
+	pathTraceTargetSlider.Create(1, 2048, 1024, 2047, "Path tracing sample count: ");
+	pathTraceTargetSlider.SetTooltip("The path tracing will perform this many samples per pixel.");
+	GetGUI().AddWidget(&pathTraceTargetSlider);
+
+	pathTraceStatisticsLabel.Create("Path tracing statistics");
+	GetGUI().AddWidget(&pathTraceStatisticsLabel);
 
 	// Renderer and Postprocess windows are created in ChangeRenderPath(), because they deal with
 	//	RenderPath related information as well, so it's easier to reset them when changing
@@ -1698,6 +1715,28 @@ void EditorComponent::Update(float dt)
 	camera.TransformCamera(cameraWnd.camera_transform);
 	camera.UpdateCamera();
 
+	RenderPath3D_PathTracing* pathtracer = dynamic_cast<RenderPath3D_PathTracing*>(renderPath.get());
+	if (pathtracer != nullptr)
+	{
+		pathtracer->setTargetSampleCount((int)pathTraceTargetSlider.GetValue());
+
+		std::stringstream ss;
+		ss << "Sample count: " << pathtracer->getCurrentSampleCount() << std::endl;
+		ss << "Trace progress: " << int(pathtracer->getProgress() * 100) << "%" << std::endl;
+		if (pathtracer->isDenoiserAvailable())
+		{
+			if (pathtracer->getDenoiserProgress() > 0)
+			{
+				ss << "Denoiser progress: " << int(pathtracer->getDenoiserProgress() * 100) << "%" << std::endl;
+			}
+		}
+		else
+		{
+			ss << "Denoiser not available" << std::endl;
+		}
+		pathTraceStatisticsLabel.SetText(ss.str());
+	}
+
 	wiProfiler::EndRange(profrange);
 
 	RenderPath2D::Update(dt);
@@ -2319,13 +2358,13 @@ void EditorComponent::ClearSelected()
 {
 	translator.selected.clear();
 }
-void EditorComponent::AddSelected(wiECS::Entity entity)
+void EditorComponent::AddSelected(Entity entity)
 {
 	wiScene::PickResult res;
 	res.entity = entity;
 	AddSelected(res);
 }
-void EditorComponent::AddSelected(const wiScene::PickResult& picked)
+void EditorComponent::AddSelected(const PickResult& picked)
 {
 	for (auto it = translator.selected.begin(); it != translator.selected.end(); ++it)
 	{

@@ -627,7 +627,9 @@ namespace wiRenderer
 		const wiScene::Scene& scene,
 		const wiGraphics::Texture& output,
 		int accumulation_sample,
-		wiGraphics::CommandList cmd
+		wiGraphics::CommandList cmd,
+		const wiGraphics::Texture* output_albedo = nullptr,
+		const wiGraphics::Texture* output_normal = nullptr
 	);
 	// Render the scene BVH with ray tracing to the screen
 	void RayTraceSceneBVH(const wiScene::Scene& scene, wiGraphics::CommandList cmd);
