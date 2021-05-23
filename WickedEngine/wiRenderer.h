@@ -322,8 +322,7 @@ namespace wiRenderer
 	);
 	struct SSAOResources
 	{
-		wiGraphics::Texture temp0;
-		wiGraphics::Texture temp1;
+		wiGraphics::Texture temp;
 	};
 	void CreateSSAOResources(SSAOResources& res, XMUINT2 resolution);
 	void Postprocess_SSAO(
@@ -377,7 +376,6 @@ namespace wiRenderer
 		);
 	struct RTAOResources
 	{
-		wiGraphics::Texture temp;
 		wiGraphics::Texture normals;
 
 		mutable int frame = 0;
@@ -401,8 +399,7 @@ namespace wiRenderer
 	);
 	struct RTReflectionResources
 	{
-		wiGraphics::Texture temp;
-		wiGraphics::Texture texture_temporal[2];
+		wiGraphics::Texture temporal[2];
 	};
 	void CreateRTReflectionResources(RTReflectionResources& res, XMUINT2 resolution);
 	void Postprocess_RTReflection(
@@ -418,7 +415,6 @@ namespace wiRenderer
 	struct SSRResources
 	{
 		wiGraphics::Texture texture_raytrace;
-		wiGraphics::Texture texture_resolve;
 		wiGraphics::Texture texture_temporal[2];
 	};
 	void CreateSSRResources(SSRResources& res, XMUINT2 resolution);
@@ -459,7 +455,7 @@ namespace wiRenderer
 	);
 	struct ScreenSpaceShadowResources
 	{
-		wiGraphics::Texture temp;
+		int placeholder;
 	};
 	void CreateScreenSpaceShadowResources(ScreenSpaceShadowResources& res, XMUINT2 resolution);
 	void Postprocess_ScreenSpaceShadow(

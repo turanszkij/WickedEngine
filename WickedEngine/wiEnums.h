@@ -383,10 +383,8 @@ enum SHADERTYPE
 	CSTYPE_POSTPROCESS_RTAO_DENOISE_FILTER,
 
 
-       
-    // raytracing shaders
-    RTTYPE_RTREFLECTION,
-
+	// raytracing pipelines:
+	RTTYPE_RTREFLECTION,
 
 
     SHADERTYPE_COUNT,

@@ -1070,7 +1070,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 		[branch]
 		if (g_xFrame_Options & OPTION_BIT_SHADOW_MASK)
 		{
-			shadow_mask_packed = texture_rtshadow[surface.pixel];
+			shadow_mask_packed = texture_rtshadow[surface.pixel / 2];
 		}
 #endif // SHADOW_MASK_ENABLED
 
