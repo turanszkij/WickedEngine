@@ -8,35 +8,19 @@
 #include "stochasticSSRHF.hlsli"
 #include "lightingHF.hlsli"
 
-STRUCTUREDBUFFER(rayCounter, uint, TEXSLOT_ONDEMAND0);
-STRUCTUREDBUFFER(rayList, uint, TEXSLOT_ONDEMAND1);
-
-RWTEXTURE2D(traceResults, float4, 0);
-RWTEXTURE2D(rayLengths, float4, 1);
+RWTEXTURE2D(output, float4, 0);
 
 struct RayPayload
 {
 	float3 color;
-	float rayLength;
-	uint2 pixel;
+	float roughness;
 };
 
 [shader("raygeneration")]
 void RTReflection_Raygen()
 {
-	uint ray_index = DispatchRaysIndex().x;
-	if (ray_index >= rayCounter[1]) return;
-	uint packed_coords = rayList[ray_index];
-
-	int2 coords;
-	bool copy_horizontal;
-	bool copy_vertical;
-	bool copy_diagonal;
-	UnpackRayCoords(packed_coords, coords, copy_horizontal, copy_vertical, copy_diagonal);
-
-	uint2 DTid = (uint2)coords;
-	//uint2 DTid = DispatchRaysIndex().xy;
-	const float2 uv = ((float2)DTid.xy + 0.5) * xPPResolution_rcp;
+	uint2 DTid = DispatchRaysIndex().xy;
+	const float2 uv = ((float2)DTid.xy + 0.5) / (float2)DispatchRaysDimensions();
 	const float depth = texture_depth.SampleLevel(sampler_linear_clamp, uv, 0);
 	if (depth == 0)
 		return;
@@ -92,8 +76,7 @@ void RTReflection_Raygen()
 
 	RayPayload payload;
 	payload.color = 0;
-	payload.rayLength = 0;
-	payload.pixel = DTid.xy;
+	payload.roughness = roughness;
 
 	TraceRay(
 		scene_acceleration_structure,   // AccelerationStructure
@@ -106,27 +89,7 @@ void RTReflection_Raygen()
 		payload                         // Payload
 	);
 
-	float4 reflection_result = float4(payload.color, 1);
-
-	traceResults[DTid.xy] = reflection_result;
-	rayLengths[DTid.xy] = payload.rayLength;
-
-	uint2 copy_target = coords ^ 0b1; // Flip last bit to find the mirrored coords along the x and y axis within a quad.
-	if (copy_horizontal) {
-		uint2 copy_coords = uint2(copy_target.x, coords.y);
-		traceResults[copy_coords] = reflection_result;
-		rayLengths[copy_coords] = payload.rayLength;
-	}
-	if (copy_vertical) {
-		uint2 copy_coords = uint2(coords.x, copy_target.y);
-		traceResults[copy_coords] = reflection_result;
-		rayLengths[copy_coords] = payload.rayLength;
-	}
-	if (copy_diagonal) {
-		uint2 copy_coords = copy_target;
-		traceResults[copy_coords] = reflection_result;
-		rayLengths[copy_coords] = payload.rayLength;
-	}
+	output[DTid.xy] = float4(payload.color, 1);
 }
 
 [shader("closesthit")]
@@ -148,8 +111,8 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 		surface
 	);
 
-	surface.pixel = payload.pixel;
-	surface.screenUV = surface.pixel * xPPResolution_rcp;
+	surface.pixel = DispatchRaysIndex().xy;
+	surface.screenUV = surface.pixel / (float2)DispatchRaysDimensions().xy;
 
 	// Light sampling:
 	surface.P = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
@@ -193,7 +156,7 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 
 	LightingPart combined_lighting = CombineLighting(surface, lighting);
 	payload.color = surface.albedo * combined_lighting.diffuse + combined_lighting.specular + surface.emissiveColor.rgb * surface.emissiveColor.a;
-	payload.rayLength = RayTCurrent();
+
 }
 
 [shader("anyhit")]

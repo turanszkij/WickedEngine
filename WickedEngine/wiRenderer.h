@@ -399,14 +399,7 @@ namespace wiRenderer
 	);
 	struct RTReflectionResources
 	{
-		wiGraphics::Texture rayLengths;
-		wiGraphics::Texture spatial;
 		wiGraphics::Texture temporal[2];
-		wiGraphics::GPUBuffer indirectArgs;
-		wiGraphics::GPUBuffer temporalVarianceMask;
-		wiGraphics::GPUBuffer rayList;
-		wiGraphics::GPUBuffer rayCounter;
-		wiGraphics::GPUBuffer metadata;
 	};
 	void CreateRTReflectionResources(RTReflectionResources& res, XMUINT2 resolution);
 	void Postprocess_RTReflection(
