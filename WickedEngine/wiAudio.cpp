@@ -76,7 +76,7 @@ namespace wiAudio
 			hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
 			assert(SUCCEEDED(hr));
 
-			hr = XAudio2Create(&audioEngine, 0, XAUDIO2_USE_DEFAULT_PROCESSOR);
+			hr = XAudio2Create(&audioEngine, 0, XAUDIO2_DEFAULT_PROCESSOR);
 			assert(SUCCEEDED(hr));
 
 #ifdef _DEBUG
