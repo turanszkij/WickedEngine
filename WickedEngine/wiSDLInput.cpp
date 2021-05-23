@@ -37,8 +37,8 @@ namespace wiSDLInput
 //        {
 //            internal_controller.state = wiInput::ControllerState();
 //        }
-        mouse.position.x = saved_x;
-        mouse.position.y = saved_y;
+        // mouse.position.x = saved_x;
+        // mouse.position.y = saved_y;
 
         std::vector<SDL_Event> events(1000);
 
@@ -80,18 +80,6 @@ namespace wiSDLInput
 
                         // mouse events
                     case SDL_MOUSEMOTION:          // Mouse moved
-                        mouse.position.x = event.motion.x;
-                        mouse.position.y = event.motion.y;
-                        mouse.delta_position.x += event.motion.xrel;
-                        mouse.delta_position.y += event.motion.yrel;
-                        // TODO you can update mouse buttons by reading event.motion.state
-                        mouse.left_button_press = event.motion.state & SDL_BUTTON_LMASK;
-                        mouse.right_button_press = event.motion.state & SDL_BUTTON_RMASK;
-                        mouse.middle_button_press = event.motion.state & SDL_BUTTON_MMASK;
-                        //mouse.x1_button_press = event.motion.state & SDL_BUTTON_X1MASK;
-                        //mouse.x2_button_press = event.motion.state & SDL_BUTTON_X2MASK;
-
-                        break;
                     case SDL_MOUSEBUTTONDOWN:      // Mouse button pressed
                     case SDL_MOUSEBUTTONUP:        // Mouse button released
                         // handled at the bottom of this function
@@ -149,6 +137,8 @@ namespace wiSDLInput
         uint32_t mouse_buttons_state = SDL_GetMouseState(&x, &y);
         mouse.position.x = x;
         mouse.position.y = y;
+        mouse.delta_position.x = x - saved_x;
+        mouse.delta_position.y = y - saved_y;
         mouse.left_button_press = mouse_buttons_state & SDL_BUTTON_LMASK;
         mouse.right_button_press = mouse_buttons_state & SDL_BUTTON_RMASK;
         mouse.middle_button_press = mouse_buttons_state & SDL_BUTTON_MMASK;
