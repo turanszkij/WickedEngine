@@ -1307,6 +1307,13 @@ void LoadShaders()
 		wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_RTAO], "rtaoCS.cso", SHADERMODEL_6_5); });
 		wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_RTAO_DENOISE_TILECLASSIFICATION], "rtao_denoise_tileclassificationCS.cso"); });
 		wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_RTAO_DENOISE_FILTER], "rtao_denoise_filterCS.cso"); });
+
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_RTREFLECTION_TILECLASSIFICATION], "rtreflection_tileclassificationCS.cso"); });
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_RTREFLECTION_INDIRECTPREPARE], "rtreflection_indirectprepareCS.cso"); });
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_RTREFLECTION], "rtreflectionCS.cso", SHADERMODEL_6_5); });
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_RTREFLECTION_DENOISE_SPATIAL], "rtreflection_denoise_spatialCS.cso"); });
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_RTREFLECTION_DENOISE_TEMPORAL], "rtreflection_denoise_temporalCS.cso"); });
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_RTREFLECTION_DENOISE_BLUR], "rtreflection_denoise_blurCS.cso"); });
 	}
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(HS, shaders[HSTYPE_OBJECT], "objectHS.cso"); });
@@ -1901,57 +1908,58 @@ void LoadShaders()
 		device->CreatePipelineState(&desc, &PSO_debug[args.jobIndex]);
 		});
 
-	if(device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
-	{
-		wiJobSystem::Execute(ctx, [](wiJobArgs args) {
+	//if(device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+	//{
+	//	wiJobSystem::Execute(ctx, [](wiJobArgs args) {
 
-			bool success = LoadShader(LIB, shaders[RTTYPE_RTREFLECTION], "rtreflectionLIB.cso");
-			assert(success);
+	//		bool success = LoadShader(LIB, shaders[RTTYPE_RTREFLECTION], "rtreflectionLIB.cso");
+	//		assert(success);
 
-			RaytracingPipelineStateDesc rtdesc;
-			rtdesc.shaderlibraries.emplace_back();
-			rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTREFLECTION];
-			rtdesc.shaderlibraries.back().function_name = "RTReflection_Raygen";
-			rtdesc.shaderlibraries.back().type = ShaderLibrary::RAYGENERATION;
+	//		RaytracingPipelineStateDesc rtdesc;
+	//		rtdesc.shaderlibraries.emplace_back();
+	//		rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTREFLECTION];
+	//		rtdesc.shaderlibraries.back().function_name = "RTReflection_Raygen";
+	//		rtdesc.shaderlibraries.back().type = ShaderLibrary::RAYGENERATION;
 
-			rtdesc.shaderlibraries.emplace_back();
-			rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTREFLECTION];
-			rtdesc.shaderlibraries.back().function_name = "RTReflection_ClosestHit";
-			rtdesc.shaderlibraries.back().type = ShaderLibrary::CLOSESTHIT;
+	//		rtdesc.shaderlibraries.emplace_back();
+	//		rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTREFLECTION];
+	//		rtdesc.shaderlibraries.back().function_name = "RTReflection_ClosestHit";
+	//		rtdesc.shaderlibraries.back().type = ShaderLibrary::CLOSESTHIT;
 
-			rtdesc.shaderlibraries.emplace_back();
-			rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTREFLECTION];
-			rtdesc.shaderlibraries.back().function_name = "RTReflection_AnyHit";
-			rtdesc.shaderlibraries.back().type = ShaderLibrary::ANYHIT;
+	//		rtdesc.shaderlibraries.emplace_back();
+	//		rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTREFLECTION];
+	//		rtdesc.shaderlibraries.back().function_name = "RTReflection_AnyHit";
+	//		rtdesc.shaderlibraries.back().type = ShaderLibrary::ANYHIT;
 
-			rtdesc.shaderlibraries.emplace_back();
-			rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTREFLECTION];
-			rtdesc.shaderlibraries.back().function_name = "RTReflection_Miss";
-			rtdesc.shaderlibraries.back().type = ShaderLibrary::MISS;
+	//		rtdesc.shaderlibraries.emplace_back();
+	//		rtdesc.shaderlibraries.back().shader = &shaders[RTTYPE_RTREFLECTION];
+	//		rtdesc.shaderlibraries.back().function_name = "RTReflection_Miss";
+	//		rtdesc.shaderlibraries.back().type = ShaderLibrary::MISS;
 
-			rtdesc.hitgroups.emplace_back();
-			rtdesc.hitgroups.back().type = ShaderHitGroup::GENERAL;
-			rtdesc.hitgroups.back().name = "RTReflection_Raygen";
-			rtdesc.hitgroups.back().general_shader = 0;
+	//		rtdesc.hitgroups.emplace_back();
+	//		rtdesc.hitgroups.back().type = ShaderHitGroup::GENERAL;
+	//		rtdesc.hitgroups.back().name = "RTReflection_Raygen";
+	//		rtdesc.hitgroups.back().general_shader = 0;
 
-			rtdesc.hitgroups.emplace_back();
-			rtdesc.hitgroups.back().type = ShaderHitGroup::GENERAL;
-			rtdesc.hitgroups.back().name = "RTReflection_Miss";
-			rtdesc.hitgroups.back().general_shader = 3;
+	//		rtdesc.hitgroups.emplace_back();
+	//		rtdesc.hitgroups.back().type = ShaderHitGroup::GENERAL;
+	//		rtdesc.hitgroups.back().name = "RTReflection_Miss";
+	//		rtdesc.hitgroups.back().general_shader = 3;
 
-			rtdesc.hitgroups.emplace_back();
-			rtdesc.hitgroups.back().type = ShaderHitGroup::TRIANGLES;
-			rtdesc.hitgroups.back().name = "RTReflection_Hitgroup";
-			rtdesc.hitgroups.back().closesthit_shader = 1;
-			rtdesc.hitgroups.back().anyhit_shader = 2;
+	//		rtdesc.hitgroups.emplace_back();
+	//		rtdesc.hitgroups.back().type = ShaderHitGroup::TRIANGLES;
+	//		rtdesc.hitgroups.back().name = "RTReflection_Hitgroup";
+	//		rtdesc.hitgroups.back().closesthit_shader = 1;
+	//		rtdesc.hitgroups.back().anyhit_shader = 2;
 
-			rtdesc.max_trace_recursion_depth = 1;
-			rtdesc.max_payload_size_in_bytes = sizeof(float4);
-			rtdesc.max_attribute_size_in_bytes = sizeof(float2); // bary
-			success = device->CreateRaytracingPipelineState(&rtdesc, &RTPSO_reflection);
-			assert(success);
-			});
-	};
+	//		rtdesc.max_trace_recursion_depth = 1;
+	//		rtdesc.max_payload_size_in_bytes = sizeof(float4) * 2;
+	//		rtdesc.max_attribute_size_in_bytes = sizeof(float2); // bary
+	//		success = device->CreateRaytracingPipelineState(&rtdesc, &RTPSO_reflection);
+
+
+	//		});
+	//};
 
 	wiJobSystem::Wait(ctx);
 
@@ -9306,16 +9314,55 @@ void Postprocess_RTAO(
 void CreateRTReflectionResources(RTReflectionResources& res, XMUINT2 resolution)
 {
 	TextureDesc desc;
-	desc.Width = (resolution.x + 1) / 2;
-	desc.Height = (resolution.y + 1) / 2;
-	desc.Format = FORMAT_R11G11B10_FLOAT;
+	desc.Width = resolution.x;
+	desc.Height = resolution.y;
 	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+	desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
 
-	device->CreateTexture(&desc, nullptr, &res.temp);
-	device->SetName(&res.temp, "rtreflection_temp");
+	desc.Format = FORMAT_R16_FLOAT;
+	device->CreateTexture(&desc, nullptr, &res.rayLengths);
+	device->SetName(&res.rayLengths, "rtreflection_rayLengths");
 
-	device->CreateTexture(&desc, nullptr, &res.texture_temporal[0]);
-	device->CreateTexture(&desc, nullptr, &res.texture_temporal[1]);
+	desc.Format = FORMAT_R11G11B10_FLOAT;
+	device->CreateTexture(&desc, nullptr, &res.spatial);
+	device->SetName(&res.spatial, "rtreflection_spatial");
+
+	desc.Format = FORMAT_R11G11B10_FLOAT;
+	device->CreateTexture(&desc, nullptr, &res.temporal[0]);
+	device->SetName(&res.temporal[0], "rtreflection_temporal[0]");
+	device->CreateTexture(&desc, nullptr, &res.temporal[1]);
+	device->SetName(&res.temporal[1], "rtreflection_temporal[1]");
+
+
+	GPUBufferDesc bd;
+	bd.StructureByteStride = sizeof(uint);
+
+	bd.BindFlags = BIND_UNORDERED_ACCESS;
+	bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS | RESOURCE_MISC_INDIRECT_ARGS;
+	bd.ByteWidth = bd.StructureByteStride * 4;
+	device->CreateBuffer(&bd, nullptr, &res.indirectArgs);
+	device->SetName(&res.indirectArgs, "rtreflection_indirectArgs");
+
+	bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+
+	bd.ByteWidth = bd.StructureByteStride * (desc.Width * desc.Height + 31) / 32;
+	device->CreateBuffer(&bd, nullptr, &res.temporalVarianceMask);
+	device->SetName(&res.temporalVarianceMask, "rtreflection_temporalVarianceMask");
+
+	bd.ByteWidth = bd.StructureByteStride * desc.Width * desc.Height;
+	device->CreateBuffer(&bd, nullptr, &res.rayList);
+	device->SetName(&res.rayList, "rtreflection_rayList");
+
+	bd.ByteWidth = bd.StructureByteStride * 2;
+	device->CreateBuffer(&bd, nullptr, &res.rayCounter);
+	device->SetName(&res.rayCounter, "rtreflection_rayCounter");
+
+	bd.ByteWidth = bd.StructureByteStride *
+		((desc.Width + 7) / 8) *
+		((desc.Height + 7) / 8);
+	device->CreateBuffer(&bd, nullptr, &res.metadata);
+	device->SetName(&res.metadata, "rtreflection_metadata");
 }
 void Postprocess_RTReflection(
 	const RTReflectionResources& res,
@@ -9328,7 +9375,7 @@ void Postprocess_RTReflection(
 	float range
 )
 {
-	if (!wiRenderer::device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+	if (!wiRenderer::device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
 		return;
 
 	if (scene.objects.GetCount() <= 0)
@@ -9339,121 +9386,51 @@ void Postprocess_RTReflection(
 	device->EventBegin("Postprocess_RTReflection", cmd);
 	auto prof_range = wiProfiler::BeginRangeGPU("RTReflection", cmd);
 
-	device->BindRaytracingPipelineState(&RTPSO_reflection, cmd);
+	const TextureDesc& desc = output.desc;
 
 	BindCommonResources(cmd);
-	BindShadowmaps(LIB, cmd);
 
-	device->BindResource(LIB, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
-	device->BindResource(LIB, &depthbuffer, TEXSLOT_DEPTH, cmd);
-	device->BindResource(LIB, &gbuffer[GBUFFER_NORMAL_ROUGHNESS], TEXSLOT_GBUFFER1, cmd);
-	device->BindResource(LIB, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
-
-	device->BindResource(LIB, &resourceBuffers[RBTYPE_ENTITYARRAY], SBSLOT_ENTITYARRAY, cmd);
-	device->BindResource(LIB, &resourceBuffers[RBTYPE_MATRIXARRAY], SBSLOT_MATRIXARRAY, cmd);
-	device->BindResource(LIB, GetVoxelRadianceSecondaryBounceEnabled() ? &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] : &textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELRADIANCE, cmd);
-	device->BindResource(LIB, &scene.envmapArray, TEXSLOT_ENVMAPARRAY, cmd);
-	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
-	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
-	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
-	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], TEXSLOT_SKYLUMINANCELUT, cmd);
-
-	device->BindResource(LIB, &scene.lightmap, TEXSLOT_GLOBALLIGHTMAP, cmd);
-	if (scene.decalAtlas.IsValid())
-	{
-		device->BindResource(LIB, &scene.decalAtlas, TEXSLOT_DECALATLAS, cmd);
-	}
-
-	device->BindUAV(LIB, &res.temp, 0, cmd);
+	device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
+	device->BindResource(CS, &gbuffer[GBUFFER_NORMAL_ROUGHNESS], TEXSLOT_GBUFFER1, cmd);
+	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
 
 	PostProcessCB cb;
-	cb.xPPResolution.x = res.temp.desc.Width;
-	cb.xPPResolution.y = res.temp.desc.Height;
+	cb.xPPResolution.x = desc.Width;
+	cb.xPPResolution.y = desc.Height;
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.rtreflection_range = range;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(LIB, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
-
-	size_t shaderIdentifierSize = device->GetShaderIdentifierSize();
-	GraphicsDevice::GPUAllocation shadertable_raygen = device->AllocateGPU(shaderIdentifierSize, cmd);
-	GraphicsDevice::GPUAllocation shadertable_miss = device->AllocateGPU(shaderIdentifierSize, cmd);
-	GraphicsDevice::GPUAllocation shadertable_hitgroup = device->AllocateGPU(shaderIdentifierSize, cmd);
-
-	device->WriteShaderIdentifier(&RTPSO_reflection, 0, shadertable_raygen.data);
-	device->WriteShaderIdentifier(&RTPSO_reflection, 1, shadertable_miss.data);
-	device->WriteShaderIdentifier(&RTPSO_reflection, 2, shadertable_hitgroup.data);
-
-	DispatchRaysDesc dispatchraysdesc;
-	dispatchraysdesc.raygeneration.buffer = shadertable_raygen.buffer;
-	dispatchraysdesc.raygeneration.offset = shadertable_raygen.offset;
-	dispatchraysdesc.raygeneration.size = shaderIdentifierSize;
-
-	dispatchraysdesc.miss.buffer = shadertable_miss.buffer;
-	dispatchraysdesc.miss.offset = shadertable_miss.offset;
-	dispatchraysdesc.miss.size = shaderIdentifierSize;
-	dispatchraysdesc.miss.stride = shaderIdentifierSize;
-
-	dispatchraysdesc.hitgroup.buffer = shadertable_hitgroup.buffer;
-	dispatchraysdesc.hitgroup.offset = shadertable_hitgroup.offset;
-	dispatchraysdesc.hitgroup.size = shaderIdentifierSize;
-	dispatchraysdesc.hitgroup.stride = shaderIdentifierSize;
-
-	dispatchraysdesc.Width = res.temp.desc.Width;
-	dispatchraysdesc.Height = res.temp.desc.Height;
-
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&res.temp, res.temp.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
-
-	device->DispatchRays(&dispatchraysdesc, cmd);
-
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
-			GPUBarrier::Image(&res.temp, IMAGE_LAYOUT_UNORDERED_ACCESS, res.temp.desc.layout),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
-
-	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
-	device->BindResource(CS, &gbuffer[GBUFFER_COLOR], TEXSLOT_GBUFFER0, cmd);
-	device->BindResource(CS, &gbuffer[GBUFFER_NORMAL_ROUGHNESS], TEXSLOT_GBUFFER1, cmd);
-	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
-
-	int temporal_output = device->GetFrameCount() % 2;
-	int temporal_history = 1 - temporal_output;
-
-	// Temporal pass:
 	{
-		device->EventBegin("Temporal pass", cmd);
-		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_TEMPORAL], cmd);
+		device->EventBegin("Tile Classification", cmd);
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTREFLECTION_TILECLASSIFICATION], cmd);
 
-		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
-		device->BindResource(CS, &res.temp, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(CS, &res.texture_temporal[temporal_history], TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(CS, &depth_history, TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(CS, &res.temporalVarianceMask, TEXSLOT_ONDEMAND0, cmd);
 
 		const GPUResource* uavs[] = {
-			&res.texture_temporal[temporal_output],
+			&res.rayList,
+			&res.rayCounter,
+			&output,
+			&res.metadata
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&res.texture_temporal[temporal_output], res.texture_temporal[temporal_output].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+				GPUBarrier::Buffer(&res.rayList, BUFFER_STATE_SHADER_RESOURCE_COMPUTE, BUFFER_STATE_UNORDERED_ACCESS),
+				GPUBarrier::Buffer(&res.rayCounter, BUFFER_STATE_SHADER_RESOURCE_COMPUTE, BUFFER_STATE_UNORDERED_ACCESS),
+				GPUBarrier::Buffer(&res.metadata, BUFFER_STATE_SHADER_RESOURCE_COMPUTE, BUFFER_STATE_UNORDERED_ACCESS),
+				GPUBarrier::Image(&output, output.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+				GPUBarrier::Image(&res.rayLengths, res.rayLengths.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
 		device->Dispatch(
-			(res.texture_temporal[temporal_output].GetDesc().Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			(res.texture_temporal[temporal_output].GetDesc().Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
 			1,
 			cmd
 		);
@@ -9461,33 +9438,212 @@ void Postprocess_RTReflection(
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Memory(),
-				GPUBarrier::Image(&res.texture_temporal[temporal_output], IMAGE_LAYOUT_UNORDERED_ACCESS, res.texture_temporal[temporal_output].desc.layout),
+				GPUBarrier::Buffer(&res.rayList, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE_COMPUTE),
+				GPUBarrier::Buffer(&res.metadata, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE_COMPUTE),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
-	// Switch to full res
-	cb.xPPResolution.x = output.desc.Width;
-	cb.xPPResolution.y = output.desc.Height;
-	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
-
-	// Median blur pass:
 	{
-		device->EventBegin("Median blur pass", cmd);
-		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_MEDIAN], cmd);
+		device->EventBegin("Indirect Prepare", cmd);
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTREFLECTION_INDIRECTPREPARE], cmd);
 
-		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
-		device->BindResource(CS, &res.texture_temporal[temporal_output], TEXSLOT_ONDEMAND0, cmd);
+		const GPUResource* uavs[] = {
+			&res.indirectArgs,
+			&res.rayCounter,
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Buffer(&res.indirectArgs, BUFFER_STATE_INDIRECT_ARGUMENT, BUFFER_STATE_UNORDERED_ACCESS),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->Dispatch(1, 1, 1, cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(),
+				GPUBarrier::Buffer(&res.indirectArgs, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_INDIRECT_ARGUMENT),
+				GPUBarrier::Buffer(&res.rayCounter, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE_COMPUTE),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->EventEnd(cmd);
+	}
+
+	{
+		device->EventBegin("Raytrace", cmd);
+
+		BindShadowmaps(CS, cmd);
+
+		device->BindResource(CS, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
+
+		device->BindResource(CS, &resourceBuffers[RBTYPE_ENTITYARRAY], SBSLOT_ENTITYARRAY, cmd);
+		device->BindResource(CS, &resourceBuffers[RBTYPE_MATRIXARRAY], SBSLOT_MATRIXARRAY, cmd);
+		device->BindResource(CS, GetVoxelRadianceSecondaryBounceEnabled() ? &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] : &textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELRADIANCE, cmd);
+		device->BindResource(CS, &scene.envmapArray, TEXSLOT_ENVMAPARRAY, cmd);
+		device->BindResource(CS, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
+		device->BindResource(CS, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
+		device->BindResource(CS, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
+		device->BindResource(CS, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], TEXSLOT_SKYLUMINANCELUT, cmd);
+
+		device->BindResource(CS, &scene.lightmap, TEXSLOT_GLOBALLIGHTMAP, cmd);
+		if (scene.decalAtlas.IsValid())
+		{
+			device->BindResource(CS, &scene.decalAtlas, TEXSLOT_DECALATLAS, cmd);
+		}
+
+		device->BindResource(CS, &res.rayCounter, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(CS, &res.rayList, TEXSLOT_ONDEMAND1, cmd);
 
 		const GPUResource* uavs[] = {
 			&output,
+			&res.rayLengths
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTREFLECTION], cmd);
+
+		device->DispatchIndirect(&res.indirectArgs, 0, cmd);
+
+		//device->BindRaytracingPipelineState(&RTPSO_reflection, cmd);
+
+		//size_t shaderIdentifierSize = device->GetShaderIdentifierSize();
+		//GraphicsDevice::GPUAllocation shadertable_raygen = device->AllocateGPU(shaderIdentifierSize, cmd);
+		//GraphicsDevice::GPUAllocation shadertable_miss = device->AllocateGPU(shaderIdentifierSize, cmd);
+		//GraphicsDevice::GPUAllocation shadertable_hitgroup = device->AllocateGPU(shaderIdentifierSize, cmd);
+
+		//device->WriteShaderIdentifier(&RTPSO_reflection, 0, shadertable_raygen.data);
+		//device->WriteShaderIdentifier(&RTPSO_reflection, 1, shadertable_miss.data);
+		//device->WriteShaderIdentifier(&RTPSO_reflection, 2, shadertable_hitgroup.data);
+
+		//DispatchRaysDesc dispatchraysdesc;
+		//dispatchraysdesc.raygeneration.buffer = shadertable_raygen.buffer;
+		//dispatchraysdesc.raygeneration.offset = shadertable_raygen.offset;
+		//dispatchraysdesc.raygeneration.size = shaderIdentifierSize;
+
+		//dispatchraysdesc.miss.buffer = shadertable_miss.buffer;
+		//dispatchraysdesc.miss.offset = shadertable_miss.offset;
+		//dispatchraysdesc.miss.size = shaderIdentifierSize;
+		//dispatchraysdesc.miss.stride = shaderIdentifierSize;
+
+		//dispatchraysdesc.hitgroup.buffer = shadertable_hitgroup.buffer;
+		//dispatchraysdesc.hitgroup.offset = shadertable_hitgroup.offset;
+		//dispatchraysdesc.hitgroup.size = shaderIdentifierSize;
+		//dispatchraysdesc.hitgroup.stride = shaderIdentifierSize;
+
+		//dispatchraysdesc.Width = output.desc.Width * output.desc.Height;
+
+		//device->DispatchRays(&dispatchraysdesc, cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(),
+				GPUBarrier::Image(&output, IMAGE_LAYOUT_UNORDERED_ACCESS, output.desc.layout),
+				GPUBarrier::Image(&res.rayLengths, IMAGE_LAYOUT_UNORDERED_ACCESS, res.rayLengths.desc.layout),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->EventEnd(cmd);
+	}
+
+	{
+		device->EventBegin("Spatial filter", cmd);
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTREFLECTION_DENOISE_SPATIAL], cmd);
+
+		device->BindResource(CS, &output, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(CS, &res.metadata, TEXSLOT_ONDEMAND1, cmd);
+
+		const GPUResource* uavs[] = {
+			&res.spatial,
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&res.spatial, res.spatial.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->Dispatch(
+			(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			1,
+			cmd
+		);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&res.spatial, IMAGE_LAYOUT_UNORDERED_ACCESS, res.spatial.desc.layout),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->EventEnd(cmd);
+	}
+
+	int temporal_output = device->GetFrameCount() % 2;
+	int temporal_history = 1 - temporal_output;
+
+	{
+		device->EventBegin("Temporal filter", cmd);
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTREFLECTION_DENOISE_TEMPORAL], cmd);
+
+		device->BindResource(CS, &res.temporal[temporal_history], TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(CS, &res.rayLengths, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(CS, &res.spatial, TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(CS, &res.metadata, TEXSLOT_ONDEMAND3, cmd);
+
+		const GPUResource* uavs[] = {
+			&res.temporal[temporal_output],
+			&res.temporalVarianceMask
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&res.temporal[temporal_output], res.temporal[temporal_output].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+				GPUBarrier::Buffer(&res.temporalVarianceMask, BUFFER_STATE_SHADER_RESOURCE_COMPUTE, BUFFER_STATE_UNORDERED_ACCESS),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->Dispatch(
+			(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			1,
+			cmd
+		);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&res.temporal[temporal_output], IMAGE_LAYOUT_UNORDERED_ACCESS, res.temporal[temporal_output].desc.layout),
+				GPUBarrier::Buffer(&res.temporalVarianceMask, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE_COMPUTE),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->EventEnd(cmd);
+	}
+
+	{
+		device->EventBegin("Blur filter", cmd);
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTREFLECTION_DENOISE_BLUR], cmd);
+
+		device->BindResource(CS, &res.temporal[temporal_output], TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(CS, &res.metadata, TEXSLOT_ONDEMAND1, cmd);
+
+		const GPUResource* uavs[] = {
+			&output
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
@@ -9499,21 +9655,19 @@ void Postprocess_RTReflection(
 		}
 
 		device->Dispatch(
-			(output.desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			(output.desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
 			1,
 			cmd
 		);
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
 				GPUBarrier::Image(&output, IMAGE_LAYOUT_UNORDERED_ACCESS, output.desc.layout),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
