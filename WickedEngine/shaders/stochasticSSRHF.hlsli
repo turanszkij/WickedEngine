@@ -210,7 +210,7 @@ float4 ImportanceSampleVisibleGGX(float2 diskXi, float roughness, float3 V)
 
 
 
-
+#ifndef HLSL5
 // AMD code below
 
 /**********************************************************************
@@ -310,11 +310,12 @@ float3 FFX_DNSR_Reflections_ScreenSpaceToViewSpace(float3 screen_uv_coord) {
 }
 
 float3 FFX_DNSR_Reflections_ViewSpaceToWorldSpace(float4 view_space_coord) {
-	return mul(view_space_coord, g_xCamera_InvV).xyz;
+	return mul(g_xCamera_InvV, view_space_coord).xyz;
 }
 
 float3 FFX_DNSR_Reflections_WorldSpaceToScreenSpacePrevious(float3 world_coord) {
 	return ProjectPosition(world_coord, g_xCamera_PrevVP);
 }
+#endif
 
 #endif // WI_STOCHASTICSSR_HF

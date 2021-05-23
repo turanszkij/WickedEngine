@@ -42,7 +42,7 @@ void main(uint2 group_id : SV_GroupID, uint group_index : SV_GroupIndex)
 	const float4 g1 = texture_gbuffer1.SampleLevel(sampler_linear_clamp, prevUV, 0);
 	float roughness = g1.a;
 #else
-	float roughness = texture_gbuffer1[dispatch_thread_id].a;
+	float roughness = texture_gbuffer1[dispatch_thread_id * 2].a;
 #endif
 
 	FFX_DNSR_Reflections_ClassifyTiles(dispatch_thread_id, group_thread_id, roughness, screen_size, g_samples_per_quad, g_temporal_variance_guided_tracing_enabled);

@@ -40,7 +40,7 @@ void FFX_DNSR_Reflections_StoreInGroupSharedMemory(int2 idx, min16float3 radianc
 }
 
 float FFX_DNSR_Reflections_LoadRoughness(int2 pixel_coordinate) {
-	return texture_gbuffer1.Load(int3(pixel_coordinate, 0)).a;
+	return texture_gbuffer1.Load(int3(pixel_coordinate * 2, 0)).a;
 }
 
 min16float3 FFX_DNSR_Reflections_LoadRadianceFP16(int2 pixel_coordinate) {
@@ -48,11 +48,11 @@ min16float3 FFX_DNSR_Reflections_LoadRadianceFP16(int2 pixel_coordinate) {
 }
 
 min16float3 FFX_DNSR_Reflections_LoadNormalFP16(int2 pixel_coordinate) {
-	return (min16float3) (2 * texture_gbuffer1.Load(int3(pixel_coordinate, 0)).xyz - 1);
+	return (min16float3) (2 * texture_gbuffer1.Load(int3(pixel_coordinate * 2, 0)).xyz - 1);
 }
 
 float FFX_DNSR_Reflections_LoadDepth(int2 pixel_coordinate) {
-	return texture_depth.Load(int3(pixel_coordinate, 0));
+	return texture_depth.Load(int3(pixel_coordinate * 2, 0));
 }
 
 void FFX_DNSR_Reflections_StoreSpatiallyDenoisedReflections(int2 pixel_coordinate, min16float3 value) {

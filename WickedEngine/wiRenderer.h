@@ -424,7 +424,6 @@ namespace wiRenderer
 	struct SSRResources
 	{
 		wiGraphics::Texture texture_raytrace;
-		wiGraphics::Texture texture_resolve;
 		wiGraphics::Texture texture_temporal[2];
 	};
 	void CreateSSRResources(SSRResources& res, XMUINT2 resolution);

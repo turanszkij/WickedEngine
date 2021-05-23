@@ -18,23 +18,23 @@ float FFX_DNSR_Reflections_LoadRayLength(int2 pixel_coordinate) {
 }
 
 float2 FFX_DNSR_Reflections_LoadMotionVector(int2 pixel_coordinate) {
-	return -texture_gbuffer2.Load(int3(pixel_coordinate, 0)).xy;
+	return -texture_gbuffer2.Load(int3(pixel_coordinate * 2, 0)).xy;
 }
 
 float3 FFX_DNSR_Reflections_LoadNormal(int2 pixel_coordinate) {
-	return 2 * texture_gbuffer1.Load(int3(pixel_coordinate, 0)).xyz - 1;
+	return 2 * texture_gbuffer1.Load(int3(pixel_coordinate * 2, 0)).xyz - 1;
 }
 
 float3 FFX_DNSR_Reflections_LoadNormalHistory(int2 pixel_coordinate) {
-	return 2 * texture_gbuffer1.Load(int3(pixel_coordinate, 0)).xyz - 1;
+	return 2 * texture_gbuffer1.Load(int3(pixel_coordinate * 2, 0)).xyz - 1;
 }
 
 float FFX_DNSR_Reflections_LoadRoughness(int2 pixel_coordinate) {
-	return texture_gbuffer1.Load(int3(pixel_coordinate, 0)).a;
+	return texture_gbuffer1.Load(int3(pixel_coordinate * 2, 0)).a;
 }
 
 float FFX_DNSR_Reflections_LoadRoughnessHistory(int2 pixel_coordinate) {
-	return texture_gbuffer1.Load(int3(pixel_coordinate, 0)).a;
+	return texture_gbuffer1.Load(int3(pixel_coordinate * 2, 0)).a;
 }
 
 float3 FFX_DNSR_Reflections_LoadRadianceHistory(int2 pixel_coordinate) {
@@ -42,7 +42,7 @@ float3 FFX_DNSR_Reflections_LoadRadianceHistory(int2 pixel_coordinate) {
 }
 
 float FFX_DNSR_Reflections_LoadDepth(int2 pixel_coordinate) {
-	return texture_depth.Load(int3(pixel_coordinate, 0));
+	return texture_depth.Load(int3(pixel_coordinate * 2, 0));
 }
 
 float3 FFX_DNSR_Reflections_LoadSpatiallyDenoisedReflections(int2 pixel_coordinate) {

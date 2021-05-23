@@ -235,6 +235,7 @@ void FFX_DNSR_Reflections_ResolveTemporal(int2 dispatch_thread_id, int2 group_th
 
         radiance = lerp(radiance, reprojection, weight);
         has_temporal_variance = FFX_DNSR_Reflections_ComputeTemporalVariance(radiance_history, radiance) > temporal_variance_threshold;
+		//has_temporal_variance = true;
 
         FFX_DNSR_Reflections_StoreTemporallyDenoisedReflections(dispatch_thread_id, radiance);
     }

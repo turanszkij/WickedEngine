@@ -66,8 +66,8 @@ void RenderPath3D::ResizeBuffers()
 		TextureDesc desc;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.Format = FORMAT_R16G16B16A16_FLOAT;
-		desc.Width = internalResolution.x;
-		desc.Height = internalResolution.y;
+		desc.Width = internalResolution.x / 2;
+		desc.Height = internalResolution.y / 2;
 		device->CreateTexture(&desc, nullptr, &rtSSR);
 		device->SetName(&rtSSR, "rtSSR");
 	}

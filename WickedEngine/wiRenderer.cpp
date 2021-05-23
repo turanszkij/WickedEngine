@@ -9314,8 +9314,8 @@ void Postprocess_RTAO(
 void CreateRTReflectionResources(RTReflectionResources& res, XMUINT2 resolution)
 {
 	TextureDesc desc;
-	desc.Width = resolution.x;
-	desc.Height = resolution.y;
+	desc.Width = resolution.x / 2;
+	desc.Height = resolution.y / 2;
 	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 	desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
 
@@ -9339,14 +9339,16 @@ void CreateRTReflectionResources(RTReflectionResources& res, XMUINT2 resolution)
 
 	bd.BindFlags = BIND_UNORDERED_ACCESS;
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS | RESOURCE_MISC_INDIRECT_ARGS;
-	bd.ByteWidth = bd.StructureByteStride * 4;
+	bd.ByteWidth = bd.StructureByteStride * 3;
 	device->CreateBuffer(&bd, nullptr, &res.indirectArgs);
 	device->SetName(&res.indirectArgs, "rtreflection_indirectArgs");
 
 	bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 
-	bd.ByteWidth = bd.StructureByteStride * (desc.Width * desc.Height + 31) / 32;
+	bd.ByteWidth = bd.StructureByteStride *
+		((desc.Width + 7) / 8) *
+		((desc.Height + 7) / 8) * 2;
 	device->CreateBuffer(&bd, nullptr, &res.temporalVarianceMask);
 	device->SetName(&res.temporalVarianceMask, "rtreflection_temporalVarianceMask");
 
@@ -9676,25 +9678,16 @@ void Postprocess_RTReflection(
 }
 void CreateSSRResources(SSRResources& res, XMUINT2 resolution)
 {
-	TextureDesc cast_desc;
-	cast_desc.type = TextureDesc::TEXTURE_2D;
-	cast_desc.Width = (resolution.x + 1) / 2;
-	cast_desc.Height = (resolution.y + 1) / 2;
-	cast_desc.Format = FORMAT_R16G16B16A16_FLOAT;
-	cast_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-	cast_desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
-	device->CreateTexture(&cast_desc, nullptr, &res.texture_raytrace);
-
-	TextureDesc buffer_desc;
-	buffer_desc.type = TextureDesc::TEXTURE_2D;
-	buffer_desc.Width = resolution.x;
-	buffer_desc.Height = resolution.y;
-	buffer_desc.Format = FORMAT_R16G16B16A16_FLOAT;
-	buffer_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-	buffer_desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
-	device->CreateTexture(&buffer_desc, nullptr, &res.texture_resolve);
-	device->CreateTexture(&buffer_desc, nullptr, &res.texture_temporal[0]);
-	device->CreateTexture(&buffer_desc, nullptr, &res.texture_temporal[1]);
+	TextureDesc desc;
+	desc.type = TextureDesc::TEXTURE_2D;
+	desc.Width = resolution.x / 2;
+	desc.Height = resolution.y / 2;
+	desc.Format = FORMAT_R16G16B16A16_FLOAT;
+	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+	desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
+	device->CreateTexture(&desc, nullptr, &res.texture_raytrace);
+	device->CreateTexture(&desc, nullptr, &res.texture_temporal[0]);
+	device->CreateTexture(&desc, nullptr, &res.texture_temporal[1]);
 }
 void Postprocess_SSR(
 	const SSRResources& res,
@@ -9723,10 +9716,9 @@ void Postprocess_SSR(
 	device->BindResource(CS, &gbuffer[GBUFFER_NORMAL_ROUGHNESS], TEXSLOT_GBUFFER1, cmd);
 	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
 
-	// Switch to half res
 	PostProcessCB cb;
-	cb.xPPResolution.x = desc.Width / 2;
-	cb.xPPResolution.y = desc.Height / 2;
+	cb.xPPResolution.x = desc.Width;
+	cb.xPPResolution.y = desc.Height;
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.ssr_input_maxmip = float(input_desc.MipLevels - 1);
@@ -9754,8 +9746,8 @@ void Postprocess_SSR(
 		}
 
 		device->Dispatch(
-			(res.texture_raytrace.GetDesc().Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			(res.texture_raytrace.GetDesc().Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
 			1,
 			cmd
 		);
@@ -9772,14 +9764,6 @@ void Postprocess_SSR(
 		device->EventEnd(cmd);
 	}
 
-	// Switch to full res
-	cb.xPPResolution.x = desc.Width;
-	cb.xPPResolution.y = desc.Height;
-	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
-
 	// Resolve pass:
 	{
 		device->EventBegin("Resolve pass", cmd);
@@ -9790,20 +9774,20 @@ void Postprocess_SSR(
 		device->BindResource(CS, &depth_history, TEXSLOT_ONDEMAND2, cmd);
 
 		const GPUResource* uavs[] = {
-			&res.texture_resolve,
+			&output,
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&res.texture_resolve, res.texture_resolve.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+				GPUBarrier::Image(&output, output.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
 		device->Dispatch(
-			(res.texture_resolve.GetDesc().Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			(res.texture_resolve.GetDesc().Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
 			1,
 			cmd
 		);
@@ -9811,7 +9795,7 @@ void Postprocess_SSR(
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Memory(),
-				GPUBarrier::Image(&res.texture_resolve, IMAGE_LAYOUT_UNORDERED_ACCESS, res.texture_resolve.desc.layout),
+				GPUBarrier::Image(&output, IMAGE_LAYOUT_UNORDERED_ACCESS, output.desc.layout),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -9828,7 +9812,7 @@ void Postprocess_SSR(
 		device->EventBegin("Temporal pass", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_TEMPORAL], cmd);
 
-		device->BindResource(CS, &res.texture_resolve, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(CS, &output, TEXSLOT_ONDEMAND0, cmd);
 		device->BindResource(CS, &res.texture_temporal[temporal_history], TEXSLOT_ONDEMAND1, cmd);
 		device->BindResource(CS, &depth_history, TEXSLOT_ONDEMAND2, cmd);
 
@@ -9845,8 +9829,8 @@ void Postprocess_SSR(
 		}
 
 		device->Dispatch(
-			(res.texture_temporal[temporal_output].GetDesc().Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			(res.texture_temporal[temporal_output].GetDesc().Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
 			1,
 			cmd
 		);
