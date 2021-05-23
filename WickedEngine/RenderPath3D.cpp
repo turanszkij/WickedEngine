@@ -64,15 +64,6 @@ void RenderPath3D::ResizeBuffers()
 	}
 	{
 		TextureDesc desc;
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.Format = FORMAT_R16G16B16A16_FLOAT;
-		desc.Width = internalResolution.x / 2;
-		desc.Height = internalResolution.y / 2;
-		device->CreateTexture(&desc, nullptr, &rtSSR);
-		device->SetName(&rtSSR, "rtSSR");
-	}
-	{
-		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		desc.Format = FORMAT_R16G16B16A16_FLOAT;
 		desc.Width = internalResolution.x;
@@ -145,19 +136,9 @@ void RenderPath3D::ResizeBuffers()
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.Format = FORMAT_R8_UNORM;
-		desc.Width = internalResolution.x;
-		desc.Height = internalResolution.y;
-		desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
-		device->CreateTexture(&desc, nullptr, &rtAO);
-		device->SetName(&rtAO, "rtAO");
-	}
-	{
-		TextureDesc desc;
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.Format = FORMAT_R32G32B32A32_UINT;
-		desc.Width = internalResolution.x;
-		desc.Height = internalResolution.y;
+		desc.Width = internalResolution.x / 2;
+		desc.Height = internalResolution.y / 2;
 		desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
 		device->CreateTexture(&desc, nullptr, &rtShadow);
 		device->SetName(&rtShadow, "rtShadow");
@@ -510,24 +491,20 @@ void RenderPath3D::ResizeBuffers()
 	wiRenderer::CreateTiledLightResources(tiledLightResources, internalResolution);
 	wiRenderer::CreateTiledLightResources(tiledLightResources_planarReflection, internalResolution);
 	wiRenderer::CreateLuminanceResources(luminanceResources, internalResolution);
-	wiRenderer::CreateSSAOResources(ssaoResources, internalResolution);
-	wiRenderer::CreateMSAOResources(msaoResources, internalResolution);
-	wiRenderer::CreateSSRResources(ssrResources, internalResolution);
 	wiRenderer::CreateScreenSpaceShadowResources(screenspaceshadowResources, internalResolution);
 	wiRenderer::CreateDepthOfFieldResources(depthoffieldResources, internalResolution);
 	wiRenderer::CreateMotionBlurResources(motionblurResources, internalResolution);
 	wiRenderer::CreateVolumetricCloudResources(volumetriccloudResources, internalResolution);
 	wiRenderer::CreateBloomResources(bloomResources, internalResolution);
 
-	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
-	{
-		wiRenderer::CreateRTReflectionResources(rtreflectionResources, internalResolution);
-	}
 	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
 	{
-		wiRenderer::CreateRTAOResources(rtaoResources, internalResolution);
 		wiRenderer::CreateRTShadowResources(rtshadowResources, internalResolution);
 	}
+
+	setAO(ao);
+	setSSREnabled(ssrEnabled);
+	setRaytracedReflectionsEnabled(raytracedReflectionsEnabled);
 
 	RenderPath2D::ResizeBuffers();
 }
@@ -1442,3 +1419,100 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 	}
 }
 
+void RenderPath3D::setAO(AO value)
+{
+	ao = value;
+
+	rtAO = {};
+	ssaoResources = {};
+	msaoResources = {};
+	rtaoResources = {};
+
+	if (ao == AO_DISABLED)
+	{
+		return;
+	}
+
+	XMUINT2 internalResolution = GetInternalResolution();
+
+	TextureDesc desc;
+	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+	desc.Format = FORMAT_R8_UNORM;
+	desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
+
+	switch (ao)
+	{
+	case RenderPath3D::AO_SSAO:
+	case RenderPath3D::AO_HBAO:
+		desc.Width = internalResolution.x / 2;
+		desc.Height = internalResolution.y / 2;
+		wiRenderer::CreateSSAOResources(ssaoResources, internalResolution);
+		break;
+	case RenderPath3D::AO_MSAO:
+		desc.Width = internalResolution.x;
+		desc.Height = internalResolution.y;
+		wiRenderer::CreateMSAOResources(msaoResources, internalResolution);
+		break;
+	case RenderPath3D::AO_RTAO:
+		desc.Width = internalResolution.x / 2;
+		desc.Height = internalResolution.y / 2;
+		wiRenderer::CreateRTAOResources(rtaoResources, internalResolution);
+		break;
+	default:
+		break;
+	}
+
+	GraphicsDevice* device = wiRenderer::GetDevice();
+	device->CreateTexture(&desc, nullptr, &rtAO);
+	device->SetName(&rtAO, "rtAO");
+}
+
+void RenderPath3D::setSSREnabled(bool value)
+{
+	ssrEnabled = value;
+
+	if (value)
+	{
+		GraphicsDevice* device = wiRenderer::GetDevice();
+		XMUINT2 internalResolution = GetInternalResolution();
+
+		TextureDesc desc;
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.Format = FORMAT_R16G16B16A16_FLOAT;
+		desc.Width = internalResolution.x / 2;
+		desc.Height = internalResolution.y / 2;
+		device->CreateTexture(&desc, nullptr, &rtSSR);
+		device->SetName(&rtSSR, "rtSSR");
+
+		wiRenderer::CreateSSRResources(ssrResources, internalResolution);
+	}
+	else
+	{
+		ssrResources = {};
+	}
+}
+
+void RenderPath3D::setRaytracedReflectionsEnabled(bool value)
+{
+	raytracedReflectionsEnabled = value;
+
+	if (value)
+	{
+		GraphicsDevice* device = wiRenderer::GetDevice();
+		XMUINT2 internalResolution = GetInternalResolution();
+
+		TextureDesc desc;
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.Format = FORMAT_R16G16B16A16_FLOAT;
+		desc.Width = internalResolution.x / 2;
+		desc.Height = internalResolution.y / 2;
+		device->CreateTexture(&desc, nullptr, &rtSSR);
+		device->SetName(&rtSSR, "rtSSR");
+
+		wiRenderer::CreateRTReflectionResources(rtreflectionResources, internalResolution);
+	}
+	else
+	{
+		rtreflectionResources = {};
+	}
+}

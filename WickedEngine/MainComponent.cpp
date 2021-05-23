@@ -177,9 +177,10 @@ void MainComponent::Run()
 		viewport.Height = (float)swapChain.desc.height;
 		wiRenderer::GetDevice()->BindViewports(1, &viewport, cmd);
 		Compose(cmd);
-		wiProfiler::EndFrame(cmd); // End before Present() so that GPU queries are properly recorded
 	}
 	wiRenderer::GetDevice()->RenderPassEnd(cmd);
+
+	wiProfiler::EndFrame(cmd);
 	wiRenderer::GetDevice()->SubmitCommandLists();
 }
 

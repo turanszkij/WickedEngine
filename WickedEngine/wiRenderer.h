@@ -322,8 +322,7 @@ namespace wiRenderer
 	);
 	struct SSAOResources
 	{
-		wiGraphics::Texture temp0;
-		wiGraphics::Texture temp1;
+		wiGraphics::Texture temp;
 	};
 	void CreateSSAOResources(SSAOResources& res, XMUINT2 resolution);
 	void Postprocess_SSAO(
@@ -377,7 +376,6 @@ namespace wiRenderer
 		);
 	struct RTAOResources
 	{
-		wiGraphics::Texture temp;
 		wiGraphics::Texture normals;
 
 		mutable int frame = 0;
@@ -464,7 +462,7 @@ namespace wiRenderer
 	);
 	struct ScreenSpaceShadowResources
 	{
-		wiGraphics::Texture temp;
+		int placeholder;
 	};
 	void CreateScreenSpaceShadowResources(ScreenSpaceShadowResources& res, XMUINT2 resolution);
 	void Postprocess_ScreenSpaceShadow(

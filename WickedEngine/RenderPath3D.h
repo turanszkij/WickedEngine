@@ -237,9 +237,9 @@ public:
 	constexpr void setEyeAdaptionKey(float value) { eyeadaptionKey = value; }
 	constexpr void setEyeAdaptionRate(float value) { eyeadaptionRate = value; }
 
-	constexpr void setAO(AO value) { ao = value; }
-	constexpr void setSSREnabled(bool value){ ssrEnabled = value; }
-	constexpr void setRaytracedReflectionsEnabled(bool value){ raytracedReflectionsEnabled = value; }
+	void setAO(AO value);
+	void setSSREnabled(bool value);
+	void setRaytracedReflectionsEnabled(bool value);
 	constexpr void setShadowsEnabled(bool value){ shadowsEnabled = value; }
 	constexpr void setReflectionsEnabled(bool value){ reflectionsEnabled = value; }
 	constexpr void setFXAAEnabled(bool value){ fxaaEnabled = value; }
