@@ -8,6 +8,8 @@
 #include "stochasticSSRHF.hlsli"
 #include "lightingHF.hlsli"
 
+TEXTURE2D(texture_depth_history, float, TEXSLOT_ONDEMAND2);
+
 RWTEXTURE2D(output, float4, 0);
 
 struct RayPayload
@@ -25,15 +27,67 @@ void RTReflection_Raygen()
 	if (depth == 0)
 		return;
 
+	bool disocclusion = false;
 	const float2 velocity = texture_gbuffer2.SampleLevel(sampler_point_clamp, uv, 0).xy;
 	const float2 prevUV = uv + velocity;
+	if (!is_saturated(prevUV))
+	{
+		//output[DTid.xy] = float4(1, 0, 0, 1);
+		//return;
+		disocclusion = true;
+	}
 
-	const float4 g1 = texture_gbuffer1.SampleLevel(sampler_linear_clamp, prevUV, 0);
+	// Disocclusion fallback:
+	float depth_current = getLinearDepth(depth);
+	float depth_history = getLinearDepth(texture_depth_history.SampleLevel(sampler_point_clamp, prevUV, 1));
+	if (abs(depth_current - depth_history) > 1)
+	{
+		//output[DTid.xy] = float4(1, 0, 0, 1);
+		//return;
+		disocclusion = true;
+	}
+
 	const float3 P = reconstructPosition(uv, depth);
-	const float3 N = normalize(g1.rgb * 2 - 1);
 	const float3 V = normalize(g_xCamera_CamPos - P);
-	const float roughness = g1.a;
 
+	float3 N;
+	float roughness;
+	if (disocclusion)
+	{
+		// When reprojection is invalid, trace the surface parameters:
+		RayDesc ray;
+		ray.Origin = P - V * 0.01;
+		ray.Direction = V;
+		ray.TMin = 0.001;
+		ray.TMax = 0.1;
+
+		RayPayload payload;
+		payload.color = 0;
+		payload.roughness = -1; // indicate closesthit shader will just fill normal and roughness
+
+		TraceRay(
+			scene_acceleration_structure,   // AccelerationStructure
+			RAY_FLAG_FORCE_OPAQUE |
+			RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH |
+			0,                              // RayFlags
+			~0,                             // InstanceInclusionMask
+			0,                              // RayContributionToHitGroupIndex
+			0,                              // MultiplierForGeomtryContributionToShaderIndex
+			0,                              // MissShaderIndex
+			ray,                            // Ray
+			payload                         // Payload
+		);
+
+		N = payload.color;
+		roughness = payload.roughness;
+	}
+	else
+	{
+		// When reprojection valid, just sample surface parameters from gbuffer:
+		const float4 g1 = texture_gbuffer1.SampleLevel(sampler_linear_clamp, prevUV, 0);
+		N = normalize(g1.rgb * 2 - 1);
+		roughness = g1.a;
+	}
 
 	// The ray direction selection part is the same as in from ssr_raytraceCS.hlsl:
 	float4 H;
@@ -110,6 +164,13 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 		ObjectToWorld3x4(),
 		surface
 	);
+
+	if (payload.roughness < 0)
+	{
+		payload.color = surface.N;
+		payload.roughness = surface.roughness;
+		return;
+	}
 
 	surface.pixel = DispatchRaysIndex().xy;
 	surface.screenUV = surface.pixel / (float2)DispatchRaysDimensions().xy;
