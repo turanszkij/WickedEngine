@@ -11,11 +11,11 @@
 TEXTURE2D(texture_depth_history, float, TEXSLOT_ONDEMAND2);
 
 RWTEXTURE2D(output, float4, 0);
+RWTEXTURE2D(output_rayLengths, float, 1);
 
 struct RayPayload
 {
-	float3 color;
-	float roughness;
+	float4 data;
 };
 
 [shader("raygeneration")]
@@ -62,8 +62,7 @@ void RTReflection_Raygen()
 		ray.TMax = 0.1;
 
 		RayPayload payload;
-		payload.color = 0;
-		payload.roughness = -1; // indicate closesthit shader will just fill normal and roughness
+		payload.data = -1; // indicate closesthit shader will just fill normal and roughness
 
 		TraceRay(
 			scene_acceleration_structure,   // AccelerationStructure
@@ -78,8 +77,8 @@ void RTReflection_Raygen()
 			payload                         // Payload
 		);
 
-		N = payload.color;
-		roughness = payload.roughness;
+		N = payload.data.xyz;
+		roughness = payload.data.w;
 	}
 	else
 	{
@@ -129,8 +128,8 @@ void RTReflection_Raygen()
 	ray.Direction = normalize(R);
 
 	RayPayload payload;
-	payload.color = 0;
-	payload.roughness = roughness;
+	payload.data.xyz = 0;
+	payload.data.w = roughness;
 
 	TraceRay(
 		scene_acceleration_structure,   // AccelerationStructure
@@ -143,15 +142,16 @@ void RTReflection_Raygen()
 		payload                         // Payload
 	);
 
-	output[DTid.xy] = float4(payload.color, 1);
+	output[DTid.xy] = float4(payload.data.xyz, 1);
+	output_rayLengths[DTid.xy] = payload.data.w;
 }
 
 [shader("closesthit")]
 void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleIntersectionAttributes attr)
 {
-	ShaderMesh mesh = bindless_buffers[InstanceID()].Load<ShaderMesh>(0);
-	ShaderMeshSubset subset = bindless_subsets[mesh.subsetbuffer][GeometryIndex()];
-	ShaderMaterial material = bindless_buffers[subset.material].Load<ShaderMaterial>(0);
+	ShaderMesh mesh = bindless_buffers[NonUniformResourceIndex(InstanceID())].Load<ShaderMesh>(0);
+	ShaderMeshSubset subset = bindless_subsets[NonUniformResourceIndex(mesh.subsetbuffer)][GeometryIndex()];
+	ShaderMaterial material = bindless_buffers[NonUniformResourceIndex(subset.material)].Load<ShaderMaterial>(0);
 
 	Surface surface;
 
@@ -165,10 +165,11 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 		surface
 	);
 
-	if (payload.roughness < 0)
+	[branch]
+	if (payload.data.w < 0)
 	{
-		payload.color = surface.N;
-		payload.roughness = surface.roughness;
+		payload.data.xyz = surface.N;
+		payload.data.w = surface.roughness;
 		return;
 	}
 
@@ -216,16 +217,16 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 	lighting.indirect.specular += max(0, EnvironmentReflection_Global(surface));
 
 	LightingPart combined_lighting = CombineLighting(surface, lighting);
-	payload.color = surface.albedo * combined_lighting.diffuse + combined_lighting.specular + surface.emissiveColor.rgb * surface.emissiveColor.a;
-
+	payload.data.xyz = surface.albedo * combined_lighting.diffuse + combined_lighting.specular + surface.emissiveColor.rgb * surface.emissiveColor.a;
+	payload.data.w = RayTCurrent();
 }
 
 [shader("anyhit")]
 void RTReflection_AnyHit(inout RayPayload payload, in BuiltInTriangleIntersectionAttributes attr)
 {
-	ShaderMesh mesh = bindless_buffers[InstanceID()].Load<ShaderMesh>(0);
-	ShaderMeshSubset subset = bindless_subsets[mesh.subsetbuffer][GeometryIndex()];
-	ShaderMaterial material = bindless_buffers[subset.material].Load<ShaderMaterial>(0);
+	ShaderMesh mesh = bindless_buffers[NonUniformResourceIndex(InstanceID())].Load<ShaderMesh>(0);
+	ShaderMeshSubset subset = bindless_subsets[NonUniformResourceIndex(mesh.subsetbuffer)][GeometryIndex()];
+	ShaderMaterial material = bindless_buffers[NonUniformResourceIndex(subset.material)].Load<ShaderMaterial>(0);
 
 	Surface surface;
 
@@ -249,5 +250,6 @@ void RTReflection_AnyHit(inout RayPayload payload, in BuiltInTriangleIntersectio
 [shader("miss")]
 void RTReflection_Miss(inout RayPayload payload)
 {
-	payload.color = GetDynamicSkyColor(WorldRayDirection());
+	payload.data.xyz = GetDynamicSkyColor(WorldRayDirection());
+	payload.data.w = FLT_MAX;
 }

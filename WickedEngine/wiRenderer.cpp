@@ -9310,6 +9310,10 @@ void CreateRTReflectionResources(RTReflectionResources& res, XMUINT2 resolution)
 	device->SetName(&res.temporal[0], "rtreflection_temporal[0]");
 	device->CreateTexture(&desc, nullptr, &res.temporal[1]);
 	device->SetName(&res.temporal[1], "rtreflection_temporal[1]");
+
+	desc.Format = FORMAT_R16_FLOAT;
+	device->CreateTexture(&desc, nullptr, &res.rayLengths);
+	device->SetName(&res.rayLengths, "rtreflection_rayLengths");
 }
 void Postprocess_RTReflection(
 	const RTReflectionResources& res,
@@ -9362,8 +9366,6 @@ void Postprocess_RTReflection(
 		device->BindResource(LIB, &scene.decalAtlas, TEXSLOT_DECALATLAS, cmd);
 	}
 
-	device->BindUAV(LIB, &output, 0, cmd);
-
 	PostProcessCB cb;
 	cb.xPPResolution.x = desc.Width;
 	cb.xPPResolution.y = desc.Height;
@@ -9400,9 +9402,16 @@ void Postprocess_RTReflection(
 	dispatchraysdesc.Width = desc.Width;
 	dispatchraysdesc.Height = desc.Height;
 
+	const GPUResource* uavs[] = {
+		&output,
+		&res.rayLengths
+	};
+	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
 	{
 		GPUBarrier barriers[] = {
 			GPUBarrier::Image(&output, output.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.rayLengths, res.rayLengths.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
@@ -9413,6 +9422,7 @@ void Postprocess_RTReflection(
 		GPUBarrier barriers[] = {
 			GPUBarrier::Memory(),
 			GPUBarrier::Image(&output, IMAGE_LAYOUT_UNORDERED_ACCESS, output.desc.layout),
+			GPUBarrier::Image(&res.rayLengths, IMAGE_LAYOUT_UNORDERED_ACCESS, res.rayLengths.desc.layout),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
@@ -9436,6 +9446,7 @@ void Postprocess_RTReflection(
 		device->BindResource(CS, &output, TEXSLOT_ONDEMAND0, cmd);
 		device->BindResource(CS, &res.temporal[temporal_history], TEXSLOT_ONDEMAND1, cmd);
 		device->BindResource(CS, &depth_history, TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(CS, &res.rayLengths, TEXSLOT_ONDEMAND3, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.temporal[temporal_output],
@@ -9522,6 +9533,10 @@ void CreateSSRResources(SSRResources& res, XMUINT2 resolution)
 	device->CreateTexture(&desc, nullptr, &res.texture_raytrace);
 	device->CreateTexture(&desc, nullptr, &res.texture_temporal[0]);
 	device->CreateTexture(&desc, nullptr, &res.texture_temporal[1]);
+
+	desc.Format = FORMAT_R16_FLOAT;
+	device->CreateTexture(&desc, nullptr, &res.rayLengths);
+	device->SetName(&res.rayLengths, "ssr_rayLengths");
 }
 void Postprocess_SSR(
 	const SSRResources& res,
@@ -9569,6 +9584,7 @@ void Postprocess_SSR(
 
 		const GPUResource* uavs[] = {
 			&res.texture_raytrace,
+			&res.rayLengths
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
@@ -9649,6 +9665,7 @@ void Postprocess_SSR(
 		device->BindResource(CS, &output, TEXSLOT_ONDEMAND0, cmd);
 		device->BindResource(CS, &res.texture_temporal[temporal_history], TEXSLOT_ONDEMAND1, cmd);
 		device->BindResource(CS, &depth_history, TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(CS, &res.rayLengths, TEXSLOT_ONDEMAND3, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.texture_temporal[temporal_output],

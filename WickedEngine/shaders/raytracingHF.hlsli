@@ -49,32 +49,32 @@ void EvaluateObjectSurface(
 )
 {
 	uint startIndex = primitiveIndex * 3 + subset.indexOffset;
-	uint i0 = bindless_ib[mesh.ib][startIndex + 0];
-	uint i1 = bindless_ib[mesh.ib][startIndex + 1];
-	uint i2 = bindless_ib[mesh.ib][startIndex + 2];
+	uint i0 = bindless_ib[NonUniformResourceIndex(mesh.ib)][startIndex + 0];
+	uint i1 = bindless_ib[NonUniformResourceIndex(mesh.ib)][startIndex + 1];
+	uint i2 = bindless_ib[NonUniformResourceIndex(mesh.ib)][startIndex + 2];
 	float4 uv0 = 0, uv1 = 0, uv2 = 0;
 	[branch]
 	if (mesh.vb_uv0 >= 0)
 	{
-		uv0.xy = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(i0 * 4));
-		uv1.xy = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(i1 * 4));
-		uv2.xy = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(i2 * 4));
+		uv0.xy = unpack_half2(bindless_buffers[NonUniformResourceIndex(mesh.vb_uv0)].Load(i0 * 4));
+		uv1.xy = unpack_half2(bindless_buffers[NonUniformResourceIndex(mesh.vb_uv0)].Load(i1 * 4));
+		uv2.xy = unpack_half2(bindless_buffers[NonUniformResourceIndex(mesh.vb_uv0)].Load(i2 * 4));
 	}
 	[branch]
 	if (mesh.vb_uv1 >= 0)
 	{
-		uv0.zw = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(i0 * 4));
-		uv1.zw = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(i1 * 4));
-		uv2.zw = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(i2 * 4));
+		uv0.zw = unpack_half2(bindless_buffers[NonUniformResourceIndex(mesh.vb_uv1)].Load(i0 * 4));
+		uv1.zw = unpack_half2(bindless_buffers[NonUniformResourceIndex(mesh.vb_uv1)].Load(i1 * 4));
+		uv2.zw = unpack_half2(bindless_buffers[NonUniformResourceIndex(mesh.vb_uv1)].Load(i2 * 4));
 	}
 	float3 n0 = 0, n1 = 0, n2 = 0;
 	[branch]
 	if (mesh.vb_pos_nor_wind >= 0)
 	{
 		const uint stride_POS = 16;
-		n0 = unpack_unitvector(bindless_buffers[mesh.vb_pos_nor_wind].Load4(i0 * stride_POS).w);
-		n1 = unpack_unitvector(bindless_buffers[mesh.vb_pos_nor_wind].Load4(i1 * stride_POS).w);
-		n2 = unpack_unitvector(bindless_buffers[mesh.vb_pos_nor_wind].Load4(i2 * stride_POS).w);
+		n0 = unpack_unitvector(bindless_buffers[NonUniformResourceIndex(mesh.vb_pos_nor_wind)].Load4(i0 * stride_POS).w);
+		n1 = unpack_unitvector(bindless_buffers[NonUniformResourceIndex(mesh.vb_pos_nor_wind)].Load4(i1 * stride_POS).w);
+		n2 = unpack_unitvector(bindless_buffers[NonUniformResourceIndex(mesh.vb_pos_nor_wind)].Load4(i2 * stride_POS).w);
 	}
 	else
 	{
@@ -92,7 +92,7 @@ void EvaluateObjectSurface(
 	if (material.texture_basecolormap_index >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 	{
 		const float2 UV_baseColorMap = material.uvset_baseColorMap == 0 ? uvsets.xy : uvsets.zw;
-		float4 baseColorMap = bindless_textures[material.texture_basecolormap_index].SampleLevel(sampler_linear_wrap, UV_baseColorMap, 0);
+		float4 baseColorMap = bindless_textures[NonUniformResourceIndex(material.texture_basecolormap_index)].SampleLevel(sampler_linear_wrap, UV_baseColorMap, 0);
 		baseColorMap.rgb *= DEGAMMA(baseColorMap.rgb);
 		baseColor *= baseColorMap;
 	}
@@ -102,9 +102,9 @@ void EvaluateObjectSurface(
 	{
 		float4 c0, c1, c2;
 		const uint stride_COL = 4;
-		c0 = unpack_rgba(bindless_buffers[mesh.vb_col].Load(i0 * stride_COL));
-		c1 = unpack_rgba(bindless_buffers[mesh.vb_col].Load(i1 * stride_COL));
-		c2 = unpack_rgba(bindless_buffers[mesh.vb_col].Load(i2 * stride_COL));
+		c0 = unpack_rgba(bindless_buffers[NonUniformResourceIndex(mesh.vb_col)].Load(i0 * stride_COL));
+		c1 = unpack_rgba(bindless_buffers[NonUniformResourceIndex(mesh.vb_col)].Load(i1 * stride_COL));
+		c2 = unpack_rgba(bindless_buffers[NonUniformResourceIndex(mesh.vb_col)].Load(i2 * stride_COL));
 		float4 vertexColor = c0 * w + c1 * u + c2 * v;
 		baseColor *= vertexColor;
 	}
@@ -114,7 +114,7 @@ void EvaluateObjectSurface(
 	if (material.texture_surfacemap_index >= 0)
 	{
 		const float2 UV_surfaceMap = material.uvset_surfaceMap == 0 ? uvsets.xy : uvsets.zw;
-		surfaceMap = bindless_textures[material.texture_surfacemap_index].SampleLevel(sampler_linear_wrap, UV_surfaceMap, 0);
+		surfaceMap = bindless_textures[NonUniformResourceIndex(material.texture_surfacemap_index)].SampleLevel(sampler_linear_wrap, UV_surfaceMap, 0);
 	}
 
 	surface.create(material, baseColor, surfaceMap);
@@ -124,7 +124,7 @@ void EvaluateObjectSurface(
 	if (material.texture_emissivemap_index >= 0)
 	{
 		const float2 UV_emissiveMap = material.uvset_emissiveMap == 0 ? uvsets.xy : uvsets.zw;
-		float4 emissiveMap = bindless_textures[material.texture_emissivemap_index].SampleLevel(sampler_linear_wrap, UV_emissiveMap, 0);
+		float4 emissiveMap = bindless_textures[NonUniformResourceIndex(material.texture_emissivemap_index)].SampleLevel(sampler_linear_wrap, UV_emissiveMap, 0);
 		emissiveMap.rgb = DEGAMMA(emissiveMap.rgb);
 		surface.emissiveColor *= emissiveMap;
 	}
@@ -133,7 +133,7 @@ void EvaluateObjectSurface(
 	if (material.texture_transmissionmap_index >= 0)
 	{
 		const float2 UV_transmissionMap = material.uvset_transmissionMap == 0 ? uvsets.xy : uvsets.zw;
-		float transmissionMap = bindless_textures[material.texture_transmissionmap_index].SampleLevel(sampler_linear_wrap, UV_transmissionMap, 0).r;
+		float transmissionMap = bindless_textures[NonUniformResourceIndex(material.texture_transmissionmap_index)].SampleLevel(sampler_linear_wrap, UV_transmissionMap, 0).r;
 		surface.transmission *= transmissionMap;
 	}
 
@@ -141,7 +141,7 @@ void EvaluateObjectSurface(
 	if (material.IsOcclusionEnabled_Secondary() && material.texture_occlusionmap_index >= 0)
 	{
 		const float2 UV_occlusionMap = material.uvset_occlusionMap == 0 ? uvsets.xy : uvsets.zw;
-		surface.occlusion *= bindless_textures[material.texture_occlusionmap_index].SampleLevel(sampler_linear_wrap, UV_occlusionMap, 0).r;
+		surface.occlusion *= bindless_textures[NonUniformResourceIndex(material.texture_occlusionmap_index)].SampleLevel(sampler_linear_wrap, UV_occlusionMap, 0).r;
 	}
 
 	surface.N = n0 * w + n1 * u + n2 * v;
@@ -154,9 +154,9 @@ void EvaluateObjectSurface(
 	{
 		float4 t0, t1, t2;
 		const uint stride_TAN = 4;
-		t0 = unpack_utangent(bindless_buffers[mesh.vb_tan].Load(i0 * stride_TAN));
-		t1 = unpack_utangent(bindless_buffers[mesh.vb_tan].Load(i1 * stride_TAN));
-		t2 = unpack_utangent(bindless_buffers[mesh.vb_tan].Load(i2 * stride_TAN));
+		t0 = unpack_utangent(bindless_buffers[NonUniformResourceIndex(mesh.vb_tan)].Load(i0 * stride_TAN));
+		t1 = unpack_utangent(bindless_buffers[NonUniformResourceIndex(mesh.vb_tan)].Load(i1 * stride_TAN));
+		t2 = unpack_utangent(bindless_buffers[NonUniformResourceIndex(mesh.vb_tan)].Load(i2 * stride_TAN));
 		float4 T = t0 * w + t1 * u + t2 * v;
 		T = T * 2 - 1;
 		T.xyz = mul((float3x3)worldMatrix, T.xyz);
@@ -165,7 +165,7 @@ void EvaluateObjectSurface(
 		float3x3 TBN = float3x3(T.xyz, B, surface.N);
 
 		const float2 UV_normalMap = material.uvset_normalMap == 0 ? uvsets.xy : uvsets.zw;
-		float3 normalMap = bindless_textures[material.texture_normalmap_index].SampleLevel(sampler_linear_wrap, UV_normalMap, 0).rgb;
+		float3 normalMap = bindless_textures[NonUniformResourceIndex(material.texture_normalmap_index)].SampleLevel(sampler_linear_wrap, UV_normalMap, 0).rgb;
 		normalMap.b = normalMap.b == 0 ? 1 : normalMap.b; // fix for missing blue channel
 		normalMap = normalMap * 2 - 1;
 		surface.N = normalize(lerp(surface.N, mul(normalMap, TBN), material.normalMapStrength));

@@ -400,6 +400,7 @@ namespace wiRenderer
 	struct RTReflectionResources
 	{
 		wiGraphics::Texture temporal[2];
+		wiGraphics::Texture rayLengths;
 	};
 	void CreateRTReflectionResources(RTReflectionResources& res, XMUINT2 resolution);
 	void Postprocess_RTReflection(
@@ -415,6 +416,7 @@ namespace wiRenderer
 	struct SSRResources
 	{
 		wiGraphics::Texture texture_raytrace;
+		wiGraphics::Texture rayLengths;
 		wiGraphics::Texture texture_temporal[2];
 	};
 	void CreateSSRResources(SSRResources& res, XMUINT2 resolution);

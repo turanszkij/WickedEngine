@@ -5,6 +5,7 @@
 TEXTURE2D(input, float4, TEXSLOT_ONDEMAND0);
 
 RWTEXTURE2D(texture_raytrace, float4, 0);
+RWTEXTURE2D(texture_rayLengths, float, 1);
 
 // Use this to use reduced precision, but higher framerate:
 #define USE_LINEARDEPTH
@@ -329,6 +330,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	bool hit = ScreenSpaceRayTrace(P, L, jitter, roughness, hitPixel, hitPoint, iterations);
 
+
 	float hitDepth = texture_depth.SampleLevel(sampler_point_clamp, hitPixel, 0);
 
     // Output:
@@ -337,4 +339,14 @@ void main(uint3 DTid : SV_DispatchThreadID)
     // w:  pdf
 	float4 raytrace = max(0, float4(hitPixel, hitDepth, H.w));
 	texture_raytrace[DTid.xy] = raytrace;
+
+	if (hit)
+	{
+		const float3 Phit = reconstructPosition(uv, hitDepth, g_xCamera_InvP);
+		texture_rayLengths[DTid.xy] = distance(P, Phit);
+	}
+	else
+	{
+		texture_rayLengths[DTid.xy] = 0;
+	}
 }

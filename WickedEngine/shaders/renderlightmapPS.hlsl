@@ -163,9 +163,9 @@ float4 main(Input input) : SV_TARGET
 				);
 				while (q.Proceed())
 				{
-					ShaderMesh mesh = bindless_buffers[q.CandidateInstanceID()].Load<ShaderMesh>(0);
-					ShaderMeshSubset subset = bindless_subsets[mesh.subsetbuffer][q.CandidateGeometryIndex()];
-					ShaderMaterial material = bindless_buffers[subset.material].Load<ShaderMaterial>(0);
+					ShaderMesh mesh = bindless_buffers[NonUniformResourceIndex(q.CandidateInstanceID())].Load<ShaderMesh>(0);
+					ShaderMeshSubset subset = bindless_subsets[NonUniformResourceIndex(mesh.subsetbuffer)][q.CandidateGeometryIndex()];
+					ShaderMaterial material = bindless_buffers[NonUniformResourceIndex(subset.material)].Load<ShaderMaterial>(0);
 					[branch]
 					if (!material.IsCastingShadow())
 					{
@@ -252,9 +252,9 @@ float4 main(Input input) : SV_TARGET
 		// ray origin updated for next bounce:
 		ray.Origin = q.WorldRayOrigin() + q.WorldRayDirection() * q.CommittedRayT();
 
-		ShaderMesh mesh = bindless_buffers[q.CommittedInstanceID()].Load<ShaderMesh>(0);
-		ShaderMeshSubset subset = bindless_subsets[mesh.subsetbuffer][q.CommittedGeometryIndex()];
-		material = bindless_buffers[subset.material].Load<ShaderMaterial>(0);
+		ShaderMesh mesh = bindless_buffers[NonUniformResourceIndex(q.CommittedInstanceID())].Load<ShaderMesh>(0);
+		ShaderMeshSubset subset = bindless_subsets[NonUniformResourceIndex(mesh.subsetbuffer)][q.CommittedGeometryIndex()];
+		material = bindless_buffers[NonUniformResourceIndex(subset.material)].Load<ShaderMaterial>(0);
 
 		EvaluateObjectSurface(
 			mesh,
