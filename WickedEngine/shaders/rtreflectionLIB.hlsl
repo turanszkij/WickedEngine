@@ -56,10 +56,10 @@ void RTReflection_Raygen()
 	{
 		// When reprojection is invalid, trace the surface parameters:
 		RayDesc ray;
-		ray.Origin = P - V * 0.01;
+		ray.Origin = P - V * 0.005;
 		ray.Direction = V;
-		ray.TMin = 0.001;
-		ray.TMax = 0.1;
+		ray.TMin = 0;
+		ray.TMax = 0.01;
 
 		RayPayload payload;
 		payload.data = -1; // indicate closesthit shader will just fill normal and roughness
@@ -122,7 +122,7 @@ void RTReflection_Raygen()
 	float seed = g_xFrame_Time;
 
 	RayDesc ray;
-	ray.TMin = 0.05;
+	ray.TMin = 0.01;
 	ray.TMax = rtreflection_range;
 	ray.Origin = P;
 	ray.Direction = normalize(R);

@@ -943,7 +943,18 @@ namespace wiScene
 			archive >> oceanParameters.wind_speed;
 			archive >> oceanParameters.wind_dependency;
 			archive >> oceanParameters.choppy_scale;
-			archive >> oceanParameters.waterColor;
+			if (archive.GetVersion() < 67)
+			{
+				XMFLOAT3 waterColor;
+				archive >> waterColor;
+				oceanParameters.waterColor.x = waterColor.x;
+				oceanParameters.waterColor.y = waterColor.y;
+				oceanParameters.waterColor.z = waterColor.z;
+			}
+			else
+			{
+				archive >> oceanParameters.waterColor;
+			}
 			archive >> oceanParameters.waterHeight;
 			archive >> oceanParameters.surfaceDetail;
 			archive >> oceanParameters.surfaceDisplacementTolerance;

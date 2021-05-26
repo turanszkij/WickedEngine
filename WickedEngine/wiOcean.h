@@ -31,7 +31,7 @@ public:
 		float choppy_scale = 1.3f;
 
 
-		XMFLOAT3 waterColor = XMFLOAT3(0.0f, 3.0f / 255.0f, 31.0f / 255.0f);
+		XMFLOAT4 waterColor = XMFLOAT4(0.0f, 3.0f / 255.0f, 31.0f / 255.0f, 1);
 		float waterHeight = 0.0f;
 		uint32_t surfaceDetail = 4;
 		float surfaceDisplacementTolerance = 2;

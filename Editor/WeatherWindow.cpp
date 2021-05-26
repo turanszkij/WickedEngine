@@ -407,7 +407,7 @@ void WeatherWindow::Create(EditorComponent* editor)
 			weather.zenith = args.color.toFloat3();
 			break;
 		case 3:
-			weather.oceanParameters.waterColor = args.color.toFloat3();
+			weather.oceanParameters.waterColor = args.color.toFloat4();
 			break;
 		}
 	});
@@ -574,7 +574,7 @@ void WeatherWindow::Update()
 			colorPicker.SetPickColor(wiColor::fromFloat3(weather.zenith));
 			break;
 		case 3:
-			colorPicker.SetPickColor(wiColor::fromFloat3(weather.oceanParameters.waterColor));
+			colorPicker.SetPickColor(wiColor::fromFloat4(weather.oceanParameters.waterColor));
 			break;
 		}
 

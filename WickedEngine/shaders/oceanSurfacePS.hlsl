@@ -12,7 +12,7 @@ float4 main(PSIn input) : SV_TARGET
 {
 	float2 gradient = texture_gradientmap.Sample(sampler_aniso_wrap, input.uv).xy;
 
-	float4 color = float4(xOceanWaterColor, 1);
+	float4 color = xOceanWaterColor;
 	float opacity = 1; // keep edge diffuse shading
 	float3 V = g_xCamera_CamPos - input.pos3D;
 	float dist = length(V);
@@ -61,6 +61,7 @@ float4 main(PSIn input) : SV_TARGET
 	}
 	// WATER FOG:
 	surface.refraction.a = 1 - saturate(color.a * 0.1f * depth_difference);
+	color.a = 1;
 
 	ApplyLighting(surface, lighting, color);
 

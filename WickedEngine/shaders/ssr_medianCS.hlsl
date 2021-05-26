@@ -16,6 +16,9 @@ RWTEXTURE2D(output, float4, 0);
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
+	if (texture_depth.Load(uint3(DTid.xy, 1)) == 0)
+		return;
+
     const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
     
     half4 v[25];

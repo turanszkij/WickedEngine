@@ -1782,7 +1782,6 @@ float4 main(PixelInput input) : SV_TARGET
 
 
 #ifdef WATER
-	color.a = 1;
 
 	//NORMALMAP
 	float2 bumpColor0 = 0;
@@ -1885,6 +1884,7 @@ float4 main(PixelInput input) : SV_TARGET
 	}
 	// WATER FOG:
 	surface.refraction.a = 1 - saturate(color.a * 0.1 * depth_difference);
+	color.a = 1;
 #endif // WATER
 
 

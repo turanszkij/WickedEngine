@@ -100,7 +100,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	Surface surface;
 	surface.init();
 	surface.pixel = DTid.xy;
-	surface.P = P + N * 0.01;
+	surface.P = P;
 	surface.N = N;
 
 	const uint2 tileIndex = uint2(floor(surface.pixel * 2 / TILED_CULLING_BLOCKSIZE));
@@ -326,7 +326,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 							if (is_saturated(proj.xy))
 							{
 								const float ray_depth_real = proj.w;
-								const float ray_depth_sample = texture_lineardepth.SampleLevel(sampler_point_clamp, proj.xy, 0) * g_xCamera_ZFarP;
+								const float ray_depth_sample = texture_lineardepth.SampleLevel(sampler_point_clamp, proj.xy, 1) * g_xCamera_ZFarP;
 								const float ray_depth_delta = ray_depth_real - ray_depth_sample;
 								if (ray_depth_delta > 0 && ray_depth_delta < thickness)
 								{
