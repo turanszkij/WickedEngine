@@ -323,6 +323,8 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		material.metalness = 1.0f;
 		material.reflectance = 0.02f;
 
+		material.SetDoubleSided(x.doubleSided);
+
 		// metallic-roughness workflow:
 		auto baseColorTexture = x.values.find("baseColorTexture");
 		auto metallicRoughnessTexture = x.values.find("metallicRoughnessTexture");

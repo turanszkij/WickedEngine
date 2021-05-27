@@ -249,7 +249,7 @@ void RendererWindow::Create(EditorComponent* editor)
 		}
 		});
 	shadowTypeComboBox.SetSelected(0);
-	shadowTypeComboBox.SetTooltip("Choose between shadowmaps and ray traced shadows (if available).\n(ray traced shadows experimental, needs hardware support and shaders compiled with HLSL6.5)");
+	shadowTypeComboBox.SetTooltip("Choose between shadowmaps and ray traced shadows (if available).\n(ray traced shadows need hardware raytracing support)");
 	AddWidget(&shadowTypeComboBox);
 
 	shadowProps2DComboBox.Create("2D Shadowmap resolution: ");

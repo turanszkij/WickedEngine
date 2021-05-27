@@ -1276,9 +1276,9 @@ PixelInput main(VertexInput input)
 
 // entry point:
 #ifdef OUTPUT_GBUFFER
-GBuffer main(PixelInput input)
+GBuffer main(PixelInput input, in bool is_frontface : SV_IsFrontFace)
 #else
-float4 main(PixelInput input) : SV_TARGET
+float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 #endif // OUTPUT_GBUFFER
 
 
@@ -1315,6 +1315,10 @@ float4 main(PixelInput input) : SV_TARGET
 
 
 #ifdef OBJECTSHADER_USE_NORMAL
+	if (is_frontface == false)
+	{
+		input.nor = -input.nor;
+	}
 	surface.N = normalize(input.nor);
 #endif // OBJECTSHADER_USE_NORMAL
 

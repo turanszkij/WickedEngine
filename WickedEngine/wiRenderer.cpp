@@ -3006,7 +3006,7 @@ void RenderMeshes(
 					{
 						const BLENDMODE blendMode = material.GetBlendMode();
 						const bool alphatest = material.IsAlphaTestEnabled() || forceAlphaTestForDithering;
-						OBJECTRENDERING_DOUBLESIDED doublesided = mesh.IsDoubleSided() ? OBJECTRENDERING_DOUBLESIDED_ENABLED : OBJECTRENDERING_DOUBLESIDED_DISABLED;
+						OBJECTRENDERING_DOUBLESIDED doublesided = (mesh.IsDoubleSided() || material.IsDoubleSided()) ? OBJECTRENDERING_DOUBLESIDED_ENABLED : OBJECTRENDERING_DOUBLESIDED_DISABLED;
 
 						pso = &PSO_object[material.shaderType][renderPass][blendMode][doublesided][tessellatorRequested][alphatest];
 						assert(pso->IsValid());

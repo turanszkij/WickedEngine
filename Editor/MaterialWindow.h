@@ -20,6 +20,7 @@ public:
 	wiCheckBox occlusionPrimaryCheckBox;
 	wiCheckBox occlusionSecondaryCheckBox;
 	wiCheckBox windCheckBox;
+	wiCheckBox doubleSidedCheckBox;
 	wiSlider normalMapSlider;
 	wiSlider roughnessSlider;
 	wiSlider reflectanceSlider;

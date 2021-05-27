@@ -133,6 +133,7 @@ namespace wiScene
 			OCCLUSION_SECONDARY = 1 << 8,
 			USE_WIND = 1 << 9,
 			DISABLE_RECEIVE_SHADOW = 1 << 10,
+			DOUBLE_SIDED = 1 << 11,
 		};
 		uint32_t _flags = CAST_SHADOW;
 
@@ -257,6 +258,7 @@ namespace wiScene
 		inline bool IsOcclusionEnabled_Primary() const { return _flags & OCCLUSION_PRIMARY; }
 		inline bool IsOcclusionEnabled_Secondary() const { return _flags & OCCLUSION_SECONDARY; }
 		inline bool IsCustomShader() const { return customShaderID >= 0; }
+		inline bool IsDoubleSided() const { return  _flags & DOUBLE_SIDED; }
 
 		inline void SetBaseColor(const XMFLOAT4& value) { SetDirty(); baseColor = value; }
 		inline void SetSpecularColor(const XMFLOAT4& value) { SetDirty(); specularColor = value; }
@@ -293,6 +295,7 @@ namespace wiScene
 		inline void SetClearcoatRoughness(float value) { clearcoatRoughness = value; SetDirty(); }
 		inline void SetCustomShaderID(int id) { customShaderID = id; }
 		inline void DisableCustomShader() { customShaderID = -1; }
+		inline void SetDoubleSided(bool value = true) { if (value) { _flags |= DOUBLE_SIDED; } else { _flags &= ~DOUBLE_SIDED; } }
 
 		// The MaterialComponent will be written to ShaderMaterial (a struct that is optimized for GPU use)
 		void WriteShaderMaterial(ShaderMaterial* dest) const;

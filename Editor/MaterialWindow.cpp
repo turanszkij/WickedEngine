@@ -95,6 +95,17 @@ void MaterialWindow::Create(EditorComponent* editor)
 		});
 	AddWidget(&windCheckBox);
 
+	doubleSidedCheckBox.Create("Double sided: ");
+	doubleSidedCheckBox.SetTooltip("Decide whether to render both sides of the material (It's also possible to set this behaviour per mesh).");
+	doubleSidedCheckBox.SetPos(XMFLOAT2(540, y));
+	doubleSidedCheckBox.SetSize(XMFLOAT2(hei, hei));
+	doubleSidedCheckBox.OnClick([&](wiEventArgs args) {
+		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+		if (material != nullptr)
+			material->SetDoubleSided(args.bValue);
+		});
+	AddWidget(&doubleSidedCheckBox);
+
 
 
 	x = 520;
@@ -650,6 +661,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		occlusionPrimaryCheckBox.SetCheck(material->IsOcclusionEnabled_Primary());
 		occlusionSecondaryCheckBox.SetCheck(material->IsOcclusionEnabled_Secondary());
 		windCheckBox.SetCheck(material->IsUsingWind());
+		doubleSidedCheckBox.SetCheck(material->IsDoubleSided());
 		normalMapSlider.SetValue(material->normalMapStrength);
 		roughnessSlider.SetValue(material->roughness);
 		reflectanceSlider.SetValue(material->reflectance);
