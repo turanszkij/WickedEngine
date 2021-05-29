@@ -209,6 +209,12 @@ namespace wiScene
 				archive >> textures[CLEARCOATNORMALMAP].uvset;
 			}
 
+			if (archive.GetVersion() >= 68)
+			{
+				archive >> textures[SPECULARMAP].name;
+				archive >> textures[SPECULARMAP].uvset;
+			}
+
 			for (auto& x : textures)
 			{
 				if (!x.name.empty())
@@ -327,6 +333,12 @@ namespace wiScene
 				archive << textures[CLEARCOATMAP].uvset;
 				archive << textures[CLEARCOATROUGHNESSMAP].uvset;
 				archive << textures[CLEARCOATNORMALMAP].uvset;
+			}
+
+			if (archive.GetVersion() >= 68)
+			{
+				archive << textures[SPECULARMAP].name;
+				archive << textures[SPECULARMAP].uvset;
 			}
 		}
 	}

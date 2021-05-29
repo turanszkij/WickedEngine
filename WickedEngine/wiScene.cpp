@@ -258,6 +258,7 @@ namespace wiScene
 		dest->uvset_clearcoatMap = textures[CLEARCOATMAP].GetUVSet();
 		dest->uvset_clearcoatRoughnessMap = textures[CLEARCOATROUGHNESSMAP].GetUVSet();
 		dest->uvset_clearcoatNormalMap = textures[CLEARCOATNORMALMAP].GetUVSet();
+		dest->uvset_specularMap = textures[SPECULARMAP].GetUVSet();
 		dest->sheenColor = sheenColor;
 		dest->sheenRoughness = sheenRoughness;
 		dest->clearcoat = clearcoat;
@@ -308,6 +309,7 @@ namespace wiScene
 		dest->texture_clearcoatmap_index = device->GetDescriptorIndex(textures[CLEARCOATMAP].GetGPUResource(), SRV);
 		dest->texture_clearcoatroughnessmap_index = device->GetDescriptorIndex(textures[CLEARCOATROUGHNESSMAP].GetGPUResource(), SRV);
 		dest->texture_clearcoatnormalmap_index = device->GetDescriptorIndex(textures[CLEARCOATNORMALMAP].GetGPUResource(), SRV);
+		dest->texture_specularmap_index = device->GetDescriptorIndex(textures[SPECULARMAP].GetGPUResource(), SRV);
 
 		dest->baseColorAtlasMulAdd = XMFLOAT4(0, 0, 0, 0);
 		dest->surfaceMapAtlasMulAdd = XMFLOAT4(0, 0, 0, 0);

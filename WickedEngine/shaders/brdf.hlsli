@@ -87,6 +87,17 @@ float3 F_Schlick(const float3 f0, float f90, float VoH)
 	return f0 + (f90 - f0) * pow5(1.0 - VoH);
 }
 
+float iorToF0(float transmittedIor, float incidentIor)
+{
+	return sqr((transmittedIor - incidentIor) / (transmittedIor + incidentIor));
+}
+
+float f0ToIor(float f0)
+{
+	float r = sqrt(f0);
+	return (1.0 + r) / (1.0 - r);
+}
+
 
 // Surface descriptors:
 
@@ -185,14 +196,15 @@ struct Surface
 	inline void create(
 		in ShaderMaterial material,
 		in float4 baseColor,
-		in float4 surfaceMap
+		in float4 surfaceMap,
+		in float4 specularMap = 1
 	)
 	{
 		init();
 
 		opacity = baseColor.a;
 		roughness = material.roughness;
-		f0 = material.specularColor.rgb * material.specularColor.a;
+		f0 = material.specularColor.rgb * specularMap.rgb * specularMap.a * material.specularColor.a;
 
 		[branch]
 		if (material.IsUsingSpecularGlossinessWorkflow())

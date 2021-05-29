@@ -30,6 +30,11 @@ struct ShaderMaterial
 	float		alphaTest;
 	float		displacementMapping;
 
+	float		transmission;
+	uint		options;
+	int			padding0;
+	int			padding1;
+
 	uint		layerMask;
 	int			uvset_baseColorMap;
 	int			uvset_surfaceMap;
@@ -40,19 +45,20 @@ struct ShaderMaterial
 	int			uvset_occlusionMap;
 	int			uvset_transmissionMap;
 
-	float2		padding1;
-	float		transmission;
-	uint		options;
-
 	int			uvset_sheenColorMap;
 	int			uvset_sheenRoughnessMap;
 	int			uvset_clearcoatMap;
 	int			uvset_clearcoatRoughnessMap;
 
 	int			uvset_clearcoatNormalMap;
+	int			uvset_specularMap;
+	int			padding2;
+	int			padding3;
+
 	float		sheenRoughness;
 	float		clearcoat;
 	float		clearcoatRoughness;
+	float		padding4;
 
 	float4		sheenColor;
 
@@ -75,6 +81,11 @@ struct ShaderMaterial
 	int			texture_clearcoatmap_index;
 	int			texture_clearcoatroughnessmap_index;
 	int			texture_clearcoatnormalmap_index;
+
+	int			texture_specularmap_index;
+	int			padding5;
+	int			padding6;
+	int			padding7;
 
 	inline bool IsUsingVertexColors() { return options & SHADERMATERIAL_OPTION_BIT_USE_VERTEXCOLORS; }
 	inline bool IsUsingSpecularGlossinessWorkflow() { return options & SHADERMATERIAL_OPTION_BIT_SPECULARGLOSSINESS_WORKFLOW; }

@@ -117,7 +117,16 @@ void EvaluateObjectSurface(
 		surfaceMap = bindless_textures[NonUniformResourceIndex(material.texture_surfacemap_index)].SampleLevel(sampler_linear_wrap, UV_surfaceMap, 0);
 	}
 
-	surface.create(material, baseColor, surfaceMap);
+	float4 specularMap = 1;
+	[branch]
+	if (material.texture_specularmap_index >= 0)
+	{
+		const float2 UV_specularMap = material.uvset_specularMap == 0 ? uvsets.xy : uvsets.zw;
+		specularMap = bindless_textures[NonUniformResourceIndex(material.texture_specularmap_index)].SampleLevel(sampler_linear_wrap, UV_specularMap, 0);
+		specularMap.rgb = DEGAMMA(specularMap.rgb);
+	}
+
+	surface.create(material, baseColor, surfaceMap, specularMap);
 
 	surface.emissiveColor = material.emissiveColor;
 	[branch]

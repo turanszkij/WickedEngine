@@ -285,7 +285,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 				{
 					lighting.direct.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
 					lighting.direct.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
-					result += max(0, shadow * (surface.albedo * lighting.direct.diffuse + lighting.direct.specular)) * surface.opacity;
+					result += max(0, shadow * (surface.albedo * (1 - surface.transmission) * lighting.direct.diffuse + lighting.direct.specular)) * surface.opacity;
 				}
 			}
 		}
@@ -314,7 +314,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		{
 			const float refractChance = surface.transmission;
 			roulette = rand(seed, uv);
-			if (roulette < refractChance)
+			if (roulette <= refractChance)
 			{
 				// Refraction
 				const float3 R = refract(ray.Direction, surface.N, 1 - material.refraction);
@@ -329,7 +329,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 				const float specChance = dot(surface.F, 0.333);
 
 				roulette = rand(seed, uv);
-				if (roulette < specChance)
+				if (roulette <= specChance)
 				{
 					// Specular reflection
 					const float3 R = reflect(ray.Direction, surface.N);

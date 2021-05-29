@@ -321,7 +321,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		material.baseColor = XMFLOAT4(1, 1, 1, 1);
 		material.roughness = 1.0f;
 		material.metalness = 1.0f;
-		material.reflectance = 0.02f;
+		material.reflectance = 0.04f;
 
 		material.SetDoubleSided(x.doubleSided);
 
@@ -420,12 +420,16 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		auto ext_unlit = x.extensions.find("KHR_materials_unlit");
 		if (ext_unlit != x.extensions.end())
 		{
+			// https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Khronos/KHR_materials_unlit
+
 			material.shaderType = MaterialComponent::SHADERTYPE_UNLIT;
 		}
 
 		auto ext_transmission = x.extensions.find("KHR_materials_transmission");
 		if (ext_transmission != x.extensions.end())
 		{
+			// https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Khronos/KHR_materials_transmission
+
 			if (ext_transmission->second.Has("transmissionFactor"))
 			{
 				auto& factor = ext_transmission->second.Get("transmissionFactor");
@@ -446,6 +450,8 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		auto specularGlossinessWorkflow = x.extensions.find("KHR_materials_pbrSpecularGlossiness");
 		if (specularGlossinessWorkflow != x.extensions.end())
 		{
+			// https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Khronos/KHR_materials_pbrSpecularGlossiness
+
 			material.SetUseSpecularGlossinessWorkflow(true);
 
 			if (specularGlossinessWorkflow->second.Has("diffuseTexture"))
@@ -493,6 +499,8 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		auto ext_sheen = x.extensions.find("KHR_materials_sheen");
 		if (ext_sheen != x.extensions.end())
 		{
+			// https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Khronos/KHR_materials_sheen
+
 			material.shaderType = MaterialComponent::SHADERTYPE_PBR_CLOTH;
 
 			if (ext_sheen->second.Has("sheenColorFactor"))
@@ -533,6 +541,8 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		auto ext_clearcoat = x.extensions.find("KHR_materials_clearcoat");
 		if (ext_clearcoat != x.extensions.end())
 		{
+			// https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Khronos/KHR_materials_clearcoat
+
 			if (material.shaderType == MaterialComponent::SHADERTYPE_PBR_CLOTH)
 			{
 				material.shaderType = MaterialComponent::SHADERTYPE_PBR_CLOTH_CLEARCOAT;
@@ -581,6 +591,78 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				material.textures[MaterialComponent::CLEARCOATNORMALMAP].resource = wiResourceManager::Load(img.uri);
 				material.textures[MaterialComponent::CLEARCOATNORMALMAP].name = img.uri;
 				material.textures[MaterialComponent::CLEARCOATNORMALMAP].uvset = (uint32_t)param.Get("texCoord").Get<int>();
+			}
+		}
+
+		auto ext_ior = x.extensions.find("KHR_materials_ior");
+		if (ext_ior != x.extensions.end())
+		{
+			// https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Khronos/KHR_materials_ior
+
+			if (ext_ior->second.Has("ior"))
+			{
+				auto& factor = ext_ior->second.Get("ior");
+				float ior = float(factor.IsNumber() ? factor.Get<double>() : factor.Get<int>());
+
+				material.reflectance = std::pow((ior - 1.0f) / (ior + 1.0f), 2.0f);
+			}
+		}
+
+		auto ext_specular = x.extensions.find("KHR_materials_specular");
+		if (ext_specular != x.extensions.end())
+		{
+			// https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Khronos/KHR_materials_specular
+
+			material.specularColor = XMFLOAT4(1, 1, 1, 1);
+
+			if (ext_specular->second.Has("specularFactor"))
+			{
+				auto& factor = ext_specular->second.Get("specularFactor");
+				material.specularColor.w = float(factor.IsNumber() ? factor.Get<double>() : factor.Get<int>());
+			}
+			if (ext_specular->second.Has("specularTexture"))
+			{
+				if (material.textures[MaterialComponent::SURFACEMAP].resource == nullptr)
+				{
+					auto& param = ext_specular->second.Get("specularTexture");
+					int index = param.Get("index").Get<int>();
+					auto& tex = state.gltfModel.textures[index];
+					auto& img = state.gltfModel.images[tex.source];
+					material.textures[MaterialComponent::SURFACEMAP].resource = wiResourceManager::Load(img.uri);
+					material.textures[MaterialComponent::SURFACEMAP].name = img.uri;
+					material.textures[MaterialComponent::SURFACEMAP].uvset = (uint32_t)param.Get("texCoord").Get<int>();
+				}
+				else if (material.textures[MaterialComponent::SPECULARMAP].resource == nullptr)
+				{
+					auto& param = ext_specular->second.Get("specularTexture");
+					int index = param.Get("index").Get<int>();
+					auto& tex = state.gltfModel.textures[index];
+					auto& img = state.gltfModel.images[tex.source];
+					material.textures[MaterialComponent::SPECULARMAP].resource = wiResourceManager::Load(img.uri);
+					material.textures[MaterialComponent::SPECULARMAP].name = img.uri;
+					material.textures[MaterialComponent::SPECULARMAP].uvset = (uint32_t)param.Get("texCoord").Get<int>();
+				}
+				else
+				{
+					wiBackLog::post("[KHR_materials_specular warning] specularTexture must be either in surfaceMap.a or specularColorTexture.a! specularTexture discarded!");
+				}
+			}
+			if (ext_specular->second.Has("specularColorTexture"))
+			{
+				auto& param = ext_specular->second.Get("specularColorTexture");
+				int index = param.Get("index").Get<int>();
+				auto& tex = state.gltfModel.textures[index];
+				auto& img = state.gltfModel.images[tex.source];
+				material.textures[MaterialComponent::SPECULARMAP].resource = wiResourceManager::Load(img.uri);
+				material.textures[MaterialComponent::SPECULARMAP].name = img.uri;
+				material.textures[MaterialComponent::SPECULARMAP].uvset = (uint32_t)param.Get("texCoord").Get<int>();
+			}
+			if (ext_specular->second.Has("specularColorFactor"))
+			{
+				auto& factor = ext_specular->second.Get("specularColorFactor");
+				material.specularColor.x = factor.ArrayLen() > 0 ? float(factor.Get(0).IsNumber() ? factor.Get(0).Get<double>() : factor.Get(0).Get<int>()) : 1.0f;
+				material.specularColor.y = factor.ArrayLen() > 0 ? float(factor.Get(1).IsNumber() ? factor.Get(1).Get<double>() : factor.Get(1).Get<int>()) : 1.0f;
+				material.specularColor.z = factor.ArrayLen() > 0 ? float(factor.Get(2).IsNumber() ? factor.Get(2).Get<double>() : factor.Get(2).Get<int>()) : 1.0f;
 			}
 		}
 

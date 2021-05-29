@@ -1,5 +1,6 @@
 This file contains changelog of wiArchive versions
 
+68: serialized MaterialComponent SPECULARMAP (for KHR_materials_specular)
 67: ocean water color float3 -> float4 (alpha in effect now)
 66: serialized WeatherComponent::atmosphereParameters and skyExposure
 65: serialized CameraComponent focal_length, aperture_size and aperture_shape

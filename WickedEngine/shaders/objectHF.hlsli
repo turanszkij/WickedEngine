@@ -65,6 +65,7 @@ inline ShaderMaterial GetMaterial3()
 #define texture_clearcoatmap			bindless_textures[GetMaterial().texture_clearcoatmap_index]
 #define texture_clearcoatroughnessmap	bindless_textures[GetMaterial().texture_clearcoatroughnessmap_index]
 #define texture_clearcoatnormalmap		bindless_textures[GetMaterial().texture_clearcoatnormalmap_index]
+#define texture_specularmap				bindless_textures[GetMaterial().texture_specularmap_index]
 
 #define texture_blend1_basecolormap		bindless_textures[GetMaterial1().texture_basecolormap_index]
 #define texture_blend1_normalmap		bindless_textures[GetMaterial1().texture_normalmap_index]
@@ -114,6 +115,7 @@ TEXTURE2D(texture_sheenroughnessmap, float4, TEXSLOT_RENDERER_SHEENROUGHNESSMAP)
 TEXTURE2D(texture_clearcoatmap, float, TEXSLOT_RENDERER_CLEARCOATMAP);						// r
 TEXTURE2D(texture_clearcoatroughnessmap, float2, TEXSLOT_RENDERER_CLEARCOATROUGHNESSMAP);	// g
 TEXTURE2D(texture_clearcoatnormalmap, float3, TEXSLOT_RENDERER_CLEARCOATNORMALMAP);			// rgb
+TEXTURE2D(texture_specularmap, float4, TEXSLOT_RENDERER_SPECULARMAP);						// rgb color, a intensity
 
 TEXTURE2D(texture_blend1_basecolormap, float4, TEXSLOT_RENDERER_BLEND1_BASECOLORMAP);	// rgb: baseColor, a: opacity
 TEXTURE2D(texture_blend1_normalmap, float3, TEXSLOT_RENDERER_BLEND1_NORMALMAP);			// rgb: normal
@@ -1392,7 +1394,21 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 #endif // OBJECTSHADER_USE_UVSETS
 
 
-	surface.create(GetMaterial(), color, surfaceMap);
+	float4 specularMap = 1;
+
+#ifdef OBJECTSHADER_USE_UVSETS
+	[branch]
+	if (GetMaterial().uvset_specularMap >= 0)
+	{
+		const float2 UV_specularMap = GetMaterial().uvset_specularMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+		specularMap = texture_specularmap.Sample(sampler_objectshader, UV_specularMap);
+		specularMap.rgb = DEGAMMA(specularMap.rgb);
+	}
+#endif // OBJECTSHADER_USE_UVSETS
+
+
+
+	surface.create(GetMaterial(), color, surfaceMap, specularMap);
 
 
 	// Emissive map:

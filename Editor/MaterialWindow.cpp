@@ -11,7 +11,7 @@ using namespace wiScene;
 void MaterialWindow::Create(EditorComponent* editor)
 {
 	wiWindow::Create("Material Window");
-	SetSize(XMFLOAT2(720, 600));
+	SetSize(XMFLOAT2(720, 620));
 
 	float x = 670, y = 0;
 	float hei = 18;
@@ -220,7 +220,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	AddWidget(&roughnessSlider);
 
 	reflectanceSlider.Create(0, 1, 0.5f, 1000, "Reflectance: ");
-	reflectanceSlider.SetTooltip("Adjust the overall surface reflectivity.\nNote: this is not available in specular-glossiness workflow");
+	reflectanceSlider.SetTooltip("Adjust the surface [non-metal] reflectivity (also called specularFactor).\nNote: this is not available in specular-glossiness workflow");
 	reflectanceSlider.SetSize(XMFLOAT2(wid, hei));
 	reflectanceSlider.SetPos(XMFLOAT2(x, y += step));
 	reflectanceSlider.OnSlide([&](wiEventArgs args) {
@@ -580,6 +580,10 @@ void MaterialWindow::Create(EditorComponent* editor)
 		case MaterialComponent::CLEARCOATNORMALMAP:
 			slots[i].label.SetText("ClearcoatNormMap:");
 			slots[i].button.SetTooltip("RGB: Normal");
+			break;
+		case MaterialComponent::SPECULARMAP:
+			slots[i].label.SetText("SpecularMap:");
+			slots[i].button.SetTooltip("RGB: Specular color, A: Specular intensity [non-metal]");
 			break;
 		default:
 			break;
