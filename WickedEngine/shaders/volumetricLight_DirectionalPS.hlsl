@@ -23,6 +23,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 	float3 accumulation = 0;
 
 	const float3 L = light.GetDirection();
+	const float scattering = ComputeScattering(saturate(dot(L, -V)));
 
 	float3 rayEnd = g_xCamera_CamPos;
 
@@ -47,7 +48,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 			{
 				float3 attenuation = shadowCascade(light, ShPos, ShTex.xy, cascade);
 
-				attenuation *= GetFogAmount(cameraDistance - marchedDistance);
+				attenuation *= GetFogAmount(cameraDistance - marchedDistance) * scattering;
 
 				accumulation += attenuation;
 
@@ -64,8 +65,13 @@ float4 main(VertexToPixel input) : SV_TARGET
 			break;
 		}
 	}
-
 	accumulation /= sampleCount;
 
-	return max(0, float4(accumulation * light.GetColor().rgb * light.GetEnergy(), 1));
+	float3 atmosphereTransmittance = 1;
+	if (g_xFrame_Options & OPTION_BIT_REALISTIC_SKY)
+	{
+		atmosphereTransmittance = GetAtmosphericLightTransmittance(g_xFrame_Atmosphere, P, L, texture_transmittancelut);
+	}
+
+	return max(0, float4(accumulation * light.GetColor().rgb * light.GetEnergy() * atmosphereTransmittance, 1));
 }

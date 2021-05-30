@@ -16,10 +16,10 @@ RWTEXTURE2D(output, float4, 0);
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
+	if (texture_depth.Load(uint3(DTid.xy, 1)) == 0)
+		return;
+
     const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
-    const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 1);
-    if (depth == 0.0f) 
-        return;
     
     half4 v[25];
 

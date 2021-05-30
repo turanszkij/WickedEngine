@@ -66,7 +66,6 @@ public:
 	wiComboBox shadowProps2DComboBox;
 	wiComboBox shadowPropsCubeComboBox;
 	wiComboBox MSAAComboBox;
-	wiSlider raytracedShadowsSlider;
 	wiCheckBox temporalAACheckBox;
 	wiCheckBox temporalAADebugCheckBox;
 	wiComboBox textureQualityComboBox;

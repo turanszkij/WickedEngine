@@ -4,7 +4,9 @@
 #include "raytracingHF.hlsli"
 #include "lightingHF.hlsli"
 
-RWTEXTURE2D(resultTexture, float4, 0);
+RWTEXTURE2D(output, float4, 0);
+RWTEXTURE2D(output_albedo, float4, 1);
+RWTEXTURE2D(output_normal, float4, 2);
 
 [numthreads(RAYTRACING_LAUNCH_BLOCKSIZE, RAYTRACING_LAUNCH_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
@@ -17,16 +19,20 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	float3 result = 0;
 	float3 energy = 1;
 
+	// for denoiser:
+	float3 primary_albedo = 0;
+	float3 primary_normal = 0;
+
 	// Compute screen coordinates:
 	float2 uv = float2((pixel + xTracePixelOffset) * xTraceResolution_rcp.xy * 2 - 1) * float2(1, -1);
-	float seed = xTraceRandomSeed;
+	float seed = xTraceAccumulationFactor;
 
 	// Create starting ray:
 	RayDesc ray = CreateCameraRay(uv);
 
 	// Depth of field setup:
 	float3 focal_point = ray.Origin + ray.Direction * g_xCamera_FocalLength;
-	float3 coc = float3(hemispherepoint_cos(rand(seed, pixel), rand(seed, pixel)).xy, 0);
+	float3 coc = float3(hemispherepoint_cos(rand(seed, uv), rand(seed, uv)).xy, 0);
 	coc.xy *= g_xCamera_ApertureShape.xy;
 	coc = mul(coc, float3x3(cross(g_xCamera_Up, g_xCamera_At), g_xCamera_Up, g_xCamera_At));
 	coc *= g_xCamera_FocalLength;
@@ -89,9 +95,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		// ray origin updated for next bounce:
 		ray.Origin = q.WorldRayOrigin() + q.WorldRayDirection() * q.CommittedRayT();
 
-		ShaderMesh mesh = bindless_buffers[q.CommittedInstanceID()].Load<ShaderMesh>(0);
-		ShaderMeshSubset subset = bindless_subsets[mesh.subsetbuffer][q.CommittedGeometryIndex()];
-		material = bindless_buffers[subset.material].Load<ShaderMaterial>(0);
+		ShaderMesh mesh = bindless_buffers[NonUniformResourceIndex(q.CommittedInstanceID())].Load<ShaderMesh>(0);
+		ShaderMeshSubset subset = bindless_subsets[NonUniformResourceIndex(mesh.subsetbuffer)][q.CommittedGeometryIndex()];
+		material = bindless_buffers[NonUniformResourceIndex(subset.material)].Load<ShaderMaterial>(0);
 
 		EvaluateObjectSurface(
 			mesh,
@@ -119,65 +125,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		surface.V = -ray.Direction;
 		surface.update();
 
-		float3 current_energy = energy;
-		result += max(0, current_energy * surface.emissiveColor.rgb * surface.emissiveColor.a);
+		result += max(0, energy * surface.emissiveColor.rgb * surface.emissiveColor.a);
 
-
-		float roulette;
-
-		const float blendChance = 1 - surface.opacity;
-		roulette = rand(seed, uv);
-		if (roulette < blendChance)
-		{
-			// Alpha blending
-
-			// Add a new bounce iteration, otherwise the transparent effect can disappear:
-			bounces++;
-
-			continue; // skip light sampling
-		}
-		else
-		{
-			const float refractChance = surface.transmission;
-			roulette = rand(seed, uv);
-			if (roulette < refractChance)
-			{
-				// Refraction
-				const float3 R = refract(ray.Direction, surface.N, 1 - material.refraction);
-				ray.Direction = lerp(R, SampleHemisphere_cos(R, seed, uv), surface.roughnessBRDF);
-				energy *= surface.albedo;
-
-				// Add a new bounce iteration, otherwise the transparent effect can disappear:
-				bounces++;
-			}
-			else
-			{
-				const float specChance = dot(surface.F, 0.333);
-
-				roulette = rand(seed, uv);
-				if (roulette < specChance)
-				{
-					// Specular reflection
-					const float3 R = reflect(ray.Direction, surface.N);
-					ray.Direction = lerp(R, SampleHemisphere_cos(R, seed, uv), surface.roughnessBRDF);
-					energy *= surface.F / specChance;
-				}
-				else
-				{
-					// Diffuse reflection
-					ray.Direction = SampleHemisphere_cos(surface.N, seed, uv);
-					energy *= surface.albedo / (1 - specChance);
-				}
-
-				if (dot(ray.Direction, surface.facenormal) <= 0)
-				{
-					// Don't allow normal map to bend over the face normal more than 90 degrees to avoid light leaks
-					//	In this case, we will not allow more bounces,
-					//	but the current light sampling is still fine to avoid abrupt cutoff
-					energy = 0;
-				}
-			}
-		}
 
 		// Light sampling:
 		[loop]
@@ -211,7 +160,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 					float3 atmosphereTransmittance = 1;
 					if (g_xFrame_Options & OPTION_BIT_REALISTIC_SKY)
 					{
-						AtmosphereParameters Atmosphere = GetAtmosphereParameters();
+						AtmosphereParameters Atmosphere = g_xFrame_Atmosphere;
 						atmosphereTransmittance = GetAtmosphericLightTransmittance(Atmosphere, surface.P, L, texture_transmittancelut);
 					}
 					lightColor *= atmosphereTransmittance;
@@ -284,13 +233,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 			if (surfaceToLight.NdotL > 0 && dist > 0)
 			{
-				float3 shadow = surfaceToLight.NdotL * current_energy;
-
-				float3 sampling_offset = float3(rand(seed, uv), rand(seed, uv), rand(seed, uv)) * 2 - 1; // todo: should be specific to light surface
+				float3 shadow = surfaceToLight.NdotL * energy;
 
 				RayDesc newRay;
 				newRay.Origin = surface.P;
-				newRay.Direction = normalize(L + sampling_offset * 0.025);
+				newRay.Direction = normalize(lerp(L, SampleHemisphere_cos(L, seed, uv), 0.025));
 				newRay.TMin = 0.001;
 				newRay.TMax = dist;
 #ifdef RTAPI
@@ -302,9 +249,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 				);
 				while (q.Proceed())
 				{
-					ShaderMesh mesh = bindless_buffers[q.CandidateInstanceID()].Load<ShaderMesh>(0);
-					ShaderMeshSubset subset = bindless_subsets[mesh.subsetbuffer][q.CandidateGeometryIndex()];
-					ShaderMaterial material = bindless_buffers[subset.material].Load<ShaderMaterial>(0);
+					ShaderMesh mesh = bindless_buffers[NonUniformResourceIndex(q.CandidateInstanceID())].Load<ShaderMesh>(0);
+					ShaderMeshSubset subset = bindless_subsets[NonUniformResourceIndex(mesh.subsetbuffer)][q.CandidateGeometryIndex()];
+					ShaderMaterial material = bindless_buffers[NonUniformResourceIndex(subset.material)].Load<ShaderMaterial>(0);
 					[branch]
 					if (!material.IsCastingShadow())
 					{
@@ -338,7 +285,70 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 				{
 					lighting.direct.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
 					lighting.direct.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
-					result += max(0, shadow * (surface.albedo * lighting.direct.diffuse + lighting.direct.specular));
+					result += max(0, shadow * (surface.albedo * (1 - surface.transmission) * lighting.direct.diffuse + lighting.direct.specular)) * surface.opacity;
+				}
+			}
+		}
+
+
+		if (bounce == 0)
+		{
+			primary_albedo = surface.albedo;
+			primary_normal = surface.N;
+		}
+
+		float roulette;
+
+		const float blendChance = 1 - surface.opacity;
+		roulette = rand(seed, uv);
+		if (roulette < blendChance)
+		{
+			// Alpha blending
+
+			// Add a new bounce iteration, otherwise the transparent effect can disappear:
+			bounces++;
+
+			continue; // skip light sampling
+		}
+		else
+		{
+			const float refractChance = surface.transmission;
+			roulette = rand(seed, uv);
+			if (roulette <= refractChance)
+			{
+				// Refraction
+				const float3 R = refract(ray.Direction, surface.N, 1 - material.refraction);
+				ray.Direction = lerp(R, SampleHemisphere_cos(R, seed, uv), surface.roughnessBRDF);
+				energy *= surface.albedo;
+
+				// Add a new bounce iteration, otherwise the transparent effect can disappear:
+				bounces++;
+			}
+			else
+			{
+				const float specChance = dot(surface.F, 0.333);
+
+				roulette = rand(seed, uv);
+				if (roulette <= specChance)
+				{
+					// Specular reflection
+					const float3 R = reflect(ray.Direction, surface.N);
+					ray.Direction = lerp(R, SampleHemisphere_cos(R, seed, uv), surface.roughnessBRDF);
+					energy *= surface.F / max(0.00001, specChance);
+				}
+				else
+				{
+					// Diffuse reflection
+					ray.Direction = SampleHemisphere_cos(surface.N, seed, uv);
+					energy *= surface.albedo / max(0.00001, 1 - specChance);
+				}
+
+				if (dot(ray.Direction, surface.facenormal) <= 0)
+				{
+					// Don't allow normal map to bend over the face normal more than 90 degrees to avoid light leaks
+					//	In this case, we will not allow more bounces,
+					//	but the current light sampling is still fine to avoid abrupt cutoff
+					energy = 0;
 				}
 			}
 		}
@@ -346,9 +356,13 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	}
 
 	// Pre-clear result texture for first bounce and first accumulation sample:
-	if (xTraceUserData.y == 0)
+	if (xTraceSampleIndex == 0)
 	{
-		resultTexture[pixel] = 0;
+		output[pixel] = 0;
+		output_albedo[pixel] = 0;
+		output_normal[pixel] = 0;
 	}
-	resultTexture[pixel] = lerp(resultTexture[pixel], float4(result, 1), xTraceAccumulationFactor);
+	output[pixel] = lerp(output[pixel], float4(result, 1), xTraceAccumulationFactor);
+	output_albedo[pixel] = lerp(output_albedo[pixel], float4(primary_albedo, 1), xTraceAccumulationFactor);
+	output_normal[pixel] = lerp(output_normal[pixel], float4(primary_normal, 1), xTraceAccumulationFactor);
 }

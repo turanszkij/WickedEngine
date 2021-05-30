@@ -108,6 +108,9 @@ public:
 	void PushToSceneGraphView(wiECS::Entity entity, int level);
 	void RefreshSceneGraphView();
 
+	wiSlider pathTraceTargetSlider;
+	wiLabel pathTraceStatisticsLabel;
+
 	std::unique_ptr<RenderPath3D> renderPath;
 	enum RENDERPATH
 	{

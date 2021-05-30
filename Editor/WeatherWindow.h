@@ -25,6 +25,7 @@ public:
 	wiSlider windDirectionSlider;
 	wiSlider windWaveSizeSlider;
 	wiSlider windRandomnessSlider;
+	wiSlider skyExposureSlider;
 	wiCheckBox simpleskyCheckBox;
 	wiCheckBox realisticskyCheckBox;
 	wiButton skyButton;

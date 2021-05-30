@@ -30,14 +30,6 @@ GBuffer main(VertexToPixel input)
 	Lighting lighting;
 	lighting.create(0, 0, GetAmbient(surface.N), 0);
 
-#ifdef SHADOW_MASK_ENABLED
-	[branch]
-	if (g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS)
-	{
-		lighting.shadow_mask = texture_rtshadow[surface.pixel];
-	}
-#endif // SHADOW_MASK_ENABLED
-
 	float depth = input.pos.z;
 	float3 reflection = 0;
 

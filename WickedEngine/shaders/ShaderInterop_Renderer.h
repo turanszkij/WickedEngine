@@ -30,6 +30,11 @@ struct ShaderMaterial
 	float		alphaTest;
 	float		displacementMapping;
 
+	float		transmission;
+	uint		options;
+	int			padding0;
+	int			padding1;
+
 	uint		layerMask;
 	int			uvset_baseColorMap;
 	int			uvset_surfaceMap;
@@ -40,19 +45,20 @@ struct ShaderMaterial
 	int			uvset_occlusionMap;
 	int			uvset_transmissionMap;
 
-	float2		padding1;
-	float		transmission;
-	uint		options;
-
 	int			uvset_sheenColorMap;
 	int			uvset_sheenRoughnessMap;
 	int			uvset_clearcoatMap;
 	int			uvset_clearcoatRoughnessMap;
 
 	int			uvset_clearcoatNormalMap;
+	int			uvset_specularMap;
+	int			padding2;
+	int			padding3;
+
 	float		sheenRoughness;
 	float		clearcoat;
 	float		clearcoatRoughness;
+	float		padding4;
 
 	float4		sheenColor;
 
@@ -75,6 +81,11 @@ struct ShaderMaterial
 	int			texture_clearcoatmap_index;
 	int			texture_clearcoatroughnessmap_index;
 	int			texture_clearcoatnormalmap_index;
+
+	int			texture_specularmap_index;
+	int			padding5;
+	int			padding6;
+	int			padding7;
 
 	inline bool IsUsingVertexColors() { return options & SHADERMATERIAL_OPTION_BIT_USE_VERTEXCOLORS; }
 	inline bool IsUsingSpecularGlossinessWorkflow() { return options & SHADERMATERIAL_OPTION_BIT_SPECULARGLOSSINESS_WORKFLOW; }
@@ -268,6 +279,88 @@ static const uint TILED_CULLING_GRANULARITY = TILED_CULLING_BLOCKSIZE / TILED_CU
 
 static const int impostorCaptureAngles = 36;
 
+struct AtmosphereParameters
+{
+		float2 padding0;
+	// Radius of the planet (center to ground)
+	float bottomRadius;
+	// Maximum considered atmosphere height (center to atmosphere top)
+	float topRadius;
+	// Center of the planet
+	float3 planetCenter;
+
+	// Rayleigh scattering exponential distribution scale in the atmosphere
+	float rayleighDensityExpScale;
+	// Rayleigh scattering coefficients
+	float3 rayleighScattering;
+
+	// Mie scattering exponential distribution scale in the atmosphere
+	float mieDensityExpScale;
+	// Mie scattering coefficients
+	float3 mieScattering;	float padding1;
+	// Mie extinction coefficients
+	float3 mieExtinction;	float padding2;
+	// Mie absorption coefficients
+	float3 mieAbsorption;	
+	// Mie phase function excentricity
+	float miePhaseG;
+
+	// Another medium type in the atmosphere
+	float absorptionDensity0LayerWidth;
+	float absorptionDensity0ConstantTerm;
+	float absorptionDensity0LinearTerm;
+	float absorptionDensity1ConstantTerm;
+		float3 padding3;
+	float absorptionDensity1LinearTerm;
+	// This other medium only absorb light, e.g. useful to represent ozone in the earth atmosphere
+	float3 absorptionExtinction;	float padding4;
+
+	// The albedo of the ground.
+	float3 groundAlbedo;	float padding5;
+
+	// Init default values (All units in kilometers)
+	void init(
+		float earthBottomRadius = 6360.0f,
+		float earthTopRadius = 6460.0f, // 100km atmosphere radius, less edge visible and it contain 99.99% of the atmosphere medium https://en.wikipedia.org/wiki/K%C3%A1rm%C3%A1n_line
+		float earthRayleighScaleHeight = 8.0f,
+		float earthMieScaleHeight = 1.2f
+	)
+	{
+
+		// Values shown here are the result of integration over wavelength power spectrum integrated with paricular function.
+		// Refer to https://github.com/ebruneton/precomputed_atmospheric_scattering for details.
+
+		// Translation from Bruneton2017 parameterisation.
+		rayleighDensityExpScale = -1.0f / earthRayleighScaleHeight;
+		mieDensityExpScale = -1.0f / earthMieScaleHeight;
+		absorptionDensity0LayerWidth = 25.0f;
+		absorptionDensity0ConstantTerm = -2.0f / 3.0f;
+		absorptionDensity0LinearTerm = 1.0f / 15.0f;
+		absorptionDensity1ConstantTerm = 8.0f / 3.0f;
+		absorptionDensity1LinearTerm = -1.0f / 15.0f;
+
+		miePhaseG = 0.8f;
+		rayleighScattering = float3(0.005802f, 0.013558f, 0.033100f);
+		mieScattering = float3(0.003996f, 0.003996f, 0.003996f);
+		mieExtinction = float3(0.004440f, 0.004440f, 0.004440f);
+		mieAbsorption.x = mieExtinction.x - mieScattering.x;
+		mieAbsorption.y = mieExtinction.y - mieScattering.y;
+		mieAbsorption.z = mieExtinction.z - mieScattering.z;
+
+		absorptionExtinction = float3(0.000650f, 0.001881f, 0.000085f);
+
+		groundAlbedo = float3(0.3f, 0.3f, 0.3f); // 0.3 for earths ground albedo, see https://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html
+		bottomRadius = earthBottomRadius;
+		topRadius = earthTopRadius;
+		planetCenter = float3(0.0f, -earthBottomRadius - 0.1f, 0.0f); // Spawn 100m in the air 
+	}
+
+
+#ifdef __cplusplus
+	AtmosphereParameters() { init(); }
+#endif // __cplusplus
+};
+
 // These option bits can be read from g_xFrame_Options constant buffer value:
 static const uint OPTION_BIT_TEMPORALAA_ENABLED = 1 << 0;
 static const uint OPTION_BIT_TRANSPARENTSHADOWS_ENABLED = 1 << 1;
@@ -304,6 +397,9 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 
 	float3		g_xFrame_Ambient;
 	float		g_xFrame_Cloudiness;
+
+	float3		g_xFrame_padding0;
+	float		g_xFrame_SkyExposure;
 
 	float3		g_xFrame_Fog;								// Fog Start,End,Height
 	float		g_xFrame_VoxelRadianceMaxDistance;			// maximum raymarch distance for voxel GI in world-space
@@ -361,8 +457,10 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 
 	float		g_xFrame_ShadowKernel2D;
 	float		g_xFrame_ShadowKernelCube;
-	uint		g_xFrame_RaytracedShadowsSampleCount;
 	int			g_xFrame_ObjectShaderSamplerIndex;
+	float		g_xFrame_BlueNoisePhase;
+
+	AtmosphereParameters g_xFrame_Atmosphere;
 };
 
 CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)
@@ -408,6 +506,7 @@ CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)
 	float4x4	g_xCamera_PrevVP;		// PrevView*PrevProjection
 	float4x4	g_xCamera_PrevInvVP;	// Inverse(PrevView*PrevProjection)
 	float4x4	g_xCamera_ReflVP;		// ReflectionView*ReflectionProjection
+	float4x4	g_xCamera_Reprojection; // view_projection_inverse_matrix * previous_view_projection_matrix
 
 	float2		g_xCamera_ApertureShape;
 	float		g_xCamera_ApertureSize;

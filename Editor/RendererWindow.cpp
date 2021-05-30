@@ -231,7 +231,7 @@ void RendererWindow::Create(EditorComponent* editor)
 	shadowTypeComboBox.SetSize(XMFLOAT2(100, itemheight));
 	shadowTypeComboBox.SetPos(XMFLOAT2(x, y += step));
 	shadowTypeComboBox.AddItem("Shadowmaps");
-	if (wiRenderer::GetDevice()->CheckCapability(wiGraphics::GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+	if (wiRenderer::GetDevice()->CheckCapability(wiGraphics::GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
 	{
 		shadowTypeComboBox.AddItem("Ray traced");
 	}
@@ -249,7 +249,7 @@ void RendererWindow::Create(EditorComponent* editor)
 		}
 		});
 	shadowTypeComboBox.SetSelected(0);
-	shadowTypeComboBox.SetTooltip("Choose between shadowmaps and ray traced shadows (if available).\n(ray traced shadows experimental, needs hardware support and shaders compiled with HLSL6.5)");
+	shadowTypeComboBox.SetTooltip("Choose between shadowmaps and ray traced shadows (if available).\n(ray traced shadows need hardware raytracing support)");
 	AddWidget(&shadowTypeComboBox);
 
 	shadowProps2DComboBox.Create("2D Shadowmap resolution: ");
@@ -369,20 +369,6 @@ void RendererWindow::Create(EditorComponent* editor)
 	MSAAComboBox.SetSelected(0);
 	MSAAComboBox.SetTooltip("Multisampling Anti Aliasing quality. ");
 	AddWidget(&MSAAComboBox);
-
-	raytracedShadowsSlider.Create(1, 16, 1, 15, "Raytraced Shadow Quality: ");
-	raytracedShadowsSlider.SetTooltip("Sample count of raytraced shadows (per light). Higher numbers increase quality, but reduce performance.\nTip: Temporal AA will also help to improve quality.");
-	raytracedShadowsSlider.SetSize(XMFLOAT2(100, itemheight));
-	raytracedShadowsSlider.SetPos(XMFLOAT2(x, y += step));
-	raytracedShadowsSlider.SetValue((float)wiRenderer::GetRaytracedShadowsSampleCount());
-	raytracedShadowsSlider.OnSlide([&](wiEventArgs args) {
-		wiRenderer::SetRaytracedShadowsSampleCount((uint32_t)args.iValue);
-		});
-	AddWidget(&raytracedShadowsSlider);
-	if (!wiRenderer::GetDevice()->CheckCapability(wiGraphics::GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
-	{
-		raytracedShadowsSlider.SetEnabled(false);
-	}
 
 	temporalAACheckBox.Create("Temporal AA: ");
 	temporalAACheckBox.SetTooltip("Toggle Temporal Anti Aliasing. It is a supersampling techique which is performed across multiple frames.");

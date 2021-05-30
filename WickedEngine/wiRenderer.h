@@ -322,8 +322,7 @@ namespace wiRenderer
 	);
 	struct SSAOResources
 	{
-		wiGraphics::Texture temp0;
-		wiGraphics::Texture temp1;
+		wiGraphics::Texture temp;
 	};
 	void CreateSSAOResources(SSAOResources& res, XMUINT2 resolution);
 	void Postprocess_SSAO(
@@ -377,9 +376,13 @@ namespace wiRenderer
 		);
 	struct RTAOResources
 	{
-		wiGraphics::Texture temp;
-		wiGraphics::Texture temporal[2];
 		wiGraphics::Texture normals;
+
+		mutable int frame = 0;
+		wiGraphics::GPUBuffer tiles;
+		wiGraphics::GPUBuffer metadata;
+		wiGraphics::Texture scratch[2];
+		wiGraphics::Texture moments[2];
 	};
 	void CreateRTAOResources(RTAOResources& res, XMUINT2 resolution);
 	void Postprocess_RTAO(
@@ -392,13 +395,12 @@ namespace wiRenderer
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd,
 		float range = 1.0f,
-		uint32_t samplecount = 16,
 		float power = 2.0f
 	);
 	struct RTReflectionResources
 	{
-		wiGraphics::Texture temp;
-		wiGraphics::Texture texture_temporal[2];
+		wiGraphics::Texture temporal[2];
+		wiGraphics::Texture rayLengths;
 	};
 	void CreateRTReflectionResources(RTReflectionResources& res, XMUINT2 resolution);
 	void Postprocess_RTReflection(
@@ -414,7 +416,7 @@ namespace wiRenderer
 	struct SSRResources
 	{
 		wiGraphics::Texture texture_raytrace;
-		wiGraphics::Texture texture_resolve;
+		wiGraphics::Texture rayLengths;
 		wiGraphics::Texture texture_temporal[2];
 	};
 	void CreateSSRResources(SSRResources& res, XMUINT2 resolution);
@@ -430,10 +432,16 @@ namespace wiRenderer
 	);
 	struct RTShadowResources
 	{
-		wiGraphics::TextureDesc saved_desc;
 		wiGraphics::Texture temp;
 		wiGraphics::Texture temporal[2];
 		wiGraphics::Texture normals;
+
+		mutable int frame = 0;
+		wiGraphics::GPUBuffer tiles;
+		wiGraphics::GPUBuffer metadata;
+		wiGraphics::Texture scratch[4][2];
+		wiGraphics::Texture moments[4][2];
+		wiGraphics::Texture denoised;
 	};
 	void CreateRTShadowResources(RTShadowResources& res, XMUINT2 resolution);
 	void Postprocess_RTShadow(
@@ -449,7 +457,7 @@ namespace wiRenderer
 	);
 	struct ScreenSpaceShadowResources
 	{
-		wiGraphics::Texture temp;
+		int placeholder;
 	};
 	void CreateScreenSpaceShadowResources(ScreenSpaceShadowResources& res, XMUINT2 resolution);
 	void Postprocess_ScreenSpaceShadow(
@@ -617,7 +625,9 @@ namespace wiRenderer
 		const wiScene::Scene& scene,
 		const wiGraphics::Texture& output,
 		int accumulation_sample,
-		wiGraphics::CommandList cmd
+		wiGraphics::CommandList cmd,
+		const wiGraphics::Texture* output_albedo = nullptr,
+		const wiGraphics::Texture* output_normal = nullptr
 	);
 	// Render the scene BVH with ray tracing to the screen
 	void RayTraceSceneBVH(const wiScene::Scene& scene, wiGraphics::CommandList cmd);
@@ -740,8 +750,6 @@ namespace wiRenderer
 	bool GetTessellationEnabled();
 	void SetDisableAlbedoMaps(bool value);
 	bool IsDisableAlbedoMaps();
-	void SetRaytracedShadowsSampleCount(uint32_t value);
-	uint32_t GetRaytracedShadowsSampleCount();
 	void SetScreenSpaceShadowsEnabled(bool value);
 	bool GetScreenSpaceShadowsEnabled();
 

@@ -8,7 +8,7 @@
 
 float3 AccurateAtmosphericScattering(Texture2D<float4> skyViewLutTexture, Texture2D<float4> transmittanceLUT, Texture2D<float4> multiScatteringLUT, float3 rayOrigin, float3 rayDirection, float3 sunDirection, float sunEnergy, float3 sunColor, bool enableSun, bool darkMode, bool stationary)
 {
-    AtmosphereParameters atmosphere = GetAtmosphereParameters();
+    AtmosphereParameters atmosphere = g_xFrame_Atmosphere;
 
     float3 worldDirection = rayDirection;
 
@@ -244,7 +244,7 @@ float3 GetDynamicSkyColor(in float3 V, bool sun_enabled = true, bool clouds_enab
 {
     if (g_xFrame_Options & OPTION_BIT_SIMPLE_SKY)
     {
-        return lerp(GetHorizonColor(), GetZenithColor(), saturate(V.y * 0.5f + 0.5f));
+        return lerp(GetHorizonColor(), GetZenithColor(), saturate(V.y * 0.5f + 0.5f)) * g_xFrame_SkyExposure;
     }
 
     const float3 sunDirection = GetSunDirection();
@@ -281,6 +281,8 @@ float3 GetDynamicSkyColor(in float3 V, bool sun_enabled = true, bool clouds_enab
             dark_enabled    // enable dark mode for light shafts etc.
         );
     }
+
+	sky *= g_xFrame_SkyExposure;
 
     if (clouds_enabled)
     {

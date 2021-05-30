@@ -23,84 +23,6 @@ static const float2 skyViewLUTRes = float2(192.0, 104);
 
 #define PLANET_RADIUS_OFFSET 0.001f // Float accuracy offset in Sky unit (km, so this is 1m)
 
-struct AtmosphereParameters
-{
-	// Radius of the planet (center to ground)
-	float bottomRadius;
-	// Maximum considered atmosphere height (center to atmosphere top)
-	float topRadius;
-    // Center of the planet
-	float3 planetCenter;
-
-	// Rayleigh scattering exponential distribution scale in the atmosphere
-	float rayleighDensityExpScale;
-	// Rayleigh scattering coefficients
-	float3 rayleighScattering;
-
-	// Mie scattering exponential distribution scale in the atmosphere
-	float mieDensityExpScale;
-	// Mie scattering coefficients
-	float3 mieScattering;
-	// Mie extinction coefficients
-	float3 mieExtinction;
-	// Mie absorption coefficients
-	float3 mieAbsorption;
-	// Mie phase function excentricity
-	float miePhaseG;
-
-	// Another medium type in the atmosphere
-	float absorptionDensity0LayerWidth;
-	float absorptionDensity0ConstantTerm;
-	float absorptionDensity0LinearTerm;
-	float absorptionDensity1ConstantTerm;
-	float absorptionDensity1LinearTerm;
-	// This other medium only absorb light, e.g. useful to represent ozone in the earth atmosphere
-	float3 absorptionExtinction;
-
-	// The albedo of the ground.
-	float3 groundAlbedo;
-};
-
-AtmosphereParameters GetAtmosphereParameters()
-{
-	AtmosphereParameters parameters;
-    
-    // Values shown here are the result of integration over wavelength power spectrum integrated with paricular function.
-	// Refer to https://github.com/ebruneton/precomputed_atmospheric_scattering for details.
-
-	// All units in kilometers
-	const float earthBottomRadius = 6360.0f;
-	const float earthTopRadius = 6460.0f; // 100km atmosphere radius, less edge visible and it contain 99.99% of the atmosphere medium https://en.wikipedia.org/wiki/K%C3%A1rm%C3%A1n_line
-	const float earthRayleighScaleHeight = 8.0f;
-	const float earthMieScaleHeight = 1.2f;
-    
-	// Traslation from Bruneton2017 parameterisation.
-	parameters.rayleighDensityExpScale = -1.0 / earthRayleighScaleHeight;
-	parameters.mieDensityExpScale = -1.0 / earthMieScaleHeight;
-	parameters.absorptionDensity0LayerWidth = 25.0;
-	parameters.absorptionDensity0ConstantTerm = -2.0 / 3.0;
-	parameters.absorptionDensity0LinearTerm = 1.0 / 15.0;
-	parameters.absorptionDensity1ConstantTerm = 8.0 / 3.0;
-	parameters.absorptionDensity1LinearTerm = -1.0 / 15.0;
-
-	parameters.miePhaseG = 0.8;
-	parameters.rayleighScattering = float3(0.005802f, 0.013558f, 0.033100f);
-	parameters.mieScattering = float3(0.003996f, 0.003996f, 0.003996f);
-	parameters.mieExtinction = float3(0.004440f, 0.004440f, 0.004440f);
-	parameters.mieAbsorption = parameters.mieExtinction - parameters.mieScattering;
-    
-	parameters.absorptionExtinction = float3(0.000650f, 0.001881f, 0.000085f);
-
-	parameters.groundAlbedo = float3(0.3, 0.3, 0.3); // 0.3 for earths ground albedo, see https://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html
-	parameters.bottomRadius = earthBottomRadius;
-	parameters.topRadius = earthTopRadius;
-	parameters.planetCenter = float3(0.0, -earthBottomRadius - 0.1, 0.0); // Spawn 100m in the air 
-
-	return parameters;
-}
-
-
-
 ////////////////////////////////////////////////////////////
 // LUT functions
 ////////////////////////////////////////////////////////////
@@ -435,6 +357,15 @@ float3 GetTransmittance(AtmosphereParameters atmosphere, float pHeight, float su
 
 float3 GetAtmosphereTransmittance(float3 worldPosition, float3 worldDirection, AtmosphereParameters atmosphere, Texture2D<float4> transmittanceLutTexture)
 {
+	// If the worldDirection is occluded from this virtual planet, then return.
+	// We do this due to the low resolution LUT, where the stored zenith to horizon never reaches black, to prevent linear interpolation artefacts.
+	// At the most shadowed point of the LUT, pure black with earth shadow is never reached.
+	float2 sol = RaySphereIntersect(worldPosition, worldDirection, float3(0.0f, 0.0f, 0.0f), atmosphere.bottomRadius);
+	if (sol.x > 0.0f || sol.y > 0.0f)
+	{
+		return 0.0f;
+	}
+	
 	float pHeight = length(worldPosition);
 	const float3 UpVector = worldPosition / pHeight;
 	float SunZenithCosAngle = dot(worldDirection, UpVector);

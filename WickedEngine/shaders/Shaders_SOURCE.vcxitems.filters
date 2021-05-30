@@ -111,9 +111,6 @@
     <None Include="$(MSBuildThisFileDirectory)bitonicSortHF.hlsli">
       <Filter>HF</Filter>
     </None>
-    <None Include="$(MSBuildThisFileDirectory)rtaoLIB.hlsl">
-      <Filter>LIB</Filter>
-    </None>
     <None Include="$(MSBuildThisFileDirectory)volumetricCloudsHF.hlsli">
       <Filter>HF</Filter>
     </None>
@@ -128,9 +125,6 @@
     </None>
     <None Include="$(MSBuildThisFileDirectory)skyAtmosphere.hlsli">
       <Filter>HF</Filter>
-    </None>
-    <None Include="$(MSBuildThisFileDirectory)rtshadowLIB.hlsl">
-      <Filter>LIB</Filter>
     </None>
     <None Include="$(MSBuildThisFileDirectory)objectHF_tessellation.hlsli">
       <Filter>HF</Filter>
@@ -788,12 +782,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)normalsfromdepthCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)rtao_denoise_blurCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)rtao_denoise_temporalCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)impostorPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
@@ -972,6 +960,24 @@
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)raytraceCS_rtapi.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)rtshadowCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)rtaoCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)rtshadow_denoise_tileclassificationCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)rtshadow_denoise_filterCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)rtao_denoise_tileclassificationCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)rtao_denoise_filterCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>

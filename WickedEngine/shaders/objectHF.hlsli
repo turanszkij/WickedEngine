@@ -65,6 +65,7 @@ inline ShaderMaterial GetMaterial3()
 #define texture_clearcoatmap			bindless_textures[GetMaterial().texture_clearcoatmap_index]
 #define texture_clearcoatroughnessmap	bindless_textures[GetMaterial().texture_clearcoatroughnessmap_index]
 #define texture_clearcoatnormalmap		bindless_textures[GetMaterial().texture_clearcoatnormalmap_index]
+#define texture_specularmap				bindless_textures[GetMaterial().texture_specularmap_index]
 
 #define texture_blend1_basecolormap		bindless_textures[GetMaterial1().texture_basecolormap_index]
 #define texture_blend1_normalmap		bindless_textures[GetMaterial1().texture_normalmap_index]
@@ -114,6 +115,7 @@ TEXTURE2D(texture_sheenroughnessmap, float4, TEXSLOT_RENDERER_SHEENROUGHNESSMAP)
 TEXTURE2D(texture_clearcoatmap, float, TEXSLOT_RENDERER_CLEARCOATMAP);						// r
 TEXTURE2D(texture_clearcoatroughnessmap, float2, TEXSLOT_RENDERER_CLEARCOATROUGHNESSMAP);	// g
 TEXTURE2D(texture_clearcoatnormalmap, float3, TEXSLOT_RENDERER_CLEARCOATNORMALMAP);			// rgb
+TEXTURE2D(texture_specularmap, float4, TEXSLOT_RENDERER_SPECULARMAP);						// rgb color, a intensity
 
 TEXTURE2D(texture_blend1_basecolormap, float4, TEXSLOT_RENDERER_BLEND1_BASECOLORMAP);	// rgb: baseColor, a: opacity
 TEXTURE2D(texture_blend1_normalmap, float3, TEXSLOT_RENDERER_BLEND1_NORMALMAP);			// rgb: normal
@@ -1065,6 +1067,15 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 	[branch]
 	if (g_xFrame_LightArrayCount > 0)
 	{
+		uint4 shadow_mask_packed = 0;
+#ifdef SHADOW_MASK_ENABLED
+		[branch]
+		if (g_xFrame_Options & OPTION_BIT_SHADOW_MASK)
+		{
+			shadow_mask_packed = texture_rtshadow[surface.pixel / 2];
+		}
+#endif // SHADOW_MASK_ENABLED
+
 		// Loop through light buckets in the tile:
 		const uint first_item = g_xFrame_LightArrayOffset;
 		const uint last_item = first_item + g_xFrame_LightArrayCount - 1;
@@ -1097,21 +1108,41 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 						continue; // static lights will be skipped (they are used in lightmap baking)
 					}
 
+					float shadow_mask = 1;
+#ifdef SHADOW_MASK_ENABLED
+					[branch]
+					if (g_xFrame_Options & OPTION_BIT_SHADOW_MASK && light.IsCastingShadow())
+					{
+						uint shadow_index = entity_index - g_xFrame_LightArrayOffset;
+						if (shadow_index < 16)
+						{
+							uint mask_shift = (shadow_index % 4) * 8;
+							uint mask_bucket = shadow_index / 4;
+							uint mask = (shadow_mask_packed[mask_bucket] >> mask_shift) & 0xFF;
+							if (mask == 0)
+							{
+								continue;
+							}
+							shadow_mask = mask / 255.0;
+						}
+					}
+#endif // SHADOW_MASK_ENABLED
+
 					switch (light.GetType())
 					{
 					case ENTITY_TYPE_DIRECTIONALLIGHT:
 					{
-						DirectionalLight(light, surface, lighting);
+						DirectionalLight(light, surface, lighting, shadow_mask);
 					}
 					break;
 					case ENTITY_TYPE_POINTLIGHT:
 					{
-						PointLight(light, surface, lighting);
+						PointLight(light, surface, lighting, shadow_mask);
 					}
 					break;
 					case ENTITY_TYPE_SPOTLIGHT:
 					{
-						SpotLight(light, surface, lighting);
+						SpotLight(light, surface, lighting, shadow_mask);
 					}
 					break;
 					}
@@ -1247,9 +1278,9 @@ PixelInput main(VertexInput input)
 
 // entry point:
 #ifdef OUTPUT_GBUFFER
-GBuffer main(PixelInput input)
+GBuffer main(PixelInput input, in bool is_frontface : SV_IsFrontFace)
 #else
-float4 main(PixelInput input) : SV_TARGET
+float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 #endif // OUTPUT_GBUFFER
 
 
@@ -1286,6 +1317,10 @@ float4 main(PixelInput input) : SV_TARGET
 
 
 #ifdef OBJECTSHADER_USE_NORMAL
+	if (is_frontface == false)
+	{
+		input.nor = -input.nor;
+	}
 	surface.N = normalize(input.nor);
 #endif // OBJECTSHADER_USE_NORMAL
 
@@ -1359,7 +1394,21 @@ float4 main(PixelInput input) : SV_TARGET
 #endif // OBJECTSHADER_USE_UVSETS
 
 
-	surface.create(GetMaterial(), color, surfaceMap);
+	float4 specularMap = 1;
+
+#ifdef OBJECTSHADER_USE_UVSETS
+	[branch]
+	if (GetMaterial().uvset_specularMap >= 0)
+	{
+		const float2 UV_specularMap = GetMaterial().uvset_specularMap == 0 ? input.uvsets.xy : input.uvsets.zw;
+		specularMap = texture_specularmap.Sample(sampler_objectshader, UV_specularMap);
+		specularMap.rgb = DEGAMMA(specularMap.rgb);
+	}
+#endif // OBJECTSHADER_USE_UVSETS
+
+
+
+	surface.create(GetMaterial(), color, surfaceMap, specularMap);
 
 
 	// Emissive map:
@@ -1753,7 +1802,6 @@ float4 main(PixelInput input) : SV_TARGET
 
 
 #ifdef WATER
-	color.a = 1;
 
 	//NORMALMAP
 	float2 bumpColor0 = 0;
@@ -1823,15 +1871,6 @@ float4 main(PixelInput input) : SV_TARGET
 #endif
 
 
-#ifdef SHADOW_MASK_ENABLED
-	[branch]
-	if (g_xFrame_Options & OPTION_BIT_SHADOW_MASK)
-	{
-		lighting.shadow_mask = texture_rtshadow[surface.pixel];
-	}
-#endif // SHADOW_MASK_ENABLED
-
-
 #ifdef FORWARD
 	ForwardLighting(surface, lighting);
 #endif // FORWARD
@@ -1865,6 +1904,7 @@ float4 main(PixelInput input) : SV_TARGET
 	}
 	// WATER FOG:
 	surface.refraction.a = 1 - saturate(color.a * 0.1 * depth_difference);
+	color.a = 1;
 #endif // WATER
 
 

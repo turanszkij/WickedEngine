@@ -12,6 +12,7 @@ namespace wiTextureHelper
 	const wiGraphics::Texture* getNormalMapDefault();
 	const wiGraphics::Texture* getBlackCubeMap();
 	const wiGraphics::Texture* getUINT4();
+	const wiGraphics::Texture* getBlueNoise();
 
 	const wiGraphics::Texture* getWhite();
 	const wiGraphics::Texture* getBlack();

@@ -5,10 +5,12 @@
 TEXTURE2D(resolve_current, uint4, TEXSLOT_ONDEMAND0);
 TEXTURE2D(resolve_history, uint4, TEXSLOT_ONDEMAND1);
 TEXTURE2D(texture_depth_history, float, TEXSLOT_ONDEMAND2);
+TEXTURE2D(denoised, float4, TEXSLOT_ONDEMAND3);
 
-RWTEXTURE2D(output, uint4, 0);
+RWTEXTURE2D(temporal_output, uint4, 0);
+RWTEXTURE2D(output, uint4, 1);
 
-static const float temporalResponseMin = 0.9;
+static const float temporalResponseMin = 0.88;
 static const float temporalResponseMax = 1.0f;
 static const float temporalScale = 2.0;
 static const float temporalExposure = 10.0f;
@@ -66,13 +68,23 @@ inline void ResolverAABB(in uint shadow_index, float sharpness, float exposureSc
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
+	if (texture_depth.Load(uint3(DTid.xy, 1)) == 0)
+		return;
+
+	// first 4 lights are denoised
+	output[DTid.xy].r = 0;
+	output[DTid.xy].r |= (uint(denoised[DTid.xy].r * 255) & 0xFF) << 0;
+	output[DTid.xy].r |= (uint(denoised[DTid.xy].g * 255) & 0xFF) << 8;
+	output[DTid.xy].r |= (uint(denoised[DTid.xy].b * 255) & 0xFF) << 16;
+	output[DTid.xy].r |= (uint(denoised[DTid.xy].a * 255) & 0xFF) << 24;
+
 	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
 
 	const float2 velocity = texture_gbuffer2.SampleLevel(sampler_point_clamp, uv, 0).xy;
 	const float2 prevUV = uv + velocity;
 	if (!is_saturated(prevUV))
 	{
-		output[DTid.xy] = resolve_current[DTid.xy];
+		output[DTid.xy].gba = resolve_current[DTid.xy].gba;
 		return;
 	}
 
@@ -82,14 +94,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 	float depth_history = getLinearDepth(texture_depth_history.SampleLevel(sampler_point_clamp, prevUV, 0));
 	if (abs(depth_current - depth_history) > 1)
 	{
-		output[DTid.xy] = resolve_current[DTid.xy];
+		output[DTid.xy].gba = resolve_current[DTid.xy].gba;
 		return;
 	}
 
 	uint4 shadow_mask = 0;
 
 	[unroll]
-	for (uint shadow_index = 0; shadow_index < 16; ++shadow_index)
+	for (uint shadow_index = 4; shadow_index < 16; ++shadow_index) // first 4 lights are denoised, rest is using simple temporal blend
 	{
 		float previous = load_shadow(shadow_index, resolve_history[floor(prevUV * xPPResolution)]);
 
@@ -111,5 +123,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 		store_shadow(result, shadow_index, shadow_mask);
 	}
 
-	output[DTid.xy] = shadow_mask;
+	output[DTid.xy].gba = shadow_mask.gba;
+	temporal_output[DTid.xy].gba = shadow_mask.gba;
 }

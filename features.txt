@@ -7,11 +7,10 @@ Vulkan renderer
 Image rendering
 Font rendering (True Type)
 Networking (UDP)
-[removed since 0.21] Blender-exporter: 3D meshes,objects,armatures,animation,materials,lights,hitspheres,wind,world info,dynamic cameras,ribbon trails,particle systems
 3D mesh rendering
 Skeletal animation
 Morph target animation
-Physically based materials
+Physically based rendering
 Animated texturing
 Normal mapping
 Displacement mapping
@@ -20,7 +19,6 @@ Real time planar reflections
 Cube map reflections (static and real time)
 Refractions (screen space, blurred)
 Interactive Water
-Gaussian Blur
 Bloom
 Edge outline
 Motion Blur
@@ -38,7 +36,6 @@ MSAA (Forward rendering only)
 FXAA
 TAA (Temporal Antialiasing)
 Supersampling
-Deferred shading
 Directional lights + cascaded shadow maps
 Spotlights + shadow maps
 Point lights + shadow cubemaps
@@ -54,7 +51,6 @@ Screen Space Ambient Occlusion (SSAO, HBAO, MSAO)
 Screen Space Reflections
 Skin shader (Subsurface scattering)
 Stencil layering
-Deferred decals
 Forward decals
 Color Grading
 Sharpen filter
@@ -63,14 +59,12 @@ Lua Scripting
 Dynamic environment mapping
 Impostor system
 Tiled forward (Forward+) rendering (+2.5D culling)
-Tiled deferred rendering
 Occlusion culling with gpu queries
 Texture atlas packing
 Tiled decals
-Area lights: Sphere, Disc, Rectangle, Tube
 Frame Profiler
 Voxel Global Illumination
-Huge draw distance support with reversed Z-buffer
+Reversed Z-buffer
 Force Fields GPU simulation
 Particle - Depth Buffer collisions
 Ocean simulation (FFT)
@@ -96,3 +90,5 @@ KHR_materials_transmission
 KHR_materials_pbrSpecularGlossiness
 KHR_materials_sheen
 KHR_materials_clearcoat
+KHR_materials_specular
+KHR_materials_ior

@@ -5,11 +5,12 @@
 TEXTURE2D(resolve_current, float4, TEXSLOT_ONDEMAND0);
 TEXTURE2D(resolve_history, float4, TEXSLOT_ONDEMAND1);
 TEXTURE2D(texture_depth_history, float, TEXSLOT_ONDEMAND2);
+TEXTURE2D(rayLengths, float, TEXSLOT_ONDEMAND3);
 
 RWTEXTURE2D(output, float4, 0);
 
-static const float temporalResponseMin = 0.85;
-static const float temporalResponseMax = 0.98f;
+static const float temporalResponseMin = 0.75;
+static const float temporalResponseMax = 0.95f;
 static const float temporalScale = 3.0;
 static const float temporalExposure = 10.0f;
 
@@ -94,30 +95,51 @@ inline void ResolverAABB(Texture2D<float4> currentColor, SamplerState currentSam
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
+	if (texture_depth.Load(uint3(DTid.xy, 1)) == 0)
+		return;
+
     const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
 
-	const float roughness = texture_gbuffer1.SampleLevel(sampler_point_clamp, uv, 0).a;
-	if (roughness < 0.05)
-	{
-		output[DTid.xy] = resolve_current[DTid.xy];
-		return;
-	}
-
 	const float2 velocity = texture_gbuffer2.SampleLevel(sampler_point_clamp, uv, 0).xy;
-	const float2 prevUV = uv + velocity;
+	float2 prevUV = uv + velocity;
 	if (!is_saturated(prevUV))
 	{
 		output[DTid.xy] = resolve_current[DTid.xy];
 		return;
 	}
 
+	const float roughness = texture_gbuffer1.SampleLevel(sampler_point_clamp, prevUV, 0).a;
+	if (roughness < 0.01)
+	{
+		output[DTid.xy] = resolve_current[DTid.xy];
+		//return;
+	}
+
+	const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 0);
+
+	// Secondary reprojection based on ray lengths:
+	//	https://www.ea.com/seed/news/seed-dd18-presentation-slides-raytracing (Slide 45)
+	if (roughness < 0.5)
+	{
+		float rayLength = rayLengths[DTid.xy];
+		if (rayLength > 0)
+		{
+			const float3 P = reconstructPosition(uv, depth);
+			const float3 V = normalize(g_xCamera_CamPos - P);
+			const float3 rayEnd = P - V * rayLength;
+			float4 rayEndPrev = mul(g_xCamera_PrevVP, float4(rayEnd, 1));
+			rayEndPrev.xy /= rayEndPrev.w;
+			prevUV = rayEndPrev.xy * float2(0.5, -0.5) + 0.5;
+		}
+	}
+
 	// Disocclusion fallback:
-	const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 1);
 	float depth_current = getLinearDepth(depth);
 	float depth_history = getLinearDepth(texture_depth_history.SampleLevel(sampler_point_clamp, prevUV, 1));
 	if (abs(depth_current - depth_history) > 1)
 	{
 		output[DTid.xy] = resolve_current[DTid.xy];
+		//output[DTid.xy] = float4(1, 0, 0, 1);
 		return;
 	}
     

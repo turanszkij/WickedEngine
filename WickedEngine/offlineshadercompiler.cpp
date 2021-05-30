@@ -212,11 +212,15 @@ int main(int argc, char* argv[])
 		"skyAtmosphere_skyViewLutCS.hlsl"							,
 		"skyAtmosphere_multiScatteredLuminanceLutCS.hlsl"			,
 		"skyAtmosphere_skyLuminanceLutCS.hlsl"						,
-		"rtao_denoise_blurCS.hlsl"									,
-		"rtao_denoise_temporalCS.hlsl"								,
-		"rtshadow_denoise_temporalCS.hlsl"							,
 		"upsample_bilateral_uint4CS.hlsl"							,
 		"screenspaceshadowCS.hlsl"									,
+		"rtshadowCS.hlsl"											,
+		"rtshadow_denoise_tileclassificationCS.hlsl"				,
+		"rtshadow_denoise_filterCS.hlsl"							,
+		"rtshadow_denoise_temporalCS.hlsl"							,
+		"rtaoCS.hlsl"												,
+		"rtao_denoise_tileclassificationCS.hlsl",
+		"rtao_denoise_filterCS.hlsl",
 	};
 
 	shaders[wiGraphics::PS] = {
@@ -380,13 +384,18 @@ int main(int argc, char* argv[])
 	};
 
 	shaders[wiGraphics::LIB] = {
-		"rtaoLIB.hlsl",
 		"rtreflectionLIB.hlsl",
-		"rtshadowLIB.hlsl",
 	};
 
 	minshadermodels["renderlightmapPS_rtapi.hlsl"] = wiGraphics::SHADERMODEL_6_5;
 	minshadermodels["raytraceCS_rtapi.hlsl"] = wiGraphics::SHADERMODEL_6_5;
+	minshadermodels["rtshadowCS.hlsl"] = wiGraphics::SHADERMODEL_6_5;
+	minshadermodels["rtshadow_denoise_tileclassificationCS.hlsl"] = wiGraphics::SHADERMODEL_6_0;
+	minshadermodels["rtshadow_denoise_filterCS.hlsl"] = wiGraphics::SHADERMODEL_6_0;
+	minshadermodels["rtshadow_denoise_temporalCS.hlsl"] = wiGraphics::SHADERMODEL_6_0;
+	minshadermodels["rtaoCS.hlsl"] = wiGraphics::SHADERMODEL_6_5;
+	minshadermodels["rtao_denoise_tileclassificationCS.hlsl"] = wiGraphics::SHADERMODEL_6_0;
+	minshadermodels["rtao_denoise_filterCS.hlsl"] = wiGraphics::SHADERMODEL_6_0;
 
 	wiShaderCompiler::Initialize();
 	wiJobSystem::Initialize();

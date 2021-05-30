@@ -5,6 +5,7 @@
 TEXTURE2D(input, float4, TEXSLOT_ONDEMAND0);
 
 RWTEXTURE2D(texture_raytrace, float4, 0);
+RWTEXTURE2D(texture_rayLengths, float, 1);
 
 // Use this to use reduced precision, but higher framerate:
 #define USE_LINEARDEPTH
@@ -258,25 +259,24 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #ifdef GGX_SAMPLE_VISIBLE
         
 #if 1
-        
-        	float2 Xi;
-            Xi.x = BNDSequenceSample(DTid.xy, g_xFrame_FrameCount, 0);
-			Xi.y = BNDSequenceSample(DTid.xy, g_xFrame_FrameCount, 1);
-            
-			Xi.y = lerp(Xi.y, 0.0f, GGX_IMPORTANCE_SAMPLE_BIAS);
+		const float2 bluenoise = blue_noise(DTid.xy).xy;
 
-			H = ImportanceSampleVisibleGGX(SampleDisk(Xi), roughness, tangentV);
+		float2 Xi = bluenoise.xy;
+            
+		Xi.y = lerp(Xi.y, 0.0f, GGX_IMPORTANCE_SAMPLE_BIAS);
+
+		H = ImportanceSampleVisibleGGX(SampleDisk(Xi), roughness, tangentV);
         
 #else // Old
         
-            // Low-discrepancy sequence
-			uint2 Random = Rand_PCG16(int3((DTid.xy + 0.5f), g_xFrame_FrameCount)).xy;
+        // Low-discrepancy sequence
+		uint2 Random = Rand_PCG16(int3((DTid.xy + 0.5f), g_xFrame_FrameCount)).xy;
             
-			float2 Xi = HammersleyRandom16(1, Random); // SingleSPP
+		float2 Xi = HammersleyRandom16(1, Random); // SingleSPP
             
-			Xi.y = lerp(Xi.y, 0.0f, GGX_IMPORTANCE_SAMPLE_BIAS);
+		Xi.y = lerp(Xi.y, 0.0f, GGX_IMPORTANCE_SAMPLE_BIAS);
             
-			H = ImportanceSampleVisibleGGX(SampleDisk(Xi), roughness, tangentV);
+		H = ImportanceSampleVisibleGGX(SampleDisk(Xi), roughness, tangentV);
         
 #endif
 
@@ -330,6 +330,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	bool hit = ScreenSpaceRayTrace(P, L, jitter, roughness, hitPixel, hitPoint, iterations);
 
+
 	float hitDepth = texture_depth.SampleLevel(sampler_point_clamp, hitPixel, 0);
 
     // Output:
@@ -338,4 +339,14 @@ void main(uint3 DTid : SV_DispatchThreadID)
     // w:  pdf
 	float4 raytrace = max(0, float4(hitPixel, hitDepth, H.w));
 	texture_raytrace[DTid.xy] = raytrace;
+
+	if (hit)
+	{
+		const float3 Phit = reconstructPosition(uv, hitDepth, g_xCamera_InvP);
+		texture_rayLengths[DTid.xy] = distance(P, Phit);
+	}
+	else
+	{
+		texture_rayLengths[DTid.xy] = 0;
+	}
 }

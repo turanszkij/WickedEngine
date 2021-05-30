@@ -209,6 +209,12 @@ namespace wiScene
 				archive >> textures[CLEARCOATNORMALMAP].uvset;
 			}
 
+			if (archive.GetVersion() >= 68)
+			{
+				archive >> textures[SPECULARMAP].name;
+				archive >> textures[SPECULARMAP].uvset;
+			}
+
 			for (auto& x : textures)
 			{
 				if (!x.name.empty())
@@ -327,6 +333,12 @@ namespace wiScene
 				archive << textures[CLEARCOATMAP].uvset;
 				archive << textures[CLEARCOATROUGHNESSMAP].uvset;
 				archive << textures[CLEARCOATNORMALMAP].uvset;
+			}
+
+			if (archive.GetVersion() >= 68)
+			{
+				archive << textures[SPECULARMAP].name;
+				archive << textures[SPECULARMAP].uvset;
 			}
 		}
 	}
@@ -943,7 +955,18 @@ namespace wiScene
 			archive >> oceanParameters.wind_speed;
 			archive >> oceanParameters.wind_dependency;
 			archive >> oceanParameters.choppy_scale;
-			archive >> oceanParameters.waterColor;
+			if (archive.GetVersion() < 67)
+			{
+				XMFLOAT3 waterColor;
+				archive >> waterColor;
+				oceanParameters.waterColor.x = waterColor.x;
+				oceanParameters.waterColor.y = waterColor.y;
+				oceanParameters.waterColor.z = waterColor.z;
+			}
+			else
+			{
+				archive >> oceanParameters.waterColor;
+			}
 			archive >> oceanParameters.waterHeight;
 			archive >> oceanParameters.surfaceDetail;
 			archive >> oceanParameters.surfaceDisplacementTolerance;
@@ -969,6 +992,28 @@ namespace wiScene
 					colorGradingMapName = dir + colorGradingMapName;
 					colorGradingMap = wiResourceManager::Load(colorGradingMapName, wiResourceManager::IMPORT_COLORGRADINGLUT | wiResourceManager::IMPORT_RETAIN_FILEDATA);
 				}
+			}
+
+			if (archive.GetVersion() >= 66)
+			{
+				archive >> skyExposure;
+
+				archive >> atmosphereParameters.bottomRadius;
+				archive >> atmosphereParameters.topRadius;
+				archive >> atmosphereParameters.planetCenter;
+				archive >> atmosphereParameters.rayleighDensityExpScale;
+				archive >> atmosphereParameters.rayleighScattering;
+				archive >> atmosphereParameters.mieDensityExpScale;
+				archive >> atmosphereParameters.mieScattering;
+				archive >> atmosphereParameters.mieExtinction;
+				archive >> atmosphereParameters.mieAbsorption;
+				archive >> atmosphereParameters.absorptionDensity0LayerWidth;
+				archive >> atmosphereParameters.absorptionDensity0ConstantTerm;
+				archive >> atmosphereParameters.absorptionDensity0LinearTerm;
+				archive >> atmosphereParameters.absorptionDensity1ConstantTerm;
+				archive >> atmosphereParameters.absorptionDensity1LinearTerm;
+				archive >> atmosphereParameters.absorptionExtinction;
+				archive >> atmosphereParameters.groundAlbedo;
 			}
 
 		}
@@ -1017,6 +1062,28 @@ namespace wiScene
 			if (archive.GetVersion() >= 62)
 			{
 				archive << colorGradingMapName;
+			}
+
+			if (archive.GetVersion() >= 66)
+			{
+				archive << skyExposure;
+
+				archive << atmosphereParameters.bottomRadius;
+				archive << atmosphereParameters.topRadius;
+				archive << atmosphereParameters.planetCenter;
+				archive << atmosphereParameters.rayleighDensityExpScale;
+				archive << atmosphereParameters.rayleighScattering;
+				archive << atmosphereParameters.mieDensityExpScale;
+				archive << atmosphereParameters.mieScattering;
+				archive << atmosphereParameters.mieExtinction;
+				archive << atmosphereParameters.mieAbsorption;
+				archive << atmosphereParameters.absorptionDensity0LayerWidth;
+				archive << atmosphereParameters.absorptionDensity0ConstantTerm;
+				archive << atmosphereParameters.absorptionDensity0LinearTerm;
+				archive << atmosphereParameters.absorptionDensity1ConstantTerm;
+				archive << atmosphereParameters.absorptionDensity1LinearTerm;
+				archive << atmosphereParameters.absorptionExtinction;
+				archive << atmosphereParameters.groundAlbedo;
 			}
 
 		}

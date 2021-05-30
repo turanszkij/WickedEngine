@@ -1,11 +1,6 @@
 #ifndef WI_STOCHASTICSSR_HF
 #define WI_STOCHASTICSSR_HF
 
-// Blue noise resources:
-STRUCTUREDBUFFER(sobolSequenceBuffer, uint, TEXSLOT_ONDEMAND1);
-STRUCTUREDBUFFER(scramblingTileBuffer, uint, TEXSLOT_ONDEMAND2);
-STRUCTUREDBUFFER(rankingTileBuffer, uint, TEXSLOT_ONDEMAND3);
-
 // Stochastic Screen Space Reflections reference:
 // https://www.ea.com/frostbite/news/stochastic-screen-space-reflections
 
@@ -213,24 +208,5 @@ float4 ImportanceSampleVisibleGGX(float2 diskXi, float roughness, float3 V)
 	return float4(H, PDF);
 }
 
-// "A Low-Discrepancy Sampler that Distributes Monte Carlo Errors as a Blue Noise in Screen Space" by Heitz et al.
-float BNDSequenceSample(uint2 pixelCoord, uint sampleIndex, uint sampleDimension)
-{
-	pixelCoord = pixelCoord & 127u;
-	sampleIndex = sampleIndex & 255u;
-	sampleDimension = sampleDimension & 255u;
-
-	// xor index based on optimized ranking
-	const uint rankedSampleIndex = sampleIndex ^ rankingTileBuffer[sampleDimension + (pixelCoord.x + pixelCoord.y * 128u) * 8u];
-
-	// Fetch value in sequence
-	uint value = sobolSequenceBuffer[sampleDimension + rankedSampleIndex * 256u];
-
-	// If the dimension is optimized, xor sequence value based on optimized scrambling
-	value = value ^ scramblingTileBuffer[(sampleDimension % 8u) + (pixelCoord.x + pixelCoord.y * 128u) * 8u];
-
-	// Convert to float and return
-	return (value + 0.5f) / 256.0f;
-}
 
 #endif // WI_STOCHASTICSSR_HF

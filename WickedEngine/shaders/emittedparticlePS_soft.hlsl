@@ -41,32 +41,38 @@ float4 main(VertextoPixel input) : SV_TARGET
 
 #ifdef EMITTEDPARTICLE_LIGHTING
 
-	float3 N;
-	N.x = -cos(PI * input.unrotated_uv.x);
-	N.y = cos(PI * input.unrotated_uv.y);
-	N.z = -sin(PI * length(input.unrotated_uv));
-	N = mul((float3x3)g_xCamera_InvV, N);
-	N = normalize(N);
+	[branch]
+	if (color.a > 0)
+	{
 
-	Lighting lighting;
-	lighting.create(0, 0, GetAmbient(N), 0);
+		float3 N;
+		N.x = -cos(PI * input.unrotated_uv.x);
+		N.y = cos(PI * input.unrotated_uv.y);
+		N.z = -sin(PI * length(input.unrotated_uv));
+		N = mul((float3x3)g_xCamera_InvV, N);
+		N = normalize(N);
 
-	Surface surface;
-	surface.create(g_xMaterial, color, 0);
-	surface.P = input.P;
-	surface.N = N;
-	surface.V = 0;
-	surface.pixel = pixel;
-	surface.sss = g_xMaterial.subsurfaceScattering;
-	surface.sss_inv = g_xMaterial.subsurfaceScattering_inv;
-	surface.update();
+		Lighting lighting;
+		lighting.create(0, 0, GetAmbient(N), 0);
 
-	TiledLighting(surface, lighting);
+		Surface surface;
+		surface.create(g_xMaterial, color, 0);
+		surface.P = input.P;
+		surface.N = N;
+		surface.V = 0;
+		surface.pixel = pixel;
+		surface.sss = g_xMaterial.subsurfaceScattering;
+		surface.sss_inv = g_xMaterial.subsurfaceScattering_inv;
+		surface.update();
 
-	color.rgb *= lighting.direct.diffuse + lighting.indirect.diffuse;
+		TiledLighting(surface, lighting);
 
-	//color.rgb = float3(unrotated_uv, 0);
-	//color.rgb = float3(input.tex, 0);
+		color.rgb *= lighting.direct.diffuse + lighting.indirect.diffuse;
+
+		//color.rgb = float3(unrotated_uv, 0);
+		//color.rgb = float3(input.tex, 0);
+
+	}
 
 #endif // EMITTEDPARTICLE_LIGHTING
 

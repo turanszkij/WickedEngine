@@ -1415,309 +1415,314 @@ using namespace Vulkan_Internal;
 				continue;
 			}
 
-			descriptorWrites.emplace_back();
-			auto& write = descriptorWrites.back();
-			write = {};
-			write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			write.dstSet = descriptorSet;
-			write.dstArrayElement = 0;
-			write.descriptorType = x.descriptorType;
-			write.dstBinding = x.binding;
-			write.descriptorCount = 1;
-
 			VkImageViewType viewtype = imageViewTypes[i++];
 
-			switch (x.descriptorType)
+			for (uint32_t descriptor_index = 0; descriptor_index < x.descriptorCount; ++descriptor_index)
 			{
-			case VK_DESCRIPTOR_TYPE_SAMPLER:
-			{
-				imageInfos.emplace_back();
-				write.pImageInfo = &imageInfos.back();
-				imageInfos.back() = {};
+				uint32_t unrolled_binding = x.binding + descriptor_index;
 
-				const uint32_t original_binding = x.binding - VULKAN_BINDING_SHIFT_S;
-				const Sampler* sampler = SAM[original_binding];
-				if (sampler == nullptr || !sampler->IsValid())
-				{
-					imageInfos.back().sampler = device->nullSampler;
-				}
-				else
-				{
-					imageInfos.back().sampler = to_internal(sampler)->resource;
-				}
-			}
-			break;
+				descriptorWrites.emplace_back();
+				auto& write = descriptorWrites.back();
+				write = {};
+				write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				write.dstSet = descriptorSet;
+				write.dstArrayElement = descriptor_index;
+				write.descriptorType = x.descriptorType;
+				write.dstBinding = x.binding;
+				write.descriptorCount = 1;
 
-			case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
-			{
-				imageInfos.emplace_back();
-				write.pImageInfo = &imageInfos.back();
-				imageInfos.back() = {};
-
-				const uint32_t original_binding = x.binding - VULKAN_BINDING_SHIFT_T;
-				const GPUResource* resource = SRV[original_binding];
-				if (resource == nullptr || !resource->IsValid() || !resource->IsTexture())
+				switch (x.descriptorType)
 				{
-					switch (viewtype)
+				case VK_DESCRIPTOR_TYPE_SAMPLER:
+				{
+					imageInfos.emplace_back();
+					write.pImageInfo = &imageInfos.back();
+					imageInfos.back() = {};
+
+					const uint32_t original_binding = unrolled_binding - VULKAN_BINDING_SHIFT_S;
+					const Sampler* sampler = SAM[original_binding];
+					if (sampler == nullptr || !sampler->IsValid())
 					{
-					case VK_IMAGE_VIEW_TYPE_1D:
-						imageInfos.back().imageView = device->nullImageView1D;
-						break;
-					case VK_IMAGE_VIEW_TYPE_2D:
-						imageInfos.back().imageView = device->nullImageView2D;
-						break;
-					case VK_IMAGE_VIEW_TYPE_3D:
-						imageInfos.back().imageView = device->nullImageView3D;
-						break;
-					case VK_IMAGE_VIEW_TYPE_CUBE:
-						imageInfos.back().imageView = device->nullImageViewCube;
-						break;
-					case VK_IMAGE_VIEW_TYPE_1D_ARRAY:
-						imageInfos.back().imageView = device->nullImageView1DArray;
-						break;
-					case VK_IMAGE_VIEW_TYPE_2D_ARRAY:
-						imageInfos.back().imageView = device->nullImageView2DArray;
-						break;
-					case VK_IMAGE_VIEW_TYPE_CUBE_ARRAY:
-						imageInfos.back().imageView = device->nullImageViewCubeArray;
-						break;
-					case VK_IMAGE_VIEW_TYPE_MAX_ENUM:
-						break;
-					default:
-						break;
-					}
-					imageInfos.back().imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-				}
-				else
-				{
-					int subresource = SRV_index[original_binding];
-					const Texture* texture = (const Texture*)resource;
-					if (subresource >= 0)
-					{
-						imageInfos.back().imageView = to_internal(texture)->subresources_srv[subresource];
+						imageInfos.back().sampler = device->nullSampler;
 					}
 					else
 					{
-						imageInfos.back().imageView = to_internal(texture)->srv;
-					}
-
-					imageInfos.back().imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-				}
-			}
-			break;
-
-			case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-			{
-				imageInfos.emplace_back();
-				write.pImageInfo = &imageInfos.back();
-				imageInfos.back() = {};
-				imageInfos.back().imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-
-				const uint32_t original_binding = x.binding - VULKAN_BINDING_SHIFT_U;
-				const GPUResource* resource = UAV[original_binding];
-				if (resource == nullptr || !resource->IsValid() || !resource->IsTexture())
-				{
-					switch (viewtype)
-					{
-					case VK_IMAGE_VIEW_TYPE_1D:
-						imageInfos.back().imageView = device->nullImageView1D;
-						break;
-					case VK_IMAGE_VIEW_TYPE_2D:
-						imageInfos.back().imageView = device->nullImageView2D;
-						break;
-					case VK_IMAGE_VIEW_TYPE_3D:
-						imageInfos.back().imageView = device->nullImageView3D;
-						break;
-					case VK_IMAGE_VIEW_TYPE_CUBE:
-						imageInfos.back().imageView = device->nullImageViewCube;
-						break;
-					case VK_IMAGE_VIEW_TYPE_1D_ARRAY:
-						imageInfos.back().imageView = device->nullImageView1DArray;
-						break;
-					case VK_IMAGE_VIEW_TYPE_2D_ARRAY:
-						imageInfos.back().imageView = device->nullImageView2DArray;
-						break;
-					case VK_IMAGE_VIEW_TYPE_CUBE_ARRAY:
-						imageInfos.back().imageView = device->nullImageViewCubeArray;
-						break;
-					case VK_IMAGE_VIEW_TYPE_MAX_ENUM:
-						break;
-					default:
-						break;
+						imageInfos.back().sampler = to_internal(sampler)->resource;
 					}
 				}
-				else
-				{
-					int subresource = UAV_index[original_binding];
-					const Texture* texture = (const Texture*)resource;
-					if (subresource >= 0)
-					{
-						imageInfos.back().imageView = to_internal(texture)->subresources_uav[subresource];
-					}
-					else
-					{
-						imageInfos.back().imageView = to_internal(texture)->uav;
-					}
-				}
-			}
-			break;
+				break;
 
-			case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
-			{
-				bufferInfos.emplace_back();
-				write.pBufferInfo = &bufferInfos.back();
-				bufferInfos.back() = {};
-
-				const uint32_t original_binding = x.binding - VULKAN_BINDING_SHIFT_B;
-				const GPUBuffer* buffer = CBV[original_binding];
-				if (buffer == nullptr || !buffer->IsValid())
+				case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
 				{
-					bufferInfos.back().buffer = device->nullBuffer;
-					bufferInfos.back().range = VK_WHOLE_SIZE;
-				}
-				else
-				{
-					auto internal_state = to_internal(buffer);
-					if (buffer->desc.Usage == USAGE_DYNAMIC)
-					{
-						const GPUAllocation& allocation = internal_state->dynamic[cmd];
-						bufferInfos.back().buffer = to_internal(allocation.buffer)->resource;
-						bufferInfos.back().offset = allocation.offset;
-						bufferInfos.back().range = buffer->desc.ByteWidth;
-					}
-					else
-					{
-						bufferInfos.back().buffer = internal_state->resource;
-						bufferInfos.back().offset = 0;
-						bufferInfos.back().range = buffer->desc.ByteWidth;
-					}
-				}
-			}
-			break;
+					imageInfos.emplace_back();
+					write.pImageInfo = &imageInfos.back();
+					imageInfos.back() = {};
 
-			case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
-			{
-				texelBufferViews.emplace_back();
-				write.pTexelBufferView = &texelBufferViews.back();
-				texelBufferViews.back() = {};
-
-				const uint32_t original_binding = x.binding - VULKAN_BINDING_SHIFT_T;
-				const GPUResource* resource = SRV[original_binding];
-				if (resource == nullptr || !resource->IsValid() || !resource->IsBuffer())
-				{
-					texelBufferViews.back() = device->nullBufferView;
-				}
-				else
-				{
-					int subresource = SRV_index[original_binding];
-					const GPUBuffer* buffer = (const GPUBuffer*)resource;
-					if (subresource >= 0)
-					{
-						texelBufferViews.back() = to_internal(buffer)->subresources_srv[subresource];
-					}
-					else
-					{
-						texelBufferViews.back() = to_internal(buffer)->srv;
-					}
-				}
-			}
-			break;
-
-			case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
-			{
-				texelBufferViews.emplace_back();
-				write.pTexelBufferView = &texelBufferViews.back();
-				texelBufferViews.back() = {};
-
-				const uint32_t original_binding = x.binding - VULKAN_BINDING_SHIFT_U;
-				const GPUResource* resource = UAV[original_binding];
-				if (resource == nullptr || !resource->IsValid() || !resource->IsBuffer())
-				{
-					texelBufferViews.back() = device->nullBufferView;
-				}
-				else
-				{
-					int subresource = UAV_index[original_binding];
-					const GPUBuffer* buffer = (const GPUBuffer*)resource;
-					if (subresource >= 0)
-					{
-						texelBufferViews.back() = to_internal(buffer)->subresources_uav[subresource];
-					}
-					else
-					{
-						texelBufferViews.back() = to_internal(buffer)->uav;
-					}
-				}
-			}
-			break;
-
-			case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
-			{
-				bufferInfos.emplace_back();
-				write.pBufferInfo = &bufferInfos.back();
-				bufferInfos.back() = {};
-
-				if (x.binding < VULKAN_BINDING_SHIFT_U)
-				{
-					// SRV
-					const uint32_t original_binding = x.binding - VULKAN_BINDING_SHIFT_T;
+					const uint32_t original_binding = unrolled_binding - VULKAN_BINDING_SHIFT_T;
 					const GPUResource* resource = SRV[original_binding];
-					if (resource == nullptr || !resource->IsValid() || !resource->IsBuffer())
+					if (resource == nullptr || !resource->IsValid() || !resource->IsTexture())
+					{
+						switch (viewtype)
+						{
+						case VK_IMAGE_VIEW_TYPE_1D:
+							imageInfos.back().imageView = device->nullImageView1D;
+							break;
+						case VK_IMAGE_VIEW_TYPE_2D:
+							imageInfos.back().imageView = device->nullImageView2D;
+							break;
+						case VK_IMAGE_VIEW_TYPE_3D:
+							imageInfos.back().imageView = device->nullImageView3D;
+							break;
+						case VK_IMAGE_VIEW_TYPE_CUBE:
+							imageInfos.back().imageView = device->nullImageViewCube;
+							break;
+						case VK_IMAGE_VIEW_TYPE_1D_ARRAY:
+							imageInfos.back().imageView = device->nullImageView1DArray;
+							break;
+						case VK_IMAGE_VIEW_TYPE_2D_ARRAY:
+							imageInfos.back().imageView = device->nullImageView2DArray;
+							break;
+						case VK_IMAGE_VIEW_TYPE_CUBE_ARRAY:
+							imageInfos.back().imageView = device->nullImageViewCubeArray;
+							break;
+						case VK_IMAGE_VIEW_TYPE_MAX_ENUM:
+							break;
+						default:
+							break;
+						}
+						imageInfos.back().imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+					}
+					else
+					{
+						int subresource = SRV_index[original_binding];
+						const Texture* texture = (const Texture*)resource;
+						if (subresource >= 0)
+						{
+							imageInfos.back().imageView = to_internal(texture)->subresources_srv[subresource];
+						}
+						else
+						{
+							imageInfos.back().imageView = to_internal(texture)->srv;
+						}
+
+						imageInfos.back().imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+					}
+				}
+				break;
+
+				case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+				{
+					imageInfos.emplace_back();
+					write.pImageInfo = &imageInfos.back();
+					imageInfos.back() = {};
+					imageInfos.back().imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+					const uint32_t original_binding = unrolled_binding - VULKAN_BINDING_SHIFT_U;
+					const GPUResource* resource = UAV[original_binding];
+					if (resource == nullptr || !resource->IsValid() || !resource->IsTexture())
+					{
+						switch (viewtype)
+						{
+						case VK_IMAGE_VIEW_TYPE_1D:
+							imageInfos.back().imageView = device->nullImageView1D;
+							break;
+						case VK_IMAGE_VIEW_TYPE_2D:
+							imageInfos.back().imageView = device->nullImageView2D;
+							break;
+						case VK_IMAGE_VIEW_TYPE_3D:
+							imageInfos.back().imageView = device->nullImageView3D;
+							break;
+						case VK_IMAGE_VIEW_TYPE_CUBE:
+							imageInfos.back().imageView = device->nullImageViewCube;
+							break;
+						case VK_IMAGE_VIEW_TYPE_1D_ARRAY:
+							imageInfos.back().imageView = device->nullImageView1DArray;
+							break;
+						case VK_IMAGE_VIEW_TYPE_2D_ARRAY:
+							imageInfos.back().imageView = device->nullImageView2DArray;
+							break;
+						case VK_IMAGE_VIEW_TYPE_CUBE_ARRAY:
+							imageInfos.back().imageView = device->nullImageViewCubeArray;
+							break;
+						case VK_IMAGE_VIEW_TYPE_MAX_ENUM:
+							break;
+						default:
+							break;
+						}
+					}
+					else
+					{
+						int subresource = UAV_index[original_binding];
+						const Texture* texture = (const Texture*)resource;
+						if (subresource >= 0)
+						{
+							imageInfos.back().imageView = to_internal(texture)->subresources_uav[subresource];
+						}
+						else
+						{
+							imageInfos.back().imageView = to_internal(texture)->uav;
+						}
+					}
+				}
+				break;
+
+				case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+				{
+					bufferInfos.emplace_back();
+					write.pBufferInfo = &bufferInfos.back();
+					bufferInfos.back() = {};
+
+					const uint32_t original_binding = unrolled_binding - VULKAN_BINDING_SHIFT_B;
+					const GPUBuffer* buffer = CBV[original_binding];
+					if (buffer == nullptr || !buffer->IsValid())
 					{
 						bufferInfos.back().buffer = device->nullBuffer;
 						bufferInfos.back().range = VK_WHOLE_SIZE;
+					}
+					else
+					{
+						auto internal_state = to_internal(buffer);
+						if (buffer->desc.Usage == USAGE_DYNAMIC)
+						{
+							const GPUAllocation& allocation = internal_state->dynamic[cmd];
+							bufferInfos.back().buffer = to_internal(allocation.buffer)->resource;
+							bufferInfos.back().offset = allocation.offset;
+							bufferInfos.back().range = buffer->desc.ByteWidth;
+						}
+						else
+						{
+							bufferInfos.back().buffer = internal_state->resource;
+							bufferInfos.back().offset = 0;
+							bufferInfos.back().range = buffer->desc.ByteWidth;
+						}
+					}
+				}
+				break;
+
+				case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+				{
+					texelBufferViews.emplace_back();
+					write.pTexelBufferView = &texelBufferViews.back();
+					texelBufferViews.back() = {};
+
+					const uint32_t original_binding = unrolled_binding - VULKAN_BINDING_SHIFT_T;
+					const GPUResource* resource = SRV[original_binding];
+					if (resource == nullptr || !resource->IsValid() || !resource->IsBuffer())
+					{
+						texelBufferViews.back() = device->nullBufferView;
 					}
 					else
 					{
 						int subresource = SRV_index[original_binding];
 						const GPUBuffer* buffer = (const GPUBuffer*)resource;
-						bufferInfos.back().buffer = to_internal(buffer)->resource;
-						bufferInfos.back().range = buffer->desc.ByteWidth;
+						if (subresource >= 0)
+						{
+							texelBufferViews.back() = to_internal(buffer)->subresources_srv[subresource];
+						}
+						else
+						{
+							texelBufferViews.back() = to_internal(buffer)->srv;
+						}
 					}
 				}
-				else
+				break;
+
+				case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
 				{
-					// UAV
-					const uint32_t original_binding = x.binding - VULKAN_BINDING_SHIFT_U;
+					texelBufferViews.emplace_back();
+					write.pTexelBufferView = &texelBufferViews.back();
+					texelBufferViews.back() = {};
+
+					const uint32_t original_binding = unrolled_binding - VULKAN_BINDING_SHIFT_U;
 					const GPUResource* resource = UAV[original_binding];
 					if (resource == nullptr || !resource->IsValid() || !resource->IsBuffer())
 					{
-						bufferInfos.back().buffer = device->nullBuffer;
-						bufferInfos.back().range = VK_WHOLE_SIZE;
+						texelBufferViews.back() = device->nullBufferView;
 					}
 					else
 					{
 						int subresource = UAV_index[original_binding];
 						const GPUBuffer* buffer = (const GPUBuffer*)resource;
-						bufferInfos.back().buffer = to_internal(buffer)->resource;
-						bufferInfos.back().range = buffer->desc.ByteWidth;
+						if (subresource >= 0)
+						{
+							texelBufferViews.back() = to_internal(buffer)->subresources_uav[subresource];
+						}
+						else
+						{
+							texelBufferViews.back() = to_internal(buffer)->uav;
+						}
 					}
 				}
-			}
-			break;
+				break;
 
-			case VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR:
-			{
-				accelerationStructureViews.emplace_back();
-				write.pNext = &accelerationStructureViews.back();
-				accelerationStructureViews.back() = {};
-				accelerationStructureViews.back().sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;
-				accelerationStructureViews.back().accelerationStructureCount = 1;
-
-				const uint32_t original_binding = x.binding - VULKAN_BINDING_SHIFT_T;
-				const GPUResource* resource = SRV[original_binding];
-				if (resource == nullptr || !resource->IsValid() || !resource->IsAccelerationStructure())
+				case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
 				{
-					assert(0); // invalid acceleration structure!
-				}
-				else
-				{
-					const RaytracingAccelerationStructure* as = (const RaytracingAccelerationStructure*)resource;
-					accelerationStructureViews.back().pAccelerationStructures = &to_internal(as)->resource;
-				}
-			}
-			break;
+					bufferInfos.emplace_back();
+					write.pBufferInfo = &bufferInfos.back();
+					bufferInfos.back() = {};
 
+					if (x.binding < VULKAN_BINDING_SHIFT_U)
+					{
+						// SRV
+						const uint32_t original_binding = unrolled_binding - VULKAN_BINDING_SHIFT_T;
+						const GPUResource* resource = SRV[original_binding];
+						if (resource == nullptr || !resource->IsValid() || !resource->IsBuffer())
+						{
+							bufferInfos.back().buffer = device->nullBuffer;
+							bufferInfos.back().range = VK_WHOLE_SIZE;
+						}
+						else
+						{
+							int subresource = SRV_index[original_binding];
+							const GPUBuffer* buffer = (const GPUBuffer*)resource;
+							bufferInfos.back().buffer = to_internal(buffer)->resource;
+							bufferInfos.back().range = buffer->desc.ByteWidth;
+						}
+					}
+					else
+					{
+						// UAV
+						const uint32_t original_binding = unrolled_binding - VULKAN_BINDING_SHIFT_U;
+						const GPUResource* resource = UAV[original_binding];
+						if (resource == nullptr || !resource->IsValid() || !resource->IsBuffer())
+						{
+							bufferInfos.back().buffer = device->nullBuffer;
+							bufferInfos.back().range = VK_WHOLE_SIZE;
+						}
+						else
+						{
+							int subresource = UAV_index[original_binding];
+							const GPUBuffer* buffer = (const GPUBuffer*)resource;
+							bufferInfos.back().buffer = to_internal(buffer)->resource;
+							bufferInfos.back().range = buffer->desc.ByteWidth;
+						}
+					}
+				}
+				break;
+
+				case VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR:
+				{
+					accelerationStructureViews.emplace_back();
+					write.pNext = &accelerationStructureViews.back();
+					accelerationStructureViews.back() = {};
+					accelerationStructureViews.back().sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;
+					accelerationStructureViews.back().accelerationStructureCount = 1;
+
+					const uint32_t original_binding = unrolled_binding - VULKAN_BINDING_SHIFT_T;
+					const GPUResource* resource = SRV[original_binding];
+					if (resource == nullptr || !resource->IsValid() || !resource->IsAccelerationStructure())
+					{
+						assert(0); // invalid acceleration structure!
+					}
+					else
+					{
+						const RaytracingAccelerationStructure* as = (const RaytracingAccelerationStructure*)resource;
+						accelerationStructureViews.back().pAccelerationStructures = &to_internal(as)->resource;
+					}
+				}
+				break;
+
+				}
 			}
 		}
 
@@ -2710,11 +2715,7 @@ using namespace Vulkan_Internal;
 	}
 	GraphicsDevice_Vulkan::~GraphicsDevice_Vulkan()
 	{
-		VkResult res = vkQueueWaitIdle(graphicsQueue);
-		assert(res == VK_SUCCESS);
-		res = vkQueueWaitIdle(computeQueue);
-		assert(res == VK_SUCCESS);
-		res = vkQueueWaitIdle(copyQueue);
+		VkResult res = vkDeviceWaitIdle(device);
 		assert(res == VK_SUCCESS);
 
 		for (auto& queue : queues)
@@ -3432,10 +3433,11 @@ using namespace Vulkan_Internal;
 			uint32_t width = imageInfo.extent.width;
 			uint32_t height = imageInfo.extent.height;
 			uint32_t depth = imageInfo.extent.depth;
+			uint32_t layers = pDesc->ArraySize;
 			for (uint32_t mip = 0; mip < pDesc->MipLevels; ++mip)
 			{
 				const SubresourceData& subresourceData = pInitialData[initDataIdx++];
-				size_t cpysize = subresourceData.SysMemPitch * height * depth;
+				size_t cpysize = subresourceData.SysMemPitch * height * depth * layers;
 				if (IsFormatBlockCompressed(pDesc->Format))
 				{
 					cpysize /= 4;
@@ -3451,7 +3453,7 @@ using namespace Vulkan_Internal;
 				copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				copyRegion.imageSubresource.mipLevel = mip;
 				copyRegion.imageSubresource.baseArrayLayer = 0;
-				copyRegion.imageSubresource.layerCount = 1;
+				copyRegion.imageSubresource.layerCount = layers;
 
 				copyRegion.imageOffset = { 0, 0, 0 };
 				copyRegion.imageExtent = {
@@ -3650,7 +3652,7 @@ using namespace Vulkan_Internal;
 
 			for (auto& x : bindings)
 			{
-				const bool bindless = x->count == 0 || x->count > 1 || x->set > 0; // strange: unbounded array returns count == 1
+				const bool bindless = x->set > 0;
 
 				if (bindless)
 				{

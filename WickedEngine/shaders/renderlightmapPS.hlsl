@@ -18,7 +18,7 @@ float4 main(Input input) : SV_TARGET
 	surface.N = normalize(input.normal);
 
 	float2 uv = input.uv;
-	float seed = xTraceRandomSeed;
+	float seed = xTraceAccumulationFactor;
 	RayDesc ray;
 	ray.Origin = input.pos3D;
 	ray.Direction = SampleHemisphere_cos(surface.N, seed, uv);
@@ -65,8 +65,7 @@ float4 main(Input input) : SV_TARGET
 					float3 atmosphereTransmittance = 1.0;
 					if (g_xFrame_Options & OPTION_BIT_REALISTIC_SKY)
 					{
-						AtmosphereParameters Atmosphere = GetAtmosphereParameters();
-						atmosphereTransmittance = GetAtmosphericLightTransmittance(Atmosphere, surface.P, L, texture_transmittancelut);
+						atmosphereTransmittance = GetAtmosphericLightTransmittance(g_xFrame_Atmosphere, surface.P, L, texture_transmittancelut);
 					}
 					
 					float3 lightColor = light.GetColor().rgb * light.GetEnergy() * atmosphereTransmittance;
@@ -147,11 +146,9 @@ float4 main(Input input) : SV_TARGET
 			{
 				float3 shadow = NdotL * energy;
 
-				float3 sampling_offset = float3(rand(seed, uv), rand(seed, uv), rand(seed, uv)) * 2 - 1;
-
 				RayDesc newRay;
 				newRay.Origin = surface.P;
-				newRay.Direction = normalize(L + sampling_offset * 0.025f);
+				newRay.Direction = normalize(lerp(L, SampleHemisphere_cos(L, seed, uv), 0.025f));
 				newRay.TMin = 0.001;
 				newRay.TMax = dist;
 #ifdef RTAPI
@@ -166,9 +163,9 @@ float4 main(Input input) : SV_TARGET
 				);
 				while (q.Proceed())
 				{
-					ShaderMesh mesh = bindless_buffers[q.CandidateInstanceID()].Load<ShaderMesh>(0);
-					ShaderMeshSubset subset = bindless_subsets[mesh.subsetbuffer][q.CandidateGeometryIndex()];
-					ShaderMaterial material = bindless_buffers[subset.material].Load<ShaderMaterial>(0);
+					ShaderMesh mesh = bindless_buffers[NonUniformResourceIndex(q.CandidateInstanceID())].Load<ShaderMesh>(0);
+					ShaderMeshSubset subset = bindless_subsets[NonUniformResourceIndex(mesh.subsetbuffer)][q.CandidateGeometryIndex()];
+					ShaderMaterial material = bindless_buffers[NonUniformResourceIndex(subset.material)].Load<ShaderMaterial>(0);
 					[branch]
 					if (!material.IsCastingShadow())
 					{
@@ -255,9 +252,9 @@ float4 main(Input input) : SV_TARGET
 		// ray origin updated for next bounce:
 		ray.Origin = q.WorldRayOrigin() + q.WorldRayDirection() * q.CommittedRayT();
 
-		ShaderMesh mesh = bindless_buffers[q.CommittedInstanceID()].Load<ShaderMesh>(0);
-		ShaderMeshSubset subset = bindless_subsets[mesh.subsetbuffer][q.CommittedGeometryIndex()];
-		material = bindless_buffers[subset.material].Load<ShaderMaterial>(0);
+		ShaderMesh mesh = bindless_buffers[NonUniformResourceIndex(q.CommittedInstanceID())].Load<ShaderMesh>(0);
+		ShaderMeshSubset subset = bindless_subsets[NonUniformResourceIndex(mesh.subsetbuffer)][q.CommittedGeometryIndex()];
+		material = bindless_buffers[NonUniformResourceIndex(subset.material)].Load<ShaderMaterial>(0);
 
 		EvaluateObjectSurface(
 			mesh,

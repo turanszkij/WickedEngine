@@ -11,7 +11,7 @@ using namespace wiScene;
 void MaterialWindow::Create(EditorComponent* editor)
 {
 	wiWindow::Create("Material Window");
-	SetSize(XMFLOAT2(720, 600));
+	SetSize(XMFLOAT2(720, 620));
 
 	float x = 670, y = 0;
 	float hei = 18;
@@ -94,6 +94,17 @@ void MaterialWindow::Create(EditorComponent* editor)
 			material->SetUseWind(args.bValue);
 		});
 	AddWidget(&windCheckBox);
+
+	doubleSidedCheckBox.Create("Double sided: ");
+	doubleSidedCheckBox.SetTooltip("Decide whether to render both sides of the material (It's also possible to set this behaviour per mesh).");
+	doubleSidedCheckBox.SetPos(XMFLOAT2(540, y));
+	doubleSidedCheckBox.SetSize(XMFLOAT2(hei, hei));
+	doubleSidedCheckBox.OnClick([&](wiEventArgs args) {
+		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+		if (material != nullptr)
+			material->SetDoubleSided(args.bValue);
+		});
+	AddWidget(&doubleSidedCheckBox);
 
 
 
@@ -209,7 +220,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	AddWidget(&roughnessSlider);
 
 	reflectanceSlider.Create(0, 1, 0.5f, 1000, "Reflectance: ");
-	reflectanceSlider.SetTooltip("Adjust the overall surface reflectivity.\nNote: this is not available in specular-glossiness workflow");
+	reflectanceSlider.SetTooltip("Adjust the surface [non-metal] reflectivity (also called specularFactor).\nNote: this is not available in specular-glossiness workflow");
 	reflectanceSlider.SetSize(XMFLOAT2(wid, hei));
 	reflectanceSlider.SetPos(XMFLOAT2(x, y += step));
 	reflectanceSlider.OnSlide([&](wiEventArgs args) {
@@ -570,6 +581,10 @@ void MaterialWindow::Create(EditorComponent* editor)
 			slots[i].label.SetText("ClearcoatNormMap:");
 			slots[i].button.SetTooltip("RGB: Normal");
 			break;
+		case MaterialComponent::SPECULARMAP:
+			slots[i].label.SetText("SpecularMap:");
+			slots[i].button.SetTooltip("RGB: Specular color, A: Specular intensity [non-metal]");
+			break;
 		default:
 			break;
 		}
@@ -650,6 +665,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		occlusionPrimaryCheckBox.SetCheck(material->IsOcclusionEnabled_Primary());
 		occlusionSecondaryCheckBox.SetCheck(material->IsOcclusionEnabled_Secondary());
 		windCheckBox.SetCheck(material->IsUsingWind());
+		doubleSidedCheckBox.SetCheck(material->IsDoubleSided());
 		normalMapSlider.SetValue(material->normalMapStrength);
 		roughnessSlider.SetValue(material->roughness);
 		reflectanceSlider.SetValue(material->reflectance);
