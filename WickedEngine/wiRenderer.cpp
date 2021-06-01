@@ -3246,30 +3246,25 @@ void UpdateVisibility(Visibility& vis)
 				group_count = 0; // first thread initializes local counter
 			}
 
-			Entity entity = vis.scene->aabb_lights.GetEntity(args.jobIndex);
-			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
-			if (layer == nullptr || (layer->GetLayerMask() & vis.layerMask))
-			{
-				const AABB& aabb = vis.scene->aabb_lights[args.jobIndex];
+			const AABB& aabb = vis.scene->aabb_lights[args.jobIndex];
 
-				if (vis.frustum.CheckBoxFast(aabb))
+			if ((aabb.layerMask & vis.layerMask) && vis.frustum.CheckBoxFast(aabb))
+			{
+				// Local stream compaction:
+				//	(also compute light distance for shadow priority sorting)
+				assert(args.jobIndex < 0xFFFF);
+				group_list[group_count].index = (uint16_t)args.jobIndex;
+				const LightComponent& lightcomponent = vis.scene->lights[args.jobIndex];
+				float distance = 0;
+				if (lightcomponent.type != LightComponent::DIRECTIONAL)
 				{
-					// Local stream compaction:
-					//	(also compute light distance for shadow priority sorting)
-					assert(args.jobIndex < 0xFFFF);
-					group_list[group_count].index = (uint16_t)args.jobIndex;
-					const LightComponent& lightcomponent = vis.scene->lights[args.jobIndex];
-					float distance = 0;
-					if (lightcomponent.type != LightComponent::DIRECTIONAL)
-					{
-						distance = wiMath::DistanceEstimated(lightcomponent.position, vis.camera->Eye);
-					}
-					group_list[group_count].distance = uint16_t(distance * 10);
-					group_count++;
-					if (lightcomponent.IsVolumetricsEnabled())
-					{
-						vis.volumetriclight_request.store(true);
-					}
+					distance = wiMath::DistanceEstimated(lightcomponent.position, vis.camera->Eye);
+				}
+				group_list[group_count].distance = uint16_t(distance * 10);
+				group_count++;
+				if (lightcomponent.IsVolumetricsEnabled())
+				{
+					vis.volumetriclight_request.store(true);
 				}
 			}
 
@@ -3300,38 +3295,33 @@ void UpdateVisibility(Visibility& vis)
 				group_count = 0; // first thread initializes local counter
 			}
 
-			Entity entity = vis.scene->aabb_objects.GetEntity(args.jobIndex);
-			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
-			if (layer == nullptr || (layer->GetLayerMask() & vis.layerMask))
+			const AABB& aabb = vis.scene->aabb_objects[args.jobIndex];
+
+			if ((aabb.layerMask & vis.layerMask) && vis.frustum.CheckBoxFast(aabb))
 			{
-				const AABB& aabb = vis.scene->aabb_objects[args.jobIndex];
+				// Local stream compaction:
+				group_list[group_count++] = args.jobIndex;
 
-				if (vis.frustum.CheckBoxFast(aabb))
+				if (vis.flags & Visibility::ALLOW_REQUEST_REFLECTION)
 				{
-					// Local stream compaction:
-					group_list[group_count++] = args.jobIndex;
-
-					if (vis.flags & Visibility::ALLOW_REQUEST_REFLECTION)
+					const ObjectComponent& object = vis.scene->objects[args.jobIndex];
+					if (object.IsRequestPlanarReflection())
 					{
-						const ObjectComponent& object = vis.scene->objects[args.jobIndex];
-						if (object.IsRequestPlanarReflection())
+						float dist = wiMath::DistanceEstimated(vis.camera->Eye, object.center);
+						vis.locker.lock();
+						if (dist < vis.closestRefPlane)
 						{
-							float dist = wiMath::DistanceEstimated(vis.camera->Eye, object.center);
-							vis.locker.lock();
-							if (dist < vis.closestRefPlane)
-							{
-								vis.closestRefPlane = dist;
-								const TransformComponent& transform = vis.scene->transforms[object.transform_index];
-								XMVECTOR P = transform.GetPositionV();
-								XMVECTOR N = XMVectorSet(0, 1, 0, 0);
-								N = XMVector3TransformNormal(N, XMLoadFloat4x4(&transform.world));
-								XMVECTOR _refPlane = XMPlaneFromPointNormal(P, N);
-								XMStoreFloat4(&vis.reflectionPlane, _refPlane);
+							vis.closestRefPlane = dist;
+							const TransformComponent& transform = vis.scene->transforms[object.transform_index];
+							XMVECTOR P = transform.GetPositionV();
+							XMVECTOR N = XMVectorSet(0, 1, 0, 0);
+							N = XMVector3TransformNormal(N, XMLoadFloat4x4(&transform.world));
+							XMVECTOR _refPlane = XMPlaneFromPointNormal(P, N);
+							XMStoreFloat4(&vis.reflectionPlane, _refPlane);
 
-								vis.planar_reflection_visible = true;
-							}
-							vis.locker.unlock();
+							vis.planar_reflection_visible = true;
 						}
+						vis.locker.unlock();
 					}
 				}
 			}
@@ -3362,17 +3352,12 @@ void UpdateVisibility(Visibility& vis)
 				group_count = 0; // first thread initializes local counter
 			}
 
-			Entity entity = vis.scene->aabb_decals.GetEntity(args.jobIndex);
-			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
-			if (layer == nullptr || (layer->GetLayerMask() & vis.layerMask))
-			{
-				const AABB& aabb = vis.scene->aabb_decals[args.jobIndex];
+			const AABB& aabb = vis.scene->aabb_decals[args.jobIndex];
 
-				if (vis.frustum.CheckBoxFast(aabb))
-				{
-					// Local stream compaction:
-					group_list[group_count++] = args.jobIndex;
-				}
+			if ((aabb.layerMask & vis.layerMask) && vis.frustum.CheckBoxFast(aabb))
+			{
+				// Local stream compaction:
+				group_list[group_count++] = args.jobIndex;
 			}
 
 			// Global stream compaction:
@@ -3394,16 +3379,9 @@ void UpdateVisibility(Visibility& vis)
 			// Cull probes:
 			for (size_t i = 0; i < vis.scene->aabb_probes.GetCount(); ++i)
 			{
-				Entity entity = vis.scene->aabb_probes.GetEntity(i);
-				const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
-				if (layer != nullptr && !(layer->GetLayerMask() & vis.layerMask))
-				{
-					continue;
-				}
-
 				const AABB& aabb = vis.scene->aabb_probes[i];
 
-				if (vis.frustum.CheckBoxFast(aabb))
+				if ((aabb.layerMask & vis.layerMask) && vis.frustum.CheckBoxFast(aabb))
 				{
 					vis.visibleEnvProbes.push_back((uint32_t)i);
 				}
@@ -6693,7 +6671,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 				}
 
 				device->BindUAV(CS, &vis.scene->envmapArray, 0, cmd, i);
-				device->BindResource(CS, &vis.scene->envmapArray, TEXSLOT_UNIQUE0, cmd, std::max(0, (int)i - 2));
+				device->BindResource(CS, &vis.scene->envmapArray, TEXSLOT_ONDEMAND0, cmd, std::max(0, (int)i - 2));
 
 				FilterEnvmapCB cb;
 				cb.filterResolution.x = desc.Width;
@@ -7281,7 +7259,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 					}
 
 					device->BindUAV(CS, &texture, 0, cmd, i + 1);
-					device->BindResource(CS, &texture, TEXSLOT_UNIQUE0, cmd, i);
+					device->BindResource(CS, &texture, TEXSLOT_ONDEMAND0, cmd, i);
 					desc.Width = std::max(1u, desc.Width / 2);
 					desc.Height = std::max(1u, desc.Height / 2);
 
@@ -7338,7 +7316,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 				for (uint32_t i = 0; i < desc.MipLevels - 1; ++i)
 				{
 					device->BindUAV(CS, &texture, 0, cmd, i + 1);
-					device->BindResource(CS, &texture, TEXSLOT_UNIQUE0, cmd, i);
+					device->BindResource(CS, &texture, TEXSLOT_ONDEMAND0, cmd, i);
 					desc.Width = std::max(1u, desc.Width / 2);
 					desc.Height = std::max(1u, desc.Height / 2);
 
@@ -7409,7 +7387,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 				}
 
 				device->BindUAV(CS, &texture, 0, cmd, i + 1);
-				device->BindResource(CS, &texture, TEXSLOT_UNIQUE0, cmd, i);
+				device->BindResource(CS, &texture, TEXSLOT_ONDEMAND0, cmd, i);
 				desc.Width = std::max(1u, desc.Width / 2);
 				desc.Height = std::max(1u, desc.Height / 2);
 
@@ -7443,7 +7421,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 			}
 		}
 
-		device->UnbindResources(TEXSLOT_UNIQUE0, 1, cmd);
+		device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 		device->UnbindUAVs(0, 1, cmd);
 
 		device->EventEnd(cmd);
@@ -7470,7 +7448,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 		for (uint32_t i = 0; i < desc.MipLevels - 1; ++i)
 		{
 			device->BindUAV(CS, &texture, 0, cmd, i + 1);
-			device->BindResource(CS, &texture, TEXSLOT_UNIQUE0, cmd, i);
+			device->BindResource(CS, &texture, TEXSLOT_ONDEMAND0, cmd, i);
 			desc.Width = std::max(1u, desc.Width / 2);
 			desc.Height = std::max(1u, desc.Height / 2);
 			desc.Depth = std::max(1u, desc.Depth / 2);
@@ -7499,7 +7477,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindResources(TEXSLOT_UNIQUE0, 1, cmd);
+		device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 		device->UnbindUAVs(0, 1, cmd);
 
 		device->EventEnd(cmd);

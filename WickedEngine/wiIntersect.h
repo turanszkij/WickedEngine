@@ -18,7 +18,9 @@ struct AABB
 	};
 
 	XMFLOAT3 _min;
+	uint32_t layerMask = ~0u;
 	XMFLOAT3 _max;
+	uint32_t userdata = 0;
 
 	AABB(const XMFLOAT3& _min = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX), const XMFLOAT3& _max = XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX)) : _min(_min), _max(_max) {}
 	void createFromHalfWidth(const XMFLOAT3& center, const XMFLOAT3& halfwidth);

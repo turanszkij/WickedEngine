@@ -270,24 +270,26 @@ void TestsRenderer::Load()
 
 		case 18:
 		{
-			wiScene::LoadModel("../Content/models/suzanne.wiscene");
+			wiScene::LoadModel("../Content/models/cube.wiscene");
 			wiProfiler::SetEnabled(true);
 			Scene& scene = wiScene::GetScene();
 			scene.Entity_CreateLight("testlight", XMFLOAT3(0, 2, -4), XMFLOAT3(1, 1, 1), 4, 10);
-			Entity suzanne = scene.Entity_FindByName("Suzanne");
-			const float scale = 0.05f;
-			int count = 256;
-			for (int i = 0; i < count; ++i)
+			Entity cubeentity = scene.Entity_FindByName("Cube");
+			const float scale = 0.06f;
+			for (int x = 0; x < 32; ++x)
 			{
-				for (int j = 0; j < count; ++j)
+				for (int y = 0; y < 32; ++y)
 				{
-					Entity entity = scene.Entity_Duplicate(suzanne);
-					TransformComponent* transform = scene.transforms.GetComponent(entity);
-					transform->Scale(XMFLOAT3(scale, scale, scale));
-					transform->Translate(XMFLOAT3(-5.5f + 11 * float(i) / float(count), -0.5f + 5 * float(j) / float(count), 0));
+					for (int z = 0; z < 64; ++z)
+					{
+						Entity entity = scene.Entity_Duplicate(cubeentity);
+						TransformComponent* transform = scene.transforms.GetComponent(entity);
+						transform->Scale(XMFLOAT3(scale, scale, scale));
+						transform->Translate(XMFLOAT3(-5.5f + 11 * float(x) / 32.f, -0.5f + 5 * y / 32.f, float(z) * 0.5f));
+					}
 				}
 			}
-			scene.Entity_Remove(suzanne);
+			scene.Entity_Remove(cubeentity);
 		}
 		break;
 

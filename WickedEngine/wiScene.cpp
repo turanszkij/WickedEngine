@@ -3040,6 +3040,17 @@ namespace wiScene
 			if (object.meshID != INVALID_ENTITY)
 			{
 				Entity entity = objects.GetEntity(args.jobIndex);
+
+				const LayerComponent* layer = layers.GetComponent(entity);
+				if (layer == nullptr)
+				{
+					aabb.layerMask = ~0;
+				}
+				else
+				{
+					aabb.layerMask = layer->GetLayerMask();
+				}
+
 				const MeshComponent* mesh = meshes.GetComponent(object.meshID);
 
 				// These will only be valid for a single frame:
@@ -3273,6 +3284,16 @@ namespace wiScene
 			aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
 			aabb = aabb.transform(transform.world);
 
+			const LayerComponent* layer = layers.GetComponent(entity);
+			if (layer == nullptr)
+			{
+				aabb.layerMask = ~0;
+			}
+			else
+			{
+				aabb.layerMask = layer->GetLayerMask();
+			}
+
 			const MaterialComponent& material = *materials.GetComponent(entity);
 			decal.color = material.baseColor;
 			decal.emissive = material.GetEmissiveStrength();
@@ -3409,6 +3430,16 @@ namespace wiScene
 			aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
 			aabb = aabb.transform(transform.world);
 
+			const LayerComponent* layer = layers.GetComponent(entity);
+			if (layer == nullptr)
+			{
+				aabb.layerMask = ~0;
+			}
+			else
+			{
+				aabb.layerMask = layer->GetLayerMask();
+			}
+
 			if (probe.IsDirty() || probe.IsRealTime())
 			{
 				probe.SetDirty(false);
@@ -3460,6 +3491,16 @@ namespace wiScene
 			Entity entity = lights.GetEntity(args.jobIndex);
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 			AABB& aabb = aabb_lights[args.jobIndex];
+
+			const LayerComponent* layer = layers.GetComponent(entity);
+			if (layer == nullptr)
+			{
+				aabb.layerMask = ~0;
+			}
+			else
+			{
+				aabb.layerMask = layer->GetLayerMask();
+			}
 
 			XMMATRIX W = XMLoadFloat4x4(&transform.world);
 			XMVECTOR S, R, T;
