@@ -4032,41 +4032,34 @@ using namespace DX12_Internal;
 
 				auto shader_internal = to_internal(shader);
 
-				if(!shader_internal->bindless_res.empty())
+				for (auto& x : shader_internal->bindless_res)
 				{
 					bool found = false;
-					for (auto& x : shader_internal->bindless_res)
+					for (auto& y : internal_state->bindless_res)
 					{
-						for (auto& y : internal_state->bindless_res)
+						if (x.RegisterSpace == y.RegisterSpace)
 						{
-							if (x.RegisterSpace == y.RegisterSpace)
-							{
-								found = true;
-								break;
-							}
-						}
-						if (found)
+							found = true;
 							break;
+						}
+					}
+					if (!found)
 						internal_state->bindless_res.push_back(x);
-					}
 				}
-				if (!shader_internal->bindless_sam.empty())
+
+				for (auto& x : shader_internal->bindless_sam)
 				{
 					bool found = false;
-					for (auto& x : shader_internal->bindless_sam)
+					for (auto& y : internal_state->bindless_sam)
 					{
-						for (auto& y : internal_state->bindless_sam)
+						if (x.RegisterSpace == y.RegisterSpace)
 						{
-							if (x.RegisterSpace == y.RegisterSpace)
-							{
-								found = true;
-								break;
-							}
-						}
-						if (found)
+							found = true;
 							break;
-						internal_state->bindless_sam.push_back(x);
+						}
 					}
+					if (!found)
+						internal_state->bindless_sam.push_back(x);
 				}
 			};
 
