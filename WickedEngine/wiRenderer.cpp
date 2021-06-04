@@ -2758,139 +2758,23 @@ void RenderMeshes(
 
 		// Purpose of InstancedBatch:
 		//	The RenderQueue is sorted by meshIndex. There can be multiple instances for a single meshIndex,
-		//	and the InstancedBatchArray contains this information. The array size will be the unique mesh count here.
+		//	but all instances of a single mesh will be rendered by 1 draw call
 		struct InstancedBatch
 		{
 			uint32_t meshIndex;
 			int instanceCount;
 			uint32_t dataOffset;
 			uint8_t userStencilRefOverride;
-			uint8_t forceAlphatestForDithering; // padded bool
+			bool forceAlphatestForDithering;
 			AABB aabb;
 		};
-		InstancedBatch* instancedBatchArray = nullptr;
-		int instancedBatchCount = 0;
-
-		// The following loop is writing the instancing batches to a GPUBuffer:
-		size_t prevMeshIndex = ~0;
-		uint8_t prevUserStencilRefOverride = 0;
-		uint32_t instanceCount = 0;
-		for (uint32_t batchID = 0; batchID < renderQueue.batchCount; ++batchID) // Do not break out of this loop!
-		{
-			const RenderBatch& batch = renderQueue.batchArray[batchID];
-			const uint32_t meshIndex = batch.GetMeshIndex();
-			const uint32_t instanceIndex = batch.GetInstanceIndex();
-			const ObjectComponent& instance = vis.scene->objects[instanceIndex];
-			const AABB& instanceAABB = vis.scene->aabb_objects[instanceIndex];
-			const uint8_t userStencilRefOverride = instance.userStencilRef;
-
-			// When we encounter a new mesh inside the global instance array, we begin a new InstancedBatch:
-			if (meshIndex != prevMeshIndex || userStencilRefOverride != prevUserStencilRefOverride)
-			{
-				prevMeshIndex = meshIndex;
-				prevUserStencilRefOverride = userStencilRefOverride;
-
-				instancedBatchCount++;
-				InstancedBatch* instancedBatch = (InstancedBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(InstancedBatch));
-				instancedBatch->meshIndex = meshIndex;
-				instancedBatch->instanceCount = 0;
-				instancedBatch->dataOffset = instances.offset + instanceCount * instanceDataSize;
-				instancedBatch->userStencilRefOverride = userStencilRefOverride;
-				instancedBatch->forceAlphatestForDithering = 0;
-				instancedBatch->aabb = AABB();
-				if (instancedBatchArray == nullptr)
-				{
-					instancedBatchArray = instancedBatch;
-				}
-			}
-
-			InstancedBatch& current_batch = instancedBatchArray[instancedBatchCount - 1];
-
-			float dither = instance.GetTransparency();
-
-			if (instance.IsImpostorPlacement())
-			{
-				float distance = wiMath::Distance(instanceAABB.getCenter(), vis.camera->Eye);
-				float swapDistance = instance.impostorSwapDistance;
-				float fadeThreshold = instance.impostorFadeThresholdRadius;
-				dither = std::max(0.0f, distance - swapDistance) / fadeThreshold;
-			}
-
-			if (dither > 0)
-			{
-				current_batch.forceAlphatestForDithering = 1;
-			}
-
-			if (forwardLightmaskRequest)
-			{
-				current_batch.aabb = AABB::Merge(current_batch.aabb, instanceAABB);
-			}
-
-			const XMFLOAT4X4& worldMatrix = instance.transform_index >= 0 ? vis.scene->transforms[instance.transform_index].world : IDENTITYMATRIX;
-
-			for (uint32_t frustum_index = 0; frustum_index < frustum_count; ++frustum_index)
-			{
-				if (frusta != nullptr && !frusta[frustum_index].CheckBoxFast(instanceAABB))
-				{
-					// In case multiple cameras were provided and no intersection detected with frustum, we don't add the instance for the face:
-					continue;
-				}
-
-				// Write into actual GPU-buffer:
-				switch (instanceRequest)
-				{
-				default:
-				case INSTANCETYPE_MATRIX_USERDATA:
-					((volatile Instance_MATRIX_USERDATA*)instances.data)[instanceCount].instance.Create(worldMatrix, instance.color, dither, frustum_index, instance.emissiveColor);
-					break;
-				case INSTANCETYPE_MATRIX_USERDATA_ATLAS:
-					((volatile Instance_MATRIX_USERDATA_ATLAS*)instances.data)[instanceCount].instance.Create(worldMatrix, instance.color, dither, frustum_index, instance.emissiveColor);
-					{
-						XMFLOAT4 lightMapMulAdd;
-						if (instance.lightmap.IsValid())
-						{
-							auto rect = instance.lightmap_rect;
-
-							// eliminate border expansion:
-							rect.x += Scene::atlasClampBorder;
-							rect.y += Scene::atlasClampBorder;
-							rect.w -= Scene::atlasClampBorder * 2;
-							rect.h -= Scene::atlasClampBorder * 2;
-
-							lightMapMulAdd = XMFLOAT4(
-								(float)rect.w / (float)lightmap_desc.Width,
-								(float)rect.h / (float)lightmap_desc.Height,
-								(float)rect.x / (float)lightmap_desc.Width,
-								(float)rect.y / (float)lightmap_desc.Height
-							);
-						}
-						else
-						{
-							lightMapMulAdd = XMFLOAT4(0, 0, 0, 0);
-						}
-						((volatile Instance_MATRIX_USERDATA_ATLAS*)instances.data)[instanceCount].instanceAtlas.Create(lightMapMulAdd);
-					}
-					break;
-				case INSTANCETYPE_MATRIX_USERDATA_MATRIXPREV:
-					((volatile Instance_MATRIX_USERDATA_MATRIXPREV*)instances.data)[instanceCount].instance.Create(worldMatrix, instance.color, dither, frustum_index, instance.emissiveColor);
-					((volatile Instance_MATRIX_USERDATA_MATRIXPREV*)instances.data)[instanceCount].instancePrev.Create(instance.prev_transform_index >= 0 ? vis.scene->prev_transforms[instance.prev_transform_index].world_prev : IDENTITYMATRIX);
-					break;
-				}
-
-				current_batch.instanceCount++; // next instance in current InstancedBatch
-				instanceCount++;
-			}
-
-		}
 
 		// Render instanced batches:
-		PRIMITIVETOPOLOGY prevTOPOLOGY = TRIANGLELIST;
-		for (int instancedBatchID = 0; instancedBatchID < instancedBatchCount; ++instancedBatchID)
-		{
-			const InstancedBatch& instancedBatch = instancedBatchArray[instancedBatchID];
+		auto flush_render_batch = [&](const InstancedBatch& instancedBatch) {
+			if (instancedBatch.instanceCount <= 0)
+				return;
+
 			const MeshComponent& mesh = vis.scene->meshes[instancedBatch.meshIndex];
-			const bool forceAlphaTestForDithering = instancedBatch.forceAlphatestForDithering != 0;
-			const uint8_t userStencilRefOverride = instancedBatch.userStencilRefOverride;
 
 			const float tessF = mesh.GetTessellationFactor();
 			const bool tessellatorRequested = tessF > 0 && tessellation;
@@ -2965,7 +2849,7 @@ void RenderMeshes(
 				{
 					continue;
 				}
-				const MaterialComponent& material = *vis.scene->materials.GetComponent(subset.materialID);
+				const MaterialComponent& material = vis.scene->materials[subset.materialIndex];
 
 				bool subsetRenderable = renderTypeFlags & material.GetRenderTypes();
 
@@ -3005,7 +2889,7 @@ void RenderMeshes(
 					else
 					{
 						const BLENDMODE blendMode = material.GetBlendMode();
-						const bool alphatest = material.IsAlphaTestEnabled() || forceAlphaTestForDithering;
+						const bool alphatest = material.IsAlphaTestEnabled() || instancedBatch.forceAlphatestForDithering;
 						OBJECTRENDERING_DOUBLESIDED doublesided = (mesh.IsDoubleSided() || material.IsDoubleSided()) ? OBJECTRENDERING_DOUBLESIDED_ENABLED : OBJECTRENDERING_DOUBLESIDED_DISABLED;
 
 						pso = &PSO_object[material.shaderType][renderPass][blendMode][doublesided][tessellatorRequested][alphatest];
@@ -3025,7 +2909,7 @@ void RenderMeshes(
 				}
 
 				STENCILREF engineStencilRef = material.engineStencilRef;
-				uint8_t userStencilRef = userStencilRefOverride > 0 ? userStencilRefOverride : material.userStencilRef;
+				uint8_t userStencilRef = instancedBatch.userStencilRefOverride > 0 ? instancedBatch.userStencilRefOverride : material.userStencilRef;
 				uint32_t stencilRef = CombineStencilrefs(engineStencilRef, userStencilRef);
 				device->BindStencilRef(stencilRef, cmd);
 
@@ -3110,9 +2994,112 @@ void RenderMeshes(
 				device->BindPipelineState(pso, cmd);
 				device->DrawIndexedInstanced(subset.indexCount, instancedBatch.instanceCount, subset.indexOffset, 0, 0, cmd);
 			}
+		};
+
+		InstancedBatch instancedBatch = {};
+
+		// The following loop is writing the instancing batches to a GPUBuffer:
+		uint32_t instanceCount = 0;
+		for (uint32_t batchID = 0; batchID < renderQueue.batchCount; ++batchID) // Do not break out of this loop!
+		{
+			const RenderBatch& batch = renderQueue.batchArray[batchID];
+			const uint32_t meshIndex = batch.GetMeshIndex();
+			const uint32_t instanceIndex = batch.GetInstanceIndex();
+			const ObjectComponent& instance = vis.scene->objects[instanceIndex];
+			const AABB& instanceAABB = vis.scene->aabb_objects[instanceIndex];
+			const uint8_t userStencilRefOverride = instance.userStencilRef;
+
+			// When we encounter a new mesh inside the global instance array, we begin a new InstancedBatch:
+			if (meshIndex != instancedBatch.meshIndex || userStencilRefOverride != instancedBatch.userStencilRefOverride)
+			{
+				flush_render_batch(instancedBatch);
+
+				instancedBatch.meshIndex = meshIndex;
+				instancedBatch.instanceCount = 0;
+				instancedBatch.dataOffset = instances.offset + instanceCount * instanceDataSize;
+				instancedBatch.userStencilRefOverride = userStencilRefOverride;
+				instancedBatch.forceAlphatestForDithering = 0;
+				instancedBatch.aabb = AABB();
+			}
+
+			float dither = instance.GetTransparency();
+
+			if (instance.IsImpostorPlacement())
+			{
+				float distance = wiMath::Distance(instanceAABB.getCenter(), vis.camera->Eye);
+				float swapDistance = instance.impostorSwapDistance;
+				float fadeThreshold = instance.impostorFadeThresholdRadius;
+				dither = std::max(0.0f, distance - swapDistance) / fadeThreshold;
+			}
+
+			if (dither > 0)
+			{
+				instancedBatch.forceAlphatestForDithering = 1;
+			}
+
+			if (forwardLightmaskRequest)
+			{
+				instancedBatch.aabb = AABB::Merge(instancedBatch.aabb, instanceAABB);
+			}
+
+			const XMFLOAT4X4& worldMatrix = instance.transform_index >= 0 ? vis.scene->transforms[instance.transform_index].world : IDENTITYMATRIX;
+
+			for (uint32_t frustum_index = 0; frustum_index < frustum_count; ++frustum_index)
+			{
+				if (frusta != nullptr && !frusta[frustum_index].CheckBoxFast(instanceAABB))
+				{
+					// In case multiple cameras were provided and no intersection detected with frustum, we don't add the instance for the face:
+					continue;
+				}
+
+				// Write into actual GPU-buffer:
+				switch (instanceRequest)
+				{
+				default:
+				case INSTANCETYPE_MATRIX_USERDATA:
+					((volatile Instance_MATRIX_USERDATA*)instances.data)[instanceCount].instance.Create(worldMatrix, instance.color, dither, frustum_index, instance.emissiveColor);
+					break;
+				case INSTANCETYPE_MATRIX_USERDATA_ATLAS:
+					((volatile Instance_MATRIX_USERDATA_ATLAS*)instances.data)[instanceCount].instance.Create(worldMatrix, instance.color, dither, frustum_index, instance.emissiveColor);
+					{
+						XMFLOAT4 lightMapMulAdd;
+						if (instance.lightmap.IsValid())
+						{
+							auto rect = instance.lightmap_rect;
+
+							// eliminate border expansion:
+							rect.x += Scene::atlasClampBorder;
+							rect.y += Scene::atlasClampBorder;
+							rect.w -= Scene::atlasClampBorder * 2;
+							rect.h -= Scene::atlasClampBorder * 2;
+
+							lightMapMulAdd = XMFLOAT4(
+								(float)rect.w / (float)lightmap_desc.Width,
+								(float)rect.h / (float)lightmap_desc.Height,
+								(float)rect.x / (float)lightmap_desc.Width,
+								(float)rect.y / (float)lightmap_desc.Height
+							);
+						}
+						else
+						{
+							lightMapMulAdd = XMFLOAT4(0, 0, 0, 0);
+						}
+						((volatile Instance_MATRIX_USERDATA_ATLAS*)instances.data)[instanceCount].instanceAtlas.Create(lightMapMulAdd);
+					}
+					break;
+				case INSTANCETYPE_MATRIX_USERDATA_MATRIXPREV:
+					((volatile Instance_MATRIX_USERDATA_MATRIXPREV*)instances.data)[instanceCount].instance.Create(worldMatrix, instance.color, dither, frustum_index, instance.emissiveColor);
+					((volatile Instance_MATRIX_USERDATA_MATRIXPREV*)instances.data)[instanceCount].instancePrev.Create(instance.prev_transform_index >= 0 ? vis.scene->prev_transforms[instance.prev_transform_index].world_prev : IDENTITYMATRIX);
+					break;
+				}
+
+				instancedBatch.instanceCount++; // next instance in current InstancedBatch
+				instanceCount++; // next instance in GPU allocation
+			}
+
 		}
 
-		GetRenderFrameAllocator(cmd).free(sizeof(InstancedBatch) * instancedBatchCount);
+		flush_render_batch(instancedBatch);
 
 		device->EventEnd(cmd);
 	}

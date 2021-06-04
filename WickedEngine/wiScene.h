@@ -344,6 +344,9 @@ namespace wiScene
 			wiECS::Entity materialID = wiECS::INVALID_ENTITY;
 			uint32_t indexOffset = 0;
 			uint32_t indexCount = 0;
+
+			// Non-serialized attributes:
+			uint32_t materialIndex = 0;
 		};
 		std::vector<MeshSubset> subsets;
 

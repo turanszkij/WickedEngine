@@ -2770,13 +2770,14 @@ namespace wiScene
 				std::swap(mesh.streamoutBuffer_POS, mesh.vertexBuffer_PRE);
 			}
 
-			if (mesh.BLAS.IsValid())
+			uint32_t subsetIndex = 0;
+			for (auto& subset : mesh.subsets)
 			{
-				uint32_t subsetIndex = 0;
-				for (auto& subset : mesh.subsets)
+				const MaterialComponent* material = materials.GetComponent(subset.materialID);
+				if (material != nullptr)
 				{
-					const MaterialComponent* material = materials.GetComponent(subset.materialID);
-					if (material != nullptr)
+					subset.materialIndex = (uint32_t)materials.GetIndex(subset.materialID);
+					if (mesh.BLAS.IsValid())
 					{
 						auto& geometry = mesh.BLAS.desc.bottomlevel.geometries[subsetIndex];
 						uint32_t flags = geometry._flags;
@@ -2798,9 +2799,16 @@ namespace wiScene
 							geometry.triangles.vertexBuffer = mesh.streamoutBuffer_POS;
 						}
 					}
-					subsetIndex++;
 				}
+				else
+				{
+					subset.materialIndex = 0;
+				}
+				subsetIndex++;
+			}
 
+			if (mesh.BLAS.IsValid())
+			{
 				if (mesh.dirty_morph)
 				{
 					mesh.BLAS_state = MeshComponent::BLAS_STATE_NEEDS_REBUILD;
