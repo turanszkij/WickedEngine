@@ -708,33 +708,36 @@ namespace wiHelper
 			std::cerr << message << std::endl;
 		}
 
-		std::vector<std::string> extensions = {params.description};
-		extensions.reserve(params.extensions.size()+1);
-		extensions.insert(extensions.end(), params.extensions.cbegin(), params.extensions.cend());
+		std::vector<std::string> extensions = {params.description, ""};
+		for (auto& x : params.extensions)
+		{
+			extensions[1] += "*." + x + " ";
+		}
 
 		switch (params.type) {
 			case FileDialogParams::OPEN: {
 				std::vector<std::string> selection = pfd::open_file(
-						params.description,
-						std::filesystem::current_path().string(),
-						extensions
-						// allow multi selection here
+					"Open file",
+					std::filesystem::current_path().string(),
+					extensions
 				).result();
-				// result() will wait for user action before returning.
-				// This operation will block and return the user choice
-
-				if (!selection.empty()) {
+				if (!selection.empty())
+				{
 					onSuccess(selection[0]);
 				}
-				//TODO what happens if the user cancelled the action? Is there not a onFailure callback?
+				break;
 			}
 			case FileDialogParams::SAVE: {
-				std::string destination = pfd::save_file(params.description,
-						std::filesystem::current_path().string(),
-						extensions
-						// remove overwrite warning here
+				std::string destination = pfd::save_file(
+					"Save file",
+					std::filesystem::current_path().string(),
+					extensions
 				).result();
-				onSuccess(destination);
+				if (!destination.empty())
+				{
+					onSuccess(destination);
+				}
+				break;
 			}
 		}
 #endif // _WIN32
