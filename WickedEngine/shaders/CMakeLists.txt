@@ -192,7 +192,7 @@ set(SHADERS_PS
 		"objectPS.hlsl"
 		"objectPS_hologram.hlsl"
 		"objectPS_paintradius.hlsl"
-		"objectPS_simplest.hlsl"
+		"objectPS_simple.hlsl"
 		"objectPS_debug.hlsl"
 		"objectPS_prepass.hlsl"
 		"objectPS_prepass_alphatest.hlsl"
@@ -213,7 +213,7 @@ set(SHADERS_PS
 		"impostorPS_wire.hlsl"
 		"impostorPS_simple.hlsl"
 		"impostorPS_prepass.hlsl"
-		"hairparticlePS_simplest.hlsl"
+		"hairparticlePS_simple.hlsl"
 		"hairparticlePS_prepass.hlsl"
 		"forceFieldVisualizerPS.hlsl"
 		"fontPS.hlsl"
@@ -223,7 +223,7 @@ set(SHADERS_PS
 		"envMapPS_terrain.hlsl"
 		"emittedparticlePS_soft_distortion.hlsl"
 		"downsampleDepthBuffer4xPS.hlsl"
-		"emittedparticlePS_simplest.hlsl"
+		"emittedparticlePS_simple.hlsl"
 		"cubeMapPS.hlsl"
 		"circlePS.hlsl"
 		"captureImpostorPS_normal.hlsl"
@@ -260,6 +260,7 @@ set(SHADERS_VS
 		"objectVS_prepass_alphatest.hlsl"
 		"objectVS_prepass_tessellation.hlsl"
 		"objectVS_prepass_alphatest_tessellation.hlsl"
+		"objectVS_simple_tessellation.hlsl"
 		"objectVS_debug.hlsl"
 		"lensFlareVS.hlsl"
 		"impostorVS.hlsl"
@@ -293,12 +294,14 @@ set(SHADERS_HS
 		"objectHS.hlsl"
 		"objectHS_prepass.hlsl"
 		"objectHS_prepass_alphatest.hlsl"
+		"objectHS_simple.hlsl"
 )
 
 set(SHADERS_DS
 		"objectDS.hlsl"
 		"objectDS_prepass.hlsl"
 		"objectDS_prepass_alphatest.hlsl"
+		"objectDS_simple.hlsl"
 )
 
 set(SHADERS_LIB

@@ -204,7 +204,7 @@ void MeshWindow::Create(EditorComponent* editor)
 	});
 	AddWidget(&impostorDistanceSlider);
 
-	tessellationFactorSlider.Create(0, 16, 0, 10000, "Tessellation Factor: ");
+	tessellationFactorSlider.Create(0, 100, 0, 10000, "Tessellation Factor: ");
 	tessellationFactorSlider.SetTooltip("Set the dynamic tessellation amount. Tessellation should be enabled in the Renderer window and your GPU must support it!");
 	tessellationFactorSlider.SetSize(XMFLOAT2(100, hei));
 	tessellationFactorSlider.SetPos(XMFLOAT2(x, y += step));

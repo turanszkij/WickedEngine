@@ -1,0 +1,6 @@
+#define OBJECTSHADER_COMPILE_HS
+#define OBJECTSHADER_LAYOUT_POS_TEX
+#define OBJECTSHADER_USE_COLOR
+#define OBJECTSHADER_USE_NORMAL
+#include "objectHF_tessellation.hlsli"
+
