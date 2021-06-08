@@ -679,6 +679,7 @@ namespace wiEmittedParticle_Internal
 
 		{
 			PipelineStateDesc desc;
+			desc.pt = TRIANGLESTRIP;
 			if (ALLOW_MESH_SHADER && wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_MESH_SHADER))
 			{
 				desc.ms = &meshShader;

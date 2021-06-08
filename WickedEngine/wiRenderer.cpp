@@ -2706,413 +2706,407 @@ void RenderMeshes(
 	uint32_t frustum_count = 1
 )
 {
-	if (!renderQueue.empty())
+	if (renderQueue.empty())
+		return;
+
+	device->EventBegin("RenderMeshes", cmd);
+	const bool bindless = device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS);
+
+	tessellation = tessellation && device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_TESSELLATION);
+	if (tessellation)
 	{
-		device->EventBegin("RenderMeshes", cmd);
-		const bool bindless = device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS);
+		BindConstantBuffers(DS, cmd);
+	}
 
-		tessellation = tessellation && device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_TESSELLATION);
-		if (tessellation)
+	const TextureDesc& lightmap_desc = vis.scene->lightmap.GetDesc();
+	const float lightmap_width_rcp = 1.0f / lightmap_desc.Width;
+	const float lightmap_height_rcp = 1.0f / lightmap_desc.Height;
+
+	// Do we need to compute a light mask for this pass on the CPU?
+	const bool forwardLightmaskRequest =
+		renderPass == RENDERPASS_ENVMAPCAPTURE ||
+		renderPass == RENDERPASS_VOXELIZE;
+
+	const INSTANCETYPE instanceRequest = instanceTypes[renderPass];
+	struct Instance_MATRIX_USERDATA
+	{
+		Instance instance;
+	};
+	struct Instance_MATRIX_USERDATA_ATLAS
+	{
+		Instance instance;
+		InstanceAtlas instanceAtlas;
+	};
+	struct Instance_MATRIX_USERDATA_MATRIXPREV
+	{
+		Instance instance;
+		InstancePrev instancePrev;
+	};
+
+	// Pre-allocate space for all the instances in GPU-buffer:
+	uint32_t instanceDataSize = 0;
+	switch (instanceRequest)
+	{
+	default:
+	case INSTANCETYPE_MATRIX_USERDATA:
+		instanceDataSize = sizeof(Instance_MATRIX_USERDATA);
+		break;
+	case INSTANCETYPE_MATRIX_USERDATA_ATLAS:
+		instanceDataSize = sizeof(Instance_MATRIX_USERDATA_ATLAS);
+		break;
+	case INSTANCETYPE_MATRIX_USERDATA_MATRIXPREV:
+		instanceDataSize = sizeof(Instance_MATRIX_USERDATA_MATRIXPREV);
+		break;
+	}
+	size_t alloc_size = renderQueue.batchCount * frustum_count * instanceDataSize;
+	GraphicsDevice::GPUAllocation instances = device->AllocateGPU(alloc_size, cmd);
+
+	// Purpose of InstancedBatch:
+	//	The RenderQueue is sorted by meshIndex. There can be multiple instances for a single meshIndex,
+	//	but all instances of a single mesh will be rendered by 1 draw call
+	struct InstancedBatch
+	{
+		uint32_t meshIndex = ~0u;
+		int instanceCount = 0;
+		uint32_t dataOffset = 0;
+		uint8_t userStencilRefOverride = 0;
+		bool forceAlphatestForDithering = false;
+		AABB aabb;
+	};
+
+	// Render instanced batches:
+	auto flush_render_batch = [&](const InstancedBatch& instancedBatch) {
+		if (instancedBatch.instanceCount <= 0)
+			return;
+
+		const MeshComponent& mesh = vis.scene->meshes[instancedBatch.meshIndex];
+
+		const float tessF = mesh.GetTessellationFactor();
+		const bool tessellatorRequested = tessF > 0 && tessellation;
+		const bool terrain = mesh.IsTerrain();
+
+		if (tessellatorRequested)
 		{
-			BindConstantBuffers(DS, cmd);
+			TessellationCB tessCB;
+			tessCB.xTessellationFactors = XMFLOAT4(tessF, tessF, tessF, tessF);
+			device->UpdateBuffer(&constantBuffers[CBTYPE_TESSELLATION], &tessCB, cmd);
+			device->BindConstantBuffer(HS, &constantBuffers[CBTYPE_TESSELLATION], CBSLOT_RENDERER_TESSELLATION, cmd);
 		}
 
-		const TextureDesc& lightmap_desc = vis.scene->lightmap.GetDesc();
-
-		// Do we need to bind every common buffers or just a reduced amount for this pass?
-		const bool commonVBRequest =
-			!IsWireRender() && (
-				renderPass == RENDERPASS_MAIN ||
-				renderPass == RENDERPASS_ENVMAPCAPTURE ||
-				renderPass == RENDERPASS_VOXELIZE
-				);
-
-		// Do we need to compute a light mask for this pass on the CPU?
-		const bool forwardLightmaskRequest =
-			renderPass == RENDERPASS_ENVMAPCAPTURE ||
-			renderPass == RENDERPASS_VOXELIZE;
-
-		const INSTANCETYPE instanceRequest = instanceTypes[renderPass];
-		struct Instance_MATRIX_USERDATA
+		if (forwardLightmaskRequest)
 		{
-			Instance instance;
-		};
-		struct Instance_MATRIX_USERDATA_ATLAS
-		{
-			Instance instance;
-			InstanceAtlas instanceAtlas;
-		};
-		struct Instance_MATRIX_USERDATA_MATRIXPREV
-		{
-			Instance instance;
-			InstancePrev instancePrev;
-		};
-
-		// Pre-allocate space for all the instances in GPU-buffer:
-		uint32_t instanceDataSize = 0;
-		switch (instanceRequest)
-		{
-		default:
-		case INSTANCETYPE_MATRIX_USERDATA:
-			instanceDataSize = sizeof(Instance_MATRIX_USERDATA);
-			break;
-		case INSTANCETYPE_MATRIX_USERDATA_ATLAS:
-			instanceDataSize = sizeof(Instance_MATRIX_USERDATA_ATLAS);
-			break;
-		case INSTANCETYPE_MATRIX_USERDATA_MATRIXPREV:
-			instanceDataSize = sizeof(Instance_MATRIX_USERDATA_MATRIXPREV);
-			break;
+			ForwardEntityMaskCB cb = ForwardEntityCullingCPU(vis, instancedBatch.aabb, renderPass);
+			device->UpdateBuffer(&constantBuffers[CBTYPE_FORWARDENTITYMASK], &cb, cmd);
+			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
 		}
-		size_t alloc_size = renderQueue.batchCount * frustum_count * instanceDataSize;
-		GraphicsDevice::GPUAllocation instances = device->AllocateGPU(alloc_size, cmd);
 
-		// Purpose of InstancedBatch:
-		//	The RenderQueue is sorted by meshIndex. There can be multiple instances for a single meshIndex,
-		//	but all instances of a single mesh will be rendered by 1 draw call
-		struct InstancedBatch
+		device->BindIndexBuffer(&mesh.indexBuffer, mesh.GetIndexFormat(), 0, cmd);
+
+		ObjectPushConstants push; // used with bindless model only
+
+		if (bindless)
 		{
-			uint32_t meshIndex = ~0u;
-			int instanceCount = 0;
-			uint32_t dataOffset = 0;
-			uint8_t userStencilRefOverride = 0;
-			bool forceAlphatestForDithering = false;
-			AABB aabb;
-		};
+			push.mesh = device->GetDescriptorIndex(&mesh.descriptor, SRV);
+			push.instances = device->GetDescriptorIndex(instances.buffer, SRV);
+			push.instance_offset = instancedBatch.dataOffset;
+		}
+		else
+		{
+			const GPUBuffer* vbs[] = {
+				mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
+				mesh.vertexBuffer_PRE.IsValid() ? &mesh.vertexBuffer_PRE : &mesh.vertexBuffer_POS,
+				&mesh.vertexBuffer_UV0,
+				&mesh.vertexBuffer_UV1,
+				&mesh.vertexBuffer_ATL,
+				&mesh.vertexBuffer_COL,
+				mesh.streamoutBuffer_TAN.IsValid() ? &mesh.streamoutBuffer_TAN : &mesh.vertexBuffer_TAN,
+				instances.buffer
+			};
+			uint32_t strides[] = {
+				sizeof(MeshComponent::Vertex_POS),
+				sizeof(MeshComponent::Vertex_POS),
+				sizeof(MeshComponent::Vertex_TEX),
+				sizeof(MeshComponent::Vertex_TEX),
+				sizeof(MeshComponent::Vertex_TEX),
+				sizeof(MeshComponent::Vertex_COL),
+				sizeof(MeshComponent::Vertex_TAN),
+				instanceDataSize
+			};
+			uint32_t offsets[] = {
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				instancedBatch.dataOffset
+			};
+			static_assert(arraysize(vbs) == INPUT_SLOT_COUNT, "This layout must conform to OBJECT_VERTEXINPUT enum!");
+			static_assert(arraysize(vbs) == arraysize(strides), "Mismatch between vertex buffers and strides!");
+			static_assert(arraysize(vbs) == arraysize(offsets), "Mismatch between vertex buffers and offsets!");
+			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+		}
 
-		// Render instanced batches:
-		auto flush_render_batch = [&](const InstancedBatch& instancedBatch) {
-			if (instancedBatch.instanceCount <= 0)
-				return;
-
-			const MeshComponent& mesh = vis.scene->meshes[instancedBatch.meshIndex];
-
-			const float tessF = mesh.GetTessellationFactor();
-			const bool tessellatorRequested = tessF > 0 && tessellation;
-			const bool terrain = mesh.IsTerrain();
-
-			if (tessellatorRequested)
+		for (const MeshComponent::MeshSubset& subset : mesh.subsets)
+		{
+			if (subset.indexCount == 0)
 			{
-				TessellationCB tessCB;
-				tessCB.xTessellationFactors = XMFLOAT4(tessF, tessF, tessF, tessF);
-				device->UpdateBuffer(&constantBuffers[CBTYPE_TESSELLATION], &tessCB, cmd);
-				device->BindConstantBuffer(HS, &constantBuffers[CBTYPE_TESSELLATION], CBSLOT_RENDERER_TESSELLATION, cmd);
+				continue;
+			}
+			const MaterialComponent& material = vis.scene->materials[subset.materialIndex];
+
+			bool subsetRenderable = renderTypeFlags & material.GetRenderTypes();
+
+			if (renderPass == RENDERPASS_SHADOW || renderPass == RENDERPASS_SHADOWCUBE)
+			{
+				subsetRenderable = subsetRenderable && material.IsCastingShadow();
 			}
 
-			if (forwardLightmaskRequest)
+			if (!subsetRenderable)
 			{
-				ForwardEntityMaskCB cb = ForwardEntityCullingCPU(vis, instancedBatch.aabb, renderPass);
-				device->UpdateBuffer(&constantBuffers[CBTYPE_FORWARDENTITYMASK], &cb, cmd);
-				device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
+				continue;
 			}
 
-			device->BindIndexBuffer(&mesh.indexBuffer, mesh.GetIndexFormat(), 0, cmd);
-
-			ObjectPushConstants push; // used with bindless model only
-
-			if (bindless)
+			const PipelineState* pso = nullptr;
+			const PipelineState* pso_backside = nullptr; // only when separate backside rendering is required (transparent doublesided)
 			{
-				push.mesh = device->GetDescriptorIndex(&mesh.descriptor, SRV);
-				push.instances = device->GetDescriptorIndex(instances.buffer, SRV);
-				push.instance_offset = instancedBatch.dataOffset;
-			}
-			else
-			{
-				const GPUBuffer* vbs[] = {
-					mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
-					mesh.vertexBuffer_PRE.IsValid() ? &mesh.vertexBuffer_PRE : &mesh.vertexBuffer_POS,
-					&mesh.vertexBuffer_UV0,
-					&mesh.vertexBuffer_UV1,
-					&mesh.vertexBuffer_ATL,
-					&mesh.vertexBuffer_COL,
-					mesh.streamoutBuffer_TAN.IsValid() ? &mesh.streamoutBuffer_TAN : &mesh.vertexBuffer_TAN,
-					instances.buffer
-				};
-				uint32_t strides[] = {
-					sizeof(MeshComponent::Vertex_POS),
-					sizeof(MeshComponent::Vertex_POS),
-					sizeof(MeshComponent::Vertex_TEX),
-					sizeof(MeshComponent::Vertex_TEX),
-					sizeof(MeshComponent::Vertex_TEX),
-					sizeof(MeshComponent::Vertex_COL),
-					sizeof(MeshComponent::Vertex_TAN),
-					instanceDataSize
-				};
-				uint32_t offsets[] = {
-					0,
-					0,
-					0,
-					0,
-					0,
-					0,
-					0,
-					instancedBatch.dataOffset
-				};
-				static_assert(arraysize(vbs) == INPUT_SLOT_COUNT, "This layout must conform to OBJECT_VERTEXINPUT enum!");
-				static_assert(arraysize(vbs) == arraysize(strides), "Mismatch between vertex buffers and strides!");
-				static_assert(arraysize(vbs) == arraysize(offsets), "Mismatch between vertex buffers and offsets!");
-				device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
-			}
-
-			for (const MeshComponent::MeshSubset& subset : mesh.subsets)
-			{
-				if (subset.indexCount == 0)
+				if (IsWireRender())
 				{
-					continue;
-				}
-				const MaterialComponent& material = vis.scene->materials[subset.materialIndex];
-
-				bool subsetRenderable = renderTypeFlags & material.GetRenderTypes();
-
-				if (renderPass == RENDERPASS_SHADOW || renderPass == RENDERPASS_SHADOWCUBE)
-				{
-					subsetRenderable = subsetRenderable && material.IsCastingShadow();
-				}
-
-				if (!subsetRenderable)
-				{
-					continue;
-				}
-
-				const PipelineState* pso = nullptr;
-				const PipelineState* pso_backside = nullptr; // only when separate backside rendering is required (transparent doublesided)
-				{
-					if (IsWireRender())
+					switch (renderPass)
 					{
-						switch (renderPass)
-						{
-						case RENDERPASS_MAIN:
-							pso = tessellatorRequested ? &PSO_object_wire_tessellation : &PSO_object_wire;
-						}
-					}
-					else if (mesh.IsTerrain())
-					{
-						pso = &PSO_object_terrain[renderPass];
-					}
-					else if (material.customShaderID >= 0 && material.customShaderID < (int)customShaders.size())
-					{
-						const CustomShader& customShader = customShaders[material.customShaderID];
-						if (renderTypeFlags & customShader.renderTypeFlags)
-						{
-							pso = &customShader.pso[renderPass];
-						}
-					}
-					else
-					{
-						const BLENDMODE blendMode = material.GetBlendMode();
-						const bool alphatest = material.IsAlphaTestEnabled() || instancedBatch.forceAlphatestForDithering;
-						OBJECTRENDERING_DOUBLESIDED doublesided = (mesh.IsDoubleSided() || material.IsDoubleSided()) ? OBJECTRENDERING_DOUBLESIDED_ENABLED : OBJECTRENDERING_DOUBLESIDED_DISABLED;
-
-						pso = &PSO_object[material.shaderType][renderPass][blendMode][doublesided][tessellatorRequested][alphatest];
-						assert(pso->IsValid());
-
-						if ((renderTypeFlags & RENDERTYPE_TRANSPARENT) && doublesided == OBJECTRENDERING_DOUBLESIDED_ENABLED)
-						{
-							doublesided = OBJECTRENDERING_DOUBLESIDED_BACKSIDE;
-							pso_backside = &PSO_object[material.shaderType][renderPass][blendMode][doublesided][tessellatorRequested][alphatest];
-						}
+					case RENDERPASS_MAIN:
+						pso = tessellatorRequested ? &PSO_object_wire_tessellation : &PSO_object_wire;
 					}
 				}
-
-				if (pso == nullptr || !pso->IsValid())
+				else if (mesh.IsTerrain())
 				{
-					continue;
+					pso = &PSO_object_terrain[renderPass];
 				}
-
-				STENCILREF engineStencilRef = material.engineStencilRef;
-				uint8_t userStencilRef = instancedBatch.userStencilRefOverride > 0 ? instancedBatch.userStencilRefOverride : material.userStencilRef;
-				uint32_t stencilRef = CombineStencilrefs(engineStencilRef, userStencilRef);
-				device->BindStencilRef(stencilRef, cmd);
-
-				if (renderPass != RENDERPASS_PREPASS && renderPass != RENDERPASS_VOXELIZE) // depth only alpha test will be full res
+				else if (material.customShaderID >= 0 && material.customShaderID < (int)customShaders.size())
 				{
-					device->BindShadingRate(material.shadingRate, cmd);
-				}
-
-				if (bindless)
-				{
-					push.material = device->GetDescriptorIndex(&material.constantBuffer, SRV);
-					device->PushConstants(&push, sizeof(push), cmd);
+					const CustomShader& customShader = customShaders[material.customShaderID];
+					if (renderTypeFlags & customShader.renderTypeFlags)
+					{
+						pso = &customShader.pso[renderPass];
+					}
 				}
 				else
 				{
-					device->BindConstantBuffer(VS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
-					device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
+					const BLENDMODE blendMode = material.GetBlendMode();
+					const bool alphatest = material.IsAlphaTestEnabled() || instancedBatch.forceAlphatestForDithering;
+					OBJECTRENDERING_DOUBLESIDED doublesided = (mesh.IsDoubleSided() || material.IsDoubleSided()) ? OBJECTRENDERING_DOUBLESIDED_ENABLED : OBJECTRENDERING_DOUBLESIDED_DISABLED;
 
-					// Bind all material textures:
-					const GPUResource* materialtextures[MaterialComponent::TEXTURESLOT_COUNT];
-					material.WriteTextures(materialtextures, arraysize(materialtextures));
-					device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BASECOLORMAP, arraysize(materialtextures), cmd);
+					pso = &PSO_object[material.shaderType][renderPass][blendMode][doublesided][tessellatorRequested][alphatest];
+					assert(pso->IsValid());
 
-					if (tessellatorRequested)
+					if ((renderTypeFlags & RENDERTYPE_TRANSPARENT) && doublesided == OBJECTRENDERING_DOUBLESIDED_ENABLED)
 					{
-						device->BindConstantBuffer(DS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
-						device->BindResources(DS, materialtextures, TEXSLOT_RENDERER_BASECOLORMAP, arraysize(materialtextures), cmd);
-					}
-
-					if (terrain)
-					{
-						if (mesh.terrain_material1 == INVALID_ENTITY || !vis.scene->materials.Contains(mesh.terrain_material1))
-						{
-							device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BLEND1_BASECOLORMAP, 4, cmd);
-							device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend1), cmd);
-						}
-						else
-						{
-							const MaterialComponent& blendmat = *vis.scene->materials.GetComponent(mesh.terrain_material1);
-							const GPUResource* res[4];
-							blendmat.WriteTextures(res, arraysize(res));
-							device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND1_BASECOLORMAP, arraysize(res), cmd);
-							device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend1), cmd);
-						}
-
-						if (mesh.terrain_material2 == INVALID_ENTITY || !vis.scene->materials.Contains(mesh.terrain_material2))
-						{
-							device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BLEND2_BASECOLORMAP, 4, cmd);
-							device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend2), cmd);
-						}
-						else
-						{
-							const MaterialComponent& blendmat = *vis.scene->materials.GetComponent(mesh.terrain_material2);
-							const GPUResource* res[4];
-							blendmat.WriteTextures(res, arraysize(res));
-							device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND2_BASECOLORMAP, arraysize(res), cmd);
-							device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend2), cmd);
-						}
-
-						if (mesh.terrain_material3 == INVALID_ENTITY || !vis.scene->materials.Contains(mesh.terrain_material3))
-						{
-							device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BLEND3_BASECOLORMAP, 4, cmd);
-							device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend3), cmd);
-						}
-						else
-						{
-							const MaterialComponent& blendmat = *vis.scene->materials.GetComponent(mesh.terrain_material3);
-							const GPUResource* res[4];
-							blendmat.WriteTextures(res, arraysize(res));
-							device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND3_BASECOLORMAP, arraysize(res), cmd);
-							device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend3), cmd);
-						}
+						doublesided = OBJECTRENDERING_DOUBLESIDED_BACKSIDE;
+						pso_backside = &PSO_object[material.shaderType][renderPass][blendMode][doublesided][tessellatorRequested][alphatest];
 					}
 				}
+			}
 
-				if (pso_backside != nullptr)
+			if (pso == nullptr || !pso->IsValid())
+			{
+				continue;
+			}
+
+			STENCILREF engineStencilRef = material.engineStencilRef;
+			uint8_t userStencilRef = instancedBatch.userStencilRefOverride > 0 ? instancedBatch.userStencilRefOverride : material.userStencilRef;
+			uint32_t stencilRef = CombineStencilrefs(engineStencilRef, userStencilRef);
+			device->BindStencilRef(stencilRef, cmd);
+
+			if (renderPass != RENDERPASS_PREPASS && renderPass != RENDERPASS_VOXELIZE) // depth only alpha test will be full res
+			{
+				device->BindShadingRate(material.shadingRate, cmd);
+			}
+
+			if (bindless)
+			{
+				push.material = device->GetDescriptorIndex(&material.constantBuffer, SRV);
+				device->PushConstants(&push, sizeof(push), cmd);
+			}
+			else
+			{
+				device->BindConstantBuffer(VS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
+				device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
+
+				// Bind all material textures:
+				const GPUResource* materialtextures[MaterialComponent::TEXTURESLOT_COUNT];
+				material.WriteTextures(materialtextures, arraysize(materialtextures));
+				device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BASECOLORMAP, arraysize(materialtextures), cmd);
+
+				if (tessellatorRequested)
 				{
-					device->BindPipelineState(pso_backside, cmd);
-					device->DrawIndexedInstanced(subset.indexCount, instancedBatch.instanceCount, subset.indexOffset, 0, 0, cmd);
+					device->BindConstantBuffer(DS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
+					device->BindResources(DS, materialtextures, TEXSLOT_RENDERER_BASECOLORMAP, arraysize(materialtextures), cmd);
 				}
 
-				device->BindPipelineState(pso, cmd);
+				if (terrain)
+				{
+					if (mesh.terrain_material1 == INVALID_ENTITY || !vis.scene->materials.Contains(mesh.terrain_material1))
+					{
+						device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BLEND1_BASECOLORMAP, 4, cmd);
+						device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend1), cmd);
+					}
+					else
+					{
+						const MaterialComponent& blendmat = *vis.scene->materials.GetComponent(mesh.terrain_material1);
+						const GPUResource* res[4];
+						blendmat.WriteTextures(res, arraysize(res));
+						device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND1_BASECOLORMAP, arraysize(res), cmd);
+						device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend1), cmd);
+					}
+
+					if (mesh.terrain_material2 == INVALID_ENTITY || !vis.scene->materials.Contains(mesh.terrain_material2))
+					{
+						device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BLEND2_BASECOLORMAP, 4, cmd);
+						device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend2), cmd);
+					}
+					else
+					{
+						const MaterialComponent& blendmat = *vis.scene->materials.GetComponent(mesh.terrain_material2);
+						const GPUResource* res[4];
+						blendmat.WriteTextures(res, arraysize(res));
+						device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND2_BASECOLORMAP, arraysize(res), cmd);
+						device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend2), cmd);
+					}
+
+					if (mesh.terrain_material3 == INVALID_ENTITY || !vis.scene->materials.Contains(mesh.terrain_material3))
+					{
+						device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BLEND3_BASECOLORMAP, 4, cmd);
+						device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend3), cmd);
+					}
+					else
+					{
+						const MaterialComponent& blendmat = *vis.scene->materials.GetComponent(mesh.terrain_material3);
+						const GPUResource* res[4];
+						blendmat.WriteTextures(res, arraysize(res));
+						device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND3_BASECOLORMAP, arraysize(res), cmd);
+						device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend3), cmd);
+					}
+				}
+			}
+
+			if (pso_backside != nullptr)
+			{
+				device->BindPipelineState(pso_backside, cmd);
 				device->DrawIndexedInstanced(subset.indexCount, instancedBatch.instanceCount, subset.indexOffset, 0, 0, cmd);
 			}
-		};
 
-		InstancedBatch instancedBatch = {};
+			device->BindPipelineState(pso, cmd);
+			device->DrawIndexedInstanced(subset.indexCount, instancedBatch.instanceCount, subset.indexOffset, 0, 0, cmd);
+		}
+	};
 
-		// The following loop is writing the instancing batches to a GPUBuffer:
-		uint32_t instanceCount = 0;
-		for (uint32_t batchID = 0; batchID < renderQueue.batchCount; ++batchID) // Do not break out of this loop!
+	InstancedBatch instancedBatch;
+
+	// The following loop is writing the instancing batches to a GPUBuffer:
+	uint32_t instanceCount = 0;
+	for (uint32_t batchID = 0; batchID < renderQueue.batchCount; ++batchID) // Do not break out of this loop!
+	{
+		const RenderBatch& batch = renderQueue.batchArray[batchID];
+		const uint32_t meshIndex = batch.GetMeshIndex();
+		const uint32_t instanceIndex = batch.GetInstanceIndex();
+		const ObjectComponent& instance = vis.scene->objects[instanceIndex];
+		const AABB& instanceAABB = vis.scene->aabb_objects[instanceIndex];
+		const uint8_t userStencilRefOverride = instance.userStencilRef;
+
+		// When we encounter a new mesh inside the global instance array, we begin a new InstancedBatch:
+		if (meshIndex != instancedBatch.meshIndex || userStencilRefOverride != instancedBatch.userStencilRefOverride)
 		{
-			const RenderBatch& batch = renderQueue.batchArray[batchID];
-			const uint32_t meshIndex = batch.GetMeshIndex();
-			const uint32_t instanceIndex = batch.GetInstanceIndex();
-			const ObjectComponent& instance = vis.scene->objects[instanceIndex];
-			const AABB& instanceAABB = vis.scene->aabb_objects[instanceIndex];
-			const uint8_t userStencilRefOverride = instance.userStencilRef;
+			flush_render_batch(instancedBatch);
 
-			// When we encounter a new mesh inside the global instance array, we begin a new InstancedBatch:
-			if (meshIndex != instancedBatch.meshIndex || userStencilRefOverride != instancedBatch.userStencilRefOverride)
-			{
-				flush_render_batch(instancedBatch);
-
-				instancedBatch.meshIndex = meshIndex;
-				instancedBatch.instanceCount = 0;
-				instancedBatch.dataOffset = instances.offset + instanceCount * instanceDataSize;
-				instancedBatch.userStencilRefOverride = userStencilRefOverride;
-				instancedBatch.forceAlphatestForDithering = 0;
-				instancedBatch.aabb = AABB();
-			}
-
-			float dither = instance.GetTransparency();
-
-			if (instance.IsImpostorPlacement())
-			{
-				float distance = wiMath::Distance(instanceAABB.getCenter(), vis.camera->Eye);
-				float swapDistance = instance.impostorSwapDistance;
-				float fadeThreshold = instance.impostorFadeThresholdRadius;
-				dither = std::max(0.0f, distance - swapDistance) / fadeThreshold;
-			}
-
-			if (dither > 0)
-			{
-				instancedBatch.forceAlphatestForDithering = 1;
-			}
-
-			if (forwardLightmaskRequest)
-			{
-				instancedBatch.aabb = AABB::Merge(instancedBatch.aabb, instanceAABB);
-			}
-
-			const XMFLOAT4X4& worldMatrix = instance.transform_index >= 0 ? vis.scene->transforms[instance.transform_index].world : IDENTITYMATRIX;
-
-			for (uint32_t frustum_index = 0; frustum_index < frustum_count; ++frustum_index)
-			{
-				if (frusta != nullptr && !frusta[frustum_index].CheckBoxFast(instanceAABB))
-				{
-					// In case multiple cameras were provided and no intersection detected with frustum, we don't add the instance for the face:
-					continue;
-				}
-
-				// Write into actual GPU-buffer:
-				switch (instanceRequest)
-				{
-				default:
-				case INSTANCETYPE_MATRIX_USERDATA:
-					((volatile Instance_MATRIX_USERDATA*)instances.data)[instanceCount].instance.Create(worldMatrix, instance.color, dither, frustum_index, instance.emissiveColor);
-					break;
-				case INSTANCETYPE_MATRIX_USERDATA_ATLAS:
-					((volatile Instance_MATRIX_USERDATA_ATLAS*)instances.data)[instanceCount].instance.Create(worldMatrix, instance.color, dither, frustum_index, instance.emissiveColor);
-					{
-						XMFLOAT4 lightMapMulAdd;
-						if (instance.lightmap.IsValid())
-						{
-							auto rect = instance.lightmap_rect;
-
-							// eliminate border expansion:
-							rect.x += Scene::atlasClampBorder;
-							rect.y += Scene::atlasClampBorder;
-							rect.w -= Scene::atlasClampBorder * 2;
-							rect.h -= Scene::atlasClampBorder * 2;
-
-							lightMapMulAdd = XMFLOAT4(
-								(float)rect.w / (float)lightmap_desc.Width,
-								(float)rect.h / (float)lightmap_desc.Height,
-								(float)rect.x / (float)lightmap_desc.Width,
-								(float)rect.y / (float)lightmap_desc.Height
-							);
-						}
-						else
-						{
-							lightMapMulAdd = XMFLOAT4(0, 0, 0, 0);
-						}
-						((volatile Instance_MATRIX_USERDATA_ATLAS*)instances.data)[instanceCount].instanceAtlas.Create(lightMapMulAdd);
-					}
-					break;
-				case INSTANCETYPE_MATRIX_USERDATA_MATRIXPREV:
-					((volatile Instance_MATRIX_USERDATA_MATRIXPREV*)instances.data)[instanceCount].instance.Create(worldMatrix, instance.color, dither, frustum_index, instance.emissiveColor);
-					((volatile Instance_MATRIX_USERDATA_MATRIXPREV*)instances.data)[instanceCount].instancePrev.Create(instance.prev_transform_index >= 0 ? vis.scene->prev_transforms[instance.prev_transform_index].world_prev : IDENTITYMATRIX);
-					break;
-				}
-
-				instancedBatch.instanceCount++; // next instance in current InstancedBatch
-				instanceCount++; // next instance in GPU allocation
-			}
-
+			instancedBatch.meshIndex = meshIndex;
+			instancedBatch.instanceCount = 0;
+			instancedBatch.dataOffset = instances.offset + instanceCount * instanceDataSize;
+			instancedBatch.userStencilRefOverride = userStencilRefOverride;
+			instancedBatch.forceAlphatestForDithering = 0;
+			instancedBatch.aabb = AABB();
 		}
 
-		flush_render_batch(instancedBatch);
+		float dither = instance.GetTransparency();
 
-		device->EventEnd(cmd);
+		if (instance.IsImpostorPlacement())
+		{
+			float distance = wiMath::Distance(instanceAABB.getCenter(), vis.camera->Eye);
+			float swapDistance = instance.impostorSwapDistance;
+			float fadeThreshold = instance.impostorFadeThresholdRadius;
+			dither = std::max(0.0f, distance - swapDistance) / fadeThreshold;
+		}
+
+		if (dither > 0)
+		{
+			instancedBatch.forceAlphatestForDithering = 1;
+		}
+
+		if (forwardLightmaskRequest)
+		{
+			instancedBatch.aabb = AABB::Merge(instancedBatch.aabb, instanceAABB);
+		}
+
+		const XMFLOAT4X4& worldMatrix = instance.transform_index >= 0 ? vis.scene->transforms[instance.transform_index].world : IDENTITYMATRIX;
+
+		for (uint32_t frustum_index = 0; frustum_index < frustum_count; ++frustum_index)
+		{
+			if (frusta != nullptr && !frusta[frustum_index].CheckBoxFast(instanceAABB))
+			{
+				// In case multiple cameras were provided and no intersection detected with frustum, we don't add the instance for the face:
+				continue;
+			}
+
+			// Write into actual GPU-buffer:
+			switch (instanceRequest)
+			{
+			default:
+			case INSTANCETYPE_MATRIX_USERDATA:
+				((volatile Instance_MATRIX_USERDATA*)instances.data)[instanceCount].instance.Create(worldMatrix, instance.color, dither, frustum_index, instance.emissiveColor);
+				break;
+			case INSTANCETYPE_MATRIX_USERDATA_ATLAS:
+				((volatile Instance_MATRIX_USERDATA_ATLAS*)instances.data)[instanceCount].instance.Create(worldMatrix, instance.color, dither, frustum_index, instance.emissiveColor);
+				{
+					XMFLOAT4 lightMapMulAdd;
+					if (instance.lightmap.IsValid())
+					{
+						auto rect = instance.lightmap_rect;
+
+						// eliminate border expansion:
+						rect.x += Scene::atlasClampBorder;
+						rect.y += Scene::atlasClampBorder;
+						rect.w -= Scene::atlasClampBorder * 2;
+						rect.h -= Scene::atlasClampBorder * 2;
+
+						lightMapMulAdd = XMFLOAT4(
+							(float)rect.w * lightmap_width_rcp,
+							(float)rect.h * lightmap_height_rcp,
+							(float)rect.x * lightmap_width_rcp,
+							(float)rect.y * lightmap_height_rcp
+						);
+					}
+					else
+					{
+						lightMapMulAdd = XMFLOAT4(0, 0, 0, 0);
+					}
+					((volatile Instance_MATRIX_USERDATA_ATLAS*)instances.data)[instanceCount].instanceAtlas.Create(lightMapMulAdd);
+				}
+				break;
+			case INSTANCETYPE_MATRIX_USERDATA_MATRIXPREV:
+				((volatile Instance_MATRIX_USERDATA_MATRIXPREV*)instances.data)[instanceCount].instance.Create(worldMatrix, instance.color, dither, frustum_index, instance.emissiveColor);
+				((volatile Instance_MATRIX_USERDATA_MATRIXPREV*)instances.data)[instanceCount].instancePrev.Create(instance.prev_transform_index >= 0 ? vis.scene->prev_transforms[instance.prev_transform_index].world_prev : IDENTITYMATRIX);
+				break;
+			}
+
+			instancedBatch.instanceCount++; // next instance in current InstancedBatch
+			instanceCount++; // next instance in GPU allocation
+		}
+
 	}
+
+	flush_render_batch(instancedBatch);
+
+	device->EventEnd(cmd);
 }
 
 void RenderImpostors(
