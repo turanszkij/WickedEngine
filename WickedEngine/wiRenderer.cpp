@@ -2771,11 +2771,11 @@ void RenderMeshes(
 		//	but all instances of a single mesh will be rendered by 1 draw call
 		struct InstancedBatch
 		{
-			uint32_t meshIndex;
-			int instanceCount;
-			uint32_t dataOffset;
-			uint8_t userStencilRefOverride;
-			bool forceAlphatestForDithering;
+			uint32_t meshIndex = ~0u;
+			int instanceCount = 0;
+			uint32_t dataOffset = 0;
+			uint8_t userStencilRefOverride = 0;
+			bool forceAlphatestForDithering = false;
 			AABB aabb;
 		};
 
