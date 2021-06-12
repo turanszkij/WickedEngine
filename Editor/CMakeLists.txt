@@ -34,6 +34,11 @@ set (SOURCE_FILES
 	xatlas.cpp
 )
 
+add_subdirectory(meshoptimizer
+target_link_libraries(${TARGET_NAME} PUBLIC
+	meshoptimizer
+))
+
 if (WIN32)
 	list (APPEND SOURCE_FILES
 		Editor.rc
