@@ -34,7 +34,8 @@ set (SOURCE_FILES
 	xatlas.cpp
 )
 
-add_subdirectory(meshoptimizer
+add_subdirectory(meshoptimizer)
+
 target_link_libraries(${TARGET_NAME} PUBLIC
 	meshoptimizer
 ))
