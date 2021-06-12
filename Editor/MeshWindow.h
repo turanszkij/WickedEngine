@@ -26,6 +26,7 @@ public:
 	wiButton computeNormalsHardButton;
 	wiButton recenterButton;
 	wiButton recenterToBottomButton;
+	wiButton optimizeButton;
 
 	wiCheckBox terrainCheckBox;
 	wiComboBox terrainMat1Combo;

@@ -28,6 +28,51 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)WeatherWindow.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)xatlas.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)stdafx.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)meshoptimizer\allocator.cpp">
+      <Filter>meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)meshoptimizer\clusterizer.cpp">
+      <Filter>meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)meshoptimizer\indexcodec.cpp">
+      <Filter>meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)meshoptimizer\indexgenerator.cpp">
+      <Filter>meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)meshoptimizer\overdrawanalyzer.cpp">
+      <Filter>meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)meshoptimizer\overdrawoptimizer.cpp">
+      <Filter>meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)meshoptimizer\simplifier.cpp">
+      <Filter>meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)meshoptimizer\spatialorder.cpp">
+      <Filter>meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)meshoptimizer\stripifier.cpp">
+      <Filter>meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)meshoptimizer\vcacheanalyzer.cpp">
+      <Filter>meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)meshoptimizer\vcacheoptimizer.cpp">
+      <Filter>meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)meshoptimizer\vertexcodec.cpp">
+      <Filter>meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)meshoptimizer\vertexfilter.cpp">
+      <Filter>meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)meshoptimizer\vfetchanalyzer.cpp">
+      <Filter>meshoptimizer</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)meshoptimizer\vfetchoptimizer.cpp">
+      <Filter>meshoptimizer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)AnimationWindow.h" />
@@ -59,6 +104,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)WeatherWindow.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)xatlas.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)stdafx.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)meshoptimizer\meshoptimizer.h">
+      <Filter>meshoptimizer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)startup.lua" />
@@ -66,6 +114,9 @@
   <ItemGroup>
     <Filter Include="images">
       <UniqueIdentifier>{caf55722-5ff7-41fe-b606-f376e784aa2f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="meshoptimizer">
+      <UniqueIdentifier>{49c521c0-5dca-4fce-b8c5-a334d1746d98}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
