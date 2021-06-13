@@ -559,6 +559,7 @@ void WeatherWindow::Update()
 		windSpeedSlider.SetValue(weather.windSpeed);
 		windWaveSizeSlider.SetValue(weather.windWaveSize);
 		windRandomnessSlider.SetValue(weather.windRandomness);
+		skyExposureSlider.SetValue(weather.skyExposure);
 		windMagnitudeSlider.SetValue(XMVectorGetX(XMVector3Length(XMLoadFloat3(&weather.windDirection))));
 
 		switch (colorComboBox.GetSelected())
