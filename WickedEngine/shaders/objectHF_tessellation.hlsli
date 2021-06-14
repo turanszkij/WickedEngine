@@ -37,14 +37,15 @@ ConstantOutput PatchConstantFunction(InputPatch<PixelInput, 3> patch)
 
 #if 1
 	// frustum culling:
+	float rad = GetMaterial().displacementMapping;
 	int culled[4];
 	[unroll]
 	for (int ip = 0; ip < 4; ++ip)
 	{
 		culled[ip] = 1;
-		culled[ip] &= dot(g_xCamera_FrustumPlanes[ip + 2], patch[0].pos) < 0;
-		culled[ip] &= dot(g_xCamera_FrustumPlanes[ip + 2], patch[1].pos) < 0;
-		culled[ip] &= dot(g_xCamera_FrustumPlanes[ip + 2], patch[2].pos) < 0;
+		culled[ip] &= dot(g_xCamera_FrustumPlanes[ip + 2], patch[0].pos) < -rad;
+		culled[ip] &= dot(g_xCamera_FrustumPlanes[ip + 2], patch[1].pos) < -rad;
+		culled[ip] &= dot(g_xCamera_FrustumPlanes[ip + 2], patch[2].pos) < -rad;
 	}
 	if (culled[0] || culled[1] || culled[2] || culled[3]) output.edges[0] = 0;
 #endif
@@ -134,6 +135,18 @@ PixelInput main(ConstantOutput input, float3 uvw : SV_DomainLocation, const Outp
 #endif // OBJECTSHADER_USE_POSITION3D
 
 
+#ifdef OBJECTSHADER_USE_NORMAL
+#ifdef OBJECTSHADER_USE_UVSETS
+	// displacement mapping:[branch]
+	if (GetMaterial().displacementMapping > 0 && GetMaterial().uvset_displacementMap >= 0)
+	{
+		float2 uv = GetMaterial().uvset_displacementMap == 0 ? output.uvsets.xy : output.uvsets.zw;
+		float displacement = texture_displacementmap.SampleLevel(sampler_objectshader, uv, 0).r;
+		displacement *= GetMaterial().displacementMapping;
+		output.pos.xyz += output.nor * displacement;
+	}
+#endif // OBJECTSHADER_USE_UVSETS
+#endif // OBJECTSHADER_USE_NORMAL
 
 
 #ifdef OBJECTSHADER_USE_CLIPPLANE

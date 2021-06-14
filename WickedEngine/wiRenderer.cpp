@@ -507,7 +507,7 @@ const std::vector<CustomShader>& GetCustomShaders()
 }
 
 
-ILTYPES GetILTYPE(RENDERPASS renderPass, bool alphatest, bool transparent)
+ILTYPES GetILTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, bool transparent)
 {
 	ILTYPES realVL = ILTYPE_OBJECT_POS_TEX;
 
@@ -519,13 +519,20 @@ ILTYPES GetILTYPE(RENDERPASS renderPass, bool alphatest, bool transparent)
 		realVL = ILTYPE_OBJECT_COMMON;
 		break;
 	case RENDERPASS_PREPASS:
-		if (alphatest)
+		if (tessellation)
 		{
-			realVL = ILTYPE_OBJECT_POS_PREVPOS_TEX;
+			realVL = ILTYPE_OBJECT_POS_PREVPOS_TEX; // tessellation needs tex because displacement mapping
 		}
 		else
 		{
-			realVL = ILTYPE_OBJECT_POS_PREVPOS;
+			if (alphatest)
+			{
+				realVL = ILTYPE_OBJECT_POS_PREVPOS_TEX;
+			}
+			else
+			{
+				realVL = ILTYPE_OBJECT_POS_PREVPOS;
+			}
 		}
 		break;
 	case RENDERPASS_SHADOW:
@@ -1340,7 +1347,7 @@ void LoadShaders()
 						{
 							const bool transparency = blendMode != BLENDMODE_OPAQUE;
 							SHADERTYPE realVS = GetVSTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency);
-							ILTYPES realVL = GetILTYPE((RENDERPASS)renderPass, alphatest, transparency);
+							ILTYPES realVL = GetILTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency);
 							SHADERTYPE realHS = GetHSTYPE((RENDERPASS)renderPass, tessellation, alphatest);
 							SHADERTYPE realDS = GetDSTYPE((RENDERPASS)renderPass, tessellation, alphatest);
 							SHADERTYPE realGS = GetGSTYPE((RENDERPASS)renderPass, alphatest, transparency);
@@ -1473,7 +1480,7 @@ void LoadShaders()
 	wiJobSystem::Dispatch(ctx, RENDERPASS_COUNT, 1, [](wiJobArgs args) {
 
 		SHADERTYPE realVS = GetVSTYPE((RENDERPASS) args.jobIndex, false, false, false);
-		ILTYPES realVL = GetILTYPE((RENDERPASS)args.jobIndex, false, false);
+		ILTYPES realVL = GetILTYPE((RENDERPASS)args.jobIndex, false, false, false);
 
 		PipelineStateDesc desc;
 		desc.rs = &rasterizers[RSTYPE_FRONT];
@@ -1520,7 +1527,7 @@ void LoadShaders()
 	// Hologram sample shader will be registered as custom shader:
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) {
 		SHADERTYPE realVS = GetVSTYPE(RENDERPASS_MAIN, false, false, true);
-		ILTYPES realVL = GetILTYPE(RENDERPASS_MAIN, false, true);
+		ILTYPES realVL = GetILTYPE(RENDERPASS_MAIN, false, false, true);
 
 		PipelineStateDesc desc;
 		desc.vs = &shaders[realVS];
