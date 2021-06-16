@@ -1385,6 +1385,9 @@ void LoadShaders()
 							case BLENDMODE_PREMULTIPLIED:
 								desc.bs = &blendStates[BSTYPE_PREMULTIPLIED];
 								break;
+							case BLENDMODE_MULTIPLY:
+								desc.bs = &blendStates[BSTYPE_MULTIPLY];
+								break;
 							default:
 								assert(0);
 								break;
@@ -3663,6 +3666,7 @@ void UpdatePerFrameData(
 	}
 
 	frameCB.g_xFrame_Atmosphere = vis.scene->weather.atmosphereParameters;
+	frameCB.g_xFrame_VolumetricClouds = vis.scene->weather.volumetricCloudParameters;
 }
 void UpdateRenderData(
 	const Visibility& vis,
@@ -11160,6 +11164,12 @@ void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resol
 	desc.Format = FORMAT_R16_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.texture_cloudDepth);
 	device->SetName(&res.texture_cloudDepth, "texture_cloudDepth");
+
+	desc.Width /= 2;
+	desc.Height /= 2;
+	desc.Format = FORMAT_R8G8B8A8_UNORM;
+	device->CreateTexture(&desc, nullptr, &res.texture_cloudMask);
+	device->SetName(&res.texture_cloudMask, "texture_cloudMask");
 }
 void Postprocess_VolumetricClouds(
 	const VolumetricCloudResources& res,
@@ -11376,6 +11386,10 @@ void Postprocess_VolumetricClouds(
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
+	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+
+
 	// Cloud pass:
 	{
 		device->EventBegin("Volumetric Cloud Rendering", cmd);
@@ -11438,12 +11452,14 @@ void Postprocess_VolumetricClouds(
 
 		const GPUResource* uavs[] = {
 			&res.texture_reproject[temporal_output],
+			&res.texture_cloudMask,
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Image(&res.texture_reproject[temporal_output], res.texture_reproject[temporal_output].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+				GPUBarrier::Image(&res.texture_cloudMask, res.texture_cloudMask.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -11459,6 +11475,7 @@ void Postprocess_VolumetricClouds(
 			GPUBarrier barriers[] = {
 				GPUBarrier::Memory(),
 				GPUBarrier::Image(&res.texture_reproject[temporal_output], IMAGE_LAYOUT_UNORDERED_ACCESS, res.texture_reproject[temporal_output].desc.layout),
+				GPUBarrier::Image(&res.texture_cloudMask, IMAGE_LAYOUT_UNORDERED_ACCESS, res.texture_cloudMask.desc.layout),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -11466,6 +11483,8 @@ void Postprocess_VolumetricClouds(
 		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
+
+	res.texture_result = res.texture_reproject[temporal_output];
 
 	wiProfiler::EndRange(range);
 	device->EventEnd(cmd);

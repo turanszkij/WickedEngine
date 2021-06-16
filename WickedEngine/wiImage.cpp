@@ -424,6 +424,17 @@ namespace wiImage
 		bd.IndependentBlendEnable = false;
 		blendStates[BLENDMODE_ADDITIVE] = bd;
 
+		bd.RenderTarget[0].BlendEnable = true;
+		bd.RenderTarget[0].SrcBlend = BLEND_ZERO;
+		bd.RenderTarget[0].DestBlend = BLEND_SRC_COLOR;
+		bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
+		bd.RenderTarget[0].SrcBlendAlpha = BLEND_ZERO;
+		bd.RenderTarget[0].DestBlendAlpha = BLEND_SRC_ALPHA;
+		bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
+		bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
+		bd.IndependentBlendEnable = false;
+		blendStates[BLENDMODE_MULTIPLY] = bd;
+
 		static wiEvent::Handle handle = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
 		LoadShaders();
 

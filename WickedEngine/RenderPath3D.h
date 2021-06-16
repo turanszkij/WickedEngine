@@ -45,7 +45,6 @@ private:
 	bool reflectionsEnabled = true;
 	bool shadowsEnabled = true;
 	bool bloomEnabled = true;
-	bool volumetricCloudsEnabled = false;
 	bool colorGradingEnabled = true;
 	bool volumeLightsEnabled = true;
 	bool lightShaftsEnabled = false;
@@ -203,7 +202,6 @@ public:
 	constexpr bool getReflectionsEnabled() const { return reflectionsEnabled; }
 	constexpr bool getFXAAEnabled() const { return fxaaEnabled; }
 	constexpr bool getBloomEnabled() const { return bloomEnabled; }
-	constexpr bool getVolumetricCloudsEnabled() const { return volumetricCloudsEnabled; }
 	constexpr bool getColorGradingEnabled() const { return colorGradingEnabled; }
 	constexpr bool getVolumeLightsEnabled() const { return volumeLightsEnabled; }
 	constexpr bool getLightShaftsEnabled() const { return lightShaftsEnabled; }
@@ -244,7 +242,6 @@ public:
 	constexpr void setReflectionsEnabled(bool value){ reflectionsEnabled = value; }
 	constexpr void setFXAAEnabled(bool value){ fxaaEnabled = value; }
 	constexpr void setBloomEnabled(bool value){ bloomEnabled = value; }
-	constexpr void setVolumetricCloudsEnabled(bool value) { volumetricCloudsEnabled = value; }
 	constexpr void setColorGradingEnabled(bool value){ colorGradingEnabled = value; }
 	constexpr void setVolumeLightsEnabled(bool value){ volumeLightsEnabled = value; }
 	constexpr void setLightShaftsEnabled(bool value){ lightShaftsEnabled = value; }

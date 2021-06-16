@@ -696,7 +696,7 @@ void RenderPath3D::Render() const
 			);
 		}
 
-		if (getVolumetricCloudsEnabled())
+		if (scene->weather.IsVolumetricClouds())
 		{
 			wiRenderer::Postprocess_VolumetricClouds(
 				volumetriccloudResources,
@@ -924,11 +924,11 @@ void RenderPath3D::Render() const
 		RenderOutline(cmd);
 
 		// Upsample + Blend the volumetric clouds on top:
-		if (getVolumetricCloudsEnabled())
+		if (scene->weather.IsVolumetricClouds())
 		{
 			device->EventBegin("Volumetric Clouds Upsample + Blend", cmd);
 			wiRenderer::Postprocess_Upsample_Bilateral(
-				volumetriccloudResources.texture_reproject[device->GetFrameCount() % 2],
+				volumetriccloudResources.texture_result,
 				rtLinearDepth,
 				*GetGbuffer_Read(GBUFFER_COLOR), // only desc is taken if pixel shader upsampling is used
 				cmd,
@@ -1109,6 +1109,16 @@ void RenderPath3D::RenderLightShafts(CommandList cmd) const
 			device->BindViewports(1, &vp, cmd);
 
 			wiRenderer::DrawSun(cmd);
+
+			if (scene->weather.IsVolumetricClouds())
+			{
+				device->EventBegin("Volumetric cloud occlusion mask", cmd);
+				wiImageParams fx;
+				fx.enableFullScreen();
+				fx.blendFlag = BLENDMODE_MULTIPLY;
+				wiImage::Draw(&volumetriccloudResources.texture_cloudMask, fx, cmd);
+				device->EventEnd(cmd);
+			}
 
 			device->RenderPassEnd(cmd);
 		}

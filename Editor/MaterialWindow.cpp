@@ -165,6 +165,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	blendModeComboBox.AddItem("Alpha");
 	blendModeComboBox.AddItem("Premultiplied");
 	blendModeComboBox.AddItem("Additive");
+	blendModeComboBox.AddItem("Multiply");
 	blendModeComboBox.SetEnabled(false);
 	blendModeComboBox.SetTooltip("Set the blend mode of the material.");
 	AddWidget(&blendModeComboBox);

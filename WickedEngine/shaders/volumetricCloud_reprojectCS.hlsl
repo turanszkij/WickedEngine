@@ -6,6 +6,7 @@ TEXTURE2D(cloud_depth, float, TEXSLOT_ONDEMAND1);
 TEXTURE2D(cloud_history, float4, TEXSLOT_ONDEMAND2);
 
 RWTEXTURE2D(output, float4, 0);
+RWTEXTURE2D(output_cloudMask, unorm float4, 1);
 
 
 // The rendering uses a temporal upsampling pass similar to Frostbite. See https://odr.chalmers.se/handle/20.500.12380/241770
@@ -212,4 +213,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	result = is_saturated(prevUV) ? result : current;
 
 	output[DTid.xy] = result;
+
+	[branch]
+	if (DTid.x % 2 == 0 && DTid.y % 2 == 0)
+	{
+		// the mask is half the resolution of the clouds
+		output_cloudMask[DTid.xy / 2] = pow(saturate(1 - result.a), 64);
+	}
 }

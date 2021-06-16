@@ -1,5 +1,6 @@
 This file contains changelog of wiArchive versions
 
+70: serialized VolumetricCloudParameters
 69: serialized AABB:: layerMask and userdata parameters
 68: serialized MaterialComponent SPECULARMAP (for KHR_materials_specular)
 67: ocean water color float3 -> float4 (alpha in effect now)

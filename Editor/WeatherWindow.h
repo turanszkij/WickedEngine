@@ -46,6 +46,11 @@ public:
 	wiComboBox colorComboBox;
 	wiColorPicker colorPicker;
 
+	// volumetric clouds:
+	wiCheckBox volumetricCloudsCheckBox;
+	wiSlider coverageAmountSlider;
+	wiSlider coverageMinimumSlider;
+
 	wiButton preset0Button;
 	wiButton preset1Button;
 	wiButton preset2Button;

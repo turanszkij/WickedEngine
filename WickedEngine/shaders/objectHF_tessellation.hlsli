@@ -137,7 +137,8 @@ PixelInput main(ConstantOutput input, float3 uvw : SV_DomainLocation, const Outp
 
 #ifdef OBJECTSHADER_USE_NORMAL
 #ifdef OBJECTSHADER_USE_UVSETS
-	// displacement mapping:[branch]
+	// displacement mapping:
+	[branch]
 	if (GetMaterial().displacementMapping > 0 && GetMaterial().uvset_displacementMap >= 0)
 	{
 		float2 uv = GetMaterial().uvset_displacementMap == 0 ? output.uvsets.xy : output.uvsets.zw;

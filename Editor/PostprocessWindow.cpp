@@ -50,16 +50,6 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	});
 	AddWidget(&lightShaftsCheckBox);
 
-	volumetricCloudsCheckBox.Create("Volumetric clouds: ");
-	volumetricCloudsCheckBox.SetTooltip("Enable volumetric cloud rendering.");
-	volumetricCloudsCheckBox.SetSize(XMFLOAT2(hei, hei));
-	volumetricCloudsCheckBox.SetPos(XMFLOAT2(x, y += step));
-	volumetricCloudsCheckBox.SetCheck(editor->renderPath->getVolumetricCloudsEnabled());
-	volumetricCloudsCheckBox.OnClick([=](wiEventArgs args) {
-		editor->renderPath->setVolumetricCloudsEnabled(args.bValue);
-		});
-	AddWidget(&volumetricCloudsCheckBox);
-
 	aoComboBox.Create("AO: ");
 	aoComboBox.SetTooltip("Choose Ambient Occlusion type. RTAO is only available if hardware supports ray tracing");
 	aoComboBox.SetScriptTip("RenderPath3D::SetAO(int value)");

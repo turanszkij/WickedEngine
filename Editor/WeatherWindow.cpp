@@ -415,6 +415,36 @@ void WeatherWindow::Create(EditorComponent* editor)
 
 	y += colorPicker.GetScale().y;
 
+
+	volumetricCloudsCheckBox.Create("Volumetric clouds: ");
+	volumetricCloudsCheckBox.SetTooltip("Enable volumetric cloud rendering, which is separate from the simple cloud parameters.");
+	volumetricCloudsCheckBox.SetSize(XMFLOAT2(hei, hei));
+	volumetricCloudsCheckBox.SetPos(XMFLOAT2(x + 280, y += step));
+	volumetricCloudsCheckBox.OnClick([&](wiEventArgs args) {
+		auto& weather = GetWeather();
+		weather.SetVolumetricClouds(args.bValue);
+		});
+	AddWidget(&volumetricCloudsCheckBox);
+
+	coverageAmountSlider.Create(0, 10, 0, 1000, "Coverage amount: ");
+	coverageAmountSlider.SetSize(XMFLOAT2(100, hei));
+	coverageAmountSlider.SetPos(XMFLOAT2(x + 150, y += step));
+	coverageAmountSlider.OnSlide([&](wiEventArgs args) {
+		auto& weather = GetWeather();
+		weather.volumetricCloudParameters.CoverageAmount = args.fValue;
+		});
+	AddWidget(&coverageAmountSlider);
+
+	coverageMinimumSlider.Create(1, 2, 1, 1000, "Coverage minimmum: ");
+	coverageMinimumSlider.SetSize(XMFLOAT2(100, hei));
+	coverageMinimumSlider.SetPos(XMFLOAT2(x + 150, y += step));
+	coverageMinimumSlider.OnSlide([&](wiEventArgs args) {
+		auto& weather = GetWeather();
+		weather.volumetricCloudParameters.CoverageMinimum = args.fValue;
+		});
+	AddWidget(&coverageMinimumSlider);
+
+
 	preset0Button.Create("WeatherPreset - Default");
 	preset0Button.SetTooltip("Apply this weather preset to the world.");
 	preset0Button.SetSize(XMFLOAT2(colorPicker.GetScale().x, hei));
@@ -591,6 +621,10 @@ void WeatherWindow::Update()
 		ocean_heightSlider.SetValue(weather.oceanParameters.waterHeight);
 		ocean_detailSlider.SetValue((float)weather.oceanParameters.surfaceDetail);
 		ocean_toleranceSlider.SetValue(weather.oceanParameters.surfaceDisplacementTolerance);
+
+		volumetricCloudsCheckBox.SetCheck(weather.IsVolumetricClouds());
+		coverageAmountSlider.SetValue(weather.volumetricCloudParameters.CoverageAmount);
+		coverageMinimumSlider.SetValue(weather.volumetricCloudParameters.CoverageMinimum);
 	}
 }
 
