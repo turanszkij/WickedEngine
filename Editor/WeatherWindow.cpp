@@ -383,6 +383,7 @@ void WeatherWindow::Create(EditorComponent* editor)
 	colorComboBox.AddItem("Horizon color");
 	colorComboBox.AddItem("Zenith color");
 	colorComboBox.AddItem("Ocean color");
+	colorComboBox.AddItem("V. Cloud color");
 	colorComboBox.SetTooltip("Choose the destination data of the color picker.");
 	AddWidget(&colorComboBox);
 
@@ -408,6 +409,9 @@ void WeatherWindow::Create(EditorComponent* editor)
 			break;
 		case 3:
 			weather.oceanParameters.waterColor = args.color.toFloat4();
+			break;
+		case 4:
+			weather.volumetricCloudParameters.Albedo = args.color.toFloat3();
 			break;
 		}
 	});
@@ -606,6 +610,9 @@ void WeatherWindow::Update()
 			break;
 		case 3:
 			colorPicker.SetPickColor(wiColor::fromFloat4(weather.oceanParameters.waterColor));
+			break;
+		case 4:
+			colorPicker.SetPickColor(wiColor::fromFloat3(weather.volumetricCloudParameters.Albedo));
 			break;
 		}
 

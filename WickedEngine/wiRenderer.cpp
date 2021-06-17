@@ -11150,8 +11150,8 @@ void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resol
 {
 	TextureDesc desc;
 	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-	desc.Width = resolution.x / 2;
-	desc.Height = resolution.y / 2;
+	desc.Width = resolution.x / 4;
+	desc.Height = resolution.y / 4;
 	desc.Format = FORMAT_R16G16B16A16_FLOAT;
 	desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
 	device->CreateTexture(&desc, nullptr, &res.texture_cloudRender);
@@ -11180,6 +11180,8 @@ void Postprocess_VolumetricClouds(
 {
 	device->EventBegin("Postprocess_VolumetricClouds", cmd);
 	auto range = wiProfiler::BeginRangeGPU("Volumetric Clouds", cmd);
+
+	BindCommonResources(cmd);
 
 	static Texture texture_shapeNoise;
 	static Texture texture_detailNoise;
@@ -11483,8 +11485,6 @@ void Postprocess_VolumetricClouds(
 		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
-
-	res.texture_result = res.texture_reproject[temporal_output];
 
 	wiProfiler::EndRange(range);
 	device->EventEnd(cmd);

@@ -928,7 +928,7 @@ void RenderPath3D::Render() const
 		{
 			device->EventBegin("Volumetric Clouds Upsample + Blend", cmd);
 			wiRenderer::Postprocess_Upsample_Bilateral(
-				volumetriccloudResources.texture_result,
+				volumetriccloudResources.texture_reproject[device->GetFrameCount() % 2],
 				rtLinearDepth,
 				*GetGbuffer_Read(GBUFFER_COLOR), // only desc is taken if pixel shader upsampling is used
 				cmd,

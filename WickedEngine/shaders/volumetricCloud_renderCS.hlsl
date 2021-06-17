@@ -667,24 +667,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		steps = g_xFrame_VolumetricClouds.MaxStepCount * saturate((tMax - tMin) * (1.0 / g_xFrame_VolumetricClouds.InverseDistanceStepCount));
 		stepSize = (tMax - tMin) / steps;
 
-
-#if 0 // Offset
-		
-		// Based on: https://github.com/yangrc1234/VolumeCloud
-		const float3x3 bayerOffsetMatrix = { 0.0, 7.0, 3.0, 6.0, 5.0, 2.0, 4.0, 1.0, 8.0, };
-		uint2 pixelID = uint2(fmod(DTid.xy, 3.0));
-		
-		float4 haltonSequence = xPPParams0;
-		
-		float bayerOffset = (bayerOffsetMatrix[pixelID.x][pixelID.y]) / 9.0;
-		float offset = -fmod(haltonSequence.x + bayerOffset, 1.0);
-		
-#else
-		
-		// Interleaved noise looks better imo
-		float offset = InterleavedGradientNoise(DTid.xy, g_xFrame_FrameCount % 16);
-
-#endif
+		//float offset = dither(DTid.xy + GetTemporalAASampleRotation());
+		float offset = blue_noise(DTid.xy).x;
+		//float offset = InterleavedGradientNoise(DTid.xy, g_xFrame_FrameCount % 16);
 		
         //t = tMin + 0.5 * stepSize;
 		t = tMin + offset * stepSize * g_xFrame_VolumetricClouds.BigStepMarch; // offset avg = 0.5
