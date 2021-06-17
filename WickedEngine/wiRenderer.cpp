@@ -2980,7 +2980,7 @@ void RenderMeshes(
 			{
 				continue;
 			}
-			const MaterialComponent& material = *vis.scene->materials.GetComponent(subset.materialID);
+			const MaterialComponent& material = vis.scene->materials[subset.materialIndex];
 
 			bool subsetRenderable = renderTypeFlags & material.GetRenderTypes();
 
@@ -3002,7 +3002,7 @@ void RenderMeshes(
 					switch (renderPass)
 					{
 					case RENDERPASS_MAIN:
-						pso = &PSO_object_wire;
+						pso = tessellatorRequested ? &PSO_object_wire_tessellation : &PSO_object_wire;
 					}
 				}
 				else if (mesh.IsTerrain())
