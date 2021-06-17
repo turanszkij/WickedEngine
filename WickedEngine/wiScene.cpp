@@ -450,7 +450,7 @@ namespace wiScene
 			bd.CPUAccessFlags = 0;
 			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
-			if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+			if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_PIPELINE) || device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
 			{
 				bd.MiscFlags |= RESOURCE_MISC_RAY_TRACING;
 			}
@@ -602,7 +602,7 @@ namespace wiScene
 			}
 
 			bd.ByteWidth = (uint32_t)(sizeof(Vertex_POS) * vertex_positions.size());
-			if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+			if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_PIPELINE) || device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
 			{
 				bd.MiscFlags |= RESOURCE_MISC_RAY_TRACING;
 			}
@@ -730,7 +730,7 @@ namespace wiScene
 		vertexBuffer_PRE = GPUBuffer();
 
 
-		if (wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_PIPELINE) || device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
 		{
 			BLAS_state = BLAS_STATE_NEEDS_REBUILD;
 
@@ -1451,7 +1451,7 @@ namespace wiScene
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
-		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_PIPELINE) || device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
 		{
 			TLAS_instances.resize(objects.GetCount() * device->GetTopLevelAccelerationStructureInstanceSize());
 		}
@@ -1546,7 +1546,7 @@ namespace wiScene
 			bounds = AABB::Merge(bounds, group_bound);
 		}
 
-		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_PIPELINE) || device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
 		{
 			// Recreate top level acceleration structure if the object count changed:
 			if (objects.GetCount() > 0 && objects.GetCount() != TLAS.desc.toplevel.count)

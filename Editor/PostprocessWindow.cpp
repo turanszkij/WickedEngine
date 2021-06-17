@@ -142,7 +142,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 		editor->renderPath->setRaytracedReflectionsEnabled(args.bValue);
 		});
 	AddWidget(&raytracedReflectionsCheckBox);
-	raytracedReflectionsCheckBox.SetEnabled(wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING));
+	raytracedReflectionsCheckBox.SetEnabled(wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_PIPELINE) && wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_GEOMETRYINDEX));
 
 	screenSpaceShadowsCheckBox.Create("SS Shadows: ");
 	screenSpaceShadowsCheckBox.SetTooltip("Enable screen space contact shadows. This can add small shadows details to shadow maps in screen space.");
