@@ -1562,6 +1562,11 @@ void LoadShaders()
 		desc.dss = &depthStencils[DSSTYPE_DEFAULT];
 		desc.il = &inputLayouts[ILTYPE_OBJECT_POS_TEX];
 
+		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
+		{
+			desc.il = nullptr;
+		}
+
 		device->CreatePipelineState(&desc, &PSO_object_wire);
 
 		desc.pt = PATCHLIST;
