@@ -465,7 +465,7 @@ inline float4 unpack_rgba(in uint value)
 	return retVal;
 }
 
-inline uint2 pack_half2(in float2 value)
+inline uint pack_half2(in float2 value)
 {
 	uint retVal = 0;
 	retVal = f32tof16(value.x) | (f32tof16(value.y) << 16u);
@@ -507,6 +507,21 @@ inline float4 unpack_half4(in uint2 value)
 	retVal.y = f16tof32(value.x >> 16u);
 	retVal.z = f16tof32(value.y);
 	retVal.w = f16tof32(value.y >> 16u);
+	return retVal;
+}
+
+inline uint pack_pixel(uint2 pixel)
+{
+	uint retVal = 0;
+	retVal |= pixel.x & 0xFFFF;
+	retVal |= (pixel.y & 0xFFFF) << 16;
+	return retVal;
+}
+inline uint2 unpack_pixel(uint value)
+{
+	uint2 retVal;
+	retVal.x = value & 0xFFFF;
+	retVal.y = (value >> 16) & 0xFFFF;
 	return retVal;
 }
 
