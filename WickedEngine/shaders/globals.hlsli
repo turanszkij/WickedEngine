@@ -465,7 +465,7 @@ inline float4 unpack_rgba(in uint value)
 	return retVal;
 }
 
-inline uint2 pack_half2(in float2 value)
+inline uint pack_half2(in float2 value)
 {
 	uint retVal = 0;
 	retVal = f32tof16(value.x) | (f32tof16(value.y) << 16u);
