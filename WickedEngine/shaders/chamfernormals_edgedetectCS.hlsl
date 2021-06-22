@@ -35,7 +35,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			{
 				float3 edgeNormal = normalize(normal.xyz + n.xyz);
 
-				texture_closestEdge[DTid.xy] = uint2(pack_unitvector(edgeNormal), pack_pixel(pixel2));
+				texture_closestEdge[DTid.xy] = uint2(pack_unitvector(edgeNormal), pack_pixel(DTid.xy));
 				return;
 			}
 		}
