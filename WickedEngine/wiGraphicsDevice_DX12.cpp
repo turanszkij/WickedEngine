@@ -2790,6 +2790,10 @@ using namespace DX12_Internal;
 			device->CreateUnorderedAccessView(nullptr, nullptr, &uav_desc, nullUAV_texture3d);
 		}
 
+
+		hr = queues[QUEUE_GRAPHICS].queue->GetTimestampFrequency(&TIMESTAMP_FREQUENCY);
+		assert(SUCCEEDED(hr));
+
 		wiBackLog::post("Created GraphicsDevice_DX12");
 	}
 	GraphicsDevice_DX12::~GraphicsDevice_DX12()
@@ -5665,9 +5669,6 @@ using namespace DX12_Internal;
 			hr = queues[QUEUE_GRAPHICS].queue->Signal(descriptorheap_sam.fence.Get(), descriptorheap_sam.fenceValue);
 			assert(SUCCEEDED(hr));
 			descriptorheap_sam.cached_completedValue = descriptorheap_sam.fence->GetCompletedValue();
-
-			hr = queues[QUEUE_GRAPHICS].queue->GetTimestampFrequency(&TIMESTAMP_FREQUENCY);
-			assert(SUCCEEDED(hr));
 
 			allocationhandler->Update(FRAMECOUNT, BUFFERCOUNT);
 		}

@@ -159,6 +159,25 @@ protected:
 
             args.Handled(true);
         }
+
+		if (args.EventType() == CoreAcceleratorKeyEventType::Character)
+		{
+			char c = (char)args.VirtualKey();
+
+			if (c == '\b')
+			{
+				if (wiBackLog::isActive())
+					wiBackLog::deletefromInput();
+				wiTextInputField::DeleteFromInput();
+			}
+			else
+			{
+				if (wiBackLog::isActive())
+					wiBackLog::input(c);
+				wiTextInputField::AddInput(c);
+			}
+
+		}
     }
 
     void OnDpiChanged(DisplayInformation const & sender, IInspectable const & /*args*/)
