@@ -4613,10 +4613,10 @@ void DrawLensFlares(
 			if (light.GetType() == LightComponent::DIRECTIONAL)
 			{
 				// directional light flare will be placed at infinite position along direction vector:
-				XMVECTOR D = XMVector3Normalize(-XMVector3Transform(XMVectorSet(0, -vis.camera->zFarP, 0, 0), XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))));
-				if (XMVectorGetX(XMVector3Dot(D, XMVectorSet(0, 1, 0, 0))) < 0)
+				XMVECTOR D = XMVector3Normalize(-XMVector3Transform(XMVectorSet(0, 1, 0, 1), XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))));
+				if (XMVectorGetX(XMVector3Dot(D, XMVectorSet(0, -1, 0, 0))) < 0)
 					continue; // sun below horizon, skip lensflare
-				POS = vis.camera->GetEye() + D;
+				POS = vis.camera->GetEye() + D * -vis.camera->zFarP;
 			}
 			else
 			{
