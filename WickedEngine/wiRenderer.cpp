@@ -4610,17 +4610,18 @@ void DrawLensFlares(
 		{
 			XMVECTOR POS;
 
-			if (light.GetType() == LightComponent::POINT || light.GetType() == LightComponent::SPOT)
+			if (light.GetType() == LightComponent::DIRECTIONAL)
 			{
-				// point and spotlight flare will be placed to the source position:
-				POS = XMLoadFloat3(&light.position);
+				// directional light flare will be placed at infinite position along direction vector:
+				XMVECTOR D = XMVector3Normalize(-XMVector3Transform(XMVectorSet(0, -vis.camera->zFarP, 0, 0), XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))));
+				if (XMVectorGetX(XMVector3Dot(D, XMVectorSet(0, 1, 0, 0))) < 0)
+					continue; // sun below horizon, skip lensflare
+				POS = vis.camera->GetEye() + D;
 			}
 			else
 			{
-				// directional light flare will be placed at infinite position along direction vector:
-				POS = 
-					vis.camera->GetEye() + 
-					XMVector3Normalize(-XMVector3Transform(XMVectorSet(0, -1, 0, 1), XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation)))) * vis.camera->zFarP;
+				// point and spotlight flare will be placed to the source position:
+				POS = XMLoadFloat3(&light.position);
 			}
 
 			if (XMVectorGetX(XMVector3Dot(XMVectorSubtract(POS, vis.camera->GetEye()), vis.camera->GetAt())) > 0) // check if the camera is facing towards the flare or not
