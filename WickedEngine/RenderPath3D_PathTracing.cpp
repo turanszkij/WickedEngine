@@ -144,10 +144,8 @@ void RenderPath3D_PathTracing::Update(float dt)
 		resetProgress();
 	}
 
-	if (sam == 0)
-	{
-		scene->InvalidateBVH();
-	}
+	scene->SetAccelerationStructureUpdateRequested(sam == 0);
+	setSceneUpdateEnabled(sam == 0);
 
 	RenderPath3D::Update(dt);
 
@@ -255,7 +253,10 @@ void RenderPath3D_PathTracing::Render() const
 
 			wiRenderer::UpdateRenderData(visibility_main, frameCB, cmd);
 
-			wiRenderer::UpdateRaytracingAccelerationStructures(*scene, cmd);
+			if (scene->IsAccelerationStructureUpdateRequested())
+			{
+				wiRenderer::UpdateRaytracingAccelerationStructures(*scene, cmd);
+			}
 			});
 
 		// Main scene:

@@ -526,6 +526,13 @@ void RenderPath3D::Update(float dt)
 	if (getSceneUpdateEnabled())
 	{
 		scene->Update(dt * wiRenderer::GetGameSpeed());
+
+		if (wiRenderer::GetRaytracedShadowsEnabled() ||
+			getAO() == AO_RTAO ||
+			getRaytracedReflectionEnabled())
+		{
+			scene->SetAccelerationStructureUpdateRequested(true);
+		}
 	}
 
 	// Frustum culling for main camera:
@@ -596,15 +603,18 @@ void RenderPath3D::Render() const
 		RenderFrameSetUp(cmd);
 		});
 
-	// Acceleration structures:
-	//	async compute parallel with depth prepass
-	cmd = device->BeginCommandList(QUEUE_COMPUTE); 
-	device->WaitCommandList(cmd, cmd_prepareframe);
-	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
+	if (scene->IsAccelerationStructureUpdateRequested())
+	{
+		// Acceleration structures:
+		//	async compute parallel with depth prepass
+		cmd = device->BeginCommandList(QUEUE_COMPUTE);
+		device->WaitCommandList(cmd, cmd_prepareframe);
+		wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
-		wiRenderer::UpdateRaytracingAccelerationStructures(*scene, cmd);
+			wiRenderer::UpdateRaytracingAccelerationStructures(*scene, cmd);
 
-		});
+			});
+	}
 
 	static const uint32_t drawscene_flags =
 		wiRenderer::DRAWSCENE_OPAQUE |

@@ -1280,18 +1280,17 @@ namespace wiScene
 		};
 		uint32_t flags = EMPTY;
 
+
 		wiSpinLock locker;
 		AABB bounds;
 		std::vector<AABB> parallel_bounds;
 		WeatherComponent weather;
 		wiGraphics::RaytracingAccelerationStructure TLAS;
 		std::vector<uint8_t> TLAS_instances;
-
 		wiGPUBVH BVH; // this is for non-hardware accelerated raytracing
-		mutable bool BVH_invalid = false;
-		void InvalidateBVH() {
-			BVH_invalid = true;
-		}
+		mutable bool acceleration_structure_update_requested = false;
+		void SetAccelerationStructureUpdateRequested(bool value = true) { acceleration_structure_update_requested = value; }
+		bool IsAccelerationStructureUpdateRequested() const { return acceleration_structure_update_requested; }
 
 		// Occlusion query state:
 		wiGraphics::GPUQueryHeap queryHeap[arraysize(ObjectComponent::occlusionQueries)];

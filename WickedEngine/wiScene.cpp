@@ -1569,7 +1569,7 @@ namespace wiScene
 
 		if (lightmap_refresh_needed.load())
 		{
-			InvalidateBVH();
+			SetAccelerationStructureUpdateRequested(true);
 		}
 		if (lightmap_repack_needed.load())
 		{

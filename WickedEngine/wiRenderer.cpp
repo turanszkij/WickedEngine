@@ -3534,7 +3534,7 @@ void UpdatePerFrameData(
 
 	wiJobSystem::Wait(ctx);
 
-	if (!device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_PIPELINE) && !device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE) && scene.BVH_invalid)
+	if (!device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_PIPELINE) && !device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE) && scene.IsAccelerationStructureUpdateRequested())
 	{
 		scene.BVH.Update(scene);
 	}
@@ -4275,12 +4275,10 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 	}
 	else
 	{
-		if (scene.BVH_invalid)
-		{
-			scene.BVH_invalid = false;
-			scene.BVH.Build(scene, cmd);
-		}
+		scene.BVH.Build(scene, cmd);
 	}
+
+	scene.acceleration_structure_update_requested = false;
 }
 void OcclusionCulling_Render(const CameraComponent& camera_previous, const Visibility& vis, CommandList cmd)
 {
@@ -7800,6 +7798,8 @@ void RefreshLightmapAtlas(const Scene& scene, CommandList cmd)
 		for (uint32_t i = 0; i < scene.objects.GetCount(); ++i)
 		{
 			const ObjectComponent& object = scene.objects[i];
+			if (!object.lightmap.IsValid())
+				continue;
 
 			if (object.IsLightmapRenderRequested())
 			{

@@ -710,7 +710,7 @@ void ObjectWindow::Create(EditorComponent* editor)
 			x->SetLightmapRenderRequest(true);
 		}
 
-		scene.InvalidateBVH();
+		scene.SetAccelerationStructureUpdateRequested(true);
 
 	});
 	AddWidget(&generateLightmapButton);
