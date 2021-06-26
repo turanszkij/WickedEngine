@@ -4,7 +4,7 @@
 TEXTURE2D(input, float4, TEXSLOT_ONDEMAND0);
 TEXTURE2D(texture_closestEdge, uint2, TEXSLOT_ONDEMAND1);
 
-RWTEXTURE2D(output_closestEdge, uint2, 1);
+RWTEXTURE2D(output_closestEdge, uint2, 0);
 
 static const int2 offsets[9] = {
 	int2(-1, -1), int2(-1, 0), int2(-1, 1),

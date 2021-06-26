@@ -623,14 +623,14 @@ namespace wiRenderer
 	struct ChamferNormalsResources
 	{
 		wiGraphics::Texture texture_closestEdge[2];
+		wiGraphics::Texture texture_edgeNormals;
 	};
 	void CreateChamferNormalsResources(ChamferNormalsResources& res, XMUINT2 resolution);
 	void Postprocess_ChamferNormals(
 		const ChamferNormalsResources& res,
-		const wiGraphics::Texture& input,
+		const wiGraphics::Texture& input_output_normals,
 		const wiGraphics::Texture& depthbuffer,
 		const wiGraphics::Texture& lineardepth,
-		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd
 	);
 

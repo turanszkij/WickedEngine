@@ -1307,6 +1307,7 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_CHAMFERNORMALS_EDGEDETECT], "chamfernormals_edgedetectCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_CHAMFERNORMALS_JUMPFLOOD], "chamfernormals_jumpfloodCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_CHAMFERNORMALS_OUTPUT], "chamfernormals_outputCS.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_CHAMFERNORMALS_CORNERS], "chamfernormals_cornersCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_SCREENSPACESHADOW], "screenspaceshadowCS.cso"); });
 
 	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
@@ -12126,13 +12127,17 @@ void CreateChamferNormalsResources(ChamferNormalsResources& res, XMUINT2 resolut
 	device->SetName(&res.texture_closestEdge[0], "texture_closestEdge[0]");
 	device->CreateTexture(&desc, nullptr, &res.texture_closestEdge[1]);
 	device->SetName(&res.texture_closestEdge[1], "texture_closestEdge[1]");
+
+	desc.Format = FORMAT_R8G8B8A8_UNORM;
+	desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
+	device->CreateTexture(&desc, nullptr, &res.texture_edgeNormals);
+	device->SetName(&res.texture_edgeNormals, "texture_edgeNormals");
 }
 void Postprocess_ChamferNormals(
 	const ChamferNormalsResources& res,
-	const Texture& input,
+	const Texture& input_output_normals,
 	const Texture& depthbuffer,
 	const Texture& lineardepth,
-	const Texture& output,
 	CommandList cmd
 )
 {
@@ -12141,9 +12146,9 @@ void Postprocess_ChamferNormals(
 
 	device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
-	device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(CS, &input_output_normals, TEXSLOT_ONDEMAND0, cmd);
 
-	const TextureDesc& desc = output.GetDesc();
+	const TextureDesc& desc = input_output_normals.GetDesc();
 
 	PostProcessCB cb;
 	cb.xPPResolution.x = desc.Width;
@@ -12153,17 +12158,12 @@ void Postprocess_ChamferNormals(
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
-	const GPUResource* uavs[] = {
-		&output,
-		&res.texture_closestEdge[0],
-	};
-	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+	device->BindUAV(CS, &res.texture_closestEdge[0], 0, cmd);
 
 	// 1.) Edge detection
 
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&output, output.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
 			GPUBarrier::Image(&res.texture_closestEdge[0], res.texture_closestEdge[0].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
@@ -12203,7 +12203,7 @@ void Postprocess_ChamferNormals(
 
 		device->UnbindResources(TEXSLOT_ONDEMAND1, 1, cmd);
 
-		device->BindUAV(CS, _write, 1, cmd);
+		device->BindUAV(CS, _write, 0, cmd);
 		device->BindResource(CS, _read, TEXSLOT_ONDEMAND1, cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_CHAMFERNORMALS_JUMPFLOOD], cmd);
@@ -12227,8 +12227,15 @@ void Postprocess_ChamferNormals(
 
 	// 3.) Twist normals towards closest edge
 
-	device->UnbindUAVs(1, 1, cmd);
+	device->BindUAV(CS, &res.texture_edgeNormals, 0, cmd);
 	device->BindResource(CS, _read, TEXSLOT_ONDEMAND1, cmd);
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&res.texture_edgeNormals, res.texture_edgeNormals.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_CHAMFERNORMALS_OUTPUT], cmd);
 	device->Dispatch(
@@ -12241,12 +12248,40 @@ void Postprocess_ChamferNormals(
 	{
 		GPUBarrier barriers[] = {
 			GPUBarrier::Memory(),
-			GPUBarrier::Image(&output, IMAGE_LAYOUT_UNORDERED_ACCESS, output.desc.layout),
+			GPUBarrier::Image(&res.texture_edgeNormals, IMAGE_LAYOUT_UNORDERED_ACCESS, res.texture_edgeNormals.desc.layout),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
-	device->UnbindUAVs(0, arraysize(uavs), cmd);
+	// 4.) Blend Corners
+
+	device->BindUAV(CS, &input_output_normals, 0, cmd);
+	device->BindResource(CS, &res.texture_edgeNormals, TEXSLOT_ONDEMAND0, cmd);
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&input_output_normals, input_output_normals.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_CHAMFERNORMALS_CORNERS], cmd);
+	device->Dispatch(
+		(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+		1,
+		cmd
+	);
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Memory(),
+			GPUBarrier::Image(&input_output_normals, IMAGE_LAYOUT_UNORDERED_ACCESS, input_output_normals.desc.layout),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+	device->UnbindUAVs(0, 1, cmd);
 
 	wiProfiler::EndRange(range);
 	device->EventEnd(cmd);

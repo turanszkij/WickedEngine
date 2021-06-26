@@ -998,6 +998,9 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)chamfernormals_jumpfloodCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)chamfernormals_cornersCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)ConstantBufferMapping.h">

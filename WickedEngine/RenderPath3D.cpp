@@ -34,7 +34,7 @@ void RenderPath3D::ResizeBuffers()
 		device->CreateTexture(&desc, nullptr, &rtGbuffer[GBUFFER_COLOR]);
 		device->SetName(&rtGbuffer[GBUFFER_COLOR], "rtGbuffer[GBUFFER_COLOR]");
 
-		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
+		//desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		desc.Format = FORMAT_R8G8B8A8_UNORM;
 		device->CreateTexture(&desc, nullptr, &rtGbuffer[GBUFFER_NORMAL_ROUGHNESS]);
 		device->SetName(&rtGbuffer[GBUFFER_NORMAL_ROUGHNESS], "rtGbuffer[GBUFFER_NORMAL_ROUGHNESS]");
@@ -235,15 +235,6 @@ void RenderPath3D::ResizeBuffers()
 		initData.SysMemPitch = sizeof(uint8_t) * desc.Width;
 		device->CreateTexture(&desc, &initData, &rtShadingRate);
 		device->SetName(&rtShadingRate, "rtShadingRate");
-	}
-	{
-		TextureDesc desc;
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.Format = FORMAT_R8G8B8A8_UNORM;
-		desc.Width = internalResolution.x;
-		desc.Height = internalResolution.y;
-		device->CreateTexture(&desc, nullptr, &rtChamferedNormals);
-		device->SetName(&rtChamferedNormals, "rtChamferedNormals");
 	}
 
 	// Depth buffers:
@@ -891,19 +882,12 @@ void RenderPath3D::Render() const
 		//	because it depends on shadow maps, and envmaps
 		if (getRaytracedReflectionEnabled())
 		{
-			Texture gb[] = {
-				*GetGbuffer_Read(GBUFFER_COLOR),
-				*GetGbuffer_Read(GBUFFER_NORMAL_ROUGHNESS),
-				*GetGbuffer_Read(GBUFFER_VELOCITY),
-			};
-			gb[GBUFFER_NORMAL_ROUGHNESS] = rtChamferedNormals;
-
 			wiRenderer::Postprocess_RTReflection(
 				rtreflectionResources,
 				*scene,
 				depthBuffer_Copy,
 				depthBuffer_Copy1,
-				gb,
+				GetGbuffer_Read(),
 				rtSSR,
 				cmd
 			);
@@ -962,7 +946,6 @@ void RenderPath3D::Render() const
 			*GetGbuffer_Read(GBUFFER_NORMAL_ROUGHNESS),
 			depthBuffer_Copy,
 			rtLinearDepth,
-			rtChamferedNormals,
 			cmd
 		);
 

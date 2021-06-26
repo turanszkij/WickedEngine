@@ -1941,7 +1941,7 @@ void EditorComponent::Compose(CommandList cmd) const
 		wiImageParams fx;
 		fx.enableFullScreen();
 		fx.blendFlag = BLENDMODE_OPAQUE;
-		wiImage::Draw(&renderPath->rtChamferedNormals, fx, cmd);
+		wiImage::Draw(renderPath->GetGbuffer_Read(GBUFFER_NORMAL_ROUGHNESS), fx, cmd);
 	}
 
 	if (cinemaModeCheckBox.GetCheck())
