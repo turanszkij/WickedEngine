@@ -14,15 +14,13 @@ void RenderPath2D::ResizeBuffers()
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	FORMAT defaultTextureFormat = FORMAT_R8G8B8A8_UNORM;
-
 	const Texture* dsv = GetDepthStencil();
 	if(dsv != nullptr && (resolutionScale != 1.0f ||  dsv->GetDesc().SampleCount > 1))
 	{
 		TextureDesc desc = GetDepthStencil()->GetDesc();
 		desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
-		desc.Format = defaultTextureFormat;
+		desc.Format = FORMAT_R8G8B8A8_UNORM;
 		device->CreateTexture(&desc, nullptr, &rtStenciled);
 		device->SetName(&rtStenciled, "rtStenciled");
 
@@ -41,7 +39,7 @@ void RenderPath2D::ResizeBuffers()
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
-		desc.Format = defaultTextureFormat;
+		desc.Format = FORMAT_R8G8B8A8_UNORM;
 		desc.Width = GetPhysicalWidth();
 		desc.Height = GetPhysicalHeight();
 		device->CreateTexture(&desc, nullptr, &rtFinal);

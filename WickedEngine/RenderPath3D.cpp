@@ -12,7 +12,6 @@ void RenderPath3D::ResizeBuffers()
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	FORMAT defaultTextureFormat = FORMAT_R8G8B8A8_UNORM;
 	XMUINT2 internalResolution = GetInternalResolution();
 
 	camera->CreatePerspective((float)internalResolution.x, (float)internalResolution.y, camera->zNearP, camera->zFarP);
@@ -146,7 +145,7 @@ void RenderPath3D::ResizeBuffers()
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
-		desc.Format = defaultTextureFormat;
+		desc.Format = FORMAT_R11G11B10_FLOAT;
 		desc.Width = internalResolution.x;
 		desc.Height = internalResolution.y;
 		desc.SampleCount = getMSAASampleCount();
@@ -192,7 +191,7 @@ void RenderPath3D::ResizeBuffers()
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.Format = defaultTextureFormat;
+		desc.Format = FORMAT_R10G10B10A2_UNORM;
 		desc.Width = internalResolution.x;
 		desc.Height = internalResolution.y;
 		device->CreateTexture(&desc, nullptr, &rtPostprocess_LDR[0]);
