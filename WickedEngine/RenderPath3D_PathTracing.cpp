@@ -43,7 +43,7 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	XMUINT2 internalResolution = GetInternalResolution();
-	FORMAT defaultTextureFormat = FORMAT_R10G10B10A2_UNORM;
+	FORMAT defaultTextureFormat = FORMAT_R8G8B8A8_UNORM;
 
 	{
 		TextureDesc desc;

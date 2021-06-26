@@ -14,7 +14,7 @@ void RenderPath2D::ResizeBuffers()
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	FORMAT defaultTextureFormat = FORMAT_R10G10B10A2_UNORM;
+	FORMAT defaultTextureFormat = FORMAT_R8G8B8A8_UNORM;
 
 	const Texture* dsv = GetDepthStencil();
 	if(dsv != nullptr && (resolutionScale != 1.0f ||  dsv->GetDesc().SampleCount > 1))
