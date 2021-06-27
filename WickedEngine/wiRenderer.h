@@ -247,7 +247,8 @@ namespace wiRenderer
 	void DrawLensFlares(
 		const Visibility& vis,
 		const wiGraphics::Texture& depthbuffer,
-		wiGraphics::CommandList cmd
+		wiGraphics::CommandList cmd,
+		const wiGraphics::Texture* texture_directional_occlusion = nullptr
 	);
 	// Call once per frame to re-render out of date environment probes
 	void RefreshEnvProbes(const Visibility& vis, wiGraphics::CommandList cmd);

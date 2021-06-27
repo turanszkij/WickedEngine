@@ -731,8 +731,10 @@ CBUFFER(VolumeLightCB, CBSLOT_RENDERER_VOLUMELIGHT)
 
 CBUFFER(LensFlareCB, CBSLOT_RENDERER_LENSFLARE)
 {
-	float4		xSunPos; // light position
-	float4		xScreen; // screen dimensions
+	float3 xLensFlarePos;
+	float xLensFlareOffset;
+	float2 xLensFlareSize;
+	float2 xLensFlare_padding;
 };
 
 struct CubemapRenderCam

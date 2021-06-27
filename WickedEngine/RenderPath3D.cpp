@@ -1298,7 +1298,12 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 
 	if (getLensFlareEnabled())
 	{
-		wiRenderer::DrawLensFlares(visibility_main, depthBuffer_Copy, cmd);
+		wiRenderer::DrawLensFlares(
+			visibility_main,
+			depthBuffer_Copy,
+			cmd,
+			scene->weather.IsVolumetricClouds() ? &volumetriccloudResources.texture_cloudMask : nullptr
+		);
 	}
 
 	wiRenderer::DrawDebugWorld(*scene, *camera, *this, cmd);
