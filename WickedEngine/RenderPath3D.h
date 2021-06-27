@@ -116,6 +116,7 @@ public:
 	wiRenderer::DepthOfFieldResources depthoffieldResources;
 	wiRenderer::MotionBlurResources motionblurResources;
 	wiRenderer::VolumetricCloudResources volumetriccloudResources;
+	wiRenderer::VolumetricCloudResources volumetriccloudResources_reflection;
 	wiRenderer::BloomResources bloomResources;
 
 	const constexpr wiGraphics::Texture* GetGbuffer_Read() const
@@ -167,6 +168,7 @@ public:
 	wiScene::CameraComponent* camera = &wiScene::GetCamera();
 	wiScene::CameraComponent camera_previous;
 	wiScene::CameraComponent camera_reflection;
+	wiScene::CameraComponent camera_reflection_previous;
 
 	wiScene::Scene* scene = &wiScene::GetScene();
 	wiRenderer::Visibility visibility_main;

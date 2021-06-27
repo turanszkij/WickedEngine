@@ -494,6 +494,7 @@ void RenderPath3D::ResizeBuffers()
 	wiRenderer::CreateDepthOfFieldResources(depthoffieldResources, internalResolution);
 	wiRenderer::CreateMotionBlurResources(motionblurResources, internalResolution);
 	wiRenderer::CreateVolumetricCloudResources(volumetriccloudResources, internalResolution);
+	wiRenderer::CreateVolumetricCloudResources(volumetriccloudResources_reflection, XMUINT2(depthBuffer_Reflection.desc.Width, depthBuffer_Reflection.desc.Height));
 	wiRenderer::CreateBloomResources(bloomResources, internalResolution);
 
 	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
@@ -511,6 +512,7 @@ void RenderPath3D::ResizeBuffers()
 void RenderPath3D::PreUpdate()
 {
 	camera_previous = *camera;
+	camera_reflection_previous = camera_reflection;
 }
 
 void RenderPath3D::Update(float dt)
@@ -709,7 +711,6 @@ void RenderPath3D::Render() const
 		{
 			wiRenderer::Postprocess_VolumetricClouds(
 				volumetriccloudResources,
-				rtLinearDepth,
 				depthBuffer_Copy,
 				cmd
 			);
@@ -787,9 +788,9 @@ void RenderPath3D::Render() const
 			});
 	}
 
-	// Planar reflections depth prepass:
 	if (visibility_main.IsRequestedPlanarReflections())
 	{
+		// Planar reflections depth prepass:
 		cmd = device->BeginCommandList();
 		wiJobSystem::Execute(ctx, [cmd, this](wiJobArgs args) {
 
@@ -797,7 +798,7 @@ void RenderPath3D::Render() const
 
 			wiRenderer::UpdateCameraCB(
 				camera_reflection,
-				camera_reflection,
+				camera_reflection_previous,
 				camera_reflection,
 				cmd
 			);
@@ -816,15 +817,21 @@ void RenderPath3D::Render() const
 
 			device->RenderPassEnd(cmd);
 
+			if (scene->weather.IsVolumetricClouds())
+			{
+				wiRenderer::Postprocess_VolumetricClouds(
+					volumetriccloudResources_reflection,
+					depthBuffer_Reflection,
+					cmd
+				);
+			}
+
 			wiProfiler::EndRange(range); // Planar Reflections
 			device->EventEnd(cmd);
 
 			});
-	}
 
-	// Planar reflections opaque color pass:
-	if (visibility_main.IsRequestedPlanarReflections())
-	{
+		// Planar reflections opaque color pass:
 		cmd = device->BeginCommandList();
 		wiJobSystem::Execute(ctx, [cmd, this](wiJobArgs args) {
 
@@ -832,7 +839,7 @@ void RenderPath3D::Render() const
 
 			wiRenderer::UpdateCameraCB(
 				camera_reflection,
-				camera_reflection,
+				camera_reflection_previous,
 				camera_reflection,
 				cmd
 			);
@@ -863,6 +870,16 @@ void RenderPath3D::Render() const
 			device->BindResource(PS, wiTextureHelper::getUINT4(), TEXSLOT_RENDERPATH_RTSHADOW, cmd);
 			wiRenderer::DrawScene(visibility_reflection, RENDERPASS_MAIN, cmd, drawscene_flags_reflections);
 			wiRenderer::DrawSky(*scene, cmd);
+
+			// Blend the volumetric clouds on top:
+			if (scene->weather.IsVolumetricClouds())
+			{
+				device->EventBegin("Volumetric Clouds Reflection Blend", cmd);
+				wiImageParams fx;
+				fx.enableFullScreen();
+				wiImage::Draw(&volumetriccloudResources_reflection.texture_reproject[device->GetFrameCount() % 2], fx, cmd);
+				device->EventEnd(cmd);
+			}
 
 			device->RenderPassEnd(cmd);
 

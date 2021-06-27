@@ -11195,7 +11195,6 @@ void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resol
 }
 void Postprocess_VolumetricClouds(
 	const VolumetricCloudResources& res,
-	const Texture& lineardepth,
 	const Texture& depthbuffer,
 	CommandList cmd
 )
