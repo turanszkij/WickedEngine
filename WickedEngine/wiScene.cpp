@@ -820,6 +820,7 @@ namespace wiScene
 	{
 		// Start recalculating normals:
 
+		if(compute != COMPUTE_NORMALS_SMOOTH_FAST)
 		{
 			// Compute hard surface normals:
 
