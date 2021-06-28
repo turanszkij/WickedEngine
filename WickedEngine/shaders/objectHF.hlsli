@@ -1373,7 +1373,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 	float alphatest = GetMaterial().alphaTest;
 	if (g_xFrame_Options & OPTION_BIT_TEMPORALAA_ENABLED)
 	{
-		alphatest = clamp(blue_noise(pixel).r, 0, 0.99);
+		alphatest = clamp(blue_noise(pixel, lineardepth).r, 0, 0.99);
 	}
 	clip(color.a - alphatest);
 #endif // DISABLE_ALPHATEST
