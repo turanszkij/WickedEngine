@@ -35,18 +35,15 @@ float4 main(PSIn input) : SV_TARGET
 	surface.pixel = input.pos.xy;
 	float depth = input.pos.z;
 
+	TiledLighting(surface, lighting);
+
 	float2 refUV = float2(1, -1)*input.ReflectionMapSamplingPos.xy / input.ReflectionMapSamplingPos.w * 0.5f + 0.5f;
 	float2 ScreenCoord = surface.pixel * g_xFrame_InternalResolution_rcp;
 
 	//REFLECTION
 	float2 RefTex = float2(1, -1)*input.ReflectionMapSamplingPos.xy / input.ReflectionMapSamplingPos.w / 2.0f + 0.5f;
 	float4 reflectiveColor = texture_reflection.SampleLevel(sampler_linear_mirror, RefTex + surface.N.xz * 0.04f, 0);
-	float NdotV = abs(dot(surface.N, surface.V));
-	float ramp = pow(abs(1.0f / (1.0f + NdotV)), 16);
-	reflectiveColor.rgb = lerp(float3(0.38f, 0.45f, 0.56f), reflectiveColor.rgb, ramp); // skycolor hack
-	lighting.indirect.specular += reflectiveColor.rgb * surface.F;
-
-	TiledLighting(surface, lighting);
+	lighting.indirect.specular = reflectiveColor.rgb * surface.F;
 
 	// WATER REFRACTION 
 	float lineardepth = input.pos.w;

@@ -820,6 +820,7 @@ namespace wiScene
 	{
 		// Start recalculating normals:
 
+		if(compute != COMPUTE_NORMALS_SMOOTH_FAST)
 		{
 			// Compute hard surface normals:
 
@@ -1569,7 +1570,7 @@ namespace wiScene
 
 		if (lightmap_refresh_needed.load())
 		{
-			InvalidateBVH();
+			SetAccelerationStructureUpdateRequested(true);
 		}
 		if (lightmap_repack_needed.load())
 		{

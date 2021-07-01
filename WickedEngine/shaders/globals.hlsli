@@ -85,6 +85,10 @@ inline float4 blue_noise(uint2 pixel)
 {
 	return frac(texture_bluenoise[pixel % 128].rgba + g_xFrame_BlueNoisePhase);
 }
+inline float4 blue_noise(uint2 pixel, float depth)
+{
+	return frac(texture_bluenoise[pixel % 128].rgba + g_xFrame_BlueNoisePhase * depth);
+}
 
 // Helpers:
 

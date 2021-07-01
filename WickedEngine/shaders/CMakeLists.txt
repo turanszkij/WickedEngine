@@ -287,7 +287,6 @@ set(SHADERS_GS
 		"cubeShadowGS_transparent_emulation.hlsl"
 		"voxelGS.hlsl"
 		"objectGS_voxelizer.hlsl"
-		"lensFlareGS.hlsl"
 )
 
 set(SHADERS_HS

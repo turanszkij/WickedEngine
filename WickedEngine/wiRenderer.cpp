@@ -1183,7 +1183,6 @@ void LoadShaders()
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(GS, shaders[GSTYPE_VOXELIZER], "objectGS_voxelizer.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(GS, shaders[GSTYPE_VOXEL], "voxelGS.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(GS, shaders[GSTYPE_LENSFLARE], "lensFlareGS.cso"); });
 
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_LUMINANCE_PASS1], "luminancePass1CS.cso"); });
@@ -1760,11 +1759,10 @@ void LoadShaders()
 		PipelineStateDesc desc;
 		desc.vs = &shaders[VSTYPE_LENSFLARE];
 		desc.ps = &shaders[PSTYPE_LENSFLARE];
-		desc.gs = &shaders[GSTYPE_LENSFLARE];
 		desc.bs = &blendStates[BSTYPE_ADDITIVE];
 		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
 		desc.dss = &depthStencils[DSSTYPE_XRAY];
-		desc.pt = POINTLIST;
+		desc.pt = TRIANGLESTRIP;
 
 		device->CreatePipelineState(&desc, &PSO_lensflare);
 		});
@@ -3538,7 +3536,7 @@ void UpdatePerFrameData(
 
 	wiJobSystem::Wait(ctx);
 
-	if (!device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_PIPELINE) && !device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE) && scene.BVH_invalid)
+	if (!device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_PIPELINE) && !device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE) && scene.IsAccelerationStructureUpdateRequested())
 	{
 		scene.BVH.Update(scene);
 	}
@@ -4279,12 +4277,10 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 	}
 	else
 	{
-		if (scene.BVH_invalid)
-		{
-			scene.BVH_invalid = false;
-			scene.BVH.Build(scene, cmd);
-		}
+		scene.BVH.Build(scene, cmd);
 	}
+
+	scene.acceleration_structure_update_requested = false;
 }
 void OcclusionCulling_Render(const CameraComponent& camera_previous, const Visibility& vis, CommandList cmd)
 {
@@ -4597,7 +4593,8 @@ void DrawVolumeLights(
 void DrawLensFlares(
 	const Visibility& vis,
 	const Texture& depthbuffer,
-	CommandList cmd
+	CommandList cmd,
+	const Texture* texture_directional_occlusion
 )
 {
 	if (IsWireRender())
@@ -4605,7 +4602,7 @@ void DrawLensFlares(
 
 	device->EventBegin("Lens Flares", cmd);
 
-	device->BindResource(GS, &depthbuffer, TEXSLOT_DEPTH, cmd);
+	device->BindResource(VS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 
 	for (auto visibleLight : vis.visibleLights)
 	{
@@ -4616,48 +4613,66 @@ void DrawLensFlares(
 		{
 			XMVECTOR POS;
 
-			if (light.GetType() == LightComponent::POINT || light.GetType() == LightComponent::SPOT)
+			if (light.GetType() == LightComponent::DIRECTIONAL)
 			{
-				// point and spotlight flare will be placed to the source position:
-				POS = XMLoadFloat3(&light.position);
+				// directional light flare will be placed at infinite position along direction vector:
+				XMVECTOR D = XMVector3Normalize(-XMVector3Transform(XMVectorSet(0, 1, 0, 1), XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))));
+				if (XMVectorGetX(XMVector3Dot(D, XMVectorSet(0, -1, 0, 0))) < 0)
+					continue; // sun below horizon, skip lensflare
+				POS = vis.camera->GetEye() + D * -vis.camera->zFarP;
+
+				// Directional light can use occlusion texture (eg. clouds):
+				if (texture_directional_occlusion == nullptr)
+				{
+					device->BindResource(VS, wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND0, cmd);
+				}
+				else
+				{
+					device->BindResource(VS, texture_directional_occlusion, TEXSLOT_ONDEMAND0, cmd);
+				}
 			}
 			else
 			{
-				// directional light flare will be placed at infinite position along direction vector:
-				POS = 
-					vis.camera->GetEye() + 
-					XMVector3Normalize(-XMVector3Transform(XMVectorSet(0, -1, 0, 1), XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation)))) * vis.camera->zFarP;
+				// point and spotlight flare will be placed to the source position:
+				POS = XMLoadFloat3(&light.position);
+
+				// not using occlusion texture
+				device->BindResource(VS, wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND0, cmd);
 			}
 
 			if (XMVectorGetX(XMVector3Dot(XMVectorSubtract(POS, vis.camera->GetEye()), vis.camera->GetAt())) > 0) // check if the camera is facing towards the flare or not
 			{
 				device->BindPipelineState(&PSO_lensflare, cmd);
+				device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_LENSFLARE], CB_GETBINDSLOT(LensFlareCB), cmd);
 
 				// Get the screen position of the flare:
 				XMVECTOR flarePos = XMVector3Project(POS, 0, 0, 1, 1, 1, 0, vis.camera->GetProjection(), vis.camera->GetView(), XMMatrixIdentity());
-				LensFlareCB cb;
-				XMStoreFloat4(&cb.xSunPos, flarePos);
-				cb.xScreen = XMFLOAT4((float)depthbuffer.desc.Width, (float)depthbuffer.desc.Height, 0, 0);
 
-				device->UpdateBuffer(&constantBuffers[CBTYPE_LENSFLARE], &cb, cmd);
-				device->BindConstantBuffer(GS, &constantBuffers[CBTYPE_LENSFLARE], CB_GETBINDSLOT(LensFlareCB), cmd);
+				LensFlareCB cb;
+				XMStoreFloat3(&cb.xLensFlarePos, flarePos);
 
 				uint32_t i = 0;
 				for (auto& x : light.lensFlareRimTextures)
 				{
 					if (x != nullptr)
 					{
-						device->BindResource(PS, &x->texture, TEXSLOT_ONDEMAND0 + i, cmd);
-						device->BindResource(GS, &x->texture, TEXSLOT_ONDEMAND0 + i, cmd);
+						// pre-baked offsets
+						// These values work well for me, but should be tweakable
+						static const float mods[] = { 1.0f,0.55f,0.4f,0.1f,-0.1f,-0.3f,-0.5f };
+						if (i >= arraysize(mods))
+							break;
+
+						cb.xLensFlareOffset = mods[i];
+						cb.xLensFlareSize.x = (float)x->texture.desc.Width;
+						cb.xLensFlareSize.y = (float)x->texture.desc.Height;
+
+						device->UpdateBuffer(&constantBuffers[CBTYPE_LENSFLARE], &cb, cmd);
+
+						device->BindResource(PS, &x->texture, TEXSLOT_ONDEMAND1, cmd);
+						device->Draw(4, 0, cmd);
 						i++;
-						if (i == 7)
-						{
-							break; // currently the pixel shader has hardcoded max amount of lens flare textures...
-						}
 					}
 				}
-
-				device->Draw(i, 0, cmd);
 			}
 
 		}
@@ -7804,6 +7819,8 @@ void RefreshLightmapAtlas(const Scene& scene, CommandList cmd)
 		for (uint32_t i = 0; i < scene.objects.GetCount(); ++i)
 		{
 			const ObjectComponent& object = scene.objects[i];
+			if (!object.lightmap.IsValid())
+				continue;
 
 			if (object.IsLightmapRenderRequested())
 			{
@@ -11198,7 +11215,6 @@ void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resol
 }
 void Postprocess_VolumetricClouds(
 	const VolumetricCloudResources& res,
-	const Texture& lineardepth,
 	const Texture& depthbuffer,
 	CommandList cmd
 )

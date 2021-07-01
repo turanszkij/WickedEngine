@@ -361,7 +361,6 @@ int main(int argc, char* argv[])
 		"cubeShadowGS_transparent_emulation.hlsl"	,
 		"voxelGS.hlsl"								,
 		"objectGS_voxelizer.hlsl"					,
-		"lensFlareGS.hlsl"							,
 	};
 
 	shaders[wiGraphics::DS] = {
