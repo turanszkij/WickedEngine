@@ -41,7 +41,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			const float3 edgePosition = reconstructPosition(edgeUV, edgeDepth);
 			float dist = length(edgePosition - P);
 
-			if (dist < 0.1 && dist < bestEdgeDistance)
+			if (dist < bestEdgeDistance)
 			{
 				bestEdgeDistance = dist;
 				bestEdge = edge;
@@ -59,7 +59,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			const float3 cornerPosition = reconstructPosition(cornerUV, cornerDepth);
 			float dist = length(cornerPosition - P);
 
-			if (dist < 0.2 && dist < bestCornerDistance)
+			if (dist < bestCornerDistance)
 			{
 				bestCornerDistance = dist;
 				bestCorner = corner;
