@@ -1286,7 +1286,8 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 		device->EventEnd(cmd);
 	}
 
-	if (getLightShaftsEnabled())
+	XMVECTOR sunDirection = XMLoadFloat3(&scene->weather.sunDirection);
+	if (getLightShaftsEnabled() && XMVectorGetX(XMVector3Dot(sunDirection, camera->GetAt())) > 0)
 	{
 		device->EventBegin("Contribute LightShafts", cmd);
 		wiImageParams fx;
