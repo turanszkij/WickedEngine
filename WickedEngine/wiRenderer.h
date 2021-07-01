@@ -622,8 +622,7 @@ namespace wiRenderer
 	);
 	struct ChamferNormalsResources
 	{
-		wiGraphics::Texture texture_closestEdge[2];
-		wiGraphics::Texture texture_edgeNormals;
+		wiGraphics::Texture texture_edgeMap[2];
 	};
 	void CreateChamferNormalsResources(ChamferNormalsResources& res, XMUINT2 resolution);
 	void Postprocess_ChamferNormals(
