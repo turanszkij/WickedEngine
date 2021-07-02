@@ -1,6 +1,17 @@
 #ifndef CHAMFERNORMALS_UTIL_H
 #define CHAMFERNORMALS_UTIL_H
 
+static const float detect_edge_threshold = 0.1f; // lower: less chance for detecting edges
+static const float detect_corner_threshold = 0.8f; // higher: less chance for detecting corners
+static const float reject_depth_threshold = 0.001f; // depth difference above this will be detected as separate surface without edge
+
+static const float chamfer_edge_radius = 0.1; // radius of the edge chamfering in world space
+static const float chamfer_edge_strength = 1; // falloff for edge smoothness (lower: smaller chamfer, higher: stronger chamfer)
+
+static const float chamfer_corner_radius = 0.2; // radius of the corner chamfering in world space
+static const float chamfer_corner_strength = 3; // falloff for corner smoothness (lower: smaller chamfer, higher: stronger chamfer)
+
+
 // Overridable functions:
 //	A sample implementation of these functions can be seen below:
 #ifdef CHAMFERNORMALS_COMPILE_USER_PROTOTYPES
@@ -73,55 +84,56 @@ void StoreEdgeMap(uint2 pixel, uint4 edgemap)
 
 
 
-//// Helper functions:
-//inline uint pack_unitvector(in float3 value)
-//{
-//	uint retVal = 0;
-//	retVal |= (uint)((value.x * 0.5 + 0.5) * 255.0) << 0u;
-//	retVal |= (uint)((value.y * 0.5 + 0.5) * 255.0) << 8u;
-//	retVal |= (uint)((value.z * 0.5 + 0.5) * 255.0) << 16u;
-//	return retVal;
-//}
-//inline float3 unpack_unitvector(in uint value)
-//{
-//	float3 retVal;
-//	retVal.x = (float)((value >> 0u) & 0xFF) / 255.0 * 2 - 1;
-//	retVal.y = (float)((value >> 8u) & 0xFF) / 255.0 * 2 - 1;
-//	retVal.z = (float)((value >> 16u) & 0xFF) / 255.0 * 2 - 1;
-//	return retVal;
-//}
-//inline uint pack_pixel(uint2 pixel)
-//{
-//	uint retVal = 0;
-//	retVal |= pixel.x & 0xFFFF;
-//	retVal |= (pixel.y & 0xFFFF) << 16;
-//	return retVal;
-//}
-//inline uint2 unpack_pixel(uint value)
-//{
-//	uint2 retVal;
-//	retVal.x = value & 0xFFFF;
-//	retVal.y = (value >> 16) & 0xFFFF;
-//	return retVal;
-//}
-//
-//// Reconstructs world-space position from depth buffer
-////	uv		: screen space coordinate in [0, 1] range
-////	z		: depth value at current pixel
-////	InvVP	: Inverse of the View-Projection matrix that was used to generate the depth value
-//inline float3 reconstructPosition(in float2 uv, in float z, in float4x4 InvVP)
-//{
-//	float x = uv.x * 2 - 1;
-//	float y = (1 - uv.y) * 2 - 1;
-//	float4 position_s = float4(x, y, z, 1);
-//	float4 position_v = mul(InvVP, position_s);
-//	return position_v.xyz / position_v.w;
-//}
-//inline float3 reconstructPosition(in float2 uv, in float z)
-//{
-//	return reconstructPosition(uv, z, GetCameraInverseViewProjection());
-//}
+// Helper functions:
+#ifndef WI_SHADER_GLOBALS_HF
+inline uint pack_unitvector(in float3 value)
+{
+	uint retVal = 0;
+	retVal |= (uint)((value.x * 0.5 + 0.5) * 255.0) << 0u;
+	retVal |= (uint)((value.y * 0.5 + 0.5) * 255.0) << 8u;
+	retVal |= (uint)((value.z * 0.5 + 0.5) * 255.0) << 16u;
+	return retVal;
+}
+inline float3 unpack_unitvector(in uint value)
+{
+	float3 retVal;
+	retVal.x = (float)((value >> 0u) & 0xFF) / 255.0 * 2 - 1;
+	retVal.y = (float)((value >> 8u) & 0xFF) / 255.0 * 2 - 1;
+	retVal.z = (float)((value >> 16u) & 0xFF) / 255.0 * 2 - 1;
+	return retVal;
+}
+inline uint pack_pixel(uint2 pixel)
+{
+	uint retVal = 0;
+	retVal |= pixel.x & 0xFFFF;
+	retVal |= (pixel.y & 0xFFFF) << 16;
+	return retVal;
+}
+inline uint2 unpack_pixel(uint value)
+{
+	uint2 retVal;
+	retVal.x = value & 0xFFFF;
+	retVal.y = (value >> 16) & 0xFFFF;
+	return retVal;
+}
 
+// Reconstructs world-space position from depth buffer
+//	uv		: screen space coordinate in [0, 1] range
+//	z		: depth value at current pixel
+//	InvVP	: Inverse of the View-Projection matrix that was used to generate the depth value
+inline float3 reconstructPosition(in float2 uv, in float z, in float4x4 InvVP)
+{
+	float x = uv.x * 2 - 1;
+	float y = (1 - uv.y) * 2 - 1;
+	float4 position_s = float4(x, y, z, 1);
+	float4 position_v = mul(InvVP, position_s);
+	return position_v.xyz / position_v.w;
+}
+inline float3 reconstructPosition(in float2 uv, in float z)
+{
+	return reconstructPosition(uv, z, GetCameraInverseViewProjection());
+}
+#endif // WI_SHADER_GLOBALS_HF
 
 
 
@@ -134,10 +146,6 @@ static const int2 offsets[3] = {
 	int2(0, 1),
 	int2(1, 1),
 };
-
-static float detect_edge_threshold = 0.1f; // lower: less chance for detecting edges
-static float detect_corner_threshold = 0.8f; // higher: less chance for detecting corners
-static float reject_depth_threshold = 0.001f; // depth difference above this will be detected as separate surface without edge
 
 [numthreads(8, 8, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
@@ -275,12 +283,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 
 #ifdef CHAMFERNORMALS_TWISTNORMAL_IMPLEMENTATION
-static const float chamfer_edge_radius = 0.1; // radius of the edge chamfering in world space
-static const float chamfer_edge_strength = 1; // falloff for edge smoothness (lower: smaller chamfer, higher: stronger chamfer)
-
-static const float chamfer_corner_radius = 0.2; // radius of the corner chamfering in world space
-static const float chamfer_corner_strength = 3; // falloff for corner smoothness (lower: smaller chamfer, higher: stronger chamfer)
-
 [numthreads(8, 8, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
