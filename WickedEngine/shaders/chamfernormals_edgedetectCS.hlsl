@@ -11,7 +11,7 @@ static const int2 offsets[3] = {
 	int2(1, 1),
 };
 
-[numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
+[numthreads(8, 8, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	float4 normal = input_normals[DTid.xy];

@@ -11,7 +11,7 @@ static const int2 offsets[9] = {
 	int2(1, -1), int2(1, 0), int2(1, 1),
 };
 
-[numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
+[numthreads(8, 8, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	const float2 uv = (DTid.xy + 0.5) * xPPResolution_rcp;

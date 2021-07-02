@@ -5,7 +5,7 @@ TEXTURE2D(input_edgeMap, uint4, TEXSLOT_ONDEMAND0);
 
 RWTEXTURE2D(input_output_normals, unorm float4, 0);
 
-[numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
+[numthreads(8, 8, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
