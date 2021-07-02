@@ -1305,7 +1305,7 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_NORMALSFROMDEPTH], "normalsfromdepthCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_CHAMFERNORMALS_EDGEDETECT], "chamfernormals_edgedetectCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_CHAMFERNORMALS_JUMPFLOOD], "chamfernormals_jumpfloodCS.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_CHAMFERNORMALS_OUTPUT], "chamfernormals_outputCS.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_CHAMFERNORMALS_TWIST], "chamfernormals_twistCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_SCREENSPACESHADOW], "screenspaceshadowCS.cso"); });
 
 	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
@@ -12248,7 +12248,7 @@ void Postprocess_ChamferNormals(
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
-	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_CHAMFERNORMALS_OUTPUT], cmd);
+	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_CHAMFERNORMALS_TWIST], cmd);
 	device->Dispatch(
 		(desc.Width + 7) / 8,
 		(desc.Height + 7) / 8,

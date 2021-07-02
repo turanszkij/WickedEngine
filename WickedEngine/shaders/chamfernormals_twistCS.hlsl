@@ -3,7 +3,7 @@
 
 TEXTURE2D(input_edgeMap, uint4, TEXSLOT_ONDEMAND0); // DXGI_FORMAT_R32G32B32A32_UINT
 
-RWTEXTURE2D(output_edgeMap, uint4, 0); // DXGI_FORMAT_R32G32B32A32_UINT
+RWTEXTURE2D(input_output_normals, unorm float4, 0); // DXGI_FORMAT_R8G8B8A8_UNORM
 
 
 // resolution of Gbuffer normals texture
@@ -40,14 +40,21 @@ float LoadLinearDepth(uint2 pixel)
 {
 	return texture_lineardepth[pixel];
 }
+float4 LoadNormal(uint2 pixel)
+{
+	float4 normal = input_output_normals[pixel];
+	normal.xyz = normalize(normal.xyz * 2 - 1);
+	return normal;
+}
+void StoreNormal(uint2 pixel, float4 normal)
+{
+	normal.xyz = normal.xyz * 0.5 + 0.5;
+	input_output_normals[pixel] = normal;
+}
 uint4 LoadEdgeMap(uint2 pixel)
 {
 	return input_edgeMap[pixel];
 }
-void StoreEdgeMap(uint2 pixel, uint4 edgemap)
-{
-	output_edgeMap[pixel] = edgemap;
-}
 
-#define CHAMFERNORMALS_JUMPFLOOD_IMPLEMENTATION
+#define CHAMFERNORMALS_TWISTNORMAL_IMPLEMENTATION
 #include "chamfernormals_util.h"
