@@ -1,9 +1,9 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
-TEXTURE2D(input_normals, float4, TEXSLOT_ONDEMAND0);
+TEXTURE2D(input_normals, float4, TEXSLOT_ONDEMAND0); // DXGI_FORMAT_R8G8B8A8_UNORM
 
-RWTEXTURE2D(output_edgeMap, uint4, 0);
+RWTEXTURE2D(output_edgeMap, uint4, 0); // DXGI_FORMAT_R32G32B32A32_UINT
 
 static const int2 offsets[3] = {
 	int2(1, 0),
@@ -11,29 +11,34 @@ static const int2 offsets[3] = {
 	int2(1, 1),
 };
 
+static float detect_edge_threshold = 0.1f; // lower: less chance for detecting edges
+static float detect_corner_threshold = 0.8f; // higher: less chance for detecting corners
+static float reject_depth_threshold = 0.001f; // depth difference above this will be detected as separate surface without edge
+
 [numthreads(8, 8, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	float4 normal = input_normals[DTid.xy];
-	normal.xyz = normal.xyz * 2 - 1;
+	normal.xyz = normalize(normal.xyz * 2 - 1);
 
-	float lineardepth = texture_lineardepth[DTid.xy];
+	const float lineardepth = texture_lineardepth[DTid.xy];
 
 	float3 edgeNormal = 0;
 	for (uint i = 0; i < 3; ++i)
 	{
-		int2 pixel2 = DTid.xy + offsets[i];
+		const int2 pixel2 = DTid.xy + offsets[i];
 
-		float ld = texture_lineardepth[pixel2];
-		float diff = abs(lineardepth - ld);
+		const float ld = texture_lineardepth[pixel2];
+		const float diff = abs(lineardepth - ld);
 
-		if (diff < 0.0001)
+		if (diff < reject_depth_threshold)
 		{
-			float3 n = input_normals[pixel2].xyz * 2 - 1;
+			const float3 n = input_normals[pixel2].xyz * 2 - 1;
 
-			if (abs(dot(normal.xyz, n.xyz)) < 0.5)
+			if (abs(dot(normal.xyz, n.xyz)) < detect_edge_threshold)
 			{
 				edgeNormal = normalize(normal.xyz + n.xyz);
+				break;
 			}
 		}
 	}
@@ -51,19 +56,19 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		float3 N = normal.xyz;
 		float3 NR = input_normals[max(0, min(DTid.xy + int2(1, 0), xPPResolution - 1))].xyz * 2 - 1;
 		float3 ND = input_normals[max(0, min(DTid.xy + int2(0, 1), xPPResolution - 1))].xyz * 2 - 1;
-		if (abs(dot(N, cross(NR, ND))) > 0.2f)
+		if (abs(dot(N, cross(NR, ND))) > detect_corner_threshold)
 		{
 			cornerNormal += NR + ND;
 		}
 		NR = input_normals[max(0, min(DTid.xy + int2(-1, 0), xPPResolution - 1))].xyz * 2 - 1;
 		ND = input_normals[max(0, min(DTid.xy + int2(0, 1), xPPResolution - 1))].xyz * 2 - 1;
-		if (abs(dot(N, cross(NR, ND))) > 0.2f)
+		if (abs(dot(N, cross(NR, ND))) > detect_corner_threshold)
 		{
 			cornerNormal += NR + ND;
 		}
 		NR = input_normals[max(0, min(DTid.xy + int2(1, 0), xPPResolution - 1))].xyz * 2 - 1;
 		ND = input_normals[max(0, min(DTid.xy + int2(0, -1), xPPResolution - 1))].xyz * 2 - 1;
-		if (abs(dot(N, cross(NR, ND))) > 0.2f)
+		if (abs(dot(N, cross(NR, ND))) > detect_corner_threshold)
 		{
 			cornerNormal += NR + ND;
 		}
