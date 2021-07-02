@@ -138,6 +138,34 @@ Character = {
 		if( input.Press(string.byte('J'))  or input.Press(KEYBOARD_BUTTON_SPACE) or input.Press(GAMEPAD_BUTTON_2) ) then
 			self:Jump(2000)
 		end
+		
+		-- state and animation update
+		if(self.state == self.states.STAND) then
+			scene.Component_GetAnimation(self.walk_anim).Stop()
+			local anim = scene.Component_GetAnimation(self.idle_anim)
+			anim.Play()
+			anim.SetAmount(math.lerp(anim.GetAmount(), 1, 0.1))
+			if(self.state ~= self.state_prev) then
+				anim.SetAmount(0)
+			end
+		elseif(self.state == self.states.WALK) then
+			scene.Component_GetAnimation(self.idle_anim).Stop()
+			local anim = scene.Component_GetAnimation(self.walk_anim)
+			anim.Play()
+			anim.SetAmount(math.lerp(anim.GetAmount(), 1, 0.1))
+			if(self.state ~= self.state_prev) then
+				anim.SetAmount(0)
+			end
+		elseif(self.state == self.states.JUMP) then
+			scene.Component_GetAnimation(self.walk_anim).Stop()
+			local anim = scene.Component_GetAnimation(self.idle_anim)
+			anim.Play()
+			anim.SetAmount(math.lerp(anim.GetAmount(), 1, 0.1))
+			if(self.state ~= self.state_prev) then
+				anim.SetAmount(0)
+			end
+		end
+		self.state_prev = self.state
 
 		-- Camera target control:
 
@@ -167,34 +195,6 @@ Character = {
 	Update = function(self)
 		local model_transform = scene.Component_GetTransform(self.model)
 		local target_transform = scene.Component_GetTransform(self.target)
-		
-		-- state and animation update
-		if(self.state == self.states.STAND) then
-			scene.Component_GetAnimation(self.walk_anim).Stop()
-			local anim = scene.Component_GetAnimation(self.idle_anim)
-			anim.Play()
-			anim.SetAmount(math.lerp(anim.GetAmount(), 1, 0.1))
-			if(self.state ~= self.state_prev) then
-				anim.SetAmount(0)
-			end
-		elseif(self.state == self.states.WALK) then
-			scene.Component_GetAnimation(self.idle_anim).Stop()
-			local anim = scene.Component_GetAnimation(self.walk_anim)
-			anim.Play()
-			anim.SetAmount(math.lerp(anim.GetAmount(), 1, 0.1))
-			if(self.state ~= self.state_prev) then
-				anim.SetAmount(0)
-			end
-		elseif(self.state == self.states.JUMP) then
-			scene.Component_GetAnimation(self.walk_anim).Stop()
-			local anim = scene.Component_GetAnimation(self.idle_anim)
-			anim.Play()
-			anim.SetAmount(math.lerp(anim.GetAmount(), 1, 0.1))
-			if(self.state ~= self.state_prev) then
-				anim.SetAmount(0)
-			end
-		end
-		self.state_prev = self.state
 		
 		-- apply force:
 		self.velocity = vector.Add(self.velocity, vector.Multiply(self.force, 0.016))
