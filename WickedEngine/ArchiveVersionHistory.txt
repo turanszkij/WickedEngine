@@ -1,5 +1,6 @@
 This file contains changelog of wiArchive versions
 
+71: serialized WeatherComponent::fogHeightStart and fogHeightEnd
 70: serialized VolumetricCloudParameters
 69: serialized AABB:: layerMask and userdata parameters
 68: serialized MaterialComponent SPECULARMAP (for KHR_materials_specular)

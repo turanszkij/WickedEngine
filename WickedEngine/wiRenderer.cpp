@@ -3552,7 +3552,8 @@ void UpdatePerFrameData(
 	frameCB.g_xFrame_Cloudiness = vis.scene->weather.cloudiness;
 	frameCB.g_xFrame_CloudScale = vis.scene->weather.cloudScale;
 	frameCB.g_xFrame_CloudSpeed = vis.scene->weather.cloudSpeed;
-	frameCB.g_xFrame_Fog = float3(vis.scene->weather.fogStart, vis.scene->weather.fogEnd, vis.scene->weather.fogHeight);
+	frameCB.g_xFrame_Fog = float4(vis.scene->weather.fogStart, vis.scene->weather.fogEnd, vis.scene->weather.fogHeightStart, vis.scene->weather.fogHeightEnd);
+	frameCB.g_xFrame_FogHeightSky = vis.scene->weather.fogHeightSky;
 	frameCB.g_xFrame_Horizon = vis.scene->weather.horizon;
 	frameCB.g_xFrame_Zenith = vis.scene->weather.zenith;
 	frameCB.g_xFrame_SkyExposure = vis.scene->weather.skyExposure;
@@ -3667,6 +3668,10 @@ void UpdatePerFrameData(
 	if (vis.scene->weather.IsRealisticSky())
 	{
 		frameCB.g_xFrame_Options |= OPTION_BIT_REALISTIC_SKY;
+	}
+	if (vis.scene->weather.IsHeightFog())
+	{
+		frameCB.g_xFrame_Options |= OPTION_BIT_HEIGHT_FOG;
 	}
 	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE) && GetRaytracedShadowsEnabled())
 	{

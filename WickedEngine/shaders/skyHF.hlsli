@@ -119,7 +119,7 @@ float3 CustomAtmosphericScattering(float3 V, float3 sunDirection, float3 sunColo
     const float zenith = V.y; // how much is above (0: horizon, 1: directly above)
     const float sunScatter = saturate(sunDirection.y + 0.1f); // how much the sun is directly above. Even if sunis at horizon, we add a constant scattering amount so that light still scatters at horizon
 
-    const float atmosphereDensity = 0.5 + g_xFrame_Fog.z; // constant of air density, or "fog height" as interpreted here (bigger is more obstruction of sun)
+    const float atmosphereDensity = 0.5 + g_xFrame_FogHeightSky; // constant of air density, or "fog height" as interpreted here (bigger is more obstruction of sun)
     const float zenithDensity = atmosphereDensity / pow(max(0.000001f, zenith), 0.75f);
     const float sunScatterDensity = atmosphereDensity / pow(max(0.000001f, sunScatter), 0.75f);
 

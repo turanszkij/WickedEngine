@@ -939,7 +939,7 @@ namespace wiScene
 			archive >> ambient;
 			archive >> fogStart;
 			archive >> fogEnd;
-			archive >> fogHeight;
+			archive >> fogHeightSky;
 			archive >> cloudiness;
 			archive >> cloudScale;
 			archive >> cloudSpeed;
@@ -1074,6 +1074,11 @@ namespace wiScene
 				archive >> volumetricCloudParameters.GroundContributionSampleCount;
 			}
 
+			if (archive.GetVersion() >= 71)
+			{
+				archive >> fogHeightStart;
+				archive >> fogHeightEnd;
+			}
 		}
 		else
 		{
@@ -1085,7 +1090,7 @@ namespace wiScene
 			archive << ambient;
 			archive << fogStart;
 			archive << fogEnd;
-			archive << fogHeight;
+			archive << fogHeightSky;
 			archive << cloudiness;
 			archive << cloudScale;
 			archive << cloudSpeed;
@@ -1202,6 +1207,11 @@ namespace wiScene
 				archive << volumetricCloudParameters.GroundContributionSampleCount;
 			}
 
+			if (archive.GetVersion() >= 71)
+			{
+				archive << fogHeightStart;
+				archive << fogHeightEnd;
+			}
 		}
 	}
 	void SoundComponent::Serialize(wiArchive& archive, EntitySerializer& seri)

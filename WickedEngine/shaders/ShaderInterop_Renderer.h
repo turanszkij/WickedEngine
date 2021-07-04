@@ -533,9 +533,10 @@ static const uint OPTION_BIT_VOXELGI_REFLECTIONS_ENABLED = 1 << 3;
 static const uint OPTION_BIT_VOXELGI_RETARGETTED = 1 << 4;
 static const uint OPTION_BIT_SIMPLE_SKY = 1 << 5;
 static const uint OPTION_BIT_REALISTIC_SKY = 1 << 6;
-static const uint OPTION_BIT_RAYTRACED_SHADOWS = 1 << 7;
-static const uint OPTION_BIT_DISABLE_ALBEDO_MAPS = 1 << 8;
-static const uint OPTION_BIT_SHADOW_MASK = 1 << 9;
+static const uint OPTION_BIT_HEIGHT_FOG = 1 << 7;
+static const uint OPTION_BIT_RAYTRACED_SHADOWS = 1 << 8;
+static const uint OPTION_BIT_DISABLE_ALBEDO_MAPS = 1 << 9;
+static const uint OPTION_BIT_SHADOW_MASK = 1 << 10;
 
 // ---------- Common Constant buffers: -----------------
 
@@ -562,10 +563,11 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float3		g_xFrame_Ambient;
 	float		g_xFrame_Cloudiness;
 
-	float3		g_xFrame_padding0;
-	float		g_xFrame_SkyExposure;
+	float4		g_xFrame_Fog;								// Fog Start,End,Height Start,Height End
 
-	float3		g_xFrame_Fog;								// Fog Start,End,Height
+	float		g_xFrame_padding0;
+	float		g_xFrame_FogHeightSky;
+	float		g_xFrame_SkyExposure;
 	float		g_xFrame_VoxelRadianceMaxDistance;			// maximum raymarch distance for voxel GI in world-space
 
 	float		g_xFrame_VoxelRadianceDataSize;				// voxel half-extent in world space units

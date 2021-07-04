@@ -1166,17 +1166,19 @@ inline void ApplyLighting(in Surface surface, in Lighting lighting, inout float4
 	color.rgb = lerp(surface.albedo * combined_lighting.diffuse, surface.refraction.rgb, surface.refraction.a) + combined_lighting.specular;
 }
 
-inline void ApplyFog(in float dist, inout float4 color)
+inline void ApplyFog(in float distance, float3 P, float3 V, inout float4 color)
 {
+	const float fogAmount = GetFogAmount(distance, P, V);
+	
 	if (g_xFrame_Options & OPTION_BIT_REALISTIC_SKY)
 	{
 		const float3 skyLuminance = texture_skyluminancelut.SampleLevel(sampler_point_clamp, float2(0.5, 0.5), 0).rgb;
-		color.rgb = lerp(color.rgb, skyLuminance, GetFogAmount(dist));
+		color.rgb = lerp(color.rgb, skyLuminance, fogAmount);
 	}
 	else
 	{
 		const float3 V = float3(0.0, -1.0, 0.0);
-		color.rgb = lerp(color.rgb, GetDynamicSkyColor(V, false, false, false, true), GetFogAmount(dist));
+		color.rgb = lerp(color.rgb, GetDynamicSkyColor(V, false, false, false, true), fogAmount);
 	}
 }
 
@@ -1927,7 +1929,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 
 
 #ifdef OBJECTSHADER_USE_POSITION3D
-	ApplyFog(dist, color);
+	ApplyFog(dist, g_xCamera_CamPos, surface.V, color);
 #endif // OBJECTSHADER_USE_POSITION3D
 
 
