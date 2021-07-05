@@ -14,9 +14,12 @@ public:
 	wiScene::WeatherComponent& GetWeather() const;
 	void InvalidateProbes() const;
 
+	wiCheckBox heightFogCheckBox;
 	wiSlider fogStartSlider;
 	wiSlider fogEndSlider;
-	wiSlider fogHeightSlider;
+	wiSlider fogHeightStartSlider;
+	wiSlider fogHeightEndSlider;
+	wiSlider fogHeightSkySlider;
 	wiSlider cloudinessSlider;
 	wiSlider cloudScaleSlider;
 	wiSlider cloudSpeedSlider;

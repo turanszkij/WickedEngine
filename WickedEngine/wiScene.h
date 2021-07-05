@@ -1112,6 +1112,7 @@ namespace wiScene
 			SIMPLE_SKY = 1 << 1,
 			REALISTIC_SKY = 1 << 2,
 			VOLUMETRIC_CLOUDS = 1 << 3,
+			HEIGHT_FOG = 1 << 4,
 		};
 		uint32_t _flags = EMPTY;
 
@@ -1119,11 +1120,13 @@ namespace wiScene
 		inline bool IsSimpleSky() const { return _flags & SIMPLE_SKY; }
 		inline bool IsRealisticSky() const { return _flags & REALISTIC_SKY; }
 		inline bool IsVolumetricClouds() const { return _flags & VOLUMETRIC_CLOUDS; }
+		inline bool IsHeightFog() const { return _flags & HEIGHT_FOG; }
 
 		inline void SetOceanEnabled(bool value = true) { if (value) { _flags |= OCEAN_ENABLED; } else { _flags &= ~OCEAN_ENABLED; } }
 		inline void SetSimpleSky(bool value = true) { if (value) { _flags |= SIMPLE_SKY; } else { _flags &= ~SIMPLE_SKY; } }
 		inline void SetRealisticSky(bool value = true) { if (value) { _flags |= REALISTIC_SKY; } else { _flags &= ~REALISTIC_SKY; } }
 		inline void SetVolumetricClouds(bool value = true) { if (value) { _flags |= VOLUMETRIC_CLOUDS; } else { _flags &= ~VOLUMETRIC_CLOUDS; } }
+		inline void SetHeightFog(bool value = true) { if (value) { _flags |= HEIGHT_FOG; } else { _flags &= ~HEIGHT_FOG; } }
 
 		XMFLOAT3 sunColor = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 sunDirection = XMFLOAT3(0, 1, 0);
@@ -1134,7 +1137,9 @@ namespace wiScene
 		XMFLOAT3 ambient = XMFLOAT3(0.2f, 0.2f, 0.2f);
 		float fogStart = 100;
 		float fogEnd = 1000;
-		float fogHeight = 0;
+		float fogHeightStart = 1;
+		float fogHeightEnd = 3;
+		float fogHeightSky = 0;
 		float cloudiness = 0.0f;
 		float cloudScale = 0.0003f;
 		float cloudSpeed = 0.1f;

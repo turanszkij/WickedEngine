@@ -62,7 +62,7 @@ float4 main(PSIn input) : SV_TARGET
 
 	ApplyLighting(surface, lighting, color);
 
-	ApplyFog(dist, color);
+	ApplyFog(dist, g_xCamera_CamPos, V, color);
 
 	return color;
 }

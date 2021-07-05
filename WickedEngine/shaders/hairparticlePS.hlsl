@@ -49,7 +49,7 @@ GBuffer main(VertexToPixel input)
 
 	ApplyLighting(surface, lighting, color);
 
-	ApplyFog(dist, color);
+	ApplyFog(dist, g_xCamera_CamPos, V, color);
 
 	return CreateGBuffer(color, surface);
 }

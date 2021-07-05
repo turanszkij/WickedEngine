@@ -49,8 +49,9 @@ float4 main(VertexToPixel input) : SV_TARGET
 			attenuation *= shadowCube(light, L, Lunnormalized);
 		}
 
-		attenuation *= GetFogAmount(cameraDistance - marchedDistance);
-
+		// Evaluate sample height for height fog calculation, given 0 for V:
+		attenuation *= GetFogAmount(cameraDistance - marchedDistance, P, float3(0.0, 0.0, 0.0));
+		
 		accumulation += attenuation;
 
 		marchedDistance += stepSize;

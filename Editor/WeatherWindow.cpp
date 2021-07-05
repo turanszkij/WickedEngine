@@ -11,13 +11,22 @@ using namespace wiGraphics;
 void WeatherWindow::Create(EditorComponent* editor)
 {
 	wiWindow::Create("Weather Window");
-	SetSize(XMFLOAT2(660, 560));
+	SetSize(XMFLOAT2(660, 610));
 
 	float x = 180;
 	float y = 20;
 	float hei = 18;
 	float step = hei + 2;
 
+
+	heightFogCheckBox.Create("Height fog: ");
+	heightFogCheckBox.SetSize(XMFLOAT2(hei, hei));
+	heightFogCheckBox.SetPos(XMFLOAT2(x + 100, y += step));
+	heightFogCheckBox.OnClick([&](wiEventArgs args) {
+		auto& weather = GetWeather();
+		weather.SetHeightFog(args.bValue);
+		});
+	AddWidget(&heightFogCheckBox);
 
 	fogStartSlider.Create(0, 5000, 0, 100000, "Fog Start: ");
 	fogStartSlider.SetSize(XMFLOAT2(100, hei));
@@ -35,13 +44,29 @@ void WeatherWindow::Create(EditorComponent* editor)
 	});
 	AddWidget(&fogEndSlider);
 
-	fogHeightSlider.Create(0, 1, 0, 10000, "Fog Height: ");
-	fogHeightSlider.SetSize(XMFLOAT2(100, hei));
-	fogHeightSlider.SetPos(XMFLOAT2(x, y += step));
-	fogHeightSlider.OnSlide([&](wiEventArgs args) {
-		GetWeather().fogHeight = args.fValue;
+	fogHeightStartSlider.Create(-100, 100, 1, 10000, "Fog Height Start: ");
+	fogHeightStartSlider.SetSize(XMFLOAT2(100, hei));
+	fogHeightStartSlider.SetPos(XMFLOAT2(x, y += step));
+	fogHeightStartSlider.OnSlide([&](wiEventArgs args) {
+		GetWeather().fogHeightStart = args.fValue;
+		});
+	AddWidget(&fogHeightStartSlider);
+
+	fogHeightEndSlider.Create(-100, 100, 3, 10000, "Fog Height End: ");
+	fogHeightEndSlider.SetSize(XMFLOAT2(100, hei));
+	fogHeightEndSlider.SetPos(XMFLOAT2(x, y += step));
+	fogHeightEndSlider.OnSlide([&](wiEventArgs args) {
+		GetWeather().fogHeightEnd = args.fValue;
+		});
+	AddWidget(&fogHeightEndSlider);
+
+	fogHeightSkySlider.Create(0, 1, 0, 10000, "Fog Height Sky: ");
+	fogHeightSkySlider.SetSize(XMFLOAT2(100, hei));
+	fogHeightSkySlider.SetPos(XMFLOAT2(x, y += step));
+	fogHeightSkySlider.OnSlide([&](wiEventArgs args) {
+		GetWeather().fogHeightSky = args.fValue;
 	});
-	AddWidget(&fogHeightSlider);
+	AddWidget(&fogHeightSkySlider);
 
 	cloudinessSlider.Create(0, 1, 0.0f, 10000, "Cloudiness: ");
 	cloudinessSlider.SetSize(XMFLOAT2(100, hei));
@@ -445,7 +470,7 @@ void WeatherWindow::Create(EditorComponent* editor)
 		weather.cloudiness = 0.4f;
 		weather.fogStart = 100;
 		weather.fogEnd = 1000;
-		weather.fogHeight = 0;
+		weather.fogHeightSky = 0;
 
 		InvalidateProbes();
 
@@ -465,7 +490,7 @@ void WeatherWindow::Create(EditorComponent* editor)
 		weather.cloudiness = 0.36f;
 		weather.fogStart = 50;
 		weather.fogEnd = 600;
-		weather.fogHeight = 0;
+		weather.fogHeightSky = 0;
 
 		InvalidateProbes();
 
@@ -485,7 +510,7 @@ void WeatherWindow::Create(EditorComponent* editor)
 		weather.cloudiness = 0.75f;
 		weather.fogStart = 0;
 		weather.fogEnd = 500;
-		weather.fogHeight = 0;
+		weather.fogHeightSky = 0;
 
 		InvalidateProbes();
 
@@ -505,7 +530,7 @@ void WeatherWindow::Create(EditorComponent* editor)
 		weather.cloudiness = 0.28f;
 		weather.fogStart = 10;
 		weather.fogEnd = 400;
-		weather.fogHeight = 0;
+		weather.fogHeightSky = 0;
 
 		InvalidateProbes();
 
@@ -552,9 +577,12 @@ void WeatherWindow::Update()
 			colorgradingButton.SetText(wiHelper::GetFileNameFromPath(weather.colorGradingMapName));
 		}
 
+		heightFogCheckBox.SetCheck(weather.IsHeightFog());
 		fogStartSlider.SetValue(weather.fogStart);
 		fogEndSlider.SetValue(weather.fogEnd);
-		fogHeightSlider.SetValue(weather.fogHeight);
+		fogHeightStartSlider.SetValue(weather.fogHeightStart);
+		fogHeightEndSlider.SetValue(weather.fogHeightEnd);
+		fogHeightSkySlider.SetValue(weather.fogHeightSky);
 		cloudinessSlider.SetValue(weather.cloudiness);
 		cloudScaleSlider.SetValue(weather.cloudScale);
 		cloudSpeedSlider.SetValue(weather.cloudSpeed);
