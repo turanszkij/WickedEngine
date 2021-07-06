@@ -1374,10 +1374,12 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 #ifndef DISABLE_ALPHATEST
 	float alphatest = GetMaterial().alphaTest;
 #ifndef TRANSPARENT
+#ifndef ENVMAPRENDERING
 	if (g_xFrame_Options & OPTION_BIT_TEMPORALAA_ENABLED)
 	{
 		alphatest = clamp(blue_noise(pixel, lineardepth).r, 0, 0.99);
 	}
+#endif // ENVMAPRENDERING
 #endif // TRANSPARENT
 	clip(color.a - alphatest);
 #endif // DISABLE_ALPHATEST

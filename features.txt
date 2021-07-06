@@ -48,10 +48,7 @@ Backlog: log,input,scripting
 Gamma correct, HDR rendering
 Resource Manager
 Screen Space Ambient Occlusion (SSAO, HBAO, MSAO)
-Screen Space Reflections
-Skin shader (Subsurface scattering)
-Stencil layering
-Forward decals
+Stochastic Screen Space Reflections
 Color Grading
 Sharpen filter
 Eye adaption
@@ -68,7 +65,7 @@ Reversed Z-buffer
 Force Fields GPU simulation
 Particle - Depth Buffer collisions
 Ocean simulation (FFT)
-Translucent shadows
+Translucent colored shadows
 Refraction caustics
 Local parallax-corrected environment maps
 Volumetric light scattering
@@ -83,6 +80,7 @@ Terrain Rendering (material blending)
 Variable Rate Shading
 Real time ray tracing: ambient occlusion, shadows, reflections (DXR and Vulkan raytracing)
 Screen Space Contact Shadows
+Stochastic alphatest transparency
 
 GLTF 2.0 extensions supported:
 KHR_materials_unlit
