@@ -3392,6 +3392,7 @@ using namespace Vulkan_Internal;
 
 			if (pDesc->CPUAccessFlags & CPU_ACCESS_READ)
 			{
+				allocInfo.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT; // I don't know why but consecutive resource downloads could fail without this
 				allocInfo.usage = VMA_MEMORY_USAGE_GPU_TO_CPU;
 				bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 			}
@@ -6041,7 +6042,7 @@ using namespace Vulkan_Internal;
 
 	void GraphicsDevice_Vulkan::WaitForGPU() const
 	{
-		VkResult res = vkQueueWaitIdle(graphicsQueue);
+		VkResult res = vkDeviceWaitIdle(device);
 		assert(res == VK_SUCCESS);
 	}
 	void GraphicsDevice_Vulkan::ClearPipelineStateCache()

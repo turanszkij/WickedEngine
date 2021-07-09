@@ -55,6 +55,7 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 
 #ifdef OPEN_IMAGE_DENOISE
 		desc.BindFlags = BIND_UNORDERED_ACCESS;
+		desc.layout = IMAGE_LAYOUT_UNORDERED_ACCESS;
 		device->CreateTexture(&desc, nullptr, &denoiserAlbedo);
 		device->SetName(&denoiserAlbedo, "denoiserAlbedo");
 		device->CreateTexture(&desc, nullptr, &denoiserNormal);
@@ -154,6 +155,9 @@ void RenderPath3D_PathTracing::Update(float dt)
 	{
 		if (!denoiserResult.IsValid() && !wiJobSystem::IsBusy(denoiserContext))
 		{
+			//wiHelper::saveTextureToFile(denoiserAlbedo, "C:/PROJECTS/WickedEngine/Editor/_albedo.png");
+			//wiHelper::saveTextureToFile(denoiserNormal, "C:/PROJECTS/WickedEngine/Editor/_normal.png");
+
 			texturedata_src.clear();
 			texturedata_dst.clear();
 			texturedata_albedo.clear();

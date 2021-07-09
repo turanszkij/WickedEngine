@@ -118,6 +118,7 @@ namespace wiHelper
 		staging_desc.BindFlags = 0;
 		staging_desc.MiscFlags = 0;
 		staging_desc.MipLevels = 1;
+		staging_desc.layout = IMAGE_LAYOUT_COPY_DST;
 		bool success = device->CreateTexture(&staging_desc, nullptr, &stagingTex);
 		assert(success);
 
@@ -204,6 +205,30 @@ namespace wiHelper
 				float g = ((pixel >> 10) & 1023) / 1023.0f;
 				float b = ((pixel >> 20) & 1023) / 1023.0f;
 				float a = ((pixel >> 30) & 3) / 3.0f;
+
+				uint32_t rgba8 = 0;
+				rgba8 |= (uint32_t)(r * 255.0f) << 0;
+				rgba8 |= (uint32_t)(g * 255.0f) << 8;
+				rgba8 |= (uint32_t)(b * 255.0f) << 16;
+				rgba8 |= (uint32_t)(a * 255.0f) << 24;
+
+				data32[i] = rgba8;
+			}
+		}
+		else if (desc.Format == FORMAT_R32G32B32A32_FLOAT)
+		{
+			// So this should be converted first to rgba8 before saving to common format...
+
+			XMFLOAT4* data128 = (XMFLOAT4*)texturedata.data();
+			uint32_t* data32 = (uint32_t*)texturedata.data();
+
+			for (uint32_t i = 0; i < data_count; ++i)
+			{
+				XMFLOAT4 pixel = data128[i];
+				float r = std::max(0.0f, std::min(pixel.x, 1.0f));
+				float g = std::max(0.0f, std::min(pixel.y, 1.0f));
+				float b = std::max(0.0f, std::min(pixel.z, 1.0f));
+				float a = std::max(0.0f, std::min(pixel.w, 1.0f));
 
 				uint32_t rgba8 = 0;
 				rgba8 |= (uint32_t)(r * 255.0f) << 0;
