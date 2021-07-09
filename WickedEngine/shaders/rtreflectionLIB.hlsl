@@ -188,6 +188,8 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 	for (uint iterator = 0; iterator < g_xFrame_LightArrayCount; iterator++)
 	{
 		ShaderEntity light = EntityArray[g_xFrame_LightArrayOffset + iterator];
+		if ((light.layerMask & material.layerMask) == 0)
+			continue;
 
 		if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
 		{

@@ -5104,17 +5104,12 @@ void DrawShadowmaps(
 					for (size_t i = 0; i < vis.scene->aabb_objects.GetCount(); ++i)
 					{
 						const AABB& aabb = vis.scene->aabb_objects[i];
-						if (shcams[cascade].frustum.CheckBoxFast(aabb))
+						if ((aabb.layerMask & vis.layerMask) && shcams[cascade].frustum.CheckBoxFast(aabb))
 						{
 							const ObjectComponent& object = vis.scene->objects[i];
 							if (object.IsRenderable() && object.IsCastingShadow() && (cascade < (CASCADE_COUNT - object.cascadeMask)))
 							{
 								Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
-								const LayerComponent* layer = vis.scene->layers.GetComponent(cullable_entity);
-								if (layer != nullptr && !(layer->GetLayerMask() & vis.layerMask))
-								{
-									continue;
-								}
 
 								RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
 								size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
@@ -5175,17 +5170,12 @@ void DrawShadowmaps(
 				for (size_t i = 0; i < vis.scene->aabb_objects.GetCount(); ++i)
 				{
 					const AABB& aabb = vis.scene->aabb_objects[i];
-					if (shcam.frustum.CheckBoxFast(aabb))
+					if ((aabb.layerMask & vis.layerMask) && shcam.frustum.CheckBoxFast(aabb))
 					{
 						const ObjectComponent& object = vis.scene->objects[i];
 						if (object.IsRenderable() && object.IsCastingShadow())
 						{
 							Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
-							const LayerComponent* layer = vis.scene->layers.GetComponent(cullable_entity);
-							if (layer != nullptr && !(layer->GetLayerMask() & vis.layerMask))
-							{
-								continue;
-							}
 
 							RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
 							size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
@@ -5241,17 +5231,12 @@ void DrawShadowmaps(
 				for (size_t i = 0; i < vis.scene->aabb_objects.GetCount(); ++i)
 				{
 					const AABB& aabb = vis.scene->aabb_objects[i];
-					if (boundingsphere.intersects(aabb))
+					if ((aabb.layerMask & vis.layerMask) && boundingsphere.intersects(aabb))
 					{
 						const ObjectComponent& object = vis.scene->objects[i];
 						if (object.IsRenderable() && object.IsCastingShadow())
 						{
 							Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
-							const LayerComponent* layer = vis.scene->layers.GetComponent(cullable_entity);
-							if (layer != nullptr && !(layer->GetLayerMask() & vis.layerMask))
-							{
-								continue;
-							}
 
 							RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
 							size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
@@ -6781,7 +6766,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 	const float zNearP = vis.camera->zNearP;
 	const float zFarP = vis.camera->zFarP;
 
-	auto render_probe = [&](const EnvironmentProbeComponent& probe, Entity entity) {
+	auto render_probe = [&](const EnvironmentProbeComponent& probe, const AABB& probe_aabb) {
 
 		const SHCAM cameras[] = {
 			SHCAM(probe.position, XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //+x
@@ -6824,26 +6809,16 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		device->RenderPassBegin(&vis.scene->renderpasses_envmap[probe.textureIndex], cmd);
 
 		// Scene will only be rendered if this is a real probe entity:
-		if (entity != INVALID_ENTITY)
+		if (probe_aabb.layerMask & vis.layerMask)
 		{
-			const LayerComponent* probe_layer = vis.scene->layers.GetComponent(entity);
-			const uint32_t layerMask = probe_layer == nullptr ? ~0 : probe_layer->GetLayerMask();
-
 			SPHERE culler = SPHERE(probe.position, zFarP);
 
 			RenderQueue renderQueue;
 			for (size_t i = 0; i < vis.scene->aabb_objects.GetCount(); ++i)
 			{
 				const AABB& aabb = vis.scene->aabb_objects[i];
-				if (culler.intersects(aabb))
+				if ((aabb.layerMask & vis.layerMask) && (aabb.layerMask & probe_aabb.layerMask) && culler.intersects(aabb))
 				{
-					Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
-					const LayerComponent* layer = vis.scene->layers.GetComponent(cullable_entity);
-					if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
-					{
-						continue;
-					}
-
 					const ObjectComponent& object = vis.scene->objects[i];
 					if (object.IsRenderable())
 					{
@@ -6960,18 +6935,22 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		EnvironmentProbeComponent probe;
 		probe.textureIndex = 0;
 		probe.position = vis.camera->Eye;
-		render_probe(probe, INVALID_ENTITY);
+
+		AABB probe_aabb;
+		probe_aabb.layerMask = 0;
+		render_probe(probe, probe_aabb);
 	}
 	else
 	{
 		for (size_t i = 0; i < vis.scene->probes.GetCount(); ++i)
 		{
 			const EnvironmentProbeComponent& probe = vis.scene->probes[i];
-			if (probe.render_dirty && probe.textureIndex >= 0 && probe.textureIndex < vis.scene->envmapCount)
+			const AABB& probe_aabb = vis.scene->aabb_probes[i];
+
+			if ((probe_aabb.layerMask & vis.layerMask) && probe.render_dirty && probe.textureIndex >= 0 && probe.textureIndex < vis.scene->envmapCount)
 			{
 				probe.render_dirty = false;
-				Entity entity = vis.scene->probes.GetEntity(i);
-				render_probe(probe, entity);
+				render_probe(probe, probe_aabb);
 			}
 		}
 	}

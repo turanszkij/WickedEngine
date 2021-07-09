@@ -864,6 +864,8 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 				bucket_bits ^= 1u << bucket_bit_index;
 
 				ShaderEntity light = EntityArray[g_xFrame_LightArrayOffset + entity_index];
+				if ((light.layerMask & GetMaterial().layerMask) == 0)
+					continue;
 
 				if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
 				{
@@ -1102,6 +1104,8 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 				if (entity_index >= first_item && entity_index <= last_item)
 				{
 					ShaderEntity light = EntityArray[entity_index];
+					if ((light.layerMask & GetMaterial().layerMask) == 0)
+						continue;
 
 					if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
 					{

@@ -3050,16 +3050,6 @@ namespace wiScene
 			{
 				Entity entity = objects.GetEntity(args.jobIndex);
 
-				const LayerComponent* layer = layers.GetComponent(entity);
-				if (layer == nullptr)
-				{
-					aabb.layerMask = ~0;
-				}
-				else
-				{
-					aabb.layerMask = layer->GetLayerMask();
-				}
-
 				const MeshComponent* mesh = meshes.GetComponent(object.meshID);
 
 				// These will only be valid for a single frame:
@@ -3232,6 +3222,16 @@ namespace wiScene
 							lightmap_rects[alloc] = &object.lightmap_rect;
 						}
 					}
+				}
+
+				const LayerComponent* layer = layers.GetComponent(entity);
+				if (layer == nullptr)
+				{
+					aabb.layerMask = ~0;
+				}
+				else
+				{
+					aabb.layerMask = layer->GetLayerMask();
 				}
 
 				// parallel bounds computation using shared memory:
