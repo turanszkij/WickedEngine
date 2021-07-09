@@ -117,7 +117,7 @@ RenderPath2D myMenuScreen; // This is an other render path, but now a simple 2D 
 main.ActivatePath(&myMenuScreen); // activate the menu, the previous path (myGame) will be stopped
 
 wiSprite mySprite("image.png"); // There are many utilities, such as a "sprite" helper class
-myMenuScreen.addSprite(&mySprite); // The 2D render path is ready to handle sprite and font rendering for you
+myMenuScreen.AddSprite(&mySprite); // The 2D render path is ready to handle sprite and font rendering for you
 
 wiAudio::Sound mySound;
 wiAudio::CreateSound("explosion.wav", &mySound); // Loads a sound file
