@@ -134,6 +134,12 @@ wiSpinLock deferredMIPGenLock;
 std::vector<std::pair<std::shared_ptr<wiResource>, bool>> deferredMIPGens;
 
 
+bool volumetric_clouds_precomputed = false;
+Texture texture_shapeNoise;
+Texture texture_detailNoise;
+Texture texture_curlNoise;
+Texture texture_weatherMap;
+
 
 void SetDevice(std::shared_ptr<GraphicsDevice> newDevice)
 {
@@ -3689,6 +3695,70 @@ void UpdatePerFrameData(
 
 	frameCB.g_xFrame_Atmosphere = vis.scene->weather.atmosphereParameters;
 	frameCB.g_xFrame_VolumetricClouds = vis.scene->weather.volumetricCloudParameters;
+
+
+
+	// Create volumetric cloud static resources if needed:
+	if (scene.weather.IsVolumetricClouds() && !texture_shapeNoise.IsValid())
+	{
+		TextureDesc shape_desc;
+		shape_desc.type = TextureDesc::TEXTURE_3D;
+		shape_desc.Width = 64;
+		shape_desc.Height = 64;
+		shape_desc.Depth = 64;
+		shape_desc.MipLevels = 6;
+		shape_desc.Format = FORMAT_R8G8B8A8_UNORM;
+		shape_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		shape_desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
+		device->CreateTexture(&shape_desc, nullptr, &texture_shapeNoise);
+		device->SetName(&texture_shapeNoise, "texture_shapeNoise");
+
+		for (uint32_t i = 0; i < texture_shapeNoise.GetDesc().MipLevels; ++i)
+		{
+			int subresource_index;
+			subresource_index = device->CreateSubresource(&texture_shapeNoise, SRV, 0, 1, i, 1);
+			assert(subresource_index == i);
+			subresource_index = device->CreateSubresource(&texture_shapeNoise, UAV, 0, 1, i, 1);
+			assert(subresource_index == i);
+		}
+
+		TextureDesc detail_desc;
+		detail_desc.type = TextureDesc::TEXTURE_3D;
+		detail_desc.Width = 32;
+		detail_desc.Height = 32;
+		detail_desc.Depth = 32;
+		detail_desc.MipLevels = 6;
+		detail_desc.Format = FORMAT_R8G8B8A8_UNORM;
+		detail_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		detail_desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
+		device->CreateTexture(&detail_desc, nullptr, &texture_detailNoise);
+		device->SetName(&texture_detailNoise, "texture_detailNoise");
+
+		for (uint32_t i = 0; i < texture_detailNoise.GetDesc().MipLevels; ++i)
+		{
+			int subresource_index;
+			subresource_index = device->CreateSubresource(&texture_detailNoise, SRV, 0, 1, i, 1);
+			assert(subresource_index == i);
+			subresource_index = device->CreateSubresource(&texture_detailNoise, UAV, 0, 1, i, 1);
+			assert(subresource_index == i);
+		}
+
+		TextureDesc texture_desc;
+		texture_desc.type = TextureDesc::TEXTURE_2D;
+		texture_desc.Width = 128;
+		texture_desc.Height = 128;
+		texture_desc.Format = FORMAT_R8G8B8A8_UNORM;
+		texture_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		texture_desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
+		device->CreateTexture(&texture_desc, nullptr, &texture_curlNoise);
+		device->SetName(&texture_curlNoise, "texture_curlNoise");
+
+		texture_desc.Width = 1024;
+		texture_desc.Height = 1024;
+		texture_desc.Format = FORMAT_R8G8B8A8_UNORM;
+		device->CreateTexture(&texture_desc, nullptr, &texture_weatherMap);
+		device->SetName(&texture_weatherMap, "texture_weatherMap");
+	}
 }
 void UpdateRenderData(
 	const Visibility& vis,
@@ -4206,6 +4276,138 @@ void UpdateRenderData(
 	{
 		// Render Atmospheric Scattering textures for lighting and sky
 		RenderAtmosphericScatteringTextures(cmd);
+	}
+
+
+	// Precompute static volumetric cloud textures:
+	if (!volumetric_clouds_precomputed && vis.scene->weather.IsVolumetricClouds())
+	{
+		// Shape Noise pass:
+		{
+			device->EventBegin("Shape Noise", cmd);
+			device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_SHAPENOISE], cmd);
+
+			const GPUResource* uavs[] = {
+				&texture_shapeNoise,
+			};
+			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Image(&texture_shapeNoise, texture_shapeNoise.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+
+			const int threadSize = 8;
+			const int noiseThreadXY = static_cast<uint32_t>(std::ceil(texture_shapeNoise.GetDesc().Width / threadSize));
+			const int noiseThreadZ = static_cast<uint32_t>(std::ceil(texture_shapeNoise.GetDesc().Depth / threadSize));
+
+			device->Dispatch(noiseThreadXY, noiseThreadXY, noiseThreadZ, cmd);
+
+			device->UnbindUAVs(0, arraysize(uavs), cmd);
+			device->EventEnd(cmd);
+		}
+
+		// Detail Noise pass:
+		{
+			device->EventBegin("Detail Noise", cmd);
+			device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_DETAILNOISE], cmd);
+
+			const GPUResource* uavs[] = {
+				&texture_detailNoise,
+			};
+			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Image(&texture_detailNoise, texture_detailNoise.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+
+			const int threadSize = 8;
+			const int noiseThreadXYZ = static_cast<uint32_t>(std::ceil(texture_detailNoise.GetDesc().Width / threadSize));
+
+			device->Dispatch(noiseThreadXYZ, noiseThreadXYZ, noiseThreadXYZ, cmd);
+
+			device->UnbindUAVs(0, arraysize(uavs), cmd);
+			device->EventEnd(cmd);
+		}
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&texture_shapeNoise, IMAGE_LAYOUT_UNORDERED_ACCESS, texture_shapeNoise.desc.layout),
+				GPUBarrier::Image(&texture_detailNoise, IMAGE_LAYOUT_UNORDERED_ACCESS, texture_detailNoise.desc.layout),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		// Generate mip chains for 3D textures:
+		GenerateMipChain(texture_shapeNoise, MIPGENFILTER_LINEAR, cmd);
+		GenerateMipChain(texture_detailNoise, MIPGENFILTER_LINEAR, cmd);
+
+		// Curl Noise pass:
+		{
+			device->EventBegin("Curl Map", cmd);
+			device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_CURLNOISE], cmd);
+
+			const GPUResource* uavs[] = {
+				&texture_curlNoise,
+			};
+			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Image(&texture_curlNoise, texture_curlNoise.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+
+			const int threadSize = 16;
+			const int curlRes = texture_curlNoise.GetDesc().Width;
+			const int curlThread = static_cast<uint32_t>(std::ceil(curlRes / threadSize));
+
+			device->Dispatch(curlThread, curlThread, 1, cmd);
+
+			device->UnbindUAVs(0, arraysize(uavs), cmd);
+			device->EventEnd(cmd);
+		}
+
+		// Weather Map pass:
+		{
+			device->EventBegin("Weather Map", cmd);
+			device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_WEATHERMAP], cmd);
+
+			const GPUResource* uavs[] = {
+				&texture_weatherMap,
+			};
+			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Image(&texture_weatherMap, texture_weatherMap.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+
+			const int threadSize = 16;
+			const int weatherMapRes = texture_weatherMap.GetDesc().Width;
+			const int weatherThread = static_cast<uint32_t>(std::ceil(weatherMapRes / threadSize));
+
+			device->Dispatch(weatherThread, weatherThread, 1, cmd);
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Memory(),
+					GPUBarrier::Image(&texture_weatherMap, IMAGE_LAYOUT_UNORDERED_ACCESS, texture_weatherMap.desc.layout),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+
+			device->UnbindUAVs(0, arraysize(uavs), cmd);
+			device->EventEnd(cmd);
+		}
+		volumetric_clouds_precomputed = true;
 	}
 }
 void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
@@ -11234,200 +11436,6 @@ void Postprocess_VolumetricClouds(
 	auto range = wiProfiler::BeginRangeGPU("Volumetric Clouds", cmd);
 
 	BindCommonResources(cmd);
-
-	static Texture texture_shapeNoise;
-	static Texture texture_detailNoise;
-	static Texture texture_curlNoise;
-	static Texture texture_weatherMap;
-
-	// Initialize and render once
-	if (!texture_shapeNoise.IsValid())
-	{
-		// Initialize textures:
-		TextureDesc shape_desc;
-		shape_desc.type = TextureDesc::TEXTURE_3D;
-		shape_desc.Width = 64;
-		shape_desc.Height = 64;
-		shape_desc.Depth = 64;
-		shape_desc.MipLevels = 6;
-		shape_desc.Format = FORMAT_R8G8B8A8_UNORM;
-		shape_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		shape_desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
-		device->CreateTexture(&shape_desc, nullptr, &texture_shapeNoise);
-		device->SetName(&texture_shapeNoise, "texture_shapeNoise");
-
-		for (uint32_t i = 0; i < texture_shapeNoise.GetDesc().MipLevels; ++i)
-		{
-			int subresource_index;
-			subresource_index = device->CreateSubresource(&texture_shapeNoise, SRV, 0, 1, i, 1);
-			assert(subresource_index == i);
-			subresource_index = device->CreateSubresource(&texture_shapeNoise, UAV, 0, 1, i, 1);
-			assert(subresource_index == i);
-		}
-
-		TextureDesc detail_desc;
-		detail_desc.type = TextureDesc::TEXTURE_3D;
-		detail_desc.Width = 32;
-		detail_desc.Height = 32;
-		detail_desc.Depth = 32;
-		detail_desc.MipLevels = 6;
-		detail_desc.Format = FORMAT_R8G8B8A8_UNORM;
-		detail_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		detail_desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
-		device->CreateTexture(&detail_desc, nullptr, &texture_detailNoise);
-		device->SetName(&texture_detailNoise, "texture_detailNoise");
-
-		for (uint32_t i = 0; i < texture_detailNoise.GetDesc().MipLevels; ++i)
-		{
-			int subresource_index;
-			subresource_index = device->CreateSubresource(&texture_detailNoise, SRV, 0, 1, i, 1);
-			assert(subresource_index == i);
-			subresource_index = device->CreateSubresource(&texture_detailNoise, UAV, 0, 1, i, 1);
-			assert(subresource_index == i);
-		}
-
-		TextureDesc texture_desc;
-		texture_desc.type = TextureDesc::TEXTURE_2D;
-		texture_desc.Width = 128;
-		texture_desc.Height = 128;
-		texture_desc.Format = FORMAT_R8G8B8A8_UNORM;
-		texture_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		texture_desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
-		device->CreateTexture(&texture_desc, nullptr, &texture_curlNoise);
-		device->SetName(&texture_curlNoise, "texture_curlNoise");
-
-		texture_desc.Width = 1024;
-		texture_desc.Height = 1024;
-		texture_desc.Format = FORMAT_R8G8B8A8_UNORM;
-		device->CreateTexture(&texture_desc, nullptr, &texture_weatherMap);
-		device->SetName(&texture_weatherMap, "texture_weatherMap");
-
-		// Shape Noise pass:
-		{
-			device->EventBegin("Shape Noise", cmd);
-			device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_SHAPENOISE], cmd);
-
-			const GPUResource* uavs[] = {
-				&texture_shapeNoise,
-			};
-			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
-
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&texture_shapeNoise, texture_shapeNoise.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
-
-			const int threadSize = 8;
-			const int noiseThreadXY = static_cast<uint32_t>(std::ceil(texture_shapeNoise.GetDesc().Width / threadSize));
-			const int noiseThreadZ = static_cast<uint32_t>(std::ceil(texture_shapeNoise.GetDesc().Depth / threadSize));
-
-			device->Dispatch(noiseThreadXY, noiseThreadXY, noiseThreadZ, cmd);
-
-			device->UnbindUAVs(0, arraysize(uavs), cmd);
-			device->EventEnd(cmd);
-		}
-
-		// Detail Noise pass:
-		{
-			device->EventBegin("Detail Noise", cmd);
-			device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_DETAILNOISE], cmd);
-
-			const GPUResource* uavs[] = {
-				&texture_detailNoise,
-			};
-			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
-
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&texture_detailNoise, texture_detailNoise.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
-
-			const int threadSize = 8;
-			const int noiseThreadXYZ = static_cast<uint32_t>(std::ceil(texture_detailNoise.GetDesc().Width / threadSize));
-
-			device->Dispatch(noiseThreadXYZ, noiseThreadXYZ, noiseThreadXYZ, cmd);
-
-			device->UnbindUAVs(0, arraysize(uavs), cmd);
-			device->EventEnd(cmd);
-		}
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&texture_shapeNoise, IMAGE_LAYOUT_UNORDERED_ACCESS, texture_shapeNoise.desc.layout),
-				GPUBarrier::Image(&texture_detailNoise, IMAGE_LAYOUT_UNORDERED_ACCESS, texture_detailNoise.desc.layout),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
-		// Generate mip chains for 3D textures:
-		GenerateMipChain(texture_shapeNoise, MIPGENFILTER_LINEAR, cmd);
-		GenerateMipChain(texture_detailNoise, MIPGENFILTER_LINEAR, cmd);
-
-		// Curl Noise pass:
-		{
-			device->EventBegin("Curl Map", cmd);
-			device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_CURLNOISE], cmd);
-
-			const GPUResource* uavs[] = {
-				&texture_curlNoise,
-			};
-			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
-
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&texture_curlNoise, texture_curlNoise.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
-
-			const int threadSize = 16;
-			const int curlRes = texture_curlNoise.GetDesc().Width;
-			const int curlThread = static_cast<uint32_t>(std::ceil(curlRes / threadSize));
-
-			device->Dispatch(curlThread, curlThread, 1, cmd);
-
-			device->UnbindUAVs(0, arraysize(uavs), cmd);
-			device->EventEnd(cmd);
-		}
-
-		// Weather Map pass:
-		{
-			device->EventBegin("Weather Map", cmd);
-			device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_WEATHERMAP], cmd);
-
-			const GPUResource* uavs[] = {
-				&texture_weatherMap,
-			};
-			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
-
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&texture_weatherMap, texture_weatherMap.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
-
-			const int threadSize = 16;
-			const int weatherMapRes = texture_weatherMap.GetDesc().Width;
-			const int weatherThread = static_cast<uint32_t>(std::ceil(weatherMapRes / threadSize));
-
-			device->Dispatch(weatherThread, weatherThread, 1, cmd);
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Memory(),
-					GPUBarrier::Image(&texture_weatherMap, IMAGE_LAYOUT_UNORDERED_ACCESS, texture_weatherMap.desc.layout),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
-
-			device->UnbindUAVs(0, arraysize(uavs), cmd);
-			device->EventEnd(cmd);
-		}
-	}
 
 	const TextureDesc& desc = res.texture_reproject[0].GetDesc();
 	PostProcessCB cb;

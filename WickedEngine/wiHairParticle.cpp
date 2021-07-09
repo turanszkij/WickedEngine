@@ -52,11 +52,10 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
-		_flags &= ~REGENERATE_FRAME;
 		if (_flags & REBUILD_BUFFERS || !cb.IsValid() || (strandCount * segmentCount) != particleBuffer.GetDesc().ByteWidth / sizeof(Patch))
 		{
 			_flags &= ~REBUILD_BUFFERS;
-			_flags |= REGENERATE_FRAME;
+			regenerate_frame = true;
 
 			GPUBufferDesc bd;
 			bd.Usage = USAGE_DEFAULT;
@@ -170,7 +169,7 @@ void wiHairParticle::UpdateGPU(const MeshComponent& mesh, const MaterialComponen
 	HairParticleCB hcb;
 	hcb.xWorld = world;
 	hcb.xColor = material.baseColor;
-	hcb.xHairRegenerate = (_flags & REGENERATE_FRAME) ? 1 : 0;
+	hcb.xHairRegenerate = regenerate_frame ? 1 : 0;
 	hcb.xLength = length;
 	hcb.xStiffness = stiffness;
 	hcb.xHairRandomness = randomness;
@@ -259,6 +258,8 @@ void wiHairParticle::UpdateGPU(const MeshComponent& mesh, const MaterialComponen
 	}
 
 	device->EventEnd(cmd);
+
+	regenerate_frame = false;
 }
 
 void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent& material, RENDERPASS renderPass, CommandList cmd) const

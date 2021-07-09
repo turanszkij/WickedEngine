@@ -33,7 +33,7 @@ public:
 	enum FLAGS
 	{
 		EMPTY = 0,
-		REGENERATE_FRAME = 1 << 0,
+		_DEPRECATED_REGENERATE_FRAME = 1 << 0,
 		REBUILD_BUFFERS = 1 << 1,
 	};
 	uint32_t _flags = EMPTY;
@@ -61,6 +61,7 @@ public:
 	AABB aabb;
 	std::vector<uint32_t> indices; // it is dependent on vertex_lengths and contains triangles with non-zero lengths
 	uint32_t layerMask = ~0u;
+	mutable bool regenerate_frame = true;
 
 	void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
 
