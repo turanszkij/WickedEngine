@@ -286,20 +286,23 @@ struct AtmosphereParameters
 	float bottomRadius;
 	// Maximum considered atmosphere height (center to atmosphere top)
 	float topRadius;
+
 	// Center of the planet
 	float3 planetCenter;
-
 	// Rayleigh scattering exponential distribution scale in the atmosphere
 	float rayleighDensityExpScale;
+
 	// Rayleigh scattering coefficients
 	float3 rayleighScattering;
-
 	// Mie scattering exponential distribution scale in the atmosphere
 	float mieDensityExpScale;
+
 	// Mie scattering coefficients
 	float3 mieScattering;	float padding1;
+
 	// Mie extinction coefficients
 	float3 mieExtinction;	float padding2;
+
 	// Mie absorption coefficients
 	float3 mieAbsorption;	
 	// Mie phase function excentricity
@@ -310,8 +313,10 @@ struct AtmosphereParameters
 	float absorptionDensity0ConstantTerm;
 	float absorptionDensity0LinearTerm;
 	float absorptionDensity1ConstantTerm;
+
 		float3 padding3;
 	float absorptionDensity1LinearTerm;
+
 	// This other medium only absorb light, e.g. useful to represent ozone in the earth atmosphere
 	float3 absorptionExtinction;	float padding4;
 
@@ -361,6 +366,165 @@ struct AtmosphereParameters
 #endif // __cplusplus
 };
 
+
+struct VolumetricCloudParameters
+{
+	float3 Albedo; // Cloud albedo is normally very close to 1
+	float CloudAmbientGroundMultiplier; // [0; 1] Amount of ambient light to reach the bottom of clouds
+
+	float3 ExtinctionCoefficient; // * 0.05 looks good too
+	float BeerPowder;
+
+	float BeerPowderPower;
+	float PhaseG; // [-0.999; 0.999]
+	float PhaseG2; // [-0.999; 0.999]
+	float PhaseBlend; // [0; 1]
+
+	float MultiScatteringScattering;
+	float MultiScatteringExtinction;
+	float MultiScatteringEccentricity;
+	float ShadowStepLength;
+
+	float HorizonBlendAmount;
+	float HorizonBlendPower;
+	float WeatherDensityAmount; // Rain clouds disabled by default.
+	float CloudStartHeight;
+
+	float CloudThickness;
+	float SkewAlongWindDirection;
+	float TotalNoiseScale;
+	float DetailScale;
+
+	float WeatherScale;
+	float CurlScale;
+	float ShapeNoiseHeightGradientAmount;
+	float ShapeNoiseMultiplier;
+
+	float2 ShapeNoiseMinMax;
+	float ShapeNoisePower;
+	float DetailNoiseModifier;
+
+	float DetailNoiseHeightFraction;
+	float CurlNoiseModifier;
+	float CoverageAmount;
+	float CoverageMinimum;
+
+	float TypeAmount;
+	float TypeOverall;
+	float AnvilAmount; // Anvil clouds disabled by default.
+	float AnvilOverhangHeight;
+
+	// Animation
+	float AnimationMultiplier;
+	float WindSpeed;
+	float WindAngle;
+	float WindUpAmount;
+
+		float2 padding0;
+	float CoverageWindSpeed;
+	float CoverageWindAngle;
+
+	// Cloud types
+	// 4 positions of a black, white, white, black gradient
+	float4 CloudGradientSmall;
+	float4 CloudGradientMedium;
+	float4 CloudGradientLarge;
+
+	// Performance
+	int MaxStepCount; // Maximum number of iterations. Higher gives better images but may be slow.
+	float MaxMarchingDistance; // Clamping the marching steps to be within a certain distance.
+	float InverseDistanceStepCount; // Distance over which the raymarch steps will be evenly distributed.
+	float RenderDistance; // Maximum distance to march before returning a miss.
+
+	float LODDistance; // After a certain distance, noises will get higher LOD
+	float LODMin; // 
+	float BigStepMarch; // How long inital rays should be until they hit something. Lower values may ives a better image but may be slower.
+	float TransmittanceThreshold; // Default: 0.005. If the clouds transmittance has reached it's desired opacity, there's no need to keep raymarching for performance.
+
+		float2 padding1;
+	float ShadowSampleCount;
+	float GroundContributionSampleCount;
+
+	void init()
+	{
+
+
+		// Lighting
+		Albedo = float3(0.9f, 0.9f, 0.9f);
+		CloudAmbientGroundMultiplier = 0.75f;
+		ExtinctionCoefficient = float3(0.71f * 0.1f, 0.86f * 0.1f, 1.0f * 0.1f);
+		BeerPowder = 20.0f;
+		BeerPowderPower = 0.5f;
+		PhaseG = 0.5f; // [-0.999; 0.999]
+		PhaseG2 = -0.5f; // [-0.999; 0.999]
+		PhaseBlend = 0.2f; // [0; 1]
+		MultiScatteringScattering = 1.0f;
+		MultiScatteringExtinction = 0.1f;
+		MultiScatteringEccentricity = 0.2f;
+		ShadowStepLength = 3000.0f;
+		HorizonBlendAmount = 1.25f;
+		HorizonBlendPower = 2.0f;
+		WeatherDensityAmount = 0.0f;
+
+		// Modelling
+		CloudStartHeight = 1500.0f;
+		CloudThickness = 4000.0f;
+		SkewAlongWindDirection = 700.0f;
+
+		TotalNoiseScale = 1.0f;
+		DetailScale = 5.0f;
+		WeatherScale = 0.0625f;
+		CurlScale = 7.5f;
+
+		ShapeNoiseHeightGradientAmount = 0.2f;
+		ShapeNoiseMultiplier = 0.8f;
+		ShapeNoisePower = 6.0f;
+		ShapeNoiseMinMax = float2(0.25f, 1.1f);
+
+		DetailNoiseModifier = 0.2f;
+		DetailNoiseHeightFraction = 10.0f;
+		CurlNoiseModifier = 550.0f;
+
+		CoverageAmount = 2.0f;
+		CoverageMinimum = 1.05f;
+		TypeAmount = 1.0f;
+		TypeOverall = 0.0f;
+		AnvilAmount = 0.0f;
+		AnvilOverhangHeight = 3.0f;
+
+		// Animation
+		AnimationMultiplier = 2.0f;
+		WindSpeed = 15.9f;
+		WindAngle = -0.39f;
+		WindUpAmount = 0.5f;
+		CoverageWindSpeed = 25.0f;
+		CoverageWindAngle = 0.087f;
+
+		// Cloud types
+		// 4 positions of a black, white, white, black gradient
+		CloudGradientSmall = float4(0.02f, 0.07f, 0.12f, 0.28f);
+		CloudGradientMedium = float4(0.02f, 0.07f, 0.39f, 0.59f);
+		CloudGradientLarge = float4(0.02f, 0.07f, 0.88f, 1.0f);
+
+		// Performance
+		MaxStepCount = 128;
+		MaxMarchingDistance = 30000.0f;
+		InverseDistanceStepCount = 15000.0f;
+		RenderDistance = 70000.0f;
+		LODDistance = 25000.0f;
+		LODMin = 0.0f;
+		BigStepMarch = 3.0f;
+		TransmittanceThreshold = 0.005f;
+		ShadowSampleCount = 5.0f;
+		GroundContributionSampleCount = 2.0f;
+	}
+
+#ifdef __cplusplus
+	VolumetricCloudParameters() { init(); }
+#endif // __cplusplus
+
+};
+
 // These option bits can be read from g_xFrame_Options constant buffer value:
 static const uint OPTION_BIT_TEMPORALAA_ENABLED = 1 << 0;
 static const uint OPTION_BIT_TRANSPARENTSHADOWS_ENABLED = 1 << 1;
@@ -369,9 +533,10 @@ static const uint OPTION_BIT_VOXELGI_REFLECTIONS_ENABLED = 1 << 3;
 static const uint OPTION_BIT_VOXELGI_RETARGETTED = 1 << 4;
 static const uint OPTION_BIT_SIMPLE_SKY = 1 << 5;
 static const uint OPTION_BIT_REALISTIC_SKY = 1 << 6;
-static const uint OPTION_BIT_RAYTRACED_SHADOWS = 1 << 7;
-static const uint OPTION_BIT_DISABLE_ALBEDO_MAPS = 1 << 8;
-static const uint OPTION_BIT_SHADOW_MASK = 1 << 9;
+static const uint OPTION_BIT_HEIGHT_FOG = 1 << 7;
+static const uint OPTION_BIT_RAYTRACED_SHADOWS = 1 << 8;
+static const uint OPTION_BIT_DISABLE_ALBEDO_MAPS = 1 << 9;
+static const uint OPTION_BIT_SHADOW_MASK = 1 << 10;
 
 // ---------- Common Constant buffers: -----------------
 
@@ -398,10 +563,11 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float3		g_xFrame_Ambient;
 	float		g_xFrame_Cloudiness;
 
-	float3		g_xFrame_padding0;
-	float		g_xFrame_SkyExposure;
+	float4		g_xFrame_Fog;								// Fog Start,End,Height Start,Height End
 
-	float3		g_xFrame_Fog;								// Fog Start,End,Height
+	float		g_xFrame_padding0;
+	float		g_xFrame_FogHeightSky;
+	float		g_xFrame_SkyExposure;
 	float		g_xFrame_VoxelRadianceMaxDistance;			// maximum raymarch distance for voxel GI in world-space
 
 	float		g_xFrame_VoxelRadianceDataSize;				// voxel half-extent in world space units
@@ -461,6 +627,7 @@ CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
 	float		g_xFrame_BlueNoisePhase;
 
 	AtmosphereParameters g_xFrame_Atmosphere;
+	VolumetricCloudParameters g_xFrame_VolumetricClouds;
 };
 
 CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)
@@ -566,8 +733,10 @@ CBUFFER(VolumeLightCB, CBSLOT_RENDERER_VOLUMELIGHT)
 
 CBUFFER(LensFlareCB, CBSLOT_RENDERER_LENSFLARE)
 {
-	float4		xSunPos; // light position
-	float4		xScreen; // screen dimensions
+	float3 xLensFlarePos;
+	float xLensFlareOffset;
+	float2 xLensFlareSize;
+	float2 xLensFlare_padding;
 };
 
 struct CubemapRenderCam

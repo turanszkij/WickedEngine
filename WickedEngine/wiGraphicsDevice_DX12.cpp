@@ -2577,10 +2577,11 @@ using namespace DX12_Internal;
 		hr = device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &features_5, sizeof(features_5));
 		if (features_5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_0)
 		{
-			capabilities |= GRAPHICSDEVICE_CAPABILITY_RAYTRACING;
+			capabilities |= GRAPHICSDEVICE_CAPABILITY_RAYTRACING_PIPELINE;
 			if (features_5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_1)
 			{
 				capabilities |= GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE;
+				capabilities |= GRAPHICSDEVICE_CAPABILITY_RAYTRACING_GEOMETRYINDEX;
 			}
 		}
 
@@ -2737,7 +2738,7 @@ using namespace DX12_Internal;
 			nullSRV_texture3d = allocationhandler->descriptors_res.allocate();
 			device->CreateShaderResourceView(nullptr, &srv_desc, nullSRV_texture3d);
 		}
-		if(CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+		if(CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_PIPELINE) || CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
 		{
 			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
 			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -2788,6 +2789,10 @@ using namespace DX12_Internal;
 			nullUAV_texture3d = allocationhandler->descriptors_res.allocate();
 			device->CreateUnorderedAccessView(nullptr, nullptr, &uav_desc, nullUAV_texture3d);
 		}
+
+
+		hr = queues[QUEUE_GRAPHICS].queue->GetTimestampFrequency(&TIMESTAMP_FREQUENCY);
+		assert(SUCCEEDED(hr));
 
 		wiBackLog::post("Created GraphicsDevice_DX12");
 	}
@@ -4032,41 +4037,34 @@ using namespace DX12_Internal;
 
 				auto shader_internal = to_internal(shader);
 
-				if(!shader_internal->bindless_res.empty())
+				for (auto& x : shader_internal->bindless_res)
 				{
 					bool found = false;
-					for (auto& x : shader_internal->bindless_res)
+					for (auto& y : internal_state->bindless_res)
 					{
-						for (auto& y : internal_state->bindless_res)
+						if (x.RegisterSpace == y.RegisterSpace)
 						{
-							if (x.RegisterSpace == y.RegisterSpace)
-							{
-								found = true;
-								break;
-							}
-						}
-						if (found)
+							found = true;
 							break;
+						}
+					}
+					if (!found)
 						internal_state->bindless_res.push_back(x);
-					}
 				}
-				if (!shader_internal->bindless_sam.empty())
+
+				for (auto& x : shader_internal->bindless_sam)
 				{
 					bool found = false;
-					for (auto& x : shader_internal->bindless_sam)
+					for (auto& y : internal_state->bindless_sam)
 					{
-						for (auto& y : internal_state->bindless_sam)
+						if (x.RegisterSpace == y.RegisterSpace)
 						{
-							if (x.RegisterSpace == y.RegisterSpace)
-							{
-								found = true;
-								break;
-							}
-						}
-						if (found)
+							found = true;
 							break;
-						internal_state->bindless_sam.push_back(x);
+						}
 					}
+					if (!found)
+						internal_state->bindless_sam.push_back(x);
 				}
 			};
 
@@ -5671,9 +5669,6 @@ using namespace DX12_Internal;
 			hr = queues[QUEUE_GRAPHICS].queue->Signal(descriptorheap_sam.fence.Get(), descriptorheap_sam.fenceValue);
 			assert(SUCCEEDED(hr));
 			descriptorheap_sam.cached_completedValue = descriptorheap_sam.fence->GetCompletedValue();
-
-			hr = queues[QUEUE_GRAPHICS].queue->GetTimestampFrequency(&TIMESTAMP_FREQUENCY);
-			assert(SUCCEEDED(hr));
 
 			allocationhandler->Update(FRAMECOUNT, BUFFERCOUNT);
 		}

@@ -126,6 +126,7 @@ void MainComponent::Run()
 		if (GetActivePath() != nullptr)
 		{
 			GetActivePath()->init(canvas);
+			GetActivePath()->PreUpdate();
 		}
 
 		// Fixed time update:
@@ -187,11 +188,6 @@ void MainComponent::Run()
 void MainComponent::Update(float dt)
 {
 	auto range = wiProfiler::BeginRangeCPU("Update");
-
-	if (GetActivePath() != nullptr)
-	{
-		GetActivePath()->PreUpdate();
-	}
 
 	wiLua::SetDeltaTime(double(dt));
 	wiLua::Update();

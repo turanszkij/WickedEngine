@@ -1,7 +1,7 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Utility.h"
 
-TEXTURECUBEARRAY(input, float4, TEXSLOT_UNIQUE0);
+TEXTURECUBEARRAY(input, float4, TEXSLOT_ONDEMAND0);
 RWTEXTURE2DARRAY(output, float4, 0);
 
 // From "Real Shading in UnrealEngine 4" by Brian Karis

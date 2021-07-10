@@ -344,6 +344,9 @@ namespace wiScene
 			wiECS::Entity materialID = wiECS::INVALID_ENTITY;
 			uint32_t indexOffset = 0;
 			uint32_t indexCount = 0;
+
+			// Non-serialized attributes:
+			uint32_t materialIndex = 0;
 		};
 		std::vector<MeshSubset> subsets;
 
@@ -1108,16 +1111,22 @@ namespace wiScene
 			OCEAN_ENABLED = 1 << 0,
 			SIMPLE_SKY = 1 << 1,
 			REALISTIC_SKY = 1 << 2,
+			VOLUMETRIC_CLOUDS = 1 << 3,
+			HEIGHT_FOG = 1 << 4,
 		};
 		uint32_t _flags = EMPTY;
 
 		inline bool IsOceanEnabled() const { return _flags & OCEAN_ENABLED; }
 		inline bool IsSimpleSky() const { return _flags & SIMPLE_SKY; }
 		inline bool IsRealisticSky() const { return _flags & REALISTIC_SKY; }
+		inline bool IsVolumetricClouds() const { return _flags & VOLUMETRIC_CLOUDS; }
+		inline bool IsHeightFog() const { return _flags & HEIGHT_FOG; }
 
 		inline void SetOceanEnabled(bool value = true) { if (value) { _flags |= OCEAN_ENABLED; } else { _flags &= ~OCEAN_ENABLED; } }
 		inline void SetSimpleSky(bool value = true) { if (value) { _flags |= SIMPLE_SKY; } else { _flags &= ~SIMPLE_SKY; } }
 		inline void SetRealisticSky(bool value = true) { if (value) { _flags |= REALISTIC_SKY; } else { _flags &= ~REALISTIC_SKY; } }
+		inline void SetVolumetricClouds(bool value = true) { if (value) { _flags |= VOLUMETRIC_CLOUDS; } else { _flags &= ~VOLUMETRIC_CLOUDS; } }
+		inline void SetHeightFog(bool value = true) { if (value) { _flags |= HEIGHT_FOG; } else { _flags &= ~HEIGHT_FOG; } }
 
 		XMFLOAT3 sunColor = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 sunDirection = XMFLOAT3(0, 1, 0);
@@ -1128,7 +1137,9 @@ namespace wiScene
 		XMFLOAT3 ambient = XMFLOAT3(0.2f, 0.2f, 0.2f);
 		float fogStart = 100;
 		float fogEnd = 1000;
-		float fogHeight = 0;
+		float fogHeightStart = 1;
+		float fogHeightEnd = 3;
+		float fogHeightSky = 0;
 		float cloudiness = 0.0f;
 		float cloudScale = 0.0003f;
 		float cloudSpeed = 0.1f;
@@ -1139,6 +1150,7 @@ namespace wiScene
 
 		wiOcean::OceanParameters oceanParameters;
 		AtmosphereParameters atmosphereParameters;
+		VolumetricCloudParameters volumetricCloudParameters;
 
 		std::string skyMapName;
 		std::string colorGradingMapName;
@@ -1273,18 +1285,17 @@ namespace wiScene
 		};
 		uint32_t flags = EMPTY;
 
+
 		wiSpinLock locker;
 		AABB bounds;
 		std::vector<AABB> parallel_bounds;
 		WeatherComponent weather;
 		wiGraphics::RaytracingAccelerationStructure TLAS;
 		std::vector<uint8_t> TLAS_instances;
-
 		wiGPUBVH BVH; // this is for non-hardware accelerated raytracing
-		mutable bool BVH_invalid = false;
-		void InvalidateBVH() {
-			BVH_invalid = true;
-		}
+		mutable bool acceleration_structure_update_requested = false;
+		void SetAccelerationStructureUpdateRequested(bool value = true) { acceleration_structure_update_requested = value; }
+		bool IsAccelerationStructureUpdateRequested() const { return acceleration_structure_update_requested; }
 
 		// Occlusion query state:
 		wiGraphics::GPUQueryHeap queryHeap[arraysize(ObjectComponent::occlusionQueries)];

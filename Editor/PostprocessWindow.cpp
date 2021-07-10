@@ -50,16 +50,6 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	});
 	AddWidget(&lightShaftsCheckBox);
 
-	volumetricCloudsCheckBox.Create("Volumetric clouds: ");
-	volumetricCloudsCheckBox.SetTooltip("Enable volumetric cloud rendering.");
-	volumetricCloudsCheckBox.SetSize(XMFLOAT2(hei, hei));
-	volumetricCloudsCheckBox.SetPos(XMFLOAT2(x, y += step));
-	volumetricCloudsCheckBox.SetCheck(editor->renderPath->getVolumetricCloudsEnabled());
-	volumetricCloudsCheckBox.OnClick([=](wiEventArgs args) {
-		editor->renderPath->setVolumetricCloudsEnabled(args.bValue);
-		});
-	AddWidget(&volumetricCloudsCheckBox);
-
 	aoComboBox.Create("AO: ");
 	aoComboBox.SetTooltip("Choose Ambient Occlusion type. RTAO is only available if hardware supports ray tracing");
 	aoComboBox.SetScriptTip("RenderPath3D::SetAO(int value)");
@@ -152,7 +142,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 		editor->renderPath->setRaytracedReflectionsEnabled(args.bValue);
 		});
 	AddWidget(&raytracedReflectionsCheckBox);
-	raytracedReflectionsCheckBox.SetEnabled(wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING));
+	raytracedReflectionsCheckBox.SetEnabled(wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_PIPELINE) && wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_GEOMETRYINDEX));
 
 	screenSpaceShadowsCheckBox.Create("SS Shadows: ");
 	screenSpaceShadowsCheckBox.SetTooltip("Enable screen space contact shadows. This can add small shadows details to shadow maps in screen space.");

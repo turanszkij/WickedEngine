@@ -395,7 +395,6 @@ namespace wiGraphics
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12PipelineState>, uint64_t>> destroyer_pipelines;
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12RootSignature>, uint64_t>> destroyer_rootSignatures;
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12StateObject>, uint64_t>> destroyer_stateobjects;
-			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>, uint64_t>> destroyer_descriptorHeaps;
 			std::deque<std::pair<int, uint64_t>> destroyer_bindless_res;
 			std::deque<std::pair<int, uint64_t>> destroyer_bindless_sam;
 
@@ -476,18 +475,6 @@ namespace wiGraphics
 					if (destroyer_stateobjects.front().second + BUFFERCOUNT < FRAMECOUNT)
 					{
 						destroyer_stateobjects.pop_front();
-						// comptr auto delete
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_descriptorHeaps.empty())
-				{
-					if (destroyer_descriptorHeaps.front().second + BUFFERCOUNT < FRAMECOUNT)
-					{
-						destroyer_descriptorHeaps.pop_front();
 						// comptr auto delete
 					}
 					else

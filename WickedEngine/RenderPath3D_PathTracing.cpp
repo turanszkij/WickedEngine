@@ -43,7 +43,6 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	XMUINT2 internalResolution = GetInternalResolution();
-	FORMAT defaultTextureFormat = FORMAT_R10G10B10A2_UNORM;
 
 	{
 		TextureDesc desc;
@@ -56,6 +55,7 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 
 #ifdef OPEN_IMAGE_DENOISE
 		desc.BindFlags = BIND_UNORDERED_ACCESS;
+		desc.layout = IMAGE_LAYOUT_UNORDERED_ACCESS;
 		device->CreateTexture(&desc, nullptr, &denoiserAlbedo);
 		device->SetName(&denoiserAlbedo, "denoiserAlbedo");
 		device->CreateTexture(&desc, nullptr, &denoiserNormal);
@@ -65,7 +65,7 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.Format = defaultTextureFormat;
+		desc.Format = FORMAT_R10G10B10A2_UNORM;
 		desc.Width = internalResolution.x;
 		desc.Height = internalResolution.y;
 		device->CreateTexture(&desc, nullptr, &rtPostprocess_LDR[0]);
@@ -144,10 +144,8 @@ void RenderPath3D_PathTracing::Update(float dt)
 		resetProgress();
 	}
 
-	if (sam == 0)
-	{
-		scene->InvalidateBVH();
-	}
+	scene->SetAccelerationStructureUpdateRequested(sam == 0);
+	setSceneUpdateEnabled(sam == 0);
 
 	RenderPath3D::Update(dt);
 
@@ -157,6 +155,9 @@ void RenderPath3D_PathTracing::Update(float dt)
 	{
 		if (!denoiserResult.IsValid() && !wiJobSystem::IsBusy(denoiserContext))
 		{
+			//wiHelper::saveTextureToFile(denoiserAlbedo, "C:/PROJECTS/WickedEngine/Editor/_albedo.png");
+			//wiHelper::saveTextureToFile(denoiserNormal, "C:/PROJECTS/WickedEngine/Editor/_normal.png");
+
 			texturedata_src.clear();
 			texturedata_dst.clear();
 			texturedata_albedo.clear();
@@ -255,7 +256,10 @@ void RenderPath3D_PathTracing::Render() const
 
 			wiRenderer::UpdateRenderData(visibility_main, frameCB, cmd);
 
-			wiRenderer::UpdateRaytracingAccelerationStructures(*scene, cmd);
+			if (scene->IsAccelerationStructureUpdateRequested())
+			{
+				wiRenderer::UpdateRaytracingAccelerationStructures(*scene, cmd);
+			}
 			});
 
 		// Main scene:

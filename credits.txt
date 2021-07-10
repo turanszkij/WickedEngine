@@ -1,0 +1,29 @@
+Credits
+
+Creator: János Turánszki https://github.com/turanszkij
+
+Contributions:
+- Silas Oler https://github.com/Kliaxe
+	- Stochastic Screen Space Reflections
+	- Realistic Sky
+	- Volumetric clouds
+	- Exponential height fog
+- Matteo De Carlo https://github.com/portaloffreedom
+	- Linux version, Cmake
+- XThemeCore https://github.com/XthemeCore
+	- Morph target support
+- Amer Koleci https://github.com/amerkoleci
+	- Windows Cmake
+	- Refactors, fixes
+- James Webb https://github.com/jdswebb
+	- Fixes
+- Ben Vinson https://github.com/BenV
+	- Fixes
+- Alexander Weinrauch https://github.com/AlexAUT
+	- Fixes
+- Eric Fedosejevs https://github.com/efedo
+	- Fixes
+- Johan Aires Rastén https://github.com/JohanAR
+	- Fixes
+- Megumumpkin https://github.com/megumumpkin
+	- Fixes

@@ -517,20 +517,6 @@ struct VertexSurface
 		tangent.xyz = normalize(mul((float3x3)WORLD, tangent.xyz));
 #endif // OBJECTSHADER_INPUT_TAN
 
-#ifdef OBJECTSHADER_USE_WIND
-		if (material.IsUsingWind())
-		{
-			const float windweight = input.GetWindWeight();
-			const float waveoffset = dot(position.xyz, g_xFrame_WindDirection) * g_xFrame_WindWaveSize + (position.x + position.y + position.z) * g_xFrame_WindRandomness;
-			const float waveoffsetPrev = dot(positionPrev.xyz, g_xFrame_WindDirection) * g_xFrame_WindWaveSize + (positionPrev.x + positionPrev.y + positionPrev.z) * g_xFrame_WindRandomness;
-			const float3 wavedir = g_xFrame_WindDirection * windweight;
-			const float3 wind = sin(g_xFrame_Time * g_xFrame_WindSpeed + waveoffset) * wavedir;
-			const float3 windPrev = sin(g_xFrame_TimePrev * g_xFrame_WindSpeed + waveoffsetPrev) * wavedir;
-			position.xyz += wind;
-			positionPrev.xyz += windPrev;
-		}
-#endif // OBJECTSHADER_USE_WIND
-
 #ifdef OBJECTSHADER_INPUT_TEX
 		uvsets = float4(input.GetUV0() * material.texMulAdd.xy + material.texMulAdd.zw, input.GetUV1());
 #endif // OBJECTSHADER_INPUT_TEX
@@ -547,6 +533,20 @@ struct VertexSurface
 #else
 		positionPrev = position;
 #endif // OBJECTSHADER_INPUT_PRE
+
+#ifdef OBJECTSHADER_USE_WIND
+		if (material.IsUsingWind())
+		{
+			const float windweight = input.GetWindWeight();
+			const float waveoffset = dot(position.xyz, g_xFrame_WindDirection) * g_xFrame_WindWaveSize + (position.x + position.y + position.z) * g_xFrame_WindRandomness;
+			const float waveoffsetPrev = dot(positionPrev.xyz, g_xFrame_WindDirection) * g_xFrame_WindWaveSize + (positionPrev.x + positionPrev.y + positionPrev.z) * g_xFrame_WindRandomness;
+			const float3 wavedir = g_xFrame_WindDirection * windweight;
+			const float3 wind = sin(g_xFrame_Time * g_xFrame_WindSpeed + waveoffset) * wavedir;
+			const float3 windPrev = sin(g_xFrame_TimePrev * g_xFrame_WindSpeed + waveoffsetPrev) * wavedir;
+			position.xyz += wind;
+			positionPrev.xyz += windPrev;
+		}
+#endif // OBJECTSHADER_USE_WIND
 	}
 };
 
@@ -727,7 +727,7 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 			if (decalAccumulation.a < 1)
 			{
 				ShaderEntity decal = EntityArray[g_xFrame_DecalArrayOffset + entity_index];
-				if ((decal.layerMask & GetMaterial().layerMask) == 0)
+				if ((decal.layerMask & surface.layerMask) == 0)
 					continue;
 
 				float4x4 decalProjection = MatrixArray[decal.GetMatrixIndex()];
@@ -796,7 +796,7 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 			if (envmapAccumulation.a < 1)
 			{
 				ShaderEntity probe = EntityArray[g_xFrame_EnvProbeArrayOffset + entity_index];
-				if ((probe.layerMask & GetMaterial().layerMask) == 0)
+				if ((probe.layerMask & surface.layerMask) == 0)
 					continue;
 
 				const float4x4 probeProjection = MatrixArray[probe.GetMatrixIndex()];
@@ -864,6 +864,8 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 				bucket_bits ^= 1u << bucket_bit_index;
 
 				ShaderEntity light = EntityArray[g_xFrame_LightArrayOffset + entity_index];
+				if ((light.layerMask & surface.layerMask) == 0)
+					continue;
 
 				if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
 				{
@@ -934,7 +936,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 				if (entity_index >= first_item && entity_index <= last_item && decalAccumulation.a < 1)
 				{
 					ShaderEntity decal = EntityArray[entity_index];
-					if ((decal.layerMask & GetMaterial().layerMask) == 0)
+					if ((decal.layerMask & surface.layerMask) == 0)
 						continue;
 
 					float4x4 decalProjection = MatrixArray[decal.GetMatrixIndex()];
@@ -1016,7 +1018,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 				if (entity_index >= first_item && entity_index <= last_item && envmapAccumulation.a < 1)
 				{
 					ShaderEntity probe = EntityArray[entity_index];
-					if ((probe.layerMask & GetMaterial().layerMask) == 0)
+					if ((probe.layerMask & surface.layerMask) == 0)
 						continue;
 
 					const float4x4 probeProjection = MatrixArray[probe.GetMatrixIndex()];
@@ -1102,6 +1104,8 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 				if (entity_index >= first_item && entity_index <= last_item)
 				{
 					ShaderEntity light = EntityArray[entity_index];
+					if ((light.layerMask & surface.layerMask) == 0)
+						continue;
 
 					if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
 					{
@@ -1166,17 +1170,19 @@ inline void ApplyLighting(in Surface surface, in Lighting lighting, inout float4
 	color.rgb = lerp(surface.albedo * combined_lighting.diffuse, surface.refraction.rgb, surface.refraction.a) + combined_lighting.specular;
 }
 
-inline void ApplyFog(in float dist, inout float4 color)
+inline void ApplyFog(in float distance, float3 P, float3 V, inout float4 color)
 {
+	const float fogAmount = GetFogAmount(distance, P, V);
+	
 	if (g_xFrame_Options & OPTION_BIT_REALISTIC_SKY)
 	{
 		const float3 skyLuminance = texture_skyluminancelut.SampleLevel(sampler_point_clamp, float2(0.5, 0.5), 0).rgb;
-		color.rgb = lerp(color.rgb, skyLuminance, GetFogAmount(dist));
+		color.rgb = lerp(color.rgb, skyLuminance, fogAmount);
 	}
 	else
 	{
 		const float3 V = float3(0.0, -1.0, 0.0);
-		color.rgb = lerp(color.rgb, GetDynamicSkyColor(V, false, false, false, true), GetFogAmount(dist));
+		color.rgb = lerp(color.rgb, GetDynamicSkyColor(V, false, false, false, true), fogAmount);
 	}
 }
 
@@ -1370,7 +1376,16 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 
 
 #ifndef DISABLE_ALPHATEST
-	clip(color.a - GetMaterial().alphaTest);
+	float alphatest = GetMaterial().alphaTest;
+#ifndef TRANSPARENT
+#ifndef ENVMAPRENDERING
+	if (g_xFrame_Options & OPTION_BIT_TEMPORALAA_ENABLED)
+	{
+		alphatest = clamp(blue_noise(pixel, lineardepth).r, 0, 0.99);
+	}
+#endif // ENVMAPRENDERING
+#endif // TRANSPARENT
+	clip(color.a - alphatest);
 #endif // DISABLE_ALPHATEST
 
 
@@ -1920,7 +1935,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 
 
 #ifdef OBJECTSHADER_USE_POSITION3D
-	ApplyFog(dist, color);
+	ApplyFog(dist, g_xCamera_CamPos, surface.V, color);
 #endif // OBJECTSHADER_USE_POSITION3D
 
 

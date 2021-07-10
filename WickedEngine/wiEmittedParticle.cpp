@@ -633,7 +633,7 @@ namespace wiEmittedParticle_Internal
 
 		wiRenderer::LoadShader(PS, pixelShader[wiEmittedParticle::SOFT], "emittedparticlePS_soft.cso");
 		wiRenderer::LoadShader(PS, pixelShader[wiEmittedParticle::SOFT_DISTORTION], "emittedparticlePS_soft_distortion.cso");
-		wiRenderer::LoadShader(PS, pixelShader[wiEmittedParticle::SIMPLEST], "emittedparticlePS_simplest.cso");
+		wiRenderer::LoadShader(PS, pixelShader[wiEmittedParticle::SIMPLE], "emittedparticlePS_simple.cso");
 		wiRenderer::LoadShader(PS, pixelShader[wiEmittedParticle::SOFT_LIGHTING], "emittedparticlePS_soft_lighting.cso");
 
 		wiRenderer::LoadShader(CS, kickoffUpdateCS, "emittedparticle_kickoffUpdateCS.cso");
@@ -679,6 +679,7 @@ namespace wiEmittedParticle_Internal
 
 		{
 			PipelineStateDesc desc;
+			desc.pt = TRIANGLESTRIP;
 			if (ALLOW_MESH_SHADER && wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_MESH_SHADER))
 			{
 				desc.ms = &meshShader;
@@ -687,7 +688,7 @@ namespace wiEmittedParticle_Internal
 			{
 				desc.vs = &vertexShader;
 			}
-			desc.ps = &pixelShader[wiEmittedParticle::SIMPLEST];
+			desc.ps = &pixelShader[wiEmittedParticle::SIMPLE];
 			desc.bs = &blendStates[BLENDMODE_ALPHA];
 			desc.rs = &wireFrameRS;
 			desc.dss = &depthStencilState;

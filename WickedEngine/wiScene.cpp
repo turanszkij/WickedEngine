@@ -450,7 +450,7 @@ namespace wiScene
 			bd.CPUAccessFlags = 0;
 			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
-			if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+			if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_PIPELINE) || device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
 			{
 				bd.MiscFlags |= RESOURCE_MISC_RAY_TRACING;
 			}
@@ -602,7 +602,7 @@ namespace wiScene
 			}
 
 			bd.ByteWidth = (uint32_t)(sizeof(Vertex_POS) * vertex_positions.size());
-			if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+			if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_PIPELINE) || device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
 			{
 				bd.MiscFlags |= RESOURCE_MISC_RAY_TRACING;
 			}
@@ -730,7 +730,7 @@ namespace wiScene
 		vertexBuffer_PRE = GPUBuffer();
 
 
-		if (wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_PIPELINE) || device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
 		{
 			BLAS_state = BLAS_STATE_NEEDS_REBUILD;
 
@@ -820,6 +820,7 @@ namespace wiScene
 	{
 		// Start recalculating normals:
 
+		if(compute != COMPUTE_NORMALS_SMOOTH_FAST)
 		{
 			// Compute hard surface normals:
 
@@ -1451,7 +1452,7 @@ namespace wiScene
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
-		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_PIPELINE) || device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
 		{
 			TLAS_instances.resize(objects.GetCount() * device->GetTopLevelAccelerationStructureInstanceSize());
 		}
@@ -1546,7 +1547,7 @@ namespace wiScene
 			bounds = AABB::Merge(bounds, group_bound);
 		}
 
-		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_PIPELINE) || device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
 		{
 			// Recreate top level acceleration structure if the object count changed:
 			if (objects.GetCount() > 0 && objects.GetCount() != TLAS.desc.toplevel.count)
@@ -1569,7 +1570,7 @@ namespace wiScene
 
 		if (lightmap_refresh_needed.load())
 		{
-			InvalidateBVH();
+			SetAccelerationStructureUpdateRequested(true);
 		}
 		if (lightmap_repack_needed.load())
 		{
@@ -2770,13 +2771,14 @@ namespace wiScene
 				std::swap(mesh.streamoutBuffer_POS, mesh.vertexBuffer_PRE);
 			}
 
-			if (mesh.BLAS.IsValid())
+			uint32_t subsetIndex = 0;
+			for (auto& subset : mesh.subsets)
 			{
-				uint32_t subsetIndex = 0;
-				for (auto& subset : mesh.subsets)
+				const MaterialComponent* material = materials.GetComponent(subset.materialID);
+				if (material != nullptr)
 				{
-					const MaterialComponent* material = materials.GetComponent(subset.materialID);
-					if (material != nullptr)
+					subset.materialIndex = (uint32_t)materials.GetIndex(subset.materialID);
+					if (mesh.BLAS.IsValid())
 					{
 						auto& geometry = mesh.BLAS.desc.bottomlevel.geometries[subsetIndex];
 						uint32_t flags = geometry._flags;
@@ -2798,9 +2800,16 @@ namespace wiScene
 							geometry.triangles.vertexBuffer = mesh.streamoutBuffer_POS;
 						}
 					}
-					subsetIndex++;
 				}
+				else
+				{
+					subset.materialIndex = 0;
+				}
+				subsetIndex++;
+			}
 
+			if (mesh.BLAS.IsValid())
+			{
 				if (mesh.dirty_morph)
 				{
 					mesh.BLAS_state = MeshComponent::BLAS_STATE_NEEDS_REBUILD;
@@ -3040,6 +3049,7 @@ namespace wiScene
 			if (object.meshID != INVALID_ENTITY)
 			{
 				Entity entity = objects.GetEntity(args.jobIndex);
+
 				const MeshComponent* mesh = meshes.GetComponent(object.meshID);
 
 				// These will only be valid for a single frame:
@@ -3214,6 +3224,16 @@ namespace wiScene
 					}
 				}
 
+				const LayerComponent* layer = layers.GetComponent(entity);
+				if (layer == nullptr)
+				{
+					aabb.layerMask = ~0;
+				}
+				else
+				{
+					aabb.layerMask = layer->GetLayerMask();
+				}
+
 				// parallel bounds computation using shared memory:
 				AABB* shared_bounds = (AABB*)args.sharedmemory;
 				if (args.isFirstJobInGroup)
@@ -3272,6 +3292,16 @@ namespace wiScene
 			AABB& aabb = aabb_decals[i];
 			aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
 			aabb = aabb.transform(transform.world);
+
+			const LayerComponent* layer = layers.GetComponent(entity);
+			if (layer == nullptr)
+			{
+				aabb.layerMask = ~0;
+			}
+			else
+			{
+				aabb.layerMask = layer->GetLayerMask();
+			}
 
 			const MaterialComponent& material = *materials.GetComponent(entity);
 			decal.color = material.baseColor;
@@ -3409,6 +3439,16 @@ namespace wiScene
 			aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(1, 1, 1));
 			aabb = aabb.transform(transform.world);
 
+			const LayerComponent* layer = layers.GetComponent(entity);
+			if (layer == nullptr)
+			{
+				aabb.layerMask = ~0;
+			}
+			else
+			{
+				aabb.layerMask = layer->GetLayerMask();
+			}
+
 			if (probe.IsDirty() || probe.IsRealTime())
 			{
 				probe.SetDirty(false);
@@ -3460,6 +3500,16 @@ namespace wiScene
 			Entity entity = lights.GetEntity(args.jobIndex);
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 			AABB& aabb = aabb_lights[args.jobIndex];
+
+			const LayerComponent* layer = layers.GetComponent(entity);
+			if (layer == nullptr)
+			{
+				aabb.layerMask = ~0;
+			}
+			else
+			{
+				aabb.layerMask = layer->GetLayerMask();
+			}
 
 			XMMATRIX W = XMLoadFloat4x4(&transform.world);
 			XMVECTOR S, R, T;

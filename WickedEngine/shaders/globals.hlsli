@@ -67,9 +67,47 @@ inline float GetTime() { return g_xFrame_Time; }
 inline uint2 GetTemporalAASampleRotation() { return uint2((g_xFrame_TemporalAASampleRotation >> 0u) & 0x000000FF, (g_xFrame_TemporalAASampleRotation >> 8) & 0x000000FF); }
 inline bool IsStaticSky() { return g_xFrame_StaticSkyGamma > 0.0; }
 
-inline float GetFogAmount(float dist)
+// Exponential height fog based on: https://www.iquilezles.org/www/articles/fog/fog.htm
+// Non constant density function
+//	distance	: sample to point distance
+//	O			: sample position
+//	V			: sample to point vector
+inline float GetFogAmount(float distance, float3 O, float3 V)
 {
-	return saturate((dist - g_xFrame_Fog.x) / (g_xFrame_Fog.y - g_xFrame_Fog.x));
+	float fogDensity = saturate((distance - g_xFrame_Fog.x) / (g_xFrame_Fog.y - g_xFrame_Fog.x));
+
+	if (g_xFrame_Options & OPTION_BIT_HEIGHT_FOG)
+	{
+		float fogHeightStart = g_xFrame_Fog.z;
+		float fogHeightEnd = g_xFrame_Fog.w;
+		float fogFalloffScale = 1.0 / max(0.01, fogHeightEnd - fogHeightStart);
+
+		// solve for x, e^(-h * x) = 0.001
+		// x = 6.907755 * h^-1
+		float fogFalloff = 6.907755 * fogFalloffScale;
+		
+		float originHeight = O.y;
+		float Z = -V.y;
+		float effectiveZ = max(abs(Z), 0.001);
+
+		float endLineHeight = originHeight + distance * Z; // Isolated vector equation for y
+		float minLineHeight = min(originHeight, endLineHeight);
+		float heightLineFalloff = max(minLineHeight - fogHeightStart, 0);
+		
+		float baseHeightFogDistance = clamp((fogHeightStart - minLineHeight) / effectiveZ, 0, distance);
+		float exponentialFogDistance = distance - baseHeightFogDistance; // Exclude distance below base height
+		float exponentialHeightLineIntegral = exp(-heightLineFalloff * fogFalloff) * (1.0 - exp(-exponentialFogDistance * effectiveZ * fogFalloff)) / (effectiveZ * fogFalloff);
+		
+		float opticalDepthHeightFog = fogDensity * (baseHeightFogDistance + exponentialHeightLineIntegral);
+		float transmittanceHeightFog = exp(-opticalDepthHeightFog);
+		
+		float fogAmount = transmittanceHeightFog;
+		return 1.0 - fogAmount;
+	}
+	else
+	{
+		return fogDensity;
+	}
 }
 
 float3 tonemap(float3 x)
@@ -84,6 +122,10 @@ float3 inverseTonemap(float3 x)
 inline float4 blue_noise(uint2 pixel)
 {
 	return frac(texture_bluenoise[pixel % 128].rgba + g_xFrame_BlueNoisePhase);
+}
+inline float4 blue_noise(uint2 pixel, float depth)
+{
+	return frac(texture_bluenoise[pixel % 128].rgba + g_xFrame_BlueNoisePhase + depth);
 }
 
 // Helpers:
@@ -465,7 +507,7 @@ inline float4 unpack_rgba(in uint value)
 	return retVal;
 }
 
-inline uint2 pack_half2(in float2 value)
+inline uint pack_half2(in float2 value)
 {
 	uint retVal = 0;
 	retVal = f32tof16(value.x) | (f32tof16(value.y) << 16u);

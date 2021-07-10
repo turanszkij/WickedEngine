@@ -584,7 +584,7 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)objectPS_paintradius.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)objectPS_simplest.hlsl">
+    <FxCompile Include="$(MSBuildThisFileDirectory)objectPS_simple.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)objectPS_debug.hlsl">
@@ -602,7 +602,7 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)impostorPS_simple.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)hairparticlePS_simplest.hlsl">
+    <FxCompile Include="$(MSBuildThisFileDirectory)hairparticlePS_simple.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)forceFieldVisualizerPS.hlsl">
@@ -629,7 +629,7 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)downsampleDepthBuffer4xPS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)emittedparticlePS_simplest.hlsl">
+    <FxCompile Include="$(MSBuildThisFileDirectory)emittedparticlePS_simple.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)cubeMapPS.hlsl">
@@ -744,9 +744,6 @@
       <Filter>GS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)objectGS_voxelizer.hlsl">
-      <Filter>GS</Filter>
-    </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)lensFlareGS.hlsl">
       <Filter>GS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)objectHS.hlsl">
@@ -979,6 +976,15 @@
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)rtao_denoise_filterCS.hlsl">
       <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)objectHS_simple.hlsl">
+      <Filter>HS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)objectDS_simple.hlsl">
+      <Filter>DS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)objectVS_simple_tessellation.hlsl">
+      <Filter>VS</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

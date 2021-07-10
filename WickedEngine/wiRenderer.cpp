@@ -134,6 +134,12 @@ wiSpinLock deferredMIPGenLock;
 std::vector<std::pair<std::shared_ptr<wiResource>, bool>> deferredMIPGens;
 
 
+bool volumetric_clouds_precomputed = false;
+Texture texture_shapeNoise;
+Texture texture_detailNoise;
+Texture texture_curlNoise;
+Texture texture_weatherMap;
+
 
 void SetDevice(std::shared_ptr<GraphicsDevice> newDevice)
 {
@@ -492,6 +498,7 @@ PipelineState PSO_object
 	[OBJECTRENDERING_ALPHATEST_COUNT];
 PipelineState PSO_object_terrain[RENDERPASS_COUNT];
 PipelineState PSO_object_wire;
+PipelineState PSO_object_wire_tessellation;
 
 std::vector<CustomShader> customShaders;
 int RegisterCustomShader(const CustomShader& customShader)
@@ -506,7 +513,7 @@ const std::vector<CustomShader>& GetCustomShaders()
 }
 
 
-ILTYPES GetILTYPE(RENDERPASS renderPass, bool alphatest, bool transparent)
+ILTYPES GetILTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, bool transparent)
 {
 	ILTYPES realVL = ILTYPE_OBJECT_POS_TEX;
 
@@ -518,13 +525,20 @@ ILTYPES GetILTYPE(RENDERPASS renderPass, bool alphatest, bool transparent)
 		realVL = ILTYPE_OBJECT_COMMON;
 		break;
 	case RENDERPASS_PREPASS:
-		if (alphatest)
+		if (tessellation)
 		{
-			realVL = ILTYPE_OBJECT_POS_PREVPOS_TEX;
+			realVL = ILTYPE_OBJECT_POS_PREVPOS_TEX; // tessellation needs tex because displacement mapping
 		}
 		else
 		{
-			realVL = ILTYPE_OBJECT_POS_PREVPOS;
+			if (alphatest)
+			{
+				realVL = ILTYPE_OBJECT_POS_PREVPOS_TEX;
+			}
+			else
+			{
+				realVL = ILTYPE_OBJECT_POS_PREVPOS;
+			}
 		}
 		break;
 	case RENDERPASS_SHADOW:
@@ -1062,6 +1076,7 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, shaders[VSTYPE_OBJECT_COMMON_TESSELLATION], "objectVS_common_tessellation.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, shaders[VSTYPE_OBJECT_PREPASS_TESSELLATION], "objectVS_prepass_tessellation.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, shaders[VSTYPE_OBJECT_PREPASS_ALPHATEST_TESSELLATION], "objectVS_prepass_alphatest_tessellation.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, shaders[VSTYPE_OBJECT_SIMPLE_TESSELLATION], "objectVS_simple_tessellation.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, shaders[VSTYPE_IMPOSTOR], "impostorVS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, shaders[VSTYPE_VOLUMETRICLIGHT_DIRECTIONAL], "volumetriclight_directionalVS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(VS, shaders[VSTYPE_VOLUMETRICLIGHT_POINT], "volumetriclight_pointVS.cso"); });
@@ -1128,7 +1143,7 @@ void LoadShaders()
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_OBJECT_DEBUG], "objectPS_debug.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_OBJECT_PAINTRADIUS], "objectPS_paintradius.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_OBJECT_SIMPLEST], "objectPS_simplest.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_OBJECT_SIMPLE], "objectPS_simple.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_OBJECT_PREPASS], "objectPS_prepass.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_OBJECT_PREPASS_ALPHATEST], "objectPS_prepass_alphatest.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(PS, shaders[PSTYPE_IMPOSTOR_PREPASS], "impostorPS_prepass.cso"); });
@@ -1174,7 +1189,6 @@ void LoadShaders()
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(GS, shaders[GSTYPE_VOXELIZER], "objectGS_voxelizer.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(GS, shaders[GSTYPE_VOXEL], "voxelGS.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(GS, shaders[GSTYPE_LENSFLARE], "lensFlareGS.cso"); });
 
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_LUMINANCE_PASS1], "luminancePass1CS.cso"); });
@@ -1313,10 +1327,12 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(HS, shaders[HSTYPE_OBJECT], "objectHS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(HS, shaders[HSTYPE_OBJECT_PREPASS], "objectHS_prepass.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(HS, shaders[HSTYPE_OBJECT_PREPASS_ALPHATEST], "objectHS_prepass_alphatest.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(HS, shaders[HSTYPE_OBJECT_SIMPLE], "objectHS_simple.cso"); });
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(DS, shaders[DSTYPE_OBJECT], "objectDS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(DS, shaders[DSTYPE_OBJECT_PREPASS], "objectDS_prepass.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(DS, shaders[DSTYPE_OBJECT_PREPASS_ALPHATEST], "objectDS_prepass_alphatest.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(DS, shaders[DSTYPE_OBJECT_SIMPLE], "objectDS_simple.cso"); });
 
 	wiJobSystem::Wait(ctx);
 
@@ -1336,7 +1352,7 @@ void LoadShaders()
 						{
 							const bool transparency = blendMode != BLENDMODE_OPAQUE;
 							SHADERTYPE realVS = GetVSTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency);
-							ILTYPES realVL = GetILTYPE((RENDERPASS)renderPass, alphatest, transparency);
+							ILTYPES realVL = GetILTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency);
 							SHADERTYPE realHS = GetHSTYPE((RENDERPASS)renderPass, tessellation, alphatest);
 							SHADERTYPE realDS = GetDSTYPE((RENDERPASS)renderPass, tessellation, alphatest);
 							SHADERTYPE realGS = GetGSTYPE((RENDERPASS)renderPass, alphatest, transparency);
@@ -1373,6 +1389,9 @@ void LoadShaders()
 								break;
 							case BLENDMODE_PREMULTIPLIED:
 								desc.bs = &blendStates[BSTYPE_PREMULTIPLIED];
+								break;
+							case BLENDMODE_MULTIPLY:
+								desc.bs = &blendStates[BSTYPE_MULTIPLY];
 								break;
 							default:
 								assert(0);
@@ -1469,7 +1488,7 @@ void LoadShaders()
 	wiJobSystem::Dispatch(ctx, RENDERPASS_COUNT, 1, [](wiJobArgs args) {
 
 		SHADERTYPE realVS = GetVSTYPE((RENDERPASS) args.jobIndex, false, false, false);
-		ILTYPES realVL = GetILTYPE((RENDERPASS)args.jobIndex, false, false);
+		ILTYPES realVL = GetILTYPE((RENDERPASS)args.jobIndex, false, false, false);
 
 		PipelineStateDesc desc;
 		desc.rs = &rasterizers[RSTYPE_FRONT];
@@ -1516,7 +1535,7 @@ void LoadShaders()
 	// Hologram sample shader will be registered as custom shader:
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) {
 		SHADERTYPE realVS = GetVSTYPE(RENDERPASS_MAIN, false, false, true);
-		ILTYPES realVL = GetILTYPE(RENDERPASS_MAIN, false, true);
+		ILTYPES realVL = GetILTYPE(RENDERPASS_MAIN, false, false, true);
 
 		PipelineStateDesc desc;
 		desc.vs = &shaders[realVS];
@@ -1542,13 +1561,24 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) {
 		PipelineStateDesc desc;
 		desc.vs = &shaders[VSTYPE_OBJECT_SIMPLE];
-		desc.ps = &shaders[PSTYPE_OBJECT_SIMPLEST];
+		desc.ps = &shaders[PSTYPE_OBJECT_SIMPLE];
 		desc.rs = &rasterizers[RSTYPE_WIRE];
 		desc.bs = &blendStates[BSTYPE_OPAQUE];
 		desc.dss = &depthStencils[DSSTYPE_DEFAULT];
 		desc.il = &inputLayouts[ILTYPE_OBJECT_POS_TEX];
 
+		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
+		{
+			desc.il = nullptr;
+		}
+
 		device->CreatePipelineState(&desc, &PSO_object_wire);
+
+		desc.pt = PATCHLIST;
+		desc.vs = &shaders[VSTYPE_OBJECT_SIMPLE_TESSELLATION];
+		desc.hs = &shaders[HSTYPE_OBJECT_SIMPLE];
+		desc.ds = &shaders[DSTYPE_OBJECT_SIMPLE];
+		device->CreatePipelineState(&desc, &PSO_object_wire_tessellation);
 		});
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) {
 		PipelineStateDesc desc;
@@ -1731,11 +1761,10 @@ void LoadShaders()
 		PipelineStateDesc desc;
 		desc.vs = &shaders[VSTYPE_LENSFLARE];
 		desc.ps = &shaders[PSTYPE_LENSFLARE];
-		desc.gs = &shaders[GSTYPE_LENSFLARE];
 		desc.bs = &blendStates[BSTYPE_ADDITIVE];
 		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
 		desc.dss = &depthStencils[DSSTYPE_XRAY];
-		desc.pt = POINTLIST;
+		desc.pt = TRIANGLESTRIP;
 
 		device->CreatePipelineState(&desc, &PSO_lensflare);
 		});
@@ -1902,7 +1931,8 @@ void LoadShaders()
 		device->CreatePipelineState(&desc, &PSO_debug[args.jobIndex]);
 		});
 
-	if(device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+	if(device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_PIPELINE) &&
+		device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_GEOMETRYINDEX))
 	{
 		wiJobSystem::Execute(ctx, [](wiJobArgs args) {
 
@@ -2696,426 +2726,420 @@ void RenderMeshes(
 	uint32_t frustum_count = 1
 )
 {
-	if (!renderQueue.empty())
+	if (renderQueue.empty())
+		return;
+
+	device->EventBegin("RenderMeshes", cmd);
+	const bool bindless = device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS);
+
+	tessellation = tessellation && device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_TESSELLATION);
+	if (tessellation)
 	{
-		device->EventBegin("RenderMeshes", cmd);
-		const bool bindless = device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS);
+		BindConstantBuffers(DS, cmd);
+	}
 
-		tessellation = tessellation && device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_TESSELLATION);
-		if (tessellation)
+	const TextureDesc& lightmap_desc = vis.scene->lightmap.GetDesc();
+	const float lightmap_width_rcp = 1.0f / lightmap_desc.Width;
+	const float lightmap_height_rcp = 1.0f / lightmap_desc.Height;
+
+	// Do we need to compute a light mask for this pass on the CPU?
+	const bool forwardLightmaskRequest =
+		renderPass == RENDERPASS_ENVMAPCAPTURE ||
+		renderPass == RENDERPASS_VOXELIZE;
+
+	const INSTANCETYPE instanceRequest = instanceTypes[renderPass];
+	struct Instance_MATRIX_USERDATA
+	{
+		Instance instance;
+	};
+	struct Instance_MATRIX_USERDATA_ATLAS
+	{
+		Instance instance;
+		InstanceAtlas instanceAtlas;
+	};
+	struct Instance_MATRIX_USERDATA_MATRIXPREV
+	{
+		Instance instance;
+		InstancePrev instancePrev;
+	};
+
+	// Pre-allocate space for all the instances in GPU-buffer:
+	uint32_t instanceDataSize = 0;
+	switch (instanceRequest)
+	{
+	default:
+	case INSTANCETYPE_MATRIX_USERDATA:
+		instanceDataSize = sizeof(Instance_MATRIX_USERDATA);
+		break;
+	case INSTANCETYPE_MATRIX_USERDATA_ATLAS:
+		instanceDataSize = sizeof(Instance_MATRIX_USERDATA_ATLAS);
+		break;
+	case INSTANCETYPE_MATRIX_USERDATA_MATRIXPREV:
+		instanceDataSize = sizeof(Instance_MATRIX_USERDATA_MATRIXPREV);
+		break;
+	}
+	size_t alloc_size = renderQueue.batchCount * frustum_count * instanceDataSize;
+	GraphicsDevice::GPUAllocation instances = device->AllocateGPU(alloc_size, cmd);
+
+	// Purpose of InstancedBatch:
+	//	The RenderQueue is sorted by meshIndex. There can be multiple instances for a single meshIndex,
+	//	and the InstancedBatchArray contains this information. The array size will be the unique mesh count here.
+	struct InstancedBatch
+	{
+		uint32_t meshIndex;
+		int instanceCount;
+		uint32_t dataOffset;
+		uint8_t userStencilRefOverride;
+		uint8_t forceAlphatestForDithering; // padded bool
+		uint16_t padding;
+		AABB aabb;
+	};
+	InstancedBatch* instancedBatchArray = nullptr;
+	int instancedBatchCount = 0;
+
+	// The following loop is writing the instancing batches to a GPUBuffer:
+	size_t prevMeshIndex = ~0;
+	uint8_t prevUserStencilRefOverride = 0;
+	uint32_t instanceCount = 0;
+	for (uint32_t batchID = 0; batchID < renderQueue.batchCount; ++batchID) // Do not break out of this loop!
+	{
+		const RenderBatch& batch = renderQueue.batchArray[batchID];
+		const uint32_t meshIndex = batch.GetMeshIndex();
+		const uint32_t instanceIndex = batch.GetInstanceIndex();
+		const ObjectComponent& instance = vis.scene->objects[instanceIndex];
+		const AABB& instanceAABB = vis.scene->aabb_objects[instanceIndex];
+		const uint8_t userStencilRefOverride = instance.userStencilRef;
+
+		// When we encounter a new mesh inside the global instance array, we begin a new InstancedBatch:
+		if (meshIndex != prevMeshIndex || userStencilRefOverride != prevUserStencilRefOverride)
 		{
-			BindConstantBuffers(DS, cmd);
+			prevMeshIndex = meshIndex;
+			prevUserStencilRefOverride = userStencilRefOverride;
+
+			instancedBatchCount++;
+			InstancedBatch* instancedBatch = (InstancedBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(InstancedBatch));
+			instancedBatch->meshIndex = meshIndex;
+			instancedBatch->instanceCount = 0;
+			instancedBatch->dataOffset = instances.offset + instanceCount * instanceDataSize;
+			instancedBatch->userStencilRefOverride = userStencilRefOverride;
+			instancedBatch->forceAlphatestForDithering = 0;
+			instancedBatch->aabb = AABB();
+			if (instancedBatchArray == nullptr)
+			{
+				instancedBatchArray = instancedBatch;
+			}
 		}
 
-		const TextureDesc& lightmap_desc = vis.scene->lightmap.GetDesc();
+		InstancedBatch& current_batch = instancedBatchArray[instancedBatchCount - 1];
 
-		// Do we need to bind every common buffers or just a reduced amount for this pass?
-		const bool commonVBRequest =
-			!IsWireRender() && (
-				renderPass == RENDERPASS_MAIN ||
-				renderPass == RENDERPASS_ENVMAPCAPTURE ||
-				renderPass == RENDERPASS_VOXELIZE
-				);
+		float dither = instance.GetTransparency();
 
-		// Do we need to compute a light mask for this pass on the CPU?
-		const bool forwardLightmaskRequest =
-			renderPass == RENDERPASS_ENVMAPCAPTURE ||
-			renderPass == RENDERPASS_VOXELIZE;
-
-		const INSTANCETYPE instanceRequest = instanceTypes[renderPass];
-		struct Instance_MATRIX_USERDATA
+		if (instance.IsImpostorPlacement())
 		{
-			Instance instance;
-		};
-		struct Instance_MATRIX_USERDATA_ATLAS
-		{
-			Instance instance;
-			InstanceAtlas instanceAtlas;
-		};
-		struct Instance_MATRIX_USERDATA_MATRIXPREV
-		{
-			Instance instance;
-			InstancePrev instancePrev;
-		};
-
-		// Pre-allocate space for all the instances in GPU-buffer:
-		uint32_t instanceDataSize = 0;
-		switch (instanceRequest)
-		{
-		default:
-		case INSTANCETYPE_MATRIX_USERDATA:
-			instanceDataSize = sizeof(Instance_MATRIX_USERDATA);
-			break;
-		case INSTANCETYPE_MATRIX_USERDATA_ATLAS:
-			instanceDataSize = sizeof(Instance_MATRIX_USERDATA_ATLAS);
-			break;
-		case INSTANCETYPE_MATRIX_USERDATA_MATRIXPREV:
-			instanceDataSize = sizeof(Instance_MATRIX_USERDATA_MATRIXPREV);
-			break;
-		}
-		size_t alloc_size = renderQueue.batchCount * frustum_count * instanceDataSize;
-		GraphicsDevice::GPUAllocation instances = device->AllocateGPU(alloc_size, cmd);
-
-		// Purpose of InstancedBatch:
-		//	The RenderQueue is sorted by meshIndex. There can be multiple instances for a single meshIndex,
-		//	and the InstancedBatchArray contains this information. The array size will be the unique mesh count here.
-		struct InstancedBatch
-		{
-			uint32_t meshIndex;
-			int instanceCount;
-			uint32_t dataOffset;
-			uint8_t userStencilRefOverride;
-			uint8_t forceAlphatestForDithering; // padded bool
-			AABB aabb;
-		};
-		InstancedBatch* instancedBatchArray = nullptr;
-		int instancedBatchCount = 0;
-
-		// The following loop is writing the instancing batches to a GPUBuffer:
-		size_t prevMeshIndex = ~0;
-		uint8_t prevUserStencilRefOverride = 0;
-		uint32_t instanceCount = 0;
-		for (uint32_t batchID = 0; batchID < renderQueue.batchCount; ++batchID) // Do not break out of this loop!
-		{
-			const RenderBatch& batch = renderQueue.batchArray[batchID];
-			const uint32_t meshIndex = batch.GetMeshIndex();
-			const uint32_t instanceIndex = batch.GetInstanceIndex();
-			const ObjectComponent& instance = vis.scene->objects[instanceIndex];
-			const AABB& instanceAABB = vis.scene->aabb_objects[instanceIndex];
-			const uint8_t userStencilRefOverride = instance.userStencilRef;
-
-			// When we encounter a new mesh inside the global instance array, we begin a new InstancedBatch:
-			if (meshIndex != prevMeshIndex || userStencilRefOverride != prevUserStencilRefOverride)
-			{
-				prevMeshIndex = meshIndex;
-				prevUserStencilRefOverride = userStencilRefOverride;
-
-				instancedBatchCount++;
-				InstancedBatch* instancedBatch = (InstancedBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(InstancedBatch));
-				instancedBatch->meshIndex = meshIndex;
-				instancedBatch->instanceCount = 0;
-				instancedBatch->dataOffset = instances.offset + instanceCount * instanceDataSize;
-				instancedBatch->userStencilRefOverride = userStencilRefOverride;
-				instancedBatch->forceAlphatestForDithering = 0;
-				instancedBatch->aabb = AABB();
-				if (instancedBatchArray == nullptr)
-				{
-					instancedBatchArray = instancedBatch;
-				}
-			}
-
-			InstancedBatch& current_batch = instancedBatchArray[instancedBatchCount - 1];
-
-			float dither = instance.GetTransparency();
-
-			if (instance.IsImpostorPlacement())
-			{
-				float distance = wiMath::Distance(instanceAABB.getCenter(), vis.camera->Eye);
-				float swapDistance = instance.impostorSwapDistance;
-				float fadeThreshold = instance.impostorFadeThresholdRadius;
-				dither = std::max(0.0f, distance - swapDistance) / fadeThreshold;
-			}
-
-			if (dither > 0)
-			{
-				current_batch.forceAlphatestForDithering = 1;
-			}
-
-			if (forwardLightmaskRequest)
-			{
-				current_batch.aabb = AABB::Merge(current_batch.aabb, instanceAABB);
-			}
-
-			const XMFLOAT4X4& worldMatrix = instance.transform_index >= 0 ? vis.scene->transforms[instance.transform_index].world : IDENTITYMATRIX;
-
-			for (uint32_t frustum_index = 0; frustum_index < frustum_count; ++frustum_index)
-			{
-				if (frusta != nullptr && !frusta[frustum_index].CheckBoxFast(instanceAABB))
-				{
-					// In case multiple cameras were provided and no intersection detected with frustum, we don't add the instance for the face:
-					continue;
-				}
-
-				// Write into actual GPU-buffer:
-				switch (instanceRequest)
-				{
-				default:
-				case INSTANCETYPE_MATRIX_USERDATA:
-					((volatile Instance_MATRIX_USERDATA*)instances.data)[instanceCount].instance.Create(worldMatrix, instance.color, dither, frustum_index, instance.emissiveColor);
-					break;
-				case INSTANCETYPE_MATRIX_USERDATA_ATLAS:
-					((volatile Instance_MATRIX_USERDATA_ATLAS*)instances.data)[instanceCount].instance.Create(worldMatrix, instance.color, dither, frustum_index, instance.emissiveColor);
-					{
-						XMFLOAT4 lightMapMulAdd;
-						if (instance.lightmap.IsValid())
-						{
-							auto rect = instance.lightmap_rect;
-
-							// eliminate border expansion:
-							rect.x += Scene::atlasClampBorder;
-							rect.y += Scene::atlasClampBorder;
-							rect.w -= Scene::atlasClampBorder * 2;
-							rect.h -= Scene::atlasClampBorder * 2;
-
-							lightMapMulAdd = XMFLOAT4(
-								(float)rect.w / (float)lightmap_desc.Width,
-								(float)rect.h / (float)lightmap_desc.Height,
-								(float)rect.x / (float)lightmap_desc.Width,
-								(float)rect.y / (float)lightmap_desc.Height
-							);
-						}
-						else
-						{
-							lightMapMulAdd = XMFLOAT4(0, 0, 0, 0);
-						}
-						((volatile Instance_MATRIX_USERDATA_ATLAS*)instances.data)[instanceCount].instanceAtlas.Create(lightMapMulAdd);
-					}
-					break;
-				case INSTANCETYPE_MATRIX_USERDATA_MATRIXPREV:
-					((volatile Instance_MATRIX_USERDATA_MATRIXPREV*)instances.data)[instanceCount].instance.Create(worldMatrix, instance.color, dither, frustum_index, instance.emissiveColor);
-					((volatile Instance_MATRIX_USERDATA_MATRIXPREV*)instances.data)[instanceCount].instancePrev.Create(instance.prev_transform_index >= 0 ? vis.scene->prev_transforms[instance.prev_transform_index].world_prev : IDENTITYMATRIX);
-					break;
-				}
-
-				current_batch.instanceCount++; // next instance in current InstancedBatch
-				instanceCount++;
-			}
-
+			float distance = wiMath::Distance(instanceAABB.getCenter(), vis.camera->Eye);
+			float swapDistance = instance.impostorSwapDistance;
+			float fadeThreshold = instance.impostorFadeThresholdRadius;
+			dither = std::max(0.0f, distance - swapDistance) / fadeThreshold;
 		}
 
-		// Render instanced batches:
-		PRIMITIVETOPOLOGY prevTOPOLOGY = TRIANGLELIST;
-		for (int instancedBatchID = 0; instancedBatchID < instancedBatchCount; ++instancedBatchID)
+		if (dither > 0)
 		{
-			const InstancedBatch& instancedBatch = instancedBatchArray[instancedBatchID];
-			const MeshComponent& mesh = vis.scene->meshes[instancedBatch.meshIndex];
-			const bool forceAlphaTestForDithering = instancedBatch.forceAlphatestForDithering != 0;
-			const uint8_t userStencilRefOverride = instancedBatch.userStencilRefOverride;
+			current_batch.forceAlphatestForDithering = 1;
+		}
 
-			const float tessF = mesh.GetTessellationFactor();
-			const bool tessellatorRequested = tessF > 0 && tessellation;
-			const bool terrain = mesh.IsTerrain();
+		if (forwardLightmaskRequest)
+		{
+			current_batch.aabb = AABB::Merge(current_batch.aabb, instanceAABB);
+		}
 
-			if (tessellatorRequested)
+		const XMFLOAT4X4& worldMatrix = instance.transform_index >= 0 ? vis.scene->transforms[instance.transform_index].world : IDENTITYMATRIX;
+
+		for (uint32_t frustum_index = 0; frustum_index < frustum_count; ++frustum_index)
+		{
+			if (frusta != nullptr && !frusta[frustum_index].CheckBoxFast(instanceAABB))
 			{
-				TessellationCB tessCB;
-				tessCB.xTessellationFactors = XMFLOAT4(tessF, tessF, tessF, tessF);
-				device->UpdateBuffer(&constantBuffers[CBTYPE_TESSELLATION], &tessCB, cmd);
-				device->BindConstantBuffer(HS, &constantBuffers[CBTYPE_TESSELLATION], CBSLOT_RENDERER_TESSELLATION, cmd);
+				// In case multiple cameras were provided and no intersection detected with frustum, we don't add the instance for the face:
+				continue;
 			}
 
-			if (forwardLightmaskRequest)
+			// Write into actual GPU-buffer:
+			switch (instanceRequest)
 			{
-				ForwardEntityMaskCB cb = ForwardEntityCullingCPU(vis, instancedBatch.aabb, renderPass);
-				device->UpdateBuffer(&constantBuffers[CBTYPE_FORWARDENTITYMASK], &cb, cmd);
-				device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
-			}
-
-			device->BindIndexBuffer(&mesh.indexBuffer, mesh.GetIndexFormat(), 0, cmd);
-
-			ObjectPushConstants push; // used with bindless model only
-
-			if (bindless)
-			{
-				push.mesh = device->GetDescriptorIndex(&mesh.descriptor, SRV);
-				push.instances = device->GetDescriptorIndex(instances.buffer, SRV);
-				push.instance_offset = instancedBatch.dataOffset;
-			}
-			else
-			{
-				const GPUBuffer* vbs[] = {
-					mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
-					mesh.vertexBuffer_PRE.IsValid() ? &mesh.vertexBuffer_PRE : &mesh.vertexBuffer_POS,
-					&mesh.vertexBuffer_UV0,
-					&mesh.vertexBuffer_UV1,
-					&mesh.vertexBuffer_ATL,
-					&mesh.vertexBuffer_COL,
-					mesh.streamoutBuffer_TAN.IsValid() ? &mesh.streamoutBuffer_TAN : &mesh.vertexBuffer_TAN,
-					instances.buffer
-				};
-				uint32_t strides[] = {
-					sizeof(MeshComponent::Vertex_POS),
-					sizeof(MeshComponent::Vertex_POS),
-					sizeof(MeshComponent::Vertex_TEX),
-					sizeof(MeshComponent::Vertex_TEX),
-					sizeof(MeshComponent::Vertex_TEX),
-					sizeof(MeshComponent::Vertex_COL),
-					sizeof(MeshComponent::Vertex_TAN),
-					instanceDataSize
-				};
-				uint32_t offsets[] = {
-					0,
-					0,
-					0,
-					0,
-					0,
-					0,
-					0,
-					instancedBatch.dataOffset
-				};
-				static_assert(arraysize(vbs) == INPUT_SLOT_COUNT, "This layout must conform to OBJECT_VERTEXINPUT enum!");
-				static_assert(arraysize(vbs) == arraysize(strides), "Mismatch between vertex buffers and strides!");
-				static_assert(arraysize(vbs) == arraysize(offsets), "Mismatch between vertex buffers and offsets!");
-				device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
-			}
-
-			for (const MeshComponent::MeshSubset& subset : mesh.subsets)
-			{
-				if (subset.indexCount == 0)
+			default:
+			case INSTANCETYPE_MATRIX_USERDATA:
+				((volatile Instance_MATRIX_USERDATA*)instances.data)[instanceCount].instance.Create(worldMatrix, instance.color, dither, frustum_index, instance.emissiveColor);
+				break;
+			case INSTANCETYPE_MATRIX_USERDATA_ATLAS:
+				((volatile Instance_MATRIX_USERDATA_ATLAS*)instances.data)[instanceCount].instance.Create(worldMatrix, instance.color, dither, frustum_index, instance.emissiveColor);
 				{
-					continue;
-				}
-				const MaterialComponent& material = *vis.scene->materials.GetComponent(subset.materialID);
-
-				bool subsetRenderable = renderTypeFlags & material.GetRenderTypes();
-
-				if (renderPass == RENDERPASS_SHADOW || renderPass == RENDERPASS_SHADOWCUBE)
-				{
-					subsetRenderable = subsetRenderable && material.IsCastingShadow();
-				}
-
-				if (!subsetRenderable)
-				{
-					continue;
-				}
-
-				const PipelineState* pso = nullptr;
-				const PipelineState* pso_backside = nullptr; // only when separate backside rendering is required (transparent doublesided)
-				{
-					if (IsWireRender())
+					XMFLOAT4 lightMapMulAdd;
+					if (instance.lightmap.IsValid())
 					{
-						switch (renderPass)
-						{
-						case RENDERPASS_MAIN:
-							pso = &PSO_object_wire;
-						}
-					}
-					else if (mesh.IsTerrain())
-					{
-						pso = &PSO_object_terrain[renderPass];
-					}
-					else if (material.customShaderID >= 0 && material.customShaderID < (int)customShaders.size())
-					{
-						const CustomShader& customShader = customShaders[material.customShaderID];
-						if (renderTypeFlags & customShader.renderTypeFlags)
-						{
-							pso = &customShader.pso[renderPass];
-						}
+						auto rect = instance.lightmap_rect;
+
+						// eliminate border expansion:
+						rect.x += Scene::atlasClampBorder;
+						rect.y += Scene::atlasClampBorder;
+						rect.w -= Scene::atlasClampBorder * 2;
+						rect.h -= Scene::atlasClampBorder * 2;
+
+						lightMapMulAdd = XMFLOAT4(
+							(float)rect.w / (float)lightmap_desc.Width,
+							(float)rect.h / (float)lightmap_desc.Height,
+							(float)rect.x / (float)lightmap_desc.Width,
+							(float)rect.y / (float)lightmap_desc.Height
+						);
 					}
 					else
 					{
-						const BLENDMODE blendMode = material.GetBlendMode();
-						const bool alphatest = material.IsAlphaTestEnabled() || forceAlphaTestForDithering;
-						OBJECTRENDERING_DOUBLESIDED doublesided = (mesh.IsDoubleSided() || material.IsDoubleSided()) ? OBJECTRENDERING_DOUBLESIDED_ENABLED : OBJECTRENDERING_DOUBLESIDED_DISABLED;
+						lightMapMulAdd = XMFLOAT4(0, 0, 0, 0);
+					}
+					((volatile Instance_MATRIX_USERDATA_ATLAS*)instances.data)[instanceCount].instanceAtlas.Create(lightMapMulAdd);
+				}
+				break;
+			case INSTANCETYPE_MATRIX_USERDATA_MATRIXPREV:
+				((volatile Instance_MATRIX_USERDATA_MATRIXPREV*)instances.data)[instanceCount].instance.Create(worldMatrix, instance.color, dither, frustum_index, instance.emissiveColor);
+				((volatile Instance_MATRIX_USERDATA_MATRIXPREV*)instances.data)[instanceCount].instancePrev.Create(instance.prev_transform_index >= 0 ? vis.scene->prev_transforms[instance.prev_transform_index].world_prev : IDENTITYMATRIX);
+				break;
+			}
 
-						pso = &PSO_object[material.shaderType][renderPass][blendMode][doublesided][tessellatorRequested][alphatest];
-						assert(pso->IsValid());
+			current_batch.instanceCount++; // next instance in current InstancedBatch
+			instanceCount++;
+		}
 
-						if ((renderTypeFlags & RENDERTYPE_TRANSPARENT) && doublesided == OBJECTRENDERING_DOUBLESIDED_ENABLED)
-						{
-							doublesided = OBJECTRENDERING_DOUBLESIDED_BACKSIDE;
-							pso_backside = &PSO_object[material.shaderType][renderPass][blendMode][doublesided][tessellatorRequested][alphatest];
-						}
+	}
+
+	// Render instanced batches:
+	for (int instancedBatchID = 0; instancedBatchID < instancedBatchCount; ++instancedBatchID)
+	{
+		const InstancedBatch& instancedBatch = instancedBatchArray[instancedBatchID];
+		const MeshComponent& mesh = vis.scene->meshes[instancedBatch.meshIndex];
+		const bool forceAlphaTestForDithering = instancedBatch.forceAlphatestForDithering != 0;
+		const uint8_t userStencilRefOverride = instancedBatch.userStencilRefOverride;
+
+		const float tessF = mesh.GetTessellationFactor();
+		const bool tessellatorRequested = tessF > 0 && tessellation;
+		const bool terrain = mesh.IsTerrain();
+
+		if (tessellatorRequested)
+		{
+			TessellationCB tessCB;
+			tessCB.xTessellationFactors = XMFLOAT4(tessF, tessF, tessF, tessF);
+			device->UpdateBuffer(&constantBuffers[CBTYPE_TESSELLATION], &tessCB, cmd);
+			device->BindConstantBuffer(HS, &constantBuffers[CBTYPE_TESSELLATION], CBSLOT_RENDERER_TESSELLATION, cmd);
+		}
+
+		if (forwardLightmaskRequest)
+		{
+			ForwardEntityMaskCB cb = ForwardEntityCullingCPU(vis, instancedBatch.aabb, renderPass);
+			device->UpdateBuffer(&constantBuffers[CBTYPE_FORWARDENTITYMASK], &cb, cmd);
+			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
+		}
+
+		device->BindIndexBuffer(&mesh.indexBuffer, mesh.GetIndexFormat(), 0, cmd);
+
+		ObjectPushConstants push; // used with bindless model only
+
+		if (bindless)
+		{
+			push.mesh = device->GetDescriptorIndex(&mesh.descriptor, SRV);
+			push.instances = device->GetDescriptorIndex(instances.buffer, SRV);
+			push.instance_offset = instancedBatch.dataOffset;
+		}
+		else
+		{
+			const GPUBuffer* vbs[] = {
+				mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
+				mesh.vertexBuffer_PRE.IsValid() ? &mesh.vertexBuffer_PRE : &mesh.vertexBuffer_POS,
+				&mesh.vertexBuffer_UV0,
+				&mesh.vertexBuffer_UV1,
+				&mesh.vertexBuffer_ATL,
+				&mesh.vertexBuffer_COL,
+				mesh.streamoutBuffer_TAN.IsValid() ? &mesh.streamoutBuffer_TAN : &mesh.vertexBuffer_TAN,
+				instances.buffer
+			};
+			uint32_t strides[] = {
+				sizeof(MeshComponent::Vertex_POS),
+				sizeof(MeshComponent::Vertex_POS),
+				sizeof(MeshComponent::Vertex_TEX),
+				sizeof(MeshComponent::Vertex_TEX),
+				sizeof(MeshComponent::Vertex_TEX),
+				sizeof(MeshComponent::Vertex_COL),
+				sizeof(MeshComponent::Vertex_TAN),
+				instanceDataSize
+			};
+			uint32_t offsets[] = {
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				instancedBatch.dataOffset
+			};
+			static_assert(arraysize(vbs) == INPUT_SLOT_COUNT, "This layout must conform to OBJECT_VERTEXINPUT enum!");
+			static_assert(arraysize(vbs) == arraysize(strides), "Mismatch between vertex buffers and strides!");
+			static_assert(arraysize(vbs) == arraysize(offsets), "Mismatch between vertex buffers and offsets!");
+			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+		}
+
+		for (const MeshComponent::MeshSubset& subset : mesh.subsets)
+		{
+			if (subset.indexCount == 0)
+			{
+				continue;
+			}
+			const MaterialComponent& material = vis.scene->materials[subset.materialIndex];
+
+			bool subsetRenderable = renderTypeFlags & material.GetRenderTypes();
+
+			if (renderPass == RENDERPASS_SHADOW || renderPass == RENDERPASS_SHADOWCUBE)
+			{
+				subsetRenderable = subsetRenderable && material.IsCastingShadow();
+			}
+
+			if (!subsetRenderable)
+			{
+				continue;
+			}
+
+			const PipelineState* pso = nullptr;
+			const PipelineState* pso_backside = nullptr; // only when separate backside rendering is required (transparent doublesided)
+			{
+				if (IsWireRender())
+				{
+					switch (renderPass)
+					{
+					case RENDERPASS_MAIN:
+						pso = tessellatorRequested ? &PSO_object_wire_tessellation : &PSO_object_wire;
 					}
 				}
-
-				if (pso == nullptr || !pso->IsValid())
+				else if (mesh.IsTerrain())
 				{
-					continue;
+					pso = &PSO_object_terrain[renderPass];
 				}
-
-				STENCILREF engineStencilRef = material.engineStencilRef;
-				uint8_t userStencilRef = userStencilRefOverride > 0 ? userStencilRefOverride : material.userStencilRef;
-				uint32_t stencilRef = CombineStencilrefs(engineStencilRef, userStencilRef);
-				device->BindStencilRef(stencilRef, cmd);
-
-				if (renderPass != RENDERPASS_PREPASS && renderPass != RENDERPASS_VOXELIZE) // depth only alpha test will be full res
+				else if (material.customShaderID >= 0 && material.customShaderID < (int)customShaders.size())
 				{
-					device->BindShadingRate(material.shadingRate, cmd);
-				}
-
-				if (bindless)
-				{
-					push.material = device->GetDescriptorIndex(&material.constantBuffer, SRV);
-					device->PushConstants(&push, sizeof(push), cmd);
+					const CustomShader& customShader = customShaders[material.customShaderID];
+					if (renderTypeFlags & customShader.renderTypeFlags)
+					{
+						pso = &customShader.pso[renderPass];
+					}
 				}
 				else
 				{
-					device->BindConstantBuffer(VS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
-					device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
+					const BLENDMODE blendMode = material.GetBlendMode();
+					const bool alphatest = material.IsAlphaTestEnabled() || forceAlphaTestForDithering;
+					OBJECTRENDERING_DOUBLESIDED doublesided = (mesh.IsDoubleSided() || material.IsDoubleSided()) ? OBJECTRENDERING_DOUBLESIDED_ENABLED : OBJECTRENDERING_DOUBLESIDED_DISABLED;
 
-					// Bind all material textures:
-					const GPUResource* materialtextures[MaterialComponent::TEXTURESLOT_COUNT];
-					material.WriteTextures(materialtextures, arraysize(materialtextures));
-					device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BASECOLORMAP, arraysize(materialtextures), cmd);
+					pso = &PSO_object[material.shaderType][renderPass][blendMode][doublesided][tessellatorRequested][alphatest];
+					assert(pso->IsValid());
 
-					if (tessellatorRequested)
+					if ((renderTypeFlags & RENDERTYPE_TRANSPARENT) && doublesided == OBJECTRENDERING_DOUBLESIDED_ENABLED)
 					{
-						device->BindConstantBuffer(DS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
-						device->BindResources(DS, materialtextures, TEXSLOT_RENDERER_BASECOLORMAP, arraysize(materialtextures), cmd);
-					}
-
-					if (terrain)
-					{
-						if (mesh.terrain_material1 == INVALID_ENTITY || !vis.scene->materials.Contains(mesh.terrain_material1))
-						{
-							device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BLEND1_BASECOLORMAP, 4, cmd);
-							device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend1), cmd);
-						}
-						else
-						{
-							const MaterialComponent& blendmat = *vis.scene->materials.GetComponent(mesh.terrain_material1);
-							const GPUResource* res[4];
-							blendmat.WriteTextures(res, arraysize(res));
-							device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND1_BASECOLORMAP, arraysize(res), cmd);
-							device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend1), cmd);
-						}
-
-						if (mesh.terrain_material2 == INVALID_ENTITY || !vis.scene->materials.Contains(mesh.terrain_material2))
-						{
-							device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BLEND2_BASECOLORMAP, 4, cmd);
-							device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend2), cmd);
-						}
-						else
-						{
-							const MaterialComponent& blendmat = *vis.scene->materials.GetComponent(mesh.terrain_material2);
-							const GPUResource* res[4];
-							blendmat.WriteTextures(res, arraysize(res));
-							device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND2_BASECOLORMAP, arraysize(res), cmd);
-							device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend2), cmd);
-						}
-
-						if (mesh.terrain_material3 == INVALID_ENTITY || !vis.scene->materials.Contains(mesh.terrain_material3))
-						{
-							device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BLEND3_BASECOLORMAP, 4, cmd);
-							device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend3), cmd);
-						}
-						else
-						{
-							const MaterialComponent& blendmat = *vis.scene->materials.GetComponent(mesh.terrain_material3);
-							const GPUResource* res[4];
-							blendmat.WriteTextures(res, arraysize(res));
-							device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND3_BASECOLORMAP, arraysize(res), cmd);
-							device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend3), cmd);
-						}
+						doublesided = OBJECTRENDERING_DOUBLESIDED_BACKSIDE;
+						pso_backside = &PSO_object[material.shaderType][renderPass][blendMode][doublesided][tessellatorRequested][alphatest];
 					}
 				}
+			}
 
-				if (pso_backside != nullptr)
+			if (pso == nullptr || !pso->IsValid())
+			{
+				continue;
+			}
+
+			STENCILREF engineStencilRef = material.engineStencilRef;
+			uint8_t userStencilRef = userStencilRefOverride > 0 ? userStencilRefOverride : material.userStencilRef;
+			uint32_t stencilRef = CombineStencilrefs(engineStencilRef, userStencilRef);
+			device->BindStencilRef(stencilRef, cmd);
+
+			if (renderPass != RENDERPASS_PREPASS && renderPass != RENDERPASS_VOXELIZE) // depth only alpha test will be full res
+			{
+				device->BindShadingRate(material.shadingRate, cmd);
+			}
+
+			if (bindless)
+			{
+				push.material = device->GetDescriptorIndex(&material.constantBuffer, SRV);
+				device->PushConstants(&push, sizeof(push), cmd);
+			}
+			else
+			{
+				device->BindConstantBuffer(VS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
+				device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
+
+				// Bind all material textures:
+				const GPUResource* materialtextures[MaterialComponent::TEXTURESLOT_COUNT];
+				material.WriteTextures(materialtextures, arraysize(materialtextures));
+				device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BASECOLORMAP, arraysize(materialtextures), cmd);
+
+				if (tessellatorRequested)
 				{
-					device->BindPipelineState(pso_backside, cmd);
-					device->DrawIndexedInstanced(subset.indexCount, instancedBatch.instanceCount, subset.indexOffset, 0, 0, cmd);
+					device->BindConstantBuffer(DS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
+					device->BindResources(DS, materialtextures, TEXSLOT_RENDERER_BASECOLORMAP, arraysize(materialtextures), cmd);
 				}
 
-				device->BindPipelineState(pso, cmd);
+				if (terrain)
+				{
+					if (mesh.terrain_material1 == INVALID_ENTITY || !vis.scene->materials.Contains(mesh.terrain_material1))
+					{
+						device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BLEND1_BASECOLORMAP, 4, cmd);
+						device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend1), cmd);
+					}
+					else
+					{
+						const MaterialComponent& blendmat = *vis.scene->materials.GetComponent(mesh.terrain_material1);
+						const GPUResource* res[4];
+						blendmat.WriteTextures(res, arraysize(res));
+						device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND1_BASECOLORMAP, arraysize(res), cmd);
+						device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend1), cmd);
+					}
+
+					if (mesh.terrain_material2 == INVALID_ENTITY || !vis.scene->materials.Contains(mesh.terrain_material2))
+					{
+						device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BLEND2_BASECOLORMAP, 4, cmd);
+						device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend2), cmd);
+					}
+					else
+					{
+						const MaterialComponent& blendmat = *vis.scene->materials.GetComponent(mesh.terrain_material2);
+						const GPUResource* res[4];
+						blendmat.WriteTextures(res, arraysize(res));
+						device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND2_BASECOLORMAP, arraysize(res), cmd);
+						device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend2), cmd);
+					}
+
+					if (mesh.terrain_material3 == INVALID_ENTITY || !vis.scene->materials.Contains(mesh.terrain_material3))
+					{
+						device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BLEND3_BASECOLORMAP, 4, cmd);
+						device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend3), cmd);
+					}
+					else
+					{
+						const MaterialComponent& blendmat = *vis.scene->materials.GetComponent(mesh.terrain_material3);
+						const GPUResource* res[4];
+						blendmat.WriteTextures(res, arraysize(res));
+						device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND3_BASECOLORMAP, arraysize(res), cmd);
+						device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend3), cmd);
+					}
+				}
+			}
+
+			if (pso_backside != nullptr)
+			{
+				device->BindPipelineState(pso_backside, cmd);
 				device->DrawIndexedInstanced(subset.indexCount, instancedBatch.instanceCount, subset.indexOffset, 0, 0, cmd);
 			}
+
+			device->BindPipelineState(pso, cmd);
+			device->DrawIndexedInstanced(subset.indexCount, instancedBatch.instanceCount, subset.indexOffset, 0, 0, cmd);
 		}
-
-		GetRenderFrameAllocator(cmd).free(sizeof(InstancedBatch) * instancedBatchCount);
-
-		device->EventEnd(cmd);
 	}
+
+	GetRenderFrameAllocator(cmd).free(sizeof(InstancedBatch) * instancedBatchCount);
+
+	device->EventEnd(cmd);
 }
 
 void RenderImpostors(
@@ -3246,30 +3270,25 @@ void UpdateVisibility(Visibility& vis)
 				group_count = 0; // first thread initializes local counter
 			}
 
-			Entity entity = vis.scene->aabb_lights.GetEntity(args.jobIndex);
-			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
-			if (layer == nullptr || (layer->GetLayerMask() & vis.layerMask))
-			{
-				const AABB& aabb = vis.scene->aabb_lights[args.jobIndex];
+			const AABB& aabb = vis.scene->aabb_lights[args.jobIndex];
 
-				if (vis.frustum.CheckBoxFast(aabb))
+			if ((aabb.layerMask & vis.layerMask) && vis.frustum.CheckBoxFast(aabb))
+			{
+				// Local stream compaction:
+				//	(also compute light distance for shadow priority sorting)
+				assert(args.jobIndex < 0xFFFF);
+				group_list[group_count].index = (uint16_t)args.jobIndex;
+				const LightComponent& lightcomponent = vis.scene->lights[args.jobIndex];
+				float distance = 0;
+				if (lightcomponent.type != LightComponent::DIRECTIONAL)
 				{
-					// Local stream compaction:
-					//	(also compute light distance for shadow priority sorting)
-					assert(args.jobIndex < 0xFFFF);
-					group_list[group_count].index = (uint16_t)args.jobIndex;
-					const LightComponent& lightcomponent = vis.scene->lights[args.jobIndex];
-					float distance = 0;
-					if (lightcomponent.type != LightComponent::DIRECTIONAL)
-					{
-						distance = wiMath::DistanceEstimated(lightcomponent.position, vis.camera->Eye);
-					}
-					group_list[group_count].distance = uint16_t(distance * 10);
-					group_count++;
-					if (lightcomponent.IsVolumetricsEnabled())
-					{
-						vis.volumetriclight_request.store(true);
-					}
+					distance = wiMath::DistanceEstimated(lightcomponent.position, vis.camera->Eye);
+				}
+				group_list[group_count].distance = uint16_t(distance * 10);
+				group_count++;
+				if (lightcomponent.IsVolumetricsEnabled())
+				{
+					vis.volumetriclight_request.store(true);
 				}
 			}
 
@@ -3300,38 +3319,33 @@ void UpdateVisibility(Visibility& vis)
 				group_count = 0; // first thread initializes local counter
 			}
 
-			Entity entity = vis.scene->aabb_objects.GetEntity(args.jobIndex);
-			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
-			if (layer == nullptr || (layer->GetLayerMask() & vis.layerMask))
+			const AABB& aabb = vis.scene->aabb_objects[args.jobIndex];
+
+			if ((aabb.layerMask & vis.layerMask) && vis.frustum.CheckBoxFast(aabb))
 			{
-				const AABB& aabb = vis.scene->aabb_objects[args.jobIndex];
+				// Local stream compaction:
+				group_list[group_count++] = args.jobIndex;
 
-				if (vis.frustum.CheckBoxFast(aabb))
+				if (vis.flags & Visibility::ALLOW_REQUEST_REFLECTION)
 				{
-					// Local stream compaction:
-					group_list[group_count++] = args.jobIndex;
-
-					if (vis.flags & Visibility::ALLOW_REQUEST_REFLECTION)
+					const ObjectComponent& object = vis.scene->objects[args.jobIndex];
+					if (object.IsRequestPlanarReflection())
 					{
-						const ObjectComponent& object = vis.scene->objects[args.jobIndex];
-						if (object.IsRequestPlanarReflection())
+						float dist = wiMath::DistanceEstimated(vis.camera->Eye, object.center);
+						vis.locker.lock();
+						if (dist < vis.closestRefPlane)
 						{
-							float dist = wiMath::DistanceEstimated(vis.camera->Eye, object.center);
-							vis.locker.lock();
-							if (dist < vis.closestRefPlane)
-							{
-								vis.closestRefPlane = dist;
-								const TransformComponent& transform = vis.scene->transforms[object.transform_index];
-								XMVECTOR P = transform.GetPositionV();
-								XMVECTOR N = XMVectorSet(0, 1, 0, 0);
-								N = XMVector3TransformNormal(N, XMLoadFloat4x4(&transform.world));
-								XMVECTOR _refPlane = XMPlaneFromPointNormal(P, N);
-								XMStoreFloat4(&vis.reflectionPlane, _refPlane);
+							vis.closestRefPlane = dist;
+							const TransformComponent& transform = vis.scene->transforms[object.transform_index];
+							XMVECTOR P = transform.GetPositionV();
+							XMVECTOR N = XMVectorSet(0, 1, 0, 0);
+							N = XMVector3TransformNormal(N, XMLoadFloat4x4(&transform.world));
+							XMVECTOR _refPlane = XMPlaneFromPointNormal(P, N);
+							XMStoreFloat4(&vis.reflectionPlane, _refPlane);
 
-								vis.planar_reflection_visible = true;
-							}
-							vis.locker.unlock();
+							vis.planar_reflection_visible = true;
 						}
+						vis.locker.unlock();
 					}
 				}
 			}
@@ -3362,17 +3376,12 @@ void UpdateVisibility(Visibility& vis)
 				group_count = 0; // first thread initializes local counter
 			}
 
-			Entity entity = vis.scene->aabb_decals.GetEntity(args.jobIndex);
-			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
-			if (layer == nullptr || (layer->GetLayerMask() & vis.layerMask))
-			{
-				const AABB& aabb = vis.scene->aabb_decals[args.jobIndex];
+			const AABB& aabb = vis.scene->aabb_decals[args.jobIndex];
 
-				if (vis.frustum.CheckBoxFast(aabb))
-				{
-					// Local stream compaction:
-					group_list[group_count++] = args.jobIndex;
-				}
+			if ((aabb.layerMask & vis.layerMask) && vis.frustum.CheckBoxFast(aabb))
+			{
+				// Local stream compaction:
+				group_list[group_count++] = args.jobIndex;
 			}
 
 			// Global stream compaction:
@@ -3394,16 +3403,9 @@ void UpdateVisibility(Visibility& vis)
 			// Cull probes:
 			for (size_t i = 0; i < vis.scene->aabb_probes.GetCount(); ++i)
 			{
-				Entity entity = vis.scene->aabb_probes.GetEntity(i);
-				const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
-				if (layer != nullptr && !(layer->GetLayerMask() & vis.layerMask))
-				{
-					continue;
-				}
-
 				const AABB& aabb = vis.scene->aabb_probes[i];
 
-				if (vis.frustum.CheckBoxFast(aabb))
+				if ((aabb.layerMask & vis.layerMask) && vis.frustum.CheckBoxFast(aabb))
 				{
 					vis.visibleEnvProbes.push_back((uint32_t)i);
 				}
@@ -3536,7 +3538,7 @@ void UpdatePerFrameData(
 
 	wiJobSystem::Wait(ctx);
 
-	if (!device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING) && scene.BVH_invalid)
+	if (!device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_PIPELINE) && !device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE) && scene.IsAccelerationStructureUpdateRequested())
 	{
 		scene.BVH.Update(scene);
 	}
@@ -3556,7 +3558,8 @@ void UpdatePerFrameData(
 	frameCB.g_xFrame_Cloudiness = vis.scene->weather.cloudiness;
 	frameCB.g_xFrame_CloudScale = vis.scene->weather.cloudScale;
 	frameCB.g_xFrame_CloudSpeed = vis.scene->weather.cloudSpeed;
-	frameCB.g_xFrame_Fog = float3(vis.scene->weather.fogStart, vis.scene->weather.fogEnd, vis.scene->weather.fogHeight);
+	frameCB.g_xFrame_Fog = float4(vis.scene->weather.fogStart, vis.scene->weather.fogEnd, vis.scene->weather.fogHeightStart, vis.scene->weather.fogHeightEnd);
+	frameCB.g_xFrame_FogHeightSky = vis.scene->weather.fogHeightSky;
 	frameCB.g_xFrame_Horizon = vis.scene->weather.horizon;
 	frameCB.g_xFrame_Zenith = vis.scene->weather.zenith;
 	frameCB.g_xFrame_SkyExposure = vis.scene->weather.skyExposure;
@@ -3672,7 +3675,11 @@ void UpdatePerFrameData(
 	{
 		frameCB.g_xFrame_Options |= OPTION_BIT_REALISTIC_SKY;
 	}
-	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING) && GetRaytracedShadowsEnabled())
+	if (vis.scene->weather.IsHeightFog())
+	{
+		frameCB.g_xFrame_Options |= OPTION_BIT_HEIGHT_FOG;
+	}
+	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE) && GetRaytracedShadowsEnabled())
 	{
 		frameCB.g_xFrame_Options |= OPTION_BIT_RAYTRACED_SHADOWS;
 		frameCB.g_xFrame_Options |= OPTION_BIT_SHADOW_MASK;
@@ -3687,6 +3694,71 @@ void UpdatePerFrameData(
 	}
 
 	frameCB.g_xFrame_Atmosphere = vis.scene->weather.atmosphereParameters;
+	frameCB.g_xFrame_VolumetricClouds = vis.scene->weather.volumetricCloudParameters;
+
+
+
+	// Create volumetric cloud static resources if needed:
+	if (scene.weather.IsVolumetricClouds() && !texture_shapeNoise.IsValid())
+	{
+		TextureDesc shape_desc;
+		shape_desc.type = TextureDesc::TEXTURE_3D;
+		shape_desc.Width = 64;
+		shape_desc.Height = 64;
+		shape_desc.Depth = 64;
+		shape_desc.MipLevels = 6;
+		shape_desc.Format = FORMAT_R8G8B8A8_UNORM;
+		shape_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		shape_desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
+		device->CreateTexture(&shape_desc, nullptr, &texture_shapeNoise);
+		device->SetName(&texture_shapeNoise, "texture_shapeNoise");
+
+		for (uint32_t i = 0; i < texture_shapeNoise.GetDesc().MipLevels; ++i)
+		{
+			int subresource_index;
+			subresource_index = device->CreateSubresource(&texture_shapeNoise, SRV, 0, 1, i, 1);
+			assert(subresource_index == i);
+			subresource_index = device->CreateSubresource(&texture_shapeNoise, UAV, 0, 1, i, 1);
+			assert(subresource_index == i);
+		}
+
+		TextureDesc detail_desc;
+		detail_desc.type = TextureDesc::TEXTURE_3D;
+		detail_desc.Width = 32;
+		detail_desc.Height = 32;
+		detail_desc.Depth = 32;
+		detail_desc.MipLevels = 6;
+		detail_desc.Format = FORMAT_R8G8B8A8_UNORM;
+		detail_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		detail_desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
+		device->CreateTexture(&detail_desc, nullptr, &texture_detailNoise);
+		device->SetName(&texture_detailNoise, "texture_detailNoise");
+
+		for (uint32_t i = 0; i < texture_detailNoise.GetDesc().MipLevels; ++i)
+		{
+			int subresource_index;
+			subresource_index = device->CreateSubresource(&texture_detailNoise, SRV, 0, 1, i, 1);
+			assert(subresource_index == i);
+			subresource_index = device->CreateSubresource(&texture_detailNoise, UAV, 0, 1, i, 1);
+			assert(subresource_index == i);
+		}
+
+		TextureDesc texture_desc;
+		texture_desc.type = TextureDesc::TEXTURE_2D;
+		texture_desc.Width = 128;
+		texture_desc.Height = 128;
+		texture_desc.Format = FORMAT_R8G8B8A8_UNORM;
+		texture_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		texture_desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
+		device->CreateTexture(&texture_desc, nullptr, &texture_curlNoise);
+		device->SetName(&texture_curlNoise, "texture_curlNoise");
+
+		texture_desc.Width = 1024;
+		texture_desc.Height = 1024;
+		texture_desc.Format = FORMAT_R8G8B8A8_UNORM;
+		device->CreateTexture(&texture_desc, nullptr, &texture_weatherMap);
+		device->SetName(&texture_weatherMap, "texture_weatherMap");
+	}
 }
 void UpdateRenderData(
 	const Visibility& vis,
@@ -4205,10 +4277,142 @@ void UpdateRenderData(
 		// Render Atmospheric Scattering textures for lighting and sky
 		RenderAtmosphericScatteringTextures(cmd);
 	}
+
+
+	// Precompute static volumetric cloud textures:
+	if (!volumetric_clouds_precomputed && vis.scene->weather.IsVolumetricClouds())
+	{
+		// Shape Noise pass:
+		{
+			device->EventBegin("Shape Noise", cmd);
+			device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_SHAPENOISE], cmd);
+
+			const GPUResource* uavs[] = {
+				&texture_shapeNoise,
+			};
+			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Image(&texture_shapeNoise, texture_shapeNoise.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+
+			const int threadSize = 8;
+			const int noiseThreadXY = static_cast<uint32_t>(std::ceil(texture_shapeNoise.GetDesc().Width / threadSize));
+			const int noiseThreadZ = static_cast<uint32_t>(std::ceil(texture_shapeNoise.GetDesc().Depth / threadSize));
+
+			device->Dispatch(noiseThreadXY, noiseThreadXY, noiseThreadZ, cmd);
+
+			device->UnbindUAVs(0, arraysize(uavs), cmd);
+			device->EventEnd(cmd);
+		}
+
+		// Detail Noise pass:
+		{
+			device->EventBegin("Detail Noise", cmd);
+			device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_DETAILNOISE], cmd);
+
+			const GPUResource* uavs[] = {
+				&texture_detailNoise,
+			};
+			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Image(&texture_detailNoise, texture_detailNoise.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+
+			const int threadSize = 8;
+			const int noiseThreadXYZ = static_cast<uint32_t>(std::ceil(texture_detailNoise.GetDesc().Width / threadSize));
+
+			device->Dispatch(noiseThreadXYZ, noiseThreadXYZ, noiseThreadXYZ, cmd);
+
+			device->UnbindUAVs(0, arraysize(uavs), cmd);
+			device->EventEnd(cmd);
+		}
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&texture_shapeNoise, IMAGE_LAYOUT_UNORDERED_ACCESS, texture_shapeNoise.desc.layout),
+				GPUBarrier::Image(&texture_detailNoise, IMAGE_LAYOUT_UNORDERED_ACCESS, texture_detailNoise.desc.layout),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		// Generate mip chains for 3D textures:
+		GenerateMipChain(texture_shapeNoise, MIPGENFILTER_LINEAR, cmd);
+		GenerateMipChain(texture_detailNoise, MIPGENFILTER_LINEAR, cmd);
+
+		// Curl Noise pass:
+		{
+			device->EventBegin("Curl Map", cmd);
+			device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_CURLNOISE], cmd);
+
+			const GPUResource* uavs[] = {
+				&texture_curlNoise,
+			};
+			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Image(&texture_curlNoise, texture_curlNoise.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+
+			const int threadSize = 16;
+			const int curlRes = texture_curlNoise.GetDesc().Width;
+			const int curlThread = static_cast<uint32_t>(std::ceil(curlRes / threadSize));
+
+			device->Dispatch(curlThread, curlThread, 1, cmd);
+
+			device->UnbindUAVs(0, arraysize(uavs), cmd);
+			device->EventEnd(cmd);
+		}
+
+		// Weather Map pass:
+		{
+			device->EventBegin("Weather Map", cmd);
+			device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_WEATHERMAP], cmd);
+
+			const GPUResource* uavs[] = {
+				&texture_weatherMap,
+			};
+			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Image(&texture_weatherMap, texture_weatherMap.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+
+			const int threadSize = 16;
+			const int weatherMapRes = texture_weatherMap.GetDesc().Width;
+			const int weatherThread = static_cast<uint32_t>(std::ceil(weatherMapRes / threadSize));
+
+			device->Dispatch(weatherThread, weatherThread, 1, cmd);
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Memory(),
+					GPUBarrier::Image(&texture_weatherMap, IMAGE_LAYOUT_UNORDERED_ACCESS, texture_weatherMap.desc.layout),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+
+			device->UnbindUAVs(0, arraysize(uavs), cmd);
+			device->EventEnd(cmd);
+		}
+		volumetric_clouds_precomputed = true;
+	}
 }
 void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 {
-	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_PIPELINE) || device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
 	{
 
 		if (!scene.TLAS.IsValid())
@@ -4276,12 +4480,10 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 	}
 	else
 	{
-		if (scene.BVH_invalid)
-		{
-			scene.BVH_invalid = false;
-			scene.BVH.Build(scene, cmd);
-		}
+		scene.BVH.Build(scene, cmd);
 	}
+
+	scene.acceleration_structure_update_requested = false;
 }
 void OcclusionCulling_Render(const CameraComponent& camera_previous, const Visibility& vis, CommandList cmd)
 {
@@ -4419,7 +4621,7 @@ void DrawSoftParticles(
 		{
 			emitter.Draw(*vis.camera, material, cmd);
 		}
-		else if (!distortion && (emitter.shaderType == wiEmittedParticle::SOFT || emitter.shaderType == wiEmittedParticle::SOFT_LIGHTING || emitter.shaderType == wiEmittedParticle::SIMPLEST || IsWireRender()))
+		else if (!distortion && (emitter.shaderType == wiEmittedParticle::SOFT || emitter.shaderType == wiEmittedParticle::SOFT_LIGHTING || emitter.shaderType == wiEmittedParticle::SIMPLE || IsWireRender()))
 		{
 			emitter.Draw(*vis.camera, material, cmd);
 		}
@@ -4594,7 +4796,8 @@ void DrawVolumeLights(
 void DrawLensFlares(
 	const Visibility& vis,
 	const Texture& depthbuffer,
-	CommandList cmd
+	CommandList cmd,
+	const Texture* texture_directional_occlusion
 )
 {
 	if (IsWireRender())
@@ -4602,7 +4805,7 @@ void DrawLensFlares(
 
 	device->EventBegin("Lens Flares", cmd);
 
-	device->BindResource(GS, &depthbuffer, TEXSLOT_DEPTH, cmd);
+	device->BindResource(VS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 
 	for (auto visibleLight : vis.visibleLights)
 	{
@@ -4613,48 +4816,66 @@ void DrawLensFlares(
 		{
 			XMVECTOR POS;
 
-			if (light.GetType() == LightComponent::POINT || light.GetType() == LightComponent::SPOT)
+			if (light.GetType() == LightComponent::DIRECTIONAL)
 			{
-				// point and spotlight flare will be placed to the source position:
-				POS = XMLoadFloat3(&light.position);
+				// directional light flare will be placed at infinite position along direction vector:
+				XMVECTOR D = XMVector3Normalize(-XMVector3Transform(XMVectorSet(0, 1, 0, 1), XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation))));
+				if (XMVectorGetX(XMVector3Dot(D, XMVectorSet(0, -1, 0, 0))) < 0)
+					continue; // sun below horizon, skip lensflare
+				POS = vis.camera->GetEye() + D * -vis.camera->zFarP;
+
+				// Directional light can use occlusion texture (eg. clouds):
+				if (texture_directional_occlusion == nullptr)
+				{
+					device->BindResource(VS, wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND0, cmd);
+				}
+				else
+				{
+					device->BindResource(VS, texture_directional_occlusion, TEXSLOT_ONDEMAND0, cmd);
+				}
 			}
 			else
 			{
-				// directional light flare will be placed at infinite position along direction vector:
-				POS = 
-					vis.camera->GetEye() + 
-					XMVector3Normalize(-XMVector3Transform(XMVectorSet(0, -1, 0, 1), XMMatrixRotationQuaternion(XMLoadFloat4(&light.rotation)))) * vis.camera->zFarP;
+				// point and spotlight flare will be placed to the source position:
+				POS = XMLoadFloat3(&light.position);
+
+				// not using occlusion texture
+				device->BindResource(VS, wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND0, cmd);
 			}
 
 			if (XMVectorGetX(XMVector3Dot(XMVectorSubtract(POS, vis.camera->GetEye()), vis.camera->GetAt())) > 0) // check if the camera is facing towards the flare or not
 			{
 				device->BindPipelineState(&PSO_lensflare, cmd);
+				device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_LENSFLARE], CB_GETBINDSLOT(LensFlareCB), cmd);
 
 				// Get the screen position of the flare:
 				XMVECTOR flarePos = XMVector3Project(POS, 0, 0, 1, 1, 1, 0, vis.camera->GetProjection(), vis.camera->GetView(), XMMatrixIdentity());
-				LensFlareCB cb;
-				XMStoreFloat4(&cb.xSunPos, flarePos);
-				cb.xScreen = XMFLOAT4((float)depthbuffer.desc.Width, (float)depthbuffer.desc.Height, 0, 0);
 
-				device->UpdateBuffer(&constantBuffers[CBTYPE_LENSFLARE], &cb, cmd);
-				device->BindConstantBuffer(GS, &constantBuffers[CBTYPE_LENSFLARE], CB_GETBINDSLOT(LensFlareCB), cmd);
+				LensFlareCB cb;
+				XMStoreFloat3(&cb.xLensFlarePos, flarePos);
 
 				uint32_t i = 0;
 				for (auto& x : light.lensFlareRimTextures)
 				{
 					if (x != nullptr)
 					{
-						device->BindResource(PS, &x->texture, TEXSLOT_ONDEMAND0 + i, cmd);
-						device->BindResource(GS, &x->texture, TEXSLOT_ONDEMAND0 + i, cmd);
+						// pre-baked offsets
+						// These values work well for me, but should be tweakable
+						static const float mods[] = { 1.0f,0.55f,0.4f,0.1f,-0.1f,-0.3f,-0.5f };
+						if (i >= arraysize(mods))
+							break;
+
+						cb.xLensFlareOffset = mods[i];
+						cb.xLensFlareSize.x = (float)x->texture.desc.Width;
+						cb.xLensFlareSize.y = (float)x->texture.desc.Height;
+
+						device->UpdateBuffer(&constantBuffers[CBTYPE_LENSFLARE], &cb, cmd);
+
+						device->BindResource(PS, &x->texture, TEXSLOT_ONDEMAND1, cmd);
+						device->Draw(4, 0, cmd);
 						i++;
-						if (i == 7)
-						{
-							break; // currently the pixel shader has hardcoded max amount of lens flare textures...
-						}
 					}
 				}
-
-				device->Draw(i, 0, cmd);
 			}
 
 		}
@@ -4883,17 +5104,12 @@ void DrawShadowmaps(
 					for (size_t i = 0; i < vis.scene->aabb_objects.GetCount(); ++i)
 					{
 						const AABB& aabb = vis.scene->aabb_objects[i];
-						if (shcams[cascade].frustum.CheckBoxFast(aabb))
+						if ((aabb.layerMask & vis.layerMask) && shcams[cascade].frustum.CheckBoxFast(aabb))
 						{
 							const ObjectComponent& object = vis.scene->objects[i];
 							if (object.IsRenderable() && object.IsCastingShadow() && (cascade < (CASCADE_COUNT - object.cascadeMask)))
 							{
 								Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
-								const LayerComponent* layer = vis.scene->layers.GetComponent(cullable_entity);
-								if (layer != nullptr && !(layer->GetLayerMask() & vis.layerMask))
-								{
-									continue;
-								}
 
 								RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
 								size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
@@ -4954,17 +5170,12 @@ void DrawShadowmaps(
 				for (size_t i = 0; i < vis.scene->aabb_objects.GetCount(); ++i)
 				{
 					const AABB& aabb = vis.scene->aabb_objects[i];
-					if (shcam.frustum.CheckBoxFast(aabb))
+					if ((aabb.layerMask & vis.layerMask) && shcam.frustum.CheckBoxFast(aabb))
 					{
 						const ObjectComponent& object = vis.scene->objects[i];
 						if (object.IsRenderable() && object.IsCastingShadow())
 						{
 							Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
-							const LayerComponent* layer = vis.scene->layers.GetComponent(cullable_entity);
-							if (layer != nullptr && !(layer->GetLayerMask() & vis.layerMask))
-							{
-								continue;
-							}
 
 							RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
 							size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
@@ -5020,17 +5231,12 @@ void DrawShadowmaps(
 				for (size_t i = 0; i < vis.scene->aabb_objects.GetCount(); ++i)
 				{
 					const AABB& aabb = vis.scene->aabb_objects[i];
-					if (boundingsphere.intersects(aabb))
+					if ((aabb.layerMask & vis.layerMask) && boundingsphere.intersects(aabb))
 					{
 						const ObjectComponent& object = vis.scene->objects[i];
 						if (object.IsRenderable() && object.IsCastingShadow())
 						{
 							Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
-							const LayerComponent* layer = vis.scene->layers.GetComponent(cullable_entity);
-							if (layer != nullptr && !(layer->GetLayerMask() & vis.layerMask))
-							{
-								continue;
-							}
 
 							RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
 							size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
@@ -5122,9 +5328,6 @@ void DrawScene(
 	const bool hairparticle = flags & DRAWSCENE_HAIRPARTICLE;
 	const bool occlusion = flags & DRAWSCENE_OCCLUSIONCULLING;
 
-	if(IsWireRender() && !transparent)
-		return;
-
 	device->EventBegin("DrawScene", cmd);
 	device->BindShadingRate(SHADING_RATE_1X1, cmd);
 
@@ -5151,7 +5354,7 @@ void DrawScene(
 		device->BindResource(PS, &vis.scene->decalAtlas, TEXSLOT_DECALATLAS, cmd);
 	}
 
-	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_PIPELINE) || device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
 	{
 		device->BindResource(PS, &vis.scene->TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
 		device->BindResource(CS, &vis.scene->TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
@@ -5176,6 +5379,9 @@ void DrawScene(
 			}
 		}
 	}
+
+	if (IsWireRender() && !transparent)
+		return;
 
 	RenderImpostors(vis, renderPass, cmd);
 
@@ -6560,7 +6766,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 	const float zNearP = vis.camera->zNearP;
 	const float zFarP = vis.camera->zFarP;
 
-	auto render_probe = [&](const EnvironmentProbeComponent& probe, Entity entity) {
+	auto render_probe = [&](const EnvironmentProbeComponent& probe, const AABB& probe_aabb) {
 
 		const SHCAM cameras[] = {
 			SHCAM(probe.position, XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //+x
@@ -6603,26 +6809,16 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		device->RenderPassBegin(&vis.scene->renderpasses_envmap[probe.textureIndex], cmd);
 
 		// Scene will only be rendered if this is a real probe entity:
-		if (entity != INVALID_ENTITY)
+		if (probe_aabb.layerMask & vis.layerMask)
 		{
-			const LayerComponent* probe_layer = vis.scene->layers.GetComponent(entity);
-			const uint32_t layerMask = probe_layer == nullptr ? ~0 : probe_layer->GetLayerMask();
-
 			SPHERE culler = SPHERE(probe.position, zFarP);
 
 			RenderQueue renderQueue;
 			for (size_t i = 0; i < vis.scene->aabb_objects.GetCount(); ++i)
 			{
 				const AABB& aabb = vis.scene->aabb_objects[i];
-				if (culler.intersects(aabb))
+				if ((aabb.layerMask & vis.layerMask) && (aabb.layerMask & probe_aabb.layerMask) && culler.intersects(aabb))
 				{
-					Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
-					const LayerComponent* layer = vis.scene->layers.GetComponent(cullable_entity);
-					if (layer != nullptr && !(layer->GetLayerMask() & layerMask))
-					{
-						continue;
-					}
-
 					const ObjectComponent& object = vis.scene->objects[i];
 					if (object.IsRenderable())
 					{
@@ -6693,7 +6889,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 				}
 
 				device->BindUAV(CS, &vis.scene->envmapArray, 0, cmd, i);
-				device->BindResource(CS, &vis.scene->envmapArray, TEXSLOT_UNIQUE0, cmd, std::max(0, (int)i - 2));
+				device->BindResource(CS, &vis.scene->envmapArray, TEXSLOT_ONDEMAND0, cmd, std::max(0, (int)i - 2));
 
 				FilterEnvmapCB cb;
 				cb.filterResolution.x = desc.Width;
@@ -6739,18 +6935,22 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		EnvironmentProbeComponent probe;
 		probe.textureIndex = 0;
 		probe.position = vis.camera->Eye;
-		render_probe(probe, INVALID_ENTITY);
+
+		AABB probe_aabb;
+		probe_aabb.layerMask = 0;
+		render_probe(probe, probe_aabb);
 	}
 	else
 	{
 		for (size_t i = 0; i < vis.scene->probes.GetCount(); ++i)
 		{
 			const EnvironmentProbeComponent& probe = vis.scene->probes[i];
-			if (probe.render_dirty && probe.textureIndex >= 0 && probe.textureIndex < vis.scene->envmapCount)
+			const AABB& probe_aabb = vis.scene->aabb_probes[i];
+
+			if ((probe_aabb.layerMask & vis.layerMask) && probe.render_dirty && probe.textureIndex >= 0 && probe.textureIndex < vis.scene->envmapCount)
 			{
 				probe.render_dirty = false;
-				Entity entity = vis.scene->probes.GetEntity(i);
-				render_probe(probe, entity);
+				render_probe(probe, probe_aabb);
 			}
 		}
 	}
@@ -7281,7 +7481,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 					}
 
 					device->BindUAV(CS, &texture, 0, cmd, i + 1);
-					device->BindResource(CS, &texture, TEXSLOT_UNIQUE0, cmd, i);
+					device->BindResource(CS, &texture, TEXSLOT_ONDEMAND0, cmd, i);
 					desc.Width = std::max(1u, desc.Width / 2);
 					desc.Height = std::max(1u, desc.Height / 2);
 
@@ -7338,7 +7538,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 				for (uint32_t i = 0; i < desc.MipLevels - 1; ++i)
 				{
 					device->BindUAV(CS, &texture, 0, cmd, i + 1);
-					device->BindResource(CS, &texture, TEXSLOT_UNIQUE0, cmd, i);
+					device->BindResource(CS, &texture, TEXSLOT_ONDEMAND0, cmd, i);
 					desc.Width = std::max(1u, desc.Width / 2);
 					desc.Height = std::max(1u, desc.Height / 2);
 
@@ -7409,7 +7609,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 				}
 
 				device->BindUAV(CS, &texture, 0, cmd, i + 1);
-				device->BindResource(CS, &texture, TEXSLOT_UNIQUE0, cmd, i);
+				device->BindResource(CS, &texture, TEXSLOT_ONDEMAND0, cmd, i);
 				desc.Width = std::max(1u, desc.Width / 2);
 				desc.Height = std::max(1u, desc.Height / 2);
 
@@ -7443,7 +7643,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 			}
 		}
 
-		device->UnbindResources(TEXSLOT_UNIQUE0, 1, cmd);
+		device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 		device->UnbindUAVs(0, 1, cmd);
 
 		device->EventEnd(cmd);
@@ -7470,7 +7670,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 		for (uint32_t i = 0; i < desc.MipLevels - 1; ++i)
 		{
 			device->BindUAV(CS, &texture, 0, cmd, i + 1);
-			device->BindResource(CS, &texture, TEXSLOT_UNIQUE0, cmd, i);
+			device->BindResource(CS, &texture, TEXSLOT_ONDEMAND0, cmd, i);
 			desc.Width = std::max(1u, desc.Width / 2);
 			desc.Height = std::max(1u, desc.Height / 2);
 			desc.Depth = std::max(1u, desc.Depth / 2);
@@ -7499,7 +7699,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindResources(TEXSLOT_UNIQUE0, 1, cmd);
+		device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 		device->UnbindUAVs(0, 1, cmd);
 
 		device->EventEnd(cmd);
@@ -7644,6 +7844,13 @@ void RayTraceScene(
 	};
 	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&output, output.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
 	if (output_albedo != nullptr)
 	{
 		device->BindUAV(CS, output_albedo, 1, cmd);
@@ -7659,10 +7866,13 @@ void RayTraceScene(
 		1,
 		cmd);
 
-	GPUBarrier barriers[] = {
-		GPUBarrier::Memory(),
-	};
-	device->Barrier(barriers, arraysize(barriers), cmd);
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Memory(),
+			GPUBarrier::Image(&output, IMAGE_LAYOUT_UNORDERED_ACCESS, output.desc.layout),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
 
 	device->UnbindUAVs(0, 3, cmd);
 
@@ -7801,6 +8011,8 @@ void RefreshLightmapAtlas(const Scene& scene, CommandList cmd)
 		for (uint32_t i = 0; i < scene.objects.GetCount(); ++i)
 		{
 			const ObjectComponent& object = scene.objects[i];
+			if (!object.lightmap.IsValid())
+				continue;
 
 			if (object.IsLightmapRenderRequested())
 			{
@@ -9326,7 +9538,9 @@ void Postprocess_RTReflection(
 	float range
 )
 {
-	if (!wiRenderer::device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
+	if (!wiRenderer::device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_PIPELINE))
+		return;
+	if (!wiRenderer::device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_GEOMETRYINDEX))
 		return;
 
 	if (scene.objects.GetCount() <= 0)
@@ -11170,8 +11384,8 @@ void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resol
 {
 	TextureDesc desc;
 	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-	desc.Width = resolution.x / 2;
-	desc.Height = resolution.y / 2;
+	desc.Width = resolution.x / 4;
+	desc.Height = resolution.y / 4;
 	desc.Format = FORMAT_R16G16B16A16_FLOAT;
 	desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
 	device->CreateTexture(&desc, nullptr, &res.texture_cloudRender);
@@ -11184,10 +11398,15 @@ void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resol
 	desc.Format = FORMAT_R16_FLOAT;
 	device->CreateTexture(&desc, nullptr, &res.texture_cloudDepth);
 	device->SetName(&res.texture_cloudDepth, "texture_cloudDepth");
+
+	desc.Width /= 2;
+	desc.Height /= 2;
+	desc.Format = FORMAT_R8G8B8A8_UNORM;
+	device->CreateTexture(&desc, nullptr, &res.texture_cloudMask);
+	device->SetName(&res.texture_cloudMask, "texture_cloudMask");
 }
 void Postprocess_VolumetricClouds(
 	const VolumetricCloudResources& res,
-	const Texture& lineardepth,
 	const Texture& depthbuffer,
 	CommandList cmd
 )
@@ -11195,199 +11414,7 @@ void Postprocess_VolumetricClouds(
 	device->EventBegin("Postprocess_VolumetricClouds", cmd);
 	auto range = wiProfiler::BeginRangeGPU("Volumetric Clouds", cmd);
 
-	static Texture texture_shapeNoise;
-	static Texture texture_detailNoise;
-	static Texture texture_curlNoise;
-	static Texture texture_weatherMap;
-
-	// Initialize and render once
-	if (!texture_shapeNoise.IsValid())
-	{
-		// Initialize textures:
-		TextureDesc shape_desc;
-		shape_desc.type = TextureDesc::TEXTURE_3D;
-		shape_desc.Width = 64;
-		shape_desc.Height = 64;
-		shape_desc.Depth = 64;
-		shape_desc.MipLevels = 6;
-		shape_desc.Format = FORMAT_R8G8B8A8_UNORM;
-		shape_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		shape_desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
-		device->CreateTexture(&shape_desc, nullptr, &texture_shapeNoise);
-		device->SetName(&texture_shapeNoise, "texture_shapeNoise");
-
-		for (uint32_t i = 0; i < texture_shapeNoise.GetDesc().MipLevels; ++i)
-		{
-			int subresource_index;
-			subresource_index = device->CreateSubresource(&texture_shapeNoise, SRV, 0, 1, i, 1);
-			assert(subresource_index == i);
-			subresource_index = device->CreateSubresource(&texture_shapeNoise, UAV, 0, 1, i, 1);
-			assert(subresource_index == i);
-		}
-
-		TextureDesc detail_desc;
-		detail_desc.type = TextureDesc::TEXTURE_3D;
-		detail_desc.Width = 32;
-		detail_desc.Height = 32;
-		detail_desc.Depth = 32;
-		detail_desc.MipLevels = 6;
-		detail_desc.Format = FORMAT_R8G8B8A8_UNORM;
-		detail_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		detail_desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
-		device->CreateTexture(&detail_desc, nullptr, &texture_detailNoise);
-		device->SetName(&texture_detailNoise, "texture_detailNoise");
-
-		for (uint32_t i = 0; i < texture_detailNoise.GetDesc().MipLevels; ++i)
-		{
-			int subresource_index;
-			subresource_index = device->CreateSubresource(&texture_detailNoise, SRV, 0, 1, i, 1);
-			assert(subresource_index == i);
-			subresource_index = device->CreateSubresource(&texture_detailNoise, UAV, 0, 1, i, 1);
-			assert(subresource_index == i);
-		}
-
-		TextureDesc texture_desc;
-		texture_desc.type = TextureDesc::TEXTURE_2D;
-		texture_desc.Width = 128;
-		texture_desc.Height = 128;
-		texture_desc.Format = FORMAT_R8G8B8A8_UNORM;
-		texture_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		texture_desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
-		device->CreateTexture(&texture_desc, nullptr, &texture_curlNoise);
-		device->SetName(&texture_curlNoise, "texture_curlNoise");
-
-		texture_desc.Width = 1024;
-		texture_desc.Height = 1024;
-		texture_desc.Format = FORMAT_R8G8B8A8_UNORM;
-		device->CreateTexture(&texture_desc, nullptr, &texture_weatherMap);
-		device->SetName(&texture_weatherMap, "texture_weatherMap");
-
-		// Shape Noise pass:
-		{
-			device->EventBegin("Shape Noise", cmd);
-			device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_SHAPENOISE], cmd);
-
-			const GPUResource* uavs[] = {
-				&texture_shapeNoise,
-			};
-			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
-
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&texture_shapeNoise, texture_shapeNoise.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
-
-			const int threadSize = 8;
-			const int noiseThreadXY = static_cast<uint32_t>(std::ceil(texture_shapeNoise.GetDesc().Width / threadSize));
-			const int noiseThreadZ = static_cast<uint32_t>(std::ceil(texture_shapeNoise.GetDesc().Depth / threadSize));
-
-			device->Dispatch(noiseThreadXY, noiseThreadXY, noiseThreadZ, cmd);
-
-			device->UnbindUAVs(0, arraysize(uavs), cmd);
-			device->EventEnd(cmd);
-		}
-
-		// Detail Noise pass:
-		{
-			device->EventBegin("Detail Noise", cmd);
-			device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_DETAILNOISE], cmd);
-
-			const GPUResource* uavs[] = {
-				&texture_detailNoise,
-			};
-			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
-
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&texture_detailNoise, texture_detailNoise.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
-
-			const int threadSize = 8;
-			const int noiseThreadXYZ = static_cast<uint32_t>(std::ceil(texture_detailNoise.GetDesc().Width / threadSize));
-
-			device->Dispatch(noiseThreadXYZ, noiseThreadXYZ, noiseThreadXYZ, cmd);
-
-			device->UnbindUAVs(0, arraysize(uavs), cmd);
-			device->EventEnd(cmd);
-		}
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&texture_shapeNoise, IMAGE_LAYOUT_UNORDERED_ACCESS, texture_shapeNoise.desc.layout),
-				GPUBarrier::Image(&texture_detailNoise, IMAGE_LAYOUT_UNORDERED_ACCESS, texture_detailNoise.desc.layout),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
-		// Generate mip chains for 3D textures:
-		GenerateMipChain(texture_shapeNoise, MIPGENFILTER_LINEAR, cmd);
-		GenerateMipChain(texture_detailNoise, MIPGENFILTER_LINEAR, cmd);
-
-		// Curl Noise pass:
-		{
-			device->EventBegin("Curl Map", cmd);
-			device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_CURLNOISE], cmd);
-
-			const GPUResource* uavs[] = {
-				&texture_curlNoise,
-			};
-			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
-
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&texture_curlNoise, texture_curlNoise.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
-
-			const int threadSize = 16;
-			const int curlRes = texture_curlNoise.GetDesc().Width;
-			const int curlThread = static_cast<uint32_t>(std::ceil(curlRes / threadSize));
-
-			device->Dispatch(curlThread, curlThread, 1, cmd);
-
-			device->UnbindUAVs(0, arraysize(uavs), cmd);
-			device->EventEnd(cmd);
-		}
-
-		// Weather Map pass:
-		{
-			device->EventBegin("Weather Map", cmd);
-			device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_WEATHERMAP], cmd);
-
-			const GPUResource* uavs[] = {
-				&texture_weatherMap,
-			};
-			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
-
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Image(&texture_weatherMap, texture_weatherMap.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
-
-			const int threadSize = 16;
-			const int weatherMapRes = texture_weatherMap.GetDesc().Width;
-			const int weatherThread = static_cast<uint32_t>(std::ceil(weatherMapRes / threadSize));
-
-			device->Dispatch(weatherThread, weatherThread, 1, cmd);
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Memory(),
-					GPUBarrier::Image(&texture_weatherMap, IMAGE_LAYOUT_UNORDERED_ACCESS, texture_weatherMap.desc.layout),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
-
-			device->UnbindUAVs(0, arraysize(uavs), cmd);
-			device->EventEnd(cmd);
-		}
-	}
+	BindCommonResources(cmd);
 
 	const TextureDesc& desc = res.texture_reproject[0].GetDesc();
 	PostProcessCB cb;
@@ -11462,12 +11489,14 @@ void Postprocess_VolumetricClouds(
 
 		const GPUResource* uavs[] = {
 			&res.texture_reproject[temporal_output],
+			&res.texture_cloudMask,
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Image(&res.texture_reproject[temporal_output], res.texture_reproject[temporal_output].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+				GPUBarrier::Image(&res.texture_cloudMask, res.texture_cloudMask.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -11483,6 +11512,7 @@ void Postprocess_VolumetricClouds(
 			GPUBarrier barriers[] = {
 				GPUBarrier::Memory(),
 				GPUBarrier::Image(&res.texture_reproject[temporal_output], IMAGE_LAYOUT_UNORDERED_ACCESS, res.texture_reproject[temporal_output].desc.layout),
+				GPUBarrier::Image(&res.texture_cloudMask, IMAGE_LAYOUT_UNORDERED_ACCESS, res.texture_cloudMask.desc.layout),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}

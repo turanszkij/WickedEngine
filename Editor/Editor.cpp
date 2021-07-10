@@ -722,6 +722,9 @@ void EditorComponent::Load()
 		params.extensions.push_back("glb");
 		wiHelper::FileDialog(params, [&](std::string fileName) {
 			wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+
+				size_t camera_count_prev = wiScene::GetScene().cameras.GetCount();
+
 				main->loader.addLoadingFunction([=](wiJobArgs args) {
 					std::string extension = wiHelper::toUpper(wiHelper::GetExtensionFromFileName(fileName));
 
@@ -749,6 +752,22 @@ void EditorComponent::Load()
 					}
 					});
 				main->loader.onFinished([=] {
+
+					// Detect when the new scene contains a new camera, and snap the camera onto it:
+					size_t camera_count = wiScene::GetScene().cameras.GetCount();
+					if (camera_count > 0 && camera_count > camera_count_prev)
+					{
+						Entity entity = wiScene::GetScene().cameras.GetEntity(camera_count_prev);
+						if (entity != INVALID_ENTITY)
+						{
+							TransformComponent* camera_transform = wiScene::GetScene().transforms.GetComponent(entity);
+							if (camera_transform != nullptr)
+							{
+								cameraWnd.camera_transform = *camera_transform;
+							}
+						}
+					}
+
 					main->ActivatePath(this, 0.2f, wiColor::Black());
 					weatherWnd.Update();
 					RefreshSceneGraphView();
@@ -1195,7 +1214,7 @@ void EditorComponent::Update(float dt)
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
 					float dis = XMVectorGetX(disV);
-					if (dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
+					if (dis > 0.01f && dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
 						hovered = wiScene::PickResult();
 						hovered.entity = entity;
@@ -1212,7 +1231,7 @@ void EditorComponent::Update(float dt)
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
 					float dis = XMVectorGetX(disV);
-					if (dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
+					if (dis > 0.01f && dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
 						hovered = wiScene::PickResult();
 						hovered.entity = entity;
@@ -1229,7 +1248,7 @@ void EditorComponent::Update(float dt)
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
 					float dis = XMVectorGetX(disV);
-					if (dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
+					if (dis > 0.01f && dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
 						hovered = wiScene::PickResult();
 						hovered.entity = entity;
@@ -1246,7 +1265,7 @@ void EditorComponent::Update(float dt)
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
 					float dis = XMVectorGetX(disV);
-					if (dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
+					if (dis > 0.01f && dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
 						hovered = wiScene::PickResult();
 						hovered.entity = entity;
@@ -1263,7 +1282,7 @@ void EditorComponent::Update(float dt)
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
 					float dis = XMVectorGetX(disV);
-					if (dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
+					if (dis > 0.01f && dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
 						hovered = wiScene::PickResult();
 						hovered.entity = entity;
@@ -1300,7 +1319,7 @@ void EditorComponent::Update(float dt)
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
 					float dis = XMVectorGetX(disV);
-					if (dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
+					if (dis > 0.01f && dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
 						hovered = wiScene::PickResult();
 						hovered.entity = entity;
@@ -1317,7 +1336,7 @@ void EditorComponent::Update(float dt)
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
 					float dis = XMVectorGetX(disV);
-					if (dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
+					if (dis > 0.01f && dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
 						hovered = wiScene::PickResult();
 						hovered.entity = entity;
@@ -1334,7 +1353,7 @@ void EditorComponent::Update(float dt)
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
 					float dis = XMVectorGetX(disV);
-					if (dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
+					if (dis > 0.01f && dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
 						hovered = wiScene::PickResult();
 						hovered.entity = entity;

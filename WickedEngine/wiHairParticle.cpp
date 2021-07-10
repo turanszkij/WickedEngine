@@ -21,7 +21,7 @@ namespace wiScene
 static Shader vs;
 static Shader ps_prepass;
 static Shader ps;
-static Shader ps_simplest;
+static Shader ps_simple;
 static Shader cs_simulate;
 static Shader cs_finishUpdate;
 static DepthStencilState dss_default, dss_equal;
@@ -52,11 +52,10 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
-		_flags &= ~REGENERATE_FRAME;
 		if (_flags & REBUILD_BUFFERS || !cb.IsValid() || (strandCount * segmentCount) != particleBuffer.GetDesc().ByteWidth / sizeof(Patch))
 		{
 			_flags &= ~REBUILD_BUFFERS;
-			_flags |= REGENERATE_FRAME;
+			regenerate_frame = true;
 
 			GPUBufferDesc bd;
 			bd.Usage = USAGE_DEFAULT;
@@ -170,7 +169,7 @@ void wiHairParticle::UpdateGPU(const MeshComponent& mesh, const MaterialComponen
 	HairParticleCB hcb;
 	hcb.xWorld = world;
 	hcb.xColor = material.baseColor;
-	hcb.xHairRegenerate = (_flags & REGENERATE_FRAME) ? 1 : 0;
+	hcb.xHairRegenerate = regenerate_frame ? 1 : 0;
 	hcb.xLength = length;
 	hcb.xStiffness = stiffness;
 	hcb.xHairRandomness = randomness;
@@ -259,6 +258,8 @@ void wiHairParticle::UpdateGPU(const MeshComponent& mesh, const MaterialComponen
 	}
 
 	device->EventEnd(cmd);
+
+	regenerate_frame = false;
 }
 
 void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent& material, RENDERPASS renderPass, CommandList cmd) const
@@ -379,7 +380,7 @@ namespace wiHairParticle_Internal
 
 		wiRenderer::LoadShader(VS, vs, "hairparticleVS.cso");
 
-		wiRenderer::LoadShader(PS, ps_simplest, "hairparticlePS_simplest.cso");
+		wiRenderer::LoadShader(PS, ps_simple, "hairparticlePS_simple.cso");
 		wiRenderer::LoadShader(PS, ps_prepass, "hairparticlePS_prepass.cso");
 		wiRenderer::LoadShader(PS, ps, "hairparticlePS.cso");
 
@@ -417,10 +418,11 @@ namespace wiHairParticle_Internal
 		{
 			PipelineStateDesc desc;
 			desc.vs = &vs;
-			desc.ps = &ps_simplest;
+			desc.ps = &ps_simple;
 			desc.bs = &bs;
 			desc.rs = &wirers;
 			desc.dss = &dss_default;
+			desc.pt = TRIANGLESTRIP;
 			device->CreatePipelineState(&desc, &PSO_wire);
 		}
 

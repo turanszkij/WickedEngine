@@ -12,7 +12,6 @@ void RenderPath3D::ResizeBuffers()
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	FORMAT defaultTextureFormat = FORMAT_R10G10B10A2_UNORM;
 	XMUINT2 internalResolution = GetInternalResolution();
 
 	camera->CreatePerspective((float)internalResolution.x, (float)internalResolution.y, camera->zNearP, camera->zFarP);
@@ -146,7 +145,7 @@ void RenderPath3D::ResizeBuffers()
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
-		desc.Format = defaultTextureFormat;
+		desc.Format = FORMAT_R11G11B10_FLOAT;
 		desc.Width = internalResolution.x;
 		desc.Height = internalResolution.y;
 		desc.SampleCount = getMSAASampleCount();
@@ -192,7 +191,7 @@ void RenderPath3D::ResizeBuffers()
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.Format = defaultTextureFormat;
+		desc.Format = FORMAT_R10G10B10A2_UNORM;
 		desc.Width = internalResolution.x;
 		desc.Height = internalResolution.y;
 		device->CreateTexture(&desc, nullptr, &rtPostprocess_LDR[0]);
@@ -495,6 +494,7 @@ void RenderPath3D::ResizeBuffers()
 	wiRenderer::CreateDepthOfFieldResources(depthoffieldResources, internalResolution);
 	wiRenderer::CreateMotionBlurResources(motionblurResources, internalResolution);
 	wiRenderer::CreateVolumetricCloudResources(volumetriccloudResources, internalResolution);
+	wiRenderer::CreateVolumetricCloudResources(volumetriccloudResources_reflection, XMUINT2(depthBuffer_Reflection.desc.Width, depthBuffer_Reflection.desc.Height));
 	wiRenderer::CreateBloomResources(bloomResources, internalResolution);
 
 	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
@@ -512,6 +512,7 @@ void RenderPath3D::ResizeBuffers()
 void RenderPath3D::PreUpdate()
 {
 	camera_previous = *camera;
+	camera_reflection_previous = camera_reflection;
 }
 
 void RenderPath3D::Update(float dt)
@@ -526,6 +527,13 @@ void RenderPath3D::Update(float dt)
 	if (getSceneUpdateEnabled())
 	{
 		scene->Update(dt * wiRenderer::GetGameSpeed());
+
+		if (wiRenderer::GetRaytracedShadowsEnabled() ||
+			getAO() == AO_RTAO ||
+			getRaytracedReflectionEnabled())
+		{
+			scene->SetAccelerationStructureUpdateRequested(true);
+		}
 	}
 
 	// Frustum culling for main camera:
@@ -596,15 +604,18 @@ void RenderPath3D::Render() const
 		RenderFrameSetUp(cmd);
 		});
 
-	// Acceleration structures:
-	//	async compute parallel with depth prepass
-	cmd = device->BeginCommandList(QUEUE_COMPUTE); 
-	device->WaitCommandList(cmd, cmd_prepareframe);
-	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
+	if (scene->IsAccelerationStructureUpdateRequested())
+	{
+		// Acceleration structures:
+		//	async compute parallel with depth prepass
+		cmd = device->BeginCommandList(QUEUE_COMPUTE);
+		device->WaitCommandList(cmd, cmd_prepareframe);
+		wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
-		wiRenderer::UpdateRaytracingAccelerationStructures(*scene, cmd);
+			wiRenderer::UpdateRaytracingAccelerationStructures(*scene, cmd);
 
-		});
+			});
+	}
 
 	static const uint32_t drawscene_flags =
 		wiRenderer::DRAWSCENE_OPAQUE |
@@ -696,11 +707,10 @@ void RenderPath3D::Render() const
 			);
 		}
 
-		if (getVolumetricCloudsEnabled())
+		if (scene->weather.IsVolumetricClouds())
 		{
 			wiRenderer::Postprocess_VolumetricClouds(
 				volumetriccloudResources,
-				rtLinearDepth,
 				depthBuffer_Copy,
 				cmd
 			);
@@ -778,9 +788,9 @@ void RenderPath3D::Render() const
 			});
 	}
 
-	// Planar reflections depth prepass:
 	if (visibility_main.IsRequestedPlanarReflections())
 	{
+		// Planar reflections depth prepass:
 		cmd = device->BeginCommandList();
 		wiJobSystem::Execute(ctx, [cmd, this](wiJobArgs args) {
 
@@ -788,7 +798,7 @@ void RenderPath3D::Render() const
 
 			wiRenderer::UpdateCameraCB(
 				camera_reflection,
-				camera_reflection,
+				camera_reflection_previous,
 				camera_reflection,
 				cmd
 			);
@@ -807,15 +817,21 @@ void RenderPath3D::Render() const
 
 			device->RenderPassEnd(cmd);
 
+			if (scene->weather.IsVolumetricClouds())
+			{
+				wiRenderer::Postprocess_VolumetricClouds(
+					volumetriccloudResources_reflection,
+					depthBuffer_Reflection,
+					cmd
+				);
+			}
+
 			wiProfiler::EndRange(range); // Planar Reflections
 			device->EventEnd(cmd);
 
 			});
-	}
 
-	// Planar reflections opaque color pass:
-	if (visibility_main.IsRequestedPlanarReflections())
-	{
+		// Planar reflections opaque color pass:
 		cmd = device->BeginCommandList();
 		wiJobSystem::Execute(ctx, [cmd, this](wiJobArgs args) {
 
@@ -823,7 +839,7 @@ void RenderPath3D::Render() const
 
 			wiRenderer::UpdateCameraCB(
 				camera_reflection,
-				camera_reflection,
+				camera_reflection_previous,
 				camera_reflection,
 				cmd
 			);
@@ -854,6 +870,16 @@ void RenderPath3D::Render() const
 			device->BindResource(PS, wiTextureHelper::getUINT4(), TEXSLOT_RENDERPATH_RTSHADOW, cmd);
 			wiRenderer::DrawScene(visibility_reflection, RENDERPASS_MAIN, cmd, drawscene_flags_reflections);
 			wiRenderer::DrawSky(*scene, cmd);
+
+			// Blend the volumetric clouds on top:
+			if (scene->weather.IsVolumetricClouds())
+			{
+				device->EventBegin("Volumetric Clouds Reflection Blend", cmd);
+				wiImageParams fx;
+				fx.enableFullScreen();
+				wiImage::Draw(&volumetriccloudResources_reflection.texture_reproject[device->GetFrameCount() % 2], fx, cmd);
+				device->EventEnd(cmd);
+			}
 
 			device->RenderPassEnd(cmd);
 
@@ -924,7 +950,7 @@ void RenderPath3D::Render() const
 		RenderOutline(cmd);
 
 		// Upsample + Blend the volumetric clouds on top:
-		if (getVolumetricCloudsEnabled())
+		if (scene->weather.IsVolumetricClouds())
 		{
 			device->EventBegin("Volumetric Clouds Upsample + Blend", cmd);
 			wiRenderer::Postprocess_Upsample_Bilateral(
@@ -1110,6 +1136,16 @@ void RenderPath3D::RenderLightShafts(CommandList cmd) const
 
 			wiRenderer::DrawSun(cmd);
 
+			if (scene->weather.IsVolumetricClouds())
+			{
+				device->EventBegin("Volumetric cloud occlusion mask", cmd);
+				wiImageParams fx;
+				fx.enableFullScreen();
+				fx.blendFlag = BLENDMODE_MULTIPLY;
+				wiImage::Draw(&volumetriccloudResources.texture_cloudMask, fx, cmd);
+				device->EventEnd(cmd);
+			}
+
 			device->RenderPassEnd(cmd);
 		}
 
@@ -1231,6 +1267,7 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 		drawscene_flags |= wiRenderer::DRAWSCENE_TRANSPARENT;
 		drawscene_flags |= wiRenderer::DRAWSCENE_OCCLUSIONCULLING;
 		drawscene_flags |= wiRenderer::DRAWSCENE_HAIRPARTICLE;
+		drawscene_flags |= wiRenderer::DRAWSCENE_TESSELLATION;
 		wiRenderer::DrawScene(visibility_main, RENDERPASS_MAIN, cmd, drawscene_flags);
 
 		device->EventEnd(cmd);
@@ -1249,7 +1286,8 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 		device->EventEnd(cmd);
 	}
 
-	if (getLightShaftsEnabled())
+	XMVECTOR sunDirection = XMLoadFloat3(&scene->weather.sunDirection);
+	if (getLightShaftsEnabled() && XMVectorGetX(XMVector3Dot(sunDirection, camera->GetAt())) > 0)
 	{
 		device->EventBegin("Contribute LightShafts", cmd);
 		wiImageParams fx;
@@ -1261,7 +1299,12 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 
 	if (getLensFlareEnabled())
 	{
-		wiRenderer::DrawLensFlares(visibility_main, depthBuffer_Copy, cmd);
+		wiRenderer::DrawLensFlares(
+			visibility_main,
+			depthBuffer_Copy,
+			cmd,
+			scene->weather.IsVolumetricClouds() ? &volumetriccloudResources.texture_cloudMask : nullptr
+		);
 	}
 
 	wiRenderer::DrawDebugWorld(*scene, *camera, *this, cmd);

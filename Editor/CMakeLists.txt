@@ -34,6 +34,8 @@ set (SOURCE_FILES
 	xatlas.cpp
 )
 
+add_subdirectory(meshoptimizer)
+
 if (WIN32)
 	list (APPEND SOURCE_FILES
 		Editor.rc
@@ -42,7 +44,8 @@ if (WIN32)
 	add_executable(WickedEngineEditor WIN32 ${SOURCE_FILES})
 
 	target_link_libraries(WickedEngineEditor PUBLIC
-		WickedEngine_Windows 
+		WickedEngine_Windows
+		meshoptimizer
 	)
 
 	set_property(TARGET WickedEngineEditor PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -52,6 +55,7 @@ else ()
 	target_link_libraries(WickedEngineEditor PUBLIC
 		WickedEngine 
 		Threads::Threads
+		meshoptimizer
 	)
 	
 	# Copy shaders to build and source folders just to be safe:

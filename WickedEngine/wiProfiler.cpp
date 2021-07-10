@@ -31,6 +31,7 @@ namespace wiProfiler
 
 	struct Range
 	{
+		bool in_use = false;
 		std::string name;
 		float times[20] = {};
 		int avg_counter = 0;
@@ -133,6 +134,8 @@ namespace wiProfiler
 				}
 				range.time = avg_time / arraysize(range.times);
 			}
+
+			range.in_use = false;
 		}
 	}
 
@@ -144,14 +147,15 @@ namespace wiProfiler
 		range_id id = wiHelper::string_hash(name);
 
 		lock.lock();
-		if (ranges.find(id) == ranges.end())
-		{
-			Range range;
-			range.name = name;
-			range.time = 0;
 
-			ranges[id] = range;
+		// If one range name is hit multiple times, differentiate between them!
+		size_t differentiator = 0;
+		while (ranges[id].in_use)
+		{
+			wiHelper::hash_combine(id, differentiator++);
 		}
+		ranges[id].in_use = true;
+		ranges[id].name = name;
 
 		ranges[id].cpuBegin.record();
 
@@ -167,17 +171,15 @@ namespace wiProfiler
 		range_id id = wiHelper::string_hash(name);
 
 		lock.lock();
-		if (ranges.find(id) == ranges.end())
+
+		// If one range name is hit multiple times, differentiate between them!
+		size_t differentiator = 0;
+		while (ranges[id].in_use)
 		{
-			Range range;
-			range.name = name;
-			range.time = 0;
-
-			std::fill(range.gpuBegin, range.gpuBegin + arraysize(queryHeap), -1);
-			std::fill(range.gpuEnd, range.gpuEnd + arraysize(queryHeap), -1);
-
-			ranges[id] = range;
+			wiHelper::hash_combine(id, differentiator++);
 		}
+		ranges[id].in_use = true;
+		ranges[id].name = name;
 
 		ranges[id].cmd = cmd;
 
@@ -216,6 +218,13 @@ namespace wiProfiler
 		lock.unlock();
 	}
 
+	struct Hits
+	{
+		uint32_t num_hits = 0;
+		float total_time = 0;
+	};
+	std::unordered_map<std::string, Hits> time_cache_cpu;
+	std::unordered_map<std::string, Hits> time_cache_gpu;
 	void DrawData(const wiCanvas& canvas, float x, float y, CommandList cmd)
 	{
 		if (!ENABLED || !initialized)
@@ -228,23 +237,36 @@ namespace wiProfiler
 		ss.precision(2);
 		ss << "Frame Profiler Ranges:" << std::endl << "----------------------------" << std::endl;
 
-		// Print CPU ranges:
+
 		for (auto& x : ranges)
 		{
 			if (x.second.IsCPURange())
 			{
-				ss << x.second.name << ": " << std::fixed << x.second.time << " ms" << std::endl;
+				time_cache_cpu[x.second.name].num_hits++;
+				time_cache_cpu[x.second.name].total_time += x.second.time;
 			}
+			else
+			{
+				time_cache_gpu[x.second.name].num_hits++;
+				time_cache_gpu[x.second.name].total_time += x.second.time;
+			}
+		}
+
+		// Print CPU ranges:
+		for (auto& x : time_cache_cpu)
+		{
+			ss << x.first << " (" << x.second.num_hits << "x)" << ": " << std::fixed << x.second.total_time << " ms" << std::endl;
+			x.second.num_hits = 0;
+			x.second.total_time = 0;
 		}
 		ss << std::endl;
 
 		// Print GPU ranges:
-		for (auto& x : ranges)
+		for (auto& x : time_cache_gpu)
 		{
-			if (!x.second.IsCPURange())
-			{
-				ss << x.second.name << ": " << std::fixed << x.second.time << " ms" << std::endl;
-			}
+			ss << x.first << " (" << x.second.num_hits << "x)" << ": " << std::fixed << x.second.total_time << " ms" << std::endl;
+			x.second.num_hits = 0;
+			x.second.total_time = 0;
 		}
 
 		wiFontParams params = wiFontParams(x, y, WIFONTSIZE_DEFAULT - 4, WIFALIGN_LEFT, WIFALIGN_TOP, wiColor(255, 255, 255, 255), wiColor(0, 0, 0, 255));

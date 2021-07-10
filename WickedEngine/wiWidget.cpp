@@ -254,6 +254,20 @@ wiColor wiWidget::GetColor() const
 {
 	return wiColor::fromFloat4(sprites[GetState()].params.color);
 }
+void wiWidget::SetImage(std::shared_ptr<wiResource> textureResource, WIDGETSTATE state)
+{
+	if (state == WIDGETSTATE_COUNT)
+	{
+		for (int i = 0; i < WIDGETSTATE_COUNT; ++i)
+		{
+			sprites[i].textureResource = textureResource;
+		}
+	}
+	else
+	{
+		sprites[state].textureResource = textureResource;
+	}
+}
 
 void wiWidget::AttachTo(wiWidget* parent)
 {

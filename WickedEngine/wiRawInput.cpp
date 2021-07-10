@@ -63,7 +63,7 @@ namespace wiRawInput
 			assert(0);
 		}
 
-		allocator.reserve(1024 * 1024); // 1 MB temp buffer
+		allocator.reserve(1024 * 1024, 8); // 1 MB temp buffer, 8byte alignment
 		input_messages.reserve(64);
 	}
 
@@ -472,6 +472,7 @@ namespace wiRawInput
 	{
 		if (index < (int)controllers.size() && controllers[index].handle && !controllers[index].is_xinput)
 		{
+			// WARNING: This was only tested for a PS4 controller, it will most likely fail with others!
 			HANDLE hid_device = CreateFile(
 				controllers[index].name.c_str(), 
 				GENERIC_READ | GENERIC_WRITE,

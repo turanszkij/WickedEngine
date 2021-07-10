@@ -4,6 +4,8 @@
 
 #include "Utility/stb_image.h"
 
+#include "meshoptimizer/meshoptimizer.h"
+
 #include <sstream>
 
 using namespace wiECS;
@@ -75,7 +77,7 @@ struct TerraGen : public wiWindow
 void MeshWindow::Create(EditorComponent* editor)
 {
 	wiWindow::Create("Mesh Window");
-	SetSize(XMFLOAT2(580, 520));
+	SetSize(XMFLOAT2(580, 540));
 
 	float x = 150;
 	float y = 0;
@@ -204,7 +206,7 @@ void MeshWindow::Create(EditorComponent* editor)
 	});
 	AddWidget(&impostorDistanceSlider);
 
-	tessellationFactorSlider.Create(0, 16, 0, 10000, "Tessellation Factor: ");
+	tessellationFactorSlider.Create(0, 100, 0, 10000, "Tessellation Factor: ");
 	tessellationFactorSlider.SetTooltip("Set the dynamic tessellation amount. Tessellation should be enabled in the Renderer window and your GPU must support it!");
 	tessellationFactorSlider.SetSize(XMFLOAT2(100, hei));
 	tessellationFactorSlider.SetPos(XMFLOAT2(x, y += step));
@@ -300,6 +302,30 @@ void MeshWindow::Create(EditorComponent* editor)
 		}
 	});
 	AddWidget(&recenterToBottomButton);
+
+	optimizeButton.Create("Optimize");
+	optimizeButton.SetTooltip("Run the meshoptimizer library.");
+	optimizeButton.SetSize(XMFLOAT2(240, hei));
+	optimizeButton.SetPos(XMFLOAT2(x - 50, y += step));
+	optimizeButton.OnClick([&](wiEventArgs args) {
+		MeshComponent* mesh = wiScene::GetScene().meshes.GetComponent(entity);
+		if (mesh != nullptr)
+		{
+			// https://github.com/zeux/meshoptimizer#vertex-cache-optimization
+
+			size_t index_count = mesh->indices.size();
+			size_t vertex_count = mesh->vertex_positions.size();
+
+			std::vector<uint32_t> indices(index_count);
+			meshopt_optimizeVertexCache(indices.data(), mesh->indices.data(), index_count, vertex_count);
+
+			mesh->indices = indices;
+
+			mesh->CreateRenderData();
+			SetEntity(entity);
+		}
+		});
+	AddWidget(&optimizeButton);
 
 	x = 150;
 	y = 190;

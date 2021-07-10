@@ -346,9 +346,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 				if (dot(ray.Direction, surface.facenormal) <= 0)
 				{
 					// Don't allow normal map to bend over the face normal more than 90 degrees to avoid light leaks
-					//	In this case, we will not allow more bounces,
-					//	but the current light sampling is still fine to avoid abrupt cutoff
-					energy = 0;
+					//	In this case, the ray is pushed above the surface slightly to not go below
+					ray.Origin += surface.facenormal * 0.001;
 				}
 			}
 		}

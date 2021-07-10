@@ -19,12 +19,24 @@ GBuffer main(VertexToPixel input)
 	V /= dist;
 	float emissive = 0;
 
+	const uint2 pixel = input.pos.xy;
+	const float2 ScreenCoord = pixel * g_xFrame_InternalResolution_rcp;
+
 	Surface surface;
 	surface.create(g_xMaterial, color, 0);
 	surface.P = input.pos3D;
 	surface.N = input.nor;
 	surface.V = V;
 	surface.pixel = input.pos.xy;
+
+#ifndef PREPASS
+#ifndef ENVMAPRENDERING
+#ifndef TRANSPARENT
+	surface.occlusion *= texture_ao.SampleLevel(sampler_linear_clamp, ScreenCoord, 0).r;
+#endif // TRANSPARENT
+#endif // ENVMAPRENDERING
+#endif // PREPASS
+
 	surface.update();
 
 	Lighting lighting;
@@ -37,7 +49,7 @@ GBuffer main(VertexToPixel input)
 
 	ApplyLighting(surface, lighting, color);
 
-	ApplyFog(dist, color);
+	ApplyFog(dist, g_xCamera_CamPos, V, color);
 
 	return CreateGBuffer(color, surface);
 }

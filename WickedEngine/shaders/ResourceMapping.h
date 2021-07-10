@@ -75,11 +75,9 @@
 #define TEXSLOT_ONDEMAND29			59
 #define TEXSLOT_ONDEMAND30			60
 #define TEXSLOT_ONDEMAND31			61
+#define TEXSLOT_ONDEMAND32			62
+#define TEXSLOT_ONDEMAND33			63
 #define TEXSLOT_ONDEMAND_COUNT	(TEXSLOT_ONDEMAND30 - TEXSLOT_ONDEMAND0 + 1)
-
-// These are reserved for demand of any type of textures in specific shaders:
-#define TEXSLOT_UNIQUE0				62
-#define TEXSLOT_UNIQUE1				63
 
 #define TEXSLOT_COUNT				64
 

@@ -11,7 +11,6 @@ public:
 	wiSlider exposureSlider;
 	wiCheckBox lensFlareCheckBox;
 	wiCheckBox lightShaftsCheckBox;
-	wiCheckBox volumetricCloudsCheckBox;
 	wiComboBox aoComboBox;
 	wiSlider aoPowerSlider;
 	wiSlider aoRangeSlider;

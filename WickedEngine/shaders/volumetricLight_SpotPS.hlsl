@@ -58,7 +58,8 @@ float4 main(VertexToPixel input) : SV_TARGET
 				}
 			}
 
-			attenuation *= GetFogAmount(cameraDistance - marchedDistance);
+			// Evaluate sample height for exponential fog calculation, given 0 for V:
+			attenuation *= GetFogAmount(cameraDistance - marchedDistance, P, float3(0.0, 0.0, 0.0));
 
 			accumulation += attenuation;
 		}

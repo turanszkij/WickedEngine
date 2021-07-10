@@ -174,11 +174,23 @@ void AABB::Serialize(wiArchive& archive, wiECS::EntitySerializer& seri)
 	{
 		archive >> _min;
 		archive >> _max;
+
+		if (archive.GetVersion() >= 69)
+		{
+			archive >> layerMask;
+			archive >> userdata;
+		}
 	}
 	else
 	{
 		archive << _min;
 		archive << _max;
+
+		if (archive.GetVersion() >= 69)
+		{
+			archive << layerMask;
+			archive << userdata;
+		}
 	}
 }
 

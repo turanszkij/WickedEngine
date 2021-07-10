@@ -66,6 +66,8 @@ public:
 	// last param default: set color for all states
 	void SetColor(wiColor color, WIDGETSTATE state = WIDGETSTATE_COUNT);
 	wiColor GetColor() const;
+	// last param default: set color for all states
+	void SetImage(std::shared_ptr<wiResource> textureResource, WIDGETSTATE state = WIDGETSTATE_COUNT);
 
 	virtual void Update(const wiCanvas& canvas, float dt);
 	virtual void Render(const wiCanvas& canvas, wiGraphics::CommandList cmd) const = 0;
