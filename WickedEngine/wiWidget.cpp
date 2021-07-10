@@ -1727,9 +1727,11 @@ void wiWindow::Update(const wiCanvas& canvas, float dt)
 		}
 	}
 
-	std::sort(widgets.begin(), widgets.end(), [](const wiWidget* a, const wiWidget* b) {
-		return a->priority < b->priority;
-		});
+	if(priority > 0) //Sort only if there are priority changes
+		//Use std::stable_sort instead of std::sort to preserve UI element order with equal priorities
+		std::stable_sort(widgets.begin(), widgets.end(), [](const wiWidget* a, const wiWidget* b) {
+			return a->priority < b->priority;
+			});
 
 	if (IsMinimized())
 	{
