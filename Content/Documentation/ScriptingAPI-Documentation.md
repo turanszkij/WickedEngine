@@ -561,14 +561,10 @@ Describes an orientation in 3D space.
 - [outer]DIRECTIONAL : int
 - [outer]POINT : int
 - [outer]SPOT : int
-- [outer]SPHERE : int
-- [outer]DISC : int
-- [outer]RECTANGLE : int
-- [outer]TUBE : int
-- SetRange(float value)
 - SetEnergy(float value)
 - SetColor(Vector value)
 - SetCastShadow(bool value)
+- GetType() : int result
 
 #### ObjectComponent
 - GetMeshID() : Entity
