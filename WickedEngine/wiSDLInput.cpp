@@ -39,6 +39,7 @@ namespace wiSDLInput
 //        }
         // mouse.position.x = saved_x;
         // mouse.position.y = saved_y;
+        mouse.delta_wheel = 0;
 
         std::vector<SDL_Event> events(1000);
 
