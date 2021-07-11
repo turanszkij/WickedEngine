@@ -275,6 +275,8 @@ namespace wiScene_BindLua
 		int SetEnergy(lua_State* L);
 		int SetColor(lua_State* L);
 		int SetCastShadow(lua_State* L);
+
+		int GetType(lua_State* L);
 	};
 
 	class ObjectComponent_BindLua

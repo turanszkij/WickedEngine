@@ -2135,6 +2135,7 @@ Luna<LightComponent_BindLua>::FunctionType LightComponent_BindLua::methods[] = {
 	lunamethod(LightComponent_BindLua, SetEnergy),
 	lunamethod(LightComponent_BindLua, SetColor),
 	lunamethod(LightComponent_BindLua, SetCastShadow),
+	lunamethod(LightComponent_BindLua, GetType),
 	{ NULL, NULL }
 };
 Luna<LightComponent_BindLua>::PropertyType LightComponent_BindLua::properties[] = {
@@ -2234,6 +2235,12 @@ int LightComponent_BindLua::SetCastShadow(lua_State* L)
 	}
 
 	return 0;
+}
+
+int LightComponent_BindLua::GetType(lua_State* L)
+{
+	wiLua::SSetInt(L, (int)component->GetType());
+	return 1;
 }
 
 
