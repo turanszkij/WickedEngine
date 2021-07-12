@@ -314,7 +314,7 @@ void main(PSInput input)
 			}
 		}
 
-		color.rgb *= lighting.direct.diffuse + GetAmbient(N);
+		color.rgb *= lighting.direct.diffuse;
 		
 		color.rgb += emissiveColor.rgb * emissiveColor.a;
 

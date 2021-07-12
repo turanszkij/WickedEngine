@@ -54,7 +54,7 @@ float4 DecodeColor(in uint colorMask)
 // the normal is encoded into 9 bits (1 for the sign/ 8 for the value).
 uint EncodeNormal(in float3 normal)
 {
-	int3 iNormal = int3(normal*255.0f);
+	int3 iNormal = int3(normalize(normal)*255.0f);
 	uint3 iNormalSigns;
 	iNormalSigns.x = (iNormal.x >> 5) & 0x04000000;
 	iNormalSigns.y = (iNormal.y >> 14) & 0x00020000;
@@ -78,7 +78,7 @@ float3 DecodeNormal(in uint normalMask)
 	iNormalSigns = 1 - iNormalSigns;
 	float3 normal = float3(iNormal) / 255.0f;
 	normal *= iNormalSigns;
-	return normal;
+	return normalize(normal);
 }
 
 #endif // WI_VOXEL_HF

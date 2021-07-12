@@ -87,8 +87,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	const float3 P = float3(tile_XY[cross_idx[0]], tile_Z[cross_idx[0]]);
 	const float3 N = normalize(cross(p2 - P, p1 - P));
 
-	uint seed = 0;
-
 	RayDesc ray;
 	ray.TMin = 0.01;
 	ray.TMax = rtao_range;

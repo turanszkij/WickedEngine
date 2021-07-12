@@ -26,7 +26,7 @@ void main( uint3 DTid : SV_DispatchThreadID )
 		P *= g_xFrame_VoxelRadianceDataRes;
 		P += g_xFrame_VoxelRadianceDataCenter;
 
-		float4 radiance = ConeTraceRadiance(input_emission, P, N);
+		float4 radiance = ConeTraceDiffuse(input_emission, P, N);
 
 		output[writecoord] = emission + float4(radiance.rgb, 0);
 	}
