@@ -2,6 +2,10 @@
 #define WI_VOXEL_CONERACING_HF
 #include "globals.hlsli"
 
+#ifndef VOXEL_INITIAL_OFFSET
+#define VOXEL_INITIAL_OFFSET 2
+#endif // VOXEL_INITIAL_OFFSET
+
 // voxels:			3D Texture containing voxel scene with direct diffuse lighting (or direct + secondary indirect bounce)
 // P:				world-space position of receiving surface
 // N:				world-space normal vector of receiving surface
@@ -15,7 +19,7 @@ inline float4 ConeTrace(in Texture3D<float4> voxels, in float3 P, in float3 N, i
 	// We need to offset the cone start position to avoid sampling its own voxel (self-occlusion):
 	//	Unfortunately, it will result in disconnection between nearby surfaces :(
 	float dist = g_xFrame_VoxelRadianceDataSize; // offset by cone dir so that first sample of all cones are not the same
-	float3 startPos = P + N * g_xFrame_VoxelRadianceDataSize * 2 * SQRT2; // sqrt2 is diagonal voxel half-extent
+	float3 startPos = P + N * g_xFrame_VoxelRadianceDataSize * VOXEL_INITIAL_OFFSET * SQRT2; // sqrt2 is diagonal voxel half-extent
 
 	// We will break off the loop if the sampling distance is too far for performance reasons:
 	while (dist < g_xFrame_VoxelRadianceMaxDistance && alpha < 1)
