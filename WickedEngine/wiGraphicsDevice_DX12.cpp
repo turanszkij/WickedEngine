@@ -2486,31 +2486,35 @@ using namespace DX12_Internal;
 				return dxgiFactory->EnumAdapters1(index, ppAdapter);
 		};
 
-		ComPtr<IDXGIAdapter1> candidateAdapter;
+		ComPtr<IDXGIAdapter1> dxgiAdapter1;
 		for (uint32_t i = 0;
-			NextAdapter(i, candidateAdapter.ReleaseAndGetAddressOf()) != DXGI_ERROR_NOT_FOUND;
+			NextAdapter(i, dxgiAdapter1.ReleaseAndGetAddressOf()) != DXGI_ERROR_NOT_FOUND;
 			++i)
 		{
 			DXGI_ADAPTER_DESC1 adapterDesc;
-			candidateAdapter->GetDesc1(&adapterDesc);
+			dxgiAdapter1->GetDesc1(&adapterDesc);
+
+			// Don't select the Basic Render Driver adapter.
+			if (adapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+			{
+				continue;
+			}
 
 			// ignore software adapter and check device creation succeeds
-			if (!(adapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) &&
-				SUCCEEDED(D3D12CreateDevice(candidateAdapter.Get(), D3D_FEATURE_LEVEL_12_1, __uuidof(ID3D12Device), nullptr)))
+			if (SUCCEEDED(D3D12CreateDevice(dxgiAdapter1.Get(), D3D_FEATURE_LEVEL_12_1, __uuidof(ID3D12Device), nullptr)))
 			{
-				candidateAdapter.As(&adapter);
 				break;
 			}
 		}
 
-		if (candidateAdapter == nullptr)
+		if (dxgiAdapter1 == nullptr)
 		{
 			wiHelper::messageBox("No capable adapter found!", "Error!");
 			assert(0);
 			wiPlatform::Exit();
 		}
 
-		hr = D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&device));
+		hr = D3D12CreateDevice(dxgiAdapter1.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&device));
 		if (FAILED(hr))
 		{
 			std::stringstream ss("");
@@ -2549,7 +2553,7 @@ using namespace DX12_Internal;
 
 		D3D12MA::ALLOCATOR_DESC allocatorDesc = {};
 		allocatorDesc.pDevice = device.Get();
-		allocatorDesc.pAdapter = adapter.Get();
+		allocatorDesc.pAdapter = dxgiAdapter1.Get();
 
 		allocationhandler = std::make_shared<AllocationHandler>();
 		allocationhandler->device = device;
