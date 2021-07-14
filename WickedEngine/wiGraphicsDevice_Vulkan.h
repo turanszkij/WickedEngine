@@ -32,6 +32,7 @@ namespace wiGraphics
 	class GraphicsDevice_Vulkan : public GraphicsDevice
 	{
 	protected:
+		bool debugUtils = false;
 		VkInstance instance = VK_NULL_HANDLE;
 	    VkDebugUtilsMessengerEXT debugUtilsMessenger = VK_NULL_HANDLE;
 		VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
