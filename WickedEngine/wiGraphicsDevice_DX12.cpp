@@ -2420,7 +2420,6 @@ using namespace DX12_Internal;
 			ComPtr<IDXGIInfoQueue> dxgiInfoQueue;
 			if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiInfoQueue.GetAddressOf()))))
 			{
-				dxgiFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
 
 				dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR, true);
 				dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, true);
@@ -2438,7 +2437,7 @@ using namespace DX12_Internal;
 		}
 #endif
 
-		hr = CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&dxgiFactory));
+		hr = CreateDXGIFactory2(debuglayer ? DXGI_CREATE_FACTORY_DEBUG : 0u, IID_PPV_ARGS(&dxgiFactory));
 		if (FAILED(hr))
 		{
 			std::stringstream ss("");

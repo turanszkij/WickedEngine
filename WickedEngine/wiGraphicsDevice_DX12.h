@@ -29,7 +29,6 @@ namespace wiGraphics
 	class GraphicsDevice_DX12 : public GraphicsDevice
 	{
 	protected:
-		DWORD dxgiFactoryFlags = 0;
 		Microsoft::WRL::ComPtr<IDXGIFactory4> dxgiFactory;
 		bool tearingSupported = false;
 		Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter;
