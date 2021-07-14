@@ -2405,13 +2405,17 @@ using namespace DX12_Internal;
 			auto D3D12GetDebugInterface = (PFN_D3D12_GET_DEBUG_INTERFACE)GetProcAddress(dx12, "D3D12GetDebugInterface");
 			if (D3D12GetDebugInterface)
 			{
-				ComPtr<ID3D12Debug1> d3dDebug;
+				ComPtr<ID3D12Debug> d3dDebug;
 				if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&d3dDebug))))
 				{
 					d3dDebug->EnableDebugLayer();
 					if (gpuvalidation)
 					{
-						d3dDebug->SetEnableGPUBasedValidation(TRUE);
+						ComPtr<ID3D12Debug1> d3dDebug1;
+						if (SUCCEEDED(d3dDebug.As(&d3dDebug1)))
+						{
+							d3dDebug1->SetEnableGPUBasedValidation(TRUE);
+						}
 					}
 				}
 			}
@@ -2420,7 +2424,6 @@ using namespace DX12_Internal;
 			ComPtr<IDXGIInfoQueue> dxgiInfoQueue;
 			if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiInfoQueue.GetAddressOf()))))
 			{
-
 				dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR, true);
 				dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, true);
 
