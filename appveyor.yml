@@ -12,7 +12,7 @@ before_build:
 build_script:
   - msbuild "C:\projects\wickedengine\WickedEngine.sln" /t:OfflineShaderCompiler /m /verbosity:minimal /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
   - cd "C:\projects\wickedengine\WickedEngine"
-  - ../BUILD/x64/Release/OfflineShaderCompiler/OfflineShaderCompiler.exe hlsl5 hlsl6 spirv shaderdump
+  - start "../BUILD/x64/Release/OfflineShaderCompiler/OfflineShaderCompiler.exe" hlsl5 hlsl6 spirv shaderdump
   - cd ..
   - msbuild "C:\projects\wickedengine\WickedEngine.sln" /t:rebuild /m /verbosity:minimal /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 
