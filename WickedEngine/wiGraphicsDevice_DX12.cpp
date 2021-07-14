@@ -640,6 +640,26 @@ namespace DX12_Internal
 		}
 		return DXGI_FORMAT_UNKNOWN;
 	}
+	constexpr DXGI_FORMAT _ConvertSwapChainFormat(FORMAT format)
+	{
+		switch (format) {
+			case FORMAT_R16G16B16A16_FLOAT:
+				return DXGI_FORMAT_R16G16B16A16_FLOAT;
+
+			case FORMAT_B8G8R8A8_UNORM:
+			case FORMAT_B8G8R8A8_UNORM_SRGB:
+				return DXGI_FORMAT_B8G8R8A8_UNORM;
+
+			case FORMAT_R8G8B8A8_UNORM:
+			case FORMAT_R8G8B8A8_UNORM_SRGB:
+				return DXGI_FORMAT_R8G8B8A8_UNORM;
+
+			case FORMAT_R10G10B10A2_UNORM:
+				return DXGI_FORMAT_R10G10B10A2_UNORM;
+		}
+
+		return DXGI_FORMAT_B8G8R8A8_UNORM;
+	}
 	inline D3D12_SUBRESOURCE_DATA _ConvertSubresourceData(const SubresourceData& pInitialData)
 	{
 		D3D12_SUBRESOURCE_DATA data;
@@ -2851,47 +2871,44 @@ using namespace DX12_Internal;
 		if (internal_state->swapChain == nullptr)
 		{
 			// Create swapchain:
-			ComPtr<IDXGISwapChain1> _swapChain;
+			ComPtr<IDXGISwapChain1> tempSwapChain;
 
-			DXGI_SWAP_CHAIN_DESC1 sd = {};
-			sd.Width = pDesc->width;
-			sd.Height = pDesc->height;
-			sd.Format = _ConvertFormat(pDesc->format);
-			sd.Stereo = false;
-			sd.SampleDesc.Count = 1;
-			sd.SampleDesc.Quality = 0;
-			sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-			sd.BufferCount = pDesc->buffercount;
-			sd.Flags = 0;
-			sd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
-			sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+			DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
+			swapChainDesc.Width = pDesc->width;
+			swapChainDesc.Height = pDesc->height;
+			swapChainDesc.Format = _ConvertSwapChainFormat(pDesc->format);
+			swapChainDesc.Stereo = false;
+			swapChainDesc.SampleDesc.Count = 1;
+			swapChainDesc.SampleDesc.Quality = 0;
+			swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+			swapChainDesc.BufferCount = pDesc->buffercount;
+			swapChainDesc.Flags = 0;
+			swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+			swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 
 #ifndef PLATFORM_UWP
-			sd.Scaling = DXGI_SCALING_STRETCH;
+			swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
 
-			DXGI_SWAP_CHAIN_FULLSCREEN_DESC fullscreenDesc;
-			fullscreenDesc.RefreshRate.Numerator = 60;
-			fullscreenDesc.RefreshRate.Denominator = 1;
-			fullscreenDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED; // needs to be unspecified for correct fullscreen scaling!
-			fullscreenDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE;
+			DXGI_SWAP_CHAIN_FULLSCREEN_DESC fullscreenDesc = {};
 			fullscreenDesc.Windowed = !pDesc->fullscreen;
+
 			hr = factory->CreateSwapChainForHwnd(
 				queues[QUEUE_GRAPHICS].queue.Get(),
 				window,
-				&sd,
+				&swapChainDesc,
 				&fullscreenDesc,
 				nullptr,
-				&_swapChain
+				tempSwapChain.GetAddressOf()
 			);
 #else
-			sd.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
+			swapChainDesc.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
 
 			hr = factory->CreateSwapChainForCoreWindow(
 				queues[QUEUE_GRAPHICS].queue.Get(),
 				static_cast<IUnknown*>(winrt::get_abi(*window)),
-				&sd,
+				&swapChainDesc,
 				nullptr,
-				&_swapChain
+				tempSwapChain.GetAddressOf()
 			);
 #endif
 
@@ -2900,7 +2917,7 @@ using namespace DX12_Internal;
 				return false;
 			}
 
-			hr = _swapChain.As(&internal_state->swapChain);
+			hr = tempSwapChain.As(&internal_state->swapChain);
 			if (FAILED(hr))
 			{
 				return false;
@@ -2930,13 +2947,19 @@ using namespace DX12_Internal;
 		internal_state->backBuffers.resize(pDesc->buffercount);
 		internal_state->backbufferRTV.resize(pDesc->buffercount);
 
+		// We can create swapchain just with given supported format, thats why we specify format in RTV
+		// For example: BGRA8UNorm for SwapChain BGRA8UNormSrgb for RTV.
+		D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+		rtvDesc.Format = _ConvertFormat(pDesc->format);
+		rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+
 		for (uint32_t i = 0; i < pDesc->buffercount; ++i)
 		{
 			hr = internal_state->swapChain->GetBuffer(i, IID_PPV_ARGS(&internal_state->backBuffers[i]));
 			assert(SUCCEEDED(hr));
 
 			internal_state->backbufferRTV[i] = allocationhandler->descriptors_rtv.allocate();
-			device->CreateRenderTargetView(internal_state->backBuffers[i].Get(), nullptr, internal_state->backbufferRTV[i]);
+			device->CreateRenderTargetView(internal_state->backBuffers[i].Get(), &rtvDesc, internal_state->backbufferRTV[i]);
 		}
 
 		internal_state->dummyTexture.desc.Format = pDesc->format;
