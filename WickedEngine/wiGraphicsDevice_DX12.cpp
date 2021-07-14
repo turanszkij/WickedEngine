@@ -2438,7 +2438,7 @@ using namespace DX12_Internal;
 		}
 #endif
 
-		hr = CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&factory));
+		hr = CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&dxgiFactory));
 		if (FAILED(hr))
 		{
 			std::stringstream ss("");
@@ -2448,9 +2448,46 @@ using namespace DX12_Internal;
 			wiPlatform::Exit();
 		}
 
+		// Determines whether tearing support is available for fullscreen borderless windows.
+		{
+			BOOL allowTearing = FALSE;
+
+			ComPtr<IDXGIFactory5> dxgiFactory5;
+			HRESULT hr = dxgiFactory.As(&dxgiFactory5);
+			if (SUCCEEDED(hr))
+			{
+				hr = dxgiFactory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowTearing, sizeof(allowTearing));
+			}
+
+			if (FAILED(hr) || !allowTearing)
+			{
+				tearingSupported = false;
+#ifdef _DEBUG
+				OutputDebugStringA("WARNING: Variable refresh rate displays not supported\n");
+#endif
+			}
+			else
+			{
+				tearingSupported = true;
+			}
+		}
+
 		// pick the highest performance adapter that is able to create the device
-		Microsoft::WRL::ComPtr<IDXGIAdapter1> candidateAdapter;
-		for (uint32_t i = 0; factory->EnumAdapterByGpuPreference(i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&candidateAdapter)) != DXGI_ERROR_NOT_FOUND; ++i)
+
+		ComPtr<IDXGIFactory6> dxgiFactory6;
+		const bool queryByPreference = SUCCEEDED(dxgiFactory.As(&dxgiFactory6));
+		auto NextAdapter = [&](uint32_t index, IDXGIAdapter1** ppAdapter)
+		{
+			if (queryByPreference)
+				return dxgiFactory6->EnumAdapterByGpuPreference(index, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(ppAdapter));
+			else
+				return dxgiFactory->EnumAdapters1(index, ppAdapter);
+		};
+
+		ComPtr<IDXGIAdapter1> candidateAdapter;
+		for (uint32_t i = 0;
+			NextAdapter(i, candidateAdapter.ReleaseAndGetAddressOf()) != DXGI_ERROR_NOT_FOUND;
+			++i)
 		{
 			DXGI_ADAPTER_DESC1 adapterDesc;
 			candidateAdapter->GetDesc1(&adapterDesc);
@@ -2463,6 +2500,7 @@ using namespace DX12_Internal;
 				break;
 			}
 		}
+
 		if (candidateAdapter == nullptr)
 		{
 			wiHelper::messageBox("No capable adapter found!", "Error!");
@@ -2892,7 +2930,7 @@ using namespace DX12_Internal;
 			DXGI_SWAP_CHAIN_FULLSCREEN_DESC fullscreenDesc = {};
 			fullscreenDesc.Windowed = !pDesc->fullscreen;
 
-			hr = factory->CreateSwapChainForHwnd(
+			hr = dxgiFactory->CreateSwapChainForHwnd(
 				queues[QUEUE_GRAPHICS].queue.Get(),
 				window,
 				&swapChainDesc,
@@ -2903,7 +2941,7 @@ using namespace DX12_Internal;
 #else
 			swapChainDesc.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
 
-			hr = factory->CreateSwapChainForCoreWindow(
+			hr = dxgiFactory->CreateSwapChainForCoreWindow(
 				queues[QUEUE_GRAPHICS].queue.Get(),
 				static_cast<IUnknown*>(winrt::get_abi(*window)),
 				&swapChainDesc,

@@ -30,7 +30,8 @@ namespace wiGraphics
 	{
 	protected:
 		DWORD dxgiFactoryFlags = 0;
-		Microsoft::WRL::ComPtr<IDXGIFactory6> factory;
+		Microsoft::WRL::ComPtr<IDXGIFactory4> dxgiFactory;
+		bool tearingSupported = false;
 		Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter;
 		Microsoft::WRL::ComPtr<ID3D12Device5> device;
 
