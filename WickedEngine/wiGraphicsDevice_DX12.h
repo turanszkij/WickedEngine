@@ -29,9 +29,10 @@ namespace wiGraphics
 	class GraphicsDevice_DX12 : public GraphicsDevice
 	{
 	protected:
-		Microsoft::WRL::ComPtr<ID3D12Device5> device;
-		Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter;
+		DWORD dxgiFactoryFlags = 0;
 		Microsoft::WRL::ComPtr<IDXGIFactory6> factory;
+		Microsoft::WRL::ComPtr<IDXGIAdapter4> adapter;
+		Microsoft::WRL::ComPtr<ID3D12Device5> device;
 
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> dispatchIndirectCommandSignature;
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> drawInstancedIndirectCommandSignature;

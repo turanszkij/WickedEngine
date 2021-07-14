@@ -18,12 +18,11 @@
 #include <pix.h>
 
 #ifdef _DEBUG
-#include <d3d12sdklayers.h>
-#endif // _DEBUG
+#include <dxgidebug.h>
+#endif
 
 #include <sstream>
 #include <algorithm>
-#include <wincodec.h>
 
 // Bindless allocation limits:
 #define BINDLESS_RESOURCE_CAPACITY		500000
@@ -48,6 +47,12 @@ namespace DX12_Internal
 #else
 	using PFN_CREATE_DXGI_FACTORY_2 = decltype(&CreateDXGIFactory2);
 	static PFN_CREATE_DXGI_FACTORY_2 CreateDXGIFactory2 = nullptr;
+
+#ifdef _DEBUG
+	using PFN_DXGI_GET_DEBUG_INTERFACE1 = decltype(&DXGIGetDebugInterface1);
+	static PFN_DXGI_GET_DEBUG_INTERFACE1 DXGIGetDebugInterface1 = nullptr;
+#endif
+
 	static PFN_D3D12_CREATE_DEVICE D3D12CreateDevice = nullptr;
 	static PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE D3D12SerializeVersionedRootSignature = nullptr;
 #endif // PLATFORM_UWP
@@ -2354,6 +2359,10 @@ using namespace DX12_Internal;
 		CreateDXGIFactory2 = (PFN_CREATE_DXGI_FACTORY_2)GetProcAddress(dxgi, "CreateDXGIFactory2");
 		assert(CreateDXGIFactory2 != nullptr);
 
+#ifdef _DEBUG
+		DXGIGetDebugInterface1 = (PFN_DXGI_GET_DEBUG_INTERFACE1)GetProcAddress(dxgi, "DXGIGetDebugInterface1");
+#endif
+
 		D3D12CreateDevice = (PFN_D3D12_CREATE_DEVICE)GetProcAddress(dx12, "D3D12CreateDevice");
 		assert(D3D12CreateDevice != nullptr);
 
@@ -2386,10 +2395,30 @@ using namespace DX12_Internal;
 					}
 				}
 			}
+
+#if defined(_DEBUG)
+			ComPtr<IDXGIInfoQueue> dxgiInfoQueue;
+			if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiInfoQueue.GetAddressOf()))))
+			{
+				dxgiFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
+
+				dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR, true);
+				dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, true);
+
+				DXGI_INFO_QUEUE_MESSAGE_ID hide[] =
+				{
+					80 /* IDXGISwapChain::GetContainingOutput: The swapchain's adapter does not control the output on which the swapchain's window resides. */,
+				};
+				DXGI_INFO_QUEUE_FILTER filter = {};
+				filter.DenyList.NumIDs = static_cast<UINT>(std::size(hide));
+				filter.DenyList.pIDList = hide;
+				dxgiInfoQueue->AddStorageFilterEntries(DXGI_DEBUG_DXGI, &filter);
+			}
+#endif
 		}
 #endif
 
-		hr = CreateDXGIFactory2(debuglayer ? DXGI_CREATE_FACTORY_DEBUG : 0, IID_PPV_ARGS(&factory));
+		hr = CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&factory));
 		if (FAILED(hr))
 		{
 			std::stringstream ss("");
@@ -2433,14 +2462,20 @@ using namespace DX12_Internal;
 
 		if (debuglayer)
 		{
-			ID3D12InfoQueue* d3dInfoQueue = nullptr;
-			if (SUCCEEDED(device->QueryInterface(__uuidof(ID3D12InfoQueue), (void**)&d3dInfoQueue)))
+			// Configure debug device (if active).
+			ComPtr<ID3D12InfoQueue> d3dInfoQueue;
+			if (SUCCEEDED(device.As(&d3dInfoQueue)))
 			{
-				d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
-				d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, true);
+#ifdef _DEBUG
+				d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
+				d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
+#endif
 
 				D3D12_MESSAGE_ID hide[] =
 				{
+					D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,
+					D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,
+					D3D12_MESSAGE_ID_EXECUTECOMMANDLISTS_WRONGSWAPCHAINBUFFERREFERENCE,
 					D3D12_MESSAGE_ID_SETPRIVATEDATA_CHANGINGPARAMS,
 					// Add more message IDs here as needed
 				};
@@ -2449,7 +2484,6 @@ using namespace DX12_Internal;
 				filter.DenyList.NumIDs = _countof(hide);
 				filter.DenyList.pIDList = hide;
 				d3dInfoQueue->AddStorageFilterEntries(&filter);
-				d3dInfoQueue->Release();
 			}
 		}
 
