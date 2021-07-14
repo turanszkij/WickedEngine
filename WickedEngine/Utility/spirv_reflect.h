@@ -144,6 +144,18 @@ typedef enum SpvReflectFormat {
   SPV_REFLECT_FORMAT_R32G32B32A32_UINT   = 107, // = VK_FORMAT_R32G32B32A32_UINT
   SPV_REFLECT_FORMAT_R32G32B32A32_SINT   = 108, // = VK_FORMAT_R32G32B32A32_SINT
   SPV_REFLECT_FORMAT_R32G32B32A32_SFLOAT = 109, // = VK_FORMAT_R32G32B32A32_SFLOAT
+  SPV_REFLECT_FORMAT_R64_UINT            = 110, // = VK_FORMAT_R64_UINT
+  SPV_REFLECT_FORMAT_R64_SINT            = 111, // = VK_FORMAT_R64_SINT
+  SPV_REFLECT_FORMAT_R64_SFLOAT          = 112, // = VK_FORMAT_R64_SFLOAT
+  SPV_REFLECT_FORMAT_R64G64_UINT         = 113, // = VK_FORMAT_R64G64_UINT
+  SPV_REFLECT_FORMAT_R64G64_SINT         = 114, // = VK_FORMAT_R64G64_SINT
+  SPV_REFLECT_FORMAT_R64G64_SFLOAT       = 115, // = VK_FORMAT_R64G64_SFLOAT
+  SPV_REFLECT_FORMAT_R64G64B64_UINT      = 116, // = VK_FORMAT_R64G64B64_UINT
+  SPV_REFLECT_FORMAT_R64G64B64_SINT      = 117, // = VK_FORMAT_R64G64B64_SINT
+  SPV_REFLECT_FORMAT_R64G64B64_SFLOAT    = 118, // = VK_FORMAT_R64G64B64_SFLOAT
+  SPV_REFLECT_FORMAT_R64G64B64A64_UINT   = 119, // = VK_FORMAT_R64G64B64A64_UINT
+  SPV_REFLECT_FORMAT_R64G64B64A64_SINT   = 120, // = VK_FORMAT_R64G64B64A64_SINT
+  SPV_REFLECT_FORMAT_R64G64B64A64_SFLOAT = 121, // = VK_FORMAT_R64G64B64A64_SFLOAT
 } SpvReflectFormat;
 
 /*! @enum SpvReflectVariableFlagBits
@@ -186,6 +198,13 @@ typedef enum SpvReflectShaderStageFlagBits {
   SPV_REFLECT_SHADER_STAGE_COMPUTE_BIT                 = 0x00000020, // = VK_SHADER_STAGE_COMPUTE_BIT
   SPV_REFLECT_SHADER_STAGE_TASK_BIT_NV                 = 0x00000040, // = VK_SHADER_STAGE_TASK_BIT_NV
   SPV_REFLECT_SHADER_STAGE_MESH_BIT_NV                 = 0x00000080, // = VK_SHADER_STAGE_MESH_BIT_NV
+  SPV_REFLECT_SHADER_STAGE_RAYGEN_BIT_KHR              = 0x00000100, // VK_SHADER_STAGE_RAYGEN_BIT_KHR
+  SPV_REFLECT_SHADER_STAGE_ANY_HIT_BIT_KHR             = 0x00000200, // VK_SHADER_STAGE_ANY_HIT_BIT_KHR
+  SPV_REFLECT_SHADER_STAGE_CLOSEST_HIT_BIT_KHR         = 0x00000400, // VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR
+  SPV_REFLECT_SHADER_STAGE_MISS_BIT_KHR                = 0x00000800, // VK_SHADER_STAGE_MISS_BIT_KHR
+  SPV_REFLECT_SHADER_STAGE_INTERSECTION_BIT_KHR        = 0x00001000, // VK_SHADER_STAGE_INTERSECTION_BIT_KHR
+  SPV_REFLECT_SHADER_STAGE_CALLABLE_BIT_KHR            = 0x00002000, // VK_SHADER_STAGE_CALLABLE_BIT_KHR
+
 } SpvReflectShaderStageFlagBits;
 
 /*! @enum SpvReflectGenerator
@@ -406,20 +425,20 @@ typedef struct SpvReflectShaderModule {
   uint32_t                          source_language_version;
   const char*                       source_file;
   const char*                       source_source;
-  SpvExecutionModel                 spirv_execution_model;
-  SpvReflectShaderStageFlagBits     shader_stage;
-  uint32_t                          descriptor_binding_count;
-  SpvReflectDescriptorBinding*      descriptor_bindings;
-  uint32_t                          descriptor_set_count;
-  SpvReflectDescriptorSet           descriptor_sets[SPV_REFLECT_MAX_DESCRIPTOR_SETS];
-  uint32_t                          input_variable_count;  
-  SpvReflectInterfaceVariable**     input_variables;       
-  uint32_t                          output_variable_count; 
-  SpvReflectInterfaceVariable**     output_variables;      
-  uint32_t                          interface_variable_count;
-  SpvReflectInterfaceVariable*      interface_variables;
-  uint32_t                          push_constant_block_count;
-  SpvReflectBlockVariable*          push_constant_blocks;
+  SpvExecutionModel                 spirv_execution_model;                            // Uses value(s) from first entry point
+  SpvReflectShaderStageFlagBits     shader_stage;                                     // Uses value(s) from first entry point
+  uint32_t                          descriptor_binding_count;                         // Uses value(s) from first entry point
+  SpvReflectDescriptorBinding*      descriptor_bindings;                              // Uses value(s) from first entry point
+  uint32_t                          descriptor_set_count;                             // Uses value(s) from first entry point
+  SpvReflectDescriptorSet           descriptor_sets[SPV_REFLECT_MAX_DESCRIPTOR_SETS]; // Uses value(s) from first entry point
+  uint32_t                          input_variable_count;                             // Uses value(s) from first entry point
+  SpvReflectInterfaceVariable**     input_variables;                                  // Uses value(s) from first entry point
+  uint32_t                          output_variable_count;                            // Uses value(s) from first entry point
+  SpvReflectInterfaceVariable**     output_variables;                                 // Uses value(s) from first entry point
+  uint32_t                          interface_variable_count;                         // Uses value(s) from first entry point
+  SpvReflectInterfaceVariable*      interface_variables;                              // Uses value(s) from first entry point
+  uint32_t                          push_constant_block_count;                        // Uses value(s) from first entry point
+  SpvReflectBlockVariable*          push_constant_blocks;                             // Uses value(s) from first entry point
 
   struct Internal {
     size_t                          spirv_size;
@@ -1365,8 +1384,9 @@ public:
 
   const char*           GetSourceFile() const;
 
-  uint32_t              GetEntryPointCount() const;
-  const char*           GetEntryPointName(uint32_t index) const;
+  uint32_t                      GetEntryPointCount() const;
+  const char*                   GetEntryPointName(uint32_t index) const;
+  SpvReflectShaderStageFlagBits GetEntryPointShaderStage(uint32_t index) const;
 
   SpvReflectShaderStageFlagBits GetShaderStage() const;
   SPV_REFLECT_DEPRECATED("Renamed to GetShaderStage")
@@ -1429,6 +1449,11 @@ public:
   SpvReflectResult ChangeDescriptorSetNumber(const SpvReflectDescriptorSet* p_set, uint32_t new_set_number = SPV_REFLECT_SET_NUMBER_DONT_CHANGE);
   SpvReflectResult ChangeInputVariableLocation(const SpvReflectInterfaceVariable* p_input_variable, uint32_t new_location);
   SpvReflectResult ChangeOutputVariableLocation(const SpvReflectInterfaceVariable* p_output_variable, uint32_t new_location);
+
+private:
+  // Make noncopyable
+  ShaderModule(const ShaderModule&);
+  ShaderModule& operator=(const ShaderModule&);
 
 private:
   mutable SpvReflectResult  m_result = SPV_REFLECT_RESULT_NOT_READY;
@@ -1567,9 +1592,18 @@ inline const char* ShaderModule::GetEntryPointName(uint32_t index) const {
   return m_module.entry_points[index].name;
 }
 
+/*! @fn GetEntryPointShaderStage
+
+  @param index
+  @return Returns the shader stage for the entry point at \b index
+*/
+inline SpvReflectShaderStageFlagBits ShaderModule::GetEntryPointShaderStage(uint32_t index) const {
+  return m_module.entry_points[index].shader_stage;
+}
+
 /*! @fn GetShaderStage
 
-  @return Returns Vulkan shader stage
+  @return Returns shader stage for the first entry point
 
 */
 inline SpvReflectShaderStageFlagBits ShaderModule::GetShaderStage() const {

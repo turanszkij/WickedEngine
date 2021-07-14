@@ -656,13 +656,20 @@ static SpvReflectResult ParseNodes(Parser* p_parser)
         }
         if (p_node->word_count >= 5) {
           const char* p_source = (const char*)(p_parser->spirv_code + p_node->word_offset + 4);
-          char* p_source_temp = (char*)calloc(strlen(p_source) + 1, sizeof(char*));
+
+          const size_t source_len = strlen(p_source);
+          char* p_source_temp = (char*)calloc(source_len + 1, sizeof(char*));
 
           if (IsNull(p_source_temp)) {
             return SPV_REFLECT_RESULT_ERROR_ALLOC_FAILED;
           }
 
+      #ifdef _WIN32
+          strcpy_s(p_source_temp, source_len + 1, p_source);
+      #else
           strcpy(p_source_temp, p_source);
+      #endif
+
           p_parser->source_embedded = p_source_temp;
         }
       }
@@ -670,14 +677,23 @@ static SpvReflectResult ParseNodes(Parser* p_parser)
 
       case SpvOpSourceContinued: {
         const char* p_source = (const char*)(p_parser->spirv_code + p_node->word_offset + 1);
-        char* p_continued_source = (char*)calloc(strlen(p_source) + strlen(p_parser->source_embedded) + 1, sizeof(char*));
+
+        const size_t source_len = strlen(p_source);
+        const size_t embedded_source_len = strlen(p_parser->source_embedded); 
+        char* p_continued_source = (char*)calloc(source_len + embedded_source_len + 1, sizeof(char*));
 
         if (IsNull(p_continued_source)) {
           return SPV_REFLECT_RESULT_ERROR_ALLOC_FAILED;
         }
 
+    #ifdef _WIN32
+        strcpy_s(p_continued_source, embedded_source_len + 1, p_parser->source_embedded);
+        strcat_s(p_continued_source, source_len + 1, p_source);
+    #else
         strcpy(p_continued_source, p_parser->source_embedded);
         strcat(p_continued_source, p_source);
+    #endif
+
         SafeFree(p_parser->source_embedded);
         p_parser->source_embedded = p_continued_source;
       }
@@ -950,13 +966,19 @@ static SpvReflectResult ParseSource(Parser* p_parser, SpvReflectShaderModule* p_
     //Source code
     if (IsNotNull(p_parser->source_embedded))
     {
-      char* p_source = (char*)calloc(strlen(p_parser->source_embedded) + 1, sizeof(char*));
+      const size_t source_len = strlen(p_parser->source_embedded);
+      char* p_source = (char*)calloc(source_len + 1, sizeof(char*));
 
       if (IsNull(p_source)) {
         return SPV_REFLECT_RESULT_ERROR_ALLOC_FAILED;
       }
 
+    #ifdef _WIN32
+      strcpy_s(p_source, source_len + 1, p_parser->source_embedded);
+    #else
       strcpy(p_source, p_parser->source_embedded);
+    #endif
+
       p_module->source_source = p_source;
     }
   }
@@ -1565,6 +1587,15 @@ static SpvReflectResult ParseType(
 
       case SpvOpTypeImage: {
         p_type->type_flags |= SPV_REFLECT_TYPE_FLAG_EXTERNAL_IMAGE;
+        uint32_t sampled_type_id = (uint32_t)INVALID_VALUE;
+        IF_READU32(result, p_parser, p_node->word_offset + 2, sampled_type_id);
+        Node* p_next_node = FindNode(p_parser, sampled_type_id);
+        if (IsNotNull(p_next_node)) {
+          result = ParseType(p_parser, p_next_node, NULL, p_module, p_type);
+        }
+        else {
+          result = SPV_REFLECT_RESULT_ERROR_SPIRV_INVALID_ID_REFERENCE;
+        }
         IF_READU32_CAST(result, p_parser, p_node->word_offset + 3, SpvDim, p_type->traits.image.dim);
         IF_READU32(result, p_parser, p_node->word_offset + 4, p_type->traits.image.depth);
         IF_READU32(result, p_parser, p_node->word_offset + 5, p_type->traits.image.arrayed);
@@ -1638,6 +1669,7 @@ static SpvReflectResult ParseType(
       break;
 
       case SpvOpTypeRuntimeArray: {
+        p_type->type_flags |= SPV_REFLECT_TYPE_FLAG_ARRAY;
         uint32_t element_type_id = (uint32_t)INVALID_VALUE;
         IF_READU32(result, p_parser, p_node->word_offset + 2, element_type_id);
         // Parse next dimension or element type
@@ -2494,38 +2526,72 @@ static SpvReflectResult ParseFormat(
 {
   SpvReflectResult result = SPV_REFLECT_RESULT_ERROR_INTERNAL_ERROR;
   bool signedness = (p_type->traits.numeric.scalar.signedness != 0);
+  uint32_t bit_width = p_type->traits.numeric.scalar.width;
   if (p_type->type_flags & SPV_REFLECT_TYPE_FLAG_VECTOR) {
     uint32_t component_count = p_type->traits.numeric.vector.component_count;
     if (p_type->type_flags & SPV_REFLECT_TYPE_FLAG_FLOAT) {
-      switch (component_count) {
-        case 2: *p_format = SPV_REFLECT_FORMAT_R32G32_SFLOAT; break;
-        case 3: *p_format = SPV_REFLECT_FORMAT_R32G32B32_SFLOAT; break;
-        case 4: *p_format = SPV_REFLECT_FORMAT_R32G32B32A32_SFLOAT; break;
+      switch (bit_width) {
+        case 32: {
+          switch (component_count) {
+            case 2: *p_format = SPV_REFLECT_FORMAT_R32G32_SFLOAT; break;
+            case 3: *p_format = SPV_REFLECT_FORMAT_R32G32B32_SFLOAT; break;
+            case 4: *p_format = SPV_REFLECT_FORMAT_R32G32B32A32_SFLOAT; break;
+          }
+        }
+        break;
+        
+        case 64: {
+          switch (component_count) {
+            case 2: *p_format = SPV_REFLECT_FORMAT_R64G64_SFLOAT; break;
+            case 3: *p_format = SPV_REFLECT_FORMAT_R64G64B64_SFLOAT; break;
+            case 4: *p_format = SPV_REFLECT_FORMAT_R64G64B64A64_SFLOAT; break;
+          }
+        }
       }
       result = SPV_REFLECT_RESULT_SUCCESS;
     }
     else if (p_type->type_flags & (SPV_REFLECT_TYPE_FLAG_INT | SPV_REFLECT_TYPE_FLAG_BOOL)) {
-      switch (component_count) {
-        case 2: *p_format = signedness ? SPV_REFLECT_FORMAT_R32G32_SINT : SPV_REFLECT_FORMAT_R32G32_UINT; break;
-        case 3: *p_format = signedness ? SPV_REFLECT_FORMAT_R32G32B32_SINT : SPV_REFLECT_FORMAT_R32G32B32_UINT; break;
-        case 4: *p_format = signedness ? SPV_REFLECT_FORMAT_R32G32B32A32_SINT : SPV_REFLECT_FORMAT_R32G32B32A32_UINT; break;
+      switch (bit_width) {
+        case 32: {
+          switch (component_count) {
+            case 2: *p_format = signedness ? SPV_REFLECT_FORMAT_R32G32_SINT : SPV_REFLECT_FORMAT_R32G32_UINT; break;
+            case 3: *p_format = signedness ? SPV_REFLECT_FORMAT_R32G32B32_SINT : SPV_REFLECT_FORMAT_R32G32B32_UINT; break;
+            case 4: *p_format = signedness ? SPV_REFLECT_FORMAT_R32G32B32A32_SINT : SPV_REFLECT_FORMAT_R32G32B32A32_UINT; break;
+          }
+        }
+        break;
+        
+        case 64: {
+          switch (component_count) {
+            case 2: *p_format = signedness ? SPV_REFLECT_FORMAT_R64G64_SINT : SPV_REFLECT_FORMAT_R64G64_UINT; break;
+            case 3: *p_format = signedness ? SPV_REFLECT_FORMAT_R64G64B64_SINT : SPV_REFLECT_FORMAT_R64G64B64_UINT; break;
+            case 4: *p_format = signedness ? SPV_REFLECT_FORMAT_R64G64B64A64_SINT : SPV_REFLECT_FORMAT_R64G64B64A64_UINT; break;
+          }
+        }
       }
       result = SPV_REFLECT_RESULT_SUCCESS;
     }
   }
   else if (p_type->type_flags & SPV_REFLECT_TYPE_FLAG_FLOAT) {
-    *p_format = SPV_REFLECT_FORMAT_R32_SFLOAT;
+    switch(bit_width) {
+      case 32:
+        *p_format = SPV_REFLECT_FORMAT_R32_SFLOAT;
+        break;
+      case 64:
+        *p_format = SPV_REFLECT_FORMAT_R64_SFLOAT;
+        break;
+    }
     result = SPV_REFLECT_RESULT_SUCCESS;
   }
   else if (p_type->type_flags & (SPV_REFLECT_TYPE_FLAG_INT | SPV_REFLECT_TYPE_FLAG_BOOL)) {
-    if (signedness) {
-      *p_format = SPV_REFLECT_FORMAT_R32_SINT;
-      result = SPV_REFLECT_RESULT_SUCCESS;
-    }
-    else {
-      *p_format = SPV_REFLECT_FORMAT_R32_UINT;
-      result = SPV_REFLECT_RESULT_SUCCESS;
-    }
+    switch(bit_width) {
+      case 32:
+        *p_format = signedness ? SPV_REFLECT_FORMAT_R32_SINT : SPV_REFLECT_FORMAT_R32_UINT; break;
+        break;
+      case 64:
+        *p_format = signedness ? SPV_REFLECT_FORMAT_R64_SINT : SPV_REFLECT_FORMAT_R64_UINT; break;
+    }        
+    result = SPV_REFLECT_RESULT_SUCCESS;
   }
   else if (p_type->type_flags & SPV_REFLECT_TYPE_FLAG_STRUCT) {
     *p_format = SPV_REFLECT_FORMAT_UNDEFINED;
@@ -2971,6 +3037,12 @@ static SpvReflectResult ParseEntryPoints(Parser* p_parser, SpvReflectShaderModul
       case SpvExecutionModelGLCompute              : p_entry_point->shader_stage = SPV_REFLECT_SHADER_STAGE_COMPUTE_BIT; break;
       case SpvExecutionModelTaskNV                 : p_entry_point->shader_stage = SPV_REFLECT_SHADER_STAGE_TASK_BIT_NV; break;
       case SpvExecutionModelMeshNV                 : p_entry_point->shader_stage = SPV_REFLECT_SHADER_STAGE_MESH_BIT_NV; break;
+      case SpvExecutionModelRayGenerationKHR       : p_entry_point->shader_stage = SPV_REFLECT_SHADER_STAGE_RAYGEN_BIT_KHR; break;
+      case SpvExecutionModelIntersectionKHR        : p_entry_point->shader_stage = SPV_REFLECT_SHADER_STAGE_INTERSECTION_BIT_KHR; break;
+      case SpvExecutionModelAnyHitKHR              : p_entry_point->shader_stage = SPV_REFLECT_SHADER_STAGE_ANY_HIT_BIT_KHR; break;
+      case SpvExecutionModelClosestHitKHR          : p_entry_point->shader_stage = SPV_REFLECT_SHADER_STAGE_CLOSEST_HIT_BIT_KHR; break;
+      case SpvExecutionModelMissKHR                : p_entry_point->shader_stage = SPV_REFLECT_SHADER_STAGE_MISS_BIT_KHR; break;
+      case SpvExecutionModelCallableKHR            : p_entry_point->shader_stage = SPV_REFLECT_SHADER_STAGE_CALLABLE_BIT_KHR; break;
     }
 
     ++entry_point_index;
