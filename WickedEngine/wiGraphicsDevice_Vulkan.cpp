@@ -2982,17 +2982,10 @@ using namespace Vulkan_Internal;
 			renderPassInfo.dependencyCount = 1;
 			renderPassInfo.pDependencies = &dependency;
 
-			{
-				auto renderpass_internal = to_internal(&internal_state->renderpass);
-				if (renderpass_internal != nullptr && renderpass_internal->renderpass != VK_NULL_HANDLE)
-				{
-					allocationhandler->destroyer_renderpasses.push_back(std::make_pair(renderpass_internal->renderpass, allocationhandler->framecount));
-				}
-			}
-
 			internal_state->renderpass = RenderPass();
 			wiHelper::hash_combine(internal_state->renderpass.hash, internal_state->swapChainImageFormat);
 			auto renderpass_internal = std::make_shared<RenderPass_Vulkan>();
+			renderpass_internal->allocationhandler = allocationhandler;
 			internal_state->renderpass.internal_state = renderpass_internal;
 			internal_state->renderpass.desc.attachments.push_back(RenderPassAttachment::RenderTarget());
 			res = vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderpass_internal->renderpass);
