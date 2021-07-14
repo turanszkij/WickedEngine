@@ -1039,7 +1039,7 @@ using namespace Vulkan_Internal;
 			VkCommandPoolCreateInfo poolInfo = {};
 			poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 			poolInfo.queueFamilyIndex = device->copyFamily;
-			poolInfo.flags = 0;
+			poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
 
 			VkResult res = vkCreateCommandPool(device->device, &poolInfo, nullptr, &cmd.commandPool);
 			assert(res == VK_SUCCESS);
@@ -2500,7 +2500,7 @@ using namespace Vulkan_Internal;
 				VkCommandPoolCreateInfo poolInfo = {};
 				poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 				poolInfo.queueFamilyIndex = graphicsFamily;
-				poolInfo.flags = 0; // Optional
+				poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
 
 				res = vkCreateCommandPool(device, &poolInfo, nullptr, &frames[fr].transitionCommandPool);
 				assert(res == VK_SUCCESS);
@@ -5806,7 +5806,7 @@ using namespace Vulkan_Internal;
 					assert(0); // queue type not handled
 					break;
 				}
-				poolInfo.flags = 0; // Optional
+				poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
 
 				res = vkCreateCommandPool(device, &poolInfo, nullptr, &frame.commandPools[cmd][queue]);
 				assert(res == VK_SUCCESS);
