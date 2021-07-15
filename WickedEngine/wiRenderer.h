@@ -620,6 +620,18 @@ namespace wiRenderer
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd
 	);
+	struct ChamferNormalsResources
+	{
+		wiGraphics::Texture texture_edgeMap[2];
+	};
+	void CreateChamferNormalsResources(ChamferNormalsResources& res, XMUINT2 resolution);
+	void Postprocess_ChamferNormals(
+		const ChamferNormalsResources& res,
+		const wiGraphics::Texture& input_output_normals,
+		const wiGraphics::Texture& depthbuffer,
+		const wiGraphics::Texture& lineardepth,
+		wiGraphics::CommandList cmd
+	);
 
 	// Render the scene with ray tracing. You provide the ray buffer, where each ray maps to one pixel of the result testure
 	void RayTraceScene(

@@ -118,6 +118,7 @@ public:
 	wiRenderer::VolumetricCloudResources volumetriccloudResources;
 	wiRenderer::VolumetricCloudResources volumetriccloudResources_reflection;
 	wiRenderer::BloomResources bloomResources;
+	wiRenderer::ChamferNormalsResources chamferNormalsResources;
 
 	const constexpr wiGraphics::Texture* GetGbuffer_Read() const
 	{

@@ -1958,6 +1958,19 @@ void EditorComponent::Compose(CommandList cmd) const
 {
 	renderPath->Compose(cmd);
 
+	static bool asd = false;
+	if (wiInput::Press(wiInput::KEYBOARD_BUTTON_F1))
+	{
+		asd = !asd;
+	}
+	if (asd)
+	{
+		wiImageParams fx;
+		fx.enableFullScreen();
+		fx.blendFlag = BLENDMODE_OPAQUE;
+		wiImage::Draw(renderPath->GetGbuffer_Read(GBUFFER_NORMAL_ROUGHNESS), fx, cmd);
+	}
+
 	if (cinemaModeCheckBox.GetCheck())
 	{
 		return;

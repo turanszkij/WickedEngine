@@ -552,6 +552,21 @@ inline float4 unpack_half4(in uint2 value)
 	return retVal;
 }
 
+inline uint pack_pixel(uint2 pixel)
+{
+	uint retVal = 0;
+	retVal |= pixel.x & 0xFFFF;
+	retVal |= (pixel.y & 0xFFFF) << 16;
+	return retVal;
+}
+inline uint2 unpack_pixel(uint value)
+{
+	uint2 retVal;
+	retVal.x = value & 0xFFFF;
+	retVal.y = (value >> 16) & 0xFFFF;
+	return retVal;
+}
+
 
 // Expands a 10-bit integer into 30 bits
 // by inserting 2 zeros after each bit.
