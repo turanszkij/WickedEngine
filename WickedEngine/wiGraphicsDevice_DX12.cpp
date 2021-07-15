@@ -18,12 +18,11 @@
 #include <pix.h>
 
 #ifdef _DEBUG
-#include <d3d12sdklayers.h>
-#endif // _DEBUG
+#include <dxgidebug.h>
+#endif
 
 #include <sstream>
 #include <algorithm>
-#include <wincodec.h>
 
 // Bindless allocation limits:
 #define BINDLESS_RESOURCE_CAPACITY		500000
@@ -48,6 +47,12 @@ namespace DX12_Internal
 #else
 	using PFN_CREATE_DXGI_FACTORY_2 = decltype(&CreateDXGIFactory2);
 	static PFN_CREATE_DXGI_FACTORY_2 CreateDXGIFactory2 = nullptr;
+
+#ifdef _DEBUG
+	using PFN_DXGI_GET_DEBUG_INTERFACE1 = decltype(&DXGIGetDebugInterface1);
+	static PFN_DXGI_GET_DEBUG_INTERFACE1 DXGIGetDebugInterface1 = nullptr;
+#endif
+
 	static PFN_D3D12_CREATE_DEVICE D3D12CreateDevice = nullptr;
 	static PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE D3D12SerializeVersionedRootSignature = nullptr;
 #endif // PLATFORM_UWP
@@ -636,6 +641,26 @@ namespace DX12_Internal
 			break;
 		}
 		return DXGI_FORMAT_UNKNOWN;
+	}
+	constexpr DXGI_FORMAT _ConvertSwapChainFormat(FORMAT format)
+	{
+		switch (format) {
+			case FORMAT_R16G16B16A16_FLOAT:
+				return DXGI_FORMAT_R16G16B16A16_FLOAT;
+
+			case FORMAT_B8G8R8A8_UNORM:
+			case FORMAT_B8G8R8A8_UNORM_SRGB:
+				return DXGI_FORMAT_B8G8R8A8_UNORM;
+
+			case FORMAT_R8G8B8A8_UNORM:
+			case FORMAT_R8G8B8A8_UNORM_SRGB:
+				return DXGI_FORMAT_R8G8B8A8_UNORM;
+
+			case FORMAT_R10G10B10A2_UNORM:
+				return DXGI_FORMAT_R10G10B10A2_UNORM;
+		}
+
+		return DXGI_FORMAT_B8G8R8A8_UNORM;
 	}
 	inline D3D12_SUBRESOURCE_DATA _ConvertSubresourceData(const SubresourceData& pInitialData)
 	{
@@ -2356,6 +2381,10 @@ using namespace DX12_Internal;
 		CreateDXGIFactory2 = (PFN_CREATE_DXGI_FACTORY_2)GetProcAddress(dxgi, "CreateDXGIFactory2");
 		assert(CreateDXGIFactory2 != nullptr);
 
+#ifdef _DEBUG
+		DXGIGetDebugInterface1 = (PFN_DXGI_GET_DEBUG_INTERFACE1)GetProcAddress(dxgi, "DXGIGetDebugInterface1");
+#endif
+
 		D3D12CreateDevice = (PFN_D3D12_CREATE_DEVICE)GetProcAddress(dx12, "D3D12CreateDevice");
 		assert(D3D12CreateDevice != nullptr);
 
@@ -2378,20 +2407,42 @@ using namespace DX12_Internal;
 			auto D3D12GetDebugInterface = (PFN_D3D12_GET_DEBUG_INTERFACE)GetProcAddress(dx12, "D3D12GetDebugInterface");
 			if (D3D12GetDebugInterface)
 			{
-				ComPtr<ID3D12Debug1> d3dDebug;
+				ComPtr<ID3D12Debug> d3dDebug;
 				if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&d3dDebug))))
 				{
 					d3dDebug->EnableDebugLayer();
 					if (gpuvalidation)
 					{
-						d3dDebug->SetEnableGPUBasedValidation(TRUE);
+						ComPtr<ID3D12Debug1> d3dDebug1;
+						if (SUCCEEDED(d3dDebug.As(&d3dDebug1)))
+						{
+							d3dDebug1->SetEnableGPUBasedValidation(TRUE);
+						}
 					}
 				}
 			}
+
+#if defined(_DEBUG)
+			ComPtr<IDXGIInfoQueue> dxgiInfoQueue;
+			if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiInfoQueue.GetAddressOf()))))
+			{
+				dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR, true);
+				dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, true);
+
+				DXGI_INFO_QUEUE_MESSAGE_ID hide[] =
+				{
+					80 /* IDXGISwapChain::GetContainingOutput: The swapchain's adapter does not control the output on which the swapchain's window resides. */,
+				};
+				DXGI_INFO_QUEUE_FILTER filter = {};
+				filter.DenyList.NumIDs = static_cast<UINT>(std::size(hide));
+				filter.DenyList.pIDList = hide;
+				dxgiInfoQueue->AddStorageFilterEntries(DXGI_DEBUG_DXGI, &filter);
+			}
+#endif
 		}
 #endif
 
-		hr = CreateDXGIFactory2(debuglayer ? DXGI_CREATE_FACTORY_DEBUG : 0, IID_PPV_ARGS(&factory));
+		hr = CreateDXGIFactory2(debuglayer ? DXGI_CREATE_FACTORY_DEBUG : 0u, IID_PPV_ARGS(&dxgiFactory));
 		if (FAILED(hr))
 		{
 			std::stringstream ss("");
@@ -2401,29 +2452,71 @@ using namespace DX12_Internal;
 			wiPlatform::Exit();
 		}
 
+		// Determines whether tearing support is available for fullscreen borderless windows.
+		{
+			BOOL allowTearing = FALSE;
+
+			ComPtr<IDXGIFactory5> dxgiFactory5;
+			HRESULT hr = dxgiFactory.As(&dxgiFactory5);
+			if (SUCCEEDED(hr))
+			{
+				hr = dxgiFactory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowTearing, sizeof(allowTearing));
+			}
+
+			if (FAILED(hr) || !allowTearing)
+			{
+				tearingSupported = false;
+#ifdef _DEBUG
+				OutputDebugStringA("WARNING: Variable refresh rate displays not supported\n");
+#endif
+			}
+			else
+			{
+				tearingSupported = true;
+			}
+		}
+
 		// pick the highest performance adapter that is able to create the device
-		Microsoft::WRL::ComPtr<IDXGIAdapter1> candidateAdapter;
-		for (uint32_t i = 0; factory->EnumAdapterByGpuPreference(i, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&candidateAdapter)) != DXGI_ERROR_NOT_FOUND; ++i)
+
+		ComPtr<IDXGIFactory6> dxgiFactory6;
+		const bool queryByPreference = SUCCEEDED(dxgiFactory.As(&dxgiFactory6));
+		auto NextAdapter = [&](uint32_t index, IDXGIAdapter1** ppAdapter)
+		{
+			if (queryByPreference)
+				return dxgiFactory6->EnumAdapterByGpuPreference(index, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(ppAdapter));
+			else
+				return dxgiFactory->EnumAdapters1(index, ppAdapter);
+		};
+
+		ComPtr<IDXGIAdapter1> dxgiAdapter1;
+		for (uint32_t i = 0;
+			NextAdapter(i, dxgiAdapter1.ReleaseAndGetAddressOf()) != DXGI_ERROR_NOT_FOUND;
+			++i)
 		{
 			DXGI_ADAPTER_DESC1 adapterDesc;
-			candidateAdapter->GetDesc1(&adapterDesc);
+			dxgiAdapter1->GetDesc1(&adapterDesc);
+
+			// Don't select the Basic Render Driver adapter.
+			if (adapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+			{
+				continue;
+			}
 
 			// ignore software adapter and check device creation succeeds
-			if (!(adapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) &&
-				SUCCEEDED(D3D12CreateDevice(candidateAdapter.Get(), D3D_FEATURE_LEVEL_12_1, __uuidof(ID3D12Device), nullptr)))
+			if (SUCCEEDED(D3D12CreateDevice(dxgiAdapter1.Get(), D3D_FEATURE_LEVEL_12_1, __uuidof(ID3D12Device), nullptr)))
 			{
-				candidateAdapter.As(&adapter);
 				break;
 			}
 		}
-		if (candidateAdapter == nullptr)
+
+		if (dxgiAdapter1 == nullptr)
 		{
 			wiHelper::messageBox("No capable adapter found!", "Error!");
 			assert(0);
 			wiPlatform::Exit();
 		}
 
-		hr = D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&device));
+		hr = D3D12CreateDevice(dxgiAdapter1.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&device));
 		if (FAILED(hr))
 		{
 			std::stringstream ss("");
@@ -2435,14 +2528,20 @@ using namespace DX12_Internal;
 
 		if (debuglayer)
 		{
-			ID3D12InfoQueue* d3dInfoQueue = nullptr;
-			if (SUCCEEDED(device->QueryInterface(__uuidof(ID3D12InfoQueue), (void**)&d3dInfoQueue)))
+			// Configure debug device (if active).
+			ComPtr<ID3D12InfoQueue> d3dInfoQueue;
+			if (SUCCEEDED(device.As(&d3dInfoQueue)))
 			{
-				d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
-				d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, true);
+#ifdef _DEBUG
+				d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
+				d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
+#endif
 
 				D3D12_MESSAGE_ID hide[] =
 				{
+					D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,
+					D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,
+					D3D12_MESSAGE_ID_EXECUTECOMMANDLISTS_WRONGSWAPCHAINBUFFERREFERENCE,
 					D3D12_MESSAGE_ID_SETPRIVATEDATA_CHANGINGPARAMS,
 					// Add more message IDs here as needed
 				};
@@ -2451,13 +2550,12 @@ using namespace DX12_Internal;
 				filter.DenyList.NumIDs = _countof(hide);
 				filter.DenyList.pIDList = hide;
 				d3dInfoQueue->AddStorageFilterEntries(&filter);
-				d3dInfoQueue->Release();
 			}
 		}
 
 		D3D12MA::ALLOCATOR_DESC allocatorDesc = {};
 		allocatorDesc.pDevice = device.Get();
-		allocatorDesc.pAdapter = adapter.Get();
+		allocatorDesc.pAdapter = dxgiAdapter1.Get();
 
 		allocationhandler = std::make_shared<AllocationHandler>();
 		allocationhandler->device = device;
@@ -2819,47 +2917,44 @@ using namespace DX12_Internal;
 		if (internal_state->swapChain == nullptr)
 		{
 			// Create swapchain:
-			ComPtr<IDXGISwapChain1> _swapChain;
+			ComPtr<IDXGISwapChain1> tempSwapChain;
 
-			DXGI_SWAP_CHAIN_DESC1 sd = {};
-			sd.Width = pDesc->width;
-			sd.Height = pDesc->height;
-			sd.Format = _ConvertFormat(pDesc->format);
-			sd.Stereo = false;
-			sd.SampleDesc.Count = 1;
-			sd.SampleDesc.Quality = 0;
-			sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-			sd.BufferCount = pDesc->buffercount;
-			sd.Flags = 0;
-			sd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
-			sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+			DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
+			swapChainDesc.Width = pDesc->width;
+			swapChainDesc.Height = pDesc->height;
+			swapChainDesc.Format = _ConvertSwapChainFormat(pDesc->format);
+			swapChainDesc.Stereo = false;
+			swapChainDesc.SampleDesc.Count = 1;
+			swapChainDesc.SampleDesc.Quality = 0;
+			swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+			swapChainDesc.BufferCount = pDesc->buffercount;
+			swapChainDesc.Flags = 0;
+			swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+			swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 
 #ifndef PLATFORM_UWP
-			sd.Scaling = DXGI_SCALING_STRETCH;
+			swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
 
-			DXGI_SWAP_CHAIN_FULLSCREEN_DESC fullscreenDesc;
-			fullscreenDesc.RefreshRate.Numerator = 60;
-			fullscreenDesc.RefreshRate.Denominator = 1;
-			fullscreenDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED; // needs to be unspecified for correct fullscreen scaling!
-			fullscreenDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE;
+			DXGI_SWAP_CHAIN_FULLSCREEN_DESC fullscreenDesc = {};
 			fullscreenDesc.Windowed = !pDesc->fullscreen;
-			hr = factory->CreateSwapChainForHwnd(
+
+			hr = dxgiFactory->CreateSwapChainForHwnd(
 				queues[QUEUE_GRAPHICS].queue.Get(),
 				window,
-				&sd,
+				&swapChainDesc,
 				&fullscreenDesc,
 				nullptr,
-				&_swapChain
+				tempSwapChain.GetAddressOf()
 			);
 #else
-			sd.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
+			swapChainDesc.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
 
-			hr = factory->CreateSwapChainForCoreWindow(
+			hr = dxgiFactory->CreateSwapChainForCoreWindow(
 				queues[QUEUE_GRAPHICS].queue.Get(),
 				static_cast<IUnknown*>(winrt::get_abi(*window)),
-				&sd,
+				&swapChainDesc,
 				nullptr,
-				&_swapChain
+				tempSwapChain.GetAddressOf()
 			);
 #endif
 
@@ -2868,7 +2963,7 @@ using namespace DX12_Internal;
 				return false;
 			}
 
-			hr = _swapChain.As(&internal_state->swapChain);
+			hr = tempSwapChain.As(&internal_state->swapChain);
 			if (FAILED(hr))
 			{
 				return false;
@@ -2898,13 +2993,19 @@ using namespace DX12_Internal;
 		internal_state->backBuffers.resize(pDesc->buffercount);
 		internal_state->backbufferRTV.resize(pDesc->buffercount);
 
+		// We can create swapchain just with given supported format, thats why we specify format in RTV
+		// For example: BGRA8UNorm for SwapChain BGRA8UNormSrgb for RTV.
+		D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+		rtvDesc.Format = _ConvertFormat(pDesc->format);
+		rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+
 		for (uint32_t i = 0; i < pDesc->buffercount; ++i)
 		{
 			hr = internal_state->swapChain->GetBuffer(i, IID_PPV_ARGS(&internal_state->backBuffers[i]));
 			assert(SUCCEEDED(hr));
 
 			internal_state->backbufferRTV[i] = allocationhandler->descriptors_rtv.allocate();
-			device->CreateRenderTargetView(internal_state->backBuffers[i].Get(), nullptr, internal_state->backbufferRTV[i]);
+			device->CreateRenderTargetView(internal_state->backBuffers[i].Get(), &rtvDesc, internal_state->backbufferRTV[i]);
 		}
 
 		internal_state->dummyTexture.desc.Format = pDesc->format;

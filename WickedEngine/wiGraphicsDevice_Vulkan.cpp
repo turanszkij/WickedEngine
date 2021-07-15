@@ -2278,9 +2278,8 @@ using namespace Vulkan_Internal;
 					}
 				}
 
-				if (!DEBUGDEVICE && checkExtensionSupport(VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME, available_deviceExtensions))
+				if (checkExtensionSupport(VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME, available_deviceExtensions))
 				{
-					// Note: VRS will crash vulkan validation layers: https://github.com/KhronosGroup/Vulkan-ValidationLayers/issues/2473
 					enabled_deviceExtensions.push_back(VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME);
 					fragment_shading_rate_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_FEATURES_KHR;
 					*features_chain = &fragment_shading_rate_features;
@@ -3271,6 +3270,10 @@ using namespace Vulkan_Internal;
 				if (pBuffer->desc.BindFlags & BIND_UNORDERED_ACCESS)
 				{
 					barrier.dstAccessMask |= VK_ACCESS_SHADER_WRITE_BIT;
+				}
+				if (pBuffer->desc.MiscFlags & RESOURCE_MISC_RAY_TRACING)
+				{
+					barrier.dstAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
 				}
 
 				vkCmdPipelineBarrier(

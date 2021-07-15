@@ -1355,10 +1355,11 @@ namespace wiScene
 		void Entity_Remove(wiECS::Entity entity);
 		// Finds the first entity by the name (if it exists, otherwise returns INVALID_ENTITY):
 		wiECS::Entity Entity_FindByName(const std::string& name);
-		// Duplicates all of an entity's components and creates a new entity with them:
+		// Duplicates all of an entity's components and creates a new entity with them (recursively keeps hierarchy):
 		wiECS::Entity Entity_Duplicate(wiECS::Entity entity);
 		// Serializes entity and all of its components to archive:
 		//	Returns either the new entity that was read, or the original entity that was written
+		//	This serialization is recursive and serializes entity hierarchy as well
 		wiECS::Entity Entity_Serialize(wiArchive& archive, wiECS::Entity entity = wiECS::INVALID_ENTITY);
 
 		wiECS::Entity Entity_CreateMaterial(

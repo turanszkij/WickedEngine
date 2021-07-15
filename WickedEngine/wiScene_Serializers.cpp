@@ -1632,6 +1632,25 @@ namespace wiScene
 					component.Serialize(archive, seri);
 				}
 			}
+
+			if (archive.GetVersion() >= 72)
+			{
+				// serialize children:
+				size_t childCount = 0;
+				archive >> childCount;
+				for (size_t i = 0; i < childCount; ++i)
+				{
+					Entity child = Entity_Serialize(archive);
+					if (child != INVALID_ENTITY)
+					{
+						HierarchyComponent* hier = hierarchy.GetComponent(child);
+						if (hier != nullptr)
+						{
+							hier->parentID = entity;
+						}
+					}
+				}
+			}
 		}
 		else
 		{
@@ -1989,6 +2008,25 @@ namespace wiScene
 				}
 			}
 
+			if (archive.GetVersion() >= 72)
+			{
+				// Recursive serialization for all children:
+				std::vector<Entity> children;
+				for (size_t i = 0; i < hierarchy.GetCount(); ++i)
+				{
+					const HierarchyComponent& hier = hierarchy[i];
+					if (hier.parentID == entity)
+					{
+						Entity child = hierarchy.GetEntity(i);
+						children.push_back(child);
+					}
+				}
+				archive << children.size();
+				for (Entity child : children)
+				{
+					Entity_Serialize(archive, child);
+				}
+			}
 		}
 
 		return entity;
