@@ -389,6 +389,10 @@ namespace wiScene
 			bd.CPUAccessFlags = 0;
 			bd.BindFlags = BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE;
 			bd.MiscFlags = 0;
+			if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_PIPELINE) || device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
+			{
+				bd.MiscFlags |= RESOURCE_MISC_RAY_TRACING;
+			}
 
 			SubresourceData initData;
 
