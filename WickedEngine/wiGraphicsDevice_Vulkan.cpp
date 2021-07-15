@@ -290,59 +290,42 @@ namespace Vulkan_Internal
 		{
 		case BLEND_ZERO:
 			return VK_BLEND_FACTOR_ZERO;
-			break;
 		case BLEND_ONE:
 			return VK_BLEND_FACTOR_ONE;
-			break;
 		case BLEND_SRC_COLOR:
 			return VK_BLEND_FACTOR_SRC_COLOR;
-			break;
 		case BLEND_INV_SRC_COLOR:
 			return VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
-			break;
 		case BLEND_SRC_ALPHA:
 			return VK_BLEND_FACTOR_SRC_ALPHA;
-			break;
 		case BLEND_INV_SRC_ALPHA:
 			return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-			break;
 		case BLEND_DEST_ALPHA:
 			return VK_BLEND_FACTOR_DST_ALPHA;
-			break;
 		case BLEND_INV_DEST_ALPHA:
 			return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
-			break;
 		case BLEND_DEST_COLOR:
 			return VK_BLEND_FACTOR_DST_COLOR;
-			break;
 		case BLEND_INV_DEST_COLOR:
 			return VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
-			break;
 		case BLEND_SRC_ALPHA_SAT:
 			return VK_BLEND_FACTOR_SRC_ALPHA_SATURATE;
-			break;
 		case BLEND_BLEND_FACTOR:
 			return VK_BLEND_FACTOR_CONSTANT_COLOR;
-			break;
 		case BLEND_INV_BLEND_FACTOR:
 			return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR;
 			break;
 		case BLEND_SRC1_COLOR:
 			return VK_BLEND_FACTOR_SRC1_COLOR;
-			break;
 		case BLEND_INV_SRC1_COLOR:
 			return VK_BLEND_FACTOR_ONE_MINUS_SRC1_COLOR;
-			break;
 		case BLEND_SRC1_ALPHA:
 			return VK_BLEND_FACTOR_SRC1_ALPHA;
-			break;
 		case BLEND_INV_SRC1_ALPHA:
 			return VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA;
-			break;
 		default:
-			break;
+			return VK_BLEND_FACTOR_ZERO;
 		}
-		return VK_BLEND_FACTOR_ZERO;
 	}
 	constexpr VkBlendOp _ConvertBlendOp(BLEND_OP value)
 	{
@@ -350,23 +333,17 @@ namespace Vulkan_Internal
 		{
 		case BLEND_OP_ADD:
 			return VK_BLEND_OP_ADD;
-			break;
 		case BLEND_OP_SUBTRACT:
 			return VK_BLEND_OP_SUBTRACT;
-			break;
 		case BLEND_OP_REV_SUBTRACT:
 			return VK_BLEND_OP_REVERSE_SUBTRACT;
-			break;
 		case BLEND_OP_MIN:
 			return VK_BLEND_OP_MIN;
-			break;
 		case BLEND_OP_MAX:
 			return VK_BLEND_OP_MAX;
-			break;
 		default:
-			break;
+			return VK_BLEND_OP_ADD;
 		}
-		return VK_BLEND_OP_ADD;
 	}
 	constexpr VkSamplerAddressMode _ConvertTextureAddressMode(TEXTURE_ADDRESS_MODE value)
 	{
@@ -1851,7 +1828,11 @@ using namespace Vulkan_Internal;
 						continue;
 					}
 
-					const auto& desc = pso->desc.bs->RenderTarget[numBlendAttachments];
+					size_t attachmentIndex = 0;
+					if (pso->desc.bs->IndependentBlendEnable)
+						attachmentIndex = i;
+
+					const auto& desc = pso->desc.bs->RenderTarget[attachmentIndex];
 					VkPipelineColorBlendAttachmentState& attachment = colorBlendAttachments[numBlendAttachments];
 					numBlendAttachments++;
 

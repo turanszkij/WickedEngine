@@ -342,59 +342,61 @@ namespace DX12_Internal
 		{
 		case BLEND_ZERO:
 			return D3D12_BLEND_ZERO;
-			break;
 		case BLEND_ONE:
 			return D3D12_BLEND_ONE;
-			break;
 		case BLEND_SRC_COLOR:
 			return D3D12_BLEND_SRC_COLOR;
-			break;
 		case BLEND_INV_SRC_COLOR:
 			return D3D12_BLEND_INV_SRC_COLOR;
-			break;
 		case BLEND_SRC_ALPHA:
 			return D3D12_BLEND_SRC_ALPHA;
-			break;
 		case BLEND_INV_SRC_ALPHA:
 			return D3D12_BLEND_INV_SRC_ALPHA;
-			break;
 		case BLEND_DEST_ALPHA:
 			return D3D12_BLEND_DEST_ALPHA;
-			break;
 		case BLEND_INV_DEST_ALPHA:
 			return D3D12_BLEND_INV_DEST_ALPHA;
-			break;
 		case BLEND_DEST_COLOR:
 			return D3D12_BLEND_DEST_COLOR;
-			break;
 		case BLEND_INV_DEST_COLOR:
 			return D3D12_BLEND_INV_DEST_COLOR;
-			break;
 		case BLEND_SRC_ALPHA_SAT:
 			return D3D12_BLEND_SRC_ALPHA_SAT;
-			break;
 		case BLEND_BLEND_FACTOR:
 			return D3D12_BLEND_BLEND_FACTOR;
-			break;
 		case BLEND_INV_BLEND_FACTOR:
 			return D3D12_BLEND_INV_BLEND_FACTOR;
-			break;
 		case BLEND_SRC1_COLOR:
 			return D3D12_BLEND_SRC1_COLOR;
-			break;
 		case BLEND_INV_SRC1_COLOR:
 			return D3D12_BLEND_INV_SRC1_COLOR;
-			break;
 		case BLEND_SRC1_ALPHA:
 			return D3D12_BLEND_SRC1_ALPHA;
-			break;
 		case BLEND_INV_SRC1_ALPHA:
 			return D3D12_BLEND_INV_SRC1_ALPHA;
-			break;
 		default:
-			break;
+			return D3D12_BLEND_ZERO;
 		}
-		return D3D12_BLEND_ZERO;
+	}
+	constexpr D3D12_BLEND _ConvertAlphaBlend(BLEND value)
+	{
+		switch (value)
+		{
+			case BLEND_SRC_COLOR:
+				return D3D12_BLEND_SRC_ALPHA;
+			case BLEND_INV_SRC_COLOR:
+				return D3D12_BLEND_INV_SRC_ALPHA;
+			case BLEND_DEST_COLOR:
+				return D3D12_BLEND_DEST_ALPHA;
+			case BLEND_INV_DEST_COLOR:
+				return D3D12_BLEND_INV_DEST_ALPHA;
+			case BLEND_SRC1_COLOR:
+				return D3D12_BLEND_SRC1_ALPHA;
+			case BLEND_INV_SRC1_COLOR:
+				return D3D12_BLEND_INV_SRC1_ALPHA;
+			default:
+				return _ConvertBlend(value);
+		}
 	}
 	constexpr D3D12_BLEND_OP _ConvertBlendOp(BLEND_OP value)
 	{
@@ -4394,8 +4396,8 @@ using namespace DX12_Internal;
 			bd.RenderTarget[i].SrcBlend = _ConvertBlend(pBlendStateDesc.RenderTarget[i].SrcBlend);
 			bd.RenderTarget[i].DestBlend = _ConvertBlend(pBlendStateDesc.RenderTarget[i].DestBlend);
 			bd.RenderTarget[i].BlendOp = _ConvertBlendOp(pBlendStateDesc.RenderTarget[i].BlendOp);
-			bd.RenderTarget[i].SrcBlendAlpha = _ConvertBlend(pBlendStateDesc.RenderTarget[i].SrcBlendAlpha);
-			bd.RenderTarget[i].DestBlendAlpha = _ConvertBlend(pBlendStateDesc.RenderTarget[i].DestBlendAlpha);
+			bd.RenderTarget[i].SrcBlendAlpha = _ConvertAlphaBlend(pBlendStateDesc.RenderTarget[i].SrcBlendAlpha);
+			bd.RenderTarget[i].DestBlendAlpha = _ConvertAlphaBlend(pBlendStateDesc.RenderTarget[i].DestBlendAlpha);
 			bd.RenderTarget[i].BlendOpAlpha = _ConvertBlendOp(pBlendStateDesc.RenderTarget[i].BlendOpAlpha);
 			bd.RenderTarget[i].RenderTargetWriteMask = _ParseColorWriteMask(pBlendStateDesc.RenderTarget[i].RenderTargetWriteMask);
 		}
