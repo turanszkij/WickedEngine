@@ -1,4 +1,4 @@
-Credits
+Wicked Engine Credits
 
 Creator: János Turánszki https://github.com/turanszkij
 
@@ -35,4 +35,6 @@ Patreon supporters:
 - Nemerle
 - James Webb
 - Quifeng Jin
+- TheGameCreators
+- Joseph Goldin
 
