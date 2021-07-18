@@ -1463,7 +1463,7 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 
 		if (rtFSR[0].IsValid() && getFSREnabled())
 		{
-			wiRenderer::Postprocess_FSR(*rt_read, rtFSR[1], rtFSR[0], cmd);
+			wiRenderer::Postprocess_FSR(*rt_read, rtFSR[1], rtFSR[0], cmd, getFSRSharpness());
 
 			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 		}

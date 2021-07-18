@@ -37,6 +37,7 @@ private:
 	float screenSpaceShadowRange = 1;
 	float eyeadaptionKey = 0.115f;
 	float eyeadaptionRate = 1;
+	float fsrSharpness = 1.0f;
 
 	AO ao = AO_DISABLED;
 	bool fxaaEnabled = false;
@@ -201,6 +202,7 @@ public:
 	constexpr float getScreenSpaceShadowRange() const { return screenSpaceShadowRange; }
 	constexpr float getEyeAdaptionKey() const { return eyeadaptionKey; }
 	constexpr float getEyeAdaptionRate() const { return eyeadaptionRate; }
+	constexpr float getFSRSharpness() const { return fsrSharpness; }
 
 	constexpr bool getAOEnabled() const { return ao != AO_DISABLED; }
 	constexpr AO getAO() const { return ao; }
@@ -243,6 +245,7 @@ public:
 	constexpr void setScreenSpaceShadowRange(float value) { screenSpaceShadowRange = value; }
 	constexpr void setEyeAdaptionKey(float value) { eyeadaptionKey = value; }
 	constexpr void setEyeAdaptionRate(float value) { eyeadaptionRate = value; }
+	constexpr void setFSRSharpness(float value) { fsrSharpness = value; }
 
 	void setAO(AO value);
 	void setSSREnabled(bool value);

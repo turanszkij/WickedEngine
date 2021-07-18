@@ -30,7 +30,6 @@ public:
 	wiCheckBox bloomCheckBox;
 	wiSlider bloomStrengthSlider;
 	wiCheckBox fxaaCheckBox;
-	wiCheckBox fsrCheckBox;
 	wiCheckBox colorGradingCheckBox;
 	wiCheckBox ditherCheckBox;
 	wiCheckBox sharpenFilterCheckBox;
@@ -40,6 +39,8 @@ public:
 	wiSlider outlineThicknessSlider;
 	wiCheckBox chromaticaberrationCheckBox;
 	wiSlider chromaticaberrationSlider;
+	wiCheckBox fsrCheckBox;
+	wiSlider fsrSlider;
 
 
 };

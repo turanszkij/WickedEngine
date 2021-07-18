@@ -280,16 +280,6 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	});
 	AddWidget(&fxaaCheckBox);
 
-	fsrCheckBox.Create("FSR: ");
-	fsrCheckBox.SetTooltip("FidelityFX FSR Upscaling. Use this only with Temporal AA or MSAA when the resolution scaling is lowered.");
-	fsrCheckBox.SetSize(XMFLOAT2(hei, hei));
-	fsrCheckBox.SetPos(XMFLOAT2(x + 100, y));
-	fsrCheckBox.SetCheck(editor->renderPath->getFSREnabled());
-	fsrCheckBox.OnClick([=](wiEventArgs args) {
-		editor->renderPath->setFSREnabled(args.bValue);
-		});
-	AddWidget(&fsrCheckBox);
-
 	colorGradingCheckBox.Create("Color Grading: ");
 	colorGradingCheckBox.SetTooltip("Enable color grading of the final render. An additional lookup texture must be set in the Weather!");
 	colorGradingCheckBox.SetSize(XMFLOAT2(hei, hei));
@@ -381,6 +371,26 @@ void PostprocessWindow::Create(EditorComponent* editor)
 		editor->renderPath->setChromaticAberrationAmount(args.fValue);
 		});
 	AddWidget(&chromaticaberrationSlider);
+
+	fsrCheckBox.Create("FSR: ");
+	fsrCheckBox.SetTooltip("FidelityFX FSR Upscaling. Use this only with Temporal AA or MSAA when the resolution scaling is lowered.");
+	fsrCheckBox.SetSize(XMFLOAT2(hei, hei));
+	fsrCheckBox.SetPos(XMFLOAT2(x, y += step));
+	fsrCheckBox.SetCheck(editor->renderPath->getFSREnabled());
+	fsrCheckBox.OnClick([=](wiEventArgs args) {
+		editor->renderPath->setFSREnabled(args.bValue);
+		});
+	AddWidget(&fsrCheckBox);
+
+	fsrSlider.Create(0, 2, 1.0f, 1000, "Sharpness: ");
+	fsrSlider.SetTooltip("The sharpening amount to apply for FSR upscaling.");
+	fsrSlider.SetSize(XMFLOAT2(100, hei));
+	fsrSlider.SetPos(XMFLOAT2(x + 100, y));
+	fsrSlider.SetValue(editor->renderPath->getFSRSharpness());
+	fsrSlider.OnSlide([=](wiEventArgs args) {
+		editor->renderPath->setFSRSharpness(args.fValue);
+		});
+	AddWidget(&fsrSlider);
 
 
 	Translate(XMFLOAT3((float)editor->GetLogicalWidth() - 500, 80, 0));
