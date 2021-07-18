@@ -505,6 +505,7 @@ void RenderPath3D::ResizeBuffers()
 	setAO(ao);
 	setSSREnabled(ssrEnabled);
 	setRaytracedReflectionsEnabled(raytracedReflectionsEnabled);
+	setFSREnabled(fsrEnabled);
 
 	RenderPath2D::ResizeBuffers();
 }
@@ -1459,6 +1460,13 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 			device->EventEnd(cmd);
 			wiProfiler::EndRange(range);
 		}
+
+		if (rtFSR[0].IsValid() && getFSREnabled())
+		{
+			wiRenderer::Postprocess_FSR(*rt_read, rtFSR[1], rtFSR[0], cmd, getFSRSharpness());
+
+			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
+		}
 	}
 }
 
@@ -1557,5 +1565,30 @@ void RenderPath3D::setRaytracedReflectionsEnabled(bool value)
 	else
 	{
 		rtreflectionResources = {};
+	}
+}
+
+void RenderPath3D::setFSREnabled(bool value)
+{
+	fsrEnabled = value;
+
+	if (resolutionScale < 1.0f && fsrEnabled)
+	{
+		GraphicsDevice* device = wiRenderer::GetDevice();
+
+		TextureDesc desc;
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.Format = rtPostprocess_LDR[0].desc.Format;
+		desc.Width = GetPhysicalWidth();
+		desc.Height = GetPhysicalHeight();
+		device->CreateTexture(&desc, nullptr, &rtFSR[0]);
+		device->SetName(&rtFSR[0], "rtFSR[0]");
+		device->CreateTexture(&desc, nullptr, &rtFSR[1]);
+		device->SetName(&rtFSR[1], "rtFSR[1]");
+	}
+	else
+	{
+		rtFSR[0] = {};
+		rtFSR[1] = {};
 	}
 }

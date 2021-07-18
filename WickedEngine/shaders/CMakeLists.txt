@@ -30,6 +30,8 @@ set(SHADERS_CS
 		"temporalaaCS.hlsl"
 		"tileFrustumsCS.hlsl"
 		"tonemapCS.hlsl"
+		"fsr_upscalingCS.hlsl"	
+		"fsr_sharpenCS.hlsl"	
 		"ssr_resolveCS.hlsl"
 		"ssr_temporalCS.hlsl"
 		"ssaoCS.hlsl"
