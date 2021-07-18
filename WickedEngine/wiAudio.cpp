@@ -567,7 +567,7 @@ namespace wiAudio
 
 //Format tags
 //Source: https://github.com/libsdl-org/SDL/blob/main/src/audio/SDL_wave.h
-#define WAV_UNKBOWN    0x0000
+#define WAV_UNKNOWN    0x0000
 #define WAV_PCM        0x0001
 #define WAV_ADPCM_MS   0x0002
 #define WAV_IEEE       0x0003
@@ -580,8 +580,10 @@ namespace wiAudio
 
 namespace wiAudio
 {
+    struct AudioInternal;
+
 	static inline void ProcessAudioFeed(void* userdata, uint8_t* stream, int len);
-	inline bool OpenAudioDevice(SDL_AudioDeviceID& device);
+	inline bool OpenAudioDevice(SDL_AudioDeviceID& device, AudioInternal* audio_internal);
 
 	struct SoundInstanceInternal;
 
@@ -592,42 +594,56 @@ namespace wiAudio
 
 		std::vector<std::shared_ptr<SoundInstanceInternal>> instances;
 
-		AudioInternal(){
+		AudioInternal()
+		    : device(-1)
+        {
 			if(!(SDL_WasInit(SDL_INIT_AUDIO) & SDL_INIT_AUDIO)){
 				return;
 			}
 
-			if(OpenAudioDevice(device)){
+			if(OpenAudioDevice(device, this)){
 				success = true;
+                set_mute(false);
 			}
 		}
 
+		void set_mute(bool mute) {
+            if (mute) {
+                SDL_PauseAudioDevice(device, 1);
+            } else {
+                SDL_PauseAudioDevice(device, 0);
+            }
+
+        }
+
 		~AudioInternal(){
-			SDL_CloseAudioDevice(device);
+		    if (device > 0) {
+                set_mute(true);
+                SDL_CloseAudioDevice(device);
+            }
 		}
 	};
 	std::shared_ptr<AudioInternal> audio;
 
-	inline bool OpenAudioDevice(SDL_AudioDeviceID& device){
+	inline bool OpenAudioDevice(SDL_AudioDeviceID& device, AudioInternal *audio_internal){
 		SDL_AudioSpec desired;
 		desired.format = AUDIO_S16LSB;
 		desired.freq = 48000;
 		desired.channels = 2;
 		desired.samples = 4096;
 		desired.callback = ProcessAudioFeed;
-		desired.userdata = audio.get();
+		desired.userdata = audio_internal;
 
-		return ((device = SDL_OpenAudioDevice(NULL, 0, &desired, NULL, SDL_AUDIO_ALLOW_ANY_CHANGE)) > 0);
+		return ((device = SDL_OpenAudioDevice(nullptr, 0, &desired, nullptr, SDL_AUDIO_ALLOW_ANY_CHANGE)) > 0);
 	}
 
-	struct SoundInternal{
-		std::shared_ptr<AudioInternal> audio;
-		SDL_AudioSpec info;
+	struct SoundInternal {
+		SDL_AudioSpec info {};
 		std::vector<uint8_t> audioData;
 	};
-	struct SoundInstanceInternal{
-		std::shared_ptr<AudioInternal> audio;
-		std::shared_ptr<SoundInternal> soundinternal;
+	struct SoundInstanceInternal {
+		std::shared_ptr<AudioInternal> audio = nullptr;
+		std::shared_ptr<SoundInternal> soundinternal = nullptr;
 
 		enum FLAGS{
 			EMPTY = 0,
@@ -637,11 +653,11 @@ namespace wiAudio
 		};
 		uint32_t _flags = EMPTY;
 
-		size_t marker;
-		float volume;
+		size_t marker = 0;
+		float volume = 0;
 
-		size_t loop_begin;
-		size_t loop_end;
+		size_t loop_begin = 0;
+		size_t loop_end = 0;
 	};
 	SoundInternal* to_internal(const Sound* param)
 	{
@@ -654,35 +670,67 @@ namespace wiAudio
 
 	//Primary processing spot for audio processing
 	static inline void ProcessAudioFeed(void* userdata, uint8_t* stream, int len){
-		AudioInternal* audiodata = static_cast<AudioInternal*>(userdata);
+		AudioInternal* _this = static_cast<AudioInternal*>(userdata);
+		assert(_this);
 		
 		//Nullify master sound to receive new signal batch, see SDL_MixAudioFormat code snippet
 		SDL_memset(stream, 0, len);
 
-		if(!audiodata->instances.empty()){
-			for(int i=0; i<audiodata->instances.size(); i++){
-				SoundInstanceInternal* instance = audiodata->instances[i].get();
+		if(!_this->instances.empty()){
+			for(auto &i : _this->instances){
+				SoundInstanceInternal* instance = i.get();
 
 				if(instance->_flags & instance->PLAY)
 				{
 					if(!(instance->_flags & instance->PAUSE))
 					{
-						std::vector<uint8_t> buffer;
-						std::copy(
-							instance->soundinternal->audioData.data()+instance->marker,
-							instance->soundinternal->audioData.data()+instance->marker+len,
-							buffer.begin());
+					    bool loop_sound = instance->_flags & instance->LOOP;
+					    size_t source_buffer_size = instance->loop_end - instance->loop_begin;
+					    size_t marker_begin = instance->marker;
+                        size_t marker_end = marker_begin + len;
+                        size_t marker_end_loop = marker_end % source_buffer_size;
+                        bool loopback_necessary = loop_sound && (marker_end > instance->loop_end);
+                        if (!loop_sound && marker_end < instance->loop_end) {
+                            len = instance->loop_end - marker_begin;
+                        }
+                        marker_end = std::min(marker_end, instance->loop_end);
 
-						//Mix sound instances buffer into master sound
-						SDL_MixAudioFormat(stream, buffer.data(), instance->soundinternal->info.format, len, (int)(instance->volume*128));
-						
+                        assert(marker_begin != marker_end_loop);
+                        assert(marker_begin >= instance->loop_begin);
+                        assert(marker_end <= instance->loop_end);
+
+                        // buffer structure should be 2 bytes per channel alternating. E.g. LLRRLLRRLLRRLLRRLLRR..
+                        // Channel layout reference : https://github.com/libsdl-org/SDL/blob/main/include/SDL_audio.h
+
+						//TODO remove Sine wave test
+//						for (int j=0; j < buffer.size(); j+=4) {
+//						    float amplitude = 200;
+//						    float frequency = 32;
+//                            buffer[j+2] = amplitude * std::sin(2.0*M_PI * frequency * (float(marker+j) / 48000.0));
+//                            buffer[j+3] = amplitude * std::sin(2.0*M_PI * frequency * (float(marker+j+1) / 48000.0));
+//                        }
+
+                        const auto &audio_data = instance->soundinternal->audioData.data();
+                        const auto &format = instance->soundinternal->info.format;
+                        int volume = static_cast<int>(std::clamp(instance->volume, 0.0f, 1.0f) * 128.0f);
+
+                        //Mix sound instances buffer into master sound
+                        Uint32 sdl_len = marker_end - marker_begin;
+                        SDL_MixAudioFormat(stream, audio_data+marker_begin, format, sdl_len, volume);
+
+                        if (loopback_necessary)
+                        {
+                            sdl_len = marker_end_loop - instance->loop_begin;
+                            SDL_MixAudioFormat(stream, audio_data+instance->loop_begin, format, sdl_len, volume);
+                        }
+
+
 						//Wave chunk positioning behavior
-						if((instance->marker+len) < instance->loop_end)
-							instance->marker += len;
-						else if(instance->_flags & instance->LOOP)
-							instance->marker = instance->loop_begin;
-						else
-						{
+						if((instance->marker+len) < instance->loop_end) {
+                            instance->marker += len;
+                        } else if(loop_sound) {
+                            instance->marker = instance->loop_begin;
+                        } else {
 							instance->marker = 0;
 						 	instance->_flags &= ~(uint32_t)instance->PLAY;
 						}
@@ -766,24 +814,33 @@ namespace wiAudio
 
 	bool CreateSound(const std::string& filename, Sound* sound)
 	{
-		std::vector<uint8_t> filedata;
-		bool success = wiHelper::FileRead(filename, filedata);
-		if (!success)
-		{
-			return false;
-		}
+        SDL_RWops *filedata = SDL_RWFromFile(filename.c_str(), "rb");
 		return CreateSound(filedata, sound);
 	}
 	bool CreateSound(const std::vector<uint8_t>& data, Sound* sound)
 	{
 		return CreateSound(data.data(), data.size(), sound);
 	}
-	bool CreateSound(const uint8_t* data, size_t size, Sound* sound)
+    bool CreateSound(const uint8_t* buffer, size_t size, Sound* sound)
+    {
+        SDL_RWops *data = SDL_RWFromMem((void *) buffer, size);
+        return CreateSound(data, sound);
+    }
+    bool CreateSound(SDL_RWops* data, Sound* sound)
 	{
-		std::shared_ptr<SoundInternal> soundinternal = std::make_shared<SoundInternal>();
-		soundinternal->audio = audio;
+        std::shared_ptr<SoundInternal> soundinternal = std::make_shared<SoundInternal>();
+//        soundinternal->audio = audio;
+
+        Uint8 *audio_buffer;
+        Uint32 audio_len;
+        //TODO load OGG/VORBIS files too
+        SDL_LoadWAV_RW(data, false, &soundinternal->info, &audio_buffer, &audio_len);
+        soundinternal->audioData.resize(audio_len);
+        std::copy(audio_buffer, audio_buffer+audio_len, soundinternal->audioData.begin());
+        SDL_FreeWAV(audio_buffer);
 		sound->internal_state = soundinternal;
 
+/*
 		uint32_t ChunkSize, ChunkPosition;
 
 		//TODO audio formatting
@@ -869,8 +926,8 @@ namespace wiAudio
 
 			free(output);
 
-			wiBackLog::post("OGG Success");
-		}
+			//wiBackLog::post("OGG Success");
+		}*/
 		return true;
 	}
 	bool CreateSoundInstance(const Sound* sound, SoundInstance* instance)
@@ -884,9 +941,14 @@ namespace wiAudio
 
 		instanceinternal->marker = instance->loop_begin;
 		instanceinternal->loop_begin = instance->loop_begin;
-		instanceinternal->loop_end = instance->loop_begin+instance->loop_length;
+		if (instance->loop_length > 0) {
+            instanceinternal->loop_end = instance->loop_begin + instance->loop_length;
+        } else {
+		   // If length is zero, use full buffer
+           instanceinternal->loop_end = soundinternal->audioData.size();
+        }
 		instanceinternal->volume = 1.0;
-		if(instance->loop_begin == instance->loop_length) instanceinternal->_flags |= instanceinternal->LOOP;
+		instanceinternal->_flags |= instanceinternal->LOOP;
 
 		audio->instances.push_back(instanceinternal);
 
