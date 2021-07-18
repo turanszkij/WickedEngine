@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (c) 2019-2021 Advanced Micro Devices, Inc. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,9 +24,9 @@
 
 /** \mainpage D3D12 Memory Allocator
 
-<b>Version 2.0.0-development</b> (2020-11-03)
+<b>Version 2.0.0-development</b> (2021-06-18)
 
-Copyright (c) 2019-2020 Advanced Micro Devices, Inc. All rights reserved. \n
+Copyright (c) 2019-2021 Advanced Micro Devices, Inc. All rights reserved. \n
 License: MIT
 
 Documentation of all members: D3D12MemAlloc.h
@@ -38,8 +38,8 @@ Documentation of all members: D3D12MemAlloc.h
         - [Project setup](@ref quick_start_project_setup)
         - [Creating resources](@ref quick_start_creating_resources)
         - [Mapping memory](@ref quick_start_mapping_memory)
+    - \subpage custom_pools
     - \subpage resource_aliasing
-    - \subpage reserving_memory
     - \subpage virtual_allocator
 - \subpage configuration
   - [Custom CPU memory allocator](@ref custom_memory_allocator)
@@ -238,6 +238,87 @@ resource->Unmap(0, NULL);
 \endcode
 
 
+\page custom_pools Custom memory pools
+
+A "pool" is a collection of memory blocks that share certain properties.
+Allocator creates 3 default pools: for `D3D12_HEAP_TYPE_DEFAULT`, `UPLOAD`, `READBACK`.
+A default pool automatically grows in size. Size of allocated blocks is also variable and managed automatically.
+Typical allocations are created in these pools. You can also create custom pools.
+
+\section custom_pools_usage Usage
+
+To create a custom pool, fill in structure D3D12MA::POOL_DESC and call function D3D12MA::Allocator::CreatePool
+to obtain object D3D12MA::Pool. Example:
+
+\code
+POOL_DESC poolDesc = {};
+poolDesc.HeapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
+
+Pool* pool;
+HRESULT hr = allocator->CreatePool(&poolDesc, &pool);
+\endcode
+
+To allocate resources out of a custom pool, only set member D3D12MA::ALLOCATION_DESC::CustomPool.
+Example:
+
+\code
+ALLOCATION_DESC allocDesc = {};
+allocDesc.CustomPool = pool;
+
+D3D12_RESOURCE_DESC resDesc = ...
+Allocation* alloc;
+hr = allocator->CreateResource(&allocDesc, &resDesc,
+    D3D12_RESOURCE_STATE_GENERIC_READ, NULL, &alloc, IID_NULL, NULL);
+\endcode
+
+All allocations must be released before releasing the pool.
+The pool must be released before relasing the allocator.
+
+\code
+alloc->Release();
+pool->Release();
+\endcode
+
+\section custom_pools_features_and_benefits Features and benefits
+
+While it is recommended to use default pools whenever possible for simplicity and to give the allocator
+more opportunities for internal optimizations, custom pools may be useful in following cases:
+
+- To keep some resources separate from others in memory.
+- To keep track of memory usage of just a specific group of resources. Statistics can be queried using
+  D3D12MA::Pool::CalculateStats.
+- To use specific size of a memory block (`ID3D12Heap`). To set it, use member D3D12MA::POOL_DESC::BlockSize.
+  When set to 0, the library uses automatically determined, variable block sizes.
+- To reserve some minimum amount of memory allocated. To use it, set member D3D12MA::POOL_DESC::MinBlockCount.
+- To limit maximum amount of memory allocated. To use it, set member D3D12MA::POOL_DESC::MaxBlockCount.
+- To use extended parameters of the D3D12 memory allocation. While resources created from default pools
+  can only specify `D3D12_HEAP_TYPE_DEFAULT`, `UPLOAD`, `READBACK`, a custom pool may use non-standard
+  `D3D12_HEAP_PROPERTIES` (member D3D12MA::POOL_DESC::HeapProperties) and `D3D12_HEAP_FLAGS`
+  (D3D12MA::POOL_DESC::HeapFlags), which is useful e.g. for cross-adapter sharing or UMA
+  (see also D3D12MA::Allocator::IsUMA).
+
+New versions of this library support creating **committed allocations in custom pools**.
+It is supported only when D3D12MA::POOL_DESC::BlockSize = 0.
+To use this feature, set D3D12MA::ALLOCATION_DESC::CustomPool to the pointer to your custom pool and
+D3D12MA::ALLOCATION_DESC::Flags to D3D12MA::ALLOCATION_FLAG_COMMITTED. Example:
+
+\code
+ALLOCATION_DESC allocDesc = {};
+allocDesc.CustomPool = pool;
+allocDesc.Flags = ALLOCATION_FLAG_COMMITTED;
+
+D3D12_RESOURCE_DESC resDesc = ...
+Allocation* alloc;
+ID3D12Resource* res;
+hr = allocator->CreateResource(&allocDesc, &resDesc,
+    D3D12_RESOURCE_STATE_GENERIC_READ, NULL, &alloc, IID_PPV_ARGS(&res));
+\endcode
+
+This feature may seem unnecessary, but creating committed allocations from custom pools may be useful
+in some cases, e.g. to have separate memory usage statistics for some group of resources or to use
+extended allocation parameters, like custom `D3D12_HEAP_PROPERTIES`, which are available only in custom pools.
+
+
 \page resource_aliasing Resource aliasing (overlap)
 
 New explicit graphics APIs (Vulkan and Direct3D 12), thanks to manual memory
@@ -350,43 +431,6 @@ Additional considerations:
 - Resources of the three categories: buffers, textures with `RENDER_TARGET` or `DEPTH_STENCIL` flags, and all other textures,
   can be placed in the same memory only when `allocator->GetD3D12Options().ResourceHeapTier >= D3D12_RESOURCE_HEAP_TIER_2`.
   Otherwise they must be placed in different memory heap types, and thus aliasing them is not possible.
-
-
-\page reserving_memory Reserving minimum amount of memory
-
-The library automatically allocates and frees memory heaps.
-It also applies some hysteresis so that it doesn't allocate and free entire heap
-when you repeatedly create and release a single resource.
-However, if you want to make sure certain number of bytes is always allocated as heaps in a specific pool,
-you can use functions designed for this purpose:
-
-- For default heaps use D3D12MA::Allocator::SetDefaultHeapMinBytes.
-- For custom heaps use D3D12MA::Pool::SetMinBytes.
-
-Default is 0. You can change this parameter any time.
-Setting it to higher value may cause new heaps to be allocated.
-If this allocation fails, the function returns appropriate error code, but the parameter remains set to the new value.
-Setting it to lower value may cause some empty heaps to be released.
-
-You can always call D3D12MA::Allocator::SetDefaultHeapMinBytes for 3 sets of heap flags separately:
-`D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS`, `D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES`, `D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES`.
-When ResourceHeapTier = 2, so that all types of resourced are kept together,
-these 3 values as simply summed up to calculate minimum amount of bytes for default pool with certain heap type.
-Alternatively, when ResourceHeapTier = 2, you can call this function with
-`D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES` = 0. This will set a single value for the default pool and
-will override the sum of those three.
-
-Reservation of minimum number of bytes interacts correctly with
-D3D12MA::POOL_DESC::MinBlockCount and D3D12MA::POOL_DESC::MaxBlockCount.
-For example, free blocks (heaps) of a custom pool will be released only when
-their number doesn't fall below `MinBlockCount` and their sum size doesn't fall below `MinBytes`.
-
-Some restrictions apply:
-
-- Setting `MinBytes` doesn't interact with memory budget. The allocator tries
-  to create additional heaps when necessary without checking if they will exceed the budget.
-- Resources created as committed don't count into the number of bytes compared with `MinBytes` set.
-  Only placed resources are considered.
 
 
 \page virtual_allocator Virtual allocator
@@ -620,8 +664,6 @@ Features deliberately excluded from the scope of this library:
 
 - Descriptor allocation. Although also called "heaps", objects that represent
   descriptors are separate part of the D3D12 API from buffers and textures.
-- Support for `D3D12_HEAP_TYPE_CUSTOM`. Only the default heap types are supported:
-  `UPLOAD`, `DEFAULT`, `READBACK`.
 - Support for reserved (tiled) resources. We don't recommend using them.
 - Support for `ID3D12Device::Evict` and `MakeResident`. We don't recommend using them.
 - Handling CPU memory allocation failures. When dynamically creating small C++
@@ -637,6 +679,13 @@ Features deliberately excluded from the scope of this library:
   are not going to be included into this repository.
 */
 
+// If using this library on a platform different than Windows PC or want to use different version of DXGI,
+// you should include D3D12-compatible headers before this library on your own and define this macro.
+#ifndef D3D12MA_D3D12_HEADERS_ALREADY_INCLUDED
+    #include <d3d12.h>
+    #include <dxgi1_4.h>
+#endif
+
 // Define this macro to 0 to disable usage of DXGI 1.4 (needed for IDXGIAdapter3 and query for memory budget).
 #ifndef D3D12MA_DXGI_1_4
     #ifdef __IDXGIAdapter3_INTERFACE_DEFINED__
@@ -644,13 +693,6 @@ Features deliberately excluded from the scope of this library:
     #else
         #define D3D12MA_DXGI_1_4 0
     #endif
-#endif
-
-// If using this library on a platform different than Windows PC, you should
-// include D3D12-compatible header before this library on your own and define this macro.
-#ifndef D3D12MA_D3D12_HEADERS_ALREADY_INCLUDED
-    #include <d3d12.h>
-    #include <dxgi.h>
 #endif
 
 /*
@@ -696,6 +738,7 @@ class AllocatorPimpl;
 class PoolPimpl;
 class NormalBlock;
 class BlockVector;
+class CommittedAllocationList;
 class JsonWriter;
 class VirtualBlockPimpl;
 /// \endcond
@@ -802,7 +845,7 @@ The object remembers size and some other information.
 To retrieve this information, use methods of this class.
 
 The object also remembers `ID3D12Resource` and "owns" a reference to it,
-so it calls `Release()` on the resource when destroyed.
+so it calls `%Release()` on the resource when destroyed.
 */
 class Allocation
 {
@@ -885,7 +928,9 @@ public:
 private:
     friend class AllocatorPimpl;
     friend class BlockVector;
+    friend class CommittedAllocationList;
     friend class JsonWriter;
+    friend struct CommittedAllocationListItemTraits;
     template<typename T> friend void D3D12MA_DELETE(const ALLOCATION_CALLBACKS&, T*);
     template<typename T> friend class PoolAllocator;
 
@@ -907,7 +952,9 @@ private:
     {
         struct
         {
-            D3D12_HEAP_TYPE heapType;
+            CommittedAllocationList* list;
+            Allocation* prev;
+            Allocation* next;
         } m_Committed;
 
         struct
@@ -918,7 +965,10 @@ private:
 
         struct
         {
-            D3D12_HEAP_TYPE heapType;
+            // Beginning must be compatible with m_Committed.
+            CommittedAllocationList* list;
+            Allocation* prev;
+            Allocation* next;
             ID3D12Heap* heap;
         } m_Heap;
     };
@@ -951,9 +1001,9 @@ private:
 
     Allocation(AllocatorPimpl* allocator, UINT64 size, BOOL wasZeroInitialized);
     ~Allocation();
-    void InitCommitted(D3D12_HEAP_TYPE heapType);
+    void InitCommitted(CommittedAllocationList* list);
     void InitPlaced(UINT64 offset, UINT64 alignment, NormalBlock* block);
-    void InitHeap(D3D12_HEAP_TYPE heapType, ID3D12Heap* heap);
+    void InitHeap(CommittedAllocationList* list, ID3D12Heap* heap);
     template<typename D3D12_RESOURCE_DESC_T>
     void SetResource(ID3D12Resource* resource, const D3D12_RESOURCE_DESC_T* pResourceDesc);
     void FreeName();
@@ -964,11 +1014,12 @@ private:
 /// \brief Parameters of created D3D12MA::Pool object. To be used with D3D12MA::Allocator::CreatePool.
 struct POOL_DESC
 {
-    /** \brief The type of memory heap where allocations of this pool should be placed.
+    /** \brief The parameters of memory heap where allocations of this pool should be placed.
 
-    It must be one of: `D3D12_HEAP_TYPE_DEFAULT`, `D3D12_HEAP_TYPE_UPLOAD`, `D3D12_HEAP_TYPE_READBACK`.
+    In the simplest case, just fill it with zeros and set `Type` to one of: `D3D12_HEAP_TYPE_DEFAULT`,
+    `D3D12_HEAP_TYPE_UPLOAD`, `D3D12_HEAP_TYPE_READBACK`. Additional parameters can be used e.g. to utilize UMA.
     */
-    D3D12_HEAP_TYPE HeapType;
+    D3D12_HEAP_PROPERTIES HeapProperties;
     /** \brief Heap flags to be used when allocating heaps of this pool.
 
     It should contain one of these values, depending on type of resources you are going to create in this heap:
@@ -1000,6 +1051,11 @@ struct POOL_DESC
     throughout whole lifetime of this pool.
     */
     UINT MaxBlockCount;
+    /** \brief Additional minimum alignment to be used for all allocations created from this pool. Can be 0.
+    
+    Leave 0 (default) not to impose any additional alignment. If not 0, it must be a power of two.
+    */
+    UINT64 MinAllocationAlignment;
 };
 
 /** \brief Custom memory pool
@@ -1025,12 +1081,6 @@ public:
     These are the same parameters as passed to D3D12MA::Allocator::CreatePool.
     */
     POOL_DESC GetDesc() const;
-
-    /** \brief Sets the minimum number of bytes that should always be allocated (reserved) in this pool.
-
-    See also: \subpage reserving_memory.
-    */
-    HRESULT SetMinBytes(UINT64 minBytes);
 
     /** \brief Retrieves statistics from the current state of this pool.
     */
@@ -1102,7 +1152,7 @@ struct ALLOCATOR_DESC
     
     /** \brief Preferred size of a single `ID3D12Heap` block to be allocated.
     
-    Set to 0 to use default, which is currently 256 MiB.
+    Set to 0 to use default, which is currently 64 MiB.
     */
     UINT64 PreferredBlockSize;
     
@@ -1122,7 +1172,7 @@ struct ALLOCATOR_DESC
 /**
 \brief Number of D3D12 memory heap types supported.
 */
-const UINT HEAP_TYPE_COUNT = 3;
+const UINT HEAP_TYPE_COUNT = 4;
 
 /**
 \brief Calculated statistics of memory usage in entire allocator.
@@ -1156,7 +1206,7 @@ struct Stats
     StatInfo Total;
     /**
     One StatInfo for each type of heap located at the following indices:
-    0 - DEFAULT, 1 - UPLOAD, 2 - READBACK.
+    0 - DEFAULT, 1 - UPLOAD, 2 - READBACK, 3 - CUSTOM.
     */
     StatInfo HeapType[HEAP_TYPE_COUNT];
 };
@@ -1220,6 +1270,22 @@ public:
     
     /// Returns cached options retrieved from D3D12 device.
     const D3D12_FEATURE_DATA_D3D12_OPTIONS& GetD3D12Options() const;
+    /** \brief Returns true if `D3D12_FEATURE_DATA_ARCHITECTURE1::UMA` was found to be true.
+    
+    For more information about how to use it, see articles in Microsoft Docs:
+    - https://docs.microsoft.com/en-us/windows/win32/direct3d12/default-texture-mapping
+    - https://docs.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_feature_data_architecture
+    - https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device-getcustomheapproperties
+    */
+    BOOL IsUMA() const;
+    /** \brief Returns true if `D3D12_FEATURE_DATA_ARCHITECTURE1::CacheCoherentUMA` was found to be true.
+
+    For more information about how to use it, see articles in Microsoft Docs:
+    - https://docs.microsoft.com/en-us/windows/win32/direct3d12/default-texture-mapping
+    - https://docs.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_feature_data_architecture
+    - https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device-getcustomheapproperties
+    */
+    BOOL IsCacheCoherentUMA() const;
 
     /** \brief Allocates memory and creates a D3D12 resource (buffer or texture). This is the main allocation function.
 
@@ -1370,20 +1436,6 @@ public:
     HRESULT CreatePool(
         const POOL_DESC* pPoolDesc,
         Pool** ppPool);
-
-    /** \brief Sets the minimum number of bytes that should always be allocated (reserved) in a specific default pool.
-
-    \param heapType Must be one of: `D3D12_HEAP_TYPE_DEFAULT`, `D3D12_HEAP_TYPE_UPLOAD`, `D3D12_HEAP_TYPE_READBACK`.
-    \param heapFlags Must be one of: `D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS`, `D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES`,
-        `D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES`. If ResourceHeapTier = 2, it can also be `D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES`.
-    \param minBytes Minimum number of bytes to keep allocated.
-
-    See also: \subpage reserving_memory.
-    */
-    HRESULT SetDefaultHeapMinBytes(
-        D3D12_HEAP_TYPE heapType,
-        D3D12_HEAP_FLAGS heapFlags,
-        UINT64 minBytes);
 
     /** \brief Sets the index of the current frame.
 

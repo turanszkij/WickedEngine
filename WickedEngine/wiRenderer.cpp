@@ -6290,7 +6290,7 @@ void DrawDebugWorld(
 
 		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_VOXEL], cmd);
 
-		device->BindResource(VS, &textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELRADIANCE, cmd);
+		device->BindResource(VS, GetVoxelRadianceSecondaryBounceEnabled() ? &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] : &textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELRADIANCE, cmd);
 
 
 		MiscCB sb;

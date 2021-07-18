@@ -9,7 +9,7 @@ void main( uint3 DTid : SV_DispatchThreadID )
 {
 	VoxelType voxel = input_output[DTid.x];
 
-	const float4 color = DecodeColor(voxel.colorMask);
+	const float4 color = UnpackVoxelColor(voxel.colorMask);
 
 	const uint3 writecoord = unflatten3D(DTid.x, g_xFrame_VoxelRadianceDataRes);
 

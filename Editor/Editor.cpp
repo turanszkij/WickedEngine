@@ -1040,6 +1040,7 @@ void EditorComponent::Update(float dt)
 
 	selectionOutlineTimer += dt;
 
+	bool clear_selected = false;
 	if (wiInput::Press(wiInput::KEYBOARD_BUTTON_ESCAPE))
 	{
 		if (cinemaModeCheckBox.GetCheck())
@@ -1056,13 +1057,13 @@ void EditorComponent::Update(float dt)
 		}
 		else
 		{
-			ClearSelected();
+			clear_selected = true;
 		}
 	}
 
 	// Camera control:
 	XMFLOAT4 currentMouse = wiInput::GetPointer();
-	if (!wiBackLog::isActive())
+	if (!wiBackLog::isActive() && !GetGUI().HasFocus())
 	{
 		static XMFLOAT4 originalMouse = XMFLOAT4(0, 0, 0, 0);
 		static bool camControlStart = true;
@@ -1195,10 +1196,7 @@ void EditorComponent::Update(float dt)
 			cameraWnd.camera_target.UpdateTransform();
 			cameraWnd.camera_transform.UpdateTransform_Parented(cameraWnd.camera_target);
 		}
-}
 
-	if (!wiBackLog::isActive() && !GetGUI().HasFocus())
-	{
 		// Begin picking:
 		unsigned int pickMask = rendererWnd.GetPickType();
 		RAY pickRay = wiRenderer::GetPickRay((long)currentMouse.x, (long)currentMouse.y, *this);
@@ -1414,7 +1412,7 @@ void EditorComponent::Update(float dt)
 
 		// Select...
 		static bool selectAll = false;
-		if (wiInput::Press(wiInput::MOUSE_BUTTON_RIGHT) || selectAll)
+		if (wiInput::Press(wiInput::MOUSE_BUTTON_RIGHT) || selectAll || clear_selected)
 		{
 
 			wiArchive& archive = AdvanceHistory();
@@ -1434,6 +1432,7 @@ void EditorComponent::Update(float dt)
 			{
 				// Add everything to selection:
 				selectAll = false;
+				ClearSelected();
 
 				for (size_t i = 0; i < scene.transforms.GetCount(); ++i)
 				{
@@ -1441,7 +1440,7 @@ void EditorComponent::Update(float dt)
 
 					if (scene.hierarchy.Contains(entity))
 					{
-						// Parented animated objects don't work properly when attached to translator in bulk
+						// Parented objects won't be attached, but only the parents instead. Otherwise it would cause "double translation"
 						continue;
 					}
 
@@ -1474,9 +1473,14 @@ void EditorComponent::Update(float dt)
 			}
 			else
 			{
-				// Clear selection:
-				translator.selected.clear();
+				clear_selected = true;
 			}
+
+			if (clear_selected)
+			{
+				ClearSelected();
+			}
+
 
 			// record NEW selection state...
 			archive << translator.selected.size();
@@ -1527,6 +1531,8 @@ void EditorComponent::Update(float dt)
 					picked.entity = scene.Entity_Serialize(clipboard);
 					AddSelected(picked);
 				}
+
+				RefreshSceneGraphView();
 			}
 			// Duplicate Instances
 			if (wiInput::Press((wiInput::BUTTON)'D'))
@@ -1545,10 +1551,6 @@ void EditorComponent::Update(float dt)
 			// Put Instances
 			if (clipboard.IsOpen() && hovered.subsetIndex >= 0 && wiInput::Down(wiInput::KEYBOARD_BUTTON_LSHIFT) && wiInput::Press(wiInput::MOUSE_BUTTON_LEFT))
 			{
-				TransformComponent parent_transform;
-				parent_transform.MatrixTransform(hovered.orientation);
-				parent_transform.UpdateTransform();
-
 				clipboard.SetReadModeAndResetPos(true);
 				size_t count;
 				clipboard >> count;
@@ -1558,7 +1560,9 @@ void EditorComponent::Update(float dt)
 					TransformComponent* transform = scene.transforms.GetComponent(entity);
 					if (transform != nullptr)
 					{
-						transform->UpdateTransform_Parented(parent_transform);
+						transform->translation_local = {};
+						//transform->MatrixTransform(hovered.orientation);
+						transform->Translate(hovered.position);
 					}
 				}
 
@@ -1568,11 +1572,15 @@ void EditorComponent::Update(float dt)
 			if (wiInput::Press((wiInput::BUTTON)'Z'))
 			{
 				ConsumeHistoryOperation(true);
+
+				RefreshSceneGraphView();
 			}
 			// Redo
 			if (wiInput::Press((wiInput::BUTTON)'Y'))
 			{
 				ConsumeHistoryOperation(false);
+
+				RefreshSceneGraphView();
 			}
 		}
 

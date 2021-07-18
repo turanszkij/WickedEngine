@@ -290,59 +290,42 @@ namespace Vulkan_Internal
 		{
 		case BLEND_ZERO:
 			return VK_BLEND_FACTOR_ZERO;
-			break;
 		case BLEND_ONE:
 			return VK_BLEND_FACTOR_ONE;
-			break;
 		case BLEND_SRC_COLOR:
 			return VK_BLEND_FACTOR_SRC_COLOR;
-			break;
 		case BLEND_INV_SRC_COLOR:
 			return VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
-			break;
 		case BLEND_SRC_ALPHA:
 			return VK_BLEND_FACTOR_SRC_ALPHA;
-			break;
 		case BLEND_INV_SRC_ALPHA:
 			return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-			break;
 		case BLEND_DEST_ALPHA:
 			return VK_BLEND_FACTOR_DST_ALPHA;
-			break;
 		case BLEND_INV_DEST_ALPHA:
 			return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
-			break;
 		case BLEND_DEST_COLOR:
 			return VK_BLEND_FACTOR_DST_COLOR;
-			break;
 		case BLEND_INV_DEST_COLOR:
 			return VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
-			break;
 		case BLEND_SRC_ALPHA_SAT:
 			return VK_BLEND_FACTOR_SRC_ALPHA_SATURATE;
-			break;
 		case BLEND_BLEND_FACTOR:
 			return VK_BLEND_FACTOR_CONSTANT_COLOR;
-			break;
 		case BLEND_INV_BLEND_FACTOR:
 			return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR;
 			break;
 		case BLEND_SRC1_COLOR:
 			return VK_BLEND_FACTOR_SRC1_COLOR;
-			break;
 		case BLEND_INV_SRC1_COLOR:
 			return VK_BLEND_FACTOR_ONE_MINUS_SRC1_COLOR;
-			break;
 		case BLEND_SRC1_ALPHA:
 			return VK_BLEND_FACTOR_SRC1_ALPHA;
-			break;
 		case BLEND_INV_SRC1_ALPHA:
 			return VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA;
-			break;
 		default:
-			break;
+			return VK_BLEND_FACTOR_ZERO;
 		}
-		return VK_BLEND_FACTOR_ZERO;
 	}
 	constexpr VkBlendOp _ConvertBlendOp(BLEND_OP value)
 	{
@@ -350,23 +333,17 @@ namespace Vulkan_Internal
 		{
 		case BLEND_OP_ADD:
 			return VK_BLEND_OP_ADD;
-			break;
 		case BLEND_OP_SUBTRACT:
 			return VK_BLEND_OP_SUBTRACT;
-			break;
 		case BLEND_OP_REV_SUBTRACT:
 			return VK_BLEND_OP_REVERSE_SUBTRACT;
-			break;
 		case BLEND_OP_MIN:
 			return VK_BLEND_OP_MIN;
-			break;
 		case BLEND_OP_MAX:
 			return VK_BLEND_OP_MAX;
-			break;
 		default:
-			break;
+			return VK_BLEND_OP_ADD;
 		}
-		return VK_BLEND_OP_ADD;
 	}
 	constexpr VkSamplerAddressMode _ConvertTextureAddressMode(TEXTURE_ADDRESS_MODE value)
 	{
@@ -567,36 +544,63 @@ namespace Vulkan_Internal
 		return false;
 	}
 
-	// Validation layer helpers:
-	const std::vector<const char*> validationLayers = {
-		"VK_LAYER_KHRONOS_validation"
-	};
-	bool checkValidationLayerSupport()
+	bool ValidateLayers(const std::vector<const char*>& required,
+		const std::vector<VkLayerProperties>& available)
 	{
-		uint32_t layerCount;
-		VkResult res = vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
-		assert(res == VK_SUCCESS);
-
-		std::vector<VkLayerProperties> availableLayers(layerCount);
-		res = vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
-		assert(res == VK_SUCCESS);
-
-		for (const char* layerName : validationLayers) {
-			bool layerFound = false;
-
-			for (const auto& layerProperties : availableLayers) {
-				if (strcmp(layerName, layerProperties.layerName) == 0) {
-					layerFound = true;
+		for (auto layer : required)
+		{
+			bool found = false;
+			for (auto& available_layer : available)
+			{
+				if (strcmp(available_layer.layerName, layer) == 0)
+				{
+					found = true;
 					break;
 				}
 			}
 
-			if (!layerFound) {
+			if (!found)
+			{
 				return false;
 			}
 		}
 
 		return true;
+	}
+
+	std::vector<const char*> GetOptimalValidationLayers(const std::vector<VkLayerProperties>& supported_instance_layers)
+	{
+		std::vector<std::vector<const char*>> validationLayerPriorityList =
+		{
+			// The preferred validation layer is "VK_LAYER_KHRONOS_validation"
+			{"VK_LAYER_KHRONOS_validation"},
+
+			// Otherwise we fallback to using the LunarG meta layer
+			{"VK_LAYER_LUNARG_standard_validation"},
+
+			// Otherwise we attempt to enable the individual layers that compose the LunarG meta layer since it doesn't exist
+			{
+				"VK_LAYER_GOOGLE_threading",
+				"VK_LAYER_LUNARG_parameter_validation",
+				"VK_LAYER_LUNARG_object_tracker",
+				"VK_LAYER_LUNARG_core_validation",
+				"VK_LAYER_GOOGLE_unique_objects",
+			},
+
+			// Otherwise as a last resort we fallback to attempting to enable the LunarG core layer
+			{"VK_LAYER_LUNARG_core_validation"}
+		};
+
+		for (auto& validationLayers : validationLayerPriorityList)
+		{
+			if (ValidateLayers(validationLayers, supported_instance_layers))
+			{
+				return validationLayers;
+			}
+		}
+
+		// Else return nothing
+		return {};
 	}
 
 	VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsMessengerCallback(
@@ -1039,7 +1043,7 @@ using namespace Vulkan_Internal;
 			VkCommandPoolCreateInfo poolInfo = {};
 			poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 			poolInfo.queueFamilyIndex = device->copyFamily;
-			poolInfo.flags = 0;
+			poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
 
 			VkResult res = vkCreateCommandPool(device->device, &poolInfo, nullptr, &cmd.commandPool);
 			assert(res == VK_SUCCESS);
@@ -1824,7 +1828,11 @@ using namespace Vulkan_Internal;
 						continue;
 					}
 
-					const auto& desc = pso->desc.bs->RenderTarget[numBlendAttachments];
+					size_t attachmentIndex = 0;
+					if (pso->desc.bs->IndependentBlendEnable)
+						attachmentIndex = i;
+
+					const auto& desc = pso->desc.bs->RenderTarget[attachmentIndex];
 					VkPipelineColorBlendAttachmentState& attachment = colorBlendAttachments[numBlendAttachments];
 					numBlendAttachments++;
 
@@ -2078,7 +2086,14 @@ using namespace Vulkan_Internal;
 		appInfo.engineVersion = VK_MAKE_VERSION(wiVersion::GetMajor(), wiVersion::GetMinor(), wiVersion::GetRevision());
 		appInfo.apiVersion = VK_API_VERSION_1_2;
 
-		// Enumerate available extensions:
+		// Enumerate available layers and extensions:
+		uint32_t instanceLayerCount;
+		res = vkEnumerateInstanceLayerProperties(&instanceLayerCount, nullptr);
+		assert(res == VK_SUCCESS);
+		std::vector<VkLayerProperties> availableInstanceLayers(instanceLayerCount);
+		res = vkEnumerateInstanceLayerProperties(&instanceLayerCount, availableInstanceLayers.data());
+		assert(res == VK_SUCCESS);
+
 		uint32_t extensionCount = 0;
 		res = vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
 		assert(res == VK_SUCCESS);
@@ -2086,34 +2101,44 @@ using namespace Vulkan_Internal;
 		res = vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, availableInstanceExtensions.data());
 		assert(res == VK_SUCCESS);
 
-		std::vector<const char*> extensionNames;
+		std::vector<const char*> instanceLayers;
+		std::vector<const char*> instanceExtensions;
 
-		if (checkExtensionSupport(VK_EXT_DEBUG_UTILS_EXTENSION_NAME, availableInstanceExtensions))
+		// Check if VK_EXT_debug_utils is supported, which supersedes VK_EXT_Debug_Report
+		for (auto& availableExtension : availableInstanceExtensions)
 		{
-			// This is needed for not only debug layer, but also debug markers, object naming, etc:
-			extensionNames.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+			if (strcmp(availableExtension.extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME) == 0)
+			{
+				debugUtils = true;
+				instanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+			}
+			else if (strcmp(availableExtension.extensionName, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME) == 0)
+			{
+				instanceExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+			}
 		}
 		
-		extensionNames.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+		instanceExtensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 
-#ifdef _WIN32
-		extensionNames.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+#if defined(VK_USE_PLATFORM_WIN32_KHR)
+		instanceExtensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #elif SDL2
 		{
 			uint32_t extensionCount;
 			SDL_Vulkan_GetInstanceExtensions(window, &extensionCount, nullptr);
 			std::vector<const char *> extensionNames_sdl(extensionCount);
 			SDL_Vulkan_GetInstanceExtensions(window, &extensionCount, extensionNames_sdl.data());
-			extensionNames.reserve(extensionNames.size() + extensionNames_sdl.size());
-			extensionNames.insert(extensionNames.begin(),
+			instanceExtensions.reserve(instanceExtensions.size() + extensionNames_sdl.size());
+			instanceExtensions.insert(instanceExtensions.begin(),
 					extensionNames_sdl.cbegin(), extensionNames_sdl.cend());
 		}
 #endif // _WIN32
 		
-		if (debuglayer && !checkValidationLayerSupport())
+		if (debuglayer)
 		{
-			wiHelper::messageBox("Vulkan validation layer requested but not available!");
-			debuglayer = false;
+			// Determine the optimal validation layers to enable that are necessary for useful debugging
+			std::vector<const char*> optimalValidationLyers = GetOptimalValidationLayers(availableInstanceLayers);
+			instanceLayers.insert(instanceLayers.end(), optimalValidationLyers.begin(), optimalValidationLyers.end());
 		}
 
 		// Create instance:
@@ -2121,29 +2146,31 @@ using namespace Vulkan_Internal;
 			VkInstanceCreateInfo createInfo = {};
 			createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 			createInfo.pApplicationInfo = &appInfo;
-			createInfo.enabledExtensionCount = static_cast<uint32_t>(extensionNames.size());
-			createInfo.ppEnabledExtensionNames = extensionNames.data();
-			createInfo.enabledLayerCount = 0;
-			if (debuglayer)
+			createInfo.enabledLayerCount = static_cast<uint32_t>(instanceLayers.size());
+			createInfo.ppEnabledLayerNames = instanceLayers.data();
+			createInfo.enabledExtensionCount = static_cast<uint32_t>(instanceExtensions.size());
+			createInfo.ppEnabledExtensionNames = instanceExtensions.data();
+
+			VkDebugUtilsMessengerCreateInfoEXT debugUtilsCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
+
+			if (debuglayer && debugUtils)
 			{
-				createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-				createInfo.ppEnabledLayerNames = validationLayers.data();
+				debugUtilsCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
+				debugUtilsCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+				debugUtilsCreateInfo.pfnUserCallback = debugUtilsMessengerCallback;
+				createInfo.pNext = &debugUtilsCreateInfo;
 			}
+
 			res = vkCreateInstance(&createInfo, nullptr, &instance);
 			assert(res == VK_SUCCESS);
 
 			volkLoadInstanceOnly(instance);
-		}
 
-		// Register validation layer callback:
-		if (debuglayer)
-		{
-			VkDebugUtilsMessengerCreateInfoEXT createInfo = {VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT};
-			createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
-			createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
-			createInfo.pfnUserCallback = debugUtilsMessengerCallback;
-			res = vkCreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &debugUtilsMessenger);
-			assert(res == VK_SUCCESS);
+			if (debuglayer && debugUtils)
+			{
+				res = vkCreateDebugUtilsMessengerEXT(instance, &debugUtilsCreateInfo, nullptr, &debugUtilsMessenger);
+				assert(res == VK_SUCCESS);
+			}
 		}
 
 		// Enumerating and creating devices:
@@ -2251,9 +2278,8 @@ using namespace Vulkan_Internal;
 					}
 				}
 
-				if (!DEBUGDEVICE && checkExtensionSupport(VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME, available_deviceExtensions))
+				if (checkExtensionSupport(VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME, available_deviceExtensions))
 				{
-					// Note: VRS will crash vulkan validation layers: https://github.com/KhronosGroup/Vulkan-ValidationLayers/issues/2473
 					enabled_deviceExtensions.push_back(VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME);
 					fragment_shading_rate_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_FEATURES_KHR;
 					*features_chain = &fragment_shading_rate_features;
@@ -2500,7 +2526,7 @@ using namespace Vulkan_Internal;
 				VkCommandPoolCreateInfo poolInfo = {};
 				poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 				poolInfo.queueFamilyIndex = graphicsFamily;
-				poolInfo.flags = 0; // Optional
+				poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
 
 				res = vkCreateCommandPool(device, &poolInfo, nullptr, &frames[fr].transitionCommandPool);
 				assert(res == VK_SUCCESS);
@@ -2982,17 +3008,10 @@ using namespace Vulkan_Internal;
 			renderPassInfo.dependencyCount = 1;
 			renderPassInfo.pDependencies = &dependency;
 
-			{
-				auto renderpass_internal = to_internal(&internal_state->renderpass);
-				if (renderpass_internal != nullptr && renderpass_internal->renderpass != VK_NULL_HANDLE)
-				{
-					allocationhandler->destroyer_renderpasses.push_back(std::make_pair(renderpass_internal->renderpass, allocationhandler->framecount));
-				}
-			}
-
 			internal_state->renderpass = RenderPass();
 			wiHelper::hash_combine(internal_state->renderpass.hash, internal_state->swapChainImageFormat);
 			auto renderpass_internal = std::make_shared<RenderPass_Vulkan>();
+			renderpass_internal->allocationhandler = allocationhandler;
 			internal_state->renderpass.internal_state = renderpass_internal;
 			internal_state->renderpass.desc.attachments.push_back(RenderPassAttachment::RenderTarget());
 			res = vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderpass_internal->renderpass);
@@ -3251,6 +3270,10 @@ using namespace Vulkan_Internal;
 				if (pBuffer->desc.BindFlags & BIND_UNORDERED_ACCESS)
 				{
 					barrier.dstAccessMask |= VK_ACCESS_SHADER_WRITE_BIT;
+				}
+				if (pBuffer->desc.MiscFlags & RESOURCE_MISC_RAY_TRACING)
+				{
+					barrier.dstAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
 				}
 
 				vkCmdPipelineBarrier(
@@ -5813,7 +5836,7 @@ using namespace Vulkan_Internal;
 					assert(0); // queue type not handled
 					break;
 				}
-				poolInfo.flags = 0; // Optional
+				poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
 
 				res = vkCreateCommandPool(device, &poolInfo, nullptr, &frame.commandPools[cmd][queue]);
 				assert(res == VK_SUCCESS);
@@ -7095,40 +7118,39 @@ using namespace Vulkan_Internal;
 
 	void GraphicsDevice_Vulkan::EventBegin(const char* name, CommandList cmd)
 	{
-		if (vkCmdBeginDebugUtilsLabelEXT != nullptr)
-		{
-			VkDebugUtilsLabelEXT label = {};
-			label.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
-			label.pLabelName = name;
-			label.color[0] = 0;
-			label.color[1] = 0;
-			label.color[2] = 0;
-			label.color[3] = 1;
-			vkCmdBeginDebugUtilsLabelEXT(GetCommandList(cmd), &label);
-		}
-	}
-	void GraphicsDevice_Vulkan::EventEnd(CommandList cmd)
-	{
-		if (vkCmdEndDebugUtilsLabelEXT != nullptr)
-		{
-			vkCmdEndDebugUtilsLabelEXT(GetCommandList(cmd));
-		}
-	}
-	void GraphicsDevice_Vulkan::SetMarker(const char* name, CommandList cmd)
-	{
-		if (vkCmdInsertDebugUtilsLabelEXT != nullptr)
-		{
-			VkDebugUtilsLabelEXT label = {};
-			label.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
-			label.pLabelName = name;
-			label.color[0] = 0;
-			label.color[1] = 0;
-			label.color[2] = 0;
-			label.color[3] = 1;
-			vkCmdInsertDebugUtilsLabelEXT(GetCommandList(cmd), &label);
-		}
+		if (!debugUtils)
+			return;
+
+		VkDebugUtilsLabelEXT label = { VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
+		label.pLabelName = name;
+		label.color[0] = 0.0f;
+		label.color[1] = 0.0f;
+		label.color[2] = 0.0f;
+		label.color[3] = 1.0f;
+		vkCmdBeginDebugUtilsLabelEXT(GetCommandList(cmd), &label);
 	}
 
+	void GraphicsDevice_Vulkan::EventEnd(CommandList cmd)
+	{
+		if (!debugUtils)
+			return;
+
+		vkCmdEndDebugUtilsLabelEXT(GetCommandList(cmd));
+	}
+
+	void GraphicsDevice_Vulkan::SetMarker(const char* name, CommandList cmd)
+	{
+		if (!debugUtils)
+			return;
+
+		VkDebugUtilsLabelEXT label { VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
+		label.pLabelName = name;
+		label.color[0] = 0.0f;
+		label.color[1] = 0.0f;
+		label.color[2] = 0.0f;
+		label.color[3] = 1.0f;
+		vkCmdInsertDebugUtilsLabelEXT(GetCommandList(cmd), &label);
+	}
 }
 
 

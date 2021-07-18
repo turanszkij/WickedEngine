@@ -18,7 +18,7 @@ struct PSInput
 
 void main(PSInput input)
 {
-	float3 N = input.N;
+	float3 N = normalize(input.N);
 	float3 P = input.P;
 
 	float3 diff = (P - g_xFrame_VoxelRadianceDataCenter) * g_xFrame_VoxelRadianceDataRes_rcp * g_xFrame_VoxelRadianceDataSize_rcp;
@@ -50,8 +50,6 @@ void main(PSInput input)
 			emissiveMap.rgb = DEGAMMA(emissiveMap.rgb);
 			emissiveColor *= emissiveMap;
 		}
-
-		N = normalize(N);
 
 
 #ifdef TERRAIN
@@ -314,12 +312,12 @@ void main(PSInput input)
 			}
 		}
 
-		color.rgb *= lighting.direct.diffuse + GetAmbient(N);
+		color.rgb *= lighting.direct.diffuse;
 		
 		color.rgb += emissiveColor.rgb * emissiveColor.a;
 
-		uint color_encoded = EncodeColor(color);
-		uint normal_encoded = EncodeNormal(N);
+		uint color_encoded = PackVoxelColor(color);
+		uint normal_encoded = pack_unitvector(N);
 
 		// output:
 		uint3 writecoord = floor(uvw * g_xFrame_VoxelRadianceDataRes);

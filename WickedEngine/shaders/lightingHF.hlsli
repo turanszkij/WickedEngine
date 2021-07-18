@@ -315,35 +315,6 @@ inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting 
 }
 
 
-// VOXEL RADIANCE
-
-inline void VoxelGI(in Surface surface, inout Lighting lighting)
-{
-	[branch]if (g_xFrame_VoxelRadianceDataRes != 0)
-	{
-		// determine blending factor (we will blend out voxel GI on grid edges):
-		float3 voxelSpacePos = surface.P - g_xFrame_VoxelRadianceDataCenter;
-		voxelSpacePos *= g_xFrame_VoxelRadianceDataSize_rcp;
-		voxelSpacePos *= g_xFrame_VoxelRadianceDataRes_rcp;
-		voxelSpacePos = saturate(abs(voxelSpacePos));
-		float blend = 1 - pow(max(voxelSpacePos.x, max(voxelSpacePos.y, voxelSpacePos.z)), 4);
-
-		float4 radiance = ConeTraceRadiance(texture_voxelradiance, surface.P, surface.N);
-
-		lighting.indirect.diffuse = lerp(lighting.indirect.diffuse, radiance.rgb, radiance.a * blend);
-
-
-		[branch]
-		if (g_xFrame_Options & OPTION_BIT_VOXELGI_REFLECTIONS_ENABLED)
-		{
-			float4 reflection = ConeTraceReflection(texture_voxelradiance, surface.P, surface.N, surface.V, surface.roughness);
-
-			lighting.indirect.specular = lerp(lighting.indirect.specular, reflection.rgb * surface.F, reflection.a * blend);
-		}
-	}
-}
-
-
 // ENVIRONMENT MAPS
 
 
@@ -459,6 +430,37 @@ inline float4 EnvironmentReflection_Local(in Surface surface, in ShaderEntity pr
 	float edgeBlend = 1 - pow(saturate(max(abs(clipSpacePos.x), max(abs(clipSpacePos.y), abs(clipSpacePos.z)))), 8);
 
 	return float4(envColor, edgeBlend);
+}
+
+
+
+// VOXEL RADIANCE
+
+inline void VoxelGI(in Surface surface, inout Lighting lighting)
+{
+	[branch] if (g_xFrame_VoxelRadianceDataRes != 0)
+	{
+		// determine blending factor (we will blend out voxel GI on grid edges):
+		float3 voxelSpacePos = surface.P - g_xFrame_VoxelRadianceDataCenter;
+		voxelSpacePos *= g_xFrame_VoxelRadianceDataSize_rcp;
+		voxelSpacePos *= g_xFrame_VoxelRadianceDataRes_rcp;
+		voxelSpacePos = saturate(abs(voxelSpacePos));
+		float blend = 1 - pow(max(voxelSpacePos.x, max(voxelSpacePos.y, voxelSpacePos.z)), 4);
+
+		// diffuse:
+		{
+			float4 trace = ConeTraceDiffuse(texture_voxelradiance, surface.P, surface.N);
+			lighting.indirect.diffuse = lerp(lighting.indirect.diffuse, trace.rgb, trace.a * blend);
+		}
+
+		// specular:
+		[branch]
+		if (g_xFrame_Options & OPTION_BIT_VOXELGI_REFLECTIONS_ENABLED)
+		{
+			float4 trace = ConeTraceSpecular(texture_voxelradiance, surface.P, surface.N, surface.V, surface.roughness);
+			lighting.indirect.specular = lerp(lighting.indirect.specular, trace.rgb * surface.F, trace.a * blend);
+		}
+	}
 }
 
 #endif // WI_LIGHTING_HF

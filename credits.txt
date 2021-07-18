@@ -1,6 +1,7 @@
-Credits
+Wicked Engine Credits
 
 Creator: János Turánszki https://github.com/turanszkij
+
 
 Contributions:
 - Silas Oler https://github.com/Kliaxe
@@ -27,3 +28,13 @@ Contributions:
 	- Fixes
 - Megumumpkin https://github.com/megumumpkin
 	- Fixes
+
+	
+Support the project on Patreon: https://www.patreon.com/wickedengine
+Patreon supporters:
+- Nemerle
+- James Webb
+- Quifeng Jin
+- TheGameCreators
+- Joseph Goldin
+
