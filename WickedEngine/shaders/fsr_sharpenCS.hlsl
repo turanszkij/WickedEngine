@@ -5,14 +5,6 @@
 #define A_HLSL 1
 #include "ffx-fsr/ffx_a.h"
 
-CBUFFER(FSRCB, CBSLOT_RENDERER_POSTPROCESS)
-{
-	uint4 Const0;
-	uint4 Const1;
-	uint4 Const2;
-	uint4 Const3;
-};
-
 static const uint4 Sample = 0;
 
 TEXTURE2D(input, float4, TEXSLOT_ONDEMAND0);
@@ -27,7 +19,7 @@ void FsrRcasInputF(inout AF1 r, inout AF1 g, inout AF1 b) {}
 void CurrFilter(int2 pos)
 {
 	AF3 c;
-	FsrRcasF(c.r, c.g, c.b, pos, Const0);
+	FsrRcasF(c.r, c.g, c.b, pos, xFSR_Const0);
 	if (Sample.x == 1)
 		c *= c;
 	output[pos] = float4(c, 1);
