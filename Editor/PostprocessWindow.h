@@ -30,6 +30,7 @@ public:
 	wiCheckBox bloomCheckBox;
 	wiSlider bloomStrengthSlider;
 	wiCheckBox fxaaCheckBox;
+	wiCheckBox fsrCheckBox;
 	wiCheckBox colorGradingCheckBox;
 	wiCheckBox ditherCheckBox;
 	wiCheckBox sharpenFilterCheckBox;

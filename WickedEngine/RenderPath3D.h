@@ -58,6 +58,7 @@ private:
 	bool ditherEnabled = true;
 	bool occlusionCullingEnabled = true;
 	bool sceneUpdateEnabled = true;
+	bool fsrEnabled = true;
 
 	uint32_t msaaSampleCount = 1;
 
@@ -81,6 +82,7 @@ public:
 	wiGraphics::Texture rtSun_resolved; // sun render target, but the resolved version if MSAA is enabled
 	wiGraphics::Texture rtGUIBlurredBackground[3];	// downsampled, gaussian blurred scene for GUI
 	wiGraphics::Texture rtShadingRate; // UINT8 shading rate per tile
+	wiGraphics::Texture rtFSR[2]; // FSR upscaling result (full resolution LDR)
 
 	wiGraphics::Texture rtPostprocess_HDR; // ping-pong with main scene RT in HDR post-process chain
 	wiGraphics::Texture rtPostprocess_LDR[2]; // ping-pong with itself in LDR post-process chain
@@ -145,6 +147,10 @@ public:
 	// Post-processes are ping-ponged, this function helps to obtain the last postprocess render target that was written
 	const wiGraphics::Texture* GetLastPostprocessRT() const
 	{
+		if (rtFSR[0].IsValid() && getFSREnabled())
+		{
+			return &rtFSR[0];
+		}
 		int ldr_postprocess_count = 0;
 		ldr_postprocess_count += getSharpenFilterEnabled() ? 1 : 0;
 		ldr_postprocess_count += getFXAAEnabled() ? 1 : 0;
@@ -217,6 +223,7 @@ public:
 	constexpr bool getDitherEnabled() const { return ditherEnabled; }
 	constexpr bool getOcclusionCullingEnabled() const { return occlusionCullingEnabled; }
 	constexpr bool getSceneUpdateEnabled() const { return sceneUpdateEnabled; }
+	constexpr bool getFSREnabled() const { return fsrEnabled; }
 
 	constexpr uint32_t getMSAASampleCount() const { return msaaSampleCount; }
 
@@ -257,6 +264,7 @@ public:
 	constexpr void setDitherEnabled(bool value) { ditherEnabled = value; }
 	constexpr void setOcclusionCullingEnabled(bool value) { occlusionCullingEnabled = value; }
 	constexpr void setSceneUpdateEnabled(bool value) { sceneUpdateEnabled = value; }
+	void setFSREnabled(bool value);
 
 	virtual void setMSAASampleCount(uint32_t value) { msaaSampleCount = value; }
 

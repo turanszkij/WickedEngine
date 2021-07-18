@@ -596,6 +596,13 @@ namespace wiRenderer
 		const wiGraphics::Texture* texture_luminance = nullptr,
 		float eyeadaptionkey = 0.115f
 	);
+	void Postprocess_FSR(
+		const wiGraphics::Texture& input,
+		const wiGraphics::Texture& temp,
+		const wiGraphics::Texture& output,
+		wiGraphics::CommandList cmd,
+		float sharpness = 1.0f
+	);
 	void Postprocess_Chromatic_Aberration(
 		const wiGraphics::Texture& input,
 		const wiGraphics::Texture& output,

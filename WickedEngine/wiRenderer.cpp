@@ -1301,6 +1301,8 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_LINEARDEPTH], "lineardepthCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_SHARPEN], "sharpenCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_TONEMAP], "tonemapCS.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_FSR_UPSCALING], "fsr_upscalingCS.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_FSR_SHARPEN], "fsr_sharpenCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_CHROMATIC_ABERRATION], "chromatic_aberrationCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL_FLOAT1], "upsample_bilateral_float1CS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL_UNORM1], "upsample_bilateral_unorm1CS.cso"); });
@@ -2067,6 +2069,10 @@ void LoadBuffers()
 	bd.ByteWidth = sizeof(PostProcessCB);
 	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_POSTPROCESS]);
 	device->SetName(&constantBuffers[CBTYPE_POSTPROCESS], "PostProcessCB");
+
+	bd.ByteWidth = sizeof(FSRCB);
+	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_POSTPROCESS_FSR]);
+	device->SetName(&constantBuffers[CBTYPE_POSTPROCESS_FSR], "FSRCB");
 
 	bd.ByteWidth = sizeof(MSAOCB);
 	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_POSTPROCESS_MSAO]);
@@ -11857,6 +11863,122 @@ void Postprocess_Tonemap(
 
 	device->UnbindUAVs(0, 1, cmd);
 
+	device->EventEnd(cmd);
+}
+
+#define A_CPU
+#include "shaders/ffx-fsr/ffx_a.h"
+#include "shaders/ffx-fsr/ffx_fsr1.h"
+void Postprocess_FSR(
+	const Texture& input,
+	const Texture& temp,
+	const Texture& output,
+	CommandList cmd,
+	float sharpness
+)
+{
+	device->EventBegin("Postprocess_FSR", cmd);
+	auto range = wiProfiler::BeginRangeGPU("Postprocess_FSR", cmd);
+
+	const TextureDesc& desc = output.GetDesc();
+
+	struct FSRCB
+	{
+		AU1 const0[4];
+		AU1 const1[4];
+		AU1 const2[4];
+		AU1 const3[4];
+	} cb;
+
+	// Upscaling:
+	{
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_FSR_UPSCALING], cmd);
+
+		FsrEasuCon(
+			cb.const0,
+			cb.const1,
+			cb.const2,
+			cb.const3,
+
+			// current frame render resolution:
+			static_cast<AF1>(input.desc.Width),
+			static_cast<AF1>(input.desc.Height),
+
+			// input container resolution:
+			static_cast<AF1>(input.desc.Width),
+			static_cast<AF1>(input.desc.Height),
+
+			// upscaled-to-resolution:
+			static_cast<AF1>(temp.desc.Width),
+			static_cast<AF1>(temp.desc.Height)
+
+		);
+		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS_FSR], &cb, cmd);
+		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS_FSR], CB_GETBINDSLOT(FSRCB), cmd);
+
+		device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
+
+		const GPUResource* uavs[] = {
+			&temp,
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&temp, temp.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->Dispatch((desc.Width + 15) / 16, (desc.Height + 15) / 16, 1, cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(),
+				GPUBarrier::Image(&temp, IMAGE_LAYOUT_UNORDERED_ACCESS, temp.desc.layout),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+	}
+
+	// Sharpen:
+	{
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_FSR_SHARPEN], cmd);
+
+		FsrRcasCon(cb.const0, sharpness);
+		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS_FSR], &cb, cmd);
+		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS_FSR], CB_GETBINDSLOT(FSRCB), cmd);
+
+		device->BindResource(CS, &temp, TEXSLOT_ONDEMAND0, cmd);
+
+		const GPUResource* uavs[] = {
+			&output,
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&output, output.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->Dispatch((desc.Width + 15) / 16, (desc.Height + 15) / 16, 1, cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(),
+				GPUBarrier::Image(&output, IMAGE_LAYOUT_UNORDERED_ACCESS, output.desc.layout),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+	}
+
+	wiProfiler::EndRange(range);
 	device->EventEnd(cmd);
 }
 void Postprocess_Chromatic_Aberration(
