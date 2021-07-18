@@ -70,6 +70,14 @@ CBUFFER(ShadingRateClassificationCB, CBSLOT_RENDERER_POSTPROCESS)
 	uint SHADING_RATE_4X4;
 };
 
+CBUFFER(FSRCB, CBSLOT_RENDERER_POSTPROCESS)
+{
+	uint4 xFSR_Const0;
+	uint4 xFSR_Const1;
+	uint4 xFSR_Const2;
+	uint4 xFSR_Const3;
+};
+
 static const uint MOTIONBLUR_TILESIZE = 32;
 #define motionblur_strength xPPParams0.x
 

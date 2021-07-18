@@ -39,6 +39,8 @@ public:
 	wiSlider outlineThicknessSlider;
 	wiCheckBox chromaticaberrationCheckBox;
 	wiSlider chromaticaberrationSlider;
+	wiCheckBox fsrCheckBox;
+	wiSlider fsrSlider;
 
 
 };
