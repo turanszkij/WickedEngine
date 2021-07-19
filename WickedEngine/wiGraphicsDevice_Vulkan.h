@@ -178,8 +178,8 @@ namespace wiGraphics
 		};
 		mutable CopyAllocator copyAllocator;
 
-		mutable std::mutex transitionLocker;
-		mutable std::vector<VkImageMemoryBarrier> transitions;
+		mutable std::mutex initLocker;
+		mutable bool submit_inits = false;
 
 		struct FrameResources
 		{
@@ -187,8 +187,8 @@ namespace wiGraphics
 			VkCommandPool commandPools[COMMANDLIST_COUNT][QUEUE_COUNT] = {};
 			VkCommandBuffer commandBuffers[COMMANDLIST_COUNT][QUEUE_COUNT] = {};
 
-			VkCommandPool transitionCommandPool = VK_NULL_HANDLE;
-			VkCommandBuffer transitionCommandBuffer = VK_NULL_HANDLE;
+			VkCommandPool initCommandPool = VK_NULL_HANDLE;
+			VkCommandBuffer initCommandBuffer = VK_NULL_HANDLE;
 
 			struct DescriptorBinder
 			{

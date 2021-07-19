@@ -218,21 +218,13 @@ void RenderPath3D::ResizeBuffers()
 		uint32_t tileSize = device->GetVariableRateShadingTileSize();
 
 		TextureDesc desc;
-		desc.layout = IMAGE_LAYOUT_UNDEFINED;
-		desc.BindFlags = BIND_UNORDERED_ACCESS;
+		desc.layout = IMAGE_LAYOUT_UNORDERED_ACCESS;
+		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADING_RATE;
 		desc.Format = FORMAT_R8_UINT;
 		desc.Width = (internalResolution.x + tileSize - 1) / tileSize;
 		desc.Height = (internalResolution.y + tileSize - 1) / tileSize;
 
-		std::vector<uint8_t> data(desc.Width * desc.Height);
-		uint8_t default_shadingrate;
-		device->WriteShadingRateValue(SHADING_RATE_1X1, &default_shadingrate);
-		std::fill(data.begin(), data.end(), default_shadingrate);
-
-		SubresourceData initData;
-		initData.pSysMem = data.data();
-		initData.SysMemPitch = sizeof(uint8_t) * desc.Width;
-		device->CreateTexture(&desc, &initData, &rtShadingRate);
+		device->CreateTexture(&desc, nullptr, &rtShadingRate);
 		device->SetName(&rtShadingRate, "rtShadingRate");
 	}
 
@@ -344,7 +336,7 @@ void RenderPath3D::ResizeBuffers()
 
 		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2))
 		{
-			desc.attachments.push_back(RenderPassAttachment::ShadingRateSource(&rtShadingRate, IMAGE_LAYOUT_UNDEFINED, IMAGE_LAYOUT_UNDEFINED));
+			desc.attachments.push_back(RenderPassAttachment::ShadingRateSource(&rtShadingRate, IMAGE_LAYOUT_UNORDERED_ACCESS, IMAGE_LAYOUT_UNORDERED_ACCESS));
 		}
 
 		device->CreateRenderPass(&desc, &renderpass_main);

@@ -8214,6 +8214,14 @@ void ComputeShadingRateClassification(
 	if (GetVariableRateShadingClassificationDebug())
 	{
 		device->BindUAV(CS, &debugUAV, 1, cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&debugUAV, debugUAV.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
 		device->BindComputeShader(&shaders[CSTYPE_SHADINGRATECLASSIFICATION_DEBUG], cmd);
 	}
 	else
@@ -8259,6 +8267,16 @@ void ComputeShadingRateClassification(
 			GPUBarrier::Image(&output, IMAGE_LAYOUT_UNORDERED_ACCESS, output.desc.layout),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+	if (GetVariableRateShadingClassificationDebug())
+	{
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&debugUAV, IMAGE_LAYOUT_UNORDERED_ACCESS, debugUAV.desc.layout),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
 	}
 
 	device->UnbindUAVs(0, arraysize(uavs), cmd);

@@ -336,6 +336,7 @@ namespace wiGraphics
 		BIND_RENDER_TARGET = 1 << 5,
 		BIND_DEPTH_STENCIL = 1 << 6,
 		BIND_UNORDERED_ACCESS = 1 << 7,
+		BIND_SHADING_RATE = 1 << 8,
 	};
 	enum CPU_ACCESS
 	{
