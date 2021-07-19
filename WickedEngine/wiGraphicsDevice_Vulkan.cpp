@@ -2528,16 +2528,16 @@ using namespace Vulkan_Internal;
 				poolInfo.queueFamilyIndex = graphicsFamily;
 				poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
 
-				res = vkCreateCommandPool(device, &poolInfo, nullptr, &frames[fr].transitionCommandPool);
+				res = vkCreateCommandPool(device, &poolInfo, nullptr, &frames[fr].initCommandPool);
 				assert(res == VK_SUCCESS);
 
 				VkCommandBufferAllocateInfo commandBufferInfo = {};
 				commandBufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 				commandBufferInfo.commandBufferCount = 1;
-				commandBufferInfo.commandPool = frames[fr].transitionCommandPool;
+				commandBufferInfo.commandPool = frames[fr].initCommandPool;
 				commandBufferInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 
-				res = vkAllocateCommandBuffers(device, &commandBufferInfo, &frames[fr].transitionCommandBuffer);
+				res = vkAllocateCommandBuffers(device, &commandBufferInfo, &frames[fr].initCommandBuffer);
 				assert(res == VK_SUCCESS);
 
 				VkCommandBufferBeginInfo beginInfo = {};
@@ -2545,7 +2545,7 @@ using namespace Vulkan_Internal;
 				beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 				beginInfo.pInheritanceInfo = nullptr; // Optional
 
-				res = vkBeginCommandBuffer(frames[fr].transitionCommandBuffer, &beginInfo);
+				res = vkBeginCommandBuffer(frames[fr].initCommandBuffer, &beginInfo);
 				assert(res == VK_SUCCESS);
 			}
 		}
@@ -2608,7 +2608,7 @@ using namespace Vulkan_Internal;
 			assert(res == VK_SUCCESS);
 
 			// Transitions:
-			transitionLocker.lock();
+			initLocker.lock();
 			{
 				VkImageMemoryBarrier barrier = {};
 				barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -2624,15 +2624,40 @@ using namespace Vulkan_Internal;
 				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 				barrier.image = nullImage1D;
 				barrier.subresourceRange.layerCount = 1;
-				transitions.push_back(barrier);
+				vkCmdPipelineBarrier(
+					GetFrameResources().initCommandBuffer,
+					VK_PIPELINE_STAGE_TRANSFER_BIT,
+					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+					0,
+					0, nullptr,
+					0, nullptr,
+					1, &barrier
+				);
 				barrier.image = nullImage2D;
 				barrier.subresourceRange.layerCount = 6;
-				transitions.push_back(barrier);
+				vkCmdPipelineBarrier(
+					GetFrameResources().initCommandBuffer,
+					VK_PIPELINE_STAGE_TRANSFER_BIT,
+					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+					0,
+					0, nullptr,
+					0, nullptr,
+					1, &barrier
+				);
 				barrier.image = nullImage3D;
 				barrier.subresourceRange.layerCount = 1;
-				transitions.push_back(barrier);
+				vkCmdPipelineBarrier(
+					GetFrameResources().initCommandBuffer,
+					VK_PIPELINE_STAGE_TRANSFER_BIT,
+					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+					0,
+					0, nullptr,
+					0, nullptr,
+					1, &barrier
+				);
 			}
-			transitionLocker.unlock();
+			submit_inits = true;
+			initLocker.unlock();
 
 			VkImageViewCreateInfo viewInfo = {};
 			viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -2761,7 +2786,7 @@ using namespace Vulkan_Internal;
 					vkDestroyCommandPool(device, frame.commandPools[cmd][queue], nullptr);
 				}
 			}
-			vkDestroyCommandPool(device, frame.transitionCommandPool, nullptr);
+			vkDestroyCommandPool(device, frame.initCommandPool, nullptr);
 
 			for (auto& descriptormanager : frame.descriptors)
 			{
@@ -3289,6 +3314,20 @@ using namespace Vulkan_Internal;
 				copyAllocator.submit(cmd);
 			}
 		}
+		else if(pDesc->Usage != USAGE_STAGING)
+		{
+			// zero-initialize:
+			initLocker.lock();
+			vkCmdFillBuffer(
+				GetFrameResources().initCommandBuffer,
+				internal_state->resource,
+				0,
+				VK_WHOLE_SIZE,
+				0
+			);
+			submit_inits = true;
+			initLocker.unlock();
+		}
 
 		if (pDesc->Format == FORMAT_UNKNOWN)
 		{
@@ -3366,6 +3405,10 @@ using namespace Vulkan_Internal;
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 			allocInfo.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+		}
+		if(pTexture->desc.BindFlags & BIND_SHADING_RATE)
+		{
+			imageInfo.usage |= VK_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR;
 		}
 		imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 		imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
@@ -3532,9 +3575,18 @@ using namespace Vulkan_Internal;
 				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 				barrier.dstAccessMask = _ParseImageLayout(pTexture->desc.layout);
 
-				transitionLocker.lock();
-				transitions.push_back(barrier);
-				transitionLocker.unlock();
+				initLocker.lock();
+				vkCmdPipelineBarrier(
+					GetFrameResources().initCommandBuffer,
+					VK_PIPELINE_STAGE_TRANSFER_BIT,
+					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+					0,
+					0, nullptr,
+					0, nullptr,
+					1, &barrier
+				);
+				submit_inits = true;
+				initLocker.unlock();
 			}
 		}
 		else
@@ -3565,9 +3617,49 @@ using namespace Vulkan_Internal;
 			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
-			transitionLocker.lock();
-			transitions.push_back(barrier);
-			transitionLocker.unlock();
+			initLocker.lock();
+			// zero initialize:
+			if (barrier.subresourceRange.aspectMask == VK_IMAGE_ASPECT_COLOR_BIT)
+			{
+				barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+				vkCmdPipelineBarrier(
+					GetFrameResources().initCommandBuffer,
+					VK_PIPELINE_STAGE_TRANSFER_BIT,
+					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+					0,
+					0, nullptr,
+					0, nullptr,
+					1, &barrier
+				);
+				VkClearColorValue initialColor = {};
+				VkImageSubresourceRange range = {};
+				range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				range.baseArrayLayer = 0;
+				range.baseMipLevel = 0;
+				range.layerCount = barrier.subresourceRange.layerCount;
+				range.levelCount = barrier.subresourceRange.levelCount;
+				vkCmdClearColorImage(
+					GetFrameResources().initCommandBuffer,
+					internal_state->resource,
+					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					&initialColor,
+					1, &range
+				);
+
+				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+				barrier.newLayout = _ConvertImageLayout(pTexture->desc.layout);
+			}
+			vkCmdPipelineBarrier(
+				GetFrameResources().initCommandBuffer,
+				VK_PIPELINE_STAGE_TRANSFER_BIT,
+				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+				0,
+				0, nullptr,
+				0, nullptr,
+				1, &barrier
+			);
+			submit_inits = true;
+			initLocker.unlock();
 		}
 
 		if (pTexture->desc.BindFlags & BIND_RENDER_TARGET)
@@ -5907,7 +5999,7 @@ using namespace Vulkan_Internal;
 	}
 	void GraphicsDevice_Vulkan::SubmitCommandLists()
 	{
-		transitionLocker.lock();
+		initLocker.lock();
 		VkResult res;
 
 		// Submit current frame:
@@ -5917,25 +6009,10 @@ using namespace Vulkan_Internal;
 			QUEUE_TYPE submit_queue = QUEUE_COUNT;
 
 			// Transitions:
-			bool submit_transitions = false;
-			if(!transitions.empty())
+			if(submit_inits)
 			{
-				vkCmdPipelineBarrier(
-					frame.transitionCommandBuffer,
-					VK_PIPELINE_STAGE_TRANSFER_BIT,
-					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-					0,
-					0, nullptr,
-					0, nullptr,
-					(uint32_t)transitions.size(),
-					transitions.data()
-				);
-				transitions.clear();
-
-				res = vkEndCommandBuffer(frame.transitionCommandBuffer);
+				res = vkEndCommandBuffer(frame.initCommandBuffer);
 				assert(res == VK_SUCCESS);
-
-				submit_transitions = true;
 			}
 
 			uint64_t copy_sync = copyAllocator.flush();
@@ -5980,10 +6057,10 @@ using namespace Vulkan_Internal;
 					copy_sync = 0;
 				}
 
-				if (submit_transitions)
+				if (submit_inits)
 				{
-					queues[submit_queue].submit_cmds.push_back(frame.transitionCommandBuffer);
-					submit_transitions = false;
+					queues[submit_queue].submit_cmds.push_back(frame.initCommandBuffer);
+					submit_inits = false;
 				}
 
 				for (auto& swapchain : prev_swapchains[cmd])
@@ -6048,7 +6125,7 @@ using namespace Vulkan_Internal;
 
 			// Restart transition command buffers:
 			{
-				res = vkResetCommandPool(device, frame.transitionCommandPool, 0);
+				res = vkResetCommandPool(device, frame.initCommandPool, 0);
 				assert(res == VK_SUCCESS);
 
 				VkCommandBufferBeginInfo beginInfo = {};
@@ -6056,11 +6133,13 @@ using namespace Vulkan_Internal;
 				beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 				beginInfo.pInheritanceInfo = nullptr; // Optional
 
-				res = vkBeginCommandBuffer(frame.transitionCommandBuffer, &beginInfo);
+				res = vkBeginCommandBuffer(frame.initCommandBuffer, &beginInfo);
 				assert(res == VK_SUCCESS);
 			}
 		}
-		transitionLocker.unlock();
+
+		submit_inits = false;
+		initLocker.unlock();
 	}
 
 	void GraphicsDevice_Vulkan::WaitForGPU() const
