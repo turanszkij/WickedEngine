@@ -22,6 +22,18 @@ groupshared float tile_Z[TILE_SIZE * TILE_SIZE];
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint groupIndex : SV_GroupIndex)
 {
 #ifdef RTSHADOW
+
+	// ray traced shadow works better with GBUFFER normal:
+	//	Reprojection issues are mostly solved by denoiser anyway
+	const float2 uv = ((float2)DTid.xy + 0.5) * xPPResolution_rcp;
+	const float2 velocity = texture_gbuffer2.SampleLevel(sampler_point_clamp, uv, 0).xy;
+	const float2 prevUV = uv + velocity;
+	const float4 g1 = texture_gbuffer1.SampleLevel(sampler_linear_clamp, prevUV, 0);
+	const float3 N = normalize(g1.rgb * 2 - 1);
+
+	const float depth = texture_depth.SampleLevel(sampler_linear_clamp, uv, 0);
+	const float3 P = reconstructPosition(uv, depth);
+
 	uint flatTileIdx = 0;
 	if (GTid.y < 4)
 	{
@@ -34,7 +46,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	output_tiles[flatTileIdx] = 0;
 
 	const float2 bluenoise = blue_noise(DTid.xy).xy;
-#endif // RTSHADOW
+
+#else
+
+	// Screen space shadow will reconstruct normal from depth:
 
 	const int2 tile_upperleft = Gid.xy * POSTPROCESS_BLOCKSIZE - TILE_BORDER;
 	for (uint t = groupIndex; t < TILE_SIZE * TILE_SIZE; t += POSTPROCESS_BLOCKSIZE * POSTPROCESS_BLOCKSIZE)
@@ -96,6 +111,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 
 	const float3 P = float3(tile_XY[cross_idx[0]], tile_Z[cross_idx[0]]);
 	const float3 N = normalize(cross(p2 - P, p1 - P));
+
+#endif // RTSHADOW
 
 	Surface surface;
 	surface.init();
