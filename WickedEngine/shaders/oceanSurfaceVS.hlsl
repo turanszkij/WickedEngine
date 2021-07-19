@@ -52,7 +52,7 @@ PSIn main(uint fakeIndex : SV_VERTEXID)
 	// Displace surface:
 	float2 uv = worldPos.xz * xOceanPatchSizeRecip;
 	float3 displacement = texture_displacementmap.SampleLevel(sampler_linear_wrap, uv + xOceanMapHalfTexel, 0).xzy;
-	displacement *= 1 - saturate(distance(g_xCamera_CamPos, worldPos) * 0.005f);
+	displacement *= 1 - saturate(distance(g_xCamera_CamPos, worldPos) * 0.0025f);
 	worldPos += displacement;
 
 	// Reproject displaced surface and output:
