@@ -870,7 +870,7 @@ void RenderPath3D::Render() const
 				device->EventBegin("Volumetric Clouds Reflection Blend", cmd);
 				wiImageParams fx;
 				fx.enableFullScreen();
-				wiImage::Draw(&volumetriccloudResources_reflection.texture_reproject[device->GetFrameCount() % 2], fx, cmd);
+				wiImage::Draw(&volumetriccloudResources_reflection.texture_temporal[device->GetFrameCount() % 2], fx, cmd);
 				device->EventEnd(cmd);
 			}
 
@@ -947,7 +947,7 @@ void RenderPath3D::Render() const
 		{
 			device->EventBegin("Volumetric Clouds Upsample + Blend", cmd);
 			wiRenderer::Postprocess_Upsample_Bilateral(
-				volumetriccloudResources.texture_reproject[device->GetFrameCount() % 2],
+				volumetriccloudResources.texture_temporal[device->GetFrameCount() % 2],
 				rtLinearDepth,
 				*GetGbuffer_Read(GBUFFER_COLOR), // only desc is taken if pixel shader upsampling is used
 				cmd,
