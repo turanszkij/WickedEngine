@@ -10,14 +10,16 @@ TEXTURE2D(texture_gradientmap, float4, TEXSLOT_ONDEMAND1);
 [earlydepthstencil]
 float4 main(PSIn input) : SV_TARGET
 {
-	float2 gradient = texture_gradientmap.Sample(sampler_aniso_wrap, input.uv).xy;
-
 	float4 color = xOceanWaterColor;
-	float opacity = 1; // keep edge diffuse shading
 	float3 V = g_xCamera_CamPos - input.pos3D;
 	float dist = length(V);
 	V /= dist;
 	float emissive = 0;
+
+	float gradient_fade = saturate(dist * 0.001);
+	float2 gradientNear = texture_gradientmap.Sample(sampler_aniso_wrap, input.uv).xy;
+	float2 gradientFar = texture_gradientmap.Sample(sampler_aniso_wrap, input.uv * 0.125).xy;
+	float2 gradient = lerp(gradientNear, gradientFar, gradient_fade);
 
 	Surface surface;
 	surface.init();
@@ -58,7 +60,9 @@ float4 main(PSIn input) : SV_TARGET
 	}
 	// WATER FOG:
 	surface.refraction.a = 1 - saturate(color.a * 0.1f * depth_difference);
-	color.a = 1;
+
+	// Blend out at distance:
+	color.a = pow(saturate(1 - saturate(dist / g_xCamera_ZFarP)), 2);
 
 	ApplyLighting(surface, lighting, color);
 

@@ -416,7 +416,6 @@ void wiOcean::Initialize()
 	wireRS = ras_desc;
 
 	DepthStencilState depth_desc;
-	memset(&depth_desc, 0, sizeof(DepthStencilState));
 	depth_desc.DepthEnable = true;
 	depth_desc.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
 	depth_desc.DepthFunc = COMPARISON_GREATER;
@@ -424,7 +423,6 @@ void wiOcean::Initialize()
 	depthStencilState = depth_desc;
 
 	BlendState blend_desc;
-	memset(&blend_desc, 0, sizeof(BlendState));
 	blend_desc.AlphaToCoverageEnable = false;
 	blend_desc.IndependentBlendEnable = false;
 	blend_desc.RenderTarget[0].BlendEnable = true;
