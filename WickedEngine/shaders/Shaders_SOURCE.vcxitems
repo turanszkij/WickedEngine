@@ -1028,6 +1028,7 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">Compute</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">Compute</ShaderType>
     </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)volumetricCloud_temporalCS.hlsl" />
     <FxCompile Include="$(MSBuildThisFileDirectory)volumetriclight_directionalVS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>

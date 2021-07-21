@@ -208,6 +208,7 @@ int main(int argc, char* argv[])
 		"volumetricCloud_weathermapCS.hlsl"							,
 		"volumetricCloud_renderCS.hlsl"								,
 		"volumetricCloud_reprojectCS.hlsl"							,
+		"volumetricCloud_temporalCS.hlsl"							,
 		"shadingRateClassificationCS.hlsl"							,
 		"shadingRateClassificationCS_DEBUG.hlsl"					,
 		"skyAtmosphere_transmittanceLutCS.hlsl"						,
