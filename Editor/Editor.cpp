@@ -1437,13 +1437,11 @@ void EditorComponent::Update(float dt)
 				for (size_t i = 0; i < scene.transforms.GetCount(); ++i)
 				{
 					Entity entity = scene.transforms.GetEntity(i);
-
 					if (scene.hierarchy.Contains(entity))
 					{
 						// Parented objects won't be attached, but only the parents instead. Otherwise it would cause "double translation"
 						continue;
 					}
-
 					wiScene::PickResult picked;
 					picked.entity = entity;
 					AddSelected(picked);
@@ -1456,7 +1454,7 @@ void EditorComponent::Update(float dt)
 				if (!translator.selected.empty() && wiInput::Down(wiInput::KEYBOARD_BUTTON_LSHIFT))
 				{
 					// Union selection:
-					std::list<wiScene::PickResult> saved = translator.selected;
+					std::vector<wiScene::PickResult> saved = translator.selected;
 					translator.selected.clear(); 
 					for (const wiScene::PickResult& picked : saved)
 					{
@@ -2393,17 +2391,23 @@ void EditorComponent::AddSelected(Entity entity)
 }
 void EditorComponent::AddSelected(const PickResult& picked)
 {
-	for (auto it = translator.selected.begin(); it != translator.selected.end(); ++it)
+	bool removal = false;
+	for (size_t i = 0; i < translator.selected.size(); ++i)
 	{
-		if ((*it) == picked)
+		if(translator.selected[i] == picked)
 		{
 			// If already selected, it will be deselected now:
-			translator.selected.erase(it);
-			return;
+			translator.selected[i] = translator.selected.back();
+			translator.selected.pop_back();
+			removal = true;
+			break;
 		}
 	}
 
-	translator.selected.push_back(picked);
+	if (!removal)
+	{
+		translator.selected.push_back(picked);
+	}
 }
 bool EditorComponent::IsSelected(Entity entity) const
 {
@@ -2504,7 +2508,7 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 			{
 				// Read selections states from archive:
 
-			std::list<wiScene::PickResult> selectedBEFORE;
+			std::vector<wiScene::PickResult> selectedBEFORE;
 				size_t selectionCountBEFORE;
 				archive >> selectionCountBEFORE;
 				for (size_t i = 0; i < selectionCountBEFORE; ++i)
@@ -2519,7 +2523,7 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 					selectedBEFORE.push_back(sel);
 				}
 
-				std::list<wiScene::PickResult> selectedAFTER;
+				std::vector<wiScene::PickResult> selectedAFTER;
 				size_t selectionCountAFTER;
 				archive >> selectionCountAFTER;
 				for (size_t i = 0; i < selectionCountAFTER; ++i)
