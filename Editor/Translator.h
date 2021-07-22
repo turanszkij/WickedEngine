@@ -2,7 +2,7 @@
 #include "CommonInclude.h"
 #include "wiCanvas.h"
 
-#include <list>
+#include <vector>
 
 class Translator
 {
@@ -24,7 +24,7 @@ public:
 	void PostTranslate();
 
 	wiScene::TransformComponent transform;
-	std::list<wiScene::PickResult> selected;
+	std::vector<wiScene::PickResult> selected;
 
 	bool enabled = false;
 
