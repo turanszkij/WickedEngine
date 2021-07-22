@@ -29,7 +29,7 @@ TEXTURE2D(texture_curlNoise, float4, TEXSLOT_ONDEMAND3);
 TEXTURE2D(texture_weatherMap, float4, TEXSLOT_ONDEMAND4);
 
 RWTEXTURE2D(texture_render, float4, 0);
-RWTEXTURE2D(texture_cloudDepth, float, 1);
+RWTEXTURE2D(texture_cloudDepth, float2, 1);
 
 
 // Octaves for multiple-scattering approximation. 1 means single-scattering only.
@@ -545,29 +545,6 @@ void RenderClouds(float3 rayOrigin, float3 rayDirection, float t, float steps, f
 	}
 }
 
-bool TraceSphereIntersections(float3 rayOrigin, float3 rayDirection, float3 sphereCenter, float sphereRadius, inout float2 solutions)
-{
-	float3 localPosition = rayOrigin - sphereCenter;
-	float localPositionSqr = dot(localPosition, localPosition);
-    
-    // Quadratic Coefficients
-	float a = dot(rayDirection, rayDirection);
-	float b = 2 * dot(rayDirection, localPosition);
-	float c = localPositionSqr - sphereRadius * sphereRadius;
-    
-	float discriminant = b * b - 4 * a * c;
-    
-    // Only continue if the ray intersects with the sphere
-	if (discriminant >= 0.0)
-	{
-		float sqrtDiscriminant = sqrt(discriminant);
-		solutions = (-b + float2(-1, 1) * sqrtDiscriminant) / (2 * a);
-		return true;
-	}
-    
-	return false;
-}
-
 float CalculateAtmosphereBlend(float tDepth)
 {
     // Progressively increase alpha as clouds reaches the desired distance.
@@ -582,15 +559,29 @@ float CalculateAtmosphereBlend(float tDepth)
 	return fade;
 }
 
+static const uint2 g_HalfResIndexToCoordinateOffset[4] = { uint2(0, 0), uint2(1, 0), uint2(0, 1), uint2(1, 1) };
+
+// Calculates checkerboard undersampling position
+int ComputeCheckerBoardIndex(int2 renderCoord, int subPixelIndex)
+{
+	const int localOffset = (renderCoord.x & 1 + renderCoord.y & 1) & 1;
+	const int checkerBoardLocation = (subPixelIndex + localOffset) & 0x3;
+	return checkerBoardLocation;
+}
+
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	const float2 uv = (DTid.xy + 0.5) * xPPResolution_rcp;
+	int subPixelIndex = g_xFrame_FrameCount % 4;
+	int checkerBoardIndex = ComputeCheckerBoardIndex(DTid.xy, subPixelIndex);
+	uint2 halfResCoord = DTid.xy * 2 + g_HalfResIndexToCoordinateOffset[checkerBoardIndex];
+
+	const float2 uv = (halfResCoord + 0.5) * xPPParams0.zw;
 	
 	float x = uv.x * 2 - 1;
 	float y = (1 - uv.y) * 2 - 1;
 	float2 screenPosition = float2(x, y);
-
+	
 	float4 unprojected = mul(g_xCamera_InvVP, float4(screenPosition, 0, 1));
 	unprojected.xyz /= unprojected.w;
 
@@ -601,6 +592,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float tMin = -FLT_MAX;
 	float tMax = -FLT_MAX;
 	float t;
+	float tToDepthBuffer;
 	float steps;
 	float stepSize;
     {
@@ -612,11 +604,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		const float cloudBottomRadius = planetRadius + g_xFrame_VolumetricClouds.CloudStartHeight;
 		const float cloudTopRadius = planetRadius + g_xFrame_VolumetricClouds.CloudStartHeight + g_xFrame_VolumetricClouds.CloudThickness;
         
-		float2 tTopSolutions = 0.0;
-		if (TraceSphereIntersections(rayOrigin, rayDirection, planetCenterWorld, cloudTopRadius, tTopSolutions))
+		float2 tTopSolutions = RaySphereIntersect(rayOrigin, rayDirection, planetCenterWorld, cloudTopRadius);
+		if (tTopSolutions.x > 0.0 || tTopSolutions.y > 0.0)
 		{
-			float2 tBottomSolutions = 0.0;
-			if (TraceSphereIntersections(rayOrigin, rayDirection, planetCenterWorld, cloudBottomRadius, tBottomSolutions))
+			float2 tBottomSolutions = RaySphereIntersect(rayOrigin, rayDirection, planetCenterWorld, cloudBottomRadius);
+			if (tBottomSolutions.x > 0.0 || tBottomSolutions.y > 0.0)
 			{
                 // If we see both intersections on the screen, keep the min closest, otherwise the max furthest
 				float tempTop = all(tTopSolutions > 0.0f) ? min(tTopSolutions.x, tTopSolutions.y) : max(tTopSolutions.x, tTopSolutions.y);
@@ -642,23 +634,23 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		}
 		else
 		{
-			texture_render[DTid.xy] = float4(0.0, 0.0, 0.0, 0.0);
-			texture_cloudDepth[DTid.xy] = 0.0;
+			texture_render[DTid.xy] = float4(0.0, 0.0, 0.0, 0.0); // Inverted alpha
+			texture_cloudDepth[DTid.xy] = FLT_MAX;
 			return;
 		}
 
 		if (tMax <= tMin || tMin > g_xFrame_VolumetricClouds.RenderDistance)
 		{
-			texture_render[DTid.xy] = float4(0.0, 0.0, 0.0, 0.0);
-			texture_cloudDepth[DTid.xy] = 0.0;
+			texture_render[DTid.xy] = float4(0.0, 0.0, 0.0, 0.0); // Inverted alpha
+			texture_cloudDepth[DTid.xy] = FLT_MAX;
 			return;
 		}
 		
 		
 		// Depth buffer intersection
-		float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 0).r;
+		float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 1).r;
 		float3 depthWorldPosition = reconstructPosition(uv, depth);
-		float tToDepthBuffer = length(depthWorldPosition - rayOrigin);
+		tToDepthBuffer = length(depthWorldPosition - rayOrigin);
 		tMax = depth == 0.0 ? tMax : min(tMax, tToDepthBuffer); // Exclude skybox
 		
 		const float marchingDistance = min(g_xFrame_VolumetricClouds.MaxMarchingDistance, tMax - tMin);
@@ -692,8 +684,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float grayScaleTransmittance = approxTransmittance < g_xFrame_VolumetricClouds.TransmittanceThreshold ? 0.0 : approxTransmittance;
 
 	float4 color = float4(luminance, grayScaleTransmittance);
-
-	color.a = 1.0 - color.a; // Invert to match reprojection. Early returns has to be inverted too.
+	
+	color.a = 1.0 - color.a; // Invert to match reprojection. Early color returns has to be inverted too.
 
     // Blend clouds with horizon
 	if (depthWeightsSum > 0.0)
@@ -707,5 +699,5 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	
     // Output
 	texture_render[DTid.xy] = color;
-	texture_cloudDepth[DTid.xy] = tDepth; // Linear depth
+	texture_cloudDepth[DTid.xy] = float2(tDepth, tToDepthBuffer); // Linear depth
 }

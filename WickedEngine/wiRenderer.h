@@ -551,8 +551,10 @@ namespace wiRenderer
 	{
 		wiGraphics::Texture texture_cloudRender;
 		wiGraphics::Texture texture_cloudDepth;
-		wiGraphics::Texture texture_cloudMask;
 		wiGraphics::Texture texture_reproject[2];
+		wiGraphics::Texture texture_reproject_depth[2];
+		wiGraphics::Texture texture_temporal[2];
+		wiGraphics::Texture texture_cloudMask;
 	};
 	void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resolution);
 	void Postprocess_VolumetricClouds(
