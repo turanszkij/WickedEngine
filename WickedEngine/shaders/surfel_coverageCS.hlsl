@@ -30,6 +30,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		const float2 uv = ((float2)DTid.xy + 0.5) * g_xFrame_InternalResolution_rcp;
 		const float3 P = reconstructPosition(uv, depth);
 
+		const float4 g1 = texture_gbuffer1.SampleLevel(sampler_linear_clamp, uv, 0);
+		const float3 N = normalize(g1.rgb * 2 - 1);
+
 		uint surfel_count = surfelStatsBuffer.Load(SURFEL_STATS_OFFSET_COUNT);
 		uint surfel_count_at_pixel = 0;
 
@@ -58,9 +61,13 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 							float dist = length(P - surfel.position);
 							if (dist <= SURFEL_RADIUS)
 							{
-								surfel_count_at_pixel++;
-								debug.rgb += unpack_unitvector(surfel.normal) * (1 - dist / SURFEL_RADIUS);
-								debug.a = 1;
+								float3 normal = unpack_unitvector(surfel.normal);
+								if (dot(N, normal) > 0)
+								{
+									surfel_count_at_pixel++;
+									debug.rgb += normal * (1 - dist / SURFEL_RADIUS);
+									debug.a = 1;
+								}
 							}
 						}
 						else
