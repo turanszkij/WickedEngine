@@ -1,6 +1,8 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Renderer.h"
 
+static const uint SURFEL_TARGET_COVERAGE = 2;
+
 TEXTURE2D(coverage, uint, TEXSLOT_ONDEMAND0);
 
 RWSTRUCTUREDBUFFER(surfelBuffer, Surfel, 0);
@@ -13,7 +15,7 @@ RWTEXTURE2D(debugUAV, unorm float4, 4);
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	// Early exit: slow down the propagation by chance
-	if (blue_noise(DTid.xy).x < 0.98)
+	if (blue_noise(DTid.xy).x < 0.8)
 		return;
 
 	uint surfel_coverage = coverage[DTid.xy];
@@ -30,7 +32,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	const float depth = texture_depth[pixel.xy];
 
-	if (depth > 0 && coverage_amount < 4)
+	if (depth > 0 && coverage_amount < SURFEL_TARGET_COVERAGE)
 	{
 		const float2 uv = ((float2)pixel.xy + 0.5) * g_xFrame_InternalResolution_rcp;
 
@@ -45,7 +47,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			surfelStatsBuffer.InterlockedAdd(SURFEL_STATS_OFFSET_COUNT, 1, surfel_alloc);
 			if (surfel_alloc < SURFEL_CAPACITY)
 			{
-				Surfel surfel;
+				Surfel surfel = (Surfel)0;
 				surfel.position = P;
 				surfel.normal = pack_unitvector(N);
 				surfelBuffer[surfel_alloc] = surfel;

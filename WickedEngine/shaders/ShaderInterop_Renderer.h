@@ -6,6 +6,8 @@ struct Surfel
 {
 	float3 position;
 	uint normal;
+	float3 color;
+	float life;
 };
 static const uint SURFEL_CAPACITY = 250000;
 static const uint SURFEL_TABLE_SIZE = 1000000;

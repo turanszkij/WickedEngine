@@ -530,6 +530,8 @@ void RenderPath3D::Update(float dt)
 		}
 	}
 
+	scene->SetAccelerationStructureUpdateRequested(true);// TODO: remove!!
+
 	// Frustum culling for main camera:
 	visibility_main.layerMask = getLayerMask();
 	visibility_main.scene = scene;
