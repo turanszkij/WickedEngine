@@ -4,7 +4,8 @@
 #define SURFEL_NEIGHBOR_SAMPLING
 
 //#define SURFEL_DEBUG_NORMAL
-#define SURFEL_DEBUG_COLOR
+//#define SURFEL_DEBUG_COLOR
+#define SURFEL_DEBUG_POINT
 
 STRUCTUREDBUFFER(surfelBuffer, Surfel, TEXSLOT_ONDEMAND0);
 RAWBUFFER(surfelStatsBuffer, TEXSLOT_ONDEMAND1);
@@ -85,6 +86,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 									debug += float4(surfel.color, 1) * contribution;
 #endif // SURFEL_DEBUG_COLOR
 								}
+
+#ifdef SURFEL_DEBUG_POINT
+								if (dist <= 0.05)
+									debug = float4(1, 0, 0, 1);
+#endif // SURFEL_DEBUG_POINT
 							}
 						}
 						else

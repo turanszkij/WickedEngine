@@ -1,7 +1,7 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Renderer.h"
 
-static const uint SURFEL_TARGET_COVERAGE = 2;
+static const uint SURFEL_TARGET_COVERAGE = 1;
 
 TEXTURE2D(coverage, uint, TEXSLOT_ONDEMAND0);
 
@@ -15,7 +15,7 @@ RWTEXTURE2D(debugUAV, unorm float4, 4);
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	// Early exit: slow down the propagation by chance
-	if (blue_noise(DTid.xy).x < 0.8)
+	if (blue_noise(DTid.xy).x < 0.98)
 		return;
 
 	uint surfel_coverage = coverage[DTid.xy];
