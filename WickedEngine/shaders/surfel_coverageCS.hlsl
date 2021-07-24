@@ -70,11 +70,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 							if (dist <= SURFEL_RADIUS)
 							{
 								float3 normal = unpack_unitvector(surfel.normal);
-								if (dot(N, normal) > 0)
+								float dotN = dot(N, normal);
+								if (dotN > 0)
 								{
 									surfel_count_at_pixel++;
 
-									float contribution = saturate(1 - dist / SURFEL_RADIUS);
+									float contribution = saturate(1 - dist / SURFEL_RADIUS) * saturate(dotN);
 #ifdef SURFEL_DEBUG_NORMAL
 									debug.rgb += normal * contribution;
 									debug.a = 1;
