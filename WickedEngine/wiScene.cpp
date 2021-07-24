@@ -1673,6 +1673,40 @@ namespace wiScene
 			}
 		}
 
+		if (!surfelBuffer.IsValid())
+		{
+			GPUBufferDesc desc;
+			desc.StructureByteStride = sizeof(Surfel);
+			desc.ByteWidth = desc.StructureByteStride * SURFEL_CAPACITY;
+			desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+			desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+			device->CreateBuffer(&desc, nullptr, &surfelBuffer);
+			device->SetName(&surfelBuffer, "surfelBuffer");
+
+			desc.StructureByteStride = sizeof(uint);
+			desc.ByteWidth = desc.StructureByteStride * 4;
+			desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS | RESOURCE_MISC_INDIRECT_ARGS;
+			device->CreateBuffer(&desc, nullptr, &surfelStatsBuffer);
+			device->SetName(&surfelStatsBuffer, "surfelStatsBuffer");
+
+			desc.StructureByteStride = sizeof(uint);
+			desc.ByteWidth = desc.StructureByteStride * SURFEL_CAPACITY;
+			desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+			device->CreateBuffer(&desc, nullptr, &surfelIndexBuffer);
+			device->SetName(&surfelIndexBuffer, "surfelIndexBuffer");
+
+			desc.StructureByteStride = sizeof(float);
+			desc.ByteWidth = desc.StructureByteStride * SURFEL_CAPACITY;
+			desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+			device->CreateBuffer(&desc, nullptr, &surfelCellIndexBuffer);
+			device->SetName(&surfelCellIndexBuffer, "surfelCellIndexBuffer");
+
+			desc.StructureByteStride = sizeof(uint);
+			desc.ByteWidth = desc.StructureByteStride * SURFEL_TABLE_SIZE;
+			desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+			device->CreateBuffer(&desc, nullptr, &surfelCellOffsetBuffer);
+			device->SetName(&surfelCellOffsetBuffer, "surfelCellOffsetBuffer");
+		}
 	}
 	void Scene::Clear()
 	{

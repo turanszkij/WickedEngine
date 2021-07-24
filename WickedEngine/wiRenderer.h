@@ -301,6 +301,20 @@ namespace wiRenderer
 		wiGraphics::CommandList cmd
 	);
 
+	struct SurfelGIResources
+	{
+		wiGraphics::Texture coverage;
+	};
+	void CreateSurfelGIResources(SurfelGIResources& res, XMUINT2 resolution);
+	void SurfelGI(
+		const SurfelGIResources& res,
+		const wiScene::Scene& scene,
+		const wiGraphics::Texture& depthbuffer,
+		const wiGraphics::Texture gbuffer[GBUFFER_COUNT],
+		const wiGraphics::Texture& debugUAV,
+		wiGraphics::CommandList cmd
+	);
+
 	void Postprocess_Blur_Gaussian(
 		const wiGraphics::Texture& input,
 		const wiGraphics::Texture& temp,

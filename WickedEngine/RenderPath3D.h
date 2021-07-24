@@ -121,6 +121,7 @@ public:
 	wiRenderer::VolumetricCloudResources volumetriccloudResources;
 	wiRenderer::VolumetricCloudResources volumetriccloudResources_reflection;
 	wiRenderer::BloomResources bloomResources;
+	wiRenderer::SurfelGIResources surfelGIResources;
 
 	const constexpr wiGraphics::Texture* GetGbuffer_Read() const
 	{

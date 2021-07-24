@@ -1304,6 +1304,14 @@ namespace wiScene
 		int queryheap_idx = 0;
 		std::atomic<uint32_t> queryAllocator{ 0 };
 
+		// Surfel GI cache:
+		wiGraphics::GPUBuffer surfelBuffer;
+		wiGraphics::GPUBuffer surfelStatsBuffer;
+		wiGraphics::GPUBuffer surfelIndexBuffer;
+		wiGraphics::GPUBuffer surfelCellIndexBuffer;
+		wiGraphics::GPUBuffer surfelCellOffsetBuffer;
+
+
 		// Environment probe cubemap array state:
 		static constexpr uint32_t envmapCount = 16;
 		static constexpr uint32_t envmapRes = 128;

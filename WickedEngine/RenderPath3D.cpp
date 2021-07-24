@@ -488,6 +488,7 @@ void RenderPath3D::ResizeBuffers()
 	wiRenderer::CreateVolumetricCloudResources(volumetriccloudResources, internalResolution);
 	wiRenderer::CreateVolumetricCloudResources(volumetriccloudResources_reflection, XMUINT2(depthBuffer_Reflection.desc.Width, depthBuffer_Reflection.desc.Height));
 	wiRenderer::CreateBloomResources(bloomResources, internalResolution);
+	wiRenderer::CreateSurfelGIResources(surfelGIResources, internalResolution);
 
 	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
 	{
@@ -990,6 +991,16 @@ void RenderPath3D::Render() const
 		RenderTransparents(cmd);
 
 		RenderPostprocessChain(cmd);
+
+		wiRenderer::SurfelGI(
+			surfelGIResources,
+			*scene,
+			depthBuffer_Copy,
+			GetGbuffer_Read(),
+			debugUAV,
+			cmd
+		);
+
 		});
 
 	RenderPath2D::Render();
@@ -1010,7 +1021,7 @@ void RenderPath3D::Compose(CommandList cmd) const
 	wiImage::Draw(GetLastPostprocessRT(), fx, cmd);
 	device->EventEnd(cmd);
 
-	if (wiRenderer::GetDebugLightCulling() || wiRenderer::GetVariableRateShadingClassificationDebug())
+	//if (wiRenderer::GetDebugLightCulling() || wiRenderer::GetVariableRateShadingClassificationDebug())
 	{
 		fx.enableFullScreen();
 		fx.blendFlag = BLENDMODE_PREMULTIPLIED;

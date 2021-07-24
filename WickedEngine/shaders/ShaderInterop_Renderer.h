@@ -2,6 +2,26 @@
 #define WI_SHADERINTEROP_RENDERER_H
 #include "ShaderInterop.h"
 
+struct Surfel
+{
+	float3 position;
+	uint normal;
+};
+static const uint SURFEL_CAPACITY = 250000;
+static const uint SURFEL_TABLE_SIZE = 1000000;
+static const uint SURFEL_STATS_OFFSET_COUNT = 0;
+static const uint SURFEL_STATS_OFFSET_INDIRECT = 4;
+static const float SURFEL_RADIUS = 0.5f;
+inline uint surfel_hash(float3 position)
+{
+	const uint p1 = 73856093;   // some large primes 
+	const uint p2 = 19349663;
+	const uint p3 = 83492791;
+	int3 cellIndex = int3(int(position.x / SURFEL_RADIUS), int(position.y / SURFEL_RADIUS), int(position.z / SURFEL_RADIUS));
+	int n = p1 * cellIndex.x ^ p2 * cellIndex.y ^ p3 * cellIndex.z;
+	n %= SURFEL_TABLE_SIZE;
+	return n;
+}
 
 static const uint SHADERMATERIAL_OPTION_BIT_USE_VERTEXCOLORS = 1 << 0;
 static const uint SHADERMATERIAL_OPTION_BIT_SPECULARGLOSSINESS_WORKFLOW = 1 << 1;
