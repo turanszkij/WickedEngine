@@ -3,6 +3,8 @@
 #include "lightingHF.hlsli"
 #include "ShaderInterop_Renderer.h"
 
+#define FIREFLY_REDUCTION
+
 RAWBUFFER(surfelStatsBuffer, TEXSLOT_ONDEMAND6);
 
 RWSTRUCTUREDBUFFER(surfelBuffer, Surfel, 0);
@@ -40,6 +42,181 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	for (uint bounce = 0; ((bounce < min(bounces, bouncelimit)) && any(energy)); ++bounce)
 	{
 		surface.P = ray.Origin;
+
+
+		[loop]
+		for (uint iterator = 0; iterator < g_xFrame_LightArrayCount; iterator++)
+		{
+			ShaderEntity light = EntityArray[g_xFrame_LightArrayOffset + iterator];
+
+			Lighting lighting;
+			lighting.create(0, 0, 0, 0);
+
+			if (bounce == 0)
+				continue;
+			//if (!(light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC))
+			//{
+			//	continue; // dynamic lights will not be baked into lightmap
+			//}
+
+			float3 L = 0;
+			float dist = 0;
+			float NdotL = 0;
+
+			switch (light.GetType())
+			{
+			case ENTITY_TYPE_DIRECTIONALLIGHT:
+			{
+				dist = FLT_MAX;
+
+				L = light.GetDirection().xyz;
+				NdotL = saturate(dot(L, surface.N));
+
+				[branch]
+				if (NdotL > 0)
+				{
+					float3 atmosphereTransmittance = 1.0;
+					if (g_xFrame_Options & OPTION_BIT_REALISTIC_SKY)
+					{
+						atmosphereTransmittance = GetAtmosphericLightTransmittance(g_xFrame_Atmosphere, surface.P, L, texture_transmittancelut);
+					}
+
+					float3 lightColor = light.GetColor().rgb * light.GetEnergy() * atmosphereTransmittance;
+
+					lighting.direct.diffuse = lightColor;
+				}
+			}
+			break;
+			case ENTITY_TYPE_POINTLIGHT:
+			{
+				L = light.position - surface.P;
+				const float dist2 = dot(L, L);
+				const float range2 = light.GetRange() * light.GetRange();
+
+				[branch]
+				if (dist2 < range2)
+				{
+					dist = sqrt(dist2);
+					L /= dist;
+					NdotL = saturate(dot(L, surface.N));
+
+					[branch]
+					if (NdotL > 0)
+					{
+						const float3 lightColor = light.GetColor().rgb * light.GetEnergy();
+
+						lighting.direct.diffuse = lightColor;
+
+						const float range2 = light.GetRange() * light.GetRange();
+						const float att = saturate(1.0 - (dist2 / range2));
+						const float attenuation = att * att;
+
+						lighting.direct.diffuse *= attenuation;
+					}
+				}
+			}
+			break;
+			case ENTITY_TYPE_SPOTLIGHT:
+			{
+				L = light.position - surface.P;
+				const float dist2 = dot(L, L);
+				const float range2 = light.GetRange() * light.GetRange();
+
+				[branch]
+				if (dist2 < range2)
+				{
+					dist = sqrt(dist2);
+					L /= dist;
+					NdotL = saturate(dot(L, surface.N));
+
+					[branch]
+					if (NdotL > 0)
+					{
+						const float SpotFactor = dot(L, light.GetDirection());
+						const float spotCutOff = light.GetConeAngleCos();
+
+						[branch]
+						if (SpotFactor > spotCutOff)
+						{
+							const float3 lightColor = light.GetColor().rgb * light.GetEnergy();
+
+							lighting.direct.diffuse = lightColor;
+
+							const float range2 = light.GetRange() * light.GetRange();
+							const float att = saturate(1.0 - (dist2 / range2));
+							float attenuation = att * att;
+							attenuation *= saturate((1.0 - (1.0 - SpotFactor) * 1.0 / (1.0 - spotCutOff)));
+
+							lighting.direct.diffuse *= attenuation;
+						}
+					}
+				}
+			}
+			break;
+			}
+
+			if (NdotL > 0 && dist > 0)
+			{
+				float3 shadow = NdotL * energy;
+
+				RayDesc newRay;
+				newRay.Origin = surface.P;
+				newRay.Direction = normalize(lerp(L, SampleHemisphere_cos(L, seed, uv), 0.025f));
+				newRay.TMin = 0.001;
+				newRay.TMax = dist;
+#ifdef RTAPI
+				RayQuery<
+					RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES
+				> q;
+				q.TraceRayInline(
+					scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
+					0,								// uint RayFlags
+					0xFF,							// uint InstanceInclusionMask
+					newRay							// RayDesc Ray
+				);
+				while (q.Proceed())
+				{
+					ShaderMesh mesh = bindless_buffers[NonUniformResourceIndex(q.CandidateInstanceID())].Load<ShaderMesh>(0);
+					ShaderMeshSubset subset = bindless_subsets[NonUniformResourceIndex(mesh.subsetbuffer)][q.CandidateGeometryIndex()];
+					ShaderMaterial material = bindless_buffers[NonUniformResourceIndex(subset.material)].Load<ShaderMaterial>(0);
+					[branch]
+					if (!material.IsCastingShadow())
+					{
+						continue;
+					}
+
+					Surface surface;
+					EvaluateObjectSurface(
+						mesh,
+						subset,
+						material,
+						q.CandidatePrimitiveIndex(),
+						q.CandidateTriangleBarycentrics(),
+						q.CandidateObjectToWorld3x4(),
+						surface
+					);
+
+					shadow *= lerp(1, surface.albedo * surface.transmission, surface.opacity);
+
+					[branch]
+					if (!any(shadow))
+					{
+						q.CommitNonOpaqueTriangleHit();
+					}
+				}
+				shadow = q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ? 0 : shadow;
+#else
+				shadow = TraceRay_Any(newRay) ? 0 : shadow;
+#endif // RTAPI
+				if (any(shadow))
+				{
+					result += max(0, shadow * lighting.direct.diffuse / PI);
+				}
+			}
+		}
+
+
+
 
 		// Sample primary ray (scene materials, sky, etc):
 		ray.Direction = normalize(ray.Direction);
@@ -159,8 +336,18 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	}
 
+#ifdef FIREFLY_REDUCTION
+	surfel.color = tonemap(surfel.color);
+	result = tonemap(result);
+#endif // FIREFLY_REDUCTION
+
 	float blendfactor = lerp(1, 0.05, saturate(surfel.life * 10));
 	surfel.color = lerp(surfel.color, result, blendfactor);
+
+#ifdef FIREFLY_REDUCTION
+	surfel.color = inverseTonemap(surfel.color);
+#endif // FIREFLY_REDUCTION
+
 	surfel.life += g_xFrame_DeltaTime;
 	surfelBuffer[DTid.x] = surfel;
 }
