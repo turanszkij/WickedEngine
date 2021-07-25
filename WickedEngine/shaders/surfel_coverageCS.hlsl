@@ -104,7 +104,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 #endif // SURFEL_DEBUG_NORMAL
 
 #ifdef SURFEL_DEBUG_COLOR
-									debug += float4(surfel.color, 1) * contribution;
+									debug += float4(surfel.mean, 1) * contribution;
 #endif // SURFEL_DEBUG_COLOR
 
 #ifdef SURFEL_DEBUG_RANDOM

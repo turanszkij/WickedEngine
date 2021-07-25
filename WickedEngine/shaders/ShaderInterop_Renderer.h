@@ -2,12 +2,20 @@
 #define WI_SHADERINTEROP_RENDERER_H
 #include "ShaderInterop.h"
 
+
 struct Surfel
 {
 	float3 position;
 	uint normal;
-	float3 color;
+
+	float3 mean;
 	float life;
+
+	float3 shortMean;
+	float vbbr;
+
+	float3 variance;
+	float inconsistency;
 };
 static const uint SURFEL_CAPACITY = 250000;
 static const uint SURFEL_TABLE_SIZE = 1000000;
