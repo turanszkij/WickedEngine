@@ -42,6 +42,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		uint surfel_count = surfelStatsBuffer.Load(SURFEL_STATS_OFFSET_COUNT);
 		uint surfel_count_at_pixel = 0;
 
+		int3 cell = surfel_cell(P);
+
 #ifdef SURFEL_NEIGHBOR_SAMPLING
 		// iterate through all [27] neighbor cells:
 		[loop]
@@ -53,9 +55,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 				[loop]
 				for (int k = -1; k <= 1; ++k)
 				{
-					uint surfel_hash_target = surfel_hash(P + float3(i,j,k) * SURFEL_RADIUS);
+					uint surfel_hash_target = surfel_hash(cell + int3(i, j, k));
 #else
-					uint surfel_hash_target = surfel_hash(P);
+					uint surfel_hash_target = surfel_hash(cell);
 #endif // SURFEL_NEIGHBOR_SAMPLING
 
 					uint surfel_list_offset = surfelCellOffsetBuffer[surfel_hash_target];

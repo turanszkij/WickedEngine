@@ -14,10 +14,6 @@ RWTEXTURE2D(debugUAV, unorm float4, 4);
 [numthreads(8, 8, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	// Early exit: slow down the propagation by chance
-	if (blue_noise(DTid.xy).x < 0.98)
-		return;
-
 	uint surfel_coverage = coverage[DTid.xy];
 
 	// Early exit: coverage not applicable (eg. sky)
@@ -31,6 +27,13 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	uint coverage_amount = surfel_coverage >> 8;
 
 	const float depth = texture_depth[pixel.xy];
+
+	// Early exit: slow down the propagation by chance
+	//	Closer surfaces have less chance to avoid excessive clumping of surfels
+	const float lineardepth = getLinearDepth(depth) * g_xCamera_ZFarP_rcp;
+	const float chance = pow(1 - lineardepth, 8);
+	if (blue_noise(DTid.xy).x < chance)
+		return;
 
 	if (depth > 0 && coverage_amount < SURFEL_TARGET_COVERAGE)
 	{
@@ -53,7 +56,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				surfelBuffer[surfel_alloc] = surfel;
 
 				surfelIndexBuffer[surfel_alloc] = surfel_alloc;
-				surfelCellIndexBuffer[surfel_alloc] = surfel_hash(P);
+				surfelCellIndexBuffer[surfel_alloc] = surfel_hash(surfel_cell(P));
 			}
 		}
 	}

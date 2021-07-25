@@ -14,13 +14,16 @@ static const uint SURFEL_TABLE_SIZE = 1000000;
 static const uint SURFEL_STATS_OFFSET_COUNT = 0;
 static const uint SURFEL_STATS_OFFSET_INDIRECT = 4;
 static const float SURFEL_RADIUS = 0.5f;
-inline uint surfel_hash(float3 position)
+inline int3 surfel_cell(float3 position)
+{
+	return int3(int(position.x / SURFEL_RADIUS), int(position.y / SURFEL_RADIUS), int(position.z / SURFEL_RADIUS));
+}
+inline uint surfel_hash(int3 cell)
 {
 	const uint p1 = 73856093;   // some large primes 
 	const uint p2 = 19349663;
 	const uint p3 = 83492791;
-	int3 cellIndex = int3(int(position.x / SURFEL_RADIUS), int(position.y / SURFEL_RADIUS), int(position.z / SURFEL_RADIUS));
-	int n = p1 * cellIndex.x ^ p2 * cellIndex.y ^ p3 * cellIndex.z;
+	int n = p1 * cell.x ^ p2 * cell.y ^ p3 * cell.z;
 	n %= SURFEL_TABLE_SIZE;
 	return n;
 }

@@ -159,7 +159,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	}
 
-	float blendfactor = lerp(1, 0.01, saturate(surfel.life * 10));
+	float blendfactor = lerp(1, 0.05, saturate(surfel.life * 10));
 	surfel.color = lerp(surfel.color, result, blendfactor);
 	surfel.life += g_xFrame_DeltaTime;
 	surfelBuffer[DTid.x] = surfel;
