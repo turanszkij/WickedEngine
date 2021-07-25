@@ -6,6 +6,22 @@
 //#define SURFEL_DEBUG_NORMAL
 #define SURFEL_DEBUG_COLOR
 //#define SURFEL_DEBUG_POINT
+//#define SURFEL_DEBUG_RANDOM
+
+
+static const uint nice_colors_size = 5;
+static const float3 nice_colors[nice_colors_size] = {
+	float3(0,0,1),
+	float3(0,1,1),
+	float3(0,1,0),
+	float3(1,1,0),
+	float3(1,0,0),
+};
+float3 hash_color(uint index)
+{
+	return nice_colors[index % nice_colors_size];
+}
+
 
 STRUCTUREDBUFFER(surfelBuffer, Surfel, TEXSLOT_ONDEMAND0);
 RAWBUFFER(surfelStatsBuffer, TEXSLOT_ONDEMAND1);
@@ -78,7 +94,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 								{
 									surfel_count_at_pixel++;
 
-									float contribution = saturate(1 - dist / SURFEL_RADIUS) * saturate(dotN);
+									float contribution = 1;
+									contribution *= saturate(1 - dist / SURFEL_RADIUS);
+									contribution *= saturate(dotN);
+									contribution = smoothstep(0, 1, contribution);
 #ifdef SURFEL_DEBUG_NORMAL
 									debug.rgb += normal * contribution;
 									debug.a = 1;
@@ -87,6 +106,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 #ifdef SURFEL_DEBUG_COLOR
 									debug += float4(surfel.color, 1) * contribution;
 #endif // SURFEL_DEBUG_COLOR
+
+#ifdef SURFEL_DEBUG_RANDOM
+									debug += float4(hash_color(surfel_index), 1) * contribution;
+#endif // SURFEL_DEBUG_RANDOM
+
 								}
 
 #ifdef SURFEL_DEBUG_POINT
@@ -120,7 +144,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		debug.rgb = normalize(debug.rgb) * 0.5 + 0.5;
 #endif // SURFEL_DEBUG_NORMAL
 
-#ifdef SURFEL_DEBUG_COLOR
+#if defined(SURFEL_DEBUG_COLOR) || defined(SURFEL_DEBUG_RANDOM)
 		if (debug.a > 0)
 		{
 			debug /= debug.a;
@@ -129,7 +153,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		{
 			debug = 0;
 		}
-#endif // SURFEL_DEBUG_COLOR
+#endif // SURFEL_DEBUG_COLOR || SURFEL_DEBUG_RANDOM
 	}
 
 	GroupMemoryBarrierWithGroupSync();
