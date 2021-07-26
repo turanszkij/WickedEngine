@@ -8303,9 +8303,9 @@ void ComputeShadingRateClassification(
 void CreateSurfelGIResources(SurfelGIResources& res, XMUINT2 resolution)
 {
 	TextureDesc desc;
-	desc.Width = (resolution.x + 15) / 16;
-	desc.Height = (resolution.y + 15) / 16;
-	desc.Format = FORMAT_R32_UINT;
+	desc.Width = (resolution.x / 2 + 15) / 16;
+	desc.Height = (resolution.y / 2 + 15) / 16;
+	desc.Format = FORMAT_R16_UINT;
 	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 	desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
 	device->CreateTexture(&desc, nullptr, &res.coverage);

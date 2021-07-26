@@ -51,6 +51,11 @@ static const int3 neighbor_offsets[27] = {
 	int3(1, 1, 1),
 };
 
+static const uint2 pixel_offsets[4] = {
+	uint2(0, 0), uint2(1, 0),
+	uint2(0, 1), uint2(1, 1),
+};
+
 
 STRUCTUREDBUFFER(surfelBuffer, Surfel, TEXSLOT_ONDEMAND0);
 RAWBUFFER(surfelStatsBuffer, TEXSLOT_ONDEMAND1);
@@ -73,15 +78,17 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	}
 	GroupMemoryBarrierWithGroupSync();
 
-	const float depth = texture_depth[DTid.xy];
-	const float4 g1 = texture_gbuffer1[DTid.xy];
+	uint2 pixel = DTid.xy * 2 + pixel_offsets[g_xFrame_FrameCount % 4];
+
+	const float depth = texture_depth[pixel];
+	const float4 g1 = texture_gbuffer1[pixel];
 
 	float4 debug = 0;
 	float4 color = 0;
 
 	if (depth > 0 && any(g1))
 	{
-		const float2 uv = ((float2)DTid.xy + 0.5) * g_xFrame_InternalResolution_rcp;
+		const float2 uv = ((float2)pixel + 0.5) * g_xFrame_InternalResolution_rcp;
 		const float3 P = reconstructPosition(uv, depth);
 
 		const float3 N = normalize(g1.rgb * 2 - 1);
@@ -199,8 +206,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		coverage[Gid.xy] = GroupMinSurfelCount;
 	}
 
-	result[DTid.xy] = color.rgb;
+	result[DTid.xy * 2 + uint2(0, 0)] = color.rgb;
+	result[DTid.xy * 2 + uint2(1, 0)] = color.rgb;
+	result[DTid.xy * 2 + uint2(0, 1)] = color.rgb;
+	result[DTid.xy * 2 + uint2(1, 1)] = color.rgb;
 
 	debug = 0;
-	debugUAV[DTid.xy] = debug;
+	debugUAV[DTid.xy * 2 + uint2(0, 0)] = debug;
+	debugUAV[DTid.xy * 2 + uint2(1, 0)] = debug;
+	debugUAV[DTid.xy * 2 + uint2(0, 1)] = debug;
+	debugUAV[DTid.xy * 2 + uint2(1, 1)] = debug;
 }
