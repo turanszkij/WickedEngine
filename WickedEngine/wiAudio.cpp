@@ -745,68 +745,6 @@ namespace wiAudio
 		}
 	}
 
-	//Equivalent of DWORD is unsigned 32-bit integer, for WORD is unsigned 16-bit integer
-	//More in-depth information: https://stackoverflow.com/questions/2995251/why-in-c-do-we-use-dword-rather-than-unsigned-int (check Windows Programmer's answer)
-	bool FindChunk(const uint8_t* data, uint32_t fourcc, uint32_t& ChunkSize, uint32_t& ChunkDataPosition)
-	{
-		size_t pos = 0;
-
-		uint32_t ChunkType;
-		uint32_t ChunkDataSize;
-		uint32_t RIFFDataSize = 0;
-		uint32_t FileType;
-		uint32_t bytesRead = 0;
-		uint32_t Offset = 0;
-
-		while(true)
-		{
-			memcpy(&ChunkType, data + pos, sizeof(uint32_t));
-			pos += sizeof(uint32_t);
-			memcpy(&ChunkDataSize, data + pos, sizeof(uint32_t));
-			pos += sizeof(uint32_t);
-
-			switch (ChunkType)
-			{
-			case fourccRIFF:
-				RIFFDataSize = ChunkDataSize;
-				ChunkDataSize = 4;
-				memcpy(&FileType, data + pos, sizeof(uint32_t));
-				pos += sizeof(uint32_t);
-				break;
-
-			default:
-				pos += ChunkDataSize;
-			}
-
-			Offset += sizeof(uint32_t) * 2;
-
-			if (ChunkType == fourcc)
-			{
-				ChunkSize = ChunkDataSize;
-				ChunkDataPosition = Offset;
-				return true;
-			}
-
-			Offset += ChunkDataSize;
-
-			if (bytesRead >= RIFFDataSize) return false;
-
-		}
-
-		return true;
-	}
-
-	// WAVEFORMATEX: https://docs.microsoft.com/en-us/windows/win32/api/mmeapi/ns-mmeapi-waveformatex
-	typedef struct tWaveFormat {
-		uint16_t wFormatTag;
-		uint16_t nChannels;
-		uint32_t nSamplesPerSec;
-		uint32_t nAvgBytesPerSec;
-		uint16_t nBlockAlign;
-		uint16_t wBitsPerSample;
-		uint16_t cbSize;
-	} WaveFormat;
-
 	bool CreateSound(const std::string& filename, Sound* sound)
 	{
         SDL_RWops *filedata = SDL_RWFromFile(filename.c_str(), "rb");
@@ -827,85 +765,36 @@ namespace wiAudio
 
         Uint8 *audio_buffer;
         Uint32 audio_len;
-        //TODO load OGG/VORBIS files too
-        SDL_AudioSpec *ret = SDL_LoadWAV_RW(data, false, &soundinternal->info, &audio_buffer, &audio_len);
-        if (ret == nullptr) {
-            return false;
-        }
-        soundinternal->audioData.resize(audio_len);
-        std::copy(audio_buffer, audio_buffer+audio_len, soundinternal->audioData.begin());
-        SDL_FreeWAV(audio_buffer);
-		sound->internal_state = soundinternal;
 
-/*
-		uint32_t ChunkSize, ChunkPosition;
-
-		//TODO audio formatting
-		bool success = false;
-		success = FindChunk(data, fourccRIFF, ChunkSize, ChunkPosition);
-		if (success)
+		Uint32 header[2];
+		SDL_RWread(data,header,4,2);
+        
+		if(header[0]==fourccRIFF)
 		{
-			// Wav decoder:
-			uint32_t filetype;
-			memcpy(&filetype, data + ChunkPosition, sizeof(uint32_t));
-			if (filetype != fourccWAVE)
-			{
-				assert(0);
-				return false;
-			}
-
-			success = FindChunk(data, fourccFMT, ChunkSize, ChunkPosition);
-			if (!success)
-			{
-				assert(0);
-				return false;
-			}
-
-			WaveFormat format = {};
-			memcpy(&format, data + ChunkPosition, ChunkSize);
-
-			//WAV PCM bits per samples
-			//Source: https://github.com/libsdl-org/SDL/blob/main/src/audio/SDL_wave.c
-			switch(format.wBitsPerSample){
-				case 8:
-					soundinternal->info.format = AUDIO_U8;
-					break;
-				case 16:
-					soundinternal->info.format = AUDIO_S16LSB;
-					break;
-				case 24:
-				case 32:
-					soundinternal->info.format = AUDIO_S32LSB;
-					break;
-				default:
-					//Throw error
-					break;
-			}
-			
-			soundinternal->info.samples = 4096;
-			soundinternal->info.channels = (Uint8)format.nChannels;
-			soundinternal->info.freq = format.nSamplesPerSec;
-
-			success = FindChunk(data, fourccDATA, ChunkSize, ChunkPosition);
-			if (!success)
-			{
-				assert(0);
-				return false;
-			}
-
-			//TODO WAV Decoding
-			soundinternal->audioData.resize(ChunkSize);
-			memcpy(soundinternal->audioData.data(), data + ChunkPosition, ChunkSize);
-
-			wiBackLog::post("WAV Success");
+			SDL_RWseek(data,0,RW_SEEK_SET);
+			SDL_AudioSpec *ret = SDL_LoadWAV_RW(data, false, &soundinternal->info, &audio_buffer, &audio_len);
+        	if (ret == nullptr) {
+            	return false;
+        	}
+        	soundinternal->audioData.resize(audio_len);
+        	std::copy(audio_buffer, audio_buffer+audio_len, soundinternal->audioData.begin());
+        	SDL_FreeWAV(audio_buffer);
 		}
 		else
 		{
-			// Ogg decoder:
+			SDL_RWseek(data,0,RW_SEEK_SET);
+
+			Sint64 size = SDL_RWsize(data);
+
+			std::vector<uint8_t> temp;
+			temp.resize(size);
+
+			SDL_RWread(data, temp.data(), 1, size);
+
 			int channels = 0;
 			int sample_rate = 0;
 			short* output = nullptr;
-			int samples = stb_vorbis_decode_memory(data, (int)size, &channels, &sample_rate, &output);
+			int samples = stb_vorbis_decode_memory(temp.data(), (int)temp.size(), &channels, &sample_rate, &output);
 			if (samples < 0)
 			{
 				assert(0);
@@ -922,9 +811,10 @@ namespace wiAudio
 			memcpy(soundinternal->audioData.data(), output, output_size);
 
 			free(output);
+		}
+        
+		sound->internal_state = soundinternal;
 
-			//wiBackLog::post("OGG Success");
-		}*/
 		return true;
 	}
 	bool CreateSoundInstance(const Sound* sound, SoundInstance* instance)
