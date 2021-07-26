@@ -72,18 +72,19 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float2 bluenoise = blue_noise(unflatten2D(DTid.x, 256)).xy;
 
 	Surfel surfel = surfelBuffer[DTid.x];
+	float3 N = normalize(unpack_unitvector(surfel.normal));
 
 	float seed = surfel.life;
 	float2 uv = float2(g_xFrame_Time, (float)DTid.x / (float)surfel_count);
 
-	Surface surface;
-	surface.init();
-	surface.N = normalize(unpack_unitvector(surfel.normal));
-
 	float4 gi = 0;
-	uint samplecount = (uint)lerp(8.0, 1.0, saturate(surfel.life));
+	uint samplecount = (uint)lerp(16.0, 1.0, saturate(surfel.life));
 	for (uint sam = 0; sam < max(1, samplecount); ++sam)
 	{
+		Surface surface;
+		surface.init();
+		surface.N = N;
+
 		RayDesc ray;
 		ray.Origin = surfel.position;
 		ray.TMin = 0.001;
