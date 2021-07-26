@@ -1,8 +1,6 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Renderer.h"
 
-#define SURFEL_NEIGHBOR_SAMPLING
-
 //#define SURFEL_DEBUG_NORMAL
 #define SURFEL_DEBUG_COLOR
 //#define SURFEL_DEBUG_POINT
@@ -22,6 +20,37 @@ float3 hash_color(uint index)
 	return nice_colors[index % nice_colors_size];
 }
 
+// 27 neighbor offsets in a 3D grid, including center cell:
+static const int3 neighbor_offsets[27] = {
+	int3(-1, -1, -1),
+	int3(-1, -1, 0),
+	int3(-1, -1, 1),
+	int3(-1, 0, -1),
+	int3(-1, 0, 0),
+	int3(-1, 0, 1),
+	int3(-1, 1, -1),
+	int3(-1, 1, 0),
+	int3(-1, 1, 1),
+	int3(0, -1, -1),
+	int3(0, -1, 0),
+	int3(0, -1, 1),
+	int3(0, 0, -1),
+	int3(0, 0, 0),
+	int3(0, 0, 1),
+	int3(0, 1, -1),
+	int3(0, 1, 0),
+	int3(0, 1, 1),
+	int3(1, -1, -1),
+	int3(1, -1, 0),
+	int3(1, -1, 1),
+	int3(1, 0, -1),
+	int3(1, 0, 0),
+	int3(1, 0, 1),
+	int3(1, 1, -1),
+	int3(1, 1, 0),
+	int3(1, 1, 1),
+};
+
 
 STRUCTUREDBUFFER(surfelBuffer, Surfel, TEXSLOT_ONDEMAND0);
 RAWBUFFER(surfelStatsBuffer, TEXSLOT_ONDEMAND1);
@@ -30,7 +59,8 @@ STRUCTUREDBUFFER(surfelCellIndexBuffer, float, TEXSLOT_ONDEMAND3);
 STRUCTUREDBUFFER(surfelCellOffsetBuffer, uint, TEXSLOT_ONDEMAND4);
 
 RWTEXTURE2D(coverage, uint, 0);
-RWTEXTURE2D(debugUAV, unorm float4, 1);
+RWTEXTURE2D(result, float3, 1);
+RWTEXTURE2D(debugUAV, unorm float4, 2);
 
 groupshared uint GroupMinSurfelCount;
 
@@ -44,15 +74,16 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	GroupMemoryBarrierWithGroupSync();
 
 	const float depth = texture_depth[DTid.xy];
+	const float4 g1 = texture_gbuffer1[DTid.xy];
 
 	float4 debug = 0;
+	float4 color = 0;
 
-	if (depth > 0)
+	if (depth > 0 && any(g1))
 	{
 		const float2 uv = ((float2)DTid.xy + 0.5) * g_xFrame_InternalResolution_rcp;
 		const float3 P = reconstructPosition(uv, depth);
 
-		const float4 g1 = texture_gbuffer1.SampleLevel(sampler_linear_clamp, uv, 0);
 		const float3 N = normalize(g1.rgb * 2 - 1);
 
 		uint surfel_count = surfelStatsBuffer.Load(SURFEL_STATS_OFFSET_COUNT);
@@ -60,79 +91,70 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 
 		int3 cell = surfel_cell(P);
 
-#ifdef SURFEL_NEIGHBOR_SAMPLING
 		// iterate through all [27] neighbor cells:
 		[loop]
-		for (int i = -1; i <= 1; ++i)
+		for (uint i = 0; i < 27; ++i)
 		{
-			[loop]
-			for (int j = -1; j <= 1; ++j)
+			uint surfel_hash_target = surfel_hash(cell + neighbor_offsets[i]);
+
+			uint surfel_list_offset = surfelCellOffsetBuffer[surfel_hash_target];
+			while (surfel_list_offset != ~0u && surfel_list_offset < surfel_count)
 			{
-				[loop]
-				for (int k = -1; k <= 1; ++k)
+				uint surfel_index = surfelIndexBuffer[surfel_list_offset];
+				Surfel surfel = surfelBuffer[surfel_index];
+				uint hash = surfel_hash(surfel_cell(surfel.position));
+				//uint hash = surfelCellIndexBuffer[surfel_index];
+
+				if (hash == surfel_hash_target)
 				{
-					uint surfel_hash_target = surfel_hash(cell + int3(i, j, k));
-#else
-					uint surfel_hash_target = surfel_hash(cell);
-#endif // SURFEL_NEIGHBOR_SAMPLING
-
-					uint surfel_list_offset = surfelCellOffsetBuffer[surfel_hash_target];
-					while (surfel_list_offset != ~0u && surfel_list_offset < surfel_count)
+					float dist = length(P - surfel.position);
+					if (dist <= SURFEL_RADIUS)
 					{
-						uint surfel_index = surfelIndexBuffer[surfel_list_offset];
-						uint surfel_hash = surfelCellIndexBuffer[surfel_index];
-
-						if (surfel_hash == surfel_hash_target)
+						float3 normal = unpack_unitvector(surfel.normal);
+						float dotN = dot(N, normal);
+						if (dotN > 0)
 						{
-							Surfel surfel = surfelBuffer[surfel_index];
-							float dist = length(P - surfel.position);
-							if (dist <= SURFEL_RADIUS)
-							{
-								float3 normal = unpack_unitvector(surfel.normal);
-								float dotN = dot(N, normal);
-								if (dotN > 0)
-								{
-									surfel_count_at_pixel++;
+							float contribution = 1;
+							contribution *= saturate(1 - dist / SURFEL_RADIUS);
+							contribution = smoothstep(0, 1, contribution);
+							contribution *= saturate(dotN);
 
-									float contribution = 1;
-									contribution *= saturate(1 - dist / SURFEL_RADIUS);
-									contribution *= saturate(dotN);
-									contribution = smoothstep(0, 1, contribution);
+							if (contribution > 0.75)
+							{
+								surfel_count_at_pixel++;
+							}
+
+							color += float4(surfel.mean, 1) * contribution;
+
 #ifdef SURFEL_DEBUG_NORMAL
-									debug.rgb += normal * contribution;
-									debug.a = 1;
+							debug.rgb += normal * contribution;
+							debug.a = 1;
 #endif // SURFEL_DEBUG_NORMAL
 
-#ifdef SURFEL_DEBUG_COLOR
-									debug += float4(surfel.mean, 1) * contribution;
-#endif // SURFEL_DEBUG_COLOR
-
 #ifdef SURFEL_DEBUG_RANDOM
-									debug += float4(hash_color(surfel_index), 1) * contribution;
+							debug += float4(hash_color(surfel_index), 1) * contribution;
 #endif // SURFEL_DEBUG_RANDOM
 
-								}
+						}
 
 #ifdef SURFEL_DEBUG_POINT
-								if (dist <= 0.05)
-									debug = float4(1, 0, 0, 1);
+						if (dist <= 0.05)
+							debug = float4(1, 0, 0, 1);
 #endif // SURFEL_DEBUG_POINT
-							}
-						}
-						else
-						{
-							// in this case we stepped out of the surfel list of the cell
-							break;
-						}
-
-						surfel_list_offset++;
 					}
-
-#ifdef SURFEL_NEIGHBOR_SAMPLING
 				}
+				else
+				{
+					// in this case we stepped out of the surfel list of the cell
+					break;
+				}
+
+				surfel_list_offset++;
 			}
+
 		}
-#endif // SURFEL_NEIGHBOR_SAMPLING
+
+		surfel_count_at_pixel = min(surfel_count_at_pixel, (uint)color.a);
 
 		surfel_count_at_pixel <<= 8;
 		surfel_count_at_pixel |= (GTid.x & 0xF) << 4;
@@ -140,11 +162,25 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 
 		InterlockedMin(GroupMinSurfelCount, surfel_count_at_pixel);
 
+		if (color.a > 0)
+		{
+			color /= color.a;
+		}
+		else
+		{
+			color = 0;
+		}
+
 #ifdef SURFEL_DEBUG_NORMAL
 		debug.rgb = normalize(debug.rgb) * 0.5 + 0.5;
 #endif // SURFEL_DEBUG_NORMAL
 
-#if defined(SURFEL_DEBUG_COLOR) || defined(SURFEL_DEBUG_RANDOM)
+#ifdef SURFEL_DEBUG_COLOR
+		debug = color;
+		debug.rgb = tonemap(debug.rgb);
+#endif // SURFEL_DEBUG_COLOR
+
+#ifdef SURFEL_DEBUG_RANDOM
 		if (debug.a > 0)
 		{
 			debug /= debug.a;
@@ -153,7 +189,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		{
 			debug = 0;
 		}
-#endif // SURFEL_DEBUG_COLOR || SURFEL_DEBUG_RANDOM
+#endif // SURFEL_DEBUG_RANDOM
 	}
 
 	GroupMemoryBarrierWithGroupSync();
@@ -163,5 +199,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		coverage[Gid.xy] = GroupMinSurfelCount;
 	}
 
+	result[DTid.xy] = color.rgb;
+
+	debug = 0;
 	debugUAV[DTid.xy] = debug;
 }

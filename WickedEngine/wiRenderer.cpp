@@ -8310,6 +8310,14 @@ void CreateSurfelGIResources(SurfelGIResources& res, XMUINT2 resolution)
 	desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
 	device->CreateTexture(&desc, nullptr, &res.coverage);
 	device->SetName(&res.coverage, "surfelCoverage");
+
+	desc.Width = resolution.x;
+	desc.Height = resolution.y;
+	desc.Format = FORMAT_R11G11B10_FLOAT;
+	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+	desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
+	device->CreateTexture(&desc, nullptr, &res.result);
+	device->SetName(&res.result, "surfelResult");
 }
 void SurfelGI(
 	const SurfelGIResources& res,
@@ -8340,6 +8348,7 @@ void SurfelGI(
 
 		const GPUResource* uavs[] = {
 			&res.coverage,
+			&res.result,
 			&debugUAV
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
@@ -8381,7 +8390,6 @@ void SurfelGI(
 			&scene.surfelStatsBuffer,
 			&scene.surfelIndexBuffer,
 			&scene.surfelCellIndexBuffer,
-			&debugUAV
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 

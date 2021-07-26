@@ -42,6 +42,8 @@
 #define TEXSLOT_BLUENOISE			23
 #define TEXSLOT_RANDOM64X64			24
 
+#define TEXSLOT_SURFELGI			25
+
 // Ondemand textures are 2d textures and declared in shader globals, these can be used independently in any shader:
 #define TEXSLOT_ONDEMAND0			30
 #define TEXSLOT_ONDEMAND1			31
