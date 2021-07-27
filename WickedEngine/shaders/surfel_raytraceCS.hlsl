@@ -178,6 +178,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			Surface surface;
 
 #ifdef RTAPI
+
+			// ray origin updated for next bounce:
+			ray.Origin = q.WorldRayOrigin() + q.WorldRayDirection() * q.CommittedRayT();
+
 			ShaderMesh mesh = bindless_buffers[NonUniformResourceIndex(q.CommittedInstanceID())].Load<ShaderMesh>(0);
 			ShaderMeshSubset subset = bindless_subsets[NonUniformResourceIndex(mesh.subsetbuffer)][q.CommittedGeometryIndex()];
 			material = bindless_buffers[NonUniformResourceIndex(subset.material)].Load<ShaderMaterial>(0);
@@ -192,10 +196,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				surface
 			);
 
-			// ray origin updated for next bounce:
-			ray.Origin = q.WorldRayOrigin() + q.WorldRayDirection() * q.CommittedRayT();
-
 #else
+
+			// ray origin updated for next bounce:
+			ray.Origin = ray.Origin + ray.Direction * hit.distance;
 
 			EvaluateObjectSurface(
 				hit,
@@ -203,12 +207,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				surface
 			);
 
-			// ray origin updated for next bounce:
-			ray.Origin = ray.Origin + ray.Direction * hit.distance;
-
 #endif // RTAPI
 
 			surface.P = ray.Origin;
+			surface.V = -ray.Direction;
 			surface.update();
 
 			// Calculate chances of reflection types:
