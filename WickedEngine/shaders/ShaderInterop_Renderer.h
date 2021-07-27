@@ -9,7 +9,7 @@ struct Surfel
 	uint normal;
 
 	float3 mean;
-	float life;
+	float padding;
 
 	float3 shortMean;
 	float vbbr;

@@ -1673,15 +1673,17 @@ namespace wiScene
 			}
 		}
 
-		if (!surfelBuffer.IsValid())
+		if (!surfelBuffer[0].IsValid())
 		{
 			GPUBufferDesc desc;
 			desc.StructureByteStride = sizeof(Surfel);
 			desc.ByteWidth = desc.StructureByteStride * SURFEL_CAPACITY;
 			desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 			desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-			device->CreateBuffer(&desc, nullptr, &surfelBuffer);
-			device->SetName(&surfelBuffer, "surfelBuffer");
+			device->CreateBuffer(&desc, nullptr, &surfelBuffer[0]);
+			device->SetName(&surfelBuffer[0], "surfelBuffer[0]");
+			device->CreateBuffer(&desc, nullptr, &surfelBuffer[1]);
+			device->SetName(&surfelBuffer[1], "surfelBuffer[1]");
 
 			desc.StructureByteStride = sizeof(uint);
 			desc.ByteWidth = desc.StructureByteStride * 4;

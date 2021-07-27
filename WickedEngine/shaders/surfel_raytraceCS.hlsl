@@ -3,6 +3,38 @@
 #include "lightingHF.hlsli"
 #include "ShaderInterop_Renderer.h"
 
+
+// 27 neighbor offsets in a 3D grid, including center cell:
+static const int3 neighbor_offsets[27] = {
+	int3(-1, -1, -1),
+	int3(-1, -1, 0),
+	int3(-1, -1, 1),
+	int3(-1, 0, -1),
+	int3(-1, 0, 0),
+	int3(-1, 0, 1),
+	int3(-1, 1, -1),
+	int3(-1, 1, 0),
+	int3(-1, 1, 1),
+	int3(0, -1, -1),
+	int3(0, -1, 0),
+	int3(0, -1, 1),
+	int3(0, 0, -1),
+	int3(0, 0, 0),
+	int3(0, 0, 1),
+	int3(0, 1, -1),
+	int3(0, 1, 0),
+	int3(0, 1, 1),
+	int3(1, -1, -1),
+	int3(1, -1, 0),
+	int3(1, -1, 1),
+	int3(1, 0, -1),
+	int3(1, 0, 0),
+	int3(1, 0, 1),
+	int3(1, 1, -1),
+	int3(1, 1, 0),
+	int3(1, 1, 1),
+};
+
 void MultiscaleMeanEstimator(
 	float3 y,
 	inout Surfel data,
@@ -58,7 +90,11 @@ void MultiscaleMeanEstimator(
 	data.inconsistency = inconsistency;
 }
 
-RAWBUFFER(surfelStatsBuffer, TEXSLOT_ONDEMAND6);
+STRUCTUREDBUFFER(surfelBuffer_History, Surfel, TEXSLOT_ONDEMAND6);
+RAWBUFFER(surfelStatsBuffer, TEXSLOT_ONDEMAND7);
+STRUCTUREDBUFFER(surfelIndexBuffer, uint, TEXSLOT_ONDEMAND8);
+STRUCTUREDBUFFER(surfelCellIndexBuffer, float, TEXSLOT_ONDEMAND9);
+STRUCTUREDBUFFER(surfelCellOffsetBuffer, uint, TEXSLOT_ONDEMAND10);
 
 RWSTRUCTUREDBUFFER(surfelBuffer, Surfel, 0);
 
@@ -74,29 +110,24 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	Surfel surfel = surfelBuffer[DTid.x];
 	float3 N = normalize(unpack_unitvector(surfel.normal));
 
-	float seed = surfel.life;
+	float seed = 0.1234;
 	float2 uv = float2(g_xFrame_Time, (float)DTid.x / (float)surfel_count);
 
 	float4 gi = 0;
-	uint samplecount = (uint)lerp(32.0, 1.0, saturate(surfel.life));
+	uint samplecount = (uint)lerp(1.0, 2.0, saturate(surfel.inconsistency));
 	for (uint sam = 0; sam < max(1, samplecount); ++sam)
 	{
-		Surface surface;
-		surface.init();
-		surface.N = N;
-		surface.P = surfel.position;
-
 		RayDesc ray;
 		ray.Origin = surfel.position;
 		ray.TMin = 0.001;
 		ray.TMax = FLT_MAX;
-		ray.Direction = SampleHemisphere_cos(surface.N, seed, uv);
+		ray.Direction = SampleHemisphere_cos(N, seed, uv);
 
 		float3 result = 0;
 		float3 energy = 1;
 
-		uint bounces = 8;
-		const uint bouncelimit = 16;
+		uint bounces = 1;
+		const uint bouncelimit = 1;
 		for (uint bounce = 0; ((bounce < min(bounces, bouncelimit)) && any(energy)); ++bounce)
 		{
 			// Sample primary ray (scene materials, sky, etc):
@@ -144,11 +175,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			}
 
 			ShaderMaterial material;
+			Surface surface;
 
 #ifdef RTAPI
-			// ray origin updated for next bounce:
-			ray.Origin = q.WorldRayOrigin() + q.WorldRayDirection() * q.CommittedRayT();
-
 			ShaderMesh mesh = bindless_buffers[NonUniformResourceIndex(q.CommittedInstanceID())].Load<ShaderMesh>(0);
 			ShaderMeshSubset subset = bindless_subsets[NonUniformResourceIndex(mesh.subsetbuffer)][q.CommittedGeometryIndex()];
 			material = bindless_buffers[NonUniformResourceIndex(subset.material)].Load<ShaderMaterial>(0);
@@ -163,9 +192,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				surface
 			);
 
-#else
 			// ray origin updated for next bounce:
-			ray.Origin = ray.Origin + ray.Direction * hit.distance;
+			ray.Origin = q.WorldRayOrigin() + q.WorldRayDirection() * q.CommittedRayT();
+
+#else
 
 			EvaluateObjectSurface(
 				hit,
@@ -173,8 +203,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				surface
 			);
 
+			// ray origin updated for next bounce:
+			ray.Origin = ray.Origin + ray.Direction * hit.distance;
+
 #endif // RTAPI
 
+			surface.P = ray.Origin;
 			surface.update();
 
 			// Calculate chances of reflection types:
@@ -216,7 +250,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			result += max(0, energy * surface.emissiveColor.rgb * surface.emissiveColor.a);
 
 
-			surface.P = ray.Origin;
+
+
+
+
+
 
 
 			[loop]
@@ -388,14 +426,83 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				}
 			}
 
+
+
+
+
+
+
+#if 1
+			//if (surfel.inconsistency < 0.5)
+			{
+			float4 surfel_gi = 0;
+			int3 cell = surfel_cell(surface.P);
+
+			// iterate through all [27] neighbor cells:
+			[loop]
+			for (uint i = 0; i < 27; ++i)
+			{
+				uint surfel_hash_target = surfel_hash(cell + neighbor_offsets[i]);
+
+				uint surfel_list_offset = surfelCellOffsetBuffer[surfel_hash_target];
+				while (surfel_list_offset != ~0u && surfel_list_offset < surfel_count)
+				{
+					uint surfel_index = surfelIndexBuffer[surfel_list_offset];
+					Surfel surfel_history = surfelBuffer_History[surfel_index];
+					uint hash = surfel_hash(surfel_cell(surfel_history.position));
+
+					if (hash == surfel_hash_target)
+					{
+						float dist = length(surface.P - surfel_history.position);
+						if (dist <= SURFEL_RADIUS)
+						{
+							float3 normal = unpack_unitvector(surfel_history.normal);
+							float dotN = dot(surface.N, normal);
+							if (dotN > 0)
+							{
+								float contribution = 1;
+								contribution *= saturate(1 - dist / SURFEL_RADIUS);
+								contribution = smoothstep(0, 1, contribution);
+								contribution *= saturate(dotN);
+
+								surfel_gi += float4(surfel_history.shortMean, 1) * contribution;
+
+							}
+						}
+					}
+					else
+					{
+						// in this case we stepped out of the surfel list of the cell
+						break;
+					}
+
+					surfel_list_offset++;
+				}
+
+			}
+			if (surfel_gi.a > 0)
+			{
+				surfel_gi /= surfel_gi.a;
+				result += max(0, energy * surfel_gi.rgb);
+				break;
+			}
+
+			}
+#endif
+
+
+
+
+
 		}
 
 		gi += float4(result, 1);
 	}
 	gi /= gi.a;
 
+
+
 	MultiscaleMeanEstimator(gi.rgb, surfel, 0.09);
 
-	surfel.life += g_xFrame_DeltaTime;
 	surfelBuffer[DTid.x] = surfel;
 }

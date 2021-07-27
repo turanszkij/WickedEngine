@@ -5,6 +5,7 @@
 #define SURFEL_DEBUG_COLOR
 //#define SURFEL_DEBUG_POINT
 //#define SURFEL_DEBUG_RANDOM
+//#define SURFEL_DEBUG_DATA
 
 
 static const uint nice_colors_size = 5;
@@ -126,7 +127,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 							contribution = smoothstep(0, 1, contribution);
 							contribution *= saturate(dotN);
 
-							if (contribution > 0.75)
+							if (contribution > 0.6)
 							{
 								surfel_count_at_pixel++;
 							}
@@ -141,6 +142,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 #ifdef SURFEL_DEBUG_RANDOM
 							debug += float4(hash_color(surfel_index), 1) * contribution;
 #endif // SURFEL_DEBUG_RANDOM
+
+#ifdef SURFEL_DEBUG_DATA
+							debug += float4(surfel.inconsistency.xxx, 1) * contribution;
+#endif // SURFEL_DEBUG_DATA
 
 						}
 
@@ -187,7 +192,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		debug.rgb = tonemap(debug.rgb);
 #endif // SURFEL_DEBUG_COLOR
 
-#ifdef SURFEL_DEBUG_RANDOM
+#if defined(SURFEL_DEBUG_RANDOM) || defined(SURFEL_DEBUG_DATA)
 		if (debug.a > 0)
 		{
 			debug /= debug.a;

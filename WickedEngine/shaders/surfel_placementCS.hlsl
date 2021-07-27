@@ -36,7 +36,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	// Early exit: slow down the propagation by chance
 	//	Closer surfaces have less chance to avoid excessive clumping of surfels
 	const float lineardepth = getLinearDepth(depth) * g_xCamera_ZFarP_rcp;
-	const float chance = pow(1 - lineardepth, 8);
+	const float chance = pow(1 - lineardepth, 32);
 	if (blue_noise(DTid.xy).x < chance)
 		return;
 
@@ -55,6 +55,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			Surfel surfel = (Surfel)0;
 			surfel.position = P;
 			surfel.normal = pack_unitvector(N);
+			surfel.inconsistency = 1;
 			surfelBuffer[surfel_alloc] = surfel;
 
 			surfelIndexBuffer[surfel_alloc] = surfel_alloc;
