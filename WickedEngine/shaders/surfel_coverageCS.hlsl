@@ -21,37 +21,6 @@ float3 hash_color(uint index)
 	return nice_colors[index % nice_colors_size];
 }
 
-// 27 neighbor offsets in a 3D grid, including center cell:
-static const int3 neighbor_offsets[27] = {
-	int3(-1, -1, -1),
-	int3(-1, -1, 0),
-	int3(-1, -1, 1),
-	int3(-1, 0, -1),
-	int3(-1, 0, 0),
-	int3(-1, 0, 1),
-	int3(-1, 1, -1),
-	int3(-1, 1, 0),
-	int3(-1, 1, 1),
-	int3(0, -1, -1),
-	int3(0, -1, 0),
-	int3(0, -1, 1),
-	int3(0, 0, -1),
-	int3(0, 0, 0),
-	int3(0, 0, 1),
-	int3(0, 1, -1),
-	int3(0, 1, 0),
-	int3(0, 1, 1),
-	int3(1, -1, -1),
-	int3(1, -1, 0),
-	int3(1, -1, 1),
-	int3(1, 0, -1),
-	int3(1, 0, 0),
-	int3(1, 0, 1),
-	int3(1, 1, -1),
-	int3(1, 1, 0),
-	int3(1, 1, 1),
-};
-
 static const uint2 pixel_offsets[4] = {
 	uint2(0, 0), uint2(1, 0),
 	uint2(0, 1), uint2(1, 1),
@@ -91,11 +60,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	{
 		const float2 uv = ((float2)pixel + 0.5) * g_xFrame_InternalResolution_rcp;
 		const float3 P = reconstructPosition(uv, depth);
+		const float3 V = normalize(g_xCamera_CamPos - P);
 
 		const float3 N = normalize(g1.rgb * 2 - 1);
 
 		uint surfel_count = surfelStatsBuffer.Load(SURFEL_STATS_OFFSET_COUNT);
-		uint surfel_count_at_pixel = 0;
 
 		int3 cell = surfel_cell(P);
 
@@ -103,7 +72,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		[loop]
 		for (uint i = 0; i < 27; ++i)
 		{
-			uint surfel_hash_target = surfel_hash(cell + neighbor_offsets[i]);
+			uint surfel_hash_target = surfel_hash(cell + surfel_neighbor_offsets[i]);
 
 			uint surfel_list_offset = surfelCellOffsetBuffer[surfel_hash_target];
 			while (surfel_list_offset != ~0u && surfel_list_offset < surfel_count)
@@ -147,7 +116,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 						}
 
 #ifdef SURFEL_DEBUG_POINT
-						if (dist <= 0.05)
+						if (dist2 <= sqr(0.1))
 							debug = float4(1, 0, 0, 1);
 #endif // SURFEL_DEBUG_POINT
 					}
@@ -163,8 +132,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 
 		}
 
-		surfel_count_at_pixel = (uint)color.a;
-
+		uint surfel_count_at_pixel = (uint)color.a;
 		surfel_count_at_pixel <<= 8;
 		surfel_count_at_pixel |= (GTid.x & 0xF) << 4;
 		surfel_count_at_pixel |= (GTid.y & 0xF) << 0;

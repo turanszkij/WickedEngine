@@ -3,38 +3,6 @@
 #include "lightingHF.hlsli"
 #include "ShaderInterop_Renderer.h"
 
-
-// 27 neighbor offsets in a 3D grid, including center cell:
-static const int3 neighbor_offsets[27] = {
-	int3(-1, -1, -1),
-	int3(-1, -1, 0),
-	int3(-1, -1, 1),
-	int3(-1, 0, -1),
-	int3(-1, 0, 0),
-	int3(-1, 0, 1),
-	int3(-1, 1, -1),
-	int3(-1, 1, 0),
-	int3(-1, 1, 1),
-	int3(0, -1, -1),
-	int3(0, -1, 0),
-	int3(0, -1, 1),
-	int3(0, 0, -1),
-	int3(0, 0, 0),
-	int3(0, 0, 1),
-	int3(0, 1, -1),
-	int3(0, 1, 0),
-	int3(0, 1, 1),
-	int3(1, -1, -1),
-	int3(1, -1, 0),
-	int3(1, -1, 1),
-	int3(1, 0, -1),
-	int3(1, 0, 0),
-	int3(1, 0, 1),
-	int3(1, 1, -1),
-	int3(1, 1, 0),
-	int3(1, 1, 1),
-};
-
 void MultiscaleMeanEstimator(
 	float3 y,
 	inout Surfel data,
@@ -114,7 +82,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float2 uv = float2(g_xFrame_Time, (float)DTid.x / (float)surfel_count);
 
 	float4 gi = 0;
-	uint samplecount = (uint)lerp(1.0, 8.0, saturate(surfel.inconsistency));
+	uint samplecount = (uint)lerp(1.0, 16.0, saturate(surfel.inconsistency));
 	for (uint sam = 0; sam < max(1, samplecount); ++sam)
 	{
 		RayDesc ray;
@@ -483,7 +451,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			[loop]
 			for (uint i = 0; i < 27; ++i)
 			{
-				uint surfel_hash_target = surfel_hash(cell + neighbor_offsets[i]);
+				uint surfel_hash_target = surfel_hash(cell + surfel_neighbor_offsets[i]);
 
 				uint surfel_list_offset = surfelCellOffsetBuffer[surfel_hash_target];
 				while (surfel_list_offset != ~0u && surfel_list_offset < surfel_count)
@@ -545,5 +513,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	MultiscaleMeanEstimator(gi.rgb, surfel, 0.09);
 
+	surfel.life += g_xFrame_DeltaTime;
 	surfelBuffer[DTid.x] = surfel;
 }

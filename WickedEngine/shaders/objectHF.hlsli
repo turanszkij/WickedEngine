@@ -144,7 +144,10 @@ TEXTURE2D(texture_ao, float, TEXSLOT_RENDERPATH_AO);						// r: ambient occlusio
 TEXTURE2D(texture_ssr, float4, TEXSLOT_RENDERPATH_SSR);						// rgb: screen space ray-traced reflections, a: reflection blend based on ray hit or miss
 TEXTURE2D(texture_rtshadow, uint4, TEXSLOT_RENDERPATH_RTSHADOW);			// bitmask for max 16 shadows' visibility
 
-TEXTURE2D(texture_surfelgi, float3, TEXSLOT_SURFELGI);
+RAWBUFFER(surfelStatsBuffer, TEXSLOT_SURFELSTATSBUFFER);
+STRUCTUREDBUFFER(surfelBuffer, Surfel, TEXSLOT_SURFELBUFFER);
+STRUCTUREDBUFFER(surfelIndexBuffer, uint, TEXSLOT_SURFELINDEXBUFFER);
+STRUCTUREDBUFFER(surfelCellOffsetBuffer, uint, TEXSLOT_SURFELCELLOFFSETBUFFER);
 
 // Use these to compile this file as shader prototype:
 //#define OBJECTSHADER_COMPILE_VS				- compile vertex shader prototype
@@ -1899,10 +1902,59 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 
 
 #ifdef TILEDFORWARD
-#ifndef TRANSPARENT
-	lighting.indirect.specular = 0;
-	lighting.indirect.diffuse = texture_surfelgi[pixel];
-#endif // TRANSPARENT
+	float4 surfelgi = 0;
+	uint surfel_count = surfelStatsBuffer.Load(SURFEL_STATS_OFFSET_COUNT);
+	int3 cell = surfel_cell(surface.P);
+
+	// iterate through all [27] neighbor cells:
+	[loop]
+	for (uint i = 0; i < 27; ++i)
+	{
+		uint surfel_hash_target = surfel_hash(cell + surfel_neighbor_offsets[i]);
+
+		uint surfel_list_offset = surfelCellOffsetBuffer[surfel_hash_target];
+		while (surfel_list_offset != ~0u && surfel_list_offset < surfel_count)
+		{
+			uint surfel_index = surfelIndexBuffer[surfel_list_offset];
+			Surfel surfel = surfelBuffer[surfel_index];
+			uint hash = surfel_hash(surfel_cell(surfel.position));
+
+			if (hash == surfel_hash_target)
+			{
+				float3 L = surfel.position - surface.P;
+				float dist2 = dot(L, L);
+				if (dist2 <= SURFEL_RADIUS2)
+				{
+					float3 normal = normalize(unpack_unitvector(surfel.normal));
+					float dotN = dot(surface.N, normal);
+					if (dotN > 0)
+					{
+						float dist = sqrt(dist2);
+						float contribution = 1;
+						contribution *= saturate(1 - dist / SURFEL_RADIUS);
+						contribution = smoothstep(0, 1, contribution);
+						contribution *= saturate(dotN);
+						contribution *= saturate(surfel.life);
+
+						surfelgi += float4(surfel.mean, 1) * contribution;
+					}
+				}
+			}
+			else
+			{
+				// in this case we stepped out of the surfel list of the cell
+				break;
+			}
+
+			surfel_list_offset++;
+		}
+
+	}
+	if (surfelgi.a > 0)
+	{
+		surfelgi.rgb /= surfelgi.a;
+		lighting.indirect.diffuse = lerp(lighting.indirect.diffuse, surfelgi.rgb, saturate(surfelgi.a));
+	}
 #endif // TILEDFORWARD
 
 

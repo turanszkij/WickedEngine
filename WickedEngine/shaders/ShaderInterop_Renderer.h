@@ -9,7 +9,7 @@ struct Surfel
 	uint normal;
 
 	float3 mean;
-	float padding;
+	float life;
 
 	float3 shortMean;
 	float vbbr;
@@ -36,6 +36,36 @@ inline uint surfel_hash(int3 cell)
 	n %= SURFEL_TABLE_SIZE;
 	return n;
 }
+// 27 neighbor offsets in a 3D grid, including center cell:
+static const int3 surfel_neighbor_offsets[27] = {
+	int3(-1, -1, -1),
+	int3(-1, -1, 0),
+	int3(-1, -1, 1),
+	int3(-1, 0, -1),
+	int3(-1, 0, 0),
+	int3(-1, 0, 1),
+	int3(-1, 1, -1),
+	int3(-1, 1, 0),
+	int3(-1, 1, 1),
+	int3(0, -1, -1),
+	int3(0, -1, 0),
+	int3(0, -1, 1),
+	int3(0, 0, -1),
+	int3(0, 0, 0),
+	int3(0, 0, 1),
+	int3(0, 1, -1),
+	int3(0, 1, 0),
+	int3(0, 1, 1),
+	int3(1, -1, -1),
+	int3(1, -1, 0),
+	int3(1, -1, 1),
+	int3(1, 0, -1),
+	int3(1, 0, 0),
+	int3(1, 0, 1),
+	int3(1, 1, -1),
+	int3(1, 1, 0),
+	int3(1, 1, 1),
+};
 
 static const uint SHADERMATERIAL_OPTION_BIT_USE_VERTEXCOLORS = 1 << 0;
 static const uint SHADERMATERIAL_OPTION_BIT_SPECULARGLOSSINESS_WORKFLOW = 1 << 1;
