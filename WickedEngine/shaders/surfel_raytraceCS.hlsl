@@ -114,7 +114,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float2 uv = float2(g_xFrame_Time, (float)DTid.x / (float)surfel_count);
 
 	float4 gi = 0;
-	uint samplecount = (uint)lerp(1.0, 4.0, saturate(surfel.inconsistency));
+	uint samplecount = (uint)lerp(1.0, 8.0, saturate(surfel.inconsistency));
 	for (uint sam = 0; sam < max(1, samplecount); ++sam)
 	{
 		RayDesc ray;
@@ -494,13 +494,15 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 					if (hash == surfel_hash_target)
 					{
-						float dist = length(surface.P - surfel_history.position);
-						if (dist <= SURFEL_RADIUS)
+						float3 L = surfel_history.position - surface.P;
+						float dist2 = dot(L, L);
+						if (dist2 <= SURFEL_RADIUS2)
 						{
-							float3 normal = unpack_unitvector(surfel_history.normal);
+							float3 normal = normalize(unpack_unitvector(surfel_history.normal));
 							float dotN = dot(surface.N, normal);
 							if (dotN > 0)
 							{
+								float dist = sqrt(dist2);
 								float contribution = 1;
 								contribution *= saturate(1 - dist / SURFEL_RADIUS);
 								contribution = smoothstep(0, 1, contribution);

@@ -2,7 +2,7 @@
 #include "ShaderInterop_Renderer.h"
 
 //#define SURFEL_DEBUG_NORMAL
-#define SURFEL_DEBUG_COLOR
+//#define SURFEL_DEBUG_COLOR
 //#define SURFEL_DEBUG_POINT
 //#define SURFEL_DEBUG_RANDOM
 //#define SURFEL_DEBUG_DATA
@@ -115,13 +115,15 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 
 				if (hash == surfel_hash_target)
 				{
-					float dist = length(P - surfel.position);
-					if (dist <= SURFEL_RADIUS)
+					float3 L = surfel.position - P;
+					float dist2 = dot(L, L);
+					if (dist2 <= SURFEL_RADIUS2)
 					{
-						float3 normal = unpack_unitvector(surfel.normal);
+						float3 normal = normalize(unpack_unitvector(surfel.normal));
 						float dotN = dot(N, normal);
 						if (dotN > 0)
 						{
+							float dist = sqrt(dist2);
 							float contribution = 1;
 							contribution *= saturate(1 - dist / SURFEL_RADIUS);
 							contribution = smoothstep(0, 1, contribution);
@@ -211,7 +213,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	result[DTid.xy * 2 + uint2(0, 1)] = color.rgb;
 	result[DTid.xy * 2 + uint2(1, 1)] = color.rgb;
 
-	debug = 0;
 	debugUAV[DTid.xy * 2 + uint2(0, 0)] = debug;
 	debugUAV[DTid.xy * 2 + uint2(1, 0)] = debug;
 	debugUAV[DTid.xy * 2 + uint2(0, 1)] = debug;
