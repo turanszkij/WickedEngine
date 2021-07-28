@@ -114,7 +114,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float2 uv = float2(g_xFrame_Time, (float)DTid.x / (float)surfel_count);
 
 	float4 gi = 0;
-	uint samplecount = (uint)lerp(1.0, 2.0, saturate(surfel.inconsistency));
+	uint samplecount = (uint)lerp(1.0, 4.0, saturate(surfel.inconsistency));
 	for (uint sam = 0; sam < max(1, samplecount); ++sam)
 	{
 		RayDesc ray;
@@ -258,7 +258,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 
 
-
+#if 1
 			[loop]
 			for (uint iterator = 0; iterator < g_xFrame_LightArrayCount; iterator++)
 			{
@@ -428,6 +428,47 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				}
 			}
 
+#else
+
+
+
+			Lighting lighting;
+			lighting.create(0, 0, 0, 0);
+
+			[loop]
+			for (uint iterator = 0; iterator < g_xFrame_LightArrayCount; iterator++)
+			{
+				ShaderEntity light = EntityArray[g_xFrame_LightArrayOffset + iterator];
+				if ((light.layerMask & material.layerMask) == 0)
+					continue;
+
+				switch (light.GetType())
+				{
+				case ENTITY_TYPE_DIRECTIONALLIGHT:
+				{
+					DirectionalLight(light, surface, lighting);
+				}
+				break;
+				case ENTITY_TYPE_POINTLIGHT:
+				{
+					PointLight(light, surface, lighting);
+				}
+				break;
+				case ENTITY_TYPE_SPOTLIGHT:
+				{
+					SpotLight(light, surface, lighting);
+				}
+				break;
+				}
+			}
+
+			result += max(0, lighting.direct.diffuse);
+
+
+
+#endif
+
+
 
 
 
@@ -435,8 +476,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 
 #if 1
-			//if (surfel.inconsistency < 0.5)
-			{
 			float4 surfel_gi = 0;
 			int3 cell = surfel_cell(surface.P);
 
@@ -487,8 +526,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				surfel_gi /= surfel_gi.a;
 				result += max(0, energy * surfel_gi.rgb);
 				break;
-			}
-
 			}
 #endif
 

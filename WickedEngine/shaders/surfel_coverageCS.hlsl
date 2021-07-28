@@ -127,11 +127,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 							contribution = smoothstep(0, 1, contribution);
 							contribution *= saturate(dotN);
 
-							if (contribution > 0.6)
-							{
-								surfel_count_at_pixel++;
-							}
-
 							color += float4(surfel.mean, 1) * contribution;
 
 #ifdef SURFEL_DEBUG_NORMAL
@@ -166,7 +161,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 
 		}
 
-		surfel_count_at_pixel = min(surfel_count_at_pixel, (uint)color.a);
+		surfel_count_at_pixel = (uint)color.a;
 
 		surfel_count_at_pixel <<= 8;
 		surfel_count_at_pixel |= (GTid.x & 0xF) << 4;
