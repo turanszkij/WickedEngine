@@ -896,9 +896,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)objectPS_prepass_alphatest.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)skyPS_velocity.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)objectVS_prepass_alphatest.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
@@ -1014,6 +1011,9 @@
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)surfel_raytraceCS_rtapi.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)surfel_updateCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>

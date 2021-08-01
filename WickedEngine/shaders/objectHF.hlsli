@@ -144,10 +144,7 @@ TEXTURE2D(texture_ao, float, TEXSLOT_RENDERPATH_AO);						// r: ambient occlusio
 TEXTURE2D(texture_ssr, float4, TEXSLOT_RENDERPATH_SSR);						// rgb: screen space ray-traced reflections, a: reflection blend based on ray hit or miss
 TEXTURE2D(texture_rtshadow, uint4, TEXSLOT_RENDERPATH_RTSHADOW);			// bitmask for max 16 shadows' visibility
 
-RAWBUFFER(surfelStatsBuffer, TEXSLOT_SURFELSTATSBUFFER);
-STRUCTUREDBUFFER(surfelBuffer, Surfel, TEXSLOT_SURFELBUFFER);
-STRUCTUREDBUFFER(surfelIndexBuffer, uint, TEXSLOT_SURFELINDEXBUFFER);
-STRUCTUREDBUFFER(surfelCellOffsetBuffer, uint, TEXSLOT_SURFELCELLOFFSETBUFFER);
+TEXTURE2D(texture_surfelgi, float3, TEXSLOT_SURFELGI);
 
 // Use these to compile this file as shader prototype:
 //#define OBJECTSHADER_COMPILE_VS				- compile vertex shader prototype
@@ -235,22 +232,6 @@ STRUCTUREDBUFFER(surfelCellOffsetBuffer, uint, TEXSLOT_SURFELCELLOFFSETBUFFER);
 #define OBJECTSHADER_USE_EMISSIVE
 #endif // OBJECTSHADER_LAYOUT_COMMON
 
-#ifdef BINDLESS
-static const uint instance_stride_matrix_userdata = 16 * 4;
-static const uint instance_stride_atlas = 16;
-static const uint instance_stride_prev = 16 * 3;
-
-#ifdef OBJECTSHADER_INPUT_PRE
-static const uint instance_stride = instance_stride_matrix_userdata + instance_stride_prev;
-#else
-#ifdef OBJECTSHADER_INPUT_ATL
-static const uint instance_stride = instance_stride_matrix_userdata + instance_stride_atlas;
-#else
-static const uint instance_stride = instance_stride_matrix_userdata;
-#endif // OBJECTSHADER_INPUT_ATL
-#endif // OBJECTSHADER_INPUT_PRE
-#endif // BINDLESS
-
 struct VertexInput
 {
 #ifdef BINDLESS
@@ -294,21 +275,9 @@ struct VertexInput
 	}
 #endif // OBJECTSHADER_INPUT_TEX
 
-	float4x4 GetInstanceMatrix()
+	ShaderMeshInstancePointer GetInstancePointer()
 	{
-		float4 mat0 = bindless_buffers[push.instances].Load<float4>(push.instance_offset + instanceID * instance_stride + 16 * 0);
-		float4 mat1 = bindless_buffers[push.instances].Load<float4>(push.instance_offset + instanceID * instance_stride + 16 * 1);
-		float4 mat2 = bindless_buffers[push.instances].Load<float4>(push.instance_offset + instanceID * instance_stride + 16 * 2);
-		return  float4x4(
-			mat0,
-			mat1,
-			mat2,
-			float4(0, 0, 0, 1)
-			);
-	}
-	uint4 GetInstanceUserdata()
-	{
-		return bindless_buffers[push.instances].Load<uint4>(push.instance_offset + instanceID * instance_stride + 16 * 3);
+		return bindless_buffers[push.instances].Load<ShaderMeshInstancePointer>(push.instance_offset + instanceID * 8);
 	}
 
 #ifdef OBJECTSHADER_INPUT_PRE
@@ -322,18 +291,6 @@ struct VertexInput
 		}
 		return float4(bindless_buffers[descriptor_index].Load<float3>(vertexID * 16), 1);
 	}
-	float4x4 GetInstanceMatrixPrev()
-	{
-		float4 matPrev0 = bindless_buffers[push.instances].Load<float4>(push.instance_offset + instanceID * instance_stride + 16 * 4);
-		float4 matPrev1 = bindless_buffers[push.instances].Load<float4>(push.instance_offset + instanceID * instance_stride + 16 * 5);
-		float4 matPrev2 = bindless_buffers[push.instances].Load<float4>(push.instance_offset + instanceID * instance_stride + 16 * 6);
-		return  float4x4(
-			matPrev0,
-			matPrev1,
-			matPrev2,
-			float4(0, 0, 0, 1)
-			);
-	}
 #endif // OBJECTSHADER_INPUT_PRE
 
 #ifdef OBJECTSHADER_INPUT_ATL
@@ -343,10 +300,6 @@ struct VertexInput
 		if (GetMesh().vb_atl < 0)
 			return 0;
 		return unpack_half2(bindless_buffers[GetMesh().vb_atl].Load<uint>(vertexID * 4));
-	}
-	float4 GetInstanceAtlas()
-	{
-		return bindless_buffers[push.instances].Load<float4>(push.instance_offset + instanceID * instance_stride + 16 * 4);
 	}
 #endif // OBJECTSHADER_INPUT_ATL
 
@@ -438,48 +391,37 @@ struct VertexInput
 	}
 #endif // OBJECTSHADER_INPUT_TAN
 
-	float4 mat0 : INSTANCEMATRIX0;
-	float4 mat1 : INSTANCEMATRIX1;
-	float4 mat2 : INSTANCEMATRIX2;
-	uint4 userdata : INSTANCEUSERDATA;
-
-#ifdef OBJECTSHADER_INPUT_PRE
-	float4 matPrev0 : INSTANCEMATRIXPREV0;
-	float4 matPrev1 : INSTANCEMATRIXPREV1;
-	float4 matPrev2 : INSTANCEMATRIXPREV2;
-	float4x4 GetInstanceMatrixPrev()
+	uint2 inst : INSTANCEPOINTER;
+	ShaderMeshInstancePointer GetInstancePointer()
 	{
-		return  float4x4(
-			matPrev0,
-			matPrev1,
-			matPrev2,
-			float4(0, 0, 0, 1)
-			);
+		ShaderMeshInstancePointer poi;
+		poi.instanceID = inst.x;
+		poi.userdata = inst.y;
+		return poi;
 	}
-#endif // OBJECTSHADER_INPUT_PRE
 
-#ifdef OBJECTSHADER_INPUT_ATL
-	float4 atlasMulAdd : INSTANCEATLAS;
-	float4 GetInstanceAtlas()
+#endif // BINDLESS
+
+	ShaderMeshInstance GetInstance()
 	{
-		return atlasMulAdd;
+		return InstanceBuffer[GetInstancePointer().instanceID];
 	}
-#endif // OBJECTSHADER_INPUT_ATL
-
 	float4x4 GetInstanceMatrix()
 	{
-		return  float4x4(
-			mat0,
-			mat1,
-			mat2,
-			float4(0, 0, 0, 1)
-			);
+		return float4x4(transpose(GetInstance().transform), float4(0, 0, 0, 1));
 	}
-	uint4 GetInstanceUserdata()
+	uint GetInstanceUserdata()
 	{
-		return userdata;
+		return GetInstancePointer().userdata;
 	}
-#endif // BINDLESS
+	float4x4 GetInstanceMatrixPrev()
+	{
+		return float4x4(transpose(GetInstance().transformPrev), float4(0, 0, 0, 1));
+	}
+	float4 GetInstanceAtlas()
+	{
+		return GetInstance().atlasMulAdd;
+	}
 };
 
 
@@ -496,11 +438,11 @@ struct VertexSurface
 
 	inline void create(in ShaderMaterial material, in VertexInput input)
 	{
-		float4x4 WORLD = input.GetInstanceMatrix();
-		uint4 userdata = input.GetInstanceUserdata();
+		uint userdata = input.GetInstanceUserdata();
 		position = input.GetPosition();
-		color = material.baseColor * unpack_rgba(userdata.x);
-		emissiveColor = userdata.z;
+		color = material.baseColor * unpack_rgba(input.GetInstance().color);
+		color.a *= 1 - input.GetInstancePointer().GetDither();
+		emissiveColor = input.GetInstance().emissive;
 
 #ifdef OBJECTSHADER_INPUT_PRE
 		positionPrev = input.GetPositionPrev();
@@ -515,11 +457,11 @@ struct VertexSurface
 		}
 #endif // OBJECTSHADER_INPUT_COL
 		
-		normal = normalize(mul((float3x3)WORLD, input.GetNormal()));
+		normal = normalize(mul((float3x3)input.GetInstanceMatrix(), input.GetNormal()));
 
 #ifdef OBJECTSHADER_INPUT_TAN
 		tangent = input.GetTangent();
-		tangent.xyz = normalize(mul((float3x3)WORLD, tangent.xyz));
+		tangent.xyz = normalize(mul((float3x3)input.GetInstanceMatrix(), tangent.xyz));
 #endif // OBJECTSHADER_INPUT_TAN
 
 #ifdef OBJECTSHADER_INPUT_TEX
@@ -531,7 +473,7 @@ struct VertexSurface
 		atlas = input.GetAtlasUV() * atlasMulAdd.xy + atlasMulAdd.zw;
 #endif // OBJECTSHADER_INPUT_ATL
 
-		position = mul(WORLD, position);
+		position = mul(input.GetInstanceMatrix(), position);
 
 #ifdef OBJECTSHADER_INPUT_PRE
 		positionPrev = mul(input.GetInstanceMatrixPrev(), positionPrev);
@@ -558,6 +500,8 @@ struct VertexSurface
 struct PixelInput
 {
 	precise float4 pos : SV_POSITION;
+
+	uint instanceID : INSTANCEID;
 
 #ifdef OBJECTSHADER_USE_CLIPPLANE
 	float  clip : SV_ClipDistance0;
@@ -1201,6 +1145,7 @@ inline void ApplyFog(in float distance, float3 P, float3 V, inout float4 color)
 PixelInput main(VertexInput input)
 {
 	PixelInput Out;
+	Out.instanceID = input.GetInstancePointer().instanceID;
 
 	VertexSurface surface;
 	surface.create(GetMaterial(), input);
@@ -1255,7 +1200,7 @@ PixelInput main(VertexInput input)
 #endif // OBJECTSHADER_USE_EMISSIVE
 
 #ifdef OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
-	const uint frustum_index = input.GetInstanceUserdata().y;
+	const uint frustum_index = input.GetInstancePointer().GetFrustumIndex();
 	Out.RTIndex = xCubemapRenderCams[frustum_index].properties.x;
 #ifndef OBJECTSHADER_USE_NOCAMERA
 	Out.pos = mul(xCubemapRenderCams[frustum_index].VP, surface.position);
@@ -1288,11 +1233,15 @@ PixelInput main(VertexInput input)
 
 
 // entry point:
+#ifdef PREPASS
+uint2 main(PixelInput input, in uint primitiveID : SV_PrimitiveID) : SV_TARGET
+#else
 #ifdef OUTPUT_GBUFFER
 GBuffer main(PixelInput input, in bool is_frontface : SV_IsFrontFace)
 #else
 float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 #endif // OUTPUT_GBUFFER
+#endif // PREPASS
 
 
 // Pixel shader base:
@@ -1902,59 +1851,9 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 
 
 #ifdef TILEDFORWARD
-	float4 surfelgi = 0;
-	uint surfel_count = surfelStatsBuffer.Load(SURFEL_STATS_OFFSET_COUNT);
-	int3 cell = surfel_cell(surface.P);
-
-	// iterate through all [27] neighbor cells:
-	[loop]
-	for (uint i = 0; i < 27; ++i)
-	{
-		uint surfel_hash_target = surfel_hash(cell + surfel_neighbor_offsets[i]);
-
-		uint surfel_list_offset = surfelCellOffsetBuffer[surfel_hash_target];
-		while (surfel_list_offset != ~0u && surfel_list_offset < surfel_count)
-		{
-			uint surfel_index = surfelIndexBuffer[surfel_list_offset];
-			Surfel surfel = surfelBuffer[surfel_index];
-			uint hash = surfel_hash(surfel_cell(surfel.position));
-
-			if (hash == surfel_hash_target)
-			{
-				float3 L = surfel.position - surface.P;
-				float dist2 = dot(L, L);
-				if (dist2 <= SURFEL_RADIUS2)
-				{
-					float3 normal = normalize(unpack_unitvector(surfel.normal));
-					float dotN = dot(surface.N, normal);
-					if (dotN > 0)
-					{
-						float dist = sqrt(dist2);
-						float contribution = 1;
-						contribution *= saturate(1 - dist / SURFEL_RADIUS);
-						contribution = smoothstep(0, 1, contribution);
-						contribution *= saturate(dotN);
-						contribution *= saturate(surfel.life);
-
-						surfelgi += float4(surfel.mean, 1) * contribution;
-					}
-				}
-			}
-			else
-			{
-				// in this case we stepped out of the surfel list of the cell
-				break;
-			}
-
-			surfel_list_offset++;
-		}
-
-	}
-	if (surfelgi.a > 0)
-	{
-		surfelgi.rgb /= surfelgi.a;
-		lighting.indirect.diffuse = lerp(lighting.indirect.diffuse, surfelgi.rgb, saturate(surfelgi.a));
-	}
+#ifndef TRANSPARENT
+	lighting.indirect.diffuse = texture_surfelgi[pixel];
+#endif // TRANSPARENT
 #endif // TILEDFORWARD
 
 
@@ -2006,9 +1905,10 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 
 	// end point:
 #ifdef PREPASS
-	return float4(velocity, 0, 0); /*FORMAT_R16G16_FLOAT*/
+	return uint2(primitiveID, (input.instanceID & 0xFFFFFF) | ((push.subsetIndex & 0xFF) << 24u));
 #else
 #ifdef OUTPUT_GBUFFER
+	//color.rgb = GetMaterial().baseColor;
 	return CreateGBuffer(color, surface);
 #else
 	return color;

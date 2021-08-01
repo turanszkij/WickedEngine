@@ -11,6 +11,7 @@
 // Application-side types:
 
 typedef XMMATRIX matrix;
+typedef XMFLOAT3X4 float3x4;
 typedef XMFLOAT4X4 float4x4;
 typedef XMFLOAT2 float2;
 typedef XMFLOAT3 float3;

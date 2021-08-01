@@ -10,7 +10,7 @@ static const float3 BILLBOARD[] = {
 	float3(1, 1, 0),
 };
 
-RAWBUFFER(instanceBuffer, TEXSLOT_ONDEMAND21);
+RAWBUFFER(impostorBuffer, TEXSLOT_ONDEMAND21);
 
 VSOut main(uint fakeIndex : SV_VERTEXID)
 {
@@ -19,10 +19,10 @@ VSOut main(uint fakeIndex : SV_VERTEXID)
 
 	uint byteOffset = (uint)g_xColor.x + instanceID * 64;
 
-	float4 mat0 = asfloat(instanceBuffer.Load4(byteOffset + 0));
-	float4 mat1 = asfloat(instanceBuffer.Load4(byteOffset + 16));
-	float4 mat2 = asfloat(instanceBuffer.Load4(byteOffset + 32));
-	uint4 userdata = instanceBuffer.Load4(byteOffset + 48);
+	float4 mat0 = asfloat(impostorBuffer.Load4(byteOffset + 0));
+	float4 mat1 = asfloat(impostorBuffer.Load4(byteOffset + 16));
+	float4 mat2 = asfloat(impostorBuffer.Load4(byteOffset + 32));
+	uint4 userdata = impostorBuffer.Load4(byteOffset + 48);
 
 	float4x4 WORLD = WORLD = float4x4(
 		mat0,

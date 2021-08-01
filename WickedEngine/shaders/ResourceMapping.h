@@ -42,10 +42,9 @@
 #define TEXSLOT_BLUENOISE			23
 #define TEXSLOT_RANDOM64X64			24
 
-#define TEXSLOT_SURFELSTATSBUFFER		25
-#define TEXSLOT_SURFELBUFFER			26
-#define TEXSLOT_SURFELINDEXBUFFER		27
-#define TEXSLOT_SURFELCELLOFFSETBUFFER	28
+#define TEXSLOT_SURFELGI			28
+
+#define TEXSLOT_INSTANCEBUFFER		29
 
 // Ondemand textures are 2d textures and declared in shader globals, these can be used independently in any shader:
 #define TEXSLOT_ONDEMAND0			30

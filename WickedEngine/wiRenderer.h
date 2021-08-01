@@ -209,8 +209,6 @@ namespace wiRenderer
 	void RefreshAtmosphericScatteringTextures(wiGraphics::CommandList cmd);
 	// Draw skydome centered to camera.
 	void DrawSky(const wiScene::Scene& scene, wiGraphics::CommandList cmd);
-	// Draw sky velocity buffer
-	void DrawSkyVelocity(wiGraphics::CommandList cmd);
 	// Draw shadow maps for each visible light that has associated shadow maps
 	void DrawSun(wiGraphics::CommandList cmd);
 	// Draw shadow maps for each visible light that has associated shadow maps

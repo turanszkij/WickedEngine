@@ -26,6 +26,7 @@ TEXTURE2D(texture_bluenoise, float4, TEXSLOT_BLUENOISE);
 TEXTURE2D(texture_random64x64, float4, TEXSLOT_RANDOM64X64);
 STRUCTUREDBUFFER(EntityArray, ShaderEntity, SBSLOT_ENTITYARRAY);
 STRUCTUREDBUFFER(MatrixArray, float4x4, SBSLOT_MATRIXARRAY);
+STRUCTUREDBUFFER(InstanceBuffer, ShaderMeshInstance, TEXSLOT_INSTANCEBUFFER);
 
 SAMPLERSTATE(			sampler_linear_clamp,	SSLOT_LINEAR_CLAMP	);
 SAMPLERSTATE(			sampler_linear_wrap,	SSLOT_LINEAR_WRAP	);
@@ -713,6 +714,22 @@ float3 ClosestPointOnSegment(float3 a, float3 b, float3 c)
 	float3 ab = b - a;
 	float t = dot(c - a, ab) / dot(ab, ab);
 	return a + saturate(t) * ab;
+}
+
+// Compute barycentric coordinates on triangle from a point p
+float3 compute_barycentrics(float3 p, float3 a, float3 b, float3 c)
+{
+	float3 v0 = b - a, v1 = c - a, v2 = p - a;
+	float d00 = dot(v0, v0);
+	float d01 = dot(v0, v1);
+	float d11 = dot(v1, v1);
+	float d20 = dot(v2, v0);
+	float d21 = dot(v2, v1);
+	float denom = d00 * d11 - d01 * d01;
+	float u = (d11 * d20 - d01 * d21) / denom;
+	float v = (d00 * d21 - d01 * d20) / denom;
+	float w = 1.0f - u - v;
+	return float3(u, v, w);
 }
 
 static const float4 halton64[] = {

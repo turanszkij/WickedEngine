@@ -248,7 +248,6 @@ int main(int argc, char* argv[])
 		"sunPS.hlsl"									,
 		"skyPS_dynamic.hlsl"							,
 		"skyPS_static.hlsl"								,
-		"skyPS_velocity.hlsl"							,
 		"shadowPS_transparent.hlsl"						,
 		"shadowPS_water.hlsl"							,
 		"shadowPS_alphatest.hlsl"						,

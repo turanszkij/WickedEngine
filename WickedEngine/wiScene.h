@@ -1297,6 +1297,9 @@ namespace wiScene
 		void SetAccelerationStructureUpdateRequested(bool value = true) { acceleration_structure_update_requested = value; }
 		bool IsAccelerationStructureUpdateRequested() const { return acceleration_structure_update_requested; }
 
+		std::vector<ShaderMeshInstance> instanceData;
+		wiGraphics::GPUBuffer instanceBuffer;
+
 		// Occlusion query state:
 		wiGraphics::GPUQueryHeap queryHeap[arraysize(ObjectComponent::occlusionQueries)];
 		std::vector<uint64_t> queryResults;

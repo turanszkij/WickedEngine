@@ -42,6 +42,10 @@ void RenderPath3D::ResizeBuffers()
 		device->CreateTexture(&desc, nullptr, &rtGbuffer[GBUFFER_VELOCITY]);
 		device->SetName(&rtGbuffer[GBUFFER_VELOCITY], "rtGbuffer[GBUFFER_VELOCITY]");
 
+		desc.Format = FORMAT_R32G32_UINT;
+		device->CreateTexture(&desc, nullptr, &rtGbuffer[GBUFFER_PRIMITIVEID]);
+		device->SetName(&rtGbuffer[GBUFFER_PRIMITIVEID], "rtGbuffer[GBUFFER_PRIMITIVEID]");
+
 		if (getMSAASampleCount() > 1)
 		{
 			desc.SampleCount = 1;
@@ -58,6 +62,10 @@ void RenderPath3D::ResizeBuffers()
 			desc.Format = FORMAT_R16G16_FLOAT;
 			device->CreateTexture(&desc, nullptr, &rtGbuffer_resolved[GBUFFER_VELOCITY]);
 			device->SetName(&rtGbuffer_resolved[GBUFFER_VELOCITY], "rtGbuffer_resolved[GBUFFER_VELOCITY]");
+
+			desc.Format = FORMAT_R32G32_UINT;
+			device->CreateTexture(&desc, nullptr, &rtGbuffer_resolved[GBUFFER_PRIMITIVEID]);
+			device->SetName(&rtGbuffer_resolved[GBUFFER_PRIMITIVEID], "rtGbuffer_resolved[GBUFFER_PRIMITIVEID]");
 
 		}
 	}
@@ -308,11 +316,7 @@ void RenderPath3D::ResizeBuffers()
 				IMAGE_LAYOUT_SHADER_RESOURCE
 			)
 		);
-		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtGbuffer[GBUFFER_VELOCITY], RenderPassAttachment::LOADOP_DONTCARE));
-		if (getMSAASampleCount() > 1)
-		{
-			desc.attachments.push_back(RenderPassAttachment::Resolve(GetGbuffer_Read(GBUFFER_VELOCITY)));
-		}
+		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtGbuffer[GBUFFER_PRIMITIVEID], RenderPassAttachment::LOADOP_DONTCARE));
 		device->CreateRenderPass(&desc, &renderpass_depthprepass);
 
 		desc.attachments.clear();
@@ -647,7 +651,6 @@ void RenderPath3D::Render() const
 		vp.Height = (float)depthBuffer_Main.GetDesc().Height;
 		device->BindViewports(1, &vp, cmd);
 		wiRenderer::DrawScene(visibility_main, RENDERPASS_PREPASS, cmd, drawscene_flags);
-		wiRenderer::DrawSkyVelocity(cmd);
 
 		wiProfiler::EndRange(range);
 		device->EventEnd(cmd);
@@ -689,6 +692,15 @@ void RenderPath3D::Render() const
 		}
 
 		wiRenderer::Postprocess_DepthPyramid(depthBuffer_Copy, rtLinearDepth, cmd);
+
+		wiRenderer::SurfelGI(
+			surfelGIResources,
+			*scene,
+			depthBuffer_Copy,
+			GetGbuffer_Read(),
+			debugUAV,
+			cmd
+		);
 
 		RenderAO(cmd);
 
@@ -938,10 +950,7 @@ void RenderPath3D::Render() const
 		device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
 		device->BindResource(PS, getAOEnabled() ? &rtAO : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_AO, cmd);
 		device->BindResource(PS, getSSREnabled() || getRaytracedReflectionEnabled() ? &rtSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, cmd);
-		device->BindResource(PS, &scene->surfelStatsBuffer, TEXSLOT_SURFELSTATSBUFFER, cmd);
-		device->BindResource(PS, &scene->surfelBuffer[device->GetFrameCount() % 2], TEXSLOT_SURFELBUFFER, cmd);
-		device->BindResource(PS, &scene->surfelIndexBuffer, TEXSLOT_SURFELINDEXBUFFER, cmd);
-		device->BindResource(PS, &scene->surfelCellOffsetBuffer, TEXSLOT_SURFELCELLOFFSETBUFFER, cmd);
+		device->BindResource(PS, &surfelGIResources.result, TEXSLOT_SURFELGI, cmd);
 		wiRenderer::DrawScene(visibility_main, RENDERPASS_MAIN, cmd, drawscene_flags);
 		wiRenderer::DrawSky(*scene, cmd);
 
@@ -997,15 +1006,6 @@ void RenderPath3D::Render() const
 		RenderTransparents(cmd);
 
 		RenderPostprocessChain(cmd);
-
-		wiRenderer::SurfelGI(
-			surfelGIResources,
-			*scene,
-			depthBuffer_Copy,
-			GetGbuffer_Read(),
-			debugUAV,
-			cmd
-		);
 
 		});
 

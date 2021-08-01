@@ -8,6 +8,9 @@ struct Surfel
 	float3 position;
 	uint normal;
 
+	uint2 primitiveID;
+	float2 bary;
+
 	float3 mean;
 	float life;
 
@@ -186,12 +189,48 @@ struct ShaderMeshSubset
 	int material;
 };
 
+struct ShaderMeshInstance
+{
+	float3x4 transform;
+	float3x4 transformPrev;
+	float4 atlasMulAdd;
+	uint color;
+	uint emissive;
+	uint padding0;
+	uint padding1;
+	ShaderMesh mesh;
+};
+struct ShaderMeshInstancePointer
+{
+	uint instanceID;
+	uint userdata;
+
+	void Create(uint _instanceID, uint frustum_index, float dither)
+	{
+		instanceID = _instanceID;
+		userdata = 0;
+		userdata |= frustum_index & 0xF;
+		userdata |= (uint(dither * 255.0f) & 0xFF) << 4u;
+	}
+	uint GetFrustumIndex()
+	{
+		return userdata & 0xF;
+	}
+	float GetDither()
+	{
+		return ((userdata >> 4u) & 0xFF) / 255.0f;
+	}
+};
+
 struct ObjectPushConstants
 {
 	int mesh;
 	int material;
 	int instances;
 	uint instance_offset;
+
+	uint3 padding;
+	uint subsetIndex;
 };
 
 // Warning: the size of this structure directly affects shader performance.

@@ -1,6 +1,11 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Renderer.h"
 
+TEXTURE2D(texture_gbuffer_primitiveID, uint2, TEXSLOT_GBUFFER2);
+ByteAddressBuffer bindless_buffers[] : register(t0, space2);
+StructuredBuffer<ShaderMeshSubset> bindless_subsets[] : register(t0, space3);
+Buffer<uint> bindless_ib[] : register(t0, space4);
+
 //#define SURFEL_DEBUG_NORMAL
 //#define SURFEL_DEBUG_COLOR
 //#define SURFEL_DEBUG_POINT
@@ -51,18 +56,59 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	uint2 pixel = DTid.xy * 2 + pixel_offsets[g_xFrame_FrameCount % 4];
 
 	const float depth = texture_depth[pixel];
-	const float4 g1 = texture_gbuffer1[pixel];
+	//const float4 g1 = texture_gbuffer1[pixel];
 
 	float4 debug = 0;
 	float4 color = 0;
 
-	if (depth > 0 && any(g1))
+	if (depth > 0 /*&& any(g1)*/)
 	{
 		const float2 uv = ((float2)pixel + 0.5) * g_xFrame_InternalResolution_rcp;
 		const float3 P = reconstructPosition(uv, depth);
 		const float3 V = normalize(g_xCamera_CamPos - P);
 
-		const float3 N = normalize(g1.rgb * 2 - 1);
+		//const float3 N = normalize(g1.rgb * 2 - 1);
+
+
+
+
+		uint2 primitiveID = texture_gbuffer_primitiveID[pixel];
+		uint primitiveIndex = primitiveID.x;
+		uint instanceID = primitiveID.y & 0xFFFFFF;
+		uint subsetIndex = (primitiveID.y >> 24u) & 0xFF;
+		ShaderMeshInstance inst = InstanceBuffer[instanceID];
+		ShaderMesh mesh = inst.mesh;
+		ShaderMeshSubset subset = bindless_subsets[NonUniformResourceIndex(mesh.subsetbuffer)][subsetIndex];
+		uint startIndex = primitiveIndex * 3 + subset.indexOffset;
+		uint i0 = bindless_ib[NonUniformResourceIndex(mesh.ib)][startIndex + 0];
+		uint i1 = bindless_ib[NonUniformResourceIndex(mesh.ib)][startIndex + 1];
+		uint i2 = bindless_ib[NonUniformResourceIndex(mesh.ib)][startIndex + 2];
+
+		float3 N = 0;
+		[branch]
+		if (mesh.vb_pos_nor_wind >= 0)
+		{
+			uint4 data0 = bindless_buffers[NonUniformResourceIndex(mesh.vb_pos_nor_wind)].Load4(i0 * 16);
+			uint4 data1 = bindless_buffers[NonUniformResourceIndex(mesh.vb_pos_nor_wind)].Load4(i1 * 16);
+			uint4 data2 = bindless_buffers[NonUniformResourceIndex(mesh.vb_pos_nor_wind)].Load4(i2 * 16);
+			float4x4 worldMatrix = float4x4(transpose(inst.transform), float4(0, 0, 0, 1));
+			float3 p0 = mul(worldMatrix, float4(asfloat(data0.xyz), 1)).xyz;
+			float3 p1 = mul(worldMatrix, float4(asfloat(data1.xyz), 1)).xyz;
+			float3 p2 = mul(worldMatrix, float4(asfloat(data2.xyz), 1)).xyz;
+			float3 n0 = unpack_unitvector(data0.w);
+			float3 n1 = unpack_unitvector(data1.w);
+			float3 n2 = unpack_unitvector(data2.w);
+
+			float3 bary = compute_barycentrics(P, p0, p1, p2);
+			float u = bary.x;
+			float v = bary.y;
+			float w = bary.z;
+			N = n0 * w + n1 * u + n2 * v;
+			N = mul((float3x3)worldMatrix, N);
+			N = normalize(N);
+		}
+
+
 
 		uint surfel_count = surfelStatsBuffer.Load(SURFEL_STATS_OFFSET_COUNT);
 

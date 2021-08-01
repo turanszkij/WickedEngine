@@ -1456,6 +1456,17 @@ namespace wiScene
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
+		instanceData.resize(objects.GetCount());
+		if (instanceBuffer.desc.ByteWidth < (instanceData.size() * sizeof(ShaderMeshInstance)))
+		{
+			GPUBufferDesc desc;
+			desc.StructureByteStride = sizeof(ShaderMeshInstance);
+			desc.ByteWidth = desc.StructureByteStride * (uint32_t)instanceData.size();
+			desc.BindFlags = BIND_SHADER_RESOURCE;
+			desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+			device->CreateBuffer(&desc, nullptr, &instanceBuffer);
+		}
+
 		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_PIPELINE) || device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
 		{
 			TLAS_instances.resize(objects.GetCount() * device->GetTopLevelAccelerationStructureInstanceSize());
@@ -3149,17 +3160,53 @@ namespace wiScene
 						object.prev_transform_index = -1;
 					}
 
+					// Create GPU instance data:
+					GraphicsDevice* device = wiRenderer::GetDevice();
+					const XMFLOAT4X4& worldMatrix = object.transform_index >= 0 ? transforms[object.transform_index].world : IDENTITYMATRIX;
+					const XMFLOAT4X4& worldMatrixPrev = object.prev_transform_index >= 0 ? prev_transforms[object.prev_transform_index].world_prev : IDENTITYMATRIX;
+					ShaderMeshInstance& inst = instanceData[args.jobIndex];
+					inst.transform = XMFLOAT3X4(
+						worldMatrix._11, worldMatrix._21, worldMatrix._31, worldMatrix._41,
+						worldMatrix._12, worldMatrix._22, worldMatrix._32, worldMatrix._42,
+						worldMatrix._13, worldMatrix._23, worldMatrix._33, worldMatrix._43
+					);
+					inst.transformPrev = XMFLOAT3X4(
+						worldMatrixPrev._11, worldMatrixPrev._21, worldMatrixPrev._31, worldMatrixPrev._41,
+						worldMatrixPrev._12, worldMatrixPrev._22, worldMatrixPrev._32, worldMatrixPrev._42,
+						worldMatrixPrev._13, worldMatrixPrev._23, worldMatrixPrev._33, worldMatrixPrev._43
+					);
+					if (object.lightmap.IsValid())
+					{
+						auto rect = object.lightmap_rect;
+
+						// eliminate border expansion:
+						rect.x += Scene::atlasClampBorder;
+						rect.y += Scene::atlasClampBorder;
+						rect.w -= Scene::atlasClampBorder * 2;
+						rect.h -= Scene::atlasClampBorder * 2;
+
+						inst.atlasMulAdd = XMFLOAT4(
+							(float)rect.w / (float)lightmap.desc.Width,
+							(float)rect.h / (float)lightmap.desc.Height,
+							(float)rect.x / (float)lightmap.desc.Width,
+							(float)rect.y / (float)lightmap.desc.Height
+						);
+					}
+					else
+					{
+						inst.atlasMulAdd = XMFLOAT4(0, 0, 0, 0);
+					}
+					inst.color = wiMath::CompressColor(object.color);
+					inst.emissive = wiMath::CompressColor(object.emissiveColor);
+					//inst.mesh = device->GetDescriptorIndex(&mesh->descriptor, SRV);
+					mesh->WriteShaderMesh(&inst.mesh);
+
 					if (TLAS.IsValid())
 					{
-						GraphicsDevice* device = wiRenderer::GetDevice();
+						// TLAS instance data:
 						RaytracingAccelerationStructureDesc::TopLevel::Instance instance = {};
-						const XMFLOAT4X4& worldMatrix = object.transform_index >= 0 ? transforms[object.transform_index].world : IDENTITYMATRIX;
 						instance = {};
-						instance.transform = XMFLOAT3X4(
-							worldMatrix._11, worldMatrix._21, worldMatrix._31, worldMatrix._41,
-							worldMatrix._12, worldMatrix._22, worldMatrix._32, worldMatrix._42,
-							worldMatrix._13, worldMatrix._23, worldMatrix._33, worldMatrix._43
-						);
+						instance.transform = inst.transform;
 						instance.InstanceID = (uint32_t)device->GetDescriptorIndex(&mesh->descriptor, SRV);
 						instance.InstanceMask = 1;
 						instance.bottomlevel = mesh->BLAS;
