@@ -7,7 +7,7 @@ Buffer<uint> bindless_ib[] : register(t0, space4);
 
 //#define SURFEL_DEBUG_NORMAL
 //#define SURFEL_DEBUG_COLOR
-#define SURFEL_DEBUG_POINT
+//#define SURFEL_DEBUG_POINT
 //#define SURFEL_DEBUG_RANDOM
 //#define SURFEL_DEBUG_DATA
 
@@ -142,10 +142,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 							float dist = sqrt(dist2);
 							float contribution = 1;
 							contribution *= saturate(1 - dist / SURFEL_RADIUS);
-							contribution *= saturate(dotN);
+							contribution *= pow(saturate(dotN), SURFEL_NORMAL_TOLERANCE);
 							contribution = smoothstep(0, 1, contribution);
 							coverage += contribution;
-							contribution *= saturate(surfel.life);
+							contribution *= saturate(surfel.life); // life must not affect coverage, only blending factor!
 
 							color += float4(surfel.mean, 1) * contribution;
 

@@ -69,6 +69,8 @@ static const int3 surfel_neighbor_offsets[27] = {
 	int3(1, 1, 0),
 	int3(1, 1, 1),
 };
+static const uint SURFEL_TARGET_COVERAGE = 1; // how many surfels should affect a pixel fully, higher values will increase quality and cost
+static const float SURFEL_NORMAL_TOLERANCE = 1; // default: 1, higher values will put more surfels on edges, to have more detail but increases cost
 
 static const uint SHADERMATERIAL_OPTION_BIT_USE_VERTEXCOLORS = 1 << 0;
 static const uint SHADERMATERIAL_OPTION_BIT_SPECULARGLOSSINESS_WORKFLOW = 1 << 1;

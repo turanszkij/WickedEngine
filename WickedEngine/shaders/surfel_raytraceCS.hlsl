@@ -156,9 +156,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			> q;
 			q.TraceRayInline(
 				scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
-#ifdef RAY_BACKFACE_CULLING
-				RAY_FLAG_CULL_BACK_FACING_TRIANGLES |
-#endif // RAY_BACKFACE_CULLING
 				RAY_FLAG_FORCE_OPAQUE |
 				0,								// uint RayFlags
 				0xFF,							// uint InstanceInclusionMask
@@ -523,7 +520,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 								float contribution = 1;
 								contribution *= saturate(1 - dist / SURFEL_RADIUS);
 								contribution = smoothstep(0, 1, contribution);
-								contribution *= saturate(dotN);
+								contribution *= pow(saturate(dotN), SURFEL_NORMAL_TOLERANCE);
 
 								surfel_gi += float4(surfel_history.shortMean, 1) * contribution;
 

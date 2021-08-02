@@ -5,8 +5,6 @@ ByteAddressBuffer bindless_buffers[] : register(t0, space2);
 StructuredBuffer<ShaderMeshSubset> bindless_subsets[] : register(t0, space3);
 Buffer<uint> bindless_ib[] : register(t0, space4);
 
-static const uint SURFEL_TARGET_COVERAGE = 1;
-
 static const uint2 pixel_offsets[4] = {
 	uint2(0, 0), uint2(1, 0),
 	uint2(0, 1), uint2(1, 1),
