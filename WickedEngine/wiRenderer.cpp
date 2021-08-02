@@ -8207,12 +8207,6 @@ void SurfelGI(
 	device->EventBegin("SurfelGI", cmd);
 	auto prof_range = wiProfiler::BeginRangeGPU("SurfelGI", cmd);
 
-	device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
-	device->BindResource(CS, &gbuffer[GBUFFER_COLOR], TEXSLOT_GBUFFER0, cmd);
-	device->BindResource(CS, &gbuffer[GBUFFER_NORMAL_ROUGHNESS], TEXSLOT_GBUFFER1, cmd);
-	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
-	device->BindResource(CS, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER2, cmd);
-
 	device->BindResource(CS, &scene.instanceBuffer, TEXSLOT_INSTANCEBUFFER, cmd);
 
 	const int current = device->GetFrameCount() % 2;
@@ -8378,10 +8372,9 @@ void SurfelGI(
 		device->BindComputeShader(&shaders[CSTYPE_SURFEL_COVERAGE], cmd);
 
 		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
-		device->BindResource(CS, &gbuffer[GBUFFER_COLOR], TEXSLOT_GBUFFER0, cmd);
+		device->BindResource(CS, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
 		device->BindResource(CS, &gbuffer[GBUFFER_NORMAL_ROUGHNESS], TEXSLOT_GBUFFER1, cmd);
 		device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
-		device->BindResource(CS, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER2, cmd);
 
 		device->BindResource(CS, &scene.surfelBuffer[current], TEXSLOT_ONDEMAND0, cmd);
 		device->BindResource(CS, &scene.surfelStatsBuffer, TEXSLOT_ONDEMAND1, cmd);
@@ -9527,7 +9520,7 @@ void Postprocess_RTAO(
 	device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
-	device->BindResource(CS, &gbuffer[GBUFFER_COLOR], TEXSLOT_GBUFFER0, cmd);
+	device->BindResource(CS, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
 	device->BindResource(CS, &gbuffer[GBUFFER_NORMAL_ROUGHNESS], TEXSLOT_GBUFFER1, cmd);
 	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
 
@@ -9878,7 +9871,7 @@ void Postprocess_RTReflection(
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
-	device->BindResource(CS, &gbuffer[GBUFFER_COLOR], TEXSLOT_GBUFFER0, cmd);
+	device->BindResource(CS, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
 	device->BindResource(CS, &gbuffer[GBUFFER_NORMAL_ROUGHNESS], TEXSLOT_GBUFFER1, cmd);
 	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
 
@@ -10009,7 +10002,7 @@ void Postprocess_SSR(
 
 	device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
-	device->BindResource(CS, &gbuffer[GBUFFER_COLOR], TEXSLOT_GBUFFER0, cmd);
+	device->BindResource(CS, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
 	device->BindResource(CS, &gbuffer[GBUFFER_NORMAL_ROUGHNESS], TEXSLOT_GBUFFER1, cmd);
 	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
 
@@ -10285,7 +10278,7 @@ void Postprocess_RTShadow(
 
 	device->BindResource(CS, &entityTiles_Opaque, TEXSLOT_RENDERPATH_ENTITYTILES, cmd);
 
-	device->BindResource(CS, &gbuffer[GBUFFER_COLOR], TEXSLOT_GBUFFER0, cmd);
+	device->BindResource(CS, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
 	device->BindResource(CS, &gbuffer[GBUFFER_NORMAL_ROUGHNESS], TEXSLOT_GBUFFER1, cmd);
 	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
 

@@ -1,7 +1,6 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Renderer.h"
 
-TEXTURE2D(texture_gbuffer_primitiveID, uint2, TEXSLOT_GBUFFER2);
 ByteAddressBuffer bindless_buffers[] : register(t0, space2);
 StructuredBuffer<ShaderMeshSubset> bindless_subsets[] : register(t0, space3);
 Buffer<uint> bindless_ib[] : register(t0, space4);
@@ -72,7 +71,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 
 
 
-		uint2 primitiveID = texture_gbuffer_primitiveID[pixel];
+		uint2 primitiveID = texture_gbuffer0[pixel];
 		uint primitiveIndex = primitiveID.x;
 		uint instanceID = primitiveID.y & 0xFFFFFF;
 		uint subsetIndex = (primitiveID.y >> 24u) & 0xFF;
