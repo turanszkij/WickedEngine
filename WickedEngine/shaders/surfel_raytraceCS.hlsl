@@ -3,6 +3,14 @@
 #include "lightingHF.hlsli"
 #include "ShaderInterop_Renderer.h"
 
+#ifndef RTAPI
+Texture2D<float4> bindless_textures[] : register(t0, space1);
+ByteAddressBuffer bindless_buffers[] : register(t0, space2);
+StructuredBuffer<ShaderMeshSubset> bindless_subsets[] : register(t0, space3);
+Buffer<uint> bindless_ib[] : register(t0, space4);
+#endif // RTAPI
+
+
 void MultiscaleMeanEstimator(
 	float3 y,
 	inout Surfel data,

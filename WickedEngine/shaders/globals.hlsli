@@ -725,9 +725,9 @@ float3 compute_barycentrics(float3 p, float3 a, float3 b, float3 c)
 	float d11 = dot(v1, v1);
 	float d20 = dot(v2, v0);
 	float d21 = dot(v2, v1);
-	float denom = d00 * d11 - d01 * d01;
-	float u = (d11 * d20 - d01 * d21) / denom;
-	float v = (d00 * d21 - d01 * d20) / denom;
+	float denom_rcp = rcp(d00 * d11 - d01 * d01);
+	float u = (d11 * d20 - d01 * d21) * denom_rcp;
+	float v = (d00 * d21 - d01 * d20) * denom_rcp;
 	float w = 1.0f - u - v;
 	return float3(u, v, w);
 }

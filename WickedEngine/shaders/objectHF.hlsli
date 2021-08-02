@@ -26,17 +26,23 @@
 
 #ifdef BINDLESS
 Texture2D<float4> bindless_textures[] : register(t0, space1);
-SamplerState bindless_samplers[] : register(t0, space2);
-ByteAddressBuffer bindless_buffers[] : register(t0, space3);
+ByteAddressBuffer bindless_buffers[] : register(t0, space2);
+StructuredBuffer<ShaderMeshSubset> bindless_subsets[] : register(t0, space3);
+SamplerState bindless_samplers[] : register(t0, space4);
 PUSHCONSTANT(push, ObjectPushConstants);
 
+inline uint GetSubsetIndex()
+{
+	return push.subsetIndex;
+}
 inline ShaderMesh GetMesh()
 {
 	return bindless_buffers[push.mesh].Load<ShaderMesh>(0);
 }
 inline ShaderMaterial GetMaterial()
 {
-	return bindless_buffers[push.material].Load<ShaderMaterial>(0);
+	ShaderMeshSubset subset = bindless_subsets[GetMesh().subsetbuffer][GetSubsetIndex()];
+	return bindless_buffers[subset.material].Load<ShaderMaterial>(0);
 }
 inline ShaderMaterial GetMaterial1()
 {
@@ -85,6 +91,10 @@ inline ShaderMaterial GetMaterial3()
 
 #else
 
+inline uint GetSubsetIndex()
+{
+	return 0;
+}
 inline ShaderMaterial GetMaterial()
 {
 	return g_xMaterial;
@@ -1905,7 +1915,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 
 	// end point:
 #ifdef PREPASS
-	return uint2(primitiveID, (input.instanceID & 0xFFFFFF) | ((push.subsetIndex & 0xFF) << 24u));
+	return uint2(primitiveID, (input.instanceID & 0xFFFFFF) | ((GetSubsetIndex() & 0xFF) << 24u));
 #else
 #ifdef OUTPUT_GBUFFER
 	//color.rgb = GetMaterial().baseColor;

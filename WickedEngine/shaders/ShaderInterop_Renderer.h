@@ -225,12 +225,9 @@ struct ShaderMeshInstancePointer
 struct ObjectPushConstants
 {
 	int mesh;
-	int material;
+	uint subsetIndex;
 	int instances;
 	uint instance_offset;
-
-	uint3 padding;
-	uint subsetIndex;
 };
 
 // Warning: the size of this structure directly affects shader performance.

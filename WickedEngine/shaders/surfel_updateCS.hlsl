@@ -7,6 +7,7 @@ Buffer<uint> bindless_ib[] : register(t0, space4);
 
 RAWBUFFER(surfelStatsBuffer, TEXSLOT_ONDEMAND0);
 STRUCTUREDBUFFER(surfelIndexBuffer, uint, TEXSLOT_ONDEMAND1);
+STRUCTUREDBUFFER(surfelBuffer_History, Surfel, TEXSLOT_ONDEMAND2);
 
 RWSTRUCTUREDBUFFER(surfelBuffer, Surfel, 0);
 RWSTRUCTUREDBUFFER(surfelCellIndexBuffer, float, 1);
@@ -19,7 +20,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		return;
 
 	uint surfel_index = surfelIndexBuffer[DTid.x];
-	Surfel surfel = surfelBuffer[surfel_index];
+	Surfel surfel = surfelBuffer_History[surfel_index];
 
 
 
