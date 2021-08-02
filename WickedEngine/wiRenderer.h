@@ -299,6 +299,13 @@ namespace wiRenderer
 		wiGraphics::CommandList cmd
 	);
 
+	void VisibilityResolve(
+		const wiScene::Scene& scene,
+		const wiGraphics::Texture& depthbuffer,
+		const wiGraphics::Texture gbuffer[GBUFFER_COUNT],
+		wiGraphics::CommandList cmd
+	);
+
 	struct SurfelGIResources
 	{
 		wiGraphics::Texture coverage;

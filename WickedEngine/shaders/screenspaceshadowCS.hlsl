@@ -26,9 +26,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	// ray traced shadow works better with GBUFFER normal:
 	//	Reprojection issues are mostly solved by denoiser anyway
 	const float2 uv = ((float2)DTid.xy + 0.5) * xPPResolution_rcp;
-	const float2 velocity = texture_gbuffer2.SampleLevel(sampler_point_clamp, uv, 0).xy;
-	const float2 prevUV = uv + velocity;
-	const float4 g1 = texture_gbuffer1.SampleLevel(sampler_linear_clamp, prevUV, 0);
+	const float4 g1 = texture_gbuffer1.SampleLevel(sampler_linear_clamp, uv, 0);
 	const float3 N = normalize(g1.rgb * 2 - 1);
 
 	const float depth = texture_depth.SampleLevel(sampler_linear_clamp, uv, 0);

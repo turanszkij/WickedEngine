@@ -154,7 +154,7 @@ TEXTURE2D(texture_ao, float, TEXSLOT_RENDERPATH_AO);						// r: ambient occlusio
 TEXTURE2D(texture_ssr, float4, TEXSLOT_RENDERPATH_SSR);						// rgb: screen space ray-traced reflections, a: reflection blend based on ray hit or miss
 TEXTURE2D(texture_rtshadow, uint4, TEXSLOT_RENDERPATH_RTSHADOW);			// bitmask for max 16 shadows' visibility
 
-TEXTURE2D(texture_surfelgi, float3, TEXSLOT_SURFELGI);
+TEXTURE2D(texture_surfelgi, float4, TEXSLOT_SURFELGI);
 
 // Use these to compile this file as shader prototype:
 //#define OBJECTSHADER_COMPILE_VS				- compile vertex shader prototype
@@ -211,7 +211,7 @@ TEXTURE2D(texture_surfelgi, float3, TEXSLOT_SURFELGI);
 #define OBJECTSHADER_INPUT_PRE
 #define OBJECTSHADER_USE_CLIPPLANE
 #define OBJECTSHADER_USE_WIND
-#define OBJECTSHADER_USE_POSITIONPREV
+//#define OBJECTSHADER_USE_POSITIONPREV
 #endif // OBJECTSHADER_LAYOUT_POS
 
 #ifdef OBJECTSHADER_LAYOUT_POS_PREVPOS_TEX // used by depth prepass with alpha test or dithered transparency
@@ -220,7 +220,7 @@ TEXTURE2D(texture_surfelgi, float3, TEXSLOT_SURFELGI);
 #define OBJECTSHADER_INPUT_TEX
 #define OBJECTSHADER_USE_CLIPPLANE
 #define OBJECTSHADER_USE_WIND
-#define OBJECTSHADER_USE_POSITIONPREV
+//#define OBJECTSHADER_USE_POSITIONPREV
 #define OBJECTSHADER_USE_UVSETS
 #define OBJECTSHADER_USE_DITHERING
 #endif // OBJECTSHADER_LAYOUT_POS_TEX
@@ -1246,11 +1246,7 @@ PixelInput main(VertexInput input)
 #ifdef PREPASS
 uint2 main(PixelInput input, in uint primitiveID : SV_PrimitiveID) : SV_TARGET
 #else
-#ifdef OUTPUT_GBUFFER
-GBuffer main(PixelInput input, in bool is_frontface : SV_IsFrontFace)
-#else
 float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
-#endif // OUTPUT_GBUFFER
 #endif // PREPASS
 
 
@@ -1862,7 +1858,8 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 
 #ifdef TILEDFORWARD
 #ifndef TRANSPARENT
-	lighting.indirect.diffuse = texture_surfelgi[pixel];
+	const float4 surfelgi = texture_surfelgi[pixel];
+	lighting.indirect.diffuse = lerp(lighting.indirect.diffuse, surfelgi.rgb, surfelgi.a);
 #endif // TRANSPARENT
 #endif // TILEDFORWARD
 
@@ -1917,12 +1914,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 #ifdef PREPASS
 	return uint2(primitiveID, (input.instanceID & 0xFFFFFF) | ((GetSubsetIndex() & 0xFF) << 24u));
 #else
-#ifdef OUTPUT_GBUFFER
-	//color.rgb = GetMaterial().baseColor;
-	return CreateGBuffer(color, surface);
-#else
 	return color;
-#endif // OUTPUT_GBUFFER
 #endif // PREPASS
 
 }

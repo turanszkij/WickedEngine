@@ -1223,6 +1223,8 @@ void LoadShaders()
 		wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_SURFEL_RAYTRACE], "surfel_raytraceCS.cso"); });
 	}
 
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_VISIBILITY_RESOLVE], "visibility_resolveCS.cso"); });
+
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(HS, shaders[HSTYPE_OBJECT], "objectHS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(HS, shaders[HSTYPE_OBJECT_PREPASS], "objectHS_prepass.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(HS, shaders[HSTYPE_OBJECT_PREPASS_ALPHATEST], "objectHS_prepass_alphatest.cso"); });
@@ -8176,11 +8178,65 @@ void ComputeShadingRateClassification(
 	device->EventEnd(cmd);
 }
 
+void VisibilityResolve(
+	const Scene& scene,
+	const Texture& depthbuffer,
+	const Texture gbuffer[GBUFFER_COUNT],
+	CommandList cmd
+)
+{
+	device->EventBegin("VisibilityResolve", cmd);
+	auto range = wiProfiler::BeginRangeGPU("VisibilityResolve", cmd);
+
+	BindCommonResources(cmd);
+
+	device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_RESOLVE], cmd);
+
+	device->BindResource(CS, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
+	device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
+	device->BindResource(CS, &scene.instanceBuffer, TEXSLOT_INSTANCEBUFFER, cmd);
+
+	const GPUResource* uavs[] = {
+		&gbuffer[GBUFFER_NORMAL_ROUGHNESS],
+		&gbuffer[GBUFFER_VELOCITY],
+	};
+	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&gbuffer[GBUFFER_NORMAL_ROUGHNESS], gbuffer[GBUFFER_NORMAL_ROUGHNESS].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+			GPUBarrier::Image(&gbuffer[GBUFFER_VELOCITY], gbuffer[GBUFFER_VELOCITY].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+	device->Dispatch(
+		(depthbuffer.desc.Width + 7) / 8,
+		(depthbuffer.desc.Height + 7) / 8,
+		1,
+		cmd
+	);
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Memory(),
+			GPUBarrier::Image(&gbuffer[GBUFFER_NORMAL_ROUGHNESS], IMAGE_LAYOUT_UNORDERED_ACCESS, gbuffer[GBUFFER_NORMAL_ROUGHNESS].desc.layout),
+			GPUBarrier::Image(&gbuffer[GBUFFER_VELOCITY], IMAGE_LAYOUT_UNORDERED_ACCESS, gbuffer[GBUFFER_VELOCITY].desc.layout),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+	device->UnbindUAVs(0, arraysize(uavs), cmd);
+
+	wiProfiler::EndRange(range);
+	device->EventEnd(cmd);
+}
+
 void CreateSurfelGIResources(SurfelGIResources& res, XMUINT2 resolution)
 {
 	TextureDesc desc;
-	desc.Width = (resolution.x / 2 + 15) / 16;
-	desc.Height = (resolution.y / 2 + 15) / 16;
+	desc.Width = (resolution.x + 15) / 16;
+	desc.Height = (resolution.y + 15) / 16;
 	desc.Format = FORMAT_R16_UINT;
 	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 	desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
@@ -8189,7 +8245,7 @@ void CreateSurfelGIResources(SurfelGIResources& res, XMUINT2 resolution)
 
 	desc.Width = resolution.x;
 	desc.Height = resolution.y;
-	desc.Format = FORMAT_R11G11B10_FLOAT;
+	desc.Format = FORMAT_R16G16B16A16_FLOAT;
 	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 	desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
 	device->CreateTexture(&desc, nullptr, &res.result);
@@ -8197,11 +8253,11 @@ void CreateSurfelGIResources(SurfelGIResources& res, XMUINT2 resolution)
 }
 void SurfelGI(
 	const SurfelGIResources& res,
-	const wiScene::Scene& scene,
-	const wiGraphics::Texture& depthbuffer,
-	const wiGraphics::Texture gbuffer[GBUFFER_COUNT],
-	const wiGraphics::Texture& debugUAV,
-	wiGraphics::CommandList cmd
+	const Scene& scene,
+	const Texture& depthbuffer,
+	const Texture gbuffer[GBUFFER_COUNT],
+	const Texture& debugUAV,
+	CommandList cmd
 )
 {
 	device->EventBegin("SurfelGI", cmd);
