@@ -2516,6 +2516,7 @@ void GraphicsDevice_DX11::Map(const GPUResource* resource, Mapping* mapping) con
 
 	D3D11_MAPPED_SUBRESOURCE map_result = {};
 	D3D11_MAP map_type = D3D11_MAP_READ_WRITE;
+	UINT map_flags = 0;
 	if (mapping->_flags & Mapping::FLAG_READ)
 	{
 		if (mapping->_flags & Mapping::FLAG_WRITE)
@@ -2526,12 +2527,13 @@ void GraphicsDevice_DX11::Map(const GPUResource* resource, Mapping* mapping) con
 		{
 			map_type = D3D11_MAP_READ;
 		}
+		map_flags |= D3D11_MAP_FLAG_DO_NOT_WAIT;
 	}
 	else if (mapping->_flags & Mapping::FLAG_WRITE)
 	{
 		map_type = D3D11_MAP_WRITE_NO_OVERWRITE;
 	}
-	HRESULT hr = immediateContext->Map(internal_state->resource.Get(), 0, map_type, D3D11_MAP_FLAG_DO_NOT_WAIT, &map_result);
+	HRESULT hr = immediateContext->Map(internal_state->resource.Get(), 0, map_type, map_flags, &map_result);
 	if (SUCCEEDED(hr))
 	{
 		mapping->data = map_result.pData;

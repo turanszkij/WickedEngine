@@ -4644,7 +4644,7 @@ using namespace Vulkan_Internal;
 
 		pipelineInfo.pDynamicState = &dynamicStateInfo;
 
-		return res == VK_TRUE;
+		return res == VK_SUCCESS;
 	}
 	bool GraphicsDevice_Vulkan::CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) const
 	{
