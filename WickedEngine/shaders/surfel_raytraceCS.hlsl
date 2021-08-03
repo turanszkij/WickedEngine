@@ -70,8 +70,7 @@ STRUCTUREDBUFFER(surfelBuffer, Surfel, TEXSLOT_ONDEMAND6);
 STRUCTUREDBUFFER(surfelPayloadBuffer, SurfelPayload, TEXSLOT_ONDEMAND7);
 RAWBUFFER(surfelStatsBuffer, TEXSLOT_ONDEMAND8);
 STRUCTUREDBUFFER(surfelIndexBuffer, uint, TEXSLOT_ONDEMAND9);
-STRUCTUREDBUFFER(surfelCellIndexBuffer, float, TEXSLOT_ONDEMAND10);
-STRUCTUREDBUFFER(surfelCellOffsetBuffer, uint, TEXSLOT_ONDEMAND11);
+STRUCTUREDBUFFER(surfelCellOffsetBuffer, uint, TEXSLOT_ONDEMAND10);
 
 RWSTRUCTUREDBUFFER(surfelDataBuffer, SurfelData, 0);
 
@@ -486,7 +485,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 								contribution *= pow(saturate(dotN), SURFEL_NORMAL_TOLERANCE);
 
 								SurfelPayload surfel_payload = surfelPayloadBuffer[surfel_index];
-								surfel_gi += float4(surfel_payload.color.rgb, 1) * contribution;
+								surfel_gi += unpack_half4(surfel_payload.color) * contribution;
 
 							}
 						}

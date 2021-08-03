@@ -10,7 +10,7 @@ struct Surfel
 };
 struct SurfelPayload
 {
-	float4 color;
+	uint2 color; // packed as half4
 };
 struct SurfelData
 {

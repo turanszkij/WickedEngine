@@ -8235,8 +8235,8 @@ void VisibilityResolve(
 void CreateSurfelGIResources(SurfelGIResources& res, XMUINT2 resolution)
 {
 	TextureDesc desc;
-	desc.Width = (resolution.x + 15) / 16;
-	desc.Height = (resolution.y + 15) / 16;
+	desc.Width = (resolution.x / 2 + 15) / 16;
+	desc.Height = (resolution.y / 2 + 15) / 16;
 	desc.Format = FORMAT_R16_UINT;
 	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 	desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
@@ -8409,8 +8409,7 @@ void SurfelGI(
 		device->BindResource(CS, &scene.surfelPayloadBuffer, TEXSLOT_ONDEMAND7, cmd);
 		device->BindResource(CS, &scene.surfelStatsBuffer, TEXSLOT_ONDEMAND8, cmd);
 		device->BindResource(CS, &scene.surfelIndexBuffer, TEXSLOT_ONDEMAND9, cmd);
-		device->BindResource(CS, &scene.surfelCellIndexBuffer, TEXSLOT_ONDEMAND10, cmd);
-		device->BindResource(CS, &scene.surfelCellOffsetBuffer, TEXSLOT_ONDEMAND11, cmd);
+		device->BindResource(CS, &scene.surfelCellOffsetBuffer, TEXSLOT_ONDEMAND10, cmd);
 
 		const GPUResource* uavs[] = {
 			&scene.surfelDataBuffer,
@@ -8453,8 +8452,7 @@ void SurfelGI(
 		device->BindResource(CS, &scene.surfelPayloadBuffer, TEXSLOT_ONDEMAND1, cmd);
 		device->BindResource(CS, &scene.surfelStatsBuffer, TEXSLOT_ONDEMAND2, cmd);
 		device->BindResource(CS, &scene.surfelIndexBuffer, TEXSLOT_ONDEMAND3, cmd);
-		device->BindResource(CS, &scene.surfelCellIndexBuffer, TEXSLOT_ONDEMAND4, cmd);
-		device->BindResource(CS, &scene.surfelCellOffsetBuffer, TEXSLOT_ONDEMAND5, cmd);
+		device->BindResource(CS, &scene.surfelCellOffsetBuffer, TEXSLOT_ONDEMAND4, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.coverage,
