@@ -7,10 +7,11 @@ Buffer<uint> bindless_ib[] : register(t0, space4);
 
 RAWBUFFER(surfelStatsBuffer, TEXSLOT_ONDEMAND0);
 STRUCTUREDBUFFER(surfelIndexBuffer, uint, TEXSLOT_ONDEMAND1);
-STRUCTUREDBUFFER(surfelBuffer_History, Surfel, TEXSLOT_ONDEMAND2);
+STRUCTUREDBUFFER(surfelDataBuffer, SurfelData, TEXSLOT_ONDEMAND2);
 
 RWSTRUCTUREDBUFFER(surfelBuffer, Surfel, 0);
-RWSTRUCTUREDBUFFER(surfelCellIndexBuffer, float, 1);
+RWSTRUCTUREDBUFFER(surfelPayloadBuffer, SurfelPayload, 1);
+RWSTRUCTUREDBUFFER(surfelCellIndexBuffer, float, 2); // sorting written for floats
 
 [numthreads(64, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
@@ -20,11 +21,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		return;
 
 	uint surfel_index = surfelIndexBuffer[DTid.x];
-	Surfel surfel = surfelBuffer_History[surfel_index];
+	SurfelData surfel_data = surfelDataBuffer[surfel_index];
+	Surfel surfel = surfelBuffer[surfel_index];
 
 
-
-	uint2 primitiveID = surfel.primitiveID;
+	uint2 primitiveID = surfel_data.primitiveID;
 	uint primitiveIndex = primitiveID.x;
 	uint instanceID = primitiveID.y & 0xFFFFFF;
 	uint subsetIndex = (primitiveID.y >> 24u) & 0xFF;
@@ -50,8 +51,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		float3 n1 = unpack_unitvector(data1.w);
 		float3 n2 = unpack_unitvector(data2.w);
 
-		float u = surfel.bary.x;
-		float v = surfel.bary.y;
+		float u = surfel_data.bary.x;
+		float v = surfel_data.bary.y;
 		float w = 1 - u - v;
 		float3 N = n0 * w + n1 * u + n2 * v;
 		N = mul((float3x3)worldMatrix, N);
@@ -63,8 +64,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 
 
-	surfel.life += g_xFrame_DeltaTime;
 	surfelBuffer[surfel_index] = surfel;
+	surfelPayloadBuffer[surfel_index].color = float4(surfel_data.mean, saturate(surfel_data.life * 4));
 
 	surfelCellIndexBuffer[surfel_index] = surfel_hash(surfel_cell(surfel.position));
 }

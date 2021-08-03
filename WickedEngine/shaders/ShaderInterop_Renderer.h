@@ -7,7 +7,13 @@ struct Surfel
 {
 	float3 position;
 	uint normal;
-
+};
+struct SurfelPayload
+{
+	float4 color;
+};
+struct SurfelData
+{
 	uint2 primitiveID;
 	float2 bary;
 

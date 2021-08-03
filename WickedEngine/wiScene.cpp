@@ -1684,17 +1684,29 @@ namespace wiScene
 			}
 		}
 
-		if (!surfelBuffer[0].IsValid())
+		if (!surfelBuffer.IsValid())
 		{
 			GPUBufferDesc desc;
 			desc.StructureByteStride = sizeof(Surfel);
 			desc.ByteWidth = desc.StructureByteStride * SURFEL_CAPACITY;
 			desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 			desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-			device->CreateBuffer(&desc, nullptr, &surfelBuffer[0]);
-			device->SetName(&surfelBuffer[0], "surfelBuffer[0]");
-			device->CreateBuffer(&desc, nullptr, &surfelBuffer[1]);
-			device->SetName(&surfelBuffer[1], "surfelBuffer[1]");
+			device->CreateBuffer(&desc, nullptr, &surfelBuffer);
+			device->SetName(&surfelBuffer, "surfelBuffer");
+
+			desc.StructureByteStride = sizeof(SurfelData);
+			desc.ByteWidth = desc.StructureByteStride * SURFEL_CAPACITY;
+			desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+			desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+			device->CreateBuffer(&desc, nullptr, &surfelDataBuffer);
+			device->SetName(&surfelDataBuffer, "surfelDataBuffer");
+
+			desc.StructureByteStride = sizeof(SurfelPayload);
+			desc.ByteWidth = desc.StructureByteStride * SURFEL_CAPACITY;
+			desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+			desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+			device->CreateBuffer(&desc, nullptr, &surfelPayloadBuffer);
+			device->SetName(&surfelPayloadBuffer, "surfelPayloadBuffer");
 
 			desc.StructureByteStride = sizeof(uint);
 			desc.ByteWidth = desc.StructureByteStride * 4;

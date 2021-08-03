@@ -1308,7 +1308,9 @@ namespace wiScene
 		std::atomic<uint32_t> queryAllocator{ 0 };
 
 		// Surfel GI cache:
-		wiGraphics::GPUBuffer surfelBuffer[2];
+		wiGraphics::GPUBuffer surfelBuffer;
+		wiGraphics::GPUBuffer surfelDataBuffer;
+		wiGraphics::GPUBuffer surfelPayloadBuffer;
 		wiGraphics::GPUBuffer surfelStatsBuffer;
 		wiGraphics::GPUBuffer surfelIndexBuffer;
 		wiGraphics::GPUBuffer surfelCellIndexBuffer;

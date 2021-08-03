@@ -12,10 +12,9 @@ static const uint2 pixel_offsets[4] = {
 
 TEXTURE2D(coverage, uint, TEXSLOT_ONDEMAND0);
 
-RWSTRUCTUREDBUFFER(surfelBuffer, Surfel, 0);
+RWSTRUCTUREDBUFFER(surfelDataBuffer, SurfelData, 0);
 RWRAWBUFFER(surfelStatsBuffer, 1);
 RWSTRUCTUREDBUFFER(surfelIndexBuffer, uint, 2);
-RWSTRUCTUREDBUFFER(surfelCellIndexBuffer, float, 3); // sorting written for floats
 
 [numthreads(8, 8, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
@@ -42,13 +41,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	if (blue_noise(DTid.xy).x < chance)
 		return;
 
-	const float4 g1 = texture_gbuffer1[pixel];
-
-	if (depth > 0 && any(g1) && coverage_amount < SURFEL_TARGET_COVERAGE)
+	if (depth > 0 && coverage_amount < SURFEL_TARGET_COVERAGE)
 	{
 		const float2 uv = ((float2)pixel.xy + 0.5) * g_xFrame_InternalResolution_rcp;
 		const float3 P = reconstructPosition(uv, depth);
-		const float3 N = normalize(g1.rgb * 2 - 1);
 
 
 
@@ -97,16 +93,13 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		surfelStatsBuffer.InterlockedAdd(SURFEL_STATS_OFFSET_COUNT, 1, surfel_alloc);
 		if (surfel_alloc < SURFEL_CAPACITY)
 		{
-			Surfel surfel = (Surfel)0;
-			surfel.position = P;
-			surfel.normal = pack_unitvector(N);
-			surfel.primitiveID = primitiveID;
-			surfel.bary = bary.xy;
-			surfel.inconsistency = 1;
-			surfelBuffer[surfel_alloc] = surfel;
+			SurfelData surfel_data = (SurfelData)0;
+			surfel_data.primitiveID = primitiveID;
+			surfel_data.bary = bary.xy;
+			surfel_data.inconsistency = 1;
+			surfelDataBuffer[surfel_alloc] = surfel_data;
 
 			surfelIndexBuffer[surfel_alloc] = surfel_alloc;
-			surfelCellIndexBuffer[surfel_alloc] = surfel_hash(surfel_cell(P));
 		}
 	}
 }

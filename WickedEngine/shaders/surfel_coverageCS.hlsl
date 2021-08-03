@@ -7,9 +7,8 @@ Buffer<uint> bindless_ib[] : register(t0, space4);
 
 //#define SURFEL_DEBUG_NORMAL
 //#define SURFEL_DEBUG_COLOR
-//#define SURFEL_DEBUG_POINT
+#define SURFEL_DEBUG_POINT
 //#define SURFEL_DEBUG_RANDOM
-//#define SURFEL_DEBUG_DATA
 
 
 static const uint nice_colors_size = 5;
@@ -32,10 +31,11 @@ static const uint2 pixel_offsets[4] = {
 
 
 STRUCTUREDBUFFER(surfelBuffer, Surfel, TEXSLOT_ONDEMAND0);
-RAWBUFFER(surfelStatsBuffer, TEXSLOT_ONDEMAND1);
-STRUCTUREDBUFFER(surfelIndexBuffer, uint, TEXSLOT_ONDEMAND2);
-STRUCTUREDBUFFER(surfelCellIndexBuffer, float, TEXSLOT_ONDEMAND3);
-STRUCTUREDBUFFER(surfelCellOffsetBuffer, uint, TEXSLOT_ONDEMAND4);
+STRUCTUREDBUFFER(surfelPayloadBuffer, SurfelPayload, TEXSLOT_ONDEMAND1);
+RAWBUFFER(surfelStatsBuffer, TEXSLOT_ONDEMAND2);
+STRUCTUREDBUFFER(surfelIndexBuffer, uint, TEXSLOT_ONDEMAND3);
+STRUCTUREDBUFFER(surfelCellIndexBuffer, float, TEXSLOT_ONDEMAND4);
+STRUCTUREDBUFFER(surfelCellOffsetBuffer, uint, TEXSLOT_ONDEMAND5);
 
 RWTEXTURE2D(coverage, uint, 0);
 RWTEXTURE2D(result, float4, 1);
@@ -145,9 +145,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 							contribution *= pow(saturate(dotN), SURFEL_NORMAL_TOLERANCE);
 							contribution = smoothstep(0, 1, contribution);
 							coverage += contribution;
-							contribution *= saturate(surfel.life); // life must not affect coverage, only blending factor!
+							//contribution *= saturate(surfel.life); // life must not affect coverage, only blending factor!
 
-							color += float4(surfel.mean, 1) * contribution;
+							SurfelPayload surfel_payload = surfelPayloadBuffer[surfel_index];
+							color += surfel_payload.color * contribution;
+							//color += float4(surfel.mean, 1) * contribution;
 
 #ifdef SURFEL_DEBUG_NORMAL
 							debug.rgb += normal * contribution;
@@ -157,10 +159,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 #ifdef SURFEL_DEBUG_RANDOM
 							debug += float4(hash_color(surfel_index), 1) * contribution;
 #endif // SURFEL_DEBUG_RANDOM
-
-#ifdef SURFEL_DEBUG_DATA
-							debug += float4(surfel.inconsistency.xxx, 1) * contribution;
-#endif // SURFEL_DEBUG_DATA
 
 						}
 
@@ -186,7 +184,13 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		surfel_count_at_pixel |= (GTid.x & 0xF) << 4;
 		surfel_count_at_pixel |= (GTid.y & 0xF) << 0;
 
-		InterlockedMin(GroupMinSurfelCount, surfel_count_at_pixel);
+		// Randomizing here too like in surfel placement can give better distribution,
+		// as it can select a different initial pixel even while tile is very empty
+		// So randomizing in both shaders is not a mistake
+		const float lineardepth = getLinearDepth(depth) * g_xCamera_ZFarP_rcp;
+		const float chance = pow(1 - lineardepth, 4);
+		if (blue_noise(DTid.xy).x >= chance)
+			InterlockedMin(GroupMinSurfelCount, surfel_count_at_pixel);
 
 		if (color.a > 0)
 		{
@@ -207,7 +211,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		debug.rgb = tonemap(debug.rgb);
 #endif // SURFEL_DEBUG_COLOR
 
-#if defined(SURFEL_DEBUG_RANDOM) || defined(SURFEL_DEBUG_DATA)
+#if defined(SURFEL_DEBUG_RANDOM)
 		if (debug.a > 0)
 		{
 			debug /= debug.a;

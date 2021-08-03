@@ -13,7 +13,7 @@ Buffer<uint> bindless_ib[] : register(t0, space4);
 
 void MultiscaleMeanEstimator(
 	float3 y,
-	inout Surfel data,
+	inout SurfelData data,
 	float shortWindowBlend = 0.08f
 )
 {
@@ -66,13 +66,14 @@ void MultiscaleMeanEstimator(
 	data.inconsistency = inconsistency;
 }
 
-STRUCTUREDBUFFER(surfelBuffer_History, Surfel, TEXSLOT_ONDEMAND6);
-RAWBUFFER(surfelStatsBuffer, TEXSLOT_ONDEMAND7);
-STRUCTUREDBUFFER(surfelIndexBuffer, uint, TEXSLOT_ONDEMAND8);
-STRUCTUREDBUFFER(surfelCellIndexBuffer, float, TEXSLOT_ONDEMAND9);
-STRUCTUREDBUFFER(surfelCellOffsetBuffer, uint, TEXSLOT_ONDEMAND10);
+STRUCTUREDBUFFER(surfelBuffer, Surfel, TEXSLOT_ONDEMAND6);
+STRUCTUREDBUFFER(surfelPayloadBuffer, SurfelPayload, TEXSLOT_ONDEMAND7);
+RAWBUFFER(surfelStatsBuffer, TEXSLOT_ONDEMAND8);
+STRUCTUREDBUFFER(surfelIndexBuffer, uint, TEXSLOT_ONDEMAND9);
+STRUCTUREDBUFFER(surfelCellIndexBuffer, float, TEXSLOT_ONDEMAND10);
+STRUCTUREDBUFFER(surfelCellOffsetBuffer, uint, TEXSLOT_ONDEMAND11);
 
-RWSTRUCTUREDBUFFER(surfelBuffer, Surfel, 0);
+RWSTRUCTUREDBUFFER(surfelDataBuffer, SurfelData, 0);
 
 [numthreads(64, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
@@ -84,45 +85,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float2 bluenoise = blue_noise(unflatten2D(DTid.x, 256)).xy;
 
 	Surfel surfel = surfelBuffer[DTid.x];
-
-
-
-	uint2 primitiveID = surfel.primitiveID;
-	uint primitiveIndex = primitiveID.x;
-	uint instanceID = primitiveID.y & 0xFFFFFF;
-	uint subsetIndex = (primitiveID.y >> 24u) & 0xFF;
-	ShaderMeshInstance inst = InstanceBuffer[instanceID];
-	ShaderMesh mesh = inst.mesh;
-	ShaderMeshSubset subset = bindless_subsets[NonUniformResourceIndex(mesh.subsetbuffer)][subsetIndex];
-	uint startIndex = primitiveIndex * 3 + subset.indexOffset;
-	uint i0 = bindless_ib[NonUniformResourceIndex(mesh.ib)][startIndex + 0];
-	uint i1 = bindless_ib[NonUniformResourceIndex(mesh.ib)][startIndex + 1];
-	uint i2 = bindless_ib[NonUniformResourceIndex(mesh.ib)][startIndex + 2];
-
-	[branch]
-	if (mesh.vb_pos_nor_wind >= 0)
-	{
-		uint4 data0 = bindless_buffers[NonUniformResourceIndex(mesh.vb_pos_nor_wind)].Load4(i0 * 16);
-		uint4 data1 = bindless_buffers[NonUniformResourceIndex(mesh.vb_pos_nor_wind)].Load4(i1 * 16);
-		uint4 data2 = bindless_buffers[NonUniformResourceIndex(mesh.vb_pos_nor_wind)].Load4(i2 * 16);
-		float4x4 worldMatrix = float4x4(transpose(inst.transform), float4(0, 0, 0, 1));
-		float3 p0 = mul(worldMatrix, float4(asfloat(data0.xyz), 1)).xyz;
-		float3 p1 = mul(worldMatrix, float4(asfloat(data1.xyz), 1)).xyz;
-		float3 p2 = mul(worldMatrix, float4(asfloat(data2.xyz), 1)).xyz;
-		float3 n0 = unpack_unitvector(data0.w);
-		float3 n1 = unpack_unitvector(data1.w);
-		float3 n2 = unpack_unitvector(data2.w);
-
-		float u = surfel.bary.x;
-		float v = surfel.bary.y;
-		float w = 1 - u - v;
-		float3 N = n0 * w + n1 * u + n2 * v;
-		N = mul((float3x3)worldMatrix, N);
-		N = normalize(N);
-		surfel.normal = pack_unitvector(N);
-
-		surfel.position = p0 * w + p1 * u + p2 * v;
-	}
+	SurfelData surfel_data = surfelDataBuffer[DTid.x];
 
 
 	float3 N = normalize(unpack_unitvector(surfel.normal));
@@ -131,7 +94,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float2 uv = float2(g_xFrame_Time, (float)DTid.x / (float)surfel_count);
 
 	float4 gi = 0;
-	uint samplecount = (uint)lerp(1.0, 16.0, saturate(surfel.inconsistency));
+	uint samplecount = (uint)lerp(1.0, 16.0, saturate(surfel_data.inconsistency));
 	for (uint sam = 0; sam < max(1, samplecount); ++sam)
 	{
 		RayDesc ray;
@@ -503,16 +466,16 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				while (surfel_list_offset != ~0u && surfel_list_offset < surfel_count)
 				{
 					uint surfel_index = surfelIndexBuffer[surfel_list_offset];
-					Surfel surfel_history = surfelBuffer_History[surfel_index];
-					uint hash = surfel_hash(surfel_cell(surfel_history.position));
+					Surfel surfel = surfelBuffer[surfel_index];
+					uint hash = surfel_hash(surfel_cell(surfel.position));
 
 					if (hash == surfel_hash_target)
 					{
-						float3 L = surfel_history.position - surface.P;
+						float3 L = surfel.position - surface.P;
 						float dist2 = dot(L, L);
 						if (dist2 <= SURFEL_RADIUS2)
 						{
-							float3 normal = normalize(unpack_unitvector(surfel_history.normal));
+							float3 normal = normalize(unpack_unitvector(surfel.normal));
 							float dotN = dot(surface.N, normal);
 							if (dotN > 0)
 							{
@@ -522,7 +485,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 								contribution = smoothstep(0, 1, contribution);
 								contribution *= pow(saturate(dotN), SURFEL_NORMAL_TOLERANCE);
 
-								surfel_gi += float4(surfel_history.shortMean, 1) * contribution;
+								SurfelPayload surfel_payload = surfelPayloadBuffer[surfel_index];
+								surfel_gi += float4(surfel_payload.color.rgb, 1) * contribution;
 
 							}
 						}
@@ -557,8 +521,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 
 
-	MultiscaleMeanEstimator(gi.rgb, surfel, 0.09);
+	MultiscaleMeanEstimator(gi.rgb, surfel_data, 0.09);
 
-	surfel.life += g_xFrame_DeltaTime;
-	surfelBuffer[DTid.x] = surfel;
+	surfel_data.life += g_xFrame_DeltaTime;
+	surfelDataBuffer[DTid.x] = surfel_data;
 }
