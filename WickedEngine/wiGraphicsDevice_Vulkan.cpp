@@ -786,6 +786,7 @@ namespace Vulkan_Internal
 			allocationhandler->destroylocker.lock();
 			uint64_t framecount = allocationhandler->framecount;
 			if (resource) allocationhandler->destroyer_samplers.push_back(std::make_pair(resource, framecount));
+			if (index >= 0) allocationhandler->destroyer_bindlessSamplers.push_back(std::make_pair(index, framecount));
 			allocationhandler->destroylocker.unlock();
 		}
 	};
