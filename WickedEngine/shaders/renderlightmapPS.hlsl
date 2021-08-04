@@ -280,6 +280,8 @@ float4 main(Input input) : SV_TARGET
 
 		surface.update();
 
+		result += max(0, energy * surface.emissiveColor.rgb * surface.emissiveColor.a);
+
 		// Calculate chances of reflection types:
 		const float refractChance = surface.transmission;
 
@@ -316,7 +318,6 @@ float4 main(Input input) : SV_TARGET
 			}
 		}
 
-		result += max(0, energy * surface.emissiveColor.rgb * surface.emissiveColor.a);
 	}
 
 	return float4(result, xTraceAccumulationFactor);

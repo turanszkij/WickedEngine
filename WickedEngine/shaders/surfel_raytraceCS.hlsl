@@ -86,7 +86,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float2 uv = float2(g_xFrame_Time, (float)DTid.x / (float)surfel_count);
 
 	float4 gi = 0;
-	uint samplecount = (uint)lerp(1.0, 16.0, saturate(surfel_data.inconsistency));
+	uint samplecount = (uint)lerp(1.0, 4.0, saturate(surfel_data.inconsistency));
 	for (uint sam = 0; sam < max(1, samplecount); ++sam)
 	{
 		RayDesc ray;
@@ -182,6 +182,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			surface.V = -ray.Direction;
 			surface.update();
 
+			result += max(0, energy * surface.emissiveColor.rgb * surface.emissiveColor.a);
+
 			// Calculate chances of reflection types:
 			const float refractChance = surface.transmission;
 
@@ -217,8 +219,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 					energy *= surface.albedo / (1 - specChance);
 				}
 			}
-
-			result += max(0, energy * surface.emissiveColor.rgb * surface.emissiveColor.a);
 
 
 
@@ -513,7 +513,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 
 
-	MultiscaleMeanEstimator(gi.rgb, surfel_data, 0.09);
+	MultiscaleMeanEstimator(gi.rgb, surfel_data, 0.1);
 
 	surfel_data.life += g_xFrame_DeltaTime;
 	surfelDataBuffer[DTid.x] = surfel_data;
