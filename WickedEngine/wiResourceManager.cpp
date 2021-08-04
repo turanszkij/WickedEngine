@@ -106,8 +106,8 @@ namespace wiResourceManager
 					desc.ArraySize = 1;
 					desc.BindFlags = BIND_SHADER_RESOURCE;
 					desc.CPUAccessFlags = 0;
-					desc.Height = dds.GetWidth();
-					desc.Width = dds.GetHeight();
+					desc.Width = dds.GetWidth();
+					desc.Height = dds.GetHeight();
 					desc.Depth = dds.GetDepth();
 					desc.MipLevels = dds.GetMipCount();
 					desc.ArraySize = dds.GetArraySize();
