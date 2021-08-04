@@ -8375,6 +8375,17 @@ void SurfelGI(
 		device->EventEnd(cmd);
 	}
 
+	// Raytrace and coverage will run in parallel, so issue all the barriers up front:
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&res.coverage, res.coverage.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.result, res.result.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+			GPUBarrier::Image(&debugUAV, debugUAV.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+			GPUBarrier::Buffer(&scene.surfelDataBuffer, BUFFER_STATE_SHADER_RESOURCE_COMPUTE, BUFFER_STATE_UNORDERED_ACCESS),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
 	// Raytracing:
 	{
 		device->EventBegin("Ray tracing", cmd);
@@ -8416,23 +8427,7 @@ void SurfelGI(
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-				GPUBarrier::Buffer(&scene.surfelDataBuffer, BUFFER_STATE_SHADER_RESOURCE_COMPUTE, BUFFER_STATE_UNORDERED_ACCESS),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
 		device->DispatchIndirect(&scene.surfelStatsBuffer, SURFEL_STATS_OFFSET_INDIRECT, cmd);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-				GPUBarrier::Buffer(&scene.surfelDataBuffer, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE_COMPUTE),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
 
 		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
@@ -8460,15 +8455,6 @@ void SurfelGI(
 			&debugUAV
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&res.coverage, res.coverage.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
-				GPUBarrier::Image(&res.result, res.result.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
-				GPUBarrier::Image(&debugUAV, debugUAV.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
 
 		device->Dispatch(
 			res.coverage.desc.Width,
@@ -8508,7 +8494,6 @@ void SurfelGI(
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Buffer(&scene.surfelDataBuffer, BUFFER_STATE_SHADER_RESOURCE_COMPUTE, BUFFER_STATE_UNORDERED_ACCESS),
 				GPUBarrier::Buffer(&scene.surfelStatsBuffer, BUFFER_STATE_INDIRECT_ARGUMENT, BUFFER_STATE_UNORDERED_ACCESS),
 				GPUBarrier::Buffer(&scene.surfelIndexBuffer, BUFFER_STATE_SHADER_RESOURCE_COMPUTE, BUFFER_STATE_UNORDERED_ACCESS),
 			};
@@ -8545,13 +8530,6 @@ void SurfelGI(
 
 		device->BindComputeShader(&shaders[CSTYPE_SURFEL_INDIRECTPREPARE], cmd);
 		device->Dispatch(1, 1, 1, cmd);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
 
 		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
