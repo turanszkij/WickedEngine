@@ -431,7 +431,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				}
 			}
 
-			result += max(0, lighting.direct.diffuse);
+			result += max(0, lighting.direct.diffuse * energy);
 
 
 

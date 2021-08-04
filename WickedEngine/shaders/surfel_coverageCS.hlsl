@@ -1,10 +1,6 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Renderer.h"
 
-ByteAddressBuffer bindless_buffers[] : register(t0, space2);
-StructuredBuffer<ShaderMeshSubset> bindless_subsets[] : register(t0, space3);
-Buffer<uint> bindless_ib[] : register(t0, space4);
-
 //#define SURFEL_DEBUG_NORMAL
 //#define SURFEL_DEBUG_COLOR
 //#define SURFEL_DEBUG_POINT

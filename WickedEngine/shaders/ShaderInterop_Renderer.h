@@ -27,7 +27,7 @@ struct SurfelData
 	float inconsistency;
 };
 static const uint SURFEL_CAPACITY = 250000;
-static const uint SURFEL_TABLE_SIZE = 1000000;
+static const uint SURFEL_TABLE_SIZE = 500000;
 static const uint SURFEL_STATS_OFFSET_COUNT = 0;
 static const uint SURFEL_STATS_OFFSET_INDIRECT = 4;
 static const float SURFEL_RADIUS = 1;
