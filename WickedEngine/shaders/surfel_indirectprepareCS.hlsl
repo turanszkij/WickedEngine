@@ -1,5 +1,5 @@
 #include "globals.hlsli"
-#include "ShaderInterop_Renderer.h"
+#include "ShaderInterop_SurfelGI.h"
 
 RWRAWBUFFER(surfelStatsBuffer, 0);
 

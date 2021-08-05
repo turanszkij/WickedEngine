@@ -11,6 +11,8 @@
 #include "wiRenderer.h"
 #include "wiBackLog.h"
 
+#include "shaders/ShaderInterop_SurfelGI.h"
+
 #include <functional>
 #include <unordered_map>
 

@@ -27,6 +27,7 @@
 #include "shaders/ShaderInterop_BVH.h"
 #include "shaders/ShaderInterop_Utility.h"
 #include "shaders/ShaderInterop_Paint.h"
+#include "shaders/ShaderInterop_SurfelGI.h"
 
 #include <algorithm>
 #include <array>

@@ -1,7 +1,7 @@
 #include "globals.hlsli"
 #include "raytracingHF.hlsli"
 #include "lightingHF.hlsli"
-#include "ShaderInterop_Renderer.h"
+#include "ShaderInterop_SurfelGI.h"
 
 
 void MultiscaleMeanEstimator(
@@ -87,7 +87,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float2 uv = float2(g_xFrame_Time, (float)DTid.x / (float)surfel_count);
 
 	float4 gi = 0;
-	uint samplecount = (uint)lerp(32.0, 1.0, saturate(surfel_data.life));
+	uint samplecount = (uint)lerp(8.0, 1.0, saturate(surfel_data.life));
 	for (uint sam = 0; sam < max(1, samplecount); ++sam)
 	{
 		RayDesc ray;

@@ -1075,5 +1075,8 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Utility.h">
       <Filter>interop</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_SurfelGI.h">
+      <Filter>interop</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

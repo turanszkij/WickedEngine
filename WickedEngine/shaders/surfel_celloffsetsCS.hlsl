@@ -1,5 +1,5 @@
 #include "globals.hlsli"
-#include "ShaderInterop_Renderer.h"
+#include "ShaderInterop_SurfelGI.h"
 
 RAWBUFFER(surfelStatsBuffer, TEXSLOT_ONDEMAND0);
 STRUCTUREDBUFFER(surfelIndexBuffer, uint, TEXSLOT_ONDEMAND1);

@@ -1,5 +1,5 @@
 #include "globals.hlsli"
-#include "ShaderInterop_Renderer.h"
+#include "ShaderInterop_SurfelGI.h"
 
 ByteAddressBuffer bindless_buffers[] : register(t0, space2);
 StructuredBuffer<ShaderMeshSubset> bindless_subsets[] : register(t0, space3);
