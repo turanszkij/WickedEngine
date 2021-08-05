@@ -35,15 +35,18 @@ void RenderPath3D::ResizeBuffers()
 
 		//desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		desc.Format = FORMAT_R8G8B8A8_UNORM;
+		desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
 		device->CreateTexture(&desc, nullptr, &rtGbuffer[GBUFFER_NORMAL_ROUGHNESS]);
 		device->SetName(&rtGbuffer[GBUFFER_NORMAL_ROUGHNESS], "rtGbuffer[GBUFFER_NORMAL_ROUGHNESS]");
 
 		desc.Format = FORMAT_R16G16_FLOAT;
+		desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
 		device->CreateTexture(&desc, nullptr, &rtGbuffer[GBUFFER_VELOCITY]);
 		device->SetName(&rtGbuffer[GBUFFER_VELOCITY], "rtGbuffer[GBUFFER_VELOCITY]");
 
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		desc.Format = FORMAT_R32G32_UINT;
+		desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
 		device->CreateTexture(&desc, nullptr, &rtGbuffer[GBUFFER_PRIMITIVEID]);
 		device->SetName(&rtGbuffer[GBUFFER_PRIMITIVEID], "rtGbuffer[GBUFFER_PRIMITIVEID]");
 
@@ -317,7 +320,16 @@ void RenderPath3D::ResizeBuffers()
 				IMAGE_LAYOUT_SHADER_RESOURCE
 			)
 		);
-		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtGbuffer[GBUFFER_PRIMITIVEID], RenderPassAttachment::LOADOP_DONTCARE));
+		desc.attachments.push_back(
+			RenderPassAttachment::RenderTarget(
+				&rtGbuffer[GBUFFER_PRIMITIVEID],
+				RenderPassAttachment::LOADOP_DONTCARE,
+				RenderPassAttachment::STOREOP_STORE,
+				IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE,
+				IMAGE_LAYOUT_RENDERTARGET,
+				IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE
+			)
+		);
 		device->CreateRenderPass(&desc, &renderpass_depthprepass);
 
 		desc.attachments.clear();
