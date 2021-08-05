@@ -13,7 +13,7 @@ RWSTRUCTUREDBUFFER(surfelBuffer, Surfel, 0);
 RWSTRUCTUREDBUFFER(surfelPayloadBuffer, SurfelPayload, 1);
 RWSTRUCTUREDBUFFER(surfelCellIndexBuffer, float, 2); // sorting written for floats
 
-[numthreads(64, 1, 1)]
+[numthreads(SURFEL_INDIRECT_NUMTHREADS, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	uint surfel_count = surfelStatsBuffer.Load(SURFEL_STATS_OFFSET_COUNT);

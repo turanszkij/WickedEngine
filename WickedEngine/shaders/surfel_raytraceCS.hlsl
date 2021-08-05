@@ -67,7 +67,7 @@ STRUCTUREDBUFFER(surfelCellOffsetBuffer, uint, TEXSLOT_ONDEMAND10);
 
 RWSTRUCTUREDBUFFER(surfelDataBuffer, SurfelData, 0);
 
-[numthreads(64, 1, 1)]
+[numthreads(SURFEL_INDIRECT_NUMTHREADS, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	uint surfel_count = surfelStatsBuffer.Load(SURFEL_STATS_OFFSET_COUNT);
@@ -76,8 +76,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	const float2 bluenoise = blue_noise(unflatten2D(DTid.x, 256)).xy;
 
-	Surfel surfel = surfelBuffer[DTid.x];
-	SurfelData surfel_data = surfelDataBuffer[DTid.x];
+	uint surfel_index = surfelIndexBuffer[DTid.x];
+	Surfel surfel = surfelBuffer[surfel_index];
+	SurfelData surfel_data = surfelDataBuffer[surfel_index];
 
 
 	float3 N = normalize(unpack_unitvector(surfel.normal));
@@ -86,7 +87,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float2 uv = float2(g_xFrame_Time, (float)DTid.x / (float)surfel_count);
 
 	float4 gi = 0;
-	uint samplecount = (uint)lerp(1.0, 4.0, saturate(surfel_data.inconsistency));
+	uint samplecount = (uint)lerp(32.0, 1.0, saturate(surfel_data.life));
 	for (uint sam = 0; sam < max(1, samplecount); ++sam)
 	{
 		RayDesc ray;
@@ -513,8 +514,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 
 
-	MultiscaleMeanEstimator(gi.rgb, surfel_data, 0.1);
+	MultiscaleMeanEstimator(gi.rgb, surfel_data, 0.08);
 
 	surfel_data.life += g_xFrame_DeltaTime;
-	surfelDataBuffer[DTid.x] = surfel_data;
+	surfelDataBuffer[surfel_index] = surfel_data;
 }
