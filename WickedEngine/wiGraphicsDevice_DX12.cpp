@@ -222,6 +222,20 @@ namespace DX12_Internal
 		}
 		return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 	}
+	constexpr D3D12_STATIC_BORDER_COLOR _ConvertSamplerBorderColor(SAMPLER_BORDER_COLOR value)
+	{
+		switch (value)
+		{
+		case SAMPLER_BORDER_COLOR_TRANSPARENT_BLACK:
+			return D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+		case SAMPLER_BORDER_COLOR_OPAQUE_BLACK:
+			return D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK;
+		case SAMPLER_BORDER_COLOR_OPAQUE_WHITE:
+			return D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE;
+		default:
+			return D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+		}
+	}
 	constexpr D3D12_COMPARISON_FUNC _ConvertComparisonFunc(COMPARISON_FUNC value)
 	{
 		switch (value)
@@ -404,38 +418,28 @@ namespace DX12_Internal
 		{
 		case BLEND_OP_ADD:
 			return D3D12_BLEND_OP_ADD;
-			break;
 		case BLEND_OP_SUBTRACT:
 			return D3D12_BLEND_OP_SUBTRACT;
-			break;
 		case BLEND_OP_REV_SUBTRACT:
 			return D3D12_BLEND_OP_REV_SUBTRACT;
-			break;
 		case BLEND_OP_MIN:
 			return D3D12_BLEND_OP_MIN;
-			break;
 		case BLEND_OP_MAX:
 			return D3D12_BLEND_OP_MAX;
-			break;
 		default:
-			break;
+			return D3D12_BLEND_OP_ADD;
 		}
-		return D3D12_BLEND_OP_ADD;
 	}
 	constexpr D3D12_INPUT_CLASSIFICATION _ConvertInputClassification(INPUT_CLASSIFICATION value)
 	{
 		switch (value)
 		{
-		case INPUT_PER_VERTEX_DATA:
-			return D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
-			break;
 		case INPUT_PER_INSTANCE_DATA:
 			return D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA;
 			break;
 		default:
-			break;
+			return D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
 		}
-		return D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
 	}
 	constexpr DXGI_FORMAT _ConvertFormat(FORMAT value)
 	{
@@ -786,7 +790,7 @@ namespace DX12_Internal
 		desc.MipLODBias = x.sampler.desc.MipLODBias;
 		desc.MaxAnisotropy = x.sampler.desc.MaxAnisotropy;
 		desc.ComparisonFunc = _ConvertComparisonFunc(x.sampler.desc.ComparisonFunc);
-		desc.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+		desc.BorderColor = _ConvertSamplerBorderColor(x.sampler.desc.BorderColor);
 		desc.MinLOD = x.sampler.desc.MinLOD;
 		desc.MaxLOD = x.sampler.desc.MaxLOD;
 		desc.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
@@ -3890,10 +3894,29 @@ using namespace DX12_Internal;
 		desc.MipLODBias = pSamplerDesc->MipLODBias;
 		desc.MaxAnisotropy = pSamplerDesc->MaxAnisotropy;
 		desc.ComparisonFunc = _ConvertComparisonFunc(pSamplerDesc->ComparisonFunc);
-		desc.BorderColor[0] = pSamplerDesc->BorderColor[0];
-		desc.BorderColor[1] = pSamplerDesc->BorderColor[1];
-		desc.BorderColor[2] = pSamplerDesc->BorderColor[2];
-		desc.BorderColor[3] = pSamplerDesc->BorderColor[3];
+		switch (pSamplerDesc->BorderColor)
+		{
+		case SAMPLER_BORDER_COLOR_OPAQUE_BLACK:
+			desc.BorderColor[0] = 0.0f;
+			desc.BorderColor[1] = 0.0f;
+			desc.BorderColor[2] = 0.0f;
+			desc.BorderColor[3] = 1.0f;
+			break;
+
+		case SAMPLER_BORDER_COLOR_OPAQUE_WHITE:
+			desc.BorderColor[0] = 1.0f;
+			desc.BorderColor[1] = 1.0f;
+			desc.BorderColor[2] = 1.0f;
+			desc.BorderColor[3] = 1.0f;
+			break;
+
+		default:
+			desc.BorderColor[0] = 0.0f;
+			desc.BorderColor[1] = 0.0f;
+			desc.BorderColor[2] = 0.0f;
+			desc.BorderColor[3] = 0.0f;
+			break;
+		}
 		desc.MinLOD = pSamplerDesc->MinLOD;
 		desc.MaxLOD = pSamplerDesc->MaxLOD;
 

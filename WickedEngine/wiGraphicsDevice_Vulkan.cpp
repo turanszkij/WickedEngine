@@ -257,32 +257,23 @@ namespace Vulkan_Internal
 		{
 		case COMPARISON_NEVER:
 			return VK_COMPARE_OP_NEVER;
-			break;
 		case COMPARISON_LESS:
 			return VK_COMPARE_OP_LESS;
-			break;
 		case COMPARISON_EQUAL:
 			return VK_COMPARE_OP_EQUAL;
-			break;
 		case COMPARISON_LESS_EQUAL:
 			return VK_COMPARE_OP_LESS_OR_EQUAL;
-			break;
 		case COMPARISON_GREATER:
 			return VK_COMPARE_OP_GREATER;
-			break;
 		case COMPARISON_NOT_EQUAL:
 			return VK_COMPARE_OP_NOT_EQUAL;
-			break;
 		case COMPARISON_GREATER_EQUAL:
 			return VK_COMPARE_OP_GREATER_OR_EQUAL;
-			break;
 		case COMPARISON_ALWAYS:
 			return VK_COMPARE_OP_ALWAYS;
-			break;
 		default:
-			break;
+			return VK_COMPARE_OP_NEVER;
 		}
-		return VK_COMPARE_OP_NEVER;
 	}
 	constexpr VkBlendFactor _ConvertBlend(BLEND value)
 	{
@@ -351,20 +342,29 @@ namespace Vulkan_Internal
 		{
 		case TEXTURE_ADDRESS_WRAP:
 			return VK_SAMPLER_ADDRESS_MODE_REPEAT;
-			break;
 		case TEXTURE_ADDRESS_MIRROR:
 			return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
-			break;
 		case TEXTURE_ADDRESS_CLAMP:
 			return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-			break;
 		case TEXTURE_ADDRESS_BORDER:
 			return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-			break;
 		default:
-			break;
+			return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 		}
-		return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	}
+	constexpr VkBorderColor _ConvertSamplerBorderColor(SAMPLER_BORDER_COLOR value)
+	{
+		switch (value)
+		{
+		case SAMPLER_BORDER_COLOR_TRANSPARENT_BLACK:
+			return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+		case SAMPLER_BORDER_COLOR_OPAQUE_BLACK:
+			return VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
+		case SAMPLER_BORDER_COLOR_OPAQUE_WHITE:
+			return VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+		default:
+			return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+		}
 	}
 	constexpr VkStencilOp _ConvertStencilOp(STENCIL_OP value)
 	{
@@ -4172,7 +4172,7 @@ using namespace Vulkan_Internal;
 		createInfo.minLod = pSamplerDesc->MinLOD;
 		createInfo.maxLod = pSamplerDesc->MaxLOD;
 		createInfo.mipLodBias = pSamplerDesc->MipLODBias;
-		createInfo.borderColor = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+		createInfo.borderColor = _ConvertSamplerBorderColor(pSamplerDesc->BorderColor);
 		createInfo.unnormalizedCoordinates = VK_FALSE;
 
 		VkResult res = vkCreateSampler(device, &createInfo, nullptr, &internal_state->resource);

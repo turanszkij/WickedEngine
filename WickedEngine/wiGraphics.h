@@ -187,6 +187,12 @@ namespace wiGraphics
 		FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR,
 		FILTER_MAXIMUM_ANISOTROPIC,
 	};
+	enum SAMPLER_BORDER_COLOR
+	{
+		SAMPLER_BORDER_COLOR_TRANSPARENT_BLACK,
+		SAMPLER_BORDER_COLOR_OPAQUE_BLACK,
+		SAMPLER_BORDER_COLOR_OPAQUE_WHITE,
+	};
 	enum FORMAT
 	{
 		FORMAT_UNKNOWN,
@@ -440,7 +446,7 @@ namespace wiGraphics
 		float MipLODBias = 0.0f;
 		uint32_t MaxAnisotropy = 0;
 		COMPARISON_FUNC ComparisonFunc = COMPARISON_NEVER;
-		float BorderColor[4] = { 0.0f,0.0f,0.0f,0.0f };
+		SAMPLER_BORDER_COLOR BorderColor = SAMPLER_BORDER_COLOR_TRANSPARENT_BLACK;
 		float MinLOD = 0.0f;
 		float MaxLOD = FLT_MAX;
 	};

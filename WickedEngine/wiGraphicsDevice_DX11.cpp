@@ -1781,10 +1781,29 @@ bool GraphicsDevice_DX11::CreateSampler(const SamplerDesc *pSamplerDesc, Sampler
 	desc.MipLODBias = pSamplerDesc->MipLODBias;
 	desc.MaxAnisotropy = pSamplerDesc->MaxAnisotropy;
 	desc.ComparisonFunc = _ConvertComparisonFunc(pSamplerDesc->ComparisonFunc);
-	desc.BorderColor[0] = pSamplerDesc->BorderColor[0];
-	desc.BorderColor[1] = pSamplerDesc->BorderColor[1];
-	desc.BorderColor[2] = pSamplerDesc->BorderColor[2];
-	desc.BorderColor[3] = pSamplerDesc->BorderColor[3];
+	switch (pSamplerDesc->BorderColor)
+	{
+	case SAMPLER_BORDER_COLOR_OPAQUE_BLACK:
+		desc.BorderColor[0] = 0.0f;
+		desc.BorderColor[1] = 0.0f;
+		desc.BorderColor[2] = 0.0f;
+		desc.BorderColor[3] = 1.0f;
+		break;
+
+	case SAMPLER_BORDER_COLOR_OPAQUE_WHITE:
+		desc.BorderColor[0] = 1.0f;
+		desc.BorderColor[1] = 1.0f;
+		desc.BorderColor[2] = 1.0f;
+		desc.BorderColor[3] = 1.0f;
+		break;
+
+	default:
+		desc.BorderColor[0] = 0.0f;
+		desc.BorderColor[1] = 0.0f;
+		desc.BorderColor[2] = 0.0f;
+		desc.BorderColor[3] = 0.0f;
+		break;
+	}
 	desc.MinLOD = pSamplerDesc->MinLOD;
 	desc.MaxLOD = pSamplerDesc->MaxLOD;
 
