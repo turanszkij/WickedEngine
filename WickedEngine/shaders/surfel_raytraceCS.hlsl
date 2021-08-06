@@ -85,7 +85,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float2 uv = float2(frac(g_xFrame_FrameCount.xx / 4096.0));
 
 	float4 gi = 0;
-	uint samplecount = (uint)lerp(1.0, 16.0, saturate(surfel_data.inconsistency));
+	uint samplecount = (uint)lerp(1.0, 32.0, pow(saturate(surfel_data.inconsistency), 4));
 	for (uint sam = 0; sam < max(1, samplecount); ++sam)
 	{
 		RayDesc ray;
@@ -509,6 +509,68 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		gi += float4(result, 1);
 	}
 	gi /= gi.a;
+
+
+#if 1
+	// "Denoising" step:
+	Surface surface;
+	surface.P = surfel.position;
+	surface.N = normalize(unpack_unitvector(surfel.normal));
+
+	float4 surfel_gi = 0;
+	int3 cell = surfel_cell(surface.P);
+
+	// iterate through all [27] neighbor cells:
+	[loop]
+	for (uint i = 0; i < 27; ++i)
+	{
+		uint surfel_hash_target = surfel_hash(cell + surfel_neighbor_offsets[i]);
+
+		uint surfel_list_offset = surfelCellOffsetBuffer[surfel_hash_target];
+		while (surfel_list_offset != ~0u && surfel_list_offset < surfel_count)
+		{
+			uint surfel_index = surfelIndexBuffer[surfel_list_offset];
+			Surfel surfel = surfelBuffer[surfel_index];
+			uint hash = surfel_hash(surfel_cell(surfel.position));
+
+			if (hash == surfel_hash_target)
+			{
+				float3 L = surfel.position - surface.P;
+				float dist2 = dot(L, L);
+				if (dist2 <= SURFEL_RADIUS2)
+				{
+					float3 normal = normalize(unpack_unitvector(surfel.normal));
+					float dotN = dot(surface.N, normal);
+					if (dotN > 0)
+					{
+						float dist = sqrt(dist2);
+						float contribution = 1;
+						contribution *= saturate(1 - dist / SURFEL_RADIUS);
+						contribution = smoothstep(0, 1, contribution);
+						contribution *= pow(saturate(dotN), SURFEL_NORMAL_TOLERANCE);
+
+						SurfelPayload surfel_payload = surfelPayloadBuffer[surfel_index];
+						surfel_gi += unpack_half4(surfel_payload.color) * contribution;
+
+					}
+				}
+			}
+			else
+			{
+				// in this case we stepped out of the surfel list of the cell
+				break;
+			}
+
+			surfel_list_offset++;
+		}
+
+	}
+	if (surfel_gi.a > 0)
+	{
+		surfel_gi /= surfel_gi.a;
+		gi.rgb = (gi.rgb + max(0, surfel_gi.rgb)) * 0.5;
+	}
+#endif
 
 
 
