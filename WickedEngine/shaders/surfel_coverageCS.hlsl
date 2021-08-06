@@ -7,17 +7,23 @@
 //#define SURFEL_DEBUG_RANDOM
 
 
-static const uint nice_colors_size = 5;
-static const float3 nice_colors[nice_colors_size] = {
+static const uint random_colors_size = 11;
+static const float3 random_colors[random_colors_size] = {
 	float3(0,0,1),
 	float3(0,1,1),
 	float3(0,1,0),
 	float3(1,1,0),
 	float3(1,0,0),
+	float3(1,0,1),
+	float3(0.5,1,1),
+	float3(0.5,1,0.5),
+	float3(1,1,0.5),
+	float3(1,0.5,0.5),
+	float3(1,0.5,1),
 };
-float3 hash_color(uint index)
+float3 random_color(uint index)
 {
-	return nice_colors[index % nice_colors_size];
+	return random_colors[index % random_colors_size];
 }
 
 static const uint2 pixel_offsets[4] = {
@@ -60,7 +66,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	{
 		const float2 uv = ((float2)pixel + 0.5) * g_xFrame_InternalResolution_rcp;
 		const float3 P = reconstructPosition(uv, depth);
-		const float3 V = normalize(g_xCamera_CamPos - P);
 
 		const float3 N = normalize(g1.rgb * 2 - 1);
 
@@ -108,7 +113,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 #endif // SURFEL_DEBUG_NORMAL
 
 #ifdef SURFEL_DEBUG_RANDOM
-							debug += float4(hash_color(surfel_index), 1) * contribution;
+							debug += float4(random_color(surfel_index), 1) * contribution;
 #endif // SURFEL_DEBUG_RANDOM
 
 						}
@@ -181,6 +186,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		coverage[Gid.xy] = GroupMinSurfelCount;
 	}
 
+	// Todo: temporal accumulation
 	result[DTid.xy * 2 + uint2(0, 0)] = color;
 	result[DTid.xy * 2 + uint2(1, 0)] = color;
 	result[DTid.xy * 2 + uint2(0, 1)] = color;

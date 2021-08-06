@@ -74,8 +74,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	if (DTid.x >= surfel_count)
 		return;
 
-	const float2 bluenoise = blue_noise(unflatten2D(DTid.x, 256)).xy;
-
 	uint surfel_index = surfelIndexBuffer[DTid.x];
 	Surfel surfel = surfelBuffer[surfel_index];
 	SurfelData surfel_data = surfelDataBuffer[surfel_index];
@@ -83,11 +81,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	float3 N = normalize(unpack_unitvector(surfel.normal));
 
-	float seed = 0.1234;
-	float2 uv = float2(g_xFrame_Time, (float)DTid.x / (float)surfel_count);
+	float seed = 0.123456;
+	float2 uv = float2(frac(g_xFrame_FrameCount.xx / 4096.0));
 
 	float4 gi = 0;
-	uint samplecount = (uint)lerp(8.0, 1.0, saturate(surfel_data.life));
+	uint samplecount = (uint)lerp(1.0, 16.0, saturate(surfel_data.inconsistency));
 	for (uint sam = 0; sam < max(1, samplecount); ++sam)
 	{
 		RayDesc ray;
