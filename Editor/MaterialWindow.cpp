@@ -520,63 +520,94 @@ void MaterialWindow::Create(EditorComponent* editor)
 		{
 		case MaterialComponent::BASECOLORMAP:
 			textureSlotComboBox.AddItem("BaseColor map");
-			textureSlotButton.SetTooltip("RGBA: Basecolor");
 			break;
 		case MaterialComponent::NORMALMAP:
 			textureSlotComboBox.AddItem("Normal map");
-			textureSlotButton.SetTooltip("RGB: Normal");
 			break;
 		case MaterialComponent::SURFACEMAP:
 			textureSlotComboBox.AddItem("Surface map");
-			textureSlotButton.SetTooltip("Default workflow: R: Occlusion, G: Roughness, B: Metalness, A: Reflectance\nSpecular-glossiness workflow: RGB: Specular color (f0), A: smoothness");
 			break;
 		case MaterialComponent::EMISSIVEMAP:
 			textureSlotComboBox.AddItem("Emissive map");
-			textureSlotButton.SetTooltip("RGBA: Emissive");
 			break;
 		case MaterialComponent::OCCLUSIONMAP:
 			textureSlotComboBox.AddItem("Occlusion map");
-			textureSlotButton.SetTooltip("R: Occlusion");
 			break;
 		case MaterialComponent::DISPLACEMENTMAP:
 			textureSlotComboBox.AddItem("Displacement map");
-			textureSlotButton.SetTooltip("R: Displacement heightmap");
 			break;
 		case MaterialComponent::TRANSMISSIONMAP:
 			textureSlotComboBox.AddItem("Transmission map");
-			textureSlotButton.SetTooltip("R: Transmission factor");
 			break;
 		case MaterialComponent::SHEENCOLORMAP:
 			textureSlotComboBox.AddItem("SheenColor map");
-			textureSlotButton.SetTooltip("RGB: Sheen color");
 			break;
 		case MaterialComponent::SHEENROUGHNESSMAP:
 			textureSlotComboBox.AddItem("SheenRoughness map");
-			textureSlotButton.SetTooltip("A: Roughness");
 			break;
 		case MaterialComponent::CLEARCOATMAP:
 			textureSlotComboBox.AddItem("Clearcoat map");
-			textureSlotButton.SetTooltip("R: Clearcoat factor");
 			break;
 		case MaterialComponent::CLEARCOATROUGHNESSMAP:
 			textureSlotComboBox.AddItem("ClearcoatRoughness map");
-			textureSlotButton.SetTooltip("G: Roughness");
 			break;
 		case MaterialComponent::CLEARCOATNORMALMAP:
 			textureSlotComboBox.AddItem("ClearcoatNormal map");
-			textureSlotButton.SetTooltip("RGB: Normal");
 			break;
 		case MaterialComponent::SPECULARMAP:
 			textureSlotComboBox.AddItem("Specular map");
-			textureSlotButton.SetTooltip("RGB: Specular color, A: Specular intensity [non-metal]");
 			break;
 		default:
 			break;
 		}
 	}
-	textureSlotComboBox.SetSelected(0);
 	textureSlotComboBox.OnSelect([this](wiEventArgs args)
 		{
+
+			switch (args.iValue)
+			{
+			case MaterialComponent::BASECOLORMAP:
+				textureSlotButton.SetTooltip("RGBA: Basecolor");
+				break;
+			case MaterialComponent::NORMALMAP:
+				textureSlotButton.SetTooltip("RGB: Normal");
+				break;
+			case MaterialComponent::SURFACEMAP:
+				textureSlotButton.SetTooltip("Default workflow: R: Occlusion, G: Roughness, B: Metalness, A: Reflectance\nSpecular-glossiness workflow: RGB: Specular color (f0), A: smoothness");
+				break;
+			case MaterialComponent::EMISSIVEMAP:
+				textureSlotButton.SetTooltip("RGBA: Emissive");
+				break;
+			case MaterialComponent::OCCLUSIONMAP:
+				textureSlotButton.SetTooltip("R: Occlusion");
+				break;
+			case MaterialComponent::DISPLACEMENTMAP:
+				textureSlotButton.SetTooltip("R: Displacement heightmap");
+				break;
+			case MaterialComponent::TRANSMISSIONMAP:
+				textureSlotButton.SetTooltip("R: Transmission factor");
+				break;
+			case MaterialComponent::SHEENCOLORMAP:
+				textureSlotButton.SetTooltip("RGB: Sheen color");
+				break;
+			case MaterialComponent::SHEENROUGHNESSMAP:
+				textureSlotButton.SetTooltip("A: Roughness");
+				break;
+			case MaterialComponent::CLEARCOATMAP:
+				textureSlotButton.SetTooltip("R: Clearcoat factor");
+				break;
+			case MaterialComponent::CLEARCOATROUGHNESSMAP:
+				textureSlotButton.SetTooltip("G: Roughness");
+				break;
+			case MaterialComponent::CLEARCOATNORMALMAP:
+				textureSlotButton.SetTooltip("RGB: Normal");
+				break;
+			case MaterialComponent::SPECULARMAP:
+				textureSlotButton.SetTooltip("RGB: Specular color, A: Specular intensity [non-metal]");
+				break;
+			default:
+				break;
+			}
 
 			MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
 			if (material == nullptr)
@@ -584,6 +615,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 			textureSlotButton.SetImage(material->textures[args.iValue].resource);
 
 		});
+	textureSlotComboBox.SetSelected(0);
 	textureSlotComboBox.SetTooltip("Choose the texture slot to modify.");
 	AddWidget(&textureSlotComboBox);
 
