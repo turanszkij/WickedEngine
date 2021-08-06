@@ -331,10 +331,7 @@ void Initialize()
 	samplerDesc.MipLODBias = 0.0f;
 	samplerDesc.MaxAnisotropy = 0;
 	samplerDesc.ComparisonFunc = COMPARISON_NEVER;
-	samplerDesc.BorderColor[0] = 0;
-	samplerDesc.BorderColor[1] = 0;
-	samplerDesc.BorderColor[2] = 0;
-	samplerDesc.BorderColor[3] = 0;
+	samplerDesc.BorderColor = SAMPLER_BORDER_COLOR_TRANSPARENT_BLACK;
 	samplerDesc.MinLOD = 0;
 	samplerDesc.MaxLOD = FLT_MAX;
 	device->CreateSampler(&samplerDesc, &sampler);
