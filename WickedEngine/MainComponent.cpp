@@ -381,12 +381,12 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 
 		if (!use_dx11 && !use_dx12 && !use_vulkan)
 		{
-#if defined(WICKEDENGINE_BUILD_DX11)
-			use_dx11 = true;
-#elif defined(WICKEDENGINE_BUILD_DX12)
+#if defined(WICKEDENGINE_BUILD_DX12)
 			use_dx12 = true;
 #elif defined(WICKEDENGINE_BUILD_VULKAN)
 			use_vulkan = true;
+#elif defined(WICKEDENGINE_BUILD_DX11)
+			use_dx11 = true;
 #else
 			wiBackLog::post("No rendering backend is enabled! Please enable at least one so we can use it as default");
 			assert(false);
