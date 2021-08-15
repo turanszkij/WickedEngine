@@ -4,12 +4,11 @@
 struct VertexToPixel
 {
 	float4 pos : SV_POSITION;
+	float2 tex : TEXCOORD;
+	nointerpolation float fade : DITHERFADE;
+	uint primitiveID : PRIMITIVEID;
 	float3 pos3D : POSITION3D;
 	float3 nor : NORMAL;
-	float2 tex : TEXCOORD;
-	float  fade : DITHERFADE;
-	float4 pos2DPrev : SCREENPOSITIONPREV;
-	float3 color : COLOR;
 };
 
 #endif // WI_HAIRPARTICLE_HF

@@ -1458,7 +1458,7 @@ namespace wiScene
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
-		instanceData.resize(objects.GetCount());
+		instanceData.resize(objects.GetCount() + hairs.GetCount());
 		if (instanceBuffer.desc.ByteWidth < (instanceData.size() * sizeof(ShaderMeshInstance)))
 		{
 			GPUBufferDesc desc;
@@ -3179,6 +3179,7 @@ namespace wiScene
 					const XMFLOAT4X4& worldMatrix = object.transform_index >= 0 ? transforms[object.transform_index].world : IDENTITYMATRIX;
 					const XMFLOAT4X4& worldMatrixPrev = object.prev_transform_index >= 0 ? prev_transforms[object.prev_transform_index].world_prev : IDENTITYMATRIX;
 					ShaderMeshInstance& inst = instanceData[args.jobIndex];
+					inst.init();
 					inst.transform = XMFLOAT3X4(
 						worldMatrix._11, worldMatrix._21, worldMatrix._31, worldMatrix._41,
 						worldMatrix._12, worldMatrix._22, worldMatrix._32, worldMatrix._42,
@@ -3654,6 +3655,21 @@ namespace wiScene
 					const TransformComponent& transform = *transforms.GetComponent(entity);
 
 					hair.UpdateCPU(transform, *mesh, dt);
+
+					GraphicsDevice* device = wiRenderer::GetDevice();
+					ShaderMeshInstance& inst = instanceData[objects.GetCount() + args.jobIndex];
+					inst.init();
+					// every vertex is pretransformed and simulated in worldspace for hair particle:
+					inst.transform = inst.transformPrev = XMFLOAT3X4(
+						IDENTITYMATRIX._11, IDENTITYMATRIX._21, IDENTITYMATRIX._31, IDENTITYMATRIX._41,
+						IDENTITYMATRIX._12, IDENTITYMATRIX._22, IDENTITYMATRIX._32, IDENTITYMATRIX._42,
+						IDENTITYMATRIX._13, IDENTITYMATRIX._23, IDENTITYMATRIX._33, IDENTITYMATRIX._43
+					);
+					inst.mesh.ib = device->GetDescriptorIndex(&hair.primitiveBuffer, SRV);
+					inst.mesh.vb_pos_nor_wind = device->GetDescriptorIndex(&hair.vertexBuffer_POS[0], SRV);
+					inst.mesh.vb_pre = device->GetDescriptorIndex(&hair.vertexBuffer_POS[1], SRV);
+					inst.mesh.vb_uv0 = device->GetDescriptorIndex(&hair.vertexBuffer_TEX, SRV);
+					inst.mesh.subsetbuffer = device->GetDescriptorIndex(&hair.subsetBuffer, SRV);
 				}
 			}
 

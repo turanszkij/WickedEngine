@@ -8,11 +8,11 @@
 TEXTURE2D(texture_color, float4, TEXSLOT_ONDEMAND0);
 
 [earlydepthstencil]
-GBuffer main(VertexToPixel input)
+float4 main(VertexToPixel input) : SV_Target
 {
 	float4 color = texture_color.Sample(sampler_linear_wrap, input.tex);
 	color.rgb = DEGAMMA(color.rgb);
-	color.rgb *= input.color;
+	color *= g_xMaterial.baseColor;
 	float opacity = 1;
 	float3 V = g_xCamera_CamPos - input.pos3D;
 	float dist = length(V);
@@ -47,9 +47,14 @@ GBuffer main(VertexToPixel input)
 
 	TiledLighting(surface, lighting);
 
+
+	const float3 surfelgi = texture_surfelgi[pixel];
+	lighting.indirect.diffuse = surfelgi.rgb;
+
+
 	ApplyLighting(surface, lighting, color);
 
 	ApplyFog(dist, g_xCamera_CamPos, V, color);
 
-	return CreateGBuffer(color, surface);
+	return color;
 }

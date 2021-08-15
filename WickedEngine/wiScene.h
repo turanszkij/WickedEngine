@@ -1297,6 +1297,10 @@ namespace wiScene
 		void SetAccelerationStructureUpdateRequested(bool value = true) { acceleration_structure_update_requested = value; }
 		bool IsAccelerationStructureUpdateRequested() const { return acceleration_structure_update_requested; }
 
+		// Instances for bindless visiblity indexing:
+		//	contains in order:
+		//		1) objects
+		//		2) hair particles
 		std::vector<ShaderMeshInstance> instanceData;
 		wiGraphics::GPUBuffer instanceBuffer;
 

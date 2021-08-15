@@ -2,6 +2,19 @@
 #include "impostorHF.hlsli"
 #include "objectHF.hlsli"
 
+struct GBuffer
+{
+	float4 g0 : SV_TARGET0;
+	float4 g1 : SV_TARGET1;
+};
+inline GBuffer CreateGBuffer(in float4 color, in Surface surface)
+{
+	GBuffer gbuffer;
+	gbuffer.g0 = color;
+	gbuffer.g1 = float4(surface.N * 0.5f + 0.5f, surface.roughness);
+	return gbuffer;
+}
+
 [earlydepthstencil]
 GBuffer main(VSOut input)
 {

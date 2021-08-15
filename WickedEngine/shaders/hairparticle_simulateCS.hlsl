@@ -1,10 +1,20 @@
 #include "globals.hlsli"
+#include "hairparticleHF.hlsli"
 #include "ShaderInterop_HairParticle.h"
 
-RWSTRUCTUREDBUFFER(particleBuffer, Patch, 0);
-RWSTRUCTUREDBUFFER(simulationBuffer, PatchSimulationData, 1);
-RWSTRUCTUREDBUFFER(indexBuffer, uint, 2);
-RWRAWBUFFER(counterBuffer, 3);
+static const float3 HAIRPATCH[] = {
+	float3(-1, -1, 0),
+	float3(1, -1, 0),
+	float3(-1, 1, 0),
+	float3(1, 1, 0),
+};
+
+RWSTRUCTUREDBUFFER(simulationBuffer, PatchSimulationData, 0);
+RWRAWBUFFER(vertexBuffer_POS, 1);
+RWRAWBUFFER(vertexBuffer_TEX, 2);
+RWSTRUCTUREDBUFFER(primitiveBuffer, uint, 3);
+RWSTRUCTUREDBUFFER(culledIndexBuffer, uint, 4);
+RWRAWBUFFER(counterBuffer, 5);
 
 TYPEDBUFFER(meshIndexBuffer, uint, TEXSLOT_ONDEMAND0);
 RAWBUFFER(meshVertexBuffer_POS, TEXSLOT_ONDEMAND1);
@@ -73,8 +83,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
     const uint strandID = DTid.x * xHairSegmentCount;
     
 	// Transform particle by the emitter object matrix:
-    float3 base = mul(xWorld, float4(position.xyz, 1)).xyz;
-    target = normalize(mul((float3x3)xWorld, target));
+    float3 base = mul(xHairWorld, float4(position.xyz, 1)).xyz;
+    target = normalize(mul((float3x3)xHairWorld, target));
 	const float3 root = base;
 
 	float3 normal = 0;
@@ -83,17 +93,17 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	{
 		// Identifies the hair strand segment particle:
 		const uint particleID = strandID + segmentID;
-		particleBuffer[particleID].tangent_random = tangent_random;
-		particleBuffer[particleID].binormal_length = binormal_length;
+		simulationBuffer[particleID].tangent_random = tangent_random;
+		simulationBuffer[particleID].binormal_length = binormal_length;
 
 		if (xHairRegenerate)
 		{
-			particleBuffer[particleID].position = base;
-			particleBuffer[particleID].normal = target;
+			simulationBuffer[particleID].position = base;
+			simulationBuffer[particleID].normal = target;
 			simulationBuffer[particleID].velocity = 0;
 		}
 
-        normal += particleBuffer[particleID].normal;
+        normal += simulationBuffer[particleID].normal;
         normal = normalize(normal);
 
 		float len = (binormal_length >> 24) & 0x000000FF;
@@ -138,8 +148,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
         float3 velocity = simulationBuffer[particleID].velocity;
 
 		// Apply surface-movement-based velocity:
-		const float3 old_base = particleBuffer[particleID].position;
-		const float3 old_normal = particleBuffer[particleID].normal;
+		const float3 old_base = simulationBuffer[particleID].position;
+		const float3 old_normal = simulationBuffer[particleID].normal;
 		const float3 old_tip = old_base + old_normal * len;
 		const float3 surface_velocity = old_tip - tip;
 		velocity += surface_velocity;
@@ -152,30 +162,90 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		velocity *= 0.98f;
 
 		// Store particle:
-        particleBuffer[particleID].position = base;
-		particleBuffer[particleID].normal = normalize(normal);
+		simulationBuffer[particleID].position = base;
+		simulationBuffer[particleID].normal = normalize(normal);
 
 		// Store simulation data:
 		simulationBuffer[particleID].velocity = velocity;
 
-		// Offset next segment root to current tip:
-        base = tip;
 
+		// Write out render buffers:
+		//	These must be persistent, not culled (raytracing, surfels...)
+		uint v0 = particleID * 4;
+		uint i0 = particleID * 6;
+		primitiveBuffer[i0 + 0] = v0 + 0;
+		primitiveBuffer[i0 + 1] = v0 + 1;
+		primitiveBuffer[i0 + 2] = v0 + 2;
+		primitiveBuffer[i0 + 3] = v0 + 2;
+		primitiveBuffer[i0 + 4] = v0 + 1;
+		primitiveBuffer[i0 + 5] = v0 + 3;
+
+		uint rand = (tangent_random >> 24) & 0x000000FF;
+		float3x3 TBN = float3x3(tangent, normal, binormal); // don't derive binormal, because we want the shear!
+		float3 rootposition = base - normal * 0.1 * len; // inset to the emitter a bit, to avoid disconnect:
+		float2 frame = float2(xHairAspect, 1) * len * 0.5;
+		const uint currentFrame = (xHairFrameStart + rand) % xHairFrameCount;
+		uint2 offset = uint2(currentFrame % xHairFramesXY.x, currentFrame / xHairFramesXY.x);
+
+		for (uint vertexID = 0; vertexID < 4; ++vertexID)
+		{
+			// expand the particle into a billboard cross section, the patch:
+			float3 patchPos = HAIRPATCH[vertexID];
+			float2 uv = vertexID < 6 ? patchPos.xy : patchPos.zy;
+			uv = uv * float2(0.5f, 0.5f) + 0.5f;
+			uv.y = lerp((float)segmentID / (float)xHairSegmentCount, ((float)segmentID + 1) / (float)xHairSegmentCount, uv.y);
+			uv.y = 1 - uv.y;
+			patchPos.y += 1;
+
+			// Sprite sheet UV transform:
+			uv.xy += offset;
+			uv.xy *= xHairTexMul;
+
+			// scale the billboard by the texture aspect:
+			patchPos.xyz *= frame.xyx;
+
+			// rotate the patch into the tangent space of the emitting triangle:
+			patchPos = mul(patchPos, TBN);
+
+			// simplistic wind effect only affects the top, but leaves the base as is:
+			const float waveoffset = dot(rootposition, g_xFrame_WindDirection) * g_xFrame_WindWaveSize + rand / 255.0f * g_xFrame_WindRandomness;
+			const float3 wavedir = g_xFrame_WindDirection * (segmentID + patchPos.y);
+			const float3 wind = sin(g_xFrame_Time * g_xFrame_WindSpeed + waveoffset) * wavedir;
+
+			float3 position = rootposition + patchPos + wind;
+
+			uint4 data;
+			data.xyz = asuint(position);
+			data.w = pack_unitvector(normalize(normal + wind));
+			vertexBuffer_POS.Store4((v0 + vertexID) * 16, data);
+			vertexBuffer_TEX.Store((v0 + vertexID) * 4, pack_half2(uv));
+		}
 
 		// Frustum culling:
 		uint infrustum = 1;
+		float3 center = (base + tip) * 0.5;
+		float radius = -len;
 		infrustum &= distance(base, g_xCamera_CamPos.xyz) < xHairViewDistance;
-		infrustum &= dot(g_xCamera_FrustumPlanes[0], float4(base, 1)) > -len;
-		infrustum &= dot(g_xCamera_FrustumPlanes[2], float4(base, 1)) > -len;
-		infrustum &= dot(g_xCamera_FrustumPlanes[3], float4(base, 1)) > -len;
-		infrustum &= dot(g_xCamera_FrustumPlanes[4], float4(base, 1)) > -len;
-		infrustum &= dot(g_xCamera_FrustumPlanes[5], float4(base, 1)) > -len;
+		infrustum &= dot(g_xCamera_FrustumPlanes[0], float4(center, 1)) > radius;
+		infrustum &= dot(g_xCamera_FrustumPlanes[2], float4(center, 1)) > radius;
+		infrustum &= dot(g_xCamera_FrustumPlanes[3], float4(center, 1)) > radius;
+		infrustum &= dot(g_xCamera_FrustumPlanes[4], float4(center, 1)) > radius;
+		infrustum &= dot(g_xCamera_FrustumPlanes[5], float4(center, 1)) > radius;
 
 		if (infrustum)
 		{
 			uint prevCount;
 			counterBuffer.InterlockedAdd(0, 1, prevCount);
-			indexBuffer[prevCount] = particleID;
+			uint ii0 = prevCount * 6;
+			culledIndexBuffer[ii0 + 0] = i0 + 0;
+			culledIndexBuffer[ii0 + 1] = i0 + 1;
+			culledIndexBuffer[ii0 + 2] = i0 + 2;
+			culledIndexBuffer[ii0 + 3] = i0 + 3;
+			culledIndexBuffer[ii0 + 4] = i0 + 4;
+			culledIndexBuffer[ii0 + 5] = i0 + 5;
 		}
+
+		// Offset next segment root to current tip:
+		base = tip;
     }
 }

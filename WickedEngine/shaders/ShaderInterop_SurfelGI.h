@@ -31,7 +31,7 @@ static const uint SURFEL_TABLE_SIZE = 500000;
 static const uint SURFEL_STATS_OFFSET_COUNT = 0;
 static const uint SURFEL_STATS_OFFSET_INDIRECT = 4;
 static const uint SURFEL_INDIRECT_NUMTHREADS = 32;
-static const float SURFEL_RADIUS = 1;
+static const float SURFEL_RADIUS = 2;
 static const float SURFEL_RADIUS2 = SURFEL_RADIUS * SURFEL_RADIUS;
 inline int3 surfel_cell(float3 position)
 {

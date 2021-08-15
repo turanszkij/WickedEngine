@@ -111,14 +111,36 @@ struct ShaderMesh
 	int blendmaterial1;
 	int blendmaterial2;
 	int blendmaterial3;
+
+	void init()
+	{
+		ib = -1;
+		vb_pos_nor_wind = -1;
+		vb_tan = -1;
+		vb_col = -1;
+
+		vb_uv0 = -1;
+		vb_uv1 = -1;
+		vb_atl = -1;
+		vb_pre = -1;
+
+		subsetbuffer = -1;
+		blendmaterial1 = -1;
+		blendmaterial2 = -1;
+		blendmaterial3 = -1;
+	}
 };
 
 struct ShaderMeshSubset
 {
 	uint indexOffset;
-	uint indexCount;
-	int mesh;
 	int material;
+
+	void init()
+	{
+		indexOffset = 0;
+		material = -1;
+	}
 };
 
 struct ShaderMeshInstance
@@ -131,6 +153,14 @@ struct ShaderMeshInstance
 	uint padding0;
 	uint padding1;
 	ShaderMesh mesh;
+
+	void init()
+	{
+		atlasMulAdd = float4(0, 0, 0, 0);
+		color = ~0u;
+		emissive = ~0u;
+		mesh.init();
+	}
 };
 struct ShaderMeshInstancePointer
 {

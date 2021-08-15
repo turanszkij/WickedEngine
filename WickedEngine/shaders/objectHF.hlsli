@@ -562,21 +562,9 @@ struct PixelInput
 #endif // OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
 };
 
-struct GBuffer
+inline uint2 PackVisibility(uint primitiveID, uint instanceID, uint subsetIndex)
 {
-	float4 g0 : SV_TARGET0;	/*FORMAT_R11G11B10_FLOAT*/
-	float4 g1 : SV_TARGET1;	/*FORMAT_R8G8B8A8_FLOAT*/
-};
-inline GBuffer CreateGBuffer(in float4 color, in Surface surface)
-{
-	GBuffer gbuffer;
-	gbuffer.g0 = color;
-#ifdef BRDF_CLEARCOAT
-	gbuffer.g1 = float4(surface.clearcoat.N * 0.5f + 0.5f, surface.clearcoat.roughness);
-#else
-	gbuffer.g1 = float4(surface.N * 0.5f + 0.5f, surface.roughness);
-#endif // BRDF_CLEARCOAT
-	return gbuffer;
+	return uint2(primitiveID, (instanceID & 0xFFFFFF) | ((subsetIndex & 0xFF) << 24u));
 }
 
 
@@ -1912,7 +1900,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 
 	// end point:
 #ifdef PREPASS
-	return uint2(primitiveID, (input.instanceID & 0xFFFFFF) | ((GetSubsetIndex() & 0xFF) << 24u));
+	return PackVisibility(primitiveID, input.instanceID, GetSubsetIndex());
 #else
 	return color;
 #endif // PREPASS

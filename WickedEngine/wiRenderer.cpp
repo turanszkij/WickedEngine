@@ -4003,8 +4003,6 @@ void UpdateRenderData(
 				{
 					ShaderMeshSubset& shadersubset = subsetarray[j++];
 					shadersubset.indexOffset = x.indexOffset;
-					shadersubset.indexCount = x.indexCount;
-					shadersubset.mesh = mesh_descriptor;
 
 					const MaterialComponent* material = vis.scene->materials.GetComponent(x.materialID);
 					if (material != nullptr)
@@ -4154,7 +4152,7 @@ void UpdateRenderData(
 				Entity entity = vis.scene->hairs.GetEntity(hairIndex);
 				const MaterialComponent& material = *vis.scene->materials.GetComponent(entity);
 
-				hair.UpdateGPU(*mesh, material, cmd);
+				hair.UpdateGPU((uint32_t)vis.scene->objects.GetCount() + hairIndex, *mesh, material, cmd);
 			}
 		}
 		wiProfiler::EndRange(range);
