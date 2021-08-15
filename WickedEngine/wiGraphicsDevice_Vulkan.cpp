@@ -1331,8 +1331,6 @@ using namespace Vulkan_Internal;
 		res = vkCreateDescriptorPool(device->device, &poolInfo, nullptr, &descriptorPool);
 		assert(res == VK_SUCCESS);
 
-		reset();
-
 	}
 	void GraphicsDevice_Vulkan::FrameResources::DescriptorBinder::destroy()
 	{

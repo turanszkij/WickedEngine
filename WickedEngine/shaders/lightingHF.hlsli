@@ -394,7 +394,7 @@ inline float3 EnvironmentReflection_Global(in Surface surface)
 inline float4 EnvironmentReflection_Local(in Surface surface, in ShaderEntity probe, in float4x4 probeProjection, in float3 clipSpacePos)
 {
 	// Perform parallax correction of reflection ray (R) into OBB:
-	float3 RayLS = mul(surface.R, (float3x3)probeProjection);
+	float3 RayLS = mul((float3x3)probeProjection, surface.R);
 	float3 FirstPlaneIntersect = (float3(1, 1, 1) - clipSpacePos) / RayLS;
 	float3 SecondPlaneIntersect = (-float3(1, 1, 1) - clipSpacePos) / RayLS;
 	float3 FurthestPlane = max(FirstPlaneIntersect, SecondPlaneIntersect);
@@ -413,7 +413,7 @@ inline float4 EnvironmentReflection_Local(in Surface surface, in ShaderEntity pr
 #endif // BRDF_SHEEN
 
 #ifdef BRDF_CLEARCOAT
-	RayLS = mul(surface.clearcoat.R, (float3x3)probeProjection);
+	RayLS = mul((float3x3)probeProjection, surface.clearcoat.R);
 	FirstPlaneIntersect = (float3(1, 1, 1) - clipSpacePos) / RayLS;
 	SecondPlaneIntersect = (-float3(1, 1, 1) - clipSpacePos) / RayLS;
 	FurthestPlane = max(FirstPlaneIntersect, SecondPlaneIntersect);
