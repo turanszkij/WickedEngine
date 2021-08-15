@@ -154,7 +154,7 @@ TEXTURE2D(texture_ao, float, TEXSLOT_RENDERPATH_AO);						// r: ambient occlusio
 TEXTURE2D(texture_ssr, float4, TEXSLOT_RENDERPATH_SSR);						// rgb: screen space ray-traced reflections, a: reflection blend based on ray hit or miss
 TEXTURE2D(texture_rtshadow, uint4, TEXSLOT_RENDERPATH_RTSHADOW);			// bitmask for max 16 shadows' visibility
 
-TEXTURE2D(texture_surfelgi, float4, TEXSLOT_SURFELGI);
+TEXTURE2D(texture_surfelgi, float3, TEXSLOT_SURFELGI);
 
 // Use these to compile this file as shader prototype:
 //#define OBJECTSHADER_COMPILE_VS				- compile vertex shader prototype
@@ -1858,8 +1858,8 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 
 #ifdef TILEDFORWARD
 #ifndef TRANSPARENT
-	const float4 surfelgi = texture_surfelgi[pixel];
-	lighting.indirect.diffuse = lerp(lighting.indirect.diffuse, surfelgi.rgb, surfelgi.a);
+	const float3 surfelgi = texture_surfelgi[pixel];
+	lighting.indirect.diffuse = surfelgi.rgb;
 #endif // TRANSPARENT
 #endif // TILEDFORWARD
 

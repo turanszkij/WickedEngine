@@ -8243,7 +8243,7 @@ void CreateSurfelGIResources(SurfelGIResources& res, XMUINT2 resolution)
 
 	desc.Width = resolution.x;
 	desc.Height = resolution.y;
-	desc.Format = FORMAT_R16G16B16A16_FLOAT;
+	desc.Format = FORMAT_R11G11B10_FLOAT;
 	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 	desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
 	device->CreateTexture(&desc, nullptr, &res.result);

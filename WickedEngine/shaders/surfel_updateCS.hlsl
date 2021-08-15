@@ -65,7 +65,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 
 	surfelBuffer[surfel_index] = surfel;
-	surfelPayloadBuffer[surfel_index].color = pack_half4(float4(surfel_data.mean, saturate(surfel_data.life * 4)));
+	surfelPayloadBuffer[surfel_index].color = pack_half4(float4(surfel_data.mean, /*saturate(surfel_data.life * 4)*/1));
 
 	surfelCellIndexBuffer[surfel_index] = surfel_hash(surfel_cell(surfel.position));
 }

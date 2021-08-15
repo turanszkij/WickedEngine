@@ -39,7 +39,7 @@ STRUCTUREDBUFFER(surfelIndexBuffer, uint, TEXSLOT_ONDEMAND3);
 STRUCTUREDBUFFER(surfelCellOffsetBuffer, uint, TEXSLOT_ONDEMAND4);
 
 RWTEXTURE2D(coverage, uint, 0);
-RWTEXTURE2D(result, float4, 1);
+RWTEXTURE2D(result, float3, 1);
 RWTEXTURE2D(debugUAV, unorm float4, 2);
 
 groupshared uint GroupMinSurfelCount;
@@ -187,10 +187,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	}
 
 	// Todo: temporal accumulation
-	result[DTid.xy * 2 + uint2(0, 0)] = color;
-	result[DTid.xy * 2 + uint2(1, 0)] = color;
-	result[DTid.xy * 2 + uint2(0, 1)] = color;
-	result[DTid.xy * 2 + uint2(1, 1)] = color;
+	result[DTid.xy * 2 + uint2(0, 0)] = color.rgb;
+	result[DTid.xy * 2 + uint2(1, 0)] = color.rgb;
+	result[DTid.xy * 2 + uint2(0, 1)] = color.rgb;
+	result[DTid.xy * 2 + uint2(1, 1)] = color.rgb;
 	
 	debugUAV[DTid.xy * 2 + uint2(0, 0)] = debug;
 	debugUAV[DTid.xy * 2 + uint2(1, 0)] = debug;
