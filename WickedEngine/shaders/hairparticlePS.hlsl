@@ -48,8 +48,12 @@ float4 main(VertexToPixel input) : SV_Target
 	TiledLighting(surface, lighting);
 
 
-	const float3 surfelgi = texture_surfelgi[pixel];
-	lighting.indirect.diffuse = surfelgi.rgb;
+	[branch]
+	if (g_xFrame_Options & OPTION_BIT_SURFELGI_ENABLED)
+	{
+		const float3 surfelgi = texture_surfelgi[pixel];
+		lighting.indirect.diffuse = surfelgi.rgb;
+	}
 
 
 	ApplyLighting(surface, lighting, color);

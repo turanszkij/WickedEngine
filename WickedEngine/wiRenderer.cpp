@@ -96,6 +96,8 @@ bool raytracedShadows = false;
 bool tessellationEnabled = true;
 bool disableAlbedoMaps = false;
 bool SCREENSPACESHADOWS = false;
+bool SURFELGI = false;
+bool SURFELGI_DEBUG = false;
 
 
 struct VoxelizedSceneData
@@ -3582,6 +3584,10 @@ void UpdatePerFrameData(
 	if (GetScreenSpaceShadowsEnabled())
 	{
 		frameCB.g_xFrame_Options |= OPTION_BIT_SHADOW_MASK;
+	}
+	if (GetSurfelGIEnabled())
+	{
+		frameCB.g_xFrame_Options |= OPTION_BIT_SURFELGI_ENABLED;
 	}
 
 	frameCB.g_xFrame_Atmosphere = vis.scene->weather.atmosphereParameters;
@@ -12825,6 +12831,22 @@ void SetScreenSpaceShadowsEnabled(bool value)
 bool GetScreenSpaceShadowsEnabled()
 {
 	return SCREENSPACESHADOWS;
+}
+void SetSurfelGIEnabled(bool value)
+{
+	SURFELGI = value;
+}
+bool GetSurfelGIEnabled()
+{
+	return SURFELGI;
+}
+void SetSurfelGIDebugEnabled(bool value)
+{
+	SURFELGI_DEBUG = value;
+}
+bool GetSurfelGIDebugEnabled()
+{
+	return SURFELGI_DEBUG;
 }
 
 }

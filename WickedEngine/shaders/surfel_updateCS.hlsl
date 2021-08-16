@@ -25,14 +25,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	Surfel surfel = surfelBuffer[surfel_index];
 
 
-	uint2 primitiveID = surfel_data.primitiveID;
-	uint primitiveIndex = primitiveID.x;
-	uint instanceID = primitiveID.y & 0xFFFFFF;
-	uint subsetIndex = (primitiveID.y >> 24u) & 0xFF;
-	ShaderMeshInstance inst = InstanceBuffer[instanceID];
+	PrimitiveID prim;
+	prim.unpack(surfel_data.primitiveID);
+	ShaderMeshInstance inst = InstanceBuffer[prim.instanceIndex];
 	ShaderMesh mesh = inst.mesh;
-	ShaderMeshSubset subset = bindless_subsets[NonUniformResourceIndex(mesh.subsetbuffer)][subsetIndex];
-	uint startIndex = primitiveIndex * 3 + subset.indexOffset;
+	ShaderMeshSubset subset = bindless_subsets[NonUniformResourceIndex(mesh.subsetbuffer)][prim.subsetIndex];
+	uint startIndex = prim.primitiveIndex * 3 + subset.indexOffset;
 	uint i0 = bindless_ib[NonUniformResourceIndex(mesh.ib)][startIndex + 0];
 	uint i1 = bindless_ib[NonUniformResourceIndex(mesh.ib)][startIndex + 1];
 	uint i2 = bindless_ib[NonUniformResourceIndex(mesh.ib)][startIndex + 2];

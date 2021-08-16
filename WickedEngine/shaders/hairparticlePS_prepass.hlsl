@@ -20,5 +20,9 @@ uint2 main(VertexToPixel input) : SV_TARGET
 	}
 	clip(color.a - alphatest);
 
-	return PackVisibility(input.primitiveID, xHairInstanceID, 0);
+	PrimitiveID prim;
+	prim.primitiveIndex = input.primitiveID;
+	prim.instanceIndex = xHairInstanceID;
+	prim.subsetIndex = 0;
+	return prim.pack();
 }

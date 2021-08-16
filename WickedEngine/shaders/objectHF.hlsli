@@ -562,11 +562,6 @@ struct PixelInput
 #endif // OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
 };
 
-inline uint2 PackVisibility(uint primitiveID, uint instanceID, uint subsetIndex)
-{
-	return uint2(primitiveID, (instanceID & 0xFFFFFF) | ((subsetIndex & 0xFF) << 24u));
-}
-
 
 // METHODS
 ////////////
@@ -1846,8 +1841,12 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 
 #ifdef TILEDFORWARD
 #ifndef TRANSPARENT
-	const float3 surfelgi = texture_surfelgi[pixel];
-	lighting.indirect.diffuse = surfelgi.rgb;
+	[branch]
+	if (g_xFrame_Options & OPTION_BIT_SURFELGI_ENABLED)
+	{
+		const float3 surfelgi = texture_surfelgi[pixel];
+		lighting.indirect.diffuse = surfelgi.rgb;
+	}
 #endif // TRANSPARENT
 #endif // TILEDFORWARD
 
@@ -1900,7 +1899,11 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 
 	// end point:
 #ifdef PREPASS
-	return PackVisibility(primitiveID, input.instanceID, GetSubsetIndex());
+	PrimitiveID prim;
+	prim.primitiveIndex = primitiveID;
+	prim.instanceIndex = input.instanceID;
+	prim.subsetIndex = GetSubsetIndex();
+	return prim.pack();
 #else
 	return color;
 #endif // PREPASS

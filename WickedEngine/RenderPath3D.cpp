@@ -537,15 +537,14 @@ void RenderPath3D::Update(float dt)
 	{
 		scene->Update(dt * wiRenderer::GetGameSpeed());
 
-		if (wiRenderer::GetRaytracedShadowsEnabled() ||
+		if (wiRenderer::GetSurfelGIEnabled() ||
+			wiRenderer::GetRaytracedShadowsEnabled() ||
 			getAO() == AO_RTAO ||
 			getRaytracedReflectionEnabled())
 		{
 			scene->SetAccelerationStructureUpdateRequested(true);
 		}
 	}
-
-	scene->SetAccelerationStructureUpdateRequested(true);// TODO: remove!!
 
 	// Frustum culling for main camera:
 	visibility_main.layerMask = getLayerMask();
@@ -711,14 +710,17 @@ void RenderPath3D::Render() const
 
 		wiRenderer::Postprocess_DepthPyramid(depthBuffer_Copy, rtLinearDepth, cmd);
 
-		wiRenderer::SurfelGI(
-			surfelGIResources,
-			*scene,
-			depthBuffer_Copy,
-			GetGbuffer_Read(),
-			debugUAV,
-			cmd
-		);
+		if (wiRenderer::GetSurfelGIEnabled())
+		{
+			wiRenderer::SurfelGI(
+				surfelGIResources,
+				*scene,
+				depthBuffer_Copy,
+				GetGbuffer_Read(),
+				debugUAV,
+				cmd
+			);
+		}
 
 		RenderAO(cmd);
 
@@ -1045,7 +1047,11 @@ void RenderPath3D::Compose(CommandList cmd) const
 	wiImage::Draw(GetLastPostprocessRT(), fx, cmd);
 	device->EventEnd(cmd);
 
-	//if (wiRenderer::GetDebugLightCulling() || wiRenderer::GetVariableRateShadingClassificationDebug())
+	if (
+		wiRenderer::GetDebugLightCulling() ||
+		wiRenderer::GetVariableRateShadingClassificationDebug() ||
+		wiRenderer::GetSurfelGIDebugEnabled()
+		)
 	{
 		fx.enableFullScreen();
 		fx.blendFlag = BLENDMODE_PREMULTIPLIED;

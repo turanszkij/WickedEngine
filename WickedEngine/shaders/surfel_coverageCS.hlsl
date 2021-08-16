@@ -3,7 +3,7 @@
 
 //#define SURFEL_DEBUG_NORMAL
 //#define SURFEL_DEBUG_COLOR
-//#define SURFEL_DEBUG_POINT
+#define SURFEL_DEBUG_POINT
 //#define SURFEL_DEBUG_RANDOM
 
 

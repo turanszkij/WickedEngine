@@ -782,6 +782,10 @@ namespace wiRenderer
 	bool IsDisableAlbedoMaps();
 	void SetScreenSpaceShadowsEnabled(bool value);
 	bool GetScreenSpaceShadowsEnabled();
+	void SetSurfelGIEnabled(bool value);
+	bool GetSurfelGIEnabled();
+	void SetSurfelGIDebugEnabled(bool value);
+	bool GetSurfelGIDebugEnabled();
 
 	// Gets pick ray according to the current screen resolution and pointer coordinates. Can be used as input into RayIntersectWorld()
 	RAY GetPickRay(long cursorX, long cursorY, const wiCanvas& canvas, const wiScene::CameraComponent& camera = wiScene::GetCamera());

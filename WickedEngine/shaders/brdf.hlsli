@@ -200,8 +200,6 @@ struct Surface
 		in float4 specularMap = 1
 	)
 	{
-		material.metalness = material.reflectance = 0;
-
 		init();
 
 		opacity = baseColor.a;

@@ -192,6 +192,27 @@ struct ObjectPushConstants
 	uint instance_offset;
 };
 
+struct PrimitiveID
+{
+	uint primitiveIndex;
+	uint instanceIndex;
+	uint subsetIndex;
+
+	uint2 pack()
+	{
+		// 32 bit primitiveID
+		// 24 bit instanceID
+		// 8  bit subsetID
+		return uint2(primitiveIndex, (instanceIndex & 0xFFFFFF) | ((subsetIndex & 0xFF) << 24u));
+	}
+	void unpack(uint2 value)
+	{
+		primitiveIndex = value.x;
+		instanceIndex = value.y & 0xFFFFFF;
+		subsetIndex = (value.y >> 24u) & 0xFF;
+	}
+};
+
 // Warning: the size of this structure directly affects shader performance.
 //	Try to reduce it as much as possible!
 //	Keep it aligned to 16 bytes for best performance!
@@ -599,6 +620,7 @@ static const uint OPTION_BIT_HEIGHT_FOG = 1 << 7;
 static const uint OPTION_BIT_RAYTRACED_SHADOWS = 1 << 8;
 static const uint OPTION_BIT_DISABLE_ALBEDO_MAPS = 1 << 9;
 static const uint OPTION_BIT_SHADOW_MASK = 1 << 10;
+static const uint OPTION_BIT_SURFELGI_ENABLED = 1 << 11;
 
 // ---------- Common Constant buffers: -----------------
 
