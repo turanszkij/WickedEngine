@@ -135,10 +135,10 @@ inline void DirectionalLight(in ShaderEntity light, in Surface surface, inout Li
 		[branch]
 		if (light.IsCastingShadow() && surface.IsReceiveShadow())
 		{
-#ifndef RTAPI
+#ifdef SHADOW_MASK_ENABLED
 			[branch]
 			if ((g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS) == 0)
-#endif // RTAPI
+#endif // SHADOW_MASK_ENABLED
 			{
 				// Loop through cascades from closest (smallest) to furthest (largest)
 				[loop]
@@ -221,10 +221,10 @@ inline void PointLight(in ShaderEntity light, in Surface surface, inout Lighting
 			[branch]
 			if (light.IsCastingShadow() && surface.IsReceiveShadow())
 			{
-#ifndef RTAPI
+#ifdef SHADOW_MASK_ENABLED
 				[branch]
 				if ((g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS) == 0)
-#endif // RTAPI
+#endif // SHADOW_MASK_ENABLED
 				{
 					shadow *= shadowCube(light, L, Lunnormalized);
 				}
@@ -277,10 +277,10 @@ inline void SpotLight(in ShaderEntity light, in Surface surface, inout Lighting 
 				[branch]
 				if (light.IsCastingShadow() && surface.IsReceiveShadow())
 				{
-#ifndef RTAPI
+#ifdef SHADOW_MASK_ENABLED
 					[branch]
 					if ((g_xFrame_Options & OPTION_BIT_RAYTRACED_SHADOWS) == 0)
-#endif // RTAPI
+#endif // SHADOW_MASK_ENABLED
 					{
 						float4 ShPos = mul(MatrixArray[light.GetMatrixIndex() + 0], float4(surface.P, 1));
 						ShPos.xyz /= ShPos.w;
