@@ -31,7 +31,7 @@ private:
 	XMFLOAT4 outlineColor = XMFLOAT4(0, 0, 0, 1);
 	float aoRange = 1.0f;
 	uint32_t aoSampleCount = 16;
-	float aoPower = 2.0f;
+	float aoPower = 1.0f;
 	float chromaticAberrationAmount = 2.0f;
 	uint32_t screenSpaceShadowSampleCount = 16;
 	float screenSpaceShadowRange = 1;

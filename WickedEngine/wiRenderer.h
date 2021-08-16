@@ -334,7 +334,7 @@ namespace wiRenderer
 		wiGraphics::CommandList cmd,
 		float range = 1.0f,
 		uint32_t samplecount = 16,
-		float power = 2.0f
+		float power = 1.0f
 	);
 	void Postprocess_HBAO(
 		const SSAOResources& res,
@@ -342,7 +342,7 @@ namespace wiRenderer
 		const wiGraphics::Texture& lineardepth,
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd,
-		float power = 2.0f
+		float power = 1.0f
 		);
 	struct MSAOResources
 	{
@@ -373,7 +373,7 @@ namespace wiRenderer
 		const wiGraphics::Texture& lineardepth,
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd,
-		float power = 2.0f
+		float power = 1.0f
 		);
 	struct RTAOResources
 	{
@@ -396,7 +396,7 @@ namespace wiRenderer
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd,
 		float range = 1.0f,
-		float power = 2.0f
+		float power = 1.0f
 	);
 	struct RTReflectionResources
 	{
