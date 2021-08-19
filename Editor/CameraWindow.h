@@ -12,6 +12,9 @@ public:
 
 	wiECS::Entity proxy = wiECS::INVALID_ENTITY;
 	void SetEntity(wiECS::Entity entity);
+	void Update();
+
+	XMFLOAT3 move = {};
 
 
 	wiScene::TransformComponent camera_transform;
@@ -26,6 +29,7 @@ public:
 	wiSlider apertureShapeYSlider;
 	wiSlider movespeedSlider;
 	wiSlider rotationspeedSlider;
+	wiSlider accelerationSlider;
 	wiButton resetButton;
 	wiCheckBox fpsCheckBox;
 
