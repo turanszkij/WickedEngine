@@ -6485,16 +6485,57 @@ void DrawDebugWorld(
 	{
 		device->EventBegin("DebugCameras", cmd);
 
+		static GPUBuffer wirecamVB;
+		static GPUBuffer wirecamIB;
+		if (!wirecamVB.IsValid())
+		{
+			XMFLOAT4 verts[] = {
+				XMFLOAT4(-0.1f,-0.1f,-1,1),	XMFLOAT4(1,1,1,1),
+				XMFLOAT4(0.1f,-0.1f,-1,1),	XMFLOAT4(1,1,1,1),
+				XMFLOAT4(0.1f,0.1f,-1,1),	XMFLOAT4(1,1,1,1),
+				XMFLOAT4(-0.1f,0.1f,-1,1),	XMFLOAT4(1,1,1,1),
+				XMFLOAT4(-1,-1,1,1),	XMFLOAT4(1,1,1,1),
+				XMFLOAT4(1,-1,1,1),	XMFLOAT4(1,1,1,1),
+				XMFLOAT4(1,1,1,1),	XMFLOAT4(1,1,1,1),
+				XMFLOAT4(-1,1,1,1),	XMFLOAT4(1,1,1,1),
+				XMFLOAT4(0,1.5f,1,1),	XMFLOAT4(1,1,1,1),
+				XMFLOAT4(0,0,-1,1),	XMFLOAT4(1,1,1,1),
+			};
+
+			GPUBufferDesc bd;
+			bd.Usage = USAGE_DEFAULT;
+			bd.ByteWidth = sizeof(verts);
+			bd.BindFlags = BIND_VERTEX_BUFFER;
+			bd.CPUAccessFlags = 0;
+			SubresourceData InitData;
+			InitData.pSysMem = verts;
+			device->CreateBuffer(&bd, &InitData, &wirecamVB);
+
+			uint16_t indices[] = {
+				0,1,1,2,0,3,0,4,1,5,4,5,
+				5,6,4,7,2,6,3,7,2,3,6,7,
+				6,8,7,8,
+				0,2,1,3
+			};
+
+			bd.Usage = USAGE_DEFAULT;
+			bd.ByteWidth = sizeof(indices);
+			bd.BindFlags = BIND_INDEX_BUFFER;
+			bd.CPUAccessFlags = 0;
+			InitData.pSysMem = indices;
+			device->CreateBuffer(&bd, &InitData, &wirecamIB);
+		}
+
 		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE], cmd);
 
 		const GPUBuffer* vbs[] = {
-			&wirecubeVB,
+			&wirecamVB,
 		};
 		const uint32_t strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
-		device->BindIndexBuffer(&wirecubeIB, INDEXFORMAT_16BIT, 0, cmd);
+		device->BindIndexBuffer(&wirecamIB, INDEXFORMAT_16BIT, 0, cmd);
 
 		MiscCB sb;
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
@@ -6504,13 +6545,14 @@ void DrawDebugWorld(
 			const CameraComponent& cam = scene.cameras[i];
 			Entity entity = scene.cameras.GetEntity(i);
 
-			XMStoreFloat4x4(&sb.g_xTransform, cam.GetInvView()*camera.GetViewProjection());
+			const float aspect = cam.width / cam.height;
+			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixScaling(aspect * 0.5f, 0.5f, 0.5f) * cam.GetInvView()*camera.GetViewProjection());
 
 			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
 			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
-			device->DrawIndexed(24, 0, 0, cmd);
+			device->DrawIndexed(32, 0, 0, cmd);
 		}
 
 		device->EventEnd(cmd);
