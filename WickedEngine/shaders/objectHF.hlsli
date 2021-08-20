@@ -208,19 +208,15 @@ TEXTURE2D(texture_surfelgi, float3, TEXSLOT_SURFELGI);
 
 #ifdef OBJECTSHADER_LAYOUT_POS_PREVPOS // used by depth prepass
 #define OBJECTSHADER_INPUT_POS
-#define OBJECTSHADER_INPUT_PRE
 #define OBJECTSHADER_USE_CLIPPLANE
 #define OBJECTSHADER_USE_WIND
-//#define OBJECTSHADER_USE_POSITIONPREV
 #endif // OBJECTSHADER_LAYOUT_POS
 
 #ifdef OBJECTSHADER_LAYOUT_POS_PREVPOS_TEX // used by depth prepass with alpha test or dithered transparency
 #define OBJECTSHADER_INPUT_POS
-#define OBJECTSHADER_INPUT_PRE
 #define OBJECTSHADER_INPUT_TEX
 #define OBJECTSHADER_USE_CLIPPLANE
 #define OBJECTSHADER_USE_WIND
-//#define OBJECTSHADER_USE_POSITIONPREV
 #define OBJECTSHADER_USE_UVSETS
 #define OBJECTSHADER_USE_DITHERING
 #endif // OBJECTSHADER_LAYOUT_POS_TEX
@@ -418,7 +414,7 @@ struct VertexInput
 	}
 	float4x4 GetInstanceMatrix()
 	{
-		return float4x4(transpose(GetInstance().transform), float4(0, 0, 0, 1));
+		return GetInstance().GetTransform();
 	}
 	uint GetInstanceUserdata()
 	{
@@ -426,7 +422,7 @@ struct VertexInput
 	}
 	float4x4 GetInstanceMatrixPrev()
 	{
-		return float4x4(transpose(GetInstance().transformPrev), float4(0, 0, 0, 1));
+		return GetInstance().GetTransformPrev();
 	}
 	float4 GetInstanceAtlas()
 	{

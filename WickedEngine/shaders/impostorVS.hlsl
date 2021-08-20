@@ -17,22 +17,16 @@ VSOut main(uint fakeIndex : SV_VERTEXID)
 	const uint vertexID = fakeIndex % 6;
 	const uint instanceID = fakeIndex / 6;
 
-	uint byteOffset = (uint)g_xColor.x + instanceID * 64;
-
-	float4 mat0 = asfloat(impostorBuffer.Load4(byteOffset + 0));
-	float4 mat1 = asfloat(impostorBuffer.Load4(byteOffset + 16));
-	float4 mat2 = asfloat(impostorBuffer.Load4(byteOffset + 32));
-	uint4 userdata = impostorBuffer.Load4(byteOffset + 48);
-
-	float4x4 WORLD = WORLD = float4x4(
-		mat0,
-		mat1,
-		mat2,
-		float4(0, 0, 0, 1)
-		);
+	ShaderMeshInstancePointer poi = impostorBuffer.Load<ShaderMeshInstancePointer>((uint)g_xColor.x + instanceID * 8);
+	ShaderMeshInstance instance = InstanceBuffer[poi.instanceID];
+	float4x4 WORLD = instance.GetTransform();
+	float3 extents = instance.mesh.aabb_max - instance.mesh.aabb_min;
+	float radius = max(extents.x, max(extents.y, extents.z)) * 0.5;
 
 	float3 pos = BILLBOARD[vertexID];
-	float3 tex = float3(pos.xy * float2(0.5f, -0.5f) + 0.5f, userdata.y);
+	float2 uv = float2(pos.xy * float2(0.5f, -0.5f) + 0.5f);
+	uint slice = poi.GetFrustumIndex();
+	pos *= radius;
 
 	// We rotate the billboard to face camera, but unlike emitted particles, 
 	//	they don't rotate according to camera rotation, but the camera position relative
@@ -52,17 +46,16 @@ VSOut main(uint fakeIndex : SV_VERTEXID)
 		angle = 2 - angle;
 	}
 	angle *= 0.5f;
-	tex.z += floor(angle * impostorCaptureAngles);
-
-	float4 color_dither = unpack_rgba(userdata.x);
+	angle = saturate(angle - 0.0001);
+	slice += uint(angle * impostorCaptureAngles);
 
 	VSOut Out;
 	Out.pos3D = mul(WORLD, float4(pos, 1)).xyz;
 	Out.pos = mul(g_xCamera_VP, float4(Out.pos3D, 1));
-	Out.tex = tex;
-	Out.dither = 1 - color_dither.a;
-	Out.instanceColor = pack_rgba(float4(color_dither.rgb, 1));
-	Out.pos2DPrev = mul(g_xCamera_PrevVP, float4(Out.pos3D, 1));
+	Out.uv = uv;
+	Out.slice = slice;
+	Out.dither = poi.GetDither();
+	Out.instanceID = poi.instanceID;
 
 	return Out;
 }

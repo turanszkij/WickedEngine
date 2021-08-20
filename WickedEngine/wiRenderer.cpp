@@ -3011,7 +3011,7 @@ void RenderImpostors(
 			const ImpostorComponent& impostor = vis.scene->impostors[impostorID];
 			if (vis.camera->frustum.CheckBoxFast(impostor.aabb))
 			{
-				instanceCount += (uint32_t)impostor.instanceMatrices.size();
+				instanceCount += (uint32_t)impostor.instances.size();
 			}
 		}
 
@@ -3022,48 +3022,8 @@ void RenderImpostors(
 
 		device->EventBegin("RenderImpostors", cmd);
 
-		struct Instance
-		{
-			XMFLOAT4 mat0;
-			XMFLOAT4 mat1;
-			XMFLOAT4 mat2;
-			XMUINT4 userdata;
-
-			inline void Create(
-				const XMFLOAT4X4& matIn,
-				const XMFLOAT4& colorIn = XMFLOAT4(1, 1, 1, 1),
-				float dither = 0,
-				uint32_t subInstance = 0,
-				const XMFLOAT4& emissiveColor = XMFLOAT4(1, 1, 1, 1)
-			) volatile
-			{
-				mat0.x = matIn._11;
-				mat0.y = matIn._21;
-				mat0.z = matIn._31;
-				mat0.w = matIn._41;
-
-				mat1.x = matIn._12;
-				mat1.y = matIn._22;
-				mat1.z = matIn._32;
-				mat1.w = matIn._42;
-
-				mat2.x = matIn._13;
-				mat2.y = matIn._23;
-				mat2.z = matIn._33;
-				mat2.w = matIn._43;
-
-				XMFLOAT4 color = colorIn;
-				color.w *= 1 - dither;
-				userdata.x = wiMath::CompressColor(color);
-				userdata.y = subInstance;
-
-				userdata.z = wiMath::CompressColor(emissiveColor);
-				userdata.w = 0;
-			}
-		};
-
 		// Pre-allocate space for all the instances in GPU-buffer:
-		const uint32_t instanceDataSize = sizeof(Instance);
+		const uint32_t instanceDataSize = sizeof(ShaderMeshInstancePointer);
 		const size_t alloc_size = instanceCount * instanceDataSize;
 		GraphicsDevice::GPUAllocation instances = device->AllocateGPU(alloc_size, cmd);
 
@@ -3076,9 +3036,16 @@ void RenderImpostors(
 				continue;
 			}
 
-			for (auto& mat : impostor.instanceMatrices)
+			for (auto& instanceIndex : impostor.instances)
 			{
-				const XMFLOAT3 center = *((XMFLOAT3*)&mat._41);
+				const ShaderMeshInstance& instance = vis.scene->instanceData[instanceIndex];
+				const AABB& aabb = vis.scene->aabb_objects[instanceIndex];
+				if (!vis.camera->frustum.CheckBoxFast(aabb))
+				{
+					continue;
+				}
+
+				const XMFLOAT3 center = aabb.getCenter();
 				float distance = wiMath::Distance(vis.camera->Eye, center);
 
 				if (distance < impostor.swapInDistance - impostor.fadeThresholdRadius)
@@ -3088,7 +3055,10 @@ void RenderImpostors(
 
 				float dither = std::max(0.0f, impostor.swapInDistance - distance) / impostor.fadeThresholdRadius;
 
-				((volatile Instance*)instances.data)[drawableInstanceCount].Create(mat, impostor.color, dither, uint32_t(impostorID * impostorCaptureAngles * 3));
+				// Write into actual GPU-buffer:
+				ShaderMeshInstancePointer poi;
+				poi.Create(instanceIndex, uint32_t(impostorID * impostorCaptureAngles * 3), dither);
+				std::memcpy((ShaderMeshInstancePointer*)instances.data + drawableInstanceCount, &poi, sizeof(ShaderMeshInstancePointer));
 
 				drawableInstanceCount++;
 			}

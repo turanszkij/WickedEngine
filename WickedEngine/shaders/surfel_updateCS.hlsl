@@ -41,7 +41,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		uint4 data0 = bindless_buffers[NonUniformResourceIndex(mesh.vb_pos_nor_wind)].Load4(i0 * 16);
 		uint4 data1 = bindless_buffers[NonUniformResourceIndex(mesh.vb_pos_nor_wind)].Load4(i1 * 16);
 		uint4 data2 = bindless_buffers[NonUniformResourceIndex(mesh.vb_pos_nor_wind)].Load4(i2 * 16);
-		float4x4 worldMatrix = float4x4(transpose(inst.transform), float4(0, 0, 0, 1));
+		float4x4 worldMatrix = inst.GetTransform();
 		float3 p0 = mul(worldMatrix, float4(asfloat(data0.xyz), 1)).xyz;
 		float3 p1 = mul(worldMatrix, float4(asfloat(data1.xyz), 1)).xyz;
 		float3 p2 = mul(worldMatrix, float4(asfloat(data2.xyz), 1)).xyz;

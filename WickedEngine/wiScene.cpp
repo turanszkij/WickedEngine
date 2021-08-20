@@ -821,6 +821,8 @@ namespace wiScene
 		dest->blendmaterial2 = terrain_material2_index;
 		dest->blendmaterial3 = terrain_material3_index;
 		dest->subsetbuffer = device->GetDescriptorIndex(&subsetBuffer, SRV);
+		dest->aabb_min = aabb._min;
+		dest->aabb_max = aabb._max;
 	}
 	void MeshComponent::ComputeNormals(COMPUTE_NORMALS compute)
 	{
@@ -3030,7 +3032,7 @@ namespace wiScene
 
 			ImpostorComponent& impostor = impostors[args.jobIndex];
 			impostor.aabb = AABB();
-			impostor.instanceMatrices.clear();
+			impostor.instances.clear();
 
 			if (impostor.IsDirty())
 			{
@@ -3143,12 +3145,7 @@ namespace wiScene
 						const SPHERE boundingsphere = mesh->GetBoundingSphere();
 
 						locker.lock();
-						impostor->instanceMatrices.emplace_back();
-						XMStoreFloat4x4(&impostor->instanceMatrices.back(),
-							XMMatrixScaling(boundingsphere.radius, boundingsphere.radius, boundingsphere.radius) *
-							XMMatrixTranslation(boundingsphere.center.x, boundingsphere.center.y, boundingsphere.center.z) *
-							W
-						);
+						impostor->instances.push_back(args.jobIndex);
 						locker.unlock();
 					}
 
@@ -3213,7 +3210,6 @@ namespace wiScene
 					}
 					inst.color = wiMath::CompressColor(object.color);
 					inst.emissive = wiMath::CompressColor(object.emissiveColor);
-					//inst.mesh = device->GetDescriptorIndex(&mesh->descriptor, SRV);
 					mesh->WriteShaderMesh(&inst.mesh);
 
 					if (TLAS.IsValid())

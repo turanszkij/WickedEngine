@@ -112,6 +112,11 @@ struct ShaderMesh
 	int blendmaterial2;
 	int blendmaterial3;
 
+	float3 aabb_min;
+	float padding0;
+	float3 aabb_max;
+	float padding1;
+
 	void init()
 	{
 		ib = -1;
@@ -128,6 +133,9 @@ struct ShaderMesh
 		blendmaterial1 = -1;
 		blendmaterial2 = -1;
 		blendmaterial3 = -1;
+
+		aabb_min = float3(0, 0, 0);
+		aabb_max = float3(0, 0, 0);
 	}
 };
 
@@ -148,19 +156,32 @@ struct ShaderMeshInstance
 	float3x4 transform;
 	float3x4 transformPrev;
 	float4 atlasMulAdd;
+	uint flags;
 	uint color;
 	uint emissive;
-	uint padding0;
-	uint padding1;
+	uint padding;
 	ShaderMesh mesh;
 
 	void init()
 	{
 		atlasMulAdd = float4(0, 0, 0, 0);
+		flags = 0;
 		color = ~0u;
 		emissive = ~0u;
 		mesh.init();
 	}
+
+#ifndef __cplusplus
+	float4x4 GetTransform()
+	{
+		return float4x4(transpose(transform), float4(0, 0, 0, 1));
+	}
+	float4x4 GetTransformPrev()
+	{
+		return float4x4(transpose(transformPrev), float4(0, 0, 0, 1));
+	}
+#endif // __cplusplus
+
 };
 struct ShaderMeshInstancePointer
 {

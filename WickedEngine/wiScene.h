@@ -596,7 +596,7 @@ namespace wiScene
 		AABB aabb;
 		XMFLOAT4 color;
 		float fadeThresholdRadius;
-		std::vector<XMFLOAT4X4> instanceMatrices;
+		std::vector<uint32_t> instances;
 		mutable bool render_dirty = false;
 
 		inline void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
