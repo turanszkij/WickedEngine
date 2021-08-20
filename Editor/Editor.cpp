@@ -765,6 +765,12 @@ void EditorComponent::Load()
 							{
 								cameraWnd.camera_transform = *camera_transform;
 							}
+
+							CameraComponent* cam = wiScene::GetScene().cameras.GetComponent(entity);
+							if (cam != nullptr)
+							{
+								wiScene::GetCamera() = *cam;
+							}
 						}
 					}
 
@@ -1034,6 +1040,7 @@ void EditorComponent::Update(float dt)
 	Scene& scene = wiScene::GetScene();
 	CameraComponent& camera = wiScene::GetCamera();
 
+	cameraWnd.Update();
 	animWnd.Update();
 	weatherWnd.Update();
 	paintToolWnd.Update(dt);
@@ -1133,7 +1140,7 @@ void EditorComponent::Update(float dt)
 			const float clampedDT = std::min(dt, 0.1f); // if dt > 100 millisec, don't allow the camera to jump too far...
 
 			const float speed = ((wiInput::Down(wiInput::KEYBOARD_BUTTON_LSHIFT) ? 10.0f : 1.0f) + rightTrigger.x * 10.0f) * cameraWnd.movespeedSlider.GetValue() * clampedDT;
-			static XMVECTOR move = XMVectorSet(0, 0, 0, 0);
+			XMVECTOR move = XMLoadFloat3(&cameraWnd.move);
 			XMVECTOR moveNew = XMVectorSet(leftStick.x, 0, leftStick.y, 0);
 
 			if (!wiInput::Down(wiInput::KEYBOARD_BUTTON_LCONTROL))
@@ -1149,7 +1156,7 @@ void EditorComponent::Update(float dt)
 			}
 			moveNew *= speed;
 
-			move = XMVectorLerp(move, moveNew, 0.18f * clampedDT / 0.0166f); // smooth the movement a bit
+			move = XMVectorLerp(move, moveNew, cameraWnd.accelerationSlider.GetValue() * clampedDT / 0.0166f); // smooth the movement a bit
 			float moveLength = XMVectorGetX(XMVector3Length(move));
 
 			if (moveLength < 0.0001f)
@@ -1169,6 +1176,7 @@ void EditorComponent::Update(float dt)
 			}
 
 			cameraWnd.camera_transform.UpdateTransform();
+			XMStoreFloat3(&cameraWnd.move, move);
 		}
 		else
 		{
