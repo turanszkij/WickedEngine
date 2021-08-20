@@ -6743,6 +6743,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
 		device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], TEXSLOT_SKYLUMINANCELUT, cmd);
 
+		device->BindResource(VS, &vis.scene->instanceBuffer, TEXSLOT_INSTANCEBUFFER, cmd);
 
 		device->RenderPassBegin(&vis.scene->renderpasses_envmap[probe.textureIndex], cmd);
 
