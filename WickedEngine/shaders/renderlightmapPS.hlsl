@@ -163,25 +163,13 @@ float4 main(Input input) : SV_TARGET
 				);
 				while (q.Proceed())
 				{
-					ShaderMesh mesh = bindless_buffers[NonUniformResourceIndex(q.CandidateInstanceID())].Load<ShaderMesh>(0);
-					ShaderMeshSubset subset = bindless_subsets[NonUniformResourceIndex(mesh.subsetbuffer)][q.CandidateGeometryIndex()];
-					ShaderMaterial material = bindless_buffers[NonUniformResourceIndex(subset.material)].Load<ShaderMaterial>(0);
-					[branch]
-					if (!material.IsCastingShadow())
-					{
-						continue;
-					}
+					PrimitiveID prim;
+					prim.primitiveIndex = q.CandidatePrimitiveIndex();
+					prim.instanceIndex = q.CandidateInstanceID();
+					prim.subsetIndex = q.CandidateGeometryIndex();
 
 					Surface surface;
-					EvaluateObjectSurface(
-						mesh,
-						subset,
-						material,
-						q.CandidatePrimitiveIndex(),
-						q.CandidateTriangleBarycentrics(),
-						q.CandidateObjectToWorld3x4(),
-						surface
-					);
+					surface.load(prim, q.CandidateTriangleBarycentrics());
 
 					shadow *= lerp(1, surface.albedo * surface.transmission, surface.opacity);
 
@@ -246,25 +234,16 @@ float4 main(Input input) : SV_TARGET
 			break;
 		}
 
-		ShaderMaterial material;
-
 #ifdef RTAPI
 		// ray origin updated for next bounce:
 		ray.Origin = q.WorldRayOrigin() + q.WorldRayDirection() * q.CommittedRayT();
 
-		ShaderMesh mesh = bindless_buffers[NonUniformResourceIndex(q.CommittedInstanceID())].Load<ShaderMesh>(0);
-		ShaderMeshSubset subset = bindless_subsets[NonUniformResourceIndex(mesh.subsetbuffer)][q.CommittedGeometryIndex()];
-		material = bindless_buffers[NonUniformResourceIndex(subset.material)].Load<ShaderMaterial>(0);
+		PrimitiveID prim;
+		prim.primitiveIndex = q.CommittedPrimitiveIndex();
+		prim.instanceIndex = q.CommittedInstanceID();
+		prim.subsetIndex = q.CommittedGeometryIndex();
 
-		EvaluateObjectSurface(
-			mesh,
-			subset,
-			material,
-			q.CommittedPrimitiveIndex(),
-			q.CommittedTriangleBarycentrics(),
-			q.CommittedObjectToWorld3x4(),
-			surface
-		);
+		surface.load(prim, q.CommittedTriangleBarycentrics());
 
 #else
 		// ray origin updated for next bounce:
@@ -290,7 +269,7 @@ float4 main(Input input) : SV_TARGET
 		if (roulette < refractChance)
 		{
 			// Refraction
-			const float3 R = refract(ray.Direction, surface.N, 1 - material.refraction);
+			const float3 R = refract(ray.Direction, surface.N, 1 - surface.material.refraction);
 			ray.Direction = lerp(R, SampleHemisphere_cos(R, seed, uv), surface.roughnessBRDF);
 			energy *= surface.albedo;
 

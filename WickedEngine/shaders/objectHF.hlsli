@@ -24,11 +24,6 @@
 // DEFINITIONS
 //////////////////
 
-#ifdef BINDLESS
-Texture2D<float4> bindless_textures[] : register(t0, space1);
-ByteAddressBuffer bindless_buffers[] : register(t0, space2);
-StructuredBuffer<ShaderMeshSubset> bindless_subsets[] : register(t0, space3);
-SamplerState bindless_samplers[] : register(t0, space4);
 PUSHCONSTANT(push, ObjectPushConstants);
 
 inline uint GetSubsetIndex()
@@ -89,61 +84,6 @@ inline ShaderMaterial GetMaterial3()
 #define texture_blend3_emissivemap		bindless_textures[GetMaterial3().texture_emissivemap_index]
 
 
-#else
-
-inline uint GetSubsetIndex()
-{
-	return 0;
-}
-inline ShaderMaterial GetMaterial()
-{
-	return g_xMaterial;
-}
-inline ShaderMaterial GetMaterial1()
-{
-	return g_xMaterial_blend1;
-}
-inline ShaderMaterial GetMaterial2()
-{
-	return g_xMaterial_blend2;
-}
-inline ShaderMaterial GetMaterial3()
-{
-	return g_xMaterial_blend3;
-}
-
-// These are bound by wiRenderer (based on Material):
-TEXTURE2D(texture_basecolormap, float4, TEXSLOT_RENDERER_BASECOLORMAP);			// rgb: baseColor, a: opacity
-TEXTURE2D(texture_normalmap, float3, TEXSLOT_RENDERER_NORMALMAP);				// rgb: normal
-TEXTURE2D(texture_surfacemap, float4, TEXSLOT_RENDERER_SURFACEMAP);				// r: occlusion, g: roughness, b: metallic, a: reflectance
-TEXTURE2D(texture_emissivemap, float4, TEXSLOT_RENDERER_EMISSIVEMAP);			// rgba: emissive
-TEXTURE2D(texture_displacementmap, float, TEXSLOT_RENDERER_DISPLACEMENTMAP);	// r: heightmap
-TEXTURE2D(texture_occlusionmap, float, TEXSLOT_RENDERER_OCCLUSIONMAP);			// r: occlusion
-TEXTURE2D(texture_transmissionmap, float, TEXSLOT_RENDERER_TRANSMISSIONMAP);	// r: transmission factor
-TEXTURE2D(texture_sheencolormap, float3, TEXSLOT_RENDERER_SHEENCOLORMAP);					// rgb
-TEXTURE2D(texture_sheenroughnessmap, float4, TEXSLOT_RENDERER_SHEENROUGHNESSMAP);			// a
-TEXTURE2D(texture_clearcoatmap, float, TEXSLOT_RENDERER_CLEARCOATMAP);						// r
-TEXTURE2D(texture_clearcoatroughnessmap, float2, TEXSLOT_RENDERER_CLEARCOATROUGHNESSMAP);	// g
-TEXTURE2D(texture_clearcoatnormalmap, float3, TEXSLOT_RENDERER_CLEARCOATNORMALMAP);			// rgb
-TEXTURE2D(texture_specularmap, float4, TEXSLOT_RENDERER_SPECULARMAP);						// rgb color, a intensity
-
-TEXTURE2D(texture_blend1_basecolormap, float4, TEXSLOT_RENDERER_BLEND1_BASECOLORMAP);	// rgb: baseColor, a: opacity
-TEXTURE2D(texture_blend1_normalmap, float3, TEXSLOT_RENDERER_BLEND1_NORMALMAP);			// rgb: normal
-TEXTURE2D(texture_blend1_surfacemap, float4, TEXSLOT_RENDERER_BLEND1_SURFACEMAP);		// r: occlusion, g: roughness, b: metallic, a: reflectance
-TEXTURE2D(texture_blend1_emissivemap, float4, TEXSLOT_RENDERER_BLEND1_EMISSIVEMAP);		// rgba: emissive
-
-TEXTURE2D(texture_blend2_basecolormap, float4, TEXSLOT_RENDERER_BLEND2_BASECOLORMAP);	// rgb: baseColor, a: opacity
-TEXTURE2D(texture_blend2_normalmap, float3, TEXSLOT_RENDERER_BLEND2_NORMALMAP);			// rgb: normal
-TEXTURE2D(texture_blend2_surfacemap, float4, TEXSLOT_RENDERER_BLEND2_SURFACEMAP);		// r: occlusion, g: roughness, b: metallic, a: reflectance
-TEXTURE2D(texture_blend2_emissivemap, float4, TEXSLOT_RENDERER_BLEND2_EMISSIVEMAP);		// rgba: emissive
-
-TEXTURE2D(texture_blend3_basecolormap, float4, TEXSLOT_RENDERER_BLEND3_BASECOLORMAP);	// rgb: baseColor, a: opacity
-TEXTURE2D(texture_blend3_normalmap, float3, TEXSLOT_RENDERER_BLEND3_NORMALMAP);			// rgb: normal
-TEXTURE2D(texture_blend3_surfacemap, float4, TEXSLOT_RENDERER_BLEND3_SURFACEMAP);		// r: occlusion, g: roughness, b: metallic, a: reflectance
-TEXTURE2D(texture_blend3_emissivemap, float4, TEXSLOT_RENDERER_BLEND3_EMISSIVEMAP);		// rgba: emissive
-
-#endif // BINDLESS
-
 
 // These are bound by RenderPath (based on Render Path):
 STRUCTUREDBUFFER(EntityTiles, uint, TEXSLOT_RENDERPATH_ENTITYTILES);
@@ -160,21 +100,12 @@ TEXTURE2D(texture_surfelgi, float3, TEXSLOT_SURFELGI);
 //#define OBJECTSHADER_COMPILE_VS				- compile vertex shader prototype
 //#define OBJECTSHADER_COMPILE_PS				- compile pixel shader prototype
 
-// Use these to define the expected input layout for the shader:
-//#define OBJECTSHADER_LAYOUT_POS				- input layout that has position and instance matrix
-//#define OBJECTSHADER_LAYOUT_POS_TEX			- input layout that has position and texture coords
-//#define OBJECTSHADER_LAYOUT_POS_PREVPOS		- input layout that has position and previous frame position
-//#define OBJECTSHADER_LAYOUT_POS_PREVPOS_TEX	- input layout that has position, previous frame position and texture coords
-//#define OBJECTSHADER_LAYOUT_COMMON			- input layout that has all the required inputs for common shaders
-
-// Use these to define the expected input layout for the shader, but in a fine grained manner:
-//	(These will not define additional capabilities)
-//#define OBJECTSHADER_INPUT_POS				- adds position to input layout
-//#define OBJECTSHADER_INPUT_PRE				- adds previous frame position to input layout
-//#define OBJECTSHADER_INPUT_TEX				- adds texture coordinates to input layout
-//#define OBJECTSHADER_INPUT_ATL				- adds atlas texture coords to input layout
-//#define OBJECTSHADER_INPUT_COL				- adds vertex colors to input layout
-//#define OBJECTSHADER_INPUT_TAN				- adds tangents to input layout
+// Use these to define the expected layout for the shader:
+//#define OBJECTSHADER_LAYOUT_SHADOW			- layout for shadow pass
+//#define OBJECTSHADER_LAYOUT_SHADOW_TEX		- layout for shadow pass and alpha test or transparency
+//#define OBJECTSHADER_LAYOUT_PREPASS			- layout for prepass
+//#define OBJECTSHADER_LAYOUT_PREPASS_TEX		- layout for prepass and alpha test or dithering
+//#define OBJECTSHADER_LAYOUT_COMMON			- layout for common passes
 
 // Use these to enable features for the shader:
 //	(Some of these are enabled automatically with OBJECTSHADER_LAYOUT defines)
@@ -187,46 +118,37 @@ TEXTURE2D(texture_surfelgi, float3, TEXSLOT_SURFELGI);
 //#define OBJECTSHADER_USE_NORMAL					- shader will use normals
 //#define OBJECTSHADER_USE_TANGENT					- shader will use tangents, normal mapping
 //#define OBJECTSHADER_USE_POSITION3D				- shader will use world space positions
-//#define OBJECTSHADER_USE_POSITIONPREV				- shader will use previous frame positions
 //#define OBJECTSHADER_USE_EMISSIVE					- shader will use emissive
 //#define OBJECTSHADER_USE_RENDERTARGETARRAYINDEX	- shader will use dynamic render target slice selection
 //#define OBJECTSHADER_USE_NOCAMERA					- shader will not use camera space transform
+//#define OBJECTSHADER_USE_VISIBILITY				- shader will use visibility export
 
 
-#ifdef OBJECTSHADER_LAYOUT_POS // used by opaque shadows
-#define OBJECTSHADER_INPUT_POS
+#ifdef OBJECTSHADER_LAYOUT_SHADOW
 #define OBJECTSHADER_USE_WIND
-#endif // OBJECTSHADER_LAYOUT_POS
+#endif // OBJECTSHADER_LAYOUT_SHADOW
 
-#ifdef OBJECTSHADER_LAYOUT_POS_TEX // used by shadows with alpha test or transparency
-#define OBJECTSHADER_INPUT_POS
-#define OBJECTSHADER_INPUT_TEX
+#ifdef OBJECTSHADER_LAYOUT_SHADOW_TEX
 #define OBJECTSHADER_USE_WIND
 #define OBJECTSHADER_USE_UVSETS
 #define OBJECTSHADER_USE_COLOR
-#endif // OBJECTSHADER_LAYOUT_POS_TEX
+#endif // OBJECTSHADER_LAYOUT_SHADOW_TEX
 
-#ifdef OBJECTSHADER_LAYOUT_POS_PREVPOS // used by depth prepass
-#define OBJECTSHADER_INPUT_POS
+#ifdef OBJECTSHADER_LAYOUT_PREPASS
 #define OBJECTSHADER_USE_CLIPPLANE
 #define OBJECTSHADER_USE_WIND
-#endif // OBJECTSHADER_LAYOUT_POS
+#define OBJECTSHADER_USE_VISIBILITY
+#endif // OBJECTSHADER_LAYOUT_SHADOW
 
-#ifdef OBJECTSHADER_LAYOUT_POS_PREVPOS_TEX // used by depth prepass with alpha test or dithered transparency
-#define OBJECTSHADER_INPUT_POS
-#define OBJECTSHADER_INPUT_TEX
+#ifdef OBJECTSHADER_LAYOUT_PREPASS_TEX
 #define OBJECTSHADER_USE_CLIPPLANE
 #define OBJECTSHADER_USE_WIND
 #define OBJECTSHADER_USE_UVSETS
 #define OBJECTSHADER_USE_DITHERING
-#endif // OBJECTSHADER_LAYOUT_POS_TEX
+#define OBJECTSHADER_USE_VISIBILITY
+#endif // OBJECTSHADER_LAYOUT_SHADOW_TEX
 
-#ifdef OBJECTSHADER_LAYOUT_COMMON // used by common render passes
-#define OBJECTSHADER_INPUT_POS
-#define OBJECTSHADER_INPUT_TEX
-#define OBJECTSHADER_INPUT_ATL
-#define OBJECTSHADER_INPUT_COL
-#define OBJECTSHADER_INPUT_TAN
+#ifdef OBJECTSHADER_LAYOUT_COMMON
 #define OBJECTSHADER_USE_CLIPPLANE
 #define OBJECTSHADER_USE_WIND
 #define OBJECTSHADER_USE_UVSETS
@@ -240,8 +162,6 @@ TEXTURE2D(texture_surfelgi, float3, TEXSLOT_SURFELGI);
 
 struct VertexInput
 {
-#ifdef BINDLESS
-	// Data coming from bindless fetching:
 	uint vertexID : SV_VertexID;
 	uint instanceID : SV_InstanceID;
 
@@ -264,7 +184,6 @@ struct VertexInput
 		return ((normal_wind >> 24u) & 0xFF) / 255.0;
 	}
 
-#ifdef OBJECTSHADER_INPUT_TEX
 	float2 GetUV0()
 	{
 		[branch]
@@ -279,27 +198,12 @@ struct VertexInput
 			return 0;
 		return unpack_half2(bindless_buffers[GetMesh().vb_uv1].Load<uint>(vertexID * 4));
 	}
-#endif // OBJECTSHADER_INPUT_TEX
 
 	ShaderMeshInstancePointer GetInstancePointer()
 	{
 		return bindless_buffers[push.instances].Load<ShaderMeshInstancePointer>(push.instance_offset + instanceID * 8);
 	}
 
-#ifdef OBJECTSHADER_INPUT_PRE
-	float4 GetPositionPrev()
-	{
-		int descriptor_index = GetMesh().vb_pre;
-		[branch]
-		if (descriptor_index < 0)
-		{
-			descriptor_index = GetMesh().vb_pos_nor_wind;
-		}
-		return float4(bindless_buffers[descriptor_index].Load<float3>(vertexID * 16), 1);
-	}
-#endif // OBJECTSHADER_INPUT_PRE
-
-#ifdef OBJECTSHADER_INPUT_ATL
 	float2 GetAtlasUV()
 	{
 		[branch]
@@ -307,9 +211,7 @@ struct VertexInput
 			return 0;
 		return unpack_half2(bindless_buffers[GetMesh().vb_atl].Load<uint>(vertexID * 4));
 	}
-#endif // OBJECTSHADER_INPUT_ATL
 
-#ifdef OBJECTSHADER_INPUT_COL
 	float4 GetVertexColor()
 	{
 		[branch]
@@ -317,96 +219,11 @@ struct VertexInput
 			return 1;
 		return unpack_rgba(bindless_buffers[GetMesh().vb_col].Load<uint>(vertexID * 4));
 	}
-#endif // OBJECTSHADER_INPUT_COL
 
-#ifdef OBJECTSHADER_INPUT_TAN
 	float4 GetTangent()
 	{
 		return unpack_utangent(bindless_buffers[GetMesh().vb_tan].Load<uint>(vertexID * 4)) * 2 - 1;
 	}
-#endif // OBJECTSHADER_INPUT_TAN
-
-
-
-
-
-#else
-	// Data coming from input layout:
-	float4 pos : POSITION_NORMAL_WIND;
-	float4 GetPosition()
-	{
-		return float4(pos.xyz, 1);
-	}
-	float3 GetNormal()
-	{
-		const uint normal_wind = asuint(pos.w);
-		float3 normal;
-		normal.x = (float)((normal_wind >> 0u) & 0xFF) / 255.0 * 2 - 1;
-		normal.y = (float)((normal_wind >> 8u) & 0xFF) / 255.0 * 2 - 1;
-		normal.z = (float)((normal_wind >> 16u) & 0xFF) / 255.0 * 2 - 1;
-		return normal;
-	}
-	float GetWindWeight()
-	{
-		const uint normal_wind = asuint(pos.w);
-		return ((normal_wind >> 24u) & 0xFF) / 255.0;
-	}
-
-#ifdef OBJECTSHADER_INPUT_PRE
-	float4 pre : PREVPOS;
-	float4 GetPositionPrev()
-	{
-		return float4(pre.xyz, 1);
-	}
-#endif // OBJECTSHADER_INPUT_PRE
-
-#ifdef OBJECTSHADER_INPUT_TEX
-	float2 uv0 : UVSET0;
-	float2 uv1 : UVSET1;
-	float2 GetUV0()
-	{
-		return uv0;
-	}
-	float2 GetUV1()
-	{
-		return uv1;
-	}
-#endif // OBJECTSHADER_INPUT_TEX
-
-#ifdef OBJECTSHADER_INPUT_ATL
-	float2 atl : ATLAS;
-	float2 GetAtlasUV()
-	{
-		return atl;
-	}
-#endif // OBJECTSHADER_INPUT_ATL
-
-#ifdef OBJECTSHADER_INPUT_COL
-	float4 col : COLOR;
-	float4 GetVertexColor()
-	{
-		return col;
-	}
-#endif // OBJECTSHADER_INPUT_COL
-
-#ifdef OBJECTSHADER_INPUT_TAN
-	float4 tan : TANGENT;
-	float4 GetTangent()
-	{
-		return tan * 2 - 1;
-	}
-#endif // OBJECTSHADER_INPUT_TAN
-
-	uint2 inst : INSTANCEPOINTER;
-	ShaderMeshInstancePointer GetInstancePointer()
-	{
-		ShaderMeshInstancePointer poi;
-		poi.instanceID = inst.x;
-		poi.userdata = inst.y;
-		return poi;
-	}
-
-#endif // BINDLESS
 
 	ShaderMeshInstance GetInstance()
 	{
@@ -439,7 +256,6 @@ struct VertexSurface
 	float4 color;
 	float3 normal;
 	float4 tangent;
-	float4 positionPrev;
 	uint emissiveColor;
 
 	inline void create(in ShaderMaterial material, in VertexInput input)
@@ -450,54 +266,32 @@ struct VertexSurface
 		color.a *= 1 - input.GetInstancePointer().GetDither();
 		emissiveColor = input.GetInstance().emissive;
 
-#ifdef OBJECTSHADER_INPUT_PRE
-		positionPrev = input.GetPositionPrev();
-#else
-		positionPrev = position;
-#endif // OBJECTSHADER_INPUT_PRE
-
-#ifdef OBJECTSHADER_INPUT_COL
 		if (material.IsUsingVertexColors())
 		{
 			color *= input.GetVertexColor();
 		}
-#endif // OBJECTSHADER_INPUT_COL
 		
 		normal = normalize(mul((float3x3)input.GetInstanceMatrix(), input.GetNormal()));
 
-#ifdef OBJECTSHADER_INPUT_TAN
 		tangent = input.GetTangent();
 		tangent.xyz = normalize(mul((float3x3)input.GetInstanceMatrix(), tangent.xyz));
-#endif // OBJECTSHADER_INPUT_TAN
 
-#ifdef OBJECTSHADER_INPUT_TEX
 		uvsets = float4(input.GetUV0() * material.texMulAdd.xy + material.texMulAdd.zw, input.GetUV1());
-#endif // OBJECTSHADER_INPUT_TEX
 
-#ifdef OBJECTSHADER_INPUT_ATL
 		float4 atlasMulAdd = input.GetInstanceAtlas();
 		atlas = input.GetAtlasUV() * atlasMulAdd.xy + atlasMulAdd.zw;
-#endif // OBJECTSHADER_INPUT_ATL
 
 		position = mul(input.GetInstanceMatrix(), position);
 
-#ifdef OBJECTSHADER_INPUT_PRE
-		positionPrev = mul(input.GetInstanceMatrixPrev(), positionPrev);
-#else
-		positionPrev = position;
-#endif // OBJECTSHADER_INPUT_PRE
 
 #ifdef OBJECTSHADER_USE_WIND
 		if (material.IsUsingWind())
 		{
 			const float windweight = input.GetWindWeight();
 			const float waveoffset = dot(position.xyz, g_xFrame_WindDirection) * g_xFrame_WindWaveSize + (position.x + position.y + position.z) * g_xFrame_WindRandomness;
-			const float waveoffsetPrev = dot(positionPrev.xyz, g_xFrame_WindDirection) * g_xFrame_WindWaveSize + (positionPrev.x + positionPrev.y + positionPrev.z) * g_xFrame_WindRandomness;
 			const float3 wavedir = g_xFrame_WindDirection * windweight;
 			const float3 wind = sin(g_xFrame_Time * g_xFrame_WindSpeed + waveoffset) * wavedir;
-			const float3 windPrev = sin(g_xFrame_TimePrev * g_xFrame_WindSpeed + waveoffsetPrev) * wavedir;
 			position.xyz += wind;
-			positionPrev.xyz += windPrev;
 		}
 #endif // OBJECTSHADER_USE_WIND
 	}
@@ -507,23 +301,25 @@ struct PixelInput
 {
 	precise float4 pos : SV_POSITION;
 
+#ifdef OBJECTSHADER_USE_VISIBILITY
 	uint instanceID : INSTANCEID;
+#endif // OBJECTSHADER_USE_VISIBILITY
 
 #ifdef OBJECTSHADER_USE_CLIPPLANE
 	float  clip : SV_ClipDistance0;
 #endif // OBJECTSHADER_USE_CLIPPLANE
 
-#ifdef OBJECTSHADER_USE_POSITIONPREV
-	float4 pre : PREVIOUSPOSITION;
-#endif // OBJECTSHADER_USE_POSITIONPREV
+#ifdef OBJECTSHADER_USE_DITHERING
+	nointerpolation float dither : DITHER;
+#endif // OBJECTSHADER_USE_DITHERING
+
+#ifdef OBJECTSHADER_USE_EMISSIVE
+	uint emissiveColor : EMISSIVECOLOR;
+#endif // OBJECTSHADER_USE_EMISSIVE
 
 #ifdef OBJECTSHADER_USE_COLOR
 	float4 color : COLOR;
 #endif // OBJECTSHADER_USE_COLOR
-
-#ifdef OBJECTSHADER_USE_DITHERING
-	nointerpolation float dither : DITHER;
-#endif // OBJECTSHADER_USE_DITHERING
 
 #ifdef OBJECTSHADER_USE_UVSETS
 	float4 uvsets : UVSETS;
@@ -544,10 +340,6 @@ struct PixelInput
 #ifdef OBJECTSHADER_USE_POSITION3D
 	float3 pos3D : WORLDPOSITION;
 #endif // OBJECTSHADER_USE_POSITION3D
-
-#ifdef OBJECTSHADER_USE_EMISSIVE
-	uint emissiveColor : EMISSIVECOLOR;
-#endif // OBJECTSHADER_USE_EMISSIVE
 
 #ifdef OBJECTSHADER_USE_RENDERTARGETARRAYINDEX
 #ifdef VPRT_EMULATION
@@ -1134,7 +926,10 @@ inline void ApplyFog(in float distance, float3 P, float3 V, inout float4 color)
 PixelInput main(VertexInput input)
 {
 	PixelInput Out;
+
+#ifdef OBJECTSHADER_USE_VISIBILITY
 	Out.instanceID = input.GetInstancePointer().instanceID;
+#endif // OBJECTSHADER_USE_VISIBILITY
 
 	VertexSurface surface;
 	surface.create(GetMaterial(), input);
@@ -1148,13 +943,6 @@ PixelInput main(VertexInput input)
 #ifdef OBJECTSHADER_USE_CLIPPLANE
 	Out.clip = dot(surface.position, g_xCamera_ClipPlane);
 #endif // OBJECTSHADER_USE_CLIPPLANE
-
-#ifdef OBJECTSHADER_USE_POSITIONPREV
-	Out.pre = surface.positionPrev;
-#ifndef OBJECTSHADER_USE_NOCAMERA
-	Out.pre = mul(g_xCamera_PrevVP, Out.pre);
-#endif // OBJECTSHADER_USE_NOCAMERA
-#endif // OBJECTSHADER_USE_POSITIONPREV
 
 #ifdef OBJECTSHADER_USE_POSITION3D
 	Out.pos3D = surface.position.xyz;
@@ -1247,14 +1035,6 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 #endif // DISABLE_ALPHATEST
 #endif // TRANSPARENT
 #endif // ENVMAPRENDERING
-
-
-#ifdef OBJECTSHADER_USE_POSITIONPREV
-	float2 pos2D = ScreenCoord * 2 - 1;
-	pos2D.y *= -1;
-	input.pre.xy /= input.pre.w;
-	const float2 velocity = ((input.pre.xy - g_xFrame_TemporalAAJitterPrev) - (pos2D.xy - g_xFrame_TemporalAAJitter)) * float2(0.5, -0.5);
-#endif // OBJECTSHADER_USE_POSITIONPREV
 
 
 	Surface surface;

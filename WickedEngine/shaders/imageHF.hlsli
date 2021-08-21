@@ -5,8 +5,6 @@
 
 #ifdef BINDLESS
 PUSHCONSTANT(push, PushConstantsImage);
-Texture2D<float4> bindless_textures[] : register(space1);
-SamplerState bindless_samplers[] : register(space2);
 #define texture_base		bindless_textures[push.texture_base_index]
 #define texture_mask		bindless_textures[push.texture_mask_index]
 #define texture_background	bindless_textures[push.texture_background_index]

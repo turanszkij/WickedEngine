@@ -3,10 +3,16 @@
 #include "ShaderInterop.h"
 #include "ShaderInterop_Renderer.h"
 
+Texture2D<float4> bindless_textures[] : register(t0, space1);
+ByteAddressBuffer bindless_buffers[] : register(t0, space2);
+StructuredBuffer<ShaderMeshSubset> bindless_subsets[] : register(t0, space3);
+Buffer<uint> bindless_ib[] : register(t0, space4);
+SamplerState bindless_samplers[] : register(s0, space5);
+
 TEXTURE2D(texture_depth, float, TEXSLOT_DEPTH);
 TEXTURE2D(texture_lineardepth, float, TEXSLOT_LINEARDEPTH);
 TEXTURE2D(texture_gbuffer0, uint2, TEXSLOT_GBUFFER0);
-TEXTURE2D(texture_gbuffer1, float4, TEXSLOT_GBUFFER1);
+TEXTURE2D(texture_gbuffer1, float3, TEXSLOT_GBUFFER1);
 TEXTURE2D(texture_gbuffer2, float2, TEXSLOT_GBUFFER2);
 TEXTURECUBE(texture_globalenvmap, float4, TEXSLOT_GLOBALENVMAP);
 TEXTURE2D(texture_globallightmap, float4, TEXSLOT_GLOBALLIGHTMAP);
@@ -717,7 +723,7 @@ float3 ClosestPointOnSegment(float3 a, float3 b, float3 c)
 }
 
 // Compute barycentric coordinates on triangle from a point p
-float3 compute_barycentrics(float3 p, float3 a, float3 b, float3 c)
+float2 compute_barycentrics(float3 p, float3 a, float3 b, float3 c)
 {
 	float3 v0 = b - a, v1 = c - a, v2 = p - a;
 	float d00 = dot(v0, v0);
@@ -728,8 +734,7 @@ float3 compute_barycentrics(float3 p, float3 a, float3 b, float3 c)
 	float denom_rcp = rcp(d00 * d11 - d01 * d01);
 	float u = (d11 * d20 - d01 * d21) * denom_rcp;
 	float v = (d00 * d21 - d01 * d20) * denom_rcp;
-	float w = 1.0f - u - v;
-	return float3(u, v, w);
+	return float2(u, v);
 }
 
 static const float4 halton64[] = {

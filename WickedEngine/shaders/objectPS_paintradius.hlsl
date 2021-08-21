@@ -1,4 +1,4 @@
-#define OBJECTSHADER_LAYOUT_POS_TEX
+#define OBJECTSHADER_LAYOUT_SHADOW_TEX
 #include "objectHF.hlsli"
 #include "ShaderInterop_Paint.h"
 

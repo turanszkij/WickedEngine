@@ -1224,6 +1224,7 @@ void LoadShaders()
 	}
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_VISIBILITY_RESOLVE], "visibility_resolveCS.cso"); });
+	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_VISIBILITY_RESOLVE_MSAA], "visibility_resolveCS_MSAA.cso"); });
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(HS, shaders[HSTYPE_OBJECT], "objectHS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(HS, shaders[HSTYPE_OBJECT_PREPASS], "objectHS_prepass.cso"); });
@@ -2638,7 +2639,6 @@ void RenderMeshes(
 		return;
 
 	device->EventBegin("RenderMeshes", cmd);
-	const bool bindless = device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS);
 
 	tessellation = tessellation && device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_TESSELLATION);
 	if (tessellation)
@@ -2779,51 +2779,10 @@ void RenderMeshes(
 
 		device->BindIndexBuffer(&mesh.indexBuffer, mesh.GetIndexFormat(), 0, cmd);
 
-		ObjectPushConstants push; // used with bindless model only
-
-		if (bindless)
-		{
-			push.mesh = device->GetDescriptorIndex(&mesh.descriptor, SRV);
-			push.instances = device->GetDescriptorIndex(instances.buffer, SRV);
-			push.instance_offset = instancedBatch.dataOffset;
-		}
-		else
-		{
-			const GPUBuffer* vbs[] = {
-				mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
-				mesh.vertexBuffer_PRE.IsValid() ? &mesh.vertexBuffer_PRE : &mesh.vertexBuffer_POS,
-				&mesh.vertexBuffer_UV0,
-				&mesh.vertexBuffer_UV1,
-				&mesh.vertexBuffer_ATL,
-				&mesh.vertexBuffer_COL,
-				mesh.streamoutBuffer_TAN.IsValid() ? &mesh.streamoutBuffer_TAN : &mesh.vertexBuffer_TAN,
-				instances.buffer
-			};
-			uint32_t strides[] = {
-				sizeof(MeshComponent::Vertex_POS),
-				sizeof(MeshComponent::Vertex_POS),
-				sizeof(MeshComponent::Vertex_TEX),
-				sizeof(MeshComponent::Vertex_TEX),
-				sizeof(MeshComponent::Vertex_TEX),
-				sizeof(MeshComponent::Vertex_COL),
-				sizeof(MeshComponent::Vertex_TAN),
-				instanceDataSize
-			};
-			uint32_t offsets[] = {
-				0,
-				0,
-				0,
-				0,
-				0,
-				0,
-				0,
-				instancedBatch.dataOffset
-			};
-			static_assert(arraysize(vbs) == INPUT_SLOT_COUNT, "This layout must conform to OBJECT_VERTEXINPUT enum!");
-			static_assert(arraysize(vbs) == arraysize(strides), "Mismatch between vertex buffers and strides!");
-			static_assert(arraysize(vbs) == arraysize(offsets), "Mismatch between vertex buffers and offsets!");
-			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
-		}
+		ObjectPushConstants push;
+		push.mesh = device->GetDescriptorIndex(&mesh.descriptor, SRV);
+		push.instances = device->GetDescriptorIndex(instances.buffer, SRV);
+		push.instance_offset = instancedBatch.dataOffset;
 
 		for (size_t subsetIndex = 0; subsetIndex < mesh.subsets.size(); ++subsetIndex)
 		{
@@ -2901,74 +2860,9 @@ void RenderMeshes(
 				device->BindShadingRate(material.shadingRate, cmd);
 			}
 
-			if (bindless)
-			{
-				assert(subsetIndex < 256u); // subsets must be represented as 8-bit
-				push.subsetIndex = (uint)subsetIndex;
-				//push.material = device->GetDescriptorIndex(&material.constantBuffer, SRV);
-				device->PushConstants(&push, sizeof(push), cmd);
-			}
-			else
-			{
-				device->BindConstantBuffer(VS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
-				device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
-
-				// Bind all material textures:
-				const GPUResource* materialtextures[MaterialComponent::TEXTURESLOT_COUNT];
-				material.WriteTextures(materialtextures, arraysize(materialtextures));
-				device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BASECOLORMAP, arraysize(materialtextures), cmd);
-
-				if (tessellatorRequested)
-				{
-					device->BindConstantBuffer(DS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
-					device->BindResources(DS, materialtextures, TEXSLOT_RENDERER_BASECOLORMAP, arraysize(materialtextures), cmd);
-				}
-
-				if (terrain)
-				{
-					if (mesh.terrain_material1 == INVALID_ENTITY || !vis.scene->materials.Contains(mesh.terrain_material1))
-					{
-						device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BLEND1_BASECOLORMAP, 4, cmd);
-						device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend1), cmd);
-					}
-					else
-					{
-						const MaterialComponent& blendmat = *vis.scene->materials.GetComponent(mesh.terrain_material1);
-						const GPUResource* res[4];
-						blendmat.WriteTextures(res, arraysize(res));
-						device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND1_BASECOLORMAP, arraysize(res), cmd);
-						device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend1), cmd);
-					}
-
-					if (mesh.terrain_material2 == INVALID_ENTITY || !vis.scene->materials.Contains(mesh.terrain_material2))
-					{
-						device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BLEND2_BASECOLORMAP, 4, cmd);
-						device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend2), cmd);
-					}
-					else
-					{
-						const MaterialComponent& blendmat = *vis.scene->materials.GetComponent(mesh.terrain_material2);
-						const GPUResource* res[4];
-						blendmat.WriteTextures(res, arraysize(res));
-						device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND2_BASECOLORMAP, arraysize(res), cmd);
-						device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend2), cmd);
-					}
-
-					if (mesh.terrain_material3 == INVALID_ENTITY || !vis.scene->materials.Contains(mesh.terrain_material3))
-					{
-						device->BindResources(PS, materialtextures, TEXSLOT_RENDERER_BLEND3_BASECOLORMAP, 4, cmd);
-						device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend3), cmd);
-					}
-					else
-					{
-						const MaterialComponent& blendmat = *vis.scene->materials.GetComponent(mesh.terrain_material3);
-						const GPUResource* res[4];
-						blendmat.WriteTextures(res, arraysize(res));
-						device->BindResources(PS, res, TEXSLOT_RENDERER_BLEND3_BASECOLORMAP, arraysize(res), cmd);
-						device->BindConstantBuffer(PS, &blendmat.constantBuffer, CB_GETBINDSLOT(MaterialCB_Blend3), cmd);
-					}
-				}
-			}
+			assert(subsetIndex < 256u); // subsets must be represented as 8-bit
+			push.subsetIndex = (uint)subsetIndex;
+			device->PushConstants(&push, sizeof(push), cmd);
 
 			if (pso_backside != nullptr)
 			{
@@ -7738,6 +7632,8 @@ void RayTraceScene(
 		device->BindResource(CS, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
 	}
 
+	device->BindResource(CS, &scene.instanceBuffer, TEXSLOT_INSTANCEBUFFER, cmd);
+
 	const XMFLOAT4& halton = wiMath::GetHaltonSequence(accumulation_sample);
 	RaytracingCB cb;
 	cb.xTracePixelOffset = XMFLOAT2(halton.x, halton.y);
@@ -7920,6 +7816,7 @@ void RefreshLightmapAtlas(const Scene& scene, CommandList cmd)
 		{
 			scene.BVH.Bind(PS, cmd);
 		}
+		device->BindResource(CS, &scene.instanceBuffer, TEXSLOT_INSTANCEBUFFER, cmd);
 
 		// Render lightmaps for each object:
 		for (uint32_t i = 0; i < scene.objects.GetCount(); ++i)
@@ -8196,7 +8093,9 @@ void ComputeShadingRateClassification(
 void VisibilityResolve(
 	const Scene& scene,
 	const Texture& depthbuffer,
+	const Texture& texture_primitiveID, // can be MSAA
 	const Texture gbuffer[GBUFFER_COUNT],
+	const Texture& depthbuffer_resolved,
 	CommandList cmd
 )
 {
@@ -8205,24 +8104,40 @@ void VisibilityResolve(
 
 	BindCommonResources(cmd);
 
-	device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_RESOLVE], cmd);
+	const bool msaa = texture_primitiveID.desc.SampleCount > 1;
 
-	device->BindResource(CS, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
-	device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
+	device->BindComputeShader(&shaders[msaa ? CSTYPE_VISIBILITY_RESOLVE_MSAA : CSTYPE_VISIBILITY_RESOLVE], cmd);
+
 	device->BindResource(CS, &scene.instanceBuffer, TEXSLOT_INSTANCEBUFFER, cmd);
 
+	device->BindResource(CS, &texture_primitiveID, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(CS, &depthbuffer, TEXSLOT_ONDEMAND1, cmd);
+
 	const GPUResource* uavs[] = {
-		&gbuffer[GBUFFER_NORMAL_ROUGHNESS],
+		&gbuffer[GBUFFER_NORMAL],
 		&gbuffer[GBUFFER_VELOCITY],
+		&depthbuffer_resolved,
 	};
 	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&gbuffer[GBUFFER_NORMAL_ROUGHNESS], gbuffer[GBUFFER_NORMAL_ROUGHNESS].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+			GPUBarrier::Image(&gbuffer[GBUFFER_NORMAL], gbuffer[GBUFFER_NORMAL].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
 			GPUBarrier::Image(&gbuffer[GBUFFER_VELOCITY], gbuffer[GBUFFER_VELOCITY].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+			GPUBarrier::Image(&depthbuffer_resolved, depthbuffer_resolved.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+	if (msaa)
+	{
+		device->BindUAV(CS, &gbuffer[GBUFFER_PRIMITIVEID], 3, cmd);
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&gbuffer[GBUFFER_PRIMITIVEID], gbuffer[GBUFFER_PRIMITIVEID].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
 	}
 
 	device->Dispatch(
@@ -8235,10 +8150,21 @@ void VisibilityResolve(
 	{
 		GPUBarrier barriers[] = {
 			GPUBarrier::Memory(),
-			GPUBarrier::Image(&gbuffer[GBUFFER_NORMAL_ROUGHNESS], IMAGE_LAYOUT_UNORDERED_ACCESS, gbuffer[GBUFFER_NORMAL_ROUGHNESS].desc.layout),
+			GPUBarrier::Image(&gbuffer[GBUFFER_NORMAL], IMAGE_LAYOUT_UNORDERED_ACCESS, gbuffer[GBUFFER_NORMAL].desc.layout),
 			GPUBarrier::Image(&gbuffer[GBUFFER_VELOCITY], IMAGE_LAYOUT_UNORDERED_ACCESS, gbuffer[GBUFFER_VELOCITY].desc.layout),
+			GPUBarrier::Image(&depthbuffer_resolved, IMAGE_LAYOUT_UNORDERED_ACCESS, depthbuffer_resolved.desc.layout),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+	if (msaa)
+	{
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&gbuffer[GBUFFER_PRIMITIVEID], IMAGE_LAYOUT_UNORDERED_ACCESS, gbuffer[GBUFFER_PRIMITIVEID].desc.layout),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
 	}
 
 	device->UnbindUAVs(0, arraysize(uavs), cmd);
@@ -8459,7 +8385,7 @@ void SurfelGI(
 
 		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 		device->BindResource(CS, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
-		device->BindResource(CS, &gbuffer[GBUFFER_NORMAL_ROUGHNESS], TEXSLOT_GBUFFER1, cmd);
+		device->BindResource(CS, &gbuffer[GBUFFER_NORMAL], TEXSLOT_GBUFFER1, cmd);
 		device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
 
 		device->BindResource(CS, &scene.surfelBuffer, TEXSLOT_ONDEMAND0, cmd);
@@ -9592,8 +9518,9 @@ void Postprocess_RTAO(
 	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
 	device->BindResource(CS, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
-	device->BindResource(CS, &gbuffer[GBUFFER_NORMAL_ROUGHNESS], TEXSLOT_GBUFFER1, cmd);
+	device->BindResource(CS, &gbuffer[GBUFFER_NORMAL], TEXSLOT_GBUFFER1, cmd);
 	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
+	device->BindResource(CS, &scene.instanceBuffer, TEXSLOT_INSTANCEBUFFER, cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
@@ -9858,8 +9785,10 @@ void Postprocess_RTReflection(
 
 	device->BindResource(LIB, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
 	device->BindResource(LIB, &depthbuffer, TEXSLOT_DEPTH, cmd);
-	device->BindResource(LIB, &gbuffer[GBUFFER_NORMAL_ROUGHNESS], TEXSLOT_GBUFFER1, cmd);
+	device->BindResource(LIB, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
+	device->BindResource(LIB, &gbuffer[GBUFFER_NORMAL], TEXSLOT_GBUFFER1, cmd);
 	device->BindResource(LIB, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
+	device->BindResource(LIB, &scene.instanceBuffer, TEXSLOT_INSTANCEBUFFER, cmd);
 
 	device->BindResource(LIB, &depth_history, TEXSLOT_ONDEMAND2, cmd);
 
@@ -9943,7 +9872,7 @@ void Postprocess_RTReflection(
 	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	device->BindResource(CS, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
-	device->BindResource(CS, &gbuffer[GBUFFER_NORMAL_ROUGHNESS], TEXSLOT_GBUFFER1, cmd);
+	device->BindResource(CS, &gbuffer[GBUFFER_NORMAL], TEXSLOT_GBUFFER1, cmd);
 	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
 
 	int temporal_output = device->GetFrameCount() % 2;
@@ -10074,7 +10003,7 @@ void Postprocess_SSR(
 	device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 	device->BindResource(CS, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
-	device->BindResource(CS, &gbuffer[GBUFFER_NORMAL_ROUGHNESS], TEXSLOT_GBUFFER1, cmd);
+	device->BindResource(CS, &gbuffer[GBUFFER_NORMAL], TEXSLOT_GBUFFER1, cmd);
 	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
 
 	PostProcessCB cb;
@@ -10350,8 +10279,9 @@ void Postprocess_RTShadow(
 	device->BindResource(CS, &entityTiles_Opaque, TEXSLOT_RENDERPATH_ENTITYTILES, cmd);
 
 	device->BindResource(CS, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
-	device->BindResource(CS, &gbuffer[GBUFFER_NORMAL_ROUGHNESS], TEXSLOT_GBUFFER1, cmd);
+	device->BindResource(CS, &gbuffer[GBUFFER_NORMAL], TEXSLOT_GBUFFER1, cmd);
 	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
+	device->BindResource(CS, &scene.instanceBuffer, TEXSLOT_INSTANCEBUFFER, cmd);
 
 	const GPUResource* uavs[] = {
 		&res.temp,

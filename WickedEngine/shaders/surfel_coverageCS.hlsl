@@ -57,7 +57,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	//uint2 pixel = DTid.xy;
 
 	const float depth = texture_depth[pixel];
-	const float4 g1 = texture_gbuffer1[pixel];
+	const float3 g1 = texture_gbuffer1[pixel];
 
 	float4 debug = 0;
 	float4 color = 0;

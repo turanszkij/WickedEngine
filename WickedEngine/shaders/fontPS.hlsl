@@ -2,7 +2,6 @@
 #include "ShaderInterop_Font.h"
 
 #ifdef BINDLESS
-Texture2D<float> bindless_textures[] : register(space1);
 #define texture_font	bindless_textures[g_xFont_TextureIndex]
 #else
 TEXTURE2D(texture_font, float, TEXSLOT_FONTATLAS);

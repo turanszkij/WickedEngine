@@ -91,21 +91,27 @@ void GetSampleInfo(float2 velocity, float2 neighborUV, float2 uv, float3 P, floa
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
-	const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 1);
+	const float depth = texture_depth.SampleLevel(sampler_linear_clamp, uv, 0);
 	if (depth == 0.0f)
 		return;
 
+    // Everthing in view space:
+	const float3 P = reconstructPosition(uv, depth, g_xCamera_InvP);
+	const float3 V = normalize(-P);
+
+	PrimitiveID prim;
+	prim.unpack(texture_gbuffer0[DTid.xy * 2]);
+
+	Surface surface;
+	surface.load(prim, P);
+
+	const float3 N = normalize(mul((float3x3)g_xCamera_View, surface.N));
+	const float roughness = GetRoughness(surface.roughness);
+
+	const float NdotV = saturate(dot(N, V));
+
 	const float2 velocity = texture_gbuffer2.SampleLevel(sampler_point_clamp, uv, 0).xy;
 	const float2 prevUV = uv + velocity;
-
-    // Everthing in view space:
-	const float4 g1 = texture_gbuffer1.SampleLevel(sampler_linear_clamp, prevUV, 0);
-	const float3 P = reconstructPosition(uv, depth, g_xCamera_InvP);
-	const float3 N = normalize(mul((float3x3)g_xCamera_View, g1.rgb * 2 - 1).xyz);
-	const float3 V = normalize(-P);
-	const float NdotV = saturate(dot(N, V));
-    
-	const float roughness = GetRoughness(g1.a);
 
     // Early out, useless if the roughness is out of range
 	float roughnessFade = GetRoughnessFade(roughness, SSRMaxRoughness);

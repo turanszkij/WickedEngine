@@ -302,7 +302,9 @@ namespace wiRenderer
 	void VisibilityResolve(
 		const wiScene::Scene& scene,
 		const wiGraphics::Texture& depthbuffer,
+		const wiGraphics::Texture& texture_primitiveID, // can be MSAA
 		const wiGraphics::Texture gbuffer[GBUFFER_COUNT],
+		const wiGraphics::Texture& depthbuffer_resolved,
 		wiGraphics::CommandList cmd
 	);
 

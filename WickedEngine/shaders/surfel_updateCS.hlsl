@@ -1,9 +1,6 @@
 #include "globals.hlsli"
 #include "ShaderInterop_SurfelGI.h"
-
-ByteAddressBuffer bindless_buffers[] : register(t0, space2);
-StructuredBuffer<ShaderMeshSubset> bindless_subsets[] : register(t0, space3);
-Buffer<uint> bindless_ib[] : register(t0, space4);
+#include "brdf.hlsli"
 
 RAWBUFFER(surfelStatsBuffer, TEXSLOT_ONDEMAND0);
 STRUCTUREDBUFFER(surfelIndexBuffer, uint, TEXSLOT_ONDEMAND1);
@@ -27,39 +24,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	PrimitiveID prim;
 	prim.unpack(surfel_data.primitiveID);
-	ShaderMeshInstance inst = InstanceBuffer[prim.instanceIndex];
-	ShaderMesh mesh = inst.mesh;
-	ShaderMeshSubset subset = bindless_subsets[NonUniformResourceIndex(mesh.subsetbuffer)][prim.subsetIndex];
-	uint startIndex = prim.primitiveIndex * 3 + subset.indexOffset;
-	uint i0 = bindless_ib[NonUniformResourceIndex(mesh.ib)][startIndex + 0];
-	uint i1 = bindless_ib[NonUniformResourceIndex(mesh.ib)][startIndex + 1];
-	uint i2 = bindless_ib[NonUniformResourceIndex(mesh.ib)][startIndex + 2];
 
-	[branch]
-	if (mesh.vb_pos_nor_wind >= 0)
-	{
-		uint4 data0 = bindless_buffers[NonUniformResourceIndex(mesh.vb_pos_nor_wind)].Load4(i0 * 16);
-		uint4 data1 = bindless_buffers[NonUniformResourceIndex(mesh.vb_pos_nor_wind)].Load4(i1 * 16);
-		uint4 data2 = bindless_buffers[NonUniformResourceIndex(mesh.vb_pos_nor_wind)].Load4(i2 * 16);
-		float4x4 worldMatrix = inst.GetTransform();
-		float3 p0 = mul(worldMatrix, float4(asfloat(data0.xyz), 1)).xyz;
-		float3 p1 = mul(worldMatrix, float4(asfloat(data1.xyz), 1)).xyz;
-		float3 p2 = mul(worldMatrix, float4(asfloat(data2.xyz), 1)).xyz;
-		float3 n0 = unpack_unitvector(data0.w);
-		float3 n1 = unpack_unitvector(data1.w);
-		float3 n2 = unpack_unitvector(data2.w);
+	Surface surface;
+	surface.load(prim, surfel_data.bary);
 
-		float u = surfel_data.bary.x;
-		float v = surfel_data.bary.y;
-		float w = 1 - u - v;
-		float3 N = n0 * w + n1 * u + n2 * v;
-		N = mul((float3x3)worldMatrix, N);
-		N = normalize(N);
-		surfel.normal = pack_unitvector(N);
-
-		surfel.position = p0 * w + p1 * u + p2 * v;
-	}
-
+	surfel.normal = pack_unitvector(surface.facenormal);
+	surfel.position = surface.P;
 
 
 	surfelBuffer[surfel_index] = surfel;

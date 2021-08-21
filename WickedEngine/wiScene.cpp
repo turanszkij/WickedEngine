@@ -3218,7 +3218,7 @@ namespace wiScene
 						RaytracingAccelerationStructureDesc::TopLevel::Instance instance = {};
 						instance = {};
 						instance.transform = inst.transform;
-						instance.InstanceID = (uint32_t)device->GetDescriptorIndex(&mesh->descriptor, SRV);
+						instance.InstanceID = args.jobIndex;
 						instance.InstanceMask = 1;
 						instance.bottomlevel = mesh->BLAS;
 

@@ -1,9 +1,6 @@
 #include "globals.hlsli"
 #include "ShaderInterop_SurfelGI.h"
-
-ByteAddressBuffer bindless_buffers[] : register(t0, space2);
-StructuredBuffer<ShaderMeshSubset> bindless_subsets[] : register(t0, space3);
-Buffer<uint> bindless_ib[] : register(t0, space4);
+#include "brdf.hlsli"
 
 static const uint2 pixel_offsets[4] = {
 	uint2(0, 0), uint2(1, 0),
@@ -47,33 +44,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		const float3 P = reconstructPosition(uv, depth);
 
 
-		uint2 g0 = texture_gbuffer0[pixel];
+		uint2 primitiveID = texture_gbuffer0[pixel];
 		PrimitiveID prim;
-		prim.unpack(g0);
-		ShaderMeshInstance inst = InstanceBuffer[prim.instanceIndex];
-		ShaderMesh mesh = inst.mesh;
-		ShaderMeshSubset subset = bindless_subsets[NonUniformResourceIndex(mesh.subsetbuffer)][prim.subsetIndex];
-		uint startIndex = prim.primitiveIndex * 3 + subset.indexOffset;
-		uint i0 = bindless_ib[NonUniformResourceIndex(mesh.ib)][startIndex + 0];
-		uint i1 = bindless_ib[NonUniformResourceIndex(mesh.ib)][startIndex + 1];
-		uint i2 = bindless_ib[NonUniformResourceIndex(mesh.ib)][startIndex + 2];
+		prim.unpack(primitiveID);
 
-		float3 bary = 0;
-		[branch]
-		if (mesh.vb_pos_nor_wind >= 0)
-		{
-			uint4 data0 = bindless_buffers[NonUniformResourceIndex(mesh.vb_pos_nor_wind)].Load4(i0 * 16);
-			uint4 data1 = bindless_buffers[NonUniformResourceIndex(mesh.vb_pos_nor_wind)].Load4(i1 * 16);
-			uint4 data2 = bindless_buffers[NonUniformResourceIndex(mesh.vb_pos_nor_wind)].Load4(i2 * 16);
-			float4x4 worldMatrix = inst.GetTransform();
-			float3 p0 = mul(worldMatrix, float4(asfloat(data0.xyz), 1)).xyz;
-			float3 p1 = mul(worldMatrix, float4(asfloat(data1.xyz), 1)).xyz;
-			float3 p2 = mul(worldMatrix, float4(asfloat(data2.xyz), 1)).xyz;
-
-			bary = compute_barycentrics(P, p0, p1, p2);
-		}
-
-
+		Surface surface;
+		surface.load(prim, P);
 
 
 		uint surfel_alloc;
@@ -81,12 +57,14 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		if (surfel_alloc < SURFEL_CAPACITY)
 		{
 			SurfelData surfel_data = (SurfelData)0;
-			surfel_data.primitiveID = g0;
-			surfel_data.bary = bary.xy;
+			surfel_data.primitiveID = primitiveID;
+			surfel_data.bary = surface.bary.xy;
 			surfel_data.inconsistency = 1;
 			surfelDataBuffer[surfel_alloc] = surfel_data;
 
 			surfelIndexBuffer[surfel_alloc] = surfel_alloc;
 		}
+
+
 	}
 }

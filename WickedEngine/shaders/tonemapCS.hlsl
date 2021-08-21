@@ -3,7 +3,6 @@
 
 #ifdef BINDLESS
 PUSHCONSTANT(push, PushConstantsTonemap);
-Texture2D<float4> bindless_textures[] : register(t0, space1);
 Texture3D<float4> bindless_textures3D[] : register(t0, space2);
 RWTexture2D<float4> bindless_rwtextures[] : register(u0, space3);
 #else

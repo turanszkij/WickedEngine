@@ -267,6 +267,204 @@ struct Surface
 	}
 
 	inline bool IsReceiveShadow() { return receiveshadow; }
+
+
+	ShaderMeshInstance inst; 
+	ShaderMeshSubset subset; 
+	ShaderMaterial material;
+	float2 bary;
+	float3 pre;
+
+	bool load(in PrimitiveID prim, in float2 barycentrics)
+	{
+		inst = InstanceBuffer[prim.instanceIndex];
+		subset = bindless_subsets[NonUniformResourceIndex(inst.mesh.subsetbuffer)][prim.subsetIndex];
+		material = bindless_buffers[NonUniformResourceIndex(subset.material)].Load<ShaderMaterial>(0);
+		bary = barycentrics;
+
+		uint startIndex = prim.primitiveIndex * 3 + subset.indexOffset;
+		uint i0 = bindless_ib[NonUniformResourceIndex(inst.mesh.ib)][startIndex + 0];
+		uint i1 = bindless_ib[NonUniformResourceIndex(inst.mesh.ib)][startIndex + 1];
+		uint i2 = bindless_ib[NonUniformResourceIndex(inst.mesh.ib)][startIndex + 2];
+		float4 uv0 = 0, uv1 = 0, uv2 = 0;
+		[branch]
+		if (inst.mesh.vb_uv0 >= 0)
+		{
+			uv0.xy = unpack_half2(bindless_buffers[NonUniformResourceIndex(inst.mesh.vb_uv0)].Load(i0 * 4));
+			uv1.xy = unpack_half2(bindless_buffers[NonUniformResourceIndex(inst.mesh.vb_uv0)].Load(i1 * 4));
+			uv2.xy = unpack_half2(bindless_buffers[NonUniformResourceIndex(inst.mesh.vb_uv0)].Load(i2 * 4));
+		}
+		[branch]
+		if (inst.mesh.vb_uv1 >= 0)
+		{
+			uv0.zw = unpack_half2(bindless_buffers[NonUniformResourceIndex(inst.mesh.vb_uv1)].Load(i0 * 4));
+			uv1.zw = unpack_half2(bindless_buffers[NonUniformResourceIndex(inst.mesh.vb_uv1)].Load(i1 * 4));
+			uv2.zw = unpack_half2(bindless_buffers[NonUniformResourceIndex(inst.mesh.vb_uv1)].Load(i2 * 4));
+		}
+		float3 p0 = 0, p1 = 0, p2 = 0;
+		float3 n0 = 0, n1 = 0, n2 = 0;
+		[branch]
+		if (inst.mesh.vb_pos_nor_wind >= 0)
+		{
+			uint4 data0 = bindless_buffers[NonUniformResourceIndex(inst.mesh.vb_pos_nor_wind)].Load4(i0 * 16);
+			uint4 data1 = bindless_buffers[NonUniformResourceIndex(inst.mesh.vb_pos_nor_wind)].Load4(i1 * 16);
+			uint4 data2 = bindless_buffers[NonUniformResourceIndex(inst.mesh.vb_pos_nor_wind)].Load4(i2 * 16);
+			p0 = asfloat(data0.xyz);
+			p1 = asfloat(data1.xyz);
+			p2 = asfloat(data2.xyz);
+			n0 = unpack_unitvector(data0.w);
+			n1 = unpack_unitvector(data1.w);
+			n2 = unpack_unitvector(data2.w);
+		}
+		else
+		{
+			return false; // error, this should always be good
+		}
+
+		float u = barycentrics.x;
+		float v = barycentrics.y;
+		float w = 1 - u - v;
+		float4 uvsets = uv0 * w + uv1 * u + uv2 * v;
+
+		float4 baseColor = material.baseColor;
+		[branch]
+		if (material.texture_basecolormap_index >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+		{
+			const float2 UV_baseColorMap = material.uvset_baseColorMap == 0 ? uvsets.xy : uvsets.zw;
+			float4 baseColorMap = bindless_textures[NonUniformResourceIndex(material.texture_basecolormap_index)].SampleLevel(sampler_linear_wrap, UV_baseColorMap, 0);
+			baseColorMap.rgb *= DEGAMMA(baseColorMap.rgb);
+			baseColor *= baseColorMap;
+		}
+
+		[branch]
+		if (inst.mesh.vb_col >= 0 && material.IsUsingVertexColors())
+		{
+			float4 c0, c1, c2;
+			const uint stride_COL = 4;
+			c0 = unpack_rgba(bindless_buffers[NonUniformResourceIndex(inst.mesh.vb_col)].Load(i0 * stride_COL));
+			c1 = unpack_rgba(bindless_buffers[NonUniformResourceIndex(inst.mesh.vb_col)].Load(i1 * stride_COL));
+			c2 = unpack_rgba(bindless_buffers[NonUniformResourceIndex(inst.mesh.vb_col)].Load(i2 * stride_COL));
+			float4 vertexColor = c0 * w + c1 * u + c2 * v;
+			baseColor *= vertexColor;
+		}
+
+		float4 surfaceMap = 1;
+		[branch]
+		if (material.texture_surfacemap_index >= 0)
+		{
+			const float2 UV_surfaceMap = material.uvset_surfaceMap == 0 ? uvsets.xy : uvsets.zw;
+			surfaceMap = bindless_textures[NonUniformResourceIndex(material.texture_surfacemap_index)].SampleLevel(sampler_linear_wrap, UV_surfaceMap, 0);
+		}
+
+		float4 specularMap = 1;
+		[branch]
+		if (material.texture_specularmap_index >= 0)
+		{
+			const float2 UV_specularMap = material.uvset_specularMap == 0 ? uvsets.xy : uvsets.zw;
+			specularMap = bindless_textures[NonUniformResourceIndex(material.texture_specularmap_index)].SampleLevel(sampler_linear_wrap, UV_specularMap, 0);
+			specularMap.rgb = DEGAMMA(specularMap.rgb);
+		}
+
+		create(material, baseColor, surfaceMap, specularMap);
+
+		emissiveColor = material.emissiveColor;
+		[branch]
+		if (material.texture_emissivemap_index >= 0)
+		{
+			const float2 UV_emissiveMap = material.uvset_emissiveMap == 0 ? uvsets.xy : uvsets.zw;
+			float4 emissiveMap = bindless_textures[NonUniformResourceIndex(material.texture_emissivemap_index)].SampleLevel(sampler_linear_wrap, UV_emissiveMap, 0);
+			emissiveMap.rgb = DEGAMMA(emissiveMap.rgb);
+			emissiveColor *= emissiveMap;
+		}
+
+		transmission = material.transmission;
+		if (material.texture_transmissionmap_index >= 0)
+		{
+			const float2 UV_transmissionMap = material.uvset_transmissionMap == 0 ? uvsets.xy : uvsets.zw;
+			float transmissionMap = bindless_textures[NonUniformResourceIndex(material.texture_transmissionmap_index)].SampleLevel(sampler_linear_wrap, UV_transmissionMap, 0).r;
+			transmission *= transmissionMap;
+		}
+
+		[branch]
+		if (material.IsOcclusionEnabled_Secondary() && material.texture_occlusionmap_index >= 0)
+		{
+			const float2 UV_occlusionMap = material.uvset_occlusionMap == 0 ? uvsets.xy : uvsets.zw;
+			occlusion *= bindless_textures[NonUniformResourceIndex(material.texture_occlusionmap_index)].SampleLevel(sampler_linear_wrap, UV_occlusionMap, 0).r;
+		}
+
+		float4x4 worldMatrix = inst.GetTransform();
+
+		P = p0 * w + p1 * u + p2 * v;
+		P = mul(worldMatrix, float4(P, 1)).xyz;
+
+		N = n0 * w + n1 * u + n2 * v;
+		N = mul((float3x3)worldMatrix, N);
+		N = normalize(N);
+		facenormal = N;
+
+		[branch]
+		if (inst.mesh.vb_tan >= 0 && material.texture_normalmap_index >= 0 && material.normalMapStrength > 0)
+		{
+			float4 t0, t1, t2;
+			const uint stride_TAN = 4;
+			t0 = unpack_utangent(bindless_buffers[NonUniformResourceIndex(inst.mesh.vb_tan)].Load(i0 * stride_TAN));
+			t1 = unpack_utangent(bindless_buffers[NonUniformResourceIndex(inst.mesh.vb_tan)].Load(i1 * stride_TAN));
+			t2 = unpack_utangent(bindless_buffers[NonUniformResourceIndex(inst.mesh.vb_tan)].Load(i2 * stride_TAN));
+			float4 T = t0 * w + t1 * u + t2 * v;
+			T = T * 2 - 1;
+			T.xyz = mul((float3x3)worldMatrix, T.xyz);
+			T.xyz = normalize(T.xyz);
+			float3 B = normalize(cross(T.xyz, N) * T.w);
+			float3x3 TBN = float3x3(T.xyz, B, N);
+
+			const float2 UV_normalMap = material.uvset_normalMap == 0 ? uvsets.xy : uvsets.zw;
+			float3 normalMap = bindless_textures[NonUniformResourceIndex(material.texture_normalmap_index)].SampleLevel(sampler_linear_wrap, UV_normalMap, 0).rgb;
+			normalMap.b = normalMap.b == 0 ? 1 : normalMap.b; // fix for missing blue channel
+			normalMap = normalMap * 2 - 1;
+			N = normalize(lerp(N, mul(normalMap, TBN), material.normalMapStrength));
+		}
+
+		[branch]
+		if (inst.mesh.vb_pre >= 0)
+		{
+			p0 = asfloat(bindless_buffers[inst.mesh.vb_pre].Load3(i0 * 16));
+			p1 = asfloat(bindless_buffers[inst.mesh.vb_pre].Load3(i1 * 16));
+			p2 = asfloat(bindless_buffers[inst.mesh.vb_pre].Load3(i2 * 16));
+		}
+		pre = p0 * w + p1 * u + p2 * v;
+
+		float4x4 worldMatrixPrev = inst.GetTransformPrev();
+		pre = mul(worldMatrixPrev, float4(pre, 1)).xyz;
+
+		return true;
+	}
+
+	bool load(in PrimitiveID prim, in float3 P)
+	{
+		inst = InstanceBuffer[prim.instanceIndex];
+		subset = bindless_subsets[NonUniformResourceIndex(inst.mesh.subsetbuffer)][prim.subsetIndex];
+		material = bindless_buffers[NonUniformResourceIndex(subset.material)].Load<ShaderMaterial>(0);
+
+		uint startIndex = prim.primitiveIndex * 3 + subset.indexOffset;
+		uint i0 = bindless_ib[NonUniformResourceIndex(inst.mesh.ib)][startIndex + 0];
+		uint i1 = bindless_ib[NonUniformResourceIndex(inst.mesh.ib)][startIndex + 1];
+		uint i2 = bindless_ib[NonUniformResourceIndex(inst.mesh.ib)][startIndex + 2];
+
+		uint4 data0 = bindless_buffers[NonUniformResourceIndex(inst.mesh.vb_pos_nor_wind)].Load4(i0 * 16);
+		uint4 data1 = bindless_buffers[NonUniformResourceIndex(inst.mesh.vb_pos_nor_wind)].Load4(i1 * 16);
+		uint4 data2 = bindless_buffers[NonUniformResourceIndex(inst.mesh.vb_pos_nor_wind)].Load4(i2 * 16);
+		float4x4 worldMatrix = inst.GetTransform();
+		float3 p0 = asfloat(data0.xyz);
+		float3 p1 = asfloat(data1.xyz);
+		float3 p2 = asfloat(data2.xyz);
+		float3 P0 = mul(worldMatrix, float4(p0, 1)).xyz;
+		float3 P1 = mul(worldMatrix, float4(p1, 1)).xyz;
+		float3 P2 = mul(worldMatrix, float4(p2, 1)).xyz;
+
+		float2 barycentrics = compute_barycentrics(P, P0, P1, P2);
+
+		return load(prim, barycentrics);
+	}
 };
 
 struct SurfaceToLight

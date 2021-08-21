@@ -6,7 +6,6 @@
 PixelInput main(uint vid : SV_VERTEXID, uint instanceID : SV_INSTANCEID)
 {
 	PixelInput output;
-	output.instanceID = 0;
 
 	output.RTIndex = instanceID;
 	output.pos = mul(xCubemapRenderCams[output.RTIndex].VP, float4(ICOSPHERE[vid].xyz,0));

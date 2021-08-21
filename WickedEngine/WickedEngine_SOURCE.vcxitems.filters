@@ -960,9 +960,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D.h">
       <Filter>ENGINE\High level interface</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_PathTracing.h">
-      <Filter>ENGINE\High level interface</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)LoadingScreen.h">
       <Filter>ENGINE\High level interface</Filter>
     </ClInclude>
@@ -1085,6 +1082,9 @@
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiCanvas.h">
       <Filter>ENGINE\System</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_PathTracing.h">
+      <Filter>ENGINE\High level interface</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

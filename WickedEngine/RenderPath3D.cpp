@@ -20,57 +20,62 @@ void RenderPath3D::ResizeBuffers()
 
 	{
 		TextureDesc desc;
-		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
-		if (getMSAASampleCount() == 1)
-		{
-			desc.BindFlags |= BIND_UNORDERED_ACCESS;
-		}
+		desc.Format = FORMAT_R11G11B10_FLOAT;
+		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.Width = internalResolution.x;
 		desc.Height = internalResolution.y;
-		desc.SampleCount = getMSAASampleCount();
+		desc.SampleCount = 1;
 
-		desc.Format = FORMAT_R11G11B10_FLOAT;
-		device->CreateTexture(&desc, nullptr, &rtGbuffer[GBUFFER_COLOR]);
-		device->SetName(&rtGbuffer[GBUFFER_COLOR], "rtGbuffer[GBUFFER_COLOR]");
-
-		//desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
-		desc.Format = FORMAT_R8G8B8A8_UNORM;
-		desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
-		device->CreateTexture(&desc, nullptr, &rtGbuffer[GBUFFER_NORMAL_ROUGHNESS]);
-		device->SetName(&rtGbuffer[GBUFFER_NORMAL_ROUGHNESS], "rtGbuffer[GBUFFER_NORMAL_ROUGHNESS]");
-
-		desc.Format = FORMAT_R16G16_FLOAT;
-		desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
-		device->CreateTexture(&desc, nullptr, &rtGbuffer[GBUFFER_VELOCITY]);
-		device->SetName(&rtGbuffer[GBUFFER_VELOCITY], "rtGbuffer[GBUFFER_VELOCITY]");
-
-		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
-		desc.Format = FORMAT_R32G32_UINT;
-		desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
-		device->CreateTexture(&desc, nullptr, &rtGbuffer[GBUFFER_PRIMITIVEID]);
-		device->SetName(&rtGbuffer[GBUFFER_PRIMITIVEID], "rtGbuffer[GBUFFER_PRIMITIVEID]");
+		device->CreateTexture(&desc, nullptr, &rtMain);
+		device->SetName(&rtMain, "rtMain");
 
 		if (getMSAASampleCount() > 1)
 		{
-			desc.SampleCount = 1;
-			desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+			desc.SampleCount = getMSAASampleCount();
+			desc.BindFlags = BIND_RENDER_TARGET;
 
-			desc.Format = FORMAT_R11G11B10_FLOAT;
-			device->CreateTexture(&desc, nullptr, &rtGbuffer_resolved[GBUFFER_COLOR]);
-			device->SetName(&rtGbuffer_resolved[GBUFFER_COLOR], "rtGbuffer_resolved[GBUFFER_COLOR]");
+			device->CreateTexture(&desc, nullptr, &rtMain_render);
+			device->SetName(&rtMain_render, "rtMain_render");
+		}
+		else
+		{
+			rtMain_render = rtMain;
+		}
+	}
+	{
+		TextureDesc desc;
+		desc.Width = internalResolution.x;
+		desc.Height = internalResolution.y;
+		desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
+		desc.SampleCount = 1;
 
-			desc.Format = FORMAT_R8G8B8A8_UNORM;
-			device->CreateTexture(&desc, nullptr, &rtGbuffer_resolved[GBUFFER_NORMAL_ROUGHNESS]);
-			device->SetName(&rtGbuffer_resolved[GBUFFER_NORMAL_ROUGHNESS], "rtGbuffer_resolved[GBUFFER_NORMAL_ROUGHNESS]");
+		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.Format = FORMAT_R32G32_UINT;
+		device->CreateTexture(&desc, nullptr, &rtGbuffer[GBUFFER_PRIMITIVEID]);
+		device->SetName(&rtGbuffer[GBUFFER_PRIMITIVEID], "rtGbuffer[GBUFFER_PRIMITIVEID]");
 
-			desc.Format = FORMAT_R16G16_FLOAT;
-			device->CreateTexture(&desc, nullptr, &rtGbuffer_resolved[GBUFFER_VELOCITY]);
-			device->SetName(&rtGbuffer_resolved[GBUFFER_VELOCITY], "rtGbuffer_resolved[GBUFFER_VELOCITY]");
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.Format = FORMAT_R11G11B10_FLOAT;
+		device->CreateTexture(&desc, nullptr, &rtGbuffer[GBUFFER_NORMAL]);
+		device->SetName(&rtGbuffer[GBUFFER_NORMAL], "rtGbuffer[GBUFFER_NORMAL]");
 
-			desc.Format = FORMAT_R32G32_UINT;
-			device->CreateTexture(&desc, nullptr, &rtGbuffer_resolved[GBUFFER_PRIMITIVEID]);
-			device->SetName(&rtGbuffer_resolved[GBUFFER_PRIMITIVEID], "rtGbuffer_resolved[GBUFFER_PRIMITIVEID]");
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.Format = FORMAT_R16G16_FLOAT;
+		device->CreateTexture(&desc, nullptr, &rtGbuffer[GBUFFER_VELOCITY]);
+		device->SetName(&rtGbuffer[GBUFFER_VELOCITY], "rtGbuffer[GBUFFER_VELOCITY]");
 
+		if (getMSAASampleCount() > 1)
+		{
+			desc = rtGbuffer[GBUFFER_PRIMITIVEID].desc;
+			desc.SampleCount = getMSAASampleCount();
+			desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
+
+			device->CreateTexture(&desc, nullptr, &rtPrimitiveID_render);
+			device->SetName(&rtPrimitiveID_render, "rtPrimitiveID_render");
+		}
+		else
+		{
+			rtPrimitiveID_render = rtGbuffer[GBUFFER_PRIMITIVEID];
 		}
 	}
 	{
@@ -322,7 +327,7 @@ void RenderPath3D::ResizeBuffers()
 		);
 		desc.attachments.push_back(
 			RenderPassAttachment::RenderTarget(
-				&rtGbuffer[GBUFFER_PRIMITIVEID],
+				&rtPrimitiveID_render,
 				RenderPassAttachment::LOADOP_DONTCARE,
 				RenderPassAttachment::STOREOP_STORE,
 				IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE,
@@ -333,7 +338,7 @@ void RenderPath3D::ResizeBuffers()
 		device->CreateRenderPass(&desc, &renderpass_depthprepass);
 
 		desc.attachments.clear();
-		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtGbuffer[GBUFFER_COLOR], RenderPassAttachment::LOADOP_DONTCARE));
+		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtMain_render, RenderPassAttachment::LOADOP_DONTCARE));
 		desc.attachments.push_back(
 			RenderPassAttachment::DepthStencil(
 				&depthBuffer_Main,
@@ -346,7 +351,7 @@ void RenderPath3D::ResizeBuffers()
 		);
 		if (getMSAASampleCount() > 1)
 		{
-			desc.attachments.push_back(RenderPassAttachment::Resolve(GetGbuffer_Read(GBUFFER_COLOR)));
+			desc.attachments.push_back(RenderPassAttachment::Resolve(&rtMain));
 		}
 
 		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2))
@@ -358,7 +363,7 @@ void RenderPath3D::ResizeBuffers()
 	}
 	{
 		RenderPassDesc desc;
-		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtGbuffer[GBUFFER_COLOR], RenderPassAttachment::LOADOP_LOAD));
+		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtMain_render, RenderPassAttachment::LOADOP_LOAD));
 		desc.attachments.push_back(
 			RenderPassAttachment::DepthStencil(
 				&depthBuffer_Main,
@@ -371,7 +376,7 @@ void RenderPath3D::ResizeBuffers()
 		);
 		if (getMSAASampleCount() > 1)
 		{
-			desc.attachments.push_back(RenderPassAttachment::Resolve(&rtGbuffer_resolved[GBUFFER_COLOR]));
+			desc.attachments.push_back(RenderPassAttachment::Resolve(&rtMain));
 		}
 		device->CreateRenderPass(&desc, &renderpass_transparent);
 	}
@@ -526,7 +531,7 @@ void RenderPath3D::PreUpdate()
 
 void RenderPath3D::Update(float dt)
 {
-	if (rtGbuffer[GBUFFER_COLOR].desc.SampleCount != msaaSampleCount)
+	if (rtMain_render.desc.SampleCount != msaaSampleCount)
 	{
 		ResizeBuffers();
 	}
@@ -691,20 +696,12 @@ void RenderPath3D::Render() const
 			cmd
 		);
 
-		// Create the top mip of depth pyramid from main depth buffer:
-		if (getMSAASampleCount() > 1)
-		{
-			wiRenderer::ResolveMSAADepthBuffer(depthBuffer_Copy, depthBuffer_Main, cmd);
-		}
-		else
-		{
-			wiRenderer::CopyTexture2D(depthBuffer_Copy, 0, 0, 0, depthBuffer_Main, 0, cmd);
-		}
-
 		wiRenderer::VisibilityResolve(
 			*scene,
+			depthBuffer_Main,
+			rtPrimitiveID_render,
+			rtGbuffer,
 			depthBuffer_Copy,
-			GetGbuffer_Read(),
 			cmd
 		);
 
@@ -716,7 +713,7 @@ void RenderPath3D::Render() const
 				surfelGIResources,
 				*scene,
 				depthBuffer_Copy,
-				GetGbuffer_Read(),
+				rtGbuffer,
 				debugUAV,
 				cmd
 			);
@@ -727,7 +724,7 @@ void RenderPath3D::Render() const
 		if (wiRenderer::GetVariableRateShadingClassification() && device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2))
 		{
 			wiRenderer::ComputeShadingRateClassification(
-				GetGbuffer_Read(),
+				rtGbuffer,
 				rtLinearDepth,
 				rtShadingRate,
 				debugUAV,
@@ -780,7 +777,7 @@ void RenderPath3D::Render() const
 				rtLinearDepth,
 				depthBuffer_Copy1,
 				tiledLightResources.entityTiles_Opaque,
-				GetGbuffer_Read(),
+				rtGbuffer,
 				rtShadow,
 				cmd
 			);
@@ -940,7 +937,7 @@ void RenderPath3D::Render() const
 				*scene,
 				depthBuffer_Copy,
 				depthBuffer_Copy1,
-				GetGbuffer_Read(),
+				rtGbuffer,
 				rtSSR,
 				cmd
 			);
@@ -985,7 +982,7 @@ void RenderPath3D::Render() const
 			wiRenderer::Postprocess_Upsample_Bilateral(
 				volumetriccloudResources.texture_temporal[device->GetFrameCount() % 2],
 				rtLinearDepth,
-				*GetGbuffer_Read(GBUFFER_COLOR), // only desc is taken if pixel shader upsampling is used
+				rtMain_render, // only desc is taken if pixel shader upsampling is used
 				cmd,
 				true // pixel shader upsampling
 			);
@@ -1116,7 +1113,7 @@ void RenderPath3D::RenderAO(CommandList cmd) const
 				depthBuffer_Copy,
 				rtLinearDepth,
 				depthBuffer_Copy1,
-				GetGbuffer_Read(),
+				rtGbuffer,
 				rtAO,
 				cmd,
 				getAORange(),
@@ -1136,7 +1133,7 @@ void RenderPath3D::RenderSSR(CommandList cmd) const
 			depthBuffer_Copy, 
 			rtLinearDepth,
 			depthBuffer_Copy1,
-			GetGbuffer_Read(),
+			rtGbuffer,
 			rtSSR, 
 			cmd
 		);
@@ -1246,7 +1243,7 @@ void RenderPath3D::RenderSceneMIPChain(CommandList cmd) const
 	fx.sampleFlag = SAMPLEMODE_CLAMP;
 	fx.quality = QUALITY_LINEAR;
 	fx.blendFlag = BLENDMODE_OPAQUE;
-	wiImage::Draw(GetGbuffer_Read(GBUFFER_COLOR), fx, cmd);
+	wiImage::Draw(&rtMain, fx, cmd);
 
 	device->RenderPassEnd(cmd);
 
@@ -1364,7 +1361,7 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	const Texture* rt_first = nullptr; // not ping-ponged with read / write
-	const Texture* rt_read = GetGbuffer_Read(GBUFFER_COLOR);
+	const Texture* rt_read = &rtMain;
 	const Texture* rt_write = &rtPostprocess_HDR;
 
 	// 1.) HDR post process chain
@@ -1379,7 +1376,7 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 				*rt_read, rtTemporalAA[history], 
 				rtLinearDepth,
 				depthBuffer_Copy1,
-				GetGbuffer_Read(),
+				rtGbuffer,
 				rtTemporalAA[output], 
 				cmd
 			);
@@ -1408,7 +1405,7 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 				motionblurResources,
 				rt_first == nullptr ? *rt_read : *rt_first,
 				rtLinearDepth,
-				GetGbuffer_Read(),
+				rtGbuffer,
 				*rt_write,
 				cmd,
 				getMotionBlurStrength()
@@ -1447,7 +1444,7 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 			getDitherEnabled(),
 			getColorGradingEnabled() ? (scene->weather.colorGradingMap == nullptr ? nullptr : &scene->weather.colorGradingMap->texture) : nullptr,
 			getMSAASampleCount() > 1 ? &rtParticleDistortion_Resolved : &rtParticleDistortion,
-			getEyeAdaptionEnabled() ? wiRenderer::ComputeLuminance(luminanceResources, *GetGbuffer_Read(GBUFFER_COLOR), cmd, getEyeAdaptionRate()) : nullptr,
+			getEyeAdaptionEnabled() ? wiRenderer::ComputeLuminance(luminanceResources, rtMain, cmd, getEyeAdaptionRate()) : nullptr,
 			getEyeAdaptionKey()
 		);
 
