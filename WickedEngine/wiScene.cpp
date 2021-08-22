@@ -702,36 +702,6 @@ namespace wiScene
 			device->SetName(&vertexBuffer_ATL, "vertexBuffer_ATL");
 		}
 
-		// vertexBuffer - SUBSETS
-		{
-			vertex_subsets.resize(vertex_positions.size());
-
-			uint32_t subsetCounter = 0;
-			for (auto& subset : subsets)
-			{
-				for (uint32_t i = 0; i < subset.indexCount; ++i)
-				{
-					uint32_t index = indices[subset.indexOffset + i];
-					vertex_subsets[index] = subsetCounter;
-				}
-				subsetCounter++;
-			}
-
-			GPUBufferDesc bd;
-			bd.Usage = USAGE_IMMUTABLE;
-			bd.CPUAccessFlags = 0;
-			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
-			bd.MiscFlags = 0;
-			bd.StructureByteStride = sizeof(uint8_t);
-			bd.ByteWidth = (uint32_t)(bd.StructureByteStride * vertex_subsets.size());
-			bd.Format = FORMAT_R8_UINT;
-
-			SubresourceData InitData;
-			InitData.pSysMem = vertex_subsets.data();
-			device->CreateBuffer(&bd, &InitData, &vertexBuffer_SUB);
-			device->SetName(&vertexBuffer_SUB, "vertexBuffer_SUB");
-		}
-
 		// vertexBuffer_PRE will be created on demand later!
 		vertexBuffer_PRE = GPUBuffer();
 

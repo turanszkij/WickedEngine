@@ -384,7 +384,6 @@ namespace wiScene
 		wiGraphics::GPUBuffer vertexBuffer_PRE;
 		wiGraphics::GPUBuffer streamoutBuffer_POS;
 		wiGraphics::GPUBuffer streamoutBuffer_TAN;
-		wiGraphics::GPUBuffer vertexBuffer_SUB;
 		std::vector<uint8_t> vertex_subsets;
 		wiGraphics::GPUBuffer descriptor;
 		wiGraphics::GPUBuffer subsetBuffer;
