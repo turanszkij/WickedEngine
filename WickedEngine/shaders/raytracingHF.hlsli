@@ -77,13 +77,15 @@ inline void IntersectTriangle(
 	float3 v0v2 = prim.v2() - prim.v0();
 	float3 pvec = cross(ray.Direction, v0v2);
 	float det = dot(v0v1, pvec);
+
 #ifdef RAY_BACKFACE_CULLING 
 	if (det > 0.000001)
 		return;
-#else 
+#endif // RAY_BACKFACE_CULLING
+
+	// ray and triangle are parallel if det is close to 0
 	if (abs(det) < 0.000001)
 		return;
-#endif 
 	float invDet = rcp(det);
 
 	float3 tvec = ray.Origin - prim.v0();
@@ -115,6 +117,7 @@ inline bool IntersectTriangleANY(
 	float3 v0v2 = prim.v2() - prim.v0();
 	float3 pvec = cross(ray.Direction, v0v2);
 	float det = dot(v0v1, pvec);
+
 	// ray and triangle are parallel if det is close to 0
 	if (abs(det) < 0.000001)
 		return false;

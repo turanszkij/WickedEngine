@@ -432,49 +432,6 @@ const std::vector<CustomShader>& GetCustomShaders()
 }
 
 
-ILTYPES GetILTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, bool transparent)
-{
-	ILTYPES realVL = ILTYPE_OBJECT_POS_TEX;
-
-	switch (renderPass)
-	{
-	case RENDERPASS_MAIN:
-	case RENDERPASS_ENVMAPCAPTURE:
-	case RENDERPASS_VOXELIZE:
-		realVL = ILTYPE_OBJECT_COMMON;
-		break;
-	case RENDERPASS_PREPASS:
-		if (tessellation)
-		{
-			realVL = ILTYPE_OBJECT_POS_PREVPOS_TEX; // tessellation needs tex because displacement mapping
-		}
-		else
-		{
-			if (alphatest)
-			{
-				realVL = ILTYPE_OBJECT_POS_PREVPOS_TEX;
-			}
-			else
-			{
-				realVL = ILTYPE_OBJECT_POS_PREVPOS;
-			}
-		}
-		break;
-	case RENDERPASS_SHADOW:
-	case RENDERPASS_SHADOWCUBE:
-		if (alphatest || transparent)
-		{
-			realVL = ILTYPE_OBJECT_POS_TEX;
-		}
-		else
-		{
-			realVL = ILTYPE_OBJECT_POS;
-		}
-		break;
-	}
-
-	return realVL;
-}
 SHADERTYPE GetVSTYPE(RENDERPASS renderPass, bool tessellation, bool alphatest, bool transparent)
 {
 	SHADERTYPE realVS = VSTYPE_OBJECT_SIMPLE;
@@ -875,63 +832,22 @@ void LoadShaders()
 		});
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) {
-		inputLayouts[ILTYPE_OBJECT_COMMON].elements =
-		{
-			{ "POSITION_NORMAL_WIND",	0, MeshComponent::Vertex_POS::FORMAT, INPUT_SLOT_POSITION_NORMAL_WIND, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA },
-			{ "UVSET",					0, MeshComponent::Vertex_TEX::FORMAT, INPUT_SLOT_UV0, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA },
-			{ "UVSET",					1, MeshComponent::Vertex_TEX::FORMAT, INPUT_SLOT_UV1, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA },
-			{ "ATLAS",					0, MeshComponent::Vertex_TEX::FORMAT, INPUT_SLOT_ATLAS, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA },
-			{ "COLOR",					0, MeshComponent::Vertex_COL::FORMAT, INPUT_SLOT_COLOR, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA },
-			{ "TANGENT",				0, MeshComponent::Vertex_TAN::FORMAT, INPUT_SLOT_TANGENT, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA },
-
-			{ "INSTANCEPOINTER",		0, FORMAT_R32G32_UINT, INPUT_SLOT_INSTANCEDATA, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA },
-		};
 		LoadShader(VS, shaders[VSTYPE_OBJECT_COMMON], "objectVS_common.cso");
 		});
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) {
-		inputLayouts[ILTYPE_OBJECT_POS_PREVPOS].elements =
-		{
-			{ "POSITION_NORMAL_WIND",	0, MeshComponent::Vertex_POS::FORMAT, INPUT_SLOT_POSITION_NORMAL_WIND, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA },
-			{ "PREVPOS",				0, MeshComponent::Vertex_POS::FORMAT, INPUT_SLOT_PREVPOS, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA },
-			
-			{ "INSTANCEPOINTER",		0, FORMAT_R32G32_UINT, INPUT_SLOT_INSTANCEDATA, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA },
-		};
 		LoadShader(VS, shaders[VSTYPE_OBJECT_PREPASS], "objectVS_prepass.cso");
 		});
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) {
-		inputLayouts[ILTYPE_OBJECT_POS_PREVPOS_TEX].elements =
-		{
-			{ "POSITION_NORMAL_WIND",	0, MeshComponent::Vertex_POS::FORMAT, INPUT_SLOT_POSITION_NORMAL_WIND, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA },
-			{ "PREVPOS",				0, MeshComponent::Vertex_POS::FORMAT, INPUT_SLOT_PREVPOS, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA },
-			{ "UVSET",					0, MeshComponent::Vertex_TEX::FORMAT, INPUT_SLOT_UV0, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA },
-			{ "UVSET",					1, MeshComponent::Vertex_TEX::FORMAT, INPUT_SLOT_UV1, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA },
-
-			{ "INSTANCEPOINTER",		0, FORMAT_R32G32_UINT, INPUT_SLOT_INSTANCEDATA, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA },
-		};
 		LoadShader(VS, shaders[VSTYPE_OBJECT_PREPASS_ALPHATEST], "objectVS_prepass_alphatest.cso");
 		});
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) {
-		inputLayouts[ILTYPE_OBJECT_POS].elements =
-		{
-			{ "POSITION_NORMAL_WIND",	0, MeshComponent::Vertex_POS::FORMAT, INPUT_SLOT_POSITION_NORMAL_WIND, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA },
-
-			{ "INSTANCEPOINTER",		0, FORMAT_R32G32_UINT, INPUT_SLOT_INSTANCEDATA, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA },
-		};
 		LoadShader(VS, shaders[VSTYPE_SHADOW], "shadowVS.cso");
 		});
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) {
-		inputLayouts[ILTYPE_OBJECT_POS_TEX].elements =
-		{
-			{ "POSITION_NORMAL_WIND",	0, MeshComponent::Vertex_POS::FORMAT, INPUT_SLOT_POSITION_NORMAL_WIND, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA },
-			{ "UVSET",					0, MeshComponent::Vertex_TEX::FORMAT, INPUT_SLOT_UV0, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA },
-			{ "UVSET",					1, MeshComponent::Vertex_TEX::FORMAT, INPUT_SLOT_UV1, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA },
-
-			{ "INSTANCEPOINTER",		0, FORMAT_R32G32_UINT, INPUT_SLOT_INSTANCEDATA, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_INSTANCE_DATA },
-		};
 		LoadShader(VS, shaders[VSTYPE_OBJECT_SIMPLE], "objectVS_simple.cso");
 		LoadShader(VS, shaders[VSTYPE_SHADOW_ALPHATEST], "shadowVS_alphatest.cso");
 		LoadShader(VS, shaders[VSTYPE_SHADOW_TRANSPARENT], "shadowVS_transparent.cso");
@@ -1254,7 +1170,6 @@ void LoadShaders()
 						{
 							const bool transparency = blendMode != BLENDMODE_OPAQUE;
 							SHADERTYPE realVS = GetVSTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency);
-							ILTYPES realVL = GetILTYPE((RENDERPASS)renderPass, tessellation, alphatest, transparency);
 							SHADERTYPE realHS = GetHSTYPE((RENDERPASS)renderPass, tessellation, alphatest);
 							SHADERTYPE realDS = GetDSTYPE((RENDERPASS)renderPass, tessellation, alphatest);
 							SHADERTYPE realGS = GetGSTYPE((RENDERPASS)renderPass, alphatest, transparency);
@@ -1266,17 +1181,11 @@ void LoadShaders()
 							}
 
 							PipelineStateDesc desc;
-							desc.il = realVL < ILTYPE_COUNT ? &inputLayouts[realVL] : nullptr;
 							desc.vs = realVS < SHADERTYPE_COUNT ? &shaders[realVS] : nullptr;
 							desc.hs = realHS < SHADERTYPE_COUNT ? &shaders[realHS] : nullptr;
 							desc.ds = realDS < SHADERTYPE_COUNT ? &shaders[realDS] : nullptr;
 							desc.gs = realGS < SHADERTYPE_COUNT ? &shaders[realGS] : nullptr;
 							desc.ps = realPS < SHADERTYPE_COUNT ? &shaders[realPS] : nullptr;
-
-							if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
-							{
-								desc.il = nullptr;
-							}
 
 							switch (blendMode)
 							{
@@ -1390,13 +1299,11 @@ void LoadShaders()
 	wiJobSystem::Dispatch(ctx, RENDERPASS_COUNT, 1, [](wiJobArgs args) {
 
 		SHADERTYPE realVS = GetVSTYPE((RENDERPASS) args.jobIndex, false, false, false);
-		ILTYPES realVL = GetILTYPE((RENDERPASS)args.jobIndex, false, false, false);
 
 		PipelineStateDesc desc;
 		desc.rs = &rasterizers[RSTYPE_FRONT];
 		desc.bs = &blendStates[BSTYPE_OPAQUE];
 		desc.dss = &depthStencils[DSSTYPE_DEFAULT];
-		desc.il = &inputLayouts[realVL];
 		desc.vs = &shaders[realVS];
 
 		switch (args.jobIndex)
@@ -1437,11 +1344,9 @@ void LoadShaders()
 	// Hologram sample shader will be registered as custom shader:
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) {
 		SHADERTYPE realVS = GetVSTYPE(RENDERPASS_MAIN, false, false, true);
-		ILTYPES realVL = GetILTYPE(RENDERPASS_MAIN, false, false, true);
 
 		PipelineStateDesc desc;
 		desc.vs = &shaders[realVS];
-		desc.il = &inputLayouts[realVL];
 		desc.ps = &shaders[PSTYPE_OBJECT_HOLOGRAM];
 
 		desc.bs = &blendStates[BSTYPE_ADDITIVE];
@@ -1467,12 +1372,6 @@ void LoadShaders()
 		desc.rs = &rasterizers[RSTYPE_WIRE];
 		desc.bs = &blendStates[BSTYPE_OPAQUE];
 		desc.dss = &depthStencils[DSSTYPE_DEFAULT];
-		desc.il = &inputLayouts[ILTYPE_OBJECT_POS_TEX];
-
-		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
-		{
-			desc.il = nullptr;
-		}
 
 		device->CreatePipelineState(&desc, &PSO_object_wire);
 
@@ -1545,7 +1444,6 @@ void LoadShaders()
 		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
 		desc.bs = &blendStates[BSTYPE_OPAQUE];
 		desc.dss = &depthStencils[DSSTYPE_CAPTUREIMPOSTOR];
-		desc.il = &inputLayouts[ILTYPE_OBJECT_COMMON];
 
 		desc.ps = &shaders[PSTYPE_CAPTUREIMPOSTOR_ALBEDO];
 		device->CreatePipelineState(&desc, &PSO_captureimpostor_albedo);
@@ -1784,7 +1682,6 @@ void LoadShaders()
 		case DEBUGRENDERING_PAINTRADIUS:
 			desc.vs = &shaders[VSTYPE_OBJECT_SIMPLE];
 			desc.ps = &shaders[PSTYPE_OBJECT_PAINTRADIUS];
-			desc.il = &inputLayouts[ILTYPE_OBJECT_POS_TEX];
 			desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
 			desc.rs = &rasterizers[RSTYPE_FRONT];
 			desc.bs = &blendStates[BSTYPE_TRANSPARENT];
@@ -6127,53 +6024,12 @@ void DrawDebugWorld(
 			buff->instanceID = (uint)scene.objects.GetIndex(x.objectEntity);
 			buff->userdata = 0;
 
-			if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
-			{
-				ObjectPushConstants push;
-				//push.material = device->GetDescriptorIndex(&material.constantBuffer, SRV);
-				push.mesh = device->GetDescriptorIndex(&mesh.descriptor, SRV);
-				push.instances = device->GetDescriptorIndex(mem.buffer, SRV);
-				push.instance_offset = mem.offset;
-				push.subsetIndex = x.subset;
-				device->PushConstants(&push, sizeof(push), cmd);
-			}
-			else
-			{
-				const GPUBuffer* vbs[] = {
-					mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
-					nullptr,
-					&mesh.vertexBuffer_UV0,
-					&mesh.vertexBuffer_UV1,
-					nullptr,
-					nullptr,
-					nullptr,
-					mem.buffer
-				};
-				uint32_t strides[] = {
-					sizeof(MeshComponent::Vertex_POS),
-					sizeof(MeshComponent::Vertex_POS),
-					sizeof(MeshComponent::Vertex_TEX),
-					sizeof(MeshComponent::Vertex_TEX),
-					sizeof(MeshComponent::Vertex_TEX),
-					sizeof(MeshComponent::Vertex_COL),
-					sizeof(MeshComponent::Vertex_TAN),
-					sizeof(ShaderMeshInstancePointer)
-				};
-				uint32_t offsets[] = {
-					0,
-					0,
-					0,
-					0,
-					0,
-					0,
-					0,
-					mem.offset
-				};
-				device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
-
-				device->BindConstantBuffer(VS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
-				device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
-			}
+			ObjectPushConstants push;
+			push.mesh = device->GetDescriptorIndex(&mesh.descriptor, SRV);
+			push.instances = device->GetDescriptorIndex(mem.buffer, SRV);
+			push.instance_offset = mem.offset;
+			push.subsetIndex = x.subset;
+			device->PushConstants(&push, sizeof(push), cmd);
 
 			device->BindIndexBuffer(&mesh.indexBuffer, mesh.GetIndexFormat(), 0, cmd);
 
@@ -6778,48 +6634,9 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 		const SPHERE boundingsphere = mesh.GetBoundingSphere();
 
 		ObjectPushConstants push; // used with bindless model only
-
-		const bool bindless = device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS);
-		if (bindless)
-		{
-			push.mesh = device->GetDescriptorIndex(&mesh.descriptor, SRV);
-			push.instances = device->GetDescriptorIndex(mem.buffer, SRV);
-			push.instance_offset = mem.offset;
-		}
-		else
-		{
-			const GPUBuffer* vbs[] = {
-				mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
-				mesh.vertexBuffer_PRE.IsValid() ? &mesh.vertexBuffer_PRE : &mesh.vertexBuffer_POS,
-				&mesh.vertexBuffer_UV0,
-				&mesh.vertexBuffer_UV1,
-				&mesh.vertexBuffer_ATL,
-				&mesh.vertexBuffer_COL,
-				mesh.streamoutBuffer_TAN.IsValid() ? &mesh.streamoutBuffer_TAN : &mesh.vertexBuffer_TAN,
-				mem.buffer
-			};
-			uint32_t strides[] = {
-				sizeof(MeshComponent::Vertex_POS),
-				sizeof(MeshComponent::Vertex_POS),
-				sizeof(MeshComponent::Vertex_TEX),
-				sizeof(MeshComponent::Vertex_TEX),
-				sizeof(MeshComponent::Vertex_TEX),
-				sizeof(MeshComponent::Vertex_COL),
-				sizeof(MeshComponent::Vertex_TAN),
-				sizeof(ShaderMeshInstance)
-			};
-			uint32_t offsets[] = {
-				0,
-				0,
-				0,
-				0,
-				0,
-				0,
-				0,
-				mem.offset
-			};
-			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
-		}
+		push.mesh = device->GetDescriptorIndex(&mesh.descriptor, SRV);
+		push.instances = device->GetDescriptorIndex(mem.buffer, SRV);
+		push.instance_offset = mem.offset;
 
 		device->BindIndexBuffer(&mesh.indexBuffer, mesh.GetIndexFormat(), 0, cmd);
 
@@ -6876,21 +6693,8 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 					}
 					const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
-					if (bindless)
-					{
-						push.subsetIndex = (uint)subsetIndex;
-						//push.material = device->GetDescriptorIndex(&material.constantBuffer, SRV);
-						device->PushConstants(&push, sizeof(push), cmd);
-					}
-					else
-					{
-						device->BindConstantBuffer(VS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
-						device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
-
-						const GPUResource* res[4];
-						material.WriteTextures(res, arraysize(res));
-						device->BindResources(PS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
-					}
+					push.subsetIndex = (uint)subsetIndex;
+					device->PushConstants(&push, sizeof(push), cmd);
 
 					device->DrawIndexedInstanced(subset.indexCount, 1, subset.indexOffset, 0, 0, cmd);
 				}
@@ -7701,6 +7505,15 @@ void RenderObjectLightMap(const Scene& scene, const ObjectComponent& object, Com
 {
 	device->EventBegin("RenderObjectLightMap", cmd);
 
+	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
+	{
+		device->BindResource(PS, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
+	}
+	else
+	{
+		scene.BVH.Bind(PS, cmd);
+	}
+
 	const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
 	assert(!mesh.vertex_atlas.empty());
 	assert(mesh.vertexBuffer_ATL.IsValid());
@@ -7786,14 +7599,6 @@ void RefreshLightmapAtlas(const Scene& scene, CommandList cmd)
 	{
 		auto range = wiProfiler::BeginRangeGPU("Lightmap Processing", cmd);
 
-		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
-		{
-			device->BindResource(PS, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
-		}
-		else
-		{
-			scene.BVH.Bind(PS, cmd);
-		}
 		device->BindResource(CS, &scene.instanceBuffer, TEXSLOT_INSTANCEBUFFER, cmd);
 
 		// Render lightmaps for each object:
