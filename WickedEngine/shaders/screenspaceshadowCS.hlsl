@@ -1,4 +1,4 @@
-#define BRDF_NDOTL_BIAS 0.1
+//#define BRDF_NDOTL_BIAS 0.1
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 #include "raytracingHF.hlsli"
@@ -21,6 +21,11 @@ groupshared float tile_Z[TILE_SIZE * TILE_SIZE];
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint groupIndex : SV_GroupIndex)
 {
+	const float2 uv = ((float2)DTid.xy + 0.5) * xPPResolution_rcp;
+	const float depth = texture_depth.SampleLevel(sampler_linear_clamp, uv, 0);
+	if (depth == 0)
+		return;
+
 #ifdef RTSHADOW
 	uint flatTileIdx = 0;
 	if (GTid.y < 4)
@@ -34,22 +39,21 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	output_tiles[flatTileIdx] = 0;
 #endif // RTSHADOW
 
-	const float2 uv = ((float2)DTid.xy + 0.5) * xPPResolution_rcp;
-	const float3 g1 = texture_gbuffer1.SampleLevel(sampler_linear_clamp, uv, 0);
-	const float3 N = normalize(g1.rgb * 2 - 1);
+	float3 P = reconstructPosition(uv, depth);
 
-	const float depth = texture_depth.SampleLevel(sampler_linear_clamp, uv, 0);
-	const float3 P = reconstructPosition(uv, depth);
+	PrimitiveID prim;
+	prim.unpack(texture_gbuffer0[DTid.xy * 2]);
+
+	Surface surface;
+	if (!surface.load(prim, P))
+	{
+		return;
+	}
+	float3 N = surface.N;
 
 	const float2 bluenoise = blue_noise(DTid.xy).xy;
 
-	Surface surface;
-	surface.init();
-	surface.pixel = DTid.xy;
-	surface.P = P;
-	surface.N = N;
-
-	const uint2 tileIndex = uint2(floor(surface.pixel * 2 / TILED_CULLING_BLOCKSIZE));
+	const uint2 tileIndex = uint2(floor(DTid.xy * 2 / TILED_CULLING_BLOCKSIZE));
 	const uint flatTileIndex = flatten2D(tileIndex, g_xFrame_EntityCullingTileCount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
 
 	uint shadow_mask[4] = {0,0,0,0}; // FXC issue: can't dynamically index into uint4, unless unrolling all loops

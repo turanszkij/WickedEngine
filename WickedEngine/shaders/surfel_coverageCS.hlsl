@@ -1,5 +1,6 @@
 #include "globals.hlsli"
 #include "ShaderInterop_SurfelGI.h"
+#include "brdf.hlsli"
 
 //#define SURFEL_DEBUG_NORMAL
 //#define SURFEL_DEBUG_COLOR
@@ -57,17 +58,25 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	//uint2 pixel = DTid.xy;
 
 	const float depth = texture_depth[pixel];
-	const float3 g1 = texture_gbuffer1[pixel];
 
 	float4 debug = 0;
 	float4 color = 0;
 
-	if (depth > 0 && any(g1))
+	if (depth > 0)
 	{
 		const float2 uv = ((float2)pixel + 0.5) * g_xFrame_InternalResolution_rcp;
 		const float3 P = reconstructPosition(uv, depth);
 
-		const float3 N = normalize(g1.rgb * 2 - 1);
+		PrimitiveID prim;
+		prim.unpack(texture_gbuffer0[pixel]);
+
+		Surface surface;
+		if (!surface.load(prim, P))
+		{
+			return;
+		}
+
+		const float3 N = surface.facenormal;
 
 		uint surfel_count = surfelStatsBuffer.Load(SURFEL_STATS_OFFSET_COUNT);
 

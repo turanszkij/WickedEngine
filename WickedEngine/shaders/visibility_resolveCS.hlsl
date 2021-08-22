@@ -2,9 +2,8 @@
 #include "ShaderInterop_Renderer.h"
 #include "brdf.hlsli"
 
-RWTEXTURE2D(output_normal, float3, 0);
-RWTEXTURE2D(output_velocity, float2, 1);
-RWTEXTURE2D(output_depthbuffer, float, 2);
+RWTEXTURE2D(output_velocity, float2, 0);
+RWTEXTURE2D(output_depthbuffer, float, 1);
 
 #ifdef VISIBILITY_MSAA
 TEXTURE2DMS(texture_primitiveID, uint2, TEXSLOT_ONDEMAND0);
@@ -42,7 +41,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		if (surface.load(prim, P))
 		{
 			pre = surface.pre;
-			output_normal[pixel] = surface.facenormal * 0.5 + 0.5;
 		}
 
 	}

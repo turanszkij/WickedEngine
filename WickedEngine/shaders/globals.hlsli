@@ -12,7 +12,6 @@ SamplerState bindless_samplers[] : register(s0, space5);
 TEXTURE2D(texture_depth, float, TEXSLOT_DEPTH);
 TEXTURE2D(texture_lineardepth, float, TEXSLOT_LINEARDEPTH);
 TEXTURE2D(texture_gbuffer0, uint2, TEXSLOT_GBUFFER0);
-TEXTURE2D(texture_gbuffer1, float3, TEXSLOT_GBUFFER1);
 TEXTURE2D(texture_gbuffer2, float2, TEXSLOT_GBUFFER2);
 TEXTURECUBE(texture_globalenvmap, float4, TEXSLOT_GLOBALENVMAP);
 TEXTURE2D(texture_globallightmap, float4, TEXSLOT_GLOBALLIGHTMAP);

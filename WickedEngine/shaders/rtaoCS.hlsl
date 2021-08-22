@@ -16,11 +16,9 @@ groupshared float tile_Z[TILE_SIZE * TILE_SIZE];
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint groupIndex : SV_GroupIndex)
 {
 	const float2 uv = ((float2)DTid.xy + 0.5) * xPPResolution_rcp;
-	const float3 g1 = texture_gbuffer1.SampleLevel(sampler_linear_clamp, uv, 0);
-	const float3 N = normalize(g1.rgb * 2 - 1);
-
 	const float depth = texture_depth.SampleLevel(sampler_linear_clamp, uv, 0);
-	const float3 P = reconstructPosition(uv, depth);
+	if (depth == 0)
+		return;
 
 	uint flatTileIdx = 0;
 	if (GTid.y < 4)
@@ -32,6 +30,18 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 		flatTileIdx = flatten2D(Gid.xy * uint2(1, 2) + uint2(0, 1), (xPPResolution + uint2(7, 3)) / uint2(8, 4));
 	}
 	output_tiles[flatTileIdx] = 0;
+
+	const float3 P = reconstructPosition(uv, depth);
+
+	PrimitiveID prim;
+	prim.unpack(texture_gbuffer0[DTid.xy * 2]);
+
+	Surface surface;
+	if (!surface.load(prim, P))
+	{
+		return;
+	}
+	float3 N = surface.facenormal;
 
 	RayDesc ray;
 	ray.TMin = 0.01;
@@ -56,32 +66,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	);
 	while (q.Proceed())
 	{
-		//ShaderMesh mesh = bindless_buffers[NonUniformResourceIndex(q.CandidateInstanceID())].Load<ShaderMesh>(0);
-		//ShaderMeshSubset subset = bindless_subsets[NonUniformResourceIndex(mesh.subsetbuffer)][q.CandidateGeometryIndex()];
-		//ShaderMaterial material = bindless_buffers[NonUniformResourceIndex(subset.material)].Load<ShaderMaterial>(0);
-		//[branch]
-		//if (!material.IsCastingShadow())
-		//{
-		//	continue;
-		//}
-		//[branch]
-		//if (material.texture_basecolormap_index < 0)
-		//{
-		//	q.CommitNonOpaqueTriangleHit();
-		//	break;
-		//}
-		//
-		//Surface surface;
-		//EvaluateObjectSurface(
-		//	mesh,
-		//	subset,
-		//	material,
-		//	q.CandidatePrimitiveIndex(),
-		//	q.CandidateTriangleBarycentrics(),
-		//	q.CandidateObjectToWorld3x4(),
-		//	surface
-		//);
-
 		PrimitiveID prim;
 		prim.primitiveIndex = q.CandidatePrimitiveIndex();
 		prim.instanceIndex = q.CandidateInstanceID();

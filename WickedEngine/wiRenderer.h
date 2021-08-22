@@ -483,9 +483,11 @@ namespace wiRenderer
 	void CreateScreenSpaceShadowResources(ScreenSpaceShadowResources& res, XMUINT2 resolution);
 	void Postprocess_ScreenSpaceShadow(
 		const ScreenSpaceShadowResources& res,
+		const wiScene::Scene& scene,
 		const wiGraphics::Texture& depthbuffer,
 		const wiGraphics::Texture& lineardepth,
 		const wiGraphics::GPUBuffer& entityTiles_Opaque,
+		const wiGraphics::Texture gbuffer[GBUFFER_COUNT],
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd,
 		float range = 1,

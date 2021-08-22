@@ -55,11 +55,6 @@ void RenderPath3D::ResizeBuffers()
 		device->SetName(&rtGbuffer[GBUFFER_PRIMITIVEID], "rtGbuffer[GBUFFER_PRIMITIVEID]");
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.Format = FORMAT_R11G11B10_FLOAT;
-		device->CreateTexture(&desc, nullptr, &rtGbuffer[GBUFFER_NORMAL]);
-		device->SetName(&rtGbuffer[GBUFFER_NORMAL], "rtGbuffer[GBUFFER_NORMAL]");
-
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.Format = FORMAT_R16G16_FLOAT;
 		device->CreateTexture(&desc, nullptr, &rtGbuffer[GBUFFER_VELOCITY]);
 		device->SetName(&rtGbuffer[GBUFFER_VELOCITY], "rtGbuffer[GBUFFER_VELOCITY]");
@@ -758,9 +753,11 @@ void RenderPath3D::Render() const
 		{
 			wiRenderer::Postprocess_ScreenSpaceShadow(
 				screenspaceshadowResources,
+				*scene,
 				depthBuffer_Copy,
 				rtLinearDepth,
 				tiledLightResources.entityTiles_Opaque,
+				rtGbuffer,
 				rtShadow,
 				cmd,
 				getScreenSpaceShadowRange(),
