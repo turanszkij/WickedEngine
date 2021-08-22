@@ -17,7 +17,6 @@ TEXTURE2D(texture_gbuffer2, float2, TEXSLOT_GBUFFER2);
 TEXTURECUBE(texture_globalenvmap, float4, TEXSLOT_GLOBALENVMAP);
 TEXTURE2D(texture_globallightmap, float4, TEXSLOT_GLOBALLIGHTMAP);
 TEXTURECUBEARRAY(texture_envmaparray, float4, TEXSLOT_ENVMAPARRAY);
-TEXTURE2D(texture_decalatlas, float4, TEXSLOT_DECALATLAS);
 TEXTURE2D(texture_skyviewlut, float4, TEXSLOT_SKYVIEWLUT);
 TEXTURE2D(texture_transmittancelut, float4, TEXSLOT_TRANSMITTANCELUT);
 TEXTURE2D(texture_multiscatteringlut, float4, TEXSLOT_MULTISCATTERINGLUT);

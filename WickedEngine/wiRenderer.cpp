@@ -3604,34 +3604,19 @@ void UpdateRenderData(
 			entityArray[entityCounter].SetIndices(matrixCounter, 0);
 			matrixArray[matrixCounter] = XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal.world));
 
-			XMFLOAT4 atlasMulAdd;
+			int texture = -1;
 			if (decal.texture != nullptr)
 			{
-				const TextureDesc& desc = vis.scene->decalAtlas.GetDesc();
-
-				wiRectPacker::rect_xywh rect = vis.scene->packedDecals.at(decal.texture);
-
-				// eliminate border expansion:
-				rect.x += Scene::atlasClampBorder;
-				rect.y += Scene::atlasClampBorder;
-				rect.w -= Scene::atlasClampBorder * 2;
-				rect.h -= Scene::atlasClampBorder * 2;
-
-				atlasMulAdd = XMFLOAT4(
-					(float)rect.w / (float)desc.Width,
-					(float)rect.h / (float)desc.Height,
-					(float)rect.x / (float)desc.Width,
-					(float)rect.y / (float)desc.Height
-				);
+				texture = device->GetDescriptorIndex(&decal.texture->texture, SRV);
 			}
-			else
+			int normal = -1;
+			if (decal.normal != nullptr)
 			{
-				atlasMulAdd = XMFLOAT4(0, 0, 0, 0);
+				normal = device->GetDescriptorIndex(&decal.normal->texture, SRV);
 			}
-			matrixArray[matrixCounter].r[0] = XMVectorSetW(matrixArray[matrixCounter].r[0], atlasMulAdd.x);
-			matrixArray[matrixCounter].r[1] = XMVectorSetW(matrixArray[matrixCounter].r[1], atlasMulAdd.y);
-			matrixArray[matrixCounter].r[2] = XMVectorSetW(matrixArray[matrixCounter].r[2], atlasMulAdd.z);
-			matrixArray[matrixCounter].r[3] = XMVectorSetW(matrixArray[matrixCounter].r[3], atlasMulAdd.w);
+			matrixArray[matrixCounter].r[0] = XMVectorSetW(matrixArray[matrixCounter].r[0], *(float*)&texture);
+			matrixArray[matrixCounter].r[1] = XMVectorSetW(matrixArray[matrixCounter].r[1], *(float*)&normal);
+
 			matrixCounter++;
 
 			entityCounter++;
@@ -5120,10 +5105,6 @@ void DrawScene(
 	}
 
 	device->BindResource(PS, &vis.scene->lightmap, TEXSLOT_GLOBALLIGHTMAP, cmd);
-	if (vis.scene->decalAtlas.IsValid())
-	{
-		device->BindResource(PS, &vis.scene->decalAtlas, TEXSLOT_DECALATLAS, cmd);
-	}
 
 	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_PIPELINE) || device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
 	{
@@ -9802,10 +9783,6 @@ void Postprocess_RTReflection(
 	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], TEXSLOT_SKYLUMINANCELUT, cmd);
 
 	device->BindResource(LIB, &scene.lightmap, TEXSLOT_GLOBALLIGHTMAP, cmd);
-	if (scene.decalAtlas.IsValid())
-	{
-		device->BindResource(LIB, &scene.decalAtlas, TEXSLOT_DECALATLAS, cmd);
-	}
 
 	PostProcessCB cb;
 	cb.xPPResolution.x = desc.Width;

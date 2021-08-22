@@ -798,7 +798,6 @@ void RenderPath3D::Render() const
 	cmd = device->BeginCommandList();
 	wiJobSystem::Execute(ctx, [cmd, this](wiJobArgs args) {
 		wiRenderer::BindCommonResources(cmd);
-		wiRenderer::RefreshDecalAtlas(*scene, cmd);
 		wiRenderer::RefreshLightmapAtlas(*scene, cmd);
 		wiRenderer::RefreshEnvProbes(visibility_main, cmd);
 		wiRenderer::RefreshImpostors(*scene, cmd);

@@ -461,7 +461,8 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 					continue;
 
 				float4x4 decalProjection = MatrixArray[decal.GetMatrixIndex()];
-				float4 texMulAdd = decalProjection[3];
+				int decalTexture = asint(decalProjection[3][0]);
+				int decalNormal = asint(decalProjection[3][1]);
 				decalProjection[3] = float4(0, 0, 0, 1);
 				const float3 clipSpacePos = mul(decalProjection, float4(surface.P, 1)).xyz;
 				const float3 uvw = clipSpacePos.xyz * float3(0.5, -0.5, 0.5) + 0.5;
@@ -469,9 +470,14 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 				if (is_saturated(uvw))
 				{
 					// mipmapping needs to be performed by hand:
-					const float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy * texMulAdd.xy;
-					const float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy * texMulAdd.xy;
-					float4 decalColor = texture_decalatlas.SampleGrad(sampler_linear_clamp, uvw.xy * texMulAdd.xy + texMulAdd.zw, decalDX, decalDY);
+					const float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy;
+					const float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy;
+					float4 decalColor = 1;
+					[branch]
+					if (decalTexture >= 0)
+					{
+						decalColor = bindless_textures[NonUniformResourceIndex(decalTexture)].SampleGrad(sampler_linear_clamp, uvw.xy, decalDX, decalDY);
+					}
 					// blend out if close to cube Z:
 					float edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
 					decalColor.a *= edgeBlend;
@@ -670,7 +676,8 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 						continue;
 
 					float4x4 decalProjection = MatrixArray[decal.GetMatrixIndex()];
-					float4 texMulAdd = decalProjection[3];
+					int decalTexture = asint(decalProjection[3][0]);
+					int decalNormal = asint(decalProjection[3][1]);
 					decalProjection[3] = float4(0, 0, 0, 1);
 					const float3 clipSpacePos = mul(decalProjection, float4(surface.P, 1)).xyz;
 					const float3 uvw = clipSpacePos.xyz * float3(0.5, -0.5, 0.5) + 0.5;
@@ -678,9 +685,14 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 					if (is_saturated(uvw))
 					{
 						// mipmapping needs to be performed by hand:
-						const float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy * texMulAdd.xy;
-						const float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy * texMulAdd.xy;
-						float4 decalColor = texture_decalatlas.SampleGrad(sampler_linear_clamp, uvw.xy * texMulAdd.xy + texMulAdd.zw, decalDX, decalDY);
+						const float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy;
+						const float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy;
+						float4 decalColor = 1;
+						[branch]
+						if (decalTexture >= 0)
+						{
+							decalColor = bindless_textures[NonUniformResourceIndex(decalTexture)].SampleGrad(sampler_linear_clamp, uvw.xy, decalDX, decalDY);
+						}
 						// blend out if close to cube Z:
 						float edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
 						decalColor.a *= edgeBlend;

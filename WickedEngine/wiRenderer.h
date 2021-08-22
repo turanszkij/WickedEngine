@@ -252,8 +252,6 @@ namespace wiRenderer
 	void RefreshEnvProbes(const Visibility& vis, wiGraphics::CommandList cmd);
 	// Call once per frame to re-render out of date impostors
 	void RefreshImpostors(const wiScene::Scene& scene, wiGraphics::CommandList cmd);
-	// Call once per frame to repack out of date decals in the atlas
-	void RefreshDecalAtlas(const wiScene::Scene& scene, wiGraphics::CommandList cmd);
 	// Call once per frame to repack out of date lightmaps in the atlas
 	void RefreshLightmapAtlas(const wiScene::Scene& scene, wiGraphics::CommandList cmd);
 	// Voxelize the scene into a voxel grid 3D texture
