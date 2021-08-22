@@ -26,11 +26,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	prim.unpack(surfel_data.primitiveID);
 
 	Surface surface;
-	surface.load(prim, surfel_data.bary);
-
-	surfel.normal = pack_unitvector(surface.facenormal);
-	surfel.position = surface.P;
-
+	if (surface.load(prim, surfel_data.bary))
+	{
+		surfel.normal = pack_unitvector(surface.facenormal);
+		surfel.position = surface.P;
+	}
 
 	surfelBuffer[surfel_index] = surfel;
 	surfelPayloadBuffer[surfel_index].color = pack_half4(float4(surfel_data.mean, /*saturate(surfel_data.life * 4)*/1));

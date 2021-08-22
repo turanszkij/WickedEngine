@@ -2961,10 +2961,7 @@ void RenderImpostors(
 		device->BindStencilRef(STENCILREF_DEFAULT, cmd);
 		device->BindPipelineState(pso, cmd);
 
-		MiscCB cb;
-		cb.g_xColor.x = (float)instances.offset;
-		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &cb, cmd);
-		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		device->PushConstants(&instances.offset, sizeof(uint), cmd);
 
 		device->BindResource(VS, instances.buffer, TEXSLOT_ONDEMAND21, cmd);
 		device->BindResource(PS, &vis.scene->impostorArray, TEXSLOT_ONDEMAND0, cmd);

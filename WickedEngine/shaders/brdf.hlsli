@@ -278,6 +278,9 @@ struct Surface
 	bool load(in PrimitiveID prim, in float2 barycentrics)
 	{
 		inst = InstanceBuffer[prim.instanceIndex];
+		if (inst.mesh.vb_pos_nor_wind < 0)
+			return false;
+
 		subset = bindless_subsets[NonUniformResourceIndex(inst.mesh.subsetbuffer)][prim.subsetIndex];
 		material = bindless_buffers[NonUniformResourceIndex(subset.material)].Load<ShaderMaterial>(0);
 		bary = barycentrics;
@@ -286,6 +289,24 @@ struct Surface
 		uint i0 = bindless_ib[NonUniformResourceIndex(inst.mesh.ib)][startIndex + 0];
 		uint i1 = bindless_ib[NonUniformResourceIndex(inst.mesh.ib)][startIndex + 1];
 		uint i2 = bindless_ib[NonUniformResourceIndex(inst.mesh.ib)][startIndex + 2];
+
+		uint4 data0 = bindless_buffers[NonUniformResourceIndex(inst.mesh.vb_pos_nor_wind)].Load4(i0 * 16);
+		uint4 data1 = bindless_buffers[NonUniformResourceIndex(inst.mesh.vb_pos_nor_wind)].Load4(i1 * 16);
+		uint4 data2 = bindless_buffers[NonUniformResourceIndex(inst.mesh.vb_pos_nor_wind)].Load4(i2 * 16);
+		float3 p0 = asfloat(data0.xyz);
+		float3 p1 = asfloat(data1.xyz);
+		float3 p2 = asfloat(data2.xyz);
+		float3 n0 = unpack_unitvector(data0.w);
+		float3 n1 = unpack_unitvector(data1.w);
+		float3 n2 = unpack_unitvector(data2.w);
+
+		float u = barycentrics.x;
+		float v = barycentrics.y;
+		float w = 1 - u - v;
+
+		P = p0 * w + p1 * u + p2 * v;
+		P = mul(inst.GetTransform(), float4(P, 1)).xyz;
+
 		float4 uv0 = 0, uv1 = 0, uv2 = 0;
 		[branch]
 		if (inst.mesh.vb_uv0 >= 0)
@@ -301,29 +322,6 @@ struct Surface
 			uv1.zw = unpack_half2(bindless_buffers[NonUniformResourceIndex(inst.mesh.vb_uv1)].Load(i1 * 4));
 			uv2.zw = unpack_half2(bindless_buffers[NonUniformResourceIndex(inst.mesh.vb_uv1)].Load(i2 * 4));
 		}
-		float3 p0 = 0, p1 = 0, p2 = 0;
-		float3 n0 = 0, n1 = 0, n2 = 0;
-		[branch]
-		if (inst.mesh.vb_pos_nor_wind >= 0)
-		{
-			uint4 data0 = bindless_buffers[NonUniformResourceIndex(inst.mesh.vb_pos_nor_wind)].Load4(i0 * 16);
-			uint4 data1 = bindless_buffers[NonUniformResourceIndex(inst.mesh.vb_pos_nor_wind)].Load4(i1 * 16);
-			uint4 data2 = bindless_buffers[NonUniformResourceIndex(inst.mesh.vb_pos_nor_wind)].Load4(i2 * 16);
-			p0 = asfloat(data0.xyz);
-			p1 = asfloat(data1.xyz);
-			p2 = asfloat(data2.xyz);
-			n0 = unpack_unitvector(data0.w);
-			n1 = unpack_unitvector(data1.w);
-			n2 = unpack_unitvector(data2.w);
-		}
-		else
-		{
-			return false; // error, this should always be good
-		}
-
-		float u = barycentrics.x;
-		float v = barycentrics.y;
-		float w = 1 - u - v;
 		float4 uvsets = uv0 * w + uv1 * u + uv2 * v;
 
 		float4 baseColor = material.baseColor;
@@ -392,13 +390,8 @@ struct Surface
 			occlusion *= bindless_textures[NonUniformResourceIndex(material.texture_occlusionmap_index)].SampleLevel(sampler_linear_wrap, UV_occlusionMap, 0).r;
 		}
 
-		float4x4 worldMatrix = inst.GetTransform();
-
-		P = p0 * w + p1 * u + p2 * v;
-		P = mul(worldMatrix, float4(P, 1)).xyz;
-
 		N = n0 * w + n1 * u + n2 * v;
-		N = mul((float3x3)worldMatrix, N);
+		N = mul((float3x3)inst.GetTransform(), N);
 		N = normalize(N);
 		facenormal = N;
 
@@ -412,7 +405,7 @@ struct Surface
 			t2 = unpack_utangent(bindless_buffers[NonUniformResourceIndex(inst.mesh.vb_tan)].Load(i2 * stride_TAN));
 			float4 T = t0 * w + t1 * u + t2 * v;
 			T = T * 2 - 1;
-			T.xyz = mul((float3x3)worldMatrix, T.xyz);
+			T.xyz = mul((float3x3)inst.GetTransform(), T.xyz);
 			T.xyz = normalize(T.xyz);
 			float3 B = normalize(cross(T.xyz, N) * T.w);
 			float3x3 TBN = float3x3(T.xyz, B, N);
@@ -432,9 +425,7 @@ struct Surface
 			p2 = asfloat(bindless_buffers[inst.mesh.vb_pre].Load3(i2 * 16));
 		}
 		pre = p0 * w + p1 * u + p2 * v;
-
-		float4x4 worldMatrixPrev = inst.GetTransformPrev();
-		pre = mul(worldMatrixPrev, float4(pre, 1)).xyz;
+		pre = mul(inst.GetTransformPrev(), float4(pre, 1)).xyz;
 
 		return true;
 	}
@@ -442,6 +433,9 @@ struct Surface
 	bool load(in PrimitiveID prim, in float3 P)
 	{
 		inst = InstanceBuffer[prim.instanceIndex];
+		if (inst.mesh.vb_pos_nor_wind < 0)
+			return false;
+
 		subset = bindless_subsets[NonUniformResourceIndex(inst.mesh.subsetbuffer)][prim.subsetIndex];
 		material = bindless_buffers[NonUniformResourceIndex(subset.material)].Load<ShaderMaterial>(0);
 
@@ -453,13 +447,12 @@ struct Surface
 		uint4 data0 = bindless_buffers[NonUniformResourceIndex(inst.mesh.vb_pos_nor_wind)].Load4(i0 * 16);
 		uint4 data1 = bindless_buffers[NonUniformResourceIndex(inst.mesh.vb_pos_nor_wind)].Load4(i1 * 16);
 		uint4 data2 = bindless_buffers[NonUniformResourceIndex(inst.mesh.vb_pos_nor_wind)].Load4(i2 * 16);
-		float4x4 worldMatrix = inst.GetTransform();
 		float3 p0 = asfloat(data0.xyz);
 		float3 p1 = asfloat(data1.xyz);
 		float3 p2 = asfloat(data2.xyz);
-		float3 P0 = mul(worldMatrix, float4(p0, 1)).xyz;
-		float3 P1 = mul(worldMatrix, float4(p1, 1)).xyz;
-		float3 P2 = mul(worldMatrix, float4(p2, 1)).xyz;
+		float3 P0 = mul(inst.GetTransform(), float4(p0, 1)).xyz;
+		float3 P1 = mul(inst.GetTransform(), float4(p1, 1)).xyz;
+		float3 P2 = mul(inst.GetTransform(), float4(p2, 1)).xyz;
 
 		float2 barycentrics = compute_barycentrics(P, P0, P1, P2);
 

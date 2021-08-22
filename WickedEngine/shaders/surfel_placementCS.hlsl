@@ -49,22 +49,21 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		prim.unpack(primitiveID);
 
 		Surface surface;
-		surface.load(prim, P);
-
-
-		uint surfel_alloc;
-		surfelStatsBuffer.InterlockedAdd(SURFEL_STATS_OFFSET_COUNT, 1, surfel_alloc);
-		if (surfel_alloc < SURFEL_CAPACITY)
+		if (surface.load(prim, P))
 		{
-			SurfelData surfel_data = (SurfelData)0;
-			surfel_data.primitiveID = primitiveID;
-			surfel_data.bary = surface.bary.xy;
-			surfel_data.inconsistency = 1;
-			surfelDataBuffer[surfel_alloc] = surfel_data;
+			uint surfel_alloc;
+			surfelStatsBuffer.InterlockedAdd(SURFEL_STATS_OFFSET_COUNT, 1, surfel_alloc);
+			if (surfel_alloc < SURFEL_CAPACITY)
+			{
+				SurfelData surfel_data = (SurfelData)0;
+				surfel_data.primitiveID = primitiveID;
+				surfel_data.bary = surface.bary.xy;
+				surfel_data.inconsistency = 1;
+				surfelDataBuffer[surfel_alloc] = surfel_data;
 
-			surfelIndexBuffer[surfel_alloc] = surfel_alloc;
+				surfelIndexBuffer[surfel_alloc] = surfel_alloc;
+			}
 		}
-
 
 	}
 }

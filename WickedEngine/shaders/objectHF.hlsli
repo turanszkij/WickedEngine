@@ -222,28 +222,15 @@ struct VertexInput
 
 	float4 GetTangent()
 	{
+		[branch]
+		if (GetMesh().vb_tan < 0)
+			return 0;
 		return unpack_utangent(bindless_buffers[GetMesh().vb_tan].Load<uint>(vertexID * 4)) * 2 - 1;
 	}
 
 	ShaderMeshInstance GetInstance()
 	{
 		return InstanceBuffer[GetInstancePointer().instanceID];
-	}
-	float4x4 GetInstanceMatrix()
-	{
-		return GetInstance().GetTransform();
-	}
-	uint GetInstanceUserdata()
-	{
-		return GetInstancePointer().userdata;
-	}
-	float4x4 GetInstanceMatrixPrev()
-	{
-		return GetInstance().GetTransformPrev();
-	}
-	float4 GetInstanceAtlas()
-	{
-		return GetInstance().atlasMulAdd;
 	}
 };
 
@@ -260,7 +247,7 @@ struct VertexSurface
 
 	inline void create(in ShaderMaterial material, in VertexInput input)
 	{
-		uint userdata = input.GetInstanceUserdata();
+		uint userdata = input.GetInstancePointer().userdata;
 		position = input.GetPosition();
 		color = material.baseColor * unpack_rgba(input.GetInstance().color);
 		color.a *= 1 - input.GetInstancePointer().GetDither();
@@ -271,17 +258,17 @@ struct VertexSurface
 			color *= input.GetVertexColor();
 		}
 		
-		normal = normalize(mul((float3x3)input.GetInstanceMatrix(), input.GetNormal()));
+		normal = normalize(mul((float3x3)input.GetInstance().GetTransform(), input.GetNormal()));
 
 		tangent = input.GetTangent();
-		tangent.xyz = normalize(mul((float3x3)input.GetInstanceMatrix(), tangent.xyz));
+		tangent.xyz = normalize(mul((float3x3)input.GetInstance().GetTransform(), tangent.xyz));
 
 		uvsets = float4(input.GetUV0() * material.texMulAdd.xy + material.texMulAdd.zw, input.GetUV1());
 
-		float4 atlasMulAdd = input.GetInstanceAtlas();
+		float4 atlasMulAdd = input.GetInstance().atlasMulAdd;
 		atlas = input.GetAtlasUV() * atlasMulAdd.xy + atlasMulAdd.zw;
 
-		position = mul(input.GetInstanceMatrix(), position);
+		position = mul(input.GetInstance().GetTransform(), position);
 
 
 #ifdef OBJECTSHADER_USE_WIND
