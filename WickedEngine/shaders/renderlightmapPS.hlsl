@@ -249,11 +249,7 @@ float4 main(Input input) : SV_TARGET
 		// ray origin updated for next bounce:
 		ray.Origin = ray.Origin + ray.Direction * hit.distance;
 
-		EvaluateObjectSurface(
-			hit,
-			material,
-			surface
-		);
+		surface.load(hit.primitiveID, hit.bary);
 
 #endif // RTAPI
 

@@ -20,18 +20,8 @@ private:
 	wiGraphics::GPUBuffer primitiveCounterBuffer;
 	wiGraphics::GPUBuffer primitiveIDBuffer;
 	wiGraphics::GPUBuffer primitiveBuffer;
-	wiGraphics::GPUBuffer primitiveDataBuffer;
 	wiGraphics::GPUBuffer primitiveMortonBuffer;
 	uint32_t primitiveCapacity = 0;
-
-	// Scene material resources:
-	wiGraphics::GPUBuffer globalMaterialBuffer;
-	wiGraphics::Texture globalMaterialAtlas;
-	std::vector<ShaderMaterial> materialArray;
-	std::unordered_map<std::shared_ptr<wiResource>, wiRectPacker::rect_xywh> storedTextures;
-	std::unordered_set<std::shared_ptr<wiResource>> sceneTextures;
-	bool repackAtlas = false;
-	void UpdateGlobalMaterialResources(const wiScene::Scene& scene);
 
 public:
 	void Update(const wiScene::Scene& scene);

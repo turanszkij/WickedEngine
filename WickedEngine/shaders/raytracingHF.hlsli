@@ -47,18 +47,15 @@ RAYTRACINGACCELERATIONSTRUCTURE(scene_acceleration_structure, TEXSLOT_ACCELERATI
 groupshared uint stack[RAYTRACE_STACKSIZE][RAYTRACING_LAUNCH_BLOCKSIZE * RAYTRACING_LAUNCH_BLOCKSIZE];
 #endif // RAYTRACE_STACK_SHARED
 
-STRUCTUREDBUFFER(materialBuffer, ShaderMaterial, TEXSLOT_ONDEMAND0);
-TEXTURE2D(materialTextureAtlas, float4, TEXSLOT_ONDEMAND1);
-RAWBUFFER(primitiveCounterBuffer, TEXSLOT_ONDEMAND2);
-STRUCTUREDBUFFER(primitiveBuffer, BVHPrimitive, TEXSLOT_ONDEMAND3);
-STRUCTUREDBUFFER(primitiveDataBuffer, BVHPrimitiveData, TEXSLOT_ONDEMAND4);
-STRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, TEXSLOT_ONDEMAND5);
+RAWBUFFER(primitiveCounterBuffer, TEXSLOT_ONDEMAND0);
+STRUCTUREDBUFFER(primitiveBuffer, BVHPrimitive, TEXSLOT_ONDEMAND1);
+STRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, TEXSLOT_ONDEMAND2);
 
 struct RayHit
 {
 	float2 bary;
 	float distance;
-	uint primitiveID;
+	PrimitiveID primitiveID;
 };
 
 inline RayHit CreateRayHit()
@@ -66,118 +63,14 @@ inline RayHit CreateRayHit()
 	RayHit hit;
 	hit.bary = 0;
 	hit.distance = FLT_MAX;
-	hit.primitiveID = ~0u;
 	return hit;
 }
 
-struct TriangleData
-{
-	float3 n0, n1, n2;	// normals
-	float4 u0, u1, u2;	// uv sets
-	float4 c0, c1, c2;	// vertex colors
-	float3 tangent;
-	float3 binormal;
-	uint materialIndex;
-};
-inline TriangleData TriangleData_Unpack(in BVHPrimitive prim, in BVHPrimitiveData primdata)
-{
-	TriangleData tri;
-
-	tri.n0 = unpack_unitvector(prim.n0);
-	tri.n1 = unpack_unitvector(prim.n1);
-	tri.n2 = unpack_unitvector(prim.n2);
-
-	tri.u0 = unpack_half4(primdata.u0);
-	tri.u1 = unpack_half4(primdata.u1);
-	tri.u2 = unpack_half4(primdata.u2);
-
-	tri.c0 = unpack_rgba(primdata.c0);
-	tri.c1 = unpack_rgba(primdata.c1);
-	tri.c2 = unpack_rgba(primdata.c2);
-
-	tri.tangent = unpack_unitvector(primdata.tangent);
-	tri.binormal = unpack_unitvector(primdata.binormal);
-
-	tri.materialIndex = primdata.materialIndex;
-
-	return tri;
-}
-
-void EvaluateObjectSurface(
-	in RayHit hit,
-	out ShaderMaterial material,
-	out Surface surface
-)
-{
-	surface = (Surface)0; // otherwise it won't let "out" parameter
-
-	TriangleData tri = TriangleData_Unpack(primitiveBuffer[hit.primitiveID], primitiveDataBuffer[hit.primitiveID]);
-
-	float u = hit.bary.x;
-	float v = hit.bary.y;
-	float w = 1 - u - v;
-
-	float4 uvsets = tri.u0 * w + tri.u1 * u + tri.u2 * v;
-	float4 color = tri.c0 * w + tri.c1 * u + tri.c2 * v;
-	uint materialIndex = tri.materialIndex;
-
-	material = materialBuffer[materialIndex];
-
-	uvsets = frac(uvsets); // emulate wrap
-
-	float4 baseColor = material.baseColor * color;
-	[branch]
-	if (material.uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
-	{
-		const float2 UV_baseColorMap = material.uvset_baseColorMap == 0 ? uvsets.xy : uvsets.zw;
-		float4 baseColorMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV_baseColorMap * material.baseColorAtlasMulAdd.xy + material.baseColorAtlasMulAdd.zw, 0);
-		baseColorMap.rgb = DEGAMMA(baseColorMap.rgb);
-		baseColor *= baseColorMap;
-	}
-
-	float4 surfaceMap = 1;
-	[branch]
-	if (material.uvset_surfaceMap >= 0)
-	{
-		const float2 UV_surfaceMap = material.uvset_surfaceMap == 0 ? uvsets.xy : uvsets.zw;
-		surfaceMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV_surfaceMap * material.surfaceMapAtlasMulAdd.xy + material.surfaceMapAtlasMulAdd.zw, 0);
-	}
-
-	surface.create(material, baseColor, surfaceMap);
-
-	surface.emissiveColor = material.emissiveColor;
-	[branch]
-	if (surface.emissiveColor.a > 0 && material.uvset_emissiveMap >= 0)
-	{
-		const float2 UV_emissiveMap = material.uvset_emissiveMap == 0 ? uvsets.xy : uvsets.zw;
-		float4 emissiveMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV_emissiveMap * material.emissiveMapAtlasMulAdd.xy + material.emissiveMapAtlasMulAdd.zw, 0);
-		emissiveMap.rgb = DEGAMMA(emissiveMap.rgb);
-		surface.emissiveColor *= emissiveMap;
-	}
-
-	surface.transmission = material.transmission;
-
-	surface.N = normalize(tri.n0 * w + tri.n1 * u + tri.n2 * v);
-	surface.facenormal = surface.N;
-
-	[branch]
-	if (material.uvset_normalMap >= 0)
-	{
-		const float2 UV_normalMap = material.uvset_normalMap == 0 ? uvsets.xy : uvsets.zw;
-		float3 normalMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV_normalMap * material.normalMapAtlasMulAdd.xy + material.normalMapAtlasMulAdd.zw, 0).rgb;
-		normalMap.b = normalMap.b == 0 ? 1 : normalMap.b; // fix for missing blue channel
-		normalMap = normalMap.rgb * 2 - 1;
-		const float3x3 TBN = float3x3(tri.tangent, tri.binormal, surface.N);
-		surface.N = normalize(lerp(surface.N, mul(normalMap, TBN), material.normalMapStrength));
-	}
-
-}
 
 inline void IntersectTriangle(
 	in RayDesc ray,
 	inout RayHit bestHit,
-	in BVHPrimitive prim,
-	uint primitiveID
+	in BVHPrimitive prim
 )
 {
 	float3 v0v1 = prim.v1() - prim.v0();
@@ -185,16 +78,13 @@ inline void IntersectTriangle(
 	float3 pvec = cross(ray.Direction, v0v2);
 	float det = dot(v0v1, pvec);
 #ifdef RAY_BACKFACE_CULLING 
-	// if the determinant is negative the triangle is backfacing
-	// if the determinant is close to 0, the ray misses the triangle
-	if (det < 0.000001)
+	if (det > 0.000001)
 		return;
 #else 
-	// ray and triangle are parallel if det is close to 0
 	if (abs(det) < 0.000001)
 		return;
 #endif 
-	float invDet = 1 / det;
+	float invDet = rcp(det);
 
 	float3 tvec = ray.Origin - prim.v0();
 	float u = dot(tvec, pvec) * invDet;
@@ -211,15 +101,14 @@ inline void IntersectTriangle(
 	if (t >= ray.TMin && t <= bestHit.distance)
 	{
 		bestHit.distance = t;
-		bestHit.primitiveID = primitiveID;
+		bestHit.primitiveID = prim.primitiveID();
 		bestHit.bary = float2(u, v);
 	}
 }
 
 inline bool IntersectTriangleANY(
 	in RayDesc ray,
-	in BVHPrimitive prim,
-	uint primitiveID
+	in BVHPrimitive prim
 )
 {
 	float3 v0v1 = prim.v1() - prim.v0();
@@ -229,7 +118,7 @@ inline bool IntersectTriangleANY(
 	// ray and triangle are parallel if det is close to 0
 	if (abs(det) < 0.000001)
 		return false;
-	float invDet = 1 / det;
+	float invDet = rcp(det);
 
 	float3 tvec = ray.Origin - prim.v0();
 	float u = dot(tvec, pvec) * invDet;
@@ -247,34 +136,15 @@ inline bool IntersectTriangleANY(
 	{
 		RayHit hit;
 		hit.distance = t;
-		hit.primitiveID = primitiveID;
+		hit.primitiveID = prim.primitiveID();
 		hit.bary = float2(u, v);
 
-		TriangleData tri = TriangleData_Unpack(prim, primitiveDataBuffer[hit.primitiveID]);
-
-		float u = hit.bary.x;
-		float v = hit.bary.y;
-		float w = 1 - u - v;
-
-		float4 uvsets = tri.u0 * w + tri.u1 * u + tri.u2 * v;
-		float4 color = tri.c0 * w + tri.c1 * u + tri.c2 * v;
-		uint materialIndex = tri.materialIndex;
-
-		ShaderMaterial material = materialBuffer[materialIndex];
-
-		uvsets = frac(uvsets); // emulate wrap
-
-		float4 baseColor = material.baseColor * color;
-		[branch]
-		if (material.uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+		Surface surface;
+		if (surface.load(prim.primitiveID(), float2(u, v)))
 		{
-			const float2 UV_baseColorMap = material.uvset_baseColorMap == 0 ? uvsets.xy : uvsets.zw;
-			float4 baseColorMap = materialTextureAtlas.SampleLevel(sampler_linear_clamp, UV_baseColorMap * material.baseColorAtlasMulAdd.xy + material.baseColorAtlasMulAdd.zw, 0);
-			baseColorMap.rgb = DEGAMMA(baseColorMap.rgb);
-			baseColor *= baseColorMap;
+			return surface.opacity > surface.material.alphaTest;
 		}
-
-		return baseColor.a > material.alphaTest;
+		return true;
 	}
 
 	return false;
@@ -357,7 +227,7 @@ inline RayHit TraceRay_Closest(RayDesc ray, uint groupIndex = 0)
 				// Leaf node
 				const uint primitiveID = node.LeftChildIndex;
 				const BVHPrimitive prim = primitiveBuffer[primitiveID];
-				IntersectTriangle(ray, bestHit, prim, primitiveID);
+				IntersectTriangle(ray, bestHit, prim);
 			}
 			else
 			{
@@ -417,7 +287,7 @@ inline bool TraceRay_Any(RayDesc ray, uint groupIndex = 0)
 				const uint primitiveID = node.LeftChildIndex;
 				const BVHPrimitive prim = primitiveBuffer[primitiveID];
 
-				if (IntersectTriangleANY(ray, prim, primitiveID))
+				if (IntersectTriangleANY(ray, prim))
 				{
 					shadow = true;
 					break;
