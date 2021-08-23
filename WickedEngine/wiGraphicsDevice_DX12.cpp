@@ -2679,14 +2679,9 @@ using namespace DX12_Internal;
 		}
 
 		hr = device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &features_5, sizeof(features_5));
-		if (features_5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_0)
+		if (features_5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_1)
 		{
-			capabilities |= GRAPHICSDEVICE_CAPABILITY_RAYTRACING_PIPELINE;
-			if (features_5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_1)
-			{
-				capabilities |= GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE;
-				capabilities |= GRAPHICSDEVICE_CAPABILITY_RAYTRACING_GEOMETRYINDEX;
-			}
+			capabilities |= GRAPHICSDEVICE_CAPABILITY_RAYTRACING;
 		}
 
 		hr = device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS6, &features_6, sizeof(features_6));
@@ -2842,7 +2837,7 @@ using namespace DX12_Internal;
 			nullSRV_texture3d = allocationhandler->descriptors_res.allocate();
 			device->CreateShaderResourceView(nullptr, &srv_desc, nullSRV_texture3d);
 		}
-		if(CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_PIPELINE) || CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
+		if(CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		{
 			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
 			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;

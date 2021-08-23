@@ -505,7 +505,7 @@ void RenderPath3D::ResizeBuffers()
 	wiRenderer::CreateBloomResources(bloomResources, internalResolution);
 	wiRenderer::CreateSurfelGIResources(surfelGIResources, internalResolution);
 
-	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
+	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 	{
 		wiRenderer::CreateRTShadowResources(rtshadowResources, internalResolution);
 	}
