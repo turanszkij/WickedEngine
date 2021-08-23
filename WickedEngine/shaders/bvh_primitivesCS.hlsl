@@ -23,7 +23,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	prim.instanceIndex = push.instanceIndex;
 	prim.subsetIndex = push.subsetIndex;
 
-	ShaderMeshInstance inst = InstanceBuffer[prim.instanceIndex];
+	ShaderMeshInstance inst = InstanceArray[prim.instanceIndex];
 	ShaderMeshSubset subset = bindless_subsets[inst.mesh.subsetbuffer][prim.subsetIndex];
 	ShaderMaterial material = bindless_buffers[subset.material].Load<ShaderMaterial>(0);
 

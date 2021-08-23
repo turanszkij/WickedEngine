@@ -23,13 +23,13 @@ TEXTURE2DARRAY(texture_shadowarray_2d, float, TEXSLOT_SHADOWARRAY_2D);
 TEXTURECUBEARRAY(texture_shadowarray_cube, float, TEXSLOT_SHADOWARRAY_CUBE);
 TEXTURE2DARRAY(texture_shadowarray_transparent_2d, float4, TEXSLOT_SHADOWARRAY_TRANSPARENT_2D);
 TEXTURECUBEARRAY(texture_shadowarray_transparent_cube, float4, TEXSLOT_SHADOWARRAY_TRANSPARENT_CUBE);
-TEXTURE3D(texture_voxelradiance, float4, TEXSLOT_VOXELRADIANCE);
+TEXTURE3D(texture_voxelgi, float4, TEXSLOT_VOXELGI);
 TEXTURE2D(texture_sheenlut, float, TEXSLOT_SHEENLUT);
 TEXTURE2D(texture_bluenoise, float4, TEXSLOT_BLUENOISE);
 TEXTURE2D(texture_random64x64, float4, TEXSLOT_RANDOM64X64);
 STRUCTUREDBUFFER(EntityArray, ShaderEntity, SBSLOT_ENTITYARRAY);
 STRUCTUREDBUFFER(MatrixArray, float4x4, SBSLOT_MATRIXARRAY);
-STRUCTUREDBUFFER(InstanceBuffer, ShaderMeshInstance, TEXSLOT_INSTANCEBUFFER);
+STRUCTUREDBUFFER(InstanceArray, ShaderMeshInstance, SBSLOT_INSTANCEARRAY);
 
 SAMPLERSTATE(			sampler_linear_clamp,	SSLOT_LINEAR_CLAMP	);
 SAMPLERSTATE(			sampler_linear_wrap,	SSLOT_LINEAR_WRAP	);

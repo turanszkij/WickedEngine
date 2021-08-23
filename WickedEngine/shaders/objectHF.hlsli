@@ -231,7 +231,7 @@ struct VertexInput
 
 	ShaderMeshInstance GetInstance()
 	{
-		return InstanceBuffer[GetInstancePointer().instanceID];
+		return InstanceArray[GetInstancePointer().instanceID];
 	}
 };
 
@@ -1591,7 +1591,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 
 
 #ifdef OBJECTSHADER_USE_ATLAS
-	LightMapping(InstanceBuffer[input.instanceID].lightmap, input.atl, lighting);
+	LightMapping(InstanceArray[input.instanceID].lightmap, input.atl, lighting);
 #endif // OBJECTSHADER_USE_ATLAS
 
 

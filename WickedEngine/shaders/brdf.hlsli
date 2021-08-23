@@ -284,7 +284,7 @@ struct Surface
 
 	bool load(in PrimitiveID prim, in float2 barycentrics, in uint uid = 0)
 	{
-		inst = InstanceBuffer[prim.instanceIndex];
+		inst = InstanceArray[prim.instanceIndex];
 		if ((uid != 0 && inst.uid != uid) || inst.mesh.vb_pos_nor_wind < 0)
 			return false;
 
@@ -440,7 +440,7 @@ struct Surface
 
 	bool load(in PrimitiveID prim, in float3 P, in uint uid = 0)
 	{
-		inst = InstanceBuffer[prim.instanceIndex];
+		inst = InstanceArray[prim.instanceIndex];
 		if ((uid != 0 && inst.uid != uid) || inst.mesh.vb_pos_nor_wind < 0)
 			return false;
 

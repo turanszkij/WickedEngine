@@ -4706,7 +4706,7 @@ void DrawShadowmaps(
 		BindConstantBuffers(VS, cmd);
 		BindConstantBuffers(PS, cmd);
 
-		device->BindResource(VS, &vis.scene->instanceBuffer, TEXSLOT_INSTANCEBUFFER, cmd);
+		device->BindResource(VS, &vis.scene->instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 		BoundingFrustum cam_frustum;
 		BoundingFrustum::CreateFromMatrix(cam_frustum, vis.camera->GetProjection());
@@ -4986,17 +4986,17 @@ void DrawScene(
 	BindConstantBuffers(VS, cmd);
 	BindConstantBuffers(PS, cmd);
 
-	device->BindResource(VS, &vis.scene->instanceBuffer, TEXSLOT_INSTANCEBUFFER, cmd);
-	device->BindResource(GS, &vis.scene->instanceBuffer, TEXSLOT_INSTANCEBUFFER, cmd);
-	device->BindResource(DS, &vis.scene->instanceBuffer, TEXSLOT_INSTANCEBUFFER, cmd);
-	device->BindResource(PS, &vis.scene->instanceBuffer, TEXSLOT_INSTANCEBUFFER, cmd);
+	device->BindResource(VS, &vis.scene->instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
+	device->BindResource(GS, &vis.scene->instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
+	device->BindResource(DS, &vis.scene->instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
+	device->BindResource(PS, &vis.scene->instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 	device->BindResource(PS, &vis.scene->envmapArray, TEXSLOT_ENVMAPARRAY, cmd);
 	device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
 	device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
 	device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
 	device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], TEXSLOT_SKYLUMINANCELUT, cmd);
-	device->BindResource(PS, GetVoxelRadianceSecondaryBounceEnabled() ? &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] : &textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELRADIANCE, cmd);
+	device->BindResource(PS, GetVoxelRadianceSecondaryBounceEnabled() ? &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] : &textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELGI, cmd);
 
 	if (vis.scene->weather.skyMap != nullptr)
 	{
@@ -5939,7 +5939,7 @@ void DrawDebugWorld(
 
 		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_VOXEL], cmd);
 
-		device->BindResource(VS, GetVoxelRadianceSecondaryBounceEnabled() ? &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] : &textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELRADIANCE, cmd);
+		device->BindResource(VS, GetVoxelRadianceSecondaryBounceEnabled() ? &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] : &textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELGI, cmd);
 
 
 		MiscCB sb;
@@ -6444,7 +6444,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
 		device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], TEXSLOT_SKYLUMINANCELUT, cmd);
 
-		device->BindResource(VS, &vis.scene->instanceBuffer, TEXSLOT_INSTANCEBUFFER, cmd);
+		device->BindResource(VS, &vis.scene->instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 		device->RenderPassBegin(&vis.scene->renderpasses_envmap[probe.textureIndex], cmd);
 
@@ -6615,8 +6615,8 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 	);
 	inst.color = 0xFFFFFFFF;
 	device->UpdateBuffer(&resourceBuffers[RBTYPE_IMPOSTORREFRESH], &inst, cmd, sizeof(inst));
-	device->BindResource(VS, &resourceBuffers[RBTYPE_IMPOSTORREFRESH], TEXSLOT_INSTANCEBUFFER, cmd);
-	device->BindResource(PS, &resourceBuffers[RBTYPE_IMPOSTORREFRESH], TEXSLOT_INSTANCEBUFFER, cmd);
+	device->BindResource(VS, &resourceBuffers[RBTYPE_IMPOSTORREFRESH], SBSLOT_INSTANCEARRAY, cmd);
+	device->BindResource(PS, &resourceBuffers[RBTYPE_IMPOSTORREFRESH], SBSLOT_INSTANCEARRAY, cmd);
 
 	GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(ShaderMeshInstance), cmd);
 	volatile ShaderMeshInstance* buff = (volatile ShaderMeshInstance*)mem.data;
@@ -6766,6 +6766,8 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 
 		BindCommonResources(cmd);
 		BindShadowmaps(PS, cmd);
+
+		device->BindResource(PS, &vis.scene->instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 		device->RenderPassBegin(&renderpass_voxelize, cmd);
 		RenderMeshes(vis, renderQueue, RENDERPASS_VOXELIZE, RENDERTYPE_OPAQUE, cmd, false, nullptr, 1);
@@ -7416,7 +7418,7 @@ void RayTraceScene(
 		device->BindResource(CS, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
 	}
 
-	device->BindResource(CS, &scene.instanceBuffer, TEXSLOT_INSTANCEBUFFER, cmd);
+	device->BindResource(CS, &scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 	const XMFLOAT4& halton = wiMath::GetHaltonSequence(accumulation_sample);
 	RaytracingCB cb;
@@ -7496,7 +7498,7 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 		{
 			scene.BVH.Bind(PS, cmd);
 		}
-		device->BindResource(CS, &scene.instanceBuffer, TEXSLOT_INSTANCEBUFFER, cmd);
+		device->BindResource(CS, &scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 		// Render lightmaps for each object:
 		for (uint32_t i = 0; i < scene.objects.GetCount(); ++i)
@@ -7860,7 +7862,7 @@ void VisibilityResolve(
 
 	device->BindComputeShader(&shaders[msaa ? CSTYPE_VISIBILITY_RESOLVE_MSAA : CSTYPE_VISIBILITY_RESOLVE], cmd);
 
-	device->BindResource(CS, &scene.instanceBuffer, TEXSLOT_INSTANCEBUFFER, cmd);
+	device->BindResource(CS, &scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 	device->BindResource(CS, &texture_primitiveID, TEXSLOT_ONDEMAND0, cmd);
 	device->BindResource(CS, &depthbuffer, TEXSLOT_ONDEMAND1, cmd);
@@ -7953,7 +7955,7 @@ void SurfelGI(
 	device->EventBegin("SurfelGI", cmd);
 	auto prof_range = wiProfiler::BeginRangeGPU("SurfelGI", cmd);
 
-	device->BindResource(CS, &scene.instanceBuffer, TEXSLOT_INSTANCEBUFFER, cmd);
+	device->BindResource(CS, &scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 	// Update:
 	{
@@ -9267,7 +9269,7 @@ void Postprocess_RTAO(
 
 	device->BindResource(CS, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
 	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
-	device->BindResource(CS, &scene.instanceBuffer, TEXSLOT_INSTANCEBUFFER, cmd);
+	device->BindResource(CS, &scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
@@ -9532,13 +9534,13 @@ void Postprocess_RTReflection(
 	device->BindResource(LIB, &depthbuffer, TEXSLOT_DEPTH, cmd);
 	device->BindResource(LIB, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
 	device->BindResource(LIB, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
-	device->BindResource(LIB, &scene.instanceBuffer, TEXSLOT_INSTANCEBUFFER, cmd);
+	device->BindResource(LIB, &scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 	device->BindResource(LIB, &depth_history, TEXSLOT_ONDEMAND2, cmd);
 
 	device->BindResource(LIB, &resourceBuffers[RBTYPE_ENTITYARRAY], SBSLOT_ENTITYARRAY, cmd);
 	device->BindResource(LIB, &resourceBuffers[RBTYPE_MATRIXARRAY], SBSLOT_MATRIXARRAY, cmd);
-	device->BindResource(LIB, GetVoxelRadianceSecondaryBounceEnabled() ? &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] : &textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELRADIANCE, cmd);
+	device->BindResource(LIB, GetVoxelRadianceSecondaryBounceEnabled() ? &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] : &textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELGI, cmd);
 	device->BindResource(LIB, &scene.envmapArray, TEXSLOT_ENVMAPARRAY, cmd);
 	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
 	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
@@ -10016,7 +10018,7 @@ void Postprocess_RTShadow(
 
 	device->BindResource(CS, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
 	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
-	device->BindResource(CS, &scene.instanceBuffer, TEXSLOT_INSTANCEBUFFER, cmd);
+	device->BindResource(CS, &scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 	const GPUResource* uavs[] = {
 		&res.temp,
@@ -10366,7 +10368,7 @@ void Postprocess_ScreenSpaceShadow(
 
 	device->BindResource(CS, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
 	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
-	device->BindResource(CS, &scene.instanceBuffer, TEXSLOT_INSTANCEBUFFER, cmd);
+	device->BindResource(CS, &scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 	const GPUResource* uavs[] = {
 		&output,

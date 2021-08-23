@@ -143,7 +143,7 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
 
 	uint32_t primitiveCount = 0;
 
-	device->BindResource(CS, &scene.instanceBuffer, TEXSLOT_INSTANCEBUFFER, cmd);
+	device->BindResource(CS, &scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 	device->EventBegin("BVH - Primitive Builder", cmd);
 	{

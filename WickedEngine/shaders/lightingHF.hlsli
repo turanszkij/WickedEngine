@@ -449,7 +449,7 @@ inline void VoxelGI(in Surface surface, inout Lighting lighting)
 
 		// diffuse:
 		{
-			float4 trace = ConeTraceDiffuse(texture_voxelradiance, surface.P, surface.N);
+			float4 trace = ConeTraceDiffuse(texture_voxelgi, surface.P, surface.N);
 			lighting.indirect.diffuse = lerp(lighting.indirect.diffuse, trace.rgb, trace.a * blend);
 		}
 
@@ -457,7 +457,7 @@ inline void VoxelGI(in Surface surface, inout Lighting lighting)
 		[branch]
 		if (g_xFrame_Options & OPTION_BIT_VOXELGI_REFLECTIONS_ENABLED)
 		{
-			float4 trace = ConeTraceSpecular(texture_voxelradiance, surface.P, surface.N, surface.V, surface.roughness);
+			float4 trace = ConeTraceSpecular(texture_voxelgi, surface.P, surface.N, surface.V, surface.roughness);
 			lighting.indirect.specular = lerp(lighting.indirect.specular, trace.rgb * surface.F, trace.a * blend);
 		}
 	}
