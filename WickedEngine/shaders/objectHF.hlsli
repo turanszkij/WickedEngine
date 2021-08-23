@@ -158,6 +158,7 @@ TEXTURE2D(texture_surfelgi, float3, TEXSLOT_SURFELGI);
 #define OBJECTSHADER_USE_TANGENT
 #define OBJECTSHADER_USE_POSITION3D
 #define OBJECTSHADER_USE_EMISSIVE
+#define OBJECTSHADER_USE_VISIBILITY
 #endif // OBJECTSHADER_LAYOUT_COMMON
 
 struct VertexInput
@@ -265,8 +266,7 @@ struct VertexSurface
 
 		uvsets = float4(input.GetUV0() * material.texMulAdd.xy + material.texMulAdd.zw, input.GetUV1());
 
-		float4 atlasMulAdd = input.GetInstance().atlasMulAdd;
-		atlas = input.GetAtlasUV() * atlasMulAdd.xy + atlasMulAdd.zw;
+		atlas = input.GetAtlasUV();
 
 		position = mul(input.GetInstance().GetTransform(), position);
 
@@ -346,15 +346,16 @@ inline void ApplyEmissive(in Surface surface, inout Lighting lighting)
 	lighting.direct.specular += surface.emissiveColor.rgb * surface.emissiveColor.a;
 }
 
-inline void LightMapping(in float2 ATLAS, inout Lighting lighting)
+inline void LightMapping(in int lightmap, in float2 ATLAS, inout Lighting lighting)
 {
 	[branch]
-	if (any(ATLAS))
+	if (lightmap >= 0 && any(ATLAS))
 	{
+		Texture2D<float4> texture_lightmap = bindless_textures[NonUniformResourceIndex(lightmap)];
 #ifdef LIGHTMAP_QUALITY_BICUBIC
-		lighting.indirect.diffuse = SampleTextureCatmullRom(texture_globallightmap, sampler_linear_clamp, ATLAS).rgb;
+		lighting.indirect.diffuse = SampleTextureCatmullRom(texture_lightmap, sampler_linear_clamp, ATLAS).rgb;
 #else
-		lighting.indirect.diffuse = texture_globallightmap.SampleLevel(sampler_linear_clamp, ATLAS, 0).rgb;
+		lighting.indirect.diffuse = texture_lightmap.SampleLevel(sampler_linear_clamp, ATLAS, 0).rgb;
 #endif // LIGHTMAP_QUALITY_BICUBIC
 	}
 }
@@ -1590,7 +1591,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 
 
 #ifdef OBJECTSHADER_USE_ATLAS
-	LightMapping(input.atl, lighting);
+	LightMapping(InstanceBuffer[input.instanceID].lightmap, input.atl, lighting);
 #endif // OBJECTSHADER_USE_ATLAS
 
 

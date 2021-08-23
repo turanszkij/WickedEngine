@@ -1336,20 +1336,7 @@ namespace wiScene
 		wiGraphics::Texture impostorArray;
 		std::vector<wiGraphics::RenderPass> renderpasses_impostor;
 
-		// Atlas packing border size in pixels:
-		static constexpr int atlasClampBorder = 1;
-
-		// Lightmap atlas state:
-		wiGraphics::Texture lightmap;
-		std::vector<wiRectPacker::rect_xywh*> lightmap_rects;
-		std::atomic<uint32_t> lightmap_rect_allocator{ 0 };
-		mutable std::atomic_bool lightmap_repack_needed{ false };
 		mutable std::atomic_bool lightmap_refresh_needed{ false };
-
-		// Decal atlas state:
-		wiGraphics::Texture decalAtlas;
-		mutable bool decal_repack_needed{ false };
-		std::unordered_map<std::shared_ptr<wiResource>, wiRectPacker::rect_xywh> packedDecals;
 
 		// Ocean GPU state:
 		wiOcean ocean;

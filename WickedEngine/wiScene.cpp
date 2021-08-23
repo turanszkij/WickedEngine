@@ -1551,6 +1551,11 @@ namespace wiScene
 			bounds = AABB::Merge(bounds, group_bound);
 		}
 
+		if (lightmap_refresh_needed.load())
+		{
+			SetAccelerationStructureUpdateRequested(true);
+		}
+
 		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		{
 			// Recreate top level acceleration structure if the object count changed:
@@ -1569,92 +1574,6 @@ namespace wiScene
 				success = device->CreateRaytracingAccelerationStructure(&desc, &TLAS);
 				assert(success);
 				device->SetName(&TLAS, "TLAS");
-			}
-		}
-
-		if (lightmap_refresh_needed.load())
-		{
-			SetAccelerationStructureUpdateRequested(true);
-		}
-		if (lightmap_repack_needed.load())
-		{
-			std::vector<wiRectPacker::bin> bins;
-			if (wiRectPacker::pack(lightmap_rects.data(), (int)lightmap_rect_allocator.load(), 16384, bins))
-			{
-				assert(bins.size() == 1 && "The regions won't fit into the texture!");
-
-				TextureDesc desc;
-				desc.Width = (uint32_t)bins[0].size.w;
-				desc.Height = (uint32_t)bins[0].size.h;
-				desc.MipLevels = 1;
-				desc.ArraySize = 1;
-				desc.Format = FORMAT_R11G11B10_FLOAT;
-				desc.SampleCount = 1;
-				desc.Usage = USAGE_DEFAULT;
-				desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-				desc.CPUAccessFlags = 0;
-				desc.MiscFlags = 0;
-
-				device->CreateTexture(&desc, nullptr, &lightmap);
-				device->SetName(&lightmap, "Scene::lightmap");
-			}
-			else
-			{
-				wiBackLog::post("Global Lightmap atlas packing failed!");
-			}
-		}
-		if (!lightmap.IsValid())
-		{
-			// In case no lightmaps, still create a dummy texture
-			TextureDesc desc;
-			desc.Width = 1;
-			desc.Height = 1;
-			desc.Format = FORMAT_R11G11B10_FLOAT;
-			desc.BindFlags = BIND_SHADER_RESOURCE;
-			device->CreateTexture(&desc, nullptr, &lightmap);
-		}
-
-		// Update atlas texture if it is invalidated:
-		if (decal_repack_needed)
-		{
-			std::vector<wiRectPacker::rect_xywh*> out_rects(packedDecals.size());
-			int i = 0;
-			for (auto& it : packedDecals)
-			{
-				out_rects[i] = &it.second;
-				i++;
-			}
-
-			std::vector<wiRectPacker::bin> bins;
-			if (wiRectPacker::pack(out_rects.data(), (int)packedDecals.size(), 16384, bins))
-			{
-				assert(bins.size() == 1 && "The regions won't fit into the texture!");
-
-				TextureDesc desc;
-				desc.Width = (uint32_t)bins[0].size.w;
-				desc.Height = (uint32_t)bins[0].size.h;
-				desc.MipLevels = 0;
-				desc.ArraySize = 1;
-				desc.Format = FORMAT_R8G8B8A8_UNORM;
-				desc.SampleCount = 1;
-				desc.Usage = USAGE_DEFAULT;
-				desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-				desc.CPUAccessFlags = 0;
-				desc.MiscFlags = 0;
-
-				device->CreateTexture(&desc, nullptr, &decalAtlas);
-				device->SetName(&decalAtlas, "Scene::decalAtlas");
-
-				for (uint32_t i = 0; i < decalAtlas.GetDesc().MipLevels; ++i)
-				{
-					int subresource_index;
-					subresource_index = device->CreateSubresource(&decalAtlas, UAV, 0, 1, i, 1);
-					assert(subresource_index == i);
-				}
-			}
-			else
-			{
-				wiBackLog::post("Decal atlas packing failed!");
 			}
 		}
 
@@ -1756,7 +1675,6 @@ namespace wiScene
 
 		TLAS = RaytracingAccelerationStructure();
 		BVH.Clear();
-		packedDecals.clear();
 		waterRipples.clear();
 	}
 	void Scene::Merge(Scene& other)
@@ -3034,9 +2952,6 @@ namespace wiScene
 	{
 		assert(objects.GetCount() == aabb_objects.GetCount());
 
-		lightmap_rects.resize(objects.GetCount());
-		lightmap_rect_allocator.store(0);
-
 		parallel_bounds.clear();
 		parallel_bounds.resize((size_t)wiJobSystem::DispatchGroupCount((uint32_t)objects.GetCount(), small_subtask_groupsize));
 		
@@ -3178,24 +3093,7 @@ namespace wiScene
 					);
 					if (object.lightmap.IsValid())
 					{
-						auto rect = object.lightmap_rect;
-
-						// eliminate border expansion:
-						rect.x += Scene::atlasClampBorder;
-						rect.y += Scene::atlasClampBorder;
-						rect.w -= Scene::atlasClampBorder * 2;
-						rect.h -= Scene::atlasClampBorder * 2;
-
-						inst.atlasMulAdd = XMFLOAT4(
-							(float)rect.w / (float)lightmap.desc.Width,
-							(float)rect.h / (float)lightmap.desc.Height,
-							(float)rect.x / (float)lightmap.desc.Width,
-							(float)rect.y / (float)lightmap.desc.Height
-						);
-					}
-					else
-					{
-						inst.atlasMulAdd = XMFLOAT4(0, 0, 0, 0);
+						inst.lightmap = device->GetDescriptorIndex(&object.lightmap, SRV);
 					}
 					inst.uid = entity;
 					inst.color = wiMath::CompressColor(object.color);
@@ -3269,19 +3167,6 @@ namespace wiScene
 						{
 							// Create a GPU-side per object lighmap if there is none yet, so that copying into atlas can be done efficiently:
 							wiTextureHelper::CreateTexture(object.lightmap, object.lightmapTextureData.data(), object.lightmapWidth, object.lightmapHeight, object.GetLightmapFormat());
-						}
-
-						if (object.lightmap.IsValid())
-						{
-							if (object.lightmap_rect.w == 0)
-							{
-								// we need to pack this lightmap texture into the atlas
-								object.lightmap_rect = wiRectPacker::rect_xywh(0, 0, object.lightmap.GetDesc().Width + atlasClampBorder * 2, object.lightmap.GetDesc().Height + atlasClampBorder * 2);
-								lightmap_repack_needed.store(true); // will need to repack all in this case!
-							}
-							// lightmap rects' state is always updated, in case one needs repacking
-							uint32_t alloc = lightmap_rect_allocator.fetch_add(1);
-							lightmap_rects[alloc] = &object.lightmap_rect;
 						}
 					}
 				}
@@ -3370,18 +3255,6 @@ namespace wiScene
 			decal.emissive = material.GetEmissiveStrength();
 			decal.texture = material.textures[MaterialComponent::BASECOLORMAP].resource;
 			decal.normal = material.textures[MaterialComponent::NORMALMAP].resource;
-
-			// atlas part is not thread safe:
-			if (decal.texture != nullptr && decal.texture->texture.IsValid())
-			{
-				if (packedDecals.find(decal.texture) == packedDecals.end())
-				{
-					// we need to pack this decal texture into the atlas
-					wiRectPacker::rect_xywh newRect = wiRectPacker::rect_xywh(0, 0, decal.texture->texture.desc.Width + atlasClampBorder * 2, decal.texture->texture.desc.Height + atlasClampBorder * 2);
-					packedDecals[decal.texture] = newRect;
-					decal_repack_needed = true;
-				}
-			}
 		}
 	}
 	void Scene::RunProbeUpdateSystem(wiJobSystem::context& ctx)

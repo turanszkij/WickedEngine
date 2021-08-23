@@ -253,7 +253,7 @@ namespace wiRenderer
 	// Call once per frame to re-render out of date impostors
 	void RefreshImpostors(const wiScene::Scene& scene, wiGraphics::CommandList cmd);
 	// Call once per frame to repack out of date lightmaps in the atlas
-	void RefreshLightmapAtlas(const wiScene::Scene& scene, wiGraphics::CommandList cmd);
+	void RefreshLightmaps(const wiScene::Scene& scene, wiGraphics::CommandList cmd);
 	// Voxelize the scene into a voxel grid 3D texture
 	void VoxelRadiance(const Visibility& vis, wiGraphics::CommandList cmd);
 	// Run a compute shader that will resolve a MSAA depth buffer to a single-sample texture

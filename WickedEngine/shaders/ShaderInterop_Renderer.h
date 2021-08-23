@@ -161,20 +161,23 @@ struct ShaderMeshInstance
 {
 	float3x4 transform;
 	float3x4 transformPrev;
-	float4 atlasMulAdd;
 	uint uid;
 	uint flags;
 	uint color;
 	uint emissive;
+	int lightmap;
+	int padding0;
+	int padding1;
+	int padding2;
 	ShaderMesh mesh;
 
 	void init()
 	{
-		atlasMulAdd = float4(0, 0, 0, 0);
 		uid = 0;
 		flags = 0;
 		color = ~0u;
 		emissive = ~0u;
+		lightmap = -1;
 		mesh.init();
 	}
 

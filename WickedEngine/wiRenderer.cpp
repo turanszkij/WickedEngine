@@ -2542,10 +2542,6 @@ void RenderMeshes(
 		BindConstantBuffers(DS, cmd);
 	}
 
-	const TextureDesc& lightmap_desc = vis.scene->lightmap.GetDesc();
-	const float lightmap_width_rcp = 1.0f / lightmap_desc.Width;
-	const float lightmap_height_rcp = 1.0f / lightmap_desc.Height;
-
 	// Do we need to compute a light mask for this pass on the CPU?
 	const bool forwardLightmaskRequest =
 		renderPass == RENDERPASS_ENVMAPCAPTURE ||
@@ -5007,8 +5003,6 @@ void DrawScene(
 		device->BindResource(PS, &vis.scene->weather.skyMap->texture, TEXSLOT_GLOBALENVMAP, cmd);
 	}
 
-	device->BindResource(PS, &vis.scene->lightmap, TEXSLOT_GLOBALLIGHTMAP, cmd);
-
 	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 	{
 		device->BindResource(PS, &vis.scene->TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
@@ -6479,7 +6473,6 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			if (!renderQueue.empty())
 			{
 				BindShadowmaps(PS, cmd);
-				device->BindResource(PS, &vis.scene->lightmap, TEXSLOT_GLOBALLIGHTMAP, cmd);
 
 				RenderMeshes(vis, renderQueue, RENDERPASS_ENVMAPCAPTURE, RENDERTYPE_ALL, cmd, false, frusta, arraysize(frusta));
 
@@ -7489,125 +7482,20 @@ void RayTraceSceneBVH(const Scene& scene, CommandList cmd)
 	device->EventEnd(cmd);
 }
 
-
-void RefreshDecalAtlas(const Scene& scene, CommandList cmd)
+void RefreshLightmaps(const Scene& scene, CommandList cmd)
 {
-	using namespace wiRectPacker;
-
-	if (scene.decal_repack_needed)
-	{
-		for (uint32_t mip = 0; mip < scene.decalAtlas.GetDesc().MipLevels; ++mip)
-		{
-			for (auto& it : scene.packedDecals)
-			{
-				if (mip < it.first->texture.desc.MipLevels)
-				{
-					CopyTexture2D(scene.decalAtlas, mip, (it.second.x >> mip) + Scene::atlasClampBorder, (it.second.y >> mip) + Scene::atlasClampBorder, it.first->texture, mip, cmd, BORDEREXPAND_CLAMP);
-				}
-			}
-		}
-		scene.decal_repack_needed = false;
-	}
-}
-
-void RenderObjectLightMap(const Scene& scene, const ObjectComponent& object, CommandList cmd)
-{
-	device->EventBegin("RenderObjectLightMap", cmd);
-
-	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
-	{
-		device->BindResource(PS, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
-	}
-	else
-	{
-		scene.BVH.Bind(PS, cmd);
-	}
-
-	const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
-	assert(!mesh.vertex_atlas.empty());
-	assert(mesh.vertexBuffer_ATL.IsValid());
-
-	const TextureDesc& desc = object.lightmap.GetDesc();
-
-	if (object.lightmapIterationCount == 0)
-	{
-		device->RenderPassBegin(&object.renderpass_lightmap_clear, cmd);
-	}
-	else
-	{
-		device->RenderPassBegin(&object.renderpass_lightmap_accumulate, cmd);
-	}
-
-	Viewport vp;
-	vp.Width = (float)desc.Width;
-	vp.Height = (float)desc.Height;
-	device->BindViewports(1, &vp, cmd);
-
-	const TransformComponent& transform = scene.transforms[object.transform_index];
-
-	MiscCB misccb;
-	misccb.g_xTransform = transform.world;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &misccb, cmd);
-	device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-
-	const GPUBuffer* vbs[] = {
-		&mesh.vertexBuffer_POS,
-		&mesh.vertexBuffer_ATL,
-	};
-	uint32_t strides[] = {
-		sizeof(MeshComponent::Vertex_POS),
-		sizeof(MeshComponent::Vertex_TEX),
-	};
-	uint32_t offsets[] = {
-		0,
-		0,
-	};
-	device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
-	device->BindIndexBuffer(&mesh.indexBuffer, mesh.GetIndexFormat(), 0, cmd);
-
-	RaytracingCB cb;
-	cb.xTraceResolution.x = desc.Width;
-	cb.xTraceResolution.y = desc.Height;
-	cb.xTraceResolution_rcp.x = 1.0f / cb.xTraceResolution.x;
-	cb.xTraceResolution_rcp.y = 1.0f / cb.xTraceResolution.y;
-	XMFLOAT4 halton = wiMath::GetHaltonSequence(object.lightmapIterationCount); // for jittering the rasterization (good for eliminating atlas border artifacts)
-	cb.xTracePixelOffset.x = (halton.x * 2 - 1) * cb.xTraceResolution_rcp.x;
-	cb.xTracePixelOffset.y = (halton.y * 2 - 1) * cb.xTraceResolution_rcp.y;
-	cb.xTracePixelOffset.x *= 1.4f;	// boost the jitter by a bit
-	cb.xTracePixelOffset.y *= 1.4f;	// boost the jitter by a bit
-	cb.xTraceAccumulationFactor = 1.0f / (object.lightmapIterationCount + 1.0f); // accumulation factor (alpha)
-	cb.xTraceUserData.x = raytraceBounceCount;
-	cb.xTraceSampleIndex = object.lightmapIterationCount;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_RAYTRACE], &cb, cmd);
-	device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(RaytracingCB), cmd);
-	device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(RaytracingCB), cmd);
-
-	device->BindPipelineState(&PSO_renderlightmap, cmd);
-
-	if (scene.weather.skyMap != nullptr)
-	{
-		device->BindResource(PS, &scene.weather.skyMap->texture, TEXSLOT_GLOBALENVMAP, cmd);
-	}
-	else
-	{
-		device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
-		device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
-		device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
-	}
-
-	device->DrawIndexedInstanced((uint32_t)mesh.indices.size(), 1, 0, 0, 0, cmd);
-	object.lightmapIterationCount++;
-
-	device->RenderPassEnd(cmd);
-
-	device->EventEnd(cmd);
-}
-void RefreshLightmapAtlas(const Scene& scene, CommandList cmd)
-{
-	if (scene.lightmap_refresh_needed.load() || scene.lightmap_repack_needed.load())
+	if (scene.lightmap_refresh_needed.load())
 	{
 		auto range = wiProfiler::BeginRangeGPU("Lightmap Processing", cmd);
 
+		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+		{
+			device->BindResource(PS, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
+		}
+		else
+		{
+			scene.BVH.Bind(PS, cmd);
+		}
 		device->BindResource(CS, &scene.instanceBuffer, TEXSLOT_INSTANCEBUFFER, cmd);
 
 		// Render lightmaps for each object:
@@ -7619,17 +7507,89 @@ void RefreshLightmapAtlas(const Scene& scene, CommandList cmd)
 
 			if (object.IsLightmapRenderRequested())
 			{
-				RenderObjectLightMap(scene, object, cmd);
-			}
+				device->EventBegin("RenderObjectLightMap", cmd);
 
-			if (object.IsLightmapRenderRequested() || scene.lightmap_repack_needed)
-			{
-				// copy object' lightmap into scene's lightmap atlas
-				CopyTexture2D(scene.lightmap, -1, object.lightmap_rect.x + Scene::atlasClampBorder, object.lightmap_rect.y + Scene::atlasClampBorder, object.lightmap, 0, cmd);
+				const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
+				assert(!mesh.vertex_atlas.empty());
+				assert(mesh.vertexBuffer_ATL.IsValid());
+
+				const TextureDesc& desc = object.lightmap.GetDesc();
+
+				if (object.lightmapIterationCount == 0)
+				{
+					device->RenderPassBegin(&object.renderpass_lightmap_clear, cmd);
+				}
+				else
+				{
+					device->RenderPassBegin(&object.renderpass_lightmap_accumulate, cmd);
+				}
+
+				Viewport vp;
+				vp.Width = (float)desc.Width;
+				vp.Height = (float)desc.Height;
+				device->BindViewports(1, &vp, cmd);
+
+				const TransformComponent& transform = scene.transforms[object.transform_index];
+
+				MiscCB misccb;
+				misccb.g_xTransform = transform.world;
+				device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &misccb, cmd);
+				device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+
+				const GPUBuffer* vbs[] = {
+					&mesh.vertexBuffer_POS,
+					&mesh.vertexBuffer_ATL,
+				};
+				uint32_t strides[] = {
+					sizeof(MeshComponent::Vertex_POS),
+					sizeof(MeshComponent::Vertex_TEX),
+				};
+				uint32_t offsets[] = {
+					0,
+					0,
+				};
+				device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
+				device->BindIndexBuffer(&mesh.indexBuffer, mesh.GetIndexFormat(), 0, cmd);
+
+				RaytracingCB cb;
+				cb.xTraceResolution.x = desc.Width;
+				cb.xTraceResolution.y = desc.Height;
+				cb.xTraceResolution_rcp.x = 1.0f / cb.xTraceResolution.x;
+				cb.xTraceResolution_rcp.y = 1.0f / cb.xTraceResolution.y;
+				XMFLOAT4 halton = wiMath::GetHaltonSequence(object.lightmapIterationCount); // for jittering the rasterization (good for eliminating atlas border artifacts)
+				cb.xTracePixelOffset.x = (halton.x * 2 - 1) * cb.xTraceResolution_rcp.x;
+				cb.xTracePixelOffset.y = (halton.y * 2 - 1) * cb.xTraceResolution_rcp.y;
+				cb.xTracePixelOffset.x *= 1.4f;	// boost the jitter by a bit
+				cb.xTracePixelOffset.y *= 1.4f;	// boost the jitter by a bit
+				cb.xTraceAccumulationFactor = 1.0f / (object.lightmapIterationCount + 1.0f); // accumulation factor (alpha)
+				cb.xTraceUserData.x = raytraceBounceCount;
+				cb.xTraceSampleIndex = object.lightmapIterationCount;
+				device->UpdateBuffer(&constantBuffers[CBTYPE_RAYTRACE], &cb, cmd);
+				device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(RaytracingCB), cmd);
+				device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(RaytracingCB), cmd);
+
+				device->BindPipelineState(&PSO_renderlightmap, cmd);
+
+				if (scene.weather.skyMap != nullptr)
+				{
+					device->BindResource(PS, &scene.weather.skyMap->texture, TEXSLOT_GLOBALENVMAP, cmd);
+				}
+				else
+				{
+					device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
+					device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
+					device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
+				}
+
+				device->DrawIndexedInstanced((uint32_t)mesh.indices.size(), 1, 0, 0, 0, cmd);
+				object.lightmapIterationCount++;
+
+				device->RenderPassEnd(cmd);
+
+				device->EventEnd(cmd);
 			}
 		}
 
-		scene.lightmap_repack_needed.store(false);
 		scene.lightmap_refresh_needed.store(false);
 		wiProfiler::EndRange(range);
 	}
@@ -9584,8 +9544,6 @@ void Postprocess_RTReflection(
 	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
 	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
 	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], TEXSLOT_SKYLUMINANCELUT, cmd);
-
-	device->BindResource(LIB, &scene.lightmap, TEXSLOT_GLOBALLIGHTMAP, cmd);
 
 	PostProcessCB cb;
 	cb.xPPResolution.x = desc.Width;

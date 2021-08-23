@@ -377,7 +377,7 @@ void wiGPUBVH::Bind(SHADERSTAGE stage, CommandList cmd) const
 		&primitiveBuffer,
 		&bvhNodeBuffer,
 	};
-	device->BindResources(stage, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
+	device->BindResources(stage, res, TEXSLOT_BVH_COUNTER, arraysize(res), cmd);
 }
 
 void wiGPUBVH::Clear()
