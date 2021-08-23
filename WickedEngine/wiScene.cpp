@@ -3197,6 +3197,7 @@ namespace wiScene
 					{
 						inst.atlasMulAdd = XMFLOAT4(0, 0, 0, 0);
 					}
+					inst.uid = entity;
 					inst.color = wiMath::CompressColor(object.color);
 					inst.emissive = wiMath::CompressColor(object.emissiveColor);
 					mesh->WriteShaderMesh(&inst.mesh);
@@ -3651,6 +3652,7 @@ namespace wiScene
 					GraphicsDevice* device = wiRenderer::GetDevice();
 					ShaderMeshInstance& inst = instanceData[instanceIndex];
 					inst.init();
+					inst.uid = entity;
 					// every vertex is pretransformed and simulated in worldspace for hair particle:
 					inst.transform = inst.transformPrev = XMFLOAT3X4(
 						IDENTITYMATRIX._11, IDENTITYMATRIX._21, IDENTITYMATRIX._31, IDENTITYMATRIX._41,

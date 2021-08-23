@@ -26,7 +26,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	prim.unpack(surfel_data.primitiveID);
 
 	Surface surface;
-	if (surface.load(prim, surfel_data.bary))
+	if (surface.load(prim, unpack_half2(surfel_data.bary), surfel_data.uid))
 	{
 		surfel.normal = pack_unitvector(surface.facenormal);
 		surfel.position = surface.P;

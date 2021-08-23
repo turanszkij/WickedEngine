@@ -15,7 +15,8 @@ struct SurfelPayload
 struct SurfelData
 {
 	uint2 primitiveID;
-	float2 bary;
+	uint bary;
+	uint uid;
 
 	float3 mean;
 	float life;

@@ -57,7 +57,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			{
 				SurfelData surfel_data = (SurfelData)0;
 				surfel_data.primitiveID = primitiveID;
-				surfel_data.bary = surface.bary.xy;
+				surfel_data.bary = pack_half2(surface.bary.xy);
+				surfel_data.uid = surface.inst.uid;
 				surfel_data.inconsistency = 1;
 				surfelDataBuffer[surfel_alloc] = surfel_data;
 

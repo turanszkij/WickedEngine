@@ -282,10 +282,10 @@ struct Surface
 	float2 bary;
 	float3 pre;
 
-	bool load(in PrimitiveID prim, in float2 barycentrics)
+	bool load(in PrimitiveID prim, in float2 barycentrics, in uint uid = 0)
 	{
 		inst = InstanceBuffer[prim.instanceIndex];
-		if (inst.mesh.vb_pos_nor_wind < 0)
+		if ((uid != 0 && inst.uid != uid) || inst.mesh.vb_pos_nor_wind < 0)
 			return false;
 
 		subset = bindless_subsets[NonUniformResourceIndex(inst.mesh.subsetbuffer)][prim.subsetIndex];
@@ -438,10 +438,10 @@ struct Surface
 		return true;
 	}
 
-	bool load(in PrimitiveID prim, in float3 P)
+	bool load(in PrimitiveID prim, in float3 P, in uint uid = 0)
 	{
 		inst = InstanceBuffer[prim.instanceIndex];
-		if (inst.mesh.vb_pos_nor_wind < 0)
+		if ((uid != 0 && inst.uid != uid) || inst.mesh.vb_pos_nor_wind < 0)
 			return false;
 
 		subset = bindless_subsets[NonUniformResourceIndex(inst.mesh.subsetbuffer)][prim.subsetIndex];
@@ -464,7 +464,7 @@ struct Surface
 
 		float2 barycentrics = compute_barycentrics(P, P0, P1, P2);
 
-		return load(prim, barycentrics);
+		return load(prim, barycentrics, uid);
 	}
 };
 
