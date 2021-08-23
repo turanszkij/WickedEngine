@@ -297,6 +297,14 @@ namespace wiScene
 		{
 			dest->options |= SHADERMATERIAL_OPTION_BIT_CAST_SHADOW;
 		}
+		if (IsDoubleSided())
+		{
+			dest->options |= SHADERMATERIAL_OPTION_BIT_DOUBLE_SIDED;
+		}
+		if (GetRenderTypes() & RENDERTYPE_TRANSPARENT)
+		{
+			dest->options |= SHADERMATERIAL_OPTION_BIT_TRANSPARENT;
+		}
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
 		dest->texture_basecolormap_index = device->GetDescriptorIndex(textures[BASECOLORMAP].GetGPUResource(), SRV);
@@ -793,6 +801,13 @@ namespace wiScene
 		dest->subsetbuffer = device->GetDescriptorIndex(&subsetBuffer, SRV);
 		dest->aabb_min = aabb._min;
 		dest->aabb_max = aabb._max;
+
+		dest->flags = 0;
+		if (IsDoubleSided())
+		{
+			dest->flags |= SHADERMESH_FLAG_DOUBLE_SIDED;
+		}
+
 	}
 	void MeshComponent::ComputeNormals(COMPUTE_NORMALS compute)
 	{
@@ -1443,7 +1458,7 @@ namespace wiScene
 
 		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_PIPELINE) || device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
 		{
-			TLAS_instances.resize(objects.GetCount() * device->GetTopLevelAccelerationStructureInstanceSize());
+			TLAS_instances.resize(instanceData.size() * device->GetTopLevelAccelerationStructureInstanceSize());
 		}
 
 		// Occlusion culling read:
@@ -1539,12 +1554,12 @@ namespace wiScene
 		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_PIPELINE) || device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
 		{
 			// Recreate top level acceleration structure if the object count changed:
-			if (objects.GetCount() > 0 && objects.GetCount() != TLAS.desc.toplevel.count)
+			if ((uint32_t)instanceData.size() != TLAS.desc.toplevel.count)
 			{
 				RaytracingAccelerationStructureDesc desc;
 				desc._flags = RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD;
 				desc.type = RaytracingAccelerationStructureDesc::TOPLEVEL;
-				desc.toplevel.count = (uint32_t)objects.GetCount();
+				desc.toplevel.count = (uint32_t)instanceData.size();
 				GPUBufferDesc bufdesc;
 				bufdesc.MiscFlags |= RESOURCE_MISC_RAY_TRACING;
 				bufdesc.ByteWidth = desc.toplevel.count * (uint32_t)device->GetTopLevelAccelerationStructureInstanceSize();
@@ -2805,6 +2820,10 @@ namespace wiScene
 							mesh.BLAS_state = MeshComponent::BLAS_STATE_NEEDS_REBUILD;
 							geometry.triangles.vertexBuffer = mesh.streamoutBuffer_POS;
 						}
+						if (material->IsDoubleSided())
+						{
+							mesh._flags |= MeshComponent::TLAS_FORCE_DOUBLE_SIDED;
+						}
 					}
 				}
 				else
@@ -3192,11 +3211,16 @@ namespace wiScene
 						instance.InstanceMask = 1;
 						instance.bottomlevel = mesh->BLAS;
 
+						if (mesh->IsDoubleSided() || mesh->_flags & MeshComponent::TLAS_FORCE_DOUBLE_SIDED)
+						{
+							instance.Flags |= RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_CULL_DISABLE;
+						}
+
 						if (XMVectorGetX(XMMatrixDeterminant(W)) > 0)
 						{
 							// There is a mismatch between object space winding and BLAS winding:
 							//	https://docs.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_raytracing_instance_flags
-							instance.Flags = RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE;
+							instance.Flags |= RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE;
 						}
 
 						void* dest = (void*)((size_t)TLAS_instances.data() + (size_t)args.jobIndex * device->GetTopLevelAccelerationStructureInstanceSize());
@@ -3622,8 +3646,10 @@ namespace wiScene
 
 					hair.UpdateCPU(transform, *mesh, dt);
 
+					size_t instanceIndex = objects.GetCount() + args.jobIndex;
+
 					GraphicsDevice* device = wiRenderer::GetDevice();
-					ShaderMeshInstance& inst = instanceData[objects.GetCount() + args.jobIndex];
+					ShaderMeshInstance& inst = instanceData[instanceIndex];
 					inst.init();
 					// every vertex is pretransformed and simulated in worldspace for hair particle:
 					inst.transform = inst.transformPrev = XMFLOAT3X4(
@@ -3636,6 +3662,22 @@ namespace wiScene
 					inst.mesh.vb_pre = device->GetDescriptorIndex(&hair.vertexBuffer_POS[1], SRV);
 					inst.mesh.vb_uv0 = device->GetDescriptorIndex(&hair.vertexBuffer_TEX, SRV);
 					inst.mesh.subsetbuffer = device->GetDescriptorIndex(&hair.subsetBuffer, SRV);
+					inst.mesh.flags |= SHADERMESH_FLAG_DOUBLE_SIDED;
+
+					if (TLAS.IsValid())
+					{
+						// TLAS instance data:
+						RaytracingAccelerationStructureDesc::TopLevel::Instance instance = {};
+						instance = {};
+						instance.transform = inst.transform;
+						instance.InstanceID = (uint32_t)instanceIndex;
+						instance.InstanceMask = 1;
+						instance.bottomlevel = hair.BLAS;
+						instance.Flags = RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_CULL_DISABLE;
+
+						void* dest = (void*)((size_t)TLAS_instances.data() + instanceIndex * device->GetTopLevelAccelerationStructureInstanceSize());
+						device->WriteTopLevelAccelerationStructureInstance(&instance, dest);
+					}
 				}
 			}
 

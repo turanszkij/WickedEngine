@@ -159,6 +159,29 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 				device->CreateBuffer(&bd, &initData, &indexBuffer);
 			}
 
+			if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_PIPELINE) || device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
+			{
+				RaytracingAccelerationStructureDesc desc;
+				desc.type = RaytracingAccelerationStructureDesc::BOTTOMLEVEL;
+				desc._flags |= RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE;
+				desc._flags |= RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD;
+
+				desc.bottomlevel.geometries.emplace_back();
+				auto& geometry = desc.bottomlevel.geometries.back();
+				geometry.type = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::TRIANGLES;
+				geometry.triangles.vertexBuffer = vertexBuffer_POS[0];
+				geometry.triangles.indexBuffer = primitiveBuffer;
+				geometry.triangles.indexFormat = INDEXFORMAT_32BIT;
+				geometry.triangles.indexCount = primitiveBuffer.desc.ByteWidth / primitiveBuffer.desc.StructureByteStride;
+				geometry.triangles.indexOffset = 0;
+				geometry.triangles.vertexCount = vertexBuffer_POS[0].desc.ByteWidth / vertexBuffer_POS[0].desc.StructureByteStride;
+				geometry.triangles.vertexFormat = FORMAT_R32G32B32_FLOAT;
+				geometry.triangles.vertexStride = sizeof(MeshComponent::Vertex_POS);
+
+				bool success = device->CreateRaytracingAccelerationStructure(&desc, &BLAS);
+				assert(success);
+				device->SetName(&BLAS, "BLAS_hair");
+			}
 		}
 
 		if (!indirectBuffer.IsValid())
@@ -181,6 +204,11 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 		}
 
 		std::swap(vertexBuffer_POS[0], vertexBuffer_POS[1]);
+
+		if (BLAS.IsValid() && !BLAS.desc.bottomlevel.geometries.empty())
+		{
+			BLAS.desc.bottomlevel.geometries.back().triangles.vertexBuffer = vertexBuffer_POS[0];
+		}
 	}
 
 }

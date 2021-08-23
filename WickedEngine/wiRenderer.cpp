@@ -4088,6 +4088,16 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 				}
 			}
 
+			for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
+			{
+				const wiHairParticle& hair = scene.hairs[i];
+
+				if (hair.meshID != INVALID_ENTITY && hair.BLAS.IsValid())
+				{
+					device->BuildRaytracingAccelerationStructure(&hair.BLAS, cmd, nullptr);
+				}
+			}
+
 			{
 				GPUBarrier barriers[] = {
 					GPUBarrier::Memory(),

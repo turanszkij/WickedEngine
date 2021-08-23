@@ -58,6 +58,15 @@ void wiGPUBVH::Update(const wiScene::Scene& scene)
 			totalTriangles += (uint)mesh.indices.size() / 3;
 		}
 	}
+	for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
+	{
+		const wiHairParticle& hair = scene.hairs[i];
+
+		if (hair.meshID != INVALID_ENTITY)
+		{
+			totalTriangles += hair.segmentCount * hair.strandCount * 2;
+		}
+	}
 
 	if (totalTriangles > primitiveCapacity)
 	{
@@ -175,6 +184,30 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
 					);
 				}
 
+			}
+		}
+
+		for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
+		{
+			const wiHairParticle& hair = scene.hairs[i];
+
+			if (hair.meshID != INVALID_ENTITY)
+			{
+				BVHPushConstants push;
+				push.instanceIndex = (uint)(scene.objects.GetCount() + i);
+				push.subsetIndex = 0;
+				push.primitiveCount = hair.segmentCount * hair.strandCount * 2;
+				push.primitiveOffset = primitiveCount;
+				device->PushConstants(&push, sizeof(push), cmd);
+
+				primitiveCount += push.primitiveCount;
+
+				device->Dispatch(
+					(push.primitiveCount + BVH_BUILDER_GROUPSIZE - 1) / BVH_BUILDER_GROUPSIZE,
+					1,
+					1,
+					cmd
+				);
 			}
 		}
 

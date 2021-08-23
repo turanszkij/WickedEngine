@@ -79,7 +79,7 @@ inline void IntersectTriangle(
 	float det = dot(v0v1, pvec);
 
 #ifdef RAY_BACKFACE_CULLING 
-	if (det > 0.000001)
+	if (det > 0.000001 && (prim.flags & BVH_PRIMITIVE_FLAG_DOUBLE_SIDED) == 0)
 		return;
 #endif // RAY_BACKFACE_CULLING
 
@@ -137,15 +137,18 @@ inline bool IntersectTriangleANY(
 
 	if (t >= ray.TMin && t <= ray.TMax)
 	{
-		RayHit hit;
-		hit.distance = t;
-		hit.primitiveID = prim.primitiveID();
-		hit.bary = float2(u, v);
-
-		Surface surface;
-		if (surface.load(prim.primitiveID(), float2(u, v)))
+		if (prim.flags & BVH_PRIMITIVE_FLAG_TRANSPARENT)
 		{
-			return surface.opacity > surface.material.alphaTest;
+			RayHit hit;
+			hit.distance = t;
+			hit.primitiveID = prim.primitiveID();
+			hit.bary = float2(u, v);
+
+			Surface surface;
+			if (surface.load(prim.primitiveID(), float2(u, v)))
+			{
+				return surface.opacity > surface.material.alphaTest;
+			}
 		}
 		return true;
 	}

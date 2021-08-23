@@ -28,6 +28,8 @@ public:
 	wiGraphics::GPUBuffer indexBuffer;
 	wiGraphics::GPUBuffer vertexBuffer_length;
 
+	wiGraphics::RaytracingAccelerationStructure BLAS;
+
 	void UpdateCPU(const TransformComponent& transform, const MeshComponent& mesh, float dt);
 	void UpdateGPU(uint32_t instanceID, const MeshComponent& mesh, const MaterialComponent& material, wiGraphics::CommandList cmd) const;
 	void Draw(const CameraComponent& camera, const MaterialComponent& material, RENDERPASS renderPass, wiGraphics::CommandList cmd) const;

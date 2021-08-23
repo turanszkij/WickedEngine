@@ -324,6 +324,7 @@ namespace wiScene
 			TERRAIN = 1 << 3,
 			_DEPRECATED_DIRTY_MORPH = 1 << 4,
 			_DEPRECATED_DIRTY_BINDLESS = 1 << 5,
+			TLAS_FORCE_DOUBLE_SIDED = 1 << 6,
 		};
 		uint32_t _flags = RENDERABLE;
 

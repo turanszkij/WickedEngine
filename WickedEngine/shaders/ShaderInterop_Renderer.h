@@ -9,6 +9,8 @@ static const uint SHADERMATERIAL_OPTION_BIT_OCCLUSION_SECONDARY = 1 << 3;
 static const uint SHADERMATERIAL_OPTION_BIT_USE_WIND = 1 << 4;
 static const uint SHADERMATERIAL_OPTION_BIT_RECEIVE_SHADOW = 1 << 5;
 static const uint SHADERMATERIAL_OPTION_BIT_CAST_SHADOW = 1 << 6;
+static const uint SHADERMATERIAL_OPTION_BIT_DOUBLE_SIDED = 1 << 7;
+static const uint SHADERMATERIAL_OPTION_BIT_TRANSPARENT = 1 << 8;
 
 struct ShaderMaterial
 {
@@ -95,6 +97,8 @@ struct ShaderMaterial
 	inline bool IsCastingShadow() { return options & SHADERMATERIAL_OPTION_BIT_CAST_SHADOW; }
 };
 
+static const uint SHADERMESH_FLAG_DOUBLE_SIDED = 1 << 0;
+
 struct ShaderMesh
 {
 	int ib;
@@ -113,7 +117,7 @@ struct ShaderMesh
 	int blendmaterial3;
 
 	float3 aabb_min;
-	float padding0;
+	uint flags;
 	float3 aabb_max;
 	float padding1;
 
@@ -136,6 +140,8 @@ struct ShaderMesh
 
 		aabb_min = float3(0, 0, 0);
 		aabb_max = float3(0, 0, 0);
+
+		flags = 0;
 	}
 };
 

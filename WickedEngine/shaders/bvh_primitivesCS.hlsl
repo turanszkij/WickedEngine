@@ -43,6 +43,20 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	float3 P2 = mul(inst.GetTransform(), float4(p2, 1)).xyz;
 
 	BVHPrimitive bvhprim;
+	bvhprim.packed_prim = prim.pack();
+	bvhprim.flags = 0;
+	if (inst.mesh.flags & SHADERMESH_FLAG_DOUBLE_SIDED)
+	{
+		bvhprim.flags |= BVH_PRIMITIVE_FLAG_DOUBLE_SIDED;
+	}
+	if (material.options & SHADERMATERIAL_OPTION_BIT_DOUBLE_SIDED)
+	{
+		bvhprim.flags |= BVH_PRIMITIVE_FLAG_DOUBLE_SIDED;
+	}
+	if (material.options & SHADERMATERIAL_OPTION_BIT_TRANSPARENT || material.alphaTest > 0)
+	{
+		bvhprim.flags |= BVH_PRIMITIVE_FLAG_TRANSPARENT;
+	}
 	bvhprim.x0 = P0.x;
 	bvhprim.y0 = P0.y;
 	bvhprim.z0 = P0.z;
@@ -52,9 +66,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	bvhprim.x2 = P2.x;
 	bvhprim.y2 = P2.y;
 	bvhprim.z2 = P2.z;
-	bvhprim.primitiveIndex = prim.primitiveIndex;
-	bvhprim.instanceIndex = prim.instanceIndex;
-	bvhprim.subsetIndex = prim.subsetIndex;
 
 	uint primitiveID = push.primitiveOffset + prim.primitiveIndex;
 	primitiveBuffer[primitiveID] = bvhprim;
