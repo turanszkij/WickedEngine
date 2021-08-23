@@ -7788,7 +7788,7 @@ void ComputeShadingRateClassification(
 		device->BindComputeShader(&shaders[CSTYPE_SHADINGRATECLASSIFICATION], cmd);
 	}
 
-	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
+	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
 	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
 	const TextureDesc& desc = output.GetDesc();
@@ -8136,7 +8136,7 @@ void SurfelGI(
 
 		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 		device->BindResource(CS, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
-		device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
+		device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
 
 		device->BindResource(CS, &scene.surfelBuffer, TEXSLOT_ONDEMAND0, cmd);
 		device->BindResource(CS, &scene.surfelPayloadBuffer, TEXSLOT_ONDEMAND1, cmd);
@@ -9268,7 +9268,7 @@ void Postprocess_RTAO(
 	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
 	device->BindResource(CS, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
-	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
+	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
 	device->BindResource(CS, &scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 	const GPUResource* uavs[] = {
@@ -9533,7 +9533,7 @@ void Postprocess_RTReflection(
 	device->BindResource(LIB, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
 	device->BindResource(LIB, &depthbuffer, TEXSLOT_DEPTH, cmd);
 	device->BindResource(LIB, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
-	device->BindResource(LIB, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
+	device->BindResource(LIB, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
 	device->BindResource(LIB, &scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 	device->BindResource(LIB, &depth_history, TEXSLOT_ONDEMAND2, cmd);
@@ -9612,7 +9612,7 @@ void Postprocess_RTReflection(
 	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	device->BindResource(CS, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
-	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
+	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
 
 	int temporal_output = device->GetFrameCount() % 2;
 	int temporal_history = 1 - temporal_output;
@@ -9742,7 +9742,7 @@ void Postprocess_SSR(
 	device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
 	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 	device->BindResource(CS, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
-	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
+	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
 
 	PostProcessCB cb;
 	cb.xPPResolution.x = desc.Width;
@@ -10017,7 +10017,7 @@ void Postprocess_RTShadow(
 	device->BindResource(CS, &entityTiles_Opaque, TEXSLOT_RENDERPATH_ENTITYTILES, cmd);
 
 	device->BindResource(CS, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
-	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
+	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
 	device->BindResource(CS, &scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 	const GPUResource* uavs[] = {
@@ -10367,7 +10367,7 @@ void Postprocess_ScreenSpaceShadow(
 	device->BindResource(CS, &entityTiles_Opaque, TEXSLOT_RENDERPATH_ENTITYTILES, cmd);
 
 	device->BindResource(CS, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
-	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
+	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
 	device->BindResource(CS, &scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 	const GPUResource* uavs[] = {
@@ -10985,7 +10985,7 @@ void Postprocess_MotionBlur(
 	auto range = wiProfiler::BeginRangeGPU("MotionBlur", cmd);
 
 	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
-	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
+	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
 
 	const TextureDesc& desc = output.GetDesc();
 
@@ -11642,7 +11642,7 @@ void Postprocess_TemporalAA(
 	device->BindResource(CS, &input_history, TEXSLOT_ONDEMAND1, cmd);
 	device->BindResource(CS, &depth_history, TEXSLOT_ONDEMAND2, cmd);
 	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
-	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER2, cmd);
+	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
 
 	const TextureDesc& desc = output.GetDesc();
 

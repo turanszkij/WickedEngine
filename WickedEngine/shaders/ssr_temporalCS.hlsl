@@ -100,7 +100,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 	if (depth == 0)
 		return;
 
-	const float2 velocity = texture_gbuffer2.SampleLevel(sampler_point_clamp, uv, 0).xy;
+	const float2 velocity = texture_gbuffer1.SampleLevel(sampler_point_clamp, uv, 0).xy;
 	float2 prevUV = uv + velocity;
 	if (!is_saturated(prevUV))
 	{

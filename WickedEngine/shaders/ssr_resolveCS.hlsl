@@ -110,7 +110,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	const float NdotV = saturate(dot(N, V));
 
-	const float2 velocity = texture_gbuffer2.SampleLevel(sampler_point_clamp, uv, 0).xy;
+	const float2 velocity = texture_gbuffer1.SampleLevel(sampler_point_clamp, uv, 0).xy;
 	const float2 prevUV = uv + velocity;
 
     // Early out, useless if the roughness is out of range
