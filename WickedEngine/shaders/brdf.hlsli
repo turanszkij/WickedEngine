@@ -202,7 +202,14 @@ struct Surface
 	{
 		init();
 
-		opacity = baseColor.a;
+		if (material.options & SHADERMATERIAL_OPTION_BIT_TRANSPARENT || material.alphaTest > 0)
+		{
+			opacity = baseColor.a;
+		}
+		else
+		{
+			opacity = 1;
+		}
 		roughness = material.roughness;
 		f0 = material.specularColor.rgb * specularMap.rgb * specularMap.a * material.specularColor.a;
 
@@ -323,6 +330,7 @@ struct Surface
 			uv2.zw = unpack_half2(bindless_buffers[NonUniformResourceIndex(inst.mesh.vb_uv1)].Load(i2 * 4));
 		}
 		float4 uvsets = uv0 * w + uv1 * u + uv2 * v;
+		uvsets.xy = uvsets.xy * material.texMulAdd.xy + material.texMulAdd.zw;
 
 		float4 baseColor = material.baseColor;
 		[branch]

@@ -265,7 +265,7 @@ namespace wiScene
 		dest->sheenRoughness = sheenRoughness;
 		dest->clearcoat = clearcoat;
 		dest->clearcoatRoughness = clearcoatRoughness;
-		dest->alphaTest = 1 - alphaRef + 1.0f / 256.0f; // 256 so that it is just about smaller than 1 unorm unit (1.0/255.0)
+		dest->alphaTest = 1 - alphaRef;
 		dest->layerMask = layerMask;
 		dest->transmission = transmission;
 		dest->options = 0;
