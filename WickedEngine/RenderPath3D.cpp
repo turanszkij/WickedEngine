@@ -624,6 +624,15 @@ void RenderPath3D::Render() const
 
 			wiRenderer::UpdateRaytracingAccelerationStructures(*scene, cmd);
 
+			if (wiRenderer::GetSurfelGIEnabled())
+			{
+				wiRenderer::SurfelGI_Raytrace(
+					surfelGIResources,
+					*scene,
+					cmd
+				);
+			}
+
 			});
 	}
 

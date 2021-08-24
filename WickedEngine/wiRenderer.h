@@ -308,7 +308,6 @@ namespace wiRenderer
 
 	struct SurfelGIResources
 	{
-		wiGraphics::Texture coverage;
 		wiGraphics::Texture result;
 	};
 	void CreateSurfelGIResources(SurfelGIResources& res, XMUINT2 resolution);
@@ -318,6 +317,11 @@ namespace wiRenderer
 		const wiGraphics::Texture& depthbuffer,
 		const wiGraphics::Texture gbuffer[GBUFFER_COUNT],
 		const wiGraphics::Texture& debugUAV,
+		wiGraphics::CommandList cmd
+	);
+	void SurfelGI_Raytrace(
+		const SurfelGIResources& res,
+		const wiScene::Scene& scene,
 		wiGraphics::CommandList cmd
 	);
 

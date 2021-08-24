@@ -1125,7 +1125,6 @@ void LoadShaders()
 	}
 
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_SURFEL_COVERAGE], "surfel_coverageCS.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_SURFEL_PLACEMENT], "surfel_placementCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_SURFEL_INDIRECTPREPARE], "surfel_indirectprepareCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_SURFEL_UPDATE], "surfel_updateCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_SURFEL_GRIDRESET], "surfel_gridresetCS.cso"); });
@@ -7928,14 +7927,6 @@ void VisibilityResolve(
 void CreateSurfelGIResources(SurfelGIResources& res, XMUINT2 resolution)
 {
 	TextureDesc desc;
-	desc.Width = (resolution.x + 15) / 16;
-	desc.Height = (resolution.y + 15) / 16;
-	desc.Format = FORMAT_R16_UINT;
-	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-	desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
-	device->CreateTexture(&desc, nullptr, &res.coverage);
-	device->SetName(&res.coverage, "surfelCoverage");
-
 	desc.Width = resolution.x;
 	desc.Height = resolution.y;
 	desc.Format = FORMAT_R11G11B10_FLOAT;
@@ -7957,9 +7948,6 @@ void SurfelGI(
 	auto prof_range = wiProfiler::BeginRangeGPU("SurfelGI", cmd);
 
 	device->BindResource(CS, &scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
-	device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
-	device->BindResource(CS, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
-	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
 
 	// Grid reset:
 	{
@@ -8093,17 +8081,87 @@ void SurfelGI(
 		device->EventEnd(cmd);
 	}
 
-	// Raytrace and coverage will run in parallel, so issue all the barriers up front:
+	device->BindResource(CS, &scene.surfelBuffer, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(CS, &scene.surfelStatsBuffer, TEXSLOT_ONDEMAND1, cmd);
+	device->BindResource(CS, &scene.surfelGridBuffer, TEXSLOT_ONDEMAND2, cmd);
+	device->BindResource(CS, &scene.surfelCellBuffer, TEXSLOT_ONDEMAND3, cmd);
+
+	// Coverage:
 	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&res.coverage, res.coverage.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
-			GPUBarrier::Image(&res.result, res.result.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
-			GPUBarrier::Image(&debugUAV, debugUAV.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
-			GPUBarrier::Buffer(&scene.surfelDataBuffer, BUFFER_STATE_SHADER_RESOURCE_COMPUTE, BUFFER_STATE_UNORDERED_ACCESS),
+		device->EventBegin("Coverage", cmd);
+		device->BindComputeShader(&shaders[CSTYPE_SURFEL_COVERAGE], cmd);
+
+		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
+		device->BindResource(CS, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
+		device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
+
+		const GPUResource* uavs[] = {
+			&scene.surfelDataBuffer,
+			&scene.surfelStatsBuffer,
+			&res.result,
+			&debugUAV
 		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Buffer(&scene.surfelStatsBuffer, BUFFER_STATE_INDIRECT_ARGUMENT, BUFFER_STATE_UNORDERED_ACCESS),
+				GPUBarrier::Image(&res.result, res.result.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+				GPUBarrier::Image(&debugUAV, debugUAV.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->Dispatch(
+			(res.result.desc.Width + 15) / 16,
+			(res.result.desc.Height + 15) / 16,
+			1,
+			cmd
+		);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(),
+				GPUBarrier::Image(&res.result, IMAGE_LAYOUT_UNORDERED_ACCESS, res.result.desc.layout),
+				GPUBarrier::Image(&debugUAV, IMAGE_LAYOUT_UNORDERED_ACCESS, debugUAV.desc.layout),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->UnbindResources(TEXSLOT_ONDEMAND0, 5, cmd);
+		device->EventEnd(cmd);
 	}
 
+	// surfel count -> indirect args (for next frame):
+	{
+		device->EventBegin("Indirect args", cmd);
+		const GPUResource* uavs[] = {
+			&scene.surfelStatsBuffer,
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		device->BindComputeShader(&shaders[CSTYPE_SURFEL_INDIRECTPREPARE], cmd);
+		device->Dispatch(1, 1, 1, cmd);
+
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->EventEnd(cmd);
+	}
+
+
+	wiProfiler::EndRange(prof_range);
+	device->EventEnd(cmd);
+}
+void SurfelGI_Raytrace(
+	const SurfelGIResources& res,
+	const wiScene::Scene& scene,
+	wiGraphics::CommandList cmd
+)
+{
+	auto prof_range = wiProfiler::BeginRangeGPU("SurfelGI - Raytrace", cmd);
+	device->EventBegin("SurfelGI - Raytrace", cmd);
+
+	device->BindResource(CS, &scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 	device->BindResource(CS, &scene.surfelBuffer, TEXSLOT_ONDEMAND0, cmd);
 	device->BindResource(CS, &scene.surfelStatsBuffer, TEXSLOT_ONDEMAND1, cmd);
 	device->BindResource(CS, &scene.surfelGridBuffer, TEXSLOT_ONDEMAND2, cmd);
@@ -8111,7 +8169,6 @@ void SurfelGI(
 
 	// Raytracing:
 	{
-		device->EventBegin("Ray tracing", cmd);
 		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		{
 			if (!scene.TLAS.IsValid())
@@ -8147,97 +8204,7 @@ void SurfelGI(
 		device->DispatchIndirect(&scene.surfelStatsBuffer, SURFEL_STATS_OFFSET_INDIRECT, cmd);
 
 		device->UnbindUAVs(0, arraysize(uavs), cmd);
-		device->EventEnd(cmd);
 	}
-
-	// Coverage:
-	{
-		device->EventBegin("Coverage", cmd);
-		device->BindComputeShader(&shaders[CSTYPE_SURFEL_COVERAGE], cmd);
-
-		const GPUResource* uavs[] = {
-			&res.coverage,
-			&res.result,
-			&debugUAV
-		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
-
-		device->Dispatch(
-			res.coverage.desc.Width,
-			res.coverage.desc.Height,
-			1,
-			cmd
-		);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-				GPUBarrier::Image(&res.coverage, IMAGE_LAYOUT_UNORDERED_ACCESS, res.coverage.desc.layout),
-				GPUBarrier::Image(&res.result, IMAGE_LAYOUT_UNORDERED_ACCESS, res.result.desc.layout),
-				GPUBarrier::Image(&debugUAV, IMAGE_LAYOUT_UNORDERED_ACCESS, debugUAV.desc.layout),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
-		device->UnbindResources(TEXSLOT_ONDEMAND0, 5, cmd);
-		device->EventEnd(cmd);
-	}
-
-	// Placement:
-	{
-		device->EventBegin("Placement", cmd);
-		device->BindComputeShader(&shaders[CSTYPE_SURFEL_PLACEMENT], cmd);
-
-		device->BindResource(CS, &res.coverage, TEXSLOT_ONDEMAND0, cmd);
-
-		const GPUResource* uavs[] = {
-			&scene.surfelDataBuffer,
-			&scene.surfelStatsBuffer,
-		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Buffer(&scene.surfelStatsBuffer, BUFFER_STATE_INDIRECT_ARGUMENT, BUFFER_STATE_UNORDERED_ACCESS),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
-		device->Dispatch(
-			(res.coverage.desc.Width + 7) / 8,
-			(res.coverage.desc.Height + 7) / 8,
-			1,
-			cmd
-		);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-				GPUBarrier::Buffer(&scene.surfelDataBuffer, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE_COMPUTE),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
-		device->EventEnd(cmd);
-	}
-
-	// surfel count -> indirect args (for next frame):
-	{
-		device->EventBegin("Indirect args", cmd);
-		const GPUResource* uavs[] = {
-			&scene.surfelStatsBuffer,
-		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
-
-		device->BindComputeShader(&shaders[CSTYPE_SURFEL_INDIRECTPREPARE], cmd);
-		device->Dispatch(1, 1, 1, cmd);
-
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
-		device->EventEnd(cmd);
-	}
-
 
 	wiProfiler::EndRange(prof_range);
 	device->EventEnd(cmd);
