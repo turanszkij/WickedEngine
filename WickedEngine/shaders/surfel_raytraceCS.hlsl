@@ -59,11 +59,10 @@ void MultiscaleMeanEstimator(
 	data.inconsistency = inconsistency;
 }
 
-STRUCTUREDBUFFER(surfelBuffer, Surfel, TEXSLOT_ONDEMAND6);
-STRUCTUREDBUFFER(surfelPayloadBuffer, SurfelPayload, TEXSLOT_ONDEMAND7);
-RAWBUFFER(surfelStatsBuffer, TEXSLOT_ONDEMAND8);
-STRUCTUREDBUFFER(surfelIndexBuffer, uint, TEXSLOT_ONDEMAND9);
-STRUCTUREDBUFFER(surfelCellOffsetBuffer, uint, TEXSLOT_ONDEMAND10);
+STRUCTUREDBUFFER(surfelBuffer, Surfel, TEXSLOT_ONDEMAND0);
+RAWBUFFER(surfelStatsBuffer, TEXSLOT_ONDEMAND1);
+STRUCTUREDBUFFER(surfelGridBuffer, SurfelGridCell, TEXSLOT_ONDEMAND2);
+STRUCTUREDBUFFER(surfelCellBuffer, uint, TEXSLOT_ONDEMAND3);
 
 RWSTRUCTUREDBUFFER(surfelDataBuffer, SurfelData, 0);
 
@@ -74,7 +73,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	if (DTid.x >= surfel_count)
 		return;
 
-	uint surfel_index = surfelIndexBuffer[DTid.x];
+	uint surfel_index = DTid.x;
 	Surfel surfel = surfelBuffer[surfel_index];
 	SurfelData surfel_data = surfelDataBuffer[surfel_index];
 
@@ -421,52 +420,31 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 #if 1
 			float4 surfel_gi = 0;
-			int3 cell = surfel_cell(surface.P);
-
-			// iterate through all [27] neighbor cells:
-			[loop]
-			for (uint i = 0; i < 27; ++i)
+			uint cellindex = surfel_cellindex(surfel_gridpos(surface.P));
+			SurfelGridCell cell = surfelGridBuffer[cellindex];
+			for (uint i = 0; i < cell.count; ++i)
 			{
-				uint surfel_hash_target = surfel_hash(cell + surfel_neighbor_offsets[i]);
+				uint surfel_index = surfelCellBuffer[cell.offset + i];
+				Surfel surfel = surfelBuffer[surfel_index];
 
-				uint surfel_list_offset = surfelCellOffsetBuffer[surfel_hash_target];
-				while (surfel_list_offset != ~0u && surfel_list_offset < surfel_count)
+				float3 L = surfel.position - surface.P;
+				float dist2 = dot(L, L);
+				if (dist2 <= sqr(GetSurfelRadius()))
 				{
-					uint surfel_index = surfelIndexBuffer[surfel_list_offset];
-					Surfel surfel = surfelBuffer[surfel_index];
-					uint hash = surfel_hash(surfel_cell(surfel.position));
-
-					if (hash == surfel_hash_target)
+					float3 normal = normalize(unpack_unitvector(surfel.normal));
+					float dotN = dot(surface.N, normal);
+					if (dotN > 0)
 					{
-						float3 L = surfel.position - surface.P;
-						float dist2 = dot(L, L);
-						if (dist2 <= SURFEL_RADIUS2)
-						{
-							float3 normal = normalize(unpack_unitvector(surfel.normal));
-							float dotN = dot(surface.N, normal);
-							if (dotN > 0)
-							{
-								float dist = sqrt(dist2);
-								float contribution = 1;
-								contribution *= saturate(1 - dist / SURFEL_RADIUS);
-								contribution = smoothstep(0, 1, contribution);
-								contribution *= pow(saturate(dotN), SURFEL_NORMAL_TOLERANCE);
+						float dist = sqrt(dist2);
+						float contribution = 1;
+						contribution *= saturate(1 - dist / GetSurfelRadius());
+						contribution = smoothstep(0, 1, contribution);
+						contribution *= pow(saturate(dotN), SURFEL_NORMAL_TOLERANCE);
 
-								SurfelPayload surfel_payload = surfelPayloadBuffer[surfel_index];
-								surfel_gi += unpack_half4(surfel_payload.color) * contribution;
+						surfel_gi += surfel.color * contribution;
 
-							}
-						}
 					}
-					else
-					{
-						// in this case we stepped out of the surfel list of the cell
-						break;
-					}
-
-					surfel_list_offset++;
 				}
-
 			}
 			if (surfel_gi.a > 0)
 			{
@@ -485,68 +463,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		gi += float4(result, 1);
 	}
 	gi /= gi.a;
-
-
-#if 1
-	// "Denoising" step:
-	Surface surface;
-	surface.P = surfel.position;
-	surface.N = normalize(unpack_unitvector(surfel.normal));
-
-	float4 surfel_gi = 0;
-	int3 cell = surfel_cell(surface.P);
-
-	// iterate through all [27] neighbor cells:
-	[loop]
-	for (uint i = 0; i < 27; ++i)
-	{
-		uint surfel_hash_target = surfel_hash(cell + surfel_neighbor_offsets[i]);
-
-		uint surfel_list_offset = surfelCellOffsetBuffer[surfel_hash_target];
-		while (surfel_list_offset != ~0u && surfel_list_offset < surfel_count)
-		{
-			uint surfel_index = surfelIndexBuffer[surfel_list_offset];
-			Surfel surfel = surfelBuffer[surfel_index];
-			uint hash = surfel_hash(surfel_cell(surfel.position));
-
-			if (hash == surfel_hash_target)
-			{
-				float3 L = surfel.position - surface.P;
-				float dist2 = dot(L, L);
-				if (dist2 <= SURFEL_RADIUS2)
-				{
-					float3 normal = normalize(unpack_unitvector(surfel.normal));
-					float dotN = dot(surface.N, normal);
-					if (dotN > 0)
-					{
-						float dist = sqrt(dist2);
-						float contribution = 1;
-						contribution *= saturate(1 - dist / SURFEL_RADIUS);
-						contribution = smoothstep(0, 1, contribution);
-						contribution *= pow(saturate(dotN), SURFEL_NORMAL_TOLERANCE);
-
-						SurfelPayload surfel_payload = surfelPayloadBuffer[surfel_index];
-						surfel_gi += unpack_half4(surfel_payload.color) * contribution;
-
-					}
-				}
-			}
-			else
-			{
-				// in this case we stepped out of the surfel list of the cell
-				break;
-			}
-
-			surfel_list_offset++;
-		}
-
-	}
-	if (surfel_gi.a > 0)
-	{
-		surfel_gi /= surfel_gi.a;
-		gi.rgb = (gi.rgb + max(0, surfel_gi.rgb)) * 0.5;
-	}
-#endif
 
 
 

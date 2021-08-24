@@ -309,7 +309,6 @@ namespace wiRenderer
 	struct SurfelGIResources
 	{
 		wiGraphics::Texture coverage;
-		wiGraphics::Texture result;
 	};
 	void CreateSurfelGIResources(SurfelGIResources& res, XMUINT2 resolution);
 	void SurfelGI(

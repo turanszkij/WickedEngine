@@ -1,14 +1,13 @@
 #include "globals.hlsli"
 #include "ShaderInterop_SurfelGI.h"
-#include "brdf.hlsli"
 
-RAWBUFFER(surfelStatsBuffer, TEXSLOT_ONDEMAND0);
-STRUCTUREDBUFFER(surfelDataBuffer, SurfelData, TEXSLOT_ONDEMAND1);
+STRUCTUREDBUFFER(surfelBuffer, Surfel, TEXSLOT_ONDEMAND0);
+RAWBUFFER(surfelStatsBuffer, TEXSLOT_ONDEMAND1);
 
-RWSTRUCTUREDBUFFER(surfelBuffer, Surfel, 0);
-RWSTRUCTUREDBUFFER(surfelGridBuffer, SurfelGridCell, 1);
+RWSTRUCTUREDBUFFER(surfelGridBuffer, SurfelGridCell, 0);
+RWSTRUCTUREDBUFFER(surfelCellBuffer, uint, 1);
 
-[numthreads(SURFEL_INDIRECT_NUMTHREADS, 1, 1)]
+[numthreads(64, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	uint surfel_count = surfelStatsBuffer.Load(SURFEL_STATS_OFFSET_COUNT);
@@ -16,18 +15,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		return;
 
 	uint surfel_index = DTid.x;
-	SurfelData surfel_data = surfelDataBuffer[surfel_index];
 	Surfel surfel = surfelBuffer[surfel_index];
-
-
-	PrimitiveID prim;
-	prim.unpack(surfel_data.primitiveID);
-
-	Surface surface;
-	if (surface.load(prim, unpack_half2(surfel_data.bary), surfel_data.uid))
+	if (surfel.color.a > 0)
 	{
-		surfel.normal = pack_unitvector(surface.facenormal);
-		surfel.position = surface.P;
 
 		int3 center_cell = surfel_gridpos(surfel.position);
 		for (int i = -1; i <= 1; ++i)
@@ -56,19 +46,14 @@ void main(uint3 DTid : SV_DispatchThreadID)
 					//if (dist < radius)
 					{
 						uint cellindex = surfel_cellindex(gridpos);
-						InterlockedAdd(surfelGridBuffer[cellindex].count, 1);
+						uint prevCount;
+						InterlockedAdd(surfelGridBuffer[cellindex].count, 1, prevCount);
+						surfelCellBuffer[surfelGridBuffer[cellindex].offset + prevCount] = surfel_index;
 					}
 
 				}
 			}
 		}
 
-		surfel.color = float4(surfel_data.mean, 1);
 	}
-	else
-	{
-		surfel.color = 0;
-	}
-
-	surfelBuffer[surfel_index] = surfel;
 }

@@ -11,7 +11,6 @@ TEXTURE2D(coverage, uint, TEXSLOT_ONDEMAND0);
 
 RWSTRUCTUREDBUFFER(surfelDataBuffer, SurfelData, 0);
 RWRAWBUFFER(surfelStatsBuffer, 1);
-RWSTRUCTUREDBUFFER(surfelIndexBuffer, uint, 2);
 
 [numthreads(8, 8, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
@@ -43,6 +42,13 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		const float2 uv = ((float2)pixel.xy + 0.5) * g_xFrame_InternalResolution_rcp;
 		const float3 P = reconstructPosition(uv, depth);
 
+		int3 gridpos = surfel_gridpos(P);
+		if (gridpos.x < 0 || gridpos.x >= SURFEL_GRID_DIMENSIONS.x)
+			return;
+		if (gridpos.y < 0 || gridpos.y >= SURFEL_GRID_DIMENSIONS.y)
+			return;
+		if (gridpos.z < 0 || gridpos.z >= SURFEL_GRID_DIMENSIONS.z)
+			return;
 
 		uint2 primitiveID = texture_gbuffer0[pixel];
 		PrimitiveID prim;
@@ -61,8 +67,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				surfel_data.uid = surface.inst.uid;
 				surfel_data.inconsistency = 1;
 				surfelDataBuffer[surfel_alloc] = surfel_data;
-
-				surfelIndexBuffer[surfel_alloc] = surfel_alloc;
 			}
 		}
 
