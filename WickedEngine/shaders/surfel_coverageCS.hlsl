@@ -78,7 +78,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 
 		float coverage = 0;
 
-		uint cellindex = surfel_cellindex(surfel_gridpos(P));
+		uint cellindex = surfel_cellindex(surfel_cell(P));
 		SurfelGridCell cell = surfelGridBuffer[cellindex];
 		for (uint i = 0; i < cell.count; ++i)
 		{
@@ -87,7 +87,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 
 			float3 L = surfel.position - P;
 			float dist2 = dot(L, L);
-			if (dist2 <= sqr(GetSurfelRadius()))
+			if (dist2 < sqr(surfel.radius))
 			{
 				float3 normal = normalize(unpack_unitvector(surfel.normal));
 				float dotN = dot(N, normal);
@@ -96,11 +96,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 					float dist = sqrt(dist2);
 					float contribution = 1;
 					contribution *= pow(saturate(dotN), SURFEL_NORMAL_TOLERANCE);
-					contribution *= saturate(1 - dist / GetSurfelRadius());
+					contribution *= saturate(1 - dist / surfel.radius);
 					contribution = smoothstep(0, 1, contribution);
 					coverage += contribution;
 
-					color += surfel.color * contribution;
+					color += float4(surfel.color, 1) * contribution;
 
 #ifdef SURFEL_DEBUG_NORMAL
 					debug.rgb += normal * contribution;
@@ -121,7 +121,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 
 		}
 
-		if (coverage < SURFEL_TARGET_COVERAGE)
+		if (cell.count < SURFEL_CELL_LIMIT)
 		{
 			uint surfel_count_at_pixel = 0;
 			surfel_count_at_pixel |= (uint(coverage) & 0xFF) << 8;
@@ -177,7 +177,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 			float3(1,0,0),
 		};
 		const uint mapTexLen = 5;
-		const uint maxHeat = 100;
+		const uint maxHeat = 50;
 		float l = saturate((float)cell.count / maxHeat) * mapTexLen;
 		float3 a = mapTex[floor(l)];
 		float3 b = mapTex[ceil(l)];

@@ -1615,7 +1615,7 @@ namespace wiScene
 			device->SetName(&surfelStatsBuffer, "surfelStatsBuffer");
 
 			desc.StructureByteStride = sizeof(SurfelGridCell);
-			desc.ByteWidth = desc.StructureByteStride * SURFEL_GRID_DIMENSIONS.x * SURFEL_GRID_DIMENSIONS.y * SURFEL_GRID_DIMENSIONS.z;
+			desc.ByteWidth = desc.StructureByteStride * SURFEL_TABLE_SIZE;
 			desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 			device->CreateBuffer(&desc, nullptr, &surfelGridBuffer);
 			device->SetName(&surfelGridBuffer, "surfelGridBuffer");

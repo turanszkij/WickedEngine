@@ -7978,7 +7978,7 @@ void SurfelGI(
 		}
 
 		device->Dispatch(
-			(SURFEL_GRID_DIMENSIONS.x * SURFEL_GRID_DIMENSIONS.y * SURFEL_GRID_DIMENSIONS.z + 63) / 64,
+			(SURFEL_TABLE_SIZE + 63) / 64,
 			1,
 			1,
 			cmd
@@ -8046,7 +8046,7 @@ void SurfelGI(
 		}
 
 		device->Dispatch(
-			(SURFEL_GRID_DIMENSIONS.x * SURFEL_GRID_DIMENSIONS.y * SURFEL_GRID_DIMENSIONS.z + 63) / 64,
+			(SURFEL_TABLE_SIZE + 63) / 64,
 			1,
 			1,
 			cmd

@@ -10,8 +10,12 @@ TEXTURE2D(texture_color, float4, TEXSLOT_ONDEMAND0);
 [earlydepthstencil]
 float4 main(VertexToPixel input) : SV_Target
 {
-	float4 color = texture_color.Sample(sampler_linear_wrap, input.tex);
-	color.rgb = DEGAMMA(color.rgb);
+	float4 color = 1;
+	if ((g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+	{
+		color = texture_color.Sample(sampler_linear_wrap, input.tex);
+		color.rgb = DEGAMMA(color.rgb);
+	}
 	color *= g_xMaterial.baseColor;
 	float opacity = 1;
 	float3 V = g_xCamera_CamPos - input.pos3D;

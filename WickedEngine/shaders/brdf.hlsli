@@ -336,12 +336,19 @@ struct Surface
 
 		float4 baseColor = material.baseColor;
 		[branch]
-		if (material.texture_basecolormap_index >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+		if (material.texture_basecolormap_index >= 0)
 		{
 			const float2 UV_baseColorMap = material.uvset_baseColorMap == 0 ? uvsets.xy : uvsets.zw;
 			float4 baseColorMap = bindless_textures[NonUniformResourceIndex(material.texture_basecolormap_index)].SampleLevel(sampler_linear_wrap, UV_baseColorMap, 0);
-			baseColorMap.rgb *= DEGAMMA(baseColorMap.rgb);
-			baseColor *= baseColorMap;
+			if ((g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+			{
+				baseColorMap.rgb *= DEGAMMA(baseColorMap.rgb);
+				baseColor *= baseColorMap;
+			}
+			else
+			{
+				baseColor.a *= baseColorMap.a;
+			}
 		}
 
 		[branch]

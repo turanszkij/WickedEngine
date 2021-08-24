@@ -902,7 +902,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 	{
 		float4 surfelgi = 0;
 
-		uint cellindex = surfel_cellindex(surfel_gridpos(surface.P));
+		uint cellindex = surfel_cellindex(surfel_cell(surface.P));
 		SurfelGridCell cell = surfelGrid[cellindex];
 		for (uint i = 0; i < cell.count; ++i)
 		{
@@ -911,7 +911,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 
 			float3 L = surfel.position - surface.P;
 			float dist2 = dot(L, L);
-			if (dist2 <= sqr(GetSurfelRadius()))
+			if (dist2 < sqr(surfel.radius))
 			{
 				float3 normal = normalize(unpack_unitvector(surfel.normal));
 				float dotN = dot(surface.N, normal);
@@ -920,10 +920,10 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 					float dist = sqrt(dist2);
 					float contribution = 1;
 					contribution *= pow(saturate(dotN), SURFEL_NORMAL_TOLERANCE);
-					contribution *= saturate(1 - dist / GetSurfelRadius());
+					contribution *= saturate(1 - dist / surfel.radius);
 					contribution = smoothstep(0, 1, contribution);
 
-					surfelgi += surfel.color * contribution;
+					surfelgi += float4(surfel.color, 1) * contribution;
 				}
 			}
 
@@ -1124,7 +1124,11 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 
 #ifdef OBJECTSHADER_USE_UVSETS
 	[branch]
+#ifdef PREPASS
+	if (GetMaterial().uvset_baseColorMap >= 0)
+#else
 	if (GetMaterial().uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+#endif // PREPASS
 	{
 		const float2 UV_baseColorMap = GetMaterial().uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 		float4 baseColorMap = texture_basecolormap.Sample(sampler_objectshader, UV_baseColorMap);

@@ -420,7 +420,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 #if 1
 			float4 surfel_gi = 0;
-			uint cellindex = surfel_cellindex(surfel_gridpos(surface.P));
+			uint cellindex = surfel_cellindex(surfel_cell(surface.P));
 			SurfelGridCell cell = surfelGridBuffer[cellindex];
 			for (uint i = 0; i < cell.count; ++i)
 			{
@@ -429,7 +429,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 				float3 L = surfel.position - surface.P;
 				float dist2 = dot(L, L);
-				if (dist2 <= sqr(GetSurfelRadius()))
+				if (dist2 < sqr(surfel.radius))
 				{
 					float3 normal = normalize(unpack_unitvector(surfel.normal));
 					float dotN = dot(surface.N, normal);
@@ -437,11 +437,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
 					{
 						float dist = sqrt(dist2);
 						float contribution = 1;
-						contribution *= saturate(1 - dist / GetSurfelRadius());
+						contribution *= saturate(1 - dist / surfel.radius);
 						contribution = smoothstep(0, 1, contribution);
 						contribution *= pow(saturate(dotN), SURFEL_NORMAL_TOLERANCE);
 
-						surfel_gi += surfel.color * contribution;
+						surfel_gi += float4(surfel.color, 1) * contribution;
 
 					}
 				}
