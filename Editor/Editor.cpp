@@ -770,6 +770,9 @@ void EditorComponent::Load()
 							if (cam != nullptr)
 							{
 								wiScene::GetCamera() = *cam;
+								// camera aspect should be always for the current screen
+								wiScene::GetCamera().width = renderPath->GetInternalResolution().x;
+								wiScene::GetCamera().height = renderPath->GetInternalResolution().y;
 							}
 						}
 					}
