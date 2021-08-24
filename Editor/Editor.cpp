@@ -771,8 +771,8 @@ void EditorComponent::Load()
 							{
 								wiScene::GetCamera() = *cam;
 								// camera aspect should be always for the current screen
-								wiScene::GetCamera().width = renderPath->GetInternalResolution().x;
-								wiScene::GetCamera().height = renderPath->GetInternalResolution().y;
+								wiScene::GetCamera().width = (float)renderPath->GetInternalResolution().x;
+								wiScene::GetCamera().height = (float)renderPath->GetInternalResolution().y;
 							}
 						}
 					}

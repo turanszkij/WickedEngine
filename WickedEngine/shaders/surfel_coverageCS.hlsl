@@ -28,18 +28,13 @@ float3 random_color(uint index)
 	return random_colors[index % random_colors_size];
 }
 
-static const uint2 pixel_offsets[4] = {
-	uint2(0, 0), uint2(1, 0),
-	uint2(0, 1), uint2(1, 1),
-};
-
 STRUCTUREDBUFFER(surfelBuffer, Surfel, TEXSLOT_ONDEMAND0);
-RAWBUFFER(surfelStatsBuffer, TEXSLOT_ONDEMAND1);
 STRUCTUREDBUFFER(surfelGridBuffer, SurfelGridCell, TEXSLOT_ONDEMAND2);
 STRUCTUREDBUFFER(surfelCellBuffer, uint, TEXSLOT_ONDEMAND3);
 
 RWTEXTURE2D(coverage, uint, 0);
-RWTEXTURE2D(debugUAV, unorm float4, 1);
+RWTEXTURE2D(result, float3, 1);
+RWTEXTURE2D(debugUAV, unorm float4, 2);
 
 groupshared uint GroupMinSurfelCount;
 
@@ -52,8 +47,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	}
 	GroupMemoryBarrierWithGroupSync();
 
-	uint2 pixel = DTid.xy * 2 + pixel_offsets[g_xFrame_FrameCount % 4];
-	//uint2 pixel = DTid.xy;
+	uint2 pixel = DTid.xy;
 
 	const float depth = texture_depth[pixel];
 
@@ -194,8 +188,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		coverage[Gid.xy] = GroupMinSurfelCount;
 	}
 	
-	debugUAV[DTid.xy * 2 + uint2(0, 0)] = debug;
-	debugUAV[DTid.xy * 2 + uint2(1, 0)] = debug;
-	debugUAV[DTid.xy * 2 + uint2(0, 1)] = debug;
-	debugUAV[DTid.xy * 2 + uint2(1, 1)] = debug;
+	result[pixel] = color.rgb;
+	debugUAV[pixel] = debug;
 }

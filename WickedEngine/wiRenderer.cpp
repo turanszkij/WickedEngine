@@ -5010,13 +5010,6 @@ void DrawScene(
 		device->BindResource(CS, &vis.scene->TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
 	}
 
-	if (GetSurfelGIEnabled())
-	{
-		device->BindResource(PS, &vis.scene->surfelBuffer, TEXSLOT_SURFELS, cmd);
-		device->BindResource(PS, &vis.scene->surfelGridBuffer, TEXSLOT_SURFELGRID, cmd);
-		device->BindResource(PS, &vis.scene->surfelCellBuffer, TEXSLOT_SURFELCELLS, cmd);
-	}
-
 	if (transparent && vis.scene->weather.IsOceanEnabled())
 	{
 		vis.scene->ocean.Render(*vis.camera, vis.scene->weather.oceanParameters, cmd);
@@ -7935,13 +7928,21 @@ void VisibilityResolve(
 void CreateSurfelGIResources(SurfelGIResources& res, XMUINT2 resolution)
 {
 	TextureDesc desc;
-	desc.Width = (resolution.x / 2 + 15) / 16;
-	desc.Height = (resolution.y / 2 + 15) / 16;
+	desc.Width = (resolution.x + 15) / 16;
+	desc.Height = (resolution.y + 15) / 16;
 	desc.Format = FORMAT_R16_UINT;
 	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 	desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
 	device->CreateTexture(&desc, nullptr, &res.coverage);
 	device->SetName(&res.coverage, "surfelCoverage");
+
+	desc.Width = resolution.x;
+	desc.Height = resolution.y;
+	desc.Format = FORMAT_R11G11B10_FLOAT;
+	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+	desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
+	device->CreateTexture(&desc, nullptr, &res.result);
+	device->SetName(&res.result, "surfelGI.result");
 }
 void SurfelGI(
 	const SurfelGIResources& res,
@@ -8096,6 +8097,7 @@ void SurfelGI(
 	{
 		GPUBarrier barriers[] = {
 			GPUBarrier::Image(&res.coverage, res.coverage.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.result, res.result.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
 			GPUBarrier::Image(&debugUAV, debugUAV.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
 			GPUBarrier::Buffer(&scene.surfelDataBuffer, BUFFER_STATE_SHADER_RESOURCE_COMPUTE, BUFFER_STATE_UNORDERED_ACCESS),
 		};
@@ -8155,6 +8157,7 @@ void SurfelGI(
 
 		const GPUResource* uavs[] = {
 			&res.coverage,
+			&res.result,
 			&debugUAV
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
@@ -8170,6 +8173,7 @@ void SurfelGI(
 			GPUBarrier barriers[] = {
 				GPUBarrier::Memory(),
 				GPUBarrier::Image(&res.coverage, IMAGE_LAYOUT_UNORDERED_ACCESS, res.coverage.desc.layout),
+				GPUBarrier::Image(&res.result, IMAGE_LAYOUT_UNORDERED_ACCESS, res.result.desc.layout),
 				GPUBarrier::Image(&debugUAV, IMAGE_LAYOUT_UNORDERED_ACCESS, debugUAV.desc.layout),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);

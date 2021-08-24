@@ -2,11 +2,6 @@
 #include "ShaderInterop_SurfelGI.h"
 #include "brdf.hlsli"
 
-static const uint2 pixel_offsets[4] = {
-	uint2(0, 0), uint2(1, 0),
-	uint2(0, 1), uint2(1, 1),
-};
-
 TEXTURE2D(coverage, uint, TEXSLOT_ONDEMAND0);
 
 RWSTRUCTUREDBUFFER(surfelDataBuffer, SurfelData, 0);
@@ -24,7 +19,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	uint2 pixel = DTid.xy * 16;
 	pixel.x += (surfel_coverage >> 4) & 0xF;
 	pixel.y += (surfel_coverage >> 0) & 0xF;
-	pixel = pixel * 2 + pixel_offsets[g_xFrame_FrameCount % 4];
+	pixel = pixel;
 
 	uint coverage_amount = surfel_coverage >> 8;
 

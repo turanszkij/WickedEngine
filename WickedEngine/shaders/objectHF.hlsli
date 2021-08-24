@@ -84,11 +84,6 @@ inline ShaderMaterial GetMaterial3()
 #define texture_blend3_emissivemap		bindless_textures[GetMaterial3().texture_emissivemap_index]
 
 
-#include "ShaderInterop_SurfelGI.h"
-STRUCTUREDBUFFER(surfels, Surfel, TEXSLOT_SURFELS);
-STRUCTUREDBUFFER(surfelGrid, SurfelGridCell, TEXSLOT_SURFELGRID);
-STRUCTUREDBUFFER(surfelCells, uint, TEXSLOT_SURFELCELLS);
-
 
 // These are bound by RenderPath (based on Render Path):
 STRUCTUREDBUFFER(EntityTiles, uint, TEXSLOT_RENDERPATH_ENTITYTILES);
@@ -98,6 +93,7 @@ TEXTURE2D(texture_waterriples, float4, TEXSLOT_RENDERPATH_WATERRIPPLES);	// rgb:
 TEXTURE2D(texture_ao, float, TEXSLOT_RENDERPATH_AO);						// r: ambient occlusion
 TEXTURE2D(texture_ssr, float4, TEXSLOT_RENDERPATH_SSR);						// rgb: screen space ray-traced reflections, a: reflection blend based on ray hit or miss
 TEXTURE2D(texture_rtshadow, uint4, TEXSLOT_RENDERPATH_RTSHADOW);			// bitmask for max 16 shadows' visibility
+TEXTURE2D(texture_surfelgi, float3, TEXSLOT_RENDERPATH_SURFELGI);
 
 // Use these to compile this file as shader prototype:
 //#define OBJECTSHADER_COMPILE_VS				- compile vertex shader prototype
@@ -900,41 +896,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 	[branch]
 	if (g_xFrame_Options & OPTION_BIT_SURFELGI_ENABLED)
 	{
-		float4 surfelgi = 0;
-
-		uint cellindex = surfel_cellindex(surfel_cell(surface.P));
-		SurfelGridCell cell = surfelGrid[cellindex];
-		for (uint i = 0; i < cell.count; ++i)
-		{
-			uint surfel_index = surfelCells[cell.offset + i];
-			Surfel surfel = surfels[surfel_index];
-
-			float3 L = surfel.position - surface.P;
-			float dist2 = dot(L, L);
-			if (dist2 < sqr(surfel.radius))
-			{
-				float3 normal = normalize(unpack_unitvector(surfel.normal));
-				float dotN = dot(surface.N, normal);
-				if (dotN > 0)
-				{
-					float dist = sqrt(dist2);
-					float contribution = 1;
-					contribution *= pow(saturate(dotN), SURFEL_NORMAL_TOLERANCE);
-					contribution *= saturate(1 - dist / surfel.radius);
-					contribution = smoothstep(0, 1, contribution);
-
-					surfelgi += float4(surfel.color, 1) * contribution;
-				}
-			}
-
-		}
-
-		if (surfelgi.a > 0)
-		{
-			surfelgi.rgb /= surfelgi.a;
-			surfelgi.a = saturate(surfelgi.a);
-			lighting.indirect.diffuse = surfelgi.rgb;
-		}
+		lighting.indirect.diffuse = texture_surfelgi[surface.pixel];
 	}
 #endif // TRANSPARENT
 
