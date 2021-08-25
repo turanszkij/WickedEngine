@@ -364,9 +364,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #if 1
 			// Evaluate surfel cache at hit point for multi bounce:
 			float4 surfel_gi = 0;
-#ifdef SURFEL_USE_AVERAGE_CELL_FALLBACK
-			surfel_gi = float4(surfelGridColorTexture.SampleLevel(sampler_linear_clamp, surfel_griduv(surface.P), 0), 1);
-#endif // SURFEL_USE_AVERAGE_CELL_FALLBACK
 			uint cellindex = surfel_cellindex(surfel_cell(surface.P));
 			SurfelGridCell cell = surfelGridBuffer[cellindex];
 			for (uint i = 0; i < cell.count; ++i)
@@ -393,12 +390,22 @@ void main(uint3 DTid : SV_DispatchThreadID)
 					}
 				}
 			}
-			if (surfel_gi.a > 0.01)
+			if (surfel_gi.a > 0)
 			{
-				surfel_gi /= surfel_gi.a;
+				surfel_gi.rgb /= surfel_gi.a;
+				surfel_gi.a = saturate(surfel_gi.a);
+			}
+
+#ifdef SURFEL_USE_AVERAGE_CELL_FALLBACK
+			surfel_gi.rgb = lerp(surfelGridColorTexture.SampleLevel(sampler_linear_clamp, surfel_griduv(surface.P), 0), surfel_gi.rgb, surfel_gi.a);
+#endif // SURFEL_USE_AVERAGE_CELL_FALLBACK
+
+			if (surfel_gi.a > 0)
+			{
 				result += max(0, energy * surfel_gi.rgb);
 				break;
 			}
+
 #endif
 
 

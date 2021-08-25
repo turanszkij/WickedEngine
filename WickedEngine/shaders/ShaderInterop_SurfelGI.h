@@ -38,7 +38,7 @@ static const uint SURFEL_STATS_OFFSET_COUNT = 0;
 static const uint SURFEL_STATS_OFFSET_CELLALLOCATOR = 4;
 static const uint SURFEL_STATS_OFFSET_INDIRECT = 8;
 static const uint SURFEL_INDIRECT_NUMTHREADS = 32;
-static const uint SURFEL_TARGET_COVERAGE = 1; // how many surfels should affect a pixel fully, higher values will increase quality and cost
+static const uint SURFEL_TARGET_COVERAGE = 4; // how many surfels should affect a pixel fully, higher values will increase quality and cost
 static const float SURFEL_NORMAL_TOLERANCE = 1; // default: 1, higher values will put more surfels on edges, to have more detail but increases cost
 static const uint SURFEL_CELL_LIMIT = ~0; // limit the amount of allocated surfels in a cell
 #define SURFEL_COVERAGE_HALFRES // runs the coverage shader in half resolution for improved performance
@@ -104,7 +104,7 @@ inline bool surfel_cellintersects(Surfel surfel, int3 cell)
 	float3 gridmax = (cell + 1) * SURFEL_MAX_RADIUS;
 #else
 	float3 gridmin = cell - SURFEL_GRID_DIMENSIONS / 2 * SURFEL_MAX_RADIUS + floor(g_xCamera_CamPos);
-	float3 gridmax = (cell + 1 - SURFEL_GRID_DIMENSIONS / 2) * SURFEL_MAX_RADIUS + floor(g_xCamera_CamPos);
+	float3 gridmax = (cell + 1) - SURFEL_GRID_DIMENSIONS / 2 * SURFEL_MAX_RADIUS + floor(g_xCamera_CamPos);
 #endif // SURFEL_USE_HASHING
 
 	float3 closestPointInAabb = min(max(surfel.position, gridmin), gridmax);

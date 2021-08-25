@@ -7,7 +7,6 @@
 //#define SURFEL_DEBUG_POINT
 //#define SURFEL_DEBUG_RANDOM
 #define SURFEL_DEBUG_HEATMAP
-//#define SURFEL_DEBUG_GRIDCOLOR
 
 
 static const uint random_colors_size = 11;
@@ -103,7 +102,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		return;
 	}
 
-	const float3 N = surface.facenormal;
+	const float3 N = surface.N;
 
 	float coverage = 0;
 
@@ -113,14 +112,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		write_debug(DTid.xy, 0);
 		return;
 	}
-
-#ifdef SURFEL_USE_AVERAGE_CELL_FALLBACK
-	color = float4(surfelGridColorTexture.SampleLevel(sampler_linear_clamp, surfel_griduv(P), 0), 1);
-#endif // SURFEL_USE_AVERAGE_CELL_FALLBACK
-
-#ifdef SURFEL_DEBUG_GRIDCOLOR
-	debug = color;
-#endif // SURFEL_DEBUG_GRIDCOLOR
 
 	uint cellindex = surfel_cellindex(gridpos);
 	SurfelGridCell cell = surfelGridBuffer[cellindex];
@@ -176,8 +167,13 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 
 	if (color.a > 0)
 	{
-		color /= color.a;
+		color.rgb /= color.a;
+		color.a = saturate(color.a);
 	}
+
+#ifdef SURFEL_USE_AVERAGE_CELL_FALLBACK
+	color.rgb = lerp(surfelGridColorTexture.SampleLevel(sampler_linear_clamp, surfel_griduv(P), 0), color.rgb, color.a);
+#endif // SURFEL_USE_AVERAGE_CELL_FALLBACK
 
 #ifdef SURFEL_DEBUG_NORMAL
 	debug.rgb = normalize(debug.rgb) * 0.5 + 0.5;
