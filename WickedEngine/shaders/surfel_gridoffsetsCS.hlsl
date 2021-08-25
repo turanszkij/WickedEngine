@@ -3,13 +3,13 @@
 
 RWSTRUCTUREDBUFFER(surfelGridBuffer, SurfelGridCell, 0);
 RWSTRUCTUREDBUFFER(surfelCellBuffer, uint, 1);
-RWSTRUCTUREDBUFFER(surfelCellAllocationBuffer, uint, 2);
+RWRAWBUFFER(surfelStatsBuffer, 2);
 
 [numthreads(64, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	SurfelGridCell cell = surfelGridBuffer[DTid.x];
-	InterlockedAdd(surfelCellAllocationBuffer[0], cell.count, cell.offset);
+	surfelStatsBuffer.InterlockedAdd(SURFEL_STATS_OFFSET_CELLALLOCATOR, cell.count, cell.offset);
 	cell.count = 0;
 	surfelGridBuffer[DTid.x] = cell;
 }

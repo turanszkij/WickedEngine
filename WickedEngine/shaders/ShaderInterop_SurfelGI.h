@@ -35,7 +35,8 @@ struct SurfelGridCell
 	uint offset;
 };
 static const uint SURFEL_STATS_OFFSET_COUNT = 0;
-static const uint SURFEL_STATS_OFFSET_INDIRECT = 4;
+static const uint SURFEL_STATS_OFFSET_CELLALLOCATOR = 4;
+static const uint SURFEL_STATS_OFFSET_INDIRECT = 8;
 static const uint SURFEL_INDIRECT_NUMTHREADS = 32;
 static const uint SURFEL_TARGET_COVERAGE = 1; // how many surfels should affect a pixel fully, higher values will increase quality and cost
 static const float SURFEL_NORMAL_TOLERANCE = 1; // default: 1, higher values will put more surfels on edges, to have more detail but increases cost

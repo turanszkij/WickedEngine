@@ -8116,19 +8116,17 @@ void SurfelGI(
 		device->EventBegin("Grid Offsets", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_SURFEL_GRIDOFFSETS], cmd);
 
-		const uint cellAllocation = 0;
-		device->UpdateBuffer(&scene.surfelCellAllocationBuffer, &cellAllocation, cmd);
-
 		const GPUResource* uavs[] = {
 			&scene.surfelGridBuffer,
 			&scene.surfelCellBuffer,
-			&scene.surfelCellAllocationBuffer,
+			&scene.surfelStatsBuffer,
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Buffer(&scene.surfelCellBuffer, BUFFER_STATE_SHADER_RESOURCE_COMPUTE, BUFFER_STATE_UNORDERED_ACCESS),
+				GPUBarrier::Buffer(&scene.surfelStatsBuffer, BUFFER_STATE_INDIRECT_ARGUMENT, BUFFER_STATE_UNORDERED_ACCESS),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -8143,6 +8141,7 @@ void SurfelGI(
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Memory(),
+				GPUBarrier::Buffer(&scene.surfelStatsBuffer, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_INDIRECT_ARGUMENT),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}

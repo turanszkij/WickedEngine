@@ -1609,7 +1609,7 @@ namespace wiScene
 			device->SetName(&surfelDataBuffer, "surfelDataBuffer");
 
 			desc.StructureByteStride = sizeof(uint);
-			desc.ByteWidth = desc.StructureByteStride * 4;
+			desc.ByteWidth = desc.StructureByteStride * 5;
 			desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS | RESOURCE_MISC_INDIRECT_ARGS;
 			device->CreateBuffer(&desc, nullptr, &surfelStatsBuffer);
 			device->SetName(&surfelStatsBuffer, "surfelStatsBuffer");
@@ -1625,13 +1625,6 @@ namespace wiScene
 			desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 			device->CreateBuffer(&desc, nullptr, &surfelCellBuffer);
 			device->SetName(&surfelCellBuffer, "surfelCellBuffer");
-
-			desc.StructureByteStride = sizeof(uint);
-			desc.ByteWidth = desc.StructureByteStride;
-			desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-			desc.BindFlags = BIND_UNORDERED_ACCESS;
-			device->CreateBuffer(&desc, nullptr, &surfelCellAllocationBuffer);
-			device->SetName(&surfelCellAllocationBuffer, "surfelCellAllocationBuffer");
 		}
 	}
 	void Scene::Clear()
@@ -1669,6 +1662,12 @@ namespace wiScene
 		TLAS = RaytracingAccelerationStructure();
 		BVH.Clear();
 		waterRipples.clear();
+
+		surfelBuffer = {};
+		surfelDataBuffer = {};
+		surfelStatsBuffer = {};
+		surfelGridBuffer = {};
+		surfelCellBuffer = {};
 	}
 	void Scene::Merge(Scene& other)
 	{
