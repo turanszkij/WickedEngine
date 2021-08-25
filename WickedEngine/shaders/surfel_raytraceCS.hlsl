@@ -63,6 +63,7 @@ STRUCTUREDBUFFER(surfelBuffer, Surfel, TEXSLOT_ONDEMAND0);
 RAWBUFFER(surfelStatsBuffer, TEXSLOT_ONDEMAND1);
 STRUCTUREDBUFFER(surfelGridBuffer, SurfelGridCell, TEXSLOT_ONDEMAND2);
 STRUCTUREDBUFFER(surfelCellBuffer, uint, TEXSLOT_ONDEMAND3);
+TEXTURE3D(surfelGridColorTexture, float3, TEXSLOT_ONDEMAND4);
 
 RWSTRUCTUREDBUFFER(surfelDataBuffer, SurfelData, 0);
 
@@ -222,11 +223,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				Lighting lighting;
 				lighting.create(0, 0, 0, 0);
 
-				//if (!(light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC))
-				//{
-				//	continue; // dynamic lights will not be baked into lightmap
-				//}
-
 				float3 L = 0;
 				float dist = 0;
 				float NdotL = 0;
@@ -356,44 +352,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				}
 			}
 
-#else
-
-
-
-			Lighting lighting;
-			lighting.create(0, 0, 0, 0);
-
-			[loop]
-			for (uint iterator = 0; iterator < g_xFrame_LightArrayCount; iterator++)
-			{
-				ShaderEntity light = EntityArray[g_xFrame_LightArrayOffset + iterator];
-				if ((light.layerMask & surface.material.layerMask) == 0)
-					continue;
-
-				switch (light.GetType())
-				{
-				case ENTITY_TYPE_DIRECTIONALLIGHT:
-				{
-					DirectionalLight(light, surface, lighting);
-				}
-				break;
-				case ENTITY_TYPE_POINTLIGHT:
-				{
-					PointLight(light, surface, lighting);
-				}
-				break;
-				case ENTITY_TYPE_SPOTLIGHT:
-				{
-					SpotLight(light, surface, lighting);
-				}
-				break;
-				}
-			}
-
-			result += max(0, lighting.direct.diffuse * energy);
-
-
-
 #endif
 
 
@@ -404,7 +362,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 
 #if 1
+			// Evaluate surfel cache at hit point for multi bounce:
 			float4 surfel_gi = 0;
+#ifdef SURFEL_USE_AVERAGE_CELL_FALLBACK
+			surfel_gi = float4(surfelGridColorTexture.SampleLevel(sampler_linear_clamp, surfel_griduv(surface.P), 0), 1);
+#endif // SURFEL_USE_AVERAGE_CELL_FALLBACK
 			uint cellindex = surfel_cellindex(surfel_cell(surface.P));
 			SurfelGridCell cell = surfelGridBuffer[cellindex];
 			for (uint i = 0; i < cell.count; ++i)
@@ -431,7 +393,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 					}
 				}
 			}
-			if (surfel_gi.a > 0)
+			if (surfel_gi.a > 0.01)
 			{
 				surfel_gi /= surfel_gi.a;
 				result += max(0, energy * surfel_gi.rgb);

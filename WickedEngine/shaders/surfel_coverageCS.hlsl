@@ -7,6 +7,7 @@
 //#define SURFEL_DEBUG_POINT
 //#define SURFEL_DEBUG_RANDOM
 #define SURFEL_DEBUG_HEATMAP
+//#define SURFEL_DEBUG_GRIDCOLOR
 
 
 static const uint random_colors_size = 11;
@@ -31,6 +32,7 @@ float3 random_color(uint index)
 STRUCTUREDBUFFER(surfelBuffer, Surfel, TEXSLOT_ONDEMAND0);
 STRUCTUREDBUFFER(surfelGridBuffer, SurfelGridCell, TEXSLOT_ONDEMAND2);
 STRUCTUREDBUFFER(surfelCellBuffer, uint, TEXSLOT_ONDEMAND3);
+TEXTURE3D(surfelGridColorTexture, float3, TEXSLOT_ONDEMAND4);
 
 RWSTRUCTUREDBUFFER(surfelDataBuffer, SurfelData, 0);
 RWRAWBUFFER(surfelStatsBuffer, 1);
@@ -112,6 +114,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		return;
 	}
 
+#ifdef SURFEL_USE_AVERAGE_CELL_FALLBACK
+	color = float4(surfelGridColorTexture.SampleLevel(sampler_linear_clamp, surfel_griduv(P), 0), 1);
+#endif // SURFEL_USE_AVERAGE_CELL_FALLBACK
+
+#ifdef SURFEL_DEBUG_GRIDCOLOR
+	debug = color;
+#endif // SURFEL_DEBUG_GRIDCOLOR
+
 	uint cellindex = surfel_cellindex(gridpos);
 	SurfelGridCell cell = surfelGridBuffer[cellindex];
 	for (uint i = 0; i < cell.count; ++i)
@@ -129,10 +139,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 			{
 				float dist = sqrt(dist2);
 				float contribution = 1;
-				contribution *= saturate(1 - dist / surfel.radius);
-				contribution *= pow(saturate(dotN), SURFEL_NORMAL_TOLERANCE);
-				contribution = smoothstep(0, 1, contribution);
 				coverage += contribution;
+				contribution *= pow(saturate(dotN), SURFEL_NORMAL_TOLERANCE);
+				contribution *= saturate(1 - dist / surfel.radius);
+				contribution = smoothstep(0, 1, contribution);
 
 				color += float4(surfel.color, 1) * contribution;
 
@@ -166,12 +176,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 
 	if (color.a > 0)
 	{
-		color.rgb /= color.a;
-		color.a = saturate(color.a);
-	}
-	else
-	{
-		color = 0;
+		color /= color.a;
 	}
 
 #ifdef SURFEL_DEBUG_NORMAL

@@ -42,16 +42,28 @@ static const uint SURFEL_TARGET_COVERAGE = 1; // how many surfels should affect 
 static const float SURFEL_NORMAL_TOLERANCE = 1; // default: 1, higher values will put more surfels on edges, to have more detail but increases cost
 static const uint SURFEL_CELL_LIMIT = ~0; // limit the amount of allocated surfels in a cell
 #define SURFEL_COVERAGE_HALFRES // runs the coverage shader in half resolution for improved performance
-
-#ifndef __cplusplus
 #define SURFEL_GRID_CULLING // if defined, surfels will not be added to grid cells that they do not intersect
 //#define SURFEL_USE_HASHING // if defined, hashing will be used to retrieve surfels, hashing is good because it supports infinite world trivially, but slower due to hash collisions
+
+#ifndef SURFEL_USE_HASHING
+#define SURFEL_USE_AVERAGE_CELL_FALLBACK // low coverage areas will fall back to average cell color (without directional information)
+#endif // SURFEL_USE_HASHING
+
+#ifndef __cplusplus
 inline int3 surfel_cell(float3 position)
 {
 #ifdef SURFEL_USE_HASHING
 	return floor(position / SURFEL_MAX_RADIUS);
 #else
 	return floor((position - floor(g_xCamera_CamPos)) / SURFEL_MAX_RADIUS) + SURFEL_GRID_DIMENSIONS / 2;
+#endif // SURFEL_USE_HASHING
+}
+float3 surfel_griduv(float3 position)
+{
+#ifdef SURFEL_USE_HASHING
+	return 0; // hashed grid can't be sampled for colors, it doesn't make sense
+#else
+	return (((position - floor(g_xCamera_CamPos)) / SURFEL_MAX_RADIUS) + SURFEL_GRID_DIMENSIONS / 2) / SURFEL_GRID_DIMENSIONS;
 #endif // SURFEL_USE_HASHING
 }
 inline uint surfel_cellindex(int3 cell)
