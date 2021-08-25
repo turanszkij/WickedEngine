@@ -649,9 +649,10 @@ static const uint OPTION_BIT_SIMPLE_SKY = 1 << 5;
 static const uint OPTION_BIT_REALISTIC_SKY = 1 << 6;
 static const uint OPTION_BIT_HEIGHT_FOG = 1 << 7;
 static const uint OPTION_BIT_RAYTRACED_SHADOWS = 1 << 8;
-static const uint OPTION_BIT_DISABLE_ALBEDO_MAPS = 1 << 9;
-static const uint OPTION_BIT_SHADOW_MASK = 1 << 10;
-static const uint OPTION_BIT_SURFELGI_ENABLED = 1 << 11;
+static const uint OPTION_BIT_SHADOW_MASK = 1 << 9;
+static const uint OPTION_BIT_SURFELGI_ENABLED = 1 << 10;
+static const uint OPTION_BIT_DISABLE_ALBEDO_MAPS = 1 << 11;
+static const uint OPTION_BIT_FORCE_DIFFUSE_LIGHTING = 1 << 12;
 
 // ---------- Common Constant buffers: -----------------
 

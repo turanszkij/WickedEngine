@@ -213,7 +213,10 @@ struct Surface
 		roughness = material.roughness;
 		f0 = material.specularColor.rgb * specularMap.rgb * specularMap.a * material.specularColor.a;
 
-		//f0 = material.metalness = material.reflectance = 0;
+		if (g_xFrame_Options & OPTION_BIT_FORCE_DIFFUSE_LIGHTING)
+		{
+			f0 = material.metalness = material.reflectance = 0;
+		}
 
 		[branch]
 		if (material.IsUsingSpecularGlossinessWorkflow())

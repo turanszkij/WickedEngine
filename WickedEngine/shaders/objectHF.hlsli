@@ -20,6 +20,7 @@
 #include "globals.hlsli"
 #include "brdf.hlsli"
 #include "lightingHF.hlsli"
+#include "ShaderInterop_SurfelGI.h"
 
 // DEFINITIONS
 //////////////////
@@ -456,14 +457,14 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 				[branch]
 				if (is_saturated(uvw))
 				{
-					// mipmapping needs to be performed by hand:
-					const float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy;
-					const float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy;
 					float4 decalColor = 1;
 					[branch]
 					if (decalTexture >= 0)
 					{
-						decalColor = bindless_textures[NonUniformResourceIndex(decalTexture)].SampleGrad(sampler_linear_clamp, uvw.xy, decalDX, decalDY);
+						// mipmapping needs to be performed by hand:
+						const float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy;
+						const float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy;
+						decalColor = bindless_textures[NonUniformResourceIndex(decalTexture)].SampleGrad(sampler_objectshader, uvw.xy, decalDX, decalDY);
 					}
 					// blend out if close to cube Z:
 					float edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
@@ -672,13 +673,13 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 					if (is_saturated(uvw))
 					{
 						// mipmapping needs to be performed by hand:
-						const float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy;
-						const float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy;
 						float4 decalColor = 1;
 						[branch]
 						if (decalTexture >= 0)
 						{
-							decalColor = bindless_textures[NonUniformResourceIndex(decalTexture)].SampleGrad(sampler_linear_clamp, uvw.xy, decalDX, decalDY);
+							const float2 decalDX = mul(P_dx, (float3x3)decalProjection).xy;
+							const float2 decalDY = mul(P_dy, (float3x3)decalProjection).xy;
+							decalColor = bindless_textures[NonUniformResourceIndex(decalTexture)].SampleGrad(sampler_objectshader, uvw.xy, decalDX, decalDY);
 						}
 						// blend out if close to cube Z:
 						float edgeBlend = 1 - pow(saturate(abs(clipSpacePos.z)), 8);
@@ -894,7 +895,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 
 #ifndef TRANSPARENT
 	[branch]
-	if (g_xFrame_Options & OPTION_BIT_SURFELGI_ENABLED)
+	if (g_xFrame_Options & OPTION_BIT_SURFELGI_ENABLED && surfel_cellvalid(surfel_cell(surface.P)))
 	{
 		lighting.indirect.diffuse = texture_surfelgi[surface.pixel];
 	}

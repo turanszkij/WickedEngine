@@ -76,6 +76,7 @@ public:
 
 	wiCheckBox freezeCullingCameraCheckBox;
 	wiCheckBox disableAlbedoMapsCheckBox;
+	wiCheckBox forceDiffuseLightingCheckBox;
 
     uint32_t GetPickType() const;
 };

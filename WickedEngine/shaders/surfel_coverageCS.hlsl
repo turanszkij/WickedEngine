@@ -37,6 +37,29 @@ RWRAWBUFFER(surfelStatsBuffer, 1);
 RWTEXTURE2D(result, float3, 2);
 RWTEXTURE2D(debugUAV, unorm float4, 3);
 
+void write_result(uint2 DTid, float4 color)
+{
+#ifdef SURFEL_COVERAGE_HALFRES
+	result[DTid * 2 + uint2(0, 0)] = color.rgb;
+	result[DTid * 2 + uint2(1, 0)] = color.rgb;
+	result[DTid * 2 + uint2(0, 1)] = color.rgb;
+	result[DTid * 2 + uint2(1, 1)] = color.rgb;
+#else
+	result[DTid] = color.rgb;
+#endif // SURFEL_COVERAGE_HALFRES
+}
+void write_debug(uint2 DTid, float4 debug)
+{
+#ifdef SURFEL_COVERAGE_HALFRES
+	debugUAV[DTid * 2 + uint2(0, 0)] = debug;
+	debugUAV[DTid * 2 + uint2(1, 0)] = debug;
+	debugUAV[DTid * 2 + uint2(0, 1)] = debug;
+	debugUAV[DTid * 2 + uint2(1, 1)] = debug;
+#else
+	debugUAV[DTid] = debug;
+#endif // SURFEL_COVERAGE_HALFRES
+}
+
 groupshared uint GroupMinSurfelCount;
 
 [numthreads(16, 16, 1)]
@@ -48,12 +71,16 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	}
 	GroupMemoryBarrierWithGroupSync();
 
+#ifdef SURFEL_COVERAGE_HALFRES
+	uint2 pixel = DTid.xy * 2 + GetTemporalAASampleRotation();
+#else
 	uint2 pixel = DTid.xy;
+#endif // SURFEL_COVERAGE_HALFRES
 
 	const float depth = texture_depth[pixel];
 	if (depth == 0)
 	{
-		debugUAV[pixel] = 0;
+		write_debug(DTid.xy, 0);
 		return;
 	}
 
@@ -78,7 +105,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 
 	float coverage = 0;
 
-	uint cellindex = surfel_cellindex(surfel_cell(P));
+	int3 gridpos = surfel_cell(P);
+	if (!surfel_cellvalid(gridpos))
+	{
+		write_debug(DTid.xy, 0);
+		return;
+	}
+
+	uint cellindex = surfel_cellindex(gridpos);
 	SurfelGridCell cell = surfelGridBuffer[cellindex];
 	for (uint i = 0; i < cell.count; ++i)
 	{
@@ -95,8 +129,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 			{
 				float dist = sqrt(dist2);
 				float contribution = 1;
-				contribution *= pow(saturate(dotN), SURFEL_NORMAL_TOLERANCE);
 				contribution *= saturate(1 - dist / surfel.radius);
+				contribution *= pow(saturate(dotN), SURFEL_NORMAL_TOLERANCE);
 				contribution = smoothstep(0, 1, contribution);
 				coverage += contribution;
 
@@ -191,7 +225,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		// Slow down the propagation by chance
 		//	Closer surfaces have less chance to avoid excessive clumping of surfels
 		const float lineardepth = getLinearDepth(depth) * g_xCamera_ZFarP_rcp;
+#ifdef SURFEL_COVERAGE_HALFRES
+		const float chance = pow(1 - lineardepth, 8);
+#else
 		const float chance = pow(1 - lineardepth, 4);
+#endif // SURFEL_COVERAGE_HALFRES
 		if (blue_noise(Gid.xy).x < chance)
 			return;
 
@@ -208,6 +246,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		}
 	}
 
-	result[pixel] = color.rgb;
-	debugUAV[pixel] = debug;
+	write_result(DTid.xy, color);
+	write_debug(DTid.xy, debug);
 }

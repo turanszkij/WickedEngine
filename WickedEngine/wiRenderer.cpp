@@ -95,6 +95,7 @@ bool raytraceDebugVisualizer = false;
 bool raytracedShadows = false;
 bool tessellationEnabled = true;
 bool disableAlbedoMaps = false;
+bool forceDiffuseLighting = false;
 bool SCREENSPACESHADOWS = false;
 bool SURFELGI = false;
 bool SURFELGI_DEBUG = false;
@@ -3330,10 +3331,6 @@ void UpdatePerFrameData(
 		frameCB.g_xFrame_Options |= OPTION_BIT_RAYTRACED_SHADOWS;
 		frameCB.g_xFrame_Options |= OPTION_BIT_SHADOW_MASK;
 	}
-	if (IsDisableAlbedoMaps())
-	{
-		frameCB.g_xFrame_Options |= OPTION_BIT_DISABLE_ALBEDO_MAPS;
-	}
 	if (GetScreenSpaceShadowsEnabled())
 	{
 		frameCB.g_xFrame_Options |= OPTION_BIT_SHADOW_MASK;
@@ -3341,6 +3338,14 @@ void UpdatePerFrameData(
 	if (GetSurfelGIEnabled())
 	{
 		frameCB.g_xFrame_Options |= OPTION_BIT_SURFELGI_ENABLED;
+	}
+	if (IsDisableAlbedoMaps())
+	{
+		frameCB.g_xFrame_Options |= OPTION_BIT_DISABLE_ALBEDO_MAPS;
+	}
+	if (IsForceDiffuseLighting())
+	{
+		frameCB.g_xFrame_Options |= OPTION_BIT_FORCE_DIFFUSE_LIGHTING;
 	}
 
 	frameCB.g_xFrame_Atmosphere = vis.scene->weather.atmosphereParameters;
@@ -7935,7 +7940,7 @@ void CreateSurfelGIResources(SurfelGIResources& res, XMUINT2 resolution)
 	device->CreateTexture(&desc, nullptr, &res.result);
 	device->SetName(&res.result, "surfelGI.result");
 }
-void SurfelGI(
+void SurfelGI_Coverage(
 	const SurfelGIResources& res,
 	const Scene& scene,
 	const Texture& depthbuffer,
@@ -7944,8 +7949,102 @@ void SurfelGI(
 	CommandList cmd
 )
 {
-	device->EventBegin("SurfelGI", cmd);
+	device->EventBegin("SurfelGI - Coverage", cmd);
+	auto prof_range = wiProfiler::BeginRangeGPU("SurfelGI - Coverage", cmd);
+
+	device->BindResource(CS, &scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
+
+	device->BindResource(CS, &scene.surfelBuffer, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(CS, &scene.surfelStatsBuffer, TEXSLOT_ONDEMAND1, cmd);
+	device->BindResource(CS, &scene.surfelGridBuffer, TEXSLOT_ONDEMAND2, cmd);
+	device->BindResource(CS, &scene.surfelCellBuffer, TEXSLOT_ONDEMAND3, cmd);
+
+	// Coverage:
+	{
+		device->EventBegin("Coverage", cmd);
+		device->BindComputeShader(&shaders[CSTYPE_SURFEL_COVERAGE], cmd);
+
+		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
+		device->BindResource(CS, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
+		device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
+
+		const GPUResource* uavs[] = {
+			&scene.surfelDataBuffer,
+			&scene.surfelStatsBuffer,
+			&res.result,
+			&debugUAV
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Buffer(&scene.surfelStatsBuffer, BUFFER_STATE_INDIRECT_ARGUMENT, BUFFER_STATE_UNORDERED_ACCESS),
+				GPUBarrier::Image(&res.result, res.result.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+				GPUBarrier::Image(&debugUAV, debugUAV.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+#ifdef SURFEL_COVERAGE_HALFRES
+		device->Dispatch(
+			(res.result.desc.Width / 2 + 15) / 16,
+			(res.result.desc.Height / 2 + 15) / 16,
+			1,
+			cmd
+		);
+#else
+		device->Dispatch(
+			(res.result.desc.Width + 15) / 16,
+			(res.result.desc.Height + 15) / 16,
+			1,
+			cmd
+		);
+#endif // SURFEL_COVERAGE_HALFRES
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(),
+				GPUBarrier::Image(&res.result, IMAGE_LAYOUT_UNORDERED_ACCESS, res.result.desc.layout),
+				GPUBarrier::Image(&debugUAV, IMAGE_LAYOUT_UNORDERED_ACCESS, debugUAV.desc.layout),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->UnbindResources(TEXSLOT_ONDEMAND0, 5, cmd);
+		device->EventEnd(cmd);
+	}
+
+	// surfel count -> indirect args (for next frame):
+	{
+		device->EventBegin("Indirect args", cmd);
+		const GPUResource* uavs[] = {
+			&scene.surfelStatsBuffer,
+		};
+		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+
+		device->BindComputeShader(&shaders[CSTYPE_SURFEL_INDIRECTPREPARE], cmd);
+		device->Dispatch(1, 1, 1, cmd);
+
+		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->EventEnd(cmd);
+	}
+
+
+	wiProfiler::EndRange(prof_range);
+	device->EventEnd(cmd);
+}
+void SurfelGI(
+	const SurfelGIResources& res,
+	const wiScene::Scene& scene,
+	wiGraphics::CommandList cmd
+)
+{
 	auto prof_range = wiProfiler::BeginRangeGPU("SurfelGI", cmd);
+	device->EventBegin("SurfelGI", cmd);
+
+	BindCommonResources(cmd);
+	BindShadowmaps(CS, cmd);
 
 	device->BindResource(CS, &scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
@@ -8050,7 +8149,7 @@ void SurfelGI(
 
 		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
-	}
+		}
 
 	// Binning:
 	{
@@ -8081,87 +8180,8 @@ void SurfelGI(
 		device->EventEnd(cmd);
 	}
 
-	device->BindResource(CS, &scene.surfelBuffer, TEXSLOT_ONDEMAND0, cmd);
-	device->BindResource(CS, &scene.surfelStatsBuffer, TEXSLOT_ONDEMAND1, cmd);
-	device->BindResource(CS, &scene.surfelGridBuffer, TEXSLOT_ONDEMAND2, cmd);
-	device->BindResource(CS, &scene.surfelCellBuffer, TEXSLOT_ONDEMAND3, cmd);
-
-	// Coverage:
-	{
-		device->EventBegin("Coverage", cmd);
-		device->BindComputeShader(&shaders[CSTYPE_SURFEL_COVERAGE], cmd);
-
-		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
-		device->BindResource(CS, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
-		device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
-
-		const GPUResource* uavs[] = {
-			&scene.surfelDataBuffer,
-			&scene.surfelStatsBuffer,
-			&res.result,
-			&debugUAV
-		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Buffer(&scene.surfelStatsBuffer, BUFFER_STATE_INDIRECT_ARGUMENT, BUFFER_STATE_UNORDERED_ACCESS),
-				GPUBarrier::Image(&res.result, res.result.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
-				GPUBarrier::Image(&debugUAV, debugUAV.desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
-		device->Dispatch(
-			(res.result.desc.Width + 15) / 16,
-			(res.result.desc.Height + 15) / 16,
-			1,
-			cmd
-		);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-				GPUBarrier::Image(&res.result, IMAGE_LAYOUT_UNORDERED_ACCESS, res.result.desc.layout),
-				GPUBarrier::Image(&debugUAV, IMAGE_LAYOUT_UNORDERED_ACCESS, debugUAV.desc.layout),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
-		device->UnbindResources(TEXSLOT_ONDEMAND0, 5, cmd);
-		device->EventEnd(cmd);
-	}
-
-	// surfel count -> indirect args (for next frame):
-	{
-		device->EventBegin("Indirect args", cmd);
-		const GPUResource* uavs[] = {
-			&scene.surfelStatsBuffer,
-		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
-
-		device->BindComputeShader(&shaders[CSTYPE_SURFEL_INDIRECTPREPARE], cmd);
-		device->Dispatch(1, 1, 1, cmd);
-
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
-		device->EventEnd(cmd);
-	}
 
 
-	wiProfiler::EndRange(prof_range);
-	device->EventEnd(cmd);
-}
-void SurfelGI_Raytrace(
-	const SurfelGIResources& res,
-	const wiScene::Scene& scene,
-	wiGraphics::CommandList cmd
-)
-{
-	auto prof_range = wiProfiler::BeginRangeGPU("SurfelGI - Raytrace", cmd);
-	device->EventBegin("SurfelGI - Raytrace", cmd);
-
-	device->BindResource(CS, &scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 	device->BindResource(CS, &scene.surfelBuffer, TEXSLOT_ONDEMAND0, cmd);
 	device->BindResource(CS, &scene.surfelStatsBuffer, TEXSLOT_ONDEMAND1, cmd);
 	device->BindResource(CS, &scene.surfelGridBuffer, TEXSLOT_ONDEMAND2, cmd);
@@ -8169,6 +8189,7 @@ void SurfelGI_Raytrace(
 
 	// Raytracing:
 	{
+		device->EventBegin("Raytrace", cmd);
 		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		{
 			if (!scene.TLAS.IsValid())
@@ -8181,9 +8202,6 @@ void SurfelGI_Raytrace(
 		{
 			scene.BVH.Bind(CS, cmd);
 		}
-
-		BindCommonResources(cmd);
-		BindShadowmaps(CS, cmd);
 
 		device->BindResource(CS, &resourceBuffers[RBTYPE_ENTITYARRAY], SBSLOT_ENTITYARRAY, cmd);
 		device->BindResource(CS, &resourceBuffers[RBTYPE_MATRIXARRAY], SBSLOT_MATRIXARRAY, cmd);
@@ -8204,6 +8222,7 @@ void SurfelGI_Raytrace(
 		device->DispatchIndirect(&scene.surfelStatsBuffer, SURFEL_STATS_OFFSET_INDIRECT, cmd);
 
 		device->UnbindUAVs(0, arraysize(uavs), cmd);
+		device->EventEnd(cmd);
 	}
 
 	wiProfiler::EndRange(prof_range);
@@ -12484,6 +12503,14 @@ void SetDisableAlbedoMaps(bool value)
 bool IsDisableAlbedoMaps()
 {
 	return disableAlbedoMaps;
+}
+void SetForceDiffuseLighting(bool value)
+{
+	forceDiffuseLighting = value;
+}
+bool IsForceDiffuseLighting()
+{
+	return forceDiffuseLighting;
 }
 void SetScreenSpaceShadowsEnabled(bool value)
 {

@@ -334,7 +334,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 					newRay.TMax = dist;
 #ifdef RTAPI
 					RayQuery<
-						RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES
+						RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES |
+						RAY_FLAG_FORCE_OPAQUE |
+						RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH
 					> q;
 					q.TraceRayInline(
 						scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
@@ -342,24 +344,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 						0xFF,							// uint InstanceInclusionMask
 						newRay							// RayDesc Ray
 					);
-					while (q.Proceed())
-					{
-						PrimitiveID prim;
-						prim.primitiveIndex = q.CandidatePrimitiveIndex();
-						prim.instanceIndex = q.CandidateInstanceID();
-						prim.subsetIndex = q.CandidateGeometryIndex();
-
-						Surface surface;
-						surface.load(prim, q.CandidateTriangleBarycentrics());
-
-						shadow *= lerp(1, surface.albedo * surface.transmission, surface.opacity);
-
-						[branch]
-						if (!any(shadow))
-						{
-							q.CommitNonOpaqueTriangleHit();
-						}
-					}
+					q.Proceed();
 					shadow = q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ? 0 : shadow;
 #else
 					shadow = TraceRay_Any(newRay) ? 0 : shadow;

@@ -311,7 +311,7 @@ namespace wiRenderer
 		wiGraphics::Texture result;
 	};
 	void CreateSurfelGIResources(SurfelGIResources& res, XMUINT2 resolution);
-	void SurfelGI(
+	void SurfelGI_Coverage(
 		const SurfelGIResources& res,
 		const wiScene::Scene& scene,
 		const wiGraphics::Texture& depthbuffer,
@@ -319,7 +319,7 @@ namespace wiRenderer
 		const wiGraphics::Texture& debugUAV,
 		wiGraphics::CommandList cmd
 	);
-	void SurfelGI_Raytrace(
+	void SurfelGI(
 		const SurfelGIResources& res,
 		const wiScene::Scene& scene,
 		wiGraphics::CommandList cmd
@@ -786,6 +786,8 @@ namespace wiRenderer
 	bool GetTessellationEnabled();
 	void SetDisableAlbedoMaps(bool value);
 	bool IsDisableAlbedoMaps();
+	void SetForceDiffuseLighting(bool value);
+	bool IsForceDiffuseLighting();
 	void SetScreenSpaceShadowsEnabled(bool value);
 	bool GetScreenSpaceShadowsEnabled();
 	void SetSurfelGIEnabled(bool value);

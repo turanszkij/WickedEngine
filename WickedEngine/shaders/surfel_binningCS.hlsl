@@ -22,10 +22,14 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		for (uint i = 0; i < 27; ++i)
 		{
 			int3 gridpos = center_cell + surfel_neighbor_offsets[i];
-			uint cellindex = surfel_cellindex(gridpos);
-			uint prevCount;
-			InterlockedAdd(surfelGridBuffer[cellindex].count, 1, prevCount);
-			surfelCellBuffer[surfelGridBuffer[cellindex].offset + prevCount] = surfel_index;
+
+			if (surfel_cellintersects(surfel, gridpos))
+			{
+				uint cellindex = surfel_cellindex(gridpos);
+				uint prevCount;
+				InterlockedAdd(surfelGridBuffer[cellindex].count, 1, prevCount);
+				surfelCellBuffer[surfelGridBuffer[cellindex].offset + prevCount] = surfel_index;
+			}
 		}
 
 	}

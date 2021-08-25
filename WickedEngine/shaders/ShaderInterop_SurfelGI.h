@@ -40,15 +40,17 @@ static const uint SURFEL_INDIRECT_NUMTHREADS = 32;
 static const uint SURFEL_TARGET_COVERAGE = 1; // how many surfels should affect a pixel fully, higher values will increase quality and cost
 static const float SURFEL_NORMAL_TOLERANCE = 1; // default: 1, higher values will put more surfels on edges, to have more detail but increases cost
 static const uint SURFEL_CELL_LIMIT = ~0; // limit the amount of allocated surfels in a cell
+#define SURFEL_COVERAGE_HALFRES // runs the coverage shader in half resolution for improved performance
 
 #ifndef __cplusplus
-#define SURFEL_USE_HASHING // if defined, hashing will be used to retrieve surfels, otherwise they will be taken from a finite grid
+#define SURFEL_GRID_CULLING // if defined, surfels will not be added to grid cells that they do not intersect
+//#define SURFEL_USE_HASHING // if defined, hashing will be used to retrieve surfels, hashing is good because it supports infinite world trivially, but slower due to hash collisions
 inline int3 surfel_cell(float3 position)
 {
 #ifdef SURFEL_USE_HASHING
-	return position / SURFEL_MAX_RADIUS;
+	return floor(position / SURFEL_MAX_RADIUS);
 #else
-	return (position - g_xCamera_CamPos) / SURFEL_MAX_RADIUS + SURFEL_GRID_DIMENSIONS / 2;
+	return floor((position - floor(g_xCamera_CamPos)) / SURFEL_MAX_RADIUS) + SURFEL_GRID_DIMENSIONS / 2;
 #endif // SURFEL_USE_HASHING
 }
 inline uint surfel_cellindex(int3 cell)
@@ -63,6 +65,43 @@ inline uint surfel_cellindex(int3 cell)
 #else
 	return flatten3D(cell, SURFEL_GRID_DIMENSIONS);
 #endif // SURFEL_USE_HASHING
+}
+inline bool surfel_cellvalid(int3 cell)
+{
+#ifdef SURFEL_USE_HASHING
+	return true;
+#else
+	if (cell.x < 0 || cell.x >= SURFEL_GRID_DIMENSIONS.x)
+		return false;
+	if (cell.y < 0 || cell.y >= SURFEL_GRID_DIMENSIONS.y)
+		return false;
+	if (cell.z < 0 || cell.z >= SURFEL_GRID_DIMENSIONS.z)
+		return false;
+	return true;
+#endif // SURFEL_USE_HASHING
+}
+inline bool surfel_cellintersects(Surfel surfel, int3 cell)
+{
+	if (!surfel_cellvalid(cell))
+		return false;
+
+#ifdef SURFEL_GRID_CULLING
+#ifdef SURFEL_USE_HASHING
+	float3 gridmin = cell * SURFEL_MAX_RADIUS;
+	float3 gridmax = (cell + 1) * SURFEL_MAX_RADIUS;
+#else
+	float3 gridmin = cell - SURFEL_GRID_DIMENSIONS / 2 * SURFEL_MAX_RADIUS + floor(g_xCamera_CamPos);
+	float3 gridmax = (cell + 1 - SURFEL_GRID_DIMENSIONS / 2) * SURFEL_MAX_RADIUS + floor(g_xCamera_CamPos);
+#endif // SURFEL_USE_HASHING
+
+	float3 closestPointInAabb = min(max(surfel.position, gridmin), gridmax);
+	float dist = distance(closestPointInAabb, surfel.position);
+	if (dist < surfel.radius)
+		return true;
+	return false;
+#else
+	return true;
+#endif // SURFEL_GRID_CULLING
 }
 // 27 neighbor offsets in a 3D grid, including center cell:
 static const int3 surfel_neighbor_offsets[27] = {

@@ -28,17 +28,20 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	{
 		surfel.normal = pack_unitvector(surface.facenormal);
 		surfel.position = surface.P;
+		surfel.color = surfel_data.mean;
+		surfel.radius = SURFEL_MAX_RADIUS;
 
 		int3 center_cell = surfel_cell(surfel.position);
 		for (uint i = 0; i < 27; ++i)
 		{
 			int3 gridpos = center_cell + surfel_neighbor_offsets[i];
-			uint cellindex = surfel_cellindex(gridpos);
-			InterlockedAdd(surfelGridBuffer[cellindex].count, 1);
-		}
 
-		surfel.color = surfel_data.mean;
-		surfel.radius = SURFEL_MAX_RADIUS;
+			if(surfel_cellintersects(surfel, gridpos))
+			{
+				uint cellindex = surfel_cellindex(gridpos);
+				InterlockedAdd(surfelGridBuffer[cellindex].count, 1);
+			}
+		}
 	}
 	else
 	{

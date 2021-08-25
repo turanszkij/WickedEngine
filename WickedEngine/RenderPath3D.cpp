@@ -626,7 +626,13 @@ void RenderPath3D::Render() const
 
 			if (wiRenderer::GetSurfelGIEnabled())
 			{
-				wiRenderer::SurfelGI_Raytrace(
+				wiRenderer::UpdateCameraCB(
+					*camera,
+					camera_previous,
+					camera_reflection,
+					cmd
+				);
+				wiRenderer::SurfelGI(
 					surfelGIResources,
 					*scene,
 					cmd
@@ -713,7 +719,7 @@ void RenderPath3D::Render() const
 
 		if (wiRenderer::GetSurfelGIEnabled())
 		{
-			wiRenderer::SurfelGI(
+			wiRenderer::SurfelGI_Coverage(
 				surfelGIResources,
 				*scene,
 				depthBuffer_Copy,

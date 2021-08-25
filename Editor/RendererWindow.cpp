@@ -651,7 +651,7 @@ void RendererWindow::Create(EditorComponent* editor)
 
 
 
-	disableAlbedoMapsCheckBox.Create("Disable Albedo maps: ");
+	disableAlbedoMapsCheckBox.Create("Disable albedo maps: ");
 	disableAlbedoMapsCheckBox.SetTooltip("Disables albedo maps on objects for easier lighting debugging");
 	disableAlbedoMapsCheckBox.SetPos(XMFLOAT2(x, y += step));
 	disableAlbedoMapsCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
@@ -660,6 +660,17 @@ void RendererWindow::Create(EditorComponent* editor)
 		});
 	disableAlbedoMapsCheckBox.SetCheck(wiRenderer::IsDisableAlbedoMaps());
 	AddWidget(&disableAlbedoMapsCheckBox);
+
+
+	forceDiffuseLightingCheckBox.Create("Force diffuse lighting: ");
+	forceDiffuseLightingCheckBox.SetTooltip("Sets every surface fully diffuse, with zero specularity");
+	forceDiffuseLightingCheckBox.SetPos(XMFLOAT2(x, y += step));
+	forceDiffuseLightingCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
+	forceDiffuseLightingCheckBox.OnClick([](wiEventArgs args) {
+		wiRenderer::SetForceDiffuseLighting(args.bValue);
+		});
+	forceDiffuseLightingCheckBox.SetCheck(wiRenderer::IsForceDiffuseLighting());
+	AddWidget(&forceDiffuseLightingCheckBox);
 
 
 
