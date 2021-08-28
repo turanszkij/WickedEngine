@@ -31,7 +31,6 @@ float3 random_color(uint index)
 STRUCTUREDBUFFER(surfelBuffer, Surfel, TEXSLOT_ONDEMAND0);
 STRUCTUREDBUFFER(surfelGridBuffer, SurfelGridCell, TEXSLOT_ONDEMAND2);
 STRUCTUREDBUFFER(surfelCellBuffer, uint, TEXSLOT_ONDEMAND3);
-TEXTURE3D(surfelGridColorTexture, float3, TEXSLOT_ONDEMAND4);
 
 RWSTRUCTUREDBUFFER(surfelDataBuffer, SurfelData, 0);
 RWRAWBUFFER(surfelStatsBuffer, 1);
@@ -170,10 +169,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		color.rgb /= color.a;
 		color.a = saturate(color.a);
 	}
-
-#ifdef SURFEL_USE_AVERAGE_CELL_FALLBACK
-	color.rgb = lerp(surfelGridColorTexture.SampleLevel(sampler_linear_clamp, surfel_griduv(P), 0), color.rgb, color.a);
-#endif // SURFEL_USE_AVERAGE_CELL_FALLBACK
 
 #ifdef SURFEL_DEBUG_NORMAL
 	debug.rgb = normalize(debug.rgb) * 0.5 + 0.5;

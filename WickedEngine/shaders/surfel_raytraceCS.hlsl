@@ -63,7 +63,6 @@ STRUCTUREDBUFFER(surfelBuffer, Surfel, TEXSLOT_ONDEMAND0);
 RAWBUFFER(surfelStatsBuffer, TEXSLOT_ONDEMAND1);
 STRUCTUREDBUFFER(surfelGridBuffer, SurfelGridCell, TEXSLOT_ONDEMAND2);
 STRUCTUREDBUFFER(surfelCellBuffer, uint, TEXSLOT_ONDEMAND3);
-TEXTURE3D(surfelGridColorTexture, float3, TEXSLOT_ONDEMAND4);
 
 RWSTRUCTUREDBUFFER(surfelDataBuffer, SurfelData, 0);
 
@@ -394,14 +393,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			{
 				surfel_gi.rgb /= surfel_gi.a;
 				surfel_gi.a = saturate(surfel_gi.a);
-			}
-
-#ifdef SURFEL_USE_AVERAGE_CELL_FALLBACK
-			surfel_gi.rgb = lerp(surfelGridColorTexture.SampleLevel(sampler_linear_clamp, surfel_griduv(surface.P), 0), surfel_gi.rgb, surfel_gi.a);
-#endif // SURFEL_USE_AVERAGE_CELL_FALLBACK
-
-			if (surfel_gi.a > 0)
-			{
 				result += max(0, energy * surfel_gi.rgb);
 				break;
 			}
@@ -418,6 +409,47 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	}
 	gi /= gi.a;
 
+
+#if 1
+	Surface surface;
+	surface.P = surfel.position;
+	surface.N = normalize(unpack_unitvector(surfel.normal));
+
+	float4 surfel_gi = gi;
+	uint cellindex = surfel_cellindex(surfel_cell(surface.P));
+	SurfelGridCell cell = surfelGridBuffer[cellindex];
+	for (uint i = 0; i < cell.count; ++i)
+	{
+		uint surfel_index = surfelCellBuffer[cell.offset + i];
+		Surfel surfel = surfelBuffer[surfel_index];
+		surfel.radius *= 2;
+
+		float3 L = surfel.position - surface.P;
+		float dist2 = dot(L, L);
+		if (dist2 < sqr(surfel.radius))
+		{
+			float3 normal = normalize(unpack_unitvector(surfel.normal));
+			float dotN = dot(surface.N, normal);
+			if (dotN > 0)
+			{
+				float dist = sqrt(dist2);
+				float contribution = 1;
+				contribution *= saturate(1 - dist / surfel.radius);
+				contribution = smoothstep(0, 1, contribution);
+				contribution *= pow(saturate(dotN), SURFEL_NORMAL_TOLERANCE);
+
+				surfel_gi += float4(surfel.color, 1) * contribution;
+
+			}
+		}
+	}
+	if (surfel_gi.a > 0)
+	{
+		surfel_gi.rgb /= surfel_gi.a;
+		surfel_gi.a = saturate(surfel_gi.a);
+		gi = surfel_gi;
+	}
+#endif
 
 
 	MultiscaleMeanEstimator(gi.rgb, surfel_data, 0.08);

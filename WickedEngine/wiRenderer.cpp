@@ -1130,7 +1130,6 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_SURFEL_UPDATE], "surfel_updateCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_SURFEL_GRIDRESET], "surfel_gridresetCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_SURFEL_GRIDOFFSETS], "surfel_gridoffsetsCS.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_SURFEL_GRIDCOLOR], "surfel_gridcolorCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_SURFEL_BINNING], "surfel_binningCS.cso"); });
 	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 	{
@@ -7968,7 +7967,6 @@ void SurfelGI_Coverage(
 		device->BindResource(CS, &scene.surfelStatsBuffer, TEXSLOT_ONDEMAND1, cmd);
 		device->BindResource(CS, &scene.surfelGridBuffer, TEXSLOT_ONDEMAND2, cmd);
 		device->BindResource(CS, &scene.surfelCellBuffer, TEXSLOT_ONDEMAND3, cmd);
-		device->BindResource(CS, &scene.surfelGridColorTexture, TEXSLOT_ONDEMAND4, cmd);
 
 		const GPUResource* uavs[] = {
 			&scene.surfelDataBuffer,
@@ -8181,49 +8179,6 @@ void SurfelGI(
 		device->EventEnd(cmd);
 	}
 
-	// (It doesn't make sense to provide average cell colors if hashing is used)
-#ifdef SURFEL_USE_AVERAGE_CELL_FALLBACK
-	// Grid cell average colors:
-	{
-		device->EventBegin("Grid Color", cmd);
-		device->BindComputeShader(&shaders[CSTYPE_SURFEL_GRIDCOLOR], cmd);
-
-		device->BindResource(CS, &scene.surfelBuffer, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(CS, &scene.surfelGridBuffer, TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(CS, &scene.surfelCellBuffer, TEXSLOT_ONDEMAND2, cmd);
-
-		const GPUResource* uavs[] = {
-			&scene.surfelGridColorTexture,
-		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&scene.surfelGridColorTexture, IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE, IMAGE_LAYOUT_UNORDERED_ACCESS),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
-		device->Dispatch(
-			(SURFEL_GRID_DIMENSIONS.x + 7) / 8,
-			(SURFEL_GRID_DIMENSIONS.y + 7) / 8,
-			(SURFEL_GRID_DIMENSIONS.z + 7) / 8,
-			cmd
-		);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-				GPUBarrier::Image(&scene.surfelGridColorTexture, IMAGE_LAYOUT_UNORDERED_ACCESS, IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
-		device->EventEnd(cmd);
-	}
-#endif // SURFEL_USE_AVERAGE_CELL_FALLBACK
-
 
 
 	// Raytracing:
@@ -8256,7 +8211,6 @@ void SurfelGI(
 		device->BindResource(CS, &scene.surfelStatsBuffer, TEXSLOT_ONDEMAND1, cmd);
 		device->BindResource(CS, &scene.surfelGridBuffer, TEXSLOT_ONDEMAND2, cmd);
 		device->BindResource(CS, &scene.surfelCellBuffer, TEXSLOT_ONDEMAND3, cmd);
-		device->BindResource(CS, &scene.surfelGridColorTexture, TEXSLOT_ONDEMAND4, cmd);
 
 		const GPUResource* uavs[] = {
 			&scene.surfelDataBuffer,

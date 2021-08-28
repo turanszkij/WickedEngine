@@ -45,10 +45,6 @@ static const uint SURFEL_CELL_LIMIT = ~0; // limit the amount of allocated surfe
 #define SURFEL_GRID_CULLING // if defined, surfels will not be added to grid cells that they do not intersect
 //#define SURFEL_USE_HASHING // if defined, hashing will be used to retrieve surfels, hashing is good because it supports infinite world trivially, but slower due to hash collisions
 
-#ifndef SURFEL_USE_HASHING
-#define SURFEL_USE_AVERAGE_CELL_FALLBACK // low coverage areas will fall back to average cell color (without directional information)
-#endif // SURFEL_USE_HASHING
-
 #ifndef __cplusplus
 inline int3 surfel_cell(float3 position)
 {
