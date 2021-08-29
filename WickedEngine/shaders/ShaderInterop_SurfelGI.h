@@ -17,7 +17,7 @@ struct SurfelData
 	uint uid;
 
 	float3 mean;
-	float life;
+	uint life;
 
 	float3 shortMean;
 	float vbbr;
@@ -26,6 +26,9 @@ struct SurfelData
 	float inconsistency;
 };
 static const uint SURFEL_CAPACITY = 250000;
+static const uint SQRT_SURFEL_CAPACITY = (uint)ceil(sqrt((float)SURFEL_CAPACITY));
+static const uint SURFEL_MOMENT_TEXELS = 4 + 2;
+static const uint SURFEL_MOMENT_ATLAS_TEXELS = SQRT_SURFEL_CAPACITY * SURFEL_MOMENT_TEXELS;
 static const uint3 SURFEL_GRID_DIMENSIONS = uint3(128, 64, 128);
 static const uint SURFEL_TABLE_SIZE = SURFEL_GRID_DIMENSIONS.x * SURFEL_GRID_DIMENSIONS.y * SURFEL_GRID_DIMENSIONS.z;
 static const float SURFEL_MAX_RADIUS = 1;
@@ -38,7 +41,7 @@ static const uint SURFEL_STATS_OFFSET_COUNT = 0;
 static const uint SURFEL_STATS_OFFSET_CELLALLOCATOR = 4;
 static const uint SURFEL_STATS_OFFSET_INDIRECT = 8;
 static const uint SURFEL_INDIRECT_NUMTHREADS = 32;
-static const uint SURFEL_TARGET_COVERAGE = 4; // how many surfels should affect a pixel fully, higher values will increase quality and cost
+static const uint SURFEL_TARGET_COVERAGE = 1; // how many surfels should affect a pixel fully, higher values will increase quality and cost
 static const float SURFEL_NORMAL_TOLERANCE = 1; // default: 1, higher values will put more surfels on edges, to have more detail but increases cost
 static const uint SURFEL_CELL_LIMIT = ~0; // limit the amount of allocated surfels in a cell
 #define SURFEL_COVERAGE_HALFRES // runs the coverage shader in half resolution for improved performance
@@ -142,6 +145,30 @@ static const int3 surfel_neighbor_offsets[27] = {
 	int3(1, 1, 0),
 	int3(1, 1, 1),
 };
+
+//float2 encode(float3 n)
+//{
+//	float2 enc = normalize(n.xy) * (sqrt(-n.z * 0.5 + 0.5));
+//	enc = enc * 0.5 + 0.5;
+//	return enc;
+//}
+float2 encode(float3 n)
+{
+	float f = sqrt(8 * n.z + 8);
+	return n.xy / f + 0.5;
+}
+float2 surfel_moment_pixel(uint surfel_index, float3 normal, float3 direction)
+{
+	uint2 moments_pixel = unflatten2D(surfel_index, SQRT_SURFEL_CAPACITY) * SURFEL_MOMENT_TEXELS;
+	//float2 moments_uv = encode_oct(direction) * 0.5 + 0.5;
+	float3 hemi = normalize(mul(direction, transpose(GetTangentSpace(normal))));
+	float2 moments_uv = encode_hemioct(hemi) * 0.5 + 0.5;
+	return moments_pixel + 1 + moments_uv * (SURFEL_MOMENT_TEXELS - 2);
+}
+float2 surfel_moment_uv(uint surfel_index, float3 normal, float3 direction)
+{
+	return surfel_moment_pixel(surfel_index, normal, direction) / SURFEL_MOMENT_ATLAS_TEXELS;
+}
 #endif // __cplusplus
 
 #endif // WI_SHADERINTEROP_SURFEL_GI_H

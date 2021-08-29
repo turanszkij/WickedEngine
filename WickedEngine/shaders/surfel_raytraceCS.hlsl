@@ -65,6 +65,14 @@ STRUCTUREDBUFFER(surfelGridBuffer, SurfelGridCell, TEXSLOT_ONDEMAND2);
 STRUCTUREDBUFFER(surfelCellBuffer, uint, TEXSLOT_ONDEMAND3);
 
 RWSTRUCTUREDBUFFER(surfelDataBuffer, SurfelData, 0);
+RWTEXTURE2D(surfelMomentsTexture, float2, 1);
+
+void surfel_moments_write(uint2 moments_pixel, float dist)
+{
+	float2 prev = surfelMomentsTexture[moments_pixel];
+	float2 blend = prev.x < dist ? 0.005 : 0.5;
+	surfelMomentsTexture[moments_pixel] = lerp(prev, float2(dist, sqr(dist)), blend);
+}
 
 [numthreads(SURFEL_INDIRECT_NUMTHREADS, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
@@ -77,8 +85,20 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	Surfel surfel = surfelBuffer[surfel_index];
 	SurfelData surfel_data = surfelDataBuffer[surfel_index];
 
+	if (surfel_data.life == 0)
+	{
+		uint2 moments_pixel = unflatten2D(surfel_index, SQRT_SURFEL_CAPACITY) * SURFEL_MOMENT_TEXELS;
+		for (int i = 0; i < SURFEL_MOMENT_TEXELS; ++i)
+		{
+			for (int j = 0; j < SURFEL_MOMENT_TEXELS; ++j)
+			{
+				uint2 pixel_write = moments_pixel + uint2(i, j);
+				surfelMomentsTexture[pixel_write] = float2(surfel.radius, sqr(surfel.radius));
+			}
+		}
+	}
 
-	float3 N = normalize(unpack_unitvector(surfel.normal));
+	const float3 N = normalize(unpack_unitvector(surfel.normal));
 
 	float seed = 0.123456;
 	float2 uv = float2(frac(g_xFrame_FrameCount.xx / 4096.0));
@@ -92,6 +112,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		ray.TMin = 0.001;
 		ray.TMax = FLT_MAX;
 		ray.Direction = SampleHemisphere_cos(N, seed, uv);
+
+		uint2 moments_pixel = surfel_moment_pixel(surfel_index, N, normalize(ray.Direction));
+		float moment_blend = 0.5;
 
 		float3 result = 0;
 		float3 energy = 1;
@@ -123,6 +146,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #endif // RTAPI
 
 			{
+				surfel_moments_write(moments_pixel, surfel.radius);
+
 				float3 envColor;
 				[branch]
 				if (IsStaticSky())
@@ -143,10 +168,13 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 			Surface surface;
 
+			float hit_depth = 0;
+
 #ifdef RTAPI
 
 			// ray origin updated for next bounce:
 			ray.Origin = q.WorldRayOrigin() + q.WorldRayDirection() * q.CommittedRayT();
+			hit_depth = q.CommittedRayT();
 
 			PrimitiveID prim;
 			prim.primitiveIndex = q.CommittedPrimitiveIndex();
@@ -159,10 +187,14 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 			// ray origin updated for next bounce:
 			ray.Origin = ray.Origin + ray.Direction * hit.distance;
+			hit_depth = hit.distance;
 
 			surface.load(hit.primitiveID, hit.bary);
 
 #endif // RTAPI
+
+			hit_depth = min(hit_depth, surfel.radius);
+			surfel_moments_write(moments_pixel, hit_depth);
 
 			surface.P = ray.Origin;
 			surface.V = -ray.Direction;
@@ -411,6 +443,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 
 #if 1
+	// Surfel irradiance sharing:
 	Surface surface;
 	surface.P = surfel.position;
 	surface.N = normalize(unpack_unitvector(surfel.normal));
@@ -452,8 +485,20 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #endif
 
 
+	uint2 moments_pixel = unflatten2D(surfel_index, SQRT_SURFEL_CAPACITY) * SURFEL_MOMENT_TEXELS;
+	for (int i = 0; i < SURFEL_MOMENT_TEXELS; ++i)
+	{
+		for (int j = 0; j < SURFEL_MOMENT_TEXELS; ++j)
+		{
+			uint2 pixel_write = moments_pixel + uint2(i, j);
+			uint2 pixel_read = clamp(pixel_write, moments_pixel + 1, moments_pixel + SURFEL_MOMENT_TEXELS - 2);
+			surfelMomentsTexture[pixel_write] = surfelMomentsTexture[pixel_read];
+		}
+	}
+
+
 	MultiscaleMeanEstimator(gi.rgb, surfel_data, 0.08);
 
-	surfel_data.life += g_xFrame_DeltaTime;
+	surfel_data.life++;
 	surfelDataBuffer[surfel_index] = surfel_data;
 }

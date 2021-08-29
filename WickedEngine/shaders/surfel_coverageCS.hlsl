@@ -31,6 +31,7 @@ float3 random_color(uint index)
 STRUCTUREDBUFFER(surfelBuffer, Surfel, TEXSLOT_ONDEMAND0);
 STRUCTUREDBUFFER(surfelGridBuffer, SurfelGridCell, TEXSLOT_ONDEMAND2);
 STRUCTUREDBUFFER(surfelCellBuffer, uint, TEXSLOT_ONDEMAND3);
+TEXTURE2D(surfelMomentsTexture, float2, TEXSLOT_ONDEMAND4);
 
 RWSTRUCTUREDBUFFER(surfelDataBuffer, SurfelData, 0);
 RWRAWBUFFER(surfelStatsBuffer, 1);
@@ -130,6 +131,19 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 				float dist = sqrt(dist2);
 				float contribution = 1;
 				coverage += contribution;
+
+
+				float3 direction = -L / dist;
+				float2 moments = surfelMomentsTexture.SampleLevel(sampler_linear_clamp, surfel_moment_uv(surfel_index, normal, direction), 0);
+				float mean = moments.x;
+				float mean2 = moments.y;
+				if (dist > mean)
+				{
+					float variance = abs(sqr(mean) - mean2);
+					contribution *= variance / (variance + sqr(dist - mean));
+				}
+
+
 				contribution *= pow(saturate(dotN), SURFEL_NORMAL_TOLERANCE);
 				contribution *= saturate(1 - dist / surfel.radius);
 				contribution = smoothstep(0, 1, contribution);

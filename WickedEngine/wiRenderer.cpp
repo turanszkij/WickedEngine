@@ -95,9 +95,9 @@ bool raytraceDebugVisualizer = false;
 bool raytracedShadows = false;
 bool tessellationEnabled = true;
 bool disableAlbedoMaps = false;
-bool forceDiffuseLighting = false;
+bool forceDiffuseLighting = true;
 bool SCREENSPACESHADOWS = false;
-bool SURFELGI = false;
+bool SURFELGI = true;
 bool SURFELGI_DEBUG = false;
 
 
@@ -7967,6 +7967,7 @@ void SurfelGI_Coverage(
 		device->BindResource(CS, &scene.surfelStatsBuffer, TEXSLOT_ONDEMAND1, cmd);
 		device->BindResource(CS, &scene.surfelGridBuffer, TEXSLOT_ONDEMAND2, cmd);
 		device->BindResource(CS, &scene.surfelCellBuffer, TEXSLOT_ONDEMAND3, cmd);
+		device->BindResource(CS, &scene.surfelMomentsTexture, TEXSLOT_ONDEMAND4, cmd);
 
 		const GPUResource* uavs[] = {
 			&scene.surfelDataBuffer,
@@ -8214,10 +8215,28 @@ void SurfelGI(
 
 		const GPUResource* uavs[] = {
 			&scene.surfelDataBuffer,
+			&scene.surfelMomentsTexture,
 		};
 		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
 
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Buffer(&scene.surfelDataBuffer, BUFFER_STATE_SHADER_RESOURCE_COMPUTE, BUFFER_STATE_UNORDERED_ACCESS),
+				GPUBarrier::Image(&scene.surfelMomentsTexture, IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE, IMAGE_LAYOUT_UNORDERED_ACCESS),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
 		device->DispatchIndirect(&scene.surfelStatsBuffer, SURFEL_STATS_OFFSET_INDIRECT, cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(),
+				GPUBarrier::Buffer(&scene.surfelDataBuffer, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE_COMPUTE),
+				GPUBarrier::Image(&scene.surfelMomentsTexture, IMAGE_LAYOUT_UNORDERED_ACCESS, IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
 
 		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);

@@ -1625,6 +1625,14 @@ namespace wiScene
 			desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 			device->CreateBuffer(&desc, nullptr, &surfelCellBuffer);
 			device->SetName(&surfelCellBuffer, "surfelCellBuffer");
+
+			TextureDesc tex;
+			tex.Width = SURFEL_MOMENT_ATLAS_TEXELS;
+			tex.Height = SURFEL_MOMENT_ATLAS_TEXELS;
+			tex.Format = FORMAT_R16G16_FLOAT;
+			tex.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
+			device->CreateTexture(&tex, nullptr, &surfelMomentsTexture);
+			device->SetName(&surfelMomentsTexture, "surfelMomentsTexture");
 		}
 	}
 	void Scene::Clear()
