@@ -24,6 +24,15 @@ struct SurfelData
 
 	float3 variance;
 	float inconsistency;
+
+	float3 hitpos;
+	uint hitnormal;
+
+	float3 hitenergy;
+	float padding0;
+
+	float3 traceresult;
+	float padding1;
 };
 static const uint SURFEL_CAPACITY = 250000;
 static const uint SQRT_SURFEL_CAPACITY = (uint)ceil(sqrt((float)SURFEL_CAPACITY));
@@ -146,28 +155,35 @@ static const int3 surfel_neighbor_offsets[27] = {
 	int3(1, 1, 1),
 };
 
-//float2 encode(float3 n)
-//{
-//	float2 enc = normalize(n.xy) * (sqrt(-n.z * 0.5 + 0.5));
-//	enc = enc * 0.5 + 0.5;
-//	return enc;
-//}
-float2 encode(float3 n)
+inline float2 encode(in float3 N)
 {
-	float f = sqrt(8 * n.z + 8);
-	return n.xy / f + 0.5;
+	return float2(atan2(N.y, N.x) / PI, N.z) * 0.5 + 0.5;
 }
 float2 surfel_moment_pixel(uint surfel_index, float3 normal, float3 direction)
 {
 	uint2 moments_pixel = unflatten2D(surfel_index, SQRT_SURFEL_CAPACITY) * SURFEL_MOMENT_TEXELS;
-	//float2 moments_uv = encode_oct(direction) * 0.5 + 0.5;
-	float3 hemi = normalize(mul(direction, transpose(GetTangentSpace(normal))));
+	float3 hemi = mul(direction, transpose(GetTangentSpace(normal)));
+	hemi.z = abs(hemi.z);
+	hemi = normalize(hemi);
 	float2 moments_uv = encode_hemioct(hemi) * 0.5 + 0.5;
+	//float2 moments_uv = hemi.xy * 0.5 + 0.5;
 	return moments_pixel + 1 + moments_uv * (SURFEL_MOMENT_TEXELS - 2);
 }
 float2 surfel_moment_uv(uint surfel_index, float3 normal, float3 direction)
 {
 	return surfel_moment_pixel(surfel_index, normal, direction) / SURFEL_MOMENT_ATLAS_TEXELS;
+}
+float surfel_moment_weight(float2 moments, float dist)
+{
+	float mean = moments.x;
+	float mean2 = moments.y;
+	if (dist > mean)
+	{
+		// Chebishev weight
+		float variance = abs(sqr(mean) - mean2);
+		return variance / (variance + sqr(dist - mean));
+	}
+	return 1;
 }
 #endif // __cplusplus
 
