@@ -107,10 +107,10 @@ namespace wiImage
 		}
 		else
 		{
-			device->BindResource(PS, texture, TEXSLOT_IMAGE_BASE, cmd);
-			device->BindResource(PS, params.maskMap, TEXSLOT_IMAGE_MASK, cmd);
-			device->BindResource(PS, &backgroundTextures[cmd], TEXSLOT_IMAGE_BACKGROUND, cmd);
-			device->BindSampler(PS, sampler, SSLOT_ONDEMAND0, cmd);
+			device->BindResource(texture, TEXSLOT_IMAGE_BASE, cmd);
+			device->BindResource(params.maskMap, TEXSLOT_IMAGE_MASK, cmd);
+			device->BindResource(&backgroundTextures[cmd], TEXSLOT_IMAGE_BACKGROUND, cmd);
+			device->BindSampler(sampler, SSLOT_ONDEMAND0, cmd);
 		}
 
 		ImageCB cb;
@@ -125,7 +125,7 @@ namespace wiImage
 		{
 			device->BindPipelineState(&imagePSO[IMAGE_SHADER_FULLSCREEN][params.blendFlag][params.stencilComp][params.stencilRefMode], cmd);
 			device->UpdateBuffer(&constantBuffer, &cb, cmd);
-			device->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(ImageCB), cmd);
+			device->BindConstantBuffer(&constantBuffer, CB_GETBINDSLOT(ImageCB), cmd);
 			device->Draw(3, 0, cmd);
 			device->EventEnd(cmd);
 			return;
@@ -241,8 +241,8 @@ namespace wiImage
 
 		device->BindPipelineState(&imagePSO[targetShader][params.blendFlag][params.stencilComp][params.stencilRefMode], cmd);
 
-		device->BindConstantBuffer(VS, &constantBuffer, CB_GETBINDSLOT(ImageCB), cmd);
-		device->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(ImageCB), cmd);
+		device->BindConstantBuffer(&constantBuffer, CB_GETBINDSLOT(ImageCB), cmd);
+		device->BindConstantBuffer(&constantBuffer, CB_GETBINDSLOT(ImageCB), cmd);
 
 		device->Draw(4, 0, cmd);
 

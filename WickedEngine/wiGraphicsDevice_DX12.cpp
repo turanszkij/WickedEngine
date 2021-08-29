@@ -19,6 +19,7 @@
 
 #ifdef _DEBUG
 #include <dxgidebug.h>
+#pragma comment(lib,"dxguid.lib")
 #endif
 
 #include <sstream>
@@ -5985,7 +5986,7 @@ using namespace DX12_Internal;
 		}
 		GetCommandList(cmd)->RSSetViewports(NumViewports, d3dViewPorts);
 	}
-	void GraphicsDevice_DX12::BindResource(SHADERSTAGE stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
+	void GraphicsDevice_DX12::BindResource(const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
 	{
 		assert(slot < GPU_RESOURCE_HEAP_SRV_COUNT);
 		if (descriptors[cmd].SRV[slot] != resource || descriptors[cmd].SRV_index[slot] != subresource)
@@ -5995,17 +5996,17 @@ using namespace DX12_Internal;
 			descriptors[cmd].dirty_res = true;
 		}
 	}
-	void GraphicsDevice_DX12::BindResources(SHADERSTAGE stage, const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd)
+	void GraphicsDevice_DX12::BindResources(const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd)
 	{
 		if (resources != nullptr)
 		{
 			for (uint32_t i = 0; i < count; ++i)
 			{
-				BindResource(stage, resources[i], slot + i, cmd, -1);
+				BindResource(resources[i], slot + i, cmd, -1);
 			}
 		}
 	}
-	void GraphicsDevice_DX12::BindUAV(SHADERSTAGE stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
+	void GraphicsDevice_DX12::BindUAV(const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
 	{
 		assert(slot < GPU_RESOURCE_HEAP_UAV_COUNT);
 		if (descriptors[cmd].UAV[slot] != resource || descriptors[cmd].UAV_index[slot] != subresource)
@@ -6015,23 +6016,17 @@ using namespace DX12_Internal;
 			descriptors[cmd].dirty_res = true;
 		}
 	}
-	void GraphicsDevice_DX12::BindUAVs(SHADERSTAGE stage, const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd)
+	void GraphicsDevice_DX12::BindUAVs(const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd)
 	{
 		if (resources != nullptr)
 		{
 			for (uint32_t i = 0; i < count; ++i)
 			{
-				BindUAV(stage, resources[i], slot + i, cmd, -1);
+				BindUAV(resources[i], slot + i, cmd, -1);
 			}
 		}
 	}
-	void GraphicsDevice_DX12::UnbindResources(uint32_t slot, uint32_t num, CommandList cmd)
-	{
-	}
-	void GraphicsDevice_DX12::UnbindUAVs(uint32_t slot, uint32_t num, CommandList cmd)
-	{
-	}
-	void GraphicsDevice_DX12::BindSampler(SHADERSTAGE stage, const Sampler* sampler, uint32_t slot, CommandList cmd)
+	void GraphicsDevice_DX12::BindSampler(const Sampler* sampler, uint32_t slot, CommandList cmd)
 	{
 		assert(slot < GPU_SAMPLER_HEAP_COUNT);
 		if (descriptors[cmd].SAM[slot] != sampler)
@@ -6040,7 +6035,7 @@ using namespace DX12_Internal;
 			descriptors[cmd].dirty_sam = true;
 		}
 	}
-	void GraphicsDevice_DX12::BindConstantBuffer(SHADERSTAGE stage, const GPUBuffer* buffer, uint32_t slot, CommandList cmd)
+	void GraphicsDevice_DX12::BindConstantBuffer(const GPUBuffer* buffer, uint32_t slot, CommandList cmd)
 	{
 		assert(slot < GPU_RESOURCE_HEAP_CBV_COUNT);
 		if (buffer->desc.Usage == USAGE_DYNAMIC || descriptors[cmd].CBV[slot] != buffer)
@@ -6061,12 +6056,12 @@ using namespace DX12_Internal;
 
 			// CBV flag marked as bound for this slot:
 			//	Also, the corresponding slot is marked dirty
-			if (stage == CS)
+			//if (stage == CS)
 			{
 				internal_state->cbv_mask_compute[cmd] |= 1 << slot;
 				descriptors[cmd].dirty_root_cbvs_compute |= 1 << slot;
 			}
-			else
+			//else
 			{
 				internal_state->cbv_mask_gfx[cmd] |= 1 << slot;
 				descriptors[cmd].dirty_root_cbvs_gfx |= 1 << slot;

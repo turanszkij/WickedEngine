@@ -894,9 +894,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice.h">
       <Filter>ENGINE\Graphics\API</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX11.h">
-      <Filter>ENGINE\Graphics\API</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFFTGenerator.h">
       <Filter>ENGINE\Graphics</Filter>
     </ClInclude>
@@ -1704,9 +1701,6 @@
       <Filter>ENGINE\Helpers</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice.cpp">
-      <Filter>ENGINE\Graphics\API</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX11.cpp">
       <Filter>ENGINE\Graphics\API</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFFTGenerator.cpp">

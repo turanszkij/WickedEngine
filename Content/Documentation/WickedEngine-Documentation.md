@@ -505,14 +505,14 @@ After this, the user can bind the texture resource from the CPU side:
 ```cpp
 Texture myTexture;
 // after texture was created, etc:
-device->BindResource(PS, myTexture, my_texture_bind_slot, cmd);
+device->BindResource(myTexture, my_texture_bind_slot, cmd);
 ```
 
 Other than this, resources like `Texture` can have different subresources, so an extra parameter can be specified to the `BindResources()` function called `subresource`:
 ```cpp
 Texture myTexture;
 // after texture was created, etc:
-device->BindResource(PS, myTexture, my_texture_bind_slot, cmd, 42);
+device->BindResource(myTexture, my_texture_bind_slot, cmd, 42);
 ```
 By default, the `subresource` parameter is `-1`, which means that the entire resource will be bound. For more information about subresources, see the [Subresources](#subresources) section.
 
@@ -696,8 +696,7 @@ To read more about variable rate shading, refer to the [DirectX specifications.]
 
 
 #### GraphicsDevice_DX11
-[[Header]](../../WickedEngine/wiGraphicsDevice_DX11.h) [[Cpp]](../../WickedEngine/wiGraphicsDevice_DX11.cpp)
-DirectX11 implementation for rendering interface
+The DirectX11 interface has been removed after version 0.56
 
 #### GraphicsDevice_DX12
 [[Header]](../../WickedEngine/wiGraphicsDevice_DX12.h) [[Cpp]](../../WickedEngine/wiGraphicsDevice_DX12.cpp)
@@ -844,7 +843,7 @@ enum CBTYPE
 };
 GPUBuffer buffers[CBTYPE_COUNT]; // this example array contains 3 elements
 //...
-device->BindConstantBuffer(PS, &buffers[CBTYPE_MESH], 0, cmd); // makes it easy to reference an element
+device->BindConstantBuffer(&buffers[CBTYPE_MESH], 0, cmd); // makes it easy to reference an element
 ```
 
 This is widely used to make code straight forward and easy to add new objects, without needing to create additional declarations, except for the enum values.

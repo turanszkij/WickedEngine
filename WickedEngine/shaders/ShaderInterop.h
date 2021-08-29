@@ -26,8 +26,8 @@ typedef XMINT4 int4;
 
 #define CB_GETBINDSLOT(name) __CBUFFERBINDSLOT__##name##__
 #define CBUFFER(name, slot) static const int CB_GETBINDSLOT(name) = slot; struct alignas(16) name
-#define CONSTANTBUFFER(name, type, slot) CBUFFER(name, slot)
-#define ROOTCONSTANTS(name, type, slot) CBUFFER(name, slot)
+#define CONSTANTBUFFER(name, type, slot)
+#define ROOTCONSTANTS(name, type, slot)
 
 #else
 

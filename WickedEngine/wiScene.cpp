@@ -380,7 +380,7 @@ namespace wiScene
 			desc.BindFlags |= BIND_SHADER_RESOURCE;
 			desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 		}
-		desc.ByteWidth = sizeof(MaterialCB);
+		desc.ByteWidth = sizeof(ShaderMaterial);
 		device->CreateBuffer(&desc, &data, &constantBuffer);
 	}
 	uint32_t MaterialComponent::GetStencilRef() const
@@ -391,6 +391,18 @@ namespace wiScene
 	void MeshComponent::CreateRenderData()
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
+
+		vertex_subsets.resize(vertex_positions.size());
+		uint32_t subsetCounter = 0;
+		for (auto& subset : subsets)
+		{
+			for (uint32_t i = 0; i < subset.indexCount; ++i)
+			{
+				uint32_t index = indices[subset.indexOffset + i];
+				vertex_subsets[index] = subsetCounter;
+			}
+			subsetCounter++;
+		}
 
 		// Create index buffer GPU data:
 		{
@@ -801,6 +813,7 @@ namespace wiScene
 		dest->subsetbuffer = device->GetDescriptorIndex(&subsetBuffer, SRV);
 		dest->aabb_min = aabb._min;
 		dest->aabb_max = aabb._max;
+		dest->tessellation_factor = tessellationFactor;
 
 		dest->flags = 0;
 		if (IsDoubleSided())

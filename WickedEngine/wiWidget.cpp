@@ -1327,7 +1327,7 @@ void wiComboBox::Render(const wiCanvas& canvas, CommandList cmd) const
 			Projection
 		);
 		device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, cmd);
-		device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CBSLOT_RENDERER_MISC, cmd);
+		device->BindConstantBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), CBSLOT_RENDERER_MISC, cmd);
 		const GPUBuffer* vbs[] = {
 			&vb_triangle,
 		};
@@ -2442,7 +2442,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 
 	const XMMATRIX Projection = canvas.GetProjection();
 
-	device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CBSLOT_RENDERER_MISC, cmd);
+	device->BindConstantBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), CBSLOT_RENDERER_MISC, cmd);
 	device->BindPipelineState(&PSO_colored, cmd);
 
 	ApplyScissor(canvas, scissorRect, cmd);
@@ -2991,7 +2991,7 @@ void wiTreeList::Render(const wiCanvas& canvas, CommandList cmd) const
 				Projection
 			);
 			device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, cmd);
-			device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CBSLOT_RENDERER_MISC, cmd);
+			device->BindConstantBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), CBSLOT_RENDERER_MISC, cmd);
 			const GPUBuffer* vbs[] = {
 				&vb_triangle,
 			};

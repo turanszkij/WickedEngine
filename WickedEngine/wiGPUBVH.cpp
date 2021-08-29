@@ -143,7 +143,7 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
 
 	uint32_t primitiveCount = 0;
 
-	device->BindResource(CS, &scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
+	device->BindResource(&scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 	device->EventBegin("BVH - Primitive Builder", cmd);
 	{
@@ -153,7 +153,7 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
 			&primitiveBuffer,
 			&primitiveMortonBuffer,
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		for (size_t i = 0; i < scene.objects.GetCount(); ++i)
 		{
@@ -215,7 +215,6 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
 			GPUBarrier::Memory()
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 	}
 	device->UpdateBuffer(&primitiveCounterBuffer, &primitiveCount, cmd);
 	device->EventEnd(cmd);
@@ -232,14 +231,14 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
 			&bvhParentBuffer,
 			&bvhFlagBuffer
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		const GPUResource* res[] = {
 			&primitiveCounterBuffer,
 			&primitiveIDBuffer,
 			&primitiveMortonBuffer,
 		};
-		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
+		device->BindResources(res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
 
 		device->Dispatch((primitiveCount + BVH_BUILDER_GROUPSIZE - 1) / BVH_BUILDER_GROUPSIZE, 1, 1, cmd);
 
@@ -247,7 +246,6 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
 			GPUBarrier::Memory()
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 	}
 	device->EventEnd(cmd);
 
@@ -263,7 +261,7 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
 			&bvhNodeBuffer,
 			&bvhFlagBuffer,
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		const GPUResource* res[] = {
 			&primitiveCounterBuffer,
@@ -271,12 +269,11 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
 			&primitiveBuffer,
 			&bvhParentBuffer,
 		};
-		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
+		device->BindResources(res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
 
 		device->Dispatch((primitiveCount + BVH_BUILDER_GROUPSIZE - 1) / BVH_BUILDER_GROUPSIZE, 1, 1, cmd);
 
 		device->Barrier(barriers, arraysize(barriers), cmd);
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 	}
 	device->EventEnd(cmd);
 
@@ -368,7 +365,7 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
 #endif // BVH_VALIDATE
 
 }
-void wiGPUBVH::Bind(SHADERSTAGE stage, CommandList cmd) const
+void wiGPUBVH::Bind(CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -377,7 +374,7 @@ void wiGPUBVH::Bind(SHADERSTAGE stage, CommandList cmd) const
 		&primitiveBuffer,
 		&bvhNodeBuffer,
 	};
-	device->BindResources(stage, res, TEXSLOT_BVH_COUNTER, arraysize(res), cmd);
+	device->BindResources(res, TEXSLOT_BVH_COUNTER, arraysize(res), cmd);
 }
 
 void wiGPUBVH::Clear()

@@ -56,20 +56,20 @@ inline bool is_saturated(float2 a) { return is_saturated(a.x) && is_saturated(a.
 inline bool is_saturated(float3 a) { return is_saturated(a.x) && is_saturated(a.y) && is_saturated(a.z); }
 inline bool is_saturated(float4 a) { return is_saturated(a.x) && is_saturated(a.y) && is_saturated(a.z) && is_saturated(a.w); }
 
-#define DEGAMMA_SKY(x)	pow(abs(x),g_xFrame_StaticSkyGamma)
-#define DEGAMMA(x)		pow(abs(x),g_xFrame_Gamma)
-#define GAMMA(x)		pow(abs(x),1.0/g_xFrame_Gamma)
+#define DEGAMMA_SKY(x)	pow(abs(x),g_xFrame.StaticSkyGamma)
+#define DEGAMMA(x)		pow(abs(x),g_xFrame.Gamma)
+#define GAMMA(x)		pow(abs(x),1.0/g_xFrame.Gamma)
 
-inline float3 GetSunColor() { return g_xFrame_SunColor; }
-inline float3 GetSunDirection() { return g_xFrame_SunDirection; }
-inline float GetSunEnergy() { return g_xFrame_SunEnergy; }
-inline float3 GetHorizonColor() { return g_xFrame_Horizon.rgb; }
-inline float3 GetZenithColor() { return g_xFrame_Zenith.rgb; }
-inline float3 GetAmbientColor() { return g_xFrame_Ambient.rgb; }
-inline float2 GetInternalResolution() { return g_xFrame_InternalResolution; }
-inline float GetTime() { return g_xFrame_Time; }
-inline uint2 GetTemporalAASampleRotation() { return uint2((g_xFrame_TemporalAASampleRotation >> 0u) & 0x000000FF, (g_xFrame_TemporalAASampleRotation >> 8) & 0x000000FF); }
-inline bool IsStaticSky() { return g_xFrame_StaticSkyGamma > 0.0; }
+inline float3 GetSunColor() { return g_xFrame.SunColor; }
+inline float3 GetSunDirection() { return g_xFrame.SunDirection; }
+inline float GetSunEnergy() { return g_xFrame.SunEnergy; }
+inline float3 GetHorizonColor() { return g_xFrame.Horizon.rgb; }
+inline float3 GetZenithColor() { return g_xFrame.Zenith.rgb; }
+inline float3 GetAmbientColor() { return g_xFrame.Ambient.rgb; }
+inline float2 GetInternalResolution() { return g_xFrame.InternalResolution; }
+inline float GetTime() { return g_xFrame.Time; }
+inline uint2 GetTemporalAASampleRotation() { return uint2((g_xFrame.TemporalAASampleRotation >> 0u) & 0x000000FF, (g_xFrame.TemporalAASampleRotation >> 8) & 0x000000FF); }
+inline bool IsStaticSky() { return g_xFrame.StaticSkyGamma > 0.0; }
 
 // Exponential height fog based on: https://www.iquilezles.org/www/articles/fog/fog.htm
 // Non constant density function
@@ -78,12 +78,12 @@ inline bool IsStaticSky() { return g_xFrame_StaticSkyGamma > 0.0; }
 //	V			: sample to point vector
 inline float GetFogAmount(float distance, float3 O, float3 V)
 {
-	float fogDensity = saturate((distance - g_xFrame_Fog.x) / (g_xFrame_Fog.y - g_xFrame_Fog.x));
+	float fogDensity = saturate((distance - g_xFrame.Fog.x) / (g_xFrame.Fog.y - g_xFrame.Fog.x));
 
-	if (g_xFrame_Options & OPTION_BIT_HEIGHT_FOG)
+	if (g_xFrame.Options & OPTION_BIT_HEIGHT_FOG)
 	{
-		float fogHeightStart = g_xFrame_Fog.z;
-		float fogHeightEnd = g_xFrame_Fog.w;
+		float fogHeightStart = g_xFrame.Fog.z;
+		float fogHeightEnd = g_xFrame.Fog.w;
 		float fogFalloffScale = 1.0 / max(0.01, fogHeightEnd - fogHeightStart);
 
 		// solve for x, e^(-h * x) = 0.001
@@ -125,11 +125,11 @@ float3 inverseTonemap(float3 x)
 
 inline float4 blue_noise(uint2 pixel)
 {
-	return frac(texture_bluenoise[pixel % 128].rgba + g_xFrame_BlueNoisePhase);
+	return frac(texture_bluenoise[pixel % 128].rgba + g_xFrame.BlueNoisePhase);
 }
 inline float4 blue_noise(uint2 pixel, float depth)
 {
-	return frac(texture_bluenoise[pixel % 128].rgba + g_xFrame_BlueNoisePhase + depth);
+	return frac(texture_bluenoise[pixel % 128].rgba + g_xFrame.BlueNoisePhase + depth);
 }
 
 // Helpers:
@@ -271,7 +271,7 @@ inline float getLinearDepth(in float z, in float near, in float far)
 }
 inline float getLinearDepth(in float z)
 {
-	return getLinearDepth(z, g_xCamera_ZNearP, g_xCamera_ZFarP);
+	return getLinearDepth(z, g_xCamera.ZNearP, g_xCamera.ZFarP);
 }
 
 inline float3x3 GetTangentSpace(in float3 normal)
@@ -326,7 +326,7 @@ inline float3 reconstructPosition(in float2 uv, in float z, in float4x4 InvVP)
 }
 inline float3 reconstructPosition(in float2 uv, in float z)
 {
-	return reconstructPosition(uv, z, g_xCamera_InvVP);
+	return reconstructPosition(uv, z, g_xCamera.InvVP);
 }
 
 #if 0

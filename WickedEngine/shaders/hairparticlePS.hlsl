@@ -11,20 +11,20 @@ TEXTURE2D(texture_color, float4, TEXSLOT_ONDEMAND0);
 float4 main(VertexToPixel input) : SV_Target
 {
 	float4 color = 1;
-	if ((g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+	if ((g_xFrame.Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 	{
 		color = texture_color.Sample(sampler_linear_wrap, input.tex);
 		color.rgb = DEGAMMA(color.rgb);
 	}
 	color *= g_xMaterial.baseColor;
 	float opacity = 1;
-	float3 V = g_xCamera_CamPos - input.pos3D;
+	float3 V = g_xCamera.CamPos - input.pos3D;
 	float dist = length(V);
 	V /= dist;
 	float emissive = 0;
 
 	const uint2 pixel = input.pos.xy;
-	const float2 ScreenCoord = pixel * g_xFrame_InternalResolution_rcp;
+	const float2 ScreenCoord = pixel * g_xFrame.InternalResolution_rcp;
 
 	Surface surface;
 	surface.create(g_xMaterial, color, 0);
@@ -54,7 +54,7 @@ float4 main(VertexToPixel input) : SV_Target
 
 	ApplyLighting(surface, lighting, color);
 
-	ApplyFog(dist, g_xCamera_CamPos, V, color);
+	ApplyFog(dist, g_xCamera.CamPos, V, color);
 
 	return color;
 }

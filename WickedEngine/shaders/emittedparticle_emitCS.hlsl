@@ -22,7 +22,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	{
 		// we can emit:
 
-		float2 uv = float2(g_xFrame_Time + xEmitterRandomness, (float)DTid.x / (float)THREADCOUNT_EMIT);
+		float2 uv = float2(g_xFrame.Time + xEmitterRandomness, (float)DTid.x / (float)THREADCOUNT_EMIT);
 		float seed = 0.12345;
 		
 #ifdef EMIT_FROM_MESH

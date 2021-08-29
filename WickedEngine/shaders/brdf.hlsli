@@ -213,7 +213,7 @@ struct Surface
 		roughness = material.roughness;
 		f0 = material.specularColor.rgb * specularMap.rgb * specularMap.a * material.specularColor.a;
 
-		if (g_xFrame_Options & OPTION_BIT_FORCE_DIFFUSE_LIGHTING)
+		if (g_xFrame.Options & OPTION_BIT_FORCE_DIFFUSE_LIGHTING)
 		{
 			f0 = material.metalness = material.reflectance = 0;
 		}
@@ -343,7 +343,7 @@ struct Surface
 		{
 			const float2 UV_baseColorMap = material.uvset_baseColorMap == 0 ? uvsets.xy : uvsets.zw;
 			float4 baseColorMap = bindless_textures[NonUniformResourceIndex(material.texture_basecolormap_index)].SampleLevel(sampler_linear_wrap, UV_baseColorMap, 0);
-			if ((g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+			if ((g_xFrame.Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 			{
 				baseColorMap.rgb *= DEGAMMA(baseColorMap.rgb);
 				baseColor *= baseColorMap;

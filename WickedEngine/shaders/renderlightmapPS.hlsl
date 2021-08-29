@@ -34,9 +34,9 @@ float4 main(Input input) : SV_TARGET
 		surface.P = ray.Origin;
 
 		[loop]
-		for (uint iterator = 0; iterator < g_xFrame_LightArrayCount; iterator++)
+		for (uint iterator = 0; iterator < g_xFrame.LightArrayCount; iterator++)
 		{
-			ShaderEntity light = EntityArray[g_xFrame_LightArrayOffset + iterator];
+			ShaderEntity light = EntityArray[g_xFrame.LightArrayOffset + iterator];
 
 			Lighting lighting;
 			lighting.create(0, 0, 0, 0);
@@ -63,9 +63,9 @@ float4 main(Input input) : SV_TARGET
 				if (NdotL > 0)
 				{
 					float3 atmosphereTransmittance = 1.0;
-					if (g_xFrame_Options & OPTION_BIT_REALISTIC_SKY)
+					if (g_xFrame.Options & OPTION_BIT_REALISTIC_SKY)
 					{
-						atmosphereTransmittance = GetAtmosphericLightTransmittance(g_xFrame_Atmosphere, surface.P, L, texture_transmittancelut);
+						atmosphereTransmittance = GetAtmosphericLightTransmittance(g_xFrame.Atmosphere, surface.P, L, texture_transmittancelut);
 					}
 					
 					float3 lightColor = light.GetColor().rgb * light.GetEnergy() * atmosphereTransmittance;

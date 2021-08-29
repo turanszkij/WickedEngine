@@ -12,7 +12,7 @@ static const float3 QUAD[] = {
 	float3(0, 1, 0),
 };
 
-#define infinite g_xCamera_ZFarP
+#define infinite g_xCamera.ZFarP
 float3 intersectPlaneClampInfinite(in float3 rayOrigin, in float3 rayDirection, in float3 planeNormal, float planeHeight)
 {
 	float dist = (planeHeight - dot(planeNormal, rayOrigin)) / dot(planeNormal, rayDirection);
@@ -42,8 +42,8 @@ PSIn main(uint fakeIndex : SV_VERTEXID)
 	Out.pos.xy *= max(1, xOceanSurfaceDisplacementTolerance); // extrude screen space grid to tolerate displacement
 
 	// Perform ray tracing of screen grid and plane surface to unproject to world space:
-	float3 o = g_xCamera_CamPos;
-	float4 r = mul(g_xCamera_InvVP, float4(Out.pos.xy, 0, 1));
+	float3 o = g_xCamera.CamPos;
+	float4 r = mul(g_xCamera.InvVP, float4(Out.pos.xy, 0, 1));
 	r.xyz /= r.w;
 	float3 d = normalize(o.xyz - r.xyz);
 
@@ -52,14 +52,14 @@ PSIn main(uint fakeIndex : SV_VERTEXID)
 	// Displace surface:
 	float2 uv = worldPos.xz * xOceanPatchSizeRecip;
 	float3 displacement = texture_displacementmap.SampleLevel(sampler_linear_wrap, uv + xOceanMapHalfTexel, 0).xzy;
-	displacement *= 1 - saturate(distance(g_xCamera_CamPos, worldPos) * 0.0025f);
+	displacement *= 1 - saturate(distance(g_xCamera.CamPos, worldPos) * 0.0025f);
 	worldPos += displacement;
 
 	// Reproject displaced surface and output:
-	Out.pos = mul(g_xCamera_VP, float4(worldPos, 1));
+	Out.pos = mul(g_xCamera.VP, float4(worldPos, 1));
 	Out.pos3D = worldPos;
 	Out.uv = uv;
-	Out.ReflectionMapSamplingPos = mul(g_xCamera_ReflVP, float4(worldPos, 1));
+	Out.ReflectionMapSamplingPos = mul(g_xCamera.ReflVP, float4(worldPos, 1));
 
 	return Out;
 }

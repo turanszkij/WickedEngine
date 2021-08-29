@@ -63,7 +63,7 @@ inline int3 surfel_cell(float3 position)
 #ifdef SURFEL_USE_HASHING
 	return floor(position / SURFEL_MAX_RADIUS);
 #else
-	return floor((position - floor(g_xCamera_CamPos)) / SURFEL_MAX_RADIUS) + SURFEL_GRID_DIMENSIONS / 2;
+	return floor((position - floor(g_xCamera.CamPos)) / SURFEL_MAX_RADIUS) + SURFEL_GRID_DIMENSIONS / 2;
 #endif // SURFEL_USE_HASHING
 }
 float3 surfel_griduv(float3 position)
@@ -71,7 +71,7 @@ float3 surfel_griduv(float3 position)
 #ifdef SURFEL_USE_HASHING
 	return 0; // hashed grid can't be sampled for colors, it doesn't make sense
 #else
-	return (((position - floor(g_xCamera_CamPos)) / SURFEL_MAX_RADIUS) + SURFEL_GRID_DIMENSIONS / 2) / SURFEL_GRID_DIMENSIONS;
+	return (((position - floor(g_xCamera.CamPos)) / SURFEL_MAX_RADIUS) + SURFEL_GRID_DIMENSIONS / 2) / SURFEL_GRID_DIMENSIONS;
 #endif // SURFEL_USE_HASHING
 }
 inline uint surfel_cellindex(int3 cell)
@@ -111,8 +111,8 @@ inline bool surfel_cellintersects(Surfel surfel, int3 cell)
 	float3 gridmin = cell * SURFEL_MAX_RADIUS;
 	float3 gridmax = (cell + 1) * SURFEL_MAX_RADIUS;
 #else
-	float3 gridmin = cell - SURFEL_GRID_DIMENSIONS / 2 * SURFEL_MAX_RADIUS + floor(g_xCamera_CamPos);
-	float3 gridmax = (cell + 1) - SURFEL_GRID_DIMENSIONS / 2 * SURFEL_MAX_RADIUS + floor(g_xCamera_CamPos);
+	float3 gridmin = cell - SURFEL_GRID_DIMENSIONS / 2 * SURFEL_MAX_RADIUS + floor(g_xCamera.CamPos);
+	float3 gridmax = (cell + 1) - SURFEL_GRID_DIMENSIONS / 2 * SURFEL_MAX_RADIUS + floor(g_xCamera.CamPos);
 #endif // SURFEL_USE_HASHING
 
 	float3 closestPointInAabb = min(max(surfel.position, gridmin), gridmax);

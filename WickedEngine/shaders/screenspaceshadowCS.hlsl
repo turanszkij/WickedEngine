@@ -54,7 +54,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	const float2 bluenoise = blue_noise(DTid.xy).xy;
 
 	const uint2 tileIndex = uint2(floor(DTid.xy * 2 / TILED_CULLING_BLOCKSIZE));
-	const uint flatTileIndex = flatten2D(tileIndex, g_xFrame_EntityCullingTileCount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
+	const uint flatTileIndex = flatten2D(tileIndex, g_xFrame.EntityCullingTileCount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
 
 	uint shadow_mask[4] = {0,0,0,0}; // FXC issue: can't dynamically index into uint4, unless unrolling all loops
 	uint shadow_index = 0;
@@ -64,7 +64,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	ray.Origin = P;
 
 #ifndef RTSHADOW
-	ray.Origin = mul(g_xCamera_View, float4(ray.Origin, 1)).xyz;
+	ray.Origin = mul(g_xCamera.View, float4(ray.Origin, 1)).xyz;
 
 	const float range = xPPParams0.x;
 	const uint samplecount = xPPParams0.y;
@@ -74,11 +74,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 #endif // RTSHADOW
 
 	[branch]
-	if (g_xFrame_LightArrayCount > 0)
+	if (g_xFrame.LightArrayCount > 0)
 	{
 		// Loop through light buckets in the tile:
-		const uint first_item = g_xFrame_LightArrayOffset;
-		const uint last_item = first_item + g_xFrame_LightArrayCount - 1;
+		const uint first_item = g_xFrame.LightArrayOffset;
+		const uint last_item = first_item + g_xFrame.LightArrayCount - 1;
 		const uint first_bucket = first_item / 32;
 		const uint last_bucket = min(last_item / 32, max(0, SHADER_ENTITY_TILE_BUCKET_COUNT - 1));
 		[loop]
@@ -101,7 +101,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 				[branch]
 				if (entity_index >= first_item && entity_index <= last_item)
 				{
-					shadow_index = entity_index - g_xFrame_LightArrayOffset;
+					shadow_index = entity_index - g_xFrame.LightArrayOffset;
 					if (shadow_index >= MAX_RTSHADOWS)
 						break;
 
@@ -267,7 +267,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 
 #else
 						// screen space raymarch shadow:
-						ray.Direction = normalize(mul((float3x3)g_xCamera_View, L));
+						ray.Direction = normalize(mul((float3x3)g_xCamera.View, L));
 						float3 rayPos = ray.Origin + ray.Direction * stepsize * offset;
 
 						float occlusion = 0;
@@ -276,7 +276,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 						{
 							rayPos += ray.Direction * stepsize;
 
-							float4 proj = mul(g_xCamera_Proj, float4(rayPos, 1));
+							float4 proj = mul(g_xCamera.Proj, float4(rayPos, 1));
 							proj.xyz /= proj.w;
 							proj.xy = proj.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 
@@ -284,7 +284,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 							if (is_saturated(proj.xy))
 							{
 								const float ray_depth_real = proj.w;
-								const float ray_depth_sample = texture_lineardepth.SampleLevel(sampler_point_clamp, proj.xy, 1) * g_xCamera_ZFarP;
+								const float ray_depth_sample = texture_lineardepth.SampleLevel(sampler_point_clamp, proj.xy, 1) * g_xCamera.ZFarP;
 								const float ray_depth_delta = ray_depth_real - ray_depth_sample;
 								if (ray_depth_delta > 0 && ray_depth_delta < thickness)
 								{

@@ -88,7 +88,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	float4 debug = 0;
 	float4 color = 0;
 
-	const float2 uv = ((float2)pixel + 0.5) * g_xFrame_InternalResolution_rcp;
+	const float2 uv = ((float2)pixel + 0.5) * g_xFrame.InternalResolution_rcp;
 	const float3 P = reconstructPosition(uv, depth);
 
 	uint2 primitiveID = texture_gbuffer0[pixel];
@@ -226,7 +226,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	{
 		// Slow down the propagation by chance
 		//	Closer surfaces have less chance to avoid excessive clumping of surfels
-		const float lineardepth = getLinearDepth(depth) * g_xCamera_ZFarP_rcp;
+		const float lineardepth = getLinearDepth(depth) * g_xCamera.ZFarP_rcp;
 #ifdef SURFEL_COVERAGE_HALFRES
 		const float chance = pow(1 - lineardepth, 8);
 #else

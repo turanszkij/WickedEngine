@@ -261,7 +261,7 @@ void wiHairParticle::UpdateGPU(uint32_t instanceID, const MeshComponent& mesh, c
 	// Simulate:
 	{
 		device->BindComputeShader(&cs_simulate, cmd);
-		device->BindConstantBuffer(CS, &cb, CB_GETBINDSLOT(HairParticleCB), cmd);
+		device->BindConstantBuffer(&cb, CB_GETBINDSLOT(HairParticleCB), cmd);
 
 		const GPUResource* uavs[] = {
 			&simulationBuffer,
@@ -271,14 +271,14 @@ void wiHairParticle::UpdateGPU(uint32_t instanceID, const MeshComponent& mesh, c
 			&culledIndexBuffer,
 			&indirectBuffer
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		const GPUResource* res[] = {
 			indexBuffer.IsValid() ? &indexBuffer : &mesh.indexBuffer,
 			mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
 			&vertexBuffer_length
 		};
-		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
+		device->BindResources(res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -294,8 +294,6 @@ void wiHairParticle::UpdateGPU(uint32_t instanceID, const MeshComponent& mesh, c
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
-		device->UnbindResources(TEXSLOT_ONDEMAND0, arraysize(res), cmd);
 	}
 
 	// Finish update (reset counter, create indirect draw args):
@@ -305,7 +303,7 @@ void wiHairParticle::UpdateGPU(uint32_t instanceID, const MeshComponent& mesh, c
 		const GPUResource* uavs[] = {
 			&indirectBuffer
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		device->Dispatch(1, 1, 1, cmd);
 
@@ -319,7 +317,6 @@ void wiHairParticle::UpdateGPU(uint32_t instanceID, const MeshComponent& mesh, c
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 	}
 
 	{
@@ -353,7 +350,7 @@ void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent
 			return;
 		}
 		device->BindPipelineState(&PSO_wire, cmd);
-		device->BindResource(VS, wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND0, cmd);
 	}
 	else
 	{
@@ -361,13 +358,13 @@ void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent
 
 		if (material.textures[MaterialComponent::BASECOLORMAP].resource == nullptr)
 		{
-			device->BindResource(PS, wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND0, cmd);
-			device->BindResource(VS, wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND0, cmd);
+			device->BindResource(wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND0, cmd);
+			device->BindResource(wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND0, cmd);
 		}
 		else
 		{
-			device->BindResource(PS, material.textures[MaterialComponent::BASECOLORMAP].GetGPUResource(), TEXSLOT_ONDEMAND0, cmd);
-			device->BindResource(VS, material.textures[MaterialComponent::BASECOLORMAP].GetGPUResource(), TEXSLOT_ONDEMAND0, cmd);
+			device->BindResource(material.textures[MaterialComponent::BASECOLORMAP].GetGPUResource(), TEXSLOT_ONDEMAND0, cmd);
+			device->BindResource(material.textures[MaterialComponent::BASECOLORMAP].GetGPUResource(), TEXSLOT_ONDEMAND0, cmd);
 		}
 
 		if (renderPass != RENDERPASS_PREPASS) // depth only alpha test will be full res
@@ -376,12 +373,12 @@ void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent
 		}
 	}
 
-	device->BindConstantBuffer(VS, &cb, CB_GETBINDSLOT(HairParticleCB), cmd);
-	device->BindConstantBuffer(PS, &material.constantBuffer, CB_GETBINDSLOT(MaterialCB), cmd);
+	device->BindConstantBuffer(&cb, CB_GETBINDSLOT(HairParticleCB), cmd);
+	device->BindConstantBuffer(&material.constantBuffer, CBSLOT_RENDERER_MATERIAL, cmd);
 
-	device->BindResource(VS, &vertexBuffer_POS[0], 0, cmd);
-	device->BindResource(VS, &vertexBuffer_TEX, 1, cmd);
-	device->BindResource(VS, &primitiveBuffer, 2, cmd);
+	device->BindResource(&vertexBuffer_POS[0], 0, cmd);
+	device->BindResource(&vertexBuffer_TEX, 1, cmd);
+	device->BindResource(&primitiveBuffer, 2, cmd);
 
 	device->BindIndexBuffer(&culledIndexBuffer, INDEXFORMAT_32BIT, 0, cmd);
 

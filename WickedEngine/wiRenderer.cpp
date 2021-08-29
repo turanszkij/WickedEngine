@@ -1843,10 +1843,6 @@ void LoadBuffers()
 	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_CUBEMAPRENDER]);
 	device->SetName(&constantBuffers[CBTYPE_CUBEMAPRENDER], "CubemapRenderCB");
 
-	bd.ByteWidth = sizeof(TessellationCB);
-	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_TESSELLATION]);
-	device->SetName(&constantBuffers[CBTYPE_TESSELLATION], "TessellationCB");
-
 	bd.ByteWidth = sizeof(RaytracingCB);
 	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_RAYTRACE]);
 	device->SetName(&constantBuffers[CBTYPE_RAYTRACE], "RayTraceCB");
@@ -1882,10 +1878,6 @@ void LoadBuffers()
 	bd.ByteWidth = sizeof(MSAO_UPSAMPLECB);
 	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_POSTPROCESS_MSAO_UPSAMPLE]);
 	device->SetName(&constantBuffers[CBTYPE_POSTPROCESS_MSAO_UPSAMPLE], "MSAO_UPSAMPLECB");
-
-	bd.ByteWidth = sizeof(LensFlareCB);
-	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_LENSFLARE]);
-	device->SetName(&constantBuffers[CBTYPE_LENSFLARE], "LensFlareCB");
 
 	bd.ByteWidth = sizeof(PaintRadiusCB);
 	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_PAINTRADIUS]);
@@ -2506,22 +2498,6 @@ ForwardEntityMaskCB ForwardEntityCullingCPU(const Visibility& vis, const AABB& b
 	return cb;
 }
 
-void BindConstantBuffers(SHADERSTAGE stage, CommandList cmd)
-{
-	device->BindConstantBuffer(stage, &constantBuffers[CBTYPE_FRAME], CB_GETBINDSLOT(FrameCB), cmd);
-	device->BindConstantBuffer(stage, &constantBuffers[CBTYPE_CAMERA], CB_GETBINDSLOT(CameraCB), cmd);
-}
-void BindShadowmaps(SHADERSTAGE stage, CommandList cmd)
-{
-	device->BindResource(stage, &shadowMapArray_2D, TEXSLOT_SHADOWARRAY_2D, cmd);
-	device->BindResource(stage, &shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, cmd);
-	if (GetTransparentShadowsEnabled())
-	{
-		device->BindResource(stage, &shadowMapArray_Transparent_2D, TEXSLOT_SHADOWARRAY_TRANSPARENT_2D, cmd);
-		device->BindResource(stage, &shadowMapArray_Transparent_Cube, TEXSLOT_SHADOWARRAY_TRANSPARENT_CUBE, cmd);
-	}
-}
-
 void RenderMeshes(
 	const Visibility& vis,
 	const RenderQueue& renderQueue,
@@ -2539,11 +2515,7 @@ void RenderMeshes(
 	device->EventBegin("RenderMeshes", cmd);
 
 	tessellation = tessellation && device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_TESSELLATION);
-	if (tessellation)
-	{
-		BindConstantBuffers(DS, cmd);
-	}
-
+	
 	// Do we need to compute a light mask for this pass on the CPU?
 	const bool forwardLightmaskRequest =
 		renderPass == RENDERPASS_ENVMAPCAPTURE ||
@@ -2656,19 +2628,11 @@ void RenderMeshes(
 		const bool tessellatorRequested = tessF > 0 && tessellation;
 		const bool terrain = mesh.IsTerrain();
 
-		if (tessellatorRequested)
-		{
-			TessellationCB tessCB;
-			tessCB.xTessellationFactors = XMFLOAT4(tessF, tessF, tessF, tessF);
-			device->UpdateBuffer(&constantBuffers[CBTYPE_TESSELLATION], &tessCB, cmd);
-			device->BindConstantBuffer(HS, &constantBuffers[CBTYPE_TESSELLATION], CBSLOT_RENDERER_TESSELLATION, cmd);
-		}
-
 		if (forwardLightmaskRequest)
 		{
 			ForwardEntityMaskCB cb = ForwardEntityCullingCPU(vis, instancedBatch.aabb, renderPass);
 			device->UpdateBuffer(&constantBuffers[CBTYPE_FORWARDENTITYMASK], &cb, cmd);
-			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
+			device->BindConstantBuffer(&constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
 		}
 
 		device->BindIndexBuffer(&mesh.indexBuffer, mesh.GetIndexFormat(), 0, cmd);
@@ -2857,8 +2821,8 @@ void RenderImpostors(
 
 		device->PushConstants(&instances.offset, sizeof(uint), cmd);
 
-		device->BindResource(VS, instances.buffer, TEXSLOT_ONDEMAND21, cmd);
-		device->BindResource(PS, &vis.scene->impostorArray, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(instances.buffer, TEXSLOT_ONDEMAND21, cmd);
+		device->BindResource(&vis.scene->impostorArray, TEXSLOT_ONDEMAND0, cmd);
 
 		device->Draw(drawableInstanceCount * 6, 0, cmd);
 
@@ -3192,75 +3156,75 @@ void UpdatePerFrameData(
 	}
 
 	// Update CPU-side frame constant buffer:
-	frameCB.g_xFrame_ConstantOne = 1;
-	frameCB.g_xFrame_CanvasSize = float2(canvas.GetLogicalWidth(), canvas.GetLogicalHeight());
-	frameCB.g_xFrame_CanvasSize_rcp = float2(1.0f / frameCB.g_xFrame_CanvasSize.x, 1.0f / frameCB.g_xFrame_CanvasSize.y);
-	frameCB.g_xFrame_InternalResolution = float2((float)internalResolution.x, (float)internalResolution.y);
-	frameCB.g_xFrame_InternalResolution_rcp = float2(1.0f / frameCB.g_xFrame_InternalResolution.x, 1.0f / frameCB.g_xFrame_InternalResolution.y);
-	frameCB.g_xFrame_Gamma = GetGamma();
-	frameCB.g_xFrame_SunColor = vis.scene->weather.sunColor;
-	frameCB.g_xFrame_SunDirection = vis.scene->weather.sunDirection;
-	frameCB.g_xFrame_SunEnergy = vis.scene->weather.sunEnergy;
-	frameCB.g_xFrame_ShadowCascadeCount = CASCADE_COUNT;
-	frameCB.g_xFrame_Ambient = vis.scene->weather.ambient;
-	frameCB.g_xFrame_Cloudiness = vis.scene->weather.cloudiness;
-	frameCB.g_xFrame_CloudScale = vis.scene->weather.cloudScale;
-	frameCB.g_xFrame_CloudSpeed = vis.scene->weather.cloudSpeed;
-	frameCB.g_xFrame_Fog = float4(vis.scene->weather.fogStart, vis.scene->weather.fogEnd, vis.scene->weather.fogHeightStart, vis.scene->weather.fogHeightEnd);
-	frameCB.g_xFrame_FogHeightSky = vis.scene->weather.fogHeightSky;
-	frameCB.g_xFrame_Horizon = vis.scene->weather.horizon;
-	frameCB.g_xFrame_Zenith = vis.scene->weather.zenith;
-	frameCB.g_xFrame_SkyExposure = vis.scene->weather.skyExposure;
-	frameCB.g_xFrame_VoxelRadianceMaxDistance = voxelSceneData.maxDistance;
-	frameCB.g_xFrame_VoxelRadianceDataSize = voxelSceneData.voxelsize;
-	frameCB.g_xFrame_VoxelRadianceDataSize_rcp = 1.0f / (float)frameCB.g_xFrame_VoxelRadianceDataSize;
-	frameCB.g_xFrame_VoxelRadianceDataRes = GetVoxelRadianceEnabled() ? (uint)voxelSceneData.res : 0;
-	frameCB.g_xFrame_VoxelRadianceDataRes_rcp = 1.0f / (float)frameCB.g_xFrame_VoxelRadianceDataRes;
-	frameCB.g_xFrame_VoxelRadianceDataMIPs = voxelSceneData.mips;
-	frameCB.g_xFrame_VoxelRadianceNumCones = std::max(std::min(voxelSceneData.numCones, 16u), 1u);
-	frameCB.g_xFrame_VoxelRadianceNumCones_rcp = 1.0f / (float)frameCB.g_xFrame_VoxelRadianceNumCones;
-	frameCB.g_xFrame_VoxelRadianceRayStepSize = voxelSceneData.rayStepSize;
-	frameCB.g_xFrame_VoxelRadianceDataCenter = voxelSceneData.center;
-	frameCB.g_xFrame_EntityCullingTileCount = GetEntityCullingTileCount(internalResolution);
-	frameCB.g_xFrame_ObjectShaderSamplerIndex = device->GetDescriptorIndex(&samplers[SSLOT_OBJECTSHADER]);
+	frameCB.ConstantOne = 1;
+	frameCB.CanvasSize = float2(canvas.GetLogicalWidth(), canvas.GetLogicalHeight());
+	frameCB.CanvasSize_rcp = float2(1.0f / frameCB.CanvasSize.x, 1.0f / frameCB.CanvasSize.y);
+	frameCB.InternalResolution = float2((float)internalResolution.x, (float)internalResolution.y);
+	frameCB.InternalResolution_rcp = float2(1.0f / frameCB.InternalResolution.x, 1.0f / frameCB.InternalResolution.y);
+	frameCB.Gamma = GetGamma();
+	frameCB.SunColor = vis.scene->weather.sunColor;
+	frameCB.SunDirection = vis.scene->weather.sunDirection;
+	frameCB.SunEnergy = vis.scene->weather.sunEnergy;
+	frameCB.ShadowCascadeCount = CASCADE_COUNT;
+	frameCB.Ambient = vis.scene->weather.ambient;
+	frameCB.Cloudiness = vis.scene->weather.cloudiness;
+	frameCB.CloudScale = vis.scene->weather.cloudScale;
+	frameCB.CloudSpeed = vis.scene->weather.cloudSpeed;
+	frameCB.Fog = float4(vis.scene->weather.fogStart, vis.scene->weather.fogEnd, vis.scene->weather.fogHeightStart, vis.scene->weather.fogHeightEnd);
+	frameCB.FogHeightSky = vis.scene->weather.fogHeightSky;
+	frameCB.Horizon = vis.scene->weather.horizon;
+	frameCB.Zenith = vis.scene->weather.zenith;
+	frameCB.SkyExposure = vis.scene->weather.skyExposure;
+	frameCB.VoxelRadianceMaxDistance = voxelSceneData.maxDistance;
+	frameCB.VoxelRadianceDataSize = voxelSceneData.voxelsize;
+	frameCB.VoxelRadianceDataSize_rcp = 1.0f / (float)frameCB.VoxelRadianceDataSize;
+	frameCB.VoxelRadianceDataRes = GetVoxelRadianceEnabled() ? (uint)voxelSceneData.res : 0;
+	frameCB.VoxelRadianceDataRes_rcp = 1.0f / (float)frameCB.VoxelRadianceDataRes;
+	frameCB.VoxelRadianceDataMIPs = voxelSceneData.mips;
+	frameCB.VoxelRadianceNumCones = std::max(std::min(voxelSceneData.numCones, 16u), 1u);
+	frameCB.VoxelRadianceNumCones_rcp = 1.0f / (float)frameCB.VoxelRadianceNumCones;
+	frameCB.VoxelRadianceRayStepSize = voxelSceneData.rayStepSize;
+	frameCB.VoxelRadianceDataCenter = voxelSceneData.center;
+	frameCB.EntityCullingTileCount = GetEntityCullingTileCount(internalResolution);
+	frameCB.ObjectShaderSamplerIndex = device->GetDescriptorIndex(&samplers[SSLOT_OBJECTSHADER]);
 
 	// The order is very important here:
-	frameCB.g_xFrame_DecalArrayOffset = 0;
-	frameCB.g_xFrame_DecalArrayCount = (uint)vis.visibleDecals.size();
-	frameCB.g_xFrame_EnvProbeArrayOffset = frameCB.g_xFrame_DecalArrayCount;
-	frameCB.g_xFrame_EnvProbeArrayCount = std::min(vis.scene->envmapCount, (uint)vis.visibleEnvProbes.size());
-	frameCB.g_xFrame_LightArrayOffset = frameCB.g_xFrame_EnvProbeArrayOffset + frameCB.g_xFrame_EnvProbeArrayCount;
-	frameCB.g_xFrame_LightArrayCount = (uint)vis.visibleLights.size();
-	frameCB.g_xFrame_ForceFieldArrayOffset = frameCB.g_xFrame_LightArrayOffset + frameCB.g_xFrame_LightArrayCount;
-	frameCB.g_xFrame_ForceFieldArrayCount = (uint)vis.scene->forces.GetCount();
+	frameCB.DecalArrayOffset = 0;
+	frameCB.DecalArrayCount = (uint)vis.visibleDecals.size();
+	frameCB.EnvProbeArrayOffset = frameCB.DecalArrayCount;
+	frameCB.EnvProbeArrayCount = std::min(vis.scene->envmapCount, (uint)vis.visibleEnvProbes.size());
+	frameCB.LightArrayOffset = frameCB.EnvProbeArrayOffset + frameCB.EnvProbeArrayCount;
+	frameCB.LightArrayCount = (uint)vis.visibleLights.size();
+	frameCB.ForceFieldArrayOffset = frameCB.LightArrayOffset + frameCB.LightArrayCount;
+	frameCB.ForceFieldArrayCount = (uint)vis.scene->forces.GetCount();
 
-	frameCB.g_xFrame_GlobalEnvProbeIndex = 0;
-	frameCB.g_xFrame_EnvProbeMipCount = 0;
-	frameCB.g_xFrame_EnvProbeMipCount_rcp = 1.0f;
+	frameCB.GlobalEnvProbeIndex = 0;
+	frameCB.EnvProbeMipCount = 0;
+	frameCB.EnvProbeMipCount_rcp = 1.0f;
 	if (vis.scene->envmapArray.IsValid())
 	{
-		frameCB.g_xFrame_EnvProbeMipCount = vis.scene->envmapArray.GetDesc().MipLevels;
-		frameCB.g_xFrame_EnvProbeMipCount_rcp = 1.0f / (float)frameCB.g_xFrame_EnvProbeMipCount;
+		frameCB.EnvProbeMipCount = vis.scene->envmapArray.GetDesc().MipLevels;
+		frameCB.EnvProbeMipCount_rcp = 1.0f / (float)frameCB.EnvProbeMipCount;
 	}
 
-	frameCB.g_xFrame_DeltaTime = dt * GetGameSpeed();
-	frameCB.g_xFrame_TimePrev = frameCB.g_xFrame_Time;
-	frameCB.g_xFrame_Time += frameCB.g_xFrame_DeltaTime;
-	frameCB.g_xFrame_WindSpeed = vis.scene->weather.windSpeed;
-	frameCB.g_xFrame_WindRandomness = vis.scene->weather.windRandomness;
-	frameCB.g_xFrame_WindWaveSize = vis.scene->weather.windWaveSize;
-	frameCB.g_xFrame_WindDirection = vis.scene->weather.windDirection;
-	frameCB.g_xFrame_StaticSkyGamma = 0.0f;
+	frameCB.DeltaTime = dt * GetGameSpeed();
+	frameCB.TimePrev = frameCB.Time;
+	frameCB.Time += frameCB.DeltaTime;
+	frameCB.WindSpeed = vis.scene->weather.windSpeed;
+	frameCB.WindRandomness = vis.scene->weather.windRandomness;
+	frameCB.WindWaveSize = vis.scene->weather.windWaveSize;
+	frameCB.WindDirection = vis.scene->weather.windDirection;
+	frameCB.StaticSkyGamma = 0.0f;
 	if (vis.scene->weather.skyMap != nullptr)
 	{
 		bool hdr = !device->IsFormatUnorm(vis.scene->weather.skyMap->texture.desc.Format);
-		frameCB.g_xFrame_StaticSkyGamma = hdr ? 1.0f : frameCB.g_xFrame_Gamma;
+		frameCB.StaticSkyGamma = hdr ? 1.0f : frameCB.Gamma;
 	}
-	frameCB.g_xFrame_FrameCount = (uint)device->GetFrameCount();
-	frameCB.g_xFrame_TemporalAASampleRotation = 0;
+	frameCB.FrameCount = (uint)device->GetFrameCount();
+	frameCB.TemporalAASampleRotation = 0;
 	if (GetTemporalAAEnabled())
 	{
-		uint id = frameCB.g_xFrame_FrameCount % 4;
+		uint id = frameCB.FrameCount % 4;
 		uint x = 0;
 		uint y = 0;
 		switch (id)
@@ -3278,79 +3242,79 @@ void UpdatePerFrameData(
 		default:
 			break;
 		}
-		frameCB.g_xFrame_TemporalAASampleRotation = (x & 0x000000FF) | ((y & 0x000000FF) << 8);
+		frameCB.TemporalAASampleRotation = (x & 0x000000FF) | ((y & 0x000000FF) << 8);
 	}
-	frameCB.g_xFrame_ShadowKernel2D = 1.0f / SHADOWRES_2D;
-	frameCB.g_xFrame_ShadowKernelCube = 1.0f / SHADOWRES_CUBE;
+	frameCB.ShadowKernel2D = 1.0f / SHADOWRES_2D;
+	frameCB.ShadowKernelCube = 1.0f / SHADOWRES_CUBE;
 
-	frameCB.g_xFrame_WorldBoundsMin = vis.scene->bounds.getMin();
-	frameCB.g_xFrame_WorldBoundsMax = vis.scene->bounds.getMax();
-	frameCB.g_xFrame_WorldBoundsExtents.x = abs(frameCB.g_xFrame_WorldBoundsMax.x - frameCB.g_xFrame_WorldBoundsMin.x);
-	frameCB.g_xFrame_WorldBoundsExtents.y = abs(frameCB.g_xFrame_WorldBoundsMax.y - frameCB.g_xFrame_WorldBoundsMin.y);
-	frameCB.g_xFrame_WorldBoundsExtents.z = abs(frameCB.g_xFrame_WorldBoundsMax.z - frameCB.g_xFrame_WorldBoundsMin.z);
-	frameCB.g_xFrame_WorldBoundsExtents_rcp.x = 1.0f / frameCB.g_xFrame_WorldBoundsExtents.x;
-	frameCB.g_xFrame_WorldBoundsExtents_rcp.y = 1.0f / frameCB.g_xFrame_WorldBoundsExtents.y;
-	frameCB.g_xFrame_WorldBoundsExtents_rcp.z = 1.0f / frameCB.g_xFrame_WorldBoundsExtents.z;
+	frameCB.WorldBoundsMin = vis.scene->bounds.getMin();
+	frameCB.WorldBoundsMax = vis.scene->bounds.getMax();
+	frameCB.WorldBoundsExtents.x = abs(frameCB.WorldBoundsMax.x - frameCB.WorldBoundsMin.x);
+	frameCB.WorldBoundsExtents.y = abs(frameCB.WorldBoundsMax.y - frameCB.WorldBoundsMin.y);
+	frameCB.WorldBoundsExtents.z = abs(frameCB.WorldBoundsMax.z - frameCB.WorldBoundsMin.z);
+	frameCB.WorldBoundsExtents_rcp.x = 1.0f / frameCB.WorldBoundsExtents.x;
+	frameCB.WorldBoundsExtents_rcp.y = 1.0f / frameCB.WorldBoundsExtents.y;
+	frameCB.WorldBoundsExtents_rcp.z = 1.0f / frameCB.WorldBoundsExtents.z;
 
-	frameCB.g_xFrame_BlueNoisePhase = (frameCB.g_xFrame_FrameCount & 0xFF) * 1.6180339887f;
+	frameCB.BlueNoisePhase = (frameCB.FrameCount & 0xFF) * 1.6180339887f;
 
-	frameCB.g_xFrame_Options = 0;
+	frameCB.Options = 0;
 	if (GetTemporalAAEnabled())
 	{
-		frameCB.g_xFrame_Options |= OPTION_BIT_TEMPORALAA_ENABLED;
+		frameCB.Options |= OPTION_BIT_TEMPORALAA_ENABLED;
 	}
 	if (GetTransparentShadowsEnabled())
 	{
-		frameCB.g_xFrame_Options |= OPTION_BIT_TRANSPARENTSHADOWS_ENABLED;
+		frameCB.Options |= OPTION_BIT_TRANSPARENTSHADOWS_ENABLED;
 	}
 	if (GetVoxelRadianceEnabled())
 	{
-		frameCB.g_xFrame_Options |= OPTION_BIT_VOXELGI_ENABLED;
+		frameCB.Options |= OPTION_BIT_VOXELGI_ENABLED;
 	}
 	if (GetVoxelRadianceReflectionsEnabled())
 	{
-		frameCB.g_xFrame_Options |= OPTION_BIT_VOXELGI_REFLECTIONS_ENABLED;
+		frameCB.Options |= OPTION_BIT_VOXELGI_REFLECTIONS_ENABLED;
 	}
 	if (voxelSceneData.centerChangedThisFrame)
 	{
-		frameCB.g_xFrame_Options |= OPTION_BIT_VOXELGI_RETARGETTED;
+		frameCB.Options |= OPTION_BIT_VOXELGI_RETARGETTED;
 	}
 	if (vis.scene->weather.IsSimpleSky())
 	{
-		frameCB.g_xFrame_Options |= OPTION_BIT_SIMPLE_SKY;
+		frameCB.Options |= OPTION_BIT_SIMPLE_SKY;
 	}
 	if (vis.scene->weather.IsRealisticSky())
 	{
-		frameCB.g_xFrame_Options |= OPTION_BIT_REALISTIC_SKY;
+		frameCB.Options |= OPTION_BIT_REALISTIC_SKY;
 	}
 	if (vis.scene->weather.IsHeightFog())
 	{
-		frameCB.g_xFrame_Options |= OPTION_BIT_HEIGHT_FOG;
+		frameCB.Options |= OPTION_BIT_HEIGHT_FOG;
 	}
 	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING) && GetRaytracedShadowsEnabled())
 	{
-		frameCB.g_xFrame_Options |= OPTION_BIT_RAYTRACED_SHADOWS;
-		frameCB.g_xFrame_Options |= OPTION_BIT_SHADOW_MASK;
+		frameCB.Options |= OPTION_BIT_RAYTRACED_SHADOWS;
+		frameCB.Options |= OPTION_BIT_SHADOW_MASK;
 	}
 	if (GetScreenSpaceShadowsEnabled())
 	{
-		frameCB.g_xFrame_Options |= OPTION_BIT_SHADOW_MASK;
+		frameCB.Options |= OPTION_BIT_SHADOW_MASK;
 	}
 	if (GetSurfelGIEnabled())
 	{
-		frameCB.g_xFrame_Options |= OPTION_BIT_SURFELGI_ENABLED;
+		frameCB.Options |= OPTION_BIT_SURFELGI_ENABLED;
 	}
 	if (IsDisableAlbedoMaps())
 	{
-		frameCB.g_xFrame_Options |= OPTION_BIT_DISABLE_ALBEDO_MAPS;
+		frameCB.Options |= OPTION_BIT_DISABLE_ALBEDO_MAPS;
 	}
 	if (IsForceDiffuseLighting())
 	{
-		frameCB.g_xFrame_Options |= OPTION_BIT_FORCE_DIFFUSE_LIGHTING;
+		frameCB.Options |= OPTION_BIT_FORCE_DIFFUSE_LIGHTING;
 	}
 
-	frameCB.g_xFrame_Atmosphere = vis.scene->weather.atmosphereParameters;
-	frameCB.g_xFrame_VolumetricClouds = vis.scene->weather.volumetricCloudParameters;
+	frameCB.Atmosphere = vis.scene->weather.atmosphereParameters;
+	frameCB.VolumetricClouds = vis.scene->weather.volumetricCloudParameters;
 
 
 
@@ -3833,8 +3797,8 @@ void UpdateRenderData(
 				barriers[1] = GPUBarrier::Buffer(&mesh.streamoutBuffer_TAN, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE);
 				// Barriers will be issued later...
 
-				device->BindResources(CS, vbs, SKINNINGSLOT_IN_VERTEX_POS, arraysize(vbs), cmd);
-				device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+				device->BindResources(vbs, SKINNINGSLOT_IN_VERTEX_POS, arraysize(vbs), cmd);
+				device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 				device->Dispatch(((uint32_t)mesh.vertex_positions.size() + SKINNING_COMPUTE_THREADCOUNT - 1) / SKINNING_COMPUTE_THREADCOUNT, 1, 1, cmd);
 			}
@@ -3849,8 +3813,6 @@ void UpdateRenderData(
 			device->Barrier(barriers_start, numBarriers, cmd);
 			GetRenderFrameAllocator(cmd).free(sizeof(GPUBarrier) * numBarriers);
 
-			device->UnbindUAVs(0, 2, cmd);
-			device->UnbindResources(SKINNINGSLOT_IN_VERTEX_POS, 4, cmd);
 		}
 
 	}
@@ -3934,7 +3896,7 @@ void UpdateRenderData(
 			const GPUResource* uavs[] = {
 				&texture_shapeNoise,
 			};
-			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+			device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 			{
 				GPUBarrier barriers[] = {
@@ -3949,7 +3911,6 @@ void UpdateRenderData(
 
 			device->Dispatch(noiseThreadXY, noiseThreadXY, noiseThreadZ, cmd);
 
-			device->UnbindUAVs(0, arraysize(uavs), cmd);
 			device->EventEnd(cmd);
 		}
 
@@ -3961,7 +3922,7 @@ void UpdateRenderData(
 			const GPUResource* uavs[] = {
 				&texture_detailNoise,
 			};
-			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+			device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 			{
 				GPUBarrier barriers[] = {
@@ -3975,7 +3936,6 @@ void UpdateRenderData(
 
 			device->Dispatch(noiseThreadXYZ, noiseThreadXYZ, noiseThreadXYZ, cmd);
 
-			device->UnbindUAVs(0, arraysize(uavs), cmd);
 			device->EventEnd(cmd);
 		}
 
@@ -3999,7 +3959,7 @@ void UpdateRenderData(
 			const GPUResource* uavs[] = {
 				&texture_curlNoise,
 			};
-			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+			device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 			{
 				GPUBarrier barriers[] = {
@@ -4014,7 +3974,6 @@ void UpdateRenderData(
 
 			device->Dispatch(curlThread, curlThread, 1, cmd);
 
-			device->UnbindUAVs(0, arraysize(uavs), cmd);
 			device->EventEnd(cmd);
 		}
 
@@ -4026,7 +3985,7 @@ void UpdateRenderData(
 			const GPUResource* uavs[] = {
 				&texture_weatherMap,
 			};
-			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+			device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 			{
 				GPUBarrier barriers[] = {
@@ -4048,7 +4007,6 @@ void UpdateRenderData(
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
 
-			device->UnbindUAVs(0, arraysize(uavs), cmd);
 			device->EventEnd(cmd);
 		}
 		volumetric_clouds_precomputed = true;
@@ -4156,7 +4114,6 @@ void OcclusionCulling_Render(const CameraComponent& camera_previous, const Visib
 		const GPUQueryHeap& queryHeap = vis.scene->queryHeap[query_write];
 
 		device->BindPipelineState(&PSO_occlusionquery, cmd);
-		const bool bindless = device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS);
 
 		XMMATRIX VP = camera_previous.GetViewProjection();
 
@@ -4175,18 +4132,7 @@ void OcclusionCulling_Render(const CameraComponent& camera_previous, const Visib
 
 				const XMMATRIX transform = aabb.getAsBoxMatrix() * VP;
 
-				if (bindless)
-				{
-					device->PushConstants(&transform, sizeof(transform), cmd);
-				}
-				else
-				{
-					MiscCB cb;
-					XMStoreFloat4x4(&cb.g_xTransform, transform);
-					device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &cb, cmd);
-					device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-
-				}
+				device->PushConstants(&transform, sizeof(transform), cmd);
 
 				// render bounding box to later read the occlusion status
 				device->QueryBegin(&queryHeap, queryIndex, cmd);
@@ -4248,7 +4194,7 @@ void DrawSoftParticles(
 		wiProfiler::BeginRangeGPU("EmittedParticles - Render (Distortion)", cmd) :
 		wiProfiler::BeginRangeGPU("EmittedParticles - Render", cmd);
 
-	device->BindResource(PS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
+	device->BindResource(&lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
 	// Sort emitters based on distance:
 	assert(emitterCount < 0x0000FFFF); // watch out for sorting hash truncation!
@@ -4294,8 +4240,8 @@ void DrawLightVisualizers(
 	{
 		device->EventBegin("Light Visualizer Render", cmd);
 
-		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), cmd);
-		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), cmd);
+		device->BindConstantBuffer(&constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), cmd);
+		device->BindConstantBuffer(&constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), cmd);
 
 		XMMATRIX camrot = XMLoadFloat3x3(&vis.camera->rotationMatrix);
 		XMMATRIX VP = vis.camera->GetViewProjection();
@@ -4363,13 +4309,9 @@ void DrawVolumeLights(
 	{
 		device->EventBegin("Volumetric Light Render", cmd);
 
-		BindShadowmaps(PS, cmd);
+		BindCommonResources(cmd);
 
-		device->BindResource(PS, &depthbuffer, TEXSLOT_DEPTH, cmd);
-		device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
-		device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
-		device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
-		device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], TEXSLOT_SKYLUMINANCELUT, cmd);
+		device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
 
 		XMMATRIX VP = vis.camera->GetViewProjection();
 
@@ -4398,8 +4340,8 @@ void DrawVolumeLights(
 						MiscCB miscCb;
 						miscCb.g_xColor.x = float(i);
 						device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, cmd);
-						device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-						device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+						device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+						device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 						device->Draw(3, 0, cmd); // full screen triangle
 					}
@@ -4411,8 +4353,8 @@ void DrawVolumeLights(
 						float sca = light.GetRange() + 1;
 						XMStoreFloat4x4(&miscCb.g_xTransform, XMMatrixScaling(sca, sca, sca)*XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) * VP);
 						device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, cmd);
-						device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-						device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+						device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+						device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 						device->Draw(240, 0, cmd); // icosphere
 					}
@@ -4429,8 +4371,8 @@ void DrawVolumeLights(
 							VP
 						);
 						device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, cmd);
-						device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-						device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+						device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+						device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 						device->Draw(192, 0, cmd); // cone
 					}
@@ -4459,7 +4401,7 @@ void DrawLensFlares(
 
 	device->EventBegin("Lens Flares", cmd);
 
-	device->BindResource(VS, &depthbuffer, TEXSLOT_DEPTH, cmd);
+	device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
 
 	for (auto visibleLight : vis.visibleLights)
 	{
@@ -4481,11 +4423,11 @@ void DrawLensFlares(
 				// Directional light can use occlusion texture (eg. clouds):
 				if (texture_directional_occlusion == nullptr)
 				{
-					device->BindResource(VS, wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND0, cmd);
+					device->BindResource(wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND0, cmd);
 				}
 				else
 				{
-					device->BindResource(VS, texture_directional_occlusion, TEXSLOT_ONDEMAND0, cmd);
+					device->BindResource(texture_directional_occlusion, TEXSLOT_ONDEMAND0, cmd);
 				}
 			}
 			else
@@ -4494,18 +4436,17 @@ void DrawLensFlares(
 				POS = XMLoadFloat3(&light.position);
 
 				// not using occlusion texture
-				device->BindResource(VS, wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND0, cmd);
+				device->BindResource(wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND0, cmd);
 			}
 
 			if (XMVectorGetX(XMVector3Dot(XMVectorSubtract(POS, vis.camera->GetEye()), vis.camera->GetAt())) > 0) // check if the camera is facing towards the flare or not
 			{
 				device->BindPipelineState(&PSO_lensflare, cmd);
-				device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_LENSFLARE], CB_GETBINDSLOT(LensFlareCB), cmd);
 
 				// Get the screen position of the flare:
 				XMVECTOR flarePos = XMVector3Project(POS, 0, 0, 1, 1, 1, 0, vis.camera->GetProjection(), vis.camera->GetView(), XMMatrixIdentity());
 
-				LensFlareCB cb;
+				LensFlarePush cb;
 				XMStoreFloat3(&cb.xLensFlarePos, flarePos);
 
 				uint32_t i = 0;
@@ -4523,9 +4464,9 @@ void DrawLensFlares(
 						cb.xLensFlareSize.x = (float)x->texture.desc.Width;
 						cb.xLensFlareSize.y = (float)x->texture.desc.Height;
 
-						device->UpdateBuffer(&constantBuffers[CBTYPE_LENSFLARE], &cb, cmd);
+						device->PushConstants(&cb, sizeof(cb), cmd);
 
-						device->BindResource(PS, &x->texture, TEXSLOT_ONDEMAND1, cmd);
+						device->BindResource(&x->texture, TEXSLOT_ONDEMAND1, cmd);
 						device->Draw(4, 0, cmd);
 						i++;
 					}
@@ -4709,10 +4650,8 @@ void DrawShadowmaps(
 		auto range = wiProfiler::BeginRangeGPU("Shadow Rendering", cmd);
 
 		BindCommonResources(cmd);
-		BindConstantBuffers(VS, cmd);
-		BindConstantBuffers(PS, cmd);
 
-		device->BindResource(VS, &vis.scene->instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
+		device->BindResource(&vis.scene->instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 		BoundingFrustum cam_frustum;
 		BoundingFrustum::CreateFromMatrix(cam_frustum, vis.camera->GetProjection());
@@ -4720,7 +4659,6 @@ void DrawShadowmaps(
 		cam_frustum.Transform(cam_frustum, vis.camera->GetInvView());
 		XMStoreFloat4(&cam_frustum.Orientation, XMQuaternionNormalize(XMLoadFloat4(&cam_frustum.Orientation)));
 
-		device->UnbindResources(TEXSLOT_SHADOWARRAY_2D, 2, cmd);
 
 		uint32_t shadowCounter_2D = SHADOWRES_2D > 0 ? 0 : SHADOWCOUNT_2D;
 		uint32_t shadowCounter_Cube = SHADOWRES_CUBE > 0 ? 0 : SHADOWCOUNT_CUBE;
@@ -4784,7 +4722,7 @@ void DrawShadowmaps(
 					if (!renderQueue.empty())
 					{
 						CameraCB cb;
-						XMStoreFloat4x4(&cb.g_xCamera_VP, shcams[cascade].VP);
+						XMStoreFloat4x4(&cb.VP, shcams[cascade].VP);
 						device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &cb, cmd);
 
 						Viewport vp;
@@ -4848,7 +4786,7 @@ void DrawShadowmaps(
 				if (!renderQueue.empty())
 				{
 					CameraCB cb;
-					XMStoreFloat4x4(&cb.g_xCamera_VP, shcam.VP);
+					XMStoreFloat4x4(&cb.VP, shcam.VP);
 					device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &cb, cmd);
 
 					Viewport vp;
@@ -4911,8 +4849,8 @@ void DrawShadowmaps(
 					MiscCB miscCb;
 					miscCb.g_xColor = float4(light.position.x, light.position.y, light.position.z, 0);
 					device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, cmd);
-					device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-					device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+					device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+					device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 					const float zNearP = 0.1f;
 					const float zFarP = std::max(1.0f, light.GetRange());
@@ -4939,7 +4877,7 @@ void DrawShadowmaps(
 						}
 					}
 					device->UpdateBuffer(&constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, cmd);
-					device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubemapRenderCB), cmd);
+					device->BindConstantBuffer(&constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubemapRenderCB), cmd);
 
 					Viewport vp;
 					vp.TopLeftX = 0;
@@ -4988,31 +4926,18 @@ void DrawScene(
 	device->BindShadingRate(SHADING_RATE_1X1, cmd);
 
 	BindCommonResources(cmd);
-	BindShadowmaps(PS, cmd);
-	BindConstantBuffers(VS, cmd);
-	BindConstantBuffers(PS, cmd);
 
-	device->BindResource(VS, &vis.scene->instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
-	device->BindResource(GS, &vis.scene->instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
-	device->BindResource(DS, &vis.scene->instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
-	device->BindResource(PS, &vis.scene->instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
-
-	device->BindResource(PS, &vis.scene->envmapArray, TEXSLOT_ENVMAPARRAY, cmd);
-	device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
-	device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
-	device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
-	device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], TEXSLOT_SKYLUMINANCELUT, cmd);
-	device->BindResource(PS, GetVoxelRadianceSecondaryBounceEnabled() ? &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] : &textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELGI, cmd);
+	device->BindResource(&vis.scene->envmapArray, TEXSLOT_ENVMAPARRAY, cmd);
+	device->BindResource(&vis.scene->instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 	if (vis.scene->weather.skyMap != nullptr)
 	{
-		device->BindResource(PS, &vis.scene->weather.skyMap->texture, TEXSLOT_GLOBALENVMAP, cmd);
+		device->BindResource(&vis.scene->weather.skyMap->texture, TEXSLOT_GLOBALENVMAP, cmd);
 	}
 
 	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 	{
-		device->BindResource(PS, &vis.scene->TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
-		device->BindResource(CS, &vis.scene->TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
+		device->BindResource(&vis.scene->TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
 	}
 
 	if (transparent && vis.scene->weather.IsOceanEnabled())
@@ -5140,8 +5065,6 @@ void DrawDebugWorld(
 	device->EventBegin("DrawDebugWorld", cmd);
 
 	BindCommonResources(cmd);
-	BindConstantBuffers(VS, cmd);
-	BindConstantBuffers(PS, cmd);
 
 	if (debugPartitionTree)
 	{
@@ -5169,8 +5092,8 @@ void DrawDebugWorld(
 			sb.g_xColor = XMFLOAT4(1, 0, 0, 1);
 
 			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 			device->DrawIndexed(24, 0, 0, cmd);
 		}
@@ -5183,8 +5106,8 @@ void DrawDebugWorld(
 			sb.g_xColor = XMFLOAT4(1, 1, 0, 1);
 
 			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 			device->DrawIndexed(24, 0, 0, cmd);
 		}
@@ -5197,8 +5120,8 @@ void DrawDebugWorld(
 			sb.g_xColor = XMFLOAT4(1, 0, 1, 1);
 
 			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 			device->DrawIndexed(24, 0, 0, cmd);
 		}
@@ -5211,8 +5134,8 @@ void DrawDebugWorld(
 			sb.g_xColor = XMFLOAT4(0, 1, 1, 1);
 
 			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 			device->DrawIndexed(24, 0, 0, cmd);
 		}
@@ -5230,8 +5153,8 @@ void DrawDebugWorld(
 		XMStoreFloat4x4(&sb.g_xTransform, camera.GetViewProjection());
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
 		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 		for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
 		{
@@ -5303,8 +5226,8 @@ void DrawDebugWorld(
 		XMStoreFloat4x4(&sb.g_xTransform, camera.GetViewProjection());
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
 		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 		struct Vertex
 		{
@@ -5356,8 +5279,8 @@ void DrawDebugWorld(
 		XMStoreFloat4x4(&sb.g_xTransform, camera.GetViewProjection());
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
 		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 		struct Vertex
 		{
@@ -5409,8 +5332,8 @@ void DrawDebugWorld(
 		XMStoreFloat4x4(&sb.g_xTransform, camera.GetViewProjection());
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
 		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 		struct LineSegment
 		{
@@ -5459,8 +5382,8 @@ void DrawDebugWorld(
 		XMStoreFloat4x4(&sb.g_xTransform, canvas.GetProjection());
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
 		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 		struct LineSegment
 		{
@@ -5509,8 +5432,8 @@ void DrawDebugWorld(
 		XMStoreFloat4x4(&sb.g_xTransform, camera.GetProjection()); // only projection, we will expand in view space on CPU below to be camera facing!
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
 		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 		// Will generate 2 line segments for each point forming a cross section:
 		struct LineSegment
@@ -5587,8 +5510,8 @@ void DrawDebugWorld(
 			sb.g_xColor = x.second;
 
 			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 			device->DrawIndexed(24, 0, 0, cmd);
 		}
@@ -5696,8 +5619,8 @@ void DrawDebugWorld(
 			sb.g_xColor = x.second;
 
 			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 			device->DrawIndexed(wiresphereIB.GetDesc().ByteWidth / sizeof(uint16_t), 0, 0, cmd);
 		}
@@ -5716,8 +5639,8 @@ void DrawDebugWorld(
 		XMStoreFloat4x4(&sb.g_xTransform, camera.GetViewProjection());
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
 		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 		const int segmentcount = 18 + 1 + 18 + 1;
 		const int linecount = (int)renderableCapsules.size() * segmentcount;
@@ -5819,16 +5742,16 @@ void DrawDebugWorld(
 
 			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranslationFromVector(XMLoadFloat3(&probe.position)));
 			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 			if (probe.textureIndex < 0)
 			{
-				device->BindResource(PS, wiTextureHelper::getBlackCubeMap(), TEXSLOT_ONDEMAND0, cmd);
+				device->BindResource(wiTextureHelper::getBlackCubeMap(), TEXSLOT_ONDEMAND0, cmd);
 			}
 			else
 			{
-				device->BindResource(PS, &scene.envmapArray, TEXSLOT_ONDEMAND0, cmd, scene.envmapArray.GetDesc().MipLevels + probe.textureIndex);
+				device->BindResource(&scene.envmapArray, TEXSLOT_ONDEMAND0, cmd, scene.envmapArray.GetDesc().MipLevels + probe.textureIndex);
 			}
 
 			device->Draw(2880, 0, cmd); // uv-sphere
@@ -5864,8 +5787,8 @@ void DrawDebugWorld(
 			sb.g_xColor = float4(0, 1, 1, 1);
 
 			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 			device->DrawIndexed(24, 0, 0, cmd);
 		}
@@ -5924,8 +5847,8 @@ void DrawDebugWorld(
 		sb.g_xColor = float4(1, 1, 1, 1);
 
 		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 		const GPUBuffer* vbs[] = {
 			&grid,
@@ -5945,7 +5868,7 @@ void DrawDebugWorld(
 
 		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_VOXEL], cmd);
 
-		device->BindResource(VS, GetVoxelRadianceSecondaryBounceEnabled() ? &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] : &textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELGI, cmd);
+		device->BindResource(GetVoxelRadianceSecondaryBounceEnabled() ? &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] : &textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELGI, cmd);
 
 
 		MiscCB sb;
@@ -5953,9 +5876,7 @@ void DrawDebugWorld(
 		sb.g_xColor = float4(1, 1, 1, 1);
 
 		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-		device->BindConstantBuffer(GS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 		device->Draw(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res, 0, cmd);
 
@@ -5977,8 +5898,8 @@ void DrawDebugWorld(
 			XMStoreFloat4x4(&sb.g_xTransform, XMLoadFloat4x4(&transform.world)*camera.GetViewProjection());
 			sb.g_xColor = float4(0, 1, 0, 1);
 			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 			if (mesh == nullptr)
 			{
@@ -6048,7 +5969,7 @@ void DrawDebugWorld(
 			cb.xPaintRadRadius = x.radius;
 			cb.xPaintRadUVSET = x.uvset;
 			device->UpdateBuffer(&constantBuffers[CBTYPE_PAINTRADIUS], &cb, cmd);
-			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_PAINTRADIUS], CB_GETBINDSLOT(PaintRadiusCB), cmd);
+			device->BindConstantBuffer(&constantBuffers[CBTYPE_PAINTRADIUS], CB_GETBINDSLOT(PaintRadiusCB), cmd);
 
 			device->DrawIndexedInstanced(subset.indexCount, 1, subset.indexOffset, 0, 0, cmd);
 		}
@@ -6071,8 +5992,8 @@ void DrawDebugWorld(
 			XMStoreFloat4x4(&sb.g_xTransform, camera.GetViewProjection());
 			sb.g_xColor = XMFLOAT4(camera.Eye.x, camera.Eye.y, camera.Eye.z, (float)i);
 			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 			switch (force.type)
 			{
@@ -6161,8 +6082,8 @@ void DrawDebugWorld(
 			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixScaling(aspect * 0.5f, 0.5f, 0.5f) * cam.GetInvView()*camera.GetViewProjection());
 
 			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-			device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-			device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 			device->DrawIndexed(32, 0, 0, cmd);
 		}
@@ -6189,13 +6110,13 @@ void RenderAtmosphericScatteringTextures(CommandList cmd)
 		device->EventBegin("TransmittanceLut", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_SKYATMOSPHERE_TRANSMITTANCELUT], cmd);
 
-		device->BindResource(CS, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_ONDEMAND0, cmd); // empty
-		device->BindResource(CS, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_ONDEMAND1, cmd); // empty
+		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_ONDEMAND0, cmd); // empty
+		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_ONDEMAND1, cmd); // empty
 
 		const GPUResource* uavs[] = {
 			&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT],
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -6220,7 +6141,6 @@ void RenderAtmosphericScatteringTextures(CommandList cmd)
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -6230,13 +6150,13 @@ void RenderAtmosphericScatteringTextures(CommandList cmd)
 		device->BindComputeShader(&shaders[CSTYPE_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], cmd);
 
 		// Use transmittance from previous pass
-		device->BindResource(CS, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(CS, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_ONDEMAND1, cmd);
 
 		const GPUResource* uavs[] = {
 			&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT],
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -6258,7 +6178,6 @@ void RenderAtmosphericScatteringTextures(CommandList cmd)
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -6267,13 +6186,13 @@ void RenderAtmosphericScatteringTextures(CommandList cmd)
 		device->EventBegin("EnvironmentLuminanceLut", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_SKYATMOSPHERE_SKYLUMINANCELUT], cmd);
 
-		device->BindResource(CS, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(CS, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_ONDEMAND1, cmd);
 
 		const GPUResource* uavs[] = {
 			&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT],
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -6295,7 +6214,6 @@ void RenderAtmosphericScatteringTextures(CommandList cmd)
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -6314,13 +6232,13 @@ void RefreshAtmosphericScatteringTextures(CommandList cmd)
 		device->EventBegin("SkyViewLut", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_SKYATMOSPHERE_SKYVIEWLUT], cmd);
 
-		device->BindResource(CS, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(CS, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_ONDEMAND1, cmd);
 
 		const GPUResource* uavs[] = {
 			&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT],
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -6345,7 +6263,6 @@ void RefreshAtmosphericScatteringTextures(CommandList cmd)
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -6358,18 +6275,14 @@ void DrawSky(const Scene& scene, CommandList cmd)
 	if (scene.weather.skyMap != nullptr)
 	{
 		device->BindPipelineState(&PSO_sky[SKYRENDERING_STATIC], cmd);
-		device->BindResource(PS, &scene.weather.skyMap->texture, TEXSLOT_GLOBALENVMAP, cmd);
+		device->BindResource(&scene.weather.skyMap->texture, TEXSLOT_GLOBALENVMAP, cmd);
 	}
 	else
 	{
 		device->BindPipelineState(&PSO_sky[SKYRENDERING_DYNAMIC], cmd);
-		device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
-		device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
-		device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
 	}
 
-	BindConstantBuffers(VS, cmd);
-	BindConstantBuffers(PS, cmd);
+	BindCommonResources(cmd);
 
 	device->Draw(3, 0, cmd);
 
@@ -6381,12 +6294,7 @@ void DrawSun(CommandList cmd)
 
 	device->BindPipelineState(&PSO_sky[SKYRENDERING_SUN], cmd);
 
-	device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
-	device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
-	device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
-
-	BindConstantBuffers(VS, cmd);
-	BindConstantBuffers(PS, cmd);
+	BindCommonResources(cmd);
 
 	device->Draw(3, 0, cmd);
 
@@ -6432,10 +6340,10 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		}
 
 		device->UpdateBuffer(&constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, cmd);
-		device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubemapRenderCB), cmd);
+		device->BindConstantBuffer(&constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubemapRenderCB), cmd);
 
 		CameraCB camcb;
-		camcb.g_xCamera_CamPos = probe.position; // only this will be used by envprobe rendering shaders the rest is read from cubemaprenderCB
+		camcb.CamPos = probe.position; // only this will be used by envprobe rendering shaders the rest is read from cubemaprenderCB
 		device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &camcb, cmd);
 
 		if (vis.scene->weather.IsRealisticSky())
@@ -6445,12 +6353,12 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		}
 
 		// Bind the atmospheric textures, as lighting and sky needs them
-		device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
-		device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
-		device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
-		device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], TEXSLOT_SKYLUMINANCELUT, cmd);
+		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
+		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
+		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
+		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], TEXSLOT_SKYLUMINANCELUT, cmd);
 
-		device->BindResource(VS, &vis.scene->instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
+		device->BindResource(&vis.scene->instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 		device->RenderPassBegin(&vis.scene->renderpasses_envmap[probe.textureIndex], cmd);
 
@@ -6478,8 +6386,6 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 			if (!renderQueue.empty())
 			{
-				BindShadowmaps(PS, cmd);
-
 				RenderMeshes(vis, renderQueue, RENDERPASS_ENVMAPCAPTURE, RENDERTYPE_ALL, cmd, false, frusta, arraysize(frusta));
 
 				GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
@@ -6491,7 +6397,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			if (vis.scene->weather.skyMap != nullptr)
 			{
 				device->BindPipelineState(&PSO_sky[SKYRENDERING_ENVMAPCAPTURE_STATIC], cmd);
-				device->BindResource(PS, &vis.scene->weather.skyMap->texture, TEXSLOT_ONDEMAND0, cmd);
+				device->BindResource(&vis.scene->weather.skyMap->texture, TEXSLOT_ONDEMAND0, cmd);
 			}
 			else
 			{
@@ -6533,8 +6439,8 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 					device->Barrier(barriers, arraysize(barriers), cmd);
 				}
 
-				device->BindUAV(CS, &vis.scene->envmapArray, 0, cmd, i);
-				device->BindResource(CS, &vis.scene->envmapArray, TEXSLOT_ONDEMAND0, cmd, std::max(0, (int)i - 2));
+				device->BindUAV(&vis.scene->envmapArray, 0, cmd, i);
+				device->BindResource(&vis.scene->envmapArray, TEXSLOT_ONDEMAND0, cmd, std::max(0, (int)i - 2));
 
 				FilterEnvmapCB cb;
 				cb.filterResolution.x = desc.Width;
@@ -6545,7 +6451,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 				cb.filterRoughness = (float)i / (float)desc.MipLevels;
 				cb.filterRayCount = 128;
 				device->UpdateBuffer(&constantBuffers[CBTYPE_FILTERENVMAP], &cb, cmd);
-				device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_FILTERENVMAP], CB_GETBINDSLOT(FilterEnvmapCB), cmd);
+				device->BindConstantBuffer(&constantBuffers[CBTYPE_FILTERENVMAP], CB_GETBINDSLOT(FilterEnvmapCB), cmd);
 
 				device->Dispatch(
 					std::max(1u, (uint32_t)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
@@ -6569,7 +6475,6 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 				desc.Width *= 2;
 				desc.Height *= 2;
 			}
-			device->UnbindUAVs(0, 1, cmd);
 		}
 		device->EventEnd(cmd);
 	};
@@ -6621,8 +6526,8 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 	);
 	inst.color = 0xFFFFFFFF;
 	device->UpdateBuffer(&resourceBuffers[RBTYPE_IMPOSTORREFRESH], &inst, cmd, sizeof(inst));
-	device->BindResource(VS, &resourceBuffers[RBTYPE_IMPOSTORREFRESH], SBSLOT_INSTANCEARRAY, cmd);
-	device->BindResource(PS, &resourceBuffers[RBTYPE_IMPOSTORREFRESH], SBSLOT_INSTANCEARRAY, cmd);
+	device->BindResource(&resourceBuffers[RBTYPE_IMPOSTORREFRESH], SBSLOT_INSTANCEARRAY, cmd);
+	device->BindResource(&resourceBuffers[RBTYPE_IMPOSTORREFRESH], SBSLOT_INSTANCEARRAY, cmd);
 
 	GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(ShaderMeshInstance), cmd);
 	volatile ShaderMeshInstance* buff = (volatile ShaderMeshInstance*)mem.data;
@@ -6768,12 +6673,11 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 		device->BindViewports(1, &vp, cmd);
 
 		GPUResource* UAVs[] = { &resourceBuffers[RBTYPE_VOXELSCENE] };
-		device->BindUAVs(PS, UAVs, 0, 1, cmd);
+		device->BindUAVs(UAVs, 0, 1, cmd);
 
 		BindCommonResources(cmd);
-		BindShadowmaps(PS, cmd);
 
-		device->BindResource(PS, &vis.scene->instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
+		device->BindResource(&vis.scene->instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 		device->RenderPassBegin(&renderpass_voxelize, cmd);
 		RenderMeshes(vis, renderQueue, RENDERPASS_VOXELIZE, RENDERTYPE_OPAQUE, cmd, false, nullptr, 1);
@@ -6790,8 +6694,8 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 
 		// Copy the packed voxel scene data to a 3D texture, then delete the voxel scene emission data. The cone tracing will operate on the 3D texture
 		device->EventBegin("Voxel Scene Copy - Clear", cmd);
-		device->BindUAV(CS, &resourceBuffers[RBTYPE_VOXELSCENE], 0, cmd);
-		device->BindUAV(CS, &textures[TEXTYPE_3D_VOXELRADIANCE], 1, cmd);
+		device->BindUAV(&resourceBuffers[RBTYPE_VOXELSCENE], 0, cmd);
+		device->BindUAV(&textures[TEXTYPE_3D_VOXELRADIANCE], 1, cmd);
 
 		static bool smooth_copy = true;
 		if (smooth_copy)
@@ -6815,13 +6719,12 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 		if (voxelSceneData.secondaryBounceEnabled)
 		{
 			device->EventBegin("Voxel Radiance Secondary Bounce", cmd);
-			device->UnbindUAVs(1, 1, cmd);
 			// Pre-integrate the voxel texture by creating blurred mip levels:
 			GenerateMipChain(textures[TEXTYPE_3D_VOXELRADIANCE], MIPGENFILTER_LINEAR, cmd);
 
-			device->BindResource(CS, &textures[TEXTYPE_3D_VOXELRADIANCE], 0, cmd);
-			device->BindResource(CS, &resourceBuffers[RBTYPE_VOXELSCENE], 1, cmd);
-			device->BindUAV(CS, &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], 0, cmd);
+			device->BindResource(&textures[TEXTYPE_3D_VOXELRADIANCE], 0, cmd);
+			device->BindResource(&resourceBuffers[RBTYPE_VOXELSCENE], 1, cmd);
+			device->BindUAV(&textures[TEXTYPE_3D_VOXELRADIANCE_HELPER], 0, cmd);
 			device->BindComputeShader(&shaders[CSTYPE_VOXELRADIANCESECONDARYBOUNCE], cmd);
 			device->Dispatch(voxelSceneData.res / 8, voxelSceneData.res / 8, voxelSceneData.res / 8, cmd);
 			device->EventEnd(cmd);
@@ -6834,8 +6737,7 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 			}
 
 			device->EventBegin("Voxel Scene Clear Normals", cmd);
-			device->UnbindResources(1, 1, cmd);
-			device->BindUAV(CS, &resourceBuffers[RBTYPE_VOXELSCENE], 0, cmd);
+			device->BindUAV(&resourceBuffers[RBTYPE_VOXELSCENE], 0, cmd);
 			device->BindComputeShader(&shaders[CSTYPE_VOXELCLEARONLYNORMAL], cmd);
 			device->Dispatch((uint32_t)(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res / 256), 1, 1, cmd);
 			device->EventEnd(cmd);
@@ -6850,7 +6752,6 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 			result = &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER];
 		}
 
-		device->UnbindUAVs(0, 2, cmd);
 
 
 		// Pre-integrate the voxel texture by creating blurred mip levels:
@@ -6906,7 +6807,7 @@ void ComputeTiledLightCulling(
 
 	BindCommonResources(cmd);
 
-	device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
+	device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
 
 	// Frustum computation
 	{
@@ -6916,7 +6817,7 @@ void ComputeTiledLightCulling(
 		const GPUResource* uavs[] = { 
 			&res.tileFrustums 
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -6932,7 +6833,6 @@ void ComputeTiledLightCulling(
 			1,
 			cmd
 		);
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 
 		device->EventEnd(cmd);
 	}
@@ -6941,12 +6841,12 @@ void ComputeTiledLightCulling(
 	{
 		device->EventBegin("Entity Culling", cmd);
 
-		device->BindResource(CS, &res.tileFrustums, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&res.tileFrustums, TEXSLOT_ONDEMAND0, cmd);
 
 		if (GetDebugLightCulling() && debugUAV.IsValid())
 		{
 			device->BindComputeShader(&shaders[GetAdvancedLightCulling() ? CSTYPE_LIGHTCULLING_ADVANCED_DEBUG : CSTYPE_LIGHTCULLING_DEBUG], cmd);
-			device->BindUAV(CS, &debugUAV, 3, cmd);
+			device->BindUAV(&debugUAV, 3, cmd);
 		}
 		else
 		{
@@ -6957,7 +6857,7 @@ void ComputeTiledLightCulling(
 			&res.entityTiles_Transparent,
 			&res.entityTiles_Opaque,
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -6981,7 +6881,6 @@ void ComputeTiledLightCulling(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 
 		device->EventEnd(cmd);
 	}
@@ -6992,8 +6891,8 @@ void ResolveMSAADepthBuffer(const Texture& dst, const Texture& src, CommandList 
 {
 	device->EventBegin("ResolveMSAADepthBuffer", cmd);
 
-	device->BindResource(CS, &src, TEXSLOT_ONDEMAND0, cmd);
-	device->BindUAV(CS, &dst, 0, cmd);
+	device->BindResource(&src, TEXSLOT_ONDEMAND0, cmd);
+	device->BindUAV(&dst, 0, cmd);
 
 	const TextureDesc& desc = src.GetDesc();
 
@@ -7001,8 +6900,6 @@ void ResolveMSAADepthBuffer(const Texture& dst, const Texture& src, CommandList 
 	device->Dispatch((desc.Width + 7) / 8, (desc.Height + 7) / 8, 1, cmd);
 
 
-	device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
-	device->UnbindUAVs(0, 1, cmd);
 
 	device->EventEnd(cmd);
 }
@@ -7012,11 +6909,10 @@ void DownsampleDepthBuffer(const wiGraphics::Texture& src, wiGraphics::CommandLi
 
 	device->BindPipelineState(&PSO_downsampledepthbuffer, cmd);
 
-	device->BindResource(PS, &src, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(&src, TEXSLOT_ONDEMAND0, cmd);
 
 	device->Draw(3, 0, cmd);
 
-	device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 
 	device->EventEnd(cmd);
 }
@@ -7054,12 +6950,12 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 				case MIPGENFILTER_POINT:
 					device->EventBegin("GenerateMipChain CubeArray - PointFilter", cmd);
 					device->BindComputeShader(&shaders[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4 : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4], cmd);
-					device->BindSampler(CS, &samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, cmd);
+					device->BindSampler(&samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, cmd);
 					break;
 				case MIPGENFILTER_LINEAR:
 					device->EventBegin("GenerateMipChain CubeArray - LinearFilter", cmd);
 					device->BindComputeShader(&shaders[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4 : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4], cmd);
-					device->BindSampler(CS, &samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, cmd);
+					device->BindSampler(&samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, cmd);
 					break;
 				default:
 					assert(0);
@@ -7080,8 +6976,8 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 						device->Barrier(barriers, arraysize(barriers), cmd);
 					}
 
-					device->BindUAV(CS, &texture, 0, cmd, i + 1);
-					device->BindResource(CS, &texture, TEXSLOT_ONDEMAND0, cmd, i);
+					device->BindUAV(&texture, 0, cmd, i + 1);
+					device->BindResource(&texture, TEXSLOT_ONDEMAND0, cmd, i);
 					desc.Width = std::max(1u, desc.Width / 2);
 					desc.Height = std::max(1u, desc.Height / 2);
 
@@ -7093,7 +6989,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 					cb.arrayIndex = options.arrayIndex;
 					cb.mipgen_options = 0;
 					device->UpdateBuffer(&constantBuffers[CBTYPE_MIPGEN], &cb, cmd);
-					device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), cmd);
+					device->BindConstantBuffer(&constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), cmd);
 
 					device->Dispatch(
 						std::max(1u, (desc.Width + GENERATEMIPCHAIN_2D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_2D_BLOCK_SIZE),
@@ -7123,12 +7019,12 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 				case MIPGENFILTER_POINT:
 					device->EventBegin("GenerateMipChain Cube - PointFilter", cmd);
 					device->BindComputeShader(&shaders[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4 : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4], cmd);
-					device->BindSampler(CS, &samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, cmd);
+					device->BindSampler(&samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, cmd);
 					break;
 				case MIPGENFILTER_LINEAR:
 					device->EventBegin("GenerateMipChain Cube - LinearFilter", cmd);
 					device->BindComputeShader(&shaders[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4 : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4], cmd);
-					device->BindSampler(CS, &samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, cmd);
+					device->BindSampler(&samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, cmd);
 					break;
 				default:
 					assert(0); // not implemented
@@ -7137,8 +7033,8 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 
 				for (uint32_t i = 0; i < desc.MipLevels - 1; ++i)
 				{
-					device->BindUAV(CS, &texture, 0, cmd, i + 1);
-					device->BindResource(CS, &texture, TEXSLOT_ONDEMAND0, cmd, i);
+					device->BindUAV(&texture, 0, cmd, i + 1);
+					device->BindResource(&texture, TEXSLOT_ONDEMAND0, cmd, i);
 					desc.Width = std::max(1u, desc.Width / 2);
 					desc.Height = std::max(1u, desc.Height / 2);
 
@@ -7150,7 +7046,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 					cb.arrayIndex = 0;
 					cb.mipgen_options = 0;
 					device->UpdateBuffer(&constantBuffers[CBTYPE_MIPGEN], &cb, cmd);
-					device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), cmd);
+					device->BindConstantBuffer(&constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), cmd);
 
 					device->Dispatch(
 						std::max(1u, (desc.Width + GENERATEMIPCHAIN_2D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_2D_BLOCK_SIZE),
@@ -7174,12 +7070,12 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 			case MIPGENFILTER_POINT:
 				device->EventBegin("GenerateMipChain 2D - PointFilter", cmd);
 				device->BindComputeShader(&shaders[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4 : CSTYPE_GENERATEMIPCHAIN2D_UNORM4], cmd);
-				device->BindSampler(CS, &samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, cmd);
+				device->BindSampler(&samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, cmd);
 				break;
 			case MIPGENFILTER_LINEAR:
 				device->EventBegin("GenerateMipChain 2D - LinearFilter", cmd);
 				device->BindComputeShader(&shaders[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4 : CSTYPE_GENERATEMIPCHAIN2D_UNORM4], cmd);
-				device->BindSampler(CS, &samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, cmd);
+				device->BindSampler(&samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, cmd);
 				break;
 			case MIPGENFILTER_GAUSSIAN:
 			{
@@ -7208,8 +7104,8 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 					device->Barrier(barriers, arraysize(barriers), cmd);
 				}
 
-				device->BindUAV(CS, &texture, 0, cmd, i + 1);
-				device->BindResource(CS, &texture, TEXSLOT_ONDEMAND0, cmd, i);
+				device->BindUAV(&texture, 0, cmd, i + 1);
+				device->BindResource(&texture, TEXSLOT_ONDEMAND0, cmd, i);
 				desc.Width = std::max(1u, desc.Width / 2);
 				desc.Height = std::max(1u, desc.Height / 2);
 
@@ -7225,7 +7121,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 					cb.mipgen_options |= MIPGEN_OPTION_BIT_PRESERVE_COVERAGE;
 				}
 				device->UpdateBuffer(&constantBuffers[CBTYPE_MIPGEN], &cb, cmd);
-				device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), cmd);
+				device->BindConstantBuffer(&constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), cmd);
 
 				device->Dispatch(
 					std::max(1u, (desc.Width + GENERATEMIPCHAIN_2D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_2D_BLOCK_SIZE),
@@ -7243,8 +7139,6 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 			}
 		}
 
-		device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
-		device->UnbindUAVs(0, 1, cmd);
 
 		device->EventEnd(cmd);
 	}
@@ -7255,12 +7149,12 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 		case MIPGENFILTER_POINT:
 			device->EventBegin("GenerateMipChain 3D - PointFilter", cmd);
 			device->BindComputeShader(&shaders[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4 : CSTYPE_GENERATEMIPCHAIN3D_UNORM4], cmd);
-			device->BindSampler(CS, &samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, cmd);
+			device->BindSampler(&samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, cmd);
 			break;
 		case MIPGENFILTER_LINEAR:
 			device->EventBegin("GenerateMipChain 3D - LinearFilter", cmd);
 			device->BindComputeShader(&shaders[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4 : CSTYPE_GENERATEMIPCHAIN3D_UNORM4], cmd);
-			device->BindSampler(CS, &samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, cmd);
+			device->BindSampler(&samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, cmd);
 			break;
 		default:
 			assert(0); // not implemented
@@ -7269,8 +7163,8 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 
 		for (uint32_t i = 0; i < desc.MipLevels - 1; ++i)
 		{
-			device->BindUAV(CS, &texture, 0, cmd, i + 1);
-			device->BindResource(CS, &texture, TEXSLOT_ONDEMAND0, cmd, i);
+			device->BindUAV(&texture, 0, cmd, i + 1);
+			device->BindResource(&texture, TEXSLOT_ONDEMAND0, cmd, i);
 			desc.Width = std::max(1u, desc.Width / 2);
 			desc.Height = std::max(1u, desc.Height / 2);
 			desc.Depth = std::max(1u, desc.Depth / 2);
@@ -7285,7 +7179,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 			cb.arrayIndex = options.arrayIndex >= 0 ? (uint)options.arrayIndex : 0;
 			cb.mipgen_options = 0;
 			device->UpdateBuffer(&constantBuffers[CBTYPE_MIPGEN], &cb, cmd);
-			device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), cmd);
+			device->BindConstantBuffer(&constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), cmd);
 
 			device->Dispatch(
 				std::max(1u, (desc.Width + GENERATEMIPCHAIN_3D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_3D_BLOCK_SIZE),
@@ -7299,8 +7193,6 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
-		device->UnbindUAVs(0, 1, cmd);
 
 		device->EventEnd(cmd);
 	}
@@ -7356,11 +7248,11 @@ void CopyTexture2D(const Texture& dst, int DstMIP, int DstX, int DstY, const Tex
 	cb.xCopyBorderExpandStyle = (uint)borderExpand;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_COPYTEXTURE], &cb, cmd);
 
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_COPYTEXTURE], CB_GETBINDSLOT(CopyTextureCB), cmd);
+	device->BindConstantBuffer(&constantBuffers[CBTYPE_COPYTEXTURE], CB_GETBINDSLOT(CopyTextureCB), cmd);
 
-	device->BindResource(CS, &src, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(&src, TEXSLOT_ONDEMAND0, cmd);
 
-	device->BindUAV(CS, &dst, 0, cmd, DstMIP);
+	device->BindUAV(&dst, 0, cmd, DstMIP);
 
 	{
 		GPUBarrier barriers[] = {
@@ -7371,7 +7263,6 @@ void CopyTexture2D(const Texture& dst, int DstMIP, int DstX, int DstY, const Tex
 
 	device->Dispatch((cb.xCopySrcSize.x + 7) / 8, (cb.xCopySrcSize.y + 7) / 8, 1, cmd);
 
-	device->UnbindUAVs(0, 1, cmd);
 
 	{
 		GPUBarrier barriers[] = {
@@ -7401,11 +7292,11 @@ void RayTraceScene(
 		{
 			return;
 		}
-		device->BindResource(CS, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
+		device->BindResource(&scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
 	}
 	else
 	{
-		scene.BVH.Bind(CS, cmd);
+		scene.BVH.Bind(cmd);
 	}
 
 	device->EventBegin("RayTraceScene", cmd);
@@ -7415,16 +7306,16 @@ void RayTraceScene(
 
 	if (scene.weather.skyMap != nullptr)
 	{
-		device->BindResource(CS, &scene.weather.skyMap->texture, TEXSLOT_GLOBALENVMAP, cmd);
+		device->BindResource(&scene.weather.skyMap->texture, TEXSLOT_GLOBALENVMAP, cmd);
 	}
 	else
 	{
-		device->BindResource(CS, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
-		device->BindResource(CS, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
-		device->BindResource(CS, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
+		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
+		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
+		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
 	}
 
-	device->BindResource(CS, &scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
+	device->BindResource(&scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 	const XMFLOAT4& halton = wiMath::GetHaltonSequence(accumulation_sample);
 	RaytracingCB cb;
@@ -7437,14 +7328,14 @@ void RayTraceScene(
 	cb.xTraceUserData.x = raytraceBounceCount;
 	cb.xTraceSampleIndex = (uint32_t)accumulation_sample;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_RAYTRACE], &cb, cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(RaytracingCB), cmd);
+	device->BindConstantBuffer(&constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(RaytracingCB), cmd);
 
 	device->BindComputeShader(&shaders[CSTYPE_RAYTRACE], cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
 	};
-	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 	{
 		GPUBarrier barriers[] = {
@@ -7455,11 +7346,11 @@ void RayTraceScene(
 
 	if (output_albedo != nullptr)
 	{
-		device->BindUAV(CS, output_albedo, 1, cmd);
+		device->BindUAV(output_albedo, 1, cmd);
 	}
 	if (output_normal != nullptr)
 	{
-		device->BindUAV(CS, output_normal, 2, cmd);
+		device->BindUAV(output_normal, 2, cmd);
 	}
 
 	device->Dispatch(
@@ -7476,7 +7367,6 @@ void RayTraceScene(
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
-	device->UnbindUAVs(0, 3, cmd);
 
 	wiProfiler::EndRange(range);
 	device->EventEnd(cmd); // RayTraceScene
@@ -7485,7 +7375,7 @@ void RayTraceSceneBVH(const Scene& scene, CommandList cmd)
 {
 	device->EventBegin("RayTraceSceneBVH", cmd);
 	device->BindPipelineState(&PSO_debug[DEBUGRENDERING_RAYTRACE_BVH], cmd);
-	scene.BVH.Bind(PS, cmd);
+	scene.BVH.Bind(cmd);
 	device->Draw(3, 0, cmd);
 	device->EventEnd(cmd);
 }
@@ -7498,13 +7388,13 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 
 		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		{
-			device->BindResource(PS, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
+			device->BindResource(&scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
 		}
 		else
 		{
-			scene.BVH.Bind(PS, cmd);
+			scene.BVH.Bind(cmd);
 		}
-		device->BindResource(CS, &scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
+		device->BindResource(&scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 		// Render lightmaps for each object:
 		for (uint32_t i = 0; i < scene.objects.GetCount(); ++i)
@@ -7542,7 +7432,7 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 				MiscCB misccb;
 				misccb.g_xTransform = transform.world;
 				device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &misccb, cmd);
-				device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+				device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
 
 				const GPUBuffer* vbs[] = {
 					&mesh.vertexBuffer_POS,
@@ -7573,20 +7463,20 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 				cb.xTraceUserData.x = raytraceBounceCount;
 				cb.xTraceSampleIndex = object.lightmapIterationCount;
 				device->UpdateBuffer(&constantBuffers[CBTYPE_RAYTRACE], &cb, cmd);
-				device->BindConstantBuffer(VS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(RaytracingCB), cmd);
-				device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(RaytracingCB), cmd);
+				device->BindConstantBuffer(&constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(RaytracingCB), cmd);
+				device->BindConstantBuffer(&constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(RaytracingCB), cmd);
 
 				device->BindPipelineState(&PSO_renderlightmap, cmd);
 
 				if (scene.weather.skyMap != nullptr)
 				{
-					device->BindResource(PS, &scene.weather.skyMap->texture, TEXSLOT_GLOBALENVMAP, cmd);
+					device->BindResource(&scene.weather.skyMap->texture, TEXSLOT_GLOBALENVMAP, cmd);
 				}
 				else
 				{
-					device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
-					device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
-					device->BindResource(PS, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
+					device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
+					device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
+					device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
 				}
 
 				device->DrawIndexedInstanced((uint32_t)mesh.indices.size(), 1, 0, 0, 0, cmd);
@@ -7605,29 +7495,42 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 
 void BindCommonResources(CommandList cmd)
 {
-	for (int i = 0; i < SHADERSTAGE_COUNT; ++i)
-	{
-		SHADERSTAGE stage = (SHADERSTAGE)i;
+	device->BindConstantBuffer(&constantBuffers[CBTYPE_FRAME], CBSLOT_RENDERER_FRAME, cmd);
+	device->BindConstantBuffer(&constantBuffers[CBTYPE_CAMERA], CBSLOT_RENDERER_CAMERA, cmd);
 
-		device->BindSampler(stage, &samplers[SSLOT_OBJECTSHADER], SSLOT_OBJECTSHADER, cmd);
+	device->BindSampler(&samplers[SSLOT_OBJECTSHADER], SSLOT_OBJECTSHADER, cmd);
 
-		BindConstantBuffers(stage, cmd);
+	device->BindResource(wiTextureHelper::getRandom64x64(), TEXSLOT_RANDOM64X64, cmd);
+	device->BindResource(wiTextureHelper::getBlueNoise(), TEXSLOT_BLUENOISE, cmd);
 
-		device->BindResource(stage, wiTextureHelper::getRandom64x64(), TEXSLOT_RANDOM64X64, cmd);
-		device->BindResource(stage, wiTextureHelper::getBlueNoise(), TEXSLOT_BLUENOISE, cmd);
-	}
-
-	device->BindResource(PS, &textures[TEXTYPE_2D_SHEENLUT], TEXSLOT_SHEENLUT, cmd);
-	device->BindResource(CS, &textures[TEXTYPE_2D_SHEENLUT], TEXSLOT_SHEENLUT, cmd);
+	device->BindResource(&textures[TEXTYPE_2D_SHEENLUT], TEXSLOT_SHEENLUT, cmd);
+	device->BindResource(&textures[TEXTYPE_2D_SHEENLUT], TEXSLOT_SHEENLUT, cmd);
 
 	// Bind the GPU entity array for all shaders that need it here:
 	GPUResource* resources[] = {
 		&resourceBuffers[RBTYPE_ENTITYARRAY],
 		&resourceBuffers[RBTYPE_MATRIXARRAY],
 	};
-	device->BindResources(VS, resources, SBSLOT_ENTITYARRAY, arraysize(resources), cmd);
-	device->BindResources(PS, resources, SBSLOT_ENTITYARRAY, arraysize(resources), cmd);
-	device->BindResources(CS, resources, SBSLOT_ENTITYARRAY, arraysize(resources), cmd);
+	device->BindResources(resources, SBSLOT_ENTITYARRAY, arraysize(resources), cmd);
+	device->BindResources(resources, SBSLOT_ENTITYARRAY, arraysize(resources), cmd);
+	device->BindResources(resources, SBSLOT_ENTITYARRAY, arraysize(resources), cmd);
+
+	device->BindResource(&shadowMapArray_2D, TEXSLOT_SHADOWARRAY_2D, cmd);
+	device->BindResource(&shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, cmd);
+	if (GetTransparentShadowsEnabled())
+	{
+		device->BindResource(&shadowMapArray_Transparent_2D, TEXSLOT_SHADOWARRAY_TRANSPARENT_2D, cmd);
+		device->BindResource(&shadowMapArray_Transparent_Cube, TEXSLOT_SHADOWARRAY_TRANSPARENT_CUBE, cmd);
+	}
+
+	// Bind the atmospheric textures, as lighting and sky needs them
+	device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
+	device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
+	device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
+	device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], TEXSLOT_SKYLUMINANCELUT, cmd);
+
+	device->BindResource(GetVoxelRadianceSecondaryBounceEnabled() ? &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] : &textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELGI, cmd);
+
 }
 
 void UpdateCameraCB(
@@ -7639,45 +7542,46 @@ void UpdateCameraCB(
 {
 	CameraCB cb;
 
-	XMStoreFloat4x4(&cb.g_xCamera_VP, camera.GetViewProjection());
-	XMStoreFloat4x4(&cb.g_xCamera_View, camera.GetView());
-	XMStoreFloat4x4(&cb.g_xCamera_Proj, camera.GetProjection());
-	cb.g_xCamera_CamPos = camera.Eye;
-	cb.g_xCamera_DistanceFromOrigin = XMVectorGetX(XMVector3Length(XMLoadFloat3(&cb.g_xCamera_CamPos)));
-	XMStoreFloat4x4(&cb.g_xCamera_InvV, camera.GetInvView());
-	XMStoreFloat4x4(&cb.g_xCamera_InvP, camera.GetInvProjection());
-	XMStoreFloat4x4(&cb.g_xCamera_InvVP, camera.GetInvViewProjection());
-	cb.g_xCamera_At = camera.At;
-	cb.g_xCamera_Up = camera.Up;
-	cb.g_xCamera_ZNearP = camera.zNearP;
-	cb.g_xCamera_ZFarP = camera.zFarP;
-	cb.g_xCamera_ZNearP_rcp = 1.0f / std::max(0.0001f, cb.g_xCamera_ZNearP);
-	cb.g_xCamera_ZFarP_rcp = 1.0f / std::max(0.0001f, cb.g_xCamera_ZFarP);
-	cb.g_xCamera_ZRange = abs(cb.g_xCamera_ZFarP - cb.g_xCamera_ZNearP);
-	cb.g_xCamera_ZRange_rcp = 1.0f / std::max(0.0001f, cb.g_xCamera_ZRange);
-	cb.g_xCamera_ClipPlane = camera.clipPlane;
+	XMStoreFloat4x4(&cb.VP, camera.GetViewProjection());
+	XMStoreFloat4x4(&cb.View, camera.GetView());
+	XMStoreFloat4x4(&cb.Proj, camera.GetProjection());
+	cb.CamPos = camera.Eye;
+	cb.DistanceFromOrigin = XMVectorGetX(XMVector3Length(XMLoadFloat3(&cb.CamPos)));
+	XMStoreFloat4x4(&cb.InvV, camera.GetInvView());
+	XMStoreFloat4x4(&cb.InvP, camera.GetInvProjection());
+	XMStoreFloat4x4(&cb.InvVP, camera.GetInvViewProjection());
+	cb.At = camera.At;
+	cb.Up = camera.Up;
+	cb.ZNearP = camera.zNearP;
+	cb.ZFarP = camera.zFarP;
+	cb.ZNearP_rcp = 1.0f / std::max(0.0001f, cb.ZNearP);
+	cb.ZFarP_rcp = 1.0f / std::max(0.0001f, cb.ZFarP);
+	cb.ZRange = abs(cb.ZFarP - cb.ZNearP);
+	cb.ZRange_rcp = 1.0f / std::max(0.0001f, cb.ZRange);
+	cb.ClipPlane = camera.clipPlane;
 
-	static_assert(arraysize(camera.frustum.planes) == arraysize(cb.g_xCamera_FrustumPlanes), "Mismatch!");
+	static_assert(arraysize(camera.frustum.planes) == arraysize(cb.FrustumPlanes), "Mismatch!");
 	for (int i = 0; i < arraysize(camera.frustum.planes); ++i)
 	{
-		cb.g_xCamera_FrustumPlanes[i] = camera.frustum.planes[i];
+		cb.FrustumPlanes[i] = camera.frustum.planes[i];
 	}
 
-	cb.g_xFrame_TemporalAAJitter = camera.jitter;
-	cb.g_xFrame_TemporalAAJitterPrev = camera_previous.jitter;
+	cb.TemporalAAJitter = camera.jitter;
+	cb.TemporalAAJitterPrev = camera_previous.jitter;
 
-	XMStoreFloat4x4(&cb.g_xCamera_PrevV, camera_previous.GetView());
-	XMStoreFloat4x4(&cb.g_xCamera_PrevP, camera_previous.GetProjection());
-	XMStoreFloat4x4(&cb.g_xCamera_PrevVP, camera_previous.GetViewProjection());
-	XMStoreFloat4x4(&cb.g_xCamera_PrevInvVP, camera_previous.GetInvViewProjection());
-	XMStoreFloat4x4(&cb.g_xCamera_ReflVP, camera_reflection.GetViewProjection());
-	XMStoreFloat4x4(&cb.g_xCamera_Reprojection, camera.GetInvViewProjection() * camera_previous.GetViewProjection());
+	XMStoreFloat4x4(&cb.PrevV, camera_previous.GetView());
+	XMStoreFloat4x4(&cb.PrevP, camera_previous.GetProjection());
+	XMStoreFloat4x4(&cb.PrevVP, camera_previous.GetViewProjection());
+	XMStoreFloat4x4(&cb.PrevInvVP, camera_previous.GetInvViewProjection());
+	XMStoreFloat4x4(&cb.ReflVP, camera_reflection.GetViewProjection());
+	XMStoreFloat4x4(&cb.Reprojection, camera.GetInvViewProjection() * camera_previous.GetViewProjection());
 
-	cb.g_xCamera_FocalLength = camera.focal_length;
-	cb.g_xCamera_ApertureSize = camera.aperture_size;
-	cb.g_xCamera_ApertureShape = camera.aperture_shape;
+	cb.FocalLength = camera.focal_length;
+	cb.ApertureSize = camera.aperture_size;
+	cb.ApertureShape = camera.aperture_shape;
 
 	device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &cb, cmd);
+	device->BindConstantBuffer(&constantBuffers[CBTYPE_CAMERA], CBSLOT_RENDERER_CAMERA, cmd);
 }
 
 void CreateLuminanceResources(LuminanceResources& res, XMUINT2 resolution)
@@ -7706,13 +7610,13 @@ const Texture* ComputeLuminance(
 	PostProcessCB cb;
 	cb.luminance_adaptionrate = adaption_rate;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	// Pass 1 : Compute log luminance and reduction
 	{
 		device->BindComputeShader(&shaders[CSTYPE_LUMINANCE_PASS1], cmd);
-		device->BindResource(CS, &sourceImage, TEXSLOT_ONDEMAND0, cmd);
-		device->BindUAV(CS, &res.reductiontex, 0, cmd);
+		device->BindResource(&sourceImage, TEXSLOT_ONDEMAND0, cmd);
+		device->BindUAV(&res.reductiontex, 0, cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -7736,8 +7640,8 @@ const Texture* ComputeLuminance(
 	{
 		device->BindComputeShader(&shaders[CSTYPE_LUMINANCE_PASS2], cmd);
 
-		device->BindUAV(CS, &res.luminance, 0, cmd);
-		device->BindResource(CS, &res.reductiontex, TEXSLOT_ONDEMAND0, cmd);
+		device->BindUAV(&res.luminance, 0, cmd);
+		device->BindResource(&res.reductiontex, TEXSLOT_ONDEMAND0, cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -7756,7 +7660,6 @@ const Texture* ComputeLuminance(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, 1, cmd);
 	}
 
 	wiProfiler::EndRange(range);
@@ -7778,7 +7681,7 @@ void ComputeShadingRateClassification(
 
 	if (GetVariableRateShadingClassificationDebug())
 	{
-		device->BindUAV(CS, &debugUAV, 1, cmd);
+		device->BindUAV(&debugUAV, 1, cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -7794,8 +7697,8 @@ void ComputeShadingRateClassification(
 		device->BindComputeShader(&shaders[CSTYPE_SHADINGRATECLASSIFICATION], cmd);
 	}
 
-	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
-	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
+	device->BindResource(&gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
+	device->BindResource(&lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
 	const TextureDesc& desc = output.GetDesc();
 
@@ -7809,12 +7712,12 @@ void ComputeShadingRateClassification(
 	device->WriteShadingRateValue(SHADING_RATE_4X2, &cb.SHADING_RATE_4X2);
 	device->WriteShadingRateValue(SHADING_RATE_4X4, &cb.SHADING_RATE_4X4);
 	device->UpdateBuffer(&constantBuffers[CBTYPE_SHADINGRATECLASSIFICATION], &cb, cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_SHADINGRATECLASSIFICATION], CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindConstantBuffer(&constantBuffers[CBTYPE_SHADINGRATECLASSIFICATION], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
 	};
-	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 	{
 		GPUBarrier barriers[] = {
@@ -7844,7 +7747,6 @@ void ComputeShadingRateClassification(
 		}
 	}
 
-	device->UnbindUAVs(0, arraysize(uavs), cmd);
 
 	wiProfiler::EndRange(range);
 	device->EventEnd(cmd);
@@ -7868,16 +7770,16 @@ void VisibilityResolve(
 
 	device->BindComputeShader(&shaders[msaa ? CSTYPE_VISIBILITY_RESOLVE_MSAA : CSTYPE_VISIBILITY_RESOLVE], cmd);
 
-	device->BindResource(CS, &scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
+	device->BindResource(&scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
-	device->BindResource(CS, &texture_primitiveID, TEXSLOT_ONDEMAND0, cmd);
-	device->BindResource(CS, &depthbuffer, TEXSLOT_ONDEMAND1, cmd);
+	device->BindResource(&texture_primitiveID, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(&depthbuffer, TEXSLOT_ONDEMAND1, cmd);
 
 	const GPUResource* uavs[] = {
 		&gbuffer[GBUFFER_VELOCITY],
 		&depthbuffer_resolved,
 	};
-	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 	{
 		GPUBarrier barriers[] = {
@@ -7889,7 +7791,7 @@ void VisibilityResolve(
 
 	if (msaa)
 	{
-		device->BindUAV(CS, &gbuffer[GBUFFER_PRIMITIVEID], 3, cmd);
+		device->BindUAV(&gbuffer[GBUFFER_PRIMITIVEID], 3, cmd);
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Image(&gbuffer[GBUFFER_PRIMITIVEID], gbuffer[GBUFFER_PRIMITIVEID].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
@@ -7924,7 +7826,6 @@ void VisibilityResolve(
 		}
 	}
 
-	device->UnbindUAVs(0, arraysize(uavs), cmd);
 
 	wiProfiler::EndRange(range);
 	device->EventEnd(cmd);
@@ -7953,22 +7854,22 @@ void SurfelGI_Coverage(
 	device->EventBegin("SurfelGI - Coverage", cmd);
 	auto prof_range = wiProfiler::BeginRangeGPU("SurfelGI - Coverage", cmd);
 
-	device->BindResource(CS, &scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
+	device->BindResource(&scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 	// Coverage:
 	{
 		device->EventBegin("Coverage", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_SURFEL_COVERAGE], cmd);
 
-		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
-		device->BindResource(CS, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
-		device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
+		device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
+		device->BindResource(&gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
+		device->BindResource(&gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
 
-		device->BindResource(CS, &scene.surfelBuffer, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(CS, &scene.surfelStatsBuffer, TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(CS, &scene.surfelGridBuffer, TEXSLOT_ONDEMAND2, cmd);
-		device->BindResource(CS, &scene.surfelCellBuffer, TEXSLOT_ONDEMAND3, cmd);
-		device->BindResource(CS, &scene.surfelMomentsTexture, TEXSLOT_ONDEMAND4, cmd);
+		device->BindResource(&scene.surfelBuffer, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&scene.surfelStatsBuffer, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(&scene.surfelGridBuffer, TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(&scene.surfelCellBuffer, TEXSLOT_ONDEMAND3, cmd);
+		device->BindResource(&scene.surfelMomentsTexture, TEXSLOT_ONDEMAND4, cmd);
 
 		const GPUResource* uavs[] = {
 			&scene.surfelDataBuffer,
@@ -7976,7 +7877,7 @@ void SurfelGI_Coverage(
 			&res.result,
 			&debugUAV
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -8012,8 +7913,6 @@ void SurfelGI_Coverage(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
-		device->UnbindResources(TEXSLOT_ONDEMAND0, 5, cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -8023,12 +7922,11 @@ void SurfelGI_Coverage(
 		const GPUResource* uavs[] = {
 			&scene.surfelStatsBuffer,
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_SURFEL_INDIRECTPREPARE], cmd);
 		device->Dispatch(1, 1, 1, cmd);
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -8046,9 +7944,8 @@ void SurfelGI(
 	device->EventBegin("SurfelGI", cmd);
 
 	BindCommonResources(cmd);
-	BindShadowmaps(CS, cmd);
 
-	device->BindResource(CS, &scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
+	device->BindResource(&scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 	// Grid reset:
 	{
@@ -8058,7 +7955,7 @@ void SurfelGI(
 		const GPUResource* uavs[] = {
 			&scene.surfelGridBuffer,
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -8074,7 +7971,6 @@ void SurfelGI(
 			cmd
 		);
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -8083,14 +7979,14 @@ void SurfelGI(
 		device->EventBegin("Update", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_SURFEL_UPDATE], cmd);
 
-		device->BindResource(CS, &scene.surfelStatsBuffer, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(CS, &scene.surfelDataBuffer, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(&scene.surfelStatsBuffer, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&scene.surfelDataBuffer, TEXSLOT_ONDEMAND1, cmd);
 
 		const GPUResource* uavs[] = {
 			&scene.surfelBuffer,
 			&scene.surfelGridBuffer,
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -8109,7 +8005,6 @@ void SurfelGI(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -8123,7 +8018,7 @@ void SurfelGI(
 			&scene.surfelCellBuffer,
 			&scene.surfelStatsBuffer,
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -8148,7 +8043,6 @@ void SurfelGI(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 		}
 
@@ -8157,14 +8051,14 @@ void SurfelGI(
 		device->EventBegin("Binning", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_SURFEL_BINNING], cmd);
 
-		device->BindResource(CS, &scene.surfelBuffer, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(CS, &scene.surfelStatsBuffer, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(&scene.surfelBuffer, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&scene.surfelStatsBuffer, TEXSLOT_ONDEMAND1, cmd);
 
 		const GPUResource* uavs[] = {
 			&scene.surfelGridBuffer,
 			&scene.surfelCellBuffer,
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		device->DispatchIndirect(&scene.surfelStatsBuffer, SURFEL_STATS_OFFSET_INDIRECT, cmd);
 
@@ -8177,7 +8071,6 @@ void SurfelGI(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -8192,33 +8085,33 @@ void SurfelGI(
 			{
 				return;
 			}
-			device->BindResource(CS, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
+			device->BindResource(&scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
 		}
 		else
 		{
-			scene.BVH.Bind(CS, cmd);
+			scene.BVH.Bind(cmd);
 		}
 
 		device->BindComputeShader(&shaders[CSTYPE_SURFEL_RAYTRACE], cmd);
 
-		device->BindResource(CS, &resourceBuffers[RBTYPE_ENTITYARRAY], SBSLOT_ENTITYARRAY, cmd);
-		device->BindResource(CS, &resourceBuffers[RBTYPE_MATRIXARRAY], SBSLOT_MATRIXARRAY, cmd);
-		device->BindResource(CS, &scene.envmapArray, TEXSLOT_ENVMAPARRAY, cmd);
-		device->BindResource(CS, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
-		device->BindResource(CS, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
-		device->BindResource(CS, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
-		device->BindResource(CS, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], TEXSLOT_SKYLUMINANCELUT, cmd);
+		device->BindResource(&resourceBuffers[RBTYPE_ENTITYARRAY], SBSLOT_ENTITYARRAY, cmd);
+		device->BindResource(&resourceBuffers[RBTYPE_MATRIXARRAY], SBSLOT_MATRIXARRAY, cmd);
+		device->BindResource(&scene.envmapArray, TEXSLOT_ENVMAPARRAY, cmd);
+		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
+		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
+		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
+		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], TEXSLOT_SKYLUMINANCELUT, cmd);
 
-		device->BindResource(CS, &scene.surfelBuffer, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(CS, &scene.surfelStatsBuffer, TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(CS, &scene.surfelGridBuffer, TEXSLOT_ONDEMAND2, cmd);
-		device->BindResource(CS, &scene.surfelCellBuffer, TEXSLOT_ONDEMAND3, cmd);
+		device->BindResource(&scene.surfelBuffer, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&scene.surfelStatsBuffer, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(&scene.surfelGridBuffer, TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(&scene.surfelCellBuffer, TEXSLOT_ONDEMAND3, cmd);
 
 		const GPUResource* uavs[] = {
 			&scene.surfelDataBuffer,
 			&scene.surfelMomentsTexture,
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -8238,7 +8131,6 @@ void SurfelGI(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -8248,16 +8140,16 @@ void SurfelGI(
 
 		device->BindComputeShader(&shaders[CSTYPE_SURFEL_SHADE], cmd);
 
-		device->BindResource(CS, &scene.surfelBuffer, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(CS, &scene.surfelStatsBuffer, TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(CS, &scene.surfelGridBuffer, TEXSLOT_ONDEMAND2, cmd);
-		device->BindResource(CS, &scene.surfelCellBuffer, TEXSLOT_ONDEMAND3, cmd);
-		device->BindResource(CS, &scene.surfelMomentsTexture, TEXSLOT_ONDEMAND4, cmd);
+		device->BindResource(&scene.surfelBuffer, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&scene.surfelStatsBuffer, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(&scene.surfelGridBuffer, TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(&scene.surfelCellBuffer, TEXSLOT_ONDEMAND3, cmd);
+		device->BindResource(&scene.surfelMomentsTexture, TEXSLOT_ONDEMAND4, cmd);
 
 		const GPUResource* uavs[] = {
 			&scene.surfelDataBuffer,
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		device->DispatchIndirect(&scene.surfelStatsBuffer, SURFEL_STATS_OFFSET_INDIRECT, cmd);
 
@@ -8269,7 +8161,6 @@ void SurfelGI(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -8318,7 +8209,7 @@ void Postprocess_Blur_Gaussian(
 		break;
 	}
 	device->BindComputeShader(&shaders[cs], cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 	
 	// Horizontal:
 	{
@@ -8338,8 +8229,8 @@ void Postprocess_Blur_Gaussian(
 		cb.xPPParams0.y = 0;
 		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 
-		device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd, mip_src);
-		device->BindUAV(CS, &temp, 0, cmd, mip_dst);
+		device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd, mip_src);
+		device->BindUAV(&temp, 0, cmd, mip_dst);
 
 		{
 			GPUBarrier barriers[] = {
@@ -8363,7 +8254,6 @@ void Postprocess_Blur_Gaussian(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, 1, cmd);
 	}
 
 	// Vertical:
@@ -8384,8 +8274,8 @@ void Postprocess_Blur_Gaussian(
 		cb.xPPParams0.y = 1;
 		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 
-		device->BindResource(CS, &temp, TEXSLOT_ONDEMAND0, cmd, mip_dst); // <- also mip_dst because it's second pass!
-		device->BindUAV(CS, &output, 0, cmd, mip_dst);
+		device->BindResource(&temp, TEXSLOT_ONDEMAND0, cmd, mip_dst); // <- also mip_dst because it's second pass!
+		device->BindUAV(&output, 0, cmd, mip_dst);
 
 		{
 			GPUBarrier barriers[] = {
@@ -8409,7 +8299,6 @@ void Postprocess_Blur_Gaussian(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, 1, cmd);
 	}
 
 	device->EventEnd(cmd);
@@ -8457,9 +8346,9 @@ void Postprocess_Blur_Bilateral(
 		break;
 	}
 	device->BindComputeShader(&shaders[cs], cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
-	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
+	device->BindResource(&lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
 	// Horizontal:
 	{
@@ -8480,8 +8369,8 @@ void Postprocess_Blur_Bilateral(
 		cb.xPPParams0.w = depth_threshold;
 		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 
-		device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd, mip_src);
-		device->BindUAV(CS, &temp, 0, cmd, mip_dst);
+		device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd, mip_src);
+		device->BindUAV(&temp, 0, cmd, mip_dst);
 
 		{
 			GPUBarrier barriers[] = {
@@ -8505,7 +8394,6 @@ void Postprocess_Blur_Bilateral(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, 1, cmd);
 	}
 
 	// Vertical:
@@ -8527,8 +8415,8 @@ void Postprocess_Blur_Bilateral(
 		cb.xPPParams0.w = depth_threshold;
 		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
 
-		device->BindResource(CS, &temp, TEXSLOT_ONDEMAND0, cmd, mip_dst); // <- also mip_dst because it's second pass!
-		device->BindUAV(CS, &output, 0, cmd, mip_dst);
+		device->BindResource(&temp, TEXSLOT_ONDEMAND0, cmd, mip_dst); // <- also mip_dst because it's second pass!
+		device->BindUAV(&output, 0, cmd, mip_dst);
 
 		{
 			GPUBarrier barriers[] = {
@@ -8552,7 +8440,6 @@ void Postprocess_Blur_Bilateral(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, 1, cmd);
 	}
 
 	device->EventEnd(cmd);
@@ -8583,8 +8470,8 @@ void Postprocess_SSAO(
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSAO], cmd);
 
-	device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
-	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
+	device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
+	device->BindResource(&lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
 	const TextureDesc& desc = output.GetDesc();
 
@@ -8597,12 +8484,12 @@ void Postprocess_SSAO(
 	cb.ssao_samplecount = (float)samplecount;
 	cb.ssao_power = power;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
 	};
-	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 	{
 		GPUBarrier barriers[] = {
@@ -8626,7 +8513,6 @@ void Postprocess_SSAO(
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
-	device->UnbindUAVs(0, arraysize(uavs), cmd);
 
 	Postprocess_Blur_Bilateral(output, lineardepth, res.temp, output, cmd, 1.2f, -1, -1, true);
 
@@ -8647,7 +8533,7 @@ void Postprocess_HBAO(
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_HBAO], cmd);
 
-	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
+	device->BindResource(&lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
 	const TextureDesc& desc = output.GetDesc();
 
@@ -8676,15 +8562,15 @@ void Postprocess_HBAO(
 	cb.xPPParams1.w = UVToViewBY;
 
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	// horizontal pass:
 	{
-		device->BindResource(CS, wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND0, cmd);
 		const GPUResource* uavs[] = {
 			&res.temp,
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -8708,7 +8594,6 @@ void Postprocess_HBAO(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 	}
 
 	// vertical pass:
@@ -8716,13 +8601,13 @@ void Postprocess_HBAO(
 		cb.xPPParams0.x = 0;
 		cb.xPPParams0.y = 1;
 		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+		device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
-		device->BindResource(CS, &res.temp, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&res.temp, TEXSLOT_ONDEMAND0, cmd);
 		const GPUResource* uavs[] = {
 			&output,
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -8746,8 +8631,6 @@ void Postprocess_HBAO(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
-		device->UnbindResources(TEXSLOT_ONDEMAND1, 1, cmd);
 	}
 
 	Postprocess_Blur_Bilateral(output, lineardepth, res.temp, output, cmd, 1.2f, -1, -1, true);
@@ -8857,7 +8740,7 @@ void Postprocess_MSAO(
 	{
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_MSAO_PREPAREDEPTHBUFFERS1], cmd);
 
-		device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
+		device->BindResource(&lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.texture_lineardepth_downsize1,
@@ -8865,7 +8748,7 @@ void Postprocess_MSAO(
 			&res.texture_lineardepth_downsize2,
 			&res.texture_lineardepth_tiled2,
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -8891,14 +8774,13 @@ void Postprocess_MSAO(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 	}
 
 	// Depth downsampling + deinterleaving pass2:
 	{
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_MSAO_PREPAREDEPTHBUFFERS2], cmd);
 
-		device->BindResource(CS, &res.texture_lineardepth_downsize2, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&res.texture_lineardepth_downsize2, TEXSLOT_ONDEMAND0, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.texture_lineardepth_downsize3,
@@ -8906,7 +8788,7 @@ void Postprocess_MSAO(
 			&res.texture_lineardepth_downsize4,
 			&res.texture_lineardepth_tiled4,
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -8932,7 +8814,6 @@ void Postprocess_MSAO(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 	}
 
 
@@ -9063,14 +8944,14 @@ void Postprocess_MSAO(
 		cb.xRcpAccentuation = 1.0f / (1.0f + Accentuation);
 
 		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS_MSAO], &cb, cmd);
-		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS_MSAO], CB_GETBINDSLOT(MSAOCB), cmd);
+		device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS_MSAO], CB_GETBINDSLOT(MSAOCB), cmd);
 
-		device->BindResource(CS, &read_depth, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&read_depth, TEXSLOT_ONDEMAND0, cmd);
 
 		const GPUResource* uavs[] = {
 			&write_result,
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -9098,7 +8979,6 @@ void Postprocess_MSAO(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 	}; // end of lambda: msao_compute
 
 	msao_compute(res.texture_ao_merged4, res.texture_lineardepth_tiled4);
@@ -9162,22 +9042,22 @@ void Postprocess_MSAO(
 		cb.kUpsampleTolerance = kUpsampleTolerance;
 
 		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS_MSAO_UPSAMPLE], &cb, cmd);
-		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS_MSAO_UPSAMPLE], CB_GETBINDSLOT(MSAO_UPSAMPLECB), cmd);
+		device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS_MSAO_UPSAMPLE], CB_GETBINDSLOT(MSAO_UPSAMPLECB), cmd);
 		
-		device->BindUAV(CS, &Destination, 0, cmd);
-		device->BindResource(CS, &LoResDepth, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(CS, &HiResDepth, TEXSLOT_ONDEMAND1, cmd);
+		device->BindUAV(&Destination, 0, cmd);
+		device->BindResource(&LoResDepth, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&HiResDepth, TEXSLOT_ONDEMAND1, cmd);
 		if (InterleavedAO != nullptr)
 		{
-			device->BindResource(CS, InterleavedAO, TEXSLOT_ONDEMAND2, cmd);
+			device->BindResource(InterleavedAO, TEXSLOT_ONDEMAND2, cmd);
 		}
 		if (HighQualityAO != nullptr)
 		{
-			device->BindResource(CS, HighQualityAO, TEXSLOT_ONDEMAND3, cmd);
+			device->BindResource(HighQualityAO, TEXSLOT_ONDEMAND3, cmd);
 		}
 		if (HiResAO != nullptr)
 		{
-			device->BindResource(CS, HiResAO, TEXSLOT_ONDEMAND4, cmd);
+			device->BindResource(HiResAO, TEXSLOT_ONDEMAND4, cmd);
 		}
 
 		{
@@ -9305,20 +9185,20 @@ void Postprocess_RTAO(
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTAO], cmd);
 
-	device->BindResource(CS, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
-	device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
-	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
+	device->BindResource(&scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
+	device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
+	device->BindResource(&lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
-	device->BindResource(CS, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
-	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
-	device->BindResource(CS, &scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
+	device->BindResource(&gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
+	device->BindResource(&gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
+	device->BindResource(&scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
 		&res.normals,
 		&res.tiles
 	};
-	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 	PostProcessCB cb;
 	cb.xPPResolution.x = desc.Width;
@@ -9329,7 +9209,7 @@ void Postprocess_RTAO(
 	cb.rtao_power = power;
 	cb.xPPParams0.w = (float)res.frame;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	{
 		GPUBarrier barriers[] = {
@@ -9359,7 +9239,7 @@ void Postprocess_RTAO(
 	device->EventEnd(cmd);
 
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	int temporal_output = res.frame % 2;
 	int temporal_history = 1 - temporal_output;
@@ -9369,19 +9249,19 @@ void Postprocess_RTAO(
 		device->EventBegin("Denoise - Tile Classification", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTAO_DENOISE_TILECLASSIFICATION], cmd);
 
-		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
-		device->BindResource(CS, &res.normals, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(CS, &res.tiles, TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(CS, &res.moments[temporal_history], TEXSLOT_ONDEMAND2, cmd);
-		device->BindResource(CS, &res.scratch[1], TEXSLOT_ONDEMAND3, cmd);
-		device->BindResource(CS, &depth_history, TEXSLOT_ONDEMAND4, cmd);
+		device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
+		device->BindResource(&res.normals, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&res.tiles, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(&res.moments[temporal_history], TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(&res.scratch[1], TEXSLOT_ONDEMAND3, cmd);
+		device->BindResource(&depth_history, TEXSLOT_ONDEMAND4, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.scratch[0],
 			&res.moments[temporal_output],
 			&res.metadata
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -9417,18 +9297,18 @@ void Postprocess_RTAO(
 		device->EventBegin("Denoise - Filter", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTAO_DENOISE_FILTER], cmd);
 
-		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
-		device->BindResource(CS, &res.normals, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(CS, &res.metadata, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
+		device->BindResource(&res.normals, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&res.metadata, TEXSLOT_ONDEMAND1, cmd);
 
 		// pass0:
 		{
-			device->BindResource(CS, &res.scratch[0], TEXSLOT_ONDEMAND2, cmd);
+			device->BindResource(&res.scratch[0], TEXSLOT_ONDEMAND2, cmd);
 			const GPUResource* uavs[] = {
 				&res.scratch[1],
 				&output
 			};
-			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+			device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 			{
 				GPUBarrier barriers[] = {
 					GPUBarrier::Image(&res.scratch[1], res.scratch[1].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
@@ -9439,7 +9319,7 @@ void Postprocess_RTAO(
 			cb.xPPParams1.x = 0;
 			cb.xPPParams1.y = 1;
 			device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-			device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+			device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 			device->Dispatch(
 				(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -9451,12 +9331,12 @@ void Postprocess_RTAO(
 
 		// pass1:
 		{
-			device->BindResource(CS, &res.scratch[1], TEXSLOT_ONDEMAND2, cmd);
+			device->BindResource(&res.scratch[1], TEXSLOT_ONDEMAND2, cmd);
 			const GPUResource* uavs[] = {
 				&res.scratch[0],
 				&output
 			};
-			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+			device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 			{
 				GPUBarrier barriers[] = {
 					GPUBarrier::Memory(),
@@ -9469,7 +9349,7 @@ void Postprocess_RTAO(
 			cb.xPPParams1.x = 1;
 			cb.xPPParams1.y = 2;
 			device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-			device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+			device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 			device->Dispatch(
 				(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -9481,12 +9361,12 @@ void Postprocess_RTAO(
 
 		// pass2:
 		{
-			device->BindResource(CS, &res.scratch[0], TEXSLOT_ONDEMAND2, cmd);
+			device->BindResource(&res.scratch[0], TEXSLOT_ONDEMAND2, cmd);
 			const GPUResource* uavs[] = {
 				&res.scratch[1],
 				&output
 			};
-			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+			device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 			{
 				GPUBarrier barriers[] = {
 					GPUBarrier::Memory(),
@@ -9499,7 +9379,7 @@ void Postprocess_RTAO(
 			cb.xPPParams1.x = 2;
 			cb.xPPParams1.y = 4;
 			device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-			device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+			device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 			device->Dispatch(
 				(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -9570,24 +9450,23 @@ void Postprocess_RTReflection(
 	device->BindRaytracingPipelineState(&RTPSO_reflection, cmd);
 
 	BindCommonResources(cmd);
-	BindShadowmaps(LIB, cmd);
 
-	device->BindResource(LIB, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
-	device->BindResource(LIB, &depthbuffer, TEXSLOT_DEPTH, cmd);
-	device->BindResource(LIB, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
-	device->BindResource(LIB, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
-	device->BindResource(LIB, &scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
+	device->BindResource(&scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
+	device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
+	device->BindResource(&gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
+	device->BindResource(&gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
+	device->BindResource(&scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
-	device->BindResource(LIB, &depth_history, TEXSLOT_ONDEMAND2, cmd);
+	device->BindResource(&depth_history, TEXSLOT_ONDEMAND2, cmd);
 
-	device->BindResource(LIB, &resourceBuffers[RBTYPE_ENTITYARRAY], SBSLOT_ENTITYARRAY, cmd);
-	device->BindResource(LIB, &resourceBuffers[RBTYPE_MATRIXARRAY], SBSLOT_MATRIXARRAY, cmd);
-	device->BindResource(LIB, GetVoxelRadianceSecondaryBounceEnabled() ? &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] : &textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELGI, cmd);
-	device->BindResource(LIB, &scene.envmapArray, TEXSLOT_ENVMAPARRAY, cmd);
-	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
-	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
-	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
-	device->BindResource(LIB, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], TEXSLOT_SKYLUMINANCELUT, cmd);
+	device->BindResource(&resourceBuffers[RBTYPE_ENTITYARRAY], SBSLOT_ENTITYARRAY, cmd);
+	device->BindResource(&resourceBuffers[RBTYPE_MATRIXARRAY], SBSLOT_MATRIXARRAY, cmd);
+	device->BindResource(GetVoxelRadianceSecondaryBounceEnabled() ? &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] : &textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELGI, cmd);
+	device->BindResource(&scene.envmapArray, TEXSLOT_ENVMAPARRAY, cmd);
+	device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
+	device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
+	device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
+	device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], TEXSLOT_SKYLUMINANCELUT, cmd);
 
 	PostProcessCB cb;
 	cb.xPPResolution.x = desc.Width;
@@ -9596,7 +9475,7 @@ void Postprocess_RTReflection(
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.rtreflection_range = range;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(LIB, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	size_t shaderIdentifierSize = device->GetShaderIdentifierSize();
 	GraphicsDevice::GPUAllocation shadertable_raygen = device->AllocateGPU(shaderIdentifierSize, cmd);
@@ -9629,7 +9508,7 @@ void Postprocess_RTReflection(
 		&output,
 		&res.rayLengths
 	};
-	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 	{
 		GPUBarrier barriers[] = {
@@ -9651,10 +9530,10 @@ void Postprocess_RTReflection(
 	}
 
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
-	device->BindResource(CS, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
-	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
+	device->BindResource(&gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
+	device->BindResource(&gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
 
 	int temporal_output = device->GetFrameCount() % 2;
 	int temporal_history = 1 - temporal_output;
@@ -9664,16 +9543,16 @@ void Postprocess_RTReflection(
 		device->EventBegin("Temporal pass", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_TEMPORAL], cmd);
 
-		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
-		device->BindResource(CS, &output, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(CS, &res.temporal[temporal_history], TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(CS, &depth_history, TEXSLOT_ONDEMAND2, cmd);
-		device->BindResource(CS, &res.rayLengths, TEXSLOT_ONDEMAND3, cmd);
+		device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
+		device->BindResource(&output, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&res.temporal[temporal_history], TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(&depth_history, TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(&res.rayLengths, TEXSLOT_ONDEMAND3, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.temporal[temporal_output],
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -9697,7 +9576,6 @@ void Postprocess_RTReflection(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -9706,13 +9584,13 @@ void Postprocess_RTReflection(
 		device->EventBegin("Median blur pass", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_MEDIAN], cmd);
 
-		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
-		device->BindResource(CS, &res.temporal[temporal_output], TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
+		device->BindResource(&res.temporal[temporal_output], TEXSLOT_ONDEMAND0, cmd);
 
 		const GPUResource* uavs[] = {
 			&output,
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -9736,7 +9614,6 @@ void Postprocess_RTReflection(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -9774,17 +9651,16 @@ void Postprocess_SSR(
 	device->EventBegin("Postprocess_SSR", cmd);
 	auto range = wiProfiler::BeginRangeGPU("SSR", cmd);
 
-	device->UnbindResources(TEXSLOT_RENDERPATH_SSR, 1, cmd);
 
 	BindCommonResources(cmd);
 
 	const TextureDesc& input_desc = input.GetDesc();
 	const TextureDesc& desc = output.GetDesc();
 
-	device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
-	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
-	device->BindResource(CS, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
-	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
+	device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
+	device->BindResource(&lineardepth, TEXSLOT_LINEARDEPTH, cmd);
+	device->BindResource(&gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
+	device->BindResource(&gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
 
 	PostProcessCB cb;
 	cb.xPPResolution.x = desc.Width;
@@ -9794,20 +9670,20 @@ void Postprocess_SSR(
 	cb.ssr_input_maxmip = float(input_desc.MipLevels - 1);
 	cb.ssr_input_resolution_max = (float)std::max(input_desc.Width, input_desc.Height);
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	// Raytrace pass:
 	{
 		device->EventBegin("Stochastic Raytrace pass", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_RAYTRACE], cmd);
 
-		device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.texture_raytrace,
 			&res.rayLengths
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -9831,7 +9707,6 @@ void Postprocess_SSR(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -9840,14 +9715,14 @@ void Postprocess_SSR(
 		device->EventBegin("Resolve pass", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_RESOLVE], cmd);
 
-		device->BindResource(CS, &res.texture_raytrace, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(CS, &input, TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(CS, &depth_history, TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(&res.texture_raytrace, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&input, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(&depth_history, TEXSLOT_ONDEMAND2, cmd);
 
 		const GPUResource* uavs[] = {
 			&output,
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -9871,7 +9746,6 @@ void Postprocess_SSR(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -9883,15 +9757,15 @@ void Postprocess_SSR(
 		device->EventBegin("Temporal pass", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_TEMPORAL], cmd);
 
-		device->BindResource(CS, &output, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(CS, &res.texture_temporal[temporal_history], TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(CS, &depth_history, TEXSLOT_ONDEMAND2, cmd);
-		device->BindResource(CS, &res.rayLengths, TEXSLOT_ONDEMAND3, cmd);
+		device->BindResource(&output, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&res.texture_temporal[temporal_history], TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(&depth_history, TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(&res.rayLengths, TEXSLOT_ONDEMAND3, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.texture_temporal[temporal_output],
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -9915,7 +9789,6 @@ void Postprocess_SSR(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -9924,12 +9797,12 @@ void Postprocess_SSR(
 		device->EventBegin("Median blur pass", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_MEDIAN], cmd);
 
-		device->BindResource(CS, &res.texture_temporal[temporal_output], TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&res.texture_temporal[temporal_output], TEXSLOT_ONDEMAND0, cmd);
 
 		const GPUResource* uavs[] = {
 			&output,
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -9953,7 +9826,6 @@ void Postprocess_SSR(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -10040,7 +9912,7 @@ void Postprocess_RTShadow(
 
 	device->EventBegin("Raytrace", cmd);
 
-	device->BindResource(CS, &scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
+	device->BindResource(&scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
 
 	PostProcessCB cb;
 	cb.xPPResolution.x = desc.Width;
@@ -10049,25 +9921,25 @@ void Postprocess_RTShadow(
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.xPPParams0.w = (float)res.frame;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTSHADOW], cmd);
 
-	device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
-	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
+	device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
+	device->BindResource(&lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
-	device->BindResource(CS, &entityTiles_Opaque, TEXSLOT_RENDERPATH_ENTITYTILES, cmd);
+	device->BindResource(&entityTiles_Opaque, TEXSLOT_RENDERPATH_ENTITYTILES, cmd);
 
-	device->BindResource(CS, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
-	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
-	device->BindResource(CS, &scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
+	device->BindResource(&gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
+	device->BindResource(&gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
+	device->BindResource(&scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 	const GPUResource* uavs[] = {
 		&res.temp,
 		&res.normals,
 		&res.tiles
 	};
-	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 	{
 		GPUBarrier barriers[] = {
@@ -10094,7 +9966,6 @@ void Postprocess_RTShadow(
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
-	device->UnbindUAVs(0, arraysize(uavs), cmd);
 	device->EventEnd(cmd);
 
 	int temporal_output = res.frame % 2;
@@ -10105,18 +9976,18 @@ void Postprocess_RTShadow(
 		device->EventBegin("Denoise - Tile Classification", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTSHADOW_DENOISE_TILECLASSIFICATION], cmd);
 
-		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
-		device->BindResource(CS, &res.normals, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(CS, &depth_history, TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(CS, &res.tiles, TEXSLOT_ONDEMAND2, cmd);
-		device->BindResource(CS, &res.moments[0][temporal_history], TEXSLOT_ONDEMAND3, cmd);
-		device->BindResource(CS, &res.moments[1][temporal_history], TEXSLOT_ONDEMAND4, cmd);
-		device->BindResource(CS, &res.moments[2][temporal_history], TEXSLOT_ONDEMAND5, cmd);
-		device->BindResource(CS, &res.moments[3][temporal_history], TEXSLOT_ONDEMAND6, cmd);
-		device->BindResource(CS, &res.scratch[0][1], TEXSLOT_ONDEMAND7, cmd);
-		device->BindResource(CS, &res.scratch[1][1], TEXSLOT_ONDEMAND8, cmd);
-		device->BindResource(CS, &res.scratch[2][1], TEXSLOT_ONDEMAND9, cmd);
-		device->BindResource(CS, &res.scratch[3][1], TEXSLOT_ONDEMAND10, cmd);
+		device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
+		device->BindResource(&res.normals, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&depth_history, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(&res.tiles, TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(&res.moments[0][temporal_history], TEXSLOT_ONDEMAND3, cmd);
+		device->BindResource(&res.moments[1][temporal_history], TEXSLOT_ONDEMAND4, cmd);
+		device->BindResource(&res.moments[2][temporal_history], TEXSLOT_ONDEMAND5, cmd);
+		device->BindResource(&res.moments[3][temporal_history], TEXSLOT_ONDEMAND6, cmd);
+		device->BindResource(&res.scratch[0][1], TEXSLOT_ONDEMAND7, cmd);
+		device->BindResource(&res.scratch[1][1], TEXSLOT_ONDEMAND8, cmd);
+		device->BindResource(&res.scratch[2][1], TEXSLOT_ONDEMAND9, cmd);
+		device->BindResource(&res.scratch[3][1], TEXSLOT_ONDEMAND10, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.metadata,
@@ -10129,7 +10000,7 @@ void Postprocess_RTShadow(
 			&res.moments[2][temporal_output],
 			&res.moments[3][temporal_output],
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -10169,7 +10040,6 @@ void Postprocess_RTShadow(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -10178,16 +10048,16 @@ void Postprocess_RTShadow(
 		device->EventBegin("Denoise - Filter", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTSHADOW_DENOISE_FILTER], cmd);
 
-		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
-		device->BindResource(CS, &res.normals, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(CS, &res.metadata, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
+		device->BindResource(&res.normals, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&res.metadata, TEXSLOT_ONDEMAND1, cmd);
 
 		// pass0:
 		{
-			device->BindResource(CS, &res.scratch[0][0], TEXSLOT_ONDEMAND2, cmd);
-			device->BindResource(CS, &res.scratch[1][0], TEXSLOT_ONDEMAND3, cmd);
-			device->BindResource(CS, &res.scratch[2][0], TEXSLOT_ONDEMAND4, cmd);
-			device->BindResource(CS, &res.scratch[3][0], TEXSLOT_ONDEMAND5, cmd);
+			device->BindResource(&res.scratch[0][0], TEXSLOT_ONDEMAND2, cmd);
+			device->BindResource(&res.scratch[1][0], TEXSLOT_ONDEMAND3, cmd);
+			device->BindResource(&res.scratch[2][0], TEXSLOT_ONDEMAND4, cmd);
+			device->BindResource(&res.scratch[3][0], TEXSLOT_ONDEMAND5, cmd);
 			const GPUResource* uavs[] = {
 				&res.scratch[0][1],
 				&res.scratch[1][1],
@@ -10195,7 +10065,7 @@ void Postprocess_RTShadow(
 				&res.scratch[3][1],
 				&res.denoised
 			};
-			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+			device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 			{
 				GPUBarrier barriers[] = {
 					GPUBarrier::Image(&res.scratch[0][1], res.scratch[0][1].desc.layout, IMAGE_LAYOUT_UNORDERED_ACCESS),
@@ -10210,7 +10080,7 @@ void Postprocess_RTShadow(
 			cb.xPPParams1.x = 0;
 			cb.xPPParams1.y = 1;
 			device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-			device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+			device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 			device->Dispatch(
 				(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -10222,10 +10092,10 @@ void Postprocess_RTShadow(
 
 		// pass1:
 		{
-			device->BindResource(CS, &res.scratch[0][1], TEXSLOT_ONDEMAND2, cmd);
-			device->BindResource(CS, &res.scratch[1][1], TEXSLOT_ONDEMAND3, cmd);
-			device->BindResource(CS, &res.scratch[2][1], TEXSLOT_ONDEMAND4, cmd);
-			device->BindResource(CS, &res.scratch[3][1], TEXSLOT_ONDEMAND5, cmd);
+			device->BindResource(&res.scratch[0][1], TEXSLOT_ONDEMAND2, cmd);
+			device->BindResource(&res.scratch[1][1], TEXSLOT_ONDEMAND3, cmd);
+			device->BindResource(&res.scratch[2][1], TEXSLOT_ONDEMAND4, cmd);
+			device->BindResource(&res.scratch[3][1], TEXSLOT_ONDEMAND5, cmd);
 			const GPUResource* uavs[] = {
 				&res.scratch[0][0],
 				&res.scratch[1][0],
@@ -10233,7 +10103,7 @@ void Postprocess_RTShadow(
 				&res.scratch[3][0],
 				&res.denoised
 			};
-			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+			device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 			{
 				GPUBarrier barriers[] = {
 					GPUBarrier::Memory(),
@@ -10252,7 +10122,7 @@ void Postprocess_RTShadow(
 			cb.xPPParams1.x = 1;
 			cb.xPPParams1.y = 2;
 			device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-			device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+			device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 			device->Dispatch(
 				(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -10264,10 +10134,10 @@ void Postprocess_RTShadow(
 
 		// pass2:
 		{
-			device->BindResource(CS, &res.scratch[0][0], TEXSLOT_ONDEMAND2, cmd);
-			device->BindResource(CS, &res.scratch[1][0], TEXSLOT_ONDEMAND3, cmd);
-			device->BindResource(CS, &res.scratch[2][0], TEXSLOT_ONDEMAND4, cmd);
-			device->BindResource(CS, &res.scratch[3][0], TEXSLOT_ONDEMAND5, cmd);
+			device->BindResource(&res.scratch[0][0], TEXSLOT_ONDEMAND2, cmd);
+			device->BindResource(&res.scratch[1][0], TEXSLOT_ONDEMAND3, cmd);
+			device->BindResource(&res.scratch[2][0], TEXSLOT_ONDEMAND4, cmd);
+			device->BindResource(&res.scratch[3][0], TEXSLOT_ONDEMAND5, cmd);
 			const GPUResource* uavs[] = {
 				&res.scratch[0][1],
 				&res.scratch[1][1],
@@ -10275,7 +10145,7 @@ void Postprocess_RTShadow(
 				&res.scratch[3][1],
 				&res.denoised
 			};
-			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+			device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 			{
 				GPUBarrier barriers[] = {
 					GPUBarrier::Memory(),
@@ -10294,7 +10164,7 @@ void Postprocess_RTShadow(
 			cb.xPPParams1.x = 2;
 			cb.xPPParams1.y = 4;
 			device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-			device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+			device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 			device->Dispatch(
 				(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -10316,7 +10186,6 @@ void Postprocess_RTShadow(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 	res.frame++;
@@ -10326,17 +10195,17 @@ void Postprocess_RTShadow(
 		device->EventBegin("Temporal Denoise", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTSHADOW_DENOISE_TEMPORAL], cmd);
 
-		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
-		device->BindResource(CS, &res.temp, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(CS, &res.temporal[temporal_history], TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(CS, &depth_history, TEXSLOT_ONDEMAND2, cmd);
-		device->BindResource(CS, &res.denoised, TEXSLOT_ONDEMAND3, cmd);
+		device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
+		device->BindResource(&res.temp, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&res.temporal[temporal_history], TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(&depth_history, TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(&res.denoised, TEXSLOT_ONDEMAND3, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.temporal[temporal_output],
 			&output,
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -10363,7 +10232,6 @@ void Postprocess_RTShadow(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -10399,23 +10267,23 @@ void Postprocess_ScreenSpaceShadow(
 	cb.xPPParams0.x = range;
 	cb.xPPParams0.y = (float)samplecount;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SCREENSPACESHADOW], cmd);
 
-	device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
-	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
+	device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
+	device->BindResource(&lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
-	device->BindResource(CS, &entityTiles_Opaque, TEXSLOT_RENDERPATH_ENTITYTILES, cmd);
+	device->BindResource(&entityTiles_Opaque, TEXSLOT_RENDERPATH_ENTITYTILES, cmd);
 
-	device->BindResource(CS, &gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
-	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
-	device->BindResource(CS, &scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
+	device->BindResource(&gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
+	device->BindResource(&gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
+	device->BindResource(&scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
 	};
-	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 	{
 		GPUBarrier barriers[] = {
@@ -10439,7 +10307,6 @@ void Postprocess_ScreenSpaceShadow(
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
-	device->UnbindUAVs(0, arraysize(uavs), cmd);
 
 	wiProfiler::EndRange(prof_range);
 	device->EventEnd(cmd);
@@ -10456,7 +10323,7 @@ void Postprocess_LightShafts(
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_LIGHTSHAFTS], cmd);
 
-	device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd);
 
 	const TextureDesc& desc = output.GetDesc();
 
@@ -10472,12 +10339,12 @@ void Postprocess_LightShafts(
 	cb.xPPParams1.x = center.x;
 	cb.xPPParams1.y = center.y;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
 	};
-	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 	{
 		GPUBarrier barriers[] = {
@@ -10501,7 +10368,6 @@ void Postprocess_LightShafts(
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
-	device->UnbindUAVs(0, arraysize(uavs), cmd);
 
 	wiProfiler::EndRange(range);
 	device->EventEnd(cmd);
@@ -10567,7 +10433,7 @@ void Postprocess_DepthOfField(
 	device->EventBegin("Postprocess_DepthOfField", cmd);
 	auto range = wiProfiler::BeginRangeGPU("Depth of Field", cmd);
 
-	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
+	device->BindResource(&lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
 	const TextureDesc& desc = output.GetDesc();
 
@@ -10579,7 +10445,7 @@ void Postprocess_DepthOfField(
 	cb.dof_cocscale = coc_scale;
 	cb.dof_maxcoc = max_coc;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	// Compute tile max COC (horizontal):
 	{
@@ -10590,7 +10456,7 @@ void Postprocess_DepthOfField(
 			&res.texture_tilemax_horizontal,
 			&res.texture_tilemin_horizontal,
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -10616,7 +10482,6 @@ void Postprocess_DepthOfField(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -10629,13 +10494,13 @@ void Postprocess_DepthOfField(
 			&res.texture_tilemax_horizontal,
 			&res.texture_tilemin_horizontal
 		};
-		device->BindResources(CS, resarray, TEXSLOT_ONDEMAND0, arraysize(resarray), cmd);
+		device->BindResources(resarray, TEXSLOT_ONDEMAND0, arraysize(resarray), cmd);
 
 		const GPUResource* uavs[] = {
 			&res.texture_tilemax,
 			&res.texture_tilemin,
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -10661,7 +10526,6 @@ void Postprocess_DepthOfField(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -10674,7 +10538,7 @@ void Postprocess_DepthOfField(
 			&res.texture_tilemax,
 			&res.texture_tilemin
 		};
-		device->BindResources(CS, resarray, TEXSLOT_ONDEMAND0, arraysize(resarray), cmd);
+		device->BindResources(resarray, TEXSLOT_ONDEMAND0, arraysize(resarray), cmd);
 
 		const GPUResource* uavs[] = {
 			&res.buffer_tile_statistics,
@@ -10683,7 +10547,7 @@ void Postprocess_DepthOfField(
 			&res.buffer_tiles_expensive,
 			&res.texture_neighborhoodmax
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -10707,7 +10571,6 @@ void Postprocess_DepthOfField(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -10716,7 +10579,7 @@ void Postprocess_DepthOfField(
 		device->EventBegin("Kickjobs", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_KICKJOBS], cmd);
 
-		device->BindResource(CS, &res.texture_tilemax, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&res.texture_tilemax, TEXSLOT_ONDEMAND0, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.buffer_tile_statistics,
@@ -10724,7 +10587,7 @@ void Postprocess_DepthOfField(
 			&res.buffer_tiles_cheap,
 			&res.buffer_tiles_expensive
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		device->Dispatch(1, 1, 1, cmd);
 
@@ -10734,7 +10597,6 @@ void Postprocess_DepthOfField(
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -10744,7 +10606,7 @@ void Postprocess_DepthOfField(
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	// Prepass:
 	{
@@ -10754,13 +10616,13 @@ void Postprocess_DepthOfField(
 			&input,
 			&res.texture_neighborhoodmax,
 		};
-		device->BindResources(CS, resarray, TEXSLOT_ONDEMAND0, arraysize(resarray), cmd);
+		device->BindResources(resarray, TEXSLOT_ONDEMAND0, arraysize(resarray), cmd);
 
 		const GPUResource* uavs[] = {
 			&res.texture_presort,
 			&res.texture_prefilter
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -10773,15 +10635,15 @@ void Postprocess_DepthOfField(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->BindResource(CS, &res.buffer_tiles_earlyexit, TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(&res.buffer_tiles_earlyexit, TEXSLOT_ONDEMAND2, cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_PREPASS_EARLYEXIT], cmd);
 		device->DispatchIndirect(&res.buffer_tile_statistics, INDIRECT_OFFSET_EARLYEXIT, cmd);
 
-		device->BindResource(CS, &res.buffer_tiles_cheap, TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(&res.buffer_tiles_cheap, TEXSLOT_ONDEMAND2, cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_PREPASS], cmd);
 		device->DispatchIndirect(&res.buffer_tile_statistics, INDIRECT_OFFSET_CHEAP, cmd);
 
-		device->BindResource(CS, &res.buffer_tiles_expensive, TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(&res.buffer_tiles_expensive, TEXSLOT_ONDEMAND2, cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_PREPASS], cmd);
 		device->DispatchIndirect(&res.buffer_tile_statistics, INDIRECT_OFFSET_EXPENSIVE, cmd);
 
@@ -10794,7 +10656,6 @@ void Postprocess_DepthOfField(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -10810,13 +10671,13 @@ void Postprocess_DepthOfField(
 			&res.buffer_tiles_cheap,
 			&res.buffer_tiles_expensive
 		};
-		device->BindResources(CS, resarray, TEXSLOT_ONDEMAND0, arraysize(resarray), cmd);
+		device->BindResources(resarray, TEXSLOT_ONDEMAND0, arraysize(resarray), cmd);
 
 		const GPUResource* uavs[] = {
 			&res.texture_main,
 			&res.texture_alpha1
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -10844,7 +10705,6 @@ void Postprocess_DepthOfField(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -10857,13 +10717,13 @@ void Postprocess_DepthOfField(
 			&res.texture_main,
 			&res.texture_alpha1
 		};
-		device->BindResources(CS, resarray, TEXSLOT_ONDEMAND0, arraysize(resarray), cmd);
+		device->BindResources(resarray, TEXSLOT_ONDEMAND0, arraysize(resarray), cmd);
 
 		const GPUResource* uavs[] = {
 			&res.texture_postfilter,
 			&res.texture_alpha2
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -10889,7 +10749,6 @@ void Postprocess_DepthOfField(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -10899,7 +10758,7 @@ void Postprocess_DepthOfField(
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	// Upsample pass:
 	{
@@ -10912,12 +10771,12 @@ void Postprocess_DepthOfField(
 			&res.texture_alpha2,
 			&res.texture_neighborhoodmax
 		};
-		device->BindResources(CS, resarray, TEXSLOT_ONDEMAND0, arraysize(resarray), cmd);
+		device->BindResources(resarray, TEXSLOT_ONDEMAND0, arraysize(resarray), cmd);
 
 		const GPUResource* uavs[] = {
 			&output,
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -10941,7 +10800,6 @@ void Postprocess_DepthOfField(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -10961,7 +10819,7 @@ void Postprocess_Outline(
 
 	device->BindPipelineState(&PSO_outline, cmd);
 
-	device->BindResource(PS, &input, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd);
 
 	PostProcessCB cb;
 	cb.xPPResolution.x = (uint)input.GetDesc().Width;
@@ -10975,7 +10833,7 @@ void Postprocess_Outline(
 	cb.xPPParams1.z = color.z;
 	cb.xPPParams1.w = color.w;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	device->Draw(3, 0, cmd);
 
@@ -11026,8 +10884,8 @@ void Postprocess_MotionBlur(
 	device->EventBegin("Postprocess_MotionBlur", cmd);
 	auto range = wiProfiler::BeginRangeGPU("MotionBlur", cmd);
 
-	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
-	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
+	device->BindResource(&lineardepth, TEXSLOT_LINEARDEPTH, cmd);
+	device->BindResource(&gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
 
 	const TextureDesc& desc = output.GetDesc();
 
@@ -11038,7 +10896,7 @@ void Postprocess_MotionBlur(
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.motionblur_strength = strength;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	// Compute tile max velocities (horizontal):
 	{
@@ -11049,7 +10907,7 @@ void Postprocess_MotionBlur(
 			&res.texture_tilemax_horizontal,
 			&res.texture_tilemin_horizontal,
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -11075,7 +10933,6 @@ void Postprocess_MotionBlur(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -11084,13 +10941,13 @@ void Postprocess_MotionBlur(
 		device->EventBegin("TileMax - Vertical", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_MOTIONBLUR_TILEMAXVELOCITY_VERTICAL], cmd);
 
-		device->BindResource(CS, &res.texture_tilemax_horizontal, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&res.texture_tilemax_horizontal, TEXSLOT_ONDEMAND0, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.texture_tilemax,
 			&res.texture_tilemin,
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -11116,7 +10973,6 @@ void Postprocess_MotionBlur(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -11129,7 +10985,7 @@ void Postprocess_MotionBlur(
 			&res.texture_tilemax,
 			&res.texture_tilemin
 		};
-		device->BindResources(CS, resarray, TEXSLOT_ONDEMAND0, arraysize(resarray), cmd);
+		device->BindResources(resarray, TEXSLOT_ONDEMAND0, arraysize(resarray), cmd);
 
 		const GPUResource* uavs[] = {
 			&res.buffer_tile_statistics,
@@ -11138,7 +10994,7 @@ void Postprocess_MotionBlur(
 			&res.buffer_tiles_expensive,
 			&res.texture_neighborhoodmax
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -11162,7 +11018,6 @@ void Postprocess_MotionBlur(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -11171,7 +11026,7 @@ void Postprocess_MotionBlur(
 		device->EventBegin("Kickjobs", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_MOTIONBLUR_KICKJOBS], cmd);
 
-		device->BindResource(CS, &res.texture_tilemax, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&res.texture_tilemax, TEXSLOT_ONDEMAND0, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.buffer_tile_statistics,
@@ -11179,7 +11034,7 @@ void Postprocess_MotionBlur(
 			&res.buffer_tiles_cheap,
 			&res.buffer_tiles_expensive
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		device->Dispatch(1, 1, 1, cmd);
 
@@ -11189,7 +11044,6 @@ void Postprocess_MotionBlur(
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -11204,12 +11058,12 @@ void Postprocess_MotionBlur(
 			&res.buffer_tiles_cheap,
 			&res.buffer_tiles_expensive,
 		};
-		device->BindResources(CS, resarray, TEXSLOT_ONDEMAND0, arraysize(resarray), cmd);
+		device->BindResources(resarray, TEXSLOT_ONDEMAND0, arraysize(resarray), cmd);
 
 		const GPUResource* uavs[] = {
 			&output,
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -11238,8 +11092,6 @@ void Postprocess_MotionBlur(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
-		device->UnbindResources(TEXSLOT_ONDEMAND0, arraysize(resarray), cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -11296,16 +11148,16 @@ void Postprocess_Bloom(
 		cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 		cb.xPPParams0.x = threshold;
 		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+		device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_BLOOMSEPARATE], cmd);
 
-		device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.texture_bloom,
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -11329,7 +11181,6 @@ void Postprocess_Bloom(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -11352,17 +11203,17 @@ void Postprocess_Bloom(
 		cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 		cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+		device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_BLOOMCOMBINE], cmd);
 
-		device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(CS, &res.texture_bloom, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&res.texture_bloom, TEXSLOT_ONDEMAND1, cmd);
 
 		const GPUResource* uavs[] = {
 			&output,
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -11386,7 +11237,6 @@ void Postprocess_Bloom(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -11458,26 +11308,26 @@ void Postprocess_VolumetricClouds(
 	cb.xPPParams0.z = 1.0f / cb.xPPParams0.x;
 	cb.xPPParams0.w = 1.0f / cb.xPPParams0.y;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	// Cloud pass:
 	{
 		device->EventBegin("Volumetric Cloud Rendering", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_RENDER], cmd);
 
-		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
-		device->BindResource(CS, &texture_shapeNoise, TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(CS, &texture_detailNoise, TEXSLOT_ONDEMAND2, cmd);
-		device->BindResource(CS, &texture_curlNoise, TEXSLOT_ONDEMAND3, cmd);
-		device->BindResource(CS, &texture_weatherMap, TEXSLOT_ONDEMAND4, cmd);
-		device->BindResource(CS, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
-		device->BindResource(CS, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], TEXSLOT_SKYLUMINANCELUT, cmd);
+		device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
+		device->BindResource(&texture_shapeNoise, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(&texture_detailNoise, TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(&texture_curlNoise, TEXSLOT_ONDEMAND3, cmd);
+		device->BindResource(&texture_weatherMap, TEXSLOT_ONDEMAND4, cmd);
+		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
+		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], TEXSLOT_SKYLUMINANCELUT, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.texture_cloudRender,
 			&res.texture_cloudDepth,
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -11503,7 +11353,6 @@ void Postprocess_VolumetricClouds(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -11513,7 +11362,7 @@ void Postprocess_VolumetricClouds(
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 	
 	int temporal_output = device->GetFrameCount() % 2;
 	int temporal_history = 1 - temporal_output;
@@ -11523,17 +11372,17 @@ void Postprocess_VolumetricClouds(
 		device->EventBegin("Volumetric Cloud Reproject", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_REPROJECT], cmd);
 
-		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
-		device->BindResource(CS, &res.texture_cloudRender, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(CS, &res.texture_cloudDepth, TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(CS, &res.texture_reproject[temporal_history], TEXSLOT_ONDEMAND2, cmd);
-		device->BindResource(CS, &res.texture_reproject_depth[temporal_history], TEXSLOT_ONDEMAND3, cmd);
+		device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
+		device->BindResource(&res.texture_cloudRender, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&res.texture_cloudDepth, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(&res.texture_reproject[temporal_history], TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(&res.texture_reproject_depth[temporal_history], TEXSLOT_ONDEMAND3, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.texture_reproject[temporal_output],
 			&res.texture_reproject_depth[temporal_output],
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -11559,7 +11408,6 @@ void Postprocess_VolumetricClouds(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -11568,16 +11416,16 @@ void Postprocess_VolumetricClouds(
 		device->EventBegin("Volumetric Cloud Temporal", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_TEMPORAL], cmd);
 
-		device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
-		device->BindResource(CS, &res.texture_reproject[temporal_output], TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(CS, &res.texture_reproject_depth[temporal_output], TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(CS, &res.texture_temporal[temporal_history], TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
+		device->BindResource(&res.texture_reproject[temporal_output], TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&res.texture_reproject_depth[temporal_output], TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(&res.texture_temporal[temporal_history], TEXSLOT_ONDEMAND2, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.texture_temporal[temporal_output],
 			&res.texture_cloudMask,
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -11603,7 +11451,6 @@ void Postprocess_VolumetricClouds(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 		device->EventEnd(cmd);
 	}
 
@@ -11621,7 +11468,7 @@ void Postprocess_FXAA(
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_FXAA], cmd);
 
-	device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd);
 
 	const TextureDesc& desc = output.GetDesc();
 
@@ -11631,12 +11478,12 @@ void Postprocess_FXAA(
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
 	};
-	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 	{
 		GPUBarrier barriers[] = {
@@ -11660,7 +11507,6 @@ void Postprocess_FXAA(
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
-	device->UnbindUAVs(0, arraysize(uavs), cmd);
 
 	wiProfiler::EndRange(range);
 	device->EventEnd(cmd);
@@ -11680,11 +11526,11 @@ void Postprocess_TemporalAA(
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_TEMPORALAA], cmd);
 
-	device->BindResource(CS, &input_current, TEXSLOT_ONDEMAND0, cmd);
-	device->BindResource(CS, &input_history, TEXSLOT_ONDEMAND1, cmd);
-	device->BindResource(CS, &depth_history, TEXSLOT_ONDEMAND2, cmd);
-	device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
-	device->BindResource(CS, &gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
+	device->BindResource(&input_current, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(&input_history, TEXSLOT_ONDEMAND1, cmd);
+	device->BindResource(&depth_history, TEXSLOT_ONDEMAND2, cmd);
+	device->BindResource(&lineardepth, TEXSLOT_LINEARDEPTH, cmd);
+	device->BindResource(&gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
 
 	const TextureDesc& desc = output.GetDesc();
 
@@ -11694,12 +11540,12 @@ void Postprocess_TemporalAA(
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
 	};
-	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 	{
 		GPUBarrier barriers[] = {
@@ -11723,7 +11569,6 @@ void Postprocess_TemporalAA(
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
-	device->UnbindUAVs(0, arraysize(uavs), cmd);
 
 	wiProfiler::EndRange(range);
 	device->EventEnd(cmd);
@@ -11751,19 +11596,19 @@ void Postprocess_DepthPyramid(
 	cb.xPPParams0.z = 1.0f / cb.xPPParams0.x;
 	cb.xPPParams0.w = 1.0f / cb.xPPParams0.y;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
-	device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd, 0); // full res native depth
+	device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd, 0); // full res native depth
 
-	device->BindUAV(CS, &lineardepth, 0, cmd, 0); // full res linear depth
-	device->BindUAV(CS, &lineardepth, 1, cmd, 1); // 2x downsample linear depth
-	device->BindUAV(CS, &lineardepth, 2, cmd, 2); // 4x downsample linear depth
-	device->BindUAV(CS, &lineardepth, 3, cmd, 3); // 8x downsample linear depth
-	device->BindUAV(CS, &lineardepth, 4, cmd, 4); // 16x downsample linear depth
-	device->BindUAV(CS, &lineardepth, 5, cmd, 5); // 32x downsample linear depth
+	device->BindUAV(&lineardepth, 0, cmd, 0); // full res linear depth
+	device->BindUAV(&lineardepth, 1, cmd, 1); // 2x downsample linear depth
+	device->BindUAV(&lineardepth, 2, cmd, 2); // 4x downsample linear depth
+	device->BindUAV(&lineardepth, 3, cmd, 3); // 8x downsample linear depth
+	device->BindUAV(&lineardepth, 4, cmd, 4); // 16x downsample linear depth
+	device->BindUAV(&lineardepth, 5, cmd, 5); // 32x downsample linear depth
 
-	device->BindUAV(CS, &depthbuffer, 6, cmd, 1); // 2x downsample native depth
-	device->BindUAV(CS, &depthbuffer, 7, cmd, 2); // 4x downsample native depth
+	device->BindUAV(&depthbuffer, 6, cmd, 1); // 2x downsample native depth
+	device->BindUAV(&depthbuffer, 7, cmd, 2); // 4x downsample native depth
 
 	{
 		GPUBarrier barriers[] = {
@@ -11792,7 +11637,6 @@ void Postprocess_DepthPyramid(
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
-	device->UnbindUAVs(0, 8, cmd);
 
 	wiProfiler::EndRange(range);
 	device->EventEnd(cmd);
@@ -11808,7 +11652,7 @@ void Postprocess_Sharpen(
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SHARPEN], cmd);
 
-	device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd);
 
 	const TextureDesc& desc = output.GetDesc();
 
@@ -11819,12 +11663,12 @@ void Postprocess_Sharpen(
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.xPPParams0.x = amount;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
 	};
-	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 	{
 		GPUBarrier barriers[] = {
@@ -11848,7 +11692,6 @@ void Postprocess_Sharpen(
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
-	device->UnbindUAVs(0, arraysize(uavs), cmd);
 
 	device->EventEnd(cmd);
 }
@@ -11900,23 +11743,22 @@ void Postprocess_Tonemap(
 	}
 	else
 	{
-		device->UnbindResources(TEXSLOT_ONDEMAND0, 4, cmd);
 
-		device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(CS, texture_luminance, TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(CS, texture_distortion, TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(texture_luminance, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(texture_distortion, TEXSLOT_ONDEMAND2, cmd);
 
 		if (texture_colorgradinglut != nullptr)
 		{
-			device->BindResource(CS, texture_colorgradinglut, TEXSLOT_ONDEMAND3, cmd);
+			device->BindResource(texture_colorgradinglut, TEXSLOT_ONDEMAND3, cmd);
 		}
 		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+		device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 		const GPUResource* uavs[] = {
 			&output,
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 	}
 
 	{
@@ -11941,7 +11783,6 @@ void Postprocess_Tonemap(
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
-	device->UnbindUAVs(0, 1, cmd);
 
 	device->EventEnd(cmd);
 }
@@ -11994,14 +11835,14 @@ void Postprocess_FSR(
 
 		);
 		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS_FSR], &cb, cmd);
-		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS_FSR], CB_GETBINDSLOT(FSRCB), cmd);
+		device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS_FSR], CB_GETBINDSLOT(FSRCB), cmd);
 
-		device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd);
 
 		const GPUResource* uavs[] = {
 			&temp,
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -12020,7 +11861,6 @@ void Postprocess_FSR(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 	}
 
 	// Sharpen:
@@ -12029,14 +11869,14 @@ void Postprocess_FSR(
 
 		FsrRcasCon(cb.const0, sharpness);
 		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS_FSR], &cb, cmd);
-		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS_FSR], CB_GETBINDSLOT(FSRCB), cmd);
+		device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS_FSR], CB_GETBINDSLOT(FSRCB), cmd);
 
-		device->BindResource(CS, &temp, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&temp, TEXSLOT_ONDEMAND0, cmd);
 
 		const GPUResource* uavs[] = {
 			&output,
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -12055,7 +11895,6 @@ void Postprocess_FSR(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 	}
 
 	wiProfiler::EndRange(range);
@@ -12072,7 +11911,7 @@ void Postprocess_Chromatic_Aberration(
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_CHROMATIC_ABERRATION], cmd);
 
-	device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd);
 
 	const TextureDesc& desc = output.GetDesc();
 
@@ -12083,12 +11922,12 @@ void Postprocess_Chromatic_Aberration(
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.xPPParams0.x = amount;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
 	};
-	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 	{
 		GPUBarrier barriers[] = {
@@ -12112,7 +11951,6 @@ void Postprocess_Chromatic_Aberration(
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
-	device->UnbindUAVs(0, arraysize(uavs), cmd);
 
 	device->EventEnd(cmd);
 }
@@ -12149,10 +11987,10 @@ void Postprocess_Upsample_Bilateral(
 	{
 		device->BindPipelineState(&PSO_upsample_bilateral, cmd);
 
-		device->BindConstantBuffer(PS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+		device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
-		device->BindResource(PS, &input, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(PS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
+		device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
 		device->Draw(3, 0, cmd);
 	}
@@ -12189,15 +12027,15 @@ void Postprocess_Upsample_Bilateral(
 		}
 		device->BindComputeShader(&shaders[cs], cmd);
 
-		device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+		device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
-		device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(CS, &lineardepth, TEXSLOT_LINEARDEPTH, cmd);
+		device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
 		const GPUResource* uavs[] = {
 			&output,
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -12221,7 +12059,6 @@ void Postprocess_Upsample_Bilateral(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 	}
 
 	device->EventEnd(cmd);
@@ -12242,16 +12079,16 @@ void Postprocess_Downsample4x(
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_DOWNSAMPLE4X], cmd);
 
-	device->BindResource(CS, &input, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
 	};
-	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 	{
 		GPUBarrier barriers[] = {
@@ -12275,7 +12112,6 @@ void Postprocess_Downsample4x(
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
-	device->UnbindUAVs(0, arraysize(uavs), cmd);
 	device->EventEnd(cmd);
 }
 void Postprocess_NormalsFromDepth(
@@ -12295,16 +12131,16 @@ void Postprocess_NormalsFromDepth(
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.xPPParams0.x = floorf(std::max(1.0f, log2f(std::max((float)desc.Width / (float)depthbuffer.GetDesc().Width, (float)desc.Height / (float)depthbuffer.GetDesc().Height))));
 	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(CS, &constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_NORMALSFROMDEPTH], cmd);
 
-	device->BindResource(CS, &depthbuffer, TEXSLOT_DEPTH, cmd);
+	device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
 	};
-	device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 	{
 		GPUBarrier barriers[] = {
@@ -12328,7 +12164,6 @@ void Postprocess_NormalsFromDepth(
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
-	device->UnbindUAVs(0, arraysize(uavs), cmd);
 	device->EventEnd(cmd);
 }
 

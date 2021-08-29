@@ -597,8 +597,8 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 
 		device->BindPipelineState(&PSO, cmd);
 
-		device->BindConstantBuffer(VS, &constantBuffer, CB_GETBINDSLOT(FontCB), cmd);
-		device->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(FontCB), cmd);
+		device->BindConstantBuffer(&constantBuffer, CB_GETBINDSLOT(FontCB), cmd);
+		device->BindConstantBuffer(&constantBuffer, CB_GETBINDSLOT(FontCB), cmd);
 
 		FontCB cb;
 		cb.g_xFont_BufferOffset = mem.offset;
@@ -609,10 +609,10 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 		}
 		else
 		{
-			device->BindResource(PS, &texture, TEXSLOT_FONTATLAS, cmd);
+			device->BindResource(&texture, TEXSLOT_FONTATLAS, cmd);
 		}
 
-		device->BindResource(VS, mem.buffer, 0, cmd);
+		device->BindResource(mem.buffer, 0, cmd);
 
 		const wiCanvas& canvas = canvases[cmd];
 		// Asserts will check that a proper canvas was set for this cmd with wiImage::SetCanvas()

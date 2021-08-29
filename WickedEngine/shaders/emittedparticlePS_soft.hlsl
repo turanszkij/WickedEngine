@@ -18,8 +18,8 @@ float4 main(VertextoPixel input) : SV_TARGET
 	}
 
 	float2 pixel = input.pos.xy;
-	float2 ScreenCoord = pixel * g_xFrame_InternalResolution_rcp;
-	float4 depthScene = texture_lineardepth.GatherRed(sampler_linear_clamp, ScreenCoord) * g_xCamera_ZFarP;
+	float2 ScreenCoord = pixel * g_xFrame.InternalResolution_rcp;
+	float4 depthScene = texture_lineardepth.GatherRed(sampler_linear_clamp, ScreenCoord) * g_xCamera.ZFarP;
 	float depthFragment = input.pos.w;
 	float fade = saturate(1.0 / input.size*(max(max(depthScene.x, depthScene.y), max(depthScene.z, depthScene.w)) - depthFragment));
 
@@ -49,7 +49,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 		N.x = -cos(PI * input.unrotated_uv.x);
 		N.y = cos(PI * input.unrotated_uv.y);
 		N.z = -sin(PI * length(input.unrotated_uv));
-		N = mul((float3x3)g_xCamera_InvV, N);
+		N = mul((float3x3)g_xCamera.InvV, N);
 		N = normalize(N);
 
 		Lighting lighting;

@@ -46,7 +46,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 		getLinearDepth(depths.y),
 		getLinearDepth(depths.z),
 		getLinearDepth(depths.w)
-	) * g_xCamera_ZFarP_rcp;
+	) * g_xCamera.ZFarP_rcp;
 	output_lineardepth_mip0[DTid.xy * 2 + uint2(0, 0)] = lineardepths.x;
 	output_lineardepth_mip0[DTid.xy * 2 + uint2(1, 0)] = lineardepths.y;
 	output_lineardepth_mip0[DTid.xy * 2 + uint2(0, 1)] = lineardepths.z;

@@ -1947,7 +1947,6 @@ void EditorComponent::Render() const
 
 		// Objects outline:
 		{
-			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 			device->RenderPassBegin(&renderpass_selectionOutline[1], cmd);
 
 			// Draw solid blocks of selected objects

@@ -28,7 +28,7 @@ void RTReflection_Raygen()
 		return;
 
 	const float3 P = reconstructPosition(uv, depth);
-	const float3 V = normalize(g_xCamera_CamPos - P);
+	const float3 V = normalize(g_xCamera.CamPos - P);
 
 	PrimitiveID prim;
 	prim.unpack(texture_gbuffer0[DTid.xy * 2]);
@@ -70,7 +70,7 @@ void RTReflection_Raygen()
 
 	const float3 R = L;
 
-	float seed = g_xFrame_Time;
+	float seed = g_xFrame.Time;
 
 	RayDesc ray;
 	ray.TMin = 0.01;
@@ -128,9 +128,9 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 	lighting.create(0, 0, GetAmbient(surface.N), 0);
 
 	[loop]
-	for (uint iterator = 0; iterator < g_xFrame_LightArrayCount; iterator++)
+	for (uint iterator = 0; iterator < g_xFrame.LightArrayCount; iterator++)
 	{
-		ShaderEntity light = EntityArray[g_xFrame_LightArrayOffset + iterator];
+		ShaderEntity light = EntityArray[g_xFrame.LightArrayOffset + iterator];
 		if ((light.layerMask & surface.material.layerMask) == 0)
 			continue;
 

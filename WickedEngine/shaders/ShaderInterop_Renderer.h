@@ -119,7 +119,7 @@ struct ShaderMesh
 	float3 aabb_min;
 	uint flags;
 	float3 aabb_max;
-	float padding1;
+	float tessellation_factor;
 
 	void init()
 	{
@@ -639,7 +639,7 @@ struct VolumetricCloudParameters
 
 };
 
-// These option bits can be read from g_xFrame_Options constant buffer value:
+// These option bits can be read from Options constant buffer value:
 static const uint OPTION_BIT_TEMPORALAA_ENABLED = 1 << 0;
 static const uint OPTION_BIT_TRANSPARENTSHADOWS_ENABLED = 1 << 1;
 static const uint OPTION_BIT_VOXELGI_ENABLED = 1 << 2;
@@ -656,121 +656,121 @@ static const uint OPTION_BIT_FORCE_DIFFUSE_LIGHTING = 1 << 12;
 
 // ---------- Common Constant buffers: -----------------
 
-CBUFFER(FrameCB, CBSLOT_RENDERER_FRAME)
+struct FrameCB
 {
-	float2		g_xFrame_CanvasSize;
-	float2		g_xFrame_CanvasSize_rcp;
+	float2		CanvasSize;
+	float2		CanvasSize_rcp;
 
-	float2		g_xFrame_InternalResolution;
-	float2		g_xFrame_InternalResolution_rcp;
+	float2		InternalResolution;
+	float2		InternalResolution_rcp;
 
-	float3		g_xFrame_SunColor;
-	float		g_xFrame_Gamma;
+	float3		SunColor;
+	float		Gamma;
 
-	float3		g_xFrame_SunDirection;
-	uint		g_xFrame_ShadowCascadeCount;
+	float3		SunDirection;
+	uint		ShadowCascadeCount;
 
-	float3		g_xFrame_Horizon;
-	uint		g_xFrame_ConstantOne;						// Just a constant 1 value as uint (can be used to force disable loop unrolling)
+	float3		Horizon;
+	uint		ConstantOne;						// Just a constant 1 value as uint (can be used to force disable loop unrolling)
 
-	float3		g_xFrame_Zenith;
-	float		g_xFrame_CloudScale;
+	float3		Zenith;
+	float		CloudScale;
 
-	float3		g_xFrame_Ambient;
-	float		g_xFrame_Cloudiness;
+	float3		Ambient;
+	float		Cloudiness;
 
-	float4		g_xFrame_Fog;								// Fog Start,End,Height Start,Height End
+	float4		Fog;								// Fog Start,End,Height Start,Height End
 
-	float		g_xFrame_padding0;
-	float		g_xFrame_FogHeightSky;
-	float		g_xFrame_SkyExposure;
-	float		g_xFrame_VoxelRadianceMaxDistance;			// maximum raymarch distance for voxel GI in world-space
+	float		padding0;
+	float		FogHeightSky;
+	float		SkyExposure;
+	float		VoxelRadianceMaxDistance;			// maximum raymarch distance for voxel GI in world-space
 
-	float		g_xFrame_VoxelRadianceDataSize;				// voxel half-extent in world space units
-	float		g_xFrame_VoxelRadianceDataSize_rcp;			// 1.0 / voxel-half extent
-	uint		g_xFrame_VoxelRadianceDataRes;				// voxel grid resolution
-	float		g_xFrame_VoxelRadianceDataRes_rcp;			// 1.0 / voxel grid resolution
+	float		VoxelRadianceDataSize;				// voxel half-extent in world space units
+	float		VoxelRadianceDataSize_rcp;			// 1.0 / voxel-half extent
+	uint		VoxelRadianceDataRes;				// voxel grid resolution
+	float		VoxelRadianceDataRes_rcp;			// 1.0 / voxel grid resolution
 
-	uint		g_xFrame_VoxelRadianceDataMIPs;				// voxel grid mipmap count
-	uint		g_xFrame_VoxelRadianceNumCones;				// number of diffuse cones to trace
-	float		g_xFrame_VoxelRadianceNumCones_rcp;			// 1.0 / number of diffuse cones to trace
-	float		g_xFrame_VoxelRadianceRayStepSize;			// raymarch step size in voxel space units
+	uint		VoxelRadianceDataMIPs;				// voxel grid mipmap count
+	uint		VoxelRadianceNumCones;				// number of diffuse cones to trace
+	float		VoxelRadianceNumCones_rcp;			// 1.0 / number of diffuse cones to trace
+	float		VoxelRadianceRayStepSize;			// raymarch step size in voxel space units
 
-	float3		g_xFrame_VoxelRadianceDataCenter;			// center of the voxel grid in world space units
-	uint		g_xFrame_Options;							// wiRenderer bool options packed into bitmask
+	float3		VoxelRadianceDataCenter;			// center of the voxel grid in world space units
+	uint		Options;							// wiRenderer bool options packed into bitmask
 
-	uint3		g_xFrame_EntityCullingTileCount;
-	int			g_xFrame_GlobalEnvProbeIndex;
+	uint3		EntityCullingTileCount;
+	int			GlobalEnvProbeIndex;
 
-	uint		g_xFrame_EnvProbeMipCount;
-	float		g_xFrame_EnvProbeMipCount_rcp;
-	float		g_xFrame_Time;
-	float		g_xFrame_TimePrev;
+	uint		EnvProbeMipCount;
+	float		EnvProbeMipCount_rcp;
+	float		Time;
+	float		TimePrev;
 
-	float		g_xFrame_SunEnergy;
-	float		g_xFrame_WindSpeed;
-	float		g_xFrame_DeltaTime;
-	uint		g_xFrame_FrameCount;
+	float		SunEnergy;
+	float		WindSpeed;
+	float		DeltaTime;
+	uint		FrameCount;
 
-	uint		g_xFrame_LightArrayOffset;			// indexing into entity array
-	uint		g_xFrame_LightArrayCount;			// indexing into entity array
-	uint		g_xFrame_DecalArrayOffset;			// indexing into entity array
-	uint		g_xFrame_DecalArrayCount;			// indexing into entity array
+	uint		LightArrayOffset;			// indexing into entity array
+	uint		LightArrayCount;			// indexing into entity array
+	uint		DecalArrayOffset;			// indexing into entity array
+	uint		DecalArrayCount;			// indexing into entity array
 
-	uint		g_xFrame_ForceFieldArrayOffset;		// indexing into entity array
-	uint		g_xFrame_ForceFieldArrayCount;		// indexing into entity array
-	uint		g_xFrame_EnvProbeArrayOffset;		// indexing into entity array
-	uint		g_xFrame_EnvProbeArrayCount;		// indexing into entity array
+	uint		ForceFieldArrayOffset;		// indexing into entity array
+	uint		ForceFieldArrayCount;		// indexing into entity array
+	uint		EnvProbeArrayOffset;		// indexing into entity array
+	uint		EnvProbeArrayCount;		// indexing into entity array
 
-	float3		g_xFrame_WindDirection;
-	float		g_xFrame_WindWaveSize;
+	float3		WindDirection;
+	float		WindWaveSize;
 
-	float3		g_xFrame_WorldBoundsMin;			// world enclosing AABB min
-	float		g_xFrame_CloudSpeed;
+	float3		WorldBoundsMin;			// world enclosing AABB min
+	float		CloudSpeed;
 
-	float3		g_xFrame_WorldBoundsMax;			// world enclosing AABB max
-	float		g_xFrame_WindRandomness;
+	float3		WorldBoundsMax;			// world enclosing AABB max
+	float		WindRandomness;
 
-	float3		g_xFrame_WorldBoundsExtents;		// world enclosing AABB abs(max - min)
-	float		g_xFrame_StaticSkyGamma;			// possible values (0: no static sky; 1: hdr static sky; other: actual gamma when ldr)
+	float3		WorldBoundsExtents;		// world enclosing AABB abs(max - min)
+	float		StaticSkyGamma;			// possible values (0: no static sky; 1: hdr static sky; other: actual gamma when ldr)
 
-	float3		g_xFrame_WorldBoundsExtents_rcp;	// world enclosing AABB 1.0f / abs(max - min)
-	uint		g_xFrame_TemporalAASampleRotation;
+	float3		WorldBoundsExtents_rcp;	// world enclosing AABB 1.0f / abs(max - min)
+	uint		TemporalAASampleRotation;
 
-	float		g_xFrame_ShadowKernel2D;
-	float		g_xFrame_ShadowKernelCube;
-	int			g_xFrame_ObjectShaderSamplerIndex;
-	float		g_xFrame_BlueNoisePhase;
+	float		ShadowKernel2D;
+	float		ShadowKernelCube;
+	int			ObjectShaderSamplerIndex;
+	float		BlueNoisePhase;
 
-	AtmosphereParameters g_xFrame_Atmosphere;
-	VolumetricCloudParameters g_xFrame_VolumetricClouds;
+	AtmosphereParameters Atmosphere;
+	VolumetricCloudParameters VolumetricClouds;
 };
 
-CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)
+struct CameraCB
 {
-	float4x4	g_xCamera_VP;			// View*Projection
+	float4x4	VP;			// View*Projection
 
-	float4		g_xCamera_ClipPlane;
+	float4		ClipPlane;
 
-	float3		g_xCamera_CamPos;
-	float		g_xCamera_DistanceFromOrigin;
+	float3		CamPos;
+	float		DistanceFromOrigin;
 
-	float3		g_xCamera_At;
-	float		g_xCamera_ZNearP;
+	float3		At;
+	float		ZNearP;
 
-	float3		g_xCamera_Up;
-	float		g_xCamera_ZFarP;
+	float3		Up;
+	float		ZFarP;
 
-	float		g_xCamera_ZNearP_rcp;
-	float		g_xCamera_ZFarP_rcp;
-	float		g_xCamera_ZRange;
-	float		g_xCamera_ZRange_rcp;
+	float		ZNearP_rcp;
+	float		ZFarP_rcp;
+	float		ZRange;
+	float		ZRange_rcp;
 
-	float4x4	g_xCamera_View;
-	float4x4	g_xCamera_Proj;
-	float4x4	g_xCamera_InvV;			// Inverse View
-	float4x4	g_xCamera_InvP;			// Inverse Projection
-	float4x4	g_xCamera_InvVP;		// Inverse View-Projection
+	float4x4	View;
+	float4x4	Proj;
+	float4x4	InvV;			// Inverse View
+	float4x4	InvP;			// Inverse Projection
+	float4x4	InvVP;		// Inverse View-Projection
 
 	// Frustum planes:
 	//	0 : near
@@ -779,44 +779,31 @@ CBUFFER(CameraCB, CBSLOT_RENDERER_CAMERA)
 	//	3 : right
 	//	4 : top
 	//	5 : bottom
-	float4		g_xCamera_FrustumPlanes[6];
+	float4		FrustumPlanes[6];
 
-	float2		g_xFrame_TemporalAAJitter;
-	float2		g_xFrame_TemporalAAJitterPrev;
+	float2		TemporalAAJitter;
+	float2		TemporalAAJitterPrev;
 
-	float4x4	g_xCamera_PrevV;
-	float4x4	g_xCamera_PrevP;
-	float4x4	g_xCamera_PrevVP;		// PrevView*PrevProjection
-	float4x4	g_xCamera_PrevInvVP;	// Inverse(PrevView*PrevProjection)
-	float4x4	g_xCamera_ReflVP;		// ReflectionView*ReflectionProjection
-	float4x4	g_xCamera_Reprojection; // view_projection_inverse_matrix * previous_view_projection_matrix
+	float4x4	PrevV;
+	float4x4	PrevP;
+	float4x4	PrevVP;		// PrevView*PrevProjection
+	float4x4	PrevInvVP;	// Inverse(PrevView*PrevProjection)
+	float4x4	ReflVP;		// ReflectionView*ReflectionProjection
+	float4x4	Reprojection; // view_projection_inverse_matrix * previous_view_projection_matrix
 
-	float2		g_xCamera_ApertureShape;
-	float		g_xCamera_ApertureSize;
-	float		g_xCamera_FocalLength;
+	float2		ApertureShape;
+	float		ApertureSize;
+	float		FocalLength;
 };
 
 
+CONSTANTBUFFER(g_xFrame, FrameCB, CBSLOT_RENDERER_FRAME);
+CONSTANTBUFFER(g_xCamera, CameraCB, CBSLOT_RENDERER_CAMERA);
 
 
 // ------- On demand Constant buffers: ----------
 
-CBUFFER(MaterialCB, CBSLOT_RENDERER_MATERIAL)
-{
-	ShaderMaterial g_xMaterial;
-};
-CBUFFER(MaterialCB_Blend1, CBSLOT_RENDERER_MATERIAL_BLEND1)
-{
-	ShaderMaterial g_xMaterial_blend1;
-};
-CBUFFER(MaterialCB_Blend2, CBSLOT_RENDERER_MATERIAL_BLEND2)
-{
-	ShaderMaterial g_xMaterial_blend2;
-};
-CBUFFER(MaterialCB_Blend3, CBSLOT_RENDERER_MATERIAL_BLEND3)
-{
-	ShaderMaterial g_xMaterial_blend3;
-};
+CONSTANTBUFFER(g_xMaterial, ShaderMaterial, CBSLOT_RENDERER_MATERIAL);
 
 CBUFFER(MiscCB, CBSLOT_RENDERER_MISC)
 {
@@ -831,15 +818,6 @@ CBUFFER(ForwardEntityMaskCB, CBSLOT_RENDERER_FORWARD_LIGHTMASK)
 	uint xForwardEnvProbeMask;	// supports indexing 32 environment probes
 };
 
-CBUFFER(DecalCB, CBSLOT_RENDERER_DECAL)
-{
-	float4x4 xDecalVP;
-	float3 eye;
-	int hasTexNor;
-	float3 front;
-	float opacity;
-};
-
 CBUFFER(VolumeLightCB, CBSLOT_RENDERER_VOLUMELIGHT)
 {
 	float4x4 lightWorld;
@@ -847,7 +825,7 @@ CBUFFER(VolumeLightCB, CBSLOT_RENDERER_VOLUMELIGHT)
 	float4 lightEnerdis;
 };
 
-CBUFFER(LensFlareCB, CBSLOT_RENDERER_LENSFLARE)
+struct LensFlarePush
 {
 	float3 xLensFlarePos;
 	float xLensFlareOffset;
@@ -863,11 +841,6 @@ struct CubemapRenderCam
 CBUFFER(CubemapRenderCB, CBSLOT_RENDERER_CUBEMAPRENDER)
 {
 	CubemapRenderCam xCubemapRenderCams[6];
-};
-
-CBUFFER(TessellationCB, CBSLOT_RENDERER_TESSELLATION)
-{
-	float4 xTessellationFactors;
 };
 
 

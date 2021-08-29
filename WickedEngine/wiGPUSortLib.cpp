@@ -67,9 +67,8 @@ namespace wiGPUSortLib
 		SortConstants sc;
 		sc.counterReadOffset = counterReadOffset;
 		device->UpdateBuffer(&sortCB, &sc, cmd);
-		device->BindConstantBuffer(CS, &sortCB, CB_GETBINDSLOT(SortConstants), cmd);
+		device->BindConstantBuffer(&sortCB, CB_GETBINDSLOT(SortConstants), cmd);
 
-		device->UnbindUAVs(0, 8, cmd);
 
 		// initialize sorting arguments:
 		{
@@ -78,12 +77,12 @@ namespace wiGPUSortLib
 			const GPUResource* res[] = {
 				&counterBuffer_read,
 			};
-			device->BindResources(CS, res, 0, arraysize(res), cmd);
+			device->BindResources(res, 0, arraysize(res), cmd);
 
 			const GPUResource* uavs[] = {
 				&indirectBuffer,
 			};
-			device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+			device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 			{
 				GPUBarrier barriers[] = {
@@ -102,20 +101,19 @@ namespace wiGPUSortLib
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
 
-			device->UnbindUAVs(0, arraysize(uavs), cmd);
 		}
 
 
 		const GPUResource* uavs[] = {
 			&indexBuffer_write,
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		const GPUResource* resources[] = {
 			&counterBuffer_read,
 			&comparisonBuffer_read,
 		};
-		device->BindResources(CS, resources, 0, arraysize(resources), cmd);
+		device->BindResources(resources, 0, arraysize(resources), cmd);
 
 		// initial sorting:
 		bool bDone = true;
@@ -184,7 +182,7 @@ namespace wiGPUSortLib
 				sc.counterReadOffset = counterReadOffset;
 
 				device->UpdateBuffer(&sortCB, &sc, cmd);
-				device->BindConstantBuffer(CS, &sortCB, CB_GETBINDSLOT(SortConstants), cmd);
+				device->BindConstantBuffer(&sortCB, CB_GETBINDSLOT(SortConstants), cmd);
 
 				device->Dispatch(numThreadGroups, 1, 1, cmd);
 
@@ -205,8 +203,6 @@ namespace wiGPUSortLib
 			presorted *= 2;
 		}
 
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
-		device->UnbindResources(0, arraysize(resources), cmd);
 
 
 		device->EventEnd(cmd);

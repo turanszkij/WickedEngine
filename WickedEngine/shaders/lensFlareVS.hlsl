@@ -1,5 +1,7 @@
 #include "globals.hlsli"
 
+PUSHCONSTANT(push, LensFlarePush);
+
 TEXTURE2D(texture_occlusion, float4, TEXSLOT_ONDEMAND0);
 
 static const float2 BILLBOARD[] = {
@@ -22,8 +24,8 @@ VertexOut main(uint vertexID : SV_VertexID)
 	Out.uv = BILLBOARD[vertexID] * 0.5f + 0.5f;
 
 	// determine the flare opacity based on depth buffer occlusion and occlusion mask:
-	float referenceDepth = saturate(1 - xLensFlarePos.z);
-	const float2 step = 1.0 / (GetInternalResolution() * xLensFlarePos.z);
+	float referenceDepth = saturate(1 - push.xLensFlarePos.z);
+	const float2 step = 1.0 / (GetInternalResolution() * push.xLensFlarePos.z);
 	const float2 range = 10.5 * step;
 	float samples = 0;
 	float visibility = 0;
@@ -32,8 +34,8 @@ VertexOut main(uint vertexID : SV_VertexID)
 		for (float x = -range.x; x <= range.x; x += step.x)
 		{
 			samples++;
-			float vis = texture_occlusion.SampleLevel(sampler_linear_clamp, xLensFlarePos.xy + float2(x, y), 0).r;
-			vis *= texture_depth.SampleLevel(sampler_point_clamp, xLensFlarePos.xy + float2(x, y), 0).r <= referenceDepth ? 1 : 0;
+			float vis = texture_occlusion.SampleLevel(sampler_linear_clamp, push.xLensFlarePos.xy + float2(x, y), 0).r;
+			vis *= texture_depth.SampleLevel(sampler_point_clamp, push.xLensFlarePos.xy + float2(x, y), 0).r <= referenceDepth ? 1 : 0;
 			visibility += vis;
 		}
 	}
@@ -41,11 +43,11 @@ VertexOut main(uint vertexID : SV_VertexID)
 
 	Out.opacity = visibility;
 
-	float2 pos = (xLensFlarePos.xy - 0.5) * float2(2, -2);
-	float2 moddedpos = pos * xLensFlareOffset;
+	float2 pos = (push.xLensFlarePos.xy - 0.5) * float2(2, -2);
+	float2 moddedpos = pos * push.xLensFlareOffset;
 	Out.opacity *= saturate(1 - length(pos - moddedpos));
 
-	Out.pos = float4(moddedpos + BILLBOARD[vertexID] * xLensFlareSize * g_xFrame_CanvasSize_rcp, 0, 1);
+	Out.pos = float4(moddedpos + BILLBOARD[vertexID] * push.xLensFlareSize * g_xFrame.CanvasSize_rcp, 0, 1);
 
 	return Out;
 }

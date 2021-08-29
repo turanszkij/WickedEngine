@@ -26,7 +26,7 @@ private:
 public:
 	void Update(const wiScene::Scene& scene);
 	void Build(const wiScene::Scene& scene, wiGraphics::CommandList cmd) const;
-	void Bind(wiGraphics::SHADERSTAGE stage, wiGraphics::CommandList cmd) const;
+	void Bind(wiGraphics::CommandList cmd) const;
 
 	void Clear();
 

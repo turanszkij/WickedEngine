@@ -46,7 +46,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float3 N = normalize(unpack_unitvector(surfel.normal));
 
 	float seed = 0.123456;
-	float2 uv = float2(frac(g_xFrame_FrameCount.x / 4096.0), (float)surfel_index / SURFEL_CAPACITY);
+	float2 uv = float2(frac(g_xFrame.FrameCount.x / 4096.0), (float)surfel_index / SURFEL_CAPACITY);
 
 	RayDesc ray;
 	ray.Origin = surfel.position;
@@ -167,9 +167,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #if 1
 	// Light sampling:
 	[loop]
-	for (uint iterator = 0; iterator < g_xFrame_LightArrayCount; iterator++)
+	for (uint iterator = 0; iterator < g_xFrame.LightArrayCount; iterator++)
 	{
-		ShaderEntity light = EntityArray[g_xFrame_LightArrayOffset + iterator];
+		ShaderEntity light = EntityArray[g_xFrame.LightArrayOffset + iterator];
 
 		Lighting lighting;
 		lighting.create(0, 0, 0, 0);
@@ -191,9 +191,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			if (NdotL > 0)
 			{
 				float3 atmosphereTransmittance = 1.0;
-				if (g_xFrame_Options & OPTION_BIT_REALISTIC_SKY)
+				if (g_xFrame.Options & OPTION_BIT_REALISTIC_SKY)
 				{
-					atmosphereTransmittance = GetAtmosphericLightTransmittance(g_xFrame_Atmosphere, surface.P, L, texture_transmittancelut);
+					atmosphereTransmittance = GetAtmosphericLightTransmittance(g_xFrame.Atmosphere, surface.P, L, texture_transmittancelut);
 				}
 
 				float3 lightColor = light.GetColor().rgb * light.GetEnergy() * atmosphereTransmittance;

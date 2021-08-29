@@ -31,12 +31,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	RayDesc ray = CreateCameraRay(uv);
 
 	// Depth of field setup:
-	float3 focal_point = ray.Origin + ray.Direction * g_xCamera_FocalLength;
+	float3 focal_point = ray.Origin + ray.Direction * g_xCamera.FocalLength;
 	float3 coc = float3(hemispherepoint_cos(rand(seed, uv), rand(seed, uv)).xy, 0);
-	coc.xy *= g_xCamera_ApertureShape.xy;
-	coc = mul(coc, float3x3(cross(g_xCamera_Up, g_xCamera_At), g_xCamera_Up, g_xCamera_At));
-	coc *= g_xCamera_FocalLength;
-	coc *= g_xCamera_ApertureSize;
+	coc.xy *= g_xCamera.ApertureShape.xy;
+	coc = mul(coc, float3x3(cross(g_xCamera.Up, g_xCamera.At), g_xCamera.Up, g_xCamera.At));
+	coc *= g_xCamera.FocalLength;
+	coc *= g_xCamera.ApertureSize;
 	coc *= 0.1f;
 	ray.Origin = ray.Origin + coc;
 	ray.Direction = focal_point - ray.Origin; // will be normalized before tracing!
@@ -122,9 +122,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 		// Light sampling:
 		[loop]
-		for (uint iterator = 0; iterator < g_xFrame_LightArrayCount; iterator++)
+		for (uint iterator = 0; iterator < g_xFrame.LightArrayCount; iterator++)
 		{
-			ShaderEntity light = EntityArray[g_xFrame_LightArrayOffset + iterator];
+			ShaderEntity light = EntityArray[g_xFrame.LightArrayOffset + iterator];
 
 			Lighting lighting;
 			lighting.create(0, 0, 0, 0);
@@ -150,9 +150,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 					lightColor = light.GetColor().rgb * light.GetEnergy();
 
 					float3 atmosphereTransmittance = 1;
-					if (g_xFrame_Options & OPTION_BIT_REALISTIC_SKY)
+					if (g_xFrame.Options & OPTION_BIT_REALISTIC_SKY)
 					{
-						AtmosphereParameters Atmosphere = g_xFrame_Atmosphere;
+						AtmosphereParameters Atmosphere = g_xFrame.Atmosphere;
 						atmosphereTransmittance = GetAtmosphericLightTransmittance(Atmosphere, surface.P, L, texture_transmittancelut);
 					}
 					lightColor *= atmosphereTransmittance;

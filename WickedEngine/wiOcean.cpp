@@ -277,10 +277,10 @@ void wiOcean::UpdateDisplacementMap(const OceanParameters& params, CommandList c
 		&buffer_Float2_H0, 
 		&buffer_Float_Omega
 	};
-	device->BindResources(CS, cs0_srvs, TEXSLOT_ONDEMAND0, arraysize(cs0_srvs), cmd);
+	device->BindResources(cs0_srvs, TEXSLOT_ONDEMAND0, arraysize(cs0_srvs), cmd);
 
 	const GPUResource* cs0_uavs[1] = { &buffer_Float2_Ht };
-	device->BindUAVs(CS, cs0_uavs, 0, arraysize(cs0_uavs), cmd);
+	device->BindUAVs(cs0_uavs, 0, arraysize(cs0_uavs), cmd);
 
 	Ocean_Simulation_PerFrameCB perFrameData;
 	perFrameData.g_TimeScale = params.time_scale;
@@ -288,8 +288,8 @@ void wiOcean::UpdateDisplacementMap(const OceanParameters& params, CommandList c
 	perFrameData.g_GridLen = params.dmap_dim / params.patch_length;
 	device->UpdateBuffer(&perFrameCB, &perFrameData, cmd);
 
-	device->BindConstantBuffer(CS, &immutableCB, CB_GETBINDSLOT(Ocean_Simulation_ImmutableCB), cmd);
-	device->BindConstantBuffer(CS, &perFrameCB, CB_GETBINDSLOT(Ocean_Simulation_PerFrameCB), cmd);
+	device->BindConstantBuffer(&immutableCB, CB_GETBINDSLOT(Ocean_Simulation_ImmutableCB), cmd);
+	device->BindConstantBuffer(&perFrameCB, CB_GETBINDSLOT(Ocean_Simulation_PerFrameCB), cmd);
 
 	// Run the CS
 	uint32_t group_count_x = (params.dmap_dim + OCEAN_COMPUTE_TILESIZE - 1) / OCEAN_COMPUTE_TILESIZE;
@@ -300,8 +300,6 @@ void wiOcean::UpdateDisplacementMap(const OceanParameters& params, CommandList c
 	};
 	device->Barrier(barriers, arraysize(barriers), cmd);
 
-	device->UnbindUAVs(0, 1, cmd);
-	device->UnbindResources(TEXSLOT_ONDEMAND0, 2, cmd);
 
 
 	// ------------------------------------ Perform FFT -------------------------------------------
@@ -309,31 +307,29 @@ void wiOcean::UpdateDisplacementMap(const OceanParameters& params, CommandList c
 
 
 
-	device->BindConstantBuffer(CS, &immutableCB, CB_GETBINDSLOT(Ocean_Simulation_ImmutableCB), cmd);
-	device->BindConstantBuffer(CS, &perFrameCB, CB_GETBINDSLOT(Ocean_Simulation_PerFrameCB), cmd);
+	device->BindConstantBuffer(&immutableCB, CB_GETBINDSLOT(Ocean_Simulation_ImmutableCB), cmd);
+	device->BindConstantBuffer(&perFrameCB, CB_GETBINDSLOT(Ocean_Simulation_PerFrameCB), cmd);
 
 
 	// Update displacement map:
 	device->BindComputeShader(&updateDisplacementMapCS, cmd);
 	const GPUResource* cs_uavs[] = { &displacementMap };
-	device->BindUAVs(CS, cs_uavs, 0, 1, cmd);
+	device->BindUAVs(cs_uavs, 0, 1, cmd);
 	const GPUResource* cs_srvs[1] = { &buffer_Float_Dxyz };
-	device->BindResources(CS, cs_srvs, TEXSLOT_ONDEMAND0, 1, cmd);
+	device->BindResources(cs_srvs, TEXSLOT_ONDEMAND0, 1, cmd);
 	device->Dispatch(params.dmap_dim / OCEAN_COMPUTE_TILESIZE, params.dmap_dim / OCEAN_COMPUTE_TILESIZE, 1, cmd);
 	device->Barrier(barriers, arraysize(barriers), cmd);
 
 	// Update gradient map:
 	device->BindComputeShader(&updateGradientFoldingCS, cmd);
 	cs_uavs[0] = { &gradientMap };
-	device->BindUAVs(CS, cs_uavs, 0, 1, cmd);
+	device->BindUAVs(cs_uavs, 0, 1, cmd);
 	cs_srvs[0] = &displacementMap;
-	device->BindResources(CS, cs_srvs, TEXSLOT_ONDEMAND0, 1, cmd);
+	device->BindResources(cs_srvs, TEXSLOT_ONDEMAND0, 1, cmd);
 	device->Dispatch(params.dmap_dim / OCEAN_COMPUTE_TILESIZE, params.dmap_dim / OCEAN_COMPUTE_TILESIZE, 1, cmd);
 	device->Barrier(barriers, arraysize(barriers), cmd);
 
 	// Unbind
-	device->UnbindUAVs(0, 1, cmd);
-	device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 
 
 	wiRenderer::GenerateMipChain(gradientMap, wiRenderer::MIPGENFILTER_LINEAR, cmd);
@@ -373,11 +369,11 @@ void wiOcean::Render(const CameraComponent& camera, const OceanParameters& param
 
 	device->UpdateBuffer(&shadingCB, &cb, cmd);
 
-	device->BindConstantBuffer(VS, &shadingCB, CB_GETBINDSLOT(Ocean_RenderCB), cmd);
-	device->BindConstantBuffer(PS, &shadingCB, CB_GETBINDSLOT(Ocean_RenderCB), cmd);
+	device->BindConstantBuffer(&shadingCB, CB_GETBINDSLOT(Ocean_RenderCB), cmd);
+	device->BindConstantBuffer(&shadingCB, CB_GETBINDSLOT(Ocean_RenderCB), cmd);
 
-	device->BindResource(VS, &displacementMap, TEXSLOT_ONDEMAND0, cmd);
-	device->BindResource(PS, &gradientMap, TEXSLOT_ONDEMAND1, cmd);
+	device->BindResource(&displacementMap, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(&gradientMap, TEXSLOT_ONDEMAND1, cmd);
 
 	device->Draw(dim.x*dim.y*6, 0, cmd);
 

@@ -114,9 +114,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 		// Accumulate forces:
 		float3 force = 0;
-        for (uint i = 0; i < g_xFrame_ForceFieldArrayCount; ++i)
+        for (uint i = 0; i < g_xFrame.ForceFieldArrayCount; ++i)
         {
-			ShaderEntity forceField = EntityArray[g_xFrame_ForceFieldArrayOffset + i];
+			ShaderEntity forceField = EntityArray[g_xFrame.ForceFieldArrayOffset + i];
 
 			[branch]
 			if (forceField.layerMask & xHairLayerMask)
@@ -142,7 +142,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		// Pull back to rest position:
         force += (target - normal) * xStiffness;
 
-        force *= g_xFrame_DeltaTime;
+        force *= g_xFrame.DeltaTime;
 
 		// Simulation buffer load:
         float3 velocity = simulationBuffer[particleID].velocity;
@@ -156,7 +156,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 		// Apply forces:
 		velocity += force;
-		normal += velocity * g_xFrame_DeltaTime;
+		normal += velocity * g_xFrame.DeltaTime;
 
 		// Drag:
 		velocity *= 0.98f;
@@ -208,9 +208,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			patchPos = mul(patchPos, TBN);
 
 			// simplistic wind effect only affects the top, but leaves the base as is:
-			const float waveoffset = dot(rootposition, g_xFrame_WindDirection) * g_xFrame_WindWaveSize + rand / 255.0f * g_xFrame_WindRandomness;
-			const float3 wavedir = g_xFrame_WindDirection * (segmentID + patchPos.y);
-			const float3 wind = sin(g_xFrame_Time * g_xFrame_WindSpeed + waveoffset) * wavedir;
+			const float waveoffset = dot(rootposition, g_xFrame.WindDirection) * g_xFrame.WindWaveSize + rand / 255.0f * g_xFrame.WindRandomness;
+			const float3 wavedir = g_xFrame.WindDirection * (segmentID + patchPos.y);
+			const float3 wind = sin(g_xFrame.Time * g_xFrame.WindSpeed + waveoffset) * wavedir;
 
 			float3 position = rootposition + patchPos + wind;
 
@@ -225,12 +225,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		uint infrustum = 1;
 		float3 center = (base + tip) * 0.5;
 		float radius = -len;
-		infrustum &= distance(base, g_xCamera_CamPos.xyz) < xHairViewDistance;
-		infrustum &= dot(g_xCamera_FrustumPlanes[0], float4(center, 1)) > radius;
-		infrustum &= dot(g_xCamera_FrustumPlanes[2], float4(center, 1)) > radius;
-		infrustum &= dot(g_xCamera_FrustumPlanes[3], float4(center, 1)) > radius;
-		infrustum &= dot(g_xCamera_FrustumPlanes[4], float4(center, 1)) > radius;
-		infrustum &= dot(g_xCamera_FrustumPlanes[5], float4(center, 1)) > radius;
+		infrustum &= distance(base, g_xCamera.CamPos.xyz) < xHairViewDistance;
+		infrustum &= dot(g_xCamera.FrustumPlanes[0], float4(center, 1)) > radius;
+		infrustum &= dot(g_xCamera.FrustumPlanes[2], float4(center, 1)) > radius;
+		infrustum &= dot(g_xCamera.FrustumPlanes[3], float4(center, 1)) > radius;
+		infrustum &= dot(g_xCamera.FrustumPlanes[4], float4(center, 1)) > radius;
+		infrustum &= dot(g_xCamera.FrustumPlanes[5], float4(center, 1)) > radius;
 
 		if (infrustum)
 		{

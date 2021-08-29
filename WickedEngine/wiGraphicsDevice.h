@@ -101,14 +101,12 @@ namespace wiGraphics
 		virtual void RenderPassEnd(CommandList cmd) = 0;
 		virtual void BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd) = 0;
 		virtual void BindViewports(uint32_t NumViewports, const Viewport* pViewports, CommandList cmd) = 0;
-		virtual void BindResource(SHADERSTAGE stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource = -1) = 0;
-		virtual void BindResources(SHADERSTAGE stage, const GPUResource *const* resources, uint32_t slot, uint32_t count, CommandList cmd) = 0;
-		virtual void BindUAV(SHADERSTAGE stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource = -1) = 0;
-		virtual void BindUAVs(SHADERSTAGE stage, const GPUResource *const* resources, uint32_t slot, uint32_t count, CommandList cmd) = 0;
-		virtual void UnbindResources(uint32_t slot, uint32_t num, CommandList cmd) = 0;
-		virtual void UnbindUAVs(uint32_t slot, uint32_t num, CommandList cmd) = 0;
-		virtual void BindSampler(SHADERSTAGE stage, const Sampler* sampler, uint32_t slot, CommandList cmd) = 0;
-		virtual void BindConstantBuffer(SHADERSTAGE stage, const GPUBuffer* buffer, uint32_t slot, CommandList cmd) = 0;
+		virtual void BindResource(const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource = -1) = 0;
+		virtual void BindResources(const GPUResource *const* resources, uint32_t slot, uint32_t count, CommandList cmd) = 0;
+		virtual void BindUAV(const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource = -1) = 0;
+		virtual void BindUAVs(const GPUResource *const* resources, uint32_t slot, uint32_t count, CommandList cmd) = 0;
+		virtual void BindSampler(const Sampler* sampler, uint32_t slot, CommandList cmd) = 0;
+		virtual void BindConstantBuffer(const GPUBuffer* buffer, uint32_t slot, CommandList cmd) = 0;
 		virtual void BindVertexBuffers(const GPUBuffer *const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint32_t* offsets, CommandList cmd) = 0;
 		virtual void BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, uint32_t offset, CommandList cmd) = 0;
 		virtual void BindStencilRef(uint32_t value, CommandList cmd) = 0;
@@ -141,7 +139,7 @@ namespace wiGraphics
 		{
 			void* data = nullptr;				// application can write to this. Reads might be not supported or slow. The offset is already applied
 			const GPUBuffer* buffer = nullptr;	// application can bind it to the GPU
-			uint32_t offset = 0;					// allocation's offset from the GPUbuffer's beginning
+			uint32_t offset = 0;				// allocation's offset from the GPUbuffer's beginning
 
 			// Returns true if the allocation was successful
 			inline bool IsValid() const { return data != nullptr && buffer != nullptr; }

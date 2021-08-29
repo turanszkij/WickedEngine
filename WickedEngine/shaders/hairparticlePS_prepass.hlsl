@@ -14,7 +14,7 @@ uint2 main(VertexToPixel input) : SV_TARGET
 	float4 color = texture_color.Sample(sampler_linear_clamp,input.tex);
 
 	float alphatest = g_xMaterial.alphaTest;
-	if (g_xFrame_Options & OPTION_BIT_TEMPORALAA_ENABLED)
+	if (g_xFrame.Options & OPTION_BIT_TEMPORALAA_ENABLED)
 	{
 		alphatest = clamp(blue_noise(input.pos.xy, lineardepth).r, 0, 0.99);
 	}

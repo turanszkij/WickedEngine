@@ -895,15 +895,14 @@ void RenderPath3D::Render() const
 			vp.Height = (float)depthBuffer_Reflection.GetDesc().Height;
 			device->BindViewports(1, &vp, cmd);
 
-			device->UnbindResources(TEXSLOT_DEPTH, 1, cmd);
 
 			device->RenderPassBegin(&renderpass_reflection, cmd);
 
-			device->BindResource(PS, &tiledLightResources_planarReflection.entityTiles_Opaque, TEXSLOT_RENDERPATH_ENTITYTILES, cmd);
-			device->BindResource(PS, wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
-			device->BindResource(PS, wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_AO, cmd);
-			device->BindResource(PS, wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, cmd);
-			device->BindResource(PS, wiTextureHelper::getUINT4(), TEXSLOT_RENDERPATH_RTSHADOW, cmd);
+			device->BindResource(&tiledLightResources_planarReflection.entityTiles_Opaque, TEXSLOT_RENDERPATH_ENTITYTILES, cmd);
+			device->BindResource(wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
+			device->BindResource(wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_AO, cmd);
+			device->BindResource(wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, cmd);
+			device->BindResource(wiTextureHelper::getUINT4(), TEXSLOT_RENDERPATH_RTSHADOW, cmd);
 			wiRenderer::DrawScene(visibility_reflection, RENDERPASS_MAIN, cmd, drawscene_flags_reflections);
 			wiRenderer::DrawSky(*scene, cmd);
 
@@ -967,18 +966,18 @@ void RenderPath3D::Render() const
 		{
 			GPUBarrier barrier = GPUBarrier::Image(&rtShadow, rtShadow.desc.layout, IMAGE_LAYOUT_SHADER_RESOURCE);
 			device->Barrier(&barrier, 1, cmd);
-			device->BindResource(PS, &rtShadow, TEXSLOT_RENDERPATH_RTSHADOW, cmd);
+			device->BindResource(&rtShadow, TEXSLOT_RENDERPATH_RTSHADOW, cmd);
 		}
 		else
 		{
-			device->BindResource(PS, wiTextureHelper::getUINT4(), TEXSLOT_RENDERPATH_RTSHADOW, cmd);
+			device->BindResource(wiTextureHelper::getUINT4(), TEXSLOT_RENDERPATH_RTSHADOW, cmd);
 		}
 
-		device->BindResource(PS, &tiledLightResources.entityTiles_Opaque, TEXSLOT_RENDERPATH_ENTITYTILES, cmd);
-		device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
-		device->BindResource(PS, getAOEnabled() ? &rtAO : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_AO, cmd);
-		device->BindResource(PS, getSSREnabled() || getRaytracedReflectionEnabled() ? &rtSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, cmd);
-		device->BindResource(PS, &surfelGIResources.result, TEXSLOT_RENDERPATH_SURFELGI, cmd);
+		device->BindResource(&tiledLightResources.entityTiles_Opaque, TEXSLOT_RENDERPATH_ENTITYTILES, cmd);
+		device->BindResource(getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
+		device->BindResource(getAOEnabled() ? &rtAO : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_AO, cmd);
+		device->BindResource(getSSREnabled() || getRaytracedReflectionEnabled() ? &rtSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, cmd);
+		device->BindResource(&surfelGIResources.result, TEXSLOT_RENDERPATH_SURFELGI, cmd);
 		wiRenderer::DrawScene(visibility_main, RENDERPASS_MAIN, cmd, drawscene_flags);
 		wiRenderer::DrawSky(*scene, cmd);
 
@@ -1073,13 +1072,12 @@ void RenderPath3D::RenderFrameSetUp(CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	device->BindResource(CS, &depthBuffer_Copy1, TEXSLOT_DEPTH, cmd);
+	device->BindResource(&depthBuffer_Copy1, TEXSLOT_DEPTH, cmd);
 	wiRenderer::UpdateRenderData(visibility_main, frameCB, cmd);
 }
 
 void RenderPath3D::RenderAO(CommandList cmd) const
 {
-	wiRenderer::GetDevice()->UnbindResources(TEXSLOT_RENDERPATH_AO, 1, cmd);
 
 	if (getAOEnabled())
 	{
@@ -1165,7 +1163,6 @@ void RenderPath3D::RenderLightShafts(CommandList cmd) const
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
 		device->EventBegin("Light Shafts", cmd);
-		device->UnbindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, cmd);
 
 		// Render sun stencil cutout:
 		{
@@ -1284,8 +1281,6 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 		device->RenderPassEnd(cmd);
 	}
 
-	device->UnbindResources(TEXSLOT_GBUFFER0, 1, cmd);
-	device->UnbindResources(TEXSLOT_ONDEMAND0, TEXSLOT_ONDEMAND_COUNT, cmd);
 
 	device->RenderPassBegin(&renderpass_transparent, cmd);
 
@@ -1299,11 +1294,11 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 		auto range = wiProfiler::BeginRangeGPU("Transparent Scene", cmd);
 		device->EventBegin("Transparent Scene", cmd);
 
-		device->BindResource(PS, &tiledLightResources.entityTiles_Transparent, TEXSLOT_RENDERPATH_ENTITYTILES, cmd);
-		device->BindResource(PS, &rtLinearDepth, TEXSLOT_LINEARDEPTH, cmd);
-		device->BindResource(PS, getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
-		device->BindResource(PS, &rtSceneCopy, TEXSLOT_RENDERPATH_REFRACTION, cmd);
-		device->BindResource(PS, &rtWaterRipple, TEXSLOT_RENDERPATH_WATERRIPPLES, cmd);
+		device->BindResource(&tiledLightResources.entityTiles_Transparent, TEXSLOT_RENDERPATH_ENTITYTILES, cmd);
+		device->BindResource(&rtLinearDepth, TEXSLOT_LINEARDEPTH, cmd);
+		device->BindResource(getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
+		device->BindResource(&rtSceneCopy, TEXSLOT_RENDERPATH_REFRACTION, cmd);
+		device->BindResource(&rtWaterRipple, TEXSLOT_RENDERPATH_WATERRIPPLES, cmd);
 
 		uint32_t drawscene_flags = 0;
 		drawscene_flags |= wiRenderer::DRAWSCENE_TRANSPARENT;
@@ -1407,7 +1402,6 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 			rt_first = nullptr;
 
 			std::swap(rt_read, rt_write);
-			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 		}
 
 		if (getMotionBlurEnabled() && getMotionBlurStrength() > 0)
@@ -1424,7 +1418,6 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 			rt_first = nullptr;
 
 			std::swap(rt_read, rt_write);
-			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 		}
 
 		if (getBloomEnabled())
@@ -1439,7 +1432,6 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 			rt_first = nullptr;
 
 			std::swap(rt_read, rt_write);
-			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 		}
 	}
 
@@ -1462,7 +1454,6 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 		rt_first = nullptr;
 		rt_read = rt_write;
 		rt_write = &rtPostprocess_LDR[1];
-		device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 	}
 
 	// 3.) LDR post process chain
@@ -1472,7 +1463,6 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 			wiRenderer::Postprocess_Sharpen(*rt_read, *rt_write, cmd, getSharpenFilterAmount());
 
 			std::swap(rt_read, rt_write);
-			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 		}
 
 		if (getFXAAEnabled())
@@ -1480,7 +1470,6 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 			wiRenderer::Postprocess_FXAA(*rt_read, *rt_write, cmd);
 
 			std::swap(rt_read, rt_write);
-			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 		}
 
 		if (getChromaticAberrationEnabled())
@@ -1488,7 +1477,6 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 			wiRenderer::Postprocess_Chromatic_Aberration(*rt_read, *rt_write, cmd, getChromaticAberrationAmount());
 
 			std::swap(rt_read, rt_write);
-			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 		}
 
 		// GUI Background blurring:
@@ -1506,7 +1494,6 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 		{
 			wiRenderer::Postprocess_FSR(*rt_read, rtFSR[1], rtFSR[0], cmd, getFSRSharpness());
 
-			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 		}
 	}
 }

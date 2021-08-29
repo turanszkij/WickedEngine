@@ -53,7 +53,7 @@ inline ShaderMaterial GetMaterial3()
 	return bindless_buffers[GetMesh().blendmaterial3].Load<ShaderMaterial>(0);
 }
 
-#define sampler_objectshader			bindless_samplers[g_xFrame_ObjectShaderSamplerIndex]
+#define sampler_objectshader			bindless_samplers[g_xFrame.ObjectShaderSamplerIndex]
 
 #define texture_basecolormap			bindless_textures[GetMaterial().texture_basecolormap_index]
 #define texture_normalmap				bindless_textures[GetMaterial().texture_normalmap_index]
@@ -121,7 +121,7 @@ TEXTURE2D(texture_surfelgi, float3, TEXSLOT_RENDERPATH_SURFELGI);
 //#define OBJECTSHADER_USE_EMISSIVE					- shader will use emissive
 //#define OBJECTSHADER_USE_RENDERTARGETARRAYINDEX	- shader will use dynamic render target slice selection
 //#define OBJECTSHADER_USE_NOCAMERA					- shader will not use camera space transform
-//#define OBJECTSHADER_USE_VISIBILITY				- shader will use visibility export
+//#define OBJECTSHADER_USE_INSTANCEID				- shader will use instance ID
 
 
 #ifdef OBJECTSHADER_LAYOUT_SHADOW
@@ -132,12 +132,13 @@ TEXTURE2D(texture_surfelgi, float3, TEXSLOT_RENDERPATH_SURFELGI);
 #define OBJECTSHADER_USE_WIND
 #define OBJECTSHADER_USE_UVSETS
 #define OBJECTSHADER_USE_COLOR
+#define OBJECTSHADER_USE_INSTANCEID
 #endif // OBJECTSHADER_LAYOUT_SHADOW_TEX
 
 #ifdef OBJECTSHADER_LAYOUT_PREPASS
 #define OBJECTSHADER_USE_CLIPPLANE
 #define OBJECTSHADER_USE_WIND
-#define OBJECTSHADER_USE_VISIBILITY
+#define OBJECTSHADER_USE_INSTANCEID
 #endif // OBJECTSHADER_LAYOUT_SHADOW
 
 #ifdef OBJECTSHADER_LAYOUT_PREPASS_TEX
@@ -145,7 +146,7 @@ TEXTURE2D(texture_surfelgi, float3, TEXSLOT_RENDERPATH_SURFELGI);
 #define OBJECTSHADER_USE_WIND
 #define OBJECTSHADER_USE_UVSETS
 #define OBJECTSHADER_USE_DITHERING
-#define OBJECTSHADER_USE_VISIBILITY
+#define OBJECTSHADER_USE_INSTANCEID
 #endif // OBJECTSHADER_LAYOUT_SHADOW_TEX
 
 #ifdef OBJECTSHADER_LAYOUT_COMMON
@@ -158,7 +159,7 @@ TEXTURE2D(texture_surfelgi, float3, TEXSLOT_RENDERPATH_SURFELGI);
 #define OBJECTSHADER_USE_TANGENT
 #define OBJECTSHADER_USE_POSITION3D
 #define OBJECTSHADER_USE_EMISSIVE
-#define OBJECTSHADER_USE_VISIBILITY
+#define OBJECTSHADER_USE_INSTANCEID
 #endif // OBJECTSHADER_LAYOUT_COMMON
 
 struct VertexInput
@@ -275,9 +276,9 @@ struct VertexSurface
 		if (material.IsUsingWind())
 		{
 			const float windweight = input.GetWindWeight();
-			const float waveoffset = dot(position.xyz, g_xFrame_WindDirection) * g_xFrame_WindWaveSize + (position.x + position.y + position.z) * g_xFrame_WindRandomness;
-			const float3 wavedir = g_xFrame_WindDirection * windweight;
-			const float3 wind = sin(g_xFrame_Time * g_xFrame_WindSpeed + waveoffset) * wavedir;
+			const float waveoffset = dot(position.xyz, g_xFrame.WindDirection) * g_xFrame.WindWaveSize + (position.x + position.y + position.z) * g_xFrame.WindRandomness;
+			const float3 wavedir = g_xFrame.WindDirection * windweight;
+			const float3 wind = sin(g_xFrame.Time * g_xFrame.WindSpeed + waveoffset) * wavedir;
 			position.xyz += wind;
 		}
 #endif // OBJECTSHADER_USE_WIND
@@ -288,9 +289,9 @@ struct PixelInput
 {
 	precise float4 pos : SV_POSITION;
 
-#ifdef OBJECTSHADER_USE_VISIBILITY
+#ifdef OBJECTSHADER_USE_INSTANCEID
 	uint instanceID : INSTANCEID;
-#endif // OBJECTSHADER_USE_VISIBILITY
+#endif // OBJECTSHADER_USE_INSTANCEID
 
 #ifdef OBJECTSHADER_USE_CLIPPLANE
 	float  clip : SV_ClipDistance0;
@@ -380,7 +381,7 @@ inline void NormalMapping(in float4 uvsets, inout float3 N, in float3x3 TBN, out
 
 inline float3 PlanarReflection(in Surface surface, in float2 bumpColor)
 {
-	float4 reflectionUV = mul(g_xCamera_ReflVP, float4(surface.P, 1));
+	float4 reflectionUV = mul(g_xCamera.ReflVP, float4(surface.P, 1));
 	reflectionUV.xy /= reflectionUV.w;
 	reflectionUV.xy = reflectionUV.xy * float2(0.5, -0.5) + 0.5;
 	return texture_reflection.SampleLevel(sampler_linear_clamp, reflectionUV.xy + bumpColor*GetMaterial().normalMapStrength, 0).rgb;
@@ -444,7 +445,7 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 			[branch]
 			if (decalAccumulation.a < 1)
 			{
-				ShaderEntity decal = EntityArray[g_xFrame_DecalArrayOffset + entity_index];
+				ShaderEntity decal = EntityArray[g_xFrame.DecalArrayOffset + entity_index];
 				if ((decal.layerMask & surface.layerMask) == 0)
 					continue;
 
@@ -519,7 +520,7 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 			[branch]
 			if (envmapAccumulation.a < 1)
 			{
-				ShaderEntity probe = EntityArray[g_xFrame_EnvProbeArrayOffset + entity_index];
+				ShaderEntity probe = EntityArray[g_xFrame.EnvProbeArrayOffset + entity_index];
 				if ((probe.layerMask & surface.layerMask) == 0)
 					continue;
 
@@ -571,7 +572,7 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 	{
 		// Loop through light buckets for the draw call:
 		const uint first_item = 0;
-		const uint last_item = first_item + g_xFrame_LightArrayCount - 1;
+		const uint last_item = first_item + g_xFrame.LightArrayCount - 1;
 		const uint first_bucket = first_item / 32;
 		const uint last_bucket = min(last_item / 32, 1); // only 2 buckets max (uint2) for forward pass!
 		[loop]
@@ -587,7 +588,7 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 				const uint entity_index = bucket * 32 + bucket_bit_index;
 				bucket_bits ^= 1u << bucket_bit_index;
 
-				ShaderEntity light = EntityArray[g_xFrame_LightArrayOffset + entity_index];
+				ShaderEntity light = EntityArray[g_xFrame.LightArrayOffset + entity_index];
 				if ((light.layerMask & surface.layerMask) == 0)
 					continue;
 
@@ -623,12 +624,12 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 {
 	const uint2 tileIndex = uint2(floor(surface.pixel / TILED_CULLING_BLOCKSIZE));
-	const uint flatTileIndex = flatten2D(tileIndex, g_xFrame_EntityCullingTileCount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
+	const uint flatTileIndex = flatten2D(tileIndex, g_xFrame.EntityCullingTileCount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
 
 
 #ifndef DISABLE_DECALS
 	[branch]
-	if (g_xFrame_DecalArrayCount > 0)
+	if (g_xFrame.DecalArrayCount > 0)
 	{
 		// decals are enabled, loop through them first:
 		float4 decalAccumulation = 0;
@@ -636,8 +637,8 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 		const float3 P_dy = ddy_coarse(surface.P);
 
 		// Loop through decal buckets in the tile:
-		const uint first_item = g_xFrame_DecalArrayOffset;
-		const uint last_item = first_item + g_xFrame_DecalArrayCount - 1;
+		const uint first_item = g_xFrame.DecalArrayOffset;
+		const uint last_item = first_item + g_xFrame.DecalArrayCount - 1;
 		const uint first_bucket = first_item / 32;
 		const uint last_bucket = min(last_item / 32, max(0, SHADER_ENTITY_TILE_BUCKET_COUNT - 1));
 		[loop]
@@ -721,11 +722,11 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 
 #ifndef DISABLE_LOCALENVPMAPS
 	[branch]
-	if (g_xFrame_EnvProbeArrayCount > 0)
+	if (g_xFrame.EnvProbeArrayCount > 0)
 	{
 		// Loop through envmap buckets in the tile:
-		const uint first_item = g_xFrame_EnvProbeArrayOffset;
-		const uint last_item = first_item + g_xFrame_EnvProbeArrayCount - 1;
+		const uint first_item = g_xFrame.EnvProbeArrayOffset;
+		const uint last_item = first_item + g_xFrame.EnvProbeArrayCount - 1;
 		const uint first_bucket = first_item / 32;
 		const uint last_bucket = min(last_item / 32, max(0, SHADER_ENTITY_TILE_BUCKET_COUNT - 1));
 		[loop]
@@ -797,20 +798,20 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 #endif //DISABLE_VOXELGI
 
 	[branch]
-	if (g_xFrame_LightArrayCount > 0)
+	if (g_xFrame.LightArrayCount > 0)
 	{
 		uint4 shadow_mask_packed = 0;
 #ifdef SHADOW_MASK_ENABLED
 		[branch]
-		if (g_xFrame_Options & OPTION_BIT_SHADOW_MASK)
+		if (g_xFrame.Options & OPTION_BIT_SHADOW_MASK)
 		{
 			shadow_mask_packed = texture_rtshadow[surface.pixel / 2];
 		}
 #endif // SHADOW_MASK_ENABLED
 
 		// Loop through light buckets in the tile:
-		const uint first_item = g_xFrame_LightArrayOffset;
-		const uint last_item = first_item + g_xFrame_LightArrayCount - 1;
+		const uint first_item = g_xFrame.LightArrayOffset;
+		const uint last_item = first_item + g_xFrame.LightArrayCount - 1;
 		const uint first_bucket = first_item / 32;
 		const uint last_bucket = min(last_item / 32, max(0, SHADER_ENTITY_TILE_BUCKET_COUNT - 1));
 		[loop]
@@ -845,9 +846,9 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 					float shadow_mask = 1;
 #ifdef SHADOW_MASK_ENABLED
 					[branch]
-					if (g_xFrame_Options & OPTION_BIT_SHADOW_MASK && light.IsCastingShadow())
+					if (g_xFrame.Options & OPTION_BIT_SHADOW_MASK && light.IsCastingShadow())
 					{
-						uint shadow_index = entity_index - g_xFrame_LightArrayOffset;
+						uint shadow_index = entity_index - g_xFrame.LightArrayOffset;
 						if (shadow_index < 16)
 						{
 							uint mask_shift = (shadow_index % 4) * 8;
@@ -895,7 +896,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 
 #ifndef TRANSPARENT
 	[branch]
-	if (g_xFrame_Options & OPTION_BIT_SURFELGI_ENABLED && surfel_cellvalid(surfel_cell(surface.P)))
+	if (g_xFrame.Options & OPTION_BIT_SURFELGI_ENABLED && surfel_cellvalid(surfel_cell(surface.P)))
 	{
 		lighting.indirect.diffuse = texture_surfelgi[surface.pixel];
 	}
@@ -913,7 +914,7 @@ inline void ApplyFog(in float distance, float3 P, float3 V, inout float4 color)
 {
 	const float fogAmount = GetFogAmount(distance, P, V);
 	
-	if (g_xFrame_Options & OPTION_BIT_REALISTIC_SKY)
+	if (g_xFrame.Options & OPTION_BIT_REALISTIC_SKY)
 	{
 		const float3 skyLuminance = texture_skyluminancelut.SampleLevel(sampler_point_clamp, float2(0.5, 0.5), 0).rgb;
 		color.rgb = lerp(color.rgb, skyLuminance, fogAmount);
@@ -936,9 +937,9 @@ PixelInput main(VertexInput input)
 {
 	PixelInput Out;
 
-#ifdef OBJECTSHADER_USE_VISIBILITY
+#ifdef OBJECTSHADER_USE_INSTANCEID
 	Out.instanceID = input.GetInstancePointer().instanceID;
-#endif // OBJECTSHADER_USE_VISIBILITY
+#endif // OBJECTSHADER_USE_INSTANCEID
 
 	VertexSurface surface;
 	surface.create(GetMaterial(), input);
@@ -946,11 +947,11 @@ PixelInput main(VertexInput input)
 	Out.pos = surface.position;
 
 #ifndef OBJECTSHADER_USE_NOCAMERA
-	Out.pos = mul(g_xCamera_VP, Out.pos);
+	Out.pos = mul(g_xCamera.VP, Out.pos);
 #endif // OBJECTSHADER_USE_NOCAMERA
 
 #ifdef OBJECTSHADER_USE_CLIPPLANE
-	Out.clip = dot(surface.position, g_xCamera_ClipPlane);
+	Out.clip = dot(surface.position, g_xCamera.ClipPlane);
 #endif // OBJECTSHADER_USE_CLIPPLANE
 
 #ifdef OBJECTSHADER_USE_POSITION3D
@@ -1031,7 +1032,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 	const float depth = input.pos.z;
 	const float lineardepth = input.pos.w;
 	const float2 pixel = input.pos.xy;
-	const float2 ScreenCoord = pixel * g_xFrame_InternalResolution_rcp;
+	const float2 ScreenCoord = pixel * g_xFrame.InternalResolution_rcp;
 	float3 bumpColor = 0;
 
 #ifndef DISABLE_ALPHATEST
@@ -1060,7 +1061,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 
 #ifdef OBJECTSHADER_USE_POSITION3D
 	surface.P = input.pos3D;
-	surface.V = g_xCamera_CamPos - surface.P;
+	surface.V = g_xCamera.CamPos - surface.P;
 	float dist = length(surface.V);
 	surface.V /= dist;
 #endif // OBJECTSHADER_USE_POSITION3D
@@ -1090,7 +1091,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 #ifdef PREPASS
 	if (GetMaterial().uvset_baseColorMap >= 0)
 #else
-	if (GetMaterial().uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+	if (GetMaterial().uvset_baseColorMap >= 0 && (g_xFrame.Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 #endif // PREPASS
 	{
 		const float2 UV_baseColorMap = GetMaterial().uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
@@ -1111,7 +1112,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 	float alphatest = GetMaterial().alphaTest;
 #ifndef TRANSPARENT
 #ifndef ENVMAPRENDERING
-	if (g_xFrame_Options & OPTION_BIT_TEMPORALAA_ENABLED)
+	if (g_xFrame.Options & OPTION_BIT_TEMPORALAA_ENABLED)
 	{
 		alphatest = clamp(blue_noise(pixel, lineardepth).r, 0, 0.99);
 	}
@@ -1194,7 +1195,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 
 #ifdef OBJECTSHADER_USE_UVSETS
 		[branch]
-		if (GetMaterial().uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+		if (GetMaterial().uvset_baseColorMap >= 0 && (g_xFrame.Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 		{
 			float2 uv = GetMaterial().uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			color2 = texture_basecolormap.Sample(sampler_objectshader, uv);
@@ -1256,7 +1257,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 
 #ifdef OBJECTSHADER_USE_UVSETS
 		[branch]
-		if (GetMaterial1().uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+		if (GetMaterial1().uvset_baseColorMap >= 0 && (g_xFrame.Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 		{
 			float2 uv = GetMaterial1().uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			color2 = texture_blend1_basecolormap.Sample(sampler_objectshader, uv);
@@ -1318,7 +1319,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 
 #ifdef OBJECTSHADER_USE_UVSETS
 		[branch]
-		if (GetMaterial2().uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+		if (GetMaterial2().uvset_baseColorMap >= 0 && (g_xFrame.Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 		{
 			float2 uv = GetMaterial2().uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			color2 = texture_blend2_basecolormap.Sample(sampler_objectshader, uv);
@@ -1380,7 +1381,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 
 #ifdef OBJECTSHADER_USE_UVSETS
 		[branch]
-		if (GetMaterial3().uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+		if (GetMaterial3().uvset_baseColorMap >= 0 && (g_xFrame.Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 		{
 			float2 uv = GetMaterial3().uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			color2 = texture_blend3_basecolormap.Sample(sampler_objectshader, uv);
@@ -1567,7 +1568,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 	bumpColor *= GetMaterial().normalMapStrength;
 
 	//REFLECTION
-	float4 reflectionUV = mul(g_xCamera_ReflVP, float4(surface.P, 1));
+	float4 reflectionUV = mul(g_xCamera.ReflVP, float4(surface.P, 1));
 	reflectionUV.xy /= reflectionUV.w;
 	reflectionUV.xy = reflectionUV.xy * float2(0.5, -0.5) + 0.5;
 	lighting.indirect.specular += texture_reflection.SampleLevel(sampler_linear_mirror, reflectionUV.xy + bumpColor.rg, 0).rgb * surface.F;
@@ -1594,7 +1595,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 		float2 size;
 		float mipLevels;
 		texture_refraction.GetDimensions(0, size.x, size.y, mipLevels);
-		const float2 normal2D = mul((float3x3)g_xCamera_View, surface.N.xyz).xy;
+		const float2 normal2D = mul((float3x3)g_xCamera.View, surface.N.xyz).xy;
 		float2 perturbatedRefrTexCoords = ScreenCoord.xy + normal2D * GetMaterial().refraction;
 		float4 refractiveColor = texture_refraction.SampleLevel(sampler_linear_clamp, perturbatedRefrTexCoords, surface.roughness * mipLevels);
 		surface.refraction.rgb = surface.albedo * refractiveColor.rgb;
@@ -1640,13 +1641,13 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 
 #ifdef WATER
 	// WATER REFRACTION
-	float sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy + bumpColor.rg, 0) * g_xCamera_ZFarP;
+	float sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy + bumpColor.rg, 0) * g_xCamera.ZFarP;
 	float depth_difference = sampled_lineardepth - lineardepth;
 	surface.refraction.rgb = texture_refraction.SampleLevel(sampler_linear_mirror, ScreenCoord.xy + bumpColor.rg * saturate(0.5 * depth_difference), 0).rgb;
 	if (depth_difference < 0)
 	{
 		// Fix cutoff by taking unperturbed depth diff to fill the holes with fog:
-		sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy, 0) * g_xCamera_ZFarP;
+		sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy, 0) * g_xCamera.ZFarP;
 		depth_difference = sampled_lineardepth - lineardepth;
 	}
 	// WATER FOG:
@@ -1667,7 +1668,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 
 
 #ifdef OBJECTSHADER_USE_POSITION3D
-	ApplyFog(dist, g_xCamera_CamPos, surface.V, color);
+	ApplyFog(dist, g_xCamera.CamPos, surface.V, color);
 #endif // OBJECTSHADER_USE_POSITION3D
 
 

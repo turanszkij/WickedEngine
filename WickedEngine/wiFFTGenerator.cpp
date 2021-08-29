@@ -37,10 +37,10 @@ namespace wiFFTGenerator
 
 		// Buffers
 		const GPUResource* srvs[1] = { &pSRV_Src };
-		device->BindResources(CS, srvs, TEXSLOT_ONDEMAND0, 1, cmd);
+		device->BindResources(srvs, TEXSLOT_ONDEMAND0, 1, cmd);
 
 		const GPUResource* uavs[1] = { &pUAV_Dst };
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		// Shader
 		if (istride > 1)
@@ -61,8 +61,6 @@ namespace wiFFTGenerator
 		device->Barrier(barriers, arraysize(barriers), cmd);
 
 		// Unbind resource
-		device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
-		device->UnbindUAVs(0, 1, cmd);
 	}
 
 	void fft_512x512_c2c(
@@ -78,32 +76,32 @@ namespace wiFFTGenerator
 
 		uint32_t istride = 512 * 512 / 8;
 		cs_cbs = &fft_plan.pRadix008A_CB[0];
-		device->BindConstantBuffer(CS, cs_cbs, CB_GETBINDSLOT(FFTGeneratorCB), cmd);
+		device->BindConstantBuffer(cs_cbs, CB_GETBINDSLOT(FFTGeneratorCB), cmd);
 		radix008A(fft_plan, fft_plan.pBuffer_Tmp, pSRV_Src, thread_count, istride, cmd);
 
 		istride /= 8;
 		cs_cbs = &fft_plan.pRadix008A_CB[1];
-		device->BindConstantBuffer(CS, cs_cbs, CB_GETBINDSLOT(FFTGeneratorCB), cmd);
+		device->BindConstantBuffer(cs_cbs, CB_GETBINDSLOT(FFTGeneratorCB), cmd);
 		radix008A(fft_plan, pUAV_Dst, fft_plan.pBuffer_Tmp, thread_count, istride, cmd);
 
 		istride /= 8;
 		cs_cbs = &fft_plan.pRadix008A_CB[2];
-		device->BindConstantBuffer(CS, cs_cbs, CB_GETBINDSLOT(FFTGeneratorCB), cmd);
+		device->BindConstantBuffer(cs_cbs, CB_GETBINDSLOT(FFTGeneratorCB), cmd);
 		radix008A(fft_plan, fft_plan.pBuffer_Tmp, pSRV_Dst, thread_count, istride, cmd);
 
 		istride /= 8;
 		cs_cbs = &fft_plan.pRadix008A_CB[3];
-		device->BindConstantBuffer(CS, cs_cbs, CB_GETBINDSLOT(FFTGeneratorCB), cmd);
+		device->BindConstantBuffer(cs_cbs, CB_GETBINDSLOT(FFTGeneratorCB), cmd);
 		radix008A(fft_plan, pUAV_Dst, fft_plan.pBuffer_Tmp, thread_count, istride, cmd);
 
 		istride /= 8;
 		cs_cbs = &fft_plan.pRadix008A_CB[4];
-		device->BindConstantBuffer(CS, cs_cbs, CB_GETBINDSLOT(FFTGeneratorCB), cmd);
+		device->BindConstantBuffer(cs_cbs, CB_GETBINDSLOT(FFTGeneratorCB), cmd);
 		radix008A(fft_plan, fft_plan.pBuffer_Tmp, pSRV_Dst, thread_count, istride, cmd);
 
 		istride /= 8;
 		cs_cbs = &fft_plan.pRadix008A_CB[5];
-		device->BindConstantBuffer(CS, cs_cbs, CB_GETBINDSLOT(FFTGeneratorCB), cmd);
+		device->BindConstantBuffer(cs_cbs, CB_GETBINDSLOT(FFTGeneratorCB), cmd);
 		radix008A(fft_plan, pUAV_Dst, fft_plan.pBuffer_Tmp, thread_count, istride, cmd);
 	}
 

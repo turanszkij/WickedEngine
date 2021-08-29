@@ -16,7 +16,6 @@
 #include "wiImage.h"
 #include "wiEvent.h"
 
-#include "wiGraphicsDevice_DX11.h"
 #include "wiGraphicsDevice_DX12.h"
 #include "wiGraphicsDevice_Vulkan.h"
 
@@ -267,12 +266,6 @@ void MainComponent::Compose(CommandList cmd)
 			ss << "[UWP]";
 #endif
 
-#ifdef WICKEDENGINE_BUILD_DX11
-			if (dynamic_cast<GraphicsDevice_DX11*>(device))
-			{
-				ss << "[DX11]";
-			}
-#endif
 #ifdef WICKEDENGINE_BUILD_DX12
 			if (dynamic_cast<GraphicsDevice_DX12*>(device))
 			{
@@ -356,16 +349,9 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 		bool debugdevice = wiStartupArguments::HasArgument("debugdevice");
 		bool gpuvalidation = wiStartupArguments::HasArgument("gpuvalidation");
 
-		bool use_dx11 = wiStartupArguments::HasArgument("dx11");
 		bool use_dx12 = wiStartupArguments::HasArgument("dx12");
 		bool use_vulkan = wiStartupArguments::HasArgument("vulkan");
 
-#ifndef WICKEDENGINE_BUILD_DX11
-		if (use_dx11) {
-			wiHelper::messageBox("The engine was built without DX11 support!", "Error");
-			use_dx11 = false;
-		}
-#endif
 #ifndef WICKEDENGINE_BUILD_DX12
 		if (use_dx12) {
 			wiHelper::messageBox("The engine was built without DX12 support!", "Error");
@@ -379,20 +365,18 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 		}
 #endif
 
-		if (!use_dx11 && !use_dx12 && !use_vulkan)
+		if (!use_dx12 && !use_vulkan)
 		{
 #if defined(WICKEDENGINE_BUILD_DX12)
 			use_dx12 = true;
 #elif defined(WICKEDENGINE_BUILD_VULKAN)
 			use_vulkan = true;
-#elif defined(WICKEDENGINE_BUILD_DX11)
-			use_dx11 = true;
 #else
 			wiBackLog::post("No rendering backend is enabled! Please enable at least one so we can use it as default");
 			assert(false);
 #endif
 		}
-		assert(use_dx11 || use_dx12 || use_vulkan);
+		assert(use_dx12 || use_vulkan);
 
 		if (use_vulkan)
 		{
@@ -406,13 +390,6 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 #ifdef WICKEDENGINE_BUILD_DX12
 			wiRenderer::SetShaderPath(wiRenderer::GetShaderPath() + "hlsl6/");
 			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_DX12>(debugdevice, gpuvalidation));
-#endif
-		}
-		else if (use_dx11)
-		{
-#ifdef WICKEDENGINE_BUILD_DX11
-			wiRenderer::SetShaderPath(wiRenderer::GetShaderPath() + "hlsl5/");
-			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_DX11>(debugdevice));
 #endif
 		}
 	}
