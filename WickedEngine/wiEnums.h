@@ -39,19 +39,6 @@ enum RENDERPASS
 	RENDERPASS_COUNT
 };
 
-enum OBJECT_VERTEXINPUT
-{
-	INPUT_SLOT_POSITION_NORMAL_WIND,
-	INPUT_SLOT_PREVPOS,
-	INPUT_SLOT_UV0,
-	INPUT_SLOT_UV1,
-	INPUT_SLOT_ATLAS,
-	INPUT_SLOT_COLOR,
-	INPUT_SLOT_TANGENT,
-	INPUT_SLOT_INSTANCEDATA,
-	INPUT_SLOT_COUNT,
-};
-
 // There are two different kinds of stencil refs:
 //	ENGINE	: managed by the engine systems (STENCILREF enum values between 0-15)
 //	USER	: managed by the user (raw numbers between 0-15)

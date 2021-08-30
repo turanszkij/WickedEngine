@@ -827,7 +827,7 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) {
 		inputLayouts[ILTYPE_OBJECT_DEBUG].elements =
 		{
-			{ "POSITION_NORMAL_WIND",	0, MeshComponent::Vertex_POS::FORMAT, INPUT_SLOT_POSITION_NORMAL_WIND, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA },
+			{ "POSITION_NORMAL_WIND",	0, MeshComponent::Vertex_POS::FORMAT, 0, InputLayout::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA },
 		};
 		LoadShader(VS, shaders[VSTYPE_OBJECT_DEBUG], "objectVS_debug.cso");
 		});
@@ -1818,7 +1818,7 @@ void LoadBuffers()
 	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 
 	bd.StructureByteStride = sizeof(ShaderMeshInstance);
-	bd.ByteWidth = bd.StructureByteStride * MATRIXARRAY_COUNT;
+	bd.ByteWidth = bd.StructureByteStride;
 	bd.BindFlags = BIND_SHADER_RESOURCE;
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 	device->CreateBuffer(&bd, nullptr, &resourceBuffers[RBTYPE_IMPOSTORREFRESH]);
@@ -6523,11 +6523,11 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 	inst.color = 0xFFFFFFFF;
 	device->UpdateBuffer(&resourceBuffers[RBTYPE_IMPOSTORREFRESH], &inst, cmd, sizeof(inst));
 	device->BindResource(&resourceBuffers[RBTYPE_IMPOSTORREFRESH], SBSLOT_INSTANCEARRAY, cmd);
-	device->BindResource(&resourceBuffers[RBTYPE_IMPOSTORREFRESH], SBSLOT_INSTANCEARRAY, cmd);
 
 	GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(ShaderMeshInstance), cmd);
-	volatile ShaderMeshInstance* buff = (volatile ShaderMeshInstance*)mem.data;
-	buff = {};
+	volatile ShaderMeshInstancePointer* buff = (volatile ShaderMeshInstancePointer*)mem.data;
+	buff->instanceID = 0;
+	buff->userdata = 0;
 
 	for (uint32_t impostorIndex = 0; impostorIndex < scene.impostors.GetCount(); ++impostorIndex)
 	{
