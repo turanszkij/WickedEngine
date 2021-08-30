@@ -130,7 +130,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 			{
 				float dist = sqrt(dist2);
 				float contribution = 1;
-				coverage += contribution;
 
 				float2 moments = surfelMomentsTexture.SampleLevel(sampler_linear_clamp, surfel_moment_uv(surfel_index, normal, -L / dist), 0);
 				contribution *= surfel_moment_weight(moments, dist);
@@ -139,6 +138,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 				contribution *= saturate(dotN);
 				contribution *= saturate(1 - dist / surfel.radius);
 				contribution = smoothstep(0, 1, contribution);
+				coverage += contribution;
 
 				color += float4(surfel.color, 1) * contribution;
 
@@ -222,7 +222,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	minGTid.x = (surfel_coverage >> 4) & 0xF;
 	minGTid.y = (surfel_coverage >> 0) & 0xF;
 	uint coverage_amount = surfel_coverage >> 8;
-	if (GTid.x == minGTid.x && GTid.y == minGTid.y && coverage_amount < SURFEL_TARGET_COVERAGE)
+	if (GTid.x == minGTid.x && GTid.y == minGTid.y && coverage < SURFEL_TARGET_COVERAGE)
 	{
 		// Slow down the propagation by chance
 		//	Closer surfaces have less chance to avoid excessive clumping of surfels

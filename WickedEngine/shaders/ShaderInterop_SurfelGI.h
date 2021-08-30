@@ -50,7 +50,7 @@ static const uint SURFEL_STATS_OFFSET_COUNT = 0;
 static const uint SURFEL_STATS_OFFSET_CELLALLOCATOR = 4;
 static const uint SURFEL_STATS_OFFSET_INDIRECT = 8;
 static const uint SURFEL_INDIRECT_NUMTHREADS = 32;
-static const uint SURFEL_TARGET_COVERAGE = 2; // how many surfels should affect a pixel fully, higher values will increase quality and cost
+static const float SURFEL_TARGET_COVERAGE = 0.5; // how many surfels should affect a pixel fully, higher values will increase quality and cost
 static const uint SURFEL_CELL_LIMIT = ~0; // limit the amount of allocated surfels in a cell
 #define SURFEL_COVERAGE_HALFRES // runs the coverage shader in half resolution for improved performance
 #define SURFEL_GRID_CULLING // if defined, surfels will not be added to grid cells that they do not intersect
