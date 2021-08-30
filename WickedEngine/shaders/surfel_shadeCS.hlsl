@@ -110,7 +110,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 					contribution *= saturate(1 - dist / surfel.radius);
 					contribution = smoothstep(0, 1, contribution);
-					contribution *= pow(saturate(dotN), SURFEL_NORMAL_TOLERANCE);
+					contribution *= saturate(dotN);
 
 					surfel_gi += float4(surfel.color, 1) * contribution;
 
@@ -161,7 +161,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 					contribution *= saturate(1 - dist / surfel.radius);
 					contribution = smoothstep(0, 1, contribution);
-					contribution *= pow(saturate(dotN), SURFEL_NORMAL_TOLERANCE);
+					contribution *= saturate(dotN);
 
 					result += float4(surfel.color, 1) * contribution;
 

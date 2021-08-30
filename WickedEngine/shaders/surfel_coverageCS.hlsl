@@ -130,15 +130,15 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 			{
 				float dist = sqrt(dist2);
 				float contribution = 1;
+				coverage += contribution;
 
 				float2 moments = surfelMomentsTexture.SampleLevel(sampler_linear_clamp, surfel_moment_uv(surfel_index, normal, -L / dist), 0);
 				contribution *= surfel_moment_weight(moments, dist);
 
 
-				contribution *= pow(saturate(dotN), SURFEL_NORMAL_TOLERANCE);
+				contribution *= saturate(dotN);
 				contribution *= saturate(1 - dist / surfel.radius);
 				contribution = smoothstep(0, 1, contribution);
-				coverage += contribution;
 
 				color += float4(surfel.color, 1) * contribution;
 
