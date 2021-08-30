@@ -6352,10 +6352,6 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			RefreshAtmosphericScatteringTextures(cmd);
 		}
 
-		// Bind the atmospheric textures, as lighting and sky needs them
-		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
-		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
-		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
 		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], TEXSLOT_SKYLUMINANCELUT, cmd);
 
 		device->BindResource(&vis.scene->instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
@@ -7308,12 +7304,8 @@ void RayTraceScene(
 	{
 		device->BindResource(&scene.weather.skyMap->texture, TEXSLOT_GLOBALENVMAP, cmd);
 	}
-	else
-	{
-		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
-		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
-		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
-	}
+
+	BindCommonResources(cmd);
 
 	device->BindResource(&scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
@@ -7396,6 +7388,8 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 		}
 		device->BindResource(&scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
+		BindCommonResources(cmd);
+
 		// Render lightmaps for each object:
 		for (uint32_t i = 0; i < scene.objects.GetCount(); ++i)
 		{
@@ -7471,12 +7465,6 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 				if (scene.weather.skyMap != nullptr)
 				{
 					device->BindResource(&scene.weather.skyMap->texture, TEXSLOT_GLOBALENVMAP, cmd);
-				}
-				else
-				{
-					device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
-					device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
-					device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
 				}
 
 				device->DrawIndexedInstanced((uint32_t)mesh.indices.size(), 1, 0, 0, 0, cmd);
@@ -8094,13 +8082,7 @@ void SurfelGI(
 
 		device->BindComputeShader(&shaders[CSTYPE_SURFEL_RAYTRACE], cmd);
 
-		device->BindResource(&resourceBuffers[RBTYPE_ENTITYARRAY], SBSLOT_ENTITYARRAY, cmd);
-		device->BindResource(&resourceBuffers[RBTYPE_MATRIXARRAY], SBSLOT_MATRIXARRAY, cmd);
 		device->BindResource(&scene.envmapArray, TEXSLOT_ENVMAPARRAY, cmd);
-		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
-		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
-		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
-		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], TEXSLOT_SKYLUMINANCELUT, cmd);
 
 		device->BindResource(&scene.surfelBuffer, TEXSLOT_ONDEMAND0, cmd);
 		device->BindResource(&scene.surfelStatsBuffer, TEXSLOT_ONDEMAND1, cmd);
@@ -9455,18 +9437,11 @@ void Postprocess_RTReflection(
 	device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
 	device->BindResource(&gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
 	device->BindResource(&gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
-	device->BindResource(&scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 	device->BindResource(&depth_history, TEXSLOT_ONDEMAND2, cmd);
 
-	device->BindResource(&resourceBuffers[RBTYPE_ENTITYARRAY], SBSLOT_ENTITYARRAY, cmd);
-	device->BindResource(&resourceBuffers[RBTYPE_MATRIXARRAY], SBSLOT_MATRIXARRAY, cmd);
-	device->BindResource(GetVoxelRadianceSecondaryBounceEnabled() ? &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] : &textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELGI, cmd);
 	device->BindResource(&scene.envmapArray, TEXSLOT_ENVMAPARRAY, cmd);
-	device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
-	device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
-	device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
-	device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], TEXSLOT_SKYLUMINANCELUT, cmd);
+	device->BindResource(&scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 	PostProcessCB cb;
 	cb.xPPResolution.x = desc.Width;
