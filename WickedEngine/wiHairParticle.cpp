@@ -282,7 +282,7 @@ void wiHairParticle::UpdateGPU(uint32_t instanceID, const MeshComponent& mesh, c
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Buffer(&mesh.indexBuffer, BUFFER_STATE_INDEX_BUFFER, BUFFER_STATE_SHADER_RESOURCE),
+				GPUBarrier::Buffer(&mesh.indexBuffer, RESOURCE_STATE_INDEX_BUFFER, RESOURCE_STATE_SHADER_RESOURCE),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -309,11 +309,11 @@ void wiHairParticle::UpdateGPU(uint32_t instanceID, const MeshComponent& mesh, c
 
 		GPUBarrier barriers[] = {
 			GPUBarrier::Memory(),
-			GPUBarrier::Buffer(&indirectBuffer, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_INDIRECT_ARGUMENT),
-			GPUBarrier::Buffer(&vertexBuffer_POS[0], BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE),
-			GPUBarrier::Buffer(&vertexBuffer_TEX, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE),
-			GPUBarrier::Buffer(&primitiveBuffer, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_SHADER_RESOURCE),
-			GPUBarrier::Buffer(&culledIndexBuffer, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_INDEX_BUFFER),
+			GPUBarrier::Buffer(&indirectBuffer, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_INDIRECT_ARGUMENT),
+			GPUBarrier::Buffer(&vertexBuffer_POS[0], RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE),
+			GPUBarrier::Buffer(&vertexBuffer_TEX, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE),
+			GPUBarrier::Buffer(&primitiveBuffer, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE),
+			GPUBarrier::Buffer(&culledIndexBuffer, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_INDEX_BUFFER),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 
@@ -321,7 +321,7 @@ void wiHairParticle::UpdateGPU(uint32_t instanceID, const MeshComponent& mesh, c
 
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Buffer(&mesh.indexBuffer, BUFFER_STATE_SHADER_RESOURCE, BUFFER_STATE_INDEX_BUFFER),
+			GPUBarrier::Buffer(&mesh.indexBuffer, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_INDEX_BUFFER),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}

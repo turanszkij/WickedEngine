@@ -62,7 +62,7 @@ namespace DX12_Internal
 
 	// Engine -> Native converters
 
-	inline uint32_t _ParseColorWriteMask(uint32_t value)
+	constexpr uint32_t _ParseColorWriteMask(uint32_t value)
 	{
 		uint32_t _flag = 0;
 
@@ -83,6 +83,45 @@ namespace DX12_Internal
 		}
 
 		return _flag;
+	}
+	constexpr D3D12_RESOURCE_STATES _ParseResourceState(RESOURCE_STATE value)
+	{
+		D3D12_RESOURCE_STATES ret = {};
+
+		if (value & RESOURCE_STATE_UNDEFINED)
+			ret |= D3D12_RESOURCE_STATE_COMMON;
+		if (value & RESOURCE_STATE_SHADER_RESOURCE)
+			ret |= D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+		if (value & RESOURCE_STATE_SHADER_RESOURCE_COMPUTE)
+			ret |= D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+		if (value & RESOURCE_STATE_UNORDERED_ACCESS)
+			ret |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+		if (value & RESOURCE_STATE_COPY_SRC)
+			ret |= D3D12_RESOURCE_STATE_COPY_SOURCE;
+		if (value & RESOURCE_STATE_COPY_DST)
+			ret |= D3D12_RESOURCE_STATE_COPY_DEST;
+
+		if (value & RESOURCE_STATE_RENDERTARGET)
+			ret |= D3D12_RESOURCE_STATE_RENDER_TARGET;
+		if (value & RESOURCE_STATE_DEPTHSTENCIL)
+			ret |= D3D12_RESOURCE_STATE_DEPTH_WRITE;
+		if (value & RESOURCE_STATE_DEPTHSTENCIL_READONLY)
+			ret |= D3D12_RESOURCE_STATE_DEPTH_READ;
+		if (value & RESOURCE_STATE_SHADING_RATE_SOURCE)
+			ret |= D3D12_RESOURCE_STATE_SHADING_RATE_SOURCE;
+
+		if (value & RESOURCE_STATE_VERTEX_BUFFER)
+			ret |= D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+		if (value & RESOURCE_STATE_INDEX_BUFFER)
+			ret |= D3D12_RESOURCE_STATE_INDEX_BUFFER;
+		if (value & RESOURCE_STATE_CONSTANT_BUFFER)
+			ret |= D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+		if (value & RESOURCE_STATE_INDIRECT_ARGUMENT)
+			ret |= D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
+		if (value & RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE)
+			ret |= D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE;
+
+		return ret;
 	}
 
 	constexpr D3D12_FILTER _ConvertFilter(FILTER value)
@@ -675,64 +714,6 @@ namespace DX12_Internal
 		data.SlicePitch = pInitialData.SysMemSlicePitch;
 
 		return data;
-	}
-	constexpr D3D12_RESOURCE_STATES _ConvertImageLayout(IMAGE_LAYOUT value)
-	{
-		switch (value)
-		{
-		case wiGraphics::IMAGE_LAYOUT_UNDEFINED:
-			return D3D12_RESOURCE_STATE_COMMON;
-		case wiGraphics::IMAGE_LAYOUT_RENDERTARGET:
-			return D3D12_RESOURCE_STATE_RENDER_TARGET;
-		case wiGraphics::IMAGE_LAYOUT_DEPTHSTENCIL:
-			return D3D12_RESOURCE_STATE_DEPTH_WRITE;
-		case wiGraphics::IMAGE_LAYOUT_DEPTHSTENCIL_READONLY:
-			return D3D12_RESOURCE_STATE_DEPTH_READ;
-		case wiGraphics::IMAGE_LAYOUT_SHADER_RESOURCE:
-			return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-		case wiGraphics::IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE:
-			return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-		case wiGraphics::IMAGE_LAYOUT_UNORDERED_ACCESS:
-			return D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-		case wiGraphics::IMAGE_LAYOUT_COPY_SRC:
-			return D3D12_RESOURCE_STATE_COPY_SOURCE;
-		case wiGraphics::IMAGE_LAYOUT_COPY_DST:
-			return D3D12_RESOURCE_STATE_COPY_DEST;
-		case wiGraphics::IMAGE_LAYOUT_SHADING_RATE_SOURCE:
-			return D3D12_RESOURCE_STATE_SHADING_RATE_SOURCE;
-		}
-
-		return D3D12_RESOURCE_STATE_COMMON;
-	}
-	constexpr D3D12_RESOURCE_STATES _ConvertBufferState(BUFFER_STATE value)
-	{
-		switch (value)
-		{
-		case wiGraphics::BUFFER_STATE_UNDEFINED:
-			return D3D12_RESOURCE_STATE_COMMON;
-		case wiGraphics::BUFFER_STATE_VERTEX_BUFFER:
-			return D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
-		case wiGraphics::BUFFER_STATE_INDEX_BUFFER:
-			return D3D12_RESOURCE_STATE_INDEX_BUFFER;
-		case wiGraphics::BUFFER_STATE_CONSTANT_BUFFER:
-			return D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
-		case wiGraphics::BUFFER_STATE_INDIRECT_ARGUMENT:
-			return D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
-		case wiGraphics::BUFFER_STATE_SHADER_RESOURCE:
-			return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-		case wiGraphics::BUFFER_STATE_SHADER_RESOURCE_COMPUTE:
-			return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-		case wiGraphics::BUFFER_STATE_UNORDERED_ACCESS:
-			return D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-		case wiGraphics::BUFFER_STATE_COPY_SRC:
-			return D3D12_RESOURCE_STATE_COPY_SOURCE;
-		case wiGraphics::BUFFER_STATE_COPY_DST:
-			return D3D12_RESOURCE_STATE_COPY_DEST;
-		case wiGraphics::BUFFER_STATE_RAYTRACING_ACCELERATION_STRUCTURE:
-			return D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE;
-		}
-
-		return D3D12_RESOURCE_STATE_COMMON;
 	}
 	constexpr D3D12_SHADER_VISIBILITY _ConvertShaderVisibility(SHADERSTAGE value)
 	{
@@ -3211,7 +3192,7 @@ using namespace DX12_Internal;
 		}
 		bool useClearValue = pDesc->BindFlags & BIND_RENDER_TARGET || pDesc->BindFlags & BIND_DEPTH_STENCIL;
 
-		D3D12_RESOURCE_STATES resourceState = _ConvertImageLayout(pTexture->desc.layout);
+		D3D12_RESOURCE_STATES resourceState = _ParseResourceState(pTexture->desc.layout);
 
 		if (pInitialData != nullptr)
 		{
@@ -4654,14 +4635,14 @@ using namespace DX12_Internal;
 			barrierdesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 			barrierdesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
 			barrierdesc.Transition.pResource = texture_internal->resource.Get();
-			barrierdesc.Transition.StateBefore = _ConvertImageLayout(attachment.initial_layout);
+			barrierdesc.Transition.StateBefore = _ParseResourceState(attachment.initial_layout);
 			if (attachment.type == RenderPassAttachment::RESOLVE)
 			{
 				barrierdesc.Transition.StateAfter = D3D12_RESOURCE_STATE_RESOLVE_DEST;
 			}
 			else
 			{
-				barrierdesc.Transition.StateAfter = _ConvertImageLayout(attachment.subpass_layout);
+				barrierdesc.Transition.StateAfter = _ParseResourceState(attachment.subpass_layout);
 			}
 			barrierdesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 
@@ -4691,9 +4672,9 @@ using namespace DX12_Internal;
 			}
 			else
 			{
-				barrierdesc.Transition.StateBefore = _ConvertImageLayout(attachment.subpass_layout);
+				barrierdesc.Transition.StateBefore = _ParseResourceState(attachment.subpass_layout);
 			}
-			barrierdesc.Transition.StateAfter = _ConvertImageLayout(attachment.final_layout);
+			barrierdesc.Transition.StateAfter = _ParseResourceState(attachment.final_layout);
 			barrierdesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 
 			if (barrierdesc.Transition.StateBefore == barrierdesc.Transition.StateAfter)
@@ -6452,8 +6433,8 @@ using namespace DX12_Internal;
 				barrierdesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 				barrierdesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
 				barrierdesc.Transition.pResource = to_internal(barrier.image.texture)->resource.Get();
-				barrierdesc.Transition.StateBefore = _ConvertImageLayout(barrier.image.layout_before);
-				barrierdesc.Transition.StateAfter = _ConvertImageLayout(barrier.image.layout_after);
+				barrierdesc.Transition.StateBefore = _ParseResourceState(barrier.image.layout_before);
+				barrierdesc.Transition.StateAfter = _ParseResourceState(barrier.image.layout_after);
 				if (barrier.image.mip >= 0 || barrier.image.slice >= 0)
 				{
 					barrierdesc.Transition.Subresource = D3D12CalcSubresource(
@@ -6475,8 +6456,8 @@ using namespace DX12_Internal;
 				barrierdesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 				barrierdesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
 				barrierdesc.Transition.pResource = to_internal(barrier.buffer.buffer)->resource.Get();
-				barrierdesc.Transition.StateBefore = _ConvertBufferState(barrier.buffer.state_before);
-				barrierdesc.Transition.StateAfter = _ConvertBufferState(barrier.buffer.state_after);
+				barrierdesc.Transition.StateBefore = _ParseResourceState(barrier.buffer.state_before);
+				barrierdesc.Transition.StateAfter = _ParseResourceState(barrier.buffer.state_after);
 				barrierdesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 			}
 			break;

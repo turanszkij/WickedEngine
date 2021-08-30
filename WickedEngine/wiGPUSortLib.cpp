@@ -86,7 +86,7 @@ namespace wiGPUSortLib
 
 			{
 				GPUBarrier barriers[] = {
-					GPUBarrier::Buffer(&indirectBuffer, BUFFER_STATE_INDIRECT_ARGUMENT, BUFFER_STATE_UNORDERED_ACCESS)
+					GPUBarrier::Buffer(&indirectBuffer, RESOURCE_STATE_INDIRECT_ARGUMENT, RESOURCE_STATE_UNORDERED_ACCESS)
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
@@ -96,7 +96,7 @@ namespace wiGPUSortLib
 			{
 				GPUBarrier barriers[] = {
 					GPUBarrier::Memory(),
-					GPUBarrier::Buffer(&indirectBuffer, BUFFER_STATE_UNORDERED_ACCESS, BUFFER_STATE_INDIRECT_ARGUMENT)
+					GPUBarrier::Buffer(&indirectBuffer, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_INDIRECT_ARGUMENT)
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}

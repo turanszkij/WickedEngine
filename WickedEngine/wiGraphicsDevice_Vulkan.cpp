@@ -399,28 +399,28 @@ namespace Vulkan_Internal
 		}
 		return VK_STENCIL_OP_KEEP;
 	}
-	constexpr VkImageLayout _ConvertImageLayout(IMAGE_LAYOUT value)
+	constexpr VkImageLayout _ConvertImageLayout(RESOURCE_STATE value)
 	{
 		switch (value)
 		{
-		case wiGraphics::IMAGE_LAYOUT_UNDEFINED:
+		case wiGraphics::RESOURCE_STATE_UNDEFINED:
 			return VK_IMAGE_LAYOUT_UNDEFINED;
-		case wiGraphics::IMAGE_LAYOUT_RENDERTARGET:
+		case wiGraphics::RESOURCE_STATE_RENDERTARGET:
 			return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		case wiGraphics::IMAGE_LAYOUT_DEPTHSTENCIL:
+		case wiGraphics::RESOURCE_STATE_DEPTHSTENCIL:
 			return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-		case wiGraphics::IMAGE_LAYOUT_DEPTHSTENCIL_READONLY:
+		case wiGraphics::RESOURCE_STATE_DEPTHSTENCIL_READONLY:
 			return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-		case wiGraphics::IMAGE_LAYOUT_SHADER_RESOURCE:
-		case wiGraphics::IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE:
+		case wiGraphics::RESOURCE_STATE_SHADER_RESOURCE:
+		case wiGraphics::RESOURCE_STATE_SHADER_RESOURCE_COMPUTE:
 			return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		case wiGraphics::IMAGE_LAYOUT_UNORDERED_ACCESS:
+		case wiGraphics::RESOURCE_STATE_UNORDERED_ACCESS:
 			return VK_IMAGE_LAYOUT_GENERAL;
-		case wiGraphics::IMAGE_LAYOUT_COPY_SRC:
+		case wiGraphics::RESOURCE_STATE_COPY_SRC:
 			return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-		case wiGraphics::IMAGE_LAYOUT_COPY_DST:
+		case wiGraphics::RESOURCE_STATE_COPY_DST:
 			return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		case wiGraphics::IMAGE_LAYOUT_SHADING_RATE_SOURCE:
+		case wiGraphics::RESOURCE_STATE_SHADING_RATE_SOURCE:
 			return VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR;
 		}
 		return VK_IMAGE_LAYOUT_UNDEFINED;
@@ -451,82 +451,66 @@ namespace Vulkan_Internal
 	}
 
 
-	inline VkAccessFlags _ParseImageLayout(IMAGE_LAYOUT value)
+	inline VkAccessFlags _ParseResourceState(RESOURCE_STATE value)
 	{
 		VkAccessFlags flags = 0;
 
-		switch (value)
+		if (value & RESOURCE_STATE_SHADER_RESOURCE)
 		{
-		case wiGraphics::IMAGE_LAYOUT_UNDEFINED:
-			break;
-		case wiGraphics::IMAGE_LAYOUT_RENDERTARGET:
-			flags |= VK_ACCESS_SHADER_WRITE_BIT;
-			break;
-		case wiGraphics::IMAGE_LAYOUT_DEPTHSTENCIL:
-			flags |= VK_ACCESS_SHADER_WRITE_BIT;
-			break;
-		case wiGraphics::IMAGE_LAYOUT_DEPTHSTENCIL_READONLY:
 			flags |= VK_ACCESS_SHADER_READ_BIT;
-			break;
-		case wiGraphics::IMAGE_LAYOUT_SHADER_RESOURCE:
-		case wiGraphics::IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE:
+			flags |= VK_ACCESS_UNIFORM_READ_BIT;
+		}
+		if (value & RESOURCE_STATE_SHADER_RESOURCE_COMPUTE)
+		{
 			flags |= VK_ACCESS_SHADER_READ_BIT;
-			break;
-		case wiGraphics::IMAGE_LAYOUT_UNORDERED_ACCESS:
+			flags |= VK_ACCESS_UNIFORM_READ_BIT;
+		}
+		if (value & RESOURCE_STATE_UNORDERED_ACCESS)
+		{
 			flags |= VK_ACCESS_SHADER_READ_BIT;
 			flags |= VK_ACCESS_SHADER_WRITE_BIT;
-			break;
-		case wiGraphics::IMAGE_LAYOUT_COPY_SRC:
+		}
+		if (value & RESOURCE_STATE_COPY_SRC)
+		{
 			flags |= VK_ACCESS_TRANSFER_READ_BIT;
-			break;
-		case wiGraphics::IMAGE_LAYOUT_COPY_DST:
+		}
+		if (value & RESOURCE_STATE_COPY_DST)
+		{
 			flags |= VK_ACCESS_TRANSFER_WRITE_BIT;
-			break;
 		}
 
-		return flags;
-	}
-	inline VkAccessFlags _ParseBufferState(BUFFER_STATE value)
-	{
-		VkAccessFlags flags = 0;
-
-		switch (value)
+		if (value & RESOURCE_STATE_RENDERTARGET)
 		{
-		case wiGraphics::BUFFER_STATE_UNDEFINED:
-			break;
-		case wiGraphics::BUFFER_STATE_VERTEX_BUFFER:
+			flags |= VK_ACCESS_SHADER_WRITE_BIT;
+		}
+		if (value & RESOURCE_STATE_DEPTHSTENCIL)
+		{
+			flags |= VK_ACCESS_SHADER_WRITE_BIT;
+		}
+		if (value & RESOURCE_STATE_DEPTHSTENCIL_READONLY)
+		{
+			flags |= VK_ACCESS_SHADER_READ_BIT;
+		}
+
+		if (value & RESOURCE_STATE_VERTEX_BUFFER)
+		{
 			flags |= VK_ACCESS_SHADER_READ_BIT;
 			flags |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
-			break;
-		case wiGraphics::BUFFER_STATE_INDEX_BUFFER:
+		}
+		if (value & RESOURCE_STATE_INDEX_BUFFER)
+		{
 			flags |= VK_ACCESS_SHADER_READ_BIT;
 			flags |= VK_ACCESS_INDEX_READ_BIT;
-			break;
-		case wiGraphics::BUFFER_STATE_CONSTANT_BUFFER:
+		}
+		if (value & RESOURCE_STATE_CONSTANT_BUFFER)
+		{
 			flags |= VK_ACCESS_SHADER_READ_BIT;
 			flags |= VK_ACCESS_UNIFORM_READ_BIT;
-			break;
-		case wiGraphics::BUFFER_STATE_INDIRECT_ARGUMENT:
+		}
+		if (value & RESOURCE_STATE_INDIRECT_ARGUMENT)
+		{
 			flags |= VK_ACCESS_SHADER_READ_BIT;
 			flags |= VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
-			break;
-		case wiGraphics::BUFFER_STATE_SHADER_RESOURCE:
-		case wiGraphics::BUFFER_STATE_SHADER_RESOURCE_COMPUTE:
-			flags |= VK_ACCESS_SHADER_READ_BIT;
-			flags |= VK_ACCESS_UNIFORM_READ_BIT;
-			break;
-		case wiGraphics::BUFFER_STATE_UNORDERED_ACCESS:
-			flags |= VK_ACCESS_SHADER_READ_BIT;
-			flags |= VK_ACCESS_SHADER_WRITE_BIT;
-			break;
-		case wiGraphics::BUFFER_STATE_COPY_SRC:
-			flags |= VK_ACCESS_TRANSFER_READ_BIT;
-			break;
-		case wiGraphics::BUFFER_STATE_COPY_DST:
-			flags |= VK_ACCESS_TRANSFER_WRITE_BIT;
-			break;
-		default:
-			break;
 		}
 
 		return flags;
@@ -3567,7 +3551,7 @@ using namespace Vulkan_Internal;
 				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 				barrier.newLayout = _ConvertImageLayout(pTexture->desc.layout);
 				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-				barrier.dstAccessMask = _ParseImageLayout(pTexture->desc.layout);
+				barrier.dstAccessMask = _ParseResourceState(pTexture->desc.layout);
 
 				initLocker.lock();
 				vkCmdPipelineBarrier(
@@ -3591,7 +3575,7 @@ using namespace Vulkan_Internal;
 			barrier.oldLayout = imageInfo.initialLayout;
 			barrier.newLayout = _ConvertImageLayout(pTexture->desc.layout);
 			barrier.srcAccessMask = 0;
-			barrier.dstAccessMask = _ParseImageLayout(pTexture->desc.layout);
+			barrier.dstAccessMask = _ParseResourceState(pTexture->desc.layout);
 			if (pTexture->desc.BindFlags & BIND_DEPTH_STENCIL)
 			{
 				barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
@@ -6913,8 +6897,8 @@ using namespace Vulkan_Internal;
 				barrierdesc.image = internal_state->resource;
 				barrierdesc.oldLayout = _ConvertImageLayout(barrier.image.layout_before);
 				barrierdesc.newLayout = _ConvertImageLayout(barrier.image.layout_after);
-				barrierdesc.srcAccessMask = _ParseImageLayout(barrier.image.layout_before);
-				barrierdesc.dstAccessMask = _ParseImageLayout(barrier.image.layout_after);
+				barrierdesc.srcAccessMask = _ParseResourceState(barrier.image.layout_before);
+				barrierdesc.dstAccessMask = _ParseResourceState(barrier.image.layout_after);
 				if (desc.BindFlags & BIND_DEPTH_STENCIL)
 				{
 					barrierdesc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
@@ -6978,8 +6962,8 @@ using namespace Vulkan_Internal;
 				barrierdesc.buffer = internal_state->resource;
 				barrierdesc.size = barrier.buffer.buffer->GetDesc().ByteWidth;
 				barrierdesc.offset = 0;
-				barrierdesc.srcAccessMask = _ParseBufferState(barrier.buffer.state_before);
-				barrierdesc.dstAccessMask = _ParseBufferState(barrier.buffer.state_after);
+				barrierdesc.srcAccessMask = _ParseResourceState(barrier.buffer.state_before);
+				barrierdesc.dstAccessMask = _ParseResourceState(barrier.buffer.state_after);
 				barrierdesc.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 				barrierdesc.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 

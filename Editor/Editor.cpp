@@ -238,9 +238,9 @@ void EditorComponent::ResizeBuffers()
 					renderPath->GetDepthStencil(),
 					RenderPassAttachment::LOADOP_LOAD,
 					RenderPassAttachment::STOREOP_STORE,
-					IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
-					IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
-					IMAGE_LAYOUT_DEPTHSTENCIL_READONLY
+					RESOURCE_STATE_DEPTHSTENCIL_READONLY,
+					RESOURCE_STATE_DEPTHSTENCIL_READONLY,
+					RESOURCE_STATE_DEPTHSTENCIL_READONLY
 				)
 			);
 			hr = device->CreateRenderPass(&desc, &renderpass_selectionOutline[0]);

@@ -46,7 +46,7 @@ void RenderPath3D::ResizeBuffers()
 		TextureDesc desc;
 		desc.Width = internalResolution.x;
 		desc.Height = internalResolution.y;
-		desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
+		desc.layout = RESOURCE_STATE_SHADER_RESOURCE_COMPUTE;
 		desc.SampleCount = 1;
 
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
@@ -150,7 +150,7 @@ void RenderPath3D::ResizeBuffers()
 		desc.Format = FORMAT_R32G32B32A32_UINT;
 		desc.Width = internalResolution.x / 2;
 		desc.Height = internalResolution.y / 2;
-		desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
+		desc.layout = RESOURCE_STATE_SHADER_RESOURCE_COMPUTE;
 		device->CreateTexture(&desc, nullptr, &rtShadow);
 		device->SetName(&rtShadow, "rtShadow");
 	}
@@ -230,7 +230,7 @@ void RenderPath3D::ResizeBuffers()
 		uint32_t tileSize = device->GetVariableRateShadingTileSize();
 
 		TextureDesc desc;
-		desc.layout = IMAGE_LAYOUT_UNORDERED_ACCESS;
+		desc.layout = RESOURCE_STATE_UNORDERED_ACCESS;
 		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADING_RATE;
 		desc.Format = FORMAT_R8_UINT;
 		desc.Width = (internalResolution.x + tileSize - 1) / tileSize;
@@ -247,13 +247,13 @@ void RenderPath3D::ResizeBuffers()
 		desc.Height = internalResolution.y;
 
 		desc.SampleCount = getMSAASampleCount();
-		desc.layout = IMAGE_LAYOUT_DEPTHSTENCIL_READONLY;
+		desc.layout = RESOURCE_STATE_DEPTHSTENCIL_READONLY;
 		desc.Format = FORMAT_R32G8X24_TYPELESS;
 		desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
 		device->CreateTexture(&desc, nullptr, &depthBuffer_Main);
 		device->SetName(&depthBuffer_Main, "depthBuffer_Main");
 
-		desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
+		desc.layout = RESOURCE_STATE_SHADER_RESOURCE_COMPUTE;
 		desc.Format = FORMAT_R32_FLOAT;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.SampleCount = 1;
@@ -282,7 +282,7 @@ void RenderPath3D::ResizeBuffers()
 		desc.Format = FORMAT_R32_TYPELESS;
 		desc.Width = internalResolution.x / 4;
 		desc.Height = internalResolution.y / 4;
-		desc.layout = IMAGE_LAYOUT_DEPTHSTENCIL_READONLY;
+		desc.layout = RESOURCE_STATE_DEPTHSTENCIL_READONLY;
 		device->CreateTexture(&desc, nullptr, &depthBuffer_Reflection);
 		device->SetName(&depthBuffer_Reflection, "depthBuffer_Reflection");
 	}
@@ -293,7 +293,7 @@ void RenderPath3D::ResizeBuffers()
 		desc.Width = internalResolution.x;
 		desc.Height = internalResolution.y;
 		desc.MipLevels = 6;
-		desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
+		desc.layout = RESOURCE_STATE_SHADER_RESOURCE_COMPUTE;
 		device->CreateTexture(&desc, nullptr, &rtLinearDepth);
 		device->SetName(&rtLinearDepth, "rtLinearDepth");
 
@@ -315,9 +315,9 @@ void RenderPath3D::ResizeBuffers()
 				&depthBuffer_Main,
 				RenderPassAttachment::LOADOP_CLEAR,
 				RenderPassAttachment::STOREOP_STORE,
-				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
-				IMAGE_LAYOUT_DEPTHSTENCIL,
-				IMAGE_LAYOUT_SHADER_RESOURCE
+				RESOURCE_STATE_DEPTHSTENCIL_READONLY,
+				RESOURCE_STATE_DEPTHSTENCIL,
+				RESOURCE_STATE_SHADER_RESOURCE
 			)
 		);
 		desc.attachments.push_back(
@@ -325,9 +325,9 @@ void RenderPath3D::ResizeBuffers()
 				&rtPrimitiveID_render,
 				RenderPassAttachment::LOADOP_DONTCARE,
 				RenderPassAttachment::STOREOP_STORE,
-				IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE,
-				IMAGE_LAYOUT_RENDERTARGET,
-				IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE
+				RESOURCE_STATE_SHADER_RESOURCE_COMPUTE,
+				RESOURCE_STATE_RENDERTARGET,
+				RESOURCE_STATE_SHADER_RESOURCE_COMPUTE
 			)
 		);
 		device->CreateRenderPass(&desc, &renderpass_depthprepass);
@@ -339,9 +339,9 @@ void RenderPath3D::ResizeBuffers()
 				&depthBuffer_Main,
 				RenderPassAttachment::LOADOP_LOAD,
 				RenderPassAttachment::STOREOP_STORE,
-				IMAGE_LAYOUT_SHADER_RESOURCE,
-				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
-				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY
+				RESOURCE_STATE_SHADER_RESOURCE,
+				RESOURCE_STATE_DEPTHSTENCIL_READONLY,
+				RESOURCE_STATE_DEPTHSTENCIL_READONLY
 			)
 		);
 		if (getMSAASampleCount() > 1)
@@ -351,7 +351,7 @@ void RenderPath3D::ResizeBuffers()
 
 		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2))
 		{
-			desc.attachments.push_back(RenderPassAttachment::ShadingRateSource(&rtShadingRate, IMAGE_LAYOUT_UNORDERED_ACCESS, IMAGE_LAYOUT_UNORDERED_ACCESS));
+			desc.attachments.push_back(RenderPassAttachment::ShadingRateSource(&rtShadingRate, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_UNORDERED_ACCESS));
 		}
 
 		device->CreateRenderPass(&desc, &renderpass_main);
@@ -364,9 +364,9 @@ void RenderPath3D::ResizeBuffers()
 				&depthBuffer_Main,
 				RenderPassAttachment::LOADOP_LOAD,
 				RenderPassAttachment::STOREOP_STORE,
-				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
-				IMAGE_LAYOUT_DEPTHSTENCIL,
-				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY
+				RESOURCE_STATE_DEPTHSTENCIL_READONLY,
+				RESOURCE_STATE_DEPTHSTENCIL,
+				RESOURCE_STATE_DEPTHSTENCIL_READONLY
 			)
 		);
 		if (getMSAASampleCount() > 1)
@@ -382,9 +382,9 @@ void RenderPath3D::ResizeBuffers()
 				&depthBuffer_Reflection,
 				RenderPassAttachment::LOADOP_CLEAR,
 				RenderPassAttachment::STOREOP_STORE,
-				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
-				IMAGE_LAYOUT_DEPTHSTENCIL,
-				IMAGE_LAYOUT_SHADER_RESOURCE
+				RESOURCE_STATE_DEPTHSTENCIL_READONLY,
+				RESOURCE_STATE_DEPTHSTENCIL,
+				RESOURCE_STATE_SHADER_RESOURCE
 			)
 		);
 
@@ -397,9 +397,9 @@ void RenderPath3D::ResizeBuffers()
 				&rtReflection,
 				RenderPassAttachment::LOADOP_DONTCARE,
 				RenderPassAttachment::STOREOP_STORE,
-				IMAGE_LAYOUT_SHADER_RESOURCE,
-				IMAGE_LAYOUT_RENDERTARGET,
-				IMAGE_LAYOUT_SHADER_RESOURCE
+				RESOURCE_STATE_SHADER_RESOURCE,
+				RESOURCE_STATE_RENDERTARGET,
+				RESOURCE_STATE_SHADER_RESOURCE
 			)
 		);
 		desc.attachments.push_back(
@@ -407,9 +407,9 @@ void RenderPath3D::ResizeBuffers()
 				&depthBuffer_Reflection, 
 				RenderPassAttachment::LOADOP_LOAD, 
 				RenderPassAttachment::STOREOP_DONTCARE,
-				IMAGE_LAYOUT_SHADER_RESOURCE,
-				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
-				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY
+				RESOURCE_STATE_SHADER_RESOURCE,
+				RESOURCE_STATE_DEPTHSTENCIL_READONLY,
+				RESOURCE_STATE_DEPTHSTENCIL_READONLY
 			)
 		);
 
@@ -428,9 +428,9 @@ void RenderPath3D::ResizeBuffers()
 				&depthBuffer_Main,
 				RenderPassAttachment::LOADOP_LOAD,
 				RenderPassAttachment::STOREOP_STORE,
-				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
-				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
-				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY
+				RESOURCE_STATE_DEPTHSTENCIL_READONLY,
+				RESOURCE_STATE_DEPTHSTENCIL_READONLY,
+				RESOURCE_STATE_DEPTHSTENCIL_READONLY
 			)
 		);
 		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtSun[0], RenderPassAttachment::LOADOP_CLEAR));
@@ -456,9 +456,9 @@ void RenderPath3D::ResizeBuffers()
 				&depthBuffer_Main,
 				RenderPassAttachment::LOADOP_LOAD,
 				RenderPassAttachment::STOREOP_STORE,
-				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
-				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
-				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY
+				RESOURCE_STATE_DEPTHSTENCIL_READONLY,
+				RESOURCE_STATE_DEPTHSTENCIL_READONLY,
+				RESOURCE_STATE_DEPTHSTENCIL_READONLY
 			)
 		);
 
@@ -964,7 +964,7 @@ void RenderPath3D::Render() const
 
 		if (wiRenderer::GetRaytracedShadowsEnabled() || wiRenderer::GetScreenSpaceShadowsEnabled())
 		{
-			GPUBarrier barrier = GPUBarrier::Image(&rtShadow, rtShadow.desc.layout, IMAGE_LAYOUT_SHADER_RESOURCE);
+			GPUBarrier barrier = GPUBarrier::Image(&rtShadow, rtShadow.desc.layout, RESOURCE_STATE_SHADER_RESOURCE);
 			device->Barrier(&barrier, 1, cmd);
 			device->BindResource(&rtShadow, TEXSLOT_RENDERPATH_RTSHADOW, cmd);
 		}
@@ -1003,7 +1003,7 @@ void RenderPath3D::Render() const
 
 		if (wiRenderer::GetRaytracedShadowsEnabled() || wiRenderer::GetScreenSpaceShadowsEnabled())
 		{
-			GPUBarrier barrier = GPUBarrier::Image(&rtShadow, IMAGE_LAYOUT_SHADER_RESOURCE, rtShadow.desc.layout);
+			GPUBarrier barrier = GPUBarrier::Image(&rtShadow, RESOURCE_STATE_SHADER_RESOURCE, rtShadow.desc.layout);
 			device->Barrier(&barrier, 1, cmd);
 		}
 
@@ -1517,7 +1517,7 @@ void RenderPath3D::setAO(AO value)
 	TextureDesc desc;
 	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 	desc.Format = FORMAT_R8_UNORM;
-	desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE;
+	desc.layout = RESOURCE_STATE_SHADER_RESOURCE_COMPUTE;
 
 	switch (ao)
 	{

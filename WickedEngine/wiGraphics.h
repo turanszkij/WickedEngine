@@ -291,33 +291,7 @@ namespace wiGraphics
 		RTV, // render target view
 		DSV, // depth stencil view
 	};
-	enum IMAGE_LAYOUT
-	{
-		IMAGE_LAYOUT_UNDEFINED,					// invalid state
-		IMAGE_LAYOUT_RENDERTARGET,				// render target, write enabled
-		IMAGE_LAYOUT_DEPTHSTENCIL,				// depth stencil, write enabled
-		IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,		// depth stencil, read only
-		IMAGE_LAYOUT_SHADER_RESOURCE,			// shader resource, read only
-		IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE,	// shader resource, read only, non-pixel shader
-		IMAGE_LAYOUT_UNORDERED_ACCESS,			// shader resource, write enabled
-		IMAGE_LAYOUT_COPY_SRC,					// copy from
-		IMAGE_LAYOUT_COPY_DST,					// copy to
-		IMAGE_LAYOUT_SHADING_RATE_SOURCE,		// shading rate control per tile
-	};
-	enum BUFFER_STATE
-	{
-		BUFFER_STATE_UNDEFINED,					// invalid state
-		BUFFER_STATE_VERTEX_BUFFER,				// vertex buffer, read only
-		BUFFER_STATE_INDEX_BUFFER,				// index buffer, read only
-		BUFFER_STATE_CONSTANT_BUFFER,			// constant buffer, read only
-		BUFFER_STATE_INDIRECT_ARGUMENT,			// argument buffer to DrawIndirect() or DispatchIndirect()
-		BUFFER_STATE_SHADER_RESOURCE,			// shader resource, read only
-		BUFFER_STATE_SHADER_RESOURCE_COMPUTE,	// shader resource, read only, non-pixel shader
-		BUFFER_STATE_UNORDERED_ACCESS,			// shader resource, write enabled
-		BUFFER_STATE_COPY_SRC,					// copy from
-		BUFFER_STATE_COPY_DST,					// copy to
-		BUFFER_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
-	};
+
 	enum SHADING_RATE
 	{
 		SHADING_RATE_1X1,
@@ -372,6 +346,29 @@ namespace wiGraphics
 		GRAPHICSDEVICE_CAPABILITY_MESH_SHADER = 1 << 8,
 		GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS = 1 << 9,
 		GRAPHICSDEVICE_CAPABILITY_RAYTRACING = 1 << 10,
+	};
+	enum RESOURCE_STATE
+	{
+		// Common resource states:
+		RESOURCE_STATE_UNDEFINED = 0,						// invalid state
+		RESOURCE_STATE_SHADER_RESOURCE = 1 << 0,			// shader resource, read only
+		RESOURCE_STATE_SHADER_RESOURCE_COMPUTE = 1 << 1,	// shader resource, read only, non-pixel shader
+		RESOURCE_STATE_UNORDERED_ACCESS = 1 << 2,			// shader resource, write enabled
+		RESOURCE_STATE_COPY_SRC = 1 << 3,					// copy from
+		RESOURCE_STATE_COPY_DST = 1 << 4,					// copy to
+
+		// Texture specific resource states:
+		RESOURCE_STATE_RENDERTARGET = 1 << 5,				// render target, write enabled
+		RESOURCE_STATE_DEPTHSTENCIL = 1 << 6,				// depth stencil, write enabled
+		RESOURCE_STATE_DEPTHSTENCIL_READONLY = 1 << 7,		// depth stencil, read only
+		RESOURCE_STATE_SHADING_RATE_SOURCE = 1 << 8,		// shading rate control per tile
+
+		// GPUBuffer specific resource states:
+		RESOURCE_STATE_VERTEX_BUFFER = 1 << 9,				// vertex buffer, read only
+		RESOURCE_STATE_INDEX_BUFFER = 1 << 10,				// index buffer, read only
+		RESOURCE_STATE_CONSTANT_BUFFER = 1 << 11,			// constant buffer, read only
+		RESOURCE_STATE_INDIRECT_ARGUMENT = 1 << 12,			// argument buffer to DrawIndirect() or DispatchIndirect()
+		RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE = 1 << 13, // acceleration structure storage or scratch
 	};
 
 	// Descriptor structs:
@@ -429,7 +426,7 @@ namespace wiGraphics
 		uint32_t CPUAccessFlags = 0;
 		uint32_t MiscFlags = 0;
 		ClearValue clear = {};
-		IMAGE_LAYOUT layout = IMAGE_LAYOUT_SHADER_RESOURCE;
+		RESOURCE_STATE layout = RESOURCE_STATE_SHADER_RESOURCE;
 	};
 	struct SamplerDesc
 	{
@@ -542,16 +539,16 @@ namespace wiGraphics
 		struct Image
 		{
 			const Texture* texture;
-			IMAGE_LAYOUT layout_before;
-			IMAGE_LAYOUT layout_after;
+			RESOURCE_STATE layout_before;
+			RESOURCE_STATE layout_after;
 			int mip;
 			int slice;
 		};
 		struct Buffer
 		{
 			const GPUBuffer* buffer;
-			BUFFER_STATE state_before;
-			BUFFER_STATE state_after;
+			RESOURCE_STATE state_before;
+			RESOURCE_STATE state_after;
 		};
 		union
 		{
@@ -567,7 +564,7 @@ namespace wiGraphics
 			barrier.memory.resource = resource;
 			return barrier;
 		}
-		static GPUBarrier Image(const Texture* texture, IMAGE_LAYOUT before, IMAGE_LAYOUT after,
+		static GPUBarrier Image(const Texture* texture, RESOURCE_STATE before, RESOURCE_STATE after,
 			int mip = -1, int slice = -1)
 		{
 			GPUBarrier barrier;
@@ -579,7 +576,7 @@ namespace wiGraphics
 			barrier.image.slice = slice;
 			return barrier;
 		}
-		static GPUBarrier Buffer(const GPUBuffer* buffer, BUFFER_STATE before, BUFFER_STATE after)
+		static GPUBarrier Buffer(const GPUBuffer* buffer, RESOURCE_STATE before, RESOURCE_STATE after)
 		{
 			GPUBarrier barrier;
 			barrier.type = BUFFER_BARRIER;
@@ -611,17 +608,17 @@ namespace wiGraphics
 			STOREOP_STORE,
 			STOREOP_DONTCARE,
 		} storeop = STOREOP_STORE;
-		IMAGE_LAYOUT initial_layout = IMAGE_LAYOUT_UNDEFINED;	// layout before the render pass
-		IMAGE_LAYOUT subpass_layout = IMAGE_LAYOUT_UNDEFINED;	// layout within the render pass
-		IMAGE_LAYOUT final_layout = IMAGE_LAYOUT_UNDEFINED;		// layout after the render pass
+		RESOURCE_STATE initial_layout = RESOURCE_STATE_UNDEFINED;	// layout before the render pass
+		RESOURCE_STATE subpass_layout = RESOURCE_STATE_UNDEFINED;	// layout within the render pass
+		RESOURCE_STATE final_layout = RESOURCE_STATE_UNDEFINED;		// layout after the render pass
 
 		static RenderPassAttachment RenderTarget(
 			const Texture* resource = nullptr,
 			LOAD_OPERATION load_op = LOADOP_LOAD,
 			STORE_OPERATION store_op = STOREOP_STORE,
-			IMAGE_LAYOUT initial_layout = IMAGE_LAYOUT_SHADER_RESOURCE,
-			IMAGE_LAYOUT subpass_layout = IMAGE_LAYOUT_RENDERTARGET,
-			IMAGE_LAYOUT final_layout = IMAGE_LAYOUT_SHADER_RESOURCE
+			RESOURCE_STATE initial_layout = RESOURCE_STATE_SHADER_RESOURCE,
+			RESOURCE_STATE subpass_layout = RESOURCE_STATE_RENDERTARGET,
+			RESOURCE_STATE final_layout = RESOURCE_STATE_SHADER_RESOURCE
 		)
 		{
 			RenderPassAttachment attachment;
@@ -639,9 +636,9 @@ namespace wiGraphics
 			const Texture* resource = nullptr,
 			LOAD_OPERATION load_op = LOADOP_LOAD,
 			STORE_OPERATION store_op = STOREOP_STORE,
-			IMAGE_LAYOUT initial_layout = IMAGE_LAYOUT_DEPTHSTENCIL,
-			IMAGE_LAYOUT subpass_layout = IMAGE_LAYOUT_DEPTHSTENCIL,
-			IMAGE_LAYOUT final_layout = IMAGE_LAYOUT_DEPTHSTENCIL
+			RESOURCE_STATE initial_layout = RESOURCE_STATE_DEPTHSTENCIL,
+			RESOURCE_STATE subpass_layout = RESOURCE_STATE_DEPTHSTENCIL,
+			RESOURCE_STATE final_layout = RESOURCE_STATE_DEPTHSTENCIL
 		)
 		{
 			RenderPassAttachment attachment;
@@ -657,8 +654,8 @@ namespace wiGraphics
 
 		static RenderPassAttachment Resolve(
 			const Texture* resource = nullptr,
-			IMAGE_LAYOUT initial_layout = IMAGE_LAYOUT_SHADER_RESOURCE,
-			IMAGE_LAYOUT final_layout = IMAGE_LAYOUT_SHADER_RESOURCE
+			RESOURCE_STATE initial_layout = RESOURCE_STATE_SHADER_RESOURCE,
+			RESOURCE_STATE final_layout = RESOURCE_STATE_SHADER_RESOURCE
 		)
 		{
 			RenderPassAttachment attachment;
@@ -671,15 +668,15 @@ namespace wiGraphics
 
 		static RenderPassAttachment ShadingRateSource(
 			const Texture* resource = nullptr,
-			IMAGE_LAYOUT initial_layout = IMAGE_LAYOUT_SHADING_RATE_SOURCE,
-			IMAGE_LAYOUT final_layout = IMAGE_LAYOUT_SHADING_RATE_SOURCE
+			RESOURCE_STATE initial_layout = RESOURCE_STATE_SHADING_RATE_SOURCE,
+			RESOURCE_STATE final_layout = RESOURCE_STATE_SHADING_RATE_SOURCE
 		)
 		{
 			RenderPassAttachment attachment;
 			attachment.type = SHADING_RATE_SOURCE;
 			attachment.texture = resource;
 			attachment.initial_layout = initial_layout;
-			attachment.subpass_layout = IMAGE_LAYOUT_SHADING_RATE_SOURCE;
+			attachment.subpass_layout = RESOURCE_STATE_SHADING_RATE_SOURCE;
 			attachment.final_layout = final_layout;
 			return attachment;
 		}

@@ -118,7 +118,7 @@ namespace wiHelper
 		staging_desc.BindFlags = 0;
 		staging_desc.MiscFlags = 0;
 		staging_desc.MipLevels = 1;
-		staging_desc.layout = IMAGE_LAYOUT_COPY_DST;
+		staging_desc.layout = RESOURCE_STATE_COPY_DST;
 		bool success = device->CreateTexture(&staging_desc, nullptr, &stagingTex);
 		assert(success);
 
@@ -126,7 +126,7 @@ namespace wiHelper
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&texture, texture.desc.layout, IMAGE_LAYOUT_COPY_SRC, 0)
+				GPUBarrier::Image(&texture, texture.desc.layout, RESOURCE_STATE_COPY_SRC, 0)
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -135,7 +135,7 @@ namespace wiHelper
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&texture, IMAGE_LAYOUT_COPY_SRC, texture.desc.layout, 0)
+				GPUBarrier::Image(&texture, RESOURCE_STATE_COPY_SRC, texture.desc.layout, 0)
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}

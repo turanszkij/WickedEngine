@@ -2907,14 +2907,14 @@ namespace wiScene
 			desc.BindFlags = BIND_DEPTH_STENCIL;
 			desc.ArraySize = 1;
 			desc.Format = FORMAT_D16_UNORM;
-			desc.layout = IMAGE_LAYOUT_DEPTHSTENCIL;
+			desc.layout = RESOURCE_STATE_DEPTHSTENCIL;
 			device->CreateTexture(&desc, nullptr, &impostorDepthStencil);
 			device->SetName(&impostorDepthStencil, "impostorDepthStencil");
 
 			desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 			desc.ArraySize = maxImpostorCount * impostorCaptureAngles * 3;
 			desc.Format = FORMAT_R8G8B8A8_UNORM;
-			desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE;
+			desc.layout = RESOURCE_STATE_SHADER_RESOURCE;
 
 			device->CreateTexture(&desc, nullptr, &impostorArray);
 			device->SetName(&impostorArray, "impostorArray");
@@ -3288,7 +3288,7 @@ namespace wiScene
 			desc.MipLevels = 1;
 			desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
 			desc.Usage = USAGE_DEFAULT;
-			desc.layout = IMAGE_LAYOUT_DEPTHSTENCIL;
+			desc.layout = RESOURCE_STATE_DEPTHSTENCIL;
 
 			device->CreateTexture(&desc, nullptr, &envrenderingDepthBuffer);
 			device->SetName(&envrenderingDepthBuffer, "envrenderingDepthBuffer");
@@ -3302,7 +3302,7 @@ namespace wiScene
 			desc.MipLevels = envmapMIPs;
 			desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
 			desc.Usage = USAGE_DEFAULT;
-			desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE;
+			desc.layout = RESOURCE_STATE_SHADER_RESOURCE;
 
 			device->CreateTexture(&desc, nullptr, &envmapArray);
 			device->SetName(&envmapArray, "envmapArray");

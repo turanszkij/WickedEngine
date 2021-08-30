@@ -55,7 +55,7 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 
 #ifdef OPEN_IMAGE_DENOISE
 		desc.BindFlags = BIND_UNORDERED_ACCESS;
-		desc.layout = IMAGE_LAYOUT_UNORDERED_ACCESS;
+		desc.layout = RESOURCE_STATE_UNORDERED_ACCESS;
 		device->CreateTexture(&desc, nullptr, &denoiserAlbedo);
 		device->SetName(&denoiserAlbedo, "denoiserAlbedo");
 		device->CreateTexture(&desc, nullptr, &denoiserNormal);
