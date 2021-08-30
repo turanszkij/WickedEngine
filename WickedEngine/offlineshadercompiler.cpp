@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
 	if (targets.empty())
 	{
 		targets = {
-			{ wiGraphics::SHADERFORMAT_HLSL5, "shaders/hlsl5/" },
+			//{ wiGraphics::SHADERFORMAT_HLSL5, "shaders/hlsl5/" },
 			{ wiGraphics::SHADERFORMAT_HLSL6, "shaders/hlsl6/" },
 			{ wiGraphics::SHADERFORMAT_SPIRV, "shaders/spirv/" },
 		};

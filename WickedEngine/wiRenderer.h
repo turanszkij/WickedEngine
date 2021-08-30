@@ -69,7 +69,7 @@ namespace wiRenderer
 		wiGraphics::SHADERSTAGE stage,
 		wiGraphics::Shader& shader,
 		const std::string& filename,
-		wiGraphics::SHADERMODEL minshadermodel = wiGraphics::SHADERMODEL_5_0
+		wiGraphics::SHADERMODEL minshadermodel = wiGraphics::SHADERMODEL_6_0
 	);
 
 
