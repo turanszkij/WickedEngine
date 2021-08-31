@@ -25,8 +25,6 @@
 #include "shaders/ShaderInterop_Skinning.h"
 #include "shaders/ShaderInterop_Raytracing.h"
 #include "shaders/ShaderInterop_BVH.h"
-#include "shaders/ShaderInterop_Utility.h"
-#include "shaders/ShaderInterop_Paint.h"
 #include "shaders/ShaderInterop_SurfelGI.h"
 
 #include <algorithm>
@@ -1845,18 +1843,6 @@ void LoadBuffers()
 	bd.ByteWidth = sizeof(RaytracingCB);
 	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_RAYTRACE]);
 	device->SetName(&constantBuffers[CBTYPE_RAYTRACE], "RayTraceCB");
-
-	bd.ByteWidth = sizeof(GenerateMIPChainCB);
-	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_MIPGEN]);
-	device->SetName(&constantBuffers[CBTYPE_MIPGEN], "MipGeneratorCB");
-
-	bd.ByteWidth = sizeof(FilterEnvmapCB);
-	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_FILTERENVMAP]);
-	device->SetName(&constantBuffers[CBTYPE_FILTERENVMAP], "FilterEnvmapCB");
-
-	bd.ByteWidth = sizeof(CopyTextureCB);
-	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_COPYTEXTURE]);
-	device->SetName(&constantBuffers[CBTYPE_COPYTEXTURE], "CopyTextureCB");
 
 	bd.ByteWidth = sizeof(ForwardEntityMaskCB);
 	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_FORWARDENTITYMASK]);
@@ -6420,8 +6406,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 				cb.filterArrayIndex = arrayIndex;
 				cb.filterRoughness = (float)i / (float)desc.MipLevels;
 				cb.filterRayCount = 128;
-				device->UpdateBuffer(&constantBuffers[CBTYPE_FILTERENVMAP], &cb, cmd);
-				device->BindConstantBuffer(&constantBuffers[CBTYPE_FILTERENVMAP], CB_GETBINDSLOT(FilterEnvmapCB), cmd);
+				device->PushConstants(&cb, sizeof(cb), cmd);
 
 				device->Dispatch(
 					std::max(1u, (uint32_t)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
@@ -6943,8 +6928,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 					cb.outputResolution_rcp.y = 1.0f / cb.outputResolution.y;
 					cb.arrayIndex = options.arrayIndex;
 					cb.mipgen_options = 0;
-					device->UpdateBuffer(&constantBuffers[CBTYPE_MIPGEN], &cb, cmd);
-					device->BindConstantBuffer(&constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), cmd);
+					device->PushConstants(&cb, sizeof(cb), cmd);
 
 					device->Dispatch(
 						std::max(1u, (desc.Width + GENERATEMIPCHAIN_2D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_2D_BLOCK_SIZE),
@@ -7000,8 +6984,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 					cb.outputResolution_rcp.y = 1.0f / cb.outputResolution.y;
 					cb.arrayIndex = 0;
 					cb.mipgen_options = 0;
-					device->UpdateBuffer(&constantBuffers[CBTYPE_MIPGEN], &cb, cmd);
-					device->BindConstantBuffer(&constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), cmd);
+					device->PushConstants(&cb, sizeof(cb), cmd);
 
 					device->Dispatch(
 						std::max(1u, (desc.Width + GENERATEMIPCHAIN_2D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_2D_BLOCK_SIZE),
@@ -7075,8 +7058,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 				{
 					cb.mipgen_options |= MIPGEN_OPTION_BIT_PRESERVE_COVERAGE;
 				}
-				device->UpdateBuffer(&constantBuffers[CBTYPE_MIPGEN], &cb, cmd);
-				device->BindConstantBuffer(&constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), cmd);
+				device->PushConstants(&cb, sizeof(cb), cmd);
 
 				device->Dispatch(
 					std::max(1u, (desc.Width + GENERATEMIPCHAIN_2D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_2D_BLOCK_SIZE),
@@ -7133,8 +7115,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 			cb.outputResolution_rcp.z = 1.0f / cb.outputResolution.z;
 			cb.arrayIndex = options.arrayIndex >= 0 ? (uint)options.arrayIndex : 0;
 			cb.mipgen_options = 0;
-			device->UpdateBuffer(&constantBuffers[CBTYPE_MIPGEN], &cb, cmd);
-			device->BindConstantBuffer(&constantBuffers[CBTYPE_MIPGEN], CB_GETBINDSLOT(GenerateMIPChainCB), cmd);
+			device->PushConstants(&cb, sizeof(cb), cmd);
 
 			device->Dispatch(
 				std::max(1u, (desc.Width + GENERATEMIPCHAIN_3D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_3D_BLOCK_SIZE),
@@ -7201,9 +7182,7 @@ void CopyTexture2D(const Texture& dst, int DstMIP, int DstX, int DstY, const Tex
 	cb.xCopySrcSize.y = desc_src.Height >> SrcMIP;
 	cb.xCopySrcMIP = SrcMIP;
 	cb.xCopyBorderExpandStyle = (uint)borderExpand;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_COPYTEXTURE], &cb, cmd);
-
-	device->BindConstantBuffer(&constantBuffers[CBTYPE_COPYTEXTURE], CB_GETBINDSLOT(CopyTextureCB), cmd);
+	device->PushConstants(&cb, sizeof(cb), cmd);
 
 	device->BindResource(&src, TEXSLOT_ONDEMAND0, cmd);
 

@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Editor.h"
 #include "PaintToolWindow.h"
-#include "shaders/ShaderInterop_Paint.h"
+#include "shaders/ShaderInterop_Renderer.h"
 
 #include <sstream>
 #include <cmath>
@@ -328,8 +328,7 @@ void PaintToolWindow::Update(float dt)
 			cb.xPaintBrushAmount = amount;
 			cb.xPaintBrushFalloff = falloff;
 			cb.xPaintBrushColor = color.rgba;
-			device->UpdateBuffer(&cbuf, &cb, cmd);
-			device->BindConstantBuffer(&cbuf, CB_GETBINDSLOT(PaintTextureCB), cmd);
+			device->PushConstants(&cb, sizeof(cb), cmd);
 
 			const uint diameter = cb.xPaintBrushRadius * 2;
 			const uint dispatch_dim = (diameter + PAINT_TEXTURE_BLOCKSIZE - 1) / PAINT_TEXTURE_BLOCKSIZE;

@@ -882,4 +882,62 @@ CBUFFER(CubemapRenderCB, CBSLOT_RENDERER_CUBEMAPRENDER)
 };
 
 
+// MIP Generator params:
+#define GENERATEMIPCHAIN_1D_BLOCK_SIZE 64
+#define GENERATEMIPCHAIN_2D_BLOCK_SIZE 8
+#define GENERATEMIPCHAIN_3D_BLOCK_SIZE 4
+
+struct GenerateMIPChainCB
+{
+	uint3 outputResolution;
+	uint arrayIndex;
+	float3 outputResolution_rcp;
+	uint mipgen_options;
+};
+static const uint MIPGEN_OPTION_BIT_PRESERVE_COVERAGE = 1 << 0;
+
+struct FilterEnvmapCB
+{
+	uint2 filterResolution;
+	float2 filterResolution_rcp;
+	uint filterArrayIndex;
+	float filterRoughness;
+	uint filterRayCount;
+	uint padding_filterCB;
+};
+
+// CopyTexture2D params:
+struct CopyTextureCB
+{
+	int2 xCopyDest;
+	int2 xCopySrcSize;
+	int2 padding0;
+	int  xCopySrcMIP;
+	int  xCopyBorderExpandStyle;
+};
+
+
+static const uint PAINT_TEXTURE_BLOCKSIZE = 8;
+
+struct PaintTextureCB
+{
+	uint2 xPaintBrushCenter;
+	uint xPaintBrushRadius;
+	float xPaintBrushAmount;
+
+	float xPaintBrushFalloff;
+	uint xPaintBrushColor;
+	uint2 padding0;
+};
+
+CBUFFER(PaintRadiusCB, CBSLOT_RENDERER_MISC)
+{
+	uint2 xPaintRadResolution;
+	uint2 xPaintRadCenter;
+	uint xPaintRadUVSET;
+	float xPaintRadRadius;
+	uint2 pad;
+};
+
+
 #endif // WI_SHADERINTEROP_RENDERER_H

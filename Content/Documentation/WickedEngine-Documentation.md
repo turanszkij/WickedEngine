@@ -1543,8 +1543,6 @@ Shader Interop is used for declaring shared structures or values between C++ Eng
 [ShaderInterop_Raytracing.h](../WickedEngine/ShaderInterop_Raytracing.h) <br/>
 [ShaderInterop_Renderer.h](../WickedEngine/ShaderInterop_Renderer.h) <br/>
 [ShaderInterop_Skinning.h](../WickedEngine/ShaderInterop_Skinning.h) <br/>
-[ShaderInterop_Utility.h](../WickedEngine/ShaderInterop_Utility.h) <br/>
-[ShaderInterop_Vulkan.h](../WickedEngine/ShaderInterop_Vulkan.h) <br/>
 The ShaderInterop also contains the resource macros to help share code between C++ and HLSL, and portability between shader compilers. Read more about macros in the [Shaders section](#shaders)
 
 ### Shader Compiler
