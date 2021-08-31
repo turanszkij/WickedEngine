@@ -172,8 +172,14 @@ struct ShaderMeshSubset
 
 struct ShaderMeshInstance
 {
-	float3x4 transform;
-	float3x4 transformPrev;
+	float4 transform0;
+	float4 transform1;
+	float4 transform2;
+
+	float4 transformPrev0;
+	float4 transformPrev1;
+	float4 transformPrev2;
+
 	uint uid;
 	uint flags;
 	uint color;
@@ -197,11 +203,21 @@ struct ShaderMeshInstance
 #ifndef __cplusplus
 	float4x4 GetTransform()
 	{
-		return float4x4(transpose(transform), float4(0, 0, 0, 1));
+		return float4x4(
+			transform0,
+			transform1,
+			transform2,
+			float4(0, 0, 0, 1)
+		);
 	}
 	float4x4 GetTransformPrev()
 	{
-		return float4x4(transpose(transformPrev), float4(0, 0, 0, 1));
+		return float4x4(
+			transformPrev0,
+			transformPrev1,
+			transformPrev2,
+			float4(0, 0, 0, 1)
+		);
 	}
 #endif // __cplusplus
 

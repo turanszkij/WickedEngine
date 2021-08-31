@@ -3067,16 +3067,12 @@ namespace wiScene
 					const XMFLOAT4X4& worldMatrixPrev = object.prev_transform_index >= 0 ? prev_transforms[object.prev_transform_index].world_prev : IDENTITYMATRIX;
 					ShaderMeshInstance& inst = instanceData[args.jobIndex];
 					inst.init();
-					inst.transform = XMFLOAT3X4(
-						worldMatrix._11, worldMatrix._21, worldMatrix._31, worldMatrix._41,
-						worldMatrix._12, worldMatrix._22, worldMatrix._32, worldMatrix._42,
-						worldMatrix._13, worldMatrix._23, worldMatrix._33, worldMatrix._43
-					);
-					inst.transformPrev = XMFLOAT3X4(
-						worldMatrixPrev._11, worldMatrixPrev._21, worldMatrixPrev._31, worldMatrixPrev._41,
-						worldMatrixPrev._12, worldMatrixPrev._22, worldMatrixPrev._32, worldMatrixPrev._42,
-						worldMatrixPrev._13, worldMatrixPrev._23, worldMatrixPrev._33, worldMatrixPrev._43
-					);
+					inst.transform0 = float4(worldMatrix._11, worldMatrix._21, worldMatrix._31, worldMatrix._41);
+					inst.transform1 = float4(worldMatrix._12, worldMatrix._22, worldMatrix._32, worldMatrix._42);
+					inst.transform2 = float4(worldMatrix._13, worldMatrix._23, worldMatrix._33, worldMatrix._43);
+					inst.transformPrev0 = float4(worldMatrixPrev._11, worldMatrixPrev._21, worldMatrixPrev._31, worldMatrixPrev._41);
+					inst.transformPrev1 = float4(worldMatrixPrev._12, worldMatrixPrev._22, worldMatrixPrev._32, worldMatrixPrev._42);
+					inst.transformPrev2 = float4(worldMatrixPrev._13, worldMatrixPrev._23, worldMatrixPrev._33, worldMatrixPrev._43);
 					if (object.lightmap.IsValid())
 					{
 						inst.lightmap = device->GetDescriptorIndex(&object.lightmap, SRV);
@@ -3091,7 +3087,11 @@ namespace wiScene
 						// TLAS instance data:
 						RaytracingAccelerationStructureDesc::TopLevel::Instance instance = {};
 						instance = {};
-						instance.transform = inst.transform;
+						instance.transform = XMFLOAT3X4(
+							worldMatrix._11, worldMatrix._21, worldMatrix._31, worldMatrix._41,
+							worldMatrix._12, worldMatrix._22, worldMatrix._32, worldMatrix._42,
+							worldMatrix._13, worldMatrix._23, worldMatrix._33, worldMatrix._43
+						);
 						instance.InstanceID = args.jobIndex;
 						instance.InstanceMask = 1;
 						instance.bottomlevel = mesh->BLAS;
@@ -3522,11 +3522,9 @@ namespace wiScene
 					inst.init();
 					inst.uid = entity;
 					// every vertex is pretransformed and simulated in worldspace for hair particle:
-					inst.transform = inst.transformPrev = XMFLOAT3X4(
-						IDENTITYMATRIX._11, IDENTITYMATRIX._21, IDENTITYMATRIX._31, IDENTITYMATRIX._41,
-						IDENTITYMATRIX._12, IDENTITYMATRIX._22, IDENTITYMATRIX._32, IDENTITYMATRIX._42,
-						IDENTITYMATRIX._13, IDENTITYMATRIX._23, IDENTITYMATRIX._33, IDENTITYMATRIX._43
-					);
+					inst.transform0 = inst.transformPrev0 = float4(IDENTITYMATRIX._11, IDENTITYMATRIX._21, IDENTITYMATRIX._31, IDENTITYMATRIX._41);
+					inst.transform1 = inst.transformPrev1 = float4(IDENTITYMATRIX._12, IDENTITYMATRIX._22, IDENTITYMATRIX._32, IDENTITYMATRIX._42);
+					inst.transform2 = inst.transformPrev2 = float4(IDENTITYMATRIX._13, IDENTITYMATRIX._23, IDENTITYMATRIX._33, IDENTITYMATRIX._43);
 					inst.mesh = mesh;
 
 					if (TLAS.IsValid())
@@ -3534,7 +3532,11 @@ namespace wiScene
 						// TLAS instance data:
 						RaytracingAccelerationStructureDesc::TopLevel::Instance instance = {};
 						instance = {};
-						instance.transform = inst.transform;
+						instance.transform = XMFLOAT3X4(
+							IDENTITYMATRIX._11, IDENTITYMATRIX._21, IDENTITYMATRIX._31, IDENTITYMATRIX._41,
+							IDENTITYMATRIX._12, IDENTITYMATRIX._22, IDENTITYMATRIX._32, IDENTITYMATRIX._42,
+							IDENTITYMATRIX._13, IDENTITYMATRIX._23, IDENTITYMATRIX._33, IDENTITYMATRIX._43
+						);
 						instance.InstanceID = (uint32_t)instanceIndex;
 						instance.InstanceMask = 1;
 						instance.bottomlevel = hair.BLAS;

@@ -6488,20 +6488,6 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 
 	BindCommonResources(cmd);
 
-	ShaderMeshInstance inst = {};
-	inst.transform = inst.transformPrev = XMFLOAT3X4(
-		IDENTITYMATRIX._11, IDENTITYMATRIX._21, IDENTITYMATRIX._31, IDENTITYMATRIX._41,
-		IDENTITYMATRIX._12, IDENTITYMATRIX._22, IDENTITYMATRIX._32, IDENTITYMATRIX._42,
-		IDENTITYMATRIX._13, IDENTITYMATRIX._23, IDENTITYMATRIX._33, IDENTITYMATRIX._43
-	);
-	inst.color = 0xFFFFFFFF;
-	device->UpdateBuffer(&resourceBuffers[RBTYPE_IMPOSTORREFRESH], &inst, cmd, sizeof(inst));
-
-	GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(ShaderMeshInstance), cmd);
-	volatile ShaderMeshInstancePointer* buff = (volatile ShaderMeshInstancePointer*)mem.data;
-	buff->instanceID = 0;
-	buff->userdata = 0;
-
 	for (uint32_t impostorIndex = 0; impostorIndex < scene.impostors.GetCount(); ++impostorIndex)
 	{
 		const ImpostorComponent& impostor = scene.impostors[impostorIndex];
@@ -6517,8 +6503,6 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 
 		ObjectPushConstants push; // used with bindless model only
 		push.meshIndex = (uint)scene.meshes.GetIndex(entity);
-		push.instances = device->GetDescriptorIndex(mem.buffer, SRV);
-		push.instance_offset = mem.offset;
 
 		device->BindIndexBuffer(&mesh.indexBuffer, mesh.GetIndexFormat(), 0, cmd);
 

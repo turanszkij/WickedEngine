@@ -24,6 +24,9 @@ typedef XMINT2 int2;
 typedef XMINT3 int3;
 typedef XMINT4 int4;
 
+#define column_major
+#define row_major
+
 #define CB_GETBINDSLOT(name) __CBUFFERBINDSLOT__##name##__
 #define CBUFFER(name, slot) static const int CB_GETBINDSLOT(name) = slot; struct alignas(16) name
 #define CONSTANTBUFFER(name, type, slot)
