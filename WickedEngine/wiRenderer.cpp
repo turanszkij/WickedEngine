@@ -1097,7 +1097,6 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_TEMPORAL], "volumetricCloud_temporalCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_FXAA], "fxaaCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_TEMPORALAA], "temporalaaCS.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_LINEARDEPTH], "lineardepthCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_SHARPEN], "sharpenCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_TONEMAP], "tonemapCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_FSR_UPSCALING], "fsr_upscalingCS.cso"); });
@@ -2638,7 +2637,7 @@ void RenderMeshes(
 		device->BindIndexBuffer(&mesh.indexBuffer, mesh.GetIndexFormat(), 0, cmd);
 
 		ObjectPushConstants push;
-		push.mesh = device->GetDescriptorIndex(&mesh.descriptor, SRV);
+		push.meshIndex = instancedBatch.meshIndex;
 		push.instances = device->GetDescriptorIndex(instances.buffer, SRV);
 		push.instance_offset = instancedBatch.dataOffset;
 
@@ -2720,6 +2719,7 @@ void RenderMeshes(
 
 			assert(subsetIndex < 256u); // subsets must be represented as 8-bit
 			push.subsetIndex = (uint)subsetIndex;
+			push.materialIndex = subset.materialIndex;
 			device->PushConstants(&push, sizeof(push), cmd);
 
 			if (pso_backside != nullptr)
@@ -3315,7 +3315,7 @@ void UpdatePerFrameData(
 
 	frameCB.Atmosphere = vis.scene->weather.atmosphereParameters;
 	frameCB.VolumetricClouds = vis.scene->weather.volumetricCloudParameters;
-
+	frameCB.scene = vis.scene->shaderscene;
 
 
 	// Create volumetric cloud static resources if needed:
@@ -3398,22 +3398,16 @@ void UpdateRenderData(
 	{
 		device->UpdateBuffer(&vis.scene->instanceBuffer, vis.scene->instanceData.data(), cmd);
 	}
+	if (!vis.scene->meshData.empty() && vis.scene->meshBuffer.IsValid())
+	{
+		device->UpdateBuffer(&vis.scene->meshBuffer, vis.scene->meshData.data(), cmd);
+	}
+	if (!vis.scene->materialData.empty() && vis.scene->materialBuffer.IsValid())
+	{
+		device->UpdateBuffer(&vis.scene->materialBuffer, vis.scene->materialData.data(), cmd);
+	}
 
 	BindCommonResources(cmd);
-
-	// Update dirty material constant buffers:
-	for (size_t i = 0; i < vis.scene->materials.GetCount(); ++i)
-	{
-		const MaterialComponent& material = vis.scene->materials[i];
-		if (material.dirty_buffer)
-		{
-			material.dirty_buffer = false;
-
-			ShaderMaterial shadermaterial;
-			material.WriteShaderMaterial(&shadermaterial);
-			device->UpdateBuffer(&material.constantBuffer, &shadermaterial, cmd);
-		}
-	}
 
 	// Fill Entity Array with decals + envprobes + lights in the frustum:
 	{
@@ -3701,14 +3695,9 @@ void UpdateRenderData(
 			Entity entity = vis.scene->meshes.GetEntity(i);
 			const MeshComponent& mesh = vis.scene->meshes[i];
 
-			if (mesh.dirty_bindless && device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
+			if (mesh.dirty_subsets)
 			{
-				mesh.dirty_bindless = false;
-
-				ShaderMesh shadermesh;
-				mesh.WriteShaderMesh(&shadermesh);
-
-				int mesh_descriptor = device->GetDescriptorIndex(&mesh.descriptor, SRV);
+				mesh.dirty_subsets = false;
 
 				size_t tmp_alloc = sizeof(ShaderMeshSubset) * mesh.subsets.size();
 				ShaderMeshSubset* subsetarray = (ShaderMeshSubset*)GetRenderFrameAllocator(cmd).allocate(tmp_alloc);
@@ -3717,15 +3706,9 @@ void UpdateRenderData(
 				{
 					ShaderMeshSubset& shadersubset = subsetarray[j++];
 					shadersubset.indexOffset = x.indexOffset;
-
-					const MaterialComponent* material = vis.scene->materials.GetComponent(x.materialID);
-					if (material != nullptr)
-					{
-						shadersubset.material = device->GetDescriptorIndex(&material->constantBuffer, SRV);
-					}
+					shadersubset.materialIndex = (uint)vis.scene->materials.GetIndex(x.materialID);
 				}
 
-				device->UpdateBuffer(&mesh.descriptor, &shadermesh, cmd);
 				device->UpdateBuffer(&mesh.subsetBuffer, subsetarray, cmd);
 				GetRenderFrameAllocator(cmd).free(tmp_alloc);
 			}
@@ -3845,7 +3828,7 @@ void UpdateRenderData(
 			const MaterialComponent& material = *vis.scene->materials.GetComponent(entity);
 			const MeshComponent* mesh = vis.scene->meshes.GetComponent(emitter.meshID);
 
-			emitter.UpdateGPU(transform, material, mesh, cmd);
+			emitter.UpdateGPU((uint32_t)vis.scene->materials.GetIndex(entity), transform, mesh, cmd);
 		}
 		wiProfiler::EndRange(range);
 	}
@@ -3862,9 +3845,10 @@ void UpdateRenderData(
 			if (mesh != nullptr)
 			{
 				Entity entity = vis.scene->hairs.GetEntity(hairIndex);
-				const MaterialComponent& material = *vis.scene->materials.GetComponent(entity);
+				size_t materialIndex = vis.scene->materials.GetIndex(entity);
+				const MaterialComponent& material = vis.scene->materials[materialIndex];
 
-				hair.UpdateGPU((uint32_t)vis.scene->objects.GetCount() + hairIndex, *mesh, material, cmd);
+				hair.UpdateGPU((uint32_t)vis.scene->objects.GetCount() + hairIndex, (uint32_t)materialIndex, *mesh, material, cmd);
 			}
 		}
 		wiProfiler::EndRange(range);
@@ -4219,11 +4203,11 @@ void DrawSoftParticles(
 
 		if (distortion && emitter.shaderType == wiEmittedParticle::SOFT_DISTORTION)
 		{
-			emitter.Draw(*vis.camera, material, cmd);
+			emitter.Draw(material, cmd);
 		}
 		else if (!distortion && (emitter.shaderType == wiEmittedParticle::SOFT || emitter.shaderType == wiEmittedParticle::SOFT_LIGHTING || emitter.shaderType == wiEmittedParticle::SIMPLE || IsWireRender()))
 		{
-			emitter.Draw(*vis.camera, material, cmd);
+			emitter.Draw(material, cmd);
 		}
 	}
 
@@ -4651,7 +4635,6 @@ void DrawShadowmaps(
 
 		BindCommonResources(cmd);
 
-		device->BindResource(&vis.scene->instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 		BoundingFrustum cam_frustum;
 		BoundingFrustum::CreateFromMatrix(cam_frustum, vis.camera->GetProjection());
@@ -4927,14 +4910,6 @@ void DrawScene(
 
 	BindCommonResources(cmd);
 
-	device->BindResource(&vis.scene->envmapArray, TEXSLOT_ENVMAPARRAY, cmd);
-	device->BindResource(&vis.scene->instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
-
-	if (vis.scene->weather.skyMap != nullptr)
-	{
-		device->BindResource(&vis.scene->weather.skyMap->texture, TEXSLOT_GLOBALENVMAP, cmd);
-	}
-
 	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 	{
 		device->BindResource(&vis.scene->TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
@@ -4955,7 +4930,7 @@ void DrawScene(
 				Entity entity = vis.scene->hairs.GetEntity(hairIndex);
 				const MaterialComponent& material = *vis.scene->materials.GetComponent(entity);
 
-				hair.Draw(*vis.camera, material, renderPass, cmd);
+				hair.Draw(material, renderPass, cmd);
 			}
 		}
 	}
@@ -5955,10 +5930,11 @@ void DrawDebugWorld(
 			buff->userdata = 0;
 
 			ObjectPushConstants push;
-			push.mesh = device->GetDescriptorIndex(&mesh.descriptor, SRV);
+			push.meshIndex = (uint)scene.meshes.GetIndex(object.meshID);
 			push.instances = device->GetDescriptorIndex(mem.buffer, SRV);
 			push.instance_offset = mem.offset;
 			push.subsetIndex = x.subset;
+			push.materialIndex = subset.materialIndex;
 			device->PushConstants(&push, sizeof(push), cmd);
 
 			device->BindIndexBuffer(&mesh.indexBuffer, mesh.GetIndexFormat(), 0, cmd);
@@ -6275,7 +6251,6 @@ void DrawSky(const Scene& scene, CommandList cmd)
 	if (scene.weather.skyMap != nullptr)
 	{
 		device->BindPipelineState(&PSO_sky[SKYRENDERING_STATIC], cmd);
-		device->BindResource(&scene.weather.skyMap->texture, TEXSLOT_GLOBALENVMAP, cmd);
 	}
 	else
 	{
@@ -6354,7 +6329,6 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], TEXSLOT_SKYLUMINANCELUT, cmd);
 
-		device->BindResource(&vis.scene->instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 		device->RenderPassBegin(&vis.scene->renderpasses_envmap[probe.textureIndex], cmd);
 
@@ -6522,7 +6496,6 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 	);
 	inst.color = 0xFFFFFFFF;
 	device->UpdateBuffer(&resourceBuffers[RBTYPE_IMPOSTORREFRESH], &inst, cmd, sizeof(inst));
-	device->BindResource(&resourceBuffers[RBTYPE_IMPOSTORREFRESH], SBSLOT_INSTANCEARRAY, cmd);
 
 	GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(ShaderMeshInstance), cmd);
 	volatile ShaderMeshInstancePointer* buff = (volatile ShaderMeshInstancePointer*)mem.data;
@@ -6543,7 +6516,7 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 		const SPHERE boundingsphere = mesh.GetBoundingSphere();
 
 		ObjectPushConstants push; // used with bindless model only
-		push.mesh = device->GetDescriptorIndex(&mesh.descriptor, SRV);
+		push.meshIndex = (uint)scene.meshes.GetIndex(entity);
 		push.instances = device->GetDescriptorIndex(mem.buffer, SRV);
 		push.instance_offset = mem.offset;
 
@@ -6603,6 +6576,7 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 					const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
 					push.subsetIndex = (uint)subsetIndex;
+					push.materialIndex = subset.materialIndex;
 					device->PushConstants(&push, sizeof(push), cmd);
 
 					device->DrawIndexedInstanced(subset.indexCount, 1, subset.indexOffset, 0, 0, cmd);
@@ -6673,7 +6647,6 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 
 		BindCommonResources(cmd);
 
-		device->BindResource(&vis.scene->instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 		device->RenderPassBegin(&renderpass_voxelize, cmd);
 		RenderMeshes(vis, renderQueue, RENDERPASS_VOXELIZE, RENDERTYPE_OPAQUE, cmd, false, nullptr, 1);
@@ -7300,14 +7273,8 @@ void RayTraceScene(
 
 	const TextureDesc& desc = output.GetDesc();
 
-	if (scene.weather.skyMap != nullptr)
-	{
-		device->BindResource(&scene.weather.skyMap->texture, TEXSLOT_GLOBALENVMAP, cmd);
-	}
-
 	BindCommonResources(cmd);
 
-	device->BindResource(&scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 	const XMFLOAT4& halton = wiMath::GetHaltonSequence(accumulation_sample);
 	RaytracingCB cb;
@@ -7386,7 +7353,6 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 		{
 			scene.BVH.Bind(cmd);
 		}
-		device->BindResource(&scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 		BindCommonResources(cmd);
 
@@ -7461,11 +7427,6 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 				device->BindConstantBuffer(&constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(RaytracingCB), cmd);
 
 				device->BindPipelineState(&PSO_renderlightmap, cmd);
-
-				if (scene.weather.skyMap != nullptr)
-				{
-					device->BindResource(&scene.weather.skyMap->texture, TEXSLOT_GLOBALENVMAP, cmd);
-				}
 
 				device->DrawIndexedInstanced((uint32_t)mesh.indices.size(), 1, 0, 0, 0, cmd);
 				object.lightmapIterationCount++;
@@ -7746,6 +7707,7 @@ void VisibilityResolve(
 	const Texture& texture_primitiveID, // can be MSAA
 	const Texture gbuffer[GBUFFER_COUNT],
 	const Texture& depthbuffer_resolved,
+	const Texture& lineardepth,
 	CommandList cmd
 )
 {
@@ -7758,28 +7720,30 @@ void VisibilityResolve(
 
 	device->BindComputeShader(&shaders[msaa ? CSTYPE_VISIBILITY_RESOLVE_MSAA : CSTYPE_VISIBILITY_RESOLVE], cmd);
 
-	device->BindResource(&scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 	device->BindResource(&texture_primitiveID, TEXSLOT_ONDEMAND0, cmd);
 	device->BindResource(&depthbuffer, TEXSLOT_ONDEMAND1, cmd);
 
-	const GPUResource* uavs[] = {
-		&gbuffer[GBUFFER_VELOCITY],
-		&depthbuffer_resolved,
-	};
-	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+	device->BindUAV(&gbuffer[GBUFFER_VELOCITY], 0, cmd);
+	device->BindUAV(&depthbuffer_resolved, 1, cmd, 0);
+	device->BindUAV(&depthbuffer_resolved, 2, cmd, 1);
+	device->BindUAV(&depthbuffer_resolved, 3, cmd, 2);
+	device->BindUAV(&lineardepth, 4, cmd, 0);
+	device->BindUAV(&lineardepth, 5, cmd, 1);
+	device->BindUAV(&lineardepth, 6, cmd, 2);
 
 	{
 		GPUBarrier barriers[] = {
 			GPUBarrier::Image(&gbuffer[GBUFFER_VELOCITY], gbuffer[GBUFFER_VELOCITY].desc.layout, RESOURCE_STATE_UNORDERED_ACCESS),
 			GPUBarrier::Image(&depthbuffer_resolved, depthbuffer_resolved.desc.layout, RESOURCE_STATE_UNORDERED_ACCESS),
+			GPUBarrier::Image(&lineardepth, lineardepth.desc.layout, RESOURCE_STATE_UNORDERED_ACCESS),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
 	if (msaa)
 	{
-		device->BindUAV(&gbuffer[GBUFFER_PRIMITIVEID], 3, cmd);
+		device->BindUAV(&gbuffer[GBUFFER_PRIMITIVEID], 7, cmd);
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Image(&gbuffer[GBUFFER_PRIMITIVEID], gbuffer[GBUFFER_PRIMITIVEID].desc.layout, RESOURCE_STATE_UNORDERED_ACCESS),
@@ -7800,6 +7764,7 @@ void VisibilityResolve(
 			GPUBarrier::Memory(),
 			GPUBarrier::Image(&gbuffer[GBUFFER_VELOCITY], RESOURCE_STATE_UNORDERED_ACCESS, gbuffer[GBUFFER_VELOCITY].desc.layout),
 			GPUBarrier::Image(&depthbuffer_resolved, RESOURCE_STATE_UNORDERED_ACCESS, depthbuffer_resolved.desc.layout),
+			GPUBarrier::Image(&lineardepth, RESOURCE_STATE_UNORDERED_ACCESS, lineardepth.desc.layout),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
@@ -7842,7 +7807,6 @@ void SurfelGI_Coverage(
 	device->EventBegin("SurfelGI - Coverage", cmd);
 	auto prof_range = wiProfiler::BeginRangeGPU("SurfelGI - Coverage", cmd);
 
-	device->BindResource(&scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 	// Coverage:
 	{
@@ -7933,7 +7897,6 @@ void SurfelGI(
 
 	BindCommonResources(cmd);
 
-	device->BindResource(&scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 	// Grid reset:
 	{
@@ -8081,8 +8044,6 @@ void SurfelGI(
 		}
 
 		device->BindComputeShader(&shaders[CSTYPE_SURFEL_RAYTRACE], cmd);
-
-		device->BindResource(&scene.envmapArray, TEXSLOT_ENVMAPARRAY, cmd);
 
 		device->BindResource(&scene.surfelBuffer, TEXSLOT_ONDEMAND0, cmd);
 		device->BindResource(&scene.surfelStatsBuffer, TEXSLOT_ONDEMAND1, cmd);
@@ -9173,7 +9134,6 @@ void Postprocess_RTAO(
 
 	device->BindResource(&gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
 	device->BindResource(&gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
-	device->BindResource(&scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
@@ -9439,9 +9399,6 @@ void Postprocess_RTReflection(
 	device->BindResource(&gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
 
 	device->BindResource(&depth_history, TEXSLOT_ONDEMAND2, cmd);
-
-	device->BindResource(&scene.envmapArray, TEXSLOT_ENVMAPARRAY, cmd);
-	device->BindResource(&scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 	PostProcessCB cb;
 	cb.xPPResolution.x = desc.Width;
@@ -9907,7 +9864,6 @@ void Postprocess_RTShadow(
 
 	device->BindResource(&gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
 	device->BindResource(&gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
-	device->BindResource(&scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 	const GPUResource* uavs[] = {
 		&res.temp,
@@ -10253,7 +10209,6 @@ void Postprocess_ScreenSpaceShadow(
 
 	device->BindResource(&gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
 	device->BindResource(&gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
-	device->BindResource(&scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
@@ -11548,74 +11503,6 @@ void Postprocess_TemporalAA(
 	wiProfiler::EndRange(range);
 	device->EventEnd(cmd);
 }
-void Postprocess_DepthPyramid(
-	const Texture& depthbuffer,
-	const Texture& lineardepth,
-	CommandList cmd
-)
-{
-	device->EventBegin("Postprocess_DepthPyramid", cmd);
-	auto range = wiProfiler::BeginRangeGPU("Depth Pyramid", cmd);
-
-	BindCommonResources(cmd);
-
-	const TextureDesc& desc = lineardepth.GetDesc();
-
-	PostProcessCB cb;
-	cb.xPPResolution.x = desc.Width / 2;  // downsample res
-	cb.xPPResolution.y = desc.Height / 2; // downsample res
-	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	cb.xPPParams0.x = (float)depthbuffer.GetDesc().Width;
-	cb.xPPParams0.y = (float)depthbuffer.GetDesc().Height;
-	cb.xPPParams0.z = 1.0f / cb.xPPParams0.x;
-	cb.xPPParams0.w = 1.0f / cb.xPPParams0.y;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
-
-	device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd, 0); // full res native depth
-
-	device->BindUAV(&lineardepth, 0, cmd, 0); // full res linear depth
-	device->BindUAV(&lineardepth, 1, cmd, 1); // 2x downsample linear depth
-	device->BindUAV(&lineardepth, 2, cmd, 2); // 4x downsample linear depth
-	device->BindUAV(&lineardepth, 3, cmd, 3); // 8x downsample linear depth
-	device->BindUAV(&lineardepth, 4, cmd, 4); // 16x downsample linear depth
-	device->BindUAV(&lineardepth, 5, cmd, 5); // 32x downsample linear depth
-
-	device->BindUAV(&depthbuffer, 6, cmd, 1); // 2x downsample native depth
-	device->BindUAV(&depthbuffer, 7, cmd, 2); // 4x downsample native depth
-
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&lineardepth, lineardepth.desc.layout, RESOURCE_STATE_UNORDERED_ACCESS),
-			GPUBarrier::Image(&depthbuffer, depthbuffer.desc.layout, RESOURCE_STATE_UNORDERED_ACCESS, 1),
-			GPUBarrier::Image(&depthbuffer, depthbuffer.desc.layout, RESOURCE_STATE_UNORDERED_ACCESS, 2),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
-
-	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_LINEARDEPTH], cmd);
-	device->Dispatch(
-		(desc.Width + POSTPROCESS_LINEARDEPTH_BLOCKSIZE - 1) / POSTPROCESS_LINEARDEPTH_BLOCKSIZE,
-		(desc.Height + POSTPROCESS_LINEARDEPTH_BLOCKSIZE - 1) / POSTPROCESS_LINEARDEPTH_BLOCKSIZE,
-		1,
-		cmd
-	);
-
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
-			GPUBarrier::Image(&lineardepth, RESOURCE_STATE_UNORDERED_ACCESS, lineardepth.desc.layout),
-			GPUBarrier::Image(&depthbuffer, RESOURCE_STATE_UNORDERED_ACCESS, depthbuffer.desc.layout, 1),
-			GPUBarrier::Image(&depthbuffer, RESOURCE_STATE_UNORDERED_ACCESS, depthbuffer.desc.layout, 2),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
-
-
-	wiProfiler::EndRange(range);
-	device->EventEnd(cmd);
-}
 void Postprocess_Sharpen(
 	const Texture& input,
 	const Texture& output,
@@ -11702,39 +11589,17 @@ void Postprocess_Tonemap(
 
 	assert(texture_colorgradinglut == nullptr || texture_colorgradinglut->desc.type == TextureDesc::TEXTURE_3D); // This must be a 3D lut
 
-	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
-	{
-		PushConstantsTonemap push = {};
-		push.xPPResolution_rcp = cb.xPPResolution_rcp;
-		push.exposure = cb.tonemap_exposure;
-		push.dither = cb.tonemap_dither;
-		push.eyeadaptionkey = cb.tonemap_eyeadaptionkey;
-		push.texture_input = device->GetDescriptorIndex(&input, SRV);
-		push.texture_input_luminance = device->GetDescriptorIndex(texture_luminance, SRV);
-		push.texture_input_distortion = device->GetDescriptorIndex(texture_distortion, SRV);
-		push.texture_colorgrade_lookuptable = device->GetDescriptorIndex(texture_colorgradinglut, SRV);
-		push.texture_output = device->GetDescriptorIndex(&output, UAV);
-		device->PushConstants(&push, sizeof(push), cmd);
-	}
-	else
-	{
-
-		device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(texture_luminance, TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(texture_distortion, TEXSLOT_ONDEMAND2, cmd);
-
-		if (texture_colorgradinglut != nullptr)
-		{
-			device->BindResource(texture_colorgradinglut, TEXSLOT_ONDEMAND3, cmd);
-		}
-		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-		device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
-
-		const GPUResource* uavs[] = {
-			&output,
-		};
-		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
-	}
+	PushConstantsTonemap push = {};
+	push.xPPResolution_rcp = cb.xPPResolution_rcp;
+	push.exposure = cb.tonemap_exposure;
+	push.dither = cb.tonemap_dither;
+	push.eyeadaptionkey = cb.tonemap_eyeadaptionkey;
+	push.texture_input = device->GetDescriptorIndex(&input, SRV);
+	push.texture_input_luminance = device->GetDescriptorIndex(texture_luminance, SRV);
+	push.texture_input_distortion = device->GetDescriptorIndex(texture_distortion, SRV);
+	push.texture_colorgrade_lookuptable = device->GetDescriptorIndex(texture_colorgradinglut, SRV);
+	push.texture_output = device->GetDescriptorIndex(&output, UAV);
+	device->PushConstants(&push, sizeof(push), cmd);
 
 	{
 		GPUBarrier barriers[] = {

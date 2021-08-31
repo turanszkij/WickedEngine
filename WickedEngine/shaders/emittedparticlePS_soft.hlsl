@@ -3,18 +3,24 @@
 #include "ShaderInterop_EmittedParticle.h"
 #include "objectHF.hlsli"
 
-TEXTURE2D(texture_color, float4, TEXSLOT_ONDEMAND0);
-
 [earlydepthstencil]
 float4 main(VertextoPixel input) : SV_TARGET
 {
-    float4 color = texture_color.Sample(sampler_linear_clamp, input.tex.xy);
+	ShaderMaterial material = EmitterGetMaterial();
+
+	float4 color = 1;
 
 	[branch]
-	if (xEmitterOptions & EMITTER_OPTION_BIT_FRAME_BLENDING_ENABLED)
+	if (material.texture_basecolormap_index >= 0)
 	{
-	    float4 color2 = texture_color.Sample(sampler_linear_clamp, input.tex.zw);
-		color = lerp(color, color2, input.frameBlend);
+		color = bindless_textures[material.texture_basecolormap_index].Sample(sampler_linear_clamp, input.tex.xy);
+
+		[branch]
+		if (xEmitterOptions & EMITTER_OPTION_BIT_FRAME_BLENDING_ENABLED)
+		{
+			float4 color2 = bindless_textures[material.texture_basecolormap_index].Sample(sampler_linear_clamp, input.tex.zw);
+			color = lerp(color, color2, input.frameBlend);
+		}
 	}
 
 	float2 pixel = input.pos.xy;
@@ -31,7 +37,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 
 	float opacity = saturate(color.a * inputColor.a * fade);
 
-	color.rgb *= inputColor.rgb * (1 + xParticleEmissive);
+	color.rgb *= inputColor.rgb * (1 + EmitterGetMaterial().emissiveColor.rgb);
 	color.a = opacity;
 
 #ifdef EMITTEDPARTICLE_DISTORTION
@@ -56,13 +62,13 @@ float4 main(VertextoPixel input) : SV_TARGET
 		lighting.create(0, 0, GetAmbient(N), 0);
 
 		Surface surface;
-		surface.create(g_xMaterial, color, 0);
+		surface.create(material, color, 0);
 		surface.P = input.P;
 		surface.N = N;
 		surface.V = 0;
 		surface.pixel = pixel;
-		surface.sss = g_xMaterial.subsurfaceScattering;
-		surface.sss_inv = g_xMaterial.subsurfaceScattering_inv;
+		surface.sss = material.subsurfaceScattering;
+		surface.sss_inv = material.subsurfaceScattering_inv;
 		surface.update();
 
 		TiledLighting(surface, lighting);

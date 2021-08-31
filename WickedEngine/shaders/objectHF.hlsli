@@ -33,24 +33,25 @@ inline uint GetSubsetIndex()
 }
 inline ShaderMesh GetMesh()
 {
-	return bindless_buffers[push.mesh].Load<ShaderMesh>(0);
+	return load_mesh(push.meshIndex);
 }
 inline ShaderMaterial GetMaterial()
 {
-	ShaderMeshSubset subset = bindless_subsets[GetMesh().subsetbuffer][GetSubsetIndex()];
-	return bindless_buffers[subset.material].Load<ShaderMaterial>(0);
+	return load_material(push.materialIndex);
+	//ShaderMeshSubset subset = load_subset(GetMesh(), GetSubsetIndex());
+	//return load_material(subset.materialIndex);
 }
 inline ShaderMaterial GetMaterial1()
 {
-	return bindless_buffers[GetMesh().blendmaterial1].Load<ShaderMaterial>(0);
+	return load_material(GetMesh().blendmaterial1);
 }
 inline ShaderMaterial GetMaterial2()
 {
-	return bindless_buffers[GetMesh().blendmaterial2].Load<ShaderMaterial>(0);
+	return load_material(GetMesh().blendmaterial2);
 }
 inline ShaderMaterial GetMaterial3()
 {
-	return bindless_buffers[GetMesh().blendmaterial3].Load<ShaderMaterial>(0);
+	return load_material(GetMesh().blendmaterial3);
 }
 
 #define sampler_objectshader			bindless_samplers[g_xFrame.ObjectShaderSamplerIndex]
@@ -132,7 +133,6 @@ TEXTURE2D(texture_surfelgi, float3, TEXSLOT_RENDERPATH_SURFELGI);
 #define OBJECTSHADER_USE_WIND
 #define OBJECTSHADER_USE_UVSETS
 #define OBJECTSHADER_USE_COLOR
-#define OBJECTSHADER_USE_INSTANCEID
 #endif // OBJECTSHADER_LAYOUT_SHADOW_TEX
 
 #ifdef OBJECTSHADER_LAYOUT_PREPASS
@@ -232,7 +232,7 @@ struct VertexInput
 
 	ShaderMeshInstance GetInstance()
 	{
-		return InstanceArray[GetInstancePointer().instanceID];
+		return load_instance(GetInstancePointer().instanceID);
 	}
 };
 
@@ -1605,7 +1605,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 
 
 #ifdef OBJECTSHADER_USE_ATLAS
-	LightMapping(InstanceArray[input.instanceID].lightmap, input.atl, lighting);
+	LightMapping(load_instance(input.instanceID).lightmap, input.atl, lighting);
 #endif // OBJECTSHADER_USE_ATLAS
 
 

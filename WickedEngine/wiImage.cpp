@@ -26,7 +26,6 @@ namespace wiImage
 		IMAGE_SHADER_COUNT
 	};
 
-	GPUBuffer				constantBuffer;
 	Shader					vertexShader;
 	Shader					screenVS;
 	Shader					imagePS[IMAGE_SHADER_COUNT];
@@ -96,36 +95,23 @@ namespace wiImage
 				sampler = wiRenderer::GetSampler(SSLOT_ANISO_CLAMP);
 		}
 
-		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
-		{
-			PushConstantsImage push;
-			push.texture_base_index = device->GetDescriptorIndex(texture, SRV);
-			push.texture_mask_index = device->GetDescriptorIndex(params.maskMap, SRV);
-			push.texture_background_index = device->GetDescriptorIndex(&backgroundTextures[cmd], SRV);
-			push.sampler_index = device->GetDescriptorIndex(sampler);
-			device->PushConstants(&push, sizeof(push), cmd);
-		}
-		else
-		{
-			device->BindResource(texture, TEXSLOT_IMAGE_BASE, cmd);
-			device->BindResource(params.maskMap, TEXSLOT_IMAGE_MASK, cmd);
-			device->BindResource(&backgroundTextures[cmd], TEXSLOT_IMAGE_BACKGROUND, cmd);
-			device->BindSampler(sampler, SSLOT_ONDEMAND0, cmd);
-		}
+		PushConstantsImage push;
+		push.texture_base_index = device->GetDescriptorIndex(texture, SRV);
+		push.texture_mask_index = device->GetDescriptorIndex(params.maskMap, SRV);
+		push.texture_background_index = device->GetDescriptorIndex(&backgroundTextures[cmd], SRV);
+		push.sampler_index = device->GetDescriptorIndex(sampler);
 
-		ImageCB cb;
-		cb.xColor = params.color;
+		push.color = params.color;
 		const float darken = 1 - params.fade;
-		cb.xColor.x *= darken;
-		cb.xColor.y *= darken;
-		cb.xColor.z *= darken;
-		cb.xColor.w *= params.opacity;
+		push.color.x *= darken;
+		push.color.y *= darken;
+		push.color.z *= darken;
+		push.color.w *= params.opacity;
 
 		if (params.isFullScreenEnabled())
 		{
 			device->BindPipelineState(&imagePSO[IMAGE_SHADER_FULLSCREEN][params.blendFlag][params.stencilComp][params.stencilRefMode], cmd);
-			device->UpdateBuffer(&constantBuffer, &cb, cmd);
-			device->BindConstantBuffer(&constantBuffer, CB_GETBINDSLOT(ImageCB), cmd);
+			device->PushConstants(&push, sizeof(push), cmd);
 			device->Draw(3, 0, cmd);
 			device->EventEnd(cmd);
 			return;
@@ -161,13 +147,13 @@ namespace wiImage
 		{
 			XMVECTOR V = XMVectorSet(params.corners[i].x - params.pivot.x, params.corners[i].y - params.pivot.y, 0, 1);
 			V = XMVector2Transform(V, M); // division by w will happen on GPU
-			XMStoreFloat4(&cb.xCorners[i], V);
+			XMStoreFloat4(&push.corners[i], V);
 		}
 
 		if (params.isMirrorEnabled())
 		{
-			std::swap(cb.xCorners[0], cb.xCorners[1]);
-			std::swap(cb.xCorners[2], cb.xCorners[3]);
+			std::swap(push.corners[0], push.corners[1]);
+			std::swap(push.corners[2], push.corners[3]);
 		}
 
 		const TextureDesc& desc = texture->GetDesc();
@@ -176,33 +162,31 @@ namespace wiImage
 
 		if (params.isDrawRectEnabled())
 		{
-			cb.xTexMulAdd.x = params.drawRect.z * inv_width;	// drawRec.width: mul
-			cb.xTexMulAdd.y = params.drawRect.w * inv_height;	// drawRec.heigh: mul
-			cb.xTexMulAdd.z = params.drawRect.x * inv_width;	// drawRec.x: add
-			cb.xTexMulAdd.w = params.drawRect.y * inv_height;	// drawRec.y: add
+			push.texMulAdd.x = params.drawRect.z * inv_width;	// drawRec.width: mul
+			push.texMulAdd.y = params.drawRect.w * inv_height;	// drawRec.heigh: mul
+			push.texMulAdd.z = params.drawRect.x * inv_width;	// drawRec.x: add
+			push.texMulAdd.w = params.drawRect.y * inv_height;	// drawRec.y: add
 		}
 		else
 		{
-			cb.xTexMulAdd = XMFLOAT4(1, 1, 0, 0);	// disabled draw rect
+			push.texMulAdd = XMFLOAT4(1, 1, 0, 0);	// disabled draw rect
 		}
-		cb.xTexMulAdd.z += params.texOffset.x * inv_width;	// texOffset.x: add
-		cb.xTexMulAdd.w += params.texOffset.y * inv_height;	// texOffset.y: add
+		push.texMulAdd.z += params.texOffset.x * inv_width;	// texOffset.x: add
+		push.texMulAdd.w += params.texOffset.y * inv_height;	// texOffset.y: add
 
 		if (params.isDrawRect2Enabled())
 		{
-			cb.xTexMulAdd2.x = params.drawRect2.z * inv_width;	// drawRec.width: mul
-			cb.xTexMulAdd2.y = params.drawRect2.w * inv_height;	// drawRec.heigh: mul
-			cb.xTexMulAdd2.z = params.drawRect2.x * inv_width;	// drawRec.x: add
-			cb.xTexMulAdd2.w = params.drawRect2.y * inv_height;	// drawRec.y: add
+			push.texMulAdd2.x = params.drawRect2.z * inv_width;	// drawRec.width: mul
+			push.texMulAdd2.y = params.drawRect2.w * inv_height;	// drawRec.heigh: mul
+			push.texMulAdd2.z = params.drawRect2.x * inv_width;	// drawRec.x: add
+			push.texMulAdd2.w = params.drawRect2.y * inv_height;	// drawRec.y: add
 		}
 		else
 		{
-			cb.xTexMulAdd2 = XMFLOAT4(1, 1, 0, 0);	// disabled draw rect
+			push.texMulAdd2 = XMFLOAT4(1, 1, 0, 0);	// disabled draw rect
 		}
-		cb.xTexMulAdd2.z += params.texOffset2.x * inv_width;	// texOffset.x: add
-		cb.xTexMulAdd2.w += params.texOffset2.y * inv_height;	// texOffset.y: add
-
-		device->UpdateBuffer(&constantBuffer, &cb, cmd);
+		push.texMulAdd2.z += params.texOffset2.x * inv_width;	// texOffset.x: add
+		push.texMulAdd2.w += params.texOffset2.y * inv_height;	// texOffset.y: add
 
 		// Determine relevant image rendering pixel shader:
 		IMAGE_SHADER targetShader;
@@ -241,8 +225,7 @@ namespace wiImage
 
 		device->BindPipelineState(&imagePSO[targetShader][params.blendFlag][params.stencilComp][params.stencilRefMode], cmd);
 
-		device->BindConstantBuffer(&constantBuffer, CB_GETBINDSLOT(ImageCB), cmd);
-		device->BindConstantBuffer(&constantBuffer, CB_GETBINDSLOT(ImageCB), cmd);
+		device->PushConstants(&push, sizeof(push), cmd);
 
 		device->Draw(4, 0, cmd);
 
@@ -302,15 +285,6 @@ namespace wiImage
 	void Initialize()
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
-
-		{
-			GPUBufferDesc bd;
-			bd.Usage = USAGE_DYNAMIC;
-			bd.ByteWidth = sizeof(ImageCB);
-			bd.BindFlags = BIND_CONSTANT_BUFFER;
-			bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-			device->CreateBuffer(&bd, nullptr, &constantBuffer);
-		}
 
 		RasterizerState rs;
 		rs.FillMode = FILL_SOLID;

@@ -2,6 +2,19 @@
 #define WI_SHADERINTEROP_RENDERER_H
 #include "ShaderInterop.h"
 
+struct ShaderScene
+{
+	int instancebuffer;
+	int meshbuffer;
+	int materialbuffer;
+	int TLAS;
+
+	int envmaparray;
+	int globalenvmap;
+	int padding1;
+	int padding2;
+};
+
 static const uint SHADERMATERIAL_OPTION_BIT_USE_VERTEXCOLORS = 1 << 0;
 static const uint SHADERMATERIAL_OPTION_BIT_SPECULARGLOSSINESS_WORKFLOW = 1 << 1;
 static const uint SHADERMATERIAL_OPTION_BIT_OCCLUSION_PRIMARY = 1 << 2;
@@ -112,9 +125,9 @@ struct ShaderMesh
 	int vb_pre;
 
 	int subsetbuffer;
-	int blendmaterial1;
-	int blendmaterial2;
-	int blendmaterial3;
+	uint blendmaterial1;
+	uint blendmaterial2;
+	uint blendmaterial3;
 
 	float3 aabb_min;
 	uint flags;
@@ -134,9 +147,9 @@ struct ShaderMesh
 		vb_pre = -1;
 
 		subsetbuffer = -1;
-		blendmaterial1 = -1;
-		blendmaterial2 = -1;
-		blendmaterial3 = -1;
+		blendmaterial1 = 0;
+		blendmaterial2 = 0;
+		blendmaterial3 = 0;
 
 		aabb_min = float3(0, 0, 0);
 		aabb_max = float3(0, 0, 0);
@@ -148,12 +161,12 @@ struct ShaderMesh
 struct ShaderMeshSubset
 {
 	uint indexOffset;
-	int material;
+	uint materialIndex;
 
 	void init()
 	{
 		indexOffset = 0;
-		material = -1;
+		materialIndex = 0;
 	}
 };
 
@@ -217,7 +230,8 @@ struct ShaderMeshInstancePointer
 
 struct ObjectPushConstants
 {
-	int mesh;
+	uint meshIndex;
+	uint materialIndex;
 	uint subsetIndex;
 	int instances;
 	uint instance_offset;
@@ -744,6 +758,8 @@ struct FrameCB
 
 	AtmosphereParameters Atmosphere;
 	VolumetricCloudParameters VolumetricClouds;
+
+	ShaderScene scene;
 };
 
 struct CameraCB
@@ -802,8 +818,6 @@ CONSTANTBUFFER(g_xCamera, CameraCB, CBSLOT_RENDERER_CAMERA);
 
 
 // ------- On demand Constant buffers: ----------
-
-CONSTANTBUFFER(g_xMaterial, ShaderMaterial, CBSLOT_RENDERER_MATERIAL);
 
 CBUFFER(MiscCB, CBSLOT_RENDERER_MISC)
 {

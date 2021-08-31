@@ -3,17 +3,23 @@
 #include "hairparticleHF.hlsli"
 #include "ShaderInterop_HairParticle.h"
 
-TEXTURE2D(texture_color, float4, TEXSLOT_ONDEMAND0);
-
 uint2 main(VertexToPixel input) : SV_TARGET
 {
+	ShaderMaterial material = HairGetMaterial();
+
 	const float lineardepth = input.pos.w;
 
 	clip(dither(input.pos.xy + GetTemporalAASampleRotation()) - input.fade);
 
-	float4 color = texture_color.Sample(sampler_linear_clamp,input.tex);
+	float4 color = 1;
 
-	float alphatest = g_xMaterial.alphaTest;
+	[branch]
+	if (material.texture_basecolormap_index >= 0)
+	{
+		color = bindless_textures[material.texture_basecolormap_index].Sample(sampler_linear_clamp, input.tex);
+	}
+
+	float alphatest = material.alphaTest;
 	if (g_xFrame.Options & OPTION_BIT_TEMPORALAA_ENABLED)
 	{
 		alphatest = clamp(blue_noise(input.pos.xy, lineardepth).r, 0, 0.99);
@@ -22,7 +28,7 @@ uint2 main(VertexToPixel input) : SV_TARGET
 
 	PrimitiveID prim;
 	prim.primitiveIndex = input.primitiveID;
-	prim.instanceIndex = xHairInstanceID;
+	prim.instanceIndex = xHairInstanceIndex;
 	prim.subsetIndex = 0;
 	return prim.pack();
 }

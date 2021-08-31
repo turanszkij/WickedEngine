@@ -3,5 +3,7 @@
 
 float4 main(VertexToPixel input) : SV_TARGET
 {
-	return g_xMaterial.baseColor;
+	ShaderMaterial material = HairGetMaterial();
+
+	return material.baseColor;
 }

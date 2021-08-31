@@ -2348,11 +2348,7 @@ using namespace Vulkan_Internal;
 			}
 
 			assert(features_1_2.hostQueryReset == VK_TRUE);
-
-			if (features_1_2.descriptorIndexing)
-			{
-				capabilities |= GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS;
-			}
+			assert(features_1_2.descriptorIndexing == VK_TRUE);
 			
 			VkFormatProperties formatProperties = {};
 			vkGetPhysicalDeviceFormatProperties(physicalDevice, _ConvertFormat(FORMAT_R11G11B10_FLOAT), &formatProperties);
@@ -4272,9 +4268,10 @@ using namespace Vulkan_Internal;
 
 				if (shader_internal->pushconstants.size > 0)
 				{
-					internal_state->pushconstants.offset = shader_internal->pushconstants.offset;
-					internal_state->pushconstants.size = shader_internal->pushconstants.size;
-					internal_state->pushconstants.stageFlags |= shader_internal->pushconstants.stageFlags;
+					internal_state->pushconstants.offset = std::min(internal_state->pushconstants.offset, shader_internal->pushconstants.offset);
+					internal_state->pushconstants.size = std::max(internal_state->pushconstants.size, shader_internal->pushconstants.size);
+					//internal_state->pushconstants.stageFlags |= shader_internal->pushconstants.stageFlags;
+					internal_state->pushconstants.stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS; // combining only the used stage flags gives some validation errors for some reason while rendering...
 				}
 			};
 

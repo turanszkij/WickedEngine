@@ -20,19 +20,17 @@ ConstantOutput PatchConstantFunction(InputPatch<PixelInput, 3> patch)
 {
 	ConstantOutput output;
 
-	ShaderMesh mesh = InstanceArray[patch[0].instanceID].mesh;
-
 	// tessellation strength based on distance and orientation:
 	[unroll]
 	for (uint ie = 0; ie < 3; ++ie)
 	{
 #if 0
-		output.edges[ie] = mesh.tessellation_factor;
+		output.edges[ie] = GetMesh().tessellation_factor;
 #else
 		float3 edge = patch[(ie + 1) % 3].pos.xyz - patch[ie].pos.xyz;
 		float3 vec = (patch[(ie + 1) % 3].pos.xyz + patch[ie].pos.xyz) / 2 - g_xCamera.CamPos.xyz;
 		float len = sqrt(dot(edge, edge) / dot(vec, vec));
-		output.edges[(ie + 1) % 3] = max(1, len * mesh.tessellation_factor);
+		output.edges[(ie + 1) % 3] = max(1, len * GetMesh().tessellation_factor);
 #endif
 	}
 

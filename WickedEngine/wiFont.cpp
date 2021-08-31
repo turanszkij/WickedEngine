@@ -30,7 +30,6 @@ using namespace wiRectPacker;
 
 namespace wiFont_Internal
 {
-	GPUBuffer			constantBuffer;
 	BlendState			blendState;
 	RasterizerState		rasterizerState;
 	DepthStencilState	depthStencilState;
@@ -281,18 +280,6 @@ void Initialize()
 	}
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
-
-	{
-		GPUBufferDesc bd;
-		bd.Usage = USAGE_DYNAMIC;
-		bd.ByteWidth = sizeof(FontCB);
-		bd.BindFlags = BIND_CONSTANT_BUFFER;
-		bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-
-		device->CreateBuffer(&bd, nullptr, &constantBuffer);
-	}
-
-
 
 	RasterizerState rs;
 	rs.FillMode = FILL_SOLID;
@@ -597,22 +584,10 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 
 		device->BindPipelineState(&PSO, cmd);
 
-		device->BindConstantBuffer(&constantBuffer, CB_GETBINDSLOT(FontCB), cmd);
-		device->BindConstantBuffer(&constantBuffer, CB_GETBINDSLOT(FontCB), cmd);
-
-		FontCB cb;
-		cb.g_xFont_BufferOffset = mem.offset;
-
-		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
-		{
-			cb.g_xFont_TextureIndex = device->GetDescriptorIndex(&texture, SRV);
-		}
-		else
-		{
-			device->BindResource(&texture, TEXSLOT_FONTATLAS, cmd);
-		}
-
-		device->BindResource(mem.buffer, 0, cmd);
+		PushConstantsFont push;
+		push.buffer_index = device->GetDescriptorIndex(mem.buffer, SRV);
+		push.buffer_offset = mem.offset;
+		push.texture_index = device->GetDescriptorIndex(&texture, SRV);
 
 		const wiCanvas& canvas = canvases[cmd];
 		// Asserts will check that a proper canvas was set for this cmd with wiImage::SetCanvas()
@@ -625,24 +600,24 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 		if (newProps.shadowColor.getA() > 0)
 		{
 			// font shadow render:
-			XMStoreFloat4x4(&cb.g_xFont_Transform,
+			XMStoreFloat4x4(&push.transform,
 				XMMatrixTranslation((float)newProps.posX + 1, (float)newProps.posY + 1, 0)
 				* Projection
 			);
-			cb.g_xFont_Color = newProps.shadowColor.toFloat4();
-			device->UpdateBuffer(&constantBuffer, &cb, cmd);
+			push.color = newProps.shadowColor.rgba;
 
+			device->PushConstants(&push, sizeof(push), cmd);
 			device->DrawInstanced(4, quadCount, 0, 0, cmd);
 		}
 
 		// font base render:
-		XMStoreFloat4x4(&cb.g_xFont_Transform,
+		XMStoreFloat4x4(&push.transform,
 			XMMatrixTranslation((float)newProps.posX, (float)newProps.posY, 0)
 			* Projection
 		);
-		cb.g_xFont_Color = newProps.color.toFloat4();
-		device->UpdateBuffer(&constantBuffer, &cb, cmd);
+		push.color = newProps.color.rgba;
 
+		device->PushConstants(&push, sizeof(push), cmd);
 		device->DrawInstanced(4, quadCount, 0, 0, cmd);
 
 		device->EventEnd(cmd);

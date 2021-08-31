@@ -292,7 +292,7 @@ void RenderPath3D::ResizeBuffers()
 		desc.Format = FORMAT_R32_FLOAT;
 		desc.Width = internalResolution.x;
 		desc.Height = internalResolution.y;
-		desc.MipLevels = 6;
+		desc.MipLevels = 3;
 		desc.layout = RESOURCE_STATE_SHADER_RESOURCE_COMPUTE;
 		device->CreateTexture(&desc, nullptr, &rtLinearDepth);
 		device->SetName(&rtLinearDepth, "rtLinearDepth");
@@ -712,10 +712,9 @@ void RenderPath3D::Render() const
 			rtPrimitiveID_render,
 			rtGbuffer,
 			depthBuffer_Copy,
+			rtLinearDepth,
 			cmd
 		);
-
-		wiRenderer::Postprocess_DepthPyramid(depthBuffer_Copy, rtLinearDepth, cmd);
 
 		if (wiRenderer::GetSurfelGIEnabled())
 		{

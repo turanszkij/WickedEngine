@@ -223,9 +223,7 @@ namespace wiScene
 		int customShaderID = -1;
 
 		// Non-serialized attributes:
-		wiGraphics::GPUBuffer constantBuffer;
 		uint32_t layerMask = ~0u;
-		mutable bool dirty_buffer = false;
 
 		// User stencil value can be in range [0, 15]
 		inline void SetUserStencilRef(uint8_t value)
@@ -386,7 +384,6 @@ namespace wiScene
 		wiGraphics::GPUBuffer streamoutBuffer_POS;
 		wiGraphics::GPUBuffer streamoutBuffer_TAN;
 		std::vector<uint8_t> vertex_subsets;
-		wiGraphics::GPUBuffer descriptor;
 		wiGraphics::GPUBuffer subsetBuffer;
 
 		wiGraphics::RaytracingAccelerationStructure BLAS;
@@ -399,12 +396,12 @@ namespace wiScene
 		mutable BLAS_STATE BLAS_state = BLAS_STATE_NEEDS_REBUILD;
 
 		// Only valid for 1 frame material component indices:
-		int terrain_material1_index = -1;
-		int terrain_material2_index = -1;
-		int terrain_material3_index = -1;
+		uint32_t terrain_material1_index = ~0u;
+		uint32_t terrain_material2_index = ~0u;
+		uint32_t terrain_material3_index = ~0u;
 
 		mutable bool dirty_morph = false;
-		mutable bool dirty_bindless = true;
+		mutable bool dirty_subsets = true;
 
 		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
 		inline void SetDoubleSided(bool value) { if (value) { _flags |= DOUBLE_SIDED; } else { _flags &= ~DOUBLE_SIDED; } }
@@ -1297,12 +1294,25 @@ namespace wiScene
 		void SetAccelerationStructureUpdateRequested(bool value = true) { acceleration_structure_update_requested = value; }
 		bool IsAccelerationStructureUpdateRequested() const { return acceleration_structure_update_requested; }
 
+		// Shader visible scene parameters:
+		ShaderScene shaderscene;
+
 		// Instances for bindless visiblity indexing:
 		//	contains in order:
 		//		1) objects
 		//		2) hair particles
 		std::vector<ShaderMeshInstance> instanceData;
 		wiGraphics::GPUBuffer instanceBuffer;
+
+		// Meshes for bindless visiblity indexing:
+		//	contains in order:
+		//		1) meshes
+		//		2) hair particles
+		std::vector<ShaderMesh> meshData;
+		wiGraphics::GPUBuffer meshBuffer;
+
+		std::vector<ShaderMaterial> materialData;
+		wiGraphics::GPUBuffer materialBuffer;
 
 		// Occlusion query state:
 		wiGraphics::GPUQueryHeap queryHeap[arraysize(ObjectComponent::occlusionQueries)];

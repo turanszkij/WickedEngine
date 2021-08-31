@@ -219,32 +219,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 						);
 						while (q.Proceed())
 						{
-							//ShaderMesh mesh = bindless_buffers[NonUniformResourceIndex(q.CandidateInstanceID())].Load<ShaderMesh>(0);
-							//ShaderMeshSubset subset = bindless_subsets[NonUniformResourceIndex(mesh.subsetbuffer)][q.CandidateGeometryIndex()];
-							//ShaderMaterial material = bindless_buffers[NonUniformResourceIndex(subset.material)].Load<ShaderMaterial>(0);
-							//[branch]
-							//if (!material.IsCastingShadow())
-							//{
-							//	continue;
-							//}
-							//[branch]
-							//if (material.texture_basecolormap_index < 0)
-							//{
-							//	q.CommitNonOpaqueTriangleHit();
-							//	break;
-							//}
-							//
-							//Surface surface;
-							//EvaluateObjectSurface(
-							//	mesh,
-							//	subset,
-							//	material,
-							//	q.CandidatePrimitiveIndex(),
-							//	q.CandidateTriangleBarycentrics(),
-							//	q.CandidateObjectToWorld3x4(),
-							//	surface
-							//);
-
 							PrimitiveID prim;
 							prim.primitiveIndex = q.CandidatePrimitiveIndex();
 							prim.instanceIndex = q.CandidateInstanceID();

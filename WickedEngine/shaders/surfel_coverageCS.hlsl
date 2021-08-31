@@ -4,9 +4,9 @@
 
 //#define SURFEL_DEBUG_NORMAL
 //#define SURFEL_DEBUG_COLOR
-//#define SURFEL_DEBUG_POINT
+#define SURFEL_DEBUG_POINT
 //#define SURFEL_DEBUG_RANDOM
-#define SURFEL_DEBUG_HEATMAP
+//#define SURFEL_DEBUG_HEATMAP
 
 
 static const uint random_colors_size = 11;
@@ -102,7 +102,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		return;
 	}
 
-	const float3 N = surface.N;
+	const float3 N = surface.facenormal;
 
 	float coverage = 0;
 

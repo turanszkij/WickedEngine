@@ -1,4 +1,5 @@
 #include "globals.hlsli"
+#include "emittedparticleHF.hlsli"
 #include "ShaderInterop_EmittedParticle.h"
 
 RWSTRUCTUREDBUFFER(particleBuffer, Particle, 0);
@@ -112,7 +113,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		color_modifier |= (uint)(255.0 * lerp(1, rand(seed, uv), xParticleRandomColorFactor)) << 0;
 		color_modifier |= (uint)(255.0 * lerp(1, rand(seed, uv), xParticleRandomColorFactor)) << 8;
 		color_modifier |= (uint)(255.0 * lerp(1, rand(seed, uv), xParticleRandomColorFactor)) << 16;
-		particle.color_mirror |= xParticleColor & color_modifier;
+		particle.color_mirror |= pack_rgba(float4(EmitterGetMaterial().baseColor.rgb, 1)) & color_modifier;
 
 
 		// new particle index retrieved from dead list (pop):

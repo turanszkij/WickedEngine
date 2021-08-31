@@ -302,9 +302,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)motionblurCS_earlyexit.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)lineardepthCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)luminancePass1CS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>

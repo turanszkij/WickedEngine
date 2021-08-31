@@ -11,7 +11,7 @@ float4 main(VSOut input) : SV_Target
 	float3 uv_sur = uv_nor;
 	uv_sur.z += impostorCaptureAngles;
 
-	ShaderMeshInstance instance = InstanceArray[input.instanceID];
+	ShaderMeshInstance instance = load_instance(input.instanceID);
 
 	float4 color = impostorTex.Sample(sampler_linear_clamp, uv_col) * unpack_rgba(instance.color);
 	float3 N = impostorTex.Sample(sampler_linear_clamp, uv_nor).rgb * 2 - 1;

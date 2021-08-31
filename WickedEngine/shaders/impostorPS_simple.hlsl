@@ -7,7 +7,7 @@ float4 main(VSOut input) : SV_TARGET
 
 	float3 uv_col = float3(input.uv, input.slice);
 
-	ShaderMeshInstance instance = InstanceArray[input.instanceID];
+	ShaderMeshInstance instance = load_instance(input.instanceID);
 	float4 color = unpack_rgba(instance.color);
 
 	return color;

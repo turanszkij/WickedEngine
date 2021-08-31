@@ -1,5 +1,12 @@
 #ifndef WI_EMITTEDPARTICLE_HF
 #define WI_EMITTEDPARTICLE_HF
+#include "globals.hlsli"
+#include "ShaderInterop_EmittedParticle.h"
+
+ShaderMaterial EmitterGetMaterial()
+{
+	return load_material(xEmitterMaterialIndex);
+}
 
 struct VertextoPixel
 {

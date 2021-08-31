@@ -289,12 +289,12 @@ struct Surface
 
 	bool load(in PrimitiveID prim, in float2 barycentrics, in uint uid = 0)
 	{
-		inst = InstanceArray[prim.instanceIndex];
+		inst = load_instance(prim.instanceIndex);
 		if ((uid != 0 && inst.uid != uid) || inst.mesh.vb_pos_nor_wind < 0)
 			return false;
 
-		subset = bindless_subsets[NonUniformResourceIndex(inst.mesh.subsetbuffer)][prim.subsetIndex];
-		material = bindless_buffers[NonUniformResourceIndex(subset.material)].Load<ShaderMaterial>(0);
+		subset = load_subset(inst.mesh, prim.subsetIndex);
+		material = load_material(subset.materialIndex);
 		bary = barycentrics;
 
 		uint startIndex = prim.primitiveIndex * 3 + subset.indexOffset;
@@ -452,12 +452,12 @@ struct Surface
 
 	bool load(in PrimitiveID prim, in float3 P, in uint uid = 0)
 	{
-		inst = InstanceArray[prim.instanceIndex];
+		inst = load_instance(prim.instanceIndex);
 		if ((uid != 0 && inst.uid != uid) || inst.mesh.vb_pos_nor_wind < 0)
 			return false;
 
-		subset = bindless_subsets[NonUniformResourceIndex(inst.mesh.subsetbuffer)][prim.subsetIndex];
-		material = bindless_buffers[NonUniformResourceIndex(subset.material)].Load<ShaderMaterial>(0);
+		subset = load_subset(inst.mesh, prim.subsetIndex);
+		material = load_material(subset.materialIndex);
 
 		uint startIndex = prim.primitiveIndex * 3 + subset.indexOffset;
 		uint i0 = bindless_ib[NonUniformResourceIndex(inst.mesh.ib)][startIndex + 0];

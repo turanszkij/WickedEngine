@@ -143,8 +143,6 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
 
 	uint32_t primitiveCount = 0;
 
-	device->BindResource(&scene.instanceBuffer, SBSLOT_INSTANCEARRAY, cmd);
-
 	device->EventBegin("BVH - Primitive Builder", cmd);
 	{
 		device->BindComputeShader(&computeShaders[CSTYPE_BVH_PRIMITIVES], cmd);

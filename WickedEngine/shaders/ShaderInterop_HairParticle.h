@@ -42,7 +42,7 @@ CBUFFER(HairParticleCB, CBSLOT_OTHER_HAIRPARTICLE)
 	float xHairAspect;
 	uint xHairLayerMask;
 
-	uint xHairInstanceID;
+	uint xHairInstanceIndex;
 	uint padding0;
 	uint padding1;
 	uint padding2;

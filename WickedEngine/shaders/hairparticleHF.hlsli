@@ -1,5 +1,20 @@
 #ifndef WI_HAIRPARTICLE_HF
 #define WI_HAIRPARTICLE_HF
+#include "globals.hlsli"
+#include "ShaderInterop_HairParticle.h"
+
+ShaderMeshInstance HairGetInstance()
+{
+	return load_instance(xHairInstanceIndex);
+}
+ShaderMesh HairGetMesh()
+{
+	return HairGetInstance().mesh;
+}
+ShaderMaterial HairGetMaterial()
+{
+	return load_material(load_subset(HairGetMesh(), 0).materialIndex);
+}
 
 struct VertexToPixel
 {

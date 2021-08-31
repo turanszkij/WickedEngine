@@ -303,6 +303,7 @@ namespace wiRenderer
 		const wiGraphics::Texture& texture_primitiveID, // can be MSAA
 		const wiGraphics::Texture gbuffer[GBUFFER_COUNT],
 		const wiGraphics::Texture& depthbuffer_resolved,
+		const wiGraphics::Texture& lineardepth,
 		wiGraphics::CommandList cmd
 	);
 
@@ -600,11 +601,6 @@ namespace wiRenderer
 		const wiGraphics::Texture& depth_history,
 		const wiGraphics::Texture gbuffer[GBUFFER_COUNT],
 		const wiGraphics::Texture& output,
-		wiGraphics::CommandList cmd
-	);
-	void Postprocess_DepthPyramid(
-		const wiGraphics::Texture& depthbuffer,
-		const wiGraphics::Texture& lineardepth,
 		wiGraphics::CommandList cmd
 	);
 	void Postprocess_Sharpen(

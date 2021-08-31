@@ -43,7 +43,7 @@ void main(
 	// calculate render properties from life:
 	float lifeLerp = 1 - particle.life / particle.maxLife;
 	float size = lerp(particle.sizeBeginEnd.x, particle.sizeBeginEnd.y, lifeLerp);
-	float opacity = saturate(lerp(1, 0, lifeLerp) * xEmitterOpacity);
+	float opacity = saturate(lerp(1, 0, lifeLerp) * EmitterGetMaterial().baseColor.a);
 	float rotation = lifeLerp * particle.rotationalVelocity;
 
 	const float spriteframe = xEmitterFrameRate == 0 ?

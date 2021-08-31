@@ -1,18 +1,7 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
-#ifdef BINDLESS
 PUSHCONSTANT(push, PushConstantsTonemap);
-Texture3D<float4> bindless_textures3D[] : register(t0, space2);
-RWTexture2D<float4> bindless_rwtextures[] : register(u0, space3);
-#else
-TEXTURE2D(input, float4, TEXSLOT_ONDEMAND0);
-TEXTURE2D(input_luminance, float, TEXSLOT_ONDEMAND1);
-TEXTURE2D(input_distortion, float4, TEXSLOT_ONDEMAND2);
-TEXTURE3D(colorgrade_lookuptable, float4, TEXSLOT_ONDEMAND3);
-
-RWTEXTURE2D(output, unorm float4, 0);
-#endif // BINDLESS
 
 // https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
 // sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT
@@ -56,7 +45,6 @@ float3 ACESFitted(float3 color)
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-#ifdef BINDLESS
 	const float2 uv = (DTid.xy + 0.5f) * push.xPPResolution_rcp;
 	float exposure = push.exposure;
 	const bool is_dither = push.dither != 0;
@@ -78,29 +66,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	{
 		exposure *= push.eyeadaptionkey / max(bindless_textures[push.texture_input_luminance][uint2(0, 0)].r, 0.0001);
 	}
-#else
-	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
-	float exposure = tonemap_exposure;
-	const bool is_dither = tonemap_dither != 0;
-	const bool is_colorgrading = tonemap_colorgrading != 0;
-	const bool is_eyeadaption = tonemap_eyeadaption != 0;
-	const bool is_distortion = tonemap_distortion != 0;
-
-	float2 distortion = 0;
-	[branch]
-	if (is_distortion)
-	{
-		distortion = input_distortion.SampleLevel(sampler_linear_clamp, uv, 0).rg;
-	}
-
-	float4 hdr = input.SampleLevel(sampler_linear_clamp, uv + distortion, 0);
-
-	[branch]
-	if (is_eyeadaption)
-	{
-		exposure *= tonemap_eyeadaptionkey / max(input_luminance[uint2(0, 0)].r, 0.0001);
-	}
-#endif // BINDLESS
 
 	hdr.rgb *= exposure;
 	float4 ldr = float4(ACESFitted(hdr.rgb), hdr.a);
@@ -115,11 +80,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	if (is_colorgrading)
 	{
-#ifdef BINDLESS
 		ldr.rgb = bindless_textures3D[push.texture_colorgrade_lookuptable].SampleLevel(sampler_linear_clamp, ldr.rgb, 0).rgb;
-#else
-		ldr.rgb = colorgrade_lookuptable.SampleLevel(sampler_linear_clamp, ldr.rgb, 0).rgb;
-#endif // BINDLESS
 	}
 
 	if (is_dither)
@@ -128,9 +89,5 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		ldr.rgb += (dither((float2)DTid.xy) - 0.5f) / 64.0f;
 	}
 
-#ifdef BINDLESS
 	bindless_rwtextures[push.texture_output][DTid.xy] = ldr;
-#else
-	output[DTid.xy] = ldr;
-#endif // BINDLESS
 }

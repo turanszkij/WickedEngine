@@ -198,7 +198,7 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 			GPUBufferDesc desc;
 			desc.StructureByteStride = sizeof(ShaderMeshSubset);
 			desc.ByteWidth = desc.StructureByteStride;
-			desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+			desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 			desc.BindFlags = BIND_SHADER_RESOURCE;
 			device->CreateBuffer(&desc, nullptr, &subsetBuffer);
 		}
@@ -212,7 +212,7 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 	}
 
 }
-void wiHairParticle::UpdateGPU(uint32_t instanceID, const MeshComponent& mesh, const MaterialComponent& material, CommandList cmd) const
+void wiHairParticle::UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex, const MeshComponent& mesh, const MaterialComponent& material, CommandList cmd) const
 {
 	if (strandCount == 0 || !simulationBuffer.IsValid())
 	{
@@ -227,7 +227,6 @@ void wiHairParticle::UpdateGPU(uint32_t instanceID, const MeshComponent& mesh, c
 	{
 		desc = material.textures[MaterialComponent::BASECOLORMAP].resource->texture.GetDesc();
 	}
-
 	HairParticleCB hcb;
 	hcb.xHairWorld = world;
 	hcb.xHairRegenerate = regenerate_frame ? 1 : 0;
@@ -249,13 +248,13 @@ void wiHairParticle::UpdateGPU(uint32_t instanceID, const MeshComponent& mesh, c
 	hcb.xHairTexMul = float2(1.0f / (float)hcb.xHairFramesXY.x, 1.0f / (float)hcb.xHairFramesXY.y);
 	hcb.xHairAspect = (float)std::max(1u, desc.Width) / (float)std::max(1u, desc.Height);
 	hcb.xHairLayerMask = layerMask;
-	hcb.xHairInstanceID = instanceID;
+	hcb.xHairInstanceIndex = instanceIndex;
 	device->UpdateBuffer(&cb, &hcb, cmd);
 
 	ShaderMeshSubset subset;
 	subset.init();
 	subset.indexOffset = 0;
-	subset.material = device->GetDescriptorIndex(&material.constantBuffer, SRV);
+	subset.materialIndex = materialIndex;
 	device->UpdateBuffer(&subsetBuffer, &subset, cmd);
 
 	// Simulate:
@@ -331,7 +330,7 @@ void wiHairParticle::UpdateGPU(uint32_t instanceID, const MeshComponent& mesh, c
 	regenerate_frame = false;
 }
 
-void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent& material, RENDERPASS renderPass, CommandList cmd) const
+void wiHairParticle::Draw(const MaterialComponent& material, RENDERPASS renderPass, CommandList cmd) const
 {
 	if (strandCount == 0 || !cb.IsValid())
 	{
@@ -356,17 +355,6 @@ void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent
 	{
 		device->BindPipelineState(&PSO[renderPass], cmd);
 
-		if (material.textures[MaterialComponent::BASECOLORMAP].resource == nullptr)
-		{
-			device->BindResource(wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND0, cmd);
-			device->BindResource(wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND0, cmd);
-		}
-		else
-		{
-			device->BindResource(material.textures[MaterialComponent::BASECOLORMAP].GetGPUResource(), TEXSLOT_ONDEMAND0, cmd);
-			device->BindResource(material.textures[MaterialComponent::BASECOLORMAP].GetGPUResource(), TEXSLOT_ONDEMAND0, cmd);
-		}
-
 		if (renderPass != RENDERPASS_PREPASS) // depth only alpha test will be full res
 		{
 			device->BindShadingRate(material.shadingRate, cmd);
@@ -374,11 +362,7 @@ void wiHairParticle::Draw(const CameraComponent& camera, const MaterialComponent
 	}
 
 	device->BindConstantBuffer(&cb, CB_GETBINDSLOT(HairParticleCB), cmd);
-	device->BindConstantBuffer(&material.constantBuffer, CBSLOT_RENDERER_MATERIAL, cmd);
-
-	device->BindResource(&vertexBuffer_POS[0], 0, cmd);
-	device->BindResource(&vertexBuffer_TEX, 1, cmd);
-	device->BindResource(&primitiveBuffer, 2, cmd);
+	device->BindResource(&primitiveBuffer, 0, cmd);
 
 	device->BindIndexBuffer(&culledIndexBuffer, INDEXFORMAT_32BIT, 0, cmd);
 

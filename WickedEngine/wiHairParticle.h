@@ -31,8 +31,8 @@ public:
 	wiGraphics::RaytracingAccelerationStructure BLAS;
 
 	void UpdateCPU(const TransformComponent& transform, const MeshComponent& mesh, float dt);
-	void UpdateGPU(uint32_t instanceID, const MeshComponent& mesh, const MaterialComponent& material, wiGraphics::CommandList cmd) const;
-	void Draw(const CameraComponent& camera, const MaterialComponent& material, RENDERPASS renderPass, wiGraphics::CommandList cmd) const;
+	void UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex, const MeshComponent& mesh, const MaterialComponent& material, wiGraphics::CommandList cmd) const;
+	void Draw(const MaterialComponent& material, RENDERPASS renderPass, wiGraphics::CommandList cmd) const;
 
 	enum FLAGS
 	{

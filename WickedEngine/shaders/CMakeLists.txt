@@ -63,7 +63,6 @@ set(SHADERS_CS
 		"motionblurCS.hlsl"
 		"motionblurCS_cheap.hlsl"
 		"motionblurCS_earlyexit.hlsl"
-		"lineardepthCS.hlsl"
 		"luminancePass1CS.hlsl"
 		"lightShaftsCS.hlsl"
 		"lightCullingCS_ADVANCED_DEBUG.hlsl"
@@ -150,6 +149,17 @@ set(SHADERS_CS
 		"rtaoCS.hlsl"
 		"rtao_denoise_tileclassificationCS.hlsl"
 		"rtao_denoise_filterCS.hlsl"
+		"visibility_resolveCS.hlsl"
+		"visibility_resolveCS_MSAA.hlsl"
+		"surfel_coverageCS.hlsl"
+		"surfel_indirectprepareCS.hlsl"
+		"surfel_updateCS.hlsl"
+		"surfel_gridresetCS.hlsl"
+		"surfel_gridoffsetsCS.hlsl"
+		"surfel_binningCS.hlsl"
+		"surfel_shadeCS.hlsl"
+		"surfel_raytraceCS_rtapi.hlsl"
+		"surfel_raytraceCS.hlsl"
 )
 
 set(SHADERS_PS

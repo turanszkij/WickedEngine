@@ -137,7 +137,6 @@ int main(int argc, char* argv[])
 		"motionblurCS.hlsl"											,
 		"motionblurCS_cheap.hlsl"									,
 		"motionblurCS_earlyexit.hlsl"								,
-		"lineardepthCS.hlsl"										,
 		"luminancePass1CS.hlsl"										,
 		"lightShaftsCS.hlsl"										,
 		"lightCullingCS_ADVANCED_DEBUG.hlsl"						,
@@ -224,6 +223,17 @@ int main(int argc, char* argv[])
 		"rtaoCS.hlsl"												,
 		"rtao_denoise_tileclassificationCS.hlsl",
 		"rtao_denoise_filterCS.hlsl",
+		"visibility_resolveCS.hlsl",
+		"visibility_resolveCS_MSAA.hlsl",
+		"surfel_coverageCS.hlsl",
+		"surfel_indirectprepareCS.hlsl",
+		"surfel_updateCS.hlsl",
+		"surfel_gridresetCS.hlsl",
+		"surfel_gridoffsetsCS.hlsl",
+		"surfel_binningCS.hlsl",
+		"surfel_shadeCS.hlsl",
+		"surfel_raytraceCS_rtapi.hlsl",
+		"surfel_raytraceCS.hlsl",
 	};
 
 	shaders[wiGraphics::PS] = {
@@ -394,12 +404,8 @@ int main(int argc, char* argv[])
 	minshadermodels["renderlightmapPS_rtapi.hlsl"] = wiGraphics::SHADERMODEL_6_5;
 	minshadermodels["raytraceCS_rtapi.hlsl"] = wiGraphics::SHADERMODEL_6_5;
 	minshadermodels["rtshadowCS.hlsl"] = wiGraphics::SHADERMODEL_6_5;
-	minshadermodels["rtshadow_denoise_tileclassificationCS.hlsl"] = wiGraphics::SHADERMODEL_6_0;
-	minshadermodels["rtshadow_denoise_filterCS.hlsl"] = wiGraphics::SHADERMODEL_6_0;
-	minshadermodels["rtshadow_denoise_temporalCS.hlsl"] = wiGraphics::SHADERMODEL_6_0;
 	minshadermodels["rtaoCS.hlsl"] = wiGraphics::SHADERMODEL_6_5;
-	minshadermodels["rtao_denoise_tileclassificationCS.hlsl"] = wiGraphics::SHADERMODEL_6_0;
-	minshadermodels["rtao_denoise_filterCS.hlsl"] = wiGraphics::SHADERMODEL_6_0;
+	minshadermodels["surfel_raytraceCS_rtapi.hlsl"] = wiGraphics::SHADERMODEL_6_5;
 
 	wiShaderCompiler::Initialize();
 	wiJobSystem::Initialize();

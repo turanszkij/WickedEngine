@@ -233,7 +233,7 @@ void wiEmittedParticle::Restart()
 	SetPaused(false);
 }
 
-void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const MaterialComponent& material, const MeshComponent* mesh, CommandList cmd) const
+void wiEmittedParticle::UpdateGPU(uint32_t materialIndex, const TransformComponent& transform, const MeshComponent* mesh, CommandList cmd) const
 {
 	if (!particleBuffer.IsValid())
 	{
@@ -260,9 +260,6 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 		cb.xParticleSize = size;
 		cb.xParticleMotionBlurAmount = motionBlurAmount;
 		cb.xParticleRotation = rotation * XM_PI * 60;
-		cb.xParticleColor = wiMath::CompressColor(XMFLOAT4(material.baseColor.x, material.baseColor.y, material.baseColor.z, 1));
-		cb.xParticleEmissive = material.emissiveColor.w;
-		cb.xEmitterOpacity = material.GetOpacity();
 		cb.xParticleMass = mass;
 		cb.xEmitterMaxParticleCount = MAX_PARTICLES;
 		cb.xEmitterFixedTimestep = FIXED_TIMESTEP;
@@ -276,6 +273,7 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 		XMStoreFloat3(&cb.xParticleVelocity, XMVector3TransformNormal(XMLoadFloat3(&velocity), XMLoadFloat4x4(&transform.world)));
 		cb.xParticleRandomColorFactor = random_color;
 		cb.xEmitterLayerMask = layerMask;
+		cb.xEmitterMaterialIndex = materialIndex;
 
 		cb.xEmitterOptions = 0;
 		if (IsSPHEnabled())
@@ -557,7 +555,7 @@ void wiEmittedParticle::UpdateGPU(const TransformComponent& transform, const Mat
 }
 
 
-void wiEmittedParticle::Draw(const CameraComponent& camera, const MaterialComponent& material, CommandList cmd) const
+void wiEmittedParticle::Draw(const MaterialComponent& material, CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	device->EventBegin("EmittedParticle", cmd);
@@ -570,20 +568,11 @@ void wiEmittedParticle::Draw(const CameraComponent& camera, const MaterialCompon
 	{
 		const BLENDMODE blendMode = material.GetBlendMode();
 		device->BindPipelineState(&PSO[blendMode][shaderType], cmd);
-		if (material.textures[MaterialComponent::BASECOLORMAP].resource == nullptr)
-		{
-			device->BindResource(wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND0, cmd);
-		}
-		else
-		{
-			device->BindResource(material.textures[MaterialComponent::BASECOLORMAP].GetGPUResource(), TEXSLOT_ONDEMAND0, cmd);
-		}
+
 		device->BindShadingRate(material.shadingRate, cmd);
 	}
 
 	device->BindConstantBuffer(&constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), cmd);
-	device->BindConstantBuffer(&constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), cmd);
-	device->BindConstantBuffer(&material.constantBuffer, CBSLOT_RENDERER_MATERIAL, cmd);
 
 	if (ALLOW_MESH_SHADER && device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_MESH_SHADER))
 	{

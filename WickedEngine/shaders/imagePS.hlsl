@@ -3,7 +3,7 @@
 float4 main(VertextoPixel input) : SV_TARGET
 {
 	float4 uvsets = input.compute_uvs();
-	float4 color = texture_base.Sample(Sampler, uvsets.xy) * xColor;
+	float4 color = texture_base.Sample(Sampler, uvsets.xy) * push.color;
 
 	return color;
 }

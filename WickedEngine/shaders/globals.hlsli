@@ -3,18 +3,40 @@
 #include "ShaderInterop.h"
 #include "ShaderInterop_Renderer.h"
 
-Texture2D<float4> bindless_textures[] : register(t0, space1);
-ByteAddressBuffer bindless_buffers[] : register(t0, space2);
-StructuredBuffer<ShaderMeshSubset> bindless_subsets[] : register(t0, space3);
-Buffer<uint> bindless_ib[] : register(t0, space4);
-SamplerState bindless_samplers[] : register(s0, space5);
+Texture2D<float4> bindless_textures[] : register(space1);
+ByteAddressBuffer bindless_buffers[] : register(space2);
+SamplerState bindless_samplers[] : register(space3);
+Buffer<uint> bindless_ib[] : register(space4);
+
+TextureCube<float4> bindless_cubemaps[] : register(space5);
+TextureCubeArray<float4> bindless_cubearrays[] : register(space6);
+Texture3D<float4> bindless_textures3D[] : register(space7);
+RWTexture2D<float4> bindless_rwtextures[] : register(space8);
+
+ShaderMeshInstance load_instance(uint instanceIndex)
+{
+	return bindless_buffers[g_xFrame.scene.instancebuffer].Load<ShaderMeshInstance>(instanceIndex * sizeof(ShaderMeshInstance));
+}
+ShaderMesh load_mesh(uint meshIndex)
+{
+	return bindless_buffers[g_xFrame.scene.meshbuffer].Load<ShaderMesh>(meshIndex * sizeof(ShaderMesh));
+}
+ShaderMeshSubset load_subset(ShaderMesh mesh, uint subsetIndex)
+{
+	return bindless_buffers[NonUniformResourceIndex(mesh.subsetbuffer)].Load<ShaderMeshSubset>(subsetIndex * sizeof(ShaderMeshSubset));
+}
+ShaderMaterial load_material(uint materialIndex)
+{
+	return bindless_buffers[g_xFrame.scene.materialbuffer].Load<ShaderMaterial>(materialIndex * sizeof(ShaderMaterial));
+}
+
+#define texture_globalenvmap bindless_cubemaps[g_xFrame.scene.globalenvmap]
+#define texture_envmaparray bindless_cubearrays[g_xFrame.scene.envmaparray]
 
 TEXTURE2D(texture_depth, float, TEXSLOT_DEPTH);
 TEXTURE2D(texture_lineardepth, float, TEXSLOT_LINEARDEPTH);
 TEXTURE2D(texture_gbuffer0, uint2, TEXSLOT_GBUFFER0);
 TEXTURE2D(texture_gbuffer1, float2, TEXSLOT_GBUFFER1);
-TEXTURECUBE(texture_globalenvmap, float4, TEXSLOT_GLOBALENVMAP);
-TEXTURECUBEARRAY(texture_envmaparray, float4, TEXSLOT_ENVMAPARRAY);
 TEXTURE2D(texture_skyviewlut, float4, TEXSLOT_SKYVIEWLUT);
 TEXTURE2D(texture_transmittancelut, float4, TEXSLOT_TRANSMITTANCELUT);
 TEXTURE2D(texture_multiscatteringlut, float4, TEXSLOT_MULTISCATTERINGLUT);
@@ -29,7 +51,6 @@ TEXTURE2D(texture_bluenoise, float4, TEXSLOT_BLUENOISE);
 TEXTURE2D(texture_random64x64, float4, TEXSLOT_RANDOM64X64);
 STRUCTUREDBUFFER(EntityArray, ShaderEntity, SBSLOT_ENTITYARRAY);
 STRUCTUREDBUFFER(MatrixArray, float4x4, SBSLOT_MATRIXARRAY);
-STRUCTUREDBUFFER(InstanceArray, ShaderMeshInstance, SBSLOT_INSTANCEARRAY);
 
 SAMPLERSTATE(			sampler_linear_clamp,	SSLOT_LINEAR_CLAMP	);
 SAMPLERSTATE(			sampler_linear_wrap,	SSLOT_LINEAR_WRAP	);
@@ -41,7 +62,6 @@ SAMPLERSTATE(			sampler_aniso_clamp,	SSLOT_ANISO_CLAMP	);
 SAMPLERSTATE(			sampler_aniso_wrap,		SSLOT_ANISO_WRAP	);
 SAMPLERSTATE(			sampler_aniso_mirror,	SSLOT_ANISO_MIRROR	);
 SAMPLERCOMPARISONSTATE(	sampler_cmp_depth,		SSLOT_CMP_DEPTH		);
-SAMPLERSTATE(			sampler_objectshader,	SSLOT_OBJECTSHADER	);
 
 #define PI 3.14159265358979323846
 #define SQRT2 1.41421356237309504880
@@ -69,7 +89,7 @@ inline float3 GetAmbientColor() { return g_xFrame.Ambient.rgb; }
 inline float2 GetInternalResolution() { return g_xFrame.InternalResolution; }
 inline float GetTime() { return g_xFrame.Time; }
 inline uint2 GetTemporalAASampleRotation() { return uint2((g_xFrame.TemporalAASampleRotation >> 0u) & 0x000000FF, (g_xFrame.TemporalAASampleRotation >> 8) & 0x000000FF); }
-inline bool IsStaticSky() { return g_xFrame.StaticSkyGamma > 0.0; }
+inline bool IsStaticSky() { return g_xFrame.scene.globalenvmap >= 0; }
 
 // Exponential height fog based on: https://www.iquilezles.org/www/articles/fog/fog.htm
 // Non constant density function
