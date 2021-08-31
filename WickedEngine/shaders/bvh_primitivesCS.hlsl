@@ -24,17 +24,18 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	prim.subsetIndex = push.subsetIndex;
 
 	ShaderMeshInstance inst = load_instance(prim.instanceIndex);
-	ShaderMeshSubset subset = load_subset(inst.mesh, prim.subsetIndex);
+	ShaderMesh mesh = load_mesh(inst.meshIndex);
+	ShaderMeshSubset subset = load_subset(mesh, prim.subsetIndex);
 	ShaderMaterial material = load_material(subset.materialIndex);
 
 	uint startIndex = prim.primitiveIndex * 3 + subset.indexOffset;
-	uint i0 = bindless_ib[inst.mesh.ib][startIndex + 0];
-	uint i1 = bindless_ib[inst.mesh.ib][startIndex + 1];
-	uint i2 = bindless_ib[inst.mesh.ib][startIndex + 2];
+	uint i0 = bindless_ib[mesh.ib][startIndex + 0];
+	uint i1 = bindless_ib[mesh.ib][startIndex + 1];
+	uint i2 = bindless_ib[mesh.ib][startIndex + 2];
 
-	uint4 data0 = bindless_buffers[inst.mesh.vb_pos_nor_wind].Load4(i0 * 16);
-	uint4 data1 = bindless_buffers[inst.mesh.vb_pos_nor_wind].Load4(i1 * 16);
-	uint4 data2 = bindless_buffers[inst.mesh.vb_pos_nor_wind].Load4(i2 * 16);
+	uint4 data0 = bindless_buffers[mesh.vb_pos_nor_wind].Load4(i0 * 16);
+	uint4 data1 = bindless_buffers[mesh.vb_pos_nor_wind].Load4(i1 * 16);
+	uint4 data2 = bindless_buffers[mesh.vb_pos_nor_wind].Load4(i2 * 16);
 	float3 p0 = asfloat(data0.xyz);
 	float3 p1 = asfloat(data1.xyz);
 	float3 p2 = asfloat(data2.xyz);
@@ -45,7 +46,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	BVHPrimitive bvhprim;
 	bvhprim.packed_prim = prim.pack();
 	bvhprim.flags = 0;
-	if (inst.mesh.flags & SHADERMESH_FLAG_DOUBLE_SIDED)
+	if (mesh.flags & SHADERMESH_FLAG_DOUBLE_SIDED)
 	{
 		bvhprim.flags |= BVH_PRIMITIVE_FLAG_DOUBLE_SIDED;
 	}

@@ -9,7 +9,7 @@ ShaderMeshInstance HairGetInstance()
 }
 ShaderMesh HairGetMesh()
 {
-	return HairGetInstance().mesh;
+	return load_mesh(HairGetInstance().meshIndex);
 }
 ShaderMaterial HairGetMaterial()
 {

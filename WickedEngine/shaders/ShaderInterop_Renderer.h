@@ -203,26 +203,25 @@ struct ShaderMeshInstance
 {
 	uint uid;
 	uint flags;
+	uint meshIndex;
 	uint color;
 	uint emissive;
 	int lightmap;
 	int padding0;
 	int padding1;
-	int padding2;
 	ShaderTransform transform;
 	ShaderTransform transformPrev;
-	ShaderMesh mesh;
 
 	void init()
 	{
 		uid = 0;
 		flags = 0;
+		meshIndex = ~0;
 		color = ~0u;
 		emissive = ~0u;
 		lightmap = -1;
 		transform.init();
 		transformPrev.init();
-		mesh.init();
 	}
 
 };

@@ -3076,7 +3076,7 @@ namespace wiScene
 					inst.uid = entity;
 					inst.color = wiMath::CompressColor(object.color);
 					inst.emissive = wiMath::CompressColor(object.emissiveColor);
-					inst.mesh = meshData[meshes.GetIndex(object.meshID)];
+					inst.meshIndex = (uint)meshes.GetIndex(object.meshID);
 
 					if (TLAS.IsValid())
 					{
@@ -3520,7 +3520,7 @@ namespace wiScene
 					// every vertex is pretransformed and simulated in worldspace for hair particle:
 					inst.transform.Create(IDENTITYMATRIX);
 					inst.transformPrev.Create(IDENTITYMATRIX);
-					inst.mesh = mesh;
+					inst.meshIndex = (uint)meshIndex;
 
 					if (TLAS.IsValid())
 					{

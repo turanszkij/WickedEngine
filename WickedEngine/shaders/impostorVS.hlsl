@@ -25,7 +25,8 @@ VSOut main(uint fakeIndex : SV_VERTEXID)
 
 	ShaderMeshInstancePointer poi = impostorBuffer.Load<ShaderMeshInstancePointer>(push.instanceOffset + instanceID * 8);
 	ShaderMeshInstance instance = load_instance(poi.instanceID);
-	float3 extents = instance.mesh.aabb_max - instance.mesh.aabb_min;
+	ShaderMesh mesh = load_mesh(instance.meshIndex);
+	float3 extents = mesh.aabb_max - mesh.aabb_min;
 	float radius = max(extents.x, max(extents.y, extents.z)) * 0.5;
 
 	float3 pos = BILLBOARD[vertexID];
