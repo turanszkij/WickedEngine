@@ -38,9 +38,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	float3 p0 = asfloat(data0.xyz);
 	float3 p1 = asfloat(data1.xyz);
 	float3 p2 = asfloat(data2.xyz);
-	float3 P0 = mul(inst.GetTransform(), float4(p0, 1)).xyz;
-	float3 P1 = mul(inst.GetTransform(), float4(p1, 1)).xyz;
-	float3 P2 = mul(inst.GetTransform(), float4(p2, 1)).xyz;
+	float3 P0 = mul(inst.transform.GetMatrix(), float4(p0, 1)).xyz;
+	float3 P1 = mul(inst.transform.GetMatrix(), float4(p1, 1)).xyz;
+	float3 P2 = mul(inst.transform.GetMatrix(), float4(p2, 1)).xyz;
 
 	BVHPrimitive bvhprim;
 	bvhprim.packed_prim = prim.pack();

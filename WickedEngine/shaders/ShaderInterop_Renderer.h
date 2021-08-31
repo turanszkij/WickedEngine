@@ -170,16 +170,37 @@ struct ShaderMeshSubset
 	}
 };
 
+struct ShaderTransform
+{
+	float4 mat0;
+	float4 mat1;
+	float4 mat2;
+
+	void init()
+	{
+		mat0 = float4(1, 0, 0, 0);
+		mat1 = float4(0, 1, 0, 0);
+		mat2 = float4(0, 0, 1, 0);
+	}
+	void Create(float4x4 mat)
+	{
+		mat0 = float4(mat._11, mat._21, mat._31, mat._41);
+		mat1 = float4(mat._12, mat._22, mat._32, mat._42);
+		mat2 = float4(mat._13, mat._23, mat._33, mat._43);
+	}
+	float4x4 GetMatrix()
+	{
+		return float4x4(
+			mat0.x, mat0.y, mat0.z, mat0.w,
+			mat1.x, mat1.y, mat1.z, mat1.w,
+			mat2.x, mat2.y, mat2.z, mat2.w,
+			0, 0, 0, 1
+		);
+	}
+};
+
 struct ShaderMeshInstance
 {
-	float4 transform0;
-	float4 transform1;
-	float4 transform2;
-
-	float4 transformPrev0;
-	float4 transformPrev1;
-	float4 transformPrev2;
-
 	uint uid;
 	uint flags;
 	uint color;
@@ -188,6 +209,8 @@ struct ShaderMeshInstance
 	int padding0;
 	int padding1;
 	int padding2;
+	ShaderTransform transform;
+	ShaderTransform transformPrev;
 	ShaderMesh mesh;
 
 	void init()
@@ -197,29 +220,10 @@ struct ShaderMeshInstance
 		color = ~0u;
 		emissive = ~0u;
 		lightmap = -1;
+		transform.init();
+		transformPrev.init();
 		mesh.init();
 	}
-
-#ifndef __cplusplus
-	float4x4 GetTransform()
-	{
-		return float4x4(
-			transform0,
-			transform1,
-			transform2,
-			float4(0, 0, 0, 1)
-		);
-	}
-	float4x4 GetTransformPrev()
-	{
-		return float4x4(
-			transformPrev0,
-			transformPrev1,
-			transformPrev2,
-			float4(0, 0, 0, 1)
-		);
-	}
-#endif // __cplusplus
 
 };
 struct ShaderMeshInstancePointer
@@ -227,6 +231,11 @@ struct ShaderMeshInstancePointer
 	uint instanceID;
 	uint userdata;
 
+	void init()
+	{
+		instanceID = ~0;
+		userdata = 0;
+	}
 	void Create(uint _instanceID, uint frustum_index, float dither)
 	{
 		instanceID = _instanceID;

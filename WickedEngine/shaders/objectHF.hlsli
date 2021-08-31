@@ -38,8 +38,6 @@ inline ShaderMesh GetMesh()
 inline ShaderMaterial GetMaterial()
 {
 	return load_material(push.materialIndex);
-	//ShaderMeshSubset subset = load_subset(GetMesh(), GetSubsetIndex());
-	//return load_material(subset.materialIndex);
 }
 inline ShaderMaterial GetMaterial1()
 {
@@ -203,7 +201,12 @@ struct VertexInput
 
 	ShaderMeshInstancePointer GetInstancePointer()
 	{
-		return bindless_buffers[push.instances].Load<ShaderMeshInstancePointer>(push.instance_offset + instanceID * 8);
+		if (push.instances >= 0)
+			return bindless_buffers[push.instances].Load<ShaderMeshInstancePointer>(push.instance_offset + instanceID * 8);
+
+		ShaderMeshInstancePointer poi;
+		poi.init();
+		return poi;
 	}
 
 	float2 GetAtlasUV()
@@ -232,7 +235,12 @@ struct VertexInput
 
 	ShaderMeshInstance GetInstance()
 	{
-		return load_instance(GetInstancePointer().instanceID);
+		if (push.instances >= 0)
+			return load_instance(GetInstancePointer().instanceID);
+
+		ShaderMeshInstance inst;
+		inst.init();
+		return inst;
 	}
 };
 
@@ -260,16 +268,16 @@ struct VertexSurface
 			color *= input.GetVertexColor();
 		}
 		
-		normal = normalize(mul((float3x3)input.GetInstance().GetTransform(), input.GetNormal()));
+		normal = normalize(mul((float3x3)input.GetInstance().transform.GetMatrix(), input.GetNormal()));
 
 		tangent = input.GetTangent();
-		tangent.xyz = normalize(mul((float3x3)input.GetInstance().GetTransform(), tangent.xyz));
+		tangent.xyz = normalize(mul((float3x3)input.GetInstance().transform.GetMatrix(), tangent.xyz));
 
 		uvsets = float4(input.GetUV0() * material.texMulAdd.xy + material.texMulAdd.zw, input.GetUV1());
 
 		atlas = input.GetAtlasUV();
 
-		position = mul(input.GetInstance().GetTransform(), position);
+		position = mul(input.GetInstance().transform.GetMatrix(), position);
 
 
 #ifdef OBJECTSHADER_USE_WIND

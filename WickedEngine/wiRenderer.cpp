@@ -6503,6 +6503,8 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 
 		ObjectPushConstants push; // used with bindless model only
 		push.meshIndex = (uint)scene.meshes.GetIndex(entity);
+		push.instances = -1;
+		push.instance_offset = 0;
 
 		device->BindIndexBuffer(&mesh.indexBuffer, mesh.GetIndexFormat(), 0, cmd);
 

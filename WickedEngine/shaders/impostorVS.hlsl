@@ -36,9 +36,9 @@ VSOut main(uint fakeIndex : SV_VERTEXID)
 	// We rotate the billboard to face camera, but unlike emitted particles, 
 	//	they don't rotate according to camera rotation, but the camera position relative
 	//	to the impostor (at least for now)
-	float3 origin = mul(instance.GetTransform(), float4(0, 0, 0, 1)).xyz;
-	float3 up = normalize(mul((float3x3)instance.GetTransform(), float3(0, 1, 0)));
-	float3 face = mul((float3x3)instance.GetTransform(), g_xCamera.CamPos - origin);
+	float3 origin = mul(instance.transform.GetMatrix(), float4(0, 0, 0, 1)).xyz;
+	float3 up = normalize(mul((float3x3)instance.transform.GetMatrix(), float3(0, 1, 0)));
+	float3 face = mul((float3x3)instance.transform.GetMatrix(), g_xCamera.CamPos - origin);
 	face.y = 0; // only rotate around Y axis!
 	face = normalize(face);
 	float3 right = normalize(cross(face, up));
@@ -55,7 +55,7 @@ VSOut main(uint fakeIndex : SV_VERTEXID)
 	slice += uint(angle * impostorCaptureAngles);
 
 	VSOut Out;
-	Out.pos3D = mul(instance.GetTransform(), float4(pos, 1)).xyz;
+	Out.pos3D = mul(instance.transform.GetMatrix(), float4(pos, 1)).xyz;
 	Out.pos = mul(g_xCamera.VP, float4(Out.pos3D, 1));
 	Out.uv = uv;
 	Out.slice = slice;

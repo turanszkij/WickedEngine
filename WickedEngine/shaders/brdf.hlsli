@@ -317,7 +317,7 @@ struct Surface
 		float w = 1 - u - v;
 
 		P = p0 * w + p1 * u + p2 * v;
-		P = mul(inst.GetTransform(), float4(P, 1)).xyz;
+		P = mul(inst.transform.GetMatrix(), float4(P, 1)).xyz;
 
 		float4 uv0 = 0, uv1 = 0, uv2 = 0;
 		[branch]
@@ -411,7 +411,7 @@ struct Surface
 		}
 
 		N = n0 * w + n1 * u + n2 * v;
-		N = mul((float3x3)inst.GetTransform(), N);
+		N = mul((float3x3)inst.transform.GetMatrix(), N);
 		N = normalize(N);
 		facenormal = N;
 
@@ -425,7 +425,7 @@ struct Surface
 			t2 = unpack_utangent(bindless_buffers[NonUniformResourceIndex(inst.mesh.vb_tan)].Load(i2 * stride_TAN));
 			float4 T = t0 * w + t1 * u + t2 * v;
 			T = T * 2 - 1;
-			T.xyz = mul((float3x3)inst.GetTransform(), T.xyz);
+			T.xyz = mul((float3x3)inst.transform.GetMatrix(), T.xyz);
 			T.xyz = normalize(T.xyz);
 			float3 B = normalize(cross(T.xyz, N) * T.w);
 			float3x3 TBN = float3x3(T.xyz, B, N);
@@ -445,7 +445,7 @@ struct Surface
 			p2 = asfloat(bindless_buffers[inst.mesh.vb_pre].Load3(i2 * 16));
 		}
 		pre = p0 * w + p1 * u + p2 * v;
-		pre = mul(inst.GetTransformPrev(), float4(pre, 1)).xyz;
+		pre = mul(inst.transformPrev.GetMatrix(), float4(pre, 1)).xyz;
 
 		return true;
 	}
@@ -470,9 +470,9 @@ struct Surface
 		float3 p0 = asfloat(data0.xyz);
 		float3 p1 = asfloat(data1.xyz);
 		float3 p2 = asfloat(data2.xyz);
-		float3 P0 = mul(inst.GetTransform(), float4(p0, 1)).xyz;
-		float3 P1 = mul(inst.GetTransform(), float4(p1, 1)).xyz;
-		float3 P2 = mul(inst.GetTransform(), float4(p2, 1)).xyz;
+		float3 P0 = mul(inst.transform.GetMatrix(), float4(p0, 1)).xyz;
+		float3 P1 = mul(inst.transform.GetMatrix(), float4(p1, 1)).xyz;
+		float3 P2 = mul(inst.transform.GetMatrix(), float4(p2, 1)).xyz;
 
 		float2 barycentrics = compute_barycentrics(P, P0, P1, P2);
 
