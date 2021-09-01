@@ -22,7 +22,6 @@
 #include "wiShaderCompiler.h"
 
 #include "shaders/ShaderInterop_Postprocess.h"
-#include "shaders/ShaderInterop_Skinning.h"
 #include "shaders/ShaderInterop_Raytracing.h"
 #include "shaders/ShaderInterop_BVH.h"
 #include "shaders/ShaderInterop_SurfelGI.h"
@@ -82,7 +81,6 @@ bool voxelHelper = false;
 bool advancedLightCulling = true;
 bool variableRateShadingClassification = false;
 bool variableRateShadingClassificationDebug = false;
-bool ldsSkinningEnabled = true;
 float GameSpeed = 1;
 bool debugLightCulling = false;
 bool occlusionCulling = false;
@@ -1019,7 +1017,6 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_COPYTEXTURE2D_UNORM4_BORDEREXPAND], "copytexture2D_unorm4_borderexpandCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_COPYTEXTURE2D_FLOAT4_BORDEREXPAND], "copytexture2D_float4_borderexpandCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_SKINNING], "skinningCS.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_SKINNING_LDS], "skinningCS_LDS.cso"); });
 	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 	{
 		wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_RAYTRACE], "raytraceCS_rtapi.cso", SHADERMODEL_6_5); });
@@ -3671,10 +3668,15 @@ void UpdateRenderData(
 	auto range = wiProfiler::BeginRangeGPU("Skinning", cmd);
 	device->EventBegin("Skinning", cmd);
 	{
-		bool streamOutSetUp = false;
-		SHADERTYPE lastCS = CSTYPE_SKINNING_LDS;
 		GPUBarrier* barriers_start = (GPUBarrier*)GetRenderFrameAllocator(cmd).top();
 		uint32_t numBarriers = 0;
+
+		for (size_t i = 0; i < vis.scene->armatures.GetCount(); ++i)
+		{
+			const ArmatureComponent& armature = vis.scene->armatures[i];
+			// Upload bones for skinning to shader
+			device->UpdateBuffer(&armature.boneBuffer, armature.boneData.data(), cmd);
+		}
 
 		for (size_t i = 0; i < vis.scene->meshes.GetCount(); ++i)
 		{
@@ -3717,36 +3719,7 @@ void UpdateRenderData(
 
 				const ArmatureComponent& armature = *vis.scene->armatures.GetComponent(mesh.armatureID);
 
-				if (!streamOutSetUp)
-				{
-					// Set up skinning shader
-					streamOutSetUp = true;
-					GPUBuffer* vbs[] = {
-						nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr
-					};
-					const uint32_t strides[] = {
-						0,0,0,0,0,0,0,0
-					};
-					device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
-					device->BindComputeShader(&shaders[CSTYPE_SKINNING_LDS], cmd);
-				}
-
-				SHADERTYPE targetCS = CSTYPE_SKINNING_LDS;
-
-				if (!GetLDSSkinningEnabled() || armature.boneData.size() > SKINNING_COMPUTE_THREADCOUNT)
-				{
-					// If we have more bones that can fit into LDS, we switch to a skinning shader which loads from device memory:
-					targetCS = CSTYPE_SKINNING;
-				}
-
-				if (targetCS != lastCS)
-				{
-					lastCS = targetCS;
-					device->BindComputeShader(&shaders[targetCS], cmd);
-				}
-
-				// Upload bones for skinning to shader
-				device->UpdateBuffer(&armature.boneBuffer, armature.boneData.data(), cmd, (int)(sizeof(ArmatureComponent::ShaderBoneType) * armature.boneData.size()));
+				device->BindComputeShader(&shaders[CSTYPE_SKINNING], cmd);
 
 				// Do the skinning
 				const GPUResource* vbs[] = {
@@ -3760,21 +3733,23 @@ void UpdateRenderData(
 					&mesh.streamoutBuffer_TAN,
 				};
 
+				device->BindResources(vbs, SKINNINGSLOT_IN_VERTEX_POS, arraysize(vbs), cmd);
+				device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+
+				device->Dispatch(((uint32_t)mesh.vertex_positions.size() + 63) / 64, 1, 1, cmd);
+
+
 				numBarriers += arraysize(uavs);
 				GPUBarrier* barriers = (GPUBarrier*)GetRenderFrameAllocator(cmd).allocate(sizeof(GPUBarrier) * arraysize(uavs));
 				barriers[0] = GPUBarrier::Buffer(&mesh.streamoutBuffer_POS, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE);
 				barriers[1] = GPUBarrier::Buffer(&mesh.streamoutBuffer_TAN, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE);
 				// Barriers will be issued later...
 
-				device->BindResources(vbs, SKINNINGSLOT_IN_VERTEX_POS, arraysize(vbs), cmd);
-				device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
-
-				device->Dispatch(((uint32_t)mesh.vertex_positions.size() + SKINNING_COMPUTE_THREADCOUNT - 1) / SKINNING_COMPUTE_THREADCOUNT, 1, 1, cmd);
 			}
 
 		}
 
-		if (streamOutSetUp)
+		if (numBarriers > 0)
 		{
 			numBarriers++;
 			GPUBarrier* barriers = (GPUBarrier*)GetRenderFrameAllocator(cmd).allocate(sizeof(GPUBarrier));
@@ -12073,8 +12048,6 @@ void SetOcclusionCullingEnabled(bool value)
 	occlusionCulling = value;
 }
 bool GetOcclusionCullingEnabled() { return occlusionCulling; }
-void SetLDSSkinningEnabled(bool enabled) { ldsSkinningEnabled = enabled; }
-bool GetLDSSkinningEnabled() { return ldsSkinningEnabled; }
 void SetTemporalAAEnabled(bool enabled) { temporalAA = enabled; }
 bool GetTemporalAAEnabled() { return temporalAA; }
 void SetTemporalAADebugEnabled(bool enabled) { temporalAADEBUG = enabled; }

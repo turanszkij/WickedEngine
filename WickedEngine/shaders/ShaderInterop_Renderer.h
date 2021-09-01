@@ -189,6 +189,9 @@ struct ShaderTransform
 		mat2 = float4(mat._13, mat._23, mat._33, mat._43);
 	}
 	float4x4 GetMatrix()
+#ifdef __cplusplus
+		const
+#endif // __cplusplus
 	{
 		return float4x4(
 			mat0.x, mat0.y, mat0.z, mat0.w,
@@ -880,7 +883,6 @@ CBUFFER(CubemapRenderCB, CBSLOT_RENDERER_CUBEMAPRENDER)
 {
 	CubemapRenderCam xCubemapRenderCams[6];
 };
-
 
 // MIP Generator params:
 #define GENERATEMIPCHAIN_1D_BLOCK_SIZE 64

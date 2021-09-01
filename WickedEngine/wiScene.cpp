@@ -1268,10 +1268,10 @@ namespace wiScene
 		bd.Usage = USAGE_DYNAMIC;
 		bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 
-		bd.ByteWidth = sizeof(ArmatureComponent::ShaderBoneType) * (uint32_t)boneCollection.size();
+		bd.ByteWidth = sizeof(ShaderTransform) * (uint32_t)boneCollection.size();
 		bd.BindFlags = BIND_SHADER_RESOURCE;
 		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		bd.StructureByteStride = sizeof(ArmatureComponent::ShaderBoneType);
+		bd.StructureByteStride = sizeof(ShaderTransform);
 
 		device->CreateBuffer(&bd, nullptr, &boneBuffer);
 	}
@@ -2692,7 +2692,9 @@ namespace wiScene
 				XMMATRIX W = XMLoadFloat4x4(&bone.world);
 				XMMATRIX M = B * W * R;
 
-				armature.boneData[boneIndex++].Store(M);
+				XMFLOAT4X4 mat;
+				XMStoreFloat4x4(&mat, M);
+				armature.boneData[boneIndex++].Create(mat);
 
 				const float bone_radius = 1;
 				XMFLOAT3 bonepos = bone.GetPosition();
@@ -2704,7 +2706,7 @@ namespace wiScene
 
 			armature.aabb = AABB(_min, _max);
 
-			if (!armature.boneBuffer.IsValid())
+			if (!armature.boneBuffer.IsValid() || armature.boneBuffer.desc.ByteWidth != armature.boneData.size() * sizeof(ShaderTransform))
 			{
 				armature.CreateRenderData();
 			}
@@ -3109,47 +3111,44 @@ namespace wiScene
 					}
 
 					// lightmap things:
-					if (dt > 0)
+					if (object.IsLightmapRenderRequested() && dt > 0)
 					{
-						if (object.IsLightmapRenderRequested() && dt > 0)
+						if (!object.lightmap.IsValid())
 						{
-							if (!object.lightmap.IsValid())
 							{
-								{
-									// Unfortunately, fp128 format only correctly downloads from GPU if it is pow2 size:
-									object.lightmapWidth = wiMath::GetNextPowerOfTwo(object.lightmapWidth + 1) / 2;
-									object.lightmapHeight = wiMath::GetNextPowerOfTwo(object.lightmapHeight + 1) / 2;
-								}
-
-								TextureDesc desc;
-								desc.Width = object.lightmapWidth;
-								desc.Height = object.lightmapHeight;
-								desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
-								// Note: we need the full precision format to achieve correct accumulative blending! 
-								//	But the global atlas will have less precision for good bandwidth for sampling
-								desc.Format = FORMAT_R32G32B32A32_FLOAT;
-
-								GraphicsDevice* device = wiRenderer::GetDevice();
-								device->CreateTexture(&desc, nullptr, &object.lightmap);
-								device->SetName(&object.lightmap, "object.lightmap");
-
-								RenderPassDesc renderpassdesc;
-
-								renderpassdesc.attachments.push_back(RenderPassAttachment::RenderTarget(&object.lightmap, RenderPassAttachment::LOADOP_CLEAR));
-
-								device->CreateRenderPass(&renderpassdesc, &object.renderpass_lightmap_clear);
-
-								renderpassdesc.attachments.back().loadop = RenderPassAttachment::LOADOP_LOAD;
-								device->CreateRenderPass(&renderpassdesc, &object.renderpass_lightmap_accumulate);
+								// Unfortunately, fp128 format only correctly downloads from GPU if it is pow2 size:
+								object.lightmapWidth = wiMath::GetNextPowerOfTwo(object.lightmapWidth + 1) / 2;
+								object.lightmapHeight = wiMath::GetNextPowerOfTwo(object.lightmapHeight + 1) / 2;
 							}
-							lightmap_refresh_needed.store(true);
-						}
 
-						if (!object.lightmapTextureData.empty() && !object.lightmap.IsValid())
-						{
-							// Create a GPU-side per object lighmap if there is none yet, so that copying into atlas can be done efficiently:
-							wiTextureHelper::CreateTexture(object.lightmap, object.lightmapTextureData.data(), object.lightmapWidth, object.lightmapHeight, object.GetLightmapFormat());
+							TextureDesc desc;
+							desc.Width = object.lightmapWidth;
+							desc.Height = object.lightmapHeight;
+							desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
+							// Note: we need the full precision format to achieve correct accumulative blending! 
+							//	But the global atlas will have less precision for good bandwidth for sampling
+							desc.Format = FORMAT_R32G32B32A32_FLOAT;
+
+							GraphicsDevice* device = wiRenderer::GetDevice();
+							device->CreateTexture(&desc, nullptr, &object.lightmap);
+							device->SetName(&object.lightmap, "object.lightmap");
+
+							RenderPassDesc renderpassdesc;
+
+							renderpassdesc.attachments.push_back(RenderPassAttachment::RenderTarget(&object.lightmap, RenderPassAttachment::LOADOP_CLEAR));
+
+							device->CreateRenderPass(&renderpassdesc, &object.renderpass_lightmap_clear);
+
+							renderpassdesc.attachments.back().loadop = RenderPassAttachment::LOADOP_LOAD;
+							device->CreateRenderPass(&renderpassdesc, &object.renderpass_lightmap_accumulate);
 						}
+						lightmap_refresh_needed.store(true);
+					}
+
+					if (!object.lightmapTextureData.empty() && !object.lightmap.IsValid())
+					{
+						// Create a GPU-side per object lighmap if there is none yet, so that copying into atlas can be done efficiently:
+						wiTextureHelper::CreateTexture(object.lightmap, object.lightmapTextureData.data(), object.lightmapWidth, object.lightmapHeight, object.GetLightmapFormat());
 					}
 				}
 
@@ -3626,11 +3625,17 @@ namespace wiScene
 		const XMUINT4& ind = mesh.vertex_boneindices[index];
 		const XMFLOAT4& wei = mesh.vertex_boneweights[index];
 
+		const XMFLOAT4X4 mat[] = {
+			armature.boneData[ind.x].GetMatrix(),
+			armature.boneData[ind.y].GetMatrix(),
+			armature.boneData[ind.z].GetMatrix(),
+			armature.boneData[ind.w].GetMatrix(),
+		};
 		const XMMATRIX M[] = {
-			armature.boneData[ind.x].Load(),
-			armature.boneData[ind.y].Load(),
-			armature.boneData[ind.z].Load(),
-			armature.boneData[ind.w].Load(),
+			XMLoadFloat4x4(&mat[0]),
+			XMLoadFloat4x4(&mat[1]),
+			XMLoadFloat4x4(&mat[2]),
+			XMLoadFloat4x4(&mat[3]),
 		};
 
 		XMVECTOR skinned;

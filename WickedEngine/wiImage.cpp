@@ -18,10 +18,6 @@ namespace wiImage
 	enum IMAGE_SHADER
 	{
 		IMAGE_SHADER_STANDARD,
-		IMAGE_SHADER_SEPARATENORMALMAP,
-		IMAGE_SHADER_MASKED,
-		IMAGE_SHADER_BACKGROUND,
-		IMAGE_SHADER_BACKGROUND_MASKED,
 		IMAGE_SHADER_FULLSCREEN,
 		IMAGE_SHADER_COUNT
 	};
@@ -98,18 +94,41 @@ namespace wiImage
 		PushConstantsImage push;
 		push.texture_base_index = device->GetDescriptorIndex(texture, SRV);
 		push.texture_mask_index = device->GetDescriptorIndex(params.maskMap, SRV);
-		push.texture_background_index = device->GetDescriptorIndex(&backgroundTextures[cmd], SRV);
+		if (params.isBackgroundEnabled())
+		{
+			push.texture_background_index = device->GetDescriptorIndex(&backgroundTextures[cmd], SRV);
+		}
+		else
+		{
+			push.texture_background_index = -1;
+		}
 		push.sampler_index = device->GetDescriptorIndex(sampler);
 
-		push.color = params.color;
+		XMFLOAT4 color = params.color;
 		const float darken = 1 - params.fade;
-		push.color.x *= darken;
-		push.color.y *= darken;
-		push.color.z *= darken;
-		push.color.w *= params.opacity;
+		color.x *= darken;
+		color.y *= darken;
+		color.z *= darken;
+		color.w *= params.opacity;
+
+		XMHALF4 packed_color;
+		packed_color.x = XMConvertFloatToHalf(color.x);
+		packed_color.y = XMConvertFloatToHalf(color.y);
+		packed_color.z = XMConvertFloatToHalf(color.z);
+		packed_color.w = XMConvertFloatToHalf(color.w);
+
+		push.packed_color.x = uint(packed_color.v);
+		push.packed_color.y = uint(packed_color.v >> 32ull);
+
+		push.flags = 0;
+		if (params.isExtractNormalMapEnabled())
+		{
+			push.flags |= IMAGE_FLAG_EXTRACT_NORMALMAP;
+		}
 
 		if (params.isFullScreenEnabled())
 		{
+			// Full screen image uses a fast path with full screen triangle and no effects
 			device->BindPipelineState(&imagePSO[IMAGE_SHADER_FULLSCREEN][params.blendFlag][params.stencilComp][params.stencilRefMode], cmd);
 			device->PushConstants(&push, sizeof(push), cmd);
 			device->Draw(3, 0, cmd);
@@ -188,42 +207,7 @@ namespace wiImage
 		push.texMulAdd2.z += params.texOffset2.x * inv_width;	// texOffset.x: add
 		push.texMulAdd2.w += params.texOffset2.y * inv_height;	// texOffset.y: add
 
-		// Determine relevant image rendering pixel shader:
-		IMAGE_SHADER targetShader;
-		const bool NormalmapSeparate = params.isExtractNormalMapEnabled();
-		const bool Mask = params.maskMap != nullptr;
-		const bool background_blur = params.isBackgroundEnabled();
-		if (NormalmapSeparate)
-		{
-			targetShader = IMAGE_SHADER_SEPARATENORMALMAP;
-		}
-		else
-		{
-			if (Mask)
-			{
-				if (background_blur)
-				{
-					targetShader = IMAGE_SHADER_BACKGROUND_MASKED;
-				}
-				else
-				{
-					targetShader = IMAGE_SHADER_MASKED;
-				}
-			}
-			else
-			{
-				if (background_blur)
-				{
-					targetShader = IMAGE_SHADER_BACKGROUND;
-				}
-				else
-				{
-					targetShader = IMAGE_SHADER_STANDARD;
-				}
-			}
-		}
-
-		device->BindPipelineState(&imagePSO[targetShader][params.blendFlag][params.stencilComp][params.stencilRefMode], cmd);
+		device->BindPipelineState(&imagePSO[IMAGE_SHADER_STANDARD][params.blendFlag][params.stencilComp][params.stencilRefMode], cmd);
 
 		device->PushConstants(&push, sizeof(push), cmd);
 
@@ -241,10 +225,6 @@ namespace wiImage
 		wiRenderer::LoadShader(VS, screenVS, "screenVS.cso");
 
 		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_STANDARD], "imagePS.cso");
-		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_SEPARATENORMALMAP], "imagePS_separatenormalmap.cso");
-		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_MASKED], "imagePS_masked.cso");
-		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_BACKGROUND], "imagePS_backgroundblur.cso");
-		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_BACKGROUND_MASKED], "imagePS_backgroundblur_masked.cso");
 		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_FULLSCREEN], "screenPS.cso");
 
 

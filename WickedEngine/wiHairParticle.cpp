@@ -48,167 +48,164 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 	aabb = AABB(_min, _max);
 	aabb = aabb.transform(world);
 
-	if (dt > 0)
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
+	if (_flags & REBUILD_BUFFERS || !cb.IsValid() || (strandCount * segmentCount) != simulationBuffer.GetDesc().ByteWidth / sizeof(PatchSimulationData))
 	{
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		_flags &= ~REBUILD_BUFFERS;
+		regenerate_frame = true;
 
-		if (_flags & REBUILD_BUFFERS || !cb.IsValid() || (strandCount * segmentCount) != simulationBuffer.GetDesc().ByteWidth / sizeof(PatchSimulationData))
+		GPUBufferDesc bd;
+		bd.Usage = USAGE_DEFAULT;
+		bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		bd.CPUAccessFlags = 0;
+		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+
+		if (strandCount * segmentCount > 0)
 		{
-			_flags &= ~REBUILD_BUFFERS;
-			regenerate_frame = true;
+			bd.StructureByteStride = sizeof(PatchSimulationData);
+			bd.ByteWidth = bd.StructureByteStride * strandCount * segmentCount;
+			device->CreateBuffer(&bd, nullptr, &simulationBuffer);
+			device->SetName(&simulationBuffer, "simulationBuffer");
 
-			GPUBufferDesc bd;
-			bd.Usage = USAGE_DEFAULT;
+			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+			bd.StructureByteStride = sizeof(MeshComponent::Vertex_POS);
+			bd.ByteWidth = bd.StructureByteStride * 4 * strandCount * segmentCount;
+			device->CreateBuffer(&bd, nullptr, &vertexBuffer_POS[0]);
+			device->SetName(&vertexBuffer_POS[0], "vertexBuffer_POS[0]");
+			device->CreateBuffer(&bd, nullptr, &vertexBuffer_POS[1]);
+			device->SetName(&vertexBuffer_POS[1], "vertexBuffer_POS[1]");
+
+			bd.StructureByteStride = sizeof(MeshComponent::Vertex_TEX);
+			bd.ByteWidth = bd.StructureByteStride * 4 * strandCount * segmentCount;
+			device->CreateBuffer(&bd, nullptr, &vertexBuffer_TEX);
+			device->SetName(&vertexBuffer_TEX, "vertexBuffer_TEX");
+
 			bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-			bd.CPUAccessFlags = 0;
-			bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-
-			if (strandCount*segmentCount > 0)
-			{
-				bd.StructureByteStride = sizeof(PatchSimulationData);
-				bd.ByteWidth = bd.StructureByteStride * strandCount * segmentCount;
-				device->CreateBuffer(&bd, nullptr, &simulationBuffer);
-				device->SetName(&simulationBuffer, "simulationBuffer");
-
-				bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
-				bd.StructureByteStride = sizeof(MeshComponent::Vertex_POS);
-				bd.ByteWidth = bd.StructureByteStride * 4 * strandCount * segmentCount;
-				device->CreateBuffer(&bd, nullptr, &vertexBuffer_POS[0]);
-				device->SetName(&vertexBuffer_POS[0], "vertexBuffer_POS[0]");
-				device->CreateBuffer(&bd, nullptr, &vertexBuffer_POS[1]);
-				device->SetName(&vertexBuffer_POS[1], "vertexBuffer_POS[1]");
-
-				bd.StructureByteStride = sizeof(MeshComponent::Vertex_TEX);
-				bd.ByteWidth = bd.StructureByteStride * 4 * strandCount * segmentCount;
-				device->CreateBuffer(&bd, nullptr, &vertexBuffer_TEX);
-				device->SetName(&vertexBuffer_TEX, "vertexBuffer_TEX");
-
-				bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-				bd.MiscFlags = 0;
-				bd.Format = FORMAT_R32_UINT;
-				bd.StructureByteStride = sizeof(uint);
-				bd.ByteWidth = bd.StructureByteStride * 6 * strandCount * segmentCount;
-				device->CreateBuffer(&bd, nullptr, &primitiveBuffer);
-				device->SetName(&primitiveBuffer, "primitiveBuffer");
-
-				bd.BindFlags = BIND_INDEX_BUFFER | BIND_UNORDERED_ACCESS;
-				bd.MiscFlags = 0;
-				bd.Format = FORMAT_R32_UINT;
-				bd.StructureByteStride = sizeof(uint);
-				bd.ByteWidth = bd.StructureByteStride * 6 * strandCount * segmentCount;
-				device->CreateBuffer(&bd, nullptr, &culledIndexBuffer);
-				device->SetName(&culledIndexBuffer, "culledIndexBuffer");
-			}
-
-			bd.Usage = USAGE_DEFAULT;
-			bd.ByteWidth = sizeof(HairParticleCB);
-			bd.BindFlags = BIND_CONSTANT_BUFFER;
-			bd.CPUAccessFlags = 0;
 			bd.MiscFlags = 0;
-			device->CreateBuffer(&bd, nullptr, &cb);
+			bd.Format = FORMAT_R32_UINT;
+			bd.StructureByteStride = sizeof(uint);
+			bd.ByteWidth = bd.StructureByteStride * 6 * strandCount * segmentCount;
+			device->CreateBuffer(&bd, nullptr, &primitiveBuffer);
+			device->SetName(&primitiveBuffer, "primitiveBuffer");
 
-			if (vertex_lengths.size() != mesh.vertex_positions.size())
-			{
-				vertex_lengths.resize(mesh.vertex_positions.size());
-				std::fill(vertex_lengths.begin(), vertex_lengths.end(), 1.0f);
-			}
-
-			indices.clear();
-			for (size_t j = 0; j < mesh.indices.size(); j += 3)
-			{
-				const uint32_t triangle[] = {
-					mesh.indices[j + 0],
-					mesh.indices[j + 1],
-					mesh.indices[j + 2],
-				};
-				if (vertex_lengths[triangle[0]] > 0 || vertex_lengths[triangle[1]] > 0 || vertex_lengths[triangle[2]] > 0)
-				{
-					indices.push_back(triangle[0]);
-					indices.push_back(triangle[1]);
-					indices.push_back(triangle[2]);
-				}
-			}
-
-			if (!vertex_lengths.empty())
-			{
-				std::vector<uint8_t> ulengths;
-				ulengths.reserve(vertex_lengths.size());
-				for (auto& x : vertex_lengths)
-				{
-					ulengths.push_back(uint8_t(wiMath::Clamp(x, 0, 1) * 255.0f));
-				}
-
-				bd.MiscFlags = 0;
-				bd.BindFlags = BIND_SHADER_RESOURCE;
-				bd.Format = FORMAT_R8_UNORM;
-				bd.StructureByteStride = sizeof(uint8_t);
-				bd.ByteWidth = bd.StructureByteStride * (uint32_t)ulengths.size();
-				SubresourceData initData;
-				initData.pSysMem = ulengths.data();
-				device->CreateBuffer(&bd, &initData, &vertexBuffer_length);
-			}
-			if (!indices.empty())
-			{
-				bd.MiscFlags = 0;
-				bd.BindFlags = BIND_SHADER_RESOURCE;
-				bd.Format = FORMAT_R32_UINT;
-				bd.StructureByteStride = sizeof(uint32_t);
-				bd.ByteWidth = bd.StructureByteStride * (uint32_t)indices.size();
-				SubresourceData initData;
-				initData.pSysMem = indices.data();
-				device->CreateBuffer(&bd, &initData, &indexBuffer);
-			}
-
-			if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
-			{
-				RaytracingAccelerationStructureDesc desc;
-				desc.type = RaytracingAccelerationStructureDesc::BOTTOMLEVEL;
-				desc._flags |= RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE;
-				desc._flags |= RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD;
-
-				desc.bottomlevel.geometries.emplace_back();
-				auto& geometry = desc.bottomlevel.geometries.back();
-				geometry.type = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::TRIANGLES;
-				geometry.triangles.vertexBuffer = vertexBuffer_POS[0];
-				geometry.triangles.indexBuffer = primitiveBuffer;
-				geometry.triangles.indexFormat = INDEXFORMAT_32BIT;
-				geometry.triangles.indexCount = primitiveBuffer.desc.ByteWidth / primitiveBuffer.desc.StructureByteStride;
-				geometry.triangles.indexOffset = 0;
-				geometry.triangles.vertexCount = vertexBuffer_POS[0].desc.ByteWidth / vertexBuffer_POS[0].desc.StructureByteStride;
-				geometry.triangles.vertexFormat = FORMAT_R32G32B32_FLOAT;
-				geometry.triangles.vertexStride = sizeof(MeshComponent::Vertex_POS);
-
-				bool success = device->CreateRaytracingAccelerationStructure(&desc, &BLAS);
-				assert(success);
-				device->SetName(&BLAS, "BLAS_hair");
-			}
+			bd.BindFlags = BIND_INDEX_BUFFER | BIND_UNORDERED_ACCESS;
+			bd.MiscFlags = 0;
+			bd.Format = FORMAT_R32_UINT;
+			bd.StructureByteStride = sizeof(uint);
+			bd.ByteWidth = bd.StructureByteStride * 6 * strandCount * segmentCount;
+			device->CreateBuffer(&bd, nullptr, &culledIndexBuffer);
+			device->SetName(&culledIndexBuffer, "culledIndexBuffer");
 		}
 
-		if (!indirectBuffer.IsValid())
+		bd.Usage = USAGE_DEFAULT;
+		bd.ByteWidth = sizeof(HairParticleCB);
+		bd.BindFlags = BIND_CONSTANT_BUFFER;
+		bd.CPUAccessFlags = 0;
+		bd.MiscFlags = 0;
+		device->CreateBuffer(&bd, nullptr, &cb);
+
+		if (vertex_lengths.size() != mesh.vertex_positions.size())
 		{
-			GPUBufferDesc desc;
-			desc.ByteWidth = sizeof(uint) + sizeof(IndirectDrawArgsIndexedInstanced); // counter + draw args
-			desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS | RESOURCE_MISC_INDIRECT_ARGS;
-			desc.BindFlags = BIND_UNORDERED_ACCESS;
-			device->CreateBuffer(&desc, nullptr, &indirectBuffer);
+			vertex_lengths.resize(mesh.vertex_positions.size());
+			std::fill(vertex_lengths.begin(), vertex_lengths.end(), 1.0f);
 		}
 
-		if (!subsetBuffer.IsValid())
+		indices.clear();
+		for (size_t j = 0; j < mesh.indices.size(); j += 3)
 		{
-			GPUBufferDesc desc;
-			desc.StructureByteStride = sizeof(ShaderMeshSubset);
-			desc.ByteWidth = desc.StructureByteStride;
-			desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
-			desc.BindFlags = BIND_SHADER_RESOURCE;
-			device->CreateBuffer(&desc, nullptr, &subsetBuffer);
+			const uint32_t triangle[] = {
+				mesh.indices[j + 0],
+				mesh.indices[j + 1],
+				mesh.indices[j + 2],
+			};
+			if (vertex_lengths[triangle[0]] > 0 || vertex_lengths[triangle[1]] > 0 || vertex_lengths[triangle[2]] > 0)
+			{
+				indices.push_back(triangle[0]);
+				indices.push_back(triangle[1]);
+				indices.push_back(triangle[2]);
+			}
 		}
 
-		std::swap(vertexBuffer_POS[0], vertexBuffer_POS[1]);
-
-		if (BLAS.IsValid() && !BLAS.desc.bottomlevel.geometries.empty())
+		if (!vertex_lengths.empty())
 		{
-			BLAS.desc.bottomlevel.geometries.back().triangles.vertexBuffer = vertexBuffer_POS[0];
+			std::vector<uint8_t> ulengths;
+			ulengths.reserve(vertex_lengths.size());
+			for (auto& x : vertex_lengths)
+			{
+				ulengths.push_back(uint8_t(wiMath::Clamp(x, 0, 1) * 255.0f));
+			}
+
+			bd.MiscFlags = 0;
+			bd.BindFlags = BIND_SHADER_RESOURCE;
+			bd.Format = FORMAT_R8_UNORM;
+			bd.StructureByteStride = sizeof(uint8_t);
+			bd.ByteWidth = bd.StructureByteStride * (uint32_t)ulengths.size();
+			SubresourceData initData;
+			initData.pSysMem = ulengths.data();
+			device->CreateBuffer(&bd, &initData, &vertexBuffer_length);
 		}
+		if (!indices.empty())
+		{
+			bd.MiscFlags = 0;
+			bd.BindFlags = BIND_SHADER_RESOURCE;
+			bd.Format = FORMAT_R32_UINT;
+			bd.StructureByteStride = sizeof(uint32_t);
+			bd.ByteWidth = bd.StructureByteStride * (uint32_t)indices.size();
+			SubresourceData initData;
+			initData.pSysMem = indices.data();
+			device->CreateBuffer(&bd, &initData, &indexBuffer);
+		}
+
+		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+		{
+			RaytracingAccelerationStructureDesc desc;
+			desc.type = RaytracingAccelerationStructureDesc::BOTTOMLEVEL;
+			desc._flags |= RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE;
+			desc._flags |= RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD;
+
+			desc.bottomlevel.geometries.emplace_back();
+			auto& geometry = desc.bottomlevel.geometries.back();
+			geometry.type = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::TRIANGLES;
+			geometry.triangles.vertexBuffer = vertexBuffer_POS[0];
+			geometry.triangles.indexBuffer = primitiveBuffer;
+			geometry.triangles.indexFormat = INDEXFORMAT_32BIT;
+			geometry.triangles.indexCount = primitiveBuffer.desc.ByteWidth / primitiveBuffer.desc.StructureByteStride;
+			geometry.triangles.indexOffset = 0;
+			geometry.triangles.vertexCount = vertexBuffer_POS[0].desc.ByteWidth / vertexBuffer_POS[0].desc.StructureByteStride;
+			geometry.triangles.vertexFormat = FORMAT_R32G32B32_FLOAT;
+			geometry.triangles.vertexStride = sizeof(MeshComponent::Vertex_POS);
+
+			bool success = device->CreateRaytracingAccelerationStructure(&desc, &BLAS);
+			assert(success);
+			device->SetName(&BLAS, "BLAS_hair");
+		}
+	}
+
+	if (!indirectBuffer.IsValid())
+	{
+		GPUBufferDesc desc;
+		desc.ByteWidth = sizeof(uint) + sizeof(IndirectDrawArgsIndexedInstanced); // counter + draw args
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS | RESOURCE_MISC_INDIRECT_ARGS;
+		desc.BindFlags = BIND_UNORDERED_ACCESS;
+		device->CreateBuffer(&desc, nullptr, &indirectBuffer);
+	}
+
+	if (!subsetBuffer.IsValid())
+	{
+		GPUBufferDesc desc;
+		desc.StructureByteStride = sizeof(ShaderMeshSubset);
+		desc.ByteWidth = desc.StructureByteStride;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+		desc.BindFlags = BIND_SHADER_RESOURCE;
+		device->CreateBuffer(&desc, nullptr, &subsetBuffer);
+	}
+
+	std::swap(vertexBuffer_POS[0], vertexBuffer_POS[1]);
+
+	if (BLAS.IsValid() && !BLAS.desc.bottomlevel.geometries.empty())
+	{
+		BLAS.desc.bottomlevel.geometries.back().triangles.vertexBuffer = vertexBuffer_POS[0];
 	}
 
 }

@@ -747,8 +747,6 @@ namespace wiRenderer
 	bool GetVariableRateShadingClassificationDebug();
 	void SetOcclusionCullingEnabled(bool enabled);
 	bool GetOcclusionCullingEnabled();
-	void SetLDSSkinningEnabled(bool enabled);
-	bool GetLDSSkinningEnabled();
 	void SetTemporalAAEnabled(bool enabled);
 	bool GetTemporalAAEnabled();
 	void SetTemporalAADebugEnabled(bool enabled);

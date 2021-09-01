@@ -3,11 +3,6 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Image.h"
 
-#define texture_base		bindless_textures[push.texture_base_index]
-#define texture_mask		bindless_textures[push.texture_mask_index]
-#define texture_background	bindless_textures[push.texture_background_index]
-#define Sampler				bindless_samplers[push.sampler_index]
-
 float Wedge2D(float2 v, float2 w)
 {
 	return v.x * w.y - v.y * w.x;
