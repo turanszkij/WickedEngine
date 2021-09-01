@@ -2340,7 +2340,6 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			desc.CPUAccessFlags = 0;
 			desc.MiscFlags = 0;
 			desc.StructureByteStride = 0;
-			desc.Usage = USAGE_IMMUTABLE;
 			SubresourceData data;
 			data.pSysMem = vertices.data();
 			device->CreateBuffer(&desc, &data, &vb_hue);
@@ -2367,7 +2366,6 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			desc.CPUAccessFlags = 0;
 			desc.MiscFlags = 0;
 			desc.StructureByteStride = 0;
-			desc.Usage = USAGE_IMMUTABLE;
 			SubresourceData data;
 			data.pSysMem = vertices.data();
 			device->CreateBuffer(&desc, &data, &vb_picker_saturation);
@@ -2408,7 +2406,6 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			desc.CPUAccessFlags = 0;
 			desc.MiscFlags = 0;
 			desc.StructureByteStride = 0;
-			desc.Usage = USAGE_IMMUTABLE;
 			SubresourceData data;
 			data.pSysMem = vertices;
 			device->CreateBuffer(&desc, &data, &vb_picker_hue);
@@ -2429,7 +2426,6 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			desc.CPUAccessFlags = 0;
 			desc.MiscFlags = 0;
 			desc.StructureByteStride = 0;
-			desc.Usage = USAGE_IMMUTABLE;
 			SubresourceData data;
 			data.pSysMem = vertices;
 			device->CreateBuffer(&desc, &data, &vb_preview);

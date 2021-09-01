@@ -389,7 +389,6 @@ namespace wiScene
 		// Create index buffer GPU data:
 		{
 			GPUBufferDesc bd;
-			bd.Usage = USAGE_IMMUTABLE;
 			bd.CPUAccessFlags = 0;
 			bd.BindFlags = BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE;
 			bd.MiscFlags = 0;
@@ -587,7 +586,6 @@ namespace wiScene
 			}
 
 			GPUBufferDesc bd;
-			bd.Usage = USAGE_IMMUTABLE;
 			bd.BindFlags = BIND_SHADER_RESOURCE;
 			bd.CPUAccessFlags = 0;
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
@@ -628,7 +626,6 @@ namespace wiScene
 			}
 
 			GPUBufferDesc bd;
-			bd.Usage = USAGE_IMMUTABLE;
 			bd.CPUAccessFlags = 0;
 			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
@@ -651,7 +648,6 @@ namespace wiScene
 			}
 
 			GPUBufferDesc bd;
-			bd.Usage = USAGE_IMMUTABLE;
 			bd.CPUAccessFlags = 0;
 			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
@@ -668,7 +664,6 @@ namespace wiScene
 		if (!vertex_colors.empty())
 		{
 			GPUBufferDesc bd;
-			bd.Usage = USAGE_IMMUTABLE;
 			bd.CPUAccessFlags = 0;
 			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
@@ -691,7 +686,6 @@ namespace wiScene
 			}
 
 			GPUBufferDesc bd;
-			bd.Usage = USAGE_IMMUTABLE;
 			bd.CPUAccessFlags = 0;
 			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;

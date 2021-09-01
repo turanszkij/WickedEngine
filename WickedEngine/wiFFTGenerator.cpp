@@ -110,7 +110,6 @@ namespace wiFFTGenerator
 		// Create 6 cbuffers for 512x512 transform.
 
 		GPUBufferDesc cb_desc;
-		cb_desc.Usage = USAGE_IMMUTABLE;
 		cb_desc.BindFlags = BIND_CONSTANT_BUFFER;
 		cb_desc.CPUAccessFlags = 0;
 		cb_desc.MiscFlags = 0;

@@ -256,7 +256,6 @@ namespace wiTextureHelper
 		textureDesc.ArraySize = 1;
 		textureDesc.Format = format;
 		textureDesc.SampleCount = 1;
-		textureDesc.Usage = USAGE_IMMUTABLE;
 		textureDesc.BindFlags = BIND_SHADER_RESOURCE;
 		textureDesc.CPUAccessFlags = 0;
 		textureDesc.MiscFlags = 0;

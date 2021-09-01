@@ -136,10 +136,9 @@ namespace wiGraphics
 	};
 	enum USAGE
 	{
-		USAGE_DEFAULT,
-		USAGE_IMMUTABLE,
-		USAGE_DYNAMIC,
-		USAGE_STAGING,
+		USAGE_DEFAULT,	// Best performance for GPU access
+		USAGE_DYNAMIC,	// Best CPU write performance
+		USAGE_STAGING,	// CPU only, for GPU copy source or dest
 	};
 	enum TEXTURE_ADDRESS_MODE
 	{

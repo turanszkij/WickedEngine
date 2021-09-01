@@ -112,7 +112,6 @@ namespace wiResourceManager
 					desc.MipLevels = dds.GetMipCount();
 					desc.ArraySize = dds.GetArraySize();
 					desc.MiscFlags = 0;
-					desc.Usage = USAGE_IMMUTABLE;
 					desc.Format = FORMAT_R8G8B8A8_UNORM;
 					desc.layout = RESOURCE_STATE_SHADER_RESOURCE;
 

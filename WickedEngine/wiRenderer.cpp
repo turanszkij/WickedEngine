@@ -5770,7 +5770,6 @@ void DrawDebugWorld(
 			gridVertexCount = arraysize(verts) / 2;
 
 			GPUBufferDesc bd;
-			bd.Usage = USAGE_IMMUTABLE;
 			bd.ByteWidth = sizeof(verts);
 			bd.BindFlags = BIND_VERTEX_BUFFER;
 			bd.CPUAccessFlags = 0;

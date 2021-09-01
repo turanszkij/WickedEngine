@@ -200,7 +200,6 @@ void wiOcean::Create(const OceanParameters& params)
 	init_cb0.pSysMem = &immutable_consts;
 
 	GPUBufferDesc cb_desc;
-	cb_desc.Usage = USAGE_IMMUTABLE;
 	cb_desc.BindFlags = BIND_CONSTANT_BUFFER;
 	cb_desc.CPUAccessFlags = 0;
 	cb_desc.MiscFlags = 0;
