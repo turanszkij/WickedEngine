@@ -2508,100 +2508,22 @@ void RenderMeshes(
 	size_t alloc_size = renderQueue.batchCount * frustum_count * instanceDataSize;
 	GraphicsDevice::GPUAllocation instances = device->AllocateGPU(alloc_size, cmd);
 
-	// Purpose of InstancedBatch:
-	//	The RenderQueue is sorted by meshIndex. There can be multiple instances for a single meshIndex,
-	//	and the InstancedBatchArray contains this information. The array size will be the unique mesh count here.
+	// This will correspond to a single draw call
+	//	It's used to render multiple instances of a single mesh
 	struct InstancedBatch
 	{
-		uint32_t meshIndex;
-		int instanceCount;
-		uint32_t dataOffset;
-		uint8_t userStencilRefOverride;
-		uint8_t forceAlphatestForDithering; // padded bool
-		uint16_t padding;
+		uint32_t meshIndex = ~0u;
+		uint32_t instanceCount = 0;
+		uint32_t dataOffset = 0;
+		uint8_t userStencilRefOverride = 0;
+		bool forceAlphatestForDithering = false;
 		AABB aabb;
-	};
-	InstancedBatch* instancedBatchArray = nullptr;
-	int instancedBatchCount = 0;
+	} instancedBatch = {};
 
-	// The following loop is writing the instancing batches to a GPUBuffer:
-	size_t prevMeshIndex = ~0;
-	uint8_t prevUserStencilRefOverride = 0;
-	uint32_t instanceCount = 0;
-	for (uint32_t batchID = 0; batchID < renderQueue.batchCount; ++batchID) // Do not break out of this loop!
+	auto batch_flush = [&]()
 	{
-		const RenderBatch& batch = renderQueue.batchArray[batchID];
-		const uint32_t meshIndex = batch.GetMeshIndex();
-		const uint32_t instanceIndex = batch.GetInstanceIndex();
-		const ObjectComponent& instance = vis.scene->objects[instanceIndex];
-		const AABB& instanceAABB = vis.scene->aabb_objects[instanceIndex];
-		const uint8_t userStencilRefOverride = instance.userStencilRef;
-
-		// When we encounter a new mesh inside the global instance array, we begin a new InstancedBatch:
-		if (meshIndex != prevMeshIndex || userStencilRefOverride != prevUserStencilRefOverride)
-		{
-			prevMeshIndex = meshIndex;
-			prevUserStencilRefOverride = userStencilRefOverride;
-
-			instancedBatchCount++;
-			InstancedBatch* instancedBatch = (InstancedBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(InstancedBatch));
-			instancedBatch->meshIndex = meshIndex;
-			instancedBatch->instanceCount = 0;
-			instancedBatch->dataOffset = instances.offset + instanceCount * instanceDataSize;
-			instancedBatch->userStencilRefOverride = userStencilRefOverride;
-			instancedBatch->forceAlphatestForDithering = 0;
-			instancedBatch->aabb = AABB();
-			if (instancedBatchArray == nullptr)
-			{
-				instancedBatchArray = instancedBatch;
-			}
-		}
-
-		InstancedBatch& current_batch = instancedBatchArray[instancedBatchCount - 1];
-
-		float dither = instance.GetTransparency();
-
-		if (instance.IsImpostorPlacement())
-		{
-			float distance = wiMath::Distance(instanceAABB.getCenter(), vis.camera->Eye);
-			float swapDistance = instance.impostorSwapDistance;
-			float fadeThreshold = instance.impostorFadeThresholdRadius;
-			dither = std::max(0.0f, distance - swapDistance) / fadeThreshold;
-		}
-
-		if (dither > 0)
-		{
-			current_batch.forceAlphatestForDithering = 1;
-		}
-
-		if (forwardLightmaskRequest)
-		{
-			current_batch.aabb = AABB::Merge(current_batch.aabb, instanceAABB);
-		}
-
-		for (uint32_t frustum_index = 0; frustum_index < frustum_count; ++frustum_index)
-		{
-			if (frusta != nullptr && !frusta[frustum_index].CheckBoxFast(instanceAABB))
-			{
-				// In case multiple cameras were provided and no intersection detected with frustum, we don't add the instance for the face:
-				continue;
-			}
-
-			// Write into actual GPU-buffer:
-			ShaderMeshInstancePointer poi;
-			poi.Create(instanceIndex, frustum_index, dither);
-			std::memcpy((ShaderMeshInstancePointer*)instances.data + instanceCount, &poi, sizeof(ShaderMeshInstancePointer));
-
-			current_batch.instanceCount++; // next instance in current InstancedBatch
-			instanceCount++;
-		}
-
-	}
-
-	// Render instanced batches:
-	for (int instancedBatchID = 0; instancedBatchID < instancedBatchCount; ++instancedBatchID)
-	{
-		const InstancedBatch& instancedBatch = instancedBatchArray[instancedBatchID];
+		if (instancedBatch.instanceCount == 0)
+			return;
 		const MeshComponent& mesh = vis.scene->meshes[instancedBatch.meshIndex];
 		const bool forceAlphaTestForDithering = instancedBatch.forceAlphatestForDithering != 0;
 		const uint8_t userStencilRefOverride = instancedBatch.userStencilRefOverride;
@@ -2714,9 +2636,74 @@ void RenderMeshes(
 			device->BindPipelineState(pso, cmd);
 			device->DrawIndexedInstanced(subset.indexCount, instancedBatch.instanceCount, subset.indexOffset, 0, 0, cmd);
 		}
+	};
+
+	// The following loop is writing the instancing batches to a GPUBuffer:
+	//	RenderQueue is sorted based on mesh index, so when a new mesh or stencil request is encountered, we need to flush the batch
+	uint32_t instanceCount = 0;
+	for (uint32_t batchID = 0; batchID < renderQueue.batchCount; ++batchID) // Do not break out of this loop!
+	{
+		const RenderBatch& batch = renderQueue.batchArray[batchID];
+		const uint32_t meshIndex = batch.GetMeshIndex();
+		const uint32_t instanceIndex = batch.GetInstanceIndex();
+		const ObjectComponent& instance = vis.scene->objects[instanceIndex];
+		const AABB& instanceAABB = vis.scene->aabb_objects[instanceIndex];
+		const uint8_t userStencilRefOverride = instance.userStencilRef;
+
+		// When we encounter a new mesh inside the global instance array, we begin a new RenderBatch:
+		if (meshIndex != instancedBatch.meshIndex || userStencilRefOverride != instancedBatch.userStencilRefOverride)
+		{
+			batch_flush();
+
+			instancedBatch = {};
+			instancedBatch.meshIndex = meshIndex;
+			instancedBatch.instanceCount = 0;
+			instancedBatch.dataOffset = instances.offset + instanceCount * instanceDataSize;
+			instancedBatch.userStencilRefOverride = userStencilRefOverride;
+			instancedBatch.forceAlphatestForDithering = 0;
+			instancedBatch.aabb = AABB();
+		}
+
+		float dither = instance.GetTransparency();
+
+		if (instance.IsImpostorPlacement())
+		{
+			float distance = wiMath::Distance(instanceAABB.getCenter(), vis.camera->Eye);
+			float swapDistance = instance.impostorSwapDistance;
+			float fadeThreshold = instance.impostorFadeThresholdRadius;
+			dither = std::max(0.0f, distance - swapDistance) / fadeThreshold;
+		}
+
+		if (dither > 0)
+		{
+			instancedBatch.forceAlphatestForDithering = 1;
+		}
+
+		if (forwardLightmaskRequest)
+		{
+			instancedBatch.aabb = AABB::Merge(instancedBatch.aabb, instanceAABB);
+		}
+
+		for (uint32_t frustum_index = 0; frustum_index < frustum_count; ++frustum_index)
+		{
+			if (frusta != nullptr && !frusta[frustum_index].CheckBoxFast(instanceAABB))
+			{
+				// In case multiple cameras were provided and no intersection detected with frustum, we don't add the instance for the face:
+				continue;
+			}
+
+			// Write into actual GPU-buffer:
+			ShaderMeshInstancePointer poi;
+			poi.Create(instanceIndex, frustum_index, dither);
+			std::memcpy((ShaderMeshInstancePointer*)instances.data + instanceCount, &poi, sizeof(ShaderMeshInstancePointer));
+
+			instancedBatch.instanceCount++; // next instance in current InstancedBatch
+			instanceCount++;
+		}
+
 	}
 
-	GetRenderFrameAllocator(cmd).free(sizeof(InstancedBatch) * instancedBatchCount);
+	batch_flush();
 
 	device->EventEnd(cmd);
 }
