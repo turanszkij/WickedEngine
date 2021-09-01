@@ -2520,6 +2520,8 @@ void RenderMeshes(
 		AABB aabb;
 	} instancedBatch = {};
 
+
+	// This will be called every time we start a new draw call:
 	auto batch_flush = [&]()
 	{
 		if (instancedBatch.instanceCount == 0)
@@ -3356,6 +3358,7 @@ void UpdateRenderData(
 	CommandList cmd
 )
 {
+	device->EventBegin("UpdateRenderData", cmd);
 	device->UpdateBuffer(&constantBuffers[CBTYPE_FRAME], &frameCB, cmd);
 	UpdateCameraCB(
 		*vis.camera,
@@ -3950,6 +3953,8 @@ void UpdateRenderData(
 		}
 		volumetric_clouds_precomputed = true;
 	}
+
+	device->EventEnd(cmd);
 }
 void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 {
