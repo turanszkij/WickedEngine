@@ -257,7 +257,6 @@ struct VertexSurface
 
 	inline void create(in ShaderMaterial material, in VertexInput input)
 	{
-		uint userdata = input.GetInstancePointer().userdata;
 		position = input.GetPosition();
 		color = material.baseColor * unpack_rgba(input.GetInstance().color);
 		color.a *= 1 - input.GetInstancePointer().GetDither();
