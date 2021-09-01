@@ -239,6 +239,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	Surface surface;
 	surface.load(prim, P);
+	if (surface.roughness > 0.6)
+	{
+		texture_raytrace[DTid.xy] = 0;
+		texture_rayLengths[DTid.xy] = 0;
+		return;
+	}
 
 	const float3 N = normalize(mul((float3x3)g_xCamera.View, surface.N));
 	const float roughness = GetRoughness(surface.roughness);

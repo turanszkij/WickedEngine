@@ -35,6 +35,12 @@ void RTReflection_Raygen()
 
 	Surface surface;
 	surface.load(prim, P);
+	if (surface.roughness > 0.6)
+	{
+		output[DTid.xy] = float4(max(0, EnvironmentReflection_Global(surface)), 1);
+		output_rayLengths[DTid.xy] = FLT_MAX;
+		return;
+	}
 
 	float3 N = surface.N;
 	float roughness = surface.roughness;
