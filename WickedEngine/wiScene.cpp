@@ -3632,10 +3632,10 @@ namespace wiScene
 			armature.boneData[ind.w].GetMatrix(),
 		};
 		const XMMATRIX M[] = {
-			XMLoadFloat4x4(&mat[0]),
-			XMLoadFloat4x4(&mat[1]),
-			XMLoadFloat4x4(&mat[2]),
-			XMLoadFloat4x4(&mat[3]),
+			XMMatrixTranspose(XMLoadFloat4x4(&mat[0])),
+			XMMatrixTranspose(XMLoadFloat4x4(&mat[1])),
+			XMMatrixTranspose(XMLoadFloat4x4(&mat[2])),
+			XMMatrixTranspose(XMLoadFloat4x4(&mat[3])),
 		};
 
 		XMVECTOR skinned;
