@@ -3906,6 +3906,13 @@ void UpdateRenderData(
 
 			device->Dispatch(curlThread, curlThread, 1, cmd);
 
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Image(&texture_curlNoise, RESOURCE_STATE_UNORDERED_ACCESS, texture_curlNoise.desc.layout),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+
 			device->EventEnd(cmd);
 		}
 

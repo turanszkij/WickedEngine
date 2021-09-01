@@ -106,64 +106,61 @@ void MainComponent::Run()
 		wiLua::RunFile("startup.lua");
 	}
 
+	if (!is_window_active)
+	{
+		// If the application is not active, disable Update loops:
+		deltaTimeAccumulator = 0;
+		return;
+	}
+
 	wiProfiler::BeginFrame();
 
 	deltaTime = float(std::max(0.0, timer.elapsed() / 1000.0));
 	timer.record();
 
-	if (is_window_active)
+	// Wake up the events that need to be executed on the main thread, in thread safe manner:
+	wiEvent::FireEvent(SYSTEM_EVENT_THREAD_SAFE_POINT, 0);
+
+	const float dt = framerate_lock ? (1.0f / targetFrameRate) : deltaTime;
+
+	fadeManager.Update(dt);
+
+	if (GetActivePath() != nullptr)
 	{
-		// If the application is active, run Update loops:
+		GetActivePath()->init(canvas);
+		GetActivePath()->PreUpdate();
+	}
 
-		// Wake up the events that need to be executed on the main thread, in thread safe manner:
-		wiEvent::FireEvent(SYSTEM_EVENT_THREAD_SAFE_POINT, 0);
-
-		const float dt = framerate_lock ? (1.0f / targetFrameRate) : deltaTime;
-
-		fadeManager.Update(dt);
-
-		if (GetActivePath() != nullptr)
+	// Fixed time update:
+	auto range = wiProfiler::BeginRangeCPU("Fixed Update");
+	{
+		if (frameskip)
 		{
-			GetActivePath()->init(canvas);
-			GetActivePath()->PreUpdate();
-		}
-
-		// Fixed time update:
-		auto range = wiProfiler::BeginRangeCPU("Fixed Update");
-		{
-			if (frameskip)
+			deltaTimeAccumulator += dt;
+			if (deltaTimeAccumulator > 10)
 			{
-				deltaTimeAccumulator += dt;
-				if (deltaTimeAccumulator > 10)
-				{
-					// application probably lost control, fixed update would take too long
-					deltaTimeAccumulator = 0;
-				}
-
-				const float targetFrameRateInv = 1.0f / targetFrameRate;
-				while (deltaTimeAccumulator >= targetFrameRateInv)
-				{
-					FixedUpdate();
-					deltaTimeAccumulator -= targetFrameRateInv;
-				}
+				// application probably lost control, fixed update would take too long
+				deltaTimeAccumulator = 0;
 			}
-			else
+
+			const float targetFrameRateInv = 1.0f / targetFrameRate;
+			while (deltaTimeAccumulator >= targetFrameRateInv)
 			{
 				FixedUpdate();
+				deltaTimeAccumulator -= targetFrameRateInv;
 			}
 		}
-		wiProfiler::EndRange(range); // Fixed Update
-
-		// Variable-timed update:
-		Update(dt);
-
-		Render();
+		else
+		{
+			FixedUpdate();
+		}
 	}
-	else
-	{
-		// If the application is not active, disable Update loops:
-		deltaTimeAccumulator = 0;
-	}
+	wiProfiler::EndRange(range); // Fixed Update
+
+	// Variable-timed update:
+	Update(dt);
+
+	Render();
 
 	wiInput::Update(window);
 
