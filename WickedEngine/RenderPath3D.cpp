@@ -707,7 +707,6 @@ void RenderPath3D::Render() const
 		);
 
 		wiRenderer::VisibilityResolve(
-			*scene,
 			depthBuffer_Main,
 			rtPrimitiveID_render,
 			rtGbuffer,
@@ -767,7 +766,6 @@ void RenderPath3D::Render() const
 		{
 			wiRenderer::Postprocess_ScreenSpaceShadow(
 				screenspaceshadowResources,
-				*scene,
 				depthBuffer_Copy,
 				rtLinearDepth,
 				tiledLightResources.entityTiles_Opaque,

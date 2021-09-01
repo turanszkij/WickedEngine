@@ -298,7 +298,6 @@ namespace wiRenderer
 	);
 
 	void VisibilityResolve(
-		const wiScene::Scene& scene,
 		const wiGraphics::Texture& depthbuffer,
 		const wiGraphics::Texture& texture_primitiveID, // can be MSAA
 		const wiGraphics::Texture gbuffer[GBUFFER_COUNT],
@@ -488,7 +487,6 @@ namespace wiRenderer
 	void CreateScreenSpaceShadowResources(ScreenSpaceShadowResources& res, XMUINT2 resolution);
 	void Postprocess_ScreenSpaceShadow(
 		const ScreenSpaceShadowResources& res,
-		const wiScene::Scene& scene,
 		const wiGraphics::Texture& depthbuffer,
 		const wiGraphics::Texture& lineardepth,
 		const wiGraphics::GPUBuffer& entityTiles_Opaque,

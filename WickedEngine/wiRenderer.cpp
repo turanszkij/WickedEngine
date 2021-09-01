@@ -7645,7 +7645,6 @@ void ComputeShadingRateClassification(
 }
 
 void VisibilityResolve(
-	const Scene& scene,
 	const Texture& depthbuffer,
 	const Texture& texture_primitiveID, // can be MSAA
 	const Texture gbuffer[GBUFFER_COUNT],
@@ -10117,7 +10116,6 @@ void CreateScreenSpaceShadowResources(ScreenSpaceShadowResources& res, XMUINT2 r
 }
 void Postprocess_ScreenSpaceShadow(
 	const ScreenSpaceShadowResources& res,
-	const Scene& scene,
 	const Texture& depthbuffer,
 	const Texture& lineardepth,
 	const GPUBuffer& entityTiles_Opaque,
