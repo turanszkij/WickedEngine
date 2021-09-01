@@ -3941,12 +3941,13 @@ using namespace Vulkan_Internal;
 					res = vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &internal_state->pipelineLayout_cs);
 					assert(res == VK_SUCCESS);
 					pso_layout_cache[internal_state->binding_hash].pipelineLayout = internal_state->pipelineLayout_cs;
+					pso_layout_cache[internal_state->binding_hash].bindlessSets = internal_state->bindlessSets;
+					pso_layout_cache[internal_state->binding_hash].bindlessFirstSet = internal_state->bindlessFirstSet;
 				}
-				else
-				{
-					internal_state->descriptorSetLayout = pso_layout_cache[internal_state->binding_hash].descriptorSetLayout;
-					internal_state->pipelineLayout_cs = pso_layout_cache[internal_state->binding_hash].pipelineLayout;
-				}
+				internal_state->descriptorSetLayout = pso_layout_cache[internal_state->binding_hash].descriptorSetLayout;
+				internal_state->pipelineLayout_cs = pso_layout_cache[internal_state->binding_hash].pipelineLayout;
+				internal_state->bindlessSets = pso_layout_cache[internal_state->binding_hash].bindlessSets;
+				internal_state->bindlessFirstSet = pso_layout_cache[internal_state->binding_hash].bindlessFirstSet;
 				pso_layout_cache_mutex.unlock();
 			}
 		}
