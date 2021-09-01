@@ -37,7 +37,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 
 	float opacity = saturate(color.a * inputColor.a * fade);
 
-	color.rgb *= inputColor.rgb * (1 + EmitterGetMaterial().emissiveColor.rgb);
+	color.rgb *= inputColor.rgb * (1 + material.emissiveColor.rgb * material.emissiveColor.a);
 	color.a = opacity;
 
 #ifdef EMITTEDPARTICLE_DISTORTION
@@ -78,9 +78,10 @@ float4 main(VertextoPixel input) : SV_TARGET
 		//color.rgb = float3(unrotated_uv, 0);
 		//color.rgb = float3(input.tex, 0);
 
+		color = max(0, color);
 	}
 
 #endif // EMITTEDPARTICLE_LIGHTING
 
-	return max(color, 0);
+	return color;
 }

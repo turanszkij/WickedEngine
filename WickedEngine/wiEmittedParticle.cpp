@@ -241,11 +241,10 @@ void wiEmittedParticle::UpdateGPU(uint32_t materialIndex, const TransformCompone
 	}
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
+	device->EventBegin("UpdateEmittedParticles", cmd);
 
 	if (!IsPaused())
 	{
-		device->EventBegin("UpdateEmittedParticles", cmd);
-
 		EmittedParticleCB cb;
 		cb.xEmitterWorld = transform.world;
 		cb.xEmitCount = (uint32_t)emit;
@@ -482,10 +481,6 @@ void wiEmittedParticle::UpdateGPU(uint32_t materialIndex, const TransformCompone
 		device->Barrier(&barrier_memory, 1, cmd);
 		device->EventEnd(cmd);
 
-
-
-		device->EventEnd(cmd);
-
 	}
 
 	if (IsSorted())
@@ -552,6 +547,8 @@ void wiEmittedParticle::UpdateGPU(uint32_t materialIndex, const TransformCompone
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
+
+	device->EventEnd(cmd);
 }
 
 

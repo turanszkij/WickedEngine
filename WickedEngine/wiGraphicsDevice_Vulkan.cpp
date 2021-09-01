@@ -6743,8 +6743,9 @@ using namespace Vulkan_Internal;
 	{
 		assert(buffer->desc.Usage != USAGE_IMMUTABLE && "Cannot update IMMUTABLE GPUBuffer!");
 		assert((int)buffer->desc.ByteWidth >= dataSize || dataSize < 0 && "Data size is too big!");
+		assert(data != nullptr);
 
-		if (dataSize == 0)
+		if (data == nullptr || dataSize == 0)
 		{
 			return;
 		}
