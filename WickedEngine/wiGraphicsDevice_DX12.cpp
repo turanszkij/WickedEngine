@@ -1305,16 +1305,12 @@ namespace DX12_Internal
 	struct QueryHeap_DX12
 	{
 		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
-		D3D12MA::Allocation* allocation = nullptr;
-		Microsoft::WRL::ComPtr<ID3D12Resource> resource;
 		Microsoft::WRL::ComPtr<ID3D12QueryHeap> heap;
 
 		~QueryHeap_DX12()
 		{
 			allocationhandler->destroylocker.lock();
 			uint64_t framecount = allocationhandler->framecount;
-			if (allocation) allocationhandler->destroyer_allocations.push_back(std::make_pair(allocation, framecount));
-			if (resource) allocationhandler->destroyer_resources.push_back(std::make_pair(resource, framecount));
 			if (heap) allocationhandler->destroyer_queryheaps.push_back(std::make_pair(heap, framecount));
 			allocationhandler->destroylocker.unlock();
 		}
@@ -2231,6 +2227,7 @@ using namespace DX12_Internal;
 			for (auto& x : query_resolves[cmd])
 			{
 				auto internal_state = to_internal(x.heap);
+				auto dst_internal = to_internal(x.dest);
 
 				switch (x.heap->desc.type)
 				{
@@ -2240,8 +2237,8 @@ using namespace DX12_Internal;
 						D3D12_QUERY_TYPE_TIMESTAMP,
 						x.index,
 						x.count,
-						internal_state->resource.Get(),
-						sizeof(uint64_t) * x.index
+						dst_internal->resource.Get(),
+						x.dest_offset
 					);
 					break;
 				case GPU_QUERY_TYPE_OCCLUSION_BINARY:
@@ -2250,8 +2247,8 @@ using namespace DX12_Internal;
 						D3D12_QUERY_TYPE_BINARY_OCCLUSION,
 						x.index,
 						x.count,
-						internal_state->resource.Get(),
-						sizeof(uint64_t) * x.index
+						dst_internal->resource.Get(),
+						x.dest_offset
 					);
 					break;
 				case GPU_QUERY_TYPE_OCCLUSION:
@@ -2260,8 +2257,8 @@ using namespace DX12_Internal;
 						D3D12_QUERY_TYPE_OCCLUSION,
 						x.index,
 						x.count,
-						internal_state->resource.Get(),
-						sizeof(uint64_t) * x.index
+						dst_internal->resource.Get(),
+						x.dest_offset
 					);
 					break;
 				}
@@ -3928,32 +3925,6 @@ using namespace DX12_Internal;
 		HRESULT hr = allocationhandler->device->CreateQueryHeap(&desc, IID_PPV_ARGS(&internal_state->heap));
 		assert(SUCCEEDED(hr));
 
-		D3D12MA::ALLOCATION_DESC allocationDesc = {};
-		allocationDesc.HeapType = D3D12_HEAP_TYPE_READBACK;
-
-		D3D12_RESOURCE_DESC resdesc = {};
-		resdesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-		resdesc.Format = DXGI_FORMAT_UNKNOWN;
-		resdesc.Width = (UINT64)(desc.Count * sizeof(uint64_t));
-		resdesc.Height = 1;
-		resdesc.MipLevels = 1;
-		resdesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-		resdesc.DepthOrArraySize = 1;
-		resdesc.Alignment = 0;
-		resdesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-		resdesc.SampleDesc.Count = 1;
-		resdesc.SampleDesc.Quality = 0;
-
-		hr = allocationhandler->allocator->CreateResource(
-			&allocationDesc,
-			&resdesc,
-			D3D12_RESOURCE_STATE_COPY_DEST,
-			nullptr,
-			&internal_state->allocation,
-			IID_PPV_ARGS(&internal_state->resource)
-		);
-		assert(SUCCEEDED(hr));
-
 		return SUCCEEDED(hr);
 	}
 	bool GraphicsDevice_DX12::CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) const
@@ -5524,26 +5495,6 @@ using namespace DX12_Internal;
 		auto internal_state = to_internal(resource);
 		internal_state->resource->Unmap(0, nullptr);
 	}
-	void GraphicsDevice_DX12::QueryRead(const GPUQueryHeap* heap, uint32_t index, uint32_t count, uint64_t* results) const
-	{
-		if (count == 0)
-			return;
-
-		auto internal_state = to_internal(heap);
-
-		D3D12_RANGE range;
-		range.Begin = (size_t)index * sizeof(uint64_t);
-		range.End = range.Begin + sizeof(uint64_t) * count;
-		D3D12_RANGE nullrange = {};
-		void* data = nullptr;
-
-		HRESULT hr = internal_state->resource->Map(0, &range, &data);
-		if (SUCCEEDED(hr))
-		{
-			std::memcpy(results, (void*)((size_t)data + range.Begin), sizeof(uint64_t) * count);
-			internal_state->resource->Unmap(0, &nullrange);
-		}
-	}
 
 	void GraphicsDevice_DX12::SetCommonSampler(const StaticSampler* sam)
 	{
@@ -6396,7 +6347,7 @@ using namespace DX12_Internal;
 			break;
 		}
 	}
-	void GraphicsDevice_DX12::QueryResolve(const GPUQueryHeap* heap, uint32_t index, uint32_t count, CommandList cmd)
+	void GraphicsDevice_DX12::QueryResolve(const GPUQueryHeap* heap, uint32_t index, uint32_t count, const GPUBuffer* dest, uint64_t dest_offset, CommandList cmd)
 	{
 		if (count == 0)
 			return;
@@ -6405,6 +6356,8 @@ using namespace DX12_Internal;
 		resolver.heap = heap;
 		resolver.index = index;
 		resolver.count = count;
+		resolver.dest = dest;
+		resolver.dest_offset = dest_offset;
 		query_resolves[cmd].push_back(resolver);
 	}
 	void GraphicsDevice_DX12::Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd)

@@ -24,7 +24,7 @@ namespace wiProfiler
 	range_id cpu_frame;
 	range_id gpu_frame;
 	GPUQueryHeap queryHeap[wiGraphics::GraphicsDevice::GetBufferCount() + 1];
-	std::vector<uint64_t> queryResults;
+	GPUBuffer queryResultBuffer[arraysize(queryHeap)];
 	std::atomic<uint32_t> nextQuery{ 0 };
 	uint32_t writtenQueries[arraysize(queryHeap)] = {};
 	int queryheap_idx = 0;
@@ -58,16 +58,25 @@ namespace wiProfiler
 
 			ranges.reserve(100);
 
+			GraphicsDevice* device = wiRenderer::GetDevice();
+
 			GPUQueryHeapDesc desc;
 			desc.type = GPU_QUERY_TYPE_TIMESTAMP;
 			desc.queryCount = 1024;
+
+			GPUBufferDesc bd;
+			bd.Usage = USAGE_STAGING;
+			bd.ByteWidth = desc.queryCount * sizeof(uint64_t);
+			bd.CPUAccessFlags = CPU_ACCESS_READ;
+
 			for (int i = 0; i < arraysize(queryHeap); ++i)
 			{
-				bool success = wiRenderer::GetDevice()->CreateQueryHeap(&desc, &queryHeap[i]);
+				bool success = device->CreateQueryHeap(&desc, &queryHeap[i]);
+				assert(success);
+
+				success = device->CreateBuffer(&bd, nullptr, &queryResultBuffer[i]);
 				assert(success);
 			}
-
-			queryResults.resize(desc.queryCount);
 		}
 
 		cpu_frame = BeginRangeCPU("CPU Frame");
@@ -91,14 +100,27 @@ namespace wiProfiler
 
 		double gpu_frequency = (double)device->GetTimestampFrequency() / 1000.0;
 
-		device->QueryResolve(&queryHeap[queryheap_idx], 0, nextQuery.load(), cmd);
+		device->QueryResolve(
+			&queryHeap[queryheap_idx],
+			0,
+			nextQuery.load(),
+			&queryResultBuffer[queryheap_idx],
+			0ull,
+			cmd
+		);
 
 		writtenQueries[queryheap_idx] = nextQuery.load();
 		nextQuery.store(0);
 		queryheap_idx = (queryheap_idx + 1) % arraysize(queryHeap);
+		uint64_t* queryResults = nullptr;
 		if (writtenQueries[queryheap_idx] > 0)
 		{
-			wiRenderer::GetDevice()->QueryRead(&queryHeap[queryheap_idx], 0, writtenQueries[queryheap_idx], queryResults.data());
+			Mapping mapping;
+			mapping._flags |= Mapping::FLAG_READ;
+			mapping.offset = 0;
+			mapping.size = sizeof(uint64_t) * writtenQueries[queryheap_idx];
+			device->Map(&queryResultBuffer[queryheap_idx], &mapping);
+			queryResults = (uint64_t*)mapping.data;
 		}
 
 		for (auto& x : ranges)
@@ -114,7 +136,7 @@ namespace wiProfiler
 			{
 				int begin_query = range.gpuBegin[queryheap_idx];
 				int end_query = range.gpuEnd[queryheap_idx];
-				if (begin_query >= 0 && end_query >= 0)
+				if (queryResults != nullptr && begin_query >= 0 && end_query >= 0)
 				{
 					uint64_t begin_result = queryResults[begin_query];
 					uint64_t end_result = queryResults[end_query];
@@ -136,6 +158,11 @@ namespace wiProfiler
 			}
 
 			range.in_use = false;
+		}
+
+		if (queryResults != nullptr)
+		{
+			device->Unmap(&queryResultBuffer[queryheap_idx]);
 		}
 	}
 

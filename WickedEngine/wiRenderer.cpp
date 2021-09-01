@@ -4091,6 +4091,8 @@ void OcclusionCulling_Render(const CameraComponent& camera_previous, const Visib
 			&queryHeap,
 			0,
 			vis.scene->writtenQueries[query_write],
+			&vis.scene->queryResultBuffer[query_write],
+			0ull,
 			cmd
 		);
 

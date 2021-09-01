@@ -207,6 +207,8 @@ namespace wiGraphics
 			const GPUQueryHeap* heap = nullptr;
 			uint32_t index = 0;
 			uint32_t count = 0;
+			uint64_t dest_offset = 0;
+			const GPUBuffer* dest = nullptr;
 		};
 		std::vector<QueryResolver> query_resolves[COMMANDLIST_COUNT];
 
@@ -239,7 +241,6 @@ namespace wiGraphics
 		
 		void Map(const GPUResource* resource, Mapping* mapping) const override;
 		void Unmap(const GPUResource* resource) const override;
-		void QueryRead(const GPUQueryHeap* heap, uint32_t index, uint32_t count, uint64_t* results) const override;
 
 		void SetCommonSampler(const StaticSampler* sam) override;
 
@@ -290,7 +291,7 @@ namespace wiGraphics
 		void UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize = -1) override;
 		void QueryBegin(const GPUQueryHeap* heap, uint32_t index, CommandList cmd) override;
 		void QueryEnd(const GPUQueryHeap* heap, uint32_t index, CommandList cmd) override;
-		void QueryResolve(const GPUQueryHeap* heap, uint32_t index, uint32_t count, CommandList cmd) override;
+		void QueryResolve(const GPUQueryHeap* heap, uint32_t index, uint32_t count, const GPUBuffer* dest, uint64_t dest_offset, CommandList cmd) override;
 		void Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd) override;
 		void BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src = nullptr) override;
 		void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) override;

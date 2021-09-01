@@ -1928,6 +1928,40 @@ using namespace Vulkan_Internal;
 		vkCmdBindPipeline(GetCommandList(cmd), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 	}
 
+	void GraphicsDevice_Vulkan::query_flush(CommandList cmd)
+	{
+		// Perform query resolves (must be outside of render pass):
+		assert(active_renderpass[cmd] == nullptr);
+
+		if (!query_resolves[cmd].empty())
+		{
+			for (auto& x : query_resolves[cmd])
+			{
+				auto internal_state = to_internal(x.heap);
+				auto dst_internal = to_internal(x.dest);
+
+				vkCmdCopyQueryPoolResults(
+					GetCommandList(cmd),
+					internal_state->pool,
+					x.index,
+					x.count,
+					dst_internal->resource,
+					x.dest_offset,
+					sizeof(uint64_t),
+					VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT
+				);
+
+				vkCmdResetQueryPool(
+					GetCommandList(cmd),
+					internal_state->pool,
+					x.index,
+					x.count
+				);
+
+			}
+			query_resolves[cmd].clear();
+		}
+	}
 	void GraphicsDevice_Vulkan::barrier_flush(CommandList cmd)
 	{
 		auto& memoryBarriers = frame_memoryBarriers[cmd];
@@ -3432,7 +3466,6 @@ using namespace Vulkan_Internal;
 
 			if (pDesc->CPUAccessFlags & CPU_ACCESS_READ)
 			{
-				allocInfo.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT; // I don't know why but consecutive resource downloads could fail without this
 				allocInfo.usage = VMA_MEMORY_USAGE_GPU_TO_CPU;
 				bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 			}
@@ -5764,12 +5797,15 @@ using namespace Vulkan_Internal;
 	void GraphicsDevice_Vulkan::Map(const GPUResource* resource, Mapping* mapping) const
 	{
 		VkDeviceMemory memory = VK_NULL_HANDLE;
+		VkDeviceSize offset = mapping->offset;
+		VkDeviceSize size = mapping->size;
 
 		if (resource->type == GPUResource::GPU_RESOURCE_TYPE::BUFFER)
 		{
 			const GPUBuffer* buffer = (const GPUBuffer*)resource;
 			auto internal_state = to_internal(buffer);
 			memory = internal_state->allocation->GetMemory();
+			offset += internal_state->allocation->GetOffset();
 			mapping->rowpitch = (uint32_t)buffer->desc.ByteWidth;
 		}
 		else if (resource->type == GPUResource::GPU_RESOURCE_TYPE::TEXTURE)
@@ -5777,6 +5813,7 @@ using namespace Vulkan_Internal;
 			const Texture* texture = (const Texture*)resource;
 			auto internal_state = to_internal(texture);
 			memory = internal_state->allocation->GetMemory();
+			offset += internal_state->allocation->GetOffset();
 			mapping->rowpitch = (uint32_t)internal_state->subresourcelayout.rowPitch;
 		}
 		else
@@ -5784,9 +5821,6 @@ using namespace Vulkan_Internal;
 			assert(0);
 			return;
 		}
-
-		VkDeviceSize offset = mapping->offset;
-		VkDeviceSize size = mapping->size;
 
 		VkResult res = vkMapMemory(device, memory, offset, size, 0, &mapping->data);
 		if (res != VK_SUCCESS)
@@ -5810,31 +5844,6 @@ using namespace Vulkan_Internal;
 			auto internal_state = to_internal(texture);
 			vkUnmapMemory(device, internal_state->allocation->GetMemory());
 		}
-	}
-	void GraphicsDevice_Vulkan::QueryRead(const GPUQueryHeap* heap, uint32_t index, uint32_t count, uint64_t* results) const
-	{
-		if (count == 0)
-			return;
-
-		auto internal_state = to_internal(heap);
-
-		VkResult res = vkGetQueryPoolResults(
-			device,
-			internal_state->pool,
-			index,
-			count,
-			sizeof(uint64_t) * count,
-			results,
-			sizeof(uint64_t),
-			VK_QUERY_RESULT_64_BIT
-		);
-
-		vkResetQueryPool(
-			device,
-			internal_state->pool,
-			index,
-			count
-		);
 	}
 
 	void GraphicsDevice_Vulkan::SetCommonSampler(const StaticSampler* sam)
@@ -5997,6 +6006,7 @@ using namespace Vulkan_Internal;
 			cmd_count.store(0);
 			for (CommandList cmd = 0; cmd < cmd_last; ++cmd)
 			{
+				query_flush(cmd);
 				barrier_flush(cmd);
 
 				res = vkEndCommandBuffer(GetCommandList(cmd));
@@ -6235,6 +6245,8 @@ using namespace Vulkan_Internal;
 		vkCmdEndRenderPass(GetCommandList(cmd));
 
 		active_renderpass[cmd] = VK_NULL_HANDLE;
+
+		query_flush(cmd);
 	}
 	void GraphicsDevice_Vulkan::BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd)
 	{
@@ -6847,13 +6859,26 @@ using namespace Vulkan_Internal;
 		switch (heap->desc.type)
 		{
 		case GPU_QUERY_TYPE_TIMESTAMP:
-			vkCmdWriteTimestamp(GetCommandList(cmd), VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, internal_state->pool, index);
+			vkCmdWriteTimestamp(GetCommandList(cmd), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, internal_state->pool, index);
 			break;
 		case GPU_QUERY_TYPE_OCCLUSION_BINARY:
 		case GPU_QUERY_TYPE_OCCLUSION:
 			vkCmdEndQuery(GetCommandList(cmd), internal_state->pool, index);
 			break;
 		}
+	}
+	void GraphicsDevice_Vulkan::QueryResolve(const GPUQueryHeap* heap, uint32_t index, uint32_t count, const GPUBuffer* dest, uint64_t dest_offset, CommandList cmd)
+	{
+		if (count == 0)
+			return;
+
+		QueryResolver resolver;
+		resolver.heap = heap;
+		resolver.index = index;
+		resolver.count = count;
+		resolver.dest = dest;
+		resolver.dest_offset = dest_offset;
+		query_resolves[cmd].push_back(resolver);
 	}
 	void GraphicsDevice_Vulkan::Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd)
 	{

@@ -1466,19 +1466,28 @@ namespace wiScene
 		}
 
 		// Occlusion culling read:
+		queryResults = nullptr;
 		if(!wiRenderer::GetFreezeCullingCameraEnabled())
 		{
 			if (!queryHeap[0].IsValid())
 			{
 				GPUQueryHeapDesc desc;
 				desc.type = GPU_QUERY_TYPE_OCCLUSION_BINARY;
-				desc.queryCount = 2048;
+				desc.queryCount = 8192;
+
+				GPUBufferDesc bd;
+				bd.Usage = USAGE_STAGING;
+				bd.ByteWidth = desc.queryCount * sizeof(uint64_t);
+				bd.CPUAccessFlags = CPU_ACCESS_READ;
+
 				for (int i = 0; i < arraysize(queryHeap); ++i)
 				{
-					bool success = wiRenderer::GetDevice()->CreateQueryHeap(&desc, &queryHeap[i]);
+					bool success = device->CreateQueryHeap(&desc, &queryHeap[i]);
+					assert(success);
+
+					success = device->CreateBuffer(&bd, nullptr, &queryResultBuffer[i]);
 					assert(success);
 				}
-				queryResults.resize(desc.queryCount);
 			}
 
 			// Previously allocated and written query count (newest one) is saved:
@@ -1491,12 +1500,16 @@ namespace wiScene
 			// Read back data from the oldest query heap:
 			if (writtenQueries[queryheap_idx] > 0)
 			{
-				device->QueryRead(
-					&queryHeap[queryheap_idx],
-					0,
-					writtenQueries[queryheap_idx],
-					queryResults.data()
-				);
+				Mapping mapping;
+				mapping._flags |= Mapping::FLAG_READ;
+				mapping.offset = 0;
+				mapping.size = sizeof(uint64_t) * writtenQueries[queryheap_idx];
+
+				device->Map(&queryResultBuffer[queryheap_idx], &mapping);
+				if (mapping.data != nullptr)
+				{
+					queryResults = (uint64_t*)mapping.data;
+				}
 			}
 		}
 
@@ -1558,6 +1571,11 @@ namespace wiScene
 		if (lightmap_refresh_needed.load())
 		{
 			SetAccelerationStructureUpdateRequested(true);
+		}
+
+		if (queryResults != nullptr)
+		{
+			device->Unmap(&queryResultBuffer[queryheap_idx]);
 		}
 
 		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
@@ -2947,7 +2965,7 @@ namespace wiScene
 			{
 				object.occlusionHistory <<= 1; // advance history by 1 frame
 				int query_id = object.occlusionQueries[queryheap_idx];
-				if (query_id >= 0 && (int)writtenQueries[queryheap_idx] > query_id)
+				if (queryResults != nullptr && query_id >= 0 && (int)writtenQueries[queryheap_idx] > query_id)
 				{
 					uint64_t visible = queryResults[query_id];
 					if (visible)
