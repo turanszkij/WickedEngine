@@ -213,6 +213,7 @@ struct ShaderMeshInstance
 	int padding0;
 	int padding1;
 	ShaderTransform transform;
+	ShaderTransform transformInverseTranspose; // This correctly handles non uniform scaling for normals
 	ShaderTransform transformPrev;
 
 	void init()
@@ -224,6 +225,7 @@ struct ShaderMeshInstance
 		emissive = ~0u;
 		lightmap = -1;
 		transform.init();
+		transformInverseTranspose.init();
 		transformPrev.init();
 	}
 

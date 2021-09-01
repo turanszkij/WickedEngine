@@ -3058,12 +3058,20 @@ namespace wiScene
 					}
 
 					// Create GPU instance data:
-					GraphicsDevice* device = wiRenderer::GetDevice();
 					const XMFLOAT4X4& worldMatrix = object.transform_index >= 0 ? transforms[object.transform_index].world : IDENTITYMATRIX;
 					const XMFLOAT4X4& worldMatrixPrev = object.prev_transform_index >= 0 ? prev_transforms[object.prev_transform_index].world_prev : IDENTITYMATRIX;
+
+					XMMATRIX worldMatrixInverseTranspose = XMLoadFloat4x4(&worldMatrix);
+					worldMatrixInverseTranspose = XMMatrixInverse(nullptr, worldMatrixInverseTranspose);
+					worldMatrixInverseTranspose = XMMatrixTranspose(worldMatrixInverseTranspose);
+					XMFLOAT4X4 transformIT;
+					XMStoreFloat4x4(&transformIT, worldMatrixInverseTranspose);
+
+					GraphicsDevice* device = wiRenderer::GetDevice();
 					ShaderMeshInstance& inst = instanceData[args.jobIndex];
 					inst.init();
 					inst.transform.Create(worldMatrix);
+					inst.transformInverseTranspose.Create(transformIT);
 					inst.transformPrev.Create(worldMatrixPrev);
 					if (object.lightmap.IsValid())
 					{

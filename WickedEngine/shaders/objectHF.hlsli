@@ -267,10 +267,10 @@ struct VertexSurface
 			color *= input.GetVertexColor();
 		}
 		
-		normal = normalize(mul((float3x3)input.GetInstance().transform.GetMatrix(), input.GetNormal()));
+		normal = normalize(mul((float3x3)input.GetInstance().transformInverseTranspose.GetMatrix(), input.GetNormal()));
 
 		tangent = input.GetTangent();
-		tangent.xyz = normalize(mul((float3x3)input.GetInstance().transform.GetMatrix(), tangent.xyz));
+		tangent.xyz = normalize(mul((float3x3)input.GetInstance().transformInverseTranspose.GetMatrix(), tangent.xyz));
 
 		uvsets = float4(input.GetUV0() * material.texMulAdd.xy + material.texMulAdd.zw, input.GetUV1());
 

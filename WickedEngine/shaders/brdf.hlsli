@@ -417,7 +417,7 @@ struct Surface
 		}
 
 		N = n0 * w + n1 * u + n2 * v;
-		N = mul((float3x3)inst.transform.GetMatrix(), N);
+		N = mul((float3x3)inst.transformInverseTranspose.GetMatrix(), N);
 		N = normalize(N);
 		facenormal = N;
 
@@ -431,7 +431,7 @@ struct Surface
 			t2 = unpack_utangent(bindless_buffers[NonUniformResourceIndex(mesh.vb_tan)].Load(i2 * stride_TAN));
 			float4 T = t0 * w + t1 * u + t2 * v;
 			T = T * 2 - 1;
-			T.xyz = mul((float3x3)inst.transform.GetMatrix(), T.xyz);
+			T.xyz = mul((float3x3)inst.transformInverseTranspose.GetMatrix(), T.xyz);
 			T.xyz = normalize(T.xyz);
 			float3 B = normalize(cross(T.xyz, N) * T.w);
 			float3x3 TBN = float3x3(T.xyz, B, N);
