@@ -2543,11 +2543,6 @@ void RenderMeshes(
 
 		device->BindIndexBuffer(&mesh.indexBuffer, mesh.GetIndexFormat(), 0, cmd);
 
-		ObjectPushConstants push;
-		push.meshIndex = instancedBatch.meshIndex;
-		push.instances = device->GetDescriptorIndex(instances.buffer, SRV);
-		push.instance_offset = instancedBatch.dataOffset;
-
 		for (size_t subsetIndex = 0; subsetIndex < mesh.subsets.size(); ++subsetIndex)
 		{
 			const MeshComponent::MeshSubset& subset = mesh.subsets[subsetIndex];
@@ -2625,8 +2620,15 @@ void RenderMeshes(
 			}
 
 			assert(subsetIndex < 256u); // subsets must be represented as 8-bit
-			push.subsetIndex = (uint)subsetIndex;
-			push.materialIndex = subset.materialIndex;
+
+			ObjectPushConstants push;
+			push.init(
+				instancedBatch.meshIndex,
+				(uint)subsetIndex,
+				subset.materialIndex,
+				device->GetDescriptorIndex(instances.buffer, SRV),
+				instancedBatch.dataOffset
+			);
 			device->PushConstants(&push, sizeof(push), cmd);
 
 			if (pso_backside != nullptr)
@@ -5889,14 +5891,6 @@ void DrawDebugWorld(
 			buff->instanceID = (uint)scene.objects.GetIndex(x.objectEntity);
 			buff->userdata = 0;
 
-			ObjectPushConstants push;
-			push.meshIndex = (uint)scene.meshes.GetIndex(object.meshID);
-			push.instances = device->GetDescriptorIndex(mem.buffer, SRV);
-			push.instance_offset = mem.offset;
-			push.subsetIndex = x.subset;
-			push.materialIndex = subset.materialIndex;
-			device->PushConstants(&push, sizeof(push), cmd);
-
 			device->BindIndexBuffer(&mesh.indexBuffer, mesh.GetIndexFormat(), 0, cmd);
 
 			PaintRadiusCB cb;
@@ -5906,6 +5900,16 @@ void DrawDebugWorld(
 			cb.xPaintRadUVSET = x.uvset;
 			device->UpdateBuffer(&constantBuffers[CBTYPE_PAINTRADIUS], &cb, cmd);
 			device->BindConstantBuffer(&constantBuffers[CBTYPE_PAINTRADIUS], CB_GETBINDSLOT(PaintRadiusCB), cmd);
+
+			ObjectPushConstants push;
+			push.init(
+				(uint)scene.meshes.GetIndex(object.meshID),
+				x.subset,
+				subset.materialIndex,
+				device->GetDescriptorIndex(mem.buffer, SRV),
+				mem.offset
+			);
+			device->PushConstants(&push, sizeof(push), cmd);
 
 			device->DrawIndexedInstanced(subset.indexCount, 1, subset.indexOffset, 0, 0, cmd);
 		}
@@ -6460,11 +6464,6 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 		// impostor camera will fit around mesh bounding sphere:
 		const SPHERE boundingsphere = mesh.GetBoundingSphere();
 
-		ObjectPushConstants push; // used with bindless model only
-		push.meshIndex = (uint)scene.meshes.GetIndex(entity);
-		push.instances = -1;
-		push.instance_offset = 0;
-
 		device->BindIndexBuffer(&mesh.indexBuffer, mesh.GetIndexFormat(), 0, cmd);
 
 		for (int prop = 0; prop < 3; ++prop)
@@ -6520,8 +6519,13 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 					}
 					const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
-					push.subsetIndex = (uint)subsetIndex;
-					push.materialIndex = subset.materialIndex;
+					ObjectPushConstants push;
+					push.init(
+						(uint)scene.meshes.GetIndex(entity),
+						(uint)subsetIndex,
+						subset.materialIndex,
+						-1, 0
+					);
 					device->PushConstants(&push, sizeof(push), cmd);
 
 					device->DrawIndexedInstanced(subset.indexCount, 1, subset.indexOffset, 0, 0, cmd);

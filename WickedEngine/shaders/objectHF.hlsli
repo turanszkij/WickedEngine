@@ -29,15 +29,15 @@ PUSHCONSTANT(push, ObjectPushConstants);
 
 inline uint GetSubsetIndex()
 {
-	return push.subsetIndex;
+	return push.GetSubsetIndex();
 }
 inline ShaderMesh GetMesh()
 {
-	return load_mesh(push.meshIndex);
+	return load_mesh(push.GetMeshIndex());
 }
 inline ShaderMaterial GetMaterial()
 {
-	return load_material(push.materialIndex);
+	return load_material(push.GetMaterialIndex());
 }
 inline ShaderMaterial GetMaterial1()
 {

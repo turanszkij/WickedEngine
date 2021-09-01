@@ -257,11 +257,38 @@ struct ShaderMeshInstancePointer
 
 struct ObjectPushConstants
 {
-	uint meshIndex;
+	uint meshIndex_subsetIndex; // 24-bit mesh, 8-bit subset
 	uint materialIndex;
-	uint subsetIndex;
 	int instances;
 	uint instance_offset;
+
+	void init(
+		uint _meshIndex,
+		uint _subsetIndex,
+		uint _materialIndex,
+		int _instances,
+		uint _instance_offset
+	)
+	{
+		meshIndex_subsetIndex = 0;
+		meshIndex_subsetIndex |= _meshIndex & 0xFFFFFF;
+		meshIndex_subsetIndex |= (_subsetIndex & 0xFF) << 24u;
+		materialIndex = _materialIndex;
+		instances = _instances;
+		instance_offset = _instance_offset;
+	}
+	uint GetMeshIndex()
+	{
+		return meshIndex_subsetIndex & 0xFFFFFF;
+	}
+	uint GetSubsetIndex()
+	{
+		return (meshIndex_subsetIndex >> 24u) & 0xFF;
+	}
+	uint GetMaterialIndex()
+	{
+		return materialIndex;
+	}
 };
 
 struct PrimitiveID
