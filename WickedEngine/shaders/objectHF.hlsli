@@ -1570,7 +1570,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 		bumpColor0 = 2 * texture_normalmap.Sample(sampler_objectshader, UV_normalMap - GetMaterial().texMulAdd.ww).rg - 1;
 		bumpColor1 = 2 * texture_normalmap.Sample(sampler_objectshader, UV_normalMap + GetMaterial().texMulAdd.zw).rg - 1;
 	}
-	bumpColor2 = texture_waterriples.SampleLevel(sampler_objectshader, ScreenCoord, 0).rg;
+	bumpColor2 = texture_waterriples.SampleLevel(sampler_linear_clamp, ScreenCoord, 0).rg;
 	bumpColor = float3(bumpColor0 + bumpColor1 + bumpColor2, 1)  * GetMaterial().refraction;
 	surface.N = normalize(lerp(surface.N, mul(normalize(bumpColor), TBN), GetMaterial().normalMapStrength));
 	bumpColor *= GetMaterial().normalMapStrength;
