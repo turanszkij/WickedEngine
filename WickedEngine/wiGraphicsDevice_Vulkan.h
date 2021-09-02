@@ -484,7 +484,6 @@ namespace wiGraphics
 					locker.unlock();
 				}
 			};
-			BindlessDescriptorHeap bindlessUniformBuffers;
 			BindlessDescriptorHeap bindlessSampledImages;
 			BindlessDescriptorHeap bindlessUniformTexelBuffers;
 			BindlessDescriptorHeap bindlessStorageBuffers;
@@ -519,7 +518,6 @@ namespace wiGraphics
 
 			~AllocationHandler()
 			{
-				bindlessUniformBuffers.destroy(device);
 				bindlessSampledImages.destroy(device);
 				bindlessUniformTexelBuffers.destroy(device);
 				bindlessStorageBuffers.destroy(device);
@@ -739,7 +737,6 @@ namespace wiGraphics
 					{
 						int index= destroyer_bindlessUniformBuffers.front().first;
 						destroyer_bindlessUniformBuffers.pop_front();
-						bindlessUniformBuffers.free(index);
 					}
 					else
 					{

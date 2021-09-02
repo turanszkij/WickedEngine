@@ -2706,10 +2706,6 @@ using namespace Vulkan_Internal;
 		dynamicStateInfo.dynamicStateCount = (uint32_t)pso_dynamicStates.size();
 		dynamicStateInfo.pDynamicStates = pso_dynamicStates.data();
 
-		if (features_1_2.descriptorBindingUniformBufferUpdateAfterBind)
-		{
-			allocationhandler->bindlessUniformBuffers.init(device, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, properties_1_2.maxDescriptorSetUpdateAfterBindUniformBuffers / 4);
-		}
 		if (features_1_2.descriptorBindingSampledImageUpdateAfterBind)
 		{
 			allocationhandler->bindlessSampledImages.init(device, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, properties_1_2.maxDescriptorSetUpdateAfterBindSampledImages / 4);
@@ -3900,8 +3896,7 @@ using namespace Vulkan_Internal;
 						switch (x.descriptorType)
 						{
 						case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
-							layouts.push_back(allocationhandler->bindlessUniformBuffers.descriptorSetLayout);
-							internal_state->bindlessSets.push_back(allocationhandler->bindlessUniformBuffers.descriptorSet);
+							assert(0); // not supported, use the raw buffers for same functionality
 							break;
 						case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
 							layouts.push_back(allocationhandler->bindlessSampledImages.descriptorSetLayout);
@@ -4365,8 +4360,7 @@ using namespace Vulkan_Internal;
 					switch (x.descriptorType)
 					{
 					case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
-						layouts.push_back(allocationhandler->bindlessUniformBuffers.descriptorSetLayout);
-						pso_layout_cache[internal_state->binding_hash].bindlessSets.push_back(allocationhandler->bindlessUniformBuffers.descriptorSet);
+						assert(0); // not supported, use the raw buffers for same functionality
 						break;
 					case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
 						layouts.push_back(allocationhandler->bindlessSampledImages.descriptorSetLayout);
