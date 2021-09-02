@@ -57,6 +57,10 @@ namespace wiShaderCompiler
 			//L"-no-legacy-cbuf-layout",
 			//L"-pack-optimized",
 			//L"-all-resources-bound",
+			//L"-Gis", // Force IEEE strictness
+			//L"-Gec", // Enable backward compatibility mode
+			//L"-Ges", // Enable strict mode
+			//L"-O0", // Optimization Level 0
 		};
 
 		if (input.flags & FLAG_DISABLE_OPTIMIZATION)
