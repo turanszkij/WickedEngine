@@ -3381,12 +3381,12 @@ using namespace Vulkan_Internal;
 		if (pTexture->desc.BindFlags & BIND_RENDER_TARGET)
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-			allocInfo.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+			//allocInfo.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 		}
 		if (pTexture->desc.BindFlags & BIND_DEPTH_STENCIL)
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-			allocInfo.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+			//allocInfo.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 		}
 		if(pTexture->desc.BindFlags & BIND_SHADING_RATE)
 		{
@@ -5066,7 +5066,6 @@ using namespace Vulkan_Internal;
 
 		VmaAllocationCreateInfo allocInfo = {};
 		allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-		allocInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 
 		VkResult res = vmaCreateBuffer(
 			allocationhandler->allocator,

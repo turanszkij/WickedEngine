@@ -3101,7 +3101,7 @@ using namespace DX12_Internal;
 		if (pDesc->BindFlags & BIND_DEPTH_STENCIL)
 		{
 			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-			allocationDesc.Flags |= D3D12MA::ALLOCATION_FLAG_COMMITTED;
+			//allocationDesc.Flags |= D3D12MA::ALLOCATION_FLAG_COMMITTED;
 			if (!(pDesc->BindFlags & BIND_SHADER_RESOURCE))
 			{
 				desc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
@@ -3110,16 +3110,11 @@ using namespace DX12_Internal;
 		if (pDesc->BindFlags & BIND_RENDER_TARGET)
 		{
 			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-			allocationDesc.Flags |= D3D12MA::ALLOCATION_FLAG_COMMITTED;
+			//allocationDesc.Flags |= D3D12MA::ALLOCATION_FLAG_COMMITTED;
 		}
 		if (pDesc->BindFlags & BIND_UNORDERED_ACCESS)
 		{
 			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-			//desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS;
-			if (pInitialData == nullptr)
-			{
-				allocationDesc.Flags |= D3D12MA::ALLOCATION_FLAG_COMMITTED;
-			}
 		}
 
 		switch (pTexture->desc.type)
