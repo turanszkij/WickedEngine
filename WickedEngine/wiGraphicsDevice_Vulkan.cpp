@@ -2350,7 +2350,6 @@ using namespace Vulkan_Internal;
 				VARIABLE_RATE_SHADING_TILE_SIZE = std::min(fragment_shading_rate_properties.maxFragmentShadingRateAttachmentTexelSize.width, fragment_shading_rate_properties.maxFragmentShadingRateAttachmentTexelSize.height);
 			}
 
-			assert(features_1_2.hostQueryReset == VK_TRUE);
 			assert(features_1_2.descriptorIndexing == VK_TRUE);
 			
 			VkFormatProperties formatProperties = {};
@@ -4213,7 +4212,6 @@ using namespace Vulkan_Internal;
 
 		VkResult res = vkCreateQueryPool(device, &poolInfo, nullptr, &internal_state->pool);
 		assert(res == VK_SUCCESS);
-		vkResetQueryPool(device, internal_state->pool, 0, poolInfo.queryCount);
 
 		return res == VK_SUCCESS;
 	}
