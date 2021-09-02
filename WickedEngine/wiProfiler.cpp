@@ -81,7 +81,16 @@ namespace wiProfiler
 
 		cpu_frame = BeginRangeCPU("CPU Frame");
 
-		CommandList cmd = wiRenderer::GetDevice()->BeginCommandList();
+		GraphicsDevice* device = wiRenderer::GetDevice();
+		CommandList cmd = device->BeginCommandList();
+
+		device->QueryReset(
+			&queryHeap[queryheap_idx],
+			0,
+			queryHeap[queryheap_idx].desc.queryCount,
+			cmd
+		);
+
 		gpu_frame = BeginRangeGPU("GPU Frame", cmd);
 	}
 	void EndFrame(CommandList cmd)
@@ -100,6 +109,13 @@ namespace wiProfiler
 
 		double gpu_frequency = (double)device->GetTimestampFrequency() / 1000.0;
 
+		// barrier will wait for queries to complete (vulkan):
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
 		device->QueryResolve(
 			&queryHeap[queryheap_idx],
 			0,
@@ -112,16 +128,7 @@ namespace wiProfiler
 		writtenQueries[queryheap_idx] = nextQuery.load();
 		nextQuery.store(0);
 		queryheap_idx = (queryheap_idx + 1) % arraysize(queryHeap);
-		uint64_t* queryResults = nullptr;
-		if (writtenQueries[queryheap_idx] > 0)
-		{
-			Mapping mapping;
-			mapping._flags |= Mapping::FLAG_READ;
-			mapping.offset = 0;
-			mapping.size = sizeof(uint64_t) * writtenQueries[queryheap_idx];
-			device->Map(&queryResultBuffer[queryheap_idx], &mapping);
-			queryResults = (uint64_t*)mapping.data;
-		}
+		uint64_t* queryResults = (uint64_t*)queryResultBuffer[queryheap_idx].mapped_data;
 
 		for (auto& x : ranges)
 		{
@@ -136,7 +143,7 @@ namespace wiProfiler
 			{
 				int begin_query = range.gpuBegin[queryheap_idx];
 				int end_query = range.gpuEnd[queryheap_idx];
-				if (queryResults != nullptr && begin_query >= 0 && end_query >= 0)
+				if (queryResultBuffer[queryheap_idx].mapped_data != nullptr && begin_query >= 0 && end_query >= 0)
 				{
 					uint64_t begin_result = queryResults[begin_query];
 					uint64_t end_result = queryResults[end_query];
@@ -158,11 +165,6 @@ namespace wiProfiler
 			}
 
 			range.in_use = false;
-		}
-
-		if (queryResults != nullptr)
-		{
-			device->Unmap(&queryResultBuffer[queryheap_idx]);
 		}
 	}
 

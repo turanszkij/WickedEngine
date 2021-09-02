@@ -663,7 +663,9 @@ namespace wiRenderer
 	void RayTraceSceneBVH(const wiScene::Scene& scene, wiGraphics::CommandList cmd);
 
 	// Render occluders against a depth buffer
+	void OcclusionCulling_Reset(const Visibility& vis, wiGraphics::CommandList cmd);
 	void OcclusionCulling_Render(const wiScene::CameraComponent& camera_previous, const Visibility& vis, wiGraphics::CommandList cmd);
+	void OcclusionCulling_Resolve(const Visibility& vis, wiGraphics::CommandList cmd);
 
 
 	enum MIPGENFILTER

@@ -732,20 +732,6 @@ namespace wiGraphics
 		int32_t right = 0;
 		int32_t bottom = 0;
 	};
-	struct Mapping
-	{
-		enum FLAGS
-		{
-			FLAG_EMPTY = 0,
-			FLAG_READ = 1 << 0,
-			FLAG_WRITE = 1 << 1,
-		};
-		uint32_t _flags = FLAG_EMPTY;
-		size_t offset = 0;
-		size_t size = 0;
-		uint32_t rowpitch = 0;	// output
-		void* data = nullptr;	// output
-	};
 
 
 	// Resources:
@@ -786,6 +772,9 @@ namespace wiGraphics
 		inline bool IsTexture() const { return type == GPU_RESOURCE_TYPE::TEXTURE; }
 		inline bool IsBuffer() const { return type == GPU_RESOURCE_TYPE::BUFFER; }
 		inline bool IsAccelerationStructure() const { return type == GPU_RESOURCE_TYPE::RAYTRACING_ACCELERATION_STRUCTURE; }
+
+		void* mapped_data = nullptr;
+		uint32_t mapped_rowpitch = 0;
 	};
 
 	struct GPUBuffer : public GPUResource

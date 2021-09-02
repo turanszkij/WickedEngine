@@ -207,16 +207,7 @@ void wiEmittedParticle::UpdateCPU(const TransformComponent& transform, float dt)
 	if (statisticsReadBackIndex > arraysize(statisticsReadbackBuffer))
 	{
 		const uint32_t oldest_stat_index = (statisticsReadBackIndex + 1) % arraysize(statisticsReadbackBuffer);
-		GraphicsDevice* device = wiRenderer::GetDevice();
-		Mapping mapping;
-		mapping._flags = Mapping::FLAG_READ;
-		mapping.size = sizeof(statistics);
-		device->Map(&statisticsReadbackBuffer[oldest_stat_index], &mapping);
-		if (mapping.data != nullptr)
-		{
-			memcpy(&statistics, mapping.data, sizeof(statistics));
-			device->Unmap(&statisticsReadbackBuffer[oldest_stat_index]);
-		}
+		memcpy(&statistics, statisticsReadbackBuffer[oldest_stat_index].mapped_data, sizeof(statistics));
 	}
 	statisticsReadBackIndex++;
 }

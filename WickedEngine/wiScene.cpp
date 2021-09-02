@@ -1466,7 +1466,6 @@ namespace wiScene
 		}
 
 		// Occlusion culling read:
-		queryResults = nullptr;
 		if(!wiRenderer::GetFreezeCullingCameraEnabled())
 		{
 			if (!queryHeap[0].IsValid())
@@ -1496,21 +1495,6 @@ namespace wiScene
 
 			// Advance to next query heap to use (this will be the oldest one that was written)
 			queryheap_idx = (queryheap_idx + 1) % arraysize(queryHeap);
-
-			// Read back data from the oldest query heap:
-			if (writtenQueries[queryheap_idx] > 0)
-			{
-				Mapping mapping;
-				mapping._flags |= Mapping::FLAG_READ;
-				mapping.offset = 0;
-				mapping.size = sizeof(uint64_t) * writtenQueries[queryheap_idx];
-
-				device->Map(&queryResultBuffer[queryheap_idx], &mapping);
-				if (mapping.data != nullptr)
-				{
-					queryResults = (uint64_t*)mapping.data;
-				}
-			}
 		}
 
 		wiJobSystem::context ctx;
@@ -1571,11 +1555,6 @@ namespace wiScene
 		if (lightmap_refresh_needed.load())
 		{
 			SetAccelerationStructureUpdateRequested(true);
-		}
-
-		if (queryResults != nullptr)
-		{
-			device->Unmap(&queryResultBuffer[queryheap_idx]);
 		}
 
 		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
@@ -2965,9 +2944,9 @@ namespace wiScene
 			{
 				object.occlusionHistory <<= 1; // advance history by 1 frame
 				int query_id = object.occlusionQueries[queryheap_idx];
-				if (queryResults != nullptr && query_id >= 0 && (int)writtenQueries[queryheap_idx] > query_id)
+				if (queryResultBuffer[queryheap_idx].mapped_data != nullptr && query_id >= 0 && (int)writtenQueries[queryheap_idx] > query_id)
 				{
-					uint64_t visible = queryResults[query_id];
+					uint64_t visible = ((uint64_t*)queryResultBuffer[queryheap_idx].mapped_data)[query_id];
 					if (visible)
 					{
 						object.occlusionHistory |= 1; // visible

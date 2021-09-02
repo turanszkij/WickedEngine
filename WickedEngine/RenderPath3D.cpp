@@ -666,6 +666,8 @@ void RenderPath3D::Render() const
 			cmd
 		);
 
+		wiRenderer::OcclusionCulling_Reset(visibility_main, cmd); // must be outside renderpass!
+
 		device->RenderPassBegin(&renderpass_depthprepass, cmd);
 
 		device->EventBegin("Opaque Z-prepass", cmd);
@@ -686,6 +688,8 @@ void RenderPath3D::Render() const
 		}
 
 		device->RenderPassEnd(cmd);
+
+		wiRenderer::OcclusionCulling_Resolve(visibility_main, cmd); // must be outside renderpass!
 
 		});
 

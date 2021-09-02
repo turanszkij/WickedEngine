@@ -1293,7 +1293,6 @@ namespace wiScene
 		// Occlusion query state:
 		wiGraphics::GPUQueryHeap queryHeap[arraysize(ObjectComponent::occlusionQueries)];
 		wiGraphics::GPUBuffer queryResultBuffer[arraysize(queryHeap)];
-		uint64_t* queryResults = nullptr;
 		uint32_t writtenQueries[arraysize(queryHeap)] = {};
 		int queryheap_idx = 0;
 		std::atomic<uint32_t> queryAllocator{ 0 };

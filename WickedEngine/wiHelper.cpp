@@ -124,38 +124,20 @@ namespace wiHelper
 
 		CommandList cmd = device->BeginCommandList();
 
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&texture, texture.desc.layout, RESOURCE_STATE_COPY_SRC, 0)
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
 		device->CopyResource(&stagingTex, &texture, cmd);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&texture, RESOURCE_STATE_COPY_SRC, texture.desc.layout, 0)
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
 
 		device->SubmitCommandLists();
 		device->WaitForGPU();
 
-		Mapping mapping;
-		mapping._flags = Mapping::FLAG_READ;
-		mapping.size = data_size;
-		device->Map(&stagingTex, &mapping);
-		if (mapping.data != nullptr)
+		if (stagingTex.mapped_data != nullptr)
 		{
-			if (mapping.rowpitch / data_stride != desc.Width)
+			if (stagingTex.mapped_rowpitch / data_stride != desc.Width)
 			{
 				// Copy padded texture row by row:
 				const uint32_t cpysize = desc.Width * data_stride;
 				for (uint32_t i = 0; i < desc.Height; ++i)
 				{
-					void* src = (void*)((size_t)mapping.data + size_t(i * mapping.rowpitch));
+					void* src = (void*)((size_t)stagingTex.mapped_data + size_t(i * stagingTex.mapped_rowpitch));
 					void* dst = (void*)((size_t)texturedata.data() + size_t(i * cpysize));
 					memcpy(dst, src, cpysize);
 				}
@@ -163,16 +145,15 @@ namespace wiHelper
 			else
 			{
 				// Copy whole
-				std::memcpy(texturedata.data(), mapping.data, texturedata.size());
+				std::memcpy(texturedata.data(), stagingTex.mapped_data, texturedata.size());
 			}
-			device->Unmap(&stagingTex);
 		}
 		else
 		{
 			assert(0);
 		}
 
-		return mapping.data != nullptr;
+		return stagingTex.mapped_data != nullptr;
 	}
 
 	bool saveTextureToMemoryFile(const wiGraphics::Texture& texture, const std::string& fileExtension, std::vector<uint8_t>& filedata)

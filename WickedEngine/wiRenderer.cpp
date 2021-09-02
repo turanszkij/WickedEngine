@@ -4039,6 +4039,25 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 
 	scene.acceleration_structure_update_requested = false;
 }
+
+
+void OcclusionCulling_Reset(const Visibility& vis, wiGraphics::CommandList cmd)
+{
+	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled())
+	{
+		return;
+	}
+
+	int query_write = vis.scene->queryheap_idx;
+	const GPUQueryHeap& queryHeap = vis.scene->queryHeap[query_write];
+
+	device->QueryReset(
+		&queryHeap,
+		0,
+		queryHeap.desc.queryCount,
+		cmd
+	);
+}
 void OcclusionCulling_Render(const CameraComponent& camera_previous, const Visibility& vis, CommandList cmd)
 {
 	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled())
@@ -4083,6 +4102,30 @@ void OcclusionCulling_Render(const CameraComponent& camera_previous, const Visib
 			}
 		}
 
+		device->EventEnd(cmd);
+	}
+
+	wiProfiler::EndRange(range); // Occlusion Culling Render
+}
+void OcclusionCulling_Resolve(const Visibility& vis, wiGraphics::CommandList cmd)
+{
+	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled())
+	{
+		return;
+	}
+
+	if (!vis.visibleObjects.empty())
+	{
+		int query_write = vis.scene->queryheap_idx;
+		const GPUQueryHeap& queryHeap = vis.scene->queryHeap[query_write];
+
+		// barrier will wait for queries to complete (vulkan):
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
 		device->QueryResolve(
 			&queryHeap,
 			0,
@@ -4091,11 +4134,7 @@ void OcclusionCulling_Render(const CameraComponent& camera_previous, const Visib
 			0ull,
 			cmd
 		);
-
-		device->EventEnd(cmd);
 	}
-
-	wiProfiler::EndRange(range); // Occlusion Culling Render
 }
 
 void DrawWaterRipples(const Visibility& vis, CommandList cmd)
