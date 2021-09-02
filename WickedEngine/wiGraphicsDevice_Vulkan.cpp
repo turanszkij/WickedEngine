@@ -6768,10 +6768,27 @@ using namespace Vulkan_Internal;
 	{
 		assert(active_renderpass[cmd] == nullptr); // Can't resolve inside renderpass!
 
+		// Looks like the vulkan needs this barrier, otherwise the queries didn't finish
+		//	It was still a problem with VK_QUERY_RESULT_WAIT_BIT, but that
+		//	also caused deadlocks, so I decided to do a safer memory barrier here
+		GPUBarrier memory_barrier = GPUBarrier::Memory();
+		Barrier(&memory_barrier, 1, cmd);
+
 		barrier_flush(cmd);
 
 		auto internal_state = to_internal(heap);
 		auto dst_internal = to_internal(dest);
+
+		VkQueryResultFlags flags = VK_QUERY_RESULT_64_BIT;
+
+		switch (heap->desc.type)
+		{
+		case GPU_QUERY_TYPE_OCCLUSION_BINARY:
+			flags |= VK_QUERY_RESULT_PARTIAL_BIT;
+			break;
+		default:
+			break;
+		}
 
 		vkCmdCopyQueryPoolResults(
 			GetCommandList(cmd),
@@ -6781,7 +6798,7 @@ using namespace Vulkan_Internal;
 			dst_internal->resource,
 			dest_offset,
 			sizeof(uint64_t),
-			VK_QUERY_RESULT_64_BIT
+			flags
 		);
 
 	}

@@ -109,13 +109,6 @@ namespace wiProfiler
 
 		double gpu_frequency = (double)device->GetTimestampFrequency() / 1000.0;
 
-		// barrier will wait for queries to complete (vulkan):
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
 		device->QueryResolve(
 			&queryHeap[queryheap_idx],
 			0,

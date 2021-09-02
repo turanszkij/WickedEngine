@@ -4119,13 +4119,6 @@ void OcclusionCulling_Resolve(const Visibility& vis, wiGraphics::CommandList cmd
 		int query_write = vis.scene->queryheap_idx;
 		const GPUQueryHeap& queryHeap = vis.scene->queryHeap[query_write];
 
-		// barrier will wait for queries to complete (vulkan):
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
 		device->QueryResolve(
 			&queryHeap,
 			0,

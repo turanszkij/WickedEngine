@@ -1523,9 +1523,9 @@ namespace wiScene
 
 		RunWeatherUpdateSystem(ctx);
 
-		wiPhysicsEngine::RunPhysicsUpdateSystem(ctx, *this, dt);
-
 		wiJobSystem::Wait(ctx); // dependencies
+
+		wiPhysicsEngine::RunPhysicsUpdateSystem(ctx, *this, dt);
 
 		RunObjectUpdateSystem(ctx);
 
