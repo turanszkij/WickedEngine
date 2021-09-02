@@ -701,44 +701,6 @@ namespace wiScene
 		// vertexBuffer_PRE will be created on demand later!
 		vertexBuffer_PRE = GPUBuffer();
 
-
-		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
-		{
-			BLAS_state = BLAS_STATE_NEEDS_REBUILD;
-
-			RaytracingAccelerationStructureDesc desc;
-			desc.type = RaytracingAccelerationStructureDesc::BOTTOMLEVEL;
-
-			if (streamoutBuffer_POS.IsValid())
-			{
-				desc._flags |= RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE;
-				desc._flags |= RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD;
-			}
-			else
-			{
-				desc._flags |= RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_TRACE;
-			}
-
-			for (auto& subset : subsets)
-			{
-				desc.bottomlevel.geometries.emplace_back();
-				auto& geometry = desc.bottomlevel.geometries.back();
-				geometry.type = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::TRIANGLES;
-				geometry.triangles.vertexBuffer = streamoutBuffer_POS.IsValid() ? streamoutBuffer_POS : vertexBuffer_POS;
-				geometry.triangles.indexBuffer = indexBuffer;
-				geometry.triangles.indexFormat = GetIndexFormat();
-				geometry.triangles.indexCount = subset.indexCount;
-				geometry.triangles.indexOffset = subset.indexOffset;
-				geometry.triangles.vertexCount = (uint32_t)vertex_positions.size();
-				geometry.triangles.vertexFormat = FORMAT_R32G32B32_FLOAT;
-				geometry.triangles.vertexStride = sizeof(MeshComponent::Vertex_POS);
-			}
-
-			bool success = device->CreateRaytracingAccelerationStructure(&desc, &BLAS);
-			assert(success);
-			device->SetName(&BLAS, "BLAS");
-		}
-
 		GPUBufferDesc desc;
 		desc.BindFlags = BIND_SHADER_RESOURCE;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
@@ -747,6 +709,9 @@ namespace wiScene
 		bool success = device->CreateBuffer(&desc, nullptr, &subsetBuffer);
 		assert(success);
 		dirty_subsets = true;
+
+		// Reset BLAS, it will be created on demand
+		BLAS = {};
 	}
 	void MeshComponent::WriteShaderMesh(ShaderMesh* dest) const
 	{
@@ -1557,7 +1522,7 @@ namespace wiScene
 			SetAccelerationStructureUpdateRequested(true);
 		}
 
-		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+		if (IsAccelerationStructureUpdateRequested() && device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		{
 			// Recreate top level acceleration structure if the object count changed:
 			if ((uint32_t)instanceData.size() != TLAS.desc.toplevel.count)
@@ -2820,6 +2785,43 @@ namespace wiScene
 			ShaderMesh& shadermesh = meshData[args.jobIndex];
 			mesh.WriteShaderMesh(&shadermesh);
 
+			if (IsAccelerationStructureUpdateRequested() && device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING) && !mesh.BLAS.IsValid())
+			{
+				mesh.BLAS_state = MeshComponent::BLAS_STATE_NEEDS_REBUILD;
+
+				RaytracingAccelerationStructureDesc desc;
+				desc.type = RaytracingAccelerationStructureDesc::BOTTOMLEVEL;
+
+				if (mesh.streamoutBuffer_POS.IsValid())
+				{
+					desc._flags |= RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE;
+					desc._flags |= RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD;
+				}
+				else
+				{
+					desc._flags |= RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_TRACE;
+				}
+
+				for (auto& subset : mesh.subsets)
+				{
+					desc.bottomlevel.geometries.emplace_back();
+					auto& geometry = desc.bottomlevel.geometries.back();
+					geometry.type = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::TRIANGLES;
+					geometry.triangles.vertexBuffer = mesh.streamoutBuffer_POS.IsValid() ? mesh.streamoutBuffer_POS : mesh.vertexBuffer_POS;
+					geometry.triangles.indexBuffer = mesh.indexBuffer;
+					geometry.triangles.indexFormat = mesh.GetIndexFormat();
+					geometry.triangles.indexCount = subset.indexCount;
+					geometry.triangles.indexOffset = subset.indexOffset;
+					geometry.triangles.vertexCount = (uint32_t)mesh.vertex_positions.size();
+					geometry.triangles.vertexFormat = FORMAT_R32G32B32_FLOAT;
+					geometry.triangles.vertexStride = sizeof(MeshComponent::Vertex_POS);
+				}
+
+				bool success = device->CreateRaytracingAccelerationStructure(&desc, &mesh.BLAS);
+				assert(success);
+				device->SetName(&mesh.BLAS, "BLAS");
+			}
+
 		});
 	}
 	void Scene::RunMaterialUpdateSystem(wiJobSystem::context& ctx)
@@ -3079,7 +3081,7 @@ namespace wiScene
 					inst.emissive = wiMath::CompressColor(object.emissiveColor);
 					inst.meshIndex = (uint)meshes.GetIndex(object.meshID);
 
-					if (TLAS.IsValid())
+					if (IsAccelerationStructureUpdateRequested() && !TLAS_instances.empty())
 					{
 						// TLAS instance data:
 						RaytracingAccelerationStructureDesc::TopLevel::Instance instance = {};
@@ -3520,7 +3522,7 @@ namespace wiScene
 					inst.transformPrev.Create(IDENTITYMATRIX);
 					inst.meshIndex = (uint)meshIndex;
 
-					if (TLAS.IsValid())
+					if (IsAccelerationStructureUpdateRequested() && !TLAS_instances.empty())
 					{
 						// TLAS instance data:
 						RaytracingAccelerationStructureDesc::TopLevel::Instance instance = {};

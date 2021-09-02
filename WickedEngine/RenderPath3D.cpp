@@ -535,8 +535,6 @@ void RenderPath3D::Update(float dt)
 
 	if (getSceneUpdateEnabled())
 	{
-		scene->Update(dt * wiRenderer::GetGameSpeed());
-
 		if (wiRenderer::GetSurfelGIEnabled() ||
 			wiRenderer::GetRaytracedShadowsEnabled() ||
 			getAO() == AO_RTAO ||
@@ -544,6 +542,8 @@ void RenderPath3D::Update(float dt)
 		{
 			scene->SetAccelerationStructureUpdateRequested(true);
 		}
+
+		scene->Update(dt * wiRenderer::GetGameSpeed());
 	}
 
 	// Frustum culling for main camera:
