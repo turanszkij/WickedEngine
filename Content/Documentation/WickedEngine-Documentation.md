@@ -565,7 +565,7 @@ struct PushConstants
 	int textureindex;
 };
 PushConstants push;
-push.materialIndex = device->GetDescriptorIndex(materialCB, CBV);
+push.materialIndex = device->GetDescriptorIndex(materialCB, SRV);
 push.textureindex = device->GetDescriptorIndex(texture, SRV);
 device->PushConstants(&push, sizeof(push), cmd);
 ```

@@ -1833,10 +1833,6 @@ void LoadBuffers()
 	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_VOLUMELIGHT]);
 	device->SetName(&constantBuffers[CBTYPE_VOLUMELIGHT], "VolumelightCB");
 
-	bd.ByteWidth = sizeof(CubemapRenderCB);
-	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_CUBEMAPRENDER]);
-	device->SetName(&constantBuffers[CBTYPE_CUBEMAPRENDER], "CubemapRenderCB");
-
 	bd.ByteWidth = sizeof(RaytracingCB);
 	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_RAYTRACE]);
 	device->SetName(&constantBuffers[CBTYPE_RAYTRACE], "RayTraceCB");
@@ -4823,8 +4819,10 @@ void DrawShadowmaps(
 							frustum_count++;
 						}
 					}
-					device->UpdateBuffer(&constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, cmd);
-					device->BindConstantBuffer(&constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubemapRenderCB), cmd);
+
+					auto alloc = device->AllocateGPU(sizeof(CubemapRenderCB), cmd);
+					memcpy(alloc.data, &cb, sizeof(cb));
+					device->BindConstantBuffer(alloc.buffer, CB_GETBINDSLOT(CubemapRenderCB), cmd, alloc.offset);
 
 					Viewport vp;
 					vp.TopLeftX = 0;
@@ -6279,8 +6277,9 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			cb.xCubemapRenderCams[i].properties = uint4(i, 0, 0, 0);
 		}
 
-		device->UpdateBuffer(&constantBuffers[CBTYPE_CUBEMAPRENDER], &cb, cmd);
-		device->BindConstantBuffer(&constantBuffers[CBTYPE_CUBEMAPRENDER], CB_GETBINDSLOT(CubemapRenderCB), cmd);
+		auto alloc = device->AllocateGPU(sizeof(CubemapRenderCB), cmd);
+		memcpy(alloc.data, &cb, sizeof(cb));
+		device->BindConstantBuffer(alloc.buffer, CB_GETBINDSLOT(CubemapRenderCB), cmd, alloc.offset);
 
 		CameraCB camcb;
 		camcb.CamPos = probe.position; // only this will be used by envprobe rendering shaders the rest is read from cubemaprenderCB

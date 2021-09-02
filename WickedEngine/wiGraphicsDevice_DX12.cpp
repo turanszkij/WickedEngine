@@ -1226,7 +1226,6 @@ namespace DX12_Internal
 		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
 		D3D12MA::Allocation* allocation = nullptr;
 		ComPtr<ID3D12Resource> resource;
-		SingleDescriptor cbv;
 		SingleDescriptor srv;
 		SingleDescriptor uav;
 		std::vector<SingleDescriptor> subresources_srv;
@@ -1250,7 +1249,6 @@ namespace DX12_Internal
 			if (resource) allocationhandler->destroyer_resources.push_back(std::make_pair(resource, framecount));
 			allocationhandler->destroylocker.unlock();
 
-			cbv.destroy();
 			srv.destroy();
 			uav.destroy();
 			for (auto& x : subresources_srv)
@@ -1641,8 +1639,7 @@ using namespace DX12_Internal;
 		// Because the "buffer" is created by hand in this, fill the desc to indicate how it can be used:
 		buffer.type = GPUResource::GPU_RESOURCE_TYPE::BUFFER;
 		buffer.desc.ByteWidth = (uint32_t)((size_t)dataEnd - (size_t)dataBegin);
-		buffer.desc.Usage = USAGE_DYNAMIC;
-		buffer.desc.BindFlags = BIND_VERTEX_BUFFER | BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE;
+		buffer.desc.BindFlags = BIND_VERTEX_BUFFER | BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE | BIND_CONSTANT_BUFFER;
 		buffer.desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 
 		internal_state->gpu_address = internal_state->resource->GetGPUVirtualAddress();
@@ -1695,6 +1692,7 @@ using namespace DX12_Internal;
 		ringOffset_sam = 0;
 
 		memset(CBV, 0, sizeof(CBV));
+		memset(CBV_offset, 0, sizeof(CBV_offset));
 		memset(SRV, 0, sizeof(SRV));
 		memset(SRV_index, -1, sizeof(SRV_index));
 		memset(UAV, 0, sizeof(UAV));
@@ -1727,6 +1725,7 @@ using namespace DX12_Internal;
 				}
 
 				const GPUBuffer* buffer = CBV[x.ShaderRegister];
+				uint64_t offset = CBV_offset[x.ShaderRegister];
 
 				D3D12_GPU_VIRTUAL_ADDRESS address;
 
@@ -1750,9 +1749,10 @@ using namespace DX12_Internal;
 					}
 					else
 					{
-						address = internal_state->cbv.cbv.BufferLocation;
+						address = internal_state->gpu_address;
 					}
 				}
+				address += offset;
 
 				if (graphics)
 				{
@@ -1957,6 +1957,7 @@ using namespace DX12_Internal;
 					case D3D12_DESCRIPTOR_RANGE_TYPE_CBV:
 					{
 						const GPUBuffer* buffer = CBV[ShaderRegister];
+						uint64_t offset = CBV_offset[ShaderRegister];
 
 						if (buffer == nullptr || !buffer->IsValid())
 						{
@@ -1972,13 +1973,19 @@ using namespace DX12_Internal;
 								D3D12_CONSTANT_BUFFER_VIEW_DESC cbv;
 								cbv.BufferLocation = to_internal(allocation.buffer)->gpu_address;
 								cbv.BufferLocation += (D3D12_GPU_VIRTUAL_ADDRESS)allocation.offset;
+								cbv.BufferLocation += offset;
 								cbv.SizeInBytes = (uint32_t)Align((size_t)buffer->desc.ByteWidth, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 
 								device->device->CreateConstantBufferView(&cbv, dst);
 							}
 							else
 							{
-								device->device->CopyDescriptorsSimple(1, dst, internal_state->cbv.handle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+								D3D12_CONSTANT_BUFFER_VIEW_DESC cbv;
+								cbv.BufferLocation = internal_state->gpu_address;
+								cbv.BufferLocation += offset;
+								cbv.SizeInBytes = (uint32_t)Align((size_t)buffer->desc.ByteWidth, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+
+								device->device->CreateConstantBufferView(&cbv, dst);
 							}
 						}
 					}
@@ -3084,10 +3091,6 @@ using namespace DX12_Internal;
 
 
 		// Create resource views if needed
-		if (pDesc->BindFlags & BIND_CONSTANT_BUFFER)
-		{
-			CreateSubresource(pBuffer, CBV, 0);
-		}
 		if (pDesc->BindFlags & BIND_SHADER_RESOURCE)
 		{
 			CreateSubresource(pBuffer, SRV, 0);
@@ -5284,16 +5287,6 @@ using namespace DX12_Internal;
 
 		switch (type)
 		{
-		case wiGraphics::CBV:
-		{
-			size = std::min(size, (uint64_t)buffer->desc.ByteWidth);
-			D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc = {};
-			cbv_desc.SizeInBytes = (uint32_t)Align(size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
-			cbv_desc.BufferLocation = internal_state->gpu_address + offset;
-			internal_state->cbv.init(this, cbv_desc);
-			return -1;
-		}
-		break;
 
 		case wiGraphics::SRV:
 		{
@@ -5402,9 +5395,6 @@ using namespace DX12_Internal;
 		switch (type)
 		{
 		default:
-		case wiGraphics::CBV:
-			return internal_state->cbv.index;
-			break;
 		case wiGraphics::SRV:
 			if (subresource < 0)
 			{
@@ -5966,12 +5956,13 @@ using namespace DX12_Internal;
 			descriptors[cmd].dirty_sam = true;
 		}
 	}
-	void GraphicsDevice_DX12::BindConstantBuffer(const GPUBuffer* buffer, uint32_t slot, CommandList cmd)
+	void GraphicsDevice_DX12::BindConstantBuffer(const GPUBuffer* buffer, uint32_t slot, CommandList cmd, uint64_t offset)
 	{
 		assert(slot < GPU_RESOURCE_HEAP_CBV_COUNT);
-		if (buffer->desc.Usage == USAGE_DYNAMIC || descriptors[cmd].CBV[slot] != buffer)
+		if (buffer->desc.Usage == USAGE_DYNAMIC || descriptors[cmd].CBV[slot] != buffer || descriptors[cmd].CBV_offset[slot] != offset)
 		{
 			descriptors[cmd].CBV[slot] = buffer;
+			descriptors[cmd].CBV_offset[slot] = offset;
 			descriptors[cmd].dirty_res = true;
 
 			// Root constant buffer root signature state tracking:

@@ -632,7 +632,6 @@ namespace Vulkan_Internal
 		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
 		VmaAllocation allocation = nullptr;
 		VkBuffer resource = VK_NULL_HANDLE;
-		int cbv_index = -1;
 		VkBufferView srv = VK_NULL_HANDLE;
 		int srv_index = -1;
 		VkBufferView uav = VK_NULL_HANDLE;
@@ -663,7 +662,6 @@ namespace Vulkan_Internal
 			{
 				allocationhandler->destroyer_bufferviews.push_back(std::make_pair(x, framecount));
 			}
-			if (cbv_index >= 0) allocationhandler->destroyer_bindlessUniformBuffers.push_back(std::make_pair(cbv_index, framecount));
 			if (is_typedbuffer)
 			{
 				if (srv_index >= 0) allocationhandler->destroyer_bindlessUniformTexelBuffers.push_back(std::make_pair(srv_index, framecount));
@@ -1201,8 +1199,7 @@ using namespace Vulkan_Internal;
 		// Because the "buffer" is created by hand in this, fill the desc to indicate how it can be used:
 		this->buffer.type = GPUResource::GPU_RESOURCE_TYPE::BUFFER;
 		this->buffer.desc.ByteWidth = (uint32_t)((size_t)dataEnd - (size_t)dataBegin);
-		this->buffer.desc.Usage = USAGE_DYNAMIC;
-		this->buffer.desc.BindFlags = BIND_VERTEX_BUFFER | BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE;
+		this->buffer.desc.BindFlags = BIND_VERTEX_BUFFER | BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE | BIND_CONSTANT_BUFFER;
 		this->buffer.desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
 
 		int index = device->allocationhandler->bindlessStorageBuffers.allocate();
@@ -1315,6 +1312,9 @@ using namespace Vulkan_Internal;
 		res = vkCreateDescriptorPool(device->device, &poolInfo, nullptr, &descriptorPool);
 		assert(res == VK_SUCCESS);
 
+		// WARNING: MUST NOT CALL reset() HERE!
+		//	This is because init can be called mid-frame when there is allocation error, but the bindings must be retained!
+
 	}
 	void GraphicsDevice_Vulkan::FrameResources::DescriptorBinder::destroy()
 	{
@@ -1337,6 +1337,7 @@ using namespace Vulkan_Internal;
 		}
 
 		memset(CBV, 0, sizeof(CBV));
+		memset(CBV_offset, 0, sizeof(CBV_offset));
 		memset(SRV, 0, sizeof(SRV));
 		memset(SRV_index, -1, sizeof(SRV_index));
 		memset(UAV, 0, sizeof(UAV));
@@ -1561,6 +1562,8 @@ using namespace Vulkan_Internal;
 
 					const uint32_t original_binding = unrolled_binding - VULKAN_BINDING_SHIFT_B;
 					const GPUBuffer* buffer = CBV[original_binding];
+					uint64_t offset = CBV_offset[original_binding];
+
 					if (buffer == nullptr || !buffer->IsValid())
 					{
 						bufferInfos.back().buffer = device->nullBuffer;
@@ -1573,14 +1576,14 @@ using namespace Vulkan_Internal;
 						{
 							const GPUAllocation& allocation = internal_state->dynamic[cmd];
 							bufferInfos.back().buffer = to_internal(allocation.buffer)->resource;
-							bufferInfos.back().offset = allocation.offset;
+							bufferInfos.back().offset = allocation.offset + offset;
 							bufferInfos.back().range = buffer->desc.ByteWidth;
 						}
 						else
 						{
 							bufferInfos.back().buffer = internal_state->resource;
-							bufferInfos.back().offset = 0;
-							bufferInfos.back().range = buffer->desc.ByteWidth;
+							bufferInfos.back().offset = offset;
+							bufferInfos.back().range = (VkDeviceSize)std::min(buffer->desc.ByteWidth - offset, (uint64_t)device->properties2.properties.limits.maxUniformBufferRange);
 						}
 					}
 				}
@@ -3348,10 +3351,6 @@ using namespace Vulkan_Internal;
 
 
 		// Create resource views if needed
-		if (pDesc->BindFlags & BIND_CONSTANT_BUFFER)
-		{
-			CreateSubresource(pBuffer, CBV, 0);
-		}
 		if (pDesc->BindFlags & BIND_SHADER_RESOURCE)
 		{
 			CreateSubresource(pBuffer, SRV, 0);
@@ -5505,29 +5504,6 @@ using namespace Vulkan_Internal;
 
 		switch (type)
 		{
-		case wiGraphics::CBV:
-		{
-			int index = allocationhandler->bindlessUniformBuffers.allocate();
-			if (index >= 0)
-			{
-				VkDescriptorBufferInfo bufferInfo = {};
-				bufferInfo.buffer = internal_state->resource;
-				bufferInfo.offset = offset;
-				bufferInfo.range = size;
-				VkWriteDescriptorSet write = {};
-				write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-				write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-				write.dstBinding = 0;
-				write.dstArrayElement = index;
-				write.descriptorCount = 1;
-				write.dstSet = allocationhandler->bindlessUniformBuffers.descriptorSet;
-				write.pBufferInfo = &bufferInfo;
-				vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
-				internal_state->cbv_index = index;
-			}
-			return -1;
-		}
-		break;
 
 		case wiGraphics::SRV:
 		case wiGraphics::UAV:
@@ -5666,13 +5642,6 @@ using namespace Vulkan_Internal;
 		switch (type)
 		{
 		default:
-		case wiGraphics::CBV:
-			if (resource->IsBuffer())
-			{
-				auto internal_state = to_internal((const GPUBuffer*)resource);
-				return internal_state->cbv_index;
-			}
-			break;
 		case wiGraphics::SRV:
 			if (resource->IsBuffer())
 			{
@@ -6329,13 +6298,14 @@ using namespace Vulkan_Internal;
 			descriptors.dirty = true;
 		}
 	}
-	void GraphicsDevice_Vulkan::BindConstantBuffer(const GPUBuffer* buffer, uint32_t slot, CommandList cmd)
+	void GraphicsDevice_Vulkan::BindConstantBuffer(const GPUBuffer* buffer, uint32_t slot, CommandList cmd, uint64_t offset)
 	{
 		assert(slot < GPU_RESOURCE_HEAP_CBV_COUNT);
 		auto& descriptors = GetFrameResources().descriptors[cmd];
-		if (buffer->desc.Usage == USAGE_DYNAMIC || descriptors.CBV[slot] != buffer)
+		if (buffer->desc.Usage == USAGE_DYNAMIC || descriptors.CBV[slot] != buffer || descriptors.CBV_offset[slot] != offset)
 		{
 			descriptors.CBV[slot] = buffer;
+			descriptors.CBV_offset[slot] = offset;
 			descriptors.dirty = true;
 		}
 	}

@@ -284,7 +284,6 @@ namespace wiGraphics
 	};
 	enum SUBRESOURCE_TYPE
 	{
-		CBV, // constant buffer view
 		SRV, // shader resource view
 		UAV, // unordered access view
 		RTV, // render target view
