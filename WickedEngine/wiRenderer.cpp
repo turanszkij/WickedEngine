@@ -7702,9 +7702,13 @@ void VisibilityResolve(
 	device->BindUAV(&depthbuffer_resolved, 1, cmd, 0);
 	device->BindUAV(&depthbuffer_resolved, 2, cmd, 1);
 	device->BindUAV(&depthbuffer_resolved, 3, cmd, 2);
-	device->BindUAV(&lineardepth, 4, cmd, 0);
-	device->BindUAV(&lineardepth, 5, cmd, 1);
-	device->BindUAV(&lineardepth, 6, cmd, 2);
+	device->BindUAV(&depthbuffer_resolved, 4, cmd, 3);
+	device->BindUAV(&depthbuffer_resolved, 5, cmd, 4);
+	device->BindUAV(&lineardepth, 6, cmd, 0);
+	device->BindUAV(&lineardepth, 7, cmd, 1);
+	device->BindUAV(&lineardepth, 8, cmd, 2);
+	device->BindUAV(&lineardepth, 9, cmd, 3);
+	device->BindUAV(&lineardepth, 10, cmd, 4);
 
 	{
 		GPUBarrier barriers[] = {
@@ -7717,7 +7721,7 @@ void VisibilityResolve(
 
 	if (msaa)
 	{
-		device->BindUAV(&gbuffer[GBUFFER_PRIMITIVEID], 7, cmd);
+		device->BindUAV(&gbuffer[GBUFFER_PRIMITIVEID], 11, cmd);
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Image(&gbuffer[GBUFFER_PRIMITIVEID], gbuffer[GBUFFER_PRIMITIVEID].desc.layout, RESOURCE_STATE_UNORDERED_ACCESS),
@@ -7727,8 +7731,8 @@ void VisibilityResolve(
 	}
 
 	device->Dispatch(
-		(depthbuffer.desc.Width + 7) / 8,
-		(depthbuffer.desc.Height + 7) / 8,
+		(depthbuffer.desc.Width + 15) / 16,
+		(depthbuffer.desc.Height + 15) / 16,
 		1,
 		cmd
 	);
