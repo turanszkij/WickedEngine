@@ -12,8 +12,8 @@ static const float3 HAIRPATCH[] = {
 RWSTRUCTUREDBUFFER(simulationBuffer, PatchSimulationData, 0);
 RWRAWBUFFER(vertexBuffer_POS, 1);
 RWRAWBUFFER(vertexBuffer_TEX, 2);
-RWSTRUCTUREDBUFFER(primitiveBuffer, uint, 3);
-RWSTRUCTUREDBUFFER(culledIndexBuffer, uint, 4);
+RWTYPEDBUFFER(primitiveBuffer, uint, 3);
+RWTYPEDBUFFER(culledIndexBuffer, uint, 4);
 RWRAWBUFFER(counterBuffer, 5);
 
 TYPEDBUFFER(meshIndexBuffer, uint, TEXSLOT_ONDEMAND0);
