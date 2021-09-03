@@ -643,8 +643,6 @@ namespace Vulkan_Internal
 		VkDeviceAddress address = 0;
 		bool is_typedbuffer = false;
 
-		GraphicsDevice::GPUAllocation dynamic[COMMANDLIST_COUNT];
-
 		~Buffer_Vulkan()
 		{
 			if (allocationhandler == nullptr)
@@ -1065,7 +1063,7 @@ using namespace Vulkan_Internal;
 		{
 			GPUBufferDesc uploaddesc;
 			uploaddesc.ByteWidth = wiMath::GetNextPowerOfTwo(staging_size);
-			uploaddesc.Usage = USAGE_STAGING;
+			uploaddesc.Usage = USAGE_UPLOAD;
 			bool upload_success = device->CreateBuffer(&uploaddesc, nullptr, &cmd.uploadbuffer);
 			assert(upload_success);
 
@@ -1200,7 +1198,7 @@ using namespace Vulkan_Internal;
 		this->buffer.type = GPUResource::GPU_RESOURCE_TYPE::BUFFER;
 		this->buffer.desc.ByteWidth = (uint32_t)((size_t)dataEnd - (size_t)dataBegin);
 		this->buffer.desc.BindFlags = BIND_VERTEX_BUFFER | BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE | BIND_CONSTANT_BUFFER;
-		this->buffer.desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+		this->buffer.desc.Flags = RESOURCE_FLAG_BUFFER_RAW;
 
 		int index = device->allocationhandler->bindlessStorageBuffers.allocate();
 		if (index >= 0)
@@ -1264,41 +1262,41 @@ using namespace Vulkan_Internal;
 		uint32_t count = 0;
 
 		poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		poolSizes[0].descriptorCount = GPU_RESOURCE_HEAP_CBV_COUNT * poolSize;
+		poolSizes[0].descriptorCount = DESCRIPTORBINDER_CBV_COUNT * poolSize;
 		count++;
 
 		poolSizes[1].type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-		poolSizes[1].descriptorCount = GPU_RESOURCE_HEAP_SRV_COUNT * poolSize;
+		poolSizes[1].descriptorCount = DESCRIPTORBINDER_SRV_COUNT * poolSize;
 		count++;
 
 		poolSizes[2].type = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
-		poolSizes[2].descriptorCount = GPU_RESOURCE_HEAP_SRV_COUNT * poolSize;
+		poolSizes[2].descriptorCount = DESCRIPTORBINDER_SRV_COUNT * poolSize;
 		count++;
 
 		poolSizes[3].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-		poolSizes[3].descriptorCount = GPU_RESOURCE_HEAP_SRV_COUNT * poolSize;
+		poolSizes[3].descriptorCount = DESCRIPTORBINDER_SRV_COUNT * poolSize;
 		count++;
 
 		poolSizes[4].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-		poolSizes[4].descriptorCount = GPU_RESOURCE_HEAP_UAV_COUNT * poolSize;
+		poolSizes[4].descriptorCount = DESCRIPTORBINDER_UAV_COUNT * poolSize;
 		count++;
 
 		poolSizes[5].type = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
-		poolSizes[5].descriptorCount = GPU_RESOURCE_HEAP_UAV_COUNT * poolSize;
+		poolSizes[5].descriptorCount = DESCRIPTORBINDER_UAV_COUNT * poolSize;
 		count++;
 
 		poolSizes[6].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-		poolSizes[6].descriptorCount = GPU_RESOURCE_HEAP_UAV_COUNT * poolSize;
+		poolSizes[6].descriptorCount = DESCRIPTORBINDER_UAV_COUNT * poolSize;
 		count++;
 
 		poolSizes[7].type = VK_DESCRIPTOR_TYPE_SAMPLER;
-		poolSizes[7].descriptorCount = GPU_SAMPLER_HEAP_COUNT * poolSize;
+		poolSizes[7].descriptorCount = DESCRIPTORBINDER_SAMPLER_COUNT * poolSize;
 		count++;
 
 		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		{
 			poolSizes[8].type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
-			poolSizes[8].descriptorCount = GPU_RESOURCE_HEAP_SRV_COUNT * poolSize;
+			poolSizes[8].descriptorCount = DESCRIPTORBINDER_SRV_COUNT * poolSize;
 			count++;
 		}
 
@@ -1572,19 +1570,9 @@ using namespace Vulkan_Internal;
 					else
 					{
 						auto internal_state = to_internal(buffer);
-						if (buffer->desc.Usage == USAGE_DYNAMIC)
-						{
-							const GPUAllocation& allocation = internal_state->dynamic[cmd];
-							bufferInfos.back().buffer = to_internal(allocation.buffer)->resource;
-							bufferInfos.back().offset = allocation.offset + offset;
-							bufferInfos.back().range = buffer->desc.ByteWidth;
-						}
-						else
-						{
-							bufferInfos.back().buffer = internal_state->resource;
-							bufferInfos.back().offset = offset;
-							bufferInfos.back().range = (VkDeviceSize)std::min(buffer->desc.ByteWidth - offset, (uint64_t)device->properties2.properties.limits.maxUniformBufferRange);
-						}
+						bufferInfos.back().buffer = internal_state->resource;
+						bufferInfos.back().offset = offset;
+						bufferInfos.back().range = (VkDeviceSize)std::min(buffer->desc.ByteWidth - offset, (uint64_t)device->properties2.properties.limits.maxUniformBufferRange);
 					}
 				}
 				break;
@@ -3093,12 +3081,6 @@ using namespace Vulkan_Internal;
 
 		pBuffer->desc = *pDesc;
 
-		if (pDesc->Usage == USAGE_DYNAMIC && pDesc->BindFlags & BIND_CONSTANT_BUFFER)
-		{
-			// this special case will use frame allocator
-			return true;
-		}
-
 		VkBufferCreateInfo bufferInfo = {};
 		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 		bufferInfo.size = pBuffer->desc.ByteWidth;
@@ -3137,11 +3119,11 @@ using namespace Vulkan_Internal;
 				bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
 			}
 		}
-		if (pBuffer->desc.MiscFlags & RESOURCE_MISC_INDIRECT_ARGS)
+		if (pBuffer->desc.Flags & RESOURCE_FLAG_INDIRECT_ARGS)
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
 		}
-		if (pBuffer->desc.MiscFlags & RESOURCE_MISC_RAY_TRACING)
+		if (pBuffer->desc.Flags & RESOURCE_FLAG_RAY_TRACING)
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
 		}
@@ -3173,29 +3155,23 @@ using namespace Vulkan_Internal;
 		//allocInfo.flags = VMA_ALLOCATION_CREATE_STRATEGY_MIN_MEMORY_BIT;
 		//allocInfo.flags = VMA_ALLOCATION_CREATE_STRATEGY_MIN_FRAGMENTATION_BIT;
 		allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-		if (pDesc->Usage == USAGE_STAGING)
+		if (pDesc->Usage == USAGE_READBACK)
 		{
 			allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
-			if (pDesc->CPUAccessFlags & CPU_ACCESS_READ)
-			{
-				allocInfo.usage = VMA_MEMORY_USAGE_GPU_TO_CPU;
-				bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-			}
-			else
-			{
-				allocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
-				bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-			}
+			allocInfo.usage = VMA_MEMORY_USAGE_GPU_TO_CPU;
+			bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 		}
-		if (pDesc->Usage == USAGE_DYNAMIC)
+		else if(pDesc->Usage == USAGE_UPLOAD)
 		{
-			allocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+			allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+			allocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+			bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 		}
 
 		res = vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &internal_state->resource, &internal_state->allocation, nullptr);
 		assert(res == VK_SUCCESS);
 
-		if (pDesc->Usage == USAGE_STAGING)
+		if (pDesc->Usage == USAGE_READBACK || pDesc->Usage == USAGE_UPLOAD)
 		{
 			pBuffer->mapped_data = internal_state->allocation->GetMappedData();
 			pBuffer->mapped_rowpitch = pDesc->ByteWidth;
@@ -3276,7 +3252,7 @@ using namespace Vulkan_Internal;
 				{
 					barrier.dstAccessMask |= VK_ACCESS_SHADER_WRITE_BIT;
 				}
-				if (pBuffer->desc.MiscFlags & RESOURCE_MISC_RAY_TRACING)
+				if (pBuffer->desc.Flags & RESOURCE_FLAG_RAY_TRACING)
 				{
 					barrier.dstAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
 				}
@@ -3294,7 +3270,7 @@ using namespace Vulkan_Internal;
 				copyAllocator.submit(cmd);
 			}
 		}
-		else if(pDesc->Usage != USAGE_STAGING)
+		else if(pDesc->Usage != USAGE_UPLOAD && pDesc->Usage != USAGE_READBACK)
 		{
 			// zero-initialize:
 			initLocker.lock();
@@ -3392,7 +3368,7 @@ using namespace Vulkan_Internal;
 		imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
 		imageInfo.flags = 0;
-		if (pTexture->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
+		if (pTexture->desc.Flags & RESOURCE_FLAG_TEXTURECUBE)
 		{
 			imageInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 		}
@@ -3427,7 +3403,7 @@ using namespace Vulkan_Internal;
 
 		VkResult res;
 
-		if (pTexture->desc.Usage == USAGE_STAGING)
+		if (pTexture->desc.Usage == USAGE_READBACK || pTexture->desc.Usage == USAGE_UPLOAD)
 		{
 			VkBufferCreateInfo bufferInfo = {};
 			bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -3435,12 +3411,12 @@ using namespace Vulkan_Internal;
 				GetFormatStride(pTexture->desc.Format);
 
 			allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
-			if (pDesc->CPUAccessFlags & CPU_ACCESS_READ)
+			if (pTexture->desc.Usage == USAGE_READBACK)
 			{
 				allocInfo.usage = VMA_MEMORY_USAGE_GPU_TO_CPU;
 				bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 			}
-			else
+			else if(pTexture->desc.Usage == USAGE_UPLOAD)
 			{
 				allocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
 				bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
@@ -3458,7 +3434,7 @@ using namespace Vulkan_Internal;
 			subresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 			vkGetImageSubresourceLayout(device, image, &subresource, &internal_state->subresourcelayout);
 
-			if (pDesc->Usage == USAGE_STAGING)
+			if (pDesc->Usage == USAGE_READBACK || pTexture->desc.Usage == USAGE_UPLOAD)
 			{
 				pTexture->mapped_data = internal_state->allocation->GetMappedData();
 				pTexture->mapped_rowpitch = (uint32_t)internal_state->subresourcelayout.rowPitch;
@@ -5263,7 +5239,7 @@ using namespace Vulkan_Internal;
 		{
 			if (texture->desc.ArraySize > 1)
 			{
-				if (texture->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
+				if (texture->desc.Flags & RESOURCE_FLAG_TEXTURECUBE)
 				{
 					if (texture->desc.ArraySize > 6 && sliceCount > 6)
 					{
@@ -6166,7 +6142,7 @@ using namespace Vulkan_Internal;
 	}
 	void GraphicsDevice_Vulkan::BindResource(const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
 	{
-		assert(slot < GPU_RESOURCE_HEAP_SRV_COUNT);
+		assert(slot < DESCRIPTORBINDER_SRV_COUNT);
 		auto& descriptors = GetFrameResources().descriptors[cmd];
 		if (descriptors.SRV[slot] != resource || descriptors.SRV_index[slot] != subresource)
 		{
@@ -6187,7 +6163,7 @@ using namespace Vulkan_Internal;
 	}
 	void GraphicsDevice_Vulkan::BindUAV(const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
 	{
-		assert(slot < GPU_RESOURCE_HEAP_UAV_COUNT);
+		assert(slot < DESCRIPTORBINDER_UAV_COUNT);
 		auto& descriptors = GetFrameResources().descriptors[cmd];
 		if (descriptors.UAV[slot] != resource || descriptors.UAV_index[slot] != subresource)
 		{
@@ -6208,7 +6184,7 @@ using namespace Vulkan_Internal;
 	}
 	void GraphicsDevice_Vulkan::BindSampler(const Sampler* sampler, uint32_t slot, CommandList cmd)
 	{
-		assert(slot < GPU_SAMPLER_HEAP_COUNT);
+		assert(slot < DESCRIPTORBINDER_SAMPLER_COUNT);
 		auto& descriptors = GetFrameResources().descriptors[cmd];
 		if (descriptors.SAM[slot] != sampler)
 		{
@@ -6218,9 +6194,9 @@ using namespace Vulkan_Internal;
 	}
 	void GraphicsDevice_Vulkan::BindConstantBuffer(const GPUBuffer* buffer, uint32_t slot, CommandList cmd, uint64_t offset)
 	{
-		assert(slot < GPU_RESOURCE_HEAP_CBV_COUNT);
+		assert(slot < DESCRIPTORBINDER_CBV_COUNT);
 		auto& descriptors = GetFrameResources().descriptors[cmd];
-		if (buffer->desc.Usage == USAGE_DYNAMIC || descriptors.CBV[slot] != buffer || descriptors.CBV_offset[slot] != offset)
+		if (descriptors.CBV[slot] != buffer || descriptors.CBV_offset[slot] != offset)
 		{
 			descriptors.CBV[slot] = buffer;
 			descriptors.CBV_offset[slot] = offset;
@@ -6529,7 +6505,7 @@ using namespace Vulkan_Internal;
 			const TextureDesc& src_desc = ((const Texture*)pSrc)->GetDesc();
 			const TextureDesc& dst_desc = ((const Texture*)pDst)->GetDesc();
 
-			if (src_desc.Usage & USAGE_STAGING)
+			if (src_desc.Usage == USAGE_UPLOAD)
 			{
 				VkBufferImageCopy copy = {};
 				copy.imageExtent.width = dst_desc.Width;
@@ -6547,7 +6523,7 @@ using namespace Vulkan_Internal;
 					&copy
 				);
 			}
-			else if (dst_desc.Usage & USAGE_STAGING)
+			else if (dst_desc.Usage == USAGE_READBACK)
 			{
 				VkBufferImageCopy copy = {};
 				copy.imageExtent.width = src_desc.Width;
@@ -6641,6 +6617,7 @@ using namespace Vulkan_Internal;
 	}
 	void GraphicsDevice_Vulkan::UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize)
 	{
+		assert(active_renderpass[cmd] == nullptr); // must not be inside render pass
 		assert((int)buffer->desc.ByteWidth >= dataSize || dataSize < 0 && "Data size is too big!");
 		assert(data != nullptr);
 
@@ -6657,73 +6634,60 @@ using namespace Vulkan_Internal;
 		GPUAllocation allocation = AllocateGPU(dataSize, cmd);
 		memcpy(allocation.data, data, dataSize);
 
-		if (buffer->desc.Usage == USAGE_DYNAMIC && buffer->desc.BindFlags & BIND_CONSTANT_BUFFER)
+		auto internal_state_src = to_internal(&GetFrameResources().resourceBuffer[cmd].buffer);
+
+		VkBufferMemoryBarrier barrier = {};
+		barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+		barrier.buffer = internal_state_dst->resource;
+		barrier.srcAccessMask = 0;
+		if (buffer->desc.BindFlags & BIND_CONSTANT_BUFFER)
 		{
-			// Dynamic buffer will be used from host memory directly:
-			internal_state_dst->dynamic[cmd] = allocation;
-			GetFrameResources().descriptors[cmd].dirty = true;
+			barrier.srcAccessMask |= VK_ACCESS_UNIFORM_READ_BIT;
 		}
-		else
+		if (buffer->desc.BindFlags & BIND_VERTEX_BUFFER)
 		{
-			// Contents will be transferred to device memory:
-			assert(active_renderpass[cmd] == nullptr); // must not be inside render pass
-
-			auto internal_state_src = to_internal(&GetFrameResources().resourceBuffer[cmd].buffer);
-
-			VkBufferMemoryBarrier barrier = {};
-			barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-			barrier.buffer = internal_state_dst->resource;
-			barrier.srcAccessMask = 0;
-			if (buffer->desc.BindFlags & BIND_CONSTANT_BUFFER)
-			{
-				barrier.srcAccessMask |= VK_ACCESS_UNIFORM_READ_BIT;
-			}
-			if (buffer->desc.BindFlags & BIND_VERTEX_BUFFER)
-			{
-				barrier.srcAccessMask |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
-			}
-			if (buffer->desc.BindFlags & BIND_INDEX_BUFFER)
-			{
-				barrier.srcAccessMask |= VK_ACCESS_INDEX_READ_BIT;
-			}
-			if (buffer->desc.BindFlags & BIND_SHADER_RESOURCE)
-			{
-				barrier.srcAccessMask |= VK_ACCESS_SHADER_READ_BIT;
-			}
-			if (buffer->desc.BindFlags & BIND_UNORDERED_ACCESS)
-			{
-				barrier.srcAccessMask |= VK_ACCESS_SHADER_WRITE_BIT;
-			}
-			if (buffer->desc.MiscFlags & RESOURCE_MISC_RAY_TRACING)
-			{
-				barrier.srcAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
-			}
-			barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			barrier.size = VK_WHOLE_SIZE;
-
-			frame_bufferBarriers[cmd].push_back(barrier);
-			barrier_flush(cmd);
-
-			VkBufferCopy copyRegion = {};
-			copyRegion.size = dataSize;
-			copyRegion.srcOffset = (VkDeviceSize)allocation.offset;
-			copyRegion.dstOffset = 0;
-
-			vkCmdCopyBuffer(
-				GetCommandList(cmd),
-				internal_state_src->resource,
-				internal_state_dst->resource,
-				1,
-				&copyRegion
-			);
-
-			// reverse barrier:
-			std::swap(barrier.srcAccessMask, barrier.dstAccessMask);
-			frame_bufferBarriers[cmd].push_back(barrier);
-
+			barrier.srcAccessMask |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
 		}
+		if (buffer->desc.BindFlags & BIND_INDEX_BUFFER)
+		{
+			barrier.srcAccessMask |= VK_ACCESS_INDEX_READ_BIT;
+		}
+		if (buffer->desc.BindFlags & BIND_SHADER_RESOURCE)
+		{
+			barrier.srcAccessMask |= VK_ACCESS_SHADER_READ_BIT;
+		}
+		if (buffer->desc.BindFlags & BIND_UNORDERED_ACCESS)
+		{
+			barrier.srcAccessMask |= VK_ACCESS_SHADER_WRITE_BIT;
+		}
+		if (buffer->desc.Flags & RESOURCE_FLAG_RAY_TRACING)
+		{
+			barrier.srcAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
+		}
+		barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.size = VK_WHOLE_SIZE;
+
+		frame_bufferBarriers[cmd].push_back(barrier);
+		barrier_flush(cmd);
+
+		VkBufferCopy copyRegion = {};
+		copyRegion.size = dataSize;
+		copyRegion.srcOffset = (VkDeviceSize)allocation.offset;
+		copyRegion.dstOffset = 0;
+
+		vkCmdCopyBuffer(
+			GetCommandList(cmd),
+			internal_state_src->resource,
+			internal_state_dst->resource,
+			1,
+			&copyRegion
+		);
+
+		// reverse barrier:
+		std::swap(barrier.srcAccessMask, barrier.dstAccessMask);
+		frame_bufferBarriers[cmd].push_back(barrier);
 
 	}
 	void GraphicsDevice_Vulkan::QueryBegin(const GPUQueryHeap* heap, uint32_t index, CommandList cmd)

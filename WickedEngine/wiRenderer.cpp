@@ -1782,9 +1782,8 @@ void LoadBuffers()
 	GPUBufferDesc bd;
 
 	// The following buffers will be DEFAULT (long lifetime, slow update, fast read):
-	bd.CPUAccessFlags = 0;
 	bd.Usage = USAGE_DEFAULT;
-	bd.MiscFlags = 0;
+	bd.Flags = 0;
 
 	bd.ByteWidth = sizeof(FrameCB);
 	bd.BindFlags = BIND_CONSTANT_BUFFER;
@@ -1794,76 +1793,17 @@ void LoadBuffers()
 
 	bd.ByteWidth = sizeof(ShaderEntity) * SHADER_ENTITY_COUNT;
 	bd.BindFlags = BIND_SHADER_RESOURCE;
-	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+	bd.Flags = RESOURCE_FLAG_BUFFER_STRUCTURED;
 	bd.StructureByteStride = sizeof(ShaderEntity);
 	device->CreateBuffer(&bd, nullptr, &resourceBuffers[RBTYPE_ENTITYARRAY]);
 	device->SetName(&resourceBuffers[RBTYPE_ENTITYARRAY], "EntityArray");
 
 	bd.ByteWidth = sizeof(XMMATRIX) * MATRIXARRAY_COUNT;
 	bd.BindFlags = BIND_SHADER_RESOURCE;
-	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+	bd.Flags = RESOURCE_FLAG_BUFFER_STRUCTURED;
 	bd.StructureByteStride = sizeof(XMMATRIX);
 	device->CreateBuffer(&bd, nullptr, &resourceBuffers[RBTYPE_MATRIXARRAY]);
 	device->SetName(&resourceBuffers[RBTYPE_MATRIXARRAY], "MatrixArray");
-
-
-	// The following buffers will be DYNAMIC (short lifetime, fast update, slow read):
-	bd.Usage = USAGE_DYNAMIC;
-	bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-
-	bd.StructureByteStride = sizeof(ShaderMeshInstance);
-	bd.ByteWidth = bd.StructureByteStride;
-	bd.BindFlags = BIND_SHADER_RESOURCE;
-	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-	device->CreateBuffer(&bd, nullptr, &resourceBuffers[RBTYPE_IMPOSTORREFRESH]);
-	device->SetName(&resourceBuffers[RBTYPE_IMPOSTORREFRESH], "resourceBuffers[RBTYPE_IMPOSTORREFRESH]");
-
-	bd.MiscFlags = 0;
-	bd.BindFlags = BIND_CONSTANT_BUFFER;
-
-	bd.ByteWidth = sizeof(CameraCB);
-	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_CAMERA]);
-	device->SetName(&constantBuffers[CBTYPE_CAMERA], "CameraCB");
-
-	bd.ByteWidth = sizeof(MiscCB);
-	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_MISC]);
-	device->SetName(&constantBuffers[CBTYPE_MISC], "MiscCB");
-
-	bd.ByteWidth = sizeof(VolumeLightCB);
-	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_VOLUMELIGHT]);
-	device->SetName(&constantBuffers[CBTYPE_VOLUMELIGHT], "VolumelightCB");
-
-	bd.ByteWidth = sizeof(RaytracingCB);
-	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_RAYTRACE]);
-	device->SetName(&constantBuffers[CBTYPE_RAYTRACE], "RayTraceCB");
-
-	bd.ByteWidth = sizeof(ForwardEntityMaskCB);
-	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_FORWARDENTITYMASK]);
-	device->SetName(&constantBuffers[CBTYPE_FORWARDENTITYMASK], "ForwardEntityMaskCB");
-
-	bd.ByteWidth = sizeof(PostProcessCB);
-	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_POSTPROCESS]);
-	device->SetName(&constantBuffers[CBTYPE_POSTPROCESS], "PostProcessCB");
-
-	bd.ByteWidth = sizeof(FSRCB);
-	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_POSTPROCESS_FSR]);
-	device->SetName(&constantBuffers[CBTYPE_POSTPROCESS_FSR], "FSRCB");
-
-	bd.ByteWidth = sizeof(MSAOCB);
-	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_POSTPROCESS_MSAO]);
-	device->SetName(&constantBuffers[CBTYPE_POSTPROCESS_MSAO], "MSAOCB");
-
-	bd.ByteWidth = sizeof(MSAO_UPSAMPLECB);
-	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_POSTPROCESS_MSAO_UPSAMPLE]);
-	device->SetName(&constantBuffers[CBTYPE_POSTPROCESS_MSAO_UPSAMPLE], "MSAO_UPSAMPLECB");
-
-	bd.ByteWidth = sizeof(PaintRadiusCB);
-	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_PAINTRADIUS]);
-	device->SetName(&constantBuffers[CBTYPE_PAINTRADIUS], "PaintRadiusCB");
-
-	bd.ByteWidth = sizeof(ShadingRateClassificationCB);
-	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_SHADINGRATECLASSIFICATION]);
-	device->SetName(&constantBuffers[CBTYPE_SHADINGRATECLASSIFICATION], "ShadingRateClassificationCB");
 
 	{
 		TextureDesc desc;
@@ -2533,8 +2473,7 @@ void RenderMeshes(
 		if (forwardLightmaskRequest)
 		{
 			ForwardEntityMaskCB cb = ForwardEntityCullingCPU(vis, instancedBatch.aabb, renderPass);
-			device->UpdateBuffer(&constantBuffers[CBTYPE_FORWARDENTITYMASK], &cb, cmd);
-			device->BindConstantBuffer(&constantBuffers[CBTYPE_FORWARDENTITYMASK], CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
+			BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
 		}
 
 		device->BindIndexBuffer(&mesh.indexBuffer, mesh.GetIndexFormat(), 0, cmd);
@@ -4216,9 +4155,6 @@ void DrawLightVisualizers(
 	{
 		device->EventBegin("Light Visualizer Render", cmd);
 
-		device->BindConstantBuffer(&constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), cmd);
-		device->BindConstantBuffer(&constantBuffers[CBTYPE_VOLUMELIGHT], CB_GETBINDSLOT(VolumeLightCB), cmd);
-
 		XMMATRIX camrot = XMLoadFloat3x3(&vis.camera->rotationMatrix);
 		XMMATRIX VP = vis.camera->GetViewProjection();
 
@@ -4247,7 +4183,7 @@ void DrawLightVisualizers(
 							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))
 						);
 
-						device->UpdateBuffer(&constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, cmd);
+						BindDynamicConstantBuffer(lcb, CB_GETBINDSLOT(VolumeLightCB), cmd);
 
 						device->Draw(108, 0, cmd); // circle
 					}
@@ -4261,7 +4197,7 @@ void DrawLightVisualizers(
 							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))
 						);
 
-						device->UpdateBuffer(&constantBuffers[CBTYPE_VOLUMELIGHT], &lcb, cmd);
+						BindDynamicConstantBuffer(lcb, CB_GETBINDSLOT(VolumeLightCB), cmd);
 
 						device->Draw(192, 0, cmd); // cone
 					}
@@ -4315,9 +4251,7 @@ void DrawVolumeLights(
 					{
 						MiscCB miscCb;
 						miscCb.g_xColor.x = float(i);
-						device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, cmd);
-						device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-						device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+						BindDynamicConstantBuffer(miscCb, CB_GETBINDSLOT(MiscCB), cmd);
 
 						device->Draw(3, 0, cmd); // full screen triangle
 					}
@@ -4328,9 +4262,7 @@ void DrawVolumeLights(
 						miscCb.g_xColor.x = float(i);
 						float sca = light.GetRange() + 1;
 						XMStoreFloat4x4(&miscCb.g_xTransform, XMMatrixScaling(sca, sca, sca)*XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) * VP);
-						device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, cmd);
-						device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-						device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+						BindDynamicConstantBuffer(miscCb, CB_GETBINDSLOT(MiscCB), cmd);
 
 						device->Draw(240, 0, cmd); // icosphere
 					}
@@ -4346,9 +4278,7 @@ void DrawVolumeLights(
 							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) *
 							VP
 						);
-						device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, cmd);
-						device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-						device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+						BindDynamicConstantBuffer(miscCb, CB_GETBINDSLOT(MiscCB), cmd);
 
 						device->Draw(192, 0, cmd); // cone
 					}
@@ -4478,7 +4408,7 @@ void SetShadowProps2D(int resolution, int count)
 		desc.SampleCount = 1;
 		desc.Usage = USAGE_DEFAULT;
 		desc.CPUAccessFlags = 0;
-		desc.MiscFlags = 0;
+		desc.Flags = 0;
 
 		desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
 		desc.Format = FORMAT_R16_TYPELESS;
@@ -4556,7 +4486,7 @@ void SetShadowPropsCube(int resolution, int count)
 		desc.SampleCount = 1;
 		desc.Usage = USAGE_DEFAULT;
 		desc.CPUAccessFlags = 0;
-		desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
+		desc.Flags = RESOURCE_FLAG_TEXTURECUBE;
 
 		desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
 		desc.Format = FORMAT_R16_TYPELESS;
@@ -4698,7 +4628,7 @@ void DrawShadowmaps(
 					{
 						CameraCB cb;
 						XMStoreFloat4x4(&cb.VP, shcams[cascade].VP);
-						device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &cb, cmd);
+						BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 
 						Viewport vp;
 						vp.TopLeftX = 0;
@@ -4762,7 +4692,7 @@ void DrawShadowmaps(
 				{
 					CameraCB cb;
 					XMStoreFloat4x4(&cb.VP, shcam.VP);
-					device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &cb, cmd);
+					BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 
 					Viewport vp;
 					vp.TopLeftX = 0;
@@ -4823,9 +4753,7 @@ void DrawShadowmaps(
 				{
 					MiscCB miscCb;
 					miscCb.g_xColor = float4(light.position.x, light.position.y, light.position.z, 0);
-					device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &miscCb, cmd);
-					device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-					device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+					BindDynamicConstantBuffer(miscCb, CB_GETBINDSLOT(MiscCB), cmd);
 
 					const float zNearP = 0.1f;
 					const float zFarP = std::max(1.0f, light.GetRange());
@@ -5013,7 +4941,6 @@ void DrawDebugWorld(
 		bd.Usage = USAGE_DEFAULT;
 		bd.ByteWidth = sizeof(verts);
 		bd.BindFlags = BIND_VERTEX_BUFFER;
-		bd.CPUAccessFlags = 0;
 		SubresourceData InitData;
 		InitData.pSysMem = verts;
 		device->CreateBuffer(&bd, &InitData, &wirecubeVB);
@@ -5026,7 +4953,6 @@ void DrawDebugWorld(
 		bd.Usage = USAGE_DEFAULT;
 		bd.ByteWidth = sizeof(indices);
 		bd.BindFlags = BIND_INDEX_BUFFER;
-		bd.CPUAccessFlags = 0;
 		InitData.pSysMem = indices;
 		device->CreateBuffer(&bd, &InitData, &wirecubeIB);
 	}
@@ -5060,9 +4986,7 @@ void DrawDebugWorld(
 			XMStoreFloat4x4(&sb.g_xTransform, aabb.getAsBoxMatrix()*camera.GetViewProjection());
 			sb.g_xColor = XMFLOAT4(1, 0, 0, 1);
 
-			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 			device->DrawIndexed(24, 0, 0, cmd);
 		}
@@ -5074,9 +4998,7 @@ void DrawDebugWorld(
 			XMStoreFloat4x4(&sb.g_xTransform, aabb.getAsBoxMatrix()*camera.GetViewProjection());
 			sb.g_xColor = XMFLOAT4(1, 1, 0, 1);
 
-			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 			device->DrawIndexed(24, 0, 0, cmd);
 		}
@@ -5088,9 +5010,7 @@ void DrawDebugWorld(
 			XMStoreFloat4x4(&sb.g_xTransform, aabb.getAsBoxMatrix()*camera.GetViewProjection());
 			sb.g_xColor = XMFLOAT4(1, 0, 1, 1);
 
-			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 			device->DrawIndexed(24, 0, 0, cmd);
 		}
@@ -5102,9 +5022,7 @@ void DrawDebugWorld(
 			XMStoreFloat4x4(&sb.g_xTransform, aabb.getAsBoxMatrix()*camera.GetViewProjection());
 			sb.g_xColor = XMFLOAT4(0, 1, 1, 1);
 
-			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 			device->DrawIndexed(24, 0, 0, cmd);
 		}
@@ -5121,9 +5039,7 @@ void DrawDebugWorld(
 		MiscCB sb;
 		XMStoreFloat4x4(&sb.g_xTransform, camera.GetViewProjection());
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
-		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-		device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-		device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 		for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
 		{
@@ -5194,9 +5110,7 @@ void DrawDebugWorld(
 		MiscCB sb;
 		XMStoreFloat4x4(&sb.g_xTransform, camera.GetViewProjection());
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
-		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-		device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-		device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 		struct Vertex
 		{
@@ -5247,9 +5161,7 @@ void DrawDebugWorld(
 		MiscCB sb;
 		XMStoreFloat4x4(&sb.g_xTransform, camera.GetViewProjection());
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
-		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-		device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-		device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 		struct Vertex
 		{
@@ -5300,9 +5212,7 @@ void DrawDebugWorld(
 		MiscCB sb;
 		XMStoreFloat4x4(&sb.g_xTransform, camera.GetViewProjection());
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
-		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-		device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-		device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 		struct LineSegment
 		{
@@ -5350,9 +5260,7 @@ void DrawDebugWorld(
 		MiscCB sb;
 		XMStoreFloat4x4(&sb.g_xTransform, canvas.GetProjection());
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
-		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-		device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-		device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 		struct LineSegment
 		{
@@ -5400,9 +5308,7 @@ void DrawDebugWorld(
 		MiscCB sb;
 		XMStoreFloat4x4(&sb.g_xTransform, camera.GetProjection()); // only projection, we will expand in view space on CPU below to be camera facing!
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
-		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-		device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-		device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 		// Will generate 2 line segments for each point forming a cross section:
 		struct LineSegment
@@ -5478,9 +5384,7 @@ void DrawDebugWorld(
 			XMStoreFloat4x4(&sb.g_xTransform, XMLoadFloat4x4(&x.first)*camera.GetViewProjection());
 			sb.g_xColor = x.second;
 
-			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 			device->DrawIndexed(24, 0, 0, cmd);
 		}
@@ -5534,7 +5438,6 @@ void DrawDebugWorld(
 			bd.Usage = USAGE_DEFAULT;
 			bd.ByteWidth = uint32_t(vertices.size() * sizeof(Vertex));
 			bd.BindFlags = BIND_VERTEX_BUFFER;
-			bd.CPUAccessFlags = 0;
 			SubresourceData InitData;
 			InitData.pSysMem = vertices.data();
 			device->CreateBuffer(&bd, &InitData, &wiresphereVB);
@@ -5559,7 +5462,6 @@ void DrawDebugWorld(
 			bd.Usage = USAGE_DEFAULT;
 			bd.ByteWidth = uint32_t(indices.size() * sizeof(uint16_t));
 			bd.BindFlags = BIND_INDEX_BUFFER;
-			bd.CPUAccessFlags = 0;
 			InitData.pSysMem = indices.data();
 			device->CreateBuffer(&bd, &InitData, &wiresphereIB);
 		}
@@ -5587,9 +5489,7 @@ void DrawDebugWorld(
 			);
 			sb.g_xColor = x.second;
 
-			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 			device->DrawIndexed(wiresphereIB.GetDesc().ByteWidth / sizeof(uint16_t), 0, 0, cmd);
 		}
@@ -5607,9 +5507,7 @@ void DrawDebugWorld(
 		MiscCB sb;
 		XMStoreFloat4x4(&sb.g_xTransform, camera.GetViewProjection());
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
-		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-		device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-		device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 		const int segmentcount = 18 + 1 + 18 + 1;
 		const int linecount = (int)renderableCapsules.size() * segmentcount;
@@ -5710,9 +5608,7 @@ void DrawDebugWorld(
 			const EnvironmentProbeComponent& probe = scene.probes[i];
 
 			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranslationFromVector(XMLoadFloat3(&probe.position)));
-			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 			if (probe.textureIndex < 0)
 			{
@@ -5755,9 +5651,7 @@ void DrawDebugWorld(
 			XMStoreFloat4x4(&sb.g_xTransform, XMLoadFloat4x4(&transform.world)*camera.GetViewProjection());
 			sb.g_xColor = float4(0, 1, 1, 1);
 
-			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 			device->DrawIndexed(24, 0, 0, cmd);
 		}
@@ -5804,7 +5698,6 @@ void DrawDebugWorld(
 			GPUBufferDesc bd;
 			bd.ByteWidth = sizeof(verts);
 			bd.BindFlags = BIND_VERTEX_BUFFER;
-			bd.CPUAccessFlags = 0;
 			SubresourceData InitData;
 			InitData.pSysMem = verts;
 			device->CreateBuffer(&bd, &InitData, &grid);
@@ -5814,9 +5707,7 @@ void DrawDebugWorld(
 		XMStoreFloat4x4(&sb.g_xTransform, camera.GetViewProjection());
 		sb.g_xColor = float4(1, 1, 1, 1);
 
-		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-		device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-		device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 		const GPUBuffer* vbs[] = {
 			&grid,
@@ -5843,8 +5734,7 @@ void DrawDebugWorld(
 		XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranslationFromVector(XMLoadFloat3(&voxelSceneData.center)) * camera.GetViewProjection());
 		sb.g_xColor = float4(1, 1, 1, 1);
 
-		device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-		device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+		BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 		device->Draw(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res, 0, cmd);
 
@@ -5865,9 +5755,8 @@ void DrawDebugWorld(
 
 			XMStoreFloat4x4(&sb.g_xTransform, XMLoadFloat4x4(&transform.world)*camera.GetViewProjection());
 			sb.g_xColor = float4(0, 1, 0, 1);
-			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+
+			BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 			if (mesh == nullptr)
 			{
@@ -5929,8 +5818,7 @@ void DrawDebugWorld(
 			cb.xPaintRadCenter = x.center;
 			cb.xPaintRadRadius = x.radius;
 			cb.xPaintRadUVSET = x.uvset;
-			device->UpdateBuffer(&constantBuffers[CBTYPE_PAINTRADIUS], &cb, cmd);
-			device->BindConstantBuffer(&constantBuffers[CBTYPE_PAINTRADIUS], CB_GETBINDSLOT(PaintRadiusCB), cmd);
+			BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PaintRadiusCB), cmd);
 
 			ObjectPushConstants push;
 			push.init(
@@ -5962,9 +5850,8 @@ void DrawDebugWorld(
 
 			XMStoreFloat4x4(&sb.g_xTransform, camera.GetViewProjection());
 			sb.g_xColor = XMFLOAT4(camera.Eye.x, camera.Eye.y, camera.Eye.z, (float)i);
-			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+
+			BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 			switch (force.type)
 			{
@@ -6010,7 +5897,6 @@ void DrawDebugWorld(
 			bd.Usage = USAGE_DEFAULT;
 			bd.ByteWidth = sizeof(verts);
 			bd.BindFlags = BIND_VERTEX_BUFFER;
-			bd.CPUAccessFlags = 0;
 			SubresourceData InitData;
 			InitData.pSysMem = verts;
 			device->CreateBuffer(&bd, &InitData, &wirecamVB);
@@ -6025,7 +5911,6 @@ void DrawDebugWorld(
 			bd.Usage = USAGE_DEFAULT;
 			bd.ByteWidth = sizeof(indices);
 			bd.BindFlags = BIND_INDEX_BUFFER;
-			bd.CPUAccessFlags = 0;
 			InitData.pSysMem = indices;
 			device->CreateBuffer(&bd, &InitData, &wirecamIB);
 		}
@@ -6052,9 +5937,7 @@ void DrawDebugWorld(
 			const float aspect = cam.width / cam.height;
 			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixScaling(aspect * 0.5f, 0.5f, 0.5f) * cam.GetInvView()*camera.GetViewProjection());
 
-			device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &sb, cmd);
-			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
-			device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+			BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 			device->DrawIndexed(32, 0, 0, cmd);
 		}
@@ -6308,14 +6191,11 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			XMStoreFloat4x4(&cb.xCubemapRenderCams[i].VP, cameras[i].VP);
 			cb.xCubemapRenderCams[i].properties = uint4(i, 0, 0, 0);
 		}
-
-		auto alloc = device->AllocateGPU(sizeof(CubemapRenderCB), cmd);
-		memcpy(alloc.data, &cb, sizeof(cb));
-		device->BindConstantBuffer(alloc.buffer, CB_GETBINDSLOT(CubemapRenderCB), cmd, alloc.offset);
+		BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(CubemapRenderCB), cmd);
 
 		CameraCB camcb;
 		camcb.CamPos = probe.position; // only this will be used by envprobe rendering shaders the rest is read from cubemaprenderCB
-		device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &camcb, cmd);
+		BindDynamicConstantBuffer(&camcb, CBSLOT_RENDERER_CAMERA, cmd);
 
 		if (vis.scene->weather.IsRealisticSky())
 		{
@@ -6724,9 +6604,8 @@ void CreateTiledLightResources(TiledLightResources& res, XMUINT2 resolution)
 		bd.StructureByteStride = sizeof(XMFLOAT4) * 4; // storing 4 planes for every tile
 		bd.ByteWidth = bd.StructureByteStride * tileCount.x * tileCount.y;
 		bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		bd.Flags = RESOURCE_FLAG_BUFFER_STRUCTURED;
 		bd.Usage = USAGE_DEFAULT;
-		bd.CPUAccessFlags = 0;
 		device->CreateBuffer(&bd, nullptr, &res.tileFrustums);
 
 		device->SetName(&res.tileFrustums, "tileFrustums");
@@ -6737,8 +6616,7 @@ void CreateTiledLightResources(TiledLightResources& res, XMUINT2 resolution)
 		bd.ByteWidth = tileCount.x * tileCount.y * bd.StructureByteStride * SHADER_ENTITY_TILE_BUCKET_COUNT;
 		bd.Usage = USAGE_DEFAULT;
 		bd.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
-		bd.CPUAccessFlags = 0;
-		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		bd.Flags = RESOURCE_FLAG_BUFFER_STRUCTURED;
 		device->CreateBuffer(&bd, nullptr, &res.entityTiles_Opaque);
 		device->CreateBuffer(&bd, nullptr, &res.entityTiles_Transparent);
 
@@ -6887,7 +6765,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 	else if (desc.type == TextureDesc::TEXTURE_2D)
 	{
 
-		if (desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
+		if (desc.Flags & RESOURCE_FLAG_TEXTURECUBE)
 		{
 
 			if (desc.ArraySize > 6)
@@ -7261,8 +7139,7 @@ void RayTraceScene(
 	cb.xTraceResolution_rcp.y = 1.0f / cb.xTraceResolution.y;
 	cb.xTraceUserData.x = raytraceBounceCount;
 	cb.xTraceSampleIndex = (uint32_t)accumulation_sample;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_RAYTRACE], &cb, cmd);
-	device->BindConstantBuffer(&constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(RaytracingCB), cmd);
+	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(RaytracingCB), cmd);
 
 	device->BindComputeShader(&shaders[CSTYPE_RAYTRACE], cmd);
 
@@ -7366,8 +7243,8 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 
 				MiscCB misccb;
 				misccb.g_xTransform = transform.world;
-				device->UpdateBuffer(&constantBuffers[CBTYPE_MISC], &misccb, cmd);
-				device->BindConstantBuffer(&constantBuffers[CBTYPE_MISC], CB_GETBINDSLOT(MiscCB), cmd);
+
+				BindDynamicConstantBuffer(misccb, CB_GETBINDSLOT(MiscCB), cmd);
 
 				const GPUBuffer* vbs[] = {
 					&mesh.vertexBuffer_POS,
@@ -7397,9 +7274,7 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 				cb.xTraceAccumulationFactor = 1.0f / (object.lightmapIterationCount + 1.0f); // accumulation factor (alpha)
 				cb.xTraceUserData.x = raytraceBounceCount;
 				cb.xTraceSampleIndex = object.lightmapIterationCount;
-				device->UpdateBuffer(&constantBuffers[CBTYPE_RAYTRACE], &cb, cmd);
-				device->BindConstantBuffer(&constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(RaytracingCB), cmd);
-				device->BindConstantBuffer(&constantBuffers[CBTYPE_RAYTRACE], CB_GETBINDSLOT(RaytracingCB), cmd);
+				BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(RaytracingCB), cmd);
 
 				device->BindPipelineState(&PSO_renderlightmap, cmd);
 
@@ -7420,7 +7295,6 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 void BindCommonResources(CommandList cmd)
 {
 	device->BindConstantBuffer(&constantBuffers[CBTYPE_FRAME], CBSLOT_RENDERER_FRAME, cmd);
-	device->BindConstantBuffer(&constantBuffers[CBTYPE_CAMERA], CBSLOT_RENDERER_CAMERA, cmd);
 
 	device->BindSampler(&samplers[SSLOT_OBJECTSHADER], SSLOT_OBJECTSHADER, cmd);
 
@@ -7504,8 +7378,7 @@ void UpdateCameraCB(
 	cb.ApertureSize = camera.aperture_size;
 	cb.ApertureShape = camera.aperture_shape;
 
-	device->UpdateBuffer(&constantBuffers[CBTYPE_CAMERA], &cb, cmd);
-	device->BindConstantBuffer(&constantBuffers[CBTYPE_CAMERA], CBSLOT_RENDERER_CAMERA, cmd);
+	BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 }
 
 void CreateLuminanceResources(LuminanceResources& res, XMUINT2 resolution)
@@ -7533,8 +7406,7 @@ const Texture* ComputeLuminance(
 
 	PostProcessCB cb;
 	cb.luminance_adaptionrate = adaption_rate;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	// Pass 1 : Compute log luminance and reduction
 	{
@@ -7635,8 +7507,7 @@ void ComputeShadingRateClassification(
 	device->WriteShadingRateValue(SHADING_RATE_2X4, &cb.SHADING_RATE_2X4);
 	device->WriteShadingRateValue(SHADING_RATE_4X2, &cb.SHADING_RATE_4X2);
 	device->WriteShadingRateValue(SHADING_RATE_4X4, &cb.SHADING_RATE_4X4);
-	device->UpdateBuffer(&constantBuffers[CBTYPE_SHADINGRATECLASSIFICATION], &cb, cmd);
-	device->BindConstantBuffer(&constantBuffers[CBTYPE_SHADINGRATECLASSIFICATION], CB_GETBINDSLOT(PostProcessCB), cmd);
+	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
@@ -8130,7 +8001,6 @@ void Postprocess_Blur_Gaussian(
 		break;
 	}
 	device->BindComputeShader(&shaders[cs], cmd);
-	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 	
 	// Horizontal:
 	{
@@ -8148,7 +8018,7 @@ void Postprocess_Blur_Gaussian(
 		cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 		cb.xPPParams0.x = 1;
 		cb.xPPParams0.y = 0;
-		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+		BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 		device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd, mip_src);
 		device->BindUAV(&temp, 0, cmd, mip_dst);
@@ -8193,7 +8063,7 @@ void Postprocess_Blur_Gaussian(
 		cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 		cb.xPPParams0.x = 0;
 		cb.xPPParams0.y = 1;
-		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+		BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 		device->BindResource(&temp, TEXSLOT_ONDEMAND0, cmd, mip_dst); // <- also mip_dst because it's second pass!
 		device->BindUAV(&output, 0, cmd, mip_dst);
@@ -8267,7 +8137,6 @@ void Postprocess_Blur_Bilateral(
 		break;
 	}
 	device->BindComputeShader(&shaders[cs], cmd);
-	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	device->BindResource(&lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
@@ -8288,7 +8157,7 @@ void Postprocess_Blur_Bilateral(
 		cb.xPPParams0.x = 1;
 		cb.xPPParams0.y = 0;
 		cb.xPPParams0.w = depth_threshold;
-		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+		BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 		device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd, mip_src);
 		device->BindUAV(&temp, 0, cmd, mip_dst);
@@ -8334,7 +8203,7 @@ void Postprocess_Blur_Bilateral(
 		cb.xPPParams0.x = 0;
 		cb.xPPParams0.y = 1;
 		cb.xPPParams0.w = depth_threshold;
-		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+		BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 		device->BindResource(&temp, TEXSLOT_ONDEMAND0, cmd, mip_dst); // <- also mip_dst because it's second pass!
 		device->BindUAV(&output, 0, cmd, mip_dst);
@@ -8404,8 +8273,7 @@ void Postprocess_SSAO(
 	cb.ssao_range = range;
 	cb.ssao_samplecount = (float)samplecount;
 	cb.ssao_power = power;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
@@ -8482,8 +8350,7 @@ void Postprocess_HBAO(
 	cb.xPPParams1.z = UVToViewBX;
 	cb.xPPParams1.w = UVToViewBY;
 
-	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	// horizontal pass:
 	{
@@ -8521,8 +8388,7 @@ void Postprocess_HBAO(
 	{
 		cb.xPPParams0.x = 0;
 		cb.xPPParams0.y = 1;
-		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-		device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+		BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 		device->BindResource(&res.temp, TEXSLOT_ONDEMAND0, cmd);
 		const GPUResource* uavs[] = {
@@ -8864,8 +8730,7 @@ void Postprocess_MSAO(
 		cb.xRejectFadeoff = 1.0f / -RejectionFalloff;
 		cb.xRcpAccentuation = 1.0f / (1.0f + Accentuation);
 
-		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS_MSAO], &cb, cmd);
-		device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS_MSAO], CB_GETBINDSLOT(MSAOCB), cmd);
+		BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(MSAOCB), cmd);
 
 		device->BindResource(&read_depth, TEXSLOT_ONDEMAND0, cmd);
 
@@ -8962,8 +8827,7 @@ void Postprocess_MSAO(
 		cb.kBlurTolerance = kBlurTolerance;
 		cb.kUpsampleTolerance = kUpsampleTolerance;
 
-		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS_MSAO_UPSAMPLE], &cb, cmd);
-		device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS_MSAO_UPSAMPLE], CB_GETBINDSLOT(MSAO_UPSAMPLECB), cmd);
+		BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(MSAO_UPSAMPLECB), cmd);
 		
 		device->BindUAV(&Destination, 0, cmd);
 		device->BindResource(&LoResDepth, TEXSLOT_ONDEMAND0, cmd);
@@ -9055,7 +8919,7 @@ void CreateRTAOResources(RTAOResources& res, XMUINT2 resolution)
 	bd.ByteWidth = bd.StructureByteStride *
 		((desc.Width + 7) / 8) *
 		((desc.Height + 3) / 4);
-	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+	bd.Flags = RESOURCE_FLAG_BUFFER_STRUCTURED;
 	bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 	device->CreateBuffer(&bd, nullptr, &res.tiles);
 	device->SetName(&res.tiles, "rtshadow_tiles");
@@ -9128,8 +8992,7 @@ void Postprocess_RTAO(
 	cb.rtao_range = range;
 	cb.rtao_power = power;
 	cb.xPPParams0.w = (float)res.frame;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	{
 		GPUBarrier barriers[] = {
@@ -9158,8 +9021,7 @@ void Postprocess_RTAO(
 
 	device->EventEnd(cmd);
 
-	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	int temporal_output = res.frame % 2;
 	int temporal_history = 1 - temporal_output;
@@ -9238,8 +9100,7 @@ void Postprocess_RTAO(
 
 			cb.xPPParams1.x = 0;
 			cb.xPPParams1.y = 1;
-			device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-			device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+			BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 			device->Dispatch(
 				(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -9268,8 +9129,7 @@ void Postprocess_RTAO(
 
 			cb.xPPParams1.x = 1;
 			cb.xPPParams1.y = 2;
-			device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-			device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+			BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 			device->Dispatch(
 				(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -9298,8 +9158,7 @@ void Postprocess_RTAO(
 
 			cb.xPPParams1.x = 2;
 			cb.xPPParams1.y = 4;
-			device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-			device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+			BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 			device->Dispatch(
 				(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -9384,8 +9243,7 @@ void Postprocess_RTReflection(
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.rtreflection_range = range;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	size_t shaderIdentifierSize = device->GetShaderIdentifierSize();
 	GraphicsDevice::GPUAllocation shadertable_raygen = device->AllocateGPU(shaderIdentifierSize, cmd);
@@ -9439,8 +9297,7 @@ void Postprocess_RTReflection(
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
-	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	device->BindResource(&gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
 	device->BindResource(&gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
@@ -9579,8 +9436,7 @@ void Postprocess_SSR(
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.ssr_input_maxmip = float(input_desc.MipLevels - 1);
 	cb.ssr_input_resolution_max = (float)std::max(input_desc.Width, input_desc.Height);
-	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	// Raytrace pass:
 	{
@@ -9767,7 +9623,7 @@ void CreateRTShadowResources(RTShadowResources& res, XMUINT2 resolution)
 	bd.ByteWidth = bd.StructureByteStride *
 		((desc.Width + 7) / 8) *
 		((desc.Height + 3) / 4);
-	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+	bd.Flags = RESOURCE_FLAG_BUFFER_STRUCTURED;
 	bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 	device->CreateBuffer(&bd, nullptr, &res.tiles);
 	device->SetName(&res.tiles, "rtshadow_tiles");
@@ -9830,8 +9686,7 @@ void Postprocess_RTShadow(
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.xPPParams0.w = (float)res.frame;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTSHADOW], cmd);
 
@@ -9988,8 +9843,7 @@ void Postprocess_RTShadow(
 
 			cb.xPPParams1.x = 0;
 			cb.xPPParams1.y = 1;
-			device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-			device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+			BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 			device->Dispatch(
 				(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -10030,8 +9884,7 @@ void Postprocess_RTShadow(
 
 			cb.xPPParams1.x = 1;
 			cb.xPPParams1.y = 2;
-			device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-			device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+			BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 			device->Dispatch(
 				(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -10072,8 +9925,7 @@ void Postprocess_RTShadow(
 
 			cb.xPPParams1.x = 2;
 			cb.xPPParams1.y = 4;
-			device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-			device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+			BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 			device->Dispatch(
 				(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -10174,8 +10026,7 @@ void Postprocess_ScreenSpaceShadow(
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.xPPParams0.x = range;
 	cb.xPPParams0.y = (float)samplecount;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SCREENSPACESHADOW], cmd);
 
@@ -10245,8 +10096,7 @@ void Postprocess_LightShafts(
 	cb.xPPParams0.w = 0.2f;		// exposure
 	cb.xPPParams1.x = center.x;
 	cb.xPPParams1.y = center.y;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
@@ -10317,10 +10167,10 @@ void CreateDepthOfFieldResources(DepthOfFieldResources& res, XMUINT2 resolution)
 	bufferdesc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 
 	bufferdesc.ByteWidth = TILE_STATISTICS_CAPACITY * sizeof(uint);
-	bufferdesc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS | RESOURCE_MISC_INDIRECT_ARGS;
+	bufferdesc.Flags = RESOURCE_FLAG_BUFFER_RAW | RESOURCE_FLAG_INDIRECT_ARGS;
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tile_statistics);
 
-	bufferdesc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+	bufferdesc.Flags = RESOURCE_FLAG_BUFFER_STRUCTURED;
 	bufferdesc.StructureByteStride = sizeof(uint);
 	bufferdesc.ByteWidth = tile_desc.Width * tile_desc.Height * bufferdesc.StructureByteStride;
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tiles_earlyexit);
@@ -10351,8 +10201,7 @@ void Postprocess_DepthOfField(
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.dof_cocscale = coc_scale;
 	cb.dof_maxcoc = max_coc;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	// Compute tile max COC (horizontal):
 	{
@@ -10512,8 +10361,7 @@ void Postprocess_DepthOfField(
 	cb.xPPResolution.y = desc.Height / 2;
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	// Prepass:
 	{
@@ -10664,8 +10512,7 @@ void Postprocess_DepthOfField(
 	cb.xPPResolution.y = desc.Height;
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	// Upsample pass:
 	{
@@ -10739,8 +10586,7 @@ void Postprocess_Outline(
 	cb.xPPParams1.y = color.y;
 	cb.xPPParams1.z = color.z;
 	cb.xPPParams1.w = color.w;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	device->Draw(3, 0, cmd);
 
@@ -10768,10 +10614,10 @@ void CreateMotionBlurResources(MotionBlurResources& res, XMUINT2 resolution)
 	bufferdesc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 
 	bufferdesc.ByteWidth = TILE_STATISTICS_CAPACITY * sizeof(uint);
-	bufferdesc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS | RESOURCE_MISC_INDIRECT_ARGS;
+	bufferdesc.Flags = RESOURCE_FLAG_BUFFER_RAW | RESOURCE_FLAG_INDIRECT_ARGS;
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tile_statistics);
 
-	bufferdesc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+	bufferdesc.Flags = RESOURCE_FLAG_BUFFER_STRUCTURED;
 	bufferdesc.StructureByteStride = sizeof(uint);
 	bufferdesc.ByteWidth = tile_desc.Width * tile_desc.Height * bufferdesc.StructureByteStride;
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tiles_earlyexit);
@@ -10802,8 +10648,7 @@ void Postprocess_MotionBlur(
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.motionblur_strength = strength;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	// Compute tile max velocities (horizontal):
 	{
@@ -11054,8 +10899,7 @@ void Postprocess_Bloom(
 		cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 		cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 		cb.xPPParams0.x = threshold;
-		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-		device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+		BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_BLOOMSEPARATE], cmd);
 
@@ -11109,8 +10953,7 @@ void Postprocess_Bloom(
 		cb.xPPResolution.y = desc.Height;
 		cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 		cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-		device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+		BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_BLOOMCOMBINE], cmd);
 
@@ -11214,8 +11057,7 @@ void Postprocess_VolumetricClouds(
 	cb.xPPParams0.y = (float)res.texture_reproject[0].GetDesc().Height;
 	cb.xPPParams0.z = 1.0f / cb.xPPParams0.x;
 	cb.xPPParams0.w = 1.0f / cb.xPPParams0.y;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	// Cloud pass:
 	{
@@ -11268,8 +11110,7 @@ void Postprocess_VolumetricClouds(
 	cb.xPPResolution.y = reprojection_desc.Height;
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 	
 	int temporal_output = device->GetFrameCount() % 2;
 	int temporal_history = 1 - temporal_output;
@@ -11384,8 +11225,7 @@ void Postprocess_FXAA(
 	cb.xPPResolution.y = desc.Height;
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
@@ -11446,8 +11286,7 @@ void Postprocess_TemporalAA(
 	cb.xPPResolution.y = desc.Height;
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
@@ -11501,8 +11340,7 @@ void Postprocess_Sharpen(
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.xPPParams0.x = amount;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
@@ -11651,8 +11489,7 @@ void Postprocess_FSR(
 			static_cast<AF1>(temp.desc.Height)
 
 		);
-		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS_FSR], &cb, cmd);
-		device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS_FSR], CB_GETBINDSLOT(FSRCB), cmd);
+		BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(FSRCB), cmd);
 
 		device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd);
 
@@ -11685,8 +11522,7 @@ void Postprocess_FSR(
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_FSR_SHARPEN], cmd);
 
 		FsrRcasCon(cb.const0, sharpness);
-		device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS_FSR], &cb, cmd);
-		device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS_FSR], CB_GETBINDSLOT(FSRCB), cmd);
+		BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(FSRCB), cmd);
 
 		device->BindResource(&temp, TEXSLOT_ONDEMAND0, cmd);
 
@@ -11738,8 +11574,7 @@ void Postprocess_Chromatic_Aberration(
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.xPPParams0.x = amount;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
@@ -11798,13 +11633,11 @@ void Postprocess_Upsample_Bilateral(
 	cb.xPPParams1.y = (float)input.GetDesc().Height;
 	cb.xPPParams1.z = 1.0f / cb.xPPParams1.x;
 	cb.xPPParams1.w = 1.0f / cb.xPPParams1.y;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
+	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	if (pixelshader)
 	{
 		device->BindPipelineState(&PSO_upsample_bilateral, cmd);
-
-		device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 		device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd);
 		device->BindResource(&lineardepth, TEXSLOT_LINEARDEPTH, cmd);
@@ -11843,8 +11676,6 @@ void Postprocess_Upsample_Bilateral(
 			break;
 		}
 		device->BindComputeShader(&shaders[cs], cmd);
-
-		device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
 
 		device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd);
 		device->BindResource(&lineardepth, TEXSLOT_LINEARDEPTH, cmd);
@@ -11895,8 +11726,7 @@ void Postprocess_Downsample4x(
 	cb.xPPResolution.y = desc.Height;
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_DOWNSAMPLE4X], cmd);
 
@@ -11947,8 +11777,7 @@ void Postprocess_NormalsFromDepth(
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.xPPParams0.x = floorf(std::max(1.0f, log2f(std::max((float)desc.Width / (float)depthbuffer.GetDesc().Width, (float)desc.Height / (float)depthbuffer.GetDesc().Height))));
-	device->UpdateBuffer(&constantBuffers[CBTYPE_POSTPROCESS], &cb, cmd);
-	device->BindConstantBuffer(&constantBuffers[CBTYPE_POSTPROCESS], CB_GETBINDSLOT(PostProcessCB), cmd);
+	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_NORMALSFROMDEPTH], cmd);
 
@@ -12106,7 +11935,7 @@ void SetVoxelRadianceEnabled(bool enabled)
 		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
 		desc.Usage = USAGE_DEFAULT;
 		desc.CPUAccessFlags = 0;
-		desc.MiscFlags = 0;
+		desc.Flags = 0;
 
 		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_3D_VOXELRADIANCE]);
 
@@ -12139,8 +11968,7 @@ void SetVoxelRadianceEnabled(bool enabled)
 		desc.StructureByteStride = sizeof(uint32_t) * 2;
 		desc.ByteWidth = desc.StructureByteStride * voxelSceneData.res * voxelSceneData.res * voxelSceneData.res;
 		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
-		desc.CPUAccessFlags = 0;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.Flags = RESOURCE_FLAG_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
 
 		device->CreateBuffer(&desc, nullptr, &resourceBuffers[RBTYPE_VOXELSCENE]);

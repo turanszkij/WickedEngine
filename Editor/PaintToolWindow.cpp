@@ -305,17 +305,6 @@ void PaintToolWindow::Update(float dt)
 			// Need to requery this because RecordHistory might swap textures on material:
 			editTexture = GetEditTextureSlot(*material, &uvset);
 
-			static GPUBuffer cbuf;
-			if (!cbuf.IsValid())
-			{
-				GPUBufferDesc desc;
-				desc.BindFlags = BIND_CONSTANT_BUFFER;
-				desc.Usage = USAGE_DYNAMIC;
-				desc.CPUAccessFlags = CPU_ACCESS_WRITE;
-				desc.ByteWidth = sizeof(PaintTextureCB);
-				device->CreateBuffer(&desc, nullptr, &cbuf);
-			}
-
 			device->BindComputeShader(wiRenderer::GetShader(CSTYPE_PAINT_TEXTURE), cmd);
 
 			wiRenderer::BindCommonResources(cmd);

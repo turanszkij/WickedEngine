@@ -100,7 +100,7 @@ namespace wiTextureHelper
 			texDesc.Usage = USAGE_DEFAULT;
 			texDesc.BindFlags = BIND_SHADER_RESOURCE;
 			texDesc.CPUAccessFlags = 0;
-			texDesc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
+			texDesc.Flags = RESOURCE_FLAG_TEXTURECUBE;
 
 			SubresourceData pData[6];
 			vector4b d[6][width * height]; // 6 images of type vector4b = 4 * unsigned char
@@ -258,7 +258,7 @@ namespace wiTextureHelper
 		textureDesc.SampleCount = 1;
 		textureDesc.BindFlags = BIND_SHADER_RESOURCE;
 		textureDesc.CPUAccessFlags = 0;
-		textureDesc.MiscFlags = 0;
+		textureDesc.Flags = 0;
 
 		SubresourceData InitData;
 		InitData.pSysMem = data;

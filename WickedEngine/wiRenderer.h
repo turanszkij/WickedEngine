@@ -864,5 +864,18 @@ namespace wiRenderer
 	int RegisterCustomShader(const CustomShader& customShader);
 	const std::vector<CustomShader>& GetCustomShaders();
 
+
+	// Helper util to bind a constant buffer with data for a specific command list:
+	//	This will be done on the CPU to an UPLOAD buffer, so this can be used inside a
+	//	RenderPass instance
+	//	But this will be only visible on the command list it was bound to
+	template<typename T>
+	void BindDynamicConstantBuffer(const T& data, uint32_t slot, wiGraphics::CommandList cmd)
+	{
+		auto alloc = GetDevice()->AllocateGPU(sizeof(T), cmd);
+		std::memcpy(alloc.data, &data, sizeof(data));
+		GetDevice()->BindConstantBuffer(alloc.buffer, slot, cmd, alloc.offset);
+	}
+
 };
 

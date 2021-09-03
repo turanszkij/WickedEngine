@@ -65,9 +65,8 @@ namespace wiProfiler
 			desc.queryCount = 1024;
 
 			GPUBufferDesc bd;
-			bd.Usage = USAGE_STAGING;
+			bd.Usage = USAGE_READBACK;
 			bd.ByteWidth = desc.queryCount * sizeof(uint64_t);
-			bd.CPUAccessFlags = CPU_ACCESS_READ;
 
 			for (int i = 0; i < arraysize(queryHeap); ++i)
 			{

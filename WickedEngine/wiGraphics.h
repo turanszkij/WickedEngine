@@ -46,7 +46,7 @@ namespace wiGraphics
 	};
 	enum PRIMITIVETOPOLOGY
 	{
-		UNDEFINED,
+		UNDEFINED_TOPOLOGY,
 		TRIANGLELIST,
 		TRIANGLESTRIP,
 		POINTLIST,
@@ -136,9 +136,9 @@ namespace wiGraphics
 	};
 	enum USAGE
 	{
-		USAGE_DEFAULT,	// Best performance for GPU access
-		USAGE_DYNAMIC,	// Best CPU write performance
-		USAGE_STAGING,	// CPU only, for GPU copy source or dest
+		USAGE_DEFAULT,	// CPU no access, GPU read/write
+		USAGE_UPLOAD,	// CPU write, GPU read
+		USAGE_READBACK,	// CPU read, GPU write
 	};
 	enum TEXTURE_ADDRESS_MODE
 	{
@@ -310,26 +310,18 @@ namespace wiGraphics
 		BIND_INDEX_BUFFER = 1 << 1,
 		BIND_CONSTANT_BUFFER = 1 << 2,
 		BIND_SHADER_RESOURCE = 1 << 3,
-		BIND_STREAM_OUTPUT = 1 << 4,
-		BIND_RENDER_TARGET = 1 << 5,
-		BIND_DEPTH_STENCIL = 1 << 6,
-		BIND_UNORDERED_ACCESS = 1 << 7,
-		BIND_SHADING_RATE = 1 << 8,
+		BIND_RENDER_TARGET = 1 << 4,
+		BIND_DEPTH_STENCIL = 1 << 5,
+		BIND_UNORDERED_ACCESS = 1 << 6,
+		BIND_SHADING_RATE = 1 << 7,
 	};
-	enum CPU_ACCESS
+	enum RESOURCE_FLAG
 	{
-		CPU_ACCESS_WRITE = 1 << 0,
-		CPU_ACCESS_READ = 1 << 1,
-	};
-	enum RESOURCE_MISC_FLAG
-	{
-		RESOURCE_MISC_SHARED = 1 << 0,
-		RESOURCE_MISC_TEXTURECUBE = 1 << 1,
-		RESOURCE_MISC_INDIRECT_ARGS = 1 << 2,
-		RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS = 1 << 3,
-		RESOURCE_MISC_BUFFER_STRUCTURED = 1 << 4,
-		RESOURCE_MISC_TILED = 1 << 5,
-		RESOURCE_MISC_RAY_TRACING = 1 << 6,
+		RESOURCE_FLAG_TEXTURECUBE = 1 << 0,
+		RESOURCE_FLAG_INDIRECT_ARGS = 1 << 1,
+		RESOURCE_FLAG_BUFFER_RAW = 1 << 2,
+		RESOURCE_FLAG_BUFFER_STRUCTURED = 1 << 3,
+		RESOURCE_FLAG_RAY_TRACING = 1 << 4,
 	};
 	enum GRAPHICSDEVICE_CAPABILITY
 	{
@@ -421,7 +413,7 @@ namespace wiGraphics
 		USAGE Usage = USAGE_DEFAULT;
 		uint32_t BindFlags = 0;
 		uint32_t CPUAccessFlags = 0;
-		uint32_t MiscFlags = 0;
+		uint32_t Flags = 0;
 		ClearValue clear = {};
 		RESOURCE_STATE layout = RESOURCE_STATE_SHADER_RESOURCE;
 	};
@@ -494,8 +486,7 @@ namespace wiGraphics
 		uint32_t ByteWidth = 0;
 		USAGE Usage = USAGE_DEFAULT;
 		uint32_t BindFlags = 0;
-		uint32_t CPUAccessFlags = 0;
-		uint32_t MiscFlags = 0;
+		uint32_t Flags = 0;
 		uint32_t StructureByteStride = 0; // needed for typed and structured buffer types!
 		FORMAT Format = FORMAT_UNKNOWN; // only needed for typed buffer!
 	};

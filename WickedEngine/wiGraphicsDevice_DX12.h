@@ -145,16 +145,15 @@ namespace wiGraphics
 			bool dirty_res = false;
 			bool dirty_sam = false;
 
-			const GPUBuffer* CBV[GPU_RESOURCE_HEAP_CBV_COUNT];
-			uint64_t CBV_offset[GPU_RESOURCE_HEAP_CBV_COUNT];
-			const GPUResource* SRV[GPU_RESOURCE_HEAP_SRV_COUNT];
-			int SRV_index[GPU_RESOURCE_HEAP_SRV_COUNT];
-			const GPUResource* UAV[GPU_RESOURCE_HEAP_UAV_COUNT];
-			int UAV_index[GPU_RESOURCE_HEAP_UAV_COUNT];
-			const Sampler* SAM[GPU_SAMPLER_HEAP_COUNT];
+			const GPUBuffer* CBV[DESCRIPTORBINDER_CBV_COUNT];
+			uint64_t CBV_offset[DESCRIPTORBINDER_CBV_COUNT];
+			const GPUResource* SRV[DESCRIPTORBINDER_SRV_COUNT];
+			int SRV_index[DESCRIPTORBINDER_SRV_COUNT];
+			const GPUResource* UAV[DESCRIPTORBINDER_UAV_COUNT];
+			int UAV_index[DESCRIPTORBINDER_UAV_COUNT];
+			const Sampler* SAM[DESCRIPTORBINDER_SAMPLER_COUNT];
 
-			uint32_t dirty_root_cbvs_gfx = 0; // bitmask
-			uint32_t dirty_root_cbvs_compute = 0; // bitmask
+			uint32_t dirty_root_cbvs = 0; // bitmask
 
 			struct DescriptorHandles
 			{

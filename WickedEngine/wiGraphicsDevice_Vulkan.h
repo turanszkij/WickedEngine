@@ -203,13 +203,13 @@ namespace wiGraphics
 				std::vector<VkWriteDescriptorSetAccelerationStructureKHR> accelerationStructureViews;
 				bool dirty = false;
 
-				const GPUBuffer* CBV[GPU_RESOURCE_HEAP_CBV_COUNT];
-				uint64_t CBV_offset[GPU_RESOURCE_HEAP_CBV_COUNT];
-				const GPUResource* SRV[GPU_RESOURCE_HEAP_SRV_COUNT];
-				int SRV_index[GPU_RESOURCE_HEAP_SRV_COUNT];
-				const GPUResource* UAV[GPU_RESOURCE_HEAP_UAV_COUNT];
-				int UAV_index[GPU_RESOURCE_HEAP_UAV_COUNT];
-				const Sampler* SAM[GPU_SAMPLER_HEAP_COUNT];
+				const GPUBuffer* CBV[DESCRIPTORBINDER_CBV_COUNT];
+				uint64_t CBV_offset[DESCRIPTORBINDER_CBV_COUNT];
+				const GPUResource* SRV[DESCRIPTORBINDER_SRV_COUNT];
+				int SRV_index[DESCRIPTORBINDER_SRV_COUNT];
+				const GPUResource* UAV[DESCRIPTORBINDER_UAV_COUNT];
+				int UAV_index[DESCRIPTORBINDER_UAV_COUNT];
+				const Sampler* SAM[DESCRIPTORBINDER_SAMPLER_COUNT];
 
 				void init(GraphicsDevice_Vulkan* device);
 				void destroy();

@@ -9,7 +9,6 @@ using namespace wiGraphics;
 namespace wiGPUSortLib
 {
 	static GPUBuffer indirectBuffer;
-	static GPUBuffer sortCB;
 	static Shader kickoffSortCS;
 	static Shader sortCS;
 	static Shader sortInnerCS;
@@ -30,19 +29,9 @@ namespace wiGPUSortLib
 	void Initialize()
 	{
 		GPUBufferDesc bd;
-
-		bd.Usage = USAGE_DYNAMIC;
-		bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-		bd.BindFlags = BIND_CONSTANT_BUFFER;
-		bd.MiscFlags = 0;
-		bd.ByteWidth = sizeof(SortConstants);
-		wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &sortCB);
-
-
 		bd.Usage = USAGE_DEFAULT;
-		bd.CPUAccessFlags = 0;
 		bd.BindFlags = BIND_UNORDERED_ACCESS;
-		bd.MiscFlags = RESOURCE_MISC_INDIRECT_ARGS | RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+		bd.Flags = RESOURCE_FLAG_INDIRECT_ARGS | RESOURCE_FLAG_BUFFER_RAW;
 		bd.ByteWidth = sizeof(IndirectDispatchArgs);
 		wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &indirectBuffer);
 
@@ -66,9 +55,7 @@ namespace wiGPUSortLib
 
 		SortConstants sc;
 		sc.counterReadOffset = counterReadOffset;
-		device->UpdateBuffer(&sortCB, &sc, cmd);
-		device->BindConstantBuffer(&sortCB, CB_GETBINDSLOT(SortConstants), cmd);
-
+		wiRenderer::BindDynamicConstantBuffer(sc, CB_GETBINDSLOT(SortConstants), cmd);
 
 		// initialize sorting arguments:
 		{
@@ -181,8 +168,7 @@ namespace wiGPUSortLib
 				}
 				sc.counterReadOffset = counterReadOffset;
 
-				device->UpdateBuffer(&sortCB, &sc, cmd);
-				device->BindConstantBuffer(&sortCB, CB_GETBINDSLOT(SortConstants), cmd);
+				wiRenderer::BindDynamicConstantBuffer(sc, CB_GETBINDSLOT(SortConstants), cmd);
 
 				device->Dispatch(numThreadGroups, 1, 1, cmd);
 

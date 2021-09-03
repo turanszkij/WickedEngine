@@ -489,7 +489,7 @@ void RenderPath3D::ResizeBuffers()
 		desc.Usage = USAGE_DEFAULT;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.CPUAccessFlags = 0;
-		desc.MiscFlags = 0;
+		desc.Flags = 0;
 
 		device->CreateTexture(&desc, nullptr, &debugUAV);
 		device->SetName(&debugUAV, "debugUAV");
@@ -811,6 +811,12 @@ void RenderPath3D::Render() const
 	cmd = device->BeginCommandList();
 	wiJobSystem::Execute(ctx, [cmd, this](wiJobArgs args) {
 		wiRenderer::BindCommonResources(cmd);
+		wiRenderer::UpdateCameraCB(
+			*camera,
+			camera_previous,
+			camera_reflection,
+			cmd
+		);
 		wiRenderer::RefreshLightmaps(*scene, cmd);
 		wiRenderer::RefreshEnvProbes(visibility_main, cmd);
 		wiRenderer::RefreshImpostors(*scene, cmd);

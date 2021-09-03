@@ -21,7 +21,6 @@ namespace wiOcean_Internal
 	Shader		wireframePS;
 	Shader		oceanSurfPS;
 
-	GPUBuffer			shadingCB;
 	RasterizerState		rasterizerState;
 	RasterizerState		wireRS;
 	DepthStencilState	depthStencilState;
@@ -126,8 +125,7 @@ void wiOcean::Create(const OceanParameters& params)
 	GPUBufferDesc buf_desc;
 	buf_desc.Usage = USAGE_DEFAULT;
 	buf_desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
-	buf_desc.CPUAccessFlags = 0;
-	buf_desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+	buf_desc.Flags = RESOURCE_FLAG_BUFFER_STRUCTURED;
 	SubresourceData init_data;
 
 	// RW buffer allocations
@@ -201,15 +199,13 @@ void wiOcean::Create(const OceanParameters& params)
 
 	GPUBufferDesc cb_desc;
 	cb_desc.BindFlags = BIND_CONSTANT_BUFFER;
-	cb_desc.CPUAccessFlags = 0;
-	cb_desc.MiscFlags = 0;
+	cb_desc.Flags = 0;
 	cb_desc.ByteWidth = sizeof(Ocean_Simulation_ImmutableCB);
 	device->CreateBuffer(&cb_desc, &init_cb0, &immutableCB);
 
 	cb_desc.Usage = USAGE_DEFAULT;
 	cb_desc.BindFlags = BIND_CONSTANT_BUFFER;
-	cb_desc.CPUAccessFlags = 0;
-	cb_desc.MiscFlags = 0;
+	cb_desc.Flags = 0;
 	cb_desc.ByteWidth = sizeof(Ocean_Simulation_PerFrameCB);
 	device->CreateBuffer(&cb_desc, nullptr, &perFrameCB);
 }
@@ -366,10 +362,7 @@ void wiOcean::Render(const CameraComponent& camera, const OceanParameters& param
 	cb.xOceanWaterHeight = params.waterHeight;
 	cb.xOceanSurfaceDisplacementTolerance = std::max(1.0f, params.surfaceDisplacementTolerance);
 
-	device->UpdateBuffer(&shadingCB, &cb, cmd);
-
-	device->BindConstantBuffer(&shadingCB, CB_GETBINDSLOT(Ocean_RenderCB), cmd);
-	device->BindConstantBuffer(&shadingCB, CB_GETBINDSLOT(Ocean_RenderCB), cmd);
+	wiRenderer::BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(Ocean_RenderCB), cmd);
 
 	device->BindResource(&displacementMap, TEXSLOT_ONDEMAND0, cmd);
 	device->BindResource(&gradientMap, TEXSLOT_ONDEMAND1, cmd);
@@ -383,15 +376,6 @@ void wiOcean::Render(const CameraComponent& camera, const OceanParameters& param
 void wiOcean::Initialize()
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
-
-
-	GPUBufferDesc cb_desc;
-	cb_desc.Usage = USAGE_DYNAMIC;
-	cb_desc.CPUAccessFlags = CPU_ACCESS_WRITE;
-	cb_desc.ByteWidth = sizeof(Ocean_RenderCB);
-	cb_desc.StructureByteStride = 0;
-	cb_desc.BindFlags = BIND_CONSTANT_BUFFER;
-	device->CreateBuffer(&cb_desc, nullptr, &shadingCB);
 
 
 	RasterizerState ras_desc;
