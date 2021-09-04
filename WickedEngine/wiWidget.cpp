@@ -1326,7 +1326,7 @@ void wiComboBox::Render(const wiCanvas& canvas, CommandList cmd) const
 			XMMatrixTranslation(translation.x + scale.x + 1 + scale.y * 0.5f, translation.y + scale.y * 0.5f, 0) *
 			Projection
 		);
-		wiRenderer::BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
+		device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
 		const GPUBuffer* vbs[] = {
 			&vb_triangle,
 		};
@@ -2474,7 +2474,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			Projection
 		);
 		cb.g_xColor = IsEnabled() ? float4(1, 1, 1, 1) : float4(0.5f, 0.5f, 0.5f, 1);
-		wiRenderer::BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
+		device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
 		const GPUBuffer* vbs[] = {
 			vb_saturation.buffer,
 		};
@@ -2495,7 +2495,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			Projection
 		);
 		cb.g_xColor = IsEnabled() ? float4(1, 1, 1, 1) : float4(0.5f, 0.5f, 0.5f, 1);
-		wiRenderer::BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
+		device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
 		const GPUBuffer* vbs[] = {
 			&vb_hue,
 		};
@@ -2522,7 +2522,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 		rgb result = hsv2rgb(source);
 		cb.g_xColor = float4(1 - result.r, 1 - result.g, 1 - result.b, 1);
 
-		wiRenderer::BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
+		device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
 		const GPUBuffer* vbs[] = {
 			&vb_picker_hue,
 		};
@@ -2573,7 +2573,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			Projection
 		);
 		cb.g_xColor = float4(1 - final_color.toFloat3().x, 1 - final_color.toFloat3().y, 1 - final_color.toFloat3().z, 1);
-		wiRenderer::BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
+		device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
 		const GPUBuffer* vbs[] = {
 			&vb_picker_saturation,
 		};
@@ -2592,7 +2592,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			Projection
 		);
 		cb.g_xColor = final_color.toFloat4();
-		wiRenderer::BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
+		device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
 		const GPUBuffer* vbs[] = {
 			&vb_preview,
 		};
@@ -2980,7 +2980,7 @@ void wiTreeList::Render(const wiCanvas& canvas, CommandList cmd) const
 				XMMatrixTranslation(open_box.pos.x + open_box.siz.x * 0.5f, open_box.pos.y + open_box.siz.y * 0.25f, 0) *
 				Projection
 			);
-			wiRenderer::BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
+			device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
 			const GPUBuffer* vbs[] = {
 				&vb_triangle,
 			};

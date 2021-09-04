@@ -62,6 +62,15 @@ inline LinearAllocator& GetRenderFrameAllocator(CommandList cmd)
 	return renderFrameAllocators[cmd];
 }
 
+std::vector<GPUBarrier> barrier_stack[COMMANDLIST_COUNT];
+void barrier_stack_flush(CommandList cmd)
+{
+	if (barrier_stack[cmd].empty())
+		return;
+	device->Barrier(barrier_stack[cmd].data(), (uint32_t)barrier_stack[cmd].size(), cmd);
+	barrier_stack[cmd].clear();
+}
+
 float GAMMA = 2.2f;
 uint32_t SHADOWRES_2D = 1024;
 uint32_t SHADOWRES_CUBE = 256;
@@ -2473,7 +2482,7 @@ void RenderMeshes(
 		if (forwardLightmaskRequest)
 		{
 			ForwardEntityMaskCB cb = ForwardEntityCullingCPU(vis, instancedBatch.aabb, renderPass);
-			BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
+			device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
 		}
 
 		device->BindIndexBuffer(&mesh.indexBuffer, mesh.GetIndexFormat(), 0, cmd);
@@ -3296,28 +3305,24 @@ void UpdateRenderData(
 )
 {
 	device->EventBegin("UpdateRenderData", cmd);
+
+	// Begin copy barriers:
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Buffer(&constantBuffers[CBTYPE_FRAME], RESOURCE_STATE_CONSTANT_BUFFER, RESOURCE_STATE_COPY_DST),
+			GPUBarrier::Buffer(&vis.scene->instanceBuffer, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_COPY_DST),
+			GPUBarrier::Buffer(&vis.scene->meshBuffer, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_COPY_DST),
+			GPUBarrier::Buffer(&vis.scene->materialBuffer, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_COPY_DST),
+			GPUBarrier::Buffer(&resourceBuffers[RBTYPE_ENTITYARRAY], RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_COPY_DST),
+			GPUBarrier::Buffer(&resourceBuffers[RBTYPE_MATRIXARRAY], RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_COPY_DST),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
 	device->UpdateBuffer(&constantBuffers[CBTYPE_FRAME], &frameCB, cmd);
-	UpdateCameraCB(
-		*vis.camera,
-		*vis.camera,
-		*vis.camera,
-		cmd
-	);
-
-	if (!vis.scene->instanceData.empty() && vis.scene->instanceBuffer.IsValid())
-	{
-		device->UpdateBuffer(&vis.scene->instanceBuffer, vis.scene->instanceData.data(), cmd);
-	}
-	if (!vis.scene->meshData.empty() && vis.scene->meshBuffer.IsValid())
-	{
-		device->UpdateBuffer(&vis.scene->meshBuffer, vis.scene->meshData.data(), cmd);
-	}
-	if (!vis.scene->materialData.empty() && vis.scene->materialBuffer.IsValid())
-	{
-		device->UpdateBuffer(&vis.scene->materialBuffer, vis.scene->materialData.data(), cmd);
-	}
-
-	BindCommonResources(cmd);
+	device->UpdateBuffer(&vis.scene->instanceBuffer, vis.scene->instanceData.data(), cmd);
+	device->UpdateBuffer(&vis.scene->meshBuffer, vis.scene->meshData.data(), cmd);
+	device->UpdateBuffer(&vis.scene->materialBuffer, vis.scene->materialData.data(), cmd);
 
 	// Fill Entity Array with decals + envprobes + lights in the frustum:
 	{
@@ -3587,23 +3592,45 @@ void UpdateRenderData(
 		device->UpdateBuffer(&resourceBuffers[RBTYPE_ENTITYARRAY], entityArray, cmd, sizeof(ShaderEntity)*entityCounter);
 		device->UpdateBuffer(&resourceBuffers[RBTYPE_MATRIXARRAY], matrixArray, cmd, sizeof(XMMATRIX)*matrixCounter);
 
+
 		// Temporary array for GPU entities can be freed now:
 		GetRenderFrameAllocator(cmd).free(sizeof(ShaderEntity)*SHADER_ENTITY_COUNT);
 		GetRenderFrameAllocator(cmd).free(sizeof(XMMATRIX)*MATRIXARRAY_COUNT);
 	}
 
+	// End copy barriers:
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Buffer(&constantBuffers[CBTYPE_FRAME], RESOURCE_STATE_COPY_DST, RESOURCE_STATE_CONSTANT_BUFFER),
+			GPUBarrier::Buffer(&vis.scene->instanceBuffer, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE),
+			GPUBarrier::Buffer(&vis.scene->meshBuffer, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE),
+			GPUBarrier::Buffer(&vis.scene->materialBuffer, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE),
+			GPUBarrier::Buffer(&resourceBuffers[RBTYPE_ENTITYARRAY], RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE),
+			GPUBarrier::Buffer(&resourceBuffers[RBTYPE_MATRIXARRAY], RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+	BindCommonResources(cmd);
+	UpdateCameraCB(
+		*vis.camera,
+		*vis.camera,
+		*vis.camera,
+		cmd
+	);
+
 	auto range = wiProfiler::BeginRangeGPU("Skinning", cmd);
 	device->EventBegin("Skinning", cmd);
 	{
-		GPUBarrier* barriers_start = (GPUBarrier*)GetRenderFrameAllocator(cmd).top();
-		uint32_t numBarriers = 0;
-
 		for (size_t i = 0; i < vis.scene->armatures.GetCount(); ++i)
 		{
 			const ArmatureComponent& armature = vis.scene->armatures[i];
 			// Upload bones for skinning to shader
 			device->UpdateBuffer(&armature.boneBuffer, armature.boneData.data(), cmd);
+
+			barrier_stack[cmd].push_back(GPUBarrier::Buffer(&armature.boneBuffer, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE));
 		}
+		barrier_stack_flush(cmd);
 
 		for (size_t i = 0; i < vis.scene->meshes.GetCount(); ++i)
 		{
@@ -3623,15 +3650,17 @@ void UpdateRenderData(
 					shadersubset.indexOffset = x.indexOffset;
 					shadersubset.materialIndex = (uint)vis.scene->materials.GetIndex(x.materialID);
 				}
+				GetRenderFrameAllocator(cmd).free(tmp_alloc);
 
 				device->UpdateBuffer(&mesh.subsetBuffer, subsetarray, cmd);
-				GetRenderFrameAllocator(cmd).free(tmp_alloc);
+				barrier_stack[cmd].push_back(GPUBarrier::Buffer(&mesh.subsetBuffer, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE));
 			}
 
 			if (mesh.dirty_morph)
 			{
 				mesh.dirty_morph = false;
 				wiRenderer::GetDevice()->UpdateBuffer(&mesh.vertexBuffer_POS, mesh.vertex_positions_morphed.data(), cmd);
+				barrier_stack[cmd].push_back(GPUBarrier::Buffer(&mesh.vertexBuffer_POS, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE));
 			}
 
 			if (mesh.IsSkinned() && vis.scene->armatures.Contains(mesh.armatureID))
@@ -3665,44 +3694,35 @@ void UpdateRenderData(
 
 				device->Dispatch(((uint32_t)mesh.vertex_positions.size() + 63) / 64, 1, 1, cmd);
 
-
-				numBarriers += arraysize(uavs);
-				GPUBarrier* barriers = (GPUBarrier*)GetRenderFrameAllocator(cmd).allocate(sizeof(GPUBarrier) * arraysize(uavs));
-				barriers[0] = GPUBarrier::Buffer(&mesh.streamoutBuffer_POS, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE);
-				barriers[1] = GPUBarrier::Buffer(&mesh.streamoutBuffer_TAN, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE);
-				// Barriers will be issued later...
+				barrier_stack[cmd].push_back(GPUBarrier::Buffer(&mesh.streamoutBuffer_POS, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE));
+				barrier_stack[cmd].push_back(GPUBarrier::Buffer(&mesh.streamoutBuffer_TAN, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE));
 
 			}
 
 		}
 
-		if (numBarriers > 0)
+		// Soft body updates:
+		for (size_t i = 0; i < vis.scene->softbodies.GetCount(); ++i)
 		{
-			numBarriers++;
-			GPUBarrier* barriers = (GPUBarrier*)GetRenderFrameAllocator(cmd).allocate(sizeof(GPUBarrier));
-			barriers[0] = GPUBarrier::Memory();
-			device->Barrier(barriers_start, numBarriers, cmd);
-			GetRenderFrameAllocator(cmd).free(sizeof(GPUBarrier) * numBarriers);
+			Entity entity = vis.scene->softbodies.GetEntity(i);
+			const SoftBodyPhysicsComponent& softbody = vis.scene->softbodies[i];
 
+			const MeshComponent* mesh = vis.scene->meshes.GetComponent(entity);
+			if (mesh != nullptr)
+			{
+				device->UpdateBuffer(&mesh->streamoutBuffer_POS, softbody.vertex_positions_simulation.data(), cmd);
+				device->UpdateBuffer(&mesh->streamoutBuffer_TAN, softbody.vertex_tangents_simulation.data(), cmd);
+
+				barrier_stack[cmd].push_back(GPUBarrier::Buffer(&mesh->streamoutBuffer_POS, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE));
+				barrier_stack[cmd].push_back(GPUBarrier::Buffer(&mesh->streamoutBuffer_TAN, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE));
+			}
 		}
+
+		barrier_stack_flush(cmd);
 
 	}
 	device->EventEnd(cmd);
 	wiProfiler::EndRange(range); // skinning
-
-	// Soft body updates:
-	for (size_t i = 0; i < vis.scene->softbodies.GetCount(); ++i)
-	{
-		Entity entity = vis.scene->softbodies.GetEntity(i);
-		const SoftBodyPhysicsComponent& softbody = vis.scene->softbodies[i];
-
-		const MeshComponent* mesh = vis.scene->meshes.GetComponent(entity);
-		if (mesh != nullptr)
-		{
-			device->UpdateBuffer(&mesh->streamoutBuffer_POS, softbody.vertex_positions_simulation.data(), cmd);
-			device->UpdateBuffer(&mesh->streamoutBuffer_TAN, softbody.vertex_tangents_simulation.data(), cmd);
-		}
-	}
 
 	// GPU Particle systems simulation/sorting/culling:
 	if (!vis.visibleEmitters.empty())
@@ -3956,7 +3976,20 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 			auto range = wiProfiler::BeginRangeGPU("TLAS Update (GPU)", cmd);
 			device->EventBegin("TLAS Update", cmd);
 
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Buffer(&scene.TLAS.desc.toplevel.instanceBuffer, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_COPY_DST),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
 			device->UpdateBuffer(&scene.TLAS.desc.toplevel.instanceBuffer, scene.TLAS_instances.data(), cmd);
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Buffer(&scene.TLAS.desc.toplevel.instanceBuffer, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+
 			device->BuildRaytracingAccelerationStructure(&scene.TLAS, cmd, nullptr);
 
 			{
@@ -4183,7 +4216,7 @@ void DrawLightVisualizers(
 							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))
 						);
 
-						BindDynamicConstantBuffer(lcb, CB_GETBINDSLOT(VolumeLightCB), cmd);
+						device->BindDynamicConstantBuffer(lcb, CB_GETBINDSLOT(VolumeLightCB), cmd);
 
 						device->Draw(108, 0, cmd); // circle
 					}
@@ -4197,7 +4230,7 @@ void DrawLightVisualizers(
 							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position))
 						);
 
-						BindDynamicConstantBuffer(lcb, CB_GETBINDSLOT(VolumeLightCB), cmd);
+						device->BindDynamicConstantBuffer(lcb, CB_GETBINDSLOT(VolumeLightCB), cmd);
 
 						device->Draw(192, 0, cmd); // cone
 					}
@@ -4251,7 +4284,7 @@ void DrawVolumeLights(
 					{
 						MiscCB miscCb;
 						miscCb.g_xColor.x = float(i);
-						BindDynamicConstantBuffer(miscCb, CB_GETBINDSLOT(MiscCB), cmd);
+						device->BindDynamicConstantBuffer(miscCb, CB_GETBINDSLOT(MiscCB), cmd);
 
 						device->Draw(3, 0, cmd); // full screen triangle
 					}
@@ -4262,7 +4295,7 @@ void DrawVolumeLights(
 						miscCb.g_xColor.x = float(i);
 						float sca = light.GetRange() + 1;
 						XMStoreFloat4x4(&miscCb.g_xTransform, XMMatrixScaling(sca, sca, sca)*XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) * VP);
-						BindDynamicConstantBuffer(miscCb, CB_GETBINDSLOT(MiscCB), cmd);
+						device->BindDynamicConstantBuffer(miscCb, CB_GETBINDSLOT(MiscCB), cmd);
 
 						device->Draw(240, 0, cmd); // icosphere
 					}
@@ -4278,7 +4311,7 @@ void DrawVolumeLights(
 							XMMatrixTranslationFromVector(XMLoadFloat3(&light.position)) *
 							VP
 						);
-						BindDynamicConstantBuffer(miscCb, CB_GETBINDSLOT(MiscCB), cmd);
+						device->BindDynamicConstantBuffer(miscCb, CB_GETBINDSLOT(MiscCB), cmd);
 
 						device->Draw(192, 0, cmd); // cone
 					}
@@ -4628,7 +4661,7 @@ void DrawShadowmaps(
 					{
 						CameraCB cb;
 						XMStoreFloat4x4(&cb.VP, shcams[cascade].VP);
-						BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
+						device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 
 						Viewport vp;
 						vp.TopLeftX = 0;
@@ -4692,7 +4725,7 @@ void DrawShadowmaps(
 				{
 					CameraCB cb;
 					XMStoreFloat4x4(&cb.VP, shcam.VP);
-					BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
+					device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 
 					Viewport vp;
 					vp.TopLeftX = 0;
@@ -4753,7 +4786,7 @@ void DrawShadowmaps(
 				{
 					MiscCB miscCb;
 					miscCb.g_xColor = float4(light.position.x, light.position.y, light.position.z, 0);
-					BindDynamicConstantBuffer(miscCb, CB_GETBINDSLOT(MiscCB), cmd);
+					device->BindDynamicConstantBuffer(miscCb, CB_GETBINDSLOT(MiscCB), cmd);
 
 					const float zNearP = 0.1f;
 					const float zFarP = std::max(1.0f, light.GetRange());
@@ -4986,7 +5019,7 @@ void DrawDebugWorld(
 			XMStoreFloat4x4(&sb.g_xTransform, aabb.getAsBoxMatrix()*camera.GetViewProjection());
 			sb.g_xColor = XMFLOAT4(1, 0, 0, 1);
 
-			BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 			device->DrawIndexed(24, 0, 0, cmd);
 		}
@@ -4998,7 +5031,7 @@ void DrawDebugWorld(
 			XMStoreFloat4x4(&sb.g_xTransform, aabb.getAsBoxMatrix()*camera.GetViewProjection());
 			sb.g_xColor = XMFLOAT4(1, 1, 0, 1);
 
-			BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 			device->DrawIndexed(24, 0, 0, cmd);
 		}
@@ -5010,7 +5043,7 @@ void DrawDebugWorld(
 			XMStoreFloat4x4(&sb.g_xTransform, aabb.getAsBoxMatrix()*camera.GetViewProjection());
 			sb.g_xColor = XMFLOAT4(1, 0, 1, 1);
 
-			BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 			device->DrawIndexed(24, 0, 0, cmd);
 		}
@@ -5022,7 +5055,7 @@ void DrawDebugWorld(
 			XMStoreFloat4x4(&sb.g_xTransform, aabb.getAsBoxMatrix()*camera.GetViewProjection());
 			sb.g_xColor = XMFLOAT4(0, 1, 1, 1);
 
-			BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 			device->DrawIndexed(24, 0, 0, cmd);
 		}
@@ -5039,7 +5072,7 @@ void DrawDebugWorld(
 		MiscCB sb;
 		XMStoreFloat4x4(&sb.g_xTransform, camera.GetViewProjection());
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
-		BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 		for (size_t i = 0; i < scene.armatures.GetCount(); ++i)
 		{
@@ -5110,7 +5143,7 @@ void DrawDebugWorld(
 		MiscCB sb;
 		XMStoreFloat4x4(&sb.g_xTransform, camera.GetViewProjection());
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
-		BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 		struct Vertex
 		{
@@ -5161,7 +5194,7 @@ void DrawDebugWorld(
 		MiscCB sb;
 		XMStoreFloat4x4(&sb.g_xTransform, camera.GetViewProjection());
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
-		BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 		struct Vertex
 		{
@@ -5212,7 +5245,7 @@ void DrawDebugWorld(
 		MiscCB sb;
 		XMStoreFloat4x4(&sb.g_xTransform, camera.GetViewProjection());
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
-		BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 		struct LineSegment
 		{
@@ -5260,7 +5293,7 @@ void DrawDebugWorld(
 		MiscCB sb;
 		XMStoreFloat4x4(&sb.g_xTransform, canvas.GetProjection());
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
-		BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 		struct LineSegment
 		{
@@ -5308,7 +5341,7 @@ void DrawDebugWorld(
 		MiscCB sb;
 		XMStoreFloat4x4(&sb.g_xTransform, camera.GetProjection()); // only projection, we will expand in view space on CPU below to be camera facing!
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
-		BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 		// Will generate 2 line segments for each point forming a cross section:
 		struct LineSegment
@@ -5384,7 +5417,7 @@ void DrawDebugWorld(
 			XMStoreFloat4x4(&sb.g_xTransform, XMLoadFloat4x4(&x.first)*camera.GetViewProjection());
 			sb.g_xColor = x.second;
 
-			BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 			device->DrawIndexed(24, 0, 0, cmd);
 		}
@@ -5489,7 +5522,7 @@ void DrawDebugWorld(
 			);
 			sb.g_xColor = x.second;
 
-			BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 			device->DrawIndexed(wiresphereIB.GetDesc().ByteWidth / sizeof(uint16_t), 0, 0, cmd);
 		}
@@ -5507,7 +5540,7 @@ void DrawDebugWorld(
 		MiscCB sb;
 		XMStoreFloat4x4(&sb.g_xTransform, camera.GetViewProjection());
 		sb.g_xColor = XMFLOAT4(1, 1, 1, 1);
-		BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 		const int segmentcount = 18 + 1 + 18 + 1;
 		const int linecount = (int)renderableCapsules.size() * segmentcount;
@@ -5608,7 +5641,7 @@ void DrawDebugWorld(
 			const EnvironmentProbeComponent& probe = scene.probes[i];
 
 			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranslationFromVector(XMLoadFloat3(&probe.position)));
-			BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 			if (probe.textureIndex < 0)
 			{
@@ -5651,7 +5684,7 @@ void DrawDebugWorld(
 			XMStoreFloat4x4(&sb.g_xTransform, XMLoadFloat4x4(&transform.world)*camera.GetViewProjection());
 			sb.g_xColor = float4(0, 1, 1, 1);
 
-			BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 			device->DrawIndexed(24, 0, 0, cmd);
 		}
@@ -5707,7 +5740,7 @@ void DrawDebugWorld(
 		XMStoreFloat4x4(&sb.g_xTransform, camera.GetViewProjection());
 		sb.g_xColor = float4(1, 1, 1, 1);
 
-		BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 		const GPUBuffer* vbs[] = {
 			&grid,
@@ -5734,7 +5767,7 @@ void DrawDebugWorld(
 		XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranslationFromVector(XMLoadFloat3(&voxelSceneData.center)) * camera.GetViewProjection());
 		sb.g_xColor = float4(1, 1, 1, 1);
 
-		BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 		device->Draw(voxelSceneData.res * voxelSceneData.res * voxelSceneData.res, 0, cmd);
 
@@ -5756,7 +5789,7 @@ void DrawDebugWorld(
 			XMStoreFloat4x4(&sb.g_xTransform, XMLoadFloat4x4(&transform.world)*camera.GetViewProjection());
 			sb.g_xColor = float4(0, 1, 0, 1);
 
-			BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 			if (mesh == nullptr)
 			{
@@ -5818,7 +5851,7 @@ void DrawDebugWorld(
 			cb.xPaintRadCenter = x.center;
 			cb.xPaintRadRadius = x.radius;
 			cb.xPaintRadUVSET = x.uvset;
-			BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PaintRadiusCB), cmd);
+			device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PaintRadiusCB), cmd);
 
 			ObjectPushConstants push;
 			push.init(
@@ -5851,7 +5884,7 @@ void DrawDebugWorld(
 			XMStoreFloat4x4(&sb.g_xTransform, camera.GetViewProjection());
 			sb.g_xColor = XMFLOAT4(camera.Eye.x, camera.Eye.y, camera.Eye.z, (float)i);
 
-			BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 			switch (force.type)
 			{
@@ -5937,7 +5970,7 @@ void DrawDebugWorld(
 			const float aspect = cam.width / cam.height;
 			XMStoreFloat4x4(&sb.g_xTransform, XMMatrixScaling(aspect * 0.5f, 0.5f, 0.5f) * cam.GetInvView()*camera.GetViewProjection());
 
-			BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
+			device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
 			device->DrawIndexed(32, 0, 0, cmd);
 		}
@@ -6191,11 +6224,11 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			XMStoreFloat4x4(&cb.xCubemapRenderCams[i].VP, cameras[i].VP);
 			cb.xCubemapRenderCams[i].properties = uint4(i, 0, 0, 0);
 		}
-		BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(CubemapRenderCB), cmd);
+		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(CubemapRenderCB), cmd);
 
 		CameraCB camcb;
 		camcb.CamPos = probe.position; // only this will be used by envprobe rendering shaders the rest is read from cubemaprenderCB
-		BindDynamicConstantBuffer(&camcb, CBSLOT_RENDERER_CAMERA, cmd);
+		device->BindDynamicConstantBuffer(&camcb, CBSLOT_RENDERER_CAMERA, cmd);
 
 		if (vis.scene->weather.IsRealisticSky())
 		{
@@ -7139,7 +7172,7 @@ void RayTraceScene(
 	cb.xTraceResolution_rcp.y = 1.0f / cb.xTraceResolution.y;
 	cb.xTraceUserData.x = raytraceBounceCount;
 	cb.xTraceSampleIndex = (uint32_t)accumulation_sample;
-	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(RaytracingCB), cmd);
+	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(RaytracingCB), cmd);
 
 	device->BindComputeShader(&shaders[CSTYPE_RAYTRACE], cmd);
 
@@ -7244,7 +7277,7 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 				MiscCB misccb;
 				misccb.g_xTransform = transform.world;
 
-				BindDynamicConstantBuffer(misccb, CB_GETBINDSLOT(MiscCB), cmd);
+				device->BindDynamicConstantBuffer(misccb, CB_GETBINDSLOT(MiscCB), cmd);
 
 				const GPUBuffer* vbs[] = {
 					&mesh.vertexBuffer_POS,
@@ -7274,7 +7307,7 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 				cb.xTraceAccumulationFactor = 1.0f / (object.lightmapIterationCount + 1.0f); // accumulation factor (alpha)
 				cb.xTraceUserData.x = raytraceBounceCount;
 				cb.xTraceSampleIndex = object.lightmapIterationCount;
-				BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(RaytracingCB), cmd);
+				device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(RaytracingCB), cmd);
 
 				device->BindPipelineState(&PSO_renderlightmap, cmd);
 
@@ -7378,7 +7411,7 @@ void UpdateCameraCB(
 	cb.ApertureSize = camera.aperture_size;
 	cb.ApertureShape = camera.aperture_shape;
 
-	BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
+	device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 }
 
 void CreateLuminanceResources(LuminanceResources& res, XMUINT2 resolution)
@@ -7406,7 +7439,7 @@ const Texture* ComputeLuminance(
 
 	PostProcessCB cb;
 	cb.luminance_adaptionrate = adaption_rate;
-	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	// Pass 1 : Compute log luminance and reduction
 	{
@@ -7507,7 +7540,7 @@ void ComputeShadingRateClassification(
 	device->WriteShadingRateValue(SHADING_RATE_2X4, &cb.SHADING_RATE_2X4);
 	device->WriteShadingRateValue(SHADING_RATE_4X2, &cb.SHADING_RATE_4X2);
 	device->WriteShadingRateValue(SHADING_RATE_4X4, &cb.SHADING_RATE_4X4);
-	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
@@ -8018,7 +8051,7 @@ void Postprocess_Blur_Gaussian(
 		cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 		cb.xPPParams0.x = 1;
 		cb.xPPParams0.y = 0;
-		BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 		device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd, mip_src);
 		device->BindUAV(&temp, 0, cmd, mip_dst);
@@ -8063,7 +8096,7 @@ void Postprocess_Blur_Gaussian(
 		cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 		cb.xPPParams0.x = 0;
 		cb.xPPParams0.y = 1;
-		BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 		device->BindResource(&temp, TEXSLOT_ONDEMAND0, cmd, mip_dst); // <- also mip_dst because it's second pass!
 		device->BindUAV(&output, 0, cmd, mip_dst);
@@ -8157,7 +8190,7 @@ void Postprocess_Blur_Bilateral(
 		cb.xPPParams0.x = 1;
 		cb.xPPParams0.y = 0;
 		cb.xPPParams0.w = depth_threshold;
-		BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 		device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd, mip_src);
 		device->BindUAV(&temp, 0, cmd, mip_dst);
@@ -8203,7 +8236,7 @@ void Postprocess_Blur_Bilateral(
 		cb.xPPParams0.x = 0;
 		cb.xPPParams0.y = 1;
 		cb.xPPParams0.w = depth_threshold;
-		BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 		device->BindResource(&temp, TEXSLOT_ONDEMAND0, cmd, mip_dst); // <- also mip_dst because it's second pass!
 		device->BindUAV(&output, 0, cmd, mip_dst);
@@ -8273,7 +8306,7 @@ void Postprocess_SSAO(
 	cb.ssao_range = range;
 	cb.ssao_samplecount = (float)samplecount;
 	cb.ssao_power = power;
-	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
@@ -8350,7 +8383,7 @@ void Postprocess_HBAO(
 	cb.xPPParams1.z = UVToViewBX;
 	cb.xPPParams1.w = UVToViewBY;
 
-	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	// horizontal pass:
 	{
@@ -8388,7 +8421,7 @@ void Postprocess_HBAO(
 	{
 		cb.xPPParams0.x = 0;
 		cb.xPPParams0.y = 1;
-		BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 		device->BindResource(&res.temp, TEXSLOT_ONDEMAND0, cmd);
 		const GPUResource* uavs[] = {
@@ -8730,7 +8763,7 @@ void Postprocess_MSAO(
 		cb.xRejectFadeoff = 1.0f / -RejectionFalloff;
 		cb.xRcpAccentuation = 1.0f / (1.0f + Accentuation);
 
-		BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(MSAOCB), cmd);
+		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(MSAOCB), cmd);
 
 		device->BindResource(&read_depth, TEXSLOT_ONDEMAND0, cmd);
 
@@ -8827,7 +8860,7 @@ void Postprocess_MSAO(
 		cb.kBlurTolerance = kBlurTolerance;
 		cb.kUpsampleTolerance = kUpsampleTolerance;
 
-		BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(MSAO_UPSAMPLECB), cmd);
+		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(MSAO_UPSAMPLECB), cmd);
 		
 		device->BindUAV(&Destination, 0, cmd);
 		device->BindResource(&LoResDepth, TEXSLOT_ONDEMAND0, cmd);
@@ -8951,7 +8984,7 @@ void Postprocess_RTAO(
 	float power
 )
 {
-	if (!wiRenderer::device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+	if (!device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		return;
 
 	if (scene.objects.GetCount() <= 0)
@@ -8992,7 +9025,7 @@ void Postprocess_RTAO(
 	cb.rtao_range = range;
 	cb.rtao_power = power;
 	cb.xPPParams0.w = (float)res.frame;
-	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	{
 		GPUBarrier barriers[] = {
@@ -9021,7 +9054,7 @@ void Postprocess_RTAO(
 
 	device->EventEnd(cmd);
 
-	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	int temporal_output = res.frame % 2;
 	int temporal_history = 1 - temporal_output;
@@ -9100,7 +9133,7 @@ void Postprocess_RTAO(
 
 			cb.xPPParams1.x = 0;
 			cb.xPPParams1.y = 1;
-			BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+			device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 			device->Dispatch(
 				(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -9129,7 +9162,7 @@ void Postprocess_RTAO(
 
 			cb.xPPParams1.x = 1;
 			cb.xPPParams1.y = 2;
-			BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+			device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 			device->Dispatch(
 				(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -9158,7 +9191,7 @@ void Postprocess_RTAO(
 
 			cb.xPPParams1.x = 2;
 			cb.xPPParams1.y = 4;
-			BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+			device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 			device->Dispatch(
 				(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -9213,7 +9246,7 @@ void Postprocess_RTReflection(
 	float range
 )
 {
-	if (!wiRenderer::device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+	if (!device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		return;
 
 	if (scene.objects.GetCount() <= 0)
@@ -9243,7 +9276,7 @@ void Postprocess_RTReflection(
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.rtreflection_range = range;
-	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	size_t shaderIdentifierSize = device->GetShaderIdentifierSize();
 	GraphicsDevice::GPUAllocation shadertable_raygen = device->AllocateGPU(shaderIdentifierSize, cmd);
@@ -9297,7 +9330,7 @@ void Postprocess_RTReflection(
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
-	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	device->BindResource(&gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
 	device->BindResource(&gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
@@ -9436,7 +9469,7 @@ void Postprocess_SSR(
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.ssr_input_maxmip = float(input_desc.MipLevels - 1);
 	cb.ssr_input_resolution_max = (float)std::max(input_desc.Width, input_desc.Height);
-	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	// Raytrace pass:
 	{
@@ -9661,7 +9694,7 @@ void Postprocess_RTShadow(
 	CommandList cmd
 )
 {
-	if (!wiRenderer::device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+	if (!device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		return;
 
 	if (scene.objects.GetCount() <= 0)
@@ -9686,7 +9719,7 @@ void Postprocess_RTShadow(
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.xPPParams0.w = (float)res.frame;
-	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTSHADOW], cmd);
 
@@ -9843,7 +9876,7 @@ void Postprocess_RTShadow(
 
 			cb.xPPParams1.x = 0;
 			cb.xPPParams1.y = 1;
-			BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+			device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 			device->Dispatch(
 				(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -9884,7 +9917,7 @@ void Postprocess_RTShadow(
 
 			cb.xPPParams1.x = 1;
 			cb.xPPParams1.y = 2;
-			BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+			device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 			device->Dispatch(
 				(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -9925,7 +9958,7 @@ void Postprocess_RTShadow(
 
 			cb.xPPParams1.x = 2;
 			cb.xPPParams1.y = 4;
-			BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+			device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 			device->Dispatch(
 				(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -10026,7 +10059,7 @@ void Postprocess_ScreenSpaceShadow(
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.xPPParams0.x = range;
 	cb.xPPParams0.y = (float)samplecount;
-	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SCREENSPACESHADOW], cmd);
 
@@ -10096,7 +10129,7 @@ void Postprocess_LightShafts(
 	cb.xPPParams0.w = 0.2f;		// exposure
 	cb.xPPParams1.x = center.x;
 	cb.xPPParams1.y = center.y;
-	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
@@ -10201,7 +10234,7 @@ void Postprocess_DepthOfField(
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.dof_cocscale = coc_scale;
 	cb.dof_maxcoc = max_coc;
-	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	// Compute tile max COC (horizontal):
 	{
@@ -10361,7 +10394,7 @@ void Postprocess_DepthOfField(
 	cb.xPPResolution.y = desc.Height / 2;
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	// Prepass:
 	{
@@ -10512,7 +10545,7 @@ void Postprocess_DepthOfField(
 	cb.xPPResolution.y = desc.Height;
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	// Upsample pass:
 	{
@@ -10586,7 +10619,7 @@ void Postprocess_Outline(
 	cb.xPPParams1.y = color.y;
 	cb.xPPParams1.z = color.z;
 	cb.xPPParams1.w = color.w;
-	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	device->Draw(3, 0, cmd);
 
@@ -10648,7 +10681,7 @@ void Postprocess_MotionBlur(
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.motionblur_strength = strength;
-	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	// Compute tile max velocities (horizontal):
 	{
@@ -10899,7 +10932,7 @@ void Postprocess_Bloom(
 		cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 		cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 		cb.xPPParams0.x = threshold;
-		BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_BLOOMSEPARATE], cmd);
 
@@ -10953,7 +10986,7 @@ void Postprocess_Bloom(
 		cb.xPPResolution.y = desc.Height;
 		cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 		cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-		BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_BLOOMCOMBINE], cmd);
 
@@ -11057,7 +11090,7 @@ void Postprocess_VolumetricClouds(
 	cb.xPPParams0.y = (float)res.texture_reproject[0].GetDesc().Height;
 	cb.xPPParams0.z = 1.0f / cb.xPPParams0.x;
 	cb.xPPParams0.w = 1.0f / cb.xPPParams0.y;
-	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	// Cloud pass:
 	{
@@ -11110,7 +11143,7 @@ void Postprocess_VolumetricClouds(
 	cb.xPPResolution.y = reprojection_desc.Height;
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 	
 	int temporal_output = device->GetFrameCount() % 2;
 	int temporal_history = 1 - temporal_output;
@@ -11225,7 +11258,7 @@ void Postprocess_FXAA(
 	cb.xPPResolution.y = desc.Height;
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
@@ -11286,7 +11319,7 @@ void Postprocess_TemporalAA(
 	cb.xPPResolution.y = desc.Height;
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
@@ -11340,7 +11373,7 @@ void Postprocess_Sharpen(
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.xPPParams0.x = amount;
-	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
@@ -11489,7 +11522,7 @@ void Postprocess_FSR(
 			static_cast<AF1>(temp.desc.Height)
 
 		);
-		BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(FSRCB), cmd);
+		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(FSRCB), cmd);
 
 		device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd);
 
@@ -11522,7 +11555,7 @@ void Postprocess_FSR(
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_FSR_SHARPEN], cmd);
 
 		FsrRcasCon(cb.const0, sharpness);
-		BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(FSRCB), cmd);
+		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(FSRCB), cmd);
 
 		device->BindResource(&temp, TEXSLOT_ONDEMAND0, cmd);
 
@@ -11574,7 +11607,7 @@ void Postprocess_Chromatic_Aberration(
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.xPPParams0.x = amount;
-	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
@@ -11633,7 +11666,7 @@ void Postprocess_Upsample_Bilateral(
 	cb.xPPParams1.y = (float)input.GetDesc().Height;
 	cb.xPPParams1.z = 1.0f / cb.xPPParams1.x;
 	cb.xPPParams1.w = 1.0f / cb.xPPParams1.y;
-	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	if (pixelshader)
 	{
@@ -11726,7 +11759,7 @@ void Postprocess_Downsample4x(
 	cb.xPPResolution.y = desc.Height;
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_DOWNSAMPLE4X], cmd);
 
@@ -11777,7 +11810,7 @@ void Postprocess_NormalsFromDepth(
 	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
 	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
 	cb.xPPParams0.x = floorf(std::max(1.0f, log2f(std::max((float)desc.Width / (float)depthbuffer.GetDesc().Width, (float)desc.Height / (float)depthbuffer.GetDesc().Height))));
-	BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_NORMALSFROMDEPTH], cmd);
 

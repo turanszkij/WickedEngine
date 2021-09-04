@@ -3,11 +3,21 @@
 #include "wiGraphics.h"
 #include "wiPlatform.h"
 
+#include <cstring>
+#include <algorithm>
+
 namespace wiGraphics
 {
 	typedef uint8_t CommandList;
 	static const CommandList COMMANDLIST_COUNT = 32;
 	static const CommandList INVALID_COMMANDLIST = COMMANDLIST_COUNT;
+
+	// Descriptor binding counts:
+	//	It's OK increase these limits if not enough
+	static const uint32_t DESCRIPTORBINDER_CBV_COUNT = 15;
+	static const uint32_t DESCRIPTORBINDER_SRV_COUNT = 64;
+	static const uint32_t DESCRIPTORBINDER_UAV_COUNT = 16;
+	static const uint32_t DESCRIPTORBINDER_SAMPLER_COUNT = 16;
 
 	enum QUEUE_TYPE
 	{
@@ -121,7 +131,7 @@ namespace wiGraphics
 		virtual void DispatchMesh(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd) {}
 		virtual void DispatchMeshIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) {}
 		virtual void CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd) = 0;
-		virtual void UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize = -1) = 0;
+		virtual void CopyBuffer(const GPUBuffer* pDst, uint64_t dst_offset, const GPUBuffer* pSrc, uint64_t src_offset, uint64_t size, CommandList cmd) = 0;
 		virtual void QueryBegin(const GPUQueryHeap *heap, uint32_t index, CommandList cmd) = 0;
 		virtual void QueryEnd(const GPUQueryHeap *heap, uint32_t index, CommandList cmd) = 0;
 		virtual void QueryResolve(const GPUQueryHeap* heap, uint32_t index, uint32_t count, const GPUBuffer* dest, uint64_t dest_offset, CommandList cmd) {}
@@ -150,6 +160,37 @@ namespace wiGraphics
 		virtual void EventBegin(const char* name, CommandList cmd) = 0;
 		virtual void EventEnd(CommandList cmd) = 0;
 		virtual void SetMarker(const char* name, CommandList cmd) = 0;
+
+
+
+
+		// Some useful helpers:
+
+		// Updates a USAGE_DEFAULT buffer data
+		//	Since it uses a GPU Copy operation, appropriate synchronization is expected
+		//	And it cannot be used inside a RenderPass
+		void UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, size_t size = ~0, size_t offset = 0)
+		{
+			if (buffer == nullptr || data == nullptr)
+				return;
+			size = std::min((size_t)buffer->desc.ByteWidth, size);
+			if (size == 0)
+				return;
+			GPUAllocation allocation = AllocateGPU(size, cmd);
+			std::memcpy(allocation.data, data, size);
+			CopyBuffer(buffer, offset, allocation.buffer, allocation.offset, size, cmd);
+		}
+
+		// Helper util to bind a constant buffer with data for a specific command list:
+		//	This will be done on the CPU to an UPLOAD buffer, so this can be used inside a RenderPass
+		//	But this will be only visible on the command list it was bound to
+		template<typename T>
+		void BindDynamicConstantBuffer(const T& data, uint32_t slot, wiGraphics::CommandList cmd)
+		{
+			GPUAllocation allocation = AllocateGPU(sizeof(T), cmd);
+			std::memcpy(allocation.data, &data, sizeof(T));
+			BindConstantBuffer(allocation.buffer, slot, cmd, allocation.offset);
+		}
 	};
 
 }

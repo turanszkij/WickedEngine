@@ -909,9 +909,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_Vulkan.h">
       <Filter>ENGINE\Graphics\API</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_SharedInternals.h">
-      <Filter>ENGINE\Graphics\API</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_image.h">
       <Filter>UTILITY</Filter>
     </ClInclude>

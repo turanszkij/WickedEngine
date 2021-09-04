@@ -626,7 +626,7 @@ Notes:
 - When `RenderPassBegin()` is called, `RenderPassEnd()` must be called after on the same command list before the command list gets [submitted](#work-submission).
 - It is not allowed to call `CopyResource()`, `CopyTexture2D()`, etc. inside a render pass.
 - It is not allowed to call `Dispatch()` and `DispatchIndirect()` inside a render pass.
-- It is not allowed to call `UpdateBuffer()` inside the render pass unless the buffer is `USAGE_DYNAMIC` and is a `BIND_CONSTANT_BUFFER`.
+- It is not allowed to call `UpdateBuffer()` inside the render pass.
 
 ##### GPU Barriers
 `GPUBarrier`s can be used to state dependencies between GPU workloads. There are different kinds of barriers:
@@ -663,11 +663,10 @@ Related topics: [Creating Resources](#creating-resources), [Destroying Resources
 Related topics: [Creating Resources](#creating-resources), [Destroying Resources](#destroying-resources), [Binding resources](#resource-binding), [Subresources](#subresources), [Updating GPU Buffers](#updating-gpu-buffers)
 
 ##### Updating GPU buffers
-A common scenario is updating buffers, when the developer wants to make data visible from the CPU to the GPU. The simplest way is to use the `GraphicsDevice::UpdateBuffer()` function. To use this successfully, the buffer must have been created with a `Usage` that is either `USAGE_DEFAULT` or `USAGE_DYNAMIC`. If the `USAGE_DEFAULT` is in effect, the buffer updating can be heavier on the CPU, and introduce additional [GPUBarriers](#gpu-barriers), but they can have superior GPU read performance, or can be writable by the GPU. On the other hand, `USAGE_DYNAMIC` type buffers will be lighter weight on the CPU side, but they could have worse GPU performance. If `USAGE_DYNAMIC` was specified, the buffer must also have been created with `CPUAccessFlags` member of the `GPUBufferDesc` that contains the value `CPU_ACCESS_WRITE` in order to be successfully updated. 
-
-`GraphicsDevice::UpdateBuffer()` function can either take the dataSize parameter, or if it is left as default, the `GPUBufferDesc::ByteWidth` (that was specified at buffer creation time) number of bytes will be read from the `data` parameter and uploaded to the buffer.
-
-An other case is to dynamically allocate a temporary buffer using the `GraphicsDevice::AllocateGPU()` function. The developer has to specify the amount of space that needs to be allocated, and the function will return a `GPUAllocation` struct that has a `buffer` member that can be used for [resource binding](#resource-binding), a `data` pointer member that the application can write into, and an offset value, that indicates an offset that the new data will start from in the temporary buffer. Buffers that were allocated like this can be only used as index buffers, vertex buffers, instance buffers, or raw buffers. Attempting to use these as constant buffers, structured buffers, or typed buffers is not supported.
+A `GPUBuffer`'s `Usage` parameter specifies how the buffer memory is accessed.
+- `USAGE_DEFAULT`: The buffer memory is visible to the GPU but not the CPU. This means that it will observe maximum GPU performance, but special care needs to be taken to write the buffer contents. The GPU could write the memory from a shader or copy operation for example. You can also use the `UpdateBuffer()` function to update such a buffer from CPU (which uses a GPU copy).
+- `USAGE_UPLOAD`: The buffer can be written by the CPU and read by the GPU. Once such a `GPUBuffer` was created, it's memory is persistently mapped for CPU access, and can be accessed through the `GPUResource::mapped_data` pointer. It's perfect to update a `USAGE_DEFAULT` buffer from this by first filling the `USAGE_UPLOAD` buffer from the CPU, then let the GPU copy its contents to the `USAGE_DEFAULT` buffer with a shader or copy operation.
+- `USAGE_READBACK`: The buffer can be written by the GPU and the contents read by the CPU. The buffer memory is persistently mapped after creation, and accessible through the `GPUResource::mapped_data` pointer.
 
 ##### GPU Queries
 The `GPUQueryHeap` can be used to retrieve information from GPU to CPU. There are different query types:

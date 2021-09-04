@@ -2,7 +2,6 @@
 
 #ifdef WICKEDENGINE_BUILD_DX12
 
-#include "wiGraphicsDevice_SharedInternals.h"
 #include "wiHelper.h"
 #include "wiBackLog.h"
 
@@ -25,14 +24,6 @@
 #include <sstream>
 #include <algorithm>
 
-// Bindless allocation limits:
-#define BINDLESS_RESOURCE_CAPACITY		500000
-#define BINDLESS_SAMPLER_CAPACITY		256
-
-// Choose how many constant buffers will be placed in root in auto root signature:
-#define CONSTANT_BUFFER_AUTO_PLACEMENT_IN_ROOT 4
-static_assert(DESCRIPTORBINDER_CBV_COUNT < 32, "cbv root mask must fit into uint32_t!");
-
 using namespace Microsoft::WRL;
 
 namespace wiGraphics
@@ -40,6 +31,14 @@ namespace wiGraphics
 
 namespace DX12_Internal
 {
+	// Bindless allocation limits:
+#define BINDLESS_RESOURCE_CAPACITY		500000
+#define BINDLESS_SAMPLER_CAPACITY		256
+
+// Choose how many constant buffers will be placed in root in auto root signature:
+#define CONSTANT_BUFFER_AUTO_PLACEMENT_IN_ROOT 4
+	static_assert(DESCRIPTORBINDER_CBV_COUNT < 32, "cbv root mask must fit into uint32_t!");
+
 
 #ifdef PLATFORM_UWP
 	// UWP will use static link + /DELAYLOAD linker feature for the dlls (optionally)
@@ -1606,48 +1605,17 @@ using namespace DX12_Internal;
 	void GraphicsDevice_DX12::FrameResources::ResourceFrameAllocator::init(GraphicsDevice_DX12* device, size_t size)
 	{
 		this->device = device;
-		auto internal_state = std::make_shared<Resource_DX12>();
-		internal_state->allocationhandler = device->allocationhandler;
-		buffer.internal_state = internal_state;
 
-		HRESULT hr;
+		GPUBufferDesc desc;
+		desc.Usage = USAGE_UPLOAD;
+		desc.ByteWidth = (uint32_t)size;
+		desc.BindFlags = BIND_CONSTANT_BUFFER | BIND_VERTEX_BUFFER | BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE;
+		desc.Flags = RESOURCE_FLAG_BUFFER_RAW;
+		device->CreateBuffer(&desc, nullptr, &buffer);
+		device->SetName(&buffer, "ResourceFrameAllocator");
 
-		D3D12MA::ALLOCATION_DESC allocationDesc = {};
-		allocationDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
-
-		CD3DX12_RESOURCE_DESC resdesc = CD3DX12_RESOURCE_DESC::Buffer(size);
-
-		hr = device->allocationhandler->allocator->CreateResource(
-			&allocationDesc,
-			&resdesc,
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			&internal_state->allocation,
-			IID_PPV_ARGS(&internal_state->resource)
-		);
-		assert(SUCCEEDED(hr));
-
-		void* pData;
-		CD3DX12_RANGE readRange(0, 0);
-		internal_state->resource->Map(0, &readRange, &pData);
-		dataCur = dataBegin = reinterpret_cast<uint8_t*>(pData);
+		dataCur = dataBegin = (uint8_t*)buffer.mapped_data;
 		dataEnd = dataBegin + size;
-
-		// Because the "buffer" is created by hand in this, fill the desc to indicate how it can be used:
-		buffer.type = GPUResource::GPU_RESOURCE_TYPE::BUFFER;
-		buffer.desc.ByteWidth = (uint32_t)((size_t)dataEnd - (size_t)dataBegin);
-		buffer.desc.BindFlags = BIND_VERTEX_BUFFER | BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE | BIND_CONSTANT_BUFFER;
-		buffer.desc.Flags = RESOURCE_FLAG_BUFFER_RAW;
-
-		internal_state->gpu_address = internal_state->resource->GetGPUVirtualAddress();
-
-		D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
-		srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-		srv_desc.Format = DXGI_FORMAT_R32_TYPELESS;
-		srv_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
-		srv_desc.Buffer.NumElements = buffer.desc.ByteWidth / sizeof(uint32_t);
-		srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		internal_state->srv.init(device, srv_desc, internal_state->resource.Get());
 	}
 	uint8_t* GraphicsDevice_DX12::FrameResources::ResourceFrameAllocator::allocate(size_t dataSize, size_t alignment)
 	{
@@ -2182,40 +2150,6 @@ using namespace DX12_Internal;
 		}
 	}
 
-	void GraphicsDevice_DX12::barrier_flush(CommandList cmd)
-	{
-		auto& barriers = frame_barriers[cmd];
-		if (!barriers.empty())
-		{
-			for (size_t i = 0; i < barriers.size(); ++i)
-			{
-				auto& barrier = barriers[i];
-				if (barrier.Type == D3D12_RESOURCE_BARRIER_TYPE_TRANSITION &&
-					cmd_meta[cmd].queue > QUEUE_GRAPHICS)
-				{
-					// Only graphics queue can do pixel shader state:
-					barrier.Transition.StateBefore &= ~D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-					barrier.Transition.StateAfter &= ~D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-				}
-				if (barrier.Type == D3D12_RESOURCE_BARRIER_TYPE_TRANSITION &&
-					barrier.Transition.StateBefore == barrier.Transition.StateAfter)
-				{
-					// Remove NOP barriers:
-					barrier = barriers.back();
-					barriers.pop_back();
-					i--;
-				}
-			}
-			if (!barriers.empty())
-			{
-				GetCommandList(cmd)->ResourceBarrier(
-					(UINT)barriers.size(),
-					barriers.data()
-				);
-				barriers.clear();
-			}
-		}
-	}
 	void GraphicsDevice_DX12::predraw(CommandList cmd)
 	{
 		pso_validate(cmd);
@@ -2239,8 +2173,6 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::predispatch(CommandList cmd)
 	{
-		barrier_flush(cmd);
-
 		descriptors[cmd].flush(false, cmd);
 
 		if (pushconstants[cmd].size > 0)
@@ -5493,8 +5425,6 @@ using namespace DX12_Internal;
 			cmd_count.store(0);
 			for (CommandList cmd = 0; cmd < cmd_last; ++cmd)
 			{
-				barrier_flush(cmd);
-
 				hr = GetCommandList(cmd)->Close();
 				assert(SUCCEEDED(hr));
 
@@ -5699,9 +5629,7 @@ using namespace DX12_Internal;
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		
-		frame_barriers[cmd].push_back(barrier);
-		barrier_flush(cmd);
+		GetCommandList(cmd)->ResourceBarrier(1, &barrier);
 		
 		D3D12_RENDER_PASS_RENDER_TARGET_DESC RTV = {};
 		RTV.cpuDescriptor = internal_state->backbufferRTV[internal_state->swapChain->GetCurrentBackBufferIndex()];
@@ -5720,11 +5648,7 @@ using namespace DX12_Internal;
 
 		auto internal_state = to_internal(active_renderpass[cmd]);
 
-		for (uint32_t i = 0; i < internal_state->num_barriers_begin; ++i)
-		{
-			frame_barriers[cmd].push_back(internal_state->barrierdescs_begin[i]);
-		}
-		barrier_flush(cmd);
+		GetCommandList(cmd)->ResourceBarrier(internal_state->num_barriers_begin, internal_state->barrierdescs_begin);
 
 		if (internal_state->shading_rate_image != nullptr)
 		{
@@ -5752,10 +5676,7 @@ using namespace DX12_Internal;
 				GetCommandList(cmd)->RSSetShadingRateImage(nullptr);
 			}
 
-			for (uint32_t i = 0; i < internal_state->num_barriers_end; ++i)
-			{
-				frame_barriers[cmd].push_back(internal_state->barrierdescs_end[i]);
-			}
+			GetCommandList(cmd)->ResourceBarrier(internal_state->num_barriers_end, internal_state->barrierdescs_end);
 		}
 
 		active_renderpass[cmd] = nullptr;
@@ -5769,7 +5690,7 @@ using namespace DX12_Internal;
 			barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 			barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-			frame_barriers[cmd].push_back(barrier);
+			GetCommandList(cmd)->ResourceBarrier(1, &barrier);
 
 			active_backbuffer[cmd] = nullptr;
 		}
@@ -6079,7 +6000,6 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd)
 	{
-		barrier_flush(cmd);
 		auto internal_state_src = to_internal(pSrc);
 		auto internal_state_dst = to_internal(pDst);
 		D3D12_RESOURCE_DESC desc_src = internal_state_src->resource->GetDesc();
@@ -6101,55 +6021,12 @@ using namespace DX12_Internal;
 			GetCommandList(cmd)->CopyResource(internal_state_dst->resource.Get(), internal_state_src->resource.Get());
 		}
 	}
-	void GraphicsDevice_DX12::UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize)
+	void GraphicsDevice_DX12::CopyBuffer(const GPUBuffer* pDst, uint64_t dst_offset, const GPUBuffer* pSrc, uint64_t src_offset, uint64_t size, CommandList cmd)
 	{
-		assert(active_renderpass[cmd] == nullptr); // must not be inside render pass
-		assert((int)buffer->desc.ByteWidth >= dataSize || dataSize < 0 && "Data size is too big!");
-		assert(data != nullptr);
+		auto src_internal = to_internal((const GPUBuffer*)pSrc);
+		auto dst_internal = to_internal((const GPUBuffer*)pDst);
 
-		if (data == nullptr || dataSize == 0)
-		{
-			return;
-		}
-
-		dataSize = std::min((int)buffer->desc.ByteWidth, dataSize);
-		dataSize = (dataSize >= 0 ? dataSize : buffer->desc.ByteWidth);
-
-		auto internal_state_dst = to_internal(buffer);
-
-		GPUAllocation allocation = AllocateGPU(dataSize, cmd);
-		memcpy(allocation.data, data, dataSize);
-
-		auto internal_state_src = to_internal(&GetFrameResources().resourceBuffer[cmd].buffer);
-
-		D3D12_RESOURCE_BARRIER barrier = {};
-		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-		barrier.Transition.pResource = internal_state_dst->resource.Get();
-		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
-		if (buffer->desc.BindFlags & BIND_CONSTANT_BUFFER || buffer->desc.BindFlags & BIND_VERTEX_BUFFER)
-		{
-			barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
-		}
-		else if (buffer->desc.BindFlags & BIND_INDEX_BUFFER)
-		{
-			barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_INDEX_BUFFER;
-		}
-		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
-		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		frame_barriers[cmd].push_back(barrier);
-		barrier_flush(cmd);
-
-		GetCommandList(cmd)->CopyBufferRegion(
-			internal_state_dst->resource.Get(), 0,
-			internal_state_src->resource.Get(), allocation.offset,
-			dataSize
-		);
-
-		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
-		frame_barriers[cmd].push_back(barrier);
-
+		GetCommandList(cmd)->CopyBufferRegion(dst_internal->resource.Get(), dst_offset, src_internal->resource.Get(), src_offset, size);
 	}
 	void GraphicsDevice_DX12::QueryBegin(const GPUQueryHeap* heap, uint32_t index, CommandList cmd)
 	{
@@ -6213,8 +6090,6 @@ using namespace DX12_Internal;
 	{
 		assert(active_renderpass[cmd] == nullptr); // Can't resolve inside renderpass!
 
-		barrier_flush(cmd);
-
 		auto internal_state = to_internal(heap);
 		auto dst_internal = to_internal(dest);
 
@@ -6259,6 +6134,11 @@ using namespace DX12_Internal;
 		for (uint32_t i = 0; i < numBarriers; ++i)
 		{
 			const GPUBarrier& barrier = barriers[i];
+
+			if (barrier.type == GPUBarrier::IMAGE_BARRIER && (barrier.image.texture == nullptr || !barrier.image.texture->IsValid()))
+				continue;
+			if (barrier.type == GPUBarrier::BUFFER_BARRIER && (barrier.buffer.buffer == nullptr || !barrier.buffer.buffer->IsValid()))
+				continue;
 
 			D3D12_RESOURCE_BARRIER barrierdesc = {};
 
@@ -6307,38 +6187,28 @@ using namespace DX12_Internal;
 			break;
 			}
 
-			// Try to detect redundant barriers:
-			bool found = false;
-			for (auto& x : barrierdescs)
+			if (barrierdesc.Type == D3D12_RESOURCE_BARRIER_TYPE_TRANSITION &&
+				cmd_meta[cmd].queue > QUEUE_GRAPHICS)
 			{
-				if (x.Type == barrierdesc.Type && x.Flags == barrierdesc.Flags)
-				{
-					switch (x.Type)
-					{
-					default:
-					case D3D12_RESOURCE_BARRIER_TYPE_TRANSITION:
-						if (x.Transition.pResource == barrierdesc.Transition.pResource &&
-							x.Transition.Subresource == barrierdesc.Transition.Subresource)
-						{
-							found = true;
-							x.Transition.StateAfter = barrierdesc.Transition.StateAfter;
-						}
-						break;
-					}
-				}
-				if (found)
-					break;
+				// Only graphics queue can do pixel shader state:
+				barrierdesc.Transition.StateBefore &= ~D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+				barrierdesc.Transition.StateAfter &= ~D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 			}
-			if (!found)
-			{
-				barrierdescs.push_back(barrierdesc);
-			}
+
+			barrierdescs.push_back(barrierdesc);
+		}
+
+		if (!barrierdescs.empty())
+		{
+			GetCommandList(cmd)->ResourceBarrier(
+				(UINT)barrierdescs.size(),
+				barrierdescs.data()
+			);
+			barrierdescs.clear();
 		}
 	}
 	void GraphicsDevice_DX12::BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src)
 	{
-		barrier_flush(cmd);
-
 		auto dst_internal = to_internal(dst);
 
 		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC desc = {};

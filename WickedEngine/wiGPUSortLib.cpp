@@ -55,7 +55,7 @@ namespace wiGPUSortLib
 
 		SortConstants sc;
 		sc.counterReadOffset = counterReadOffset;
-		wiRenderer::BindDynamicConstantBuffer(sc, CB_GETBINDSLOT(SortConstants), cmd);
+		device->BindDynamicConstantBuffer(sc, CB_GETBINDSLOT(SortConstants), cmd);
 
 		// initialize sorting arguments:
 		{
@@ -168,7 +168,7 @@ namespace wiGPUSortLib
 				}
 				sc.counterReadOffset = counterReadOffset;
 
-				wiRenderer::BindDynamicConstantBuffer(sc, CB_GETBINDSLOT(SortConstants), cmd);
+				device->BindDynamicConstantBuffer(sc, CB_GETBINDSLOT(SortConstants), cmd);
 
 				device->Dispatch(numThreadGroups, 1, 1, cmd);
 

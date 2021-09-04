@@ -281,7 +281,20 @@ void wiOcean::UpdateDisplacementMap(const OceanParameters& params, CommandList c
 	perFrameData.g_TimeScale = params.time_scale;
 	perFrameData.g_ChoppyScale = params.choppy_scale;
 	perFrameData.g_GridLen = params.dmap_dim / params.patch_length;
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Buffer(&perFrameCB, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_CONSTANT_BUFFER),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
 	device->UpdateBuffer(&perFrameCB, &perFrameData, cmd);
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Buffer(&perFrameCB, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_CONSTANT_BUFFER),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
 
 	device->BindConstantBuffer(&immutableCB, CB_GETBINDSLOT(Ocean_Simulation_ImmutableCB), cmd);
 	device->BindConstantBuffer(&perFrameCB, CB_GETBINDSLOT(Ocean_Simulation_PerFrameCB), cmd);
@@ -362,7 +375,7 @@ void wiOcean::Render(const CameraComponent& camera, const OceanParameters& param
 	cb.xOceanWaterHeight = params.waterHeight;
 	cb.xOceanSurfaceDisplacementTolerance = std::max(1.0f, params.surfaceDisplacementTolerance);
 
-	wiRenderer::BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(Ocean_RenderCB), cmd);
+	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(Ocean_RenderCB), cmd);
 
 	device->BindResource(&displacementMap, TEXSLOT_ONDEMAND0, cmd);
 	device->BindResource(&gradientMap, TEXSLOT_ONDEMAND1, cmd);

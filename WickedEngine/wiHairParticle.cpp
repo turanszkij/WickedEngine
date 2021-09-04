@@ -252,6 +252,14 @@ void wiHairParticle::UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex, c
 	subset.materialIndex = materialIndex;
 	device->UpdateBuffer(&subsetBuffer, &subset, cmd);
 
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Buffer(&cb, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_CONSTANT_BUFFER),
+			GPUBarrier::Buffer(&subsetBuffer, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
 	// Simulate:
 	{
 		device->BindComputeShader(&cs_simulate, cmd);

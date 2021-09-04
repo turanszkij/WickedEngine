@@ -207,7 +207,21 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Buffer(&primitiveCounterBuffer, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_COPY_DST),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
 	device->UpdateBuffer(&primitiveCounterBuffer, &primitiveCount, cmd);
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Buffer(&primitiveCounterBuffer, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
 	device->EventEnd(cmd);
 
 	device->EventBegin("BVH - Sort Primitive Mortons", cmd);

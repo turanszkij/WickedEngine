@@ -289,7 +289,20 @@ void wiEmittedParticle::UpdateGPU(uint32_t materialIndex, const TransformCompone
 		cb.xSPH_p0 = SPH_p0;
 		cb.xSPH_e = SPH_e;
 
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Buffer(&constantBuffer, RESOURCE_STATE_CONSTANT_BUFFER, RESOURCE_STATE_COPY_DST),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
 		device->UpdateBuffer(&constantBuffer, &cb, cmd);
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Buffer(&constantBuffer, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_CONSTANT_BUFFER),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
 		device->BindConstantBuffer(&constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), cmd);
 
 		const GPUResource* uavs[] = {
