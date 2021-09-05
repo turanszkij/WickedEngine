@@ -4006,6 +4006,7 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 	}
 	else
 	{
+		BindCommonResources(cmd);
 		scene.BVH.Build(scene, cmd);
 	}
 
