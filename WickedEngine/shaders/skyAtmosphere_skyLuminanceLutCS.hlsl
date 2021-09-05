@@ -16,7 +16,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float2 uv = pixelPosition * rcp(multiScatteringLUTRes);
 
     
-	AtmosphereParameters atmosphere = g_xFrame_Atmosphere;
+	AtmosphereParameters atmosphere = g_xFrame.Atmosphere;
     
 	float viewHeight = atmosphere.bottomRadius + skyLuminanceSampleHeight;
     

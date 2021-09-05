@@ -5,24 +5,19 @@
 
 #define THREADCOUNT_SIMULATEHAIR 256
 
-struct Patch
+struct PatchSimulationData
 {
 	float3 position;
 	uint tangent_random;
 	float3 normal; // need high precision for the simulation!
 	uint binormal_length;
-};
-
-struct PatchSimulationData
-{
 	float3 velocity;
 	uint padding;
 };
 
 CBUFFER(HairParticleCB, CBSLOT_OTHER_HAIRPARTICLE)
 {
-	float4x4 xWorld;
-	float4 xColor;
+	float4x4 xHairWorld;
 
 	uint xHairRegenerate;
 	float xLength;
@@ -46,6 +41,11 @@ CBUFFER(HairParticleCB, CBSLOT_OTHER_HAIRPARTICLE)
 	float2 xHairTexMul;
 	float xHairAspect;
 	uint xHairLayerMask;
+
+	uint xHairInstanceIndex;
+	uint padding0;
+	uint padding1;
+	uint padding2;
 };
 
 #endif // WI_SHADERINTEROP_HAIRPARTICLE_H

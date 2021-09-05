@@ -1,5 +1,6 @@
 #ifndef WI_STOCHASTICSSR_HF
 #define WI_STOCHASTICSSR_HF
+#include "brdf.hlsli"
 
 // Stochastic Screen Space Reflections reference:
 // https://www.ea.com/frostbite/news/stochastic-screen-space-reflections

@@ -5,25 +5,32 @@
 #include "objectHF.hlsli"
 #include "hairparticleHF.hlsli"
 
-TEXTURE2D(texture_color, float4, TEXSLOT_ONDEMAND0);
-
 [earlydepthstencil]
-GBuffer main(VertexToPixel input)
+float4 main(VertexToPixel input) : SV_Target
 {
-	float4 color = texture_color.Sample(sampler_linear_wrap, input.tex);
-	color.rgb = DEGAMMA(color.rgb);
-	color.rgb *= input.color;
+	ShaderMaterial material = HairGetMaterial();
+
+	float4 color = 1;
+
+	[branch]
+	if (material.texture_basecolormap_index >= 0 && (g_xFrame.Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+	{
+		color = bindless_textures[material.texture_basecolormap_index].Sample(sampler_linear_wrap, input.tex);
+		color.rgb = DEGAMMA(color.rgb);
+	}
+	color *= material.baseColor;
+
 	float opacity = 1;
-	float3 V = g_xCamera_CamPos - input.pos3D;
+	float3 V = g_xCamera.CamPos - input.pos3D;
 	float dist = length(V);
 	V /= dist;
 	float emissive = 0;
 
 	const uint2 pixel = input.pos.xy;
-	const float2 ScreenCoord = pixel * g_xFrame_InternalResolution_rcp;
+	const float2 ScreenCoord = pixel * g_xFrame.InternalResolution_rcp;
 
 	Surface surface;
-	surface.create(g_xMaterial, color, 0);
+	surface.create(material, color, 0);
 	surface.P = input.pos3D;
 	surface.N = input.nor;
 	surface.V = V;
@@ -47,9 +54,10 @@ GBuffer main(VertexToPixel input)
 
 	TiledLighting(surface, lighting);
 
+
 	ApplyLighting(surface, lighting, color);
 
-	ApplyFog(dist, g_xCamera_CamPos, V, color);
+	ApplyFog(dist, g_xCamera.CamPos, V, color);
 
-	return CreateGBuffer(color, surface);
+	return color;
 }

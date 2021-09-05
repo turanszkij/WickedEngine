@@ -95,12 +95,12 @@ inline void ResolverAABB(Texture2D<float4> currentColor, SamplerState currentSam
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
-	if (texture_depth.Load(uint3(DTid.xy, 1)) == 0)
+	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
+	const float depth = texture_depth.SampleLevel(sampler_linear_clamp, uv, 0);
+	if (depth == 0)
 		return;
 
-    const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
-
-	const float2 velocity = texture_gbuffer2.SampleLevel(sampler_point_clamp, uv, 0).xy;
+	const float2 velocity = texture_gbuffer1.SampleLevel(sampler_point_clamp, uv, 0).xy;
 	float2 prevUV = uv + velocity;
 	if (!is_saturated(prevUV))
 	{
@@ -108,14 +108,21 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 		return;
 	}
 
-	const float roughness = texture_gbuffer1.SampleLevel(sampler_point_clamp, prevUV, 0).a;
+	const float3 P = reconstructPosition(uv, depth, g_xCamera.InvP);
+
+	PrimitiveID prim;
+	prim.unpack(texture_gbuffer0[DTid.xy * 2]);
+
+	Surface surface;
+	surface.load(prim, P);
+
+	const float roughness = surface.roughness;
+
 	if (roughness < 0.01)
 	{
 		output[DTid.xy] = resolve_current[DTid.xy];
 		//return;
 	}
-
-	const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 0);
 
 	// Secondary reprojection based on ray lengths:
 	//	https://www.ea.com/seed/news/seed-dd18-presentation-slides-raytracing (Slide 45)
@@ -125,9 +132,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 		if (rayLength > 0)
 		{
 			const float3 P = reconstructPosition(uv, depth);
-			const float3 V = normalize(g_xCamera_CamPos - P);
+			const float3 V = normalize(g_xCamera.CamPos - P);
 			const float3 rayEnd = P - V * rayLength;
-			float4 rayEndPrev = mul(g_xCamera_PrevVP, float4(rayEnd, 1));
+			float4 rayEndPrev = mul(g_xCamera.PrevVP, float4(rayEnd, 1));
 			rayEndPrev.xy /= rayEndPrev.w;
 			prevUV = rayEndPrev.xy * float2(0.5, -0.5) + 0.5;
 		}

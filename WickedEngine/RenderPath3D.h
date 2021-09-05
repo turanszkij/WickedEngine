@@ -64,8 +64,10 @@ private:
 	uint32_t msaaSampleCount = 1;
 
 public:
+	wiGraphics::Texture rtMain;
+	wiGraphics::Texture rtMain_render; // can be MSAA
 	wiGraphics::Texture rtGbuffer[GBUFFER_COUNT];
-	wiGraphics::Texture rtGbuffer_resolved[GBUFFER_COUNT];
+	wiGraphics::Texture rtPrimitiveID_render; // can be MSAA
 	wiGraphics::Texture rtReflection; // contains the scene rendered for planar reflections
 	wiGraphics::Texture rtSSR; // standard screen-space reflection results
 	wiGraphics::Texture rtSceneCopy; // contains the rendered scene that can be fed into transparent pass for distortion effect
@@ -121,29 +123,7 @@ public:
 	wiRenderer::VolumetricCloudResources volumetriccloudResources;
 	wiRenderer::VolumetricCloudResources volumetriccloudResources_reflection;
 	wiRenderer::BloomResources bloomResources;
-
-	const constexpr wiGraphics::Texture* GetGbuffer_Read() const
-	{
-		if (getMSAASampleCount() > 1)
-		{
-			return rtGbuffer_resolved;
-		}
-		else
-		{
-			return rtGbuffer;
-		}
-	}
-	const constexpr wiGraphics::Texture* GetGbuffer_Read(GBUFFER i) const
-	{
-		if (getMSAASampleCount() > 1)
-		{
-			return &rtGbuffer_resolved[i];
-		}
-		else
-		{
-			return &rtGbuffer[i];
-		}
-	}
+	wiRenderer::SurfelGIResources surfelGIResources;
 
 	// Post-processes are ping-ponged, this function helps to obtain the last postprocess render target that was written
 	const wiGraphics::Texture* GetLastPostprocessRT() const

@@ -26,214 +26,10 @@ enum CSTYPES_BVH
 	CSTYPE_BVH_COUNT
 };
 static Shader computeShaders[CSTYPE_BVH_COUNT];
-static GPUBuffer constantBuffer;
-
-static const int atlasWrapBorder = 1;
-
-void wiGPUBVH::UpdateGlobalMaterialResources(const Scene& scene)
-{
-	GraphicsDevice* device = wiRenderer::GetDevice();
-
-	using namespace wiRectPacker;
-
-	for (size_t i = 0; i < scene.objects.GetCount(); ++i)
-	{
-		const ObjectComponent& object = scene.objects[i];
-
-		if (object.meshID != INVALID_ENTITY)
-		{
-			const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
-
-			for (auto& subset : mesh.subsets)
-			{
-				const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
-
-				if (material.textures[MaterialComponent::BASECOLORMAP].resource != nullptr)
-				{
-					sceneTextures.insert(material.textures[MaterialComponent::BASECOLORMAP].resource);
-				}
-				if (material.textures[MaterialComponent::SURFACEMAP].resource != nullptr)
-				{
-					sceneTextures.insert(material.textures[MaterialComponent::SURFACEMAP].resource);
-				}
-				if (material.textures[MaterialComponent::EMISSIVEMAP].resource != nullptr)
-				{
-					sceneTextures.insert(material.textures[MaterialComponent::EMISSIVEMAP].resource);
-				}
-				if (material.textures[MaterialComponent::NORMALMAP].resource != nullptr)
-				{
-					sceneTextures.insert(material.textures[MaterialComponent::NORMALMAP].resource);
-				}
-			}
-		}
-
-	}
-
-	repackAtlas = false;
-	for (auto res : sceneTextures)
-	{
-		if (res == nullptr)
-		{
-			continue;
-		}
-
-		if (storedTextures.find(res) == storedTextures.end())
-		{
-			// we need to pack this texture into the atlas
-			rect_xywh newRect = rect_xywh(0, 0, res->texture.desc.Width + atlasWrapBorder * 2, res->texture.desc.Height + atlasWrapBorder * 2);
-			storedTextures[res] = newRect;
-
-			repackAtlas = true;
-		}
-
-	}
-
-	if (repackAtlas)
-	{
-		std::vector<rect_xywh*> out_rects(storedTextures.size());
-		int i = 0;
-		for (auto& it : storedTextures)
-		{
-			out_rects[i] = &it.second;
-			i++;
-		}
-
-		std::vector<bin> bins;
-		if (pack(out_rects.data(), (int)storedTextures.size(), 16384, bins))
-		{
-			assert(bins.size() == 1 && "The regions won't fit into the texture!");
-
-			TextureDesc desc;
-			desc.Width = (uint32_t)bins[0].size.w;
-			desc.Height = (uint32_t)bins[0].size.h;
-			desc.MipLevels = 1;
-			desc.ArraySize = 1;
-			desc.Format = FORMAT_R8G8B8A8_UNORM;
-			desc.SampleCount = 1;
-			desc.Usage = USAGE_DEFAULT;
-			desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-			desc.CPUAccessFlags = 0;
-			desc.MiscFlags = 0;
-
-			device->CreateTexture(&desc, nullptr, &globalMaterialAtlas);
-			device->SetName(&globalMaterialAtlas, "globalMaterialAtlas");
-		}
-		else
-		{
-			wiBackLog::post("Tracing atlas packing failed!");
-		}
-	}
-
-	materialArray.clear();
-
-	// Pre-gather scene properties:
-	for (size_t i = 0; i < scene.objects.GetCount(); ++i)
-	{
-		const ObjectComponent& object = scene.objects[i];
-
-		if (object.meshID != INVALID_ENTITY)
-		{
-			const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
-
-			for (auto& subset : mesh.subsets)
-			{
-				const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
-				ShaderMaterial global_material;
-				material.WriteShaderMaterial(&global_material);
-
-				// Add extended properties:
-				const TextureDesc& desc = globalMaterialAtlas.GetDesc();
-
-				if (material.textures[MaterialComponent::BASECOLORMAP].resource != nullptr)
-				{
-					rect_xywh rect = storedTextures[material.textures[MaterialComponent::BASECOLORMAP].resource];
-					// eliminate border expansion:
-					rect.x += atlasWrapBorder;
-					rect.y += atlasWrapBorder;
-					rect.w -= atlasWrapBorder * 2;
-					rect.h -= atlasWrapBorder * 2;
-					global_material.baseColorAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
-						(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
-				}
-
-				if (material.textures[MaterialComponent::SURFACEMAP].resource != nullptr)
-				{
-					rect_xywh rect = storedTextures[material.textures[MaterialComponent::SURFACEMAP].resource];
-					// eliminate border expansion:
-					rect.x += atlasWrapBorder;
-					rect.y += atlasWrapBorder;
-					rect.w -= atlasWrapBorder * 2;
-					rect.h -= atlasWrapBorder * 2;
-					global_material.surfaceMapAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
-						(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
-				}
-
-				if (material.textures[MaterialComponent::EMISSIVEMAP].resource != nullptr)
-				{
-					rect_xywh rect = storedTextures[material.textures[MaterialComponent::EMISSIVEMAP].resource];
-					// eliminate border expansion:
-					rect.x += atlasWrapBorder;
-					rect.y += atlasWrapBorder;
-					rect.w -= atlasWrapBorder * 2;
-					rect.h -= atlasWrapBorder * 2;
-					global_material.emissiveMapAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
-						(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
-				}
-
-				if (material.textures[MaterialComponent::NORMALMAP].resource != nullptr)
-				{
-					rect_xywh rect = storedTextures[material.textures[MaterialComponent::NORMALMAP].resource];
-					// eliminate border expansion:
-					rect.x += atlasWrapBorder;
-					rect.y += atlasWrapBorder;
-					rect.w -= atlasWrapBorder * 2;
-					rect.h -= atlasWrapBorder * 2;
-					global_material.normalMapAtlasMulAdd = XMFLOAT4((float)rect.w / (float)desc.Width, (float)rect.h / (float)desc.Height,
-						(float)rect.x / (float)desc.Width, (float)rect.y / (float)desc.Height);
-				}
-
-				materialArray.push_back(global_material);
-			}
-		}
-	}
-
-	if (materialArray.empty())
-	{
-		return;
-	}
-
-	if (globalMaterialBuffer.GetDesc().ByteWidth != sizeof(ShaderMaterial) * materialArray.size())
-	{
-		GPUBufferDesc desc;
-
-		desc.BindFlags = BIND_SHADER_RESOURCE;
-		desc.StructureByteStride = sizeof(ShaderMaterial);
-		desc.ByteWidth = desc.StructureByteStride * (uint32_t)materialArray.size();
-		desc.CPUAccessFlags = 0;
-		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		desc.Usage = USAGE_DEFAULT;
-
-		device->CreateBuffer(&desc, nullptr, &globalMaterialBuffer);
-	}
-
-}
 
 void wiGPUBVH::Update(const wiScene::Scene& scene)
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
-
-	if (!constantBuffer.IsValid())
-	{
-		GPUBufferDesc bd;
-		bd.Usage = USAGE_DYNAMIC;
-		bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-		bd.BindFlags = BIND_CONSTANT_BUFFER;
-		bd.ByteWidth = sizeof(BVHCB);
-
-		device->CreateBuffer(&bd, nullptr, &constantBuffer);
-		device->SetName(&constantBuffer, "BVHGeneratorCB");
-	}
 
 	if (!primitiveCounterBuffer.IsValid())
 	{
@@ -241,9 +37,8 @@ void wiGPUBVH::Update(const wiScene::Scene& scene)
 		desc.BindFlags = BIND_SHADER_RESOURCE;
 		desc.StructureByteStride = sizeof(uint);
 		desc.ByteWidth = desc.StructureByteStride;
-		desc.CPUAccessFlags = 0;
 		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
 		desc.Usage = USAGE_DEFAULT;
 		device->CreateBuffer(&desc, nullptr, &primitiveCounterBuffer);
 		device->SetName(&primitiveCounterBuffer, "primitiveCounterBuffer");
@@ -262,6 +57,15 @@ void wiGPUBVH::Update(const wiScene::Scene& scene)
 			totalTriangles += (uint)mesh.indices.size() / 3;
 		}
 	}
+	for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
+	{
+		const wiHairParticle& hair = scene.hairs[i];
+
+		if (hair.meshID != INVALID_ENTITY)
+		{
+			totalTriangles += hair.segmentCount * hair.strandCount * 2;
+		}
+	}
 
 	if (totalTriangles > primitiveCapacity)
 	{
@@ -272,7 +76,6 @@ void wiGPUBVH::Update(const wiScene::Scene& scene)
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.StructureByteStride = sizeof(BVHNode);
 		desc.ByteWidth = desc.StructureByteStride * primitiveCapacity * 2;
-		desc.CPUAccessFlags = 0;
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
@@ -282,7 +85,6 @@ void wiGPUBVH::Update(const wiScene::Scene& scene)
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.StructureByteStride = sizeof(uint);
 		desc.ByteWidth = desc.StructureByteStride * primitiveCapacity * 2;
-		desc.CPUAccessFlags = 0;
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
@@ -292,7 +94,6 @@ void wiGPUBVH::Update(const wiScene::Scene& scene)
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.StructureByteStride = sizeof(uint);
 		desc.ByteWidth = desc.StructureByteStride * (((primitiveCapacity - 1) + 31) / 32); // bitfield for internal nodes
-		desc.CPUAccessFlags = 0;
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
@@ -302,7 +103,6 @@ void wiGPUBVH::Update(const wiScene::Scene& scene)
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.StructureByteStride = sizeof(uint);
 		desc.ByteWidth = desc.StructureByteStride * primitiveCapacity;
-		desc.CPUAccessFlags = 0;
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
@@ -312,7 +112,6 @@ void wiGPUBVH::Update(const wiScene::Scene& scene)
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.StructureByteStride = sizeof(BVHPrimitive);
 		desc.ByteWidth = desc.StructureByteStride * primitiveCapacity;
-		desc.CPUAccessFlags = 0;
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
@@ -320,18 +119,7 @@ void wiGPUBVH::Update(const wiScene::Scene& scene)
 		device->SetName(&primitiveBuffer, "primitiveBuffer");
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.StructureByteStride = sizeof(BVHPrimitiveData);
 		desc.ByteWidth = desc.StructureByteStride * primitiveCapacity;
-		desc.CPUAccessFlags = 0;
-		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		desc.Usage = USAGE_DEFAULT;
-		device->CreateBuffer(&desc, nullptr, &primitiveDataBuffer);
-		device->SetName(&primitiveDataBuffer, "primitiveDataBuffer");
-
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.ByteWidth = desc.StructureByteStride * primitiveCapacity;
-		desc.CPUAccessFlags = 0;
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
@@ -339,40 +127,14 @@ void wiGPUBVH::Update(const wiScene::Scene& scene)
 		device->CreateBuffer(&desc, nullptr, &primitiveMortonBuffer);
 		device->SetName(&primitiveMortonBuffer, "primitiveMortonBuffer");
 	}
-
-	UpdateGlobalMaterialResources(scene);
 }
 void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	// Pre-gather scene properties:
-	uint totalTriangles = 0;
-	for (size_t i = 0; i < scene.objects.GetCount(); ++i)
-	{
-		const ObjectComponent& object = scene.objects[i];
-
-		if (object.meshID != INVALID_ENTITY)
-		{
-			const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
-
-			totalTriangles += (uint)mesh.indices.size() / 3;
-		}
-	}
-
 	auto range = wiProfiler::BeginRangeGPU("BVH Rebuild", cmd);
 
-	if (repackAtlas)
-	{
-		for (auto& it : storedTextures)
-		{
-			wiRenderer::CopyTexture2D(globalMaterialAtlas, -1, it.second.x + atlasWrapBorder, it.second.y + atlasWrapBorder, it.first->texture, 0, cmd, wiRenderer::BORDEREXPAND_WRAP);
-		}
-	}
-	device->UpdateBuffer(&globalMaterialBuffer, materialArray.data(), cmd, sizeof(ShaderMaterial) * (int)materialArray.size());
-
 	uint32_t primitiveCount = 0;
-	uint32_t materialCount = 0;
 
 	device->EventBegin("BVH - Primitive Builder", cmd);
 	{
@@ -380,10 +142,9 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
 		const GPUResource* uavs[] = {
 			&primitiveIDBuffer,
 			&primitiveBuffer,
-			&primitiveDataBuffer,
 			&primitiveMortonBuffer,
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		for (size_t i = 0; i < scene.objects.GetCount(); ++i)
 		{
@@ -393,34 +154,51 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
 			{
 				const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
 
-				BVHCB cb;
-				cb.xBVHWorld = object.transform_index >= 0 ? scene.transforms[object.transform_index].world : IDENTITYMATRIX;
-				cb.xBVHInstanceColor = object.color;
-				cb.xBVHMaterialOffset = materialCount;
-				cb.xBVHMeshTriangleOffset = primitiveCount;
-				cb.xBVHMeshTriangleCount = (uint)mesh.indices.size() / 3;
-				cb.xBVHMeshVertexPOSStride = sizeof(MeshComponent::Vertex_POS);
+				for (size_t j = 0; j < mesh.subsets.size(); ++j)
+				{
+					auto& subset = mesh.subsets[j];
 
-				device->UpdateBuffer(&constantBuffer, &cb, cmd);
+					BVHPushConstants push;
+					push.instanceIndex = (uint)i;
+					push.subsetIndex = (uint)j;
+					push.primitiveCount = subset.indexCount / 3;
+					push.primitiveOffset = primitiveCount;
+					device->PushConstants(&push, sizeof(push), cmd);
 
-				primitiveCount += cb.xBVHMeshTriangleCount;
+					primitiveCount += push.primitiveCount;
 
-				device->BindConstantBuffer(CS, &constantBuffer, CB_GETBINDSLOT(BVHCB), cmd);
+					device->Dispatch(
+						(push.primitiveCount + BVH_BUILDER_GROUPSIZE - 1) / BVH_BUILDER_GROUPSIZE,
+						1,
+						1,
+						cmd
+					);
+				}
 
-				const GPUResource* res[] = {
-					&globalMaterialBuffer,
-					&mesh.indexBuffer,
-					mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
-					&mesh.vertexBuffer_UV0,
-					&mesh.vertexBuffer_UV1,
-					&mesh.vertexBuffer_COL,
-					&mesh.vertexBuffer_SUB,
-				};
-				device->BindResources(CS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
+			}
+		}
 
-				device->Dispatch((cb.xBVHMeshTriangleCount + BVH_BUILDER_GROUPSIZE - 1) / BVH_BUILDER_GROUPSIZE, 1, 1, cmd);
+		for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
+		{
+			const wiHairParticle& hair = scene.hairs[i];
 
-				materialCount += (uint32_t)mesh.subsets.size();
+			if (hair.meshID != INVALID_ENTITY)
+			{
+				BVHPushConstants push;
+				push.instanceIndex = (uint)(scene.objects.GetCount() + i);
+				push.subsetIndex = 0;
+				push.primitiveCount = hair.segmentCount * hair.strandCount * 2;
+				push.primitiveOffset = primitiveCount;
+				device->PushConstants(&push, sizeof(push), cmd);
+
+				primitiveCount += push.primitiveCount;
+
+				device->Dispatch(
+					(push.primitiveCount + BVH_BUILDER_GROUPSIZE - 1) / BVH_BUILDER_GROUPSIZE,
+					1,
+					1,
+					cmd
+				);
 			}
 		}
 
@@ -428,9 +206,22 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
 			GPUBarrier::Memory()
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
+	}
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Buffer(&primitiveCounterBuffer, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_COPY_DST),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 	device->UpdateBuffer(&primitiveCounterBuffer, &primitiveCount, cmd);
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Buffer(&primitiveCounterBuffer, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
 	device->EventEnd(cmd);
 
 	device->EventBegin("BVH - Sort Primitive Mortons", cmd);
@@ -445,14 +236,14 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
 			&bvhParentBuffer,
 			&bvhFlagBuffer
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		const GPUResource* res[] = {
 			&primitiveCounterBuffer,
 			&primitiveIDBuffer,
 			&primitiveMortonBuffer,
 		};
-		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
+		device->BindResources(res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
 
 		device->Dispatch((primitiveCount + BVH_BUILDER_GROUPSIZE - 1) / BVH_BUILDER_GROUPSIZE, 1, 1, cmd);
 
@@ -460,7 +251,6 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
 			GPUBarrier::Memory()
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 	}
 	device->EventEnd(cmd);
 
@@ -476,7 +266,7 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
 			&bvhNodeBuffer,
 			&bvhFlagBuffer,
 		};
-		device->BindUAVs(CS, uavs, 0, arraysize(uavs), cmd);
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 		const GPUResource* res[] = {
 			&primitiveCounterBuffer,
@@ -484,12 +274,11 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
 			&primitiveBuffer,
 			&bvhParentBuffer,
 		};
-		device->BindResources(CS, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
+		device->BindResources(res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
 
 		device->Dispatch((primitiveCount + BVH_BUILDER_GROUPSIZE - 1) / BVH_BUILDER_GROUPSIZE, 1, 1, cmd);
 
 		device->Barrier(barriers, arraysize(barriers), cmd);
-		device->UnbindUAVs(0, arraysize(uavs), cmd);
 	}
 	device->EventEnd(cmd);
 
@@ -505,7 +294,7 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
 		readback_desc.Usage = USAGE_STAGING;
 		readback_desc.CPUAccessFlags = CPU_ACCESS_READ;
 		readback_desc.BindFlags = 0;
-		readback_desc.MiscFlags = 0;
+		readback_desc.Flags = 0;
 		GPUBuffer readback_primitiveCounterBuffer;
 		device->CreateBuffer(&readback_desc, nullptr, &readback_primitiveCounterBuffer);
 		uint primitiveCount;
@@ -521,7 +310,7 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
 			readback_desc.Usage = USAGE_STAGING;
 			readback_desc.CPUAccessFlags = CPU_ACCESS_READ;
 			readback_desc.BindFlags = 0;
-			readback_desc.MiscFlags = 0;
+			readback_desc.Flags = 0;
 			GPUBuffer readback_nodeBuffer;
 			device->CreateBuffer(&readback_desc, nullptr, &readback_nodeBuffer);
 			vector<BVHNode> nodes(readback_desc.ByteWidth / sizeof(BVHNode));
@@ -562,7 +351,7 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
 			readback_desc.Usage = USAGE_STAGING;
 			readback_desc.CPUAccessFlags = CPU_ACCESS_READ;
 			readback_desc.BindFlags = 0;
-			readback_desc.MiscFlags = 0;
+			readback_desc.Flags = 0;
 			GPUBuffer readback_flagBuffer;
 			device->CreateBuffer(&readback_desc, nullptr, &readback_flagBuffer);
 			vector<uint> flags(readback_desc.ByteWidth / sizeof(uint));
@@ -581,27 +370,21 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
 #endif // BVH_VALIDATE
 
 }
-void wiGPUBVH::Bind(SHADERSTAGE stage, CommandList cmd) const
+void wiGPUBVH::Bind(CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	const GPUResource* res[] = {
-		&globalMaterialBuffer,
-		(globalMaterialAtlas.IsValid() ? &globalMaterialAtlas : wiTextureHelper::getWhite()),
 		&primitiveCounterBuffer,
 		&primitiveBuffer,
-		&primitiveDataBuffer,
 		&bvhNodeBuffer,
 	};
-	device->BindResources(stage, res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
+	device->BindResources(res, TEXSLOT_BVH_COUNTER, arraysize(res), cmd);
 }
 
 void wiGPUBVH::Clear()
 {
 	primitiveCapacity = 0;
-	materialArray.clear();
-	storedTextures.clear();
-	sceneTextures.clear();
 }
 
 namespace wiGPUBVH_Internal

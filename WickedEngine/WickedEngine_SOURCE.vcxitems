@@ -262,7 +262,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGPUBVH.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGPUSortLib.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX12.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_SharedInternals.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_Vulkan.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiInput.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiInput_BindLua.h" />
@@ -319,7 +318,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiShaderCompiler.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiSpriteFont_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphics.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX11.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGUI.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiHairParticle.h" />
@@ -658,7 +656,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSDLInput.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiShaderCompiler.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSpriteFont_BindLua.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX11.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGUI.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiHairParticle.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiHelper.cpp" />

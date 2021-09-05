@@ -16,7 +16,6 @@
 #include "wiImage.h"
 #include "wiEvent.h"
 
-#include "wiGraphicsDevice_DX11.h"
 #include "wiGraphicsDevice_DX12.h"
 #include "wiGraphicsDevice_Vulkan.h"
 
@@ -107,64 +106,61 @@ void MainComponent::Run()
 		wiLua::RunFile("startup.lua");
 	}
 
+	if (!is_window_active)
+	{
+		// If the application is not active, disable Update loops:
+		deltaTimeAccumulator = 0;
+		return;
+	}
+
 	wiProfiler::BeginFrame();
 
 	deltaTime = float(std::max(0.0, timer.elapsed() / 1000.0));
 	timer.record();
 
-	if (is_window_active)
+	// Wake up the events that need to be executed on the main thread, in thread safe manner:
+	wiEvent::FireEvent(SYSTEM_EVENT_THREAD_SAFE_POINT, 0);
+
+	const float dt = framerate_lock ? (1.0f / targetFrameRate) : deltaTime;
+
+	fadeManager.Update(dt);
+
+	if (GetActivePath() != nullptr)
 	{
-		// If the application is active, run Update loops:
+		GetActivePath()->init(canvas);
+		GetActivePath()->PreUpdate();
+	}
 
-		// Wake up the events that need to be executed on the main thread, in thread safe manner:
-		wiEvent::FireEvent(SYSTEM_EVENT_THREAD_SAFE_POINT, 0);
-
-		const float dt = framerate_lock ? (1.0f / targetFrameRate) : deltaTime;
-
-		fadeManager.Update(dt);
-
-		if (GetActivePath() != nullptr)
+	// Fixed time update:
+	auto range = wiProfiler::BeginRangeCPU("Fixed Update");
+	{
+		if (frameskip)
 		{
-			GetActivePath()->init(canvas);
-			GetActivePath()->PreUpdate();
-		}
-
-		// Fixed time update:
-		auto range = wiProfiler::BeginRangeCPU("Fixed Update");
-		{
-			if (frameskip)
+			deltaTimeAccumulator += dt;
+			if (deltaTimeAccumulator > 10)
 			{
-				deltaTimeAccumulator += dt;
-				if (deltaTimeAccumulator > 10)
-				{
-					// application probably lost control, fixed update would take too long
-					deltaTimeAccumulator = 0;
-				}
-
-				const float targetFrameRateInv = 1.0f / targetFrameRate;
-				while (deltaTimeAccumulator >= targetFrameRateInv)
-				{
-					FixedUpdate();
-					deltaTimeAccumulator -= targetFrameRateInv;
-				}
+				// application probably lost control, fixed update would take too long
+				deltaTimeAccumulator = 0;
 			}
-			else
+
+			const float targetFrameRateInv = 1.0f / targetFrameRate;
+			while (deltaTimeAccumulator >= targetFrameRateInv)
 			{
 				FixedUpdate();
+				deltaTimeAccumulator -= targetFrameRateInv;
 			}
 		}
-		wiProfiler::EndRange(range); // Fixed Update
-
-		// Variable-timed update:
-		Update(dt);
-
-		Render();
+		else
+		{
+			FixedUpdate();
+		}
 	}
-	else
-	{
-		// If the application is not active, disable Update loops:
-		deltaTimeAccumulator = 0;
-	}
+	wiProfiler::EndRange(range); // Fixed Update
+
+	// Variable-timed update:
+	Update(dt);
+
+	Render();
 
 	wiInput::Update(window);
 
@@ -267,12 +263,6 @@ void MainComponent::Compose(CommandList cmd)
 			ss << "[UWP]";
 #endif
 
-#ifdef WICKEDENGINE_BUILD_DX11
-			if (dynamic_cast<GraphicsDevice_DX11*>(device))
-			{
-				ss << "[DX11]";
-			}
-#endif
 #ifdef WICKEDENGINE_BUILD_DX12
 			if (dynamic_cast<GraphicsDevice_DX12*>(device))
 			{
@@ -356,16 +346,9 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 		bool debugdevice = wiStartupArguments::HasArgument("debugdevice");
 		bool gpuvalidation = wiStartupArguments::HasArgument("gpuvalidation");
 
-		bool use_dx11 = wiStartupArguments::HasArgument("dx11");
 		bool use_dx12 = wiStartupArguments::HasArgument("dx12");
 		bool use_vulkan = wiStartupArguments::HasArgument("vulkan");
 
-#ifndef WICKEDENGINE_BUILD_DX11
-		if (use_dx11) {
-			wiHelper::messageBox("The engine was built without DX11 support!", "Error");
-			use_dx11 = false;
-		}
-#endif
 #ifndef WICKEDENGINE_BUILD_DX12
 		if (use_dx12) {
 			wiHelper::messageBox("The engine was built without DX12 support!", "Error");
@@ -379,11 +362,9 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 		}
 #endif
 
-		if (!use_dx11 && !use_dx12 && !use_vulkan)
+		if (!use_dx12 && !use_vulkan)
 		{
-#if defined(WICKEDENGINE_BUILD_DX11)
-			use_dx11 = true;
-#elif defined(WICKEDENGINE_BUILD_DX12)
+#if defined(WICKEDENGINE_BUILD_DX12)
 			use_dx12 = true;
 #elif defined(WICKEDENGINE_BUILD_VULKAN)
 			use_vulkan = true;
@@ -392,7 +373,7 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 			assert(false);
 #endif
 		}
-		assert(use_dx11 || use_dx12 || use_vulkan);
+		assert(use_dx12 || use_vulkan);
 
 		if (use_vulkan)
 		{
@@ -406,13 +387,6 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 #ifdef WICKEDENGINE_BUILD_DX12
 			wiRenderer::SetShaderPath(wiRenderer::GetShaderPath() + "hlsl6/");
 			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_DX12>(debugdevice, gpuvalidation));
-#endif
-		}
-		else if (use_dx11)
-		{
-#ifdef WICKEDENGINE_BUILD_DX11
-			wiRenderer::SetShaderPath(wiRenderer::GetShaderPath() + "hlsl5/");
-			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_DX11>(debugdevice));
 #endif
 		}
 	}

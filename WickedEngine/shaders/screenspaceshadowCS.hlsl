@@ -1,4 +1,4 @@
-#define BRDF_NDOTL_BIAS 0.1
+//#define BRDF_NDOTL_BIAS 0.1
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 #include "raytracingHF.hlsli"
@@ -21,19 +21,12 @@ groupshared float tile_Z[TILE_SIZE * TILE_SIZE];
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint groupIndex : SV_GroupIndex)
 {
-#ifdef RTSHADOW
-
-	// ray traced shadow works better with GBUFFER normal:
-	//	Reprojection issues are mostly solved by denoiser anyway
 	const float2 uv = ((float2)DTid.xy + 0.5) * xPPResolution_rcp;
-	const float2 velocity = texture_gbuffer2.SampleLevel(sampler_point_clamp, uv, 0).xy;
-	const float2 prevUV = uv + velocity;
-	const float4 g1 = texture_gbuffer1.SampleLevel(sampler_linear_clamp, prevUV, 0);
-	const float3 N = normalize(g1.rgb * 2 - 1);
-
 	const float depth = texture_depth.SampleLevel(sampler_linear_clamp, uv, 0);
-	const float3 P = reconstructPosition(uv, depth);
+	if (depth == 0)
+		return;
 
+#ifdef RTSHADOW
 	uint flatTileIdx = 0;
 	if (GTid.y < 4)
 	{
@@ -44,84 +37,24 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 		flatTileIdx = flatten2D(Gid.xy * uint2(1, 2) + uint2(0, 1), (xPPResolution + uint2(7, 3)) / uint2(8, 4));
 	}
 	output_tiles[flatTileIdx] = 0;
+#endif // RTSHADOW
+
+	float3 P = reconstructPosition(uv, depth);
+
+	PrimitiveID prim;
+	prim.unpack(texture_gbuffer0[DTid.xy * 2]);
+
+	Surface surface;
+	if (!surface.load(prim, P))
+	{
+		return;
+	}
+	float3 N = surface.N;
 
 	const float2 bluenoise = blue_noise(DTid.xy).xy;
 
-#else
-
-	// Screen space shadow will reconstruct normal from depth:
-
-	const int2 tile_upperleft = Gid.xy * POSTPROCESS_BLOCKSIZE - TILE_BORDER;
-	for (uint t = groupIndex; t < TILE_SIZE * TILE_SIZE; t += POSTPROCESS_BLOCKSIZE * POSTPROCESS_BLOCKSIZE)
-	{
-		const uint2 pixel = tile_upperleft + unflatten2D(t, TILE_SIZE);
-		const float2 uv = (pixel + 0.5f) * xPPResolution_rcp;
-		const float depth = texture_depth.SampleLevel(sampler_linear_clamp, uv, 0);
-		const float3 position = reconstructPosition(uv, depth);
-		tile_XY[t] = position.xy;
-		tile_Z[t] = position.z;
-	}
-	GroupMemoryBarrierWithGroupSync();
-
-	// reconstruct flat normals from depth buffer:
-	//	Explanation: There are two main ways to reconstruct flat normals from depth buffer:
-	//		1: use ddx() and ddy() on the reconstructed positions to compute triangle, this has artifacts on depth discontinuities and doesn't work in compute shader
-	//		2: Take 3 taps from the depth buffer, reconstruct positions and compute triangle. This can still produce artifacts
-	//			on discontinuities, but a little less. To fix the remaining artifacts, we can take 4 taps around the center, and find the "best triangle"
-	//			by only computing the positions from those depths that have the least amount of discontinuity
-
-	const uint cross_idx[5] = {
-		flatten2D(TILE_BORDER + GTid.xy, TILE_SIZE),				// 0: center
-		flatten2D(TILE_BORDER + GTid.xy + int2(1, 0), TILE_SIZE),	// 1: right
-		flatten2D(TILE_BORDER + GTid.xy + int2(-1, 0), TILE_SIZE),	// 2: left
-		flatten2D(TILE_BORDER + GTid.xy + int2(0, 1), TILE_SIZE),	// 3: down
-		flatten2D(TILE_BORDER + GTid.xy + int2(0, -1), TILE_SIZE),	// 4: up
-	};
-
-	const float center_Z = tile_Z[cross_idx[0]];
-
-	[branch]
-	if (center_Z >= g_xCamera_ZFarP)
-		return;
-
-	const uint best_Z_horizontal = abs(tile_Z[cross_idx[1]] - center_Z) < abs(tile_Z[cross_idx[2]] - center_Z) ? 1 : 2;
-	const uint best_Z_vertical = abs(tile_Z[cross_idx[3]] - center_Z) < abs(tile_Z[cross_idx[4]] - center_Z) ? 3 : 4;
-
-	float3 p1 = 0, p2 = 0;
-	if (best_Z_horizontal == 1 && best_Z_vertical == 4)
-	{
-		p1 = float3(tile_XY[cross_idx[1]], tile_Z[cross_idx[1]]);
-		p2 = float3(tile_XY[cross_idx[4]], tile_Z[cross_idx[4]]);
-	}
-	else if (best_Z_horizontal == 1 && best_Z_vertical == 3)
-	{
-		p1 = float3(tile_XY[cross_idx[3]], tile_Z[cross_idx[3]]);
-		p2 = float3(tile_XY[cross_idx[1]], tile_Z[cross_idx[1]]);
-	}
-	else if (best_Z_horizontal == 2 && best_Z_vertical == 4)
-	{
-		p1 = float3(tile_XY[cross_idx[4]], tile_Z[cross_idx[4]]);
-		p2 = float3(tile_XY[cross_idx[2]], tile_Z[cross_idx[2]]);
-	}
-	else if (best_Z_horizontal == 2 && best_Z_vertical == 3)
-	{
-		p1 = float3(tile_XY[cross_idx[2]], tile_Z[cross_idx[2]]);
-		p2 = float3(tile_XY[cross_idx[3]], tile_Z[cross_idx[3]]);
-	}
-
-	const float3 P = float3(tile_XY[cross_idx[0]], tile_Z[cross_idx[0]]);
-	const float3 N = normalize(cross(p2 - P, p1 - P));
-
-#endif // RTSHADOW
-
-	Surface surface;
-	surface.init();
-	surface.pixel = DTid.xy;
-	surface.P = P;
-	surface.N = N;
-
-	const uint2 tileIndex = uint2(floor(surface.pixel * 2 / TILED_CULLING_BLOCKSIZE));
-	const uint flatTileIndex = flatten2D(tileIndex, g_xFrame_EntityCullingTileCount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
+	const uint2 tileIndex = uint2(floor(DTid.xy * 2 / TILED_CULLING_BLOCKSIZE));
+	const uint flatTileIndex = flatten2D(tileIndex, g_xFrame.EntityCullingTileCount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
 
 	uint shadow_mask[4] = {0,0,0,0}; // FXC issue: can't dynamically index into uint4, unless unrolling all loops
 	uint shadow_index = 0;
@@ -131,7 +64,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	ray.Origin = P;
 
 #ifndef RTSHADOW
-	ray.Origin = mul(g_xCamera_View, float4(ray.Origin, 1)).xyz;
+	ray.Origin = mul(g_xCamera.View, float4(ray.Origin, 1)).xyz;
 
 	const float range = xPPParams0.x;
 	const uint samplecount = xPPParams0.y;
@@ -141,11 +74,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 #endif // RTSHADOW
 
 	[branch]
-	if (g_xFrame_LightArrayCount > 0)
+	if (g_xFrame.LightArrayCount > 0)
 	{
 		// Loop through light buckets in the tile:
-		const uint first_item = g_xFrame_LightArrayOffset;
-		const uint last_item = first_item + g_xFrame_LightArrayCount - 1;
+		const uint first_item = g_xFrame.LightArrayOffset;
+		const uint last_item = first_item + g_xFrame.LightArrayCount - 1;
 		const uint first_bucket = first_item / 32;
 		const uint last_bucket = min(last_item / 32, max(0, SHADER_ENTITY_TILE_BUCKET_COUNT - 1));
 		[loop]
@@ -168,7 +101,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 				[branch]
 				if (entity_index >= first_item && entity_index <= last_item)
 				{
-					shadow_index = entity_index - g_xFrame_LightArrayOffset;
+					shadow_index = entity_index - g_xFrame.LightArrayOffset;
 					if (shadow_index >= MAX_RTSHADOWS)
 						break;
 
@@ -286,34 +219,16 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 						);
 						while (q.Proceed())
 						{
-							ShaderMesh mesh = bindless_buffers[NonUniformResourceIndex(q.CandidateInstanceID())].Load<ShaderMesh>(0);
-							ShaderMeshSubset subset = bindless_subsets[NonUniformResourceIndex(mesh.subsetbuffer)][q.CandidateGeometryIndex()];
-							ShaderMaterial material = bindless_buffers[NonUniformResourceIndex(subset.material)].Load<ShaderMaterial>(0);
-							[branch]
-							if (!material.IsCastingShadow())
-							{
-								continue;
-							}
-							[branch]
-							if (material.texture_basecolormap_index < 0)
-							{
-								q.CommitNonOpaqueTriangleHit();
-								break;
-							}
+							PrimitiveID prim;
+							prim.primitiveIndex = q.CandidatePrimitiveIndex();
+							prim.instanceIndex = q.CandidateInstanceID();
+							prim.subsetIndex = q.CandidateGeometryIndex();
 
 							Surface surface;
-							EvaluateObjectSurface(
-								mesh,
-								subset,
-								material,
-								q.CandidatePrimitiveIndex(),
-								q.CandidateTriangleBarycentrics(),
-								q.CandidateObjectToWorld3x4(),
-								surface
-							);
+							surface.load(prim, q.CandidateTriangleBarycentrics());
 
 							[branch]
-							if (surface.opacity >= material.alphaTest)
+							if (surface.opacity >= surface.material.alphaTest)
 							{
 								q.CommitNonOpaqueTriangleHit();
 								break;
@@ -326,7 +241,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 
 #else
 						// screen space raymarch shadow:
-						ray.Direction = normalize(mul((float3x3)g_xCamera_View, L));
+						ray.Direction = normalize(mul((float3x3)g_xCamera.View, L));
 						float3 rayPos = ray.Origin + ray.Direction * stepsize * offset;
 
 						float occlusion = 0;
@@ -335,7 +250,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 						{
 							rayPos += ray.Direction * stepsize;
 
-							float4 proj = mul(g_xCamera_Proj, float4(rayPos, 1));
+							float4 proj = mul(g_xCamera.Proj, float4(rayPos, 1));
 							proj.xyz /= proj.w;
 							proj.xy = proj.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 
@@ -343,7 +258,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 							if (is_saturated(proj.xy))
 							{
 								const float ray_depth_real = proj.w;
-								const float ray_depth_sample = texture_lineardepth.SampleLevel(sampler_point_clamp, proj.xy, 1) * g_xCamera_ZFarP;
+								const float ray_depth_sample = texture_lineardepth.SampleLevel(sampler_point_clamp, proj.xy, 1) * g_xCamera.ZFarP;
 								const float ray_depth_delta = ray_depth_real - ray_depth_sample;
 								if (ray_depth_delta > 0 && ray_depth_delta < thickness)
 								{

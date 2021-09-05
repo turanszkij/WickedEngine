@@ -55,7 +55,7 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 
 #ifdef OPEN_IMAGE_DENOISE
 		desc.BindFlags = BIND_UNORDERED_ACCESS;
-		desc.layout = IMAGE_LAYOUT_UNORDERED_ACCESS;
+		desc.layout = RESOURCE_STATE_UNORDERED_ACCESS;
 		device->CreateTexture(&desc, nullptr, &denoiserAlbedo);
 		device->SetName(&denoiserAlbedo, "denoiserAlbedo");
 		device->CreateTexture(&desc, nullptr, &denoiserNormal);
@@ -92,6 +92,8 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 
 		device->CreateRenderPass(&desc, &renderpass_debugbvh);
 	}
+
+	wiRenderer::CreateLuminanceResources(luminanceResources, internalResolution);
 
 	// also reset accumulation buffer state:
 	sam = -1;
@@ -306,25 +308,6 @@ void RenderPath3D_PathTracing::Render() const
 				wiProfiler::EndRange(range); // Traced Scene
 			}
 
-			wiRenderer::Postprocess_Tonemap(
-				denoiserResult.IsValid() ? denoiserResult : traceResult,
-				rtPostprocess_LDR[0],
-				cmd,
-				getExposure(),
-				getDitherEnabled(),
-				getColorGradingEnabled() ? (scene->weather.colorGradingMap == nullptr ? nullptr : &scene->weather.colorGradingMap->texture) : nullptr
-			);
-
-			// GUI Background blurring:
-			{
-				auto range = wiProfiler::BeginRangeGPU("GUI Background Blur", cmd);
-				device->EventBegin("GUI Background Blur", cmd);
-				wiRenderer::Postprocess_Downsample4x(rtPostprocess_LDR[0], rtGUIBlurredBackground[0], cmd);
-				wiRenderer::Postprocess_Downsample4x(rtGUIBlurredBackground[0], rtGUIBlurredBackground[2], cmd);
-				wiRenderer::Postprocess_Blur_Gaussian(rtGUIBlurredBackground[2], rtGUIBlurredBackground[1], rtGUIBlurredBackground[2], cmd, -1, -1, true);
-				device->EventEnd(cmd);
-				wiProfiler::EndRange(range);
-			}
 			});
 	}
 
@@ -342,13 +325,18 @@ void RenderPath3D_PathTracing::Render() const
 		);
 		wiRenderer::BindCommonResources(cmd);
 
+		Texture srcTex = denoiserResult.IsValid() && !wiJobSystem::IsBusy(denoiserContext) ? denoiserResult : traceResult;
+
 		wiRenderer::Postprocess_Tonemap(
-			denoiserResult.IsValid() && !wiJobSystem::IsBusy(denoiserContext) ? denoiserResult : traceResult,
+			srcTex,
 			rtPostprocess_LDR[0],
 			cmd,
 			getExposure(),
 			getDitherEnabled(),
-			getColorGradingEnabled() ? (scene->weather.colorGradingMap == nullptr ? nullptr : &scene->weather.colorGradingMap->texture) : nullptr
+			getColorGradingEnabled() ? (scene->weather.colorGradingMap == nullptr ? nullptr : &scene->weather.colorGradingMap->texture) : nullptr,
+			nullptr,
+			getEyeAdaptionEnabled() ? wiRenderer::ComputeLuminance(luminanceResources, srcTex, cmd, getEyeAdaptionRate()) : nullptr,
+			getEyeAdaptionKey()
 		);
 
 		// GUI Background blurring:

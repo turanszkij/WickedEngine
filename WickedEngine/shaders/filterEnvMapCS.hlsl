@@ -1,5 +1,7 @@
 #include "globals.hlsli"
-#include "ShaderInterop_Utility.h"
+#include "ShaderInterop_Renderer.h"
+
+PUSHCONSTANT(push, FilterEnvmapCB);
 
 TEXTURECUBEARRAY(input, float4, TEXSLOT_ONDEMAND0);
 RWTEXTURE2DARRAY(output, float4, 0);
@@ -21,25 +23,25 @@ float3 ImportanceSampleGGX(float2 Xi, float Roughness, float3 N)
 [numthreads(GENERATEMIPCHAIN_2D_BLOCK_SIZE, GENERATEMIPCHAIN_2D_BLOCK_SIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	if (DTid.x < filterResolution.x && DTid.y < filterResolution.y)
+	if (DTid.x < push.filterResolution.x && DTid.y < push.filterResolution.y)
 	{
-		float2 uv = (DTid.xy + 0.5f) * filterResolution_rcp.xy;
+		float2 uv = (DTid.xy + 0.5f) * push.filterResolution_rcp.xy;
 		float3 N = UV_to_CubeMap(uv, DTid.z);
 
 		float3x3 tangentSpace = GetTangentSpace(N);
 
 		float4 col = 0;
 
-		for (uint i = 0; i < filterRayCount; ++i)
+		for (uint i = 0; i < push.filterRayCount; ++i)
 		{
-			float2 hamm = hammersley2d(i, filterRayCount);
-			float3 hemisphere = ImportanceSampleGGX(hamm, filterRoughness, N);
+			float2 hamm = hammersley2d(i, push.filterRayCount);
+			float3 hemisphere = ImportanceSampleGGX(hamm, push.filterRoughness, N);
 			float3 cone = mul(hemisphere, tangentSpace);
 
-			col += input.SampleLevel(sampler_linear_clamp, float4(cone, filterArrayIndex), 0);
+			col += input.SampleLevel(sampler_linear_clamp, float4(cone, push.filterArrayIndex), 0);
 		}
-		col /= (float)filterRayCount;
+		col /= (float)push.filterRayCount;
 
-		output[uint3(DTid.xy, DTid.z + filterArrayIndex * 6)] = col;
+		output[uint3(DTid.xy, DTid.z + push.filterArrayIndex * 6)] = col;
 	}
 }

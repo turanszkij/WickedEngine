@@ -1,3 +1,3 @@
 #define OBJECTSHADER_COMPILE_VS
-#define OBJECTSHADER_LAYOUT_POS
+#define OBJECTSHADER_LAYOUT_SHADOW
 #include "objectHF.hlsli"

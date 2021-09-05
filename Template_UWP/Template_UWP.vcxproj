@@ -159,11 +159,6 @@
     </AppxManifest>
   </ItemGroup>
   <ItemGroup>
-    <CopyFileToFolders Include="..\WickedEngine\d3dcompiler_47.dll">
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
-      <FileType>Document</FileType>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
-    </CopyFileToFolders>
     <CopyFileToFolders Include="..\WickedEngine\dxcompiler.dll">
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
       <FileType>Document</FileType>

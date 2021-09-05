@@ -61,7 +61,6 @@ add_library(${TARGET_NAME} STATIC
 	wiGPUBVH.cpp
 	wiGPUSortLib.cpp
 	wiGraphicsDevice.cpp
-	wiGraphicsDevice_DX11.cpp
 	wiGraphicsDevice_DX12.cpp
 	wiGraphicsDevice_Vulkan.cpp
 	wiGUI.cpp

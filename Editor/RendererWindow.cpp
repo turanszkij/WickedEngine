@@ -64,6 +64,26 @@ void RendererWindow::Create(EditorComponent* editor)
 	});
 	AddWidget(&gammaSlider);
 
+	surfelGICheckBox.Create("Surfel GI: ");
+	surfelGICheckBox.SetTooltip("Surfel GI is a raytraced diffuse GI using raytracing and surface cache.");
+	surfelGICheckBox.SetPos(XMFLOAT2(x, y += step));
+	surfelGICheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
+	surfelGICheckBox.OnClick([](wiEventArgs args) {
+		wiRenderer::SetSurfelGIEnabled(args.bValue);
+		});
+	surfelGICheckBox.SetCheck(wiRenderer::GetSurfelGIEnabled());
+	AddWidget(&surfelGICheckBox);
+
+	surfelGIDebugCheckBox.Create("DEBUG: ");
+	surfelGIDebugCheckBox.SetTooltip("Toggle Surfel GI visualization.");
+	surfelGIDebugCheckBox.SetPos(XMFLOAT2(x + 122, y));
+	surfelGIDebugCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
+	surfelGIDebugCheckBox.OnClick([](wiEventArgs args) {
+		wiRenderer::SetSurfelGIDebugEnabled(args.bValue);
+		});
+	surfelGIDebugCheckBox.SetCheck(wiRenderer::GetSurfelGIDebugEnabled());
+	AddWidget(&surfelGIDebugCheckBox);
+
 	voxelRadianceCheckBox.Create("Voxel GI: ");
 	voxelRadianceCheckBox.SetTooltip("Toggle voxel Global Illumination computation.");
 	voxelRadianceCheckBox.SetPos(XMFLOAT2(x, y += step));
@@ -231,7 +251,7 @@ void RendererWindow::Create(EditorComponent* editor)
 	shadowTypeComboBox.SetSize(XMFLOAT2(100, itemheight));
 	shadowTypeComboBox.SetPos(XMFLOAT2(x, y += step));
 	shadowTypeComboBox.AddItem("Shadowmaps");
-	if (wiRenderer::GetDevice()->CheckCapability(wiGraphics::GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
+	if (wiRenderer::GetDevice()->CheckCapability(wiGraphics::GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 	{
 		shadowTypeComboBox.AddItem("Ray traced");
 	}
@@ -631,7 +651,7 @@ void RendererWindow::Create(EditorComponent* editor)
 
 
 
-	disableAlbedoMapsCheckBox.Create("Disable Albedo maps: ");
+	disableAlbedoMapsCheckBox.Create("Disable albedo maps: ");
 	disableAlbedoMapsCheckBox.SetTooltip("Disables albedo maps on objects for easier lighting debugging");
 	disableAlbedoMapsCheckBox.SetPos(XMFLOAT2(x, y += step));
 	disableAlbedoMapsCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
@@ -640,6 +660,17 @@ void RendererWindow::Create(EditorComponent* editor)
 		});
 	disableAlbedoMapsCheckBox.SetCheck(wiRenderer::IsDisableAlbedoMaps());
 	AddWidget(&disableAlbedoMapsCheckBox);
+
+
+	forceDiffuseLightingCheckBox.Create("Force diffuse lighting: ");
+	forceDiffuseLightingCheckBox.SetTooltip("Sets every surface fully diffuse, with zero specularity");
+	forceDiffuseLightingCheckBox.SetPos(XMFLOAT2(x, y += step));
+	forceDiffuseLightingCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
+	forceDiffuseLightingCheckBox.OnClick([](wiEventArgs args) {
+		wiRenderer::SetForceDiffuseLighting(args.bValue);
+		});
+	forceDiffuseLightingCheckBox.SetCheck(wiRenderer::IsForceDiffuseLighting());
+	AddWidget(&forceDiffuseLightingCheckBox);
 
 
 

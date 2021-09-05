@@ -24,7 +24,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	const float coc = get_coc(center_depth);
 
-	float depthDelta = saturate(1.0 - g_xCamera_ZFarP * (center_depth - mindepth));
+	float depthDelta = saturate(1.0 - g_xCamera.ZFarP * (center_depth - mindepth));
 
 	const float backgroundFactor = coc;
 	const float foregroundFactor = lerp(maxcoc, coc, depthDelta);

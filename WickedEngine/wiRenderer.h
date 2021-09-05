@@ -69,7 +69,7 @@ namespace wiRenderer
 		wiGraphics::SHADERSTAGE stage,
 		wiGraphics::Shader& shader,
 		const std::string& filename,
-		wiGraphics::SHADERMODEL minshadermodel = wiGraphics::SHADERMODEL_5_0
+		wiGraphics::SHADERMODEL minshadermodel = wiGraphics::SHADERMODEL_6_0
 	);
 
 
@@ -209,8 +209,6 @@ namespace wiRenderer
 	void RefreshAtmosphericScatteringTextures(wiGraphics::CommandList cmd);
 	// Draw skydome centered to camera.
 	void DrawSky(const wiScene::Scene& scene, wiGraphics::CommandList cmd);
-	// Draw sky velocity buffer
-	void DrawSkyVelocity(wiGraphics::CommandList cmd);
 	// Draw shadow maps for each visible light that has associated shadow maps
 	void DrawSun(wiGraphics::CommandList cmd);
 	// Draw shadow maps for each visible light that has associated shadow maps
@@ -254,10 +252,8 @@ namespace wiRenderer
 	void RefreshEnvProbes(const Visibility& vis, wiGraphics::CommandList cmd);
 	// Call once per frame to re-render out of date impostors
 	void RefreshImpostors(const wiScene::Scene& scene, wiGraphics::CommandList cmd);
-	// Call once per frame to repack out of date decals in the atlas
-	void RefreshDecalAtlas(const wiScene::Scene& scene, wiGraphics::CommandList cmd);
 	// Call once per frame to repack out of date lightmaps in the atlas
-	void RefreshLightmapAtlas(const wiScene::Scene& scene, wiGraphics::CommandList cmd);
+	void RefreshLightmaps(const wiScene::Scene& scene, wiGraphics::CommandList cmd);
 	// Voxelize the scene into a voxel grid 3D texture
 	void VoxelRadiance(const Visibility& vis, wiGraphics::CommandList cmd);
 	// Run a compute shader that will resolve a MSAA depth buffer to a single-sample texture
@@ -298,6 +294,34 @@ namespace wiRenderer
 		const wiGraphics::Texture& lineardepth,
 		const wiGraphics::Texture& output,
 		const wiGraphics::Texture& debugUAV,
+		wiGraphics::CommandList cmd
+	);
+
+	void VisibilityResolve(
+		const wiGraphics::Texture& depthbuffer,
+		const wiGraphics::Texture& texture_primitiveID, // can be MSAA
+		const wiGraphics::Texture gbuffer[GBUFFER_COUNT],
+		const wiGraphics::Texture& depthbuffer_resolved,
+		const wiGraphics::Texture& lineardepth,
+		wiGraphics::CommandList cmd
+	);
+
+	struct SurfelGIResources
+	{
+		wiGraphics::Texture result;
+	};
+	void CreateSurfelGIResources(SurfelGIResources& res, XMUINT2 resolution);
+	void SurfelGI_Coverage(
+		const SurfelGIResources& res,
+		const wiScene::Scene& scene,
+		const wiGraphics::Texture& depthbuffer,
+		const wiGraphics::Texture gbuffer[GBUFFER_COUNT],
+		const wiGraphics::Texture& debugUAV,
+		wiGraphics::CommandList cmd
+	);
+	void SurfelGI(
+		const SurfelGIResources& res,
+		const wiScene::Scene& scene,
 		wiGraphics::CommandList cmd
 	);
 
@@ -466,6 +490,7 @@ namespace wiRenderer
 		const wiGraphics::Texture& depthbuffer,
 		const wiGraphics::Texture& lineardepth,
 		const wiGraphics::GPUBuffer& entityTiles_Opaque,
+		const wiGraphics::Texture gbuffer[GBUFFER_COUNT],
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd,
 		float range = 1,
@@ -576,11 +601,6 @@ namespace wiRenderer
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd
 	);
-	void Postprocess_DepthPyramid(
-		const wiGraphics::Texture& depthbuffer,
-		const wiGraphics::Texture& lineardepth,
-		wiGraphics::CommandList cmd
-	);
 	void Postprocess_Sharpen(
 		const wiGraphics::Texture& input,
 		const wiGraphics::Texture& output,
@@ -643,7 +663,9 @@ namespace wiRenderer
 	void RayTraceSceneBVH(const wiScene::Scene& scene, wiGraphics::CommandList cmd);
 
 	// Render occluders against a depth buffer
+	void OcclusionCulling_Reset(const Visibility& vis, wiGraphics::CommandList cmd);
 	void OcclusionCulling_Render(const wiScene::CameraComponent& camera_previous, const Visibility& vis, wiGraphics::CommandList cmd);
+	void OcclusionCulling_Resolve(const Visibility& vis, wiGraphics::CommandList cmd);
 
 
 	enum MIPGENFILTER
@@ -725,8 +747,6 @@ namespace wiRenderer
 	bool GetVariableRateShadingClassificationDebug();
 	void SetOcclusionCullingEnabled(bool enabled);
 	bool GetOcclusionCullingEnabled();
-	void SetLDSSkinningEnabled(bool enabled);
-	bool GetLDSSkinningEnabled();
 	void SetTemporalAAEnabled(bool enabled);
 	bool GetTemporalAAEnabled();
 	void SetTemporalAADebugEnabled(bool enabled);
@@ -760,8 +780,14 @@ namespace wiRenderer
 	bool GetTessellationEnabled();
 	void SetDisableAlbedoMaps(bool value);
 	bool IsDisableAlbedoMaps();
+	void SetForceDiffuseLighting(bool value);
+	bool IsForceDiffuseLighting();
 	void SetScreenSpaceShadowsEnabled(bool value);
 	bool GetScreenSpaceShadowsEnabled();
+	void SetSurfelGIEnabled(bool value);
+	bool GetSurfelGIEnabled();
+	void SetSurfelGIDebugEnabled(bool value);
+	bool GetSurfelGIDebugEnabled();
 
 	// Gets pick ray according to the current screen resolution and pointer coordinates. Can be used as input into RayIntersectWorld()
 	RAY GetPickRay(long cursorX, long cursorY, const wiCanvas& canvas, const wiScene::CameraComponent& camera = wiScene::GetCamera());
