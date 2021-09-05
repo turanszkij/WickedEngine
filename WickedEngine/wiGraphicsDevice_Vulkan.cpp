@@ -2938,19 +2938,19 @@ using namespace Vulkan_Internal;
 				bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
 			}
 		}
-		if (pBuffer->desc.Flags & RESOURCE_FLAG_BUFFER_RAW)
+		if (pBuffer->desc.MiscFlags & RESOURCE_MISC_BUFFER_RAW)
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 		}
-		if (pBuffer->desc.Flags & RESOURCE_FLAG_BUFFER_STRUCTURED)
+		if (pBuffer->desc.MiscFlags & RESOURCE_MISC_BUFFER_STRUCTURED)
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 		}
-		if (pBuffer->desc.Flags & RESOURCE_FLAG_INDIRECT_ARGS)
+		if (pBuffer->desc.MiscFlags & RESOURCE_MISC_INDIRECT_ARGS)
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
 		}
-		if (pBuffer->desc.Flags & RESOURCE_FLAG_RAY_TRACING)
+		if (pBuffer->desc.MiscFlags & RESOURCE_MISC_RAY_TRACING)
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
 		}
@@ -3079,7 +3079,7 @@ using namespace Vulkan_Internal;
 				{
 					barrier.dstAccessMask |= VK_ACCESS_SHADER_WRITE_BIT;
 				}
-				if (pBuffer->desc.Flags & RESOURCE_FLAG_RAY_TRACING)
+				if (pBuffer->desc.MiscFlags & RESOURCE_MISC_RAY_TRACING)
 				{
 					barrier.dstAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
 				}
@@ -3195,7 +3195,7 @@ using namespace Vulkan_Internal;
 		imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
 		imageInfo.flags = 0;
-		if (pTexture->desc.Flags & RESOURCE_FLAG_TEXTURECUBE)
+		if (pTexture->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
 		{
 			imageInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 		}
@@ -5066,7 +5066,7 @@ using namespace Vulkan_Internal;
 		{
 			if (texture->desc.ArraySize > 1)
 			{
-				if (texture->desc.Flags & RESOURCE_FLAG_TEXTURECUBE)
+				if (texture->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
 				{
 					if (texture->desc.ArraySize > 6 && sliceCount > 6)
 					{

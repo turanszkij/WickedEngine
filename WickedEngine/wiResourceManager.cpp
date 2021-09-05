@@ -105,19 +105,17 @@ namespace wiResourceManager
 					TextureDesc desc;
 					desc.ArraySize = 1;
 					desc.BindFlags = BIND_SHADER_RESOURCE;
-					desc.CPUAccessFlags = 0;
 					desc.Width = dds.GetWidth();
 					desc.Height = dds.GetHeight();
 					desc.Depth = dds.GetDepth();
 					desc.MipLevels = dds.GetMipCount();
 					desc.ArraySize = dds.GetArraySize();
-					desc.Flags = 0;
 					desc.Format = FORMAT_R8G8B8A8_UNORM;
 					desc.layout = RESOURCE_STATE_SHADER_RESOURCE;
 
 					if (dds.IsCubemap())
 					{
-						desc.Flags |= RESOURCE_FLAG_TEXTURECUBE;
+						desc.MiscFlags |= RESOURCE_MISC_TEXTURECUBE;
 					}
 
 					auto ddsFormat = dds.GetFormat();
@@ -293,10 +291,8 @@ namespace wiResourceManager
 					else
 					{
 						desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-						desc.CPUAccessFlags = 0;
 						desc.Format = FORMAT_R8G8B8A8_UNORM;
 						desc.MipLevels = (uint32_t)log2(std::max(width, height)) + 1;
-						desc.Flags = 0;
 						desc.Usage = USAGE_DEFAULT;
 						desc.layout = RESOURCE_STATE_SHADER_RESOURCE;
 

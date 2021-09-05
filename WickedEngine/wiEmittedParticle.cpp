@@ -67,7 +67,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 	GPUBufferDesc bd;
 	bd.Usage = USAGE_DEFAULT;
 	bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-	bd.Flags = RESOURCE_FLAG_BUFFER_STRUCTURED;
+	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 	SubresourceData data;
 
 	// Particle buffer:
@@ -125,13 +125,13 @@ void wiEmittedParticle::CreateSelfBuffers()
 	data.pSysMem = &counters;
 	bd.ByteWidth = sizeof(counters);
 	bd.StructureByteStride = sizeof(counters);
-	bd.Flags = RESOURCE_FLAG_BUFFER_RAW;
+	bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
 	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, &counterBuffer);
 	data.pSysMem = nullptr;
 
 	// Indirect Execution buffer:
 	bd.BindFlags = BIND_UNORDERED_ACCESS;
-	bd.Flags = RESOURCE_FLAG_BUFFER_RAW | RESOURCE_FLAG_INDIRECT_ARGS;
+	bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW | RESOURCE_MISC_INDIRECT_ARGS;
 	bd.ByteWidth = 
 		sizeof(wiGraphics::IndirectDispatchArgs) + 
 		sizeof(wiGraphics::IndirectDispatchArgs) + 
@@ -142,15 +142,14 @@ void wiEmittedParticle::CreateSelfBuffers()
 	bd.Usage = USAGE_DEFAULT;
 	bd.ByteWidth = sizeof(EmittedParticleCB);
 	bd.BindFlags = BIND_CONSTANT_BUFFER;
-	bd.Flags = 0;
 	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &constantBuffer);
 
 	// Debug information CPU-readback buffer:
 	{
 		GPUBufferDesc debugBufDesc = counterBuffer.GetDesc();
 		debugBufDesc.Usage = USAGE_READBACK;
-		debugBufDesc.BindFlags = 0;
-		debugBufDesc.Flags = 0;
+		debugBufDesc.BindFlags = BIND_NONE;
+		debugBufDesc.MiscFlags = RESOURCE_MISC_NONE;
 		for (int i = 0; i < arraysize(statisticsReadbackBuffer); ++i)
 		{
 			wiRenderer::GetDevice()->CreateBuffer(&debugBufDesc, nullptr, &statisticsReadbackBuffer[i]);

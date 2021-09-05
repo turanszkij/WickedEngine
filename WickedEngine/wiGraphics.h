@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include <type_traits>
 
 namespace wiGraphics
 {
@@ -101,15 +102,6 @@ namespace wiGraphics
 		BLEND_SRC1_ALPHA,
 		BLEND_INV_SRC1_ALPHA,
 	}; 
-	enum COLOR_WRITE_ENABLE
-	{
-		COLOR_WRITE_DISABLE = 0,
-		COLOR_WRITE_ENABLE_RED = 1,
-		COLOR_WRITE_ENABLE_GREEN = 2,
-		COLOR_WRITE_ENABLE_BLUE = 4,
-		COLOR_WRITE_ENABLE_ALPHA = 8,
-		COLOR_WRITE_ENABLE_ALL = (((COLOR_WRITE_ENABLE_RED | COLOR_WRITE_ENABLE_GREEN) | COLOR_WRITE_ENABLE_BLUE) | COLOR_WRITE_ENABLE_ALPHA)
-	};
 	enum BLEND_OP
 	{
 		BLEND_OP_ADD,
@@ -304,8 +296,46 @@ namespace wiGraphics
 	};
 
 	// Flags ////////////////////////////////////////////
+
+	// Enable enum flags:
+	//	https://www.justsoftwaresolutions.co.uk/cplusplus/using-enum-classes-as-bitfields.html
+	template<typename E>
+	struct enable_bitmask_operators {
+		static constexpr bool enable = true;
+	};
+	template<typename E>
+	typename std::enable_if<enable_bitmask_operators<E>::enable, E>::type operator|(E lhs, E rhs)
+	{
+		typedef typename std::underlying_type<E>::type underlying;
+		return static_cast<E>(
+			static_cast<underlying>(lhs) | static_cast<underlying>(rhs));
+	}
+	template<typename E>
+	typename std::enable_if<enable_bitmask_operators<E>::enable, E&>::type operator|=(E& lhs, E rhs)
+	{
+		typedef typename std::underlying_type<E>::type underlying;
+		lhs = static_cast<E>(
+			static_cast<underlying>(lhs) | static_cast<underlying>(rhs));
+		return lhs;
+	}
+
+	enum COLOR_WRITE_ENABLE
+	{
+		COLOR_WRITE_DISABLE = 0,
+		COLOR_WRITE_ENABLE_RED = 1 << 0,
+		COLOR_WRITE_ENABLE_GREEN = 1 << 1,
+		COLOR_WRITE_ENABLE_BLUE = 1 << 2,
+		COLOR_WRITE_ENABLE_ALPHA = 1 << 3,
+		COLOR_WRITE_ENABLE_ALL = ~0,
+	};
+	template<>
+	struct enable_bitmask_operators<COLOR_WRITE_ENABLE> {
+		static const bool enable = true;
+	};
+
 	enum BIND_FLAG
 	{
+		BIND_NONE = 0,
 		BIND_VERTEX_BUFFER = 1 << 0,
 		BIND_INDEX_BUFFER = 1 << 1,
 		BIND_CONSTANT_BUFFER = 1 << 2,
@@ -315,14 +345,25 @@ namespace wiGraphics
 		BIND_UNORDERED_ACCESS = 1 << 6,
 		BIND_SHADING_RATE = 1 << 7,
 	};
-	enum RESOURCE_FLAG
-	{
-		RESOURCE_FLAG_TEXTURECUBE = 1 << 0,
-		RESOURCE_FLAG_INDIRECT_ARGS = 1 << 1,
-		RESOURCE_FLAG_BUFFER_RAW = 1 << 2,
-		RESOURCE_FLAG_BUFFER_STRUCTURED = 1 << 3,
-		RESOURCE_FLAG_RAY_TRACING = 1 << 4,
+	template<>
+	struct enable_bitmask_operators<BIND_FLAG> {
+		static const bool enable = true;
 	};
+
+	enum RESOURCE_MISC_FLAG
+	{
+		RESOURCE_MISC_NONE = 0,
+		RESOURCE_MISC_TEXTURECUBE = 1 << 0,
+		RESOURCE_MISC_INDIRECT_ARGS = 1 << 1,
+		RESOURCE_MISC_BUFFER_RAW = 1 << 2,
+		RESOURCE_MISC_BUFFER_STRUCTURED = 1 << 3,
+		RESOURCE_MISC_RAY_TRACING = 1 << 4,
+	};
+	template<>
+	struct enable_bitmask_operators<RESOURCE_MISC_FLAG> {
+		static const bool enable = true;
+	};
+
 	enum GRAPHICSDEVICE_CAPABILITY
 	{
 		GRAPHICSDEVICE_CAPABILITY_TESSELLATION = 1 << 0,
@@ -358,6 +399,10 @@ namespace wiGraphics
 		RESOURCE_STATE_CONSTANT_BUFFER = 1 << 11,			// constant buffer, read only
 		RESOURCE_STATE_INDIRECT_ARGUMENT = 1 << 12,			// argument buffer to DrawIndirect() or DispatchIndirect()
 		RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE = 1 << 13, // acceleration structure storage or scratch
+	};
+	template<>
+	struct enable_bitmask_operators<RESOURCE_STATE> {
+		static const bool enable = true;
 	};
 
 	// Descriptor structs:
@@ -411,9 +456,8 @@ namespace wiGraphics
 		FORMAT Format = FORMAT_UNKNOWN;
 		uint32_t SampleCount = 1;
 		USAGE Usage = USAGE_DEFAULT;
-		uint32_t BindFlags = 0;
-		uint32_t CPUAccessFlags = 0;
-		uint32_t Flags = 0;
+		BIND_FLAG BindFlags = BIND_NONE;
+		RESOURCE_MISC_FLAG MiscFlags = RESOURCE_MISC_NONE;
 		ClearValue clear = {};
 		RESOURCE_STATE layout = RESOURCE_STATE_SHADER_RESOURCE;
 	};
@@ -485,8 +529,8 @@ namespace wiGraphics
 	{
 		uint32_t ByteWidth = 0;
 		USAGE Usage = USAGE_DEFAULT;
-		uint32_t BindFlags = 0;
-		uint32_t Flags = 0;
+		BIND_FLAG BindFlags = BIND_NONE;
+		RESOURCE_MISC_FLAG MiscFlags = RESOURCE_MISC_NONE;
 		uint32_t StructureByteStride = 0; // needed for typed and structured buffer types!
 		FORMAT Format = FORMAT_UNKNOWN; // only needed for typed buffer!
 	};

@@ -125,7 +125,7 @@ void wiOcean::Create(const OceanParameters& params)
 	GPUBufferDesc buf_desc;
 	buf_desc.Usage = USAGE_DEFAULT;
 	buf_desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
-	buf_desc.Flags = RESOURCE_FLAG_BUFFER_STRUCTURED;
+	buf_desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 	SubresourceData init_data;
 
 	// RW buffer allocations
@@ -165,7 +165,6 @@ void wiOcean::Create(const OceanParameters& params)
 	tex_desc.SampleCount = 1;
 	tex_desc.Usage = USAGE_DEFAULT;
 	tex_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-	tex_desc.CPUAccessFlags = 0;
 
 	tex_desc.Format = FORMAT_R16G16B16A16_FLOAT;
 	tex_desc.MipLevels = 0;
@@ -199,13 +198,11 @@ void wiOcean::Create(const OceanParameters& params)
 
 	GPUBufferDesc cb_desc;
 	cb_desc.BindFlags = BIND_CONSTANT_BUFFER;
-	cb_desc.Flags = 0;
 	cb_desc.ByteWidth = sizeof(Ocean_Simulation_ImmutableCB);
 	device->CreateBuffer(&cb_desc, &init_cb0, &immutableCB);
 
 	cb_desc.Usage = USAGE_DEFAULT;
 	cb_desc.BindFlags = BIND_CONSTANT_BUFFER;
-	cb_desc.Flags = 0;
 	cb_desc.ByteWidth = sizeof(Ocean_Simulation_PerFrameCB);
 	device->CreateBuffer(&cb_desc, nullptr, &perFrameCB);
 }
@@ -284,7 +281,7 @@ void wiOcean::UpdateDisplacementMap(const OceanParameters& params, CommandList c
 
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Buffer(&perFrameCB, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_CONSTANT_BUFFER),
+			GPUBarrier::Buffer(&perFrameCB, RESOURCE_STATE_CONSTANT_BUFFER, RESOURCE_STATE_COPY_DST),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}

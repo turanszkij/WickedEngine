@@ -1792,7 +1792,6 @@ void LoadBuffers()
 
 	// The following buffers will be DEFAULT (long lifetime, slow update, fast read):
 	bd.Usage = USAGE_DEFAULT;
-	bd.Flags = 0;
 
 	bd.ByteWidth = sizeof(FrameCB);
 	bd.BindFlags = BIND_CONSTANT_BUFFER;
@@ -1802,14 +1801,14 @@ void LoadBuffers()
 
 	bd.ByteWidth = sizeof(ShaderEntity) * SHADER_ENTITY_COUNT;
 	bd.BindFlags = BIND_SHADER_RESOURCE;
-	bd.Flags = RESOURCE_FLAG_BUFFER_STRUCTURED;
+	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 	bd.StructureByteStride = sizeof(ShaderEntity);
 	device->CreateBuffer(&bd, nullptr, &resourceBuffers[RBTYPE_ENTITYARRAY]);
 	device->SetName(&resourceBuffers[RBTYPE_ENTITYARRAY], "EntityArray");
 
 	bd.ByteWidth = sizeof(XMMATRIX) * MATRIXARRAY_COUNT;
 	bd.BindFlags = BIND_SHADER_RESOURCE;
-	bd.Flags = RESOURCE_FLAG_BUFFER_STRUCTURED;
+	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 	bd.StructureByteStride = sizeof(XMMATRIX);
 	device->CreateBuffer(&bd, nullptr, &resourceBuffers[RBTYPE_MATRIXARRAY]);
 	device->SetName(&resourceBuffers[RBTYPE_MATRIXARRAY], "MatrixArray");
@@ -4441,8 +4440,6 @@ void SetShadowProps2D(int resolution, int count)
 		desc.ArraySize = SHADOWCOUNT_2D;
 		desc.SampleCount = 1;
 		desc.Usage = USAGE_DEFAULT;
-		desc.CPUAccessFlags = 0;
-		desc.Flags = 0;
 
 		desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
 		desc.Format = FORMAT_R16_TYPELESS;
@@ -4519,8 +4516,7 @@ void SetShadowPropsCube(int resolution, int count)
 		desc.ArraySize = 6 * SHADOWCOUNT_CUBE;
 		desc.SampleCount = 1;
 		desc.Usage = USAGE_DEFAULT;
-		desc.CPUAccessFlags = 0;
-		desc.Flags = RESOURCE_FLAG_TEXTURECUBE;
+		desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
 
 		desc.BindFlags = BIND_DEPTH_STENCIL | BIND_SHADER_RESOURCE;
 		desc.Format = FORMAT_R16_TYPELESS;
@@ -6634,7 +6630,7 @@ void CreateTiledLightResources(TiledLightResources& res, XMUINT2 resolution)
 		bd.StructureByteStride = sizeof(XMFLOAT4) * 4; // storing 4 planes for every tile
 		bd.ByteWidth = bd.StructureByteStride * tileCount.x * tileCount.y;
 		bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		bd.Flags = RESOURCE_FLAG_BUFFER_STRUCTURED;
+		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		bd.Usage = USAGE_DEFAULT;
 		device->CreateBuffer(&bd, nullptr, &res.tileFrustums);
 
@@ -6646,7 +6642,7 @@ void CreateTiledLightResources(TiledLightResources& res, XMUINT2 resolution)
 		bd.ByteWidth = tileCount.x * tileCount.y * bd.StructureByteStride * SHADER_ENTITY_TILE_BUCKET_COUNT;
 		bd.Usage = USAGE_DEFAULT;
 		bd.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
-		bd.Flags = RESOURCE_FLAG_BUFFER_STRUCTURED;
+		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		device->CreateBuffer(&bd, nullptr, &res.entityTiles_Opaque);
 		device->CreateBuffer(&bd, nullptr, &res.entityTiles_Transparent);
 
@@ -6795,7 +6791,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 	else if (desc.type == TextureDesc::TEXTURE_2D)
 	{
 
-		if (desc.Flags & RESOURCE_FLAG_TEXTURECUBE)
+		if (desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
 		{
 
 			if (desc.ArraySize > 6)
@@ -8948,7 +8944,7 @@ void CreateRTAOResources(RTAOResources& res, XMUINT2 resolution)
 	bd.ByteWidth = bd.StructureByteStride *
 		((desc.Width + 7) / 8) *
 		((desc.Height + 3) / 4);
-	bd.Flags = RESOURCE_FLAG_BUFFER_STRUCTURED;
+	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 	bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 	device->CreateBuffer(&bd, nullptr, &res.tiles);
 	device->SetName(&res.tiles, "rtshadow_tiles");
@@ -9652,7 +9648,7 @@ void CreateRTShadowResources(RTShadowResources& res, XMUINT2 resolution)
 	bd.ByteWidth = bd.StructureByteStride *
 		((desc.Width + 7) / 8) *
 		((desc.Height + 3) / 4);
-	bd.Flags = RESOURCE_FLAG_BUFFER_STRUCTURED;
+	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 	bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 	device->CreateBuffer(&bd, nullptr, &res.tiles);
 	device->SetName(&res.tiles, "rtshadow_tiles");
@@ -10196,10 +10192,10 @@ void CreateDepthOfFieldResources(DepthOfFieldResources& res, XMUINT2 resolution)
 	bufferdesc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 
 	bufferdesc.ByteWidth = TILE_STATISTICS_CAPACITY * sizeof(uint);
-	bufferdesc.Flags = RESOURCE_FLAG_BUFFER_RAW | RESOURCE_FLAG_INDIRECT_ARGS;
+	bufferdesc.MiscFlags = RESOURCE_MISC_BUFFER_RAW | RESOURCE_MISC_INDIRECT_ARGS;
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tile_statistics);
 
-	bufferdesc.Flags = RESOURCE_FLAG_BUFFER_STRUCTURED;
+	bufferdesc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 	bufferdesc.StructureByteStride = sizeof(uint);
 	bufferdesc.ByteWidth = tile_desc.Width * tile_desc.Height * bufferdesc.StructureByteStride;
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tiles_earlyexit);
@@ -10643,10 +10639,10 @@ void CreateMotionBlurResources(MotionBlurResources& res, XMUINT2 resolution)
 	bufferdesc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 
 	bufferdesc.ByteWidth = TILE_STATISTICS_CAPACITY * sizeof(uint);
-	bufferdesc.Flags = RESOURCE_FLAG_BUFFER_RAW | RESOURCE_FLAG_INDIRECT_ARGS;
+	bufferdesc.MiscFlags = RESOURCE_MISC_BUFFER_RAW | RESOURCE_MISC_INDIRECT_ARGS;
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tile_statistics);
 
-	bufferdesc.Flags = RESOURCE_FLAG_BUFFER_STRUCTURED;
+	bufferdesc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 	bufferdesc.StructureByteStride = sizeof(uint);
 	bufferdesc.ByteWidth = tile_desc.Width * tile_desc.Height * bufferdesc.StructureByteStride;
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tiles_earlyexit);
@@ -11963,8 +11959,6 @@ void SetVoxelRadianceEnabled(bool enabled)
 		desc.Format = FORMAT_R16G16B16A16_FLOAT;
 		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
 		desc.Usage = USAGE_DEFAULT;
-		desc.CPUAccessFlags = 0;
-		desc.Flags = 0;
 
 		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_3D_VOXELRADIANCE]);
 
@@ -11997,7 +11991,7 @@ void SetVoxelRadianceEnabled(bool enabled)
 		desc.StructureByteStride = sizeof(uint32_t) * 2;
 		desc.ByteWidth = desc.StructureByteStride * voxelSceneData.res * voxelSceneData.res * voxelSceneData.res;
 		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
-		desc.Flags = RESOURCE_FLAG_BUFFER_STRUCTURED;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
 
 		device->CreateBuffer(&desc, nullptr, &resourceBuffers[RBTYPE_VOXELSCENE]);

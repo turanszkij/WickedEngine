@@ -2336,7 +2336,6 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			GPUBufferDesc desc;
 			desc.BindFlags = BIND_VERTEX_BUFFER;
 			desc.ByteWidth = (uint32_t)(vertices.size() * sizeof(Vertex));
-			desc.Flags = 0;
 			desc.StructureByteStride = 0;
 			SubresourceData data;
 			data.pSysMem = vertices.data();
@@ -2361,7 +2360,6 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			GPUBufferDesc desc;
 			desc.BindFlags = BIND_VERTEX_BUFFER;
 			desc.ByteWidth = (uint32_t)(vertices.size() * sizeof(Vertex));
-			desc.Flags = 0;
 			desc.StructureByteStride = 0;
 			SubresourceData data;
 			data.pSysMem = vertices.data();
@@ -2400,7 +2398,6 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			GPUBufferDesc desc;
 			desc.BindFlags = BIND_VERTEX_BUFFER;
 			desc.ByteWidth = (uint32_t)sizeof(vertices);
-			desc.Flags = 0;
 			desc.StructureByteStride = 0;
 			SubresourceData data;
 			data.pSysMem = vertices;
@@ -2419,8 +2416,6 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			GPUBufferDesc desc;
 			desc.BindFlags = BIND_VERTEX_BUFFER;
 			desc.ByteWidth = (uint32_t)sizeof(vertices);
-			desc.Flags = 0;
-			desc.StructureByteStride = 0;
 			SubresourceData data;
 			data.pSysMem = vertices;
 			device->CreateBuffer(&desc, &data, &vb_preview);

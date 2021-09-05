@@ -38,7 +38,7 @@ void wiGPUBVH::Update(const wiScene::Scene& scene)
 		desc.StructureByteStride = sizeof(uint);
 		desc.ByteWidth = desc.StructureByteStride;
 		desc.Format = FORMAT_UNKNOWN;
-		desc.Flags = RESOURCE_FLAG_BUFFER_RAW;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
 		desc.Usage = USAGE_DEFAULT;
 		device->CreateBuffer(&desc, nullptr, &primitiveCounterBuffer);
 		device->SetName(&primitiveCounterBuffer, "primitiveCounterBuffer");
@@ -77,7 +77,7 @@ void wiGPUBVH::Update(const wiScene::Scene& scene)
 		desc.StructureByteStride = sizeof(BVHNode);
 		desc.ByteWidth = desc.StructureByteStride * primitiveCapacity * 2;
 		desc.Format = FORMAT_UNKNOWN;
-		desc.Flags = RESOURCE_FLAG_BUFFER_STRUCTURED;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
 		device->CreateBuffer(&desc, nullptr, &bvhNodeBuffer);
 		device->SetName(&bvhNodeBuffer, "BVHNodeBuffer");
@@ -86,7 +86,7 @@ void wiGPUBVH::Update(const wiScene::Scene& scene)
 		desc.StructureByteStride = sizeof(uint);
 		desc.ByteWidth = desc.StructureByteStride * primitiveCapacity * 2;
 		desc.Format = FORMAT_UNKNOWN;
-		desc.Flags = RESOURCE_FLAG_BUFFER_STRUCTURED;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
 		device->CreateBuffer(&desc, nullptr, &bvhParentBuffer);
 		device->SetName(&bvhParentBuffer, "BVHParentBuffer");
@@ -95,7 +95,7 @@ void wiGPUBVH::Update(const wiScene::Scene& scene)
 		desc.StructureByteStride = sizeof(uint);
 		desc.ByteWidth = desc.StructureByteStride * (((primitiveCapacity - 1) + 31) / 32); // bitfield for internal nodes
 		desc.Format = FORMAT_UNKNOWN;
-		desc.Flags = RESOURCE_FLAG_BUFFER_STRUCTURED;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
 		device->CreateBuffer(&desc, nullptr, &bvhFlagBuffer);
 		device->SetName(&bvhFlagBuffer, "BVHFlagBuffer");
@@ -104,7 +104,7 @@ void wiGPUBVH::Update(const wiScene::Scene& scene)
 		desc.StructureByteStride = sizeof(uint);
 		desc.ByteWidth = desc.StructureByteStride * primitiveCapacity;
 		desc.Format = FORMAT_UNKNOWN;
-		desc.Flags = RESOURCE_FLAG_BUFFER_STRUCTURED;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
 		device->CreateBuffer(&desc, nullptr, &primitiveIDBuffer);
 		device->SetName(&primitiveIDBuffer, "primitiveIDBuffer");
@@ -113,7 +113,7 @@ void wiGPUBVH::Update(const wiScene::Scene& scene)
 		desc.StructureByteStride = sizeof(BVHPrimitive);
 		desc.ByteWidth = desc.StructureByteStride * primitiveCapacity;
 		desc.Format = FORMAT_UNKNOWN;
-		desc.Flags = RESOURCE_FLAG_BUFFER_STRUCTURED;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
 		device->CreateBuffer(&desc, nullptr, &primitiveBuffer);
 		device->SetName(&primitiveBuffer, "primitiveBuffer");
@@ -121,7 +121,7 @@ void wiGPUBVH::Update(const wiScene::Scene& scene)
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.ByteWidth = desc.StructureByteStride * primitiveCapacity;
 		desc.Format = FORMAT_UNKNOWN;
-		desc.Flags = RESOURCE_FLAG_BUFFER_STRUCTURED;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
 		desc.StructureByteStride = sizeof(float); // morton buffer is float because sorting must be done and gpu sort operates on floats for now!
 		device->CreateBuffer(&desc, nullptr, &primitiveMortonBuffer);

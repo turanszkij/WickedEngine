@@ -4759,7 +4759,7 @@ using namespace DX12_Internal;
 			{
 				if (texture->desc.ArraySize > 1)
 				{
-					if (texture->desc.Flags & RESOURCE_FLAG_TEXTURECUBE)
+					if (texture->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
 					{
 						if (texture->desc.ArraySize > 6)
 						{
@@ -5092,7 +5092,7 @@ using namespace DX12_Internal;
 			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
 			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 
-			if (desc.Flags & RESOURCE_FLAG_BUFFER_RAW)
+			if (desc.MiscFlags & RESOURCE_MISC_BUFFER_RAW)
 			{
 				// This is a Raw Buffer
 				srv_desc.Format = DXGI_FORMAT_R32_TYPELESS;
@@ -5101,7 +5101,7 @@ using namespace DX12_Internal;
 				srv_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
 				srv_desc.Buffer.NumElements = std::min((UINT)size, desc.ByteWidth - (UINT)offset) / sizeof(uint32_t);
 			}
-			else if (desc.Flags & RESOURCE_FLAG_BUFFER_STRUCTURED)
+			else if (desc.MiscFlags & RESOURCE_MISC_BUFFER_STRUCTURED)
 			{
 				// This is a Structured Buffer
 				srv_desc.Format = DXGI_FORMAT_UNKNOWN;
@@ -5139,7 +5139,7 @@ using namespace DX12_Internal;
 			uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
 			uav_desc.Buffer.FirstElement = 0;
 
-			if (desc.Flags & RESOURCE_FLAG_BUFFER_RAW)
+			if (desc.MiscFlags & RESOURCE_MISC_BUFFER_RAW)
 			{
 				// This is a Raw Buffer
 				uav_desc.Format = DXGI_FORMAT_R32_TYPELESS;
@@ -5147,7 +5147,7 @@ using namespace DX12_Internal;
 				uav_desc.Buffer.FirstElement = (UINT)offset / sizeof(uint32_t);
 				uav_desc.Buffer.NumElements = std::min((UINT)size, desc.ByteWidth - (UINT)offset) / sizeof(uint32_t);
 			}
-			else if (desc.Flags & RESOURCE_FLAG_BUFFER_STRUCTURED)
+			else if (desc.MiscFlags & RESOURCE_MISC_BUFFER_STRUCTURED)
 			{
 				// This is a Structured Buffer
 				uav_desc.Format = DXGI_FORMAT_UNKNOWN;

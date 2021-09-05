@@ -31,7 +31,7 @@ namespace wiGPUSortLib
 		GPUBufferDesc bd;
 		bd.Usage = USAGE_DEFAULT;
 		bd.BindFlags = BIND_UNORDERED_ACCESS;
-		bd.Flags = RESOURCE_FLAG_INDIRECT_ARGS | RESOURCE_FLAG_BUFFER_RAW;
+		bd.MiscFlags = RESOURCE_MISC_INDIRECT_ARGS | RESOURCE_MISC_BUFFER_RAW;
 		bd.ByteWidth = sizeof(IndirectDispatchArgs);
 		wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &indirectBuffer);
 

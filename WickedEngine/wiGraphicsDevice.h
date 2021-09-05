@@ -200,7 +200,7 @@ namespace wiGraphics
 				desc.Usage = USAGE_UPLOAD;
 				desc.ByteWidth = (uint32_t)Align((allocator.buffer.desc.ByteWidth + dataSize) * 2, ALLOCATION_MIN_ALIGNMENT);
 				desc.BindFlags = BIND_CONSTANT_BUFFER | BIND_VERTEX_BUFFER | BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE;
-				desc.Flags = RESOURCE_FLAG_BUFFER_RAW;
+				desc.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
 				CreateBuffer(&desc, nullptr, &allocator.buffer);
 				SetName(&allocator.buffer, "frame_allocator");
 				allocator.offset = 0;

@@ -488,8 +488,6 @@ void RenderPath3D::ResizeBuffers()
 		desc.SampleCount = 1;
 		desc.Usage = USAGE_DEFAULT;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.CPUAccessFlags = 0;
-		desc.Flags = 0;
 
 		device->CreateTexture(&desc, nullptr, &debugUAV);
 		device->SetName(&debugUAV, "debugUAV");
