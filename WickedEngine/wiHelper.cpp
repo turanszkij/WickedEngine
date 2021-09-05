@@ -116,6 +116,8 @@ namespace wiHelper
 		staging_desc.Usage = USAGE_READBACK;
 		staging_desc.MipLevels = 1;
 		staging_desc.layout = RESOURCE_STATE_COPY_DST;
+		staging_desc.BindFlags = BIND_NONE;
+		staging_desc.MiscFlags = RESOURCE_MISC_NONE;
 		bool success = device->CreateTexture(&staging_desc, nullptr, &stagingTex);
 		assert(success);
 
