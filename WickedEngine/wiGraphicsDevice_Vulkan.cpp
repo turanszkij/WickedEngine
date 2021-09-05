@@ -1872,42 +1872,34 @@ using namespace Vulkan_Internal;
 
 		GetFrameResources().descriptors[cmd].flush(true, cmd);
 
-		if (pushconstants[cmd].size > 0)
+		auto pso_internal = to_internal(active_pso[cmd]);
+		if (pso_internal->pushconstants.size > 0)
 		{
-			auto pso_internal = to_internal(active_pso[cmd]);
-			if (pso_internal->pushconstants.size > 0)
-			{
-				vkCmdPushConstants(
-					GetCommandList(cmd),
-					pso_internal->pipelineLayout,
-					pso_internal->pushconstants.stageFlags,
-					pso_internal->pushconstants.offset,
-					pso_internal->pushconstants.size,
-					pushconstants[cmd].data
-				);
-				pushconstants[cmd].size = 0;
-			}
+			vkCmdPushConstants(
+				GetCommandList(cmd),
+				pso_internal->pipelineLayout,
+				pso_internal->pushconstants.stageFlags,
+				pso_internal->pushconstants.offset,
+				pso_internal->pushconstants.size,
+				pushconstants[cmd].data
+			);
 		}
 	}
 	void GraphicsDevice_Vulkan::predispatch(CommandList cmd)
 	{
 		GetFrameResources().descriptors[cmd].flush(false, cmd);
 
-		if (pushconstants[cmd].size > 0)
+		auto cs_internal = to_internal(active_cs[cmd]);
+		if (cs_internal->pushconstants.size > 0)
 		{
-			auto cs_internal = to_internal(active_cs[cmd]);
-			if (cs_internal->pushconstants.size > 0)
-			{
-				vkCmdPushConstants(
-					GetCommandList(cmd),
-					cs_internal->pipelineLayout_cs,
-					cs_internal->pushconstants.stageFlags,
-					cs_internal->pushconstants.offset,
-					cs_internal->pushconstants.size,
-					pushconstants[cmd].data
-				);
-				pushconstants[cmd].size = 0;
-			}
+			vkCmdPushConstants(
+				GetCommandList(cmd),
+				cs_internal->pipelineLayout_cs,
+				cs_internal->pushconstants.stageFlags,
+				cs_internal->pushconstants.offset,
+				cs_internal->pushconstants.size,
+				pushconstants[cmd].data
+			);
 		}
 	}
 

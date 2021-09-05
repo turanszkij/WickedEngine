@@ -2156,38 +2156,30 @@ using namespace DX12_Internal;
 
 		descriptors[cmd].flush(true, cmd);
 
-		if (pushconstants[cmd].size > 0)
+		auto pso_internal = to_internal(active_pso[cmd]);
+		if (pso_internal->rootconstants.Constants.Num32BitValues > 0)
 		{
-			auto pso_internal = to_internal(active_pso[cmd]);
-			if (pso_internal->rootconstants.Constants.Num32BitValues > 0)
-			{
-				GetCommandList(cmd)->SetGraphicsRoot32BitConstants(
-					pso_internal->bindpoint_rootconstant,
-					pso_internal->rootconstants.Constants.Num32BitValues,
-					pushconstants[cmd].data,
-					0
-				);
-				pushconstants[cmd].size = 0;
-			}
+			GetCommandList(cmd)->SetGraphicsRoot32BitConstants(
+				pso_internal->bindpoint_rootconstant,
+				pso_internal->rootconstants.Constants.Num32BitValues,
+				pushconstants[cmd].data,
+				0
+			);
 		}
 	}
 	void GraphicsDevice_DX12::predispatch(CommandList cmd)
 	{
 		descriptors[cmd].flush(false, cmd);
 
-		if (pushconstants[cmd].size > 0)
+		auto cs_internal = to_internal(active_cs[cmd]);
+		if (cs_internal->rootconstants.Constants.Num32BitValues > 0)
 		{
-			auto cs_internal = to_internal(active_cs[cmd]);
-			if (cs_internal->rootconstants.Constants.Num32BitValues > 0)
-			{
-				GetCommandList(cmd)->SetComputeRoot32BitConstants(
-					cs_internal->bindpoint_rootconstant,
-					cs_internal->rootconstants.Constants.Num32BitValues,
-					pushconstants[cmd].data,
-					0
-				);
-				pushconstants[cmd].size = 0;
-			}
+			GetCommandList(cmd)->SetComputeRoot32BitConstants(
+				cs_internal->bindpoint_rootconstant,
+				cs_internal->rootconstants.Constants.Num32BitValues,
+				pushconstants[cmd].data,
+				0
+			);
 		}
 	}
 
