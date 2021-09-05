@@ -27,6 +27,8 @@ public:
 	wiCheckBox occlusionCullingCheckBox;
 	wiSlider resolutionScaleSlider;
 	wiSlider gammaSlider;
+	wiCheckBox surfelGICheckBox;
+	wiCheckBox surfelGIDebugCheckBox;
 	wiCheckBox voxelRadianceCheckBox;
 	wiCheckBox voxelRadianceDebugCheckBox;
 	wiCheckBox voxelRadianceSecondaryBounceCheckBox;
@@ -74,6 +76,7 @@ public:
 
 	wiCheckBox freezeCullingCameraCheckBox;
 	wiCheckBox disableAlbedoMapsCheckBox;
+	wiCheckBox forceDiffuseLightingCheckBox;
 
     uint32_t GetPickType() const;
 };

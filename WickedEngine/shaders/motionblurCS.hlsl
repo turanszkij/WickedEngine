@@ -62,7 +62,7 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 	const float neighborhood_velocity_magnitude = length(neighborhood_velocity);
 	const float4 center_color = input[pixel];
 
-	const float2 center_velocity = texture_gbuffer2[pixel].xy * motionblur_strength;
+	const float2 center_velocity = texture_gbuffer1[pixel].xy * motionblur_strength;
 	const float center_velocity_magnitude = length(center_velocity);
 	const float center_depth = texture_lineardepth[pixel];
 
@@ -85,12 +85,12 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 	for (float i = -range; i <= range; i += 2.0f)
 	{
 		const float depth1 = texture_lineardepth.SampleLevel(sampler_point_clamp, uv2, 0);
-		const float2 velocity1 = texture_gbuffer2.SampleLevel(sampler_point_clamp, uv2, 0).xy;
+		const float2 velocity1 = texture_gbuffer1.SampleLevel(sampler_point_clamp, uv2, 0).xy;
 		const float velocity_magnitude1 = length(velocity1);
 		const float3 color1 = input.SampleLevel(sampler_point_clamp, uv2, 0).rgb;
 		uv2 += sampling_direction;
 		const float depth2 = texture_lineardepth.SampleLevel(sampler_point_clamp, uv2, 0);
-		const float2 velocity2 = texture_gbuffer2.SampleLevel(sampler_point_clamp, uv2, 0).xy;
+		const float2 velocity2 = texture_gbuffer1.SampleLevel(sampler_point_clamp, uv2, 0).xy;
 		const float velocity_magnitude2 = length(velocity2);
 		const float3 color2 = input.SampleLevel(sampler_point_clamp, uv2, 0).rgb;
 		uv2 += sampling_direction;
@@ -99,8 +99,8 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 		sum += float4(color1, 1);
 		sum += float4(color2, 1);
 #else
-		float weight1 = SampleWeight(center_depth, depth1, neighborhood_velocity_magnitude, center_velocity_magnitude, velocity_magnitude1, 1000, g_xCamera_ZFarP);
-		float weight2 = SampleWeight(center_depth, depth2, neighborhood_velocity_magnitude, center_velocity_magnitude, velocity_magnitude2, 1000, g_xCamera_ZFarP);
+		float weight1 = SampleWeight(center_depth, depth1, neighborhood_velocity_magnitude, center_velocity_magnitude, velocity_magnitude1, 1000, g_xCamera.ZFarP);
+		float weight2 = SampleWeight(center_depth, depth2, neighborhood_velocity_magnitude, center_velocity_magnitude, velocity_magnitude2, 1000, g_xCamera.ZFarP);
 		
 		bool2 mirror = bool2(depth1 > depth2, velocity_magnitude2 > velocity_magnitude1);
 		weight1 = all(mirror) ? weight2 : weight1;

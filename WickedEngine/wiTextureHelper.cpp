@@ -95,11 +95,9 @@ namespace wiTextureHelper
 			texDesc.MipLevels = 1;
 			texDesc.ArraySize = 6;
 			texDesc.Format = FORMAT_R8G8B8A8_UNORM;
-			texDesc.CPUAccessFlags = 0;
 			texDesc.SampleCount = 1;
 			texDesc.Usage = USAGE_DEFAULT;
 			texDesc.BindFlags = BIND_SHADER_RESOURCE;
-			texDesc.CPUAccessFlags = 0;
 			texDesc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
 
 			SubresourceData pData[6];
@@ -256,10 +254,7 @@ namespace wiTextureHelper
 		textureDesc.ArraySize = 1;
 		textureDesc.Format = format;
 		textureDesc.SampleCount = 1;
-		textureDesc.Usage = USAGE_IMMUTABLE;
 		textureDesc.BindFlags = BIND_SHADER_RESOURCE;
-		textureDesc.CPUAccessFlags = 0;
-		textureDesc.MiscFlags = 0;
 
 		SubresourceData InitData;
 		InitData.pSysMem = data;

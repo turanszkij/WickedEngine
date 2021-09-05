@@ -31,12 +31,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	RayDesc ray = CreateCameraRay(uv);
 
 	// Depth of field setup:
-	float3 focal_point = ray.Origin + ray.Direction * g_xCamera_FocalLength;
+	float3 focal_point = ray.Origin + ray.Direction * g_xCamera.FocalLength;
 	float3 coc = float3(hemispherepoint_cos(rand(seed, uv), rand(seed, uv)).xy, 0);
-	coc.xy *= g_xCamera_ApertureShape.xy;
-	coc = mul(coc, float3x3(cross(g_xCamera_Up, g_xCamera_At), g_xCamera_Up, g_xCamera_At));
-	coc *= g_xCamera_FocalLength;
-	coc *= g_xCamera_ApertureSize;
+	coc.xy *= g_xCamera.ApertureShape.xy;
+	coc = mul(coc, float3x3(cross(g_xCamera.Up, g_xCamera.At), g_xCamera.Up, g_xCamera.At));
+	coc *= g_xCamera.FocalLength;
+	coc *= g_xCamera.ApertureSize;
 	coc *= 0.1f;
 	ray.Origin = ray.Origin + coc;
 	ray.Direction = focal_point - ray.Origin; // will be normalized before tracing!
@@ -89,35 +89,23 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		}
 
 		Surface surface;
-		ShaderMaterial material;
 
 #ifdef RTAPI
 		// ray origin updated for next bounce:
 		ray.Origin = q.WorldRayOrigin() + q.WorldRayDirection() * q.CommittedRayT();
 
-		ShaderMesh mesh = bindless_buffers[NonUniformResourceIndex(q.CommittedInstanceID())].Load<ShaderMesh>(0);
-		ShaderMeshSubset subset = bindless_subsets[NonUniformResourceIndex(mesh.subsetbuffer)][q.CommittedGeometryIndex()];
-		material = bindless_buffers[NonUniformResourceIndex(subset.material)].Load<ShaderMaterial>(0);
+		PrimitiveID prim;
+		prim.primitiveIndex = q.CommittedPrimitiveIndex();
+		prim.instanceIndex = q.CommittedInstanceID();
+		prim.subsetIndex = q.CommittedGeometryIndex();
 
-		EvaluateObjectSurface(
-			mesh,
-			subset,
-			material,
-			q.CommittedPrimitiveIndex(),
-			q.CommittedTriangleBarycentrics(),
-			q.CommittedObjectToWorld3x4(),
-			surface
-		);
+		surface.load(prim, q.CommittedTriangleBarycentrics());
 
 #else
 		// ray origin updated for next bounce:
 		ray.Origin = ray.Origin + ray.Direction * hit.distance;
 
-		EvaluateObjectSurface(
-			hit,
-			material,
-			surface
-		);
+		surface.load(hit.primitiveID, hit.bary);
 
 #endif // RTAPI
 
@@ -125,14 +113,18 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		surface.V = -ray.Direction;
 		surface.update();
 
+
 		result += max(0, energy * surface.emissiveColor.rgb * surface.emissiveColor.a);
+
+
+
 
 
 		// Light sampling:
 		[loop]
-		for (uint iterator = 0; iterator < g_xFrame_LightArrayCount; iterator++)
+		for (uint iterator = 0; iterator < g_xFrame.LightArrayCount; iterator++)
 		{
-			ShaderEntity light = EntityArray[g_xFrame_LightArrayOffset + iterator];
+			ShaderEntity light = EntityArray[g_xFrame.LightArrayOffset + iterator];
 
 			Lighting lighting;
 			lighting.create(0, 0, 0, 0);
@@ -158,9 +150,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 					lightColor = light.GetColor().rgb * light.GetEnergy();
 
 					float3 atmosphereTransmittance = 1;
-					if (g_xFrame_Options & OPTION_BIT_REALISTIC_SKY)
+					if (g_xFrame.Options & OPTION_BIT_REALISTIC_SKY)
 					{
-						AtmosphereParameters Atmosphere = g_xFrame_Atmosphere;
+						AtmosphereParameters Atmosphere = g_xFrame.Atmosphere;
 						atmosphereTransmittance = GetAtmosphericLightTransmittance(Atmosphere, surface.P, L, texture_transmittancelut);
 					}
 					lightColor *= atmosphereTransmittance;
@@ -249,25 +241,13 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 				);
 				while (q.Proceed())
 				{
-					ShaderMesh mesh = bindless_buffers[NonUniformResourceIndex(q.CandidateInstanceID())].Load<ShaderMesh>(0);
-					ShaderMeshSubset subset = bindless_subsets[NonUniformResourceIndex(mesh.subsetbuffer)][q.CandidateGeometryIndex()];
-					ShaderMaterial material = bindless_buffers[NonUniformResourceIndex(subset.material)].Load<ShaderMaterial>(0);
-					[branch]
-					if (!material.IsCastingShadow())
-					{
-						continue;
-					}
+					PrimitiveID prim;
+					prim.primitiveIndex = q.CandidatePrimitiveIndex();
+					prim.instanceIndex = q.CandidateInstanceID();
+					prim.subsetIndex = q.CandidateGeometryIndex();
 
 					Surface surface;
-					EvaluateObjectSurface(
-						mesh,
-						subset,
-						material,
-						q.CandidatePrimitiveIndex(),
-						q.CandidateTriangleBarycentrics(),
-						q.CandidateObjectToWorld3x4(),
-						surface
-					);
+					surface.load(prim, q.CandidateTriangleBarycentrics());
 
 					shadow *= lerp(1, surface.albedo * surface.transmission, surface.opacity);
 
@@ -289,6 +269,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 				}
 			}
 		}
+
 
 
 		if (bounce == 0)
@@ -317,7 +298,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			if (roulette <= refractChance)
 			{
 				// Refraction
-				const float3 R = refract(ray.Direction, surface.N, 1 - material.refraction);
+				const float3 R = refract(ray.Direction, surface.N, 1 - surface.material.refraction);
 				ray.Direction = lerp(R, SampleHemisphere_cos(R, seed, uv), surface.roughnessBRDF);
 				energy *= surface.albedo;
 

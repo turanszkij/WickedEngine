@@ -1326,8 +1326,7 @@ void wiComboBox::Render(const wiCanvas& canvas, CommandList cmd) const
 			XMMatrixTranslation(translation.x + scale.x + 1 + scale.y * 0.5f, translation.y + scale.y * 0.5f, 0) *
 			Projection
 		);
-		device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, cmd);
-		device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CBSLOT_RENDERER_MISC, cmd);
+		device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
 		const GPUBuffer* vbs[] = {
 			&vb_triangle,
 		};
@@ -2337,10 +2336,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			GPUBufferDesc desc;
 			desc.BindFlags = BIND_VERTEX_BUFFER;
 			desc.ByteWidth = (uint32_t)(vertices.size() * sizeof(Vertex));
-			desc.CPUAccessFlags = 0;
-			desc.MiscFlags = 0;
 			desc.StructureByteStride = 0;
-			desc.Usage = USAGE_IMMUTABLE;
 			SubresourceData data;
 			data.pSysMem = vertices.data();
 			device->CreateBuffer(&desc, &data, &vb_hue);
@@ -2364,10 +2360,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			GPUBufferDesc desc;
 			desc.BindFlags = BIND_VERTEX_BUFFER;
 			desc.ByteWidth = (uint32_t)(vertices.size() * sizeof(Vertex));
-			desc.CPUAccessFlags = 0;
-			desc.MiscFlags = 0;
 			desc.StructureByteStride = 0;
-			desc.Usage = USAGE_IMMUTABLE;
 			SubresourceData data;
 			data.pSysMem = vertices.data();
 			device->CreateBuffer(&desc, &data, &vb_picker_saturation);
@@ -2405,10 +2398,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			GPUBufferDesc desc;
 			desc.BindFlags = BIND_VERTEX_BUFFER;
 			desc.ByteWidth = (uint32_t)sizeof(vertices);
-			desc.CPUAccessFlags = 0;
-			desc.MiscFlags = 0;
 			desc.StructureByteStride = 0;
-			desc.Usage = USAGE_IMMUTABLE;
 			SubresourceData data;
 			data.pSysMem = vertices;
 			device->CreateBuffer(&desc, &data, &vb_picker_hue);
@@ -2426,10 +2416,6 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			GPUBufferDesc desc;
 			desc.BindFlags = BIND_VERTEX_BUFFER;
 			desc.ByteWidth = (uint32_t)sizeof(vertices);
-			desc.CPUAccessFlags = 0;
-			desc.MiscFlags = 0;
-			desc.StructureByteStride = 0;
-			desc.Usage = USAGE_IMMUTABLE;
 			SubresourceData data;
 			data.pSysMem = vertices;
 			device->CreateBuffer(&desc, &data, &vb_preview);
@@ -2442,7 +2428,6 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 
 	const XMMATRIX Projection = canvas.GetProjection();
 
-	device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CBSLOT_RENDERER_MISC, cmd);
 	device->BindPipelineState(&PSO_colored, cmd);
 
 	ApplyScissor(canvas, scissorRect, cmd);
@@ -2484,9 +2469,9 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			Projection
 		);
 		cb.g_xColor = IsEnabled() ? float4(1, 1, 1, 1) : float4(0.5f, 0.5f, 0.5f, 1);
-		device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, cmd);
+		device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
 		const GPUBuffer* vbs[] = {
-			vb_saturation.buffer,
+			&vb_saturation.buffer,
 		};
 		const uint32_t strides[] = {
 			sizeof(Vertex),
@@ -2505,7 +2490,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			Projection
 		);
 		cb.g_xColor = IsEnabled() ? float4(1, 1, 1, 1) : float4(0.5f, 0.5f, 0.5f, 1);
-		device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, cmd);
+		device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
 		const GPUBuffer* vbs[] = {
 			&vb_hue,
 		};
@@ -2532,7 +2517,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 		rgb result = hsv2rgb(source);
 		cb.g_xColor = float4(1 - result.r, 1 - result.g, 1 - result.b, 1);
 
-		device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, cmd);
+		device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
 		const GPUBuffer* vbs[] = {
 			&vb_picker_hue,
 		};
@@ -2583,7 +2568,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			Projection
 		);
 		cb.g_xColor = float4(1 - final_color.toFloat3().x, 1 - final_color.toFloat3().y, 1 - final_color.toFloat3().z, 1);
-		device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, cmd);
+		device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
 		const GPUBuffer* vbs[] = {
 			&vb_picker_saturation,
 		};
@@ -2602,7 +2587,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			Projection
 		);
 		cb.g_xColor = final_color.toFloat4();
-		device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, cmd);
+		device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
 		const GPUBuffer* vbs[] = {
 			&vb_preview,
 		};
@@ -2990,8 +2975,7 @@ void wiTreeList::Render(const wiCanvas& canvas, CommandList cmd) const
 				XMMatrixTranslation(open_box.pos.x + open_box.siz.x * 0.5f, open_box.pos.y + open_box.siz.y * 0.25f, 0) *
 				Projection
 			);
-			device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &cb, cmd);
-			device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CBSLOT_RENDERER_MISC, cmd);
+			device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
 			const GPUBuffer* vbs[] = {
 				&vb_triangle,
 			};

@@ -6,7 +6,7 @@ float4 main(PixelInput input) : SV_TARGET
 {
 	float4 color;
 	[branch]
-	if (GetMaterial().uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+	if (GetMaterial().uvset_baseColorMap >= 0 && (g_xFrame.Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 	{
 		const float2 UV_baseColorMap = GetMaterial().uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 		color = texture_basecolormap.Sample(sampler_objectshader, UV_baseColorMap);
@@ -30,15 +30,15 @@ float4 main(PixelInput input) : SV_TARGET
 	}
 	color.rgb += emissiveColor.rgb * emissiveColor.a;
 
-	float time = g_xFrame_Time;
-	float2 uv = input.pos.xy * g_xFrame_InternalResolution_rcp;
-	uv.y *= g_xFrame_InternalResolution.y * g_xFrame_InternalResolution_rcp.x;
+	float time = g_xFrame.Time;
+	float2 uv = input.pos.xy * g_xFrame.InternalResolution_rcp;
+	uv.y *= g_xFrame.InternalResolution.y * g_xFrame.InternalResolution_rcp.x;
 
 	// wave:
 	color.a *= sin(input.pos3D.y * 30 + time * 10) * 0.5 + 0.5;
 
 	// rim:
-	color *= lerp(0.3, 6, pow(1 - saturate(dot(normalize(input.nor), normalize(g_xCamera_CamPos - input.pos3D))), 2));
+	color *= lerp(0.3, 6, pow(1 - saturate(dot(normalize(input.nor), normalize(g_xCamera.CamPos - input.pos3D))), 2));
 
 	// keep some base color
 	color.a += 0.2;

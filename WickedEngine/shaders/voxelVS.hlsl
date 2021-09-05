@@ -12,9 +12,9 @@ VSOut main( uint vertexID : SV_VERTEXID )
 {
 	VSOut o;
 
-	uint3 coord = unflatten3D(vertexID, g_xFrame_VoxelRadianceDataRes);
+	uint3 coord = unflatten3D(vertexID, g_xFrame.VoxelRadianceDataRes);
 	o.pos = float4(coord, 1);
-	o.col = texture_voxelradiance[coord];
+	o.col = texture_voxelgi[coord];
 
 	return o;
 }

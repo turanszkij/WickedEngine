@@ -18,15 +18,10 @@ namespace wiImage
 	enum IMAGE_SHADER
 	{
 		IMAGE_SHADER_STANDARD,
-		IMAGE_SHADER_SEPARATENORMALMAP,
-		IMAGE_SHADER_MASKED,
-		IMAGE_SHADER_BACKGROUND,
-		IMAGE_SHADER_BACKGROUND_MASKED,
 		IMAGE_SHADER_FULLSCREEN,
 		IMAGE_SHADER_COUNT
 	};
 
-	GPUBuffer				constantBuffer;
 	Shader					vertexShader;
 	Shader					screenVS;
 	Shader					imagePS[IMAGE_SHADER_COUNT];
@@ -96,36 +91,46 @@ namespace wiImage
 				sampler = wiRenderer::GetSampler(SSLOT_ANISO_CLAMP);
 		}
 
-		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
+		PushConstantsImage push;
+		push.texture_base_index = device->GetDescriptorIndex(texture, SRV);
+		push.texture_mask_index = device->GetDescriptorIndex(params.maskMap, SRV);
+		if (params.isBackgroundEnabled())
 		{
-			PushConstantsImage push;
-			push.texture_base_index = device->GetDescriptorIndex(texture, SRV);
-			push.texture_mask_index = device->GetDescriptorIndex(params.maskMap, SRV);
 			push.texture_background_index = device->GetDescriptorIndex(&backgroundTextures[cmd], SRV);
-			push.sampler_index = device->GetDescriptorIndex(sampler);
-			device->PushConstants(&push, sizeof(push), cmd);
 		}
 		else
 		{
-			device->BindResource(PS, texture, TEXSLOT_IMAGE_BASE, cmd);
-			device->BindResource(PS, params.maskMap, TEXSLOT_IMAGE_MASK, cmd);
-			device->BindResource(PS, &backgroundTextures[cmd], TEXSLOT_IMAGE_BACKGROUND, cmd);
-			device->BindSampler(PS, sampler, SSLOT_ONDEMAND0, cmd);
+			push.texture_background_index = -1;
 		}
+		push.sampler_index = device->GetDescriptorIndex(sampler);
 
-		ImageCB cb;
-		cb.xColor = params.color;
+		XMFLOAT4 color = params.color;
 		const float darken = 1 - params.fade;
-		cb.xColor.x *= darken;
-		cb.xColor.y *= darken;
-		cb.xColor.z *= darken;
-		cb.xColor.w *= params.opacity;
+		color.x *= darken;
+		color.y *= darken;
+		color.z *= darken;
+		color.w *= params.opacity;
+
+		XMHALF4 packed_color;
+		packed_color.x = XMConvertFloatToHalf(color.x);
+		packed_color.y = XMConvertFloatToHalf(color.y);
+		packed_color.z = XMConvertFloatToHalf(color.z);
+		packed_color.w = XMConvertFloatToHalf(color.w);
+
+		push.packed_color.x = uint(packed_color.v);
+		push.packed_color.y = uint(packed_color.v >> 32ull);
+
+		push.flags = 0;
+		if (params.isExtractNormalMapEnabled())
+		{
+			push.flags |= IMAGE_FLAG_EXTRACT_NORMALMAP;
+		}
 
 		if (params.isFullScreenEnabled())
 		{
+			// Full screen image uses a fast path with full screen triangle and no effects
 			device->BindPipelineState(&imagePSO[IMAGE_SHADER_FULLSCREEN][params.blendFlag][params.stencilComp][params.stencilRefMode], cmd);
-			device->UpdateBuffer(&constantBuffer, &cb, cmd);
-			device->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(ImageCB), cmd);
+			device->PushConstants(&push, sizeof(push), cmd);
 			device->Draw(3, 0, cmd);
 			device->EventEnd(cmd);
 			return;
@@ -161,13 +166,13 @@ namespace wiImage
 		{
 			XMVECTOR V = XMVectorSet(params.corners[i].x - params.pivot.x, params.corners[i].y - params.pivot.y, 0, 1);
 			V = XMVector2Transform(V, M); // division by w will happen on GPU
-			XMStoreFloat4(&cb.xCorners[i], V);
+			XMStoreFloat4(&push.corners[i], V);
 		}
 
 		if (params.isMirrorEnabled())
 		{
-			std::swap(cb.xCorners[0], cb.xCorners[1]);
-			std::swap(cb.xCorners[2], cb.xCorners[3]);
+			std::swap(push.corners[0], push.corners[1]);
+			std::swap(push.corners[2], push.corners[3]);
 		}
 
 		const TextureDesc& desc = texture->GetDesc();
@@ -176,73 +181,35 @@ namespace wiImage
 
 		if (params.isDrawRectEnabled())
 		{
-			cb.xTexMulAdd.x = params.drawRect.z * inv_width;	// drawRec.width: mul
-			cb.xTexMulAdd.y = params.drawRect.w * inv_height;	// drawRec.heigh: mul
-			cb.xTexMulAdd.z = params.drawRect.x * inv_width;	// drawRec.x: add
-			cb.xTexMulAdd.w = params.drawRect.y * inv_height;	// drawRec.y: add
+			push.texMulAdd.x = params.drawRect.z * inv_width;	// drawRec.width: mul
+			push.texMulAdd.y = params.drawRect.w * inv_height;	// drawRec.heigh: mul
+			push.texMulAdd.z = params.drawRect.x * inv_width;	// drawRec.x: add
+			push.texMulAdd.w = params.drawRect.y * inv_height;	// drawRec.y: add
 		}
 		else
 		{
-			cb.xTexMulAdd = XMFLOAT4(1, 1, 0, 0);	// disabled draw rect
+			push.texMulAdd = XMFLOAT4(1, 1, 0, 0);	// disabled draw rect
 		}
-		cb.xTexMulAdd.z += params.texOffset.x * inv_width;	// texOffset.x: add
-		cb.xTexMulAdd.w += params.texOffset.y * inv_height;	// texOffset.y: add
+		push.texMulAdd.z += params.texOffset.x * inv_width;	// texOffset.x: add
+		push.texMulAdd.w += params.texOffset.y * inv_height;	// texOffset.y: add
 
 		if (params.isDrawRect2Enabled())
 		{
-			cb.xTexMulAdd2.x = params.drawRect2.z * inv_width;	// drawRec.width: mul
-			cb.xTexMulAdd2.y = params.drawRect2.w * inv_height;	// drawRec.heigh: mul
-			cb.xTexMulAdd2.z = params.drawRect2.x * inv_width;	// drawRec.x: add
-			cb.xTexMulAdd2.w = params.drawRect2.y * inv_height;	// drawRec.y: add
+			push.texMulAdd2.x = params.drawRect2.z * inv_width;	// drawRec.width: mul
+			push.texMulAdd2.y = params.drawRect2.w * inv_height;	// drawRec.heigh: mul
+			push.texMulAdd2.z = params.drawRect2.x * inv_width;	// drawRec.x: add
+			push.texMulAdd2.w = params.drawRect2.y * inv_height;	// drawRec.y: add
 		}
 		else
 		{
-			cb.xTexMulAdd2 = XMFLOAT4(1, 1, 0, 0);	// disabled draw rect
+			push.texMulAdd2 = XMFLOAT4(1, 1, 0, 0);	// disabled draw rect
 		}
-		cb.xTexMulAdd2.z += params.texOffset2.x * inv_width;	// texOffset.x: add
-		cb.xTexMulAdd2.w += params.texOffset2.y * inv_height;	// texOffset.y: add
+		push.texMulAdd2.z += params.texOffset2.x * inv_width;	// texOffset.x: add
+		push.texMulAdd2.w += params.texOffset2.y * inv_height;	// texOffset.y: add
 
-		device->UpdateBuffer(&constantBuffer, &cb, cmd);
+		device->BindPipelineState(&imagePSO[IMAGE_SHADER_STANDARD][params.blendFlag][params.stencilComp][params.stencilRefMode], cmd);
 
-		// Determine relevant image rendering pixel shader:
-		IMAGE_SHADER targetShader;
-		const bool NormalmapSeparate = params.isExtractNormalMapEnabled();
-		const bool Mask = params.maskMap != nullptr;
-		const bool background_blur = params.isBackgroundEnabled();
-		if (NormalmapSeparate)
-		{
-			targetShader = IMAGE_SHADER_SEPARATENORMALMAP;
-		}
-		else
-		{
-			if (Mask)
-			{
-				if (background_blur)
-				{
-					targetShader = IMAGE_SHADER_BACKGROUND_MASKED;
-				}
-				else
-				{
-					targetShader = IMAGE_SHADER_MASKED;
-				}
-			}
-			else
-			{
-				if (background_blur)
-				{
-					targetShader = IMAGE_SHADER_BACKGROUND;
-				}
-				else
-				{
-					targetShader = IMAGE_SHADER_STANDARD;
-				}
-			}
-		}
-
-		device->BindPipelineState(&imagePSO[targetShader][params.blendFlag][params.stencilComp][params.stencilRefMode], cmd);
-
-		device->BindConstantBuffer(VS, &constantBuffer, CB_GETBINDSLOT(ImageCB), cmd);
-		device->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(ImageCB), cmd);
+		device->PushConstants(&push, sizeof(push), cmd);
 
 		device->Draw(4, 0, cmd);
 
@@ -258,10 +225,6 @@ namespace wiImage
 		wiRenderer::LoadShader(VS, screenVS, "screenVS.cso");
 
 		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_STANDARD], "imagePS.cso");
-		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_SEPARATENORMALMAP], "imagePS_separatenormalmap.cso");
-		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_MASKED], "imagePS_masked.cso");
-		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_BACKGROUND], "imagePS_backgroundblur.cso");
-		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_BACKGROUND_MASKED], "imagePS_backgroundblur_masked.cso");
 		wiRenderer::LoadShader(PS, imagePS[IMAGE_SHADER_FULLSCREEN], "screenPS.cso");
 
 
@@ -302,15 +265,6 @@ namespace wiImage
 	void Initialize()
 	{
 		GraphicsDevice* device = wiRenderer::GetDevice();
-
-		{
-			GPUBufferDesc bd;
-			bd.Usage = USAGE_DYNAMIC;
-			bd.ByteWidth = sizeof(ImageCB);
-			bd.BindFlags = BIND_CONSTANT_BUFFER;
-			bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-			device->CreateBuffer(&bd, nullptr, &constantBuffer);
-		}
 
 		RasterizerState rs;
 		rs.FillMode = FILL_SOLID;

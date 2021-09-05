@@ -30,19 +30,19 @@ float2 FFX_DNSR_Shadows_GetInvBufferDimensions()
 }
 float3 FFX_DNSR_Shadows_GetEye()
 {
-	return g_xCamera_CamPos;
+	return g_xCamera.CamPos;
 }
 float4x4 FFX_DNSR_Shadows_GetProjectionInverse()
 {
-	return g_xCamera_InvP;
+	return g_xCamera.InvP;
 }
 float4x4 FFX_DNSR_Shadows_GetViewProjectionInverse()
 {
-	return g_xCamera_InvVP;
+	return g_xCamera.InvVP;
 }
 float4x4 FFX_DNSR_Shadows_GetReprojectionMatrix()
 {
-	return g_xCamera_Reprojection;
+	return g_xCamera.Reprojection;
 }
 
 float FFX_DNSR_Shadows_ReadDepth(uint2 did)
@@ -71,7 +71,7 @@ float FFX_DNSR_Shadows_ReadHistory(float2 history_uv)
 }
 float2 FFX_DNSR_Shadows_ReadVelocity(uint2 did)
 {
-	return -texture_gbuffer2[did * 2].xy;
+	return -texture_gbuffer1[did * 2].xy;
 }
 
 void FFX_DNSR_Shadows_WriteReprojectionResults(uint2 did, float2 value)

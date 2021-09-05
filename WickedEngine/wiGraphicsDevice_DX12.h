@@ -8,7 +8,6 @@
 
 #ifdef WICKEDENGINE_BUILD_DX12
 #include "wiGraphicsDevice.h"
-#include "wiGraphicsDevice_SharedInternals.h"
 #include "wiMath.h"
 
 #include <dxgi1_6.h>
@@ -105,25 +104,9 @@ namespace wiGraphics
 		{
 			Microsoft::WRL::ComPtr<ID3D12Fence> fence[QUEUE_COUNT];
 			Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocators[COMMANDLIST_COUNT][QUEUE_COUNT];
-
-			struct ResourceFrameAllocator
-			{
-				GraphicsDevice_DX12*	device = nullptr;
-				GPUBuffer				buffer;
-				uint8_t*				dataBegin = nullptr;
-				uint8_t*				dataCur = nullptr;
-				uint8_t*				dataEnd = nullptr;
-
-				void init(GraphicsDevice_DX12* device, size_t size);
-
-				uint8_t* allocate(size_t dataSize, size_t alignment);
-				void clear();
-				uint64_t calculateOffset(uint8_t* address);
-			};
-			ResourceFrameAllocator resourceBuffer[COMMANDLIST_COUNT];
 		};
 		FrameResources frames[BUFFERCOUNT];
-		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BUFFERCOUNT]; }
+		FrameResources& GetFrameResources() { return frames[GetBufferIndex()]; }
 
 		struct CommandListMetadata
 		{
@@ -145,15 +128,15 @@ namespace wiGraphics
 			bool dirty_res = false;
 			bool dirty_sam = false;
 
-			const GPUBuffer* CBV[GPU_RESOURCE_HEAP_CBV_COUNT];
-			const GPUResource* SRV[GPU_RESOURCE_HEAP_SRV_COUNT];
-			int SRV_index[GPU_RESOURCE_HEAP_SRV_COUNT];
-			const GPUResource* UAV[GPU_RESOURCE_HEAP_UAV_COUNT];
-			int UAV_index[GPU_RESOURCE_HEAP_UAV_COUNT];
-			const Sampler* SAM[GPU_SAMPLER_HEAP_COUNT];
+			GPUBuffer CBV[DESCRIPTORBINDER_CBV_COUNT];
+			uint64_t CBV_offset[DESCRIPTORBINDER_CBV_COUNT];
+			GPUResource SRV[DESCRIPTORBINDER_SRV_COUNT];
+			int SRV_index[DESCRIPTORBINDER_SRV_COUNT];
+			GPUResource UAV[DESCRIPTORBINDER_UAV_COUNT];
+			int UAV_index[DESCRIPTORBINDER_UAV_COUNT];
+			Sampler SAM[DESCRIPTORBINDER_SAMPLER_COUNT];
 
-			uint32_t dirty_root_cbvs_gfx = 0; // bitmask
-			uint32_t dirty_root_cbvs_compute = 0; // bitmask
+			uint32_t dirty_root_cbvs = 0; // bitmask
 
 			struct DescriptorHandles
 			{
@@ -197,18 +180,8 @@ namespace wiGraphics
 		bool dirty_pso[COMMANDLIST_COUNT] = {};
 		void pso_validate(CommandList cmd);
 
-		void query_flush(CommandList cmd);
-		void barrier_flush(CommandList cmd);
 		void predraw(CommandList cmd);
 		void predispatch(CommandList cmd);
-
-		struct QueryResolver
-		{
-			const GPUQueryHeap* heap = nullptr;
-			uint32_t index = 0;
-			uint32_t count = 0;
-		};
-		std::vector<QueryResolver> query_resolves[COMMANDLIST_COUNT];
 
 		std::atomic<CommandList> cmd_count{ 0 };
 
@@ -237,10 +210,6 @@ namespace wiGraphics
 		void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) const override;
 		void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) const override;
 		
-		void Map(const GPUResource* resource, Mapping* mapping) const override;
-		void Unmap(const GPUResource* resource) const override;
-		void QueryRead(const GPUQueryHeap* heap, uint32_t index, uint32_t count, uint64_t* results) const override;
-
 		void SetCommonSampler(const StaticSampler* sam) override;
 
 		void SetName(GPUResource* pResource, const char* name) override;
@@ -263,14 +232,12 @@ namespace wiGraphics
 		void RenderPassEnd(CommandList cmd) override;
 		void BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd) override;
 		void BindViewports(uint32_t NumViewports, const Viewport* pViewports, CommandList cmd) override;
-		void BindResource(SHADERSTAGE stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource = -1) override;
-		void BindResources(SHADERSTAGE stage, const GPUResource *const* resources, uint32_t slot, uint32_t count, CommandList cmd) override;
-		void BindUAV(SHADERSTAGE stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource = -1) override;
-		void BindUAVs(SHADERSTAGE stage, const GPUResource *const* resources, uint32_t slot, uint32_t count, CommandList cmd) override;
-		void UnbindResources(uint32_t slot, uint32_t num, CommandList cmd) override;
-		void UnbindUAVs(uint32_t slot, uint32_t num, CommandList cmd) override;
-		void BindSampler(SHADERSTAGE stage, const Sampler* sampler, uint32_t slot, CommandList cmd) override;
-		void BindConstantBuffer(SHADERSTAGE stage, const GPUBuffer* buffer, uint32_t slot, CommandList cmd) override;
+		void BindResource(const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource = -1) override;
+		void BindResources(const GPUResource *const* resources, uint32_t slot, uint32_t count, CommandList cmd) override;
+		void BindUAV(const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource = -1) override;
+		void BindUAVs(const GPUResource *const* resources, uint32_t slot, uint32_t count, CommandList cmd) override;
+		void BindSampler(const Sampler* sampler, uint32_t slot, CommandList cmd) override;
+		void BindConstantBuffer(const GPUBuffer* buffer, uint32_t slot, CommandList cmd, uint64_t offset = 0ull) override;
 		void BindVertexBuffers(const GPUBuffer *const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint32_t* offsets, CommandList cmd) override;
 		void BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, uint32_t offset, CommandList cmd) override;
 		void BindStencilRef(uint32_t value, CommandList cmd) override;
@@ -289,17 +256,16 @@ namespace wiGraphics
 		void DispatchMesh(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd) override;
 		void DispatchMeshIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) override;
 		void CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd) override;
-		void UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize = -1) override;
+		void CopyBuffer(const GPUBuffer* pDst, uint64_t dst_offset, const GPUBuffer* pSrc, uint64_t src_offset, uint64_t size, CommandList cmd) override;
 		void QueryBegin(const GPUQueryHeap* heap, uint32_t index, CommandList cmd) override;
 		void QueryEnd(const GPUQueryHeap* heap, uint32_t index, CommandList cmd) override;
-		void QueryResolve(const GPUQueryHeap* heap, uint32_t index, uint32_t count, CommandList cmd) override;
+		void QueryResolve(const GPUQueryHeap* heap, uint32_t index, uint32_t count, const GPUBuffer* dest, uint64_t dest_offset, CommandList cmd) override;
+		void QueryReset(const GPUQueryHeap* heap, uint32_t index, uint32_t count, CommandList cmd) override {}
 		void Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd) override;
 		void BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src = nullptr) override;
 		void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) override;
 		void DispatchRays(const DispatchRaysDesc* desc, CommandList cmd) override;
 		void PushConstants(const void* data, uint32_t size, CommandList cmd) override;
-
-		GPUAllocation AllocateGPU(size_t dataSize, CommandList cmd) override;
 
 		void EventBegin(const char* name, CommandList cmd) override;
 		void EventEnd(CommandList cmd) override;

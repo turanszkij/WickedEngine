@@ -18,12 +18,12 @@ void main( uint3 DTid : SV_DispatchThreadID )
 	{
 		float3 N = unpack_unitvector(input_voxelscene[DTid.x].normalMask);
 
-		float3 P = ((float3)writecoord + 0.5f) * g_xFrame_VoxelRadianceDataRes_rcp;
+		float3 P = ((float3)writecoord + 0.5f) * g_xFrame.VoxelRadianceDataRes_rcp;
 		P = P * 2 - 1;
 		P.y *= -1;
-		P *= g_xFrame_VoxelRadianceDataSize;
-		P *= g_xFrame_VoxelRadianceDataRes;
-		P += g_xFrame_VoxelRadianceDataCenter;
+		P *= g_xFrame.VoxelRadianceDataSize;
+		P *= g_xFrame.VoxelRadianceDataRes;
+		P += g_xFrame.VoxelRadianceDataCenter;
 
 		float4 radiance = ConeTraceDiffuse(input_emission, P, N);
 

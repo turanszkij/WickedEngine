@@ -21,7 +21,7 @@ void main(PSInput input)
 	float3 N = normalize(input.N);
 	float3 P = input.P;
 
-	float3 diff = (P - g_xFrame_VoxelRadianceDataCenter) * g_xFrame_VoxelRadianceDataRes_rcp * g_xFrame_VoxelRadianceDataSize_rcp;
+	float3 diff = (P - g_xFrame.VoxelRadianceDataCenter) * g_xFrame.VoxelRadianceDataRes_rcp * g_xFrame.VoxelRadianceDataSize_rcp;
 	float3 uvw = diff * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 
 	[branch]
@@ -29,7 +29,7 @@ void main(PSInput input)
 	{
 		float4 baseColor;
 		[branch]
-		if (GetMaterial().uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+		if (GetMaterial().uvset_baseColorMap >= 0 && (g_xFrame.Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 		{
 			const float2 UV_baseColorMap = GetMaterial().uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			baseColor = texture_basecolormap.Sample(sampler_linear_wrap, UV_baseColorMap);
@@ -63,7 +63,7 @@ void main(PSInput input)
 		if (blend_weights.x > 0)
 		{
 			[branch]
-			if (GetMaterial().uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+			if (GetMaterial().uvset_baseColorMap >= 0 && (g_xFrame.Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 			{
 				float2 uv = GetMaterial().uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 				sam = texture_basecolormap.Sample(sampler_objectshader, uv);
@@ -89,7 +89,7 @@ void main(PSInput input)
 		if (blend_weights.y > 0)
 		{
 			[branch]
-			if (GetMaterial1().uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+			if (GetMaterial1().uvset_baseColorMap >= 0 && (g_xFrame.Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 			{
 				float2 uv = GetMaterial1().uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 				sam = texture_blend1_basecolormap.Sample(sampler_objectshader, uv);
@@ -115,7 +115,7 @@ void main(PSInput input)
 		if (blend_weights.z > 0)
 		{
 			[branch]
-			if (GetMaterial2().uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+			if (GetMaterial2().uvset_baseColorMap >= 0 && (g_xFrame.Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 			{
 				float2 uv = GetMaterial2().uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 				sam = texture_blend2_basecolormap.Sample(sampler_objectshader, uv);
@@ -141,7 +141,7 @@ void main(PSInput input)
 		if (blend_weights.w > 0)
 		{
 			[branch]
-			if (GetMaterial3().uvset_baseColorMap >= 0 && (g_xFrame_Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+			if (GetMaterial3().uvset_baseColorMap >= 0 && (g_xFrame.Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 			{
 				float2 uv = GetMaterial3().uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 				sam = texture_blend3_basecolormap.Sample(sampler_objectshader, uv);
@@ -175,7 +175,7 @@ void main(PSInput input)
 		{
 			// Loop through light buckets for the draw call:
 			const uint first_item = 0;
-			const uint last_item = first_item + g_xFrame_LightArrayCount - 1;
+			const uint last_item = first_item + g_xFrame.LightArrayCount - 1;
 			const uint first_bucket = first_item / 32;
 			const uint last_bucket = min(last_item / 32, 1); // only 2 buckets max (uint2) for forward pass!
 			[loop]
@@ -191,7 +191,7 @@ void main(PSInput input)
 					const uint entity_index = bucket * 32 + bucket_bit_index;
 					bucket_bits ^= 1u << bucket_bit_index;
 
-					ShaderEntity light = EntityArray[g_xFrame_LightArrayOffset + entity_index];
+					ShaderEntity light = EntityArray[g_xFrame.LightArrayOffset + entity_index];
 
 					if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
 					{
@@ -213,7 +213,7 @@ void main(PSInput input)
 							[branch]
 							if (light.IsCastingShadow() >= 0)
 							{
-								const uint cascade = g_xFrame_ShadowCascadeCount - 1; // biggest cascade (coarsest resolution) will be used to voxelize
+								const uint cascade = g_xFrame.ShadowCascadeCount - 1; // biggest cascade (coarsest resolution) will be used to voxelize
 								float3 ShPos = mul(MatrixArray[light.GetMatrixIndex() + cascade], float4(P, 1)).xyz; // ortho matrix, no divide by .w
 								float3 ShTex = ShPos.xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 
@@ -320,8 +320,8 @@ void main(PSInput input)
 		uint normal_encoded = pack_unitvector(N);
 
 		// output:
-		uint3 writecoord = floor(uvw * g_xFrame_VoxelRadianceDataRes);
-		uint id = flatten3D(writecoord, g_xFrame_VoxelRadianceDataRes);
+		uint3 writecoord = floor(uvw * g_xFrame.VoxelRadianceDataRes);
+		uint id = flatten3D(writecoord, g_xFrame.VoxelRadianceDataRes);
 		InterlockedMax(output[id].colorMask, color_encoded);
 		InterlockedMax(output[id].normalMask, normal_encoded);
 	}

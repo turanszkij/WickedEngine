@@ -15,20 +15,24 @@ namespace wiScene
 
 class wiHairParticle
 {
-private:
+public:
 	wiGraphics::GPUBuffer cb;
-	wiGraphics::GPUBuffer particleBuffer;
 	wiGraphics::GPUBuffer simulationBuffer;
+	wiGraphics::GPUBuffer vertexBuffer_POS[2];
+	wiGraphics::GPUBuffer vertexBuffer_TEX;
+	wiGraphics::GPUBuffer primitiveBuffer;
 	wiGraphics::GPUBuffer culledIndexBuffer;
 	wiGraphics::GPUBuffer indirectBuffer;
+	wiGraphics::GPUBuffer subsetBuffer;
 
 	wiGraphics::GPUBuffer indexBuffer;
 	wiGraphics::GPUBuffer vertexBuffer_length;
-public:
+
+	wiGraphics::RaytracingAccelerationStructure BLAS;
 
 	void UpdateCPU(const TransformComponent& transform, const MeshComponent& mesh, float dt);
-	void UpdateGPU(const MeshComponent& mesh, const MaterialComponent& material, wiGraphics::CommandList cmd) const;
-	void Draw(const CameraComponent& camera, const MaterialComponent& material, RENDERPASS renderPass, wiGraphics::CommandList cmd) const;
+	void UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex, const MeshComponent& mesh, const MaterialComponent& material, wiGraphics::CommandList cmd) const;
+	void Draw(const MaterialComponent& material, RENDERPASS renderPass, wiGraphics::CommandList cmd) const;
 
 	enum FLAGS
 	{

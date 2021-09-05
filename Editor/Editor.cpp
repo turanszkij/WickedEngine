@@ -238,9 +238,9 @@ void EditorComponent::ResizeBuffers()
 					renderPath->GetDepthStencil(),
 					RenderPassAttachment::LOADOP_LOAD,
 					RenderPassAttachment::STOREOP_STORE,
-					IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
-					IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
-					IMAGE_LAYOUT_DEPTHSTENCIL_READONLY
+					RESOURCE_STATE_DEPTHSTENCIL_READONLY,
+					RESOURCE_STATE_DEPTHSTENCIL_READONLY,
+					RESOURCE_STATE_DEPTHSTENCIL_READONLY
 				)
 			);
 			hr = device->CreateRenderPass(&desc, &renderpass_selectionOutline[0]);
@@ -771,8 +771,8 @@ void EditorComponent::Load()
 							{
 								wiScene::GetCamera() = *cam;
 								// camera aspect should be always for the current screen
-								wiScene::GetCamera().width = renderPath->GetInternalResolution().x;
-								wiScene::GetCamera().height = renderPath->GetInternalResolution().y;
+								wiScene::GetCamera().width = (float)renderPath->GetInternalResolution().x;
+								wiScene::GetCamera().height = (float)renderPath->GetInternalResolution().y;
 							}
 						}
 					}
@@ -1947,7 +1947,6 @@ void EditorComponent::Render() const
 
 		// Objects outline:
 		{
-			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 			device->RenderPassBegin(&renderpass_selectionOutline[1], cmd);
 
 			// Draw solid blocks of selected objects

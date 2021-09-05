@@ -32,7 +32,7 @@ void main(
 		GSOutput output;
 
 		// World space -> Voxel grid space:
-		output.pos.xyz = (input[i].pos.xyz - g_xFrame_VoxelRadianceDataCenter) * g_xFrame_VoxelRadianceDataSize_rcp;
+		output.pos.xyz = (input[i].pos.xyz - g_xFrame.VoxelRadianceDataCenter) * g_xFrame.VoxelRadianceDataSize_rcp;
 
 		// Project onto dominant axis:
 		[flatten]
@@ -46,7 +46,7 @@ void main(
 		}
 
 		// Voxel grid space -> Clip space
-		output.pos.xy *= g_xFrame_VoxelRadianceDataRes_rcp;
+		output.pos.xy *= g_xFrame.VoxelRadianceDataRes_rcp;
 		output.pos.zw = 1;
 
 		// Append the rest of the parameters as is:

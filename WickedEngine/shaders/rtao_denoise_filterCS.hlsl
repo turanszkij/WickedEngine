@@ -22,7 +22,7 @@ float2 FFX_DNSR_Shadows_GetInvBufferDimensions()
 }
 float4x4 FFX_DNSR_Shadows_GetProjectionInverse()
 {
-	return g_xCamera_InvP;
+	return g_xCamera.InvP;
 }
 
 float FFX_DNSR_Shadows_GetDepthSimilaritySigma()

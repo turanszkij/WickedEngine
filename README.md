@@ -203,7 +203,7 @@ The preferred workflow is to import models into the Editor, and save them as <b>
 
 ### Graphics API:
 
-The default renderer is `DirectX 11` on Windows and `Vulkan` on Linux. There is also an optional `DirectX 12` renderer for Windows.
+The default renderer is `DirectX 12` on Windows and `Vulkan` on Linux. The `DirectX 11` renderer is no longer available starting from version 0.57.0, but it can be found on the <a href="https://github.com/turanszkij/WickedEngine/tree/dx11-backup">dx11-backup branch</a>.
 You can specify command line arguments (without any prefix) to switch between render devices or other settings. Currently the list of options:
 <table>
   <tr>

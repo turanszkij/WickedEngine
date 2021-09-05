@@ -3,23 +3,29 @@
 #include "ShaderInterop_EmittedParticle.h"
 #include "objectHF.hlsli"
 
-TEXTURE2D(texture_color, float4, TEXSLOT_ONDEMAND0);
-
 [earlydepthstencil]
 float4 main(VertextoPixel input) : SV_TARGET
 {
-    float4 color = texture_color.Sample(sampler_linear_clamp, input.tex.xy);
+	ShaderMaterial material = EmitterGetMaterial();
+
+	float4 color = 1;
 
 	[branch]
-	if (xEmitterOptions & EMITTER_OPTION_BIT_FRAME_BLENDING_ENABLED)
+	if (material.texture_basecolormap_index >= 0)
 	{
-	    float4 color2 = texture_color.Sample(sampler_linear_clamp, input.tex.zw);
-		color = lerp(color, color2, input.frameBlend);
+		color = bindless_textures[material.texture_basecolormap_index].Sample(sampler_linear_clamp, input.tex.xy);
+
+		[branch]
+		if (xEmitterOptions & EMITTER_OPTION_BIT_FRAME_BLENDING_ENABLED)
+		{
+			float4 color2 = bindless_textures[material.texture_basecolormap_index].Sample(sampler_linear_clamp, input.tex.zw);
+			color = lerp(color, color2, input.frameBlend);
+		}
 	}
 
 	float2 pixel = input.pos.xy;
-	float2 ScreenCoord = pixel * g_xFrame_InternalResolution_rcp;
-	float4 depthScene = texture_lineardepth.GatherRed(sampler_linear_clamp, ScreenCoord) * g_xCamera_ZFarP;
+	float2 ScreenCoord = pixel * g_xFrame.InternalResolution_rcp;
+	float4 depthScene = texture_lineardepth.GatherRed(sampler_linear_clamp, ScreenCoord) * g_xCamera.ZFarP;
 	float depthFragment = input.pos.w;
 	float fade = saturate(1.0 / input.size*(max(max(depthScene.x, depthScene.y), max(depthScene.z, depthScene.w)) - depthFragment));
 
@@ -31,7 +37,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 
 	float opacity = saturate(color.a * inputColor.a * fade);
 
-	color.rgb *= inputColor.rgb * (1 + xParticleEmissive);
+	color.rgb *= inputColor.rgb * (1 + material.emissiveColor.rgb * material.emissiveColor.a);
 	color.a = opacity;
 
 #ifdef EMITTEDPARTICLE_DISTORTION
@@ -49,20 +55,20 @@ float4 main(VertextoPixel input) : SV_TARGET
 		N.x = -cos(PI * input.unrotated_uv.x);
 		N.y = cos(PI * input.unrotated_uv.y);
 		N.z = -sin(PI * length(input.unrotated_uv));
-		N = mul((float3x3)g_xCamera_InvV, N);
+		N = mul((float3x3)g_xCamera.InvV, N);
 		N = normalize(N);
 
 		Lighting lighting;
 		lighting.create(0, 0, GetAmbient(N), 0);
 
 		Surface surface;
-		surface.create(g_xMaterial, color, 0);
+		surface.create(material, color, 0);
 		surface.P = input.P;
 		surface.N = N;
 		surface.V = 0;
 		surface.pixel = pixel;
-		surface.sss = g_xMaterial.subsurfaceScattering;
-		surface.sss_inv = g_xMaterial.subsurfaceScattering_inv;
+		surface.sss = material.subsurfaceScattering;
+		surface.sss_inv = material.subsurfaceScattering_inv;
 		surface.update();
 
 		TiledLighting(surface, lighting);
@@ -72,9 +78,10 @@ float4 main(VertextoPixel input) : SV_TARGET
 		//color.rgb = float3(unrotated_uv, 0);
 		//color.rgb = float3(input.tex, 0);
 
+		color = max(0, color);
 	}
 
 #endif // EMITTEDPARTICLE_LIGHTING
 
-	return max(color, 0);
+	return color;
 }

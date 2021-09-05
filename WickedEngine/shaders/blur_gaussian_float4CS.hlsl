@@ -165,7 +165,7 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 		const BLUR_FORMAT color2 = color_cache[sam];
 #ifdef BILATERAL
 		const float depth = depth_cache[sam];
-		const float weight = saturate(abs(depth - center_depth) * g_xCamera_ZFarP * depth_threshold);
+		const float weight = saturate(abs(depth - center_depth) * g_xCamera.ZFarP * depth_threshold);
 		color += lerp(color2, center_color, weight) * gaussianWeightsNormalized[i];
 #else
 		color += color2 * gaussianWeightsNormalized[i];

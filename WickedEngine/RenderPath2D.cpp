@@ -18,7 +18,7 @@ void RenderPath2D::ResizeBuffers()
 	if(dsv != nullptr && (resolutionScale != 1.0f ||  dsv->GetDesc().SampleCount > 1))
 	{
 		TextureDesc desc = GetDepthStencil()->GetDesc();
-		desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE;
+		desc.layout = RESOURCE_STATE_SHADER_RESOURCE;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		desc.Format = FORMAT_R8G8B8A8_UNORM;
 		device->CreateTexture(&desc, nullptr, &rtStenciled);
@@ -55,9 +55,9 @@ void RenderPath2D::ResizeBuffers()
 				dsv,
 				RenderPassAttachment::LOADOP_LOAD,
 				RenderPassAttachment::STOREOP_STORE,
-				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
-				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
-				IMAGE_LAYOUT_DEPTHSTENCIL_READONLY
+				RESOURCE_STATE_DEPTHSTENCIL_READONLY,
+				RESOURCE_STATE_DEPTHSTENCIL_READONLY,
+				RESOURCE_STATE_DEPTHSTENCIL_READONLY
 			)
 		);
 
@@ -81,9 +81,9 @@ void RenderPath2D::ResizeBuffers()
 					dsv,
 					RenderPassAttachment::LOADOP_LOAD,
 					RenderPassAttachment::STOREOP_STORE,
-					IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
-					IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
-					IMAGE_LAYOUT_DEPTHSTENCIL_READONLY
+					RESOURCE_STATE_DEPTHSTENCIL_READONLY,
+					RESOURCE_STATE_DEPTHSTENCIL_READONLY,
+					RESOURCE_STATE_DEPTHSTENCIL_READONLY
 				)
 			);
 		}
