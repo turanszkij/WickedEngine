@@ -2570,7 +2570,7 @@ void RenderMeshes(
 				instancedBatch.meshIndex,
 				(uint)subsetIndex,
 				subset.materialIndex,
-				device->GetDescriptorIndex(instances.buffer, SRV),
+				device->GetDescriptorIndex(&instances.buffer, SRV),
 				instancedBatch.dataOffset
 			);
 			device->PushConstants(&push, sizeof(push), cmd);
@@ -2739,7 +2739,7 @@ void RenderImpostors(
 
 		device->PushConstants(&instances.offset, sizeof(uint), cmd);
 
-		device->BindResource(instances.buffer, TEXSLOT_ONDEMAND21, cmd);
+		device->BindResource(&instances.buffer, TEXSLOT_ONDEMAND21, cmd);
 		device->BindResource(&vis.scene->impostorArray, TEXSLOT_ONDEMAND0, cmd);
 
 		device->Draw(drawableInstanceCount * 6, 0, cmd);
@@ -4813,10 +4813,7 @@ void DrawShadowmaps(
 							frustum_count++;
 						}
 					}
-
-					auto alloc = device->AllocateGPU(sizeof(CubemapRenderCB), cmd);
-					memcpy(alloc.data, &cb, sizeof(cb));
-					device->BindConstantBuffer(alloc.buffer, CB_GETBINDSLOT(CubemapRenderCB), cmd, alloc.offset);
+					device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(CubemapRenderCB), cmd);
 
 					Viewport vp;
 					vp.TopLeftX = 0;
@@ -5118,7 +5115,7 @@ void DrawDebugWorld(
 			}
 
 			const GPUBuffer* vbs[] = {
-				mem.buffer
+				&mem.buffer
 			};
 			const uint32_t strides[] = {
 				sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
@@ -5169,7 +5166,7 @@ void DrawDebugWorld(
 		}
 
 		const GPUBuffer* vbs[] = {
-			mem.buffer,
+			&mem.buffer,
 		};
 		const uint32_t strides[] = {
 			sizeof(Vertex),
@@ -5220,7 +5217,7 @@ void DrawDebugWorld(
 		}
 
 		const GPUBuffer* vbs[] = {
-			mem.buffer,
+			&mem.buffer,
 		};
 		const uint32_t strides[] = {
 			sizeof(Vertex),
@@ -5268,7 +5265,7 @@ void DrawDebugWorld(
 		}
 
 		const GPUBuffer* vbs[] = {
-			mem.buffer,
+			&mem.buffer,
 		};
 		const uint32_t strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
@@ -5316,7 +5313,7 @@ void DrawDebugWorld(
 		}
 
 		const GPUBuffer* vbs[] = {
-			mem.buffer,
+			&mem.buffer,
 		};
 		const uint32_t strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
@@ -5379,7 +5376,7 @@ void DrawDebugWorld(
 		}
 
 		const GPUBuffer* vbs[] = {
-			mem.buffer,
+			&mem.buffer,
 		};
 		const uint32_t strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
@@ -5611,7 +5608,7 @@ void DrawDebugWorld(
 		}
 
 		const GPUBuffer* vbs[] = {
-			mem.buffer,
+			&mem.buffer,
 		};
 		const uint32_t strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
@@ -5859,7 +5856,7 @@ void DrawDebugWorld(
 				(uint)scene.meshes.GetIndex(object.meshID),
 				x.subset,
 				subset.materialIndex,
-				device->GetDescriptorIndex(mem.buffer, SRV),
+				device->GetDescriptorIndex(&mem.buffer, SRV),
 				mem.offset
 			);
 			device->PushConstants(&push, sizeof(push), cmd);
@@ -6208,6 +6205,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 	auto render_probe = [&](const EnvironmentProbeComponent& probe, const AABB& probe_aabb) {
 
+
 		const SHCAM cameras[] = {
 			SHCAM(probe.position, XMFLOAT4(0.5f, -0.5f, -0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //+x
 			SHCAM(probe.position, XMFLOAT4(0.5f, 0.5f, 0.5f, -0.5f), zNearP, zFarP, XM_PIDIV2), //-x
@@ -6229,16 +6227,14 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 		CameraCB camcb;
 		camcb.CamPos = probe.position; // only this will be used by envprobe rendering shaders the rest is read from cubemaprenderCB
-		device->BindDynamicConstantBuffer(&camcb, CBSLOT_RENDERER_CAMERA, cmd);
+		device->BindDynamicConstantBuffer(camcb, CBSLOT_RENDERER_CAMERA, cmd);
 
 		if (vis.scene->weather.IsRealisticSky())
 		{
 			// Refresh atmospheric textures, since each probe has different positions
 			RefreshAtmosphericScatteringTextures(cmd);
+			device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], TEXSLOT_SKYLUMINANCELUT, cmd);
 		}
-
-		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], TEXSLOT_SKYLUMINANCELUT, cmd);
-
 
 		device->RenderPassBegin(&vis.scene->renderpasses_envmap[probe.textureIndex], cmd);
 
@@ -7335,7 +7331,6 @@ void BindCommonResources(CommandList cmd)
 	device->BindResource(wiTextureHelper::getRandom64x64(), TEXSLOT_RANDOM64X64, cmd);
 	device->BindResource(wiTextureHelper::getBlueNoise(), TEXSLOT_BLUENOISE, cmd);
 
-	device->BindResource(&textures[TEXTYPE_2D_SHEENLUT], TEXSLOT_SHEENLUT, cmd);
 	device->BindResource(&textures[TEXTYPE_2D_SHEENLUT], TEXSLOT_SHEENLUT, cmd);
 
 	// Bind the GPU entity array for all shaders that need it here:
@@ -9289,16 +9284,16 @@ void Postprocess_RTReflection(
 	device->WriteShaderIdentifier(&RTPSO_reflection, 2, shadertable_hitgroup.data);
 
 	DispatchRaysDesc dispatchraysdesc;
-	dispatchraysdesc.raygeneration.buffer = shadertable_raygen.buffer;
+	dispatchraysdesc.raygeneration.buffer = &shadertable_raygen.buffer;
 	dispatchraysdesc.raygeneration.offset = shadertable_raygen.offset;
 	dispatchraysdesc.raygeneration.size = shaderIdentifierSize;
 
-	dispatchraysdesc.miss.buffer = shadertable_miss.buffer;
+	dispatchraysdesc.miss.buffer = &shadertable_miss.buffer;
 	dispatchraysdesc.miss.offset = shadertable_miss.offset;
 	dispatchraysdesc.miss.size = shaderIdentifierSize;
 	dispatchraysdesc.miss.stride = shaderIdentifierSize;
 
-	dispatchraysdesc.hitgroup.buffer = shadertable_hitgroup.buffer;
+	dispatchraysdesc.hitgroup.buffer = &shadertable_hitgroup.buffer;
 	dispatchraysdesc.hitgroup.offset = shadertable_hitgroup.offset;
 	dispatchraysdesc.hitgroup.size = shaderIdentifierSize;
 	dispatchraysdesc.hitgroup.stride = shaderIdentifierSize;

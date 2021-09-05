@@ -2476,7 +2476,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 		cb.g_xColor = IsEnabled() ? float4(1, 1, 1, 1) : float4(0.5f, 0.5f, 0.5f, 1);
 		device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_MISC, cmd);
 		const GPUBuffer* vbs[] = {
-			vb_saturation.buffer,
+			&vb_saturation.buffer,
 		};
 		const uint32_t strides[] = {
 			sizeof(Vertex),

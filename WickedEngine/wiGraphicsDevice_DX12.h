@@ -104,25 +104,9 @@ namespace wiGraphics
 		{
 			Microsoft::WRL::ComPtr<ID3D12Fence> fence[QUEUE_COUNT];
 			Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocators[COMMANDLIST_COUNT][QUEUE_COUNT];
-
-			struct ResourceFrameAllocator
-			{
-				GraphicsDevice_DX12*	device = nullptr;
-				GPUBuffer				buffer;
-				uint8_t*				dataBegin = nullptr;
-				uint8_t*				dataCur = nullptr;
-				uint8_t*				dataEnd = nullptr;
-
-				void init(GraphicsDevice_DX12* device, size_t size);
-
-				uint8_t* allocate(size_t dataSize, size_t alignment);
-				void clear();
-				uint64_t calculateOffset(uint8_t* address);
-			};
-			ResourceFrameAllocator resourceBuffer[COMMANDLIST_COUNT];
 		};
 		FrameResources frames[BUFFERCOUNT];
-		FrameResources& GetFrameResources() { return frames[GetFrameCount() % BUFFERCOUNT]; }
+		FrameResources& GetFrameResources() { return frames[GetBufferIndex()]; }
 
 		struct CommandListMetadata
 		{
@@ -144,13 +128,13 @@ namespace wiGraphics
 			bool dirty_res = false;
 			bool dirty_sam = false;
 
-			const GPUBuffer* CBV[DESCRIPTORBINDER_CBV_COUNT];
+			GPUBuffer CBV[DESCRIPTORBINDER_CBV_COUNT];
 			uint64_t CBV_offset[DESCRIPTORBINDER_CBV_COUNT];
-			const GPUResource* SRV[DESCRIPTORBINDER_SRV_COUNT];
+			GPUResource SRV[DESCRIPTORBINDER_SRV_COUNT];
 			int SRV_index[DESCRIPTORBINDER_SRV_COUNT];
-			const GPUResource* UAV[DESCRIPTORBINDER_UAV_COUNT];
+			GPUResource UAV[DESCRIPTORBINDER_UAV_COUNT];
 			int UAV_index[DESCRIPTORBINDER_UAV_COUNT];
-			const Sampler* SAM[DESCRIPTORBINDER_SAMPLER_COUNT];
+			Sampler SAM[DESCRIPTORBINDER_SAMPLER_COUNT];
 
 			uint32_t dirty_root_cbvs = 0; // bitmask
 
@@ -282,8 +266,6 @@ namespace wiGraphics
 		void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) override;
 		void DispatchRays(const DispatchRaysDesc* desc, CommandList cmd) override;
 		void PushConstants(const void* data, uint32_t size, CommandList cmd) override;
-
-		GPUAllocation AllocateGPU(size_t dataSize, CommandList cmd) override;
 
 		void EventBegin(const char* name, CommandList cmd) override;
 		void EventEnd(CommandList cmd) override;

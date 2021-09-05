@@ -585,7 +585,7 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 		device->BindPipelineState(&PSO, cmd);
 
 		PushConstantsFont push;
-		push.buffer_index = device->GetDescriptorIndex(mem.buffer, SRV);
+		push.buffer_index = device->GetDescriptorIndex(&mem.buffer, SRV);
 		push.buffer_offset = mem.offset;
 		push.texture_index = device->GetDescriptorIndex(&texture, SRV);
 

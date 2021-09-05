@@ -19,6 +19,15 @@ namespace wiGraphics
 	static const uint32_t DESCRIPTORBINDER_UAV_COUNT = 16;
 	static const uint32_t DESCRIPTORBINDER_SAMPLER_COUNT = 16;
 
+	inline size_t Align(size_t uLocation, size_t uAlign)
+	{
+		if ((0 == uAlign) || (uAlign & (uAlign - 1)))
+		{
+			assert(0);
+		}
+		return ((uLocation + (uAlign - 1)) & ~(uAlign - 1));
+	}
+
 	enum QUEUE_TYPE
 	{
 		QUEUE_GRAPHICS,
@@ -38,6 +47,7 @@ namespace wiGraphics
 		size_t TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = 0;
 		uint32_t VARIABLE_RATE_SHADING_TILE_SIZE = 0;
 		uint64_t TIMESTAMP_FREQUENCY = 0;
+		size_t ALLOCATION_MIN_ALIGNMENT = 0;
 
 	public:
 		virtual ~GraphicsDevice() = default;
@@ -87,6 +97,7 @@ namespace wiGraphics
 		bool IsFormatStencilSupport(FORMAT value) const;
 
 		static constexpr uint32_t GetBufferCount() { return BUFFERCOUNT; }
+		constexpr uint32_t GetBufferIndex() const { return GetFrameCount() % BUFFERCOUNT; }
 
 		constexpr bool IsDebugDevice() const { return DEBUGDEVICE; }
 
@@ -141,21 +152,6 @@ namespace wiGraphics
 		virtual void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) {}
 		virtual void DispatchRays(const DispatchRaysDesc* desc, CommandList cmd) {}
 		virtual void PushConstants(const void* data, uint32_t size, CommandList cmd) {}
-
-		struct GPUAllocation
-		{
-			void* data = nullptr;				// application can write to this. Reads might be not supported or slow. The offset is already applied
-			const GPUBuffer* buffer = nullptr;	// application can bind it to the GPU
-			uint32_t offset = 0;				// allocation's offset from the GPUbuffer's beginning
-
-			// Returns true if the allocation was successful
-			inline bool IsValid() const { return data != nullptr && buffer != nullptr; }
-		};
-		// Allocates temporary memory that the CPU can write and GPU can read. 
-		//	It is only alive for one frame and automatically invalidated after that.
-		//	The CPU pointer gets invalidated as soon as there is a Draw() or Dispatch() event on the same thread
-		//	This allocation can be used to provide temporary vertex buffer, index buffer or raw buffer data to shaders
-		virtual GPUAllocation AllocateGPU(size_t dataSize, CommandList cmd) = 0;
 		
 		virtual void EventBegin(const char* name, CommandList cmd) = 0;
 		virtual void EventEnd(CommandList cmd) = 0;
@@ -165,6 +161,60 @@ namespace wiGraphics
 
 
 		// Some useful helpers:
+
+		struct GPULinearAllocator
+		{
+			GPUBuffer buffer;
+			size_t offset = 0;
+			uint64_t frame_index = 0;
+		} frame_allocators[BUFFERCOUNT][COMMANDLIST_COUNT];
+
+		struct GPUAllocation
+		{
+			void* data = nullptr;				// application can write to this. Reads might be not supported or slow. The offset is already applied
+			GPUBuffer buffer;					// application can bind it to the GPU
+			uint32_t offset = 0;				// allocation's offset from the GPUbuffer's beginning
+
+			// Returns true if the allocation was successful
+			inline bool IsValid() const { return data != nullptr && buffer.IsValid(); }
+		};
+		// Allocates temporary memory that the CPU can write and GPU can read. 
+		//	It is only alive for one frame and automatically invalidated after that.
+		GPUAllocation AllocateGPU(size_t dataSize, CommandList cmd)
+		{
+			GPUAllocation allocation;
+			if (dataSize == 0)
+				return allocation;
+
+			GPULinearAllocator& allocator = frame_allocators[GetBufferIndex()][cmd];
+			if (FRAMECOUNT != allocator.frame_index)
+			{
+				allocator.frame_index = FRAMECOUNT;
+				allocator.offset = 0;
+			}
+
+			size_t free_space = (size_t)allocator.buffer.desc.ByteWidth - allocator.offset;
+			if (dataSize > free_space)
+			{
+				GPUBufferDesc desc;
+				desc.Usage = USAGE_UPLOAD;
+				desc.ByteWidth = (uint32_t)Align((allocator.buffer.desc.ByteWidth + dataSize) * 2, ALLOCATION_MIN_ALIGNMENT);
+				desc.BindFlags = BIND_CONSTANT_BUFFER | BIND_VERTEX_BUFFER | BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE;
+				desc.Flags = RESOURCE_FLAG_BUFFER_RAW;
+				CreateBuffer(&desc, nullptr, &allocator.buffer);
+				SetName(&allocator.buffer, "frame_allocator");
+				allocator.offset = 0;
+			}
+
+			allocation.buffer = allocator.buffer;
+			allocation.offset = (uint32_t)allocator.offset;
+			allocation.data = (void*)((size_t)allocator.buffer.mapped_data + allocator.offset);
+
+			allocator.offset += Align(dataSize, ALLOCATION_MIN_ALIGNMENT);
+
+			assert(allocation.IsValid());
+			return allocation;
+		}
 
 		// Updates a USAGE_DEFAULT buffer data
 		//	Since it uses a GPU Copy operation, appropriate synchronization is expected
@@ -178,7 +228,7 @@ namespace wiGraphics
 				return;
 			GPUAllocation allocation = AllocateGPU(size, cmd);
 			std::memcpy(allocation.data, data, size);
-			CopyBuffer(buffer, offset, allocation.buffer, allocation.offset, size, cmd);
+			CopyBuffer(buffer, offset, &allocation.buffer, allocation.offset, size, cmd);
 		}
 
 		// Helper util to bind a constant buffer with data for a specific command list:
@@ -189,7 +239,7 @@ namespace wiGraphics
 		{
 			GPUAllocation allocation = AllocateGPU(sizeof(T), cmd);
 			std::memcpy(allocation.data, &data, sizeof(T));
-			BindConstantBuffer(allocation.buffer, slot, cmd, allocation.offset);
+			BindConstantBuffer(&allocation.buffer, slot, cmd, allocation.offset);
 		}
 	};
 

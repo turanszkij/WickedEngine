@@ -613,18 +613,6 @@ namespace Vulkan_Internal
 	}
 
 
-	// Memory tools:
-
-	inline size_t Align(size_t uLocation, size_t uAlign)
-	{
-		if ((0 == uAlign) || (uAlign & (uAlign - 1)))
-		{
-			assert(0);
-		}
-
-		return ((uLocation + (uAlign - 1)) & ~(uAlign - 1));
-	}
-
 
 	struct Buffer_Vulkan
 	{
@@ -1151,46 +1139,6 @@ using namespace Vulkan_Internal;
 		return value;
 	}
 
-	void GraphicsDevice_Vulkan::FrameResources::ResourceFrameAllocator::init(GraphicsDevice_Vulkan* device, size_t size)
-	{
-		this->device = device;
-
-		GPUBufferDesc desc;
-		desc.Usage = USAGE_UPLOAD;
-		desc.ByteWidth = (uint32_t)size;
-		desc.BindFlags = BIND_CONSTANT_BUFFER | BIND_VERTEX_BUFFER | BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE;
-		desc.Flags = RESOURCE_FLAG_BUFFER_RAW;
-		device->CreateBuffer(&desc, nullptr, &buffer);
-		device->SetName(&buffer, "ResourceFrameAllocator");
-
-		dataCur = dataBegin = (uint8_t*)buffer.mapped_data;
-		dataEnd = dataBegin + size;
-	}
-	uint8_t* GraphicsDevice_Vulkan::FrameResources::ResourceFrameAllocator::allocate(size_t dataSize, size_t alignment)
-	{
-		dataCur = reinterpret_cast<uint8_t*>(Align(reinterpret_cast<size_t>(dataCur), alignment));
-
-		if (dataCur + dataSize > dataEnd)
-		{
-			init(device, ((size_t)dataEnd + dataSize - (size_t)dataBegin) * 2);
-		}
-
-		uint8_t* retVal = dataCur;
-
-		dataCur += dataSize;
-
-		return retVal;
-	}
-	void GraphicsDevice_Vulkan::FrameResources::ResourceFrameAllocator::clear()
-	{
-		dataCur = dataBegin;
-	}
-	uint64_t GraphicsDevice_Vulkan::FrameResources::ResourceFrameAllocator::calculateOffset(uint8_t* address)
-	{
-		assert(address >= dataBegin && address < dataEnd);
-		return static_cast<uint64_t>(address - dataBegin);
-	}
-
 	void GraphicsDevice_Vulkan::FrameResources::DescriptorBinder::init(GraphicsDevice_Vulkan* device)
 	{
 		this->device = device;
@@ -1373,14 +1321,14 @@ using namespace Vulkan_Internal;
 					imageInfos.back() = {};
 
 					const uint32_t original_binding = unrolled_binding - VULKAN_BINDING_SHIFT_S;
-					const Sampler* sampler = SAM[original_binding];
-					if (sampler == nullptr || !sampler->IsValid())
+					const Sampler& sampler = SAM[original_binding];
+					if (!sampler.IsValid())
 					{
 						imageInfos.back().sampler = device->nullSampler;
 					}
 					else
 					{
-						imageInfos.back().sampler = to_internal(sampler)->resource;
+						imageInfos.back().sampler = to_internal(&sampler)->resource;
 					}
 				}
 				break;
@@ -1392,8 +1340,8 @@ using namespace Vulkan_Internal;
 					imageInfos.back() = {};
 
 					const uint32_t original_binding = unrolled_binding - VULKAN_BINDING_SHIFT_T;
-					const GPUResource* resource = SRV[original_binding];
-					if (resource == nullptr || !resource->IsValid() || !resource->IsTexture())
+					const GPUResource& resource = SRV[original_binding];
+					if (!resource.IsValid() || !resource.IsTexture())
 					{
 						switch (viewtype)
 						{
@@ -1428,14 +1376,14 @@ using namespace Vulkan_Internal;
 					else
 					{
 						int subresource = SRV_index[original_binding];
-						const Texture* texture = (const Texture*)resource;
+						auto texture_internal = to_internal((const Texture*)&resource);
 						if (subresource >= 0)
 						{
-							imageInfos.back().imageView = to_internal(texture)->subresources_srv[subresource];
+							imageInfos.back().imageView = texture_internal->subresources_srv[subresource];
 						}
 						else
 						{
-							imageInfos.back().imageView = to_internal(texture)->srv;
+							imageInfos.back().imageView = texture_internal->srv;
 						}
 
 						imageInfos.back().imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -1451,8 +1399,8 @@ using namespace Vulkan_Internal;
 					imageInfos.back().imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
 					const uint32_t original_binding = unrolled_binding - VULKAN_BINDING_SHIFT_U;
-					const GPUResource* resource = UAV[original_binding];
-					if (resource == nullptr || !resource->IsValid() || !resource->IsTexture())
+					const GPUResource& resource = UAV[original_binding];
+					if (!resource.IsValid() || !resource.IsTexture())
 					{
 						switch (viewtype)
 						{
@@ -1486,14 +1434,14 @@ using namespace Vulkan_Internal;
 					else
 					{
 						int subresource = UAV_index[original_binding];
-						const Texture* texture = (const Texture*)resource;
+						auto texture_internal = to_internal((const Texture*)&resource);
 						if (subresource >= 0)
 						{
-							imageInfos.back().imageView = to_internal(texture)->subresources_uav[subresource];
+							imageInfos.back().imageView = texture_internal->subresources_uav[subresource];
 						}
 						else
 						{
-							imageInfos.back().imageView = to_internal(texture)->uav;
+							imageInfos.back().imageView = texture_internal->uav;
 						}
 					}
 				}
@@ -1506,20 +1454,20 @@ using namespace Vulkan_Internal;
 					bufferInfos.back() = {};
 
 					const uint32_t original_binding = unrolled_binding - VULKAN_BINDING_SHIFT_B;
-					const GPUBuffer* buffer = CBV[original_binding];
+					const GPUBuffer& buffer = CBV[original_binding];
 					uint64_t offset = CBV_offset[original_binding];
 
-					if (buffer == nullptr || !buffer->IsValid())
+					if (!buffer.IsValid())
 					{
 						bufferInfos.back().buffer = device->nullBuffer;
 						bufferInfos.back().range = VK_WHOLE_SIZE;
 					}
 					else
 					{
-						auto internal_state = to_internal(buffer);
+						auto internal_state = to_internal(&buffer);
 						bufferInfos.back().buffer = internal_state->resource;
 						bufferInfos.back().offset = offset;
-						bufferInfos.back().range = (VkDeviceSize)std::min(buffer->desc.ByteWidth - offset, (uint64_t)device->properties2.properties.limits.maxUniformBufferRange);
+						bufferInfos.back().range = (VkDeviceSize)std::min(buffer.desc.ByteWidth - offset, (uint64_t)device->properties2.properties.limits.maxUniformBufferRange);
 					}
 				}
 				break;
@@ -1531,22 +1479,22 @@ using namespace Vulkan_Internal;
 					texelBufferViews.back() = {};
 
 					const uint32_t original_binding = unrolled_binding - VULKAN_BINDING_SHIFT_T;
-					const GPUResource* resource = SRV[original_binding];
-					if (resource == nullptr || !resource->IsValid() || !resource->IsBuffer())
+					const GPUResource& resource = SRV[original_binding];
+					if (!resource.IsValid() || !resource.IsBuffer())
 					{
 						texelBufferViews.back() = device->nullBufferView;
 					}
 					else
 					{
 						int subresource = SRV_index[original_binding];
-						const GPUBuffer* buffer = (const GPUBuffer*)resource;
+						auto buffer_internal = to_internal((const GPUBuffer*)&resource);
 						if (subresource >= 0)
 						{
-							texelBufferViews.back() = to_internal(buffer)->subresources_srv[subresource];
+							texelBufferViews.back() = buffer_internal->subresources_srv[subresource];
 						}
 						else
 						{
-							texelBufferViews.back() = to_internal(buffer)->srv;
+							texelBufferViews.back() = buffer_internal->srv;
 						}
 					}
 				}
@@ -1559,22 +1507,22 @@ using namespace Vulkan_Internal;
 					texelBufferViews.back() = {};
 
 					const uint32_t original_binding = unrolled_binding - VULKAN_BINDING_SHIFT_U;
-					const GPUResource* resource = UAV[original_binding];
-					if (resource == nullptr || !resource->IsValid() || !resource->IsBuffer())
+					const GPUResource& resource = UAV[original_binding];
+					if (!resource.IsValid() || !resource.IsBuffer())
 					{
 						texelBufferViews.back() = device->nullBufferView;
 					}
 					else
 					{
 						int subresource = UAV_index[original_binding];
-						const GPUBuffer* buffer = (const GPUBuffer*)resource;
+						auto buffer_internal = to_internal((const GPUBuffer*)&resource);
 						if (subresource >= 0)
 						{
-							texelBufferViews.back() = to_internal(buffer)->subresources_uav[subresource];
+							texelBufferViews.back() = buffer_internal->subresources_uav[subresource];
 						}
 						else
 						{
-							texelBufferViews.back() = to_internal(buffer)->uav;
+							texelBufferViews.back() = buffer_internal->uav;
 						}
 					}
 				}
@@ -1590,8 +1538,8 @@ using namespace Vulkan_Internal;
 					{
 						// SRV
 						const uint32_t original_binding = unrolled_binding - VULKAN_BINDING_SHIFT_T;
-						const GPUResource* resource = SRV[original_binding];
-						if (resource == nullptr || !resource->IsValid() || !resource->IsBuffer())
+						const GPUResource& resource = SRV[original_binding];
+						if (!resource.IsValid() || !resource.IsBuffer())
 						{
 							bufferInfos.back().buffer = device->nullBuffer;
 							bufferInfos.back().range = VK_WHOLE_SIZE;
@@ -1599,17 +1547,17 @@ using namespace Vulkan_Internal;
 						else
 						{
 							int subresource = SRV_index[original_binding];
-							const GPUBuffer* buffer = (const GPUBuffer*)resource;
-							bufferInfos.back().buffer = to_internal(buffer)->resource;
-							bufferInfos.back().range = buffer->desc.ByteWidth;
+							auto buffer_internal = to_internal((const GPUBuffer*)&resource);
+							bufferInfos.back().buffer = buffer_internal->resource;
+							bufferInfos.back().range = VK_WHOLE_SIZE;
 						}
 					}
 					else
 					{
 						// UAV
 						const uint32_t original_binding = unrolled_binding - VULKAN_BINDING_SHIFT_U;
-						const GPUResource* resource = UAV[original_binding];
-						if (resource == nullptr || !resource->IsValid() || !resource->IsBuffer())
+						const GPUResource& resource = UAV[original_binding];
+						if (!resource.IsValid() || !resource.IsBuffer())
 						{
 							bufferInfos.back().buffer = device->nullBuffer;
 							bufferInfos.back().range = VK_WHOLE_SIZE;
@@ -1617,9 +1565,9 @@ using namespace Vulkan_Internal;
 						else
 						{
 							int subresource = UAV_index[original_binding];
-							const GPUBuffer* buffer = (const GPUBuffer*)resource;
-							bufferInfos.back().buffer = to_internal(buffer)->resource;
-							bufferInfos.back().range = buffer->desc.ByteWidth;
+							auto buffer_internal = to_internal((const GPUBuffer*)&resource);
+							bufferInfos.back().buffer = buffer_internal->resource;
+							bufferInfos.back().range = VK_WHOLE_SIZE;
 						}
 					}
 				}
@@ -1634,15 +1582,15 @@ using namespace Vulkan_Internal;
 					accelerationStructureViews.back().accelerationStructureCount = 1;
 
 					const uint32_t original_binding = unrolled_binding - VULKAN_BINDING_SHIFT_T;
-					const GPUResource* resource = SRV[original_binding];
-					if (resource == nullptr || !resource->IsValid() || !resource->IsAccelerationStructure())
+					const GPUResource& resource = SRV[original_binding];
+					if (!resource.IsValid() || !resource.IsAccelerationStructure())
 					{
 						assert(0); // invalid acceleration structure!
 					}
 					else
 					{
-						const RaytracingAccelerationStructure* as = (const RaytracingAccelerationStructure*)resource;
-						accelerationStructureViews.back().pAccelerationStructures = &to_internal(as)->resource;
+						auto as_internal = to_internal((const RaytracingAccelerationStructure*)&resource);
+						accelerationStructureViews.back().pAccelerationStructures = &as_internal->resource;
 					}
 				}
 				break;
@@ -2587,6 +2535,13 @@ using namespace Vulkan_Internal;
 			allocationhandler->bindlessAccelerationStructures.init(device, VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 32);
 		}
 
+		ALLOCATION_MIN_ALIGNMENT = std::max(
+			properties2.properties.limits.minUniformBufferOffsetAlignment,
+			std::max(
+				properties2.properties.limits.minStorageBufferOffsetAlignment,
+				properties2.properties.limits.minTexelBufferOffsetAlignment
+			)
+		);
 
 		wiBackLog::post("Created GraphicsDevice_Vulkan");
 	}
@@ -5665,7 +5620,6 @@ using namespace Vulkan_Internal;
 				res = vkAllocateCommandBuffers(device, &commandBufferInfo, &frame.commandBuffers[cmd][queue]);
 				assert(res == VK_SUCCESS);
 
-				frame.resourceBuffer[cmd].init(this, 1024 * 1024); // 1 MB starting size
 				frame.descriptors[cmd].init(this);
 			}
 		}
@@ -5683,9 +5637,6 @@ using namespace Vulkan_Internal;
 
 		// reset descriptor allocators:
 		GetFrameResources().descriptors[cmd].reset();
-
-		// reset immediate resource allocators:
-		GetFrameResources().resourceBuffer[cmd].clear();
 
 		if (queue == QUEUE_GRAPHICS)
 		{
@@ -6011,9 +5962,9 @@ using namespace Vulkan_Internal;
 	{
 		assert(slot < DESCRIPTORBINDER_SRV_COUNT);
 		auto& descriptors = GetFrameResources().descriptors[cmd];
-		if (descriptors.SRV[slot] != resource || descriptors.SRV_index[slot] != subresource)
+		if (descriptors.SRV[slot].internal_state != resource->internal_state || descriptors.SRV_index[slot] != subresource)
 		{
-			descriptors.SRV[slot] = resource;
+			descriptors.SRV[slot] = *resource;
 			descriptors.SRV_index[slot] = subresource;
 			descriptors.dirty = true;
 		}
@@ -6032,9 +5983,9 @@ using namespace Vulkan_Internal;
 	{
 		assert(slot < DESCRIPTORBINDER_UAV_COUNT);
 		auto& descriptors = GetFrameResources().descriptors[cmd];
-		if (descriptors.UAV[slot] != resource || descriptors.UAV_index[slot] != subresource)
+		if (descriptors.UAV[slot].internal_state != resource->internal_state || descriptors.UAV_index[slot] != subresource)
 		{
-			descriptors.UAV[slot] = resource;
+			descriptors.UAV[slot] = *resource;
 			descriptors.UAV_index[slot] = subresource;
 			descriptors.dirty = true;
 		}
@@ -6053,9 +6004,9 @@ using namespace Vulkan_Internal;
 	{
 		assert(slot < DESCRIPTORBINDER_SAMPLER_COUNT);
 		auto& descriptors = GetFrameResources().descriptors[cmd];
-		if (descriptors.SAM[slot] != sampler)
+		if (descriptors.SAM[slot].internal_state != sampler->internal_state)
 		{
-			descriptors.SAM[slot] = sampler;
+			descriptors.SAM[slot] = *sampler;
 			descriptors.dirty = true;
 		}
 	}
@@ -6063,9 +6014,9 @@ using namespace Vulkan_Internal;
 	{
 		assert(slot < DESCRIPTORBINDER_CBV_COUNT);
 		auto& descriptors = GetFrameResources().descriptors[cmd];
-		if (descriptors.CBV[slot] != buffer || descriptors.CBV_offset[slot] != offset)
+		if (descriptors.CBV[slot].internal_state != buffer->internal_state || descriptors.CBV_offset[slot] != offset)
 		{
-			descriptors.CBV[slot] = buffer;
+			descriptors.CBV[slot] = *buffer;
 			descriptors.CBV_offset[slot] = offset;
 			descriptors.dirty = true;
 		}
@@ -6859,24 +6810,6 @@ using namespace Vulkan_Internal;
 		pushconstants[cmd].size = size;
 	}
 
-	GraphicsDevice::GPUAllocation GraphicsDevice_Vulkan::AllocateGPU(size_t dataSize, CommandList cmd)
-	{
-		GPUAllocation result;
-		if (dataSize == 0)
-		{
-			return result;
-		}
-
-		FrameResources::ResourceFrameAllocator& allocator = GetFrameResources().resourceBuffer[cmd];
-		uint8_t* dest = allocator.allocate(dataSize, 256);
-		assert(dest != nullptr);
-
-		result.buffer = &allocator.buffer;
-		result.offset = (uint32_t)allocator.calculateOffset(dest);
-		result.data = (void*)dest;
-		return result;
-	}
-
 	void GraphicsDevice_Vulkan::EventBegin(const char* name, CommandList cmd)
 	{
 		if (!debugUtils)
@@ -6890,7 +6823,6 @@ using namespace Vulkan_Internal;
 		label.color[3] = 1.0f;
 		vkCmdBeginDebugUtilsLabelEXT(GetCommandList(cmd), &label);
 	}
-
 	void GraphicsDevice_Vulkan::EventEnd(CommandList cmd)
 	{
 		if (!debugUtils)
@@ -6898,7 +6830,6 @@ using namespace Vulkan_Internal;
 
 		vkCmdEndDebugUtilsLabelEXT(GetCommandList(cmd));
 	}
-
 	void GraphicsDevice_Vulkan::SetMarker(const char* name, CommandList cmd)
 	{
 		if (!debugUtils)

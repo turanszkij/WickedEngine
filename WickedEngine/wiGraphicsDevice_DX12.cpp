@@ -1015,18 +1015,6 @@ namespace DX12_Internal
 	}
 
 
-	// Local Helpers:
-
-	inline size_t Align(size_t uLocation, size_t uAlign)
-	{
-		if ((0 == uAlign) || (uAlign & (uAlign - 1)))
-		{
-			assert(0);
-		}
-
-		return ((uLocation + (uAlign - 1)) & ~(uAlign - 1));
-	}
-
 	enum RESOURCEBINDING
 	{
 		CONSTANTBUFFER,
@@ -1602,46 +1590,6 @@ using namespace DX12_Internal;
 		locker.unlock();
 	}
 
-	void GraphicsDevice_DX12::FrameResources::ResourceFrameAllocator::init(GraphicsDevice_DX12* device, size_t size)
-	{
-		this->device = device;
-
-		GPUBufferDesc desc;
-		desc.Usage = USAGE_UPLOAD;
-		desc.ByteWidth = (uint32_t)size;
-		desc.BindFlags = BIND_CONSTANT_BUFFER | BIND_VERTEX_BUFFER | BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE;
-		desc.Flags = RESOURCE_FLAG_BUFFER_RAW;
-		device->CreateBuffer(&desc, nullptr, &buffer);
-		device->SetName(&buffer, "ResourceFrameAllocator");
-
-		dataCur = dataBegin = (uint8_t*)buffer.mapped_data;
-		dataEnd = dataBegin + size;
-	}
-	uint8_t* GraphicsDevice_DX12::FrameResources::ResourceFrameAllocator::allocate(size_t dataSize, size_t alignment)
-	{
-		dataCur = reinterpret_cast<uint8_t*>(Align(reinterpret_cast<size_t>(dataCur), alignment));
-
-		if (dataCur + dataSize > dataEnd)
-		{
-			init(device, ((size_t)dataEnd + dataSize - (size_t)dataBegin) * 2);
-		}
-
-		uint8_t* retVal = dataCur;
-
-		dataCur += dataSize;
-
-		return retVal;
-	}
-	void GraphicsDevice_DX12::FrameResources::ResourceFrameAllocator::clear()
-	{
-		dataCur = dataBegin;
-	}
-	uint64_t GraphicsDevice_DX12::FrameResources::ResourceFrameAllocator::calculateOffset(uint8_t* address)
-	{
-		assert(address >= dataBegin && address < dataEnd);
-		return static_cast<uint64_t>(address - dataBegin);
-	}
-
 	void GraphicsDevice_DX12::DescriptorBinder::init(GraphicsDevice_DX12* device)
 	{
 		this->device = device;
@@ -1681,12 +1629,12 @@ using namespace DX12_Internal;
 					continue;
 				}
 
-				const GPUBuffer* buffer = CBV[x.ShaderRegister];
+				const GPUBuffer& buffer = CBV[x.ShaderRegister];
 				uint64_t offset = CBV_offset[x.ShaderRegister];
 
 				D3D12_GPU_VIRTUAL_ADDRESS address;
 
-				if (buffer == nullptr || !buffer->IsValid())
+				if (!buffer.IsValid())
 				{
 					// this must not happen, root descriptor must be always valid!
 					// this happens when constant buffer was not bound by engine
@@ -1696,7 +1644,7 @@ using namespace DX12_Internal;
 				}
 				else
 				{
-					auto internal_state = to_internal(buffer);
+					auto internal_state = to_internal(&buffer);
 					address = internal_state->gpu_address;
 					address += offset;
 				}
@@ -1782,9 +1730,9 @@ using namespace DX12_Internal;
 					default:
 					case D3D12_DESCRIPTOR_RANGE_TYPE_SRV:
 					{
-						const GPUResource* resource = SRV[ShaderRegister];
+						const GPUResource& resource = SRV[ShaderRegister];
 						const int subresource = SRV_index[ShaderRegister];
-						if (resource == nullptr || !resource->IsValid())
+						if (!resource.IsValid())
 						{
 							switch (binding)
 							{
@@ -1824,9 +1772,9 @@ using namespace DX12_Internal;
 						}
 						else
 						{
-							auto internal_state = to_internal(resource);
+							auto internal_state = to_internal(&resource);
 
-							if (resource->IsAccelerationStructure())
+							if (resource.IsAccelerationStructure())
 							{
 								device->device->CopyDescriptorsSimple(1, dst, internal_state->srv.handle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 							}
@@ -1847,9 +1795,9 @@ using namespace DX12_Internal;
 
 					case D3D12_DESCRIPTOR_RANGE_TYPE_UAV:
 					{
-						const GPUResource* resource = UAV[ShaderRegister];
+						const GPUResource& resource = UAV[ShaderRegister];
 						const int subresource = UAV_index[ShaderRegister];
-						if (resource == nullptr || !resource->IsValid())
+						if (!resource.IsValid())
 						{
 							switch (binding)
 							{
@@ -1880,7 +1828,7 @@ using namespace DX12_Internal;
 						}
 						else
 						{
-							auto internal_state = to_internal(resource);
+							auto internal_state = to_internal(&resource);
 
 							if (subresource < 0)
 							{
@@ -1896,21 +1844,21 @@ using namespace DX12_Internal;
 
 					case D3D12_DESCRIPTOR_RANGE_TYPE_CBV:
 					{
-						const GPUBuffer* buffer = CBV[ShaderRegister];
+						const GPUBuffer& buffer = CBV[ShaderRegister];
 						uint64_t offset = CBV_offset[ShaderRegister];
 
-						if (buffer == nullptr || !buffer->IsValid())
+						if (!buffer.IsValid())
 						{
 							device->device->CopyDescriptorsSimple(1, dst, device->nullCBV, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 						}
 						else
 						{
-							auto internal_state = to_internal(buffer);
+							auto internal_state = to_internal(&buffer);
 
 							D3D12_CONSTANT_BUFFER_VIEW_DESC cbv;
 							cbv.BufferLocation = internal_state->gpu_address;
 							cbv.BufferLocation += offset;
-							cbv.SizeInBytes = (uint32_t)Align((size_t)buffer->desc.ByteWidth, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+							cbv.SizeInBytes = (uint32_t)Align((size_t)buffer.desc.ByteWidth, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 
 							device->device->CreateConstantBufferView(&cbv, dst);
 						}
@@ -1972,14 +1920,14 @@ using namespace DX12_Internal;
 
 					UINT ShaderRegister = x.BaseShaderRegister + descriptor_index;
 
-					const Sampler* sampler = SAM[ShaderRegister];
-					if (sampler == nullptr || !sampler->IsValid())
+					const Sampler& sampler = SAM[ShaderRegister];
+					if (!sampler.IsValid())
 					{
 						device->device->CopyDescriptorsSimple(1, dst, device->nullSAM, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 					}
 					else
 					{
-						auto internal_state = to_internal(sampler);
+						auto internal_state = to_internal(&sampler);
 						device->device->CopyDescriptorsSimple(1, dst, internal_state->descriptor.handle, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 					}
 				}
@@ -2187,6 +2135,7 @@ using namespace DX12_Internal;
 	// Engine functions
 	GraphicsDevice_DX12::GraphicsDevice_DX12(bool debuglayer, bool gpuvalidation)
 	{
+		ALLOCATION_MIN_ALIGNMENT = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
 		SHADER_IDENTIFIER_SIZE = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
 		TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
 
@@ -5345,8 +5294,6 @@ using namespace DX12_Internal;
 				hr = device->CreateCommandAllocator(queues[queue].desc.Type, IID_PPV_ARGS(&frames[fr].commandAllocators[cmd][queue]));
 				assert(SUCCEEDED(hr));
 
-				frames[fr].resourceBuffer[cmd].init(this, 1024 * 1024); // 1 MB starting size
-
 			}
 
 			hr = device->CreateCommandList1(0, queues[queue].desc.Type, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(&commandLists[cmd][queue]));
@@ -5372,7 +5319,6 @@ using namespace DX12_Internal;
 		GetCommandList(cmd)->SetDescriptorHeaps(arraysize(heaps), heaps);
 
 		descriptors[cmd].reset();
-		GetFrameResources().resourceBuffer[cmd].clear();
 
 		if (queue == QUEUE_GRAPHICS)
 		{
@@ -5719,9 +5665,9 @@ using namespace DX12_Internal;
 	void GraphicsDevice_DX12::BindResource(const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
 	{
 		assert(slot < DESCRIPTORBINDER_SRV_COUNT);
-		if (descriptors[cmd].SRV[slot] != resource || descriptors[cmd].SRV_index[slot] != subresource)
+		if (descriptors[cmd].SRV[slot].internal_state != resource->internal_state || descriptors[cmd].SRV_index[slot] != subresource)
 		{
-			descriptors[cmd].SRV[slot] = resource;
+			descriptors[cmd].SRV[slot] = *resource;
 			descriptors[cmd].SRV_index[slot] = subresource;
 			descriptors[cmd].dirty_res = true;
 		}
@@ -5739,9 +5685,9 @@ using namespace DX12_Internal;
 	void GraphicsDevice_DX12::BindUAV(const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
 	{
 		assert(slot < DESCRIPTORBINDER_UAV_COUNT);
-		if (descriptors[cmd].UAV[slot] != resource || descriptors[cmd].UAV_index[slot] != subresource)
+		if (descriptors[cmd].UAV[slot].internal_state != resource->internal_state || descriptors[cmd].UAV_index[slot] != subresource)
 		{
-			descriptors[cmd].UAV[slot] = resource;
+			descriptors[cmd].UAV[slot] = *resource;
 			descriptors[cmd].UAV_index[slot] = subresource;
 			descriptors[cmd].dirty_res = true;
 		}
@@ -5759,18 +5705,18 @@ using namespace DX12_Internal;
 	void GraphicsDevice_DX12::BindSampler(const Sampler* sampler, uint32_t slot, CommandList cmd)
 	{
 		assert(slot < DESCRIPTORBINDER_SAMPLER_COUNT);
-		if (descriptors[cmd].SAM[slot] != sampler)
+		if (descriptors[cmd].SAM[slot].internal_state != sampler->internal_state)
 		{
-			descriptors[cmd].SAM[slot] = sampler;
+			descriptors[cmd].SAM[slot] = *sampler;
 			descriptors[cmd].dirty_sam = true;
 		}
 	}
 	void GraphicsDevice_DX12::BindConstantBuffer(const GPUBuffer* buffer, uint32_t slot, CommandList cmd, uint64_t offset)
 	{
 		assert(slot < DESCRIPTORBINDER_CBV_COUNT);
-		if (descriptors[cmd].CBV[slot] != buffer || descriptors[cmd].CBV_offset[slot] != offset)
+		if (descriptors[cmd].CBV[slot].internal_state != buffer->internal_state || descriptors[cmd].CBV_offset[slot] != offset)
 		{
-			descriptors[cmd].CBV[slot] = buffer;
+			descriptors[cmd].CBV[slot] = *buffer;
 			descriptors[cmd].CBV_offset[slot] = offset;
 			descriptors[cmd].dirty_res = true;
 
@@ -6339,24 +6285,6 @@ using namespace DX12_Internal;
 	{
 		std::memcpy(pushconstants[cmd].data, data, size);
 		pushconstants[cmd].size = size;
-	}
-
-	GraphicsDevice::GPUAllocation GraphicsDevice_DX12::AllocateGPU(size_t dataSize, CommandList cmd)
-	{
-		GPUAllocation result;
-		if (dataSize == 0)
-		{
-			return result;
-		}
-
-		FrameResources::ResourceFrameAllocator& allocator = GetFrameResources().resourceBuffer[cmd];
-		uint8_t* dest = allocator.allocate(dataSize, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
-		assert(dest != nullptr);
-
-		result.buffer = &allocator.buffer;
-		result.offset = (uint32_t)allocator.calculateOffset(dest);
-		result.data = (void*)dest;
-		return result;
 	}
 
 	void GraphicsDevice_DX12::EventBegin(const char* name, CommandList cmd)
