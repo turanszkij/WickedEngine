@@ -139,9 +139,7 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 			bd.Format = FORMAT_R8_UNORM;
 			bd.StructureByteStride = sizeof(uint8_t);
 			bd.ByteWidth = bd.StructureByteStride * (uint32_t)ulengths.size();
-			SubresourceData initData;
-			initData.pData = ulengths.data();
-			device->CreateBuffer(&bd, &initData, &vertexBuffer_length);
+			device->CreateBuffer(&bd, ulengths.data(), &vertexBuffer_length);
 		}
 		if (!indices.empty())
 		{
@@ -150,9 +148,7 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 			bd.Format = FORMAT_R32_UINT;
 			bd.StructureByteStride = sizeof(uint32_t);
 			bd.ByteWidth = bd.StructureByteStride * (uint32_t)indices.size();
-			SubresourceData initData;
-			initData.pData = indices.data();
-			device->CreateBuffer(&bd, &initData, &indexBuffer);
+			device->CreateBuffer(&bd, indices.data(), &indexBuffer);
 		}
 
 		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
@@ -168,9 +164,9 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 			geometry.triangles.vertexBuffer = vertexBuffer_POS[0];
 			geometry.triangles.indexBuffer = primitiveBuffer;
 			geometry.triangles.indexFormat = INDEXFORMAT_32BIT;
-			geometry.triangles.indexCount = primitiveBuffer.desc.ByteWidth / primitiveBuffer.desc.StructureByteStride;
+			geometry.triangles.indexCount = (uint32_t)(primitiveBuffer.desc.ByteWidth / primitiveBuffer.desc.StructureByteStride);
 			geometry.triangles.indexOffset = 0;
-			geometry.triangles.vertexCount = vertexBuffer_POS[0].desc.ByteWidth / vertexBuffer_POS[0].desc.StructureByteStride;
+			geometry.triangles.vertexCount = (uint32_t)(vertexBuffer_POS[0].desc.ByteWidth / vertexBuffer_POS[0].desc.StructureByteStride);
 			geometry.triangles.vertexFormat = FORMAT_R32G32B32_FLOAT;
 			geometry.triangles.vertexStride = sizeof(MeshComponent::Vertex_POS);
 

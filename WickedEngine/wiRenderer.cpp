@@ -4968,9 +4968,7 @@ void DrawDebugWorld(
 		bd.Usage = USAGE_DEFAULT;
 		bd.ByteWidth = sizeof(verts);
 		bd.BindFlags = BIND_VERTEX_BUFFER;
-		SubresourceData InitData;
-		InitData.pData = verts;
-		device->CreateBuffer(&bd, &InitData, &wirecubeVB);
+		device->CreateBuffer(&bd, verts, &wirecubeVB);
 
 		uint16_t indices[] = {
 			0,1,1,2,0,3,0,4,1,5,4,5,
@@ -4980,8 +4978,7 @@ void DrawDebugWorld(
 		bd.Usage = USAGE_DEFAULT;
 		bd.ByteWidth = sizeof(indices);
 		bd.BindFlags = BIND_INDEX_BUFFER;
-		InitData.pData = indices;
-		device->CreateBuffer(&bd, &InitData, &wirecubeIB);
+		device->CreateBuffer(&bd, indices, &wirecubeIB);
 	}
 
 	device->EventBegin("DrawDebugWorld", cmd);
@@ -5465,9 +5462,7 @@ void DrawDebugWorld(
 			bd.Usage = USAGE_DEFAULT;
 			bd.ByteWidth = uint32_t(vertices.size() * sizeof(Vertex));
 			bd.BindFlags = BIND_VERTEX_BUFFER;
-			SubresourceData InitData;
-			InitData.pData = vertices.data();
-			device->CreateBuffer(&bd, &InitData, &wiresphereVB);
+			device->CreateBuffer(&bd, vertices.data(), &wiresphereVB);
 
 			std::vector<uint16_t> indices;
 			for (int i = 0; i < segmentcount; ++i)
@@ -5489,8 +5484,7 @@ void DrawDebugWorld(
 			bd.Usage = USAGE_DEFAULT;
 			bd.ByteWidth = uint32_t(indices.size() * sizeof(uint16_t));
 			bd.BindFlags = BIND_INDEX_BUFFER;
-			InitData.pData = indices.data();
-			device->CreateBuffer(&bd, &InitData, &wiresphereIB);
+			device->CreateBuffer(&bd, indices.data(), &wiresphereIB);
 		}
 
 		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE], cmd);
@@ -5725,9 +5719,7 @@ void DrawDebugWorld(
 			GPUBufferDesc bd;
 			bd.ByteWidth = sizeof(verts);
 			bd.BindFlags = BIND_VERTEX_BUFFER;
-			SubresourceData InitData;
-			InitData.pData = verts;
-			device->CreateBuffer(&bd, &InitData, &grid);
+			device->CreateBuffer(&bd, verts, &grid);
 		}
 
 		MiscCB sb;
@@ -5924,9 +5916,7 @@ void DrawDebugWorld(
 			bd.Usage = USAGE_DEFAULT;
 			bd.ByteWidth = sizeof(verts);
 			bd.BindFlags = BIND_VERTEX_BUFFER;
-			SubresourceData InitData;
-			InitData.pData = verts;
-			device->CreateBuffer(&bd, &InitData, &wirecamVB);
+			device->CreateBuffer(&bd, verts, &wirecamVB);
 
 			uint16_t indices[] = {
 				0,1,1,2,0,3,0,4,1,5,4,5,
@@ -5938,8 +5928,7 @@ void DrawDebugWorld(
 			bd.Usage = USAGE_DEFAULT;
 			bd.ByteWidth = sizeof(indices);
 			bd.BindFlags = BIND_INDEX_BUFFER;
-			InitData.pData = indices;
-			device->CreateBuffer(&bd, &InitData, &wirecamIB);
+			device->CreateBuffer(&bd, indices, &wirecamIB);
 		}
 
 		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE], cmd);

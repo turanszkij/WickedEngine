@@ -395,8 +395,6 @@ namespace wiScene
 				bd.MiscFlags |= RESOURCE_MISC_RAY_TRACING;
 			}
 
-			SubresourceData initData;
-
 			if (GetIndexFormat() == INDEXFORMAT_32BIT)
 			{
 				bd.StructureByteStride = sizeof(uint32_t);
@@ -405,9 +403,8 @@ namespace wiScene
 
 				// Use indices directly since vector is in correct format
 				static_assert(std::is_same<decltype(indices)::value_type, uint32_t>::value, "indices not in INDEXFORMAT_32BIT");
-				initData.pData = indices.data();
 
-				device->CreateBuffer(&bd, &initData, &indexBuffer);
+				device->CreateBuffer(&bd, indices.data(), &indexBuffer);
 				device->SetName(&indexBuffer, "indexBuffer_32bit");
 			}
 			else
@@ -418,9 +415,8 @@ namespace wiScene
 
 				std::vector<uint16_t> gpuIndexData(indices.size());
 				std::copy(indices.begin(), indices.end(), gpuIndexData.begin());
-				initData.pData = gpuIndexData.data();
 
-				device->CreateBuffer(&bd, &initData, &indexBuffer);
+				device->CreateBuffer(&bd, gpuIndexData.data(), &indexBuffer);
 				device->SetName(&indexBuffer, "indexBuffer_16bit");
 			}
 		}
@@ -460,9 +456,7 @@ namespace wiScene
 			}
 			bd.ByteWidth = (uint32_t)(sizeof(Vertex_POS) * vertices.size());
 
-			SubresourceData InitData;
-			InitData.pData = vertices.data();
-			device->CreateBuffer(&bd, &InitData, &vertexBuffer_POS);
+			device->CreateBuffer(&bd, vertices.data(), &vertexBuffer_POS);
 			device->SetName(&vertexBuffer_POS, "vertexBuffer_POS");
 		}
 
@@ -554,9 +548,7 @@ namespace wiScene
 			bd.StructureByteStride = sizeof(Vertex_TAN);
 			bd.ByteWidth = (uint32_t)(bd.StructureByteStride * vertices.size());
 
-			SubresourceData InitData;
-			InitData.pData = vertices.data();
-			device->CreateBuffer(&bd, &InitData, &vertexBuffer_TAN);
+			device->CreateBuffer(&bd, vertices.data(), &vertexBuffer_TAN);
 			device->SetName(&vertexBuffer_TAN, "vertexBuffer_TAN");
 		}
 
@@ -586,9 +578,7 @@ namespace wiScene
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
 			bd.ByteWidth = (uint32_t)(sizeof(Vertex_BON) * vertices.size());
 
-			SubresourceData InitData;
-			InitData.pData = vertices.data();
-			device->CreateBuffer(&bd, &InitData, &vertexBuffer_BON);
+			device->CreateBuffer(&bd, vertices.data(), &vertexBuffer_BON);
 
 			bd.Usage = USAGE_DEFAULT;
 			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
@@ -625,9 +615,7 @@ namespace wiScene
 			bd.StructureByteStride = sizeof(Vertex_TEX);
 			bd.ByteWidth = (uint32_t)(bd.StructureByteStride * vertices.size());
 
-			SubresourceData InitData;
-			InitData.pData = vertices.data();
-			device->CreateBuffer(&bd, &InitData, &vertexBuffer_UV0);
+			device->CreateBuffer(&bd, vertices.data(), &vertexBuffer_UV0);
 			device->SetName(&vertexBuffer_UV0, "vertexBuffer_UV0");
 		}
 
@@ -646,9 +634,7 @@ namespace wiScene
 			bd.StructureByteStride = sizeof(Vertex_TEX);
 			bd.ByteWidth = (uint32_t)(bd.StructureByteStride * vertices.size());
 
-			SubresourceData InitData;
-			InitData.pData = vertices.data();
-			device->CreateBuffer(&bd, &InitData, &vertexBuffer_UV1);
+			device->CreateBuffer(&bd, vertices.data(), &vertexBuffer_UV1);
 			device->SetName(&vertexBuffer_UV1, "vertexBuffer_UV1");
 		}
 
@@ -661,9 +647,7 @@ namespace wiScene
 			bd.StructureByteStride = sizeof(Vertex_COL);
 			bd.ByteWidth = (uint32_t)(bd.StructureByteStride * vertex_colors.size());
 
-			SubresourceData InitData;
-			InitData.pData = vertex_colors.data();
-			device->CreateBuffer(&bd, &InitData, &vertexBuffer_COL);
+			device->CreateBuffer(&bd, vertex_colors.data(), &vertexBuffer_COL);
 			device->SetName(&vertexBuffer_COL, "vertexBuffer_COL");
 		}
 
@@ -682,9 +666,7 @@ namespace wiScene
 			bd.StructureByteStride = sizeof(Vertex_TEX);
 			bd.ByteWidth = (uint32_t)(bd.StructureByteStride * vertices.size());
 
-			SubresourceData InitData;
-			InitData.pData = vertices.data();
-			device->CreateBuffer(&bd, &InitData, &vertexBuffer_ATL);
+			device->CreateBuffer(&bd, vertices.data(), &vertexBuffer_ATL);
 			device->SetName(&vertexBuffer_ATL, "vertexBuffer_ATL");
 		}
 

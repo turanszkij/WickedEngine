@@ -999,7 +999,7 @@ using namespace Vulkan_Internal;
 		}
 		vkDestroySemaphore(device->device, semaphore, nullptr);
 	}
-	GraphicsDevice_Vulkan::CopyAllocator::CopyCMD GraphicsDevice_Vulkan::CopyAllocator::allocate(uint32_t staging_size)
+	GraphicsDevice_Vulkan::CopyAllocator::CopyCMD GraphicsDevice_Vulkan::CopyAllocator::allocate(uint64_t staging_size)
 	{
 		locker.lock();
 
@@ -1049,7 +1049,7 @@ using namespace Vulkan_Internal;
 		if (cmd.uploadbuffer.desc.ByteWidth < staging_size)
 		{
 			GPUBufferDesc uploaddesc;
-			uploaddesc.ByteWidth = wiMath::GetNextPowerOfTwo(staging_size);
+			uploaddesc.ByteWidth = wiMath::GetNextPowerOfTwo((uint32_t)staging_size);
 			uploaddesc.Usage = USAGE_UPLOAD;
 			bool upload_success = device->CreateBuffer(&uploaddesc, nullptr, &cmd.uploadbuffer);
 			assert(upload_success);
@@ -2905,7 +2905,7 @@ using namespace Vulkan_Internal;
 
 		return true;
 	}
-	bool GraphicsDevice_Vulkan::CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer) const
+	bool GraphicsDevice_Vulkan::CreateBuffer(const GPUBufferDesc *pDesc, const void* pInitialData, GPUBuffer *pBuffer) const
 	{
 		auto internal_state = std::make_shared<Buffer_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
@@ -3033,7 +3033,7 @@ using namespace Vulkan_Internal;
 		{
 			auto cmd = copyAllocator.allocate(pDesc->ByteWidth);
 
-			memcpy(cmd.uploadbuffer.mapped_data, pInitialData->pData, pBuffer->desc.ByteWidth);
+			memcpy(cmd.uploadbuffer.mapped_data, pInitialData, pBuffer->desc.ByteWidth);
 
 			{
 				auto& frame = GetFrameResources();

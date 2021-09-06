@@ -126,14 +126,12 @@ void wiOcean::Create(const OceanParameters& params)
 	buf_desc.Usage = USAGE_DEFAULT;
 	buf_desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
 	buf_desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-	SubresourceData init_data;
 
 	// RW buffer allocations
 	// H0
 	buf_desc.StructureByteStride = sizeof(float2);
 	buf_desc.ByteWidth = buf_desc.StructureByteStride * input_full_size;
-	init_data.pData = h0_data.data();
-	device->CreateBuffer(&buf_desc, &init_data, &buffer_Float2_H0);
+	device->CreateBuffer(&buf_desc, h0_data.data(), &buffer_Float2_H0);
 
 	// Notice: The following 3 buffers should be half sized buffer because of conjugate symmetric input. But
 	// we use full sized buffers due to the CS4.0 restriction.
@@ -141,22 +139,19 @@ void wiOcean::Create(const OceanParameters& params)
 	// Put H(t), Dx(t) and Dy(t) into one buffer because CS4.0 allows only 1 UAV at a time
 	buf_desc.StructureByteStride = sizeof(float2);
 	buf_desc.ByteWidth = buf_desc.StructureByteStride * 3 * input_half_size;
-	init_data.pData = zero_data.data();
-	device->CreateBuffer(&buf_desc, &init_data, &buffer_Float2_Ht);
+	device->CreateBuffer(&buf_desc, zero_data.data(), &buffer_Float2_Ht);
 
 	// omega
 	buf_desc.StructureByteStride = sizeof(float);
 	buf_desc.ByteWidth = buf_desc.StructureByteStride * input_full_size;
-	init_data.pData = omega_data.data();
-	device->CreateBuffer(&buf_desc, &init_data, &buffer_Float_Omega);
+	device->CreateBuffer(&buf_desc, omega_data.data(), &buffer_Float_Omega);
 
 	// Notice: The following 3 should be real number data. But here we use the complex numbers and C2C FFT
 	// due to the CS4.0 restriction.
 	// Put Dz, Dx and Dy into one buffer because CS4.0 allows only 1 UAV at a time
 	buf_desc.StructureByteStride = sizeof(float2);
 	buf_desc.ByteWidth = buf_desc.StructureByteStride * 3 * output_size;
-	init_data.pData = zero_data.data();
-	device->CreateBuffer(&buf_desc, &init_data, &buffer_Float_Dxyz);
+	device->CreateBuffer(&buf_desc, zero_data.data(), &buffer_Float_Dxyz);
 
 	TextureDesc tex_desc;
 	tex_desc.Width = hmap_dim;
@@ -193,13 +188,11 @@ void wiOcean::Create(const OceanParameters& params)
 	uint32_t dtx_offset = actual_dim * actual_dim;
 	uint32_t dty_offset = actual_dim * actual_dim * 2;
 	Ocean_Simulation_ImmutableCB immutable_consts = { actual_dim, input_width, output_width, output_height, dtx_offset, dty_offset };
-	SubresourceData init_cb0;
-	init_cb0.pData = &immutable_consts;
 
 	GPUBufferDesc cb_desc;
 	cb_desc.BindFlags = BIND_CONSTANT_BUFFER;
 	cb_desc.ByteWidth = sizeof(Ocean_Simulation_ImmutableCB);
-	device->CreateBuffer(&cb_desc, &init_cb0, &immutableCB);
+	device->CreateBuffer(&cb_desc, &immutable_consts, &immutableCB);
 
 	cb_desc.Usage = USAGE_DEFAULT;
 	cb_desc.BindFlags = BIND_CONSTANT_BUFFER;

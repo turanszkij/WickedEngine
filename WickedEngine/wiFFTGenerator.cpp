@@ -114,10 +114,6 @@ namespace wiFFTGenerator
 		cb_desc.ByteWidth = sizeof(FFTGeneratorCB);
 		cb_desc.StructureByteStride = 0;
 
-		SubresourceData cb_data;
-		cb_data.rowPitch = 0;
-		cb_data.slicePitch = 0;
-
 		// Buffer 0
 		const uint32_t thread_count = slices * (512 * 512) / 8;
 		uint32_t ostride = 512 * 512 / 8;
@@ -125,27 +121,24 @@ namespace wiFFTGenerator
 		double phase_base = -TWO_PI / (512.0 * 512.0);
 
 		FFTGeneratorCB cb_data_buf0 = { thread_count, ostride, istride, 512, (float)phase_base };
-		cb_data.pData = &cb_data_buf0;
 
-		device->CreateBuffer(&cb_desc, &cb_data, &plan.pRadix008A_CB[0]);
+		device->CreateBuffer(&cb_desc, &cb_data_buf0, &plan.pRadix008A_CB[0]);
 
 		// Buffer 1
 		istride /= 8;
 		phase_base *= 8.0;
 
 		FFTGeneratorCB cb_data_buf1 = { thread_count, ostride, istride, 512, (float)phase_base };
-		cb_data.pData = &cb_data_buf1;
 
-		device->CreateBuffer(&cb_desc, &cb_data, &plan.pRadix008A_CB[1]);
+		device->CreateBuffer(&cb_desc, &cb_data_buf1, &plan.pRadix008A_CB[1]);
 
 		// Buffer 2
 		istride /= 8;
 		phase_base *= 8.0;
 
 		FFTGeneratorCB cb_data_buf2 = { thread_count, ostride, istride, 512, (float)phase_base };
-		cb_data.pData = &cb_data_buf2;
 
-		device->CreateBuffer(&cb_desc, &cb_data, &plan.pRadix008A_CB[2]);
+		device->CreateBuffer(&cb_desc, &cb_data_buf2, &plan.pRadix008A_CB[2]);
 
 		// Buffer 3
 		istride /= 8;
@@ -153,27 +146,24 @@ namespace wiFFTGenerator
 		ostride /= 512;
 
 		FFTGeneratorCB cb_data_buf3 = { thread_count, ostride, istride, 1, (float)phase_base };
-		cb_data.pData = &cb_data_buf3;
 
-		device->CreateBuffer(&cb_desc, &cb_data, &plan.pRadix008A_CB[3]);
+		device->CreateBuffer(&cb_desc, &cb_data_buf3, &plan.pRadix008A_CB[3]);
 
 		// Buffer 4
 		istride /= 8;
 		phase_base *= 8.0;
 
 		FFTGeneratorCB cb_data_buf4 = { thread_count, ostride, istride, 1, (float)phase_base };
-		cb_data.pData = &cb_data_buf4;
 
-		device->CreateBuffer(&cb_desc, &cb_data, &plan.pRadix008A_CB[4]);
+		device->CreateBuffer(&cb_desc, &cb_data_buf4, &plan.pRadix008A_CB[4]);
 
 		// Buffer 5
 		istride /= 8;
 		phase_base *= 8.0;
 
 		FFTGeneratorCB cb_data_buf5 = { thread_count, ostride, istride, 1, (float)phase_base };
-		cb_data.pData = &cb_data_buf5;
 
-		device->CreateBuffer(&cb_desc, &cb_data, &plan.pRadix008A_CB[5]);
+		device->CreateBuffer(&cb_desc, &cb_data_buf5, &plan.pRadix008A_CB[5]);
 	}
 
 	void fft512x512_create_plan(CSFFT512x512_Plan& plan, uint32_t slices)

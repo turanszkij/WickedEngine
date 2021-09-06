@@ -68,7 +68,6 @@ void wiEmittedParticle::CreateSelfBuffers()
 	bd.Usage = USAGE_DEFAULT;
 	bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-	SubresourceData data;
 
 	// Particle buffer:
 	bd.StructureByteStride = sizeof(Particle);
@@ -87,18 +86,14 @@ void wiEmittedParticle::CreateSelfBuffers()
 	{
 		indices[i] = i;
 	}
-	data.pData = indices.data();
-	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, &deadList);
-	data.pData = nullptr;
+	wiRenderer::GetDevice()->CreateBuffer(&bd, indices.data(), &deadList);
 
 	// Distance buffer:
 	bd.StructureByteStride = sizeof(float);
 	bd.ByteWidth = bd.StructureByteStride * MAX_PARTICLES;
 	std::vector<float> distances(MAX_PARTICLES);
 	std::fill(distances.begin(), distances.end(), 0.0f);
-	data.pData = distances.data();
-	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, &distanceBuffer);
-	data.pData = nullptr;
+	wiRenderer::GetDevice()->CreateBuffer(&bd, distances.data(), &distanceBuffer);
 
 	// SPH Partitioning grid indices per particle:
 	bd.StructureByteStride = sizeof(float); // really, it is uint, but sorting is performing comparisons on floats, so whateva
@@ -122,12 +117,10 @@ void wiEmittedParticle::CreateSelfBuffers()
 	counters.realEmitCount = 0;
 	counters.aliveCount_afterSimulation = 0;
 
-	data.pData = &counters;
 	bd.ByteWidth = sizeof(counters);
 	bd.StructureByteStride = sizeof(counters);
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, &data, &counterBuffer);
-	data.pData = nullptr;
+	wiRenderer::GetDevice()->CreateBuffer(&bd, &counters, &counterBuffer);
 
 	// Indirect Execution buffer:
 	bd.BindFlags = BIND_UNORDERED_ACCESS;

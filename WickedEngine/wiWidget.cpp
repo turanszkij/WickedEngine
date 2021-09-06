@@ -1303,9 +1303,7 @@ void wiComboBox::Render(const wiCanvas& canvas, CommandList cmd) const
 		GPUBufferDesc desc;
 		desc.BindFlags = BIND_VERTEX_BUFFER;
 		desc.ByteWidth = sizeof(vertices);
-		SubresourceData initdata;
-		initdata.pData = vertices;
-		device->CreateBuffer(&desc, &initdata, &vb_triangle);
+		device->CreateBuffer(&desc, &vertices, &vb_triangle);
 	}
 	const XMMATRIX Projection = canvas.GetProjection();
 
@@ -2337,9 +2335,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			desc.BindFlags = BIND_VERTEX_BUFFER;
 			desc.ByteWidth = (uint32_t)(vertices.size() * sizeof(Vertex));
 			desc.StructureByteStride = 0;
-			SubresourceData data;
-			data.pData = vertices.data();
-			device->CreateBuffer(&desc, &data, &vb_hue);
+			device->CreateBuffer(&desc, vertices.data(), &vb_hue);
 		}
 		// saturation picker (small circle)
 		{
@@ -2361,9 +2357,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			desc.BindFlags = BIND_VERTEX_BUFFER;
 			desc.ByteWidth = (uint32_t)(vertices.size() * sizeof(Vertex));
 			desc.StructureByteStride = 0;
-			SubresourceData data;
-			data.pData = vertices.data();
-			device->CreateBuffer(&desc, &data, &vb_picker_saturation);
+			device->CreateBuffer(&desc, vertices.data(), &vb_picker_saturation);
 		}
 		// hue picker (rectangle)
 		{
@@ -2399,9 +2393,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			desc.BindFlags = BIND_VERTEX_BUFFER;
 			desc.ByteWidth = (uint32_t)sizeof(vertices);
 			desc.StructureByteStride = 0;
-			SubresourceData data;
-			data.pData = vertices;
-			device->CreateBuffer(&desc, &data, &vb_picker_hue);
+			device->CreateBuffer(&desc, vertices, &vb_picker_hue);
 		}
 		// preview
 		{
@@ -2416,9 +2408,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			GPUBufferDesc desc;
 			desc.BindFlags = BIND_VERTEX_BUFFER;
 			desc.ByteWidth = (uint32_t)sizeof(vertices);
-			SubresourceData data;
-			data.pData = vertices;
-			device->CreateBuffer(&desc, &data, &vb_preview);
+			device->CreateBuffer(&desc, vertices, &vb_preview);
 		}
 
 	}
@@ -2926,9 +2916,7 @@ void wiTreeList::Render(const wiCanvas& canvas, CommandList cmd) const
 		GPUBufferDesc desc;
 		desc.BindFlags = BIND_VERTEX_BUFFER;
 		desc.ByteWidth = sizeof(vertices);
-		SubresourceData initdata;
-		initdata.pData = vertices;
-		device->CreateBuffer(&desc, &initdata, &vb_triangle);
+		device->CreateBuffer(&desc, vertices, &vb_triangle);
 	}
 	const XMMATRIX Projection = canvas.GetProjection();
 

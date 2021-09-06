@@ -1579,7 +1579,7 @@ using namespace DX12_Internal;
 		if (cmd.uploadbuffer.desc.ByteWidth < staging_size)
 		{
 			GPUBufferDesc uploaddesc;
-			uploaddesc.ByteWidth = wiMath::GetNextPowerOfTwo(staging_size);
+			uploaddesc.ByteWidth = wiMath::GetNextPowerOfTwo((uint32_t)staging_size);
 			uploaddesc.Usage = USAGE_UPLOAD;
 			bool upload_success = device->CreateBuffer(&uploaddesc, nullptr, &cmd.uploadbuffer);
 			assert(upload_success);
@@ -2801,7 +2801,7 @@ using namespace DX12_Internal;
 
 		return true;
 	}
-	bool GraphicsDevice_DX12::CreateBuffer(const GPUBufferDesc* pDesc, const SubresourceData* pInitialData, GPUBuffer* pBuffer) const
+	bool GraphicsDevice_DX12::CreateBuffer(const GPUBufferDesc* pDesc, const void* pInitialData, GPUBuffer* pBuffer) const
 	{
 		auto internal_state = std::make_shared<Resource_DX12>();
 		internal_state->allocationhandler = allocationhandler;
@@ -2885,7 +2885,7 @@ using namespace DX12_Internal;
 		{
 			auto cmd = copyAllocator.allocate(pDesc->ByteWidth);
 
-			memcpy(cmd.uploadbuffer.mapped_data, pInitialData->pData, pDesc->ByteWidth);
+			memcpy(cmd.uploadbuffer.mapped_data, pInitialData, pDesc->ByteWidth);
 
 			cmd.commandList->CopyBufferRegion(
 				internal_state->resource.Get(),
