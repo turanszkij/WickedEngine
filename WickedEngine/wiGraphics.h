@@ -527,7 +527,7 @@ namespace wiGraphics
 	};
 	struct GPUBufferDesc
 	{
-		uint64_t ByteWidth = 0;
+		uint64_t Size = 0;
 		USAGE Usage = USAGE_DEFAULT;
 		BIND_FLAG BindFlags = BIND_NONE;
 		RESOURCE_MISC_FLAG MiscFlags = RESOURCE_MISC_NONE;

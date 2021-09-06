@@ -71,12 +71,12 @@ void wiEmittedParticle::CreateSelfBuffers()
 
 	// Particle buffer:
 	bd.Stride = sizeof(Particle);
-	bd.ByteWidth = bd.Stride * MAX_PARTICLES;
+	bd.Size = bd.Stride * MAX_PARTICLES;
 	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &particleBuffer);
 
 	// Alive index lists (double buffered):
 	bd.Stride = sizeof(uint32_t);
-	bd.ByteWidth = bd.Stride * MAX_PARTICLES;
+	bd.Size = bd.Stride * MAX_PARTICLES;
 	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &aliveList[0]);
 	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &aliveList[1]);
 
@@ -90,24 +90,24 @@ void wiEmittedParticle::CreateSelfBuffers()
 
 	// Distance buffer:
 	bd.Stride = sizeof(float);
-	bd.ByteWidth = bd.Stride * MAX_PARTICLES;
+	bd.Size = bd.Stride * MAX_PARTICLES;
 	std::vector<float> distances(MAX_PARTICLES);
 	std::fill(distances.begin(), distances.end(), 0.0f);
 	wiRenderer::GetDevice()->CreateBuffer(&bd, distances.data(), &distanceBuffer);
 
 	// SPH Partitioning grid indices per particle:
 	bd.Stride = sizeof(float); // really, it is uint, but sorting is performing comparisons on floats, so whateva
-	bd.ByteWidth = bd.Stride * MAX_PARTICLES;
+	bd.Size = bd.Stride * MAX_PARTICLES;
 	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &sphPartitionCellIndices);
 
 	// SPH Partitioning grid cell offsets into particle index list:
 	bd.Stride = sizeof(uint32_t);
-	bd.ByteWidth = bd.Stride * SPH_PARTITION_BUCKET_COUNT;
+	bd.Size = bd.Stride * SPH_PARTITION_BUCKET_COUNT;
 	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &sphPartitionCellOffsets);
 
 	// Density buffer (for SPH simulation):
 	bd.Stride = sizeof(float);
-	bd.ByteWidth = bd.Stride * MAX_PARTICLES;
+	bd.Size = bd.Stride * MAX_PARTICLES;
 	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &densityBuffer);
 
 	// Particle System statistics:
@@ -117,7 +117,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 	counters.realEmitCount = 0;
 	counters.aliveCount_afterSimulation = 0;
 
-	bd.ByteWidth = sizeof(counters);
+	bd.Size = sizeof(counters);
 	bd.Stride = sizeof(counters);
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
 	wiRenderer::GetDevice()->CreateBuffer(&bd, &counters, &counterBuffer);
@@ -125,7 +125,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 	// Indirect Execution buffer:
 	bd.BindFlags = BIND_UNORDERED_ACCESS;
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW | RESOURCE_MISC_INDIRECT_ARGS;
-	bd.ByteWidth = 
+	bd.Size = 
 		sizeof(wiGraphics::IndirectDispatchArgs) + 
 		sizeof(wiGraphics::IndirectDispatchArgs) + 
 		sizeof(wiGraphics::IndirectDrawArgsInstanced);
@@ -133,7 +133,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 
 	// Constant buffer:
 	bd.Usage = USAGE_DEFAULT;
-	bd.ByteWidth = sizeof(EmittedParticleCB);
+	bd.Size = sizeof(EmittedParticleCB);
 	bd.BindFlags = BIND_CONSTANT_BUFFER;
 	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &constantBuffer);
 
@@ -158,17 +158,17 @@ uint64_t wiEmittedParticle::GetMemorySizeInBytes() const
 
 	uint64_t retVal = 0;
 
-	retVal += particleBuffer.GetDesc().ByteWidth;
-	retVal += aliveList[0].GetDesc().ByteWidth;
-	retVal += aliveList[1].GetDesc().ByteWidth;
-	retVal += deadList.GetDesc().ByteWidth;
-	retVal += distanceBuffer.GetDesc().ByteWidth;
-	retVal += sphPartitionCellIndices.GetDesc().ByteWidth;
-	retVal += sphPartitionCellOffsets.GetDesc().ByteWidth;
-	retVal += densityBuffer.GetDesc().ByteWidth;
-	retVal += counterBuffer.GetDesc().ByteWidth;
-	retVal += indirectBuffers.GetDesc().ByteWidth;
-	retVal += constantBuffer.GetDesc().ByteWidth;
+	retVal += particleBuffer.GetDesc().Size;
+	retVal += aliveList[0].GetDesc().Size;
+	retVal += aliveList[1].GetDesc().Size;
+	retVal += deadList.GetDesc().Size;
+	retVal += distanceBuffer.GetDesc().Size;
+	retVal += sphPartitionCellIndices.GetDesc().Size;
+	retVal += sphPartitionCellOffsets.GetDesc().Size;
+	retVal += densityBuffer.GetDesc().Size;
+	retVal += counterBuffer.GetDesc().Size;
+	retVal += indirectBuffers.GetDesc().Size;
+	retVal += constantBuffer.GetDesc().Size;
 
 	return retVal;
 }

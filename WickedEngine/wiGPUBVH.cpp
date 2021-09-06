@@ -36,7 +36,7 @@ void wiGPUBVH::Update(const wiScene::Scene& scene)
 		GPUBufferDesc desc;
 		desc.BindFlags = BIND_SHADER_RESOURCE;
 		desc.Stride = sizeof(uint);
-		desc.ByteWidth = desc.Stride;
+		desc.Size = desc.Stride;
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
 		desc.Usage = USAGE_DEFAULT;
@@ -75,7 +75,7 @@ void wiGPUBVH::Update(const wiScene::Scene& scene)
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.Stride = sizeof(BVHNode);
-		desc.ByteWidth = desc.Stride * primitiveCapacity * 2;
+		desc.Size = desc.Stride * primitiveCapacity * 2;
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
@@ -84,7 +84,7 @@ void wiGPUBVH::Update(const wiScene::Scene& scene)
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.Stride = sizeof(uint);
-		desc.ByteWidth = desc.Stride * primitiveCapacity * 2;
+		desc.Size = desc.Stride * primitiveCapacity * 2;
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
@@ -93,7 +93,7 @@ void wiGPUBVH::Update(const wiScene::Scene& scene)
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.Stride = sizeof(uint);
-		desc.ByteWidth = desc.Stride * (((primitiveCapacity - 1) + 31) / 32); // bitfield for internal nodes
+		desc.Size = desc.Stride * (((primitiveCapacity - 1) + 31) / 32); // bitfield for internal nodes
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
@@ -102,7 +102,7 @@ void wiGPUBVH::Update(const wiScene::Scene& scene)
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.Stride = sizeof(uint);
-		desc.ByteWidth = desc.Stride * primitiveCapacity;
+		desc.Size = desc.Stride * primitiveCapacity;
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
@@ -111,7 +111,7 @@ void wiGPUBVH::Update(const wiScene::Scene& scene)
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.Stride = sizeof(BVHPrimitive);
-		desc.ByteWidth = desc.Stride * primitiveCapacity;
+		desc.Size = desc.Stride * primitiveCapacity;
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
@@ -119,7 +119,7 @@ void wiGPUBVH::Update(const wiScene::Scene& scene)
 		device->SetName(&primitiveBuffer, "primitiveBuffer");
 
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.ByteWidth = desc.Stride * primitiveCapacity;
+		desc.Size = desc.Stride * primitiveCapacity;
 		desc.Format = FORMAT_UNKNOWN;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
@@ -313,7 +313,7 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
 			readback_desc.Flags = 0;
 			GPUBuffer readback_nodeBuffer;
 			device->CreateBuffer(&readback_desc, nullptr, &readback_nodeBuffer);
-			vector<BVHNode> nodes(readback_desc.ByteWidth / sizeof(BVHNode));
+			vector<BVHNode> nodes(readback_desc.Size / sizeof(BVHNode));
 			download_success = device->DownloadResource(&bvhNodeBuffer, &readback_nodeBuffer, nodes.data(), cmd);
 			assert(download_success);
 			set<uint> visitedLeafs;
@@ -354,7 +354,7 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
 			readback_desc.Flags = 0;
 			GPUBuffer readback_flagBuffer;
 			device->CreateBuffer(&readback_desc, nullptr, &readback_flagBuffer);
-			vector<uint> flags(readback_desc.ByteWidth / sizeof(uint));
+			vector<uint> flags(readback_desc.Size / sizeof(uint));
 			download_success = device->DownloadResource(&bvhFlagBuffer, &readback_flagBuffer, flags.data(), cmd);
 			assert(download_success);
 			for (auto& x : flags)

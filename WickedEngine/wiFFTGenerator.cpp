@@ -111,7 +111,7 @@ namespace wiFFTGenerator
 
 		GPUBufferDesc cb_desc;
 		cb_desc.BindFlags = BIND_CONSTANT_BUFFER;
-		cb_desc.ByteWidth = sizeof(FFTGeneratorCB);
+		cb_desc.Size = sizeof(FFTGeneratorCB);
 		cb_desc.Stride = 0;
 
 		// Buffer 0
@@ -178,7 +178,7 @@ namespace wiFFTGenerator
 
 		// Temp buffer
 		GPUBufferDesc buf_desc;
-		buf_desc.ByteWidth = sizeof(float) * 2 * (512 * slices) * 512;
+		buf_desc.Size = sizeof(float) * 2 * (512 * slices) * 512;
 		buf_desc.Usage = USAGE_DEFAULT;
 		buf_desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
 		buf_desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;

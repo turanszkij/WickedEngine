@@ -194,12 +194,12 @@ namespace wiGraphics
 				allocator.offset = 0;
 			}
 
-			uint64_t free_space = allocator.buffer.desc.ByteWidth - allocator.offset;
+			const uint64_t free_space = allocator.buffer.desc.Size - allocator.offset;
 			if (dataSize > free_space)
 			{
 				GPUBufferDesc desc;
 				desc.Usage = USAGE_UPLOAD;
-				desc.ByteWidth = AlignTo((allocator.buffer.desc.ByteWidth + dataSize) * 2, ALLOCATION_MIN_ALIGNMENT);
+				desc.Size = AlignTo((allocator.buffer.desc.Size + dataSize) * 2, ALLOCATION_MIN_ALIGNMENT);
 				desc.BindFlags = BIND_CONSTANT_BUFFER | BIND_VERTEX_BUFFER | BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE;
 				desc.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
 				CreateBuffer(&desc, nullptr, &allocator.buffer);
@@ -224,7 +224,7 @@ namespace wiGraphics
 		{
 			if (buffer == nullptr || data == nullptr)
 				return;
-			size = std::min(buffer->desc.ByteWidth, size);
+			size = std::min(buffer->desc.Size, size);
 			if (size == 0)
 				return;
 			GPUAllocation allocation = AllocateGPU(size, cmd);

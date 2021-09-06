@@ -32,7 +32,7 @@ namespace wiGPUSortLib
 		bd.Usage = USAGE_DEFAULT;
 		bd.BindFlags = BIND_UNORDERED_ACCESS;
 		bd.MiscFlags = RESOURCE_MISC_INDIRECT_ARGS | RESOURCE_MISC_BUFFER_RAW;
-		bd.ByteWidth = sizeof(IndirectDispatchArgs);
+		bd.Size = sizeof(IndirectDispatchArgs);
 		wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &indirectBuffer);
 
 		static wiEvent::Handle handle = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });

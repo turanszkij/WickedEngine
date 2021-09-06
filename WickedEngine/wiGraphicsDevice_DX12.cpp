@@ -1559,12 +1559,12 @@ using namespace DX12_Internal;
 		}
 
 		CopyCMD cmd = freelist.back();
-		if (cmd.uploadbuffer.desc.ByteWidth < staging_size)
+		if (cmd.uploadbuffer.desc.Size < staging_size)
 		{
 			// Try to search for a staging buffer that can fit the request:
 			for (size_t i = 0; i < freelist.size(); ++i)
 			{
-				if (freelist[i].uploadbuffer.desc.ByteWidth >= staging_size)
+				if (freelist[i].uploadbuffer.desc.Size >= staging_size)
 				{
 					cmd = freelist[i];
 					std::swap(freelist[i], freelist.back());
@@ -1576,12 +1576,12 @@ using namespace DX12_Internal;
 		locker.unlock();
 
 		// If no buffer was found that fits the data, create one:
-		if (cmd.uploadbuffer.desc.ByteWidth < staging_size)
+		if (cmd.uploadbuffer.desc.Size < staging_size)
 		{
-			GPUBufferDesc uploaddesc;
-			uploaddesc.ByteWidth = wiMath::GetNextPowerOfTwo((uint32_t)staging_size);
-			uploaddesc.Usage = USAGE_UPLOAD;
-			bool upload_success = device->CreateBuffer(&uploaddesc, nullptr, &cmd.uploadbuffer);
+			GPUBufferDesc uploadBufferDesc;
+			uploadBufferDesc.Size = wiMath::GetNextPowerOfTwo((uint32_t)staging_size);
+			uploadBufferDesc.Usage = USAGE_UPLOAD;
+			bool upload_success = device->CreateBuffer(&uploadBufferDesc, nullptr, &cmd.uploadbuffer);
 			assert(upload_success);
 		}
 
@@ -1903,7 +1903,7 @@ using namespace DX12_Internal;
 							D3D12_CONSTANT_BUFFER_VIEW_DESC cbv;
 							cbv.BufferLocation = internal_state->gpu_address;
 							cbv.BufferLocation += offset;
-							cbv.SizeInBytes = AlignTo((UINT)buffer.desc.ByteWidth, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+							cbv.SizeInBytes = AlignTo((UINT)buffer.desc.Size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 
 							device->device->CreateConstantBufferView(&cbv, dst);
 						}
@@ -2814,7 +2814,7 @@ using namespace DX12_Internal;
 
 		HRESULT hr = E_FAIL;
 
-		UINT64 alignedSize = pDesc->ByteWidth;
+		UINT64 alignedSize = pDesc->Size;
 		if (pDesc->BindFlags & BIND_CONSTANT_BUFFER)
 		{
 			alignedSize = AlignTo(alignedSize, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
@@ -2870,29 +2870,29 @@ using namespace DX12_Internal;
 		{
 			hr = internal_state->resource->Map(0, nullptr, &pBuffer->mapped_data);
 			assert(SUCCEEDED(hr));
-			pBuffer->mapped_rowpitch = static_cast<uint32_t>(pDesc->ByteWidth);
+			pBuffer->mapped_rowpitch = static_cast<uint32_t>(pDesc->Size);
 		}
 		else if (pDesc->Usage == USAGE_UPLOAD)
 		{
 			D3D12_RANGE read_range = {};
 			hr = internal_state->resource->Map(0, &read_range, &pBuffer->mapped_data);
 			assert(SUCCEEDED(hr));
-			pBuffer->mapped_rowpitch = static_cast<uint32_t>(pDesc->ByteWidth);
+			pBuffer->mapped_rowpitch = static_cast<uint32_t>(pDesc->Size);
 		}
 
 		// Issue data copy on request:
 		if (pInitialData != nullptr)
 		{
-			auto cmd = copyAllocator.allocate(pDesc->ByteWidth);
+			auto cmd = copyAllocator.allocate(pDesc->Size);
 
-			memcpy(cmd.uploadbuffer.mapped_data, pInitialData, pDesc->ByteWidth);
+			memcpy(cmd.uploadbuffer.mapped_data, pInitialData, pDesc->Size);
 
 			cmd.commandList->CopyBufferRegion(
 				internal_state->resource.Get(),
 				0,
 				to_internal(&cmd.uploadbuffer)->resource.Get(),
 				0,
-				pDesc->ByteWidth
+				pDesc->Size
 			);
 
 			copyAllocator.submit(cmd);
@@ -4611,7 +4611,7 @@ using namespace DX12_Internal;
 		internal_state->srv.init(this, srv_desc, nullptr);
 
 		GPUBufferDesc scratch_desc;
-		scratch_desc.ByteWidth = (uint32_t)std::max(internal_state->info.ScratchDataSizeInBytes, internal_state->info.UpdateScratchDataSizeInBytes);
+		scratch_desc.Size = (uint32_t)std::max(internal_state->info.ScratchDataSizeInBytes, internal_state->info.UpdateScratchDataSizeInBytes);
 
 		return CreateBuffer(&scratch_desc, nullptr, &internal_state->scratch);
 	}
@@ -5121,7 +5121,7 @@ using namespace DX12_Internal;
 				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 				srv_desc.Buffer.FirstElement = (UINT)offset / sizeof(uint32_t);
 				srv_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
-				srv_desc.Buffer.NumElements = (UINT)std::min(size, desc.ByteWidth - offset) / sizeof(uint32_t);
+				srv_desc.Buffer.NumElements = (UINT)std::min(size, desc.Size - offset) / sizeof(uint32_t);
 			}
 			else if (desc.MiscFlags & RESOURCE_MISC_BUFFER_STRUCTURED)
 			{
@@ -5129,7 +5129,7 @@ using namespace DX12_Internal;
 				srv_desc.Format = DXGI_FORMAT_UNKNOWN;
 				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 				srv_desc.Buffer.FirstElement = (UINT)offset / desc.Stride;
-				srv_desc.Buffer.NumElements = (UINT)std::min(size, desc.ByteWidth - offset) / desc.Stride;
+				srv_desc.Buffer.NumElements = (UINT)std::min(size, desc.Size - offset) / desc.Stride;
 				srv_desc.Buffer.StructureByteStride = desc.Stride;
 			}
 			else
@@ -5139,7 +5139,7 @@ using namespace DX12_Internal;
 				srv_desc.Format = _ConvertFormat(desc.Format);
 				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 				srv_desc.Buffer.FirstElement = offset / stride;
-				srv_desc.Buffer.NumElements = (UINT)std::min(size, desc.ByteWidth - offset) / stride;
+				srv_desc.Buffer.NumElements = (UINT)std::min(size, desc.Size - offset) / stride;
 			}
 
 			SingleDescriptor descriptor;
@@ -5167,14 +5167,14 @@ using namespace DX12_Internal;
 				uav_desc.Format = DXGI_FORMAT_R32_TYPELESS;
 				uav_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
 				uav_desc.Buffer.FirstElement = (UINT)offset / sizeof(uint32_t);
-				uav_desc.Buffer.NumElements = (UINT)std::min(size, desc.ByteWidth - offset) / sizeof(uint32_t);
+				uav_desc.Buffer.NumElements = (UINT)std::min(size, desc.Size - offset) / sizeof(uint32_t);
 			}
 			else if (desc.MiscFlags & RESOURCE_MISC_BUFFER_STRUCTURED)
 			{
 				// This is a Structured Buffer
 				uav_desc.Format = DXGI_FORMAT_UNKNOWN;
 				uav_desc.Buffer.FirstElement = (UINT)offset / desc.Stride;
-				uav_desc.Buffer.NumElements = (UINT)std::min(size, desc.ByteWidth - offset) / desc.Stride;
+				uav_desc.Buffer.NumElements = (UINT)std::min(size, desc.Size - offset) / desc.Stride;
 				uav_desc.Buffer.StructureByteStride = desc.Stride;
 			}
 			else
@@ -5183,7 +5183,7 @@ using namespace DX12_Internal;
 				uint32_t stride = GetFormatStride(desc.Format);
 				uav_desc.Format = _ConvertFormat(desc.Format);
 				uav_desc.Buffer.FirstElement = (UINT)offset / stride;
-				uav_desc.Buffer.NumElements = (UINT)std::min(size, desc.ByteWidth - offset) / stride;
+				uav_desc.Buffer.NumElements = (UINT)std::min(size, desc.Size - offset) / stride;
 			}
 
 			SingleDescriptor descriptor;
@@ -5767,7 +5767,7 @@ using namespace DX12_Internal;
 			if (vertexBuffers[i] != nullptr)
 			{
 				res[i].BufferLocation = vertexBuffers[i]->IsValid() ? to_internal(vertexBuffers[i])->gpu_address : 0;
-				res[i].SizeInBytes = (UINT)vertexBuffers[i]->desc.ByteWidth;
+				res[i].SizeInBytes = (UINT)vertexBuffers[i]->desc.Size;
 				if (offsets != nullptr)
 				{
 					res[i].BufferLocation += offsets[i];
@@ -5776,7 +5776,7 @@ using namespace DX12_Internal;
 				res[i].StrideInBytes = strides[i];
 			}
 		}
-		GetCommandList(cmd)->IASetVertexBuffers(static_cast<uint32_t>(slot), static_cast<uint32_t>(count), res);
+		GetCommandList(cmd)->IASetVertexBuffers(slot, count, res);
 	}
 	void GraphicsDevice_DX12::BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, uint32_t offset, CommandList cmd)
 	{
@@ -5787,7 +5787,7 @@ using namespace DX12_Internal;
 
 			res.BufferLocation = internal_state->gpu_address + (D3D12_GPU_VIRTUAL_ADDRESS)offset;
 			res.Format = (format == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT);
-			res.SizeInBytes = (UINT)(indexBuffer->desc.ByteWidth - offset);
+			res.SizeInBytes = (UINT)(indexBuffer->desc.Size - offset);
 		}
 		GetCommandList(cmd)->IASetIndexBuffer(&res);
 	}

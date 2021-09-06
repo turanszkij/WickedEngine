@@ -71,7 +71,7 @@ void Translator::Create()
 
 			GPUBufferDesc bd;
 			bd.Usage = USAGE_DEFAULT;
-			bd.ByteWidth = sizeof(verts);
+			bd.Size = sizeof(verts);
 			bd.BindFlags = BIND_VERTEX_BUFFER;
 
 			device->CreateBuffer(&bd, verts, &vertexBuffer_Axis);
@@ -94,7 +94,7 @@ void Translator::Create()
 
 			GPUBufferDesc bd;
 			bd.Usage = USAGE_DEFAULT;
-			bd.ByteWidth = sizeof(verts);
+			bd.Size = sizeof(verts);
 			bd.BindFlags = BIND_VERTEX_BUFFER;
 
 			device->CreateBuffer(&bd, verts, &vertexBuffer_Plane);
@@ -147,7 +147,7 @@ void Translator::Create()
 
 			GPUBufferDesc bd;
 			bd.Usage = USAGE_DEFAULT;
-			bd.ByteWidth = sizeof(verts);
+			bd.Size = sizeof(verts);
 			bd.BindFlags = BIND_VERTEX_BUFFER;
 
 			device->CreateBuffer(&bd, verts, &vertexBuffer_Origin);

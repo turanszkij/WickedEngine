@@ -130,7 +130,7 @@ void wiOcean::Create(const OceanParameters& params)
 	// RW buffer allocations
 	// H0
 	buf_desc.Stride = sizeof(float2);
-	buf_desc.ByteWidth = buf_desc.Stride * input_full_size;
+	buf_desc.Size = buf_desc.Stride * input_full_size;
 	device->CreateBuffer(&buf_desc, h0_data.data(), &buffer_Float2_H0);
 
 	// Notice: The following 3 buffers should be half sized buffer because of conjugate symmetric input. But
@@ -138,19 +138,19 @@ void wiOcean::Create(const OceanParameters& params)
 
 	// Put H(t), Dx(t) and Dy(t) into one buffer because CS4.0 allows only 1 UAV at a time
 	buf_desc.Stride = sizeof(float2);
-	buf_desc.ByteWidth = buf_desc.Stride * 3 * input_half_size;
+	buf_desc.Size = buf_desc.Stride * 3 * input_half_size;
 	device->CreateBuffer(&buf_desc, zero_data.data(), &buffer_Float2_Ht);
 
 	// omega
 	buf_desc.Stride = sizeof(float);
-	buf_desc.ByteWidth = buf_desc.Stride * input_full_size;
+	buf_desc.Size = buf_desc.Stride * input_full_size;
 	device->CreateBuffer(&buf_desc, omega_data.data(), &buffer_Float_Omega);
 
 	// Notice: The following 3 should be real number data. But here we use the complex numbers and C2C FFT
 	// due to the CS4.0 restriction.
 	// Put Dz, Dx and Dy into one buffer because CS4.0 allows only 1 UAV at a time
 	buf_desc.Stride = sizeof(float2);
-	buf_desc.ByteWidth = buf_desc.Stride * 3 * output_size;
+	buf_desc.Size = buf_desc.Stride * 3 * output_size;
 	device->CreateBuffer(&buf_desc, zero_data.data(), &buffer_Float_Dxyz);
 
 	TextureDesc tex_desc;
@@ -191,12 +191,12 @@ void wiOcean::Create(const OceanParameters& params)
 
 	GPUBufferDesc cb_desc;
 	cb_desc.BindFlags = BIND_CONSTANT_BUFFER;
-	cb_desc.ByteWidth = sizeof(Ocean_Simulation_ImmutableCB);
+	cb_desc.Size = sizeof(Ocean_Simulation_ImmutableCB);
 	device->CreateBuffer(&cb_desc, &immutable_consts, &immutableCB);
 
 	cb_desc.Usage = USAGE_DEFAULT;
 	cb_desc.BindFlags = BIND_CONSTANT_BUFFER;
-	cb_desc.ByteWidth = sizeof(Ocean_Simulation_PerFrameCB);
+	cb_desc.Size = sizeof(Ocean_Simulation_PerFrameCB);
 	device->CreateBuffer(&cb_desc, nullptr, &perFrameCB);
 }
 
