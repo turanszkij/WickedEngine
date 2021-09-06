@@ -6095,6 +6095,8 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd)
 	{
+		assert(active_renderpass[cmd] == nullptr);
+
 		auto& barrierdescs = frame_barriers[cmd];
 
 		for (uint32_t i = 0; i < numBarriers; ++i)
