@@ -161,8 +161,6 @@ namespace wiGraphics
 				VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
 				uint64_t target = 0;
 				GPUBuffer uploadbuffer;
-				void* data = nullptr;
-				VkBuffer upload_resource = VK_NULL_HANDLE;
 			};
 			std::vector<CopyCMD> freelist; // available
 			std::vector<CopyCMD> worklist; // in progress

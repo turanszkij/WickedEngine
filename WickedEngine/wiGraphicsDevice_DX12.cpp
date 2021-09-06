@@ -1554,11 +1554,6 @@ using namespace DX12_Internal;
 			uploaddesc.Usage = USAGE_UPLOAD;
 			bool upload_success = device->CreateBuffer(&uploaddesc, nullptr, &cmd.uploadbuffer);
 			assert(upload_success);
-
-			cmd.upload_resource = to_internal(&cmd.uploadbuffer)->resource.Get();
-			CD3DX12_RANGE readRange(0, 0);
-			HRESULT hr = cmd.upload_resource->Map(0, &readRange, &cmd.data);
-			assert(SUCCEEDED(hr));
 		}
 
 		// begin command list in valid state:
@@ -2885,12 +2880,12 @@ using namespace DX12_Internal;
 		{
 			auto cmd = copyAllocator.allocate(pDesc->ByteWidth);
 
-			memcpy(cmd.data, pInitialData->pSysMem, pDesc->ByteWidth);
+			memcpy(cmd.uploadbuffer.mapped_data, pInitialData->pSysMem, pDesc->ByteWidth);
 
 			cmd.commandList->CopyBufferRegion(
 				internal_state->resource.Get(),
 				0,
-				cmd.upload_resource,
+				to_internal(&cmd.uploadbuffer)->resource.Get(),
 				0,
 				pDesc->ByteWidth
 			);
@@ -3080,7 +3075,7 @@ using namespace DX12_Internal;
 				if (rowSizesInBytes[i] > (SIZE_T)-1)
 					continue;
 				D3D12_MEMCPY_DEST DestData = {};
-				DestData.pData = (void*)((UINT64)cmd.data + layouts[i].Offset);
+				DestData.pData = (void*)((UINT64)cmd.uploadbuffer.mapped_data + layouts[i].Offset);
 				DestData.RowPitch = (SIZE_T)layouts[i].Footprint.RowPitch;
 				DestData.SlicePitch = (SIZE_T)layouts[i].Footprint.RowPitch * (SIZE_T)numRows[i];
 				MemcpySubresource(&DestData, &data[i], (SIZE_T)rowSizesInBytes[i], numRows[i], layouts[i].Footprint.Depth);
@@ -3089,7 +3084,7 @@ using namespace DX12_Internal;
 			for (UINT i = 0; i < dataCount; ++i)
 			{
 				CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state->resource.Get(), i);
-				CD3DX12_TEXTURE_COPY_LOCATION Src(cmd.upload_resource, layouts[i]);
+				CD3DX12_TEXTURE_COPY_LOCATION Src(to_internal(&cmd.uploadbuffer)->resource.Get(), layouts[i]);
 				cmd.commandList->CopyTextureRegion(
 					&Dst,
 					0,

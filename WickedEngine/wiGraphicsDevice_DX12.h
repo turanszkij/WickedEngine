@@ -88,8 +88,6 @@ namespace wiGraphics
 				Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList;
 				Microsoft::WRL::ComPtr<ID3D12Fence> fence;
 				GPUBuffer uploadbuffer;
-				void* data = nullptr;
-				ID3D12Resource* upload_resource = nullptr;
 			};
 			std::vector<CopyCMD> freelist;
 
