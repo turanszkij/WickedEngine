@@ -241,7 +241,7 @@ namespace DX12_Internal
 		return D3D12_FILTER_MIN_MAG_MIP_POINT;
 	}
 
-	[[nodiscard]] constexpr D3D_PRIMITIVE_TOPOLOGY _ConvertPrimitiveTopology(PRIMITIVETOPOLOGY topology, uint32_t controlPoints)
+	constexpr D3D_PRIMITIVE_TOPOLOGY _ConvertPrimitiveTopology(PRIMITIVETOPOLOGY topology, uint32_t controlPoints)
 	{
 		switch (topology)
 		{
@@ -263,7 +263,6 @@ namespace DX12_Internal
 				}
 				return D3D_PRIMITIVE_TOPOLOGY(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST + (controlPoints - 1));
 			default:
-				__assume(false);
 				return D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
 		}
 	}
@@ -2111,7 +2110,7 @@ using namespace DX12_Internal;
 
 		GetCommandList(cmd)->SetPipelineState(pipeline);
 
-		if (prev_pt[cmd] != pso->desc.pt)
+		if (prev_pt[cmd] != internal_state->primitiveTopology)
 		{
 			prev_pt[cmd] = internal_state->primitiveTopology;
 
