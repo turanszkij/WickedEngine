@@ -3305,6 +3305,9 @@ void UpdateRenderData(
 {
 	device->EventBegin("UpdateRenderData", cmd);
 
+	auto prof_updatebuffers_cpu = wiProfiler::BeginRangeCPU("Update Buffers (CPU)");
+	auto prof_updatebuffers_gpu = wiProfiler::BeginRangeGPU("Update Buffers (GPU)", cmd);
+
 	// Begin copy barriers:
 	{
 		GPUBarrier barriers[] = {
@@ -3609,6 +3612,9 @@ void UpdateRenderData(
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
+
+	wiProfiler::EndRange(prof_updatebuffers_cpu);
+	wiProfiler::EndRange(prof_updatebuffers_gpu);
 
 	BindCommonResources(cmd);
 	UpdateCameraCB(
@@ -3977,14 +3983,14 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 
 			{
 				GPUBarrier barriers[] = {
-					GPUBarrier::Buffer(&scene.TLAS.desc.toplevel.instanceBuffer, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_COPY_DST),
+					GPUBarrier::Buffer(&scene.TLAS.desc.toplevel.instanceBuffer, RESOURCE_STATE_SHADER_RESOURCE_COMPUTE, RESOURCE_STATE_COPY_DST),
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
 			device->UpdateBuffer(&scene.TLAS.desc.toplevel.instanceBuffer, scene.TLAS_instances.data(), cmd);
 			{
 				GPUBarrier barriers[] = {
-					GPUBarrier::Buffer(&scene.TLAS.desc.toplevel.instanceBuffer, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE),
+					GPUBarrier::Buffer(&scene.TLAS.desc.toplevel.instanceBuffer, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE_COMPUTE),
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
