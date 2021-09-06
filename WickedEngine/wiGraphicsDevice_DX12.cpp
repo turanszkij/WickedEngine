@@ -2835,7 +2835,7 @@ using namespace DX12_Internal;
 			resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 		}
 
-		if (!(pDesc->BindFlags & BIND_SHADER_RESOURCE))
+		if (!(pDesc->BindFlags & BIND_SHADER_RESOURCE) && !(pDesc->MiscFlags & RESOURCE_MISC_RAY_TRACING))
 		{
 			resourceDesc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 		}
