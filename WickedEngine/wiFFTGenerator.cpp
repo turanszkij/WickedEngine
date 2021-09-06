@@ -111,12 +111,8 @@ namespace wiFFTGenerator
 
 		GPUBufferDesc cb_desc;
 		cb_desc.BindFlags = BIND_CONSTANT_BUFFER;
-		cb_desc.ByteWidth = sizeof(FFTGeneratorCB);
-		cb_desc.StructureByteStride = 0;
-
-		SubresourceData cb_data;
-		cb_data.SysMemPitch = 0;
-		cb_data.SysMemSlicePitch = 0;
+		cb_desc.Size = sizeof(FFTGeneratorCB);
+		cb_desc.Stride = 0;
 
 		// Buffer 0
 		const uint32_t thread_count = slices * (512 * 512) / 8;
@@ -125,27 +121,24 @@ namespace wiFFTGenerator
 		double phase_base = -TWO_PI / (512.0 * 512.0);
 
 		FFTGeneratorCB cb_data_buf0 = { thread_count, ostride, istride, 512, (float)phase_base };
-		cb_data.pSysMem = &cb_data_buf0;
 
-		device->CreateBuffer(&cb_desc, &cb_data, &plan.pRadix008A_CB[0]);
+		device->CreateBuffer(&cb_desc, &cb_data_buf0, &plan.pRadix008A_CB[0]);
 
 		// Buffer 1
 		istride /= 8;
 		phase_base *= 8.0;
 
 		FFTGeneratorCB cb_data_buf1 = { thread_count, ostride, istride, 512, (float)phase_base };
-		cb_data.pSysMem = &cb_data_buf1;
 
-		device->CreateBuffer(&cb_desc, &cb_data, &plan.pRadix008A_CB[1]);
+		device->CreateBuffer(&cb_desc, &cb_data_buf1, &plan.pRadix008A_CB[1]);
 
 		// Buffer 2
 		istride /= 8;
 		phase_base *= 8.0;
 
 		FFTGeneratorCB cb_data_buf2 = { thread_count, ostride, istride, 512, (float)phase_base };
-		cb_data.pSysMem = &cb_data_buf2;
 
-		device->CreateBuffer(&cb_desc, &cb_data, &plan.pRadix008A_CB[2]);
+		device->CreateBuffer(&cb_desc, &cb_data_buf2, &plan.pRadix008A_CB[2]);
 
 		// Buffer 3
 		istride /= 8;
@@ -153,27 +146,24 @@ namespace wiFFTGenerator
 		ostride /= 512;
 
 		FFTGeneratorCB cb_data_buf3 = { thread_count, ostride, istride, 1, (float)phase_base };
-		cb_data.pSysMem = &cb_data_buf3;
 
-		device->CreateBuffer(&cb_desc, &cb_data, &plan.pRadix008A_CB[3]);
+		device->CreateBuffer(&cb_desc, &cb_data_buf3, &plan.pRadix008A_CB[3]);
 
 		// Buffer 4
 		istride /= 8;
 		phase_base *= 8.0;
 
 		FFTGeneratorCB cb_data_buf4 = { thread_count, ostride, istride, 1, (float)phase_base };
-		cb_data.pSysMem = &cb_data_buf4;
 
-		device->CreateBuffer(&cb_desc, &cb_data, &plan.pRadix008A_CB[4]);
+		device->CreateBuffer(&cb_desc, &cb_data_buf4, &plan.pRadix008A_CB[4]);
 
 		// Buffer 5
 		istride /= 8;
 		phase_base *= 8.0;
 
 		FFTGeneratorCB cb_data_buf5 = { thread_count, ostride, istride, 1, (float)phase_base };
-		cb_data.pSysMem = &cb_data_buf5;
 
-		device->CreateBuffer(&cb_desc, &cb_data, &plan.pRadix008A_CB[5]);
+		device->CreateBuffer(&cb_desc, &cb_data_buf5, &plan.pRadix008A_CB[5]);
 	}
 
 	void fft512x512_create_plan(CSFFT512x512_Plan& plan, uint32_t slices)
@@ -188,11 +178,11 @@ namespace wiFFTGenerator
 
 		// Temp buffer
 		GPUBufferDesc buf_desc;
-		buf_desc.ByteWidth = sizeof(float) * 2 * (512 * slices) * 512;
+		buf_desc.Size = sizeof(float) * 2 * (512 * slices) * 512;
 		buf_desc.Usage = USAGE_DEFAULT;
 		buf_desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
 		buf_desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		buf_desc.StructureByteStride = sizeof(float) * 2;
+		buf_desc.Stride = sizeof(float) * 2;
 
 		device->CreateBuffer(&buf_desc, nullptr, &plan.pBuffer_Tmp);
 	}

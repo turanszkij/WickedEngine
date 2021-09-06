@@ -19,13 +19,14 @@ namespace wiGraphics
 	static const uint32_t DESCRIPTORBINDER_UAV_COUNT = 16;
 	static const uint32_t DESCRIPTORBINDER_SAMPLER_COUNT = 16;
 
-	inline size_t Align(size_t uLocation, size_t uAlign)
+	constexpr uint32_t AlignTo(uint32_t value, uint32_t alignment)
 	{
-		if ((0 == uAlign) || (uAlign & (uAlign - 1)))
-		{
-			assert(0);
-		}
-		return ((uLocation + (uAlign - 1)) & ~(uAlign - 1));
+		return ((value + alignment - 1) / alignment) * alignment;
+	}
+
+	constexpr uint64_t AlignTo(uint64_t value, uint64_t alignment)
+	{
+		return ((value + alignment - 1) / alignment) * alignment;
 	}
 
 	enum QUEUE_TYPE
@@ -47,13 +48,13 @@ namespace wiGraphics
 		size_t TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = 0;
 		uint32_t VARIABLE_RATE_SHADING_TILE_SIZE = 0;
 		uint64_t TIMESTAMP_FREQUENCY = 0;
-		size_t ALLOCATION_MIN_ALIGNMENT = 0;
+		uint64_t ALLOCATION_MIN_ALIGNMENT = 0;
 
 	public:
 		virtual ~GraphicsDevice() = default;
 
 		virtual bool CreateSwapChain(const SwapChainDesc* pDesc, wiPlatform::window_type window, SwapChain* swapChain) const = 0;
-		virtual bool CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer) const = 0;
+		virtual bool CreateBuffer(const GPUBufferDesc *pDesc, const void* pInitialData, GPUBuffer *pBuffer) const = 0;
 		virtual bool CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) const = 0;
 		virtual bool CreateShader(SHADERSTAGE stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) const = 0;
 		virtual bool CreateSampler(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) const = 0;
@@ -124,7 +125,7 @@ namespace wiGraphics
 		virtual void BindUAVs(const GPUResource *const* resources, uint32_t slot, uint32_t count, CommandList cmd) = 0;
 		virtual void BindSampler(const Sampler* sampler, uint32_t slot, CommandList cmd) = 0;
 		virtual void BindConstantBuffer(const GPUBuffer* buffer, uint32_t slot, CommandList cmd, uint64_t offset = 0ull) = 0;
-		virtual void BindVertexBuffers(const GPUBuffer *const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint32_t* offsets, CommandList cmd) = 0;
+		virtual void BindVertexBuffers(const GPUBuffer *const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint64_t* offsets, CommandList cmd) = 0;
 		virtual void BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, uint32_t offset, CommandList cmd) = 0;
 		virtual void BindStencilRef(uint32_t value, CommandList cmd) = 0;
 		virtual void BindBlendFactor(float r, float g, float b, float a, CommandList cmd) = 0;
@@ -165,7 +166,7 @@ namespace wiGraphics
 		struct GPULinearAllocator
 		{
 			GPUBuffer buffer;
-			size_t offset = 0;
+			uint64_t offset = 0;
 			uint64_t frame_index = 0;
 		} frame_allocators[BUFFERCOUNT][COMMANDLIST_COUNT];
 
@@ -173,14 +174,14 @@ namespace wiGraphics
 		{
 			void* data = nullptr;				// application can write to this. Reads might be not supported or slow. The offset is already applied
 			GPUBuffer buffer;					// application can bind it to the GPU
-			uint32_t offset = 0;				// allocation's offset from the GPUbuffer's beginning
+			uint64_t offset = 0;				// allocation's offset from the GPUbuffer's beginning
 
 			// Returns true if the allocation was successful
 			inline bool IsValid() const { return data != nullptr && buffer.IsValid(); }
 		};
 		// Allocates temporary memory that the CPU can write and GPU can read. 
 		//	It is only alive for one frame and automatically invalidated after that.
-		GPUAllocation AllocateGPU(size_t dataSize, CommandList cmd)
+		GPUAllocation AllocateGPU(uint64_t dataSize, CommandList cmd)
 		{
 			GPUAllocation allocation;
 			if (dataSize == 0)
@@ -193,12 +194,12 @@ namespace wiGraphics
 				allocator.offset = 0;
 			}
 
-			size_t free_space = (size_t)allocator.buffer.desc.ByteWidth - allocator.offset;
+			const uint64_t free_space = allocator.buffer.desc.Size - allocator.offset;
 			if (dataSize > free_space)
 			{
 				GPUBufferDesc desc;
 				desc.Usage = USAGE_UPLOAD;
-				desc.ByteWidth = (uint32_t)Align((allocator.buffer.desc.ByteWidth + dataSize) * 2, ALLOCATION_MIN_ALIGNMENT);
+				desc.Size = AlignTo((allocator.buffer.desc.Size + dataSize) * 2, ALLOCATION_MIN_ALIGNMENT);
 				desc.BindFlags = BIND_CONSTANT_BUFFER | BIND_VERTEX_BUFFER | BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE;
 				desc.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
 				CreateBuffer(&desc, nullptr, &allocator.buffer);
@@ -207,10 +208,10 @@ namespace wiGraphics
 			}
 
 			allocation.buffer = allocator.buffer;
-			allocation.offset = (uint32_t)allocator.offset;
+			allocation.offset = allocator.offset;
 			allocation.data = (void*)((size_t)allocator.buffer.mapped_data + allocator.offset);
 
-			allocator.offset += Align(dataSize, ALLOCATION_MIN_ALIGNMENT);
+			allocator.offset += AlignTo(dataSize, ALLOCATION_MIN_ALIGNMENT);
 
 			assert(allocation.IsValid());
 			return allocation;
@@ -219,11 +220,11 @@ namespace wiGraphics
 		// Updates a USAGE_DEFAULT buffer data
 		//	Since it uses a GPU Copy operation, appropriate synchronization is expected
 		//	And it cannot be used inside a RenderPass
-		void UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, size_t size = ~0, size_t offset = 0)
+		void UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, uint64_t size = ~0, uint64_t offset = 0)
 		{
 			if (buffer == nullptr || data == nullptr)
 				return;
-			size = std::min((size_t)buffer->desc.ByteWidth, size);
+			size = std::min(buffer->desc.Size, size);
 			if (size == 0)
 				return;
 			GPUAllocation allocation = AllocateGPU(size, cmd);

@@ -66,7 +66,7 @@ namespace wiProfiler
 
 			GPUBufferDesc bd;
 			bd.Usage = USAGE_READBACK;
-			bd.ByteWidth = desc.queryCount * sizeof(uint64_t);
+			bd.Size = desc.queryCount * sizeof(uint64_t);
 
 			for (int i = 0; i < arraysize(queryHeap); ++i)
 			{

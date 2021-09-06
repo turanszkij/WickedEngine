@@ -71,13 +71,10 @@ void Translator::Create()
 
 			GPUBufferDesc bd;
 			bd.Usage = USAGE_DEFAULT;
-			bd.ByteWidth = sizeof(verts);
+			bd.Size = sizeof(verts);
 			bd.BindFlags = BIND_VERTEX_BUFFER;
 
-			SubresourceData InitData;
-			InitData.pSysMem = verts;
-
-			device->CreateBuffer(&bd, &InitData, &vertexBuffer_Axis);
+			device->CreateBuffer(&bd, verts, &vertexBuffer_Axis);
 		}
 	}
 
@@ -97,12 +94,10 @@ void Translator::Create()
 
 			GPUBufferDesc bd;
 			bd.Usage = USAGE_DEFAULT;
-			bd.ByteWidth = sizeof(verts);
+			bd.Size = sizeof(verts);
 			bd.BindFlags = BIND_VERTEX_BUFFER;
 
-			SubresourceData InitData;
-			InitData.pSysMem = verts;
-			device->CreateBuffer(&bd, &InitData, &vertexBuffer_Plane);
+			device->CreateBuffer(&bd, verts, &vertexBuffer_Plane);
 		}
 	}
 
@@ -152,12 +147,10 @@ void Translator::Create()
 
 			GPUBufferDesc bd;
 			bd.Usage = USAGE_DEFAULT;
-			bd.ByteWidth = sizeof(verts);
+			bd.Size = sizeof(verts);
 			bd.BindFlags = BIND_VERTEX_BUFFER;
 
-			SubresourceData InitData;
-			InitData.pSysMem = verts;
-			device->CreateBuffer(&bd, &InitData, &vertexBuffer_Origin);
+			device->CreateBuffer(&bd, verts, &vertexBuffer_Origin);
 		}
 	}
 }

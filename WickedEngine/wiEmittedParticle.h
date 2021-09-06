@@ -112,7 +112,7 @@ public:
 
 	void SetMaxParticleCount(uint32_t value);
 	uint32_t GetMaxParticleCount() const { return MAX_PARTICLES; }
-	uint32_t GetMemorySizeInBytes() const;
+	uint64_t GetMemorySizeInBytes() const;
 
 	// Non-serialized attributes:
 	XMFLOAT3 center;

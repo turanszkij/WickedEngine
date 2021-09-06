@@ -50,7 +50,7 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	if (_flags & REBUILD_BUFFERS || !cb.IsValid() || (strandCount * segmentCount) != simulationBuffer.GetDesc().ByteWidth / sizeof(PatchSimulationData))
+	if (_flags & REBUILD_BUFFERS || !cb.IsValid() || (strandCount * segmentCount) != simulationBuffer.GetDesc().Size / sizeof(PatchSimulationData))
 	{
 		_flags &= ~REBUILD_BUFFERS;
 		regenerate_frame = true;
@@ -62,43 +62,43 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 
 		if (strandCount * segmentCount > 0)
 		{
-			bd.StructureByteStride = sizeof(PatchSimulationData);
-			bd.ByteWidth = bd.StructureByteStride * strandCount * segmentCount;
+			bd.Stride = sizeof(PatchSimulationData);
+			bd.Size = bd.Stride * strandCount * segmentCount;
 			device->CreateBuffer(&bd, nullptr, &simulationBuffer);
 			device->SetName(&simulationBuffer, "simulationBuffer");
 
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
-			bd.StructureByteStride = sizeof(MeshComponent::Vertex_POS);
-			bd.ByteWidth = bd.StructureByteStride * 4 * strandCount * segmentCount;
+			bd.Stride = sizeof(MeshComponent::Vertex_POS);
+			bd.Size = bd.Stride * 4 * strandCount * segmentCount;
 			device->CreateBuffer(&bd, nullptr, &vertexBuffer_POS[0]);
 			device->SetName(&vertexBuffer_POS[0], "vertexBuffer_POS[0]");
 			device->CreateBuffer(&bd, nullptr, &vertexBuffer_POS[1]);
 			device->SetName(&vertexBuffer_POS[1], "vertexBuffer_POS[1]");
 
-			bd.StructureByteStride = sizeof(MeshComponent::Vertex_TEX);
-			bd.ByteWidth = bd.StructureByteStride * 4 * strandCount * segmentCount;
+			bd.Stride = sizeof(MeshComponent::Vertex_TEX);
+			bd.Size = bd.Stride * 4 * strandCount * segmentCount;
 			device->CreateBuffer(&bd, nullptr, &vertexBuffer_TEX);
 			device->SetName(&vertexBuffer_TEX, "vertexBuffer_TEX");
 
 			bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 			bd.MiscFlags = RESOURCE_MISC_NONE;
 			bd.Format = FORMAT_R32_UINT;
-			bd.StructureByteStride = sizeof(uint);
-			bd.ByteWidth = bd.StructureByteStride * 6 * strandCount * segmentCount;
+			bd.Stride = sizeof(uint);
+			bd.Size = bd.Stride * 6 * strandCount * segmentCount;
 			device->CreateBuffer(&bd, nullptr, &primitiveBuffer);
 			device->SetName(&primitiveBuffer, "primitiveBuffer");
 
 			bd.BindFlags = BIND_INDEX_BUFFER | BIND_UNORDERED_ACCESS;
 			bd.MiscFlags = RESOURCE_MISC_NONE;
 			bd.Format = FORMAT_R32_UINT;
-			bd.StructureByteStride = sizeof(uint);
-			bd.ByteWidth = bd.StructureByteStride * 6 * strandCount * segmentCount;
+			bd.Stride = sizeof(uint);
+			bd.Size = bd.Stride * 6 * strandCount * segmentCount;
 			device->CreateBuffer(&bd, nullptr, &culledIndexBuffer);
 			device->SetName(&culledIndexBuffer, "culledIndexBuffer");
 		}
 
 		bd.Usage = USAGE_DEFAULT;
-		bd.ByteWidth = sizeof(HairParticleCB);
+		bd.Size = sizeof(HairParticleCB);
 		bd.BindFlags = BIND_CONSTANT_BUFFER;
 		bd.MiscFlags = RESOURCE_MISC_NONE;
 		device->CreateBuffer(&bd, nullptr, &cb);
@@ -137,22 +137,18 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 			bd.MiscFlags = RESOURCE_MISC_NONE;
 			bd.BindFlags = BIND_SHADER_RESOURCE;
 			bd.Format = FORMAT_R8_UNORM;
-			bd.StructureByteStride = sizeof(uint8_t);
-			bd.ByteWidth = bd.StructureByteStride * (uint32_t)ulengths.size();
-			SubresourceData initData;
-			initData.pSysMem = ulengths.data();
-			device->CreateBuffer(&bd, &initData, &vertexBuffer_length);
+			bd.Stride = sizeof(uint8_t);
+			bd.Size = bd.Stride * (uint32_t)ulengths.size();
+			device->CreateBuffer(&bd, ulengths.data(), &vertexBuffer_length);
 		}
 		if (!indices.empty())
 		{
 			bd.MiscFlags = RESOURCE_MISC_NONE;
 			bd.BindFlags = BIND_SHADER_RESOURCE;
 			bd.Format = FORMAT_R32_UINT;
-			bd.StructureByteStride = sizeof(uint32_t);
-			bd.ByteWidth = bd.StructureByteStride * (uint32_t)indices.size();
-			SubresourceData initData;
-			initData.pSysMem = indices.data();
-			device->CreateBuffer(&bd, &initData, &indexBuffer);
+			bd.Stride = sizeof(uint32_t);
+			bd.Size = bd.Stride * (uint32_t)indices.size();
+			device->CreateBuffer(&bd, indices.data(), &indexBuffer);
 		}
 
 		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
@@ -168,9 +164,9 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 			geometry.triangles.vertexBuffer = vertexBuffer_POS[0];
 			geometry.triangles.indexBuffer = primitiveBuffer;
 			geometry.triangles.indexFormat = INDEXFORMAT_32BIT;
-			geometry.triangles.indexCount = primitiveBuffer.desc.ByteWidth / primitiveBuffer.desc.StructureByteStride;
+			geometry.triangles.indexCount = (uint32_t)(primitiveBuffer.desc.Size / primitiveBuffer.desc.Stride);
 			geometry.triangles.indexOffset = 0;
-			geometry.triangles.vertexCount = vertexBuffer_POS[0].desc.ByteWidth / vertexBuffer_POS[0].desc.StructureByteStride;
+			geometry.triangles.vertexCount = (uint32_t)(vertexBuffer_POS[0].desc.Size / vertexBuffer_POS[0].desc.Stride);
 			geometry.triangles.vertexFormat = FORMAT_R32G32B32_FLOAT;
 			geometry.triangles.vertexStride = sizeof(MeshComponent::Vertex_POS);
 
@@ -183,7 +179,7 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 	if (!indirectBuffer.IsValid())
 	{
 		GPUBufferDesc desc;
-		desc.ByteWidth = sizeof(uint) + sizeof(IndirectDrawArgsIndexedInstanced); // counter + draw args
+		desc.Size = sizeof(uint) + sizeof(IndirectDrawArgsIndexedInstanced); // counter + draw args
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_RAW | RESOURCE_MISC_INDIRECT_ARGS;
 		desc.BindFlags = BIND_UNORDERED_ACCESS;
 		device->CreateBuffer(&desc, nullptr, &indirectBuffer);
@@ -192,8 +188,8 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 	if (!subsetBuffer.IsValid())
 	{
 		GPUBufferDesc desc;
-		desc.StructureByteStride = sizeof(ShaderMeshSubset);
-		desc.ByteWidth = desc.StructureByteStride;
+		desc.Stride = sizeof(ShaderMeshSubset);
+		desc.Size = desc.Stride;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
 		desc.BindFlags = BIND_SHADER_RESOURCE;
 		device->CreateBuffer(&desc, nullptr, &subsetBuffer);

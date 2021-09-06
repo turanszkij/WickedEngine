@@ -169,7 +169,7 @@ namespace wiGraphics
 
 			void init(GraphicsDevice_Vulkan* device);
 			void destroy();
-			CopyCMD allocate(uint32_t staging_size);
+			CopyCMD allocate(uint64_t staging_size);
 			void submit(CopyCMD cmd);
 			uint64_t flush();
 		};
@@ -280,7 +280,7 @@ namespace wiGraphics
 		virtual ~GraphicsDevice_Vulkan();
 
 		bool CreateSwapChain(const SwapChainDesc* pDesc, wiPlatform::window_type window, SwapChain* swapChain) const override;
-		bool CreateBuffer(const GPUBufferDesc *pDesc, const SubresourceData* pInitialData, GPUBuffer *pBuffer) const override;
+		bool CreateBuffer(const GPUBufferDesc *pDesc, const void* pInitialData, GPUBuffer *pBuffer) const override;
 		bool CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) const override;
 		bool CreateShader(SHADERSTAGE stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) const override;
 		bool CreateSampler(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) const override;
@@ -328,7 +328,7 @@ namespace wiGraphics
 		void BindUAVs(const GPUResource *const* resources, uint32_t slot, uint32_t count, CommandList cmd) override;
 		void BindSampler(const Sampler* sampler, uint32_t slot, CommandList cmd) override;
 		void BindConstantBuffer(const GPUBuffer* buffer, uint32_t slot, CommandList cmd, uint64_t offset = 0ull) override;
-		void BindVertexBuffers(const GPUBuffer *const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint32_t* offsets, CommandList cmd) override;
+		void BindVertexBuffers(const GPUBuffer *const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint64_t* offsets, CommandList cmd) override;
 		void BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, uint32_t offset, CommandList cmd) override;
 		void BindStencilRef(uint32_t value, CommandList cmd) override;
 		void BindBlendFactor(float r, float g, float b, float a, CommandList cmd) override;

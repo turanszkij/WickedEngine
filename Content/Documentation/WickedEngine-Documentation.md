@@ -645,20 +645,17 @@ It is very important to place barriers to the right places if using low level gr
 
 `SubresourceData` usage: 
 - The `SubresourceData` parameter points to an array of `SubresourceData` structs. The array size is determined by the `TextureDesc::ArraySize` * `TextureDesc::MipLevels`, so one structure for every subresource. 
-- The `SubresourceData::pSysMem` pointer should point to the texture contents on the CPU that will be uploaded to the GPU.
-- The `SubresourceData::SysMemPitch` member is indicating the distance (in bytes) from the beginning of one line of a texture to the next line.
-System-memory pitch is used only for 2D and 3D texture data as it is has no meaning for the other resource types. Specify the distance from the first pixel of one 2D slice of a 3D texture to the first pixel of the next 2D slice in that texture in the `SysMemSlicePitch` member.
-- The `SubresourcData::SysMemSlicePitch` member is indicating the distance (in bytes) from the beginning of one depth level to the next.
+- The `SubresourceData::pData` pointer should point to the texture contents on the CPU that will be uploaded to the GPU.
+- The `SubresourceData::rowPitch` member is indicating the distance (in bytes) from the beginning of one line of a texture to the next line.
+System-memory pitch is used only for 2D and 3D texture data as it is has no meaning for the other resource types. Specify the distance from the first pixel of one 2D slice of a 3D texture to the first pixel of the next 2D slice in that texture in the `slicePitch` member.
+- The `SubresourcData::slicePitch` member is indicating the distance (in bytes) from the beginning of one depth level to the next.
 System-memory-slice pitch is only used for 3D texture data as it has no meaning for the other resource types.
 - For more complete information, refer to the [DirectX 11 documentation](https://docs.microsoft.com/en-us/windows/win32/api/d3d11/ns-d3d11-d3d11_subresource_data) on this topic, which should closely match.
 
 Related topics: [Creating Resources](#creating-resources), [Destroying Resources](#destroying-resources), [Binding resources](#resource-binding), [Subresources](#subresources)
 
 ##### GPU Buffers
-`GPUBuffer` type resources are used to store linear data which will be read or written by the GPU. There are a lot of buffer types, such as structured buffers, raw buffers, vertex buffers, index buffers, typed buffers, etc. used in [shaders](#shaders), that correspond to the simple `GPUBuffer` type on the CPU. The buffer type will be determined when creating the buffer with `GraphicsDevice::CreateBuffer(const GPUBufferDesc*, const SubresourceData*, GPUBuffer*)` function. The first argument is the `GPUBufferDesc` that determines the dimensions, size, format and other properties of the texture resource. The `SubresourceData` is used to initialize the texture contents, it can be left as `nullptr`, when the texture contents don't need to be initialized, such as for textures that will be rendered into. The `GPUBuffer` is the texture that will be initialized.
-
-`SubresourceData` usage: 
-- The `SubresourceData::pSysMem` pointer should point to the buffer contents on the CPU that will be uploaded to the GPU Buffer. The size of the data is determined by the `GPUBufferDesc::ByteWidth` value that was passed to the `GraphicsDevice::CreateBuffer()` function. The buffer contents will be readily available by the time the GPU first accesses the buffer.
+`GPUBuffer` type resources are used to store linear data which will be read or written by the GPU. There are a lot of buffer types, such as structured buffers, raw buffers, vertex buffers, index buffers, typed buffers, etc. used in [shaders](#shaders), that correspond to the simple `GPUBuffer` type on the CPU. The buffer type will be determined when creating the buffer with `GraphicsDevice::CreateBuffer(const GPUBufferDesc*, const void*, GPUBuffer*)` function. The first argument is the `GPUBufferDesc` that determines the dimensions, size, format and other properties of the texture resource. The `pInitialData` is used to initialize the buffer contents, it can be left as `nullptr`. The `GPUBuffer` is the buffer that will be initialized.
 
 Related topics: [Creating Resources](#creating-resources), [Destroying Resources](#destroying-resources), [Binding resources](#resource-binding), [Subresources](#subresources), [Updating GPU Buffers](#updating-gpu-buffers)
 
