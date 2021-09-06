@@ -1264,7 +1264,8 @@ namespace wiScene
 		std::vector<AABB> parallel_bounds;
 		WeatherComponent weather;
 		wiGraphics::RaytracingAccelerationStructure TLAS;
-		std::vector<uint8_t> TLAS_instances;
+		wiGraphics::GPUBuffer TLAS_instancesUpload[wiGraphics::GraphicsDevice::GetBufferCount()];
+		void* TLAS_instancesMapped = nullptr;
 		wiGPUBVH BVH; // this is for non-hardware accelerated raytracing
 		mutable bool acceleration_structure_update_requested = false;
 		void SetAccelerationStructureUpdateRequested(bool value = true) { acceleration_structure_update_requested = value; }
@@ -1277,17 +1278,24 @@ namespace wiScene
 		//	contains in order:
 		//		1) objects
 		//		2) hair particles
-		std::vector<ShaderMeshInstance> instanceData;
+		wiGraphics::GPUBuffer instanceUploadBuffer[wiGraphics::GraphicsDevice::GetBufferCount()];
+		ShaderMeshInstance* instanceArrayMapped = nullptr;
+		size_t instanceArraySize = 0;
 		wiGraphics::GPUBuffer instanceBuffer;
 
 		// Meshes for bindless visiblity indexing:
 		//	contains in order:
 		//		1) meshes
 		//		2) hair particles
-		std::vector<ShaderMesh> meshData;
+		wiGraphics::GPUBuffer meshUploadBuffer[wiGraphics::GraphicsDevice::GetBufferCount()];
+		ShaderMesh* meshArrayMapped = nullptr;
+		size_t meshArraySize = 0;
 		wiGraphics::GPUBuffer meshBuffer;
 
-		std::vector<ShaderMaterial> materialData;
+		// Materials for bindless visibility indexing:
+		wiGraphics::GPUBuffer materialUploadBuffer[wiGraphics::GraphicsDevice::GetBufferCount()];
+		ShaderMaterial* materialArrayMapped = nullptr;
+		size_t materialArraySize = 0;
 		wiGraphics::GPUBuffer materialBuffer;
 
 		// Occlusion query state:

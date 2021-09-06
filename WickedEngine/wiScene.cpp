@@ -1393,45 +1393,88 @@ namespace wiScene
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
-		instanceData.resize(objects.GetCount() + hairs.GetCount());
-		if (instanceBuffer.desc.Size < (instanceData.size() * sizeof(ShaderMeshInstance)))
+		instanceArraySize = objects.GetCount() + hairs.GetCount();
+		if (instanceBuffer.desc.Size < (instanceArraySize * sizeof(ShaderMeshInstance)))
 		{
 			GPUBufferDesc desc;
 			desc.Stride = sizeof(ShaderMeshInstance);
-			desc.Size = desc.Stride * (uint32_t)instanceData.size();
+			desc.Size = desc.Stride * instanceArraySize;
 			desc.BindFlags = BIND_SHADER_RESOURCE;
 			desc.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
 			device->CreateBuffer(&desc, nullptr, &instanceBuffer);
 			device->SetName(&instanceBuffer, "instanceBuffer");
-		}
 
-		meshData.resize(meshes.GetCount() + hairs.GetCount());
-		if (meshBuffer.desc.Size < (meshData.size() * sizeof(ShaderMesh)))
+			desc.Usage = USAGE_UPLOAD;
+			desc.BindFlags = BIND_NONE;
+			desc.MiscFlags = RESOURCE_MISC_NONE;
+			for (int i = 0; i < arraysize(instanceUploadBuffer); ++i)
+			{
+				device->CreateBuffer(&desc, nullptr, &instanceUploadBuffer[i]);
+				device->SetName(&instanceUploadBuffer[i], "instanceUploadBuffer");
+			}
+		}
+		instanceArrayMapped = (ShaderMeshInstance*)instanceUploadBuffer[device->GetBufferIndex()].mapped_data;
+
+		meshArraySize = meshes.GetCount() + hairs.GetCount();
+		if (meshBuffer.desc.Size < (meshArraySize * sizeof(ShaderMesh)))
 		{
 			GPUBufferDesc desc;
 			desc.Stride = sizeof(ShaderMesh);
-			desc.Size = desc.Stride * (uint32_t)meshData.size();
+			desc.Size = desc.Stride * meshArraySize;
 			desc.BindFlags = BIND_SHADER_RESOURCE;
 			desc.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
 			device->CreateBuffer(&desc, nullptr, &meshBuffer);
 			device->SetName(&meshBuffer, "meshBuffer");
-		}
 
-		materialData.resize(materials.GetCount());
-		if (materialBuffer.desc.Size < (materialData.size() * sizeof(ShaderMaterial)))
+			desc.Usage = USAGE_UPLOAD;
+			desc.BindFlags = BIND_NONE;
+			desc.MiscFlags = RESOURCE_MISC_NONE;
+			for (int i = 0; i < arraysize(meshUploadBuffer); ++i)
+			{
+				device->CreateBuffer(&desc, nullptr, &meshUploadBuffer[i]);
+				device->SetName(&meshUploadBuffer[i], "meshUploadBuffer");
+			}
+		}
+		meshArrayMapped = (ShaderMesh*)meshUploadBuffer[device->GetBufferIndex()].mapped_data;
+
+		materialArraySize = materials.GetCount();
+		if (materialBuffer.desc.Size < (materialArraySize * sizeof(ShaderMaterial)))
 		{
 			GPUBufferDesc desc;
 			desc.Stride = sizeof(ShaderMaterial);
-			desc.Size = desc.Stride * (uint32_t)materialData.size();
+			desc.Size = desc.Stride * materialArraySize;
 			desc.BindFlags = BIND_SHADER_RESOURCE;
 			desc.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
 			device->CreateBuffer(&desc, nullptr, &materialBuffer);
 			device->SetName(&materialBuffer, "materialBuffer");
-		}
 
+			desc.Usage = USAGE_UPLOAD;
+			desc.BindFlags = BIND_NONE;
+			desc.MiscFlags = RESOURCE_MISC_NONE;
+			for (int i = 0; i < arraysize(materialUploadBuffer); ++i)
+			{
+				device->CreateBuffer(&desc, nullptr, &materialUploadBuffer[i]);
+				device->SetName(&materialUploadBuffer[i], "materialUploadBuffer");
+			}
+		}
+		materialArrayMapped = (ShaderMaterial*)materialUploadBuffer[device->GetBufferIndex()].mapped_data;
+
+		TLAS_instancesMapped = nullptr;
 		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		{
-			TLAS_instances.resize(instanceData.size() * device->GetTopLevelAccelerationStructureInstanceSize());
+			GPUBufferDesc desc;
+			desc.Stride = (uint32_t)device->GetTopLevelAccelerationStructureInstanceSize();
+			desc.Size = desc.Stride * instanceArraySize;
+			desc.Usage = USAGE_UPLOAD;
+			if (TLAS_instancesUpload->desc.Size < desc.Size)
+			{
+				for (int i = 0; i < arraysize(TLAS_instancesUpload); ++i)
+				{
+					device->CreateBuffer(&desc, nullptr, &TLAS_instancesUpload[i]);
+					device->SetName(&TLAS_instancesUpload[i], "TLAS_instancesUpload");
+				}
+			}
+			TLAS_instancesMapped = TLAS_instancesUpload[device->GetBufferIndex()].mapped_data;
 		}
 
 		// Occlusion culling read:
@@ -1528,12 +1571,12 @@ namespace wiScene
 		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		{
 			// Recreate top level acceleration structure if the object count changed:
-			if ((uint32_t)instanceData.size() != TLAS.desc.toplevel.count)
+			if ((uint32_t)instanceArraySize != TLAS.desc.toplevel.count)
 			{
 				RaytracingAccelerationStructureDesc desc;
 				desc._flags = RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD;
 				desc.type = RaytracingAccelerationStructureDesc::TOPLEVEL;
-				desc.toplevel.count = (uint32_t)instanceData.size();
+				desc.toplevel.count = (uint32_t)instanceArraySize;
 				GPUBufferDesc bufdesc;
 				bufdesc.MiscFlags |= RESOURCE_MISC_RAY_TRACING;
 				bufdesc.Size = desc.toplevel.count * (uint32_t)device->GetTopLevelAccelerationStructureInstanceSize();
@@ -2791,8 +2834,8 @@ namespace wiScene
 			    mesh.aabb = AABB(_min, _max);
 			}
 
-			ShaderMesh& shadermesh = meshData[args.jobIndex];
-			mesh.WriteShaderMesh(&shadermesh);
+			ShaderMesh* shadermesh = meshArrayMapped + args.jobIndex;
+			mesh.WriteShaderMesh(shadermesh);
 
 		});
 	}
@@ -2829,8 +2872,8 @@ namespace wiScene
 				material.SetDirty(false);
 			}
 
-			ShaderMaterial& shadermat = materialData[args.jobIndex];
-			material.WriteShaderMaterial(&shadermat);
+			ShaderMaterial* shadermat = materialArrayMapped + args.jobIndex;
+			material.WriteShaderMaterial(shadermat);
 
 		});
 	}
@@ -3039,7 +3082,7 @@ namespace wiScene
 					XMStoreFloat4x4(&transformIT, worldMatrixInverseTranspose);
 
 					GraphicsDevice* device = wiRenderer::GetDevice();
-					ShaderMeshInstance& inst = instanceData[args.jobIndex];
+					ShaderMeshInstance inst;
 					inst.init();
 					inst.transform.Create(worldMatrix);
 					inst.transformInverseTranspose.Create(transformIT);
@@ -3052,8 +3095,9 @@ namespace wiScene
 					inst.color = wiMath::CompressColor(object.color);
 					inst.emissive = wiMath::CompressColor(object.emissiveColor);
 					inst.meshIndex = (uint)meshes.GetIndex(object.meshID);
+					std::memcpy(instanceArrayMapped + args.jobIndex, &inst, sizeof(inst));
 
-					if (!TLAS_instances.empty())
+					if (TLAS_instancesMapped != nullptr)
 					{
 						// TLAS instance data:
 						RaytracingAccelerationStructureDesc::TopLevel::Instance instance = {};
@@ -3079,7 +3123,7 @@ namespace wiScene
 							instance.Flags |= RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE;
 						}
 
-						void* dest = (void*)((size_t)TLAS_instances.data() + (size_t)args.jobIndex * device->GetTopLevelAccelerationStructureInstanceSize());
+						void* dest = (void*)((size_t)TLAS_instancesMapped + (size_t)args.jobIndex * device->GetTopLevelAccelerationStructureInstanceSize());
 						device->WriteTopLevelAccelerationStructureInstance(&instance, dest);
 					}
 
@@ -3474,25 +3518,27 @@ namespace wiScene
 
 					GraphicsDevice* device = wiRenderer::GetDevice();
 
-					size_t meshIndex = meshes.GetCount() + args.jobIndex;
-					ShaderMesh& mesh = meshData[meshIndex];
+					ShaderMesh mesh;
 					mesh.ib = device->GetDescriptorIndex(&hair.primitiveBuffer, SRV);
 					mesh.vb_pos_nor_wind = device->GetDescriptorIndex(&hair.vertexBuffer_POS[0], SRV);
 					mesh.vb_pre = device->GetDescriptorIndex(&hair.vertexBuffer_POS[1], SRV);
 					mesh.vb_uv0 = device->GetDescriptorIndex(&hair.vertexBuffer_TEX, SRV);
 					mesh.subsetbuffer = device->GetDescriptorIndex(&hair.subsetBuffer, SRV);
 					mesh.flags |= SHADERMESH_FLAG_DOUBLE_SIDED;
+					size_t meshIndex = meshes.GetCount() + args.jobIndex;
+					std::memcpy(meshArrayMapped + meshIndex, &mesh, sizeof(mesh));
 
-					size_t instanceIndex = objects.GetCount() + args.jobIndex;
-					ShaderMeshInstance& inst = instanceData[instanceIndex];
+					ShaderMeshInstance inst;
 					inst.init();
 					inst.uid = entity;
 					// every vertex is pretransformed and simulated in worldspace for hair particle:
 					inst.transform.Create(IDENTITYMATRIX);
 					inst.transformPrev.Create(IDENTITYMATRIX);
 					inst.meshIndex = (uint)meshIndex;
+					size_t instanceIndex = objects.GetCount() + args.jobIndex;
+					std::memcpy(instanceArrayMapped + instanceIndex, &inst, sizeof(inst));
 
-					if (!TLAS_instances.empty())
+					if (TLAS_instancesMapped != nullptr)
 					{
 						// TLAS instance data:
 						RaytracingAccelerationStructureDesc::TopLevel::Instance instance = {};
@@ -3507,7 +3553,7 @@ namespace wiScene
 						instance.bottomlevel = hair.BLAS;
 						instance.Flags = RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_CULL_DISABLE;
 
-						void* dest = (void*)((size_t)TLAS_instances.data() + instanceIndex * device->GetTopLevelAccelerationStructureInstanceSize());
+						void* dest = (void*)((size_t)TLAS_instancesMapped + instanceIndex * device->GetTopLevelAccelerationStructureInstanceSize());
 						device->WriteTopLevelAccelerationStructureInstance(&instance, dest);
 					}
 				}

@@ -6544,6 +6544,8 @@ using namespace Vulkan_Internal;
 	}
 	void GraphicsDevice_Vulkan::Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd)
 	{
+		assert(active_renderpass[cmd] == nullptr);
+
 		auto& memoryBarriers = frame_memoryBarriers[cmd];
 		auto& imageBarriers = frame_imageBarriers[cmd];
 		auto& bufferBarriers = frame_bufferBarriers[cmd];
