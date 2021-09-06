@@ -1053,11 +1053,6 @@ using namespace Vulkan_Internal;
 			uploaddesc.Usage = USAGE_UPLOAD;
 			bool upload_success = device->CreateBuffer(&uploaddesc, nullptr, &cmd.uploadbuffer);
 			assert(upload_success);
-
-			VmaAllocation upload_allocation = to_internal(&cmd.uploadbuffer)->allocation;
-			cmd.data = upload_allocation->GetMappedData();
-			assert(cmd.data != nullptr);
-			cmd.upload_resource = to_internal(&cmd.uploadbuffer)->resource;
 		}
 
 		// begin command list in valid state:
@@ -3038,7 +3033,7 @@ using namespace Vulkan_Internal;
 		{
 			auto cmd = copyAllocator.allocate(pDesc->ByteWidth);
 
-			memcpy(cmd.data, pInitialData->pSysMem, pBuffer->desc.ByteWidth);
+			memcpy(cmd.uploadbuffer.mapped_data, pInitialData->pSysMem, pBuffer->desc.ByteWidth);
 
 			{
 				auto& frame = GetFrameResources();
@@ -3070,7 +3065,7 @@ using namespace Vulkan_Internal;
 
 				vkCmdCopyBuffer(
 					cmd.commandBuffer,
-					cmd.upload_resource,
+					to_internal(&cmd.uploadbuffer)->resource,
 					internal_state->resource,
 					1,
 					&copyRegion
@@ -3318,7 +3313,7 @@ using namespace Vulkan_Internal;
 				{
 					cpysize /= 4;
 				}
-				uint8_t* cpyaddr = (uint8_t*)cmd.data + cpyoffset;
+				uint8_t* cpyaddr = (uint8_t*)cmd.uploadbuffer.mapped_data + cpyoffset;
 				memcpy(cpyaddr, subresourceData.pSysMem, cpysize);
 
 				VkBufferImageCopy copyRegion = {};
@@ -3373,7 +3368,7 @@ using namespace Vulkan_Internal;
 					1, &barrier
 				);
 
-				vkCmdCopyBufferToImage(cmd.commandBuffer, cmd.upload_resource, internal_state->resource, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, (uint32_t)copyRegions.size(), copyRegions.data());
+				vkCmdCopyBufferToImage(cmd.commandBuffer, to_internal(&cmd.uploadbuffer)->resource, internal_state->resource, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, (uint32_t)copyRegions.size(), copyRegions.data());
 
 				copyAllocator.submit(cmd);
 
