@@ -193,9 +193,9 @@ namespace wiResourceManager
 						{
 							auto imageData = dds.GetImageData(mip, arrayIndex);
 							SubresourceData subresourceData;
-							subresourceData.pSysMem = imageData->m_mem;
-							subresourceData.SysMemPitch = imageData->m_memPitch;
-							subresourceData.SysMemSlicePitch = imageData->m_memSlicePitch;
+							subresourceData.pData = imageData->m_mem;
+							subresourceData.rowPitch = imageData->m_memPitch;
+							subresourceData.slicePitch = imageData->m_memSlicePitch;
 							InitData.push_back(subresourceData);
 						}
 					}
@@ -281,9 +281,9 @@ namespace wiResourceManager
 							desc.Format = FORMAT_R8G8B8A8_UNORM;
 							desc.BindFlags = BIND_SHADER_RESOURCE;
 							SubresourceData InitData;
-							InitData.pSysMem = data;
-							InitData.SysMemPitch = 16 * sizeof(uint32_t);
-							InitData.SysMemSlicePitch = 16 * InitData.SysMemPitch;
+							InitData.pData = data;
+							InitData.rowPitch = 16 * sizeof(uint32_t);
+							InitData.slicePitch = 16 * InitData.rowPitch;
 							success = device->CreateTexture(&desc, &InitData, &resource->texture);
 							device->SetName(&resource->texture, name.c_str());
 						}
@@ -300,8 +300,8 @@ namespace wiResourceManager
 						std::vector<SubresourceData> InitData(desc.MipLevels);
 						for (uint32_t mip = 0; mip < desc.MipLevels; ++mip)
 						{
-							InitData[mip].pSysMem = rgb; // attention! we don't fill the mips here correctly, just always point to the mip0 data by default. Mip levels will be created using compute shader when needed!
-							InitData[mip].SysMemPitch = static_cast<uint32_t>(mipwidth * channelCount);
+							InitData[mip].pData = rgb; // attention! we don't fill the mips here correctly, just always point to the mip0 data by default. Mip levels will be created using compute shader when needed!
+							InitData[mip].rowPitch = static_cast<uint32_t>(mipwidth * channelCount);
 							mipwidth = std::max(1u, mipwidth / 2);
 						}
 

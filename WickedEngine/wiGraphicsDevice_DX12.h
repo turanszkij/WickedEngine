@@ -22,7 +22,6 @@
 #include <atomic>
 #include <mutex>
 
-
 namespace wiGraphics
 {
 	class GraphicsDevice_DX12 : public GraphicsDevice
@@ -93,7 +92,7 @@ namespace wiGraphics
 
 			void init(GraphicsDevice_DX12* device);
 			void destroy();
-			CopyCMD allocate(uint32_t staging_size);
+			CopyCMD allocate(uint64_t staging_size);
 			void submit(CopyCMD cmd);
 		};
 		mutable CopyAllocator copyAllocator;
@@ -150,7 +149,7 @@ namespace wiGraphics
 
 		std::vector<D3D12_RESOURCE_BARRIER> frame_barriers[COMMANDLIST_COUNT];
 
-		PRIMITIVETOPOLOGY prev_pt[COMMANDLIST_COUNT] = {};
+		D3D_PRIMITIVE_TOPOLOGY prev_pt[COMMANDLIST_COUNT] = {};
 
 		mutable std::unordered_map<size_t, Microsoft::WRL::ComPtr<ID3D12RootSignature>> rootsignature_cache;
 		mutable std::mutex rootsignature_cache_mutex;
@@ -236,7 +235,7 @@ namespace wiGraphics
 		void BindUAVs(const GPUResource *const* resources, uint32_t slot, uint32_t count, CommandList cmd) override;
 		void BindSampler(const Sampler* sampler, uint32_t slot, CommandList cmd) override;
 		void BindConstantBuffer(const GPUBuffer* buffer, uint32_t slot, CommandList cmd, uint64_t offset = 0ull) override;
-		void BindVertexBuffers(const GPUBuffer *const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint32_t* offsets, CommandList cmd) override;
+		void BindVertexBuffers(const GPUBuffer *const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint64_t* offsets, CommandList cmd) override;
 		void BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, uint32_t offset, CommandList cmd) override;
 		void BindStencilRef(uint32_t value, CommandList cmd) override;
 		void BindBlendFactor(float r, float g, float b, float a, CommandList cmd) override;

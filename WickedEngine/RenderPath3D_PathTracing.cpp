@@ -228,8 +228,8 @@ void RenderPath3D_PathTracing::Update(float dt)
 					desc.Format = FORMAT_R32G32B32A32_FLOAT;
 
 					SubresourceData initdata;
-					initdata.pSysMem = texturedata_dst.data();
-					initdata.SysMemPitch = uint32_t(sizeof(XMFLOAT4) * width);
+					initdata.pData = texturedata_dst.data();
+					initdata.rowPitch = uint32_t(sizeof(XMFLOAT4) * width);
 					device->CreateTexture(&desc, &initdata, &denoiserResult);
 
 					});

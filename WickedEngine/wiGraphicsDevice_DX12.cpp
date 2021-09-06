@@ -240,6 +240,34 @@ namespace DX12_Internal
 		}
 		return D3D12_FILTER_MIN_MAG_MIP_POINT;
 	}
+
+	[[nodiscard]] constexpr D3D_PRIMITIVE_TOPOLOGY _ConvertPrimitiveTopology(PRIMITIVETOPOLOGY topology, uint32_t controlPoints)
+	{
+		switch (topology)
+		{
+			case POINTLIST:
+				return D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
+			case LINELIST:
+				return D3D_PRIMITIVE_TOPOLOGY_LINELIST;
+			case LINESTRIP:
+				return D3D_PRIMITIVE_TOPOLOGY_LINESTRIP;
+			case TRIANGLELIST:
+				return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+			case TRIANGLESTRIP:
+				return D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+			case PATCHLIST:
+				if (controlPoints == 0 || controlPoints > 32)
+				{
+					assert(false && "Invalid PatchList control points");
+					return D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
+				}
+				return D3D_PRIMITIVE_TOPOLOGY(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST + (controlPoints - 1));
+			default:
+				__assume(false);
+				return D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
+		}
+	}
+
 	constexpr D3D12_TEXTURE_ADDRESS_MODE _ConvertTextureAddressMode(TEXTURE_ADDRESS_MODE value)
 	{
 		switch (value)
@@ -708,9 +736,9 @@ namespace DX12_Internal
 	inline D3D12_SUBRESOURCE_DATA _ConvertSubresourceData(const SubresourceData& pInitialData)
 	{
 		D3D12_SUBRESOURCE_DATA data;
-		data.pData = pInitialData.pSysMem;
-		data.RowPitch = pInitialData.SysMemPitch;
-		data.SlicePitch = pInitialData.SysMemSlicePitch;
+		data.pData = pInitialData.pData;
+		data.RowPitch = pInitialData.rowPitch;
+		data.SlicePitch = pInitialData.slicePitch;
 
 		return data;
 	}
@@ -1327,6 +1355,7 @@ namespace DX12_Internal
 
 		std::vector<uint8_t> shadercode;
 		std::vector<D3D12_INPUT_ELEMENT_DESC> input_elements;
+		D3D_PRIMITIVE_TOPOLOGY primitiveTopology;
 
 		struct PSO_STREAM
 		{
@@ -1506,7 +1535,7 @@ using namespace DX12_Internal;
 		hr = fence->SetEventOnCompletion(1, nullptr);
 		assert(SUCCEEDED(hr));
 	}
-	GraphicsDevice_DX12::CopyAllocator::CopyCMD GraphicsDevice_DX12::CopyAllocator::allocate(uint32_t staging_size)
+	GraphicsDevice_DX12::CopyAllocator::CopyCMD GraphicsDevice_DX12::CopyAllocator::allocate(uint64_t staging_size)
 	{
 		locker.lock();
 
@@ -1520,7 +1549,7 @@ using namespace DX12_Internal;
 			hr = device->device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, cmd.commandAllocator.Get(), nullptr, IID_PPV_ARGS(&cmd.commandList));
 			assert(SUCCEEDED(hr));
 
-			hr = static_cast<ID3D12GraphicsCommandList*>(cmd.commandList.Get())->Close();
+			hr = cmd.commandList->Close();
 			assert(SUCCEEDED(hr));
 
 			hr = device->device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&cmd.fence));
@@ -1559,7 +1588,7 @@ using namespace DX12_Internal;
 		// begin command list in valid state:
 		HRESULT hr = cmd.commandAllocator->Reset();
 		assert(SUCCEEDED(hr));
-		hr = static_cast<ID3D12GraphicsCommandList*>(cmd.commandList.Get())->Reset(cmd.commandAllocator.Get(), nullptr);
+		hr = cmd.commandList->Reset(cmd.commandAllocator.Get(), nullptr);
 		assert(SUCCEEDED(hr));
 
 		return cmd;
@@ -1874,7 +1903,7 @@ using namespace DX12_Internal;
 							D3D12_CONSTANT_BUFFER_VIEW_DESC cbv;
 							cbv.BufferLocation = internal_state->gpu_address;
 							cbv.BufferLocation += offset;
-							cbv.SizeInBytes = (uint32_t)Align((size_t)buffer.desc.ByteWidth, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+							cbv.SizeInBytes = AlignTo((UINT)buffer.desc.ByteWidth, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 
 							device->device->CreateConstantBufferView(&cbv, dst);
 						}
@@ -2084,33 +2113,9 @@ using namespace DX12_Internal;
 
 		if (prev_pt[cmd] != pso->desc.pt)
 		{
-			prev_pt[cmd] = pso->desc.pt;
+			prev_pt[cmd] = internal_state->primitiveTopology;
 
-			D3D12_PRIMITIVE_TOPOLOGY d3dType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-			switch (pso->desc.pt)
-			{
-			case TRIANGLELIST:
-				d3dType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-				break;
-			case TRIANGLESTRIP:
-				d3dType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
-				break;
-			case POINTLIST:
-				d3dType = D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
-				break;
-			case LINELIST:
-				d3dType = D3D_PRIMITIVE_TOPOLOGY_LINELIST;
-				break;
-			case LINESTRIP:
-				d3dType = D3D_PRIMITIVE_TOPOLOGY_LINESTRIP;
-				break;
-			case PATCHLIST:
-				d3dType = D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST;
-				break;
-			default:
-				break;
-			};
-			GetCommandList(cmd)->IASetPrimitiveTopology(d3dType);
+			GetCommandList(cmd)->IASetPrimitiveTopology(internal_state->primitiveTopology);
 		}
 	}
 
@@ -2809,16 +2814,16 @@ using namespace DX12_Internal;
 
 		HRESULT hr = E_FAIL;
 
-		size_t alignedSize = pDesc->ByteWidth;
+		UINT64 alignedSize = pDesc->ByteWidth;
 		if (pDesc->BindFlags & BIND_CONSTANT_BUFFER)
 		{
-			alignedSize = Align(alignedSize, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+			alignedSize = AlignTo(alignedSize, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 		}
 
 		D3D12_RESOURCE_DESC desc;
 		desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
 		desc.Format = DXGI_FORMAT_UNKNOWN;
-		desc.Width = (UINT64)alignedSize;
+		desc.Width = alignedSize;
 		desc.Height = 1;
 		desc.MipLevels = 1;
 		desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
@@ -2865,14 +2870,14 @@ using namespace DX12_Internal;
 		{
 			hr = internal_state->resource->Map(0, nullptr, &pBuffer->mapped_data);
 			assert(SUCCEEDED(hr));
-			pBuffer->mapped_rowpitch = pDesc->ByteWidth;
+			pBuffer->mapped_rowpitch = static_cast<uint32_t>(pDesc->ByteWidth);
 		}
 		else if (pDesc->Usage == USAGE_UPLOAD)
 		{
 			D3D12_RANGE read_range = {};
 			hr = internal_state->resource->Map(0, &read_range, &pBuffer->mapped_data);
 			assert(SUCCEEDED(hr));
-			pBuffer->mapped_rowpitch = pDesc->ByteWidth;
+			pBuffer->mapped_rowpitch = static_cast<uint32_t>(pDesc->ByteWidth);
 		}
 
 		// Issue data copy on request:
@@ -2880,7 +2885,7 @@ using namespace DX12_Internal;
 		{
 			auto cmd = copyAllocator.allocate(pDesc->ByteWidth);
 
-			memcpy(cmd.uploadbuffer.mapped_data, pInitialData->pSysMem, pDesc->ByteWidth);
+			memcpy(cmd.uploadbuffer.mapped_data, pInitialData->pData, pDesc->ByteWidth);
 
 			cmd.commandList->CopyBufferRegion(
 				internal_state->resource.Get(),
@@ -3068,7 +3073,7 @@ using namespace DX12_Internal;
 			std::vector<UINT> numRows(dataCount);
 			device->GetCopyableFootprints(&desc, 0, dataCount, 0, layouts.data(), numRows.data(), rowSizesInBytes.data(), &RequiredSize);
 
-			auto cmd = copyAllocator.allocate((uint32_t)RequiredSize);
+			auto cmd = copyAllocator.allocate(RequiredSize);
 
 			for (uint32_t i = 0; i < dataCount; ++i)
 			{
@@ -4219,6 +4224,7 @@ using namespace DX12_Internal;
 
 		stream.stream1.SampleMask = pso->desc.sampleMask;
 
+		internal_state->primitiveTopology = _ConvertPrimitiveTopology(pDesc->pt, pDesc->patchControlPoints);
 		switch (pso->desc.pt)
 		{
 		case POINTLIST:
@@ -4564,8 +4570,8 @@ using namespace DX12_Internal;
 		device->GetRaytracingAccelerationStructurePrebuildInfo(&internal_state->desc, &internal_state->info);
 
 
-		size_t alignment = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT;
-		size_t alignedSize = Align((size_t)internal_state->info.ResultDataMaxSizeInBytes, alignment);
+		UINT64 alignment = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT;
+		UINT64 alignedSize = AlignTo(internal_state->info.ResultDataMaxSizeInBytes, alignment);
 
 		D3D12_RESOURCE_DESC desc;
 		desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
@@ -5115,7 +5121,7 @@ using namespace DX12_Internal;
 				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 				srv_desc.Buffer.FirstElement = (UINT)offset / sizeof(uint32_t);
 				srv_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
-				srv_desc.Buffer.NumElements = std::min((UINT)size, desc.ByteWidth - (UINT)offset) / sizeof(uint32_t);
+				srv_desc.Buffer.NumElements = (UINT)std::min(size, desc.ByteWidth - offset) / sizeof(uint32_t);
 			}
 			else if (desc.MiscFlags & RESOURCE_MISC_BUFFER_STRUCTURED)
 			{
@@ -5123,7 +5129,7 @@ using namespace DX12_Internal;
 				srv_desc.Format = DXGI_FORMAT_UNKNOWN;
 				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 				srv_desc.Buffer.FirstElement = (UINT)offset / desc.StructureByteStride;
-				srv_desc.Buffer.NumElements = std::min((UINT)size, desc.ByteWidth - (UINT)offset) / desc.StructureByteStride;
+				srv_desc.Buffer.NumElements = (UINT)std::min(size, desc.ByteWidth - offset) / desc.StructureByteStride;
 				srv_desc.Buffer.StructureByteStride = desc.StructureByteStride;
 			}
 			else
@@ -5133,7 +5139,7 @@ using namespace DX12_Internal;
 				srv_desc.Format = _ConvertFormat(desc.Format);
 				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 				srv_desc.Buffer.FirstElement = offset / stride;
-				srv_desc.Buffer.NumElements = std::min((UINT)size, desc.ByteWidth - (UINT)offset) / stride;
+				srv_desc.Buffer.NumElements = (UINT)std::min(size, desc.ByteWidth - offset) / stride;
 			}
 
 			SingleDescriptor descriptor;
@@ -5161,14 +5167,14 @@ using namespace DX12_Internal;
 				uav_desc.Format = DXGI_FORMAT_R32_TYPELESS;
 				uav_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
 				uav_desc.Buffer.FirstElement = (UINT)offset / sizeof(uint32_t);
-				uav_desc.Buffer.NumElements = std::min((UINT)size, desc.ByteWidth - (UINT)offset) / sizeof(uint32_t);
+				uav_desc.Buffer.NumElements = (UINT)std::min(size, desc.ByteWidth - offset) / sizeof(uint32_t);
 			}
 			else if (desc.MiscFlags & RESOURCE_MISC_BUFFER_STRUCTURED)
 			{
 				// This is a Structured Buffer
 				uav_desc.Format = DXGI_FORMAT_UNKNOWN;
 				uav_desc.Buffer.FirstElement = (UINT)offset / desc.StructureByteStride;
-				uav_desc.Buffer.NumElements = std::min((UINT)size, desc.ByteWidth - (UINT)offset) / desc.StructureByteStride;
+				uav_desc.Buffer.NumElements = (UINT)std::min(size, desc.ByteWidth - offset) / desc.StructureByteStride;
 				uav_desc.Buffer.StructureByteStride = desc.StructureByteStride;
 			}
 			else
@@ -5177,7 +5183,7 @@ using namespace DX12_Internal;
 				uint32_t stride = GetFormatStride(desc.Format);
 				uav_desc.Format = _ConvertFormat(desc.Format);
 				uav_desc.Buffer.FirstElement = (UINT)offset / stride;
-				uav_desc.Buffer.NumElements = std::min((UINT)size, desc.ByteWidth - (UINT)offset) / stride;
+				uav_desc.Buffer.NumElements = (UINT)std::min(size, desc.ByteWidth - offset) / stride;
 			}
 
 			SingleDescriptor descriptor;
@@ -5349,7 +5355,7 @@ using namespace DX12_Internal;
 			GetCommandList(cmd)->RSSetScissorRects(8, pRects);
 		}
 
-		prev_pt[cmd] = UNDEFINED_TOPOLOGY;
+		prev_pt[cmd] = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
 		prev_pipeline_hash[cmd] = 0;
 		active_pso[cmd] = nullptr;
 		active_cs[cmd] = nullptr;
@@ -5752,7 +5758,7 @@ using namespace DX12_Internal;
 			descriptors[cmd].dirty_root_cbvs |= 1 << slot;
 		}
 	}
-	void GraphicsDevice_DX12::BindVertexBuffers(const GPUBuffer* const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint32_t* offsets, CommandList cmd)
+	void GraphicsDevice_DX12::BindVertexBuffers(const GPUBuffer* const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint64_t* offsets, CommandList cmd)
 	{
 		assert(count <= 8);
 		D3D12_VERTEX_BUFFER_VIEW res[8] = {};
@@ -5761,11 +5767,11 @@ using namespace DX12_Internal;
 			if (vertexBuffers[i] != nullptr)
 			{
 				res[i].BufferLocation = vertexBuffers[i]->IsValid() ? to_internal(vertexBuffers[i])->gpu_address : 0;
-				res[i].SizeInBytes = vertexBuffers[i]->desc.ByteWidth;
+				res[i].SizeInBytes = (UINT)vertexBuffers[i]->desc.ByteWidth;
 				if (offsets != nullptr)
 				{
-					res[i].BufferLocation += (D3D12_GPU_VIRTUAL_ADDRESS)offsets[i];
-					res[i].SizeInBytes -= offsets[i];
+					res[i].BufferLocation += offsets[i];
+					res[i].SizeInBytes -= (UINT)offsets[i];
 				}
 				res[i].StrideInBytes = strides[i];
 			}
@@ -5781,7 +5787,7 @@ using namespace DX12_Internal;
 
 			res.BufferLocation = internal_state->gpu_address + (D3D12_GPU_VIRTUAL_ADDRESS)offset;
 			res.Format = (format == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT);
-			res.SizeInBytes = indexBuffer->desc.ByteWidth - offset;
+			res.SizeInBytes = (UINT)(indexBuffer->desc.ByteWidth - offset);
 		}
 		GetCommandList(cmd)->IASetIndexBuffer(&res);
 	}

@@ -140,7 +140,7 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 			bd.StructureByteStride = sizeof(uint8_t);
 			bd.ByteWidth = bd.StructureByteStride * (uint32_t)ulengths.size();
 			SubresourceData initData;
-			initData.pSysMem = ulengths.data();
+			initData.pData = ulengths.data();
 			device->CreateBuffer(&bd, &initData, &vertexBuffer_length);
 		}
 		if (!indices.empty())
@@ -151,7 +151,7 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 			bd.StructureByteStride = sizeof(uint32_t);
 			bd.ByteWidth = bd.StructureByteStride * (uint32_t)indices.size();
 			SubresourceData initData;
-			initData.pSysMem = indices.data();
+			initData.pData = indices.data();
 			device->CreateBuffer(&bd, &initData, &indexBuffer);
 		}
 

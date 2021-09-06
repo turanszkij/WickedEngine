@@ -111,9 +111,9 @@ namespace wiTextureHelper
 					d[cubeMapFaceIndex][pix] = vector4b(0, 0, 0, 0);
 				}
 
-				pData[cubeMapFaceIndex].pSysMem = &d[cubeMapFaceIndex][0];// description.data;
-				pData[cubeMapFaceIndex].SysMemPitch = width * 4;
-				pData[cubeMapFaceIndex].SysMemSlicePitch = 0;
+				pData[cubeMapFaceIndex].pData = &d[cubeMapFaceIndex][0];// description.data;
+				pData[cubeMapFaceIndex].rowPitch = width * 4;
+				pData[cubeMapFaceIndex].slicePitch = 0;
 			}
 
 			device->CreateTexture(&texDesc, &pData[0], &helperTextures[HELPERTEXTURE_BLACKCUBEMAP]);
@@ -257,8 +257,8 @@ namespace wiTextureHelper
 		textureDesc.BindFlags = BIND_SHADER_RESOURCE;
 
 		SubresourceData InitData;
-		InitData.pSysMem = data;
-		InitData.SysMemPitch = width * device->GetFormatStride(format);
+		InitData.pData = data;
+		InitData.rowPitch = width * device->GetFormatStride(format);
 
 		return device->CreateTexture(&textureDesc, &InitData, &texture);
 	}

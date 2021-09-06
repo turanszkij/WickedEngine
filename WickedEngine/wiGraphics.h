@@ -527,7 +527,7 @@ namespace wiGraphics
 	};
 	struct GPUBufferDesc
 	{
-		uint32_t ByteWidth = 0;
+		uint64_t ByteWidth = 0;
 		USAGE Usage = USAGE_DEFAULT;
 		BIND_FLAG BindFlags = BIND_NONE;
 		RESOURCE_MISC_FLAG MiscFlags = RESOURCE_MISC_NONE;
@@ -553,6 +553,7 @@ namespace wiGraphics
 		const DepthStencilState* dss = nullptr;
 		const InputLayout*		il = nullptr;
 		PRIMITIVETOPOLOGY		pt = TRIANGLELIST;
+		uint32_t                patchControlPoints = 3;
 		uint32_t				sampleMask = 0xFFFFFFFF;
 	};
 	struct GPUBarrier
@@ -756,9 +757,9 @@ namespace wiGraphics
 	};
 	struct SubresourceData
 	{
-		const void *pSysMem = nullptr;
-		uint32_t SysMemPitch = 0;
-		uint32_t SysMemSlicePitch = 0;
+		const void *pData = nullptr;
+		uint32_t rowPitch = 0;
+		uint32_t slicePitch = 0;
 	};
 	struct Rect
 	{

@@ -115,8 +115,8 @@ namespace wiFFTGenerator
 		cb_desc.StructureByteStride = 0;
 
 		SubresourceData cb_data;
-		cb_data.SysMemPitch = 0;
-		cb_data.SysMemSlicePitch = 0;
+		cb_data.rowPitch = 0;
+		cb_data.slicePitch = 0;
 
 		// Buffer 0
 		const uint32_t thread_count = slices * (512 * 512) / 8;
@@ -125,7 +125,7 @@ namespace wiFFTGenerator
 		double phase_base = -TWO_PI / (512.0 * 512.0);
 
 		FFTGeneratorCB cb_data_buf0 = { thread_count, ostride, istride, 512, (float)phase_base };
-		cb_data.pSysMem = &cb_data_buf0;
+		cb_data.pData = &cb_data_buf0;
 
 		device->CreateBuffer(&cb_desc, &cb_data, &plan.pRadix008A_CB[0]);
 
@@ -134,7 +134,7 @@ namespace wiFFTGenerator
 		phase_base *= 8.0;
 
 		FFTGeneratorCB cb_data_buf1 = { thread_count, ostride, istride, 512, (float)phase_base };
-		cb_data.pSysMem = &cb_data_buf1;
+		cb_data.pData = &cb_data_buf1;
 
 		device->CreateBuffer(&cb_desc, &cb_data, &plan.pRadix008A_CB[1]);
 
@@ -143,7 +143,7 @@ namespace wiFFTGenerator
 		phase_base *= 8.0;
 
 		FFTGeneratorCB cb_data_buf2 = { thread_count, ostride, istride, 512, (float)phase_base };
-		cb_data.pSysMem = &cb_data_buf2;
+		cb_data.pData = &cb_data_buf2;
 
 		device->CreateBuffer(&cb_desc, &cb_data, &plan.pRadix008A_CB[2]);
 
@@ -153,7 +153,7 @@ namespace wiFFTGenerator
 		ostride /= 512;
 
 		FFTGeneratorCB cb_data_buf3 = { thread_count, ostride, istride, 1, (float)phase_base };
-		cb_data.pSysMem = &cb_data_buf3;
+		cb_data.pData = &cb_data_buf3;
 
 		device->CreateBuffer(&cb_desc, &cb_data, &plan.pRadix008A_CB[3]);
 
@@ -162,7 +162,7 @@ namespace wiFFTGenerator
 		phase_base *= 8.0;
 
 		FFTGeneratorCB cb_data_buf4 = { thread_count, ostride, istride, 1, (float)phase_base };
-		cb_data.pSysMem = &cb_data_buf4;
+		cb_data.pData = &cb_data_buf4;
 
 		device->CreateBuffer(&cb_desc, &cb_data, &plan.pRadix008A_CB[4]);
 
@@ -171,7 +171,7 @@ namespace wiFFTGenerator
 		phase_base *= 8.0;
 
 		FFTGeneratorCB cb_data_buf5 = { thread_count, ostride, istride, 1, (float)phase_base };
-		cb_data.pSysMem = &cb_data_buf5;
+		cb_data.pData = &cb_data_buf5;
 
 		device->CreateBuffer(&cb_desc, &cb_data, &plan.pRadix008A_CB[5]);
 	}

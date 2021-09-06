@@ -1820,8 +1820,8 @@ void LoadBuffers()
 		desc.Height = 16;
 		desc.Width = 16;
 		SubresourceData InitData;
-		InitData.pSysMem = sheenLUTdata;
-		InitData.SysMemPitch = desc.Width;
+		InitData.pData = sheenLUTdata;
+		InitData.rowPitch = desc.Width;
 		device->CreateTexture(&desc, &InitData, &textures[TEXTYPE_2D_SHEENLUT]);
 	}
 
@@ -2605,7 +2605,7 @@ void RenderMeshes(
 			instancedBatch = {};
 			instancedBatch.meshIndex = meshIndex;
 			instancedBatch.instanceCount = 0;
-			instancedBatch.dataOffset = instances.offset + instanceCount * instanceDataSize;
+			instancedBatch.dataOffset = (uint32_t)(instances.offset + instanceCount * instanceDataSize);
 			instancedBatch.userStencilRefOverride = userStencilRefOverride;
 			instancedBatch.forceAlphatestForDithering = 0;
 			instancedBatch.aabb = AABB();
@@ -4969,7 +4969,7 @@ void DrawDebugWorld(
 		bd.ByteWidth = sizeof(verts);
 		bd.BindFlags = BIND_VERTEX_BUFFER;
 		SubresourceData InitData;
-		InitData.pSysMem = verts;
+		InitData.pData = verts;
 		device->CreateBuffer(&bd, &InitData, &wirecubeVB);
 
 		uint16_t indices[] = {
@@ -4980,7 +4980,7 @@ void DrawDebugWorld(
 		bd.Usage = USAGE_DEFAULT;
 		bd.ByteWidth = sizeof(indices);
 		bd.BindFlags = BIND_INDEX_BUFFER;
-		InitData.pSysMem = indices;
+		InitData.pData = indices;
 		device->CreateBuffer(&bd, &InitData, &wirecubeIB);
 	}
 
@@ -5116,7 +5116,7 @@ void DrawDebugWorld(
 			const uint32_t strides[] = {
 				sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 			};
-			const uint32_t offsets[] = {
+			const uint64_t offsets[] = {
 				mem.offset,
 			};
 			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
@@ -5167,7 +5167,7 @@ void DrawDebugWorld(
 		const uint32_t strides[] = {
 			sizeof(Vertex),
 		};
-		const uint32_t offsets[] = {
+		const uint64_t offsets[] = {
 			mem.offset,
 		};
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
@@ -5218,7 +5218,7 @@ void DrawDebugWorld(
 		const uint32_t strides[] = {
 			sizeof(Vertex),
 		};
-		const uint32_t offsets[] = {
+		const uint64_t offsets[] = {
 			mem.offset,
 		};
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
@@ -5266,7 +5266,7 @@ void DrawDebugWorld(
 		const uint32_t strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
-		const uint32_t offsets[] = {
+		const uint64_t offsets[] = {
 			mem.offset,
 		};
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
@@ -5314,7 +5314,7 @@ void DrawDebugWorld(
 		const uint32_t strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
-		const uint32_t offsets[] = {
+		const uint64_t offsets[] = {
 			mem.offset,
 		};
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
@@ -5377,7 +5377,7 @@ void DrawDebugWorld(
 		const uint32_t strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
-		const uint32_t offsets[] = {
+		const uint64_t offsets[] = {
 			mem.offset,
 		};
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
@@ -5466,7 +5466,7 @@ void DrawDebugWorld(
 			bd.ByteWidth = uint32_t(vertices.size() * sizeof(Vertex));
 			bd.BindFlags = BIND_VERTEX_BUFFER;
 			SubresourceData InitData;
-			InitData.pSysMem = vertices.data();
+			InitData.pData = vertices.data();
 			device->CreateBuffer(&bd, &InitData, &wiresphereVB);
 
 			std::vector<uint16_t> indices;
@@ -5489,7 +5489,7 @@ void DrawDebugWorld(
 			bd.Usage = USAGE_DEFAULT;
 			bd.ByteWidth = uint32_t(indices.size() * sizeof(uint16_t));
 			bd.BindFlags = BIND_INDEX_BUFFER;
-			InitData.pSysMem = indices.data();
+			InitData.pData = indices.data();
 			device->CreateBuffer(&bd, &InitData, &wiresphereIB);
 		}
 
@@ -5518,7 +5518,7 @@ void DrawDebugWorld(
 
 			device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
-			device->DrawIndexed(wiresphereIB.GetDesc().ByteWidth / sizeof(uint16_t), 0, 0, cmd);
+			device->DrawIndexed((uint32_t)(wiresphereIB.GetDesc().ByteWidth / sizeof(uint16_t)), 0, 0, cmd);
 		}
 		renderableSpheres.clear();
 
@@ -5609,7 +5609,7 @@ void DrawDebugWorld(
 		const uint32_t strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
-		const uint32_t offsets[] = {
+		const uint64_t offsets[] = {
 			mem.offset,
 		};
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
@@ -5726,7 +5726,7 @@ void DrawDebugWorld(
 			bd.ByteWidth = sizeof(verts);
 			bd.BindFlags = BIND_VERTEX_BUFFER;
 			SubresourceData InitData;
-			InitData.pSysMem = verts;
+			InitData.pData = verts;
 			device->CreateBuffer(&bd, &InitData, &grid);
 		}
 
@@ -5853,7 +5853,7 @@ void DrawDebugWorld(
 				x.subset,
 				subset.materialIndex,
 				device->GetDescriptorIndex(&mem.buffer, SRV),
-				mem.offset
+				(uint32_t)mem.offset
 			);
 			device->PushConstants(&push, sizeof(push), cmd);
 
@@ -5925,7 +5925,7 @@ void DrawDebugWorld(
 			bd.ByteWidth = sizeof(verts);
 			bd.BindFlags = BIND_VERTEX_BUFFER;
 			SubresourceData InitData;
-			InitData.pSysMem = verts;
+			InitData.pData = verts;
 			device->CreateBuffer(&bd, &InitData, &wirecamVB);
 
 			uint16_t indices[] = {
@@ -5938,7 +5938,7 @@ void DrawDebugWorld(
 			bd.Usage = USAGE_DEFAULT;
 			bd.ByteWidth = sizeof(indices);
 			bd.BindFlags = BIND_INDEX_BUFFER;
-			InitData.pSysMem = indices;
+			InitData.pData = indices;
 			device->CreateBuffer(&bd, &InitData, &wirecamIB);
 		}
 
@@ -7280,7 +7280,7 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 					sizeof(MeshComponent::Vertex_POS),
 					sizeof(MeshComponent::Vertex_TEX),
 				};
-				uint32_t offsets[] = {
+				uint64_t offsets[] = {
 					0,
 					0,
 				};

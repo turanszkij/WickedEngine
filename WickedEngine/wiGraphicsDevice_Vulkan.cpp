@@ -3017,7 +3017,7 @@ using namespace Vulkan_Internal;
 		if (pDesc->Usage == USAGE_READBACK || pDesc->Usage == USAGE_UPLOAD)
 		{
 			pBuffer->mapped_data = internal_state->allocation->GetMappedData();
-			pBuffer->mapped_rowpitch = pDesc->ByteWidth;
+			pBuffer->mapped_rowpitch = static_cast<uint32_t>(pDesc->ByteWidth);
 		}
 
 		if (bufferInfo.usage & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT)
@@ -3033,7 +3033,7 @@ using namespace Vulkan_Internal;
 		{
 			auto cmd = copyAllocator.allocate(pDesc->ByteWidth);
 
-			memcpy(cmd.uploadbuffer.mapped_data, pInitialData->pSysMem, pBuffer->desc.ByteWidth);
+			memcpy(cmd.uploadbuffer.mapped_data, pInitialData->pData, pBuffer->desc.ByteWidth);
 
 			{
 				auto& frame = GetFrameResources();
@@ -3299,7 +3299,7 @@ using namespace Vulkan_Internal;
 
 			std::vector<VkBufferImageCopy> copyRegions;
 
-			size_t cpyoffset = 0;
+			VkDeviceSize copyOffset = 0;
 			uint32_t initDataIdx = 0;
 			uint32_t width = imageInfo.extent.width;
 			uint32_t height = imageInfo.extent.height;
@@ -3308,16 +3308,16 @@ using namespace Vulkan_Internal;
 			for (uint32_t mip = 0; mip < pDesc->MipLevels; ++mip)
 			{
 				const SubresourceData& subresourceData = pInitialData[initDataIdx++];
-				size_t cpysize = subresourceData.SysMemPitch * height * depth * layers;
+				VkDeviceSize copySize = subresourceData.rowPitch * height * depth * layers;
 				if (IsFormatBlockCompressed(pDesc->Format))
 				{
-					cpysize /= 4;
+					copySize /= 4;
 				}
-				uint8_t* cpyaddr = (uint8_t*)cmd.uploadbuffer.mapped_data + cpyoffset;
-				memcpy(cpyaddr, subresourceData.pSysMem, cpysize);
+				uint8_t* cpyaddr = (uint8_t*)cmd.uploadbuffer.mapped_data + copyOffset;
+				memcpy(cpyaddr, subresourceData.pData, copySize);
 
 				VkBufferImageCopy copyRegion = {};
-				copyRegion.bufferOffset = cpyoffset;
+				copyRegion.bufferOffset = copyOffset;
 				copyRegion.bufferRowLength = 0;
 				copyRegion.bufferImageHeight = 0;
 
@@ -3339,7 +3339,7 @@ using namespace Vulkan_Internal;
 
 				copyRegions.push_back(copyRegion);
 
-				cpyoffset += Align(cpysize, GetFormatStride(pDesc->Format));
+				copyOffset += AlignTo(copySize, (VkDeviceSize)GetFormatStride(pDesc->Format));
 			}
 
 			{
@@ -4438,7 +4438,7 @@ using namespace Vulkan_Internal;
 		// Tessellation:
 		VkPipelineTessellationStateCreateInfo& tessellationInfo = internal_state->tessellationInfo;
 		tessellationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
-		tessellationInfo.patchControlPoints = 3;
+		tessellationInfo.patchControlPoints = pDesc->patchControlPoints;
 
 		pipelineInfo.pTessellationState = &tessellationInfo;
 
@@ -5351,7 +5351,7 @@ using namespace Vulkan_Internal;
 				srv_desc.buffer = internal_state->resource;
 				srv_desc.flags = 0;
 				srv_desc.format = _ConvertFormat(desc.Format);
-				srv_desc.offset = Align(offset, properties2.properties.limits.minTexelBufferOffsetAlignment); // damn, if this needs alignment, that could break a lot of things! (index buffer, index offset?)
+				srv_desc.offset = AlignTo(offset, properties2.properties.limits.minTexelBufferOffsetAlignment); // damn, if this needs alignment, that could break a lot of things! (index buffer, index offset?)
 				srv_desc.range = std::min(size, (uint64_t)desc.ByteWidth - srv_desc.offset);
 
 				VkBufferView view;
@@ -6037,7 +6037,7 @@ using namespace Vulkan_Internal;
 			descriptors.dirty = true;
 		}
 	}
-	void GraphicsDevice_Vulkan::BindVertexBuffers(const GPUBuffer *const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint32_t* offsets, CommandList cmd)
+	void GraphicsDevice_Vulkan::BindVertexBuffers(const GPUBuffer *const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint64_t* offsets, CommandList cmd)
 	{
 		size_t hash = 0;
 

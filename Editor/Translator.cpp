@@ -75,7 +75,7 @@ void Translator::Create()
 			bd.BindFlags = BIND_VERTEX_BUFFER;
 
 			SubresourceData InitData;
-			InitData.pSysMem = verts;
+			InitData.pData = verts;
 
 			device->CreateBuffer(&bd, &InitData, &vertexBuffer_Axis);
 		}
@@ -101,7 +101,7 @@ void Translator::Create()
 			bd.BindFlags = BIND_VERTEX_BUFFER;
 
 			SubresourceData InitData;
-			InitData.pSysMem = verts;
+			InitData.pData = verts;
 			device->CreateBuffer(&bd, &InitData, &vertexBuffer_Plane);
 		}
 	}
@@ -156,7 +156,7 @@ void Translator::Create()
 			bd.BindFlags = BIND_VERTEX_BUFFER;
 
 			SubresourceData InitData;
-			InitData.pSysMem = verts;
+			InitData.pData = verts;
 			device->CreateBuffer(&bd, &InitData, &vertexBuffer_Origin);
 		}
 	}

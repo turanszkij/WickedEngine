@@ -405,7 +405,7 @@ namespace wiScene
 
 				// Use indices directly since vector is in correct format
 				static_assert(std::is_same<decltype(indices)::value_type, uint32_t>::value, "indices not in INDEXFORMAT_32BIT");
-				initData.pSysMem = indices.data();
+				initData.pData = indices.data();
 
 				device->CreateBuffer(&bd, &initData, &indexBuffer);
 				device->SetName(&indexBuffer, "indexBuffer_32bit");
@@ -418,7 +418,7 @@ namespace wiScene
 
 				std::vector<uint16_t> gpuIndexData(indices.size());
 				std::copy(indices.begin(), indices.end(), gpuIndexData.begin());
-				initData.pSysMem = gpuIndexData.data();
+				initData.pData = gpuIndexData.data();
 
 				device->CreateBuffer(&bd, &initData, &indexBuffer);
 				device->SetName(&indexBuffer, "indexBuffer_16bit");
@@ -461,7 +461,7 @@ namespace wiScene
 			bd.ByteWidth = (uint32_t)(sizeof(Vertex_POS) * vertices.size());
 
 			SubresourceData InitData;
-			InitData.pSysMem = vertices.data();
+			InitData.pData = vertices.data();
 			device->CreateBuffer(&bd, &InitData, &vertexBuffer_POS);
 			device->SetName(&vertexBuffer_POS, "vertexBuffer_POS");
 		}
@@ -555,7 +555,7 @@ namespace wiScene
 			bd.ByteWidth = (uint32_t)(bd.StructureByteStride * vertices.size());
 
 			SubresourceData InitData;
-			InitData.pSysMem = vertices.data();
+			InitData.pData = vertices.data();
 			device->CreateBuffer(&bd, &InitData, &vertexBuffer_TAN);
 			device->SetName(&vertexBuffer_TAN, "vertexBuffer_TAN");
 		}
@@ -587,7 +587,7 @@ namespace wiScene
 			bd.ByteWidth = (uint32_t)(sizeof(Vertex_BON) * vertices.size());
 
 			SubresourceData InitData;
-			InitData.pSysMem = vertices.data();
+			InitData.pData = vertices.data();
 			device->CreateBuffer(&bd, &InitData, &vertexBuffer_BON);
 
 			bd.Usage = USAGE_DEFAULT;
@@ -626,7 +626,7 @@ namespace wiScene
 			bd.ByteWidth = (uint32_t)(bd.StructureByteStride * vertices.size());
 
 			SubresourceData InitData;
-			InitData.pSysMem = vertices.data();
+			InitData.pData = vertices.data();
 			device->CreateBuffer(&bd, &InitData, &vertexBuffer_UV0);
 			device->SetName(&vertexBuffer_UV0, "vertexBuffer_UV0");
 		}
@@ -647,7 +647,7 @@ namespace wiScene
 			bd.ByteWidth = (uint32_t)(bd.StructureByteStride * vertices.size());
 
 			SubresourceData InitData;
-			InitData.pSysMem = vertices.data();
+			InitData.pData = vertices.data();
 			device->CreateBuffer(&bd, &InitData, &vertexBuffer_UV1);
 			device->SetName(&vertexBuffer_UV1, "vertexBuffer_UV1");
 		}
@@ -662,7 +662,7 @@ namespace wiScene
 			bd.ByteWidth = (uint32_t)(bd.StructureByteStride * vertex_colors.size());
 
 			SubresourceData InitData;
-			InitData.pSysMem = vertex_colors.data();
+			InitData.pData = vertex_colors.data();
 			device->CreateBuffer(&bd, &InitData, &vertexBuffer_COL);
 			device->SetName(&vertexBuffer_COL, "vertexBuffer_COL");
 		}
@@ -683,7 +683,7 @@ namespace wiScene
 			bd.ByteWidth = (uint32_t)(bd.StructureByteStride * vertices.size());
 
 			SubresourceData InitData;
-			InitData.pSysMem = vertices.data();
+			InitData.pData = vertices.data();
 			device->CreateBuffer(&bd, &InitData, &vertexBuffer_ATL);
 			device->SetName(&vertexBuffer_ATL, "vertexBuffer_ATL");
 		}
@@ -1219,8 +1219,8 @@ namespace wiScene
 				GraphicsDevice* device = wiRenderer::GetDevice();
 
 				SubresourceData initdata;
-				initdata.pSysMem = texturedata_dst.data();
-				initdata.SysMemPitch = uint32_t(sizeof(XMFLOAT4) * width);
+				initdata.pData = texturedata_dst.data();
+				initdata.rowPitch = uint32_t(sizeof(XMFLOAT4) * width);
 				device->CreateTexture(&lightmap.desc, &initdata, &lightmap);
 
 				lightmapTextureData = std::move(texturedata_dst);
