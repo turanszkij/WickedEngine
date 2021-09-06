@@ -397,7 +397,7 @@ namespace wiScene
 
 			if (GetIndexFormat() == INDEXFORMAT_32BIT)
 			{
-				bd.StructureByteStride = sizeof(uint32_t);
+				bd.Stride = sizeof(uint32_t);
 				bd.Format = FORMAT_R32_UINT;
 				bd.ByteWidth = uint32_t(sizeof(uint32_t) * indices.size());
 
@@ -409,7 +409,7 @@ namespace wiScene
 			}
 			else
 			{
-				bd.StructureByteStride = sizeof(uint16_t);
+				bd.Stride = sizeof(uint16_t);
 				bd.Format = FORMAT_R16_UINT;
 				bd.ByteWidth = uint32_t(sizeof(uint16_t) * indices.size());
 
@@ -545,8 +545,8 @@ namespace wiScene
 			bd.Usage = USAGE_DEFAULT;
 			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
-			bd.StructureByteStride = sizeof(Vertex_TAN);
-			bd.ByteWidth = (uint32_t)(bd.StructureByteStride * vertices.size());
+			bd.Stride = sizeof(Vertex_TAN);
+			bd.ByteWidth = (uint32_t)(bd.Stride * vertices.size());
 
 			device->CreateBuffer(&bd, vertices.data(), &vertexBuffer_TAN);
 			device->SetName(&vertexBuffer_TAN, "vertexBuffer_TAN");
@@ -612,8 +612,8 @@ namespace wiScene
 			GPUBufferDesc bd;
 			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
-			bd.StructureByteStride = sizeof(Vertex_TEX);
-			bd.ByteWidth = (uint32_t)(bd.StructureByteStride * vertices.size());
+			bd.Stride = sizeof(Vertex_TEX);
+			bd.ByteWidth = (uint32_t)(bd.Stride * vertices.size());
 
 			device->CreateBuffer(&bd, vertices.data(), &vertexBuffer_UV0);
 			device->SetName(&vertexBuffer_UV0, "vertexBuffer_UV0");
@@ -631,8 +631,8 @@ namespace wiScene
 			GPUBufferDesc bd;
 			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
-			bd.StructureByteStride = sizeof(Vertex_TEX);
-			bd.ByteWidth = (uint32_t)(bd.StructureByteStride * vertices.size());
+			bd.Stride = sizeof(Vertex_TEX);
+			bd.ByteWidth = (uint32_t)(bd.Stride * vertices.size());
 
 			device->CreateBuffer(&bd, vertices.data(), &vertexBuffer_UV1);
 			device->SetName(&vertexBuffer_UV1, "vertexBuffer_UV1");
@@ -644,8 +644,8 @@ namespace wiScene
 			GPUBufferDesc bd;
 			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
-			bd.StructureByteStride = sizeof(Vertex_COL);
-			bd.ByteWidth = (uint32_t)(bd.StructureByteStride * vertex_colors.size());
+			bd.Stride = sizeof(Vertex_COL);
+			bd.ByteWidth = (uint32_t)(bd.Stride * vertex_colors.size());
 
 			device->CreateBuffer(&bd, vertex_colors.data(), &vertexBuffer_COL);
 			device->SetName(&vertexBuffer_COL, "vertexBuffer_COL");
@@ -663,8 +663,8 @@ namespace wiScene
 			GPUBufferDesc bd;
 			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
-			bd.StructureByteStride = sizeof(Vertex_TEX);
-			bd.ByteWidth = (uint32_t)(bd.StructureByteStride * vertices.size());
+			bd.Stride = sizeof(Vertex_TEX);
+			bd.ByteWidth = (uint32_t)(bd.Stride * vertices.size());
 
 			device->CreateBuffer(&bd, vertices.data(), &vertexBuffer_ATL);
 			device->SetName(&vertexBuffer_ATL, "vertexBuffer_ATL");
@@ -676,8 +676,8 @@ namespace wiScene
 		GPUBufferDesc desc;
 		desc.BindFlags = BIND_SHADER_RESOURCE;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
-		desc.StructureByteStride = sizeof(ShaderMeshSubset);
-		desc.ByteWidth = desc.StructureByteStride * (uint32_t)subsets.size();
+		desc.Stride = sizeof(ShaderMeshSubset);
+		desc.ByteWidth = desc.Stride * (uint32_t)subsets.size();
 		bool success = device->CreateBuffer(&desc, nullptr, &subsetBuffer);
 		assert(success);
 		dirty_subsets = true;
@@ -1234,7 +1234,7 @@ namespace wiScene
 		bd.ByteWidth = sizeof(ShaderTransform) * (uint32_t)boneCollection.size();
 		bd.BindFlags = BIND_SHADER_RESOURCE;
 		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		bd.StructureByteStride = sizeof(ShaderTransform);
+		bd.Stride = sizeof(ShaderTransform);
 
 		device->CreateBuffer(&bd, nullptr, &boneBuffer);
 	}
@@ -1397,8 +1397,8 @@ namespace wiScene
 		if (instanceBuffer.desc.ByteWidth < (instanceData.size() * sizeof(ShaderMeshInstance)))
 		{
 			GPUBufferDesc desc;
-			desc.StructureByteStride = sizeof(ShaderMeshInstance);
-			desc.ByteWidth = desc.StructureByteStride * (uint32_t)instanceData.size();
+			desc.Stride = sizeof(ShaderMeshInstance);
+			desc.ByteWidth = desc.Stride * (uint32_t)instanceData.size();
 			desc.BindFlags = BIND_SHADER_RESOURCE;
 			desc.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
 			device->CreateBuffer(&desc, nullptr, &instanceBuffer);
@@ -1409,8 +1409,8 @@ namespace wiScene
 		if (meshBuffer.desc.ByteWidth < (meshData.size() * sizeof(ShaderMesh)))
 		{
 			GPUBufferDesc desc;
-			desc.StructureByteStride = sizeof(ShaderMesh);
-			desc.ByteWidth = desc.StructureByteStride * (uint32_t)meshData.size();
+			desc.Stride = sizeof(ShaderMesh);
+			desc.ByteWidth = desc.Stride * (uint32_t)meshData.size();
 			desc.BindFlags = BIND_SHADER_RESOURCE;
 			desc.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
 			device->CreateBuffer(&desc, nullptr, &meshBuffer);
@@ -1421,8 +1421,8 @@ namespace wiScene
 		if (materialBuffer.desc.ByteWidth < (materialData.size() * sizeof(ShaderMaterial)))
 		{
 			GPUBufferDesc desc;
-			desc.StructureByteStride = sizeof(ShaderMaterial);
-			desc.ByteWidth = desc.StructureByteStride * (uint32_t)materialData.size();
+			desc.Stride = sizeof(ShaderMaterial);
+			desc.ByteWidth = desc.Stride * (uint32_t)materialData.size();
 			desc.BindFlags = BIND_SHADER_RESOURCE;
 			desc.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
 			device->CreateBuffer(&desc, nullptr, &materialBuffer);
@@ -1564,33 +1564,33 @@ namespace wiScene
 		if (wiRenderer::GetSurfelGIEnabled() && !surfelBuffer.IsValid())
 		{
 			GPUBufferDesc desc;
-			desc.StructureByteStride = sizeof(Surfel);
-			desc.ByteWidth = desc.StructureByteStride * SURFEL_CAPACITY;
+			desc.Stride = sizeof(Surfel);
+			desc.ByteWidth = desc.Stride * SURFEL_CAPACITY;
 			desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 			desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 			device->CreateBuffer(&desc, nullptr, &surfelBuffer);
 			device->SetName(&surfelBuffer, "surfelBuffer");
 
-			desc.StructureByteStride = sizeof(SurfelData);
-			desc.ByteWidth = desc.StructureByteStride * SURFEL_CAPACITY;
+			desc.Stride = sizeof(SurfelData);
+			desc.ByteWidth = desc.Stride * SURFEL_CAPACITY;
 			desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 			device->CreateBuffer(&desc, nullptr, &surfelDataBuffer);
 			device->SetName(&surfelDataBuffer, "surfelDataBuffer");
 
-			desc.StructureByteStride = sizeof(uint);
-			desc.ByteWidth = desc.StructureByteStride * 5;
+			desc.Stride = sizeof(uint);
+			desc.ByteWidth = desc.Stride * 5;
 			desc.MiscFlags = RESOURCE_MISC_BUFFER_RAW | RESOURCE_MISC_INDIRECT_ARGS;
 			device->CreateBuffer(&desc, nullptr, &surfelStatsBuffer);
 			device->SetName(&surfelStatsBuffer, "surfelStatsBuffer");
 
-			desc.StructureByteStride = sizeof(SurfelGridCell);
-			desc.ByteWidth = desc.StructureByteStride * SURFEL_TABLE_SIZE;
+			desc.Stride = sizeof(SurfelGridCell);
+			desc.ByteWidth = desc.Stride * SURFEL_TABLE_SIZE;
 			desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 			device->CreateBuffer(&desc, nullptr, &surfelGridBuffer);
 			device->SetName(&surfelGridBuffer, "surfelGridBuffer");
 
-			desc.StructureByteStride = sizeof(uint);
-			desc.ByteWidth = desc.StructureByteStride * SURFEL_CAPACITY * 27; // each surfel can be in 3x3x3=27 cells
+			desc.Stride = sizeof(uint);
+			desc.ByteWidth = desc.Stride * SURFEL_CAPACITY * 27; // each surfel can be in 3x3x3=27 cells
 			desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 			device->CreateBuffer(&desc, nullptr, &surfelCellBuffer);
 			device->SetName(&surfelCellBuffer, "surfelCellBuffer");

@@ -531,7 +531,7 @@ namespace wiGraphics
 		USAGE Usage = USAGE_DEFAULT;
 		BIND_FLAG BindFlags = BIND_NONE;
 		RESOURCE_MISC_FLAG MiscFlags = RESOURCE_MISC_NONE;
-		uint32_t StructureByteStride = 0; // needed for typed and structured buffer types!
+		uint32_t Stride = 0; // needed for typed and structured buffer types!
 		FORMAT Format = FORMAT_UNKNOWN; // only needed for typed buffer!
 	};
 	struct GPUQueryHeapDesc

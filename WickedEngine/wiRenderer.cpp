@@ -1802,14 +1802,14 @@ void LoadBuffers()
 	bd.ByteWidth = sizeof(ShaderEntity) * SHADER_ENTITY_COUNT;
 	bd.BindFlags = BIND_SHADER_RESOURCE;
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-	bd.StructureByteStride = sizeof(ShaderEntity);
+	bd.Stride = sizeof(ShaderEntity);
 	device->CreateBuffer(&bd, nullptr, &resourceBuffers[RBTYPE_ENTITYARRAY]);
 	device->SetName(&resourceBuffers[RBTYPE_ENTITYARRAY], "EntityArray");
 
 	bd.ByteWidth = sizeof(XMMATRIX) * MATRIXARRAY_COUNT;
 	bd.BindFlags = BIND_SHADER_RESOURCE;
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-	bd.StructureByteStride = sizeof(XMMATRIX);
+	bd.Stride = sizeof(XMMATRIX);
 	device->CreateBuffer(&bd, nullptr, &resourceBuffers[RBTYPE_MATRIXARRAY]);
 	device->SetName(&resourceBuffers[RBTYPE_MATRIXARRAY], "MatrixArray");
 
@@ -6616,8 +6616,8 @@ void CreateTiledLightResources(TiledLightResources& res, XMUINT2 resolution)
 
 	{
 		GPUBufferDesc bd;
-		bd.StructureByteStride = sizeof(XMFLOAT4) * 4; // storing 4 planes for every tile
-		bd.ByteWidth = bd.StructureByteStride * tileCount.x * tileCount.y;
+		bd.Stride = sizeof(XMFLOAT4) * 4; // storing 4 planes for every tile
+		bd.ByteWidth = bd.Stride * tileCount.x * tileCount.y;
 		bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		bd.Usage = USAGE_DEFAULT;
@@ -6627,8 +6627,8 @@ void CreateTiledLightResources(TiledLightResources& res, XMUINT2 resolution)
 	}
 	{
 		GPUBufferDesc bd;
-		bd.StructureByteStride = sizeof(uint);
-		bd.ByteWidth = tileCount.x * tileCount.y * bd.StructureByteStride * SHADER_ENTITY_TILE_BUCKET_COUNT;
+		bd.Stride = sizeof(uint);
+		bd.ByteWidth = tileCount.x * tileCount.y * bd.Stride * SHADER_ENTITY_TILE_BUCKET_COUNT;
 		bd.Usage = USAGE_DEFAULT;
 		bd.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
 		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
@@ -8929,8 +8929,8 @@ void CreateRTAOResources(RTAOResources& res, XMUINT2 resolution)
 	device->SetName(&res.normals, "rtao_normals");
 
 	GPUBufferDesc bd;
-	bd.StructureByteStride = sizeof(uint);
-	bd.ByteWidth = bd.StructureByteStride *
+	bd.Stride = sizeof(uint);
+	bd.ByteWidth = bd.Stride *
 		((desc.Width + 7) / 8) *
 		((desc.Height + 3) / 4);
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
@@ -9633,8 +9633,8 @@ void CreateRTShadowResources(RTShadowResources& res, XMUINT2 resolution)
 	device->SetName(&res.normals, "rtshadow_normals");
 
 	GPUBufferDesc bd;
-	bd.StructureByteStride = sizeof(uint4);
-	bd.ByteWidth = bd.StructureByteStride *
+	bd.Stride = sizeof(uint4);
+	bd.ByteWidth = bd.Stride *
 		((desc.Width + 7) / 8) *
 		((desc.Height + 3) / 4);
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
@@ -10185,8 +10185,8 @@ void CreateDepthOfFieldResources(DepthOfFieldResources& res, XMUINT2 resolution)
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tile_statistics);
 
 	bufferdesc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-	bufferdesc.StructureByteStride = sizeof(uint);
-	bufferdesc.ByteWidth = tile_desc.Width * tile_desc.Height * bufferdesc.StructureByteStride;
+	bufferdesc.Stride = sizeof(uint);
+	bufferdesc.ByteWidth = tile_desc.Width * tile_desc.Height * bufferdesc.Stride;
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tiles_earlyexit);
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tiles_cheap);
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tiles_expensive);
@@ -10632,8 +10632,8 @@ void CreateMotionBlurResources(MotionBlurResources& res, XMUINT2 resolution)
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tile_statistics);
 
 	bufferdesc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-	bufferdesc.StructureByteStride = sizeof(uint);
-	bufferdesc.ByteWidth = tile_desc.Width * tile_desc.Height * bufferdesc.StructureByteStride;
+	bufferdesc.Stride = sizeof(uint);
+	bufferdesc.ByteWidth = tile_desc.Width * tile_desc.Height * bufferdesc.Stride;
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tiles_earlyexit);
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tiles_cheap);
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tiles_expensive);
@@ -11977,8 +11977,8 @@ void SetVoxelRadianceEnabled(bool enabled)
 	if (!resourceBuffers[RBTYPE_VOXELSCENE].IsValid())
 	{
 		GPUBufferDesc desc;
-		desc.StructureByteStride = sizeof(uint32_t) * 2;
-		desc.ByteWidth = desc.StructureByteStride * voxelSceneData.res * voxelSceneData.res * voxelSceneData.res;
+		desc.Stride = sizeof(uint32_t) * 2;
+		desc.ByteWidth = desc.Stride * voxelSceneData.res * voxelSceneData.res * voxelSceneData.res;
 		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;

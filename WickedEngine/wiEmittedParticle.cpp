@@ -70,13 +70,13 @@ void wiEmittedParticle::CreateSelfBuffers()
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 
 	// Particle buffer:
-	bd.StructureByteStride = sizeof(Particle);
-	bd.ByteWidth = bd.StructureByteStride * MAX_PARTICLES;
+	bd.Stride = sizeof(Particle);
+	bd.ByteWidth = bd.Stride * MAX_PARTICLES;
 	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &particleBuffer);
 
 	// Alive index lists (double buffered):
-	bd.StructureByteStride = sizeof(uint32_t);
-	bd.ByteWidth = bd.StructureByteStride * MAX_PARTICLES;
+	bd.Stride = sizeof(uint32_t);
+	bd.ByteWidth = bd.Stride * MAX_PARTICLES;
 	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &aliveList[0]);
 	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &aliveList[1]);
 
@@ -89,25 +89,25 @@ void wiEmittedParticle::CreateSelfBuffers()
 	wiRenderer::GetDevice()->CreateBuffer(&bd, indices.data(), &deadList);
 
 	// Distance buffer:
-	bd.StructureByteStride = sizeof(float);
-	bd.ByteWidth = bd.StructureByteStride * MAX_PARTICLES;
+	bd.Stride = sizeof(float);
+	bd.ByteWidth = bd.Stride * MAX_PARTICLES;
 	std::vector<float> distances(MAX_PARTICLES);
 	std::fill(distances.begin(), distances.end(), 0.0f);
 	wiRenderer::GetDevice()->CreateBuffer(&bd, distances.data(), &distanceBuffer);
 
 	// SPH Partitioning grid indices per particle:
-	bd.StructureByteStride = sizeof(float); // really, it is uint, but sorting is performing comparisons on floats, so whateva
-	bd.ByteWidth = bd.StructureByteStride * MAX_PARTICLES;
+	bd.Stride = sizeof(float); // really, it is uint, but sorting is performing comparisons on floats, so whateva
+	bd.ByteWidth = bd.Stride * MAX_PARTICLES;
 	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &sphPartitionCellIndices);
 
 	// SPH Partitioning grid cell offsets into particle index list:
-	bd.StructureByteStride = sizeof(uint32_t);
-	bd.ByteWidth = bd.StructureByteStride * SPH_PARTITION_BUCKET_COUNT;
+	bd.Stride = sizeof(uint32_t);
+	bd.ByteWidth = bd.Stride * SPH_PARTITION_BUCKET_COUNT;
 	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &sphPartitionCellOffsets);
 
 	// Density buffer (for SPH simulation):
-	bd.StructureByteStride = sizeof(float);
-	bd.ByteWidth = bd.StructureByteStride * MAX_PARTICLES;
+	bd.Stride = sizeof(float);
+	bd.ByteWidth = bd.Stride * MAX_PARTICLES;
 	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &densityBuffer);
 
 	// Particle System statistics:
@@ -118,7 +118,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 	counters.aliveCount_afterSimulation = 0;
 
 	bd.ByteWidth = sizeof(counters);
-	bd.StructureByteStride = sizeof(counters);
+	bd.Stride = sizeof(counters);
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
 	wiRenderer::GetDevice()->CreateBuffer(&bd, &counters, &counterBuffer);
 

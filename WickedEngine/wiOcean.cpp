@@ -129,28 +129,28 @@ void wiOcean::Create(const OceanParameters& params)
 
 	// RW buffer allocations
 	// H0
-	buf_desc.StructureByteStride = sizeof(float2);
-	buf_desc.ByteWidth = buf_desc.StructureByteStride * input_full_size;
+	buf_desc.Stride = sizeof(float2);
+	buf_desc.ByteWidth = buf_desc.Stride * input_full_size;
 	device->CreateBuffer(&buf_desc, h0_data.data(), &buffer_Float2_H0);
 
 	// Notice: The following 3 buffers should be half sized buffer because of conjugate symmetric input. But
 	// we use full sized buffers due to the CS4.0 restriction.
 
 	// Put H(t), Dx(t) and Dy(t) into one buffer because CS4.0 allows only 1 UAV at a time
-	buf_desc.StructureByteStride = sizeof(float2);
-	buf_desc.ByteWidth = buf_desc.StructureByteStride * 3 * input_half_size;
+	buf_desc.Stride = sizeof(float2);
+	buf_desc.ByteWidth = buf_desc.Stride * 3 * input_half_size;
 	device->CreateBuffer(&buf_desc, zero_data.data(), &buffer_Float2_Ht);
 
 	// omega
-	buf_desc.StructureByteStride = sizeof(float);
-	buf_desc.ByteWidth = buf_desc.StructureByteStride * input_full_size;
+	buf_desc.Stride = sizeof(float);
+	buf_desc.ByteWidth = buf_desc.Stride * input_full_size;
 	device->CreateBuffer(&buf_desc, omega_data.data(), &buffer_Float_Omega);
 
 	// Notice: The following 3 should be real number data. But here we use the complex numbers and C2C FFT
 	// due to the CS4.0 restriction.
 	// Put Dz, Dx and Dy into one buffer because CS4.0 allows only 1 UAV at a time
-	buf_desc.StructureByteStride = sizeof(float2);
-	buf_desc.ByteWidth = buf_desc.StructureByteStride * 3 * output_size;
+	buf_desc.Stride = sizeof(float2);
+	buf_desc.ByteWidth = buf_desc.Stride * 3 * output_size;
 	device->CreateBuffer(&buf_desc, zero_data.data(), &buffer_Float_Dxyz);
 
 	TextureDesc tex_desc;

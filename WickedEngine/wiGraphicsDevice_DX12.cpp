@@ -5128,9 +5128,9 @@ using namespace DX12_Internal;
 				// This is a Structured Buffer
 				srv_desc.Format = DXGI_FORMAT_UNKNOWN;
 				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-				srv_desc.Buffer.FirstElement = (UINT)offset / desc.StructureByteStride;
-				srv_desc.Buffer.NumElements = (UINT)std::min(size, desc.ByteWidth - offset) / desc.StructureByteStride;
-				srv_desc.Buffer.StructureByteStride = desc.StructureByteStride;
+				srv_desc.Buffer.FirstElement = (UINT)offset / desc.Stride;
+				srv_desc.Buffer.NumElements = (UINT)std::min(size, desc.ByteWidth - offset) / desc.Stride;
+				srv_desc.Buffer.StructureByteStride = desc.Stride;
 			}
 			else
 			{
@@ -5173,9 +5173,9 @@ using namespace DX12_Internal;
 			{
 				// This is a Structured Buffer
 				uav_desc.Format = DXGI_FORMAT_UNKNOWN;
-				uav_desc.Buffer.FirstElement = (UINT)offset / desc.StructureByteStride;
-				uav_desc.Buffer.NumElements = (UINT)std::min(size, desc.ByteWidth - offset) / desc.StructureByteStride;
-				uav_desc.Buffer.StructureByteStride = desc.StructureByteStride;
+				uav_desc.Buffer.FirstElement = (UINT)offset / desc.Stride;
+				uav_desc.Buffer.NumElements = (UINT)std::min(size, desc.ByteWidth - offset) / desc.Stride;
+				uav_desc.Buffer.StructureByteStride = desc.Stride;
 			}
 			else
 			{

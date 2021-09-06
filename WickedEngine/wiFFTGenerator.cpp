@@ -112,7 +112,7 @@ namespace wiFFTGenerator
 		GPUBufferDesc cb_desc;
 		cb_desc.BindFlags = BIND_CONSTANT_BUFFER;
 		cb_desc.ByteWidth = sizeof(FFTGeneratorCB);
-		cb_desc.StructureByteStride = 0;
+		cb_desc.Stride = 0;
 
 		// Buffer 0
 		const uint32_t thread_count = slices * (512 * 512) / 8;
@@ -182,7 +182,7 @@ namespace wiFFTGenerator
 		buf_desc.Usage = USAGE_DEFAULT;
 		buf_desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
 		buf_desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		buf_desc.StructureByteStride = sizeof(float) * 2;
+		buf_desc.Stride = sizeof(float) * 2;
 
 		device->CreateBuffer(&buf_desc, nullptr, &plan.pBuffer_Tmp);
 	}

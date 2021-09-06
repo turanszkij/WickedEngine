@@ -2334,7 +2334,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			GPUBufferDesc desc;
 			desc.BindFlags = BIND_VERTEX_BUFFER;
 			desc.ByteWidth = (uint32_t)(vertices.size() * sizeof(Vertex));
-			desc.StructureByteStride = 0;
+			desc.Stride = 0;
 			device->CreateBuffer(&desc, vertices.data(), &vb_hue);
 		}
 		// saturation picker (small circle)
@@ -2356,7 +2356,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			GPUBufferDesc desc;
 			desc.BindFlags = BIND_VERTEX_BUFFER;
 			desc.ByteWidth = (uint32_t)(vertices.size() * sizeof(Vertex));
-			desc.StructureByteStride = 0;
+			desc.Stride = 0;
 			device->CreateBuffer(&desc, vertices.data(), &vb_picker_saturation);
 		}
 		// hue picker (rectangle)
@@ -2392,7 +2392,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			GPUBufferDesc desc;
 			desc.BindFlags = BIND_VERTEX_BUFFER;
 			desc.ByteWidth = (uint32_t)sizeof(vertices);
-			desc.StructureByteStride = 0;
+			desc.Stride = 0;
 			device->CreateBuffer(&desc, vertices, &vb_picker_hue);
 		}
 		// preview
