@@ -1604,13 +1604,34 @@ using namespace DX12_Internal;
 		ringOffset_res = 0;
 		ringOffset_sam = 0;
 
-		memset(CBV, 0, sizeof(CBV));
-		memset(CBV_offset, 0, sizeof(CBV_offset));
-		memset(SRV, 0, sizeof(SRV));
-		memset(SRV_index, -1, sizeof(SRV_index));
-		memset(UAV, 0, sizeof(UAV));
-		memset(UAV_index, -1, sizeof(UAV_index));
-		memset(SAM, 0, sizeof(SAM));
+		for (int i = 0; i < arraysize(CBV); ++i)
+		{
+			CBV[i] = {};
+		}
+		for (int i = 0; i < arraysize(CBV_offset); ++i)
+		{
+			CBV_offset[i] = {};
+		}
+		for (int i = 0; i < arraysize(SRV); ++i)
+		{
+			SRV[i] = {};
+		}
+		for (int i = 0; i < arraysize(SRV_index); ++i)
+		{
+			SRV_index[i] = {};
+		}
+		for (int i = 0; i < arraysize(UAV); ++i)
+		{
+			UAV[i] = {};
+		}
+		for (int i = 0; i < arraysize(UAV_index); ++i)
+		{
+			UAV_index[i] = {};
+		}
+		for (int i = 0; i < arraysize(SAM); ++i)
+		{
+			SAM[i] = {};
+		}
 	}
 	void GraphicsDevice_DX12::DescriptorBinder::flush(bool graphics, CommandList cmd)
 	{
