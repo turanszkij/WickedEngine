@@ -2820,22 +2820,28 @@ using namespace DX12_Internal;
 			alignedSize = AlignTo(alignedSize, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 		}
 
-		D3D12_RESOURCE_DESC desc;
-		desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-		desc.Format = DXGI_FORMAT_UNKNOWN;
-		desc.Width = alignedSize;
-		desc.Height = 1;
-		desc.MipLevels = 1;
-		desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-		desc.DepthOrArraySize = 1;
-		desc.Alignment = 0;
-		desc.Flags = D3D12_RESOURCE_FLAG_NONE;
+		D3D12_RESOURCE_DESC resourceDesc;
+		resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+		resourceDesc.Format = DXGI_FORMAT_UNKNOWN;
+		resourceDesc.Width = alignedSize;
+		resourceDesc.Height = 1;
+		resourceDesc.MipLevels = 1;
+		resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+		resourceDesc.DepthOrArraySize = 1;
+		resourceDesc.Alignment = 0;
+		resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
 		if (pDesc->BindFlags & BIND_UNORDERED_ACCESS)
 		{
-			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+			resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 		}
-		desc.SampleDesc.Count = 1;
-		desc.SampleDesc.Quality = 0;
+
+		if (!(pDesc->BindFlags & BIND_SHADER_RESOURCE))
+		{
+			resourceDesc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
+		}
+
+		resourceDesc.SampleDesc.Count = 1;
+		resourceDesc.SampleDesc.Quality = 0;
 
 		D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_COMMON;
 
@@ -2845,6 +2851,7 @@ using namespace DX12_Internal;
 		{
 			allocationDesc.HeapType = D3D12_HEAP_TYPE_READBACK;
 			resourceState = D3D12_RESOURCE_STATE_COPY_DEST;
+			resourceDesc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 		}
 		else if (pDesc->Usage == USAGE_UPLOAD)
 		{
@@ -2852,11 +2859,11 @@ using namespace DX12_Internal;
 			resourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
 		}
 
-		device->GetCopyableFootprints(&desc, 0, 1, 0, &internal_state->footprint, nullptr, nullptr, nullptr);
+		device->GetCopyableFootprints(&resourceDesc, 0, 1, 0, &internal_state->footprint, nullptr, nullptr, nullptr);
 
 		hr = allocationhandler->allocator->CreateResource(
 			&allocationDesc,
-			&desc,
+			&resourceDesc,
 			resourceState,
 			nullptr,
 			&internal_state->allocation,
