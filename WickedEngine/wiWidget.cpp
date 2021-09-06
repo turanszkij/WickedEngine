@@ -1302,10 +1302,8 @@ void wiComboBox::Render(const wiCanvas& canvas, CommandList cmd) const
 
 		GPUBufferDesc desc;
 		desc.BindFlags = BIND_VERTEX_BUFFER;
-		desc.ByteWidth = sizeof(vertices);
-		SubresourceData initdata;
-		initdata.pSysMem = vertices;
-		device->CreateBuffer(&desc, &initdata, &vb_triangle);
+		desc.Size = sizeof(vertices);
+		device->CreateBuffer(&desc, &vertices, &vb_triangle);
 	}
 	const XMMATRIX Projection = canvas.GetProjection();
 
@@ -2335,11 +2333,9 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 
 			GPUBufferDesc desc;
 			desc.BindFlags = BIND_VERTEX_BUFFER;
-			desc.ByteWidth = (uint32_t)(vertices.size() * sizeof(Vertex));
-			desc.StructureByteStride = 0;
-			SubresourceData data;
-			data.pSysMem = vertices.data();
-			device->CreateBuffer(&desc, &data, &vb_hue);
+			desc.Size = vertices.size() * sizeof(Vertex);
+			desc.Stride = 0;
+			device->CreateBuffer(&desc, vertices.data(), &vb_hue);
 		}
 		// saturation picker (small circle)
 		{
@@ -2359,11 +2355,9 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 
 			GPUBufferDesc desc;
 			desc.BindFlags = BIND_VERTEX_BUFFER;
-			desc.ByteWidth = (uint32_t)(vertices.size() * sizeof(Vertex));
-			desc.StructureByteStride = 0;
-			SubresourceData data;
-			data.pSysMem = vertices.data();
-			device->CreateBuffer(&desc, &data, &vb_picker_saturation);
+			desc.Size = vertices.size() * sizeof(Vertex);
+			desc.Stride = 0;
+			device->CreateBuffer(&desc, vertices.data(), &vb_picker_saturation);
 		}
 		// hue picker (rectangle)
 		{
@@ -2397,11 +2391,9 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 
 			GPUBufferDesc desc;
 			desc.BindFlags = BIND_VERTEX_BUFFER;
-			desc.ByteWidth = (uint32_t)sizeof(vertices);
-			desc.StructureByteStride = 0;
-			SubresourceData data;
-			data.pSysMem = vertices;
-			device->CreateBuffer(&desc, &data, &vb_picker_hue);
+			desc.Size = sizeof(vertices);
+			desc.Stride = 0;
+			device->CreateBuffer(&desc, vertices, &vb_picker_hue);
 		}
 		// preview
 		{
@@ -2415,10 +2407,8 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 
 			GPUBufferDesc desc;
 			desc.BindFlags = BIND_VERTEX_BUFFER;
-			desc.ByteWidth = (uint32_t)sizeof(vertices);
-			SubresourceData data;
-			data.pSysMem = vertices;
-			device->CreateBuffer(&desc, &data, &vb_preview);
+			desc.Size = sizeof(vertices);
+			device->CreateBuffer(&desc, vertices, &vb_preview);
 		}
 
 	}
@@ -2476,7 +2466,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 		const uint32_t strides[] = {
 			sizeof(Vertex),
 		};
-		const uint32_t offsets[] = {
+		const uint64_t offsets[] = {
 			vb_saturation.offset,
 		};
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
@@ -2498,7 +2488,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			sizeof(Vertex),
 		};
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
-		device->Draw(vb_hue.GetDesc().ByteWidth / sizeof(Vertex), 0, cmd);
+		device->Draw((uint32_t)(vb_hue.GetDesc().Size / sizeof(Vertex)), 0, cmd);
 	}
 
 	// render hue picker
@@ -2525,7 +2515,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			sizeof(Vertex),
 		};
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
-		device->Draw(vb_picker_hue.GetDesc().ByteWidth / sizeof(Vertex), 0, cmd);
+		device->Draw((uint32_t)(vb_picker_hue.GetDesc().Size / sizeof(Vertex)), 0, cmd);
 	}
 
 	// render saturation picker
@@ -2576,7 +2566,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			sizeof(Vertex),
 		};
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
-		device->Draw(vb_picker_saturation.GetDesc().ByteWidth / sizeof(Vertex), 0, cmd);
+		device->Draw((uint32_t)(vb_picker_saturation.GetDesc().Size / sizeof(Vertex)), 0, cmd);
 	}
 
 	// render preview
@@ -2595,7 +2585,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			sizeof(Vertex),
 		};
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
-		device->Draw(vb_preview.GetDesc().ByteWidth / sizeof(Vertex), 0, cmd);
+		device->Draw((uint32_t)(vb_preview.GetDesc().Size / sizeof(Vertex)), 0, cmd);
 	}
 }
 wiColor wiColorPicker::GetPickColor() const
@@ -2925,10 +2915,8 @@ void wiTreeList::Render(const wiCanvas& canvas, CommandList cmd) const
 
 		GPUBufferDesc desc;
 		desc.BindFlags = BIND_VERTEX_BUFFER;
-		desc.ByteWidth = sizeof(vertices);
-		SubresourceData initdata;
-		initdata.pSysMem = vertices;
-		device->CreateBuffer(&desc, &initdata, &vb_triangle);
+		desc.Size = sizeof(vertices);
+		device->CreateBuffer(&desc, vertices, &vb_triangle);
 	}
 	const XMMATRIX Projection = canvas.GetProjection();
 

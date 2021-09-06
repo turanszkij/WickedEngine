@@ -586,7 +586,7 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 
 		PushConstantsFont push;
 		push.buffer_index = device->GetDescriptorIndex(&mem.buffer, SRV);
-		push.buffer_offset = mem.offset;
+		push.buffer_offset = (uint32_t)mem.offset;
 		push.texture_index = device->GetDescriptorIndex(&texture, SRV);
 
 		const wiCanvas& canvas = canvases[cmd];

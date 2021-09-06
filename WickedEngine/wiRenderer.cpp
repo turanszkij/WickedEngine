@@ -1793,23 +1793,23 @@ void LoadBuffers()
 	// The following buffers will be DEFAULT (long lifetime, slow update, fast read):
 	bd.Usage = USAGE_DEFAULT;
 
-	bd.ByteWidth = sizeof(FrameCB);
+	bd.Size = sizeof(FrameCB);
 	bd.BindFlags = BIND_CONSTANT_BUFFER;
 	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_FRAME]);
 	device->SetName(&constantBuffers[CBTYPE_FRAME], "FrameCB");
 
 
-	bd.ByteWidth = sizeof(ShaderEntity) * SHADER_ENTITY_COUNT;
+	bd.Size = sizeof(ShaderEntity) * SHADER_ENTITY_COUNT;
 	bd.BindFlags = BIND_SHADER_RESOURCE;
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-	bd.StructureByteStride = sizeof(ShaderEntity);
+	bd.Stride = sizeof(ShaderEntity);
 	device->CreateBuffer(&bd, nullptr, &resourceBuffers[RBTYPE_ENTITYARRAY]);
 	device->SetName(&resourceBuffers[RBTYPE_ENTITYARRAY], "EntityArray");
 
-	bd.ByteWidth = sizeof(XMMATRIX) * MATRIXARRAY_COUNT;
+	bd.Size = sizeof(XMMATRIX) * MATRIXARRAY_COUNT;
 	bd.BindFlags = BIND_SHADER_RESOURCE;
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-	bd.StructureByteStride = sizeof(XMMATRIX);
+	bd.Stride = sizeof(XMMATRIX);
 	device->CreateBuffer(&bd, nullptr, &resourceBuffers[RBTYPE_MATRIXARRAY]);
 	device->SetName(&resourceBuffers[RBTYPE_MATRIXARRAY], "MatrixArray");
 
@@ -1820,8 +1820,8 @@ void LoadBuffers()
 		desc.Height = 16;
 		desc.Width = 16;
 		SubresourceData InitData;
-		InitData.pSysMem = sheenLUTdata;
-		InitData.SysMemPitch = desc.Width;
+		InitData.pData = sheenLUTdata;
+		InitData.rowPitch = desc.Width;
 		device->CreateTexture(&desc, &InitData, &textures[TEXTYPE_2D_SHEENLUT]);
 	}
 
@@ -2605,7 +2605,7 @@ void RenderMeshes(
 			instancedBatch = {};
 			instancedBatch.meshIndex = meshIndex;
 			instancedBatch.instanceCount = 0;
-			instancedBatch.dataOffset = instances.offset + instanceCount * instanceDataSize;
+			instancedBatch.dataOffset = (uint32_t)(instances.offset + instanceCount * instanceDataSize);
 			instancedBatch.userStencilRefOverride = userStencilRefOverride;
 			instancedBatch.forceAlphatestForDithering = 0;
 			instancedBatch.aabb = AABB();
@@ -4966,11 +4966,9 @@ void DrawDebugWorld(
 
 		GPUBufferDesc bd;
 		bd.Usage = USAGE_DEFAULT;
-		bd.ByteWidth = sizeof(verts);
+		bd.Size = sizeof(verts);
 		bd.BindFlags = BIND_VERTEX_BUFFER;
-		SubresourceData InitData;
-		InitData.pSysMem = verts;
-		device->CreateBuffer(&bd, &InitData, &wirecubeVB);
+		device->CreateBuffer(&bd, verts, &wirecubeVB);
 
 		uint16_t indices[] = {
 			0,1,1,2,0,3,0,4,1,5,4,5,
@@ -4978,10 +4976,9 @@ void DrawDebugWorld(
 		};
 
 		bd.Usage = USAGE_DEFAULT;
-		bd.ByteWidth = sizeof(indices);
+		bd.Size = sizeof(indices);
 		bd.BindFlags = BIND_INDEX_BUFFER;
-		InitData.pSysMem = indices;
-		device->CreateBuffer(&bd, &InitData, &wirecubeIB);
+		device->CreateBuffer(&bd, indices, &wirecubeIB);
 	}
 
 	device->EventBegin("DrawDebugWorld", cmd);
@@ -5116,7 +5113,7 @@ void DrawDebugWorld(
 			const uint32_t strides[] = {
 				sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 			};
-			const uint32_t offsets[] = {
+			const uint64_t offsets[] = {
 				mem.offset,
 			};
 			device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
@@ -5167,7 +5164,7 @@ void DrawDebugWorld(
 		const uint32_t strides[] = {
 			sizeof(Vertex),
 		};
-		const uint32_t offsets[] = {
+		const uint64_t offsets[] = {
 			mem.offset,
 		};
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
@@ -5218,7 +5215,7 @@ void DrawDebugWorld(
 		const uint32_t strides[] = {
 			sizeof(Vertex),
 		};
-		const uint32_t offsets[] = {
+		const uint64_t offsets[] = {
 			mem.offset,
 		};
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
@@ -5266,7 +5263,7 @@ void DrawDebugWorld(
 		const uint32_t strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
-		const uint32_t offsets[] = {
+		const uint64_t offsets[] = {
 			mem.offset,
 		};
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
@@ -5314,7 +5311,7 @@ void DrawDebugWorld(
 		const uint32_t strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
-		const uint32_t offsets[] = {
+		const uint64_t offsets[] = {
 			mem.offset,
 		};
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
@@ -5377,7 +5374,7 @@ void DrawDebugWorld(
 		const uint32_t strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
-		const uint32_t offsets[] = {
+		const uint64_t offsets[] = {
 			mem.offset,
 		};
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
@@ -5463,11 +5460,9 @@ void DrawDebugWorld(
 
 			GPUBufferDesc bd;
 			bd.Usage = USAGE_DEFAULT;
-			bd.ByteWidth = uint32_t(vertices.size() * sizeof(Vertex));
+			bd.Size = vertices.size() * sizeof(Vertex);
 			bd.BindFlags = BIND_VERTEX_BUFFER;
-			SubresourceData InitData;
-			InitData.pSysMem = vertices.data();
-			device->CreateBuffer(&bd, &InitData, &wiresphereVB);
+			device->CreateBuffer(&bd, vertices.data(), &wiresphereVB);
 
 			std::vector<uint16_t> indices;
 			for (int i = 0; i < segmentcount; ++i)
@@ -5487,10 +5482,9 @@ void DrawDebugWorld(
 			}
 
 			bd.Usage = USAGE_DEFAULT;
-			bd.ByteWidth = uint32_t(indices.size() * sizeof(uint16_t));
+			bd.Size = indices.size() * sizeof(uint16_t);
 			bd.BindFlags = BIND_INDEX_BUFFER;
-			InitData.pSysMem = indices.data();
-			device->CreateBuffer(&bd, &InitData, &wiresphereIB);
+			device->CreateBuffer(&bd, indices.data(), &wiresphereIB);
 		}
 
 		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE], cmd);
@@ -5518,7 +5512,7 @@ void DrawDebugWorld(
 
 			device->BindDynamicConstantBuffer(sb, CB_GETBINDSLOT(MiscCB), cmd);
 
-			device->DrawIndexed(wiresphereIB.GetDesc().ByteWidth / sizeof(uint16_t), 0, 0, cmd);
+			device->DrawIndexed((uint32_t)(wiresphereIB.GetDesc().Size / sizeof(uint16_t)), 0, 0, cmd);
 		}
 		renderableSpheres.clear();
 
@@ -5609,7 +5603,7 @@ void DrawDebugWorld(
 		const uint32_t strides[] = {
 			sizeof(XMFLOAT4) + sizeof(XMFLOAT4),
 		};
-		const uint32_t offsets[] = {
+		const uint64_t offsets[] = {
 			mem.offset,
 		};
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
@@ -5723,11 +5717,9 @@ void DrawDebugWorld(
 			gridVertexCount = arraysize(verts) / 2;
 
 			GPUBufferDesc bd;
-			bd.ByteWidth = sizeof(verts);
+			bd.Size = sizeof(verts);
 			bd.BindFlags = BIND_VERTEX_BUFFER;
-			SubresourceData InitData;
-			InitData.pSysMem = verts;
-			device->CreateBuffer(&bd, &InitData, &grid);
+			device->CreateBuffer(&bd, verts, &grid);
 		}
 
 		MiscCB sb;
@@ -5853,7 +5845,7 @@ void DrawDebugWorld(
 				x.subset,
 				subset.materialIndex,
 				device->GetDescriptorIndex(&mem.buffer, SRV),
-				mem.offset
+				(uint32_t)mem.offset
 			);
 			device->PushConstants(&push, sizeof(push), cmd);
 
@@ -5922,11 +5914,9 @@ void DrawDebugWorld(
 
 			GPUBufferDesc bd;
 			bd.Usage = USAGE_DEFAULT;
-			bd.ByteWidth = sizeof(verts);
+			bd.Size = sizeof(verts);
 			bd.BindFlags = BIND_VERTEX_BUFFER;
-			SubresourceData InitData;
-			InitData.pSysMem = verts;
-			device->CreateBuffer(&bd, &InitData, &wirecamVB);
+			device->CreateBuffer(&bd, verts, &wirecamVB);
 
 			uint16_t indices[] = {
 				0,1,1,2,0,3,0,4,1,5,4,5,
@@ -5936,10 +5926,9 @@ void DrawDebugWorld(
 			};
 
 			bd.Usage = USAGE_DEFAULT;
-			bd.ByteWidth = sizeof(indices);
+			bd.Size = sizeof(indices);
 			bd.BindFlags = BIND_INDEX_BUFFER;
-			InitData.pSysMem = indices;
-			device->CreateBuffer(&bd, &InitData, &wirecamIB);
+			device->CreateBuffer(&bd, indices, &wirecamIB);
 		}
 
 		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_CUBE], cmd);
@@ -6627,8 +6616,8 @@ void CreateTiledLightResources(TiledLightResources& res, XMUINT2 resolution)
 
 	{
 		GPUBufferDesc bd;
-		bd.StructureByteStride = sizeof(XMFLOAT4) * 4; // storing 4 planes for every tile
-		bd.ByteWidth = bd.StructureByteStride * tileCount.x * tileCount.y;
+		bd.Stride = sizeof(XMFLOAT4) * 4; // storing 4 planes for every tile
+		bd.Size = bd.Stride * tileCount.x * tileCount.y;
 		bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		bd.Usage = USAGE_DEFAULT;
@@ -6638,8 +6627,8 @@ void CreateTiledLightResources(TiledLightResources& res, XMUINT2 resolution)
 	}
 	{
 		GPUBufferDesc bd;
-		bd.StructureByteStride = sizeof(uint);
-		bd.ByteWidth = tileCount.x * tileCount.y * bd.StructureByteStride * SHADER_ENTITY_TILE_BUCKET_COUNT;
+		bd.Stride = sizeof(uint);
+		bd.Size = tileCount.x * tileCount.y * bd.Stride * SHADER_ENTITY_TILE_BUCKET_COUNT;
 		bd.Usage = USAGE_DEFAULT;
 		bd.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
 		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
@@ -7280,7 +7269,7 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 					sizeof(MeshComponent::Vertex_POS),
 					sizeof(MeshComponent::Vertex_TEX),
 				};
-				uint32_t offsets[] = {
+				uint64_t offsets[] = {
 					0,
 					0,
 				};
@@ -8940,8 +8929,8 @@ void CreateRTAOResources(RTAOResources& res, XMUINT2 resolution)
 	device->SetName(&res.normals, "rtao_normals");
 
 	GPUBufferDesc bd;
-	bd.StructureByteStride = sizeof(uint);
-	bd.ByteWidth = bd.StructureByteStride *
+	bd.Stride = sizeof(uint);
+	bd.Size = bd.Stride *
 		((desc.Width + 7) / 8) *
 		((desc.Height + 3) / 4);
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
@@ -9644,8 +9633,8 @@ void CreateRTShadowResources(RTShadowResources& res, XMUINT2 resolution)
 	device->SetName(&res.normals, "rtshadow_normals");
 
 	GPUBufferDesc bd;
-	bd.StructureByteStride = sizeof(uint4);
-	bd.ByteWidth = bd.StructureByteStride *
+	bd.Stride = sizeof(uint4);
+	bd.Size = bd.Stride *
 		((desc.Width + 7) / 8) *
 		((desc.Height + 3) / 4);
 	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
@@ -10191,13 +10180,13 @@ void CreateDepthOfFieldResources(DepthOfFieldResources& res, XMUINT2 resolution)
 	GPUBufferDesc bufferdesc;
 	bufferdesc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 
-	bufferdesc.ByteWidth = TILE_STATISTICS_CAPACITY * sizeof(uint);
+	bufferdesc.Size = TILE_STATISTICS_CAPACITY * sizeof(uint);
 	bufferdesc.MiscFlags = RESOURCE_MISC_BUFFER_RAW | RESOURCE_MISC_INDIRECT_ARGS;
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tile_statistics);
 
 	bufferdesc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-	bufferdesc.StructureByteStride = sizeof(uint);
-	bufferdesc.ByteWidth = tile_desc.Width * tile_desc.Height * bufferdesc.StructureByteStride;
+	bufferdesc.Stride = sizeof(uint);
+	bufferdesc.Size = tile_desc.Width * tile_desc.Height * bufferdesc.Stride;
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tiles_earlyexit);
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tiles_cheap);
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tiles_expensive);
@@ -10638,13 +10627,13 @@ void CreateMotionBlurResources(MotionBlurResources& res, XMUINT2 resolution)
 	GPUBufferDesc bufferdesc;
 	bufferdesc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 
-	bufferdesc.ByteWidth = TILE_STATISTICS_CAPACITY * sizeof(uint);
+	bufferdesc.Size = TILE_STATISTICS_CAPACITY * sizeof(uint);
 	bufferdesc.MiscFlags = RESOURCE_MISC_BUFFER_RAW | RESOURCE_MISC_INDIRECT_ARGS;
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tile_statistics);
 
 	bufferdesc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-	bufferdesc.StructureByteStride = sizeof(uint);
-	bufferdesc.ByteWidth = tile_desc.Width * tile_desc.Height * bufferdesc.StructureByteStride;
+	bufferdesc.Stride = sizeof(uint);
+	bufferdesc.Size = tile_desc.Width * tile_desc.Height * bufferdesc.Stride;
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tiles_earlyexit);
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tiles_cheap);
 	device->CreateBuffer(&bufferdesc, nullptr, &res.buffer_tiles_expensive);
@@ -11988,8 +11977,8 @@ void SetVoxelRadianceEnabled(bool enabled)
 	if (!resourceBuffers[RBTYPE_VOXELSCENE].IsValid())
 	{
 		GPUBufferDesc desc;
-		desc.StructureByteStride = sizeof(uint32_t) * 2;
-		desc.ByteWidth = desc.StructureByteStride * voxelSceneData.res * voxelSceneData.res * voxelSceneData.res;
+		desc.Stride = sizeof(uint32_t) * 2;
+		desc.Size = desc.Stride * voxelSceneData.res * voxelSceneData.res * voxelSceneData.res;
 		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
 		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		desc.Usage = USAGE_DEFAULT;
