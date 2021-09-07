@@ -2835,8 +2835,7 @@ namespace wiScene
 			    mesh.aabb = AABB(_min, _max);
 			}
 
-			ShaderMesh* shadermesh = meshArrayMapped + args.jobIndex;
-			mesh.WriteShaderMesh(shadermesh);
+			mesh.WriteShaderMesh(meshArrayMapped + args.jobIndex);
 
 		});
 	}
@@ -2873,8 +2872,7 @@ namespace wiScene
 				material.SetDirty(false);
 			}
 
-			ShaderMaterial* shadermat = materialArrayMapped + args.jobIndex;
-			material.WriteShaderMaterial(shadermat);
+			material.WriteShaderMaterial(materialArrayMapped + args.jobIndex);
 
 		});
 	}
@@ -3083,7 +3081,7 @@ namespace wiScene
 					XMStoreFloat4x4(&transformIT, worldMatrixInverseTranspose);
 
 					GraphicsDevice* device = wiRenderer::GetDevice();
-					ShaderMeshInstance inst;
+					ShaderMeshInstance& inst = instanceArrayMapped[args.jobIndex];
 					inst.init();
 					inst.transform.Create(worldMatrix);
 					inst.transformInverseTranspose.Create(transformIT);
@@ -3096,7 +3094,6 @@ namespace wiScene
 					inst.color = wiMath::CompressColor(object.color);
 					inst.emissive = wiMath::CompressColor(object.emissiveColor);
 					inst.meshIndex = (uint)meshes.GetIndex(object.meshID);
-					std::memcpy(instanceArrayMapped + args.jobIndex, &inst, sizeof(inst));
 
 					if (TLAS_instancesMapped != nullptr)
 					{
@@ -3519,25 +3516,23 @@ namespace wiScene
 
 					GraphicsDevice* device = wiRenderer::GetDevice();
 
-					ShaderMesh mesh;
+					size_t meshIndex = meshes.GetCount() + args.jobIndex;
+					ShaderMesh& mesh = meshArrayMapped[meshIndex];
 					mesh.ib = device->GetDescriptorIndex(&hair.primitiveBuffer, SRV);
 					mesh.vb_pos_nor_wind = device->GetDescriptorIndex(&hair.vertexBuffer_POS[0], SRV);
 					mesh.vb_pre = device->GetDescriptorIndex(&hair.vertexBuffer_POS[1], SRV);
 					mesh.vb_uv0 = device->GetDescriptorIndex(&hair.vertexBuffer_TEX, SRV);
 					mesh.subsetbuffer = device->GetDescriptorIndex(&hair.subsetBuffer, SRV);
 					mesh.flags |= SHADERMESH_FLAG_DOUBLE_SIDED;
-					size_t meshIndex = meshes.GetCount() + args.jobIndex;
-					std::memcpy(meshArrayMapped + meshIndex, &mesh, sizeof(mesh));
 
-					ShaderMeshInstance inst;
+					size_t instanceIndex = objects.GetCount() + args.jobIndex;
+					ShaderMeshInstance& inst = instanceArrayMapped[instanceIndex];
 					inst.init();
 					inst.uid = entity;
 					// every vertex is pretransformed and simulated in worldspace for hair particle:
 					inst.transform.Create(IDENTITYMATRIX);
 					inst.transformPrev.Create(IDENTITYMATRIX);
 					inst.meshIndex = (uint)meshIndex;
-					size_t instanceIndex = objects.GetCount() + args.jobIndex;
-					std::memcpy(instanceArrayMapped + instanceIndex, &inst, sizeof(inst));
 
 					if (TLAS_instancesMapped != nullptr)
 					{
