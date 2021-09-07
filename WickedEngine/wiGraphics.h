@@ -301,7 +301,7 @@ namespace wiGraphics
 	//	https://www.justsoftwaresolutions.co.uk/cplusplus/using-enum-classes-as-bitfields.html
 	template<typename E>
 	struct enable_bitmask_operators {
-		static constexpr bool enable = true;
+		static constexpr bool enable = false;
 	};
 	template<typename E>
 	typename std::enable_if<enable_bitmask_operators<E>::enable, E>::type operator|(E lhs, E rhs)
