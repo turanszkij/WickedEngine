@@ -140,7 +140,6 @@ public:
 		return &rtPostprocess_LDR[rt_index];
 	}
 
-	virtual void RenderFrameSetUp(wiGraphics::CommandList cmd) const;
 	virtual void RenderAO(wiGraphics::CommandList cmd) const;
 	virtual void RenderSSR(wiGraphics::CommandList cmd) const;
 	virtual void RenderOutline(wiGraphics::CommandList cmd) const;

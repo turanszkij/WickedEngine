@@ -163,7 +163,9 @@ void wiOcean::Create(const OceanParameters& params)
 
 	tex_desc.Format = FORMAT_R16G16B16A16_FLOAT;
 	tex_desc.MipLevels = 0;
+	tex_desc.layout = RESOURCE_STATE_SHADER_RESOURCE_COMPUTE;
 	device->CreateTexture(&tex_desc, nullptr, &gradientMap);
+	device->SetName(&gradientMap, "gradientMap");
 
 	for (uint32_t i = 0; i < gradientMap.GetDesc().MipLevels; ++i)
 	{
@@ -177,6 +179,7 @@ void wiOcean::Create(const OceanParameters& params)
 	tex_desc.Format = FORMAT_R32G32B32A32_FLOAT;
 	tex_desc.MipLevels = 1;
 	device->CreateTexture(&tex_desc, nullptr, &displacementMap);
+	device->SetName(&displacementMap, "displacementMap");
 
 
 	// Constant buffers
@@ -293,10 +296,13 @@ void wiOcean::UpdateDisplacementMap(const OceanParameters& params, CommandList c
 	uint32_t group_count_x = (params.dmap_dim + OCEAN_COMPUTE_TILESIZE - 1) / OCEAN_COMPUTE_TILESIZE;
 	uint32_t group_count_y = (params.dmap_dim + OCEAN_COMPUTE_TILESIZE - 1) / OCEAN_COMPUTE_TILESIZE;
 	device->Dispatch(group_count_x, group_count_y, 1, cmd);
-	GPUBarrier barriers[] = {
-		GPUBarrier::Memory(),
-	};
-	device->Barrier(barriers, arraysize(barriers), cmd);
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Memory(),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
 
 
 
@@ -315,8 +321,20 @@ void wiOcean::UpdateDisplacementMap(const OceanParameters& params, CommandList c
 	device->BindUAVs(cs_uavs, 0, 1, cmd);
 	const GPUResource* cs_srvs[1] = { &buffer_Float_Dxyz };
 	device->BindResources(cs_srvs, TEXSLOT_ONDEMAND0, 1, cmd);
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&displacementMap, displacementMap.desc.layout, RESOURCE_STATE_UNORDERED_ACCESS),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
 	device->Dispatch(params.dmap_dim / OCEAN_COMPUTE_TILESIZE, params.dmap_dim / OCEAN_COMPUTE_TILESIZE, 1, cmd);
-	device->Barrier(barriers, arraysize(barriers), cmd);
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&displacementMap, RESOURCE_STATE_UNORDERED_ACCESS, displacementMap.desc.layout),
+			GPUBarrier::Memory(),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
 
 	// Update gradient map:
 	device->BindComputeShader(&updateGradientFoldingCS, cmd);
@@ -324,8 +342,20 @@ void wiOcean::UpdateDisplacementMap(const OceanParameters& params, CommandList c
 	device->BindUAVs(cs_uavs, 0, 1, cmd);
 	cs_srvs[0] = &displacementMap;
 	device->BindResources(cs_srvs, TEXSLOT_ONDEMAND0, 1, cmd);
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&gradientMap, gradientMap.desc.layout, RESOURCE_STATE_UNORDERED_ACCESS),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
 	device->Dispatch(params.dmap_dim / OCEAN_COMPUTE_TILESIZE, params.dmap_dim / OCEAN_COMPUTE_TILESIZE, 1, cmd);
-	device->Barrier(barriers, arraysize(barriers), cmd);
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&gradientMap, RESOURCE_STATE_UNORDERED_ACCESS, gradientMap.desc.layout),
+			GPUBarrier::Memory(),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
 
 	// Unbind
 

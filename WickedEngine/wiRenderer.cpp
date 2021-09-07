@@ -3672,6 +3672,7 @@ void UpdateRenderData(
 		{
 			Entity entity = vis.scene->meshes.GetEntity(i);
 			const MeshComponent& mesh = vis.scene->meshes[i];
+			barrier_stack[cmd].push_back(GPUBarrier::Buffer(&mesh.indexBuffer, RESOURCE_STATE_UNDEFINED, RESOURCE_STATE_INDEX_BUFFER | RESOURCE_STATE_SHADER_RESOURCE));
 
 			if (mesh.dirty_subsets)
 			{
@@ -3743,24 +3744,8 @@ void UpdateRenderData(
 	device->EventEnd(cmd);
 	wiProfiler::EndRange(range); // skinning
 
-	// GPU Particle systems simulation/sorting/culling:
-	if (!vis.visibleEmitters.empty())
-	{
-		range = wiProfiler::BeginRangeGPU("EmittedParticles - Simulate", cmd);
-		for (uint32_t emitterIndex : vis.visibleEmitters)
-		{
-			const wiEmittedParticle& emitter = vis.scene->emitters[emitterIndex];
-			Entity entity = vis.scene->emitters.GetEntity(emitterIndex);
-			const TransformComponent& transform = *vis.scene->transforms.GetComponent(entity);
-			const MaterialComponent& material = *vis.scene->materials.GetComponent(entity);
-			const MeshComponent* mesh = vis.scene->meshes.GetComponent(emitter.meshID);
-
-			emitter.UpdateGPU((uint32_t)vis.scene->materials.GetIndex(entity), transform, mesh, cmd);
-		}
-		wiProfiler::EndRange(range);
-	}
-
 	// Hair particle systems GPU simulation:
+	//	(This must be non-async too, as prepass will render hairs!)
 	if (!vis.visibleHairs.empty())
 	{
 		range = wiProfiler::BeginRangeGPU("HairParticles - Simulate", cmd);
@@ -3781,20 +3766,11 @@ void UpdateRenderData(
 		wiProfiler::EndRange(range);
 	}
 
-	// Compute water simulation:
-	if (vis.scene->weather.IsOceanEnabled())
-	{
-		range = wiProfiler::BeginRangeGPU("Ocean - Simulate", cmd);
-		vis.scene->ocean.UpdateDisplacementMap(vis.scene->weather.oceanParameters, cmd);
-		wiProfiler::EndRange(range);
-	}
-
 	if (vis.scene->weather.IsRealisticSky())
 	{
 		// Render Atmospheric Scattering textures for lighting and sky
 		RenderAtmosphericScatteringTextures(cmd);
 	}
-
 
 	// Precompute static volumetric cloud textures:
 	if (!volumetric_clouds_precomputed && vis.scene->weather.IsVolumetricClouds())
@@ -3932,13 +3908,67 @@ void UpdateRenderData(
 
 	device->EventEnd(cmd);
 }
+
+
+void UpdateRenderDataAsync(
+	const Visibility& vis,
+	const FrameCB& frameCB,
+	CommandList cmd
+)
+{
+	device->EventBegin("UpdateRenderDataAsync", cmd);
+
+	BindCommonResources(cmd);
+	UpdateCameraCB(
+		*vis.camera,
+		*vis.camera,
+		*vis.camera,
+		cmd
+	);
+
+	// GPU Particle systems simulation/sorting/culling:
+	if (!vis.visibleEmitters.empty())
+	{
+		auto range = wiProfiler::BeginRangeGPU("EmittedParticles - Simulate", cmd);
+		for (uint32_t emitterIndex : vis.visibleEmitters)
+		{
+			const wiEmittedParticle& emitter = vis.scene->emitters[emitterIndex];
+			Entity entity = vis.scene->emitters.GetEntity(emitterIndex);
+			const TransformComponent& transform = *vis.scene->transforms.GetComponent(entity);
+			const MaterialComponent& material = *vis.scene->materials.GetComponent(entity);
+			const MeshComponent* mesh = vis.scene->meshes.GetComponent(emitter.meshID);
+
+			emitter.UpdateGPU((uint32_t)vis.scene->materials.GetIndex(entity), transform, mesh, cmd);
+		}
+		wiProfiler::EndRange(range);
+	}
+
+	// Compute water simulation:
+	if (vis.scene->weather.IsOceanEnabled())
+	{
+		auto range = wiProfiler::BeginRangeGPU("Ocean - Simulate", cmd);
+		vis.scene->ocean.UpdateDisplacementMap(vis.scene->weather.oceanParameters, cmd);
+		wiProfiler::EndRange(range);
+	}
+
+	device->EventEnd(cmd);
+}
+
 void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 {
 	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 	{
-
 		if (!scene.TLAS.IsValid())
 			return;
+
+		device->CopyBuffer(
+			&scene.TLAS.desc.toplevel.instanceBuffer,
+			0,
+			&scene.TLAS_instancesUpload[device->GetBufferIndex()],
+			0,
+			scene.TLAS.desc.toplevel.instanceBuffer.desc.Size,
+			cmd
+		);
 
 		// BLAS:
 		{
@@ -3979,7 +4009,8 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 
 			{
 				GPUBarrier barriers[] = {
-					GPUBarrier::Memory(),
+					GPUBarrier::Buffer(&scene.TLAS.desc.toplevel.instanceBuffer, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE_COMPUTE),
+					GPUBarrier::Memory(), // sync BLAS
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
@@ -3994,29 +4025,6 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 			auto rangeCPU = wiProfiler::BeginRangeCPU("TLAS Update (CPU)");
 			auto range = wiProfiler::BeginRangeGPU("TLAS Update (GPU)", cmd);
 			device->EventBegin("TLAS Update", cmd);
-
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Buffer(&scene.TLAS.desc.toplevel.instanceBuffer, RESOURCE_STATE_SHADER_RESOURCE_COMPUTE, RESOURCE_STATE_COPY_DST),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
-
-			device->CopyBuffer(
-				&scene.TLAS.desc.toplevel.instanceBuffer,
-				0,
-				&scene.TLAS_instancesUpload[device->GetBufferIndex()],
-				0,
-				scene.instanceArraySize * device->GetTopLevelAccelerationStructureInstanceSize(),
-				cmd
-			);
-
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Buffer(&scene.TLAS.desc.toplevel.instanceBuffer, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE_COMPUTE),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
 
 			device->BuildRaytracingAccelerationStructure(&scene.TLAS, cmd, nullptr);
 

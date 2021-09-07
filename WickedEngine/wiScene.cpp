@@ -1579,7 +1579,8 @@ namespace wiScene
 				desc.toplevel.count = (uint32_t)instanceArraySize;
 				GPUBufferDesc bufdesc;
 				bufdesc.MiscFlags |= RESOURCE_MISC_RAY_TRACING;
-				bufdesc.Size = desc.toplevel.count * (uint32_t)device->GetTopLevelAccelerationStructureInstanceSize();
+				bufdesc.Stride = (uint32_t)device->GetTopLevelAccelerationStructureInstanceSize();
+				bufdesc.Size = bufdesc.Stride * desc.toplevel.count;
 				bool success = device->CreateBuffer(&bufdesc, nullptr, &desc.toplevel.instanceBuffer);
 				assert(success);
 				device->SetName(&desc.toplevel.instanceBuffer, "TLAS.instanceBuffer");
