@@ -2707,7 +2707,6 @@ void RenderImpostors(
 
 			for (auto& instanceIndex : impostor.instances)
 			{
-				const ShaderMeshInstance& instance = vis.scene->instanceData[instanceIndex];
 				const AABB& aabb = vis.scene->aabb_objects[instanceIndex];
 				if (!vis.camera->frustum.CheckBoxFast(aabb))
 				{
@@ -3305,26 +3304,50 @@ void UpdateRenderData(
 {
 	device->EventBegin("UpdateRenderData", cmd);
 
-	auto prof_updatebuffers_cpu = wiProfiler::BeginRangeCPU("Update Buffers (CPU)");
-	auto prof_updatebuffers_gpu = wiProfiler::BeginRangeGPU("Update Buffers (GPU)", cmd);
-
-	// Begin copy barriers:
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Buffer(&constantBuffers[CBTYPE_FRAME], RESOURCE_STATE_CONSTANT_BUFFER, RESOURCE_STATE_COPY_DST),
-			GPUBarrier::Buffer(&vis.scene->instanceBuffer, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_COPY_DST),
-			GPUBarrier::Buffer(&vis.scene->meshBuffer, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_COPY_DST),
-			GPUBarrier::Buffer(&vis.scene->materialBuffer, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_COPY_DST),
-			GPUBarrier::Buffer(&resourceBuffers[RBTYPE_ENTITYARRAY], RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_COPY_DST),
-			GPUBarrier::Buffer(&resourceBuffers[RBTYPE_MATRIXARRAY], RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_COPY_DST),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
+	auto prof_updatebuffer_cpu = wiProfiler::BeginRangeCPU("Update Buffers (CPU)");
+	auto prof_updatebuffer_gpu = wiProfiler::BeginRangeGPU("Update Buffers (GPU)", cmd);
 
 	device->UpdateBuffer(&constantBuffers[CBTYPE_FRAME], &frameCB, cmd);
-	device->UpdateBuffer(&vis.scene->instanceBuffer, vis.scene->instanceData.data(), cmd);
-	device->UpdateBuffer(&vis.scene->meshBuffer, vis.scene->meshData.data(), cmd);
-	device->UpdateBuffer(&vis.scene->materialBuffer, vis.scene->materialData.data(), cmd);
+	barrier_stack[cmd].push_back(GPUBarrier::Buffer(&constantBuffers[CBTYPE_FRAME], RESOURCE_STATE_COPY_DST, RESOURCE_STATE_CONSTANT_BUFFER));
+
+	if (vis.scene->instanceBuffer.IsValid() && vis.scene->instanceArraySize > 0)
+	{
+		device->CopyBuffer(
+			&vis.scene->instanceBuffer,
+			0,
+			&vis.scene->instanceUploadBuffer[device->GetBufferIndex()],
+			0,
+			vis.scene->instanceArraySize * sizeof(ShaderMeshInstance),
+			cmd
+		);
+		barrier_stack[cmd].push_back(GPUBarrier::Buffer(&vis.scene->instanceBuffer, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE));
+	}
+
+	if (vis.scene->meshBuffer.IsValid() && vis.scene->meshArraySize > 0)
+	{
+		device->CopyBuffer(
+			&vis.scene->meshBuffer,
+			0,
+			&vis.scene->meshUploadBuffer[device->GetBufferIndex()],
+			0,
+			vis.scene->meshArraySize * sizeof(ShaderMesh),
+			cmd
+		);
+		barrier_stack[cmd].push_back(GPUBarrier::Buffer(&vis.scene->meshBuffer, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE));
+	}
+
+	if (vis.scene->materialBuffer.IsValid() && vis.scene->materialArraySize > 0)
+	{
+		device->CopyBuffer(
+			&vis.scene->materialBuffer,
+			0,
+			&vis.scene->materialUploadBuffer[device->GetBufferIndex()],
+			0,
+			vis.scene->materialArraySize * sizeof(ShaderMaterial),
+			cmd
+		);
+		barrier_stack[cmd].push_back(GPUBarrier::Buffer(&vis.scene->materialBuffer, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE));
+	}
 
 	// Fill Entity Array with decals + envprobes + lights in the frustum:
 	{
@@ -3594,27 +3617,45 @@ void UpdateRenderData(
 		device->UpdateBuffer(&resourceBuffers[RBTYPE_ENTITYARRAY], entityArray, cmd, sizeof(ShaderEntity)*entityCounter);
 		device->UpdateBuffer(&resourceBuffers[RBTYPE_MATRIXARRAY], matrixArray, cmd, sizeof(XMMATRIX)*matrixCounter);
 
+		barrier_stack[cmd].push_back(GPUBarrier::Buffer(&resourceBuffers[RBTYPE_ENTITYARRAY], RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE));
+		barrier_stack[cmd].push_back(GPUBarrier::Buffer(&resourceBuffers[RBTYPE_MATRIXARRAY], RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE));
 
 		// Temporary array for GPU entities can be freed now:
 		GetRenderFrameAllocator(cmd).free(sizeof(ShaderEntity)*SHADER_ENTITY_COUNT);
 		GetRenderFrameAllocator(cmd).free(sizeof(XMMATRIX)*MATRIXARRAY_COUNT);
 	}
 
-	// End copy barriers:
+	// Upload bones for skinning to shader:
+	for (size_t i = 0; i < vis.scene->armatures.GetCount(); ++i)
 	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Buffer(&constantBuffers[CBTYPE_FRAME], RESOURCE_STATE_COPY_DST, RESOURCE_STATE_CONSTANT_BUFFER),
-			GPUBarrier::Buffer(&vis.scene->instanceBuffer, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE),
-			GPUBarrier::Buffer(&vis.scene->meshBuffer, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE),
-			GPUBarrier::Buffer(&vis.scene->materialBuffer, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE),
-			GPUBarrier::Buffer(&resourceBuffers[RBTYPE_ENTITYARRAY], RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE),
-			GPUBarrier::Buffer(&resourceBuffers[RBTYPE_MATRIXARRAY], RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
+		const ArmatureComponent& armature = vis.scene->armatures[i];
+		device->UpdateBuffer(&armature.boneBuffer, armature.boneData.data(), cmd);
+
+		barrier_stack[cmd].push_back(GPUBarrier::Buffer(&armature.boneBuffer, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE));
 	}
 
-	wiProfiler::EndRange(prof_updatebuffers_cpu);
-	wiProfiler::EndRange(prof_updatebuffers_gpu);
+	// Soft body updates:
+	for (size_t i = 0; i < vis.scene->softbodies.GetCount(); ++i)
+	{
+		Entity entity = vis.scene->softbodies.GetEntity(i);
+		const SoftBodyPhysicsComponent& softbody = vis.scene->softbodies[i];
+
+		const MeshComponent* mesh = vis.scene->meshes.GetComponent(entity);
+		if (mesh != nullptr)
+		{
+			device->UpdateBuffer(&mesh->streamoutBuffer_POS, softbody.vertex_positions_simulation.data(), cmd);
+			device->UpdateBuffer(&mesh->streamoutBuffer_TAN, softbody.vertex_tangents_simulation.data(), cmd);
+
+			barrier_stack[cmd].push_back(GPUBarrier::Buffer(&mesh->streamoutBuffer_POS, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE));
+			barrier_stack[cmd].push_back(GPUBarrier::Buffer(&mesh->streamoutBuffer_TAN, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE));
+		}
+	}
+
+	// Flush buffer updates:
+	barrier_stack_flush(cmd);
+
+	wiProfiler::EndRange(prof_updatebuffer_cpu);
+	wiProfiler::EndRange(prof_updatebuffer_gpu);
 
 	BindCommonResources(cmd);
 	UpdateCameraCB(
@@ -3627,16 +3668,6 @@ void UpdateRenderData(
 	auto range = wiProfiler::BeginRangeGPU("Skinning", cmd);
 	device->EventBegin("Skinning", cmd);
 	{
-		for (size_t i = 0; i < vis.scene->armatures.GetCount(); ++i)
-		{
-			const ArmatureComponent& armature = vis.scene->armatures[i];
-			// Upload bones for skinning to shader
-			device->UpdateBuffer(&armature.boneBuffer, armature.boneData.data(), cmd);
-
-			barrier_stack[cmd].push_back(GPUBarrier::Buffer(&armature.boneBuffer, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE));
-		}
-		barrier_stack_flush(cmd);
-
 		for (size_t i = 0; i < vis.scene->meshes.GetCount(); ++i)
 		{
 			Entity entity = vis.scene->meshes.GetEntity(i);
@@ -3704,23 +3735,6 @@ void UpdateRenderData(
 
 			}
 
-		}
-
-		// Soft body updates:
-		for (size_t i = 0; i < vis.scene->softbodies.GetCount(); ++i)
-		{
-			Entity entity = vis.scene->softbodies.GetEntity(i);
-			const SoftBodyPhysicsComponent& softbody = vis.scene->softbodies[i];
-
-			const MeshComponent* mesh = vis.scene->meshes.GetComponent(entity);
-			if (mesh != nullptr)
-			{
-				device->UpdateBuffer(&mesh->streamoutBuffer_POS, softbody.vertex_positions_simulation.data(), cmd);
-				device->UpdateBuffer(&mesh->streamoutBuffer_TAN, softbody.vertex_tangents_simulation.data(), cmd);
-
-				barrier_stack[cmd].push_back(GPUBarrier::Buffer(&mesh->streamoutBuffer_POS, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE));
-				barrier_stack[cmd].push_back(GPUBarrier::Buffer(&mesh->streamoutBuffer_TAN, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE));
-			}
 		}
 
 		barrier_stack_flush(cmd);
@@ -3987,7 +4001,16 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
-			device->UpdateBuffer(&scene.TLAS.desc.toplevel.instanceBuffer, scene.TLAS_instances.data(), cmd);
+
+			device->CopyBuffer(
+				&scene.TLAS.desc.toplevel.instanceBuffer,
+				0,
+				&scene.TLAS_instancesUpload[device->GetBufferIndex()],
+				0,
+				scene.instanceArraySize * device->GetTopLevelAccelerationStructureInstanceSize(),
+				cmd
+			);
+
 			{
 				GPUBarrier barriers[] = {
 					GPUBarrier::Buffer(&scene.TLAS.desc.toplevel.instanceBuffer, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE_COMPUTE),

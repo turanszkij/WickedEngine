@@ -958,8 +958,6 @@ void RenderPath3D::Render() const
 			);
 		}
 
-		device->RenderPassBegin(&renderpass_main, cmd);
-
 		auto range = wiProfiler::BeginRangeGPU("Opaque Scene", cmd);
 
 		Viewport vp;
@@ -983,6 +981,9 @@ void RenderPath3D::Render() const
 		device->BindResource(getAOEnabled() ? &rtAO : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_AO, cmd);
 		device->BindResource(getSSREnabled() || getRaytracedReflectionEnabled() ? &rtSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, cmd);
 		device->BindResource(&surfelGIResources.result, TEXSLOT_RENDERPATH_SURFELGI, cmd);
+
+		device->RenderPassBegin(&renderpass_main, cmd);
+
 		wiRenderer::DrawScene(visibility_main, RENDERPASS_MAIN, cmd, drawscene_flags);
 		wiRenderer::DrawSky(*scene, cmd);
 
