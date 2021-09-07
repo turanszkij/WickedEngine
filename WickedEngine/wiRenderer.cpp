@@ -2640,9 +2640,8 @@ void RenderMeshes(
 			}
 
 			// Write into actual GPU-buffer:
-			ShaderMeshInstancePointer poi;
-			poi.Create(instanceIndex, frustum_index, dither);
-			std::memcpy((ShaderMeshInstancePointer*)instances.data + instanceCount, &poi, sizeof(ShaderMeshInstancePointer));
+			ShaderMeshInstancePointer* poi = (ShaderMeshInstancePointer*)instances.data + instanceCount;
+			poi->Create(instanceIndex, frustum_index, dither);
 
 			instancedBatch.instanceCount++; // next instance in current InstancedBatch
 			instanceCount++;
@@ -2724,9 +2723,8 @@ void RenderImpostors(
 				float dither = std::max(0.0f, impostor.swapInDistance - distance) / impostor.fadeThresholdRadius;
 
 				// Write into actual GPU-buffer:
-				ShaderMeshInstancePointer poi;
-				poi.Create(instanceIndex, uint32_t(impostorID * impostorCaptureAngles * 3), dither);
-				std::memcpy((ShaderMeshInstancePointer*)instances.data + drawableInstanceCount, &poi, sizeof(ShaderMeshInstancePointer));
+				ShaderMeshInstancePointer* poi = (ShaderMeshInstancePointer*)instances.data + drawableInstanceCount;
+				poi->Create(instanceIndex, uint32_t(impostorID * impostorCaptureAngles * 3), dither);
 
 				drawableInstanceCount++;
 			}

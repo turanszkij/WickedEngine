@@ -68,6 +68,10 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 			device->SetName(&simulationBuffer, "simulationBuffer");
 
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
+			if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+			{
+				bd.MiscFlags |= RESOURCE_MISC_RAY_TRACING;
+			}
 			bd.Stride = sizeof(MeshComponent::Vertex_POS);
 			bd.Size = bd.Stride * 4 * strandCount * segmentCount;
 			device->CreateBuffer(&bd, nullptr, &vertexBuffer_POS[0]);
@@ -75,6 +79,7 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 			device->CreateBuffer(&bd, nullptr, &vertexBuffer_POS[1]);
 			device->SetName(&vertexBuffer_POS[1], "vertexBuffer_POS[1]");
 
+			bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
 			bd.Stride = sizeof(MeshComponent::Vertex_TEX);
 			bd.Size = bd.Stride * 4 * strandCount * segmentCount;
 			device->CreateBuffer(&bd, nullptr, &vertexBuffer_TEX);
@@ -82,6 +87,10 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 
 			bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 			bd.MiscFlags = RESOURCE_MISC_NONE;
+			if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+			{
+				bd.MiscFlags |= RESOURCE_MISC_RAY_TRACING;
+			}
 			bd.Format = FORMAT_R32_UINT;
 			bd.Stride = sizeof(uint);
 			bd.Size = bd.Stride * 6 * strandCount * segmentCount;
