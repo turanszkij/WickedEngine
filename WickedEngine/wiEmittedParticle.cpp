@@ -315,13 +315,6 @@ void wiEmittedParticle::UpdateGPU(uint32_t materialIndex, const TransformCompone
 				(mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
 			};
 			device->BindResources(resources, TEXSLOT_ONDEMAND0, arraysize(resources), cmd);
-
-			{
-				GPUBarrier barriers[] = {
-					GPUBarrier::Buffer(&mesh->indexBuffer, RESOURCE_STATE_INDEX_BUFFER, RESOURCE_STATE_SHADER_RESOURCE),
-				};
-				device->Barrier(barriers, arraysize(barriers), cmd);
-			}
 		}
 
 		GPUBarrier barrier_indirect_uav = GPUBarrier::Buffer(&indirectBuffers, RESOURCE_STATE_INDIRECT_ARGUMENT, RESOURCE_STATE_UNORDERED_ACCESS);
@@ -529,14 +522,6 @@ void wiEmittedParticle::UpdateGPU(uint32_t materialIndex, const TransformCompone
 			GPUBarrier::Buffer(&counterBuffer, RESOURCE_STATE_COPY_SRC, RESOURCE_STATE_SHADER_RESOURCE),
 			GPUBarrier::Buffer(&particleBuffer, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE),
 			GPUBarrier::Buffer(&aliveList[1], RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
-
-	if (mesh != nullptr)
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Buffer(&mesh->indexBuffer, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_INDEX_BUFFER),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}

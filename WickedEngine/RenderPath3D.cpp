@@ -609,36 +609,39 @@ void RenderPath3D::Render() const
 	cmd = device->BeginCommandList();
 	CommandList cmd_prepareframe = cmd;
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
-		RenderFrameSetUp(cmd);
+		wiRenderer::UpdateRenderData(visibility_main, frameCB, cmd);
 		});
 
-	if (scene->IsAccelerationStructureUpdateRequested())
-	{
-		// Acceleration structures:
-		//	async compute parallel with depth prepass
-		cmd = device->BeginCommandList(QUEUE_COMPUTE);
-		device->WaitCommandList(cmd, cmd_prepareframe);
-		wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
+	//	async compute parallel with depth prepass
+	cmd = device->BeginCommandList(QUEUE_COMPUTE);
+	device->WaitCommandList(cmd, cmd_prepareframe);
+	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
+		GraphicsDevice* device = wiRenderer::GetDevice();
+		device->BindResource(&depthBuffer_Copy1, TEXSLOT_DEPTH, cmd);
+		wiRenderer::UpdateRenderDataAsync(visibility_main, frameCB, cmd);
+
+		if (scene->IsAccelerationStructureUpdateRequested())
+		{
 			wiRenderer::UpdateRaytracingAccelerationStructures(*scene, cmd);
+		}
 
-			if (wiRenderer::GetSurfelGIEnabled())
-			{
-				wiRenderer::UpdateCameraCB(
-					*camera,
-					camera_previous,
-					camera_reflection,
-					cmd
-				);
-				wiRenderer::SurfelGI(
-					surfelGIResources,
-					*scene,
-					cmd
-				);
-			}
+		if (wiRenderer::GetSurfelGIEnabled())
+		{
+			wiRenderer::UpdateCameraCB(
+				*camera,
+				camera_previous,
+				camera_reflection,
+				cmd
+			);
+			wiRenderer::SurfelGI(
+				surfelGIResources,
+				*scene,
+				cmd
+			);
+		}
 
-			});
-	}
+		});
 
 	static const uint32_t drawscene_flags =
 		wiRenderer::DRAWSCENE_OPAQUE |
@@ -1072,14 +1075,6 @@ void RenderPath3D::Compose(CommandList cmd) const
 	}
 
 	RenderPath2D::Compose(cmd);
-}
-
-void RenderPath3D::RenderFrameSetUp(CommandList cmd) const
-{
-	GraphicsDevice* device = wiRenderer::GetDevice();
-
-	device->BindResource(&depthBuffer_Copy1, TEXSLOT_DEPTH, cmd);
-	wiRenderer::UpdateRenderData(visibility_main, frameCB, cmd);
 }
 
 void RenderPath3D::RenderAO(CommandList cmd) const

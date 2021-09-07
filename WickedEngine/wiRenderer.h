@@ -168,6 +168,13 @@ namespace wiRenderer
 		wiGraphics::CommandList cmd
 	);
 
+	// Updates those GPU states that can be async
+	void UpdateRenderDataAsync(
+		const Visibility& vis,
+		const FrameCB& frameCB,
+		wiGraphics::CommandList cmd
+	);
+
 	void UpdateRaytracingAccelerationStructures(const wiScene::Scene& scene, wiGraphics::CommandList cmd);
 
 	// Binds all common constant buffers and samplers that may be used in all shaders

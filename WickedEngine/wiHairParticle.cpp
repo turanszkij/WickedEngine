@@ -278,13 +278,6 @@ void wiHairParticle::UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex, c
 		};
 		device->BindResources(res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
 
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Buffer(&mesh.indexBuffer, RESOURCE_STATE_INDEX_BUFFER, RESOURCE_STATE_SHADER_RESOURCE),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
 		device->Dispatch(hcb.xHairNumDispatchGroups, 1, 1, cmd);
 
 		GPUBarrier barriers[] = {
@@ -315,13 +308,6 @@ void wiHairParticle::UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex, c
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 
-	}
-
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Buffer(&mesh.indexBuffer, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_INDEX_BUFFER),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
 	device->EventEnd(cmd);
