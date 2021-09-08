@@ -1,6 +1,8 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
+PUSHCONSTANT(postprocess, PostProcess);
+
 TEXTURE2D(input, float4, TEXSLOT_ONDEMAND0);
 
 RWTEXTURE2D(output, unorm float4, 0);
@@ -14,5 +16,5 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float4 right =	input[DTid.xy + int2(1, 0)];
 	float4 bottom = input[DTid.xy + int2(0, 1)];
 
-	output[DTid.xy] = saturate(center + (4 * center - top - bottom - left - right) * xPPParams0[0]);
+	output[DTid.xy] = saturate(center + (4 * center - top - bottom - left - right) * postprocess.params0[0]);
 }

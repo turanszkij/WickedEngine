@@ -1,6 +1,8 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
+PUSHCONSTANT(postprocess, PostProcess);
+
 TEXTURE2D(normals, float3, TEXSLOT_ONDEMAND0);
 TEXTURE2D(texture_depth_history, float, TEXSLOT_ONDEMAND1);
 STRUCTUREDBUFFER(tiles, uint4, TEXSLOT_ONDEMAND2);
@@ -18,15 +20,15 @@ groupshared uint light_index;
 
 int FFX_DNSR_Shadows_IsFirstFrame()
 {
-	return xPPParams0.w == 0;
+	return postprocess.params0.w == 0;
 }
 uint2 FFX_DNSR_Shadows_GetBufferDimensions()
 {
-	return xPPResolution;
+	return postprocess.resolution;
 }
 float2 FFX_DNSR_Shadows_GetInvBufferDimensions()
 {
-	return xPPResolution_rcp;
+	return postprocess.resolution_rcp;
 }
 float3 FFX_DNSR_Shadows_GetEye()
 {

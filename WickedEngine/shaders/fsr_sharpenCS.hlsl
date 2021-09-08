@@ -1,6 +1,8 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
+PUSHCONSTANT(fsr, FSR);
+
 #define A_GPU 1
 #define A_HLSL 1
 #include "ffx-fsr/ffx_a.h"
@@ -19,7 +21,7 @@ void FsrRcasInputF(inout AF1 r, inout AF1 g, inout AF1 b) {}
 void CurrFilter(int2 pos)
 {
 	AF3 c;
-	FsrRcasF(c.r, c.g, c.b, pos, xFSR_Const0);
+	FsrRcasF(c.r, c.g, c.b, pos, fsr.Const0);
 	if (Sample.x == 1)
 		c *= c;
 	output[pos] = float4(c, 1);

@@ -8,6 +8,8 @@
 #include "stochasticSSRHF.hlsli"
 #include "lightingHF.hlsli"
 
+PUSHCONSTANT(postprocess, PostProcess);
+
 TEXTURE2D(texture_depth_history, float, TEXSLOT_ONDEMAND2);
 
 RWTEXTURE2D(output, float4, 0);

@@ -1,6 +1,8 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
+PUSHCONSTANT(fsr, FSR);
+
 #define A_GPU 1
 #define A_HLSL 1
 #include "ffx-fsr/ffx_a.h"
@@ -21,7 +23,7 @@ AF4 FsrEasuBF(AF2 p) { AF4 res = input.GatherBlue(sampler_linear_clamp, p, int2(
 void CurrFilter(int2 pos)
 {
 	AF3 c;
-	FsrEasuF(c, pos, xFSR_Const0, xFSR_Const1, xFSR_Const2, xFSR_Const3);
+	FsrEasuF(c, pos, fsr.Const0, fsr.Const1, fsr.Const2, fsr.Const3);
 	if (Sample.x == 1)
 		c *= c;
 	output[pos] = float4(c, 1);

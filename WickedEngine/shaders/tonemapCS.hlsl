@@ -1,7 +1,7 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
-PUSHCONSTANT(push, PushConstantsTonemap);
+PUSHCONSTANT(tonemap_push, PushConstantsTonemap);
 
 // https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
 // sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT
@@ -45,26 +45,26 @@ float3 ACESFitted(float3 color)
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	const float2 uv = (DTid.xy + 0.5f) * push.xPPResolution_rcp;
-	float exposure = push.exposure;
-	const bool is_dither = push.dither != 0;
-	const bool is_colorgrading = push.texture_colorgrade_lookuptable >= 0;
-	const bool is_eyeadaption = push.texture_input_luminance >= 0;
-	const bool is_distortion = push.texture_input_distortion >= 0;
+	const float2 uv = (DTid.xy + 0.5f) * tonemap_push.resolution_rcp;
+	float exposure = tonemap_push.exposure;
+	const bool is_dither = tonemap_push.dither != 0;
+	const bool is_colorgrading = tonemap_push.texture_colorgrade_lookuptable >= 0;
+	const bool is_eyeadaption = tonemap_push.texture_input_luminance >= 0;
+	const bool is_distortion = tonemap_push.texture_input_distortion >= 0;
 
 	float2 distortion = 0;
 	[branch]
 	if (is_distortion)
 	{
-		distortion = bindless_textures[push.texture_input_distortion].SampleLevel(sampler_linear_clamp, uv, 0).rg;
+		distortion = bindless_textures[tonemap_push.texture_input_distortion].SampleLevel(sampler_linear_clamp, uv, 0).rg;
 	}
 
-	float4 hdr = bindless_textures[push.texture_input].SampleLevel(sampler_linear_clamp, uv + distortion, 0);
+	float4 hdr = bindless_textures[tonemap_push.texture_input].SampleLevel(sampler_linear_clamp, uv + distortion, 0);
 
 	[branch]
 	if (is_eyeadaption)
 	{
-		exposure *= push.eyeadaptionkey / max(bindless_textures[push.texture_input_luminance][uint2(0, 0)].r, 0.0001);
+		exposure *= tonemap_push.eyeadaptionkey / max(bindless_textures[tonemap_push.texture_input_luminance][uint2(0, 0)].r, 0.0001);
 	}
 
 	hdr.rgb *= exposure;
@@ -80,7 +80,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	if (is_colorgrading)
 	{
-		ldr.rgb = bindless_textures3D[push.texture_colorgrade_lookuptable].SampleLevel(sampler_linear_clamp, ldr.rgb, 0).rgb;
+		ldr.rgb = bindless_textures3D[tonemap_push.texture_colorgrade_lookuptable].SampleLevel(sampler_linear_clamp, ldr.rgb, 0).rgb;
 	}
 
 	if (is_dither)
@@ -89,5 +89,5 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		ldr.rgb += (dither((float2)DTid.xy) - 0.5f) / 64.0f;
 	}
 
-	bindless_rwtextures[push.texture_output][DTid.xy] = ldr;
+	bindless_rwtextures[tonemap_push.texture_output][DTid.xy] = ldr;
 }

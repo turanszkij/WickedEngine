@@ -23,7 +23,7 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 
     float3 prefilter;
 
-    const float2 uv = (pixel + 0.5f) * xPPResolution_rcp;
+    const float2 uv = (pixel + 0.5f) * postprocess.resolution_rcp;
 
 #ifdef DEPTHOFFIELD_EARLYEXIT
     prefilter = max(0, input.SampleLevel(sampler_point_clamp, uv, 0).rgb);
@@ -47,7 +47,7 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
     [branch]
     if (backgroundFactor < 1.0f)
     {
-        const float2 ringScale = 0.5f * coc * g_xCamera.ApertureShape * xPPResolution_rcp;
+        const float2 ringScale = 0.5f * coc * g_xCamera.ApertureShape * postprocess.resolution_rcp;
         [unroll]
         for (uint i = ringSampleCount[0]; i < ringSampleCount[1]; ++i)
         {

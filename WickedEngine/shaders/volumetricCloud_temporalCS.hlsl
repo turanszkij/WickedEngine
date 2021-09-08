@@ -1,6 +1,8 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
+PUSHCONSTANT(postprocess, PostProcess);
+
 TEXTURE2D(cloud_reproject, float4, TEXSLOT_ONDEMAND0);
 TEXTURE2D(cloud_reproject_depth, float2, TEXSLOT_ONDEMAND1);
 TEXTURE2D(cloud_history, float4, TEXSLOT_ONDEMAND2);
@@ -135,7 +137,7 @@ float getInverseLinearDepth(float lin, float near, float far)
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
+	const float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
 
 #if 0
 	
@@ -183,7 +185,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
     
 	float4 current = 0;
 	float4 currentMin, currentMax, currentAverage;
-	ResolverAABB(cloud_reproject, sampler_point_clamp, 0, temporalExposure, temporalScale, uv, xPPResolution, currentMin, currentMax, currentAverage, current);
+	ResolverAABB(cloud_reproject, sampler_point_clamp, 0, temporalExposure, temporalScale, uv, postprocess.resolution, currentMin, currentMax, currentAverage, current);
 
 	//previous = clip_aabb(currentMin.xyz, currentMax.xyz, clamp(currentAverage, currentMin, currentMax), previous);
 	previous = clip_aabb(currentMin, currentMax, previous);

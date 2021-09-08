@@ -3,6 +3,8 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
+PUSHCONSTANT(msao, MSAO);
+
 #ifdef INTERLEAVE_RESULT
 TEXTURE2DARRAY(texture_lineardepth_deinterleaved, float, TEXSLOT_ONDEMAND0);
 #else
@@ -34,8 +36,8 @@ float TestSamplePair(float frontDepth, float invRange, uint base, int offset)
     float disocclusion1 = DepthSamples[base + offset] * invRange - frontDepth;
     float disocclusion2 = DepthSamples[base - offset] * invRange - frontDepth;
 
-    float pseudoDisocclusion1 = saturate(xRejectFadeoff * disocclusion1);
-    float pseudoDisocclusion2 = saturate(xRejectFadeoff * disocclusion2);
+    float pseudoDisocclusion1 = saturate(msao.xRejectFadeoff * disocclusion1);
+    float pseudoDisocclusion2 = saturate(msao.xRejectFadeoff * disocclusion2);
 
     return saturate(
         clamp(disocclusion1, pseudoDisocclusion2, 1.0) +
@@ -82,9 +84,9 @@ float TestSamples(uint centerIdx, uint x, uint y, float invDepth, float invThick
 void main(uint3 Gid : SV_GroupID, uint GI : SV_GroupIndex, uint3 GTid : SV_GroupThreadID, uint3 DTid : SV_DispatchThreadID)
 {
 #if WIDE_SAMPLING
-    float2 QuadCenterUV = int2(DTid.xy + GTid.xy - 7) * xInvSliceDimension.xy;
+    float2 QuadCenterUV = int2(DTid.xy + GTid.xy - 7) * msao.xInvSliceDimension.xy;
 #else
-    float2 QuadCenterUV = int2(DTid.xy + GTid.xy - 3) * xInvSliceDimension.xy;
+    float2 QuadCenterUV = int2(DTid.xy + GTid.xy - 3) * msao.xInvSliceDimension.xy;
 #endif // WIDE_SAMPLING
 
     // Fetch four depths and store them in LDS
@@ -113,27 +115,27 @@ void main(uint3 Gid : SV_GroupID, uint GI : SV_GroupIndex, uint3 GTid : SV_Group
 
 #ifdef MSAO_SAMPLE_EXHAUSTIVELY
     // 68 samples:  sample all cells in *within* a circular radius of 5
-    ao += xSampleWeightTable[0].x * TestSamples(thisIdx, 1, 0, invThisDepth, xInvThicknessTable[0].x);
-    ao += xSampleWeightTable[0].y * TestSamples(thisIdx, 2, 0, invThisDepth, xInvThicknessTable[0].y);
-    ao += xSampleWeightTable[0].z * TestSamples(thisIdx, 3, 0, invThisDepth, xInvThicknessTable[0].z);
-    ao += xSampleWeightTable[0].w * TestSamples(thisIdx, 4, 0, invThisDepth, xInvThicknessTable[0].w);
-    ao += xSampleWeightTable[1].x * TestSamples(thisIdx, 1, 1, invThisDepth, xInvThicknessTable[1].x);
-    ao += xSampleWeightTable[2].x * TestSamples(thisIdx, 2, 2, invThisDepth, xInvThicknessTable[2].x);
-    ao += xSampleWeightTable[2].w * TestSamples(thisIdx, 3, 3, invThisDepth, xInvThicknessTable[2].w);
-    ao += xSampleWeightTable[1].y * TestSamples(thisIdx, 1, 2, invThisDepth, xInvThicknessTable[1].y);
-    ao += xSampleWeightTable[1].z * TestSamples(thisIdx, 1, 3, invThisDepth, xInvThicknessTable[1].z);
-    ao += xSampleWeightTable[1].w * TestSamples(thisIdx, 1, 4, invThisDepth, xInvThicknessTable[1].w);
-    ao += xSampleWeightTable[2].y * TestSamples(thisIdx, 2, 3, invThisDepth, xInvThicknessTable[2].y);
-    ao += xSampleWeightTable[2].z * TestSamples(thisIdx, 2, 4, invThisDepth, xInvThicknessTable[2].z);
+    ao += msao.xSampleWeightTable[0].x * TestSamples(thisIdx, 1, 0, invThisDepth, msao.xInvThicknessTable[0].x);
+    ao += msao.xSampleWeightTable[0].y * TestSamples(thisIdx, 2, 0, invThisDepth, msao.xInvThicknessTable[0].y);
+    ao += msao.xSampleWeightTable[0].z * TestSamples(thisIdx, 3, 0, invThisDepth, msao.xInvThicknessTable[0].z);
+    ao += msao.xSampleWeightTable[0].w * TestSamples(thisIdx, 4, 0, invThisDepth, msao.xInvThicknessTable[0].w);
+    ao += msao.xSampleWeightTable[1].x * TestSamples(thisIdx, 1, 1, invThisDepth, msao.xInvThicknessTable[1].x);
+    ao += msao.xSampleWeightTable[2].x * TestSamples(thisIdx, 2, 2, invThisDepth, msao.xInvThicknessTable[2].x);
+    ao += msao.xSampleWeightTable[2].w * TestSamples(thisIdx, 3, 3, invThisDepth, msao.xInvThicknessTable[2].w);
+    ao += msao.xSampleWeightTable[1].y * TestSamples(thisIdx, 1, 2, invThisDepth, msao.xInvThicknessTable[1].y);
+    ao += msao.xSampleWeightTable[1].z * TestSamples(thisIdx, 1, 3, invThisDepth, msao.xInvThicknessTable[1].z);
+    ao += msao.xSampleWeightTable[1].w * TestSamples(thisIdx, 1, 4, invThisDepth, msao.xInvThicknessTable[1].w);
+    ao += msao.xSampleWeightTable[2].y * TestSamples(thisIdx, 2, 3, invThisDepth, msao.xInvThicknessTable[2].y);
+    ao += msao.xSampleWeightTable[2].z * TestSamples(thisIdx, 2, 4, invThisDepth, msao.xInvThicknessTable[2].z);
 #else // SAMPLE_CHECKER
     // 36 samples:  sample every-other cell in a checker board pattern
-    ao += xSampleWeightTable[0].y * TestSamples(thisIdx, 2, 0, invThisDepth, xInvThicknessTable[0].y);
-    ao += xSampleWeightTable[0].w * TestSamples(thisIdx, 4, 0, invThisDepth, xInvThicknessTable[0].w);
-    ao += xSampleWeightTable[1].x * TestSamples(thisIdx, 1, 1, invThisDepth, xInvThicknessTable[1].x);
-    ao += xSampleWeightTable[2].x * TestSamples(thisIdx, 2, 2, invThisDepth, xInvThicknessTable[2].x);
-    ao += xSampleWeightTable[2].w * TestSamples(thisIdx, 3, 3, invThisDepth, xInvThicknessTable[2].w);
-    ao += xSampleWeightTable[1].z * TestSamples(thisIdx, 1, 3, invThisDepth, xInvThicknessTable[1].z);
-    ao += xSampleWeightTable[2].z * TestSamples(thisIdx, 2, 4, invThisDepth, xInvThicknessTable[2].z);
+    ao += msao.xSampleWeightTable[0].y * TestSamples(thisIdx, 2, 0, invThisDepth, msao.xInvThicknessTable[0].y);
+    ao += msao.xSampleWeightTable[0].w * TestSamples(thisIdx, 4, 0, invThisDepth, msao.xInvThicknessTable[0].w);
+    ao += msao.xSampleWeightTable[1].x * TestSamples(thisIdx, 1, 1, invThisDepth, msao.xInvThicknessTable[1].x);
+    ao += msao.xSampleWeightTable[2].x * TestSamples(thisIdx, 2, 2, invThisDepth, msao.xInvThicknessTable[2].x);
+    ao += msao.xSampleWeightTable[2].w * TestSamples(thisIdx, 3, 3, invThisDepth, msao.xInvThicknessTable[2].w);
+    ao += msao.xSampleWeightTable[1].z * TestSamples(thisIdx, 1, 3, invThisDepth, msao.xInvThicknessTable[1].z);
+    ao += msao.xSampleWeightTable[2].z * TestSamples(thisIdx, 2, 4, invThisDepth, msao.xInvThicknessTable[2].z);
 #endif // MSAO_SAMPLE_EXHAUSTIVELY
 
 #ifdef INTERLEAVE_RESULT
@@ -141,5 +143,5 @@ void main(uint3 Gid : SV_GroupID, uint GI : SV_GroupIndex, uint3 GTid : SV_Group
 #else
     uint2 OutPixel = DTid.xy;
 #endif // INTERLEAVE_RESULT
-    output[OutPixel] = ao * xRcpAccentuation;
+    output[OutPixel] = ao * msao.xRcpAccentuation;
 }

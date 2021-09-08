@@ -4,6 +4,8 @@
 // Define this to use reduced precision, but faster depth buffer:
 #define USE_LINEARDEPTH
 
+PUSHCONSTANT(postprocess, PostProcess);
+
 RWTEXTURE2D(output, unorm float, 0);
 
 static const uint TILE_BORDER = 1;
@@ -18,7 +20,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	for (uint t = groupIndex; t < TILE_SIZE * TILE_SIZE; t += POSTPROCESS_BLOCKSIZE * POSTPROCESS_BLOCKSIZE)
 	{
 		const uint2 pixel = tile_upperleft + unflatten2D(t, TILE_SIZE);
-		const float2 uv = (pixel + 0.5f) * xPPResolution_rcp;
+		const float2 uv = (pixel + 0.5f) * postprocess.resolution_rcp;
 		const float depth = texture_depth.SampleLevel(sampler_linear_clamp, uv, 1);
 		const float3 position = reconstructPosition(uv, depth, g_xCamera.InvP); // specify matrix to get view-space position!
 		tile_XY[t] = position.xy;
@@ -75,7 +77,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	const float3 P = float3(tile_XY[cross_idx[0]], tile_Z[cross_idx[0]]);
 	const float3 normal = normalize(cross(p2 - P, p1 - P));
 
-	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
+	const float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
 
 	float seed = 1;
 	const float3 noise = float3(rand(seed, uv), rand(seed, uv), rand(seed, uv)) * 2 - 1;

@@ -3,6 +3,8 @@
 #include "ShaderInterop_Postprocess.h"
 #include "raytracingHF.hlsli"
 
+PUSHCONSTANT(postprocess, PostProcess);
+
 STRUCTUREDBUFFER(EntityTiles, uint, TEXSLOT_RENDERPATH_ENTITYTILES);
 
 static const uint MAX_RTSHADOWS = 16;
@@ -21,7 +23,7 @@ groupshared float tile_Z[TILE_SIZE * TILE_SIZE];
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint groupIndex : SV_GroupIndex)
 {
-	const float2 uv = ((float2)DTid.xy + 0.5) * xPPResolution_rcp;
+	const float2 uv = ((float2)DTid.xy + 0.5) * postprocess.resolution_rcp;
 	const float depth = texture_depth.SampleLevel(sampler_linear_clamp, uv, 0);
 	if (depth == 0)
 		return;
@@ -30,11 +32,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	uint flatTileIdx = 0;
 	if (GTid.y < 4)
 	{
-		flatTileIdx = flatten2D(Gid.xy * uint2(1, 2) + uint2(0, 0), (xPPResolution + uint2(7, 3)) / uint2(8, 4));
+		flatTileIdx = flatten2D(Gid.xy * uint2(1, 2) + uint2(0, 0), (postprocess.resolution + uint2(7, 3)) / uint2(8, 4));
 	}
 	else
 	{
-		flatTileIdx = flatten2D(Gid.xy * uint2(1, 2) + uint2(0, 1), (xPPResolution + uint2(7, 3)) / uint2(8, 4));
+		flatTileIdx = flatten2D(Gid.xy * uint2(1, 2) + uint2(0, 1), (postprocess.resolution + uint2(7, 3)) / uint2(8, 4));
 	}
 	output_tiles[flatTileIdx] = 0;
 #endif // RTSHADOW
@@ -66,8 +68,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 #ifndef RTSHADOW
 	ray.Origin = mul(g_xCamera.View, float4(ray.Origin, 1)).xyz;
 
-	const float range = xPPParams0.x;
-	const uint samplecount = xPPParams0.y;
+	const float range = postprocess.params0.x;
+	const uint samplecount = postprocess.params0.y;
 	const float thickness = 0.1;
 	const float stepsize = range / samplecount;
 	const float offset = abs(dither(DTid.xy + GetTemporalAASampleRotation()));

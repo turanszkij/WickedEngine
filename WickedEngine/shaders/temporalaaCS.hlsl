@@ -1,6 +1,8 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
+PUSHCONSTANT(postprocess, PostProcess);
+
 TEXTURE2D(input_current, float3, TEXSLOT_ONDEMAND0);
 TEXTURE2D(input_history, float3, TEXSLOT_ONDEMAND1);
 TEXTURE2D(texture_depth_history, float, TEXSLOT_ONDEMAND2);
@@ -21,7 +23,7 @@ groupshared uint tile_B_depth[TILE_SIZE*TILE_SIZE];
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
-	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
+	const float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
 	float3 neighborhoodMin = 100000;
 	float3 neighborhoodMax = -100000;
 	float3 current;

@@ -23,6 +23,8 @@
  *
  */
 
+PUSHCONSTANT(postprocess, PostProcess);
+
 TEXTURE3D(texture_shapeNoise, float4, TEXSLOT_ONDEMAND1);
 TEXTURE3D(texture_detailNoise, float4, TEXSLOT_ONDEMAND2);
 TEXTURE2D(texture_curlNoise, float4, TEXSLOT_ONDEMAND3);
@@ -576,7 +578,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	int checkerBoardIndex = ComputeCheckerBoardIndex(DTid.xy, subPixelIndex);
 	uint2 halfResCoord = DTid.xy * 2 + g_HalfResIndexToCoordinateOffset[checkerBoardIndex];
 
-	const float2 uv = (halfResCoord + 0.5) * xPPParams0.zw;
+	const float2 uv = (halfResCoord + 0.5) * postprocess.params0.zw;
 	
 	float x = uv.x * 2 - 1;
 	float y = (1 - uv.y) * 2 - 1;
