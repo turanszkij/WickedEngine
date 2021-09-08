@@ -441,6 +441,17 @@ void WeatherWindow::Create(EditorComponent* editor)
 		});
 	AddWidget(&coverageMinimumSlider);
 
+	MaxStepCountSlider.Create(16, 2048, 256, 2048 - 16, "Max Step Count: ");
+	MaxStepCountSlider.SetSize(XMFLOAT2(100, hei));
+	MaxStepCountSlider.SetPos(XMFLOAT2(x + 150, y += step));
+	MaxStepCountSlider.SetTooltip("Increases the Quality & Stability of Clouds");
+	MaxStepCountSlider.OnSlide([&](wiEventArgs args) {
+		MaxStepCountSlider.SetValue(float(wiMath::GetNextPowerOfTwo(uint32_t(args.fValue))));
+		auto& weather = GetWeather();
+		weather.volumetricCloudParameters.MaxStepCount = float(wiMath::GetNextPowerOfTwo(uint32_t(args.fValue)));
+		});
+	AddWidget(&MaxStepCountSlider);
+
 
 	preset0Button.Create("WeatherPreset - Default");
 	preset0Button.SetTooltip("Apply this weather preset to the world.");

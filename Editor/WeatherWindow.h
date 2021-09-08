@@ -53,6 +53,7 @@ public:
 	wiCheckBox volumetricCloudsCheckBox;
 	wiSlider coverageAmountSlider;
 	wiSlider coverageMinimumSlider;
+	wiSlider MaxStepCountSlider;
 
 	wiButton preset0Button;
 	wiButton preset1Button;
