@@ -1,6 +1,8 @@
 #ifndef WI_DEPTHOFFIELD_HF
 #define WI_DEPTHOFFIELD_HF
 
+PUSHCONSTANT(postprocess, PostProcess);
+
 inline float get_coc(in float linear_depth)
 {
     return min(dof_maxcoc, dof_cocscale * g_xCamera.ApertureSize * pow(abs(1 - g_xCamera.FocalLength / (linear_depth * g_xCamera.ZFarP)), 2.0f));

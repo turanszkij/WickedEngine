@@ -1,6 +1,8 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
+PUSHCONSTANT(postprocess, PostProcess);
+
 TEXTURE2D(input, float4, TEXSLOT_ONDEMAND0);
 
 RWTEXTURE2D(output, float4, 0);
@@ -11,13 +13,13 @@ static const uint UNROLL_GRANULARITY = 8;
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
+	float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
 
 	float3 color = input.SampleLevel(sampler_linear_clamp, uv, 0).rgb;
 
-	float2 lightPos = xPPParams1.xy;
+	float2 lightPos = postprocess.params1.xy;
 	float2 deltaTexCoord =  uv - lightPos;
-	deltaTexCoord *= xPPParams0.x / NUM_SAMPLES;
+	deltaTexCoord *= postprocess.params0.x / NUM_SAMPLES;
 	float illuminationDecay = 1.0f;
 	
 	[loop] // loop big part (balance register pressure)
@@ -28,13 +30,13 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		{
 			uv.xy -= deltaTexCoord;
 			float3 sam = input.SampleLevel(sampler_linear_clamp, uv.xy, 0).rgb;
-			sam *= illuminationDecay * xPPParams0.y;
+			sam *= illuminationDecay * postprocess.params0.y;
 			color.rgb += sam;
-			illuminationDecay *= xPPParams0.z;
+			illuminationDecay *= postprocess.params0.z;
 		}
 	}
 
-	color*= xPPParams0.w;
+	color*= postprocess.params0.w;
 
 	output[DTid.xy] = float4(color, 1);
 }

@@ -1,15 +1,17 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
+PUSHCONSTANT(postprocess, PostProcess);
+
 TEXTURE2D(input, float, TEXSLOT_ONDEMAND0);
 
 float4 main(float4 pos : SV_Position, float2 uv : TEXCOORD) : SV_TARGET
 {
 	const float middle = input.SampleLevel(sampler_linear_clamp, uv, 0);
 
-	const float outlineThickness = xPPParams0.y;
-	const float4 outlineColor = xPPParams1;
-	const float outlineThreshold = xPPParams0.x * middle;
+	const float outlineThickness = postprocess.params0.y;
+	const float4 outlineColor = postprocess.params1;
+	const float outlineThreshold = postprocess.params0.x * middle;
 
 	float2 dim;
 	input.GetDimensions(dim.x, dim.y);

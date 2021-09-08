@@ -2,6 +2,8 @@
 #include "ShaderInterop_Postprocess.h"
 // Reduce log luminances into 1x1
 
+PUSHCONSTANT(postprocess, PostProcess);
+
 TEXTURE2D(input, float, TEXSLOT_ONDEMAND0);
 
 RWTEXTURE2D(output, float, 0);

@@ -3,6 +3,8 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
+PUSHCONSTANT(msao_upsample, MSAO_UPSAMPLE);
+
 TEXTURE2D(LoResDB, float, TEXSLOT_ONDEMAND0);
 TEXTURE2D(HiResDB, float, TEXSLOT_ONDEMAND1);
 TEXTURE2D(LoResAO1, float, TEXSLOT_ONDEMAND2);
@@ -50,8 +52,8 @@ float SmartBlur(float a, float b, float c, float d, float e, bool Left, bool Mid
 
 bool CompareDeltas(float d1, float d2, float l1, float l2)
 {
-    float temp = d1 * d2 + StepSize;
-    return temp * temp > l1 * l2 * kBlurTolerance;
+    float temp = d1 * d2 + msao_upsample.StepSize;
+    return temp * temp > l1 * l2 * msao_upsample.kBlurTolerance;
 }
 
 void BlurHorizontally(uint leftMostIndex)
@@ -79,12 +81,12 @@ void BlurHorizontally(uint leftMostIndex)
     float d45 = d5 - d4;
     float d56 = d6 - d5;
 
-    float l01 = d01 * d01 + StepSize;
-    float l12 = d12 * d12 + StepSize;
-    float l23 = d23 * d23 + StepSize;
-    float l34 = d34 * d34 + StepSize;
-    float l45 = d45 * d45 + StepSize;
-    float l56 = d56 * d56 + StepSize;
+    float l01 = d01 * d01 + msao_upsample.StepSize;
+    float l12 = d12 * d12 + msao_upsample.StepSize;
+    float l23 = d23 * d23 + msao_upsample.StepSize;
+    float l34 = d34 * d34 + msao_upsample.StepSize;
+    float l45 = d45 * d45 + msao_upsample.StepSize;
+    float l56 = d56 * d56 + msao_upsample.StepSize;
 
     bool c02 = CompareDeltas(d01, d12, l01, l12);
     bool c13 = CompareDeltas(d12, d23, l12, l23);
@@ -119,11 +121,11 @@ void BlurVertically(uint topMostIndex)
     float d34 = d4 - d3;
     float d45 = d5 - d4;
 
-    float l01 = d01 * d01 + StepSize;
-    float l12 = d12 * d12 + StepSize;
-    float l23 = d23 * d23 + StepSize;
-    float l34 = d34 * d34 + StepSize;
-    float l45 = d45 * d45 + StepSize;
+    float l01 = d01 * d01 + msao_upsample.StepSize;
+    float l12 = d12 * d12 + msao_upsample.StepSize;
+    float l23 = d23 * d23 + msao_upsample.StepSize;
+    float l34 = d34 * d34 + msao_upsample.StepSize;
+    float l45 = d45 * d45 + msao_upsample.StepSize;
 
     bool c02 = CompareDeltas(d01, d12, l01, l12);
     bool c13 = CompareDeltas(d12, d23, l12, l23);
@@ -144,9 +146,9 @@ void BlurVertically(uint topMostIndex)
 // buffer has a lot of small holes in it causing the low-res depth buffer to inaccurately represent it.
 float BilateralUpsample(float HiDepth, float HiAO, float4 LowDepths, float4 LowAO)
 {
-    float4 weights = float4(9, 3, 1, 3) / (abs(HiDepth - LowDepths) + kUpsampleTolerance);
-    float TotalWeight = dot(weights, 1) + NoiseFilterStrength;
-    float WeightedSum = dot(LowAO, weights) + NoiseFilterStrength;// * HiAO;
+    float4 weights = float4(9, 3, 1, 3) / (abs(HiDepth - LowDepths) + msao_upsample.kUpsampleTolerance);
+    float TotalWeight = dot(weights, 1) + msao_upsample.NoiseFilterStrength;
+    float WeightedSum = dot(LowAO, weights) + msao_upsample.NoiseFilterStrength;// * HiAO;
     return HiAO * WeightedSum / TotalWeight;
 }
 
@@ -156,7 +158,7 @@ void main(uint3 Gid : SV_GroupID, uint GI : SV_GroupIndex, uint3 GTid : SV_Group
     //
     // Load 4 pixels per thread into LDS to fill the 16x16 LDS cache with depth and AO
     //
-    PrefetchData(GTid.x << 1 | GTid.y << 5, int2(DTid.xy + GTid.xy - 2) * InvLowResolution);
+    PrefetchData(GTid.x << 1 | GTid.y << 5, int2(DTid.xy + GTid.xy - 2) * msao_upsample.InvLowResolution);
     GroupMemoryBarrierWithGroupSync();
 
     // Goal:  End up with a 9x9 patch that is blurred so we can upsample.  Blur radius is 2 pixels, so start with 13x13 area.
@@ -182,8 +184,8 @@ void main(uint3 Gid : SV_GroupID, uint GI : SV_GroupIndex, uint3 GTid : SV_Group
     float4 LoSSAOs = float4(AOCache1[Idx0 + 16], AOCache1[Idx0 + 17], AOCache1[Idx0 + 1], AOCache1[Idx0]);
 
     // We work on a quad of pixels at once because then we can gather 4 each of high and low-res depth values
-    float2 UV0 = DTid.xy * InvLowResolution;
-    float2 UV1 = DTid.xy * 2 * InvHighResolution;
+    float2 UV0 = DTid.xy * msao_upsample.InvLowResolution;
+    float2 UV1 = DTid.xy * 2 * msao_upsample.InvHighResolution;
 
 #ifdef BLEND_WITH_HIGHER_RESOLUTION
     float4 HiSSAOs = HiResAO.Gather(sampler_linear_clamp, UV1);

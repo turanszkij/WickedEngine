@@ -5,6 +5,8 @@
 #define UPSAMPLE_FORMAT float4
 #endif // UPSAMPLE_FORMAT
 
+PUSHCONSTANT(postprocess, PostProcess);
+
 TEXTURE2D(input, UPSAMPLE_FORMAT, TEXSLOT_ONDEMAND0);
 
 // Note: this post process can be either a pixel shader or compute shader, depending on use case
@@ -21,14 +23,14 @@ RWTEXTURE2D(output, UPSAMPLE_FORMAT, 0);
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	const uint2 pixel = DTid.xy;
-	const float2 uv = (pixel + 0.5f) * xPPResolution_rcp;
+	const float2 uv = (pixel + 0.5f) * postprocess.resolution_rcp;
 #endif // USE_PIXELSHADER
 
 
-	const float threshold = xPPParams0.x;
-	const float lowres_depthchain_mip = xPPParams0.w;
-	const float2 lowres_size = xPPParams1.xy;
-	const float2 lowres_texel_size = xPPParams1.zw;
+	const float threshold = postprocess.params0.x;
+	const float lowres_depthchain_mip = postprocess.params0.w;
+	const float2 lowres_size = postprocess.params1.xy;
+	const float2 lowres_texel_size = postprocess.params1.zw;
 
 	const float2 uv00 = uv - lowres_texel_size * 0.5;
 	const float2 uv10 = uv00 + float2(lowres_texel_size.x, 0);

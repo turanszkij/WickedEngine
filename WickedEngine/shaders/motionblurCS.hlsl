@@ -1,6 +1,8 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
+PUSHCONSTANT(postprocess, PostProcess);
+
 // Implementation based on Jorge Jimenez Siggraph 2014 Next Generation Post Processing in Call of Duty Advanced Warfare
 
 //#define DEBUG_TILING
@@ -66,15 +68,15 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 	const float center_velocity_magnitude = length(center_velocity);
 	const float center_depth = texture_lineardepth[pixel];
 
-	const float2 uv = (pixel + 0.5f) * xPPResolution_rcp;
+	const float2 uv = (pixel + 0.5f) * postprocess.resolution_rcp;
 
 	float seed = 12345;
 	const float random_direction = rand(seed, uv) * 0.5f + 0.5f;
 
 #ifdef MOTIONBLUR_CHEAP
-	const float2 sampling_direction = center_velocity * random_direction * xPPResolution_rcp;
+	const float2 sampling_direction = center_velocity * random_direction * postprocess.resolution_rcp;
 #else
-	const float2 sampling_direction = neighborhood_velocity * random_direction * xPPResolution_rcp;
+	const float2 sampling_direction = neighborhood_velocity * random_direction * postprocess.resolution_rcp;
 #endif // MOTIONBLUR_CHEAP
 
 	const float range = 7.5f;

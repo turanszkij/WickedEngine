@@ -3,6 +3,8 @@
 #include "stochasticSSRHF.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
+PUSHCONSTANT(postprocess, PostProcess);
+
 TEXTURE2D(texture_raytrace, float4, TEXSLOT_ONDEMAND0);
 TEXTURE2D(texture_main, float4, TEXSLOT_ONDEMAND1);
 
@@ -90,7 +92,7 @@ void GetSampleInfo(float2 velocity, float2 neighborUV, float2 uv, float3 P, floa
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
+	const float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
 	const float depth = texture_depth.SampleLevel(sampler_linear_clamp, uv, 0);
 	if (depth == 0.0f)
 		return;
@@ -158,7 +160,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			if (uint(abs(x) + abs(y)) % 2 == 0)
 				continue;
 			
-			float2 offsetUV = float2(x, y) * xPPResolution_rcp * SSRResolveSpatialSize;
+			float2 offsetUV = float2(x, y) * postprocess.resolution_rcp * SSRResolveSpatialSize;
 			float2 neighborUV = uv + offsetUV;
             
 			float4 sampleColor;
@@ -189,7 +191,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
     [unroll]
 	for (uint i = 0; i < NUM_RESOLVE; i++)
 	{
-		float2 offsetUV = spatialReuseOffsets3x3[i] * xPPResolution_rcp * SSRResolveSpatialSize;
+		float2 offsetUV = spatialReuseOffsets3x3[i] * postprocess.resolution_rcp * SSRResolveSpatialSize;
 		float2 neighborUV = uv + offsetUV;
         
 		float4 sampleColor;

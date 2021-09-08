@@ -3695,6 +3695,9 @@ using namespace Vulkan_Internal;
 					wiHelper::hash_combine(internal_state->binding_hash, x.descriptorType);
 					wiHelper::hash_combine(internal_state->binding_hash, x.stageFlags);
 				}
+				wiHelper::hash_combine(internal_state->binding_hash, internal_state->pushconstants.offset);
+				wiHelper::hash_combine(internal_state->binding_hash, internal_state->pushconstants.size);
+				wiHelper::hash_combine(internal_state->binding_hash, internal_state->pushconstants.stageFlags);
 
 				pso_layout_cache_mutex.lock();
 				if (pso_layout_cache[internal_state->binding_hash].pipelineLayout == VK_NULL_HANDLE)
@@ -4100,8 +4103,7 @@ using namespace Vulkan_Internal;
 				{
 					internal_state->pushconstants.offset = std::min(internal_state->pushconstants.offset, shader_internal->pushconstants.offset);
 					internal_state->pushconstants.size = std::max(internal_state->pushconstants.size, shader_internal->pushconstants.size);
-					//internal_state->pushconstants.stageFlags |= shader_internal->pushconstants.stageFlags;
-					internal_state->pushconstants.stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS; // combining only the used stage flags gives some validation errors for some reason while rendering...
+					internal_state->pushconstants.stageFlags |= shader_internal->pushconstants.stageFlags;
 				}
 			};
 
@@ -4160,6 +4162,10 @@ using namespace Vulkan_Internal;
 				wiHelper::hash_combine(internal_state->binding_hash, x.descriptorType);
 				wiHelper::hash_combine(internal_state->binding_hash, x.stageFlags);
 			}
+			wiHelper::hash_combine(internal_state->binding_hash, internal_state->pushconstants.offset);
+			wiHelper::hash_combine(internal_state->binding_hash, internal_state->pushconstants.size);
+			wiHelper::hash_combine(internal_state->binding_hash, internal_state->pushconstants.stageFlags);
+
 
 			pso_layout_cache_mutex.lock();
 			if (pso_layout_cache[internal_state->binding_hash].pipelineLayout == VK_NULL_HANDLE)

@@ -4057,7 +4057,7 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 }
 
 
-void OcclusionCulling_Reset(const Visibility& vis, wiGraphics::CommandList cmd)
+void OcclusionCulling_Reset(const Visibility& vis, CommandList cmd)
 {
 	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled())
 	{
@@ -4123,7 +4123,7 @@ void OcclusionCulling_Render(const CameraComponent& camera_previous, const Visib
 
 	wiProfiler::EndRange(range); // Occlusion Culling Render
 }
-void OcclusionCulling_Resolve(const Visibility& vis, wiGraphics::CommandList cmd)
+void OcclusionCulling_Resolve(const Visibility& vis, CommandList cmd)
 {
 	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled())
 	{
@@ -7426,9 +7426,9 @@ const Texture* ComputeLuminance(
 	device->EventBegin("Compute Luminance", cmd);
 	auto range = wiProfiler::BeginRangeGPU("Luminance", cmd);
 
-	PostProcessCB cb;
-	cb.luminance_adaptionrate = adaption_rate;
-	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	PostProcess postprocess;
+	luminance_adaptionrate = adaption_rate;
+	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	// Pass 1 : Compute log luminance and reduction
 	{
@@ -7520,16 +7520,16 @@ void ComputeShadingRateClassification(
 
 	const TextureDesc& desc = output.GetDesc();
 
-	ShadingRateClassificationCB cb = {}; // zero init the shading rates!
-	cb.xShadingRateTileSize = device->GetVariableRateShadingTileSize();
-	device->WriteShadingRateValue(SHADING_RATE_1X1, &cb.SHADING_RATE_1X1);
-	device->WriteShadingRateValue(SHADING_RATE_1X2, &cb.SHADING_RATE_1X2);
-	device->WriteShadingRateValue(SHADING_RATE_2X1, &cb.SHADING_RATE_2X1);
-	device->WriteShadingRateValue(SHADING_RATE_2X2, &cb.SHADING_RATE_2X2);
-	device->WriteShadingRateValue(SHADING_RATE_2X4, &cb.SHADING_RATE_2X4);
-	device->WriteShadingRateValue(SHADING_RATE_4X2, &cb.SHADING_RATE_4X2);
-	device->WriteShadingRateValue(SHADING_RATE_4X4, &cb.SHADING_RATE_4X4);
-	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	ShadingRateClassification shadingrate = {}; // zero init the shading rates!
+	shadingrate.TileSize = device->GetVariableRateShadingTileSize();
+	device->WriteShadingRateValue(SHADING_RATE_1X1, &shadingrate.SHADING_RATE_1X1);
+	device->WriteShadingRateValue(SHADING_RATE_1X2, &shadingrate.SHADING_RATE_1X2);
+	device->WriteShadingRateValue(SHADING_RATE_2X1, &shadingrate.SHADING_RATE_2X1);
+	device->WriteShadingRateValue(SHADING_RATE_2X2, &shadingrate.SHADING_RATE_2X2);
+	device->WriteShadingRateValue(SHADING_RATE_2X4, &shadingrate.SHADING_RATE_2X4);
+	device->WriteShadingRateValue(SHADING_RATE_4X2, &shadingrate.SHADING_RATE_4X2);
+	device->WriteShadingRateValue(SHADING_RATE_4X4, &shadingrate.SHADING_RATE_4X4);
+	device->PushConstants(&shadingrate, sizeof(shadingrate), cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
@@ -8028,19 +8028,19 @@ void Postprocess_Blur_Gaussian(
 	{
 		const TextureDesc& desc = temp.GetDesc();
 
-		PostProcessCB cb;
-		cb.xPPResolution.x = desc.Width;
-		cb.xPPResolution.y = desc.Height;
+		PostProcess postprocess;
+		postprocess.resolution.x = desc.Width;
+		postprocess.resolution.y = desc.Height;
 		if (mip_dst > 0)
 		{
-			cb.xPPResolution.x >>= mip_dst;
-			cb.xPPResolution.y >>= mip_dst;
+			postprocess.resolution.x >>= mip_dst;
+			postprocess.resolution.y >>= mip_dst;
 		}
-		cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-		cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-		cb.xPPParams0.x = 1;
-		cb.xPPParams0.y = 0;
-		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+		postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+		postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+		postprocess.params0.x = 1;
+		postprocess.params0.y = 0;
+		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 		device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd, mip_src);
 		device->BindUAV(&temp, 0, cmd, mip_dst);
@@ -8053,8 +8053,8 @@ void Postprocess_Blur_Gaussian(
 		}
 
 		device->Dispatch(
-			(cb.xPPResolution.x + POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT - 1) / POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT,
-			cb.xPPResolution.y,
+			(postprocess.resolution.x + POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT - 1) / POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT,
+			postprocess.resolution.y,
 			1,
 			cmd
 		);
@@ -8073,19 +8073,19 @@ void Postprocess_Blur_Gaussian(
 	{
 		const TextureDesc& desc = output.GetDesc();
 
-		PostProcessCB cb;
-		cb.xPPResolution.x = desc.Width;
-		cb.xPPResolution.y = desc.Height;
+		PostProcess postprocess;
+		postprocess.resolution.x = desc.Width;
+		postprocess.resolution.y = desc.Height;
 		if (mip_dst > 0)
 		{
-			cb.xPPResolution.x >>= mip_dst;
-			cb.xPPResolution.y >>= mip_dst;
+			postprocess.resolution.x >>= mip_dst;
+			postprocess.resolution.y >>= mip_dst;
 		}
-		cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-		cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-		cb.xPPParams0.x = 0;
-		cb.xPPParams0.y = 1;
-		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+		postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+		postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+		postprocess.params0.x = 0;
+		postprocess.params0.y = 1;
+		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 		device->BindResource(&temp, TEXSLOT_ONDEMAND0, cmd, mip_dst); // <- also mip_dst because it's second pass!
 		device->BindUAV(&output, 0, cmd, mip_dst);
@@ -8098,8 +8098,8 @@ void Postprocess_Blur_Gaussian(
 		}
 
 		device->Dispatch(
-			cb.xPPResolution.x,
-			(cb.xPPResolution.y + POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT - 1) / POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT,
+			postprocess.resolution.x,
+			(postprocess.resolution.y + POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT - 1) / POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT,
 			1,
 			cmd
 		);
@@ -8166,20 +8166,20 @@ void Postprocess_Blur_Bilateral(
 	{
 		const TextureDesc& desc = temp.GetDesc();
 
-		PostProcessCB cb;
-		cb.xPPResolution.x = desc.Width;
-		cb.xPPResolution.y = desc.Height;
+		PostProcess postprocess;
+		postprocess.resolution.x = desc.Width;
+		postprocess.resolution.y = desc.Height;
 		if (mip_dst > 0)
 		{
-			cb.xPPResolution.x >>= mip_dst;
-			cb.xPPResolution.y >>= mip_dst;
+			postprocess.resolution.x >>= mip_dst;
+			postprocess.resolution.y >>= mip_dst;
 		}
-		cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-		cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-		cb.xPPParams0.x = 1;
-		cb.xPPParams0.y = 0;
-		cb.xPPParams0.w = depth_threshold;
-		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+		postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+		postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+		postprocess.params0.x = 1;
+		postprocess.params0.y = 0;
+		postprocess.params0.w = depth_threshold;
+		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 		device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd, mip_src);
 		device->BindUAV(&temp, 0, cmd, mip_dst);
@@ -8192,8 +8192,8 @@ void Postprocess_Blur_Bilateral(
 		}
 
 		device->Dispatch(
-			(cb.xPPResolution.x + POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT - 1) / POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT,
-			cb.xPPResolution.y,
+			(postprocess.resolution.x + POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT - 1) / POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT,
+			postprocess.resolution.y,
 			1,
 			cmd
 		);
@@ -8212,20 +8212,20 @@ void Postprocess_Blur_Bilateral(
 	{
 		const TextureDesc& desc = output.GetDesc();
 
-		PostProcessCB cb;
-		cb.xPPResolution.x = desc.Width;
-		cb.xPPResolution.y = desc.Height;
+		PostProcess postprocess;
+		postprocess.resolution.x = desc.Width;
+		postprocess.resolution.y = desc.Height;
 		if (mip_dst > 0)
 		{
-			cb.xPPResolution.x >>= mip_dst;
-			cb.xPPResolution.y >>= mip_dst;
+			postprocess.resolution.x >>= mip_dst;
+			postprocess.resolution.y >>= mip_dst;
 		}
-		cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-		cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-		cb.xPPParams0.x = 0;
-		cb.xPPParams0.y = 1;
-		cb.xPPParams0.w = depth_threshold;
-		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+		postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+		postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+		postprocess.params0.x = 0;
+		postprocess.params0.y = 1;
+		postprocess.params0.w = depth_threshold;
+		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 		device->BindResource(&temp, TEXSLOT_ONDEMAND0, cmd, mip_dst); // <- also mip_dst because it's second pass!
 		device->BindUAV(&output, 0, cmd, mip_dst);
@@ -8238,8 +8238,8 @@ void Postprocess_Blur_Bilateral(
 		}
 
 		device->Dispatch(
-			cb.xPPResolution.x,
-			(cb.xPPResolution.y + POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT - 1) / POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT,
+			postprocess.resolution.x,
+			(postprocess.resolution.y + POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT - 1) / POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT,
 			1,
 			cmd
 		);
@@ -8287,15 +8287,15 @@ void Postprocess_SSAO(
 
 	const TextureDesc& desc = output.GetDesc();
 
-	PostProcessCB cb;
-	cb.xPPResolution.x = desc.Width;
-	cb.xPPResolution.y = desc.Height;
-	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	cb.ssao_range = range;
-	cb.ssao_samplecount = (float)samplecount;
-	cb.ssao_power = power;
-	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	PostProcess postprocess;
+	postprocess.resolution.x = desc.Width;
+	postprocess.resolution.y = desc.Height;
+	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	ssao_range = range;
+	ssao_samplecount = (float)samplecount;
+	ssao_power = power;
+	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
@@ -8348,18 +8348,18 @@ void Postprocess_HBAO(
 
 	const TextureDesc& desc = output.GetDesc();
 
-	PostProcessCB cb;
-	cb.xPPResolution.x = desc.Width;
-	cb.xPPResolution.y = desc.Height;
-	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	cb.xPPParams0.x = 1;
-	cb.xPPParams0.y = 0;
-	cb.hbao_power = power;
+	PostProcess postprocess;
+	postprocess.resolution.x = desc.Width;
+	postprocess.resolution.y = desc.Height;
+	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	postprocess.params0.x = 1;
+	postprocess.params0.y = 0;
+	hbao_power = power;
 
 	// Load first element of projection matrix which is the cotangent of the horizontal FOV divided by 2.
 	const float TanHalfFovH = 1.0f / camera.Projection.m[0][0];
-	const float FocalLenX = 1.0f / TanHalfFovH * ((float)cb.xPPResolution.y / (float)cb.xPPResolution.x);
+	const float FocalLenX = 1.0f / TanHalfFovH * ((float)postprocess.resolution.y / (float)postprocess.resolution.x);
 	const float FocalLenY = 1.0f / TanHalfFovH;
 	const float InvFocalLenX = 1.0f / FocalLenX;
 	const float InvFocalLenY = 1.0f / FocalLenY;
@@ -8367,12 +8367,12 @@ void Postprocess_HBAO(
 	const float UVToViewAY = -2.0f * InvFocalLenY;
 	const float UVToViewBX = -1.0f * InvFocalLenX;
 	const float UVToViewBY = 1.0f * InvFocalLenY;
-	cb.xPPParams1.x = UVToViewAX;
-	cb.xPPParams1.y = UVToViewAY;
-	cb.xPPParams1.z = UVToViewBX;
-	cb.xPPParams1.w = UVToViewBY;
+	postprocess.params1.x = UVToViewAX;
+	postprocess.params1.y = UVToViewAY;
+	postprocess.params1.z = UVToViewBX;
+	postprocess.params1.w = UVToViewBY;
 
-	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	// horizontal pass:
 	{
@@ -8390,8 +8390,8 @@ void Postprocess_HBAO(
 		}
 
 		device->Dispatch(
-			(cb.xPPResolution.x + POSTPROCESS_HBAO_THREADCOUNT - 1) / POSTPROCESS_HBAO_THREADCOUNT,
-			cb.xPPResolution.y,
+			(postprocess.resolution.x + POSTPROCESS_HBAO_THREADCOUNT - 1) / POSTPROCESS_HBAO_THREADCOUNT,
+			postprocess.resolution.y,
 			1,
 			cmd
 			);
@@ -8408,9 +8408,9 @@ void Postprocess_HBAO(
 
 	// vertical pass:
 	{
-		cb.xPPParams0.x = 0;
-		cb.xPPParams0.y = 1;
-		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+		postprocess.params0.x = 0;
+		postprocess.params0.y = 1;
+		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 		device->BindResource(&res.temp, TEXSLOT_ONDEMAND0, cmd);
 		const GPUResource* uavs[] = {
@@ -8426,8 +8426,8 @@ void Postprocess_HBAO(
 		}
 
 		device->Dispatch(
-			cb.xPPResolution.x,
-			(cb.xPPResolution.y + POSTPROCESS_HBAO_THREADCOUNT - 1) / POSTPROCESS_HBAO_THREADCOUNT,
+			postprocess.resolution.x,
+			(postprocess.resolution.y + POSTPROCESS_HBAO_THREADCOUNT - 1) / POSTPROCESS_HBAO_THREADCOUNT,
 			1,
 			cmd
 			);
@@ -8647,7 +8647,7 @@ void Postprocess_MSAO(
 	{
 		const TextureDesc& desc = read_depth.GetDesc();
 
-		MSAOCB cb;
+		MSAO msao;
 
 		// Load first element of projection matrix which is the cotangent of the horizontal FOV divided by 2.
 		const float TanHalfFovH = 1.0f / camera.Projection.m[0][0];
@@ -8679,18 +8679,18 @@ void Postprocess_MSAO(
 
 		// The thicknesses are smaller for all off-center samples of the sphere.  Compute thicknesses relative
 		// to the center sample.
-		cb.xInvThicknessTable[0].x = InverseRangeFactor / SampleThickness[0];
-		cb.xInvThicknessTable[0].y = InverseRangeFactor / SampleThickness[1];
-		cb.xInvThicknessTable[0].z = InverseRangeFactor / SampleThickness[2];
-		cb.xInvThicknessTable[0].w = InverseRangeFactor / SampleThickness[3];
-		cb.xInvThicknessTable[1].x = InverseRangeFactor / SampleThickness[4];
-		cb.xInvThicknessTable[1].y = InverseRangeFactor / SampleThickness[5];
-		cb.xInvThicknessTable[1].z = InverseRangeFactor / SampleThickness[6];
-		cb.xInvThicknessTable[1].w = InverseRangeFactor / SampleThickness[7];
-		cb.xInvThicknessTable[2].x = InverseRangeFactor / SampleThickness[8];
-		cb.xInvThicknessTable[2].y = InverseRangeFactor / SampleThickness[9];
-		cb.xInvThicknessTable[2].z = InverseRangeFactor / SampleThickness[10];
-		cb.xInvThicknessTable[2].w = InverseRangeFactor / SampleThickness[11];
+		msao.xInvThicknessTable[0].x = InverseRangeFactor / SampleThickness[0];
+		msao.xInvThicknessTable[0].y = InverseRangeFactor / SampleThickness[1];
+		msao.xInvThicknessTable[0].z = InverseRangeFactor / SampleThickness[2];
+		msao.xInvThicknessTable[0].w = InverseRangeFactor / SampleThickness[3];
+		msao.xInvThicknessTable[1].x = InverseRangeFactor / SampleThickness[4];
+		msao.xInvThicknessTable[1].y = InverseRangeFactor / SampleThickness[5];
+		msao.xInvThicknessTable[1].z = InverseRangeFactor / SampleThickness[6];
+		msao.xInvThicknessTable[1].w = InverseRangeFactor / SampleThickness[7];
+		msao.xInvThicknessTable[2].x = InverseRangeFactor / SampleThickness[8];
+		msao.xInvThicknessTable[2].y = InverseRangeFactor / SampleThickness[9];
+		msao.xInvThicknessTable[2].z = InverseRangeFactor / SampleThickness[10];
+		msao.xInvThicknessTable[2].w = InverseRangeFactor / SampleThickness[11];
 
 		// These are the weights that are multiplied against the samples because not all samples are
 		// equally important.  The farther the sample is from the center location, the less they matter.
@@ -8698,61 +8698,61 @@ void Postprocess_MSAO(
 		// of samples with this weight because we sum the samples together before multiplying by the weight,
 		// so as an aggregate all of those samples matter more.  After generating this table, the weights
 		// are normalized.
-		cb.xSampleWeightTable[0].x = 4.0f * SampleThickness[0];    // Axial
-		cb.xSampleWeightTable[0].y = 4.0f * SampleThickness[1];    // Axial
-		cb.xSampleWeightTable[0].z = 4.0f * SampleThickness[2];    // Axial
-		cb.xSampleWeightTable[0].w = 4.0f * SampleThickness[3];    // Axial
-		cb.xSampleWeightTable[1].x = 4.0f * SampleThickness[4];    // Diagonal
-		cb.xSampleWeightTable[1].y = 8.0f * SampleThickness[5];    // L-shaped
-		cb.xSampleWeightTable[1].z = 8.0f * SampleThickness[6];    // L-shaped
-		cb.xSampleWeightTable[1].w = 8.0f * SampleThickness[7];    // L-shaped
-		cb.xSampleWeightTable[2].x = 4.0f * SampleThickness[8];    // Diagonal
-		cb.xSampleWeightTable[2].y = 8.0f * SampleThickness[9];    // L-shaped
-		cb.xSampleWeightTable[2].z = 8.0f * SampleThickness[10];   // L-shaped
-		cb.xSampleWeightTable[2].w = 4.0f * SampleThickness[11];   // Diagonal
+		msao.xSampleWeightTable[0].x = 4.0f * SampleThickness[0];    // Axial
+		msao.xSampleWeightTable[0].y = 4.0f * SampleThickness[1];    // Axial
+		msao.xSampleWeightTable[0].z = 4.0f * SampleThickness[2];    // Axial
+		msao.xSampleWeightTable[0].w = 4.0f * SampleThickness[3];    // Axial
+		msao.xSampleWeightTable[1].x = 4.0f * SampleThickness[4];    // Diagonal
+		msao.xSampleWeightTable[1].y = 8.0f * SampleThickness[5];    // L-shaped
+		msao.xSampleWeightTable[1].z = 8.0f * SampleThickness[6];    // L-shaped
+		msao.xSampleWeightTable[1].w = 8.0f * SampleThickness[7];    // L-shaped
+		msao.xSampleWeightTable[2].x = 4.0f * SampleThickness[8];    // Diagonal
+		msao.xSampleWeightTable[2].y = 8.0f * SampleThickness[9];    // L-shaped
+		msao.xSampleWeightTable[2].z = 8.0f * SampleThickness[10];   // L-shaped
+		msao.xSampleWeightTable[2].w = 4.0f * SampleThickness[11];   // Diagonal
 
 		// If we aren't using all of the samples, delete their weights before we normalize.
 #ifndef MSAO_SAMPLE_EXHAUSTIVELY
-		cb.xSampleWeightTable[0].x = 0.0f;
-		cb.xSampleWeightTable[0].z = 0.0f;
-		cb.xSampleWeightTable[1].y = 0.0f;
-		cb.xSampleWeightTable[1].w = 0.0f;
-		cb.xSampleWeightTable[2].y = 0.0f;
+		msao.xSampleWeightTable[0].x = 0.0f;
+		msao.xSampleWeightTable[0].z = 0.0f;
+		msao.xSampleWeightTable[1].y = 0.0f;
+		msao.xSampleWeightTable[1].w = 0.0f;
+		msao.xSampleWeightTable[2].y = 0.0f;
 #endif
 
 		// Normalize the weights by dividing by the sum of all weights
 		float totalWeight = 0.0f;
-		totalWeight += cb.xSampleWeightTable[0].x;
-		totalWeight += cb.xSampleWeightTable[0].y;
-		totalWeight += cb.xSampleWeightTable[0].z;
-		totalWeight += cb.xSampleWeightTable[0].w;
-		totalWeight += cb.xSampleWeightTable[1].x;
-		totalWeight += cb.xSampleWeightTable[1].y;
-		totalWeight += cb.xSampleWeightTable[1].z;
-		totalWeight += cb.xSampleWeightTable[1].w;
-		totalWeight += cb.xSampleWeightTable[2].x;
-		totalWeight += cb.xSampleWeightTable[2].y;
-		totalWeight += cb.xSampleWeightTable[2].z;
-		totalWeight += cb.xSampleWeightTable[2].w;
-		cb.xSampleWeightTable[0].x /= totalWeight;
-		cb.xSampleWeightTable[0].y /= totalWeight;
-		cb.xSampleWeightTable[0].z /= totalWeight;
-		cb.xSampleWeightTable[0].w /= totalWeight;
-		cb.xSampleWeightTable[1].x /= totalWeight;
-		cb.xSampleWeightTable[1].y /= totalWeight;
-		cb.xSampleWeightTable[1].z /= totalWeight;
-		cb.xSampleWeightTable[1].w /= totalWeight;
-		cb.xSampleWeightTable[2].x /= totalWeight;
-		cb.xSampleWeightTable[2].y /= totalWeight;
-		cb.xSampleWeightTable[2].z /= totalWeight;
-		cb.xSampleWeightTable[2].w /= totalWeight;
+		totalWeight += msao.xSampleWeightTable[0].x;
+		totalWeight += msao.xSampleWeightTable[0].y;
+		totalWeight += msao.xSampleWeightTable[0].z;
+		totalWeight += msao.xSampleWeightTable[0].w;
+		totalWeight += msao.xSampleWeightTable[1].x;
+		totalWeight += msao.xSampleWeightTable[1].y;
+		totalWeight += msao.xSampleWeightTable[1].z;
+		totalWeight += msao.xSampleWeightTable[1].w;
+		totalWeight += msao.xSampleWeightTable[2].x;
+		totalWeight += msao.xSampleWeightTable[2].y;
+		totalWeight += msao.xSampleWeightTable[2].z;
+		totalWeight += msao.xSampleWeightTable[2].w;
+		msao.xSampleWeightTable[0].x /= totalWeight;
+		msao.xSampleWeightTable[0].y /= totalWeight;
+		msao.xSampleWeightTable[0].z /= totalWeight;
+		msao.xSampleWeightTable[0].w /= totalWeight;
+		msao.xSampleWeightTable[1].x /= totalWeight;
+		msao.xSampleWeightTable[1].y /= totalWeight;
+		msao.xSampleWeightTable[1].z /= totalWeight;
+		msao.xSampleWeightTable[1].w /= totalWeight;
+		msao.xSampleWeightTable[2].x /= totalWeight;
+		msao.xSampleWeightTable[2].y /= totalWeight;
+		msao.xSampleWeightTable[2].z /= totalWeight;
+		msao.xSampleWeightTable[2].w /= totalWeight;
 
-		cb.xInvSliceDimension.x = 1.0f / desc.Width;
-		cb.xInvSliceDimension.y = 1.0f / desc.Height;
-		cb.xRejectFadeoff = 1.0f / -RejectionFalloff;
-		cb.xRcpAccentuation = 1.0f / (1.0f + Accentuation);
+		msao.xInvSliceDimension.x = 1.0f / desc.Width;
+		msao.xInvSliceDimension.y = 1.0f / desc.Height;
+		msao.xRejectFadeoff = 1.0f / -RejectionFalloff;
+		msao.xRcpAccentuation = 1.0f / (1.0f + Accentuation);
 
-		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(MSAOCB), cmd);
+		device->PushConstants(&msao, sizeof(msao), cmd);
 
 		device->BindResource(&read_depth, TEXSLOT_ONDEMAND0, cmd);
 
@@ -8836,20 +8836,15 @@ void Postprocess_MSAO(
 		static float g_BlurTolerance = -5.0f;
 		static float g_UpsampleTolerance = -7.0f;
 
-		float kBlurTolerance = 1.0f - powf(10.0f, g_BlurTolerance) * 1920.0f / (float)LoWidth;
-		kBlurTolerance *= kBlurTolerance;
-		float kUpsampleTolerance = powf(10.0f, g_UpsampleTolerance);
-		float kNoiseFilterWeight = 1.0f / (powf(10.0f, g_NoiseFilterTolerance) + kUpsampleTolerance);
-
-		MSAO_UPSAMPLECB cb;
-		cb.InvLowResolution = float2(1.0f / LoWidth, 1.0f / LoHeight);
-		cb.InvHighResolution = float2(1.0f / HiWidth, 1.0f / HiHeight);
-		cb.NoiseFilterStrength = kNoiseFilterWeight;
-		cb.StepSize = (float)lineardepth.GetDesc().Width / (float)LoWidth;
-		cb.kBlurTolerance = kBlurTolerance;
-		cb.kUpsampleTolerance = kUpsampleTolerance;
-
-		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(MSAO_UPSAMPLECB), cmd);
+		MSAO_UPSAMPLE msao_upsample;
+		msao_upsample.InvLowResolution = float2(1.0f / LoWidth, 1.0f / LoHeight);
+		msao_upsample.InvHighResolution = float2(1.0f / HiWidth, 1.0f / HiHeight);
+		msao_upsample.kBlurTolerance = 1.0f - powf(10.0f, g_BlurTolerance) * 1920.0f / (float)LoWidth;
+		msao_upsample.kBlurTolerance *= msao_upsample.kBlurTolerance;
+		msao_upsample.kUpsampleTolerance = powf(10.0f, g_UpsampleTolerance);
+		msao_upsample.NoiseFilterStrength = 1.0f / (powf(10.0f, g_NoiseFilterTolerance) + msao_upsample.kUpsampleTolerance);
+		msao_upsample.StepSize = (float)lineardepth.GetDesc().Width / (float)LoWidth;
+		device->PushConstants(&msao_upsample, sizeof(msao_upsample), cmd);
 		
 		device->BindUAV(&Destination, 0, cmd);
 		device->BindResource(&LoResDepth, TEXSLOT_ONDEMAND0, cmd);
@@ -9006,15 +9001,15 @@ void Postprocess_RTAO(
 	};
 	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-	PostProcessCB cb;
-	cb.xPPResolution.x = desc.Width;
-	cb.xPPResolution.y = desc.Height;
-	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	cb.rtao_range = range;
-	cb.rtao_power = power;
-	cb.xPPParams0.w = (float)res.frame;
-	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	PostProcess postprocess;
+	postprocess.resolution.x = desc.Width;
+	postprocess.resolution.y = desc.Height;
+	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	rtao_range = range;
+	rtao_power = power;
+	postprocess.params0.w = (float)res.frame;
+	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	{
 		GPUBarrier barriers[] = {
@@ -9043,7 +9038,7 @@ void Postprocess_RTAO(
 
 	device->EventEnd(cmd);
 
-	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	int temporal_output = res.frame % 2;
 	int temporal_history = 1 - temporal_output;
@@ -9120,9 +9115,9 @@ void Postprocess_RTAO(
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
 
-			cb.xPPParams1.x = 0;
-			cb.xPPParams1.y = 1;
-			device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+			postprocess.params1.x = 0;
+			postprocess.params1.y = 1;
+			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 			device->Dispatch(
 				(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -9149,9 +9144,9 @@ void Postprocess_RTAO(
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
 
-			cb.xPPParams1.x = 1;
-			cb.xPPParams1.y = 2;
-			device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+			postprocess.params1.x = 1;
+			postprocess.params1.y = 2;
+			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 			device->Dispatch(
 				(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -9178,9 +9173,9 @@ void Postprocess_RTAO(
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
 
-			cb.xPPParams1.x = 2;
-			cb.xPPParams1.y = 4;
-			device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+			postprocess.params1.x = 2;
+			postprocess.params1.y = 4;
+			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 			device->Dispatch(
 				(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -9259,13 +9254,13 @@ void Postprocess_RTReflection(
 
 	device->BindResource(&depth_history, TEXSLOT_ONDEMAND2, cmd);
 
-	PostProcessCB cb;
-	cb.xPPResolution.x = desc.Width;
-	cb.xPPResolution.y = desc.Height;
-	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	cb.rtreflection_range = range;
-	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	PostProcess postprocess;
+	postprocess.resolution.x = desc.Width;
+	postprocess.resolution.y = desc.Height;
+	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	rtreflection_range = range;
+	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	size_t shaderIdentifierSize = device->GetShaderIdentifierSize();
 	GraphicsDevice::GPUAllocation shadertable_raygen = device->AllocateGPU(shaderIdentifierSize, cmd);
@@ -9319,7 +9314,7 @@ void Postprocess_RTReflection(
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
-	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	device->BindResource(&gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
 	device->BindResource(&gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
@@ -9451,14 +9446,14 @@ void Postprocess_SSR(
 	device->BindResource(&gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
 	device->BindResource(&gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
 
-	PostProcessCB cb;
-	cb.xPPResolution.x = desc.Width;
-	cb.xPPResolution.y = desc.Height;
-	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	cb.ssr_input_maxmip = float(input_desc.MipLevels - 1);
-	cb.ssr_input_resolution_max = (float)std::max(input_desc.Width, input_desc.Height);
-	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	PostProcess postprocess;
+	postprocess.resolution.x = desc.Width;
+	postprocess.resolution.y = desc.Height;
+	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	ssr_input_maxmip = float(input_desc.MipLevels - 1);
+	ssr_input_resolution_max = (float)std::max(input_desc.Width, input_desc.Height);
+	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	// Raytrace pass:
 	{
@@ -9702,13 +9697,13 @@ void Postprocess_RTShadow(
 
 	device->BindResource(&scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
 
-	PostProcessCB cb;
-	cb.xPPResolution.x = desc.Width;
-	cb.xPPResolution.y = desc.Height;
-	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	cb.xPPParams0.w = (float)res.frame;
-	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	PostProcess postprocess;
+	postprocess.resolution.x = desc.Width;
+	postprocess.resolution.y = desc.Height;
+	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	postprocess.params0.w = (float)res.frame;
+	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTSHADOW], cmd);
 
@@ -9863,9 +9858,9 @@ void Postprocess_RTShadow(
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
 
-			cb.xPPParams1.x = 0;
-			cb.xPPParams1.y = 1;
-			device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+			postprocess.params1.x = 0;
+			postprocess.params1.y = 1;
+			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 			device->Dispatch(
 				(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -9904,9 +9899,9 @@ void Postprocess_RTShadow(
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
 
-			cb.xPPParams1.x = 1;
-			cb.xPPParams1.y = 2;
-			device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+			postprocess.params1.x = 1;
+			postprocess.params1.y = 2;
+			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 			device->Dispatch(
 				(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -9945,9 +9940,9 @@ void Postprocess_RTShadow(
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
 
-			cb.xPPParams1.x = 2;
-			cb.xPPParams1.y = 4;
-			device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+			postprocess.params1.x = 2;
+			postprocess.params1.y = 4;
+			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 			device->Dispatch(
 				(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
@@ -10041,14 +10036,14 @@ void Postprocess_ScreenSpaceShadow(
 
 	const TextureDesc& desc = output.GetDesc();
 
-	PostProcessCB cb;
-	cb.xPPResolution.x = desc.Width;
-	cb.xPPResolution.y = desc.Height;
-	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	cb.xPPParams0.x = range;
-	cb.xPPParams0.y = (float)samplecount;
-	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	PostProcess postprocess;
+	postprocess.resolution.x = desc.Width;
+	postprocess.resolution.y = desc.Height;
+	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	postprocess.params0.x = range;
+	postprocess.params0.y = (float)samplecount;
+	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SCREENSPACESHADOW], cmd);
 
@@ -10107,18 +10102,18 @@ void Postprocess_LightShafts(
 
 	const TextureDesc& desc = output.GetDesc();
 
-	PostProcessCB cb;
-	cb.xPPResolution.x = desc.Width;
-	cb.xPPResolution.y = desc.Height;
-	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	cb.xPPParams0.x = 0.65f;	// density
-	cb.xPPParams0.y = 0.25f;	// weight
-	cb.xPPParams0.z = 0.945f;	// decay
-	cb.xPPParams0.w = 0.2f;		// exposure
-	cb.xPPParams1.x = center.x;
-	cb.xPPParams1.y = center.y;
-	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	PostProcess postprocess;
+	postprocess.resolution.x = desc.Width;
+	postprocess.resolution.y = desc.Height;
+	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	postprocess.params0.x = 0.65f;	// density
+	postprocess.params0.y = 0.25f;	// weight
+	postprocess.params0.z = 0.945f;	// decay
+	postprocess.params0.w = 0.2f;		// exposure
+	postprocess.params1.x = center.x;
+	postprocess.params1.y = center.y;
+	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
@@ -10216,14 +10211,14 @@ void Postprocess_DepthOfField(
 
 	const TextureDesc& desc = output.GetDesc();
 
-	PostProcessCB cb;
-	cb.xPPResolution.x = desc.Width;
-	cb.xPPResolution.y = desc.Height;
-	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	cb.dof_cocscale = coc_scale;
-	cb.dof_maxcoc = max_coc;
-	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	PostProcess postprocess;
+	postprocess.resolution.x = desc.Width;
+	postprocess.resolution.y = desc.Height;
+	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	dof_cocscale = coc_scale;
+	dof_maxcoc = max_coc;
+	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	// Compute tile max COC (horizontal):
 	{
@@ -10379,11 +10374,11 @@ void Postprocess_DepthOfField(
 	}
 
 	// Switch to half res:
-	cb.xPPResolution.x = desc.Width / 2;
-	cb.xPPResolution.y = desc.Height / 2;
-	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	postprocess.resolution.x = desc.Width / 2;
+	postprocess.resolution.y = desc.Height / 2;
+	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	// Prepass:
 	{
@@ -10530,11 +10525,11 @@ void Postprocess_DepthOfField(
 	}
 
 	// Switch to full res:
-	cb.xPPResolution.x = desc.Width;
-	cb.xPPResolution.y = desc.Height;
-	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	postprocess.resolution.x = desc.Width;
+	postprocess.resolution.y = desc.Height;
+	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	// Upsample pass:
 	{
@@ -10597,18 +10592,18 @@ void Postprocess_Outline(
 
 	device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd);
 
-	PostProcessCB cb;
-	cb.xPPResolution.x = (uint)input.GetDesc().Width;
-	cb.xPPResolution.y = (uint)input.GetDesc().Height;
-	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	cb.xPPParams0.x = threshold;
-	cb.xPPParams0.y = thickness;
-	cb.xPPParams1.x = color.x;
-	cb.xPPParams1.y = color.y;
-	cb.xPPParams1.z = color.z;
-	cb.xPPParams1.w = color.w;
-	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	PostProcess postprocess;
+	postprocess.resolution.x = (uint)input.GetDesc().Width;
+	postprocess.resolution.y = (uint)input.GetDesc().Height;
+	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	postprocess.params0.x = threshold;
+	postprocess.params0.y = thickness;
+	postprocess.params1.x = color.x;
+	postprocess.params1.y = color.y;
+	postprocess.params1.z = color.z;
+	postprocess.params1.w = color.w;
+	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	device->Draw(3, 0, cmd);
 
@@ -10664,13 +10659,13 @@ void Postprocess_MotionBlur(
 
 	const TextureDesc& desc = output.GetDesc();
 
-	PostProcessCB cb;
-	cb.xPPResolution.x = desc.Width;
-	cb.xPPResolution.y = desc.Height;
-	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	cb.motionblur_strength = strength;
-	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	PostProcess postprocess;
+	postprocess.resolution.x = desc.Width;
+	postprocess.resolution.y = desc.Height;
+	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	motionblur_strength = strength;
+	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	// Compute tile max velocities (horizontal):
 	{
@@ -10915,13 +10910,13 @@ void Postprocess_Bloom(
 
 		const TextureDesc& desc = res.texture_bloom.GetDesc();
 
-		PostProcessCB cb;
-		cb.xPPResolution.x = desc.Width;
-		cb.xPPResolution.y = desc.Height;
-		cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-		cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-		cb.xPPParams0.x = threshold;
-		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+		PostProcess postprocess;
+		postprocess.resolution.x = desc.Width;
+		postprocess.resolution.y = desc.Height;
+		postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+		postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+		postprocess.params0.x = threshold;
+		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_BLOOMSEPARATE], cmd);
 
@@ -10970,12 +10965,12 @@ void Postprocess_Bloom(
 
 		const TextureDesc& desc = output.GetDesc();
 
-		PostProcessCB cb;
-		cb.xPPResolution.x = desc.Width;
-		cb.xPPResolution.y = desc.Height;
-		cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-		cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+		PostProcess postprocess;
+		postprocess.resolution.x = desc.Width;
+		postprocess.resolution.y = desc.Height;
+		postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+		postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_BLOOMCOMBINE], cmd);
 
@@ -11070,16 +11065,16 @@ void Postprocess_VolumetricClouds(
 	BindCommonResources(cmd);
 
 	const TextureDesc& desc = res.texture_reproject[0].GetDesc();
-	PostProcessCB cb;
-	cb.xPPResolution.x = desc.Width;
-	cb.xPPResolution.y = desc.Height;
-	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	cb.xPPParams0.x = (float)res.texture_reproject[0].GetDesc().Width;
-	cb.xPPParams0.y = (float)res.texture_reproject[0].GetDesc().Height;
-	cb.xPPParams0.z = 1.0f / cb.xPPParams0.x;
-	cb.xPPParams0.w = 1.0f / cb.xPPParams0.y;
-	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	PostProcess postprocess;
+	postprocess.resolution.x = desc.Width;
+	postprocess.resolution.y = desc.Height;
+	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	postprocess.params0.x = (float)res.texture_reproject[0].GetDesc().Width;
+	postprocess.params0.y = (float)res.texture_reproject[0].GetDesc().Height;
+	postprocess.params0.z = 1.0f / postprocess.params0.x;
+	postprocess.params0.w = 1.0f / postprocess.params0.y;
+	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	// Cloud pass:
 	{
@@ -11126,11 +11121,11 @@ void Postprocess_VolumetricClouds(
 	}
 
 	const TextureDesc& reprojection_desc = res.texture_reproject[0].GetDesc();
-	cb.xPPResolution.x = reprojection_desc.Width;
-	cb.xPPResolution.y = reprojection_desc.Height;
-	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	postprocess.resolution.x = reprojection_desc.Width;
+	postprocess.resolution.y = reprojection_desc.Height;
+	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 	
 	int temporal_output = device->GetFrameCount() % 2;
 	int temporal_history = 1 - temporal_output;
@@ -11240,12 +11235,12 @@ void Postprocess_FXAA(
 
 	const TextureDesc& desc = output.GetDesc();
 
-	PostProcessCB cb;
-	cb.xPPResolution.x = desc.Width;
-	cb.xPPResolution.y = desc.Height;
-	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	PostProcess postprocess;
+	postprocess.resolution.x = desc.Width;
+	postprocess.resolution.y = desc.Height;
+	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
@@ -11301,12 +11296,12 @@ void Postprocess_TemporalAA(
 
 	const TextureDesc& desc = output.GetDesc();
 
-	PostProcessCB cb;
-	cb.xPPResolution.x = desc.Width;
-	cb.xPPResolution.y = desc.Height;
-	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	PostProcess postprocess;
+	postprocess.resolution.x = desc.Width;
+	postprocess.resolution.y = desc.Height;
+	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
@@ -11354,13 +11349,13 @@ void Postprocess_Sharpen(
 
 	const TextureDesc& desc = output.GetDesc();
 
-	PostProcessCB cb;
-	cb.xPPResolution.x = desc.Width;
-	cb.xPPResolution.y = desc.Height;
-	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	cb.xPPParams0.x = amount;
-	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	PostProcess postprocess;
+	postprocess.resolution.x = desc.Width;
+	postprocess.resolution.y = desc.Height;
+	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	postprocess.params0.x = amount;
+	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
@@ -11410,31 +11405,20 @@ void Postprocess_Tonemap(
 
 	const TextureDesc& desc = output.GetDesc();
 
-	PostProcessCB cb;
-	cb.xPPResolution.x = desc.Width;
-	cb.xPPResolution.y = desc.Height;
-	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	cb.tonemap_exposure = exposure;
-	cb.tonemap_dither = dither ? 1.0f : 0.0f;
-	cb.tonemap_colorgrading = texture_colorgradinglut == nullptr ? 0.0f : 1.0f;
-	cb.tonemap_eyeadaption = texture_luminance == nullptr ? 0.0f : 1.0f;
-	cb.tonemap_distortion = texture_distortion == nullptr ? 0.0f : 1.0f;
-	cb.tonemap_eyeadaptionkey = eyeadaptionkey;
-
 	assert(texture_colorgradinglut == nullptr || texture_colorgradinglut->desc.type == TextureDesc::TEXTURE_3D); // This must be a 3D lut
 
-	PushConstantsTonemap push = {};
-	push.xPPResolution_rcp = cb.xPPResolution_rcp;
-	push.exposure = cb.tonemap_exposure;
-	push.dither = cb.tonemap_dither;
-	push.eyeadaptionkey = cb.tonemap_eyeadaptionkey;
-	push.texture_input = device->GetDescriptorIndex(&input, SRV);
-	push.texture_input_luminance = device->GetDescriptorIndex(texture_luminance, SRV);
-	push.texture_input_distortion = device->GetDescriptorIndex(texture_distortion, SRV);
-	push.texture_colorgrade_lookuptable = device->GetDescriptorIndex(texture_colorgradinglut, SRV);
-	push.texture_output = device->GetDescriptorIndex(&output, UAV);
-	device->PushConstants(&push, sizeof(push), cmd);
+	PushConstantsTonemap tonemap_push = {};
+	tonemap_push.resolution_rcp.x = 1.0f / desc.Width;
+	tonemap_push.resolution_rcp.y = 1.0f / desc.Height;
+	tonemap_push.exposure = exposure;
+	tonemap_push.dither = dither ? 1.0f : 0.0f;
+	tonemap_push.eyeadaptionkey = eyeadaptionkey;
+	tonemap_push.texture_input = device->GetDescriptorIndex(&input, SRV);
+	tonemap_push.texture_input_luminance = device->GetDescriptorIndex(texture_luminance, SRV);
+	tonemap_push.texture_input_distortion = device->GetDescriptorIndex(texture_distortion, SRV);
+	tonemap_push.texture_colorgrade_lookuptable = device->GetDescriptorIndex(texture_colorgradinglut, SRV);
+	tonemap_push.texture_output = device->GetDescriptorIndex(&output, UAV);
+	device->PushConstants(&tonemap_push, sizeof(tonemap_push), cmd);
 
 	{
 		GPUBarrier barriers[] = {
@@ -11478,23 +11462,23 @@ void Postprocess_FSR(
 
 	const TextureDesc& desc = output.GetDesc();
 
-	struct FSRCB
+	struct FSR
 	{
 		AU1 const0[4];
 		AU1 const1[4];
 		AU1 const2[4];
 		AU1 const3[4];
-	} cb;
+	} fsr;
 
 	// Upscaling:
 	{
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_FSR_UPSCALING], cmd);
 
 		FsrEasuCon(
-			cb.const0,
-			cb.const1,
-			cb.const2,
-			cb.const3,
+			fsr.const0,
+			fsr.const1,
+			fsr.const2,
+			fsr.const3,
 
 			// current frame render resolution:
 			static_cast<AF1>(input.desc.Width),
@@ -11509,7 +11493,7 @@ void Postprocess_FSR(
 			static_cast<AF1>(temp.desc.Height)
 
 		);
-		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(FSRCB), cmd);
+		device->PushConstants(&fsr, sizeof(fsr), cmd);
 
 		device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd);
 
@@ -11541,8 +11525,8 @@ void Postprocess_FSR(
 	{
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_FSR_SHARPEN], cmd);
 
-		FsrRcasCon(cb.const0, sharpness);
-		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(FSRCB), cmd);
+		FsrRcasCon(fsr.const0, sharpness);
+		device->PushConstants(&fsr, sizeof(fsr), cmd);
 
 		device->BindResource(&temp, TEXSLOT_ONDEMAND0, cmd);
 
@@ -11588,13 +11572,13 @@ void Postprocess_Chromatic_Aberration(
 
 	const TextureDesc& desc = output.GetDesc();
 
-	PostProcessCB cb;
-	cb.xPPResolution.x = desc.Width;
-	cb.xPPResolution.y = desc.Height;
-	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	cb.xPPParams0.x = amount;
-	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	PostProcess postprocess;
+	postprocess.resolution.x = desc.Width;
+	postprocess.resolution.y = desc.Height;
+	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	postprocess.params0.x = amount;
+	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
@@ -11639,21 +11623,21 @@ void Postprocess_Upsample_Bilateral(
 
 	const TextureDesc& desc = output.GetDesc();
 
-	PostProcessCB cb;
-	cb.xPPResolution.x = desc.Width;
-	cb.xPPResolution.y = desc.Height;
-	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	cb.xPPParams0.x = threshold;
-	cb.xPPParams0.y = 1.0f / (float)input.GetDesc().Width;
-	cb.xPPParams0.z = 1.0f / (float)input.GetDesc().Height;
+	PostProcess postprocess;
+	postprocess.resolution.x = desc.Width;
+	postprocess.resolution.y = desc.Height;
+	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	postprocess.params0.x = threshold;
+	postprocess.params0.y = 1.0f / (float)input.GetDesc().Width;
+	postprocess.params0.z = 1.0f / (float)input.GetDesc().Height;
 	// select mip from lowres depth mipchain:
-	cb.xPPParams0.w = floorf(std::max(1.0f, log2f(std::max((float)desc.Width / (float)input.GetDesc().Width, (float)desc.Height / (float)input.GetDesc().Height))));
-	cb.xPPParams1.x = (float)input.GetDesc().Width;
-	cb.xPPParams1.y = (float)input.GetDesc().Height;
-	cb.xPPParams1.z = 1.0f / cb.xPPParams1.x;
-	cb.xPPParams1.w = 1.0f / cb.xPPParams1.y;
-	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	postprocess.params0.w = floorf(std::max(1.0f, log2f(std::max((float)desc.Width / (float)input.GetDesc().Width, (float)desc.Height / (float)input.GetDesc().Height))));
+	postprocess.params1.x = (float)input.GetDesc().Width;
+	postprocess.params1.y = (float)input.GetDesc().Height;
+	postprocess.params1.z = 1.0f / postprocess.params1.x;
+	postprocess.params1.w = 1.0f / postprocess.params1.y;
+	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	if (pixelshader)
 	{
@@ -11741,12 +11725,12 @@ void Postprocess_Downsample4x(
 
 	const TextureDesc& desc = output.GetDesc();
 
-	PostProcessCB cb;
-	cb.xPPResolution.x = desc.Width;
-	cb.xPPResolution.y = desc.Height;
-	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	PostProcess postprocess;
+	postprocess.resolution.x = desc.Width;
+	postprocess.resolution.y = desc.Height;
+	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_DOWNSAMPLE4X], cmd);
 
@@ -11791,13 +11775,13 @@ void Postprocess_NormalsFromDepth(
 
 	const TextureDesc& desc = output.GetDesc();
 
-	PostProcessCB cb;
-	cb.xPPResolution.x = desc.Width;
-	cb.xPPResolution.y = desc.Height;
-	cb.xPPResolution_rcp.x = 1.0f / cb.xPPResolution.x;
-	cb.xPPResolution_rcp.y = 1.0f / cb.xPPResolution.y;
-	cb.xPPParams0.x = floorf(std::max(1.0f, log2f(std::max((float)desc.Width / (float)depthbuffer.GetDesc().Width, (float)desc.Height / (float)depthbuffer.GetDesc().Height))));
-	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PostProcessCB), cmd);
+	PostProcess postprocess;
+	postprocess.resolution.x = desc.Width;
+	postprocess.resolution.y = desc.Height;
+	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	postprocess.params0.x = floorf(std::max(1.0f, log2f(std::max((float)desc.Width / (float)depthbuffer.GetDesc().Width, (float)desc.Height / (float)depthbuffer.GetDesc().Height))));
+	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_NORMALSFROMDEPTH], cmd);
 

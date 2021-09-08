@@ -1,6 +1,8 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
+PUSHCONSTANT(postprocess, PostProcess);
+
 TEXTURE2D(texture_temporal, float4, TEXSLOT_ONDEMAND0);
 
 RWTEXTURE2D(output, float4, 0);
@@ -19,7 +21,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	if (texture_depth.Load(uint3(DTid.xy, 1)) == 0)
 		return;
 
-    const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
+    const float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
     
     half4 v[25];
 
@@ -35,7 +37,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
             // If a pixel in the window is located at (x+dX, y+dY), put it at index (dX + R)(2R + 1) + (dY + R) of the
             // pixel array. This will fill the pixel array, with the top left pixel of the window at pixel[0] and the
             // bottom right pixel of the window at pixel[N-1].
-            v[(dX + 2) * 5 + (dY + 2)] = texture_temporal.SampleLevel(sampler_linear_clamp, uv + offset * xPPResolution_rcp, 0);
+            v[(dX + 2) * 5 + (dY + 2)] = texture_temporal.SampleLevel(sampler_linear_clamp, uv + offset * postprocess.resolution_rcp, 0);
         }
     }
     

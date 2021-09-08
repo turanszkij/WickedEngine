@@ -1,6 +1,8 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
+PUSHCONSTANT(shadingrate, ShadingRateClassification);
+
 static const uint THREAD_COUNT = 64;
 
 RWTEXTURE2D(output, uint, 0);
@@ -25,13 +27,13 @@ void main( uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint groupInde
 
 	const uint2 tile = Gid.xy;
 
-	const uint sqrtile = xShadingRateTileSize * xShadingRateTileSize;
+	const uint sqrtile = shadingrate.TileSize * shadingrate.TileSize;
 
 	uint i;
 	for (i = groupIndex; i < sqrtile; i += THREAD_COUNT)
 	{
-		const uint2 tile_pixel = unflatten2D(i, xShadingRateTileSize);
-		const uint2 pixel = min(tile * xShadingRateTileSize + tile_pixel, dim - 1);
+		const uint2 tile_pixel = unflatten2D(i, shadingrate.TileSize);
+		const uint2 pixel = min(tile * shadingrate.TileSize + tile_pixel, dim - 1);
 
 		const float2 velocity = abs(texture_gbuffer1[pixel].xy);
 		const float magnitude = max(velocity.x, velocity.y);
@@ -40,24 +42,24 @@ void main( uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint groupInde
 		if (magnitude > 0.1f)
 		{
 			// least detailed
-			rate = SHADING_RATE_4X4;
+			rate = shadingrate.SHADING_RATE_4X4;
 		}
 		else if (magnitude > 0.01f)
 		{
-			rate = SHADING_RATE_4X2;
+			rate = shadingrate.SHADING_RATE_4X2;
 		}
 		else if (magnitude > 0.005f)
 		{
-			rate = SHADING_RATE_2X2;
+			rate = shadingrate.SHADING_RATE_2X2;
 		}
 		else if (magnitude > 0.001f)
 		{
-			rate = SHADING_RATE_2X1;
+			rate = shadingrate.SHADING_RATE_2X1;
 		}
 		else
 		{
 			// most detailed
-			rate = SHADING_RATE_1X1;
+			rate = shadingrate.SHADING_RATE_1X1;
 		}
 		InterlockedMin(tile_rate, rate);
 	}
@@ -73,23 +75,23 @@ void main( uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint groupInde
 #ifdef DEBUG_SHADINGRATECLASSIFICATION
 	for (i = groupIndex; i < sqrtile; i += THREAD_COUNT)
 	{
-		const uint2 tile_pixel = unflatten2D(i, xShadingRateTileSize);
-		const uint2 pixel = min(tile * xShadingRateTileSize + tile_pixel, dim - 1);
+		const uint2 tile_pixel = unflatten2D(i, shadingrate.TileSize);
+		const uint2 pixel = min(tile * shadingrate.TileSize + tile_pixel, dim - 1);
 
 		float4 debugcolor = float4(0, 0, 0, 0);
 		float debugalpha = 0.6f;
 
-		if (rate == SHADING_RATE_4X4)
+		if (rate == shadingrate.SHADING_RATE_4X4)
 			debugcolor = float4(1, 0, 0, debugalpha);
-		else if (rate == SHADING_RATE_2X4 || rate == SHADING_RATE_4X2)
+		else if (rate == shadingrate.SHADING_RATE_2X4 || rate == shadingrate.SHADING_RATE_4X2)
 			debugcolor = float4(1, 1, 0, debugalpha);
-		else if (rate == SHADING_RATE_2X2)
+		else if (rate == shadingrate.SHADING_RATE_2X2)
 			debugcolor = float4(0, 1, 0, debugalpha);
-		else if (rate == SHADING_RATE_1X2 || rate == SHADING_RATE_2X1)
+		else if (rate == shadingrate.SHADING_RATE_1X2 || rate == shadingrate.SHADING_RATE_2X1)
 			debugcolor = float4(0, 0, 1, debugalpha);
 
-		if (tile_pixel.x == 0 || tile_pixel.x == xShadingRateTileSize - 1 || 
-			tile_pixel.y == 0 || tile_pixel.y == xShadingRateTileSize - 1)
+		if (tile_pixel.x == 0 || tile_pixel.x == shadingrate.TileSize - 1 || 
+			tile_pixel.y == 0 || tile_pixel.y == shadingrate.TileSize - 1)
 			debugcolor = float4(0, 0, 0, debugalpha);
 
 		output_debug[pixel] = debugcolor;

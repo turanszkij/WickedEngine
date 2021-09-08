@@ -2,6 +2,8 @@
 #include "stochasticSSRHF.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
+PUSHCONSTANT(postprocess, PostProcess);
+
 TEXTURE2D(input, float4, TEXSLOT_ONDEMAND0);
 
 RWTEXTURE2D(texture_raytrace, float4, 0);
@@ -72,13 +74,13 @@ bool ScreenSpaceRayTrace(float3 csOrig, float3 csDir, float jitter, float roughn
 	P0 = P0 * float2(0.5, -0.5) + float2(0.5, 0.5);
 	P1 = P1 * float2(0.5, -0.5) + float2(0.5, 0.5);
 
-	P0.xy *= xPPResolution.xy;
-	P1.xy *= xPPResolution.xy;
+	P0.xy *= postprocess.resolution.xy;
+	P1.xy *= postprocess.resolution.xy;
     
 #if 0
     // Clip to the screen coordinates. Alternatively we could just modify rayTraceMaxStep instead
-    float2 yDelta = float2(xPPResolution.y + 2.0f, -2.0f); // - 0.5, 0.5
-    float2 xDelta = float2(xPPResolution.x + 2.0f, -2.0f); // - 0.5, 0.5
+    float2 yDelta = float2(postprocess.resolution.y + 2.0f, -2.0f); // - 0.5, 0.5
+    float2 xDelta = float2(postprocess.resolution.x + 2.0f, -2.0f); // - 0.5, 0.5
     float alpha = 0.0;
     
     // P0 must be in bounds
@@ -199,7 +201,7 @@ bool ScreenSpaceRayTrace(float3 csOrig, float3 csDir, float jitter, float roughn
 		level = min(level, 6.0f);
 
 		hitPixel = permute ? PQk.yx : PQk.xy;
-		hitPixel *= xPPResolution_rcp;
+		hitPixel *= postprocess.resolution_rcp;
         
 		sceneZMax = texture_lineardepth.SampleLevel(sampler_linear_clamp, hitPixel, level) * g_xCamera.ZFarP;
 	}
@@ -221,7 +223,7 @@ bool ScreenSpaceRayTrace(float3 csOrig, float3 csDir, float jitter, float roughn
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
+	const float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
 	const float depth = texture_depth.SampleLevel(sampler_linear_clamp, uv, 1);
 	if (depth == 0)
 		return;
