@@ -4,7 +4,7 @@
 
 float4 main(VertexToPixel input) : SV_TARGET
 {
-	ShaderEntity light = EntityArray[g_xFrame.LightArrayOffset + (uint)g_xColor.x];
+	ShaderEntity light = load_entity(g_xFrame.LightArrayOffset + (uint)g_xColor.x);
 
 	if (!light.IsCastingShadow())
 	{
@@ -41,7 +41,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 
 		for (uint cascade = 0; cascade < g_xFrame.ShadowCascadeCount; ++cascade)
 		{
-			float3 ShPos = mul(MatrixArray[light.GetMatrixIndex() + cascade], float4(P, 1)).xyz; // ortho matrix, no divide by .w
+			float3 ShPos = mul(load_entitymatrix(light.GetMatrixIndex() + cascade), float4(P, 1)).xyz; // ortho matrix, no divide by .w
 			float3 ShTex = ShPos.xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 
 			[branch]if (is_saturated(ShTex))

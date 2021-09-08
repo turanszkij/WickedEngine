@@ -8,10 +8,12 @@ ByteAddressBuffer bindless_buffers[] : register(space2);
 SamplerState bindless_samplers[] : register(space3);
 Buffer<uint> bindless_ib[] : register(space4);
 
+Texture2DArray<float4> bindless_textures2DArray[] : register(space5);
 TextureCube<float4> bindless_cubemaps[] : register(space5);
 TextureCubeArray<float4> bindless_cubearrays[] : register(space6);
 Texture3D<float4> bindless_textures3D[] : register(space7);
 RWTexture2D<float4> bindless_rwtextures[] : register(space8);
+RWByteAddressBuffer bindless_rwbuffers[] : register(space9);
 
 ShaderMeshInstance load_instance(uint instanceIndex)
 {
@@ -29,29 +31,37 @@ ShaderMaterial load_material(uint materialIndex)
 {
 	return bindless_buffers[g_xFrame.scene.materialbuffer].Load<ShaderMaterial>(materialIndex * sizeof(ShaderMaterial));
 }
+ShaderEntity load_entity(uint entityIndex)
+{
+	return bindless_buffers[g_xFrame.buffer_entityarray_index].Load<ShaderEntity>(entityIndex * sizeof(ShaderEntity));
+}
+float4x4 load_entitymatrix(uint matrixIndex)
+{
+	return transpose(bindless_buffers[g_xFrame.buffer_entitymatrixarray_index].Load<float4x4>(matrixIndex * sizeof(float4x4)));
+}
 
 #define texture_globalenvmap bindless_cubemaps[g_xFrame.scene.globalenvmap]
 #define texture_envmaparray bindless_cubearrays[g_xFrame.scene.envmaparray]
+
+#define texture_random64x64 bindless_textures[g_xFrame.texture_random64x64_index]
+#define texture_bluenoise bindless_textures[g_xFrame.texture_bluenoise_index]
+#define texture_sheenlut bindless_textures[g_xFrame.texture_sheenlut_index]
+#define texture_skyviewlut bindless_textures[g_xFrame.texture_skyviewlut_index]
+#define texture_transmittancelut bindless_textures[g_xFrame.texture_transmittancelut_index]
+#define texture_multiscatteringlut bindless_textures[g_xFrame.texture_multiscatteringlut_index]
+#define texture_skyluminancelut bindless_textures[g_xFrame.texture_skyluminancelut_index]
+#define texture_shadowarray_2d bindless_textures2DArray[g_xFrame.texture_shadowarray_2d_index]
+#define texture_shadowarray_cube bindless_cubearrays[g_xFrame.texture_shadowarray_cube_index]
+#define texture_shadowarray_transparent_2d bindless_textures2DArray[g_xFrame.texture_shadowarray_transparent_2d_index]
+#define texture_shadowarray_transparent_cube bindless_cubearrays[g_xFrame.texture_shadowarray_transparent_cube_index]
+#define texture_voxelgi bindless_textures3D[g_xFrame.texture_voxelgi_index]
 
 TEXTURE2D(texture_depth, float, TEXSLOT_DEPTH);
 TEXTURE2D(texture_lineardepth, float, TEXSLOT_LINEARDEPTH);
 TEXTURE2D(texture_gbuffer0, uint2, TEXSLOT_GBUFFER0);
 TEXTURE2D(texture_gbuffer1, float2, TEXSLOT_GBUFFER1);
-TEXTURE2D(texture_skyviewlut, float4, TEXSLOT_SKYVIEWLUT);
-TEXTURE2D(texture_transmittancelut, float4, TEXSLOT_TRANSMITTANCELUT);
-TEXTURE2D(texture_multiscatteringlut, float4, TEXSLOT_MULTISCATTERINGLUT);
-TEXTURE2D(texture_skyluminancelut, float4, TEXSLOT_SKYLUMINANCELUT);
-TEXTURE2DARRAY(texture_shadowarray_2d, float, TEXSLOT_SHADOWARRAY_2D);
-TEXTURECUBEARRAY(texture_shadowarray_cube, float, TEXSLOT_SHADOWARRAY_CUBE);
-TEXTURE2DARRAY(texture_shadowarray_transparent_2d, float4, TEXSLOT_SHADOWARRAY_TRANSPARENT_2D);
-TEXTURECUBEARRAY(texture_shadowarray_transparent_cube, float4, TEXSLOT_SHADOWARRAY_TRANSPARENT_CUBE);
-TEXTURE3D(texture_voxelgi, float4, TEXSLOT_VOXELGI);
-TEXTURE2D(texture_sheenlut, float, TEXSLOT_SHEENLUT);
-TEXTURE2D(texture_bluenoise, float4, TEXSLOT_BLUENOISE);
-TEXTURE2D(texture_random64x64, float4, TEXSLOT_RANDOM64X64);
-STRUCTUREDBUFFER(EntityArray, ShaderEntity, SBSLOT_ENTITYARRAY);
-STRUCTUREDBUFFER(MatrixArray, float4x4, SBSLOT_MATRIXARRAY);
 
+// These are static samplers, don't need to be bound:
 SAMPLERSTATE(			sampler_linear_clamp,	SSLOT_LINEAR_CLAMP	);
 SAMPLERSTATE(			sampler_linear_wrap,	SSLOT_LINEAR_WRAP	);
 SAMPLERSTATE(			sampler_linear_mirror,	SSLOT_LINEAR_MIRROR	);

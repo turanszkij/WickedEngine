@@ -1,17 +1,8 @@
-#include "ResourceMapping.h"
-#include "ShaderInterop_Renderer.h"
+#include "globals.hlsli"
 
-STRUCTUREDBUFFER(boneBuffer, ShaderTransform, SKINNINGSLOT_IN_BONEBUFFER);
+PUSHCONSTANT(push, SkinningPushConstants);
 
-RAWBUFFER(vertexBuffer_POS, SKINNINGSLOT_IN_VERTEX_POS);
-RAWBUFFER(vertexBuffer_TAN, SKINNINGSLOT_IN_VERTEX_TAN);
-RAWBUFFER(vertexBuffer_BON, SKINNINGSLOT_IN_VERTEX_BON);
-
-RWRAWBUFFER(streamoutBuffer_POS, 0);
-RWRAWBUFFER(streamoutBuffer_TAN, 1);
-
-
-inline void Skinning(inout float3 pos, inout float3 nor, inout float3 tan, in float4 inBon, in float4 inWei)
+inline void Skinning(inout float3 pos, inout float3 nor, inout float3 tan, in uint4 inBon, in float4 inWei)
 {
 	if (any(inWei))
 	{
@@ -25,7 +16,7 @@ inline void Skinning(inout float3 pos, inout float3 nor, inout float3 tan, in fl
 		[loop]
 		for (uint i = 0; ((i < 4) && (weisum < 1.0f)); ++i)
 		{
-			float4x4 m = boneBuffer[(uint)inBon[i]].GetMatrix();
+			float4x4 m = bindless_buffers[push.bonebuffer_index].Load<ShaderTransform>(inBon[i] * sizeof(ShaderTransform)).GetMatrix();
 
 			p += mul(m, float4(pos.xyz, 1)) * inWei[i];
 			n += mul((float3x3)m, nor.xyz) * inWei[i];
@@ -49,9 +40,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 	const uint fetchAddress_BON = DTid.x * sizeof(uint4);
 
 	// Manual type-conversion for pos:
-	uint4 pos_nor_u = vertexBuffer_POS.Load4(fetchAddress_POS_NOR);
+	uint4 pos_nor_u = bindless_buffers[push.vb_pos_nor_wind].Load4(fetchAddress_POS_NOR);
 	float3 pos = asfloat(pos_nor_u.xyz);
-	uint vtan = vertexBuffer_TAN.Load(fetchAddress_TAN);
+	uint vtan = bindless_buffers[push.vb_tan].Load(fetchAddress_TAN);
 
 	// Manual type-conversion for normal:
 	float4 nor = 0;
@@ -72,14 +63,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 	}
 
 	// Manual type-conversion for bone props:
-	uint4 ind_wei_u = vertexBuffer_BON.Load4(fetchAddress_BON);
+	uint4 ind_wei_u = bindless_buffers[push.vb_bon].Load4(fetchAddress_BON);
 	float4 ind = 0;
 	float4 wei = 0;
 	{
-		ind.x = (float)((ind_wei_u.x >> 0) & 0x0000FFFF);
-		ind.y = (float)((ind_wei_u.x >> 16) & 0x0000FFFF);
-		ind.z = (float)((ind_wei_u.y >> 0) & 0x0000FFFF);
-		ind.w = (float)((ind_wei_u.y >> 16) & 0x0000FFFF);
+		ind.x = (ind_wei_u.x >> 0) & 0x0000FFFF;
+		ind.y = (ind_wei_u.x >> 16) & 0x0000FFFF;
+		ind.z = (ind_wei_u.y >> 0) & 0x0000FFFF;
+		ind.w = (ind_wei_u.y >> 16) & 0x0000FFFF;
 
 		wei.x = (float)((ind_wei_u.z >> 0) & 0x0000FFFF) / 65535.0f;
 		wei.y = (float)((ind_wei_u.z >> 16) & 0x0000FFFF) / 65535.0f;
@@ -96,7 +87,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 	// Manual type-conversion for pos:
 	pos_nor_u.xyz = asuint(pos.xyz);
 
-
+	
 	// Manual type-conversion for normal:
 	pos_nor_u.w = 0;
 	{
@@ -116,6 +107,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 	}
 
 	// Store data:
-	streamoutBuffer_POS.Store4(fetchAddress_POS_NOR, pos_nor_u);
-	streamoutBuffer_TAN.Store(fetchAddress_TAN, vtan);
+	bindless_rwbuffers[push.so_pos_nor_wind].Store4(fetchAddress_POS_NOR, pos_nor_u);
+	bindless_rwbuffers[push.so_tan].Store(fetchAddress_TAN, vtan);
 }

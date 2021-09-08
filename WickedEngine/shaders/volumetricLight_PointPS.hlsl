@@ -4,7 +4,7 @@
 
 float4 main(VertexToPixel input) : SV_TARGET
 {
-	ShaderEntity light = EntityArray[g_xFrame.LightArrayOffset + (uint)g_xColor.x];
+	ShaderEntity light = load_entity(g_xFrame.LightArrayOffset + (uint)g_xColor.x);
 
 	float2 ScreenCoord = input.pos2D.xy / input.pos2D.w * float2(0.5f, -0.5f) + 0.5f;
 	float depth = max(input.pos.z, texture_depth.SampleLevel(sampler_point_clamp, ScreenCoord, 2));

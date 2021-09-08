@@ -452,11 +452,11 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 			[branch]
 			if (decalAccumulation.a < 1)
 			{
-				ShaderEntity decal = EntityArray[g_xFrame.DecalArrayOffset + entity_index];
+				ShaderEntity decal = load_entity(g_xFrame.DecalArrayOffset + entity_index);
 				if ((decal.layerMask & surface.layerMask) == 0)
 					continue;
 
-				float4x4 decalProjection = MatrixArray[decal.GetMatrixIndex()];
+				float4x4 decalProjection = load_entitymatrix(decal.GetMatrixIndex());
 				int decalTexture = asint(decalProjection[3][0]);
 				int decalNormal = asint(decalProjection[3][1]);
 				decalProjection[3] = float4(0, 0, 0, 1);
@@ -527,11 +527,11 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 			[branch]
 			if (envmapAccumulation.a < 1)
 			{
-				ShaderEntity probe = EntityArray[g_xFrame.EnvProbeArrayOffset + entity_index];
+				ShaderEntity probe = load_entity(g_xFrame.EnvProbeArrayOffset + entity_index);
 				if ((probe.layerMask & surface.layerMask) == 0)
 					continue;
 
-				const float4x4 probeProjection = MatrixArray[probe.GetMatrixIndex()];
+				const float4x4 probeProjection = load_entitymatrix(probe.GetMatrixIndex());
 				const float3 clipSpacePos = mul(probeProjection, float4(surface.P, 1)).xyz;
 				const float3 uvw = clipSpacePos.xyz * float3(0.5, -0.5, 0.5) + 0.5;
 				[branch]
@@ -595,7 +595,7 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 				const uint entity_index = bucket * 32 + bucket_bit_index;
 				bucket_bits ^= 1u << bucket_bit_index;
 
-				ShaderEntity light = EntityArray[g_xFrame.LightArrayOffset + entity_index];
+				ShaderEntity light = load_entity(g_xFrame.LightArrayOffset + entity_index);
 				if ((light.layerMask & surface.layerMask) == 0)
 					continue;
 
@@ -667,11 +667,11 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 				[branch]
 				if (entity_index >= first_item && entity_index <= last_item && decalAccumulation.a < 1)
 				{
-					ShaderEntity decal = EntityArray[entity_index];
+					ShaderEntity decal = load_entity(entity_index);
 					if ((decal.layerMask & surface.layerMask) == 0)
 						continue;
 
-					float4x4 decalProjection = MatrixArray[decal.GetMatrixIndex()];
+					float4x4 decalProjection = load_entitymatrix(decal.GetMatrixIndex());
 					int decalTexture = asint(decalProjection[3][0]);
 					int decalNormal = asint(decalProjection[3][1]);
 					decalProjection[3] = float4(0, 0, 0, 1);
@@ -755,11 +755,11 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 				[branch]
 				if (entity_index >= first_item && entity_index <= last_item && envmapAccumulation.a < 1)
 				{
-					ShaderEntity probe = EntityArray[entity_index];
+					ShaderEntity probe = load_entity(entity_index);
 					if ((probe.layerMask & surface.layerMask) == 0)
 						continue;
 
-					const float4x4 probeProjection = MatrixArray[probe.GetMatrixIndex()];
+					const float4x4 probeProjection = load_entitymatrix(probe.GetMatrixIndex());
 					const float3 clipSpacePos = mul(probeProjection, float4(surface.P, 1)).xyz;
 					const float3 uvw = clipSpacePos.xyz * float3(0.5, -0.5, 0.5) + 0.5;
 					[branch]
@@ -841,7 +841,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 				[branch]
 				if (entity_index >= first_item && entity_index <= last_item)
 				{
-					ShaderEntity light = EntityArray[entity_index];
+					ShaderEntity light = load_entity(entity_index);
 					if ((light.layerMask & surface.layerMask) == 0)
 						continue;
 

@@ -4,7 +4,7 @@
 
 float4 main(VertexToPixel input) : SV_TARGET
 {
-	ShaderEntity light = EntityArray[g_xFrame.LightArrayOffset + (uint)g_xColor.x];
+	ShaderEntity light = load_entity(g_xFrame.LightArrayOffset + (uint)g_xColor.x);
 
 	float2 ScreenCoord = input.pos2D.xy / input.pos2D.w * float2(0.5f, -0.5f) + 0.5f;
 	float depth = max(input.pos.z, texture_depth.SampleLevel(sampler_point_clamp, ScreenCoord, 2));
@@ -48,7 +48,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 			[branch]
 			if (light.IsCastingShadow())
 			{
-				float4 ShPos = mul(MatrixArray[light.GetMatrixIndex() + 0], float4(P, 1));
+				float4 ShPos = mul(load_entitymatrix(light.GetMatrixIndex() + 0), float4(P, 1));
 				ShPos.xyz /= ShPos.w;
 				float2 ShTex = ShPos.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 				[branch]

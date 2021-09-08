@@ -1233,7 +1233,7 @@ namespace wiScene
 		GPUBufferDesc bd;
 		bd.Size = sizeof(ShaderTransform) * (uint32_t)boneCollection.size();
 		bd.BindFlags = BIND_SHADER_RESOURCE;
-		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
 		bd.Stride = sizeof(ShaderTransform);
 
 		device->CreateBuffer(&bd, nullptr, &boneBuffer);
