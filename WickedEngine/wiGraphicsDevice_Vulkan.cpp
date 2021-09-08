@@ -2047,6 +2047,11 @@ using namespace Vulkan_Internal;
 					enabled_deviceExtensions.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
 				}
 
+				if (checkExtensionSupport(VK_EXT_SHADER_VIEWPORT_INDEX_LAYER_EXTENSION_NAME, available_deviceExtensions))
+				{
+					enabled_deviceExtensions.push_back(VK_EXT_SHADER_VIEWPORT_INDEX_LAYER_EXTENSION_NAME);
+				}
+
 				if (checkExtensionSupport(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME, available_deviceExtensions))
 				{
 					enabled_deviceExtensions.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
@@ -2140,7 +2145,10 @@ using namespace Vulkan_Internal;
 			{
 				capabilities |= GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_COMMON;
 			}
-			capabilities |= GRAPHICSDEVICE_CAPABILITY_RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS; // let's hope for the best...
+			if (features2.features.multiViewport == VK_TRUE)
+			{
+				capabilities |= GRAPHICSDEVICE_CAPABILITY_RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS;
+			}
 
 			if (
 				raytracing_features.rayTracingPipeline == VK_TRUE &&
@@ -5728,6 +5736,15 @@ using namespace Vulkan_Internal;
 				{
 					submit_queue = meta.queue;
 				}
+
+				if (copy_sync > 0) // sync up with copyallocator before first submit
+				{
+					queues[submit_queue].submit_waitStages.push_back(VK_PIPELINE_STAGE_TRANSFER_BIT);
+					queues[submit_queue].submit_waitSemaphores.push_back(copyAllocator.semaphore);
+					queues[submit_queue].submit_waitValues.push_back(copy_sync);
+					copy_sync = 0;
+				}
+
 				if (submit_queue != meta.queue || !meta.waits.empty()) // new queue type or wait breaks submit batch
 				{
 					// New batch signals its last cmd:
@@ -5744,14 +5761,6 @@ using namespace Vulkan_Internal;
 						queues[submit_queue].submit_waitSemaphores.push_back(queues[wait_meta.queue].semaphore);
 						queues[submit_queue].submit_waitValues.push_back(FRAMECOUNT * COMMANDLIST_COUNT + (uint64_t)wait);
 					}
-				}
-
-				if (copy_sync > 0)
-				{
-					queues[submit_queue].submit_waitStages.push_back(VK_PIPELINE_STAGE_TRANSFER_BIT);
-					queues[submit_queue].submit_waitSemaphores.push_back(copyAllocator.semaphore);
-					queues[submit_queue].submit_waitValues.push_back(copy_sync);
-					copy_sync = 0;
 				}
 
 				if (submit_inits)
