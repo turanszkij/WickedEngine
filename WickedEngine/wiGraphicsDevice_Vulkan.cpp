@@ -3302,45 +3302,47 @@ using namespace Vulkan_Internal;
 
 			VkDeviceSize copyOffset = 0;
 			uint32_t initDataIdx = 0;
-			uint32_t width = imageInfo.extent.width;
-			uint32_t height = imageInfo.extent.height;
-			uint32_t depth = imageInfo.extent.depth;
-			uint32_t layers = pDesc->ArraySize;
-			for (uint32_t mip = 0; mip < pDesc->MipLevels; ++mip)
+			for (uint32_t layer = 0; layer < pDesc->ArraySize; ++layer)
 			{
-				const SubresourceData& subresourceData = pInitialData[initDataIdx++];
-				VkDeviceSize copySize = subresourceData.rowPitch * height * depth * layers;
-				if (IsFormatBlockCompressed(pDesc->Format))
+				uint32_t width = imageInfo.extent.width;
+				uint32_t height = imageInfo.extent.height;
+				uint32_t depth = imageInfo.extent.depth;
+				for (uint32_t mip = 0; mip < pDesc->MipLevels; ++mip)
 				{
-					copySize /= 4;
+					const SubresourceData& subresourceData = pInitialData[initDataIdx++];
+					VkDeviceSize copySize = subresourceData.rowPitch * height * depth;
+					if (IsFormatBlockCompressed(pDesc->Format))
+					{
+						copySize /= 4;
+					}
+					uint8_t* cpyaddr = (uint8_t*)cmd.uploadbuffer.mapped_data + copyOffset;
+					memcpy(cpyaddr, subresourceData.pData, copySize);
+
+					VkBufferImageCopy copyRegion = {};
+					copyRegion.bufferOffset = copyOffset;
+					copyRegion.bufferRowLength = 0;
+					copyRegion.bufferImageHeight = 0;
+
+					copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+					copyRegion.imageSubresource.mipLevel = mip;
+					copyRegion.imageSubresource.baseArrayLayer = layer;
+					copyRegion.imageSubresource.layerCount = 1;
+
+					copyRegion.imageOffset = { 0, 0, 0 };
+					copyRegion.imageExtent = {
+						width,
+						height,
+						depth
+					};
+
+					width = std::max(1u, width / 2);
+					height = std::max(1u, height / 2);
+					depth = std::max(1u, depth / 2);
+
+					copyRegions.push_back(copyRegion);
+
+					copyOffset += AlignTo(copySize, (VkDeviceSize)GetFormatStride(pDesc->Format));
 				}
-				uint8_t* cpyaddr = (uint8_t*)cmd.uploadbuffer.mapped_data + copyOffset;
-				memcpy(cpyaddr, subresourceData.pData, copySize);
-
-				VkBufferImageCopy copyRegion = {};
-				copyRegion.bufferOffset = copyOffset;
-				copyRegion.bufferRowLength = 0;
-				copyRegion.bufferImageHeight = 0;
-
-				copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-				copyRegion.imageSubresource.mipLevel = mip;
-				copyRegion.imageSubresource.baseArrayLayer = 0;
-				copyRegion.imageSubresource.layerCount = layers;
-
-				copyRegion.imageOffset = { 0, 0, 0 };
-				copyRegion.imageExtent = {
-					width,
-					height,
-					depth
-				};
-
-				width = std::max(1u, width / 2);
-				height = std::max(1u, height / 2);
-				depth = std::max(1u, depth / 2);
-
-				copyRegions.push_back(copyRegion);
-
-				copyOffset += AlignTo(copySize, (VkDeviceSize)GetFormatStride(pDesc->Format));
 			}
 
 			{
