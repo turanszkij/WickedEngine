@@ -9,11 +9,11 @@ SamplerState bindless_samplers[] : register(space3);
 Buffer<uint> bindless_ib[] : register(space4);
 
 Texture2DArray<float4> bindless_textures2DArray[] : register(space5);
-TextureCube<float4> bindless_cubemaps[] : register(space5);
-TextureCubeArray<float4> bindless_cubearrays[] : register(space6);
-Texture3D<float4> bindless_textures3D[] : register(space7);
-RWTexture2D<float4> bindless_rwtextures[] : register(space8);
-RWByteAddressBuffer bindless_rwbuffers[] : register(space9);
+TextureCube<float4> bindless_cubemaps[] : register(space6);
+TextureCubeArray<float4> bindless_cubearrays[] : register(space7);
+Texture3D<float4> bindless_textures3D[] : register(space8);
+RWTexture2D<float4> bindless_rwtextures[] : register(space9);
+RWByteAddressBuffer bindless_rwbuffers[] : register(space10);
 
 ShaderMeshInstance load_instance(uint instanceIndex)
 {

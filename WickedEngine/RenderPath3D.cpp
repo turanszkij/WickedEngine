@@ -32,7 +32,7 @@ void RenderPath3D::ResizeBuffers()
 		if (getMSAASampleCount() > 1)
 		{
 			desc.SampleCount = getMSAASampleCount();
-			desc.BindFlags = BIND_RENDER_TARGET;
+			desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 
 			device->CreateTexture(&desc, nullptr, &rtMain_render);
 			device->SetName(&rtMain_render, "rtMain_render");

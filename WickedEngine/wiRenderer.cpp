@@ -7050,6 +7050,13 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 			desc.Height = std::max(1u, desc.Height / 2);
 			desc.Depth = std::max(1u, desc.Depth / 2);
 
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Image(&texture,texture.desc.layout,RESOURCE_STATE_UNORDERED_ACCESS,i + 1),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+
 			GenerateMIPChainCB cb;
 			cb.outputResolution.x = desc.Width;
 			cb.outputResolution.y = desc.Height;
@@ -7067,10 +7074,13 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 				std::max(1u, (desc.Depth + GENERATEMIPCHAIN_3D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_3D_BLOCK_SIZE),
 				cmd);
 
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Memory(),
+					GPUBarrier::Image(&texture,RESOURCE_STATE_UNORDERED_ACCESS,texture.desc.layout,i + 1),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
 		}
 
 
@@ -7603,25 +7613,17 @@ void VisibilityResolve(
 	device->BindUAV(&lineardepth, 9, cmd, 3);
 	device->BindUAV(&lineardepth, 10, cmd, 4);
 
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&gbuffer[GBUFFER_VELOCITY], gbuffer[GBUFFER_VELOCITY].desc.layout, RESOURCE_STATE_UNORDERED_ACCESS),
-			GPUBarrier::Image(&depthbuffer_resolved, depthbuffer_resolved.desc.layout, RESOURCE_STATE_UNORDERED_ACCESS),
-			GPUBarrier::Image(&lineardepth, lineardepth.desc.layout, RESOURCE_STATE_UNORDERED_ACCESS),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
+	barrier_stack[cmd].push_back(GPUBarrier::Image(&gbuffer[GBUFFER_VELOCITY], gbuffer[GBUFFER_VELOCITY].desc.layout, RESOURCE_STATE_UNORDERED_ACCESS));
+	barrier_stack[cmd].push_back(GPUBarrier::Image(&depthbuffer_resolved, depthbuffer_resolved.desc.layout, RESOURCE_STATE_UNORDERED_ACCESS));
+	barrier_stack[cmd].push_back(GPUBarrier::Image(&lineardepth, lineardepth.desc.layout, RESOURCE_STATE_UNORDERED_ACCESS));
 
 	if (msaa)
 	{
 		device->BindUAV(&gbuffer[GBUFFER_PRIMITIVEID], 11, cmd);
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&gbuffer[GBUFFER_PRIMITIVEID], gbuffer[GBUFFER_PRIMITIVEID].desc.layout, RESOURCE_STATE_UNORDERED_ACCESS),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
+		barrier_stack[cmd].push_back(GPUBarrier::Image(&gbuffer[GBUFFER_PRIMITIVEID], gbuffer[GBUFFER_PRIMITIVEID].desc.layout, RESOURCE_STATE_UNORDERED_ACCESS));
 	}
+
+	barrier_stack_flush(cmd);
 
 	device->Dispatch(
 		(depthbuffer.desc.Width + 15) / 16,
@@ -7630,26 +7632,17 @@ void VisibilityResolve(
 		cmd
 	);
 
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
-			GPUBarrier::Image(&gbuffer[GBUFFER_VELOCITY], RESOURCE_STATE_UNORDERED_ACCESS, gbuffer[GBUFFER_VELOCITY].desc.layout),
-			GPUBarrier::Image(&depthbuffer_resolved, RESOURCE_STATE_UNORDERED_ACCESS, depthbuffer_resolved.desc.layout),
-			GPUBarrier::Image(&lineardepth, RESOURCE_STATE_UNORDERED_ACCESS, lineardepth.desc.layout),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
+	barrier_stack[cmd].push_back(GPUBarrier::Memory());
+	barrier_stack[cmd].push_back(GPUBarrier::Image(&gbuffer[GBUFFER_VELOCITY], RESOURCE_STATE_UNORDERED_ACCESS, gbuffer[GBUFFER_VELOCITY].desc.layout));
+	barrier_stack[cmd].push_back(GPUBarrier::Image(&depthbuffer_resolved, RESOURCE_STATE_UNORDERED_ACCESS, depthbuffer_resolved.desc.layout));
+	barrier_stack[cmd].push_back(GPUBarrier::Image(&lineardepth, RESOURCE_STATE_UNORDERED_ACCESS, lineardepth.desc.layout));
 
 	if (msaa)
 	{
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&gbuffer[GBUFFER_PRIMITIVEID], RESOURCE_STATE_UNORDERED_ACCESS, gbuffer[GBUFFER_PRIMITIVEID].desc.layout),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
+		barrier_stack[cmd].push_back(GPUBarrier::Image(&gbuffer[GBUFFER_PRIMITIVEID], RESOURCE_STATE_UNORDERED_ACCESS, gbuffer[GBUFFER_PRIMITIVEID].desc.layout));
 	}
 
+	barrier_stack_flush(cmd);
 
 	wiProfiler::EndRange(range);
 	device->EventEnd(cmd);
