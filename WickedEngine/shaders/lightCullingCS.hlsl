@@ -212,7 +212,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	// Each thread will cull one entity until all entities have been culled:
 	for (i = groupIndex; i < entityCount; i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
-		ShaderEntity entity = EntityArray[i];
+		ShaderEntity entity = load_entity(i);
 
 		if (entity.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
 		{
@@ -287,7 +287,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 
 				// frustum AABB in world space transformed into the space of the probe/decal OBB:
 				AABB b = GroupAABB_WS;
-				AABBtransform(b, MatrixArray[entity.GetMatrixIndex()]);
+				AABBtransform(b, load_entitymatrix(entity.GetMatrixIndex()));
 
 				if (IntersectAABB(a, b))
 				{

@@ -36,7 +36,7 @@ float4 main(Input input) : SV_TARGET
 		[loop]
 		for (uint iterator = 0; iterator < g_xFrame.LightArrayCount; iterator++)
 		{
-			ShaderEntity light = EntityArray[g_xFrame.LightArrayOffset + iterator];
+			ShaderEntity light = load_entity(g_xFrame.LightArrayOffset + iterator);
 
 			Lighting lighting;
 			lighting.create(0, 0, 0, 0);

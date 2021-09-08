@@ -1801,14 +1801,14 @@ void LoadBuffers()
 
 	bd.Size = sizeof(ShaderEntity) * SHADER_ENTITY_COUNT;
 	bd.BindFlags = BIND_SHADER_RESOURCE;
-	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+	bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
 	bd.Stride = sizeof(ShaderEntity);
 	device->CreateBuffer(&bd, nullptr, &resourceBuffers[RBTYPE_ENTITYARRAY]);
 	device->SetName(&resourceBuffers[RBTYPE_ENTITYARRAY], "EntityArray");
 
 	bd.Size = sizeof(XMMATRIX) * MATRIXARRAY_COUNT;
 	bd.BindFlags = BIND_SHADER_RESOURCE;
-	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+	bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
 	bd.Stride = sizeof(XMMATRIX);
 	device->CreateBuffer(&bd, nullptr, &resourceBuffers[RBTYPE_MATRIXARRAY]);
 	device->SetName(&resourceBuffers[RBTYPE_MATRIXARRAY], "MatrixArray");
@@ -3231,6 +3231,21 @@ void UpdatePerFrameData(
 	frameCB.VolumetricClouds = vis.scene->weather.volumetricCloudParameters;
 	frameCB.scene = vis.scene->shaderscene;
 
+	frameCB.texture_random64x64_index = device->GetDescriptorIndex(wiTextureHelper::getRandom64x64(), SRV);
+	frameCB.texture_bluenoise_index = device->GetDescriptorIndex(wiTextureHelper::getBlueNoise(), SRV);
+	frameCB.texture_sheenlut_index = device->GetDescriptorIndex(&textures[TEXTYPE_2D_SHEENLUT], SRV);
+	frameCB.texture_skyviewlut_index = device->GetDescriptorIndex(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], SRV);
+	frameCB.texture_transmittancelut_index = device->GetDescriptorIndex(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], SRV);
+	frameCB.texture_multiscatteringlut_index = device->GetDescriptorIndex(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], SRV);
+	frameCB.texture_skyluminancelut_index = device->GetDescriptorIndex(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], SRV);
+	frameCB.texture_shadowarray_2d_index = device->GetDescriptorIndex(&shadowMapArray_2D, SRV);
+	frameCB.texture_shadowarray_cube_index = device->GetDescriptorIndex(&shadowMapArray_Cube, SRV);
+	frameCB.texture_shadowarray_transparent_2d_index = device->GetDescriptorIndex(&shadowMapArray_Transparent_2D, SRV);
+	frameCB.texture_shadowarray_transparent_cube_index = device->GetDescriptorIndex(&shadowMapArray_Transparent_Cube, SRV);
+	frameCB.texture_voxelgi_index = device->GetDescriptorIndex(GetVoxelRadianceSecondaryBounceEnabled() ? &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] : &textures[TEXTYPE_3D_VOXELRADIANCE], SRV);
+	frameCB.buffer_entityarray_index = device->GetDescriptorIndex(&resourceBuffers[RBTYPE_ENTITYARRAY], SRV);
+	frameCB.buffer_entitymatrixarray_index = device->GetDescriptorIndex(&resourceBuffers[RBTYPE_MATRIXARRAY], SRV);
+
 
 	// Create volumetric cloud static resources if needed:
 	if (scene.weather.IsVolumetricClouds() && !texture_shapeNoise.IsValid())
@@ -3712,20 +3727,14 @@ void UpdateRenderData(
 
 				device->BindComputeShader(&shaders[CSTYPE_SKINNING], cmd);
 
-				// Do the skinning
-				const GPUResource* vbs[] = {
-					&mesh.vertexBuffer_POS,
-					&mesh.vertexBuffer_TAN,
-					&mesh.vertexBuffer_BON,
-					&armature.boneBuffer,
-				};
-				const GPUResource* uavs[] = {
-					&mesh.streamoutBuffer_POS,
-					&mesh.streamoutBuffer_TAN,
-				};
-
-				device->BindResources(vbs, SKINNINGSLOT_IN_VERTEX_POS, arraysize(vbs), cmd);
-				device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+				SkinningPushConstants push;
+				push.bonebuffer_index = device->GetDescriptorIndex(&armature.boneBuffer, SRV);
+				push.vb_pos_nor_wind = device->GetDescriptorIndex(&mesh.vertexBuffer_POS, SRV);
+				push.vb_tan = device->GetDescriptorIndex(&mesh.vertexBuffer_TAN, SRV);
+				push.vb_bon = device->GetDescriptorIndex(&mesh.vertexBuffer_BON, SRV);
+				push.so_pos_nor_wind = device->GetDescriptorIndex(&mesh.streamoutBuffer_POS, UAV);
+				push.so_tan = device->GetDescriptorIndex(&mesh.streamoutBuffer_TAN, UAV);
+				device->PushConstants(&push, sizeof(push), cmd);
 
 				device->Dispatch(((uint32_t)mesh.vertex_positions.size() + 63) / 64, 1, 1, cmd);
 
@@ -5781,8 +5790,6 @@ void DrawDebugWorld(
 
 		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_VOXEL], cmd);
 
-		device->BindResource(GetVoxelRadianceSecondaryBounceEnabled() ? &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] : &textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELGI, cmd);
-
 
 		MiscCB sb;
 		XMStoreFloat4x4(&sb.g_xTransform, XMMatrixTranslationFromVector(XMLoadFloat3(&voxelSceneData.center)) * camera.GetViewProjection());
@@ -6253,7 +6260,6 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		{
 			// Refresh atmospheric textures, since each probe has different positions
 			RefreshAtmosphericScatteringTextures(cmd);
-			device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], TEXSLOT_SKYLUMINANCELUT, cmd);
 		}
 
 		device->RenderPassBegin(&vis.scene->renderpasses_envmap[probe.textureIndex], cmd);
@@ -7345,39 +7351,6 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 void BindCommonResources(CommandList cmd)
 {
 	device->BindConstantBuffer(&constantBuffers[CBTYPE_FRAME], CBSLOT_RENDERER_FRAME, cmd);
-
-	device->BindSampler(&samplers[SSLOT_OBJECTSHADER], SSLOT_OBJECTSHADER, cmd);
-
-	device->BindResource(wiTextureHelper::getRandom64x64(), TEXSLOT_RANDOM64X64, cmd);
-	device->BindResource(wiTextureHelper::getBlueNoise(), TEXSLOT_BLUENOISE, cmd);
-
-	device->BindResource(&textures[TEXTYPE_2D_SHEENLUT], TEXSLOT_SHEENLUT, cmd);
-
-	// Bind the GPU entity array for all shaders that need it here:
-	GPUResource* resources[] = {
-		&resourceBuffers[RBTYPE_ENTITYARRAY],
-		&resourceBuffers[RBTYPE_MATRIXARRAY],
-	};
-	device->BindResources(resources, SBSLOT_ENTITYARRAY, arraysize(resources), cmd);
-	device->BindResources(resources, SBSLOT_ENTITYARRAY, arraysize(resources), cmd);
-	device->BindResources(resources, SBSLOT_ENTITYARRAY, arraysize(resources), cmd);
-
-	device->BindResource(&shadowMapArray_2D, TEXSLOT_SHADOWARRAY_2D, cmd);
-	device->BindResource(&shadowMapArray_Cube, TEXSLOT_SHADOWARRAY_CUBE, cmd);
-	if (GetTransparentShadowsEnabled())
-	{
-		device->BindResource(&shadowMapArray_Transparent_2D, TEXSLOT_SHADOWARRAY_TRANSPARENT_2D, cmd);
-		device->BindResource(&shadowMapArray_Transparent_Cube, TEXSLOT_SHADOWARRAY_TRANSPARENT_CUBE, cmd);
-	}
-
-	// Bind the atmospheric textures, as lighting and sky needs them
-	device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], TEXSLOT_SKYVIEWLUT, cmd);
-	device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
-	device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_MULTISCATTERINGLUT, cmd);
-	device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], TEXSLOT_SKYLUMINANCELUT, cmd);
-
-	device->BindResource(GetVoxelRadianceSecondaryBounceEnabled() ? &textures[TEXTYPE_3D_VOXELRADIANCE_HELPER] : &textures[TEXTYPE_3D_VOXELRADIANCE], TEXSLOT_VOXELGI, cmd);
-
 }
 
 void UpdateCameraCB(
@@ -11118,8 +11091,6 @@ void Postprocess_VolumetricClouds(
 		device->BindResource(&texture_detailNoise, TEXSLOT_ONDEMAND2, cmd);
 		device->BindResource(&texture_curlNoise, TEXSLOT_ONDEMAND3, cmd);
 		device->BindResource(&texture_weatherMap, TEXSLOT_ONDEMAND4, cmd);
-		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_TRANSMITTANCELUT, cmd);
-		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], TEXSLOT_SKYLUMINANCELUT, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.texture_cloudRender,

@@ -105,7 +105,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 					if (shadow_index >= MAX_RTSHADOWS)
 						break;
 
-					ShaderEntity light = EntityArray[entity_index];
+					ShaderEntity light = load_entity(entity_index);
 
 					if (!light.IsCastingShadow())
 					{

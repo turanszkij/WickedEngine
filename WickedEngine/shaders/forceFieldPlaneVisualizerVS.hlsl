@@ -14,7 +14,7 @@ PSIn main(uint vID : SV_VERTEXID)
 	Out.pos = float4(CreateCube(vID) * 2 - 1, 1);
 
 	uint forceFieldID = g_xFrame.ForceFieldArrayOffset + (uint)g_xColor.w;
-	ShaderEntity forceField = EntityArray[forceFieldID];
+	ShaderEntity forceField = load_entity(forceFieldID);
 
 	Out.pos.xyz *= forceField.GetConeAngleCos(); // range...
 	Out.pos.xyz += forceField.position;

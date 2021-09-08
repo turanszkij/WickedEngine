@@ -812,6 +812,26 @@ struct FrameCB
 	int			ObjectShaderSamplerIndex;
 	float		BlueNoisePhase;
 
+	int			texture_random64x64_index;
+	int			texture_bluenoise_index;
+	int			texture_sheenlut_index;
+	int			texture_skyviewlut_index;
+
+	int			texture_transmittancelut_index;
+	int			texture_multiscatteringlut_index;
+	int			texture_skyluminancelut_index;
+	int			texture_shadowarray_2d_index;
+
+	int			texture_shadowarray_cube_index;
+	int			texture_shadowarray_transparent_2d_index;
+	int			texture_shadowarray_transparent_cube_index;
+	int			texture_voxelgi_index;
+
+	int			buffer_entityarray_index;
+	int			buffer_entitymatrixarray_index;
+	int			padding1;
+	int			padding2;
+
 	AtmosphereParameters Atmosphere;
 	VolumetricCloudParameters VolumetricClouds;
 
@@ -968,6 +988,17 @@ CBUFFER(PaintRadiusCB, CBSLOT_RENDERER_MISC)
 	uint xPaintRadUVSET;
 	float xPaintRadRadius;
 	uint2 pad;
+};
+
+struct SkinningPushConstants
+{
+	int bonebuffer_index;
+	int vb_pos_nor_wind;
+	int vb_tan;
+	int vb_bon;
+
+	int so_pos_nor_wind;
+	int so_tan;
 };
 
 

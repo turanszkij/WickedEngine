@@ -31,7 +31,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 			// simulate:
 			for (uint i = 0; i < g_xFrame.ForceFieldArrayCount; ++i)
 			{
-				ShaderEntity forceField = EntityArray[g_xFrame.ForceFieldArrayOffset + i];
+				ShaderEntity forceField = load_entity(g_xFrame.ForceFieldArrayOffset + i);
 
 				[branch]
 				if (forceField.layerMask & xEmitterLayerMask)

@@ -124,7 +124,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		[loop]
 		for (uint iterator = 0; iterator < g_xFrame.LightArrayCount; iterator++)
 		{
-			ShaderEntity light = EntityArray[g_xFrame.LightArrayOffset + iterator];
+			ShaderEntity light = load_entity(g_xFrame.LightArrayOffset + iterator);
 
 			Lighting lighting;
 			lighting.create(0, 0, 0, 0);
