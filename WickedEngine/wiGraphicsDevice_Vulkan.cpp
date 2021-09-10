@@ -1038,19 +1038,16 @@ using namespace Vulkan_Internal;
 	{
 		this->device = device;
 
-		VkSemaphoreTypeCreateInfo timelineCreateInfo = {};
-		timelineCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
+		VkSemaphoreTypeCreateInfo timelineCreateInfo { VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO };
 		timelineCreateInfo.pNext = nullptr;
 		timelineCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
 		timelineCreateInfo.initialValue = 0;
 
-		VkSemaphoreCreateInfo createInfo = {};
-		createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+		VkSemaphoreCreateInfo createInfo { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
 		createInfo.pNext = &timelineCreateInfo;
 		createInfo.flags = 0;
 
-		VkResult res = vkCreateSemaphore(device->device, &createInfo, nullptr, &semaphore);
-		assert(res == VK_SUCCESS);
+		VK_CHECK(vkCreateSemaphore(device->device, &createInfo, nullptr, &semaphore));
 	}
 	void GraphicsDevice_Vulkan::CopyAllocator::destroy()
 	{
@@ -1936,10 +1933,7 @@ using namespace Vulkan_Internal;
 
 		DEBUGDEVICE = debuglayer;
 
-		VkResult res;
-
-		res = volkInitialize();
-		VK_CHECK(res);
+		VK_CHECK(volkInitialize());
 
 		// Fill out application info:
 		VkApplicationInfo appInfo = {};
@@ -2021,15 +2015,13 @@ using namespace Vulkan_Internal;
 				createInfo.pNext = &debugUtilsCreateInfo;
 			}
 
-			res = vkCreateInstance(&createInfo, nullptr, &instance);
-			assert(res == VK_SUCCESS);
+			VK_CHECK(vkCreateInstance(&createInfo, nullptr, &instance));
 
 			volkLoadInstanceOnly(instance);
 
 			if (debuglayer && debugUtils)
 			{
-				res = vkCreateDebugUtilsMessengerEXT(instance, &debugUtilsCreateInfo, nullptr, &debugUtilsMessenger);
-				assert(res == VK_SUCCESS);
+				VK_CHECK(vkCreateDebugUtilsMessengerEXT(instance, &debugUtilsCreateInfo, nullptr, &debugUtilsMessenger));
 			}
 		}
 
@@ -2342,12 +2334,9 @@ using namespace Vulkan_Internal;
 			createInfo.pNext = &timelineCreateInfo;
 			createInfo.flags = 0;
 
-			res = vkCreateSemaphore(device, &createInfo, nullptr, &queues[QUEUE_GRAPHICS].semaphore);
-			assert(res == VK_SUCCESS);
-			res = vkCreateSemaphore(device, &createInfo, nullptr, &queues[QUEUE_COMPUTE].semaphore);
-			assert(res == VK_SUCCESS);
+			VK_CHECK(vkCreateSemaphore(device, &createInfo, nullptr, &queues[QUEUE_GRAPHICS].semaphore));
+			VK_CHECK(vkCreateSemaphore(device, &createInfo, nullptr, &queues[QUEUE_COMPUTE].semaphore));
 		}
-
 
 		allocationhandler = std::make_shared<AllocationHandler>();
 		allocationhandler->device = device;
@@ -2362,8 +2351,7 @@ using namespace Vulkan_Internal;
 		{
 			allocatorInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
 		}
-		res = vmaCreateAllocator(&allocatorInfo, &allocationhandler->allocator);
-		assert(res == VK_SUCCESS);
+		VK_CHECK(vmaCreateAllocator(&allocatorInfo, &allocationhandler->allocator));
 
 		copyAllocator.init(this);
 
@@ -2381,30 +2369,24 @@ using namespace Vulkan_Internal;
 
 			// Create resources for transition command buffer:
 			{
-				VkCommandPoolCreateInfo poolInfo = {};
-				poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+				VkCommandPoolCreateInfo poolInfo { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
 				poolInfo.queueFamilyIndex = graphicsFamily;
 				poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
 
-				res = vkCreateCommandPool(device, &poolInfo, nullptr, &frames[fr].initCommandPool);
-				assert(res == VK_SUCCESS);
+				VK_CHECK(vkCreateCommandPool(device, &poolInfo, nullptr, &frames[fr].initCommandPool));
 
-				VkCommandBufferAllocateInfo commandBufferInfo = {};
-				commandBufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+				VkCommandBufferAllocateInfo commandBufferInfo { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
 				commandBufferInfo.commandBufferCount = 1;
 				commandBufferInfo.commandPool = frames[fr].initCommandPool;
 				commandBufferInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 
-				res = vkAllocateCommandBuffers(device, &commandBufferInfo, &frames[fr].initCommandBuffer);
-				assert(res == VK_SUCCESS);
+				VK_CHECK(vkAllocateCommandBuffers(device, &commandBufferInfo, &frames[fr].initCommandBuffer));
 
-				VkCommandBufferBeginInfo beginInfo = {};
-				beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+				VkCommandBufferBeginInfo beginInfo { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 				beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 				beginInfo.pInheritanceInfo = nullptr; // Optional
 
-				res = vkBeginCommandBuffer(frames[fr].initCommandBuffer, &beginInfo);
-				assert(res == VK_SUCCESS);
+				VK_CHECK(vkBeginCommandBuffer(frames[fr].initCommandBuffer, &beginInfo));
 			}
 		}
 
@@ -2420,16 +2402,14 @@ using namespace Vulkan_Internal;
 			VmaAllocationCreateInfo allocInfo = {};
 			allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
-			res = vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &nullBuffer, &nullBufferAllocation, nullptr);
-			assert(res == VK_SUCCESS);
+			VK_CHECK(vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &nullBuffer, &nullBufferAllocation, nullptr));
 			
 			VkBufferViewCreateInfo viewInfo = {};
 			viewInfo.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
 			viewInfo.format = VK_FORMAT_R32G32B32A32_SFLOAT;
 			viewInfo.range = VK_WHOLE_SIZE;
 			viewInfo.buffer = nullBuffer;
-			res = vkCreateBufferView(device, &viewInfo, nullptr, &nullBufferView);
-			assert(res == VK_SUCCESS);
+			VK_CHECK(vkCreateBufferView(device, &viewInfo, nullptr, &nullBufferView));
 		}
 		{
 			VkImageCreateInfo imageInfo = {};
@@ -2450,20 +2430,17 @@ using namespace Vulkan_Internal;
 			allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
 			imageInfo.imageType = VK_IMAGE_TYPE_1D;
-			res = vmaCreateImage(allocationhandler->allocator, &imageInfo, &allocInfo, &nullImage1D, &nullImageAllocation1D, nullptr);
-			assert(res == VK_SUCCESS);
+			VK_CHECK(vmaCreateImage(allocationhandler->allocator, &imageInfo, &allocInfo, &nullImage1D, &nullImageAllocation1D, nullptr));
 
 			imageInfo.imageType = VK_IMAGE_TYPE_2D;
 			imageInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 			imageInfo.arrayLayers = 6;
-			res = vmaCreateImage(allocationhandler->allocator, &imageInfo, &allocInfo, &nullImage2D, &nullImageAllocation2D, nullptr);
-			assert(res == VK_SUCCESS);
+			VK_CHECK(vmaCreateImage(allocationhandler->allocator, &imageInfo, &allocInfo, &nullImage2D, &nullImageAllocation2D, nullptr));
 
 			imageInfo.imageType = VK_IMAGE_TYPE_3D;
 			imageInfo.flags = 0;
 			imageInfo.arrayLayers = 1;
-			res = vmaCreateImage(allocationhandler->allocator, &imageInfo, &allocInfo, &nullImage3D, &nullImageAllocation3D, nullptr);
-			assert(res == VK_SUCCESS);
+			VK_CHECK(vmaCreateImage(allocationhandler->allocator, &imageInfo, &allocInfo, &nullImage3D, &nullImageAllocation3D, nullptr));
 
 			// Transitions:
 			initLocker.lock();
@@ -2528,48 +2505,37 @@ using namespace Vulkan_Internal;
 
 			viewInfo.image = nullImage1D;
 			viewInfo.viewType = VK_IMAGE_VIEW_TYPE_1D;
-			res = vkCreateImageView(device, &viewInfo, nullptr, &nullImageView1D);
-			assert(res == VK_SUCCESS);
+			VK_CHECK(vkCreateImageView(device, &viewInfo, nullptr, &nullImageView1D));
 
 			viewInfo.image = nullImage1D;
 			viewInfo.viewType = VK_IMAGE_VIEW_TYPE_1D_ARRAY;
-			res = vkCreateImageView(device, &viewInfo, nullptr, &nullImageView1DArray);
-			assert(res == VK_SUCCESS);
+			VK_CHECK(vkCreateImageView(device, &viewInfo, nullptr, &nullImageView1DArray));
 
 			viewInfo.image = nullImage2D;
 			viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-			res = vkCreateImageView(device, &viewInfo, nullptr, &nullImageView2D);
-			assert(res == VK_SUCCESS);
+			VK_CHECK(vkCreateImageView(device, &viewInfo, nullptr, &nullImageView2D));
 
 			viewInfo.image = nullImage2D;
 			viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-			res = vkCreateImageView(device, &viewInfo, nullptr, &nullImageView2DArray);
-			assert(res == VK_SUCCESS);
+			VK_CHECK(vkCreateImageView(device, &viewInfo, nullptr, &nullImageView2DArray));
 
 			viewInfo.image = nullImage2D;
 			viewInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
 			viewInfo.subresourceRange.layerCount = 6;
-			res = vkCreateImageView(device, &viewInfo, nullptr, &nullImageViewCube);
-			assert(res == VK_SUCCESS);
+			VK_CHECK(vkCreateImageView(device, &viewInfo, nullptr, &nullImageViewCube));
 
 			viewInfo.image = nullImage2D;
 			viewInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
 			viewInfo.subresourceRange.layerCount = 6;
-			res = vkCreateImageView(device, &viewInfo, nullptr, &nullImageViewCubeArray);
-			assert(res == VK_SUCCESS);
+			VK_CHECK(vkCreateImageView(device, &viewInfo, nullptr, &nullImageViewCubeArray));
 
 			viewInfo.image = nullImage3D;
 			viewInfo.subresourceRange.layerCount = 1;
 			viewInfo.viewType = VK_IMAGE_VIEW_TYPE_3D;
-			res = vkCreateImageView(device, &viewInfo, nullptr, &nullImageView3D);
-			assert(res == VK_SUCCESS);
-		}
-		{
-			VkSamplerCreateInfo createInfo = {};
-			createInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-
-			res = vkCreateSampler(device, &createInfo, nullptr, &nullSampler);
-			assert(res == VK_SUCCESS);
+			VK_CHECK(vkCreateImageView(device, &viewInfo, nullptr, &nullImageView3D));
+		
+			VkSamplerCreateInfo samplerCreateInfo { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+			VK_CHECK(vkCreateSampler(device, &samplerCreateInfo, nullptr, &nullSampler));
 		}
 
 		TIMESTAMP_FREQUENCY = uint64_t(1.0 / double(properties2.properties.limits.timestampPeriod) * 1000 * 1000 * 1000);
@@ -2629,8 +2595,7 @@ using namespace Vulkan_Internal;
 	}
 	GraphicsDevice_Vulkan::~GraphicsDevice_Vulkan()
 	{
-		VkResult res = vkDeviceWaitIdle(device);
-		assert(res == VK_SUCCESS);
+		VK_CHECK(vkDeviceWaitIdle(device));
 
 		for (auto& queue : queues)
 		{
@@ -2706,8 +2671,6 @@ using namespace Vulkan_Internal;
 		swapChain->internal_state = internal_state;
 		swapChain->desc = *pDesc;
 
-		VkResult res;
-
 		// Surface creation:
 		if(internal_state->surface == VK_NULL_HANDLE)
 		{
@@ -2717,8 +2680,7 @@ using namespace Vulkan_Internal;
 			createInfo.hwnd = window;
 			createInfo.hinstance = GetModuleHandle(nullptr);
 
-			VkResult res = vkCreateWin32SurfaceKHR(instance, &createInfo, nullptr, &internal_state->surface);
-			assert(res == VK_SUCCESS);
+			VK_CHECK(vkCreateWin32SurfaceKHR(instance, &createInfo, nullptr, &internal_state->surface));
 #elif SDL2
 			if (!SDL_Vulkan_CreateSurface(window, instance, &internal_state->surface))
 			{
@@ -2734,8 +2696,7 @@ using namespace Vulkan_Internal;
 		for (const auto& queueFamily : queueFamilies)
 		{
 			VkBool32 presentSupport = false;
-			res = vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, (uint32_t)familyIndex, internal_state->surface, &presentSupport);
-			assert(res == VK_SUCCESS);
+			VK_CHECK(vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, (uint32_t)familyIndex, internal_state->surface, &presentSupport));
 
 			if (presentFamily < 0 && queueFamily.queueCount > 0 && presentSupport)
 			{
@@ -2745,7 +2706,11 @@ using namespace Vulkan_Internal;
 			familyIndex++;
 		}
 
-		res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, internal_state->surface, &internal_state->swapchain_capabilities);
+		// Check if we found present family
+		if (presentFamily == -1)
+			return false;
+
+		VkResult res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, internal_state->surface, &internal_state->swapchain_capabilities);
 		assert(res == VK_SUCCESS);
 
 		uint32_t formatCount;
