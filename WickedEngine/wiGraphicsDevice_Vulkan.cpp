@@ -3104,6 +3104,10 @@ using namespace Vulkan_Internal;
 				{
 					barrier.dstAccessMask |= VK_ACCESS_SHADER_WRITE_BIT;
 				}
+				if (pBuffer->desc.MiscFlags & RESOURCE_MISC_INDIRECT_ARGS)
+				{
+					barrier.dstAccessMask |= VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
+				}
 				if (pBuffer->desc.MiscFlags & RESOURCE_MISC_RAY_TRACING)
 				{
 					barrier.dstAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
