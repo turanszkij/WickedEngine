@@ -33,14 +33,9 @@ int main(int argc, char* argv[])
 
 	wiStartupArguments::Parse(argc, argv);
 
-	if (wiStartupArguments::HasArgument("hlsl5"))
+	if (wiStartupArguments::HasArgument("hlsl6") || wiStartupArguments::HasArgument("dxil"))
 	{
-		targets.push_back({ wiGraphics::SHADERFORMAT_HLSL5, "shaders/hlsl5/" });
-		std::cout << "hlsl5 ";
-	}
-	if (wiStartupArguments::HasArgument("hlsl6"))
-	{
-		targets.push_back({ wiGraphics::SHADERFORMAT_HLSL6, "shaders/hlsl6/" });
+		targets.push_back({ wiGraphics::SHADERFORMAT_DXIL, "shaders/hlsl6/" });
 		std::cout << "hlsl6 ";
 	}
 	if (wiStartupArguments::HasArgument("spirv"))
@@ -67,8 +62,7 @@ int main(int argc, char* argv[])
 	if (targets.empty())
 	{
 		targets = {
-			//{ wiGraphics::SHADERFORMAT_HLSL5, "shaders/hlsl5/" },
-			{ wiGraphics::SHADERFORMAT_HLSL6, "shaders/hlsl6/" },
+			{ wiGraphics::SHADERFORMAT_DXIL, "shaders/hlsl6/" },
 			{ wiGraphics::SHADERFORMAT_SPIRV, "shaders/spirv/" },
 		};
 		std::cout << "No shader formats were specified, assuming command arguments: hlsl5 spirv hlsl6" << std::endl;
@@ -418,19 +412,6 @@ int main(int argc, char* argv[])
 
 		for (int i = 0; i < wiGraphics::SHADERSTAGE_COUNT; ++i)
 		{
-			if (target.format == wiGraphics::SHADERFORMAT_HLSL5)
-			{
-				if (
-					i == wiGraphics::MS ||
-					i == wiGraphics::AS ||
-					i == wiGraphics::LIB
-					)
-				{
-					// shader stage not applicable to HLSL5
-					continue;
-				}
-			}
-
 			for (auto& shader : shaders[i])
 			{
 				wiJobSystem::Execute(ctx, [=](wiJobArgs args) {
@@ -451,11 +432,6 @@ int main(int argc, char* argv[])
 					{
 						// increase min shader model only for specific shaders
 						input.minshadermodel = it->second;
-					}
-					if (input.minshadermodel > wiGraphics::SHADERMODEL_5_0 && target.format == wiGraphics::SHADERFORMAT_HLSL5)
-					{
-						// if shader format cannot support shader model, then we cancel the task without returning error
-						return;
 					}
 
 					wiShaderCompiler::CompilerOutput output;

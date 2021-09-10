@@ -217,7 +217,7 @@ namespace wiGraphics
 		void WaitForGPU() const override;
 		void ClearPipelineStateCache() override;
 
-		SHADERFORMAT GetShaderFormat() const override { return SHADERFORMAT_HLSL6; }
+		SHADERFORMAT GetShaderFormat() const override { return SHADERFORMAT_DXIL; }
 
 		Texture GetBackBuffer(const SwapChain* swapchain) const override;
 

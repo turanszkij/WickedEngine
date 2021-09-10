@@ -67,8 +67,8 @@ namespace wiGraphics
 		virtual int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) const = 0;
 		virtual int CreateSubresource(GPUBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size = ~0) const = 0;
 
-		virtual int GetDescriptorIndex(const GPUResource* resource, SUBRESOURCE_TYPE type, int subresource = -1) const { return -1; };
-		virtual int GetDescriptorIndex(const Sampler* sampler) const { return -1; };
+		virtual int GetDescriptorIndex(const GPUResource* resource, SUBRESOURCE_TYPE type, int subresource = -1) const = 0;
+		virtual int GetDescriptorIndex(const Sampler* sampler) const = 0;
 
 		virtual void WriteShadingRateValue(SHADING_RATE rate, void* dest) const {};
 		virtual void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) const {}
@@ -107,7 +107,7 @@ namespace wiGraphics
 		constexpr uint32_t GetVariableRateShadingTileSize() const { return VARIABLE_RATE_SHADING_TILE_SIZE; }
 		constexpr uint64_t GetTimestampFrequency() const { return TIMESTAMP_FREQUENCY; }
 
-		virtual SHADERFORMAT GetShaderFormat() const { return SHADERFORMAT_NONE; }
+		virtual SHADERFORMAT GetShaderFormat() const = 0;
 
 		virtual Texture GetBackBuffer(const SwapChain* swapchain) const = 0;
 
