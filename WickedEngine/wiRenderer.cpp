@@ -4221,6 +4221,8 @@ void DrawSoftParticles(
 
 	GetRenderFrameAllocator(cmd).free(sizeof(uint32_t) * emitterCount);
 
+	device->BindShadingRate(SHADING_RATE_1X1, cmd);
+
 	wiProfiler::EndRange(range);
 }
 void DrawLightVisualizers(
@@ -7546,23 +7548,8 @@ void ComputeShadingRateClassification(
 	};
 	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&output, output.desc.layout, RESOURCE_STATE_UNORDERED_ACCESS),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
-
 	// Whole threadgroup for each tile:
 	device->Dispatch(desc.Width, desc.Height, 1, cmd);
-
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
-			GPUBarrier::Image(&output, RESOURCE_STATE_UNORDERED_ACCESS, output.desc.layout),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
 
 	if (GetVariableRateShadingClassificationDebug())
 	{
