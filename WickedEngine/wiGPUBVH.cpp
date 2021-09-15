@@ -8,6 +8,7 @@
 #include "wiTextureHelper.h"
 #include "wiBackLog.h"
 #include "wiEvent.h"
+#include "wiTimer.h"
 
 //#define BVH_VALIDATE // slow but great for debug!
 #ifdef BVH_VALIDATE
@@ -399,6 +400,10 @@ namespace wiGPUBVH_Internal
 
 void wiGPUBVH::Initialize()
 {
+	wiTimer timer;
+
 	static wiEvent::Handle handle = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { wiGPUBVH_Internal::LoadShaders(); });
 	wiGPUBVH_Internal::LoadShaders();
+
+	wiBackLog::post("wiGPUBVH Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 }

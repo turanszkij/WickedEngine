@@ -4,6 +4,7 @@
 #include "wiBackLog.h"
 #include "wiJobSystem.h"
 #include "wiRenderer.h"
+#include "wiTimer.h"
 
 #include "btBulletDynamicsCommon.h"
 #include "BulletSoftBody/btSoftBodyHelpers.h"
@@ -66,6 +67,8 @@ namespace wiPhysicsEngine
 
 	void Initialize()
 	{
+		wiTimer timer;
+
 		dispatcher = std::make_unique<btCollisionDispatcher>(&collisionConfiguration);
 		dynamicsWorld = std::make_unique<btSoftRigidDynamicsWorld>(dispatcher.get(), &overlappingPairCache, &solver, &collisionConfiguration);
 
@@ -86,7 +89,7 @@ namespace wiPhysicsEngine
 
 		softRigidWorld->setDebugDrawer(&debugDraw);
 
-		wiBackLog::post("wiPhysicsEngine_Bullet Initialized");
+		wiBackLog::post("wiPhysicsEngine_Bullet Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
 
 	bool IsEnabled() { return ENABLED; }

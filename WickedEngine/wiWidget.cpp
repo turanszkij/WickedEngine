@@ -8,6 +8,7 @@
 #include "shaders/ShaderInterop_Renderer.h"
 #include "wiEvent.h"
 #include "wiBackLog.h"
+#include "wiTimer.h"
 
 #include <sstream>
 
@@ -354,8 +355,12 @@ namespace wiWidget_Internal
 
 void wiWidget::Initialize()
 {
+	wiTimer timer;
+
 	static wiEvent::Handle handle = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { wiWidget_Internal::LoadShaders(); });
 	wiWidget_Internal::LoadShaders();
+
+	wiBackLog::post("wiWidget Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 }
 
 

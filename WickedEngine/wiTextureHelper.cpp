@@ -4,6 +4,7 @@
 #include "wiColor.h"
 #include "wiBackLog.h"
 #include "wiSpinLock.h"
+#include "wiTimer.h"
 
 #include <unordered_map>
 
@@ -31,6 +32,8 @@ namespace wiTextureHelper
 
 	void Initialize()
 	{
+		wiTimer timer;
+
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
 		// Random64x64
@@ -151,7 +154,7 @@ namespace wiTextureHelper
 			device->SetName(&helperTextures[HELPERTEXTURE_BLUENOISE], "HELPERTEXTURE_BLUENOISE");
 		}
 
-		wiBackLog::post("wiTextureHelper Initialized");
+		wiBackLog::post("wiTextureHelper Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
 
 	const Texture* getRandom64x64()

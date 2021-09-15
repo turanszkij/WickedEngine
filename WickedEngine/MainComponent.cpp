@@ -65,6 +65,8 @@ void MainComponent::ActivatePath(RenderPath* component, float fadeSeconds, wiCol
 
 void MainComponent::Run()
 {
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
 	if (!initialized)
 	{
 		// Initialize in a lazy way, so the user application doesn't have to call this explicitly
@@ -74,14 +76,14 @@ void MainComponent::Run()
 	if (!wiInitializer::IsInitializeFinished())
 	{
 		// Until engine is not loaded, present initialization screen...
-		CommandList cmd = wiRenderer::GetDevice()->BeginCommandList();
-		wiRenderer::GetDevice()->RenderPassBegin(&swapChain, cmd);
+		CommandList cmd = device->BeginCommandList();
+		device->RenderPassBegin(&swapChain, cmd);
 		wiImage::SetCanvas(canvas, cmd);
 		wiFont::SetCanvas(canvas, cmd);
 		Viewport viewport;
 		viewport.Width = (float)swapChain.desc.width;
 		viewport.Height = (float)swapChain.desc.height;
-		wiRenderer::GetDevice()->BindViewports(1, &viewport, cmd);
+		device->BindViewports(1, &viewport, cmd);
 		wiFontParams params;
 		params.posX = 5.f;
 		params.posY = 5.f;
@@ -93,8 +95,8 @@ void MainComponent::Run()
 			params.posY = screenheight - textheight;
 		}
 		wiFont::Draw(text, params, cmd);
-		wiRenderer::GetDevice()->RenderPassEnd(cmd);
-		wiRenderer::GetDevice()->SubmitCommandLists();
+		device->RenderPassEnd(cmd);
+		device->SubmitCommandLists();
 		return;
 	}
 
@@ -164,21 +166,21 @@ void MainComponent::Run()
 
 	wiInput::Update(window);
 
-	CommandList cmd = wiRenderer::GetDevice()->BeginCommandList();
-	wiRenderer::GetDevice()->RenderPassBegin(&swapChain, cmd);
+	CommandList cmd = device->BeginCommandList();
+	device->RenderPassBegin(&swapChain, cmd);
 	{
 		wiImage::SetCanvas(canvas, cmd);
 		wiFont::SetCanvas(canvas, cmd);
 		Viewport viewport;
 		viewport.Width = (float)swapChain.desc.width;
 		viewport.Height = (float)swapChain.desc.height;
-		wiRenderer::GetDevice()->BindViewports(1, &viewport, cmd);
+		device->BindViewports(1, &viewport, cmd);
 		Compose(cmd);
 	}
-	wiRenderer::GetDevice()->RenderPassEnd(cmd);
+	device->RenderPassEnd(cmd);
 
 	wiProfiler::EndFrame(cmd);
-	wiRenderer::GetDevice()->SubmitCommandLists();
+	device->SubmitCommandLists();
 }
 
 void MainComponent::Update(float dt)

@@ -15,7 +15,7 @@ namespace wiBackLog
 
 	std::string getText();
 	void clear();
-	void post(const char* input);
+	void post(const std::string& input);
 	void input(const char input);
 	void acceptInput();
 	void deletefromInput();
