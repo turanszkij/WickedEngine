@@ -1622,39 +1622,11 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::DescriptorBinder::reset()
 	{
+		table = {};
 		dirty_res = true;
 		dirty_sam = true;
 		ringOffset_res = 0;
 		ringOffset_sam = 0;
-
-		for (int i = 0; i < arraysize(CBV); ++i)
-		{
-			CBV[i] = {};
-		}
-		for (int i = 0; i < arraysize(CBV_offset); ++i)
-		{
-			CBV_offset[i] = {};
-		}
-		for (int i = 0; i < arraysize(SRV); ++i)
-		{
-			SRV[i] = {};
-		}
-		for (int i = 0; i < arraysize(SRV_index); ++i)
-		{
-			SRV_index[i] = {};
-		}
-		for (int i = 0; i < arraysize(UAV); ++i)
-		{
-			UAV[i] = {};
-		}
-		for (int i = 0; i < arraysize(UAV_index); ++i)
-		{
-			UAV_index[i] = {};
-		}
-		for (int i = 0; i < arraysize(SAM); ++i)
-		{
-			SAM[i] = {};
-		}
 	}
 	void GraphicsDevice_DX12::DescriptorBinder::flush(bool graphics, CommandList cmd)
 	{
@@ -1673,8 +1645,8 @@ using namespace DX12_Internal;
 					continue;
 				}
 
-				const GPUBuffer& buffer = CBV[x.ShaderRegister];
-				uint64_t offset = CBV_offset[x.ShaderRegister];
+				const GPUBuffer& buffer = table.CBV[x.ShaderRegister];
+				uint64_t offset = table.CBV_offset[x.ShaderRegister];
 
 				D3D12_GPU_VIRTUAL_ADDRESS address;
 
@@ -1774,8 +1746,8 @@ using namespace DX12_Internal;
 					default:
 					case D3D12_DESCRIPTOR_RANGE_TYPE_SRV:
 					{
-						const GPUResource& resource = SRV[ShaderRegister];
-						const int subresource = SRV_index[ShaderRegister];
+						const GPUResource& resource = table.SRV[ShaderRegister];
+						const int subresource = table.SRV_index[ShaderRegister];
 						if (!resource.IsValid())
 						{
 							switch (binding)
@@ -1839,8 +1811,8 @@ using namespace DX12_Internal;
 
 					case D3D12_DESCRIPTOR_RANGE_TYPE_UAV:
 					{
-						const GPUResource& resource = UAV[ShaderRegister];
-						const int subresource = UAV_index[ShaderRegister];
+						const GPUResource& resource = table.UAV[ShaderRegister];
+						const int subresource = table.UAV_index[ShaderRegister];
 						if (!resource.IsValid())
 						{
 							switch (binding)
@@ -1888,8 +1860,8 @@ using namespace DX12_Internal;
 
 					case D3D12_DESCRIPTOR_RANGE_TYPE_CBV:
 					{
-						const GPUBuffer& buffer = CBV[ShaderRegister];
-						uint64_t offset = CBV_offset[ShaderRegister];
+						const GPUBuffer& buffer = table.CBV[ShaderRegister];
+						uint64_t offset = table.CBV_offset[ShaderRegister];
 
 						if (!buffer.IsValid())
 						{
@@ -1964,7 +1936,7 @@ using namespace DX12_Internal;
 
 					UINT ShaderRegister = x.BaseShaderRegister + descriptor_index;
 
-					const Sampler& sampler = SAM[ShaderRegister];
+					const Sampler& sampler = table.SAM[ShaderRegister];
 					if (!sampler.IsValid())
 					{
 						device->device->CopyDescriptorsSimple(1, dst, device->nullSAM, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
@@ -2122,7 +2094,7 @@ using namespace DX12_Internal;
 	{
 		pso_validate(cmd);
 
-		descriptors[cmd].flush(true, cmd);
+		binders[cmd].flush(true, cmd);
 
 		auto pso_internal = to_internal(active_pso[cmd]);
 		if (pso_internal->rootconstants.Constants.Num32BitValues > 0)
@@ -2137,7 +2109,7 @@ using namespace DX12_Internal;
 	}
 	void GraphicsDevice_DX12::predispatch(CommandList cmd)
 	{
-		descriptors[cmd].flush(false, cmd);
+		binders[cmd].flush(false, cmd);
 
 		auto cs_internal = to_internal(active_cs[cmd]);
 		if (cs_internal->rootconstants.Constants.Num32BitValues > 0)
@@ -5354,7 +5326,7 @@ using namespace DX12_Internal;
 			wss << "cmd" << cmd;
 			commandLists[cmd][queue]->SetName(wss.str().c_str());
 
-			descriptors[cmd].init(this);
+			binders[cmd].init(this);
 		}
 
 		// Start the command list in a default state:
@@ -5369,7 +5341,7 @@ using namespace DX12_Internal;
 		};
 		GetCommandList(cmd)->SetDescriptorHeaps(arraysize(heaps), heaps);
 
-		descriptors[cmd].reset();
+		binders[cmd].reset();
 
 		if (queue == QUEUE_GRAPHICS)
 		{
@@ -5716,11 +5688,12 @@ using namespace DX12_Internal;
 	void GraphicsDevice_DX12::BindResource(const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
 	{
 		assert(slot < DESCRIPTORBINDER_SRV_COUNT);
-		if (descriptors[cmd].SRV[slot].internal_state != resource->internal_state || descriptors[cmd].SRV_index[slot] != subresource)
+		auto& binder = binders[cmd];
+		if (binder.table.SRV[slot].internal_state != resource->internal_state || binder.table.SRV_index[slot] != subresource)
 		{
-			descriptors[cmd].SRV[slot] = *resource;
-			descriptors[cmd].SRV_index[slot] = subresource;
-			descriptors[cmd].dirty_res = true;
+			binder.table.SRV[slot] = *resource;
+			binder.table.SRV_index[slot] = subresource;
+			binder.dirty_res = true;
 		}
 	}
 	void GraphicsDevice_DX12::BindResources(const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd)
@@ -5736,11 +5709,12 @@ using namespace DX12_Internal;
 	void GraphicsDevice_DX12::BindUAV(const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
 	{
 		assert(slot < DESCRIPTORBINDER_UAV_COUNT);
-		if (descriptors[cmd].UAV[slot].internal_state != resource->internal_state || descriptors[cmd].UAV_index[slot] != subresource)
+		auto& binder = binders[cmd];
+		if (binder.table.UAV[slot].internal_state != resource->internal_state || binder.table.UAV_index[slot] != subresource)
 		{
-			descriptors[cmd].UAV[slot] = *resource;
-			descriptors[cmd].UAV_index[slot] = subresource;
-			descriptors[cmd].dirty_res = true;
+			binder.table.UAV[slot] = *resource;
+			binder.table.UAV_index[slot] = subresource;
+			binder.dirty_res = true;
 		}
 	}
 	void GraphicsDevice_DX12::BindUAVs(const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd)
@@ -5756,20 +5730,22 @@ using namespace DX12_Internal;
 	void GraphicsDevice_DX12::BindSampler(const Sampler* sampler, uint32_t slot, CommandList cmd)
 	{
 		assert(slot < DESCRIPTORBINDER_SAMPLER_COUNT);
-		if (descriptors[cmd].SAM[slot].internal_state != sampler->internal_state)
+		auto& binder = binders[cmd];
+		if (binder.table.SAM[slot].internal_state != sampler->internal_state)
 		{
-			descriptors[cmd].SAM[slot] = *sampler;
-			descriptors[cmd].dirty_sam = true;
+			binder.table.SAM[slot] = *sampler;
+			binder.dirty_sam = true;
 		}
 	}
 	void GraphicsDevice_DX12::BindConstantBuffer(const GPUBuffer* buffer, uint32_t slot, CommandList cmd, uint64_t offset)
 	{
 		assert(slot < DESCRIPTORBINDER_CBV_COUNT);
-		if (descriptors[cmd].CBV[slot].internal_state != buffer->internal_state || descriptors[cmd].CBV_offset[slot] != offset)
+		auto& binder = binders[cmd];
+		if (binder.table.CBV[slot].internal_state != buffer->internal_state || binder.table.CBV_offset[slot] != offset)
 		{
-			descriptors[cmd].CBV[slot] = *buffer;
-			descriptors[cmd].CBV_offset[slot] = offset;
-			descriptors[cmd].dirty_res = true;
+			binder.table.CBV[slot] = *buffer;
+			binder.table.CBV_offset[slot] = offset;
+			binder.dirty_res = true;
 
 			// Root constant buffer root signature state tracking:
 			auto internal_state = to_internal(buffer);
@@ -5784,7 +5760,7 @@ using namespace DX12_Internal;
 			// CBV flag marked as bound for this slot:
 			//	Also, the corresponding slot is marked dirty
 			internal_state->cbv_mask[cmd] |= 1 << slot;
-			descriptors[cmd].dirty_root_cbvs |= 1 << slot;
+			binder.dirty_root_cbvs |= 1 << slot;
 		}
 	}
 	void GraphicsDevice_DX12::BindVertexBuffers(const GPUBuffer* const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint64_t* offsets, CommandList cmd)
@@ -5871,9 +5847,9 @@ using namespace DX12_Internal;
 			GetCommandList(cmd)->SetGraphicsRootSignature(internal_state->rootSignature.Get());
 
 			// Invalidate graphics root bindings:
-			descriptors[cmd].dirty_res = true;
-			descriptors[cmd].dirty_sam = true;
-			descriptors[cmd].dirty_root_cbvs = ~0;
+			binders[cmd].dirty_res = true;
+			binders[cmd].dirty_sam = true;
+			binders[cmd].dirty_root_cbvs = ~0;
 
 			// Set the bindless tables:
 			uint32_t bindpoint = internal_state->bindpoint_bindless;
@@ -5915,9 +5891,9 @@ using namespace DX12_Internal;
 				GetCommandList(cmd)->SetComputeRootSignature(internal_state->rootSignature.Get());
 
 				// Invalidate compute root bindings:
-				descriptors[cmd].dirty_res = true;
-				descriptors[cmd].dirty_sam = true;
-				descriptors[cmd].dirty_root_cbvs = ~0;
+				binders[cmd].dirty_res = true;
+				binders[cmd].dirty_sam = true;
+				binders[cmd].dirty_root_cbvs = ~0;
 
 				// Set the bindless tables:
 				uint32_t bindpoint = internal_state->bindpoint_bindless;

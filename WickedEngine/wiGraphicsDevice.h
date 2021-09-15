@@ -8,22 +8,36 @@
 
 namespace wiGraphics
 {
+	// CommandList can be used to record graphics commands from a CPU thread
+	//	Use GraphicsDevice::BeginCommandList() to start a command list
+	//	Use GraphicsDevice::SubmitCommandLists() to give all started command lists to the GPU for execution
+	//	CommandList recording is not thread safe
 	typedef uint8_t CommandList;
-	static const CommandList COMMANDLIST_COUNT = 32;
+	static const CommandList COMMANDLIST_COUNT = 32; // If you increase command list count, more memory will be statically allocated for per-command list resources
 	static const CommandList INVALID_COMMANDLIST = COMMANDLIST_COUNT;
 
 	// Descriptor binding counts:
 	//	It's OK increase these limits if not enough
+	//	But it's better to refactor shaders to use bindless descriptors if they require more resources
 	static const uint32_t DESCRIPTORBINDER_CBV_COUNT = 15;
 	static const uint32_t DESCRIPTORBINDER_SRV_COUNT = 64;
 	static const uint32_t DESCRIPTORBINDER_UAV_COUNT = 16;
 	static const uint32_t DESCRIPTORBINDER_SAMPLER_COUNT = 16;
+	struct DescriptorBindingTable
+	{
+		GPUBuffer CBV[DESCRIPTORBINDER_CBV_COUNT];
+		uint64_t CBV_offset[DESCRIPTORBINDER_CBV_COUNT] = {};
+		GPUResource SRV[DESCRIPTORBINDER_SRV_COUNT];
+		int SRV_index[DESCRIPTORBINDER_SRV_COUNT] = {};
+		GPUResource UAV[DESCRIPTORBINDER_UAV_COUNT];
+		int UAV_index[DESCRIPTORBINDER_UAV_COUNT] = {};
+		Sampler SAM[DESCRIPTORBINDER_SAMPLER_COUNT];
+	};
 
 	constexpr uint32_t AlignTo(uint32_t value, uint32_t alignment)
 	{
 		return ((value + alignment - 1) / alignment) * alignment;
 	}
-
 	constexpr uint64_t AlignTo(uint64_t value, uint64_t alignment)
 	{
 		return ((value + alignment - 1) / alignment) * alignment;
@@ -67,8 +81,8 @@ namespace wiGraphics
 		virtual int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) const = 0;
 		virtual int CreateSubresource(GPUBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size = ~0) const = 0;
 
-		virtual int GetDescriptorIndex(const GPUResource* resource, SUBRESOURCE_TYPE type, int subresource = -1) const { return -1; };
-		virtual int GetDescriptorIndex(const Sampler* sampler) const { return -1; };
+		virtual int GetDescriptorIndex(const GPUResource* resource, SUBRESOURCE_TYPE type, int subresource = -1) const = 0;
+		virtual int GetDescriptorIndex(const Sampler* sampler) const = 0;
 
 		virtual void WriteShadingRateValue(SHADING_RATE rate, void* dest) const {};
 		virtual void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) const {}
@@ -86,7 +100,7 @@ namespace wiGraphics
 		virtual void SubmitCommandLists() = 0;
 
 		virtual void WaitForGPU() const = 0;
-		virtual void ClearPipelineStateCache() {};
+		virtual void ClearPipelineStateCache() = 0;
 
 		constexpr uint64_t GetFrameCount() const { return FRAMECOUNT; }
 
@@ -107,13 +121,13 @@ namespace wiGraphics
 		constexpr uint32_t GetVariableRateShadingTileSize() const { return VARIABLE_RATE_SHADING_TILE_SIZE; }
 		constexpr uint64_t GetTimestampFrequency() const { return TIMESTAMP_FREQUENCY; }
 
-		virtual SHADERFORMAT GetShaderFormat() const { return SHADERFORMAT_NONE; }
+		virtual SHADERFORMAT GetShaderFormat() const = 0;
 
 		virtual Texture GetBackBuffer(const SwapChain* swapchain) const = 0;
 
 		///////////////Thread-sensitive////////////////////////
 
-		virtual void WaitCommandList(CommandList cmd, CommandList wait_for) {}
+		virtual void WaitCommandList(CommandList cmd, CommandList wait_for) = 0;
 		virtual void RenderPassBegin(const SwapChain* swapchain, CommandList cmd) = 0;
 		virtual void RenderPassBegin(const RenderPass* renderpass, CommandList cmd) = 0;
 		virtual void RenderPassEnd(CommandList cmd) = 0;
@@ -146,18 +160,17 @@ namespace wiGraphics
 		virtual void CopyBuffer(const GPUBuffer* pDst, uint64_t dst_offset, const GPUBuffer* pSrc, uint64_t src_offset, uint64_t size, CommandList cmd) = 0;
 		virtual void QueryBegin(const GPUQueryHeap *heap, uint32_t index, CommandList cmd) = 0;
 		virtual void QueryEnd(const GPUQueryHeap *heap, uint32_t index, CommandList cmd) = 0;
-		virtual void QueryResolve(const GPUQueryHeap* heap, uint32_t index, uint32_t count, const GPUBuffer* dest, uint64_t dest_offset, CommandList cmd) {}
+		virtual void QueryResolve(const GPUQueryHeap* heap, uint32_t index, uint32_t count, const GPUBuffer* dest, uint64_t dest_offset, CommandList cmd) = 0;
 		virtual void QueryReset(const GPUQueryHeap* heap, uint32_t index, uint32_t count, CommandList cmd) {}
 		virtual void Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd) = 0;
 		virtual void BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src = nullptr) {}
 		virtual void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) {}
 		virtual void DispatchRays(const DispatchRaysDesc* desc, CommandList cmd) {}
-		virtual void PushConstants(const void* data, uint32_t size, CommandList cmd) {}
+		virtual void PushConstants(const void* data, uint32_t size, CommandList cmd) = 0;
 		
 		virtual void EventBegin(const char* name, CommandList cmd) = 0;
 		virtual void EventEnd(CommandList cmd) = 0;
 		virtual void SetMarker(const char* name, CommandList cmd) = 0;
-
 
 
 
@@ -179,6 +192,7 @@ namespace wiGraphics
 			// Returns true if the allocation was successful
 			inline bool IsValid() const { return data != nullptr && buffer.IsValid(); }
 		};
+
 		// Allocates temporary memory that the CPU can write and GPU can read. 
 		//	It is only alive for one frame and automatically invalidated after that.
 		GPUAllocation AllocateGPU(uint64_t dataSize, CommandList cmd)

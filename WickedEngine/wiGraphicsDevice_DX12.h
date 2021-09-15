@@ -119,20 +119,12 @@ namespace wiGraphics
 
 		struct DescriptorBinder
 		{
+			DescriptorBindingTable table;
 			GraphicsDevice_DX12* device = nullptr;
 			uint32_t ringOffset_res = 0;
 			uint32_t ringOffset_sam = 0;
 			bool dirty_res = false;
 			bool dirty_sam = false;
-
-			GPUBuffer CBV[DESCRIPTORBINDER_CBV_COUNT];
-			uint64_t CBV_offset[DESCRIPTORBINDER_CBV_COUNT];
-			GPUResource SRV[DESCRIPTORBINDER_SRV_COUNT];
-			int SRV_index[DESCRIPTORBINDER_SRV_COUNT];
-			GPUResource UAV[DESCRIPTORBINDER_UAV_COUNT];
-			int UAV_index[DESCRIPTORBINDER_UAV_COUNT];
-			Sampler SAM[DESCRIPTORBINDER_SAMPLER_COUNT];
-
 			uint32_t dirty_root_cbvs = 0; // bitmask
 
 			struct DescriptorHandles
@@ -145,7 +137,7 @@ namespace wiGraphics
 			void reset();
 			void flush(bool graphics, CommandList cmd);
 		};
-		DescriptorBinder descriptors[COMMANDLIST_COUNT];
+		DescriptorBinder binders[COMMANDLIST_COUNT];
 
 		std::vector<D3D12_RESOURCE_BARRIER> frame_barriers[COMMANDLIST_COUNT];
 

@@ -187,33 +187,16 @@ namespace wiGraphics
 			VkCommandPool initCommandPool = VK_NULL_HANDLE;
 			VkCommandBuffer initCommandBuffer = VK_NULL_HANDLE;
 
-			struct DescriptorBinder
+			struct DescriptorBinderPool
 			{
 				GraphicsDevice_Vulkan* device;
 				VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
 				uint32_t poolSize = 256;
 
-				std::vector<VkWriteDescriptorSet> descriptorWrites;
-				std::vector<VkDescriptorBufferInfo> bufferInfos;
-				std::vector<VkDescriptorImageInfo> imageInfos;
-				std::vector<VkBufferView> texelBufferViews;
-				std::vector<VkWriteDescriptorSetAccelerationStructureKHR> accelerationStructureViews;
-				bool dirty = false;
-
-				GPUBuffer CBV[DESCRIPTORBINDER_CBV_COUNT];
-				uint64_t CBV_offset[DESCRIPTORBINDER_CBV_COUNT];
-				GPUResource SRV[DESCRIPTORBINDER_SRV_COUNT];
-				int SRV_index[DESCRIPTORBINDER_SRV_COUNT];
-				GPUResource UAV[DESCRIPTORBINDER_UAV_COUNT];
-				int UAV_index[DESCRIPTORBINDER_UAV_COUNT];
-				Sampler SAM[DESCRIPTORBINDER_SAMPLER_COUNT];
-
 				void init(GraphicsDevice_Vulkan* device);
 				void destroy();
 				void reset();
-				void flush(bool graphics, CommandList cmd);
-			};
-			DescriptorBinder descriptors[COMMANDLIST_COUNT];
+			} binder_pools[COMMANDLIST_COUNT];
 		};
 		FrameResources frames[BUFFERCOUNT];
 		const FrameResources& GetFrameResources() const { return frames[GetBufferIndex()]; }
@@ -229,6 +212,24 @@ namespace wiGraphics
 		{
 			return GetFrameResources().commandBuffers[cmd][cmd_meta[cmd].queue];
 		}
+
+		struct DescriptorBinder
+		{
+			DescriptorBindingTable table;
+			GraphicsDevice_Vulkan* device;
+
+			std::vector<VkWriteDescriptorSet> descriptorWrites;
+			std::vector<VkDescriptorBufferInfo> bufferInfos;
+			std::vector<VkDescriptorImageInfo> imageInfos;
+			std::vector<VkBufferView> texelBufferViews;
+			std::vector<VkWriteDescriptorSetAccelerationStructureKHR> accelerationStructureViews;
+			bool dirty = false;
+
+			void init(GraphicsDevice_Vulkan* device);
+			void reset();
+			void flush(bool graphics, CommandList cmd);
+		};
+		DescriptorBinder binders[COMMANDLIST_COUNT];
 
 		std::vector<VkMemoryBarrier> frame_memoryBarriers[COMMANDLIST_COUNT];
 		std::vector<VkImageMemoryBarrier> frame_imageBarriers[COMMANDLIST_COUNT];
