@@ -146,7 +146,7 @@ namespace wiBackLog
 		scroll = 0;
 		logLock.unlock();
 	}
-	void post(const char* input) 
+	void post(const std::string& input)
 	{
 		logLock.lock();
 		std::string str;

@@ -20,6 +20,7 @@
 #include "wiPlatform.h"
 #include "wiSheenLUT.h"
 #include "wiShaderCompiler.h"
+#include "wiTimer.h"
 
 #include "shaders/ShaderInterop_Postprocess.h"
 #include "shaders/ShaderInterop_Raytracing.h"
@@ -2212,6 +2213,8 @@ void ReloadShaders()
 
 void Initialize()
 {
+	wiTimer timer;
+
 	SetUpStates();
 	LoadBuffers();
 
@@ -2221,7 +2224,7 @@ void Initialize()
 	SetShadowProps2D(SHADOWRES_2D, SHADOWCOUNT_2D);
 	SetShadowPropsCube(SHADOWRES_CUBE, SHADOWCOUNT_CUBE);
 
-	wiBackLog::post("wiRenderer Initialized");
+	wiBackLog::post("wiRenderer Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 }
 void ClearWorld(Scene& scene)
 {

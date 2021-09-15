@@ -12,6 +12,7 @@
 #include "shaders/ShaderInterop_HairParticle.h"
 #include "wiBackLog.h"
 #include "wiEvent.h"
+#include "wiTimer.h"
 
 using namespace wiGraphics;
 
@@ -482,6 +483,7 @@ namespace wiHairParticle_Internal
 
 void wiHairParticle::Initialize()
 {
+	wiTimer timer;
 
 	RasterizerState rsd;
 	rsd.FillMode = FILL_SOLID;
@@ -550,7 +552,7 @@ void wiHairParticle::Initialize()
 	static wiEvent::Handle handle = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { wiHairParticle_Internal::LoadShaders(); });
 	wiHairParticle_Internal::LoadShaders();
 
-	wiBackLog::post("wiHairParticle Initialized");
+	wiBackLog::post("wiHairParticle Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 }
 
 }

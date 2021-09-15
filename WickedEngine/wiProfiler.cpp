@@ -38,7 +38,7 @@ namespace wiProfiler
 		float time = 0;
 		CommandList cmd = COMMANDLIST_COUNT;
 
-		wiTimer cpuBegin, cpuEnd;
+		wiTimer cpuTimer;
 
 		int gpuBegin[arraysize(queryHeap)];
 		int gpuEnd[arraysize(queryHeap)];
@@ -126,12 +126,7 @@ namespace wiProfiler
 		{
 			auto& range = x.second;
 
-			range.time = 0;
-			if (range.IsCPURange())
-			{
-				range.time = (float)abs(range.cpuEnd.elapsed() - range.cpuBegin.elapsed());
-			}
-			else
+			if (!range.IsCPURange())
 			{
 				int begin_query = range.gpuBegin[queryheap_idx];
 				int end_query = range.gpuEnd[queryheap_idx];
@@ -177,8 +172,7 @@ namespace wiProfiler
 		}
 		ranges[id].in_use = true;
 		ranges[id].name = name;
-
-		ranges[id].cpuBegin.record();
+		ranges[id].cpuTimer.record();
 
 		lock.unlock();
 
@@ -201,7 +195,6 @@ namespace wiProfiler
 		}
 		ranges[id].in_use = true;
 		ranges[id].name = name;
-
 		ranges[id].cmd = cmd;
 
 		ranges[id].gpuBegin[queryheap_idx] = nextQuery.fetch_add(1);
@@ -223,7 +216,7 @@ namespace wiProfiler
 		{
 			if (it->second.IsCPURange())
 			{
-				it->second.cpuEnd.record();
+				it->second.time = (float)it->second.cpuTimer.elapsed();
 			}
 			else
 			{

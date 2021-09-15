@@ -10,6 +10,7 @@
 #include "wiSpinLock.h"
 #include "wiPlatform.h"
 #include "wiEvent.h"
+#include "wiTimer.h"
 
 #include "Utility/arial.h"
 #include "Utility/stb_truetype.h"
@@ -273,6 +274,8 @@ void Initialize()
 		return;
 	}
 
+	wiTimer timer;
+
 	// add default font if there is none yet:
 	if (fontStyles.empty())
 	{
@@ -327,7 +330,7 @@ void Initialize()
 	LoadShaders();
 
 
-	wiBackLog::post("wiFont Initialized");
+	wiBackLog::post("wiFont Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	initialized.store(true);
 }
 

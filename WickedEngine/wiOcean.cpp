@@ -5,6 +5,7 @@
 #include "wiScene.h"
 #include "wiBackLog.h"
 #include "wiEvent.h"
+#include "wiTimer.h"
 
 #include <algorithm>
 #include <vector>
@@ -408,8 +409,9 @@ void wiOcean::Render(const CameraComponent& camera, const OceanParameters& param
 
 void wiOcean::Initialize()
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	wiTimer timer;
 
+	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	RasterizerState ras_desc;
 	ras_desc.FillMode = FILL_SOLID;
@@ -454,7 +456,7 @@ void wiOcean::Initialize()
 	wiFFTGenerator::LoadShaders();
 	fft512x512_create_plan(m_fft_plan, 3);
 
-	wiBackLog::post("wiOcean Initialized");
+	wiBackLog::post("wiOcean Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 }
 
 const Texture* wiOcean::getDisplacementMap() const

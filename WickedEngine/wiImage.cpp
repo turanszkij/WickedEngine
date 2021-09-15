@@ -7,6 +7,7 @@
 #include "shaders/ShaderInterop_Image.h"
 #include "wiBackLog.h"
 #include "wiEvent.h"
+#include "wiTimer.h"
 
 #include <atomic>
 
@@ -264,6 +265,8 @@ namespace wiImage
 
 	void Initialize()
 	{
+		wiTimer timer;
+
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
 		RasterizerState rs;
@@ -392,7 +395,7 @@ namespace wiImage
 		static wiEvent::Handle handle = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
 		LoadShaders();
 
-		wiBackLog::post("wiImage Initialized");
+		wiBackLog::post("wiImage Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 		initialized.store(true);
 	}
 

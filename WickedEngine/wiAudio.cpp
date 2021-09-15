@@ -1,6 +1,7 @@
 #include "wiAudio.h"
 #include "wiBackLog.h"
 #include "wiHelper.h"
+#include "wiTimer.h"
 
 #include <vector>
 
@@ -193,11 +194,13 @@ namespace wiAudio
 
 	void Initialize()
 	{
+		wiTimer timer;
+
 		audio = std::make_shared<AudioInternal>();
 
 		if (audio->success)
 		{
-			wiBackLog::post("wiAudio Initialized");
+			wiBackLog::post("wiAudio Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 		}
 	}
 

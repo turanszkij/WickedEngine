@@ -3,6 +3,8 @@
 #include "wiResourceManager.h"
 #include "shaders/ShaderInterop_GPUSortLib.h"
 #include "wiEvent.h"
+#include "wiTimer.h"
+#include "wiBackLog.h"
 
 using namespace wiGraphics;
 
@@ -28,6 +30,8 @@ namespace wiGPUSortLib
 
 	void Initialize()
 	{
+		wiTimer timer;
+
 		GPUBufferDesc bd;
 		bd.Usage = USAGE_DEFAULT;
 		bd.BindFlags = BIND_UNORDERED_ACCESS;
@@ -37,6 +41,8 @@ namespace wiGPUSortLib
 
 		static wiEvent::Handle handle = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
 		LoadShaders();
+
+		wiBackLog::post("wiGPUSortLib Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
 
 

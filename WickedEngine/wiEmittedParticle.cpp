@@ -12,6 +12,7 @@
 #include "wiProfiler.h"
 #include "wiBackLog.h"
 #include "wiEvent.h"
+#include "wiTimer.h"
 
 #include <algorithm>
 
@@ -656,6 +657,7 @@ namespace wiEmittedParticle_Internal
 
 void wiEmittedParticle::Initialize()
 {
+	wiTimer timer;
 
 	RasterizerState rs;
 	rs.FillMode = FILL_SOLID;
@@ -730,7 +732,7 @@ void wiEmittedParticle::Initialize()
 	static wiEvent::Handle handle = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { wiEmittedParticle_Internal::LoadShaders(); });
 	wiEmittedParticle_Internal::LoadShaders();
 
-	wiBackLog::post("wiEmittedParticle Initialized");
+	wiBackLog::post("wiEmittedParticle Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 }
 
 
