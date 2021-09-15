@@ -1134,16 +1134,9 @@ using namespace Vulkan_Internal;
 		return value;
 	}
 
-	void GraphicsDevice_Vulkan::FrameResources::DescriptorBinder::init(GraphicsDevice_Vulkan* device)
+	void GraphicsDevice_Vulkan::FrameResources::DescriptorBinderPool::init(GraphicsDevice_Vulkan* device)
 	{
 		this->device = device;
-
-		// Important that these don't reallocate themselves during writing descriptors!
-		descriptorWrites.reserve(128);
-		bufferInfos.reserve(128);
-		imageInfos.reserve(128);
-		texelBufferViews.reserve(128);
-		accelerationStructureViews.reserve(128);
 
 		VkResult res;
 
@@ -1204,7 +1197,7 @@ using namespace Vulkan_Internal;
 		//	This is because init can be called mid-frame when there is allocation error, but the bindings must be retained!
 
 	}
-	void GraphicsDevice_Vulkan::FrameResources::DescriptorBinder::destroy()
+	void GraphicsDevice_Vulkan::FrameResources::DescriptorBinderPool::destroy()
 	{
 		if (descriptorPool != VK_NULL_HANDLE)
 		{
@@ -1214,51 +1207,38 @@ using namespace Vulkan_Internal;
 			device->allocationhandler->destroylocker.unlock();
 		}
 	}
-	void GraphicsDevice_Vulkan::FrameResources::DescriptorBinder::reset()
+	void GraphicsDevice_Vulkan::FrameResources::DescriptorBinderPool::reset()
 	{
-		dirty = true;
-
 		if (descriptorPool != VK_NULL_HANDLE)
 		{
 			VkResult res = vkResetDescriptorPool(device->device, descriptorPool, 0);
 			assert(res == VK_SUCCESS);
 		}
-
-		for (int i = 0; i < arraysize(CBV); ++i)
-		{
-			CBV[i] = {};
-		}
-		for (int i = 0; i < arraysize(CBV_offset); ++i)
-		{
-			CBV_offset[i] = {};
-		}
-		for (int i = 0; i < arraysize(SRV); ++i)
-		{
-			SRV[i] = {};
-		}
-		for (int i = 0; i < arraysize(SRV_index); ++i)
-		{
-			SRV_index[i] = {};
-		}
-		for (int i = 0; i < arraysize(UAV); ++i)
-		{
-			UAV[i] = {};
-		}
-		for (int i = 0; i < arraysize(UAV_index); ++i)
-		{
-			UAV_index[i] = {};
-		}
-		for (int i = 0; i < arraysize(SAM); ++i)
-		{
-			SAM[i] = {};
-		}
 	}
-	void GraphicsDevice_Vulkan::FrameResources::DescriptorBinder::flush(bool graphics, CommandList cmd)
+
+	void GraphicsDevice_Vulkan::DescriptorBinder::init(GraphicsDevice_Vulkan* device)
+	{
+		this->device = device;
+
+		// Important that these don't reallocate themselves during writing descriptors!
+		descriptorWrites.reserve(128);
+		bufferInfos.reserve(128);
+		imageInfos.reserve(128);
+		texelBufferViews.reserve(128);
+		accelerationStructureViews.reserve(128);
+	}
+	void GraphicsDevice_Vulkan::DescriptorBinder::reset()
+	{
+		table = {};
+		dirty = true;
+	}
+	void GraphicsDevice_Vulkan::DescriptorBinder::flush(bool graphics, CommandList cmd)
 	{
 		if (!dirty)
 			return;
 		dirty = false;
 
+		auto& binder_pool = device->GetFrameResources().binder_pools[cmd];
 		auto pso_internal = graphics ? to_internal(device->active_pso[cmd]) : nullptr;
 		auto cs_internal = graphics ? nullptr : to_internal(device->active_cs[cmd]);
 
@@ -1277,7 +1257,7 @@ using namespace Vulkan_Internal;
 
 		VkDescriptorSetAllocateInfo allocInfo = {};
 		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		allocInfo.descriptorPool = descriptorPool;
+		allocInfo.descriptorPool = binder_pool.descriptorPool;
 		allocInfo.descriptorSetCount = 1;
 		allocInfo.pSetLayouts = &descriptorSetLayout;
 
@@ -1285,10 +1265,10 @@ using namespace Vulkan_Internal;
 		VkResult res = vkAllocateDescriptorSets(device->device, &allocInfo, &descriptorSet);
 		while (res == VK_ERROR_OUT_OF_POOL_MEMORY)
 		{
-			poolSize *= 2;
-			destroy();
-			init(device);
-			allocInfo.descriptorPool = descriptorPool;
+			binder_pool.poolSize *= 2;
+			binder_pool.destroy();
+			binder_pool.init(device);
+			allocInfo.descriptorPool = binder_pool.descriptorPool;
 			res = vkAllocateDescriptorSets(device->device, &allocInfo, &descriptorSet);
 		}
 		assert(res == VK_SUCCESS);
@@ -1337,7 +1317,7 @@ using namespace Vulkan_Internal;
 					imageInfos.back() = {};
 
 					const uint32_t original_binding = unrolled_binding - VULKAN_BINDING_SHIFT_S;
-					const Sampler& sampler = SAM[original_binding];
+					const Sampler& sampler = table.SAM[original_binding];
 					if (!sampler.IsValid())
 					{
 						imageInfos.back().sampler = device->nullSampler;
@@ -1356,7 +1336,7 @@ using namespace Vulkan_Internal;
 					imageInfos.back() = {};
 
 					const uint32_t original_binding = unrolled_binding - VULKAN_BINDING_SHIFT_T;
-					const GPUResource& resource = SRV[original_binding];
+					const GPUResource& resource = table.SRV[original_binding];
 					if (!resource.IsValid() || !resource.IsTexture())
 					{
 						switch (viewtype)
@@ -1391,7 +1371,7 @@ using namespace Vulkan_Internal;
 					}
 					else
 					{
-						int subresource = SRV_index[original_binding];
+						int subresource = table.SRV_index[original_binding];
 						auto texture_internal = to_internal((const Texture*)&resource);
 						if (subresource >= 0)
 						{
@@ -1415,7 +1395,7 @@ using namespace Vulkan_Internal;
 					imageInfos.back().imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
 					const uint32_t original_binding = unrolled_binding - VULKAN_BINDING_SHIFT_U;
-					const GPUResource& resource = UAV[original_binding];
+					const GPUResource& resource = table.UAV[original_binding];
 					if (!resource.IsValid() || !resource.IsTexture())
 					{
 						switch (viewtype)
@@ -1449,7 +1429,7 @@ using namespace Vulkan_Internal;
 					}
 					else
 					{
-						int subresource = UAV_index[original_binding];
+						int subresource = table.UAV_index[original_binding];
 						auto texture_internal = to_internal((const Texture*)&resource);
 						if (subresource >= 0)
 						{
@@ -1470,8 +1450,8 @@ using namespace Vulkan_Internal;
 					bufferInfos.back() = {};
 
 					const uint32_t original_binding = unrolled_binding - VULKAN_BINDING_SHIFT_B;
-					const GPUBuffer& buffer = CBV[original_binding];
-					uint64_t offset = CBV_offset[original_binding];
+					const GPUBuffer& buffer = table.CBV[original_binding];
+					uint64_t offset = table.CBV_offset[original_binding];
 
 					if (!buffer.IsValid())
 					{
@@ -1495,14 +1475,14 @@ using namespace Vulkan_Internal;
 					texelBufferViews.back() = {};
 
 					const uint32_t original_binding = unrolled_binding - VULKAN_BINDING_SHIFT_T;
-					const GPUResource& resource = SRV[original_binding];
+					const GPUResource& resource = table.SRV[original_binding];
 					if (!resource.IsValid() || !resource.IsBuffer())
 					{
 						texelBufferViews.back() = device->nullBufferView;
 					}
 					else
 					{
-						int subresource = SRV_index[original_binding];
+						int subresource = table.SRV_index[original_binding];
 						auto buffer_internal = to_internal((const GPUBuffer*)&resource);
 						if (subresource >= 0)
 						{
@@ -1523,14 +1503,14 @@ using namespace Vulkan_Internal;
 					texelBufferViews.back() = {};
 
 					const uint32_t original_binding = unrolled_binding - VULKAN_BINDING_SHIFT_U;
-					const GPUResource& resource = UAV[original_binding];
+					const GPUResource& resource = table.UAV[original_binding];
 					if (!resource.IsValid() || !resource.IsBuffer())
 					{
 						texelBufferViews.back() = device->nullBufferView;
 					}
 					else
 					{
-						int subresource = UAV_index[original_binding];
+						int subresource = table.UAV_index[original_binding];
 						auto buffer_internal = to_internal((const GPUBuffer*)&resource);
 						if (subresource >= 0)
 						{
@@ -1554,7 +1534,7 @@ using namespace Vulkan_Internal;
 					{
 						// SRV
 						const uint32_t original_binding = unrolled_binding - VULKAN_BINDING_SHIFT_T;
-						const GPUResource& resource = SRV[original_binding];
+						const GPUResource& resource = table.SRV[original_binding];
 						if (!resource.IsValid() || !resource.IsBuffer())
 						{
 							bufferInfos.back().buffer = device->nullBuffer;
@@ -1562,7 +1542,7 @@ using namespace Vulkan_Internal;
 						}
 						else
 						{
-							int subresource = SRV_index[original_binding];
+							int subresource = table.SRV_index[original_binding];
 							auto buffer_internal = to_internal((const GPUBuffer*)&resource);
 							bufferInfos.back().buffer = buffer_internal->resource;
 							bufferInfos.back().range = VK_WHOLE_SIZE;
@@ -1572,7 +1552,7 @@ using namespace Vulkan_Internal;
 					{
 						// UAV
 						const uint32_t original_binding = unrolled_binding - VULKAN_BINDING_SHIFT_U;
-						const GPUResource& resource = UAV[original_binding];
+						const GPUResource& resource = table.UAV[original_binding];
 						if (!resource.IsValid() || !resource.IsBuffer())
 						{
 							bufferInfos.back().buffer = device->nullBuffer;
@@ -1580,7 +1560,7 @@ using namespace Vulkan_Internal;
 						}
 						else
 						{
-							int subresource = UAV_index[original_binding];
+							int subresource = table.UAV_index[original_binding];
 							auto buffer_internal = to_internal((const GPUBuffer*)&resource);
 							bufferInfos.back().buffer = buffer_internal->resource;
 							bufferInfos.back().range = VK_WHOLE_SIZE;
@@ -1598,7 +1578,7 @@ using namespace Vulkan_Internal;
 					accelerationStructureViews.back().accelerationStructureCount = 1;
 
 					const uint32_t original_binding = unrolled_binding - VULKAN_BINDING_SHIFT_T;
-					const GPUResource& resource = SRV[original_binding];
+					const GPUResource& resource = table.SRV[original_binding];
 					if (!resource.IsValid() || !resource.IsAccelerationStructure())
 					{
 						assert(0); // invalid acceleration structure!
@@ -1834,7 +1814,7 @@ using namespace Vulkan_Internal;
 	{
 		pso_validate(cmd);
 
-		GetFrameResources().descriptors[cmd].flush(true, cmd);
+		binders[cmd].flush(true, cmd);
 
 		auto pso_internal = to_internal(active_pso[cmd]);
 		if (pso_internal->pushconstants.size > 0)
@@ -1851,7 +1831,7 @@ using namespace Vulkan_Internal;
 	}
 	void GraphicsDevice_Vulkan::predispatch(CommandList cmd)
 	{
-		GetFrameResources().descriptors[cmd].flush(false, cmd);
+		binders[cmd].flush(false, cmd);
 
 		auto cs_internal = to_internal(active_cs[cmd]);
 		if (cs_internal->pushconstants.size > 0)
@@ -2591,7 +2571,7 @@ using namespace Vulkan_Internal;
 			}
 			vkDestroyCommandPool(device, frame.initCommandPool, nullptr);
 
-			for (auto& descriptormanager : frame.descriptors)
+			for (auto& descriptormanager : frame.binder_pools)
 			{
 				descriptormanager.destroy();
 			}
@@ -5657,8 +5637,10 @@ using namespace Vulkan_Internal;
 				res = vkAllocateCommandBuffers(device, &commandBufferInfo, &frame.commandBuffers[cmd][queue]);
 				assert(res == VK_SUCCESS);
 
-				frame.descriptors[cmd].init(this);
+				frame.binder_pools[cmd].init(this);
 			}
+
+			binders[cmd].init(this);
 		}
 
 		res = vkResetCommandPool(device, GetFrameResources().commandPools[cmd][queue], 0);
@@ -5673,7 +5655,8 @@ using namespace Vulkan_Internal;
 		assert(res == VK_SUCCESS);
 
 		// reset descriptor allocators:
-		GetFrameResources().descriptors[cmd].reset();
+		GetFrameResources().binder_pools[cmd].reset();
+		binders[cmd].reset();
 
 		if (queue == QUEUE_GRAPHICS)
 		{
@@ -5999,12 +5982,12 @@ using namespace Vulkan_Internal;
 	void GraphicsDevice_Vulkan::BindResource(const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
 	{
 		assert(slot < DESCRIPTORBINDER_SRV_COUNT);
-		auto& descriptors = GetFrameResources().descriptors[cmd];
-		if (descriptors.SRV[slot].internal_state != resource->internal_state || descriptors.SRV_index[slot] != subresource)
+		auto& binder = binders[cmd];
+		if (binder.table.SRV[slot].internal_state != resource->internal_state || binder.table.SRV_index[slot] != subresource)
 		{
-			descriptors.SRV[slot] = *resource;
-			descriptors.SRV_index[slot] = subresource;
-			descriptors.dirty = true;
+			binder.table.SRV[slot] = *resource;
+			binder.table.SRV_index[slot] = subresource;
+			binder.dirty = true;
 		}
 	}
 	void GraphicsDevice_Vulkan::BindResources(const GPUResource *const* resources, uint32_t slot, uint32_t count, CommandList cmd)
@@ -6020,12 +6003,12 @@ using namespace Vulkan_Internal;
 	void GraphicsDevice_Vulkan::BindUAV(const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
 	{
 		assert(slot < DESCRIPTORBINDER_UAV_COUNT);
-		auto& descriptors = GetFrameResources().descriptors[cmd];
-		if (descriptors.UAV[slot].internal_state != resource->internal_state || descriptors.UAV_index[slot] != subresource)
+		auto& binder = binders[cmd];
+		if (binder.table.UAV[slot].internal_state != resource->internal_state || binder.table.UAV_index[slot] != subresource)
 		{
-			descriptors.UAV[slot] = *resource;
-			descriptors.UAV_index[slot] = subresource;
-			descriptors.dirty = true;
+			binder.table.UAV[slot] = *resource;
+			binder.table.UAV_index[slot] = subresource;
+			binder.dirty = true;
 		}
 	}
 	void GraphicsDevice_Vulkan::BindUAVs(const GPUResource *const* resources, uint32_t slot, uint32_t count, CommandList cmd)
@@ -6041,22 +6024,22 @@ using namespace Vulkan_Internal;
 	void GraphicsDevice_Vulkan::BindSampler(const Sampler* sampler, uint32_t slot, CommandList cmd)
 	{
 		assert(slot < DESCRIPTORBINDER_SAMPLER_COUNT);
-		auto& descriptors = GetFrameResources().descriptors[cmd];
-		if (descriptors.SAM[slot].internal_state != sampler->internal_state)
+		auto& binder = binders[cmd];
+		if (binder.table.SAM[slot].internal_state != sampler->internal_state)
 		{
-			descriptors.SAM[slot] = *sampler;
-			descriptors.dirty = true;
+			binder.table.SAM[slot] = *sampler;
+			binder.dirty = true;
 		}
 	}
 	void GraphicsDevice_Vulkan::BindConstantBuffer(const GPUBuffer* buffer, uint32_t slot, CommandList cmd, uint64_t offset)
 	{
 		assert(slot < DESCRIPTORBINDER_CBV_COUNT);
-		auto& descriptors = GetFrameResources().descriptors[cmd];
-		if (descriptors.CBV[slot].internal_state != buffer->internal_state || descriptors.CBV_offset[slot] != offset)
+		auto& binder = binders[cmd];
+		if (binder.table.CBV[slot].internal_state != buffer->internal_state || binder.table.CBV_offset[slot] != offset)
 		{
-			descriptors.CBV[slot] = *buffer;
-			descriptors.CBV_offset[slot] = offset;
-			descriptors.dirty = true;
+			binder.table.CBV[slot] = *buffer;
+			binder.table.CBV_offset[slot] = offset;
+			binder.dirty = true;
 		}
 	}
 	void GraphicsDevice_Vulkan::BindVertexBuffers(const GPUBuffer *const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint64_t* offsets, CommandList cmd)
@@ -6209,14 +6192,14 @@ using namespace Vulkan_Internal;
 
 		if (active_pso[cmd] == nullptr)
 		{
-			GetFrameResources().descriptors[cmd].dirty = true;
+			binders[cmd].dirty = true;
 		}
 		else
 		{
 			auto active_internal = to_internal(active_pso[cmd]);
 			if (internal_state->binding_hash != active_internal->binding_hash)
 			{
-				GetFrameResources().descriptors[cmd].dirty = true;
+				binders[cmd].dirty = true;
 			}
 		}
 
@@ -6244,7 +6227,7 @@ using namespace Vulkan_Internal;
 		{
 			if (active_cs[cmd] == nullptr)
 			{
-				GetFrameResources().descriptors[cmd].dirty = true;
+				binders[cmd].dirty = true;
 			}
 			else
 			{
@@ -6252,7 +6235,7 @@ using namespace Vulkan_Internal;
 				auto active_internal = to_internal(active_cs[cmd]);
 				if (internal_state->binding_hash != active_internal->binding_hash)
 				{
-					GetFrameResources().descriptors[cmd].dirty = true;
+					binders[cmd].dirty = true;
 				}
 			}
 
