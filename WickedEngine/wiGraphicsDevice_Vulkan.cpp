@@ -10,6 +10,7 @@
 #include "wiHelper.h"
 #include "wiBackLog.h"
 #include "wiVersion.h"
+#include "wiTimer.h"
 
 #define VMA_IMPLEMENTATION
 #include "Utility/vk_mem_alloc.h"
@@ -1850,6 +1851,8 @@ using namespace Vulkan_Internal;
 	// Engine functions
 	GraphicsDevice_Vulkan::GraphicsDevice_Vulkan(wiPlatform::window_type window, bool debuglayer)
 	{
+		wiTimer timer;
+
 		TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = sizeof(VkAccelerationStructureInstanceKHR);
 
 		DEBUGDEVICE = debuglayer;
@@ -2547,7 +2550,7 @@ using namespace Vulkan_Internal;
 			)
 		);
 
-		wiBackLog::post("Created GraphicsDevice_Vulkan");
+		wiBackLog::post("Created GraphicsDevice_Vulkan (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
 	GraphicsDevice_Vulkan::~GraphicsDevice_Vulkan()
 	{

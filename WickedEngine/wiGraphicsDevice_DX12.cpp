@@ -4,6 +4,7 @@
 
 #include "wiHelper.h"
 #include "wiBackLog.h"
+#include "wiTimer.h"
 
 #include "Utility/dx12/d3dx12.h"
 #include "Utility/D3D12MemAlloc.h"
@@ -2127,6 +2128,8 @@ using namespace DX12_Internal;
 	// Engine functions
 	GraphicsDevice_DX12::GraphicsDevice_DX12(bool debuglayer, bool gpuvalidation)
 	{
+		wiTimer timer;
+
 		ALLOCATION_MIN_ALIGNMENT = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
 		SHADER_IDENTIFIER_SIZE = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
 		TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
@@ -2651,7 +2654,7 @@ using namespace DX12_Internal;
 		hr = queues[QUEUE_GRAPHICS].queue->GetTimestampFrequency(&TIMESTAMP_FREQUENCY);
 		assert(SUCCEEDED(hr));
 
-		wiBackLog::post("Created GraphicsDevice_DX12");
+		wiBackLog::post("Created GraphicsDevice_DX12 (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
 	GraphicsDevice_DX12::~GraphicsDevice_DX12()
 	{
