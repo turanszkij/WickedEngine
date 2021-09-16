@@ -3,11 +3,13 @@
 
 #include <string>
 #include <sstream>
+#include <thread>
 
 namespace wiInitializer
 {
 	bool initializationStarted = false;
 	wiJobSystem::context ctx;
+	wiTimer timer;
 
 	void InitializeComponentsImmediate()
 	{
@@ -16,6 +18,8 @@ namespace wiInitializer
 	}
 	void InitializeComponentsAsync()
 	{
+		timer.record();
+
 		initializationStarted = true;
 
 		std::stringstream ss;
@@ -49,6 +53,11 @@ namespace wiInitializer
 
 		// Initialize this immediately:
 		wiLua::Initialize();
+
+		std::thread([] {
+			wiJobSystem::Wait(ctx);
+			wiBackLog::post("\n[wiInitializer] Wicked Engine Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
+		}).detach();
 
 	}
 
