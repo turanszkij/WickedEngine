@@ -2,6 +2,7 @@
 #include "wiRenderer.h"
 #include "wiInput.h"
 #include "wiIntersect.h"
+#include "wiProfiler.h"
 
 using namespace wiGraphics;
 
@@ -11,6 +12,8 @@ void wiGUI::Update(const wiCanvas& canvas, float dt)
 	{
 		return;
 	}
+
+	auto range = wiProfiler::BeginRangeCPU("GUI Update");
 
 	XMFLOAT4 pointer = wiInput::GetPointer();
 	Hitbox2D pointerHitbox = Hitbox2D(XMFLOAT2(pointer.x, pointer.y), XMFLOAT2(1, 1));
@@ -44,11 +47,16 @@ void wiGUI::Update(const wiCanvas& canvas, float dt)
 		}
 	}
 
-	if(priority > 0) //Sort only if there are priority changes
+	//Sort only if there are priority changes
+	if (priority > 0)
+	{
 		//Use std::stable_sort instead of std::sort to preserve UI element order with equal priorities
 		std::stable_sort(widgets.begin(), widgets.end(), [](const wiWidget* a, const wiWidget* b) {
 			return a->priority < b->priority;
 			});
+	}
+
+	wiProfiler::EndRange(range);
 }
 
 void wiGUI::Render(const wiCanvas& canvas, CommandList cmd) const
@@ -57,6 +65,9 @@ void wiGUI::Render(const wiCanvas& canvas, CommandList cmd) const
 	{
 		return;
 	}
+
+	auto range_cpu = wiProfiler::BeginRangeCPU("GUI Render");
+	auto range_gpu = wiProfiler::BeginRangeGPU("GUI Render", cmd);
 
 	Rect scissorRect;
 	scissorRect.bottom = (int32_t)(canvas.GetPhysicalHeight());
@@ -82,6 +93,9 @@ void wiGUI::Render(const wiCanvas& canvas, CommandList cmd) const
 	}
 
 	device->EventEnd(cmd);
+
+	wiProfiler::EndRange(range_cpu);
+	wiProfiler::EndRange(range_gpu);
 }
 
 void wiGUI::AddWidget(wiWidget* widget)
