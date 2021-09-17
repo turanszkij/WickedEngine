@@ -111,6 +111,7 @@ namespace wiResourceManager
 				if (transcoder.init(filedata, (uint32_t)filesize))
 				{
 					TextureDesc desc;
+					desc.BindFlags = BIND_SHADER_RESOURCE;
 					desc.Width = transcoder.get_width();
 					desc.Height = transcoder.get_height();
 					desc.ArraySize = std::max(desc.ArraySize, transcoder.get_layers() * transcoder.get_faces());
