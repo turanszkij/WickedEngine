@@ -5,6 +5,7 @@
 
 #include "Utility/stb_image.h"
 #include "Utility/tinyddsloader.h"
+#include "Utility/basis_universal/transcoder/basisu_transcoder.h"
 
 #include <algorithm>
 
@@ -15,6 +16,7 @@ namespace wiResourceManager
 	std::mutex locker;
 	std::unordered_map<std::string, std::weak_ptr<wiResource>> resources;
 	MODE mode = MODE_DISCARD_FILEDATA_AFTER_LOAD;
+	static basist::etc1_global_selector_codebook globalCodebook(basist::g_global_selector_cb_size, basist::g_global_selector_cb);
 
 	void SetMode(MODE param)
 	{
@@ -26,6 +28,8 @@ namespace wiResourceManager
 	}
 
 	static const std::unordered_map<std::string, wiResource::DATA_TYPE> types = {
+		std::make_pair("BASIS", wiResource::IMAGE),
+		std::make_pair("KTX2", wiResource::IMAGE),
 		std::make_pair("JPG", wiResource::IMAGE),
 		std::make_pair("JPEG", wiResource::IMAGE),
 		std::make_pair("PNG", wiResource::IMAGE),
@@ -46,6 +50,13 @@ namespace wiResourceManager
 		locker.lock();
 		std::weak_ptr<wiResource>& weak_resource = resources[name];
 		std::shared_ptr<wiResource> resource = weak_resource.lock();
+
+		static bool basis_init = false; // within lock!
+		if (!basis_init)
+		{
+			basis_init = true;
+			basist::basisu_transcoder_init();
+		}
 
 		if (resource == nullptr)
 		{
@@ -93,7 +104,112 @@ namespace wiResourceManager
 		case wiResource::IMAGE:
 		{
 			GraphicsDevice* device = wiRenderer::GetDevice();
-			if (!ext.compare(std::string("DDS")))
+			if (!ext.compare("KTX2"))
+			{
+				using namespace basist;
+				ktx2_transcoder transcoder(&globalCodebook);
+				if (transcoder.init(filedata, (uint32_t)filesize))
+				{
+					TextureDesc desc;
+					desc.Width = transcoder.get_width();
+					desc.Height = transcoder.get_height();
+					desc.ArraySize = std::max(desc.ArraySize, transcoder.get_layers() * transcoder.get_faces());
+					desc.MipLevels = transcoder.get_levels();
+					if (transcoder.get_faces() == 6)
+					{
+						desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
+					}
+
+					transcoder_texture_format fmt;
+					if (transcoder.get_has_alpha())
+					{
+						fmt = transcoder_texture_format::cTFBC3_RGBA;
+						desc.Format = FORMAT_BC3_UNORM;
+					}
+					else
+					{
+						fmt = transcoder_texture_format::cTFBC1_RGB;
+						desc.Format = FORMAT_BC1_UNORM;
+					}
+					uint32_t bytes_per_block = basis_get_bytes_per_block_or_pixel(fmt);
+
+					if (transcoder.start_transcoding())
+					{
+						// all subresources will use one allocation for transcoder destination, so compute combined size:
+						size_t transcoded_data_size = 0;
+						for (uint32_t layer = 0; layer < std::max(1u, transcoder.get_layers()); ++layer)
+						{
+							for (uint32_t face = 0; face < transcoder.get_faces(); ++face)
+							{
+								for (uint32_t mip = 0; mip < transcoder.get_levels(); ++mip)
+								{
+									ktx2_image_level_info info;
+									if (transcoder.get_image_level_info(info, mip, layer, face))
+									{
+										transcoded_data_size += info.m_total_blocks * bytes_per_block;
+									}
+								}
+							}
+						}
+						std::vector<uint8_t*> transcoded_data(transcoded_data_size);
+
+						std::vector<SubresourceData> InitData;
+						size_t transcoded_data_offset = 0;
+						for (uint32_t layer = 0; layer < std::max(1u, transcoder.get_layers()); ++layer)
+						{
+							for (uint32_t face = 0; face < transcoder.get_faces(); ++face)
+							{
+								for (uint32_t mip = 0; mip < transcoder.get_levels(); ++mip)
+								{
+									ktx2_image_level_info info;
+									if (transcoder.get_image_level_info(info, mip, layer, face))
+									{
+										void* data_ptr = transcoded_data.data() + transcoded_data_offset;
+										transcoded_data_offset += info.m_total_blocks * bytes_per_block;
+										if (transcoder.transcode_image_level(
+											mip, layer, face,
+											data_ptr,
+											info.m_total_blocks,
+											fmt
+										))
+										{
+											SubresourceData subresourceData;
+											subresourceData.pData = data_ptr;
+											subresourceData.rowPitch = info.m_num_blocks_x * bytes_per_block;
+											subresourceData.slicePitch = subresourceData.rowPitch * info.m_num_blocks_y;
+											InitData.push_back(subresourceData);
+										}
+									}
+								}
+							}
+						}
+
+						if (!InitData.empty())
+						{
+							success = device->CreateTexture(&desc, InitData.data(), &resource->texture);
+							device->SetName(&resource->texture, name.c_str());
+						}
+					}
+					transcoder.clear();
+				}
+
+				//basisu_transcoder transcoder(globalCodebook);
+				//if (transcoder.validate_header(filedata, filesize))
+				//{
+				//	basisu_file_info fileInfo;
+				//	if (transcoder.get_file_info(filedata, filesize, fileInfo))
+				//	{
+				//		basisu_image_info info;
+				//		if (transcoder.get_image_info(filedata, filesize, info, 0))
+				//		{
+				//			printf("Success (file w: %d, h: %d, mips: %d)\n",
+				//				info.m_width, info.m_height, info.m_total_levels);
+				//			return EXIT_SUCCESS;
+				//		}
+				//	}
+				//}
+			}
+			else if (!ext.compare("DDS"))
 			{
 				// Load dds
 

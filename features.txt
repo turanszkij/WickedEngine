@@ -81,6 +81,7 @@ Variable Rate Shading
 Real time ray tracing: ambient occlusion, shadows, reflections (DXR and Vulkan raytracing)
 Screen Space Contact Shadows
 Stochastic alphatest transparency
+Surfel GI
 
 GLTF 2.0 extensions supported:
 KHR_materials_unlit
@@ -90,3 +91,4 @@ KHR_materials_sheen
 KHR_materials_clearcoat
 KHR_materials_specular
 KHR_materials_ior
+KHR_texture_basisu

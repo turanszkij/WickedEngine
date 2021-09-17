@@ -2,6 +2,9 @@
 
 namespace wiMath
 {
+
+#define saturate(x) std::min(std::max(x,0.0f),1.0f)
+
 	float TriangleArea(const XMVECTOR& A, const XMVECTOR& B, const XMVECTOR& C)
 	{
 		// Heron's formula:
