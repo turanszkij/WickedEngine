@@ -2174,20 +2174,20 @@ using namespace Vulkan_Internal;
 			vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
 
 			// Query base queue families:
-			int familyIndex = 0;
+			uint32_t familyIndex = 0;
 			for (const auto& queueFamily : queueFamilies)
 			{
-				if (graphicsFamily < 0 && queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+				if (graphicsFamily == VK_QUEUE_FAMILY_IGNORED && queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
 				{
 					graphicsFamily = familyIndex;
 				}
 
-				if (copyFamily < 0 && queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT)
+				if (copyFamily == VK_QUEUE_FAMILY_IGNORED && queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT)
 				{
 					copyFamily = familyIndex;
 				}
 
-				if (computeFamily < 0 && queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT)
+				if (computeFamily == VK_QUEUE_FAMILY_IGNORED && queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT)
 				{
 					computeFamily = familyIndex;
 				}
@@ -2218,10 +2218,10 @@ using namespace Vulkan_Internal;
 			}
 
 			std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-			std::set<int> uniqueQueueFamilies = { graphicsFamily, copyFamily, computeFamily };
+			std::set<uint32_t> uniqueQueueFamilies = { graphicsFamily, copyFamily, computeFamily };
 
 			float queuePriority = 1.0f;
-			for (int queueFamily : uniqueQueueFamilies)
+			for (uint32_t queueFamily : uniqueQueueFamilies)
 			{
 				VkDeviceQueueCreateInfo queueCreateInfo = {};
 				queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -2229,7 +2229,7 @@ using namespace Vulkan_Internal;
 				queueCreateInfo.queueCount = 1;
 				queueCreateInfo.pQueuePriorities = &queuePriority;
 				queueCreateInfos.push_back(queueCreateInfo);
-				families.push_back((uint32_t)queueFamily);
+				families.push_back(queueFamily);
 			}
 
 			VkDeviceCreateInfo createInfo = {};
@@ -2982,10 +2982,6 @@ using namespace Vulkan_Internal;
 			bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		}
 
-
-
-		VkResult res;
-
 		VmaAllocationCreateInfo allocInfo = {};
 		//allocInfo.flags = VMA_ALLOCATION_CREATE_STRATEGY_MIN_MEMORY_BIT;
 		//allocInfo.flags = VMA_ALLOCATION_CREATE_STRATEGY_MIN_FRAGMENTATION_BIT;
@@ -3003,7 +2999,7 @@ using namespace Vulkan_Internal;
 			bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 		}
 
-		res = vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &internal_state->resource, &internal_state->allocation, nullptr);
+		VkResult res = vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &internal_state->resource, &internal_state->allocation, nullptr);
 		assert(res == VK_SUCCESS);
 
 		if (pDesc->Usage == USAGE_READBACK || pDesc->Usage == USAGE_UPLOAD)
@@ -3027,87 +3023,83 @@ using namespace Vulkan_Internal;
 
 			memcpy(cmd.uploadbuffer.mapped_data, pInitialData, pBuffer->desc.Size);
 
+			VkBufferMemoryBarrier barrier = {};
+			barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+			barrier.buffer = internal_state->resource;
+			barrier.srcAccessMask = 0;
+			barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			barrier.size = VK_WHOLE_SIZE;
+
+			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+			vkCmdPipelineBarrier(
+				cmd.commandBuffer,
+				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+				VK_PIPELINE_STAGE_TRANSFER_BIT,
+				0,
+				0, nullptr,
+				1, &barrier,
+				0, nullptr
+			);
+
+			VkBufferCopy copyRegion = {};
+			copyRegion.size = pBuffer->desc.Size;
+			copyRegion.srcOffset = 0;
+			copyRegion.dstOffset = 0;
+
+			vkCmdCopyBuffer(
+				cmd.commandBuffer,
+				to_internal(&cmd.uploadbuffer)->resource,
+				internal_state->resource,
+				1,
+				&copyRegion
+			);
+
+			VkAccessFlags tmp = barrier.srcAccessMask;
+			barrier.srcAccessMask = barrier.dstAccessMask;
+			barrier.dstAccessMask = 0;
+
+			if (pBuffer->desc.BindFlags & BIND_CONSTANT_BUFFER)
 			{
-				auto& frame = GetFrameResources();
-
-				VkBufferMemoryBarrier barrier = {};
-				barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-				barrier.buffer = internal_state->resource;
-				barrier.srcAccessMask = 0;
-				barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-				barrier.size = VK_WHOLE_SIZE;
-
-				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-				vkCmdPipelineBarrier(
-					cmd.commandBuffer,
-					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-					VK_PIPELINE_STAGE_TRANSFER_BIT,
-					0,
-					0, nullptr,
-					1, &barrier,
-					0, nullptr
-				);
-
-				VkBufferCopy copyRegion = {};
-				copyRegion.size = pBuffer->desc.Size;
-				copyRegion.srcOffset = 0;
-				copyRegion.dstOffset = 0;
-
-				vkCmdCopyBuffer(
-					cmd.commandBuffer,
-					to_internal(&cmd.uploadbuffer)->resource,
-					internal_state->resource,
-					1,
-					&copyRegion
-				);
-
-				VkAccessFlags tmp = barrier.srcAccessMask;
-				barrier.srcAccessMask = barrier.dstAccessMask;
-				barrier.dstAccessMask = 0;
-
-				if (pBuffer->desc.BindFlags & BIND_CONSTANT_BUFFER)
-				{
-					barrier.dstAccessMask |= VK_ACCESS_UNIFORM_READ_BIT;
-				}
-				if (pBuffer->desc.BindFlags & BIND_VERTEX_BUFFER)
-				{
-					barrier.dstAccessMask |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
-				}
-				if (pBuffer->desc.BindFlags & BIND_INDEX_BUFFER)
-				{
-					barrier.dstAccessMask |= VK_ACCESS_INDEX_READ_BIT;
-				}
-				if(pBuffer->desc.BindFlags & BIND_SHADER_RESOURCE)
-				{
-					barrier.dstAccessMask |= VK_ACCESS_SHADER_READ_BIT;
-				}
-				if (pBuffer->desc.BindFlags & BIND_UNORDERED_ACCESS)
-				{
-					barrier.dstAccessMask |= VK_ACCESS_SHADER_WRITE_BIT;
-				}
-				if (pBuffer->desc.MiscFlags & RESOURCE_MISC_INDIRECT_ARGS)
-				{
-					barrier.dstAccessMask |= VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
-				}
-				if (pBuffer->desc.MiscFlags & RESOURCE_MISC_RAY_TRACING)
-				{
-					barrier.dstAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
-				}
-
-				vkCmdPipelineBarrier(
-					cmd.commandBuffer,
-					VK_PIPELINE_STAGE_TRANSFER_BIT,
-					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-					0,
-					0, nullptr,
-					1, &barrier,
-					0, nullptr
-				);
-
-				copyAllocator.submit(cmd);
+				barrier.dstAccessMask |= VK_ACCESS_UNIFORM_READ_BIT;
 			}
+			if (pBuffer->desc.BindFlags & BIND_VERTEX_BUFFER)
+			{
+				barrier.dstAccessMask |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+			}
+			if (pBuffer->desc.BindFlags & BIND_INDEX_BUFFER)
+			{
+				barrier.dstAccessMask |= VK_ACCESS_INDEX_READ_BIT;
+			}
+			if(pBuffer->desc.BindFlags & BIND_SHADER_RESOURCE)
+			{
+				barrier.dstAccessMask |= VK_ACCESS_SHADER_READ_BIT;
+			}
+			if (pBuffer->desc.BindFlags & BIND_UNORDERED_ACCESS)
+			{
+				barrier.dstAccessMask |= VK_ACCESS_SHADER_WRITE_BIT;
+			}
+			if (pBuffer->desc.MiscFlags & RESOURCE_MISC_INDIRECT_ARGS)
+			{
+				barrier.dstAccessMask |= VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
+			}
+			if (pBuffer->desc.MiscFlags & RESOURCE_MISC_RAY_TRACING)
+			{
+				barrier.dstAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
+			}
+
+			vkCmdPipelineBarrier(
+				cmd.commandBuffer,
+				VK_PIPELINE_STAGE_TRANSFER_BIT,
+				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+				0,
+				0, nullptr,
+				1, &barrier,
+				0, nullptr
+			);
+
+			copyAllocator.submit(cmd);
 		}
 		else if(pDesc->Usage != USAGE_UPLOAD && pDesc->Usage != USAGE_READBACK)
 		{
@@ -3143,8 +3135,6 @@ using namespace Vulkan_Internal;
 		{
 			CreateSubresource(pBuffer, UAV, 0);
 		}
-
-
 
 		return res == VK_SUCCESS;
 	}
