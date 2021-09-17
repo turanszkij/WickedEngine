@@ -37,9 +37,9 @@ namespace wiGraphics
 		VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 		VkDevice device = VK_NULL_HANDLE;
 		std::vector<VkQueueFamilyProperties> queueFamilies;
-		int graphicsFamily = -1;
-		int computeFamily = -1;
-		int copyFamily = -1;
+		uint32_t graphicsFamily = VK_QUEUE_FAMILY_IGNORED;
+		uint32_t computeFamily = VK_QUEUE_FAMILY_IGNORED;
+		uint32_t copyFamily = VK_QUEUE_FAMILY_IGNORED;
 		std::vector<uint32_t> families;
 		VkQueue graphicsQueue = VK_NULL_HANDLE;
 		VkQueue computeQueue = VK_NULL_HANDLE;
