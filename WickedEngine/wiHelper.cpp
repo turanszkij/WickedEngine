@@ -120,7 +120,21 @@ namespace wiHelper
 
 		CommandList cmd = device->BeginCommandList();
 
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&texture,texture.desc.layout,RESOURCE_STATE_COPY_SRC),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
 		device->CopyResource(&stagingTex, &texture, cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&texture,RESOURCE_STATE_COPY_SRC,texture.desc.layout),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
 
 		device->SubmitCommandLists();
 		device->WaitForGPU();

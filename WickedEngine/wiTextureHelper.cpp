@@ -261,7 +261,7 @@ namespace wiTextureHelper
 
 		SubresourceData InitData;
 		InitData.pData = data;
-		InitData.rowPitch = width * GetFormatStride(format);
+		InitData.rowPitch = width * GetFormatStride(format) / GetFormatBlockSize(format);
 
 		return device->CreateTexture(&textureDesc, &InitData, &texture);
 	}

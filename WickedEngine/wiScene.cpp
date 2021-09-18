@@ -10,8 +10,11 @@
 #include "wiHelper.h"
 #include "wiRenderer.h"
 #include "wiBackLog.h"
+#include "wiTimer.h"
 
 #include "shaders/ShaderInterop_SurfelGI.h"
+
+#include "Utility/BC.h"
 
 #include <functional>
 #include <unordered_map>
@@ -1155,8 +1158,10 @@ namespace wiScene
 #endif
 	void ObjectComponent::SaveLightmap()
 	{
-		if (lightmap.IsValid())
+		if (lightmap.IsValid() && (lightmap.desc.BindFlags & BIND_RENDER_TARGET))
 		{
+			SetLightmapRenderRequest(false);
+
 			bool success = wiHelper::saveTextureToMemory(lightmap, lightmapTextureData);
 			assert(success);
 
@@ -1197,31 +1202,65 @@ namespace wiScene
 					}
 				}
 
-				GraphicsDevice* device = wiRenderer::GetDevice();
-
-				SubresourceData initdata;
-				initdata.pData = texturedata_dst.data();
-				initdata.rowPitch = uint32_t(sizeof(XMFLOAT4) * width);
-				device->CreateTexture(&lightmap.desc, &initdata, &lightmap);
-
-				lightmapTextureData = std::move(texturedata_dst);
+				lightmapTextureData = std::move(texturedata_dst); // replace old (raw) data with denoised data
 			}
 #endif // OPEN_IMAGE_DENOISE
 
+			CompressLightmap();
+
+			wiTextureHelper::CreateTexture(lightmap, lightmapTextureData.data(), lightmapWidth, lightmapHeight, lightmap.desc.Format);
+			wiRenderer::GetDevice()->SetName(&lightmap, "lightmap");
 		}
 	}
-	FORMAT ObjectComponent::GetLightmapFormat()
+	void ObjectComponent::CompressLightmap()
 	{
-		uint32_t stride = (uint32_t)lightmapTextureData.size() / lightmapWidth / lightmapHeight;
+		wiTimer timer;
+		wiBackLog::post("compressing lightmap...");
 
-		switch (stride)
-		{
-		case 4: return FORMAT_R8G8B8A8_UNORM;
-		case 8: return FORMAT_R16G16B16A16_FLOAT;
-		case 16: return FORMAT_R32G32B32A32_FLOAT;
-		}
+		lightmap.desc.Format = lightmap_block_format;
+		lightmap.desc.BindFlags = BIND_SHADER_RESOURCE;
 
-		return FORMAT_UNKNOWN;
+		const uint32_t bc6_width = lightmapWidth / lightmap_blocksize;
+		const uint32_t bc6_height = lightmapHeight / lightmap_blocksize;
+		std::vector<uint8_t> bc6_data;
+		bc6_data.resize(sizeof(XMFLOAT4) * bc6_width * bc6_height);
+		const XMFLOAT4* raw_data = (const XMFLOAT4*)lightmapTextureData.data();
+
+		wiJobSystem::context ctx;
+		wiJobSystem::Dispatch(ctx, bc6_width, 1, [&](wiJobArgs args) {
+			uint32_t x = args.jobIndex;
+			for (uint32_t y = 0; y < bc6_height; ++y)
+			{
+				uint32_t bc6_idx = x + y * bc6_width;
+				uint8_t* ptr = (uint8_t*)((XMFLOAT4*)bc6_data.data() + bc6_idx);
+
+				XMVECTOR raw_vec[lightmap_blocksize * lightmap_blocksize];
+				for (uint32_t i = 0; i < lightmap_blocksize; ++i)
+				{
+					for (uint32_t j = 0; j < lightmap_blocksize; ++j)
+					{
+						uint32_t raw_idx = (x * lightmap_blocksize + i) + (y * lightmap_blocksize + j) * lightmapWidth;
+						uint32_t block_idx = i + j * lightmap_blocksize;
+						raw_vec[block_idx] = XMLoadFloat4(raw_data + raw_idx);
+					}
+				}
+				static_assert(arraysize(raw_vec) == 16); // it will work only for a certain block size!
+				D3DXEncodeBC6HU(ptr, raw_vec, 0);
+			}
+			});
+		wiJobSystem::Wait(ctx);
+
+		lightmapTextureData = std::move(bc6_data); // replace old (raw) data with compressed data
+
+		wiBackLog::post(
+			"compressing lightmap [" +
+			std::to_string(lightmapWidth) +
+			"x" +
+			std::to_string(lightmapHeight) +
+			"] finished in " +
+			std::to_string(timer.elapsed_seconds()) +
+			" seconds"
+		);
 	}
 
 	void ArmatureComponent::CreateRenderData()
@@ -3128,23 +3167,19 @@ namespace wiScene
 					{
 						if (!object.lightmap.IsValid())
 						{
-							{
-								// Unfortunately, fp128 format only correctly downloads from GPU if it is pow2 size:
-								object.lightmapWidth = wiMath::GetNextPowerOfTwo(object.lightmapWidth + 1) / 2;
-								object.lightmapHeight = wiMath::GetNextPowerOfTwo(object.lightmapHeight + 1) / 2;
-							}
+							object.lightmapWidth = wiMath::GetNextPowerOfTwo(object.lightmapWidth + 1) / 2;
+							object.lightmapHeight = wiMath::GetNextPowerOfTwo(object.lightmapHeight + 1) / 2;
 
 							TextureDesc desc;
 							desc.Width = object.lightmapWidth;
 							desc.Height = object.lightmapHeight;
 							desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 							// Note: we need the full precision format to achieve correct accumulative blending! 
-							//	But the global atlas will have less precision for good bandwidth for sampling
+							//	But the final lightmap will be compressed into an optimal format when the rendering is finished
 							desc.Format = FORMAT_R32G32B32A32_FLOAT;
 
-							GraphicsDevice* device = wiRenderer::GetDevice();
 							device->CreateTexture(&desc, nullptr, &object.lightmap);
-							device->SetName(&object.lightmap, "object.lightmap");
+							device->SetName(&object.lightmap, "lightmap_renderable");
 
 							RenderPassDesc renderpassdesc;
 
@@ -3154,14 +3189,17 @@ namespace wiScene
 
 							renderpassdesc.attachments.back().loadop = RenderPassAttachment::LOADOP_LOAD;
 							device->CreateRenderPass(&renderpassdesc, &object.renderpass_lightmap_accumulate);
+
+							object.lightmapIterationCount = 0; // reset accumulation
 						}
 						lightmap_refresh_needed.store(true);
 					}
 
 					if (!object.lightmapTextureData.empty() && !object.lightmap.IsValid())
 					{
-						// Create a GPU-side per object lighmap if there is none yet, so that copying into atlas can be done efficiently:
-						wiTextureHelper::CreateTexture(object.lightmap, object.lightmapTextureData.data(), object.lightmapWidth, object.lightmapHeight, object.GetLightmapFormat());
+						// Create a GPU-side per object lighmap if there is none yet, but the data exists already:
+						wiTextureHelper::CreateTexture(object.lightmap, object.lightmapTextureData.data(), object.lightmapWidth, object.lightmapHeight, ObjectComponent::lightmap_block_format);
+						device->SetName(&object.lightmap, "lightmap");
 					}
 				}
 

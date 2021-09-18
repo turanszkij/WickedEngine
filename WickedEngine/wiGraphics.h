@@ -1014,7 +1014,7 @@ namespace wiGraphics
 	};
 
 
-	inline bool IsFormatUnorm(FORMAT format)
+	constexpr bool IsFormatUnorm(FORMAT format)
 	{
 		switch (format)
 		{
@@ -1035,7 +1035,7 @@ namespace wiGraphics
 
 		return false;
 	}
-	inline bool IsFormatBlockCompressed(FORMAT format)
+	constexpr bool IsFormatBlockCompressed(FORMAT format)
 	{
 		switch (format)
 		{
@@ -1058,7 +1058,7 @@ namespace wiGraphics
 
 		return false;
 	}
-	inline bool IsFormatStencilSupport(FORMAT format)
+	constexpr bool IsFormatStencilSupport(FORMAT format)
 	{
 		switch (format)
 		{
@@ -1071,7 +1071,7 @@ namespace wiGraphics
 
 		return false;
 	}
-	inline uint32_t GetFormatBlockSize(FORMAT format)
+	constexpr uint32_t GetFormatBlockSize(FORMAT format)
 	{
 		if(IsFormatBlockCompressed(format))
 		{
@@ -1079,7 +1079,7 @@ namespace wiGraphics
 		}
 		return 1u;
 	}
-	inline uint32_t GetFormatStride(FORMAT format)
+	constexpr uint32_t GetFormatStride(FORMAT format)
 	{
 		switch (format)
 		{
