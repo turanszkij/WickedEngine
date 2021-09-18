@@ -3295,11 +3295,7 @@ using namespace Vulkan_Internal;
 				for (uint32_t mip = 0; mip < pDesc->MipLevels; ++mip)
 				{
 					const SubresourceData& subresourceData = pInitialData[initDataIdx++];
-					VkDeviceSize copySize = subresourceData.rowPitch * height * depth;
-					if (IsFormatBlockCompressed(pDesc->Format))
-					{
-						copySize /= 4;
-					}
+					VkDeviceSize copySize = subresourceData.rowPitch * height * depth / GetFormatBlockSize(pDesc->Format);
 					uint8_t* cpyaddr = (uint8_t*)cmd.uploadbuffer.mapped_data + copyOffset;
 					memcpy(cpyaddr, subresourceData.pData, copySize);
 
