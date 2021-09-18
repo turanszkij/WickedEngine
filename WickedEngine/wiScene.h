@@ -634,7 +634,6 @@ namespace wiScene
 		wiGraphics::RenderPass renderpass_lightmap_clear;
 		wiGraphics::RenderPass renderpass_lightmap_accumulate;
 		mutable uint32_t lightmapIterationCount = 0;
-		wiRectPacker::rect_xywh lightmap_rect = {};
 
 		XMFLOAT3 center = XMFLOAT3(0, 0, 0);
 		float impostorFadeThresholdRadius;

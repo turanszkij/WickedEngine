@@ -5,6 +5,8 @@
 #include "wiEvent.h"
 
 #include "Utility/stb_image_write.h"
+#include "Utility/basis_universal/encoder/basisu_comp.h"
+extern basist::etc1_global_selector_codebook g_basis_global_codebook;
 
 #include <thread>
 #include <locale>
@@ -224,6 +226,61 @@ namespace wiHelper
 			assert(desc.Format == FORMAT_R8G8B8A8_UNORM); // If you need to save other backbuffer format, convert the data here yourself...
 		}
 
+		std::string extension = wiHelper::toUpper(fileExtension);
+
+		bool basis = !extension.compare("BASIS");
+		bool ktx2 = !extension.compare("KTX2");
+		if (basis || ktx2)
+		{
+			basisu::image basis_image;
+			basis_image.init(texturedata.data(), desc.Width, desc.Height, 4);
+			basisu::basis_compressor_params params;
+			params.m_source_images.push_back(basis_image);
+			if (ktx2)
+			{
+				params.m_create_ktx2_file = true;
+			}
+			else
+			{
+				params.m_create_ktx2_file = false;
+			}
+#if 1
+			params.m_compression_level = basisu::BASISU_DEFAULT_COMPRESSION_LEVEL;
+#else
+			params.m_compression_level = basisu::BASISU_MAX_COMPRESSION_LEVEL;
+#endif
+			params.m_mip_gen = true;
+			params.m_pSel_codebook = &g_basis_global_codebook;
+			params.m_quality_level = 255;
+			params.m_multithreading = true;
+			int num_threads = std::max(1u, std::thread::hardware_concurrency());
+			basisu::job_pool jpool(num_threads);
+			params.m_pJob_pool = &jpool;
+			basisu::basis_compressor compressor;
+			if (compressor.init(params))
+			{
+				auto result = compressor.process();
+				if (result == basisu::basis_compressor::cECSuccess)
+				{
+					if (basis)
+					{
+						auto basis_file = compressor.get_output_basis_file();
+						filedata.resize(basis_file.size());
+						std::memcpy(filedata.data(), basis_file.data(), basis_file.size());
+						return true;
+					}
+					else if (ktx2)
+					{
+						auto ktx2_file = compressor.get_output_ktx2_file();
+						filedata.resize(ktx2_file.size());
+						std::memcpy(filedata.data(), ktx2_file.data(), ktx2_file.size());
+						return true;
+					}
+				}
+			}
+			return false;
+		}
+
 		int write_result = 0;
 
 		filedata.clear();
@@ -235,7 +292,6 @@ namespace wiHelper
 			}
 		};
 
-		std::string extension = wiHelper::toUpper(fileExtension);
 		if (!extension.compare("JPG") || !extension.compare("JPEG"))
 		{
 			write_result = stbi_write_jpg_to_func(func, &filedata, (int)desc.Width, (int)desc.Height, 4, texturedata.data(), 100);

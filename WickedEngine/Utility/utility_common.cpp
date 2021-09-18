@@ -17,6 +17,11 @@
 
 
 
+
+
+// Basis Universal library sources are compiled below for simplicity:
+
+//#define BASISU_FORCE_DEVEL_MESSAGES 1
 #define BASISU_NO_ITERATOR_DEBUG_LEVEL
 #include "basis_universal/transcoder/basisu_transcoder.cpp"
 
@@ -44,3 +49,5 @@
 #undef CLAMP
 //#include "basis_universal/zstd/zstddeclib.c"
 #include "basis_universal/zstd/zstd.c"
+
+basist::etc1_global_selector_codebook g_basis_global_codebook(basist::g_global_selector_cb_size, basist::g_global_selector_cb);

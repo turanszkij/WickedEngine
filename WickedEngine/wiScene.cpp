@@ -1139,7 +1139,6 @@ namespace wiScene
 	void ObjectComponent::ClearLightmap()
 	{
 		lightmap = Texture();
-		lightmap_rect = {};
 		lightmapWidth = 0;
 		lightmapHeight = 0;
 		lightmapIterationCount = 0; 
@@ -1207,7 +1206,6 @@ namespace wiScene
 
 				lightmapTextureData = std::move(texturedata_dst);
 			}
-			lightmap_rect = {}; // repack into global atlas
 #endif // OPEN_IMAGE_DENOISE
 
 		}
