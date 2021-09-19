@@ -497,6 +497,18 @@ namespace wiScene
 				archive >> lightmapWidth;
 				archive >> lightmapHeight;
 				archive >> lightmapTextureData;
+
+				if (!lightmapTextureData.empty())
+				{
+					const uint32_t expected_datasize = lightmapWidth * lightmapHeight * sizeof(PackedVector::XMFLOAT3PK);
+					if (expected_datasize != lightmapTextureData.size())
+					{
+						// This means it's from an old version, when lightmap data was stored in raw format, so compress it...
+						wiJobSystem::Execute(seri.ctx, [this](wiJobArgs args) {
+							CompressLightmap();
+							});
+					}
+				}
 			}
 			if (archive.GetVersion() >= 31)
 			{

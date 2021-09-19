@@ -3101,20 +3101,6 @@ using namespace Vulkan_Internal;
 
 			copyAllocator.submit(cmd);
 		}
-		else if(pDesc->Usage != USAGE_UPLOAD && pDesc->Usage != USAGE_READBACK)
-		{
-			// zero-initialize:
-			initLocker.lock();
-			vkCmdFillBuffer(
-				GetFrameResources().initCommandBuffer,
-				internal_state->resource,
-				0,
-				VK_WHOLE_SIZE,
-				0
-			);
-			submit_inits = true;
-			initLocker.unlock();
-		}
 
 		if (pDesc->Format == FORMAT_UNKNOWN)
 		{
@@ -3295,11 +3281,7 @@ using namespace Vulkan_Internal;
 				for (uint32_t mip = 0; mip < pDesc->MipLevels; ++mip)
 				{
 					const SubresourceData& subresourceData = pInitialData[initDataIdx++];
-					VkDeviceSize copySize = subresourceData.rowPitch * height * depth;
-					if (IsFormatBlockCompressed(pDesc->Format))
-					{
-						copySize /= 4;
-					}
+					VkDeviceSize copySize = subresourceData.rowPitch * height * depth / GetFormatBlockSize(pDesc->Format);
 					uint8_t* cpyaddr = (uint8_t*)cmd.uploadbuffer.mapped_data + copyOffset;
 					memcpy(cpyaddr, subresourceData.pData, copySize);
 
@@ -3408,37 +3390,6 @@ using namespace Vulkan_Internal;
 			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
 			initLocker.lock();
-			// zero initialize:
-			if (barrier.subresourceRange.aspectMask == VK_IMAGE_ASPECT_COLOR_BIT)
-			{
-				barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-				vkCmdPipelineBarrier(
-					GetFrameResources().initCommandBuffer,
-					VK_PIPELINE_STAGE_TRANSFER_BIT,
-					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-					0,
-					0, nullptr,
-					0, nullptr,
-					1, &barrier
-				);
-				VkClearColorValue initialColor = {};
-				VkImageSubresourceRange range = {};
-				range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-				range.baseArrayLayer = 0;
-				range.baseMipLevel = 0;
-				range.layerCount = barrier.subresourceRange.layerCount;
-				range.levelCount = barrier.subresourceRange.levelCount;
-				vkCmdClearColorImage(
-					GetFrameResources().initCommandBuffer,
-					internal_state->resource,
-					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-					&initialColor,
-					1, &range
-				);
-
-				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-				barrier.newLayout = _ConvertImageLayout(pTexture->desc.layout);
-			}
 			vkCmdPipelineBarrier(
 				GetFrameResources().initCommandBuffer,
 				VK_PIPELINE_STAGE_TRANSFER_BIT,

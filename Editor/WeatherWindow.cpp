@@ -3,6 +3,7 @@
 #include "Editor.h"
 
 #include <thread>
+#include <unordered_map>
 
 using namespace wiECS;
 using namespace wiScene;
@@ -215,9 +216,7 @@ void WeatherWindow::Create(EditorComponent* editor)
 			wiHelper::FileDialogParams params;
 			params.type = wiHelper::FileDialogParams::OPEN;
 			params.description = "Texture";
-			params.extensions.push_back("png");
-			params.extensions.push_back("tga");
-			params.extensions.push_back("bmp");
+			params.extensions = wiResourceManager::GetSupportedImageExtensions();
 			wiHelper::FileDialog(params, [=](std::string fileName) {
 				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					auto& weather = GetWeather();
@@ -552,6 +551,56 @@ void WeatherWindow::Create(EditorComponent* editor)
 
 		});
 	AddWidget(&eliminateCoarseCascadesButton);
+
+
+	ktxConvButton.Create("KTX2 Convert");
+	ktxConvButton.SetTooltip("All material textures in the scene will be cinverted to KTX2 format.\nTHIS MIGHT TAKE LONG, SO GET YOURSELF A COFFEE OR TEA!");
+	ktxConvButton.SetSize(XMFLOAT2(colorPicker.GetScale().x, hei));
+	ktxConvButton.SetPos(XMFLOAT2(x, y += step));
+	ktxConvButton.OnClick([=](wiEventArgs args) {
+
+		Scene& scene = wiScene::GetScene();
+
+		std::unordered_map<std::string, std::shared_ptr<wiResource>> conv;
+		for (uint32_t i = 0; i < scene.materials.GetCount(); ++i)
+		{
+			MaterialComponent& material = scene.materials[i];
+			for (auto& x : material.textures)
+			{
+				if (x.GetGPUResource() == nullptr)
+					continue;
+				if (wiHelper::GetExtensionFromFileName(x.name).compare("KTX2"))
+				{
+					x.name = wiHelper::ReplaceExtension(x.name, "KTX2");
+					conv[x.name] = x.resource;
+				}
+			}
+		}
+
+		wiJobSystem::context ctx;
+		for (auto& x : conv)
+		{
+			if (wiHelper::saveTextureToMemory(x.second->texture, x.second->filedata))
+			{
+				wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
+					std::vector<uint8_t> filedata_ktx2;
+					if (wiHelper::saveTextureToMemoryFile(x.second->filedata, x.second->texture.desc, "KTX2", filedata_ktx2))
+					{
+						x.second = wiResourceManager::Load(x.first, wiResourceManager::IMPORT_RETAIN_FILEDATA, filedata_ktx2.data(), filedata_ktx2.size());
+					}
+					});
+			}
+		}
+		wiJobSystem::Wait(ctx);
+
+		for (uint32_t i = 0; i < scene.materials.GetCount(); ++i)
+		{
+			MaterialComponent& material = scene.materials[i];
+			material.CreateRenderData();
+		}
+
+		});
+	AddWidget(&ktxConvButton);
 
 
 

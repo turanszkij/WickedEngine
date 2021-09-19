@@ -5,6 +5,9 @@
 #include "wiEvent.h"
 
 #include "Utility/stb_image_write.h"
+#include "Utility/basis_universal/encoder/basisu_comp.h"
+#include "Utility/basis_universal/encoder/basisu_gpu_texture.h"
+extern basist::etc1_global_selector_codebook g_basis_global_codebook;
 
 #include <thread>
 #include <locale>
@@ -104,12 +107,6 @@ namespace wiHelper
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
 		TextureDesc desc = texture.GetDesc();
-		uint32_t data_count = desc.Width * desc.Height;
-		uint32_t data_stride = device->GetFormatStride(desc.Format);
-		uint32_t data_size = data_count * data_stride;
-
-		texturedata.clear();
-		texturedata.resize(data_size);
 
 		Texture stagingTex;
 		TextureDesc staging_desc = desc;
@@ -123,10 +120,33 @@ namespace wiHelper
 
 		CommandList cmd = device->BeginCommandList();
 
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&texture,texture.desc.layout,RESOURCE_STATE_COPY_SRC),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
 		device->CopyResource(&stagingTex, &texture, cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&texture,RESOURCE_STATE_COPY_SRC,texture.desc.layout),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
 
 		device->SubmitCommandLists();
 		device->WaitForGPU();
+
+		desc.Width /= GetFormatBlockSize(desc.Format);
+		desc.Height /= GetFormatBlockSize(desc.Format);
+		uint32_t data_count = desc.Width * desc.Height;
+		uint32_t data_stride = GetFormatStride(desc.Format);
+		uint32_t data_size = data_count * data_stride;
+
+		texturedata.clear();
+		texturedata.resize(data_size);
 
 		if (stagingTex.mapped_data != nullptr)
 		{
@@ -171,6 +191,11 @@ namespace wiHelper
 	{
 		using namespace wiGraphics;
 		uint32_t data_count = desc.Width * desc.Height;
+
+		std::string extension = wiHelper::toUpper(fileExtension);
+		bool basis = !extension.compare("BASIS");
+		bool ktx2 = !extension.compare("KTX2");
+		basisu::image basis_image;
 
 		if (desc.Format == FORMAT_R10G10B10A2_UNORM)
 		{
@@ -219,9 +244,94 @@ namespace wiHelper
 				data32[i] = rgba8;
 			}
 		}
+		else if (IsFormatBlockCompressed(desc.Format))
+		{
+			basisu::texture_format fmt;
+			switch (desc.Format)
+			{
+			default:
+				assert(0);
+				return false;
+			case FORMAT_BC1_UNORM:
+			case FORMAT_BC1_UNORM_SRGB:
+				fmt = basisu::texture_format::cBC1;
+				break;
+			case FORMAT_BC3_UNORM:
+			case FORMAT_BC3_UNORM_SRGB:
+				fmt = basisu::texture_format::cBC3;
+				break;
+			case FORMAT_BC4_UNORM:
+				fmt = basisu::texture_format::cBC4;
+				break;
+			case FORMAT_BC5_UNORM:
+				fmt = basisu::texture_format::cBC5;
+				break;
+			case FORMAT_BC7_UNORM:
+			case FORMAT_BC7_UNORM_SRGB:
+				fmt = basisu::texture_format::cBC7;
+				break;
+			}
+			basisu::gpu_image basis_gpu_image;
+			basis_gpu_image.init(fmt, desc.Width, desc.Height);
+			std::memcpy(basis_gpu_image.get_ptr(), texturedata.data(), std::min(texturedata.size(), (size_t)basis_gpu_image.get_size_in_bytes()));
+			basis_gpu_image.unpack(basis_image);
+		}
 		else
 		{
 			assert(desc.Format == FORMAT_R8G8B8A8_UNORM); // If you need to save other backbuffer format, convert the data here yourself...
+		}
+
+		if (basis || ktx2)
+		{
+			if (basis_image.get_total_pixels() == 0)
+			{
+				basis_image.init(texturedata.data(), desc.Width, desc.Height, 4);
+			}
+			basisu::basis_compressor_params params;
+			params.m_source_images.push_back(basis_image);
+			if (ktx2)
+			{
+				params.m_create_ktx2_file = true;
+			}
+			else
+			{
+				params.m_create_ktx2_file = false;
+			}
+#if 1
+			params.m_compression_level = basisu::BASISU_DEFAULT_COMPRESSION_LEVEL;
+#else
+			params.m_compression_level = basisu::BASISU_MAX_COMPRESSION_LEVEL;
+#endif
+			params.m_mip_gen = true;
+			params.m_pSel_codebook = &g_basis_global_codebook;
+			params.m_quality_level = basisu::BASISU_QUALITY_MAX;
+			params.m_multithreading = true;
+			int num_threads = std::max(1u, std::thread::hardware_concurrency());
+			basisu::job_pool jpool(num_threads);
+			params.m_pJob_pool = &jpool;
+			basisu::basis_compressor compressor;
+			if (compressor.init(params))
+			{
+				auto result = compressor.process();
+				if (result == basisu::basis_compressor::cECSuccess)
+				{
+					if (basis)
+					{
+						const auto& basis_file = compressor.get_output_basis_file();
+						filedata.resize(basis_file.size());
+						std::memcpy(filedata.data(), basis_file.data(), basis_file.size());
+						return true;
+					}
+					else if (ktx2)
+					{
+						const auto& ktx2_file = compressor.get_output_ktx2_file();
+						filedata.resize(ktx2_file.size());
+						std::memcpy(filedata.data(), ktx2_file.data(), ktx2_file.size());
+						return true;
+					}
+				}
+			}
+			return false;
 		}
 
 		int write_result = 0;
@@ -235,22 +345,27 @@ namespace wiHelper
 			}
 		};
 
-		std::string extension = wiHelper::toUpper(fileExtension);
+		const void* src_data = texturedata.data();
+		if (basis_image.get_ptr() != nullptr)
+		{
+			src_data = basis_image.get_ptr();
+		}
+
 		if (!extension.compare("JPG") || !extension.compare("JPEG"))
 		{
-			write_result = stbi_write_jpg_to_func(func, &filedata, (int)desc.Width, (int)desc.Height, 4, texturedata.data(), 100);
+			write_result = stbi_write_jpg_to_func(func, &filedata, (int)desc.Width, (int)desc.Height, 4, src_data, 100);
 		}
 		else if (!extension.compare("PNG"))
 		{
-			write_result = stbi_write_png_to_func(func, &filedata, (int)desc.Width, (int)desc.Height, 4, texturedata.data(), 0);
+			write_result = stbi_write_png_to_func(func, &filedata, (int)desc.Width, (int)desc.Height, 4, src_data, 0);
 		}
 		else if (!extension.compare("TGA"))
 		{
-			write_result = stbi_write_tga_to_func(func, &filedata, (int)desc.Width, (int)desc.Height, 4, texturedata.data());
+			write_result = stbi_write_tga_to_func(func, &filedata, (int)desc.Width, (int)desc.Height, 4, src_data);
 		}
 		else if (!extension.compare("BMP"))
 		{
-			write_result = stbi_write_bmp_to_func(func, &filedata, (int)desc.Width, (int)desc.Height, 4, texturedata.data());
+			write_result = stbi_write_bmp_to_func(func, &filedata, (int)desc.Width, (int)desc.Height, 4, src_data);
 		}
 		else
 		{

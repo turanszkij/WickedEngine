@@ -106,11 +106,6 @@ namespace wiGraphics
 
 		inline bool CheckCapability(GRAPHICSDEVICE_CAPABILITY capability) const { return capabilities & capability; }
 
-		uint32_t GetFormatStride(FORMAT value) const;
-		bool IsFormatUnorm(FORMAT value) const;
-		bool IsFormatBlockCompressed(FORMAT value) const;
-		bool IsFormatStencilSupport(FORMAT value) const;
-
 		static constexpr uint32_t GetBufferCount() { return BUFFERCOUNT; }
 		constexpr uint32_t GetBufferIndex() const { return GetFrameCount() % BUFFERCOUNT; }
 

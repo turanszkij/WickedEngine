@@ -374,8 +374,7 @@ inline void NormalMapping(in float4 uvsets, inout float3 N, in float3x3 TBN, out
 	if (GetMaterial().normalMapStrength > 0 && GetMaterial().uvset_normalMap >= 0)
 	{
 		const float2 UV_normalMap = GetMaterial().uvset_normalMap == 0 ? uvsets.xy : uvsets.zw;
-		float3 normalMap = texture_normalmap.Sample(sampler_objectshader, UV_normalMap).rgb;
-		normalMap.b = normalMap.b == 0 ? 1 : normalMap.b; // fix for missing blue channel
+		float3 normalMap = float3(texture_normalmap.Sample(sampler_objectshader, UV_normalMap).rg, 1);
 		bumpColor = normalMap.rgb * 2 - 1;
 		N = normalize(lerp(N, mul(bumpColor, TBN), GetMaterial().normalMapStrength));
 		bumpColor *= GetMaterial().normalMapStrength;
