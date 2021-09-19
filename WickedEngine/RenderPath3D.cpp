@@ -225,7 +225,8 @@ void RenderPath3D::ResizeBuffers()
 		device->SetName(&rtGUIBlurredBackground[2], "rtGUIBlurredBackground[2]");
 	}
 
-	if(device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2))
+	if(device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2) &&
+		wiRenderer::GetVariableRateShadingClassification())
 	{
 		uint32_t tileSize = device->GetVariableRateShadingTileSize();
 
@@ -236,15 +237,7 @@ void RenderPath3D::ResizeBuffers()
 		desc.Width = (internalResolution.x + tileSize - 1) / tileSize;
 		desc.Height = (internalResolution.y + tileSize - 1) / tileSize;
 
-		std::vector<uint8_t> data(desc.Width * desc.Height);
-		uint8_t default_shadingrate;
-		device->WriteShadingRateValue(SHADING_RATE_1X1, &default_shadingrate);
-		std::fill(data.begin(), data.end(), default_shadingrate);
-
-		SubresourceData initData;
-		initData.pData = data.data();
-		initData.rowPitch = sizeof(uint8_t) * desc.Width;
-		device->CreateTexture(&desc, &initData, &rtShadingRate);
+		device->CreateTexture(&desc, nullptr, &rtShadingRate);
 		device->SetName(&rtShadingRate, "rtShadingRate");
 	}
 
@@ -357,7 +350,7 @@ void RenderPath3D::ResizeBuffers()
 			desc.attachments.push_back(RenderPassAttachment::Resolve(&rtMain));
 		}
 
-		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2))
+		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2) && rtShadingRate.IsValid())
 		{
 			desc.attachments.push_back(RenderPassAttachment::ShadingRateSource(&rtShadingRate, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_UNORDERED_ACCESS));
 		}
