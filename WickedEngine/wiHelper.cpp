@@ -304,7 +304,7 @@ namespace wiHelper
 #endif
 			params.m_mip_gen = true;
 			params.m_pSel_codebook = &g_basis_global_codebook;
-			params.m_quality_level = 255;
+			params.m_quality_level = basisu::BASISU_QUALITY_MAX;
 			params.m_multithreading = true;
 			int num_threads = std::max(1u, std::thread::hardware_concurrency());
 			basisu::job_pool jpool(num_threads);

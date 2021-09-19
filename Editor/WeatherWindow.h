@@ -60,5 +60,6 @@ public:
 	wiButton preset3Button;
 	wiButton preset4Button;
 	wiButton eliminateCoarseCascadesButton;
+	wiButton ktxConvButton;
 };
 

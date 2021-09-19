@@ -437,8 +437,7 @@ struct Surface
 			float3x3 TBN = float3x3(T.xyz, B, N);
 
 			const float2 UV_normalMap = material.uvset_normalMap == 0 ? uvsets.xy : uvsets.zw;
-			float3 normalMap = bindless_textures[NonUniformResourceIndex(material.texture_normalmap_index)].SampleLevel(sampler_linear_wrap, UV_normalMap, 0).rgb;
-			normalMap.b = normalMap.b == 0 ? 1 : normalMap.b; // fix for missing blue channel
+			float3 normalMap = float3(bindless_textures[NonUniformResourceIndex(material.texture_normalmap_index)].SampleLevel(sampler_linear_wrap, UV_normalMap, 0).rg, 1);
 			normalMap = normalMap * 2 - 1;
 			N = normalize(lerp(N, mul(normalMap, TBN), material.normalMapStrength));
 		}
