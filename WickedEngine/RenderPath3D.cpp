@@ -236,7 +236,15 @@ void RenderPath3D::ResizeBuffers()
 		desc.Width = (internalResolution.x + tileSize - 1) / tileSize;
 		desc.Height = (internalResolution.y + tileSize - 1) / tileSize;
 
-		device->CreateTexture(&desc, nullptr, &rtShadingRate);
+		std::vector<uint8_t> data(desc.Width * desc.Height);
+		uint8_t default_shadingrate;
+		device->WriteShadingRateValue(SHADING_RATE_1X1, &default_shadingrate);
+		std::fill(data.begin(), data.end(), default_shadingrate);
+
+		SubresourceData initData;
+		initData.pData = data.data();
+		initData.rowPitch = sizeof(uint8_t) * desc.Width;
+		device->CreateTexture(&desc, &initData, &rtShadingRate);
 		device->SetName(&rtShadingRate, "rtShadingRate");
 	}
 
