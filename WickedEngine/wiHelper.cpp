@@ -283,7 +283,7 @@ namespace wiHelper
 
 		if (basis || ktx2)
 		{
-			if (basis_image.get_ptr() == nullptr)
+			if (basis_image.get_total_pixels() == 0)
 			{
 				basis_image.init(texturedata.data(), desc.Width, desc.Height, 4);
 			}
