@@ -53,10 +53,3 @@
 basist::etc1_global_selector_codebook g_basis_global_codebook(basist::g_global_selector_cb_size, basist::g_global_selector_cb);
 
 
-
-
-// DirectXTex BC encoders/decoders are compiled below for simplicity:
-#include "BC.cpp"
-#include "BC4BC5.cpp"
-#include "BC6HBC7.cpp"
-

@@ -14,8 +14,6 @@
 
 #include "shaders/ShaderInterop_SurfelGI.h"
 
-#include "Utility/BC.h"
-
 #include <functional>
 #include <unordered_map>
 
@@ -1214,21 +1212,26 @@ namespace wiScene
 	}
 	void ObjectComponent::CompressLightmap()
 	{
+
+		// BC6 Block compression code that uses DirectXTex library, but it's not cross platform, so disabled:
+#if 0
 		wiTimer timer;
 		wiBackLog::post("compressing lightmap...");
 
 		lightmap.desc.Format = lightmap_block_format;
 		lightmap.desc.BindFlags = BIND_SHADER_RESOURCE;
 
+		static constexpr wiGraphics::FORMAT lightmap_block_format = wiGraphics::FORMAT_BC6H_UF16;
+		static constexpr uint32_t lightmap_blocksize = wiGraphics::GetFormatBlockSize(lightmap_block_format);
+		static_assert(lightmap_blocksize == 4u);
 		const uint32_t bc6_width = lightmapWidth / lightmap_blocksize;
 		const uint32_t bc6_height = lightmapHeight / lightmap_blocksize;
 		std::vector<uint8_t> bc6_data;
 		bc6_data.resize(sizeof(XMFLOAT4) * bc6_width * bc6_height);
 		const XMFLOAT4* raw_data = (const XMFLOAT4*)lightmapTextureData.data();
 
-		wiJobSystem::context ctx;
-		wiJobSystem::Dispatch(ctx, bc6_width, 1, [&](wiJobArgs args) {
-			uint32_t x = args.jobIndex;
+		for (uint32_t x = 0; x < bc6_width; ++x)
+		{
 			for (uint32_t y = 0; y < bc6_height; ++y)
 			{
 				uint32_t bc6_idx = x + y * bc6_width;
@@ -1247,8 +1250,7 @@ namespace wiScene
 				static_assert(arraysize(raw_vec) == 16); // it will work only for a certain block size!
 				D3DXEncodeBC6HU(ptr, raw_vec, 0);
 			}
-			});
-		wiJobSystem::Wait(ctx);
+		}
 
 		lightmapTextureData = std::move(bc6_data); // replace old (raw) data with compressed data
 
@@ -1261,6 +1263,26 @@ namespace wiScene
 			std::to_string(timer.elapsed_seconds()) +
 			" seconds"
 		);
+#else
+
+		// Simple compression to R11G11B10_FLOAT format:
+		using namespace PackedVector;
+		std::vector<uint8_t> packed_data;
+		packed_data.resize(sizeof(XMFLOAT3PK) * lightmapWidth * lightmapHeight);
+		XMFLOAT3PK* packed_ptr = (XMFLOAT3PK*)packed_data.data();
+		XMFLOAT4* raw_ptr = (XMFLOAT4*)lightmapTextureData.data();
+
+		uint32_t texelcount = lightmapWidth * lightmapHeight;
+		for (uint32_t i = 0; i < texelcount; ++i)
+		{
+			XMStoreFloat3PK(packed_ptr + i, XMLoadFloat4(raw_ptr + i));
+		}
+
+		lightmapTextureData = std::move(packed_data);
+		lightmap.desc.Format = FORMAT_R11G11B10_FLOAT;
+		lightmap.desc.BindFlags = BIND_SHADER_RESOURCE;
+
+#endif
 	}
 
 	void ArmatureComponent::CreateRenderData()
@@ -3198,7 +3220,8 @@ namespace wiScene
 					if (!object.lightmapTextureData.empty() && !object.lightmap.IsValid())
 					{
 						// Create a GPU-side per object lighmap if there is none yet, but the data exists already:
-						wiTextureHelper::CreateTexture(object.lightmap, object.lightmapTextureData.data(), object.lightmapWidth, object.lightmapHeight, ObjectComponent::lightmap_block_format);
+						object.lightmap.desc.Format = FORMAT_R11G11B10_FLOAT;
+						wiTextureHelper::CreateTexture(object.lightmap, object.lightmapTextureData.data(), object.lightmapWidth, object.lightmapHeight, object.lightmap.desc.Format);
 						device->SetName(&object.lightmap, "lightmap");
 					}
 				}

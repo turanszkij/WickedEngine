@@ -683,11 +683,6 @@ namespace wiScene
 
 		void ClearLightmap();
 		void SaveLightmap();
-
-		static constexpr wiGraphics::FORMAT lightmap_block_format = wiGraphics::FORMAT_BC6H_UF16;
-		static constexpr uint32_t lightmap_format_stride = wiGraphics::GetFormatStride(lightmap_block_format);
-		static constexpr uint32_t lightmap_blocksize = wiGraphics::GetFormatBlockSize(lightmap_block_format);
-		static_assert(lightmap_blocksize == 4u);
 		void CompressLightmap();
 
 		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
