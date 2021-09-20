@@ -905,9 +905,6 @@ namespace Vulkan_Internal
 		RenderPass renderpass;
 
 		VkSurfaceKHR surface = VK_NULL_HANDLE;
-		VkSurfaceCapabilitiesKHR swapchain_capabilities;
-		std::vector<VkSurfaceFormatKHR> swapchain_formats;
-		std::vector<VkPresentModeKHR> swapchain_presentModes;
 
 		uint32_t swapChainImageIndex = 0;
 		VkSemaphore swapchainAcquireSemaphore = VK_NULL_HANDLE;
@@ -2624,52 +2621,55 @@ using namespace Vulkan_Internal;
 #endif // _WIN32
 		}
 
-		int presentFamily = -1;
-		int familyIndex = 0;
+		uint32_t presentFamily = VK_QUEUE_FAMILY_IGNORED;
+		uint32_t familyIndex = 0;
 		for (const auto& queueFamily : queueFamilies)
 		{
 			VkBool32 presentSupport = false;
 			res = vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, (uint32_t)familyIndex, internal_state->surface, &presentSupport);
 			assert(res == VK_SUCCESS);
 
-			if (presentFamily < 0 && queueFamily.queueCount > 0 && presentSupport)
+			if (presentFamily == VK_QUEUE_FAMILY_IGNORED && queueFamily.queueCount > 0 && presentSupport)
 			{
 				presentFamily = familyIndex;
+				break;
 			}
 
 			familyIndex++;
 		}
 
-		res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, internal_state->surface, &internal_state->swapchain_capabilities);
+		// Present family not found, we cannot create SwapChain
+		if (presentFamily == VK_QUEUE_FAMILY_IGNORED)
+		{
+			return false;
+		}
+
+		VkSurfaceCapabilitiesKHR swapchain_capabilities;
+		res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, internal_state->surface, &swapchain_capabilities);
 		assert(res == VK_SUCCESS);
 
 		uint32_t formatCount;
 		res = vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, internal_state->surface, &formatCount, nullptr);
 		assert(res == VK_SUCCESS);
 
-		if (formatCount != 0)
-		{
-			internal_state->swapchain_formats.resize(formatCount);
-			res = vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, internal_state->surface, &formatCount, internal_state->swapchain_formats.data());
-			assert(res == VK_SUCCESS);
-		}
+		std::vector<VkSurfaceFormatKHR> swapchain_formats(formatCount);
+		res = vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, internal_state->surface, &formatCount, swapchain_formats.data());
+		assert(res == VK_SUCCESS);
 
 		uint32_t presentModeCount;
 		res = vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, internal_state->surface, &presentModeCount, nullptr);
 		assert(res == VK_SUCCESS);
 
-		if (presentModeCount != 0)
-		{
-			internal_state->swapchain_presentModes.resize(presentModeCount);
-			res = vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, internal_state->surface, &presentModeCount, internal_state->swapchain_presentModes.data());
-			assert(res == VK_SUCCESS);
-		}
+		std::vector<VkPresentModeKHR> swapchain_presentModes(presentModeCount);
+		swapchain_presentModes.resize(presentModeCount);
+		res = vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, internal_state->surface, &presentModeCount, swapchain_presentModes.data());
+		assert(res == VK_SUCCESS);
 
 		VkSurfaceFormatKHR surfaceFormat = {};
 		surfaceFormat.format = _ConvertFormat(pDesc->format);
 		bool valid = false;
 
-		for (const auto& format : internal_state->swapchain_formats)
+		for (const auto& format : swapchain_formats)
 		{
 			if (format.format == surfaceFormat.format)
 			{
@@ -2684,11 +2684,14 @@ using namespace Vulkan_Internal;
 		}
 
 		internal_state->swapChainExtent = { pDesc->width, pDesc->height };
-		internal_state->swapChainExtent.width = std::max(internal_state->swapchain_capabilities.minImageExtent.width, std::min(internal_state->swapchain_capabilities.maxImageExtent.width, internal_state->swapChainExtent.width));
-		internal_state->swapChainExtent.height = std::max(internal_state->swapchain_capabilities.minImageExtent.height, std::min(internal_state->swapchain_capabilities.maxImageExtent.height, internal_state->swapChainExtent.height));
-
+		internal_state->swapChainExtent.width = std::max(swapchain_capabilities.minImageExtent.width, std::min(swapchain_capabilities.maxImageExtent.width, internal_state->swapChainExtent.width));
+		internal_state->swapChainExtent.height = std::max(swapchain_capabilities.minImageExtent.height, std::min(swapchain_capabilities.maxImageExtent.height, internal_state->swapChainExtent.height));
 
 		uint32_t imageCount = pDesc->buffercount;
+		if ((swapchain_capabilities.maxImageCount > 0) && (imageCount > swapchain_capabilities.maxImageCount))
+		{
+			imageCount = swapchain_capabilities.maxImageCount;
+		}
 
 		VkSwapchainCreateInfoKHR createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -2701,18 +2704,42 @@ using namespace Vulkan_Internal;
 		createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 		createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-		createInfo.preTransform = internal_state->swapchain_capabilities.currentTransform;
-		createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+		// Transform
+		if(swapchain_capabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR)
+			createInfo.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+		else
+			createInfo.preTransform = swapchain_capabilities.currentTransform;
+
+		// Composite alpha
+		std::vector<VkCompositeAlphaFlagBitsKHR> compositeAlphaFlags = {
+			VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+			VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR,
+			VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR,
+			VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR,
+		};
+		for (auto& compositeAlphaFlag : compositeAlphaFlags)
+		{
+			if (swapchain_capabilities.supportedCompositeAlpha & compositeAlphaFlag)
+			{
+				createInfo.compositeAlpha = compositeAlphaFlag;
+				break;
+			};
+		}
+
 		createInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR; // The only one that is always supported
 		if (!pDesc->vsync)
 		{
-			// The immediate present mode is not necessarily supported:
-			for (auto& presentmode : internal_state->swapchain_presentModes)
+			// The mailbox/immediate present mode is not necessarily supported:
+			for (auto& presentMode : swapchain_presentModes)
 			{
-				if (presentmode == VK_PRESENT_MODE_IMMEDIATE_KHR)
+				if (presentMode == VK_PRESENT_MODE_MAILBOX_KHR)
+				{
+					createInfo.presentMode = VK_PRESENT_MODE_MAILBOX_KHR;
+					break;
+				}
+				if (presentMode == VK_PRESENT_MODE_IMMEDIATE_KHR)
 				{
 					createInfo.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
-					break;
 				}
 			}
 		}
@@ -2735,12 +2762,12 @@ using namespace Vulkan_Internal;
 		assert(res == VK_SUCCESS);
 		internal_state->swapChainImageFormat = surfaceFormat.format;
 
-		if (vkSetDebugUtilsObjectNameEXT != nullptr)
+		if (debugUtils)
 		{
 			VkDebugUtilsObjectNameInfoEXT info = {};
 			info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
-			info.pObjectName = "SWAPCHAIN";
 			info.objectType = VK_OBJECT_TYPE_IMAGE;
+			info.pObjectName = "SWAPCHAIN";
 			for (auto& x : internal_state->swapChainImages)
 			{
 				info.objectHandle = (uint64_t)x;
