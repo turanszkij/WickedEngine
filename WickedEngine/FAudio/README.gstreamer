@@ -1,0 +1,20 @@
+FAudio has optional support for decoding xWMA resources using GStreamer.
+
+Please note that enabling support for GStreamer means your project has to comply
+with the GStreamer license and WMA patent license. For more information:
+
+https://gstreamer.freedesktop.org/documentation/frequently-asked-questions/legal.html
+
+https://fluendo.com/en/products/enterprise/fluendo-codec-pack/
+
+Building with GStreamer support on *nix platforms
+-------------------------------------------------
+Enable GStreamer support at cmake configure-time with `-DGSTREAMER=ON`.
+
+Building with GStreamer support on Windows
+------------------------------------------
+You'll need to modify the Visual Studio project for FAudio to enable support:
+- Add HAVE_GSTREAMER=1 to preprocessor defines
+- Add the correct include and lib paths to the Visual C++ directories.
+- Add the GStreamer .lib files to the linker input
+- Add FAudio_gstreamer.c to the sources of the project

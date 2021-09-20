@@ -1,0 +1,11 @@
+This is FAudio#, a C# wrapper for FAudio, an XAudio reimplementation for FNA.
+
+Project Website: http://fna-xna.github.io/
+
+License
+-------
+FAudio# is released under the zlib license. See LICENSE for details.
+
+Building FAudio#
+----------------
+Just type `make` in the root directory!

@@ -29,6 +29,7 @@ else ()
 endif()    
 
 add_subdirectory(BULLET)
+add_subdirectory(FAudio)
 add_subdirectory(LUA)
 add_subdirectory(Utility)
 add_subdirectory(shaders)
@@ -125,6 +126,7 @@ else ()
 		Vulkan::Vulkan
 		SDL2::SDL2
 		$<$<BOOL:${OpenImageDenoise_FOUND}>:OpenImageDenoise> # links OpenImageDenoise only if it's found
+		FAudio
 	)
 
 	target_link_libraries(${TARGET_NAME} PRIVATE dl)

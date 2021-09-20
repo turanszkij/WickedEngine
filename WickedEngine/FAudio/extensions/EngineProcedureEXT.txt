@@ -1,0 +1,44 @@
+EngineProcedureEXT - Allow clients to wrap engine procedure
+
+About
+-----
+Clients may be interested in having more control over the engine procedure. In
+particular, they may want to modify or access the generated output before
+passing it to the underlying platform. In other cases, clients like Wine may
+have specific thread requirements that the platform's audio library cannot
+satisfy. This extension allows clients to "wrap" the engine procedure with
+arbitrary code.
+
+Dependencies
+------------
+This extension does not interact with any non-standard XAudio features.
+
+New Types
+---------
+typedef void (FAUDIOCALL *FAudioEngineCallEXT)(FAudio *audio, float *output);
+
+typedef void (FAUDIOCALL *FAudioEngineProcedureEXT)(
+	FAudioEngineCallEXT defaultEngineProc,
+	FAudio *audio,
+	float *output,
+	void *user
+);
+
+New Procedures and Functions
+----------------------------
+FAUDIOAPI void FAudio_SetEngineProcedureEXT(
+	FAudio *audio,
+	FAudioEngineProcedureEXT clientEngineProc,
+	void *user
+);
+
+How to Use
+----------
+At any time, the client may request that FAudio call the given
+clientEngineProc function instead of FAudio's default engine procedure
+beginning with the next engine tick. It is valid to call
+FAudio_SetEngineProcedureEXT before creating the mastering voice.
+
+clientEngineProc will be invoked with a pointer to FAudio's default engine
+procedure, allowing the client to execute the procedure on a specific thread,
+or operate on the retrieved audio before returning control back to FAudio.

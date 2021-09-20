@@ -1,0 +1,125 @@
+CustomAllocatorEXT - Allow using custom memory management functions with FAudio
+
+About
+-----
+These entry points are needed for scenarios where the application needs control
+over the memory allocators used by FAudio. This is useful for programs that have
+strict memory requirements, and is also useful for COM wrappers that need to use
+the same memory allocator as Microsoft's XAudio2 runtime, for accuracy.
+
+This extension only supports using ONE and ONLY ONE set of custom callbacks. You
+are NOT allowed to send different malloc/free/realloc functions to each object,
+ALL objects must use the exact same callbacks. Any and all attempts to mix
+callbacks will result in an unspecified program crash.
+
+Dependencies
+------------
+This extension interacts with COMConstructEXT.
+
+New Types
+---------
+typedef void* (FAUDIOCALL * FAudioMallocFunc)(size_t size);
+
+typedef void (FAUDIOCALL * FAudioFreeFunc)(void* ptr);
+
+typedef void* (FAUDIOCALL * FAudioReallocFunc)(void* ptr, size_t size);
+
+New Procedures and Functions
+----------------------------
+FAUDIOAPI uint32_t FAudioCreateWithCustomAllocatorEXT(
+	FAudio **ppFAudio,
+	uint32_t Flags,
+	FAudioProcessor XAudio2Processor,
+	FAudioMallocFunc customMalloc,
+	FAudioFreeFunc customFree,
+	FAudioReallocFunc customRealloc
+);
+
+FAUDIOAPI uint32_t FAudioCOMConstructWithCustomAllocatorEXT(
+	FAudio **ppFAudio,
+	uint8_t version,
+	FAudioMallocFunc customMalloc,
+	FAudioFreeFunc customFree,
+	FAudioReallocFunc customRealloc
+);
+
+FAUDIOAPI uint32_t FAudioCreateVolumeMeterWithCustomAllocatorEXT(
+	FAPO** ppApo,
+	uint32_t Flags,
+	FAudioMallocFunc customMalloc,
+	FAudioFreeFunc customFree,
+	FAudioReallocFunc customRealloc
+);
+
+FAUDIOAPI uint32_t FAudioCreateReverbWithCustomAllocatorEXT(
+	FAPO** ppApo,
+	uint32_t Flags,
+	FAudioMallocFunc customMalloc,
+	FAudioFreeFunc customFree,
+	FAudioReallocFunc customRealloc
+);
+
+FAUDIOAPI uint32_t FAudioCreateReverb9WithCustomAllocatorEXT(
+	FAPO** ppApo,
+	uint32_t Flags,
+	FAudioMallocFunc customMalloc,
+	FAudioFreeFunc customFree,
+	FAudioReallocFunc customRealloc
+);
+
+FAPOAPI void CreateFAPOBaseWithCustomAllocatorEXT(
+	FAPOBase *fapo,
+	const FAPORegistrationProperties *pRegistrationProperties,
+	uint8_t *pParameterBlocks,
+	uint32_t uParameterBlockByteSize,
+	uint8_t fProducer,
+	FAudioMallocFunc customMalloc,
+	FAudioFreeFunc customFree,
+	FAudioReallocFunc customRealloc
+);
+
+FAPOFXAPI uint32_t FAPOFX_CreateFXWithCustomAllocatorEXT(
+	const FAudioGUID *clsid,
+	FAPO **pEffect,
+	const void *pInitData,
+	uint32_t InitDataByteSize,
+	FAudioMallocFunc customMalloc,
+	FAudioFreeFunc customFree,
+	FAudioReallocFunc customRealloc
+);
+
+FACTAPI uint32_t FACTCreateEngineWithCustomAllocatorEXT(
+	uint32_t dwCreationFlags,
+	FACTAudioEngine **ppEngine,
+	FAudioMallocFunc customMalloc,
+	FAudioFreeFunc customFree,
+	FAudioReallocFunc customRealloc
+);
+
+How to Use
+----------
+Initialization of FAudio objects should be the same, only you send three more
+parameters when initializing: A malloc, free, and realloc function:
+
+	extern void* MyMalloc(size_t size);
+	extern void MyFree(void* ptr);
+	extern void MyRealloc(void* ptr, size_t size);
+	FAudio *audio;
+	FAudioCreateWithCustomAllocatorEXT(
+		&audio,
+		0,
+		FAUDIO_PROCESSOR_DEFAULT,
+		MyMalloc,
+		MyFree,
+		MyRealloc
+	);
+
+If you use a custom allocator with one object, you MUST send the same allocators
+to ALL new objects that support custom allocators.
+
+FAQ:
+----
+Q: Should we allow custom allocators to be mixed between objects?
+A: No. While each object asks for callbacks separately, XAudio2 objects all
+   closely interact with each other, including allocating/freeing memory from
+   one another. Your program WILL crash if allocator functions are mismatched!

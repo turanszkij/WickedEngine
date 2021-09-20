@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\F3DAudio.c" />
+    <ClCompile Include="..\src\FAudio.c" />
+    <ClCompile Include="..\src\FAudio_internal.c" />
+    <ClCompile Include="..\src\FAudio_internal_simd.c" />
+    <ClCompile Include="..\src\FAudio_operationset.c" />
+    <ClCompile Include="..\src\FAudioFX_reverb.c" />
+    <ClCompile Include="..\src\FAudioFX_volumemeter.c" />
+    <ClCompile Include="..\src\FACT.c" />
+    <ClCompile Include="..\src\FACT3D.c" />
+    <ClCompile Include="..\src\FACT_internal.c" />
+    <ClCompile Include="..\src\FAPOBase.c" />
+    <ClCompile Include="..\src\FAPOFX.c" />
+    <ClCompile Include="..\src\FAPOFX_eq.c" />
+    <ClCompile Include="..\src\FAPOFX_masteringlimiter.c" />
+    <ClCompile Include="..\src\FAPOFX_reverb.c" />
+    <ClCompile Include="..\src\FAPOFX_echo.c" />
+    <ClCompile Include="..\src\XNA_Song.c" />
+    <ClCompile Include="..\src\FAudio_platform_sdl2.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\include\F3DAudio.h" />
+    <ClInclude Include="..\include\FAudio.h" />
+    <ClInclude Include="..\include\FAudioFX.h" />
+    <ClInclude Include="..\include\FACT.h" />
+    <ClInclude Include="..\include\FACT3D.h" />
+    <ClInclude Include="..\include\FAPO.h" />
+    <ClInclude Include="..\include\FAPOBase.h" />
+    <ClInclude Include="..\include\FAPOFX.h" />
+    <ClInclude Include="..\src\FAudio_internal.h" />
+    <ClInclude Include="..\src\FACT_internal.h" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{208f0a10-10fe-4c43-990f-3569169b1083}</ProjectGuid>
+    <Keyword>DynamicLibrary</Keyword>
+    <RootNamespace>FAudio</RootNamespace>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <MinimumVisualStudioVersion>14.0</MinimumVisualStudioVersion>
+    <AppContainerApplication>true</AppContainerApplication>
+    <ApplicationType>Windows Store</ApplicationType>
+    <WindowsTargetPlatformVersion>10.0.10240.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformMinVersion>10.0.10240.0</WindowsTargetPlatformMinVersion>
+    <ApplicationTypeRevision>10.0</ApplicationTypeRevision>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <PlatformToolset>v141</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <GenerateManifest>false</GenerateManifest>
+    <IgnoreImportLibrary>false</IgnoreImportLibrary>
+    <IncludePath>..\..\SDL2\include;..\include;$(IncludePath)</IncludePath>
+    <LibraryPath>..\..\SDL2\VisualC-WinRT\UWP_VS2015\$(Platform)\$(Configuration)\SDL-UWP;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <GenerateManifest>false</GenerateManifest>
+    <IgnoreImportLibrary>false</IgnoreImportLibrary>
+    <IncludePath>..\..\SDL2\include;..\include;$(IncludePath)</IncludePath>
+    <LibraryPath>..\..\SDL2\VisualC-WinRT\UWP_VS2015\$(Platform)\$(Configuration)\SDL-UWP;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <CompileAsWinRT>false</CompileAsWinRT>
+      <PreprocessorDefinitions>_WINDLL;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
+      <GenerateWindowsMetadata>false</GenerateWindowsMetadata>
+      <AdditionalDependencies>WindowsApp.lib;SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <CompileAsWinRT>false</CompileAsWinRT>
+      <PreprocessorDefinitions>_WINDLL;_CRT_SECURE_NO_WARNINGS;FAUDIO_DISABLE_DEBUGCONFIGURATION;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
+      <GenerateWindowsMetadata>false</GenerateWindowsMetadata>
+      <AdditionalDependencies>WindowsApp.lib;SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

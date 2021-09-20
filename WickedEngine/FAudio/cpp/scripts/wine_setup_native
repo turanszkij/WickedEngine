@@ -1,0 +1,106 @@
+#!/bin/bash
+
+if [ -z "$WINEPREFIX" ]; then
+	echo "Please set WINEPREFIX before running this script"	
+	exit 1
+fi
+
+if [ ! -f $WINEPREFIX/system.reg ]; then
+	echo "$WINEPREFIX does not seem like a valid Wine Prefix"
+	exit 1
+fi
+
+winedump xaudio2_0.dll | grep 32BIT_MACHINE >> /dev/null 2>&1
+
+if [ $? -eq 0 ]; then
+	wine_exe=wine
+else
+	wine_exe=wine64
+fi
+
+wine_path=$(${wine_exe} winepath -u 'C:\windows\system32' 2>>/dev/null)
+if [ $? -ne 0 ]; then
+	echo "Failed to get winepath for c:\windows\system32 (64-bit vs 32-bit mismatch?)"
+	exit 1;
+fi
+
+dll_path=$(pwd)
+
+function install_dll {
+	name=$1
+	
+	# update registry
+	log=$(${wine_exe} reg add 'HKEY_CURRENT_USER\Software\Wine\DllOverrides' /v $name /d native /f 2>>/dev/null)
+
+	if [ $? -ne 0 ]; then
+		echo "Failed to update registry for $name"
+		exit 1
+	fi
+
+	# link dll
+	ln -sf "$dll_path/$name.dll" "$wine_path/$name.dll"
+
+	if [ $? -ne 0 ]; then
+		echo "Failed to create link for $name"
+		exit 1
+	fi
+
+	echo "$name: done"
+}
+
+install_dll xaudio2_0
+install_dll xaudio2_1
+install_dll xaudio2_2
+install_dll xaudio2_3
+install_dll xaudio2_4
+install_dll xaudio2_5
+install_dll xaudio2_6
+install_dll xaudio2_7
+install_dll xaudio2_8
+install_dll xaudio2_9
+
+install_dll x3daudio1_3
+install_dll x3daudio1_4
+install_dll x3daudio1_5
+install_dll x3daudio1_6
+install_dll x3daudio1_7
+
+install_dll xactengine3_0
+install_dll xactengine3_1
+install_dll xactengine3_2
+install_dll xactengine3_3
+install_dll xactengine3_4
+install_dll xactengine3_5
+install_dll xactengine3_6
+install_dll xactengine3_7
+
+install_dll xapofx1_1
+install_dll xapofx1_2
+install_dll xapofx1_3
+install_dll xapofx1_4
+install_dll xapofx1_5
+
+ln -sf "$dll_path/FAudio.dll" "$wine_path/FAudio.dll"
+ln -sf "$dll_path/SDL2.dll" "$wine_path/SDL2.dll"
+ln -sf "$dll_path/libwinpthread-1.dll" "$wine_path/libwinpthread-1.dll"
+
+if [ -f "$dll_path/iconv.dll" ];then 
+	ln -sf "$dll_path/iconv.dll" "$wine_path/iconv.dll"
+fi
+
+if [ -f "$dll_path/libiconv-2.dll" ];then 
+	ln -sf "$dll_path/libiconv-2.dll" "$wine_path/libiconv-2.dll"
+fi
+
+if [ -f "$dll_path/avcodec-58.dll" ];then 
+	ln -sf "$dll_path/avcodec-58.dll" "$wine_path/avcodec-58.dll"
+fi
+
+if [ -f "$dll_path/avutil-56.dll" ];then 
+	ln -sf "$dll_path/avutil-56.dll" "$wine_path/avutil-56.dll"
+fi
+
+if [ -f "$dll_path/swresample-3.dll" ];then 
+	ln -sf "$dll_path/swresample-3.dll" "$wine_path/swresample-3.dll"
+fi
+

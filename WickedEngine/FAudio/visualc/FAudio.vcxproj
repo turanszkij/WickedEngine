@@ -1,0 +1,108 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{90A103EF-E403-47D4-BBBB-0F206B9FA7F2}</ProjectGuid>
+    <RootNamespace>FAudio</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Release'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <IncludePath>..\..\SDL2\include;..\include;$(IncludePath)</IncludePath>
+    <LibraryPath>..\..\SDL2\lib\$(PlatformShortName);$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <PreprocessorDefinitions>FAUDIO_DISABLE_DEBUGCONFIGURATION;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\F3DAudio.c" />
+    <ClCompile Include="..\src\FAudio.c" />
+    <ClCompile Include="..\src\FAudio_internal.c" />
+    <ClCompile Include="..\src\FAudio_internal_simd.c" />
+    <ClCompile Include="..\src\FAudio_operationset.c" />
+    <ClCompile Include="..\src\FAudioFX_reverb.c" />
+    <ClCompile Include="..\src\FAudioFX_volumemeter.c" />
+    <ClCompile Include="..\src\FACT.c" />
+    <ClCompile Include="..\src\FACT3D.c" />
+    <ClCompile Include="..\src\FACT_internal.c" />
+    <ClCompile Include="..\src\FAPOBase.c" />
+    <ClCompile Include="..\src\FAPOFX.c" />
+    <ClCompile Include="..\src\FAPOFX_eq.c" />
+    <ClCompile Include="..\src\FAPOFX_masteringlimiter.c" />
+    <ClCompile Include="..\src\FAPOFX_reverb.c" />
+    <ClCompile Include="..\src\FAPOFX_echo.c" />
+    <ClCompile Include="..\src\XNA_Song.c" />
+    <ClCompile Include="..\src\FAudio_platform_sdl2.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\include\F3DAudio.h" />
+    <ClInclude Include="..\include\FAudio.h" />
+    <ClInclude Include="..\include\FAudioFX.h" />
+    <ClInclude Include="..\include\FACT.h" />
+    <ClInclude Include="..\include\FACT3D.h" />
+    <ClInclude Include="..\include\FAPO.h" />
+    <ClInclude Include="..\include\FAPOBase.h" />
+    <ClInclude Include="..\include\FAPOFX.h" />
+    <ClInclude Include="..\src\FAudio_internal.h" />
+    <ClInclude Include="..\src\FACT_internal.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

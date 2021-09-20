@@ -1,0 +1,20 @@
+Building FAudio for Windows
+---------------------------
+FAudio uses Visual Studio 2010 to build on Windows.
+
+TODO: REMOVE C RUNTIME DEPENDENCY!
+
+Dependencies
+------------
+Before building, download SDL2's VC development libraries from SDL's website:
+
+http://libsdl.org/download-2.0.php
+
+Extract the ZIP file's SDL2 directory (called something like 'SDL2-2.0.8') as
+a sibling to your FAudio checkout and rename it to 'SDL2', so that you have
+directories named 'FAudio' and 'SDL2' next to each other.
+
+Compiling
+---------
+1. Build FAudio.sln
+2. Grab the output DLL along with SDL2.dll, ship it!

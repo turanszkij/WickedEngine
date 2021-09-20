@@ -1,0 +1,41 @@
+COMConstructEXT - Entry point for improved compatibility with COM wrappers
+
+About
+-----
+This entry point is needed for scenarios when you need to create the FAudio
+object, but are unable to provide the parameters that FAudioCreate asks for by
+default. This is typical in COM wrappers where XAudio2 (<= 2.7) programs will
+first construct the object (as requested by CoCreateInstance), then call
+IXAudio2_Initialize with the 'Flags' and 'XAudio2Processor' parameters
+afterward.
+
+Dependencies
+------------
+This extension does not interact with any non-standard XAudio features.
+
+New Procedures and Functions
+----------------------------
+FAUDIOAPI uint32_t FAudioCOMConstructEXT(FAudio **ppFAudio, uint8_t version);
+
+How to Use
+----------
+Instead of initializing FAudio with the traditional method...
+
+	FAudio *audio;
+	FAudioCreate(&audio, 0, FAUDIO_PROCESSOR_DEFAULT);
+
+... you construct and then initialize as two separate function calls:
+
+	FAudio *audio;
+	FAudioCOMConstructEXT(&audio, FAUDIO_TARGET_VERSION);
+	FAudio_Initialize(audio, 0, FAUDIO_PROCESSOR_DEFAULT);
+
+FAQ:
+----
+Q: Should we create similar functions for other XAudio subsystems (such as XACT,
+   XAPOFX, and XAudio2FX)?
+A: No. While other objects in XAudio 2.7 (or lower) are initialized via COM on
+   Windows, XAudio2 has a unique situation where the 'XAudio2Create' macro calls
+   Initialize in addition to CoCreateInstance. All other creation macros simply
+   call CoCreateInstance with no further activity, so it is easy to support them
+   with the one exported 'Create' function.

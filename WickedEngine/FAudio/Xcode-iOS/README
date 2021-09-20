@@ -1,0 +1,18 @@
+Building FAudio for iOS/tvOS
+----------------------------
+FAudio uses Xcode to build on iOS and tvOS.
+
+Dependencies
+------------
+Before building, download SDL2's source code from SDL's website:
+
+http://libsdl.org/download-2.0.php
+
+After extracting the zip file, be sure to rename the directory to remove the
+version number (for example, 'SDL2-2.0.8' should be 'SDL2').
+
+Compiling
+---------
+1. Build SDL2/Xcode-iOS/SDL/SDL.xcodeproj
+2. Build FAudio.xcodeproj
+3. Grab libFAudio.a and libSDL2.a, ship it!
