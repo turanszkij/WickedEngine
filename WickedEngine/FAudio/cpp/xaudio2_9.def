@@ -1,7 +1,0 @@
-EXPORTS  
-    XAudio2Create @1  
-    CreateAudioReverb @2
-    CreateAudioVolumeMeter @3
-    CreateFX @4
-    X3DAudioCalculate @5
-    X3DAudioInitialize @6

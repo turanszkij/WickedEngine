@@ -29,7 +29,6 @@ else ()
 endif()    
 
 add_subdirectory(BULLET)
-add_subdirectory(FAudio)
 add_subdirectory(LUA)
 add_subdirectory(Utility)
 add_subdirectory(shaders)

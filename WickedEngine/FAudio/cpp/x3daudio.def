@@ -1,4 +1,0 @@
-EXPORTS  
-	X3DAudioInitialize  @1  
-	X3DAudioCalculate   @2
-   
