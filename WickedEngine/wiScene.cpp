@@ -1630,7 +1630,7 @@ namespace wiScene
 		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		{
 			// Recreate top level acceleration structure if the object count changed:
-			if ((uint32_t)instanceArraySize != TLAS.desc.toplevel.count)
+			if (instanceArraySize > 0 && (uint32_t)instanceArraySize != TLAS.desc.toplevel.count)
 			{
 				RaytracingAccelerationStructureDesc desc;
 				desc._flags = RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD;

@@ -48,7 +48,6 @@ private:
 	float emit = 0.0f;
 	int burst = 0;
 
-	bool buffersUpToDate = false;
 	uint32_t MAX_PARTICLES = 1000;
 
 public:
