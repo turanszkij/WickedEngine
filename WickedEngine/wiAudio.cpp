@@ -3,7 +3,6 @@
 #include "wiHelper.h"
 #include "wiTimer.h"
 
-#include <SDL_stdinc.h>
 #include <vector>
 
 #define STB_VORBIS_HEADER_ONLY
