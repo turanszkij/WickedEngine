@@ -1707,7 +1707,7 @@ void LoadShaders()
 			desc.ps = &shaders[PSTYPE_FORCEFIELDVISUALIZER];
 			desc.dss = &depthStencils[DSSTYPE_XRAY];
 			desc.rs = &rasterizers[RSTYPE_BACK];
-			desc.bs = &blendStates[BSTYPE_TRANSPARENT];
+			desc.bs = &blendStates[BSTYPE_ADDITIVE];
 			desc.pt = TRIANGLELIST;
 			break;
 		case DEBUGRENDERING_FORCEFIELD_PLANE:
@@ -1715,7 +1715,7 @@ void LoadShaders()
 			desc.ps = &shaders[PSTYPE_FORCEFIELDVISUALIZER];
 			desc.dss = &depthStencils[DSSTYPE_XRAY];
 			desc.rs = &rasterizers[RSTYPE_FRONT];
-			desc.bs = &blendStates[BSTYPE_TRANSPARENT];
+			desc.bs = &blendStates[BSTYPE_ADDITIVE];
 			desc.pt = TRIANGLESTRIP;
 			break;
 		case DEBUGRENDERING_RAYTRACE_BVH:
@@ -5930,8 +5930,6 @@ void DrawDebugWorld(
 				device->Draw(14, 0, cmd); // box
 				break;
 			}
-
-			++i;
 		}
 
 		device->EventEnd(cmd);
