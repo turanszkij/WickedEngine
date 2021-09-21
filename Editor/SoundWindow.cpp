@@ -68,8 +68,7 @@ void SoundWindow::Create(EditorComponent* editor)
 		wiHelper::FileDialogParams params;
 		params.type = wiHelper::FileDialogParams::OPEN;
 		params.description = "Sound";
-		params.extensions.push_back("wav");
-		params.extensions.push_back("ogg");
+		params.extensions = wiResourceManager::GetSupportedSoundExtensions();
 		wiHelper::FileDialog(params, [=](std::string fileName) {
 			wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 				Entity entity = GetScene().Entity_CreateSound("editorSound", fileName);

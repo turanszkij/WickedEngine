@@ -529,7 +529,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiFFTGenerator.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGPUBVH.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGPUSortLib.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX12.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_Vulkan.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)LoadingScreen.cpp" />

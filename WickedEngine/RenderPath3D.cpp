@@ -225,7 +225,8 @@ void RenderPath3D::ResizeBuffers()
 		device->SetName(&rtGUIBlurredBackground[2], "rtGUIBlurredBackground[2]");
 	}
 
-	if(device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2))
+	if(device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2) &&
+		wiRenderer::GetVariableRateShadingClassification())
 	{
 		uint32_t tileSize = device->GetVariableRateShadingTileSize();
 
@@ -349,7 +350,7 @@ void RenderPath3D::ResizeBuffers()
 			desc.attachments.push_back(RenderPassAttachment::Resolve(&rtMain));
 		}
 
-		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2))
+		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2) && rtShadingRate.IsValid())
 		{
 			desc.attachments.push_back(RenderPassAttachment::ShadingRateSource(&rtShadingRate, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_UNORDERED_ACCESS));
 		}

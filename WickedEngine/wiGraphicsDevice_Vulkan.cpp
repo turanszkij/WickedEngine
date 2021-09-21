@@ -905,9 +905,6 @@ namespace Vulkan_Internal
 		RenderPass renderpass;
 
 		VkSurfaceKHR surface = VK_NULL_HANDLE;
-		VkSurfaceCapabilitiesKHR swapchain_capabilities;
-		std::vector<VkSurfaceFormatKHR> swapchain_formats;
-		std::vector<VkPresentModeKHR> swapchain_presentModes;
 
 		uint32_t swapChainImageIndex = 0;
 		VkSemaphore swapchainAcquireSemaphore = VK_NULL_HANDLE;
@@ -2025,15 +2022,10 @@ using namespace Vulkan_Internal;
 
 				enabled_deviceExtensions = required_deviceExtensions;
 
-				if (checkExtensionSupport(VK_KHR_SPIRV_1_4_EXTENSION_NAME, available_deviceExtensions))
-				{
-					enabled_deviceExtensions.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
-				}
-
-				if (checkExtensionSupport(VK_EXT_SHADER_VIEWPORT_INDEX_LAYER_EXTENSION_NAME, available_deviceExtensions))
-				{
-					enabled_deviceExtensions.push_back(VK_EXT_SHADER_VIEWPORT_INDEX_LAYER_EXTENSION_NAME);
-				}
+				// Core 1.2
+				enabled_deviceExtensions.push_back(VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME);
+				enabled_deviceExtensions.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
+				enabled_deviceExtensions.push_back(VK_EXT_SHADER_VIEWPORT_INDEX_LAYER_EXTENSION_NAME);
 
 				if (checkExtensionSupport(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME, available_deviceExtensions))
 				{
@@ -2070,6 +2062,8 @@ using namespace Vulkan_Internal;
 
 				if (checkExtensionSupport(VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME, available_deviceExtensions))
 				{
+					assert(checkExtensionSupport(VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME, available_deviceExtensions));
+					enabled_deviceExtensions.push_back(VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME);
 					enabled_deviceExtensions.push_back(VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME);
 					fragment_shading_rate_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_FEATURES_KHR;
 					*features_chain = &fragment_shading_rate_features;
@@ -2120,6 +2114,8 @@ using namespace Vulkan_Internal;
 			assert(features2.features.shaderClipDistance == VK_TRUE);
 			assert(features2.features.textureCompressionBC == VK_TRUE);
 			assert(features2.features.occlusionQueryPrecise == VK_TRUE);
+			assert(features_1_2.descriptorIndexing == VK_TRUE);
+
 			if (features2.features.tessellationShader == VK_TRUE)
 			{
 				capabilities |= GRAPHICSDEVICE_CAPABILITY_TESSELLATION;
@@ -2137,8 +2133,7 @@ using namespace Vulkan_Internal;
 				raytracing_features.rayTracingPipeline == VK_TRUE &&
 				raytracing_query_features.rayQuery == VK_TRUE &&
 				acceleration_structure_features.accelerationStructure == VK_TRUE &&
-				features_1_2.bufferDeviceAddress == VK_TRUE
-				)
+				features_1_2.bufferDeviceAddress == VK_TRUE)
 			{
 				capabilities |= GRAPHICSDEVICE_CAPABILITY_RAYTRACING;
 				SHADER_IDENTIFIER_SIZE = raytracing_properties.shaderGroupHandleSize;
@@ -2157,8 +2152,6 @@ using namespace Vulkan_Internal;
 				VARIABLE_RATE_SHADING_TILE_SIZE = std::min(fragment_shading_rate_properties.maxFragmentShadingRateAttachmentTexelSize.width, fragment_shading_rate_properties.maxFragmentShadingRateAttachmentTexelSize.height);
 			}
 
-			assert(features_1_2.descriptorIndexing == VK_TRUE);
-			
 			VkFormatProperties formatProperties = {};
 			vkGetPhysicalDeviceFormatProperties(physicalDevice, _ConvertFormat(FORMAT_R11G11B10_FLOAT), &formatProperties);
 			if (formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)
@@ -2513,30 +2506,31 @@ using namespace Vulkan_Internal;
 		dynamicStateInfo.dynamicStateCount = (uint32_t)pso_dynamicStates.size();
 		dynamicStateInfo.pDynamicStates = pso_dynamicStates.data();
 
-		if (features_1_2.descriptorBindingSampledImageUpdateAfterBind)
+		if (features_1_2.descriptorBindingSampledImageUpdateAfterBind == VK_TRUE)
 		{
 			allocationhandler->bindlessSampledImages.init(device, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, properties_1_2.maxDescriptorSetUpdateAfterBindSampledImages / 4);
 		}
-		if (features_1_2.descriptorBindingUniformTexelBufferUpdateAfterBind)
+		if (features_1_2.descriptorBindingUniformTexelBufferUpdateAfterBind == VK_TRUE)
 		{
 			allocationhandler->bindlessUniformTexelBuffers.init(device, VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, properties_1_2.maxDescriptorSetUpdateAfterBindSampledImages / 4);
 		}
-		if (features_1_2.descriptorBindingStorageBufferUpdateAfterBind)
+		if (features_1_2.descriptorBindingStorageBufferUpdateAfterBind == VK_TRUE)
 		{
 			allocationhandler->bindlessStorageBuffers.init(device, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, properties_1_2.maxDescriptorSetUpdateAfterBindStorageBuffers / 4);
 		}
-		if (features_1_2.descriptorBindingStorageImageUpdateAfterBind)
+		if (features_1_2.descriptorBindingStorageImageUpdateAfterBind == VK_TRUE)
 		{
 			allocationhandler->bindlessStorageImages.init(device, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, properties_1_2.maxDescriptorSetUpdateAfterBindStorageImages / 4);
 		}
-		if (features_1_2.descriptorBindingStorageTexelBufferUpdateAfterBind)
+		if (features_1_2.descriptorBindingStorageTexelBufferUpdateAfterBind == VK_TRUE)
 		{
 			allocationhandler->bindlessStorageTexelBuffers.init(device, VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, properties_1_2.maxDescriptorSetUpdateAfterBindStorageImages / 4);
 		}
-		if (features_1_2.descriptorBindingSampledImageUpdateAfterBind)
+		if (features_1_2.descriptorBindingSampledImageUpdateAfterBind == VK_TRUE)
 		{
 			allocationhandler->bindlessSamplers.init(device, VK_DESCRIPTOR_TYPE_SAMPLER, 256);
 		}
+
 		if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		{
 			allocationhandler->bindlessAccelerationStructures.init(device, VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 32);
@@ -2654,52 +2648,55 @@ using namespace Vulkan_Internal;
 #endif // _WIN32
 		}
 
-		int presentFamily = -1;
-		int familyIndex = 0;
+		uint32_t presentFamily = VK_QUEUE_FAMILY_IGNORED;
+		uint32_t familyIndex = 0;
 		for (const auto& queueFamily : queueFamilies)
 		{
 			VkBool32 presentSupport = false;
 			res = vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, (uint32_t)familyIndex, internal_state->surface, &presentSupport);
 			assert(res == VK_SUCCESS);
 
-			if (presentFamily < 0 && queueFamily.queueCount > 0 && presentSupport)
+			if (presentFamily == VK_QUEUE_FAMILY_IGNORED && queueFamily.queueCount > 0 && presentSupport)
 			{
 				presentFamily = familyIndex;
+				break;
 			}
 
 			familyIndex++;
 		}
 
-		res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, internal_state->surface, &internal_state->swapchain_capabilities);
+		// Present family not found, we cannot create SwapChain
+		if (presentFamily == VK_QUEUE_FAMILY_IGNORED)
+		{
+			return false;
+		}
+
+		VkSurfaceCapabilitiesKHR swapchain_capabilities;
+		res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, internal_state->surface, &swapchain_capabilities);
 		assert(res == VK_SUCCESS);
 
 		uint32_t formatCount;
 		res = vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, internal_state->surface, &formatCount, nullptr);
 		assert(res == VK_SUCCESS);
 
-		if (formatCount != 0)
-		{
-			internal_state->swapchain_formats.resize(formatCount);
-			res = vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, internal_state->surface, &formatCount, internal_state->swapchain_formats.data());
-			assert(res == VK_SUCCESS);
-		}
+		std::vector<VkSurfaceFormatKHR> swapchain_formats(formatCount);
+		res = vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, internal_state->surface, &formatCount, swapchain_formats.data());
+		assert(res == VK_SUCCESS);
 
 		uint32_t presentModeCount;
 		res = vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, internal_state->surface, &presentModeCount, nullptr);
 		assert(res == VK_SUCCESS);
 
-		if (presentModeCount != 0)
-		{
-			internal_state->swapchain_presentModes.resize(presentModeCount);
-			res = vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, internal_state->surface, &presentModeCount, internal_state->swapchain_presentModes.data());
-			assert(res == VK_SUCCESS);
-		}
+		std::vector<VkPresentModeKHR> swapchain_presentModes(presentModeCount);
+		swapchain_presentModes.resize(presentModeCount);
+		res = vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, internal_state->surface, &presentModeCount, swapchain_presentModes.data());
+		assert(res == VK_SUCCESS);
 
 		VkSurfaceFormatKHR surfaceFormat = {};
 		surfaceFormat.format = _ConvertFormat(pDesc->format);
 		bool valid = false;
 
-		for (const auto& format : internal_state->swapchain_formats)
+		for (const auto& format : swapchain_formats)
 		{
 			if (format.format == surfaceFormat.format)
 			{
@@ -2714,11 +2711,14 @@ using namespace Vulkan_Internal;
 		}
 
 		internal_state->swapChainExtent = { pDesc->width, pDesc->height };
-		internal_state->swapChainExtent.width = std::max(internal_state->swapchain_capabilities.minImageExtent.width, std::min(internal_state->swapchain_capabilities.maxImageExtent.width, internal_state->swapChainExtent.width));
-		internal_state->swapChainExtent.height = std::max(internal_state->swapchain_capabilities.minImageExtent.height, std::min(internal_state->swapchain_capabilities.maxImageExtent.height, internal_state->swapChainExtent.height));
-
+		internal_state->swapChainExtent.width = std::max(swapchain_capabilities.minImageExtent.width, std::min(swapchain_capabilities.maxImageExtent.width, internal_state->swapChainExtent.width));
+		internal_state->swapChainExtent.height = std::max(swapchain_capabilities.minImageExtent.height, std::min(swapchain_capabilities.maxImageExtent.height, internal_state->swapChainExtent.height));
 
 		uint32_t imageCount = pDesc->buffercount;
+		if ((swapchain_capabilities.maxImageCount > 0) && (imageCount > swapchain_capabilities.maxImageCount))
+		{
+			imageCount = swapchain_capabilities.maxImageCount;
+		}
 
 		VkSwapchainCreateInfoKHR createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -2731,18 +2731,42 @@ using namespace Vulkan_Internal;
 		createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 		createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-		createInfo.preTransform = internal_state->swapchain_capabilities.currentTransform;
-		createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+		// Transform
+		if(swapchain_capabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR)
+			createInfo.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+		else
+			createInfo.preTransform = swapchain_capabilities.currentTransform;
+
+		// Composite alpha
+		std::vector<VkCompositeAlphaFlagBitsKHR> compositeAlphaFlags = {
+			VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+			VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR,
+			VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR,
+			VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR,
+		};
+		for (auto& compositeAlphaFlag : compositeAlphaFlags)
+		{
+			if (swapchain_capabilities.supportedCompositeAlpha & compositeAlphaFlag)
+			{
+				createInfo.compositeAlpha = compositeAlphaFlag;
+				break;
+			};
+		}
+
 		createInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR; // The only one that is always supported
 		if (!pDesc->vsync)
 		{
-			// The immediate present mode is not necessarily supported:
-			for (auto& presentmode : internal_state->swapchain_presentModes)
+			// The mailbox/immediate present mode is not necessarily supported:
+			for (auto& presentMode : swapchain_presentModes)
 			{
-				if (presentmode == VK_PRESENT_MODE_IMMEDIATE_KHR)
+				if (presentMode == VK_PRESENT_MODE_MAILBOX_KHR)
+				{
+					createInfo.presentMode = VK_PRESENT_MODE_MAILBOX_KHR;
+					break;
+				}
+				if (presentMode == VK_PRESENT_MODE_IMMEDIATE_KHR)
 				{
 					createInfo.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
-					break;
 				}
 			}
 		}
@@ -2765,12 +2789,12 @@ using namespace Vulkan_Internal;
 		assert(res == VK_SUCCESS);
 		internal_state->swapChainImageFormat = surfaceFormat.format;
 
-		if (vkSetDebugUtilsObjectNameEXT != nullptr)
+		if (debugUtils)
 		{
 			VkDebugUtilsObjectNameInfoEXT info = {};
 			info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
-			info.pObjectName = "SWAPCHAIN";
 			info.objectType = VK_OBJECT_TYPE_IMAGE;
+			info.pObjectName = "SWAPCHAIN";
 			for (auto& x : internal_state->swapChainImages)
 			{
 				info.objectHandle = (uint64_t)x;
@@ -3101,20 +3125,6 @@ using namespace Vulkan_Internal;
 
 			copyAllocator.submit(cmd);
 		}
-		else if(pDesc->Usage != USAGE_UPLOAD && pDesc->Usage != USAGE_READBACK)
-		{
-			// zero-initialize:
-			initLocker.lock();
-			vkCmdFillBuffer(
-				GetFrameResources().initCommandBuffer,
-				internal_state->resource,
-				0,
-				VK_WHOLE_SIZE,
-				0
-			);
-			submit_inits = true;
-			initLocker.unlock();
-		}
 
 		if (pDesc->Format == FORMAT_UNKNOWN)
 		{
@@ -3295,11 +3305,7 @@ using namespace Vulkan_Internal;
 				for (uint32_t mip = 0; mip < pDesc->MipLevels; ++mip)
 				{
 					const SubresourceData& subresourceData = pInitialData[initDataIdx++];
-					VkDeviceSize copySize = subresourceData.rowPitch * height * depth;
-					if (IsFormatBlockCompressed(pDesc->Format))
-					{
-						copySize /= 4;
-					}
+					VkDeviceSize copySize = subresourceData.rowPitch * height * depth / GetFormatBlockSize(pDesc->Format);
 					uint8_t* cpyaddr = (uint8_t*)cmd.uploadbuffer.mapped_data + copyOffset;
 					memcpy(cpyaddr, subresourceData.pData, copySize);
 
@@ -3408,37 +3414,6 @@ using namespace Vulkan_Internal;
 			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
 			initLocker.lock();
-			// zero initialize:
-			if (barrier.subresourceRange.aspectMask == VK_IMAGE_ASPECT_COLOR_BIT)
-			{
-				barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-				vkCmdPipelineBarrier(
-					GetFrameResources().initCommandBuffer,
-					VK_PIPELINE_STAGE_TRANSFER_BIT,
-					VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-					0,
-					0, nullptr,
-					0, nullptr,
-					1, &barrier
-				);
-				VkClearColorValue initialColor = {};
-				VkImageSubresourceRange range = {};
-				range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-				range.baseArrayLayer = 0;
-				range.baseMipLevel = 0;
-				range.layerCount = barrier.subresourceRange.layerCount;
-				range.levelCount = barrier.subresourceRange.levelCount;
-				vkCmdClearColorImage(
-					GetFrameResources().initCommandBuffer,
-					internal_state->resource,
-					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-					&initialColor,
-					1, &range
-				);
-
-				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-				barrier.newLayout = _ConvertImageLayout(pTexture->desc.layout);
-			}
 			vkCmdPipelineBarrier(
 				GetFrameResources().initCommandBuffer,
 				VK_PIPELINE_STAGE_TRANSFER_BIT,

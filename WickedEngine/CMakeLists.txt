@@ -60,7 +60,6 @@ add_library(${TARGET_NAME} STATIC
 	wiFont.cpp
 	wiGPUBVH.cpp
 	wiGPUSortLib.cpp
-	wiGraphicsDevice.cpp
 	wiGraphicsDevice_DX12.cpp
 	wiGraphicsDevice_Vulkan.cpp
 	wiGUI.cpp

@@ -3,8 +3,6 @@
 
 #include <algorithm>
 
-#define saturate(x) std::min(std::max(x,0.0f),1.0f)
-
 namespace wiMath
 {
 	inline float Length(const XMFLOAT2& v)

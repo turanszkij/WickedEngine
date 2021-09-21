@@ -1707,7 +1707,7 @@ void LoadShaders()
 			desc.ps = &shaders[PSTYPE_FORCEFIELDVISUALIZER];
 			desc.dss = &depthStencils[DSSTYPE_XRAY];
 			desc.rs = &rasterizers[RSTYPE_BACK];
-			desc.bs = &blendStates[BSTYPE_TRANSPARENT];
+			desc.bs = &blendStates[BSTYPE_ADDITIVE];
 			desc.pt = TRIANGLELIST;
 			break;
 		case DEBUGRENDERING_FORCEFIELD_PLANE:
@@ -1715,7 +1715,7 @@ void LoadShaders()
 			desc.ps = &shaders[PSTYPE_FORCEFIELDVISUALIZER];
 			desc.dss = &depthStencils[DSSTYPE_XRAY];
 			desc.rs = &rasterizers[RSTYPE_FRONT];
-			desc.bs = &blendStates[BSTYPE_TRANSPARENT];
+			desc.bs = &blendStates[BSTYPE_ADDITIVE];
 			desc.pt = TRIANGLESTRIP;
 			break;
 		case DEBUGRENDERING_RAYTRACE_BVH:
@@ -3134,7 +3134,7 @@ void UpdatePerFrameData(
 	frameCB.StaticSkyGamma = 0.0f;
 	if (vis.scene->weather.skyMap != nullptr)
 	{
-		bool hdr = !device->IsFormatUnorm(vis.scene->weather.skyMap->texture.desc.Format);
+		bool hdr = !IsFormatUnorm(vis.scene->weather.skyMap->texture.desc.Format);
 		frameCB.StaticSkyGamma = hdr ? 1.0f : frameCB.Gamma;
 	}
 	frameCB.FrameCount = (uint)device->GetFrameCount();
@@ -5930,8 +5930,6 @@ void DrawDebugWorld(
 				device->Draw(14, 0, cmd); // box
 				break;
 			}
-
-			++i;
 		}
 
 		device->EventEnd(cmd);
@@ -6817,7 +6815,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 	}
 
 
-	bool hdr = !device->IsFormatUnorm(desc.Format);
+	bool hdr = !IsFormatUnorm(desc.Format);
 
 	if (desc.type == TextureDesc::TEXTURE_1D)
 	{
@@ -7105,7 +7103,7 @@ void CopyTexture2D(const Texture& dst, int DstMIP, int DstX, int DstY, const Tex
 	assert(desc_dst.BindFlags & BIND_UNORDERED_ACCESS);
 	assert(desc_src.BindFlags & BIND_SHADER_RESOURCE);
 
-	bool hdr = !device->IsFormatUnorm(desc_dst.Format);
+	bool hdr = !IsFormatUnorm(desc_dst.Format);
 
 	if (borderExpand == BORDEREXPAND_DISABLE)
 	{

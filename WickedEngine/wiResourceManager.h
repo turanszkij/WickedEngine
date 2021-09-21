@@ -35,6 +35,8 @@ namespace wiResourceManager
 	};
 	void SetMode(MODE param);
 	MODE GetMode();
+	std::vector<std::string> GetSupportedImageExtensions();
+	std::vector<std::string> GetSupportedSoundExtensions();
 
 	// Order of these must not change as the flags can be serialized!
 	enum FLAGS

@@ -51,102 +51,140 @@ static bool ALLOW_MESH_SHADER = false;
 
 void wiEmittedParticle::SetMaxParticleCount(uint32_t value)
 {
-	buffersUpToDate = false;
 	MAX_PARTICLES = value;
+	counterBuffer = {}; // will be recreated
 }
 
 void wiEmittedParticle::CreateSelfBuffers()
 {
-	if (buffersUpToDate)
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
+	if (particleBuffer.desc.Size < MAX_PARTICLES * sizeof(Particle))
 	{
-		return;
-	}
-	buffersUpToDate = true;
+		GPUBufferDesc bd;
+		bd.Usage = USAGE_DEFAULT;
+		bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 
+		// Particle buffer:
+		bd.Stride = sizeof(Particle);
+		bd.Size = bd.Stride * MAX_PARTICLES;
+		device->CreateBuffer(&bd, nullptr, &particleBuffer);
 
-	// GPU-local buffer descriptors:
-	GPUBufferDesc bd;
-	bd.Usage = USAGE_DEFAULT;
-	bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-	bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		// Alive index lists (double buffered):
+		bd.Stride = sizeof(uint32_t);
+		bd.Size = bd.Stride * MAX_PARTICLES;
+		device->CreateBuffer(&bd, nullptr, &aliveList[0]);
+		device->CreateBuffer(&bd, nullptr, &aliveList[1]);
 
-	// Particle buffer:
-	bd.Stride = sizeof(Particle);
-	bd.Size = bd.Stride * MAX_PARTICLES;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &particleBuffer);
-
-	// Alive index lists (double buffered):
-	bd.Stride = sizeof(uint32_t);
-	bd.Size = bd.Stride * MAX_PARTICLES;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &aliveList[0]);
-	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &aliveList[1]);
-
-	// Dead index list:
-	std::vector<uint32_t> indices(MAX_PARTICLES);
-	for (uint32_t i = 0; i < MAX_PARTICLES; ++i)
-	{
-		indices[i] = i;
-	}
-	wiRenderer::GetDevice()->CreateBuffer(&bd, indices.data(), &deadList);
-
-	// Distance buffer:
-	bd.Stride = sizeof(float);
-	bd.Size = bd.Stride * MAX_PARTICLES;
-	std::vector<float> distances(MAX_PARTICLES);
-	std::fill(distances.begin(), distances.end(), 0.0f);
-	wiRenderer::GetDevice()->CreateBuffer(&bd, distances.data(), &distanceBuffer);
-
-	// SPH Partitioning grid indices per particle:
-	bd.Stride = sizeof(float); // really, it is uint, but sorting is performing comparisons on floats, so whateva
-	bd.Size = bd.Stride * MAX_PARTICLES;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &sphPartitionCellIndices);
-
-	// SPH Partitioning grid cell offsets into particle index list:
-	bd.Stride = sizeof(uint32_t);
-	bd.Size = bd.Stride * SPH_PARTITION_BUCKET_COUNT;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &sphPartitionCellOffsets);
-
-	// Density buffer (for SPH simulation):
-	bd.Stride = sizeof(float);
-	bd.Size = bd.Stride * MAX_PARTICLES;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &densityBuffer);
-
-	// Particle System statistics:
-	ParticleCounters counters;
-	counters.aliveCount = 0;
-	counters.deadCount = MAX_PARTICLES;
-	counters.realEmitCount = 0;
-	counters.aliveCount_afterSimulation = 0;
-
-	bd.Size = sizeof(counters);
-	bd.Stride = sizeof(counters);
-	bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, &counters, &counterBuffer);
-
-	// Indirect Execution buffer:
-	bd.BindFlags = BIND_UNORDERED_ACCESS;
-	bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW | RESOURCE_MISC_INDIRECT_ARGS;
-	bd.Size = 
-		sizeof(wiGraphics::IndirectDispatchArgs) + 
-		sizeof(wiGraphics::IndirectDispatchArgs) + 
-		sizeof(wiGraphics::IndirectDrawArgsInstanced);
-	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &indirectBuffers);
-
-	// Constant buffer:
-	bd.Usage = USAGE_DEFAULT;
-	bd.Size = sizeof(EmittedParticleCB);
-	bd.BindFlags = BIND_CONSTANT_BUFFER;
-	wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &constantBuffer);
-
-	// Debug information CPU-readback buffer:
-	{
-		GPUBufferDesc debugBufDesc = counterBuffer.GetDesc();
-		debugBufDesc.Usage = USAGE_READBACK;
-		debugBufDesc.BindFlags = BIND_NONE;
-		debugBufDesc.MiscFlags = RESOURCE_MISC_NONE;
-		for (int i = 0; i < arraysize(statisticsReadbackBuffer); ++i)
+		// Dead index list:
+		std::vector<uint32_t> indices(MAX_PARTICLES);
+		for (uint32_t i = 0; i < MAX_PARTICLES; ++i)
 		{
-			wiRenderer::GetDevice()->CreateBuffer(&debugBufDesc, nullptr, &statisticsReadbackBuffer[i]);
+			indices[i] = i;
+		}
+		device->CreateBuffer(&bd, indices.data(), &deadList);
+	}
+
+	if (IsSorted() && distanceBuffer.desc.Size < MAX_PARTICLES * sizeof(float))
+	{
+		// Distance buffer:
+		GPUBufferDesc bd;
+		bd.Usage = USAGE_DEFAULT;
+		bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		bd.Stride = sizeof(float);
+		bd.Size = bd.Stride * MAX_PARTICLES;
+		std::vector<float> distances(MAX_PARTICLES);
+		std::fill(distances.begin(), distances.end(), 0.0f);
+		device->CreateBuffer(&bd, distances.data(), &distanceBuffer);
+	}
+
+	if (IsSPHEnabled())
+	{
+		GPUBufferDesc bd;
+		bd.Usage = USAGE_DEFAULT;
+		bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+
+		if (sphPartitionCellIndices.desc.Size < MAX_PARTICLES * sizeof(float))
+		{
+			// SPH Partitioning grid indices per particle:
+			bd.Stride = sizeof(float); // really, it is uint, but sorting is performing comparisons on floats, so whateva
+			bd.Size = bd.Stride * MAX_PARTICLES;
+			device->CreateBuffer(&bd, nullptr, &sphPartitionCellIndices);
+
+			// Density buffer (for SPH simulation):
+			bd.Stride = sizeof(float);
+			bd.Size = bd.Stride * MAX_PARTICLES;
+			device->CreateBuffer(&bd, nullptr, &densityBuffer);
+		}
+
+		if (sphPartitionCellOffsets.desc.Size < SPH_PARTITION_BUCKET_COUNT * sizeof(uint32_t))
+		{
+			// SPH Partitioning grid cell offsets into particle index list:
+			bd.Stride = sizeof(uint32_t);
+			bd.Size = bd.Stride * SPH_PARTITION_BUCKET_COUNT;
+			device->CreateBuffer(&bd, nullptr, &sphPartitionCellOffsets);
+		}
+	}
+	else
+	{
+		sphPartitionCellIndices = {};
+		densityBuffer = {};
+		sphPartitionCellOffsets = {};
+	}
+
+	if (!counterBuffer.IsValid())
+	{
+		// Particle System statistics:
+		ParticleCounters counters;
+		counters.aliveCount = 0;
+		counters.deadCount = MAX_PARTICLES;
+		counters.realEmitCount = 0;
+		counters.aliveCount_afterSimulation = 0;
+
+		GPUBufferDesc bd;
+		bd.Usage = USAGE_DEFAULT;
+		bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		bd.Size = sizeof(counters);
+		bd.Stride = sizeof(counters);
+		bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
+		device->CreateBuffer(&bd, &counters, &counterBuffer);
+	}
+
+	if(!indirectBuffers.IsValid())
+	{
+		GPUBufferDesc bd;
+
+		// Indirect Execution buffer:
+		bd.Usage = USAGE_DEFAULT;
+		bd.BindFlags = BIND_UNORDERED_ACCESS;
+		bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW | RESOURCE_MISC_INDIRECT_ARGS;
+		bd.Size =
+			sizeof(wiGraphics::IndirectDispatchArgs) +
+			sizeof(wiGraphics::IndirectDispatchArgs) +
+			sizeof(wiGraphics::IndirectDrawArgsInstanced);
+		device->CreateBuffer(&bd, nullptr, &indirectBuffers);
+
+		// Constant buffer:
+		bd.Usage = USAGE_DEFAULT;
+		bd.Size = sizeof(EmittedParticleCB);
+		bd.BindFlags = BIND_CONSTANT_BUFFER;
+		bd.MiscFlags = RESOURCE_MISC_NONE;
+		device->CreateBuffer(&bd, nullptr, &constantBuffer);
+
+		// Debug information CPU-readback buffer:
+		{
+			GPUBufferDesc debugBufDesc = counterBuffer.GetDesc();
+			debugBufDesc.Usage = USAGE_READBACK;
+			debugBufDesc.BindFlags = BIND_NONE;
+			debugBufDesc.MiscFlags = RESOURCE_MISC_NONE;
+			for (int i = 0; i < arraysize(statisticsReadbackBuffer); ++i)
+			{
+				device->CreateBuffer(&debugBufDesc, nullptr, &statisticsReadbackBuffer[i]);
+			}
 		}
 	}
 
@@ -210,8 +248,8 @@ void wiEmittedParticle::Burst(int num)
 }
 void wiEmittedParticle::Restart()
 {
-	buffersUpToDate = false;
 	SetPaused(false);
+	counterBuffer = {}; // will be recreated
 }
 
 void wiEmittedParticle::UpdateGPU(uint32_t materialIndex, const TransformComponent& transform, const MeshComponent* mesh, CommandList cmd) const
