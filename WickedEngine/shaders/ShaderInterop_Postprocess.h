@@ -6,23 +6,25 @@ static const uint POSTPROCESS_BLOCKSIZE = 8;
 static const uint POSTPROCESS_LINEARDEPTH_BLOCKSIZE = 16;
 static const uint POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT = 256;
 
-CBUFFER(PostProcessCB, CBSLOT_RENDERER_POSTPROCESS)
+struct PostProcess
 {
-	uint2 xPPResolution;
-	float2 xPPResolution_rcp;
-	float4 xPPParams0;
-	float4 xPPParams1;
+	uint2 resolution;
+	float2 resolution_rcp;
+	float4 params0;
+	float4 params1;
 };
 
-#define lineardepth_inputresolution xPPParams0.xy
-#define lineardepth_inputresolution_rcp xPPParams0.zw
+#define luminance_adaptionrate postprocess.params0.x
 
-#define ssr_input_maxmip xPPParams0.x
-#define ssr_input_resolution_max xPPParams0.y
+#define lineardepth_inputresolution postprocess.params0.xy
+#define lineardepth_inputresolution_rcp postprocess.params0.zw
 
-#define ssao_range xPPParams0.x
-#define ssao_samplecount xPPParams0.y
-#define ssao_power xPPParams0.z
+#define ssr_input_maxmip postprocess.params0.x
+#define ssr_input_resolution_max postprocess.params0.y
+
+#define ssao_range postprocess.params0.x
+#define ssao_samplecount postprocess.params0.y
+#define ssao_power postprocess.params0.z
 
 #define rtao_range ssao_range
 #define rtao_power ssao_power
@@ -30,15 +32,15 @@ CBUFFER(PostProcessCB, CBSLOT_RENDERER_POSTPROCESS)
 #define rtreflection_range ssao_range
 
 static const uint POSTPROCESS_HBAO_THREADCOUNT = 320;
-#define hbao_direction xPPParams0.xy
-#define hbao_power xPPParams0.z
-#define hbao_uv_to_view_A xPPParams1.xy
-#define hbao_uv_to_view_B xPPParams1.zw
+#define hbao_direction postprocess.params0.xy
+#define hbao_power postprocess.params0.z
+#define hbao_uv_to_view_A postprocess.params1.xy
+#define hbao_uv_to_view_B postprocess.params1.zw
 
-#define sss_step xPPParams0
+#define sss_step postprocess.params0
 
 static const uint POSTPROCESS_MSAO_BLOCKSIZE = 16;
-CBUFFER(MSAOCB, CBSLOT_RENDERER_POSTPROCESS)
+struct MSAO
 {
 	float4 xInvThicknessTable[3];
 	float4 xSampleWeightTable[3];
@@ -47,7 +49,7 @@ CBUFFER(MSAOCB, CBSLOT_RENDERER_POSTPROCESS)
 	float xRcpAccentuation;
 };
 //#define MSAO_SAMPLE_EXHAUSTIVELY
-CBUFFER(MSAO_UPSAMPLECB, CBSLOT_RENDERER_POSTPROCESS)
+struct MSAO_UPSAMPLE
 {
 	float2 InvLowResolution;
 	float2 InvHighResolution;
@@ -57,9 +59,9 @@ CBUFFER(MSAO_UPSAMPLECB, CBSLOT_RENDERER_POSTPROCESS)
 	float kUpsampleTolerance;
 };
 
-CBUFFER(ShadingRateClassificationCB, CBSLOT_RENDERER_POSTPROCESS)
+struct ShadingRateClassification
 {
-	uint xShadingRateTileSize;
+	uint TileSize;
 	uint SHADING_RATE_1X1;
 	uint SHADING_RATE_1X2;
 	uint SHADING_RATE_2X1;
@@ -70,16 +72,24 @@ CBUFFER(ShadingRateClassificationCB, CBSLOT_RENDERER_POSTPROCESS)
 	uint SHADING_RATE_4X4;
 };
 
+struct FSR
+{
+	uint4 Const0;
+	uint4 Const1;
+	uint4 Const2;
+	uint4 Const3;
+};
+
 static const uint MOTIONBLUR_TILESIZE = 32;
-#define motionblur_strength xPPParams0.x
+#define motionblur_strength postprocess.params0.x
 
 static const uint DEPTHOFFIELD_TILESIZE = 32;
-#define dof_cocscale xPPParams0.x
-#define dof_maxcoc xPPParams0.y
+#define dof_cocscale postprocess.params0.x
+#define dof_maxcoc postprocess.params0.y
 
 struct PushConstantsTonemap
 {
-	float2 xPPResolution_rcp;
+	float2 resolution_rcp;
 	float exposure;
 	float dither;
 	float eyeadaptionkey;
@@ -89,14 +99,6 @@ struct PushConstantsTonemap
 	int texture_colorgrade_lookuptable;
 	int texture_output;
 };
-#define tonemap_exposure xPPParams0.x
-#define tonemap_dither xPPParams0.y
-#define tonemap_colorgrading xPPParams0.z
-#define tonemap_eyeadaption xPPParams0.w
-#define tonemap_distortion xPPParams1.x
-#define tonemap_eyeadaptionkey xPPParams1.y
-
-#define luminance_adaptionrate xPPParams0.x
 
 static const uint TILE_STATISTICS_OFFSET_EARLYEXIT = 0;
 static const uint TILE_STATISTICS_OFFSET_CHEAP = TILE_STATISTICS_OFFSET_EARLYEXIT + 4;

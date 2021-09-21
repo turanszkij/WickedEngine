@@ -4,7 +4,7 @@
 
 float4 main(VertexToPixel input) : SV_TARGET
 {
-	ShaderEntity light = EntityArray[g_xFrame_LightArrayOffset + (uint)g_xColor.x];
+	ShaderEntity light = load_entity(g_xFrame.LightArrayOffset + (uint)g_xColor.x);
 
 	if (!light.IsCastingShadow())
 	{
@@ -15,7 +15,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 	float2 ScreenCoord = input.pos2D.xy / input.pos2D.w * float2(0.5f, -0.5f) + 0.5f;
 	float depth = max(input.pos.z, texture_depth.SampleLevel(sampler_point_clamp, ScreenCoord, 2));
 	float3 P = reconstructPosition(ScreenCoord, depth);
-	float3 V = g_xCamera_CamPos - P;
+	float3 V = g_xCamera.CamPos - P;
 	float cameraDistance = length(V);
 	V /= cameraDistance;
 
@@ -25,7 +25,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 	const float3 L = light.GetDirection();
 	const float scattering = ComputeScattering(saturate(dot(L, -V)));
 
-	float3 rayEnd = g_xCamera_CamPos;
+	float3 rayEnd = g_xCamera.CamPos;
 
 	const uint sampleCount = 16;
 	const float stepSize = length(P - rayEnd) / sampleCount;
@@ -39,9 +39,9 @@ float4 main(VertexToPixel input) : SV_TARGET
 	{
 		bool valid = false;
 
-		for (uint cascade = 0; cascade < g_xFrame_ShadowCascadeCount; ++cascade)
+		for (uint cascade = 0; cascade < g_xFrame.ShadowCascadeCount; ++cascade)
 		{
-			float3 ShPos = mul(MatrixArray[light.GetMatrixIndex() + cascade], float4(P, 1)).xyz; // ortho matrix, no divide by .w
+			float3 ShPos = mul(load_entitymatrix(light.GetMatrixIndex() + cascade), float4(P, 1)).xyz; // ortho matrix, no divide by .w
 			float3 ShTex = ShPos.xyz * float3(0.5f, -0.5f, 0.5f) + 0.5f;
 
 			[branch]if (is_saturated(ShTex))
@@ -69,9 +69,9 @@ float4 main(VertexToPixel input) : SV_TARGET
 	accumulation /= sampleCount;
 
 	float3 atmosphereTransmittance = 1;
-	if (g_xFrame_Options & OPTION_BIT_REALISTIC_SKY)
+	if (g_xFrame.Options & OPTION_BIT_REALISTIC_SKY)
 	{
-		atmosphereTransmittance = GetAtmosphericLightTransmittance(g_xFrame_Atmosphere, P, L, texture_transmittancelut);
+		atmosphereTransmittance = GetAtmosphericLightTransmittance(g_xFrame.Atmosphere, P, L, texture_transmittancelut);
 	}
 
 	return max(0, float4(accumulation * light.GetColor().rgb * light.GetEnergy() * atmosphereTransmittance, 1));

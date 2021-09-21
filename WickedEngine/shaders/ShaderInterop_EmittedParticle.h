@@ -44,17 +44,17 @@ CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 	float		xParticleSize;
 	float		xParticleScaling;
 	float		xParticleRotation;
-	uint		xParticleColor;
-
 	float		xParticleRandomFactor;
+
 	float		xParticleNormalFactor;
 	float		xParticleLifeSpan;
 	float		xParticleLifeSpanRandomness;
-
 	float		xParticleMass;
+
 	float		xParticleMotionBlurAmount;
-	float		xEmitterOpacity;
 	uint		xEmitterMaxParticleCount;
+	uint		xEmitterMaterialIndex;
+	uint		xEmitter_padding1;
 
 	uint2		xEmitterFramesXY;
 	uint		xEmitterFrameCount;
@@ -77,7 +77,7 @@ CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 	float		xSPH_e;					// viscosity constant
 	uint		xEmitterOptions;
 	float		xEmitterFixedTimestep;	// we can force a fixed timestep (>0) onto the simulation to avoid blowing up
-	float		xParticleEmissive;
+	float		xEmitter_padding2;
 
 	float3		xParticleGravity;
 	float		xParticleDrag;

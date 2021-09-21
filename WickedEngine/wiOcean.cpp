@@ -5,6 +5,7 @@
 #include "wiScene.h"
 #include "wiBackLog.h"
 #include "wiEvent.h"
+#include "wiTimer.h"
 
 #include <algorithm>
 #include <vector>
@@ -21,7 +22,6 @@ namespace wiOcean_Internal
 	Shader		wireframePS;
 	Shader		oceanSurfPS;
 
-	GPUBuffer			shadingCB;
 	RasterizerState		rasterizerState;
 	RasterizerState		wireRS;
 	DepthStencilState	depthStencilState;
@@ -126,39 +126,33 @@ void wiOcean::Create(const OceanParameters& params)
 	GPUBufferDesc buf_desc;
 	buf_desc.Usage = USAGE_DEFAULT;
 	buf_desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
-	buf_desc.CPUAccessFlags = 0;
 	buf_desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-	SubresourceData init_data;
 
 	// RW buffer allocations
 	// H0
-	buf_desc.StructureByteStride = sizeof(float2);
-	buf_desc.ByteWidth = buf_desc.StructureByteStride * input_full_size;
-	init_data.pSysMem = h0_data.data();
-	device->CreateBuffer(&buf_desc, &init_data, &buffer_Float2_H0);
+	buf_desc.Stride = sizeof(float2);
+	buf_desc.Size = buf_desc.Stride * input_full_size;
+	device->CreateBuffer(&buf_desc, h0_data.data(), &buffer_Float2_H0);
 
 	// Notice: The following 3 buffers should be half sized buffer because of conjugate symmetric input. But
 	// we use full sized buffers due to the CS4.0 restriction.
 
 	// Put H(t), Dx(t) and Dy(t) into one buffer because CS4.0 allows only 1 UAV at a time
-	buf_desc.StructureByteStride = sizeof(float2);
-	buf_desc.ByteWidth = buf_desc.StructureByteStride * 3 * input_half_size;
-	init_data.pSysMem = zero_data.data();
-	device->CreateBuffer(&buf_desc, &init_data, &buffer_Float2_Ht);
+	buf_desc.Stride = sizeof(float2);
+	buf_desc.Size = buf_desc.Stride * 3 * input_half_size;
+	device->CreateBuffer(&buf_desc, zero_data.data(), &buffer_Float2_Ht);
 
 	// omega
-	buf_desc.StructureByteStride = sizeof(float);
-	buf_desc.ByteWidth = buf_desc.StructureByteStride * input_full_size;
-	init_data.pSysMem = omega_data.data();
-	device->CreateBuffer(&buf_desc, &init_data, &buffer_Float_Omega);
+	buf_desc.Stride = sizeof(float);
+	buf_desc.Size = buf_desc.Stride * input_full_size;
+	device->CreateBuffer(&buf_desc, omega_data.data(), &buffer_Float_Omega);
 
 	// Notice: The following 3 should be real number data. But here we use the complex numbers and C2C FFT
 	// due to the CS4.0 restriction.
 	// Put Dz, Dx and Dy into one buffer because CS4.0 allows only 1 UAV at a time
-	buf_desc.StructureByteStride = sizeof(float2);
-	buf_desc.ByteWidth = buf_desc.StructureByteStride * 3 * output_size;
-	init_data.pSysMem = zero_data.data();
-	device->CreateBuffer(&buf_desc, &init_data, &buffer_Float_Dxyz);
+	buf_desc.Stride = sizeof(float2);
+	buf_desc.Size = buf_desc.Stride * 3 * output_size;
+	device->CreateBuffer(&buf_desc, zero_data.data(), &buffer_Float_Dxyz);
 
 	TextureDesc tex_desc;
 	tex_desc.Width = hmap_dim;
@@ -167,11 +161,12 @@ void wiOcean::Create(const OceanParameters& params)
 	tex_desc.SampleCount = 1;
 	tex_desc.Usage = USAGE_DEFAULT;
 	tex_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-	tex_desc.CPUAccessFlags = 0;
 
 	tex_desc.Format = FORMAT_R16G16B16A16_FLOAT;
 	tex_desc.MipLevels = 0;
+	tex_desc.layout = RESOURCE_STATE_SHADER_RESOURCE_COMPUTE;
 	device->CreateTexture(&tex_desc, nullptr, &gradientMap);
+	device->SetName(&gradientMap, "gradientMap");
 
 	for (uint32_t i = 0; i < gradientMap.GetDesc().MipLevels; ++i)
 	{
@@ -185,6 +180,7 @@ void wiOcean::Create(const OceanParameters& params)
 	tex_desc.Format = FORMAT_R32G32B32A32_FLOAT;
 	tex_desc.MipLevels = 1;
 	device->CreateTexture(&tex_desc, nullptr, &displacementMap);
+	device->SetName(&displacementMap, "displacementMap");
 
 
 	// Constant buffers
@@ -196,22 +192,15 @@ void wiOcean::Create(const OceanParameters& params)
 	uint32_t dtx_offset = actual_dim * actual_dim;
 	uint32_t dty_offset = actual_dim * actual_dim * 2;
 	Ocean_Simulation_ImmutableCB immutable_consts = { actual_dim, input_width, output_width, output_height, dtx_offset, dty_offset };
-	SubresourceData init_cb0;
-	init_cb0.pSysMem = &immutable_consts;
 
 	GPUBufferDesc cb_desc;
-	cb_desc.Usage = USAGE_IMMUTABLE;
 	cb_desc.BindFlags = BIND_CONSTANT_BUFFER;
-	cb_desc.CPUAccessFlags = 0;
-	cb_desc.MiscFlags = 0;
-	cb_desc.ByteWidth = sizeof(Ocean_Simulation_ImmutableCB);
-	device->CreateBuffer(&cb_desc, &init_cb0, &immutableCB);
+	cb_desc.Size = sizeof(Ocean_Simulation_ImmutableCB);
+	device->CreateBuffer(&cb_desc, &immutable_consts, &immutableCB);
 
 	cb_desc.Usage = USAGE_DEFAULT;
 	cb_desc.BindFlags = BIND_CONSTANT_BUFFER;
-	cb_desc.CPUAccessFlags = 0;
-	cb_desc.MiscFlags = 0;
-	cb_desc.ByteWidth = sizeof(Ocean_Simulation_PerFrameCB);
+	cb_desc.Size = sizeof(Ocean_Simulation_PerFrameCB);
 	device->CreateBuffer(&cb_desc, nullptr, &perFrameCB);
 }
 
@@ -277,31 +266,45 @@ void wiOcean::UpdateDisplacementMap(const OceanParameters& params, CommandList c
 		&buffer_Float2_H0, 
 		&buffer_Float_Omega
 	};
-	device->BindResources(CS, cs0_srvs, TEXSLOT_ONDEMAND0, arraysize(cs0_srvs), cmd);
+	device->BindResources(cs0_srvs, TEXSLOT_ONDEMAND0, arraysize(cs0_srvs), cmd);
 
 	const GPUResource* cs0_uavs[1] = { &buffer_Float2_Ht };
-	device->BindUAVs(CS, cs0_uavs, 0, arraysize(cs0_uavs), cmd);
+	device->BindUAVs(cs0_uavs, 0, arraysize(cs0_uavs), cmd);
 
 	Ocean_Simulation_PerFrameCB perFrameData;
 	perFrameData.g_TimeScale = params.time_scale;
 	perFrameData.g_ChoppyScale = params.choppy_scale;
 	perFrameData.g_GridLen = params.dmap_dim / params.patch_length;
-	device->UpdateBuffer(&perFrameCB, &perFrameData, cmd);
 
-	device->BindConstantBuffer(CS, &immutableCB, CB_GETBINDSLOT(Ocean_Simulation_ImmutableCB), cmd);
-	device->BindConstantBuffer(CS, &perFrameCB, CB_GETBINDSLOT(Ocean_Simulation_PerFrameCB), cmd);
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Buffer(&perFrameCB, RESOURCE_STATE_CONSTANT_BUFFER, RESOURCE_STATE_COPY_DST),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+	device->UpdateBuffer(&perFrameCB, &perFrameData, cmd);
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Buffer(&perFrameCB, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_CONSTANT_BUFFER),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+	device->BindConstantBuffer(&immutableCB, CB_GETBINDSLOT(Ocean_Simulation_ImmutableCB), cmd);
+	device->BindConstantBuffer(&perFrameCB, CB_GETBINDSLOT(Ocean_Simulation_PerFrameCB), cmd);
 
 	// Run the CS
 	uint32_t group_count_x = (params.dmap_dim + OCEAN_COMPUTE_TILESIZE - 1) / OCEAN_COMPUTE_TILESIZE;
 	uint32_t group_count_y = (params.dmap_dim + OCEAN_COMPUTE_TILESIZE - 1) / OCEAN_COMPUTE_TILESIZE;
 	device->Dispatch(group_count_x, group_count_y, 1, cmd);
-	GPUBarrier barriers[] = {
-		GPUBarrier::Memory(),
-	};
-	device->Barrier(barriers, arraysize(barriers), cmd);
 
-	device->UnbindUAVs(0, 1, cmd);
-	device->UnbindResources(TEXSLOT_ONDEMAND0, 2, cmd);
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Memory(),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
 
 
 	// ------------------------------------ Perform FFT -------------------------------------------
@@ -309,31 +312,53 @@ void wiOcean::UpdateDisplacementMap(const OceanParameters& params, CommandList c
 
 
 
-	device->BindConstantBuffer(CS, &immutableCB, CB_GETBINDSLOT(Ocean_Simulation_ImmutableCB), cmd);
-	device->BindConstantBuffer(CS, &perFrameCB, CB_GETBINDSLOT(Ocean_Simulation_PerFrameCB), cmd);
+	device->BindConstantBuffer(&immutableCB, CB_GETBINDSLOT(Ocean_Simulation_ImmutableCB), cmd);
+	device->BindConstantBuffer(&perFrameCB, CB_GETBINDSLOT(Ocean_Simulation_PerFrameCB), cmd);
 
 
 	// Update displacement map:
 	device->BindComputeShader(&updateDisplacementMapCS, cmd);
 	const GPUResource* cs_uavs[] = { &displacementMap };
-	device->BindUAVs(CS, cs_uavs, 0, 1, cmd);
+	device->BindUAVs(cs_uavs, 0, 1, cmd);
 	const GPUResource* cs_srvs[1] = { &buffer_Float_Dxyz };
-	device->BindResources(CS, cs_srvs, TEXSLOT_ONDEMAND0, 1, cmd);
+	device->BindResources(cs_srvs, TEXSLOT_ONDEMAND0, 1, cmd);
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&displacementMap, displacementMap.desc.layout, RESOURCE_STATE_UNORDERED_ACCESS),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
 	device->Dispatch(params.dmap_dim / OCEAN_COMPUTE_TILESIZE, params.dmap_dim / OCEAN_COMPUTE_TILESIZE, 1, cmd);
-	device->Barrier(barriers, arraysize(barriers), cmd);
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&displacementMap, RESOURCE_STATE_UNORDERED_ACCESS, displacementMap.desc.layout),
+			GPUBarrier::Memory(),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
 
 	// Update gradient map:
 	device->BindComputeShader(&updateGradientFoldingCS, cmd);
 	cs_uavs[0] = { &gradientMap };
-	device->BindUAVs(CS, cs_uavs, 0, 1, cmd);
+	device->BindUAVs(cs_uavs, 0, 1, cmd);
 	cs_srvs[0] = &displacementMap;
-	device->BindResources(CS, cs_srvs, TEXSLOT_ONDEMAND0, 1, cmd);
+	device->BindResources(cs_srvs, TEXSLOT_ONDEMAND0, 1, cmd);
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&gradientMap, gradientMap.desc.layout, RESOURCE_STATE_UNORDERED_ACCESS),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
 	device->Dispatch(params.dmap_dim / OCEAN_COMPUTE_TILESIZE, params.dmap_dim / OCEAN_COMPUTE_TILESIZE, 1, cmd);
-	device->Barrier(barriers, arraysize(barriers), cmd);
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&gradientMap, RESOURCE_STATE_UNORDERED_ACCESS, gradientMap.desc.layout),
+			GPUBarrier::Memory(),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
 
 	// Unbind
-	device->UnbindUAVs(0, 1, cmd);
-	device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 
 
 	wiRenderer::GenerateMipChain(gradientMap, wiRenderer::MIPGENFILTER_LINEAR, cmd);
@@ -371,13 +396,10 @@ void wiOcean::Render(const CameraComponent& camera, const OceanParameters& param
 	cb.xOceanWaterHeight = params.waterHeight;
 	cb.xOceanSurfaceDisplacementTolerance = std::max(1.0f, params.surfaceDisplacementTolerance);
 
-	device->UpdateBuffer(&shadingCB, &cb, cmd);
+	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(Ocean_RenderCB), cmd);
 
-	device->BindConstantBuffer(VS, &shadingCB, CB_GETBINDSLOT(Ocean_RenderCB), cmd);
-	device->BindConstantBuffer(PS, &shadingCB, CB_GETBINDSLOT(Ocean_RenderCB), cmd);
-
-	device->BindResource(VS, &displacementMap, TEXSLOT_ONDEMAND0, cmd);
-	device->BindResource(PS, &gradientMap, TEXSLOT_ONDEMAND1, cmd);
+	device->BindResource(&displacementMap, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(&gradientMap, TEXSLOT_ONDEMAND1, cmd);
 
 	device->Draw(dim.x*dim.y*6, 0, cmd);
 
@@ -387,17 +409,9 @@ void wiOcean::Render(const CameraComponent& camera, const OceanParameters& param
 
 void wiOcean::Initialize()
 {
+	wiTimer timer;
+
 	GraphicsDevice* device = wiRenderer::GetDevice();
-
-
-	GPUBufferDesc cb_desc;
-	cb_desc.Usage = USAGE_DYNAMIC;
-	cb_desc.CPUAccessFlags = CPU_ACCESS_WRITE;
-	cb_desc.ByteWidth = sizeof(Ocean_RenderCB);
-	cb_desc.StructureByteStride = 0;
-	cb_desc.BindFlags = BIND_CONSTANT_BUFFER;
-	device->CreateBuffer(&cb_desc, nullptr, &shadingCB);
-
 
 	RasterizerState ras_desc;
 	ras_desc.FillMode = FILL_SOLID;
@@ -416,7 +430,6 @@ void wiOcean::Initialize()
 	wireRS = ras_desc;
 
 	DepthStencilState depth_desc;
-	memset(&depth_desc, 0, sizeof(DepthStencilState));
 	depth_desc.DepthEnable = true;
 	depth_desc.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
 	depth_desc.DepthFunc = COMPARISON_GREATER;
@@ -424,7 +437,6 @@ void wiOcean::Initialize()
 	depthStencilState = depth_desc;
 
 	BlendState blend_desc;
-	memset(&blend_desc, 0, sizeof(BlendState));
 	blend_desc.AlphaToCoverageEnable = false;
 	blend_desc.IndependentBlendEnable = false;
 	blend_desc.RenderTarget[0].BlendEnable = true;
@@ -444,7 +456,7 @@ void wiOcean::Initialize()
 	wiFFTGenerator::LoadShaders();
 	fft512x512_create_plan(m_fft_plan, 3);
 
-	wiBackLog::post("wiOcean Initialized");
+	wiBackLog::post("wiOcean Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 }
 
 const Texture* wiOcean::getDisplacementMap() const

@@ -21,6 +21,7 @@
 #include "wiBackLog_BindLua.h"
 #include "wiNetwork_BindLua.h"
 #include "wiIntersect_BindLua.h"
+#include "wiTimer.h"
 
 #include <sstream>
 #include <memory>
@@ -88,6 +89,8 @@ namespace wiLua
 
 	void Initialize()
 	{
+		wiTimer timer;
+
 		luainternal.m_luaState = luaL_newstate();
 		luaL_openlibs(luainternal.m_luaState);
 		RegisterFunc("dofile", Internal_DoFile);
@@ -114,7 +117,7 @@ namespace wiLua
 		wiNetwork_BindLua::Bind();
 		wiIntersect_BindLua::Bind();
 
-		wiBackLog::post("wiLua Initialized");
+		wiBackLog::post("wiLua Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
 
 	lua_State* GetLuaState()

@@ -13,6 +13,6 @@ void main( uint3 DTid : SV_DispatchThreadID )
 	// Reset counter for next frame:
 	counterBuffer.Store(0, 0);
 
-	// Create draw argument buffer (VertexCountPerInstance, InstanceCount, StartVertexLocation, StartInstanceLocation):
-	counterBuffer.Store4(4, uint4(4, particleCount, 0, 0));
+	// Create draw argument buffer (IndexCountPerInstance, InstanceCount, StartIndexLocation, BaseVertexLocation, StartInstanceLocation):
+	counterBuffer.Store4(4, uint4(particleCount * 6, 1, 0, 0));
 }

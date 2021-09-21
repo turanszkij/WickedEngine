@@ -3,6 +3,8 @@
 #include "ShaderInterop_Postprocess.h"
 #include "raytracingHF.hlsli"
 
+PUSHCONSTANT(postprocess, PostProcess);
+
 RWTEXTURE2D(output, unorm float, 0);
 RWTEXTURE2D(output_normals, float3, 1);
 RWSTRUCTUREDBUFFER(output_tiles, uint, 2);
@@ -15,77 +17,33 @@ groupshared float tile_Z[TILE_SIZE * TILE_SIZE];
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint groupIndex : SV_GroupIndex)
 {
+	const float2 uv = ((float2)DTid.xy + 0.5) * postprocess.resolution_rcp;
+	const float depth = texture_depth.SampleLevel(sampler_linear_clamp, uv, 0);
+	if (depth == 0)
+		return;
+
 	uint flatTileIdx = 0;
 	if (GTid.y < 4)
 	{
-		flatTileIdx = flatten2D(Gid.xy * uint2(1, 2) + uint2(0, 0), (xPPResolution + uint2(7, 3)) / uint2(8, 4));
+		flatTileIdx = flatten2D(Gid.xy * uint2(1, 2) + uint2(0, 0), (postprocess.resolution + uint2(7, 3)) / uint2(8, 4));
 	}
 	else
 	{
-		flatTileIdx = flatten2D(Gid.xy * uint2(1, 2) + uint2(0, 1), (xPPResolution + uint2(7, 3)) / uint2(8, 4));
+		flatTileIdx = flatten2D(Gid.xy * uint2(1, 2) + uint2(0, 1), (postprocess.resolution + uint2(7, 3)) / uint2(8, 4));
 	}
 	output_tiles[flatTileIdx] = 0;
 
-	const int2 tile_upperleft = Gid.xy * POSTPROCESS_BLOCKSIZE - TILE_BORDER;
-	for (uint t = groupIndex; t < TILE_SIZE * TILE_SIZE; t += POSTPROCESS_BLOCKSIZE * POSTPROCESS_BLOCKSIZE)
+	const float3 P = reconstructPosition(uv, depth);
+
+	PrimitiveID prim;
+	prim.unpack(texture_gbuffer0[DTid.xy * 2]);
+
+	Surface surface;
+	if (!surface.load(prim, P))
 	{
-		const uint2 pixel = tile_upperleft + unflatten2D(t, TILE_SIZE);
-		const float2 uv = (pixel + 0.5f) * xPPResolution_rcp;
-		const float depth = texture_depth.SampleLevel(sampler_linear_clamp, uv, 0);
-		const float3 position = reconstructPosition(uv, depth);
-		tile_XY[t] = position.xy;
-		tile_Z[t] = position.z;
-	}
-	GroupMemoryBarrierWithGroupSync();
-
-	// reconstruct flat normals from depth buffer:
-	//	Explanation: There are two main ways to reconstruct flat normals from depth buffer:
-	//		1: use ddx() and ddy() on the reconstructed positions to compute triangle, this has artifacts on depth discontinuities and doesn't work in compute shader
-	//		2: Take 3 taps from the depth buffer, reconstruct positions and compute triangle. This can still produce artifacts
-	//			on discontinuities, but a little less. To fix the remaining artifacts, we can take 4 taps around the center, and find the "best triangle"
-	//			by only computing the positions from those depths that have the least amount of discontinuity
-
-	const uint cross_idx[5] = {
-		flatten2D(TILE_BORDER + GTid.xy, TILE_SIZE),				// 0: center
-		flatten2D(TILE_BORDER + GTid.xy + int2(1, 0), TILE_SIZE),	// 1: right
-		flatten2D(TILE_BORDER + GTid.xy + int2(-1, 0), TILE_SIZE),	// 2: left
-		flatten2D(TILE_BORDER + GTid.xy + int2(0, 1), TILE_SIZE),	// 3: down
-		flatten2D(TILE_BORDER + GTid.xy + int2(0, -1), TILE_SIZE),	// 4: up
-	};
-
-	const float center_Z = tile_Z[cross_idx[0]];
-
-	[branch]
-	if (center_Z >= g_xCamera_ZFarP)
 		return;
-
-	const uint best_Z_horizontal = abs(tile_Z[cross_idx[1]] - center_Z) < abs(tile_Z[cross_idx[2]] - center_Z) ? 1 : 2;
-	const uint best_Z_vertical = abs(tile_Z[cross_idx[3]] - center_Z) < abs(tile_Z[cross_idx[4]] - center_Z) ? 3 : 4;
-
-	float3 p1 = 0, p2 = 0;
-	if (best_Z_horizontal == 1 && best_Z_vertical == 4)
-	{
-		p1 = float3(tile_XY[cross_idx[1]], tile_Z[cross_idx[1]]);
-		p2 = float3(tile_XY[cross_idx[4]], tile_Z[cross_idx[4]]);
 	}
-	else if (best_Z_horizontal == 1 && best_Z_vertical == 3)
-	{
-		p1 = float3(tile_XY[cross_idx[3]], tile_Z[cross_idx[3]]);
-		p2 = float3(tile_XY[cross_idx[1]], tile_Z[cross_idx[1]]);
-	}
-	else if (best_Z_horizontal == 2 && best_Z_vertical == 4)
-	{
-		p1 = float3(tile_XY[cross_idx[4]], tile_Z[cross_idx[4]]);
-		p2 = float3(tile_XY[cross_idx[2]], tile_Z[cross_idx[2]]);
-	}
-	else if (best_Z_horizontal == 2 && best_Z_vertical == 3)
-	{
-		p1 = float3(tile_XY[cross_idx[2]], tile_Z[cross_idx[2]]);
-		p2 = float3(tile_XY[cross_idx[3]], tile_Z[cross_idx[3]]);
-	}
-
-	const float3 P = float3(tile_XY[cross_idx[0]], tile_Z[cross_idx[0]]);
-	const float3 N = normalize(cross(p2 - P, p1 - P));
+	float3 N = surface.facenormal;
 
 	RayDesc ray;
 	ray.TMin = 0.01;
@@ -110,34 +68,16 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	);
 	while (q.Proceed())
 	{
-		ShaderMesh mesh = bindless_buffers[NonUniformResourceIndex(q.CandidateInstanceID())].Load<ShaderMesh>(0);
-		ShaderMeshSubset subset = bindless_subsets[NonUniformResourceIndex(mesh.subsetbuffer)][q.CandidateGeometryIndex()];
-		ShaderMaterial material = bindless_buffers[NonUniformResourceIndex(subset.material)].Load<ShaderMaterial>(0);
-		[branch]
-		if (!material.IsCastingShadow())
-		{
-			continue;
-		}
-		[branch]
-		if (material.texture_basecolormap_index < 0)
-		{
-			q.CommitNonOpaqueTriangleHit();
-			break;
-		}
+		PrimitiveID prim;
+		prim.primitiveIndex = q.CandidatePrimitiveIndex();
+		prim.instanceIndex = q.CandidateInstanceID();
+		prim.subsetIndex = q.CandidateGeometryIndex();
 
 		Surface surface;
-		EvaluateObjectSurface(
-			mesh,
-			subset,
-			material,
-			q.CandidatePrimitiveIndex(),
-			q.CandidateTriangleBarycentrics(),
-			q.CandidateObjectToWorld3x4(),
-			surface
-		);
+		surface.load(prim, q.CandidateTriangleBarycentrics());
 
 		[branch]
-		if (surface.opacity >= material.alphaTest)
+		if (surface.opacity >= surface.material.alphaTest)
 		{
 			q.CommitNonOpaqueTriangleHit();
 			break;

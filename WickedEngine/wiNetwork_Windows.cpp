@@ -3,6 +3,7 @@
 #if defined(_WIN32) && !defined(PLATFORM_UWP)
 #include "wiNetwork.h"
 #include "wiBackLog.h"
+#include "wiTimer.h"
 
 #include <sstream>
 
@@ -44,6 +45,8 @@ namespace wiNetwork
 
 	void Initialize()
 	{
+		wiTimer timer;
+
 		int result;
 
 		networkinternal = std::make_shared<wiNetworkInternal>();
@@ -58,7 +61,7 @@ namespace wiNetwork
 			assert(0);
 		}
 
-		wiBackLog::post("wiNetwork Initialized");
+		wiBackLog::post("wiNetwork Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
 
 	bool CreateSocket(Socket* sock)

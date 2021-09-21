@@ -21,7 +21,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 	if (DTid.x < aliveCount)
 	{
 		// simulation can be either fixed or variable timestep:
-		const float dt = xEmitterFixedTimestep >= 0 ? xEmitterFixedTimestep : g_xFrame_DeltaTime;
+		const float dt = xEmitterFixedTimestep >= 0 ? xEmitterFixedTimestep : g_xFrame.DeltaTime;
 
 		uint particleIndex = aliveBuffer_CURRENT[DTid.x];
 		Particle particle = particleBuffer[particleIndex];
@@ -29,9 +29,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 		if (particle.life > 0)
 		{
 			// simulate:
-			for (uint i = 0; i < g_xFrame_ForceFieldArrayCount; ++i)
+			for (uint i = 0; i < g_xFrame.ForceFieldArrayCount; ++i)
 			{
-				ShaderEntity forceField = EntityArray[g_xFrame_ForceFieldArrayOffset + i];
+				ShaderEntity forceField = load_entity(g_xFrame.ForceFieldArrayOffset + i);
 
 				[branch]
 				if (forceField.layerMask & xEmitterLayerMask)
@@ -57,13 +57,13 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 
 			// NOTE: We are using the textures from previous frame, so reproject against those! (PrevVP)
 
-			float4 pos2D = mul(g_xCamera_PrevVP, float4(particle.position, 1));
+			float4 pos2D = mul(g_xCamera.PrevVP, float4(particle.position, 1));
 			pos2D.xyz /= pos2D.w;
 
 			if (pos2D.x > -1 && pos2D.x < 1 && pos2D.y > -1 && pos2D.y < 1)
 			{
 				float2 uv = pos2D.xy * float2(0.5f, -0.5f) + 0.5f;
-				uint2 pixel = uv * g_xFrame_InternalResolution;
+				uint2 pixel = uv * g_xFrame.InternalResolution;
 
 				float depth0 = texture_depth[pixel];
 				float surfaceLinearDepth = getLinearDepth(depth0);
@@ -79,9 +79,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 					float depth1 = texture_depth[pixel + uint2(1, 0)];
 					float depth2 = texture_depth[pixel + uint2(0, -1)];
 
-					float3 p0 = reconstructPosition(uv, depth0, g_xCamera_PrevInvVP);
-					float3 p1 = reconstructPosition(uv + float2(1, 0) * g_xFrame_InternalResolution_rcp, depth1, g_xCamera_PrevInvVP);
-					float3 p2 = reconstructPosition(uv + float2(0, -1) * g_xFrame_InternalResolution_rcp, depth2, g_xCamera_PrevInvVP);
+					float3 p0 = reconstructPosition(uv, depth0, g_xCamera.PrevInvVP);
+					float3 p1 = reconstructPosition(uv + float2(1, 0) * g_xFrame.InternalResolution_rcp, depth1, g_xCamera.PrevInvVP);
+					float3 p2 = reconstructPosition(uv + float2(0, -1) * g_xFrame.InternalResolution_rcp, depth2, g_xCamera.PrevInvVP);
 
 					float3 surfaceNormal = normalize(cross(p2 - p0, p1 - p0));
 
@@ -165,7 +165,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 
 #ifdef SORTING
 			// store squared distance to main camera:
-			float3 eyeVector = particle.position - g_xCamera_CamPos;
+			float3 eyeVector = particle.position - g_xCamera.CamPos;
 			float distSQ = dot(eyeVector, eyeVector);
 			distanceBuffer[particleIndex] = -distSQ; // this can be negated to modify sorting order here instead of rewriting sorting shaders...
 #endif // SORTING

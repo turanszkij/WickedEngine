@@ -7,12 +7,22 @@ using namespace wiScene;
 
 void CameraWindow::ResetCam()
 {
+	move = {};
+
 	Scene& scene = wiScene::GetScene();
+
+	CameraComponent& camera = wiScene::GetCamera();
+	float width = camera.width;
+	float height = camera.height;
+	camera = CameraComponent();
+	camera.width = width;
+	camera.height = height;
 
 	camera_transform.ClearTransform();
 	camera_transform.Translate(XMFLOAT3(0, 2, -10));
 	camera_transform.UpdateTransform();
-	wiScene::GetCamera().TransformCamera(camera_transform);
+	camera.TransformCamera(camera_transform);
+	camera.UpdateCamera();
 
 	camera_target.ClearTransform();
 	camera_target.UpdateTransform();
@@ -24,7 +34,7 @@ void CameraWindow::Create(EditorComponent* editor)
 	camera_transform.MatrixTransform(wiScene::GetCamera().GetInvView());
 	camera_transform.UpdateTransform();
 
-	SetSize(XMFLOAT2(380, 340));
+	SetSize(XMFLOAT2(380, 360));
 
 	float x = 200;
 	float y = 10;
@@ -129,6 +139,11 @@ void CameraWindow::Create(EditorComponent* editor)
 	movespeedSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&movespeedSlider);
 
+	accelerationSlider.Create(0.01f, 1, 0.18f, 10000, "Acceleration: ");
+	accelerationSlider.SetSize(XMFLOAT2(100, hei));
+	accelerationSlider.SetPos(XMFLOAT2(x, y += step));
+	AddWidget(&accelerationSlider);
+
 	rotationspeedSlider.Create(0.1f, 2, 1, 10000, "Rotation Speed: ");
 	rotationspeedSlider.SetSize(XMFLOAT2(100, hei));
 	rotationspeedSlider.SetPos(XMFLOAT2(x, y += step));
@@ -163,6 +178,9 @@ void CameraWindow::Create(EditorComponent* editor)
 		static int camcounter = 0;
 		Entity entity = scene.Entity_CreateCamera("cam" + std::to_string(camcounter), camera.width, camera.height, camera.zNearP, camera.zFarP, camera.fov);
 		camcounter++;
+
+		CameraComponent& cam = *scene.cameras.GetComponent(entity);
+		cam = camera;
 
 		TransformComponent& transform = *scene.transforms.GetComponent(entity);
 		transform.MatrixTransform(camera.InvView);
@@ -210,5 +228,27 @@ void CameraWindow::SetEntity(Entity entity)
 		followCheckBox.SetCheck(false);
 		followCheckBox.SetEnabled(false);
 		followSlider.SetEnabled(false);
+	}
+}
+
+void CameraWindow::Update()
+{
+	CameraComponent& camera = wiScene::GetCamera();
+
+	farPlaneSlider.SetValue(camera.zFarP);
+	nearPlaneSlider.SetValue(camera.zNearP);
+	fovSlider.SetValue(camera.fov * 180.0f / XM_PI);
+	focalLengthSlider.SetValue(camera.focal_length);
+	apertureSizeSlider.SetValue(camera.aperture_size);
+	apertureShapeXSlider.SetValue(camera.aperture_shape.x);
+	apertureShapeYSlider.SetValue(camera.aperture_shape.y);
+
+	// It's important to feedback new transform from camera as scripts can modify camera too
+	//	independently from the editor
+	//	however this only works well for fps camera
+	if (fpsCheckBox.GetCheck())
+	{
+		camera_transform.ClearTransform();
+		camera_transform.MatrixTransform(camera.InvView);
 	}
 }

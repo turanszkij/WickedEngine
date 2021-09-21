@@ -24,7 +24,7 @@ namespace wiProfiler
 	range_id cpu_frame;
 	range_id gpu_frame;
 	GPUQueryHeap queryHeap[wiGraphics::GraphicsDevice::GetBufferCount() + 1];
-	std::vector<uint64_t> queryResults;
+	GPUBuffer queryResultBuffer[arraysize(queryHeap)];
 	std::atomic<uint32_t> nextQuery{ 0 };
 	uint32_t writtenQueries[arraysize(queryHeap)] = {};
 	int queryheap_idx = 0;
@@ -38,7 +38,7 @@ namespace wiProfiler
 		float time = 0;
 		CommandList cmd = COMMANDLIST_COUNT;
 
-		wiTimer cpuBegin, cpuEnd;
+		wiTimer cpuTimer;
 
 		int gpuBegin[arraysize(queryHeap)];
 		int gpuEnd[arraysize(queryHeap)];
@@ -58,21 +58,38 @@ namespace wiProfiler
 
 			ranges.reserve(100);
 
+			GraphicsDevice* device = wiRenderer::GetDevice();
+
 			GPUQueryHeapDesc desc;
 			desc.type = GPU_QUERY_TYPE_TIMESTAMP;
 			desc.queryCount = 1024;
+
+			GPUBufferDesc bd;
+			bd.Usage = USAGE_READBACK;
+			bd.Size = desc.queryCount * sizeof(uint64_t);
+
 			for (int i = 0; i < arraysize(queryHeap); ++i)
 			{
-				bool success = wiRenderer::GetDevice()->CreateQueryHeap(&desc, &queryHeap[i]);
+				bool success = device->CreateQueryHeap(&desc, &queryHeap[i]);
+				assert(success);
+
+				success = device->CreateBuffer(&bd, nullptr, &queryResultBuffer[i]);
 				assert(success);
 			}
-
-			queryResults.resize(desc.queryCount);
 		}
 
 		cpu_frame = BeginRangeCPU("CPU Frame");
 
-		CommandList cmd = wiRenderer::GetDevice()->BeginCommandList();
+		GraphicsDevice* device = wiRenderer::GetDevice();
+		CommandList cmd = device->BeginCommandList();
+
+		device->QueryReset(
+			&queryHeap[queryheap_idx],
+			0,
+			queryHeap[queryheap_idx].desc.queryCount,
+			cmd
+		);
+
 		gpu_frame = BeginRangeGPU("GPU Frame", cmd);
 	}
 	void EndFrame(CommandList cmd)
@@ -91,30 +108,29 @@ namespace wiProfiler
 
 		double gpu_frequency = (double)device->GetTimestampFrequency() / 1000.0;
 
-		device->QueryResolve(&queryHeap[queryheap_idx], 0, nextQuery.load(), cmd);
+		device->QueryResolve(
+			&queryHeap[queryheap_idx],
+			0,
+			nextQuery.load(),
+			&queryResultBuffer[queryheap_idx],
+			0ull,
+			cmd
+		);
 
 		writtenQueries[queryheap_idx] = nextQuery.load();
 		nextQuery.store(0);
 		queryheap_idx = (queryheap_idx + 1) % arraysize(queryHeap);
-		if (writtenQueries[queryheap_idx] > 0)
-		{
-			wiRenderer::GetDevice()->QueryRead(&queryHeap[queryheap_idx], 0, writtenQueries[queryheap_idx], queryResults.data());
-		}
+		uint64_t* queryResults = (uint64_t*)queryResultBuffer[queryheap_idx].mapped_data;
 
 		for (auto& x : ranges)
 		{
 			auto& range = x.second;
 
-			range.time = 0;
-			if (range.IsCPURange())
-			{
-				range.time = (float)abs(range.cpuEnd.elapsed() - range.cpuBegin.elapsed());
-			}
-			else
+			if (!range.IsCPURange())
 			{
 				int begin_query = range.gpuBegin[queryheap_idx];
 				int end_query = range.gpuEnd[queryheap_idx];
-				if (begin_query >= 0 && end_query >= 0)
+				if (queryResultBuffer[queryheap_idx].mapped_data != nullptr && begin_query >= 0 && end_query >= 0)
 				{
 					uint64_t begin_result = queryResults[begin_query];
 					uint64_t end_result = queryResults[end_query];
@@ -156,8 +172,7 @@ namespace wiProfiler
 		}
 		ranges[id].in_use = true;
 		ranges[id].name = name;
-
-		ranges[id].cpuBegin.record();
+		ranges[id].cpuTimer.record();
 
 		lock.unlock();
 
@@ -180,7 +195,6 @@ namespace wiProfiler
 		}
 		ranges[id].in_use = true;
 		ranges[id].name = name;
-
 		ranges[id].cmd = cmd;
 
 		ranges[id].gpuBegin[queryheap_idx] = nextQuery.fetch_add(1);
@@ -202,7 +216,7 @@ namespace wiProfiler
 		{
 			if (it->second.IsCPURange())
 			{
-				it->second.cpuEnd.record();
+				it->second.time = (float)it->second.cpuTimer.elapsed();
 			}
 			else
 			{
@@ -242,29 +256,49 @@ namespace wiProfiler
 		{
 			if (x.second.IsCPURange())
 			{
+				if (x.first == cpu_frame)
+					continue;
 				time_cache_cpu[x.second.name].num_hits++;
 				time_cache_cpu[x.second.name].total_time += x.second.time;
 			}
 			else
 			{
+				if (x.first == gpu_frame)
+					continue;
 				time_cache_gpu[x.second.name].num_hits++;
 				time_cache_gpu[x.second.name].total_time += x.second.time;
 			}
 		}
 
 		// Print CPU ranges:
+		ss << ranges[cpu_frame].name << ": " << std::fixed << ranges[cpu_frame].time << " ms" << std::endl;
 		for (auto& x : time_cache_cpu)
 		{
-			ss << x.first << " (" << x.second.num_hits << "x)" << ": " << std::fixed << x.second.total_time << " ms" << std::endl;
+			if (x.second.num_hits > 1)
+			{
+				ss << "\t" << x.first << " (" << x.second.num_hits << "x)" << ": " << std::fixed << x.second.total_time << " ms" << std::endl;
+			}
+			else
+			{
+				ss << "\t" << x.first << ": " << std::fixed << x.second.total_time << " ms" << std::endl;
+			}
 			x.second.num_hits = 0;
 			x.second.total_time = 0;
 		}
 		ss << std::endl;
 
 		// Print GPU ranges:
+		ss << ranges[gpu_frame].name << ": " << std::fixed << ranges[gpu_frame].time << " ms" << std::endl;
 		for (auto& x : time_cache_gpu)
 		{
-			ss << x.first << " (" << x.second.num_hits << "x)" << ": " << std::fixed << x.second.total_time << " ms" << std::endl;
+			if (x.second.num_hits > 1)
+			{
+				ss << "\t" << x.first << " (" << x.second.num_hits << "x)" << ": " << std::fixed << x.second.total_time << " ms" << std::endl;
+			}
+			else
+			{
+				ss << "\t" << x.first << ": " << std::fixed << x.second.total_time << " ms" << std::endl;
+			}
 			x.second.num_hits = 0;
 			x.second.total_time = 0;
 		}

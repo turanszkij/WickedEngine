@@ -238,9 +238,9 @@ void EditorComponent::ResizeBuffers()
 					renderPath->GetDepthStencil(),
 					RenderPassAttachment::LOADOP_LOAD,
 					RenderPassAttachment::STOREOP_STORE,
-					IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
-					IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,
-					IMAGE_LAYOUT_DEPTHSTENCIL_READONLY
+					RESOURCE_STATE_DEPTHSTENCIL_READONLY,
+					RESOURCE_STATE_DEPTHSTENCIL_READONLY,
+					RESOURCE_STATE_DEPTHSTENCIL_READONLY
 				)
 			);
 			hr = device->CreateRenderPass(&desc, &renderpass_selectionOutline[0]);
@@ -765,6 +765,15 @@ void EditorComponent::Load()
 							{
 								cameraWnd.camera_transform = *camera_transform;
 							}
+
+							CameraComponent* cam = wiScene::GetScene().cameras.GetComponent(entity);
+							if (cam != nullptr)
+							{
+								wiScene::GetCamera() = *cam;
+								// camera aspect should be always for the current screen
+								wiScene::GetCamera().width = (float)renderPath->GetInternalResolution().x;
+								wiScene::GetCamera().height = (float)renderPath->GetInternalResolution().y;
+							}
 						}
 					}
 
@@ -1034,6 +1043,7 @@ void EditorComponent::Update(float dt)
 	Scene& scene = wiScene::GetScene();
 	CameraComponent& camera = wiScene::GetCamera();
 
+	cameraWnd.Update();
 	animWnd.Update();
 	weatherWnd.Update();
 	paintToolWnd.Update(dt);
@@ -1133,7 +1143,7 @@ void EditorComponent::Update(float dt)
 			const float clampedDT = std::min(dt, 0.1f); // if dt > 100 millisec, don't allow the camera to jump too far...
 
 			const float speed = ((wiInput::Down(wiInput::KEYBOARD_BUTTON_LSHIFT) ? 10.0f : 1.0f) + rightTrigger.x * 10.0f) * cameraWnd.movespeedSlider.GetValue() * clampedDT;
-			static XMVECTOR move = XMVectorSet(0, 0, 0, 0);
+			XMVECTOR move = XMLoadFloat3(&cameraWnd.move);
 			XMVECTOR moveNew = XMVectorSet(leftStick.x, 0, leftStick.y, 0);
 
 			if (!wiInput::Down(wiInput::KEYBOARD_BUTTON_LCONTROL))
@@ -1149,7 +1159,7 @@ void EditorComponent::Update(float dt)
 			}
 			moveNew *= speed;
 
-			move = XMVectorLerp(move, moveNew, 0.18f * clampedDT / 0.0166f); // smooth the movement a bit
+			move = XMVectorLerp(move, moveNew, cameraWnd.accelerationSlider.GetValue() * clampedDT / 0.0166f); // smooth the movement a bit
 			float moveLength = XMVectorGetX(XMVector3Length(move));
 
 			if (moveLength < 0.0001f)
@@ -1169,6 +1179,7 @@ void EditorComponent::Update(float dt)
 			}
 
 			cameraWnd.camera_transform.UpdateTransform();
+			XMStoreFloat3(&cameraWnd.move, move);
 		}
 		else
 		{
@@ -1437,13 +1448,11 @@ void EditorComponent::Update(float dt)
 				for (size_t i = 0; i < scene.transforms.GetCount(); ++i)
 				{
 					Entity entity = scene.transforms.GetEntity(i);
-
 					if (scene.hierarchy.Contains(entity))
 					{
 						// Parented objects won't be attached, but only the parents instead. Otherwise it would cause "double translation"
 						continue;
 					}
-
 					wiScene::PickResult picked;
 					picked.entity = entity;
 					AddSelected(picked);
@@ -1456,7 +1465,7 @@ void EditorComponent::Update(float dt)
 				if (!translator.selected.empty() && wiInput::Down(wiInput::KEYBOARD_BUTTON_LSHIFT))
 				{
 					// Union selection:
-					std::list<wiScene::PickResult> saved = translator.selected;
+					std::vector<wiScene::PickResult> saved = translator.selected;
 					translator.selected.clear(); 
 					for (const wiScene::PickResult& picked : saved)
 					{
@@ -1938,7 +1947,6 @@ void EditorComponent::Render() const
 
 		// Objects outline:
 		{
-			device->UnbindResources(TEXSLOT_ONDEMAND0, 1, cmd);
 			device->RenderPassBegin(&renderpass_selectionOutline[1], cmd);
 
 			// Draw solid blocks of selected objects
@@ -2393,17 +2401,23 @@ void EditorComponent::AddSelected(Entity entity)
 }
 void EditorComponent::AddSelected(const PickResult& picked)
 {
-	for (auto it = translator.selected.begin(); it != translator.selected.end(); ++it)
+	bool removal = false;
+	for (size_t i = 0; i < translator.selected.size(); ++i)
 	{
-		if ((*it) == picked)
+		if(translator.selected[i] == picked)
 		{
 			// If already selected, it will be deselected now:
-			translator.selected.erase(it);
-			return;
+			translator.selected[i] = translator.selected.back();
+			translator.selected.pop_back();
+			removal = true;
+			break;
 		}
 	}
 
-	translator.selected.push_back(picked);
+	if (!removal)
+	{
+		translator.selected.push_back(picked);
+	}
 }
 bool EditorComponent::IsSelected(Entity entity) const
 {
@@ -2504,7 +2518,7 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 			{
 				// Read selections states from archive:
 
-			std::list<wiScene::PickResult> selectedBEFORE;
+			std::vector<wiScene::PickResult> selectedBEFORE;
 				size_t selectionCountBEFORE;
 				archive >> selectionCountBEFORE;
 				for (size_t i = 0; i < selectionCountBEFORE; ++i)
@@ -2519,7 +2533,7 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 					selectedBEFORE.push_back(sel);
 				}
 
-				std::list<wiScene::PickResult> selectedAFTER;
+				std::vector<wiScene::PickResult> selectedAFTER;
 				size_t selectionCountAFTER;
 				archive >> selectionCountAFTER;
 				for (size_t i = 0; i < selectionCountAFTER; ++i)

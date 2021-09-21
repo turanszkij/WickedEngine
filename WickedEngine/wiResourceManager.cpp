@@ -105,16 +105,13 @@ namespace wiResourceManager
 					TextureDesc desc;
 					desc.ArraySize = 1;
 					desc.BindFlags = BIND_SHADER_RESOURCE;
-					desc.CPUAccessFlags = 0;
-					desc.Height = dds.GetWidth();
-					desc.Width = dds.GetHeight();
+					desc.Width = dds.GetWidth();
+					desc.Height = dds.GetHeight();
 					desc.Depth = dds.GetDepth();
 					desc.MipLevels = dds.GetMipCount();
 					desc.ArraySize = dds.GetArraySize();
-					desc.MiscFlags = 0;
-					desc.Usage = USAGE_IMMUTABLE;
 					desc.Format = FORMAT_R8G8B8A8_UNORM;
-					desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE;
+					desc.layout = RESOURCE_STATE_SHADER_RESOURCE;
 
 					if (dds.IsCubemap())
 					{
@@ -196,9 +193,9 @@ namespace wiResourceManager
 						{
 							auto imageData = dds.GetImageData(mip, arrayIndex);
 							SubresourceData subresourceData;
-							subresourceData.pSysMem = imageData->m_mem;
-							subresourceData.SysMemPitch = imageData->m_memPitch;
-							subresourceData.SysMemSlicePitch = imageData->m_memSlicePitch;
+							subresourceData.pData = imageData->m_mem;
+							subresourceData.rowPitch = imageData->m_memPitch;
+							subresourceData.slicePitch = imageData->m_memSlicePitch;
 							InitData.push_back(subresourceData);
 						}
 					}
@@ -251,7 +248,7 @@ namespace wiResourceManager
 					TextureDesc desc;
 					desc.Height = uint32_t(height);
 					desc.Width = uint32_t(width);
-					desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE;
+					desc.layout = RESOURCE_STATE_SHADER_RESOURCE;
 
 					if (flags & IMPORT_COLORGRADINGLUT)
 					{
@@ -284,9 +281,9 @@ namespace wiResourceManager
 							desc.Format = FORMAT_R8G8B8A8_UNORM;
 							desc.BindFlags = BIND_SHADER_RESOURCE;
 							SubresourceData InitData;
-							InitData.pSysMem = data;
-							InitData.SysMemPitch = 16 * sizeof(uint32_t);
-							InitData.SysMemSlicePitch = 16 * InitData.SysMemPitch;
+							InitData.pData = data;
+							InitData.rowPitch = 16 * sizeof(uint32_t);
+							InitData.slicePitch = 16 * InitData.rowPitch;
 							success = device->CreateTexture(&desc, &InitData, &resource->texture);
 							device->SetName(&resource->texture, name.c_str());
 						}
@@ -294,19 +291,17 @@ namespace wiResourceManager
 					else
 					{
 						desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-						desc.CPUAccessFlags = 0;
 						desc.Format = FORMAT_R8G8B8A8_UNORM;
 						desc.MipLevels = (uint32_t)log2(std::max(width, height)) + 1;
-						desc.MiscFlags = 0;
 						desc.Usage = USAGE_DEFAULT;
-						desc.layout = IMAGE_LAYOUT_SHADER_RESOURCE;
+						desc.layout = RESOURCE_STATE_SHADER_RESOURCE;
 
 						uint32_t mipwidth = width;
 						std::vector<SubresourceData> InitData(desc.MipLevels);
 						for (uint32_t mip = 0; mip < desc.MipLevels; ++mip)
 						{
-							InitData[mip].pSysMem = rgb; // attention! we don't fill the mips here correctly, just always point to the mip0 data by default. Mip levels will be created using compute shader when needed!
-							InitData[mip].SysMemPitch = static_cast<uint32_t>(mipwidth * channelCount);
+							InitData[mip].pData = rgb; // attention! we don't fill the mips here correctly, just always point to the mip0 data by default. Mip levels will be created using compute shader when needed!
+							InitData[mip].rowPitch = static_cast<uint32_t>(mipwidth * channelCount);
 							mipwidth = std::max(1u, mipwidth / 2);
 						}
 

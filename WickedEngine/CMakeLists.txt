@@ -61,7 +61,6 @@ add_library(${TARGET_NAME} STATIC
 	wiGPUBVH.cpp
 	wiGPUSortLib.cpp
 	wiGraphicsDevice.cpp
-	wiGraphicsDevice_DX11.cpp
 	wiGraphicsDevice_DX12.cpp
 	wiGraphicsDevice_Vulkan.cpp
 	wiGUI.cpp
@@ -126,6 +125,7 @@ else ()
 		Vulkan::Vulkan
 		SDL2::SDL2
 		$<$<BOOL:${OpenImageDenoise_FOUND}>:OpenImageDenoise> # links OpenImageDenoise only if it's found
+		FAudio
 	)
 
 	target_link_libraries(${TARGET_NAME} PRIVATE dl)

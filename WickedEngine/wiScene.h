@@ -223,9 +223,7 @@ namespace wiScene
 		int customShaderID = -1;
 
 		// Non-serialized attributes:
-		wiGraphics::GPUBuffer constantBuffer;
 		uint32_t layerMask = ~0u;
-		mutable bool dirty_buffer = false;
 
 		// User stencil value can be in range [0, 15]
 		inline void SetUserStencilRef(uint8_t value)
@@ -324,6 +322,7 @@ namespace wiScene
 			TERRAIN = 1 << 3,
 			_DEPRECATED_DIRTY_MORPH = 1 << 4,
 			_DEPRECATED_DIRTY_BINDLESS = 1 << 5,
+			TLAS_FORCE_DOUBLE_SIDED = 1 << 6,
 		};
 		uint32_t _flags = RENDERABLE;
 
@@ -384,9 +383,7 @@ namespace wiScene
 		wiGraphics::GPUBuffer vertexBuffer_PRE;
 		wiGraphics::GPUBuffer streamoutBuffer_POS;
 		wiGraphics::GPUBuffer streamoutBuffer_TAN;
-		wiGraphics::GPUBuffer vertexBuffer_SUB;
 		std::vector<uint8_t> vertex_subsets;
-		wiGraphics::GPUBuffer descriptor;
 		wiGraphics::GPUBuffer subsetBuffer;
 
 		wiGraphics::RaytracingAccelerationStructure BLAS;
@@ -399,12 +396,12 @@ namespace wiScene
 		mutable BLAS_STATE BLAS_state = BLAS_STATE_NEEDS_REBUILD;
 
 		// Only valid for 1 frame material component indices:
-		int terrain_material1_index = -1;
-		int terrain_material2_index = -1;
-		int terrain_material3_index = -1;
+		uint32_t terrain_material1_index = ~0u;
+		uint32_t terrain_material2_index = ~0u;
+		uint32_t terrain_material3_index = ~0u;
 
 		mutable bool dirty_morph = false;
-		mutable bool dirty_bindless = true;
+		mutable bool dirty_subsets = true;
 
 		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
 		inline void SetDoubleSided(bool value) { if (value) { _flags |= DOUBLE_SIDED; } else { _flags &= ~DOUBLE_SIDED; } }
@@ -596,7 +593,7 @@ namespace wiScene
 		AABB aabb;
 		XMFLOAT4 color;
 		float fadeThresholdRadius;
-		std::vector<XMFLOAT4X4> instanceMatrices;
+		std::vector<uint32_t> instances;
 		mutable bool render_dirty = false;
 
 		inline void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
@@ -794,31 +791,7 @@ namespace wiScene
 		// Non-serialized attributes:
 		AABB aabb;
 
-		struct ShaderBoneType
-		{
-			XMFLOAT4 pose0;
-			XMFLOAT4 pose1;
-			XMFLOAT4 pose2;
-
-			inline void Store(const XMMATRIX& M)
-			{
-				XMFLOAT4X4 mat;
-				XMStoreFloat4x4(&mat, M);
-				pose0 = XMFLOAT4(mat._11, mat._21, mat._31, mat._41);
-				pose1 = XMFLOAT4(mat._12, mat._22, mat._32, mat._42);
-				pose2 = XMFLOAT4(mat._13, mat._23, mat._33, mat._43);
-			}
-			inline XMMATRIX Load() const
-			{
-				return XMMATRIX(
-					pose0.x, pose1.x, pose2.x, 0, 
-					pose0.y, pose1.y, pose2.y, 0, 
-					pose0.z, pose1.z, pose2.z, 0, 
-					pose0.w, pose1.w, pose2.w, 1
-				);
-			}
-		};
-		std::vector<ShaderBoneType> boneData;
+		std::vector<ShaderTransform> boneData;
 		wiGraphics::GPUBuffer boneBuffer;
 
 		void CreateRenderData();
@@ -1291,18 +1264,55 @@ namespace wiScene
 		std::vector<AABB> parallel_bounds;
 		WeatherComponent weather;
 		wiGraphics::RaytracingAccelerationStructure TLAS;
-		std::vector<uint8_t> TLAS_instances;
+		wiGraphics::GPUBuffer TLAS_instancesUpload[wiGraphics::GraphicsDevice::GetBufferCount()];
+		void* TLAS_instancesMapped = nullptr;
 		wiGPUBVH BVH; // this is for non-hardware accelerated raytracing
 		mutable bool acceleration_structure_update_requested = false;
 		void SetAccelerationStructureUpdateRequested(bool value = true) { acceleration_structure_update_requested = value; }
 		bool IsAccelerationStructureUpdateRequested() const { return acceleration_structure_update_requested; }
 
+		// Shader visible scene parameters:
+		ShaderScene shaderscene;
+
+		// Instances for bindless visiblity indexing:
+		//	contains in order:
+		//		1) objects
+		//		2) hair particles
+		wiGraphics::GPUBuffer instanceUploadBuffer[wiGraphics::GraphicsDevice::GetBufferCount()];
+		ShaderMeshInstance* instanceArrayMapped = nullptr;
+		size_t instanceArraySize = 0;
+		wiGraphics::GPUBuffer instanceBuffer;
+
+		// Meshes for bindless visiblity indexing:
+		//	contains in order:
+		//		1) meshes
+		//		2) hair particles
+		wiGraphics::GPUBuffer meshUploadBuffer[wiGraphics::GraphicsDevice::GetBufferCount()];
+		ShaderMesh* meshArrayMapped = nullptr;
+		size_t meshArraySize = 0;
+		wiGraphics::GPUBuffer meshBuffer;
+
+		// Materials for bindless visibility indexing:
+		wiGraphics::GPUBuffer materialUploadBuffer[wiGraphics::GraphicsDevice::GetBufferCount()];
+		ShaderMaterial* materialArrayMapped = nullptr;
+		size_t materialArraySize = 0;
+		wiGraphics::GPUBuffer materialBuffer;
+
 		// Occlusion query state:
 		wiGraphics::GPUQueryHeap queryHeap[arraysize(ObjectComponent::occlusionQueries)];
-		std::vector<uint64_t> queryResults;
+		wiGraphics::GPUBuffer queryResultBuffer[arraysize(queryHeap)];
 		uint32_t writtenQueries[arraysize(queryHeap)] = {};
 		int queryheap_idx = 0;
 		std::atomic<uint32_t> queryAllocator{ 0 };
+
+		// Surfel GI resources:
+		wiGraphics::GPUBuffer surfelBuffer;
+		wiGraphics::GPUBuffer surfelDataBuffer;
+		wiGraphics::GPUBuffer surfelStatsBuffer;
+		wiGraphics::GPUBuffer surfelGridBuffer;
+		wiGraphics::GPUBuffer surfelCellBuffer;
+		wiGraphics::Texture surfelMomentsTexture;
+
 
 		// Environment probe cubemap array state:
 		static constexpr uint32_t envmapCount = 16;
@@ -1319,20 +1329,7 @@ namespace wiScene
 		wiGraphics::Texture impostorArray;
 		std::vector<wiGraphics::RenderPass> renderpasses_impostor;
 
-		// Atlas packing border size in pixels:
-		static constexpr int atlasClampBorder = 1;
-
-		// Lightmap atlas state:
-		wiGraphics::Texture lightmap;
-		std::vector<wiRectPacker::rect_xywh*> lightmap_rects;
-		std::atomic<uint32_t> lightmap_rect_allocator{ 0 };
-		mutable std::atomic_bool lightmap_repack_needed{ false };
 		mutable std::atomic_bool lightmap_refresh_needed{ false };
-
-		// Decal atlas state:
-		wiGraphics::Texture decalAtlas;
-		mutable bool decal_repack_needed{ false };
-		std::unordered_map<std::shared_ptr<wiResource>, wiRectPacker::rect_xywh> packedDecals;
 
 		// Ocean GPU state:
 		wiOcean ocean;

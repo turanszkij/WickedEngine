@@ -1,12 +1,14 @@
 #ifndef WI_DEPTHOFFIELD_HF
 #define WI_DEPTHOFFIELD_HF
 
+PUSHCONSTANT(postprocess, PostProcess);
+
 inline float get_coc(in float linear_depth)
 {
-    return min(dof_maxcoc, dof_cocscale * g_xCamera_ApertureSize * pow(abs(1 - g_xCamera_FocalLength / (linear_depth * g_xCamera_ZFarP)), 2.0f));
+    return min(dof_maxcoc, dof_cocscale * g_xCamera.ApertureSize * pow(abs(1 - g_xCamera.FocalLength / (linear_depth * g_xCamera.ZFarP)), 2.0f));
 }
 
-#define DOF_DEPTH_SCALE_FOREGROUND (g_xCamera_ZFarP * 1.5)
+#define DOF_DEPTH_SCALE_FOREGROUND (g_xCamera.ZFarP * 1.5)
 float2 DepthCmp2(float depth, float closestTileDepth)
 {
     float d = DOF_DEPTH_SCALE_FOREGROUND * (depth - closestTileDepth);

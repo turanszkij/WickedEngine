@@ -2,13 +2,12 @@
 #include "stochasticSSRHF.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
+PUSHCONSTANT(postprocess, PostProcess);
+
 TEXTURE2D(input, float4, TEXSLOT_ONDEMAND0);
 
 RWTEXTURE2D(texture_raytrace, float4, 0);
 RWTEXTURE2D(texture_rayLengths, float, 1);
-
-// Use this to use reduced precision, but higher framerate:
-#define USE_LINEARDEPTH
 
 static const float rayTraceStrideMin = 1.0f; // Step in horizontal or vertical pixels between samples.
 static const float rayTraceStrideMax = 10.0f; // Define max stride between samples. Roughness will interpolate between it's min and max counterparts.
@@ -20,7 +19,7 @@ static const float rayTraceMaxDistance = 1000.0f; // Maximum camera-space distan
 static const float rayTraceStrideCutoff = 100.0f; // More distant pixels are smaller in screen space. This value tells at what point to
                                                             // start relaxing the stride to give higher quality reflections for objects far from the camera.
 static const float raytraceHZBBias = 0.05f; // This value tells how fast the roughness increases the level.
-static const float raytraceHZBStartLevel = 0.0f;
+static const float raytraceHZBStartLevel = 1.0f;
 static const float raytraceHZBMinStep = 0.005f; // Minimum level increasement per iteration.
 
 
@@ -34,10 +33,12 @@ bool IntersectsDepthBuffer(float sceneZMax, float rayZMin, float rayZMax)
 {
     // Increase thickness along distance. 
 	float thickness = max(sceneZMax * rayTraceThicknessBias + rayTraceThicknessOffset, 1.0);
-    
+
+#if 0 // precision issues in DX12
     // Effectively remove line/tiny artifacts, mostly caused by Zbuffers precision.
 	float depthScale = min(1.0f, sceneZMax / rayTraceStrideCutoff);
 	sceneZMax += lerp(0.05f, 0.0f, depthScale);
+#endif
     
 	if (raytraceThicknessInfinite)
 		return (rayZMin >= sceneZMax);
@@ -49,21 +50,22 @@ bool IntersectsDepthBuffer(float sceneZMax, float rayZMin, float rayZMax)
 // http://casual-effects.blogspot.com/2014/08/screen-space-ray-tracing.html
 bool ScreenSpaceRayTrace(float3 csOrig, float3 csDir, float jitter, float roughness, out float2 hitPixel, out float3 hitPoint, out float iterations)
 {
-	float rayLength = ((csOrig.z + csDir.z * rayTraceMaxDistance) < g_xCamera_ZNearP) ?
-        (g_xCamera_ZNearP - csOrig.z) / csDir.z : rayTraceMaxDistance;
+	csOrig += csDir * 0.001; // precision issues in DX12
+	float rayLength = ((csOrig.z + csDir.z * rayTraceMaxDistance) < g_xCamera.ZNearP) ?
+        (g_xCamera.ZNearP - csOrig.z) / csDir.z : rayTraceMaxDistance;
     
 	float3 csRayEnd = csOrig + csDir * rayLength;
 
     // Project into homogeneous clip space
-	float4 clipRayOrigin = mul(g_xCamera_Proj, float4(csOrig, 1.0f));
-	float4 clipRayEnd = mul(g_xCamera_Proj, float4(csRayEnd, 1.0f));
+	float4 clipRayOrigin = mul(g_xCamera.Proj, float4(csOrig, 1.0f));
+	float4 clipRayEnd = mul(g_xCamera.Proj, float4(csRayEnd, 1.0f));
     
 	float k0 = 1.0f / clipRayOrigin.w;
 	float k1 = 1.0f / clipRayEnd.w;
 
 	float3 Q0 = csOrig * k0;
 	float3 Q1 = csRayEnd * k1;
-
+	  
     // Screen-space endpoints
 	float2 P0 = clipRayOrigin.xy * k0;
 	float2 P1 = clipRayEnd.xy * k1;
@@ -72,13 +74,13 @@ bool ScreenSpaceRayTrace(float3 csOrig, float3 csDir, float jitter, float roughn
 	P0 = P0 * float2(0.5, -0.5) + float2(0.5, 0.5);
 	P1 = P1 * float2(0.5, -0.5) + float2(0.5, 0.5);
 
-	P0.xy *= xPPResolution.xy;
-	P1.xy *= xPPResolution.xy;
+	P0.xy *= postprocess.resolution.xy;
+	P1.xy *= postprocess.resolution.xy;
     
 #if 0
     // Clip to the screen coordinates. Alternatively we could just modify rayTraceMaxStep instead
-    float2 yDelta = float2(xPPResolution.y + 2.0f, -2.0f); // - 0.5, 0.5
-    float2 xDelta = float2(xPPResolution.x + 2.0f, -2.0f); // - 0.5, 0.5
+    float2 yDelta = float2(postprocess.resolution.y + 2.0f, -2.0f); // - 0.5, 0.5
+    float2 xDelta = float2(postprocess.resolution.x + 2.0f, -2.0f); // - 0.5, 0.5
     float alpha = 0.0;
     
     // P0 must be in bounds
@@ -199,13 +201,9 @@ bool ScreenSpaceRayTrace(float3 csOrig, float3 csDir, float jitter, float roughn
 		level = min(level, 6.0f);
 
 		hitPixel = permute ? PQk.yx : PQk.xy;
-		hitPixel *= xPPResolution_rcp;
+		hitPixel *= postprocess.resolution_rcp;
         
-#ifdef USE_LINEARDEPTH
-		sceneZMax = texture_lineardepth.SampleLevel(sampler_point_clamp, hitPixel, level) * g_xCamera_ZFarP;
-#else
-        sceneZMax = getLinearDepth(texture_depth.SampleLevel(sampler_point_clamp, hitPixel, 0).r);
-#endif
+		sceneZMax = texture_lineardepth.SampleLevel(sampler_linear_clamp, hitPixel, level) * g_xCamera.ZFarP;
 	}
     
     // Undo the last increment, which ran after the test variables were set up
@@ -225,21 +223,28 @@ bool ScreenSpaceRayTrace(float3 csOrig, float3 csDir, float jitter, float roughn
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
-	const float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 1);
+	const float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
+	const float depth = texture_depth.SampleLevel(sampler_linear_clamp, uv, 1);
 	if (depth == 0)
 		return;
 
-	const float2 velocity = texture_gbuffer2.SampleLevel(sampler_point_clamp, uv, 0).xy;
-	const float2 prevUV = uv + velocity;
+	PrimitiveID prim;
+	prim.unpack(texture_gbuffer0[DTid.xy * 2]);
 
-    // Everything in view space:
-	const float4 g1 = texture_gbuffer1.SampleLevel(sampler_linear_clamp, prevUV, 0);
-	const float3 P = reconstructPosition(uv, depth, g_xCamera_InvP);
-	const float3 N = normalize(mul((float3x3)g_xCamera_View, g1.rgb * 2 - 1).xyz);
-	const float3 V = normalize(-P);
+	Surface surface;
+	surface.load(prim, reconstructPosition(uv, depth));
+	if (surface.roughness > 0.6)
+	{
+		texture_raytrace[DTid.xy] = 0;
+		texture_rayLengths[DTid.xy] = 0;
+		return;
+	}
 
-	const float roughness = GetRoughness(g1.a);
+	// Everything in view space:
+	float3 N = normalize(mul((float3x3)g_xCamera.View, surface.N));
+	float3 P = reconstructPosition(uv, depth, g_xCamera.InvP);
+	float3 V = normalize(-P);
+	const float roughness = GetRoughness(surface.roughness);
     
 	const float roughnessFade = GetRoughnessFade(roughness, SSRMaxRoughness);
 	if (roughnessFade <= 0)
@@ -270,7 +275,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #else // Old
         
         // Low-discrepancy sequence
-		uint2 Random = Rand_PCG16(int3((DTid.xy + 0.5f), g_xFrame_FrameCount)).xy;
+		uint2 Random = Rand_PCG16(int3((DTid.xy + 0.5f), g_xFrame.FrameCount)).xy;
             
 		float2 Xi = HammersleyRandom16(1, Random); // SingleSPP
             
@@ -288,7 +293,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		const float surfaceMargin = 0.0f;
 		const float maxRegenCount = 15.0f;
         
-		uint2 Random = Rand_PCG16(int3((DTid.xy + 0.5f), g_xFrame_FrameCount)).xy;
+		uint2 Random = Rand_PCG16(int3((DTid.xy + 0.5f), g_xFrame.FrameCount)).xy;
         
         // By using an uniform importance sampling method, some rays go below the surface.
         // We simply re-generate them at a negligible cost, to get some nice ones.
@@ -315,7 +320,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #endif
         
 		L = reflect(-V, H.xyz);
-		jitter = InterleavedGradientNoise(DTid.xy, g_xFrame_FrameCount);
+		jitter = InterleavedGradientNoise(DTid.xy, g_xFrame.FrameCount);
 	}
 	else
 	{
@@ -331,7 +336,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	bool hit = ScreenSpaceRayTrace(P, L, jitter, roughness, hitPixel, hitPoint, iterations);
 
 
-	float hitDepth = texture_depth.SampleLevel(sampler_point_clamp, hitPixel, 0);
+	float hitDepth = texture_depth.SampleLevel(sampler_linear_clamp, hitPixel, 1);
 
     // Output:
     // xy: hit pixel
@@ -342,7 +347,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	if (hit)
 	{
-		const float3 Phit = reconstructPosition(uv, hitDepth, g_xCamera_InvP);
+		const float3 Phit = reconstructPosition(uv, hitDepth, g_xCamera.InvP);
 		texture_rayLengths[DTid.xy] = distance(P, Phit);
 	}
 	else

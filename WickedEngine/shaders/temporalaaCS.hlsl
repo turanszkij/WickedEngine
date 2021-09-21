@@ -1,6 +1,8 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
+PUSHCONSTANT(postprocess, PostProcess);
+
 TEXTURE2D(input_current, float3, TEXSLOT_ONDEMAND0);
 TEXTURE2D(input_history, float3, TEXSLOT_ONDEMAND1);
 TEXTURE2D(texture_depth_history, float, TEXSLOT_ONDEMAND2);
@@ -21,7 +23,7 @@ groupshared uint tile_B_depth[TILE_SIZE*TILE_SIZE];
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
-	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
+	const float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
 	float3 neighborhoodMin = 100000;
 	float3 neighborhoodMax = -100000;
 	float3 current;
@@ -66,7 +68,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 			}
 		}
 	}
-	const float2 velocity = texture_gbuffer2[DTid.xy + bestOffset].xy;
+	const float2 velocity = texture_gbuffer1[DTid.xy + bestOffset].xy;
 
 #else
 
@@ -94,7 +96,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 			}
 		}
 	}
-	const float2 velocity = texture_gbuffer2[bestPixel].xy;
+	const float2 velocity = texture_gbuffer1[bestPixel].xy;
 
 #endif // USE_LDS
 
@@ -102,7 +104,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 
 #if 0
 	// Disocclusion fallback:
-	float depth_current = texture_lineardepth[DTid.xy] * g_xCamera_ZFarP;
+	float depth_current = texture_lineardepth[DTid.xy] * g_xCamera.ZFarP;
 	float depth_history = getLinearDepth(texture_depth_history.SampleLevel(sampler_point_clamp, prevUV, 0));
 	if (length(velocity) > 0.01 && abs(depth_current - depth_history) > 1)
 	{
@@ -119,7 +121,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 	history.rgb = clamp(history.rgb, neighborhoodMin, neighborhoodMax);
 
 	// the linear filtering can cause blurry image, try to account for that:
-	float subpixelCorrection = frac(max(abs(velocity.x)*g_xFrame_InternalResolution.x, abs(velocity.y)*g_xFrame_InternalResolution.y)) * 0.5f;
+	float subpixelCorrection = frac(max(abs(velocity.x)*g_xFrame.InternalResolution.x, abs(velocity.y)*g_xFrame.InternalResolution.y)) * 0.5f;
 
 	// compute a nice blend factor:
 	float blendfactor = saturate(lerp(0.05f, 0.8f, subpixelCorrection));

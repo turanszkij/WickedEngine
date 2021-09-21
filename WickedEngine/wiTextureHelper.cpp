@@ -4,6 +4,7 @@
 #include "wiColor.h"
 #include "wiBackLog.h"
 #include "wiSpinLock.h"
+#include "wiTimer.h"
 
 #include <unordered_map>
 
@@ -31,6 +32,8 @@ namespace wiTextureHelper
 
 	void Initialize()
 	{
+		wiTimer timer;
+
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
 		// Random64x64
@@ -95,11 +98,9 @@ namespace wiTextureHelper
 			texDesc.MipLevels = 1;
 			texDesc.ArraySize = 6;
 			texDesc.Format = FORMAT_R8G8B8A8_UNORM;
-			texDesc.CPUAccessFlags = 0;
 			texDesc.SampleCount = 1;
 			texDesc.Usage = USAGE_DEFAULT;
 			texDesc.BindFlags = BIND_SHADER_RESOURCE;
-			texDesc.CPUAccessFlags = 0;
 			texDesc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
 
 			SubresourceData pData[6];
@@ -113,9 +114,9 @@ namespace wiTextureHelper
 					d[cubeMapFaceIndex][pix] = vector4b(0, 0, 0, 0);
 				}
 
-				pData[cubeMapFaceIndex].pSysMem = &d[cubeMapFaceIndex][0];// description.data;
-				pData[cubeMapFaceIndex].SysMemPitch = width * 4;
-				pData[cubeMapFaceIndex].SysMemSlicePitch = 0;
+				pData[cubeMapFaceIndex].pData = &d[cubeMapFaceIndex][0];// description.data;
+				pData[cubeMapFaceIndex].rowPitch = width * 4;
+				pData[cubeMapFaceIndex].slicePitch = 0;
 			}
 
 			device->CreateTexture(&texDesc, &pData[0], &helperTextures[HELPERTEXTURE_BLACKCUBEMAP]);
@@ -153,7 +154,7 @@ namespace wiTextureHelper
 			device->SetName(&helperTextures[HELPERTEXTURE_BLUENOISE], "HELPERTEXTURE_BLUENOISE");
 		}
 
-		wiBackLog::post("wiTextureHelper Initialized");
+		wiBackLog::post("wiTextureHelper Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
 
 	const Texture* getRandom64x64()
@@ -256,14 +257,11 @@ namespace wiTextureHelper
 		textureDesc.ArraySize = 1;
 		textureDesc.Format = format;
 		textureDesc.SampleCount = 1;
-		textureDesc.Usage = USAGE_IMMUTABLE;
 		textureDesc.BindFlags = BIND_SHADER_RESOURCE;
-		textureDesc.CPUAccessFlags = 0;
-		textureDesc.MiscFlags = 0;
 
 		SubresourceData InitData;
-		InitData.pSysMem = data;
-		InitData.SysMemPitch = width * device->GetFormatStride(format);
+		InitData.pData = data;
+		InitData.rowPitch = width * device->GetFormatStride(format);
 
 		return device->CreateTexture(&textureDesc, &InitData, &texture);
 	}

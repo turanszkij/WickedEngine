@@ -103,6 +103,10 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 
 	if (success)
 	{
+		Entity rootEntity = CreateEntity();
+		scene.transforms.Create(rootEntity);
+		scene.names.Create(rootEntity) = name;
+
 		// Load material library:
 		std::vector<Entity> materialLibrary = {};
 		for (auto& obj_material : obj_materials)
@@ -157,6 +161,7 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 		for (auto& shape : obj_shapes)
 		{
 			Entity objectEntity = scene.Entity_CreateObject(shape.name);
+			scene.Component_Attach(objectEntity, rootEntity);
 			Entity meshEntity = scene.Entity_CreateMesh(shape.name + "_mesh");
 			ObjectComponent& object = *scene.objects.GetComponent(objectEntity);
 			MeshComponent& mesh = *scene.meshes.GetComponent(meshEntity);

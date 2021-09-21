@@ -7,6 +7,7 @@
 #include "wiBackLog.h"
 #include "wiProfiler.h"
 #include "wiColor.h"
+#include "wiTimer.h"
 
 #include <algorithm>
 #include <map>
@@ -80,10 +81,12 @@ namespace wiInput
 
 	void Initialize()
 	{
+		wiTimer timer;
+
 		wiRawInput::Initialize();
 		wiSDLInput::Initialize();
 
-		wiBackLog::post("wiInput Initialized");
+		wiBackLog::post("wiInput Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 		initialized.store(true);
 	}
 

@@ -1,6 +1,8 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
+PUSHCONSTANT(postprocess, PostProcess);
+
 #define float16_t2 min16float2
 #define float16_t3 min16float3
 
@@ -14,15 +16,15 @@ RWTEXTURE2D(output, unorm float, 1);
 
 uint2 FFX_DNSR_Shadows_GetBufferDimensions()
 {
-	return xPPResolution;
+	return postprocess.resolution;
 }
 float2 FFX_DNSR_Shadows_GetInvBufferDimensions()
 {
-	return xPPResolution_rcp;
+	return postprocess.resolution_rcp;
 }
 float4x4 FFX_DNSR_Shadows_GetProjectionInverse()
 {
-	return g_xCamera_InvP;
+	return g_xCamera.InvP;
 }
 
 float FFX_DNSR_Shadows_GetDepthSimilaritySigma()
@@ -60,8 +62,8 @@ uint FFX_DNSR_Shadows_ReadTileMetaData(uint p)
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint2 gid : SV_GroupID, uint2 gtid : SV_GroupThreadID, uint2 did : SV_DispatchThreadID)
 {
-	const uint PASS_INDEX = (uint)xPPParams1.x;
-	const uint STEP_SIZE = (uint)xPPParams1.y;
+	const uint PASS_INDEX = (uint)postprocess.params1.x;
+	const uint STEP_SIZE = (uint)postprocess.params1.y;
 
 	bool bWriteOutput = false;
 	float2 const results = FFX_DNSR_Shadows_FilterSoftShadowsPass(gid, gtid, did, bWriteOutput, PASS_INDEX, STEP_SIZE);

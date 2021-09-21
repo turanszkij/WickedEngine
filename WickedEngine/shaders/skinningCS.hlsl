@@ -1,30 +1,8 @@
-#include "ResourceMapping.h"
-#include "ShaderInterop_Skinning.h"
+#include "globals.hlsli"
 
-// This will make use of LDS to preload bones into local memory:
-// #define USE_LDS
+PUSHCONSTANT(push, SkinningPushConstants);
 
-struct Bone
-{
-	float4 pose0;
-	float4 pose1;
-	float4 pose2;
-};
-STRUCTUREDBUFFER(boneBuffer, Bone, SKINNINGSLOT_IN_BONEBUFFER);
-
-#ifdef USE_LDS
-groupshared Bone LDS_BoneList[SKINNING_COMPUTE_THREADCOUNT];
-#endif // USE_LDS
-
-RAWBUFFER(vertexBuffer_POS, SKINNINGSLOT_IN_VERTEX_POS);
-RAWBUFFER(vertexBuffer_TAN, SKINNINGSLOT_IN_VERTEX_TAN);
-RAWBUFFER(vertexBuffer_BON, SKINNINGSLOT_IN_VERTEX_BON);
-
-RWRAWBUFFER(streamoutBuffer_POS, 0);
-RWRAWBUFFER(streamoutBuffer_TAN, 1);
-
-
-inline void Skinning(inout float3 pos, inout float3 nor, inout float3 tan, in float4 inBon, in float4 inWei)
+inline void Skinning(inout float3 pos, inout float3 nor, inout float3 tan, in uint4 inBon, in float4 inWei)
 {
 	if (any(inWei))
 	{
@@ -38,18 +16,7 @@ inline void Skinning(inout float3 pos, inout float3 nor, inout float3 tan, in fl
 		[loop]
 		for (uint i = 0; ((i < 4) && (weisum < 1.0f)); ++i)
 		{
-			float4x4 m = float4x4(
-#ifdef USE_LDS
-				LDS_BoneList[(uint)inBon[i]].pose0,
-				LDS_BoneList[(uint)inBon[i]].pose1,
-				LDS_BoneList[(uint)inBon[i]].pose2,
-#else
-				boneBuffer[(uint)inBon[i]].pose0,
-				boneBuffer[(uint)inBon[i]].pose1,
-				boneBuffer[(uint)inBon[i]].pose2,
-#endif // USE_LDS
-				float4(0, 0, 0, 1)
-				);
+			float4x4 m = bindless_buffers[push.bonebuffer_index].Load<ShaderTransform>(inBon[i] * sizeof(ShaderTransform)).GetMatrix();
 
 			p += mul(m, float4(pos.xyz, 1)) * inWei[i];
 			n += mul((float3x3)m, nor.xyz) * inWei[i];
@@ -65,26 +32,17 @@ inline void Skinning(inout float3 pos, inout float3 nor, inout float3 tan, in fl
 }
 
 
-[numthreads(SKINNING_COMPUTE_THREADCOUNT, 1, 1)]
+[numthreads(64, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 {
-#ifdef USE_LDS
-	LDS_BoneList[GTid.x] = boneBuffer[GTid.x];
-#endif // USE_LDS
-
-	const uint stride_POS_NOR = 16;
-	const uint stride_TAN = 4;
-	const uint stride_BON_IND = 8;
-	const uint stride_BON_WEI = 8;
-
-	const uint fetchAddress_POS_NOR = DTid.x * stride_POS_NOR;
-	const uint fetchAddress_TAN = DTid.x * stride_TAN;
-	const uint fetchAddress_BON = DTid.x * (stride_BON_IND + stride_BON_WEI);
+	const uint fetchAddress_POS_NOR = DTid.x * sizeof(float4);
+	const uint fetchAddress_TAN = DTid.x * sizeof(uint);
+	const uint fetchAddress_BON = DTid.x * sizeof(uint4);
 
 	// Manual type-conversion for pos:
-	uint4 pos_nor_u = vertexBuffer_POS.Load4(fetchAddress_POS_NOR);
+	uint4 pos_nor_u = bindless_buffers[push.vb_pos_nor_wind].Load4(fetchAddress_POS_NOR);
 	float3 pos = asfloat(pos_nor_u.xyz);
-	uint vtan = vertexBuffer_TAN.Load(fetchAddress_TAN);
+	uint vtan = bindless_buffers[push.vb_tan].Load(fetchAddress_TAN);
 
 	// Manual type-conversion for normal:
 	float4 nor = 0;
@@ -105,24 +63,20 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 	}
 
 	// Manual type-conversion for bone props:
-	uint4 ind_wei_u = vertexBuffer_BON.Load4(fetchAddress_BON);
+	uint4 ind_wei_u = bindless_buffers[push.vb_bon].Load4(fetchAddress_BON);
 	float4 ind = 0;
 	float4 wei = 0;
 	{
-		ind.x = (float)((ind_wei_u.x >> 0) & 0x0000FFFF);
-		ind.y = (float)((ind_wei_u.x >> 16) & 0x0000FFFF);
-		ind.z = (float)((ind_wei_u.y >> 0) & 0x0000FFFF);
-		ind.w = (float)((ind_wei_u.y >> 16) & 0x0000FFFF);
+		ind.x = (ind_wei_u.x >> 0) & 0x0000FFFF;
+		ind.y = (ind_wei_u.x >> 16) & 0x0000FFFF;
+		ind.z = (ind_wei_u.y >> 0) & 0x0000FFFF;
+		ind.w = (ind_wei_u.y >> 16) & 0x0000FFFF;
 
 		wei.x = (float)((ind_wei_u.z >> 0) & 0x0000FFFF) / 65535.0f;
 		wei.y = (float)((ind_wei_u.z >> 16) & 0x0000FFFF) / 65535.0f;
 		wei.z = (float)((ind_wei_u.w >> 0) & 0x0000FFFF) / 65535.0f;
 		wei.w = (float)((ind_wei_u.w >> 16) & 0x0000FFFF) / 65535.0f;
 	}
-
-#ifdef USE_LDS
-	GroupMemoryBarrierWithGroupSync();
-#endif // USE_LDS
 
 
 	// Perform skinning:
@@ -133,7 +87,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 	// Manual type-conversion for pos:
 	pos_nor_u.xyz = asuint(pos.xyz);
 
-
+	
 	// Manual type-conversion for normal:
 	pos_nor_u.w = 0;
 	{
@@ -153,6 +107,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 	}
 
 	// Store data:
-	streamoutBuffer_POS.Store4(fetchAddress_POS_NOR, pos_nor_u);
-	streamoutBuffer_TAN.Store(fetchAddress_TAN, vtan);
+	bindless_rwbuffers[push.so_pos_nor_wind].Store4(fetchAddress_POS_NOR, pos_nor_u);
+	bindless_rwbuffers[push.so_tan].Store(fetchAddress_TAN, vtan);
 }

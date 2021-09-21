@@ -1,6 +1,8 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
+PUSHCONSTANT(postprocess, PostProcess);
+
 TEXTURE2D(texture_main, float3, TEXSLOT_ONDEMAND0);
 TEXTURE2D(texture_alpha, float, TEXSLOT_ONDEMAND1);
 
@@ -136,19 +138,19 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	{
 		float p[9];
 
-		p[0] = texture_alpha.SampleLevel(sampler_point_clamp, (uv + circleOffsets[0]) * xPPResolution_rcp, 0);
-		p[1] = texture_alpha.SampleLevel(sampler_point_clamp, (uv + circleOffsets[1]) * xPPResolution_rcp, 0);
-		p[2] = texture_alpha.SampleLevel(sampler_point_clamp, (uv + circleOffsets[2]) * xPPResolution_rcp, 0);
+		p[0] = texture_alpha.SampleLevel(sampler_point_clamp, (uv + circleOffsets[0]) * postprocess.resolution_rcp, 0);
+		p[1] = texture_alpha.SampleLevel(sampler_point_clamp, (uv + circleOffsets[1]) * postprocess.resolution_rcp, 0);
+		p[2] = texture_alpha.SampleLevel(sampler_point_clamp, (uv + circleOffsets[2]) * postprocess.resolution_rcp, 0);
 		sort3(p[0], p[1], p[2]);
 
-		p[3] = texture_alpha.SampleLevel(sampler_point_clamp, (uv + circleOffsets[3]) * xPPResolution_rcp, 0);
-		p[4] = texture_alpha.SampleLevel(sampler_point_clamp, (uv + circleOffsets[4]) * xPPResolution_rcp, 0);
-		p[5] = texture_alpha.SampleLevel(sampler_point_clamp, (uv + circleOffsets[5]) * xPPResolution_rcp, 0);
+		p[3] = texture_alpha.SampleLevel(sampler_point_clamp, (uv + circleOffsets[3]) * postprocess.resolution_rcp, 0);
+		p[4] = texture_alpha.SampleLevel(sampler_point_clamp, (uv + circleOffsets[4]) * postprocess.resolution_rcp, 0);
+		p[5] = texture_alpha.SampleLevel(sampler_point_clamp, (uv + circleOffsets[5]) * postprocess.resolution_rcp, 0);
 		sort3(p[3], p[4], p[5]);
 
-		p[6] = texture_alpha.SampleLevel(sampler_point_clamp, (uv + circleOffsets[6]) * xPPResolution_rcp, 0);
-		p[7] = texture_alpha.SampleLevel(sampler_point_clamp, (uv + circleOffsets[7]) * xPPResolution_rcp, 0);
-		p[8] = texture_alpha.SampleLevel(sampler_point_clamp, (uv + circleOffsets[8]) * xPPResolution_rcp, 0);
+		p[6] = texture_alpha.SampleLevel(sampler_point_clamp, (uv + circleOffsets[6]) * postprocess.resolution_rcp, 0);
+		p[7] = texture_alpha.SampleLevel(sampler_point_clamp, (uv + circleOffsets[7]) * postprocess.resolution_rcp, 0);
+		p[8] = texture_alpha.SampleLevel(sampler_point_clamp, (uv + circleOffsets[8]) * postprocess.resolution_rcp, 0);
 		sort3(p[6], p[7], p[8]);
 
 		p[6] = max3(p[0], p[3], p[6]);
@@ -163,19 +165,19 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	{
 		float3 p[9];
 
-		p[0] = texture_main.SampleLevel(sampler_point_clamp, (uv + circleOffsets[0]) * xPPResolution_rcp, 0);
-		p[1] = texture_main.SampleLevel(sampler_point_clamp, (uv + circleOffsets[1]) * xPPResolution_rcp, 0);
-		p[2] = texture_main.SampleLevel(sampler_point_clamp, (uv + circleOffsets[2]) * xPPResolution_rcp, 0);
+		p[0] = texture_main.SampleLevel(sampler_point_clamp, (uv + circleOffsets[0]) * postprocess.resolution_rcp, 0);
+		p[1] = texture_main.SampleLevel(sampler_point_clamp, (uv + circleOffsets[1]) * postprocess.resolution_rcp, 0);
+		p[2] = texture_main.SampleLevel(sampler_point_clamp, (uv + circleOffsets[2]) * postprocess.resolution_rcp, 0);
 		sort3(p[0], p[1], p[2]);
 
-		p[3] = texture_main.SampleLevel(sampler_point_clamp, (uv + circleOffsets[3]) * xPPResolution_rcp, 0);
-		p[4] = texture_main.SampleLevel(sampler_point_clamp, (uv + circleOffsets[4]) * xPPResolution_rcp, 0);
-		p[5] = texture_main.SampleLevel(sampler_point_clamp, (uv + circleOffsets[5]) * xPPResolution_rcp, 0);
+		p[3] = texture_main.SampleLevel(sampler_point_clamp, (uv + circleOffsets[3]) * postprocess.resolution_rcp, 0);
+		p[4] = texture_main.SampleLevel(sampler_point_clamp, (uv + circleOffsets[4]) * postprocess.resolution_rcp, 0);
+		p[5] = texture_main.SampleLevel(sampler_point_clamp, (uv + circleOffsets[5]) * postprocess.resolution_rcp, 0);
 		sort3(p[3], p[4], p[5]);
 
-		p[6] = texture_main.SampleLevel(sampler_point_clamp, (uv + circleOffsets[6]) * xPPResolution_rcp, 0);
-		p[7] = texture_main.SampleLevel(sampler_point_clamp, (uv + circleOffsets[7]) * xPPResolution_rcp, 0);
-		p[8] = texture_main.SampleLevel(sampler_point_clamp, (uv + circleOffsets[8]) * xPPResolution_rcp, 0);
+		p[6] = texture_main.SampleLevel(sampler_point_clamp, (uv + circleOffsets[6]) * postprocess.resolution_rcp, 0);
+		p[7] = texture_main.SampleLevel(sampler_point_clamp, (uv + circleOffsets[7]) * postprocess.resolution_rcp, 0);
+		p[8] = texture_main.SampleLevel(sampler_point_clamp, (uv + circleOffsets[8]) * postprocess.resolution_rcp, 0);
 		sort3(p[6], p[7], p[8]);
 
 		p[6] = max3(p[0], p[3], p[6]);

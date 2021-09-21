@@ -3,6 +3,7 @@
 #include "wiBackLog.h"
 #include "wiContainers.h"
 #include "wiPlatform.h"
+#include "wiTimer.h"
 
 #include <thread>
 #include <condition_variable>
@@ -60,6 +61,8 @@ namespace wiJobSystem
 
 	void Initialize()
 	{
+		wiTimer timer;
+
 		// Retrieve the number of hardware threads in this system:
 		auto numCores = std::thread::hardware_concurrency();
 
@@ -104,7 +107,7 @@ namespace wiJobSystem
 			worker.detach();
 		}
 
-		wiBackLog::post(("wiJobSystem Initialized with [" + std::to_string(numCores) + " cores] [" + std::to_string(numThreads) + " threads]").c_str());
+		wiBackLog::post("wiJobSystem Initialized with [" + std::to_string(numCores) + " cores] [" + std::to_string(numThreads) + " threads] (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
 
 	uint32_t GetThreadCount()

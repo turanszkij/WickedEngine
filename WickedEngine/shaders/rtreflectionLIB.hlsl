@@ -8,6 +8,8 @@
 #include "stochasticSSRHF.hlsli"
 #include "lightingHF.hlsli"
 
+PUSHCONSTANT(postprocess, PostProcess);
+
 TEXTURE2D(texture_depth_history, float, TEXSLOT_ONDEMAND2);
 
 RWTEXTURE2D(output, float4, 0);
@@ -27,66 +29,23 @@ void RTReflection_Raygen()
 	if (depth == 0)
 		return;
 
-	bool disocclusion = false;
-	const float2 velocity = texture_gbuffer2.SampleLevel(sampler_point_clamp, uv, 0).xy;
-	const float2 prevUV = uv + velocity;
-	if (!is_saturated(prevUV))
-	{
-		//output[DTid.xy] = float4(1, 0, 0, 1);
-		//return;
-		disocclusion = true;
-	}
-
-	// Disocclusion fallback:
-	float depth_current = getLinearDepth(depth);
-	float depth_history = getLinearDepth(texture_depth_history.SampleLevel(sampler_point_clamp, prevUV, 1));
-	if (abs(depth_current - depth_history) > 1)
-	{
-		//output[DTid.xy] = float4(1, 0, 0, 1);
-		//return;
-		disocclusion = true;
-	}
-
 	const float3 P = reconstructPosition(uv, depth);
-	const float3 V = normalize(g_xCamera_CamPos - P);
+	const float3 V = normalize(g_xCamera.CamPos - P);
 
-	float3 N;
-	float roughness;
-	if (disocclusion)
+	PrimitiveID prim;
+	prim.unpack(texture_gbuffer0[DTid.xy * 2]);
+
+	Surface surface;
+	surface.load(prim, P);
+	if (surface.roughness > 0.6)
 	{
-		// When reprojection is invalid, trace the surface parameters:
-		RayDesc ray;
-		ray.Origin = P - V * 0.005;
-		ray.Direction = V;
-		ray.TMin = 0;
-		ray.TMax = 0.01;
-
-		RayPayload payload;
-		payload.data = -1; // indicate closesthit shader will just fill normal and roughness
-
-		TraceRay(
-			scene_acceleration_structure,   // AccelerationStructure
-			RAY_FLAG_FORCE_OPAQUE |
-			RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH |
-			0,                              // RayFlags
-			~0,                             // InstanceInclusionMask
-			0,                              // RayContributionToHitGroupIndex
-			0,                              // MultiplierForGeomtryContributionToShaderIndex
-			0,                              // MissShaderIndex
-			ray,                            // Ray
-			payload                         // Payload
-		);
-
-		N = payload.data.xyz;
-		roughness = payload.data.w;
+		output[DTid.xy] = float4(max(0, EnvironmentReflection_Global(surface)), 1);
+		output_rayLengths[DTid.xy] = FLT_MAX;
+		return;
 	}
-	else
-	{
-		// When reprojection valid, just sample surface parameters from gbuffer:
-		const float4 g1 = texture_gbuffer1.SampleLevel(sampler_linear_clamp, prevUV, 0);
-		N = normalize(g1.rgb * 2 - 1);
-		roughness = g1.a;
-	}
+
+	float3 N = surface.N;
+	float roughness = surface.roughness;
 
 	// The ray direction selection part is the same as in from ssr_raytraceCS.hlsl:
 	float4 H;
@@ -119,7 +78,7 @@ void RTReflection_Raygen()
 
 	const float3 R = L;
 
-	float seed = g_xFrame_Time;
+	float seed = g_xFrame.Time;
 
 	RayDesc ray;
 	ray.TMin = 0.01;
@@ -149,21 +108,13 @@ void RTReflection_Raygen()
 [shader("closesthit")]
 void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleIntersectionAttributes attr)
 {
-	ShaderMesh mesh = bindless_buffers[NonUniformResourceIndex(InstanceID())].Load<ShaderMesh>(0);
-	ShaderMeshSubset subset = bindless_subsets[NonUniformResourceIndex(mesh.subsetbuffer)][GeometryIndex()];
-	ShaderMaterial material = bindless_buffers[NonUniformResourceIndex(subset.material)].Load<ShaderMaterial>(0);
+	PrimitiveID prim;
+	prim.primitiveIndex = PrimitiveIndex();
+	prim.instanceIndex = InstanceID();
+	prim.subsetIndex = GeometryIndex();
 
 	Surface surface;
-
-	EvaluateObjectSurface(
-		mesh,
-		subset,
-		material,
-		PrimitiveIndex(),
-		attr.barycentrics,
-		ObjectToWorld3x4(),
-		surface
-	);
+	surface.load(prim, attr.barycentrics);
 
 	[branch]
 	if (payload.data.w < 0)
@@ -185,10 +136,10 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 	lighting.create(0, 0, GetAmbient(surface.N), 0);
 
 	[loop]
-	for (uint iterator = 0; iterator < g_xFrame_LightArrayCount; iterator++)
+	for (uint iterator = 0; iterator < g_xFrame.LightArrayCount; iterator++)
 	{
-		ShaderEntity light = EntityArray[g_xFrame_LightArrayOffset + iterator];
-		if ((light.layerMask & material.layerMask) == 0)
+		ShaderEntity light = load_entity(g_xFrame.LightArrayOffset + iterator);
+		if ((light.layerMask & surface.material.layerMask) == 0)
 			continue;
 
 		if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
@@ -226,24 +177,16 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 [shader("anyhit")]
 void RTReflection_AnyHit(inout RayPayload payload, in BuiltInTriangleIntersectionAttributes attr)
 {
-	ShaderMesh mesh = bindless_buffers[NonUniformResourceIndex(InstanceID())].Load<ShaderMesh>(0);
-	ShaderMeshSubset subset = bindless_subsets[NonUniformResourceIndex(mesh.subsetbuffer)][GeometryIndex()];
-	ShaderMaterial material = bindless_buffers[NonUniformResourceIndex(subset.material)].Load<ShaderMaterial>(0);
+	PrimitiveID prim;
+	prim.primitiveIndex = PrimitiveIndex();
+	prim.instanceIndex = InstanceID();
+	prim.subsetIndex = GeometryIndex();
 
 	Surface surface;
-
-	EvaluateObjectSurface(
-		mesh,
-		subset,
-		material,
-		PrimitiveIndex(),
-		attr.barycentrics,
-		ObjectToWorld3x4(),
-		surface
-	);
+	surface.load(prim, attr.barycentrics);
 
 	[branch]
-	if (surface.opacity < material.alphaTest)
+	if (surface.opacity < surface.material.alphaTest)
 	{
 		IgnoreHit();
 	}

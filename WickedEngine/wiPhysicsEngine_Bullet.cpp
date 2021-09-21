@@ -4,6 +4,7 @@
 #include "wiBackLog.h"
 #include "wiJobSystem.h"
 #include "wiRenderer.h"
+#include "wiTimer.h"
 
 #include "btBulletDynamicsCommon.h"
 #include "BulletSoftBody/btSoftBodyHelpers.h"
@@ -66,6 +67,8 @@ namespace wiPhysicsEngine
 
 	void Initialize()
 	{
+		wiTimer timer;
+
 		dispatcher = std::make_unique<btCollisionDispatcher>(&collisionConfiguration);
 		dynamicsWorld = std::make_unique<btSoftRigidDynamicsWorld>(dispatcher.get(), &overlappingPairCache, &solver, &collisionConfiguration);
 
@@ -86,7 +89,7 @@ namespace wiPhysicsEngine
 
 		softRigidWorld->setDebugDrawer(&debugDraw);
 
-		wiBackLog::post("wiPhysicsEngine_Bullet Initialized");
+		wiBackLog::post("wiPhysicsEngine_Bullet Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
 
 	bool IsEnabled() { return ENABLED; }
@@ -424,15 +427,6 @@ namespace wiPhysicsEngine
 			MeshComponent& mesh = *scene.meshes.GetComponent(entity);
 			const ArmatureComponent* armature = mesh.IsSkinned() ? scene.armatures.GetComponent(mesh.armatureID) : nullptr;
 			mesh.SetDynamic(true);
-
-			if (!mesh.vertexBuffer_PRE.IsValid())
-			{
-				using namespace wiGraphics;
-				GraphicsDevice* device = wiRenderer::GetDevice();
-				device->CreateBuffer(&mesh.vertexBuffer_POS.desc, nullptr, &mesh.streamoutBuffer_POS);
-				device->CreateBuffer(&mesh.vertexBuffer_POS.desc, nullptr, &mesh.vertexBuffer_PRE);
-				device->CreateBuffer(&mesh.vertexBuffer_TAN.desc, nullptr, &mesh.streamoutBuffer_TAN);
-			}
 
 			if (physicscomponent._flags & SoftBodyPhysicsComponent::FORCE_RESET)
 			{

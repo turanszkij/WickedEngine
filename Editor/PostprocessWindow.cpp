@@ -59,7 +59,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	aoComboBox.AddItem("SSAO");
 	aoComboBox.AddItem("HBAO");
 	aoComboBox.AddItem("MSAO");
-	if (wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE))
+	if (wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 	{
 		aoComboBox.AddItem("RTAO");
 	}
@@ -142,7 +142,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 		editor->renderPath->setRaytracedReflectionsEnabled(args.bValue);
 		});
 	AddWidget(&raytracedReflectionsCheckBox);
-	raytracedReflectionsCheckBox.SetEnabled(wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_PIPELINE) && wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING_GEOMETRYINDEX));
+	raytracedReflectionsCheckBox.SetEnabled(wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING));
 
 	screenSpaceShadowsCheckBox.Create("SS Shadows: ");
 	screenSpaceShadowsCheckBox.SetTooltip("Enable screen space contact shadows. This can add small shadows details to shadow maps in screen space.");
@@ -371,6 +371,26 @@ void PostprocessWindow::Create(EditorComponent* editor)
 		editor->renderPath->setChromaticAberrationAmount(args.fValue);
 		});
 	AddWidget(&chromaticaberrationSlider);
+
+	fsrCheckBox.Create("FSR: ");
+	fsrCheckBox.SetTooltip("FidelityFX FSR Upscaling. Use this only with Temporal AA or MSAA when the resolution scaling is lowered.");
+	fsrCheckBox.SetSize(XMFLOAT2(hei, hei));
+	fsrCheckBox.SetPos(XMFLOAT2(x, y += step));
+	fsrCheckBox.SetCheck(editor->renderPath->getFSREnabled());
+	fsrCheckBox.OnClick([=](wiEventArgs args) {
+		editor->renderPath->setFSREnabled(args.bValue);
+		});
+	AddWidget(&fsrCheckBox);
+
+	fsrSlider.Create(0, 2, 1.0f, 1000, "Sharpness: ");
+	fsrSlider.SetTooltip("The sharpening amount to apply for FSR upscaling.");
+	fsrSlider.SetSize(XMFLOAT2(100, hei));
+	fsrSlider.SetPos(XMFLOAT2(x + 100, y));
+	fsrSlider.SetValue(editor->renderPath->getFSRSharpness());
+	fsrSlider.OnSlide([=](wiEventArgs args) {
+		editor->renderPath->setFSRSharpness(args.fValue);
+		});
+	AddWidget(&fsrSlider);
 
 
 	Translate(XMFLOAT3((float)editor->GetLogicalWidth() - 500, 80, 0));

@@ -1,6 +1,8 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
+PUSHCONSTANT(postprocess, PostProcess);
+
 TEXTURE2D(normals, float3, TEXSLOT_ONDEMAND0);
 STRUCTUREDBUFFER(tiles, uint, TEXSLOT_ONDEMAND1);
 TEXTURE2D(moments_prev, float3, TEXSLOT_ONDEMAND2);
@@ -13,31 +15,31 @@ RWSTRUCTUREDBUFFER(metadata, uint, 2);
 
 int FFX_DNSR_Shadows_IsFirstFrame()
 {
-	return xPPParams0.w == 0;
+	return postprocess.params0.w == 0;
 }
 uint2 FFX_DNSR_Shadows_GetBufferDimensions()
 {
-	return xPPResolution;
+	return postprocess.resolution;
 }
 float2 FFX_DNSR_Shadows_GetInvBufferDimensions()
 {
-	return xPPResolution_rcp;
+	return postprocess.resolution_rcp;
 }
 float3 FFX_DNSR_Shadows_GetEye()
 {
-	return g_xCamera_CamPos;
+	return g_xCamera.CamPos;
 }
 float4x4 FFX_DNSR_Shadows_GetProjectionInverse()
 {
-	return g_xCamera_InvP;
+	return g_xCamera.InvP;
 }
 float4x4 FFX_DNSR_Shadows_GetViewProjectionInverse()
 {
-	return g_xCamera_InvVP;
+	return g_xCamera.InvVP;
 }
 float4x4 FFX_DNSR_Shadows_GetReprojectionMatrix()
 {
-	return g_xCamera_Reprojection;
+	return g_xCamera.Reprojection;
 }
 
 float FFX_DNSR_Shadows_ReadDepth(uint2 did)
@@ -66,7 +68,7 @@ float FFX_DNSR_Shadows_ReadHistory(float2 history_uv)
 }
 float2 FFX_DNSR_Shadows_ReadVelocity(uint2 did)
 {
-	return -texture_gbuffer2[did * 2].xy;
+	return -texture_gbuffer1[did * 2].xy;
 }
 
 void FFX_DNSR_Shadows_WriteReprojectionResults(uint2 did, float2 value)

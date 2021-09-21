@@ -12,7 +12,7 @@ RWTEXTURE2D(output, float4, 0);
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
+	const float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
 
 	const float center_depth = texture_lineardepth[DTid.xy];
 	const float2 mindepth_maxcoc = neighborhood_mindepth_maxcoc[DTid.xy / DEPTHOFFIELD_TILESIZE];
@@ -24,7 +24,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	const float coc = get_coc(center_depth);
 
-	float depthDelta = saturate(1.0 - g_xCamera_ZFarP * (center_depth - mindepth));
+	float depthDelta = saturate(1.0 - g_xCamera.ZFarP * (center_depth - mindepth));
 
 	const float backgroundFactor = coc;
 	const float foregroundFactor = lerp(maxcoc, coc, depthDelta);

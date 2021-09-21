@@ -10,6 +10,7 @@
 #include "wiSpinLock.h"
 #include "wiPlatform.h"
 #include "wiEvent.h"
+#include "wiTimer.h"
 
 #include "Utility/arial.h"
 #include "Utility/stb_truetype.h"
@@ -30,7 +31,6 @@ using namespace wiRectPacker;
 
 namespace wiFont_Internal
 {
-	GPUBuffer			constantBuffer;
 	BlendState			blendState;
 	RasterizerState		rasterizerState;
 	DepthStencilState	depthStencilState;
@@ -274,6 +274,8 @@ void Initialize()
 		return;
 	}
 
+	wiTimer timer;
+
 	// add default font if there is none yet:
 	if (fontStyles.empty())
 	{
@@ -281,18 +283,6 @@ void Initialize()
 	}
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
-
-	{
-		GPUBufferDesc bd;
-		bd.Usage = USAGE_DYNAMIC;
-		bd.ByteWidth = sizeof(FontCB);
-		bd.BindFlags = BIND_CONSTANT_BUFFER;
-		bd.CPUAccessFlags = CPU_ACCESS_WRITE;
-
-		device->CreateBuffer(&bd, nullptr, &constantBuffer);
-	}
-
-
 
 	RasterizerState rs;
 	rs.FillMode = FILL_SOLID;
@@ -331,10 +321,7 @@ void Initialize()
 	samplerDesc.MipLODBias = 0.0f;
 	samplerDesc.MaxAnisotropy = 0;
 	samplerDesc.ComparisonFunc = COMPARISON_NEVER;
-	samplerDesc.BorderColor[0] = 0;
-	samplerDesc.BorderColor[1] = 0;
-	samplerDesc.BorderColor[2] = 0;
-	samplerDesc.BorderColor[3] = 0;
+	samplerDesc.BorderColor = SAMPLER_BORDER_COLOR_TRANSPARENT_BLACK;
 	samplerDesc.MinLOD = 0;
 	samplerDesc.MaxLOD = FLT_MAX;
 	device->CreateSampler(&samplerDesc, &sampler);
@@ -343,7 +330,7 @@ void Initialize()
 	LoadShaders();
 
 
-	wiBackLog::post("wiFont Initialized");
+	wiBackLog::post("wiFont Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	initialized.store(true);
 }
 
@@ -600,22 +587,10 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 
 		device->BindPipelineState(&PSO, cmd);
 
-		device->BindConstantBuffer(VS, &constantBuffer, CB_GETBINDSLOT(FontCB), cmd);
-		device->BindConstantBuffer(PS, &constantBuffer, CB_GETBINDSLOT(FontCB), cmd);
-
-		FontCB cb;
-		cb.g_xFont_BufferOffset = mem.offset;
-
-		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS))
-		{
-			cb.g_xFont_TextureIndex = device->GetDescriptorIndex(&texture, SRV);
-		}
-		else
-		{
-			device->BindResource(PS, &texture, TEXSLOT_FONTATLAS, cmd);
-		}
-
-		device->BindResource(VS, mem.buffer, 0, cmd);
+		PushConstantsFont push;
+		push.buffer_index = device->GetDescriptorIndex(&mem.buffer, SRV);
+		push.buffer_offset = (uint32_t)mem.offset;
+		push.texture_index = device->GetDescriptorIndex(&texture, SRV);
 
 		const wiCanvas& canvas = canvases[cmd];
 		// Asserts will check that a proper canvas was set for this cmd with wiImage::SetCanvas()
@@ -628,24 +603,24 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 		if (newProps.shadowColor.getA() > 0)
 		{
 			// font shadow render:
-			XMStoreFloat4x4(&cb.g_xFont_Transform,
+			XMStoreFloat4x4(&push.transform,
 				XMMatrixTranslation((float)newProps.posX + 1, (float)newProps.posY + 1, 0)
 				* Projection
 			);
-			cb.g_xFont_Color = newProps.shadowColor.toFloat4();
-			device->UpdateBuffer(&constantBuffer, &cb, cmd);
+			push.color = newProps.shadowColor.rgba;
 
+			device->PushConstants(&push, sizeof(push), cmd);
 			device->DrawInstanced(4, quadCount, 0, 0, cmd);
 		}
 
 		// font base render:
-		XMStoreFloat4x4(&cb.g_xFont_Transform,
+		XMStoreFloat4x4(&push.transform,
 			XMMatrixTranslation((float)newProps.posX, (float)newProps.posY, 0)
 			* Projection
 		);
-		cb.g_xFont_Color = newProps.color.toFloat4();
-		device->UpdateBuffer(&constantBuffer, &cb, cmd);
+		push.color = newProps.color.rgba;
 
+		device->PushConstants(&push, sizeof(push), cmd);
 		device->DrawInstanced(4, quadCount, 0, 0, cmd);
 
 		device->EventEnd(cmd);

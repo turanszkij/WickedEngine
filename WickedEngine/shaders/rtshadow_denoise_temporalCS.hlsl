@@ -2,6 +2,8 @@
 #include "stochasticSSRHF.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
+PUSHCONSTANT(postprocess, PostProcess);
+
 TEXTURE2D(resolve_current, uint4, TEXSLOT_ONDEMAND0);
 TEXTURE2D(resolve_history, uint4, TEXSLOT_ONDEMAND1);
 TEXTURE2D(texture_depth_history, float, TEXSLOT_ONDEMAND2);
@@ -39,7 +41,7 @@ inline void ResolverAABB(in uint shadow_index, float sharpness, float exposureSc
 	[unroll]
 	for (uint i = 0; i < 9; i++)
 	{
-		sampleColors[i] = load_shadow(shadow_index, resolve_current[floor(uv * xPPResolution) + SampleOffset[i]]);
+		sampleColors[i] = load_shadow(shadow_index, resolve_current[floor(uv * postprocess.resolution) + SampleOffset[i]]);
 	}
 
 	// Variance Clipping (AABB)
@@ -78,9 +80,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 	output[DTid.xy].r |= (uint(denoised[DTid.xy].b * 255) & 0xFF) << 16;
 	output[DTid.xy].r |= (uint(denoised[DTid.xy].a * 255) & 0xFF) << 24;
 
-	const float2 uv = (DTid.xy + 0.5f) * xPPResolution_rcp;
+	const float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
 
-	const float2 velocity = texture_gbuffer2.SampleLevel(sampler_point_clamp, uv, 0).xy;
+	const float2 velocity = texture_gbuffer1.SampleLevel(sampler_point_clamp, uv, 0).xy;
 	const float2 prevUV = uv + velocity;
 	if (!is_saturated(prevUV))
 	{
@@ -103,7 +105,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 	[unroll]
 	for (uint shadow_index = 4; shadow_index < 16; ++shadow_index) // first 4 lights are denoised, rest is using simple temporal blend
 	{
-		float previous = load_shadow(shadow_index, resolve_history[floor(prevUV * xPPResolution)]);
+		float previous = load_shadow(shadow_index, resolve_history[floor(prevUV * postprocess.resolution)]);
 
 		float current = 0;
 		float currentMin, currentMax, currentAverage;
@@ -114,7 +116,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 		float blendFinal = lerp(temporalResponseMin, temporalResponseMax, lumWeight);
 
 		// Reduce ghosting by refreshing the blend by velocity (Unreal)
-		float2 velocityScreen = velocity * xPPResolution;
+		float2 velocityScreen = velocity * postprocess.resolution;
 		float velocityBlend = sqrt(dot(velocityScreen, velocityScreen));
 		blendFinal = lerp(blendFinal, 0.2, saturate(velocityBlend / 100.0));
 

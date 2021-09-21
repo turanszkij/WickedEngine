@@ -1,6 +1,8 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
+PUSHCONSTANT(postprocess, PostProcess);
+
 #ifndef BLUR_FORMAT
 #define BLUR_FORMAT float4
 #endif // BLUR_FORMAT
@@ -119,7 +121,7 @@ groupshared float depth_cache[CACHE_SIZE];
 [numthreads(POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT, 1, 1)]
 void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
-	float2 direction = xPPParams0.xy;
+	float2 direction = postprocess.params0.xy;
 	const bool horizontal = direction.y == 0;
 	
 	uint2 tile_start = Gid.xy;
@@ -136,7 +138,7 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	int i;
 	for (i = groupIndex; i < CACHE_SIZE; i += POSTPROCESS_BLUR_GAUSSIAN_THREADCOUNT)
 	{
-		const float2 uv = (tile_start + 0.5f + direction * (i - TILE_BORDER)) * xPPResolution_rcp;
+		const float2 uv = (tile_start + 0.5f + direction * (i - TILE_BORDER)) * postprocess.resolution_rcp;
 		color_cache[i] = input.SampleLevel(sampler_linear_clamp, uv, 0);
 #ifdef BILATERAL
 		depth_cache[i] = texture_lineardepth.SampleLevel(sampler_point_clamp, uv, 0);
@@ -145,7 +147,7 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	GroupMemoryBarrierWithGroupSync();
 
 	const uint2 pixel = tile_start + groupIndex * direction;
-	if (pixel.x >= xPPResolution.x || pixel.y >= xPPResolution.y)
+	if (pixel.x >= postprocess.resolution.x || pixel.y >= postprocess.resolution.y)
 	{
 		return;
 	}
@@ -153,7 +155,7 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	const uint center = TILE_BORDER + groupIndex;
 
 #ifdef BILATERAL
-	const float depth_threshold = xPPParams0.w;
+	const float depth_threshold = postprocess.params0.w;
 	const float center_depth = depth_cache[center];
 	const BLUR_FORMAT center_color = color_cache[center];
 #endif // BILATERAL
@@ -165,7 +167,7 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 		const BLUR_FORMAT color2 = color_cache[sam];
 #ifdef BILATERAL
 		const float depth = depth_cache[sam];
-		const float weight = saturate(abs(depth - center_depth) * g_xCamera_ZFarP * depth_threshold);
+		const float weight = saturate(abs(depth - center_depth) * g_xCamera.ZFarP * depth_threshold);
 		color += lerp(color2, center_color, weight) * gaussianWeightsNormalized[i];
 #else
 		color += color2 * gaussianWeightsNormalized[i];

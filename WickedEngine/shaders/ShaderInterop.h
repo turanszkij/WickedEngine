@@ -11,6 +11,7 @@
 // Application-side types:
 
 typedef XMMATRIX matrix;
+typedef XMFLOAT3X4 float3x4;
 typedef XMFLOAT4X4 float4x4;
 typedef XMFLOAT2 float2;
 typedef XMFLOAT3 float3;
@@ -23,10 +24,13 @@ typedef XMINT2 int2;
 typedef XMINT3 int3;
 typedef XMINT4 int4;
 
+#define column_major
+#define row_major
+
 #define CB_GETBINDSLOT(name) __CBUFFERBINDSLOT__##name##__
 #define CBUFFER(name, slot) static const int CB_GETBINDSLOT(name) = slot; struct alignas(16) name
-#define CONSTANTBUFFER(name, type, slot) CBUFFER(name, slot)
-#define ROOTCONSTANTS(name, type, slot) CBUFFER(name, slot)
+#define CONSTANTBUFFER(name, type, slot)
+#define PUSHCONSTANT(name, type)
 
 #else
 

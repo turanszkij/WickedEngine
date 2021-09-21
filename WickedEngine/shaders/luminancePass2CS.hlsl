@@ -2,6 +2,8 @@
 #include "ShaderInterop_Postprocess.h"
 // Reduce log luminances into 1x1
 
+PUSHCONSTANT(postprocess, PostProcess);
+
 TEXTURE2D(input, float, TEXSLOT_ONDEMAND0);
 
 RWTEXTURE2D(output, float, 0);
@@ -39,7 +41,7 @@ void main(
 		float lastlum = output[uint2(0, 0)];
 
 		// https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/LuminanceReduction.hlsl
-		float newlum = lastlum + (currentlum - lastlum) * (1 - exp(-g_xFrame_DeltaTime * luminance_adaptionrate));
+		float newlum = lastlum + (currentlum - lastlum) * (1 - exp(-g_xFrame.DeltaTime * luminance_adaptionrate));
 
 		output[uint2(0, 0)] = newlum;
 	}

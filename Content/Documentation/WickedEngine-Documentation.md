@@ -480,7 +480,7 @@ device->SubmitCommandLists(); // execute all of the above
 
 The `WaitCommandList()` function is a GPU wait operation, so it will not block CPU execution. Furthermore, it is not required to use this between two `CommandList`s that are on the same queue, because the synchronization between those is implicit.
 
-Important: The `IMAGE_LAYOUT_SHADER_RESOURCE` and `BUFFER_STATE_SHADER_RESOURCE` states cannot be used on the compute queue. The device could convert these to `IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE` and `BUFFER_STATE_SHADER_RESOURCE_COMPUTE` respectively while issuing `Barrier()` commands. However, the starting resource state must be correctly specified, because those cannot be converted. Consider always choosing a `_SHADER_RESOURCE_COMPUTE` starting resource state if the resource is goig to be used in a compute queue, and transition them to regular `SHADER_RESOURCE` only before the resource is going to be used in a pixel shader. The graphics queue with compute commands doesn't have this limitation however.
+Important: The `RESOURCE_STATE_SHADER_RESOURCE` state cannot be used on the compute queue. The device could convert these to `RESOURCE_STATE_SHADER_RESOURCE_COMPUTE` while issuing `Barrier()` commands. However, the starting resource state must be correctly specified, because those cannot be converted. Consider always choosing a `_SHADER_RESOURCE_COMPUTE` starting resource state if the resource is goig to be used in a compute queue, and transition them to regular `SHADER_RESOURCE` only before the resource is going to be used in a pixel shader. The graphics queue with compute commands doesn't have this limitation however.
 
 ##### Presenting to the screen
 To present to the screen (an operating system window), first create a SwapChain with the `CreateSwapChain()` function that will be associated with a window. The SwapChain acts as a special kind of [RenderPass](#render-passes), so there is a `BeginRenderPass()` function with an overload that accepts a SwapChain parameter instead of a RenderPass. Simply use this `BeginRenderPass()` and `EndRenderPass()` to draw to the SwapChain. The final presentation will happen when calling `SubmitCommandLists()`.
@@ -505,14 +505,14 @@ After this, the user can bind the texture resource from the CPU side:
 ```cpp
 Texture myTexture;
 // after texture was created, etc:
-device->BindResource(PS, myTexture, my_texture_bind_slot, cmd);
+device->BindResource(myTexture, my_texture_bind_slot, cmd);
 ```
 
 Other than this, resources like `Texture` can have different subresources, so an extra parameter can be specified to the `BindResources()` function called `subresource`:
 ```cpp
 Texture myTexture;
 // after texture was created, etc:
-device->BindResource(PS, myTexture, my_texture_bind_slot, cmd, 42);
+device->BindResource(myTexture, my_texture_bind_slot, cmd, 42);
 ```
 By default, the `subresource` parameter is `-1`, which means that the entire resource will be bound. For more information about subresources, see the [Subresources](#subresources) section.
 
@@ -536,7 +536,7 @@ Remarks:
 
 ##### Bindless resources
 
-Some graphics API supports bindless resource management, this can greatly improve performance and removes resource binding constraints to allow great flexibility. This can be queried by `GraphicsDevice::CheckCapability()` and providing the `GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS` flag. If the device supports this feature, the function will return true.
+Wicked Engine supports bindless resource management, this can greatly improve performance and removes resource binding constraints to allow great flexibility.
 
 Related functions to this feature:
 - `GetDescriptorIndex()` : returns an `int` that identifies the resource in bindless space. The queried resource can be a `Sampler` or a `GPUResource`. If the resource is not usable (for example if it was not created), then the function returns `-1`. **In this case, the shaders must not use the resource, but instead rely on dynamic branching to avoid it, because this would be undefined behaviour and could result in a GPU hang**. Otherwise, the index can be used by shaders to index into a descriptor heap.
@@ -565,7 +565,7 @@ struct PushConstants
 	int textureindex;
 };
 PushConstants push;
-push.materialIndex = device->GetDescriptorIndex(materialCB, CBV);
+push.materialIndex = device->GetDescriptorIndex(materialCB, SRV);
 push.textureindex = device->GetDescriptorIndex(texture, SRV);
 device->PushConstants(&push, sizeof(push), cmd);
 ```
@@ -620,13 +620,13 @@ Defines how the texture contents are initialized at the start of the render pass
 - Store operation: <br/>
 Defines how the texture contents are handled after the render pass ends. `STOREOP_STORE` means that the contents will be preserved. `STOREOP_DONTCARE` means that the contents won't be necessarily preserved, they are only temporarily valid within the duration of the render pass, which can save some memory bandwidth on some platforms (specifically tile based rendering architectures, like mobile GPUs).
 - Layout transition: <br/>
-Define the `intial_layout`, `subpass_layout` (only for `RENDERTARGET` or `DEPTH_STENCIL`) and `final_layout` members to have an implicit transition performed as part of the render pass, that works like an [IMAGE_BARRIER](#gpu-barriers), but can be more optimal. The `initial_layout` states the starting state of the resource. The resource will be transitioned from `initial_layout` to `subpass_layout` within the render pass. The `subpass_layout` states how the resource is accessed within the render pass. For `RENDERTARGET`, this must be `IMAGE_LAYOUT_RENDERTARGET`, for `DEPTH_STENCIL` type, it must be either `IMAGE_LAYOUT_DEPTHSTENCIL` or `IMAGE_LAYOUT_DEPTHSTENCIL_READONLY`. For `RESOLVE` type, the subpass_layout have no meaning, it is implicitly defined. At the end of the render pass, the resources will be transitioned from `subpass_layout` to `final_layout`.
+Define the `intial_layout`, `subpass_layout` (only for `RENDERTARGET` or `DEPTH_STENCIL`) and `final_layout` members to have an implicit transition performed as part of the render pass, that works like an [IMAGE_BARRIER](#gpu-barriers), but can be more optimal. The `initial_layout` states the starting state of the resource. The resource will be transitioned from `initial_layout` to `subpass_layout` within the render pass. The `subpass_layout` states how the resource is accessed within the render pass. For `RENDERTARGET`, this must be `RESOURCE_STATE_RENDERTARGET`, for `DEPTH_STENCIL` type, it must be either `RESOURCE_STATE_DEPTHSTENCIL` or `RESOURCE_STATE_DEPTHSTENCIL_READONLY`. For `RESOLVE` type, the subpass_layout have no meaning, it is implicitly defined. At the end of the render pass, the resources will be transitioned from `subpass_layout` to `final_layout`.
 
 Notes:
 - When `RenderPassBegin()` is called, `RenderPassEnd()` must be called after on the same command list before the command list gets [submitted](#work-submission).
 - It is not allowed to call `CopyResource()`, `CopyTexture2D()`, etc. inside a render pass.
 - It is not allowed to call `Dispatch()` and `DispatchIndirect()` inside a render pass.
-- It is not allowed to call `UpdateBuffer()` inside the render pass unless the buffer is `USAGE_DYNAMIC` and is a `BIND_CONSTANT_BUFFER`.
+- It is not allowed to call `UpdateBuffer()` inside the render pass.
 
 ##### GPU Barriers
 `GPUBarrier`s can be used to state dependencies between GPU workloads. There are different kinds of barriers:
@@ -634,7 +634,7 @@ Notes:
 - MEMORY_BARRIER <br/>
 Memory barriers are used to wait for UAV writes to finish, or in other words to wait for shaders to finish that are writing to a BIND_UNORDERED_ACCESS resource. The `GPUBarrier::memory.resource` member is a pointer to the GPUResource to wait on. If it is nullptr, than the barrier means "wait for every UAV write that is in flight to finish".
 - IMAGE_BARRIER <br/>
-Image barriers are stating resource state transition for [textures](#textures). The most common use case for example is to transition from `IMAGE_LAYOUT_RENDERTARGET` to `IMAGE_LAYOUT_SHADER_RESOURCE`, which means that the [RenderPass](#render-passes) that writes to the texture as render target must finish before the barrier, and the texture can be used as a read only shader resource after the barrier. There are other cases that can be indicated using the `GPUBarrier::image.layout_before` and `GPUBarrier::image.layout_after` states. The `GPUBarrier::image.resource` is a pointer to the resource which will have its state changed. If the texture's `layout` (as part of the TextureDesc) is not `IMAGE_LAYOUT_SHADER_RESOURCE`, the layout must be transitioned to `IMAGE_LAYOUT_SHADER_RESOURCE` before binding as shader resource. The image layout can also be transitioned using a [RenderPass](#render-passes), which should be preferred to `GPUBarrier`s.
+Image barriers are stating resource state transition for [textures](#textures). The most common use case for example is to transition from `RESOURCE_STATE_RENDERTARGET` to `RESOURCE_STATE_SHADER_RESOURCE`, which means that the [RenderPass](#render-passes) that writes to the texture as render target must finish before the barrier, and the texture can be used as a read only shader resource after the barrier. There are other cases that can be indicated using the `GPUBarrier::image.layout_before` and `GPUBarrier::image.layout_after` states. The `GPUBarrier::image.resource` is a pointer to the resource which will have its state changed. If the texture's `layout` (as part of the TextureDesc) is not `RESOURCE_STATE_SHADER_RESOURCE`, the layout must be transitioned to `RESOURCE_STATE_SHADER_RESOURCE` before binding as shader resource. The image layout can also be transitioned using a [RenderPass](#render-passes), which should be preferred to `GPUBarrier`s.
 - BUFFER_BARRIER <br/>
 Similar to `IMAGE_BARRIER`, but for [GPU Buffer](#gpu-buffers) state transitions.
 
@@ -645,29 +645,25 @@ It is very important to place barriers to the right places if using low level gr
 
 `SubresourceData` usage: 
 - The `SubresourceData` parameter points to an array of `SubresourceData` structs. The array size is determined by the `TextureDesc::ArraySize` * `TextureDesc::MipLevels`, so one structure for every subresource. 
-- The `SubresourceData::pSysMem` pointer should point to the texture contents on the CPU that will be uploaded to the GPU.
-- The `SubresourceData::SysMemPitch` member is indicating the distance (in bytes) from the beginning of one line of a texture to the next line.
-System-memory pitch is used only for 2D and 3D texture data as it is has no meaning for the other resource types. Specify the distance from the first pixel of one 2D slice of a 3D texture to the first pixel of the next 2D slice in that texture in the `SysMemSlicePitch` member.
-- The `SubresourcData::SysMemSlicePitch` member is indicating the distance (in bytes) from the beginning of one depth level to the next.
+- The `SubresourceData::pData` pointer should point to the texture contents on the CPU that will be uploaded to the GPU.
+- The `SubresourceData::rowPitch` member is indicating the distance (in bytes) from the beginning of one line of a texture to the next line.
+System-memory pitch is used only for 2D and 3D texture data as it is has no meaning for the other resource types. Specify the distance from the first pixel of one 2D slice of a 3D texture to the first pixel of the next 2D slice in that texture in the `slicePitch` member.
+- The `SubresourcData::slicePitch` member is indicating the distance (in bytes) from the beginning of one depth level to the next.
 System-memory-slice pitch is only used for 3D texture data as it has no meaning for the other resource types.
 - For more complete information, refer to the [DirectX 11 documentation](https://docs.microsoft.com/en-us/windows/win32/api/d3d11/ns-d3d11-d3d11_subresource_data) on this topic, which should closely match.
 
 Related topics: [Creating Resources](#creating-resources), [Destroying Resources](#destroying-resources), [Binding resources](#resource-binding), [Subresources](#subresources)
 
 ##### GPU Buffers
-`GPUBuffer` type resources are used to store linear data which will be read or written by the GPU. There are a lot of buffer types, such as structured buffers, raw buffers, vertex buffers, index buffers, typed buffers, etc. used in [shaders](#shaders), that correspond to the simple `GPUBuffer` type on the CPU. The buffer type will be determined when creating the buffer with `GraphicsDevice::CreateBuffer(const GPUBufferDesc*, const SubresourceData*, GPUBuffer*)` function. The first argument is the `GPUBufferDesc` that determines the dimensions, size, format and other properties of the texture resource. The `SubresourceData` is used to initialize the texture contents, it can be left as `nullptr`, when the texture contents don't need to be initialized, such as for textures that will be rendered into. The `GPUBuffer` is the texture that will be initialized.
-
-`SubresourceData` usage: 
-- The `SubresourceData::pSysMem` pointer should point to the buffer contents on the CPU that will be uploaded to the GPU Buffer. The size of the data is determined by the `GPUBufferDesc::ByteWidth` value that was passed to the `GraphicsDevice::CreateBuffer()` function. The buffer contents will be readily available by the time the GPU first accesses the buffer.
+`GPUBuffer` type resources are used to store linear data which will be read or written by the GPU. There are a lot of buffer types, such as structured buffers, raw buffers, vertex buffers, index buffers, typed buffers, etc. used in [shaders](#shaders), that correspond to the simple `GPUBuffer` type on the CPU. The buffer type will be determined when creating the buffer with `GraphicsDevice::CreateBuffer(const GPUBufferDesc*, const void*, GPUBuffer*)` function. The first argument is the `GPUBufferDesc` that determines the dimensions, size, format and other properties of the texture resource. The `pInitialData` is used to initialize the buffer contents, it can be left as `nullptr`. The `GPUBuffer` is the buffer that will be initialized.
 
 Related topics: [Creating Resources](#creating-resources), [Destroying Resources](#destroying-resources), [Binding resources](#resource-binding), [Subresources](#subresources), [Updating GPU Buffers](#updating-gpu-buffers)
 
 ##### Updating GPU buffers
-A common scenario is updating buffers, when the developer wants to make data visible from the CPU to the GPU. The simplest way is to use the `GraphicsDevice::UpdateBuffer()` function. To use this successfully, the buffer must have been created with a `Usage` that is either `USAGE_DEFAULT` or `USAGE_DYNAMIC`. The `USAGE_IMMUTABLE` buffers cannot be updated after having been created. If the `USAGE_DEFAULT` is in effect, the buffer updating can be heavier on the CPU, and introduce additional [GPUBarriers](#gpu-barriers), but they can have superior GPU read performance, or can be writable by the GPU. On the other hand, `USAGE_DYNAMIC` type buffers will be lighter weight on the CPU side, but they could have worse GPU performance. If `USAGE_DYNAMIC` was specified, the buffer must also have been created with `CPUAccessFlags` member of the `GPUBufferDesc` that contains the value `CPU_ACCESS_WRITE` in order to be successfully updated. 
-
-`GraphicsDevice::UpdateBuffer()` function can either take the dataSize parameter, or if it is left as default, the `GPUBufferDesc::ByteWidth` (that was specified at buffer creation time) number of bytes will be read from the `data` parameter and uploaded to the buffer.
-
-An other case is to dynamically allocate a temporary buffer using the `GraphicsDevice::AllocateGPU()` function. The developer has to specify the amount of space that needs to be allocated, and the function will return a `GPUAllocation` struct that has a `buffer` member that can be used for [resource binding](#resource-binding), a `data` pointer member that the application can write into, and an offset value, that indicates an offset that the new data will start from in the temporary buffer. Buffers that were allocated like this can be only used as index buffers, vertex buffers, instance buffers, or raw buffers. Attempting to use these as constant buffers, structured buffers, or typed buffers is not supported.
+A `GPUBuffer`'s `Usage` parameter specifies how the buffer memory is accessed.
+- `USAGE_DEFAULT`: The buffer memory is visible to the GPU but not the CPU. This means that it will observe maximum GPU performance, but special care needs to be taken to write the buffer contents. The GPU could write the memory from a shader or copy operation for example. You can also use the `UpdateBuffer()` function to update such a buffer from CPU (which uses a GPU copy).
+- `USAGE_UPLOAD`: The buffer can be written by the CPU and read by the GPU. Once such a `GPUBuffer` was created, it's memory is persistently mapped for CPU access, and can be accessed through the `GPUResource::mapped_data` pointer. It's perfect to update a `USAGE_DEFAULT` buffer from this by first filling the `USAGE_UPLOAD` buffer from the CPU, then let the GPU copy its contents to the `USAGE_DEFAULT` buffer with a shader or copy operation.
+- `USAGE_READBACK`: The buffer can be written by the GPU and the contents read by the CPU. The buffer memory is persistently mapped after creation, and accessible through the `GPUResource::mapped_data` pointer.
 
 ##### GPU Queries
 The `GPUQueryHeap` can be used to retrieve information from GPU to CPU. There are different query types:
@@ -687,7 +683,7 @@ Binding a ray tracing pipeline state is required to dispatch ray tracing shaders
 Variable Rate Shading can be used to decrease shading quality while retaining depth testing accuracy. The shading rate can be set up in different ways:
 
 - `BindShadingRate()`: Set the shading rate for the following draw calls. The first parameter is the shading rate, which is by default `SHADING_RATE_1X1` (the best quality). The increasing enum values are standing for decreasing shading rates.
-- Shading rate image: Set the shading rate for the screen via a tiled texture. The texture must be set as a RenderPassAttachment of `SHADING_RATE_SOURCE` type. The texture must be using the `FORMAT_R8_UINT` format. In each pixel, the texture contains the shading rate value for a tile of pixels (8x8, 16x16 or 32x32). The tile size can be queried via `GetVariableRateShadingTileSize()`. The shading rate values that the texture contains are not the raw values from `SHADING_RATE` enum, but they must be converted to values that are native to the graphics API used using the `WriteShadingRateValue()` function. The shading rate texture must be written with a compute shader and transitioned to `IMAGE_LAYOUT_SHADING_RATE_SOURCE` with a [GPUBarrier](#gpu-barriers) before setting it with `BindShadingRateImage()`. It is valid to set a `nullptr` instead of the texture, indicating that the shading rate is not specified by a texture.
+- Shading rate image: Set the shading rate for the screen via a tiled texture. The texture must be set as a RenderPassAttachment of `SHADING_RATE_SOURCE` type. The texture must be using the `FORMAT_R8_UINT` format. In each pixel, the texture contains the shading rate value for a tile of pixels (8x8, 16x16 or 32x32). The tile size can be queried via `GetVariableRateShadingTileSize()`. The shading rate values that the texture contains are not the raw values from `SHADING_RATE` enum, but they must be converted to values that are native to the graphics API used using the `WriteShadingRateValue()` function. The shading rate texture must be written with a compute shader and transitioned to `RESOURCE_STATE_SHADING_RATE_SOURCE` with a [GPUBarrier](#gpu-barriers) before setting it with `BindShadingRateImage()`. It is valid to set a `nullptr` instead of the texture, indicating that the shading rate is not specified by a texture.
 - Or setting the shading rate from a vertex or geometry shader with the `SV_ShadingRate` system value semantic.
 
 The final shading rate will be determined from the above methods using the maximum shading rate (least detailed) which is applicable to the screen tile. In the future it might be considered to expose the operator to define this.
@@ -696,8 +692,7 @@ To read more about variable rate shading, refer to the [DirectX specifications.]
 
 
 #### GraphicsDevice_DX11
-[[Header]](../../WickedEngine/wiGraphicsDevice_DX11.h) [[Cpp]](../../WickedEngine/wiGraphicsDevice_DX11.cpp)
-DirectX11 implementation for rendering interface
+The DirectX11 interface has been removed after version 0.56
 
 #### GraphicsDevice_DX12
 [[Header]](../../WickedEngine/wiGraphicsDevice_DX12.h) [[Cpp]](../../WickedEngine/wiGraphicsDevice_DX12.cpp)
@@ -844,7 +839,7 @@ enum CBTYPE
 };
 GPUBuffer buffers[CBTYPE_COUNT]; // this example array contains 3 elements
 //...
-device->BindConstantBuffer(PS, &buffers[CBTYPE_MESH], 0, cmd); // makes it easy to reference an element
+device->BindConstantBuffer(&buffers[CBTYPE_MESH], 0, cmd); // makes it easy to reference an element
 ```
 
 This is widely used to make code straight forward and easy to add new objects, without needing to create additional declarations, except for the enum values.
@@ -1544,8 +1539,6 @@ Shader Interop is used for declaring shared structures or values between C++ Eng
 [ShaderInterop_Raytracing.h](../WickedEngine/ShaderInterop_Raytracing.h) <br/>
 [ShaderInterop_Renderer.h](../WickedEngine/ShaderInterop_Renderer.h) <br/>
 [ShaderInterop_Skinning.h](../WickedEngine/ShaderInterop_Skinning.h) <br/>
-[ShaderInterop_Utility.h](../WickedEngine/ShaderInterop_Utility.h) <br/>
-[ShaderInterop_Vulkan.h](../WickedEngine/ShaderInterop_Vulkan.h) <br/>
 The ShaderInterop also contains the resource macros to help share code between C++ and HLSL, and portability between shader compilers. Read more about macros in the [Shaders section](#shaders)
 
 ### Shader Compiler

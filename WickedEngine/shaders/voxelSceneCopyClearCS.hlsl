@@ -11,7 +11,7 @@ void main( uint3 DTid : SV_DispatchThreadID )
 
 	const float4 color = UnpackVoxelColor(voxel.colorMask);
 
-	const uint3 writecoord = unflatten3D(DTid.x, g_xFrame_VoxelRadianceDataRes);
+	const uint3 writecoord = unflatten3D(DTid.x, g_xFrame.VoxelRadianceDataRes);
 
 	[branch]
 	if (color.a > 0)
@@ -19,7 +19,7 @@ void main( uint3 DTid : SV_DispatchThreadID )
 #ifdef TEMPORAL_SMOOTHING
 		// Blend voxels with the previous frame's data to avoid popping artifacts for dynamic objects:
 		[branch]
-		if (g_xFrame_Options & OPTION_BIT_VOXELGI_RETARGETTED)
+		if (g_xFrame.Options & OPTION_BIT_VOXELGI_RETARGETTED)
 		{
 			// Do not perform the blend if an offset happened to the voxel grid's center. 
 			// The offset is not accounted for in the blend operation which can introduce severe light leaking.

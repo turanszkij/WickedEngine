@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include <type_traits>
 
 namespace wiGraphics
 {
@@ -46,7 +47,7 @@ namespace wiGraphics
 	};
 	enum PRIMITIVETOPOLOGY
 	{
-		UNDEFINED,
+		UNDEFINED_TOPOLOGY,
 		TRIANGLELIST,
 		TRIANGLESTRIP,
 		POINTLIST,
@@ -101,15 +102,6 @@ namespace wiGraphics
 		BLEND_SRC1_ALPHA,
 		BLEND_INV_SRC1_ALPHA,
 	}; 
-	enum COLOR_WRITE_ENABLE
-	{
-		COLOR_WRITE_DISABLE = 0,
-		COLOR_WRITE_ENABLE_RED = 1,
-		COLOR_WRITE_ENABLE_GREEN = 2,
-		COLOR_WRITE_ENABLE_BLUE = 4,
-		COLOR_WRITE_ENABLE_ALPHA = 8,
-		COLOR_WRITE_ENABLE_ALL = (((COLOR_WRITE_ENABLE_RED | COLOR_WRITE_ENABLE_GREEN) | COLOR_WRITE_ENABLE_BLUE) | COLOR_WRITE_ENABLE_ALPHA)
-	};
 	enum BLEND_OP
 	{
 		BLEND_OP_ADD,
@@ -136,10 +128,9 @@ namespace wiGraphics
 	};
 	enum USAGE
 	{
-		USAGE_DEFAULT,
-		USAGE_IMMUTABLE,
-		USAGE_DYNAMIC,
-		USAGE_STAGING,
+		USAGE_DEFAULT,	// CPU no access, GPU read/write
+		USAGE_UPLOAD,	// CPU write, GPU read
+		USAGE_READBACK,	// CPU read, GPU write
 	};
 	enum TEXTURE_ADDRESS_MODE
 	{
@@ -186,6 +177,12 @@ namespace wiGraphics
 		FILTER_MAXIMUM_MIN_MAG_LINEAR_MIP_POINT,
 		FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR,
 		FILTER_MAXIMUM_ANISOTROPIC,
+	};
+	enum SAMPLER_BORDER_COLOR
+	{
+		SAMPLER_BORDER_COLOR_TRANSPARENT_BLACK,
+		SAMPLER_BORDER_COLOR_OPAQUE_BLACK,
+		SAMPLER_BORDER_COLOR_OPAQUE_WHITE,
 	};
 	enum FORMAT
 	{
@@ -279,39 +276,12 @@ namespace wiGraphics
 	};
 	enum SUBRESOURCE_TYPE
 	{
-		CBV, // constant buffer view
 		SRV, // shader resource view
 		UAV, // unordered access view
 		RTV, // render target view
 		DSV, // depth stencil view
 	};
-	enum IMAGE_LAYOUT
-	{
-		IMAGE_LAYOUT_UNDEFINED,					// invalid state
-		IMAGE_LAYOUT_RENDERTARGET,				// render target, write enabled
-		IMAGE_LAYOUT_DEPTHSTENCIL,				// depth stencil, write enabled
-		IMAGE_LAYOUT_DEPTHSTENCIL_READONLY,		// depth stencil, read only
-		IMAGE_LAYOUT_SHADER_RESOURCE,			// shader resource, read only
-		IMAGE_LAYOUT_SHADER_RESOURCE_COMPUTE,	// shader resource, read only, non-pixel shader
-		IMAGE_LAYOUT_UNORDERED_ACCESS,			// shader resource, write enabled
-		IMAGE_LAYOUT_COPY_SRC,					// copy from
-		IMAGE_LAYOUT_COPY_DST,					// copy to
-		IMAGE_LAYOUT_SHADING_RATE_SOURCE,		// shading rate control per tile
-	};
-	enum BUFFER_STATE
-	{
-		BUFFER_STATE_UNDEFINED,					// invalid state
-		BUFFER_STATE_VERTEX_BUFFER,				// vertex buffer, read only
-		BUFFER_STATE_INDEX_BUFFER,				// index buffer, read only
-		BUFFER_STATE_CONSTANT_BUFFER,			// constant buffer, read only
-		BUFFER_STATE_INDIRECT_ARGUMENT,			// argument buffer to DrawIndirect() or DispatchIndirect()
-		BUFFER_STATE_SHADER_RESOURCE,			// shader resource, read only
-		BUFFER_STATE_SHADER_RESOURCE_COMPUTE,	// shader resource, read only, non-pixel shader
-		BUFFER_STATE_UNORDERED_ACCESS,			// shader resource, write enabled
-		BUFFER_STATE_COPY_SRC,					// copy from
-		BUFFER_STATE_COPY_DST,					// copy to
-		BUFFER_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
-	};
+
 	enum SHADING_RATE
 	{
 		SHADING_RATE_1X1,
@@ -326,32 +296,74 @@ namespace wiGraphics
 	};
 
 	// Flags ////////////////////////////////////////////
+
+	// Enable enum flags:
+	//	https://www.justsoftwaresolutions.co.uk/cplusplus/using-enum-classes-as-bitfields.html
+	template<typename E>
+	struct enable_bitmask_operators {
+		static constexpr bool enable = false;
+	};
+	template<typename E>
+	typename std::enable_if<enable_bitmask_operators<E>::enable, E>::type operator|(E lhs, E rhs)
+	{
+		typedef typename std::underlying_type<E>::type underlying;
+		return static_cast<E>(
+			static_cast<underlying>(lhs) | static_cast<underlying>(rhs));
+	}
+	template<typename E>
+	typename std::enable_if<enable_bitmask_operators<E>::enable, E&>::type operator|=(E& lhs, E rhs)
+	{
+		typedef typename std::underlying_type<E>::type underlying;
+		lhs = static_cast<E>(
+			static_cast<underlying>(lhs) | static_cast<underlying>(rhs));
+		return lhs;
+	}
+
+	enum COLOR_WRITE_ENABLE
+	{
+		COLOR_WRITE_DISABLE = 0,
+		COLOR_WRITE_ENABLE_RED = 1 << 0,
+		COLOR_WRITE_ENABLE_GREEN = 1 << 1,
+		COLOR_WRITE_ENABLE_BLUE = 1 << 2,
+		COLOR_WRITE_ENABLE_ALPHA = 1 << 3,
+		COLOR_WRITE_ENABLE_ALL = ~0,
+	};
+	template<>
+	struct enable_bitmask_operators<COLOR_WRITE_ENABLE> {
+		static const bool enable = true;
+	};
+
 	enum BIND_FLAG
 	{
+		BIND_NONE = 0,
 		BIND_VERTEX_BUFFER = 1 << 0,
 		BIND_INDEX_BUFFER = 1 << 1,
 		BIND_CONSTANT_BUFFER = 1 << 2,
 		BIND_SHADER_RESOURCE = 1 << 3,
-		BIND_STREAM_OUTPUT = 1 << 4,
-		BIND_RENDER_TARGET = 1 << 5,
-		BIND_DEPTH_STENCIL = 1 << 6,
-		BIND_UNORDERED_ACCESS = 1 << 7,
+		BIND_RENDER_TARGET = 1 << 4,
+		BIND_DEPTH_STENCIL = 1 << 5,
+		BIND_UNORDERED_ACCESS = 1 << 6,
+		BIND_SHADING_RATE = 1 << 7,
 	};
-	enum CPU_ACCESS
-	{
-		CPU_ACCESS_WRITE = 1 << 0,
-		CPU_ACCESS_READ = 1 << 1,
+	template<>
+	struct enable_bitmask_operators<BIND_FLAG> {
+		static const bool enable = true;
 	};
+
 	enum RESOURCE_MISC_FLAG
 	{
-		RESOURCE_MISC_SHARED = 1 << 0,
-		RESOURCE_MISC_TEXTURECUBE = 1 << 1,
-		RESOURCE_MISC_INDIRECT_ARGS = 1 << 2,
-		RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS = 1 << 3,
-		RESOURCE_MISC_BUFFER_STRUCTURED = 1 << 4,
-		RESOURCE_MISC_TILED = 1 << 5,
-		RESOURCE_MISC_RAY_TRACING = 1 << 6,
+		RESOURCE_MISC_NONE = 0,
+		RESOURCE_MISC_TEXTURECUBE = 1 << 0,
+		RESOURCE_MISC_INDIRECT_ARGS = 1 << 1,
+		RESOURCE_MISC_BUFFER_RAW = 1 << 2,
+		RESOURCE_MISC_BUFFER_STRUCTURED = 1 << 3,
+		RESOURCE_MISC_RAY_TRACING = 1 << 4,
 	};
+	template<>
+	struct enable_bitmask_operators<RESOURCE_MISC_FLAG> {
+		static const bool enable = true;
+	};
+
 	enum GRAPHICSDEVICE_CAPABILITY
 	{
 		GRAPHICSDEVICE_CAPABILITY_TESSELLATION = 1 << 0,
@@ -360,17 +372,37 @@ namespace wiGraphics
 		GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_COMMON = 1 << 3, // eg: R16G16B16A16_FLOAT, R8G8B8A8_UNORM and more common ones
 		GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_R11G11B10_FLOAT = 1 << 4,
 		GRAPHICSDEVICE_CAPABILITY_RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS = 1 << 5,
-		GRAPHICSDEVICE_CAPABILITY_RAYTRACING_PIPELINE = 1 << 6,
-		GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE = 1 << 7,
-		GRAPHICSDEVICE_CAPABILITY_RAYTRACING_GEOMETRYINDEX = 1 << 8,
-		GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING = 1 << 9,
-		GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2 = 1 << 10,
-		GRAPHICSDEVICE_CAPABILITY_MESH_SHADER = 1 << 11,
-		GRAPHICSDEVICE_CAPABILITY_BINDLESS_DESCRIPTORS = 1 << 12,
+		GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING = 1 << 6,
+		GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2 = 1 << 7,
+		GRAPHICSDEVICE_CAPABILITY_MESH_SHADER = 1 << 8,
+		GRAPHICSDEVICE_CAPABILITY_RAYTRACING = 1 << 9,
+	};
+	enum RESOURCE_STATE
+	{
+		// Common resource states:
+		RESOURCE_STATE_UNDEFINED = 0,						// invalid state
+		RESOURCE_STATE_SHADER_RESOURCE = 1 << 0,			// shader resource, read only
+		RESOURCE_STATE_SHADER_RESOURCE_COMPUTE = 1 << 1,	// shader resource, read only, non-pixel shader
+		RESOURCE_STATE_UNORDERED_ACCESS = 1 << 2,			// shader resource, write enabled
+		RESOURCE_STATE_COPY_SRC = 1 << 3,					// copy from
+		RESOURCE_STATE_COPY_DST = 1 << 4,					// copy to
 
+		// Texture specific resource states:
+		RESOURCE_STATE_RENDERTARGET = 1 << 5,				// render target, write enabled
+		RESOURCE_STATE_DEPTHSTENCIL = 1 << 6,				// depth stencil, write enabled
+		RESOURCE_STATE_DEPTHSTENCIL_READONLY = 1 << 7,		// depth stencil, read only
+		RESOURCE_STATE_SHADING_RATE_SOURCE = 1 << 8,		// shading rate control per tile
 
-		// helper query for full raytracing support:
-		GRAPHICSDEVICE_CAPABILITY_RAYTRACING = GRAPHICSDEVICE_CAPABILITY_RAYTRACING_PIPELINE | GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE | GRAPHICSDEVICE_CAPABILITY_RAYTRACING_GEOMETRYINDEX,
+		// GPUBuffer specific resource states:
+		RESOURCE_STATE_VERTEX_BUFFER = 1 << 9,				// vertex buffer, read only
+		RESOURCE_STATE_INDEX_BUFFER = 1 << 10,				// index buffer, read only
+		RESOURCE_STATE_CONSTANT_BUFFER = 1 << 11,			// constant buffer, read only
+		RESOURCE_STATE_INDIRECT_ARGUMENT = 1 << 12,			// argument buffer to DrawIndirect() or DispatchIndirect()
+		RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE = 1 << 13, // acceleration structure storage or scratch
+	};
+	template<>
+	struct enable_bitmask_operators<RESOURCE_STATE> {
+		static const bool enable = true;
 	};
 
 	// Descriptor structs:
@@ -424,11 +456,10 @@ namespace wiGraphics
 		FORMAT Format = FORMAT_UNKNOWN;
 		uint32_t SampleCount = 1;
 		USAGE Usage = USAGE_DEFAULT;
-		uint32_t BindFlags = 0;
-		uint32_t CPUAccessFlags = 0;
-		uint32_t MiscFlags = 0;
+		BIND_FLAG BindFlags = BIND_NONE;
+		RESOURCE_MISC_FLAG MiscFlags = RESOURCE_MISC_NONE;
 		ClearValue clear = {};
-		IMAGE_LAYOUT layout = IMAGE_LAYOUT_SHADER_RESOURCE;
+		RESOURCE_STATE layout = RESOURCE_STATE_SHADER_RESOURCE;
 	};
 	struct SamplerDesc
 	{
@@ -439,7 +470,7 @@ namespace wiGraphics
 		float MipLODBias = 0.0f;
 		uint32_t MaxAnisotropy = 0;
 		COMPARISON_FUNC ComparisonFunc = COMPARISON_NEVER;
-		float BorderColor[4] = { 0.0f,0.0f,0.0f,0.0f };
+		SAMPLER_BORDER_COLOR BorderColor = SAMPLER_BORDER_COLOR_TRANSPARENT_BLACK;
 		float MinLOD = 0.0f;
 		float MaxLOD = FLT_MAX;
 	};
@@ -496,12 +527,11 @@ namespace wiGraphics
 	};
 	struct GPUBufferDesc
 	{
-		uint32_t ByteWidth = 0;
+		uint64_t Size = 0;
 		USAGE Usage = USAGE_DEFAULT;
-		uint32_t BindFlags = 0;
-		uint32_t CPUAccessFlags = 0;
-		uint32_t MiscFlags = 0;
-		uint32_t StructureByteStride = 0; // needed for typed and structured buffer types!
+		BIND_FLAG BindFlags = BIND_NONE;
+		RESOURCE_MISC_FLAG MiscFlags = RESOURCE_MISC_NONE;
+		uint32_t Stride = 0; // needed for typed and structured buffer types!
 		FORMAT Format = FORMAT_UNKNOWN; // only needed for typed buffer!
 	};
 	struct GPUQueryHeapDesc
@@ -523,6 +553,7 @@ namespace wiGraphics
 		const DepthStencilState* dss = nullptr;
 		const InputLayout*		il = nullptr;
 		PRIMITIVETOPOLOGY		pt = TRIANGLELIST;
+		uint32_t                patchControlPoints = 3;
 		uint32_t				sampleMask = 0xFFFFFFFF;
 	};
 	struct GPUBarrier
@@ -541,16 +572,16 @@ namespace wiGraphics
 		struct Image
 		{
 			const Texture* texture;
-			IMAGE_LAYOUT layout_before;
-			IMAGE_LAYOUT layout_after;
+			RESOURCE_STATE layout_before;
+			RESOURCE_STATE layout_after;
 			int mip;
 			int slice;
 		};
 		struct Buffer
 		{
 			const GPUBuffer* buffer;
-			BUFFER_STATE state_before;
-			BUFFER_STATE state_after;
+			RESOURCE_STATE state_before;
+			RESOURCE_STATE state_after;
 		};
 		union
 		{
@@ -566,7 +597,7 @@ namespace wiGraphics
 			barrier.memory.resource = resource;
 			return barrier;
 		}
-		static GPUBarrier Image(const Texture* texture, IMAGE_LAYOUT before, IMAGE_LAYOUT after,
+		static GPUBarrier Image(const Texture* texture, RESOURCE_STATE before, RESOURCE_STATE after,
 			int mip = -1, int slice = -1)
 		{
 			GPUBarrier barrier;
@@ -578,7 +609,7 @@ namespace wiGraphics
 			barrier.image.slice = slice;
 			return barrier;
 		}
-		static GPUBarrier Buffer(const GPUBuffer* buffer, BUFFER_STATE before, BUFFER_STATE after)
+		static GPUBarrier Buffer(const GPUBuffer* buffer, RESOURCE_STATE before, RESOURCE_STATE after)
 		{
 			GPUBarrier barrier;
 			barrier.type = BUFFER_BARRIER;
@@ -610,17 +641,17 @@ namespace wiGraphics
 			STOREOP_STORE,
 			STOREOP_DONTCARE,
 		} storeop = STOREOP_STORE;
-		IMAGE_LAYOUT initial_layout = IMAGE_LAYOUT_UNDEFINED;	// layout before the render pass
-		IMAGE_LAYOUT subpass_layout = IMAGE_LAYOUT_UNDEFINED;	// layout within the render pass
-		IMAGE_LAYOUT final_layout = IMAGE_LAYOUT_UNDEFINED;		// layout after the render pass
+		RESOURCE_STATE initial_layout = RESOURCE_STATE_UNDEFINED;	// layout before the render pass
+		RESOURCE_STATE subpass_layout = RESOURCE_STATE_UNDEFINED;	// layout within the render pass
+		RESOURCE_STATE final_layout = RESOURCE_STATE_UNDEFINED;		// layout after the render pass
 
 		static RenderPassAttachment RenderTarget(
 			const Texture* resource = nullptr,
 			LOAD_OPERATION load_op = LOADOP_LOAD,
 			STORE_OPERATION store_op = STOREOP_STORE,
-			IMAGE_LAYOUT initial_layout = IMAGE_LAYOUT_SHADER_RESOURCE,
-			IMAGE_LAYOUT subpass_layout = IMAGE_LAYOUT_RENDERTARGET,
-			IMAGE_LAYOUT final_layout = IMAGE_LAYOUT_SHADER_RESOURCE
+			RESOURCE_STATE initial_layout = RESOURCE_STATE_SHADER_RESOURCE,
+			RESOURCE_STATE subpass_layout = RESOURCE_STATE_RENDERTARGET,
+			RESOURCE_STATE final_layout = RESOURCE_STATE_SHADER_RESOURCE
 		)
 		{
 			RenderPassAttachment attachment;
@@ -638,9 +669,9 @@ namespace wiGraphics
 			const Texture* resource = nullptr,
 			LOAD_OPERATION load_op = LOADOP_LOAD,
 			STORE_OPERATION store_op = STOREOP_STORE,
-			IMAGE_LAYOUT initial_layout = IMAGE_LAYOUT_DEPTHSTENCIL,
-			IMAGE_LAYOUT subpass_layout = IMAGE_LAYOUT_DEPTHSTENCIL,
-			IMAGE_LAYOUT final_layout = IMAGE_LAYOUT_DEPTHSTENCIL
+			RESOURCE_STATE initial_layout = RESOURCE_STATE_DEPTHSTENCIL,
+			RESOURCE_STATE subpass_layout = RESOURCE_STATE_DEPTHSTENCIL,
+			RESOURCE_STATE final_layout = RESOURCE_STATE_DEPTHSTENCIL
 		)
 		{
 			RenderPassAttachment attachment;
@@ -656,8 +687,8 @@ namespace wiGraphics
 
 		static RenderPassAttachment Resolve(
 			const Texture* resource = nullptr,
-			IMAGE_LAYOUT initial_layout = IMAGE_LAYOUT_SHADER_RESOURCE,
-			IMAGE_LAYOUT final_layout = IMAGE_LAYOUT_SHADER_RESOURCE
+			RESOURCE_STATE initial_layout = RESOURCE_STATE_SHADER_RESOURCE,
+			RESOURCE_STATE final_layout = RESOURCE_STATE_SHADER_RESOURCE
 		)
 		{
 			RenderPassAttachment attachment;
@@ -670,15 +701,15 @@ namespace wiGraphics
 
 		static RenderPassAttachment ShadingRateSource(
 			const Texture* resource = nullptr,
-			IMAGE_LAYOUT initial_layout = IMAGE_LAYOUT_SHADING_RATE_SOURCE,
-			IMAGE_LAYOUT final_layout = IMAGE_LAYOUT_SHADING_RATE_SOURCE
+			RESOURCE_STATE initial_layout = RESOURCE_STATE_SHADING_RATE_SOURCE,
+			RESOURCE_STATE final_layout = RESOURCE_STATE_SHADING_RATE_SOURCE
 		)
 		{
 			RenderPassAttachment attachment;
 			attachment.type = SHADING_RATE_SOURCE;
 			attachment.texture = resource;
 			attachment.initial_layout = initial_layout;
-			attachment.subpass_layout = IMAGE_LAYOUT_SHADING_RATE_SOURCE;
+			attachment.subpass_layout = RESOURCE_STATE_SHADING_RATE_SOURCE;
 			attachment.final_layout = final_layout;
 			return attachment;
 		}
@@ -726,9 +757,9 @@ namespace wiGraphics
 	};
 	struct SubresourceData
 	{
-		const void *pSysMem = nullptr;
-		uint32_t SysMemPitch = 0;
-		uint32_t SysMemSlicePitch = 0;
+		const void *pData = nullptr;
+		uint32_t rowPitch = 0;
+		uint32_t slicePitch = 0;
 	};
 	struct Rect
 	{
@@ -736,20 +767,6 @@ namespace wiGraphics
 		int32_t top = 0;
 		int32_t right = 0;
 		int32_t bottom = 0;
-	};
-	struct Mapping
-	{
-		enum FLAGS
-		{
-			FLAG_EMPTY = 0,
-			FLAG_READ = 1 << 0,
-			FLAG_WRITE = 1 << 1,
-		};
-		uint32_t _flags = FLAG_EMPTY;
-		size_t offset = 0;
-		size_t size = 0;
-		uint32_t rowpitch = 0;	// output
-		void* data = nullptr;	// output
 	};
 
 
@@ -791,6 +808,9 @@ namespace wiGraphics
 		inline bool IsTexture() const { return type == GPU_RESOURCE_TYPE::TEXTURE; }
 		inline bool IsBuffer() const { return type == GPU_RESOURCE_TYPE::BUFFER; }
 		inline bool IsAccelerationStructure() const { return type == GPU_RESOURCE_TYPE::RAYTRACING_ACCELERATION_STRUCTURE; }
+
+		void* mapped_data = nullptr;
+		uint32_t mapped_rowpitch = 0;
 	};
 
 	struct GPUBuffer : public GPUResource

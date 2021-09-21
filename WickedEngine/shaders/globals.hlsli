@@ -3,30 +3,65 @@
 #include "ShaderInterop.h"
 #include "ShaderInterop_Renderer.h"
 
+Texture2D<float4> bindless_textures[] : register(space1);
+ByteAddressBuffer bindless_buffers[] : register(space2);
+SamplerState bindless_samplers[] : register(space3);
+Buffer<uint> bindless_ib[] : register(space4);
+
+Texture2DArray<float4> bindless_textures2DArray[] : register(space5);
+TextureCube<float4> bindless_cubemaps[] : register(space6);
+TextureCubeArray<float4> bindless_cubearrays[] : register(space7);
+Texture3D<float4> bindless_textures3D[] : register(space8);
+RWTexture2D<float4> bindless_rwtextures[] : register(space9);
+RWByteAddressBuffer bindless_rwbuffers[] : register(space10);
+
+ShaderMeshInstance load_instance(uint instanceIndex)
+{
+	return bindless_buffers[g_xFrame.scene.instancebuffer].Load<ShaderMeshInstance>(instanceIndex * sizeof(ShaderMeshInstance));
+}
+ShaderMesh load_mesh(uint meshIndex)
+{
+	return bindless_buffers[g_xFrame.scene.meshbuffer].Load<ShaderMesh>(meshIndex * sizeof(ShaderMesh));
+}
+ShaderMeshSubset load_subset(ShaderMesh mesh, uint subsetIndex)
+{
+	return bindless_buffers[NonUniformResourceIndex(mesh.subsetbuffer)].Load<ShaderMeshSubset>(subsetIndex * sizeof(ShaderMeshSubset));
+}
+ShaderMaterial load_material(uint materialIndex)
+{
+	return bindless_buffers[g_xFrame.scene.materialbuffer].Load<ShaderMaterial>(materialIndex * sizeof(ShaderMaterial));
+}
+ShaderEntity load_entity(uint entityIndex)
+{
+	return bindless_buffers[g_xFrame.buffer_entityarray_index].Load<ShaderEntity>(entityIndex * sizeof(ShaderEntity));
+}
+float4x4 load_entitymatrix(uint matrixIndex)
+{
+	return transpose(bindless_buffers[g_xFrame.buffer_entitymatrixarray_index].Load<float4x4>(matrixIndex * sizeof(float4x4)));
+}
+
+#define texture_globalenvmap bindless_cubemaps[g_xFrame.scene.globalenvmap]
+#define texture_envmaparray bindless_cubearrays[g_xFrame.scene.envmaparray]
+
+#define texture_random64x64 bindless_textures[g_xFrame.texture_random64x64_index]
+#define texture_bluenoise bindless_textures[g_xFrame.texture_bluenoise_index]
+#define texture_sheenlut bindless_textures[g_xFrame.texture_sheenlut_index]
+#define texture_skyviewlut bindless_textures[g_xFrame.texture_skyviewlut_index]
+#define texture_transmittancelut bindless_textures[g_xFrame.texture_transmittancelut_index]
+#define texture_multiscatteringlut bindless_textures[g_xFrame.texture_multiscatteringlut_index]
+#define texture_skyluminancelut bindless_textures[g_xFrame.texture_skyluminancelut_index]
+#define texture_shadowarray_2d bindless_textures2DArray[g_xFrame.texture_shadowarray_2d_index]
+#define texture_shadowarray_cube bindless_cubearrays[g_xFrame.texture_shadowarray_cube_index]
+#define texture_shadowarray_transparent_2d bindless_textures2DArray[g_xFrame.texture_shadowarray_transparent_2d_index]
+#define texture_shadowarray_transparent_cube bindless_cubearrays[g_xFrame.texture_shadowarray_transparent_cube_index]
+#define texture_voxelgi bindless_textures3D[g_xFrame.texture_voxelgi_index]
+
 TEXTURE2D(texture_depth, float, TEXSLOT_DEPTH);
 TEXTURE2D(texture_lineardepth, float, TEXSLOT_LINEARDEPTH);
-TEXTURE2D(texture_gbuffer0, float3, TEXSLOT_GBUFFER0);
-TEXTURE2D(texture_gbuffer1, float4, TEXSLOT_GBUFFER1);
-TEXTURE2D(texture_gbuffer2, float2, TEXSLOT_GBUFFER2);
-TEXTURECUBE(texture_globalenvmap, float4, TEXSLOT_GLOBALENVMAP);
-TEXTURE2D(texture_globallightmap, float4, TEXSLOT_GLOBALLIGHTMAP);
-TEXTURECUBEARRAY(texture_envmaparray, float4, TEXSLOT_ENVMAPARRAY);
-TEXTURE2D(texture_decalatlas, float4, TEXSLOT_DECALATLAS);
-TEXTURE2D(texture_skyviewlut, float4, TEXSLOT_SKYVIEWLUT);
-TEXTURE2D(texture_transmittancelut, float4, TEXSLOT_TRANSMITTANCELUT);
-TEXTURE2D(texture_multiscatteringlut, float4, TEXSLOT_MULTISCATTERINGLUT);
-TEXTURE2D(texture_skyluminancelut, float4, TEXSLOT_SKYLUMINANCELUT);
-TEXTURE2DARRAY(texture_shadowarray_2d, float, TEXSLOT_SHADOWARRAY_2D);
-TEXTURECUBEARRAY(texture_shadowarray_cube, float, TEXSLOT_SHADOWARRAY_CUBE);
-TEXTURE2DARRAY(texture_shadowarray_transparent_2d, float4, TEXSLOT_SHADOWARRAY_TRANSPARENT_2D);
-TEXTURECUBEARRAY(texture_shadowarray_transparent_cube, float4, TEXSLOT_SHADOWARRAY_TRANSPARENT_CUBE);
-TEXTURE3D(texture_voxelradiance, float4, TEXSLOT_VOXELRADIANCE);
-TEXTURE2D(texture_sheenlut, float, TEXSLOT_SHEENLUT);
-TEXTURE2D(texture_bluenoise, float4, TEXSLOT_BLUENOISE);
-TEXTURE2D(texture_random64x64, float4, TEXSLOT_RANDOM64X64);
-STRUCTUREDBUFFER(EntityArray, ShaderEntity, SBSLOT_ENTITYARRAY);
-STRUCTUREDBUFFER(MatrixArray, float4x4, SBSLOT_MATRIXARRAY);
+TEXTURE2D(texture_gbuffer0, uint2, TEXSLOT_GBUFFER0);
+TEXTURE2D(texture_gbuffer1, float2, TEXSLOT_GBUFFER1);
 
+// These are static samplers, don't need to be bound:
 SAMPLERSTATE(			sampler_linear_clamp,	SSLOT_LINEAR_CLAMP	);
 SAMPLERSTATE(			sampler_linear_wrap,	SSLOT_LINEAR_WRAP	);
 SAMPLERSTATE(			sampler_linear_mirror,	SSLOT_LINEAR_MIRROR	);
@@ -37,7 +72,6 @@ SAMPLERSTATE(			sampler_aniso_clamp,	SSLOT_ANISO_CLAMP	);
 SAMPLERSTATE(			sampler_aniso_wrap,		SSLOT_ANISO_WRAP	);
 SAMPLERSTATE(			sampler_aniso_mirror,	SSLOT_ANISO_MIRROR	);
 SAMPLERCOMPARISONSTATE(	sampler_cmp_depth,		SSLOT_CMP_DEPTH		);
-SAMPLERSTATE(			sampler_objectshader,	SSLOT_OBJECTSHADER	);
 
 #define PI 3.14159265358979323846
 #define SQRT2 1.41421356237309504880
@@ -52,20 +86,20 @@ inline bool is_saturated(float2 a) { return is_saturated(a.x) && is_saturated(a.
 inline bool is_saturated(float3 a) { return is_saturated(a.x) && is_saturated(a.y) && is_saturated(a.z); }
 inline bool is_saturated(float4 a) { return is_saturated(a.x) && is_saturated(a.y) && is_saturated(a.z) && is_saturated(a.w); }
 
-#define DEGAMMA_SKY(x)	pow(abs(x),g_xFrame_StaticSkyGamma)
-#define DEGAMMA(x)		pow(abs(x),g_xFrame_Gamma)
-#define GAMMA(x)		pow(abs(x),1.0/g_xFrame_Gamma)
+#define DEGAMMA_SKY(x)	pow(abs(x),g_xFrame.StaticSkyGamma)
+#define DEGAMMA(x)		pow(abs(x),g_xFrame.Gamma)
+#define GAMMA(x)		pow(abs(x),1.0/g_xFrame.Gamma)
 
-inline float3 GetSunColor() { return g_xFrame_SunColor; }
-inline float3 GetSunDirection() { return g_xFrame_SunDirection; }
-inline float GetSunEnergy() { return g_xFrame_SunEnergy; }
-inline float3 GetHorizonColor() { return g_xFrame_Horizon.rgb; }
-inline float3 GetZenithColor() { return g_xFrame_Zenith.rgb; }
-inline float3 GetAmbientColor() { return g_xFrame_Ambient.rgb; }
-inline float2 GetInternalResolution() { return g_xFrame_InternalResolution; }
-inline float GetTime() { return g_xFrame_Time; }
-inline uint2 GetTemporalAASampleRotation() { return uint2((g_xFrame_TemporalAASampleRotation >> 0u) & 0x000000FF, (g_xFrame_TemporalAASampleRotation >> 8) & 0x000000FF); }
-inline bool IsStaticSky() { return g_xFrame_StaticSkyGamma > 0.0; }
+inline float3 GetSunColor() { return g_xFrame.SunColor; }
+inline float3 GetSunDirection() { return g_xFrame.SunDirection; }
+inline float GetSunEnergy() { return g_xFrame.SunEnergy; }
+inline float3 GetHorizonColor() { return g_xFrame.Horizon.rgb; }
+inline float3 GetZenithColor() { return g_xFrame.Zenith.rgb; }
+inline float3 GetAmbientColor() { return g_xFrame.Ambient.rgb; }
+inline float2 GetInternalResolution() { return g_xFrame.InternalResolution; }
+inline float GetTime() { return g_xFrame.Time; }
+inline uint2 GetTemporalAASampleRotation() { return uint2((g_xFrame.TemporalAASampleRotation >> 0u) & 0x000000FF, (g_xFrame.TemporalAASampleRotation >> 8) & 0x000000FF); }
+inline bool IsStaticSky() { return g_xFrame.scene.globalenvmap >= 0; }
 
 // Exponential height fog based on: https://www.iquilezles.org/www/articles/fog/fog.htm
 // Non constant density function
@@ -74,12 +108,12 @@ inline bool IsStaticSky() { return g_xFrame_StaticSkyGamma > 0.0; }
 //	V			: sample to point vector
 inline float GetFogAmount(float distance, float3 O, float3 V)
 {
-	float fogDensity = saturate((distance - g_xFrame_Fog.x) / (g_xFrame_Fog.y - g_xFrame_Fog.x));
+	float fogDensity = saturate((distance - g_xFrame.Fog.x) / (g_xFrame.Fog.y - g_xFrame.Fog.x));
 
-	if (g_xFrame_Options & OPTION_BIT_HEIGHT_FOG)
+	if (g_xFrame.Options & OPTION_BIT_HEIGHT_FOG)
 	{
-		float fogHeightStart = g_xFrame_Fog.z;
-		float fogHeightEnd = g_xFrame_Fog.w;
+		float fogHeightStart = g_xFrame.Fog.z;
+		float fogHeightEnd = g_xFrame.Fog.w;
 		float fogFalloffScale = 1.0 / max(0.01, fogHeightEnd - fogHeightStart);
 
 		// solve for x, e^(-h * x) = 0.001
@@ -121,11 +155,11 @@ float3 inverseTonemap(float3 x)
 
 inline float4 blue_noise(uint2 pixel)
 {
-	return frac(texture_bluenoise[pixel % 128].rgba + g_xFrame_BlueNoisePhase);
+	return frac(texture_bluenoise[pixel % 128].rgba + g_xFrame.BlueNoisePhase);
 }
 inline float4 blue_noise(uint2 pixel, float depth)
 {
-	return frac(texture_bluenoise[pixel % 128].rgba + g_xFrame_BlueNoisePhase + depth);
+	return frac(texture_bluenoise[pixel % 128].rgba + g_xFrame.BlueNoisePhase + depth);
 }
 
 // Helpers:
@@ -267,7 +301,7 @@ inline float getLinearDepth(in float z, in float near, in float far)
 }
 inline float getLinearDepth(in float z)
 {
-	return getLinearDepth(z, g_xCamera_ZNearP, g_xCamera_ZFarP);
+	return getLinearDepth(z, g_xCamera.ZNearP, g_xCamera.ZFarP);
 }
 
 inline float3x3 GetTangentSpace(in float3 normal)
@@ -322,7 +356,7 @@ inline float3 reconstructPosition(in float2 uv, in float z, in float4x4 InvVP)
 }
 inline float3 reconstructPosition(in float2 uv, in float z)
 {
-	return reconstructPosition(uv, z, g_xCamera_InvVP);
+	return reconstructPosition(uv, z, g_xCamera.InvVP);
 }
 
 #if 0
@@ -578,6 +612,49 @@ inline uint morton3D(in float3 pos)
 }
 
 
+// Octahedral encodings:
+//	Journal of Computer Graphics Techniques Vol. 3, No. 2, 2014 http://jcgt.org
+
+// Returns +/-1
+float2 signNotZero(float2 v)
+{
+	return float2((v.x >= 0.0) ? +1.0 : -1.0, (v.y >= 0.0) ? +1.0 : -1.0);
+}
+// Assume normalized input. Output is on [-1, 1] for each component.
+float2 encode_oct(in float3 v)
+{
+	// Project the sphere onto the octahedron, and then onto the xy plane
+	float2 p = v.xy * (1.0 / (abs(v.x) + abs(v.y) + abs(v.z)));
+	// Reflect the folds of the lower hemisphere over the diagonals
+	return (v.z <= 0.0) ? ((1.0 - abs(p.yx)) * signNotZero(p)) : p;
+}
+float3 decode_oct(float2 e)
+{
+	float3 v = float3(e.xy, 1.0 - abs(e.x) - abs(e.y));
+	if (v.z < 0) v.xy = (1.0 - abs(v.yx)) * signNotZero(v.xy);
+	return normalize(v);
+}
+
+// Assume normalized input on +Z hemisphere.
+// Output is on [-1, 1].
+float2 encode_hemioct(in float3 v)
+{
+	// Project the hemisphere onto the hemi-octahedron,
+	// and then into the xy plane
+	float2 p = v.xy * (1.0 / (abs(v.x) + abs(v.y) + v.z));
+	// Rotate and scale the center diamond to the unit square
+	return float2(p.x + p.y, p.x - p.y);
+}
+float3 decode_hemioct(float2 e)
+{
+	// Rotate and scale the unit square back to the center diamond
+	float2 temp = float2(e.x + e.y, e.x - e.y) * 0.5;
+	float3 v = float3(temp, 1.0 - abs(temp.x) - abs(temp.y));
+	return normalize(v);
+}
+
+
+
 
 static const float2x2 BayerMatrix2 =
 {
@@ -713,6 +790,21 @@ float3 ClosestPointOnSegment(float3 a, float3 b, float3 c)
 	float3 ab = b - a;
 	float t = dot(c - a, ab) / dot(ab, ab);
 	return a + saturate(t) * ab;
+}
+
+// Compute barycentric coordinates on triangle from a point p
+float2 compute_barycentrics(float3 p, float3 a, float3 b, float3 c)
+{
+	float3 v0 = b - a, v1 = c - a, v2 = p - a;
+	float d00 = dot(v0, v0);
+	float d01 = dot(v0, v1);
+	float d11 = dot(v1, v1);
+	float d20 = dot(v2, v0);
+	float d21 = dot(v2, v1);
+	float denom_rcp = rcp(d00 * d11 - d01 * d01);
+	float u = (d11 * d20 - d01 * d21) * denom_rcp;
+	float v = (d00 * d21 - d01 * d20) * denom_rcp;
+	return float2(u, v);
 }
 
 static const float4 halton64[] = {

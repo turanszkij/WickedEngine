@@ -4,6 +4,8 @@
 // This shader takes depth buffer and converts it to a flat normals buffer (world space)
 //	Output is unsigned float3 in [0, 1] range
 
+PUSHCONSTANT(postprocess, PostProcess);
+
 RWTEXTURE2D(output, float3, 0);
 
 static const uint TILE_BORDER = 1;
@@ -14,13 +16,13 @@ groupshared float tile_Z[TILE_SIZE * TILE_SIZE];
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint groupIndex : SV_GroupIndex)
 {
-	const float depth_mip = xPPParams0.x;
+	const float depth_mip = postprocess.params0.x;
 
 	const int2 tile_upperleft = Gid.xy * POSTPROCESS_BLOCKSIZE - TILE_BORDER;
 	for (uint t = groupIndex; t < TILE_SIZE * TILE_SIZE; t += POSTPROCESS_BLOCKSIZE * POSTPROCESS_BLOCKSIZE)
 	{
 		const uint2 pixel = tile_upperleft + unflatten2D(t, TILE_SIZE);
-		const float2 uv = (pixel + 0.5f) * xPPResolution_rcp;
+		const float2 uv = (pixel + 0.5f) * postprocess.resolution_rcp;
 		const float depth = texture_depth.SampleLevel(sampler_linear_clamp, uv, depth_mip);
 		const float3 position = reconstructPosition(uv, depth);
 		tile_XY[t] = position.xy;
@@ -46,7 +48,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	const float center_Z = tile_Z[cross_idx[0]];
 
 	[branch]
-	if (center_Z >= g_xCamera_ZFarP)
+	if (center_Z >= g_xCamera.ZFarP)
 		return;
 
 	const uint best_Z_horizontal = abs(tile_Z[cross_idx[1]] - center_Z) < abs(tile_Z[cross_idx[2]] - center_Z) ? 1 : 2;

@@ -34,9 +34,9 @@ float4 main(Input input) : SV_TARGET
 		surface.P = ray.Origin;
 
 		[loop]
-		for (uint iterator = 0; iterator < g_xFrame_LightArrayCount; iterator++)
+		for (uint iterator = 0; iterator < g_xFrame.LightArrayCount; iterator++)
 		{
-			ShaderEntity light = EntityArray[g_xFrame_LightArrayOffset + iterator];
+			ShaderEntity light = load_entity(g_xFrame.LightArrayOffset + iterator);
 
 			Lighting lighting;
 			lighting.create(0, 0, 0, 0);
@@ -63,9 +63,9 @@ float4 main(Input input) : SV_TARGET
 				if (NdotL > 0)
 				{
 					float3 atmosphereTransmittance = 1.0;
-					if (g_xFrame_Options & OPTION_BIT_REALISTIC_SKY)
+					if (g_xFrame.Options & OPTION_BIT_REALISTIC_SKY)
 					{
-						atmosphereTransmittance = GetAtmosphericLightTransmittance(g_xFrame_Atmosphere, surface.P, L, texture_transmittancelut);
+						atmosphereTransmittance = GetAtmosphericLightTransmittance(g_xFrame.Atmosphere, surface.P, L, texture_transmittancelut);
 					}
 					
 					float3 lightColor = light.GetColor().rgb * light.GetEnergy() * atmosphereTransmittance;
@@ -163,25 +163,13 @@ float4 main(Input input) : SV_TARGET
 				);
 				while (q.Proceed())
 				{
-					ShaderMesh mesh = bindless_buffers[NonUniformResourceIndex(q.CandidateInstanceID())].Load<ShaderMesh>(0);
-					ShaderMeshSubset subset = bindless_subsets[NonUniformResourceIndex(mesh.subsetbuffer)][q.CandidateGeometryIndex()];
-					ShaderMaterial material = bindless_buffers[NonUniformResourceIndex(subset.material)].Load<ShaderMaterial>(0);
-					[branch]
-					if (!material.IsCastingShadow())
-					{
-						continue;
-					}
+					PrimitiveID prim;
+					prim.primitiveIndex = q.CandidatePrimitiveIndex();
+					prim.instanceIndex = q.CandidateInstanceID();
+					prim.subsetIndex = q.CandidateGeometryIndex();
 
 					Surface surface;
-					EvaluateObjectSurface(
-						mesh,
-						subset,
-						material,
-						q.CandidatePrimitiveIndex(),
-						q.CandidateTriangleBarycentrics(),
-						q.CandidateObjectToWorld3x4(),
-						surface
-					);
+					surface.load(prim, q.CandidateTriangleBarycentrics());
 
 					shadow *= lerp(1, surface.albedo * surface.transmission, surface.opacity);
 
@@ -246,39 +234,28 @@ float4 main(Input input) : SV_TARGET
 			break;
 		}
 
-		ShaderMaterial material;
-
 #ifdef RTAPI
 		// ray origin updated for next bounce:
 		ray.Origin = q.WorldRayOrigin() + q.WorldRayDirection() * q.CommittedRayT();
 
-		ShaderMesh mesh = bindless_buffers[NonUniformResourceIndex(q.CommittedInstanceID())].Load<ShaderMesh>(0);
-		ShaderMeshSubset subset = bindless_subsets[NonUniformResourceIndex(mesh.subsetbuffer)][q.CommittedGeometryIndex()];
-		material = bindless_buffers[NonUniformResourceIndex(subset.material)].Load<ShaderMaterial>(0);
+		PrimitiveID prim;
+		prim.primitiveIndex = q.CommittedPrimitiveIndex();
+		prim.instanceIndex = q.CommittedInstanceID();
+		prim.subsetIndex = q.CommittedGeometryIndex();
 
-		EvaluateObjectSurface(
-			mesh,
-			subset,
-			material,
-			q.CommittedPrimitiveIndex(),
-			q.CommittedTriangleBarycentrics(),
-			q.CommittedObjectToWorld3x4(),
-			surface
-		);
+		surface.load(prim, q.CommittedTriangleBarycentrics());
 
 #else
 		// ray origin updated for next bounce:
 		ray.Origin = ray.Origin + ray.Direction * hit.distance;
 
-		EvaluateObjectSurface(
-			hit,
-			material,
-			surface
-		);
+		surface.load(hit.primitiveID, hit.bary);
 
 #endif // RTAPI
 
 		surface.update();
+
+		result += max(0, energy * surface.emissiveColor.rgb * surface.emissiveColor.a);
 
 		// Calculate chances of reflection types:
 		const float refractChance = surface.transmission;
@@ -288,7 +265,7 @@ float4 main(Input input) : SV_TARGET
 		if (roulette < refractChance)
 		{
 			// Refraction
-			const float3 R = refract(ray.Direction, surface.N, 1 - material.refraction);
+			const float3 R = refract(ray.Direction, surface.N, 1 - surface.material.refraction);
 			ray.Direction = lerp(R, SampleHemisphere_cos(R, seed, uv), surface.roughnessBRDF);
 			energy *= surface.albedo;
 
@@ -316,7 +293,6 @@ float4 main(Input input) : SV_TARGET
 			}
 		}
 
-		result += max(0, energy * surface.emissiveColor.rgb * surface.emissiveColor.a);
 	}
 
 	return float4(result, xTraceAccumulationFactor);

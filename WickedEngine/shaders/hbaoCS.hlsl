@@ -1,6 +1,8 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
+PUSHCONSTANT(postprocess, PostProcess);
+
 TEXTURE2D(texture_horizontalpass, float, TEXSLOT_ONDEMAND0);
 
 RWTEXTURE2D(output, unorm float, 0);
@@ -88,8 +90,8 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	for (i = groupIndex; i < CACHE_SIZE; i += POSTPROCESS_HBAO_THREADCOUNT)
 	{
 		const uint2 pixel = tile_start + hbao_direction * (i - TILE_BORDER);
-		const float2 uv = (pixel + 0.5f) * xPPResolution_rcp;
-		const float z = texture_lineardepth.Load(uint3(tile_start + hbao_direction * (i - TILE_BORDER), 1)) * g_xCamera_ZFarP;
+		const float2 uv = (pixel + 0.5f) * postprocess.resolution_rcp;
+		const float z = texture_lineardepth.Load(uint3(tile_start + hbao_direction * (i - TILE_BORDER), 1)) * g_xCamera.ZFarP;
 		const float2 xy = (hbao_uv_to_view_A * uv + hbao_uv_to_view_B) * z;
 		cache[i] = float2(horizontal ? xy.x : xy.y, z);
 	}
@@ -97,7 +99,7 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
 	const uint2 pixel = tile_start + groupIndex * hbao_direction;
 	const int center = TILE_BORDER + groupIndex;
-	if (pixel.x >= xPPResolution.x || pixel.y >= xPPResolution.y || cache[center].y >= g_xCamera_ZFarP - 0.99)
+	if (pixel.x >= postprocess.resolution.x || pixel.y >= postprocess.resolution.y || cache[center].y >= g_xCamera.ZFarP - 0.99)
 	{
 		return;
 	}

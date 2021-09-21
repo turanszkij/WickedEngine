@@ -71,14 +71,10 @@ void Translator::Create()
 
 			GPUBufferDesc bd;
 			bd.Usage = USAGE_DEFAULT;
-			bd.ByteWidth = sizeof(verts);
+			bd.Size = sizeof(verts);
 			bd.BindFlags = BIND_VERTEX_BUFFER;
-			bd.CPUAccessFlags = 0;
 
-			SubresourceData InitData;
-			InitData.pSysMem = verts;
-
-			device->CreateBuffer(&bd, &InitData, &vertexBuffer_Axis);
+			device->CreateBuffer(&bd, verts, &vertexBuffer_Axis);
 		}
 	}
 
@@ -98,13 +94,10 @@ void Translator::Create()
 
 			GPUBufferDesc bd;
 			bd.Usage = USAGE_DEFAULT;
-			bd.ByteWidth = sizeof(verts);
+			bd.Size = sizeof(verts);
 			bd.BindFlags = BIND_VERTEX_BUFFER;
-			bd.CPUAccessFlags = 0;
 
-			SubresourceData InitData;
-			InitData.pSysMem = verts;
-			device->CreateBuffer(&bd, &InitData, &vertexBuffer_Plane);
+			device->CreateBuffer(&bd, verts, &vertexBuffer_Plane);
 		}
 	}
 
@@ -154,13 +147,10 @@ void Translator::Create()
 
 			GPUBufferDesc bd;
 			bd.Usage = USAGE_DEFAULT;
-			bd.ByteWidth = sizeof(verts);
+			bd.Size = sizeof(verts);
 			bd.BindFlags = BIND_VERTEX_BUFFER;
-			bd.CPUAccessFlags = 0;
 
-			SubresourceData InitData;
-			InitData.pSysMem = verts;
-			device->CreateBuffer(&bd, &InitData, &vertexBuffer_Origin);
+			device->CreateBuffer(&bd, verts, &vertexBuffer_Origin);
 		}
 	}
 }
@@ -467,25 +457,19 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 	// xy
 	XMStoreFloat4x4(&sb.g_xTransform, matX);
 	sb.g_xColor = state == TRANSLATOR_XY ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.4f, 0.4f, 0, 0.4f);
-	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, cmd);
-	device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), cmd);
-	device->BindConstantBuffer(PS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), cmd);
+	device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 	device->Draw(vertexCount_Plane, 0, cmd);
 
 	// xz
 	XMStoreFloat4x4(&sb.g_xTransform, matZ);
 	sb.g_xColor = state == TRANSLATOR_XZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.4f, 0.4f, 0, 0.4f);
-	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, cmd);
-	device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), cmd);
-	device->BindConstantBuffer(PS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), cmd);
+	device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 	device->Draw(vertexCount_Plane, 0, cmd);
 
 	// yz
 	XMStoreFloat4x4(&sb.g_xTransform, matY);
 	sb.g_xColor = state == TRANSLATOR_YZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.4f, 0.4f, 0, 0.4f);
-	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, cmd);
-	device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), cmd);
-	device->BindConstantBuffer(PS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), cmd);
+	device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 	device->Draw(vertexCount_Plane, 0, cmd);
 
 	// Lines:
@@ -503,25 +487,19 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 	// x
 	XMStoreFloat4x4(&sb.g_xTransform, matX);
 	sb.g_xColor = state == TRANSLATOR_X ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(1, 0, 0, 1);
-	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, cmd);
-	device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), cmd);
-	device->BindConstantBuffer(PS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), cmd);
+	device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 	device->Draw(vertexCount_Axis, 0, cmd);
 
 	// y
 	XMStoreFloat4x4(&sb.g_xTransform, matY);
 	sb.g_xColor = state == TRANSLATOR_Y ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0, 1, 0, 1);
-	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, cmd);
-	device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), cmd);
-	device->BindConstantBuffer(PS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), cmd);
+	device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 	device->Draw(vertexCount_Axis, 0, cmd);
 
 	// z
 	XMStoreFloat4x4(&sb.g_xTransform, matZ);
 	sb.g_xColor = state == TRANSLATOR_Z ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0, 0, 1, 1);
-	device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, cmd);
-	device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), cmd);
-	device->BindConstantBuffer(PS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), cmd);
+	device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 	device->Draw(vertexCount_Axis, 0, cmd);
 
 	// Origin:
@@ -536,9 +514,7 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
 		XMStoreFloat4x4(&sb.g_xTransform, mat);
 		sb.g_xColor = state == TRANSLATOR_XYZ ? XMFLOAT4(1, 1, 1, 1) : XMFLOAT4(0.25f, 0.25f, 0.25f, 1);
-		device->UpdateBuffer(wiRenderer::GetConstantBuffer(CBTYPE_MISC), &sb, cmd);
-		device->BindConstantBuffer(VS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), cmd);
-		device->BindConstantBuffer(PS, wiRenderer::GetConstantBuffer(CBTYPE_MISC), CB_GETBINDSLOT(MiscCB), cmd);
+		device->BindDynamicConstantBuffer(sb, CBSLOT_RENDERER_MISC, cmd);
 		device->Draw(vertexCount_Origin, 0, cmd);
 	}
 

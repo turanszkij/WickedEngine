@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
 	if (targets.empty())
 	{
 		targets = {
-			{ wiGraphics::SHADERFORMAT_HLSL5, "shaders/hlsl5/" },
+			//{ wiGraphics::SHADERFORMAT_HLSL5, "shaders/hlsl5/" },
 			{ wiGraphics::SHADERFORMAT_HLSL6, "shaders/hlsl6/" },
 			{ wiGraphics::SHADERFORMAT_SPIRV, "shaders/spirv/" },
 		};
@@ -104,6 +104,8 @@ int main(int argc, char* argv[])
 		"temporalaaCS.hlsl"											,
 		"tileFrustumsCS.hlsl"										,
 		"tonemapCS.hlsl"											,
+		"fsr_upscalingCS.hlsl"										,
+		"fsr_sharpenCS.hlsl"										,
 		"ssr_resolveCS.hlsl"										,
 		"ssr_temporalCS.hlsl"										,
 		"ssaoCS.hlsl"												,
@@ -111,7 +113,6 @@ int main(int argc, char* argv[])
 		"ssr_raytraceCS.hlsl"										,
 		"sharpenCS.hlsl"											,
 		"skinningCS.hlsl"											,
-		"skinningCS_LDS.hlsl"										,
 		"resolveMSAADepthStencilCS.hlsl"							,
 		"raytraceCS.hlsl"											,
 		"raytraceCS_rtapi.hlsl"										,
@@ -135,7 +136,6 @@ int main(int argc, char* argv[])
 		"motionblurCS.hlsl"											,
 		"motionblurCS_cheap.hlsl"									,
 		"motionblurCS_earlyexit.hlsl"								,
-		"lineardepthCS.hlsl"										,
 		"luminancePass1CS.hlsl"										,
 		"lightShaftsCS.hlsl"										,
 		"lightCullingCS_ADVANCED_DEBUG.hlsl"						,
@@ -206,6 +206,7 @@ int main(int argc, char* argv[])
 		"volumetricCloud_weathermapCS.hlsl"							,
 		"volumetricCloud_renderCS.hlsl"								,
 		"volumetricCloud_reprojectCS.hlsl"							,
+		"volumetricCloud_temporalCS.hlsl"							,
 		"shadingRateClassificationCS.hlsl"							,
 		"shadingRateClassificationCS_DEBUG.hlsl"					,
 		"skyAtmosphere_transmittanceLutCS.hlsl"						,
@@ -221,16 +222,22 @@ int main(int argc, char* argv[])
 		"rtaoCS.hlsl"												,
 		"rtao_denoise_tileclassificationCS.hlsl",
 		"rtao_denoise_filterCS.hlsl",
+		"visibility_resolveCS.hlsl",
+		"visibility_resolveCS_MSAA.hlsl",
+		"surfel_coverageCS.hlsl",
+		"surfel_indirectprepareCS.hlsl",
+		"surfel_updateCS.hlsl",
+		"surfel_gridresetCS.hlsl",
+		"surfel_gridoffsetsCS.hlsl",
+		"surfel_binningCS.hlsl",
+		"surfel_shadeCS.hlsl",
+		"surfel_raytraceCS_rtapi.hlsl",
+		"surfel_raytraceCS.hlsl",
 	};
 
 	shaders[wiGraphics::PS] = {
 		"emittedparticlePS_soft.hlsl"					,
 		"screenPS.hlsl"									,
-		"imagePS_separatenormalmap.hlsl"				,
-		"imagePS_separatenormalmap_bicubic.hlsl"		,
-		"imagePS_backgroundblur_masked.hlsl"			,
-		"imagePS_masked.hlsl"							,
-		"imagePS_backgroundblur.hlsl"					,
 		"imagePS.hlsl"									,
 		"emittedparticlePS_soft_lighting.hlsl"			,
 		"oceanSurfacePS.hlsl"							,
@@ -245,7 +252,6 @@ int main(int argc, char* argv[])
 		"sunPS.hlsl"									,
 		"skyPS_dynamic.hlsl"							,
 		"skyPS_static.hlsl"								,
-		"skyPS_velocity.hlsl"							,
 		"shadowPS_transparent.hlsl"						,
 		"shadowPS_water.hlsl"							,
 		"shadowPS_alphatest.hlsl"						,
@@ -392,12 +398,8 @@ int main(int argc, char* argv[])
 	minshadermodels["renderlightmapPS_rtapi.hlsl"] = wiGraphics::SHADERMODEL_6_5;
 	minshadermodels["raytraceCS_rtapi.hlsl"] = wiGraphics::SHADERMODEL_6_5;
 	minshadermodels["rtshadowCS.hlsl"] = wiGraphics::SHADERMODEL_6_5;
-	minshadermodels["rtshadow_denoise_tileclassificationCS.hlsl"] = wiGraphics::SHADERMODEL_6_0;
-	minshadermodels["rtshadow_denoise_filterCS.hlsl"] = wiGraphics::SHADERMODEL_6_0;
-	minshadermodels["rtshadow_denoise_temporalCS.hlsl"] = wiGraphics::SHADERMODEL_6_0;
 	minshadermodels["rtaoCS.hlsl"] = wiGraphics::SHADERMODEL_6_5;
-	minshadermodels["rtao_denoise_tileclassificationCS.hlsl"] = wiGraphics::SHADERMODEL_6_0;
-	minshadermodels["rtao_denoise_filterCS.hlsl"] = wiGraphics::SHADERMODEL_6_0;
+	minshadermodels["surfel_raytraceCS_rtapi.hlsl"] = wiGraphics::SHADERMODEL_6_5;
 
 	wiShaderCompiler::Initialize();
 	wiJobSystem::Initialize();

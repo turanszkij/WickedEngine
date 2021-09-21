@@ -1,6 +1,6 @@
-#define OBJECTSHADER_LAYOUT_POS_TEX
+#define OBJECTSHADER_LAYOUT_SHADOW_TEX
 #include "objectHF.hlsli"
-#include "ShaderInterop_Paint.h"
+#include "ShaderInterop_Renderer.h"
 
 [earlydepthstencil]
 float4 main(PixelInput PSIn) : SV_TARGET

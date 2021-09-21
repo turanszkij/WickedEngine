@@ -1,6 +1,7 @@
 #include "wiAudio.h"
 #include "wiBackLog.h"
 #include "wiHelper.h"
+#include "wiTimer.h"
 
 #include <vector>
 
@@ -193,11 +194,13 @@ namespace wiAudio
 
 	void Initialize()
 	{
+		wiTimer timer;
+
 		audio = std::make_shared<AudioInternal>();
 
 		if (audio->success)
 		{
-			wiBackLog::post("wiAudio Initialized");
+			wiBackLog::post("wiAudio Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 		}
 	}
 
@@ -551,114 +554,161 @@ namespace wiAudio
 }
 
 #elif SDL2
-#include <SDL.h>
-#include <SDL_audio.h>
-#include <SDL_stdinc.h>
-#include <cstdint>
 
-//WAVE audio data tags
-//Little-Endian things in hex:
-#define fourccRIFF 0x46464952 //'FFIR'
-#define fourccDATA 0x61746164 //'atad'
-#define fourccFMT  0x20746d66 //' tmf'
-#define fourccWAVE 0x45564157 //'EVAW'
-#define fourccXWMA 0x414d5758 //'AMWX'
-#define fourccDPDS 0x73647064 //'sdpd'
+//FAudio implemetation
+#include <FAudio.h>
+#include <FAPO.h>
+#include <FAudioFX.h>
+#include <F3DAudio.h>
 
-//Format tags
-//Source: https://github.com/libsdl-org/SDL/blob/main/src/audio/SDL_wave.h
-#define WAV_UNKNOWN    0x0000
-#define WAV_PCM        0x0001
-#define WAV_ADPCM_MS   0x0002
-#define WAV_IEEE       0x0003
-#define WAV_ALAW       0x0006
-#define WAV_MULAW      0x0007
-#define WAV_ADPCM_IMA  0x0011
-#define WAV_MPEG       0x0050
-#define WAV_MPEGLAYER3 0x0055
-#define WAV_EXTENSIBLE 0xFFFE
+#define SPEED_OF_SOUND 343.5f
+#define fourccRIFF 0x46464952
+#define fourccWAVE 0x45564157
+#define fourccFMT 0x20746d66
+#define fourccDATA 0x61746164
 
 namespace wiAudio
 {
-    struct AudioInternal;
+	static const FAudioFXReverbI3DL2Parameters reverbPresets[] = {
+		FAUDIOFX_I3DL2_PRESET_DEFAULT,
+		FAUDIOFX_I3DL2_PRESET_GENERIC,
+		FAUDIOFX_I3DL2_PRESET_FOREST,
+		FAUDIOFX_I3DL2_PRESET_PADDEDCELL,
+		FAUDIOFX_I3DL2_PRESET_ROOM,
+		FAUDIOFX_I3DL2_PRESET_BATHROOM,
+		FAUDIOFX_I3DL2_PRESET_LIVINGROOM,
+		FAUDIOFX_I3DL2_PRESET_STONEROOM,
+		FAUDIOFX_I3DL2_PRESET_AUDITORIUM,
+		FAUDIOFX_I3DL2_PRESET_CONCERTHALL,
+		FAUDIOFX_I3DL2_PRESET_CAVE,
+		FAUDIOFX_I3DL2_PRESET_ARENA,
+		FAUDIOFX_I3DL2_PRESET_HANGAR,
+		FAUDIOFX_I3DL2_PRESET_CARPETEDHALLWAY,
+		FAUDIOFX_I3DL2_PRESET_HALLWAY,
+		FAUDIOFX_I3DL2_PRESET_STONECORRIDOR,
+		FAUDIOFX_I3DL2_PRESET_ALLEY,
+		FAUDIOFX_I3DL2_PRESET_CITY,
+		FAUDIOFX_I3DL2_PRESET_MOUNTAINS,
+		FAUDIOFX_I3DL2_PRESET_QUARRY,
+		FAUDIOFX_I3DL2_PRESET_PLAIN,
+		FAUDIOFX_I3DL2_PRESET_PARKINGLOT,
+		FAUDIOFX_I3DL2_PRESET_SEWERPIPE,
+		FAUDIOFX_I3DL2_PRESET_UNDERWATER,
+		FAUDIOFX_I3DL2_PRESET_SMALLROOM,
+		FAUDIOFX_I3DL2_PRESET_MEDIUMROOM,
+		FAUDIOFX_I3DL2_PRESET_LARGEROOM,
+		FAUDIOFX_I3DL2_PRESET_MEDIUMHALL,
+		FAUDIOFX_I3DL2_PRESET_LARGEHALL,
+		FAUDIOFX_I3DL2_PRESET_PLATE,
+	};
 
-	static inline void ProcessAudioFeed(void* userdata, uint8_t* stream, int len);
-	inline bool OpenAudioDevice(SDL_AudioDeviceID& device, AudioInternal* audio_internal);
-
-	struct SoundInstanceInternal;
-
-	struct AudioInternal
-	{
+	struct AudioInternal{
 		bool success = false;
-		SDL_AudioDeviceID device;
+		FAudio *audioEngine;
+		FAudioMasteringVoice* masteringVoice = nullptr;
+		FAudioVoiceDetails masteringVoiceDetails;
+		FAudioSubmixVoice* submixVoices[SUBMIX_TYPE_COUNT] = {};
+		F3DAUDIO_HANDLE audio3D = {};
+		FAPO* reverbEffect;
+		FAudioSubmixVoice* reverbSubmix = nullptr;
 
-		std::vector<std::shared_ptr<SoundInstanceInternal>> instances;
+		AudioInternal(){
+			uint32_t res;
+			res = FAudioCreate(&audioEngine, 0, FAUDIO_DEFAULT_PROCESSOR);
+			assert(res == 0);
 
-		AudioInternal()
-		    : device(-1)
-        {
-			if(!(SDL_WasInit(SDL_INIT_AUDIO) & SDL_INIT_AUDIO)){
-				return;
+			res = FAudio_CreateMasteringVoice(
+				audioEngine, 
+				&masteringVoice, 
+				FAUDIO_DEFAULT_CHANNELS, 
+				FAUDIO_DEFAULT_SAMPLERATE, 
+				0, 0, NULL);
+			assert(res == 0);
+		
+			FAudioVoice_GetVoiceDetails(masteringVoice, &masteringVoiceDetails);
+
+			for (int i=0; i<SUBMIX_TYPE_COUNT; ++i){
+				res = FAudio_CreateSubmixVoice(
+					audioEngine, 
+					&submixVoices[i], 
+					masteringVoiceDetails.InputChannels, 
+					masteringVoiceDetails.InputSampleRate, 
+					0, 0, NULL, NULL);
+				assert(res == 0);
 			}
 
-			if(OpenAudioDevice(device, this)){
-				success = true;
-                set_mute(false);
+			uint32_t channelMask;
+			FAudioMasteringVoice_GetChannelMask(masteringVoice, &channelMask);
+
+			F3DAudioInitialize(channelMask, SPEED_OF_SOUND, audio3D);
+			success = (res == 0);
+
+			// Reverb setup
+			{
+				res = FAudioCreateReverb(&reverbEffect, 0);
+				success = (res == 0);
+
+				FAudioEffectDescriptor effects[] = { { reverbEffect, 1, 1 } };
+				FAudioEffectChain effectChain = { arraysize(effects), effects };
+				
+				res = FAudio_CreateSubmixVoice(
+					audioEngine, 
+					&reverbSubmix, 
+					1, 
+					masteringVoiceDetails.InputSampleRate, 
+					0, 
+					0, 
+					nullptr, 
+					&effectChain);
 			}
 		}
-
-		void set_mute(bool mute) {
-            if (mute) {
-                SDL_PauseAudioDevice(device, 1);
-            } else {
-                SDL_PauseAudioDevice(device, 0);
-            }
-
-        }
-
 		~AudioInternal(){
-		    if (device > 0) {
-                set_mute(true);
-                SDL_CloseAudioDevice(device);
-            }
+			if(reverbSubmix != nullptr)
+				FAudioVoice_DestroyVoice(reverbSubmix);
+
+			for (int i = 0; i < SUBMIX_TYPE_COUNT; ++i){
+				if(submixVoices[i] != nullptr)
+					FAudioVoice_DestroyVoice(submixVoices[i]);
+			}
+
+			if(masteringVoice != nullptr)
+				FAudioVoice_DestroyVoice(masteringVoice);
+
+			FAudio_StopEngine(audioEngine);
 		}
 	};
 	std::shared_ptr<AudioInternal> audio;
 
-	inline bool OpenAudioDevice(SDL_AudioDeviceID& device, AudioInternal *audio_internal){
-		SDL_AudioSpec desired;
-		desired.format = AUDIO_S16LSB;
-		desired.freq = 48000;
-		desired.channels = 2;
-		desired.samples = 4096;
-		desired.callback = ProcessAudioFeed;
-		desired.userdata = audio_internal;
-
-		return ((device = SDL_OpenAudioDevice(nullptr, 0, &desired, nullptr, SDL_AUDIO_ALLOW_ANY_CHANGE)) > 0);
-	}
-
-	struct SoundInternal {
-		SDL_AudioSpec info {};
+	struct SoundInternal{
+		std::shared_ptr<AudioInternal> audio;
+		FAudioWaveFormatEx wfx = {};
 		std::vector<uint8_t> audioData;
 	};
-	struct SoundInstanceInternal {
-		std::shared_ptr<AudioInternal> audio = nullptr;
-		std::shared_ptr<SoundInternal> soundinternal = nullptr;
+	struct SoundInstanceInternal{
+		std::shared_ptr<AudioInternal> audio;
+		std::shared_ptr<SoundInternal> soundinternal;
+		FAudioSourceVoice* sourceVoice = nullptr;
+		FAudioVoiceDetails voiceDetails = {};
+		std::vector<float> outputMatrix;
+		std::vector<float> channelAzimuths;
+		FAudioBuffer buffer = {};
 
-		enum FLAGS{
-			EMPTY = 0,
-			PLAY = 1 << 0,
-			PAUSE = 1 << 1,
-			LOOP = 1 << 2,
-		};
-		uint32_t _flags = EMPTY;
-
-		size_t marker = 0;
-		float volume = 0;
-
-		size_t loop_begin = 0;
-		size_t loop_end = 0;
+		~SoundInstanceInternal(){
+			FAudioSourceVoice_Stop(sourceVoice, 0, FAUDIO_COMMIT_NOW);
+			FAudioVoice_DestroyVoice(sourceVoice);
+		}
 	};
+
+	void Initialize() {
+		wiTimer timer;
+
+		audio = std::make_shared<AudioInternal>();
+
+		if (audio->success)
+		{
+			wiBackLog::post("wiAudio Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
+		}
+	}
 	SoundInternal* to_internal(const Sound* param)
 	{
 		return static_cast<SoundInternal*>(param->internal_state.get());
@@ -668,143 +718,129 @@ namespace wiAudio
 		return static_cast<SoundInstanceInternal*>(param->internal_state.get());
 	}
 
-	//Primary processing spot for audio processing
-	static inline void ProcessAudioFeed(void* userdata, uint8_t* stream, int len){
-		AudioInternal *_this = static_cast<AudioInternal *>(userdata);
-        assert(_this);
-
-        //Nullify master sound to receive new signal batch, see SDL_MixAudioFormat code snippet
-        SDL_memset(stream, 0, len);
-
-        for (std::shared_ptr<SoundInstanceInternal> &instance : _this->instances)
-        {
-            if (!(instance->_flags & instance->PLAY) || (instance->_flags & instance->PAUSE)) {
-                continue;
-            }
-
-            bool loop_sound = instance->_flags & instance->LOOP;
-            size_t source_buffer_size = instance->loop_end - instance->loop_begin;
-            size_t marker_begin = instance->marker;
-            size_t marker_end = marker_begin + len;
-            size_t marker_end_loop = marker_end % source_buffer_size;
-            bool loopback_necessary = loop_sound && (marker_end > instance->loop_end);
-            if (!loop_sound && marker_end < instance->loop_end) {
-                len = instance->loop_end - marker_begin;
-            }
-            marker_end = std::min(marker_end, instance->loop_end);
-
-            assert(marker_begin != marker_end_loop);
-            assert(marker_begin >= instance->loop_begin);
-            assert(marker_end <= instance->loop_end);
-
-            // buffer structure should be 2 bytes per channel alternating. E.g. LLRRLLRRLLRRLLRRLLRR..
-            // Channel layout reference : https://github.com/libsdl-org/SDL/blob/main/include/SDL_audio.h
-
-            //TODO remove Sine wave test
-//            for (int j = 0; j < buffer.size(); j += 4) {
-//                float amplitude = 200;
-//                float frequency = 32;
-//                buffer[j + 2] = amplitude * std::sin(2.0 * M_PI * frequency * (float(marker + j) / 48000.0));
-//                buffer[j + 3] = amplitude * std::sin(2.0 * M_PI * frequency * (float(marker + j + 1) / 48000.0));
-//            }
-
-            const auto &audio_data = instance->soundinternal->audioData.data();
-            const SDL_AudioFormat &format = instance->soundinternal->info.format;
-            // SDL_MixAudioFormat wants the volume between 0 and 128.
-            int volume = static_cast<int>(std::clamp(instance->volume, 0.0f, 1.0f) * 128.0f);
-
-            //Mix sound instances buffer into master sound
-            Uint32 sdl_len = marker_end - marker_begin;
-            SDL_MixAudioFormat(stream, audio_data + marker_begin, format, sdl_len, volume);
-
-            if (loopback_necessary) {
-                Uint32 old_len = sdl_len;
-                sdl_len = marker_end_loop - instance->loop_begin;
-                SDL_MixAudioFormat(stream + old_len, audio_data + instance->loop_begin, format, sdl_len, volume);
-            }
-
-            //Wave chunk positioning behavior
-            if ((instance->marker + len) < instance->loop_end) {
-                instance->marker += len;
-            } else if (loop_sound) {
-                instance->marker = instance->loop_begin;
-            } else {
-                instance->marker = 0;
-                instance->_flags &= ~(uint32_t) instance->PLAY;
-            }
-        }
-	}
-
-	void Initialize()
+	bool FindChunk(const uint8_t* data, uint32_t fourcc, uint32_t& dwChunkSize, uint32_t& dwChunkDataPosition)
 	{
-		audio = std::make_shared<AudioInternal>();
+		size_t pos = 0;
 
-		if (audio->success)
+		uint32_t dwChunkType;
+		uint32_t dwChunkDataSize;
+		uint32_t dwRIFFDataSize = 0;
+		uint32_t dwFileType;
+		uint32_t bytesRead = 0;
+		uint32_t dwOffset = 0;
+
+		while(true)
 		{
-			wiBackLog::post("wiAudio Initialized");
+			memcpy(&dwChunkType, data + pos, sizeof(uint32_t));
+			pos += sizeof(uint32_t);
+			memcpy(&dwChunkDataSize, data + pos, sizeof(uint32_t));
+			pos += sizeof(uint32_t);
+
+			switch (dwChunkType)
+			{
+			case fourccRIFF: //TODO
+				dwRIFFDataSize = dwChunkDataSize;
+				dwChunkDataSize = 4;
+				memcpy(&dwFileType, data + pos, sizeof(uint32_t));
+				pos += sizeof(uint32_t);
+				break;
+
+			default:
+				pos += dwChunkDataSize;
+			}
+
+			dwOffset += sizeof(uint32_t) * 2;
+
+			if (dwChunkType == fourcc)
+			{
+				dwChunkSize = dwChunkDataSize;
+				dwChunkDataPosition = dwOffset;
+				return true;
+			}
+
+			dwOffset += dwChunkDataSize;
+
+			if (bytesRead >= dwRIFFDataSize) return false;
+
 		}
+
+		return true;
+
 	}
 
-	bool CreateSound(const std::string& filename, Sound* sound)
-	{
-        SDL_RWops *filedata = SDL_RWFromFile(filename.c_str(), "rb");
+	bool CreateSound(const std::string& filename, Sound* sound) { 
+		std::vector<uint8_t> filedata;
+		bool success = wiHelper::FileRead(filename, filedata);
+		if (!success)
+		{
+			return false;
+		}
 		return CreateSound(filedata, sound);
 	}
-	bool CreateSound(const std::vector<uint8_t>& data, Sound* sound)
-	{
+	bool CreateSound(const std::vector<uint8_t>& data, Sound* sound) {
 		return CreateSound(data.data(), data.size(), sound);
 	}
-    bool CreateSound(const uint8_t* buffer, size_t size, Sound* sound)
-    {
-        SDL_RWops *data = SDL_RWFromMem((void *) buffer, size);
-        return CreateSound(data, sound);
-    }
-    bool CreateSound(SDL_RWops* data, Sound* sound)
-	{
-        std::shared_ptr<SoundInternal> soundinternal = std::make_shared<SoundInternal>();
+	bool CreateSound(const uint8_t* data, size_t size, Sound* sound) {
+		std::shared_ptr<SoundInternal> soundinternal = std::make_shared<SoundInternal>();
+		soundinternal->audio = audio;
+		sound->internal_state = soundinternal;
 
-        Uint8 *audio_buffer;
-        Uint32 audio_len;
+		uint32_t dwChunkSize;
+		uint32_t dwChunkPosition;
 
-		Uint32 header[2];
-		SDL_RWread(data,header,4,2);
-        
-		if(header[0]==fourccRIFF)
+		bool success;
+
+		success = FindChunk(data, fourccRIFF, dwChunkSize, dwChunkPosition);
+		if (success)
 		{
-			SDL_RWseek(data,0,RW_SEEK_SET);
-			SDL_AudioSpec *ret = SDL_LoadWAV_RW(data, false, &soundinternal->info, &audio_buffer, &audio_len);
-        	if (ret == nullptr) {
-            	return false;
-        	}
-        	soundinternal->audioData.resize(audio_len);
-        	std::copy(audio_buffer, audio_buffer+audio_len, soundinternal->audioData.begin());
-        	SDL_FreeWAV(audio_buffer);
+			// Wav decoder:
+			uint32_t filetype;
+			memcpy(&filetype, data + dwChunkPosition, sizeof(uint32_t));
+			if (filetype != fourccWAVE)
+			{
+				assert(0);
+				return false;
+			}
+
+			success = FindChunk(data, fourccFMT, dwChunkSize, dwChunkPosition);
+			if (!success)
+			{
+				assert(0);
+				return false;
+			}
+			memcpy(&soundinternal->wfx, data + dwChunkPosition, dwChunkSize);
+			soundinternal->wfx.wFormatTag = FAUDIO_FORMAT_PCM;
+
+			success = FindChunk(data, fourccDATA, dwChunkSize, dwChunkPosition);
+			if (!success)
+			{
+				assert(0);
+				return false;
+			}
+
+			soundinternal->audioData.resize(dwChunkSize);
+			memcpy(soundinternal->audioData.data(), data + dwChunkPosition, dwChunkSize);
 		}
 		else
 		{
-			SDL_RWseek(data,0,RW_SEEK_SET);
-
-			Sint64 size = SDL_RWsize(data);
-
-			std::vector<uint8_t> temp;
-			temp.resize(size);
-
-			SDL_RWread(data, temp.data(), 1, size);
-
+			// Ogg decoder:
 			int channels = 0;
 			int sample_rate = 0;
 			short* output = nullptr;
-			int samples = stb_vorbis_decode_memory(temp.data(), (int)temp.size(), &channels, &sample_rate, &output);
+			int samples = stb_vorbis_decode_memory(data, (int)size, &channels, &sample_rate, &output);
 			if (samples < 0)
 			{
 				assert(0);
 				return false;
 			}
 
-			soundinternal->info.format = AUDIO_S16LSB;
-			soundinternal->info.samples = 4096;
-			soundinternal->info.channels = (Uint8)channels;
-			soundinternal->info.freq = sample_rate;
+			// WAVEFORMATEX: https://docs.microsoft.com/en-us/previous-versions/dd757713(v=vs.85)?redirectedfrom=MSDN
+			soundinternal->wfx.wFormatTag = FAUDIO_FORMAT_PCM;
+			soundinternal->wfx.nChannels = (uint16_t)channels;
+			soundinternal->wfx.nSamplesPerSec = (uint32_t)sample_rate;
+			soundinternal->wfx.wBitsPerSample = sizeof(short) * 8;
+			soundinternal->wfx.nBlockAlign = (uint16_t)channels * sizeof(short); // is this right?
+			soundinternal->wfx.nAvgBytesPerSec = soundinternal->wfx.nSamplesPerSec * soundinternal->wfx.nBlockAlign;
 
 			size_t output_size = (size_t)samples * sizeof(short);
 			soundinternal->audioData.resize(output_size);
@@ -812,13 +848,11 @@ namespace wiAudio
 
 			free(output);
 		}
-        
-		sound->internal_state = soundinternal;
 
 		return true;
 	}
-	bool CreateSoundInstance(const Sound* sound, SoundInstance* instance)
-	{
+	bool CreateSoundInstance(const Sound* sound, SoundInstance* instance) { 
+		uint32_t res;
 		const auto& soundinternal = std::static_pointer_cast<SoundInternal>(sound->internal_state);
 		std::shared_ptr<SoundInstanceInternal> instanceinternal = std::make_shared<SoundInstanceInternal>();
 		instance->internal_state = instanceinternal;
@@ -826,56 +860,186 @@ namespace wiAudio
 		instanceinternal->audio = audio;
 		instanceinternal->soundinternal = soundinternal;
 
-		instanceinternal->marker = instance->loop_begin;
-		instanceinternal->loop_begin = instance->loop_begin;
-		if (instance->loop_length > 0) {
-            instanceinternal->loop_end = instance->loop_begin + instance->loop_length;
-        } else {
-		   // If length is zero, use full buffer
-           instanceinternal->loop_end = soundinternal->audioData.size();
-        }
-		instanceinternal->volume = 1.0;
-		instanceinternal->_flags |= instanceinternal->LOOP;
+		FAudioSendDescriptor SFXSend[] = {
+			{ FAUDIO_SEND_USEFILTER, audio->submixVoices[instance->type] },
+			{ FAUDIO_SEND_USEFILTER, audio->reverbSubmix }, // this should be last to enable/disable reverb simply
+		};
 
-		audio->instances.push_back(instanceinternal);
+		FAudioVoiceSends SFXSendList = {
+			instance->IsEnableReverb() ? (uint32_t)arraysize(SFXSend) : 1,
+			SFXSend
+		};
+		
+		res = FAudio_CreateSourceVoice(instanceinternal->audio->audioEngine, &instanceinternal->sourceVoice, &soundinternal->wfx,
+			0, FAUDIO_DEFAULT_FREQ_RATIO, NULL, &SFXSendList, NULL);
+		if(res != 0){
+			assert(0);
+			return false;
+		}
+
+		FAudioVoice_GetVoiceDetails(instanceinternal->sourceVoice, &instanceinternal->voiceDetails);
+		instanceinternal->outputMatrix.resize(size_t(instanceinternal->voiceDetails.InputChannels) * size_t(audio->masteringVoiceDetails.InputChannels));
+		instanceinternal->channelAzimuths.resize(instanceinternal->voiceDetails.InputChannels);
+		for (size_t i = 0; i < instanceinternal->channelAzimuths.size(); ++i)
+		{
+			instanceinternal->channelAzimuths[i] = F3DAUDIO_2PI * float(i) / float(instanceinternal->channelAzimuths.size());
+		}
+
+		instanceinternal->buffer.AudioBytes = (uint32_t)soundinternal->audioData.size();
+		instanceinternal->buffer.pAudioData = soundinternal->audioData.data();
+		instanceinternal->buffer.Flags = FAUDIO_END_OF_STREAM;
+		instanceinternal->buffer.LoopCount = FAUDIO_LOOP_INFINITE;
+		instanceinternal->buffer.LoopBegin = uint32_t(instance->loop_begin * audio->masteringVoiceDetails.InputSampleRate);
+		instanceinternal->buffer.LoopLength = uint32_t(instance->loop_length * audio->masteringVoiceDetails.InputSampleRate);
+
+		res = FAudioSourceVoice_SubmitSourceBuffer(instanceinternal->sourceVoice, &(instanceinternal->buffer), nullptr);
+		if(res != 0){
+			assert(0);
+			return false;
+		}
 
 		return true;
 	}
 
-	void Play(SoundInstance* instance)
-	{
-		SoundInstanceInternal* instanceinternal = to_internal(instance);
-		instanceinternal->_flags |= instanceinternal->PLAY;
-		instanceinternal->_flags &= ~(uint32_t)instanceinternal->PAUSE;
+	void Play(SoundInstance* instance) {
+		if (instance != nullptr && instance->IsValid()){
+			auto instanceinternal = to_internal(instance);
+			uint32_t res = FAudioSourceVoice_Start(instanceinternal->sourceVoice, 0, FAUDIO_COMMIT_NOW);
+			assert(res == 0);
+		}
 	}
-	void Pause(SoundInstance* instance)
-	{
-		SoundInstanceInternal* instanceinternal = to_internal(instance);
-		instanceinternal->_flags |= instanceinternal->PAUSE;
+	void Pause(SoundInstance* instance) {
+		if (instance != nullptr && instance->IsValid()){
+			auto instanceinternal = to_internal(instance);
+			uint32_t res = FAudioSourceVoice_Stop(instanceinternal->sourceVoice, 0, FAUDIO_COMMIT_NOW); // preserves cursor position
+			assert(res == 0);
+		}
 	}
-	void Stop(SoundInstance* instance){
-		SoundInstanceInternal* instanceinternal = to_internal(instance);
-		instanceinternal->_flags &= ~(uint32_t)instanceinternal->PLAY;
-		instanceinternal->_flags &= ~(uint32_t)instanceinternal->PAUSE;
+	void Stop(SoundInstance* instance) {
+		if (instance != nullptr && instance->IsValid()){
+			auto instanceinternal = to_internal(instance);
+			uint32_t res = FAudioSourceVoice_Stop(instanceinternal->sourceVoice, 0, FAUDIO_COMMIT_NOW); // preserves cursor position
+			assert(res == 0);
+			res = FAudioSourceVoice_FlushSourceBuffers(instanceinternal->sourceVoice); // reset submitted audio buffer
+			assert(res == 0);
+			res = FAudioSourceVoice_SubmitSourceBuffer(instanceinternal->sourceVoice, &(instanceinternal->buffer), nullptr);
+			assert(res == 0);
+		}
 	}
-	void SetVolume(float volume, SoundInstance* instance)
-	{
-		SoundInstanceInternal* instanceinternal = to_internal(instance);
-		instanceinternal->volume = volume;
+	void SetVolume(float volume, SoundInstance* instance) {
+		if (instance == nullptr || !instance->IsValid()){
+			uint32_t res = FAudioVoice_SetVolume(audio->masteringVoice, volume, FAUDIO_COMMIT_NOW);
+			assert(res == 0);
+		}
+		else {
+			auto instanceinternal = to_internal(instance);
+			uint32_t res = FAudioVoice_SetVolume(instanceinternal->sourceVoice, volume, FAUDIO_COMMIT_NOW);
+			assert(res == 0);
+		}
 	}
-	float GetVolume(const SoundInstance* instance) { return to_internal(instance)->volume; }
-	void ExitLoop(SoundInstance* instance)
-	{
-		SoundInstanceInternal* instanceinternal = to_internal(instance);
-		instanceinternal->_flags &= ~(uint32_t)instanceinternal->LOOP;
+	float GetVolume(const SoundInstance* instance) {
+		float volume = 0;
+		if (instance == nullptr || !instance->IsValid()){
+			FAudioVoice_GetVolume(audio->masteringVoice, &volume);
+		}
+		else {
+			auto instanceinternal = to_internal(instance);
+			FAudioVoice_GetVolume(instanceinternal->sourceVoice, &volume);
+		}
+		return volume;
+	}
+	void ExitLoop(SoundInstance* instance) {
+		if (instance != nullptr && instance->IsValid()){
+			auto instanceinternal = to_internal(instance);
+			uint32_t res = FAudioSourceVoice_ExitLoop(instanceinternal->sourceVoice, FAUDIO_COMMIT_NOW);
+			assert(res == 0);
+		}
 	}
 
-	void SetSubmixVolume(SUBMIX_TYPE type, float volume) {}
-	float GetSubmixVolume(SUBMIX_TYPE type) { return 0; }
+	void SetSubmixVolume(SUBMIX_TYPE type, float volume) {
+		uint32_t res = FAudioVoice_SetVolume(audio->submixVoices[type], volume, FAUDIO_COMMIT_NOW);
+		assert(res == 0);
+	}
+	float GetSubmixVolume(SUBMIX_TYPE type) { 
+		float volume;
+		FAudioVoice_GetVolume(audio->submixVoices[type], &volume);
+		return volume; 
+	}
 
-	void Update3D(SoundInstance* instance, const SoundInstance3D& instance3D) {}
+	void Update3D(SoundInstance* instance, const SoundInstance3D& instance3D) {
+		if (instance != nullptr && instance->IsValid()){
+			auto instanceinternal = to_internal(instance);
+			F3DAUDIO_LISTENER listener = {};
+			listener.Position = (F3DAUDIO_VECTOR){ instance3D.listenerPos.x, instance3D.listenerPos.y, instance3D.listenerPos.z };
+			listener.OrientFront = (F3DAUDIO_VECTOR){ instance3D.listenerFront.x, instance3D.listenerFront.y, instance3D.listenerFront.z };
+			listener.OrientTop = (F3DAUDIO_VECTOR){ instance3D.listenerUp.x, instance3D.listenerUp.y, instance3D.listenerUp.z };
+			listener.Velocity = (F3DAUDIO_VECTOR){ instance3D.listenerVelocity.x, instance3D.listenerVelocity.y, instance3D.listenerVelocity.z }; 
 
-	void SetReverb(REVERB_PRESET preset) {}
+			F3DAUDIO_EMITTER emitter = {};
+			emitter.Position = (F3DAUDIO_VECTOR){ instance3D.emitterPos.x, instance3D.emitterPos.y, instance3D.emitterPos.z };
+			emitter.OrientFront = (F3DAUDIO_VECTOR){ instance3D.emitterFront.x, instance3D.emitterFront.y, instance3D.emitterFront.z };
+			emitter.OrientTop = (F3DAUDIO_VECTOR){ instance3D.emitterUp.x, instance3D.emitterUp.y, instance3D.emitterUp.z };
+			emitter.Velocity = (F3DAUDIO_VECTOR){ instance3D.emitterVelocity.x, instance3D.emitterVelocity.y, instance3D.emitterVelocity.z }; 
+			emitter.InnerRadius = instance3D.emitterRadius;
+			emitter.InnerRadiusAngle = F3DAUDIO_PI / 4.0f;
+			emitter.ChannelCount = instanceinternal->voiceDetails.InputChannels;
+			emitter.pChannelAzimuths = instanceinternal->channelAzimuths.data();
+			emitter.ChannelRadius = 0.1f;
+			emitter.CurveDistanceScaler = 1;
+			emitter.DopplerScaler = 1;
+
+			uint32_t flags = 0;
+			flags |= F3DAUDIO_CALCULATE_MATRIX;
+			flags |= F3DAUDIO_CALCULATE_LPF_DIRECT;
+			flags |= F3DAUDIO_CALCULATE_REVERB;
+			flags |= F3DAUDIO_CALCULATE_LPF_REVERB;
+			flags |= F3DAUDIO_CALCULATE_DOPPLER;
+			// flags |= F3DAUDIO_CALCULATE_DELAY;
+			// flags |= F3DAUDIO_CALCULATE_EMITTER_ANGLE;
+			// flags |= F3DAUDIO_CALCULATE_ZEROCENTER;
+			// flags |= F3DAUDIO_CALCULATE_REDIRECT_TO_LFE;
+
+			F3DAUDIO_DSP_SETTINGS settings = {};
+			settings.SrcChannelCount = instanceinternal->voiceDetails.InputChannels;
+			settings.DstChannelCount = audio->masteringVoiceDetails.InputChannels;
+			settings.pMatrixCoefficients = instanceinternal->outputMatrix.data();
+
+			F3DAudioCalculate(audio->audio3D, &listener, &emitter, flags, &settings);
+
+			uint32_t res;
+
+			res = FAudioSourceVoice_SetFrequencyRatio(instanceinternal->sourceVoice, settings.DopplerFactor, FAUDIO_COMMIT_NOW);
+			assert(res == 0);
+
+			res = FAudioVoice_SetOutputMatrix(
+				instanceinternal->sourceVoice, 
+				audio->submixVoices[instance->type], 
+				settings.SrcChannelCount, 
+				settings.DstChannelCount, 
+				settings.pMatrixCoefficients, 
+				FAUDIO_COMMIT_NOW);
+			assert(res == 0);
+
+			FAudioFilterParameters FilterParametersDirect = { FAudioLowPassFilter, 2.0f * sinf(F3DAUDIO_PI / 6.0f * settings.LPFDirectCoefficient), 1.0f };
+			res = FAudioVoice_SetOutputFilterParameters(instanceinternal->sourceVoice, audio->submixVoices[instance->type], &FilterParametersDirect, FAUDIO_COMMIT_NOW);
+			assert(res == 0);
+
+			if(instance->IsEnableReverb()){
+				res = FAudioVoice_SetOutputMatrix(instanceinternal->sourceVoice, audio->reverbSubmix, settings.SrcChannelCount, 1, &settings.ReverbLevel, FAUDIO_COMMIT_NOW);
+				assert(res == 0);
+				FAudioFilterParameters FilterParametersReverb = { FAudioLowPassFilter, 2.0f * sinf(F3DAUDIO_PI / 6.0f * settings.LPFReverbCoefficient), 1.0f };
+				res = FAudioVoice_SetOutputFilterParameters(instanceinternal->sourceVoice, audio->reverbSubmix, &FilterParametersReverb, FAUDIO_COMMIT_NOW);
+				assert(res == 0);
+			}
+		}
+	}
+
+	void SetReverb(REVERB_PRESET preset) {
+		FAudioFXReverbParameters native;
+		ReverbConvertI3DL2ToNative(&reverbPresets[preset], &native);
+		uint32_t res = FAudioVoice_SetEffectParameters(audio->reverbSubmix, 0, &native, sizeof(native), FAUDIO_COMMIT_NOW);
+		assert(res == 0);
+	}
 }
 
 #else

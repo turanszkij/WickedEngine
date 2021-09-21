@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Editor.h"
 #include "PaintToolWindow.h"
-#include "shaders/ShaderInterop_Paint.h"
+#include "shaders/ShaderInterop_Renderer.h"
 
 #include <sstream>
 #include <cmath>
@@ -305,22 +305,11 @@ void PaintToolWindow::Update(float dt)
 			// Need to requery this because RecordHistory might swap textures on material:
 			editTexture = GetEditTextureSlot(*material, &uvset);
 
-			static GPUBuffer cbuf;
-			if (!cbuf.IsValid())
-			{
-				GPUBufferDesc desc;
-				desc.BindFlags = BIND_CONSTANT_BUFFER;
-				desc.Usage = USAGE_DYNAMIC;
-				desc.CPUAccessFlags = CPU_ACCESS_WRITE;
-				desc.ByteWidth = sizeof(PaintTextureCB);
-				device->CreateBuffer(&desc, nullptr, &cbuf);
-			}
-
 			device->BindComputeShader(wiRenderer::GetShader(CSTYPE_PAINT_TEXTURE), cmd);
 
 			wiRenderer::BindCommonResources(cmd);
-			device->BindResource(CS, wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND0, cmd);
-			device->BindUAV(CS, &editTexture, 0, cmd);
+			device->BindResource(wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND0, cmd);
+			device->BindUAV(&editTexture, 0, cmd);
 
 			PaintTextureCB cb;
 			cb.xPaintBrushCenter = center;
@@ -328,8 +317,7 @@ void PaintToolWindow::Update(float dt)
 			cb.xPaintBrushAmount = amount;
 			cb.xPaintBrushFalloff = falloff;
 			cb.xPaintBrushColor = color.rgba;
-			device->UpdateBuffer(&cbuf, &cb, cmd);
-			device->BindConstantBuffer(CS, &cbuf, CB_GETBINDSLOT(PaintTextureCB), cmd);
+			device->PushConstants(&cb, sizeof(cb), cmd);
 
 			const uint diameter = cb.xPaintBrushRadius * 2;
 			const uint dispatch_dim = (diameter + PAINT_TEXTURE_BLOCKSIZE - 1) / PAINT_TEXTURE_BLOCKSIZE;
@@ -340,7 +328,6 @@ void PaintToolWindow::Update(float dt)
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 
-			device->UnbindUAVs(0, 1, cmd);
 
 			wiRenderer::GenerateMipChain(editTexture, wiRenderer::MIPGENFILTER::MIPGENFILTER_LINEAR, cmd);
 		}

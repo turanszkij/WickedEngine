@@ -3,15 +3,17 @@
 #include "objectHF.hlsli"
 
 [earlydepthstencil]
-GBuffer main(VSOut input)
+float4 main(VSOut input) : SV_Target
 {
-	float3 uv_col = input.tex;
+	float3 uv_col = float3(input.uv, input.slice);
 	float3 uv_nor = uv_col;
 	uv_nor.z += impostorCaptureAngles;
 	float3 uv_sur = uv_nor;
 	uv_sur.z += impostorCaptureAngles;
 
-	float4 color = impostorTex.Sample(sampler_linear_clamp, uv_col) * unpack_rgba(input.instanceColor);
+	ShaderMeshInstance instance = load_instance(input.instanceID);
+
+	float4 color = impostorTex.Sample(sampler_linear_clamp, uv_col) * unpack_rgba(instance.color);
 	float3 N = impostorTex.Sample(sampler_linear_clamp, uv_nor).rgb * 2 - 1;
 	float4 surfaceparams = impostorTex.Sample(sampler_linear_clamp, uv_sur);
 
@@ -20,7 +22,7 @@ GBuffer main(VSOut input)
 	float metalness = surfaceparams.b;
 	float reflectance = surfaceparams.a;
 
-	float3 V = g_xCamera_CamPos - input.pos3D;
+	float3 V = g_xCamera.CamPos - input.pos3D;
 	float dist = length(V);
 	V /= dist;
 
@@ -38,16 +40,11 @@ GBuffer main(VSOut input)
 	Lighting lighting;
 	lighting.create(0, 0, GetAmbient(surface.N), 0);
 
-	float2 ScreenCoord = surface.pixel * g_xFrame_InternalResolution_rcp;
-	float2 pos2D = ScreenCoord * 2 - 1;
-	pos2D.y *= -1;
-	float2 velocity = ((input.pos2DPrev.xy / input.pos2DPrev.w - g_xFrame_TemporalAAJitterPrev) - (pos2D.xy - g_xFrame_TemporalAAJitter)) * float2(0.5f, -0.5f);
-
 	TiledLighting(surface, lighting);
 
 	ApplyLighting(surface, lighting, color);
 
-	ApplyFog(dist, g_xCamera_CamPos, V, color);
+	ApplyFog(dist, g_xCamera.CamPos, V, color);
 
-	return CreateGBuffer(color, surface);
+	return color;
 }
