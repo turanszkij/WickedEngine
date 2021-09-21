@@ -4,6 +4,9 @@
 #include <memory>
 #include <string>
 #include <vector>
+#ifdef SDL2
+#include <SDL2/SDL.h>
+#endif
 
 namespace wiAudio
 {
@@ -32,7 +35,7 @@ namespace wiAudio
 
 		SUBMIX_TYPE type = SUBMIX_TYPE_SOUNDEFFECT;
 		float loop_begin = 0;	// loop region begin in seconds (0 = from beginning)
-		float loop_length = 0;	// loop region legth in seconds (0 = until the end)
+		float loop_length = 0;	// loop region length in seconds (0 = until the end)
 
 		enum FLAGS
 		{
@@ -48,6 +51,9 @@ namespace wiAudio
 	bool CreateSound(const std::string& filename, Sound* sound);
 	bool CreateSound(const std::vector<uint8_t>& data, Sound* sound);
 	bool CreateSound(const uint8_t* data, size_t size, Sound* sound);
+#ifdef SDL2
+	bool CreateSound(SDL_RWops* data, Sound* sound);
+#endif
 	bool CreateSoundInstance(const Sound* sound, SoundInstance* instance);
 
 	void Play(SoundInstance* instance);
