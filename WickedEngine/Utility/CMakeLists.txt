@@ -1,3 +1,7 @@
+if (PLATFORM MATCHES "SDL2")
+	add_subdirectory(FAudio)
+endif()
+
 set (SOURCE_FILES
 	utility_common.cpp
 	spirv_reflect.c

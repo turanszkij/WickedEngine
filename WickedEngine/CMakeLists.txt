@@ -124,6 +124,7 @@ else ()
 		Vulkan::Vulkan
 		SDL2::SDL2
 		$<$<BOOL:${OpenImageDenoise_FOUND}>:OpenImageDenoise> # links OpenImageDenoise only if it's found
+		FAudio
 	)
 
 	target_link_libraries(${TARGET_NAME} PRIVATE dl)
