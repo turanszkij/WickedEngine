@@ -28,6 +28,7 @@ Contributions:
 	- Fixes
 - Megumumpkin https://github.com/megumumpkin
 	- Fixes
+	- Linux Audio
 
 	
 Support the project on Patreon: https://www.patreon.com/wickedengine
