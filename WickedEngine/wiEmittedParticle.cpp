@@ -52,6 +52,7 @@ static bool ALLOW_MESH_SHADER = false;
 void wiEmittedParticle::SetMaxParticleCount(uint32_t value)
 {
 	MAX_PARTICLES = value;
+	counterBuffer = {}; // will be recreated
 }
 
 void wiEmittedParticle::CreateSelfBuffers()
@@ -151,8 +152,14 @@ void wiEmittedParticle::CreateSelfBuffers()
 		bd.Stride = sizeof(counters);
 		bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
 		device->CreateBuffer(&bd, &counters, &counterBuffer);
+	}
+
+	if(!indirectBuffers.IsValid())
+	{
+		GPUBufferDesc bd;
 
 		// Indirect Execution buffer:
+		bd.Usage = USAGE_DEFAULT;
 		bd.BindFlags = BIND_UNORDERED_ACCESS;
 		bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW | RESOURCE_MISC_INDIRECT_ARGS;
 		bd.Size =
@@ -165,6 +172,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 		bd.Usage = USAGE_DEFAULT;
 		bd.Size = sizeof(EmittedParticleCB);
 		bd.BindFlags = BIND_CONSTANT_BUFFER;
+		bd.MiscFlags = RESOURCE_MISC_NONE;
 		device->CreateBuffer(&bd, nullptr, &constantBuffer);
 
 		// Debug information CPU-readback buffer:
@@ -241,6 +249,7 @@ void wiEmittedParticle::Burst(int num)
 void wiEmittedParticle::Restart()
 {
 	SetPaused(false);
+	counterBuffer = {}; // will be recreated
 }
 
 void wiEmittedParticle::UpdateGPU(uint32_t materialIndex, const TransformComponent& transform, const MeshComponent* mesh, CommandList cmd) const
