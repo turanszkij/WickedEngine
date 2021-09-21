@@ -1894,6 +1894,10 @@ using namespace Vulkan_Internal;
 				debugUtils = true;
 				instanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 			}
+			else if (strcmp(availableExtension.extensionName, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME) == 0)
+			{
+				instanceExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+			}
 		}
 		
 		instanceExtensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
@@ -1994,8 +1998,10 @@ using namespace Vulkan_Internal;
 					continue;
 
 				features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+				features_1_1.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
 				features_1_2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
-				features2.pNext = &features_1_2;
+				features2.pNext = &features_1_1;
+				features_1_1.pNext = &features_1_2;
 				void** features_chain = &features_1_2.pNext;
 				acceleration_structure_features = {};
 				raytracing_features = {};
@@ -2004,8 +2010,10 @@ using namespace Vulkan_Internal;
 				mesh_shader_features = {};
 
 				properties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+				properties_1_1.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_PROPERTIES;
 				properties_1_2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES;
-				properties2.pNext = &properties_1_2;
+				properties2.pNext = &properties_1_1;
+				properties_1_1.pNext = &properties_1_2;
 				void** properties_chain = &properties_1_2.pNext;
 				acceleration_structure_properties = {};
 				raytracing_properties = {};
@@ -2015,6 +2023,7 @@ using namespace Vulkan_Internal;
 				enabled_deviceExtensions = required_deviceExtensions;
 
 				// Core 1.2
+				enabled_deviceExtensions.push_back(VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME);
 				enabled_deviceExtensions.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
 				enabled_deviceExtensions.push_back(VK_EXT_SHADER_VIEWPORT_INDEX_LAYER_EXTENSION_NAME);
 
@@ -2105,8 +2114,8 @@ using namespace Vulkan_Internal;
 			assert(features2.features.shaderClipDistance == VK_TRUE);
 			assert(features2.features.textureCompressionBC == VK_TRUE);
 			assert(features2.features.occlusionQueryPrecise == VK_TRUE);
-			assert(features_1_2.bufferDeviceAddress == VK_TRUE);
 			assert(features_1_2.descriptorIndexing == VK_TRUE);
+
 			if (features2.features.tessellationShader == VK_TRUE)
 			{
 				capabilities |= GRAPHICSDEVICE_CAPABILITY_TESSELLATION;
@@ -2123,8 +2132,8 @@ using namespace Vulkan_Internal;
 			if (
 				raytracing_features.rayTracingPipeline == VK_TRUE &&
 				raytracing_query_features.rayQuery == VK_TRUE &&
-				acceleration_structure_features.accelerationStructure == VK_TRUE
-				)
+				acceleration_structure_features.accelerationStructure == VK_TRUE &&
+				features_1_2.bufferDeviceAddress == VK_TRUE)
 			{
 				capabilities |= GRAPHICSDEVICE_CAPABILITY_RAYTRACING;
 				SHADER_IDENTIFIER_SIZE = raytracing_properties.shaderGroupHandleSize;
@@ -2267,7 +2276,10 @@ using namespace Vulkan_Internal;
 		allocatorInfo.physicalDevice = physicalDevice;
 		allocatorInfo.device = device;
 		allocatorInfo.instance = instance;
-		allocatorInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+		if (features_1_2.bufferDeviceAddress)
+		{
+			allocatorInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+		}
 		res = vmaCreateAllocator(&allocatorInfo, &allocationhandler->allocator);
 		assert(res == VK_SUCCESS);
 
@@ -2494,12 +2506,30 @@ using namespace Vulkan_Internal;
 		dynamicStateInfo.dynamicStateCount = (uint32_t)pso_dynamicStates.size();
 		dynamicStateInfo.pDynamicStates = pso_dynamicStates.data();
 
-		allocationhandler->bindlessSampledImages.init(device, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, properties_1_2.maxDescriptorSetUpdateAfterBindSampledImages / 4);
-		allocationhandler->bindlessUniformTexelBuffers.init(device, VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, properties_1_2.maxDescriptorSetUpdateAfterBindSampledImages / 4);
-		allocationhandler->bindlessStorageBuffers.init(device, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, properties_1_2.maxDescriptorSetUpdateAfterBindStorageBuffers / 4);
-		allocationhandler->bindlessStorageImages.init(device, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, properties_1_2.maxDescriptorSetUpdateAfterBindStorageImages / 4);
-		allocationhandler->bindlessStorageTexelBuffers.init(device, VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, properties_1_2.maxDescriptorSetUpdateAfterBindStorageImages / 4);
-		allocationhandler->bindlessSamplers.init(device, VK_DESCRIPTOR_TYPE_SAMPLER, 256);
+		if (features_1_2.descriptorBindingSampledImageUpdateAfterBind == VK_TRUE)
+		{
+			allocationhandler->bindlessSampledImages.init(device, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, properties_1_2.maxDescriptorSetUpdateAfterBindSampledImages / 4);
+		}
+		if (features_1_2.descriptorBindingUniformTexelBufferUpdateAfterBind == VK_TRUE)
+		{
+			allocationhandler->bindlessUniformTexelBuffers.init(device, VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, properties_1_2.maxDescriptorSetUpdateAfterBindSampledImages / 4);
+		}
+		if (features_1_2.descriptorBindingStorageBufferUpdateAfterBind == VK_TRUE)
+		{
+			allocationhandler->bindlessStorageBuffers.init(device, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, properties_1_2.maxDescriptorSetUpdateAfterBindStorageBuffers / 4);
+		}
+		if (features_1_2.descriptorBindingStorageImageUpdateAfterBind == VK_TRUE)
+		{
+			allocationhandler->bindlessStorageImages.init(device, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, properties_1_2.maxDescriptorSetUpdateAfterBindStorageImages / 4);
+		}
+		if (features_1_2.descriptorBindingStorageTexelBufferUpdateAfterBind == VK_TRUE)
+		{
+			allocationhandler->bindlessStorageTexelBuffers.init(device, VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, properties_1_2.maxDescriptorSetUpdateAfterBindStorageImages / 4);
+		}
+		if (features_1_2.descriptorBindingSampledImageUpdateAfterBind == VK_TRUE)
+		{
+			allocationhandler->bindlessSamplers.init(device, VK_DESCRIPTOR_TYPE_SAMPLER, 256);
+		}
 
 		if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		{
@@ -2956,9 +2986,12 @@ using namespace Vulkan_Internal;
 			bufferInfo.usage |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
 			bufferInfo.usage |= VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR;
 		}
+		if (features_1_2.bufferDeviceAddress == VK_TRUE)
+		{
+			bufferInfo.usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+		}
 		bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 		bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-		bufferInfo.usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
 
 		bufferInfo.flags = 0;
 
