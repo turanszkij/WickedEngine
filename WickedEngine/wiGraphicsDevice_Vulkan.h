@@ -372,8 +372,8 @@ namespace wiGraphics
 
 			struct BindlessDescriptorHeap
 			{
-				VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
 				VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
+				VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
 				VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 				std::vector<int> freelist;
 				std::mutex locker;
@@ -438,8 +438,17 @@ namespace wiGraphics
 				}
 				void destroy(VkDevice device)
 				{
-					vkDestroyDescriptorPool(device, descriptorPool, nullptr);
-					vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
+					if (descriptorSetLayout != VK_NULL_HANDLE)
+					{
+						vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
+						descriptorSetLayout = VK_NULL_HANDLE;
+					}
+
+					if (descriptorPool != VK_NULL_HANDLE)
+					{
+						vkDestroyDescriptorPool(device, descriptorPool, nullptr);
+						descriptorPool = VK_NULL_HANDLE;
+					}
 				}
 
 				int allocate()
@@ -485,7 +494,6 @@ namespace wiGraphics
 			std::deque<std::pair<VkRenderPass, uint64_t>> destroyer_renderpasses;
 			std::deque<std::pair<VkFramebuffer, uint64_t>> destroyer_framebuffers;
 			std::deque<std::pair<VkQueryPool, uint64_t>> destroyer_querypools;
-			std::deque<std::pair<int, uint64_t>> destroyer_bindlessUniformBuffers;
 			std::deque<std::pair<int, uint64_t>> destroyer_bindlessSampledImages;
 			std::deque<std::pair<int, uint64_t>> destroyer_bindlessUniformTexelBuffers;
 			std::deque<std::pair<int, uint64_t>> destroyer_bindlessStorageBuffers;
@@ -703,18 +711,6 @@ namespace wiGraphics
 						auto item = destroyer_querypools.front();
 						destroyer_querypools.pop_front();
 						vkDestroyQueryPool(device, item.first, nullptr);
-					}
-					else
-					{
-						break;
-					}
-				}
-				while (!destroyer_bindlessUniformBuffers.empty())
-				{
-					if (destroyer_bindlessUniformBuffers.front().second + BUFFERCOUNT < FRAMECOUNT)
-					{
-						int index= destroyer_bindlessUniformBuffers.front().first;
-						destroyer_bindlessUniformBuffers.pop_front();
 					}
 					else
 					{
