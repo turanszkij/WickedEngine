@@ -284,16 +284,31 @@ namespace wiRenderer
 
 	struct LuminanceResources
 	{
-		wiGraphics::Texture reductiontex;
-		wiGraphics::Texture luminance;
+		wiGraphics::GPUBuffer luminance;
 	};
 	void CreateLuminanceResources(LuminanceResources& res, XMUINT2 resolution);
 	// Compute the luminance for the source image and return the texture containing the luminance value in pixel [0,0]
-	const wiGraphics::Texture* ComputeLuminance(
+	void ComputeLuminance(
 		const LuminanceResources& res,
 		const wiGraphics::Texture& sourceImage,
 		wiGraphics::CommandList cmd,
-		float adaption_rate = 1
+		float adaption_rate = 1,
+		float eyeadaptionkey = 0.115f
+	);
+
+	struct BloomResources
+	{
+		wiGraphics::Texture texture_bloom;
+		wiGraphics::Texture texture_temp;
+	};
+	void CreateBloomResources(BloomResources& res, XMUINT2 resolution);
+	void ComputeBloom(
+		const BloomResources& res,
+		const wiGraphics::Texture& input,
+		wiGraphics::CommandList cmd,
+		float threshold = 1.0f, // cutoff value, pixels below this will not contribute to bloom
+		float exposure = 1.0f,
+		const wiGraphics::GPUBuffer* buffer_luminance = nullptr
 	);
 
 	void ComputeShadingRateClassification(
@@ -566,19 +581,6 @@ namespace wiRenderer
 		wiGraphics::CommandList cmd,
 		float strength = 100.0f
 	);
-	struct BloomResources
-	{
-		wiGraphics::Texture texture_bloom;
-		wiGraphics::Texture texture_temp;
-	};
-	void CreateBloomResources(BloomResources& res, XMUINT2 resolution);
-	void Postprocess_Bloom(
-		const BloomResources& res,
-		const wiGraphics::Texture& input,
-		const wiGraphics::Texture& output,
-		wiGraphics::CommandList cmd,
-		float threshold = 1.0f
-	);
 	struct VolumetricCloudResources
 	{
 		wiGraphics::Texture texture_cloudRender;
@@ -622,8 +624,8 @@ namespace wiRenderer
 		bool dither,
 		const wiGraphics::Texture* texture_colorgradinglut = nullptr,
 		const wiGraphics::Texture* texture_distortion = nullptr,
-		const wiGraphics::Texture* texture_luminance = nullptr,
-		float eyeadaptionkey = 0.115f
+		const wiGraphics::GPUBuffer* buffer_luminance = nullptr,
+		const wiGraphics::Texture* texture_bloom = nullptr
 	);
 	void Postprocess_FSR(
 		const wiGraphics::Texture& input,

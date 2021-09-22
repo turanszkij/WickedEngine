@@ -934,20 +934,23 @@ CBUFFER(CubemapRenderCB, CBSLOT_RENDERER_CUBEMAPRENDER)
 };
 
 // MIP Generator params:
-#define GENERATEMIPCHAIN_1D_BLOCK_SIZE 64
-#define GENERATEMIPCHAIN_2D_BLOCK_SIZE 8
-#define GENERATEMIPCHAIN_3D_BLOCK_SIZE 4
+static const uint GENERATEMIPCHAIN_1D_BLOCK_SIZE = 64;
+static const uint GENERATEMIPCHAIN_2D_BLOCK_SIZE = 8;
+static const uint GENERATEMIPCHAIN_3D_BLOCK_SIZE = 4;
 
-struct GenerateMIPChainCB
+struct MipgenPushConstants
 {
 	uint3 outputResolution;
 	uint arrayIndex;
 	float3 outputResolution_rcp;
 	uint mipgen_options;
+	int texture_input;
+	int texture_output;
+	int sampler_index;
 };
 static const uint MIPGEN_OPTION_BIT_PRESERVE_COVERAGE = 1 << 0;
 
-struct FilterEnvmapCB
+struct FilterEnvmapPushConstants
 {
 	uint2 filterResolution;
 	float2 filterResolution_rcp;
@@ -955,6 +958,8 @@ struct FilterEnvmapCB
 	float filterRoughness;
 	uint filterRayCount;
 	uint padding_filterCB;
+	int texture_input;
+	int texture_output;
 };
 
 // CopyTexture2D params:

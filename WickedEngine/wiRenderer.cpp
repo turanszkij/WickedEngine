@@ -1092,7 +1092,6 @@ void LoadShaders()
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_MOTIONBLUR_EARLYEXIT], "motionblurCS_earlyexit.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_MOTIONBLUR_CHEAP], "motionblurCS_cheap.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_BLOOMSEPARATE], "bloomseparateCS.cso"); });
-	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_BLOOMCOMBINE], "bloomcombineCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_SHAPENOISE], "volumetricCloud_shapenoiseCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_DETAILNOISE], "volumetricCloud_detailnoiseCS.cso"); });
 	wiJobSystem::Execute(ctx, [](wiJobArgs args) { LoadShader(CS, shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_CURLNOISE], "volumetricCloud_curlnoiseCS.cso"); });
@@ -6347,15 +6346,17 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 				device->BindUAV(&vis.scene->envmapArray, 0, cmd, i);
 				device->BindResource(&vis.scene->envmapArray, TEXSLOT_ONDEMAND0, cmd, std::max(0, (int)i - 2));
 
-				FilterEnvmapCB cb;
-				cb.filterResolution.x = desc.Width;
-				cb.filterResolution.y = desc.Height;
-				cb.filterResolution_rcp.x = 1.0f / cb.filterResolution.x;
-				cb.filterResolution_rcp.y = 1.0f / cb.filterResolution.y;
-				cb.filterArrayIndex = arrayIndex;
-				cb.filterRoughness = (float)i / (float)desc.MipLevels;
-				cb.filterRayCount = 128;
-				device->PushConstants(&cb, sizeof(cb), cmd);
+				FilterEnvmapPushConstants push;
+				push.filterResolution.x = desc.Width;
+				push.filterResolution.y = desc.Height;
+				push.filterResolution_rcp.x = 1.0f / push.filterResolution.x;
+				push.filterResolution_rcp.y = 1.0f / push.filterResolution.y;
+				push.filterArrayIndex = arrayIndex;
+				push.filterRoughness = (float)i / (float)desc.MipLevels;
+				push.filterRayCount = 128;
+				push.texture_input = device->GetDescriptorIndex(&vis.scene->envmapArray, SRV, std::max(0, (int)i - 2));
+				push.texture_output = device->GetDescriptorIndex(&vis.scene->envmapArray, UAV, i);
+				device->PushConstants(&push, sizeof(push), cmd);
 
 				device->Dispatch(
 					std::max(1u, (uint32_t)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
@@ -6817,6 +6818,8 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 
 	bool hdr = !IsFormatUnorm(desc.Format);
 
+	MipgenPushConstants mipgen;
+
 	if (desc.type == TextureDesc::TEXTURE_1D)
 	{
 		assert(0); // not implemented
@@ -6837,12 +6840,12 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 				case MIPGENFILTER_POINT:
 					device->EventBegin("GenerateMipChain CubeArray - PointFilter", cmd);
 					device->BindComputeShader(&shaders[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4 : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4], cmd);
-					device->BindSampler(&samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, cmd);
+					mipgen.sampler_index = device->GetDescriptorIndex(&samplers[SSLOT_POINT_CLAMP]);
 					break;
 				case MIPGENFILTER_LINEAR:
 					device->EventBegin("GenerateMipChain CubeArray - LinearFilter", cmd);
 					device->BindComputeShader(&shaders[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4 : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4], cmd);
-					device->BindSampler(&samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, cmd);
+					mipgen.sampler_index = device->GetDescriptorIndex(&samplers[SSLOT_LINEAR_CLAMP]);
 					break;
 				default:
 					assert(0);
@@ -6863,19 +6866,18 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 						device->Barrier(barriers, arraysize(barriers), cmd);
 					}
 
-					device->BindUAV(&texture, 0, cmd, i + 1);
-					device->BindResource(&texture, TEXSLOT_ONDEMAND0, cmd, i);
+					mipgen.texture_output = device->GetDescriptorIndex(&texture, UAV, i + 1);
+					mipgen.texture_input = device->GetDescriptorIndex(&texture, SRV, i);
 					desc.Width = std::max(1u, desc.Width / 2);
 					desc.Height = std::max(1u, desc.Height / 2);
 
-					GenerateMIPChainCB cb;
-					cb.outputResolution.x = desc.Width;
-					cb.outputResolution.y = desc.Height;
-					cb.outputResolution_rcp.x = 1.0f / cb.outputResolution.x;
-					cb.outputResolution_rcp.y = 1.0f / cb.outputResolution.y;
-					cb.arrayIndex = options.arrayIndex;
-					cb.mipgen_options = 0;
-					device->PushConstants(&cb, sizeof(cb), cmd);
+					mipgen.outputResolution.x = desc.Width;
+					mipgen.outputResolution.y = desc.Height;
+					mipgen.outputResolution_rcp.x = 1.0f / mipgen.outputResolution.x;
+					mipgen.outputResolution_rcp.y = 1.0f / mipgen.outputResolution.y;
+					mipgen.arrayIndex = options.arrayIndex;
+					mipgen.mipgen_options = 0;
+					device->PushConstants(&mipgen, sizeof(mipgen), cmd);
 
 					device->Dispatch(
 						std::max(1u, (desc.Width + GENERATEMIPCHAIN_2D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_2D_BLOCK_SIZE),
@@ -6905,12 +6907,12 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 				case MIPGENFILTER_POINT:
 					device->EventBegin("GenerateMipChain Cube - PointFilter", cmd);
 					device->BindComputeShader(&shaders[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4 : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4], cmd);
-					device->BindSampler(&samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, cmd);
+					mipgen.sampler_index = device->GetDescriptorIndex(&samplers[SSLOT_POINT_CLAMP]);
 					break;
 				case MIPGENFILTER_LINEAR:
 					device->EventBegin("GenerateMipChain Cube - LinearFilter", cmd);
 					device->BindComputeShader(&shaders[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4 : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4], cmd);
-					device->BindSampler(&samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, cmd);
+					mipgen.sampler_index = device->GetDescriptorIndex(&samplers[SSLOT_LINEAR_CLAMP]);
 					break;
 				default:
 					assert(0); // not implemented
@@ -6919,19 +6921,18 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 
 				for (uint32_t i = 0; i < desc.MipLevels - 1; ++i)
 				{
-					device->BindUAV(&texture, 0, cmd, i + 1);
-					device->BindResource(&texture, TEXSLOT_ONDEMAND0, cmd, i);
+					mipgen.texture_output = device->GetDescriptorIndex(&texture, UAV, i + 1);
+					mipgen.texture_input = device->GetDescriptorIndex(&texture, SRV, i);
 					desc.Width = std::max(1u, desc.Width / 2);
 					desc.Height = std::max(1u, desc.Height / 2);
 
-					GenerateMIPChainCB cb;
-					cb.outputResolution.x = desc.Width;
-					cb.outputResolution.y = desc.Height;
-					cb.outputResolution_rcp.x = 1.0f / cb.outputResolution.x;
-					cb.outputResolution_rcp.y = 1.0f / cb.outputResolution.y;
-					cb.arrayIndex = 0;
-					cb.mipgen_options = 0;
-					device->PushConstants(&cb, sizeof(cb), cmd);
+					mipgen.outputResolution.x = desc.Width;
+					mipgen.outputResolution.y = desc.Height;
+					mipgen.outputResolution_rcp.x = 1.0f / mipgen.outputResolution.x;
+					mipgen.outputResolution_rcp.y = 1.0f / mipgen.outputResolution.y;
+					mipgen.arrayIndex = 0;
+					mipgen.mipgen_options = 0;
+					device->PushConstants(&mipgen, sizeof(mipgen), cmd);
 
 					device->Dispatch(
 						std::max(1u, (desc.Width + GENERATEMIPCHAIN_2D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_2D_BLOCK_SIZE),
@@ -6955,12 +6956,12 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 			case MIPGENFILTER_POINT:
 				device->EventBegin("GenerateMipChain 2D - PointFilter", cmd);
 				device->BindComputeShader(&shaders[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4 : CSTYPE_GENERATEMIPCHAIN2D_UNORM4], cmd);
-				device->BindSampler(&samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, cmd);
+				mipgen.sampler_index = device->GetDescriptorIndex(&samplers[SSLOT_POINT_CLAMP]);
 				break;
 			case MIPGENFILTER_LINEAR:
 				device->EventBegin("GenerateMipChain 2D - LinearFilter", cmd);
 				device->BindComputeShader(&shaders[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4 : CSTYPE_GENERATEMIPCHAIN2D_UNORM4], cmd);
-				device->BindSampler(&samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, cmd);
+				mipgen.sampler_index = device->GetDescriptorIndex(&samplers[SSLOT_LINEAR_CLAMP]);
 				break;
 			case MIPGENFILTER_GAUSSIAN:
 			{
@@ -6989,23 +6990,22 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 					device->Barrier(barriers, arraysize(barriers), cmd);
 				}
 
-				device->BindUAV(&texture, 0, cmd, i + 1);
-				device->BindResource(&texture, TEXSLOT_ONDEMAND0, cmd, i);
+				mipgen.texture_output = device->GetDescriptorIndex(&texture, UAV, i + 1);
+				mipgen.texture_input = device->GetDescriptorIndex(&texture, SRV, i);
 				desc.Width = std::max(1u, desc.Width / 2);
 				desc.Height = std::max(1u, desc.Height / 2);
 
-				GenerateMIPChainCB cb;
-				cb.outputResolution.x = desc.Width;
-				cb.outputResolution.y = desc.Height;
-				cb.outputResolution_rcp.x = 1.0f / cb.outputResolution.x;
-				cb.outputResolution_rcp.y = 1.0f / cb.outputResolution.y;
-				cb.arrayIndex = options.arrayIndex >= 0 ? (uint)options.arrayIndex : 0;
-				cb.mipgen_options = 0;
+				mipgen.outputResolution.x = desc.Width;
+				mipgen.outputResolution.y = desc.Height;
+				mipgen.outputResolution_rcp.x = 1.0f / mipgen.outputResolution.x;
+				mipgen.outputResolution_rcp.y = 1.0f / mipgen.outputResolution.y;
+				mipgen.arrayIndex = options.arrayIndex >= 0 ? (uint)options.arrayIndex : 0;
+				mipgen.mipgen_options = 0;
 				if (options.preserve_coverage)
 				{
-					cb.mipgen_options |= MIPGEN_OPTION_BIT_PRESERVE_COVERAGE;
+					mipgen.mipgen_options |= MIPGEN_OPTION_BIT_PRESERVE_COVERAGE;
 				}
-				device->PushConstants(&cb, sizeof(cb), cmd);
+				device->PushConstants(&mipgen, sizeof(mipgen), cmd);
 
 				device->Dispatch(
 					std::max(1u, (desc.Width + GENERATEMIPCHAIN_2D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_2D_BLOCK_SIZE),
@@ -7033,12 +7033,12 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 		case MIPGENFILTER_POINT:
 			device->EventBegin("GenerateMipChain 3D - PointFilter", cmd);
 			device->BindComputeShader(&shaders[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4 : CSTYPE_GENERATEMIPCHAIN3D_UNORM4], cmd);
-			device->BindSampler(&samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, cmd);
+			mipgen.sampler_index = device->GetDescriptorIndex(&samplers[SSLOT_POINT_CLAMP]);
 			break;
 		case MIPGENFILTER_LINEAR:
 			device->EventBegin("GenerateMipChain 3D - LinearFilter", cmd);
 			device->BindComputeShader(&shaders[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4 : CSTYPE_GENERATEMIPCHAIN3D_UNORM4], cmd);
-			device->BindSampler(&samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, cmd);
+			mipgen.sampler_index = device->GetDescriptorIndex(&samplers[SSLOT_LINEAR_CLAMP]);
 			break;
 		default:
 			assert(0); // not implemented
@@ -7047,8 +7047,8 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 
 		for (uint32_t i = 0; i < desc.MipLevels - 1; ++i)
 		{
-			device->BindUAV(&texture, 0, cmd, i + 1);
-			device->BindResource(&texture, TEXSLOT_ONDEMAND0, cmd, i);
+			mipgen.texture_output = device->GetDescriptorIndex(&texture, UAV, i + 1);
+			mipgen.texture_input = device->GetDescriptorIndex(&texture, SRV, i);
 			desc.Width = std::max(1u, desc.Width / 2);
 			desc.Height = std::max(1u, desc.Height / 2);
 			desc.Depth = std::max(1u, desc.Depth / 2);
@@ -7060,16 +7060,15 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
 
-			GenerateMIPChainCB cb;
-			cb.outputResolution.x = desc.Width;
-			cb.outputResolution.y = desc.Height;
-			cb.outputResolution.z = desc.Depth;
-			cb.outputResolution_rcp.x = 1.0f / cb.outputResolution.x;
-			cb.outputResolution_rcp.y = 1.0f / cb.outputResolution.y;
-			cb.outputResolution_rcp.z = 1.0f / cb.outputResolution.z;
-			cb.arrayIndex = options.arrayIndex >= 0 ? (uint)options.arrayIndex : 0;
-			cb.mipgen_options = 0;
-			device->PushConstants(&cb, sizeof(cb), cmd);
+			mipgen.outputResolution.x = desc.Width;
+			mipgen.outputResolution.y = desc.Height;
+			mipgen.outputResolution.z = desc.Depth;
+			mipgen.outputResolution_rcp.x = 1.0f / mipgen.outputResolution.x;
+			mipgen.outputResolution_rcp.y = 1.0f / mipgen.outputResolution.y;
+			mipgen.outputResolution_rcp.z = 1.0f / mipgen.outputResolution.z;
+			mipgen.arrayIndex = options.arrayIndex >= 0 ? (uint)options.arrayIndex : 0;
+			mipgen.mipgen_options = 0;
+			device->PushConstants(&mipgen, sizeof(mipgen), cmd);
 
 			device->Dispatch(
 				std::max(1u, (desc.Width + GENERATEMIPCHAIN_3D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_3D_BLOCK_SIZE),
@@ -7418,50 +7417,63 @@ void UpdateCameraCB(
 
 void CreateLuminanceResources(LuminanceResources& res, XMUINT2 resolution)
 {
-	TextureDesc desc;
-	desc.Width = 32;
-	desc.Height = desc.Width;
-	desc.Format = FORMAT_R16_FLOAT;
+	float values[LUMINANCE_NUM_HISTOGRAM_BINS + 1 + 1] = {}; // 1 exposure + 1 luminance value + histogram
+	GPUBufferDesc desc;
+	desc.Size = sizeof(values);
 	desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-	device->CreateTexture(&desc, nullptr, &res.reductiontex);
-
-	desc.Width = 1;
-	desc.Height = desc.Width;
-	device->CreateTexture(&desc, nullptr, &res.luminance);
+	desc.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
+	device->CreateBuffer(&desc, values, &res.luminance);
+	device->SetName(&res.luminance, "luminance");
 }
-const Texture* ComputeLuminance(
+void ComputeLuminance(
 	const LuminanceResources& res,
 	const Texture& sourceImage,
 	CommandList cmd,
-	float adaption_rate
+	float adaption_rate,
+	float eyeadaptionkey
 )
 {
 	device->EventBegin("Compute Luminance", cmd);
 	auto range = wiProfiler::BeginRangeGPU("Luminance", cmd);
 
 	PostProcess postprocess;
+	postprocess.resolution.x = sourceImage.desc.Width / 2;
+	postprocess.resolution.y = sourceImage.desc.Height / 2;
+	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
+	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 	luminance_adaptionrate = adaption_rate;
+	luminance_log_min = -10.0f;
+	luminance_log_max = 2.0f;
+	luminance_log_range = luminance_log_max - luminance_log_min;
+	luminance_log_range_rcp = 1.0f / luminance_log_range;
+	luminance_pixelcount = float(postprocess.resolution.x * postprocess.resolution.y);
+	luminance_eyeadaptionkey = eyeadaptionkey;
 	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
+
+	device->BindUAV(&res.luminance, 0, cmd);
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Buffer(&res.luminance, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_UNORDERED_ACCESS),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
 
 	// Pass 1 : Compute log luminance and reduction
 	{
 		device->BindComputeShader(&shaders[CSTYPE_LUMINANCE_PASS1], cmd);
 		device->BindResource(&sourceImage, TEXSLOT_ONDEMAND0, cmd);
-		device->BindUAV(&res.reductiontex, 0, cmd);
 
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&res.reductiontex, res.reductiontex.desc.layout, RESOURCE_STATE_UNORDERED_ACCESS),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
-		device->Dispatch(32, 32, 1, cmd);
+		device->Dispatch(
+			(postprocess.resolution.x + LUMINANCE_BLOCKSIZE - 1) / LUMINANCE_BLOCKSIZE,
+			(postprocess.resolution.y + LUMINANCE_BLOCKSIZE - 1) / LUMINANCE_BLOCKSIZE,
+			1,
+			cmd
+		);
 
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Memory(),
-				GPUBarrier::Image(&res.reductiontex, RESOURCE_STATE_UNORDERED_ACCESS, res.reductiontex.desc.layout),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -7471,32 +7483,111 @@ const Texture* ComputeLuminance(
 	{
 		device->BindComputeShader(&shaders[CSTYPE_LUMINANCE_PASS2], cmd);
 
-		device->BindUAV(&res.luminance, 0, cmd);
-		device->BindResource(&res.reductiontex, TEXSLOT_ONDEMAND0, cmd);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&res.luminance, res.luminance.desc.layout, RESOURCE_STATE_UNORDERED_ACCESS),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
 		device->Dispatch(1, 1, 1, cmd);
+	}
 
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-				GPUBarrier::Image(&res.luminance, RESOURCE_STATE_UNORDERED_ACCESS, res.luminance.desc.layout),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Memory(),
+			GPUBarrier::Buffer(&res.luminance, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
 	wiProfiler::EndRange(range);
 	device->EventEnd(cmd);
+}
 
-	return &res.luminance;
+void CreateBloomResources(BloomResources& res, XMUINT2 resolution)
+{
+	TextureDesc desc;
+	desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+	desc.Format = FORMAT_R11G11B10_FLOAT;
+	desc.Width = resolution.x / 4;
+	desc.Height = resolution.y / 4;
+	desc.MipLevels = std::min(5u, (uint32_t)std::log2(std::max(desc.Width, desc.Height)));
+	device->CreateTexture(&desc, nullptr, &res.texture_bloom);
+	device->SetName(&res.texture_bloom, "bloom.texture_bloom");
+	device->CreateTexture(&desc, nullptr, &res.texture_temp);
+	device->SetName(&res.texture_temp, "bloom.texture_temp");
+
+	for (uint32_t i = 0; i < res.texture_bloom.desc.MipLevels; ++i)
+	{
+		int subresource_index;
+		subresource_index = device->CreateSubresource(&res.texture_bloom, SRV, 0, 1, i, 1);
+		assert(subresource_index == i);
+		subresource_index = device->CreateSubresource(&res.texture_temp, SRV, 0, 1, i, 1);
+		assert(subresource_index == i);
+		subresource_index = device->CreateSubresource(&res.texture_bloom, UAV, 0, 1, i, 1);
+		assert(subresource_index == i);
+		subresource_index = device->CreateSubresource(&res.texture_temp, UAV, 0, 1, i, 1);
+		assert(subresource_index == i);
+	}
+}
+void ComputeBloom(
+	const BloomResources& res,
+	const Texture& input,
+	CommandList cmd,
+	float threshold,
+	float exposure,
+	const GPUBuffer* buffer_luminance
+)
+{
+	device->EventBegin("Bloom", cmd);
+	auto range = wiProfiler::BeginRangeGPU("Bloom", cmd);
+
+	// Separate bright parts of image to bloom texture:
+	{
+		device->EventBegin("Bloom Separate", cmd);
+
+		const TextureDesc& desc = res.texture_bloom.GetDesc();
+
+		Bloom bloom;
+		bloom.resolution_rcp.x = 1.0f / desc.Width;
+		bloom.resolution_rcp.y = 1.0f / desc.Height;
+		bloom.threshold = threshold;
+		bloom.exposure = exposure;
+		bloom.texture_input = device->GetDescriptorIndex(&input, SRV);
+		bloom.texture_output = device->GetDescriptorIndex(&res.texture_bloom, UAV);
+		bloom.buffer_input_luminance = device->GetDescriptorIndex(buffer_luminance, SRV);
+		device->PushConstants(&bloom, sizeof(bloom), cmd);
+
+		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_BLOOMSEPARATE], cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&res.texture_bloom, res.texture_bloom.desc.layout, RESOURCE_STATE_UNORDERED_ACCESS),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->Dispatch(
+			(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
+			1,
+			cmd
+		);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(),
+				GPUBarrier::Image(&res.texture_bloom, RESOURCE_STATE_UNORDERED_ACCESS, res.texture_bloom.desc.layout),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->EventEnd(cmd);
+	}
+
+	device->EventBegin("Bloom Mipchain", cmd);
+	MIPGEN_OPTIONS mipopt;
+	mipopt.gaussian_temp = &res.texture_temp;
+	mipopt.wide_gauss = true;
+	GenerateMipChain(res.texture_bloom, wiRenderer::MIPGENFILTER_GAUSSIAN, cmd, mipopt);
+	device->EventEnd(cmd);
+
+	wiProfiler::EndRange(range);
+	device->EventEnd(cmd);
 }
 
 void ComputeShadingRateClassification(
@@ -10848,149 +10939,6 @@ void Postprocess_MotionBlur(
 	wiProfiler::EndRange(range);
 	device->EventEnd(cmd);
 }
-void CreateBloomResources(BloomResources& res, XMUINT2 resolution)
-{
-	TextureDesc desc;
-	desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-	desc.Format = FORMAT_R11G11B10_FLOAT;
-	desc.Width = resolution.x / 4;
-	desc.Height = resolution.y / 4;
-	desc.MipLevels = std::min(5u, (uint32_t)std::log2(std::max(desc.Width, desc.Height)));
-	device->CreateTexture(&desc, nullptr, &res.texture_bloom);
-	device->SetName(&res.texture_bloom, "bloom.texture_bloom");
-	device->CreateTexture(&desc, nullptr, &res.texture_temp);
-	device->SetName(&res.texture_temp, "bloom.texture_temp");
-
-	for (uint32_t i = 0; i < res.texture_bloom.desc.MipLevels; ++i)
-	{
-		int subresource_index;
-		subresource_index = device->CreateSubresource(&res.texture_bloom, SRV, 0, 1, i, 1);
-		assert(subresource_index == i);
-		subresource_index = device->CreateSubresource(&res.texture_temp, SRV, 0, 1, i, 1);
-		assert(subresource_index == i);
-		subresource_index = device->CreateSubresource(&res.texture_bloom, UAV, 0, 1, i, 1);
-		assert(subresource_index == i);
-		subresource_index = device->CreateSubresource(&res.texture_temp, UAV, 0, 1, i, 1);
-		assert(subresource_index == i);
-	}
-}
-void Postprocess_Bloom(
-	const BloomResources& res,
-	const Texture& input,
-	const Texture& output,
-	CommandList cmd,
-	float threshold
-)
-{
-	device->EventBegin("Postprocess_Bloom", cmd);
-	auto range = wiProfiler::BeginRangeGPU("Bloom", cmd);
-
-	// Separate bright parts of image to bloom texture:
-	{
-		device->EventBegin("Bloom Separate", cmd);
-
-		const TextureDesc& desc = res.texture_bloom.GetDesc();
-
-		PostProcess postprocess;
-		postprocess.resolution.x = desc.Width;
-		postprocess.resolution.y = desc.Height;
-		postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
-		postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
-		postprocess.params0.x = threshold;
-		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
-
-		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_BLOOMSEPARATE], cmd);
-
-		device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd);
-
-		const GPUResource* uavs[] = {
-			&res.texture_bloom,
-		};
-		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&res.texture_bloom, res.texture_bloom.desc.layout, RESOURCE_STATE_UNORDERED_ACCESS),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
-		device->Dispatch(
-			(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			1,
-			cmd
-		);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-				GPUBarrier::Image(&res.texture_bloom, RESOURCE_STATE_UNORDERED_ACCESS, res.texture_bloom.desc.layout),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
-		device->EventEnd(cmd);
-	}
-
-	device->EventBegin("Bloom Mipchain", cmd);
-	MIPGEN_OPTIONS mipopt;
-	mipopt.gaussian_temp = &res.texture_temp;
-	mipopt.wide_gauss = true;
-	GenerateMipChain(res.texture_bloom, wiRenderer::MIPGENFILTER_GAUSSIAN, cmd, mipopt);
-	device->EventEnd(cmd);
-
-	// Combine image with bloom
-	{
-		device->EventBegin("Bloom Combine", cmd);
-
-		const TextureDesc& desc = output.GetDesc();
-
-		PostProcess postprocess;
-		postprocess.resolution.x = desc.Width;
-		postprocess.resolution.y = desc.Height;
-		postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
-		postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
-		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
-
-		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_BLOOMCOMBINE], cmd);
-
-		device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(&res.texture_bloom, TEXSLOT_ONDEMAND1, cmd);
-
-		const GPUResource* uavs[] = {
-			&output,
-		};
-		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&output, output.desc.layout, RESOURCE_STATE_UNORDERED_ACCESS),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
-		device->Dispatch(
-			(desc.Width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			(desc.Height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			1,
-			cmd
-		);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-				GPUBarrier::Image(&output, RESOURCE_STATE_UNORDERED_ACCESS, output.desc.layout),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
-		device->EventEnd(cmd);
-	}
-
-	wiProfiler::EndRange(range);
-	device->EventEnd(cmd);
-}
 void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resolution)
 {
 	XMUINT2 renderResolution = XMUINT2(resolution.x / 4, resolution.y / 4);
@@ -11376,8 +11324,8 @@ void Postprocess_Tonemap(
 	bool dither,
 	const Texture* texture_colorgradinglut,
 	const Texture* texture_distortion,
-	const Texture* texture_luminance,
-	float eyeadaptionkey
+	const GPUBuffer* buffer_luminance,
+	const Texture* texture_bloom
 )
 {
 	device->EventBegin("Postprocess_Tonemap", cmd);
@@ -11393,11 +11341,11 @@ void Postprocess_Tonemap(
 	tonemap_push.resolution_rcp.y = 1.0f / desc.Height;
 	tonemap_push.exposure = exposure;
 	tonemap_push.dither = dither ? 1.0f : 0.0f;
-	tonemap_push.eyeadaptionkey = eyeadaptionkey;
 	tonemap_push.texture_input = device->GetDescriptorIndex(&input, SRV);
-	tonemap_push.texture_input_luminance = device->GetDescriptorIndex(texture_luminance, SRV);
+	tonemap_push.buffer_input_luminance = device->GetDescriptorIndex(buffer_luminance, SRV);
 	tonemap_push.texture_input_distortion = device->GetDescriptorIndex(texture_distortion, SRV);
 	tonemap_push.texture_colorgrade_lookuptable = device->GetDescriptorIndex(texture_colorgradinglut, SRV);
+	tonemap_push.texture_bloom = device->GetDescriptorIndex(texture_bloom, SRV);
 	tonemap_push.texture_output = device->GetDescriptorIndex(&output, UAV);
 	device->PushConstants(&tonemap_push, sizeof(tonemap_push), cmd);
 

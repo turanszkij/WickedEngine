@@ -5,18 +5,17 @@
 #define MIP_OUTPUT_FORMAT float4
 #endif
 
-PUSHCONSTANT(push, GenerateMIPChainCB);
-
-TEXTURE3D(input, float4, TEXSLOT_ONDEMAND0);
-RWTEXTURE3D(output, MIP_OUTPUT_FORMAT, 0);
-
-SAMPLERSTATE(customsampler, SSLOT_ONDEMAND0);
+PUSHCONSTANT(mipgen, MipgenPushConstants);
 
 [numthreads(GENERATEMIPCHAIN_3D_BLOCK_SIZE, GENERATEMIPCHAIN_3D_BLOCK_SIZE, GENERATEMIPCHAIN_3D_BLOCK_SIZE)]
-void main( uint3 DTid : SV_DispatchThreadID )
+void main(uint3 DTid : SV_DispatchThreadID)
 {
-	if (DTid.x < push.outputResolution.x && DTid.y < push.outputResolution.y && DTid.z < push.outputResolution.z)
+	if (DTid.x < mipgen.outputResolution.x && DTid.y < mipgen.outputResolution.y && DTid.z < mipgen.outputResolution.z)
 	{
-		output[DTid] = input.SampleLevel(customsampler, ((float3)DTid + 0.5f) * (float3)push.outputResolution_rcp, 0);
+		SamplerState customsampler = bindless_samplers[mipgen.sampler_index];
+		Texture3D input = bindless_textures3D[mipgen.texture_input];
+		RWTexture3D<MIP_OUTPUT_FORMAT> output = bindless_rwtextures3D[mipgen.texture_output];
+
+		output[DTid] = input.SampleLevel(customsampler, ((float3)DTid + 0.5f) * (float3)mipgen.outputResolution_rcp, 0);
 	}
 }

@@ -1,10 +1,7 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Renderer.h"
 
-PUSHCONSTANT(push, FilterEnvmapCB);
-
-TEXTURECUBEARRAY(input, float4, TEXSLOT_ONDEMAND0);
-RWTEXTURE2DARRAY(output, float4, 0);
+PUSHCONSTANT(push, FilterEnvmapPushConstants);
 
 // From "Real Shading in UnrealEngine 4" by Brian Karis
 float3 ImportanceSampleGGX(float2 Xi, float Roughness, float3 N)
@@ -25,6 +22,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 {
 	if (DTid.x < push.filterResolution.x && DTid.y < push.filterResolution.y)
 	{
+		TextureCubeArray input = bindless_cubearrays[push.texture_input];
+		RWTexture2DArray<float4> output = bindless_rwtextures2DArray[push.texture_output];
+
 		float2 uv = (DTid.xy + 0.5f) * push.filterResolution_rcp.xy;
 		float3 N = UV_to_CubeMap(uv, DTid.z);
 

@@ -482,9 +482,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)blur_bilateral_unorm1CS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)bloomcombineCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)objectDS.hlsl">
       <Filter>DS</Filter>
     </FxCompile>
