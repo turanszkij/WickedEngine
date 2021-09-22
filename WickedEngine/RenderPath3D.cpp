@@ -962,6 +962,15 @@ void RenderPath3D::Render() const
 			);
 		}
 
+		// Depth buffers were created on COMPUTE queue, so make them available for pixel shaders here:
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&rtLinearDepth, rtLinearDepth.desc.layout, RESOURCE_STATE_SHADER_RESOURCE),
+				GPUBarrier::Image(&depthBuffer_Copy, depthBuffer_Copy.desc.layout, RESOURCE_STATE_SHADER_RESOURCE),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
 		auto range = wiProfiler::BeginRangeGPU("Opaque Scene", cmd);
 
 		Viewport vp;
@@ -1043,6 +1052,15 @@ void RenderPath3D::Render() const
 		RenderTransparents(cmd);
 
 		RenderPostprocessChain(cmd);
+
+		// Depth buffers expect a non-pixel shader resource state as they are generated on compute queue:
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&rtLinearDepth, RESOURCE_STATE_SHADER_RESOURCE, rtLinearDepth.desc.layout),
+				GPUBarrier::Image(&depthBuffer_Copy, RESOURCE_STATE_SHADER_RESOURCE, depthBuffer_Copy.desc.layout),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
 
 		});
 
