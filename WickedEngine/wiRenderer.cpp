@@ -6346,15 +6346,17 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 				device->BindUAV(&vis.scene->envmapArray, 0, cmd, i);
 				device->BindResource(&vis.scene->envmapArray, TEXSLOT_ONDEMAND0, cmd, std::max(0, (int)i - 2));
 
-				FilterEnvmapCB cb;
-				cb.filterResolution.x = desc.Width;
-				cb.filterResolution.y = desc.Height;
-				cb.filterResolution_rcp.x = 1.0f / cb.filterResolution.x;
-				cb.filterResolution_rcp.y = 1.0f / cb.filterResolution.y;
-				cb.filterArrayIndex = arrayIndex;
-				cb.filterRoughness = (float)i / (float)desc.MipLevels;
-				cb.filterRayCount = 128;
-				device->PushConstants(&cb, sizeof(cb), cmd);
+				FilterEnvmapPushConstants push;
+				push.filterResolution.x = desc.Width;
+				push.filterResolution.y = desc.Height;
+				push.filterResolution_rcp.x = 1.0f / push.filterResolution.x;
+				push.filterResolution_rcp.y = 1.0f / push.filterResolution.y;
+				push.filterArrayIndex = arrayIndex;
+				push.filterRoughness = (float)i / (float)desc.MipLevels;
+				push.filterRayCount = 128;
+				push.texture_input = device->GetDescriptorIndex(&vis.scene->envmapArray, SRV, std::max(0, (int)i - 2));
+				push.texture_output = device->GetDescriptorIndex(&vis.scene->envmapArray, UAV, i);
+				device->PushConstants(&push, sizeof(push), cmd);
 
 				device->Dispatch(
 					std::max(1u, (uint32_t)ceilf((float)desc.Width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
@@ -6816,6 +6818,8 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 
 	bool hdr = !IsFormatUnorm(desc.Format);
 
+	MipgenPushConstants mipgen;
+
 	if (desc.type == TextureDesc::TEXTURE_1D)
 	{
 		assert(0); // not implemented
@@ -6836,12 +6840,12 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 				case MIPGENFILTER_POINT:
 					device->EventBegin("GenerateMipChain CubeArray - PointFilter", cmd);
 					device->BindComputeShader(&shaders[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4 : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4], cmd);
-					device->BindSampler(&samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, cmd);
+					mipgen.sampler_index = device->GetDescriptorIndex(&samplers[SSLOT_POINT_CLAMP]);
 					break;
 				case MIPGENFILTER_LINEAR:
 					device->EventBegin("GenerateMipChain CubeArray - LinearFilter", cmd);
 					device->BindComputeShader(&shaders[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4 : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4], cmd);
-					device->BindSampler(&samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, cmd);
+					mipgen.sampler_index = device->GetDescriptorIndex(&samplers[SSLOT_LINEAR_CLAMP]);
 					break;
 				default:
 					assert(0);
@@ -6862,19 +6866,18 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 						device->Barrier(barriers, arraysize(barriers), cmd);
 					}
 
-					device->BindUAV(&texture, 0, cmd, i + 1);
-					device->BindResource(&texture, TEXSLOT_ONDEMAND0, cmd, i);
+					mipgen.texture_output = device->GetDescriptorIndex(&texture, UAV, i + 1);
+					mipgen.texture_input = device->GetDescriptorIndex(&texture, SRV, i);
 					desc.Width = std::max(1u, desc.Width / 2);
 					desc.Height = std::max(1u, desc.Height / 2);
 
-					GenerateMIPChainCB cb;
-					cb.outputResolution.x = desc.Width;
-					cb.outputResolution.y = desc.Height;
-					cb.outputResolution_rcp.x = 1.0f / cb.outputResolution.x;
-					cb.outputResolution_rcp.y = 1.0f / cb.outputResolution.y;
-					cb.arrayIndex = options.arrayIndex;
-					cb.mipgen_options = 0;
-					device->PushConstants(&cb, sizeof(cb), cmd);
+					mipgen.outputResolution.x = desc.Width;
+					mipgen.outputResolution.y = desc.Height;
+					mipgen.outputResolution_rcp.x = 1.0f / mipgen.outputResolution.x;
+					mipgen.outputResolution_rcp.y = 1.0f / mipgen.outputResolution.y;
+					mipgen.arrayIndex = options.arrayIndex;
+					mipgen.mipgen_options = 0;
+					device->PushConstants(&mipgen, sizeof(mipgen), cmd);
 
 					device->Dispatch(
 						std::max(1u, (desc.Width + GENERATEMIPCHAIN_2D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_2D_BLOCK_SIZE),
@@ -6904,12 +6907,12 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 				case MIPGENFILTER_POINT:
 					device->EventBegin("GenerateMipChain Cube - PointFilter", cmd);
 					device->BindComputeShader(&shaders[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4 : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4], cmd);
-					device->BindSampler(&samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, cmd);
+					mipgen.sampler_index = device->GetDescriptorIndex(&samplers[SSLOT_POINT_CLAMP]);
 					break;
 				case MIPGENFILTER_LINEAR:
 					device->EventBegin("GenerateMipChain Cube - LinearFilter", cmd);
 					device->BindComputeShader(&shaders[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4 : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4], cmd);
-					device->BindSampler(&samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, cmd);
+					mipgen.sampler_index = device->GetDescriptorIndex(&samplers[SSLOT_LINEAR_CLAMP]);
 					break;
 				default:
 					assert(0); // not implemented
@@ -6918,19 +6921,18 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 
 				for (uint32_t i = 0; i < desc.MipLevels - 1; ++i)
 				{
-					device->BindUAV(&texture, 0, cmd, i + 1);
-					device->BindResource(&texture, TEXSLOT_ONDEMAND0, cmd, i);
+					mipgen.texture_output = device->GetDescriptorIndex(&texture, UAV, i + 1);
+					mipgen.texture_input = device->GetDescriptorIndex(&texture, SRV, i);
 					desc.Width = std::max(1u, desc.Width / 2);
 					desc.Height = std::max(1u, desc.Height / 2);
 
-					GenerateMIPChainCB cb;
-					cb.outputResolution.x = desc.Width;
-					cb.outputResolution.y = desc.Height;
-					cb.outputResolution_rcp.x = 1.0f / cb.outputResolution.x;
-					cb.outputResolution_rcp.y = 1.0f / cb.outputResolution.y;
-					cb.arrayIndex = 0;
-					cb.mipgen_options = 0;
-					device->PushConstants(&cb, sizeof(cb), cmd);
+					mipgen.outputResolution.x = desc.Width;
+					mipgen.outputResolution.y = desc.Height;
+					mipgen.outputResolution_rcp.x = 1.0f / mipgen.outputResolution.x;
+					mipgen.outputResolution_rcp.y = 1.0f / mipgen.outputResolution.y;
+					mipgen.arrayIndex = 0;
+					mipgen.mipgen_options = 0;
+					device->PushConstants(&mipgen, sizeof(mipgen), cmd);
 
 					device->Dispatch(
 						std::max(1u, (desc.Width + GENERATEMIPCHAIN_2D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_2D_BLOCK_SIZE),
@@ -6954,12 +6956,12 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 			case MIPGENFILTER_POINT:
 				device->EventBegin("GenerateMipChain 2D - PointFilter", cmd);
 				device->BindComputeShader(&shaders[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4 : CSTYPE_GENERATEMIPCHAIN2D_UNORM4], cmd);
-				device->BindSampler(&samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, cmd);
+				mipgen.sampler_index = device->GetDescriptorIndex(&samplers[SSLOT_POINT_CLAMP]);
 				break;
 			case MIPGENFILTER_LINEAR:
 				device->EventBegin("GenerateMipChain 2D - LinearFilter", cmd);
 				device->BindComputeShader(&shaders[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4 : CSTYPE_GENERATEMIPCHAIN2D_UNORM4], cmd);
-				device->BindSampler(&samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, cmd);
+				mipgen.sampler_index = device->GetDescriptorIndex(&samplers[SSLOT_LINEAR_CLAMP]);
 				break;
 			case MIPGENFILTER_GAUSSIAN:
 			{
@@ -6988,23 +6990,22 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 					device->Barrier(barriers, arraysize(barriers), cmd);
 				}
 
-				device->BindUAV(&texture, 0, cmd, i + 1);
-				device->BindResource(&texture, TEXSLOT_ONDEMAND0, cmd, i);
+				mipgen.texture_output = device->GetDescriptorIndex(&texture, UAV, i + 1);
+				mipgen.texture_input = device->GetDescriptorIndex(&texture, SRV, i);
 				desc.Width = std::max(1u, desc.Width / 2);
 				desc.Height = std::max(1u, desc.Height / 2);
 
-				GenerateMIPChainCB cb;
-				cb.outputResolution.x = desc.Width;
-				cb.outputResolution.y = desc.Height;
-				cb.outputResolution_rcp.x = 1.0f / cb.outputResolution.x;
-				cb.outputResolution_rcp.y = 1.0f / cb.outputResolution.y;
-				cb.arrayIndex = options.arrayIndex >= 0 ? (uint)options.arrayIndex : 0;
-				cb.mipgen_options = 0;
+				mipgen.outputResolution.x = desc.Width;
+				mipgen.outputResolution.y = desc.Height;
+				mipgen.outputResolution_rcp.x = 1.0f / mipgen.outputResolution.x;
+				mipgen.outputResolution_rcp.y = 1.0f / mipgen.outputResolution.y;
+				mipgen.arrayIndex = options.arrayIndex >= 0 ? (uint)options.arrayIndex : 0;
+				mipgen.mipgen_options = 0;
 				if (options.preserve_coverage)
 				{
-					cb.mipgen_options |= MIPGEN_OPTION_BIT_PRESERVE_COVERAGE;
+					mipgen.mipgen_options |= MIPGEN_OPTION_BIT_PRESERVE_COVERAGE;
 				}
-				device->PushConstants(&cb, sizeof(cb), cmd);
+				device->PushConstants(&mipgen, sizeof(mipgen), cmd);
 
 				device->Dispatch(
 					std::max(1u, (desc.Width + GENERATEMIPCHAIN_2D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_2D_BLOCK_SIZE),
@@ -7032,12 +7033,12 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 		case MIPGENFILTER_POINT:
 			device->EventBegin("GenerateMipChain 3D - PointFilter", cmd);
 			device->BindComputeShader(&shaders[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4 : CSTYPE_GENERATEMIPCHAIN3D_UNORM4], cmd);
-			device->BindSampler(&samplers[SSLOT_POINT_CLAMP], SSLOT_ONDEMAND0, cmd);
+			mipgen.sampler_index = device->GetDescriptorIndex(&samplers[SSLOT_POINT_CLAMP]);
 			break;
 		case MIPGENFILTER_LINEAR:
 			device->EventBegin("GenerateMipChain 3D - LinearFilter", cmd);
 			device->BindComputeShader(&shaders[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4 : CSTYPE_GENERATEMIPCHAIN3D_UNORM4], cmd);
-			device->BindSampler(&samplers[SSLOT_LINEAR_CLAMP], SSLOT_ONDEMAND0, cmd);
+			mipgen.sampler_index = device->GetDescriptorIndex(&samplers[SSLOT_LINEAR_CLAMP]);
 			break;
 		default:
 			assert(0); // not implemented
@@ -7046,8 +7047,8 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 
 		for (uint32_t i = 0; i < desc.MipLevels - 1; ++i)
 		{
-			device->BindUAV(&texture, 0, cmd, i + 1);
-			device->BindResource(&texture, TEXSLOT_ONDEMAND0, cmd, i);
+			mipgen.texture_output = device->GetDescriptorIndex(&texture, UAV, i + 1);
+			mipgen.texture_input = device->GetDescriptorIndex(&texture, SRV, i);
 			desc.Width = std::max(1u, desc.Width / 2);
 			desc.Height = std::max(1u, desc.Height / 2);
 			desc.Depth = std::max(1u, desc.Depth / 2);
@@ -7059,16 +7060,15 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
 
-			GenerateMIPChainCB cb;
-			cb.outputResolution.x = desc.Width;
-			cb.outputResolution.y = desc.Height;
-			cb.outputResolution.z = desc.Depth;
-			cb.outputResolution_rcp.x = 1.0f / cb.outputResolution.x;
-			cb.outputResolution_rcp.y = 1.0f / cb.outputResolution.y;
-			cb.outputResolution_rcp.z = 1.0f / cb.outputResolution.z;
-			cb.arrayIndex = options.arrayIndex >= 0 ? (uint)options.arrayIndex : 0;
-			cb.mipgen_options = 0;
-			device->PushConstants(&cb, sizeof(cb), cmd);
+			mipgen.outputResolution.x = desc.Width;
+			mipgen.outputResolution.y = desc.Height;
+			mipgen.outputResolution.z = desc.Depth;
+			mipgen.outputResolution_rcp.x = 1.0f / mipgen.outputResolution.x;
+			mipgen.outputResolution_rcp.y = 1.0f / mipgen.outputResolution.y;
+			mipgen.outputResolution_rcp.z = 1.0f / mipgen.outputResolution.z;
+			mipgen.arrayIndex = options.arrayIndex >= 0 ? (uint)options.arrayIndex : 0;
+			mipgen.mipgen_options = 0;
+			device->PushConstants(&mipgen, sizeof(mipgen), cmd);
 
 			device->Dispatch(
 				std::max(1u, (desc.Width + GENERATEMIPCHAIN_3D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_3D_BLOCK_SIZE),

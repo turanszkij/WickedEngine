@@ -3,17 +3,19 @@
 #include "ShaderInterop.h"
 #include "ShaderInterop_Renderer.h"
 
-Texture2D<float4> bindless_textures[] : register(space1);
+Texture2D bindless_textures[] : register(space1);
 ByteAddressBuffer bindless_buffers[] : register(space2);
 SamplerState bindless_samplers[] : register(space3);
 Buffer<uint> bindless_ib[] : register(space4);
 
-Texture2DArray<float4> bindless_textures2DArray[] : register(space5);
-TextureCube<float4> bindless_cubemaps[] : register(space6);
-TextureCubeArray<float4> bindless_cubearrays[] : register(space7);
-Texture3D<float4> bindless_textures3D[] : register(space8);
+Texture2DArray bindless_textures2DArray[] : register(space5);
+TextureCube bindless_cubemaps[] : register(space6);
+TextureCubeArray bindless_cubearrays[] : register(space7);
+Texture3D bindless_textures3D[] : register(space8);
 RWTexture2D<float4> bindless_rwtextures[] : register(space9);
 RWByteAddressBuffer bindless_rwbuffers[] : register(space10);
+RWTexture2DArray<float4> bindless_rwtextures2DArray[] : register(space11);
+RWTexture3D<float4> bindless_rwtextures3D[] : register(space12);
 
 ShaderMeshInstance load_instance(uint instanceIndex)
 {
