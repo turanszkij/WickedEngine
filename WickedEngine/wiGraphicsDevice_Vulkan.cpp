@@ -513,6 +513,11 @@ namespace Vulkan_Internal
 			flags |= VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
 		}
 
+		if (value & RESOURCE_STATE_PREDICATION)
+		{
+			flags |= VK_ACCESS_CONDITIONAL_RENDERING_READ_BIT_EXT;
+		}
+
 		return flags;
 	}
 	
@@ -2084,6 +2089,14 @@ using namespace Vulkan_Internal;
 					properties_chain = &mesh_shader_properties.pNext;
 				}
 
+				if (checkExtensionSupport(VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME, available_deviceExtensions))
+				{
+					enabled_deviceExtensions.push_back(VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME);
+					conditional_rendering_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_CONDITIONAL_RENDERING_FEATURES_EXT;
+					*features_chain = &conditional_rendering_features;
+					features_chain = &conditional_rendering_features.pNext;
+				}
+
 				vkGetPhysicalDeviceProperties2(dev, &properties2);
 
 				bool discrete = properties2.properties.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
@@ -2157,6 +2170,11 @@ using namespace Vulkan_Internal;
 			if (formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)
 			{
 				capabilities |= GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_R11G11B10_FLOAT;
+			}
+
+			if (conditional_rendering_features.conditionalRendering == VK_TRUE)
+			{
+				capabilities |= GRAPHICSDEVICE_CAPABILITY_PREDICATION;
 			}
 
 			// Find queue families:
@@ -2985,6 +3003,10 @@ using namespace Vulkan_Internal;
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
 			bufferInfo.usage |= VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR;
+		}
+		if (pBuffer->desc.MiscFlags & RESOURCE_MISC_PREDICATION)
+		{
+			bufferInfo.usage |= VK_BUFFER_USAGE_CONDITIONAL_RENDERING_BIT_EXT;
 		}
 		if (features_1_2.bufferDeviceAddress == VK_TRUE)
 		{
@@ -6518,6 +6540,9 @@ using namespace Vulkan_Internal;
 	{
 		assert(active_renderpass[cmd] == nullptr);
 
+		VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+		VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+
 		auto& memoryBarriers = frame_memoryBarriers[cmd];
 		auto& imageBarriers = frame_imageBarriers[cmd];
 		auto& bufferBarriers = frame_bufferBarriers[cmd];
@@ -6552,7 +6577,7 @@ using namespace Vulkan_Internal;
 			break;
 			case GPUBarrier::IMAGE_BARRIER:
 			{
-				const TextureDesc& desc = barrier.image.texture->GetDesc();
+				const TextureDesc& desc = barrier.image.texture->desc;
 				auto internal_state = to_internal(barrier.image.texture);
 
 				VkImageMemoryBarrier barrierdesc = {};
@@ -6597,13 +6622,14 @@ using namespace Vulkan_Internal;
 			break;
 			case GPUBarrier::BUFFER_BARRIER:
 			{
+				const GPUBufferDesc& desc = barrier.buffer.buffer->desc;
 				auto internal_state = to_internal(barrier.buffer.buffer);
 
 				VkBufferMemoryBarrier barrierdesc = {};
 				barrierdesc.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
 				barrierdesc.pNext = nullptr;
 				barrierdesc.buffer = internal_state->resource;
-				barrierdesc.size = barrier.buffer.buffer->GetDesc().Size;
+				barrierdesc.size = desc.Size;
 				barrierdesc.offset = 0;
 				barrierdesc.srcAccessMask = _ParseResourceState(barrier.buffer.state_before);
 				barrierdesc.dstAccessMask = _ParseResourceState(barrier.buffer.state_after);
@@ -6611,6 +6637,20 @@ using namespace Vulkan_Internal;
 				barrierdesc.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
 				bufferBarriers.push_back(barrierdesc);
+
+				if (desc.MiscFlags & RESOURCE_MISC_RAY_TRACING)
+				{
+					assert(CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING));
+					srcStage |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
+					dstStage |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
+				}
+
+				if (desc.MiscFlags & RESOURCE_MISC_PREDICATION)
+				{
+					assert(CheckCapability(GRAPHICSDEVICE_CAPABILITY_PREDICATION));
+					srcStage |= VK_PIPELINE_STAGE_CONDITIONAL_RENDERING_BIT_EXT;
+					dstStage |= VK_PIPELINE_STAGE_CONDITIONAL_RENDERING_BIT_EXT;
+				}
 			}
 			break;
 			}
@@ -6621,15 +6661,6 @@ using namespace Vulkan_Internal;
 			!imageBarriers.empty()
 			)
 		{
-			VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-			VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-
-			if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
-			{
-				srcStage |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
-				dstStage |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
-			}
-
 			vkCmdPipelineBarrier(
 				GetCommandList(cmd),
 				srcStage,
@@ -6799,6 +6830,30 @@ using namespace Vulkan_Internal;
 	{
 		std::memcpy(pushconstants[cmd].data, data, size);
 		pushconstants[cmd].size = size;
+	}
+	void GraphicsDevice_Vulkan::PredicationBegin(const GPUBuffer* buffer, uint64_t offset, PREDICATION_OP op, CommandList cmd)
+	{
+		if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_PREDICATION))
+		{
+			auto internal_state = to_internal(buffer);
+
+			VkConditionalRenderingBeginInfoEXT info = {};
+			info.sType = VK_STRUCTURE_TYPE_CONDITIONAL_RENDERING_BEGIN_INFO_EXT;
+			if (op == PREDICATION_OP_NOT_EQUAL_ZERO)
+			{
+				info.flags = VK_CONDITIONAL_RENDERING_INVERTED_BIT_EXT;
+			}
+			info.offset = offset;
+			info.buffer = internal_state->resource;
+			vkCmdBeginConditionalRenderingEXT(GetCommandList(cmd), &info);
+		}
+	}
+	void GraphicsDevice_Vulkan::PredicationEnd(CommandList cmd)
+	{
+		if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_PREDICATION))
+		{
+			vkCmdEndConditionalRenderingEXT(GetCommandList(cmd));
+		}
 	}
 
 	void GraphicsDevice_Vulkan::EventBegin(const char* name, CommandList cmd)

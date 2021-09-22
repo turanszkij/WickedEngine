@@ -295,6 +295,12 @@ namespace wiGraphics
 		SHADING_RATE_INVALID
 	};
 
+	enum PREDICATION_OP
+	{
+		PREDICATION_OP_EQUAL_ZERO,
+		PREDICATION_OP_NOT_EQUAL_ZERO,
+	};
+
 	// Flags ////////////////////////////////////////////
 
 	// Enable enum flags:
@@ -358,6 +364,7 @@ namespace wiGraphics
 		RESOURCE_MISC_BUFFER_RAW = 1 << 2,
 		RESOURCE_MISC_BUFFER_STRUCTURED = 1 << 3,
 		RESOURCE_MISC_RAY_TRACING = 1 << 4,
+		RESOURCE_MISC_PREDICATION = 1 << 5,
 	};
 	template<>
 	struct enable_bitmask_operators<RESOURCE_MISC_FLAG> {
@@ -376,6 +383,7 @@ namespace wiGraphics
 		GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2 = 1 << 7,
 		GRAPHICSDEVICE_CAPABILITY_MESH_SHADER = 1 << 8,
 		GRAPHICSDEVICE_CAPABILITY_RAYTRACING = 1 << 9,
+		GRAPHICSDEVICE_CAPABILITY_PREDICATION = 1 << 10,
 	};
 	enum RESOURCE_STATE
 	{
@@ -399,6 +407,7 @@ namespace wiGraphics
 		RESOURCE_STATE_CONSTANT_BUFFER = 1 << 11,			// constant buffer, read only
 		RESOURCE_STATE_INDIRECT_ARGUMENT = 1 << 12,			// argument buffer to DrawIndirect() or DispatchIndirect()
 		RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE = 1 << 13, // acceleration structure storage or scratch
+		RESOURCE_STATE_PREDICATION = 1 << 14				// storage for predication comparison value
 	};
 	template<>
 	struct enable_bitmask_operators<RESOURCE_STATE> {

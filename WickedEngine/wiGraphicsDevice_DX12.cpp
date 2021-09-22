@@ -120,6 +120,8 @@ namespace DX12_Internal
 			ret |= D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
 		if (value & RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE)
 			ret |= D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE;
+		if (value & RESOURCE_STATE_PREDICATION)
+			ret |= D3D12_RESOURCE_STATE_PREDICATION;
 
 		return ret;
 	}
@@ -2411,6 +2413,7 @@ using namespace DX12_Internal;
 		// Query features:
 
 		capabilities |= GRAPHICSDEVICE_CAPABILITY_TESSELLATION;
+		capabilities |= GRAPHICSDEVICE_CAPABILITY_PREDICATION;
 
 		hr = device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &features_0, sizeof(features_0));
 		if (features_0.ConservativeRasterizationTier >= D3D12_CONSERVATIVE_RASTERIZATION_TIER_1)
@@ -6317,6 +6320,26 @@ using namespace DX12_Internal;
 	{
 		std::memcpy(pushconstants[cmd].data, data, size);
 		pushconstants[cmd].size = size;
+	}
+	void GraphicsDevice_DX12::PredicationBegin(const GPUBuffer* buffer, uint64_t offset, PREDICATION_OP op, CommandList cmd)
+	{
+		auto internal_state = to_internal(buffer);
+		D3D12_PREDICATION_OP operation;
+		switch (op)
+		{
+		default:
+		case wiGraphics::PREDICATION_OP_EQUAL_ZERO:
+			operation = D3D12_PREDICATION_OP_EQUAL_ZERO;
+			break;
+		case wiGraphics::PREDICATION_OP_NOT_EQUAL_ZERO:
+			operation = D3D12_PREDICATION_OP_NOT_EQUAL_ZERO;
+			break;
+		}
+		GetCommandList(cmd)->SetPredication(internal_state->resource.Get(), offset, operation);
+	}
+	void GraphicsDevice_DX12::PredicationEnd(CommandList cmd)
+	{
+		GetCommandList(cmd)->SetPredication(nullptr, 0, D3D12_PREDICATION_OP_EQUAL_ZERO);
 	}
 
 	void GraphicsDevice_DX12::EventBegin(const char* name, CommandList cmd)
