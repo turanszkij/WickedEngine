@@ -45,29 +45,35 @@ float3 ACESFitted(float3 color)
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	const float2 uv = (DTid.xy + 0.5f) * tonemap_push.resolution_rcp;
+	float2 uv = (DTid.xy + 0.5f) * tonemap_push.resolution_rcp;
 	float exposure = tonemap_push.exposure;
-	const bool is_dither = tonemap_push.dither != 0;
-	const bool is_colorgrading = tonemap_push.texture_colorgrade_lookuptable >= 0;
-	const bool is_eyeadaption = tonemap_push.texture_input_luminance >= 0;
-	const bool is_distortion = tonemap_push.texture_input_distortion >= 0;
-
-	float2 distortion = 0;
-	[branch]
-	if (is_distortion)
-	{
-		distortion = bindless_textures[tonemap_push.texture_input_distortion].SampleLevel(sampler_linear_clamp, uv, 0).rg;
-	}
-
-	float4 hdr = bindless_textures[tonemap_push.texture_input].SampleLevel(sampler_linear_clamp, uv + distortion, 0);
 
 	[branch]
-	if (is_eyeadaption)
+	if (tonemap_push.texture_input_distortion >= 0)
 	{
-		exposure *= tonemap_push.eyeadaptionkey / max(bindless_textures[tonemap_push.texture_input_luminance][uint2(0, 0)].r, 0.0001);
+		uv += bindless_textures[tonemap_push.texture_input_distortion].SampleLevel(sampler_linear_clamp, uv, 0).rg;
 	}
 
+	float4 hdr = bindless_textures[tonemap_push.texture_input].SampleLevel(sampler_linear_clamp, uv, 0);
+
+	[branch]
+	if (tonemap_push.buffer_input_luminance >= 0)
+	{
+		exposure *= bindless_buffers[tonemap_push.buffer_input_luminance].Load<float>(LUMINANCE_BUFFER_OFFSET_EXPOSURE);
+	}
 	hdr.rgb *= exposure;
+
+	[branch]
+	if (tonemap_push.texture_bloom >= 0)
+	{
+		Texture2D<float4> texture_bloom = bindless_textures[tonemap_push.texture_bloom];
+		float3 bloom = texture_bloom.SampleLevel(sampler_linear_clamp, uv, 1.5f).rgb;
+		bloom += texture_bloom.SampleLevel(sampler_linear_clamp, uv, 3.5f).rgb;
+		bloom += texture_bloom.SampleLevel(sampler_linear_clamp, uv, 4.5f).rgb;
+		bloom /= 3.0f;
+		hdr.rgb += bloom;
+	}
+
 	float4 ldr = float4(ACESFitted(hdr.rgb), hdr.a);
 
 #if 0 // DEBUG luminance
@@ -78,12 +84,13 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	ldr = saturate(ldr);
 	ldr.rgb = GAMMA(ldr.rgb);
 
-	if (is_colorgrading)
+	[branch]
+	if (tonemap_push.texture_colorgrade_lookuptable >= 0)
 	{
 		ldr.rgb = bindless_textures3D[tonemap_push.texture_colorgrade_lookuptable].SampleLevel(sampler_linear_clamp, ldr.rgb, 0).rgb;
 	}
 
-	if (is_dither)
+	if (tonemap_push.dither != 0)
 	{
 		// dithering before outputting to SDR will reduce color banding:
 		ldr.rgb += (dither((float2)DTid.xy) - 0.5f) / 64.0f;

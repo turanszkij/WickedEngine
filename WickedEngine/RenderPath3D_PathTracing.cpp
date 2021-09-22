@@ -94,6 +94,7 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 	}
 
 	wiRenderer::CreateLuminanceResources(luminanceResources, internalResolution);
+	wiRenderer::CreateBloomResources(bloomResources, internalResolution);
 
 	// also reset accumulation buffer state:
 	sam = -1;
@@ -327,6 +328,28 @@ void RenderPath3D_PathTracing::Render() const
 
 		Texture srcTex = denoiserResult.IsValid() && !wiJobSystem::IsBusy(denoiserContext) ? denoiserResult : traceResult;
 
+		if (getEyeAdaptionEnabled())
+		{
+			wiRenderer::ComputeLuminance(
+				luminanceResources,
+				srcTex,
+				cmd,
+				getEyeAdaptionRate(),
+				getEyeAdaptionKey()
+			);
+		}
+		if (getBloomEnabled())
+		{
+			wiRenderer::ComputeBloom(
+				bloomResources,
+				srcTex,
+				cmd,
+				getBloomThreshold(),
+				getExposure(),
+				getEyeAdaptionEnabled() ? &luminanceResources.luminance : nullptr
+			);
+		}
+
 		wiRenderer::Postprocess_Tonemap(
 			srcTex,
 			rtPostprocess_LDR[0],
@@ -335,8 +358,8 @@ void RenderPath3D_PathTracing::Render() const
 			getDitherEnabled(),
 			getColorGradingEnabled() ? (scene->weather.colorGradingMap == nullptr ? nullptr : &scene->weather.colorGradingMap->texture) : nullptr,
 			nullptr,
-			getEyeAdaptionEnabled() ? wiRenderer::ComputeLuminance(luminanceResources, srcTex, cmd, getEyeAdaptionRate()) : nullptr,
-			getEyeAdaptionKey()
+			getEyeAdaptionEnabled() ? &luminanceResources.luminance : nullptr,
+			getBloomEnabled() ? &bloomResources.texture_bloom : nullptr
 		);
 
 		// GUI Background blurring:

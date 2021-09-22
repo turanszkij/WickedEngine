@@ -1,48 +1,41 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
-// Reduce log luminances into 1x1
+// average histogram: http://www.alextardif.com/HistogramLuminance.html
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-TEXTURE2D(input, float, TEXSLOT_ONDEMAND0);
+RWRAWBUFFER(luminance_histogram, 0);
 
-RWTEXTURE2D(output, float, 0);
+groupshared uint histogram[LUMINANCE_NUM_HISTOGRAM_BINS];
 
-static const uint DIM = 32;
-static const uint THREADCOUNT = DIM * DIM;
-
-groupshared float shared_sam[THREADCOUNT];
-
-[numthreads(DIM, DIM, 1)]
-void main(
-	uint3 DTid : SV_DispatchThreadID,
-	uint3 Gid : SV_GroupID,
-	uint3 GTid : SV_GroupThreadID,
-	uint groupIndex : SV_GroupIndex
-)
+[numthreads(LUMINANCE_BLOCKSIZE, LUMINANCE_BLOCKSIZE, 1)]
+void main(uint groupIndex : SV_GroupIndex)
 {
-	float loglum = input[DTid.xy];
-	shared_sam[groupIndex] = loglum;
+	float countForThisBin = (float)luminance_histogram.Load(LUMINANCE_BUFFER_OFFSET_HISTOGRAM + groupIndex * 4);
+	histogram[groupIndex] = countForThisBin * (float)groupIndex;
+
 	GroupMemoryBarrierWithGroupSync();
 
 	[unroll]
-	for (uint s = THREADCOUNT >> 1; s > 0; s >>= 1)
+	for (uint histogramSampleIndex = (LUMINANCE_NUM_HISTOGRAM_BINS >> 1); histogramSampleIndex > 0; histogramSampleIndex >>= 1)
 	{
-		if (groupIndex < s)
-			shared_sam[groupIndex] += shared_sam[groupIndex + s];
+		if (groupIndex < histogramSampleIndex)
+		{
+			histogram[groupIndex] += histogram[groupIndex + histogramSampleIndex];
+		}
 
 		GroupMemoryBarrierWithGroupSync();
 	}
 
 	if (groupIndex == 0)
 	{
-		loglum = shared_sam[0] / THREADCOUNT;
-		float currentlum = exp(loglum);
-		float lastlum = output[uint2(0, 0)];
-
-		// https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/LuminanceReduction.hlsl
-		float newlum = lastlum + (currentlum - lastlum) * (1 - exp(-g_xFrame.DeltaTime * luminance_adaptionrate));
-
-		output[uint2(0, 0)] = newlum;
+		float weightedLogAverage = (histogram[0].x / max(luminance_pixelcount - countForThisBin, 1.0)) - 1.0;
+		float weightedAverageLuminance = exp2(((weightedLogAverage / (LUMINANCE_NUM_HISTOGRAM_BINS - 2)) * luminance_log_range) + luminance_log_min);
+		float luminanceLastFrame = luminance_histogram.Load<float>(LUMINANCE_BUFFER_OFFSET_LUMINANCE);
+		float adaptedLuminance = luminanceLastFrame + (weightedAverageLuminance - luminanceLastFrame) * (1 - exp(-max(g_xFrame.DeltaTime, 0.01) * luminance_adaptionrate));
+		luminance_histogram.Store<float>(LUMINANCE_BUFFER_OFFSET_LUMINANCE, adaptedLuminance);
+		luminance_histogram.Store<float>(LUMINANCE_BUFFER_OFFSET_EXPOSURE, luminance_eyeadaptionkey / max(adaptedLuminance, 0.0001));
 	}
+
+	luminance_histogram.Store(LUMINANCE_BUFFER_OFFSET_HISTOGRAM + groupIndex * 4, 0); // clear histogram for next frame
 }

@@ -1421,39 +1421,50 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 
 			std::swap(rt_read, rt_write);
 		}
-
-		if (getBloomEnabled())
-		{
-			wiRenderer::Postprocess_Bloom(
-				bloomResources,
-				rt_first == nullptr ? *rt_read : *rt_first,
-				*rt_write,
-				cmd,
-				getBloomThreshold()
-			);
-			rt_first = nullptr;
-
-			std::swap(rt_read, rt_write);
-		}
 	}
 
 	// 2.) Tone mapping HDR -> LDR
 	{
+		rt_read = rt_first == nullptr ? rt_read : rt_first;
+		rt_first = nullptr;
 		rt_write = &rtPostprocess_LDR[0];
 
+		// Bloom and eye adaption is not part of post process "chain",
+		//	because they will be applied to the screen in tonemap
+		if (getEyeAdaptionEnabled())
+		{
+			wiRenderer::ComputeLuminance(
+				luminanceResources,
+				*rt_read,
+				cmd,
+				getEyeAdaptionRate(),
+				getEyeAdaptionKey()
+				);
+		}
+		if (getBloomEnabled())
+		{
+			wiRenderer::ComputeBloom(
+				bloomResources,
+				*rt_read,
+				cmd,
+				getBloomThreshold(),
+				getExposure(),
+				getEyeAdaptionEnabled() ? &luminanceResources.luminance : nullptr
+			);
+		}
+
 		wiRenderer::Postprocess_Tonemap(
-			rt_first == nullptr ? *rt_read : *rt_first,
+			*rt_read,
 			*rt_write,
 			cmd,
 			getExposure(),
 			getDitherEnabled(),
 			getColorGradingEnabled() ? (scene->weather.colorGradingMap == nullptr ? nullptr : &scene->weather.colorGradingMap->texture) : nullptr,
 			getMSAASampleCount() > 1 ? &rtParticleDistortion_Resolved : &rtParticleDistortion,
-			getEyeAdaptionEnabled() ? wiRenderer::ComputeLuminance(luminanceResources, rtMain, cmd, getEyeAdaptionRate()) : nullptr,
-			getEyeAdaptionKey()
+			getEyeAdaptionEnabled() ? &luminanceResources.luminance : nullptr,
+			getBloomEnabled() ? &bloomResources.texture_bloom : nullptr
 		);
 
-		rt_first = nullptr;
 		rt_read = rt_write;
 		rt_write = &rtPostprocess_LDR[1];
 	}

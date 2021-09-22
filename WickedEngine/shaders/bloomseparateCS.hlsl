@@ -1,13 +1,8 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
-
-PUSHCONSTANT(postprocess, PostProcess);
-
 // This will cut out bright parts (>1) and also downsample 4x
 
-TEXTURE2D(input, float4, TEXSLOT_ONDEMAND0);
-
-RWTEXTURE2D(output, float4, 0);
+PUSHCONSTANT(bloom, Bloom);
 
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
@@ -16,16 +11,24 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	float3 color = 0;
 
-	color += input.SampleLevel(sampler_linear_clamp, (uv + float2(-1, -1)) * postprocess.resolution_rcp, 0).rgb;
-	color += input.SampleLevel(sampler_linear_clamp, (uv + float2(1, -1)) * postprocess.resolution_rcp, 0).rgb;
-	color += input.SampleLevel(sampler_linear_clamp, (uv + float2(-1, 1)) * postprocess.resolution_rcp, 0).rgb;
-	color += input.SampleLevel(sampler_linear_clamp, (uv + float2(1, 1)) * postprocess.resolution_rcp, 0).rgb;
+	Texture2D<float4> texture_input = bindless_textures[bloom.texture_input];
+	color += texture_input.SampleLevel(sampler_linear_clamp, (uv + float2(-1, -1)) * bloom.resolution_rcp, 0).rgb;
+	color += texture_input.SampleLevel(sampler_linear_clamp, (uv + float2(1, -1)) * bloom.resolution_rcp, 0).rgb;
+	color += texture_input.SampleLevel(sampler_linear_clamp, (uv + float2(-1, 1)) * bloom.resolution_rcp, 0).rgb;
+	color += texture_input.SampleLevel(sampler_linear_clamp, (uv + float2(1, 1)) * bloom.resolution_rcp, 0).rgb;
 
 	color /= 4.0f;
 
-	const float bloomThreshold = postprocess.params0.x;
-	color = min(color, 10); // clamp upper limit: avoid incredibly large values to overly dominate bloom (high speculars were causing problems)
-	color = max(color - bloomThreshold, 0);
+	float exposure = bloom.exposure;
+	[branch]
+	if (bloom.buffer_input_luminance >= 0)
+	{
+		exposure *= bindless_buffers[bloom.buffer_input_luminance].Load<float>(LUMINANCE_BUFFER_OFFSET_EXPOSURE);
+	}
+	color *= exposure;
 
-	output[DTid.xy] = float4(color, 1);
+	color = min(color, 10); // clamp upper limit: avoid incredibly large values to overly dominate bloom (high speculars were causing problems)
+	color = max(color - bloom.threshold, 0);
+
+	bindless_rwtextures[bloom.texture_output][DTid.xy] = float4(color, 1);
 }

@@ -197,7 +197,6 @@ int main(int argc, char* argv[])
 		"blur_bilateral_float3CS.hlsl"								,
 		"blur_bilateral_float4CS.hlsl"								,
 		"blur_bilateral_unorm1CS.hlsl"								,
-		"bloomcombineCS.hlsl"										,
 		"voxelSceneCopyClearCS_TemporalSmoothing.hlsl"				,
 		"normalsfromdepthCS.hlsl"									,
 		"volumetricCloud_shapenoiseCS.hlsl"							,

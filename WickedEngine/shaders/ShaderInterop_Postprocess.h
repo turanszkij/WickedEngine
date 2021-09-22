@@ -14,7 +14,28 @@ struct PostProcess
 	float4 params1;
 };
 
+static const uint LUMINANCE_BLOCKSIZE = 32;
+static const uint LUMINANCE_NUM_HISTOGRAM_BINS = LUMINANCE_BLOCKSIZE * LUMINANCE_BLOCKSIZE;
+static const uint LUMINANCE_BUFFER_OFFSET_EXPOSURE = 0;
+static const uint LUMINANCE_BUFFER_OFFSET_LUMINANCE = LUMINANCE_BUFFER_OFFSET_EXPOSURE + 4;
+static const uint LUMINANCE_BUFFER_OFFSET_HISTOGRAM = LUMINANCE_BUFFER_OFFSET_LUMINANCE + 4;
 #define luminance_adaptionrate postprocess.params0.x
+#define luminance_log_min postprocess.params0.y
+#define luminance_log_max postprocess.params0.z
+#define luminance_log_range postprocess.params0.w
+#define luminance_log_range_rcp postprocess.params1.x
+#define luminance_pixelcount postprocess.params1.y
+#define luminance_eyeadaptionkey postprocess.params1.z
+
+struct Bloom
+{
+	float2 resolution_rcp;
+	float threshold;
+	float exposure;
+	int texture_input;
+	int texture_output;
+	int buffer_input_luminance;
+};
 
 #define lineardepth_inputresolution postprocess.params0.xy
 #define lineardepth_inputresolution_rcp postprocess.params0.zw
@@ -92,11 +113,11 @@ struct PushConstantsTonemap
 	float2 resolution_rcp;
 	float exposure;
 	float dither;
-	float eyeadaptionkey;
 	int texture_input;
-	int texture_input_luminance;
+	int buffer_input_luminance;
 	int texture_input_distortion;
 	int texture_colorgrade_lookuptable;
+	int texture_bloom;
 	int texture_output;
 };
 
