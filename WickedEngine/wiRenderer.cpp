@@ -1950,7 +1950,7 @@ void SetUpStates()
 	rs.DepthBias = 2;
 	rs.DepthBiasClamp = 0;
 	rs.SlopeScaledDepthBias = 2;
-	rs.DepthClipEnable = true;
+	rs.DepthClipEnable = false;
 	rs.MultisampleEnable = false;
 	rs.AntialiasedLineEnable = false;
 	rs.ConservativeRasterizationEnable = false;
@@ -2584,6 +2584,7 @@ void RenderMeshes(
 
 			device->BindPipelineState(pso, cmd);
 			device->DrawIndexedInstanced(subset.indexCount, instancedBatch.instanceCount, subset.indexOffset, 0, 0, cmd);
+
 		}
 	};
 
@@ -3020,28 +3021,49 @@ void UpdatePerFrameData(
 	// Occlusion query allocation:
 	if (GetOcclusionCullingEnabled() && !GetFreezeCullingCameraEnabled())
 	{
+		scene.queryAllocator.store(0);
 		wiJobSystem::Dispatch(ctx, (uint32_t)vis.visibleObjects.size(), 64, [&](wiJobArgs args) {
 
-			ObjectComponent& object = scene.objects[args.jobIndex];
+			uint32_t instanceIndex = vis.visibleObjects[args.jobIndex];
+			ObjectComponent& object = scene.objects[instanceIndex];
 			if (!object.IsRenderable())
 			{
 				return;
 			}
 
-			const AABB& aabb = scene.aabb_objects[args.jobIndex];
+			const AABB& aabb = scene.aabb_objects[instanceIndex];
 
 			if (aabb.intersects(vis.camera->Eye))
 			{
 				// camera is inside the instance, mark it as visible in this frame:
 				object.occlusionHistory |= 1;
+				object.occlusionQueries[scene.queryheap_idx] = -1;
 			}
 			else
 			{
 				const uint32_t writeQuery = scene.queryAllocator.fetch_add(1); // allocate new occlusion query from heap
-				if (writeQuery < scene.queryHeap[scene.queryheap_idx].desc.queryCount)
-				{
-					object.occlusionQueries[scene.queryheap_idx] = writeQuery;
-				}
+				object.occlusionQueries[scene.queryheap_idx] = writeQuery;
+			}
+		});
+
+		wiJobSystem::Dispatch(ctx, (uint32_t)vis.visibleLights.size(), 1, [&](wiJobArgs args) {
+
+			uint32_t lightIndex = vis.visibleLights[args.jobIndex].index;
+			LightComponent& light = scene.lights[lightIndex];
+			if (light.IsStatic() || light.GetType() == LightComponent::DIRECTIONAL)
+			{
+				return;
+			}
+
+			const AABB& aabb = scene.aabb_lights[lightIndex];
+			if (aabb.intersects(vis.camera->Eye))
+			{
+				light.occlusionquery = -1;
+			}
+			else
+			{
+				const uint32_t writeQuery = scene.queryAllocator.fetch_add(1); // allocate new occlusion query from heap
+				light.occlusionquery = writeQuery;
 			}
 		});
 	}
@@ -4061,13 +4083,17 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 
 void OcclusionCulling_Reset(const Visibility& vis, CommandList cmd)
 {
-	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled())
+	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled() || !vis.scene->queryHeap.IsValid())
+	{
+		return;
+	}
+	if (vis.visibleObjects.empty() && vis.visibleLights.empty())
 	{
 		return;
 	}
 
 	int query_write = vis.scene->queryheap_idx;
-	const GPUQueryHeap& queryHeap = vis.scene->queryHeap[query_write];
+	const GPUQueryHeap& queryHeap = vis.scene->queryHeap;
 
 	device->QueryReset(
 		&queryHeap,
@@ -4076,33 +4102,33 @@ void OcclusionCulling_Reset(const Visibility& vis, CommandList cmd)
 		cmd
 	);
 }
-void OcclusionCulling_Render(const CameraComponent& camera_previous, const Visibility& vis, CommandList cmd)
+void OcclusionCulling_Render(const CameraComponent& camera, const Visibility& vis, CommandList cmd)
 {
-	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled())
+	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled() || !vis.scene->queryHeap.IsValid())
+	{
+		return;
+	}
+	if (vis.visibleObjects.empty() && vis.visibleLights.empty())
 	{
 		return;
 	}
 
 	auto range = wiProfiler::BeginRangeGPU("Occlusion Culling Render", cmd);
 
+	device->BindPipelineState(&PSO_occlusionquery, cmd);
+
+	XMMATRIX VP = camera.GetViewProjection();
+
+	const GPUQueryHeap& queryHeap = vis.scene->queryHeap;
+
 	if (!vis.visibleObjects.empty())
 	{
-		device->EventBegin("Occlusion Culling Render", cmd);
-
+		device->EventBegin("Occlusion Culling Objects", cmd);
 		int query_write = vis.scene->queryheap_idx;
-		const GPUQueryHeap& queryHeap = vis.scene->queryHeap[query_write];
-
-		device->BindPipelineState(&PSO_occlusionquery, cmd);
-
-		XMMATRIX VP = camera_previous.GetViewProjection();
 
 		for (uint32_t instanceIndex : vis.visibleObjects)
 		{
 			const ObjectComponent& object = vis.scene->objects[instanceIndex];
-			if (!object.IsRenderable())
-			{
-				continue;
-			}
 
 			int queryIndex = object.occlusionQueries[query_write];
 			if (queryIndex >= 0)
@@ -4123,28 +4149,77 @@ void OcclusionCulling_Render(const CameraComponent& camera_previous, const Visib
 		device->EventEnd(cmd);
 	}
 
+	if (!vis.visibleLights.empty())
+	{
+		device->EventBegin("Occlusion Culling Lights", cmd);
+
+		for (auto& x : vis.visibleLights)
+		{
+			const uint32_t lightIndex = x.index;
+			const LightComponent& light = vis.scene->lights[lightIndex];
+			if (light.occlusionquery >= 0)
+			{
+				uint32_t queryIndex = (uint32_t)light.occlusionquery;
+				const AABB& aabb = vis.scene->aabb_lights[lightIndex];
+
+				const XMMATRIX transform = aabb.getAsBoxMatrix() * VP;
+
+				device->PushConstants(&transform, sizeof(transform), cmd);
+
+				device->QueryBegin(&queryHeap, queryIndex, cmd);
+				device->Draw(14, 0, cmd);
+				device->QueryEnd(&queryHeap, queryIndex, cmd);
+			}
+		}
+
+		device->EventEnd(cmd);
+	}
+
 	wiProfiler::EndRange(range); // Occlusion Culling Render
 }
 void OcclusionCulling_Resolve(const Visibility& vis, CommandList cmd)
 {
-	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled())
+	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled() || !vis.scene->queryHeap.IsValid())
+	{
+		return;
+	}
+	if (vis.visibleObjects.empty() && vis.visibleLights.empty())
 	{
 		return;
 	}
 
-	if (!vis.visibleObjects.empty())
-	{
-		int query_write = vis.scene->queryheap_idx;
-		const GPUQueryHeap& queryHeap = vis.scene->queryHeap[query_write];
+	int query_write = vis.scene->queryheap_idx;
+	const GPUQueryHeap& queryHeap = vis.scene->queryHeap;
+	uint32_t queryCount = vis.scene->queryAllocator.load();
 
+	// Resolve into readback buffer:
+	device->QueryResolve(
+		&queryHeap,
+		0,
+		queryCount,
+		&vis.scene->queryResultBuffer[query_write],
+		0ull,
+		cmd
+	);
+
+	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_PREDICATION))
+	{
+		// Resolve into predication buffer:
 		device->QueryResolve(
 			&queryHeap,
 			0,
-			vis.scene->writtenQueries[query_write],
-			&vis.scene->queryResultBuffer[query_write],
+			queryCount,
+			&vis.scene->queryPredicationBuffer,
 			0ull,
 			cmd
 		);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Buffer(&vis.scene->queryPredicationBuffer, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_PREDICATION),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
 	}
 }
 
@@ -4633,8 +4708,11 @@ void DrawShadowmaps(
 		device->EventBegin("DrawShadowmaps", cmd);
 		auto range = wiProfiler::BeginRangeGPU("Shadow Rendering", cmd);
 
-		BindCommonResources(cmd);
+		const bool predicationRequest =
+			device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_PREDICATION) &&
+			GetOcclusionCullingEnabled();
 
+		BindCommonResources(cmd);
 
 		BoundingFrustum cam_frustum;
 		BoundingFrustum::CreateFromMatrix(cam_frustum, vis.camera->GetProjection());
@@ -4768,6 +4846,14 @@ void DrawShadowmaps(
 				}
 				if (!renderQueue.empty())
 				{
+					if (predicationRequest && light.occlusionquery >= 0)
+						device->PredicationBegin(
+							&vis.scene->queryPredicationBuffer,
+							(uint64_t)light.occlusionquery * sizeof(uint64_t),
+							PREDICATION_OP_EQUAL_ZERO,
+							cmd
+						);
+
 					CameraCB cb;
 					XMStoreFloat4x4(&cb.VP, shcam.VP);
 					device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
@@ -4790,6 +4876,9 @@ void DrawShadowmaps(
 					device->RenderPassEnd(cmd);
 
 					GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
+
+					if (predicationRequest && light.occlusionquery >= 0)
+						device->PredicationEnd(cmd);
 				}
 
 			}
@@ -4829,6 +4918,14 @@ void DrawShadowmaps(
 				}
 				if (!renderQueue.empty())
 				{
+					if (predicationRequest && light.occlusionquery >= 0)
+						device->PredicationBegin(
+							&vis.scene->queryPredicationBuffer,
+							(uint64_t)light.occlusionquery * sizeof(uint64_t),
+							PREDICATION_OP_EQUAL_ZERO,
+							cmd
+						);
+
 					MiscCB miscCb;
 					miscCb.g_xColor = float4(light.position.x, light.position.y, light.position.z, 0);
 					device->BindDynamicConstantBuffer(miscCb, CB_GETBINDSLOT(MiscCB), cmd);
@@ -4877,6 +4974,9 @@ void DrawShadowmaps(
 					device->RenderPassEnd(cmd);
 
 					GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
+
+					if (predicationRequest && light.occlusionquery >= 0)
+						device->PredicationEnd(cmd);
 				}
 
 			}

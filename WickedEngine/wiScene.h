@@ -838,6 +838,7 @@ namespace wiScene
 		XMFLOAT3 scale;
 		XMFLOAT3 front;
 		XMFLOAT3 right;
+		int occlusionquery = -1;
 
 		std::vector<std::shared_ptr<wiResource>> lensFlareRimTextures;
 
@@ -1298,9 +1299,9 @@ namespace wiScene
 		wiGraphics::GPUBuffer materialBuffer;
 
 		// Occlusion query state:
-		wiGraphics::GPUQueryHeap queryHeap[arraysize(ObjectComponent::occlusionQueries)];
-		wiGraphics::GPUBuffer queryResultBuffer[arraysize(queryHeap)];
-		uint32_t writtenQueries[arraysize(queryHeap)] = {};
+		wiGraphics::GPUQueryHeap queryHeap;
+		wiGraphics::GPUBuffer queryResultBuffer[arraysize(ObjectComponent::occlusionQueries)];
+		wiGraphics::GPUBuffer queryPredicationBuffer;
 		int queryheap_idx = 0;
 		std::atomic<uint32_t> queryAllocator{ 0 };
 

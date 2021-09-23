@@ -458,12 +458,10 @@ namespace Vulkan_Internal
 		if (value & RESOURCE_STATE_SHADER_RESOURCE)
 		{
 			flags |= VK_ACCESS_SHADER_READ_BIT;
-			flags |= VK_ACCESS_UNIFORM_READ_BIT;
 		}
 		if (value & RESOURCE_STATE_SHADER_RESOURCE_COMPUTE)
 		{
 			flags |= VK_ACCESS_SHADER_READ_BIT;
-			flags |= VK_ACCESS_UNIFORM_READ_BIT;
 		}
 		if (value & RESOURCE_STATE_UNORDERED_ACCESS)
 		{
@@ -481,35 +479,33 @@ namespace Vulkan_Internal
 
 		if (value & RESOURCE_STATE_RENDERTARGET)
 		{
-			flags |= VK_ACCESS_SHADER_WRITE_BIT;
+			flags |= VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+			flags |= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 		}
 		if (value & RESOURCE_STATE_DEPTHSTENCIL)
 		{
-			flags |= VK_ACCESS_SHADER_WRITE_BIT;
+			flags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+			flags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 		}
 		if (value & RESOURCE_STATE_DEPTHSTENCIL_READONLY)
 		{
-			flags |= VK_ACCESS_SHADER_READ_BIT;
+			flags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
 		}
 
 		if (value & RESOURCE_STATE_VERTEX_BUFFER)
 		{
-			flags |= VK_ACCESS_SHADER_READ_BIT;
 			flags |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
 		}
 		if (value & RESOURCE_STATE_INDEX_BUFFER)
 		{
-			flags |= VK_ACCESS_SHADER_READ_BIT;
 			flags |= VK_ACCESS_INDEX_READ_BIT;
 		}
 		if (value & RESOURCE_STATE_CONSTANT_BUFFER)
 		{
-			flags |= VK_ACCESS_SHADER_READ_BIT;
 			flags |= VK_ACCESS_UNIFORM_READ_BIT;
 		}
 		if (value & RESOURCE_STATE_INDIRECT_ARGUMENT)
 		{
-			flags |= VK_ACCESS_SHADER_READ_BIT;
 			flags |= VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
 		}
 
@@ -6491,16 +6487,11 @@ using namespace Vulkan_Internal;
 	{
 		assert(active_renderpass[cmd] == nullptr); // Can't resolve inside renderpass!
 
-		// Looks like the vulkan needs this barrier, otherwise the queries didn't finish
-		//	It was still a problem with VK_QUERY_RESULT_WAIT_BIT, but that
-		//	also caused deadlocks, so I decided to do a safer memory barrier here
-		GPUBarrier memory_barrier = GPUBarrier::Memory();
-		Barrier(&memory_barrier, 1, cmd);
-
 		auto internal_state = to_internal(heap);
 		auto dst_internal = to_internal(dest);
 
 		VkQueryResultFlags flags = VK_QUERY_RESULT_64_BIT;
+		flags |= VK_QUERY_RESULT_WAIT_BIT;
 
 		switch (heap->desc.type)
 		{
@@ -6535,6 +6526,7 @@ using namespace Vulkan_Internal;
 			index,
 			count
 		);
+
 	}
 	void GraphicsDevice_Vulkan::Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd)
 	{
@@ -6564,12 +6556,23 @@ using namespace Vulkan_Internal;
 				VkMemoryBarrier barrierdesc = {};
 				barrierdesc.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
 				barrierdesc.pNext = nullptr;
-				barrierdesc.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-				barrierdesc.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_SHADER_READ_BIT;
+				barrierdesc.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
+				barrierdesc.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+
 				if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 				{
 					barrierdesc.srcAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
 					barrierdesc.dstAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
+					srcStage |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
+					dstStage |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
+				}
+
+				if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_PREDICATION))
+				{
+					barrierdesc.srcAccessMask |= VK_ACCESS_CONDITIONAL_RENDERING_READ_BIT_EXT;
+					barrierdesc.dstAccessMask |= VK_ACCESS_CONDITIONAL_RENDERING_READ_BIT_EXT;
+					srcStage |= VK_PIPELINE_STAGE_CONDITIONAL_RENDERING_BIT_EXT;
+					dstStage |= VK_PIPELINE_STAGE_CONDITIONAL_RENDERING_BIT_EXT;
 				}
 
 				memoryBarriers.push_back(barrierdesc);

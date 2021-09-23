@@ -673,7 +673,7 @@ namespace wiRenderer
 
 	// Render occluders against a depth buffer
 	void OcclusionCulling_Reset(const Visibility& vis, wiGraphics::CommandList cmd);
-	void OcclusionCulling_Render(const wiScene::CameraComponent& camera_previous, const Visibility& vis, wiGraphics::CommandList cmd);
+	void OcclusionCulling_Render(const wiScene::CameraComponent& camera, const Visibility& vis, wiGraphics::CommandList cmd);
 	void OcclusionCulling_Resolve(const Visibility& vis, wiGraphics::CommandList cmd);
 
 

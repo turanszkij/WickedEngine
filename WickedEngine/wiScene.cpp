@@ -1539,32 +1539,36 @@ namespace wiScene
 		// Occlusion culling read:
 		if(!wiRenderer::GetFreezeCullingCameraEnabled())
 		{
-			if (!queryHeap[0].IsValid())
+			uint32_t minQueryCount = uint32_t(objects.GetCount() + lights.GetCount());
+			if (queryHeap.desc.queryCount < minQueryCount)
 			{
 				GPUQueryHeapDesc desc;
 				desc.type = GPU_QUERY_TYPE_OCCLUSION_BINARY;
-				desc.queryCount = 8192;
+				desc.queryCount = minQueryCount;
+				bool success = device->CreateQueryHeap(&desc, &queryHeap);
+				assert(success);
 
 				GPUBufferDesc bd;
 				bd.Usage = USAGE_READBACK;
 				bd.Size = desc.queryCount * sizeof(uint64_t);
 
-				for (int i = 0; i < arraysize(queryHeap); ++i)
+				for (int i = 0; i < arraysize(queryResultBuffer); ++i)
 				{
-					bool success = device->CreateQueryHeap(&desc, &queryHeap[i]);
-					assert(success);
-
 					success = device->CreateBuffer(&bd, nullptr, &queryResultBuffer[i]);
+					assert(success);
+				}
+
+				if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_PREDICATION))
+				{
+					bd.Usage = USAGE_DEFAULT;
+					bd.MiscFlags |= RESOURCE_MISC_PREDICATION;
+					success = device->CreateBuffer(&bd, nullptr, &queryPredicationBuffer);
 					assert(success);
 				}
 			}
 
-			// Previously allocated and written query count (newest one) is saved:
-			writtenQueries[queryheap_idx] = std::min(queryAllocator.load(), queryHeap[queryheap_idx].desc.queryCount);
-			queryAllocator.store(0);
-
 			// Advance to next query heap to use (this will be the oldest one that was written)
-			queryheap_idx = (queryheap_idx + 1) % arraysize(queryHeap);
+			queryheap_idx = (queryheap_idx + 1) % arraysize(queryResultBuffer);
 		}
 
 		wiJobSystem::context ctx;
@@ -3019,7 +3023,7 @@ namespace wiScene
 			{
 				object.occlusionHistory <<= 1; // advance history by 1 frame
 				int query_id = object.occlusionQueries[queryheap_idx];
-				if (queryResultBuffer[queryheap_idx].mapped_data != nullptr && query_id >= 0 && (int)writtenQueries[queryheap_idx] > query_id)
+				if (queryResultBuffer[queryheap_idx].mapped_data != nullptr && query_id >= 0)
 				{
 					uint64_t visible = ((uint64_t*)queryResultBuffer[queryheap_idx].mapped_data)[query_id];
 					if (visible)
@@ -3488,6 +3492,8 @@ namespace wiScene
 			Entity entity = lights.GetEntity(args.jobIndex);
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 			AABB& aabb = aabb_lights[args.jobIndex];
+
+			light.occlusionquery = -1;
 
 			const LayerComponent* layer = layers.GetComponent(entity);
 			if (layer == nullptr)
