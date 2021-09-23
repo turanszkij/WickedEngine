@@ -163,50 +163,76 @@ namespace wiImage
 			M = M * canvas.GetProjection();
 		}
 
+		XMHALF4 corners[4];
 		for (int i = 0; i < 4; ++i)
 		{
 			XMVECTOR V = XMVectorSet(params.corners[i].x - params.pivot.x, params.corners[i].y - params.pivot.y, 0, 1);
 			V = XMVector2Transform(V, M); // division by w will happen on GPU
-			XMStoreFloat4(&push.corners[i], V);
+			XMStoreHalf4(&corners[i], V);
 		}
 
 		if (params.isMirrorEnabled())
 		{
-			std::swap(push.corners[0], push.corners[1]);
-			std::swap(push.corners[2], push.corners[3]);
+			std::swap(corners[0], corners[1]);
+			std::swap(corners[2], corners[3]);
 		}
+
+		push.corners0.x = uint(corners[0].v);
+		push.corners0.y = uint(corners[0].v >> 32ull);
+		push.corners1.x = uint(corners[1].v);
+		push.corners1.y = uint(corners[1].v >> 32ull);
+		push.corners2.x = uint(corners[2].v);
+		push.corners2.y = uint(corners[2].v >> 32ull);
+		push.corners3.x = uint(corners[3].v);
+		push.corners3.y = uint(corners[3].v >> 32ull);
 
 		const TextureDesc& desc = texture->GetDesc();
 		const float inv_width = 1.0f / float(desc.Width);
 		const float inv_height = 1.0f / float(desc.Height);
 
+		XMFLOAT4 texMulAdd;
 		if (params.isDrawRectEnabled())
 		{
-			push.texMulAdd.x = params.drawRect.z * inv_width;	// drawRec.width: mul
-			push.texMulAdd.y = params.drawRect.w * inv_height;	// drawRec.heigh: mul
-			push.texMulAdd.z = params.drawRect.x * inv_width;	// drawRec.x: add
-			push.texMulAdd.w = params.drawRect.y * inv_height;	// drawRec.y: add
+			texMulAdd.x = params.drawRect.z * inv_width;	// drawRec.width: mul
+			texMulAdd.y = params.drawRect.w * inv_height;	// drawRec.heigh: mul
+			texMulAdd.z = params.drawRect.x * inv_width;	// drawRec.x: add
+			texMulAdd.w = params.drawRect.y * inv_height;	// drawRec.y: add
 		}
 		else
 		{
-			push.texMulAdd = XMFLOAT4(1, 1, 0, 0);	// disabled draw rect
+			texMulAdd = XMFLOAT4(1, 1, 0, 0);	// disabled draw rect
 		}
-		push.texMulAdd.z += params.texOffset.x * inv_width;	// texOffset.x: add
-		push.texMulAdd.w += params.texOffset.y * inv_height;	// texOffset.y: add
+		texMulAdd.z += params.texOffset.x * inv_width;	// texOffset.x: add
+		texMulAdd.w += params.texOffset.y * inv_height;	// texOffset.y: add
+		XMHALF4 half_texMulAdd;
+		half_texMulAdd.x = XMConvertFloatToHalf(texMulAdd.x);
+		half_texMulAdd.y = XMConvertFloatToHalf(texMulAdd.y);
+		half_texMulAdd.z = XMConvertFloatToHalf(texMulAdd.z);
+		half_texMulAdd.w = XMConvertFloatToHalf(texMulAdd.w);
+		push.texMulAdd.x = uint(half_texMulAdd.v);
+		push.texMulAdd.y = uint(half_texMulAdd.v >> 32ull);
 
+		XMFLOAT4 texMulAdd2;
 		if (params.isDrawRect2Enabled())
 		{
-			push.texMulAdd2.x = params.drawRect2.z * inv_width;	// drawRec.width: mul
-			push.texMulAdd2.y = params.drawRect2.w * inv_height;	// drawRec.heigh: mul
-			push.texMulAdd2.z = params.drawRect2.x * inv_width;	// drawRec.x: add
-			push.texMulAdd2.w = params.drawRect2.y * inv_height;	// drawRec.y: add
+			texMulAdd2.x = params.drawRect2.z * inv_width;	// drawRec.width: mul
+			texMulAdd2.y = params.drawRect2.w * inv_height;	// drawRec.heigh: mul
+			texMulAdd2.z = params.drawRect2.x * inv_width;	// drawRec.x: add
+			texMulAdd2.w = params.drawRect2.y * inv_height;	// drawRec.y: add
 		}
 		else
 		{
-			push.texMulAdd2 = XMFLOAT4(1, 1, 0, 0);	// disabled draw rect
+			texMulAdd2 = XMFLOAT4(1, 1, 0, 0);	// disabled draw rect
 		}
-		push.texMulAdd2.z += params.texOffset2.x * inv_width;	// texOffset.x: add
-		push.texMulAdd2.w += params.texOffset2.y * inv_height;	// texOffset.y: add
+		texMulAdd2.z += params.texOffset2.x * inv_width;	// texOffset.x: add
+		texMulAdd2.w += params.texOffset2.y * inv_height;	// texOffset.y: add
+		XMHALF4 half_texMulAdd2;
+		half_texMulAdd2.x = XMConvertFloatToHalf(texMulAdd2.x);
+		half_texMulAdd2.y = XMConvertFloatToHalf(texMulAdd2.y);
+		half_texMulAdd2.z = XMConvertFloatToHalf(texMulAdd2.z);
+		half_texMulAdd2.w = XMConvertFloatToHalf(texMulAdd2.w);
+		push.texMulAdd2.x = uint(half_texMulAdd2.v);
+		push.texMulAdd2.y = uint(half_texMulAdd2.v >> 32ull);
 
 		device->BindPipelineState(&imagePSO[IMAGE_SHADER_STANDARD][params.blendFlag][params.stencilComp][params.stencilRefMode], cmd);
 

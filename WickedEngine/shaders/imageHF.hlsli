@@ -47,8 +47,11 @@ struct VertextoPixel
 		else
 			uv.x = (q.y - b2.y * uv.y) / denom.y;
 
-		float2 uv0 = uv * push.texMulAdd.xy + push.texMulAdd.zw;
-		float2 uv1 = uv * push.texMulAdd2.xy + push.texMulAdd2.zw;
+		float4 texMulAdd = unpack_half4(push.texMulAdd);
+		float4 texMulAdd2 = unpack_half4(push.texMulAdd2);
+
+		float2 uv0 = uv * texMulAdd.xy + texMulAdd.zw;
+		float2 uv1 = uv * texMulAdd2.xy + texMulAdd2.zw;
 		return float4(uv0, uv1);
 	}
 };
