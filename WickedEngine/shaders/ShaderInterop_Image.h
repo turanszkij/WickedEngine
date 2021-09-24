@@ -6,11 +6,7 @@ static const uint IMAGE_FLAG_EXTRACT_NORMALMAP = 1 << 0;
 
 struct PushConstantsImage
 {
-	uint2 corners0; // packed half4
-	uint2 corners1; // packed half4
-
-	uint2 corners2; // packed half4
-	uint2 corners3; // packed half4
+	float4 corners[4];
 
 	uint2 texMulAdd; // packed half4
 	uint2 texMulAdd2; // packed half4

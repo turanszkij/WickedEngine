@@ -163,28 +163,18 @@ namespace wiImage
 			M = M * canvas.GetProjection();
 		}
 
-		XMHALF4 corners[4];
 		for (int i = 0; i < 4; ++i)
 		{
 			XMVECTOR V = XMVectorSet(params.corners[i].x - params.pivot.x, params.corners[i].y - params.pivot.y, 0, 1);
 			V = XMVector2Transform(V, M); // division by w will happen on GPU
-			XMStoreHalf4(&corners[i], V);
+			XMStoreFloat4(&push.corners[i], V);
 		}
 
 		if (params.isMirrorEnabled())
 		{
-			std::swap(corners[0], corners[1]);
-			std::swap(corners[2], corners[3]);
+			std::swap(push.corners[0], push.corners[1]);
+			std::swap(push.corners[2], push.corners[3]);
 		}
-
-		push.corners0.x = uint(corners[0].v);
-		push.corners0.y = uint(corners[0].v >> 32ull);
-		push.corners1.x = uint(corners[1].v);
-		push.corners1.y = uint(corners[1].v >> 32ull);
-		push.corners2.x = uint(corners[2].v);
-		push.corners2.y = uint(corners[2].v >> 32ull);
-		push.corners3.x = uint(corners[3].v);
-		push.corners3.y = uint(corners[3].v >> 32ull);
 
 		const TextureDesc& desc = texture->GetDesc();
 		const float inv_width = 1.0f / float(desc.Width);
