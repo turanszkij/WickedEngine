@@ -1537,7 +1537,7 @@ namespace wiScene
 		}
 
 		// Occlusion culling read:
-		if(!wiRenderer::GetFreezeCullingCameraEnabled())
+		if(wiRenderer::GetOcclusionCullingEnabled() && !wiRenderer::GetFreezeCullingCameraEnabled())
 		{
 			uint32_t minQueryCount = uint32_t(objects.GetCount() + lights.GetCount());
 			if (queryHeap.desc.queryCount < minQueryCount)
@@ -1567,8 +1567,11 @@ namespace wiScene
 				}
 			}
 
-			// Advance to next query heap to use (this will be the oldest one that was written)
+			// Advance to next query result buffer to use (this will be the oldest one that was written)
 			queryheap_idx = (queryheap_idx + 1) % arraysize(queryResultBuffer);
+
+			// Clear query allocation state:
+			queryAllocator.store(0);
 		}
 
 		wiJobSystem::context ctx;
@@ -3035,8 +3038,8 @@ namespace wiScene
 				{
 					object.occlusionHistory |= 1; // visible
 				}
-				object.occlusionQueries[queryheap_idx] = -1; // invalidate query
 			}
+			object.occlusionQueries[queryheap_idx] = -1; // invalidate query
 
 			aabb = AABB();
 			object.rendertypeMask = 0;

@@ -89,6 +89,7 @@ namespace wiRenderer
 			ALLOW_EMITTERS = 1 << 4,
 			ALLOW_HAIRS = 1 << 5,
 			ALLOW_REQUEST_REFLECTION = 1 << 6,
+			ALLOW_OCCLUSION_CULLING = 1 << 7,
 
 			ALLOW_EVERYTHING = ~0u
 		};

@@ -24,7 +24,7 @@ namespace wiProfiler
 	range_id cpu_frame;
 	range_id gpu_frame;
 	GPUQueryHeap queryHeap;
-	GPUBuffer queryResultBuffer[wiGraphics::GraphicsDevice::GetBufferCount() + 1];
+	GPUBuffer queryResultBuffer[GraphicsDevice::GetBufferCount() + 1];
 	std::atomic<uint32_t> nextQuery{ 0 };
 	int queryheap_idx = 0;
 

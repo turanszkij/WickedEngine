@@ -31,7 +31,7 @@ public:
 
 private:
 	ParticleCounters statistics = {};
-	wiGraphics::GPUBuffer statisticsReadbackBuffer[wiGraphics::GraphicsDevice::GetBufferCount() + 3];
+	wiGraphics::GPUBuffer statisticsReadbackBuffer[wiGraphics::GraphicsDevice::GetBufferCount() + 1];
 
 	wiGraphics::GPUBuffer particleBuffer;
 	wiGraphics::GPUBuffer aliveList[2];

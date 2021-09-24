@@ -644,8 +644,8 @@ namespace wiScene
 		int prev_transform_index = -1;
 
 		// occlusion result history bitfield (32 bit->32 frame history)
-		uint32_t occlusionHistory = ~0;
-		int occlusionQueries[wiGraphics::GraphicsDevice::GetBufferCount() + 1];
+		mutable uint32_t occlusionHistory = ~0;
+		mutable int occlusionQueries[wiGraphics::GraphicsDevice::GetBufferCount() + 1];
 
 		inline bool IsOccluded() const
 		{
@@ -838,7 +838,7 @@ namespace wiScene
 		XMFLOAT3 scale;
 		XMFLOAT3 front;
 		XMFLOAT3 right;
-		int occlusionquery = -1;
+		mutable int occlusionquery = -1;
 
 		std::vector<std::shared_ptr<wiResource>> lensFlareRimTextures;
 
@@ -1303,7 +1303,7 @@ namespace wiScene
 		wiGraphics::GPUBuffer queryResultBuffer[arraysize(ObjectComponent::occlusionQueries)];
 		wiGraphics::GPUBuffer queryPredicationBuffer;
 		int queryheap_idx = 0;
-		std::atomic<uint32_t> queryAllocator{ 0 };
+		mutable std::atomic<uint32_t> queryAllocator{ 0 };
 
 		// Surfel GI resources:
 		wiGraphics::GPUBuffer surfelBuffer;

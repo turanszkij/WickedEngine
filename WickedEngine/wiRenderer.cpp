@@ -2780,9 +2780,14 @@ void UpdateVisibility(Visibility& vis)
 	// Initialize visible indices:
 	vis.Clear();
 
-	if (!freezeCullingCamera)
+	if (!GetFreezeCullingCameraEnabled())
 	{
 		vis.frustum = vis.camera->frustum;
+	}
+
+	if (!GetOcclusionCullingEnabled() || GetFreezeCullingCameraEnabled())
+	{
+		vis.flags &= ~Visibility::ALLOW_OCCLUSION_CULLING;
 	}
 
 	if (vis.flags & Visibility::ALLOW_LIGHTS)
@@ -2807,17 +2812,28 @@ void UpdateVisibility(Visibility& vis)
 				//	(also compute light distance for shadow priority sorting)
 				assert(args.jobIndex < 0xFFFF);
 				group_list[group_count].index = (uint16_t)args.jobIndex;
-				const LightComponent& lightcomponent = vis.scene->lights[args.jobIndex];
+				const LightComponent& light = vis.scene->lights[args.jobIndex];
 				float distance = 0;
-				if (lightcomponent.type != LightComponent::DIRECTIONAL)
+				if (light.type != LightComponent::DIRECTIONAL)
 				{
-					distance = wiMath::DistanceEstimated(lightcomponent.position, vis.camera->Eye);
+					distance = wiMath::DistanceEstimated(light.position, vis.camera->Eye);
 				}
 				group_list[group_count].distance = uint16_t(distance * 10);
 				group_count++;
-				if (lightcomponent.IsVolumetricsEnabled())
+				if (light.IsVolumetricsEnabled())
 				{
 					vis.volumetriclight_request.store(true);
+				}
+
+				if (vis.flags & Visibility::ALLOW_OCCLUSION_CULLING)
+				{
+					if (!light.IsStatic() && light.GetType() != LightComponent::DIRECTIONAL || light.occlusionquery < 0)
+					{
+						if (!aabb.intersects(vis.camera->Eye))
+						{
+							light.occlusionquery = vis.scene->queryAllocator.fetch_add(1); // allocate new occlusion query from heap
+						}
+					}
 				}
 			}
 
@@ -2855,9 +2871,10 @@ void UpdateVisibility(Visibility& vis)
 				// Local stream compaction:
 				group_list[group_count++] = args.jobIndex;
 
+				const ObjectComponent& object = vis.scene->objects[args.jobIndex];
+
 				if (vis.flags & Visibility::ALLOW_REQUEST_REFLECTION)
 				{
-					const ObjectComponent& object = vis.scene->objects[args.jobIndex];
 					if (object.IsRequestPlanarReflection())
 					{
 						float dist = wiMath::DistanceEstimated(vis.camera->Eye, object.center);
@@ -2875,6 +2892,22 @@ void UpdateVisibility(Visibility& vis)
 							vis.planar_reflection_visible = true;
 						}
 						vis.locker.unlock();
+					}
+				}
+
+				if (vis.flags & Visibility::ALLOW_OCCLUSION_CULLING)
+				{
+					if (object.IsRenderable() && object.occlusionQueries[vis.scene->queryheap_idx] < 0)
+					{
+						if (aabb.intersects(vis.camera->Eye))
+						{
+							// camera is inside the instance, mark it as visible in this frame:
+							object.occlusionHistory |= 1;
+						}
+						else
+						{
+							object.occlusionQueries[vis.scene->queryheap_idx] = vis.scene->queryAllocator.fetch_add(1); // allocate new occlusion query from heap
+						}
 					}
 				}
 			}
@@ -3016,58 +3049,6 @@ void UpdatePerFrameData(
 		renderFrameAllocators[i].reset();
 	}
 
-	wiJobSystem::context ctx;
-
-	// Occlusion query allocation:
-	if (GetOcclusionCullingEnabled() && !GetFreezeCullingCameraEnabled())
-	{
-		scene.queryAllocator.store(0);
-		wiJobSystem::Dispatch(ctx, (uint32_t)vis.visibleObjects.size(), 64, [&](wiJobArgs args) {
-
-			uint32_t instanceIndex = vis.visibleObjects[args.jobIndex];
-			ObjectComponent& object = scene.objects[instanceIndex];
-			if (!object.IsRenderable())
-			{
-				return;
-			}
-
-			const AABB& aabb = scene.aabb_objects[instanceIndex];
-
-			if (aabb.intersects(vis.camera->Eye))
-			{
-				// camera is inside the instance, mark it as visible in this frame:
-				object.occlusionHistory |= 1;
-				object.occlusionQueries[scene.queryheap_idx] = -1;
-			}
-			else
-			{
-				const uint32_t writeQuery = scene.queryAllocator.fetch_add(1); // allocate new occlusion query from heap
-				object.occlusionQueries[scene.queryheap_idx] = writeQuery;
-			}
-		});
-
-		wiJobSystem::Dispatch(ctx, (uint32_t)vis.visibleLights.size(), 1, [&](wiJobArgs args) {
-
-			uint32_t lightIndex = vis.visibleLights[args.jobIndex].index;
-			LightComponent& light = scene.lights[lightIndex];
-			if (light.IsStatic() || light.GetType() == LightComponent::DIRECTIONAL)
-			{
-				return;
-			}
-
-			const AABB& aabb = scene.aabb_lights[lightIndex];
-			if (aabb.intersects(vis.camera->Eye))
-			{
-				light.occlusionquery = -1;
-			}
-			else
-			{
-				const uint32_t writeQuery = scene.queryAllocator.fetch_add(1); // allocate new occlusion query from heap
-				light.occlusionquery = writeQuery;
-			}
-		});
-	}
-
 	// Update Voxelization parameters:
 	if (scene.objects.GetCount() > 0)
 	{
@@ -3085,8 +3066,6 @@ void UpdatePerFrameData(
 		voxelSceneData.center = center;
 		voxelSceneData.extents = XMFLOAT3(voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize);
 	}
-
-	wiJobSystem::Wait(ctx);
 
 	if (!device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING) && scene.IsAccelerationStructureUpdateRequested())
 	{
