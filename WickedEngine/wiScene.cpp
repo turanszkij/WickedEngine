@@ -3776,9 +3776,14 @@ namespace wiScene
 					}
 				}
 
-				// The root component is transformed, scene is updated:
-				scene.transforms.GetComponent(root)->MatrixTransform(transformMatrix);
-				scene.Update(0);
+				// The root component is transformed, scene hierarchy is updated:
+				TransformComponent* root_transform = scene.transforms.GetComponent(root);
+				root_transform->MatrixTransform(transformMatrix);
+				root_transform->UpdateTransform();
+
+				wiJobSystem::context ctx;
+				scene.RunHierarchyUpdateSystem(ctx);
+				wiJobSystem::Wait(ctx);
 			}
 
 			if (!attached)
@@ -4196,7 +4201,7 @@ namespace wiScene
 						}
 						else
 						{
-							if (armature == nullptr)
+							if (armature == nullptr || armature->boneData.empty())
 							{
 								p0 = XMLoadFloat3(&mesh.vertex_positions[i0]);
 								p1 = XMLoadFloat3(&mesh.vertex_positions[i1]);
