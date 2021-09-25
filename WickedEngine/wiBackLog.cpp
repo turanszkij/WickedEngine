@@ -33,6 +33,10 @@ namespace wiBackLog
 	Texture backgroundTex;
 	bool refitscroll = false;
 
+	bool locked = false;
+	bool blockLuaExec = false;
+	LogLevel logLevel = LogLevel::Default;
+
 	void Toggle() 
 	{
 		enabled = !enabled;
@@ -43,32 +47,35 @@ namespace wiBackLog
 	}
 	void Update(const wiCanvas& canvas)
 	{
-		if (wiInput::Press(wiInput::KEYBOARD_BUTTON_HOME))
+		if (!locked)
 		{
-			Toggle();
-		}
+			if (wiInput::Press(wiInput::KEYBOARD_BUTTON_HOME))
+			{
+				Toggle();
+			}
 
-		if (isActive())
-		{
-			if (wiInput::Press(wiInput::KEYBOARD_BUTTON_UP))
+			if (isActive())
 			{
-				historyPrev();
-			}
-			if (wiInput::Press(wiInput::KEYBOARD_BUTTON_DOWN))
-			{
-				historyNext();
-			}
-			if (wiInput::Press(wiInput::KEYBOARD_BUTTON_ENTER))
-			{
-				acceptInput();
-			}
-			if (wiInput::Down(wiInput::KEYBOARD_BUTTON_PAGEUP))
-			{
-				Scroll(10);
-			}
-			if (wiInput::Down(wiInput::KEYBOARD_BUTTON_PAGEDOWN))
-			{
-				Scroll(-10);
+				if (wiInput::Press(wiInput::KEYBOARD_BUTTON_UP))
+				{
+					historyPrev();
+				}
+				if (wiInput::Press(wiInput::KEYBOARD_BUTTON_DOWN))
+				{
+					historyNext();
+				}
+				if (wiInput::Press(wiInput::KEYBOARD_BUTTON_ENTER))
+				{
+					acceptInput();
+				}
+				if (wiInput::Down(wiInput::KEYBOARD_BUTTON_PAGEUP))
+				{
+					Scroll(10);
+				}
+				if (wiInput::Down(wiInput::KEYBOARD_BUTTON_PAGEDOWN))
+				{
+					Scroll(-10);
+				}
 			}
 		}
 
@@ -148,9 +155,30 @@ namespace wiBackLog
 	}
 	void post(const std::string& input)
 	{
+		post(input, LogLevel::Default);
+	}
+	void post(const std::string& input, LogLevel level)
+	{
+		if (logLevel < level)
+		{
+			return;
+		}
 		logLock.lock();
 		std::string str;
-		str = input;
+		switch (level)
+		{
+		default:
+		case LogLevel::Default:
+			str = "";
+			break;
+		case LogLevel::Warning:
+			str = "[Warning] ";
+			break;
+		case LogLevel::Error:
+			str = "[Error] ";
+			break;
+		}
+		str += input;
 		str += '\n';
 		stream.push_back(str);
 		if (stream.size() > deletefromline)
@@ -178,7 +206,14 @@ namespace wiBackLog
 		if (history.size() > deletefromline) {
 			history.pop_front();
 		}
-		wiLua::RunText(inputArea);
+		if (!blockLuaExec)
+		{
+			wiLua::RunText(inputArea);
+		}
+		else
+		{
+			wiBackLog::post("Lua execution is disabled", LogLevel::Error);
+		}
 		inputArea.clear();
 	}
 	void deletefromInput() 
@@ -221,4 +256,27 @@ namespace wiBackLog
 
 	bool isActive() { return enabled; }
 
+	void Lock()
+	{
+		locked = true;
+		enabled = false;
+	}
+	void Unlock()
+	{
+		locked = false;
+	}
+
+	void BlockLuaExecution()
+	{
+		blockLuaExec = true;
+	}
+	void UnblockLuaExecution()
+	{
+		blockLuaExec = false;
+	}
+
+	void SetLogLevel(LogLevel newLevel)
+	{
+		logLevel = newLevel;
+	}
 }
