@@ -56,6 +56,37 @@ namespace wiBackLog_BindLua
 			wiLua::SError(L, "backlog_fontrowspacing(int val) not enough arguments!");
 		return 0;
 	}
+	int backlog_setlevel(lua_State* L)
+	{
+		int argc = wiLua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			wiBackLog::SetLogLevel((wiBackLog::LogLevel)wiLua::SGetInt(L, 1));
+		}
+		else
+			wiLua::SError(L, "backlog_setlevel(int val) not enough arguments!");
+		return 0;
+	}
+	int backlog_lock(lua_State* L)
+	{
+		wiBackLog::Lock();
+		return 0;
+	}
+	int backlog_unlock(lua_State* L)
+	{
+		wiBackLog::Unlock();
+		return 0;
+	}
+	int backlog_blocklua(lua_State* L)
+	{
+		wiBackLog::BlockLuaExecution();
+		return 0;
+	}
+	int backlog_unblocklua(lua_State* L)
+	{
+		wiBackLog::UnblockLuaExecution();
+		return 0;
+	}
 
 	void Bind()
 	{
@@ -68,6 +99,11 @@ namespace wiBackLog_BindLua
 			wiLua::RegisterFunc("backlog_fontsize", backlog_fontsize);
 			wiLua::RegisterFunc("backlog_isactive", backlog_isactive);
 			wiLua::RegisterFunc("backlog_fontrowspacing", backlog_fontrowspacing);
+			wiLua::RegisterFunc("backlog_setlevel", backlog_setlevel);
+			wiLua::RegisterFunc("backlog_lock", backlog_lock);
+			wiLua::RegisterFunc("backlog_unlock", backlog_unlock);
+			wiLua::RegisterFunc("backlog_blocklua", backlog_blocklua);
+			wiLua::RegisterFunc("backlog_unblocklua", backlog_unblocklua);
 		}
 	}
 }
