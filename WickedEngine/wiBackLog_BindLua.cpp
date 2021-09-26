@@ -82,6 +82,11 @@ namespace wiBackLog_BindLua
 		wiBackLog::BlockLuaExecution();
 		return 0;
 	}
+	int backlog_unblocklua(lua_State* L)
+	{
+		wiBackLog::UnblockLuaExecution();
+		return 0;
+	}
 
 	void Bind()
 	{
@@ -98,6 +103,7 @@ namespace wiBackLog_BindLua
 			wiLua::RegisterFunc("backlog_lock", backlog_lock);
 			wiLua::RegisterFunc("backlog_unlock", backlog_unlock);
 			wiLua::RegisterFunc("backlog_blocklua", backlog_blocklua);
+			wiLua::RegisterFunc("backlog_unblocklua", backlog_unblocklua);
 		}
 	}
 }
