@@ -2414,7 +2414,6 @@ using namespace DX12_Internal;
 
 		capabilities |= GRAPHICSDEVICE_CAPABILITY_TESSELLATION;
 		capabilities |= GRAPHICSDEVICE_CAPABILITY_PREDICATION;
-		capabilities |= GRAPHICSDEVICE_CAPABILITY_SAMPLER_MINMAX;
 
 		hr = device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &features_0, sizeof(features_0));
 		if (features_0.ConservativeRasterizationTier >= D3D12_CONSERVATIVE_RASTERIZATION_TIER_1)
@@ -2428,6 +2427,11 @@ using namespace DX12_Internal;
 		if (features_0.VPAndRTArrayIndexFromAnyShaderFeedingRasterizerSupportedWithoutGSEmulation == TRUE)
 		{
 			capabilities |= GRAPHICSDEVICE_CAPABILITY_RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS;
+		}
+		if (features_0.TiledResourcesTier >= D3D12_TILED_RESOURCES_TIER_2)
+		{
+			// https://docs.microsoft.com/en-us/windows/win32/direct3d11/tiled-resources-texture-sampling-features
+			capabilities |= GRAPHICSDEVICE_CAPABILITY_SAMPLER_MINMAX;
 		}
 
 		if (features_0.TypedUAVLoadAdditionalFormats)
