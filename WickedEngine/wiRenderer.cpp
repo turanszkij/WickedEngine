@@ -287,27 +287,30 @@ GraphicsDevice* GetDevice()
 // Direct reference to a renderable instance:
 struct RenderBatch
 {
-	uint32_t hash;
-	uint32_t instance;
+	uint64_t data;
 
 	inline void Create(size_t meshIndex, size_t instanceIndex, float distance)
 	{
-		hash = 0;
-
 		assert(meshIndex < 0x00FFFFFF);
-		hash |= (uint32_t)(meshIndex & 0x00FFFFFF);
-		hash |= ((uint32_t)distance & 0xFF) << 24;
+		assert(instanceIndex < 0x00FFFFFF);
 
-		instance = (uint32_t)instanceIndex;
+		data = 0;
+		data |= uint64_t(XMConvertFloatToHalf(distance) & 0xFFFF) << 48ull;
+		data |= uint64_t(meshIndex & 0x00FFFFFF) << 24ull;
+		data |= uint64_t(instanceIndex & 0x00FFFFFF) << 0ull;
 	}
 
+	inline float GetDistance() const
+	{
+		return XMConvertHalfToFloat(HALF(data >> 48ull));
+	}
 	inline uint32_t GetMeshIndex() const
 	{
-		return hash & 0x00FFFFFF;
+		return (data >> 24ull) & 0x00FFFFFF;
 	}
 	inline uint32_t GetInstanceIndex() const
 	{
-		return instance;
+		return (data >> 0ull) & 0x00FFFFFF;
 	}
 };
 
@@ -338,25 +341,8 @@ struct RenderQueue
 		if (batchCount > 1)
 		{
 			std::sort(batchArray, batchArray + batchCount, [sortType](const RenderBatch& a, const RenderBatch& b) -> bool {
-				return ((sortType == SORT_FRONT_TO_BACK) ? (a.hash < b.hash) : (a.hash > b.hash));
+				return ((sortType == SORT_FRONT_TO_BACK) ? (a.data < b.data) : (a.data > b.data));
 			});
-
-			//for (size_t i = 0; i < batchCount - 1; ++i)
-			//{
-			//	for (size_t j = i + 1; j < batchCount; ++j)
-			//	{
-			//		bool swap = false;
-			//		swap = sortType == SORT_FRONT_TO_BACK && batchArray[i].hash > batchArray[j].hash;
-			//		swap = sortType == SORT_BACK_TO_FRONT && batchArray[i].hash < batchArray[j].hash;
-
-			//		if (swap)
-			//		{
-			//			RenderBatch tmp = batchArray[i];
-			//			batchArray[i] = batchArray[j];
-			//			batchArray[j] = tmp;
-			//		}
-			//	}
-			//}
 		}
 	}
 };
@@ -2618,7 +2604,7 @@ void RenderMeshes(
 
 		if (instance.IsImpostorPlacement())
 		{
-			float distance = wiMath::Distance(instanceAABB.getCenter(), vis.camera->Eye);
+			float distance = batch.GetDistance();
 			float swapDistance = instance.impostorSwapDistance;
 			float fadeThreshold = instance.impostorFadeThresholdRadius;
 			dither = std::max(0.0f, distance - swapDistance) / fadeThreshold;

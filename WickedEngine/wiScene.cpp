@@ -3776,14 +3776,11 @@ namespace wiScene
 					}
 				}
 
-				// The root component is transformed, scene hierarchy is updated:
+				// The root component is transformed, scene is updated:
 				TransformComponent* root_transform = scene.transforms.GetComponent(root);
 				root_transform->MatrixTransform(transformMatrix);
-				root_transform->UpdateTransform();
 
-				wiJobSystem::context ctx;
-				scene.RunHierarchyUpdateSystem(ctx);
-				wiJobSystem::Wait(ctx);
+				scene.Update(0);
 			}
 
 			if (!attached)
