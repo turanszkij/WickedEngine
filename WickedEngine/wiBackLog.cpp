@@ -153,10 +153,6 @@ namespace wiBackLog
 		scroll = 0;
 		logLock.unlock();
 	}
-	void post(const std::string& input)
-	{
-		post(input, LogLevel::Default);
-	}
 	void post(const std::string& input, LogLevel level)
 	{
 		if (logLevel < level)

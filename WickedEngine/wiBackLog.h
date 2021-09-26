@@ -23,8 +23,7 @@ namespace wiBackLog
 
 	std::string getText();
 	void clear();
-	void post(const std::string& input);
-	void post(const std::string& input, LogLevel level);
+	void post(const std::string& input, LogLevel level = LogLevel::Default);
 	void input(const char input);
 	void acceptInput();
 	void deletefromInput();
