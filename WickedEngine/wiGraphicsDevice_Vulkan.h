@@ -48,6 +48,7 @@ namespace wiGraphics
 		VkPhysicalDeviceProperties2 properties2 = {};
 		VkPhysicalDeviceVulkan11Properties properties_1_1 = {};
 		VkPhysicalDeviceVulkan12Properties properties_1_2 = {};
+		VkPhysicalDeviceSamplerFilterMinmaxProperties sampler_minmax_properties = {};
 		VkPhysicalDeviceAccelerationStructurePropertiesKHR acceleration_structure_properties = {};
 		VkPhysicalDeviceRayTracingPipelinePropertiesKHR raytracing_properties = {};
 		VkPhysicalDeviceFragmentShadingRatePropertiesKHR fragment_shading_rate_properties = {};

@@ -2016,10 +2016,15 @@ using namespace Vulkan_Internal;
 				properties2.pNext = &properties_1_1;
 				properties_1_1.pNext = &properties_1_2;
 				void** properties_chain = &properties_1_2.pNext;
+				sampler_minmax_properties = {};
 				acceleration_structure_properties = {};
 				raytracing_properties = {};
 				fragment_shading_rate_properties = {};
 				mesh_shader_properties = {};
+
+				sampler_minmax_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SAMPLER_FILTER_MINMAX_PROPERTIES;
+				*properties_chain = &sampler_minmax_properties;
+				properties_chain = &sampler_minmax_properties.pNext;
 
 				enabled_deviceExtensions = required_deviceExtensions;
 
@@ -2171,6 +2176,11 @@ using namespace Vulkan_Internal;
 			if (conditional_rendering_features.conditionalRendering == VK_TRUE)
 			{
 				capabilities |= GRAPHICSDEVICE_CAPABILITY_PREDICATION;
+			}
+
+			if (sampler_minmax_properties.filterMinmaxSingleComponentFormats == VK_TRUE)
+			{
+				capabilities |= GRAPHICSDEVICE_CAPABILITY_SAMPLER_MINMAX;
 			}
 
 			// Find queue families:
@@ -3797,6 +3807,8 @@ using namespace Vulkan_Internal;
 		switch (pSamplerDesc->Filter)
 		{
 		case FILTER_MIN_MAG_MIP_POINT:
+		case FILTER_MINIMUM_MIN_MAG_MIP_POINT:
+		case FILTER_MAXIMUM_MIN_MAG_MIP_POINT:
 			createInfo.minFilter = VK_FILTER_NEAREST;
 			createInfo.magFilter = VK_FILTER_NEAREST;
 			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
@@ -3804,6 +3816,8 @@ using namespace Vulkan_Internal;
 			createInfo.compareEnable = false;
 			break;
 		case FILTER_MIN_MAG_POINT_MIP_LINEAR:
+		case FILTER_MINIMUM_MIN_MAG_POINT_MIP_LINEAR:
+		case FILTER_MAXIMUM_MIN_MAG_POINT_MIP_LINEAR:
 			createInfo.minFilter = VK_FILTER_NEAREST;
 			createInfo.magFilter = VK_FILTER_NEAREST;
 			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
@@ -3811,6 +3825,8 @@ using namespace Vulkan_Internal;
 			createInfo.compareEnable = false;
 			break;
 		case FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT:
+		case FILTER_MINIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT:
+		case FILTER_MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT:
 			createInfo.minFilter = VK_FILTER_NEAREST;
 			createInfo.magFilter = VK_FILTER_LINEAR;
 			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
@@ -3818,6 +3834,8 @@ using namespace Vulkan_Internal;
 			createInfo.compareEnable = false;
 			break;
 		case FILTER_MIN_POINT_MAG_MIP_LINEAR:
+		case FILTER_MINIMUM_MIN_POINT_MAG_MIP_LINEAR:
+		case FILTER_MAXIMUM_MIN_POINT_MAG_MIP_LINEAR:
 			createInfo.minFilter = VK_FILTER_NEAREST;
 			createInfo.magFilter = VK_FILTER_LINEAR;
 			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
@@ -3825,6 +3843,8 @@ using namespace Vulkan_Internal;
 			createInfo.compareEnable = false;
 			break;
 		case FILTER_MIN_LINEAR_MAG_MIP_POINT:
+		case FILTER_MINIMUM_MIN_LINEAR_MAG_MIP_POINT:
+		case FILTER_MAXIMUM_MIN_LINEAR_MAG_MIP_POINT:
 			createInfo.minFilter = VK_FILTER_LINEAR;
 			createInfo.magFilter = VK_FILTER_NEAREST;
 			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
@@ -3832,6 +3852,8 @@ using namespace Vulkan_Internal;
 			createInfo.compareEnable = false;
 			break;
 		case FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
+		case FILTER_MINIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
+		case FILTER_MAXIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
 			createInfo.minFilter = VK_FILTER_LINEAR;
 			createInfo.magFilter = VK_FILTER_NEAREST;
 			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
@@ -3839,6 +3861,8 @@ using namespace Vulkan_Internal;
 			createInfo.compareEnable = false;
 			break;
 		case FILTER_MIN_MAG_LINEAR_MIP_POINT:
+		case FILTER_MINIMUM_MIN_MAG_LINEAR_MIP_POINT:
+		case FILTER_MAXIMUM_MIN_MAG_LINEAR_MIP_POINT:
 			createInfo.minFilter = VK_FILTER_LINEAR;
 			createInfo.magFilter = VK_FILTER_LINEAR;
 			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
@@ -3846,6 +3870,8 @@ using namespace Vulkan_Internal;
 			createInfo.compareEnable = false;
 			break;
 		case FILTER_MIN_MAG_MIP_LINEAR:
+		case FILTER_MINIMUM_MIN_MAG_MIP_LINEAR:
+		case FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR:
 			createInfo.minFilter = VK_FILTER_LINEAR;
 			createInfo.magFilter = VK_FILTER_LINEAR;
 			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
@@ -3853,6 +3879,8 @@ using namespace Vulkan_Internal;
 			createInfo.compareEnable = false;
 			break;
 		case FILTER_ANISOTROPIC:
+		case FILTER_MINIMUM_ANISOTROPIC:
+		case FILTER_MAXIMUM_ANISOTROPIC:
 			createInfo.minFilter = VK_FILTER_LINEAR;
 			createInfo.magFilter = VK_FILTER_LINEAR;
 			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
@@ -3922,24 +3950,6 @@ using namespace Vulkan_Internal;
 			createInfo.anisotropyEnable = true;
 			createInfo.compareEnable = true;
 			break;
-		case FILTER_MINIMUM_MIN_MAG_MIP_POINT:
-		case FILTER_MINIMUM_MIN_MAG_POINT_MIP_LINEAR:
-		case FILTER_MINIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT:
-		case FILTER_MINIMUM_MIN_POINT_MAG_MIP_LINEAR:
-		case FILTER_MINIMUM_MIN_LINEAR_MAG_MIP_POINT:
-		case FILTER_MINIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
-		case FILTER_MINIMUM_MIN_MAG_LINEAR_MIP_POINT:
-		case FILTER_MINIMUM_MIN_MAG_MIP_LINEAR:
-		case FILTER_MINIMUM_ANISOTROPIC:
-		case FILTER_MAXIMUM_MIN_MAG_MIP_POINT:
-		case FILTER_MAXIMUM_MIN_MAG_POINT_MIP_LINEAR:
-		case FILTER_MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT:
-		case FILTER_MAXIMUM_MIN_POINT_MAG_MIP_LINEAR:
-		case FILTER_MAXIMUM_MIN_LINEAR_MAG_MIP_POINT:
-		case FILTER_MAXIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
-		case FILTER_MAXIMUM_MIN_MAG_LINEAR_MIP_POINT:
-		case FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR:
-		case FILTER_MAXIMUM_ANISOTROPIC:
 		default:
 			createInfo.minFilter = VK_FILTER_NEAREST;
 			createInfo.magFilter = VK_FILTER_NEAREST;
@@ -3947,6 +3957,41 @@ using namespace Vulkan_Internal;
 			createInfo.anisotropyEnable = false;
 			createInfo.compareEnable = false;
 			break;
+		}
+
+		VkSamplerReductionModeCreateInfo reductionmode = {};
+		reductionmode.sType = VK_STRUCTURE_TYPE_SAMPLER_REDUCTION_MODE_CREATE_INFO;
+		if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_SAMPLER_MINMAX))
+		{
+			switch (pSamplerDesc->Filter)
+			{
+			case FILTER_MINIMUM_MIN_MAG_MIP_POINT:
+			case FILTER_MINIMUM_MIN_MAG_POINT_MIP_LINEAR:
+			case FILTER_MINIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT:
+			case FILTER_MINIMUM_MIN_POINT_MAG_MIP_LINEAR:
+			case FILTER_MINIMUM_MIN_LINEAR_MAG_MIP_POINT:
+			case FILTER_MINIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
+			case FILTER_MINIMUM_MIN_MAG_LINEAR_MIP_POINT:
+			case FILTER_MINIMUM_MIN_MAG_MIP_LINEAR:
+			case FILTER_MINIMUM_ANISOTROPIC:
+				reductionmode.reductionMode = VK_SAMPLER_REDUCTION_MODE_MIN;
+				createInfo.pNext = &reductionmode;
+				break;
+			case FILTER_MAXIMUM_MIN_MAG_MIP_POINT:
+			case FILTER_MAXIMUM_MIN_MAG_POINT_MIP_LINEAR:
+			case FILTER_MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT:
+			case FILTER_MAXIMUM_MIN_POINT_MAG_MIP_LINEAR:
+			case FILTER_MAXIMUM_MIN_LINEAR_MAG_MIP_POINT:
+			case FILTER_MAXIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
+			case FILTER_MAXIMUM_MIN_MAG_LINEAR_MIP_POINT:
+			case FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR:
+			case FILTER_MAXIMUM_ANISOTROPIC:
+				reductionmode.reductionMode = VK_SAMPLER_REDUCTION_MODE_MAX;
+				createInfo.pNext = &reductionmode;
+				break;
+			default:
+				break;
+			}
 		}
 
 		createInfo.addressModeU = _ConvertTextureAddressMode(pSamplerDesc->AddressU);

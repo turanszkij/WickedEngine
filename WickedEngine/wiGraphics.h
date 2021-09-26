@@ -384,6 +384,7 @@ namespace wiGraphics
 		GRAPHICSDEVICE_CAPABILITY_MESH_SHADER = 1 << 8,
 		GRAPHICSDEVICE_CAPABILITY_RAYTRACING = 1 << 9,
 		GRAPHICSDEVICE_CAPABILITY_PREDICATION = 1 << 10,
+		GRAPHICSDEVICE_CAPABILITY_SAMPLER_MINMAX = 1 << 11,
 	};
 	enum RESOURCE_STATE
 	{
@@ -530,7 +531,7 @@ namespace wiGraphics
 			BLEND SrcBlendAlpha = BLEND_ONE;
 			BLEND DestBlendAlpha = BLEND_ONE;
 			BLEND_OP BlendOpAlpha = BLEND_OP_ADD;
-			uint8_t RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
+			COLOR_WRITE_ENABLE RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 		};
 		RenderTargetBlendState RenderTarget[8];
 	};
