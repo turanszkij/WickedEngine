@@ -366,6 +366,29 @@ void TestsRenderer::Update(float dt)
 		}
 	}
 	break;
+
+	case 18:
+	{
+		static wiTimer timer;
+		float sec = (float)timer.elapsed_seconds();
+		wiJobSystem::context ctx;
+		wiJobSystem::Dispatch(ctx, (uint32_t)scene->transforms.GetCount(), 1024, [&](wiJobArgs args) {
+			TransformComponent& transform = scene->transforms[args.jobIndex];
+			XMStoreFloat4x4(
+				&transform.world,
+				transform.GetLocalMatrix() * XMMatrixTranslation(0, std::sin(sec + 20 * (float)args.jobIndex / (float)scene->transforms.GetCount()) * 0.1f, 0)
+			);
+		});
+		scene->materials[0].SetEmissiveColor(XMFLOAT4(1, 1, 1, 1));
+		wiJobSystem::Dispatch(ctx, (uint32_t)scene->objects.GetCount(), 1024, [&](wiJobArgs args) {
+			ObjectComponent& object = scene->objects[args.jobIndex];
+			float f = std::pow(std::sin(-sec * 2 + 4 * (float)args.jobIndex / (float)scene->objects.GetCount()) * 0.5f + 0.5f, 32.0f);
+			object.emissiveColor = XMFLOAT4(0, 0.25f, 1, f * 3);
+		});
+		wiJobSystem::Wait(ctx);
+	}
+	break;
+
 	}
 
     RenderPath3D::Update(dt);
