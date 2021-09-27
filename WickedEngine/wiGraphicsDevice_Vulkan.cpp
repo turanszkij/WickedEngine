@@ -348,6 +348,8 @@ namespace Vulkan_Internal
 			return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 		case TEXTURE_ADDRESS_BORDER:
 			return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+		case TEXTURE_ADDRESS_MIRROR_ONCE:
+			return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
 		default:
 			return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 		}
@@ -2032,6 +2034,7 @@ using namespace Vulkan_Internal;
 				enabled_deviceExtensions.push_back(VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME);
 				enabled_deviceExtensions.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
 				enabled_deviceExtensions.push_back(VK_EXT_SHADER_VIEWPORT_INDEX_LAYER_EXTENSION_NAME);
+				enabled_deviceExtensions.push_back(VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME);
 
 				if (checkExtensionSupport(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME, available_deviceExtensions))
 				{
@@ -5594,10 +5597,9 @@ using namespace Vulkan_Internal;
 
 	void GraphicsDevice_Vulkan::SetName(GPUResource* pResource, const char* name)
 	{
-		if (vkSetDebugUtilsObjectNameEXT != nullptr)
+		if (debugUtils)
 		{
-			VkDebugUtilsObjectNameInfoEXT info = {};
-			info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+			VkDebugUtilsObjectNameInfoEXT info { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
 			info.pObjectName = name;
 			if (pResource->IsTexture())
 			{
