@@ -161,7 +161,7 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 			device->CreateBuffer(&bd, indices.data(), &indexBuffer);
 		}
 
-		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING) && primitiveBuffer.IsValid())
 		{
 			RaytracingAccelerationStructureDesc desc;
 			desc.type = RaytracingAccelerationStructureDesc::BOTTOMLEVEL;
