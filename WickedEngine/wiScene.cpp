@@ -3626,7 +3626,7 @@ namespace wiScene
 					inst.transformPrev.Create(IDENTITYMATRIX);
 					inst.meshIndex = (uint)meshIndex;
 
-					if (TLAS_instancesMapped != nullptr)
+					if (TLAS_instancesMapped != nullptr && hair.BLAS.IsValid())
 					{
 						// TLAS instance data:
 						RaytracingAccelerationStructureDesc::TopLevel::Instance instance = {};
