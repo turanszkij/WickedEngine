@@ -62,7 +62,8 @@ STRUCTUREDBUFFER(surfelBuffer, Surfel, TEXSLOT_ONDEMAND0);
 RAWBUFFER(surfelStatsBuffer, TEXSLOT_ONDEMAND1);
 STRUCTUREDBUFFER(surfelGridBuffer, SurfelGridCell, TEXSLOT_ONDEMAND2);
 STRUCTUREDBUFFER(surfelCellBuffer, uint, TEXSLOT_ONDEMAND3);
-TEXTURE2D(surfelMomentsTexture, float2, TEXSLOT_ONDEMAND4);
+STRUCTUREDBUFFER(surfelAliveBuffer, uint, TEXSLOT_ONDEMAND4);
+TEXTURE2D(surfelMomentsTexture, float2, TEXSLOT_ONDEMAND5);
 
 RWSTRUCTUREDBUFFER(surfelDataBuffer, SurfelData, 0);
 
@@ -73,7 +74,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	if (DTid.x >= surfel_count)
 		return;
 
-	uint surfel_index = DTid.x;
+	uint surfel_index = surfelAliveBuffer[DTid.x];
 	Surfel surfel = surfelBuffer[surfel_index];
 	SurfelData surfel_data = surfelDataBuffer[surfel_index];
 

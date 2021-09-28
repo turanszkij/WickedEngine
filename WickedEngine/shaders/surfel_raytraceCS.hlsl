@@ -8,6 +8,7 @@ STRUCTUREDBUFFER(surfelBuffer, Surfel, TEXSLOT_ONDEMAND0);
 RAWBUFFER(surfelStatsBuffer, TEXSLOT_ONDEMAND1);
 STRUCTUREDBUFFER(surfelGridBuffer, SurfelGridCell, TEXSLOT_ONDEMAND2);
 STRUCTUREDBUFFER(surfelCellBuffer, uint, TEXSLOT_ONDEMAND3);
+STRUCTUREDBUFFER(surfelAliveBuffer, uint, TEXSLOT_ONDEMAND4);
 
 RWSTRUCTUREDBUFFER(surfelDataBuffer, SurfelData, 0);
 RWTEXTURE2D(surfelMomentsTexture, float2, 1);
@@ -26,7 +27,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	if (DTid.x >= surfel_count)
 		return;
 
-	uint surfel_index = DTid.x;
+	uint surfel_index = surfelAliveBuffer[DTid.x];
 	Surfel surfel = surfelBuffer[surfel_index];
 	SurfelData surfel_data = surfelDataBuffer[surfel_index];
 
@@ -318,5 +319,16 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	surfel_data.traceresult = result;
 
 	surfel_data.life++;
+
+	float3 cam_to_surfel = surfel.position - g_xCamera.CamPos;
+	if (dot(cam_to_surfel, g_xCamera.At) < 0 && length(cam_to_surfel) > 100)
+	{
+		surfel_data.last_seen_since++;
+	}
+	else
+	{
+		surfel_data.last_seen_since = 0;
+	}
+
 	surfelDataBuffer[surfel_index] = surfel_data;
 }

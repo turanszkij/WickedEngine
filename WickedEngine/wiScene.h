@@ -1308,6 +1308,8 @@ namespace wiScene
 		// Surfel GI resources:
 		wiGraphics::GPUBuffer surfelBuffer;
 		wiGraphics::GPUBuffer surfelDataBuffer;
+		wiGraphics::GPUBuffer surfelAliveBuffer[2];
+		wiGraphics::GPUBuffer surfelDeadBuffer;
 		wiGraphics::GPUBuffer surfelStatsBuffer;
 		wiGraphics::GPUBuffer surfelGridBuffer;
 		wiGraphics::GPUBuffer surfelCellBuffer;

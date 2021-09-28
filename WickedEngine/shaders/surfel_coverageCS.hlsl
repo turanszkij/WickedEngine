@@ -29,14 +29,16 @@ float3 random_color(uint index)
 }
 
 STRUCTUREDBUFFER(surfelBuffer, Surfel, TEXSLOT_ONDEMAND0);
-STRUCTUREDBUFFER(surfelGridBuffer, SurfelGridCell, TEXSLOT_ONDEMAND2);
-STRUCTUREDBUFFER(surfelCellBuffer, uint, TEXSLOT_ONDEMAND3);
-TEXTURE2D(surfelMomentsTexture, float2, TEXSLOT_ONDEMAND4);
+STRUCTUREDBUFFER(surfelGridBuffer, SurfelGridCell, TEXSLOT_ONDEMAND1);
+STRUCTUREDBUFFER(surfelCellBuffer, uint, TEXSLOT_ONDEMAND2);
+TEXTURE2D(surfelMomentsTexture, float2, TEXSLOT_ONDEMAND3);
 
 RWSTRUCTUREDBUFFER(surfelDataBuffer, SurfelData, 0);
-RWRAWBUFFER(surfelStatsBuffer, 1);
-RWTEXTURE2D(result, float3, 2);
-RWTEXTURE2D(debugUAV, unorm float4, 3);
+RWSTRUCTUREDBUFFER(surfelDeadBuffer, uint, 1);
+RWSTRUCTUREDBUFFER(surfelAliveBuffer, uint, 2);
+RWRAWBUFFER(surfelStatsBuffer, 3);
+RWTEXTURE2D(result, float3, 4);
+RWTEXTURE2D(debugUAV, unorm float4, 5);
 
 void write_result(uint2 DTid, float4 color)
 {
@@ -88,6 +90,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	float4 debug = 0;
 	float4 color = 0;
 
+	float seed = g_xFrame.Time;
 	const float2 uv = ((float2)pixel + 0.5) * g_xFrame.InternalResolution_rcp;
 	const float3 P = reconstructPosition(uv, depth);
 
@@ -164,7 +167,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	if (cell.count < SURFEL_CELL_LIMIT)
 	{
 		uint surfel_count_at_pixel = 0;
-		surfel_count_at_pixel |= (uint(coverage) & 0xFF) << 8;
+		surfel_count_at_pixel |= (uint(coverage) & 0xFF) << 24; // the upper bits matter most for min selection
+		surfel_count_at_pixel |= (uint(rand(seed, uv) * 65535) & 0xFFFF) << 8; // shuffle pixels randomly
 		surfel_count_at_pixel |= (GTid.x & 0xF) << 4;
 		surfel_count_at_pixel |= (GTid.y & 0xF) << 0;
 		InterlockedMin(GroupMinSurfelCount, surfel_count_at_pixel);
@@ -221,7 +225,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	uint2 minGTid;
 	minGTid.x = (surfel_coverage >> 4) & 0xF;
 	minGTid.y = (surfel_coverage >> 0) & 0xF;
-	uint coverage_amount = surfel_coverage >> 8;
+	uint coverage_amount = surfel_coverage >> 24;
 	if (GTid.x == minGTid.x && GTid.y == minGTid.y && coverage < SURFEL_TARGET_COVERAGE)
 	{
 		// Slow down the propagation by chance
@@ -232,19 +236,35 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 #else
 		const float chance = pow(1 - lineardepth, 4);
 #endif // SURFEL_COVERAGE_HALFRES
-		if (blue_noise(Gid.xy).x < chance)
+
+		//if (blue_noise(Gid.xy).x < chance)
+		//	return;
+
+		if (rand(seed, uv) < chance)
 			return;
 
-		uint surfel_alloc;
-		surfelStatsBuffer.InterlockedAdd(SURFEL_STATS_OFFSET_COUNT, 1, surfel_alloc);
-		if (surfel_alloc < SURFEL_CAPACITY)
+
+
+		// new particle index retrieved from dead list (pop):
+		int deadCount;
+		surfelStatsBuffer.InterlockedAdd(SURFEL_STATS_OFFSET_DEADCOUNT, -1, deadCount);
+		if (deadCount <= 0 || deadCount > SURFEL_CAPACITY)
+			return;
+		uint newSurfelIndex = surfelDeadBuffer[deadCount - 1];
+
+		// and add index to the alive list (push):
+		uint aliveCount;
+		surfelStatsBuffer.InterlockedAdd(SURFEL_STATS_OFFSET_NEXTCOUNT, 1, aliveCount);
+		if (aliveCount < SURFEL_CAPACITY)
 		{
+			surfelAliveBuffer[aliveCount] = newSurfelIndex;
+
 			SurfelData surfel_data = (SurfelData)0;
 			surfel_data.primitiveID = primitiveID;
 			surfel_data.bary = pack_half2(surface.bary.xy);
 			surfel_data.uid = surface.inst.uid;
 			surfel_data.inconsistency = 1;
-			surfelDataBuffer[surfel_alloc] = surfel_data;
+			surfelDataBuffer[newSurfelIndex] = surfel_data;
 		}
 	}
 

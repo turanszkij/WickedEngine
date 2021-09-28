@@ -1671,47 +1671,68 @@ namespace wiScene
 			}
 		}
 
-		if (wiRenderer::GetSurfelGIEnabled() && !surfelBuffer.IsValid())
+		if (wiRenderer::GetSurfelGIEnabled())
 		{
-			GPUBufferDesc desc;
-			desc.Stride = sizeof(Surfel);
-			desc.Size = desc.Stride * SURFEL_CAPACITY;
-			desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-			desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-			device->CreateBuffer(&desc, nullptr, &surfelBuffer);
-			device->SetName(&surfelBuffer, "surfelBuffer");
+			if (!surfelBuffer.IsValid())
+			{
+				GPUBufferDesc desc;
+				desc.Stride = sizeof(Surfel);
+				desc.Size = desc.Stride * SURFEL_CAPACITY;
+				desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+				desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+				device->CreateBuffer(&desc, nullptr, &surfelBuffer);
+				device->SetName(&surfelBuffer, "surfelBuffer");
 
-			desc.Stride = sizeof(SurfelData);
-			desc.Size = desc.Stride * SURFEL_CAPACITY;
-			desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-			device->CreateBuffer(&desc, nullptr, &surfelDataBuffer);
-			device->SetName(&surfelDataBuffer, "surfelDataBuffer");
+				desc.Stride = sizeof(SurfelData);
+				desc.Size = desc.Stride * SURFEL_CAPACITY;
+				desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+				device->CreateBuffer(&desc, nullptr, &surfelDataBuffer);
+				device->SetName(&surfelDataBuffer, "surfelDataBuffer");
 
-			desc.Stride = sizeof(uint);
-			desc.Size = desc.Stride * 5;
-			desc.MiscFlags = RESOURCE_MISC_BUFFER_RAW | RESOURCE_MISC_INDIRECT_ARGS;
-			device->CreateBuffer(&desc, nullptr, &surfelStatsBuffer);
-			device->SetName(&surfelStatsBuffer, "surfelStatsBuffer");
+				desc.Stride = sizeof(uint);
+				desc.Size = desc.Stride * SURFEL_CAPACITY;
+				desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+				device->CreateBuffer(&desc, nullptr, &surfelAliveBuffer[0]);
+				device->SetName(&surfelAliveBuffer[0], "surfelAliveBuffer[0]");
+				device->CreateBuffer(&desc, nullptr, &surfelAliveBuffer[1]);
+				device->SetName(&surfelAliveBuffer[1], "surfelAliveBuffer[1]");
 
-			desc.Stride = sizeof(SurfelGridCell);
-			desc.Size = desc.Stride * SURFEL_TABLE_SIZE;
-			desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-			device->CreateBuffer(&desc, nullptr, &surfelGridBuffer);
-			device->SetName(&surfelGridBuffer, "surfelGridBuffer");
+				std::vector<uint32_t> dead_indices(SURFEL_CAPACITY);
+				for (uint32_t i = 0; i < dead_indices.size(); ++i)
+				{
+					dead_indices[i] = i;
+				}
+				device->CreateBuffer(&desc, dead_indices.data(), &surfelDeadBuffer);
+				device->SetName(&surfelDeadBuffer, "surfelDeadBuffer");
 
-			desc.Stride = sizeof(uint);
-			desc.Size = desc.Stride * SURFEL_CAPACITY * 27; // each surfel can be in 3x3x3=27 cells
-			desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-			device->CreateBuffer(&desc, nullptr, &surfelCellBuffer);
-			device->SetName(&surfelCellBuffer, "surfelCellBuffer");
+				desc.Stride = sizeof(uint);
+				desc.Size = desc.Stride * 7; // count (1 uint), nextCount (1 uint), deadCount (1 uint), cellAllocator (1 uint), IndirectDispatchArgs (3 uints)
+				desc.MiscFlags = RESOURCE_MISC_BUFFER_RAW | RESOURCE_MISC_INDIRECT_ARGS;
+				uint stats_data[] = { 0,0,SURFEL_CAPACITY,0,0,0,0 };
+				device->CreateBuffer(&desc, &stats_data, &surfelStatsBuffer);
+				device->SetName(&surfelStatsBuffer, "surfelStatsBuffer");
 
-			TextureDesc tex;
-			tex.Width = SURFEL_MOMENT_ATLAS_TEXELS;
-			tex.Height = SURFEL_MOMENT_ATLAS_TEXELS;
-			tex.Format = FORMAT_R16G16_FLOAT;
-			tex.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
-			device->CreateTexture(&tex, nullptr, &surfelMomentsTexture);
-			device->SetName(&surfelMomentsTexture, "surfelMomentsTexture");
+				desc.Stride = sizeof(SurfelGridCell);
+				desc.Size = desc.Stride * SURFEL_TABLE_SIZE;
+				desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+				device->CreateBuffer(&desc, nullptr, &surfelGridBuffer);
+				device->SetName(&surfelGridBuffer, "surfelGridBuffer");
+
+				desc.Stride = sizeof(uint);
+				desc.Size = desc.Stride * SURFEL_CAPACITY * 27; // each surfel can be in 3x3x3=27 cells
+				desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+				device->CreateBuffer(&desc, nullptr, &surfelCellBuffer);
+				device->SetName(&surfelCellBuffer, "surfelCellBuffer");
+
+				TextureDesc tex;
+				tex.Width = SURFEL_MOMENT_ATLAS_TEXELS;
+				tex.Height = SURFEL_MOMENT_ATLAS_TEXELS;
+				tex.Format = FORMAT_R16G16_FLOAT;
+				tex.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
+				device->CreateTexture(&tex, nullptr, &surfelMomentsTexture);
+				device->SetName(&surfelMomentsTexture, "surfelMomentsTexture");
+			}
+			std::swap(surfelAliveBuffer[0], surfelAliveBuffer[1]);
 		}
 
 		// Bindless scene resources:
@@ -1768,6 +1789,9 @@ namespace wiScene
 
 		surfelBuffer = {};
 		surfelDataBuffer = {};
+		surfelAliveBuffer[0] = {};
+		surfelAliveBuffer[1] = {};
+		surfelDeadBuffer = {};
 		surfelStatsBuffer = {};
 		surfelGridBuffer = {};
 		surfelCellBuffer = {};
