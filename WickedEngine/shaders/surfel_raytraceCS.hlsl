@@ -41,12 +41,16 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float seed = 0.123456;
 	float2 uv = float2(frac(g_xFrame.FrameCount.x / 4096.0), (float)surfel_index / SURFEL_CAPACITY);
 
-	uint rayCount = saturate(surfel_data.inconsistency) * 16;
+	uint rayCount = 1;
+	rayCount = saturate(surfel_data.inconsistency) * 4;
+	if (life == 0)
+	{
+		rayCount = 32;
+	}
 	if (recycle > 60)
 	{
 		rayCount = 0;
 	}
-	//rayCount = 1;
 
 	for (uint rayIndex = 0; rayIndex < rayCount; ++rayIndex)
 	{
