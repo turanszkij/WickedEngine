@@ -4,10 +4,10 @@
 
 //#define SURFEL_DEBUG_NORMAL
 //#define SURFEL_DEBUG_COLOR
-#define SURFEL_DEBUG_POINT
+//#define SURFEL_DEBUG_POINT
 //#define SURFEL_DEBUG_RANDOM
 //#define SURFEL_DEBUG_HEATMAP
-//#define SURFEL_DEBUG_INCONSISTENCY
+#define SURFEL_DEBUG_INCONSISTENCY
 
 
 static const uint random_colors_size = 11;
@@ -126,11 +126,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 
 		float3 L = surfel.position - P;
 		float dist2 = dot(L, L);
-		//if (dist2 < sqr(surfel.radius))
+		if (dist2 < sqr(surfel.radius))
 		{
 			float3 normal = normalize(unpack_unitvector(surfel.normal));
 			float dotN = dot(N, normal);
-			//if (dotN > 0)
+			if (dotN > 0)
 			{
 				float dist = sqrt(dist2);
 				float contribution = 1;
