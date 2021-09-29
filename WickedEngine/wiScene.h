@@ -1313,7 +1313,7 @@ namespace wiScene
 		wiGraphics::GPUBuffer surfelStatsBuffer;
 		wiGraphics::GPUBuffer surfelGridBuffer;
 		wiGraphics::GPUBuffer surfelCellBuffer;
-		wiGraphics::Texture surfelMomentsTexture;
+		wiGraphics::Texture surfelMomentsTexture[2];
 
 
 		// Environment probe cubemap array state:

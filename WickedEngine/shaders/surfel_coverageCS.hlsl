@@ -7,6 +7,7 @@
 #define SURFEL_DEBUG_POINT
 //#define SURFEL_DEBUG_RANDOM
 //#define SURFEL_DEBUG_HEATMAP
+//#define SURFEL_DEBUG_INCONSISTENCY
 
 
 static const uint random_colors_size = 11;
@@ -125,11 +126,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 
 		float3 L = surfel.position - P;
 		float dist2 = dot(L, L);
-		if (dist2 < sqr(surfel.radius))
+		//if (dist2 < sqr(surfel.radius))
 		{
 			float3 normal = normalize(unpack_unitvector(surfel.normal));
 			float dotN = dot(N, normal);
-			if (dotN > 0)
+			//if (dotN > 0)
 			{
 				float dist = sqrt(dist2);
 				float contribution = 1;
@@ -143,6 +144,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 				contribution = smoothstep(0, 1, contribution);
 				coverage += contribution;
 
+				// contribution based on life can eliminate black popping surfels, but the surfel_data must be accessed...
+				contribution = lerp(0, contribution, surfelDataBuffer[surfel_index].GetLife() / 30.0f);
+
 				color += float4(surfel.color, 1) * contribution;
 
 #ifdef SURFEL_DEBUG_NORMAL
@@ -153,6 +157,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 #ifdef SURFEL_DEBUG_RANDOM
 				debug += float4(random_color(surfel_index), 1) * contribution;
 #endif // SURFEL_DEBUG_RANDOM
+
+#ifdef SURFEL_DEBUG_INCONSISTENCY
+				debug += float4(surfelDataBuffer[surfel_index].inconsistency.xxx, 1) * contribution;
+#endif // SURFEL_DEBUG_INCONSISTENCY
 
 			}
 
@@ -217,6 +225,17 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	float4 heatmap = float4(lerp(a, b, l - floor(l)), 0.8);
 	debug = heatmap;
 #endif // SURFEL_DEBUG_HEATMAP
+
+#if defined(SURFEL_DEBUG_INCONSISTENCY)
+	if (debug.a > 0)
+	{
+		debug /= debug.a;
+	}
+	else
+	{
+		debug = 0;
+	}
+#endif // SURFEL_DEBUG_INCONSISTENCY
 
 
 	GroupMemoryBarrierWithGroupSync();

@@ -1729,10 +1729,13 @@ namespace wiScene
 				tex.Height = SURFEL_MOMENT_ATLAS_TEXELS;
 				tex.Format = FORMAT_R16G16_FLOAT;
 				tex.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
-				device->CreateTexture(&tex, nullptr, &surfelMomentsTexture);
-				device->SetName(&surfelMomentsTexture, "surfelMomentsTexture");
+				device->CreateTexture(&tex, nullptr, &surfelMomentsTexture[0]);
+				device->SetName(&surfelMomentsTexture[0], "surfelMomentsTexture[0]");
+				device->CreateTexture(&tex, nullptr, &surfelMomentsTexture[1]);
+				device->SetName(&surfelMomentsTexture[1], "surfelMomentsTexture[1]");
 			}
 			std::swap(surfelAliveBuffer[0], surfelAliveBuffer[1]);
+			std::swap(surfelMomentsTexture[0], surfelMomentsTexture[1]);
 		}
 
 		// Bindless scene resources:
