@@ -41,14 +41,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float seed = 0.123456;
 	float2 uv = float2(frac(g_xFrame.FrameCount.x / 4096.0), (float)surfel_index / SURFEL_CAPACITY);
 
-	uint rayCount = clamp(surfel_data.inconsistency * 8, 1, 8);
-	if (life <= 10)
-	{
-		rayCount = 32;
-	}
+	uint rayCount = saturate(surfel_data.inconsistency) * 16;
 	if (recycle > 60)
 	{
-		rayCount = 1;
+		rayCount = 0;
 	}
 	//rayCount = 1;
 
@@ -56,7 +52,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	{
 		RayDesc ray;
 		ray.Origin = surfel.position;
-		ray.TMin = 0.001;
+		ray.TMin = 0.0001;
 		ray.TMax = FLT_MAX;
 		ray.Direction = normalize(SampleHemisphere_cos(N, seed, uv));
 

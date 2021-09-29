@@ -34,7 +34,7 @@ static const uint SURFEL_MOMENT_TEXELS = 4 + 2;
 static const uint SURFEL_MOMENT_ATLAS_TEXELS = SQRT_SURFEL_CAPACITY * SURFEL_MOMENT_TEXELS;
 static const uint3 SURFEL_GRID_DIMENSIONS = uint3(128, 64, 128);
 static const uint SURFEL_TABLE_SIZE = SURFEL_GRID_DIMENSIONS.x * SURFEL_GRID_DIMENSIONS.y * SURFEL_GRID_DIMENSIONS.z;
-static const float SURFEL_MAX_RADIUS = 1;
+static const float SURFEL_MAX_RADIUS = 2;
 static const float SURFEL_RECYCLE_DISTANCE = 100; // if surfel is behind camera and farther than this distance, it starts preparing for recycling
 static const uint SURFEL_RECYCLE_TIME = 240; // if surfel is preparing for recycling, this is how many frames it takes to recycle it
 struct SurfelGridCell
