@@ -321,7 +321,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	surfel_data.life++;
 
 	float3 cam_to_surfel = surfel.position - g_xCamera.CamPos;
-	if (dot(cam_to_surfel, g_xCamera.At) < 0 && length(cam_to_surfel) > 100)
+	if (dot(cam_to_surfel, g_xCamera.At) < 0 && length(cam_to_surfel) > SURFEL_RECYCLE_DISTANCE)
 	{
 		surfel_data.last_seen_since++;
 	}

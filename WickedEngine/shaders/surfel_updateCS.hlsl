@@ -51,10 +51,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		surfel.radius = 0;
 	}
 
-	//if (surfel_data.life > 100 && distance(surfel.position, g_xCamera.CamPos) > 100)
-	//	surfel.radius = 0;
-
-	if (surfel_data.last_seen_since > 100)
+	if (surfel_data.last_seen_since > SURFEL_RECYCLE_TIME)
 	{
 		surfel.radius = 0;
 	}

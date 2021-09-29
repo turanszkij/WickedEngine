@@ -8,7 +8,7 @@ RAWBUFFER(surfelStatsBuffer, TEXSLOT_ONDEMAND2);
 RWSTRUCTUREDBUFFER(surfelGridBuffer, SurfelGridCell, 0);
 RWSTRUCTUREDBUFFER(surfelCellBuffer, uint, 1);
 
-[numthreads(64, 1, 1)]
+[numthreads(SURFEL_INDIRECT_NUMTHREADS, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	uint surfel_count = surfelStatsBuffer.Load(SURFEL_STATS_OFFSET_COUNT);
