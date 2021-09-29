@@ -41,15 +41,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float seed = 0.123456;
 	float2 uv = float2(frac(g_xFrame.FrameCount.x / 4096.0), (float)surfel_index / SURFEL_CAPACITY);
 
-	uint rayCount = 1;
-	rayCount = saturate(surfel_data.inconsistency) * 4;
-	if (life == 0)
+	uint rayCount = surfel_raycount(surfel_data);
+
+	uint globalRayCount = surfelStatsBuffer.Load(SURFEL_STATS_OFFSET_RAYCOUNT);
+	if (rayCount > 1 && globalRayCount > SURFEL_RAY_BUDGET)
 	{
-		rayCount = 32;
-	}
-	if (recycle > 60)
-	{
-		rayCount = 0;
+		rayCount = max(1, (float)rayCount * (SURFEL_RAY_BUDGET / globalRayCount));
 	}
 
 	for (uint rayIndex = 0; rayIndex < rayCount; ++rayIndex)
@@ -323,9 +320,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 							float2 moments = surfelMomentsTexturePrev.SampleLevel(sampler_linear_clamp, surfel_moment_uv(surfel_index, normal, -L / dist), 0);
 							contribution *= surfel_moment_weight(moments, dist);
 
+							contribution *= saturate(dotN);
 							contribution *= saturate(1 - dist / surfel.radius);
 							contribution = smoothstep(0, 1, contribution);
-							contribution *= saturate(dotN);
 
 							surfel_gi += float4(surfel.color, 1) * contribution;
 
@@ -360,7 +357,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		{
 			uint surfel_index = surfelCellBuffer[cell.offset + i];
 			Surfel surfel = surfelBuffer[surfel_index];
-			surfel.radius += radius;
+			surfel.radius *= 2;
 
 			float3 L = surfel.position - surface.P;
 			float dist2 = dot(L, L);
@@ -376,9 +373,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 					float2 moments = surfelMomentsTexturePrev.SampleLevel(sampler_linear_clamp, surfel_moment_uv(surfel_index, normal, -L / dist), 0);
 					contribution *= surfel_moment_weight(moments, dist);
 
+					contribution *= saturate(dotN);
 					contribution *= saturate(1 - dist / surfel.radius);
 					contribution = smoothstep(0, 1, contribution);
-					contribution *= saturate(dotN);
 
 					result += float4(surfel.color, 1) * contribution;
 
@@ -388,8 +385,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	}
 #endif // SURFEL_ENABLE_IRRADIANCE_SHARING
 
-	result /= result.a;
-	MultiscaleMeanEstimator(result.rgb, surfel_data, 0.08);
+	if (result.a > 0)
+	{
+		result /= result.a;
+		MultiscaleMeanEstimator(result.rgb, surfel_data, 0.08);
+	}
 
 	// Copy moment borders:
 	uint2 moments_topleft = unflatten2D(surfel_index, SQRT_SURFEL_CAPACITY) * SURFEL_MOMENT_TEXELS;

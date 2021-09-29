@@ -1706,9 +1706,9 @@ namespace wiScene
 				device->SetName(&surfelDeadBuffer, "surfelDeadBuffer");
 
 				desc.Stride = sizeof(uint);
-				desc.Size = desc.Stride * 7; // count (1 uint), nextCount (1 uint), deadCount (1 uint), cellAllocator (1 uint), IndirectDispatchArgs (3 uints)
+				desc.Size = desc.Stride * 8; // count (1 uint), nextCount (1 uint), deadCount (1 uint), cellAllocator (1 uint), IndirectDispatchArgs (3 uints), raycount (1 uint)
 				desc.MiscFlags = RESOURCE_MISC_BUFFER_RAW | RESOURCE_MISC_INDIRECT_ARGS;
-				uint stats_data[] = { 0,0,SURFEL_CAPACITY,0,0,0,0 };
+				uint stats_data[] = { 0,0,SURFEL_CAPACITY,0,0,0,0,0 };
 				device->CreateBuffer(&desc, &stats_data, &surfelStatsBuffer);
 				device->SetName(&surfelStatsBuffer, "surfelStatsBuffer");
 

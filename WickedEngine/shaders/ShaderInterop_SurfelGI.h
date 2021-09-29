@@ -28,7 +28,7 @@ struct SurfelData
 	uint GetLife() { return life_recycle & 0xFFFF; }
 	uint GetRecycle() { return (life_recycle >> 16u) & 0xFFFF; }
 };
-static const uint SURFEL_CAPACITY = 250000;
+static const uint SURFEL_CAPACITY = 100000;
 static const uint SQRT_SURFEL_CAPACITY = (uint)ceil(sqrt((float)SURFEL_CAPACITY));
 static const uint SURFEL_MOMENT_TEXELS = 4 + 2;
 static const uint SURFEL_MOMENT_ATLAS_TEXELS = SQRT_SURFEL_CAPACITY * SURFEL_MOMENT_TEXELS;
@@ -47,9 +47,11 @@ static const uint SURFEL_STATS_OFFSET_NEXTCOUNT = SURFEL_STATS_OFFSET_COUNT + 4;
 static const uint SURFEL_STATS_OFFSET_DEADCOUNT = SURFEL_STATS_OFFSET_NEXTCOUNT + 4;
 static const uint SURFEL_STATS_OFFSET_CELLALLOCATOR = SURFEL_STATS_OFFSET_DEADCOUNT + 4;
 static const uint SURFEL_STATS_OFFSET_INDIRECT = SURFEL_STATS_OFFSET_CELLALLOCATOR + 4;
+static const uint SURFEL_STATS_OFFSET_RAYCOUNT = SURFEL_STATS_OFFSET_INDIRECT + 4 * 3;
 static const uint SURFEL_INDIRECT_NUMTHREADS = 32;
 static const float SURFEL_TARGET_COVERAGE = 0.5f; // how many surfels should affect a pixel fully, higher values will increase quality and cost
 static const uint SURFEL_CELL_LIMIT = ~0; // limit the amount of allocated surfels in a cell
+static const uint SURFEL_RAY_BUDGET = 200000; // max number of rays per frame
 #define SURFEL_COVERAGE_HALFRES // runs the coverage shader in half resolution for improved performance
 #define SURFEL_GRID_CULLING // if defined, surfels will not be added to grid cells that they do not intersect
 #define SURFEL_USE_HASHING // if defined, hashing will be used to retrieve surfels, hashing is good because it supports infinite world trivially, but slower due to hash collisions
@@ -183,6 +185,16 @@ float surfel_moment_weight(float2 moments, float dist)
 		return variance / (variance + sqr(dist - mean));
 	}
 	return 1;
+}
+
+uint surfel_raycount(SurfelData surfel_data)
+{
+	uint rayCount = saturate(surfel_data.inconsistency) * 32;
+	if (surfel_data.GetRecycle() > 60)
+	{
+		rayCount = 0;
+	}
+	return rayCount;
 }
 
 void MultiscaleMeanEstimator(

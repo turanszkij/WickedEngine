@@ -91,6 +91,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				}
 			}
 		}
+
+		uint rayCount = surfel_raycount(surfel_data);
+		surfelStatsBuffer.InterlockedAdd(SURFEL_STATS_OFFSET_RAYCOUNT, rayCount);
 	}
 	else
 	{
