@@ -56,8 +56,8 @@ static const uint SURFEL_RAY_BOOST_MAX = 32; // max amount of rays per surfel
 #define SURFEL_COVERAGE_HALFRES // runs the coverage shader in half resolution for improved performance
 #define SURFEL_GRID_CULLING // if defined, surfels will not be added to grid cells that they do not intersect
 #define SURFEL_USE_HASHING // if defined, hashing will be used to retrieve surfels, hashing is good because it supports infinite world trivially, but slower due to hash collisions
-#define SURFEL_ENABLE_INFINITE_BOUNCES
-#define SURFEL_ENABLE_IRRADIANCE_SHARING
+#define SURFEL_ENABLE_INFINITE_BOUNCES // if defined, previous frame's surfel data will be sampled at ray tracing hit points
+#define SURFEL_ENABLE_IRRADIANCE_SHARING // if defined, surfels will pull color from nearby surfels, this can smooth out the GI a bit
 
 #ifndef __cplusplus
 inline int3 surfel_cell(float3 position)
