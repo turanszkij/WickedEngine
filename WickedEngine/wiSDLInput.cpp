@@ -1,6 +1,13 @@
 #include "CommonInclude.h"
+#include "Utility/DirectXMath.h"
+#include "wiBackLog.h"
 #include "wiInput.h"
 #include "wiSDLInput.h"
+#include <SDL_events.h>
+#include <SDL_gamecontroller.h>
+#include <SDL_joystick.h>
+#include <SDL_stdinc.h>
+#include <string>
 
 #ifdef SDL2
 
@@ -22,9 +29,37 @@ namespace wiSDLInput
     //};
     //std::vector<Internal_ControllerState> controllers;
 
-    int to_wiInput(const SDL_Scancode &key);
+    struct Internal_ControllerState
+    {
+        Sint32 portID;
+        SDL_JoystickID internalID;
+        SDL_GameController* controller;
+        wiInput::ControllerState state;
+    };
+    std::vector<Internal_ControllerState> controllers;
+    int numSticks = 0;
 
-    void Initialize() {}
+    int to_wiInput(const SDL_Scancode &key);
+    void controller_to_wiInput(uint32_t *current, Uint8 button, bool pressed);
+
+    void AddController(Sint32 id);
+    void RemoveController(Sint32 id);
+    void RemoveController();
+
+    void Initialize() {
+        if(!SDL_GameControllerAddMappingsFromFile("gamecontrollerdb.txt")){
+            wiBackLog::post("No controller config loaded, add gamecontrollerdb.txt file next to the executable or download it from https://github.com/gabomdq/SDL_GameControllerDB");
+        }
+        
+        // Attempt to add joysticks at initialization
+        numSticks = SDL_NumJoysticks();
+        if(numSticks > 0){
+            for(int i = 0; i<numSticks; i++){
+                AddController(i);
+            }
+        }
+    }
+
     void Update()
     {
         auto saved_x = mouse.position.x;
@@ -41,6 +76,24 @@ namespace wiSDLInput
         // mouse.position.y = saved_y;
         mouse.delta_wheel = 0;
 
+        //Attempt to add-remove controller by checking joystick numbers, works reliably
+        if(SDL_NumJoysticks() > numSticks){
+            numSticks = SDL_NumJoysticks();
+            for(int i = 0; i<numSticks; i++){
+                if(controllers.empty()){
+                    AddController(i);
+                }
+                if(i < controllers.size()){
+                    if(!controllers[i].controller){
+                        AddController(i);
+                    }
+                }
+            }
+        }else if(SDL_NumJoysticks() < numSticks){
+            numSticks = SDL_NumJoysticks();
+            RemoveController();
+        }
+
         std::vector<SDL_Event> events(1000);
 
         // This removes the only the inputs events from the event queue, leaving audio and window events for other
@@ -52,7 +105,6 @@ namespace wiSDLInput
             return;
         } else if (ret > 0) {
             events.resize(ret);
-
             for (const SDL_Event &event : events) {
                 switch (event.type) {
                     // Keyboard events
@@ -143,6 +195,33 @@ namespace wiSDLInput
         mouse.left_button_press = mouse_buttons_state & SDL_BUTTON_LMASK;
         mouse.right_button_press = mouse_buttons_state & SDL_BUTTON_RMASK;
         mouse.middle_button_press = mouse_buttons_state & SDL_BUTTON_MMASK;
+
+        //Get controller axis and button values here instead
+        for(auto& controller : controllers){
+            if(controller.controller){
+                //Get controller buttons
+                for(int btn=SDL_CONTROLLER_BUTTON_INVALID; btn<SDL_CONTROLLER_BUTTON_MAX; btn++){
+                    controller_to_wiInput(&controller.state.buttons,
+                        btn,
+                        (bool)SDL_GameControllerGetButton(controller.controller, (SDL_GameControllerButton)btn));
+                }
+
+                //Get controller axes
+                float rawLx = SDL_GameControllerGetAxis(controller.controller, SDL_CONTROLLER_AXIS_LEFTX) / 32767.0f;
+                float rawLy = SDL_GameControllerGetAxis(controller.controller, SDL_CONTROLLER_AXIS_LEFTY) / 32767.0f;
+                float rawRx = SDL_GameControllerGetAxis(controller.controller, SDL_CONTROLLER_AXIS_RIGHTY) / 32767.0f;
+                float rawRy = SDL_GameControllerGetAxis(controller.controller, SDL_CONTROLLER_AXIS_RIGHTX) / 32767.0f;
+                float rawLT = SDL_GameControllerGetAxis(controller.controller, SDL_CONTROLLER_AXIS_TRIGGERLEFT) / 32767.0f;
+                float rawRT = SDL_GameControllerGetAxis(controller.controller, SDL_CONTROLLER_AXIS_TRIGGERRIGHT) / 32767.0f;
+
+                controller.state.thumbstick_L.x = (rawLx < -0.01 || rawLx > 0.01) ? rawLx : 0;
+                controller.state.thumbstick_L.y = (rawLy < -0.01 || rawLy > 0.01) ? rawLy : 0;
+                controller.state.thumbstick_R.x = (rawRx < -0.01 || rawRx > 0.01) ? rawRx : 0;
+                controller.state.thumbstick_R.y = (rawRy < -0.01 || rawRy > 0.01) ? rawRy : 0;
+                controller.state.trigger_L = (rawLT > 0.01) ? rawLT : 0;
+                controller.state.trigger_R = (rawRT > 0.01) ? rawRT : 0;
+            }
+        }
     }
 
     void GetKeyboardState(wiInput::KeyboardState* state) {
@@ -151,8 +230,18 @@ namespace wiSDLInput
     void GetMouseState(wiInput::MouseState* state) {
         *state = mouse;
     }
-    int GetMaxControllerCount() { return 0; }
-    bool GetControllerState(wiInput::ControllerState* state, int index) { return false; }
+    int GetMaxControllerCount() { return numSticks; }
+    bool GetControllerState(wiInput::ControllerState* state, int index) { 
+        if(index < controllers.size()){
+            if(controllers[index].controller){
+                if(state){
+                    *state = controllers[index].state;
+                }
+                return true;
+            }
+        }
+        return false; 
+    }
     void SetControllerFeedback(const wiInput::ControllerFeedback& data, int index) {}
 
 
@@ -162,6 +251,67 @@ namespace wiSDLInput
             return key;
         }
         return -1;
+    }
+
+    void controller_to_wiInput(uint32_t *current, Uint8 button, bool pressed){
+        uint32_t btnenum;
+        switch(button){
+            case SDL_CONTROLLER_BUTTON_DPAD_UP: btnenum = wiInput::GAMEPAD_BUTTON_UP; break;
+            case SDL_CONTROLLER_BUTTON_DPAD_LEFT: btnenum = wiInput::GAMEPAD_BUTTON_LEFT; break;
+            case SDL_CONTROLLER_BUTTON_DPAD_DOWN: btnenum = wiInput::GAMEPAD_BUTTON_DOWN; break;
+            case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: btnenum = wiInput::GAMEPAD_BUTTON_RIGHT; break;
+            case SDL_CONTROLLER_BUTTON_X: btnenum = wiInput::GAMEPAD_BUTTON_1; break;
+            case SDL_CONTROLLER_BUTTON_A: btnenum = wiInput::GAMEPAD_BUTTON_2; break;
+            case SDL_CONTROLLER_BUTTON_B: btnenum = wiInput::GAMEPAD_BUTTON_3; break;
+            case SDL_CONTROLLER_BUTTON_Y: btnenum = wiInput::GAMEPAD_BUTTON_4; break;
+            case SDL_CONTROLLER_BUTTON_LEFTSHOULDER: btnenum = wiInput::GAMEPAD_BUTTON_5; break;
+            case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER: btnenum = wiInput::GAMEPAD_BUTTON_6; break;
+            case SDL_CONTROLLER_BUTTON_LEFTSTICK: btnenum = wiInput::GAMEPAD_BUTTON_7; break;
+            case SDL_CONTROLLER_BUTTON_RIGHTSTICK: btnenum = wiInput::GAMEPAD_BUTTON_8; break;
+            case SDL_CONTROLLER_BUTTON_BACK: btnenum = wiInput::GAMEPAD_BUTTON_9; break;
+            case SDL_CONTROLLER_BUTTON_START: btnenum = wiInput::GAMEPAD_BUTTON_10; break;
+        }
+        btnenum = 1 << (btnenum - wiInput::GAMEPAD_RANGE_START - 1);
+        if(pressed){
+            *current |= btnenum;
+        }else{
+            *current &= ~btnenum;
+        }
+    }
+
+    void AddController(Sint32 id){
+        if(SDL_IsGameController(id)){
+            bool opened = false;
+            for(auto& controller : controllers){
+                if(!controller.controller){
+                    controller.controller = SDL_GameControllerOpen(id);
+                    if(controller.controller){
+                        controller.portID = id;
+                        controller.internalID = SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(controller.controller));
+                        opened = true;
+                    }
+                }
+            }
+            if(!opened){
+                auto& controller = controllers.emplace_back();
+                controller.controller = SDL_GameControllerOpen(id);
+                if(controller.controller){
+                    controller.portID = id;
+                    controller.internalID = SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(controller.controller));
+                    opened = true;
+                }
+            }
+        }
+    }
+
+    //Attempt to remove controller by checking if controller is attached or not
+    void RemoveController(){
+        for(auto& controller : controllers){
+            if(!SDL_JoystickGetAttached(SDL_GameControllerGetJoystick(controller.controller))){
+                SDL_GameControllerClose(controller.controller);
+                controller.controller = nullptr;
+            }
+        }
     }
 }
 
