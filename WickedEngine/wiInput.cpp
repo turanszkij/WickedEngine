@@ -71,6 +71,7 @@ namespace wiInput
 			DISCONNECTED,
 			XINPUT,
 			RAWINPUT,
+			SDLINPUT,
 		};
 		DeviceType deviceType;
 		int deviceIndex;
@@ -272,18 +273,52 @@ namespace wiInput
 			}
 		}
 
+		// Check if low-level SDLINPUT controller is not registered for playerindex slot and register:
+		for (int i = 0; i < wiSDLInput::GetMaxControllerCount(); ++i)
+		{
+			if (wiSDLInput::GetControllerState(nullptr, i))
+			{
+				int slot = -1;
+				for (int j = 0; j < (int)controllers.size(); ++j)
+				{
+					if (slot < 0 && controllers[j].deviceType == Controller::DISCONNECTED)
+					{
+						// take the first disconnected slot
+						slot = j;
+					}
+					if (controllers[j].deviceType == Controller::SDLINPUT && controllers[j].deviceIndex == i)
+					{
+						// it is already registered to this slot
+						slot = j;
+						break;
+					}
+				}
+				if (slot == -1)
+				{
+					// no disconnected slot was found, and it was not registered
+					slot = (int)controllers.size();
+					controllers.emplace_back();
+				}
+				controllers[slot].deviceType = Controller::SDLINPUT;
+				controllers[slot].deviceIndex = i;
+			}
+		}
+
 		// Read low-level controllers:
 		for (auto& controller : controllers)
 		{
 			bool connected = false;
 			switch (controller.deviceType)
 			{
-			case Controller::XINPUT:
-				connected = wiXInput::GetControllerState(&controller.state, controller.deviceIndex);
-				break;
-			case Controller::RAWINPUT:
-				connected = wiRawInput::GetControllerState(&controller.state, controller.deviceIndex);
-				break;
+				case Controller::XINPUT:
+					connected = wiXInput::GetControllerState(&controller.state, controller.deviceIndex);
+					break;
+				case Controller::RAWINPUT:
+					connected = wiRawInput::GetControllerState(&controller.state, controller.deviceIndex);
+					break;
+				case Controller::SDLINPUT:
+					connected = wiSDLInput::GetControllerState(&controller.state, controller.deviceIndex);
+					break;
 			}
 
 			if (!connected)

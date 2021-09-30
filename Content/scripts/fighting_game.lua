@@ -1234,7 +1234,7 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 			--	We use a custom scene because if two models are loaded into the global scene, they will have name collisions
 			--	and thus we couldn't properly query entities by name
 			local model_scene = Scene()
-			self.model = LoadModel(model_scene, "../models/havoc/havoc.wiscene")
+			self.model = LoadModel(model_scene, "../models/Havoc/havoc.wiscene")
 
 			-- Place model according to starting facing direction:
 			self.face = face
