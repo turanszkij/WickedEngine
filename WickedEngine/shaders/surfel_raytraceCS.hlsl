@@ -357,7 +357,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		{
 			uint surfel_index = surfelCellBuffer[cell.offset + i];
 			Surfel surfel = surfelBuffer[surfel_index];
-			surfel.radius *= 2;
+			surfel.radius += radius;
 
 			float3 L = surfel.position - surface.P;
 			float dist2 = dot(L, L);

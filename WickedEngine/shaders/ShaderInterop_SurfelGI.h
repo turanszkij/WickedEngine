@@ -52,6 +52,7 @@ static const uint SURFEL_INDIRECT_NUMTHREADS = 32;
 static const float SURFEL_TARGET_COVERAGE = 0.5f; // how many surfels should affect a pixel fully, higher values will increase quality and cost
 static const uint SURFEL_CELL_LIMIT = ~0; // limit the amount of allocated surfels in a cell
 static const uint SURFEL_RAY_BUDGET = 200000; // max number of rays per frame
+static const uint SURFEL_RAY_BOOST_MAX = 32; // max amount of rays per surfel
 #define SURFEL_COVERAGE_HALFRES // runs the coverage shader in half resolution for improved performance
 #define SURFEL_GRID_CULLING // if defined, surfels will not be added to grid cells that they do not intersect
 #define SURFEL_USE_HASHING // if defined, hashing will be used to retrieve surfels, hashing is good because it supports infinite world trivially, but slower due to hash collisions
@@ -189,7 +190,7 @@ float surfel_moment_weight(float2 moments, float dist)
 
 uint surfel_raycount(SurfelData surfel_data)
 {
-	uint rayCount = saturate(surfel_data.inconsistency) * 32;
+	uint rayCount = saturate(surfel_data.inconsistency) * SURFEL_RAY_BOOST_MAX;
 	if (surfel_data.GetRecycle() > 60)
 	{
 		rayCount = 0;
