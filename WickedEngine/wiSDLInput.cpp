@@ -1,18 +1,17 @@
+#include "wiSDLInput.h"
+
+#ifdef SDL2
+
 #include "CommonInclude.h"
-#include "Utility/DirectXMath.h"
 #include "wiBackLog.h"
 #include "wiInput.h"
-#include "wiSDLInput.h"
+#include <SDL2/SDL.h>
 #include <SDL_events.h>
 #include <SDL_gamecontroller.h>
 #include <SDL_joystick.h>
 #include <SDL_stdinc.h>
-#include <string>
-
-#ifdef SDL2
-
-#include <SDL2/SDL.h>
 #include <iostream>
+#include <string>
 
 namespace wiSDLInput
 {
@@ -48,7 +47,7 @@ namespace wiSDLInput
 
     void Initialize() {
         if(!SDL_GameControllerAddMappingsFromFile("gamecontrollerdb.txt")){
-            wiBackLog::post("No controller config loaded, add gamecontrollerdb.txt file next to the executable or download it from https://github.com/gabomdq/SDL_GameControllerDB");
+            wiBackLog::post("[SDL Input] No controller config loaded, add gamecontrollerdb.txt file next to the executable or download it from https://github.com/gabomdq/SDL_GameControllerDB");
         }
         
         // Attempt to add joysticks at initialization
