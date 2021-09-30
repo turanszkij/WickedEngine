@@ -348,6 +348,8 @@ namespace Vulkan_Internal
 			return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 		case TEXTURE_ADDRESS_BORDER:
 			return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+		case TEXTURE_ADDRESS_MIRROR_ONCE:
+			return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
 		default:
 			return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 		}
@@ -1675,7 +1677,14 @@ using namespace Vulkan_Internal;
 				VkSampleMask samplemask = internal_state->samplemask;
 				samplemask = pso->desc.sampleMask;
 				multisampling.pSampleMask = &samplemask;
-				multisampling.alphaToCoverageEnable = VK_FALSE;
+				if (pso->desc.bs != nullptr)
+				{
+					multisampling.alphaToCoverageEnable = pso->desc.bs->AlphaToCoverageEnable ? VK_TRUE : VK_FALSE;
+				}
+				else
+				{
+					multisampling.alphaToCoverageEnable = VK_FALSE;
+				}
 				multisampling.alphaToOneEnable = VK_FALSE;
 
 				pipelineInfo.pMultisampleState = &multisampling;
@@ -2032,6 +2041,7 @@ using namespace Vulkan_Internal;
 				enabled_deviceExtensions.push_back(VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME);
 				enabled_deviceExtensions.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
 				enabled_deviceExtensions.push_back(VK_EXT_SHADER_VIEWPORT_INDEX_LAYER_EXTENSION_NAME);
+				enabled_deviceExtensions.push_back(VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME);
 
 				if (checkExtensionSupport(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME, available_deviceExtensions))
 				{
@@ -5594,10 +5604,9 @@ using namespace Vulkan_Internal;
 
 	void GraphicsDevice_Vulkan::SetName(GPUResource* pResource, const char* name)
 	{
-		if (vkSetDebugUtilsObjectNameEXT != nullptr)
+		if (debugUtils)
 		{
-			VkDebugUtilsObjectNameInfoEXT info = {};
-			info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+			VkDebugUtilsObjectNameInfoEXT info { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
 			info.pObjectName = name;
 			if (pResource->IsTexture())
 			{
@@ -6312,56 +6321,56 @@ using namespace Vulkan_Internal;
 	void GraphicsDevice_Vulkan::Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd)
 	{
 		predraw(cmd);
-		vkCmdDraw(GetCommandList(cmd), static_cast<uint32_t>(vertexCount), 1, startVertexLocation, 0);
+		vkCmdDraw(GetCommandList(cmd), vertexCount, 1, startVertexLocation, 0);
 	}
-	void GraphicsDevice_Vulkan::DrawIndexed(uint32_t indexCount, uint32_t startIndexLocation, uint32_t baseVertexLocation, CommandList cmd)
+	void GraphicsDevice_Vulkan::DrawIndexed(uint32_t indexCount, uint32_t startIndexLocation, int32_t baseVertexLocation, CommandList cmd)
 	{
 		predraw(cmd);
-		vkCmdDrawIndexed(GetCommandList(cmd), static_cast<uint32_t>(indexCount), 1, startIndexLocation, baseVertexLocation, 0);
+		vkCmdDrawIndexed(GetCommandList(cmd), indexCount, 1, startIndexLocation, baseVertexLocation, 0);
 	}
 	void GraphicsDevice_Vulkan::DrawInstanced(uint32_t vertexCount, uint32_t instanceCount, uint32_t startVertexLocation, uint32_t startInstanceLocation, CommandList cmd)
 	{
 		predraw(cmd);
-		vkCmdDraw(GetCommandList(cmd), static_cast<uint32_t>(vertexCount), static_cast<uint32_t>(instanceCount), startVertexLocation, startInstanceLocation);
+		vkCmdDraw(GetCommandList(cmd), vertexCount, instanceCount, startVertexLocation, startInstanceLocation);
 	}
-	void GraphicsDevice_Vulkan::DrawIndexedInstanced(uint32_t indexCount, uint32_t instanceCount, uint32_t startIndexLocation, uint32_t baseVertexLocation, uint32_t startInstanceLocation, CommandList cmd)
+	void GraphicsDevice_Vulkan::DrawIndexedInstanced(uint32_t indexCount, uint32_t instanceCount, uint32_t startIndexLocation, int32_t baseVertexLocation, uint32_t startInstanceLocation, CommandList cmd)
 	{
 		predraw(cmd);
-		vkCmdDrawIndexed(GetCommandList(cmd), static_cast<uint32_t>(indexCount), static_cast<uint32_t>(instanceCount), startIndexLocation, baseVertexLocation, startInstanceLocation);
+		vkCmdDrawIndexed(GetCommandList(cmd), indexCount, instanceCount, startIndexLocation, baseVertexLocation, startInstanceLocation);
 	}
-	void GraphicsDevice_Vulkan::DrawInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
-	{
-		predraw(cmd);
-		auto internal_state = to_internal(args);
-		vkCmdDrawIndirect(GetCommandList(cmd), internal_state->resource, (VkDeviceSize)args_offset, 1, (uint32_t)sizeof(IndirectDrawArgsInstanced));
-	}
-	void GraphicsDevice_Vulkan::DrawIndexedInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
+	void GraphicsDevice_Vulkan::DrawInstancedIndirect(const GPUBuffer* args, uint64_t args_offset, CommandList cmd)
 	{
 		predraw(cmd);
 		auto internal_state = to_internal(args);
-		vkCmdDrawIndexedIndirect(GetCommandList(cmd), internal_state->resource, (VkDeviceSize)args_offset, 1, (uint32_t)sizeof(IndirectDrawArgsIndexedInstanced));
+		vkCmdDrawIndirect(GetCommandList(cmd), internal_state->resource, args_offset, 1, (uint32_t)sizeof(IndirectDrawArgsInstanced));
+	}
+	void GraphicsDevice_Vulkan::DrawIndexedInstancedIndirect(const GPUBuffer* args, uint64_t args_offset, CommandList cmd)
+	{
+		predraw(cmd);
+		auto internal_state = to_internal(args);
+		vkCmdDrawIndexedIndirect(GetCommandList(cmd), internal_state->resource, args_offset, 1, sizeof(IndirectDrawArgsIndexedInstanced));
 	}
 	void GraphicsDevice_Vulkan::Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd)
 	{
 		predispatch(cmd);
 		vkCmdDispatch(GetCommandList(cmd), threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 	}
-	void GraphicsDevice_Vulkan::DispatchIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
+	void GraphicsDevice_Vulkan::DispatchIndirect(const GPUBuffer* args, uint64_t args_offset, CommandList cmd)
 	{
 		predispatch(cmd);
 		auto internal_state = to_internal(args);
-		vkCmdDispatchIndirect(GetCommandList(cmd), internal_state->resource, (VkDeviceSize)args_offset);
+		vkCmdDispatchIndirect(GetCommandList(cmd), internal_state->resource, args_offset);
 	}
 	void GraphicsDevice_Vulkan::DispatchMesh(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd)
 	{
 		predraw(cmd);
 		vkCmdDrawMeshTasksNV(GetCommandList(cmd), threadGroupCountX * threadGroupCountY * threadGroupCountZ, 0);
 	}
-	void GraphicsDevice_Vulkan::DispatchMeshIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
+	void GraphicsDevice_Vulkan::DispatchMeshIndirect(const GPUBuffer* args, uint64_t args_offset, CommandList cmd)
 	{
 		predraw(cmd);
 		auto internal_state = to_internal(args);
-		vkCmdDrawMeshTasksIndirectNV(GetCommandList(cmd), internal_state->resource, (VkDeviceSize)args_offset,1,sizeof(IndirectDispatchArgs));
+		vkCmdDrawMeshTasksIndirectNV(GetCommandList(cmd), internal_state->resource, args_offset, 1, sizeof(IndirectDispatchArgs));
 	}
 	void GraphicsDevice_Vulkan::CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd)
 	{
