@@ -240,50 +240,53 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 
 	GroupMemoryBarrierWithGroupSync();
 
-	uint surfel_coverage = GroupMinSurfelCount;
-	uint2 minGTid;
-	minGTid.x = (surfel_coverage >> 4) & 0xF;
-	minGTid.y = (surfel_coverage >> 0) & 0xF;
-	uint coverage_amount = surfel_coverage >> 24;
-	if (GTid.x == minGTid.x && GTid.y == minGTid.y && coverage < SURFEL_TARGET_COVERAGE)
+	if (cell.count < SURFEL_CELL_LIMIT)
 	{
-		// Slow down the propagation by chance
-		//	Closer surfaces have less chance to avoid excessive clumping of surfels
-		const float lineardepth = getLinearDepth(depth) * g_xCamera.ZFarP_rcp;
+		uint surfel_coverage = GroupMinSurfelCount;
+		uint2 minGTid;
+		minGTid.x = (surfel_coverage >> 4) & 0xF;
+		minGTid.y = (surfel_coverage >> 0) & 0xF;
+		uint coverage_amount = surfel_coverage >> 24;
+		if (GTid.x == minGTid.x && GTid.y == minGTid.y && coverage < SURFEL_TARGET_COVERAGE)
+		{
+			// Slow down the propagation by chance
+			//	Closer surfaces have less chance to avoid excessive clumping of surfels
+			const float lineardepth = getLinearDepth(depth) * g_xCamera.ZFarP_rcp;
 #ifdef SURFEL_COVERAGE_HALFRES
-		const float chance = pow(1 - lineardepth, 8);
+			const float chance = pow(1 - lineardepth, 8);
 #else
-		const float chance = pow(1 - lineardepth, 4);
+			const float chance = pow(1 - lineardepth, 4);
 #endif // SURFEL_COVERAGE_HALFRES
 
-		//if (blue_noise(Gid.xy).x < chance)
-		//	return;
+			//if (blue_noise(Gid.xy).x < chance)
+			//	return;
 
-		if (rand(seed, uv) < chance)
-			return;
+			if (rand(seed, uv) < chance)
+				return;
 
 
 
-		// new particle index retrieved from dead list (pop):
-		int deadCount;
-		surfelStatsBuffer.InterlockedAdd(SURFEL_STATS_OFFSET_DEADCOUNT, -1, deadCount);
-		if (deadCount <= 0 || deadCount > SURFEL_CAPACITY)
-			return;
-		uint newSurfelIndex = surfelDeadBuffer[deadCount - 1];
+			// new particle index retrieved from dead list (pop):
+			int deadCount;
+			surfelStatsBuffer.InterlockedAdd(SURFEL_STATS_OFFSET_DEADCOUNT, -1, deadCount);
+			if (deadCount <= 0 || deadCount > SURFEL_CAPACITY)
+				return;
+			uint newSurfelIndex = surfelDeadBuffer[deadCount - 1];
 
-		// and add index to the alive list (push):
-		uint aliveCount;
-		surfelStatsBuffer.InterlockedAdd(SURFEL_STATS_OFFSET_NEXTCOUNT, 1, aliveCount);
-		if (aliveCount < SURFEL_CAPACITY)
-		{
-			surfelAliveBuffer[aliveCount] = newSurfelIndex;
+			// and add index to the alive list (push):
+			uint aliveCount;
+			surfelStatsBuffer.InterlockedAdd(SURFEL_STATS_OFFSET_NEXTCOUNT, 1, aliveCount);
+			if (aliveCount < SURFEL_CAPACITY)
+			{
+				surfelAliveBuffer[aliveCount] = newSurfelIndex;
 
-			SurfelData surfel_data = (SurfelData)0;
-			surfel_data.primitiveID = primitiveID;
-			surfel_data.bary = pack_half2(surface.bary.xy);
-			surfel_data.uid = surface.inst.uid;
-			surfel_data.inconsistency = 1;
-			surfelDataBuffer[newSurfelIndex] = surfel_data;
+				SurfelData surfel_data = (SurfelData)0;
+				surfel_data.primitiveID = primitiveID;
+				surfel_data.bary = pack_half2(surface.bary.xy);
+				surfel_data.uid = surface.inst.uid;
+				surfel_data.inconsistency = 1;
+				surfelDataBuffer[newSurfelIndex] = surfel_data;
+			}
 		}
 	}
 
