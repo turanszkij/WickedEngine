@@ -17,7 +17,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	uint surfel_index = surfelAliveBuffer[DTid.x];
 	Surfel surfel = surfelBuffer[surfel_index];
-	if (surfel.radius > 0)
+	if (surfel.GetRadius() > 0)
 	{
 		int3 center_cell = surfel_cell(surfel.position);
 		for (uint i = 0; i < 27; ++i)

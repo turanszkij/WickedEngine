@@ -126,7 +126,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 
 		float3 L = surfel.position - P;
 		float dist2 = dot(L, L);
-		if (dist2 < sqr(surfel.radius))
+		if (dist2 < sqr(surfel.GetRadius()))
 		{
 			float3 normal = normalize(unpack_unitvector(surfel.normal));
 			float dotN = dot(N, normal);
@@ -137,7 +137,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 
 
 				contribution *= saturate(dotN);
-				contribution *= saturate(1 - dist / surfel.radius);
+				contribution *= saturate(1 - dist / surfel.GetRadius());
 				contribution = smoothstep(0, 1, contribution);
 				coverage += contribution;
 

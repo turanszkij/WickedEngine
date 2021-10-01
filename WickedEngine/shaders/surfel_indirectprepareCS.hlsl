@@ -17,8 +17,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	surfelStatsBuffer.Store(SURFEL_STATS_OFFSET_NEXTCOUNT, 0);
 	surfelStatsBuffer.Store(SURFEL_STATS_OFFSET_DEADCOUNT, dead_count);
 	surfelStatsBuffer.Store(SURFEL_STATS_OFFSET_CELLALLOCATOR, 0);
-	surfelStatsBuffer.Store(SURFEL_STATS_OFFSET_RAYCOUNT, 0);
-	surfelStatsBuffer.Store(SURFEL_STATS_OFFSET_SHORTAGE, asuint(shortage));
+	surfelStatsBuffer.Store(SURFEL_STATS_OFFSET_RAYCOUNT, SURFEL_RAY_BUDGET);
+	surfelStatsBuffer.Store(SURFEL_STATS_OFFSET_SHORTAGE, shortage);
 
 	surfelStatsBuffer.Store3(SURFEL_STATS_OFFSET_INDIRECT, uint3((surfel_count + SURFEL_INDIRECT_NUMTHREADS - 1) / SURFEL_INDIRECT_NUMTHREADS, 1, 1));
 }

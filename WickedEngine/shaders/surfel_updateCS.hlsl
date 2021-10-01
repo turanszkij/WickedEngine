@@ -24,6 +24,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	SurfelData surfel_data = surfelDataBuffer[surfel_index];
 	Surfel surfel = surfelBuffer[surfel_index];
 
+	float radius = SURFEL_MAX_RADIUS;
 
 	PrimitiveID prim;
 	prim.unpack(surfel_data.primitiveID);
@@ -34,7 +35,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		surfel.normal = pack_unitvector(surface.facenormal);
 		surfel.position = surface.P;
 		surfel.color = surfel_data.mean;
-		surfel.radius = SURFEL_MAX_RADIUS;
 
 		int3 center_cell = surfel_cell(surfel.position);
 		for (uint i = 0; i < 27; ++i)
@@ -50,21 +50,43 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	}
 	else
 	{
-		surfel.radius = 0;
+		radius = 0;
 	}
 
 	bool shortage = true;
 	shortage = asint(surfelStatsBuffer.Load(SURFEL_STATS_OFFSET_SHORTAGE)) > 0;
 	if (surfel_data.GetRecycle() > SURFEL_RECYCLE_TIME && shortage)
 	{
-		surfel.radius = 0;
+		radius = 0;
 	}
 
-	if (surfel.radius > 0)
+	if (radius > 0)
 	{
 		uint aliveCount;
 		surfelStatsBuffer.InterlockedAdd(SURFEL_STATS_OFFSET_NEXTCOUNT, 1, aliveCount);
 		surfelAliveBuffer_NEXT[aliveCount] = surfel_index;
+
+		surfel.data = 0;
+		surfel.data |= f32tof16(radius) & 0xFFFF;
+
+		// Determine ray count for surfel:
+		uint rayCountRequest = saturate(surfel_data.inconsistency) * SURFEL_RAY_BOOST_MAX;
+		const uint recycle = surfel_data.GetRecycle();
+		if (recycle > 0)
+		{
+			rayCountRequest = 1;
+		}
+		if (recycle > 60)
+		{
+			rayCountRequest = 0;
+		}
+		int rayCountGlobal = 0;
+		if (rayCountRequest > 0)
+		{
+			surfelStatsBuffer.InterlockedAdd(SURFEL_STATS_OFFSET_RAYCOUNT, -rayCountRequest, rayCountGlobal);
+		}
+		uint rayCount = clamp(rayCountRequest, 0, rayCountGlobal);
+		surfel.data |= (rayCount & 0xFFFF) << 16u;
 
 		surfelBuffer[surfel_index] = surfel;
 
@@ -77,7 +99,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				for (int j = 0; j < SURFEL_MOMENT_TEXELS; ++j)
 				{
 					uint2 pixel_write = moments_pixel + uint2(i, j);
-					surfelMomentsTexture[pixel_write] = float2(surfel.radius, sqr(surfel.radius));
+					surfelMomentsTexture[pixel_write] = float2(radius, sqr(radius));
 				}
 			}
 		}
@@ -93,9 +115,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				}
 			}
 		}
-
-		uint rayCount = surfel_raycount(surfel_data);
-		surfelStatsBuffer.InterlockedAdd(SURFEL_STATS_OFFSET_RAYCOUNT, rayCount);
 	}
 	else
 	{

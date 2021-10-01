@@ -8,7 +8,12 @@ struct Surfel
 	float3 position;
 	uint normal;
 	float3 color;
-	float radius;
+	uint data; // 16bit radius (half float), 16bit rayCount
+
+#ifndef __cplusplus
+	float GetRadius() { return f16tof32(data & 0xFFFF); }
+	uint GetRayCount() { return (data >> 16u) & 0xFFFF; }
+#endif // __cplusplus
 };
 struct SurfelData
 {
@@ -120,7 +125,7 @@ inline bool surfel_cellintersects(Surfel surfel, int3 cell)
 
 	float3 closestPointInAabb = min(max(surfel.position, gridmin), gridmax);
 	float dist = distance(closestPointInAabb, surfel.position);
-	if (dist < surfel.radius)
+	if (dist < surfel.GetRadius())
 		return true;
 	return false;
 #else
@@ -158,10 +163,6 @@ static const int3 surfel_neighbor_offsets[27] = {
 	int3(1, 1, 1),
 };
 
-inline float2 encode(in float3 N)
-{
-	return float2(atan2(N.y, N.x) / PI, N.z) * 0.5 + 0.5;
-}
 float2 surfel_moment_pixel(uint surfel_index, float3 normal, float3 direction)
 {
 	uint2 moments_pixel = unflatten2D(surfel_index, SQRT_SURFEL_CAPACITY) * SURFEL_MOMENT_TEXELS;
@@ -187,21 +188,6 @@ float surfel_moment_weight(float2 moments, float dist)
 		return max(0, pow(variance / (variance + sqr(max(0, dist - mean))), 3));
 	}
 	return 1;
-}
-
-uint surfel_raycount(SurfelData surfel_data)
-{
-	uint rayCount = saturate(surfel_data.inconsistency) * SURFEL_RAY_BOOST_MAX;
-	const uint recycle = surfel_data.GetRecycle();
-	if (recycle > 0)
-	{
-		rayCount = 1;
-	}
-	if (recycle > 60)
-	{
-		rayCount = 0;
-	}
-	return rayCount;
 }
 
 void MultiscaleMeanEstimator(

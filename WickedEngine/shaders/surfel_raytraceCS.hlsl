@@ -41,14 +41,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float seed = 0.123456;
 	float2 uv = float2(frac(g_xFrame.FrameCount.x / 4096.0), (float)surfel_index / SURFEL_CAPACITY);
 
-	uint rayCount = surfel_raycount(surfel_data);
-
-	uint globalRayCount = surfelStatsBuffer.Load(SURFEL_STATS_OFFSET_RAYCOUNT);
-	if (rayCount > 1 && globalRayCount > SURFEL_RAY_BUDGET)
-	{
-		rayCount = max(1, (float)rayCount * (SURFEL_RAY_BUDGET / globalRayCount));
-	}
-
+	uint rayCount = surfel.GetRayCount();
 	for (uint rayIndex = 0; rayIndex < rayCount; ++rayIndex)
 	{
 		RayDesc ray;
@@ -80,7 +73,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #endif // RTAPI
 
 		{
-			surfel_moments_write(moments_pixel, surfel.radius);
+			surfel_moments_write(moments_pixel, surfel.GetRadius());
 
 			float3 envColor;
 			[branch]
@@ -126,11 +119,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 #endif // RTAPI
 
-			if (hit_depth < surfel.radius)
+			if (hit_depth < surfel.GetRadius())
 			{
 				hit_depth *= 0.8; // bias
 			}
-			hit_depth = clamp(hit_depth, 0, surfel.radius);
+			hit_depth = clamp(hit_depth, 0, surfel.GetRadius());
 			surfel_moments_write(moments_pixel, hit_depth);
 
 			surface.P = ray.Origin;
@@ -291,7 +284,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 					float3 L = surfel.position - surface.P;
 					float dist2 = dot(L, L);
-					if (dist2 < sqr(surfel.radius))
+					if (dist2 < sqr(surfel.GetRadius()))
 					{
 						float3 normal = normalize(unpack_unitvector(surfel.normal));
 						float dotN = dot(surface.N, normal);
@@ -301,7 +294,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 							float contribution = 1;
 
 							contribution *= saturate(dotN);
-							contribution *= saturate(1 - dist / surfel.radius);
+							contribution *= saturate(1 - dist / surfel.GetRadius());
 							contribution = smoothstep(0, 1, contribution);
 
 							float2 moments = surfelMomentsTexturePrev.SampleLevel(sampler_linear_clamp, surfel_moment_uv(surfel_index, normal, -L / dist), 0);
@@ -336,7 +329,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		Surface surface;
 		surface.P = surfel.position;
 		surface.N = normalize(unpack_unitvector(surfel.normal));
-		float radius = surfel.radius;
 
 		uint cellindex = surfel_cellindex(surfel_cell(surface.P));
 		SurfelGridCell cell = surfelGridBuffer[cellindex];
@@ -344,11 +336,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		{
 			uint surfel_index = surfelCellBuffer[cell.offset + i];
 			Surfel surfel = surfelBuffer[surfel_index];
-			surfel.radius += radius;
 
 			float3 L = surfel.position - surface.P;
 			float dist2 = dot(L, L);
-			if (dist2 < sqr(surfel.radius))
+			if (dist2 < sqr(surfel.GetRadius()))
 			{
 				float3 normal = normalize(unpack_unitvector(surfel.normal));
 				float dotN = dot(surface.N, normal);
@@ -358,7 +349,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 					float contribution = 1;
 					
 					//contribution *= saturate(dotN);
-					//contribution *= saturate(1 - dist / surfel.radius);
+					//contribution *= saturate(1 - dist / surfel.GetRadius());
 					//contribution = smoothstep(0, 1, contribution);
 
 					float2 moments = surfelMomentsTexturePrev.SampleLevel(sampler_linear_clamp, surfel_moment_uv(surfel_index, normal, -L / dist), 0);
@@ -398,7 +389,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #if 1
 		uint infrustum = 1;
 		float3 center = surfel.position;
-		float radius = -surfel.radius;
+		float radius = -surfel.GetRadius();
 		infrustum &= dot(g_xCamera.FrustumPlanes[0], float4(center, 1)) > radius;
 		infrustum &= dot(g_xCamera.FrustumPlanes[1], float4(center, 1)) > radius;
 		infrustum &= dot(g_xCamera.FrustumPlanes[2], float4(center, 1)) > radius;
