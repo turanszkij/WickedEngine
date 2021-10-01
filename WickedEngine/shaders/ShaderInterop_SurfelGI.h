@@ -35,8 +35,8 @@ static const uint SURFEL_MOMENT_ATLAS_TEXELS = SQRT_SURFEL_CAPACITY * SURFEL_MOM
 static const uint3 SURFEL_GRID_DIMENSIONS = uint3(128, 64, 128);
 static const uint SURFEL_TABLE_SIZE = SURFEL_GRID_DIMENSIONS.x * SURFEL_GRID_DIMENSIONS.y * SURFEL_GRID_DIMENSIONS.z;
 static const float SURFEL_MAX_RADIUS = 1;
-static const float SURFEL_RECYCLE_DISTANCE = 10; // if surfel is behind camera and farther than this distance, it starts preparing for recycling
-static const uint SURFEL_RECYCLE_TIME = 240; // if surfel is preparing for recycling, this is how many frames it takes to recycle it
+static const float SURFEL_RECYCLE_DISTANCE = 0; // if surfel is behind camera and farther than this distance, it starts preparing for recycling
+static const uint SURFEL_RECYCLE_TIME = 60; // if surfel is preparing for recycling, this is how many frames it takes to recycle it
 struct SurfelGridCell
 {
 	uint count;
@@ -48,6 +48,7 @@ static const uint SURFEL_STATS_OFFSET_DEADCOUNT = SURFEL_STATS_OFFSET_NEXTCOUNT 
 static const uint SURFEL_STATS_OFFSET_CELLALLOCATOR = SURFEL_STATS_OFFSET_DEADCOUNT + 4;
 static const uint SURFEL_STATS_OFFSET_INDIRECT = SURFEL_STATS_OFFSET_CELLALLOCATOR + 4;
 static const uint SURFEL_STATS_OFFSET_RAYCOUNT = SURFEL_STATS_OFFSET_INDIRECT + 4 * 3;
+static const uint SURFEL_STATS_OFFSET_SHORTAGE = SURFEL_STATS_OFFSET_RAYCOUNT + 4;
 static const uint SURFEL_INDIRECT_NUMTHREADS = 32;
 static const float SURFEL_TARGET_COVERAGE = 0.5f; // how many surfels should affect a pixel fully, higher values will increase quality and cost
 static const uint SURFEL_CELL_LIMIT = ~0; // limit the amount of allocated surfels in a cell
@@ -183,7 +184,7 @@ float surfel_moment_weight(float2 moments, float dist)
 	{
 		// Chebishev weight
 		float variance = abs(sqr(mean) - mean2);
-		return variance / (variance + sqr(dist - mean));
+		return max(0, pow(variance / (variance + sqr(max(0, dist - mean))), 3));
 	}
 	return 1;
 }
@@ -191,7 +192,12 @@ float surfel_moment_weight(float2 moments, float dist)
 uint surfel_raycount(SurfelData surfel_data)
 {
 	uint rayCount = saturate(surfel_data.inconsistency) * SURFEL_RAY_BOOST_MAX;
-	if (surfel_data.GetRecycle() > 60)
+	const uint recycle = surfel_data.GetRecycle();
+	if (recycle > 0)
+	{
+		rayCount = 1;
+	}
+	if (recycle > 60)
 	{
 		rayCount = 0;
 	}

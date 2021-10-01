@@ -53,7 +53,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		surfel.radius = 0;
 	}
 
-	if (surfel_data.GetRecycle() > SURFEL_RECYCLE_TIME)
+	bool shortage = true;
+	shortage = asint(surfelStatsBuffer.Load(SURFEL_STATS_OFFSET_SHORTAGE)) > 0;
+	if (surfel_data.GetRecycle() > SURFEL_RECYCLE_TIME && shortage)
 	{
 		surfel.radius = 0;
 	}

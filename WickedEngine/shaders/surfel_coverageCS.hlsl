@@ -135,17 +135,17 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 				float dist = sqrt(dist2);
 				float contribution = 1;
 
-				float2 moments = surfelMomentsTexture.SampleLevel(sampler_linear_clamp, surfel_moment_uv(surfel_index, normal, -L / dist), 0);
-				contribution *= surfel_moment_weight(moments, dist);
-
 
 				contribution *= saturate(dotN);
 				contribution *= saturate(1 - dist / surfel.radius);
 				contribution = smoothstep(0, 1, contribution);
 				coverage += contribution;
 
+				float2 moments = surfelMomentsTexture.SampleLevel(sampler_linear_clamp, surfel_moment_uv(surfel_index, normal, -L / dist), 0);
+				contribution *= surfel_moment_weight(moments, dist);
+
 				// contribution based on life can eliminate black popping surfels, but the surfel_data must be accessed...
-				contribution = lerp(0, contribution, surfelDataBuffer[surfel_index].GetLife() / 10.0f);
+				contribution = lerp(0, contribution, surfelDataBuffer[surfel_index].GetLife() / 2.0f);
 
 				color += float4(surfel.color, 1) * contribution;
 

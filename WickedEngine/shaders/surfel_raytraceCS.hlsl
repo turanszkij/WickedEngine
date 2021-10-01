@@ -59,8 +59,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 		uint2 moments_pixel = surfel_moment_pixel(surfel_index, N, ray.Direction);
 
-		float3 energy = 1;
-
 
 #ifdef RTAPI
 		RayQuery<
@@ -95,10 +93,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			{
 				envColor = GetDynamicSkyColor(ray.Direction, true, true, false, true);
 			}
-			result += float4(max(0, energy * envColor), 1);
-
-			// Erase the ray's energy
-			energy = 0;
+			result += float4(max(0, envColor), 1);
 		}
 		else
 		{
@@ -106,6 +101,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			Surface surface;
 
 			float hit_depth = 0;
+			float3 hit_result = 0;
 
 #ifdef RTAPI
 
@@ -130,33 +126,16 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 #endif // RTAPI
 
-			hit_depth = min(hit_depth, surfel.radius);
+			if (hit_depth < surfel.radius)
+			{
+				hit_depth *= 0.8; // bias
+			}
+			hit_depth = clamp(hit_depth, 0, surfel.radius);
 			surfel_moments_write(moments_pixel, hit_depth);
 
 			surface.P = ray.Origin;
 			surface.V = -ray.Direction;
 			surface.update();
-
-			result += float4(max(0, energy * surface.emissiveColor.rgb * surface.emissiveColor.a), 1);
-
-			// Calculate chances of reflection types:
-			const float specChance = dot(surface.F, 0.333f);
-
-			float roulette = rand(seed, uv);
-			if (roulette < specChance)
-			{
-				// Specular reflection
-				const float3 R = reflect(ray.Direction, surface.N);
-				ray.Direction = lerp(R, SampleHemisphere_cos(R, seed, uv), surface.roughnessBRDF);
-				energy *= surface.F / specChance;
-			}
-			else
-			{
-				// Diffuse reflection
-				ray.Direction = SampleHemisphere_cos(surface.N, seed, uv);
-				energy *= surface.albedo / (1 - specChance);
-			}
-
 
 #if 1
 			// Light sampling:
@@ -266,11 +245,15 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 				if (NdotL > 0 && dist > 0)
 				{
-					float3 shadow = NdotL * energy;
+					float3 shadow = NdotL;
 
 					RayDesc newRay;
 					newRay.Origin = surface.P;
+#if 1
 					newRay.Direction = normalize(lerp(L, SampleHemisphere_cos(L, seed, uv), 0.025f));
+#else
+					newRay.Direction = L;
+#endif
 					newRay.TMin = 0.001;
 					newRay.TMax = dist;
 #ifdef RTAPI
@@ -287,7 +270,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #endif // RTAPI
 					if (any(shadow))
 					{
-						result.rgb += max(0, shadow * lighting.direct.diffuse / PI);
+						hit_result += max(0, shadow * lighting.direct.diffuse / PI);
 					}
 				}
 			}
@@ -317,12 +300,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
 							float dist = sqrt(dist2);
 							float contribution = 1;
 
-							float2 moments = surfelMomentsTexturePrev.SampleLevel(sampler_linear_clamp, surfel_moment_uv(surfel_index, normal, -L / dist), 0);
-							contribution *= surfel_moment_weight(moments, dist);
-
 							contribution *= saturate(dotN);
 							contribution *= saturate(1 - dist / surfel.radius);
 							contribution = smoothstep(0, 1, contribution);
+
+							float2 moments = surfelMomentsTexturePrev.SampleLevel(sampler_linear_clamp, surfel_moment_uv(surfel_index, normal, -L / dist), 0);
+							contribution *= surfel_moment_weight(moments, dist);
 
 							surfel_gi += float4(surfel.color, 1) * contribution;
 
@@ -333,10 +316,14 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				{
 					surfel_gi.rgb /= surfel_gi.a;
 					surfel_gi.a = saturate(surfel_gi.a);
-					result.rgb += max(0, energy * surfel_gi.rgb);
+					hit_result += max(0, surfel_gi.rgb);
 				}
 			}
 #endif // SURFEL_ENABLE_INFINITE_BOUNCES
+
+			hit_result *= surface.albedo;
+			hit_result += max(0, surface.emissiveColor.rgb * surface.emissiveColor.a);
+			result += float4(hit_result, 1);
 
 		}
 
@@ -369,13 +356,13 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				{
 					float dist = sqrt(dist2);
 					float contribution = 1;
+					
+					//contribution *= saturate(dotN);
+					//contribution *= saturate(1 - dist / surfel.radius);
+					//contribution = smoothstep(0, 1, contribution);
 
 					float2 moments = surfelMomentsTexturePrev.SampleLevel(sampler_linear_clamp, surfel_moment_uv(surfel_index, normal, -L / dist), 0);
 					contribution *= surfel_moment_weight(moments, dist);
-
-					contribution *= saturate(dotN);
-					contribution *= saturate(1 - dist / surfel.radius);
-					contribution = smoothstep(0, 1, contribution);
 
 					result += float4(surfel.color, 1) * contribution;
 
@@ -406,9 +393,36 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	life++;
 
 	float3 cam_to_surfel = surfel.position - g_xCamera.CamPos;
-	if (dot(cam_to_surfel, g_xCamera.At) < 0 && length(cam_to_surfel) > SURFEL_RECYCLE_DISTANCE)
+	if (length(cam_to_surfel) > SURFEL_RECYCLE_DISTANCE)
 	{
-		recycle++;
+#if 1
+		uint infrustum = 1;
+		float3 center = surfel.position;
+		float radius = -surfel.radius;
+		infrustum &= dot(g_xCamera.FrustumPlanes[0], float4(center, 1)) > radius;
+		infrustum &= dot(g_xCamera.FrustumPlanes[1], float4(center, 1)) > radius;
+		infrustum &= dot(g_xCamera.FrustumPlanes[2], float4(center, 1)) > radius;
+		infrustum &= dot(g_xCamera.FrustumPlanes[3], float4(center, 1)) > radius;
+		infrustum &= dot(g_xCamera.FrustumPlanes[4], float4(center, 1)) > radius;
+		infrustum &= dot(g_xCamera.FrustumPlanes[5], float4(center, 1)) > radius;
+		if (infrustum)
+		{
+			recycle = 0;
+		}
+		else
+		{
+			recycle++;
+		}
+#else
+		if (dot(cam_to_surfel, g_xCamera.At) < 0)
+		{
+			recycle++;
+		}
+		else
+		{
+			recycle = 0;
+		}
+#endif
 	}
 	else
 	{
