@@ -2,19 +2,20 @@
 #include "ShaderInterop_SurfelGI.h"
 
 STRUCTUREDBUFFER(surfelBuffer, Surfel, TEXSLOT_ONDEMAND0);
-RAWBUFFER(surfelStatsBuffer, TEXSLOT_ONDEMAND1);
+STRUCTUREDBUFFER(surfelAliveBuffer, uint, TEXSLOT_ONDEMAND1);
+RAWBUFFER(surfelStatsBuffer, TEXSLOT_ONDEMAND2);
 
 RWSTRUCTUREDBUFFER(surfelGridBuffer, SurfelGridCell, 0);
 RWSTRUCTUREDBUFFER(surfelCellBuffer, uint, 1);
 
-[numthreads(64, 1, 1)]
+[numthreads(SURFEL_INDIRECT_NUMTHREADS, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	uint surfel_count = surfelStatsBuffer.Load(SURFEL_STATS_OFFSET_COUNT);
 	if (DTid.x >= surfel_count)
 		return;
 
-	uint surfel_index = DTid.x;
+	uint surfel_index = surfelAliveBuffer[DTid.x];
 	Surfel surfel = surfelBuffer[surfel_index];
 	if (surfel.radius > 0)
 	{

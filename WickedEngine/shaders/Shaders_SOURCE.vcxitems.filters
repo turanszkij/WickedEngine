@@ -998,9 +998,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)surfel_binningCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)surfel_shadeCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)ConstantBufferMapping.h">

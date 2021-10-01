@@ -155,7 +155,6 @@ set(SHADERS_CS
 		"surfel_gridresetCS.hlsl"
 		"surfel_gridoffsetsCS.hlsl"
 		"surfel_binningCS.hlsl"
-		"surfel_shadeCS.hlsl"
 		"surfel_raytraceCS_rtapi.hlsl"
 		"surfel_raytraceCS.hlsl"
 )

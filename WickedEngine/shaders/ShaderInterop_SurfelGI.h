@@ -17,7 +17,7 @@ struct SurfelData
 	uint uid;
 
 	float3 mean;
-	uint life;
+	uint life_recycle; // 16bit life frames, 16bit recycle frames
 
 	float3 shortMean;
 	float vbbr;
@@ -25,36 +25,39 @@ struct SurfelData
 	float3 variance;
 	float inconsistency;
 
-	float3 hitpos;
-	uint hitnormal;
-
-	float3 hitenergy;
-	float padding0;
-
-	float3 traceresult;
-	float padding1;
+	uint GetLife() { return life_recycle & 0xFFFF; }
+	uint GetRecycle() { return (life_recycle >> 16u) & 0xFFFF; }
 };
-static const uint SURFEL_CAPACITY = 250000;
+static const uint SURFEL_CAPACITY = 100000;
 static const uint SQRT_SURFEL_CAPACITY = (uint)ceil(sqrt((float)SURFEL_CAPACITY));
 static const uint SURFEL_MOMENT_TEXELS = 4 + 2;
 static const uint SURFEL_MOMENT_ATLAS_TEXELS = SQRT_SURFEL_CAPACITY * SURFEL_MOMENT_TEXELS;
 static const uint3 SURFEL_GRID_DIMENSIONS = uint3(128, 64, 128);
 static const uint SURFEL_TABLE_SIZE = SURFEL_GRID_DIMENSIONS.x * SURFEL_GRID_DIMENSIONS.y * SURFEL_GRID_DIMENSIONS.z;
 static const float SURFEL_MAX_RADIUS = 1;
+static const float SURFEL_RECYCLE_DISTANCE = 10; // if surfel is behind camera and farther than this distance, it starts preparing for recycling
+static const uint SURFEL_RECYCLE_TIME = 240; // if surfel is preparing for recycling, this is how many frames it takes to recycle it
 struct SurfelGridCell
 {
 	uint count;
 	uint offset;
 };
 static const uint SURFEL_STATS_OFFSET_COUNT = 0;
-static const uint SURFEL_STATS_OFFSET_CELLALLOCATOR = 4;
-static const uint SURFEL_STATS_OFFSET_INDIRECT = 8;
+static const uint SURFEL_STATS_OFFSET_NEXTCOUNT = SURFEL_STATS_OFFSET_COUNT + 4;
+static const uint SURFEL_STATS_OFFSET_DEADCOUNT = SURFEL_STATS_OFFSET_NEXTCOUNT + 4;
+static const uint SURFEL_STATS_OFFSET_CELLALLOCATOR = SURFEL_STATS_OFFSET_DEADCOUNT + 4;
+static const uint SURFEL_STATS_OFFSET_INDIRECT = SURFEL_STATS_OFFSET_CELLALLOCATOR + 4;
+static const uint SURFEL_STATS_OFFSET_RAYCOUNT = SURFEL_STATS_OFFSET_INDIRECT + 4 * 3;
 static const uint SURFEL_INDIRECT_NUMTHREADS = 32;
-static const float SURFEL_TARGET_COVERAGE = 0.5; // how many surfels should affect a pixel fully, higher values will increase quality and cost
+static const float SURFEL_TARGET_COVERAGE = 0.5f; // how many surfels should affect a pixel fully, higher values will increase quality and cost
 static const uint SURFEL_CELL_LIMIT = ~0; // limit the amount of allocated surfels in a cell
+static const uint SURFEL_RAY_BUDGET = 200000; // max number of rays per frame
+static const uint SURFEL_RAY_BOOST_MAX = 32; // max amount of rays per surfel
 #define SURFEL_COVERAGE_HALFRES // runs the coverage shader in half resolution for improved performance
 #define SURFEL_GRID_CULLING // if defined, surfels will not be added to grid cells that they do not intersect
 #define SURFEL_USE_HASHING // if defined, hashing will be used to retrieve surfels, hashing is good because it supports infinite world trivially, but slower due to hash collisions
+#define SURFEL_ENABLE_INFINITE_BOUNCES // if defined, previous frame's surfel data will be sampled at ray tracing hit points
+#define SURFEL_ENABLE_IRRADIANCE_SHARING // if defined, surfels will pull color from nearby surfels, this can smooth out the GI a bit
 
 #ifndef __cplusplus
 inline int3 surfel_cell(float3 position)
@@ -183,6 +186,71 @@ float surfel_moment_weight(float2 moments, float dist)
 		return variance / (variance + sqr(dist - mean));
 	}
 	return 1;
+}
+
+uint surfel_raycount(SurfelData surfel_data)
+{
+	uint rayCount = saturate(surfel_data.inconsistency) * SURFEL_RAY_BOOST_MAX;
+	if (surfel_data.GetRecycle() > 60)
+	{
+		rayCount = 0;
+	}
+	return rayCount;
+}
+
+void MultiscaleMeanEstimator(
+	float3 y,
+	inout SurfelData data,
+	float shortWindowBlend = 0.08f
+)
+{
+	float3 mean = data.mean;
+	float3 shortMean = data.shortMean;
+	float vbbr = data.vbbr;
+	float3 variance = data.variance;
+	float inconsistency = data.inconsistency;
+
+	// Suppress fireflies.
+	{
+		float3 dev = sqrt(max(1e-5, variance));
+		float3 highThreshold = 0.1 + shortMean + dev * 8;
+		float3 overflow = max(0, y - highThreshold);
+		y -= overflow;
+	}
+
+	float3 delta = y - shortMean;
+	shortMean = lerp(shortMean, y, shortWindowBlend);
+	float3 delta2 = y - shortMean;
+
+	// This should be a longer window than shortWindowBlend to avoid bias
+	// from the variance getting smaller when the short-term mean does.
+	float varianceBlend = shortWindowBlend * 0.5;
+	variance = lerp(variance, delta * delta2, varianceBlend);
+	float3 dev = sqrt(max(1e-5, variance));
+
+	float3 shortDiff = mean - shortMean;
+
+	float relativeDiff = dot(float3(0.299, 0.587, 0.114),
+		abs(shortDiff) / max(1e-5, dev));
+	inconsistency = lerp(inconsistency, relativeDiff, 0.08);
+
+	float varianceBasedBlendReduction =
+		clamp(dot(float3(0.299, 0.587, 0.114),
+			0.5 * shortMean / max(1e-5, dev)), 1.0 / 32, 1);
+
+	float3 catchUpBlend = clamp(smoothstep(0, 1,
+		relativeDiff * max(0.02, inconsistency - 0.2)), 1.0 / 256, 1);
+	catchUpBlend *= vbbr;
+
+	vbbr = lerp(vbbr, varianceBasedBlendReduction, 0.1);
+	mean = lerp(mean, y, saturate(catchUpBlend));
+
+	// Output
+	data.mean = mean;
+	data.shortMean = shortMean;
+	data.vbbr = vbbr;
+	data.variance = variance;
+	data.inconsistency = inconsistency;
 }
 #endif // __cplusplus
 
