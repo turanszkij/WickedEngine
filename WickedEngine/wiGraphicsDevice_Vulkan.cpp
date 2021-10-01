@@ -2188,7 +2188,7 @@ using namespace Vulkan_Internal;
 				capabilities |= GRAPHICSDEVICE_CAPABILITY_PREDICATION;
 			}
 
-			if (sampler_minmax_properties.filterMinmaxSingleComponentFormats == VK_TRUE)
+			if (features_1_2.samplerFilterMinmax == VK_TRUE)
 			{
 				capabilities |= GRAPHICSDEVICE_CAPABILITY_SAMPLER_MINMAX;
 			}
@@ -3118,9 +3118,7 @@ using namespace Vulkan_Internal;
 				&copyRegion
 			);
 
-			VkAccessFlags tmp = barrier.srcAccessMask;
-			barrier.srcAccessMask = barrier.dstAccessMask;
-			barrier.dstAccessMask = 0;
+			std::swap(barrier.srcAccessMask, barrier.dstAccessMask);
 
 			if (pBuffer->desc.BindFlags & BIND_CONSTANT_BUFFER)
 			{
