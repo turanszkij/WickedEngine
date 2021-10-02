@@ -241,14 +241,18 @@ namespace wiScene
 		dest->normalMapStrength = (textures[NORMALMAP].resource == nullptr ? 0 : normalMapStrength);
 		dest->parallaxOcclusionMapping = parallaxOcclusionMapping;
 		dest->displacementMapping = displacementMapping;
-		dest->subsurfaceScattering = subsurfaceScattering;
-		dest->subsurfaceScattering.x *= dest->subsurfaceScattering.w;
-		dest->subsurfaceScattering.y *= dest->subsurfaceScattering.w;
-		dest->subsurfaceScattering.z *= dest->subsurfaceScattering.w;
-		dest->subsurfaceScattering_inv.x = 1.0f / ((1 + dest->subsurfaceScattering.x) * (1 + dest->subsurfaceScattering.x));
-		dest->subsurfaceScattering_inv.y = 1.0f / ((1 + dest->subsurfaceScattering.y) * (1 + dest->subsurfaceScattering.y));
-		dest->subsurfaceScattering_inv.z = 1.0f / ((1 + dest->subsurfaceScattering.z) * (1 + dest->subsurfaceScattering.z));
-		dest->subsurfaceScattering_inv.w = 1.0f / ((1 + dest->subsurfaceScattering.w) * (1 + dest->subsurfaceScattering.w));
+		XMFLOAT4 sss = subsurfaceScattering;
+		sss.x *= sss.w;
+		sss.y *= sss.w;
+		sss.z *= sss.w;
+		XMFLOAT4 sss_inv = XMFLOAT4(
+			sss_inv.x = 1.0f / ((1 + sss.x) * (1 + sss.x)),
+			sss_inv.y = 1.0f / ((1 + sss.y) * (1 + sss.y)),
+			sss_inv.z = 1.0f / ((1 + sss.z) * (1 + sss.z)),
+			sss_inv.w = 1.0f / ((1 + sss.w) * (1 + sss.w))
+		);
+		dest->subsurfaceScattering = sss;
+		dest->subsurfaceScattering_inv = sss_inv;
 		dest->uvset_baseColorMap = textures[BASECOLORMAP].GetUVSet();
 		dest->uvset_surfaceMap = textures[SURFACEMAP].GetUVSet();
 		dest->uvset_normalMap = textures[NORMALMAP].GetUVSet();
