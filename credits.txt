@@ -14,8 +14,7 @@ Contributions:
 - XThemeCore https://github.com/XthemeCore
 	- Morph target support
 - Amer Koleci https://github.com/amerkoleci
-	- Windows Cmake
-	- Refactors, fixes
+	- Windows Cmake, graphics API, refactors, fixes
 - James Webb https://github.com/jdswebb
 	- Fixes
 - Ben Vinson https://github.com/BenV
@@ -27,8 +26,9 @@ Contributions:
 - Johan Aires Rastén https://github.com/JohanAR
 	- Fixes
 - Megumumpkin https://github.com/megumumpkin
-	- Fixes
 	- Linux Audio
+	- Linux Controller support
+	- Fixes
 
 	
 Support the project on Patreon: https://www.patreon.com/wickedengine
@@ -39,4 +39,6 @@ Patreon supporters:
 - TheGameCreators
 - Joseph Goldin
 - Yuri
+- Sergey K
+- Yukawa Kanta
 
