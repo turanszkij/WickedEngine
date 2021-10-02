@@ -72,11 +72,6 @@ struct ShaderMaterial
 	float		clearcoat;
 	float		clearcoatRoughness;
 
-	float4		baseColorAtlasMulAdd;
-	float4		surfaceMapAtlasMulAdd;
-	float4		emissiveMapAtlasMulAdd;
-	float4		normalMapAtlasMulAdd;
-
 	int			texture_basecolormap_index;
 	int			texture_surfacemap_index;
 	int			texture_emissivemap_index;

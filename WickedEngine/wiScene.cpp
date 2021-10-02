@@ -269,43 +269,45 @@ namespace wiScene
 		dest->alphaTest = 1 - alphaRef;
 		dest->layerMask = layerMask;
 		dest->transmission = transmission;
-		dest->options = 0;
+
+		uint32_t options = 0;
 		if (IsUsingVertexColors())
 		{
-			dest->options |= SHADERMATERIAL_OPTION_BIT_USE_VERTEXCOLORS;
+			options |= SHADERMATERIAL_OPTION_BIT_USE_VERTEXCOLORS;
 		}
 		if (IsUsingSpecularGlossinessWorkflow())
 		{
-			dest->options |= SHADERMATERIAL_OPTION_BIT_SPECULARGLOSSINESS_WORKFLOW;
+			options |= SHADERMATERIAL_OPTION_BIT_SPECULARGLOSSINESS_WORKFLOW;
 		}
 		if (IsOcclusionEnabled_Primary())
 		{
-			dest->options |= SHADERMATERIAL_OPTION_BIT_OCCLUSION_PRIMARY;
+			options |= SHADERMATERIAL_OPTION_BIT_OCCLUSION_PRIMARY;
 		}
 		if (IsOcclusionEnabled_Secondary())
 		{
-			dest->options |= SHADERMATERIAL_OPTION_BIT_OCCLUSION_SECONDARY;
+			options |= SHADERMATERIAL_OPTION_BIT_OCCLUSION_SECONDARY;
 		}
 		if (IsUsingWind())
 		{
-			dest->options |= SHADERMATERIAL_OPTION_BIT_USE_WIND;
+			options |= SHADERMATERIAL_OPTION_BIT_USE_WIND;
 		}
 		if (IsReceiveShadow())
 		{
-			dest->options |= SHADERMATERIAL_OPTION_BIT_RECEIVE_SHADOW;
+			options |= SHADERMATERIAL_OPTION_BIT_RECEIVE_SHADOW;
 		}
 		if (IsCastingShadow())
 		{
-			dest->options |= SHADERMATERIAL_OPTION_BIT_CAST_SHADOW;
+			options |= SHADERMATERIAL_OPTION_BIT_CAST_SHADOW;
 		}
 		if (IsDoubleSided())
 		{
-			dest->options |= SHADERMATERIAL_OPTION_BIT_DOUBLE_SIDED;
+			options |= SHADERMATERIAL_OPTION_BIT_DOUBLE_SIDED;
 		}
 		if (GetRenderTypes() & RENDERTYPE_TRANSPARENT)
 		{
-			dest->options |= SHADERMATERIAL_OPTION_BIT_TRANSPARENT;
+			options |= SHADERMATERIAL_OPTION_BIT_TRANSPARENT;
 		}
+		dest->options = options; // ensure that this memory is not read, so bitwise ORs also not performed with it!
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
 		dest->texture_basecolormap_index = device->GetDescriptorIndex(textures[BASECOLORMAP].GetGPUResource(), SRV);
@@ -322,10 +324,6 @@ namespace wiScene
 		dest->texture_clearcoatnormalmap_index = device->GetDescriptorIndex(textures[CLEARCOATNORMALMAP].GetGPUResource(), SRV);
 		dest->texture_specularmap_index = device->GetDescriptorIndex(textures[SPECULARMAP].GetGPUResource(), SRV);
 
-		dest->baseColorAtlasMulAdd = XMFLOAT4(0, 0, 0, 0);
-		dest->surfaceMapAtlasMulAdd = XMFLOAT4(0, 0, 0, 0);
-		dest->emissiveMapAtlasMulAdd = XMFLOAT4(0, 0, 0, 0);
-		dest->normalMapAtlasMulAdd = XMFLOAT4(0, 0, 0, 0);
 	}
 	void MaterialComponent::WriteTextures(const wiGraphics::GPUResource** dest, int count) const
 	{
