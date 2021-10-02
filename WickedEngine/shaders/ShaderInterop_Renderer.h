@@ -28,8 +28,6 @@ static const uint SHADERMATERIAL_OPTION_BIT_TRANSPARENT = 1 << 8;
 struct ShaderMaterial
 {
 	float4		baseColor;
-	float4		specularColor;
-	float4		emissiveColor;
 	float4		subsurfaceScattering;
 	float4		subsurfaceScattering_inv;
 	float4		texMulAdd;
@@ -46,8 +44,8 @@ struct ShaderMaterial
 
 	float		transmission;
 	uint		options;
-	int			padding0;
-	int			padding1;
+	uint		emissive_r11g11b10;
+	uint		specular_r11g11b10;
 
 	uint		layerMask;
 	int			uvset_baseColorMap;
@@ -69,12 +67,10 @@ struct ShaderMaterial
 	int			padding2;
 	int			padding3;
 
+	uint		sheenColor_r11g11b10;
 	float		sheenRoughness;
 	float		clearcoat;
 	float		clearcoatRoughness;
-	float		padding4;
-
-	float4		sheenColor;
 
 	float4		baseColorAtlasMulAdd;
 	float4		surfaceMapAtlasMulAdd;
@@ -100,6 +96,12 @@ struct ShaderMaterial
 	int			padding5;
 	int			padding6;
 	int			padding7;
+
+#ifndef __cplusplus
+	float3 GetEmissive() { return Unpack_R11G11B10_FLOAT(emissive_r11g11b10); }
+	float3 GetSpecular() { return Unpack_R11G11B10_FLOAT(specular_r11g11b10); }
+	float3 GetSheenColor() { return Unpack_R11G11B10_FLOAT(sheenColor_r11g11b10); }
+#endif // __cplusplus
 
 	inline bool IsUsingVertexColors() { return options & SHADERMATERIAL_OPTION_BIT_USE_VERTEXCOLORS; }
 	inline bool IsUsingSpecularGlossinessWorkflow() { return options & SHADERMATERIAL_OPTION_BIT_SPECULARGLOSSINESS_WORKFLOW; }

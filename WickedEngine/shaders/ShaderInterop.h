@@ -5,7 +5,6 @@
 #include "SamplerMapping.h"
 #include "ResourceMapping.h"
 
-
 #ifdef __cplusplus // not invoking shader compiler, but included in engine source
 
 // Application-side types:
@@ -33,6 +32,8 @@ typedef XMINT4 int4;
 #define PUSHCONSTANT(name, type)
 
 #else
+
+#include "PixelPacking_R11G11B10.hlsli"
 
 // Shader - side types:
 

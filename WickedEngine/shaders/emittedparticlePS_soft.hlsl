@@ -37,7 +37,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 
 	float opacity = saturate(color.a * inputColor.a * fade);
 
-	color.rgb *= inputColor.rgb * (1 + material.emissiveColor.rgb * material.emissiveColor.a);
+	color.rgb *= inputColor.rgb * (1 + material.GetEmissive());
 	color.a = opacity;
 
 #ifdef EMITTEDPARTICLE_DISTORTION

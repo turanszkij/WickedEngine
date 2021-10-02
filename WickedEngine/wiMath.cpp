@@ -2,9 +2,6 @@
 
 namespace wiMath
 {
-
-#define saturate(x) std::min(std::max(x,0.0f),1.0f)
-
 	float TriangleArea(const XMVECTOR& A, const XMVECTOR& B, const XMVECTOR& C)
 	{
 		// Heron's formula:
@@ -419,35 +416,4 @@ namespace wiMath
 		return HALTON[idx % arraysize(HALTON)];
 	}
 
-	uint32_t CompressNormal(const XMFLOAT3& normal)
-	{
-		uint32_t retval = 0;
-
-		retval |= (uint32_t)((uint8_t)(normal.x * 127.5f + 127.5f) << 0);
-		retval |= (uint32_t)((uint8_t)(normal.y * 127.5f + 127.5f) << 8);
-		retval |= (uint32_t)((uint8_t)(normal.z * 127.5f + 127.5f) << 16);
-
-		return retval;
-	}
-	uint32_t CompressColor(const XMFLOAT3& color)
-	{
-		uint32_t retval = 0;
-
-		retval |= (uint32_t)((uint8_t)(saturate(color.x) * 255.0f) << 0);
-		retval |= (uint32_t)((uint8_t)(saturate(color.y) * 255.0f) << 8);
-		retval |= (uint32_t)((uint8_t)(saturate(color.z) * 255.0f) << 16);
-
-		return retval;
-	}
-	uint32_t CompressColor(const XMFLOAT4& color)
-	{
-		uint32_t retval = 0;
-
-		retval |= (uint32_t)((uint8_t)(saturate(color.x) * 255.0f) << 0);
-		retval |= (uint32_t)((uint8_t)(saturate(color.y) * 255.0f) << 8);
-		retval |= (uint32_t)((uint8_t)(saturate(color.z) * 255.0f) << 16);
-		retval |= (uint32_t)((uint8_t)(saturate(color.w) * 255.0f) << 24);
-
-		return retval;
-	}
 }

@@ -19,16 +19,16 @@ float4 main(PixelInput input) : SV_TARGET
 	}
 	color *= input.color;
 
-	float4 emissiveColor = GetMaterial().emissiveColor;
+	float3 emissiveColor = GetMaterial().GetEmissive();
 	[branch]
-	if (emissiveColor.a > 0 && GetMaterial().uvset_emissiveMap >= 0)
+	if (any(emissiveColor) && GetMaterial().uvset_emissiveMap >= 0)
 	{
 		const float2 UV_emissiveMap = GetMaterial().uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 		float4 emissiveMap = texture_emissivemap.Sample(sampler_objectshader, UV_emissiveMap);
 		emissiveMap.rgb = DEGAMMA(emissiveMap.rgb);
-		emissiveColor *= emissiveMap;
+		emissiveColor *= emissiveMap.rgb * emissiveMap.a;
 	}
-	color.rgb += emissiveColor.rgb * emissiveColor.a;
+	color.rgb += emissiveColor;
 
 	float time = g_xFrame.Time;
 	float2 uv = input.pos.xy * g_xFrame.InternalResolution_rcp;

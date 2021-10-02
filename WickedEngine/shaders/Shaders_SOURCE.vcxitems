@@ -17,6 +17,7 @@
     <None Include="$(MSBuildThisFileDirectory)bitonicSortHF.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)brdf.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)circle.hlsli" />
+    <None Include="$(MSBuildThisFileDirectory)ColorSpaceUtility.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)cone.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)cube.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)cullingShaderHF.hlsli" />
@@ -33,6 +34,7 @@
     <None Include="$(MSBuildThisFileDirectory)objectHF.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)objectHF_tessellation.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)oceanSurfaceHF.hlsli" />
+    <None Include="$(MSBuildThisFileDirectory)PixelPacking_R11G11B10.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)quad.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)raytracingHF.hlsli" />
     <None Include="$(MSBuildThisFileDirectory)skyAtmosphere.hlsli" />

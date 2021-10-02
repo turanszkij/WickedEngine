@@ -17,8 +17,8 @@ RWTEXTURE2D(output, float3, 0);
 
 static const uint TILE_BORDER = 1;
 static const uint TILE_SIZE = POSTPROCESS_BLOCKSIZE + TILE_BORDER * 2;
-groupshared uint tile_RG[TILE_SIZE*TILE_SIZE];
-groupshared uint tile_B_depth[TILE_SIZE*TILE_SIZE];
+groupshared uint tile_color[TILE_SIZE*TILE_SIZE];
+groupshared float tile_depth[TILE_SIZE*TILE_SIZE];
 
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
@@ -36,8 +36,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 		const uint2 pixel = tile_upperleft + unflatten2D(t, TILE_SIZE);
 		const float depth = texture_lineardepth[pixel];
 		const float3 color = input_current[pixel].rgb;
-		tile_RG[t] = f32tof16(color.r) | (f32tof16(color.g) << 16);
-		tile_B_depth[t] = f32tof16(color.b) | (f32tof16(depth) << 16);
+		tile_color[t] = Pack_R11G11B10_FLOAT(color);
+		tile_depth[t] = depth;
 	}
 	GroupMemoryBarrierWithGroupSync();
 
@@ -49,10 +49,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 		{
 			const int2 offset = int2(x, y);
 			const uint idx = flatten2D(GTid.xy + TILE_BORDER + offset, TILE_SIZE);
-			const uint RG = tile_RG[idx];
-			const uint B_depth = tile_B_depth[idx];
 
-			const float3 neighbor = float3(f16tof32(RG), f16tof32(RG >> 16), f16tof32(B_depth));
+			const float3 neighbor = Unpack_R11G11B10_FLOAT(tile_color[idx]);
 			neighborhoodMin = min(neighborhoodMin, neighbor);
 			neighborhoodMax = max(neighborhoodMax, neighbor);
 			if (x == 0 && y == 0)
@@ -60,7 +58,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 				current = neighbor;
 			}
 
-			const float depth = f16tof32(B_depth >> 16);
+			const float depth = tile_depth[idx];
 			if (depth < bestDepth)
 			{
 				bestDepth = depth;

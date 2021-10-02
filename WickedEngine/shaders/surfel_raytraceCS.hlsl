@@ -315,7 +315,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #endif // SURFEL_ENABLE_INFINITE_BOUNCES
 
 			hit_result *= surface.albedo;
-			hit_result += max(0, surface.emissiveColor.rgb * surface.emissiveColor.a);
+			hit_result += max(0, surface.emissiveColor);
 			result += float4(hit_result, 1);
 
 		}

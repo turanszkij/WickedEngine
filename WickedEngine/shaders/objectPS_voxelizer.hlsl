@@ -41,14 +41,14 @@ void main(PSInput input)
 		}
 		baseColor *= input.color;
 		float4 color = baseColor;
-		float4 emissiveColor = GetMaterial().emissiveColor;
+		float3 emissiveColor = GetMaterial().GetEmissive();
 		[branch]
-		if (GetMaterial().emissiveColor.a > 0 && GetMaterial().uvset_emissiveMap >= 0)
+		if (any(emissiveColor) && GetMaterial().uvset_emissiveMap >= 0)
 		{
 			const float2 UV_emissiveMap = GetMaterial().uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			float4 emissiveMap = texture_emissivemap.Sample(sampler_linear_wrap, UV_emissiveMap);
 			emissiveMap.rgb = DEGAMMA(emissiveMap.rgb);
-			emissiveColor *= emissiveMap;
+			emissiveColor *= emissiveMap.rgb * emissiveMap.a;
 		}
 
 
@@ -76,12 +76,12 @@ void main(PSInput input)
 			color += sam * GetMaterial().baseColor * blend_weights.x;
 
 			[branch]
-			if (GetMaterial().uvset_emissiveMap >= 0 && any(GetMaterial().emissiveColor))
+			if (GetMaterial().uvset_emissiveMap >= 0 && any(GetMaterial().GetEmissive()))
 			{
 				float2 uv = GetMaterial().uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 				sam = texture_emissivemap.Sample(sampler_objectshader, uv);
 				sam.rgb = DEGAMMA(sam.rgb);
-				emissiveColor += sam * GetMaterial().emissiveColor * blend_weights.x;
+				emissiveColor += sam.rgb * sam.a * GetMaterial().GetEmissive() * blend_weights.x;
 			}
 		}
 
@@ -102,12 +102,12 @@ void main(PSInput input)
 			color += sam * GetMaterial1().baseColor * blend_weights.y;
 
 			[branch]
-			if (GetMaterial1().uvset_emissiveMap >= 0 && any(GetMaterial1().emissiveColor))
+			if (GetMaterial1().uvset_emissiveMap >= 0 && any(GetMaterial1().GetEmissive()))
 			{
 				float2 uv = GetMaterial1().uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 				sam = texture_blend1_emissivemap.Sample(sampler_objectshader, uv);
 				sam.rgb = DEGAMMA(sam.rgb);
-				emissiveColor += sam * GetMaterial1().emissiveColor * blend_weights.y;
+				emissiveColor += sam.rgb * sam.a * GetMaterial1().GetEmissive() * blend_weights.y;
 			}
 		}
 
@@ -128,12 +128,12 @@ void main(PSInput input)
 			color += sam * GetMaterial2().baseColor * blend_weights.z;
 
 			[branch]
-			if (GetMaterial2().uvset_emissiveMap >= 0 && any(GetMaterial2().emissiveColor))
+			if (GetMaterial2().uvset_emissiveMap >= 0 && any(GetMaterial2().GetEmissive()))
 			{
 				float2 uv = GetMaterial2().uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 				sam = texture_blend2_emissivemap.Sample(sampler_objectshader, uv);
 				sam.rgb = DEGAMMA(sam.rgb);
-				emissiveColor += sam * GetMaterial2().emissiveColor * blend_weights.z;
+				emissiveColor += sam.rgb * sam.a * GetMaterial2().GetEmissive() * blend_weights.z;
 			}
 		}
 
@@ -154,12 +154,12 @@ void main(PSInput input)
 			color += sam * GetMaterial3().baseColor * blend_weights.w;
 
 			[branch]
-			if (GetMaterial3().uvset_emissiveMap >= 0 && any(GetMaterial3().emissiveColor))
+			if (GetMaterial3().uvset_emissiveMap >= 0 && any(GetMaterial3().GetEmissive()))
 			{
 				float2 uv = GetMaterial3().uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 				sam = texture_blend3_emissivemap.Sample(sampler_objectshader, uv);
 				sam.rgb = DEGAMMA(sam.rgb);
-				emissiveColor += sam * GetMaterial3().emissiveColor * blend_weights.w;
+				emissiveColor += sam.rgb * sam.a * GetMaterial3().GetEmissive() * blend_weights.w;
 			}
 		}
 
@@ -314,7 +314,7 @@ void main(PSInput input)
 
 		color.rgb *= lighting.direct.diffuse;
 		
-		color.rgb += emissiveColor.rgb * emissiveColor.a;
+		color.rgb += emissiveColor;
 
 		uint color_encoded = PackVoxelColor(color);
 		uint normal_encoded = pack_unitvector(N);

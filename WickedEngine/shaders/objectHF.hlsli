@@ -351,7 +351,7 @@ struct PixelInput
 
 inline void ApplyEmissive(in Surface surface, inout Lighting lighting)
 {
-	lighting.direct.specular += surface.emissiveColor.rgb * surface.emissiveColor.a;
+	lighting.direct.specular += surface.emissiveColor;
 }
 
 inline void LightMapping(in int lightmap, in float2 ATLAS, inout Lighting lighting)
@@ -1166,16 +1166,16 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 
 
 	// Emissive map:
-	surface.emissiveColor = GetMaterial().emissiveColor;
+	surface.emissiveColor = GetMaterial().GetEmissive();
 
 #ifdef OBJECTSHADER_USE_UVSETS
 	[branch]
-	if (surface.emissiveColor.a > 0 && GetMaterial().uvset_emissiveMap >= 0)
+	if (any(surface.emissiveColor) && GetMaterial().uvset_emissiveMap >= 0)
 	{
 		const float2 UV_emissiveMap = GetMaterial().uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 		float4 emissiveMap = texture_emissivemap.Sample(sampler_objectshader, UV_emissiveMap);
 		emissiveMap.rgb = DEGAMMA(emissiveMap.rgb);
-		surface.emissiveColor *= emissiveMap;
+		surface.emissiveColor *= emissiveMap.rgb * emissiveMap.a;
 	}
 #endif // OBJECTSHADER_USE_UVSETS
 
@@ -1235,16 +1235,16 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 		}
 #endif // OBJECTSHADER_USE_UVSETS
 
-		surface2.emissiveColor = GetMaterial().emissiveColor;
+		surface2.emissiveColor = GetMaterial().GetEmissive();
 
 #ifdef OBJECTSHADER_USE_UVSETS
 		[branch]
-		if (GetMaterial().uvset_emissiveMap >= 0 && any(GetMaterial().emissiveColor))
+		if (GetMaterial().uvset_emissiveMap >= 0 && any(surface2.emissiveColor))
 		{
 			float2 uv = GetMaterial().uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			sam = texture_emissivemap.Sample(sampler_objectshader, uv);
 			sam.rgb = DEGAMMA(sam.rgb);
-			surface2.emissiveColor *= sam;
+			surface2.emissiveColor *= sam.rgb * sam.a;
 		}
 #endif // OBJECTSHADER_USE_UVSETS
 
@@ -1297,16 +1297,16 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 		}
 #endif // OBJECTSHADER_USE_UVSETS
 
-		surface2.emissiveColor = GetMaterial1().emissiveColor;
+		surface2.emissiveColor = GetMaterial1().GetEmissive();
 
 #ifdef OBJECTSHADER_USE_UVSETS
 		[branch]
-		if (GetMaterial1().uvset_emissiveMap >= 0 && any(GetMaterial().emissiveColor))
+		if (GetMaterial1().uvset_emissiveMap >= 0 && any(surface2.emissiveColor))
 		{
 			float2 uv = GetMaterial1().uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			sam = texture_blend1_emissivemap.Sample(sampler_objectshader, uv);
 			sam.rgb = DEGAMMA(sam.rgb);
-			surface2.emissiveColor *= sam;
+			surface2.emissiveColor *= sam.rgb * sam.a;
 		}
 #endif // OBJECTSHADER_USE_UVSETS
 
@@ -1359,16 +1359,16 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 		}
 #endif // OBJECTSHADER_USE_UVSETS
 
-		surface2.emissiveColor = GetMaterial2().emissiveColor;
+		surface2.emissiveColor = GetMaterial2().GetEmissive();
 
 #ifdef OBJECTSHADER_USE_UVSETS
 		[branch]
-		if (GetMaterial2().uvset_emissiveMap >= 0 && any(GetMaterial2().emissiveColor))
+		if (GetMaterial2().uvset_emissiveMap >= 0 && any(surface2.emissiveColor))
 		{
 			float2 uv = GetMaterial2().uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			sam = texture_blend2_emissivemap.Sample(sampler_objectshader, uv);
 			sam.rgb = DEGAMMA(sam.rgb);
-			surface2.emissiveColor *= sam;
+			surface2.emissiveColor *= sam.rgb * sam.a;
 		}
 #endif // OBJECTSHADER_USE_UVSETS
 
@@ -1421,16 +1421,16 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 		}
 #endif // OBJECTSHADER_USE_UVSETS
 
-		surface2.emissiveColor = GetMaterial3().emissiveColor;
+		surface2.emissiveColor = GetMaterial3().GetEmissive();
 
 #ifdef OBJECTSHADER_USE_UVSETS
 		[branch]
-		if (GetMaterial3().uvset_emissiveMap >= 0 && any(GetMaterial3().emissiveColor))
+		if (GetMaterial3().uvset_emissiveMap >= 0 && any(surface2.emissiveColor))
 		{
 			float2 uv = GetMaterial3().uvset_emissiveMap == 0 ? input.uvsets.xy : input.uvsets.zw;
 			sam = texture_blend3_emissivemap.Sample(sampler_objectshader, uv);
 			sam.rgb = DEGAMMA(sam.rgb);
-			surface2.emissiveColor *= sam;
+			surface2.emissiveColor *= sam.rgb * sam.a;
 		}
 #endif // OBJECTSHADER_USE_UVSETS
 
@@ -1449,7 +1449,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 
 
 #ifdef OBJECTSHADER_USE_EMISSIVE
-	surface.emissiveColor *= unpack_rgba(input.emissiveColor);
+	surface.emissiveColor *= Unpack_R11G11B10_FLOAT(input.emissiveColor);
 #endif // OBJECTSHADER_USE_EMISSIVE
 
 
@@ -1481,7 +1481,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 
 
 #ifdef BRDF_SHEEN
-	surface.sheen.color = GetMaterial().sheenColor.rgb;
+	surface.sheen.color = GetMaterial().GetSheenColor();
 	surface.sheen.roughness = GetMaterial().sheenRoughness;
 
 #ifdef OBJECTSHADER_USE_UVSETS

@@ -136,7 +136,7 @@ struct Surface
 	float roughness;		// roughness: [0:smooth -> 1:rough] (perceptual)
 	float occlusion;		// occlusion [0 -> 1]
 	float opacity;			// opacity for blending operation [0 -> 1]
-	float4 emissiveColor;	// light emission [0 -> 1]
+	float3 emissiveColor;	// light emission [0 -> 1]
 	float4 refraction;		// refraction color (rgb), refraction amount (a)
 	float transmission;		// transmission factor
 	float2 pixel;			// pixel coordinate (used for randomization effects)
@@ -211,7 +211,7 @@ struct Surface
 			opacity = 1;
 		}
 		roughness = material.roughness;
-		f0 = material.specularColor.rgb * specularMap.rgb * specularMap.a * material.specularColor.a;
+		f0 = material.GetSpecular() * specularMap.rgb * specularMap.a;
 
 		if (g_xFrame.Options & OPTION_BIT_FORCE_DIFFUSE_LIGHTING)
 		{
@@ -391,14 +391,14 @@ struct Surface
 
 		create(material, baseColor, surfaceMap, specularMap);
 
-		emissiveColor = material.emissiveColor;
+		emissiveColor = material.GetEmissive();
 		[branch]
 		if (material.texture_emissivemap_index >= 0)
 		{
 			const float2 UV_emissiveMap = material.uvset_emissiveMap == 0 ? uvsets.xy : uvsets.zw;
 			float4 emissiveMap = bindless_textures[NonUniformResourceIndex(material.texture_emissivemap_index)].SampleLevel(sampler_linear_wrap, UV_emissiveMap, 0);
 			emissiveMap.rgb = DEGAMMA(emissiveMap.rgb);
-			emissiveColor *= emissiveMap;
+			emissiveColor *= emissiveMap.rgb * emissiveMap.a;
 		}
 
 		transmission = material.transmission;

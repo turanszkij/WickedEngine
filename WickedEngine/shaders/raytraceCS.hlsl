@@ -114,7 +114,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		surface.update();
 
 
-		result += max(0, energy * surface.emissiveColor.rgb * surface.emissiveColor.a);
+		result += max(0, energy * surface.emissiveColor);
 
 
 

@@ -231,8 +231,8 @@ namespace wiScene
 	void MaterialComponent::WriteShaderMaterial(ShaderMaterial* dest) const
 	{
 		dest->baseColor = baseColor;
-		dest->specularColor = specularColor;
-		dest->emissiveColor = emissiveColor;
+		dest->emissive_r11g11b10 = wiMath::Pack_R11G11B10_FLOAT(XMFLOAT3(emissiveColor.x * emissiveColor.w, emissiveColor.y * emissiveColor.w, emissiveColor.z * emissiveColor.w));
+		dest->specular_r11g11b10 = wiMath::Pack_R11G11B10_FLOAT(XMFLOAT3(specularColor.x * specularColor.w, specularColor.y * specularColor.w, specularColor.z * specularColor.w));
 		dest->texMulAdd = texMulAdd;
 		dest->roughness = roughness;
 		dest->reflectance = reflectance;
@@ -262,7 +262,7 @@ namespace wiScene
 		dest->uvset_clearcoatRoughnessMap = textures[CLEARCOATROUGHNESSMAP].GetUVSet();
 		dest->uvset_clearcoatNormalMap = textures[CLEARCOATNORMALMAP].GetUVSet();
 		dest->uvset_specularMap = textures[SPECULARMAP].GetUVSet();
-		dest->sheenColor = sheenColor;
+		dest->sheenColor_r11g11b10 = wiMath::Pack_R11G11B10_FLOAT(XMFLOAT3(sheenColor.x, sheenColor.y, sheenColor.z));
 		dest->sheenRoughness = sheenRoughness;
 		dest->clearcoat = clearcoat;
 		dest->clearcoatRoughness = clearcoatRoughness;
@@ -3185,7 +3185,7 @@ namespace wiScene
 					}
 					inst.uid = entity;
 					inst.color = wiMath::CompressColor(object.color);
-					inst.emissive = wiMath::CompressColor(object.emissiveColor);
+					inst.emissive = wiMath::Pack_R11G11B10_FLOAT(XMFLOAT3(object.emissiveColor.x * object.emissiveColor.w, object.emissiveColor.y * object.emissiveColor.w, object.emissiveColor.z * object.emissiveColor.w));
 					inst.meshIndex = (uint)meshes.GetIndex(object.meshID);
 
 					if (TLAS_instancesMapped != nullptr)
