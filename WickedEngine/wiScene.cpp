@@ -723,6 +723,7 @@ namespace wiScene
 	}
 	void MeshComponent::WriteShaderMesh(ShaderMesh* dest) const
 	{
+		dest->init();
 		GraphicsDevice* device = wiRenderer::GetDevice();
 		dest->ib = device->GetDescriptorIndex(&indexBuffer, SRV);
 		if (streamoutBuffer_POS.IsValid())
@@ -754,11 +755,12 @@ namespace wiScene
 		dest->aabb_max = aabb._max;
 		dest->tessellation_factor = tessellationFactor;
 
-		dest->flags = 0;
+		uint flags = 0;
 		if (IsDoubleSided())
 		{
-			dest->flags |= SHADERMESH_FLAG_DOUBLE_SIDED;
+			flags |= SHADERMESH_FLAG_DOUBLE_SIDED;
 		}
+		dest->flags = flags; // ensure that this memory is not read, so bitwise ORs also not performed with it!
 
 	}
 	void MeshComponent::ComputeNormals(COMPUTE_NORMALS compute)
@@ -3613,12 +3615,13 @@ namespace wiScene
 
 					size_t meshIndex = meshes.GetCount() + args.jobIndex;
 					ShaderMesh& mesh = meshArrayMapped[meshIndex];
+					mesh.init();
 					mesh.ib = device->GetDescriptorIndex(&hair.primitiveBuffer, SRV);
 					mesh.vb_pos_nor_wind = device->GetDescriptorIndex(&hair.vertexBuffer_POS[0], SRV);
 					mesh.vb_pre = device->GetDescriptorIndex(&hair.vertexBuffer_POS[1], SRV);
 					mesh.vb_uv0 = device->GetDescriptorIndex(&hair.vertexBuffer_TEX, SRV);
 					mesh.subsetbuffer = device->GetDescriptorIndex(&hair.subsetBuffer, SRV);
-					mesh.flags |= SHADERMESH_FLAG_DOUBLE_SIDED;
+					mesh.flags = SHADERMESH_FLAG_DOUBLE_SIDED;
 
 					size_t instanceIndex = objects.GetCount() + args.jobIndex;
 					ShaderMeshInstance& inst = instanceArrayMapped[instanceIndex];

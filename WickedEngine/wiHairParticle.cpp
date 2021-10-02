@@ -51,7 +51,7 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	if (_flags & REBUILD_BUFFERS || !cb.IsValid() || (strandCount * segmentCount) != simulationBuffer.GetDesc().Size / sizeof(PatchSimulationData))
+	if (_flags & REBUILD_BUFFERS || !constantBuffer.IsValid() || (strandCount * segmentCount) != simulationBuffer.GetDesc().Size / sizeof(PatchSimulationData))
 	{
 		_flags &= ~REBUILD_BUFFERS;
 		regenerate_frame = true;
@@ -111,7 +111,8 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 		bd.Size = sizeof(HairParticleCB);
 		bd.BindFlags = BIND_CONSTANT_BUFFER;
 		bd.MiscFlags = RESOURCE_MISC_NONE;
-		device->CreateBuffer(&bd, nullptr, &cb);
+		device->CreateBuffer(&bd, nullptr, &constantBuffer);
+		device->SetName(&constantBuffer, "constantBuffer");
 
 		if (vertex_lengths.size() != mesh.vertex_positions.size())
 		{
@@ -221,7 +222,7 @@ void wiHairParticle::UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex, c
 	}
 
 	GraphicsDevice* device = wiRenderer::GetDevice();
-	device->EventBegin("HairParticle - UpdateRenderData", cmd);
+	device->EventBegin("HairParticle - UpdateGPU", cmd);
 
 	TextureDesc desc;
 	if (material.textures[MaterialComponent::BASECOLORMAP].resource != nullptr)
@@ -250,7 +251,7 @@ void wiHairParticle::UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex, c
 	hcb.xHairAspect = (float)std::max(1u, desc.Width) / (float)std::max(1u, desc.Height);
 	hcb.xHairLayerMask = layerMask;
 	hcb.xHairInstanceIndex = instanceIndex;
-	device->UpdateBuffer(&cb, &hcb, cmd);
+	device->UpdateBuffer(&constantBuffer, &hcb, cmd);
 
 	ShaderMeshSubset subset;
 	subset.init();
@@ -260,7 +261,7 @@ void wiHairParticle::UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex, c
 
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Buffer(&cb, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_CONSTANT_BUFFER),
+			GPUBarrier::Buffer(&constantBuffer, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_CONSTANT_BUFFER),
 			GPUBarrier::Buffer(&subsetBuffer, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
@@ -269,7 +270,7 @@ void wiHairParticle::UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex, c
 	// Simulate:
 	{
 		device->BindComputeShader(&cs_simulate, cmd);
-		device->BindConstantBuffer(&cb, CB_GETBINDSLOT(HairParticleCB), cmd);
+		device->BindConstantBuffer(&constantBuffer, CB_GETBINDSLOT(HairParticleCB), cmd);
 
 		const GPUResource* uavs[] = {
 			&simulationBuffer,
@@ -309,7 +310,7 @@ void wiHairParticle::UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex, c
 		device->Dispatch(1, 1, 1, cmd);
 
 		GPUBarrier barriers[] = {
-			GPUBarrier::Memory(),
+			GPUBarrier::Memory(&indirectBuffer),
 			GPUBarrier::Buffer(&indirectBuffer, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_INDIRECT_ARGUMENT),
 			GPUBarrier::Buffer(&vertexBuffer_POS[0], RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE),
 			GPUBarrier::Buffer(&vertexBuffer_TEX, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE),
@@ -327,7 +328,7 @@ void wiHairParticle::UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex, c
 
 void wiHairParticle::Draw(const MaterialComponent& material, RENDERPASS renderPass, CommandList cmd) const
 {
-	if (strandCount == 0 || !cb.IsValid())
+	if (strandCount == 0 || !constantBuffer.IsValid())
 	{
 		return;
 	}
@@ -356,7 +357,7 @@ void wiHairParticle::Draw(const MaterialComponent& material, RENDERPASS renderPa
 		}
 	}
 
-	device->BindConstantBuffer(&cb, CB_GETBINDSLOT(HairParticleCB), cmd);
+	device->BindConstantBuffer(&constantBuffer, CB_GETBINDSLOT(HairParticleCB), cmd);
 	device->BindResource(&primitiveBuffer, 0, cmd);
 
 	device->BindIndexBuffer(&culledIndexBuffer, INDEXFORMAT_32BIT, 0, cmd);

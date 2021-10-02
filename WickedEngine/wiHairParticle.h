@@ -16,7 +16,7 @@ namespace wiScene
 class wiHairParticle
 {
 public:
-	wiGraphics::GPUBuffer cb;
+	wiGraphics::GPUBuffer constantBuffer;
 	wiGraphics::GPUBuffer simulationBuffer;
 	wiGraphics::GPUBuffer vertexBuffer_POS[2];
 	wiGraphics::GPUBuffer vertexBuffer_TEX;

@@ -70,12 +70,15 @@ void wiEmittedParticle::CreateSelfBuffers()
 		bd.Stride = sizeof(Particle);
 		bd.Size = bd.Stride * MAX_PARTICLES;
 		device->CreateBuffer(&bd, nullptr, &particleBuffer);
+		device->SetName(&particleBuffer, "particleBuffer");
 
 		// Alive index lists (double buffered):
 		bd.Stride = sizeof(uint32_t);
 		bd.Size = bd.Stride * MAX_PARTICLES;
 		device->CreateBuffer(&bd, nullptr, &aliveList[0]);
+		device->SetName(&aliveList[0], "aliveList[0]");
 		device->CreateBuffer(&bd, nullptr, &aliveList[1]);
+		device->SetName(&aliveList[1], "aliveList[1]");
 
 		// Dead index list:
 		std::vector<uint32_t> indices(MAX_PARTICLES);
@@ -84,6 +87,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 			indices[i] = i;
 		}
 		device->CreateBuffer(&bd, indices.data(), &deadList);
+		device->SetName(&deadList, "deadList");
 	}
 
 	if (IsSorted() && distanceBuffer.desc.Size < MAX_PARTICLES * sizeof(float))
@@ -98,6 +102,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 		std::vector<float> distances(MAX_PARTICLES);
 		std::fill(distances.begin(), distances.end(), 0.0f);
 		device->CreateBuffer(&bd, distances.data(), &distanceBuffer);
+		device->SetName(&distanceBuffer, "distanceBuffer");
 	}
 
 	if (IsSPHEnabled())
@@ -113,11 +118,13 @@ void wiEmittedParticle::CreateSelfBuffers()
 			bd.Stride = sizeof(float); // really, it is uint, but sorting is performing comparisons on floats, so whateva
 			bd.Size = bd.Stride * MAX_PARTICLES;
 			device->CreateBuffer(&bd, nullptr, &sphPartitionCellIndices);
+			device->SetName(&sphPartitionCellIndices, "sphPartitionCellIndices");
 
 			// Density buffer (for SPH simulation):
 			bd.Stride = sizeof(float);
 			bd.Size = bd.Stride * MAX_PARTICLES;
 			device->CreateBuffer(&bd, nullptr, &densityBuffer);
+			device->SetName(&densityBuffer, "densityBuffer");
 		}
 
 		if (sphPartitionCellOffsets.desc.Size < SPH_PARTITION_BUCKET_COUNT * sizeof(uint32_t))
@@ -126,6 +133,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 			bd.Stride = sizeof(uint32_t);
 			bd.Size = bd.Stride * SPH_PARTITION_BUCKET_COUNT;
 			device->CreateBuffer(&bd, nullptr, &sphPartitionCellOffsets);
+			device->SetName(&sphPartitionCellOffsets, "sphPartitionCellOffsets");
 		}
 	}
 	else
@@ -152,6 +160,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 		bd.Stride = sizeof(counters);
 		bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
 		device->CreateBuffer(&bd, &counters, &counterBuffer);
+		device->SetName(&counterBuffer, "counterBuffer");
 	}
 
 	if(!indirectBuffers.IsValid())
@@ -167,6 +176,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 			sizeof(wiGraphics::IndirectDispatchArgs) +
 			sizeof(wiGraphics::IndirectDrawArgsInstanced);
 		device->CreateBuffer(&bd, nullptr, &indirectBuffers);
+		device->SetName(&indirectBuffers, "indirectBuffers");
 
 		// Constant buffer:
 		bd.Usage = USAGE_DEFAULT;
@@ -174,6 +184,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 		bd.BindFlags = BIND_CONSTANT_BUFFER;
 		bd.MiscFlags = RESOURCE_MISC_NONE;
 		device->CreateBuffer(&bd, nullptr, &constantBuffer);
+		device->SetName(&constantBuffer, "constantBuffer");
 
 		// Debug information CPU-readback buffer:
 		{
@@ -184,6 +195,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 			for (int i = 0; i < arraysize(statisticsReadbackBuffer); ++i)
 			{
 				device->CreateBuffer(&debugBufDesc, nullptr, &statisticsReadbackBuffer[i]);
+				device->SetName(&statisticsReadbackBuffer[i], "statisticsReadbackBuffer");
 			}
 		}
 	}
