@@ -883,6 +883,26 @@ struct CameraCB
 	float2		ApertureShape;
 	float		ApertureSize;
 	float		FocalLength;
+
+	int texture_depth_index;
+	int texture_lineardepth_index;
+	int texture_gbuffer0_index;
+	int texture_gbuffer1_index;
+
+	int buffer_entitytiles_opaque_index;
+	int buffer_entitytiles_transparent_index;
+	int texture_reflection_index;
+	int texture_refraction_index;
+
+	int texture_waterriples_index;
+	int texture_ao_index;
+	int texture_ssr_index;
+	int texture_rtshadow_index;
+
+	int texture_surfelgi_index;
+	int padding0;
+	int padding1;
+	int padding2;
 };
 
 

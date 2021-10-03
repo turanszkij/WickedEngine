@@ -598,6 +598,35 @@ void RenderPath3D::Update(float dt)
 	}
 
 	std::swap(depthBuffer_Copy, depthBuffer_Copy1);
+
+	GraphicsDevice* device = wiRenderer::GetDevice();
+	camera->texture_depth_index = device->GetDescriptorIndex(&depthBuffer_Copy, SRV);
+	camera->texture_lineardepth_index = device->GetDescriptorIndex(&rtLinearDepth, SRV);
+	camera->texture_gbuffer0_index = device->GetDescriptorIndex(&rtGbuffer[GBUFFER_PRIMITIVEID], SRV);
+	camera->texture_gbuffer1_index = device->GetDescriptorIndex(&rtGbuffer[GBUFFER_VELOCITY], SRV);
+	camera->buffer_entitytiles_opaque_index = device->GetDescriptorIndex(&tiledLightResources.entityTiles_Opaque, SRV);
+	camera->buffer_entitytiles_transparent_index = device->GetDescriptorIndex(&tiledLightResources.entityTiles_Transparent, SRV);
+	camera->texture_reflection_index = device->GetDescriptorIndex(&rtReflection, SRV);
+	camera->texture_refraction_index = device->GetDescriptorIndex(&rtSceneCopy, SRV);
+	camera->texture_waterriples_index = device->GetDescriptorIndex(&rtWaterRipple, SRV);
+	camera->texture_ao_index = device->GetDescriptorIndex(&rtAO, SRV);
+	camera->texture_ssr_index = device->GetDescriptorIndex(&rtSSR, SRV);
+	camera->texture_rtshadow_index = device->GetDescriptorIndex(&rtShadow, SRV);
+	camera->texture_surfelgi_index = device->GetDescriptorIndex(&surfelGIResources.result, SRV);
+
+	camera_reflection.texture_depth_index = device->GetDescriptorIndex(&depthBuffer_Reflection, SRV);
+	camera_reflection.texture_lineardepth_index = -1;
+	camera_reflection.texture_gbuffer0_index = -1;
+	camera_reflection.texture_gbuffer1_index = -1;
+	camera_reflection.buffer_entitytiles_opaque_index = device->GetDescriptorIndex(&tiledLightResources_planarReflection.entityTiles_Opaque, SRV);
+	camera_reflection.buffer_entitytiles_transparent_index = device->GetDescriptorIndex(&tiledLightResources_planarReflection.entityTiles_Transparent, SRV);
+	camera_reflection.texture_reflection_index = -1;
+	camera_reflection.texture_refraction_index = -1;
+	camera_reflection.texture_waterriples_index = -1;
+	camera_reflection.texture_ao_index = -1;
+	camera_reflection.texture_ssr_index = -1;
+	camera_reflection.texture_rtshadow_index = -1;
+	camera_reflection.texture_surfelgi_index = -1;
 }
 
 void RenderPath3D::Render() const
@@ -907,11 +936,6 @@ void RenderPath3D::Render() const
 
 			device->RenderPassBegin(&renderpass_reflection, cmd);
 
-			device->BindResource(&tiledLightResources_planarReflection.entityTiles_Opaque, TEXSLOT_RENDERPATH_ENTITYTILES, cmd);
-			device->BindResource(wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
-			device->BindResource(wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_AO, cmd);
-			device->BindResource(wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, cmd);
-			device->BindResource(wiTextureHelper::getUINT4(), TEXSLOT_RENDERPATH_RTSHADOW, cmd);
 			wiRenderer::DrawScene(visibility_reflection, RENDERPASS_MAIN, cmd, drawscene_flags_reflections);
 			wiRenderer::DrawSky(*scene, cmd);
 
@@ -982,18 +1006,7 @@ void RenderPath3D::Render() const
 		{
 			GPUBarrier barrier = GPUBarrier::Image(&rtShadow, rtShadow.desc.layout, RESOURCE_STATE_SHADER_RESOURCE);
 			device->Barrier(&barrier, 1, cmd);
-			device->BindResource(&rtShadow, TEXSLOT_RENDERPATH_RTSHADOW, cmd);
 		}
-		else
-		{
-			device->BindResource(wiTextureHelper::getUINT4(), TEXSLOT_RENDERPATH_RTSHADOW, cmd);
-		}
-
-		device->BindResource(&tiledLightResources.entityTiles_Opaque, TEXSLOT_RENDERPATH_ENTITYTILES, cmd);
-		device->BindResource(getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
-		device->BindResource(getAOEnabled() ? &rtAO : wiTextureHelper::getWhite(), TEXSLOT_RENDERPATH_AO, cmd);
-		device->BindResource(getSSREnabled() || getRaytracedReflectionEnabled() ? &rtSSR : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_SSR, cmd);
-		device->BindResource(&surfelGIResources.result, TEXSLOT_RENDERPATH_SURFELGI, cmd);
 
 		device->RenderPassBegin(&renderpass_main, cmd);
 
@@ -1313,12 +1326,6 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 	{
 		auto range = wiProfiler::BeginRangeGPU("Transparent Scene", cmd);
 		device->EventBegin("Transparent Scene", cmd);
-
-		device->BindResource(&tiledLightResources.entityTiles_Transparent, TEXSLOT_RENDERPATH_ENTITYTILES, cmd);
-		device->BindResource(&rtLinearDepth, TEXSLOT_LINEARDEPTH, cmd);
-		device->BindResource(getReflectionsEnabled() ? &rtReflection : wiTextureHelper::getTransparent(), TEXSLOT_RENDERPATH_REFLECTION, cmd);
-		device->BindResource(&rtSceneCopy, TEXSLOT_RENDERPATH_REFRACTION, cmd);
-		device->BindResource(&rtWaterRipple, TEXSLOT_RENDERPATH_WATERRIPPLES, cmd);
 
 		uint32_t drawscene_flags = 0;
 		drawscene_flags |= wiRenderer::DRAWSCENE_TRANSPARENT;

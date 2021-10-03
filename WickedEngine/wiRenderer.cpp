@@ -6740,7 +6740,7 @@ void CreateTiledLightResources(TiledLightResources& res, XMUINT2 resolution)
 		bd.Size = tileCount.x * tileCount.y * bd.Stride * SHADER_ENTITY_TILE_BUCKET_COUNT;
 		bd.Usage = USAGE_DEFAULT;
 		bd.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
-		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
 		device->CreateBuffer(&bd, nullptr, &res.entityTiles_Opaque);
 		device->CreateBuffer(&bd, nullptr, &res.entityTiles_Transparent);
 
@@ -7475,6 +7475,20 @@ void UpdateCameraCB(
 	cb.FocalLength = camera.focal_length;
 	cb.ApertureSize = camera.aperture_size;
 	cb.ApertureShape = camera.aperture_shape;
+
+	cb.texture_depth_index = camera.texture_depth_index;
+	cb.texture_lineardepth_index = camera.texture_lineardepth_index;
+	cb.texture_gbuffer0_index = camera.texture_gbuffer0_index;
+	cb.texture_gbuffer1_index = camera.texture_gbuffer1_index;
+	cb.buffer_entitytiles_opaque_index = camera.buffer_entitytiles_opaque_index;
+	cb.buffer_entitytiles_transparent_index = camera.buffer_entitytiles_transparent_index;
+	cb.texture_reflection_index = camera.texture_reflection_index;
+	cb.texture_refraction_index = camera.texture_refraction_index;
+	cb.texture_waterriples_index = camera.texture_waterriples_index;
+	cb.texture_ao_index = camera.texture_ao_index;
+	cb.texture_ssr_index = camera.texture_ssr_index;
+	cb.texture_rtshadow_index = camera.texture_rtshadow_index;
+	cb.texture_surfelgi_index = camera.texture_surfelgi_index;
 
 	device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 }
@@ -9825,8 +9839,6 @@ void Postprocess_RTShadow(
 	device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
 	device->BindResource(&lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
-	device->BindResource(&entityTiles_Opaque, TEXSLOT_RENDERPATH_ENTITYTILES, cmd);
-
 	device->BindResource(&gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
 	device->BindResource(&gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
 
@@ -10164,8 +10176,6 @@ void Postprocess_ScreenSpaceShadow(
 
 	device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
 	device->BindResource(&lineardepth, TEXSLOT_LINEARDEPTH, cmd);
-
-	device->BindResource(&entityTiles_Opaque, TEXSLOT_RENDERPATH_ENTITYTILES, cmd);
 
 	device->BindResource(&gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
 	device->BindResource(&gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);

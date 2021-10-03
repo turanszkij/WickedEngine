@@ -83,17 +83,14 @@ inline ShaderMaterial GetMaterial3()
 #define texture_blend3_surfacemap		bindless_textures[GetMaterial3().texture_surfacemap_index]
 #define texture_blend3_emissivemap		bindless_textures[GetMaterial3().texture_emissivemap_index]
 
-
-
-// These are bound by RenderPath (based on Render Path):
-STRUCTUREDBUFFER(EntityTiles, uint, TEXSLOT_RENDERPATH_ENTITYTILES);
-TEXTURE2D(texture_reflection, float4, TEXSLOT_RENDERPATH_REFLECTION);		// rgba: scene color from reflected camera angle
-TEXTURE2D(texture_refraction, float4, TEXSLOT_RENDERPATH_REFRACTION);		// rgba: scene color from primary camera angle
-TEXTURE2D(texture_waterriples, float4, TEXSLOT_RENDERPATH_WATERRIPPLES);	// rgb: snorm8 water ripple normal map
-TEXTURE2D(texture_ao, float, TEXSLOT_RENDERPATH_AO);						// r: ambient occlusion
-TEXTURE2D(texture_ssr, float4, TEXSLOT_RENDERPATH_SSR);						// rgb: screen space ray-traced reflections, a: reflection blend based on ray hit or miss
-TEXTURE2D(texture_rtshadow, uint4, TEXSLOT_RENDERPATH_RTSHADOW);			// bitmask for max 16 shadows' visibility
-TEXTURE2D(texture_surfelgi, float3, TEXSLOT_RENDERPATH_SURFELGI);
+uint load_entitytile(uint tileIndex)
+{
+#ifdef TRANSPARENT
+	return bindless_buffers[GetCamera().buffer_entitytiles_transparent_index].Load(tileIndex * sizeof(uint));
+#else
+	return bindless_buffers[GetCamera().buffer_entitytiles_opaque_index].Load(tileIndex * sizeof(uint));
+#endif // TRANSPARENT
+}
 
 // Use these to compile this file as shader prototype:
 //#define OBJECTSHADER_COMPILE_VS				- compile vertex shader prototype
@@ -387,10 +384,15 @@ inline void NormalMapping(in float4 uvsets, inout float3 N, in float3x3 TBN, out
 
 inline float3 PlanarReflection(in Surface surface, in float2 bumpColor)
 {
-	float4 reflectionUV = mul(g_xCamera.ReflVP, float4(surface.P, 1));
-	reflectionUV.xy /= reflectionUV.w;
-	reflectionUV.xy = reflectionUV.xy * float2(0.5, -0.5) + 0.5;
-	return texture_reflection.SampleLevel(sampler_linear_clamp, reflectionUV.xy + bumpColor*GetMaterial().normalMapStrength, 0).rgb;
+	[branch]
+	if (g_xCamera.texture_reflection_index >= 0)
+	{
+		float4 reflectionUV = mul(g_xCamera.ReflVP, float4(surface.P, 1));
+		reflectionUV.xy /= reflectionUV.w;
+		reflectionUV.xy = reflectionUV.xy * float2(0.5, -0.5) + 0.5;
+		return bindless_textures[g_xCamera.texture_reflection_index].SampleLevel(sampler_linear_clamp, reflectionUV.xy + bumpColor * GetMaterial().normalMapStrength, 0).rgb;
+	}
+	return 0;
 }
 
 #define NUM_PARALLAX_OCCLUSION_STEPS 32
@@ -650,7 +652,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 		[loop]
 		for (uint bucket = first_bucket; bucket <= last_bucket; ++bucket)
 		{
-			uint bucket_bits = EntityTiles[flatTileIndex + bucket];
+			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 
 			// This is the wave scalarizer from Improved Culling - Siggraph 2017 [Drobot]:
 			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
@@ -738,7 +740,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 		[loop]
 		for (uint bucket = first_bucket; bucket <= last_bucket; ++bucket)
 		{
-			uint bucket_bits = EntityTiles[flatTileIndex + bucket];
+			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 
 			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
 			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
@@ -809,9 +811,9 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 		uint4 shadow_mask_packed = 0;
 #ifdef SHADOW_MASK_ENABLED
 		[branch]
-		if (g_xFrame.Options & OPTION_BIT_SHADOW_MASK)
+		if (g_xFrame.Options & OPTION_BIT_SHADOW_MASK && g_xCamera.texture_rtshadow_index >= 0)
 		{
-			shadow_mask_packed = texture_rtshadow[surface.pixel / 2];
+			shadow_mask_packed = bindless_textures_uint4[g_xCamera.texture_rtshadow_index][surface.pixel / 2];
 		}
 #endif // SHADOW_MASK_ENABLED
 
@@ -823,7 +825,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 		[loop]
 		for (uint bucket = first_bucket; bucket <= last_bucket; ++bucket)
 		{
-			uint bucket_bits = EntityTiles[flatTileIndex + bucket];
+			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 
 			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
 			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
@@ -902,9 +904,9 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 
 #ifndef TRANSPARENT
 	[branch]
-	if (g_xFrame.Options & OPTION_BIT_SURFELGI_ENABLED && surfel_cellvalid(surfel_cell(surface.P)))
+	if (g_xFrame.Options & OPTION_BIT_SURFELGI_ENABLED && g_xCamera.texture_surfelgi_index >= 0 && surfel_cellvalid(surfel_cell(surface.P)))
 	{
-		lighting.indirect.diffuse = texture_surfelgi[surface.pixel];
+		lighting.indirect.diffuse = bindless_textures[g_xCamera.texture_surfelgi_index][surface.pixel].rgb;
 	}
 #endif // TRANSPARENT
 
@@ -1467,7 +1469,11 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 #ifndef PREPASS
 #ifndef ENVMAPRENDERING
 #ifndef TRANSPARENT
-	surface.occlusion *= texture_ao.SampleLevel(sampler_linear_clamp, ScreenCoord, 0).r;
+	[branch]
+	if (g_xCamera.texture_ao_index >= 0)
+	{
+		surface.occlusion *= bindless_textures_float[g_xCamera.texture_ao_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).r;
+	}
 #endif // TRANSPARENT
 #endif // ENVMAPRENDERING
 #endif // PREPASS
@@ -1568,16 +1574,24 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 		bumpColor0 = 2 * texture_normalmap.Sample(sampler_objectshader, UV_normalMap - GetMaterial().texMulAdd.ww).rg - 1;
 		bumpColor1 = 2 * texture_normalmap.Sample(sampler_objectshader, UV_normalMap + GetMaterial().texMulAdd.zw).rg - 1;
 	}
-	bumpColor2 = texture_waterriples.SampleLevel(sampler_linear_clamp, ScreenCoord, 0).rg;
+	[branch]
+	if (g_xCamera.texture_waterriples_index >= 0)
+	{
+		bumpColor2 = bindless_textures_float2[g_xCamera.texture_waterriples_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).rg;
+	}
 	bumpColor = float3(bumpColor0 + bumpColor1 + bumpColor2, 1)  * GetMaterial().refraction;
 	surface.N = normalize(lerp(surface.N, mul(normalize(bumpColor), TBN), GetMaterial().normalMapStrength));
 	bumpColor *= GetMaterial().normalMapStrength;
 
-	//REFLECTION
-	float4 reflectionUV = mul(g_xCamera.ReflVP, float4(surface.P, 1));
-	reflectionUV.xy /= reflectionUV.w;
-	reflectionUV.xy = reflectionUV.xy * float2(0.5, -0.5) + 0.5;
-	lighting.indirect.specular += texture_reflection.SampleLevel(sampler_linear_mirror, reflectionUV.xy + bumpColor.rg, 0).rgb * surface.F;
+	[branch]
+	if (g_xCamera.texture_reflection_index >= 0)
+	{
+		//REFLECTION
+		float4 reflectionUV = mul(g_xCamera.ReflVP, float4(surface.P, 1));
+		reflectionUV.xy /= reflectionUV.w;
+		reflectionUV.xy = reflectionUV.xy * float2(0.5, -0.5) + 0.5;
+		lighting.indirect.specular += bindless_textures[g_xCamera.texture_reflection_index].SampleLevel(sampler_linear_mirror, reflectionUV.xy + bumpColor.rg, 0).rgb * surface.F;
+	}
 #endif // WATER
 
 
@@ -1598,14 +1612,19 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 		}
 #endif // OBJECTSHADER_USE_UVSETS
 
-		float2 size;
-		float mipLevels;
-		texture_refraction.GetDimensions(0, size.x, size.y, mipLevels);
-		const float2 normal2D = mul((float3x3)g_xCamera.View, surface.N.xyz).xy;
-		float2 perturbatedRefrTexCoords = ScreenCoord.xy + normal2D * GetMaterial().refraction;
-		float4 refractiveColor = texture_refraction.SampleLevel(sampler_linear_clamp, perturbatedRefrTexCoords, surface.roughness * mipLevels);
-		surface.refraction.rgb = surface.albedo * refractiveColor.rgb;
-		surface.refraction.a = surface.transmission;
+		[branch]
+		if (g_xCamera.texture_refraction_index >= 0)
+		{
+			Texture2D texture_refraction = bindless_textures[g_xCamera.texture_refraction_index];
+			float2 size;
+			float mipLevels;
+			texture_refraction.GetDimensions(0, size.x, size.y, mipLevels);
+			const float2 normal2D = mul((float3x3)g_xCamera.View, surface.N.xyz).xy;
+			float2 perturbatedRefrTexCoords = ScreenCoord.xy + normal2D * GetMaterial().refraction;
+			float4 refractiveColor = texture_refraction.SampleLevel(sampler_linear_clamp, perturbatedRefrTexCoords, surface.roughness * mipLevels);
+			surface.refraction.rgb = surface.albedo * refractiveColor.rgb;
+			surface.refraction.a = surface.transmission;
+		}
 	}
 #endif // TRANSPARENT
 
@@ -1638,27 +1657,36 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 #ifndef WATER
 #ifndef ENVMAPRENDERING
 #ifndef TRANSPARENT
-	float4 ssr = texture_ssr.SampleLevel(sampler_linear_clamp, ScreenCoord, 0);
-	lighting.indirect.specular = lerp(lighting.indirect.specular, ssr.rgb * surface.F, ssr.a);
+	[branch]
+	if (g_xCamera.texture_ssr_index >= 0)
+	{
+		float4 ssr = bindless_textures[g_xCamera.texture_ssr_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0);
+		lighting.indirect.specular = lerp(lighting.indirect.specular, ssr.rgb * surface.F, ssr.a);
+	}
 #endif // TRANSPARENT
 #endif // ENVMAPRENDERING
 #endif // WATER
 
 
 #ifdef WATER
-	// WATER REFRACTION
-	float sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy + bumpColor.rg, 0) * g_xCamera.ZFarP;
-	float depth_difference = sampled_lineardepth - lineardepth;
-	surface.refraction.rgb = texture_refraction.SampleLevel(sampler_linear_mirror, ScreenCoord.xy + bumpColor.rg * saturate(0.5 * depth_difference), 0).rgb;
-	if (depth_difference < 0)
+	[branch]
+	if (g_xCamera.texture_refraction_index >= 0)
 	{
-		// Fix cutoff by taking unperturbed depth diff to fill the holes with fog:
-		sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy, 0) * g_xCamera.ZFarP;
-		depth_difference = sampled_lineardepth - lineardepth;
+		// WATER REFRACTION
+		Texture2D texture_refraction = bindless_textures[g_xCamera.texture_refraction_index];
+		float sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy + bumpColor.rg, 0) * g_xCamera.ZFarP;
+		float depth_difference = sampled_lineardepth - lineardepth;
+		surface.refraction.rgb = texture_refraction.SampleLevel(sampler_linear_mirror, ScreenCoord.xy + bumpColor.rg * saturate(0.5 * depth_difference), 0).rgb;
+		if (depth_difference < 0)
+		{
+			// Fix cutoff by taking unperturbed depth diff to fill the holes with fog:
+			sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy, 0) * g_xCamera.ZFarP;
+			depth_difference = sampled_lineardepth - lineardepth;
+		}
+		// WATER FOG:
+		surface.refraction.a = 1 - saturate(color.a * 0.1 * depth_difference);
+		color.a = 1;
 	}
-	// WATER FOG:
-	surface.refraction.a = 1 - saturate(color.a * 0.1 * depth_difference);
-	color.a = 1;
 #endif // WATER
 
 

@@ -6,8 +6,8 @@
 
 STRUCTUREDBUFFER(in_Frustums, Frustum, TEXSLOT_ONDEMAND0);
 
-RWSTRUCTUREDBUFFER(EntityTiles_Transparent, uint, 0);
-RWSTRUCTUREDBUFFER(EntityTiles_Opaque, uint, 1);
+RWRAWBUFFER(EntityTiles_Transparent, 0);
+RWRAWBUFFER(EntityTiles_Opaque, 1);
 
 
 #ifdef DEBUG_TILEDLIGHTCULLING
@@ -309,8 +309,8 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	// Each thread will export one bucket from LDS to global memory:
 	for (i = bucketIndex; i < SHADER_ENTITY_TILE_BUCKET_COUNT; i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
-		EntityTiles_Opaque[tileBucketsAddress + i] = tile_opaque[i];
-		EntityTiles_Transparent[tileBucketsAddress + i] = tile_transparent[i];
+		EntityTiles_Opaque.Store((tileBucketsAddress + i) * sizeof(uint), tile_opaque[i]);
+		EntityTiles_Transparent.Store((tileBucketsAddress + i) * sizeof(uint), tile_transparent[i]);
 	}
 
 #ifdef DEBUG_TILEDLIGHTCULLING

@@ -2,10 +2,9 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 #include "raytracingHF.hlsli"
+#include "objectHF.hlsli"
 
 PUSHCONSTANT(postprocess, PostProcess);
-
-STRUCTUREDBUFFER(EntityTiles, uint, TEXSLOT_RENDERPATH_ENTITYTILES);
 
 static const uint MAX_RTSHADOWS = 16;
 RWTEXTURE2D(output, uint4, 0);
@@ -86,7 +85,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 		[loop]
 		for (uint bucket = first_bucket; bucket <= last_bucket && shadow_index < MAX_RTSHADOWS; ++bucket)
 		{
-			uint bucket_bits = EntityTiles[flatTileIndex + bucket];
+			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 
 			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
 			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));

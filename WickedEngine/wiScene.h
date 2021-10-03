@@ -889,6 +889,19 @@ namespace wiScene
 		XMFLOAT4X4 InvView, InvProjection, InvVP;
 		XMFLOAT2 jitter;
 		XMFLOAT4 clipPlane = XMFLOAT4(0, 0, 0, 0); // default: no clip plane
+		int texture_depth_index = -1;
+		int texture_lineardepth_index = -1;
+		int texture_gbuffer0_index = -1;
+		int texture_gbuffer1_index = -1;
+		int texture_reflection_index = -1;
+		int texture_refraction_index = -1;
+		int texture_waterriples_index = -1;
+		int texture_ao_index = -1;
+		int texture_ssr_index = -1;
+		int texture_rtshadow_index = -1;
+		int texture_surfelgi_index = -1;
+		int buffer_entitytiles_opaque_index = -1;
+		int buffer_entitytiles_transparent_index = -1;
 
 		void CreatePerspective(float newWidth, float newHeight, float newNear, float newFar, float newFOV = XM_PI / 3.0f);
 		void UpdateCamera();
