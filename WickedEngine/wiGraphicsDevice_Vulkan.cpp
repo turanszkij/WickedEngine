@@ -1816,6 +1816,7 @@ using namespace Vulkan_Internal;
 		assert(pipeline != VK_NULL_HANDLE);
 
 		vkCmdBindPipeline(GetCommandList(cmd), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+		dirty_pso[cmd] = false;
 	}
 
 	void GraphicsDevice_Vulkan::predraw(CommandList cmd)
