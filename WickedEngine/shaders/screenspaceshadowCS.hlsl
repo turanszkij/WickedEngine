@@ -2,9 +2,17 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 #include "raytracingHF.hlsli"
-#include "objectHF.hlsli"
 
 PUSHCONSTANT(postprocess, PostProcess);
+
+uint load_entitytile(uint tileIndex)
+{
+#ifdef TRANSPARENT
+	return bindless_buffers[GetCamera().buffer_entitytiles_transparent_index].Load(tileIndex * sizeof(uint));
+#else
+	return bindless_buffers[GetCamera().buffer_entitytiles_opaque_index].Load(tileIndex * sizeof(uint));
+#endif // TRANSPARENT
+}
 
 static const uint MAX_RTSHADOWS = 16;
 RWTEXTURE2D(output, uint4, 0);
