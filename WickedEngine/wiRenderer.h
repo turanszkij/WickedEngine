@@ -183,7 +183,7 @@ namespace wiRenderer
 	// Updates the per camera constant buffer need to call for each different camera that is used when calling DrawScene() and the like
 	//	camera_previous : camera from previous frame, used for reprojection effects.
 	//	camera_reflection : camera that renders planar reflection
-	void UpdateCameraCB(
+	void BindCameraCB(
 		const wiScene::CameraComponent& camera,
 		const wiScene::CameraComponent& camera_previous,
 		const wiScene::CameraComponent& camera_reflection,
@@ -200,7 +200,7 @@ namespace wiRenderer
 		DRAWSCENE_HAIRPARTICLE = 1 << 4,
 	};
 
-	// Draw the world from a camera. You must call UpdateCameraCB() at least once in this frame prior to this
+	// Draw the world from a camera. You must call BindCameraCB() at least once in this frame prior to this
 	void DrawScene(
 		const Visibility& vis,
 		RENDERPASS renderPass,

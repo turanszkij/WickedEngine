@@ -3627,7 +3627,7 @@ void UpdateRenderData(
 	wiProfiler::EndRange(prof_updatebuffer_gpu);
 
 	BindCommonResources(cmd);
-	UpdateCameraCB(
+	BindCameraCB(
 		*vis.camera,
 		*vis.camera,
 		*vis.camera,
@@ -3882,7 +3882,7 @@ void UpdateRenderDataAsync(
 	device->EventBegin("UpdateRenderDataAsync", cmd);
 
 	BindCommonResources(cmd);
-	UpdateCameraCB(
+	BindCameraCB(
 		*vis.camera,
 		*vis.camera,
 		*vis.camera,
@@ -6490,7 +6490,7 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 				impostorcamera.TransformCamera(camera_transform);
 				impostorcamera.UpdateCamera();
 
-				UpdateCameraCB(impostorcamera, impostorcamera, impostorcamera, cmd);
+				BindCameraCB(impostorcamera, impostorcamera, impostorcamera, cmd);
 
 
 				int textureIndex = (int)(impostorIndex * impostorCaptureAngles * 3 + prop * impostorCaptureAngles + i);
@@ -7361,7 +7361,7 @@ void BindCommonResources(CommandList cmd)
 	device->BindConstantBuffer(&constantBuffers[CBTYPE_FRAME], CBSLOT_RENDERER_FRAME, cmd);
 }
 
-void UpdateCameraCB(
+void BindCameraCB(
 	const CameraComponent& camera,
 	const CameraComponent& camera_previous,
 	const CameraComponent& camera_reflection,

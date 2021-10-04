@@ -674,7 +674,7 @@ void RenderPath3D::Render() const
 
 		if (wiRenderer::GetSurfelGIEnabled())
 		{
-			wiRenderer::UpdateCameraCB(
+			wiRenderer::BindCameraCB(
 				*camera,
 				camera_previous,
 				camera_reflection,
@@ -706,7 +706,7 @@ void RenderPath3D::Render() const
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
-		wiRenderer::UpdateCameraCB(
+		wiRenderer::BindCameraCB(
 			*camera,
 			camera_previous,
 			camera_reflection,
@@ -750,7 +750,7 @@ void RenderPath3D::Render() const
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
-		wiRenderer::UpdateCameraCB(
+		wiRenderer::BindCameraCB(
 			*camera,
 			camera_previous,
 			camera_reflection,
@@ -845,7 +845,7 @@ void RenderPath3D::Render() const
 	cmd = device->BeginCommandList();
 	wiJobSystem::Execute(ctx, [cmd, this](wiJobArgs args) {
 		wiRenderer::BindCommonResources(cmd);
-		wiRenderer::UpdateCameraCB(
+		wiRenderer::BindCameraCB(
 			*camera,
 			camera_previous,
 			camera_reflection,
@@ -873,7 +873,7 @@ void RenderPath3D::Render() const
 
 			GraphicsDevice* device = wiRenderer::GetDevice();
 
-			wiRenderer::UpdateCameraCB(
+			wiRenderer::BindCameraCB(
 				camera_reflection,
 				camera_reflection_previous,
 				camera_reflection,
@@ -913,7 +913,7 @@ void RenderPath3D::Render() const
 
 			GraphicsDevice* device = wiRenderer::GetDevice();
 
-			wiRenderer::UpdateCameraCB(
+			wiRenderer::BindCameraCB(
 				camera_reflection,
 				camera_reflection_previous,
 				camera_reflection,
@@ -965,7 +965,7 @@ void RenderPath3D::Render() const
 		GraphicsDevice* device = wiRenderer::GetDevice();
 		device->EventBegin("Opaque Scene", cmd);
 
-		wiRenderer::UpdateCameraCB(
+		wiRenderer::BindCameraCB(
 			*camera,
 			camera_previous,
 			camera_reflection,
@@ -1046,7 +1046,7 @@ void RenderPath3D::Render() const
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
-		wiRenderer::UpdateCameraCB(
+		wiRenderer::BindCameraCB(
 			*camera,
 			camera_previous,
 			camera_reflection,

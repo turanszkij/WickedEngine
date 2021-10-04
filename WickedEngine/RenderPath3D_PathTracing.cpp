@@ -271,7 +271,7 @@ void RenderPath3D_PathTracing::Render() const
 
 			GraphicsDevice* device = wiRenderer::GetDevice();
 
-			wiRenderer::UpdateCameraCB(
+			wiRenderer::BindCameraCB(
 				*camera,
 				*camera,
 				*camera,
@@ -318,7 +318,7 @@ void RenderPath3D_PathTracing::Render() const
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
-		wiRenderer::UpdateCameraCB(
+		wiRenderer::BindCameraCB(
 			*camera,
 			*camera,
 			*camera,
