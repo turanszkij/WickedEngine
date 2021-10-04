@@ -6,6 +6,8 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
+TEXTURE2D(depthbuffer, float, TEXSLOT_ONDEMAND0);
+
 RWTEXTURE2D(output, float3, 0);
 
 static const uint TILE_BORDER = 1;
@@ -23,7 +25,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	{
 		const uint2 pixel = tile_upperleft + unflatten2D(t, TILE_SIZE);
 		const float2 uv = (pixel + 0.5f) * postprocess.resolution_rcp;
-		const float depth = texture_depth.SampleLevel(sampler_linear_clamp, uv, depth_mip);
+		const float depth = depthbuffer.SampleLevel(sampler_linear_clamp, uv, depth_mip);
 		const float3 position = reconstructPosition(uv, depth);
 		tile_XY[t] = position.xy;
 		tile_Z[t] = position.z;

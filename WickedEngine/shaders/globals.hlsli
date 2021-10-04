@@ -7,20 +7,23 @@ Texture2D bindless_textures[] : register(space1);
 ByteAddressBuffer bindless_buffers[] : register(space2);
 SamplerState bindless_samplers[] : register(space3);
 Buffer<uint> bindless_ib[] : register(space4);
+#ifdef RTAPI
+RaytracingAccelerationStructure bindless_accelerationstructures[] : register(space5);
+#endif // RTAPI
 
-Texture2DArray bindless_textures2DArray[] : register(space5);
-TextureCube bindless_cubemaps[] : register(space6);
-TextureCubeArray bindless_cubearrays[] : register(space7);
-Texture3D bindless_textures3D[] : register(space8);
-RWTexture2D<float4> bindless_rwtextures[] : register(space9);
-RWByteAddressBuffer bindless_rwbuffers[] : register(space10);
-RWTexture2DArray<float4> bindless_rwtextures2DArray[] : register(space11);
-RWTexture3D<float4> bindless_rwtextures3D[] : register(space12);
+Texture2DArray bindless_textures2DArray[] : register(space6);
+TextureCube bindless_cubemaps[] : register(space7);
+TextureCubeArray bindless_cubearrays[] : register(space8);
+Texture3D bindless_textures3D[] : register(space9);
+RWTexture2D<float4> bindless_rwtextures[] : register(space10);
+RWByteAddressBuffer bindless_rwbuffers[] : register(space11);
+RWTexture2DArray<float4> bindless_rwtextures2DArray[] : register(space12);
+RWTexture3D<float4> bindless_rwtextures3D[] : register(space13);
 
-Texture2D<float> bindless_textures_float[] : register(space13);
-Texture2D<float2> bindless_textures_float2[] : register(space14);
-Texture2D<uint2> bindless_textures_uint2[] : register(space15);
-Texture2D<uint4> bindless_textures_uint4[] : register(space16);
+Texture2D<float> bindless_textures_float[] : register(space14);
+Texture2D<float2> bindless_textures_float2[] : register(space15);
+Texture2D<uint2> bindless_textures_uint2[] : register(space16);
+Texture2D<uint4> bindless_textures_uint4[] : register(space17);
 
 ShaderScene GetScene()
 {
@@ -70,8 +73,10 @@ float4x4 load_entitymatrix(uint matrixIndex)
 #define texture_shadowarray_transparent_2d bindless_textures2DArray[g_xFrame.texture_shadowarray_transparent_2d_index]
 #define texture_shadowarray_transparent_cube bindless_cubearrays[g_xFrame.texture_shadowarray_transparent_cube_index]
 #define texture_voxelgi bindless_textures3D[g_xFrame.texture_voxelgi_index]
+#define scene_acceleration_structure bindless_accelerationstructures[GetScene().TLAS]
 
 #define texture_depth bindless_textures_float[GetCamera().texture_depth_index]
+#define texture_depth_history bindless_textures_float[GetCamera().texture_depth_index_prev]
 #define texture_lineardepth bindless_textures_float[GetCamera().texture_lineardepth_index]
 #define texture_gbuffer0 bindless_textures_uint2[GetCamera().texture_gbuffer0_index]
 #define texture_gbuffer1 bindless_textures_float2[GetCamera().texture_gbuffer1_index]

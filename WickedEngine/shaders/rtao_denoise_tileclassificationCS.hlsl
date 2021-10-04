@@ -7,7 +7,6 @@ TEXTURE2D(normals, float3, TEXSLOT_ONDEMAND0);
 STRUCTUREDBUFFER(tiles, uint, TEXSLOT_ONDEMAND1);
 TEXTURE2D(moments_prev, float3, TEXSLOT_ONDEMAND2);
 TEXTURE2D(history, float, TEXSLOT_ONDEMAND3);
-TEXTURE2D(texture_depth_history, float, TEXSLOT_ONDEMAND4);
 
 RWTEXTURE2D(reprojection, float2, 0);
 RWTEXTURE2D(moments, float3, 1);

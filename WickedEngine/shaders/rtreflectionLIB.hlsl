@@ -10,8 +10,6 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-TEXTURE2D(texture_depth_history, float, TEXSLOT_ONDEMAND2);
-
 RWTEXTURE2D(output, float4, 0);
 RWTEXTURE2D(output_rayLengths, float, 1);
 

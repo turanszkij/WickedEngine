@@ -10,9 +10,8 @@
 #include <unordered_map>
 #include <unordered_set>
 
-class wiGPUBVH
+struct wiGPUBVH
 {
-private:
 	// Scene BVH intersection resources:
 	wiGraphics::GPUBuffer bvhNodeBuffer;
 	wiGraphics::GPUBuffer bvhParentBuffer;
@@ -22,14 +21,12 @@ private:
 	wiGraphics::GPUBuffer primitiveBuffer;
 	wiGraphics::GPUBuffer primitiveMortonBuffer;
 	uint32_t primitiveCapacity = 0;
+	bool IsValid() const { return primitiveCounterBuffer.IsValid(); }
 
-public:
 	void Update(const wiScene::Scene& scene);
 	void Build(const wiScene::Scene& scene, wiGraphics::CommandList cmd) const;
-	void Bind(wiGraphics::CommandList cmd) const;
 
 	void Clear();
 
 	static void Initialize();
-
 };

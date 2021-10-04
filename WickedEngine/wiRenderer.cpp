@@ -3052,11 +3052,6 @@ void UpdatePerFrameData(
 		voxelSceneData.extents = XMFLOAT3(voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize, voxelSceneData.res * voxelSceneData.voxelsize);
 	}
 
-	if (!device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING) && scene.IsAccelerationStructureUpdateRequested())
-	{
-		scene.BVH.Update(scene);
-	}
-
 	// Update CPU-side frame constant buffer:
 	frameCB.ConstantOne = 1;
 	frameCB.CanvasSize = float2(canvas.GetLogicalWidth(), canvas.GetLogicalHeight());
@@ -3088,7 +3083,6 @@ void UpdatePerFrameData(
 	frameCB.VoxelRadianceRayStepSize = voxelSceneData.rayStepSize;
 	frameCB.VoxelRadianceDataCenter = voxelSceneData.center;
 	frameCB.EntityCullingTileCount = GetEntityCullingTileCount(internalResolution);
-	frameCB.ObjectShaderSamplerIndex = device->GetDescriptorIndex(&samplers[SSLOT_OBJECTSHADER]);
 
 	// The order is very important here:
 	frameCB.DecalArrayOffset = 0;
@@ -3219,6 +3213,7 @@ void UpdatePerFrameData(
 	frameCB.VolumetricClouds = vis.scene->weather.volumetricCloudParameters;
 	frameCB.scene = vis.scene->shaderscene;
 
+	frameCB.sampler_objectshader_index = device->GetDescriptorIndex(&samplers[SSLOT_OBJECTSHADER]);
 	frameCB.texture_random64x64_index = device->GetDescriptorIndex(wiTextureHelper::getRandom64x64(), SRV);
 	frameCB.texture_bluenoise_index = device->GetDescriptorIndex(wiTextureHelper::getBlueNoise(), SRV);
 	frameCB.texture_sheenlut_index = device->GetDescriptorIndex(&textures[TEXTYPE_2D_SHEENLUT], SRV);
@@ -4227,8 +4222,6 @@ void DrawSoftParticles(
 		wiProfiler::BeginRangeGPU("EmittedParticles - Render (Distortion)", cmd) :
 		wiProfiler::BeginRangeGPU("EmittedParticles - Render", cmd);
 
-	device->BindResource(&lineardepth, TEXSLOT_LINEARDEPTH, cmd);
-
 	// Sort emitters based on distance:
 	assert(emitterCount < 0x0000FFFF); // watch out for sorting hash truncation!
 	uint32_t* emitterSortingHashes = (uint32_t*)GetRenderFrameAllocator(cmd).allocate(sizeof(uint32_t) * emitterCount);
@@ -4332,7 +4325,6 @@ void DrawLightVisualizers(
 }
 void DrawVolumeLights(
 	const Visibility& vis,
-	const Texture& depthbuffer,
 	CommandList cmd
 )
 {
@@ -4342,8 +4334,6 @@ void DrawVolumeLights(
 		device->EventBegin("Volumetric Light Render", cmd);
 
 		BindCommonResources(cmd);
-
-		device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
 
 		XMMATRIX VP = vis.camera->GetViewProjection();
 
@@ -4417,7 +4407,6 @@ void DrawVolumeLights(
 }
 void DrawLensFlares(
 	const Visibility& vis,
-	const Texture& depthbuffer,
 	CommandList cmd,
 	const Texture* texture_directional_occlusion
 )
@@ -4426,8 +4415,6 @@ void DrawLensFlares(
 		return;
 
 	device->EventBegin("Lens Flares", cmd);
-
-	device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
 
 	for (auto visibleLight : vis.visibleLights)
 	{
@@ -4970,11 +4957,6 @@ void DrawScene(
 	device->BindShadingRate(SHADING_RATE_1X1, cmd);
 
 	BindCommonResources(cmd);
-
-	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
-	{
-		device->BindResource(&vis.scene->TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
-	}
 
 	if (transparent && vis.scene->weather.IsOceanEnabled())
 	{
@@ -6721,12 +6703,12 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 
 void CreateTiledLightResources(TiledLightResources& res, XMUINT2 resolution)
 {
-	const XMUINT3 tileCount = wiRenderer::GetEntityCullingTileCount(resolution);
+	res.tileCount = wiRenderer::GetEntityCullingTileCount(resolution);
 
 	{
 		GPUBufferDesc bd;
 		bd.Stride = sizeof(XMFLOAT4) * 4; // storing 4 planes for every tile
-		bd.Size = bd.Stride * tileCount.x * tileCount.y;
+		bd.Size = bd.Stride * res.tileCount.x * res.tileCount.y;
 		bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 		bd.Usage = USAGE_DEFAULT;
@@ -6737,7 +6719,7 @@ void CreateTiledLightResources(TiledLightResources& res, XMUINT2 resolution)
 	{
 		GPUBufferDesc bd;
 		bd.Stride = sizeof(uint);
-		bd.Size = tileCount.x * tileCount.y * bd.Stride * SHADER_ENTITY_TILE_BUCKET_COUNT;
+		bd.Size = res.tileCount.x * res.tileCount.y * bd.Stride * SHADER_ENTITY_TILE_BUCKET_COUNT;
 		bd.Usage = USAGE_DEFAULT;
 		bd.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
 		bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
@@ -6750,16 +6732,11 @@ void CreateTiledLightResources(TiledLightResources& res, XMUINT2 resolution)
 }
 void ComputeTiledLightCulling(
 	const TiledLightResources& res,
-	const Texture& depthbuffer,
 	const Texture& debugUAV,
 	CommandList cmd
 )
 {
-	const XMUINT3 tileCount = GetEntityCullingTileCount(XMUINT2(depthbuffer.desc.Width, depthbuffer.desc.Height));
-
 	BindCommonResources(cmd);
-
-	device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
 
 	// Frustum computation
 	{
@@ -6780,8 +6757,8 @@ void ComputeTiledLightCulling(
 		}
 
 		device->Dispatch(
-			(tileCount.x + TILED_CULLING_BLOCKSIZE - 1) / TILED_CULLING_BLOCKSIZE,
-			(tileCount.y + TILED_CULLING_BLOCKSIZE - 1) / TILED_CULLING_BLOCKSIZE,
+			(res.tileCount.x + TILED_CULLING_BLOCKSIZE - 1) / TILED_CULLING_BLOCKSIZE,
+			(res.tileCount.y + TILED_CULLING_BLOCKSIZE - 1) / TILED_CULLING_BLOCKSIZE,
 			1,
 			cmd
 		);
@@ -6821,7 +6798,7 @@ void ComputeTiledLightCulling(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->Dispatch(tileCount.x, tileCount.y, 1, cmd);
+		device->Dispatch(res.tileCount.x, res.tileCount.y, 1, cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -7239,19 +7216,8 @@ void RayTraceScene(
 	const Texture* output_normal
 )
 {
-	// Set up tracing resources:
-	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
-	{
-		if (!scene.TLAS.IsValid())
-		{
-			return;
-		}
-		device->BindResource(&scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
-	}
-	else
-	{
-		scene.BVH.Bind(cmd);
-	}
+	if (!scene.TLAS.IsValid() && !scene.BVH.IsValid())
+		return;
 
 	device->EventBegin("RayTraceScene", cmd);
 	auto range = wiProfiler::BeginRangeGPU("RayTraceScene", cmd);
@@ -7318,7 +7284,6 @@ void RayTraceSceneBVH(const Scene& scene, CommandList cmd)
 {
 	device->EventBegin("RayTraceSceneBVH", cmd);
 	device->BindPipelineState(&PSO_debug[DEBUGRENDERING_RAYTRACE_BVH], cmd);
-	scene.BVH.Bind(cmd);
 	device->Draw(3, 0, cmd);
 	device->EventEnd(cmd);
 }
@@ -7329,14 +7294,8 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 	{
 		auto range = wiProfiler::BeginRangeGPU("Lightmap Processing", cmd);
 
-		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
-		{
-			device->BindResource(&scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
-		}
-		else
-		{
-			scene.BVH.Bind(cmd);
-		}
+		if (!scene.TLAS.IsValid() && !scene.BVH.IsValid())
+			return;
 
 		BindCommonResources(cmd);
 
@@ -7489,6 +7448,7 @@ void UpdateCameraCB(
 	cb.texture_ssr_index = camera.texture_ssr_index;
 	cb.texture_rtshadow_index = camera.texture_rtshadow_index;
 	cb.texture_surfelgi_index = camera.texture_surfelgi_index;
+	cb.texture_depth_index_prev = camera_previous.texture_depth_index;
 
 	device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 }
@@ -7669,8 +7629,6 @@ void ComputeBloom(
 }
 
 void ComputeShadingRateClassification(
-	const Texture gbuffer[GBUFFER_COUNT],
-	const Texture& lineardepth,
 	const Texture& output,
 	const Texture& debugUAV,
 	CommandList cmd
@@ -7696,9 +7654,6 @@ void ComputeShadingRateClassification(
 	{
 		device->BindComputeShader(&shaders[CSTYPE_SHADINGRATECLASSIFICATION], cmd);
 	}
-
-	device->BindResource(&gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
-	device->BindResource(&lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
 	const TextureDesc& desc = output.GetDesc();
 
@@ -7819,8 +7774,6 @@ void CreateSurfelGIResources(SurfelGIResources& res, XMUINT2 resolution)
 void SurfelGI_Coverage(
 	const SurfelGIResources& res,
 	const Scene& scene,
-	const Texture& depthbuffer,
-	const Texture gbuffer[GBUFFER_COUNT],
 	const Texture& debugUAV,
 	CommandList cmd
 )
@@ -7833,10 +7786,6 @@ void SurfelGI_Coverage(
 	{
 		device->EventBegin("Coverage", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_SURFEL_COVERAGE], cmd);
-
-		device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
-		device->BindResource(&gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
-		device->BindResource(&gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
 
 		device->BindResource(&scene.surfelBuffer, TEXSLOT_ONDEMAND0, cmd);
 		device->BindResource(&scene.surfelGridBuffer, TEXSLOT_ONDEMAND1, cmd);
@@ -7914,6 +7863,9 @@ void SurfelGI(
 	wiGraphics::CommandList cmd
 )
 {
+	if (!scene.TLAS.IsValid() && !scene.BVH.IsValid())
+		return;
+
 	auto prof_range = wiProfiler::BeginRangeGPU("SurfelGI", cmd);
 	device->EventBegin("SurfelGI", cmd);
 
@@ -8058,18 +8010,6 @@ void SurfelGI(
 	// Raytracing:
 	{
 		device->EventBegin("Raytrace", cmd);
-		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
-		{
-			if (!scene.TLAS.IsValid())
-			{
-				return;
-			}
-			device->BindResource(&scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
-		}
-		else
-		{
-			scene.BVH.Bind(cmd);
-		}
 
 		device->BindComputeShader(&shaders[CSTYPE_SURFEL_RAYTRACE], cmd);
 
@@ -8289,8 +8229,6 @@ void Postprocess_Blur_Bilateral(
 	}
 	device->BindComputeShader(&shaders[cs], cmd);
 
-	device->BindResource(&lineardepth, TEXSLOT_LINEARDEPTH, cmd);
-
 	// Horizontal:
 	{
 		const TextureDesc& desc = temp.GetDesc();
@@ -8397,7 +8335,6 @@ void CreateSSAOResources(SSAOResources& res, XMUINT2 resolution)
 }
 void Postprocess_SSAO(
 	const SSAOResources& res,
-	const Texture& depthbuffer,
 	const Texture& lineardepth,
 	const Texture& output,
 	CommandList cmd,
@@ -8410,9 +8347,6 @@ void Postprocess_SSAO(
 	auto prof_range = wiProfiler::BeginRangeGPU("SSAO", cmd);
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSAO], cmd);
-
-	device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
-	device->BindResource(&lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
 	const TextureDesc& desc = output.GetDesc();
 
@@ -8473,7 +8407,6 @@ void Postprocess_HBAO(
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_HBAO], cmd);
 
-	device->BindResource(&lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
 	const TextureDesc& desc = output.GetDesc();
 
@@ -8677,8 +8610,6 @@ void Postprocess_MSAO(
 	// Depth downsampling + deinterleaving pass1:
 	{
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_MSAO_PREPAREDEPTHBUFFERS1], cmd);
-
-		device->BindResource(&lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.texture_lineardepth_downsize1,
@@ -9087,10 +9018,6 @@ void CreateRTAOResources(RTAOResources& res, XMUINT2 resolution)
 void Postprocess_RTAO(
 	const RTAOResources& res,
 	const Scene& scene,
-	const Texture& depthbuffer,
-	const Texture& lineardepth,
-	const Texture& depth_history,
-	const Texture gbuffer[GBUFFER_COUNT],
 	const Texture& output,
 	CommandList cmd,
 	float range,
@@ -9100,10 +9027,8 @@ void Postprocess_RTAO(
 	if (!device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		return;
 
-	if (scene.objects.GetCount() <= 0)
-	{
+	if (!scene.TLAS.IsValid())
 		return;
-	}
 
 	device->EventBegin("Postprocess_RTAO", cmd);
 	auto prof_range = wiProfiler::BeginRangeGPU("RTAO", cmd);
@@ -9115,13 +9040,6 @@ void Postprocess_RTAO(
 	const TextureDesc& desc = output.GetDesc();
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTAO], cmd);
-
-	device->BindResource(&scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
-	device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
-	device->BindResource(&lineardepth, TEXSLOT_LINEARDEPTH, cmd);
-
-	device->BindResource(&gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
-	device->BindResource(&gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
@@ -9177,12 +9095,10 @@ void Postprocess_RTAO(
 		device->EventBegin("Denoise - Tile Classification", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTAO_DENOISE_TILECLASSIFICATION], cmd);
 
-		device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
 		device->BindResource(&res.normals, TEXSLOT_ONDEMAND0, cmd);
 		device->BindResource(&res.tiles, TEXSLOT_ONDEMAND1, cmd);
 		device->BindResource(&res.moments[temporal_history], TEXSLOT_ONDEMAND2, cmd);
 		device->BindResource(&res.scratch[1], TEXSLOT_ONDEMAND3, cmd);
-		device->BindResource(&depth_history, TEXSLOT_ONDEMAND4, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.scratch[0],
@@ -9225,7 +9141,6 @@ void Postprocess_RTAO(
 		device->EventBegin("Denoise - Filter", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTAO_DENOISE_FILTER], cmd);
 
-		device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
 		device->BindResource(&res.normals, TEXSLOT_ONDEMAND0, cmd);
 		device->BindResource(&res.metadata, TEXSLOT_ONDEMAND1, cmd);
 
@@ -9351,9 +9266,6 @@ void CreateRTReflectionResources(RTReflectionResources& res, XMUINT2 resolution)
 void Postprocess_RTReflection(
 	const RTReflectionResources& res,
 	const Scene& scene,
-	const Texture& depthbuffer,
-	const Texture& depth_history,
-	const Texture gbuffer[GBUFFER_COUNT],
 	const Texture& output,
 	CommandList cmd,
 	float range
@@ -9362,10 +9274,8 @@ void Postprocess_RTReflection(
 	if (!device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		return;
 
-	if (scene.objects.GetCount() <= 0)
-	{
+	if (!scene.TLAS.IsValid() && !scene.BVH.IsValid())
 		return;
-	}
 
 	device->EventBegin("Postprocess_RTReflection", cmd);
 	auto prof_range = wiProfiler::BeginRangeGPU("RTReflection", cmd);
@@ -9375,13 +9285,6 @@ void Postprocess_RTReflection(
 	device->BindRaytracingPipelineState(&RTPSO_reflection, cmd);
 
 	BindCommonResources(cmd);
-
-	device->BindResource(&scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
-	device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
-	device->BindResource(&gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
-	device->BindResource(&gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
-
-	device->BindResource(&depth_history, TEXSLOT_ONDEMAND2, cmd);
 
 	PostProcess postprocess;
 	postprocess.resolution.x = desc.Width;
@@ -9445,9 +9348,6 @@ void Postprocess_RTReflection(
 
 	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
-	device->BindResource(&gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
-	device->BindResource(&gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
-
 	int temporal_output = device->GetFrameCount() % 2;
 	int temporal_history = 1 - temporal_output;
 
@@ -9456,10 +9356,8 @@ void Postprocess_RTReflection(
 		device->EventBegin("Temporal pass", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_TEMPORAL], cmd);
 
-		device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
 		device->BindResource(&output, TEXSLOT_ONDEMAND0, cmd);
 		device->BindResource(&res.temporal[temporal_history], TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(&depth_history, TEXSLOT_ONDEMAND2, cmd);
 		device->BindResource(&res.rayLengths, TEXSLOT_ONDEMAND3, cmd);
 
 		const GPUResource* uavs[] = {
@@ -9497,7 +9395,6 @@ void Postprocess_RTReflection(
 		device->EventBegin("Median blur pass", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_MEDIAN], cmd);
 
-		device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
 		device->BindResource(&res.temporal[temporal_output], TEXSLOT_ONDEMAND0, cmd);
 
 		const GPUResource* uavs[] = {
@@ -9553,10 +9450,6 @@ void CreateSSRResources(SSRResources& res, XMUINT2 resolution)
 void Postprocess_SSR(
 	const SSRResources& res,
 	const Texture& input,
-	const Texture& depthbuffer,
-	const Texture& lineardepth,
-	const Texture& depth_history,
-	const Texture gbuffer[GBUFFER_COUNT],
 	const Texture& output,
 	CommandList cmd
 )
@@ -9569,11 +9462,6 @@ void Postprocess_SSR(
 
 	const TextureDesc& input_desc = input.GetDesc();
 	const TextureDesc& desc = output.GetDesc();
-
-	device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
-	device->BindResource(&lineardepth, TEXSLOT_LINEARDEPTH, cmd);
-	device->BindResource(&gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
-	device->BindResource(&gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
 
 	PostProcess postprocess;
 	postprocess.resolution.x = desc.Width;
@@ -9629,7 +9517,6 @@ void Postprocess_SSR(
 
 		device->BindResource(&res.texture_raytrace, TEXSLOT_ONDEMAND0, cmd);
 		device->BindResource(&input, TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(&depth_history, TEXSLOT_ONDEMAND2, cmd);
 
 		const GPUResource* uavs[] = {
 			&output,
@@ -9671,7 +9558,6 @@ void Postprocess_SSR(
 
 		device->BindResource(&output, TEXSLOT_ONDEMAND0, cmd);
 		device->BindResource(&res.texture_temporal[temporal_history], TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(&depth_history, TEXSLOT_ONDEMAND2, cmd);
 		device->BindResource(&res.rayLengths, TEXSLOT_ONDEMAND3, cmd);
 
 		const GPUResource* uavs[] = {
@@ -9798,11 +9684,7 @@ void CreateRTShadowResources(RTShadowResources& res, XMUINT2 resolution)
 void Postprocess_RTShadow(
 	const RTShadowResources& res,
 	const Scene& scene,
-	const Texture& depthbuffer,
-	const Texture& lineardepth,
-	const Texture& depth_history,
 	const GPUBuffer& entityTiles_Opaque,
-	const Texture gbuffer[GBUFFER_COUNT],
 	const Texture& output,
 	CommandList cmd
 )
@@ -9810,10 +9692,8 @@ void Postprocess_RTShadow(
 	if (!device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		return;
 
-	if (scene.objects.GetCount() <= 0)
-	{
+	if (!scene.TLAS.IsValid() && !scene.BVH.IsValid())
 		return;
-	}
 
 	device->EventBegin("Postprocess_RTShadow", cmd);
 	auto prof_range = wiProfiler::BeginRangeGPU("RTShadow", cmd);
@@ -9824,8 +9704,6 @@ void Postprocess_RTShadow(
 
 	device->EventBegin("Raytrace", cmd);
 
-	device->BindResource(&scene.TLAS, TEXSLOT_ACCELERATION_STRUCTURE, cmd);
-
 	PostProcess postprocess;
 	postprocess.resolution.x = desc.Width;
 	postprocess.resolution.y = desc.Height;
@@ -9835,12 +9713,6 @@ void Postprocess_RTShadow(
 	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTSHADOW], cmd);
-
-	device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
-	device->BindResource(&lineardepth, TEXSLOT_LINEARDEPTH, cmd);
-
-	device->BindResource(&gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
-	device->BindResource(&gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
 
 	const GPUResource* uavs[] = {
 		&res.temp,
@@ -9884,9 +9756,7 @@ void Postprocess_RTShadow(
 		device->EventBegin("Denoise - Tile Classification", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTSHADOW_DENOISE_TILECLASSIFICATION], cmd);
 
-		device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
 		device->BindResource(&res.normals, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(&depth_history, TEXSLOT_ONDEMAND1, cmd);
 		device->BindResource(&res.tiles, TEXSLOT_ONDEMAND2, cmd);
 		device->BindResource(&res.moments[0][temporal_history], TEXSLOT_ONDEMAND3, cmd);
 		device->BindResource(&res.moments[1][temporal_history], TEXSLOT_ONDEMAND4, cmd);
@@ -9956,7 +9826,6 @@ void Postprocess_RTShadow(
 		device->EventBegin("Denoise - Filter", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTSHADOW_DENOISE_FILTER], cmd);
 
-		device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
 		device->BindResource(&res.normals, TEXSLOT_ONDEMAND0, cmd);
 		device->BindResource(&res.metadata, TEXSLOT_ONDEMAND1, cmd);
 
@@ -10100,10 +9969,8 @@ void Postprocess_RTShadow(
 		device->EventBegin("Temporal Denoise", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTSHADOW_DENOISE_TEMPORAL], cmd);
 
-		device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
 		device->BindResource(&res.temp, TEXSLOT_ONDEMAND0, cmd);
 		device->BindResource(&res.temporal[temporal_history], TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(&depth_history, TEXSLOT_ONDEMAND2, cmd);
 		device->BindResource(&res.denoised, TEXSLOT_ONDEMAND3, cmd);
 
 		const GPUResource* uavs[] = {
@@ -10148,10 +10015,7 @@ void CreateScreenSpaceShadowResources(ScreenSpaceShadowResources& res, XMUINT2 r
 }
 void Postprocess_ScreenSpaceShadow(
 	const ScreenSpaceShadowResources& res,
-	const Texture& depthbuffer,
-	const Texture& lineardepth,
 	const GPUBuffer& entityTiles_Opaque,
-	const Texture gbuffer[GBUFFER_COUNT],
 	const Texture& output,
 	CommandList cmd,
 	float range,
@@ -10173,12 +10037,6 @@ void Postprocess_ScreenSpaceShadow(
 	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SCREENSPACESHADOW], cmd);
-
-	device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
-	device->BindResource(&lineardepth, TEXSLOT_LINEARDEPTH, cmd);
-
-	device->BindResource(&gbuffer[GBUFFER_PRIMITIVEID], TEXSLOT_GBUFFER0, cmd);
-	device->BindResource(&gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
@@ -10323,7 +10181,6 @@ void Postprocess_DepthOfField(
 	const DepthOfFieldResources& res,
 	const Texture& input,
 	const Texture& output,
-	const Texture& lineardepth,
 	CommandList cmd,
 	float coc_scale,
 	float max_coc
@@ -10331,8 +10188,6 @@ void Postprocess_DepthOfField(
 {
 	device->EventBegin("Postprocess_DepthOfField", cmd);
 	auto range = wiProfiler::BeginRangeGPU("Depth of Field", cmd);
-
-	device->BindResource(&lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
 	const TextureDesc& desc = output.GetDesc();
 
@@ -10769,8 +10624,6 @@ void CreateMotionBlurResources(MotionBlurResources& res, XMUINT2 resolution)
 void Postprocess_MotionBlur(
 	const MotionBlurResources& res,
 	const Texture& input,
-	const Texture& lineardepth,
-	const Texture gbuffer[GBUFFER_COUNT],
 	const Texture& output,
 	CommandList cmd,
 	float strength
@@ -10778,9 +10631,6 @@ void Postprocess_MotionBlur(
 {
 	device->EventBegin("Postprocess_MotionBlur", cmd);
 	auto range = wiProfiler::BeginRangeGPU("MotionBlur", cmd);
-
-	device->BindResource(&lineardepth, TEXSLOT_LINEARDEPTH, cmd);
-	device->BindResource(&gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
 
 	const TextureDesc& desc = output.GetDesc();
 
@@ -11037,7 +10887,6 @@ void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resol
 }
 void Postprocess_VolumetricClouds(
 	const VolumetricCloudResources& res,
-	const Texture& depthbuffer,
 	CommandList cmd
 )
 {
@@ -11063,7 +10912,6 @@ void Postprocess_VolumetricClouds(
 		device->EventBegin("Volumetric Cloud Rendering", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_RENDER], cmd);
 
-		device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
 		device->BindResource(&texture_shapeNoise, TEXSLOT_ONDEMAND1, cmd);
 		device->BindResource(&texture_detailNoise, TEXSLOT_ONDEMAND2, cmd);
 		device->BindResource(&texture_curlNoise, TEXSLOT_ONDEMAND3, cmd);
@@ -11117,7 +10965,6 @@ void Postprocess_VolumetricClouds(
 		device->EventBegin("Volumetric Cloud Reproject", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_REPROJECT], cmd);
 
-		device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
 		device->BindResource(&res.texture_cloudRender, TEXSLOT_ONDEMAND0, cmd);
 		device->BindResource(&res.texture_cloudDepth, TEXSLOT_ONDEMAND1, cmd);
 		device->BindResource(&res.texture_reproject[temporal_history], TEXSLOT_ONDEMAND2, cmd);
@@ -11161,7 +11008,6 @@ void Postprocess_VolumetricClouds(
 		device->EventBegin("Volumetric Cloud Temporal", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_TEMPORAL], cmd);
 
-		device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
 		device->BindResource(&res.texture_reproject[temporal_output], TEXSLOT_ONDEMAND0, cmd);
 		device->BindResource(&res.texture_reproject_depth[temporal_output], TEXSLOT_ONDEMAND1, cmd);
 		device->BindResource(&res.texture_temporal[temporal_history], TEXSLOT_ONDEMAND2, cmd);
@@ -11258,9 +11104,6 @@ void Postprocess_FXAA(
 void Postprocess_TemporalAA(
 	const Texture& input_current,
 	const Texture& input_history,
-	const Texture& lineardepth,
-	const Texture& depth_history,
-	const Texture gbuffer[GBUFFER_COUNT],
 	const Texture& output,
 	CommandList cmd
 )
@@ -11272,9 +11115,6 @@ void Postprocess_TemporalAA(
 
 	device->BindResource(&input_current, TEXSLOT_ONDEMAND0, cmd);
 	device->BindResource(&input_history, TEXSLOT_ONDEMAND1, cmd);
-	device->BindResource(&depth_history, TEXSLOT_ONDEMAND2, cmd);
-	device->BindResource(&lineardepth, TEXSLOT_LINEARDEPTH, cmd);
-	device->BindResource(&gbuffer[GBUFFER_VELOCITY], TEXSLOT_GBUFFER1, cmd);
 
 	const TextureDesc& desc = output.GetDesc();
 
@@ -11626,7 +11466,6 @@ void Postprocess_Upsample_Bilateral(
 		device->BindPipelineState(&PSO_upsample_bilateral, cmd);
 
 		device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(&lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
 		device->Draw(3, 0, cmd);
 	}
@@ -11664,7 +11503,6 @@ void Postprocess_Upsample_Bilateral(
 		device->BindComputeShader(&shaders[cs], cmd);
 
 		device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(&lineardepth, TEXSLOT_LINEARDEPTH, cmd);
 
 		const GPUResource* uavs[] = {
 			&output,
@@ -11766,8 +11604,7 @@ void Postprocess_NormalsFromDepth(
 	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_NORMALSFROMDEPTH], cmd);
-
-	device->BindResource(&depthbuffer, TEXSLOT_DEPTH, cmd);
+	device->BindResource(&depthbuffer, TEXSLOT_ONDEMAND0, cmd);
 
 	const GPUResource* uavs[] = {
 		&output,

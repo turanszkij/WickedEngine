@@ -1660,6 +1660,11 @@ namespace wiScene
 			}
 		}
 
+		if (!device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING) && IsAccelerationStructureUpdateRequested())
+		{
+			BVH.Update(*this);
+		}
+
 		// Update water ripples:
 		for (size_t i = 0; i < waterRipples.size(); ++i)
 		{
@@ -1746,9 +1751,7 @@ namespace wiScene
 		shaderscene.instancebuffer = device->GetDescriptorIndex(&instanceBuffer, SRV);
 		shaderscene.meshbuffer = device->GetDescriptorIndex(&meshBuffer, SRV);
 		shaderscene.materialbuffer = device->GetDescriptorIndex(&materialBuffer, SRV);
-		shaderscene.TLAS = device->GetDescriptorIndex(&TLAS, SRV);
 		shaderscene.envmaparray = device->GetDescriptorIndex(&envmapArray, SRV);
-
 		if (weather.skyMap == nullptr)
 		{
 			shaderscene.globalenvmap = -1;
@@ -1757,6 +1760,10 @@ namespace wiScene
 		{
 			shaderscene.globalenvmap = device->GetDescriptorIndex(&weather.skyMap->texture, SRV);
 		}
+		shaderscene.TLAS = device->GetDescriptorIndex(&TLAS, SRV);
+		shaderscene.BVH_counter = device->GetDescriptorIndex(&BVH.primitiveCounterBuffer, SRV);
+		shaderscene.BVH_nodes = device->GetDescriptorIndex(&BVH.bvhNodeBuffer, SRV);
+		shaderscene.BVH_primitives = device->GetDescriptorIndex(&BVH.primitiveBuffer, SRV);
 	}
 	void Scene::Clear()
 	{

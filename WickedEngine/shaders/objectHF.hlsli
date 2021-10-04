@@ -52,7 +52,7 @@ inline ShaderMaterial GetMaterial3()
 	return load_material(GetMesh().blendmaterial3);
 }
 
-#define sampler_objectshader			bindless_samplers[g_xFrame.ObjectShaderSamplerIndex]
+#define sampler_objectshader			bindless_samplers[g_xFrame.sampler_objectshader_index]
 
 #define texture_basecolormap			bindless_textures[GetMaterial().texture_basecolormap_index]
 #define texture_normalmap				bindless_textures[GetMaterial().texture_normalmap_index]

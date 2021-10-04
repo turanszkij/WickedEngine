@@ -7,12 +7,17 @@ struct ShaderScene
 	int instancebuffer;
 	int meshbuffer;
 	int materialbuffer;
-	int TLAS;
-
 	int envmaparray;
+
 	int globalenvmap;
+	int padding0;
 	int padding1;
 	int padding2;
+
+	int TLAS;
+	int BVH_counter;
+	int BVH_nodes;
+	int BVH_primitives;
 };
 
 static const uint SHADERMATERIAL_OPTION_BIT_USE_VERTEXCOLORS = 1 << 0;
@@ -806,8 +811,8 @@ struct FrameCB
 
 	float		ShadowKernel2D;
 	float		ShadowKernelCube;
-	int			ObjectShaderSamplerIndex;
 	float		BlueNoisePhase;
+	int			sampler_objectshader_index;
 
 	int			texture_random64x64_index;
 	int			texture_bluenoise_index;
@@ -900,7 +905,7 @@ struct CameraCB
 	int texture_rtshadow_index;
 
 	int texture_surfelgi_index;
-	int padding0;
+	int texture_depth_index_prev;
 	int padding1;
 	int padding2;
 };

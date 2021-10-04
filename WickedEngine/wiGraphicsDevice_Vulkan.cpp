@@ -4960,8 +4960,8 @@ using namespace Vulkan_Internal;
 
 		if (pDesc->type == RaytracingAccelerationStructureDesc::TOPLEVEL)
 		{
-			int index = allocationhandler->bindlessAccelerationStructures.allocate();
-			if (index >= 0)
+			internal_state->index = allocationhandler->bindlessAccelerationStructures.allocate();
+			if (internal_state->index >= 0)
 			{
 				VkWriteDescriptorSetAccelerationStructureKHR acc = {};
 				acc.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;
@@ -4972,7 +4972,7 @@ using namespace Vulkan_Internal;
 				write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 				write.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
 				write.dstBinding = 0;
-				write.dstArrayElement = index;
+				write.dstArrayElement = internal_state->index;
 				write.descriptorCount = 1;
 				write.dstSet = allocationhandler->bindlessAccelerationStructures.descriptorSet;
 				write.pNext = &acc;

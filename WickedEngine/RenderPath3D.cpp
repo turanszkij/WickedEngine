@@ -648,7 +648,6 @@ void RenderPath3D::Render() const
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
-		device->BindResource(&depthBuffer_Copy1, TEXSLOT_DEPTH, cmd);
 		wiRenderer::UpdateRenderDataAsync(visibility_main, frameCB, cmd);
 
 		if (scene->IsAccelerationStructureUpdateRequested())
@@ -755,8 +754,6 @@ void RenderPath3D::Render() const
 			wiRenderer::SurfelGI_Coverage(
 				surfelGIResources,
 				*scene,
-				depthBuffer_Copy,
-				rtGbuffer,
 				debugUAV,
 				cmd
 			);
@@ -767,8 +764,6 @@ void RenderPath3D::Render() const
 		if (wiRenderer::GetVariableRateShadingClassification() && device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2))
 		{
 			wiRenderer::ComputeShadingRateClassification(
-				rtGbuffer,
-				rtLinearDepth,
 				rtShadingRate,
 				debugUAV,
 				cmd
@@ -779,7 +774,6 @@ void RenderPath3D::Render() const
 		{
 			wiRenderer::Postprocess_VolumetricClouds(
 				volumetriccloudResources,
-				depthBuffer_Copy,
 				cmd
 			);
 		}
@@ -788,7 +782,6 @@ void RenderPath3D::Render() const
 			auto range = wiProfiler::BeginRangeGPU("Entity Culling", cmd);
 			wiRenderer::ComputeTiledLightCulling(
 				tiledLightResources,
-				depthBuffer_Copy,
 				debugUAV,
 				cmd
 			);
@@ -801,10 +794,7 @@ void RenderPath3D::Render() const
 		{
 			wiRenderer::Postprocess_ScreenSpaceShadow(
 				screenspaceshadowResources,
-				depthBuffer_Copy,
-				rtLinearDepth,
 				tiledLightResources.entityTiles_Opaque,
-				rtGbuffer,
 				rtShadow,
 				cmd,
 				getScreenSpaceShadowRange(),
@@ -817,11 +807,7 @@ void RenderPath3D::Render() const
 			wiRenderer::Postprocess_RTShadow(
 				rtshadowResources,
 				*scene,
-				depthBuffer_Copy,
-				rtLinearDepth,
-				depthBuffer_Copy1,
 				tiledLightResources.entityTiles_Opaque,
-				rtGbuffer,
 				rtShadow,
 				cmd
 			);
@@ -895,7 +881,6 @@ void RenderPath3D::Render() const
 			{
 				wiRenderer::Postprocess_VolumetricClouds(
 					volumetriccloudResources_reflection,
-					depthBuffer_Reflection,
 					cmd
 				);
 			}
@@ -920,7 +905,6 @@ void RenderPath3D::Render() const
 
 			wiRenderer::ComputeTiledLightCulling(
 				tiledLightResources_planarReflection,
-				depthBuffer_Reflection,
 				Texture(),
 				cmd
 			);
@@ -978,9 +962,6 @@ void RenderPath3D::Render() const
 			wiRenderer::Postprocess_RTReflection(
 				rtreflectionResources,
 				*scene,
-				depthBuffer_Copy,
-				depthBuffer_Copy1,
-				rtGbuffer,
 				rtSSR,
 				cmd
 			);
@@ -1119,7 +1100,6 @@ void RenderPath3D::RenderAO(CommandList cmd) const
 		case AO_SSAO:
 			wiRenderer::Postprocess_SSAO(
 				ssaoResources,
-				depthBuffer_Copy,
 				rtLinearDepth,
 				rtAO,
 				cmd,
@@ -1152,10 +1132,6 @@ void RenderPath3D::RenderAO(CommandList cmd) const
 			wiRenderer::Postprocess_RTAO(
 				rtaoResources,
 				*scene,
-				depthBuffer_Copy,
-				rtLinearDepth,
-				depthBuffer_Copy1,
-				rtGbuffer,
 				rtAO,
 				cmd,
 				getAORange(),
@@ -1171,11 +1147,7 @@ void RenderPath3D::RenderSSR(CommandList cmd) const
 	{
 		wiRenderer::Postprocess_SSR(
 			ssrResources,
-			rtSceneCopy, 
-			depthBuffer_Copy, 
-			rtLinearDepth,
-			depthBuffer_Copy1,
-			rtGbuffer,
+			rtSceneCopy,
 			rtSSR, 
 			cmd
 		);
@@ -1250,7 +1222,7 @@ void RenderPath3D::RenderVolumetrics(CommandList cmd) const
 		vp.Height = (float)rtVolumetricLights[0].GetDesc().Height;
 		device->BindViewports(1, &vp, cmd);
 
-		wiRenderer::DrawVolumeLights(visibility_main, depthBuffer_Copy, cmd);
+		wiRenderer::DrawVolumeLights(visibility_main, cmd);
 
 		device->RenderPassEnd(cmd);
 
@@ -1365,7 +1337,6 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 	{
 		wiRenderer::DrawLensFlares(
 			visibility_main,
-			depthBuffer_Copy,
 			cmd,
 			scene->weather.IsVolumetricClouds() ? &volumetriccloudResources.texture_cloudMask : nullptr
 		);
@@ -1406,10 +1377,7 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 			int output = device->GetFrameCount() % 2;
 			int history = 1 - output;
 			wiRenderer::Postprocess_TemporalAA(
-				*rt_read, rtTemporalAA[history], 
-				rtLinearDepth,
-				depthBuffer_Copy1,
-				rtGbuffer,
+				*rt_read, rtTemporalAA[history],
 				rtTemporalAA[output], 
 				cmd
 			);
@@ -1422,7 +1390,6 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 				depthoffieldResources,
 				rt_first == nullptr ? *rt_read : *rt_first,
 				*rt_write,
-				rtLinearDepth,
 				cmd,
 				getDepthOfFieldStrength()
 			);
@@ -1436,8 +1403,6 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 			wiRenderer::Postprocess_MotionBlur(
 				motionblurResources,
 				rt_first == nullptr ? *rt_read : *rt_first,
-				rtLinearDepth,
-				rtGbuffer,
 				*rt_write,
 				cmd,
 				getMotionBlurStrength()

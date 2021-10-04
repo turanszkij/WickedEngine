@@ -4,7 +4,6 @@
 PUSHCONSTANT(postprocess, PostProcess);
 
 TEXTURE2D(normals, float3, TEXSLOT_ONDEMAND0);
-TEXTURE2D(texture_depth_history, float, TEXSLOT_ONDEMAND1);
 STRUCTUREDBUFFER(tiles, uint4, TEXSLOT_ONDEMAND2);
 
 RWSTRUCTUREDBUFFER(metadata, uint4, 0);
