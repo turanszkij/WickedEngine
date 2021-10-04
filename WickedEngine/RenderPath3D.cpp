@@ -214,7 +214,6 @@ void RenderPath3D::ResizeBuffers()
 		device->CreateTexture(&desc, nullptr, &rtGUIBlurredBackground[2]);
 		device->SetName(&rtGUIBlurredBackground[2], "rtGUIBlurredBackground[2]");
 	}
-
 	if(device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2) &&
 		wiRenderer::GetVariableRateShadingClassification())
 	{
@@ -230,6 +229,9 @@ void RenderPath3D::ResizeBuffers()
 		device->CreateTexture(&desc, nullptr, &rtShadingRate);
 		device->SetName(&rtShadingRate, "rtShadingRate");
 	}
+	rtAO = {};
+	rtShadow = {};
+	rtSSR = {};
 
 	// Depth buffers:
 	{
