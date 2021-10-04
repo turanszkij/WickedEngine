@@ -19,7 +19,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
     
 	uv = float2(FromSubUvsToUnit(uv.x, multiScatteringLUTRes.x), FromSubUvsToUnit(uv.y, multiScatteringLUTRes.y));
 
-	AtmosphereParameters atmosphere = g_xFrame.Atmosphere;
+	AtmosphereParameters atmosphere = GetWeather().atmosphere;
     
 	float cosSunZenithAngle = uv.x * 2.0 - 1.0;
 	float3 sunDirection = float3(0.0, sqrt(saturate(1.0 - cosSunZenithAngle * cosSunZenithAngle)), cosSunZenithAngle);

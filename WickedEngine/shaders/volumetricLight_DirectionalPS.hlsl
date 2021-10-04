@@ -71,7 +71,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 	float3 atmosphereTransmittance = 1;
 	if (g_xFrame.Options & OPTION_BIT_REALISTIC_SKY)
 	{
-		atmosphereTransmittance = GetAtmosphericLightTransmittance(g_xFrame.Atmosphere, P, L, texture_transmittancelut);
+		atmosphereTransmittance = GetAtmosphericLightTransmittance(GetWeather().atmosphere, P, L, texture_transmittancelut);
 	}
 
 	return max(0, float4(accumulation * light.GetColor().rgb * light.GetEnergy() * atmosphereTransmittance, 1));

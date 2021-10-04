@@ -3059,19 +3059,7 @@ void UpdatePerFrameData(
 	frameCB.InternalResolution = float2((float)internalResolution.x, (float)internalResolution.y);
 	frameCB.InternalResolution_rcp = float2(1.0f / frameCB.InternalResolution.x, 1.0f / frameCB.InternalResolution.y);
 	frameCB.Gamma = GetGamma();
-	frameCB.SunColor = vis.scene->weather.sunColor;
-	frameCB.SunDirection = vis.scene->weather.sunDirection;
-	frameCB.SunEnergy = vis.scene->weather.sunEnergy;
 	frameCB.ShadowCascadeCount = CASCADE_COUNT;
-	frameCB.Ambient = vis.scene->weather.ambient;
-	frameCB.Cloudiness = vis.scene->weather.cloudiness;
-	frameCB.CloudScale = vis.scene->weather.cloudScale;
-	frameCB.CloudSpeed = vis.scene->weather.cloudSpeed;
-	frameCB.Fog = float4(vis.scene->weather.fogStart, vis.scene->weather.fogEnd, vis.scene->weather.fogHeightStart, vis.scene->weather.fogHeightEnd);
-	frameCB.FogHeightSky = vis.scene->weather.fogHeightSky;
-	frameCB.Horizon = vis.scene->weather.horizon;
-	frameCB.Zenith = vis.scene->weather.zenith;
-	frameCB.SkyExposure = vis.scene->weather.skyExposure;
 	frameCB.VoxelRadianceMaxDistance = voxelSceneData.maxDistance;
 	frameCB.VoxelRadianceDataSize = voxelSceneData.voxelsize;
 	frameCB.VoxelRadianceDataSize_rcp = 1.0f / (float)frameCB.VoxelRadianceDataSize;
@@ -3106,10 +3094,6 @@ void UpdatePerFrameData(
 	frameCB.DeltaTime = dt * GetGameSpeed();
 	frameCB.TimePrev = frameCB.Time;
 	frameCB.Time += frameCB.DeltaTime;
-	frameCB.WindSpeed = vis.scene->weather.windSpeed;
-	frameCB.WindRandomness = vis.scene->weather.windRandomness;
-	frameCB.WindWaveSize = vis.scene->weather.windWaveSize;
-	frameCB.WindDirection = vis.scene->weather.windDirection;
 	frameCB.StaticSkyGamma = 0.0f;
 	if (vis.scene->weather.skyMap != nullptr)
 	{
@@ -3142,15 +3126,6 @@ void UpdatePerFrameData(
 	}
 	frameCB.ShadowKernel2D = 1.0f / SHADOWRES_2D;
 	frameCB.ShadowKernelCube = 1.0f / SHADOWRES_CUBE;
-
-	frameCB.WorldBoundsMin = vis.scene->bounds.getMin();
-	frameCB.WorldBoundsMax = vis.scene->bounds.getMax();
-	frameCB.WorldBoundsExtents.x = abs(frameCB.WorldBoundsMax.x - frameCB.WorldBoundsMin.x);
-	frameCB.WorldBoundsExtents.y = abs(frameCB.WorldBoundsMax.y - frameCB.WorldBoundsMin.y);
-	frameCB.WorldBoundsExtents.z = abs(frameCB.WorldBoundsMax.z - frameCB.WorldBoundsMin.z);
-	frameCB.WorldBoundsExtents_rcp.x = 1.0f / frameCB.WorldBoundsExtents.x;
-	frameCB.WorldBoundsExtents_rcp.y = 1.0f / frameCB.WorldBoundsExtents.y;
-	frameCB.WorldBoundsExtents_rcp.z = 1.0f / frameCB.WorldBoundsExtents.z;
 
 	frameCB.BlueNoisePhase = (frameCB.FrameCount & 0xFF) * 1.6180339887f;
 
@@ -3209,8 +3184,6 @@ void UpdatePerFrameData(
 		frameCB.Options |= OPTION_BIT_FORCE_DIFFUSE_LIGHTING;
 	}
 
-	frameCB.Atmosphere = vis.scene->weather.atmosphereParameters;
-	frameCB.VolumetricClouds = vis.scene->weather.volumetricCloudParameters;
 	frameCB.scene = vis.scene->shaderscene;
 
 	frameCB.sampler_objectshader_index = device->GetDescriptorIndex(&samplers[SSLOT_OBJECTSHADER]);

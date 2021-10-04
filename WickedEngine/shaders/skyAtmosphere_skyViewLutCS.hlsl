@@ -8,7 +8,7 @@ RWTEXTURE2D(output, float4, 0);
 [numthreads(8, 8, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	AtmosphereParameters atmosphere = g_xFrame.Atmosphere;
+	AtmosphereParameters atmosphere = GetWeather().atmosphere;
     
 	float2 pixelPosition = float2(DTid.xy) + 0.5;
 	float2 uv = pixelPosition * rcp(skyViewLUTRes);

@@ -29,6 +29,10 @@ ShaderScene GetScene()
 {
 	return g_xFrame.scene;
 }
+ShaderWeather GetWeather()
+{
+	return GetScene().weather;
+}
 CameraCB GetCamera()
 {
 	return g_xCamera;
@@ -110,12 +114,12 @@ inline bool is_saturated(float4 a) { return is_saturated(a.x) && is_saturated(a.
 #define DEGAMMA(x)		pow(abs(x),g_xFrame.Gamma)
 #define GAMMA(x)		pow(abs(x),1.0/g_xFrame.Gamma)
 
-inline float3 GetSunColor() { return g_xFrame.SunColor; }
-inline float3 GetSunDirection() { return g_xFrame.SunDirection; }
-inline float GetSunEnergy() { return g_xFrame.SunEnergy; }
-inline float3 GetHorizonColor() { return g_xFrame.Horizon.rgb; }
-inline float3 GetZenithColor() { return g_xFrame.Zenith.rgb; }
-inline float3 GetAmbientColor() { return g_xFrame.Ambient.rgb; }
+inline float3 GetSunColor() { return GetWeather().sun_color; }
+inline float3 GetSunDirection() { return GetWeather().sun_direction; }
+inline float GetSunEnergy() { return GetWeather().sun_energy; }
+inline float3 GetHorizonColor() { return GetWeather().horizon.rgb; }
+inline float3 GetZenithColor() { return GetWeather().zenith.rgb; }
+inline float3 GetAmbientColor() { return GetWeather().ambient.rgb; }
 inline float2 GetInternalResolution() { return g_xFrame.InternalResolution; }
 inline float GetTime() { return g_xFrame.Time; }
 inline uint2 GetTemporalAASampleRotation() { return uint2((g_xFrame.TemporalAASampleRotation >> 0u) & 0x000000FF, (g_xFrame.TemporalAASampleRotation >> 8) & 0x000000FF); }
@@ -128,13 +132,12 @@ inline bool IsStaticSky() { return GetScene().globalenvmap >= 0; }
 //	V			: sample to point vector
 inline float GetFogAmount(float distance, float3 O, float3 V)
 {
-	float fogDensity = saturate((distance - g_xFrame.Fog.x) / (g_xFrame.Fog.y - g_xFrame.Fog.x));
+	ShaderFog fog = GetWeather().fog;
+	float fogDensity = saturate((distance - fog.start) / (fog.end - fog.start));
 
 	if (g_xFrame.Options & OPTION_BIT_HEIGHT_FOG)
 	{
-		float fogHeightStart = g_xFrame.Fog.z;
-		float fogHeightEnd = g_xFrame.Fog.w;
-		float fogFalloffScale = 1.0 / max(0.01, fogHeightEnd - fogHeightStart);
+		float fogFalloffScale = 1.0 / max(0.01, fog.height_end - fog.height_start);
 
 		// solve for x, e^(-h * x) = 0.001
 		// x = 6.907755 * h^-1
@@ -146,9 +149,9 @@ inline float GetFogAmount(float distance, float3 O, float3 V)
 
 		float endLineHeight = originHeight + distance * Z; // Isolated vector equation for y
 		float minLineHeight = min(originHeight, endLineHeight);
-		float heightLineFalloff = max(minLineHeight - fogHeightStart, 0);
+		float heightLineFalloff = max(minLineHeight - fog.height_start, 0);
 		
-		float baseHeightFogDistance = clamp((fogHeightStart - minLineHeight) / effectiveZ, 0, distance);
+		float baseHeightFogDistance = clamp((fog.height_start - minLineHeight) / effectiveZ, 0, distance);
 		float exponentialFogDistance = distance - baseHeightFogDistance; // Exclude distance below base height
 		float exponentialHeightLineIntegral = exp(-heightLineFalloff * fogFalloff) * (1.0 - exp(-exponentialFogDistance * effectiveZ * fogFalloff)) / (effectiveZ * fogFalloff);
 		

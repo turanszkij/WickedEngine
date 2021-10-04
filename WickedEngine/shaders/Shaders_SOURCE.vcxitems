@@ -2836,5 +2836,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Raytracing.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Renderer.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_SurfelGI.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Weather.h" />
   </ItemGroup>
 </Project>

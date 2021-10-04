@@ -208,9 +208,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			patchPos = mul(patchPos, TBN);
 
 			// simplistic wind effect only affects the top, but leaves the base as is:
-			const float waveoffset = dot(rootposition, g_xFrame.WindDirection) * g_xFrame.WindWaveSize + rand / 255.0f * g_xFrame.WindRandomness;
-			const float3 wavedir = g_xFrame.WindDirection * (segmentID + patchPos.y);
-			const float3 wind = sin(g_xFrame.Time * g_xFrame.WindSpeed + waveoffset) * wavedir;
+			const float waveoffset = dot(rootposition, GetWeather().wind.direction) * GetWeather().wind.wavesize + rand / 255.0f * GetWeather().wind.randomness;
+			const float3 wavedir = GetWeather().wind.direction * (segmentID + patchPos.y);
+			const float3 wind = sin(g_xFrame.Time * GetWeather().wind.speed + waveoffset) * wavedir;
 
 			float3 position = rootposition + patchPos + wind;
 

@@ -8,7 +8,7 @@
 
 float3 AccurateAtmosphericScattering(Texture2D<float4> skyViewLutTexture, Texture2D<float4> transmittanceLUT, Texture2D<float4> multiScatteringLUT, float3 rayOrigin, float3 rayDirection, float3 sunDirection, float sunEnergy, float3 sunColor, bool enableSun, bool darkMode, bool stationary)
 {
-    AtmosphereParameters atmosphere = g_xFrame.Atmosphere;
+    AtmosphereParameters atmosphere = GetWeather().atmosphere;
 
     float3 worldDirection = rayDirection;
 
@@ -119,7 +119,7 @@ float3 CustomAtmosphericScattering(float3 V, float3 sunDirection, float3 sunColo
     const float zenith = V.y; // how much is above (0: horizon, 1: directly above)
     const float sunScatter = saturate(sunDirection.y + 0.1f); // how much the sun is directly above. Even if sunis at horizon, we add a constant scattering amount so that light still scatters at horizon
 
-    const float atmosphereDensity = 0.5 + g_xFrame.FogHeightSky; // constant of air density, or "fog height" as interpreted here (bigger is more obstruction of sun)
+    const float atmosphereDensity = 0.5 + GetWeather().fog.height_sky; // constant of air density, or "fog height" as interpreted here (bigger is more obstruction of sun)
     const float zenithDensity = atmosphereDensity / pow(max(0.000001f, zenith), 0.75f);
     const float sunScatterDensity = atmosphereDensity / pow(max(0.000001f, sunScatter), 0.75f);
 
@@ -153,7 +153,7 @@ float3 CustomAtmosphericScattering(float3 V, float3 sunDirection, float3 sunColo
 
 void CalculateClouds(inout float3 sky, float3 V, bool dark_enabled)
 {
-    if (g_xFrame.Cloudiness <= 0)
+    if (GetWeather().cloudiness <= 0)
     {
         return;
     }
@@ -171,8 +171,8 @@ void CalculateClouds(inout float3 sky, float3 V, bool dark_enabled)
     }
 
     const float3 cloudPos = o + d * t;
-    const float2 cloudUV = cloudPos.xz * g_xFrame.CloudScale;
-    const float cloudTime = g_xFrame.Time * g_xFrame.CloudSpeed;
+    const float2 cloudUV = cloudPos.xz * GetWeather().cloud_scale;
+    const float cloudTime = g_xFrame.Time * GetWeather().cloud_speed;
     const float2x2 m = float2x2(1.6, 1.2, -1.2, 1.6);
     const uint quality = 8;
 
@@ -224,8 +224,8 @@ void CalculateClouds(inout float3 sky, float3 V, bool dark_enabled)
 
 
     // lerp between "choppy clouds" and "uniform clouds". Lower cloudiness will produce choppy clouds, but very high cloudiness will switch to overcast unfiform clouds:
-    clouds = lerp(clouds * 9.0f * g_xFrame.Cloudiness + 0.3f, clouds * 0.5f + 0.5f, pow(saturate(g_xFrame.Cloudiness), 8));
-    clouds = saturate(clouds - (1 - g_xFrame.Cloudiness)); // modulate constant cloudiness
+    clouds = lerp(clouds * 9.0f * GetWeather().cloudiness + 0.3f, clouds * 0.5f + 0.5f, pow(saturate(GetWeather().cloudiness), 8));
+    clouds = saturate(clouds - (1 - GetWeather().cloudiness)); // modulate constant cloudiness
     clouds *= pow(1 - saturate(length(abs(cloudPos.xz * 0.00001f))), 16); //fade close to horizon
 
     if (dark_enabled)
@@ -244,7 +244,7 @@ float3 GetDynamicSkyColor(in float3 V, bool sun_enabled = true, bool clouds_enab
 {
     if (g_xFrame.Options & OPTION_BIT_SIMPLE_SKY)
     {
-        return lerp(GetHorizonColor(), GetZenithColor(), saturate(V.y * 0.5f + 0.5f)) * g_xFrame.SkyExposure;
+        return lerp(GetHorizonColor(), GetZenithColor(), saturate(V.y * 0.5f + 0.5f)) * GetWeather().sky_exposure;
     }
 
     const float3 sunDirection = GetSunDirection();
@@ -282,7 +282,7 @@ float3 GetDynamicSkyColor(in float3 V, bool sun_enabled = true, bool clouds_enab
         );
     }
 
-	sky *= g_xFrame.SkyExposure;
+	sky *= GetWeather().sky_exposure;
 
     if (clouds_enabled)
     {
