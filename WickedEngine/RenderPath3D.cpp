@@ -146,16 +146,6 @@ void RenderPath3D::ResizeBuffers()
 	}
 	{
 		TextureDesc desc;
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.Format = FORMAT_R32G32B32A32_UINT;
-		desc.Width = internalResolution.x / 2;
-		desc.Height = internalResolution.y / 2;
-		desc.layout = RESOURCE_STATE_SHADER_RESOURCE_COMPUTE;
-		device->CreateTexture(&desc, nullptr, &rtShadow);
-		device->SetName(&rtShadow, "rtShadow");
-	}
-	{
-		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		desc.Format = FORMAT_R11G11B10_FLOAT;
 		desc.Width = internalResolution.x;
@@ -596,10 +586,35 @@ void RenderPath3D::Update(float dt)
 	{
 		rtshadowResources.frame = 0;
 	}
+	if (!getSSREnabled() && !getRaytracedReflectionEnabled())
+	{
+		rtSSR = {};
+	}
+	if (getAO() == AO_DISABLED)
+	{
+		rtAO = {};
+	}
+	if (!wiRenderer::GetScreenSpaceShadowsEnabled() && !wiRenderer::GetRaytracedShadowsEnabled())
+	{
+		rtShadow = {};
+	}
+
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
+	if((wiRenderer::GetScreenSpaceShadowsEnabled() || wiRenderer::GetRaytracedShadowsEnabled()) && !rtShadow.IsValid())
+	{
+		TextureDesc desc;
+		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.Format = FORMAT_R32G32B32A32_UINT;
+		desc.Width = internalResolution.x / 2;
+		desc.Height = internalResolution.y / 2;
+		desc.layout = RESOURCE_STATE_SHADER_RESOURCE_COMPUTE;
+		device->CreateTexture(&desc, nullptr, &rtShadow);
+		device->SetName(&rtShadow, "rtShadow");
+	}
 
 	std::swap(depthBuffer_Copy, depthBuffer_Copy1);
 
-	GraphicsDevice* device = wiRenderer::GetDevice();
 	camera->texture_depth_index = device->GetDescriptorIndex(&depthBuffer_Copy, SRV);
 	camera->texture_lineardepth_index = device->GetDescriptorIndex(&rtLinearDepth, SRV);
 	camera->texture_gbuffer0_index = device->GetDescriptorIndex(&rtGbuffer[GBUFFER_PRIMITIVEID], SRV);
