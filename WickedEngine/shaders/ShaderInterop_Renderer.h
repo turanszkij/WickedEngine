@@ -619,6 +619,7 @@ struct CameraCB
 	float2 InternalResolution_rcp;
 
 	uint3 EntityCullingTileCount;
+	int padding0;
 
 	int texture_depth_index;
 	int texture_lineardepth_index;
