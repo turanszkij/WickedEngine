@@ -47,14 +47,14 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
     [branch]
     if (backgroundFactor < 1.0f)
     {
-        const float2 ringScale = 0.5f * coc * g_xCamera.ApertureShape * postprocess.resolution_rcp;
+        const float2 ringScale = 0.5f * coc * GetCamera().ApertureShape * postprocess.resolution_rcp;
         [unroll]
         for (uint i = ringSampleCount[0]; i < ringSampleCount[1]; ++i)
         {
             const float2 uv2 = uv + ringScale * disc[i].xy;
             const float depth = texture_lineardepth.SampleLevel(sampler_point_clamp, uv2, 1);
             const float3 color = max(0, input.SampleLevel(sampler_linear_clamp, uv2, 0).rgb);
-            const float weight = saturate(abs(depth - center_depth) * g_xCamera.ZFarP * 2);
+            const float weight = saturate(abs(depth - center_depth) * GetCamera().ZFarP * 2);
             prefilter += lerp(color, center_color, weight);
         }
         prefilter *= ringNormFactor[1];

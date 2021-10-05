@@ -120,7 +120,7 @@ inline float GetSunEnergy() { return GetWeather().sun_energy; }
 inline float3 GetHorizonColor() { return GetWeather().horizon.rgb; }
 inline float3 GetZenithColor() { return GetWeather().zenith.rgb; }
 inline float3 GetAmbientColor() { return GetWeather().ambient.rgb; }
-inline float2 GetInternalResolution() { return g_xFrame.InternalResolution; }
+inline uint2 GetInternalResolution() { return GetCamera().InternalResolution; }
 inline float GetTime() { return g_xFrame.Time; }
 inline uint2 GetTemporalAASampleRotation() { return uint2((g_xFrame.TemporalAASampleRotation >> 0u) & 0x000000FF, (g_xFrame.TemporalAASampleRotation >> 8) & 0x000000FF); }
 inline bool IsStaticSky() { return GetScene().globalenvmap >= 0; }

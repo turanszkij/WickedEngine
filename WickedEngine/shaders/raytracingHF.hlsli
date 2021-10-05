@@ -17,11 +17,11 @@ struct RayDesc
 
 inline RayDesc CreateCameraRay(float2 clipspace)
 {
-	float4 unprojected = mul(g_xCamera.InvVP, float4(clipspace, 0, 1));
+	float4 unprojected = mul(GetCamera().InvVP, float4(clipspace, 0, 1));
 	unprojected.xyz /= unprojected.w;
 
 	RayDesc ray;
-	ray.Origin = g_xCamera.CamPos;
+	ray.Origin = GetCamera().CamPos;
 	ray.Direction = normalize(unprojected.xyz - ray.Origin);
 	ray.TMin = 0.001;
 	ray.TMax = FLT_MAX;

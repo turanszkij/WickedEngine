@@ -21,13 +21,13 @@ float4 main(VertexToPixel input) : SV_Target
 	color *= material.baseColor;
 
 	float opacity = 1;
-	float3 V = g_xCamera.CamPos - input.pos3D;
+	float3 V = GetCamera().CamPos - input.pos3D;
 	float dist = length(V);
 	V /= dist;
 	float emissive = 0;
 
 	const uint2 pixel = input.pos.xy;
-	const float2 ScreenCoord = pixel * g_xFrame.InternalResolution_rcp;
+	const float2 ScreenCoord = pixel * GetCamera().InternalResolution_rcp;
 
 	Surface surface;
 	surface.create(material, color, 0);
@@ -40,9 +40,9 @@ float4 main(VertexToPixel input) : SV_Target
 #ifndef ENVMAPRENDERING
 #ifndef TRANSPARENT
 	[branch]
-	if (g_xCamera.texture_ao_index >= 0)
+	if (GetCamera().texture_ao_index >= 0)
 	{
-		surface.occlusion *= bindless_textures_float[g_xCamera.texture_ao_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).r;
+		surface.occlusion *= bindless_textures_float[GetCamera().texture_ao_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).r;
 	}
 #endif // TRANSPARENT
 #endif // ENVMAPRENDERING
@@ -61,7 +61,7 @@ float4 main(VertexToPixel input) : SV_Target
 
 	ApplyLighting(surface, lighting, color);
 
-	ApplyFog(dist, g_xCamera.CamPos, V, color);
+	ApplyFog(dist, GetCamera().CamPos, V, color);
 
 	return color;
 }

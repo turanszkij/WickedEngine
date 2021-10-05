@@ -51,14 +51,14 @@ bool IntersectsDepthBuffer(float sceneZMax, float rayZMin, float rayZMax)
 bool ScreenSpaceRayTrace(float3 csOrig, float3 csDir, float jitter, float roughness, out float2 hitPixel, out float3 hitPoint, out float iterations)
 {
 	csOrig += csDir * 0.001; // precision issues in DX12
-	float rayLength = ((csOrig.z + csDir.z * rayTraceMaxDistance) < g_xCamera.ZNearP) ?
-        (g_xCamera.ZNearP - csOrig.z) / csDir.z : rayTraceMaxDistance;
+	float rayLength = ((csOrig.z + csDir.z * rayTraceMaxDistance) < GetCamera().ZNearP) ?
+        (GetCamera().ZNearP - csOrig.z) / csDir.z : rayTraceMaxDistance;
     
 	float3 csRayEnd = csOrig + csDir * rayLength;
 
     // Project into homogeneous clip space
-	float4 clipRayOrigin = mul(g_xCamera.Proj, float4(csOrig, 1.0f));
-	float4 clipRayEnd = mul(g_xCamera.Proj, float4(csRayEnd, 1.0f));
+	float4 clipRayOrigin = mul(GetCamera().Proj, float4(csOrig, 1.0f));
+	float4 clipRayEnd = mul(GetCamera().Proj, float4(csRayEnd, 1.0f));
     
 	float k0 = 1.0f / clipRayOrigin.w;
 	float k1 = 1.0f / clipRayEnd.w;
@@ -203,7 +203,7 @@ bool ScreenSpaceRayTrace(float3 csOrig, float3 csDir, float jitter, float roughn
 		hitPixel = permute ? PQk.yx : PQk.xy;
 		hitPixel *= postprocess.resolution_rcp;
         
-		sceneZMax = texture_lineardepth.SampleLevel(sampler_linear_clamp, hitPixel, level) * g_xCamera.ZFarP;
+		sceneZMax = texture_lineardepth.SampleLevel(sampler_linear_clamp, hitPixel, level) * GetCamera().ZFarP;
 	}
     
     // Undo the last increment, which ran after the test variables were set up
@@ -241,8 +241,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	}
 
 	// Everything in view space:
-	float3 N = normalize(mul((float3x3)g_xCamera.View, surface.N));
-	float3 P = reconstructPosition(uv, depth, g_xCamera.InvP);
+	float3 N = normalize(mul((float3x3)GetCamera().View, surface.N));
+	float3 P = reconstructPosition(uv, depth, GetCamera().InvP);
 	float3 V = normalize(-P);
 	const float roughness = GetRoughness(surface.roughness);
     
@@ -347,7 +347,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	if (hit)
 	{
-		const float3 Phit = reconstructPosition(uv, hitDepth, g_xCamera.InvP);
+		const float3 Phit = reconstructPosition(uv, hitDepth, GetCamera().InvP);
 		texture_rayLengths[DTid.xy] = distance(P, Phit);
 	}
 	else

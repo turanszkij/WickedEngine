@@ -5,10 +5,10 @@ PUSHCONSTANT(postprocess, PostProcess);
 
 inline float get_coc(in float linear_depth)
 {
-    return min(dof_maxcoc, dof_cocscale * g_xCamera.ApertureSize * pow(abs(1 - g_xCamera.FocalLength / (linear_depth * g_xCamera.ZFarP)), 2.0f));
+    return min(dof_maxcoc, dof_cocscale * GetCamera().ApertureSize * pow(abs(1 - GetCamera().FocalLength / (linear_depth * GetCamera().ZFarP)), 2.0f));
 }
 
-#define DOF_DEPTH_SCALE_FOREGROUND (g_xCamera.ZFarP * 1.5)
+#define DOF_DEPTH_SCALE_FOREGROUND (GetCamera().ZFarP * 1.5)
 float2 DepthCmp2(float depth, float closestTileDepth)
 {
     float d = DOF_DEPTH_SCALE_FOREGROUND * (depth - closestTileDepth);

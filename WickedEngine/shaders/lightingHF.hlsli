@@ -332,7 +332,7 @@ inline float3 GetAmbient(in float3 N)
 
 #else
 
-	ambient = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(N, g_xFrame.GlobalEnvProbeIndex), g_xFrame.EnvProbeMipCount).rgb;
+	ambient = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(N, 0), g_xFrame.EnvProbeMipCount).rgb;
 
 #endif // ENVMAPRENDERING
 
@@ -366,18 +366,18 @@ inline float3 EnvironmentReflection_Global(in Surface surface)
 #else
 
 	float MIP = surface.roughness * g_xFrame.EnvProbeMipCount;
-	envColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(surface.R, g_xFrame.GlobalEnvProbeIndex), MIP).rgb * surface.F;
+	envColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(surface.R, 0), MIP).rgb * surface.F;
 
 #ifdef BRDF_SHEEN
 	envColor *= surface.sheen.albedoScaling;
 	MIP = surface.sheen.roughness * g_xFrame.EnvProbeMipCount;
-	envColor += texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(surface.R, g_xFrame.GlobalEnvProbeIndex), MIP).rgb * surface.sheen.color * surface.sheen.DFG;
+	envColor += texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(surface.R, 0), MIP).rgb * surface.sheen.color * surface.sheen.DFG;
 #endif // BRDF_SHEEN
 
 #ifdef BRDF_CLEARCOAT
 	envColor *= 1 - surface.clearcoat.F;
 	MIP = surface.clearcoat.roughness * g_xFrame.EnvProbeMipCount;
-	envColor += texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(surface.clearcoat.R, g_xFrame.GlobalEnvProbeIndex), MIP).rgb * surface.clearcoat.F;
+	envColor += texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(surface.clearcoat.R, 0), MIP).rgb * surface.clearcoat.F;
 #endif // BRDF_CLEARCOAT
 
 #endif // ENVMAPRENDERING

@@ -509,7 +509,7 @@ void RenderClouds(float3 rayOrigin, float3 rayDirection, float t, float steps, f
 		}
 
 
-		float rayDepth = distance(g_xCamera.CamPos, sampleWorldPosition);
+		float rayDepth = distance(GetCamera().CamPos, sampleWorldPosition);
 		float lod = step(GetWeather().volumetric_clouds.LODDistance, rayDepth) + GetWeather().volumetric_clouds.LODMin;
 		float cloudDensity = saturate(SampleCloudDensity(sampleWorldPosition, heightFraction, weatherData, windOffset, windDirection, lod, true));
         
@@ -584,10 +584,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float y = (1 - uv.y) * 2 - 1;
 	float2 screenPosition = float2(x, y);
 	
-	float4 unprojected = mul(g_xCamera.InvVP, float4(screenPosition, 0, 1));
+	float4 unprojected = mul(GetCamera().InvVP, float4(screenPosition, 0, 1));
 	unprojected.xyz /= unprojected.w;
 
-	float3 rayOrigin = g_xCamera.CamPos;
+	float3 rayOrigin = GetCamera().CamPos;
 	float3 rayDirection = normalize(unprojected.xyz - rayOrigin);
 
 

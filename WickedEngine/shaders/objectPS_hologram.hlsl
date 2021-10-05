@@ -31,14 +31,14 @@ float4 main(PixelInput input) : SV_TARGET
 	color.rgb += emissiveColor;
 
 	float time = g_xFrame.Time;
-	float2 uv = input.pos.xy * g_xFrame.InternalResolution_rcp;
-	uv.y *= g_xFrame.InternalResolution.y * g_xFrame.InternalResolution_rcp.x;
+	float2 uv = input.pos.xy * GetCamera().InternalResolution_rcp;
+	uv.y *= GetCamera().InternalResolution.y * GetCamera().InternalResolution_rcp.x;
 
 	// wave:
 	color.a *= sin(input.pos3D.y * 30 + time * 10) * 0.5 + 0.5;
 
 	// rim:
-	color *= lerp(0.3, 6, pow(1 - saturate(dot(normalize(input.nor), normalize(g_xCamera.CamPos - input.pos3D))), 2));
+	color *= lerp(0.3, 6, pow(1 - saturate(dot(normalize(input.nor), normalize(GetCamera().CamPos - input.pos3D))), 2));
 
 	// keep some base color
 	color.a += 0.2;

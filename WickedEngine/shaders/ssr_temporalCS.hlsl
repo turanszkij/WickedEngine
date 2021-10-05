@@ -109,7 +109,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 		return;
 	}
 
-	const float3 P = reconstructPosition(uv, depth, g_xCamera.InvP);
+	const float3 P = reconstructPosition(uv, depth, GetCamera().InvP);
 
 	PrimitiveID prim;
 	prim.unpack(texture_gbuffer0[DTid.xy * 2]);
@@ -133,9 +133,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 		if (rayLength > 0)
 		{
 			const float3 P = reconstructPosition(uv, depth);
-			const float3 V = normalize(g_xCamera.CamPos - P);
+			const float3 V = normalize(GetCamera().CamPos - P);
 			const float3 rayEnd = P - V * rayLength;
-			float4 rayEndPrev = mul(g_xCamera.PrevVP, float4(rayEnd, 1));
+			float4 rayEndPrev = mul(GetCamera().PrevVP, float4(rayEnd, 1));
 			rayEndPrev.xy /= rayEndPrev.w;
 			prevUV = rayEndPrev.xy * float2(0.5, -0.5) + 0.5;
 		}

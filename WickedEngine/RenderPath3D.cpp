@@ -486,7 +486,7 @@ void RenderPath3D::ResizeBuffers()
 		device->SetName(&debugUAV, "debugUAV");
 	}
 	wiRenderer::CreateTiledLightResources(tiledLightResources, internalResolution);
-	wiRenderer::CreateTiledLightResources(tiledLightResources_planarReflection, internalResolution);
+	wiRenderer::CreateTiledLightResources(tiledLightResources_planarReflection, XMUINT2(depthBuffer_Reflection.desc.Width, depthBuffer_Reflection.desc.Height));
 	wiRenderer::CreateLuminanceResources(luminanceResources, internalResolution);
 	wiRenderer::CreateScreenSpaceShadowResources(screenspaceshadowResources, internalResolution);
 	wiRenderer::CreateDepthOfFieldResources(depthoffieldResources, internalResolution);
@@ -563,8 +563,6 @@ void RenderPath3D::Update(float dt)
 		*scene,
 		visibility_main,
 		frameCB,
-		internalResolution,
-		*this,
 		dt
 	);
 
@@ -617,6 +615,9 @@ void RenderPath3D::Update(float dt)
 
 	std::swap(depthBuffer_Copy, depthBuffer_Copy1);
 
+	camera->canvas = *this;
+	camera->width = (float)internalResolution.x;
+	camera->height = (float)internalResolution.y;
 	camera->texture_depth_index = device->GetDescriptorIndex(&depthBuffer_Copy, SRV);
 	camera->texture_lineardepth_index = device->GetDescriptorIndex(&rtLinearDepth, SRV);
 	camera->texture_gbuffer0_index = device->GetDescriptorIndex(&rtGbuffer[GBUFFER_PRIMITIVEID], SRV);
@@ -631,6 +632,9 @@ void RenderPath3D::Update(float dt)
 	camera->texture_rtshadow_index = device->GetDescriptorIndex(&rtShadow, SRV);
 	camera->texture_surfelgi_index = device->GetDescriptorIndex(&surfelGIResources.result, SRV);
 
+	camera_reflection.canvas = *this;
+	camera_reflection.width = (float)depthBuffer_Reflection.desc.Width;
+	camera_reflection.height = (float)depthBuffer_Reflection.desc.Height;
 	camera_reflection.texture_depth_index = device->GetDescriptorIndex(&depthBuffer_Reflection, SRV);
 	camera_reflection.texture_lineardepth_index = -1;
 	camera_reflection.texture_gbuffer0_index = -1;
@@ -665,7 +669,7 @@ void RenderPath3D::Render() const
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
-		wiRenderer::UpdateRenderDataAsync(visibility_main, frameCB, cmd);
+		wiRenderer::UpdateRenderDataAsync(visibility_main, cmd);
 
 		if (scene->IsAccelerationStructureUpdateRequested())
 		{

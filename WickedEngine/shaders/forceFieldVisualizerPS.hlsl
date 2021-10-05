@@ -30,7 +30,7 @@ float4 main(PSIn input) : SV_TARGET
 	}
 
 	float2 pTex = input.pos2D.xy / input.pos2D.w * float2(0.5f, -0.5f) + 0.5f;
-	float4 depthScene = texture_lineardepth.GatherRed(sampler_linear_clamp, pTex) * g_xCamera.ZFarP;
+	float4 depthScene = texture_lineardepth.GatherRed(sampler_linear_clamp, pTex) * GetCamera().ZFarP;
 	float depthFragment = input.pos2D.w;
 	float fade = saturate(1.0 / forceField.GetConeAngleCos() * abs(forceField.GetEnergy()) * (max(max(depthScene.x, depthScene.y), max(depthScene.z, depthScene.w)) - depthFragment));
 	color.a *= fade;

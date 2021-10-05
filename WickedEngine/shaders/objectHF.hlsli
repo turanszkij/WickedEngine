@@ -385,12 +385,12 @@ inline void NormalMapping(in float4 uvsets, inout float3 N, in float3x3 TBN, out
 inline float3 PlanarReflection(in Surface surface, in float2 bumpColor)
 {
 	[branch]
-	if (g_xCamera.texture_reflection_index >= 0)
+	if (GetCamera().texture_reflection_index >= 0)
 	{
-		float4 reflectionUV = mul(g_xCamera.ReflVP, float4(surface.P, 1));
+		float4 reflectionUV = mul(GetCamera().ReflVP, float4(surface.P, 1));
 		reflectionUV.xy /= reflectionUV.w;
 		reflectionUV.xy = reflectionUV.xy * float2(0.5, -0.5) + 0.5;
-		return bindless_textures[g_xCamera.texture_reflection_index].SampleLevel(sampler_linear_clamp, reflectionUV.xy + bumpColor * GetMaterial().normalMapStrength, 0).rgb;
+		return bindless_textures[GetCamera().texture_reflection_index].SampleLevel(sampler_linear_clamp, reflectionUV.xy + bumpColor * GetMaterial().normalMapStrength, 0).rgb;
 	}
 	return 0;
 }
@@ -632,7 +632,7 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 {
 	const uint2 tileIndex = uint2(floor(surface.pixel / TILED_CULLING_BLOCKSIZE));
-	const uint flatTileIndex = flatten2D(tileIndex, g_xFrame.EntityCullingTileCount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
+	const uint flatTileIndex = flatten2D(tileIndex, GetCamera().EntityCullingTileCount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
 
 
 #ifndef DISABLE_DECALS
@@ -811,9 +811,9 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 		uint4 shadow_mask_packed = 0;
 #ifdef SHADOW_MASK_ENABLED
 		[branch]
-		if (g_xFrame.Options & OPTION_BIT_SHADOW_MASK && g_xCamera.texture_rtshadow_index >= 0)
+		if (g_xFrame.Options & OPTION_BIT_SHADOW_MASK && GetCamera().texture_rtshadow_index >= 0)
 		{
-			shadow_mask_packed = bindless_textures_uint4[g_xCamera.texture_rtshadow_index][surface.pixel / 2];
+			shadow_mask_packed = bindless_textures_uint4[GetCamera().texture_rtshadow_index][surface.pixel / 2];
 		}
 #endif // SHADOW_MASK_ENABLED
 
@@ -904,9 +904,9 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 
 #ifndef TRANSPARENT
 	[branch]
-	if (g_xFrame.Options & OPTION_BIT_SURFELGI_ENABLED && g_xCamera.texture_surfelgi_index >= 0 && surfel_cellvalid(surfel_cell(surface.P)))
+	if (g_xFrame.Options & OPTION_BIT_SURFELGI_ENABLED && GetCamera().texture_surfelgi_index >= 0 && surfel_cellvalid(surfel_cell(surface.P)))
 	{
-		lighting.indirect.diffuse = bindless_textures[g_xCamera.texture_surfelgi_index][surface.pixel].rgb;
+		lighting.indirect.diffuse = bindless_textures[GetCamera().texture_surfelgi_index][surface.pixel].rgb;
 	}
 #endif // TRANSPARENT
 
@@ -955,11 +955,11 @@ PixelInput main(VertexInput input)
 	Out.pos = surface.position;
 
 #ifndef OBJECTSHADER_USE_NOCAMERA
-	Out.pos = mul(g_xCamera.VP, Out.pos);
+	Out.pos = mul(GetCamera().VP, Out.pos);
 #endif // OBJECTSHADER_USE_NOCAMERA
 
 #ifdef OBJECTSHADER_USE_CLIPPLANE
-	Out.clip = dot(surface.position, g_xCamera.ClipPlane);
+	Out.clip = dot(surface.position, GetCamera().ClipPlane);
 #endif // OBJECTSHADER_USE_CLIPPLANE
 
 #ifdef OBJECTSHADER_USE_POSITION3D
@@ -1040,7 +1040,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 	const float depth = input.pos.z;
 	const float lineardepth = input.pos.w;
 	const float2 pixel = input.pos.xy;
-	const float2 ScreenCoord = pixel * g_xFrame.InternalResolution_rcp;
+	const float2 ScreenCoord = pixel * GetCamera().InternalResolution_rcp;
 	float3 bumpColor = 0;
 
 #ifndef DISABLE_ALPHATEST
@@ -1069,7 +1069,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 
 #ifdef OBJECTSHADER_USE_POSITION3D
 	surface.P = input.pos3D;
-	surface.V = g_xCamera.CamPos - surface.P;
+	surface.V = GetCamera().CamPos - surface.P;
 	float dist = length(surface.V);
 	surface.V /= dist;
 #endif // OBJECTSHADER_USE_POSITION3D
@@ -1470,9 +1470,9 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 #ifndef ENVMAPRENDERING
 #ifndef TRANSPARENT
 	[branch]
-	if (g_xCamera.texture_ao_index >= 0)
+	if (GetCamera().texture_ao_index >= 0)
 	{
-		surface.occlusion *= bindless_textures_float[g_xCamera.texture_ao_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).r;
+		surface.occlusion *= bindless_textures_float[GetCamera().texture_ao_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).r;
 	}
 #endif // TRANSPARENT
 #endif // ENVMAPRENDERING
@@ -1575,22 +1575,22 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 		bumpColor1 = 2 * texture_normalmap.Sample(sampler_objectshader, UV_normalMap + GetMaterial().texMulAdd.zw).rg - 1;
 	}
 	[branch]
-	if (g_xCamera.texture_waterriples_index >= 0)
+	if (GetCamera().texture_waterriples_index >= 0)
 	{
-		bumpColor2 = bindless_textures_float2[g_xCamera.texture_waterriples_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).rg;
+		bumpColor2 = bindless_textures_float2[GetCamera().texture_waterriples_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0).rg;
 	}
 	bumpColor = float3(bumpColor0 + bumpColor1 + bumpColor2, 1)  * GetMaterial().refraction;
 	surface.N = normalize(lerp(surface.N, mul(normalize(bumpColor), TBN), GetMaterial().normalMapStrength));
 	bumpColor *= GetMaterial().normalMapStrength;
 
 	[branch]
-	if (g_xCamera.texture_reflection_index >= 0)
+	if (GetCamera().texture_reflection_index >= 0)
 	{
 		//REFLECTION
-		float4 reflectionUV = mul(g_xCamera.ReflVP, float4(surface.P, 1));
+		float4 reflectionUV = mul(GetCamera().ReflVP, float4(surface.P, 1));
 		reflectionUV.xy /= reflectionUV.w;
 		reflectionUV.xy = reflectionUV.xy * float2(0.5, -0.5) + 0.5;
-		lighting.indirect.specular += bindless_textures[g_xCamera.texture_reflection_index].SampleLevel(sampler_linear_mirror, reflectionUV.xy + bumpColor.rg, 0).rgb * surface.F;
+		lighting.indirect.specular += bindless_textures[GetCamera().texture_reflection_index].SampleLevel(sampler_linear_mirror, reflectionUV.xy + bumpColor.rg, 0).rgb * surface.F;
 	}
 #endif // WATER
 
@@ -1613,13 +1613,13 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 #endif // OBJECTSHADER_USE_UVSETS
 
 		[branch]
-		if (g_xCamera.texture_refraction_index >= 0)
+		if (GetCamera().texture_refraction_index >= 0)
 		{
-			Texture2D texture_refraction = bindless_textures[g_xCamera.texture_refraction_index];
+			Texture2D texture_refraction = bindless_textures[GetCamera().texture_refraction_index];
 			float2 size;
 			float mipLevels;
 			texture_refraction.GetDimensions(0, size.x, size.y, mipLevels);
-			const float2 normal2D = mul((float3x3)g_xCamera.View, surface.N.xyz).xy;
+			const float2 normal2D = mul((float3x3)GetCamera().View, surface.N.xyz).xy;
 			float2 perturbatedRefrTexCoords = ScreenCoord.xy + normal2D * GetMaterial().refraction;
 			float4 refractiveColor = texture_refraction.SampleLevel(sampler_linear_clamp, perturbatedRefrTexCoords, surface.roughness * mipLevels);
 			surface.refraction.rgb = surface.albedo * refractiveColor.rgb;
@@ -1658,9 +1658,9 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 #ifndef ENVMAPRENDERING
 #ifndef TRANSPARENT
 	[branch]
-	if (g_xCamera.texture_ssr_index >= 0)
+	if (GetCamera().texture_ssr_index >= 0)
 	{
-		float4 ssr = bindless_textures[g_xCamera.texture_ssr_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0);
+		float4 ssr = bindless_textures[GetCamera().texture_ssr_index].SampleLevel(sampler_linear_clamp, ScreenCoord, 0);
 		lighting.indirect.specular = lerp(lighting.indirect.specular, ssr.rgb * surface.F, ssr.a);
 	}
 #endif // TRANSPARENT
@@ -1670,17 +1670,17 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 
 #ifdef WATER
 	[branch]
-	if (g_xCamera.texture_refraction_index >= 0)
+	if (GetCamera().texture_refraction_index >= 0)
 	{
 		// WATER REFRACTION
-		Texture2D texture_refraction = bindless_textures[g_xCamera.texture_refraction_index];
-		float sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy + bumpColor.rg, 0) * g_xCamera.ZFarP;
+		Texture2D texture_refraction = bindless_textures[GetCamera().texture_refraction_index];
+		float sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy + bumpColor.rg, 0) * GetCamera().ZFarP;
 		float depth_difference = sampled_lineardepth - lineardepth;
 		surface.refraction.rgb = texture_refraction.SampleLevel(sampler_linear_mirror, ScreenCoord.xy + bumpColor.rg * saturate(0.5 * depth_difference), 0).rgb;
 		if (depth_difference < 0)
 		{
 			// Fix cutoff by taking unperturbed depth diff to fill the holes with fog:
-			sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy, 0) * g_xCamera.ZFarP;
+			sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy, 0) * GetCamera().ZFarP;
 			depth_difference = sampled_lineardepth - lineardepth;
 		}
 		// WATER FOG:
@@ -1702,7 +1702,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 
 
 #ifdef OBJECTSHADER_USE_POSITION3D
-	ApplyFog(dist, g_xCamera.CamPos, surface.V, color);
+	ApplyFog(dist, GetCamera().CamPos, surface.V, color);
 #endif // OBJECTSHADER_USE_POSITION3D
 
 

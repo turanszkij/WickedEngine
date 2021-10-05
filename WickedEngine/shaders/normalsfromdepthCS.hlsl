@@ -50,7 +50,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	const float center_Z = tile_Z[cross_idx[0]];
 
 	[branch]
-	if (center_Z >= g_xCamera.ZFarP)
+	if (center_Z >= GetCamera().ZFarP)
 		return;
 
 	const uint best_Z_horizontal = abs(tile_Z[cross_idx[1]] - center_Z) < abs(tile_Z[cross_idx[2]] - center_Z) ? 1 : 2;

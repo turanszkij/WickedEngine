@@ -225,12 +225,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		uint infrustum = 1;
 		float3 center = (base + tip) * 0.5;
 		float radius = -len;
-		infrustum &= distance(base, g_xCamera.CamPos.xyz) < xHairViewDistance;
-		infrustum &= dot(g_xCamera.FrustumPlanes[0], float4(center, 1)) > radius;
-		infrustum &= dot(g_xCamera.FrustumPlanes[2], float4(center, 1)) > radius;
-		infrustum &= dot(g_xCamera.FrustumPlanes[3], float4(center, 1)) > radius;
-		infrustum &= dot(g_xCamera.FrustumPlanes[4], float4(center, 1)) > radius;
-		infrustum &= dot(g_xCamera.FrustumPlanes[5], float4(center, 1)) > radius;
+		infrustum &= distance(base, GetCamera().CamPos.xyz) < xHairViewDistance;
+		infrustum &= dot(GetCamera().FrustumPlanes[0], float4(center, 1)) > radius;
+		infrustum &= dot(GetCamera().FrustumPlanes[2], float4(center, 1)) > radius;
+		infrustum &= dot(GetCamera().FrustumPlanes[3], float4(center, 1)) > radius;
+		infrustum &= dot(GetCamera().FrustumPlanes[4], float4(center, 1)) > radius;
+		infrustum &= dot(GetCamera().FrustumPlanes[5], float4(center, 1)) > radius;
 
 		if (infrustum)
 		{

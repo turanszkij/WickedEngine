@@ -159,7 +159,7 @@ void CalculateClouds(inout float3 sky, float3 V, bool dark_enabled)
     }
 
     // Trace a cloud layer plane:
-    const float3 o = g_xCamera.CamPos;
+    const float3 o = GetCamera().CamPos;
     const float3 d = V;
     const float3 planeOrigin = float3(0, 1000, 0);
     const float3 planeNormal = float3(0, -1, 0);
@@ -260,7 +260,7 @@ float3 GetDynamicSkyColor(in float3 V, bool sun_enabled = true, bool clouds_enab
             texture_skyviewlut,          // Sky View Lut (combination of precomputed atmospheric LUTs)
             texture_transmittancelut,
             texture_multiscatteringlut,
-            g_xCamera.CamPos,           // Ray origin
+            GetCamera().CamPos,           // Ray origin
             V,                          // Ray direction
             sunDirection,               // Position of the sun
             sunEnergy,                  // Sun energy

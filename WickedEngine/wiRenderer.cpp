@@ -3024,8 +3024,6 @@ void UpdatePerFrameData(
 	Scene& scene,
 	const Visibility& vis,
 	FrameCB& frameCB,
-	XMUINT2 internalResolution,
-	const wiCanvas& canvas,
 	float dt
 )
 {
@@ -3054,10 +3052,6 @@ void UpdatePerFrameData(
 
 	// Update CPU-side frame constant buffer:
 	frameCB.ConstantOne = 1;
-	frameCB.CanvasSize = float2(canvas.GetLogicalWidth(), canvas.GetLogicalHeight());
-	frameCB.CanvasSize_rcp = float2(1.0f / frameCB.CanvasSize.x, 1.0f / frameCB.CanvasSize.y);
-	frameCB.InternalResolution = float2((float)internalResolution.x, (float)internalResolution.y);
-	frameCB.InternalResolution_rcp = float2(1.0f / frameCB.InternalResolution.x, 1.0f / frameCB.InternalResolution.y);
 	frameCB.Gamma = GetGamma();
 	frameCB.ShadowCascadeCount = CASCADE_COUNT;
 	frameCB.VoxelRadianceMaxDistance = voxelSceneData.maxDistance;
@@ -3070,7 +3064,6 @@ void UpdatePerFrameData(
 	frameCB.VoxelRadianceNumCones_rcp = 1.0f / (float)frameCB.VoxelRadianceNumCones;
 	frameCB.VoxelRadianceRayStepSize = voxelSceneData.rayStepSize;
 	frameCB.VoxelRadianceDataCenter = voxelSceneData.center;
-	frameCB.EntityCullingTileCount = GetEntityCullingTileCount(internalResolution);
 
 	// The order is very important here:
 	frameCB.DecalArrayOffset = 0;
@@ -3082,7 +3075,6 @@ void UpdatePerFrameData(
 	frameCB.ForceFieldArrayOffset = frameCB.LightArrayOffset + frameCB.LightArrayCount;
 	frameCB.ForceFieldArrayCount = (uint)vis.scene->forces.GetCount();
 
-	frameCB.GlobalEnvProbeIndex = 0;
 	frameCB.EnvProbeMipCount = 0;
 	frameCB.EnvProbeMipCount_rcp = 1.0f;
 	if (vis.scene->envmapArray.IsValid())
@@ -3875,7 +3867,6 @@ void UpdateRenderData(
 
 void UpdateRenderDataAsync(
 	const Visibility& vis,
-	const FrameCB& frameCB,
 	CommandList cmd
 )
 {
@@ -7407,6 +7398,14 @@ void BindCameraCB(
 	cb.FocalLength = camera.focal_length;
 	cb.ApertureSize = camera.aperture_size;
 	cb.ApertureShape = camera.aperture_shape;
+
+
+	cb.CanvasSize = float2(camera.canvas.GetLogicalWidth(), camera.canvas.GetLogicalHeight());
+	cb.CanvasSize_rcp = float2(1.0f / cb.CanvasSize.x, 1.0f / cb.CanvasSize.y);
+	cb.InternalResolution = uint2((uint)camera.width, (uint)camera.height);
+	cb.InternalResolution_rcp = float2(1.0f / cb.InternalResolution.x, 1.0f / cb.InternalResolution.y);
+
+	cb.EntityCullingTileCount = GetEntityCullingTileCount(cb.InternalResolution);
 
 	cb.texture_depth_index = camera.texture_depth_index;
 	cb.texture_lineardepth_index = camera.texture_lineardepth_index;

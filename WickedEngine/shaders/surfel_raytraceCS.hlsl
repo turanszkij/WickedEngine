@@ -383,19 +383,19 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	life++;
 
-	float3 cam_to_surfel = surfel.position - g_xCamera.CamPos;
+	float3 cam_to_surfel = surfel.position - GetCamera().CamPos;
 	if (length(cam_to_surfel) > SURFEL_RECYCLE_DISTANCE)
 	{
 #if 1
 		uint infrustum = 1;
 		float3 center = surfel.position;
 		float radius = -surfel.GetRadius();
-		infrustum &= dot(g_xCamera.FrustumPlanes[0], float4(center, 1)) > radius;
-		infrustum &= dot(g_xCamera.FrustumPlanes[1], float4(center, 1)) > radius;
-		infrustum &= dot(g_xCamera.FrustumPlanes[2], float4(center, 1)) > radius;
-		infrustum &= dot(g_xCamera.FrustumPlanes[3], float4(center, 1)) > radius;
-		infrustum &= dot(g_xCamera.FrustumPlanes[4], float4(center, 1)) > radius;
-		infrustum &= dot(g_xCamera.FrustumPlanes[5], float4(center, 1)) > radius;
+		infrustum &= dot(GetCamera().FrustumPlanes[0], float4(center, 1)) > radius;
+		infrustum &= dot(GetCamera().FrustumPlanes[1], float4(center, 1)) > radius;
+		infrustum &= dot(GetCamera().FrustumPlanes[2], float4(center, 1)) > radius;
+		infrustum &= dot(GetCamera().FrustumPlanes[3], float4(center, 1)) > radius;
+		infrustum &= dot(GetCamera().FrustumPlanes[4], float4(center, 1)) > radius;
+		infrustum &= dot(GetCamera().FrustumPlanes[5], float4(center, 1)) > radius;
 		if (infrustum)
 		{
 			recycle = 0;
@@ -405,7 +405,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			recycle++;
 		}
 #else
-		if (dot(cam_to_surfel, g_xCamera.At) < 0)
+		if (dot(cam_to_surfel, GetCamera().At) < 0)
 		{
 			recycle++;
 		}

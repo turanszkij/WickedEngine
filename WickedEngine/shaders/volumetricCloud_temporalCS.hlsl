@@ -86,7 +86,7 @@ inline void ResolverAABB(Texture2D<float4> currentColor, SamplerState currentSam
 	
 	float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 1).r; // Half res
 	float3 depthWorldPosition = reconstructPosition(uv, depth);
-	float tToDepthBuffer = length(depthWorldPosition - g_xCamera.CamPos);
+	float tToDepthBuffer = length(depthWorldPosition - GetCamera().CamPos);
 	
 	float validSampleCount = 1.0;
 	
@@ -143,13 +143,13 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	
     // Calculate screen dependant motion vector
     float4 prevPos = float4(uv * 2.0 - 1.0, 1.0, 1.0);
-    prevPos = mul(g_xCamera.InvP, prevPos);
+    prevPos = mul(GetCamera().InvP, prevPos);
     prevPos = prevPos / prevPos.w;
 	
-    prevPos.xyz = mul((float3x3)g_xCamera.InvV, prevPos.xyz);
-    prevPos.xyz = mul((float3x3)g_xCamera.PrevV, prevPos.xyz);
+    prevPos.xyz = mul((float3x3)GetCamera().InvV, prevPos.xyz);
+    prevPos.xyz = mul((float3x3)GetCamera().PrevV, prevPos.xyz);
 	
-    float4 reproj = mul(g_xCamera.Proj, prevPos);
+    float4 reproj = mul(GetCamera().Proj, prevPos);
     reproj /= reproj.w;
 	
     float2 prevUV = reproj.xy * 0.5 + 0.5;
@@ -163,14 +163,14 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float2 screenPosition = float2(x, y);
 
 	float currentCloudLinearDepth = cloud_reproject_depth[DTid.xy].x;
-	float currentCloudDepth = getInverseLinearDepth(currentCloudLinearDepth, g_xCamera.ZNearP, g_xCamera.ZFarP);
+	float currentCloudDepth = getInverseLinearDepth(currentCloudLinearDepth, GetCamera().ZNearP, GetCamera().ZFarP);
 	
 	float4 thisClip = float4(screenPosition, currentCloudDepth, 1.0);
 	
-	float4 prevClip = mul(g_xCamera.InvVP, thisClip);
-	prevClip = mul(g_xCamera.PrevVP, prevClip);
+	float4 prevClip = mul(GetCamera().InvVP, thisClip);
+	prevClip = mul(GetCamera().PrevVP, prevClip);
 	
-	//float4 prevClip = mul(g_xCamera.PrevVP, worldPosition);
+	//float4 prevClip = mul(GetCamera().PrevVP, worldPosition);
 	float2 prevScreen = prevClip.xy / prevClip.w;
 	
 	float2 screenVelocity = screenPosition - prevScreen;

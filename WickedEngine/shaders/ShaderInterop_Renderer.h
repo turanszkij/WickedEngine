@@ -496,12 +496,6 @@ static const uint OPTION_BIT_FORCE_DIFFUSE_LIGHTING = 1 << 12;
 
 struct FrameCB
 {
-	float2		CanvasSize;
-	float2		CanvasSize_rcp;
-
-	float2		InternalResolution;
-	float2		InternalResolution_rcp;
-
 	float		Gamma;
 	uint		ShadowCascadeCount;
 	uint		ConstantOne;						// Just a constant 1 value as uint (can be used to force disable loop unrolling)
@@ -519,9 +513,6 @@ struct FrameCB
 
 	float3		VoxelRadianceDataCenter;			// center of the voxel grid in world space units
 	uint		Options;							// wiRenderer bool options packed into bitmask
-
-	uint3		EntityCullingTileCount;
-	int			GlobalEnvProbeIndex;
 
 	uint		EnvProbeMipCount;
 	float		EnvProbeMipCount_rcp;
@@ -619,6 +610,15 @@ struct CameraCB
 	float2		ApertureShape;
 	float		ApertureSize;
 	float		FocalLength;
+
+
+	float2 CanvasSize;
+	float2 CanvasSize_rcp;
+		   
+	uint2 InternalResolution;
+	float2 InternalResolution_rcp;
+
+	uint3 EntityCullingTileCount;
 
 	int texture_depth_index;
 	int texture_lineardepth_index;
