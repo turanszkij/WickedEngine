@@ -11,7 +11,7 @@ TEXTURE2D(texture_gradientmap, float4, TEXSLOT_ONDEMAND1);
 float4 main(PSIn input) : SV_TARGET
 {
 	float4 color = xOceanWaterColor;
-	float3 V = g_xCamera.CamPos - input.pos3D;
+	float3 V = GetCamera().CamPos - input.pos3D;
 	float dist = length(V);
 	V /= dist;
 	float emissive = 0;
@@ -40,33 +40,42 @@ float4 main(PSIn input) : SV_TARGET
 	TiledLighting(surface, lighting);
 
 	float2 refUV = float2(1, -1)*input.ReflectionMapSamplingPos.xy / input.ReflectionMapSamplingPos.w * 0.5f + 0.5f;
-	float2 ScreenCoord = surface.pixel * g_xFrame.InternalResolution_rcp;
+	float2 ScreenCoord = surface.pixel * GetCamera().InternalResolution_rcp;
 
-	//REFLECTION
-	float2 RefTex = float2(1, -1)*input.ReflectionMapSamplingPos.xy / input.ReflectionMapSamplingPos.w / 2.0f + 0.5f;
-	float4 reflectiveColor = texture_reflection.SampleLevel(sampler_linear_mirror, RefTex + surface.N.xz * 0.04f, 0);
-	lighting.indirect.specular = reflectiveColor.rgb * surface.F;
-
-	// WATER REFRACTION 
-	float lineardepth = input.pos.w;
-	float sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy + surface.N.xz * 0.04f, 0) * g_xCamera.ZFarP;
-	float depth_difference = sampled_lineardepth - lineardepth;
-	surface.refraction.rgb = texture_refraction.SampleLevel(sampler_linear_mirror, ScreenCoord.xy + surface.N.xz * 0.04f * saturate(0.5 * depth_difference), 0).rgb;
-	if (depth_difference < 0)
+	[branch]
+	if (GetCamera().texture_reflection_index >= 0)
 	{
-		// Fix cutoff by taking unperturbed depth diff to fill the holes with fog:
-		sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy, 0) * g_xCamera.ZFarP;
-		depth_difference = sampled_lineardepth - lineardepth;
+		//REFLECTION
+		float2 RefTex = float2(1, -1) * input.ReflectionMapSamplingPos.xy / input.ReflectionMapSamplingPos.w / 2.0f + 0.5f;
+		float4 reflectiveColor = bindless_textures[GetCamera().texture_reflection_index].SampleLevel(sampler_linear_mirror, RefTex + surface.N.xz * 0.04f, 0);
+		lighting.indirect.specular = reflectiveColor.rgb * surface.F;
 	}
-	// WATER FOG:
-	surface.refraction.a = 1 - saturate(color.a * 0.1f * depth_difference);
+
+	[branch]
+	if (GetCamera().texture_refraction_index >= 0)
+	{
+		// WATER REFRACTION 
+		Texture2D texture_refraction = bindless_textures[GetCamera().texture_refraction_index];
+		float lineardepth = input.pos.w;
+		float sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy + surface.N.xz * 0.04f, 0) * GetCamera().ZFarP;
+		float depth_difference = sampled_lineardepth - lineardepth;
+		surface.refraction.rgb = texture_refraction.SampleLevel(sampler_linear_mirror, ScreenCoord.xy + surface.N.xz * 0.04f * saturate(0.5 * depth_difference), 0).rgb;
+		if (depth_difference < 0)
+		{
+			// Fix cutoff by taking unperturbed depth diff to fill the holes with fog:
+			sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy, 0) * GetCamera().ZFarP;
+			depth_difference = sampled_lineardepth - lineardepth;
+		}
+		// WATER FOG:
+		surface.refraction.a = 1 - saturate(color.a * 0.1f * depth_difference);
+	}
 
 	// Blend out at distance:
-	color.a = pow(saturate(1 - saturate(dist / g_xCamera.ZFarP)), 2);
+	color.a = pow(saturate(1 - saturate(dist / GetCamera().ZFarP)), 2);
 
 	ApplyLighting(surface, lighting, color);
 
-	ApplyFog(dist, g_xCamera.CamPos, V, color);
+	ApplyFog(dist, GetCamera().CamPos, V, color);
 
 	return color;
 }

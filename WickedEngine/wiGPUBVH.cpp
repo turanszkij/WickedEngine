@@ -32,19 +32,6 @@ void wiGPUBVH::Update(const wiScene::Scene& scene)
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	if (!primitiveCounterBuffer.IsValid())
-	{
-		GPUBufferDesc desc;
-		desc.BindFlags = BIND_SHADER_RESOURCE;
-		desc.Stride = sizeof(uint);
-		desc.Size = desc.Stride;
-		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
-		desc.Usage = USAGE_DEFAULT;
-		device->CreateBuffer(&desc, nullptr, &primitiveCounterBuffer);
-		device->SetName(&primitiveCounterBuffer, "primitiveCounterBuffer");
-	}
-
 	// Pre-gather scene properties:
 	uint totalTriangles = 0;
 	for (size_t i = 0; i < scene.objects.GetCount(); ++i)
@@ -68,6 +55,24 @@ void wiGPUBVH::Update(const wiScene::Scene& scene)
 		}
 	}
 
+	if (totalTriangles > 0 && !primitiveCounterBuffer.IsValid())
+	{
+		GPUBufferDesc desc;
+		desc.BindFlags = BIND_SHADER_RESOURCE;
+		desc.Stride = sizeof(uint);
+		desc.Size = desc.Stride;
+		desc.Format = FORMAT_UNKNOWN;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
+		desc.Usage = USAGE_DEFAULT;
+		device->CreateBuffer(&desc, nullptr, &primitiveCounterBuffer);
+		device->SetName(&primitiveCounterBuffer, "primitiveCounterBuffer");
+	}
+
+	if (totalTriangles == 0)
+	{
+		primitiveCounterBuffer = {};
+	}
+
 	if (totalTriangles > primitiveCapacity)
 	{
 		primitiveCapacity = std::max(2u, totalTriangles);
@@ -78,7 +83,7 @@ void wiGPUBVH::Update(const wiScene::Scene& scene)
 		desc.Stride = sizeof(BVHNode);
 		desc.Size = desc.Stride * primitiveCapacity * 2;
 		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
 		desc.Usage = USAGE_DEFAULT;
 		device->CreateBuffer(&desc, nullptr, &bvhNodeBuffer);
 		device->SetName(&bvhNodeBuffer, "BVHNodeBuffer");
@@ -114,7 +119,7 @@ void wiGPUBVH::Update(const wiScene::Scene& scene)
 		desc.Stride = sizeof(BVHPrimitive);
 		desc.Size = desc.Stride * primitiveCapacity;
 		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
 		desc.Usage = USAGE_DEFAULT;
 		device->CreateBuffer(&desc, nullptr, &primitiveBuffer);
 		device->SetName(&primitiveBuffer, "primitiveBuffer");
@@ -370,17 +375,6 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
 	}
 #endif // BVH_VALIDATE
 
-}
-void wiGPUBVH::Bind(CommandList cmd) const
-{
-	GraphicsDevice* device = wiRenderer::GetDevice();
-
-	const GPUResource* res[] = {
-		&primitiveCounterBuffer,
-		&primitiveBuffer,
-		&bvhNodeBuffer,
-	};
-	device->BindResources(res, TEXSLOT_BVH_COUNTER, arraysize(res), cmd);
 }
 
 void wiGPUBVH::Clear()

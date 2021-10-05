@@ -1660,6 +1660,11 @@ namespace wiScene
 			}
 		}
 
+		if (!device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING) && IsAccelerationStructureUpdateRequested())
+		{
+			BVH.Update(*this);
+		}
+
 		// Update water ripples:
 		for (size_t i = 0; i < waterRipples.size(); ++i)
 		{
@@ -1742,13 +1747,12 @@ namespace wiScene
 			std::swap(surfelMomentsTexture[0], surfelMomentsTexture[1]);
 		}
 
-		// Bindless scene resources:
+
+		// Shader scene resources:
 		shaderscene.instancebuffer = device->GetDescriptorIndex(&instanceBuffer, SRV);
 		shaderscene.meshbuffer = device->GetDescriptorIndex(&meshBuffer, SRV);
 		shaderscene.materialbuffer = device->GetDescriptorIndex(&materialBuffer, SRV);
-		shaderscene.TLAS = device->GetDescriptorIndex(&TLAS, SRV);
 		shaderscene.envmaparray = device->GetDescriptorIndex(&envmapArray, SRV);
-
 		if (weather.skyMap == nullptr)
 		{
 			shaderscene.globalenvmap = -1;
@@ -1757,6 +1761,41 @@ namespace wiScene
 		{
 			shaderscene.globalenvmap = device->GetDescriptorIndex(&weather.skyMap->texture, SRV);
 		}
+		shaderscene.TLAS = device->GetDescriptorIndex(&TLAS, SRV);
+		shaderscene.BVH_counter = device->GetDescriptorIndex(&BVH.primitiveCounterBuffer, SRV);
+		shaderscene.BVH_nodes = device->GetDescriptorIndex(&BVH.bvhNodeBuffer, SRV);
+		shaderscene.BVH_primitives = device->GetDescriptorIndex(&BVH.primitiveBuffer, SRV);
+
+		shaderscene.aabb_min = bounds.getMin();
+		shaderscene.aabb_max = bounds.getMax();
+		shaderscene.aabb_extents.x = abs(shaderscene.aabb_max.x - shaderscene.aabb_min.x);
+		shaderscene.aabb_extents.y = abs(shaderscene.aabb_max.y - shaderscene.aabb_min.y);
+		shaderscene.aabb_extents.z = abs(shaderscene.aabb_max.z - shaderscene.aabb_min.z);
+		shaderscene.aabb_extents_rcp.x = 1.0f / shaderscene.aabb_extents.x;
+		shaderscene.aabb_extents_rcp.y = 1.0f / shaderscene.aabb_extents.y;
+		shaderscene.aabb_extents_rcp.z = 1.0f / shaderscene.aabb_extents.z;
+
+		shaderscene.weather.sun_color = weather.sunColor;
+		shaderscene.weather.sun_direction = weather.sunDirection;
+		shaderscene.weather.sun_energy = weather.sunEnergy;
+		shaderscene.weather.ambient = weather.ambient;
+		shaderscene.weather.cloudiness = weather.cloudiness;
+		shaderscene.weather.cloud_scale = weather.cloudScale;
+		shaderscene.weather.cloud_speed = weather.cloudSpeed;
+		shaderscene.weather.fog.start = weather.fogStart;
+		shaderscene.weather.fog.end = weather.fogEnd;
+		shaderscene.weather.fog.height_start = weather.fogHeightStart;
+		shaderscene.weather.fog.height_end = weather.fogHeightEnd;
+		shaderscene.weather.fog.height_sky = weather.fogHeightSky;
+		shaderscene.weather.horizon = weather.horizon;
+		shaderscene.weather.zenith = weather.zenith;
+		shaderscene.weather.sky_exposure = weather.skyExposure;
+		shaderscene.weather.wind.speed = weather.windSpeed;
+		shaderscene.weather.wind.randomness = weather.windRandomness;
+		shaderscene.weather.wind.wavesize = weather.windWaveSize;
+		shaderscene.weather.wind.direction = weather.windDirection;
+		shaderscene.weather.atmosphere = weather.atmosphereParameters;
+		shaderscene.weather.volumetric_clouds = weather.volumetricCloudParameters;
 	}
 	void Scene::Clear()
 	{

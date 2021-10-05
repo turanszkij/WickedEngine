@@ -323,7 +323,7 @@ struct Surface
 
 		P = p0 * w + p1 * u + p2 * v;
 		P = mul(inst.transform.GetMatrix(), float4(P, 1)).xyz;
-		V = normalize(g_xCamera.CamPos - P);
+		V = normalize(GetCamera().CamPos - P);
 
 		float4 uv0 = 0, uv1 = 0, uv2 = 0;
 		[branch]

@@ -65,7 +65,7 @@ void GetSampleInfo(float2 velocity, float2 neighborUV, float2 uv, float3 P, floa
     
     // BRDF Weight
     
-	float3 hitViewPosition = reconstructPosition(hitPixel, hitDepth, g_xCamera.InvP);
+	float3 hitViewPosition = reconstructPosition(hitPixel, hitDepth, GetCamera().InvP);
     
 	float3 L = normalize(hitViewPosition - P);
 	float3 H = normalize(L + V);
@@ -98,7 +98,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		return;
 
     // Everthing in view space:
-	const float3 P = reconstructPosition(uv, depth, g_xCamera.InvP);
+	const float3 P = reconstructPosition(uv, depth, GetCamera().InvP);
 	const float3 V = normalize(-P);
 
 	PrimitiveID prim;
@@ -107,7 +107,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	Surface surface;
 	surface.load(prim, P);
 
-	const float3 N = normalize(mul((float3x3)g_xCamera.View, surface.N));
+	const float3 N = normalize(mul((float3x3)GetCamera().View, surface.N));
 	const float roughness = GetRoughness(surface.roughness);
 
 	const float NdotV = saturate(dot(N, V));

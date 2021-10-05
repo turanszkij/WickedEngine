@@ -7,23 +7,43 @@ Texture2D bindless_textures[] : register(space1);
 ByteAddressBuffer bindless_buffers[] : register(space2);
 SamplerState bindless_samplers[] : register(space3);
 Buffer<uint> bindless_ib[] : register(space4);
+#ifdef RTAPI
+RaytracingAccelerationStructure bindless_accelerationstructures[] : register(space5);
+#endif // RTAPI
 
-Texture2DArray bindless_textures2DArray[] : register(space5);
-TextureCube bindless_cubemaps[] : register(space6);
-TextureCubeArray bindless_cubearrays[] : register(space7);
-Texture3D bindless_textures3D[] : register(space8);
-RWTexture2D<float4> bindless_rwtextures[] : register(space9);
-RWByteAddressBuffer bindless_rwbuffers[] : register(space10);
-RWTexture2DArray<float4> bindless_rwtextures2DArray[] : register(space11);
-RWTexture3D<float4> bindless_rwtextures3D[] : register(space12);
+Texture2DArray bindless_textures2DArray[] : register(space6);
+TextureCube bindless_cubemaps[] : register(space7);
+TextureCubeArray bindless_cubearrays[] : register(space8);
+Texture3D bindless_textures3D[] : register(space9);
+RWTexture2D<float4> bindless_rwtextures[] : register(space10);
+RWByteAddressBuffer bindless_rwbuffers[] : register(space11);
+RWTexture2DArray<float4> bindless_rwtextures2DArray[] : register(space12);
+RWTexture3D<float4> bindless_rwtextures3D[] : register(space13);
 
+Texture2D<float> bindless_textures_float[] : register(space14);
+Texture2D<float2> bindless_textures_float2[] : register(space15);
+Texture2D<uint2> bindless_textures_uint2[] : register(space16);
+Texture2D<uint4> bindless_textures_uint4[] : register(space17);
+
+ShaderScene GetScene()
+{
+	return g_xFrame.scene;
+}
+ShaderWeather GetWeather()
+{
+	return GetScene().weather;
+}
+CameraCB GetCamera()
+{
+	return g_xCamera;
+}
 ShaderMeshInstance load_instance(uint instanceIndex)
 {
-	return bindless_buffers[g_xFrame.scene.instancebuffer].Load<ShaderMeshInstance>(instanceIndex * sizeof(ShaderMeshInstance));
+	return bindless_buffers[GetScene().instancebuffer].Load<ShaderMeshInstance>(instanceIndex * sizeof(ShaderMeshInstance));
 }
 ShaderMesh load_mesh(uint meshIndex)
 {
-	return bindless_buffers[g_xFrame.scene.meshbuffer].Load<ShaderMesh>(meshIndex * sizeof(ShaderMesh));
+	return bindless_buffers[GetScene().meshbuffer].Load<ShaderMesh>(meshIndex * sizeof(ShaderMesh));
 }
 ShaderMeshSubset load_subset(ShaderMesh mesh, uint subsetIndex)
 {
@@ -31,7 +51,7 @@ ShaderMeshSubset load_subset(ShaderMesh mesh, uint subsetIndex)
 }
 ShaderMaterial load_material(uint materialIndex)
 {
-	return bindless_buffers[g_xFrame.scene.materialbuffer].Load<ShaderMaterial>(materialIndex * sizeof(ShaderMaterial));
+	return bindless_buffers[GetScene().materialbuffer].Load<ShaderMaterial>(materialIndex * sizeof(ShaderMaterial));
 }
 ShaderEntity load_entity(uint entityIndex)
 {
@@ -42,8 +62,8 @@ float4x4 load_entitymatrix(uint matrixIndex)
 	return transpose(bindless_buffers[g_xFrame.buffer_entitymatrixarray_index].Load<float4x4>(matrixIndex * sizeof(float4x4)));
 }
 
-#define texture_globalenvmap bindless_cubemaps[g_xFrame.scene.globalenvmap]
-#define texture_envmaparray bindless_cubearrays[g_xFrame.scene.envmaparray]
+#define texture_globalenvmap bindless_cubemaps[GetScene().globalenvmap]
+#define texture_envmaparray bindless_cubearrays[GetScene().envmaparray]
 
 #define texture_random64x64 bindless_textures[g_xFrame.texture_random64x64_index]
 #define texture_bluenoise bindless_textures[g_xFrame.texture_bluenoise_index]
@@ -57,11 +77,13 @@ float4x4 load_entitymatrix(uint matrixIndex)
 #define texture_shadowarray_transparent_2d bindless_textures2DArray[g_xFrame.texture_shadowarray_transparent_2d_index]
 #define texture_shadowarray_transparent_cube bindless_cubearrays[g_xFrame.texture_shadowarray_transparent_cube_index]
 #define texture_voxelgi bindless_textures3D[g_xFrame.texture_voxelgi_index]
+#define scene_acceleration_structure bindless_accelerationstructures[GetScene().TLAS]
 
-TEXTURE2D(texture_depth, float, TEXSLOT_DEPTH);
-TEXTURE2D(texture_lineardepth, float, TEXSLOT_LINEARDEPTH);
-TEXTURE2D(texture_gbuffer0, uint2, TEXSLOT_GBUFFER0);
-TEXTURE2D(texture_gbuffer1, float2, TEXSLOT_GBUFFER1);
+#define texture_depth bindless_textures_float[GetCamera().texture_depth_index]
+#define texture_depth_history bindless_textures_float[GetCamera().texture_depth_index_prev]
+#define texture_lineardepth bindless_textures_float[GetCamera().texture_lineardepth_index]
+#define texture_gbuffer0 bindless_textures_uint2[GetCamera().texture_gbuffer0_index]
+#define texture_gbuffer1 bindless_textures_float2[GetCamera().texture_gbuffer1_index]
 
 // These are static samplers, don't need to be bound:
 SAMPLERSTATE(			sampler_linear_clamp,	SSLOT_LINEAR_CLAMP	);
@@ -92,16 +114,16 @@ inline bool is_saturated(float4 a) { return is_saturated(a.x) && is_saturated(a.
 #define DEGAMMA(x)		pow(abs(x),g_xFrame.Gamma)
 #define GAMMA(x)		pow(abs(x),1.0/g_xFrame.Gamma)
 
-inline float3 GetSunColor() { return g_xFrame.SunColor; }
-inline float3 GetSunDirection() { return g_xFrame.SunDirection; }
-inline float GetSunEnergy() { return g_xFrame.SunEnergy; }
-inline float3 GetHorizonColor() { return g_xFrame.Horizon.rgb; }
-inline float3 GetZenithColor() { return g_xFrame.Zenith.rgb; }
-inline float3 GetAmbientColor() { return g_xFrame.Ambient.rgb; }
-inline float2 GetInternalResolution() { return g_xFrame.InternalResolution; }
+inline float3 GetSunColor() { return GetWeather().sun_color; }
+inline float3 GetSunDirection() { return GetWeather().sun_direction; }
+inline float GetSunEnergy() { return GetWeather().sun_energy; }
+inline float3 GetHorizonColor() { return GetWeather().horizon.rgb; }
+inline float3 GetZenithColor() { return GetWeather().zenith.rgb; }
+inline float3 GetAmbientColor() { return GetWeather().ambient.rgb; }
+inline uint2 GetInternalResolution() { return GetCamera().InternalResolution; }
 inline float GetTime() { return g_xFrame.Time; }
 inline uint2 GetTemporalAASampleRotation() { return uint2((g_xFrame.TemporalAASampleRotation >> 0u) & 0x000000FF, (g_xFrame.TemporalAASampleRotation >> 8) & 0x000000FF); }
-inline bool IsStaticSky() { return g_xFrame.scene.globalenvmap >= 0; }
+inline bool IsStaticSky() { return GetScene().globalenvmap >= 0; }
 
 // Exponential height fog based on: https://www.iquilezles.org/www/articles/fog/fog.htm
 // Non constant density function
@@ -110,13 +132,12 @@ inline bool IsStaticSky() { return g_xFrame.scene.globalenvmap >= 0; }
 //	V			: sample to point vector
 inline float GetFogAmount(float distance, float3 O, float3 V)
 {
-	float fogDensity = saturate((distance - g_xFrame.Fog.x) / (g_xFrame.Fog.y - g_xFrame.Fog.x));
+	ShaderFog fog = GetWeather().fog;
+	float fogDensity = saturate((distance - fog.start) / (fog.end - fog.start));
 
 	if (g_xFrame.Options & OPTION_BIT_HEIGHT_FOG)
 	{
-		float fogHeightStart = g_xFrame.Fog.z;
-		float fogHeightEnd = g_xFrame.Fog.w;
-		float fogFalloffScale = 1.0 / max(0.01, fogHeightEnd - fogHeightStart);
+		float fogFalloffScale = 1.0 / max(0.01, fog.height_end - fog.height_start);
 
 		// solve for x, e^(-h * x) = 0.001
 		// x = 6.907755 * h^-1
@@ -128,9 +149,9 @@ inline float GetFogAmount(float distance, float3 O, float3 V)
 
 		float endLineHeight = originHeight + distance * Z; // Isolated vector equation for y
 		float minLineHeight = min(originHeight, endLineHeight);
-		float heightLineFalloff = max(minLineHeight - fogHeightStart, 0);
+		float heightLineFalloff = max(minLineHeight - fog.height_start, 0);
 		
-		float baseHeightFogDistance = clamp((fogHeightStart - minLineHeight) / effectiveZ, 0, distance);
+		float baseHeightFogDistance = clamp((fog.height_start - minLineHeight) / effectiveZ, 0, distance);
 		float exponentialFogDistance = distance - baseHeightFogDistance; // Exclude distance below base height
 		float exponentialHeightLineIntegral = exp(-heightLineFalloff * fogFalloff) * (1.0 - exp(-exponentialFogDistance * effectiveZ * fogFalloff)) / (effectiveZ * fogFalloff);
 		
@@ -303,7 +324,7 @@ inline float getLinearDepth(in float z, in float near, in float far)
 }
 inline float getLinearDepth(in float z)
 {
-	return getLinearDepth(z, g_xCamera.ZNearP, g_xCamera.ZFarP);
+	return getLinearDepth(z, GetCamera().ZNearP, GetCamera().ZFarP);
 }
 
 inline float3x3 GetTangentSpace(in float3 normal)
@@ -358,7 +379,7 @@ inline float3 reconstructPosition(in float2 uv, in float z, in float4x4 InvVP)
 }
 inline float3 reconstructPosition(in float2 uv, in float z)
 {
-	return reconstructPosition(uv, z, g_xCamera.InvVP);
+	return reconstructPosition(uv, z, GetCamera().InvVP);
 }
 
 #if 0

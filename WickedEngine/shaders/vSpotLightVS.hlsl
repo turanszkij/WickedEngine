@@ -7,7 +7,7 @@ VertexToPixel main(uint vID : SV_VertexID)
 		
 	float4 pos = CONE[vID];
 	pos = mul(lightWorld, pos);
-	Out.pos = mul(g_xCamera.VP, pos);
+	Out.pos = mul(GetCamera().VP, pos);
 	Out.col = lerp(
 		float4(lightColor.rgb, 1), float4(0, 0, 0, 0),
 		distance(pos.xyz, float3(lightWorld._14, lightWorld._24, lightWorld._34)) / (lightEnerdis.w)

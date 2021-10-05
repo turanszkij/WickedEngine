@@ -6,7 +6,6 @@ PUSHCONSTANT(postprocess, PostProcess);
 
 TEXTURE2D(resolve_current, uint4, TEXSLOT_ONDEMAND0);
 TEXTURE2D(resolve_history, uint4, TEXSLOT_ONDEMAND1);
-TEXTURE2D(texture_depth_history, float, TEXSLOT_ONDEMAND2);
 TEXTURE2D(denoised, float4, TEXSLOT_ONDEMAND3);
 
 RWTEXTURE2D(temporal_output, uint4, 0);

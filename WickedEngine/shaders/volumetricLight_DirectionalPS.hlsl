@@ -15,7 +15,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 	float2 ScreenCoord = input.pos2D.xy / input.pos2D.w * float2(0.5f, -0.5f) + 0.5f;
 	float depth = max(input.pos.z, texture_depth.SampleLevel(sampler_point_clamp, ScreenCoord, 2));
 	float3 P = reconstructPosition(ScreenCoord, depth);
-	float3 V = g_xCamera.CamPos - P;
+	float3 V = GetCamera().CamPos - P;
 	float cameraDistance = length(V);
 	V /= cameraDistance;
 
@@ -25,7 +25,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 	const float3 L = light.GetDirection();
 	const float scattering = ComputeScattering(saturate(dot(L, -V)));
 
-	float3 rayEnd = g_xCamera.CamPos;
+	float3 rayEnd = GetCamera().CamPos;
 
 	const uint sampleCount = 16;
 	const float stepSize = length(P - rayEnd) / sampleCount;
@@ -71,7 +71,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 	float3 atmosphereTransmittance = 1;
 	if (g_xFrame.Options & OPTION_BIT_REALISTIC_SKY)
 	{
-		atmosphereTransmittance = GetAtmosphericLightTransmittance(g_xFrame.Atmosphere, P, L, texture_transmittancelut);
+		atmosphereTransmittance = GetAtmosphericLightTransmittance(GetWeather().atmosphere, P, L, texture_transmittancelut);
 	}
 
 	return max(0, float4(accumulation * light.GetColor().rgb * light.GetEnergy() * atmosphereTransmittance, 1));

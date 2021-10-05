@@ -54,18 +54,17 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 
 
 #ifdef DEPTHCOLLISIONS
-
 			// NOTE: We are using the textures from previous frame, so reproject against those! (PrevVP)
 
-			float4 pos2D = mul(g_xCamera.PrevVP, float4(particle.position, 1));
+			float4 pos2D = mul(GetCamera().PrevVP, float4(particle.position, 1));
 			pos2D.xyz /= pos2D.w;
 
 			if (pos2D.x > -1 && pos2D.x < 1 && pos2D.y > -1 && pos2D.y < 1)
 			{
 				float2 uv = pos2D.xy * float2(0.5f, -0.5f) + 0.5f;
-				uint2 pixel = uv * g_xFrame.InternalResolution;
+				uint2 pixel = uv * GetCamera().InternalResolution;
 
-				float depth0 = texture_depth[pixel];
+				float depth0 = texture_depth_history[pixel];
 				float surfaceLinearDepth = getLinearDepth(depth0);
 				float surfaceThickness = 1.5f;
 
@@ -76,12 +75,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 				if ((pos2D.w + particleSize > surfaceLinearDepth) && (pos2D.w - particleSize < surfaceLinearDepth + surfaceThickness))
 				{
 					// Calculate surface normal and bounce off the particle:
-					float depth1 = texture_depth[pixel + uint2(1, 0)];
-					float depth2 = texture_depth[pixel + uint2(0, -1)];
+					float depth1 = texture_depth_history[pixel + uint2(1, 0)];
+					float depth2 = texture_depth_history[pixel + uint2(0, -1)];
 
-					float3 p0 = reconstructPosition(uv, depth0, g_xCamera.PrevInvVP);
-					float3 p1 = reconstructPosition(uv + float2(1, 0) * g_xFrame.InternalResolution_rcp, depth1, g_xCamera.PrevInvVP);
-					float3 p2 = reconstructPosition(uv + float2(0, -1) * g_xFrame.InternalResolution_rcp, depth2, g_xCamera.PrevInvVP);
+					float3 p0 = reconstructPosition(uv, depth0, GetCamera().PrevInvVP);
+					float3 p1 = reconstructPosition(uv + float2(1, 0) * GetCamera().InternalResolution_rcp, depth1, GetCamera().PrevInvVP);
+					float3 p2 = reconstructPosition(uv + float2(0, -1) * GetCamera().InternalResolution_rcp, depth2, GetCamera().PrevInvVP);
 
 					float3 surfaceNormal = normalize(cross(p2 - p0, p1 - p0));
 
@@ -92,7 +91,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 					}
 				}
 			}
-
 #endif // DEPTHCOLLISIONS
 
 			// integrate:
@@ -165,7 +163,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 
 #ifdef SORTING
 			// store squared distance to main camera:
-			float3 eyeVector = particle.position - g_xCamera.CamPos;
+			float3 eyeVector = particle.position - GetCamera().CamPos;
 			float distSQ = dot(eyeVector, eyeVector);
 			distanceBuffer[particleIndex] = -distSQ; // this can be negated to modify sorting order here instead of rewriting sorting shaders...
 #endif // SORTING

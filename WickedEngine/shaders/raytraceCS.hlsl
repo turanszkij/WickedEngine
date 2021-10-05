@@ -31,12 +31,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	RayDesc ray = CreateCameraRay(uv);
 
 	// Depth of field setup:
-	float3 focal_point = ray.Origin + ray.Direction * g_xCamera.FocalLength;
+	float3 focal_point = ray.Origin + ray.Direction * GetCamera().FocalLength;
 	float3 coc = float3(hemispherepoint_cos(rand(seed, uv), rand(seed, uv)).xy, 0);
-	coc.xy *= g_xCamera.ApertureShape.xy;
-	coc = mul(coc, float3x3(cross(g_xCamera.Up, g_xCamera.At), g_xCamera.Up, g_xCamera.At));
-	coc *= g_xCamera.FocalLength;
-	coc *= g_xCamera.ApertureSize;
+	coc.xy *= GetCamera().ApertureShape.xy;
+	coc = mul(coc, float3x3(cross(GetCamera().Up, GetCamera().At), GetCamera().Up, GetCamera().At));
+	coc *= GetCamera().FocalLength;
+	coc *= GetCamera().ApertureSize;
 	coc *= 0.1f;
 	ray.Origin = ray.Origin + coc;
 	ray.Direction = focal_point - ray.Origin; // will be normalized before tracing!
@@ -152,7 +152,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 					float3 atmosphereTransmittance = 1;
 					if (g_xFrame.Options & OPTION_BIT_REALISTIC_SKY)
 					{
-						AtmosphereParameters Atmosphere = g_xFrame.Atmosphere;
+						AtmosphereParameters Atmosphere = GetWeather().atmosphere;
 						atmosphereTransmittance = GetAtmosphericLightTransmittance(Atmosphere, surface.P, L, texture_transmittancelut);
 					}
 					lightColor *= atmosphereTransmittance;

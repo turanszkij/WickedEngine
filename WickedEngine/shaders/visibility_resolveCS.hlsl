@@ -30,7 +30,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 {
 	uint2 pixel = DTid.xy;
 
-	const float2 uv = ((float2)pixel + 0.5) * g_xFrame.InternalResolution_rcp;
+	const float2 uv = ((float2)pixel + 0.5) * GetCamera().InternalResolution_rcp;
 	const float depth = texture_depthbuffer[pixel];
 	const float3 P = reconstructPosition(uv, depth);
 
@@ -55,11 +55,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 
 	}
 
-	float4 pos2DPrev = mul(g_xCamera.PrevVP, float4(pre, 1));
+	float4 pos2DPrev = mul(GetCamera().PrevVP, float4(pre, 1));
 	pos2DPrev.xy /= pos2DPrev.w;
 	float2 pos2D = uv * 2 - 1;
 	pos2D.y *= -1;
-	float2 velocity = ((pos2DPrev.xy - g_xCamera.TemporalAAJitterPrev) - (pos2D.xy - g_xCamera.TemporalAAJitter)) * float2(0.5, -0.5);
+	float2 velocity = ((pos2DPrev.xy - GetCamera().TemporalAAJitterPrev) - (pos2D.xy - GetCamera().TemporalAAJitter)) * float2(0.5, -0.5);
 
 	output_velocity[pixel] = velocity;
 
@@ -67,7 +67,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 
 	// Downsample depths:
 	output_depth_mip0[pixel] = depth;
-	float lineardepth = getLinearDepth(depth) * g_xCamera.ZFarP_rcp;
+	float lineardepth = getLinearDepth(depth) * GetCamera().ZFarP_rcp;
 	output_lineardepth_mip0[pixel] = lineardepth;
 
 	if (GTid.x % 2 == 0 && GTid.y % 2 == 0)

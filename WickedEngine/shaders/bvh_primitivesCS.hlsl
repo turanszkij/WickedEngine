@@ -9,7 +9,7 @@
 PUSHCONSTANT(push, BVHPushConstants);
 
 RWSTRUCTUREDBUFFER(primitiveIDBuffer, uint, 0);
-RWSTRUCTUREDBUFFER(primitiveBuffer, BVHPrimitive, 1);
+RWRAWBUFFER(primitiveBuffer, 1);
 RWSTRUCTUREDBUFFER(primitiveMortonBuffer, float, 2); // morton buffer is float because sorting is written for floats!
 
 [numthreads(BVH_BUILDER_GROUPSIZE, 1, 1)]
@@ -69,14 +69,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	bvhprim.z2 = P2.z;
 
 	uint primitiveID = push.primitiveOffset + prim.primitiveIndex;
-	primitiveBuffer[primitiveID] = bvhprim;
+	primitiveBuffer.Store<BVHPrimitive>(primitiveID * sizeof(BVHPrimitive), bvhprim);
 	primitiveIDBuffer[primitiveID] = primitiveID; // will be sorted by morton so we need this!
 
 	// Compute triangle morton code:
 	float3 minAABB = min(P0, min(P1, P2));
 	float3 maxAABB = max(P0, max(P1, P2));
 	float3 centerAABB = (minAABB + maxAABB) * 0.5f;
-	const uint mortoncode = morton3D((centerAABB - g_xFrame.WorldBoundsMin) * g_xFrame.WorldBoundsExtents_rcp);
+	const uint mortoncode = morton3D((centerAABB - GetScene().aabb_min) * GetScene().aabb_extents_rcp);
 	primitiveMortonBuffer[primitiveID] = (float)mortoncode; // convert to float before sorting
 
 }

@@ -2081,6 +2081,7 @@ using namespace DX12_Internal;
 		assert(pipeline != nullptr);
 
 		GetCommandList(cmd)->SetPipelineState(pipeline);
+		dirty_pso[cmd] = false;
 
 		if (prev_pt[cmd] != internal_state->primitiveTopology)
 		{

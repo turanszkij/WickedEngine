@@ -5,7 +5,6 @@ PUSHCONSTANT(postprocess, PostProcess);
 
 TEXTURE2D(input_current, float3, TEXSLOT_ONDEMAND0);
 TEXTURE2D(input_history, float3, TEXSLOT_ONDEMAND1);
-TEXTURE2D(texture_depth_history, float, TEXSLOT_ONDEMAND2);
 
 RWTEXTURE2D(output, float3, 0);
 
@@ -102,7 +101,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 
 #if 0
 	// Disocclusion fallback:
-	float depth_current = texture_lineardepth[DTid.xy] * g_xCamera.ZFarP;
+	float depth_current = texture_lineardepth[DTid.xy] * GetCamera().ZFarP;
 	float depth_history = getLinearDepth(texture_depth_history.SampleLevel(sampler_point_clamp, prevUV, 0));
 	if (length(velocity) > 0.01 && abs(depth_current - depth_history) > 1)
 	{
@@ -119,7 +118,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 	history.rgb = clamp(history.rgb, neighborhoodMin, neighborhoodMax);
 
 	// the linear filtering can cause blurry image, try to account for that:
-	float subpixelCorrection = frac(max(abs(velocity.x)*g_xFrame.InternalResolution.x, abs(velocity.y)*g_xFrame.InternalResolution.y)) * 0.5f;
+	float subpixelCorrection = frac(max(abs(velocity.x) * GetCamera().InternalResolution.x, abs(velocity.y) * GetCamera().InternalResolution.y)) * 0.5f;
 
 	// compute a nice blend factor:
 	float blendfactor = saturate(lerp(0.05f, 0.8f, subpixelCorrection));

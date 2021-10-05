@@ -7,7 +7,6 @@ TEXTURE2D(normals, float3, TEXSLOT_ONDEMAND0);
 STRUCTUREDBUFFER(tiles, uint, TEXSLOT_ONDEMAND1);
 TEXTURE2D(moments_prev, float3, TEXSLOT_ONDEMAND2);
 TEXTURE2D(history, float, TEXSLOT_ONDEMAND3);
-TEXTURE2D(texture_depth_history, float, TEXSLOT_ONDEMAND4);
 
 RWTEXTURE2D(reprojection, float2, 0);
 RWTEXTURE2D(moments, float3, 1);
@@ -27,19 +26,19 @@ float2 FFX_DNSR_Shadows_GetInvBufferDimensions()
 }
 float3 FFX_DNSR_Shadows_GetEye()
 {
-	return g_xCamera.CamPos;
+	return GetCamera().CamPos;
 }
 float4x4 FFX_DNSR_Shadows_GetProjectionInverse()
 {
-	return g_xCamera.InvP;
+	return GetCamera().InvP;
 }
 float4x4 FFX_DNSR_Shadows_GetViewProjectionInverse()
 {
-	return g_xCamera.InvVP;
+	return GetCamera().InvVP;
 }
 float4x4 FFX_DNSR_Shadows_GetReprojectionMatrix()
 {
-	return g_xCamera.Reprojection;
+	return GetCamera().Reprojection;
 }
 
 float FFX_DNSR_Shadows_ReadDepth(uint2 did)

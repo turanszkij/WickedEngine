@@ -17,11 +17,11 @@ struct RayDesc
 
 inline RayDesc CreateCameraRay(float2 clipspace)
 {
-	float4 unprojected = mul(g_xCamera.InvVP, float4(clipspace, 0, 1));
+	float4 unprojected = mul(GetCamera().InvVP, float4(clipspace, 0, 1));
 	unprojected.xyz /= unprojected.w;
 
 	RayDesc ray;
-	ray.Origin = g_xCamera.CamPos;
+	ray.Origin = GetCamera().CamPos;
 	ray.Direction = normalize(unprojected.xyz - ray.Origin);
 	ray.TMin = 0.001;
 	ray.TMax = FLT_MAX;
@@ -29,13 +29,7 @@ inline RayDesc CreateCameraRay(float2 clipspace)
 	return ray;
 }
 
-#ifdef RTAPI
-// Hardware acceleration raytracing path:
-
-RAYTRACINGACCELERATIONSTRUCTURE(scene_acceleration_structure, TEXSLOT_ACCELERATION_STRUCTURE);
-
-
-#else
+#ifndef RTAPI
 // Software raytracing implementation:
 
 #ifndef RAYTRACE_STACKSIZE
@@ -47,9 +41,9 @@ RAYTRACINGACCELERATIONSTRUCTURE(scene_acceleration_structure, TEXSLOT_ACCELERATI
 groupshared uint stack[RAYTRACE_STACKSIZE][RAYTRACING_LAUNCH_BLOCKSIZE * RAYTRACING_LAUNCH_BLOCKSIZE];
 #endif // RAYTRACE_STACK_SHARED
 
-RAWBUFFER(primitiveCounterBuffer, TEXSLOT_BVH_COUNTER);
-STRUCTUREDBUFFER(primitiveBuffer, BVHPrimitive, TEXSLOT_BVH_PRIMITIVES);
-STRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, TEXSLOT_BVH_NODES);
+#define primitiveCounterBuffer bindless_buffers[GetScene().BVH_counter]
+#define bvhNodeBuffer bindless_buffers[GetScene().BVH_nodes]
+#define primitiveBuffer bindless_buffers[GetScene().BVH_primitives]
 
 struct RayHit
 {
@@ -224,7 +218,7 @@ inline RayHit TraceRay_Closest(RayDesc ray, uint groupIndex = 0)
 		// pop untraversed node
 		const uint nodeIndex = stack[--stackpos][groupIndex];
 
-		BVHNode node = bvhNodeBuffer[nodeIndex];
+		BVHNode node = bvhNodeBuffer.Load<BVHNode>(nodeIndex * sizeof(BVHNode));
 
 		if (IntersectNode(ray, node, rcpDirection, bestHit.distance))
 		{
@@ -232,7 +226,7 @@ inline RayHit TraceRay_Closest(RayDesc ray, uint groupIndex = 0)
 			{
 				// Leaf node
 				const uint primitiveID = node.LeftChildIndex;
-				const BVHPrimitive prim = primitiveBuffer[primitiveID];
+				const BVHPrimitive prim = primitiveBuffer.Load<BVHPrimitive>(primitiveID * sizeof(BVHPrimitive));
 				IntersectTriangle(ray, bestHit, prim);
 			}
 			else
@@ -283,7 +277,7 @@ inline bool TraceRay_Any(RayDesc ray, uint groupIndex = 0)
 		// pop untraversed node
 		const uint nodeIndex = stack[--stackpos][groupIndex];
 
-		BVHNode node = bvhNodeBuffer[nodeIndex];
+		BVHNode node = bvhNodeBuffer.Load<BVHNode>(nodeIndex * sizeof(BVHNode));
 
 		if (IntersectNode(ray, node, rcpDirection))
 		{
@@ -291,7 +285,7 @@ inline bool TraceRay_Any(RayDesc ray, uint groupIndex = 0)
 			{
 				// Leaf node
 				const uint primitiveID = node.LeftChildIndex;
-				const BVHPrimitive prim = primitiveBuffer[primitiveID];
+				const BVHPrimitive prim = primitiveBuffer.Load<BVHPrimitive>(primitiveID * sizeof(BVHPrimitive));
 
 				if (IntersectTriangleANY(ray, prim))
 				{
@@ -345,7 +339,7 @@ inline uint TraceRay_DebugBVH(RayDesc ray)
 		// pop untraversed node
 		const uint nodeIndex = stack[--stackpos];
 
-		BVHNode node = bvhNodeBuffer[nodeIndex];
+		BVHNode node = bvhNodeBuffer.Load<BVHNode>(nodeIndex * sizeof(BVHNode));
 
 		if (IntersectNode(ray, node, rcpDirection))
 		{

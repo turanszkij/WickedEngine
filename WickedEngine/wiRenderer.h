@@ -158,8 +158,6 @@ namespace wiRenderer
 		wiScene::Scene& scene,
 		const Visibility& vis,
 		FrameCB& frameCB,
-		XMUINT2 internalResolution,
-		const wiCanvas& canvas,
 		float dt
 	);
 	// Updates the GPU state according to the previously called UpdatePerFrameData()
@@ -172,7 +170,6 @@ namespace wiRenderer
 	// Updates those GPU states that can be async
 	void UpdateRenderDataAsync(
 		const Visibility& vis,
-		const FrameCB& frameCB,
 		wiGraphics::CommandList cmd
 	);
 
@@ -183,7 +180,7 @@ namespace wiRenderer
 	// Updates the per camera constant buffer need to call for each different camera that is used when calling DrawScene() and the like
 	//	camera_previous : camera from previous frame, used for reprojection effects.
 	//	camera_reflection : camera that renders planar reflection
-	void UpdateCameraCB(
+	void BindCameraCB(
 		const wiScene::CameraComponent& camera,
 		const wiScene::CameraComponent& camera_previous,
 		const wiScene::CameraComponent& camera_reflection,
@@ -200,7 +197,7 @@ namespace wiRenderer
 		DRAWSCENE_HAIRPARTICLE = 1 << 4,
 	};
 
-	// Draw the world from a camera. You must call UpdateCameraCB() at least once in this frame prior to this
+	// Draw the world from a camera. You must call BindCameraCB() at least once in this frame prior to this
 	void DrawScene(
 		const Visibility& vis,
 		RENDERPASS renderPass,
@@ -246,13 +243,11 @@ namespace wiRenderer
 	// Draw volumetric light scattering effects
 	void DrawVolumeLights(
 		const Visibility& vis,
-		const wiGraphics::Texture& depthbuffer,
 		wiGraphics::CommandList cmd
 	);
 	// Draw Lens Flares for lights that have them enabled
 	void DrawLensFlares(
 		const Visibility& vis,
-		const wiGraphics::Texture& depthbuffer,
 		wiGraphics::CommandList cmd,
 		const wiGraphics::Texture* texture_directional_occlusion = nullptr
 	);
@@ -270,6 +265,7 @@ namespace wiRenderer
 
 	struct TiledLightResources
 	{
+		XMUINT3 tileCount = {};
 		wiGraphics::GPUBuffer tileFrustums; // entity culling frustums
 		wiGraphics::GPUBuffer entityTiles_Opaque; // culled entity indices (for opaque pass)
 		wiGraphics::GPUBuffer entityTiles_Transparent; // culled entity indices (for transparent pass)
@@ -278,7 +274,6 @@ namespace wiRenderer
 	// Compute light grid tiles
 	void ComputeTiledLightCulling(
 		const TiledLightResources& res,
-		const wiGraphics::Texture& depthbuffer,
 		const wiGraphics::Texture& debugUAV,
 		wiGraphics::CommandList cmd
 	);
@@ -313,8 +308,6 @@ namespace wiRenderer
 	);
 
 	void ComputeShadingRateClassification(
-		const wiGraphics::Texture gbuffer[GBUFFER_COUNT],
-		const wiGraphics::Texture& lineardepth,
 		const wiGraphics::Texture& output,
 		const wiGraphics::Texture& debugUAV,
 		wiGraphics::CommandList cmd
@@ -337,8 +330,6 @@ namespace wiRenderer
 	void SurfelGI_Coverage(
 		const SurfelGIResources& res,
 		const wiScene::Scene& scene,
-		const wiGraphics::Texture& depthbuffer,
-		const wiGraphics::Texture gbuffer[GBUFFER_COUNT],
 		const wiGraphics::Texture& debugUAV,
 		wiGraphics::CommandList cmd
 	);
@@ -375,9 +366,8 @@ namespace wiRenderer
 	void CreateSSAOResources(SSAOResources& res, XMUINT2 resolution);
 	void Postprocess_SSAO(
 		const SSAOResources& res,
-		const wiGraphics::Texture& depthbuffer,
-		const wiGraphics::Texture& lineardepth,
 		const wiGraphics::Texture& output,
+		const wiGraphics::Texture& lineardepth,
 		wiGraphics::CommandList cmd,
 		float range = 1.0f,
 		uint32_t samplecount = 16,
@@ -436,10 +426,6 @@ namespace wiRenderer
 	void Postprocess_RTAO(
 		const RTAOResources& res,
 		const wiScene::Scene& scene,
-		const wiGraphics::Texture& depthbuffer,
-		const wiGraphics::Texture& lineardepth,
-		const wiGraphics::Texture& depth_history,
-		const wiGraphics::Texture gbuffer[GBUFFER_COUNT],
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd,
 		float range = 1.0f,
@@ -454,9 +440,6 @@ namespace wiRenderer
 	void Postprocess_RTReflection(
 		const RTReflectionResources& res,
 		const wiScene::Scene& scene,
-		const wiGraphics::Texture& depthbuffer,
-		const wiGraphics::Texture& depth_history,
-		const wiGraphics::Texture gbuffer[GBUFFER_COUNT],
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd,
 		float range = 1000.0f
@@ -471,10 +454,6 @@ namespace wiRenderer
 	void Postprocess_SSR(
 		const SSRResources& res,
 		const wiGraphics::Texture& input,
-		const wiGraphics::Texture& depthbuffer,
-		const wiGraphics::Texture& lineardepth,
-		const wiGraphics::Texture& depth_history,
-		const wiGraphics::Texture gbuffer[GBUFFER_COUNT],
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd
 	);
@@ -495,11 +474,7 @@ namespace wiRenderer
 	void Postprocess_RTShadow(
 		const RTShadowResources& res,
 		const wiScene::Scene& scene,
-		const wiGraphics::Texture& depthbuffer,
-		const wiGraphics::Texture& lineardepth,
-		const wiGraphics::Texture& depth_history,
 		const wiGraphics::GPUBuffer& entityTiles_Opaque,
-		const wiGraphics::Texture gbuffer[GBUFFER_COUNT],
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd
 	);
@@ -510,10 +485,7 @@ namespace wiRenderer
 	void CreateScreenSpaceShadowResources(ScreenSpaceShadowResources& res, XMUINT2 resolution);
 	void Postprocess_ScreenSpaceShadow(
 		const ScreenSpaceShadowResources& res,
-		const wiGraphics::Texture& depthbuffer,
-		const wiGraphics::Texture& lineardepth,
 		const wiGraphics::GPUBuffer& entityTiles_Opaque,
-		const wiGraphics::Texture gbuffer[GBUFFER_COUNT],
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd,
 		float range = 1,
@@ -548,7 +520,6 @@ namespace wiRenderer
 		const DepthOfFieldResources& res,
 		const wiGraphics::Texture& input,
 		const wiGraphics::Texture& output,
-		const wiGraphics::Texture& lineardepth,
 		wiGraphics::CommandList cmd,
 		float coc_scale = 10,
 		float max_coc = 18
@@ -576,8 +547,6 @@ namespace wiRenderer
 	void Postprocess_MotionBlur(
 		const MotionBlurResources& res,
 		const wiGraphics::Texture& input,
-		const wiGraphics::Texture& lineardepth,
-		const wiGraphics::Texture gbuffer[GBUFFER_COUNT],
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd,
 		float strength = 100.0f
@@ -594,7 +563,6 @@ namespace wiRenderer
 	void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resolution);
 	void Postprocess_VolumetricClouds(
 		const VolumetricCloudResources& res,
-		const wiGraphics::Texture& depthbuffer,
 		wiGraphics::CommandList cmd
 	);
 	void Postprocess_FXAA(
@@ -605,9 +573,6 @@ namespace wiRenderer
 	void Postprocess_TemporalAA(
 		const wiGraphics::Texture& input_current,
 		const wiGraphics::Texture& input_history,
-		const wiGraphics::Texture& lineardepth,
-		const wiGraphics::Texture& depth_history,
-		const wiGraphics::Texture gbuffer[GBUFFER_COUNT],
 		const wiGraphics::Texture& output,
 		wiGraphics::CommandList cmd
 	);

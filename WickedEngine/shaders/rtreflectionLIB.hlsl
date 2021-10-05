@@ -10,8 +10,6 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-TEXTURE2D(texture_depth_history, float, TEXSLOT_ONDEMAND2);
-
 RWTEXTURE2D(output, float4, 0);
 RWTEXTURE2D(output_rayLengths, float, 1);
 
@@ -30,7 +28,7 @@ void RTReflection_Raygen()
 		return;
 
 	const float3 P = reconstructPosition(uv, depth);
-	const float3 V = normalize(g_xCamera.CamPos - P);
+	const float3 V = normalize(GetCamera().CamPos - P);
 
 	PrimitiveID prim;
 	prim.unpack(texture_gbuffer0[DTid.xy * 2]);

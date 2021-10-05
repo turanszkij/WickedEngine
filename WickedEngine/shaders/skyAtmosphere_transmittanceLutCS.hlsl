@@ -9,7 +9,7 @@ RWTEXTURE2D(output, float4, 0);
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	float2 pixelPosition = float2(DTid.xy) + 0.5;
-	AtmosphereParameters atmosphere = g_xFrame.Atmosphere;
+	AtmosphereParameters atmosphere = GetWeather().atmosphere;
     
     // Compute camera position from LUT coords
 	const float2 uv = pixelPosition * rcp(transmittanceLUTRes);

@@ -16,7 +16,7 @@ RAWBUFFER(primitiveCounterBuffer, TEXSLOT_ONDEMAND0);
 STRUCTUREDBUFFER(primitiveIDBuffer, uint, TEXSLOT_ONDEMAND1);
 STRUCTUREDBUFFER(primitiveMortonBuffer, float, TEXSLOT_ONDEMAND2); // float because it was sorted
 
-RWSTRUCTUREDBUFFER(bvhNodeBuffer, BVHNode, 0);
+RWRAWBUFFER(bvhNodeBuffer, 0);
 RWSTRUCTUREDBUFFER(bvhParentBuffer, uint, 1);
 RWSTRUCTUREDBUFFER(bvhFlagBuffer, uint, 2);
 
@@ -126,8 +126,10 @@ void main( uint3 DTid : SV_DispatchThreadID )
 			childBIndex = internalNodeOffset + split + 1;
 
 		// write to parent:
-		bvhNodeBuffer[idx].LeftChildIndex = childAIndex;
-		bvhNodeBuffer[idx].RightChildIndex = childBIndex;
+		BVHNode node = bvhNodeBuffer.Load<BVHNode>(idx * sizeof(BVHNode));
+		node.LeftChildIndex = childAIndex;
+		node.RightChildIndex = childBIndex;
+		bvhNodeBuffer.Store<BVHNode>(idx * sizeof(BVHNode), node);
 		// write to children:
 		bvhParentBuffer[childAIndex] = idx;
 		bvhParentBuffer[childBIndex] = idx;
