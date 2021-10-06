@@ -1456,7 +1456,7 @@ namespace wiScene
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
-		instanceArraySize = objects.GetCount() + hairs.GetCount();
+		instanceArraySize = objects.GetCount() + hairs.GetCount() + emitters.GetCount();
 		if (instanceBuffer.desc.Size < (instanceArraySize * sizeof(ShaderMeshInstance)))
 		{
 			GPUBufferDesc desc;
@@ -1478,7 +1478,7 @@ namespace wiScene
 		}
 		instanceArrayMapped = (ShaderMeshInstance*)instanceUploadBuffer[device->GetBufferIndex()].mapped_data;
 
-		meshArraySize = meshes.GetCount() + hairs.GetCount();
+		meshArraySize = meshes.GetCount() + hairs.GetCount() + emitters.GetCount();
 		if (meshBuffer.desc.Size < (meshArraySize * sizeof(ShaderMesh)))
 		{
 			GPUBufferDesc desc;
@@ -3616,21 +3616,6 @@ namespace wiScene
 	}
 	void Scene::RunParticleUpdateSystem(wiJobSystem::context& ctx)
 	{
-		wiJobSystem::Dispatch(ctx, (uint32_t)emitters.GetCount(), small_subtask_groupsize, [&](wiJobArgs args) {
-
-			wiEmittedParticle& emitter = emitters[args.jobIndex];
-			Entity entity = emitters.GetEntity(args.jobIndex);
-
-			const LayerComponent* layer = layers.GetComponent(entity);
-			if (layer != nullptr)
-			{
-				emitter.layerMask = layer->GetLayerMask();
-			}
-
-			const TransformComponent& transform = *transforms.GetComponent(entity);
-			emitter.UpdateCPU(transform, dt);
-		});
-
 		wiJobSystem::Dispatch(ctx, (uint32_t)hairs.GetCount(), small_subtask_groupsize, [&](wiJobArgs args) {
 
 			wiHairParticle& hair = hairs[args.jobIndex];
@@ -3692,6 +3677,63 @@ namespace wiScene
 						device->WriteTopLevelAccelerationStructureInstance(&instance, dest);
 					}
 				}
+			}
+
+		});
+
+		wiJobSystem::Dispatch(ctx, (uint32_t)emitters.GetCount(), small_subtask_groupsize, [&](wiJobArgs args) {
+
+			wiEmittedParticle& emitter = emitters[args.jobIndex];
+			Entity entity = emitters.GetEntity(args.jobIndex);
+
+			const LayerComponent* layer = layers.GetComponent(entity);
+			if (layer != nullptr)
+			{
+				emitter.layerMask = layer->GetLayerMask();
+			}
+
+			const TransformComponent& transform = *transforms.GetComponent(entity);
+			emitter.UpdateCPU(transform, dt);
+
+			GraphicsDevice* device = wiRenderer::GetDevice();
+
+			size_t meshIndex = meshes.GetCount() + hairs.GetCount() + args.jobIndex;
+			ShaderMesh& mesh = meshArrayMapped[meshIndex];
+			mesh.init();
+			mesh.ib = device->GetDescriptorIndex(&emitter.primitiveBuffer, SRV);
+			mesh.vb_pos_nor_wind = device->GetDescriptorIndex(&emitter.vertexBuffer_POS, SRV);
+			mesh.vb_uv0 = device->GetDescriptorIndex(&emitter.vertexBuffer_TEX, SRV);
+			mesh.vb_uv1 = device->GetDescriptorIndex(&emitter.vertexBuffer_TEX2, SRV);
+			mesh.vb_col = device->GetDescriptorIndex(&emitter.vertexBuffer_COL, SRV);
+			mesh.subsetbuffer = device->GetDescriptorIndex(&emitter.subsetBuffer, SRV);
+			mesh.flags = SHADERMESH_FLAG_DOUBLE_SIDED;
+
+			size_t instanceIndex = objects.GetCount() + hairs.GetCount() + args.jobIndex;
+			ShaderMeshInstance& inst = instanceArrayMapped[instanceIndex];
+			inst.init();
+			inst.uid = entity;
+			// every vertex is pretransformed and simulated in worldspace for emitted particle:
+			inst.transform.Create(IDENTITYMATRIX);
+			inst.transformPrev.Create(IDENTITYMATRIX);
+			inst.meshIndex = (uint)meshIndex;
+
+			if (TLAS_instancesMapped != nullptr && emitter.BLAS.IsValid())
+			{
+				// TLAS instance data:
+				RaytracingAccelerationStructureDesc::TopLevel::Instance instance = {};
+				instance = {};
+				instance.transform = XMFLOAT3X4(
+					IDENTITYMATRIX._11, IDENTITYMATRIX._21, IDENTITYMATRIX._31, IDENTITYMATRIX._41,
+					IDENTITYMATRIX._12, IDENTITYMATRIX._22, IDENTITYMATRIX._32, IDENTITYMATRIX._42,
+					IDENTITYMATRIX._13, IDENTITYMATRIX._23, IDENTITYMATRIX._33, IDENTITYMATRIX._43
+				);
+				instance.InstanceID = (uint32_t)instanceIndex;
+				instance.InstanceMask = 1;
+				instance.bottomlevel = emitter.BLAS;
+				instance.Flags = RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_CULL_DISABLE;
+
+				void* dest = (void*)((size_t)TLAS_instancesMapped + instanceIndex * device->GetTopLevelAccelerationStructureInstanceSize());
+				device->WriteTopLevelAccelerationStructureInstance(&instance, dest);
 			}
 
 		});

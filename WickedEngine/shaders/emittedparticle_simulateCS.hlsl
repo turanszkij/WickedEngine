@@ -1,5 +1,13 @@
 #include "globals.hlsli"
+#include "emittedparticleHF.hlsli"
 #include "ShaderInterop_EmittedParticle.h"
+
+static const float3 BILLBOARD[] = {
+	float3(-1, -1, 0),	// 0
+	float3(1, -1, 0),	// 1
+	float3(-1, 1, 0),	// 2
+	float3(1, 1, 0),	// 4
+};
 
 RWSTRUCTUREDBUFFER(particleBuffer, Particle, 0);
 RWSTRUCTUREDBUFFER(aliveBuffer_CURRENT, uint, 1);
@@ -7,6 +15,11 @@ RWSTRUCTUREDBUFFER(aliveBuffer_NEW, uint, 2);
 RWSTRUCTUREDBUFFER(deadBuffer, uint, 3);
 RWRAWBUFFER(counterBuffer, 4);
 RWSTRUCTUREDBUFFER(distanceBuffer, float, 6);
+RWRAWBUFFER(vertexBuffer_POS, 7);
+RWRAWBUFFER(vertexBuffer_TEX, 8);
+RWRAWBUFFER(vertexBuffer_TEX2, 9);
+RWRAWBUFFER(vertexBuffer_COL, 10);
+RWTYPEDBUFFER(culledIndexBuffer, uint, 11);
 
 #define SPH_FLOOR_COLLISION
 #define SPH_BOX_COLLISION
@@ -104,15 +117,15 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 			// drag: 
 			particle.velocity *= xParticleDrag;
 
+			float lifeLerp = 1 - particle.life / particle.maxLife;
+			float particleSize = lerp(particle.sizeBeginEnd.x, particle.sizeBeginEnd.y, lifeLerp);
+
 			[branch]
 			if (xEmitterOptions & EMITTER_OPTION_BIT_SPH_ENABLED)
 			{
 				// debug collisions:
 
 				float elastic = 0.6;
-
-				float lifeLerp = 1 - particle.life / particle.maxLife;
-				float particleSize = lerp(particle.sizeBeginEnd.x, particle.sizeBeginEnd.y, lifeLerp);
 
 #ifdef SPH_FLOOR_COLLISION
 				// floor collision:
@@ -161,6 +174,90 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 			counterBuffer.InterlockedAdd(PARTICLECOUNTER_OFFSET_ALIVECOUNT_AFTERSIMULATION, 1, newAliveIndex);
 			aliveBuffer_NEW[newAliveIndex] = particleIndex;
 
+			// Write out render buffers:
+			//	These must be persistent, not culled (raytracing, surfels...)
+			uint v0 = newAliveIndex * 4;
+			uint i0 = newAliveIndex * 6;
+
+			float opacity = saturate(lerp(1, 0, lifeLerp) * EmitterGetMaterial().baseColor.a);
+			uint particleColorPacked = (particle.color_mirror & 0x00FFFFFF) | (uint(opacity * 255.0f) << 24u);
+
+			float rotation = lifeLerp * particle.rotationalVelocity;
+			float2x2 rot = float2x2(
+				cos(rotation), -sin(rotation),
+				sin(rotation), cos(rotation)
+				);
+
+			// Sprite sheet frame:
+			const float spriteframe = xEmitterFrameRate == 0 ?
+				lerp(xEmitterFrameStart, xEmitterFrameCount, lifeLerp) :
+				((xEmitterFrameStart + particle.life * xEmitterFrameRate) % xEmitterFrameCount);
+			const uint currentFrame = floor(spriteframe);
+			const uint nextFrame = ceil(spriteframe);
+			const float frameBlend = frac(spriteframe);
+			uint2 offset = uint2(currentFrame % xEmitterFramesXY.x, currentFrame / xEmitterFramesXY.x);
+			uint2 offset2 = uint2(nextFrame % xEmitterFramesXY.x, nextFrame / xEmitterFramesXY.x);
+
+			for (uint vertexID = 0; vertexID < 4; ++vertexID)
+			{
+				// expand the point into a billboard in view space:
+				float3 quadPos = BILLBOARD[vertexID];
+				quadPos.x = particle.color_mirror & 0x10000000 ? -quadPos.x : quadPos.x;
+				quadPos.y = particle.color_mirror & 0x20000000 ? -quadPos.y : quadPos.y;
+				float2 uv = quadPos.xy * float2(0.5f, -0.5f) + 0.5f;
+				float2 uv2 = uv;
+
+				// sprite sheet UV transform:
+				uv.xy += offset;
+				uv.xy *= xEmitterTexMul;
+				uv2.xy += offset2;
+				uv2.xy *= xEmitterTexMul;
+
+				// rotate the billboard:
+				quadPos.xy = mul(quadPos.xy, rot);
+				quadPos = mul(quadPos, (float3x3)GetCamera().View); // reversed mul for inverse camera rotation!
+
+				// scale the billboard:
+				quadPos *= particleSize;
+
+				// scale the billboard along view space motion vector:
+				float3 velocity = mul((float3x3)GetCamera().View, particle.velocity);
+				quadPos += dot(quadPos, velocity) * velocity * xParticleMotionBlurAmount;
+
+				// write out vertex:
+				uint4 data;
+				data.xyz = asuint(particle.position + quadPos);
+				data.w = pack_unitvector(normalize(-GetCamera().At));
+				vertexBuffer_POS.Store4((v0 + vertexID) * 16, data);
+				vertexBuffer_TEX.Store((v0 + vertexID) * 4, pack_half2(uv));
+				vertexBuffer_TEX2.Store((v0 + vertexID) * 4, pack_half2(uv2));
+				vertexBuffer_COL.Store((v0 + vertexID) * 4, particleColorPacked);
+			}
+
+			// Frustum culling:
+			uint infrustum = 1;
+			float3 center = particle.position;
+			float radius = -particleSize;
+			infrustum &= dot(GetCamera().FrustumPlanes[0], float4(center, 1)) > radius;
+			infrustum &= dot(GetCamera().FrustumPlanes[1], float4(center, 1)) > radius;
+			infrustum &= dot(GetCamera().FrustumPlanes[2], float4(center, 1)) > radius;
+			infrustum &= dot(GetCamera().FrustumPlanes[3], float4(center, 1)) > radius;
+			infrustum &= dot(GetCamera().FrustumPlanes[4], float4(center, 1)) > radius;
+			infrustum &= dot(GetCamera().FrustumPlanes[5], float4(center, 1)) > radius;
+
+			if (infrustum)
+			{
+				uint prevCount;
+				counterBuffer.InterlockedAdd(PARTICLECOUNTER_OFFSET_CULLEDCOUNT, 1, prevCount);
+				uint ii0 = prevCount * 6;
+				culledIndexBuffer[ii0 + 0] = v0 + 0;
+				culledIndexBuffer[ii0 + 1] = v0 + 1;
+				culledIndexBuffer[ii0 + 2] = v0 + 2;
+				culledIndexBuffer[ii0 + 3] = v0 + 2;
+				culledIndexBuffer[ii0 + 4] = v0 + 1;
+				culledIndexBuffer[ii0 + 5] = v0 + 3;
+			}
+
 #ifdef SORTING
 			// store squared distance to main camera:
 			float3 eyeVector = particle.position - GetCamera().CamPos;
@@ -175,6 +272,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 			uint deadIndex;
 			counterBuffer.InterlockedAdd(PARTICLECOUNTER_OFFSET_DEADCOUNT, 1, deadIndex);
 			deadBuffer[deadIndex] = particleIndex;
+
+			uint v0 = deadIndex * 4;
+			vertexBuffer_POS.Store4((v0 + 0) * 16, 0);
+			vertexBuffer_POS.Store4((v0 + 1) * 16, 0);
+			vertexBuffer_POS.Store4((v0 + 2) * 16, 0);
+			vertexBuffer_POS.Store4((v0 + 3) * 16, 0);
 		}
 	}
 

@@ -92,6 +92,29 @@ typedef XMINT4 int4;
 #define WaveActiveBitOr(a) (a)
 #endif // DISABLE_WAVE_INTRINSICS
 
+struct IndirectDrawArgsInstanced
+{
+	uint VertexCountPerInstance;
+	uint InstanceCount;
+	uint StartVertexLocation;
+	uint StartInstanceLocation;
+};
+struct IndirectDrawArgsIndexedInstanced
+{
+	uint IndexCountPerInstance;
+	uint InstanceCount;
+	uint StartIndexLocation;
+	int BaseVertexLocation;
+	uint StartInstanceLocation;
+};
+struct IndirectDispatchArgs
+{
+	uint ThreadGroupCountX;
+	uint ThreadGroupCountY;
+	uint ThreadGroupCountZ;
+};
+
 #endif // __cplusplus
+
 
 #endif // WI_SHADERINTEROP_H

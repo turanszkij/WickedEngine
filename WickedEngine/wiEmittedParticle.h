@@ -29,7 +29,6 @@ public:
 		ENUM_FORCE_UINT32 = 0xFFFFFFFF,
 	};
 
-private:
 	ParticleCounters statistics = {};
 	wiGraphics::GPUBuffer statisticsReadbackBuffer[wiGraphics::GraphicsDevice::GetBufferCount() + 1];
 
@@ -43,6 +42,17 @@ private:
 	wiGraphics::GPUBuffer counterBuffer;
 	wiGraphics::GPUBuffer indirectBuffers; // kickoffUpdate, simulation, draw
 	wiGraphics::GPUBuffer constantBuffer;
+	wiGraphics::GPUBuffer vertexBuffer_POS;
+	wiGraphics::GPUBuffer vertexBuffer_TEX;
+	wiGraphics::GPUBuffer vertexBuffer_TEX2;
+	wiGraphics::GPUBuffer vertexBuffer_COL;
+	wiGraphics::GPUBuffer primitiveBuffer; // raytracing
+	wiGraphics::GPUBuffer culledIndexBuffer; // rasterization
+	wiGraphics::GPUBuffer subsetBuffer;
+
+	wiGraphics::RaytracingAccelerationStructure BLAS;
+
+private:
 	void CreateSelfBuffers();
 
 	float emit = 0.0f;
@@ -56,7 +66,7 @@ public:
 	void Restart();
 
 	// Must have a transform and material component, but mesh is optional
-	void UpdateGPU(uint32_t materialIndex, const TransformComponent& transform, const MeshComponent* mesh, wiGraphics::CommandList cmd) const;
+	void UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex, const TransformComponent& transform, const MeshComponent* mesh, wiGraphics::CommandList cmd) const;
 	void Draw(const MaterialComponent& material, wiGraphics::CommandList cmd) const;
 
 	ParticleCounters GetStatistics() { return statistics; }

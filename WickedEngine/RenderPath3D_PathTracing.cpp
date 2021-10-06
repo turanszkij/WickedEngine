@@ -257,7 +257,14 @@ void RenderPath3D_PathTracing::Render() const
 		cmd = device->BeginCommandList();
 		wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
+			wiRenderer::BindCameraCB(
+				*camera,
+				camera_previous,
+				camera_reflection,
+				cmd
+			);
 			wiRenderer::UpdateRenderData(visibility_main, frameCB, cmd);
+			wiRenderer::UpdateRenderDataAsync(visibility_main, cmd);
 
 			if (scene->IsAccelerationStructureUpdateRequested())
 			{

@@ -765,6 +765,7 @@ void EmitterWindow::UpdateData()
 	ss << "Alive Particle Count = " << data.aliveCount << std::endl;
 	ss << "Dead Particle Count = " << data.deadCount << std::endl;
 	ss << "GPU Emit count = " << data.realEmitCount << std::endl;
+	ss << "Visible after frustum culling = " << data.culledCount << std::endl;
 
 	infoLabel.SetText(ss.str());
 

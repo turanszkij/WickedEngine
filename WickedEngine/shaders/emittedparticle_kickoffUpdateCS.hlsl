@@ -28,6 +28,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	// reset new alivecount:
 	counterBuffer.Store(PARTICLECOUNTER_OFFSET_ALIVECOUNT_AFTERSIMULATION, 0);
 
+	// reset culled count:
+	counterBuffer.Store(PARTICLECOUNTER_OFFSET_CULLEDCOUNT, 0);
+
 	// and write real emit count:
 	counterBuffer.Store(PARTICLECOUNTER_OFFSET_REALEMITCOUNT, realEmitCount);
 }

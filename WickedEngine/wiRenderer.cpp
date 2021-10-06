@@ -3619,12 +3619,6 @@ void UpdateRenderData(
 	wiProfiler::EndRange(prof_updatebuffer_gpu);
 
 	BindCommonResources(cmd);
-	BindCameraCB(
-		*vis.camera,
-		*vis.camera,
-		*vis.camera,
-		cmd
-	);
 
 	auto range = wiProfiler::BeginRangeGPU("Skinning", cmd);
 	device->EventBegin("Skinning", cmd);
@@ -3873,12 +3867,6 @@ void UpdateRenderDataAsync(
 	device->EventBegin("UpdateRenderDataAsync", cmd);
 
 	BindCommonResources(cmd);
-	BindCameraCB(
-		*vis.camera,
-		*vis.camera,
-		*vis.camera,
-		cmd
-	);
 
 	// GPU Particle systems simulation/sorting/culling:
 	if (!vis.visibleEmitters.empty())
@@ -3891,8 +3879,10 @@ void UpdateRenderDataAsync(
 			const TransformComponent& transform = *vis.scene->transforms.GetComponent(entity);
 			const MaterialComponent& material = *vis.scene->materials.GetComponent(entity);
 			const MeshComponent* mesh = vis.scene->meshes.GetComponent(emitter.meshID);
+			const uint32_t instanceIndex = uint32_t(vis.scene->objects.GetCount() + vis.scene->hairs.GetCount()) + emitterIndex;
+			const uint32_t materialIndex = (uint32_t)vis.scene->materials.GetIndex(entity);
 
-			emitter.UpdateGPU((uint32_t)vis.scene->materials.GetIndex(entity), transform, mesh, cmd);
+			emitter.UpdateGPU(instanceIndex, materialIndex, transform, mesh, cmd);
 		}
 		wiProfiler::EndRange(range);
 	}
@@ -3958,6 +3948,16 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 				if (hair.meshID != INVALID_ENTITY && hair.BLAS.IsValid())
 				{
 					device->BuildRaytracingAccelerationStructure(&hair.BLAS, cmd, nullptr);
+				}
+			}
+
+			for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
+			{
+				const wiEmittedParticle& emitter = scene.emitters[i];
+
+				if (emitter.BLAS.IsValid())
+				{
+					device->BuildRaytracingAccelerationStructure(&emitter.BLAS, cmd, nullptr);
 				}
 			}
 

@@ -22,11 +22,13 @@ struct ParticleCounters
 	uint deadCount;
 	uint realEmitCount;
 	uint aliveCount_afterSimulation;
+	uint culledCount;
 };
 static const uint PARTICLECOUNTER_OFFSET_ALIVECOUNT = 0;
 static const uint PARTICLECOUNTER_OFFSET_DEADCOUNT = PARTICLECOUNTER_OFFSET_ALIVECOUNT + 4;
 static const uint PARTICLECOUNTER_OFFSET_REALEMITCOUNT = PARTICLECOUNTER_OFFSET_DEADCOUNT + 4;
 static const uint PARTICLECOUNTER_OFFSET_ALIVECOUNT_AFTERSIMULATION = PARTICLECOUNTER_OFFSET_REALEMITCOUNT + 4;
+static const uint PARTICLECOUNTER_OFFSET_CULLEDCOUNT = PARTICLECOUNTER_OFFSET_ALIVECOUNT_AFTERSIMULATION + 4;
 
 static const uint EMITTER_OPTION_BIT_FRAME_BLENDING_ENABLED = 1 << 0;
 static const uint EMITTER_OPTION_BIT_SPH_ENABLED = 1 << 1;
@@ -53,7 +55,7 @@ CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 
 	float		xParticleMotionBlurAmount;
 	uint		xEmitterMaxParticleCount;
-	uint		xEmitterMaterialIndex;
+	uint		xEmitterInstanceIndex;
 	uint		xEmitter_padding1;
 
 	uint2		xEmitterFramesXY;

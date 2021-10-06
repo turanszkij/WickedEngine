@@ -660,6 +660,12 @@ void RenderPath3D::Render() const
 	cmd = device->BeginCommandList();
 	CommandList cmd_prepareframe = cmd;
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
+		wiRenderer::BindCameraCB(
+			*camera,
+			camera_previous,
+			camera_reflection,
+			cmd
+		);
 		wiRenderer::UpdateRenderData(visibility_main, frameCB, cmd);
 		});
 
@@ -669,6 +675,13 @@ void RenderPath3D::Render() const
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
+
+		wiRenderer::BindCameraCB(
+			*camera,
+			camera_previous,
+			camera_reflection,
+			cmd
+		);
 		wiRenderer::UpdateRenderDataAsync(visibility_main, cmd);
 
 		if (scene->IsAccelerationStructureUpdateRequested())
@@ -678,12 +691,6 @@ void RenderPath3D::Render() const
 
 		if (wiRenderer::GetSurfelGIEnabled())
 		{
-			wiRenderer::BindCameraCB(
-				*camera,
-				camera_previous,
-				camera_reflection,
-				cmd
-			);
 			wiRenderer::SurfelGI(
 				surfelGIResources,
 				*scene,

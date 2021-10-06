@@ -12,9 +12,8 @@ static const float3 HAIRPATCH[] = {
 RWSTRUCTUREDBUFFER(simulationBuffer, PatchSimulationData, 0);
 RWRAWBUFFER(vertexBuffer_POS, 1);
 RWRAWBUFFER(vertexBuffer_TEX, 2);
-RWTYPEDBUFFER(primitiveBuffer, uint, 3);
-RWTYPEDBUFFER(culledIndexBuffer, uint, 4);
-RWRAWBUFFER(counterBuffer, 5);
+RWTYPEDBUFFER(culledIndexBuffer, uint, 3);
+RWRAWBUFFER(counterBuffer, 4);
 
 TYPEDBUFFER(meshIndexBuffer, uint, TEXSLOT_ONDEMAND0);
 RAWBUFFER(meshVertexBuffer_POS, TEXSLOT_ONDEMAND1);
@@ -173,12 +172,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		//	These must be persistent, not culled (raytracing, surfels...)
 		uint v0 = particleID * 4;
 		uint i0 = particleID * 6;
-		primitiveBuffer[i0 + 0] = v0 + 0;
-		primitiveBuffer[i0 + 1] = v0 + 1;
-		primitiveBuffer[i0 + 2] = v0 + 2;
-		primitiveBuffer[i0 + 3] = v0 + 2;
-		primitiveBuffer[i0 + 4] = v0 + 1;
-		primitiveBuffer[i0 + 5] = v0 + 3;
 
 		uint rand = (tangent_random >> 24) & 0x000000FF;
 		float3x3 TBN = float3x3(tangent, normal, binormal); // don't derive binormal, because we want the shear!
