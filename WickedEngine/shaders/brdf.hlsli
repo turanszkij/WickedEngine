@@ -298,6 +298,10 @@ struct Surface
 		if (mesh.vb_pos_nor_wind < 0)
 			return false;
 
+		const bool is_hairparticle = mesh.flags & SHADERMESH_FLAG_HAIRPARTICLE;
+		const bool is_emittedparticle = mesh.flags & SHADERMESH_FLAG_EMITTEDPARTICLE;
+		const bool simple_lighting = is_hairparticle || is_emittedparticle;
+
 		subset = load_subset(mesh, prim.subsetIndex);
 		material = load_material(subset.materialIndex);
 		bary = barycentrics;
@@ -343,7 +347,7 @@ struct Surface
 		float4 uvsets = uv0 * w + uv1 * u + uv2 * v;
 		uvsets.xy = uvsets.xy * material.texMulAdd.xy + material.texMulAdd.zw;
 
-		float4 baseColor = material.baseColor;
+		float4 baseColor = is_emittedparticle ? 1 : material.baseColor;
 		[branch]
 		if (material.texture_basecolormap_index >= 0)
 		{
@@ -374,15 +378,19 @@ struct Surface
 
 		float4 surfaceMap = 1;
 		[branch]
-		if (material.texture_surfacemap_index >= 0)
+		if (material.texture_surfacemap_index >= 0 && !simple_lighting)
 		{
 			const float2 UV_surfaceMap = material.uvset_surfaceMap == 0 ? uvsets.xy : uvsets.zw;
 			surfaceMap = bindless_textures[NonUniformResourceIndex(material.texture_surfacemap_index)].SampleLevel(sampler_linear_wrap, UV_surfaceMap, 0);
 		}
+		if (simple_lighting)
+		{
+			surfaceMap = 0;
+		}
 
 		float4 specularMap = 1;
 		[branch]
-		if (material.texture_specularmap_index >= 0)
+		if (material.texture_specularmap_index >= 0 && !simple_lighting)
 		{
 			const float2 UV_specularMap = material.uvset_specularMap == 0 ? uvsets.xy : uvsets.zw;
 			specularMap = bindless_textures[NonUniformResourceIndex(material.texture_specularmap_index)].SampleLevel(sampler_linear_wrap, UV_specularMap, 0);
@@ -392,13 +400,26 @@ struct Surface
 		create(material, baseColor, surfaceMap, specularMap);
 
 		emissiveColor = material.GetEmissive();
-		[branch]
-		if (material.texture_emissivemap_index >= 0)
+		if (is_emittedparticle)
 		{
-			const float2 UV_emissiveMap = material.uvset_emissiveMap == 0 ? uvsets.xy : uvsets.zw;
-			float4 emissiveMap = bindless_textures[NonUniformResourceIndex(material.texture_emissivemap_index)].SampleLevel(sampler_linear_wrap, UV_emissiveMap, 0);
-			emissiveMap.rgb = DEGAMMA(emissiveMap.rgb);
-			emissiveColor *= emissiveMap.rgb * emissiveMap.a;
+			emissiveColor *= baseColor.rgb * baseColor.a;
+		}
+		else
+		{
+			[branch]
+			if (material.texture_emissivemap_index >= 0)
+			{
+				const float2 UV_emissiveMap = material.uvset_emissiveMap == 0 ? uvsets.xy : uvsets.zw;
+				float4 emissiveMap = bindless_textures[NonUniformResourceIndex(material.texture_emissivemap_index)].SampleLevel(sampler_linear_wrap, UV_emissiveMap, 0);
+				emissiveMap.rgb = DEGAMMA(emissiveMap.rgb);
+				emissiveColor *= emissiveMap.rgb * emissiveMap.a;
+			}
+		}
+
+		if (material.options & SHADERMATERIAL_OPTION_BIT_ADDITIVE)
+		{
+			opacity = 0;
+			emissiveColor += baseColor.rgb * baseColor.a;
 		}
 
 		transmission = material.transmission;

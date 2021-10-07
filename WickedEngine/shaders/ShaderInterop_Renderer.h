@@ -41,6 +41,7 @@ static const uint SHADERMATERIAL_OPTION_BIT_RECEIVE_SHADOW = 1 << 5;
 static const uint SHADERMATERIAL_OPTION_BIT_CAST_SHADOW = 1 << 6;
 static const uint SHADERMATERIAL_OPTION_BIT_DOUBLE_SIDED = 1 << 7;
 static const uint SHADERMATERIAL_OPTION_BIT_TRANSPARENT = 1 << 8;
+static const uint SHADERMATERIAL_OPTION_BIT_ADDITIVE = 1 << 9;
 
 struct ShaderMaterial
 {
@@ -125,6 +126,8 @@ struct ShaderMaterial
 };
 
 static const uint SHADERMESH_FLAG_DOUBLE_SIDED = 1 << 0;
+static const uint SHADERMESH_FLAG_HAIRPARTICLE = 1 << 1;
+static const uint SHADERMESH_FLAG_EMITTEDPARTICLE = 1 << 2;
 
 struct ShaderMesh
 {

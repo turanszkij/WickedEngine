@@ -311,6 +311,10 @@ namespace wiScene
 		{
 			options |= SHADERMATERIAL_OPTION_BIT_TRANSPARENT;
 		}
+		if (userBlendMode == BLENDMODE_ADDITIVE)
+		{
+			options |= SHADERMATERIAL_OPTION_BIT_ADDITIVE;
+		}
 		dest->options = options; // ensure that this memory is not read, so bitwise ORs also not performed with it!
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
@@ -3647,7 +3651,7 @@ namespace wiScene
 					mesh.vb_pre = device->GetDescriptorIndex(&hair.vertexBuffer_POS[1], SRV);
 					mesh.vb_uv0 = device->GetDescriptorIndex(&hair.vertexBuffer_TEX, SRV);
 					mesh.subsetbuffer = device->GetDescriptorIndex(&hair.subsetBuffer, SRV);
-					mesh.flags = SHADERMESH_FLAG_DOUBLE_SIDED;
+					mesh.flags = SHADERMESH_FLAG_DOUBLE_SIDED | SHADERMESH_FLAG_HAIRPARTICLE;
 
 					size_t instanceIndex = objects.GetCount() + args.jobIndex;
 					ShaderMeshInstance& inst = instanceArrayMapped[instanceIndex];
@@ -3712,7 +3716,7 @@ namespace wiScene
 			mesh.vb_uv1 = device->GetDescriptorIndex(&emitter.vertexBuffer_TEX2, SRV);
 			mesh.vb_col = device->GetDescriptorIndex(&emitter.vertexBuffer_COL, SRV);
 			mesh.subsetbuffer = device->GetDescriptorIndex(&emitter.subsetBuffer, SRV);
-			mesh.flags = SHADERMESH_FLAG_DOUBLE_SIDED;
+			mesh.flags = SHADERMESH_FLAG_DOUBLE_SIDED | SHADERMESH_FLAG_EMITTEDPARTICLE;
 
 			size_t instanceIndex = objects.GetCount() + hairs.GetCount() + args.jobIndex;
 			ShaderMeshInstance& inst = instanceArrayMapped[instanceIndex];

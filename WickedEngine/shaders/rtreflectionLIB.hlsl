@@ -168,7 +168,7 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 	lighting.indirect.specular += max(0, EnvironmentReflection_Global(surface));
 
 	LightingPart combined_lighting = CombineLighting(surface, lighting);
-	payload.data.xyz = surface.albedo * combined_lighting.diffuse + combined_lighting.specular + surface.emissiveColor;
+	payload.data.xyz += surface.albedo * combined_lighting.diffuse + combined_lighting.specular + surface.emissiveColor;
 	payload.data.w = RayTCurrent();
 }
 
@@ -183,8 +183,10 @@ void RTReflection_AnyHit(inout RayPayload payload, in BuiltInTriangleIntersectio
 	Surface surface;
 	surface.load(prim, attr.barycentrics);
 
+	payload.data.rgb += surface.emissiveColor;
+
 	[branch]
-	if (surface.opacity < surface.material.alphaTest)
+	if (surface.opacity < surface.material.alphaTest + 1.0 / 255.0)
 	{
 		IgnoreHit();
 	}
@@ -193,6 +195,6 @@ void RTReflection_AnyHit(inout RayPayload payload, in BuiltInTriangleIntersectio
 [shader("miss")]
 void RTReflection_Miss(inout RayPayload payload)
 {
-	payload.data.xyz = GetDynamicSkyColor(WorldRayDirection());
+	payload.data.xyz += GetDynamicSkyColor(WorldRayDirection());
 	payload.data.w = FLT_MAX;
 }

@@ -563,7 +563,7 @@ void RenderPath3D::Update(float dt)
 		*scene,
 		visibility_main,
 		frameCB,
-		dt
+		getSceneUpdateEnabled() ? dt : 0
 	);
 
 	if (wiRenderer::GetTemporalAAEnabled())
