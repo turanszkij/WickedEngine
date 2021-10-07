@@ -215,7 +215,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 
 				// rotate the billboard:
 				quadPos.xy = mul(quadPos.xy, rot);
-				quadPos = mul(quadPos, (float3x3)GetCamera().View); // reversed mul for inverse camera rotation!
 
 				// scale the billboard:
 				quadPos *= particleSize;
@@ -223,6 +222,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 				// scale the billboard along view space motion vector:
 				float3 velocity = mul((float3x3)GetCamera().View, particle.velocity);
 				quadPos += dot(quadPos, velocity) * velocity * xParticleMotionBlurAmount;
+
+				// rotate the billboard to face the camera:
+				quadPos = mul(quadPos, (float3x3)GetCamera().View); // reversed mul for inverse camera rotation!
 
 				// write out vertex:
 				uint4 data;

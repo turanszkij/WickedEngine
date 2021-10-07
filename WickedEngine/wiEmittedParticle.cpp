@@ -725,24 +725,20 @@ void wiEmittedParticle::Draw(const MaterialComponent& material, CommandList cmd)
 
 	device->BindConstantBuffer(&constantBuffer, CB_GETBINDSLOT(EmittedParticleCB), cmd);
 
+	const GPUResource* res[] = {
+		&counterBuffer,
+		&particleBuffer,
+		&culledIndirectionBuffer,
+		&culledIndirectionBuffer2,
+	};
+	device->BindResources(res, TEXSLOT_ONDEMAND20, arraysize(res), cmd);
+
 	if (ALLOW_MESH_SHADER && device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_MESH_SHADER))
 	{
-		const GPUResource* res[] = {
-			&counterBuffer,
-			&particleBuffer,
-			&aliveList[1], // NEW aliveList
-		};
-		device->BindResources(res, TEXSLOT_ONDEMAND20, arraysize(res), cmd);
 		device->DispatchMeshIndirect(&indirectBuffers, ARGUMENTBUFFER_OFFSET_DRAWPARTICLES, cmd);
 	}
 	else
 	{
-		const GPUResource* res[] = {
-			&particleBuffer,
-			&culledIndirectionBuffer,
-			&culledIndirectionBuffer2,
-		};
-		device->BindResources(res, TEXSLOT_ONDEMAND21, arraysize(res), cmd);
 		device->DrawInstancedIndirect(&indirectBuffers, ARGUMENTBUFFER_OFFSET_DRAWPARTICLES, cmd);
 	}
 
