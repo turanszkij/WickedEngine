@@ -315,6 +315,10 @@ namespace wiScene
 		{
 			options |= SHADERMATERIAL_OPTION_BIT_ADDITIVE;
 		}
+		if (shaderType == SHADERTYPE_UNLIT)
+		{
+			options |= SHADERMATERIAL_OPTION_BIT_UNLIT;
+		}
 		dest->options = options; // ensure that this memory is not read, so bitwise ORs also not performed with it!
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
@@ -3691,9 +3695,20 @@ namespace wiScene
 			Entity entity = emitters.GetEntity(args.jobIndex);
 
 			MaterialComponent* material = materials.GetComponent(entity);
-			if (material != nullptr && !material->IsUsingVertexColors())
+			if (material != nullptr)
 			{
-				material->SetUseVertexColors(true);
+				if (!material->IsUsingVertexColors())
+				{
+					material->SetUseVertexColors(true);
+				}
+				if (emitter.shaderType == wiEmittedParticle::PARTICLESHADERTYPE::SOFT_LIGHTING)
+				{
+					material->shaderType = MaterialComponent::SHADERTYPE_PBR;
+				}
+				else
+				{
+					material->shaderType = MaterialComponent::SHADERTYPE_UNLIT;
+				}
 			}
 
 			const LayerComponent* layer = layers.GetComponent(entity);

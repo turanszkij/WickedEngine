@@ -116,9 +116,18 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 		result += max(0, energy * surface.emissiveColor);
 
-
-
-
+		if (surface.material.IsUnlit())
+		{
+			const float blendChance = 1 - surface.opacity;
+			float roulette = rand(seed, uv);
+			if (roulette < blendChance)
+			{
+				bounces++;
+				continue;
+			}
+			result += surface.albedo;
+			break;
+		}
 
 		// Light sampling:
 		[loop]
