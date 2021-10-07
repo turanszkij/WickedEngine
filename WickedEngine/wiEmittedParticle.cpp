@@ -79,6 +79,10 @@ void wiEmittedParticle::CreateSelfBuffers()
 		device->SetName(&aliveList[0], "aliveList[0]");
 		device->CreateBuffer(&bd, nullptr, &aliveList[1]);
 		device->SetName(&aliveList[1], "aliveList[1]");
+		device->CreateBuffer(&bd, nullptr, &culledIndirectionBuffer);
+		device->SetName(&culledIndirectionBuffer, "culledIndirectionBuffer");
+		device->CreateBuffer(&bd, nullptr, &culledIndirectionBuffer2);
+		device->SetName(&culledIndirectionBuffer2, "culledIndirectionBuffer2");
 
 		// Dead index list:
 		std::vector<uint32_t> indices(MAX_PARTICLES);
@@ -143,14 +147,6 @@ void wiEmittedParticle::CreateSelfBuffers()
 		}
 		device->CreateBuffer(&bd, primitiveData.data(), &primitiveBuffer);
 		device->SetName(&primitiveBuffer, "primitiveBuffer");
-
-		bd.BindFlags = BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		bd.MiscFlags = RESOURCE_MISC_NONE;
-		bd.Format = FORMAT_R32_UINT;
-		bd.Stride = sizeof(uint);
-		bd.Size = bd.Stride * 6 * MAX_PARTICLES;
-		device->CreateBuffer(&bd, nullptr, &culledIndexBuffer);
-		device->SetName(&culledIndexBuffer, "culledIndexBuffer");
 	}
 
 	if (IsSorted() && distanceBuffer.desc.Size < MAX_PARTICLES * sizeof(float))
@@ -237,7 +233,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 		bd.Size =
 			sizeof(wiGraphics::IndirectDispatchArgs) +
 			sizeof(wiGraphics::IndirectDispatchArgs) +
-			sizeof(wiGraphics::IndirectDrawArgsIndexedInstanced);
+			sizeof(wiGraphics::IndirectDrawArgsInstanced);
 		device->CreateBuffer(&bd, nullptr, &indirectBuffers);
 		device->SetName(&indirectBuffers, "indirectBuffers");
 
@@ -322,7 +318,8 @@ uint64_t wiEmittedParticle::GetMemorySizeInBytes() const
 	retVal += vertexBuffer_TEX2.GetDesc().Size;
 	retVal += vertexBuffer_COL.GetDesc().Size;
 	retVal += primitiveBuffer.GetDesc().Size;
-	retVal += culledIndexBuffer.GetDesc().Size;
+	retVal += culledIndirectionBuffer.GetDesc().Size;
+	retVal += culledIndirectionBuffer2.GetDesc().Size;
 	retVal += subsetBuffer.GetDesc().Size;
 
 	return retVal;
@@ -471,7 +468,8 @@ void wiEmittedParticle::UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex
 			&vertexBuffer_TEX,
 			&vertexBuffer_TEX2,
 			&vertexBuffer_COL,
-			&culledIndexBuffer
+			&culledIndirectionBuffer,
+			&culledIndirectionBuffer2,
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
@@ -631,14 +629,20 @@ void wiEmittedParticle::UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex
 			}
 		}
 		device->DispatchIndirect(&indirectBuffers, ARGUMENTBUFFER_OFFSET_DISPATCHSIMULATION, cmd);
-		device->Barrier(&barrier_memory, 1, cmd);
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(),
+				GPUBarrier::Buffer(&counterBuffer, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE),
+				GPUBarrier::Buffer(&distanceBuffer, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE_COMPUTE),
+			};
+		}
 		device->EventEnd(cmd);
 
 	}
 
 	if (IsSorted())
 	{
-		wiGPUSortLib::Sort(MAX_PARTICLES, distanceBuffer, counterBuffer, PARTICLECOUNTER_OFFSET_ALIVECOUNT_AFTERSIMULATION, aliveList[1], cmd);
+		wiGPUSortLib::Sort(MAX_PARTICLES, distanceBuffer, counterBuffer, PARTICLECOUNTER_OFFSET_CULLEDCOUNT, culledIndirectionBuffer, cmd);
 	}
 
 	if (!IsPaused())
@@ -660,7 +664,6 @@ void wiEmittedParticle::UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Memory(),
-				GPUBarrier::Buffer(&counterBuffer, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE),
 				GPUBarrier::Buffer(&indirectBuffers, RESOURCE_STATE_INDIRECT_ARGUMENT, RESOURCE_STATE_UNORDERED_ACCESS),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
@@ -693,7 +696,8 @@ void wiEmittedParticle::UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex
 			GPUBarrier::Buffer(&vertexBuffer_TEX, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE),
 			GPUBarrier::Buffer(&vertexBuffer_TEX2, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE),
 			GPUBarrier::Buffer(&vertexBuffer_COL, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE),
-			GPUBarrier::Buffer(&culledIndexBuffer, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE),
+			GPUBarrier::Buffer(&culledIndirectionBuffer, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE_COMPUTE),
+			GPUBarrier::Buffer(&culledIndirectionBuffer2, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE_COMPUTE),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
@@ -735,11 +739,11 @@ void wiEmittedParticle::Draw(const MaterialComponent& material, CommandList cmd)
 	{
 		const GPUResource* res[] = {
 			&particleBuffer,
-			&aliveList[1], // NEW aliveList
+			&culledIndirectionBuffer,
+			&culledIndirectionBuffer2,
 		};
 		device->BindResources(res, TEXSLOT_ONDEMAND21, arraysize(res), cmd);
-		device->BindIndexBuffer(&culledIndexBuffer, INDEXFORMAT_32BIT, 0, cmd);
-		device->DrawIndexedInstancedIndirect(&indirectBuffers, ARGUMENTBUFFER_OFFSET_DRAWPARTICLES, cmd);
+		device->DrawInstancedIndirect(&indirectBuffers, ARGUMENTBUFFER_OFFSET_DRAWPARTICLES, cmd);
 	}
 
 	device->EventEnd(cmd);
@@ -785,7 +789,7 @@ namespace wiEmittedParticle_Internal
 		for (int i = 0; i < BLENDMODE_COUNT; ++i)
 		{
 			PipelineStateDesc desc;
-			desc.pt = TRIANGLELIST;
+			desc.pt = TRIANGLESTRIP;
 			if (ALLOW_MESH_SHADER && wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_MESH_SHADER))
 			{
 				desc.ms = &meshShader;
@@ -807,7 +811,7 @@ namespace wiEmittedParticle_Internal
 
 		{
 			PipelineStateDesc desc;
-			desc.pt = TRIANGLELIST;
+			desc.pt = TRIANGLESTRIP;
 			if (ALLOW_MESH_SHADER && wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_MESH_SHADER))
 			{
 				desc.ms = &meshShader;

@@ -47,7 +47,8 @@ public:
 	wiGraphics::GPUBuffer vertexBuffer_TEX2;
 	wiGraphics::GPUBuffer vertexBuffer_COL;
 	wiGraphics::GPUBuffer primitiveBuffer; // raytracing
-	wiGraphics::GPUBuffer culledIndexBuffer; // rasterization
+	wiGraphics::GPUBuffer culledIndirectionBuffer; // rasterization
+	wiGraphics::GPUBuffer culledIndirectionBuffer2; // rasterization
 	wiGraphics::GPUBuffer subsetBuffer;
 
 	wiGraphics::RaytracingAccelerationStructure BLAS;

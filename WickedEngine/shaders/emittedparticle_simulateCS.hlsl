@@ -19,7 +19,8 @@ RWRAWBUFFER(vertexBuffer_POS, 7);
 RWRAWBUFFER(vertexBuffer_TEX, 8);
 RWRAWBUFFER(vertexBuffer_TEX2, 9);
 RWRAWBUFFER(vertexBuffer_COL, 10);
-RWTYPEDBUFFER(culledIndexBuffer, uint, 11);
+RWSTRUCTUREDBUFFER(culledIndirectionBuffer, uint, 11);
+RWSTRUCTUREDBUFFER(culledIndirectionBuffer2, uint, 12);
 
 #define SPH_FLOOR_COLLISION
 #define SPH_BOX_COLLISION
@@ -38,6 +39,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 
 		uint particleIndex = aliveBuffer_CURRENT[DTid.x];
 		Particle particle = particleBuffer[particleIndex];
+		uint v0 = particleIndex * 4;
 
 		if (particle.life > 0)
 		{
@@ -176,8 +178,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 
 			// Write out render buffers:
 			//	These must be persistent, not culled (raytracing, surfels...)
-			uint v0 = newAliveIndex * 4;
-			uint i0 = newAliveIndex * 6;
 
 			float opacity = saturate(lerp(1, 0, lifeLerp) * EmitterGetMaterial().baseColor.a);
 			uint particleColorPacked = (particle.color_mirror & 0x00FFFFFF) | (uint(opacity * 255.0f) << 24u);
@@ -249,21 +249,17 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 			{
 				uint prevCount;
 				counterBuffer.InterlockedAdd(PARTICLECOUNTER_OFFSET_CULLEDCOUNT, 1, prevCount);
-				uint ii0 = prevCount * 6;
-				culledIndexBuffer[ii0 + 0] = v0 + 0;
-				culledIndexBuffer[ii0 + 1] = v0 + 1;
-				culledIndexBuffer[ii0 + 2] = v0 + 2;
-				culledIndexBuffer[ii0 + 3] = v0 + 2;
-				culledIndexBuffer[ii0 + 4] = v0 + 1;
-				culledIndexBuffer[ii0 + 5] = v0 + 3;
-			}
+
+				culledIndirectionBuffer[prevCount] = prevCount;
+				culledIndirectionBuffer2[prevCount] = particleIndex;
 
 #ifdef SORTING
-			// store squared distance to main camera:
-			float3 eyeVector = particle.position - GetCamera().CamPos;
-			float distSQ = dot(eyeVector, eyeVector);
-			distanceBuffer[particleIndex] = -distSQ; // this can be negated to modify sorting order here instead of rewriting sorting shaders...
+				// store squared distance to main camera:
+				float3 eyeVector = particle.position - GetCamera().CamPos;
+				float distSQ = dot(eyeVector, eyeVector);
+				distanceBuffer[prevCount] = -distSQ; // this can be negated to modify sorting order here instead of rewriting sorting shaders...
 #endif // SORTING
+			}
 
 		}
 		else
@@ -273,7 +269,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 			counterBuffer.InterlockedAdd(PARTICLECOUNTER_OFFSET_DEADCOUNT, 1, deadIndex);
 			deadBuffer[deadIndex] = particleIndex;
 
-			uint v0 = deadIndex * 4;
 			vertexBuffer_POS.Store4((v0 + 0) * 16, 0);
 			vertexBuffer_POS.Store4((v0 + 1) * 16, 0);
 			vertexBuffer_POS.Store4((v0 + 2) * 16, 0);

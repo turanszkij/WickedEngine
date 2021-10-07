@@ -10,13 +10,15 @@ static const float3 BILLBOARD[] = {
 };
 
 STRUCTUREDBUFFER(particleBuffer, Particle, TEXSLOT_ONDEMAND21);
-STRUCTUREDBUFFER(aliveList, uint, TEXSLOT_ONDEMAND22);
+STRUCTUREDBUFFER(culledIndirectionBuffer, uint, TEXSLOT_ONDEMAND22);
+STRUCTUREDBUFFER(culledIndirectionBuffer2, uint, TEXSLOT_ONDEMAND23);
 
-VertextoPixel main(uint vertexID : SV_VERTEXID)
+VertextoPixel main(uint vid : SV_VertexID, uint instanceID : SV_InstanceID)
 {
 	ShaderMesh mesh = EmitterGetMesh();
 
-	VertextoPixel Out = (VertextoPixel)0;
+	uint particleIndex = culledIndirectionBuffer2[culledIndirectionBuffer[instanceID]];
+	uint vertexID = particleIndex * 4 + vid;
 
 	uint4 data = bindless_buffers[mesh.vb_pos_nor_wind].Load4(vertexID * 16);
 	float3 position = asfloat(data.xyz);
@@ -27,7 +29,7 @@ VertextoPixel main(uint vertexID : SV_VERTEXID)
 
 
 	// load particle data:
-	Particle particle = particleBuffer[aliveList[vertexID / 4]];
+	Particle particle = particleBuffer[particleIndex];
 
 	// calculate render properties from life:
 	float lifeLerp = 1 - particle.life / particle.maxLife;
@@ -39,6 +41,7 @@ VertextoPixel main(uint vertexID : SV_VERTEXID)
 		((xEmitterFrameStart + particle.life * xEmitterFrameRate) % xEmitterFrameCount);
 	const float frameBlend = frac(spriteframe);
 
+	VertextoPixel Out;
 	Out.P = position;
 	Out.pos = mul(GetCamera().VP, float4(position, 1));
 	Out.tex = float4(uv, uv2);
@@ -46,6 +49,5 @@ VertextoPixel main(uint vertexID : SV_VERTEXID)
 	Out.color = color;
 	Out.unrotated_uv = BILLBOARD[vertexID % 4].xy * float2(1, -1) * 0.5f + 0.5f;
 	Out.frameBlend = frameBlend;
-
 	return Out;
 }

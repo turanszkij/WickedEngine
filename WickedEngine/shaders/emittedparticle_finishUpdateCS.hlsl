@@ -22,12 +22,11 @@ void main( uint3 DTid : SV_DispatchThreadID )
 	else
 	{
 		// Create draw argument buffer
-		IndirectDrawArgsIndexedInstanced args;
-		args.IndexCountPerInstance = particleCount * 6;
-		args.InstanceCount = 1;
-		args.StartIndexLocation = 0;
-		args.BaseVertexLocation = 0;
+		IndirectDrawArgsInstanced args;
+		args.VertexCountPerInstance = 4;
+		args.InstanceCount = particleCount;
+		args.StartVertexLocation = 0;
 		args.StartInstanceLocation = 0;
-		indirectBuffers.Store<IndirectDrawArgsIndexedInstanced>(ARGUMENTBUFFER_OFFSET_DRAWPARTICLES, args);
+		indirectBuffers.Store<IndirectDrawArgsInstanced>(ARGUMENTBUFFER_OFFSET_DRAWPARTICLES, args);
 	}
 }
