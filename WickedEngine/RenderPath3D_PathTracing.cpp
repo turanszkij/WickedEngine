@@ -264,7 +264,7 @@ void RenderPath3D_PathTracing::Render() const
 				cmd
 			);
 			wiRenderer::UpdateRenderData(visibility_main, frameCB, cmd);
-			wiRenderer::UpdateRenderDataAsync(visibility_main, cmd);
+			wiRenderer::UpdateRenderDataAsync(visibility_main, frameCB, cmd);
 
 			if (scene->IsAccelerationStructureUpdateRequested())
 			{

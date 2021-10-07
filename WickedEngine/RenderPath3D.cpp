@@ -682,7 +682,7 @@ void RenderPath3D::Render() const
 			camera_reflection,
 			cmd
 		);
-		wiRenderer::UpdateRenderDataAsync(visibility_main, cmd);
+		wiRenderer::UpdateRenderDataAsync(visibility_main, frameCB, cmd);
 
 		if (scene->IsAccelerationStructureUpdateRequested())
 		{

@@ -170,6 +170,7 @@ namespace wiRenderer
 	// Updates those GPU states that can be async
 	void UpdateRenderDataAsync(
 		const Visibility& vis,
+		const FrameCB& frameCB,
 		wiGraphics::CommandList cmd
 	);
 

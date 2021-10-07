@@ -3695,7 +3695,7 @@ void UpdateRenderData(
 
 	// Hair particle systems GPU simulation:
 	//	(This must be non-async too, as prepass will render hairs!)
-	if (!vis.visibleHairs.empty())
+	if (!vis.visibleHairs.empty() && frameCB.DeltaTime > 0)
 	{
 		range = wiProfiler::BeginRangeGPU("HairParticles - Simulate", cmd);
 		for (uint32_t hairIndex : vis.visibleHairs)
@@ -3861,6 +3861,7 @@ void UpdateRenderData(
 
 void UpdateRenderDataAsync(
 	const Visibility& vis,
+	const FrameCB& frameCB,
 	CommandList cmd
 )
 {
@@ -3869,7 +3870,7 @@ void UpdateRenderDataAsync(
 	BindCommonResources(cmd);
 
 	// GPU Particle systems simulation/sorting/culling:
-	if (!vis.visibleEmitters.empty())
+	if (!vis.visibleEmitters.empty() && frameCB.DeltaTime > 0)
 	{
 		auto range = wiProfiler::BeginRangeGPU("EmittedParticles - Simulate", cmd);
 		for (uint32_t emitterIndex : vis.visibleEmitters)
