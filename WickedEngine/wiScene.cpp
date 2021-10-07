@@ -3686,6 +3686,12 @@ namespace wiScene
 			wiEmittedParticle& emitter = emitters[args.jobIndex];
 			Entity entity = emitters.GetEntity(args.jobIndex);
 
+			MaterialComponent* material = materials.GetComponent(entity);
+			if (material != nullptr && !material->IsUsingVertexColors())
+			{
+				material->SetUseVertexColors(true);
+			}
+
 			const LayerComponent* layer = layers.GetComponent(entity);
 			if (layer != nullptr)
 			{
