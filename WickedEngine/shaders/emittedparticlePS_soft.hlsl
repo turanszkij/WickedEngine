@@ -1,3 +1,4 @@
+#define TRANSPARENT // uses transparent light lists
 #include "globals.hlsli"
 #include "emittedparticleHF.hlsli"
 #include "ShaderInterop_EmittedParticle.h"

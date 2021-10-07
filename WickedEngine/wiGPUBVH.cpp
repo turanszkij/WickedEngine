@@ -54,6 +54,11 @@ void wiGPUBVH::Update(const wiScene::Scene& scene)
 			totalTriangles += hair.segmentCount * hair.strandCount * 2;
 		}
 	}
+	for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
+	{
+		const wiEmittedParticle& emitter = scene.emitters[i];
+		totalTriangles += emitter.GetMaxParticleCount() * 2;
+	}
 
 	if (totalTriangles > 0 && !primitiveCounterBuffer.IsValid())
 	{
@@ -194,6 +199,30 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
 				push.instanceIndex = (uint)(scene.objects.GetCount() + i);
 				push.subsetIndex = 0;
 				push.primitiveCount = hair.segmentCount * hair.strandCount * 2;
+				push.primitiveOffset = primitiveCount;
+				device->PushConstants(&push, sizeof(push), cmd);
+
+				primitiveCount += push.primitiveCount;
+
+				device->Dispatch(
+					(push.primitiveCount + BVH_BUILDER_GROUPSIZE - 1) / BVH_BUILDER_GROUPSIZE,
+					1,
+					1,
+					cmd
+				);
+			}
+		}
+
+		for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
+		{
+			const wiEmittedParticle& emitter = scene.emitters[i];
+
+			if (emitter.GetMaxParticleCount() > 0)
+			{
+				BVHPushConstants push;
+				push.instanceIndex = (uint)(scene.objects.GetCount() + i);
+				push.subsetIndex = 0;
+				push.primitiveCount = emitter.GetMaxParticleCount() * 2;
 				push.primitiveOffset = primitiveCount;
 				device->PushConstants(&push, sizeof(push), cmd);
 

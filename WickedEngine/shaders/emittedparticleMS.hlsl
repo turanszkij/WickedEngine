@@ -12,7 +12,8 @@ static const uint BILLBOARD_VERTEXCOUNT = 4;
 
 RAWBUFFER(counterBuffer, TEXSLOT_ONDEMAND20);
 STRUCTUREDBUFFER(particleBuffer, Particle, TEXSLOT_ONDEMAND21);
-STRUCTUREDBUFFER(aliveList, uint, TEXSLOT_ONDEMAND22);
+STRUCTUREDBUFFER(culledIndirectionBuffer, uint, TEXSLOT_ONDEMAND22);
+STRUCTUREDBUFFER(culledIndirectionBuffer2, uint, TEXSLOT_ONDEMAND23);
 
 static const uint VERTEXCOUNT = THREADCOUNT_MESH_SHADER * BILLBOARD_VERTEXCOUNT;
 static const uint PRIMITIVECOUNT = THREADCOUNT_MESH_SHADER * 2;
@@ -26,7 +27,7 @@ void main(
     out vertices VertextoPixel verts[VERTEXCOUNT],
     out indices uint3 triangles[PRIMITIVECOUNT])
 {
-	uint particleCount = counterBuffer.Load(PARTICLECOUNTER_OFFSET_ALIVECOUNT_AFTERSIMULATION);
+	uint particleCount = counterBuffer.Load(PARTICLECOUNTER_OFFSET_CULLEDCOUNT);
 	uint realGroupCount = min(THREADCOUNT_MESH_SHADER, particleCount - gid * THREADCOUNT_MESH_SHADER);
 
     // Set number of outputs
@@ -35,75 +36,44 @@ void main(
 	if (tig >= realGroupCount)
 		return;
 
+	ShaderMesh mesh = EmitterGetMesh();
+
 	uint instanceID = tid;
+	uint particleIndex = culledIndirectionBuffer2[culledIndirectionBuffer[instanceID]];
 
 	// load particle data:
-	Particle particle = particleBuffer[aliveList[instanceID]];
+	Particle particle = particleBuffer[particleIndex];
 
 	// calculate render properties from life:
 	float lifeLerp = 1 - particle.life / particle.maxLife;
 	float size = lerp(particle.sizeBeginEnd.x, particle.sizeBeginEnd.y, lifeLerp);
-	float opacity = saturate(lerp(1, 0, lifeLerp) * EmitterGetMaterial().baseColor.a);
-	float rotation = lifeLerp * particle.rotationalVelocity;
 
+	// Sprite sheet UV transform:
 	const float spriteframe = xEmitterFrameRate == 0 ?
 		lerp(xEmitterFrameStart, xEmitterFrameCount, lifeLerp) :
 		((xEmitterFrameStart + particle.life * xEmitterFrameRate) % xEmitterFrameCount);
-	const uint currentFrame = floor(spriteframe);
-	const uint nextFrame = ceil(spriteframe);
 	const float frameBlend = frac(spriteframe);
-	uint2 offset = uint2(currentFrame % xEmitterFramesXY.x, currentFrame / xEmitterFramesXY.x);
-	uint2 offset2 = uint2(nextFrame % xEmitterFramesXY.x, nextFrame / xEmitterFramesXY.x);
-
-	float2x2 rot = float2x2(
-		cos(rotation), -sin(rotation),
-		sin(rotation), cos(rotation)
-		);
-
-	float3 velocity = mul((float3x3)GetCamera().View, particle.velocity);
 
     // Transform the vertices and write them
 	for (uint i = 0; i < BILLBOARD_VERTEXCOUNT; ++i)
 	{
+		uint vertexID = particleIndex * 4 + i;
+
+		uint4 data = bindless_buffers[mesh.vb_pos_nor_wind].Load4(vertexID * 16);
+		float3 position = asfloat(data.xyz);
+		float3 normal = normalize(unpack_unitvector(data.w));
+		float2 uv = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(vertexID * 4));
+		float2 uv2 = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(vertexID * 4));
+		uint color = bindless_buffers[mesh.vb_col].Load(vertexID * 4);
+
 		VertextoPixel Out;
-		uint vertexID = i;
-
-		// expand the point into a billboard in view space:
-		float3 quadPos = BILLBOARD[vertexID];
-		quadPos.x = particle.color_mirror & 0x10000000 ? -quadPos.x : quadPos.x;
-		quadPos.y = particle.color_mirror & 0x20000000 ? -quadPos.y : quadPos.y;
-		float2 uv = quadPos.xy * float2(0.5f, -0.5f) + 0.5f;
-		float2 uv2 = uv;
-
-		// Sprite sheet UV transform:
-		uv.xy += offset;
-		uv.xy *= xEmitterTexMul;
-		uv2.xy += offset2;
-		uv2.xy *= xEmitterTexMul;
-
-		// rotate the billboard:
-		quadPos.xy = mul(quadPos.xy, rot);
-
-		// scale the billboard:
-		quadPos *= size;
-
-		// scale the billboard along view space motion vector:
-		quadPos += dot(quadPos, velocity) * velocity * xParticleMotionBlurAmount;
-
-
-		// copy to output:
-		Out.pos = float4(particle.position, 1);
-		Out.pos = mul(GetCamera().View, Out.pos);
-		Out.pos.xyz += quadPos.xyz;
-		Out.P = mul(GetCamera().InvV, float4(Out.pos.xyz, 1)).xyz;
-		Out.pos = mul(GetCamera().Proj, Out.pos);
-
+		Out.P = position;
+		Out.pos = mul(GetCamera().VP, float4(position, 1));
 		Out.tex = float4(uv, uv2);
 		Out.size = size;
-		Out.color = (particle.color_mirror & 0x00FFFFFF) | (uint(opacity * 255.0f) << 24);
-		Out.unrotated_uv = quadPos.xy * float2(1, -1) / size * 0.5f + 0.5f;
+		Out.color = color;
+		Out.unrotated_uv = BILLBOARD[i].xy * float2(1, -1) * 0.5f + 0.5f;
 		Out.frameBlend = frameBlend;
-
 
 		verts[tig * BILLBOARD_VERTEXCOUNT + i] = Out;
 	}

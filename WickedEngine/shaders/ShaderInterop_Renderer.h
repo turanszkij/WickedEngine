@@ -41,6 +41,8 @@ static const uint SHADERMATERIAL_OPTION_BIT_RECEIVE_SHADOW = 1 << 5;
 static const uint SHADERMATERIAL_OPTION_BIT_CAST_SHADOW = 1 << 6;
 static const uint SHADERMATERIAL_OPTION_BIT_DOUBLE_SIDED = 1 << 7;
 static const uint SHADERMATERIAL_OPTION_BIT_TRANSPARENT = 1 << 8;
+static const uint SHADERMATERIAL_OPTION_BIT_ADDITIVE = 1 << 9;
+static const uint SHADERMATERIAL_OPTION_BIT_UNLIT = 1 << 10;
 
 struct ShaderMaterial
 {
@@ -122,9 +124,12 @@ struct ShaderMaterial
 	inline bool IsUsingWind() { return options & SHADERMATERIAL_OPTION_BIT_USE_WIND; }
 	inline bool IsReceiveShadow() { return options & SHADERMATERIAL_OPTION_BIT_RECEIVE_SHADOW; }
 	inline bool IsCastingShadow() { return options & SHADERMATERIAL_OPTION_BIT_CAST_SHADOW; }
+	inline bool IsUnlit() { return options & SHADERMATERIAL_OPTION_BIT_UNLIT; }
 };
 
 static const uint SHADERMESH_FLAG_DOUBLE_SIDED = 1 << 0;
+static const uint SHADERMESH_FLAG_HAIRPARTICLE = 1 << 1;
+static const uint SHADERMESH_FLAG_EMITTEDPARTICLE = 1 << 2;
 
 struct ShaderMesh
 {

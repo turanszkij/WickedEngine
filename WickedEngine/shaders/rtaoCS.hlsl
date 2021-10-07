@@ -77,7 +77,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 		surface.load(prim, q.CandidateTriangleBarycentrics());
 
 		[branch]
-		if (surface.opacity >= surface.material.alphaTest)
+		if (surface.opacity >= surface.material.alphaTest + 1.0 / 255.0)
 		{
 			q.CommitNonOpaqueTriangleHit();
 			break;

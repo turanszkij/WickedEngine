@@ -61,10 +61,11 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 		bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
 
-		if (strandCount * segmentCount > 0)
+		const uint32_t particleCount = strandCount * segmentCount;
+		if (particleCount > 0)
 		{
 			bd.Stride = sizeof(PatchSimulationData);
-			bd.Size = bd.Stride * strandCount * segmentCount;
+			bd.Size = bd.Stride * particleCount;
 			device->CreateBuffer(&bd, nullptr, &simulationBuffer);
 			device->SetName(&simulationBuffer, "simulationBuffer");
 
@@ -74,7 +75,7 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 				bd.MiscFlags |= RESOURCE_MISC_RAY_TRACING;
 			}
 			bd.Stride = sizeof(MeshComponent::Vertex_POS);
-			bd.Size = bd.Stride * 4 * strandCount * segmentCount;
+			bd.Size = bd.Stride * 4 * particleCount;
 			device->CreateBuffer(&bd, nullptr, &vertexBuffer_POS[0]);
 			device->SetName(&vertexBuffer_POS[0], "vertexBuffer_POS[0]");
 			device->CreateBuffer(&bd, nullptr, &vertexBuffer_POS[1]);
@@ -82,11 +83,11 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 
 			bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
 			bd.Stride = sizeof(MeshComponent::Vertex_TEX);
-			bd.Size = bd.Stride * 4 * strandCount * segmentCount;
+			bd.Size = bd.Stride * 4 * particleCount;
 			device->CreateBuffer(&bd, nullptr, &vertexBuffer_TEX);
 			device->SetName(&vertexBuffer_TEX, "vertexBuffer_TEX");
 
-			bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+			bd.BindFlags = BIND_SHADER_RESOURCE;
 			bd.MiscFlags = RESOURCE_MISC_NONE;
 			if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 			{
@@ -94,15 +95,27 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 			}
 			bd.Format = FORMAT_R32_UINT;
 			bd.Stride = sizeof(uint);
-			bd.Size = bd.Stride * 6 * strandCount * segmentCount;
-			device->CreateBuffer(&bd, nullptr, &primitiveBuffer);
+			bd.Size = bd.Stride * 6 * particleCount;
+			std::vector<uint> primitiveData(6 * particleCount);
+			for (uint particleID = 0; particleID < particleCount; ++particleID)
+			{
+				uint v0 = particleID * 4;
+				uint i0 = particleID * 6;
+				primitiveData[i0 + 0] = v0 + 0;
+				primitiveData[i0 + 1] = v0 + 1;
+				primitiveData[i0 + 2] = v0 + 2;
+				primitiveData[i0 + 3] = v0 + 2;
+				primitiveData[i0 + 4] = v0 + 1;
+				primitiveData[i0 + 5] = v0 + 3;
+			}
+			device->CreateBuffer(&bd, primitiveData.data(), &primitiveBuffer);
 			device->SetName(&primitiveBuffer, "primitiveBuffer");
 
 			bd.BindFlags = BIND_INDEX_BUFFER | BIND_UNORDERED_ACCESS;
 			bd.MiscFlags = RESOURCE_MISC_NONE;
 			bd.Format = FORMAT_R32_UINT;
 			bd.Stride = sizeof(uint);
-			bd.Size = bd.Stride * 6 * strandCount * segmentCount;
+			bd.Size = bd.Stride * 6 * particleCount;
 			device->CreateBuffer(&bd, nullptr, &culledIndexBuffer);
 			device->SetName(&culledIndexBuffer, "culledIndexBuffer");
 		}
@@ -276,7 +289,6 @@ void wiHairParticle::UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex, c
 			&simulationBuffer,
 			&vertexBuffer_POS[0],
 			&vertexBuffer_TEX,
-			&primitiveBuffer,
 			&culledIndexBuffer,
 			&indirectBuffer
 		};
@@ -314,7 +326,6 @@ void wiHairParticle::UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex, c
 			GPUBarrier::Buffer(&indirectBuffer, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_INDIRECT_ARGUMENT),
 			GPUBarrier::Buffer(&vertexBuffer_POS[0], RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE),
 			GPUBarrier::Buffer(&vertexBuffer_TEX, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE),
-			GPUBarrier::Buffer(&primitiveBuffer, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE),
 			GPUBarrier::Buffer(&culledIndexBuffer, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_INDEX_BUFFER),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
