@@ -125,7 +125,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 				bounces++;
 				continue;
 			}
-			result += surface.albedo;
+			result += surface.albedo * energy;
 			break;
 		}
 
