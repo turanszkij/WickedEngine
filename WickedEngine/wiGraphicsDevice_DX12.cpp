@@ -1578,7 +1578,7 @@ using namespace DX12_Internal;
 		if (cmd.uploadbuffer.desc.Size < staging_size)
 		{
 			GPUBufferDesc uploadBufferDesc;
-			uploadBufferDesc.Size = wiMath::GetNextPowerOfTwo((uint32_t)staging_size);
+			uploadBufferDesc.Size = wiMath::GetNextPowerOfTwo(staging_size);
 			uploadBufferDesc.Usage = USAGE_UPLOAD;
 			bool upload_success = device->CreateBuffer(&uploadBufferDesc, nullptr, &cmd.uploadbuffer);
 			assert(upload_success);
@@ -5792,7 +5792,7 @@ using namespace DX12_Internal;
 		}
 		GetCommandList(cmd)->IASetVertexBuffers(slot, count, res);
 	}
-	void GraphicsDevice_DX12::BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, uint32_t offset, CommandList cmd)
+	void GraphicsDevice_DX12::BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, uint64_t offset, CommandList cmd)
 	{
 		D3D12_INDEX_BUFFER_VIEW res = {};
 		if (indexBuffer != nullptr)

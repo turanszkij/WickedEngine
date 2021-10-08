@@ -151,6 +151,17 @@ namespace wiMath
 		x |= x >> 16;
 		return ++x;
 	}
+	inline constexpr uint64_t GetNextPowerOfTwo(uint64_t x)
+	{
+		--x;
+		x |= x >> 1;
+		x |= x >> 2;
+		x |= x >> 4;
+		x |= x >> 8;
+		x |= x >> 16;
+		x |= x >> 32u;
+		return ++x;
+	}
 
 	// A, B, C: trangle vertices
 	float TriangleArea(const XMVECTOR& A, const XMVECTOR& B, const XMVECTOR& C);

@@ -1050,7 +1050,7 @@ using namespace Vulkan_Internal;
 		if (cmd.uploadbuffer.desc.Size < staging_size)
 		{
 			GPUBufferDesc uploaddesc;
-			uploaddesc.Size = wiMath::GetNextPowerOfTwo((uint32_t)staging_size);
+			uploaddesc.Size = wiMath::GetNextPowerOfTwo(staging_size);
 			uploaddesc.Usage = USAGE_UPLOAD;
 			bool upload_success = device->CreateBuffer(&uploaddesc, nullptr, &cmd.uploadbuffer);
 			assert(upload_success);
@@ -1464,7 +1464,7 @@ using namespace Vulkan_Internal;
 						auto internal_state = to_internal(&buffer);
 						bufferInfos.back().buffer = internal_state->resource;
 						bufferInfos.back().offset = offset;
-						bufferInfos.back().range = (VkDeviceSize)std::min(buffer.desc.Size - offset, (uint64_t)device->properties2.properties.limits.maxUniformBufferRange);
+						bufferInfos.back().range = std::min(buffer.desc.Size - offset, (uint64_t)device->properties2.properties.limits.maxUniformBufferRange);
 					}
 				}
 				break;
@@ -3328,7 +3328,7 @@ using namespace Vulkan_Internal;
 		// Issue data copy on request:
 		if (pInitialData != nullptr)
 		{
-			auto cmd = copyAllocator.allocate((uint32_t)internal_state->allocation->GetSize());
+			auto cmd = copyAllocator.allocate(internal_state->allocation->GetSize());
 
 			std::vector<VkBufferImageCopy> copyRegions;
 
@@ -6103,7 +6103,7 @@ using namespace Vulkan_Internal;
 				vbuffers[i] = internal_state->resource;
 				if (offsets != nullptr)
 				{
-					voffsets[i] = (VkDeviceSize)offsets[i];
+					voffsets[i] = offsets[i];
 				}
 			}
 		}
@@ -6120,12 +6120,12 @@ using namespace Vulkan_Internal;
 			dirty_pso[cmd] = true;
 		}
 	}
-	void GraphicsDevice_Vulkan::BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, uint32_t offset, CommandList cmd)
+	void GraphicsDevice_Vulkan::BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, uint64_t offset, CommandList cmd)
 	{
 		if (indexBuffer != nullptr)
 		{
 			auto internal_state = to_internal(indexBuffer);
-			vkCmdBindIndexBuffer(GetCommandList(cmd), internal_state->resource, (VkDeviceSize)offset, format == INDEXFORMAT_16BIT ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
+			vkCmdBindIndexBuffer(GetCommandList(cmd), internal_state->resource, offset, format == INDEXFORMAT_16BIT ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
 		}
 	}
 	void GraphicsDevice_Vulkan::BindStencilRef(uint32_t value, CommandList cmd)
@@ -6482,7 +6482,7 @@ using namespace Vulkan_Internal;
 			VkBufferCopy copy = {};
 			copy.srcOffset = 0;
 			copy.dstOffset = 0;
-			copy.size = (VkDeviceSize)std::min(src_desc.Size, dst_desc.Size);
+			copy.size = std::min(src_desc.Size, dst_desc.Size);
 
 			vkCmdCopyBuffer(GetCommandList(cmd),
 				internal_state_src->resource,
