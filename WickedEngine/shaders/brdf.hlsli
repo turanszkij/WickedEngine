@@ -149,6 +149,7 @@ struct Surface
 	uint layerMask;			// the engine-side layer mask
 	bool receiveshadow;
 	float3 facenormal;		// surface normal without normal map
+	bool is_frontface;
 
 	// These will be computed when calling Update():
 	float roughnessBRDF;	// roughness input for BRDF functions
@@ -440,6 +441,10 @@ struct Surface
 		N = n0 * w + n1 * u + n2 * v;
 		N = mul((float3x3)inst.transformInverseTranspose.GetMatrix(), N);
 		N = normalize(N);
+		if (is_frontface == false && !is_hairparticle && !is_emittedparticle)
+		{
+			N = -N;
+		}
 		facenormal = N;
 
 		[branch]

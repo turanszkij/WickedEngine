@@ -112,6 +112,7 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 	prim.subsetIndex = GeometryIndex();
 
 	Surface surface;
+	surface.is_frontface = (HitKind() == HIT_KIND_TRIANGLE_FRONT_FACE);
 	surface.load(prim, attr.barycentrics);
 
 	[branch]
@@ -125,50 +126,57 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 	surface.pixel = DispatchRaysIndex().xy;
 	surface.screenUV = surface.pixel / (float2)DispatchRaysDimensions().xy;
 
-	// Light sampling:
-	surface.P = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
-	surface.V = -WorldRayDirection();
-	surface.update();
-
-	Lighting lighting;
-	lighting.create(0, 0, GetAmbient(surface.N), 0);
-
-	[loop]
-	for (uint iterator = 0; iterator < g_xFrame.LightArrayCount; iterator++)
+	if (surface.material.IsUnlit())
 	{
-		ShaderEntity light = load_entity(g_xFrame.LightArrayOffset + iterator);
-		if ((light.layerMask & surface.material.layerMask) == 0)
-			continue;
-
-		if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
-		{
-			continue; // static lights will be skipped (they are used in lightmap baking)
-		}
-
-		switch (light.GetType())
-		{
-		case ENTITY_TYPE_DIRECTIONALLIGHT:
-		{
-			DirectionalLight(light, surface, lighting);
-		}
-		break;
-		case ENTITY_TYPE_POINTLIGHT:
-		{
-			PointLight(light, surface, lighting);
-		}
-		break;
-		case ENTITY_TYPE_SPOTLIGHT:
-		{
-			SpotLight(light, surface, lighting);
-		}
-		break;
-		}
+		payload.data.xyz += surface.albedo + surface.emissiveColor;
 	}
+	else
+	{
+		// Light sampling:
+		surface.P = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
+		surface.V = -WorldRayDirection();
+		surface.update();
 
-	lighting.indirect.specular += max(0, EnvironmentReflection_Global(surface));
+		Lighting lighting;
+		lighting.create(0, 0, GetAmbient(surface.N), 0);
 
-	LightingPart combined_lighting = CombineLighting(surface, lighting);
-	payload.data.xyz += surface.albedo * combined_lighting.diffuse + combined_lighting.specular + surface.emissiveColor;
+		[loop]
+		for (uint iterator = 0; iterator < g_xFrame.LightArrayCount; iterator++)
+		{
+			ShaderEntity light = load_entity(g_xFrame.LightArrayOffset + iterator);
+			if ((light.layerMask & surface.material.layerMask) == 0)
+				continue;
+
+			if (light.GetFlags() & ENTITY_FLAG_LIGHT_STATIC)
+			{
+				continue; // static lights will be skipped (they are used in lightmap baking)
+			}
+
+			switch (light.GetType())
+			{
+			case ENTITY_TYPE_DIRECTIONALLIGHT:
+			{
+				DirectionalLight(light, surface, lighting);
+			}
+			break;
+			case ENTITY_TYPE_POINTLIGHT:
+			{
+				PointLight(light, surface, lighting);
+			}
+			break;
+			case ENTITY_TYPE_SPOTLIGHT:
+			{
+				SpotLight(light, surface, lighting);
+			}
+			break;
+			}
+		}
+
+		lighting.indirect.specular += max(0, EnvironmentReflection_Global(surface));
+
+		LightingPart combined_lighting = CombineLighting(surface, lighting);
+		payload.data.xyz += surface.albedo * combined_lighting.diffuse + combined_lighting.specular + surface.emissiveColor;
+	}
 	payload.data.w = RayTCurrent();
 }
 
