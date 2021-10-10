@@ -840,7 +840,7 @@ void wiSlider::Update(const wiCanvas& canvas, float dt)
 	wiWidget::Update(canvas, dt);
 
 	valueInputField.Detach();
-	valueInputField.SetSize(XMFLOAT2(scale.y * 2, scale.y));
+	valueInputField.SetSize(XMFLOAT2(std::max(scale.y * 2, wiFont::textWidth(valueInputField.GetText(), valueInputField.font.params) + 4), scale.y));
 	valueInputField.SetPos(XMFLOAT2(translation.x + scale.x + 2, translation.y));
 	valueInputField.AttachTo(this);
 
