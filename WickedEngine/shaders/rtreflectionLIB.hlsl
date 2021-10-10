@@ -85,8 +85,7 @@ void RTReflection_Raygen()
 	ray.Direction = normalize(R);
 
 	RayPayload payload;
-	payload.data.xyz = 0;
-	payload.data.w = roughness;
+	payload.data = 0;
 
 	TraceRay(
 		scene_acceleration_structure,   // AccelerationStructure
@@ -114,14 +113,6 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 	Surface surface;
 	surface.is_frontface = (HitKind() == HIT_KIND_TRIANGLE_FRONT_FACE);
 	surface.load(prim, attr.barycentrics);
-
-	[branch]
-	if (payload.data.w < 0)
-	{
-		payload.data.xyz = surface.N;
-		payload.data.w = surface.roughness;
-		return;
-	}
 
 	surface.pixel = DispatchRaysIndex().xy;
 	surface.screenUV = surface.pixel / (float2)DispatchRaysDimensions().xy;
@@ -193,8 +184,10 @@ void RTReflection_AnyHit(inout RayPayload payload, in BuiltInTriangleIntersectio
 
 	payload.data.rgb += surface.emissiveColor;
 
+	float alphatest = clamp(blue_noise(DispatchRaysIndex().xy, RayTCurrent()).r, 0, 0.99);
+
 	[branch]
-	if (surface.opacity < surface.material.alphaTest + 1.0 / 255.0)
+	if (surface.opacity - alphatest < 0)
 	{
 		IgnoreHit();
 	}

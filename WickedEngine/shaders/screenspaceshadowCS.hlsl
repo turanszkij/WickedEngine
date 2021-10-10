@@ -236,8 +236,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 							Surface surface;
 							surface.load(prim, q.CandidateTriangleBarycentrics());
 
+							float alphatest = clamp(blue_noise(DTid.xy, q.CandidateTriangleRayT()).r, 0, 0.99);
+
 							[branch]
-							if (surface.opacity >= surface.material.alphaTest + 1.0 / 255.0)
+							if (surface.opacity - alphatest >= 0)
 							{
 								q.CommitNonOpaqueTriangleHit();
 								break;
