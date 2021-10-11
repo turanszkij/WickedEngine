@@ -971,23 +971,7 @@ namespace Vulkan_Internal
 
 	inline const std::string GetCachePath()
 	{
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
-		WCHAR temp_buffer[MAX_PATH];
-		DWORD temp_path_ret = GetTempPathW(MAX_PATH, temp_buffer);
-		if (temp_path_ret > MAX_PATH || temp_path_ret == 0)
-		{
-			return "temp";
-		}
-		else
-		{
-			std::string path;
-			wiHelper::StringConvert(temp_buffer, path);
-			return path + "WickedVkPipelineCache.data";
-		}
-#else
-		std::string path = SDL_GetBasePath();
-		return path + "WickedVkPipelineCache.data";
-#endif
+		return wiHelper::GetTempDirectoryPath() + "WickedVkPipelineCache.data";
 	}
 }
 using namespace Vulkan_Internal;

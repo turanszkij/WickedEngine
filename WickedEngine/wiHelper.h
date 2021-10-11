@@ -76,6 +76,8 @@ namespace wiHelper
 
 	bool FileExists(const std::string& fileName);
 
+	std::string GetTempDirectoryPath();
+
 	struct FileDialogParams
 	{
 		enum TYPE

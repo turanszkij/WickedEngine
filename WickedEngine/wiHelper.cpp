@@ -666,6 +666,12 @@ namespace wiHelper
 		return exists;
 	}
 
+	std::string GetTempDirectoryPath()
+	{
+		auto path = std::filesystem::temp_directory_path();
+		return path.string();
+	}
+
 	void FileDialog(const FileDialogParams& params, std::function<void(std::string fileName)> onSuccess)
 	{
 #ifdef _WIN32
