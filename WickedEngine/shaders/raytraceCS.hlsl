@@ -56,15 +56,29 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 #ifdef RAY_BACKFACE_CULLING
 			RAY_FLAG_CULL_BACK_FACING_TRIANGLES |
 #endif // RAY_BACKFACE_CULLING
-			RAY_FLAG_FORCE_OPAQUE |
 			0,								// uint RayFlags
 			0xFF,							// uint InstanceInclusionMask
 			ray								// RayDesc Ray
 		);
-		q.Proceed();
+		while (q.Proceed())
+		{
+			PrimitiveID prim;
+			prim.primitiveIndex = q.CandidatePrimitiveIndex();
+			prim.instanceIndex = q.CandidateInstanceID();
+			prim.subsetIndex = q.CandidateGeometryIndex();
+
+			Surface surface;
+			surface.load(prim, q.CandidateTriangleBarycentrics());
+
+			[branch]
+			if (surface.opacity - rand(seed, uv) >= 0)
+			{
+				q.CommitNonOpaqueTriangleHit();
+			}
+		}
 		if (q.CommittedStatus() != COMMITTED_TRIANGLE_HIT)
 #else
-		RayHit hit = TraceRay_Closest(ray, groupIndex);
+		RayHit hit = TraceRay_Closest(ray, seed, uv, groupIndex);
 
 		if (hit.distance >= FLT_MAX - 1)
 #endif // RTAPI
@@ -258,7 +272,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 					}
 					shadow = q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ? 0 : shadow;
 #else
-					shadow = TraceRay_Any(newRay, groupIndex) ? 0 : shadow;
+					shadow = TraceRay_Any(newRay, seed, uv, groupIndex) ? 0 : shadow;
 #endif // RTAPI
 					if (any(shadow))
 					{
@@ -278,64 +292,48 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			primary_normal = surface.N;
 		}
 
-		float roulette;
-
-		const float blendChance = 1 - surface.opacity;
-		roulette = rand(seed, uv);
-		if (roulette < blendChance)
+		if (surface.material.IsUnlit())
 		{
-			// Alpha blending
+			result += surface.albedo * energy;
+			break;
+		}
+
+		const float refractChance = surface.transmission;
+		float roulette = rand(seed, uv);
+		if (roulette <= refractChance)
+		{
+			// Refraction
+			const float3 R = refract(ray.Direction, surface.N, 1 - surface.material.refraction);
+			ray.Direction = lerp(R, SampleHemisphere_cos(R, seed, uv), surface.roughnessBRDF);
+			energy *= surface.albedo;
 
 			// Add a new bounce iteration, otherwise the transparent effect can disappear:
 			bounces++;
-
-			continue; // skip light sampling
 		}
 		else
 		{
-			if (surface.material.IsUnlit())
-			{
-				result += surface.albedo * energy;
-				break;
-			}
+			const float specChance = dot(surface.F, 0.333);
 
-			const float refractChance = surface.transmission;
 			roulette = rand(seed, uv);
-			if (roulette <= refractChance)
+			if (roulette <= specChance)
 			{
-				// Refraction
-				const float3 R = refract(ray.Direction, surface.N, 1 - surface.material.refraction);
+				// Specular reflection
+				const float3 R = reflect(ray.Direction, surface.N);
 				ray.Direction = lerp(R, SampleHemisphere_cos(R, seed, uv), surface.roughnessBRDF);
-				energy *= surface.albedo;
-
-				// Add a new bounce iteration, otherwise the transparent effect can disappear:
-				bounces++;
+				energy *= surface.F / max(0.00001, specChance);
 			}
 			else
 			{
-				const float specChance = dot(surface.F, 0.333);
+				// Diffuse reflection
+				ray.Direction = SampleHemisphere_cos(surface.N, seed, uv);
+				energy *= surface.albedo / max(0.00001, 1 - specChance);
+			}
 
-				roulette = rand(seed, uv);
-				if (roulette <= specChance)
-				{
-					// Specular reflection
-					const float3 R = reflect(ray.Direction, surface.N);
-					ray.Direction = lerp(R, SampleHemisphere_cos(R, seed, uv), surface.roughnessBRDF);
-					energy *= surface.F / max(0.00001, specChance);
-				}
-				else
-				{
-					// Diffuse reflection
-					ray.Direction = SampleHemisphere_cos(surface.N, seed, uv);
-					energy *= surface.albedo / max(0.00001, 1 - specChance);
-				}
-
-				if (dot(ray.Direction, surface.facenormal) <= 0)
-				{
-					// Don't allow normal map to bend over the face normal more than 90 degrees to avoid light leaks
-					//	In this case, the ray is pushed above the surface slightly to not go below
-					ray.Origin += surface.facenormal * 0.001;
-				}
+			if (dot(ray.Direction, surface.facenormal) <= 0)
+			{
+				// Don't allow normal map to bend over the face normal more than 90 degrees to avoid light leaks
+				//	In this case, the ray is pushed above the surface slightly to not go below
+				ray.Origin += surface.facenormal * 0.001;
 			}
 		}
 

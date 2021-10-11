@@ -419,8 +419,7 @@ struct Surface
 
 		if (material.options & SHADERMATERIAL_OPTION_BIT_ADDITIVE)
 		{
-			opacity = 0;
-			emissiveColor += baseColor.rgb * baseColor.a;
+			emissiveColor += baseColor.rgb;
 		}
 
 		transmission = material.transmission;

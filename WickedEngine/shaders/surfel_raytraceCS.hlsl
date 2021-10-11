@@ -67,7 +67,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		q.Proceed();
 		if (q.CommittedStatus() != COMMITTED_TRIANGLE_HIT)
 #else
-		RayHit hit = TraceRay_Closest(ray);
+		RayHit hit = TraceRay_Closest(ray, seed, uv);
 
 		if (hit.distance >= FLT_MAX - 1)
 #endif // RTAPI
@@ -259,7 +259,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 					q.Proceed();
 					shadow = q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ? 0 : shadow;
 #else
-					shadow = TraceRay_Any(newRay) ? 0 : shadow;
+					shadow = TraceRay_Any(newRay, seed, uv) ? 0 : shadow;
 #endif // RTAPI
 					if (any(shadow))
 					{

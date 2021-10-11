@@ -64,7 +64,9 @@ inline RayHit CreateRayHit()
 inline void IntersectTriangle(
 	in RayDesc ray,
 	inout RayHit bestHit,
-	in BVHPrimitive prim
+	in BVHPrimitive prim,
+	inout float seed,
+	in float2 uv
 )
 {
 	float3 v0v1 = prim.v1() - prim.v0();
@@ -96,15 +98,34 @@ inline void IntersectTriangle(
 
 	if (t >= ray.TMin && t <= bestHit.distance)
 	{
-		bestHit.distance = t;
-		bestHit.primitiveID = prim.primitiveID();
-		bestHit.bary = float2(u, v);
+		RayHit hit;
+		hit.distance = t;
+		hit.primitiveID = prim.primitiveID();
+		hit.bary = float2(u, v);
+
+		if (prim.flags & BVH_PRIMITIVE_FLAG_TRANSPARENT)
+		{
+			Surface surface;
+			if (surface.load(hit.primitiveID, hit.bary))
+			{
+				if (surface.opacity - rand(seed, uv) >= 0)
+				{
+					bestHit = hit;
+				}
+			}
+		}
+		else
+		{
+			bestHit = hit;
+		}
 	}
 }
 
 inline bool IntersectTriangleANY(
 	in RayDesc ray,
-	in BVHPrimitive prim
+	in BVHPrimitive prim,
+	inout float seed,
+	in float2 uv
 )
 {
 	float3 v0v1 = prim.v1() - prim.v0();
@@ -141,7 +162,7 @@ inline bool IntersectTriangleANY(
 			Surface surface;
 			if (surface.load(prim.primitiveID(), float2(u, v)))
 			{
-				return surface.opacity > surface.material.alphaTest;
+				return surface.opacity - rand(seed, uv) >= 0;
 			}
 		}
 		return true;
@@ -196,7 +217,7 @@ inline bool IntersectNode(
 
 
 // Returns the closest hit primitive if any (useful for generic trace). If nothing was hit, then rayHit.distance will be equal to FLT_MAX
-inline RayHit TraceRay_Closest(RayDesc ray, uint groupIndex = 0)
+inline RayHit TraceRay_Closest(RayDesc ray, inout float seed, in float2 uv, uint groupIndex = 0)
 {
 	const float3 rcpDirection = rcp(ray.Direction);
 
@@ -227,7 +248,7 @@ inline RayHit TraceRay_Closest(RayDesc ray, uint groupIndex = 0)
 				// Leaf node
 				const uint primitiveID = node.LeftChildIndex;
 				const BVHPrimitive prim = primitiveBuffer.Load<BVHPrimitive>(primitiveID * sizeof(BVHPrimitive));
-				IntersectTriangle(ray, bestHit, prim);
+				IntersectTriangle(ray, bestHit, prim, seed, uv);
 			}
 			else
 			{
@@ -255,7 +276,7 @@ inline RayHit TraceRay_Closest(RayDesc ray, uint groupIndex = 0)
 }
 
 // Returns true immediately if any primitives were hit, flase if nothing was hit (useful for opaque shadows):
-inline bool TraceRay_Any(RayDesc ray, uint groupIndex = 0)
+inline bool TraceRay_Any(RayDesc ray, inout float seed, in float2 uv, uint groupIndex = 0)
 {
 	const float3 rcpDirection = rcp(ray.Direction);
 
@@ -287,7 +308,7 @@ inline bool TraceRay_Any(RayDesc ray, uint groupIndex = 0)
 				const uint primitiveID = node.LeftChildIndex;
 				const BVHPrimitive prim = primitiveBuffer.Load<BVHPrimitive>(primitiveID * sizeof(BVHPrimitive));
 
-				if (IntersectTriangleANY(ray, prim))
+				if (IntersectTriangleANY(ray, prim, seed, uv))
 				{
 					shadow = true;
 					break;
