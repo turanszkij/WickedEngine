@@ -968,6 +968,11 @@ namespace Vulkan_Internal
 	{
 		return static_cast<SwapChain_Vulkan*>(param->internal_state.get());
 	}
+
+	inline const std::string GetCachePath()
+	{
+		return wiHelper::GetTempDirectoryPath() + "WickedVkPipelineCache.data";
+	}
 }
 using namespace Vulkan_Internal;
 
@@ -1803,7 +1808,7 @@ using namespace Vulkan_Internal;
 				}
 				pipelineInfo.pVertexInputState = &vertexInputInfo;
 
-				VkResult res = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
+				VkResult res = vkCreateGraphicsPipelines(device, pipelineCache, 1, &pipelineInfo, nullptr, &pipeline);
 				assert(res == VK_SUCCESS);
 
 				pipelines_worker[cmd].push_back(std::make_pair(pipeline_hash, pipeline));
@@ -2579,6 +2584,75 @@ using namespace Vulkan_Internal;
 			)
 		);
 
+		// Pipeline Cache
+		{
+			// Try to read pipeline cache file if exists.
+			std::vector<uint8_t> pipelineData;
+
+			std::string cachePath = GetCachePath(); 
+			if (!wiHelper::FileRead(cachePath, pipelineData))
+			{
+				pipelineData.clear();
+			}
+
+			// Verify cache validation.
+			if (!pipelineData.empty())
+			{
+				uint32_t headerLength = 0;
+				uint32_t cacheHeaderVersion = 0;
+				uint32_t vendorID = 0;
+				uint32_t deviceID = 0;
+				uint8_t pipelineCacheUUID[VK_UUID_SIZE] = {};
+
+				memcpy(&headerLength, (uint8_t*)pipelineData.data() + 0, 4);
+				memcpy(&cacheHeaderVersion, (uint8_t*)pipelineData.data() + 4, 4);
+				memcpy(&vendorID, (uint8_t*)pipelineData.data() + 8, 4);
+				memcpy(&deviceID, (uint8_t*)pipelineData.data() + 12, 4);
+				memcpy(pipelineCacheUUID, (uint8_t*)pipelineData.data() + 16, VK_UUID_SIZE);
+
+				bool badCache = false;
+
+				if (headerLength <= 0)
+				{
+					badCache = true;
+				}
+
+				if (cacheHeaderVersion != VK_PIPELINE_CACHE_HEADER_VERSION_ONE)
+				{
+					badCache = true;
+				}
+
+				if (vendorID != properties2.properties.vendorID)
+				{
+					badCache = true;
+				}
+
+				if (deviceID != properties2.properties.deviceID)
+				{
+					badCache = true;
+				}
+
+				if (memcmp(pipelineCacheUUID, properties2.properties.pipelineCacheUUID, sizeof(pipelineCacheUUID)) != 0)
+				{
+					badCache = true;
+				}
+
+				if (badCache)
+				{
+					// Don't submit initial cache data if any version info is incorrect
+					pipelineData.clear();
+				}
+			}
+
+			VkPipelineCacheCreateInfo createInfo{ VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO };
+			createInfo.initialDataSize = pipelineData.size();
+			createInfo.pInitialData = pipelineData.data();
+
+			// Create Vulkan pipeline cache
+			res = vkCreatePipelineCache(device, &createInfo, nullptr, &pipelineCache);
+			assert(res == VK_SUCCESS);
+		}
+
 		wiBackLog::post("Created GraphicsDevice_Vulkan (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
 	GraphicsDevice_Vulkan::~GraphicsDevice_Vulkan()
@@ -2642,6 +2716,27 @@ using namespace Vulkan_Internal;
 		vkDestroyImageView(device, nullImageViewCubeArray, nullptr);
 		vkDestroyImageView(device, nullImageView3D, nullptr);
 		vkDestroySampler(device, nullSampler, nullptr);
+
+		if (pipelineCache != VK_NULL_HANDLE)
+		{
+			// Get size of pipeline cache
+			size_t size{};
+			res = vkGetPipelineCacheData(device, pipelineCache, &size, nullptr);
+			assert(res == VK_SUCCESS);
+
+			// Get data of pipeline cache 
+			std::vector<uint8_t> data(size);
+			res = vkGetPipelineCacheData(device, pipelineCache, &size, data.data());
+			assert(res == VK_SUCCESS);
+
+			// Write pipeline cache data to a file in binary format
+			std::string cachePath = GetCachePath();
+			wiHelper::FileWrite(cachePath, data.data(), size);
+
+			// Destroy Vulkan pipeline cache 
+			vkDestroyPipelineCache(device, pipelineCache, nullptr);
+			pipelineCache = VK_NULL_HANDLE;
+		}
 
 		if (debugUtilsMessenger != VK_NULL_HANDLE)
 		{
@@ -3793,7 +3888,7 @@ using namespace Vulkan_Internal;
 			pipelineInfo.stage = internal_state->stageInfo;
 
 
-			res = vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &internal_state->pipeline_cs);
+			res = vkCreateComputePipelines(device, pipelineCache, 1, &pipelineInfo, nullptr, &internal_state->pipeline_cs);
 			assert(res == VK_SUCCESS);
 		}
 
