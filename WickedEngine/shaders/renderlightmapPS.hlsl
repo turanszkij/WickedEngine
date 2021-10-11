@@ -181,7 +181,7 @@ float4 main(Input input) : SV_TARGET
 				}
 				shadow = q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ? 0 : shadow;
 #else
-				shadow = TraceRay_Any(newRay) ? 0 : shadow;
+				shadow = TraceRay_Any(newRay, seed, uv) ? 0 : shadow;
 #endif // RTAPI
 				if (any(shadow))
 				{
@@ -210,7 +210,7 @@ float4 main(Input input) : SV_TARGET
 		q.Proceed();
 		if (q.CommittedStatus() != COMMITTED_TRIANGLE_HIT)
 #else
-		RayHit hit = TraceRay_Closest(ray);
+		RayHit hit = TraceRay_Closest(ray, seed, uv);
 
 		if (hit.distance >= FLT_MAX - 1)
 #endif // RTAPI

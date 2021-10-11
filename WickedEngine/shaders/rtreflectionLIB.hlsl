@@ -182,8 +182,6 @@ void RTReflection_AnyHit(inout RayPayload payload, in BuiltInTriangleIntersectio
 	Surface surface;
 	surface.load(prim, attr.barycentrics);
 
-	payload.data.rgb += surface.emissiveColor;
-
 	float alphatest = clamp(blue_noise(DispatchRaysIndex().xy, RayTCurrent()).r, 0, 0.99);
 
 	[branch]
