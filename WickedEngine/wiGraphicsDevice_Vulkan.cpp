@@ -6002,6 +6002,18 @@ using namespace Vulkan_Internal;
 			pipelines_worker[i].clear();
 		}
 		allocationhandler->destroylocker.unlock();
+
+		// Destroy Vulkan pipeline cache 
+		vkDestroyPipelineCache(device, pipelineCache, nullptr);
+		pipelineCache = VK_NULL_HANDLE;
+
+		VkPipelineCacheCreateInfo createInfo{ VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO };
+		createInfo.initialDataSize = 0;
+		createInfo.pInitialData = nullptr;
+
+		// Create Vulkan pipeline cache
+		VkResult res = vkCreatePipelineCache(device, &createInfo, nullptr, &pipelineCache);
+		assert(res == VK_SUCCESS);
 	}
 
 	Texture GraphicsDevice_Vulkan::GetBackBuffer(const SwapChain* swapchain) const
