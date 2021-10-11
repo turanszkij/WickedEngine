@@ -247,6 +247,7 @@ namespace wiGraphics
 		mutable std::unordered_map<size_t, PSOLayout> pso_layout_cache;
 		mutable std::mutex pso_layout_cache_mutex;
 
+		VkPipelineCache pipelineCache = VK_NULL_HANDLE;
 		std::unordered_map<size_t, VkPipeline> pipelines_global;
 		std::vector<std::pair<size_t, VkPipeline>> pipelines_worker[COMMANDLIST_COUNT];
 		size_t prev_pipeline_hash[COMMANDLIST_COUNT] = {};
