@@ -2413,65 +2413,67 @@ using namespace DX12_Internal;
 		capabilities |= GRAPHICSDEVICE_CAPABILITY_TESSELLATION;
 		capabilities |= GRAPHICSDEVICE_CAPABILITY_PREDICATION;
 
-		hr = device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &features_0, sizeof(features_0));
-		if (features_0.ConservativeRasterizationTier >= D3D12_CONSERVATIVE_RASTERIZATION_TIER_1)
+		// Init feature check (https://devblogs.microsoft.com/directx/introducing-a-new-api-for-checking-feature-support-in-direct3d-12/)
+		CD3DX12FeatureSupport features;
+		hr = features.Init(device.Get());
+		assert(SUCCEEDED(hr));
+
+		if (features.ConservativeRasterizationTier() >= D3D12_CONSERVATIVE_RASTERIZATION_TIER_1)
 		{
 			capabilities |= GRAPHICSDEVICE_CAPABILITY_CONSERVATIVE_RASTERIZATION;
 		}
-		if (features_0.ROVsSupported == TRUE)
+		if (features.ROVsSupported() == TRUE)
 		{
 			capabilities |= GRAPHICSDEVICE_CAPABILITY_RASTERIZER_ORDERED_VIEWS;
 		}
-		if (features_0.VPAndRTArrayIndexFromAnyShaderFeedingRasterizerSupportedWithoutGSEmulation == TRUE)
+		if (features.VPAndRTArrayIndexFromAnyShaderFeedingRasterizerSupportedWithoutGSEmulation() == TRUE)
 		{
 			capabilities |= GRAPHICSDEVICE_CAPABILITY_RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS;
 		}
-		if (features_0.TiledResourcesTier >= D3D12_TILED_RESOURCES_TIER_2)
+		if (features.TiledResourcesTier() >= D3D12_TILED_RESOURCES_TIER_2)
 		{
 			// https://docs.microsoft.com/en-us/windows/win32/direct3d11/tiled-resources-texture-sampling-features
 			capabilities |= GRAPHICSDEVICE_CAPABILITY_SAMPLER_MINMAX;
 		}
 
-		if (features_0.TypedUAVLoadAdditionalFormats)
+		if (features.TypedUAVLoadAdditionalFormats())
 		{
 			// More info about UAV format load support: https://docs.microsoft.com/en-us/windows/win32/direct3d12/typed-unordered-access-view-loads
 			capabilities |= GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_COMMON;
 
-			D3D12_FEATURE_DATA_FORMAT_SUPPORT FormatSupport = { DXGI_FORMAT_R11G11B10_FLOAT, D3D12_FORMAT_SUPPORT1_NONE, D3D12_FORMAT_SUPPORT2_NONE };
-			hr = device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &FormatSupport, sizeof(FormatSupport));
-			if (SUCCEEDED(hr) && (FormatSupport.Support2 & D3D12_FORMAT_SUPPORT2_UAV_TYPED_LOAD) != 0)
+			D3D12_FORMAT_SUPPORT1 formatSupport1 = D3D12_FORMAT_SUPPORT1_NONE;
+			D3D12_FORMAT_SUPPORT2 formatSupport2 = D3D12_FORMAT_SUPPORT2_NONE;
+
+			hr = features.FormatSupport(DXGI_FORMAT_R11G11B10_FLOAT, formatSupport1, formatSupport2);
+			if (SUCCEEDED(hr) && (formatSupport2 & D3D12_FORMAT_SUPPORT2_UAV_TYPED_LOAD) != 0)
 			{
 				capabilities |= GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_R11G11B10_FLOAT;
 			}
 		}
 
-		hr = device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &features_5, sizeof(features_5));
-		if (features_5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_1)
+		if (features.RaytracingTier() >= D3D12_RAYTRACING_TIER_1_1)
 		{
 			capabilities |= GRAPHICSDEVICE_CAPABILITY_RAYTRACING;
 		}
 
-		hr = device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS6, &features_6, sizeof(features_6));
-		if (features_6.VariableShadingRateTier >= D3D12_VARIABLE_SHADING_RATE_TIER_1)
+		if (features.VariableShadingRateTier() >= D3D12_VARIABLE_SHADING_RATE_TIER_1)
 		{
 			capabilities |= GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING;
-			if (features_6.VariableShadingRateTier >= D3D12_VARIABLE_SHADING_RATE_TIER_2)
+			if (features.VariableShadingRateTier() >= D3D12_VARIABLE_SHADING_RATE_TIER_2)
 			{
 				capabilities |= GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2;
-				VARIABLE_RATE_SHADING_TILE_SIZE = features_6.ShadingRateImageTileSize;
+				VARIABLE_RATE_SHADING_TILE_SIZE = features.ShadingRateImageTileSize();
 			}
 		}
 
-		hr = device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, &features_7, sizeof(features_7));
-		if (features_7.MeshShaderTier >= D3D12_MESH_SHADER_TIER_1)
+		additionalShadingRatesSupported = features.AdditionalShadingRatesSupported();
+
+		if (features.MeshShaderTier() >= D3D12_MESH_SHADER_TIER_1)
 		{
 			capabilities |= GRAPHICSDEVICE_CAPABILITY_MESH_SHADER;
 		}
 
-		D3D12_FEATURE_DATA_ROOT_SIGNATURE features_rootsignature = {};
-		features_rootsignature.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
-		hr = device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &features_rootsignature, sizeof(features_rootsignature));
-		if (features_rootsignature.HighestVersion < D3D_ROOT_SIGNATURE_VERSION_1_1)
+		if (features.HighestRootSignatureVersion() < D3D_ROOT_SIGNATURE_VERSION_1_1)
 		{
 			wiBackLog::post("DX12: Root signature version 1.1 not supported!");
 			assert(0);
@@ -5262,7 +5264,7 @@ using namespace DX12_Internal;
 	void GraphicsDevice_DX12::WriteShadingRateValue(SHADING_RATE rate, void* dest) const
 	{
 		D3D12_SHADING_RATE _rate = _ConvertShadingRate(rate);
-		if (!features_6.AdditionalShadingRatesSupported)
+		if (!additionalShadingRatesSupported)
 		{
 			_rate = std::min(_rate, D3D12_SHADING_RATE_2X2);
 		}
