@@ -2696,9 +2696,13 @@ using namespace DX12_Internal;
 			swapChainDesc.SampleDesc.Quality = 0;
 			swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 			swapChainDesc.BufferCount = pDesc->buffercount;
-			swapChainDesc.Flags = 0;
-			swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
 			swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+			swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+			swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+			if (tearingSupported)
+			{
+				swapChainDesc.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+			}
 
 #ifndef PLATFORM_UWP
 			swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
@@ -2748,12 +2752,18 @@ using namespace DX12_Internal;
 			}
 			internal_state->backbufferRTV.clear();
 
+			UINT swapChainFlags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+			if (tearingSupported)
+			{
+				swapChainFlags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+			}
+
 			hr = internal_state->swapChain->ResizeBuffers(
 				pDesc->buffercount,
 				pDesc->width,
 				pDesc->height,
 				_ConvertFormat(pDesc->format),
-				0
+				swapChainFlags
 			);
 			assert(SUCCEEDED(hr));
 		}
@@ -5477,7 +5487,27 @@ using namespace DX12_Internal;
 			{
 				for (auto& swapchain : swapchains[cmd])
 				{
-					to_internal(swapchain)->swapChain->Present(swapchain->desc.vsync, 0);
+					UINT presentFlags = 0;
+					if (!swapchain->desc.vsync && !swapchain->desc.fullscreen)
+					{
+						presentFlags = DXGI_PRESENT_ALLOW_TEARING;
+					}
+
+					hr = to_internal(swapchain)->swapChain->Present(swapchain->desc.vsync, presentFlags);
+
+					// If the device was reset we must completely reinitialize the renderer.
+					if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
+					{
+#ifdef _DEBUG
+						char buff[64] = {};
+						sprintf_s(buff, "Device Lost on Present: Reason code 0x%08X\n",
+							static_cast<unsigned int>((hr == DXGI_ERROR_DEVICE_REMOVED) ? device->GetDeviceRemovedReason() : hr));
+						OutputDebugStringA(buff);
+#endif
+
+						// TODO: Handle device lost
+						// HandleDeviceLost();
+					}
 				}
 			}
 		}
