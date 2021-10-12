@@ -5366,15 +5366,15 @@ using namespace DX12_Internal;
 
 		if (queue == QUEUE_GRAPHICS)
 		{
-			D3D12_RECT pRects[8];
-			for (uint32_t i = 0; i < 8; ++i)
+			D3D12_RECT pRects[D3D12_VIEWPORT_AND_SCISSORRECT_MAX_INDEX + 1];
+			for (uint32_t i = 0; i < arraysize(pRects); ++i)
 			{
 				pRects[i].bottom = D3D12_VIEWPORT_BOUNDS_MAX;
 				pRects[i].left = D3D12_VIEWPORT_BOUNDS_MIN;
 				pRects[i].right = D3D12_VIEWPORT_BOUNDS_MAX;
 				pRects[i].top = D3D12_VIEWPORT_BOUNDS_MIN;
 			}
-			GetCommandList(cmd)->RSSetScissorRects(8, pRects);
+			GetCommandList(cmd)->RSSetScissorRects(arraysize(pRects), pRects);
 		}
 
 		prev_pt[cmd] = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
@@ -5700,9 +5700,10 @@ using namespace DX12_Internal;
 	void GraphicsDevice_DX12::BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd)
 	{
 		assert(rects != nullptr);
-		assert(numRects <= D3D12_VIEWPORT_AND_SCISSORRECT_MAX_INDEX);
-		D3D12_RECT pRects[D3D12_VIEWPORT_AND_SCISSORRECT_MAX_INDEX];
-		for (uint32_t i = 0; i < numRects; ++i) {
+		D3D12_RECT pRects[D3D12_VIEWPORT_AND_SCISSORRECT_MAX_INDEX + 1];
+		assert(numRects < arraysize(pRects));
+		for (uint32_t i = 0; i < numRects; ++i)
+		{
 			pRects[i].bottom = (LONG)rects[i].bottom;
 			pRects[i].left = (LONG)rects[i].left;
 			pRects[i].right = (LONG)rects[i].right;
@@ -5713,8 +5714,8 @@ using namespace DX12_Internal;
 	void GraphicsDevice_DX12::BindViewports(uint32_t NumViewports, const Viewport* pViewports, CommandList cmd)
 	{
 		assert(pViewports != nullptr);
-		assert(NumViewports <= D3D12_VIEWPORT_AND_SCISSORRECT_MAX_INDEX);
-		D3D12_VIEWPORT d3dViewPorts[D3D12_VIEWPORT_AND_SCISSORRECT_MAX_INDEX];
+		D3D12_VIEWPORT d3dViewPorts[D3D12_VIEWPORT_AND_SCISSORRECT_MAX_INDEX + 1];
+		assert(NumViewports < arraysize(d3dViewPorts));
 		for (uint32_t i = 0; i < NumViewports; ++i)
 		{
 			d3dViewPorts[i].TopLeftX = pViewports[i].TopLeftX;

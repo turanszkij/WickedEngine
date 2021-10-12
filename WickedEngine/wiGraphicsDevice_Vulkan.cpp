@@ -5794,7 +5794,7 @@ using namespace Vulkan_Internal;
 
 		if (queue == QUEUE_GRAPHICS)
 		{
-			VkRect2D scissors[8];
+			VkRect2D scissors[16];
 			for (int i = 0; i < arraysize(scissors); ++i)
 			{
 				scissors[i].offset.x = 0;
@@ -6099,9 +6099,11 @@ using namespace Vulkan_Internal;
 	void GraphicsDevice_Vulkan::BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd)
 	{
 		assert(rects != nullptr);
-		assert(numRects <= 16);
 		VkRect2D scissors[16];
-		for(uint32_t i = 0; i < numRects; ++i) {
+		assert(numRects < arraysize(scissors));
+		assert(numRects < properties2.properties.limits.maxViewports);
+		for(uint32_t i = 0; i < numRects; ++i)
+		{
 			scissors[i].extent.width = abs(rects[i].right - rects[i].left);
 			scissors[i].extent.height = abs(rects[i].top - rects[i].bottom);
 			scissors[i].offset.x = std::max(0, rects[i].left);
@@ -6112,8 +6114,9 @@ using namespace Vulkan_Internal;
 	void GraphicsDevice_Vulkan::BindViewports(uint32_t NumViewports, const Viewport* pViewports, CommandList cmd)
 	{
 		assert(pViewports != nullptr);
-		assert(NumViewports <= 16);
 		VkViewport vp[16];
+		assert(NumViewports < arraysize(vp));
+		assert(NumViewports < properties2.properties.limits.maxViewports);
 		for (uint32_t i = 0; i < NumViewports; ++i)
 		{
 			vp[i].x = pViewports[i].TopLeftX;
