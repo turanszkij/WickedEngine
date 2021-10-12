@@ -3803,7 +3803,6 @@ using namespace Vulkan_Internal;
 						descriptorSetlayoutInfo.bindingCount = uint32_t(internal_state->layoutBindings.size());
 						res = vkCreateDescriptorSetLayout(device, &descriptorSetlayoutInfo, nullptr, &internal_state->descriptorSetLayout);
 						assert(res == VK_SUCCESS);
-						pso_layout_cache[internal_state->binding_hash].descriptorSetLayout = internal_state->descriptorSetLayout;
 						layouts.push_back(internal_state->descriptorSetLayout);
 					}
 
@@ -3865,14 +3864,21 @@ using namespace Vulkan_Internal;
 
 					res = vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &internal_state->pipelineLayout_cs);
 					assert(res == VK_SUCCESS);
-					pso_layout_cache[internal_state->binding_hash].pipelineLayout = internal_state->pipelineLayout_cs;
-					pso_layout_cache[internal_state->binding_hash].bindlessSets = internal_state->bindlessSets;
-					pso_layout_cache[internal_state->binding_hash].bindlessFirstSet = internal_state->bindlessFirstSet;
+					if (res == VK_SUCCESS)
+					{
+						pso_layout_cache[internal_state->binding_hash].descriptorSetLayout = internal_state->descriptorSetLayout;
+						pso_layout_cache[internal_state->binding_hash].pipelineLayout = internal_state->pipelineLayout_cs;
+						pso_layout_cache[internal_state->binding_hash].bindlessSets = internal_state->bindlessSets;
+						pso_layout_cache[internal_state->binding_hash].bindlessFirstSet = internal_state->bindlessFirstSet;
+					}
 				}
-				internal_state->descriptorSetLayout = pso_layout_cache[internal_state->binding_hash].descriptorSetLayout;
-				internal_state->pipelineLayout_cs = pso_layout_cache[internal_state->binding_hash].pipelineLayout;
-				internal_state->bindlessSets = pso_layout_cache[internal_state->binding_hash].bindlessSets;
-				internal_state->bindlessFirstSet = pso_layout_cache[internal_state->binding_hash].bindlessFirstSet;
+				else
+				{
+					internal_state->descriptorSetLayout = pso_layout_cache[internal_state->binding_hash].descriptorSetLayout;
+					internal_state->pipelineLayout_cs = pso_layout_cache[internal_state->binding_hash].pipelineLayout;
+					internal_state->bindlessSets = pso_layout_cache[internal_state->binding_hash].bindlessSets;
+					internal_state->bindlessFirstSet = pso_layout_cache[internal_state->binding_hash].bindlessFirstSet;
+				}
 				pso_layout_cache_mutex.unlock();
 			}
 		}
@@ -4305,11 +4311,10 @@ using namespace Vulkan_Internal;
 					descriptorSetlayoutInfo.bindingCount = static_cast<uint32_t>(internal_state->layoutBindings.size());
 					res = vkCreateDescriptorSetLayout(device, &descriptorSetlayoutInfo, nullptr, &internal_state->descriptorSetLayout);
 					assert(res == VK_SUCCESS);
-					pso_layout_cache[internal_state->binding_hash].descriptorSetLayout = internal_state->descriptorSetLayout;
 					layouts.push_back(internal_state->descriptorSetLayout);
 				}
 
-				pso_layout_cache[internal_state->binding_hash].bindlessFirstSet = (uint32_t)layouts.size();
+				internal_state->bindlessFirstSet = (uint32_t)layouts.size();
 				for (auto& x : internal_state->bindlessBindings)
 				{
 					switch (x.descriptorType)
@@ -4319,31 +4324,31 @@ using namespace Vulkan_Internal;
 						break;
 					case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
 						layouts.push_back(allocationhandler->bindlessSampledImages.descriptorSetLayout);
-						pso_layout_cache[internal_state->binding_hash].bindlessSets.push_back(allocationhandler->bindlessSampledImages.descriptorSet);
+						internal_state->bindlessSets.push_back(allocationhandler->bindlessSampledImages.descriptorSet);
 						break;
 					case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
 						layouts.push_back(allocationhandler->bindlessUniformTexelBuffers.descriptorSetLayout);
-						pso_layout_cache[internal_state->binding_hash].bindlessSets.push_back(allocationhandler->bindlessUniformTexelBuffers.descriptorSet);
+						internal_state->bindlessSets.push_back(allocationhandler->bindlessUniformTexelBuffers.descriptorSet);
 						break;
 					case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
 						layouts.push_back(allocationhandler->bindlessStorageBuffers.descriptorSetLayout);
-						pso_layout_cache[internal_state->binding_hash].bindlessSets.push_back(allocationhandler->bindlessStorageBuffers.descriptorSet);
+						internal_state->bindlessSets.push_back(allocationhandler->bindlessStorageBuffers.descriptorSet);
 						break;
 					case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
 						layouts.push_back(allocationhandler->bindlessStorageImages.descriptorSetLayout);
-						pso_layout_cache[internal_state->binding_hash].bindlessSets.push_back(allocationhandler->bindlessStorageImages.descriptorSet);
+						internal_state->bindlessSets.push_back(allocationhandler->bindlessStorageImages.descriptorSet);
 						break;
 					case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
 						layouts.push_back(allocationhandler->bindlessStorageTexelBuffers.descriptorSetLayout);
-						pso_layout_cache[internal_state->binding_hash].bindlessSets.push_back(allocationhandler->bindlessStorageTexelBuffers.descriptorSet);
+						internal_state->bindlessSets.push_back(allocationhandler->bindlessStorageTexelBuffers.descriptorSet);
 						break;
 					case VK_DESCRIPTOR_TYPE_SAMPLER:
 						layouts.push_back(allocationhandler->bindlessSamplers.descriptorSetLayout);
-						pso_layout_cache[internal_state->binding_hash].bindlessSets.push_back(allocationhandler->bindlessSamplers.descriptorSet);
+						internal_state->bindlessSets.push_back(allocationhandler->bindlessSamplers.descriptorSet);
 						break;
 					case VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR:
 						layouts.push_back(allocationhandler->bindlessAccelerationStructures.descriptorSetLayout);
-						pso_layout_cache[internal_state->binding_hash].bindlessSets.push_back(allocationhandler->bindlessAccelerationStructures.descriptorSet);
+						internal_state->bindlessSets.push_back(allocationhandler->bindlessAccelerationStructures.descriptorSet);
 						break;
 					default:
 						break;
@@ -4368,12 +4373,21 @@ using namespace Vulkan_Internal;
 
 				res = vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &internal_state->pipelineLayout);
 				assert(res == VK_SUCCESS);
-				pso_layout_cache[internal_state->binding_hash].pipelineLayout = internal_state->pipelineLayout;
+				if (res == VK_SUCCESS)
+				{
+					pso_layout_cache[internal_state->binding_hash].descriptorSetLayout = internal_state->descriptorSetLayout;
+					pso_layout_cache[internal_state->binding_hash].pipelineLayout = internal_state->pipelineLayout;
+					pso_layout_cache[internal_state->binding_hash].bindlessSets = internal_state->bindlessSets;
+					pso_layout_cache[internal_state->binding_hash].bindlessFirstSet = internal_state->bindlessFirstSet;
+				}
 			}
-			internal_state->descriptorSetLayout = pso_layout_cache[internal_state->binding_hash].descriptorSetLayout;
-			internal_state->pipelineLayout = pso_layout_cache[internal_state->binding_hash].pipelineLayout;
-			internal_state->bindlessSets = pso_layout_cache[internal_state->binding_hash].bindlessSets;
-			internal_state->bindlessFirstSet = pso_layout_cache[internal_state->binding_hash].bindlessFirstSet;
+			else
+			{
+				internal_state->descriptorSetLayout = pso_layout_cache[internal_state->binding_hash].descriptorSetLayout;
+				internal_state->pipelineLayout = pso_layout_cache[internal_state->binding_hash].pipelineLayout;
+				internal_state->bindlessSets = pso_layout_cache[internal_state->binding_hash].bindlessSets;
+				internal_state->bindlessFirstSet = pso_layout_cache[internal_state->binding_hash].bindlessFirstSet;
+			}
 			pso_layout_cache_mutex.unlock();
 		}
 
@@ -5812,7 +5826,7 @@ using namespace Vulkan_Internal;
 		active_pso[cmd] = nullptr;
 		active_cs[cmd] = nullptr;
 		active_rt[cmd] = nullptr;
-		active_renderpass[cmd] = VK_NULL_HANDLE;
+		active_renderpass[cmd] = nullptr;
 		dirty_pso[cmd] = false;
 		prev_shadingrate[cmd] = SHADING_RATE_INVALID;
 		pushconstants[cmd] = {};

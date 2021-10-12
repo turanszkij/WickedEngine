@@ -3671,7 +3671,10 @@ using namespace DX12_Internal;
 					}
 					hr = device->CreateRootSignature(0, rootSigBlob->GetBufferPointer(), rootSigBlob->GetBufferSize(), IID_PPV_ARGS(&internal_state->rootSignature));
 					assert(SUCCEEDED(hr));
-					rootsignature_cache[rootsig_hash] = internal_state->rootSignature;
+					if (SUCCEEDED(hr))
+					{
+						rootsignature_cache[rootsig_hash] = internal_state->rootSignature;
+					}
 				}
 				rootsignature_cache_mutex.unlock();
 			}
@@ -4126,6 +4129,10 @@ using namespace DX12_Internal;
 				}
 				hr = device->CreateRootSignature(0, rootSigBlob->GetBufferPointer(), rootSigBlob->GetBufferSize(), IID_PPV_ARGS(&internal_state->rootSignature));
 				assert(SUCCEEDED(hr));
+				if (SUCCEEDED(hr))
+				{
+					rootsignature_cache[rootsig_hash] = internal_state->rootSignature;
+				}
 			}
 			rootsignature_cache_mutex.unlock();
 		}
