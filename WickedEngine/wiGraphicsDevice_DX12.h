@@ -36,10 +36,7 @@ namespace wiGraphics
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> drawIndexedInstancedIndirectCommandSignature;
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> dispatchMeshIndirectCommandSignature;
 
-		D3D12_FEATURE_DATA_D3D12_OPTIONS features_0;
-		D3D12_FEATURE_DATA_D3D12_OPTIONS5 features_5;
-		D3D12_FEATURE_DATA_D3D12_OPTIONS6 features_6;
-		D3D12_FEATURE_DATA_D3D12_OPTIONS7 features_7;
+		bool additionalShadingRatesSupported = false;
 
 		uint32_t rtv_descriptor_size = 0;
 		uint32_t dsv_descriptor_size = 0;

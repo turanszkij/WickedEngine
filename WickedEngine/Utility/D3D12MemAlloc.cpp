@@ -31,11 +31,14 @@
 
 #include <combaseapi.h>
 #include <mutex>
-#include <atomic>
 #include <algorithm>
 #include <utility>
 #include <cstdlib>
 #include <malloc.h> // for _aligned_malloc, _aligned_free
+
+#ifndef _WIN32
+    #include <shared_mutex>
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
@@ -101,6 +104,7 @@ especially to test compatibility with D3D12_RESOURCE_HEAP_TIER_1 on modern GPUs.
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 
+#define D3D12MA_IID_PPV_ARGS(ppType)   __uuidof(**(ppType)), reinterpret_cast<void**>(ppType)
 
 namespace D3D12MA
 {
@@ -110,11 +114,19 @@ namespace D3D12MA
 
 static void* DefaultAllocate(size_t Size, size_t Alignment, void* /*pUserData*/)
 {
+#ifdef _WIN32
     return _aligned_malloc(Size, Alignment);
+#else
+    return aligned_alloc(Alignment, Size);
+#endif
 }
 static void DefaultFree(void* pMemory, void* /*pUserData*/)
 {
+#ifdef _WIN32
     return _aligned_free(pMemory);
+#else
+    return free(pMemory);
+#endif
 }
 
 static void* Malloc(const ALLOCATION_CALLBACKS& allocs, size_t size, size_t alignment)
@@ -220,11 +232,14 @@ static inline void D3D12MA_SWAP(T& a, T& b)
     #define D3D12MA_MUTEX Mutex
 #endif
 
-#if !defined(_WIN32) || !defined(WINVER) || WINVER < 0x0600
-    #error Required at least WinAPI version supporting: client = Windows Vista, server = Windows Server 2008.
-#endif
+#ifdef _WIN32
+    #if !defined(WINVER) || WINVER < 0x0600
+        #error Required at least WinAPI version supporting: client = Windows Vista, server = Windows Server 2008.
+    #endif
+#endif // #ifdef _WIN32
 
 #ifndef D3D12MA_RW_MUTEX
+#ifdef _WIN32
     class RWMutex
     {
     public:
@@ -236,19 +251,21 @@ static inline void D3D12MA_SWAP(T& a, T& b)
     private:
         SRWLOCK m_Lock;
     };
+#else // #ifdef _WIN32
+    class RWMutex
+    {
+    public:
+        RWMutex() {}
+        void LockRead() { m_Mutex.lock_shared(); }
+        void UnlockRead() { m_Mutex.unlock_shared(); }
+        void LockWrite() { m_Mutex.lock(); }
+        void UnlockWrite() { m_Mutex.unlock(); }
+    private:
+        std::shared_timed_mutex m_Mutex;
+    };
+#endif // #ifdef _WIN32
     #define D3D12MA_RW_MUTEX RWMutex
-#endif
-
-/*
-If providing your own implementation, you need to implement a subset of std::atomic.
-*/
-#ifndef D3D12MA_ATOMIC_UINT32
-    #define D3D12MA_ATOMIC_UINT32 std::atomic<UINT>
-#endif
-
-#ifndef D3D12MA_ATOMIC_UINT64
-    #define D3D12MA_ATOMIC_UINT64 std::atomic<UINT64>
-#endif
+#endif // #ifndef D3D12MA_RW_MUTEX
 
 /*
 Returns true if given number is a power of two.
@@ -288,59 +305,6 @@ template <typename T>
 static inline T DivideRoudingUp(T x, T y)
 {
     return (x + y - 1) / y;
-}
-
-// Returns smallest power of 2 greater or equal to v.
-static inline UINT NextPow2(UINT v)
-{
-	v--;
-    v |= v >> 1;
-    v |= v >> 2;
-    v |= v >> 4;
-    v |= v >> 8;
-    v |= v >> 16;
-    v++;
-    return v;
-}
-static inline uint64_t NextPow2(uint64_t v)
-{
-	v--;
-    v |= v >> 1;
-    v |= v >> 2;
-    v |= v >> 4;
-    v |= v >> 8;
-    v |= v >> 16;
-    v |= v >> 32;
-    v++;
-    return v;
-}
-
-// Returns largest power of 2 less or equal to v.
-static inline UINT PrevPow2(UINT v)
-{
-    v |= v >> 1;
-    v |= v >> 2;
-    v |= v >> 4;
-    v |= v >> 8;
-    v |= v >> 16;
-    v = v ^ (v >> 1);
-    return v;
-}
-static inline uint64_t PrevPow2(uint64_t v)
-{
-    v |= v >> 1;
-    v |= v >> 2;
-    v |= v >> 4;
-    v |= v >> 8;
-    v |= v >> 16;
-    v |= v >> 32;
-    v = v ^ (v >> 1);
-    return v;
-}
-
-static inline bool StrIsEmpty(const char* pStr)
-{
-    return pStr == NULL || *pStr == '\0';
 }
 
 // Helper RAII class to lock a mutex in constructor and unlock it in destructor (at the end of scope).
@@ -791,7 +755,7 @@ template<typename T>
 class Vector
 {
 public:
-    typedef T value_type;
+    using value_type = T;
 
     // allocationCallbacks externally owned, must outlive this object.
     Vector(const ALLOCATION_CALLBACKS& allocationCallbacks) :
@@ -979,7 +943,7 @@ public:
         remove(0);
     }
 
-    typedef T* iterator;
+    using iterator = T*;
 
     iterator begin() { return m_pArray; }
     iterator end() { return m_pArray + m_Count; }
@@ -1565,7 +1529,11 @@ public:
 
     // allocationCallbacks externally owned, must outlive this object.
     List(const ALLOCATION_CALLBACKS& allocationCallbacks);
-    ~List();
+
+    // Intentionally not calling Clear, because that would be unnecessary
+    // computations to return all items to m_ItemAllocator as free.
+    // ~List() {}
+    
     void Clear();
 
     size_t GetCount() const { return m_Count; }
@@ -1789,13 +1757,6 @@ List<T>::List(const ALLOCATION_CALLBACKS& allocationCallbacks) :
 }
 
 template<typename T>
-List<T>::~List()
-{
-    // Intentionally not calling Clear, because that would be unnecessary
-    // computations to return all items to m_ItemAllocator as free.
-}
-
-template<typename T>
 void List<T>::Clear()
 {
     if(!IsEmpty())
@@ -2010,7 +1971,7 @@ typename List<T>::Item* List<T>::InsertAfter(Item* pItem, const T& value)
 Expected interface of ItemTypeTraits:
 struct MyItemTypeTraits
 {
-    typedef MyItem ItemType;
+    using ItemType = MyItem;
     static ItemType* GetPrev(const ItemType* item) { return item->myPrevPtr; }
     static ItemType* GetNext(const ItemType* item) { return item->myNextPtr; }
     static ItemType*& AccessPrev(ItemType* item) { return item->myPrevPtr; }
@@ -2021,7 +1982,7 @@ template<typename ItemTypeTraits>
 class IntrusiveLinkedList
 {
 public:
-    typedef typename ItemTypeTraits::ItemType ItemType;
+    using ItemType = typename ItemTypeTraits::ItemType;
     static ItemType* GetPrev(const ItemType* item) { return ItemTypeTraits::GetPrev(item); }
     static ItemType* GetNext(const ItemType* item) { return ItemTypeTraits::GetNext(item); }
     // Movable, not copyable.
@@ -2276,7 +2237,7 @@ struct SuballocationOffsetGreater
     }
 };
 
-typedef List<Suballocation> SuballocationList;
+using SuballocationList = List<Suballocation>;
 
 struct SuballocationItemSizeLess
 {
@@ -2567,7 +2528,7 @@ private:
 
 struct CommittedAllocationListItemTraits
 {
-    typedef Allocation ItemType;
+    using ItemType = Allocation;
     static ItemType* GetPrev(const ItemType* item)
     {
         D3D12MA_ASSERT(item->m_PackedData.GetType() == Allocation::TYPE_COMMITTED || item->m_PackedData.GetType() == Allocation::TYPE_HEAP);
@@ -2616,7 +2577,7 @@ private:
     PoolPimpl* m_Pool = NULL;
 
     D3D12MA_RW_MUTEX m_Mutex;
-    typedef IntrusiveLinkedList<CommittedAllocationListItemTraits> CommittedAllocationLinkedList;
+    using CommittedAllocationLinkedList = IntrusiveLinkedList<CommittedAllocationListItemTraits>;
     CommittedAllocationLinkedList m_AllocationList;
 };
 
@@ -2827,7 +2788,7 @@ private:
 
 struct PoolListItemTraits
 {
-    typedef PoolPimpl ItemType;
+    using ItemType = PoolPimpl;
     static ItemType* GetPrev(const ItemType* item) { return item->m_PrevPool; }
     static ItemType* GetNext(const ItemType* item) { return item->m_NextPool; }
     static ItemType*& AccessPrev(ItemType* item) { return item->m_PrevPool; }
@@ -2846,6 +2807,7 @@ struct CommittedAllocationParameters
 class AllocatorPimpl
 {
 public:
+    std::atomic_uint32_t m_RefCount = 1;
     CurrentBudgetData m_Budget;
 
     AllocatorPimpl(const ALLOCATION_CALLBACKS& allocationCallbacks, const ALLOCATOR_DESC& desc);
@@ -2979,7 +2941,7 @@ private:
     D3D12_FEATURE_DATA_ARCHITECTURE m_D3D12Architecture;
     AllocationObjectAllocator m_AllocationObjectAllocator;
 
-    typedef IntrusiveLinkedList<PoolListItemTraits> PoolList;
+    using PoolList = IntrusiveLinkedList<PoolListItemTraits>;
     PoolList m_Pools[HEAP_TYPE_COUNT];
     D3D12MA_RW_MUTEX m_PoolsMutex[HEAP_TYPE_COUNT];
 
@@ -3764,7 +3726,7 @@ HRESULT MemoryBlock::Init()
     heapDesc.Alignment = HeapFlagsToAlignment(m_HeapFlags);
     heapDesc.Flags = m_HeapFlags;
 
-    HRESULT hr = m_Allocator->GetDevice()->CreateHeap(&heapDesc, __uuidof(*m_Heap), (void**)&m_Heap);
+    HRESULT hr = m_Allocator->GetDevice()->CreateHeap(&heapDesc, D3D12MA_IID_PPV_ARGS(&m_Heap));
     if(SUCCEEDED(hr))
     {
         m_Allocator->m_Budget.m_BlockBytes[HeapTypeToIndex(m_HeapProps.Type)] += m_Size;
@@ -4080,7 +4042,6 @@ void BlockVector::Free(Allocation* hAllocation)
         D3D12MA_HEAVY_ASSERT(pBlock->Validate());
 
         const size_t blockCount = m_Blocks.size();
-        const UINT64 sumBlockSize = CalcSumBlockSize();
         // pBlock became empty after this deallocation.
         if(pBlock->m_pMetadata->IsEmpty())
         {
@@ -4142,7 +4103,7 @@ HRESULT BlockVector::CreateResource(
             &resourceDesc,
             InitialResourceState,
             pOptimizedClearValue,
-            IID_PPV_ARGS(&res));
+            D3D12MA_IID_PPV_ARGS(&res));
         if(SUCCEEDED(hr))
         {
             if(ppvResource != NULL)
@@ -4198,7 +4159,7 @@ HRESULT BlockVector::CreateResource2(
             &resourceDesc,
             InitialResourceState,
             pOptimizedClearValue,
-            IID_PPV_ARGS(&res));
+            D3D12MA_IID_PPV_ARGS(&res));
         if(SUCCEEDED(hr))
         {
             if(ppvResource != NULL)
@@ -4473,7 +4434,7 @@ void PoolPimpl::FreeName()
 ////////////////////////////////////////////////////////////////////////////////
 // Public class Pool implementation
 
-void Pool::Release()
+void Pool::ReleaseThis()
 {
     if(this == NULL)
     {
@@ -4555,15 +4516,15 @@ AllocatorPimpl::AllocatorPimpl(const ALLOCATION_CALLBACKS& allocationCallbacks, 
 HRESULT AllocatorPimpl::Init(const ALLOCATOR_DESC& desc)
 {
 #if D3D12MA_DXGI_1_4
-    desc.pAdapter->QueryInterface<IDXGIAdapter3>(&m_Adapter3);
+    desc.pAdapter->QueryInterface(D3D12MA_IID_PPV_ARGS(&m_Adapter3));
 #endif
 
 #ifdef __ID3D12Device4_INTERFACE_DEFINED__
-    m_Device->QueryInterface<ID3D12Device4>(&m_Device4);
+    m_Device->QueryInterface(D3D12MA_IID_PPV_ARGS(&m_Device4));
 #endif
 
 #ifdef __ID3D12Device8_INTERFACE_DEFINED__
-    m_Device->QueryInterface<ID3D12Device8>(&m_Device8);
+    m_Device->QueryInterface(D3D12MA_IID_PPV_ARGS(&m_Device8));
 #endif
 
     HRESULT hr = m_Adapter->GetDesc(&m_AdapterDesc);
@@ -4989,7 +4950,7 @@ HRESULT AllocatorPimpl::AllocateCommittedResource(
         &committedAllocParams.m_HeapProperties,
         committedAllocParams.m_HeapFlags & ~RESOURCE_CLASS_HEAP_FLAGS, // D3D12 ERROR: ID3D12Device::CreateCommittedResource: When creating a committed resource, D3D12_HEAP_FLAGS must not have either D3D12_HEAP_FLAG_DENY_NON_RT_DS_TEXTURES, D3D12_HEAP_FLAG_DENY_RT_DS_TEXTURES, nor D3D12_HEAP_FLAG_DENY_BUFFERS set. These flags will be set automatically to correspond with the committed resource type. [ STATE_CREATION ERROR #640: CREATERESOURCEANDHEAP_INVALIDHEAPMISCFLAGS]
         pResourceDesc, InitialResourceState,
-        pOptimizedClearValue, IID_PPV_ARGS(&res));
+        pOptimizedClearValue, D3D12MA_IID_PPV_ARGS(&res));
     if(SUCCEEDED(hr))
     {
         if(ppvResource != NULL)
@@ -5045,7 +5006,7 @@ HRESULT AllocatorPimpl::AllocateCommittedResource1(
         &committedAllocParams.m_HeapProperties,
         committedAllocParams.m_HeapFlags & ~RESOURCE_CLASS_HEAP_FLAGS, // D3D12 ERROR: ID3D12Device::CreateCommittedResource: When creating a committed resource, D3D12_HEAP_FLAGS must not have either D3D12_HEAP_FLAG_DENY_NON_RT_DS_TEXTURES, D3D12_HEAP_FLAG_DENY_RT_DS_TEXTURES, nor D3D12_HEAP_FLAG_DENY_BUFFERS set. These flags will be set automatically to correspond with the committed resource type. [ STATE_CREATION ERROR #640: CREATERESOURCEANDHEAP_INVALIDHEAPMISCFLAGS]
         pResourceDesc, InitialResourceState,
-        pOptimizedClearValue, pProtectedSession, IID_PPV_ARGS(&res));
+        pOptimizedClearValue, pProtectedSession, D3D12MA_IID_PPV_ARGS(&res));
     if(SUCCEEDED(hr))
     {
         if(ppvResource != NULL)
@@ -5102,7 +5063,7 @@ HRESULT AllocatorPimpl::AllocateCommittedResource2(
         &committedAllocParams.m_HeapProperties,
         committedAllocParams.m_HeapFlags & ~RESOURCE_CLASS_HEAP_FLAGS, // D3D12 ERROR: ID3D12Device::CreateCommittedResource: When creating a committed resource, D3D12_HEAP_FLAGS must not have either D3D12_HEAP_FLAG_DENY_NON_RT_DS_TEXTURES, D3D12_HEAP_FLAG_DENY_RT_DS_TEXTURES, nor D3D12_HEAP_FLAG_DENY_BUFFERS set. These flags will be set automatically to correspond with the committed resource type. [ STATE_CREATION ERROR #640: CREATERESOURCEANDHEAP_INVALIDHEAPMISCFLAGS]
         pResourceDesc, InitialResourceState,
-        pOptimizedClearValue, pProtectedSession, IID_PPV_ARGS(&res));
+        pOptimizedClearValue, pProtectedSession, D3D12MA_IID_PPV_ARGS(&res));
     if(SUCCEEDED(hr))
     {
         if(ppvResource != NULL)
@@ -5154,7 +5115,7 @@ HRESULT AllocatorPimpl::AllocateHeap(
     heapDesc.Flags = committedAllocParams.m_HeapFlags;
 
     ID3D12Heap* heap = nullptr;
-    HRESULT hr = m_Device->CreateHeap(&heapDesc, __uuidof(*heap), (void**)&heap);
+    HRESULT hr = m_Device->CreateHeap(&heapDesc, D3D12MA_IID_PPV_ARGS(&heap));
     if(SUCCEEDED(hr))
     {
         const BOOL wasZeroInitialized = TRUE;
@@ -5197,7 +5158,7 @@ HRESULT AllocatorPimpl::AllocateHeap1(
     heapDesc.Flags = committedAllocParams.m_HeapFlags;
 
     ID3D12Heap* heap = nullptr;
-    HRESULT hr = m_Device4->CreateHeap1(&heapDesc, pProtectedSession, __uuidof(*heap), (void**)&heap);
+    HRESULT hr = m_Device4->CreateHeap1(&heapDesc, pProtectedSession, D3D12MA_IID_PPV_ARGS(&heap));
     if(SUCCEEDED(hr))
     {
         const BOOL wasZeroInitialized = TRUE;
@@ -5863,6 +5824,38 @@ void AllocatorPimpl::WriteBudgetToJson(JsonWriter& json, const Budget& budget)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// Public but internal class IUnknownImpl implementation
+
+HRESULT STDMETHODCALLTYPE IUnknownImpl::QueryInterface(REFIID riid, void** ppvObject)
+{
+    if(ppvObject == NULL)
+        return E_POINTER;
+    if(riid == IID_IUnknown)
+    {
+        ++m_RefCount;
+        *ppvObject = this;
+        return S_OK;
+    }
+    *ppvObject = NULL;
+    return E_NOINTERFACE;
+}
+
+ULONG STDMETHODCALLTYPE IUnknownImpl::AddRef()
+{
+    return ++m_RefCount;
+}
+
+ULONG STDMETHODCALLTYPE IUnknownImpl::Release()
+{
+    D3D12MA_DEBUG_GLOBAL_MUTEX_LOCK
+
+    const uint32_t newRefCount = --m_RefCount;
+    if(newRefCount == 0)
+        ReleaseThis();
+    return newRefCount;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // Public class Allocation implementation
 
 void Allocation::PackedData::SetType(Type type)
@@ -5893,7 +5886,7 @@ void Allocation::PackedData::SetTextureLayout(D3D12_TEXTURE_LAYOUT textureLayout
     m_TextureLayout = u;
 }
 
-void Allocation::Release()
+void Allocation::ReleaseThis()
 {
     if(this == NULL)
     {
@@ -5981,11 +5974,6 @@ Allocation::Allocation(AllocatorPimpl* allocator, UINT64 size, BOOL wasZeroIniti
     m_PackedData.SetWasZeroInitialized(wasZeroInitialized);
 }
 
-Allocation::~Allocation()
-{
-    // Nothing here, everything already done in Release.
-}
-
 void Allocation::InitCommitted(CommittedAllocationList* list)
 {
     m_PackedData.SetType(TYPE_COMMITTED);
@@ -6063,7 +6051,7 @@ Allocator::~Allocator()
     D3D12MA_DELETE(m_Pimpl->GetAllocs(), m_Pimpl);
 }
 
-void Allocator::Release()
+void Allocator::ReleaseThis()
 {
     D3D12MA_DEBUG_GLOBAL_MUTEX_LOCK
 
@@ -6071,8 +6059,6 @@ void Allocator::Release()
     const ALLOCATION_CALLBACKS allocationCallbacksCopy = m_Pimpl->GetAllocs();
     D3D12MA_DELETE(allocationCallbacksCopy, this);
 }
-
-
 
 const D3D12_FEATURE_DATA_D3D12_OPTIONS& Allocator::GetD3D12Options() const
 {
@@ -6292,7 +6278,6 @@ public:
     BlockMetadata_Generic m_Metadata;
 
     VirtualBlockPimpl(const ALLOCATION_CALLBACKS& allocationCallbacks, UINT64 size);
-    ~VirtualBlockPimpl();
 };
 
 VirtualBlockPimpl::VirtualBlockPimpl(const ALLOCATION_CALLBACKS& allocationCallbacks, UINT64 size) :
@@ -6302,10 +6287,6 @@ VirtualBlockPimpl::VirtualBlockPimpl(const ALLOCATION_CALLBACKS& allocationCallb
         true) // isVirtual
 {
     m_Metadata.Init(m_Size);
-}
-
-VirtualBlockPimpl::~VirtualBlockPimpl()
-{
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -6325,7 +6306,7 @@ VirtualBlock::~VirtualBlock()
     D3D12MA_DELETE(m_Pimpl->m_AllocationCallbacks, m_Pimpl);
 }
 
-void VirtualBlock::Release()
+void VirtualBlock::ReleaseThis()
 {
     D3D12MA_DEBUG_GLOBAL_MUTEX_LOCK
 
