@@ -5369,10 +5369,10 @@ using namespace DX12_Internal;
 			D3D12_RECT pRects[8];
 			for (uint32_t i = 0; i < 8; ++i)
 			{
-				pRects[i].bottom = INT32_MAX;
-				pRects[i].left = INT32_MIN;
-				pRects[i].right = INT32_MAX;
-				pRects[i].top = INT32_MIN;
+				pRects[i].bottom = D3D12_VIEWPORT_BOUNDS_MAX;
+				pRects[i].left = D3D12_VIEWPORT_BOUNDS_MIN;
+				pRects[i].right = D3D12_VIEWPORT_BOUNDS_MAX;
+				pRects[i].top = D3D12_VIEWPORT_BOUNDS_MIN;
 			}
 			GetCommandList(cmd)->RSSetScissorRects(8, pRects);
 		}

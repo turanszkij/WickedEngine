@@ -163,17 +163,26 @@ namespace wiImage
 			M = M * canvas.GetProjection();
 		}
 
-		for (int i = 0; i < 4; ++i)
-		{
-			XMVECTOR V = XMVectorSet(params.corners[i].x - params.pivot.x, params.corners[i].y - params.pivot.y, 0, 1);
-			V = XMVector2Transform(V, M); // division by w will happen on GPU
-			XMStoreFloat4(&push.corners[i], V);
-		}
+		XMVECTOR V = XMVectorSet(params.corners[0].x - params.pivot.x, params.corners[0].y - params.pivot.y, 0, 1);
+		V = XMVector2Transform(V, M); // division by w will happen on GPU
+		XMStoreFloat4(&push.corners0, V);
+
+		V = XMVectorSet(params.corners[1].x - params.pivot.x, params.corners[1].y - params.pivot.y, 0, 1);
+		V = XMVector2Transform(V, M); // division by w will happen on GPU
+		XMStoreFloat4(&push.corners1, V);
+
+		V = XMVectorSet(params.corners[2].x - params.pivot.x, params.corners[2].y - params.pivot.y, 0, 1);
+		V = XMVector2Transform(V, M); // division by w will happen on GPU
+		XMStoreFloat4(&push.corners2, V);
+
+		V = XMVectorSet(params.corners[3].x - params.pivot.x, params.corners[3].y - params.pivot.y, 0, 1);
+		V = XMVector2Transform(V, M); // division by w will happen on GPU
+		XMStoreFloat4(&push.corners3, V);
 
 		if (params.isMirrorEnabled())
 		{
-			std::swap(push.corners[0], push.corners[1]);
-			std::swap(push.corners[2], push.corners[3]);
+			std::swap(push.corners0, push.corners1);
+			std::swap(push.corners2, push.corners3);
 		}
 
 		const TextureDesc& desc = texture->GetDesc();
