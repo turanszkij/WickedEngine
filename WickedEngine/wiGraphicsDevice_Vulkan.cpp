@@ -3153,7 +3153,7 @@ using namespace Vulkan_Internal;
 		else if(pDesc->Usage == USAGE_UPLOAD)
 		{
 			allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
-			allocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+			allocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY; // yes, not using VMA_MEMORY_USAGE_CPU_TO_GPU, as it had worse performance for CPU write
 			bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 		}
 
@@ -3389,7 +3389,7 @@ using namespace Vulkan_Internal;
 			}
 			else if(pTexture->desc.Usage == USAGE_UPLOAD)
 			{
-				allocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+				allocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY; // yes, not using VMA_MEMORY_USAGE_CPU_TO_GPU, as it had worse performance for CPU write
 				bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 			}
 
