@@ -336,7 +336,7 @@ namespace Vulkan_Internal
 			return VK_BLEND_OP_ADD;
 		}
 	}
-	constexpr VkSamplerAddressMode _ConvertTextureAddressMode(TEXTURE_ADDRESS_MODE value)
+	constexpr VkSamplerAddressMode _ConvertTextureAddressMode(TEXTURE_ADDRESS_MODE value, const VkPhysicalDeviceVulkan12Features& features_1_2)
 	{
 		switch (value)
 		{
@@ -349,7 +349,11 @@ namespace Vulkan_Internal
 		case TEXTURE_ADDRESS_BORDER:
 			return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
 		case TEXTURE_ADDRESS_MIRROR_ONCE:
-			return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
+			if (features_1_2.samplerMirrorClampToEdge == VK_TRUE)
+			{
+				return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
+			}
+			return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
 		default:
 			return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 		}
@@ -2043,12 +2047,6 @@ using namespace Vulkan_Internal;
 
 				enabled_deviceExtensions = required_deviceExtensions;
 
-				// Core 1.2
-				enabled_deviceExtensions.push_back(VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME);
-				enabled_deviceExtensions.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
-				enabled_deviceExtensions.push_back(VK_EXT_SHADER_VIEWPORT_INDEX_LAYER_EXTENSION_NAME);
-				enabled_deviceExtensions.push_back(VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME);
-
 				if (checkExtensionSupport(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME, available_deviceExtensions))
 				{
 					enabled_deviceExtensions.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
@@ -2154,7 +2152,7 @@ using namespace Vulkan_Internal;
 			{
 				capabilities |= GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_COMMON;
 			}
-			if (features2.features.multiViewport == VK_TRUE)
+			if (features_1_2.shaderOutputLayer == VK_TRUE && features_1_2.shaderOutputViewportIndex)
 			{
 				capabilities |= GRAPHICSDEVICE_CAPABILITY_RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS;
 			}
@@ -4104,9 +4102,9 @@ using namespace Vulkan_Internal;
 			}
 		}
 
-		createInfo.addressModeU = _ConvertTextureAddressMode(pSamplerDesc->AddressU);
-		createInfo.addressModeV = _ConvertTextureAddressMode(pSamplerDesc->AddressV);
-		createInfo.addressModeW = _ConvertTextureAddressMode(pSamplerDesc->AddressW);
+		createInfo.addressModeU = _ConvertTextureAddressMode(pSamplerDesc->AddressU, features_1_2);
+		createInfo.addressModeV = _ConvertTextureAddressMode(pSamplerDesc->AddressV, features_1_2);
+		createInfo.addressModeW = _ConvertTextureAddressMode(pSamplerDesc->AddressW, features_1_2);
 		createInfo.maxAnisotropy = static_cast<float>(pSamplerDesc->MaxAnisotropy);
 		createInfo.compareOp = _ConvertComparisonFunc(pSamplerDesc->ComparisonFunc);
 		createInfo.minLod = pSamplerDesc->MinLOD;
