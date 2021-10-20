@@ -1992,7 +1992,6 @@ using namespace Vulkan_Internal;
 
 			const std::vector<const char*> required_deviceExtensions = {
 				VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-				VK_EXT_DEPTH_CLIP_ENABLE_EXTENSION_NAME,
 			};
 			std::vector<const char*> enabled_deviceExtensions;
 
@@ -2047,6 +2046,12 @@ using namespace Vulkan_Internal;
 
 				enabled_deviceExtensions = required_deviceExtensions;
 
+				if (checkExtensionSupport(VK_EXT_DEPTH_CLIP_ENABLE_EXTENSION_NAME, available_deviceExtensions))
+				{
+					enabled_deviceExtensions.push_back(VK_EXT_DEPTH_CLIP_ENABLE_EXTENSION_NAME);
+					*features_chain = &depth_clip_enable_features;
+					features_chain = &depth_clip_enable_features.pNext;
+				}
 				if (checkExtensionSupport(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME, available_deviceExtensions))
 				{
 					enabled_deviceExtensions.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
@@ -4483,7 +4488,10 @@ using namespace Vulkan_Internal;
 		VkPipelineRasterizationDepthClipStateCreateInfoEXT& depthclip = internal_state->depthclip;
 		depthclip.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_DEPTH_CLIP_STATE_CREATE_INFO_EXT;
 		depthclip.depthClipEnable = VK_TRUE;
-		rasterizer.pNext = &depthclip;
+		if (depth_clip_enable_features.depthClipEnable == VK_TRUE)
+		{
+			rasterizer.pNext = &depthclip;
+		}
 
 		if (pso->desc.rs != nullptr)
 		{

@@ -63,6 +63,7 @@ namespace wiGraphics
 		VkPhysicalDeviceFragmentShadingRateFeaturesKHR fragment_shading_rate_features = {};
 		VkPhysicalDeviceMeshShaderFeaturesNV mesh_shader_features = {};
 		VkPhysicalDeviceConditionalRenderingFeaturesEXT conditional_rendering_features = {};
+		VkPhysicalDeviceDepthClipEnableFeaturesEXT depth_clip_enable_features = {};
 
 		std::vector<VkDynamicState> pso_dynamicStates;
 		VkPipelineDynamicStateCreateInfo dynamicStateInfo = {};
