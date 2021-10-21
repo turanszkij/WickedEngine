@@ -2049,6 +2049,7 @@ using namespace Vulkan_Internal;
 				if (checkExtensionSupport(VK_EXT_DEPTH_CLIP_ENABLE_EXTENSION_NAME, available_deviceExtensions))
 				{
 					enabled_deviceExtensions.push_back(VK_EXT_DEPTH_CLIP_ENABLE_EXTENSION_NAME);
+					depth_clip_enable_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEPTH_CLIP_ENABLE_FEATURES_EXT;
 					*features_chain = &depth_clip_enable_features;
 					features_chain = &depth_clip_enable_features.pNext;
 				}
