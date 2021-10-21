@@ -732,9 +732,9 @@ namespace DX12_Internal
 
 		return DXGI_FORMAT_B8G8R8A8_UNORM;
 	}
-	inline D3D12_SUBRESOURCE_DATA _ConvertSubresourceData(const SubresourceData& pInitialData)
+	constexpr D3D12_SUBRESOURCE_DATA _ConvertSubresourceData(const SubresourceData& pInitialData)
 	{
-		D3D12_SUBRESOURCE_DATA data;
+		D3D12_SUBRESOURCE_DATA data = {};
 		data.pData = pInitialData.pData;
 		data.RowPitch = pInitialData.rowPitch;
 		data.SlicePitch = pInitialData.slicePitch;

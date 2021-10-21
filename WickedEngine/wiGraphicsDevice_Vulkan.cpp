@@ -456,8 +456,7 @@ namespace Vulkan_Internal
 		}
 	}
 
-
-	inline VkAccessFlags _ParseResourceState(RESOURCE_STATE value)
+	constexpr VkAccessFlags _ParseResourceState(RESOURCE_STATE value)
 	{
 		VkAccessFlags flags = 0;
 
@@ -522,7 +521,8 @@ namespace Vulkan_Internal
 
 		return flags;
 	}
-	
+
+
 	bool checkExtensionSupport(const char* checkExtension, const std::vector<VkExtensionProperties>& available_extensions)
 	{
 		for (const auto& x : available_extensions)
