@@ -11,6 +11,7 @@ public:
 	void Load() override;
 	void Update(float dt) override;
 	void ResizeLayout() override;
+	void Render() const override;
 
 	void RunJobSystemTest();
 	void RunFontTest();
@@ -21,8 +22,10 @@ public:
 class Tests : public MainComponent
 {
 	TestsRenderer renderer;
+
 public:
 	~Tests() override;
 	void Initialize() override;
+	void Compose(wiGraphics::CommandList cmd) override;
 };
 

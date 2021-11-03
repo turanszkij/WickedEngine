@@ -19,6 +19,69 @@ using namespace wiScene;
 
 Shader imguiVS;
 Shader imguiPS;
+Texture fontTexture;
+InputLayout	imguiInputLayout;
+PipelineState imguiPSO;
+
+struct ImGui_Impl_Data
+{
+};
+
+static ImGui_Impl_Data* ImGui_Impl_GetBackendData()
+{
+	return ImGui::GetCurrentContext() ? (ImGui_Impl_Data*)ImGui::GetIO().BackendRendererUserData : nullptr;
+}
+
+bool ImGui_Impl_CreateDeviceObjects()
+{
+	auto* backendData = ImGui_Impl_GetBackendData();
+
+	// Build texture atlas
+	ImGuiIO& io = ImGui::GetIO();
+
+	unsigned char* pixels;
+	int width, height;
+	io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+
+	// Upload texture to graphics system
+	TextureDesc textureDesc;
+	textureDesc.Width = width;
+	textureDesc.Height = height;
+	textureDesc.MipLevels = 1;
+	textureDesc.ArraySize = 1;
+	textureDesc.Format = FORMAT_R8G8B8A8_UNORM;
+	textureDesc.BindFlags = BIND_SHADER_RESOURCE;
+
+	SubresourceData textureData;
+	textureData.pData = pixels;
+	textureData.rowPitch = width * GetFormatStride(textureDesc.Format);
+	textureData.slicePitch = textureData.rowPitch * height;
+
+	wiRenderer::GetDevice()->CreateTexture(&textureDesc, &textureData, &fontTexture);
+
+	// Store our identifier
+	io.Fonts->SetTexID((ImTextureID)&fontTexture);
+
+	imguiInputLayout.elements =
+	{
+		{ "POSITION", 0, FORMAT_R32G32_FLOAT, 0, (UINT)IM_OFFSETOF(ImDrawVert, pos), INPUT_PER_VERTEX_DATA },
+		{ "TEXCOORD", 0, FORMAT_R32G32_FLOAT, 0, (UINT)IM_OFFSETOF(ImDrawVert, uv), INPUT_PER_VERTEX_DATA },
+		{ "COLOR", 0, FORMAT_R8G8B8A8_UNORM, 0, (UINT)IM_OFFSETOF(ImDrawVert, col), INPUT_PER_VERTEX_DATA },
+	};
+
+	// Create pipeline
+	PipelineStateDesc desc;
+	desc.vs = &imguiVS;
+	desc.ps = &imguiPS;
+	desc.il = &imguiInputLayout;
+	desc.dss = wiRenderer::GetDepthStencilState(DSSTYPE_DEPTHREAD);
+	desc.rs = wiRenderer::GetRasterizerState(RSTYPE_DOUBLESIDED);
+	desc.bs = wiRenderer::GetBlendState(BSTYPE_TRANSPARENT);
+	desc.pt = TRIANGLELIST;
+	wiRenderer::GetDevice()->CreatePipelineState(&desc, &imguiPSO);
+
+	return true;
+}
 
 Tests::~Tests()
 {
@@ -32,6 +95,19 @@ Tests::~Tests()
 
 void Tests::Initialize()
 {
+	// Compile shaders
+	{
+		wiShaderCompiler::Initialize();
+
+		auto shaderPath = wiRenderer::GetShaderSourcePath();
+		wiRenderer::SetShaderSourcePath(wiHelper::GetCurrentPath() + "/");
+
+		wiRenderer::LoadShader(VS, imguiVS, "ImGuiVS.cso");
+		wiRenderer::LoadShader(PS, imguiPS, "ImGuiPS.cso");
+
+		wiRenderer::SetShaderSourcePath(shaderPath);
+	}
+
 	// Setup Dear ImGui context
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -47,10 +123,15 @@ void Tests::Initialize()
 	ImGui_ImplWin32_Init(window);
 #endif
 
-	wiRenderer::LoadShader(VS, imguiVS, "ImGuiVS.cso");
-	wiRenderer::LoadShader(PS, imguiPS, "ImGuiPS.cso");
+	IM_ASSERT(io.BackendRendererUserData == NULL && "Already initialized a renderer backend!");
 
-    MainComponent::Initialize();
+	// Setup backend capabilities flags
+	ImGui_Impl_Data* bd = IM_NEW(ImGui_Impl_Data)();
+	io.BackendRendererUserData = (void*)bd;
+	io.BackendRendererName = "Wicked";
+	io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
+
+	MainComponent::Initialize();
 
 	infoDisplay.active = true;
 	infoDisplay.watermark = true;
@@ -64,14 +145,170 @@ void Tests::Initialize()
 	ActivatePath(&renderer);
 }
 
+void Tests::Compose(wiGraphics::CommandList cmd)
+{
+	MainComponent::Compose(cmd);
+
+	// Rendering
+	ImGui::Render();
+
+	auto drawData = ImGui::GetDrawData();
+
+	if (!drawData || drawData->TotalVtxCount == 0)
+	{
+		return;
+	}
+
+	// Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
+	int fb_width = (int)(drawData->DisplaySize.x * drawData->FramebufferScale.x);
+	int fb_height = (int)(drawData->DisplaySize.y * drawData->FramebufferScale.y);
+	if (fb_width <= 0 || fb_height <= 0)
+		return;
+
+	auto* bd = ImGui_Impl_GetBackendData();
+
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
+	// Get memory for vertex and index buffers
+	const uint64_t vbSize = sizeof(ImDrawVert) * drawData->TotalVtxCount;
+	const uint64_t ibSize = sizeof(ImDrawIdx) * drawData->TotalIdxCount;
+	auto vertexBufferAllocation = device->AllocateGPU(vbSize, cmd);
+	auto indexBufferAllocation = device->AllocateGPU(ibSize, cmd);
+
+	// Copy and convert all vertices into a single contiguous buffer
+	ImDrawVert* vertexCPUMem = reinterpret_cast<ImDrawVert*>(vertexBufferAllocation.data);
+	ImDrawIdx* indexCPUMem = reinterpret_cast<ImDrawIdx*>(indexBufferAllocation.data);
+	for (int cmdListIdx = 0; cmdListIdx < drawData->CmdListsCount; cmdListIdx++)
+	{
+		const ImDrawList* drawList = drawData->CmdLists[cmdListIdx];
+		memcpy(vertexCPUMem, &drawList->VtxBuffer[0], drawList->VtxBuffer.Size * sizeof(ImDrawVert));
+		memcpy(indexCPUMem, &drawList->IdxBuffer[0], drawList->IdxBuffer.Size * sizeof(ImDrawIdx));
+		vertexCPUMem += drawList->VtxBuffer.Size;
+		indexCPUMem += drawList->IdxBuffer.Size;
+	}
+
+	// Setup orthographic projection matrix into our constant buffer
+	struct ImGuiConstants
+	{
+		float   mvp[4][4];
+	};
+
+	{
+		const float L = drawData->DisplayPos.x;
+		const float R = drawData->DisplayPos.x + drawData->DisplaySize.x;
+		const float T = drawData->DisplayPos.y;
+		const float B = drawData->DisplayPos.y + drawData->DisplaySize.y;
+
+		//Matrix4x4::CreateOrthographicOffCenter(0.0f, drawData->DisplaySize.x, drawData->DisplaySize.y, 0.0f, 0.0f, 1.0f, &constants.projectionMatrix);
+
+		ImGuiConstants constants;
+
+		float mvp[4][4] =
+		{
+			{ 2.0f / (R - L),   0.0f,           0.0f,       0.0f },
+			{ 0.0f,         2.0f / (T - B),     0.0f,       0.0f },
+			{ 0.0f,         0.0f,           0.5f,       0.0f },
+			{ (R + L) / (L - R),  (T + B) / (B - T),    0.5f,       1.0f },
+		};
+		memcpy(&constants.mvp, mvp, sizeof(mvp));
+
+		device->BindDynamicConstantBuffer(constants, 0, cmd);
+	}
+
+	const GPUBuffer* vbs[] = {
+		&vertexBufferAllocation.buffer,
+	};
+	const uint32_t strides[] = {
+		sizeof(ImDrawVert),
+	};
+	const uint64_t offsets[] = {
+		vertexBufferAllocation.offset,
+	};
+
+	device->BindVertexBuffers(vbs, 0, 1, strides, offsets, cmd);
+	device->BindIndexBuffer(&indexBufferAllocation.buffer, INDEXFORMAT_16BIT, indexBufferAllocation.offset, cmd);
+
+	Viewport viewport;
+	viewport.Width = (float)fb_width;
+	viewport.Height = (float)fb_height;
+	device->BindViewports(1, &viewport, cmd);
+
+	device->BindPipelineState(&imguiPSO, cmd);
+
+	// Will project scissor/clipping rectangles into framebuffer space
+	ImVec2 clip_off = drawData->DisplayPos;         // (0,0) unless using multi-viewports
+	ImVec2 clip_scale = drawData->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
+
+	//passEncoder->SetSampler(0, Sampler::LinearWrap());
+
+	// Render command lists
+	int32_t vertexOffset = 0;
+	uint32_t indexOffset = 0;
+	for (uint32_t cmdListIdx = 0; cmdListIdx < (uint32_t)drawData->CmdListsCount; ++cmdListIdx)
+	{
+		const ImDrawList* drawList = drawData->CmdLists[cmdListIdx];
+		for (uint32_t cmdIndex = 0; cmdIndex < (uint32_t)drawList->CmdBuffer.size(); ++cmdIndex)
+		{
+			const ImDrawCmd* drawCmd = &drawList->CmdBuffer[cmdIndex];
+			if (drawCmd->UserCallback)
+			{
+				// User callback, registered via ImDrawList::AddCallback()
+				// (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
+				if (drawCmd->UserCallback == ImDrawCallback_ResetRenderState)
+				{
+				}
+				else
+				{
+					drawCmd->UserCallback(drawList, drawCmd);
+				}
+			}
+			else
+			{
+				// Project scissor/clipping rectangles into framebuffer space
+				ImVec2 clip_min(drawCmd->ClipRect.x - clip_off.x, drawCmd->ClipRect.y - clip_off.y);
+				ImVec2 clip_max(drawCmd->ClipRect.z - clip_off.x, drawCmd->ClipRect.w - clip_off.y);
+				if (clip_max.x < clip_min.x || clip_max.y < clip_min.y)
+					continue;
+
+				// Apply scissor/clipping rectangle
+				Rect scissor;
+				scissor.left = (int32_t)(clip_min.x);
+				scissor.top = (int32_t)(clip_min.y);
+				scissor.right = (int32_t)(clip_max.x);
+				scissor.bottom = (int32_t)(clip_max.y);
+				device->BindScissorRects(1, &scissor, cmd);
+
+				const Texture* texture = (const Texture*)drawCmd->TextureId;
+				device->BindResource(texture, 0, cmd);
+				device->DrawIndexed(drawCmd->ElemCount, indexOffset, vertexOffset, cmd);
+			}
+			indexOffset += drawCmd->ElemCount;
+		}
+		vertexOffset += drawList->VtxBuffer.size();
+	}
+
+	//// Update and Render additional Platform Windows
+	//if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+	//{
+	//	ImGui::UpdatePlatformWindows();
+	//	//ImGui::RenderPlatformWindowsDefault(NULL, (void*)g_pd3dCommandList);
+	//}
+}
+
 void TestsRenderer::ResizeLayout()
 {
-    RenderPath3D::ResizeLayout();
+	RenderPath3D::ResizeLayout();
 
 	float screenW = GetLogicalWidth();
 	float screenH = GetLogicalHeight();
 	label.SetPos(XMFLOAT2(screenW / 2.f - label.scale.x / 2.f, screenH * 0.95f));
 }
+
+void TestsRenderer::Render() const
+{
+	RenderPath3D::Render();
+}
+
 void TestsRenderer::Load()
 {
 	setSSREnabled(false);
@@ -81,7 +318,7 @@ void TestsRenderer::Load()
 	label.Create("Label1");
 	label.SetText("Wicked Engine ImGui integration");
 	label.font.params.h_align = WIFALIGN_CENTER;
-	label.SetSize(XMFLOAT2(240,20));
+	label.SetSize(XMFLOAT2(240, 20));
 	GetGUI().AddWidget(&label);
 
 	testSelector.Create("TestSelector");
@@ -121,8 +358,8 @@ void TestsRenderer::Load()
 		this->ClearSprites();
 		this->ClearFonts();
 		if (wiLua::GetLuaState() != nullptr) {
-            wiLua::KillProcesses();
-        }
+			wiLua::KillProcesses();
+		}
 
 		// Reset camera position:
 		TransformComponent transform;
@@ -136,258 +373,307 @@ void TestsRenderer::Load()
 		// Based on combobox selection, start the appropriate test:
 		switch (args.iValue)
 		{
-		case 0:
-		{
-			// This will spawn a sprite with two textures. The first texture is a color texture and it will be animated.
-			//	The second texture is a static image of "hello world" written on it
-			//	Then add some animations to the sprite to get a nice wobbly and color changing effect.
-			//	You can learn more in the Sprite test in RunSpriteTest() function
-			static wiSprite sprite;
-			sprite = wiSprite("images/movingtex.png", "images/HelloWorld.png");
-			sprite.params.pos = XMFLOAT3(screenW / 2, screenH / 2, 0);
-			sprite.params.siz = XMFLOAT2(200, 100);
-			sprite.params.pivot = XMFLOAT2(0.5f, 0.5f);
-			sprite.anim.rot = XM_PI / 4.0f;
-			sprite.anim.wobbleAnim.amount = XMFLOAT2(0.16f, 0.16f);
-			sprite.anim.movingTexAnim.speedX = 0;
-			sprite.anim.movingTexAnim.speedY = 3;
-			this->AddSprite(&sprite);
-			break;
-		}
-		case 1:
-			wiRenderer::SetTemporalAAEnabled(true);
-			wiScene::LoadModel("../Content/models/teapot.wiscene");
-			break;
-		case 2:
-			wiScene::LoadModel("../Content/models/emitter_smoke.wiscene");
-			break;
-		case 3:
-			wiScene::LoadModel("../Content/models/emitter_skinned.wiscene");
-			break;
-		case 4:
-			wiScene::LoadModel("../Content/models/hairparticle_torus.wiscene", XMMatrixTranslation(0, 1, 0));
-			break;
-		case 5:
-			wiRenderer::SetToDrawGridHelper(true);
-			wiLua::RunFile("test_script.lua");
-			break;
-		case 6:
-			wiRenderer::SetTemporalAAEnabled(true);
-			wiScene::LoadModel("../Content/models/water_test.wiscene", XMMatrixTranslation(0, 1, 0));
-			break;
-		case 7:
-			wiRenderer::SetTemporalAAEnabled(true);
-			wiScene::LoadModel("../Content/models/shadows_test.wiscene", XMMatrixTranslation(0, 1, 0));
-			break;
-		case 8:
-			wiRenderer::SetTemporalAAEnabled(true);
-			wiScene::LoadModel("../Content/models/physics_test.wiscene");
-			break;
-		case 9:
-			wiScene::LoadModel("../Content/models/cloth_test.wiscene", XMMatrixTranslation(0, 3, 4));
-			break;
-		case 10:
-			RunJobSystemTest();
-			break;
-		case 11:
-			RunFontTest();
-			break;
-		case 12:
-			wiRenderer::SetTemporalAAEnabled(true);
-			wiScene::LoadModel("../Content/models/volumetric_test.wiscene", XMMatrixTranslation(0, 0, 4));
-			break;
-		case 13:
-			RunSpriteTest();
-			break;
-		case 14:
-			wiEvent::SetVSync(false); // turn off vsync if we can to accelerate the baking
-			wiRenderer::SetTemporalAAEnabled(true);
-			wiScene::LoadModel("../Content/models/lightmap_bake_test.wiscene", XMMatrixTranslation(0, 0, 4));
-			break;
-		case 15:
-			RunNetworkTest();
-			break;
-		case 16:
-		{
-			static wiSpriteFont font("This test plays a vibration on the first controller's left motor (if device supports it) \n and changes the LED to a random color (if device supports it)");
-			font.params.h_align = WIFALIGN_CENTER;
-			font.params.v_align = WIFALIGN_CENTER;
-			font.params.size = 20;
-			font.params.posX = screenW / 2;
-			font.params.posY = screenH / 2;
-			AddFont(&font);
-
-			wiInput::ControllerFeedback feedback;
-			feedback.led_color.rgba = wiRandom::getRandom(0xFFFFFF);
-			feedback.vibration_left = 0.9f;
-			wiInput::SetControllerFeedback(feedback, 0);
-		}
-		break;
-		case 17:
-		{
-			Scene scene;
-			LoadModel(scene, "../Content/models/girl.wiscene", XMMatrixScaling(0.7f, 0.7f, 0.7f));
-
-			ik_entity = scene.Entity_FindByName("mano_L"); // hand bone in girl.wiscene
-			if (ik_entity != INVALID_ENTITY)
+			case 0:
 			{
-				InverseKinematicsComponent& ik = scene.inverse_kinematics.Create(ik_entity);
-				ik.chain_length = 2; // lower and upper arm included (two parents in hierarchy of hand)
-				ik.iteration_count = 5; // precision of ik simulation
-				ik.target = CreateEntity();
-				scene.transforms.Create(ik.target);
+				// This will spawn a sprite with two textures. The first texture is a color texture and it will be animated.
+				//	The second texture is a static image of "hello world" written on it
+				//	Then add some animations to the sprite to get a nice wobbly and color changing effect.
+				//	You can learn more in the Sprite test in RunSpriteTest() function
+				static wiSprite sprite;
+				sprite = wiSprite("images/movingtex.png", "images/HelloWorld.png");
+				sprite.params.pos = XMFLOAT3(screenW / 2, screenH / 2, 0);
+				sprite.params.siz = XMFLOAT2(200, 100);
+				sprite.params.pivot = XMFLOAT2(0.5f, 0.5f);
+				sprite.anim.rot = XM_PI / 4.0f;
+				sprite.anim.wobbleAnim.amount = XMFLOAT2(0.16f, 0.16f);
+				sprite.anim.movingTexAnim.speedX = 0;
+				sprite.anim.movingTexAnim.speedY = 3;
+				this->AddSprite(&sprite);
+				break;
 			}
-
-			// Play walk animation:
-			Entity walk = scene.Entity_FindByName("walk");
-			AnimationComponent* walk_anim = scene.animations.GetComponent(walk);
-			if (walk_anim != nullptr)
+			case 1:
+				wiRenderer::SetTemporalAAEnabled(true);
+				wiScene::LoadModel("../Content/models/teapot.wiscene");
+				break;
+			case 2:
+				wiScene::LoadModel("../Content/models/emitter_smoke.wiscene");
+				break;
+			case 3:
+				wiScene::LoadModel("../Content/models/emitter_skinned.wiscene");
+				break;
+			case 4:
+				wiScene::LoadModel("../Content/models/hairparticle_torus.wiscene", XMMatrixTranslation(0, 1, 0));
+				break;
+			case 5:
+				wiRenderer::SetToDrawGridHelper(true);
+				wiLua::RunFile("test_script.lua");
+				break;
+			case 6:
+				wiRenderer::SetTemporalAAEnabled(true);
+				wiScene::LoadModel("../Content/models/water_test.wiscene", XMMatrixTranslation(0, 1, 0));
+				break;
+			case 7:
+				wiRenderer::SetTemporalAAEnabled(true);
+				wiScene::LoadModel("../Content/models/shadows_test.wiscene", XMMatrixTranslation(0, 1, 0));
+				break;
+			case 8:
+				wiRenderer::SetTemporalAAEnabled(true);
+				wiScene::LoadModel("../Content/models/physics_test.wiscene");
+				break;
+			case 9:
+				wiScene::LoadModel("../Content/models/cloth_test.wiscene", XMMatrixTranslation(0, 3, 4));
+				break;
+			case 10:
+				RunJobSystemTest();
+				break;
+			case 11:
+				RunFontTest();
+				break;
+			case 12:
+				wiRenderer::SetTemporalAAEnabled(true);
+				wiScene::LoadModel("../Content/models/volumetric_test.wiscene", XMMatrixTranslation(0, 0, 4));
+				break;
+			case 13:
+				RunSpriteTest();
+				break;
+			case 14:
+				wiEvent::SetVSync(false); // turn off vsync if we can to accelerate the baking
+				wiRenderer::SetTemporalAAEnabled(true);
+				wiScene::LoadModel("../Content/models/lightmap_bake_test.wiscene", XMMatrixTranslation(0, 0, 4));
+				break;
+			case 15:
+				RunNetworkTest();
+				break;
+			case 16:
 			{
-				walk_anim->Play();
+				static wiSpriteFont font("This test plays a vibration on the first controller's left motor (if device supports it) \n and changes the LED to a random color (if device supports it)");
+				font.params.h_align = WIFALIGN_CENTER;
+				font.params.v_align = WIFALIGN_CENTER;
+				font.params.size = 20;
+				font.params.posX = screenW / 2;
+				font.params.posY = screenH / 2;
+				AddFont(&font);
+
+				wiInput::ControllerFeedback feedback;
+				feedback.led_color.rgba = wiRandom::getRandom(0xFFFFFF);
+				feedback.vibration_left = 0.9f;
+				wiInput::SetControllerFeedback(feedback, 0);
 			}
-
-			// Add some nice weather, not just black:
-			auto& weather = scene.weathers.Create(CreateEntity());
-			weather.ambient = XMFLOAT3(0.2f, 0.2f, 0.2f);
-			weather.horizon = XMFLOAT3(0.38f, 0.38f, 0.38f);
-			weather.zenith = XMFLOAT3(0.42f, 0.42f, 0.42f);
-			weather.cloudiness = 0.75f;
-
-			wiScene::GetScene().Merge(scene); // add lodaded scene to global scene
-		}
-		break;
-
-		case 18:
-		{
-			wiScene::LoadModel("../Content/models/cube.wiscene");
-			wiProfiler::SetEnabled(true);
-			Scene& scene = wiScene::GetScene();
-			scene.Entity_CreateLight("testlight", XMFLOAT3(0, 2, -4), XMFLOAT3(1, 1, 1), 4, 10);
-			Entity cubeentity = scene.Entity_FindByName("Cube");
-			const float scale = 0.06f;
-			for (int x = 0; x < 32; ++x)
+			break;
+			case 17:
 			{
-				for (int y = 0; y < 32; ++y)
+				Scene scene;
+				LoadModel(scene, "../Content/models/girl.wiscene", XMMatrixScaling(0.7f, 0.7f, 0.7f));
+
+				ik_entity = scene.Entity_FindByName("mano_L"); // hand bone in girl.wiscene
+				if (ik_entity != INVALID_ENTITY)
 				{
-					for (int z = 0; z < 64; ++z)
+					InverseKinematicsComponent& ik = scene.inverse_kinematics.Create(ik_entity);
+					ik.chain_length = 2; // lower and upper arm included (two parents in hierarchy of hand)
+					ik.iteration_count = 5; // precision of ik simulation
+					ik.target = CreateEntity();
+					scene.transforms.Create(ik.target);
+				}
+
+				// Play walk animation:
+				Entity walk = scene.Entity_FindByName("walk");
+				AnimationComponent* walk_anim = scene.animations.GetComponent(walk);
+				if (walk_anim != nullptr)
+				{
+					walk_anim->Play();
+				}
+
+				// Add some nice weather, not just black:
+				auto& weather = scene.weathers.Create(CreateEntity());
+				weather.ambient = XMFLOAT3(0.2f, 0.2f, 0.2f);
+				weather.horizon = XMFLOAT3(0.38f, 0.38f, 0.38f);
+				weather.zenith = XMFLOAT3(0.42f, 0.42f, 0.42f);
+				weather.cloudiness = 0.75f;
+
+				wiScene::GetScene().Merge(scene); // add lodaded scene to global scene
+			}
+			break;
+
+			case 18:
+			{
+				wiScene::LoadModel("../Content/models/cube.wiscene");
+				wiProfiler::SetEnabled(true);
+				Scene& scene = wiScene::GetScene();
+				scene.Entity_CreateLight("testlight", XMFLOAT3(0, 2, -4), XMFLOAT3(1, 1, 1), 4, 10);
+				Entity cubeentity = scene.Entity_FindByName("Cube");
+				const float scale = 0.06f;
+				for (int x = 0; x < 32; ++x)
+				{
+					for (int y = 0; y < 32; ++y)
 					{
-						Entity entity = scene.Entity_Duplicate(cubeentity);
-						TransformComponent* transform = scene.transforms.GetComponent(entity);
-						transform->Scale(XMFLOAT3(scale, scale, scale));
-						transform->Translate(XMFLOAT3(-5.5f + 11 * float(x) / 32.f, -0.5f + 5 * y / 32.f, float(z) * 0.5f));
+						for (int z = 0; z < 64; ++z)
+						{
+							Entity entity = scene.Entity_Duplicate(cubeentity);
+							TransformComponent* transform = scene.transforms.GetComponent(entity);
+							transform->Scale(XMFLOAT3(scale, scale, scale));
+							transform->Translate(XMFLOAT3(-5.5f + 11 * float(x) / 32.f, -0.5f + 5 * y / 32.f, float(z) * 0.5f));
+						}
 					}
 				}
+				scene.Entity_Remove(cubeentity);
 			}
-			scene.Entity_Remove(cubeentity);
-		}
-		break;
-
-		default:
-			assert(0);
 			break;
+
+			default:
+				assert(0);
+				break;
 		}
 
-	});
+		});
 	testSelector.SetSelected(0);
 	GetGUI().AddWidget(&testSelector);
 
-    RenderPath3D::Load();
+	RenderPath3D::Load();
 }
+
+bool show_demo_window = true;
+bool show_another_window = false;
+ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+
 void TestsRenderer::Update(float dt)
 {
 	// Start the Dear ImGui frame
-	//ImGui_ImplDX11_NewFrame();
+	auto* backendData = ImGui_Impl_GetBackendData();
+	IM_ASSERT(backendData != NULL);
+
+	if (!fontTexture.IsValid())
+	{
+		ImGui_Impl_CreateDeviceObjects();
+	}
+
 #ifdef _WIN32
 	ImGui_ImplWin32_NewFrame();
 #endif
 	ImGui::NewFrame();
 
+	// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
+	if (show_demo_window)
+		ImGui::ShowDemoWindow(&show_demo_window);
+
+	// 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
+	{
+		static float f = 0.0f;
+		static int counter = 0;
+
+		ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+
+		ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
+		ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
+		ImGui::Checkbox("Another Window", &show_another_window);
+
+		ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+		ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+
+		if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
+			counter++;
+		ImGui::SameLine();
+		ImGui::Text("counter = %d", counter);
+
+		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+		ImGui::End();
+	}
+
+	// 3. Show another simple window.
+	if (show_another_window)
+	{
+		ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
+		ImGui::Text("Hello from another window!");
+		if (ImGui::Button("Close Me"))
+			show_another_window = false;
+		ImGui::End();
+	}
+
 	switch (testSelector.GetSelected())
 	{
-    case 1:
-    {
-        Scene& scene = wiScene::GetScene();
-        // teapot_material Base Base_mesh Top Top_mesh editorLight
-        wiECS::Entity e_teapot_base = scene.Entity_FindByName("Base");
-        wiECS::Entity e_teapot_top = scene.Entity_FindByName("Top");
-        assert(e_teapot_base != wiECS::INVALID_ENTITY);
-        assert(e_teapot_top != wiECS::INVALID_ENTITY);
-        TransformComponent* transform_base = scene.transforms.GetComponent(e_teapot_base);
-        TransformComponent* transform_top = scene.transforms.GetComponent(e_teapot_top);
-        assert(transform_base != nullptr);
-        assert(transform_top != nullptr);
-        float rotation = dt;
-        if (wiInput::Down(wiInput::KEYBOARD_BUTTON_LEFT))
-        {
-            transform_base->Rotate(XMVectorSet(0,rotation,0,1));
-            transform_top->Rotate(XMVectorSet(0,rotation,0,1));
-        }
-        else if (wiInput::Down(wiInput::KEYBOARD_BUTTON_RIGHT))
-        {
-            transform_base->Rotate(XMVectorSet(0,-rotation,0,1));
-            transform_top->Rotate(XMVectorSet(0,-rotation,0,1));
-        }
-    }
-    break;
-	case 17:
-	{
-		if (ik_entity != INVALID_ENTITY)
+		case 1:
 		{
-			// Inverse kinematics test:
 			Scene& scene = wiScene::GetScene();
-			InverseKinematicsComponent& ik = *scene.inverse_kinematics.GetComponent(ik_entity);
-			TransformComponent& target = *scene.transforms.GetComponent(ik.target);
-
-			// place ik target on a plane intersected by mouse ray:
-			RAY ray = wiRenderer::GetPickRay((long)wiInput::GetPointer().x, (long)wiInput::GetPointer().y, *this);
-			XMVECTOR plane = XMVectorSet(0, 0, 1, 0.2f);
-			XMVECTOR I = XMPlaneIntersectLine(plane, XMLoadFloat3(&ray.origin), XMLoadFloat3(&ray.origin) + XMLoadFloat3(&ray.direction) * 10000);
-			target.ClearTransform();
-			XMFLOAT3 _I;
-			XMStoreFloat3(&_I, I);
-			target.Translate(_I);
-			target.UpdateTransform();
-
-			// draw debug ik target position:
-			wiRenderer::RenderablePoint pp;
-			pp.position = target.GetPosition();
-			pp.color = XMFLOAT4(0, 1, 1, 1);
-			pp.size = 0.2f;
-			wiRenderer::DrawPoint(pp);
-
-			pp.position = scene.transforms.GetComponent(ik_entity)->GetPosition();
-			pp.color = XMFLOAT4(1, 0, 0, 1);
-			pp.size = 0.1f;
-			wiRenderer::DrawPoint(pp);
+			// teapot_material Base Base_mesh Top Top_mesh editorLight
+			wiECS::Entity e_teapot_base = scene.Entity_FindByName("Base");
+			wiECS::Entity e_teapot_top = scene.Entity_FindByName("Top");
+			assert(e_teapot_base != wiECS::INVALID_ENTITY);
+			assert(e_teapot_top != wiECS::INVALID_ENTITY);
+			TransformComponent* transform_base = scene.transforms.GetComponent(e_teapot_base);
+			TransformComponent* transform_top = scene.transforms.GetComponent(e_teapot_top);
+			assert(transform_base != nullptr);
+			assert(transform_top != nullptr);
+			float rotation = dt;
+			if (wiInput::Down(wiInput::KEYBOARD_BUTTON_LEFT))
+			{
+				transform_base->Rotate(XMVectorSet(0, rotation, 0, 1));
+				transform_top->Rotate(XMVectorSet(0, rotation, 0, 1));
+			}
+			else if (wiInput::Down(wiInput::KEYBOARD_BUTTON_RIGHT))
+			{
+				transform_base->Rotate(XMVectorSet(0, -rotation, 0, 1));
+				transform_top->Rotate(XMVectorSet(0, -rotation, 0, 1));
+			}
 		}
-	}
-	break;
+		break;
+		case 17:
+		{
+			if (ik_entity != INVALID_ENTITY)
+			{
+				// Inverse kinematics test:
+				Scene& scene = wiScene::GetScene();
+				InverseKinematicsComponent& ik = *scene.inverse_kinematics.GetComponent(ik_entity);
+				TransformComponent& target = *scene.transforms.GetComponent(ik.target);
 
-	case 18:
-	{
-		static wiTimer timer;
-		float sec = (float)timer.elapsed_seconds();
-		wiJobSystem::context ctx;
-		wiJobSystem::Dispatch(ctx, (uint32_t)scene->transforms.GetCount(), 1024, [&](wiJobArgs args) {
-			TransformComponent& transform = scene->transforms[args.jobIndex];
-			XMStoreFloat4x4(
-				&transform.world,
-				transform.GetLocalMatrix() * XMMatrixTranslation(0, std::sin(sec + 20 * (float)args.jobIndex / (float)scene->transforms.GetCount()) * 0.1f, 0)
-			);
-		});
-		scene->materials[0].SetEmissiveColor(XMFLOAT4(1, 1, 1, 1));
-		wiJobSystem::Dispatch(ctx, (uint32_t)scene->objects.GetCount(), 1024, [&](wiJobArgs args) {
-			ObjectComponent& object = scene->objects[args.jobIndex];
-			float f = std::pow(std::sin(-sec * 2 + 4 * (float)args.jobIndex / (float)scene->objects.GetCount()) * 0.5f + 0.5f, 32.0f);
-			object.emissiveColor = XMFLOAT4(0, 0.25f, 1, f * 3);
-		});
-		wiJobSystem::Wait(ctx);
-	}
-	break;
+				// place ik target on a plane intersected by mouse ray:
+				RAY ray = wiRenderer::GetPickRay((long)wiInput::GetPointer().x, (long)wiInput::GetPointer().y, *this);
+				XMVECTOR plane = XMVectorSet(0, 0, 1, 0.2f);
+				XMVECTOR I = XMPlaneIntersectLine(plane, XMLoadFloat3(&ray.origin), XMLoadFloat3(&ray.origin) + XMLoadFloat3(&ray.direction) * 10000);
+				target.ClearTransform();
+				XMFLOAT3 _I;
+				XMStoreFloat3(&_I, I);
+				target.Translate(_I);
+				target.UpdateTransform();
+
+				// draw debug ik target position:
+				wiRenderer::RenderablePoint pp;
+				pp.position = target.GetPosition();
+				pp.color = XMFLOAT4(0, 1, 1, 1);
+				pp.size = 0.2f;
+				wiRenderer::DrawPoint(pp);
+
+				pp.position = scene.transforms.GetComponent(ik_entity)->GetPosition();
+				pp.color = XMFLOAT4(1, 0, 0, 1);
+				pp.size = 0.1f;
+				wiRenderer::DrawPoint(pp);
+			}
+		}
+		break;
+
+		case 18:
+		{
+			static wiTimer timer;
+			float sec = (float)timer.elapsed_seconds();
+			wiJobSystem::context ctx;
+			wiJobSystem::Dispatch(ctx, (uint32_t)scene->transforms.GetCount(), 1024, [&](wiJobArgs args) {
+				TransformComponent& transform = scene->transforms[args.jobIndex];
+				XMStoreFloat4x4(
+					&transform.world,
+					transform.GetLocalMatrix() * XMMatrixTranslation(0, std::sin(sec + 20 * (float)args.jobIndex / (float)scene->transforms.GetCount()) * 0.1f, 0)
+				);
+				});
+			scene->materials[0].SetEmissiveColor(XMFLOAT4(1, 1, 1, 1));
+			wiJobSystem::Dispatch(ctx, (uint32_t)scene->objects.GetCount(), 1024, [&](wiJobArgs args) {
+				ObjectComponent& object = scene->objects[args.jobIndex];
+				float f = std::pow(std::sin(-sec * 2 + 4 * (float)args.jobIndex / (float)scene->objects.GetCount()) * 0.5f + 0.5f, 32.0f);
+				object.emissiveColor = XMFLOAT4(0, 0.25f, 1, f * 3);
+				});
+			wiJobSystem::Wait(ctx);
+		}
+		break;
 
 	}
 
-    RenderPath3D::Update(dt);
+	RenderPath3D::Update(dt);
 }
 
 void TestsRenderer::RunJobSystemTest()
@@ -420,10 +706,10 @@ void TestsRenderer::RunJobSystemTest()
 	// Execute test
 	{
 		timer.record();
-		wiJobSystem::Execute(ctx, [](wiJobArgs args){ wiHelper::Spin(100); });
-		wiJobSystem::Execute(ctx, [](wiJobArgs args){ wiHelper::Spin(100); });
-		wiJobSystem::Execute(ctx, [](wiJobArgs args){ wiHelper::Spin(100); });
-		wiJobSystem::Execute(ctx, [](wiJobArgs args){ wiHelper::Spin(100); });
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiHelper::Spin(100); });
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiHelper::Spin(100); });
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiHelper::Spin(100); });
+		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiHelper::Spin(100); });
 		wiJobSystem::Wait(ctx);
 		double time = timer.elapsed();
 		ss << "wiJobSystem::Execute() took " << time << " milliseconds" << std::endl;
@@ -450,7 +736,7 @@ void TestsRenderer::RunJobSystemTest()
 		timer.record();
 		wiJobSystem::Dispatch(ctx, itemCount, 1000, [&](wiJobArgs args) {
 			dataSet[args.jobIndex].UpdateCamera();
-		});
+			});
 		wiJobSystem::Wait(ctx);
 		double time = timer.elapsed();
 		ss << "wiJobSystem::Dispatch() took " << time << " milliseconds" << std::endl;
@@ -876,7 +1162,7 @@ void TestsRenderer::RunNetworkTest()
 
 		// Listen on the port which the sender uses:
 		wiNetwork::ListenPort(&sock, connection.port);
-		
+
 		// We can check for incoming messages with CanReceive(). A timeout value can be specified in microseconds
 		//	to let the function block for some time, otherwise it returns imediately
 		//	It is not necessary to use this, but the wiNetwork::Receive() will block until there is a message

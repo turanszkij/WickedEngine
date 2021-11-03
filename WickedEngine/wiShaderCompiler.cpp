@@ -579,6 +579,11 @@ namespace wiShaderCompiler
 	void Initialize()
 	{
 #ifdef SHADERCOMPILER_ENABLED_DXCOMPILER
+		if (dxcCompiler != nullptr) // Already initialized?
+		{
+			return;
+		}
+
 		HMODULE dxcompiler = wiLoadLibrary("dxcompiler.dll");
 		if(dxcompiler != nullptr)
 		{
