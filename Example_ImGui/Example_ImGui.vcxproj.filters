@@ -22,7 +22,7 @@
     <ClInclude Include="targetver.h">
       <Filter>Code</Filter>
     </ClInclude>
-    <ClInclude Include="Tests.h">
+    <ClInclude Include="Example_ImGui.h">
       <Filter>Code</Filter>
     </ClInclude>
     <ClInclude Include="main_Windows.h">
@@ -54,7 +54,7 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>Code</Filter>
     </ClCompile>
-    <ClCompile Include="Tests.cpp">
+    <ClCompile Include="Example_ImGui.cpp">
       <Filter>Code</Filter>
     </ClCompile>
     <ClCompile Include="main_Windows.cpp">

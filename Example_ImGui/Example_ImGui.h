@@ -2,10 +2,9 @@
 #include "WickedEngine.h"
 
 
-class TestsRenderer : public RenderPath3D
+class Example_ImGuiRenderer : public RenderPath3D
 {
 	wiLabel label;
-	wiECS::Entity ik_entity = wiECS::INVALID_ENTITY;
 public:
 	void Load() override;
 	void Update(float dt) override;
@@ -13,12 +12,12 @@ public:
 	void Render() const override;
 };
 
-class Tests : public MainComponent
+class Example_ImGui : public MainComponent
 {
-	TestsRenderer renderer;
+	Example_ImGuiRenderer renderer;
 
 public:
-	~Tests() override;
+	~Example_ImGui() override;
 	void Initialize() override;
 	void Compose(wiGraphics::CommandList cmd) override;
 };

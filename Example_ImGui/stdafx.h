@@ -1,3 +1,3 @@
 #pragma once
 #include "WickedEngine.h"
-#include "Tests.h"
+#include "Example_ImGui.h"

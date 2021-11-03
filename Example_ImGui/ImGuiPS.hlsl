@@ -6,9 +6,9 @@ struct VertexOutput
 };
 
 Texture2D texture0 : register(t0);
-sampler sampler0 : register(s0); 
+SamplerState sampler0 : register(s0); 
 
 float4 main(VertexOutput input) : SV_TARGET
 {
-	return input.col * texture0.Sample(sampler0, input.uv);;
+	return input.col * texture0.Sample(sampler0, input.uv);
 }

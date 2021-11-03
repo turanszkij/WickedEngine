@@ -12,7 +12,7 @@
 HINSTANCE hInst;                                // current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
-Tests tests;
+Example_ImGui example_imgui;
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -59,7 +59,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		}
 		else {
 
-			tests.Run();
+			example_imgui.Run();
 
 		}
 	}
@@ -115,7 +115,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
       return FALSE;
    }
 
-   tests.SetWindow(hWnd);
+   example_imgui.SetWindow(hWnd);
 
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
@@ -162,8 +162,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
     case WM_SIZE:
     case WM_DPICHANGED:
-		if (tests.is_window_active)
-			tests.SetWindow(hWnd);
+		if (example_imgui.is_window_active)
+			example_imgui.SetWindow(hWnd);
         break;
 	case WM_CHAR:
 		switch (wParam)
@@ -191,10 +191,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		wiRawInput::ParseMessage((void*)lParam);
 		break;
 	case WM_KILLFOCUS:
-		tests.is_window_active = false;
+		example_imgui.is_window_active = false;
 		break;
 	case WM_SETFOCUS:
-		tests.is_window_active = true;
+		example_imgui.is_window_active = true;
 		break;
     case WM_PAINT:
         {

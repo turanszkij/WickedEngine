@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Tests.h"
+#include "Example_ImGui.h"
 
 #include "ImGui/imgui.h"
 #include "ImGui/imgui_internal.h"
@@ -83,7 +83,7 @@ bool ImGui_Impl_CreateDeviceObjects()
 	return true;
 }
 
-Tests::~Tests()
+Example_ImGui::~Example_ImGui()
 {
 	// Cleanup
 	//ImGui_ImplDX11_Shutdown();
@@ -93,7 +93,7 @@ Tests::~Tests()
 	ImGui::DestroyContext();
 }
 
-void Tests::Initialize()
+void Example_ImGui::Initialize()
 {
 	// Compile shaders
 	{
@@ -145,7 +145,7 @@ void Tests::Initialize()
 	ActivatePath(&renderer);
 }
 
-void Tests::Compose(wiGraphics::CommandList cmd)
+void Example_ImGui::Compose(wiGraphics::CommandList cmd)
 {
 	MainComponent::Compose(cmd);
 
@@ -295,7 +295,7 @@ void Tests::Compose(wiGraphics::CommandList cmd)
 	//}
 }
 
-void TestsRenderer::ResizeLayout()
+void Example_ImGuiRenderer::ResizeLayout()
 {
 	RenderPath3D::ResizeLayout();
 
@@ -304,12 +304,12 @@ void TestsRenderer::ResizeLayout()
 	label.SetPos(XMFLOAT2(screenW / 2.f - label.scale.x / 2.f, screenH * 0.95f));
 }
 
-void TestsRenderer::Render() const
+void Example_ImGuiRenderer::Render() const
 {
 	RenderPath3D::Render();
 }
 
-void TestsRenderer::Load()
+void Example_ImGuiRenderer::Load()
 {
 	setSSREnabled(false);
 	setReflectionsEnabled(true);
@@ -349,7 +349,7 @@ bool show_demo_window = true;
 bool show_another_window = false;
 ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-void TestsRenderer::Update(float dt)
+void Example_ImGuiRenderer::Update(float dt)
 {
 	// Start the Dear ImGui frame
 	auto* backendData = ImGui_Impl_GetBackendData();
