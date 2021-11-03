@@ -891,7 +891,8 @@ namespace wiHelper
 			MultiByteToWideChar(CP_UTF8, 0, from.c_str(), -1, &to[0], num);
 		}
 #else
-		to = std::wstring(from.begin(), from.end()); // TODO
+		std::wstring_convert<std::codecvt_utf8<wchar_t>> cv;
+		to = cv.from_bytes(from);
 #endif // _WIN32
 	}
 
@@ -905,7 +906,8 @@ namespace wiHelper
 			WideCharToMultiByte(CP_UTF8, 0, from.c_str(), -1, &to[0], num, NULL, NULL);
 		}
 #else
-		to = std::string(from.begin(), from.end()); // TODO
+		std::wstring_convert<std::codecvt_utf8<wchar_t>> cv;
+		to = cv.to_bytes(from);
 #endif // _WIN32
 	}
 
@@ -917,13 +919,12 @@ namespace wiHelper
 		{
 			MultiByteToWideChar(CP_UTF8, 0, from, -1, &to[0], num);
 		}
-#else
-		std::string sfrom = from;
-		std::wstring wto = std::wstring(sfrom.begin(), sfrom.end());
-		std::wmemcpy(to, wto.c_str(), wto.length());
-		int num = wto.length();
-#endif // _WIN32
 		return num;
+#else
+		std::wstring_convert<std::codecvt_utf8<wchar_t>> cv;
+		std::memcpy(to, cv.from_bytes(from).c_str(), cv.converted());
+		return (int)cv.converted();
+#endif // _WIN32
 	}
 
 	int StringConvert(const wchar_t* from, char* to)
@@ -934,13 +935,12 @@ namespace wiHelper
 		{
 			WideCharToMultiByte(CP_UTF8, 0, from, -1, &to[0], num, NULL, NULL);
 		}
-#else
-		std::wstring wfrom = from;
-		std::string sto = std::string(wfrom.begin(), wfrom.end());
-		std::strcpy(to, sto.c_str());
-		int num = sto.length();
-#endif // _WIN32
 		return num;
+#else
+		std::wstring_convert<std::codecvt_utf8<wchar_t>> cv;
+		std::memcpy(to, cv.to_bytes(from).c_str(), cv.converted());
+		return (int)cv.converted();
+#endif // _WIN32
 	}
 	
 	void Sleep(float milliseconds)
