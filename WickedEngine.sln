@@ -55,6 +55,10 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Shaders_SOURCE", "WickedEng
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Content", "Content\Content.vcxitems", "{C48F6BFF-F91B-4DB5-98B5-15287DFB7C95}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{F1ADB727-BCFC-4967-A8ED-BF943AAA5BF7}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Example_ImGui", "Example_ImGui\Example_ImGui.vcxproj", "{2B636202-EF12-43CF-8431-FA516F2E132C}"
+EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		WickedEngine\WickedEngine_SOURCE.vcxitems*{06163dcb-b183-4ed9-9c62-13ef1658e049}*SharedItemsImports = 4
@@ -108,9 +112,16 @@ Global
 		{3B74A7FE-CED7-4723-8824-AC708A865B98}.Debug|x64.Build.0 = Debug|x64
 		{3B74A7FE-CED7-4723-8824-AC708A865B98}.Release|x64.ActiveCfg = Release|x64
 		{3B74A7FE-CED7-4723-8824-AC708A865B98}.Release|x64.Build.0 = Release|x64
+		{2B636202-EF12-43CF-8431-FA516F2E132C}.Debug|x64.ActiveCfg = Debug|x64
+		{2B636202-EF12-43CF-8431-FA516F2E132C}.Debug|x64.Build.0 = Debug|x64
+		{2B636202-EF12-43CF-8431-FA516F2E132C}.Release|x64.ActiveCfg = Release|x64
+		{2B636202-EF12-43CF-8431-FA516F2E132C}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{2B636202-EF12-43CF-8431-FA516F2E132C} = {F1ADB727-BCFC-4967-A8ED-BF943AAA5BF7}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E3FF044A-B72E-4ED5-BE05-AB641BA048CD}
