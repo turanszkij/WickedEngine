@@ -14,7 +14,11 @@
 #include <thread>
 
 using namespace wiECS;
+using namespace wiGraphics;
 using namespace wiScene;
+
+Shader imguiVS;
+Shader imguiPS;
 
 Tests::~Tests()
 {
@@ -42,6 +46,9 @@ void Tests::Initialize()
 #ifdef _WIN32
 	ImGui_ImplWin32_Init(window);
 #endif
+
+	wiRenderer::LoadShader(VS, imguiVS, "ImGuiVS.cso");
+	wiRenderer::LoadShader(PS, imguiPS, "ImGuiPS.cso");
 
     MainComponent::Initialize();
 
@@ -72,60 +79,10 @@ void TestsRenderer::Load()
 	setFXAAEnabled(false);
 
 	label.Create("Label1");
-	label.SetText("Wicked Engine Test Framework");
+	label.SetText("Wicked Engine ImGui integration");
 	label.font.params.h_align = WIFALIGN_CENTER;
 	label.SetSize(XMFLOAT2(240,20));
 	GetGUI().AddWidget(&label);
-
-	static wiAudio::Sound sound;
-	static wiAudio::SoundInstance soundinstance;
-
-	static wiButton audioTest;
-	audioTest.Create("AudioTest");
-	audioTest.SetText("Play Test Audio");
-	audioTest.SetSize(XMFLOAT2(200, 20));
-	audioTest.SetPos(XMFLOAT2(10, 140));
-	audioTest.SetColor(wiColor(255, 205, 43, 200), wiWidget::WIDGETSTATE::IDLE);
-	audioTest.SetColor(wiColor(255, 235, 173, 255), wiWidget::WIDGETSTATE::FOCUS);
-	audioTest.OnClick([&](wiEventArgs args) {
-		static bool playing = false;
-
-		if (!sound.IsValid())
-		{
-			wiAudio::CreateSound("sound/music.wav", &sound);
-			wiAudio::CreateSoundInstance(&sound, &soundinstance);
-		}
-
-		if (playing)
-		{
-			wiAudio::Stop(&soundinstance);
-			audioTest.SetText("Play Test Audio");
-		}
-		else
-		{
-			wiAudio::Play(&soundinstance);
-			audioTest.SetText("Stop Test Audio");
-		}
-
-		playing = !playing;
-	});
-	GetGUI().AddWidget(&audioTest);
-
-
-	static wiSlider volume;
-	volume.Create(0, 100, 50, 100, "Volume");
-	volume.SetText("Volume: ");
-	volume.SetSize(XMFLOAT2(100, 20));
-	volume.SetPos(XMFLOAT2(65, 170));
-	volume.sprites_knob[wiWidget::WIDGETSTATE::IDLE].params.color = wiColor(255, 205, 43, 200);
-	volume.sprites_knob[wiWidget::WIDGETSTATE::FOCUS].params.color = wiColor(255, 235, 173, 255);
-	volume.sprites[wiWidget::WIDGETSTATE::IDLE].params.color = wiMath::Lerp(wiColor::Transparent(), volume.sprites_knob[wiWidget::WIDGETSTATE::IDLE].params.color, 0.5f);
-	volume.sprites[wiWidget::WIDGETSTATE::FOCUS].params.color = wiMath::Lerp(wiColor::Transparent(), volume.sprites_knob[wiWidget::WIDGETSTATE::FOCUS].params.color, 0.5f);
-	volume.OnSlide([](wiEventArgs args) {
-		wiAudio::SetVolume(args.fValue / 100.0f, &soundinstance);
-	});
-	GetGUI().AddWidget(&volume);
-
 
 	testSelector.Create("TestSelector");
 	testSelector.SetText("Demo: ");
