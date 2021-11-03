@@ -24,9 +24,6 @@ namespace wiNetwork
 	// Creates a socket that can be used to send or receive data
 	bool CreateSocket(Socket* sock);
 
-	// Destroys socket
-	bool Destroy(Socket* sock);
-
 	// Sends data packet to destination connection
 	//	sock		:	socket that sends the packet
 	//	connection	:	connection to the receiver, it is provided by the call site
