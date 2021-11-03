@@ -1,6 +1,3 @@
-if (NOT WIN32)
-	find_package(Threads REQUIRED)
-endif ()
 
 set (SOURCE_FILES
 	main_${PLATFORM}.cpp
@@ -49,27 +46,23 @@ if (WIN32)
 	)
 
 	set_property(TARGET WickedEngineEditor PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+	set(LIB_DXCOMPILER "dxcompiler.dll")
 else ()
 	add_executable(WickedEngineEditor ${SOURCE_FILES})
 
 	target_link_libraries(WickedEngineEditor PUBLIC
-		WickedEngine 
-		Threads::Threads
+		WickedEngine
 		meshoptimizer
 	)
-	
-	# Copy shaders to build and source folders just to be safe:
-	add_custom_command(
-		TARGET WickedEngineEditor POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/WickedEngine/shaders/spirv ${CMAKE_CURRENT_SOURCE_DIR}/shaders/spirv
-		COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/WickedEngine/shaders/spirv ${CMAKE_CURRENT_BINARY_DIR}/shaders/spirv
-	)
+	set(LIB_DXCOMPILER "libdxcompiler.so")
 
 endif ()
 
 # Copy content to build folder:
 add_custom_command(
 	TARGET WickedEngineEditor POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/images ${CMAKE_CURRENT_BINARY_DIR}/images
+	# Copy shader compiler library in the source folder
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/WickedEngine/${LIB_DXCOMPILER} ${CMAKE_CURRENT_BINARY_DIR}
+	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/images ${CMAKE_CURRENT_BINARY_DIR}/images
 )
 

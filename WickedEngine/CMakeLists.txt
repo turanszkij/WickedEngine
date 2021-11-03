@@ -7,6 +7,7 @@ else ()
 	find_package(Vulkan REQUIRED)
 	find_package(SDL2 REQUIRED)
 	find_package(OpenImageDenoise QUIET)
+	find_package(Threads REQUIRED)
 	if(NOT ${OpenImageDenoise_FOUND})
 		message("OpenImageDenoise not found, it will be disabled.")
 	else()
@@ -31,7 +32,6 @@ endif()
 add_subdirectory(BULLET)
 add_subdirectory(LUA)
 add_subdirectory(Utility)
-add_subdirectory(shaders)
 
 add_library(${TARGET_NAME} STATIC
 	LoadingScreen.cpp
@@ -118,9 +118,11 @@ if (WIN32)
 	target_compile_definitions(${TARGET_NAME} PUBLIC
 		UNICODE _UNICODE
 	)
-	
+
+	set(LIBDXCOMPILER "dxcompiler.dll")
 else ()
 	target_link_libraries(${TARGET_NAME} PUBLIC
+		Threads::Threads
 		Vulkan::Vulkan
 		SDL2::SDL2
 		$<$<BOOL:${OpenImageDenoise_FOUND}>:OpenImageDenoise> # links OpenImageDenoise only if it's found
@@ -129,12 +131,26 @@ else ()
 
 	target_link_libraries(${TARGET_NAME} PRIVATE dl)
 
-	add_dependencies(${TARGET_NAME}
-		Shaders_SPIRV
-	)
+	set(LIBDXCOMPILER "libdxcompiler.so")
 endif()
 
 
 if (PLATFORM MATCHES "SDL2")
 	target_compile_definitions(${TARGET_NAME} PUBLIC SDL2=1)
 endif()
+
+# Copy the shader library next to the executable
+add_custom_command(
+		TARGET ${TARGET_NAME} POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/WickedEngine/${LIBDXCOMPILER} ${CMAKE_CURRENT_BINARY_DIR}
+		COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/WickedEngine/shaders ${CMAKE_CURRENT_BINARY_DIR}/shaders/
+)
+
+
+# OFFLINE SHADER COMPILER
+add_executable(offlineshadercompiler
+		offlineshadercompiler.cpp
+)
+
+target_link_libraries(offlineshadercompiler
+		PUBLIC ${TARGET_NAME})

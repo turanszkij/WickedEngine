@@ -1,6 +1,4 @@
-if (NOT WIN32)
-	find_package(Threads REQUIRED)
-endif ()
+
 
 set (SOURCE_FILES
 	stdafx.cpp
@@ -21,6 +19,8 @@ if (WIN32)
 	target_link_libraries(Tests PUBLIC 
 		WickedEngine_Windows
 	)
+
+	set(LIB_DXCOMPILER "dxcompiler.dll")
 else()
 	list (APPEND SOURCE_FILES
 		main_SDL2.cpp
@@ -30,16 +30,9 @@ else()
 
 	target_link_libraries(Tests PUBLIC 
 		WickedEngine
-		Threads::Threads
 	)
-	
-	# Copy shaders to build and source folders just to be safe:
-	add_custom_command(
-		TARGET Tests POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/WickedEngine/shaders/spirv ${CMAKE_CURRENT_SOURCE_DIR}/shaders/spirv
-		COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/WickedEngine/shaders/spirv ${CMAKE_CURRENT_BINARY_DIR}/shaders/spirv
-	)
-	
+
+	set(LIB_DXCOMPILER "libdxcompiler.so")
 endif ()
 
 if (MSVC)
@@ -50,7 +43,10 @@ endif ()
 # Copy content to build folder:
 add_custom_command(
 	TARGET Tests POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/images ${CMAKE_CURRENT_BINARY_DIR}/images
+	# Copy the shader library next to the executable
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/WickedEngine/${LIB_DXCOMPILER} ${CMAKE_CURRENT_BINARY_DIR}
+	# Copy the resources
+	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/images ${CMAKE_CURRENT_BINARY_DIR}/images
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/sound ${CMAKE_CURRENT_BINARY_DIR}/sound
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Content ${CMAKE_CURRENT_BINARY_DIR}/../Content
 )
