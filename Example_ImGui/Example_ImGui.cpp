@@ -64,9 +64,9 @@ bool ImGui_Impl_CreateDeviceObjects()
 
 	imguiInputLayout.elements =
 	{
-		{ "POSITION", 0, FORMAT_R32G32_FLOAT, 0, (UINT)IM_OFFSETOF(ImDrawVert, pos), INPUT_PER_VERTEX_DATA },
-		{ "TEXCOORD", 0, FORMAT_R32G32_FLOAT, 0, (UINT)IM_OFFSETOF(ImDrawVert, uv), INPUT_PER_VERTEX_DATA },
-		{ "COLOR", 0, FORMAT_R8G8B8A8_UNORM, 0, (UINT)IM_OFFSETOF(ImDrawVert, col), INPUT_PER_VERTEX_DATA },
+		{ "POSITION", 0, FORMAT_R32G32_FLOAT, 0, (uint32_t)IM_OFFSETOF(ImDrawVert, pos), INPUT_PER_VERTEX_DATA },
+		{ "TEXCOORD", 0, FORMAT_R32G32_FLOAT, 0, (uint32_t)IM_OFFSETOF(ImDrawVert, uv), INPUT_PER_VERTEX_DATA },
+		{ "COLOR", 0, FORMAT_R8G8B8A8_UNORM, 0, (uint32_t)IM_OFFSETOF(ImDrawVert, col), INPUT_PER_VERTEX_DATA },
 	};
 
 	// Create pipeline
