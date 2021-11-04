@@ -24,8 +24,21 @@ namespace wiJobSystem
 
 	uint32_t numThreads = 0;
 	wiContainers::ThreadSafeRingBuffer<Job, 256> jobQueue;
-	std::condition_variable wakeCondition;
-	std::mutex wakeMutex;
+
+	bool jobs_alive = true;
+
+	// This structure is responsible to stop worker thread loops.
+	//	Once this is destroyed, worker threads will be woken up and end their loops.
+	struct InternalState
+	{
+		std::condition_variable wakeCondition;
+		std::mutex wakeMutex;
+		~InternalState()
+		{
+			jobs_alive = false; // ends all worker thread loops
+			wakeCondition.notify_all(); // wakes up sleeping worker threads
+		}
+	} internal_state;
 
 	// This function executes the next item from the job queue. Returns true if successful, false if there was no job available
 	inline bool work()
@@ -73,13 +86,13 @@ namespace wiJobSystem
 		{
 			std::thread worker([] {
 
-				while (true)
+				while (jobs_alive)
 				{
 					if (!work())
 					{
 						// no job, put thread to sleep
-						std::unique_lock<std::mutex> lock(wakeMutex);
-						wakeCondition.wait(lock);
+						std::unique_lock<std::mutex> lock(internal_state.wakeMutex);
+						internal_state.wakeCondition.wait(lock);
 					}
 				}
 
@@ -129,10 +142,10 @@ namespace wiJobSystem
 		job.sharedmemory_size = 0;
 
 		// Try to push a new job until it is pushed successfully:
-		while (!jobQueue.push_back(job)) { wakeCondition.notify_all(); work(); }
+		while (!jobQueue.push_back(job)) { internal_state.wakeCondition.notify_all(); work(); }
 
 		// Wake any one thread that might be sleeping:
-		wakeCondition.notify_one();
+		internal_state.wakeCondition.notify_one();
 	}
 
 	void Dispatch(context& ctx, uint32_t jobCount, uint32_t groupSize, const std::function<void(wiJobArgs)>& task, size_t sharedmemory_size)
@@ -160,11 +173,11 @@ namespace wiJobSystem
 			job.groupJobEnd = std::min(job.groupJobOffset + groupSize, jobCount);
 
 			// Try to push a new job until it is pushed successfully:
-			while (!jobQueue.push_back(job)) { wakeCondition.notify_all(); work(); }
+			while (!jobQueue.push_back(job)) { internal_state.wakeCondition.notify_all(); work(); }
 		}
 
 		// Wake any threads that might be sleeping:
-		wakeCondition.notify_all();
+		internal_state.wakeCondition.notify_all();
 	}
 
 	uint32_t DispatchGroupCount(uint32_t jobCount, uint32_t groupSize)
@@ -182,7 +195,7 @@ namespace wiJobSystem
 	void Wait(const context& ctx)
 	{
 		// Wake any threads that might be sleeping:
-		wakeCondition.notify_all();
+		internal_state.wakeCondition.notify_all();
 
 		// Waiting will also put the current thread to good use by working on an other job if it can:
 		while (IsBusy(ctx)) { work(); }
