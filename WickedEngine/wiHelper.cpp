@@ -672,6 +672,12 @@ namespace wiHelper
 		return path.string();
 	}
 
+	std::string GetCurrentPath()
+	{
+		auto path = std::filesystem::current_path();
+		return path.string();
+	}
+
 	void FileDialog(const FileDialogParams& params, std::function<void(std::string fileName)> onSuccess)
 	{
 #ifdef _WIN32

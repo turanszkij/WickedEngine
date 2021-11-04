@@ -580,6 +580,11 @@ namespace wiShaderCompiler
 	void Initialize()
 	{
 #ifdef SHADERCOMPILER_ENABLED_DXCOMPILER
+		if (dxcCompiler != nullptr)
+		{
+			return; // already initialized
+		}
+
 #ifdef _WIN32
 #define LIBDXCOMPILER "dxcompiler.dll"
         HMODULE dxcompiler = wiLoadLibrary(LIBDXCOMPILER);
@@ -600,12 +605,19 @@ namespace wiShaderCompiler
 				assert(SUCCEEDED(hr));
 				wiBackLog::post("wiShaderCompiler: loaded " LIBDXCOMPILER);
 			}
-		} else {
+		}
+		else
+		{
             wiBackLog::post("wiShaderCompiler: could not load library " LIBDXCOMPILER);
         }
 #endif // SHADERCOMPILER_ENABLED_DXCOMPILER
 
 #ifdef SHADERCOMPILER_ENABLED_D3DCOMPILER
+		if (D3DCompile != nullptr)
+		{
+			return; // already initialized
+		}
+
 		HMODULE d3dcompiler = wiLoadLibrary("d3dcompiler_47.dll");
 		if(d3dcompiler != nullptr)
 		{
