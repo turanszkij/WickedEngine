@@ -2253,13 +2253,10 @@ using namespace DX12_Internal;
 				return dxgiFactory->EnumAdapters1(index, ppAdapter);
 		};
 
-		ComPtr<IDXGIAdapter1> dxgiAdapter1;
-		for (uint32_t i = 0;
-			NextAdapter(i, dxgiAdapter1.ReleaseAndGetAddressOf()) != DXGI_ERROR_NOT_FOUND;
-			++i)
+		for (uint32_t i = 0; NextAdapter(i, dxgiAdapter.ReleaseAndGetAddressOf()) != DXGI_ERROR_NOT_FOUND; ++i)
 		{
 			DXGI_ADAPTER_DESC1 adapterDesc;
-			dxgiAdapter1->GetDesc1(&adapterDesc);
+			dxgiAdapter->GetDesc1(&adapterDesc);
 
 			// Don't select the Basic Render Driver adapter.
 			if (adapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
@@ -2268,25 +2265,22 @@ using namespace DX12_Internal;
 			}
 
 			// ignore software adapter and check device creation succeeds
-			if (SUCCEEDED(D3D12CreateDevice(dxgiAdapter1.Get(), D3D_FEATURE_LEVEL_12_1, __uuidof(ID3D12Device), nullptr)))
+			if (SUCCEEDED(D3D12CreateDevice(dxgiAdapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&device))))
 			{
 				break;
 			}
 		}
 
-		if (dxgiAdapter1 == nullptr)
+		if (dxgiAdapter == nullptr)
 		{
-			wiHelper::messageBox("No capable adapter found!", "Error!");
+			wiHelper::messageBox("DXGI: No capable adapter found!", "Error!");
 			assert(0);
 			wiPlatform::Exit();
 		}
 
-		hr = D3D12CreateDevice(dxgiAdapter1.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&device));
-		if (FAILED(hr))
+		if (device == nullptr)
 		{
-			std::stringstream ss("");
-			ss << "Failed to create the graphics device! ERROR: " << std::hex << hr;
-			wiHelper::messageBox(ss.str(), "Error!");
+			wiHelper::messageBox("D3D12: Device couldn't be created!", "Error!");
 			assert(0);
 			wiPlatform::Exit();
 		}
@@ -2320,7 +2314,7 @@ using namespace DX12_Internal;
 
 		D3D12MA::ALLOCATOR_DESC allocatorDesc = {};
 		allocatorDesc.pDevice = device.Get();
-		allocatorDesc.pAdapter = dxgiAdapter1.Get();
+		allocatorDesc.pAdapter = dxgiAdapter.Get();
 
 		allocationhandler = std::make_shared<AllocationHandler>();
 		allocationhandler->device = device;
@@ -2766,6 +2760,49 @@ using namespace DX12_Internal;
 				swapChainFlags
 			);
 			assert(SUCCEEDED(hr));
+		}
+
+		if (IsFormatHDRSupport(swapChain->desc.format))
+		{
+			// HDR display query: https://docs.microsoft.com/en-us/windows/win32/direct3darticles/high-dynamic-range
+			ComPtr<IDXGIOutput> dxgiOutput;
+			for (uint32_t i = 0; dxgiAdapter->EnumOutputs(i, &dxgiOutput) != DXGI_ERROR_NOT_FOUND; ++i)
+			{
+				ComPtr<IDXGIOutput6> output6;
+				hr = dxgiOutput.As(&output6);
+				assert(SUCCEEDED(hr));
+
+				DXGI_OUTPUT_DESC1 desc1;
+				hr = output6->GetDesc1(&desc1);
+				assert(SUCCEEDED(hr));
+
+				bool hdr = false;
+				switch (desc1.ColorSpace)
+				{
+				default:
+				case DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709:
+					hdr = false;
+					break;
+				case DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020:
+					hdr = true;
+					break;
+				}
+
+				if (hdr)
+				{
+					UINT colorspacesupport = 0;
+					hr = internal_state->swapChain->CheckColorSpaceSupport(desc1.ColorSpace, &colorspacesupport);
+					assert(SUCCEEDED(hr));
+					if (colorspacesupport & DXGI_SWAP_CHAIN_COLOR_SPACE_SUPPORT_FLAG_PRESENT)
+					{
+						hr = internal_state->swapChain->SetColorSpace1(desc1.ColorSpace);
+						assert(SUCCEEDED(hr));
+						break; // hdr display found, accept it and move on
+					}
+				}
+
+				++i;
+			}
 		}
 
 		internal_state->backBuffers.resize(pDesc->buffercount);

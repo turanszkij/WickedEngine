@@ -28,7 +28,7 @@
 #endif
 
 // These shifts are made so that Vulkan resource bindings slots don't interfere with each other across shader stages:
-//	These are also defined in compile_shaders_spirv.py as shift numbers, and it needs to be synced!
+//	These are also defined in wiShaderCompiler.cpp as hard coded compiler arguments for SPIRV, so they need to be the same
 #define VULKAN_BINDING_SHIFT_B 0
 #define VULKAN_BINDING_SHIFT_T 1000
 #define VULKAN_BINDING_SHIFT_U 2000

@@ -28,6 +28,7 @@ namespace wiGraphics
 	{
 	protected:
 		Microsoft::WRL::ComPtr<IDXGIFactory4> dxgiFactory;
+		Microsoft::WRL::ComPtr<IDXGIAdapter1> dxgiAdapter;
 		bool tearingSupported = false;
 		Microsoft::WRL::ComPtr<ID3D12Device5> device;
 
