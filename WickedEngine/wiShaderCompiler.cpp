@@ -17,8 +17,9 @@
 #endif // _WIN32
 
 #ifdef PLATFORM_LINUX
-// TODO: dxcompiler for linux
-//#define SHADERCOMPILER_ENABLED_DXCOMPILER
+#define SHADERCOMPILER_ENABLED
+#define SHADERCOMPILER_ENABLED_DXCOMPILER
+#define __RPC_FAR
 #endif // PLATFORM_LINUX
 
 #ifdef SHADERCOMPILER_ENABLED_DXCOMPILER
@@ -579,12 +580,18 @@ namespace wiShaderCompiler
 	void Initialize()
 	{
 #ifdef SHADERCOMPILER_ENABLED_DXCOMPILER
-		if (dxcCompiler != nullptr) // Already initialized?
+		if (dxcCompiler != nullptr)
 		{
-			return;
+			return; // already initialized
 		}
 
-		HMODULE dxcompiler = wiLoadLibrary("dxcompiler.dll");
+#ifdef _WIN32
+#define LIBDXCOMPILER "dxcompiler.dll"
+        HMODULE dxcompiler = wiLoadLibrary(LIBDXCOMPILER);
+#elif defined(PLATFORM_LINUX)
+#define LIBDXCOMPILER "libdxcompiler.so"
+        HMODULE dxcompiler = wiLoadLibrary("./" LIBDXCOMPILER);
+#endif
 		if(dxcompiler != nullptr)
 		{
 			DxcCreateInstance = (DxcCreateInstanceProc)wiGetProcAddress(dxcompiler, "DxcCreateInstance");
@@ -596,12 +603,21 @@ namespace wiShaderCompiler
 				assert(SUCCEEDED(hr));
 				hr = dxcUtils->CreateDefaultIncludeHandler(&dxcIncludeHandler);
 				assert(SUCCEEDED(hr));
-				wiBackLog::post("wiShaderCompiler: loaded dxcompiler.dll");
+				wiBackLog::post("wiShaderCompiler: loaded " LIBDXCOMPILER);
 			}
 		}
+		else
+		{
+            wiBackLog::post("wiShaderCompiler: could not load library " LIBDXCOMPILER);
+        }
 #endif // SHADERCOMPILER_ENABLED_DXCOMPILER
 
 #ifdef SHADERCOMPILER_ENABLED_D3DCOMPILER
+		if (D3DCompile != nullptr)
+		{
+			return; // already initialized
+		}
+
 		HMODULE d3dcompiler = wiLoadLibrary("d3dcompiler_47.dll");
 		if(d3dcompiler != nullptr)
 		{

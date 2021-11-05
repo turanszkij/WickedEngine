@@ -88,6 +88,13 @@ jobs:
         cd build
         cmake .. -DCMAKE_BUILD_TYPE=Release
         make
+        echo "---Generating Shader Dump---"
+        cd WickedEngine
+        ./offlineshadercompiler spirv rebuild shaderdump
+        mv wiShaderDump.h ../../WickedEngine/
+        cd ..
+        echo "---Rebuilding with ShaderDump---"
+        make -B
         
     - name: Move binaries
       run: |
@@ -99,7 +106,6 @@ jobs:
       with:
         name: Editor (Ubuntu 20.04)
         path: |
-          Editor/shaders/spirv/*.cso
           Content/
           README.md
           LICENSE.md
@@ -117,7 +123,6 @@ jobs:
       with:
         name: Tests (Ubuntu 20.04)
         path: |
-          Tests/shaders/spirv/*.cso
           Content/
           README.md
           LICENSE.md

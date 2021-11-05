@@ -735,7 +735,7 @@ PipelineState PSO_debug[DEBUGRENDERING_COUNT];
 
 #if __has_include("wiShaderDump.h")
 // In this case, wiShaderDump.h contains precompiled shader binary data
-#include "wiShaderdump.h"
+#include "wiShaderDump.h"
 #define SHADERDUMP_ENABLED
 size_t GetShaderDumpCount()
 {
