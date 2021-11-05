@@ -4,9 +4,20 @@ endif ()
 
 set (SOURCE_FILES
 	stdafx.cpp
-	Tests.cpp
-	Tests.h
+	Example_ImGui.cpp
+	Example_ImGui.h
 	stdafx.h
+	ImGui/imconfig.h
+	ImGui/imgui.cpp
+	ImGui/imgui.h
+	ImGui/imgui_demo.cpp
+	ImGui/imgui_draw.cpp
+	ImGui/imgui_internal.h
+	ImGui/imgui_tables.cpp
+	ImGui/imgui_widgets.cpp
+	ImGui/imstb_rectpack.h
+	ImGui/imstb_textedit.h
+	ImGui/imstb_truetype.h
 )
 
 if (WIN32)
@@ -16,9 +27,9 @@ if (WIN32)
 		Tests.rc
 	)
 
-	add_executable(Tests WIN32 ${SOURCE_FILES})
+	add_executable(Example_ImGui WIN32 ${SOURCE_FILES})
 
-	target_link_libraries(Tests PUBLIC 
+	target_link_libraries(Example_ImGui PUBLIC
 		WickedEngine_Windows
 	)
 else()
@@ -26,16 +37,16 @@ else()
 		main_SDL2.cpp
 	)
 
-	add_executable(Tests ${SOURCE_FILES})
+	add_executable(Example_ImGui ${SOURCE_FILES})
 
-	target_link_libraries(Tests PUBLIC 
+	target_link_libraries(Example_ImGui PUBLIC
 		WickedEngine
 		Threads::Threads
 	)
 	
 	# Copy shaders to build and source folders just to be safe:
 	add_custom_command(
-		TARGET Tests POST_BUILD
+		TARGET Example_ImGui POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/WickedEngine/shaders/spirv ${CMAKE_CURRENT_SOURCE_DIR}/shaders/spirv
 		COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/WickedEngine/shaders/spirv ${CMAKE_CURRENT_BINARY_DIR}/shaders/spirv
 	)
@@ -43,14 +54,13 @@ else()
 endif ()
 
 if (MSVC)
-	set_property(TARGET Tests PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+	set_property(TARGET Example_ImGui PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 endif ()
 
 
 # Copy content to build folder:
 add_custom_command(
-	TARGET Tests POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/images ${CMAKE_CURRENT_BINARY_DIR}/images
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/sound ${CMAKE_CURRENT_BINARY_DIR}/sound
+	TARGET Example_ImGui POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/WickedEngine/${LIB_DXCOMPILER} ${CMAKE_CURRENT_BINARY_DIR}
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Content ${CMAKE_CURRENT_BINARY_DIR}/../Content
 )

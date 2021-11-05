@@ -5,7 +5,7 @@
 #include <SDL2/SDL.h>
 #include "sdl2.h"
 
-int sdl_loop(Tests &tests)
+int sdl_loop(Example_ImGui &tests)
 {
     SDL_Event event;
 
@@ -50,7 +50,7 @@ int sdl_loop(Tests &tests)
 
 int main(int argc, char *argv[])
 {
-    Tests tests;
+    Example_ImGui exampleImGui;
     // TODO: Place code here.
 
     wiStartupArguments::Parse(argc, argv);
@@ -69,9 +69,9 @@ int main(int argc, char *argv[])
         throw sdl2::SDLError("Error creating window");
     }
 
-    tests.SetWindow(window.get());
+    exampleImGui.SetWindow(window.get());
 
-    int ret = sdl_loop(tests);
+    int ret = sdl_loop(exampleImGui);
 
     SDL_Quit();
     return ret;
