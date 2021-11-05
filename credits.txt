@@ -17,6 +17,7 @@ Contributions:
 - Amer Koleci https://github.com/amerkoleci
 	- Windows Cmake
 	- Graphics API improvements
+	- Dear ImGui integration
 	- Refactors, fixes
 - James Webb https://github.com/jdswebb
 	- Fixes
