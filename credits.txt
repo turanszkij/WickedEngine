@@ -10,11 +10,14 @@ Contributions:
 	- Volumetric clouds
 	- Exponential height fog
 - Matteo De Carlo https://github.com/portaloffreedom
-	- Linux version, Cmake
+	- Linux core systems
+	- Cmake
 - XThemeCore https://github.com/XthemeCore
-	- Morph target support
+	- Morph targets
 - Amer Koleci https://github.com/amerkoleci
-	- Windows Cmake, graphics API, refactors, fixes
+	- Windows Cmake
+	- Graphics API improvements
+	- Refactors, fixes
 - James Webb https://github.com/jdswebb
 	- Fixes
 - Ben Vinson https://github.com/BenV
@@ -26,8 +29,9 @@ Contributions:
 - Johan Aires Rastén https://github.com/JohanAR
 	- Fixes
 - Megumumpkin https://github.com/megumumpkin
-	- Linux Audio
-	- Linux Controller support
+	- Linux audio implementation
+	- Linux controller implementation
+	- Linux network implementation
 	- Fixes
 
 	
@@ -41,4 +45,4 @@ Patreon supporters:
 - Yuri
 - Sergey K
 - Yukawa Kanta
-
+- Dragon Josh
