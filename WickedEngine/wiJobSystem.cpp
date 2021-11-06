@@ -10,6 +10,10 @@
 #include <string>
 #include <algorithm>
 
+#ifdef PLATFORM_LINUX
+#include <pthread.h>
+#endif
+
 namespace wiJobSystem
 {
 	struct Job
@@ -120,6 +124,26 @@ namespace wiJobSystem
 			std::wstring wthreadname =  L"wiJobSystem_" + std::to_wstring(threadID);
 			HRESULT hr = SetThreadDescription(handle, wthreadname.c_str());
 			assert(SUCCEEDED(hr));
+#elif defined(PLATFORM_LINUX)
+#define handle_error_en(en, msg) \
+               do { errno = en; perror(msg); } while (0)
+
+            int ret;
+            cpu_set_t cpuset;
+            CPU_ZERO(&cpuset);
+            size_t cpusetsize = sizeof (cpuset);
+
+            CPU_SET(threadID, &cpuset);
+            ret = pthread_setaffinity_np(worker.native_handle(), cpusetsize, &cpuset);
+            if(ret != 0)
+                handle_error_en(ret, std::string(" pthread_setaffinity_np[" + std::to_string(threadID) + ']').c_str());
+
+            // Name the thread
+            std::string thread_name = "wiJobSystem_" + std::to_string(threadID);
+            ret = pthread_setname_np(worker.native_handle(), thread_name.c_str());
+            if(ret != 0)
+                handle_error_en(ret, std::string(" pthread_setname_np[" + std::to_string(threadID) + ']').c_str());
+#undef handle_error_en
 #endif // _WIN32
 
 			worker.detach();
