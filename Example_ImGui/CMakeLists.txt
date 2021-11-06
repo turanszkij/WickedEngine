@@ -18,6 +18,8 @@ set (SOURCE_FILES
 	ImGui/imstb_rectpack.h
 	ImGui/imstb_textedit.h
 	ImGui/imstb_truetype.h
+	ImGui/imgui_impl_sdl.cpp
+	ImGui/imgui_impl_sdl.h
 )
 
 if (WIN32)
@@ -32,6 +34,7 @@ if (WIN32)
 	target_link_libraries(Example_ImGui PUBLIC
 		WickedEngine_Windows
 	)
+	set(LIB_DXCOMPILER "dxcompiler.dll")
 else()
 	list (APPEND SOURCE_FILES
 		main_SDL2.cpp
@@ -50,7 +53,8 @@ else()
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/ImGuiPS.hlsl ${CMAKE_CURRENT_BINARY_DIR}
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/ImGuiVS.hlsl ${CMAKE_CURRENT_BINARY_DIR}
 	)
-	
+
+	set(LIB_DXCOMPILER "libdxcompiler.so")
 endif ()
 
 if (MSVC)
