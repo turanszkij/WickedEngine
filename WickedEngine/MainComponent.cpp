@@ -419,6 +419,8 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 	desc.height = canvas.GetPhysicalHeight();
 	desc.buffercount = 3;
 	desc.format = FORMAT_R10G10B10A2_UNORM;
+	//desc.format = FORMAT_R16G16B16A16_FLOAT;
+	//desc.allow_hdr = false;
 	bool success = wiRenderer::GetDevice()->CreateSwapChain(&desc, window, &swapChain);
 	assert(success);
 

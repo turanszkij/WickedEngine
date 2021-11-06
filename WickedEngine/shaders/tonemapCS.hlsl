@@ -1,5 +1,6 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
+#include "ColorSpaceUtility.hlsli"
 
 PUSHCONSTANT(tonemap_push, PushConstantsTonemap);
 
@@ -42,6 +43,10 @@ float3 ACESFitted(float3 color)
 	return color;
 }
 
+#define COLOR_SPACE_SRGB
+//#define COLOR_SPACE_HDR10_ST2084
+//#define COLOR_SPACE_HDR_LINEAR
+
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
@@ -74,27 +79,37 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		hdr.rgb += bloom;
 	}
 
-	float4 ldr = float4(ACESFitted(hdr.rgb), hdr.a);
+	float4 result = hdr;
 
-#if 0 // DEBUG luminance
-	if(DTid.x<800)
-		ldr = average_luminance;
-#endif
-
-	ldr = saturate(ldr);
-	ldr.rgb = GAMMA(ldr.rgb);
+#if defined(COLOR_SPACE_SRGB)
+	result.rgb = ACESFitted(hdr.rgb);
+	result.rgb = GAMMA(result.rgb);
 
 	[branch]
 	if (tonemap_push.texture_colorgrade_lookuptable >= 0)
 	{
-		ldr.rgb = bindless_textures3D[tonemap_push.texture_colorgrade_lookuptable].SampleLevel(sampler_linear_clamp, ldr.rgb, 0).rgb;
+		result.rgb = bindless_textures3D[tonemap_push.texture_colorgrade_lookuptable].SampleLevel(sampler_linear_clamp, result.rgb, 0).rgb;
 	}
 
 	if (tonemap_push.dither != 0)
 	{
 		// dithering before outputting to SDR will reduce color banding:
-		ldr.rgb += (dither((float2)DTid.xy) - 0.5f) / 64.0f;
+		result.rgb += (dither((float2)DTid.xy) - 0.5f) / 64.0f;
 	}
 
-	bindless_rwtextures[tonemap_push.texture_output][DTid.xy] = ldr;
+#elif defined(COLOR_SPACE_HDR10_ST2084)
+	const float standardNits = 100;
+	const float st2084max = 10000.0;
+	const float hdrScalar = standardNits / st2084max;
+	// The HDR scene is in Rec.709, but the display is Rec.2020
+	result.rgb = REC709toREC2020(result.rgb);
+	// Apply the ST.2084 curve to the scene.
+	result.rgb = ApplyREC2084Curve(result.rgb * hdrScalar);
+
+#else // COLOR_SPACE_HDR_LINEAR
+	// we are already linear
+
+#endif // COLOR_SPACE
+
+	bindless_rwtextures[tonemap_push.texture_output][DTid.xy] = result;
 }

@@ -65,11 +65,11 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.Format = FORMAT_R10G10B10A2_UNORM;
+		desc.Format = FORMAT_R11G11B10_FLOAT;
 		desc.Width = internalResolution.x;
 		desc.Height = internalResolution.y;
-		device->CreateTexture(&desc, nullptr, &rtPostprocess_LDR[0]);
-		device->SetName(&rtPostprocess_LDR[0], "rtPostprocess_LDR[0]");
+		device->CreateTexture(&desc, nullptr, &rtPostprocess);
+		device->SetName(&rtPostprocess, "rtPostprocess");
 
 
 		desc.Width /= 4;
@@ -359,7 +359,7 @@ void RenderPath3D_PathTracing::Render() const
 
 		wiRenderer::Postprocess_Tonemap(
 			srcTex,
-			rtPostprocess_LDR[0],
+			rtPostprocess,
 			cmd,
 			getExposure(),
 			getDitherEnabled(),
@@ -368,12 +368,13 @@ void RenderPath3D_PathTracing::Render() const
 			getEyeAdaptionEnabled() ? &luminanceResources.luminance : nullptr,
 			getBloomEnabled() ? &bloomResources.texture_bloom : nullptr
 		);
+		lastPostprocessRT = &rtPostprocess;
 
 		// GUI Background blurring:
 		{
 			auto range = wiProfiler::BeginRangeGPU("GUI Background Blur", cmd);
 			device->EventBegin("GUI Background Blur", cmd);
-			wiRenderer::Postprocess_Downsample4x(rtPostprocess_LDR[0], rtGUIBlurredBackground[0], cmd);
+			wiRenderer::Postprocess_Downsample4x(rtPostprocess, rtGUIBlurredBackground[0], cmd);
 			wiRenderer::Postprocess_Downsample4x(rtGUIBlurredBackground[0], rtGUIBlurredBackground[2], cmd);
 			wiRenderer::Postprocess_Blur_Gaussian(rtGUIBlurredBackground[2], rtGUIBlurredBackground[1], rtGUIBlurredBackground[2], cmd, -1, -1, true);
 			device->EventEnd(cmd);
@@ -398,7 +399,7 @@ void RenderPath3D_PathTracing::Compose(CommandList cmd) const
 	fx.enableFullScreen();
 	fx.blendFlag = BLENDMODE_OPAQUE;
 	fx.quality = QUALITY_LINEAR;
-	wiImage::Draw(&rtPostprocess_LDR[0], fx, cmd);
+	wiImage::Draw(&rtPostprocess, fx, cmd);
 
 	device->EventEnd(cmd);
 
