@@ -4,6 +4,7 @@
 #include "stdafx.h"
 #include <SDL2/SDL.h>
 #include "sdl2.h"
+#include "ImGui/imgui_impl_sdl.h"
 
 int sdl_loop(Example_ImGui &tests)
 {
@@ -16,15 +17,8 @@ int sdl_loop(Example_ImGui &tests)
         tests.Run();
 
 //        int ret = SDL_PeepEvents(&event, 1, SDL_GETEVENT, SDL_FIRSTEVENT, SDL_LASTEVENT);
-        int ret = SDL_PollEvent(&event);
+        while (SDL_PollEvent(&event)) {
 
-        if (ret < 0) {
-            std::cerr << "Error Peeping event: " << SDL_GetError() << std::endl;
-            std::cerr << "Exiting now" << std::endl;
-            return -1;
-        }
-
-        if (ret > 0) {
             if (event.type == SDL_WINDOWEVENT) {
                 switch (event.window.event) {
                     case SDL_WINDOWEVENT_CLOSE:   // exit game
@@ -41,6 +35,8 @@ int sdl_loop(Example_ImGui &tests)
 //                        tests.SetSelected(tests.GetSelected()+1);
 //                }
 //            }
+
+            ImGui_ImplSDL2_ProcessEvent(&event);
         }
 
     }
