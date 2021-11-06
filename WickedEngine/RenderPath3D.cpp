@@ -1437,9 +1437,6 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 
 	// 2.) Tone mapping HDR -> LDR
 	{
-		rt_read = rt_first == nullptr ? rt_read : rt_first;
-		rt_first = nullptr;
-
 		// Bloom and eye adaption is not part of post process "chain",
 		//	because they will be applied to the screen in tonemap
 		if (getEyeAdaptionEnabled())
@@ -1476,6 +1473,7 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 			getBloomEnabled() ? &bloomResources.texture_bloom : nullptr
 		);
 
+		rt_first = nullptr;
 		std::swap(rt_read, rt_write);
 	}
 
@@ -1502,6 +1500,8 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 			std::swap(rt_read, rt_write);
 		}
 
+		lastPostprocessRT = rt_read;
+
 		// GUI Background blurring:
 		{
 			auto range = wiProfiler::BeginRangeGPU("GUI Background Blur", cmd);
@@ -1516,10 +1516,8 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 		if (rtFSR[0].IsValid() && getFSREnabled())
 		{
 			wiRenderer::Postprocess_FSR(*rt_read, rtFSR[1], rtFSR[0], cmd, getFSRSharpness());
-
+			lastPostprocessRT = &rtFSR[0];
 		}
-
-		lastPostprocessRT = rt_read;
 	}
 }
 

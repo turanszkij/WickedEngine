@@ -124,7 +124,7 @@ public:
 	wiRenderer::BloomResources bloomResources;
 	wiRenderer::SurfelGIResources surfelGIResources;
 
-	mutable const wiGraphics::Texture* lastPostprocessRT = nullptr;
+	mutable const wiGraphics::Texture* lastPostprocessRT = &rtPostprocess;
 	// Post-processes are ping-ponged, this function helps to obtain the last postprocess render target that was written
 	const wiGraphics::Texture* GetLastPostprocessRT() const
 	{
