@@ -291,6 +291,25 @@ void MainComponent::Compose(CommandList cmd)
 		{
 			ss << "Resolution: " << canvas.GetPhysicalWidth() << " x " << canvas.GetPhysicalHeight() << " (" << canvas.GetDPI() << " dpi)" << std::endl;
 		}
+		if (infoDisplay.hdr)
+		{
+			ss << "HDR: ";
+			COLOR_SPACE colorSpace = device->GetSwapChainColorSpace(&swapChain);
+			switch (colorSpace)
+			{
+			default:
+			case wiGraphics::COLOR_SPACE_SRGB:
+				ss << "Off (SRGB)";
+				break;
+			case wiGraphics::COLOR_SPACE_HDR_LINEAR:
+				ss << "On (Linear)";
+				break;
+			case wiGraphics::COLOR_SPACE_HDR10_ST2084:
+				ss << "On (HDR10 ST.2084)";
+				break;
+			}
+			ss << std::endl;
+		}
 		if (infoDisplay.fpsinfo)
 		{
 			deltatimes[fps_avg_counter++ % arraysize(deltatimes)] = deltaTime;
@@ -400,6 +419,9 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 	desc.height = canvas.GetPhysicalHeight();
 	desc.buffercount = 3;
 	desc.format = FORMAT_R10G10B10A2_UNORM;
+	//desc.format = FORMAT_R16G16B16A16_FLOAT;
+	//desc.format = FORMAT_R8G8B8A8_UNORM;
+	//desc.allow_hdr = false;
 	bool success = wiRenderer::GetDevice()->CreateSwapChain(&desc, window, &swapChain);
 	assert(success);
 

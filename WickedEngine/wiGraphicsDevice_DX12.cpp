@@ -61,7 +61,6 @@ namespace DX12_Internal
 	ComPtr<IDxcUtils> dxcUtils;
 
 	// Engine -> Native converters
-
 	constexpr uint32_t _ParseColorWriteMask(uint32_t value)
 	{
 		uint32_t _flag = 0;
@@ -125,7 +124,6 @@ namespace DX12_Internal
 
 		return ret;
 	}
-
 	constexpr D3D12_FILTER _ConvertFilter(FILTER value)
 	{
 		switch (value)
@@ -243,7 +241,6 @@ namespace DX12_Internal
 		}
 		return D3D12_FILTER_MIN_MAG_MIP_POINT;
 	}
-
 	constexpr D3D_PRIMITIVE_TOPOLOGY _ConvertPrimitiveTopology(PRIMITIVETOPOLOGY topology, uint32_t controlPoints)
 	{
 		switch (topology)
@@ -269,7 +266,6 @@ namespace DX12_Internal
 				return D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
 		}
 	}
-
 	constexpr D3D12_TEXTURE_ADDRESS_MODE _ConvertTextureAddressMode(TEXTURE_ADDRESS_MODE value)
 	{
 		switch (value)
@@ -712,26 +708,6 @@ namespace DX12_Internal
 		}
 		return DXGI_FORMAT_UNKNOWN;
 	}
-	constexpr DXGI_FORMAT _ConvertSwapChainFormat(FORMAT format)
-	{
-		switch (format) {
-			case FORMAT_R16G16B16A16_FLOAT:
-				return DXGI_FORMAT_R16G16B16A16_FLOAT;
-
-			case FORMAT_B8G8R8A8_UNORM:
-			case FORMAT_B8G8R8A8_UNORM_SRGB:
-				return DXGI_FORMAT_B8G8R8A8_UNORM;
-
-			case FORMAT_R8G8B8A8_UNORM:
-			case FORMAT_R8G8B8A8_UNORM_SRGB:
-				return DXGI_FORMAT_R8G8B8A8_UNORM;
-
-			case FORMAT_R10G10B10A2_UNORM:
-				return DXGI_FORMAT_R10G10B10A2_UNORM;
-		}
-
-		return DXGI_FORMAT_B8G8R8A8_UNORM;
-	}
 	constexpr D3D12_SUBRESOURCE_DATA _ConvertSubresourceData(const SubresourceData& pInitialData)
 	{
 		D3D12_SUBRESOURCE_DATA data = {};
@@ -806,7 +782,6 @@ namespace DX12_Internal
 	}
 
 	// Native -> Engine converters
-
 	constexpr FORMAT _ConvertFormat_Inv(DXGI_FORMAT value)
 	{
 		switch (value)
@@ -1012,7 +987,6 @@ namespace DX12_Internal
 		}
 		return FORMAT_UNKNOWN;
 	}
-
 	constexpr TextureDesc _ConvertTextureDesc_Inv(const D3D12_RESOURCE_DESC& desc)
 	{
 		TextureDesc retVal;
@@ -1445,6 +1419,8 @@ namespace DX12_Internal
 
 		Texture dummyTexture;
 		RenderPass renderpass;
+
+		COLOR_SPACE colorSpace = COLOR_SPACE_SRGB;
 
 		~SwapChain_DX12()
 		{
@@ -2687,6 +2663,12 @@ using namespace DX12_Internal;
 		swapChain->desc = *pDesc;
 		HRESULT hr;
 
+		UINT swapChainFlags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+		if (tearingSupported)
+		{
+			swapChainFlags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+		}
+
 		if (internal_state->swapChain == nullptr)
 		{
 			// Create swapchain:
@@ -2695,7 +2677,7 @@ using namespace DX12_Internal;
 			DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
 			swapChainDesc.Width = pDesc->width;
 			swapChainDesc.Height = pDesc->height;
-			swapChainDesc.Format = _ConvertSwapChainFormat(pDesc->format);
+			swapChainDesc.Format = _ConvertFormat(pDesc->format);
 			swapChainDesc.Stereo = false;
 			swapChainDesc.SampleDesc.Count = 1;
 			swapChainDesc.SampleDesc.Quality = 0;
@@ -2703,11 +2685,7 @@ using namespace DX12_Internal;
 			swapChainDesc.BufferCount = pDesc->buffercount;
 			swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 			swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
-			swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
-			if (tearingSupported)
-			{
-				swapChainDesc.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
-			}
+			swapChainDesc.Flags = swapChainFlags;
 
 #ifndef PLATFORM_UWP
 			swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
@@ -2757,12 +2735,6 @@ using namespace DX12_Internal;
 			}
 			internal_state->backbufferRTV.clear();
 
-			UINT swapChainFlags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
-			if (tearingSupported)
-			{
-				swapChainFlags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
-			}
-
 			hr = internal_state->swapChain->ResizeBuffers(
 				pDesc->buffercount,
 				pDesc->width,
@@ -2773,7 +2745,8 @@ using namespace DX12_Internal;
 			assert(SUCCEEDED(hr));
 		}
 
-		if (IsFormatHDRSupport(swapChain->desc.format))
+		bool hdr = false;
+		if (pDesc->allow_hdr && IsFormatHDRSupport(swapChain->desc.format))
 		{
 			// HDR display query: https://docs.microsoft.com/en-us/windows/win32/direct3darticles/high-dynamic-range
 			ComPtr<IDXGIOutput> dxgiOutput;
@@ -2787,32 +2760,59 @@ using namespace DX12_Internal;
 				hr = output6->GetDesc1(&desc1);
 				assert(SUCCEEDED(hr));
 
-				bool hdr = false;
-				switch (desc1.ColorSpace)
+				if (desc1.ColorSpace == DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020)
 				{
-				default:
-				case DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709:
-					hdr = false;
-					break;
-				case DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020:
 					hdr = true;
 					break;
 				}
+			}
+		}
 
-				if (hdr)
+		// Ensure correct color space:
+		//	https://github.com/microsoft/DirectX-Graphics-Samples/blob/master/Samples/Desktop/D3D12HDR/src/D3D12HDR.cpp
+		{
+			DXGI_COLOR_SPACE_TYPE colorSpace = {};
+
+			switch (pDesc->format)
+			{
+			case FORMAT_R10G10B10A2_UNORM:
+				// This format is either HDR10 (ST.2084), or SDR (SRGB)
+				colorSpace = hdr ? DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020 : DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709;
+				break;
+			case FORMAT_R16G16B16A16_FLOAT:
+				// This format is HDR (Linear):
+				colorSpace = DXGI_COLOR_SPACE_RGB_FULL_G10_NONE_P709;
+				break;
+			default:
+				// Anything else will be SDR (SRGB):
+				colorSpace = DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709;
+				break;
+			}
+
+			UINT colorSpaceSupport = 0;
+			if (SUCCEEDED(internal_state->swapChain->CheckColorSpaceSupport(colorSpace, &colorSpaceSupport)))
+			{
+				if (colorSpaceSupport & DXGI_SWAP_CHAIN_COLOR_SPACE_SUPPORT_FLAG_PRESENT)
 				{
-					UINT colorspacesupport = 0;
-					hr = internal_state->swapChain->CheckColorSpaceSupport(desc1.ColorSpace, &colorspacesupport);
+					hr = internal_state->swapChain->SetColorSpace1(colorSpace);
 					assert(SUCCEEDED(hr));
-					if (colorspacesupport & DXGI_SWAP_CHAIN_COLOR_SPACE_SUPPORT_FLAG_PRESENT)
+					if (SUCCEEDED(hr))
 					{
-						hr = internal_state->swapChain->SetColorSpace1(desc1.ColorSpace);
-						assert(SUCCEEDED(hr));
-						break; // hdr display found, accept it and move on
+						switch (colorSpace)
+						{
+						default:
+						case DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709:
+							internal_state->colorSpace = COLOR_SPACE_SRGB;
+							break;
+						case DXGI_COLOR_SPACE_RGB_FULL_G10_NONE_P709:
+							internal_state->colorSpace = COLOR_SPACE_HDR_LINEAR;
+							break;
+						case DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020:
+							internal_state->colorSpace = COLOR_SPACE_HDR10_ST2084;
+							break;
+						}
 					}
 				}
-
-				++i;
 			}
 		}
 
@@ -5665,6 +5665,12 @@ using namespace DX12_Internal;
 		result.internal_state = internal_state;
 		result.desc = _ConvertTextureDesc_Inv(desc);
 		return result;
+	}
+
+	COLOR_SPACE GraphicsDevice_DX12::GetSwapChainColorSpace(const SwapChain* swapchain) const
+	{
+		auto internal_state = to_internal(swapchain);
+		return internal_state->colorSpace;
 	}
 
 	void GraphicsDevice_DX12::WaitCommandList(CommandList cmd, CommandList wait_for)

@@ -455,7 +455,6 @@ namespace Vulkan_Internal
 			return VK_SHADER_STAGE_ALL;
 		}
 	}
-
 	constexpr VkAccessFlags _ParseResourceState(RESOURCE_STATE value)
 	{
 		VkAccessFlags flags = 0;
@@ -916,6 +915,8 @@ namespace Vulkan_Internal
 		uint32_t swapChainImageIndex = 0;
 		VkSemaphore swapchainAcquireSemaphore = VK_NULL_HANDLE;
 		VkSemaphore swapchainReleaseSemaphore = VK_NULL_HANDLE;
+
+		COLOR_SPACE colorSpace = COLOR_SPACE_SRGB;
 
 		~SwapChain_Vulkan()
 		{
@@ -1906,7 +1907,6 @@ using namespace Vulkan_Internal;
 		std::vector<const char*> instanceLayers;
 		std::vector<const char*> instanceExtensions;
 
-		// Check if VK_EXT_debug_utils is supported, which supersedes VK_EXT_Debug_Report
 		for (auto& availableExtension : availableInstanceExtensions)
 		{
 			if (strcmp(availableExtension.extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME) == 0)
@@ -1917,6 +1917,10 @@ using namespace Vulkan_Internal;
 			else if (strcmp(availableExtension.extensionName, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME) == 0)
 			{
 				instanceExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+			}
+			else if (strcmp(availableExtension.extensionName, VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME) == 0)
+			{
+				instanceExtensions.push_back(VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME);
 			}
 		}
 		
@@ -2828,10 +2832,13 @@ using namespace Vulkan_Internal;
 
 		VkSurfaceFormatKHR surfaceFormat = {};
 		surfaceFormat.format = _ConvertFormat(pDesc->format);
+		surfaceFormat.colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 		bool valid = false;
 
 		for (const auto& format : swapchain_formats)
 		{
+			if (!pDesc->allow_hdr && format.colorSpace != VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+				continue;
 			if (format.format == surfaceFormat.format)
 			{
 				surfaceFormat = format;
@@ -2841,7 +2848,22 @@ using namespace Vulkan_Internal;
 		}
 		if (!valid)
 		{
-			surfaceFormat = { VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
+			surfaceFormat.format = VK_FORMAT_B8G8R8A8_UNORM;
+			surfaceFormat.colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+		}
+
+		switch (surfaceFormat.colorSpace)
+		{
+		default:
+		case VK_COLOR_SPACE_SRGB_NONLINEAR_KHR:
+			internal_state->colorSpace = COLOR_SPACE_SRGB;
+			break;
+		case VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT:
+			internal_state->colorSpace = COLOR_SPACE_HDR_LINEAR;
+			break;
+		case VK_COLOR_SPACE_HDR10_ST2084_EXT:
+			internal_state->colorSpace = COLOR_SPACE_HDR10_ST2084;
+			break;
 		}
 
 		internal_state->swapChainExtent = { pDesc->width, pDesc->height };
@@ -2864,28 +2886,8 @@ using namespace Vulkan_Internal;
 		createInfo.imageArrayLayers = 1;
 		createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 		createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-		// Transform
-		if(swapchain_capabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR)
-			createInfo.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
-		else
-			createInfo.preTransform = swapchain_capabilities.currentTransform;
-
-		// Composite alpha
-		std::vector<VkCompositeAlphaFlagBitsKHR> compositeAlphaFlags = {
-			VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-			VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR,
-			VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR,
-			VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR,
-		};
-		for (auto& compositeAlphaFlag : compositeAlphaFlags)
-		{
-			if (swapchain_capabilities.supportedCompositeAlpha & compositeAlphaFlag)
-			{
-				createInfo.compositeAlpha = compositeAlphaFlag;
-				break;
-			};
-		}
+		createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+		createInfo.preTransform = swapchain_capabilities.currentTransform;
 
 		createInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR; // The only one that is always supported
 		if (!pDesc->vsync)
@@ -6054,6 +6056,11 @@ using namespace Vulkan_Internal;
 		return result;
 	}
 
+	COLOR_SPACE GraphicsDevice_Vulkan::GetSwapChainColorSpace(const SwapChain* swapchain) const
+	{
+		auto internal_state = to_internal(swapchain);
+		return internal_state->colorSpace;
+	}
 
 	void GraphicsDevice_Vulkan::WaitCommandList(CommandList cmd, CommandList wait_for)
 	{

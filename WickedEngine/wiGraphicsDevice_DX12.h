@@ -211,6 +211,8 @@ namespace wiGraphics
 
 		Texture GetBackBuffer(const SwapChain* swapchain) const override;
 
+		COLOR_SPACE GetSwapChainColorSpace(const SwapChain* swapchain) const override;
+
 		///////////////Thread-sensitive////////////////////////
 
 		void WaitCommandList(CommandList cmd, CommandList wait_for) override;

@@ -113,6 +113,7 @@ void Editor::Initialize()
 	infoDisplay.watermark = true;
 	infoDisplay.fpsinfo = true;
 	infoDisplay.resolution = true;
+	infoDisplay.hdr = true;
 	infoDisplay.heap_allocation_counter = true;
 
 	wiRenderer::SetOcclusionCullingEnabled(true);

@@ -120,6 +120,8 @@ namespace wiGraphics
 
 		virtual Texture GetBackBuffer(const SwapChain* swapchain) const = 0;
 
+		virtual COLOR_SPACE GetSwapChainColorSpace(const SwapChain* swapchain) const = 0;
+
 		///////////////Thread-sensitive////////////////////////
 
 		virtual void WaitCommandList(CommandList cmd, CommandList wait_for) = 0;
