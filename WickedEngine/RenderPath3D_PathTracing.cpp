@@ -366,7 +366,8 @@ void RenderPath3D_PathTracing::Render() const
 			getColorGradingEnabled() ? (scene->weather.colorGradingMap == nullptr ? nullptr : &scene->weather.colorGradingMap->texture) : nullptr,
 			nullptr,
 			getEyeAdaptionEnabled() ? &luminanceResources.luminance : nullptr,
-			getBloomEnabled() ? &bloomResources.texture_bloom : nullptr
+			getBloomEnabled() ? &bloomResources.texture_bloom : nullptr,
+			colorspace
 		);
 		lastPostprocessRT = &rtPostprocess;
 

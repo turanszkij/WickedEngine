@@ -68,6 +68,7 @@ struct wiImageParams
 		EXTRACT_NORMALMAP = 1 << 3,
 		FULLSCREEN = 1 << 4,
 		BACKGROUND = 1 << 5,
+		OUTPUT_COLOR_SPACE_HDR10_ST2084 = 1 << 6,
 	};
 	uint32_t _flags = EMPTY;
 
@@ -96,9 +97,9 @@ struct wiImageParams
 
 	const wiGraphics::Texture* maskMap;
 	// Generic texture
-	void setMaskMap(const wiGraphics::Texture* tex) { maskMap = tex; }
+	constexpr void setMaskMap(const wiGraphics::Texture* tex) { maskMap = tex; }
 
-	void init() 
+	constexpr void init()
 	{
 		_flags = EMPTY;
 		pos = XMFLOAT3(0, 0, 0);
@@ -134,33 +135,33 @@ struct wiImageParams
 	constexpr bool isExtractNormalMapEnabled() const { return _flags & EXTRACT_NORMALMAP; }
 	constexpr bool isFullScreenEnabled() const { return _flags & FULLSCREEN; }
 	constexpr bool isBackgroundEnabled() const { return _flags & BACKGROUND; }
+	constexpr bool isHDR10OutputMappingEnabled() const { return _flags & OUTPUT_COLOR_SPACE_HDR10_ST2084; }
 
 	// enables draw rectangle for base texture (cutout texture outside draw rectangle)
-	void enableDrawRect(const XMFLOAT4& rect) { _flags |= DRAWRECT; drawRect = rect; }
+	constexpr void enableDrawRect(const XMFLOAT4& rect) { _flags |= DRAWRECT; drawRect = rect; }
 	// enables draw rectangle for mask texture (cutout texture outside draw rectangle)
-	void enableDrawRect2(const XMFLOAT4& rect) { _flags |= DRAWRECT2; drawRect2 = rect; }
+	constexpr void enableDrawRect2(const XMFLOAT4& rect) { _flags |= DRAWRECT2; drawRect2 = rect; }
 	// mirror the image horizontally
-	void enableMirror() { _flags |= MIRROR; }
+	constexpr void enableMirror() { _flags |= MIRROR; }
 	// enable normal map extraction shader that will perform texcolor * 2 - 1 (preferably onto a signed render target)
-	void enableExtractNormalMap() { _flags |= EXTRACT_NORMALMAP; }
+	constexpr void enableExtractNormalMap() { _flags |= EXTRACT_NORMALMAP; }
 	// enable full screen override. It just draws texture onto the full screen, disabling any other setup except sampler and stencil)
-	void enableFullScreen() { _flags |= FULLSCREEN; }
+	constexpr void enableFullScreen() { _flags |= FULLSCREEN; }
 	// enable background blur, which samples a background screen texture on a specified mip level on transparent areas instead of alpha blending
 	//	the background tex should be bound with wiImage::SetBackground() beforehand
-	void enableBackground() { _flags |= BACKGROUND; }
+	constexpr void enableBackground() { _flags |= BACKGROUND; }
+	// enable HDR10 output mapping, if this image can be interpreted in linear space and converted to HDR10 display format
+	constexpr void enableHDR10OutputMapping() { _flags |= OUTPUT_COLOR_SPACE_HDR10_ST2084; }
 
 	// disable draw rectangle for base texture (whole texture will be drawn, no cutout)
-	void disableDrawRect() { _flags &= ~DRAWRECT; }
+	constexpr void disableDrawRect() { _flags &= ~DRAWRECT; }
 	// disable draw rectangle for mask texture (whole texture will be drawn, no cutout)
-	void disableDrawRect2() { _flags &= ~DRAWRECT2; }
-	// disable mirroring
-	void disableMirror() { _flags &= ~MIRROR; }
-	// disable normal map extraction shader
-	void disableExtractNormalMap() { _flags &= ~EXTRACT_NORMALMAP; }
-	// disable full screen override
-	void disableFullScreen() { _flags &= ~FULLSCREEN; }
-	// disable background blur
-	void disableBackground() { _flags &= ~BACKGROUND; }
+	constexpr void disableDrawRect2() { _flags &= ~DRAWRECT2; }
+	constexpr void disableMirror() { _flags &= ~MIRROR; }
+	constexpr void disableExtractNormalMap() { _flags &= ~EXTRACT_NORMALMAP; }
+	constexpr void disableFullScreen() { _flags &= ~FULLSCREEN; }
+	constexpr void disableBackground() { _flags &= ~BACKGROUND; }
+	constexpr void disableHDR10OutputMapping() { _flags &= ~OUTPUT_COLOR_SPACE_HDR10_ST2084; }
 
 
 	wiImageParams() 

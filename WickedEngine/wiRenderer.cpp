@@ -72,7 +72,6 @@ void barrier_stack_flush(CommandList cmd)
 	barrier_stack[cmd].clear();
 }
 
-float GAMMA = 2.2f;
 uint32_t SHADOWRES_2D = 1024;
 uint32_t SHADOWRES_CUBE = 256;
 uint32_t SHADOWCOUNT_2D = 5 + 3 + 3;
@@ -3051,8 +3050,6 @@ void UpdatePerFrameData(
 	}
 
 	// Update CPU-side frame constant buffer:
-	frameCB.ConstantOne = 1;
-	frameCB.Gamma = GetGamma();
 	frameCB.ShadowCascadeCount = CASCADE_COUNT;
 	frameCB.VoxelRadianceMaxDistance = voxelSceneData.maxDistance;
 	frameCB.VoxelRadianceDataSize = voxelSceneData.voxelsize;
@@ -3086,12 +3083,6 @@ void UpdatePerFrameData(
 	frameCB.DeltaTime = dt * GetGameSpeed();
 	frameCB.TimePrev = frameCB.Time;
 	frameCB.Time += frameCB.DeltaTime;
-	frameCB.StaticSkyGamma = 0.0f;
-	if (vis.scene->weather.skyMap != nullptr)
-	{
-		bool hdr = !IsFormatUnorm(vis.scene->weather.skyMap->texture.desc.Format);
-		frameCB.StaticSkyGamma = hdr ? 1.0f : frameCB.Gamma;
-	}
 	frameCB.FrameCount = (uint)device->GetFrameCount();
 	frameCB.TemporalAASampleRotation = 0;
 	if (GetTemporalAAEnabled())
@@ -3174,6 +3165,14 @@ void UpdatePerFrameData(
 	if (IsForceDiffuseLighting())
 	{
 		frameCB.Options |= OPTION_BIT_FORCE_DIFFUSE_LIGHTING;
+	}
+	if (vis.scene->weather.skyMap != nullptr)
+	{
+		bool hdr = !IsFormatUnorm(vis.scene->weather.skyMap->texture.desc.Format);
+		if (hdr)
+		{
+			frameCB.Options |= OPTION_BIT_STATIC_SKY_HDR;
+		}
 	}
 
 	frameCB.scene = vis.scene->shaderscene;
@@ -11191,7 +11190,8 @@ void Postprocess_Tonemap(
 	const Texture* texture_colorgradinglut,
 	const Texture* texture_distortion,
 	const GPUBuffer* buffer_luminance,
-	const Texture* texture_bloom
+	const Texture* texture_bloom,
+	COLOR_SPACE display_colorspace
 )
 {
 	device->EventBegin("Postprocess_Tonemap", cmd);
@@ -11213,6 +11213,7 @@ void Postprocess_Tonemap(
 	tonemap_push.texture_colorgrade_lookuptable = device->GetDescriptorIndex(texture_colorgradinglut, SRV);
 	tonemap_push.texture_bloom = device->GetDescriptorIndex(texture_bloom, SRV);
 	tonemap_push.texture_output = device->GetDescriptorIndex(&output, UAV);
+	tonemap_push.display_colorspace = display_colorspace;
 	device->PushConstants(&tonemap_push, sizeof(tonemap_push), cmd);
 
 	{
@@ -11677,8 +11678,6 @@ int GetShadowRes2D() { return SHADOWRES_2D; }
 int GetShadowResCube() { return SHADOWRES_CUBE; }
 void SetTransparentShadowsEnabled(float value) { TRANSPARENTSHADOWSENABLED = value; }
 float GetTransparentShadowsEnabled() { return TRANSPARENTSHADOWSENABLED; }
-void SetGamma(float value) { GAMMA = value; }
-float GetGamma() { return GAMMA; }
 void SetWireRender(bool value) { wireRender = value; }
 bool IsWireRender() { return wireRender; }
 void SetToDrawDebugBoneLines(bool param) { debugBoneLines = param; }

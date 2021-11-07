@@ -110,9 +110,9 @@ inline bool is_saturated(float2 a) { return is_saturated(a.x) && is_saturated(a.
 inline bool is_saturated(float3 a) { return is_saturated(a.x) && is_saturated(a.y) && is_saturated(a.z); }
 inline bool is_saturated(float4 a) { return is_saturated(a.x) && is_saturated(a.y) && is_saturated(a.z) && is_saturated(a.w); }
 
-#define DEGAMMA_SKY(x)	pow(abs(x),g_xFrame.StaticSkyGamma)
-#define DEGAMMA(x)		pow(abs(x),g_xFrame.Gamma)
-#define GAMMA(x)		pow(abs(x),1.0/g_xFrame.Gamma)
+#define DEGAMMA_SKY(x)	((g_xFrame.Options & OPTION_BIT_STATIC_SKY_HDR) ? (x) : RemoveSRGBCurve_Fast(x))
+#define DEGAMMA(x)		(RemoveSRGBCurve_Fast(x))
+#define GAMMA(x)		(ApplySRGBCurve_Fast(x))
 
 inline float3 GetSunColor() { return GetWeather().sun_color; }
 inline float3 GetSunDirection() { return GetWeather().sun_direction; }

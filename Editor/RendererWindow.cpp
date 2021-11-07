@@ -13,7 +13,7 @@ void RendererWindow::Create(EditorComponent* editor)
 	wiRenderer::SetToDrawGridHelper(true);
 	wiRenderer::SetToDrawDebugCameras(true);
 
-	SetSize(XMFLOAT2(580, 530));
+	SetSize(XMFLOAT2(580, 550));
 
 	float x = 220, y = 5, step = 20, itemheight = 18;
 
@@ -27,6 +27,32 @@ void RendererWindow::Create(EditorComponent* editor)
 	});
 	vsyncCheckBox.SetCheck(editor->main->swapChain.desc.vsync);
 	AddWidget(&vsyncCheckBox);
+
+	swapchainComboBox.Create("Swapchain format: ");
+	swapchainComboBox.SetSize(XMFLOAT2(100, itemheight));
+	swapchainComboBox.SetPos(XMFLOAT2(x, y += step));
+	swapchainComboBox.AddItem("SDR 8bit", wiGraphics::FORMAT_R8G8B8A8_UNORM);
+	swapchainComboBox.AddItem("SDR 10bit", wiGraphics::FORMAT_R10G10B10A2_UNORM);
+	swapchainComboBox.AddItem("HDR 10bit", wiGraphics::FORMAT_R10G10B10A2_UNORM);
+	swapchainComboBox.AddItem("HDR 16bit", wiGraphics::FORMAT_R16G16B16A16_FLOAT);
+	swapchainComboBox.OnSelect([=](wiEventArgs args) {
+		editor->main->swapChain.desc.format = (wiGraphics::FORMAT)args.userdata;
+		switch (args.iValue)
+		{
+		default:
+		case 0:
+		case 1:
+			editor->main->swapChain.desc.allow_hdr = false;
+			break;
+		case 2:
+		case 3:
+			editor->main->swapChain.desc.allow_hdr = true;
+			break;
+		}
+		wiEvent::SetVSync(vsyncCheckBox.GetCheck());
+		});
+	swapchainComboBox.SetTooltip("Choose between different swapchain presentation formats.\nIf the display doesn't support the selected format, it will switch back to a reasonable default.");
+	AddWidget(&swapchainComboBox);
 
 	occlusionCullingCheckBox.Create("Occlusion Culling: ");
 	occlusionCullingCheckBox.SetTooltip("Toggle occlusion culling. This can boost framerate if many objects are occluded in the scene.");
@@ -53,16 +79,6 @@ void RendererWindow::Create(EditorComponent* editor)
 		}
 	});
 	AddWidget(&resolutionScaleSlider);
-
-	gammaSlider.Create(1.0f, 3.0f, 2.2f, 1000.0f, "Gamma: ");
-	gammaSlider.SetTooltip("Adjust the gamma correction for the display device.");
-	gammaSlider.SetSize(XMFLOAT2(100, itemheight));
-	gammaSlider.SetPos(XMFLOAT2(x, y += step));
-	gammaSlider.SetValue(wiRenderer::GetGamma());
-	gammaSlider.OnSlide([&](wiEventArgs args) {
-		wiRenderer::SetGamma(args.fValue);
-	});
-	AddWidget(&gammaSlider);
 
 	surfelGICheckBox.Create("Surfel GI: ");
 	surfelGICheckBox.SetTooltip("Surfel GI is a raytraced diffuse GI using raytracing and surface cache.");

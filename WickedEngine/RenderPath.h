@@ -35,5 +35,7 @@ public:
 
 	inline uint32_t getLayerMask() const { return layerMask; }
 	inline void setlayerMask(uint32_t value) { layerMask = value; }
+
+	wiGraphics::COLOR_SPACE colorspace = wiGraphics::COLOR_SPACE_SRGB;
 };
 

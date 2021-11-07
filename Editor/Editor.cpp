@@ -1778,6 +1778,7 @@ void EditorComponent::Update(float dt)
 
 	RenderPath2D::Update(dt);
 
+	renderPath->colorspace = colorspace;
 	renderPath->Update(dt);
 }
 void EditorComponent::PostUpdate()

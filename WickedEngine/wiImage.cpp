@@ -126,6 +126,10 @@ namespace wiImage
 		{
 			push.flags |= IMAGE_FLAG_EXTRACT_NORMALMAP;
 		}
+		if (params.isHDR10OutputMappingEnabled())
+		{
+			push.flags |= IMAGE_FLAG_OUTPUT_COLOR_SPACE_HDR10_ST2084;
+		}
 
 		if (params.isFullScreenEnabled())
 		{

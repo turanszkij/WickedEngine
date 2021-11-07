@@ -24,7 +24,7 @@ namespace wiRenderer_BindLua
 		int argc = wiLua::SGetArgCount(L);
 		if (argc > 0)
 		{
-			wiRenderer::SetGamma(wiLua::SGetFloat(L, 1));
+			wiLua::SSetString(L, "SetGamma() no longer supported!");
 		}
 		else
 		{

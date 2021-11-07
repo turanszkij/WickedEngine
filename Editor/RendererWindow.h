@@ -24,9 +24,9 @@ public:
 	void Create(EditorComponent* editorcomponent);
 
 	wiCheckBox vsyncCheckBox;
+	wiComboBox swapchainComboBox;
 	wiCheckBox occlusionCullingCheckBox;
 	wiSlider resolutionScaleSlider;
-	wiSlider gammaSlider;
 	wiCheckBox surfelGICheckBox;
 	wiCheckBox surfelGIDebugCheckBox;
 	wiCheckBox voxelRadianceCheckBox;

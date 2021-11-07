@@ -30,6 +30,11 @@ protected:
 	float deltatimes[20] = {};
 	int fps_avg_counter = 0;
 
+	// These are used when HDR10 color space is active:
+	//	Because we want to blend in linear color space, but HDR10 is non-linear
+	wiGraphics::Texture rendertarget;
+	wiGraphics::RenderPass renderpass;
+
 public:
 	virtual ~MainComponent() = default;
 

@@ -1470,7 +1470,8 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 			getColorGradingEnabled() ? (scene->weather.colorGradingMap == nullptr ? nullptr : &scene->weather.colorGradingMap->texture) : nullptr,
 			getMSAASampleCount() > 1 ? &rtParticleDistortion_Resolved : &rtParticleDistortion,
 			getEyeAdaptionEnabled() ? &luminanceResources.luminance : nullptr,
-			getBloomEnabled() ? &bloomResources.texture_bloom : nullptr
+			getBloomEnabled() ? &bloomResources.texture_bloom : nullptr,
+			colorspace
 		);
 
 		rt_first = nullptr;

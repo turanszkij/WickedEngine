@@ -113,12 +113,15 @@ struct PushConstantsTonemap
 	float2 resolution_rcp;
 	float exposure;
 	float dither;
+
 	int texture_input;
 	int buffer_input_luminance;
 	int texture_input_distortion;
 	int texture_colorgrade_lookuptable;
+
 	int texture_bloom;
 	int texture_output;
+	uint display_colorspace;
 };
 
 static const uint TILE_STATISTICS_OFFSET_EARLYEXIT = 0;

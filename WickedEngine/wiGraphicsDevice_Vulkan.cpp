@@ -2852,6 +2852,7 @@ using namespace Vulkan_Internal;
 			surfaceFormat.colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 		}
 
+		// For now, we only include the color spaces that were tested successfully:
 		switch (surfaceFormat.colorSpace)
 		{
 		default:
