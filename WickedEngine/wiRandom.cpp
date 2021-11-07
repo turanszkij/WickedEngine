@@ -3,13 +3,16 @@
 
 namespace wiRandom
 {
-	std::random_device           rand_dev;
-	std::mt19937                 generator(rand_dev());
+	std::mt19937 &generator() {
+		static std::random_device rand_dev;
+		static std::mt19937       generator(rand_dev());
+		return generator;
+    }
 
 	int getRandom(int minValue, int maxValue)
 	{
 		std::uniform_int_distribution<int>  distr(minValue, maxValue);
-		return distr(generator);
+		return distr(generator());
 	}
 	int getRandom(int maxValue)
 	{
@@ -19,7 +22,7 @@ namespace wiRandom
 	uint32_t getRandom(uint32_t minValue, uint32_t maxValue)
 	{
 		std::uniform_int_distribution<uint32_t>  distr(minValue, maxValue);
-		return distr(generator);
+		return distr(generator());
 	}
 	uint32_t getRandom(uint32_t maxValue)
 	{
@@ -29,7 +32,7 @@ namespace wiRandom
 	uint64_t getRandom(uint64_t minValue, uint64_t maxValue)
 	{
 		std::uniform_int_distribution<uint64_t>  distr(minValue, maxValue);
-		return distr(generator);
+		return distr(generator());
 	}
 	uint64_t getRandom(uint64_t maxValue)
 	{
