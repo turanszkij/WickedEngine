@@ -31,9 +31,9 @@ Tip: try loading models or scripts from the Content folder using the Editor app 
 <img align="right" src="https://turanszkij.files.wordpress.com/2018/11/physics.gif" width="256px"/>
 
 ### Platforms:
-- Windows 10 Desktop [Visual Studio 2019]
-- UWP [Visual Studio 2019]
-- Linux (experimental) [CMake 3.7]
+- Windows 10 or newer
+- Linux
+- UWP
 
 ### How to build: 
 
@@ -48,22 +48,18 @@ You can also dowload prebuilt and packaged versions of the Editor and Tests here
 
 If you have questions or stuck, please use the `windows` communication channel on Discord: [![Discord chat](https://img.shields.io/discord/602811659224088577?logo=discord)](https://discord.gg/CFjRYmE)
 
-Note: Building 32-bit and ARM versions should be possible, but no longer provided by default. You will need to configure the solution for these platforms yourself if you want this. For ARM platform, also use the `-D BT_USE_DOUBLE_PRECISION=1` definition when compiling.
+Note: Building 32-bit and ARM versions should be possible, but no longer provided by default. You will need to configure the solution for these platforms yourself if you want this. For ARM platform, also use the `-DBT_USE_DOUBLE_PRECISION=1` definition when compiling.
 
-Cmake: It is possible to build the windows version with Cmake, but the recommended way is to use the provided WickedEngine.sln file with Visual Studio as this is the most tested method.
+Cmake: It is possible to build the windows version with Cmake, but the recommended way is to use the provided WickedEngine.sln file with Visual Studio.
 
 #### Linux
-The Linux support is experimental. You can find a sample build script for Ubuntu 20.04 [here](.github/workflows/build.yml) (in the linux section). You might need to install some dependencies, such as Vulkan SDK 1.2 or greater (to get DirectXShaderCompiler), SDL2, cmake 3.7 and g++ compiler (C++ 17 compliant version). For Ubuntu 20.04, you can use the following commands to install dependencies:
+To build the engine for Linux, use Cmake. You can find a sample build script for Ubuntu 20.04 [here](.github/workflows/build.yml) (in the linux section). You might need to install some dependencies, such as Cmake (3.7 or newer), g++ compiler (C++ 17 compliant version) and SDL2. For Ubuntu 20.04, you can use the following commands to install dependencies:
 ```bash
-wget -qO - https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
-sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.2.170-focal.list https://packages.lunarg.com/vulkan/1.2.170/lunarg-vulkan-1.2.170-focal.list
 sudo apt update
-sudo apt install vulkan-sdk
 sudo apt install libsdl2-dev
 sudo apt install build-essential
 ```
- - Note: The Vulkan SDK for Ubuntu contains DXC (<a href="https://github.com/microsoft/DirectXShaderCompiler">DirectXShaderCompiler</a>) which is required to build the shaders. If you are using an other Linux distribution, make sure that you have DirectXShaderCompiler.
-To build the engine, editor and tests, use Cmake and make:
+To build the engine, editor and tests, use `cmake` and then `make`:
 ```bash
 mkdir build
 cd build
@@ -71,7 +67,7 @@ cmake .. -DCMAKE_BUILD_TYPE=Release
 make
 ```
 
-If you want to develop an application that uses Wicked Engine, you will have to link to libWickedEngine.a and `#include "WickedEngine.h"` into the source code. For examples, look at the Cmake files.
+If you want to develop an application that uses Wicked Engine, you will have to link to libWickedEngine.a and `#include "WickedEngine.h"` into the source code. For examples, look at the Cmake files, or the Tests and the Editor applications.
 
 You can also dowload prebuilt and packaged versions of the Editor and Tests here: [![Github Build Status](https://github.com/turanszkij/WickedEngine/workflows/Build/badge.svg)](https://github.com/turanszkij/WickedEngine/actions)
 
@@ -107,7 +103,6 @@ main.ActivatePath(&myGame); // Register your game to the application. It will ca
 
 wiScene::LoadModel("myModel.wiscene"); // Simply load a model into the current global scene
 wiScene::GetScene(); // Get the current global scene
-wiRenderer::ClearWorld(); // Delete every model, etc. from the current global scene
 
 wiScene::Scene scene2; // create a separate scene
 wiScene::LoadModel(scene2, "myModel2.wiscene"); // Load model into a separate scene
@@ -156,9 +151,6 @@ scene = GetScene();
 transform = scene.Component_GetTransform(entity);
 transform.Translate(Vector(2, 0, 0));
 
--- Clear every model from the current global scene:
-ClearWorld();
-
 -- Print any WickedEngine class information to the backlog:
 getprops(main);    -- prints the main component methods
 getprops(scene);    -- prints the Scene class methods
@@ -180,7 +172,7 @@ end
 ```
 <i>(You can enter lua scripts into the backlog (HOME button), or the startup.lua script which is always executed on application startup if it is found near the app, or load a script via dofile("script.lua") command)</i>
 
-For more code samples and advanced use cases, please see the example projects, like the Template_Windows, Tests, or Editor project. There are also sample models and scripts included with Wicked Engine in the models and scripts folders. Check them out to learn about more features.
+For more code samples and advanced use cases, please see the example projects, like the Template_Windows, Tests, or Editor project. There are also sample models and scripts included with Wicked Engine in the Content/models and Content/scripts folders. Check them out to learn about more features.
 
 ### Scripting API:
 
