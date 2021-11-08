@@ -197,7 +197,7 @@ int main(int argc, char *argv[])
             "Wicked Engine Editor",
             SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
             w, h,
-            SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
+            SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
     if (!window) {
         throw sdl2::SDLError("Error creating window");
     }
