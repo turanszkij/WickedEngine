@@ -79,5 +79,7 @@ public:
 	wiCheckBox forceDiffuseLightingCheckBox;
 
     uint32_t GetPickType() const;
+
+	void UpdateSwapChainFormats(wiGraphics::SwapChain* swapChain);
 };
 

@@ -2745,27 +2745,7 @@ using namespace DX12_Internal;
 			assert(SUCCEEDED(hr));
 		}
 
-		bool hdr = false;
-		if (pDesc->allow_hdr)
-		{
-			// HDR display query: https://docs.microsoft.com/en-us/windows/win32/direct3darticles/high-dynamic-range
-			ComPtr<IDXGIOutput> dxgiOutput;
-			if(SUCCEEDED(internal_state->swapChain->GetContainingOutput(&dxgiOutput)))
-			{
-				ComPtr<IDXGIOutput6> output6;
-				hr = dxgiOutput.As(&output6);
-				assert(SUCCEEDED(hr));
-
-				DXGI_OUTPUT_DESC1 desc1;
-				hr = output6->GetDesc1(&desc1);
-				assert(SUCCEEDED(hr));
-
-				if (desc1.ColorSpace == DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020)
-				{
-					hdr = true;
-				}
-			}
-		}
+		const bool hdr = pDesc->allow_hdr && GetSwapChainHDRSupport(swapChain);
 
 		// Ensure correct color space:
 		//	https://github.com/microsoft/DirectX-Graphics-Samples/blob/master/Samples/Desktop/D3D12HDR/src/D3D12HDR.cpp
@@ -5671,6 +5651,29 @@ using namespace DX12_Internal;
 	{
 		auto internal_state = to_internal(swapchain);
 		return internal_state->colorSpace;
+	}
+	bool GraphicsDevice_DX12::GetSwapChainHDRSupport(const SwapChain* swapchain) const
+	{
+		auto internal_state = to_internal(swapchain);
+
+		// HDR display query: https://docs.microsoft.com/en-us/windows/win32/direct3darticles/high-dynamic-range
+		ComPtr<IDXGIOutput> dxgiOutput;
+		if (SUCCEEDED(internal_state->swapChain->GetContainingOutput(&dxgiOutput)))
+		{
+			ComPtr<IDXGIOutput6> output6;
+			if (SUCCEEDED(dxgiOutput.As(&output6)))
+			{
+				DXGI_OUTPUT_DESC1 desc1;
+				if (SUCCEEDED(output6->GetDesc1(&desc1)))
+				{
+					if (desc1.ColorSpace == DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020)
+					{
+						return true;
+					}
+				}
+			}
+		}
+		return false;
 	}
 
 	void GraphicsDevice_DX12::WaitCommandList(CommandList cmd, CommandList wait_for)

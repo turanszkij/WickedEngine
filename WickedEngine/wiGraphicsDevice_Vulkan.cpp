@@ -6062,6 +6062,29 @@ using namespace Vulkan_Internal;
 		auto internal_state = to_internal(swapchain);
 		return internal_state->colorSpace;
 	}
+	bool GraphicsDevice_Vulkan::GetSwapChainHDRSupport(const SwapChain* swapchain) const
+	{
+		auto internal_state = to_internal(swapchain);
+
+		uint32_t formatCount;
+		VkResult res = vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, internal_state->surface, &formatCount, nullptr);
+		if (res == VK_SUCCESS)
+		{
+			std::vector<VkSurfaceFormatKHR> swapchain_formats(formatCount);
+			res = vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, internal_state->surface, &formatCount, swapchain_formats.data());
+			if (res == VK_SUCCESS)
+			{
+				for (const auto& format : swapchain_formats)
+				{
+					if (format.colorSpace != VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+					{
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
 
 	void GraphicsDevice_Vulkan::WaitCommandList(CommandList cmd, CommandList wait_for)
 	{

@@ -320,6 +320,7 @@ namespace wiGraphics
 		Texture GetBackBuffer(const SwapChain* swapchain) const override;
 
 		COLOR_SPACE GetSwapChainColorSpace(const SwapChain* swapchain) const override;
+		bool GetSwapChainHDRSupport(const SwapChain* swapchain) const override;
 
 		///////////////Thread-sensitive////////////////////////
 

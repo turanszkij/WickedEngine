@@ -113,7 +113,8 @@ void Editor::Initialize()
 	infoDisplay.watermark = true;
 	infoDisplay.fpsinfo = true;
 	infoDisplay.resolution = true;
-	infoDisplay.hdr = true;
+	//infoDisplay.logical_size = true;
+	infoDisplay.colorspace = true;
 	infoDisplay.heap_allocation_counter = true;
 
 	wiRenderer::SetOcclusionCullingEnabled(true);
@@ -195,6 +196,8 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 
 void EditorComponent::ResizeBuffers()
 {
+	rendererWnd.UpdateSwapChainFormats(&main->swapChain);
+
 	init(main->canvas);
 	RenderPath2D::ResizeBuffers();
 

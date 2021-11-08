@@ -90,8 +90,10 @@ public:
 		bool fpsinfo = false;
 		// display resolution info
 		bool resolution = false;
+		// window's size in logical (DPI scaled) units
+		bool logical_size = false;
 		// HDR status and color space
-		bool hdr = false;
+		bool colorspace = false;
 		// display number of heap allocations per frame
 		bool heap_allocation_counter = false;
 		// text size

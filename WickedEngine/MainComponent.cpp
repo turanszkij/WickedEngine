@@ -317,21 +317,25 @@ void MainComponent::Compose(CommandList cmd)
 		{
 			ss << "Resolution: " << canvas.GetPhysicalWidth() << " x " << canvas.GetPhysicalHeight() << " (" << canvas.GetDPI() << " dpi)" << std::endl;
 		}
-		if (infoDisplay.hdr)
+		if (infoDisplay.logical_size)
 		{
-			ss << "HDR: ";
+			ss << "Logical Size: " << canvas.GetLogicalWidth() << " x " << canvas.GetLogicalHeight() << std::endl;
+		}
+		if (infoDisplay.colorspace)
+		{
+			ss << "Color Space: ";
 			COLOR_SPACE colorSpace = device->GetSwapChainColorSpace(&swapChain);
 			switch (colorSpace)
 			{
 			default:
 			case wiGraphics::COLOR_SPACE_SRGB:
-				ss << "Off (SRGB)";
-				break;
-			case wiGraphics::COLOR_SPACE_HDR_LINEAR:
-				ss << "On (Linear)";
+				ss << "sRGB";
 				break;
 			case wiGraphics::COLOR_SPACE_HDR10_ST2084:
-				ss << "On (HDR10 ST.2084)";
+				ss << "ST.2084 (HDR10)";
+				break;
+			case wiGraphics::COLOR_SPACE_HDR_LINEAR:
+				ss << "Linear (HDR)";
 				break;
 			}
 			ss << std::endl;

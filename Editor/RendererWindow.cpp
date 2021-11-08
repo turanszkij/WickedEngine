@@ -22,37 +22,18 @@ void RendererWindow::Create(EditorComponent* editor)
 	vsyncCheckBox.SetScriptTip("SetVSyncEnabled(opt bool enabled)");
 	vsyncCheckBox.SetPos(XMFLOAT2(x, y += step));
 	vsyncCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
+	vsyncCheckBox.SetCheck(editor->main->swapChain.desc.vsync);
 	vsyncCheckBox.OnClick([=](wiEventArgs args) {
 		wiEvent::SetVSync(args.bValue);
 	});
-	vsyncCheckBox.SetCheck(editor->main->swapChain.desc.vsync);
 	AddWidget(&vsyncCheckBox);
 
 	swapchainComboBox.Create("Swapchain format: ");
 	swapchainComboBox.SetSize(XMFLOAT2(100, itemheight));
 	swapchainComboBox.SetPos(XMFLOAT2(x, y += step));
-	swapchainComboBox.AddItem("SDR 8bit", wiGraphics::FORMAT_R8G8B8A8_UNORM);
-	swapchainComboBox.AddItem("SDR 10bit", wiGraphics::FORMAT_R10G10B10A2_UNORM);
-	swapchainComboBox.AddItem("HDR 10bit", wiGraphics::FORMAT_R10G10B10A2_UNORM);
-	swapchainComboBox.AddItem("HDR 16bit", wiGraphics::FORMAT_R16G16B16A16_FLOAT);
-	swapchainComboBox.OnSelect([=](wiEventArgs args) {
-		editor->main->swapChain.desc.format = (wiGraphics::FORMAT)args.userdata;
-		switch (args.iValue)
-		{
-		default:
-		case 0:
-		case 1:
-			editor->main->swapChain.desc.allow_hdr = false;
-			break;
-		case 2:
-		case 3:
-			editor->main->swapChain.desc.allow_hdr = true;
-			break;
-		}
-		wiEvent::SetVSync(vsyncCheckBox.GetCheck());
-		});
-	swapchainComboBox.SetTooltip("Choose between different swapchain presentation formats.\nIf the display doesn't support the selected format, it will switch back to a reasonable default.");
+	swapchainComboBox.SetTooltip("Choose between different display output formats.\nIf the display doesn't support the selected format, it will switch back to a reasonable default.\nHDR formats will be only selectable when the current display supports HDR output");
 	AddWidget(&swapchainComboBox);
+	UpdateSwapChainFormats(&editor->main->swapChain);
 
 	occlusionCullingCheckBox.Create("Occlusion Culling: ");
 	occlusionCullingCheckBox.SetTooltip("Toggle occlusion culling. This can boost framerate if many objects are occluded in the scene.");
@@ -740,4 +721,74 @@ uint32_t RendererWindow::GetPickType() const
 	}
 
 	return pickType;
+}
+
+void RendererWindow::UpdateSwapChainFormats(wiGraphics::SwapChain* swapChain)
+{
+	swapchainComboBox.OnSelect(nullptr);
+	swapchainComboBox.ClearItems();
+	swapchainComboBox.AddItem("SDR 8bit", wiGraphics::FORMAT_R8G8B8A8_UNORM);
+	swapchainComboBox.AddItem("SDR 10bit", wiGraphics::FORMAT_R10G10B10A2_UNORM);
+	if (wiRenderer::GetDevice()->GetSwapChainHDRSupport(swapChain))
+	{
+		swapchainComboBox.AddItem("HDR 10bit", wiGraphics::FORMAT_R10G10B10A2_UNORM);
+		swapchainComboBox.AddItem("HDR 16bit", wiGraphics::FORMAT_R16G16B16A16_FLOAT);
+
+		switch (swapChain->desc.format)
+		{
+		default:
+		case wiGraphics::FORMAT_R8G8B8A8_UNORM:
+			swapchainComboBox.SetSelected(0);
+			break;
+		case wiGraphics::FORMAT_R10G10B10A2_UNORM:
+			if (swapChain->desc.allow_hdr)
+			{
+				swapchainComboBox.SetSelected(2);
+			}
+			else
+			{
+				swapchainComboBox.SetSelected(1);
+			}
+			break;
+		case wiGraphics::FORMAT_R16G16B16A16_FLOAT:
+			swapchainComboBox.SetSelected(4);
+			break;
+		}
+	}
+	else
+	{
+		switch (swapChain->desc.format)
+		{
+		default:
+		case wiGraphics::FORMAT_R8G8B8A8_UNORM:
+			swapchainComboBox.SetSelected(0);
+			break;
+		case wiGraphics::FORMAT_R10G10B10A2_UNORM:
+			swapchainComboBox.SetSelected(1);
+			break;
+		case wiGraphics::FORMAT_R16G16B16A16_FLOAT:
+			swapchainComboBox.SetSelected(1);
+			break;
+		}
+	}
+
+	swapchainComboBox.OnSelect([=](wiEventArgs args) {
+
+		swapChain->desc.format = (wiGraphics::FORMAT)args.userdata;
+		switch (args.iValue)
+		{
+		default:
+		case 0:
+		case 1:
+			swapChain->desc.allow_hdr = false;
+			break;
+		case 2:
+		case 3:
+			swapChain->desc.allow_hdr = true;
+			break;
+		}
+
+		bool success = wiRenderer::GetDevice()->CreateSwapChain(&swapChain->desc, nullptr, swapChain);
+		assert(success);
+		});
 }

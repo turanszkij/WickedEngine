@@ -120,7 +120,11 @@ namespace wiGraphics
 
 		virtual Texture GetBackBuffer(const SwapChain* swapchain) const = 0;
 
+		// Returns the current color space of the swapchain output
 		virtual COLOR_SPACE GetSwapChainColorSpace(const SwapChain* swapchain) const = 0;
+		// Returns true if the swapchain could support HDR output regardless of current format
+		//	Returns false if the swapchain couldn't support HDR output
+		virtual bool GetSwapChainHDRSupport(const SwapChain* swapchain) const = 0;
 
 		///////////////Thread-sensitive////////////////////////
 
