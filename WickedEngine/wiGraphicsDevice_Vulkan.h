@@ -30,6 +30,7 @@ namespace wiGraphics
 {
 	class GraphicsDevice_Vulkan : public GraphicsDevice
 	{
+		friend struct CommandQueue;
 	protected:
 		bool debugUtils = false;
 		VkInstance instance = VK_NULL_HANDLE;
@@ -90,6 +91,7 @@ namespace wiGraphics
 		{
 			VkQueue queue = VK_NULL_HANDLE;
 			VkSemaphore semaphore = VK_NULL_HANDLE;
+			std::vector<SwapChain> swapchain_updates;
 			std::vector<VkSwapchainKHR> submit_swapchains;
 			std::vector<uint32_t> submit_swapChainImageIndices;
 			std::vector<VkPipelineStageFlags> submit_waitStages;
@@ -99,55 +101,7 @@ namespace wiGraphics
 			std::vector<uint64_t> submit_signalValues;
 			std::vector<VkCommandBuffer> submit_cmds;
 
-			void submit(VkFence fence)
-			{
-				VkSubmitInfo submitInfo = {};
-				submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-				submitInfo.commandBufferCount = (uint32_t)submit_cmds.size();
-				submitInfo.pCommandBuffers = submit_cmds.data();
-
-				submitInfo.waitSemaphoreCount = (uint32_t)submit_waitSemaphores.size();
-				submitInfo.pWaitSemaphores = submit_waitSemaphores.data();
-				submitInfo.pWaitDstStageMask = submit_waitStages.data();
-
-				submitInfo.signalSemaphoreCount = (uint32_t)submit_signalSemaphores.size();
-				submitInfo.pSignalSemaphores = submit_signalSemaphores.data();
-
-				VkTimelineSemaphoreSubmitInfo timelineInfo = {};
-				timelineInfo.sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO;
-				timelineInfo.pNext = nullptr;
-				timelineInfo.waitSemaphoreValueCount = (uint32_t)submit_waitValues.size();
-				timelineInfo.pWaitSemaphoreValues = submit_waitValues.data();
-				timelineInfo.signalSemaphoreValueCount = (uint32_t)submit_signalValues.size();
-				timelineInfo.pSignalSemaphoreValues = submit_signalValues.data();
-
-				submitInfo.pNext = &timelineInfo;
-
-				VkResult res = vkQueueSubmit(queue, 1, &submitInfo, fence);
-				assert(res == VK_SUCCESS);
-
-				if (!submit_swapchains.empty())
-				{
-					VkPresentInfoKHR presentInfo = {};
-					presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-					presentInfo.waitSemaphoreCount = (uint32_t)submit_signalSemaphores.size();
-					presentInfo.pWaitSemaphores = submit_signalSemaphores.data();
-					presentInfo.swapchainCount = (uint32_t)submit_swapchains.size();
-					presentInfo.pSwapchains = submit_swapchains.data();
-					presentInfo.pImageIndices = submit_swapChainImageIndices.data();
-					res = vkQueuePresentKHR(queue, &presentInfo);
-					assert(res == VK_SUCCESS);
-				}
-
-				submit_swapchains.clear();
-				submit_swapChainImageIndices.clear();
-				submit_waitStages.clear();
-				submit_waitSemaphores.clear();
-				submit_waitValues.clear();
-				submit_signalSemaphores.clear();
-				submit_signalValues.clear();
-				submit_cmds.clear();
-			}
+			void submit(GraphicsDevice_Vulkan* device, VkFence fence);
 
 		} queues[QUEUE_COUNT];
 
@@ -257,7 +211,7 @@ namespace wiGraphics
 		const RaytracingPipelineState* active_rt[COMMANDLIST_COUNT] = {};
 		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
 		SHADING_RATE prev_shadingrate[COMMANDLIST_COUNT] = {};
-		std::vector<const SwapChain*> prev_swapchains[COMMANDLIST_COUNT];
+		std::vector<SwapChain> prev_swapchains[COMMANDLIST_COUNT];
 
 		uint32_t vb_strides[COMMANDLIST_COUNT][8] = {};
 		size_t vb_hash[COMMANDLIST_COUNT] = {};
