@@ -42,14 +42,6 @@ float3 ACESFitted(float3 color)
 	return color;
 }
 
-// This the same as wiGraphics::COLOR_SPACE:
-enum COLOR_SPACE
-{
-	COLOR_SPACE_SRGB,			// SDR color space (8 or 10 bits per channel)
-	COLOR_SPACE_HDR10_ST2084,	// HDR10 color space (10 bits per channel)
-	COLOR_SPACE_HDR_LINEAR,		// HDR color space (16 bits per channel)
-};
-
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
@@ -89,18 +81,19 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	{
 		result.rgb = ACESFitted(hdr.rgb);
 		result.rgb = GAMMA(result.rgb);
+	}
 
-		[branch]
-		if (tonemap_push.texture_colorgrade_lookuptable >= 0)
-		{
-			result.rgb = bindless_textures3D[tonemap_push.texture_colorgrade_lookuptable].SampleLevel(sampler_linear_clamp, result.rgb, 0).rgb;
-		}
+	[branch]
+	if (tonemap_push.texture_colorgrade_lookuptable >= 0)
+	{
+		result.rgb = bindless_textures3D[tonemap_push.texture_colorgrade_lookuptable].SampleLevel(sampler_linear_clamp, result.rgb, 0).rgb;
+	}
 
-		if (tonemap_push.dither != 0)
-		{
-			// dithering before outputting to SDR will reduce color banding:
-			result.rgb += (dither((float2)DTid.xy) - 0.5f) / 64.0f;
-		}
+	[branch]
+	if (tonemap_push.dither != 0)
+	{
+		// dithering before outputting to SDR will reduce color banding:
+		result.rgb += (dither((float2)DTid.xy) - 0.5f) / 64.0f;
 	}
 
 	bindless_rwtextures[tonemap_push.texture_output][DTid.xy] = result;

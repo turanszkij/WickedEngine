@@ -69,6 +69,7 @@ struct wiImageParams
 		FULLSCREEN = 1 << 4,
 		BACKGROUND = 1 << 5,
 		OUTPUT_COLOR_SPACE_HDR10_ST2084 = 1 << 6,
+		OUTPUT_COLOR_SPACE_LINEAR = 1 << 7,
 	};
 	uint32_t _flags = EMPTY;
 
@@ -136,6 +137,7 @@ struct wiImageParams
 	constexpr bool isFullScreenEnabled() const { return _flags & FULLSCREEN; }
 	constexpr bool isBackgroundEnabled() const { return _flags & BACKGROUND; }
 	constexpr bool isHDR10OutputMappingEnabled() const { return _flags & OUTPUT_COLOR_SPACE_HDR10_ST2084; }
+	constexpr bool isLinearOutputMappingEnabled() const { return _flags & OUTPUT_COLOR_SPACE_LINEAR; }
 
 	// enables draw rectangle for base texture (cutout texture outside draw rectangle)
 	constexpr void enableDrawRect(const XMFLOAT4& rect) { _flags |= DRAWRECT; drawRect = rect; }
@@ -151,7 +153,11 @@ struct wiImageParams
 	//	the background tex should be bound with wiImage::SetBackground() beforehand
 	constexpr void enableBackground() { _flags |= BACKGROUND; }
 	// enable HDR10 output mapping, if this image can be interpreted in linear space and converted to HDR10 display format
+	//	this only works together with the enableFullScreen() override!
 	constexpr void enableHDR10OutputMapping() { _flags |= OUTPUT_COLOR_SPACE_HDR10_ST2084; }
+	// enable linear output mapping, which means removing gamma curve and outputting in linear space (useful for blending in HDR space)
+	//	this only works together with the enableFullScreen() override!
+	constexpr void enableLinearOutputMapping() { _flags |= OUTPUT_COLOR_SPACE_LINEAR; }
 
 	// disable draw rectangle for base texture (whole texture will be drawn, no cutout)
 	constexpr void disableDrawRect() { _flags &= ~DRAWRECT; }
@@ -162,6 +168,7 @@ struct wiImageParams
 	constexpr void disableFullScreen() { _flags &= ~FULLSCREEN; }
 	constexpr void disableBackground() { _flags &= ~BACKGROUND; }
 	constexpr void disableHDR10OutputMapping() { _flags &= ~OUTPUT_COLOR_SPACE_HDR10_ST2084; }
+	constexpr void disableLinearOutputMapping() { _flags &= ~OUTPUT_COLOR_SPACE_LINEAR; }
 
 
 	wiImageParams() 

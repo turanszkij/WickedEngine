@@ -2745,39 +2745,17 @@ using namespace DX12_Internal;
 			assert(SUCCEEDED(hr));
 		}
 
-		bool hdr = false;
-		if (pDesc->allow_hdr && IsFormatHDRSupport(swapChain->desc.format))
-		{
-			// HDR display query: https://docs.microsoft.com/en-us/windows/win32/direct3darticles/high-dynamic-range
-			ComPtr<IDXGIOutput> dxgiOutput;
-			for (uint32_t i = 0; dxgiAdapter->EnumOutputs(i, &dxgiOutput) != DXGI_ERROR_NOT_FOUND; ++i)
-			{
-				ComPtr<IDXGIOutput6> output6;
-				hr = dxgiOutput.As(&output6);
-				assert(SUCCEEDED(hr));
-
-				DXGI_OUTPUT_DESC1 desc1;
-				hr = output6->GetDesc1(&desc1);
-				assert(SUCCEEDED(hr));
-
-				if (desc1.ColorSpace == DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020)
-				{
-					hdr = true;
-					break;
-				}
-			}
-		}
-
 		// Ensure correct color space:
 		//	https://github.com/microsoft/DirectX-Graphics-Samples/blob/master/Samples/Desktop/D3D12HDR/src/D3D12HDR.cpp
 		{
+			internal_state->colorSpace = COLOR_SPACE_SRGB; // reset to SDR, in case anything below fails to set HDR state
 			DXGI_COLOR_SPACE_TYPE colorSpace = {};
 
 			switch (pDesc->format)
 			{
 			case FORMAT_R10G10B10A2_UNORM:
 				// This format is either HDR10 (ST.2084), or SDR (SRGB)
-				colorSpace = hdr ? DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020 : DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709;
+				colorSpace = pDesc->allow_hdr ? DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020 : DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709;
 				break;
 			case FORMAT_R16G16B16A16_FLOAT:
 				// This format is HDR (Linear):

@@ -198,7 +198,8 @@ void MainComponent::Run()
 	{
 		// In HDR10, we perform a final mapping from linear to HDR10, into the swapchain
 		device->RenderPassBegin(&swapChain, cmd);
-		wiImageParams fx(canvas.GetLogicalWidth(), canvas.GetLogicalHeight());
+		wiImageParams fx;
+		fx.enableFullScreen();
 		fx.enableHDR10OutputMapping();
 		wiImage::Draw(&rendertarget, fx, cmd);
 		device->RenderPassEnd(cmd);

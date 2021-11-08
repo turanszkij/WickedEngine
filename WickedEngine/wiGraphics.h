@@ -1193,16 +1193,5 @@ namespace wiGraphics
 
 		return 16u;
 	}
-	constexpr bool IsFormatHDRSupport(FORMAT format)
-	{
-		switch (format)
-		{
-		case FORMAT_R10G10B10A2_UNORM:
-		case FORMAT_R16G16B16A16_FLOAT:
-			return true;
-		}
-
-		return false;
-	}
 
 }

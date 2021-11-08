@@ -1,5 +1,7 @@
 #ifndef WI_SHADER_GLOBALS_HF
 #define WI_SHADER_GLOBALS_HF
+#include "ColorSpaceUtility.hlsli"
+#include "PixelPacking_R11G11B10.hlsli"
 #include "ShaderInterop.h"
 #include "ShaderInterop_Renderer.h"
 
@@ -896,6 +898,14 @@ static const float4 halton64[] = {
 	float4(0.9843750000f, 0.0617283951f, 0.6960000000f, 0.0437317784f),
 	float4(0.0078125000f, 0.3950617284f, 0.8960000000f, 0.1865889213f),
 	float4(0.5078125000f, 0.7283950617f, 0.1360000000f, 0.3294460641f),
+};
+
+// This the same as wiGraphics::COLOR_SPACE:
+enum COLOR_SPACE
+{
+	COLOR_SPACE_SRGB,			// SDR color space (8 or 10 bits per channel)
+	COLOR_SPACE_HDR10_ST2084,	// HDR10 color space (10 bits per channel)
+	COLOR_SPACE_HDR_LINEAR,		// HDR color space (16 bits per channel)
 };
 
 #endif // WI_SHADER_GLOBALS_HF
