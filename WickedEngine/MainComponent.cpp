@@ -454,6 +454,7 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 	}
 	desc.width = canvas.GetPhysicalWidth();
 	desc.height = canvas.GetPhysicalHeight();
+	desc.allow_hdr = allow_hdr;
 	bool success = wiRenderer::GetDevice()->CreateSwapChain(&desc, window, &swapChain);
 	assert(success);
 

@@ -117,6 +117,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    int x = CW_USEDEFAULT, y = 0, w = CW_USEDEFAULT, h = 0;
    bool fullscreen = false;
    bool borderless = false;
+   bool allow_hdr = true;
    std::string voidStr = "";
 
    std::ifstream file("config.ini");
@@ -126,7 +127,8 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 	   file >> voidStr >> enabled;
 	   if (enabled != 0)
 	   {
-		   file >> voidStr >> x >> voidStr >> y >> voidStr >> w >> voidStr >> h >> voidStr >> fullscreen >> voidStr >> borderless;
+		   file >> voidStr >> x >> voidStr >> y >> voidStr >> w >> voidStr >> h >> voidStr >> fullscreen >> voidStr >> borderless >> voidStr >> allow_hdr;
+		   editor.allow_hdr = allow_hdr;
 	   }
    }
    file.close();

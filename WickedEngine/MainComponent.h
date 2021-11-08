@@ -39,6 +39,7 @@ public:
 	virtual ~MainComponent() = default;
 
 	bool is_window_active = true;
+	bool allow_hdr = true;
 	wiGraphics::SwapChain swapChain;
 	wiCanvas canvas;
 	wiPlatform::window_type window;
