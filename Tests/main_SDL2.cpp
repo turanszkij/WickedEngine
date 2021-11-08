@@ -16,31 +16,31 @@ int sdl_loop(Tests &tests)
         tests.Run();
 
 //        int ret = SDL_PeepEvents(&event, 1, SDL_GETEVENT, SDL_FIRSTEVENT, SDL_LASTEVENT);
-        int ret = SDL_PollEvent(&event);
-
-        if (ret < 0) {
-            std::cerr << "Error Peeping event: " << SDL_GetError() << std::endl;
-            std::cerr << "Exiting now" << std::endl;
-            return -1;
-        }
-
-        if (ret > 0) {
-            if (event.type == SDL_WINDOWEVENT) {
+        while( SDL_PollEvent(&event)) {
+            switch (event.type) {
+            case SDL_QUIT:
+                quit = true;
+                break;
+            case SDL_WINDOWEVENT:
                 switch (event.window.event) {
-                    case SDL_WINDOWEVENT_CLOSE:   // exit game
-                        //tests.Quit();
-                        quit = true;
-
-                    default:
-                        break;
+                case SDL_WINDOWEVENT_CLOSE:   // exit game
+                    quit = true;
+                    break;
+                case SDL_WINDOWEVENT_RESIZED:
+                    // Tells the engine to reload window configuration (size and dpi)
+                    tests.SetWindow(tests.window);
+                    break;
+                default:
+                    break;
                 }
-            }
-//            else if (event.type == SDL_KEYDOWN) {
+            default:
+                break;
+//            case SDL_KEYDOWN:
 //                switch (event.key.keysym.scancode) {
 //                    case SDL_SCANCODE_SPACE:
 //                        tests.SetSelected(tests.GetSelected()+1);
 //                }
-//            }
+            }
         }
 
     }
@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
             "Wicked Engine Tests",
             SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
             1280, 800,
-            SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN);
+            SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
     if (!window) {
         throw sdl2::SDLError("Error creating window");
     }

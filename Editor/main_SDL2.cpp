@@ -91,27 +91,28 @@ int sdl_loop(Editor &editor)
         SDL_PumpEvents();
         editor.Run();
 
-        int ret = SDL_PollEvent(&event);
-
-        if (ret < 0) {
-            std::cerr << "Error Peeping event: " << SDL_GetError() << std::endl;
-            std::cerr << "Exiting now" << std::endl;
-            return -1;
-        }
-
-        if (ret > 0) {
-            if (event.type == SDL_KEYUP) //Flush key input comparison because key is up
+        while( SDL_PollEvent(&event)) {
+            switch (event.type) {
+            case SDL_KEYUP: //Flush key input comparison because key is up
                 cbuf = -1;
-
-            if (event.type == SDL_WINDOWEVENT) {
+                break;
+            case SDL_QUIT:
+                quit = true;
+                break;
+            case SDL_WINDOWEVENT:
                 switch (event.window.event) {
-                    case SDL_WINDOWEVENT_CLOSE:   // exit game
-                        //editor.Quit();
-                        quit = true;
-
-                    default:
-                        break;
+                case SDL_WINDOWEVENT_CLOSE: // exit editor
+                    quit = true;
+                    break;
+                case SDL_WINDOWEVENT_RESIZED:
+                    // Tells the engine to reload window configuration (size and dpi)
+                    editor.SetWindow(editor.window);
+                    break;
+                default:
+                    break;
                 }
+            default:
+                break;
             }
         }
 
@@ -196,7 +197,7 @@ int main(int argc, char *argv[])
             "Wicked Engine Editor",
             SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
             w, h,
-            SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN);
+            SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
     if (!window) {
         throw sdl2::SDLError("Error creating window");
     }
