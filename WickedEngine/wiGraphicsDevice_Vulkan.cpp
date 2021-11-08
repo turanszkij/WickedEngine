@@ -1217,13 +1217,13 @@ namespace Vulkan_Internal
 		VkSemaphoreCreateInfo semaphoreInfo = {};
 		semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-		if (internal_state->swapchainAcquireSemaphore == nullptr)
+		if (internal_state->swapchainAcquireSemaphore == VK_NULL_HANDLE)
 		{
 			res = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &internal_state->swapchainAcquireSemaphore);
 			assert(res == VK_SUCCESS);
 		}
 
-		if (internal_state->swapchainReleaseSemaphore == nullptr)
+		if (internal_state->swapchainReleaseSemaphore == VK_NULL_HANDLE)
 		{
 			res = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &internal_state->swapchainReleaseSemaphore);
 			assert(res == VK_SUCCESS);
