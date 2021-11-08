@@ -35,4 +35,9 @@ add_library(LUA STATIC
     lzio.c
 )
 
+if (UNIX)
+    # for Linux, BSD, Solaris, Minix, Apple
+    target_compile_definitions(LUA PUBLIC LUA_USE_POSIX=1)
+endif()
+
 set_property(TARGET "LUA" PROPERTY FOLDER "ThirdParty")
