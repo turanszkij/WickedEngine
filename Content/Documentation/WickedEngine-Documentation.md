@@ -583,7 +583,7 @@ device->PushConstants(&push, sizeof(push), cmd);
 
 *Note: a descriptor array of ConstantBuffer<T> could be supported by some hardware/API (eg. Vulkan) in a limited form even though bindless descriptors are supported, so avoid relying on it too much.*
 
-The regular slot based binding model can will work alongside the bindless model seamlessly. The slot based bindings will always use `space0` implicitly, `space1` and greater should be used for the bindless model. Aim to keep space numbers as low as possible.
+The regular slot based binding model will work alongside the bindless model seamlessly. The slot based bindings will always use `space0` implicitly, `space1` and greater should be used for the bindless model. Aim to keep space numbers as low as possible.
 
 ##### Subresources
 Resources like textures can have different views. For example, if a texture contains multiple mip levels, each mip level can be viewed as a separate texture with one mip level, or the whole texture can be viewed as a texture with multiple mip levels. When creating resources, a subresource that views the entire resource will be created. Functions that expect a subresource parameter can be provided with the value `-1` that means the whole resource. Usually, this parameter is optional.
@@ -611,10 +611,7 @@ Shaders still need to be created with `GraphicsDevice::CreateShader()` in a simi
 - `SHADERSTAGE_COUNT`: Invalid Shader. This can be used to enumerate through all shader stages like:
 
 ```cpp
-for(int i = 0; i < SHADERSTAGE_COUNT; ++i)
-{
-	device->BindResource((SHADERSTAGE)i, myTexture, 5, cmd); // Binds myTexture to slot 5 for all stages
-}
+device->BindResource(, myTexture, 5, cmd); // Binds myTexture to slot 5
 ```
 
 Depending on the graphics device implementation, the shader code must be different format. For example, DirectX expects HLSL shaders, Vulkan expects SPIR-V shaders. The engine can only use precompiled shader bytecodes, shader compilation from high level source code is not supported. Usually shaders are compiled into bytecode and saved to files (with .cso extension) by Visual Studio if they are included in the project. These files can be loaded to memory and provided as input buffers to the CreateShader() function.
