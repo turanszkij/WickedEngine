@@ -95,10 +95,10 @@ namespace wiPlatform
 #endif // PLATFORM_UWP
 
 #ifdef PLATFORM_LINUX
-        int window_width, window_height;
+		int window_width, window_height;
 		SDL_GetWindowSize(window, &window_width, &window_height);
 		SDL_Vulkan_GetDrawableSize(window, &dest->width, &dest->height);
-        dest->dpi = ((float) dest->width / (float) window_width) * 96.0;
+		dest->dpi = ((float) dest->width / (float) window_width) * 96.0;
 #endif // PLATFORM_LINUX
 	}
 }
