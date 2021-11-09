@@ -1,9 +1,14 @@
 #include "wiInitializer.h"
 #include "WickedEngine.h"
+#include "wiBackLog.h"
 
 #include <string>
 #include <sstream>
 #include <thread>
+
+#ifdef PLATFORM_LINUX
+#include "Utility/gamemode_client.h"
+#endif // PLATFORM_LINUX
 
 namespace wiInitializer
 {
@@ -26,6 +31,12 @@ namespace wiInitializer
 		ss << std::endl << "[wiInitializer] Initializing Wicked Engine, please wait..." << std::endl;
 		ss << "Version: " << wiVersion::GetVersionString() << std::endl;
 		wiBackLog::post(ss.str().c_str());
+
+#ifdef PLATFORM_LINUX
+		if(gamemode_request_start() == 0){
+			wiBackLog::post("GameMode optimization enabled!");
+		}
+#endif // PLATFORM_LINUX
 
 		wiJobSystem::Initialize();
 		wiShaderCompiler::Initialize();
