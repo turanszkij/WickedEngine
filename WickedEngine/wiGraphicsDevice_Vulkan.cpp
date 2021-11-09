@@ -1038,6 +1038,7 @@ namespace Vulkan_Internal
 		}
 
 		// For now, we only include the color spaces that were tested successfully:
+		COLOR_SPACE prev_colorspace = internal_state->colorSpace;
 		switch (surfaceFormat.colorSpace)
 		{
 		default:
@@ -1052,9 +1053,29 @@ namespace Vulkan_Internal
 			break;
 		}
 
-		internal_state->swapChainExtent = { internal_state->desc.width, internal_state->desc.height };
-		internal_state->swapChainExtent.width = std::max(swapchain_capabilities.minImageExtent.width, std::min(swapchain_capabilities.maxImageExtent.width, internal_state->swapChainExtent.width));
-		internal_state->swapChainExtent.height = std::max(swapchain_capabilities.minImageExtent.height, std::min(swapchain_capabilities.maxImageExtent.height, internal_state->swapChainExtent.height));
+		if (prev_colorspace != internal_state->colorSpace)
+		{
+			if (internal_state->swapChain != VK_NULL_HANDLE)
+			{
+				// For some reason, if the swapchain gets recreated (via oldSwapChain) with different color space but same image format,
+				//	the color space change will not be applied
+				res = vkDeviceWaitIdle(device);
+				assert(res == VK_SUCCESS);
+				vkDestroySwapchainKHR(device, internal_state->swapChain, nullptr);
+				internal_state->swapChain = nullptr;
+			}
+		}
+
+		if (swapchain_capabilities.currentExtent.width != 0xFFFFFFFF && swapchain_capabilities.currentExtent.width != 0xFFFFFFFF)
+		{
+			internal_state->swapChainExtent = swapchain_capabilities.currentExtent;
+		}
+		else
+		{
+			internal_state->swapChainExtent = { internal_state->desc.width, internal_state->desc.height };
+			internal_state->swapChainExtent.width = std::max(swapchain_capabilities.minImageExtent.width, std::min(swapchain_capabilities.maxImageExtent.width, internal_state->swapChainExtent.width));
+			internal_state->swapChainExtent.height = std::max(swapchain_capabilities.minImageExtent.height, std::min(swapchain_capabilities.maxImageExtent.height, internal_state->swapChainExtent.height));
+		}
 
 		uint32_t imageCount = internal_state->desc.buffercount;
 		if ((swapchain_capabilities.maxImageCount > 0) && (imageCount > swapchain_capabilities.maxImageCount))
