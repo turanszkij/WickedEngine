@@ -496,14 +496,23 @@ static const uint OPTION_BIT_SHADOW_MASK = 1 << 9;
 static const uint OPTION_BIT_SURFELGI_ENABLED = 1 << 10;
 static const uint OPTION_BIT_DISABLE_ALBEDO_MAPS = 1 << 11;
 static const uint OPTION_BIT_FORCE_DIFFUSE_LIGHTING = 1 << 12;
+static const uint OPTION_BIT_STATIC_SKY_HDR = 1 << 13;
 
 // ---------- Common Constant buffers: -----------------
 
 struct FrameCB
 {
-	float		Gamma;
+	uint		Options;							// wiRenderer bool options packed into bitmask
 	uint		ShadowCascadeCount;
-	uint		ConstantOne;						// Just a constant 1 value as uint (can be used to force disable loop unrolling)
+	float		ShadowKernel2D;
+	float		ShadowKernelCube;
+
+	float		Time;
+	float		TimePrev;
+	float		DeltaTime;
+	uint		FrameCount;
+
+	float3		VoxelRadianceDataCenter;			// center of the voxel grid in world space units
 	float		VoxelRadianceMaxDistance;			// maximum raymarch distance for voxel GI in world-space
 
 	float		VoxelRadianceDataSize;				// voxel half-extent in world space units
@@ -516,16 +525,8 @@ struct FrameCB
 	float		VoxelRadianceNumCones_rcp;			// 1.0 / number of diffuse cones to trace
 	float		VoxelRadianceRayStepSize;			// raymarch step size in voxel space units
 
-	float3		VoxelRadianceDataCenter;			// center of the voxel grid in world space units
-	uint		Options;							// wiRenderer bool options packed into bitmask
-
 	uint		EnvProbeMipCount;
 	float		EnvProbeMipCount_rcp;
-	float		Time;
-	float		TimePrev;
-
-	float		DeltaTime;
-	uint		FrameCount;
 	uint		LightArrayOffset;			// indexing into entity array
 	uint		LightArrayCount;			// indexing into entity array
 
@@ -536,33 +537,28 @@ struct FrameCB
 
 	uint		EnvProbeArrayOffset;		// indexing into entity array
 	uint		EnvProbeArrayCount;			// indexing into entity array
-	float		StaticSkyGamma;			// possible values (0: no static sky; 1: hdr static sky; other: actual gamma when ldr)
 	uint		TemporalAASampleRotation;
-
-	float		ShadowKernel2D;
-	float		ShadowKernelCube;
 	float		BlueNoisePhase;
-	int			sampler_objectshader_index;
 
+	int			sampler_objectshader_index;
 	int			texture_random64x64_index;
 	int			texture_bluenoise_index;
 	int			texture_sheenlut_index;
-	int			texture_skyviewlut_index;
 
+	int			texture_skyviewlut_index;
 	int			texture_transmittancelut_index;
 	int			texture_multiscatteringlut_index;
 	int			texture_skyluminancelut_index;
-	int			texture_shadowarray_2d_index;
 
+	int			texture_shadowarray_2d_index;
 	int			texture_shadowarray_cube_index;
 	int			texture_shadowarray_transparent_2d_index;
 	int			texture_shadowarray_transparent_cube_index;
-	int			texture_voxelgi_index;
 
+	int			texture_voxelgi_index;
 	int			buffer_entityarray_index;
 	int			buffer_entitymatrixarray_index;
 	int	padding0;
-	int	padding1;
 
 	ShaderScene scene;
 };

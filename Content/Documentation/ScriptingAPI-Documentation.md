@@ -103,7 +103,6 @@ This is the graphics renderer, which is also responsible for managing the scene 
 parent-child relationships between the scene hierarchy, updating the world, animating armatures.
 You can use the Renderer with the following functions, all of which are in the global scope:
 - GetGameSpeed() : float result
-- SetGamma(float gamma)
 - SetGameSpeed(float speed)
 - GetScreenWidth() : float result  -- (deprecated, use MainComponent::GetCanvas().GetLogicalWidth() instead)
 - GetScreenHeight() : float result  -- (deprecated, use MainComponent::GetCanvas().GetLogicalHeight() instead)

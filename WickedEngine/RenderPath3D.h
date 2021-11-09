@@ -87,8 +87,7 @@ public:
 	wiGraphics::Texture rtShadingRate; // UINT8 shading rate per tile
 	wiGraphics::Texture rtFSR[2]; // FSR upscaling result (full resolution LDR)
 
-	wiGraphics::Texture rtPostprocess_HDR; // ping-pong with main scene RT in HDR post-process chain
-	wiGraphics::Texture rtPostprocess_LDR[2]; // ping-pong with itself in LDR post-process chain
+	wiGraphics::Texture rtPostprocess; // ping-pong with main scene RT in post-process chain
 
 	wiGraphics::Texture depthBuffer_Main; // used for depth-testing, can be MSAA
 	wiGraphics::Texture depthBuffer_Copy; // used for shader resource, single sample
@@ -125,19 +124,11 @@ public:
 	wiRenderer::BloomResources bloomResources;
 	wiRenderer::SurfelGIResources surfelGIResources;
 
+	mutable const wiGraphics::Texture* lastPostprocessRT = &rtPostprocess;
 	// Post-processes are ping-ponged, this function helps to obtain the last postprocess render target that was written
 	const wiGraphics::Texture* GetLastPostprocessRT() const
 	{
-		if (rtFSR[0].IsValid() && getFSREnabled())
-		{
-			return &rtFSR[0];
-		}
-		int ldr_postprocess_count = 0;
-		ldr_postprocess_count += getSharpenFilterEnabled() ? 1 : 0;
-		ldr_postprocess_count += getFXAAEnabled() ? 1 : 0;
-		ldr_postprocess_count += getChromaticAberrationEnabled() ? 1 : 0;
-		int rt_index = ldr_postprocess_count % 2;
-		return &rtPostprocess_LDR[rt_index];
+		return lastPostprocessRT;
 	}
 
 	virtual void RenderAO(wiGraphics::CommandList cmd) const;

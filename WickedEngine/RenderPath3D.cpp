@@ -187,22 +187,15 @@ void RenderPath3D::ResizeBuffers()
 		desc.Format = FORMAT_R11G11B10_FLOAT;
 		desc.Width = internalResolution.x;
 		desc.Height = internalResolution.y;
-		device->CreateTexture(&desc, nullptr, &rtPostprocess_HDR);
-		device->SetName(&rtPostprocess_HDR, "rtPostprocess_HDR");
+		device->CreateTexture(&desc, nullptr, &rtPostprocess);
+		device->SetName(&rtPostprocess, "rtPostprocess");
 	}
 	{
 		TextureDesc desc;
 		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 		desc.Format = FORMAT_R10G10B10A2_UNORM;
-		desc.Width = internalResolution.x;
-		desc.Height = internalResolution.y;
-		device->CreateTexture(&desc, nullptr, &rtPostprocess_LDR[0]);
-		device->SetName(&rtPostprocess_LDR[0], "rtPostprocess_LDR[0]");
-		device->CreateTexture(&desc, nullptr, &rtPostprocess_LDR[1]);
-		device->SetName(&rtPostprocess_LDR[1], "rtPostprocess_LDR[1]");
-
-		desc.Width /= 4;
-		desc.Height /= 4;
+		desc.Width = internalResolution.x / 4;
+		desc.Height = internalResolution.y / 4;
 		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
 		device->CreateTexture(&desc, nullptr, &rtGUIBlurredBackground[0]);
 		device->SetName(&rtGUIBlurredBackground[0], "rtGUIBlurredBackground[0]");
@@ -1394,7 +1387,7 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 
 	const Texture* rt_first = nullptr; // not ping-ponged with read / write
 	const Texture* rt_read = &rtMain;
-	const Texture* rt_write = &rtPostprocess_HDR;
+	const Texture* rt_write = &rtPostprocess;
 
 	// 1.) HDR post process chain
 	{
@@ -1405,7 +1398,8 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 			int output = device->GetFrameCount() % 2;
 			int history = 1 - output;
 			wiRenderer::Postprocess_TemporalAA(
-				*rt_read, rtTemporalAA[history],
+				*rt_read,
+				rtTemporalAA[history],
 				rtTemporalAA[output], 
 				cmd
 			);
@@ -1421,8 +1415,8 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 				cmd,
 				getDepthOfFieldStrength()
 			);
-			rt_first = nullptr;
 
+			rt_first = nullptr;
 			std::swap(rt_read, rt_write);
 		}
 
@@ -1435,25 +1429,21 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 				cmd,
 				getMotionBlurStrength()
 			);
-			rt_first = nullptr;
 
+			rt_first = nullptr;
 			std::swap(rt_read, rt_write);
 		}
 	}
 
 	// 2.) Tone mapping HDR -> LDR
 	{
-		rt_read = rt_first == nullptr ? rt_read : rt_first;
-		rt_first = nullptr;
-		rt_write = &rtPostprocess_LDR[0];
-
 		// Bloom and eye adaption is not part of post process "chain",
 		//	because they will be applied to the screen in tonemap
 		if (getEyeAdaptionEnabled())
 		{
 			wiRenderer::ComputeLuminance(
 				luminanceResources,
-				*rt_read,
+				rt_first == nullptr ? *rt_read : *rt_first,
 				cmd,
 				getEyeAdaptionRate(),
 				getEyeAdaptionKey()
@@ -1463,7 +1453,7 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 		{
 			wiRenderer::ComputeBloom(
 				bloomResources,
-				*rt_read,
+				rt_first == nullptr ? *rt_read : *rt_first,
 				cmd,
 				getBloomThreshold(),
 				getExposure(),
@@ -1472,7 +1462,7 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 		}
 
 		wiRenderer::Postprocess_Tonemap(
-			*rt_read,
+			rt_first == nullptr ? *rt_read : *rt_first,
 			*rt_write,
 			cmd,
 			getExposure(),
@@ -1480,11 +1470,12 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 			getColorGradingEnabled() ? (scene->weather.colorGradingMap == nullptr ? nullptr : &scene->weather.colorGradingMap->texture) : nullptr,
 			getMSAASampleCount() > 1 ? &rtParticleDistortion_Resolved : &rtParticleDistortion,
 			getEyeAdaptionEnabled() ? &luminanceResources.luminance : nullptr,
-			getBloomEnabled() ? &bloomResources.texture_bloom : nullptr
+			getBloomEnabled() ? &bloomResources.texture_bloom : nullptr,
+			colorspace
 		);
 
-		rt_read = rt_write;
-		rt_write = &rtPostprocess_LDR[1];
+		rt_first = nullptr;
+		std::swap(rt_read, rt_write);
 	}
 
 	// 3.) LDR post process chain
@@ -1510,6 +1501,8 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 			std::swap(rt_read, rt_write);
 		}
 
+		lastPostprocessRT = rt_read;
+
 		// GUI Background blurring:
 		{
 			auto range = wiProfiler::BeginRangeGPU("GUI Background Blur", cmd);
@@ -1524,7 +1517,7 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 		if (rtFSR[0].IsValid() && getFSREnabled())
 		{
 			wiRenderer::Postprocess_FSR(*rt_read, rtFSR[1], rtFSR[0], cmd, getFSRSharpness());
-
+			lastPostprocessRT = &rtFSR[0];
 		}
 	}
 }
@@ -1637,7 +1630,7 @@ void RenderPath3D::setFSREnabled(bool value)
 
 		TextureDesc desc;
 		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.Format = rtPostprocess_LDR[0].desc.Format;
+		desc.Format = rtPostprocess.desc.Format;
 		desc.Width = GetPhysicalWidth();
 		desc.Height = GetPhysicalHeight();
 		device->CreateTexture(&desc, nullptr, &rtFSR[0]);

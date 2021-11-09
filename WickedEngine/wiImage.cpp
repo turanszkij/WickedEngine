@@ -126,6 +126,16 @@ namespace wiImage
 		{
 			push.flags |= IMAGE_FLAG_EXTRACT_NORMALMAP;
 		}
+		if (params.isHDR10OutputMappingEnabled())
+		{
+			assert(params.isFullScreenEnabled()); // for now, this effect is only usable in full screen rendering
+			push.flags |= IMAGE_FLAG_OUTPUT_COLOR_SPACE_HDR10_ST2084;
+		}
+		if (params.isLinearOutputMappingEnabled())
+		{
+			assert(params.isFullScreenEnabled()); // for now, this effect is only usable in full screen rendering
+			push.flags |= IMAGE_FLAG_OUTPUT_COLOR_SPACE_LINEAR;
+		}
 
 		if (params.isFullScreenEnabled())
 		{
@@ -373,7 +383,7 @@ namespace wiImage
 		bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
 		bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
 		bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
-		bd.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
+		bd.RenderTarget[0].DestBlendAlpha = BLEND_INV_SRC_ALPHA;
 		bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 		bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 		bd.IndependentBlendEnable = false;
@@ -384,7 +394,7 @@ namespace wiImage
 		bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
 		bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
 		bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
-		bd.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
+		bd.RenderTarget[0].DestBlendAlpha = BLEND_INV_SRC_ALPHA;
 		bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
 		bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 		bd.IndependentBlendEnable = false;

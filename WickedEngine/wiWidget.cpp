@@ -1471,11 +1471,14 @@ void wiComboBox::SetSelected(int index)
 {
 	selected = index;
 
-	wiEventArgs args;
-	args.iValue = selected;
-	args.sValue = GetItemText(selected);
-	args.userdata = GetItemUserData(selected);
-	onSelect(args);
+	if (onSelect != nullptr)
+	{
+		wiEventArgs args;
+		args.iValue = selected;
+		args.sValue = GetItemText(selected);
+		args.userdata = GetItemUserData(selected);
+		onSelect(args);
+	}
 }
 void wiComboBox::SetSelectedByUserdata(uint64_t userdata)
 {

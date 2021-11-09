@@ -28,6 +28,7 @@ namespace wiGraphics
 	{
 	protected:
 		Microsoft::WRL::ComPtr<IDXGIFactory4> dxgiFactory;
+		Microsoft::WRL::ComPtr<IDXGIAdapter1> dxgiAdapter;
 		bool tearingSupported = false;
 		Microsoft::WRL::ComPtr<ID3D12Device5> device;
 
@@ -209,6 +210,9 @@ namespace wiGraphics
 		SHADERFORMAT GetShaderFormat() const override { return SHADERFORMAT_HLSL6; }
 
 		Texture GetBackBuffer(const SwapChain* swapchain) const override;
+
+		COLOR_SPACE GetSwapChainColorSpace(const SwapChain* swapchain) const override;
+		bool GetSwapChainHDRSupport(const SwapChain* swapchain) const override;
 
 		///////////////Thread-sensitive////////////////////////
 

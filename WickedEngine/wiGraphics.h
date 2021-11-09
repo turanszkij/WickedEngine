@@ -416,6 +416,13 @@ namespace wiGraphics
 		static const bool enable = true;
 	};
 
+	enum COLOR_SPACE
+	{
+		COLOR_SPACE_SRGB,			// SDR color space (8 or 10 bits per channel)
+		COLOR_SPACE_HDR10_ST2084,	// HDR10 color space (10 bits per channel)
+		COLOR_SPACE_HDR_LINEAR,		// HDR color space (16 bits per channel)
+	};
+
 	// Descriptor structs:
 
 	struct Viewport
@@ -744,6 +751,7 @@ namespace wiGraphics
 		bool fullscreen = false;
 		bool vsync = true;
 		float clearcolor[4] = { 0,0,0,1 };
+		bool allow_hdr = true;
 	};
 	struct IndirectDrawArgsInstanced
 	{

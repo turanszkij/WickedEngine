@@ -3,6 +3,8 @@
 #include "ShaderInterop.h"
 
 static const uint IMAGE_FLAG_EXTRACT_NORMALMAP = 1 << 0;
+static const uint IMAGE_FLAG_OUTPUT_COLOR_SPACE_HDR10_ST2084 = 1 << 1;
+static const uint IMAGE_FLAG_OUTPUT_COLOR_SPACE_LINEAR = 1 << 2;
 
 struct PushConstantsImage
 {

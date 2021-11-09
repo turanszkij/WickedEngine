@@ -12,10 +12,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float3 color = 0;
 
 	Texture2D<float4> texture_input = bindless_textures[bloom.texture_input];
-	color += texture_input.SampleLevel(sampler_linear_clamp, (uv + float2(-1, -1)) * bloom.resolution_rcp, 0).rgb;
-	color += texture_input.SampleLevel(sampler_linear_clamp, (uv + float2(1, -1)) * bloom.resolution_rcp, 0).rgb;
-	color += texture_input.SampleLevel(sampler_linear_clamp, (uv + float2(-1, 1)) * bloom.resolution_rcp, 0).rgb;
-	color += texture_input.SampleLevel(sampler_linear_clamp, (uv + float2(1, 1)) * bloom.resolution_rcp, 0).rgb;
+	color += texture_input.SampleLevel(sampler_linear_clamp, (uv + float2(-0.5, -0.5)) * bloom.resolution_rcp, 0).rgb;
+	color += texture_input.SampleLevel(sampler_linear_clamp, (uv + float2(0.5, -0.5)) * bloom.resolution_rcp, 0).rgb;
+	color += texture_input.SampleLevel(sampler_linear_clamp, (uv + float2(-0.5, 0.5)) * bloom.resolution_rcp, 0).rgb;
+	color += texture_input.SampleLevel(sampler_linear_clamp, (uv + float2(0.5, 0.5)) * bloom.resolution_rcp, 0).rgb;
 
 	color /= 4.0f;
 

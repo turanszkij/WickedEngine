@@ -24,9 +24,9 @@ public:
 	void Create(EditorComponent* editorcomponent);
 
 	wiCheckBox vsyncCheckBox;
+	wiComboBox swapchainComboBox;
 	wiCheckBox occlusionCullingCheckBox;
 	wiSlider resolutionScaleSlider;
-	wiSlider gammaSlider;
 	wiCheckBox surfelGICheckBox;
 	wiCheckBox surfelGIDebugCheckBox;
 	wiCheckBox voxelRadianceCheckBox;
@@ -79,5 +79,7 @@ public:
 	wiCheckBox forceDiffuseLightingCheckBox;
 
     uint32_t GetPickType() const;
+
+	void UpdateSwapChainFormats(wiGraphics::SwapChain* swapChain);
 };
 

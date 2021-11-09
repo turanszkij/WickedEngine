@@ -127,8 +127,11 @@ void MainComponent::Run()
 
 	fadeManager.Update(dt);
 
+	COLOR_SPACE colorspace = device->GetSwapChainColorSpace(&swapChain);
+
 	if (GetActivePath() != nullptr)
 	{
+		GetActivePath()->colorspace = colorspace;
 		GetActivePath()->init(canvas);
 		GetActivePath()->PreUpdate();
 	}
@@ -166,18 +169,41 @@ void MainComponent::Run()
 
 	wiInput::Update(window);
 
+	// Begin final compositing:
 	CommandList cmd = device->BeginCommandList();
-	device->RenderPassBegin(&swapChain, cmd);
+	wiImage::SetCanvas(canvas, cmd);
+	wiFont::SetCanvas(canvas, cmd);
+	Viewport viewport;
+	viewport.Width = (float)swapChain.desc.width;
+	viewport.Height = (float)swapChain.desc.height;
+	device->BindViewports(1, &viewport, cmd);
+
+	bool colorspace_conversion_required = colorspace == COLOR_SPACE_HDR10_ST2084;
+	if (colorspace_conversion_required)
 	{
-		wiImage::SetCanvas(canvas, cmd);
-		wiFont::SetCanvas(canvas, cmd);
-		Viewport viewport;
-		viewport.Width = (float)swapChain.desc.width;
-		viewport.Height = (float)swapChain.desc.height;
-		device->BindViewports(1, &viewport, cmd);
-		Compose(cmd);
+		// In HDR10, we perform the compositing in a custom linear color space render target
+		device->RenderPassBegin(&renderpass, cmd);
 	}
+	else
+	{
+		// If swapchain is SRGB or Linear HDR, it can be used for blending
+		//	- If it is SRGB, the render path will ensure tonemapping to SDR
+		//	- If it is Linear HDR, we can blend trivially in linear space
+		device->RenderPassBegin(&swapChain, cmd);
+	}
+	Compose(cmd);
 	device->RenderPassEnd(cmd);
+
+	if (colorspace_conversion_required)
+	{
+		// In HDR10, we perform a final mapping from linear to HDR10, into the swapchain
+		device->RenderPassBegin(&swapChain, cmd);
+		wiImageParams fx;
+		fx.enableFullScreen();
+		fx.enableHDR10OutputMapping();
+		wiImage::Draw(&rendertarget, fx, cmd);
+		device->RenderPassEnd(cmd);
+	}
 
 	wiProfiler::EndFrame(cmd);
 	device->SubmitCommandLists();
@@ -291,6 +317,29 @@ void MainComponent::Compose(CommandList cmd)
 		{
 			ss << "Resolution: " << canvas.GetPhysicalWidth() << " x " << canvas.GetPhysicalHeight() << " (" << canvas.GetDPI() << " dpi)" << std::endl;
 		}
+		if (infoDisplay.logical_size)
+		{
+			ss << "Logical Size: " << canvas.GetLogicalWidth() << " x " << canvas.GetLogicalHeight() << std::endl;
+		}
+		if (infoDisplay.colorspace)
+		{
+			ss << "Color Space: ";
+			COLOR_SPACE colorSpace = device->GetSwapChainColorSpace(&swapChain);
+			switch (colorSpace)
+			{
+			default:
+			case wiGraphics::COLOR_SPACE_SRGB:
+				ss << "sRGB";
+				break;
+			case wiGraphics::COLOR_SPACE_HDR10_ST2084:
+				ss << "ST.2084 (HDR10)";
+				break;
+			case wiGraphics::COLOR_SPACE_HDR_LINEAR:
+				ss << "Linear (HDR)";
+				break;
+			}
+			ss << std::endl;
+		}
 		if (infoDisplay.fpsinfo)
 		{
 			deltatimes[fps_avg_counter++ % arraysize(deltatimes)] = deltaTime;
@@ -396,10 +445,20 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 	canvas.init(window);
 
 	SwapChainDesc desc;
+	if (swapChain.IsValid())
+	{
+		// it will only resize, but keep format and other settings
+		desc = swapChain.desc;
+	}
+	else
+	{
+		// initialize for the first time
+		desc.buffercount = 3;
+		desc.format = FORMAT_R10G10B10A2_UNORM;
+	}
 	desc.width = canvas.GetPhysicalWidth();
 	desc.height = canvas.GetPhysicalHeight();
-	desc.buffercount = 3;
-	desc.format = FORMAT_R10G10B10A2_UNORM;
+	desc.allow_hdr = allow_hdr;
 	bool success = wiRenderer::GetDevice()->CreateSwapChain(&desc, window, &swapChain);
 	assert(success);
 
@@ -408,6 +467,23 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 		desc.vsync = userdata != 0;
 		bool success = wiRenderer::GetDevice()->CreateSwapChain(&desc, nullptr, &swapChain);
 		assert(success);
-	});
+		});
+
+	if (wiRenderer::GetDevice()->GetSwapChainColorSpace(&swapChain))
+	{
+		TextureDesc desc;
+		desc.Width = swapChain.desc.width;
+		desc.Height = swapChain.desc.height;
+		desc.Format = FORMAT_R11G11B10_FLOAT;
+		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
+		bool success = wiRenderer::GetDevice()->CreateTexture(&desc, nullptr, &rendertarget);
+		assert(success);
+		wiRenderer::GetDevice()->SetName(&rendertarget, "MainComponent::rendertarget");
+
+		RenderPassDesc renderpassdesc;
+		renderpassdesc.attachments.push_back(RenderPassAttachment::RenderTarget(&rendertarget, RenderPassAttachment::LOADOP_CLEAR));
+		success = wiRenderer::GetDevice()->CreateRenderPass(&renderpassdesc, &renderpass);
+		assert(success);
+	}
 }
 

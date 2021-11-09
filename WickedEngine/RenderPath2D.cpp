@@ -135,6 +135,20 @@ void RenderPath2D::Update(float dt)
 		}
 	}
 
+	if (colorspace != COLOR_SPACE_SRGB && (rtLinearColorSpace.desc.Width != rtFinal.desc.Width || rtLinearColorSpace.desc.Height != rtFinal.desc.Height))
+	{
+		TextureDesc desc = rtFinal.desc;
+		desc.Format = FORMAT_R16G16B16A16_FLOAT;
+		bool success = wiRenderer::GetDevice()->CreateTexture(&desc, nullptr, &rtLinearColorSpace);
+		assert(success);
+		wiRenderer::GetDevice()->SetName(&rtLinearColorSpace, "rtLinearColorSpace");
+
+		RenderPassDesc renderpassdesc;
+		renderpassdesc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtLinearColorSpace, RenderPassAttachment::LOADOP_CLEAR));
+		success = wiRenderer::GetDevice()->CreateRenderPass(&renderpassdesc, &renderpass_linearize);
+		assert(success);
+	}
+
 	RenderPath::Update(dt);
 }
 void RenderPath2D::FixedUpdate()
@@ -189,7 +203,7 @@ void RenderPath2D::Render() const
 		vp.Height = (float)rtStenciled.GetDesc().Height;
 		device->BindViewports(1, &vp, cmd);
 
-		wiRenderer::GetDevice()->EventBegin("STENCIL Sprite Layers", cmd);
+		device->EventBegin("STENCIL Sprite Layers", cmd);
 		for (auto& x : layers)
 		{
 			for (auto& y : x.items)
@@ -202,7 +216,7 @@ void RenderPath2D::Render() const
 				}
 			}
 		}
-		wiRenderer::GetDevice()->EventEnd(cmd);
+		device->EventEnd(cmd);
 
 		device->RenderPassEnd(cmd);
 	}
@@ -218,7 +232,7 @@ void RenderPath2D::Render() const
 	{
 		if (rtStenciled.IsValid())
 		{
-			wiRenderer::GetDevice()->EventBegin("Copy STENCIL Sprite Layers", cmd);
+			device->EventBegin("Copy STENCIL Sprite Layers", cmd);
 			wiImageParams fx;
 			fx.enableFullScreen();
 			if (rtStenciled.GetDesc().SampleCount > 1)
@@ -229,11 +243,11 @@ void RenderPath2D::Render() const
 			{
 				wiImage::Draw(&rtStenciled, fx, cmd);
 			}
-			wiRenderer::GetDevice()->EventEnd(cmd);
+			device->EventEnd(cmd);
 		}
 		else
 		{
-			wiRenderer::GetDevice()->EventBegin("STENCIL Sprite Layers", cmd);
+			device->EventBegin("STENCIL Sprite Layers", cmd);
 			for (auto& x : layers)
 			{
 				for (auto& y : x.items)
@@ -246,11 +260,11 @@ void RenderPath2D::Render() const
 					}
 				}
 			}
-			wiRenderer::GetDevice()->EventEnd(cmd);
+			device->EventEnd(cmd);
 		}
 	}
 
-	wiRenderer::GetDevice()->EventBegin("Sprite Layers", cmd);
+	device->EventBegin("Sprite Layers", cmd);
 	for (auto& x : layers)
 	{
 		for (auto& y : x.items)
@@ -273,11 +287,27 @@ void RenderPath2D::Render() const
 			}
 		}
 	}
-	wiRenderer::GetDevice()->EventEnd(cmd);
+	device->EventEnd(cmd);
 
 	GetGUI().Render(*this, cmd);
 
 	device->RenderPassEnd(cmd);
+
+	if (colorspace != COLOR_SPACE_SRGB)
+	{
+		// Convert the regular SRGB result of the render path to linear space for HDR compositing:
+		device->RenderPassBegin(&renderpass_linearize, cmd);
+		wiImageParams fx;
+		fx.enableFullScreen();
+		fx.enableLinearOutputMapping();
+		wiImage::Draw(&rtFinal, fx, cmd);
+		device->RenderPassEnd(cmd);
+		render_result = rtLinearColorSpace;
+	}
+	else
+	{
+		render_result = rtFinal;
+	}
 
 	RenderPath::Render();
 }
@@ -286,8 +316,7 @@ void RenderPath2D::Compose(CommandList cmd) const
 	wiImageParams fx;
 	fx.enableFullScreen();
 	fx.blendFlag = BLENDMODE_PREMULTIPLIED;
-
-	wiImage::Draw(&rtFinal, fx, cmd);
+	wiImage::Draw(&render_result, fx, cmd);
 
 	RenderPath::Compose(cmd);
 }

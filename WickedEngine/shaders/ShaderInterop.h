@@ -33,8 +33,6 @@ typedef XMINT4 int4;
 
 #else
 
-#include "PixelPacking_R11G11B10.hlsli"
-
 // Shader - side types:
 
 #define CBUFFER(name, slot) cbuffer name : register(b ## slot)

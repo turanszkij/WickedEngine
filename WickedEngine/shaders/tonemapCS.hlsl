@@ -74,27 +74,27 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		hdr.rgb += bloom;
 	}
 
-	float4 ldr = float4(ACESFitted(hdr.rgb), hdr.a);
+	float4 result = hdr;
 
-#if 0 // DEBUG luminance
-	if(DTid.x<800)
-		ldr = average_luminance;
-#endif
-
-	ldr = saturate(ldr);
-	ldr.rgb = GAMMA(ldr.rgb);
+	[branch]
+	if (tonemap_push.display_colorspace == COLOR_SPACE_SRGB)
+	{
+		result.rgb = ACESFitted(hdr.rgb);
+		result.rgb = GAMMA(result.rgb);
+	}
 
 	[branch]
 	if (tonemap_push.texture_colorgrade_lookuptable >= 0)
 	{
-		ldr.rgb = bindless_textures3D[tonemap_push.texture_colorgrade_lookuptable].SampleLevel(sampler_linear_clamp, ldr.rgb, 0).rgb;
+		result.rgb = bindless_textures3D[tonemap_push.texture_colorgrade_lookuptable].SampleLevel(sampler_linear_clamp, result.rgb, 0).rgb;
 	}
 
+	[branch]
 	if (tonemap_push.dither != 0)
 	{
 		// dithering before outputting to SDR will reduce color banding:
-		ldr.rgb += (dither((float2)DTid.xy) - 0.5f) / 64.0f;
+		result.rgb += (dither((float2)DTid.xy) - 0.5f) / 64.0f;
 	}
 
-	bindless_rwtextures[tonemap_push.texture_output][DTid.xy] = ldr;
+	bindless_rwtextures[tonemap_push.texture_output][DTid.xy] = result;
 }

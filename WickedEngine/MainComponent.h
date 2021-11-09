@@ -30,10 +30,16 @@ protected:
 	float deltatimes[20] = {};
 	int fps_avg_counter = 0;
 
+	// These are used when HDR10 color space is active:
+	//	Because we want to blend in linear color space, but HDR10 is non-linear
+	wiGraphics::Texture rendertarget;
+	wiGraphics::RenderPass renderpass;
+
 public:
 	virtual ~MainComponent() = default;
 
 	bool is_window_active = true;
+	bool allow_hdr = true;
 	wiGraphics::SwapChain swapChain;
 	wiCanvas canvas;
 	wiPlatform::window_type window;
@@ -84,6 +90,10 @@ public:
 		bool fpsinfo = false;
 		// display resolution info
 		bool resolution = false;
+		// window's size in logical (DPI scaled) units
+		bool logical_size = false;
+		// HDR status and color space
+		bool colorspace = false;
 		// display number of heap allocations per frame
 		bool heap_allocation_counter = false;
 		// text size

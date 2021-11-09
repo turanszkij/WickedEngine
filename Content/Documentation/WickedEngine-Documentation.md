@@ -52,6 +52,7 @@ This is a reference for the C++ features of Wicked Engine
 			4. [Work submission](#work-submission)
 				1. [Async compute](#async-compute)
 			5. [Presenting to the screen](#presenting-to-the-screen)
+				1. [HDR Display](#hdr-display)
 			6. [Resource binding](#resource-binding)
 			6. [Bindless resources](#bindless-resources)
 			7. [Subresources](#subresources)
@@ -483,7 +484,17 @@ The `WaitCommandList()` function is a GPU wait operation, so it will not block C
 Important: The `RESOURCE_STATE_SHADER_RESOURCE` state cannot be used on the compute queue. The device could convert these to `RESOURCE_STATE_SHADER_RESOURCE_COMPUTE` while issuing `Barrier()` commands. However, the starting resource state must be correctly specified, because those cannot be converted. Consider always choosing a `_SHADER_RESOURCE_COMPUTE` starting resource state if the resource is goig to be used in a compute queue, and transition them to regular `SHADER_RESOURCE` only before the resource is going to be used in a pixel shader. The graphics queue with compute commands doesn't have this limitation however.
 
 ##### Presenting to the screen
-To present to the screen (an operating system window), first create a SwapChain with the `CreateSwapChain()` function that will be associated with a window. The SwapChain acts as a special kind of [RenderPass](#render-passes), so there is a `BeginRenderPass()` function with an overload that accepts a SwapChain parameter instead of a RenderPass. Simply use this `BeginRenderPass()` and `EndRenderPass()` to draw to the SwapChain. The final presentation will happen when calling `SubmitCommandLists()`.
+To present to the screen (an operating system window), first create a `SwapChain` with the `CreateSwapChain()` function that will be associated with a window. The SwapChain acts as a special kind of [RenderPass](#render-passes), so there is a `BeginRenderPass()` function with an overload that accepts a SwapChain parameter instead of a RenderPass. Simply use this `BeginRenderPass()` and `EndRenderPass()` to draw to the SwapChain. The final presentation will happen when calling `SubmitCommandLists()`.
+
+###### HDR Display
+To present content to a HDR display, set the `SwapChainDesc::allow_hdr` to `true` when creating the `SwapChain`. Also, select a texture format for the swapChain that can be used for HDR content. The formats that are capable of HDR, are:
+- `FORMAT_R10G10B10A2_UNORM`, which supports both the `COLOR_SPACE_SRGB` (which is SDR) and `COLOR_SPACE_HDR10_ST2084` (HDR10) color spaces.
+- `FORMAT_R16G16B16A16_FLOAT`, which supports the `COLOR_SPACE_HDR_LINEAR` color space.
+
+If the display associated with the `SwapChain` doesn't support HDR output, HDR will be disabled and the `SwapChain` can fall back to an appropriate format that is supported. To check the final color space of the `SwapChain`, call the `GraphicsDevice::GetSwapChainColorSpace()` function providing a valid `SwapChain` as argument. The function returns the actual `COLOR_SPACE` of the `SwapChain`.
+To check whether the display associated with the `SwapChain` is HDR capable, call the `GraphicsDevice::GetSwapChainHDRSupport()` function providing a valid `SwapChain` as argument. This will return whether the display supports HDR or not, regardless of the current format of the `SwapChain`.
+
+It is not enough to set up a HDR `SwapChain` to render correct HDR content, because great care must be taken to blend elements in linear color space, and correctly convert to the display's color space before presenting. This is a responsibility of shaders.
 
 ##### Resource binding
 The resource binding model is based on DirectX 11. That means, resources are bound to slot numbers that are simple integers. This makes it easy to share binding information between shaders and C++ code, just define the bind slot number as global constants in [shared header files](#shaderinterop). For sharing, the bind slot numbers can be easily defined as compile time constants using:
@@ -572,7 +583,7 @@ device->PushConstants(&push, sizeof(push), cmd);
 
 *Note: a descriptor array of ConstantBuffer<T> could be supported by some hardware/API (eg. Vulkan) in a limited form even though bindless descriptors are supported, so avoid relying on it too much.*
 
-The regular slot based binding model can will work alongside the bindless model seamlessly. The slot based bindings will always use `space0` implicitly, `space1` and greater should be used for the bindless model. Aim to keep space numbers as low as possible.
+The regular slot based binding model will work alongside the bindless model seamlessly. The slot based bindings will always use `space0` implicitly, `space1` and greater should be used for the bindless model. Aim to keep space numbers as low as possible.
 
 ##### Subresources
 Resources like textures can have different views. For example, if a texture contains multiple mip levels, each mip level can be viewed as a separate texture with one mip level, or the whole texture can be viewed as a texture with multiple mip levels. When creating resources, a subresource that views the entire resource will be created. Functions that expect a subresource parameter can be provided with the value `-1` that means the whole resource. Usually, this parameter is optional.
@@ -600,10 +611,7 @@ Shaders still need to be created with `GraphicsDevice::CreateShader()` in a simi
 - `SHADERSTAGE_COUNT`: Invalid Shader. This can be used to enumerate through all shader stages like:
 
 ```cpp
-for(int i = 0; i < SHADERSTAGE_COUNT; ++i)
-{
-	device->BindResource((SHADERSTAGE)i, myTexture, 5, cmd); // Binds myTexture to slot 5 for all stages
-}
+device->BindResource(, myTexture, 5, cmd); // Binds myTexture to slot 5
 ```
 
 Depending on the graphics device implementation, the shader code must be different format. For example, DirectX expects HLSL shaders, Vulkan expects SPIR-V shaders. The engine can only use precompiled shader bytecodes, shader compilation from high level source code is not supported. Usually shaders are compiled into bytecode and saved to files (with .cso extension) by Visual Studio if they are included in the project. These files can be loaded to memory and provided as input buffers to the CreateShader() function.

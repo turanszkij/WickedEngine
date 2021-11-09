@@ -39,10 +39,15 @@ private:
 	wiGraphics::RenderPass renderpass_stenciled;
 	wiGraphics::RenderPass renderpass_final;
 
+	wiGraphics::Texture rtLinearColorSpace;
+	wiGraphics::RenderPass renderpass_linearize;
+
 	wiGUI GUI;
 
 	XMUINT2 current_buffersize{};
 	float current_layoutscale{};
+
+	mutable wiGraphics::Texture render_result = rtFinal;
 
 public:
 	// create resolution dependent resources, such as render targets
@@ -55,7 +60,7 @@ public:
 	void Render() const override;
 	void Compose(wiGraphics::CommandList cmd) const override;
 
-	const wiGraphics::Texture& GetRenderResult() const { return rtFinal; }
+	const wiGraphics::Texture& GetRenderResult() const { return render_result; }
 	virtual const wiGraphics::Texture* GetDepthStencil() const { return nullptr; }
 	virtual const wiGraphics::Texture* GetGUIBlurredBackground() const { return nullptr; }
 

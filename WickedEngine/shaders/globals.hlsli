@@ -1,5 +1,7 @@
 #ifndef WI_SHADER_GLOBALS_HF
 #define WI_SHADER_GLOBALS_HF
+#include "ColorSpaceUtility.hlsli"
+#include "PixelPacking_R11G11B10.hlsli"
 #include "ShaderInterop.h"
 #include "ShaderInterop_Renderer.h"
 
@@ -110,9 +112,9 @@ inline bool is_saturated(float2 a) { return is_saturated(a.x) && is_saturated(a.
 inline bool is_saturated(float3 a) { return is_saturated(a.x) && is_saturated(a.y) && is_saturated(a.z); }
 inline bool is_saturated(float4 a) { return is_saturated(a.x) && is_saturated(a.y) && is_saturated(a.z) && is_saturated(a.w); }
 
-#define DEGAMMA_SKY(x)	pow(abs(x),g_xFrame.StaticSkyGamma)
-#define DEGAMMA(x)		pow(abs(x),g_xFrame.Gamma)
-#define GAMMA(x)		pow(abs(x),1.0/g_xFrame.Gamma)
+#define DEGAMMA_SKY(x)	((g_xFrame.Options & OPTION_BIT_STATIC_SKY_HDR) ? (x) : RemoveSRGBCurve_Fast(x))
+#define DEGAMMA(x)		(RemoveSRGBCurve_Fast(x))
+#define GAMMA(x)		(ApplySRGBCurve_Fast(x))
 
 inline float3 GetSunColor() { return GetWeather().sun_color; }
 inline float3 GetSunDirection() { return GetWeather().sun_direction; }
@@ -896,6 +898,14 @@ static const float4 halton64[] = {
 	float4(0.9843750000f, 0.0617283951f, 0.6960000000f, 0.0437317784f),
 	float4(0.0078125000f, 0.3950617284f, 0.8960000000f, 0.1865889213f),
 	float4(0.5078125000f, 0.7283950617f, 0.1360000000f, 0.3294460641f),
+};
+
+// This the same as wiGraphics::COLOR_SPACE:
+enum COLOR_SPACE
+{
+	COLOR_SPACE_SRGB,			// SDR color space (8 or 10 bits per channel)
+	COLOR_SPACE_HDR10_ST2084,	// HDR10 color space (10 bits per channel)
+	COLOR_SPACE_HDR_LINEAR,		// HDR color space (16 bits per channel)
 };
 
 #endif // WI_SHADER_GLOBALS_HF

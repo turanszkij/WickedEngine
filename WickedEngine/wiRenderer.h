@@ -592,7 +592,8 @@ namespace wiRenderer
 		const wiGraphics::Texture* texture_colorgradinglut = nullptr,
 		const wiGraphics::Texture* texture_distortion = nullptr,
 		const wiGraphics::GPUBuffer* buffer_luminance = nullptr,
-		const wiGraphics::Texture* texture_bloom = nullptr
+		const wiGraphics::Texture* texture_bloom = nullptr,
+		wiGraphics::COLOR_SPACE display_colorspace = wiGraphics::COLOR_SPACE_SRGB
 	);
 	void Postprocess_FSR(
 		const wiGraphics::Texture& input,
@@ -693,8 +694,6 @@ namespace wiRenderer
 
 	void SetTransparentShadowsEnabled(float value);
 	float GetTransparentShadowsEnabled();
-	void SetGamma(float value);
-	float GetGamma();
 	void SetWireRender(bool value);
 	bool IsWireRender();
 	void SetToDrawDebugBoneLines(bool param);
