@@ -922,15 +922,22 @@ namespace Vulkan_Internal
 
 		~SwapChain_Vulkan()
 		{
+			if (allocationhandler == nullptr)
+				return;
+			allocationhandler->destroylocker.lock();
+			uint64_t framecount = allocationhandler->framecount;
+
 			for (size_t i = 0; i < swapChainImages.size(); ++i)
 			{
-				vkDestroyFramebuffer(allocationhandler->device, swapChainFramebuffers[i], nullptr);
-				vkDestroyImageView(allocationhandler->device, swapChainImageViews[i], nullptr);
+				allocationhandler->destroyer_framebuffers.push_back(std::make_pair(swapChainFramebuffers[i], framecount));
+				allocationhandler->destroyer_imageviews.push_back(std::make_pair(swapChainImageViews[i], framecount));
 			}
-			vkDestroySwapchainKHR(allocationhandler->device, swapChain, nullptr);
-			vkDestroySurfaceKHR(allocationhandler->instance, surface, nullptr);
-			vkDestroySemaphore(allocationhandler->device, swapchainAcquireSemaphore, nullptr);
-			vkDestroySemaphore(allocationhandler->device, swapchainReleaseSemaphore, nullptr);
+			allocationhandler->destroyer_swapchains.push_back(std::make_pair(swapChain, framecount));
+			allocationhandler->destroyer_surfaces.push_back(std::make_pair(surface, framecount));
+			allocationhandler->destroyer_semaphores.push_back(std::make_pair(swapchainAcquireSemaphore, framecount));
+			allocationhandler->destroyer_semaphores.push_back(std::make_pair(swapchainReleaseSemaphore, framecount));
+
+			allocationhandler->destroylocker.unlock();
 
 		}
 	};

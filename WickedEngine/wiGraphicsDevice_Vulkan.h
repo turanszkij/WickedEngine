@@ -457,6 +457,9 @@ namespace wiGraphics
 			std::deque<std::pair<VkRenderPass, uint64_t>> destroyer_renderpasses;
 			std::deque<std::pair<VkFramebuffer, uint64_t>> destroyer_framebuffers;
 			std::deque<std::pair<VkQueryPool, uint64_t>> destroyer_querypools;
+			std::deque<std::pair<VkSwapchainKHR, uint64_t>> destroyer_swapchains;
+			std::deque<std::pair<VkSurfaceKHR, uint64_t>> destroyer_surfaces;
+			std::deque<std::pair<VkSemaphore, uint64_t>> destroyer_semaphores;
 			std::deque<std::pair<int, uint64_t>> destroyer_bindlessSampledImages;
 			std::deque<std::pair<int, uint64_t>> destroyer_bindlessUniformTexelBuffers;
 			std::deque<std::pair<int, uint64_t>> destroyer_bindlessStorageBuffers;
@@ -674,6 +677,45 @@ namespace wiGraphics
 						auto item = destroyer_querypools.front();
 						destroyer_querypools.pop_front();
 						vkDestroyQueryPool(device, item.first, nullptr);
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_swapchains.empty())
+				{
+					if (destroyer_swapchains.front().second + BUFFERCOUNT < FRAMECOUNT)
+					{
+						auto item = destroyer_swapchains.front();
+						destroyer_swapchains.pop_front();
+						vkDestroySwapchainKHR(device, item.first, nullptr);
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_surfaces.empty())
+				{
+					if (destroyer_surfaces.front().second + BUFFERCOUNT < FRAMECOUNT)
+					{
+						auto item = destroyer_surfaces.front();
+						destroyer_surfaces.pop_front();
+						vkDestroySurfaceKHR(instance, item.first, nullptr);
+					}
+					else
+					{
+						break;
+					}
+				}
+				while (!destroyer_semaphores.empty())
+				{
+					if (destroyer_semaphores.front().second + BUFFERCOUNT < FRAMECOUNT)
+					{
+						auto item = destroyer_semaphores.front();
+						destroyer_semaphores.pop_front();
+						vkDestroySemaphore(device, item.first, nullptr);
 					}
 					else
 					{
