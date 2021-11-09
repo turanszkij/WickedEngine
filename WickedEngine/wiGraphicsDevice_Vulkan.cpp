@@ -929,7 +929,7 @@ namespace Vulkan_Internal
 			// If so we would delete the swapchain twice, causing a crash on wayland.
 			if (SDL_WasInit(SDL_INIT_VIDEO))
 			#endif
-            {
+			{
 				vkDestroySwapchainKHR(allocationhandler->device, swapChain, nullptr);
 				vkDestroySurfaceKHR(allocationhandler->instance, surface, nullptr);
 			}
