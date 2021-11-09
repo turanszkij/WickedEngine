@@ -924,8 +924,15 @@ namespace Vulkan_Internal
 				vkDestroyFramebuffer(allocationhandler->device, swapChainFramebuffers[i], nullptr);
 				vkDestroyImageView(allocationhandler->device, swapChainImageViews[i], nullptr);
 			}
-			vkDestroySwapchainKHR(allocationhandler->device, swapChain, nullptr);
-			vkDestroySurfaceKHR(allocationhandler->instance, surface, nullptr);
+			#ifdef SDL2
+			// Checks if the SDL VIDEO System was already destroyed.
+			// If so we would delete the swapchain twice, causing a crash on wayland.
+			if (SDL_WasInit(SDL_INIT_VIDEO))
+			#endif
+			{
+				vkDestroySwapchainKHR(allocationhandler->device, swapChain, nullptr);
+				vkDestroySurfaceKHR(allocationhandler->instance, surface, nullptr);
+			}
 			vkDestroySemaphore(allocationhandler->device, swapchainAcquireSemaphore, nullptr);
 			vkDestroySemaphore(allocationhandler->device, swapchainReleaseSemaphore, nullptr);
 
