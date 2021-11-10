@@ -11,7 +11,7 @@ static const uint4 Sample = 0;
 
 TEXTURE2D(input, float4, TEXSLOT_ONDEMAND0);
 
-RWTEXTURE2D(output, unorm float4, 0);
+RWTEXTURE2D(output, float4, 0);
 
 #define FSR_RCAS_F
 AF4 FsrRcasLoadF(ASU2 p) { return input.Load(int3(ASU2(p), 0)); }

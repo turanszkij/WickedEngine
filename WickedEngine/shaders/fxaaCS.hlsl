@@ -17,7 +17,7 @@ static const float fxaaEdgeThresholdMin = 0.0833;
 
 TEXTURE2D(input, float4, TEXSLOT_ONDEMAND0);
 
-RWTEXTURE2D(output, unorm float4, 0);
+RWTEXTURE2D(output, float4, 0);
 
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)

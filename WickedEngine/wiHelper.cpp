@@ -199,8 +199,7 @@ namespace wiHelper
 
 		if (desc.Format == FORMAT_R10G10B10A2_UNORM)
 		{
-			// So this should be converted first to rgba8 before saving to common format...
-
+			// This will be converted first to rgba8 before saving to common format:
 			uint32_t* data32 = (uint32_t*)texturedata.data();
 
 			for (uint32_t i = 0; i < data_count; ++i)
@@ -222,18 +221,66 @@ namespace wiHelper
 		}
 		else if (desc.Format == FORMAT_R32G32B32A32_FLOAT)
 		{
-			// So this should be converted first to rgba8 before saving to common format...
-
-			XMFLOAT4* data128 = (XMFLOAT4*)texturedata.data();
+			// This will be converted first to rgba8 before saving to common format:
+			XMFLOAT4* dataSrc = (XMFLOAT4*)texturedata.data();
 			uint32_t* data32 = (uint32_t*)texturedata.data();
 
 			for (uint32_t i = 0; i < data_count; ++i)
 			{
-				XMFLOAT4 pixel = data128[i];
+				XMFLOAT4 pixel = dataSrc[i];
 				float r = std::max(0.0f, std::min(pixel.x, 1.0f));
 				float g = std::max(0.0f, std::min(pixel.y, 1.0f));
 				float b = std::max(0.0f, std::min(pixel.z, 1.0f));
 				float a = std::max(0.0f, std::min(pixel.w, 1.0f));
+
+				uint32_t rgba8 = 0;
+				rgba8 |= (uint32_t)(r * 255.0f) << 0;
+				rgba8 |= (uint32_t)(g * 255.0f) << 8;
+				rgba8 |= (uint32_t)(b * 255.0f) << 16;
+				rgba8 |= (uint32_t)(a * 255.0f) << 24;
+
+				data32[i] = rgba8;
+			}
+		}
+		else if (desc.Format == FORMAT_R16G16B16A16_FLOAT)
+		{
+			// This will be converted first to rgba8 before saving to common format:
+			XMHALF4* dataSrc = (XMHALF4*)texturedata.data();
+			uint32_t* data32 = (uint32_t*)texturedata.data();
+
+			for (uint32_t i = 0; i < data_count; ++i)
+			{
+				XMHALF4 pixel = dataSrc[i];
+				float r = std::max(0.0f, std::min(XMConvertHalfToFloat(pixel.x), 1.0f));
+				float g = std::max(0.0f, std::min(XMConvertHalfToFloat(pixel.y), 1.0f));
+				float b = std::max(0.0f, std::min(XMConvertHalfToFloat(pixel.z), 1.0f));
+				float a = std::max(0.0f, std::min(XMConvertHalfToFloat(pixel.w), 1.0f));
+
+				uint32_t rgba8 = 0;
+				rgba8 |= (uint32_t)(r * 255.0f) << 0;
+				rgba8 |= (uint32_t)(g * 255.0f) << 8;
+				rgba8 |= (uint32_t)(b * 255.0f) << 16;
+				rgba8 |= (uint32_t)(a * 255.0f) << 24;
+
+				data32[i] = rgba8;
+			}
+		}
+		else if (desc.Format == FORMAT_R11G11B10_FLOAT)
+		{
+			// This will be converted first to rgba8 before saving to common format:
+			XMFLOAT3PK* dataSrc = (XMFLOAT3PK*)texturedata.data();
+			uint32_t* data32 = (uint32_t*)texturedata.data();
+
+			for (uint32_t i = 0; i < data_count; ++i)
+			{
+				XMFLOAT3PK pixel = dataSrc[i];
+				XMVECTOR V = XMLoadFloat3PK(&pixel);
+				XMFLOAT3 pixel3;
+				XMStoreFloat3(&pixel3, V);
+				float r = std::max(0.0f, std::min(pixel3.x, 1.0f));
+				float g = std::max(0.0f, std::min(pixel3.y, 1.0f));
+				float b = std::max(0.0f, std::min(pixel3.z, 1.0f));
+				float a = 1;
 
 				uint32_t rgba8 = 0;
 				rgba8 |= (uint32_t)(r * 255.0f) << 0;
@@ -278,7 +325,7 @@ namespace wiHelper
 		}
 		else
 		{
-			assert(desc.Format == FORMAT_R8G8B8A8_UNORM); // If you need to save other backbuffer format, convert the data here yourself...
+			assert(desc.Format == FORMAT_R8G8B8A8_UNORM); // If you need to save other texture format, implement data conversion for it
 		}
 
 		if (basis || ktx2)
