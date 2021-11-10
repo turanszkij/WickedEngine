@@ -1092,7 +1092,11 @@ namespace Vulkan_Internal
 			internal_state->swapChainExtent.height = std::max(swapchain_capabilities.minImageExtent.height, std::min(swapchain_capabilities.maxImageExtent.height, internal_state->swapChainExtent.height));
 		}
 
-		uint32_t imageCount = std::min(swapchain_capabilities.maxImageCount, std::max(swapchain_capabilities.minImageCount, internal_state->desc.buffercount));
+		uint32_t imageCount = std::max(internal_state->desc.buffercount, swapchain_capabilities.minImageCount);
+		if ((swapchain_capabilities.maxImageCount > 0) && (imageCount > swapchain_capabilities.maxImageCount))
+		{
+			imageCount = swapchain_capabilities.maxImageCount;
+		}
 
 		VkSwapchainCreateInfoKHR createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
