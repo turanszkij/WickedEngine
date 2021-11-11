@@ -3,7 +3,7 @@ if (WIN32)
 	# TODO: Choose whether to use SDL2 on windows as well
 	set(TARGET_NAME WickedEngine_Windows)
 else ()
-	set(TARGET_NAME WickedEngine)
+	set(TARGET_NAME WickedEngine_Linux)
 	find_package(Vulkan REQUIRED)
 	find_package(SDL2 REQUIRED)
 	find_package(OpenImageDenoise QUIET)
@@ -103,12 +103,13 @@ add_library(${TARGET_NAME} STATIC
 	wiXInput.cpp
 	wiShaderCompiler.cpp
 )
+add_library(WickedEngine ALIAS ${TARGET_NAME})
 
 target_include_directories(${TARGET_NAME} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-target_link_libraries(${TARGET_NAME} PUBLIC
+set(WICKEDENGINE_STATIC_LIBRARIES
 	Bullet
 	LUA
 	Utility
@@ -126,18 +127,23 @@ else ()
 		Vulkan::Vulkan
 		SDL2::SDL2
 		$<$<BOOL:${OpenImageDenoise_FOUND}>:OpenImageDenoise> # links OpenImageDenoise only if it's found
-		FAudio
 	)
+	set(WICKEDENGINE_STATIC_LIBRARIES ${WICKEDENGINE_STATIC_LIBRARIES} FAudio)
 
 	target_link_libraries(${TARGET_NAME} PRIVATE dl)
 
 	set(LIBDXCOMPILER "libdxcompiler.so")
 endif()
 
+target_link_libraries(${TARGET_NAME} PUBLIC ${WICKEDENGINE_STATIC_LIBRARIES})
 
 if (PLATFORM MATCHES "SDL2")
 	target_compile_definitions(${TARGET_NAME} PUBLIC SDL2=1)
 endif()
+
+add_library(dxcompiler SHARED IMPORTED)
+set_property(TARGET dxcompiler PROPERTY
+		IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/WickedEngine/${LIBDXCOMPILER} )
 
 # Copy the shader library next to the executable
 add_custom_command(
@@ -154,3 +160,37 @@ add_executable(offlineshadercompiler
 
 target_link_libraries(offlineshadercompiler
 		PUBLIC ${TARGET_NAME})
+
+# Create importable target here
+include(CMakePackageConfigHelpers)
+set(INSTALL_CONFIGDIR "${CMAKE_BINARY_DIR}/cmake")
+#set(INSTALL_CONFIGDIR "${CMAKE_INSTALL_LIBDIR}/cmake/WickedEngine")
+
+#set_target_properties(${TARGET_NAME} PROPERTIES PUBLIC_HEADER "${HEADERS}")
+set_target_properties("${TARGET_NAME}" PROPERTIES EXPORT_NAME "${TARGET_NAME}")
+
+
+install(TARGETS "${TARGET_NAME}" ${WICKEDENGINE_STATIC_LIBRARIES}
+		EXPORT Engine-Targets
+		LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+		PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine")
+
+export(EXPORT Engine-Targets
+		FILE "${CMAKE_BINARY_DIR}/cmake/WickedEngineTargets.cmake"
+		NAMESPACE WickedEngine::
+		)
+
+#install(EXPORT Engine-Targets
+#		FILE WickedEngineTargets.cmake
+#		NAMESPACE WickedEngine
+#		DESTINATION ${INSTALL_CONFIGDIR})
+
+configure_package_config_file(
+		${CMAKE_CURRENT_SOURCE_DIR}/WickedEngineConfig.cmake.in
+		${CMAKE_BINARY_DIR}/cmake/WickedEngineConfig.cmake
+		INSTALL_DESTINATION ${INSTALL_CONFIGDIR}
+)
+
+#install(FILES ${CMAKE_CURRENT_BINARY_DIR}/WickedEngineConfig.cmake
+#		DESTINATION ${INSTALL_CONFIGDIR}
+#)
