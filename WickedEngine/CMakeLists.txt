@@ -143,7 +143,7 @@ endif()
 
 add_library(dxcompiler SHARED IMPORTED)
 set_property(TARGET dxcompiler PROPERTY
-                IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/WickedEngine/${LIBDXCOMPILER} )
+                IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/${LIBDXCOMPILER} )
 
 # Copy the shader library next to the executable
 add_custom_command(
