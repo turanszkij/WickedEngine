@@ -118,8 +118,8 @@ namespace tinygltf
 			return false;
 		}
 
-		image->width = resource->texture.desc.Width;
-		image->height = resource->texture.desc.Height;
+		image->width = resource->texture.desc.width;
+		image->height = resource->texture.desc.height;
 		image->component = 4;
 
 		wiResourceManager::ResourceSerializer* seri = (wiResourceManager::ResourceSerializer*)userdata;

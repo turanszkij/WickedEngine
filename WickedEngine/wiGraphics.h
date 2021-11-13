@@ -427,12 +427,12 @@ namespace wiGraphics
 
 	struct Viewport
 	{
-		float TopLeftX = 0.0f;
-		float TopLeftY = 0.0f;
-		float Width = 0.0f;
-		float Height = 0.0f;
-		float MinDepth = 0.0f;
-		float MaxDepth = 1.0f;
+		float top_left_x = 0.0f;
+		float top_left_y = 0.0f;
+		float width = 0.0f;
+		float height = 0.0f;
+		float min_depth = 0.0f;
+		float max_depth = 1.0f;
 	};
 	struct InputLayout
 	{
@@ -440,12 +440,12 @@ namespace wiGraphics
 
 		struct Element
 		{
-			std::string SemanticName;
-			uint32_t SemanticIndex = 0;
-			FORMAT Format = FORMAT_UNKNOWN;
-			uint32_t InputSlot = 0;
-			uint32_t AlignedByteOffset = APPEND_ALIGNED_ELEMENT;
-			INPUT_CLASSIFICATION InputSlotClass = INPUT_CLASSIFICATION::INPUT_PER_VERTEX_DATA;
+			std::string semantic_name;
+			uint32_t semantic_index = 0;
+			FORMAT format = FORMAT_UNKNOWN;
+			uint32_t input_slot = 0;
+			uint32_t aligned_byte_offset = APPEND_ALIGNED_ELEMENT;
+			INPUT_CLASSIFICATION input_slot_class = INPUT_CLASSIFICATION::INPUT_PER_VERTEX_DATA;
 		};
 		std::vector<Element> elements;
 	};
@@ -456,7 +456,7 @@ namespace wiGraphics
 		{
 			float depth;
 			uint32_t stencil;
-		} depthstencil;
+		} depth_stencil;
 	};
 	struct TextureDesc
 	{
@@ -466,96 +466,96 @@ namespace wiGraphics
 			TEXTURE_2D,
 			TEXTURE_3D,
 		} type = TEXTURE_2D;
-		uint32_t Width = 0;
-		uint32_t Height = 0;
-		uint32_t Depth = 0;
-		uint32_t ArraySize = 1;
-		uint32_t MipLevels = 1;
-		FORMAT Format = FORMAT_UNKNOWN;
-		uint32_t SampleCount = 1;
-		USAGE Usage = USAGE_DEFAULT;
-		BIND_FLAG BindFlags = BIND_NONE;
-		RESOURCE_MISC_FLAG MiscFlags = RESOURCE_MISC_NONE;
+		uint32_t width = 0;
+		uint32_t height = 0;
+		uint32_t depth = 0;
+		uint32_t array_size = 1;
+		uint32_t mip_levels = 1;
+		FORMAT format = FORMAT_UNKNOWN;
+		uint32_t sample_count = 1;
+		USAGE usage = USAGE_DEFAULT;
+		BIND_FLAG bind_flags = BIND_NONE;
+		RESOURCE_MISC_FLAG misc_flags = RESOURCE_MISC_NONE;
 		ClearValue clear = {};
 		RESOURCE_STATE layout = RESOURCE_STATE_SHADER_RESOURCE;
 	};
 	struct SamplerDesc
 	{
-		FILTER Filter = FILTER_MIN_MAG_MIP_POINT;
-		TEXTURE_ADDRESS_MODE AddressU = TEXTURE_ADDRESS_CLAMP;
-		TEXTURE_ADDRESS_MODE AddressV = TEXTURE_ADDRESS_CLAMP;
-		TEXTURE_ADDRESS_MODE AddressW = TEXTURE_ADDRESS_CLAMP;
-		float MipLODBias = 0.0f;
-		uint32_t MaxAnisotropy = 0;
-		COMPARISON_FUNC ComparisonFunc = COMPARISON_NEVER;
-		SAMPLER_BORDER_COLOR BorderColor = SAMPLER_BORDER_COLOR_TRANSPARENT_BLACK;
-		float MinLOD = 0.0f;
-		float MaxLOD = FLT_MAX;
+		FILTER filter = FILTER_MIN_MAG_MIP_POINT;
+		TEXTURE_ADDRESS_MODE address_u = TEXTURE_ADDRESS_CLAMP;
+		TEXTURE_ADDRESS_MODE address_v = TEXTURE_ADDRESS_CLAMP;
+		TEXTURE_ADDRESS_MODE address_w = TEXTURE_ADDRESS_CLAMP;
+		float mip_lod_bias = 0.0f;
+		uint32_t max_anisotropy = 0;
+		COMPARISON_FUNC comparison_func = COMPARISON_NEVER;
+		SAMPLER_BORDER_COLOR border_color = SAMPLER_BORDER_COLOR_TRANSPARENT_BLACK;
+		float min_lod = 0.0f;
+		float max_lod = FLT_MAX;
 	};
 	struct RasterizerState
 	{
-		FILL_MODE FillMode = FILL_SOLID;
-		CULL_MODE CullMode = CULL_NONE;
-		bool FrontCounterClockwise = false;
-		int32_t DepthBias = 0;
-		float DepthBiasClamp = 0.0f;
-		float SlopeScaledDepthBias = 0.0f;
-		bool DepthClipEnable = false;
-		bool MultisampleEnable = false;
-		bool AntialiasedLineEnable = false;
-		bool ConservativeRasterizationEnable = false;
-		uint32_t ForcedSampleCount = 0;
+		FILL_MODE fill_mode = FILL_SOLID;
+		CULL_MODE cull_mode = CULL_NONE;
+		bool front_counter_clockwise = false;
+		int32_t depth_bias = 0;
+		float depth_bias_clamp = 0.0f;
+		float slope_scaled_depth_bias = 0.0f;
+		bool depth_clip_enable = false;
+		bool multisample_enable = false;
+		bool antialiased_line_enable = false;
+		bool conservative_rasterization_enable = false;
+		uint32_t forced_sample_count = 0;
 	};
 	struct DepthStencilState
 	{
-		bool DepthEnable = false;
-		DEPTH_WRITE_MASK DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
-		COMPARISON_FUNC DepthFunc = COMPARISON_NEVER;
-		bool StencilEnable = false;
-		uint8_t StencilReadMask = 0xff;
-		uint8_t StencilWriteMask = 0xff;
+		bool depth_enable = false;
+		DEPTH_WRITE_MASK depth_write_mask = DEPTH_WRITE_MASK_ZERO;
+		COMPARISON_FUNC depth_func = COMPARISON_NEVER;
+		bool stencil_enable = false;
+		uint8_t stencil_read_mask = 0xff;
+		uint8_t stencil_write_mask = 0xff;
 
 		struct DepthStencilOp
 		{
-			STENCIL_OP StencilFailOp = STENCIL_OP_KEEP;
-			STENCIL_OP StencilDepthFailOp = STENCIL_OP_KEEP;
-			STENCIL_OP StencilPassOp = STENCIL_OP_KEEP;
-			COMPARISON_FUNC StencilFunc = COMPARISON_NEVER;
+			STENCIL_OP stencil_fail_op = STENCIL_OP_KEEP;
+			STENCIL_OP stencil_depth_fail_op = STENCIL_OP_KEEP;
+			STENCIL_OP stencil_pass_op = STENCIL_OP_KEEP;
+			COMPARISON_FUNC stencil_func = COMPARISON_NEVER;
 		};
-		DepthStencilOp FrontFace;
-		DepthStencilOp BackFace;
+		DepthStencilOp front_face;
+		DepthStencilOp back_face;
 	};
 	struct BlendState
 	{
-		bool AlphaToCoverageEnable = false;
-		bool IndependentBlendEnable = false;
+		bool alpha_to_coverage_enable = false;
+		bool independent_blend_enable = false;
 
 		struct RenderTargetBlendState
 		{
-			bool BlendEnable = false;
-			BLEND SrcBlend = BLEND_SRC_ALPHA;
-			BLEND DestBlend = BLEND_INV_SRC_ALPHA;
-			BLEND_OP BlendOp = BLEND_OP_ADD;
-			BLEND SrcBlendAlpha = BLEND_ONE;
-			BLEND DestBlendAlpha = BLEND_ONE;
-			BLEND_OP BlendOpAlpha = BLEND_OP_ADD;
-			COLOR_WRITE_ENABLE RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
+			bool blend_enable = false;
+			BLEND src_blend = BLEND_SRC_ALPHA;
+			BLEND dest_blend = BLEND_INV_SRC_ALPHA;
+			BLEND_OP blend_op = BLEND_OP_ADD;
+			BLEND src_blend_alpha = BLEND_ONE;
+			BLEND dest_blend_alpha = BLEND_ONE;
+			BLEND_OP blend_op_alpha = BLEND_OP_ADD;
+			COLOR_WRITE_ENABLE render_target_write_mask = COLOR_WRITE_ENABLE_ALL;
 		};
-		RenderTargetBlendState RenderTarget[8];
+		RenderTargetBlendState render_target[8];
 	};
 	struct GPUBufferDesc
 	{
-		uint64_t Size = 0;
-		USAGE Usage = USAGE_DEFAULT;
-		BIND_FLAG BindFlags = BIND_NONE;
-		RESOURCE_MISC_FLAG MiscFlags = RESOURCE_MISC_NONE;
-		uint32_t Stride = 0; // needed for typed and structured buffer types!
-		FORMAT Format = FORMAT_UNKNOWN; // only needed for typed buffer!
+		uint64_t size = 0;
+		USAGE usage = USAGE_DEFAULT;
+		BIND_FLAG bind_flags = BIND_NONE;
+		RESOURCE_MISC_FLAG misc_flags = RESOURCE_MISC_NONE;
+		uint32_t stride = 0; // needed for typed and structured buffer types!
+		FORMAT format = FORMAT_UNKNOWN; // only needed for typed buffer!
 	};
 	struct GPUQueryHeapDesc
 	{
 		GPU_QUERY_TYPE type = GPU_QUERY_TYPE_TIMESTAMP;
-		uint32_t queryCount = 0;
+		uint32_t query_count = 0;
 	};
 	struct PipelineStateDesc
 	{
@@ -571,8 +571,8 @@ namespace wiGraphics
 		const DepthStencilState* dss = nullptr;
 		const InputLayout*		il = nullptr;
 		PRIMITIVETOPOLOGY		pt = TRIANGLELIST;
-		uint32_t                patchControlPoints = 3;
-		uint32_t				sampleMask = 0xFFFFFFFF;
+		uint32_t                patch_control_points = 3;
+		uint32_t				sample_mask = 0xFFFFFFFF;
 	};
 	struct GPUBarrier
 	{
@@ -739,46 +739,46 @@ namespace wiGraphics
 			FLAG_EMPTY = 0,
 			FLAG_ALLOW_UAV_WRITES = 1 << 0,
 		};
-		uint32_t _flags = FLAG_EMPTY;
+		uint32_t flags = FLAG_EMPTY;
 		std::vector<RenderPassAttachment> attachments;
 	};
 	struct SwapChainDesc
 	{
 		uint32_t width = 0;
 		uint32_t height = 0;
-		uint32_t buffercount = 2;
+		uint32_t buffer_count = 2;
 		FORMAT format = FORMAT_R10G10B10A2_UNORM;
 		bool fullscreen = false;
 		bool vsync = true;
-		float clearcolor[4] = { 0,0,0,1 };
+		float clear_color[4] = { 0,0,0,1 };
 		bool allow_hdr = true;
 	};
 	struct IndirectDrawArgsInstanced
 	{
-		uint32_t VertexCountPerInstance = 0;
-		uint32_t InstanceCount = 0;
-		uint32_t StartVertexLocation = 0;
-		uint32_t StartInstanceLocation = 0;
+		uint32_t vertex_count_per_instance = 0;
+		uint32_t instance_count = 0;
+		uint32_t start_vertex_location = 0;
+		uint32_t start_instance_location = 0;
 	};
 	struct IndirectDrawArgsIndexedInstanced
 	{
-		uint32_t IndexCountPerInstance = 0;
-		uint32_t InstanceCount = 0;
-		uint32_t StartIndexLocation = 0;
-		int32_t BaseVertexLocation = 0;
-		uint32_t StartInstanceLocation = 0;
+		uint32_t index_count_per_instance = 0;
+		uint32_t instance_count = 0;
+		uint32_t start_index_location = 0;
+		int32_t base_vertex_location = 0;
+		uint32_t start_instance_location = 0;
 	};
 	struct IndirectDispatchArgs
 	{
-		uint32_t ThreadGroupCountX = 0;
-		uint32_t ThreadGroupCountY = 0;
-		uint32_t ThreadGroupCountZ = 0;
+		uint32_t thread_group_count_x = 0;
+		uint32_t thread_group_count_y = 0;
+		uint32_t thread_group_count_z = 0;
 	};
 	struct SubresourceData
 	{
-		const void *pData = nullptr;
-		uint32_t rowPitch = 0;
-		uint32_t slicePitch = 0;
+		const void *data_ptr = nullptr;
+		uint32_t row_pitch = 0;
+		uint32_t slice_pitch = 0;
 	};
 	struct Rect
 	{
@@ -888,7 +888,7 @@ namespace wiGraphics
 			FLAG_PREFER_FAST_BUILD = 1 << 3,
 			FLAG_MINIMIZE_MEMORY = 1 << 4,
 		};
-		uint32_t _flags = FLAG_EMPTY;
+		uint32_t flags = FLAG_EMPTY;
 
 		enum TYPE
 		{
@@ -907,7 +907,7 @@ namespace wiGraphics
 					FLAG_NO_DUPLICATE_ANYHIT_INVOCATION = 1 << 1,
 					FLAG_USE_TRANSFORM = 1 << 2,
 				};
-				uint32_t _flags = FLAG_EMPTY;
+				uint32_t flags = FLAG_EMPTY;
 
 				enum TYPE
 				{
@@ -917,21 +917,21 @@ namespace wiGraphics
 
 				struct Triangles
 				{
-					GPUBuffer vertexBuffer;
-					GPUBuffer indexBuffer;
-					uint32_t indexCount = 0;
-					uint32_t indexOffset = 0;
-					uint32_t vertexCount = 0;
-					uint32_t vertexByteOffset = 0;
-					uint32_t vertexStride = 0;
-					INDEXBUFFER_FORMAT indexFormat = INDEXFORMAT_32BIT;
-					FORMAT vertexFormat = FORMAT_R32G32B32_FLOAT;
-					GPUBuffer transform3x4Buffer;
-					uint32_t transform3x4BufferOffset = 0;
+					GPUBuffer vertex_buffer;
+					GPUBuffer index_buffer;
+					uint32_t index_count = 0;
+					uint32_t index_offset = 0;
+					uint32_t vertex_count = 0;
+					uint32_t vertex_byte_offset = 0;
+					uint32_t vertex_stride = 0;
+					INDEXBUFFER_FORMAT index_format = INDEXFORMAT_32BIT;
+					FORMAT vertex_format = FORMAT_R32G32B32_FLOAT;
+					GPUBuffer transform_3x4_buffer;
+					uint32_t transform_3x4_buffer_offset = 0;
 				} triangles;
 				struct Procedural_AABBs
 				{
-					GPUBuffer aabbBuffer;
+					GPUBuffer aabb_buffer;
 					uint32_t offset = 0;
 					uint32_t count = 0;
 					uint32_t stride = 0;
@@ -939,7 +939,7 @@ namespace wiGraphics
 
 			};
 			std::vector<Geometry> geometries;
-		} bottomlevel;
+		} bottom_level;
 
 		struct TopLevel
 		{
@@ -954,16 +954,16 @@ namespace wiGraphics
 					FLAG_FORCE_NON_OPAQUE = 1 << 3,
 				};
 				XMFLOAT3X4 transform;
-				uint32_t InstanceID : 24;
-				uint32_t InstanceMask : 8;
-				uint32_t InstanceContributionToHitGroupIndex : 24;
-				uint32_t Flags : 8;
-				GPUResource bottomlevel;
+				uint32_t instance_id : 24;
+				uint32_t instance_mask : 8;
+				uint32_t instance_contribution_to_hit_group_index : 24;
+				uint32_t flags : 8;
+				GPUResource bottom_level;
 			};
-			GPUBuffer instanceBuffer;
+			GPUBuffer instance_buffer;
 			uint32_t offset = 0;
 			uint32_t count = 0;
-		} toplevel;
+		} top_level;
 	};
 	struct RaytracingAccelerationStructure : public GPUResource
 	{
@@ -995,14 +995,14 @@ namespace wiGraphics
 		} type = TRIANGLES;
 		std::string name;
 		uint32_t general_shader = ~0;
-		uint32_t closesthit_shader = ~0;
-		uint32_t anyhit_shader = ~0;
+		uint32_t closest_hit_shader = ~0;
+		uint32_t any_hit_shader = ~0;
 		uint32_t intersection_shader = ~0;
 	};
 	struct RaytracingPipelineStateDesc
 	{
-		std::vector<ShaderLibrary> shaderlibraries;
-		std::vector<ShaderHitGroup> hitgroups;
+		std::vector<ShaderLibrary> shader_libraries;
+		std::vector<ShaderHitGroup> hit_groups;
 		uint32_t max_trace_recursion_depth = 1;
 		uint32_t max_attribute_size_in_bytes = 0;
 		uint32_t max_payload_size_in_bytes = 0;
@@ -1023,13 +1023,13 @@ namespace wiGraphics
 	};
 	struct DispatchRaysDesc
 	{
-		ShaderTable raygeneration;
+		ShaderTable ray_generation;
 		ShaderTable miss;
-		ShaderTable hitgroup;
+		ShaderTable hit_group;
 		ShaderTable callable;
-		uint32_t Width = 1;
-		uint32_t Height = 1;
-		uint32_t Depth = 1;
+		uint32_t width = 1;
+		uint32_t height = 1;
+		uint32_t depth = 1;
 	};
 
 

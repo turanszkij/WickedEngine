@@ -196,8 +196,8 @@ namespace wiImage
 		}
 
 		const TextureDesc& desc = texture->GetDesc();
-		const float inv_width = 1.0f / float(desc.Width);
-		const float inv_height = 1.0f / float(desc.Height);
+		const float inv_width = 1.0f / float(desc.width);
+		const float inv_height = 1.0f / float(desc.height);
 
 		XMFLOAT4 texMulAdd;
 		if (params.isDrawRectEnabled())
@@ -305,15 +305,15 @@ namespace wiImage
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
 		RasterizerState rs;
-		rs.FillMode = FILL_SOLID;
-		rs.CullMode = CULL_NONE;
-		rs.FrontCounterClockwise = false;
-		rs.DepthBias = 0;
-		rs.DepthBiasClamp = 0;
-		rs.SlopeScaledDepthBias = 0;
-		rs.DepthClipEnable = true;
-		rs.MultisampleEnable = false;
-		rs.AntialiasedLineEnable = false;
+		rs.fill_mode = FILL_SOLID;
+		rs.cull_mode = CULL_NONE;
+		rs.front_counter_clockwise = false;
+		rs.depth_bias = 0;
+		rs.depth_bias_clamp = 0;
+		rs.slope_scaled_depth_bias = 0;
+		rs.depth_clip_enable = true;
+		rs.multisample_enable = false;
+		rs.antialiased_line_enable = false;
 		rasterizerState = rs;
 
 
@@ -322,109 +322,109 @@ namespace wiImage
 		for (int i = 0; i < STENCILREFMODE_COUNT; ++i)
 		{
 			DepthStencilState dsd;
-			dsd.DepthEnable = false;
-			dsd.StencilEnable = false;
+			dsd.depth_enable = false;
+			dsd.stencil_enable = false;
 			depthStencilStates[STENCILMODE_DISABLED][i] = dsd;
 
-			dsd.StencilEnable = true;
+			dsd.stencil_enable = true;
 			switch (i)
 			{
 			case STENCILREFMODE_ENGINE:
-				dsd.StencilReadMask = STENCILREF_MASK_ENGINE;
+				dsd.stencil_read_mask = STENCILREF_MASK_ENGINE;
 				break;
 			case STENCILREFMODE_USER:
-				dsd.StencilReadMask = STENCILREF_MASK_USER;
+				dsd.stencil_read_mask = STENCILREF_MASK_USER;
 				break;
 			default:
-				dsd.StencilReadMask = STENCILREF_MASK_ALL;
+				dsd.stencil_read_mask = STENCILREF_MASK_ALL;
 				break;
 			}
-			dsd.StencilWriteMask = 0;
-			dsd.FrontFace.StencilPassOp = STENCIL_OP_KEEP;
-			dsd.FrontFace.StencilFailOp = STENCIL_OP_KEEP;
-			dsd.FrontFace.StencilDepthFailOp = STENCIL_OP_KEEP;
-			dsd.BackFace.StencilPassOp = STENCIL_OP_KEEP;
-			dsd.BackFace.StencilFailOp = STENCIL_OP_KEEP;
-			dsd.BackFace.StencilDepthFailOp = STENCIL_OP_KEEP;
+			dsd.stencil_write_mask = 0;
+			dsd.front_face.stencil_pass_op = STENCIL_OP_KEEP;
+			dsd.front_face.stencil_fail_op = STENCIL_OP_KEEP;
+			dsd.front_face.stencil_depth_fail_op = STENCIL_OP_KEEP;
+			dsd.back_face.stencil_pass_op = STENCIL_OP_KEEP;
+			dsd.back_face.stencil_fail_op = STENCIL_OP_KEEP;
+			dsd.back_face.stencil_depth_fail_op = STENCIL_OP_KEEP;
 
-			dsd.FrontFace.StencilFunc = COMPARISON_EQUAL;
-			dsd.BackFace.StencilFunc = COMPARISON_EQUAL;
+			dsd.front_face.stencil_func = COMPARISON_EQUAL;
+			dsd.back_face.stencil_func = COMPARISON_EQUAL;
 			depthStencilStates[STENCILMODE_EQUAL][i] = dsd;
 
-			dsd.FrontFace.StencilFunc = COMPARISON_LESS;
-			dsd.BackFace.StencilFunc = COMPARISON_LESS;
+			dsd.front_face.stencil_func = COMPARISON_LESS;
+			dsd.back_face.stencil_func = COMPARISON_LESS;
 			depthStencilStates[STENCILMODE_LESS][i] = dsd;
 
-			dsd.FrontFace.StencilFunc = COMPARISON_LESS_EQUAL;
-			dsd.BackFace.StencilFunc = COMPARISON_LESS_EQUAL;
+			dsd.front_face.stencil_func = COMPARISON_LESS_EQUAL;
+			dsd.back_face.stencil_func = COMPARISON_LESS_EQUAL;
 			depthStencilStates[STENCILMODE_LESSEQUAL][i] = dsd;
 
-			dsd.FrontFace.StencilFunc = COMPARISON_GREATER;
-			dsd.BackFace.StencilFunc = COMPARISON_GREATER;
+			dsd.front_face.stencil_func = COMPARISON_GREATER;
+			dsd.back_face.stencil_func = COMPARISON_GREATER;
 			depthStencilStates[STENCILMODE_GREATER][i] = dsd;
 
-			dsd.FrontFace.StencilFunc = COMPARISON_GREATER_EQUAL;
-			dsd.BackFace.StencilFunc = COMPARISON_GREATER_EQUAL;
+			dsd.front_face.stencil_func = COMPARISON_GREATER_EQUAL;
+			dsd.back_face.stencil_func = COMPARISON_GREATER_EQUAL;
 			depthStencilStates[STENCILMODE_GREATEREQUAL][i] = dsd;
 
-			dsd.FrontFace.StencilFunc = COMPARISON_NOT_EQUAL;
-			dsd.BackFace.StencilFunc = COMPARISON_NOT_EQUAL;
+			dsd.front_face.stencil_func = COMPARISON_NOT_EQUAL;
+			dsd.back_face.stencil_func = COMPARISON_NOT_EQUAL;
 			depthStencilStates[STENCILMODE_NOT][i] = dsd;
 
-			dsd.FrontFace.StencilFunc = COMPARISON_ALWAYS;
-			dsd.BackFace.StencilFunc = COMPARISON_ALWAYS;
+			dsd.front_face.stencil_func = COMPARISON_ALWAYS;
+			dsd.back_face.stencil_func = COMPARISON_ALWAYS;
 			depthStencilStates[STENCILMODE_ALWAYS][i] = dsd;
 		}
 
 
 		BlendState bd;
-		bd.RenderTarget[0].BlendEnable = true;
-		bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
-		bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
-		bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
-		bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
-		bd.RenderTarget[0].DestBlendAlpha = BLEND_INV_SRC_ALPHA;
-		bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
-		bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
-		bd.IndependentBlendEnable = false;
+		bd.render_target[0].blend_enable = true;
+		bd.render_target[0].src_blend = BLEND_SRC_ALPHA;
+		bd.render_target[0].dest_blend = BLEND_INV_SRC_ALPHA;
+		bd.render_target[0].blend_op = BLEND_OP_ADD;
+		bd.render_target[0].src_blend_alpha = BLEND_ONE;
+		bd.render_target[0].dest_blend_alpha = BLEND_INV_SRC_ALPHA;
+		bd.render_target[0].blend_op_alpha = BLEND_OP_ADD;
+		bd.render_target[0].render_target_write_mask = COLOR_WRITE_ENABLE_ALL;
+		bd.independent_blend_enable = false;
 		blendStates[BLENDMODE_ALPHA] = bd;
 
-		bd.RenderTarget[0].BlendEnable = true;
-		bd.RenderTarget[0].SrcBlend = BLEND_ONE;
-		bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
-		bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
-		bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
-		bd.RenderTarget[0].DestBlendAlpha = BLEND_INV_SRC_ALPHA;
-		bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
-		bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
-		bd.IndependentBlendEnable = false;
+		bd.render_target[0].blend_enable = true;
+		bd.render_target[0].src_blend = BLEND_ONE;
+		bd.render_target[0].dest_blend = BLEND_INV_SRC_ALPHA;
+		bd.render_target[0].blend_op = BLEND_OP_ADD;
+		bd.render_target[0].src_blend_alpha = BLEND_ONE;
+		bd.render_target[0].dest_blend_alpha = BLEND_INV_SRC_ALPHA;
+		bd.render_target[0].blend_op_alpha = BLEND_OP_ADD;
+		bd.render_target[0].render_target_write_mask = COLOR_WRITE_ENABLE_ALL;
+		bd.independent_blend_enable = false;
 		blendStates[BLENDMODE_PREMULTIPLIED] = bd;
 
-		bd.RenderTarget[0].BlendEnable = false;
-		bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
-		bd.IndependentBlendEnable = false;
+		bd.render_target[0].blend_enable = false;
+		bd.render_target[0].render_target_write_mask = COLOR_WRITE_ENABLE_ALL;
+		bd.independent_blend_enable = false;
 		blendStates[BLENDMODE_OPAQUE] = bd;
 
-		bd.RenderTarget[0].BlendEnable = true;
-		bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
-		bd.RenderTarget[0].DestBlend = BLEND_ONE;
-		bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
-		bd.RenderTarget[0].SrcBlendAlpha = BLEND_ZERO;
-		bd.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
-		bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
-		bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
-		bd.IndependentBlendEnable = false;
+		bd.render_target[0].blend_enable = true;
+		bd.render_target[0].src_blend = BLEND_SRC_ALPHA;
+		bd.render_target[0].dest_blend = BLEND_ONE;
+		bd.render_target[0].blend_op = BLEND_OP_ADD;
+		bd.render_target[0].src_blend_alpha = BLEND_ZERO;
+		bd.render_target[0].dest_blend_alpha = BLEND_ONE;
+		bd.render_target[0].blend_op_alpha = BLEND_OP_ADD;
+		bd.render_target[0].render_target_write_mask = COLOR_WRITE_ENABLE_ALL;
+		bd.independent_blend_enable = false;
 		blendStates[BLENDMODE_ADDITIVE] = bd;
 
-		bd.RenderTarget[0].BlendEnable = true;
-		bd.RenderTarget[0].SrcBlend = BLEND_ZERO;
-		bd.RenderTarget[0].DestBlend = BLEND_SRC_COLOR;
-		bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
-		bd.RenderTarget[0].SrcBlendAlpha = BLEND_ZERO;
-		bd.RenderTarget[0].DestBlendAlpha = BLEND_SRC_ALPHA;
-		bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
-		bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
-		bd.IndependentBlendEnable = false;
+		bd.render_target[0].blend_enable = true;
+		bd.render_target[0].src_blend = BLEND_ZERO;
+		bd.render_target[0].dest_blend = BLEND_SRC_COLOR;
+		bd.render_target[0].blend_op = BLEND_OP_ADD;
+		bd.render_target[0].src_blend_alpha = BLEND_ZERO;
+		bd.render_target[0].dest_blend_alpha = BLEND_SRC_ALPHA;
+		bd.render_target[0].blend_op_alpha = BLEND_OP_ADD;
+		bd.render_target[0].render_target_write_mask = COLOR_WRITE_ENABLE_ALL;
+		bd.independent_blend_enable = false;
 		blendStates[BLENDMODE_MULTIPLY] = bd;
 
 		static wiEvent::Handle handle = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });

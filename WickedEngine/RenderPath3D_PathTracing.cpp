@@ -46,15 +46,15 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 
 	{
 		TextureDesc desc;
-		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE | BIND_RENDER_TARGET;
-		desc.Format = FORMAT_R32G32B32A32_FLOAT;
-		desc.Width = internalResolution.x;
-		desc.Height = internalResolution.y;
+		desc.bind_flags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE | BIND_RENDER_TARGET;
+		desc.format = FORMAT_R32G32B32A32_FLOAT;
+		desc.width = internalResolution.x;
+		desc.height = internalResolution.y;
 		device->CreateTexture(&desc, nullptr, &traceResult);
 		device->SetName(&traceResult, "traceResult");
 
 #ifdef OPEN_IMAGE_DENOISE
-		desc.BindFlags = BIND_UNORDERED_ACCESS;
+		desc.bind_flags = BIND_UNORDERED_ACCESS;
 		desc.layout = RESOURCE_STATE_UNORDERED_ACCESS;
 		device->CreateTexture(&desc, nullptr, &denoiserAlbedo);
 		device->SetName(&denoiserAlbedo, "denoiserAlbedo");
@@ -64,22 +64,22 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 	}
 	{
 		TextureDesc desc;
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.Format = FORMAT_R11G11B10_FLOAT;
-		desc.Width = internalResolution.x;
-		desc.Height = internalResolution.y;
+		desc.bind_flags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.format = FORMAT_R11G11B10_FLOAT;
+		desc.width = internalResolution.x;
+		desc.height = internalResolution.y;
 		device->CreateTexture(&desc, nullptr, &rtPostprocess);
 		device->SetName(&rtPostprocess, "rtPostprocess");
 
 
-		desc.Width /= 4;
-		desc.Height /= 4;
-		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
+		desc.width /= 4;
+		desc.height /= 4;
+		desc.bind_flags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
 		device->CreateTexture(&desc, nullptr, &rtGUIBlurredBackground[0]);
 		device->SetName(&rtGUIBlurredBackground[0], "rtGUIBlurredBackground[0]");
 
-		desc.Width /= 4;
-		desc.Height /= 4;
+		desc.width /= 4;
+		desc.height /= 4;
 		device->CreateTexture(&desc, nullptr, &rtGUIBlurredBackground[1]);
 		device->SetName(&rtGUIBlurredBackground[1], "rtGUIBlurredBackground[1]");
 		device->CreateTexture(&desc, nullptr, &rtGUIBlurredBackground[2]);
@@ -175,8 +175,8 @@ void RenderPath3D_PathTracing::Update(float dt)
 
 				wiJobSystem::Execute(denoiserContext, [&](wiJobArgs args) {
 
-					size_t width = (size_t)traceResult.desc.Width;
-					size_t height = (size_t)traceResult.desc.Height;
+					size_t width = (size_t)traceResult.desc.width;
+					size_t height = (size_t)traceResult.desc.height;
 					{
 						// https://github.com/OpenImageDenoise/oidn#c11-api-example
 
@@ -223,14 +223,14 @@ void RenderPath3D_PathTracing::Update(float dt)
 					GraphicsDevice* device = wiRenderer::GetDevice();
 
 					TextureDesc desc;
-					desc.Width = (uint32_t)width;
-					desc.Height = (uint32_t)height;
-					desc.BindFlags = BIND_SHADER_RESOURCE;
-					desc.Format = FORMAT_R32G32B32A32_FLOAT;
+					desc.width = (uint32_t)width;
+					desc.height = (uint32_t)height;
+					desc.bind_flags = BIND_SHADER_RESOURCE;
+					desc.format = FORMAT_R32G32B32A32_FLOAT;
 
 					SubresourceData initdata;
-					initdata.pData = texturedata_dst.data();
-					initdata.rowPitch = uint32_t(sizeof(XMFLOAT4) * width);
+					initdata.data_ptr = texturedata_dst.data();
+					initdata.row_pitch = uint32_t(sizeof(XMFLOAT4) * width);
 					device->CreateTexture(&desc, &initdata, &denoiserResult);
 
 					});
@@ -291,8 +291,8 @@ void RenderPath3D_PathTracing::Render() const
 				device->RenderPassBegin(&renderpass_debugbvh, cmd);
 
 				Viewport vp;
-				vp.Width = (float)traceResult.GetDesc().Width;
-				vp.Height = (float)traceResult.GetDesc().Height;
+				vp.width = (float)traceResult.GetDesc().width;
+				vp.height = (float)traceResult.GetDesc().height;
 				device->BindViewports(1, &vp, cmd);
 
 				wiRenderer::RayTraceSceneBVH(*scene, cmd);

@@ -15,18 +15,18 @@ void RenderPath2D::ResizeBuffers()
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	const Texture* dsv = GetDepthStencil();
-	if(dsv != nullptr && (resolutionScale != 1.0f ||  dsv->GetDesc().SampleCount > 1))
+	if(dsv != nullptr && (resolutionScale != 1.0f ||  dsv->GetDesc().sample_count > 1))
 	{
 		TextureDesc desc = GetDepthStencil()->GetDesc();
 		desc.layout = RESOURCE_STATE_SHADER_RESOURCE;
-		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
-		desc.Format = FORMAT_R8G8B8A8_UNORM;
+		desc.bind_flags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
+		desc.format = FORMAT_R8G8B8A8_UNORM;
 		device->CreateTexture(&desc, nullptr, &rtStenciled);
 		device->SetName(&rtStenciled, "rtStenciled");
 
-		if (desc.SampleCount > 1)
+		if (desc.sample_count > 1)
 		{
-			desc.SampleCount = 1;
+			desc.sample_count = 1;
 			device->CreateTexture(&desc, nullptr, &rtStenciled_resolved);
 			device->SetName(&rtStenciled_resolved, "rtStenciled_resolved");
 		}
@@ -38,10 +38,10 @@ void RenderPath2D::ResizeBuffers()
 
 	{
 		TextureDesc desc;
-		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
-		desc.Format = FORMAT_R8G8B8A8_UNORM;
-		desc.Width = GetPhysicalWidth();
-		desc.Height = GetPhysicalHeight();
+		desc.bind_flags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
+		desc.format = FORMAT_R8G8B8A8_UNORM;
+		desc.width = GetPhysicalWidth();
+		desc.height = GetPhysicalHeight();
 		device->CreateTexture(&desc, nullptr, &rtFinal);
 		device->SetName(&rtFinal, "rtFinal");
 	}
@@ -61,7 +61,7 @@ void RenderPath2D::ResizeBuffers()
 			)
 		);
 
-		if (rtStenciled.GetDesc().SampleCount > 1)
+		if (rtStenciled.GetDesc().sample_count > 1)
 		{
 			desc.attachments.push_back(RenderPassAttachment::Resolve(&rtStenciled_resolved));
 		}
@@ -135,10 +135,10 @@ void RenderPath2D::Update(float dt)
 		}
 	}
 
-	if (colorspace != COLOR_SPACE_SRGB && (rtLinearColorSpace.desc.Width != rtFinal.desc.Width || rtLinearColorSpace.desc.Height != rtFinal.desc.Height))
+	if (colorspace != COLOR_SPACE_SRGB && (rtLinearColorSpace.desc.width != rtFinal.desc.width || rtLinearColorSpace.desc.height != rtFinal.desc.height))
 	{
 		TextureDesc desc = rtFinal.desc;
-		desc.Format = FORMAT_R16G16B16A16_FLOAT;
+		desc.format = FORMAT_R16G16B16A16_FLOAT;
 		bool success = wiRenderer::GetDevice()->CreateTexture(&desc, nullptr, &rtLinearColorSpace);
 		assert(success);
 		wiRenderer::GetDevice()->SetName(&rtLinearColorSpace, "rtLinearColorSpace");
@@ -199,8 +199,8 @@ void RenderPath2D::Render() const
 		device->RenderPassBegin(&renderpass_stenciled, cmd);
 
 		Viewport vp;
-		vp.Width = (float)rtStenciled.GetDesc().Width;
-		vp.Height = (float)rtStenciled.GetDesc().Height;
+		vp.width = (float)rtStenciled.GetDesc().width;
+		vp.height = (float)rtStenciled.GetDesc().height;
 		device->BindViewports(1, &vp, cmd);
 
 		device->EventBegin("STENCIL Sprite Layers", cmd);
@@ -224,8 +224,8 @@ void RenderPath2D::Render() const
 	device->RenderPassBegin(&renderpass_final, cmd);
 
 	Viewport vp;
-	vp.Width = (float)rtFinal.GetDesc().Width;
-	vp.Height = (float)rtFinal.GetDesc().Height;
+	vp.width = (float)rtFinal.GetDesc().width;
+	vp.height = (float)rtFinal.GetDesc().height;
 	device->BindViewports(1, &vp, cmd);
 
 	if (GetDepthStencil() != nullptr)
@@ -235,7 +235,7 @@ void RenderPath2D::Render() const
 			device->EventBegin("Copy STENCIL Sprite Layers", cmd);
 			wiImageParams fx;
 			fx.enableFullScreen();
-			if (rtStenciled.GetDesc().SampleCount > 1)
+			if (rtStenciled.GetDesc().sample_count > 1)
 			{
 				wiImage::Draw(&rtStenciled_resolved, fx, cmd);
 			}

@@ -59,22 +59,22 @@ void wiEmittedParticle::CreateSelfBuffers()
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	if (particleBuffer.desc.Size < MAX_PARTICLES * sizeof(Particle))
+	if (particleBuffer.desc.size < MAX_PARTICLES * sizeof(Particle))
 	{
 		GPUBufferDesc bd;
-		bd.Usage = USAGE_DEFAULT;
-		bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		bd.usage = USAGE_DEFAULT;
+		bd.bind_flags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		bd.misc_flags = RESOURCE_MISC_BUFFER_STRUCTURED;
 
 		// Particle buffer:
-		bd.Stride = sizeof(Particle);
-		bd.Size = bd.Stride * MAX_PARTICLES;
+		bd.stride = sizeof(Particle);
+		bd.size = bd.stride * MAX_PARTICLES;
 		device->CreateBuffer(&bd, nullptr, &particleBuffer);
 		device->SetName(&particleBuffer, "particleBuffer");
 
 		// Alive index lists (double buffered):
-		bd.Stride = sizeof(uint32_t);
-		bd.Size = bd.Stride * MAX_PARTICLES;
+		bd.stride = sizeof(uint32_t);
+		bd.size = bd.stride * MAX_PARTICLES;
 		device->CreateBuffer(&bd, nullptr, &aliveList[0]);
 		device->SetName(&aliveList[0], "aliveList[0]");
 		device->CreateBuffer(&bd, nullptr, &aliveList[1]);
@@ -94,45 +94,45 @@ void wiEmittedParticle::CreateSelfBuffers()
 		device->SetName(&deadList, "deadList");
 
 
-		bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
+		bd.misc_flags = RESOURCE_MISC_BUFFER_RAW;
 		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		{
-			bd.MiscFlags |= RESOURCE_MISC_RAY_TRACING;
+			bd.misc_flags |= RESOURCE_MISC_RAY_TRACING;
 		}
-		bd.Stride = sizeof(MeshComponent::Vertex_POS);
-		bd.Size = bd.Stride * 4 * MAX_PARTICLES;
+		bd.stride = sizeof(MeshComponent::Vertex_POS);
+		bd.size = bd.stride * 4 * MAX_PARTICLES;
 		std::vector<MeshComponent::Vertex_POS> positionData(4 * MAX_PARTICLES);
 		std::fill(positionData.begin(), positionData.end(), MeshComponent::Vertex_POS());
 		device->CreateBuffer(&bd, positionData.data(), &vertexBuffer_POS);
 		device->SetName(&vertexBuffer_POS, "vertexBuffer_POS");
 
-		bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
-		bd.Stride = sizeof(MeshComponent::Vertex_TEX);
-		bd.Size = bd.Stride * 4 * MAX_PARTICLES;
+		bd.misc_flags = RESOURCE_MISC_BUFFER_RAW;
+		bd.stride = sizeof(MeshComponent::Vertex_TEX);
+		bd.size = bd.stride * 4 * MAX_PARTICLES;
 		device->CreateBuffer(&bd, nullptr, &vertexBuffer_TEX);
 		device->SetName(&vertexBuffer_TEX, "vertexBuffer_TEX");
 
-		bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
-		bd.Stride = sizeof(MeshComponent::Vertex_TEX);
-		bd.Size = bd.Stride * 4 * MAX_PARTICLES;
+		bd.misc_flags = RESOURCE_MISC_BUFFER_RAW;
+		bd.stride = sizeof(MeshComponent::Vertex_TEX);
+		bd.size = bd.stride * 4 * MAX_PARTICLES;
 		device->CreateBuffer(&bd, nullptr, &vertexBuffer_TEX2);
 		device->SetName(&vertexBuffer_TEX2, "vertexBuffer_TEX2");
 
-		bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
-		bd.Stride = sizeof(MeshComponent::Vertex_COL);
-		bd.Size = bd.Stride * 4 * MAX_PARTICLES;
+		bd.misc_flags = RESOURCE_MISC_BUFFER_RAW;
+		bd.stride = sizeof(MeshComponent::Vertex_COL);
+		bd.size = bd.stride * 4 * MAX_PARTICLES;
 		device->CreateBuffer(&bd, nullptr, &vertexBuffer_COL);
 		device->SetName(&vertexBuffer_COL, "vertexBuffer_COL");
 
-		bd.BindFlags = BIND_SHADER_RESOURCE;
-		bd.MiscFlags = RESOURCE_MISC_NONE;
+		bd.bind_flags = BIND_SHADER_RESOURCE;
+		bd.misc_flags = RESOURCE_MISC_NONE;
 		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		{
-			bd.MiscFlags |= RESOURCE_MISC_RAY_TRACING;
+			bd.misc_flags |= RESOURCE_MISC_RAY_TRACING;
 		}
-		bd.Format = FORMAT_R32_UINT;
-		bd.Stride = sizeof(uint);
-		bd.Size = bd.Stride * 6 * MAX_PARTICLES;
+		bd.format = FORMAT_R32_UINT;
+		bd.stride = sizeof(uint);
+		bd.size = bd.stride * 6 * MAX_PARTICLES;
 		std::vector<uint> primitiveData(6 * MAX_PARTICLES);
 		for (uint particleID = 0; particleID < MAX_PARTICLES; ++particleID)
 		{
@@ -149,15 +149,15 @@ void wiEmittedParticle::CreateSelfBuffers()
 		device->SetName(&primitiveBuffer, "primitiveBuffer");
 	}
 
-	if (IsSorted() && distanceBuffer.desc.Size < MAX_PARTICLES * sizeof(float))
+	if (IsSorted() && distanceBuffer.desc.size < MAX_PARTICLES * sizeof(float))
 	{
 		// Distance buffer:
 		GPUBufferDesc bd;
-		bd.Usage = USAGE_DEFAULT;
-		bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		bd.Stride = sizeof(float);
-		bd.Size = bd.Stride * MAX_PARTICLES;
+		bd.usage = USAGE_DEFAULT;
+		bd.bind_flags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		bd.misc_flags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		bd.stride = sizeof(float);
+		bd.size = bd.stride * MAX_PARTICLES;
 		std::vector<float> distances(MAX_PARTICLES);
 		std::fill(distances.begin(), distances.end(), 0.0f);
 		device->CreateBuffer(&bd, distances.data(), &distanceBuffer);
@@ -167,30 +167,30 @@ void wiEmittedParticle::CreateSelfBuffers()
 	if (IsSPHEnabled())
 	{
 		GPUBufferDesc bd;
-		bd.Usage = USAGE_DEFAULT;
-		bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		bd.usage = USAGE_DEFAULT;
+		bd.bind_flags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		bd.misc_flags = RESOURCE_MISC_BUFFER_STRUCTURED;
 
-		if (sphPartitionCellIndices.desc.Size < MAX_PARTICLES * sizeof(float))
+		if (sphPartitionCellIndices.desc.size < MAX_PARTICLES * sizeof(float))
 		{
 			// SPH Partitioning grid indices per particle:
-			bd.Stride = sizeof(float); // really, it is uint, but sorting is performing comparisons on floats, so whateva
-			bd.Size = bd.Stride * MAX_PARTICLES;
+			bd.stride = sizeof(float); // really, it is uint, but sorting is performing comparisons on floats, so whateva
+			bd.size = bd.stride * MAX_PARTICLES;
 			device->CreateBuffer(&bd, nullptr, &sphPartitionCellIndices);
 			device->SetName(&sphPartitionCellIndices, "sphPartitionCellIndices");
 
 			// Density buffer (for SPH simulation):
-			bd.Stride = sizeof(float);
-			bd.Size = bd.Stride * MAX_PARTICLES;
+			bd.stride = sizeof(float);
+			bd.size = bd.stride * MAX_PARTICLES;
 			device->CreateBuffer(&bd, nullptr, &densityBuffer);
 			device->SetName(&densityBuffer, "densityBuffer");
 		}
 
-		if (sphPartitionCellOffsets.desc.Size < SPH_PARTITION_BUCKET_COUNT * sizeof(uint32_t))
+		if (sphPartitionCellOffsets.desc.size < SPH_PARTITION_BUCKET_COUNT * sizeof(uint32_t))
 		{
 			// SPH Partitioning grid cell offsets into particle index list:
-			bd.Stride = sizeof(uint32_t);
-			bd.Size = bd.Stride * SPH_PARTITION_BUCKET_COUNT;
+			bd.stride = sizeof(uint32_t);
+			bd.size = bd.stride * SPH_PARTITION_BUCKET_COUNT;
 			device->CreateBuffer(&bd, nullptr, &sphPartitionCellOffsets);
 			device->SetName(&sphPartitionCellOffsets, "sphPartitionCellOffsets");
 		}
@@ -212,12 +212,12 @@ void wiEmittedParticle::CreateSelfBuffers()
 		counters.aliveCount_afterSimulation = 0;
 
 		GPUBufferDesc bd;
-		bd.Usage = USAGE_DEFAULT;
-		bd.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		bd.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		bd.Size = sizeof(counters);
-		bd.Stride = sizeof(counters);
-		bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
+		bd.usage = USAGE_DEFAULT;
+		bd.bind_flags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		bd.misc_flags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		bd.size = sizeof(counters);
+		bd.stride = sizeof(counters);
+		bd.misc_flags = RESOURCE_MISC_BUFFER_RAW;
 		device->CreateBuffer(&bd, &counters, &counterBuffer);
 		device->SetName(&counterBuffer, "counterBuffer");
 	}
@@ -227,10 +227,10 @@ void wiEmittedParticle::CreateSelfBuffers()
 		GPUBufferDesc bd;
 
 		// Indirect Execution buffer:
-		bd.Usage = USAGE_DEFAULT;
-		bd.BindFlags = BIND_UNORDERED_ACCESS;
-		bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW | RESOURCE_MISC_INDIRECT_ARGS;
-		bd.Size =
+		bd.usage = USAGE_DEFAULT;
+		bd.bind_flags = BIND_UNORDERED_ACCESS;
+		bd.misc_flags = RESOURCE_MISC_BUFFER_RAW | RESOURCE_MISC_INDIRECT_ARGS;
+		bd.size =
 			sizeof(wiGraphics::IndirectDispatchArgs) +
 			sizeof(wiGraphics::IndirectDispatchArgs) +
 			sizeof(wiGraphics::IndirectDrawArgsInstanced);
@@ -238,19 +238,19 @@ void wiEmittedParticle::CreateSelfBuffers()
 		device->SetName(&indirectBuffers, "indirectBuffers");
 
 		// Constant buffer:
-		bd.Usage = USAGE_DEFAULT;
-		bd.Size = sizeof(EmittedParticleCB);
-		bd.BindFlags = BIND_CONSTANT_BUFFER;
-		bd.MiscFlags = RESOURCE_MISC_NONE;
+		bd.usage = USAGE_DEFAULT;
+		bd.size = sizeof(EmittedParticleCB);
+		bd.bind_flags = BIND_CONSTANT_BUFFER;
+		bd.misc_flags = RESOURCE_MISC_NONE;
 		device->CreateBuffer(&bd, nullptr, &constantBuffer);
 		device->SetName(&constantBuffer, "constantBuffer");
 
 		// Debug information CPU-readback buffer:
 		{
 			GPUBufferDesc debugBufDesc = counterBuffer.GetDesc();
-			debugBufDesc.Usage = USAGE_READBACK;
-			debugBufDesc.BindFlags = BIND_NONE;
-			debugBufDesc.MiscFlags = RESOURCE_MISC_NONE;
+			debugBufDesc.usage = USAGE_READBACK;
+			debugBufDesc.bind_flags = BIND_NONE;
+			debugBufDesc.misc_flags = RESOURCE_MISC_NONE;
 			for (int i = 0; i < arraysize(statisticsReadbackBuffer); ++i)
 			{
 				device->CreateBuffer(&debugBufDesc, nullptr, &statisticsReadbackBuffer[i]);
@@ -262,10 +262,10 @@ void wiEmittedParticle::CreateSelfBuffers()
 	if (!subsetBuffer.IsValid())
 	{
 		GPUBufferDesc desc;
-		desc.Stride = sizeof(ShaderMeshSubset);
-		desc.Size = desc.Stride;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
-		desc.BindFlags = BIND_SHADER_RESOURCE;
+		desc.stride = sizeof(ShaderMeshSubset);
+		desc.size = desc.stride;
+		desc.misc_flags = RESOURCE_MISC_BUFFER_RAW;
+		desc.bind_flags = BIND_SHADER_RESOURCE;
 		device->CreateBuffer(&desc, nullptr, &subsetBuffer);
 	}
 
@@ -273,20 +273,20 @@ void wiEmittedParticle::CreateSelfBuffers()
 	{
 		RaytracingAccelerationStructureDesc desc;
 		desc.type = RaytracingAccelerationStructureDesc::BOTTOMLEVEL;
-		desc._flags |= RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE;
-		desc._flags |= RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD;
+		desc.flags |= RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE;
+		desc.flags |= RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD;
 
-		desc.bottomlevel.geometries.emplace_back();
-		auto& geometry = desc.bottomlevel.geometries.back();
+		desc.bottom_level.geometries.emplace_back();
+		auto& geometry = desc.bottom_level.geometries.back();
 		geometry.type = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::TRIANGLES;
-		geometry.triangles.vertexBuffer = vertexBuffer_POS;
-		geometry.triangles.indexBuffer = primitiveBuffer;
-		geometry.triangles.indexFormat = INDEXFORMAT_32BIT;
-		geometry.triangles.indexCount = (uint32_t)(primitiveBuffer.desc.Size / primitiveBuffer.desc.Stride);
-		geometry.triangles.indexOffset = 0;
-		geometry.triangles.vertexCount = (uint32_t)(vertexBuffer_POS.desc.Size / vertexBuffer_POS.desc.Stride);
-		geometry.triangles.vertexFormat = FORMAT_R32G32B32_FLOAT;
-		geometry.triangles.vertexStride = sizeof(MeshComponent::Vertex_POS);
+		geometry.triangles.vertex_buffer = vertexBuffer_POS;
+		geometry.triangles.index_buffer = primitiveBuffer;
+		geometry.triangles.index_format = INDEXFORMAT_32BIT;
+		geometry.triangles.index_count = (uint32_t)(primitiveBuffer.desc.size / primitiveBuffer.desc.stride);
+		geometry.triangles.index_offset = 0;
+		geometry.triangles.vertex_count = (uint32_t)(vertexBuffer_POS.desc.size / vertexBuffer_POS.desc.stride);
+		geometry.triangles.vertex_format = FORMAT_R32G32B32_FLOAT;
+		geometry.triangles.vertex_stride = sizeof(MeshComponent::Vertex_POS);
 
 		bool success = device->CreateRaytracingAccelerationStructure(&desc, &BLAS);
 		assert(success);
@@ -302,25 +302,25 @@ uint64_t wiEmittedParticle::GetMemorySizeInBytes() const
 
 	uint64_t retVal = 0;
 
-	retVal += particleBuffer.GetDesc().Size;
-	retVal += aliveList[0].GetDesc().Size;
-	retVal += aliveList[1].GetDesc().Size;
-	retVal += deadList.GetDesc().Size;
-	retVal += distanceBuffer.GetDesc().Size;
-	retVal += sphPartitionCellIndices.GetDesc().Size;
-	retVal += sphPartitionCellOffsets.GetDesc().Size;
-	retVal += densityBuffer.GetDesc().Size;
-	retVal += counterBuffer.GetDesc().Size;
-	retVal += indirectBuffers.GetDesc().Size;
-	retVal += constantBuffer.GetDesc().Size;
-	retVal += vertexBuffer_POS.GetDesc().Size;
-	retVal += vertexBuffer_TEX.GetDesc().Size;
-	retVal += vertexBuffer_TEX2.GetDesc().Size;
-	retVal += vertexBuffer_COL.GetDesc().Size;
-	retVal += primitiveBuffer.GetDesc().Size;
-	retVal += culledIndirectionBuffer.GetDesc().Size;
-	retVal += culledIndirectionBuffer2.GetDesc().Size;
-	retVal += subsetBuffer.GetDesc().Size;
+	retVal += particleBuffer.GetDesc().size;
+	retVal += aliveList[0].GetDesc().size;
+	retVal += aliveList[1].GetDesc().size;
+	retVal += deadList.GetDesc().size;
+	retVal += distanceBuffer.GetDesc().size;
+	retVal += sphPartitionCellIndices.GetDesc().size;
+	retVal += sphPartitionCellOffsets.GetDesc().size;
+	retVal += densityBuffer.GetDesc().size;
+	retVal += counterBuffer.GetDesc().size;
+	retVal += indirectBuffers.GetDesc().size;
+	retVal += constantBuffer.GetDesc().size;
+	retVal += vertexBuffer_POS.GetDesc().size;
+	retVal += vertexBuffer_TEX.GetDesc().size;
+	retVal += vertexBuffer_TEX2.GetDesc().size;
+	retVal += vertexBuffer_COL.GetDesc().size;
+	retVal += primitiveBuffer.GetDesc().size;
+	retVal += culledIndirectionBuffer.GetDesc().size;
+	retVal += culledIndirectionBuffer2.GetDesc().size;
+	retVal += subsetBuffer.GetDesc().size;
 
 	return retVal;
 }
@@ -832,73 +832,73 @@ void wiEmittedParticle::Initialize()
 	wiTimer timer;
 
 	RasterizerState rs;
-	rs.FillMode = FILL_SOLID;
-	rs.CullMode = CULL_NONE;
-	rs.FrontCounterClockwise = true;
-	rs.DepthBias = 0;
-	rs.DepthBiasClamp = 0;
-	rs.SlopeScaledDepthBias = 0;
-	rs.DepthClipEnable = false;
-	rs.MultisampleEnable = false;
-	rs.AntialiasedLineEnable = false;
+	rs.fill_mode = FILL_SOLID;
+	rs.cull_mode = CULL_NONE;
+	rs.front_counter_clockwise = true;
+	rs.depth_bias = 0;
+	rs.depth_bias_clamp = 0;
+	rs.slope_scaled_depth_bias = 0;
+	rs.depth_clip_enable = false;
+	rs.multisample_enable = false;
+	rs.antialiased_line_enable = false;
 	rasterizerState = rs;
 
 
-	rs.FillMode = FILL_WIREFRAME;
-	rs.CullMode = CULL_NONE;
-	rs.FrontCounterClockwise = true;
-	rs.DepthBias = 0;
-	rs.DepthBiasClamp = 0;
-	rs.SlopeScaledDepthBias = 0;
-	rs.DepthClipEnable = false;
-	rs.MultisampleEnable = false;
-	rs.AntialiasedLineEnable = false;
+	rs.fill_mode = FILL_WIREFRAME;
+	rs.cull_mode = CULL_NONE;
+	rs.front_counter_clockwise = true;
+	rs.depth_bias = 0;
+	rs.depth_bias_clamp = 0;
+	rs.slope_scaled_depth_bias = 0;
+	rs.depth_clip_enable = false;
+	rs.multisample_enable = false;
+	rs.antialiased_line_enable = false;
 	wireFrameRS = rs;
 
 
 	DepthStencilState dsd;
-	dsd.DepthEnable = true;
-	dsd.DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
-	dsd.DepthFunc = COMPARISON_GREATER_EQUAL;
-	dsd.StencilEnable = false;
+	dsd.depth_enable = true;
+	dsd.depth_write_mask = DEPTH_WRITE_MASK_ZERO;
+	dsd.depth_func = COMPARISON_GREATER_EQUAL;
+	dsd.stencil_enable = false;
 	depthStencilState = dsd;
 
 
 	BlendState bd;
-	bd.RenderTarget[0].BlendEnable = true;
-	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
-	bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
-	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
-	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
-	bd.RenderTarget[0].DestBlendAlpha = BLEND_INV_SRC_ALPHA;
-	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
-	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
-	bd.IndependentBlendEnable = false;
+	bd.render_target[0].blend_enable = true;
+	bd.render_target[0].src_blend = BLEND_SRC_ALPHA;
+	bd.render_target[0].dest_blend = BLEND_INV_SRC_ALPHA;
+	bd.render_target[0].blend_op = BLEND_OP_ADD;
+	bd.render_target[0].src_blend_alpha = BLEND_ONE;
+	bd.render_target[0].dest_blend_alpha = BLEND_INV_SRC_ALPHA;
+	bd.render_target[0].blend_op_alpha = BLEND_OP_ADD;
+	bd.render_target[0].render_target_write_mask = COLOR_WRITE_ENABLE_ALL;
+	bd.independent_blend_enable = false;
 	blendStates[BLENDMODE_ALPHA] = bd;
 
-	bd.RenderTarget[0].BlendEnable = true;
-	bd.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
-	bd.RenderTarget[0].DestBlend = BLEND_ONE;
-	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
-	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ZERO;
-	bd.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
-	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
-	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
-	bd.IndependentBlendEnable = false;
+	bd.render_target[0].blend_enable = true;
+	bd.render_target[0].src_blend = BLEND_SRC_ALPHA;
+	bd.render_target[0].dest_blend = BLEND_ONE;
+	bd.render_target[0].blend_op = BLEND_OP_ADD;
+	bd.render_target[0].src_blend_alpha = BLEND_ZERO;
+	bd.render_target[0].dest_blend_alpha = BLEND_ONE;
+	bd.render_target[0].blend_op_alpha = BLEND_OP_ADD;
+	bd.render_target[0].render_target_write_mask = COLOR_WRITE_ENABLE_ALL;
+	bd.independent_blend_enable = false;
 	blendStates[BLENDMODE_ADDITIVE] = bd;
 
-	bd.RenderTarget[0].BlendEnable = true;
-	bd.RenderTarget[0].SrcBlend = BLEND_ONE;
-	bd.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
-	bd.RenderTarget[0].BlendOp = BLEND_OP_ADD;
-	bd.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
-	bd.RenderTarget[0].DestBlendAlpha = BLEND_ONE;
-	bd.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
-	bd.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
-	bd.IndependentBlendEnable = false;
+	bd.render_target[0].blend_enable = true;
+	bd.render_target[0].src_blend = BLEND_ONE;
+	bd.render_target[0].dest_blend = BLEND_INV_SRC_ALPHA;
+	bd.render_target[0].blend_op = BLEND_OP_ADD;
+	bd.render_target[0].src_blend_alpha = BLEND_ONE;
+	bd.render_target[0].dest_blend_alpha = BLEND_ONE;
+	bd.render_target[0].blend_op_alpha = BLEND_OP_ADD;
+	bd.render_target[0].render_target_write_mask = COLOR_WRITE_ENABLE_ALL;
+	bd.independent_blend_enable = false;
 	blendStates[BLENDMODE_PREMULTIPLIED] = bd;
 
-	bd.RenderTarget[0].BlendEnable = false;
+	bd.render_target[0].blend_enable = false;
 	blendStates[BLENDMODE_OPAQUE] = bd;
 
 	static wiEvent::Handle handle = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { wiEmittedParticle_Internal::LoadShaders(); });

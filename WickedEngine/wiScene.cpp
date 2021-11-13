@@ -400,17 +400,17 @@ namespace wiScene
 		// Create index buffer GPU data:
 		{
 			GPUBufferDesc bd;
-			bd.BindFlags = BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE;
+			bd.bind_flags = BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE;
 			if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 			{
-				bd.MiscFlags |= RESOURCE_MISC_RAY_TRACING;
+				bd.misc_flags |= RESOURCE_MISC_RAY_TRACING;
 			}
 
 			if (GetIndexFormat() == INDEXFORMAT_32BIT)
 			{
-				bd.Stride = sizeof(uint32_t);
-				bd.Format = FORMAT_R32_UINT;
-				bd.Size = uint32_t(sizeof(uint32_t) * indices.size());
+				bd.stride = sizeof(uint32_t);
+				bd.format = FORMAT_R32_UINT;
+				bd.size = uint32_t(sizeof(uint32_t) * indices.size());
 
 				// Use indices directly since vector is in correct format
 				static_assert(std::is_same<decltype(indices)::value_type, uint32_t>::value, "indices not in INDEXFORMAT_32BIT");
@@ -420,9 +420,9 @@ namespace wiScene
 			}
 			else
 			{
-				bd.Stride = sizeof(uint16_t);
-				bd.Format = FORMAT_R16_UINT;
-				bd.Size = uint32_t(sizeof(uint16_t) * indices.size());
+				bd.stride = sizeof(uint16_t);
+				bd.format = FORMAT_R16_UINT;
+				bd.size = uint32_t(sizeof(uint16_t) * indices.size());
 
 				std::vector<uint16_t> gpuIndexData(indices.size());
 				std::copy(indices.begin(), indices.end(), gpuIndexData.begin());
@@ -458,14 +458,14 @@ namespace wiScene
 			}
 
 			GPUBufferDesc bd;
-			bd.Usage = USAGE_DEFAULT;
-			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
-			bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
+			bd.usage = USAGE_DEFAULT;
+			bd.bind_flags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
+			bd.misc_flags = RESOURCE_MISC_BUFFER_RAW;
 			if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 			{
-				bd.MiscFlags |= RESOURCE_MISC_RAY_TRACING;
+				bd.misc_flags |= RESOURCE_MISC_RAY_TRACING;
 			}
-			bd.Size = (uint32_t)(sizeof(Vertex_POS) * vertices.size());
+			bd.size = (uint32_t)(sizeof(Vertex_POS) * vertices.size());
 
 			device->CreateBuffer(&bd, vertices.data(), &vertexBuffer_POS);
 			device->SetName(&vertexBuffer_POS, "vertexBuffer_POS");
@@ -553,11 +553,11 @@ namespace wiScene
 			}
 
 			GPUBufferDesc bd;
-			bd.Usage = USAGE_DEFAULT;
-			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
-			bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
-			bd.Stride = sizeof(Vertex_TAN);
-			bd.Size = (uint32_t)(bd.Stride * vertices.size());
+			bd.usage = USAGE_DEFAULT;
+			bd.bind_flags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
+			bd.misc_flags = RESOURCE_MISC_BUFFER_RAW;
+			bd.stride = sizeof(Vertex_TAN);
+			bd.size = (uint32_t)(bd.stride * vertices.size());
 
 			device->CreateBuffer(&bd, vertices.data(), &vertexBuffer_TAN);
 			device->SetName(&vertexBuffer_TAN, "vertexBuffer_TAN");
@@ -585,27 +585,27 @@ namespace wiScene
 			}
 
 			GPUBufferDesc bd;
-			bd.BindFlags = BIND_SHADER_RESOURCE;
-			bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
-			bd.Size = (uint32_t)(sizeof(Vertex_BON) * vertices.size());
+			bd.bind_flags = BIND_SHADER_RESOURCE;
+			bd.misc_flags = RESOURCE_MISC_BUFFER_RAW;
+			bd.size = (uint32_t)(sizeof(Vertex_BON) * vertices.size());
 
 			device->CreateBuffer(&bd, vertices.data(), &vertexBuffer_BON);
 
-			bd.Usage = USAGE_DEFAULT;
-			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
-			bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
+			bd.usage = USAGE_DEFAULT;
+			bd.bind_flags = BIND_VERTEX_BUFFER | BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
+			bd.misc_flags = RESOURCE_MISC_BUFFER_RAW;
 
 			if (!vertex_tangents.empty())
 			{
-				bd.Size = (uint32_t)(sizeof(Vertex_TAN) * vertex_tangents.size());
+				bd.size = (uint32_t)(sizeof(Vertex_TAN) * vertex_tangents.size());
 				device->CreateBuffer(&bd, nullptr, &streamoutBuffer_TAN);
 				device->SetName(&streamoutBuffer_TAN, "streamoutBuffer_TAN");
 			}
 
-			bd.Size = (uint32_t)(sizeof(Vertex_POS) * vertex_positions.size());
+			bd.size = (uint32_t)(sizeof(Vertex_POS) * vertex_positions.size());
 			if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 			{
-				bd.MiscFlags |= RESOURCE_MISC_RAY_TRACING;
+				bd.misc_flags |= RESOURCE_MISC_RAY_TRACING;
 			}
 			device->CreateBuffer(&bd, nullptr, &streamoutBuffer_POS);
 			device->SetName(&streamoutBuffer_POS, "streamoutBuffer_POS");
@@ -621,10 +621,10 @@ namespace wiScene
 			}
 
 			GPUBufferDesc bd;
-			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
-			bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
-			bd.Stride = sizeof(Vertex_TEX);
-			bd.Size = (uint32_t)(bd.Stride * vertices.size());
+			bd.bind_flags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
+			bd.misc_flags = RESOURCE_MISC_BUFFER_RAW;
+			bd.stride = sizeof(Vertex_TEX);
+			bd.size = (uint32_t)(bd.stride * vertices.size());
 
 			device->CreateBuffer(&bd, vertices.data(), &vertexBuffer_UV0);
 			device->SetName(&vertexBuffer_UV0, "vertexBuffer_UV0");
@@ -640,10 +640,10 @@ namespace wiScene
 			}
 
 			GPUBufferDesc bd;
-			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
-			bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
-			bd.Stride = sizeof(Vertex_TEX);
-			bd.Size = (uint32_t)(bd.Stride * vertices.size());
+			bd.bind_flags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
+			bd.misc_flags = RESOURCE_MISC_BUFFER_RAW;
+			bd.stride = sizeof(Vertex_TEX);
+			bd.size = (uint32_t)(bd.stride * vertices.size());
 
 			device->CreateBuffer(&bd, vertices.data(), &vertexBuffer_UV1);
 			device->SetName(&vertexBuffer_UV1, "vertexBuffer_UV1");
@@ -653,10 +653,10 @@ namespace wiScene
 		if (!vertex_colors.empty())
 		{
 			GPUBufferDesc bd;
-			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
-			bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
-			bd.Stride = sizeof(Vertex_COL);
-			bd.Size = (uint32_t)(bd.Stride * vertex_colors.size());
+			bd.bind_flags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
+			bd.misc_flags = RESOURCE_MISC_BUFFER_RAW;
+			bd.stride = sizeof(Vertex_COL);
+			bd.size = (uint32_t)(bd.stride * vertex_colors.size());
 
 			device->CreateBuffer(&bd, vertex_colors.data(), &vertexBuffer_COL);
 			device->SetName(&vertexBuffer_COL, "vertexBuffer_COL");
@@ -672,10 +672,10 @@ namespace wiScene
 			}
 
 			GPUBufferDesc bd;
-			bd.BindFlags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
-			bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
-			bd.Stride = sizeof(Vertex_TEX);
-			bd.Size = (uint32_t)(bd.Stride * vertices.size());
+			bd.bind_flags = BIND_VERTEX_BUFFER | BIND_SHADER_RESOURCE;
+			bd.misc_flags = RESOURCE_MISC_BUFFER_RAW;
+			bd.stride = sizeof(Vertex_TEX);
+			bd.size = (uint32_t)(bd.stride * vertices.size());
 
 			device->CreateBuffer(&bd, vertices.data(), &vertexBuffer_ATL);
 			device->SetName(&vertexBuffer_ATL, "vertexBuffer_ATL");
@@ -685,10 +685,10 @@ namespace wiScene
 		vertexBuffer_PRE = GPUBuffer();
 
 		GPUBufferDesc desc;
-		desc.BindFlags = BIND_SHADER_RESOURCE;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
-		desc.Stride = sizeof(ShaderMeshSubset);
-		desc.Size = desc.Stride * (uint32_t)subsets.size();
+		desc.bind_flags = BIND_SHADER_RESOURCE;
+		desc.misc_flags = RESOURCE_MISC_BUFFER_RAW;
+		desc.stride = sizeof(ShaderMeshSubset);
+		desc.size = desc.stride * (uint32_t)subsets.size();
 		bool success = device->CreateBuffer(&desc, nullptr, &subsetBuffer);
 		assert(success);
 		dirty_subsets = true;
@@ -703,27 +703,27 @@ namespace wiScene
 
 			if (streamoutBuffer_POS.IsValid())
 			{
-				desc._flags |= RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE;
-				desc._flags |= RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD;
+				desc.flags |= RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE;
+				desc.flags |= RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD;
 			}
 			else
 			{
-				desc._flags |= RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_TRACE;
+				desc.flags |= RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_TRACE;
 			}
 
 			for (auto& subset : subsets)
 			{
-				desc.bottomlevel.geometries.emplace_back();
-				auto& geometry = desc.bottomlevel.geometries.back();
+				desc.bottom_level.geometries.emplace_back();
+				auto& geometry = desc.bottom_level.geometries.back();
 				geometry.type = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::TRIANGLES;
-				geometry.triangles.vertexBuffer = streamoutBuffer_POS.IsValid() ? streamoutBuffer_POS : vertexBuffer_POS;
-				geometry.triangles.indexBuffer = indexBuffer;
-				geometry.triangles.indexFormat = GetIndexFormat();
-				geometry.triangles.indexCount = subset.indexCount;
-				geometry.triangles.indexOffset = subset.indexOffset;
-				geometry.triangles.vertexCount = (uint32_t)vertex_positions.size();
-				geometry.triangles.vertexFormat = FORMAT_R32G32B32_FLOAT;
-				geometry.triangles.vertexStride = sizeof(MeshComponent::Vertex_POS);
+				geometry.triangles.vertex_buffer = streamoutBuffer_POS.IsValid() ? streamoutBuffer_POS : vertexBuffer_POS;
+				geometry.triangles.index_buffer = indexBuffer;
+				geometry.triangles.index_format = GetIndexFormat();
+				geometry.triangles.index_count = subset.indexCount;
+				geometry.triangles.index_offset = subset.indexOffset;
+				geometry.triangles.vertex_count = (uint32_t)vertex_positions.size();
+				geometry.triangles.vertex_format = FORMAT_R32G32B32_FLOAT;
+				geometry.triangles.vertex_stride = sizeof(MeshComponent::Vertex_POS);
 			}
 
 			bool success = device->CreateRaytracingAccelerationStructure(&desc, &BLAS);
@@ -1168,7 +1168,7 @@ namespace wiScene
 #endif
 	void ObjectComponent::SaveLightmap()
 	{
-		if (lightmap.IsValid() && (lightmap.desc.BindFlags & BIND_RENDER_TARGET))
+		if (lightmap.IsValid() && (lightmap.desc.bind_flags & BIND_RENDER_TARGET))
 		{
 			SetLightmapRenderRequest(false);
 
@@ -1218,7 +1218,7 @@ namespace wiScene
 
 			CompressLightmap();
 
-			wiTextureHelper::CreateTexture(lightmap, lightmapTextureData.data(), lightmapWidth, lightmapHeight, lightmap.desc.Format);
+			wiTextureHelper::CreateTexture(lightmap, lightmapTextureData.data(), lightmapWidth, lightmapHeight, lightmap.desc.format);
 			wiRenderer::GetDevice()->SetName(&lightmap, "lightmap");
 		}
 	}
@@ -1291,8 +1291,8 @@ namespace wiScene
 		}
 
 		lightmapTextureData = std::move(packed_data);
-		lightmap.desc.Format = FORMAT_R11G11B10_FLOAT;
-		lightmap.desc.BindFlags = BIND_SHADER_RESOURCE;
+		lightmap.desc.format = FORMAT_R11G11B10_FLOAT;
+		lightmap.desc.bind_flags = BIND_SHADER_RESOURCE;
 
 #endif
 	}
@@ -1302,10 +1302,10 @@ namespace wiScene
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
 		GPUBufferDesc bd;
-		bd.Size = sizeof(ShaderTransform) * (uint32_t)boneCollection.size();
-		bd.BindFlags = BIND_SHADER_RESOURCE;
-		bd.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
-		bd.Stride = sizeof(ShaderTransform);
+		bd.size = sizeof(ShaderTransform) * (uint32_t)boneCollection.size();
+		bd.bind_flags = BIND_SHADER_RESOURCE;
+		bd.misc_flags = RESOURCE_MISC_BUFFER_RAW;
+		bd.stride = sizeof(ShaderTransform);
 
 		device->CreateBuffer(&bd, nullptr, &boneBuffer);
 	}
@@ -1465,19 +1465,19 @@ namespace wiScene
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
 		instanceArraySize = objects.GetCount() + hairs.GetCount() + emitters.GetCount();
-		if (instanceBuffer.desc.Size < (instanceArraySize * sizeof(ShaderMeshInstance)))
+		if (instanceBuffer.desc.size < (instanceArraySize * sizeof(ShaderMeshInstance)))
 		{
 			GPUBufferDesc desc;
-			desc.Stride = sizeof(ShaderMeshInstance);
-			desc.Size = desc.Stride * instanceArraySize;
-			desc.BindFlags = BIND_SHADER_RESOURCE;
-			desc.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
+			desc.stride = sizeof(ShaderMeshInstance);
+			desc.size = desc.stride * instanceArraySize;
+			desc.bind_flags = BIND_SHADER_RESOURCE;
+			desc.misc_flags = RESOURCE_MISC_BUFFER_RAW;
 			device->CreateBuffer(&desc, nullptr, &instanceBuffer);
 			device->SetName(&instanceBuffer, "instanceBuffer");
 
-			desc.Usage = USAGE_UPLOAD;
-			desc.BindFlags = BIND_NONE;
-			desc.MiscFlags = RESOURCE_MISC_NONE;
+			desc.usage = USAGE_UPLOAD;
+			desc.bind_flags = BIND_NONE;
+			desc.misc_flags = RESOURCE_MISC_NONE;
 			for (int i = 0; i < arraysize(instanceUploadBuffer); ++i)
 			{
 				device->CreateBuffer(&desc, nullptr, &instanceUploadBuffer[i]);
@@ -1487,19 +1487,19 @@ namespace wiScene
 		instanceArrayMapped = (ShaderMeshInstance*)instanceUploadBuffer[device->GetBufferIndex()].mapped_data;
 
 		meshArraySize = meshes.GetCount() + hairs.GetCount() + emitters.GetCount();
-		if (meshBuffer.desc.Size < (meshArraySize * sizeof(ShaderMesh)))
+		if (meshBuffer.desc.size < (meshArraySize * sizeof(ShaderMesh)))
 		{
 			GPUBufferDesc desc;
-			desc.Stride = sizeof(ShaderMesh);
-			desc.Size = desc.Stride * meshArraySize;
-			desc.BindFlags = BIND_SHADER_RESOURCE;
-			desc.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
+			desc.stride = sizeof(ShaderMesh);
+			desc.size = desc.stride * meshArraySize;
+			desc.bind_flags = BIND_SHADER_RESOURCE;
+			desc.misc_flags = RESOURCE_MISC_BUFFER_RAW;
 			device->CreateBuffer(&desc, nullptr, &meshBuffer);
 			device->SetName(&meshBuffer, "meshBuffer");
 
-			desc.Usage = USAGE_UPLOAD;
-			desc.BindFlags = BIND_NONE;
-			desc.MiscFlags = RESOURCE_MISC_NONE;
+			desc.usage = USAGE_UPLOAD;
+			desc.bind_flags = BIND_NONE;
+			desc.misc_flags = RESOURCE_MISC_NONE;
 			for (int i = 0; i < arraysize(meshUploadBuffer); ++i)
 			{
 				device->CreateBuffer(&desc, nullptr, &meshUploadBuffer[i]);
@@ -1509,19 +1509,19 @@ namespace wiScene
 		meshArrayMapped = (ShaderMesh*)meshUploadBuffer[device->GetBufferIndex()].mapped_data;
 
 		materialArraySize = materials.GetCount();
-		if (materialBuffer.desc.Size < (materialArraySize * sizeof(ShaderMaterial)))
+		if (materialBuffer.desc.size < (materialArraySize * sizeof(ShaderMaterial)))
 		{
 			GPUBufferDesc desc;
-			desc.Stride = sizeof(ShaderMaterial);
-			desc.Size = desc.Stride * materialArraySize;
-			desc.BindFlags = BIND_SHADER_RESOURCE;
-			desc.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
+			desc.stride = sizeof(ShaderMaterial);
+			desc.size = desc.stride * materialArraySize;
+			desc.bind_flags = BIND_SHADER_RESOURCE;
+			desc.misc_flags = RESOURCE_MISC_BUFFER_RAW;
 			device->CreateBuffer(&desc, nullptr, &materialBuffer);
 			device->SetName(&materialBuffer, "materialBuffer");
 
-			desc.Usage = USAGE_UPLOAD;
-			desc.BindFlags = BIND_NONE;
-			desc.MiscFlags = RESOURCE_MISC_NONE;
+			desc.usage = USAGE_UPLOAD;
+			desc.bind_flags = BIND_NONE;
+			desc.misc_flags = RESOURCE_MISC_NONE;
 			for (int i = 0; i < arraysize(materialUploadBuffer); ++i)
 			{
 				device->CreateBuffer(&desc, nullptr, &materialUploadBuffer[i]);
@@ -1534,10 +1534,10 @@ namespace wiScene
 		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		{
 			GPUBufferDesc desc;
-			desc.Stride = (uint32_t)device->GetTopLevelAccelerationStructureInstanceSize();
-			desc.Size = desc.Stride * instanceArraySize;
-			desc.Usage = USAGE_UPLOAD;
-			if (TLAS_instancesUpload->desc.Size < desc.Size)
+			desc.stride = (uint32_t)device->GetTopLevelAccelerationStructureInstanceSize();
+			desc.size = desc.stride * instanceArraySize;
+			desc.usage = USAGE_UPLOAD;
+			if (TLAS_instancesUpload->desc.size < desc.size)
 			{
 				for (int i = 0; i < arraysize(TLAS_instancesUpload); ++i)
 				{
@@ -1552,17 +1552,17 @@ namespace wiScene
 		if(wiRenderer::GetOcclusionCullingEnabled() && !wiRenderer::GetFreezeCullingCameraEnabled())
 		{
 			uint32_t minQueryCount = uint32_t(objects.GetCount() + lights.GetCount());
-			if (queryHeap.desc.queryCount < minQueryCount)
+			if (queryHeap.desc.query_count < minQueryCount)
 			{
 				GPUQueryHeapDesc desc;
 				desc.type = GPU_QUERY_TYPE_OCCLUSION_BINARY;
-				desc.queryCount = minQueryCount;
+				desc.query_count = minQueryCount;
 				bool success = device->CreateQueryHeap(&desc, &queryHeap);
 				assert(success);
 
 				GPUBufferDesc bd;
-				bd.Usage = USAGE_READBACK;
-				bd.Size = desc.queryCount * sizeof(uint64_t);
+				bd.usage = USAGE_READBACK;
+				bd.size = desc.query_count * sizeof(uint64_t);
 
 				for (int i = 0; i < arraysize(queryResultBuffer); ++i)
 				{
@@ -1572,8 +1572,8 @@ namespace wiScene
 
 				if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_PREDICATION))
 				{
-					bd.Usage = USAGE_DEFAULT;
-					bd.MiscFlags |= RESOURCE_MISC_PREDICATION;
+					bd.usage = USAGE_DEFAULT;
+					bd.misc_flags |= RESOURCE_MISC_PREDICATION;
 					success = device->CreateBuffer(&bd, nullptr, &queryPredicationBuffer);
 					assert(success);
 				}
@@ -1649,19 +1649,19 @@ namespace wiScene
 		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
 		{
 			// Recreate top level acceleration structure if the object count changed:
-			if (instanceArraySize > 0 && (uint32_t)instanceArraySize != TLAS.desc.toplevel.count)
+			if (instanceArraySize > 0 && (uint32_t)instanceArraySize != TLAS.desc.top_level.count)
 			{
 				RaytracingAccelerationStructureDesc desc;
-				desc._flags = RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD;
+				desc.flags = RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD;
 				desc.type = RaytracingAccelerationStructureDesc::TOPLEVEL;
-				desc.toplevel.count = (uint32_t)instanceArraySize;
+				desc.top_level.count = (uint32_t)instanceArraySize;
 				GPUBufferDesc bufdesc;
-				bufdesc.MiscFlags |= RESOURCE_MISC_RAY_TRACING;
-				bufdesc.Stride = (uint32_t)device->GetTopLevelAccelerationStructureInstanceSize();
-				bufdesc.Size = bufdesc.Stride * desc.toplevel.count;
-				bool success = device->CreateBuffer(&bufdesc, nullptr, &desc.toplevel.instanceBuffer);
+				bufdesc.misc_flags |= RESOURCE_MISC_RAY_TRACING;
+				bufdesc.stride = (uint32_t)device->GetTopLevelAccelerationStructureInstanceSize();
+				bufdesc.size = bufdesc.stride * desc.top_level.count;
+				bool success = device->CreateBuffer(&bufdesc, nullptr, &desc.top_level.instance_buffer);
 				assert(success);
-				device->SetName(&desc.toplevel.instanceBuffer, "TLAS.instanceBuffer");
+				device->SetName(&desc.top_level.instance_buffer, "TLAS.instanceBuffer");
 				success = device->CreateRaytracingAccelerationStructure(&desc, &TLAS);
 				assert(success);
 				device->SetName(&TLAS, "TLAS");
@@ -1693,22 +1693,22 @@ namespace wiScene
 			if (!surfelBuffer.IsValid())
 			{
 				GPUBufferDesc desc;
-				desc.Stride = sizeof(Surfel);
-				desc.Size = desc.Stride * SURFEL_CAPACITY;
-				desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-				desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+				desc.stride = sizeof(Surfel);
+				desc.size = desc.stride * SURFEL_CAPACITY;
+				desc.misc_flags = RESOURCE_MISC_BUFFER_STRUCTURED;
+				desc.bind_flags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
 				device->CreateBuffer(&desc, nullptr, &surfelBuffer);
 				device->SetName(&surfelBuffer, "surfelBuffer");
 
-				desc.Stride = sizeof(SurfelData);
-				desc.Size = desc.Stride * SURFEL_CAPACITY;
-				desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+				desc.stride = sizeof(SurfelData);
+				desc.size = desc.stride * SURFEL_CAPACITY;
+				desc.misc_flags = RESOURCE_MISC_BUFFER_STRUCTURED;
 				device->CreateBuffer(&desc, nullptr, &surfelDataBuffer);
 				device->SetName(&surfelDataBuffer, "surfelDataBuffer");
 
-				desc.Stride = sizeof(uint);
-				desc.Size = desc.Stride * SURFEL_CAPACITY;
-				desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+				desc.stride = sizeof(uint);
+				desc.size = desc.stride * SURFEL_CAPACITY;
+				desc.misc_flags = RESOURCE_MISC_BUFFER_STRUCTURED;
 				device->CreateBuffer(&desc, nullptr, &surfelAliveBuffer[0]);
 				device->SetName(&surfelAliveBuffer[0], "surfelAliveBuffer[0]");
 				device->CreateBuffer(&desc, nullptr, &surfelAliveBuffer[1]);
@@ -1722,30 +1722,30 @@ namespace wiScene
 				device->CreateBuffer(&desc, dead_indices.data(), &surfelDeadBuffer);
 				device->SetName(&surfelDeadBuffer, "surfelDeadBuffer");
 
-				desc.Stride = sizeof(uint);
-				desc.Size = desc.Stride * 9; // count (1 uint), nextCount (1 uint), deadCount (1 uint), cellAllocator (1 uint), IndirectDispatchArgs (3 uints), raycount (1 uint), shortage (1 uint)
-				desc.MiscFlags = RESOURCE_MISC_BUFFER_RAW | RESOURCE_MISC_INDIRECT_ARGS;
+				desc.stride = sizeof(uint);
+				desc.size = desc.stride * 9; // count (1 uint), nextCount (1 uint), deadCount (1 uint), cellAllocator (1 uint), IndirectDispatchArgs (3 uints), raycount (1 uint), shortage (1 uint)
+				desc.misc_flags = RESOURCE_MISC_BUFFER_RAW | RESOURCE_MISC_INDIRECT_ARGS;
 				uint stats_data[] = { 0,0,SURFEL_CAPACITY,0,0,0,0,0,0 };
 				device->CreateBuffer(&desc, &stats_data, &surfelStatsBuffer);
 				device->SetName(&surfelStatsBuffer, "surfelStatsBuffer");
 
-				desc.Stride = sizeof(SurfelGridCell);
-				desc.Size = desc.Stride * SURFEL_TABLE_SIZE;
-				desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+				desc.stride = sizeof(SurfelGridCell);
+				desc.size = desc.stride * SURFEL_TABLE_SIZE;
+				desc.misc_flags = RESOURCE_MISC_BUFFER_STRUCTURED;
 				device->CreateBuffer(&desc, nullptr, &surfelGridBuffer);
 				device->SetName(&surfelGridBuffer, "surfelGridBuffer");
 
-				desc.Stride = sizeof(uint);
-				desc.Size = desc.Stride * SURFEL_CAPACITY * 27; // each surfel can be in 3x3x3=27 cells
-				desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+				desc.stride = sizeof(uint);
+				desc.size = desc.stride * SURFEL_CAPACITY * 27; // each surfel can be in 3x3x3=27 cells
+				desc.misc_flags = RESOURCE_MISC_BUFFER_STRUCTURED;
 				device->CreateBuffer(&desc, nullptr, &surfelCellBuffer);
 				device->SetName(&surfelCellBuffer, "surfelCellBuffer");
 
 				TextureDesc tex;
-				tex.Width = SURFEL_MOMENT_ATLAS_TEXELS;
-				tex.Height = SURFEL_MOMENT_ATLAS_TEXELS;
-				tex.Format = FORMAT_R16G16_FLOAT;
-				tex.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
+				tex.width = SURFEL_MOMENT_ATLAS_TEXELS;
+				tex.height = SURFEL_MOMENT_ATLAS_TEXELS;
+				tex.format = FORMAT_R16G16_FLOAT;
+				tex.bind_flags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
 				device->CreateTexture(&tex, nullptr, &surfelMomentsTexture[0]);
 				device->SetName(&surfelMomentsTexture[0], "surfelMomentsTexture[0]");
 				device->CreateTexture(&tex, nullptr, &surfelMomentsTexture[1]);
@@ -2853,7 +2853,7 @@ namespace wiScene
 
 			armature.aabb = AABB(_min, _max);
 
-			if (!armature.boneBuffer.IsValid() || armature.boneBuffer.desc.Size != armature.boneData.size() * sizeof(ShaderTransform))
+			if (!armature.boneBuffer.IsValid() || armature.boneBuffer.desc.size != armature.boneData.size() * sizeof(ShaderTransform))
 			{
 				armature.CreateRenderData();
 			}
@@ -2899,24 +2899,24 @@ namespace wiScene
 					subset.materialIndex = (uint32_t)materials.GetIndex(subset.materialID);
 					if (mesh.BLAS.IsValid())
 					{
-						auto& geometry = mesh.BLAS.desc.bottomlevel.geometries[subsetIndex];
-						uint32_t flags = geometry._flags;
+						auto& geometry = mesh.BLAS.desc.bottom_level.geometries[subsetIndex];
+						uint32_t flags = geometry.flags;
 						if (material->IsAlphaTestEnabled() || (material->GetRenderTypes() & RENDERTYPE_TRANSPARENT) || !material->IsCastingShadow())
 						{
-							geometry._flags &= ~RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
+							geometry.flags &= ~RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
 						}
 						else
 						{
-							geometry._flags = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
+							geometry.flags = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
 						}
-						if (flags != geometry._flags)
+						if (flags != geometry.flags)
 						{
 							mesh.BLAS_state = MeshComponent::BLAS_STATE_NEEDS_REBUILD;
 						}
 						if (mesh.streamoutBuffer_POS.IsValid())
 						{
 							mesh.BLAS_state = MeshComponent::BLAS_STATE_NEEDS_REBUILD;
-							geometry.triangles.vertexBuffer = mesh.streamoutBuffer_POS;
+							geometry.triangles.vertex_buffer = mesh.streamoutBuffer_POS;
 						}
 						if (material->IsDoubleSided())
 						{
@@ -3027,27 +3027,27 @@ namespace wiScene
 			GraphicsDevice* device = wiRenderer::GetDevice();
 
 			TextureDesc desc;
-			desc.Width = impostorTextureDim;
-			desc.Height = impostorTextureDim;
+			desc.width = impostorTextureDim;
+			desc.height = impostorTextureDim;
 
-			desc.BindFlags = BIND_DEPTH_STENCIL;
-			desc.ArraySize = 1;
-			desc.Format = FORMAT_D16_UNORM;
+			desc.bind_flags = BIND_DEPTH_STENCIL;
+			desc.array_size = 1;
+			desc.format = FORMAT_D16_UNORM;
 			desc.layout = RESOURCE_STATE_DEPTHSTENCIL;
 			device->CreateTexture(&desc, nullptr, &impostorDepthStencil);
 			device->SetName(&impostorDepthStencil, "impostorDepthStencil");
 
-			desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-			desc.ArraySize = maxImpostorCount * impostorCaptureAngles * 3;
-			desc.Format = FORMAT_R8G8B8A8_UNORM;
+			desc.bind_flags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+			desc.array_size = maxImpostorCount * impostorCaptureAngles * 3;
+			desc.format = FORMAT_R8G8B8A8_UNORM;
 			desc.layout = RESOURCE_STATE_SHADER_RESOURCE;
 
 			device->CreateTexture(&desc, nullptr, &impostorArray);
 			device->SetName(&impostorArray, "impostorArray");
 
-			renderpasses_impostor.resize(desc.ArraySize);
+			renderpasses_impostor.resize(desc.array_size);
 
-			for (uint32_t i = 0; i < desc.ArraySize; ++i)
+			for (uint32_t i = 0; i < desc.array_size; ++i)
 			{
 				int subresource_index;
 				subresource_index = device->CreateSubresource(&impostorArray, RTV, i, 1, 0, 1);
@@ -3249,20 +3249,20 @@ namespace wiScene
 							worldMatrix._12, worldMatrix._22, worldMatrix._32, worldMatrix._42,
 							worldMatrix._13, worldMatrix._23, worldMatrix._33, worldMatrix._43
 						);
-						instance.InstanceID = args.jobIndex;
-						instance.InstanceMask = 1;
-						instance.bottomlevel = mesh->BLAS;
+						instance.instance_id = args.jobIndex;
+						instance.instance_mask = 1;
+						instance.bottom_level = mesh->BLAS;
 
 						if (mesh->IsDoubleSided() || mesh->_flags & MeshComponent::TLAS_FORCE_DOUBLE_SIDED)
 						{
-							instance.Flags |= RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_CULL_DISABLE;
+							instance.flags |= RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_CULL_DISABLE;
 						}
 
 						if (XMVectorGetX(XMMatrixDeterminant(W)) > 0)
 						{
 							// There is a mismatch between object space winding and BLAS winding:
 							//	https://docs.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_raytracing_instance_flags
-							instance.Flags |= RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE;
+							instance.flags |= RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE;
 						}
 
 						void* dest = (void*)((size_t)TLAS_instancesMapped + (size_t)args.jobIndex * device->GetTopLevelAccelerationStructureInstanceSize());
@@ -3278,12 +3278,12 @@ namespace wiScene
 							object.lightmapHeight = wiMath::GetNextPowerOfTwo(object.lightmapHeight + 1) / 2;
 
 							TextureDesc desc;
-							desc.Width = object.lightmapWidth;
-							desc.Height = object.lightmapHeight;
-							desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
+							desc.width = object.lightmapWidth;
+							desc.height = object.lightmapHeight;
+							desc.bind_flags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 							// Note: we need the full precision format to achieve correct accumulative blending! 
 							//	But the final lightmap will be compressed into an optimal format when the rendering is finished
-							desc.Format = FORMAT_R32G32B32A32_FLOAT;
+							desc.format = FORMAT_R32G32B32A32_FLOAT;
 
 							device->CreateTexture(&desc, nullptr, &object.lightmap);
 							device->SetName(&object.lightmap, "lightmap_renderable");
@@ -3305,8 +3305,8 @@ namespace wiScene
 					if (!object.lightmapTextureData.empty() && !object.lightmap.IsValid())
 					{
 						// Create a GPU-side per object lighmap if there is none yet, but the data exists already:
-						object.lightmap.desc.Format = FORMAT_R11G11B10_FLOAT;
-						wiTextureHelper::CreateTexture(object.lightmap, object.lightmapTextureData.data(), object.lightmapWidth, object.lightmapHeight, object.lightmap.desc.Format);
+						object.lightmap.desc.format = FORMAT_R11G11B10_FLOAT;
+						wiTextureHelper::CreateTexture(object.lightmap, object.lightmapTextureData.data(), object.lightmapWidth, object.lightmapHeight, object.lightmap.desc.format);
 						device->SetName(&object.lightmap, "lightmap");
 					}
 				}
@@ -3406,27 +3406,27 @@ namespace wiScene
 			GraphicsDevice* device = wiRenderer::GetDevice();
 
 			TextureDesc desc;
-			desc.ArraySize = 6;
-			desc.BindFlags = BIND_DEPTH_STENCIL;
-			desc.Format = FORMAT_D16_UNORM;
-			desc.Height = envmapRes;
-			desc.Width = envmapRes;
-			desc.MipLevels = 1;
-			desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
-			desc.Usage = USAGE_DEFAULT;
+			desc.array_size = 6;
+			desc.bind_flags = BIND_DEPTH_STENCIL;
+			desc.format = FORMAT_D16_UNORM;
+			desc.height = envmapRes;
+			desc.width = envmapRes;
+			desc.mip_levels = 1;
+			desc.misc_flags = RESOURCE_MISC_TEXTURECUBE;
+			desc.usage = USAGE_DEFAULT;
 			desc.layout = RESOURCE_STATE_DEPTHSTENCIL;
 
 			device->CreateTexture(&desc, nullptr, &envrenderingDepthBuffer);
 			device->SetName(&envrenderingDepthBuffer, "envrenderingDepthBuffer");
 
-			desc.ArraySize = envmapCount * 6;
-			desc.BindFlags = BIND_SHADER_RESOURCE | BIND_RENDER_TARGET | BIND_UNORDERED_ACCESS;
-			desc.Format = FORMAT_R11G11B10_FLOAT;
-			desc.Height = envmapRes;
-			desc.Width = envmapRes;
-			desc.MipLevels = envmapMIPs;
-			desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
-			desc.Usage = USAGE_DEFAULT;
+			desc.array_size = envmapCount * 6;
+			desc.bind_flags = BIND_SHADER_RESOURCE | BIND_RENDER_TARGET | BIND_UNORDERED_ACCESS;
+			desc.format = FORMAT_R11G11B10_FLOAT;
+			desc.height = envmapRes;
+			desc.width = envmapRes;
+			desc.mip_levels = envmapMIPs;
+			desc.misc_flags = RESOURCE_MISC_TEXTURECUBE;
+			desc.usage = USAGE_DEFAULT;
 			desc.layout = RESOURCE_STATE_SHADER_RESOURCE;
 
 			device->CreateTexture(&desc, nullptr, &envmapArray);
@@ -3458,12 +3458,12 @@ namespace wiScene
 
 				device->CreateRenderPass(&renderpassdesc, &renderpasses_envmap[subresource_index]);
 			}
-			for (uint32_t i = 0; i < envmapArray.desc.MipLevels; ++i)
+			for (uint32_t i = 0; i < envmapArray.desc.mip_levels; ++i)
 			{
 				int subresource_index;
-				subresource_index = device->CreateSubresource(&envmapArray, SRV, 0, desc.ArraySize, i, 1);
+				subresource_index = device->CreateSubresource(&envmapArray, SRV, 0, desc.array_size, i, 1);
 				assert(subresource_index == i);
-				subresource_index = device->CreateSubresource(&envmapArray, UAV, 0, desc.ArraySize, i, 1);
+				subresource_index = device->CreateSubresource(&envmapArray, UAV, 0, desc.array_size, i, 1);
 				assert(subresource_index == i);
 			}
 
@@ -3472,7 +3472,7 @@ namespace wiScene
 			{
 				int subresource_index;
 				subresource_index = device->CreateSubresource(&envmapArray, SRV, i * 6, 6, 0, -1);
-				assert(subresource_index == envmapArray.desc.MipLevels + i);
+				assert(subresource_index == envmapArray.desc.mip_levels + i);
 			}
 		}
 
@@ -3676,10 +3676,10 @@ namespace wiScene
 							IDENTITYMATRIX._12, IDENTITYMATRIX._22, IDENTITYMATRIX._32, IDENTITYMATRIX._42,
 							IDENTITYMATRIX._13, IDENTITYMATRIX._23, IDENTITYMATRIX._33, IDENTITYMATRIX._43
 						);
-						instance.InstanceID = (uint32_t)instanceIndex;
-						instance.InstanceMask = 1;
-						instance.bottomlevel = hair.BLAS;
-						instance.Flags = RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_CULL_DISABLE;
+						instance.instance_id = (uint32_t)instanceIndex;
+						instance.instance_mask = 1;
+						instance.bottom_level = hair.BLAS;
+						instance.flags = RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_CULL_DISABLE;
 
 						void* dest = (void*)((size_t)TLAS_instancesMapped + instanceIndex * device->GetTopLevelAccelerationStructureInstanceSize());
 						device->WriteTopLevelAccelerationStructureInstance(&instance, dest);
@@ -3752,10 +3752,10 @@ namespace wiScene
 					IDENTITYMATRIX._12, IDENTITYMATRIX._22, IDENTITYMATRIX._32, IDENTITYMATRIX._42,
 					IDENTITYMATRIX._13, IDENTITYMATRIX._23, IDENTITYMATRIX._33, IDENTITYMATRIX._43
 				);
-				instance.InstanceID = (uint32_t)instanceIndex;
-				instance.InstanceMask = 1;
-				instance.bottomlevel = emitter.BLAS;
-				instance.Flags = RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_CULL_DISABLE;
+				instance.instance_id = (uint32_t)instanceIndex;
+				instance.instance_mask = 1;
+				instance.bottom_level = emitter.BLAS;
+				instance.flags = RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_CULL_DISABLE;
 
 				void* dest = (void*)((size_t)TLAS_instancesMapped + instanceIndex * device->GetTopLevelAccelerationStructureInstanceSize());
 				device->WriteTopLevelAccelerationStructureInstance(&instance, dest);

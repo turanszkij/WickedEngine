@@ -93,15 +93,15 @@ namespace wiTextureHelper
 			};
 
 			TextureDesc texDesc;
-			texDesc.Width = width;
-			texDesc.Height = height;
-			texDesc.MipLevels = 1;
-			texDesc.ArraySize = 6;
-			texDesc.Format = FORMAT_R8G8B8A8_UNORM;
-			texDesc.SampleCount = 1;
-			texDesc.Usage = USAGE_DEFAULT;
-			texDesc.BindFlags = BIND_SHADER_RESOURCE;
-			texDesc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
+			texDesc.width = width;
+			texDesc.height = height;
+			texDesc.mip_levels = 1;
+			texDesc.array_size = 6;
+			texDesc.format = FORMAT_R8G8B8A8_UNORM;
+			texDesc.sample_count = 1;
+			texDesc.usage = USAGE_DEFAULT;
+			texDesc.bind_flags = BIND_SHADER_RESOURCE;
+			texDesc.misc_flags = RESOURCE_MISC_TEXTURECUBE;
 
 			SubresourceData pData[6];
 			vector4b d[6][width * height]; // 6 images of type vector4b = 4 * unsigned char
@@ -114,9 +114,9 @@ namespace wiTextureHelper
 					d[cubeMapFaceIndex][pix] = vector4b(0, 0, 0, 0);
 				}
 
-				pData[cubeMapFaceIndex].pData = &d[cubeMapFaceIndex][0];// description.data;
-				pData[cubeMapFaceIndex].rowPitch = width * 4;
-				pData[cubeMapFaceIndex].slicePitch = 0;
+				pData[cubeMapFaceIndex].data_ptr = &d[cubeMapFaceIndex][0];// description.data;
+				pData[cubeMapFaceIndex].row_pitch = width * 4;
+				pData[cubeMapFaceIndex].slice_pitch = 0;
 			}
 
 			device->CreateTexture(&texDesc, &pData[0], &helperTextures[HELPERTEXTURE_BLACKCUBEMAP]);
@@ -251,17 +251,17 @@ namespace wiTextureHelper
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
 		TextureDesc textureDesc;
-		textureDesc.Width = width;
-		textureDesc.Height = height;
-		textureDesc.MipLevels = 1;
-		textureDesc.ArraySize = 1;
-		textureDesc.Format = format;
-		textureDesc.SampleCount = 1;
-		textureDesc.BindFlags = BIND_SHADER_RESOURCE;
+		textureDesc.width = width;
+		textureDesc.height = height;
+		textureDesc.mip_levels = 1;
+		textureDesc.array_size = 1;
+		textureDesc.format = format;
+		textureDesc.sample_count = 1;
+		textureDesc.bind_flags = BIND_SHADER_RESOURCE;
 
 		SubresourceData InitData;
-		InitData.pData = data;
-		InitData.rowPitch = width * GetFormatStride(format) / GetFormatBlockSize(format);
+		InitData.data_ptr = data;
+		InitData.row_pitch = width * GetFormatStride(format) / GetFormatBlockSize(format);
 
 		return device->CreateTexture(&textureDesc, &InitData, &texture);
 	}

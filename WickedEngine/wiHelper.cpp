@@ -110,11 +110,11 @@ namespace wiHelper
 
 		Texture stagingTex;
 		TextureDesc staging_desc = desc;
-		staging_desc.Usage = USAGE_READBACK;
-		staging_desc.MipLevels = 1;
+		staging_desc.usage = USAGE_READBACK;
+		staging_desc.mip_levels = 1;
 		staging_desc.layout = RESOURCE_STATE_COPY_DST;
-		staging_desc.BindFlags = BIND_NONE;
-		staging_desc.MiscFlags = RESOURCE_MISC_NONE;
+		staging_desc.bind_flags = BIND_NONE;
+		staging_desc.misc_flags = RESOURCE_MISC_NONE;
 		bool success = device->CreateTexture(&staging_desc, nullptr, &stagingTex);
 		assert(success);
 
@@ -139,10 +139,10 @@ namespace wiHelper
 		device->SubmitCommandLists();
 		device->WaitForGPU();
 
-		desc.Width /= GetFormatBlockSize(desc.Format);
-		desc.Height /= GetFormatBlockSize(desc.Format);
-		uint32_t data_count = desc.Width * desc.Height;
-		uint32_t data_stride = GetFormatStride(desc.Format);
+		desc.width /= GetFormatBlockSize(desc.format);
+		desc.height /= GetFormatBlockSize(desc.format);
+		uint32_t data_count = desc.width * desc.height;
+		uint32_t data_stride = GetFormatStride(desc.format);
 		uint32_t data_size = data_count * data_stride;
 
 		texturedata.clear();
@@ -150,11 +150,11 @@ namespace wiHelper
 
 		if (stagingTex.mapped_data != nullptr)
 		{
-			if (stagingTex.mapped_rowpitch / data_stride != desc.Width)
+			if (stagingTex.mapped_rowpitch / data_stride != desc.width)
 			{
 				// Copy padded texture row by row:
-				const uint32_t cpysize = desc.Width * data_stride;
-				for (uint32_t i = 0; i < desc.Height; ++i)
+				const uint32_t cpysize = desc.width * data_stride;
+				for (uint32_t i = 0; i < desc.height; ++i)
 				{
 					void* src = (void*)((size_t)stagingTex.mapped_data + size_t(i * stagingTex.mapped_rowpitch));
 					void* dst = (void*)((size_t)texturedata.data() + size_t(i * cpysize));
@@ -190,14 +190,14 @@ namespace wiHelper
 	bool saveTextureToMemoryFile(const std::vector<uint8_t>& texturedata, const wiGraphics::TextureDesc& desc, const std::string& fileExtension, std::vector<uint8_t>& filedata)
 	{
 		using namespace wiGraphics;
-		uint32_t data_count = desc.Width * desc.Height;
+		uint32_t data_count = desc.width * desc.height;
 
 		std::string extension = wiHelper::toUpper(fileExtension);
 		bool basis = !extension.compare("BASIS");
 		bool ktx2 = !extension.compare("KTX2");
 		basisu::image basis_image;
 
-		if (desc.Format == FORMAT_R10G10B10A2_UNORM)
+		if (desc.format == FORMAT_R10G10B10A2_UNORM)
 		{
 			// This will be converted first to rgba8 before saving to common format:
 			uint32_t* data32 = (uint32_t*)texturedata.data();
@@ -219,7 +219,7 @@ namespace wiHelper
 				data32[i] = rgba8;
 			}
 		}
-		else if (desc.Format == FORMAT_R32G32B32A32_FLOAT)
+		else if (desc.format == FORMAT_R32G32B32A32_FLOAT)
 		{
 			// This will be converted first to rgba8 before saving to common format:
 			XMFLOAT4* dataSrc = (XMFLOAT4*)texturedata.data();
@@ -242,7 +242,7 @@ namespace wiHelper
 				data32[i] = rgba8;
 			}
 		}
-		else if (desc.Format == FORMAT_R16G16B16A16_FLOAT)
+		else if (desc.format == FORMAT_R16G16B16A16_FLOAT)
 		{
 			// This will be converted first to rgba8 before saving to common format:
 			XMHALF4* dataSrc = (XMHALF4*)texturedata.data();
@@ -265,7 +265,7 @@ namespace wiHelper
 				data32[i] = rgba8;
 			}
 		}
-		else if (desc.Format == FORMAT_R11G11B10_FLOAT)
+		else if (desc.format == FORMAT_R11G11B10_FLOAT)
 		{
 			// This will be converted first to rgba8 before saving to common format:
 			XMFLOAT3PK* dataSrc = (XMFLOAT3PK*)texturedata.data();
@@ -291,10 +291,10 @@ namespace wiHelper
 				data32[i] = rgba8;
 			}
 		}
-		else if (IsFormatBlockCompressed(desc.Format))
+		else if (IsFormatBlockCompressed(desc.format))
 		{
 			basisu::texture_format fmt;
-			switch (desc.Format)
+			switch (desc.format)
 			{
 			default:
 				assert(0);
@@ -319,20 +319,20 @@ namespace wiHelper
 				break;
 			}
 			basisu::gpu_image basis_gpu_image;
-			basis_gpu_image.init(fmt, desc.Width, desc.Height);
+			basis_gpu_image.init(fmt, desc.width, desc.height);
 			std::memcpy(basis_gpu_image.get_ptr(), texturedata.data(), std::min(texturedata.size(), (size_t)basis_gpu_image.get_size_in_bytes()));
 			basis_gpu_image.unpack(basis_image);
 		}
 		else
 		{
-			assert(desc.Format == FORMAT_R8G8B8A8_UNORM); // If you need to save other texture format, implement data conversion for it
+			assert(desc.format == FORMAT_R8G8B8A8_UNORM); // If you need to save other texture format, implement data conversion for it
 		}
 
 		if (basis || ktx2)
 		{
 			if (basis_image.get_total_pixels() == 0)
 			{
-				basis_image.init(texturedata.data(), desc.Width, desc.Height, 4);
+				basis_image.init(texturedata.data(), desc.width, desc.height, 4);
 			}
 			basisu::basis_compressor_params params;
 			params.m_source_images.push_back(basis_image);
@@ -400,19 +400,19 @@ namespace wiHelper
 
 		if (!extension.compare("JPG") || !extension.compare("JPEG"))
 		{
-			write_result = stbi_write_jpg_to_func(func, &filedata, (int)desc.Width, (int)desc.Height, 4, src_data, 100);
+			write_result = stbi_write_jpg_to_func(func, &filedata, (int)desc.width, (int)desc.height, 4, src_data, 100);
 		}
 		else if (!extension.compare("PNG"))
 		{
-			write_result = stbi_write_png_to_func(func, &filedata, (int)desc.Width, (int)desc.Height, 4, src_data, 0);
+			write_result = stbi_write_png_to_func(func, &filedata, (int)desc.width, (int)desc.height, 4, src_data, 0);
 		}
 		else if (!extension.compare("TGA"))
 		{
-			write_result = stbi_write_tga_to_func(func, &filedata, (int)desc.Width, (int)desc.Height, 4, src_data);
+			write_result = stbi_write_tga_to_func(func, &filedata, (int)desc.width, (int)desc.height, 4, src_data);
 		}
 		else if (!extension.compare("BMP"))
 		{
-			write_result = stbi_write_bmp_to_func(func, &filedata, (int)desc.Width, (int)desc.Height, 4, src_data);
+			write_result = stbi_write_bmp_to_func(func, &filedata, (int)desc.width, (int)desc.height, 4, src_data);
 		}
 		else
 		{

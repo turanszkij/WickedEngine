@@ -1092,7 +1092,7 @@ namespace Vulkan_Internal
 			internal_state->swapChainExtent.height = std::max(swapchain_capabilities.minImageExtent.height, std::min(swapchain_capabilities.maxImageExtent.height, internal_state->swapChainExtent.height));
 		}
 
-		uint32_t imageCount = std::max(internal_state->desc.buffercount, swapchain_capabilities.minImageCount);
+		uint32_t imageCount = std::max(internal_state->desc.buffer_count, swapchain_capabilities.minImageCount);
 		if ((swapchain_capabilities.maxImageCount > 0) && (imageCount > swapchain_capabilities.maxImageCount))
 		{
 			imageCount = swapchain_capabilities.maxImageCount;
@@ -1395,12 +1395,12 @@ using namespace Vulkan_Internal;
 		}
 
 		CopyCMD cmd = freelist.back();
-		if (cmd.uploadbuffer.desc.Size < staging_size)
+		if (cmd.uploadbuffer.desc.size < staging_size)
 		{
 			// Try to search for a staging buffer that can fit the request:
 			for (size_t i = 0; i < freelist.size(); ++i)
 			{
-				if (freelist[i].uploadbuffer.desc.Size >= staging_size)
+				if (freelist[i].uploadbuffer.desc.size >= staging_size)
 				{
 					cmd = freelist[i];
 					std::swap(freelist[i], freelist.back());
@@ -1412,11 +1412,11 @@ using namespace Vulkan_Internal;
 		locker.unlock();
 
 		// If no buffer was found that fits the data, create one:
-		if (cmd.uploadbuffer.desc.Size < staging_size)
+		if (cmd.uploadbuffer.desc.size < staging_size)
 		{
 			GPUBufferDesc uploaddesc;
-			uploaddesc.Size = wiMath::GetNextPowerOfTwo(staging_size);
-			uploaddesc.Usage = USAGE_UPLOAD;
+			uploaddesc.size = wiMath::GetNextPowerOfTwo(staging_size);
+			uploaddesc.usage = USAGE_UPLOAD;
 			bool upload_success = device->CreateBuffer(&uploaddesc, nullptr, &cmd.uploadbuffer);
 			assert(upload_success);
 		}
@@ -1829,7 +1829,7 @@ using namespace Vulkan_Internal;
 						auto internal_state = to_internal(&buffer);
 						bufferInfos.back().buffer = internal_state->resource;
 						bufferInfos.back().offset = offset;
-						bufferInfos.back().range = std::min(buffer.desc.Size - offset, (uint64_t)device->properties2.properties.limits.maxUniformBufferRange);
+						bufferInfos.back().range = std::min(buffer.desc.size - offset, (uint64_t)device->properties2.properties.limits.maxUniformBufferRange);
 					}
 				}
 				break;
@@ -2028,23 +2028,23 @@ using namespace Vulkan_Internal;
 				multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 				if (active_renderpass[cmd]->desc.attachments.size() > 0 && active_renderpass[cmd]->desc.attachments[0].texture != nullptr)
 				{
-					multisampling.rasterizationSamples = (VkSampleCountFlagBits)active_renderpass[cmd]->desc.attachments[0].texture->desc.SampleCount;
+					multisampling.rasterizationSamples = (VkSampleCountFlagBits)active_renderpass[cmd]->desc.attachments[0].texture->desc.sample_count;
 				}
 				if (pso->desc.rs != nullptr)
 				{
 					const RasterizerState& desc = *pso->desc.rs;
-					if (desc.ForcedSampleCount > 1)
+					if (desc.forced_sample_count > 1)
 					{
-						multisampling.rasterizationSamples = (VkSampleCountFlagBits)desc.ForcedSampleCount;
+						multisampling.rasterizationSamples = (VkSampleCountFlagBits)desc.forced_sample_count;
 					}
 				}
 				multisampling.minSampleShading = 1.0f;
 				VkSampleMask samplemask = internal_state->samplemask;
-				samplemask = pso->desc.sampleMask;
+				samplemask = pso->desc.sample_mask;
 				multisampling.pSampleMask = &samplemask;
 				if (pso->desc.bs != nullptr)
 				{
-					multisampling.alphaToCoverageEnable = pso->desc.bs->AlphaToCoverageEnable ? VK_TRUE : VK_FALSE;
+					multisampling.alphaToCoverageEnable = pso->desc.bs->alpha_to_coverage_enable ? VK_TRUE : VK_FALSE;
 				}
 				else
 				{
@@ -2067,39 +2067,39 @@ using namespace Vulkan_Internal;
 					}
 
 					size_t attachmentIndex = 0;
-					if (pso->desc.bs->IndependentBlendEnable)
+					if (pso->desc.bs->independent_blend_enable)
 						attachmentIndex = i;
 
-					const auto& desc = pso->desc.bs->RenderTarget[attachmentIndex];
+					const auto& desc = pso->desc.bs->render_target[attachmentIndex];
 					VkPipelineColorBlendAttachmentState& attachment = colorBlendAttachments[numBlendAttachments];
 					numBlendAttachments++;
 
-					attachment.blendEnable = desc.BlendEnable ? VK_TRUE : VK_FALSE;
+					attachment.blendEnable = desc.blend_enable ? VK_TRUE : VK_FALSE;
 
 					attachment.colorWriteMask = 0;
-					if (desc.RenderTargetWriteMask & COLOR_WRITE_ENABLE_RED)
+					if (desc.render_target_write_mask & COLOR_WRITE_ENABLE_RED)
 					{
 						attachment.colorWriteMask |= VK_COLOR_COMPONENT_R_BIT;
 					}
-					if (desc.RenderTargetWriteMask & COLOR_WRITE_ENABLE_GREEN)
+					if (desc.render_target_write_mask & COLOR_WRITE_ENABLE_GREEN)
 					{
 						attachment.colorWriteMask |= VK_COLOR_COMPONENT_G_BIT;
 					}
-					if (desc.RenderTargetWriteMask & COLOR_WRITE_ENABLE_BLUE)
+					if (desc.render_target_write_mask & COLOR_WRITE_ENABLE_BLUE)
 					{
 						attachment.colorWriteMask |= VK_COLOR_COMPONENT_B_BIT;
 					}
-					if (desc.RenderTargetWriteMask & COLOR_WRITE_ENABLE_ALPHA)
+					if (desc.render_target_write_mask & COLOR_WRITE_ENABLE_ALPHA)
 					{
 						attachment.colorWriteMask |= VK_COLOR_COMPONENT_A_BIT;
 					}
 
-					attachment.srcColorBlendFactor = _ConvertBlend(desc.SrcBlend);
-					attachment.dstColorBlendFactor = _ConvertBlend(desc.DestBlend);
-					attachment.colorBlendOp = _ConvertBlendOp(desc.BlendOp);
-					attachment.srcAlphaBlendFactor = _ConvertBlend(desc.SrcBlendAlpha);
-					attachment.dstAlphaBlendFactor = _ConvertBlend(desc.DestBlendAlpha);
-					attachment.alphaBlendOp = _ConvertBlendOp(desc.BlendOpAlpha);
+					attachment.srcColorBlendFactor = _ConvertBlend(desc.src_blend);
+					attachment.dstColorBlendFactor = _ConvertBlend(desc.dest_blend);
+					attachment.colorBlendOp = _ConvertBlendOp(desc.blend_op);
+					attachment.srcAlphaBlendFactor = _ConvertBlend(desc.src_blend_alpha);
+					attachment.dstAlphaBlendFactor = _ConvertBlend(desc.dest_blend_alpha);
+					attachment.alphaBlendOp = _ConvertBlendOp(desc.blend_op_alpha);
 				}
 
 				VkPipelineColorBlendStateCreateInfo colorBlending = {};
@@ -2125,13 +2125,13 @@ using namespace Vulkan_Internal;
 					uint32_t lastBinding = 0xFFFFFFFF;
 					for (auto& x : pso->desc.il->elements)
 					{
-						if (x.InputSlot == lastBinding)
+						if (x.input_slot == lastBinding)
 							continue;
-						lastBinding = x.InputSlot;
+						lastBinding = x.input_slot;
 						VkVertexInputBindingDescription& bind = bindings.emplace_back();
-						bind.binding = x.InputSlot;
-						bind.inputRate = x.InputSlotClass == INPUT_PER_VERTEX_DATA ? VK_VERTEX_INPUT_RATE_VERTEX : VK_VERTEX_INPUT_RATE_INSTANCE;
-						bind.stride = vb_strides[cmd][x.InputSlot];
+						bind.binding = x.input_slot;
+						bind.inputRate = x.input_slot_class == INPUT_PER_VERTEX_DATA ? VK_VERTEX_INPUT_RATE_VERTEX : VK_VERTEX_INPUT_RATE_INSTANCE;
+						bind.stride = vb_strides[cmd][x.input_slot];
 					}
 
 					uint32_t offset = 0;
@@ -2140,20 +2140,20 @@ using namespace Vulkan_Internal;
 					for (auto& x : pso->desc.il->elements)
 					{
 						VkVertexInputAttributeDescription attr = {};
-						attr.binding = x.InputSlot;
+						attr.binding = x.input_slot;
 						if (attr.binding != lastBinding)
 						{
 							lastBinding = attr.binding;
 							offset = 0;
 						}
-						attr.format = _ConvertFormat(x.Format);
+						attr.format = _ConvertFormat(x.format);
 						attr.location = i;
-						attr.offset = x.AlignedByteOffset;
+						attr.offset = x.aligned_byte_offset;
 						if (attr.offset == InputLayout::APPEND_ALIGNED_ELEMENT)
 						{
 							// need to manually resolve this from the format spec.
 							attr.offset = offset;
-							offset += GetFormatStride(x.Format);
+							offset += GetFormatStride(x.format);
 						}
 
 						attributes.push_back(attr);
@@ -3180,23 +3180,23 @@ using namespace Vulkan_Internal;
 
 		VkBufferCreateInfo bufferInfo = {};
 		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		bufferInfo.size = pBuffer->desc.Size;
+		bufferInfo.size = pBuffer->desc.size;
 		bufferInfo.usage = 0;
-		if (pBuffer->desc.BindFlags & BIND_VERTEX_BUFFER)
+		if (pBuffer->desc.bind_flags & BIND_VERTEX_BUFFER)
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 		}
-		if (pBuffer->desc.BindFlags & BIND_INDEX_BUFFER)
+		if (pBuffer->desc.bind_flags & BIND_INDEX_BUFFER)
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
 		}
-		if (pBuffer->desc.BindFlags & BIND_CONSTANT_BUFFER)
+		if (pBuffer->desc.bind_flags & BIND_CONSTANT_BUFFER)
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 		}
-		if (pBuffer->desc.BindFlags & BIND_SHADER_RESOURCE)
+		if (pBuffer->desc.bind_flags & BIND_SHADER_RESOURCE)
 		{
-			if (pBuffer->desc.Format == FORMAT_UNKNOWN)
+			if (pBuffer->desc.format == FORMAT_UNKNOWN)
 			{
 				bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 			}
@@ -3205,9 +3205,9 @@ using namespace Vulkan_Internal;
 				bufferInfo.usage |= VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT;
 			}
 		}
-		if (pBuffer->desc.BindFlags & BIND_UNORDERED_ACCESS)
+		if (pBuffer->desc.bind_flags & BIND_UNORDERED_ACCESS)
 		{
-			if (pBuffer->desc.Format == FORMAT_UNKNOWN)
+			if (pBuffer->desc.format == FORMAT_UNKNOWN)
 			{
 				bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 			}
@@ -3216,24 +3216,24 @@ using namespace Vulkan_Internal;
 				bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
 			}
 		}
-		if (pBuffer->desc.MiscFlags & RESOURCE_MISC_BUFFER_RAW)
+		if (pBuffer->desc.misc_flags & RESOURCE_MISC_BUFFER_RAW)
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 		}
-		if (pBuffer->desc.MiscFlags & RESOURCE_MISC_BUFFER_STRUCTURED)
+		if (pBuffer->desc.misc_flags & RESOURCE_MISC_BUFFER_STRUCTURED)
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 		}
-		if (pBuffer->desc.MiscFlags & RESOURCE_MISC_INDIRECT_ARGS)
+		if (pBuffer->desc.misc_flags & RESOURCE_MISC_INDIRECT_ARGS)
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
 		}
-		if (pBuffer->desc.MiscFlags & RESOURCE_MISC_RAY_TRACING)
+		if (pBuffer->desc.misc_flags & RESOURCE_MISC_RAY_TRACING)
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
 			bufferInfo.usage |= VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR;
 		}
-		if (pBuffer->desc.MiscFlags & RESOURCE_MISC_PREDICATION)
+		if (pBuffer->desc.misc_flags & RESOURCE_MISC_PREDICATION)
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_CONDITIONAL_RENDERING_BIT_EXT;
 		}
@@ -3261,13 +3261,13 @@ using namespace Vulkan_Internal;
 		//allocInfo.flags = VMA_ALLOCATION_CREATE_STRATEGY_MIN_MEMORY_BIT;
 		//allocInfo.flags = VMA_ALLOCATION_CREATE_STRATEGY_MIN_FRAGMENTATION_BIT;
 		allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-		if (pDesc->Usage == USAGE_READBACK)
+		if (pDesc->usage == USAGE_READBACK)
 		{
 			allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
 			allocInfo.usage = VMA_MEMORY_USAGE_GPU_TO_CPU;
 			bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 		}
-		else if(pDesc->Usage == USAGE_UPLOAD)
+		else if(pDesc->usage == USAGE_UPLOAD)
 		{
 			allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
 			allocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY; // yes, not using VMA_MEMORY_USAGE_CPU_TO_GPU, as it had worse performance for CPU write
@@ -3277,10 +3277,10 @@ using namespace Vulkan_Internal;
 		VkResult res = vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &internal_state->resource, &internal_state->allocation, nullptr);
 		assert(res == VK_SUCCESS);
 
-		if (pDesc->Usage == USAGE_READBACK || pDesc->Usage == USAGE_UPLOAD)
+		if (pDesc->usage == USAGE_READBACK || pDesc->usage == USAGE_UPLOAD)
 		{
 			pBuffer->mapped_data = internal_state->allocation->GetMappedData();
-			pBuffer->mapped_rowpitch = static_cast<uint32_t>(pDesc->Size);
+			pBuffer->mapped_rowpitch = static_cast<uint32_t>(pDesc->size);
 		}
 
 		if (bufferInfo.usage & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT)
@@ -3294,9 +3294,9 @@ using namespace Vulkan_Internal;
 		// Issue data copy on request:
 		if (pInitialData != nullptr)
 		{
-			auto cmd = copyAllocator.allocate(pDesc->Size);
+			auto cmd = copyAllocator.allocate(pDesc->size);
 
-			memcpy(cmd.uploadbuffer.mapped_data, pInitialData, pBuffer->desc.Size);
+			memcpy(cmd.uploadbuffer.mapped_data, pInitialData, pBuffer->desc.size);
 
 			VkBufferMemoryBarrier barrier = {};
 			barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
@@ -3319,7 +3319,7 @@ using namespace Vulkan_Internal;
 			);
 
 			VkBufferCopy copyRegion = {};
-			copyRegion.size = pBuffer->desc.Size;
+			copyRegion.size = pBuffer->desc.size;
 			copyRegion.srcOffset = 0;
 			copyRegion.dstOffset = 0;
 
@@ -3333,31 +3333,31 @@ using namespace Vulkan_Internal;
 
 			std::swap(barrier.srcAccessMask, barrier.dstAccessMask);
 
-			if (pBuffer->desc.BindFlags & BIND_CONSTANT_BUFFER)
+			if (pBuffer->desc.bind_flags & BIND_CONSTANT_BUFFER)
 			{
 				barrier.dstAccessMask |= VK_ACCESS_UNIFORM_READ_BIT;
 			}
-			if (pBuffer->desc.BindFlags & BIND_VERTEX_BUFFER)
+			if (pBuffer->desc.bind_flags & BIND_VERTEX_BUFFER)
 			{
 				barrier.dstAccessMask |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
 			}
-			if (pBuffer->desc.BindFlags & BIND_INDEX_BUFFER)
+			if (pBuffer->desc.bind_flags & BIND_INDEX_BUFFER)
 			{
 				barrier.dstAccessMask |= VK_ACCESS_INDEX_READ_BIT;
 			}
-			if(pBuffer->desc.BindFlags & BIND_SHADER_RESOURCE)
+			if(pBuffer->desc.bind_flags & BIND_SHADER_RESOURCE)
 			{
 				barrier.dstAccessMask |= VK_ACCESS_SHADER_READ_BIT;
 			}
-			if (pBuffer->desc.BindFlags & BIND_UNORDERED_ACCESS)
+			if (pBuffer->desc.bind_flags & BIND_UNORDERED_ACCESS)
 			{
 				barrier.dstAccessMask |= VK_ACCESS_SHADER_WRITE_BIT;
 			}
-			if (pBuffer->desc.MiscFlags & RESOURCE_MISC_INDIRECT_ARGS)
+			if (pBuffer->desc.misc_flags & RESOURCE_MISC_INDIRECT_ARGS)
 			{
 				barrier.dstAccessMask |= VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
 			}
-			if (pBuffer->desc.MiscFlags & RESOURCE_MISC_RAY_TRACING)
+			if (pBuffer->desc.misc_flags & RESOURCE_MISC_RAY_TRACING)
 			{
 				barrier.dstAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
 			}
@@ -3375,7 +3375,7 @@ using namespace Vulkan_Internal;
 			copyAllocator.submit(cmd);
 		}
 
-		if (pDesc->Format == FORMAT_UNKNOWN)
+		if (pDesc->format == FORMAT_UNKNOWN)
 		{
 			internal_state->is_typedbuffer = false;
 		}
@@ -3386,11 +3386,11 @@ using namespace Vulkan_Internal;
 
 
 		// Create resource views if needed
-		if (pDesc->BindFlags & BIND_SHADER_RESOURCE)
+		if (pDesc->bind_flags & BIND_SHADER_RESOURCE)
 		{
 			CreateSubresource(pBuffer, SRV, 0);
 		}
-		if (pDesc->BindFlags & BIND_UNORDERED_ACCESS)
+		if (pDesc->bind_flags & BIND_UNORDERED_ACCESS)
 		{
 			CreateSubresource(pBuffer, UAV, 0);
 		}
@@ -3408,9 +3408,9 @@ using namespace Vulkan_Internal;
 
 		pTexture->desc = *pDesc;
 
-		if (pTexture->desc.MipLevels == 0)
+		if (pTexture->desc.mip_levels == 0)
 		{
-			pTexture->desc.MipLevels = (uint32_t)log2(std::max(pTexture->desc.Width, pTexture->desc.Height)) + 1;
+			pTexture->desc.mip_levels = (uint32_t)log2(std::max(pTexture->desc.width, pTexture->desc.height)) + 1;
 		}
 
 		VmaAllocationCreateInfo allocInfo = {};
@@ -3420,35 +3420,35 @@ using namespace Vulkan_Internal;
 
 		VkImageCreateInfo imageInfo = {};
 		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-		imageInfo.extent.width = pTexture->desc.Width;
-		imageInfo.extent.height = pTexture->desc.Height;
+		imageInfo.extent.width = pTexture->desc.width;
+		imageInfo.extent.height = pTexture->desc.height;
 		imageInfo.extent.depth = 1;
-		imageInfo.format = _ConvertFormat(pTexture->desc.Format);
-		imageInfo.arrayLayers = pTexture->desc.ArraySize;
-		imageInfo.mipLevels = pTexture->desc.MipLevels;
-		imageInfo.samples = (VkSampleCountFlagBits)pTexture->desc.SampleCount;
+		imageInfo.format = _ConvertFormat(pTexture->desc.format);
+		imageInfo.arrayLayers = pTexture->desc.array_size;
+		imageInfo.mipLevels = pTexture->desc.mip_levels;
+		imageInfo.samples = (VkSampleCountFlagBits)pTexture->desc.sample_count;
 		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
 		imageInfo.usage = 0;
-		if (pTexture->desc.BindFlags & BIND_SHADER_RESOURCE)
+		if (pTexture->desc.bind_flags & BIND_SHADER_RESOURCE)
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
 		}
-		if (pTexture->desc.BindFlags & BIND_UNORDERED_ACCESS)
+		if (pTexture->desc.bind_flags & BIND_UNORDERED_ACCESS)
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
 		}
-		if (pTexture->desc.BindFlags & BIND_RENDER_TARGET)
+		if (pTexture->desc.bind_flags & BIND_RENDER_TARGET)
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 			//allocInfo.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 		}
-		if (pTexture->desc.BindFlags & BIND_DEPTH_STENCIL)
+		if (pTexture->desc.bind_flags & BIND_DEPTH_STENCIL)
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 			//allocInfo.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 		}
-		if(pTexture->desc.BindFlags & BIND_SHADING_RATE)
+		if(pTexture->desc.bind_flags & BIND_SHADING_RATE)
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR;
 		}
@@ -3456,7 +3456,7 @@ using namespace Vulkan_Internal;
 		imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
 		imageInfo.flags = 0;
-		if (pTexture->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
+		if (pTexture->desc.misc_flags & RESOURCE_MISC_TEXTURECUBE)
 		{
 			imageInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 		}
@@ -3482,7 +3482,7 @@ using namespace Vulkan_Internal;
 			break;
 		case TextureDesc::TEXTURE_3D:
 			imageInfo.imageType = VK_IMAGE_TYPE_3D;
-			imageInfo.extent.depth = pTexture->desc.Depth;
+			imageInfo.extent.depth = pTexture->desc.depth;
 			break;
 		default:
 			assert(0);
@@ -3491,20 +3491,20 @@ using namespace Vulkan_Internal;
 
 		VkResult res;
 
-		if (pTexture->desc.Usage == USAGE_READBACK || pTexture->desc.Usage == USAGE_UPLOAD)
+		if (pTexture->desc.usage == USAGE_READBACK || pTexture->desc.usage == USAGE_UPLOAD)
 		{
 			VkBufferCreateInfo bufferInfo = {};
 			bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 			bufferInfo.size = imageInfo.extent.width * imageInfo.extent.height * imageInfo.extent.depth * imageInfo.arrayLayers *
-				GetFormatStride(pTexture->desc.Format);
+				GetFormatStride(pTexture->desc.format);
 
 			allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
-			if (pTexture->desc.Usage == USAGE_READBACK)
+			if (pTexture->desc.usage == USAGE_READBACK)
 			{
 				allocInfo.usage = VMA_MEMORY_USAGE_GPU_TO_CPU;
 				bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 			}
-			else if(pTexture->desc.Usage == USAGE_UPLOAD)
+			else if(pTexture->desc.usage == USAGE_UPLOAD)
 			{
 				allocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY; // yes, not using VMA_MEMORY_USAGE_CPU_TO_GPU, as it had worse performance for CPU write
 				bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
@@ -3522,7 +3522,7 @@ using namespace Vulkan_Internal;
 			subresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 			vkGetImageSubresourceLayout(device, image, &subresource, &internal_state->subresourcelayout);
 
-			if (pDesc->Usage == USAGE_READBACK || pTexture->desc.Usage == USAGE_UPLOAD)
+			if (pDesc->usage == USAGE_READBACK || pTexture->desc.usage == USAGE_UPLOAD)
 			{
 				pTexture->mapped_data = internal_state->allocation->GetMappedData();
 				pTexture->mapped_rowpitch = (uint32_t)internal_state->subresourcelayout.rowPitch;
@@ -3546,17 +3546,17 @@ using namespace Vulkan_Internal;
 
 			VkDeviceSize copyOffset = 0;
 			uint32_t initDataIdx = 0;
-			for (uint32_t layer = 0; layer < pDesc->ArraySize; ++layer)
+			for (uint32_t layer = 0; layer < pDesc->array_size; ++layer)
 			{
 				uint32_t width = imageInfo.extent.width;
 				uint32_t height = imageInfo.extent.height;
 				uint32_t depth = imageInfo.extent.depth;
-				for (uint32_t mip = 0; mip < pDesc->MipLevels; ++mip)
+				for (uint32_t mip = 0; mip < pDesc->mip_levels; ++mip)
 				{
 					const SubresourceData& subresourceData = pInitialData[initDataIdx++];
-					VkDeviceSize copySize = subresourceData.rowPitch * height * depth / GetFormatBlockSize(pDesc->Format);
+					VkDeviceSize copySize = subresourceData.row_pitch * height * depth / GetFormatBlockSize(pDesc->format);
 					uint8_t* cpyaddr = (uint8_t*)cmd.uploadbuffer.mapped_data + copyOffset;
-					memcpy(cpyaddr, subresourceData.pData, copySize);
+					memcpy(cpyaddr, subresourceData.data_ptr, copySize);
 
 					VkBufferImageCopy copyRegion = {};
 					copyRegion.bufferOffset = copyOffset;
@@ -3581,7 +3581,7 @@ using namespace Vulkan_Internal;
 
 					copyRegions.push_back(copyRegion);
 
-					copyOffset += AlignTo(copySize, (VkDeviceSize)GetFormatStride(pDesc->Format));
+					copyOffset += AlignTo(copySize, (VkDeviceSize)GetFormatStride(pDesc->format));
 				}
 			}
 
@@ -3643,10 +3643,10 @@ using namespace Vulkan_Internal;
 			barrier.newLayout = _ConvertImageLayout(pTexture->desc.layout);
 			barrier.srcAccessMask = 0;
 			barrier.dstAccessMask = _ParseResourceState(pTexture->desc.layout);
-			if (pTexture->desc.BindFlags & BIND_DEPTH_STENCIL)
+			if (pTexture->desc.bind_flags & BIND_DEPTH_STENCIL)
 			{
 				barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-				if (IsFormatStencilSupport(pTexture->desc.Format))
+				if (IsFormatStencilSupport(pTexture->desc.format))
 				{
 					barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
 				}
@@ -3676,19 +3676,19 @@ using namespace Vulkan_Internal;
 			initLocker.unlock();
 		}
 
-		if (pTexture->desc.BindFlags & BIND_RENDER_TARGET)
+		if (pTexture->desc.bind_flags & BIND_RENDER_TARGET)
 		{
 			CreateSubresource(pTexture, RTV, 0, -1, 0, -1);
 		}
-		if (pTexture->desc.BindFlags & BIND_DEPTH_STENCIL)
+		if (pTexture->desc.bind_flags & BIND_DEPTH_STENCIL)
 		{
 			CreateSubresource(pTexture, DSV, 0, -1, 0, -1);
 		}
-		if (pTexture->desc.BindFlags & BIND_SHADER_RESOURCE)
+		if (pTexture->desc.bind_flags & BIND_SHADER_RESOURCE)
 		{
 			CreateSubresource(pTexture, SRV, 0, -1, 0, -1);
 		}
-		if (pTexture->desc.BindFlags & BIND_UNORDERED_ACCESS)
+		if (pTexture->desc.bind_flags & BIND_UNORDERED_ACCESS)
 		{
 			CreateSubresource(pTexture, UAV, 0, -1, 0, -1);
 		}
@@ -4031,7 +4031,7 @@ using namespace Vulkan_Internal;
 		createInfo.pNext = nullptr;
 
 
-		switch (pSamplerDesc->Filter)
+		switch (pSamplerDesc->filter)
 		{
 		case FILTER_MIN_MAG_MIP_POINT:
 		case FILTER_MINIMUM_MIN_MAG_MIP_POINT:
@@ -4190,7 +4190,7 @@ using namespace Vulkan_Internal;
 		reductionmode.sType = VK_STRUCTURE_TYPE_SAMPLER_REDUCTION_MODE_CREATE_INFO;
 		if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_SAMPLER_MINMAX))
 		{
-			switch (pSamplerDesc->Filter)
+			switch (pSamplerDesc->filter)
 			{
 			case FILTER_MINIMUM_MIN_MAG_MIP_POINT:
 			case FILTER_MINIMUM_MIN_MAG_POINT_MIP_LINEAR:
@@ -4221,15 +4221,15 @@ using namespace Vulkan_Internal;
 			}
 		}
 
-		createInfo.addressModeU = _ConvertTextureAddressMode(pSamplerDesc->AddressU, features_1_2);
-		createInfo.addressModeV = _ConvertTextureAddressMode(pSamplerDesc->AddressV, features_1_2);
-		createInfo.addressModeW = _ConvertTextureAddressMode(pSamplerDesc->AddressW, features_1_2);
-		createInfo.maxAnisotropy = static_cast<float>(pSamplerDesc->MaxAnisotropy);
-		createInfo.compareOp = _ConvertComparisonFunc(pSamplerDesc->ComparisonFunc);
-		createInfo.minLod = pSamplerDesc->MinLOD;
-		createInfo.maxLod = pSamplerDesc->MaxLOD;
-		createInfo.mipLodBias = pSamplerDesc->MipLODBias;
-		createInfo.borderColor = _ConvertSamplerBorderColor(pSamplerDesc->BorderColor);
+		createInfo.addressModeU = _ConvertTextureAddressMode(pSamplerDesc->address_u, features_1_2);
+		createInfo.addressModeV = _ConvertTextureAddressMode(pSamplerDesc->address_v, features_1_2);
+		createInfo.addressModeW = _ConvertTextureAddressMode(pSamplerDesc->address_w, features_1_2);
+		createInfo.maxAnisotropy = static_cast<float>(pSamplerDesc->max_anisotropy);
+		createInfo.compareOp = _ConvertComparisonFunc(pSamplerDesc->comparison_func);
+		createInfo.minLod = pSamplerDesc->min_lod;
+		createInfo.maxLod = pSamplerDesc->max_lod;
+		createInfo.mipLodBias = pSamplerDesc->mip_lod_bias;
+		createInfo.borderColor = _ConvertSamplerBorderColor(pSamplerDesc->border_color);
 		createInfo.unnormalizedCoordinates = VK_FALSE;
 
 		VkResult res = vkCreateSampler(device, &createInfo, nullptr, &internal_state->resource);
@@ -4267,7 +4267,7 @@ using namespace Vulkan_Internal;
 
 		VkQueryPoolCreateInfo poolInfo = {};
 		poolInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
-		poolInfo.queryCount = pDesc->queryCount;
+		poolInfo.queryCount = pDesc->query_count;
 
 		switch (pDesc->type)
 		{
@@ -4306,7 +4306,7 @@ using namespace Vulkan_Internal;
 		wiHelper::hash_combine(pso->hash, pDesc->bs);
 		wiHelper::hash_combine(pso->hash, pDesc->dss);
 		wiHelper::hash_combine(pso->hash, pDesc->pt);
-		wiHelper::hash_combine(pso->hash, pDesc->sampleMask);
+		wiHelper::hash_combine(pso->hash, pDesc->sample_mask);
 
 		VkResult res = VK_SUCCESS;
 
@@ -4611,7 +4611,7 @@ using namespace Vulkan_Internal;
 		{
 			const RasterizerState& desc = *pso->desc.rs;
 
-			switch (desc.FillMode)
+			switch (desc.fill_mode)
 			{
 			case FILL_WIREFRAME:
 				rasterizer.polygonMode = VK_POLYGON_MODE_LINE;
@@ -4622,7 +4622,7 @@ using namespace Vulkan_Internal;
 				break;
 			}
 
-			switch (desc.CullMode)
+			switch (desc.cull_mode)
 			{
 			case CULL_BACK:
 				rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
@@ -4636,14 +4636,14 @@ using namespace Vulkan_Internal;
 				break;
 			}
 
-			rasterizer.frontFace = desc.FrontCounterClockwise ? VK_FRONT_FACE_COUNTER_CLOCKWISE : VK_FRONT_FACE_CLOCKWISE;
-			rasterizer.depthBiasEnable = desc.DepthBias != 0 || desc.SlopeScaledDepthBias != 0;
-			rasterizer.depthBiasConstantFactor = static_cast<float>(desc.DepthBias);
-			rasterizer.depthBiasClamp = desc.DepthBiasClamp;
-			rasterizer.depthBiasSlopeFactor = desc.SlopeScaledDepthBias;
+			rasterizer.frontFace = desc.front_counter_clockwise ? VK_FRONT_FACE_COUNTER_CLOCKWISE : VK_FRONT_FACE_CLOCKWISE;
+			rasterizer.depthBiasEnable = desc.depth_bias != 0 || desc.slope_scaled_depth_bias != 0;
+			rasterizer.depthBiasConstantFactor = static_cast<float>(desc.depth_bias);
+			rasterizer.depthBiasClamp = desc.depth_bias_clamp;
+			rasterizer.depthBiasSlopeFactor = desc.slope_scaled_depth_bias;
 
 			// depth clip is extension in Vulkan 1.1:
-			depthclip.depthClipEnable = desc.DepthClipEnable ? VK_TRUE : VK_FALSE;
+			depthclip.depthClipEnable = desc.depth_clip_enable ? VK_TRUE : VK_FALSE;
 		}
 
 		pipelineInfo.pRasterizationState = &rasterizer;
@@ -4677,27 +4677,27 @@ using namespace Vulkan_Internal;
 		depthstencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 		if (pso->desc.dss != nullptr)
 		{
-			depthstencil.depthTestEnable = pso->desc.dss->DepthEnable ? VK_TRUE : VK_FALSE;
-			depthstencil.depthWriteEnable = pso->desc.dss->DepthWriteMask == DEPTH_WRITE_MASK_ZERO ? VK_FALSE : VK_TRUE;
-			depthstencil.depthCompareOp = _ConvertComparisonFunc(pso->desc.dss->DepthFunc);
+			depthstencil.depthTestEnable = pso->desc.dss->depth_enable ? VK_TRUE : VK_FALSE;
+			depthstencil.depthWriteEnable = pso->desc.dss->depth_write_mask == DEPTH_WRITE_MASK_ZERO ? VK_FALSE : VK_TRUE;
+			depthstencil.depthCompareOp = _ConvertComparisonFunc(pso->desc.dss->depth_func);
 
-			depthstencil.stencilTestEnable = pso->desc.dss->StencilEnable ? VK_TRUE : VK_FALSE;
+			depthstencil.stencilTestEnable = pso->desc.dss->stencil_enable ? VK_TRUE : VK_FALSE;
 
-			depthstencil.front.compareMask = pso->desc.dss->StencilReadMask;
-			depthstencil.front.writeMask = pso->desc.dss->StencilWriteMask;
+			depthstencil.front.compareMask = pso->desc.dss->stencil_read_mask;
+			depthstencil.front.writeMask = pso->desc.dss->stencil_write_mask;
 			depthstencil.front.reference = 0; // runtime supplied
-			depthstencil.front.compareOp = _ConvertComparisonFunc(pso->desc.dss->FrontFace.StencilFunc);
-			depthstencil.front.passOp = _ConvertStencilOp(pso->desc.dss->FrontFace.StencilPassOp);
-			depthstencil.front.failOp = _ConvertStencilOp(pso->desc.dss->FrontFace.StencilFailOp);
-			depthstencil.front.depthFailOp = _ConvertStencilOp(pso->desc.dss->FrontFace.StencilDepthFailOp);
+			depthstencil.front.compareOp = _ConvertComparisonFunc(pso->desc.dss->front_face.stencil_func);
+			depthstencil.front.passOp = _ConvertStencilOp(pso->desc.dss->front_face.stencil_pass_op);
+			depthstencil.front.failOp = _ConvertStencilOp(pso->desc.dss->front_face.stencil_fail_op);
+			depthstencil.front.depthFailOp = _ConvertStencilOp(pso->desc.dss->front_face.stencil_depth_fail_op);
 
-			depthstencil.back.compareMask = pso->desc.dss->StencilReadMask;
-			depthstencil.back.writeMask = pso->desc.dss->StencilWriteMask;
+			depthstencil.back.compareMask = pso->desc.dss->stencil_read_mask;
+			depthstencil.back.writeMask = pso->desc.dss->stencil_write_mask;
 			depthstencil.back.reference = 0; // runtime supplied
-			depthstencil.back.compareOp = _ConvertComparisonFunc(pso->desc.dss->BackFace.StencilFunc);
-			depthstencil.back.passOp = _ConvertStencilOp(pso->desc.dss->BackFace.StencilPassOp);
-			depthstencil.back.failOp = _ConvertStencilOp(pso->desc.dss->BackFace.StencilFailOp);
-			depthstencil.back.depthFailOp = _ConvertStencilOp(pso->desc.dss->BackFace.StencilDepthFailOp);
+			depthstencil.back.compareOp = _ConvertComparisonFunc(pso->desc.dss->back_face.stencil_func);
+			depthstencil.back.passOp = _ConvertStencilOp(pso->desc.dss->back_face.stencil_pass_op);
+			depthstencil.back.failOp = _ConvertStencilOp(pso->desc.dss->back_face.stencil_fail_op);
+			depthstencil.back.depthFailOp = _ConvertStencilOp(pso->desc.dss->back_face.stencil_depth_fail_op);
 
 			depthstencil.depthBoundsTestEnable = VK_FALSE;
 		}
@@ -4708,7 +4708,7 @@ using namespace Vulkan_Internal;
 		// Tessellation:
 		VkPipelineTessellationStateCreateInfo& tessellationInfo = internal_state->tessellationInfo;
 		tessellationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
-		tessellationInfo.patchControlPoints = pDesc->patchControlPoints;
+		tessellationInfo.patchControlPoints = pDesc->patch_control_points;
 
 		pipelineInfo.pTessellationState = &tessellationInfo;
 
@@ -4731,8 +4731,8 @@ using namespace Vulkan_Internal;
 		{
 			if (attachment.type == RenderPassAttachment::RENDERTARGET || attachment.type == RenderPassAttachment::DEPTH_STENCIL)
 			{
-				wiHelper::hash_combine(renderpass->hash, attachment.texture->desc.Format);
-				wiHelper::hash_combine(renderpass->hash, attachment.texture->desc.SampleCount);
+				wiHelper::hash_combine(renderpass->hash, attachment.texture->desc.format);
+				wiHelper::hash_combine(renderpass->hash, attachment.texture->desc.sample_count);
 			}
 		}
 
@@ -4768,8 +4768,8 @@ using namespace Vulkan_Internal;
 			auto texture_internal_state = to_internal(texture);
 
 			attachmentDescriptions[validAttachmentCount].sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2;
-			attachmentDescriptions[validAttachmentCount].format = _ConvertFormat(texdesc.Format);
-			attachmentDescriptions[validAttachmentCount].samples = (VkSampleCountFlagBits)texdesc.SampleCount;
+			attachmentDescriptions[validAttachmentCount].format = _ConvertFormat(texdesc.format);
+			attachmentDescriptions[validAttachmentCount].samples = (VkSampleCountFlagBits)texdesc.sample_count;
 
 			switch (attachment.loadop)
 			{
@@ -4847,7 +4847,7 @@ using namespace Vulkan_Internal;
 				depthAttachmentRef.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 				subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
-				if (IsFormatStencilSupport(texdesc.Format))
+				if (IsFormatStencilSupport(texdesc.format))
 				{
 					depthAttachmentRef.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
 					switch (attachment.loadop)
@@ -4962,8 +4962,8 @@ using namespace Vulkan_Internal;
 			const TextureDesc& texdesc = desc.attachments[0].texture->desc;
 			auto texture_internal = to_internal(desc.attachments[0].texture);
 			framebufferInfo.pAttachments = attachments;
-			framebufferInfo.width = texdesc.Width;
-			framebufferInfo.height = texdesc.Height;
+			framebufferInfo.width = texdesc.width;
+			framebufferInfo.height = texdesc.height;
 			if (desc.attachments[0].subresource >= 0)
 			{
 				framebufferInfo.layers = texture_internal->subresources_framebuffer_layercount[0];
@@ -4972,7 +4972,7 @@ using namespace Vulkan_Internal;
 			{
 				framebufferInfo.layers = texture_internal->framebuffer_layercount;
 			}
-			framebufferInfo.layers = std::min(framebufferInfo.layers, texdesc.ArraySize);
+			framebufferInfo.layers = std::min(framebufferInfo.layers, texdesc.array_size);
 		}
 		else
 		{
@@ -5018,8 +5018,8 @@ using namespace Vulkan_Internal;
 				}
 				else if (desc.attachments[i].type == RenderPassAttachment::DEPTH_STENCIL)
 				{
-					internal_state->clearColors[i].depthStencil.depth = clear.depthstencil.depth;
-					internal_state->clearColors[i].depthStencil.stencil = clear.depthstencil.stencil;
+					internal_state->clearColors[i].depthStencil.depth = clear.depth_stencil.depth;
+					internal_state->clearColors[i].depthStencil.stencil = clear.depth_stencil.stencil;
 				}
 				else
 				{
@@ -5042,23 +5042,23 @@ using namespace Vulkan_Internal;
 
 		internal_state->buildInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
 		internal_state->buildInfo.flags = 0;
-		if (bvh->desc._flags & RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE)
+		if (bvh->desc.flags & RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE)
 		{
 			internal_state->buildInfo.flags |= VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR;
 		}
-		if (bvh->desc._flags & RaytracingAccelerationStructureDesc::FLAG_ALLOW_COMPACTION)
+		if (bvh->desc.flags & RaytracingAccelerationStructureDesc::FLAG_ALLOW_COMPACTION)
 		{
 			internal_state->buildInfo.flags |= VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_COMPACTION_BIT_KHR;
 		}
-		if (bvh->desc._flags & RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_TRACE)
+		if (bvh->desc.flags & RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_TRACE)
 		{
 			internal_state->buildInfo.flags |= VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
 		}
-		if (bvh->desc._flags & RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD)
+		if (bvh->desc.flags & RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD)
 		{
 			internal_state->buildInfo.flags |= VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR;
 		}
-		if (bvh->desc._flags & RaytracingAccelerationStructureDesc::FLAG_MINIMIZE_MEMORY)
+		if (bvh->desc.flags & RaytracingAccelerationStructureDesc::FLAG_MINIMIZE_MEMORY)
 		{
 			internal_state->buildInfo.flags |= VK_BUILD_ACCELERATION_STRUCTURE_LOW_MEMORY_BIT_KHR;
 		}
@@ -5069,7 +5069,7 @@ using namespace Vulkan_Internal;
 		{
 			internal_state->buildInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
 
-			for (auto& x : pDesc->bottomlevel.geometries)
+			for (auto& x : pDesc->bottom_level.geometries)
 			{
 				internal_state->geometries.emplace_back();
 				auto& geometry = internal_state->geometries.back();
@@ -5083,12 +5083,12 @@ using namespace Vulkan_Internal;
 				{
 					geometry.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
 					geometry.geometry.triangles.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
-					geometry.geometry.triangles.indexType = x.triangles.indexFormat == INDEXFORMAT_16BIT ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
-					geometry.geometry.triangles.maxVertex = x.triangles.vertexCount;
-					geometry.geometry.triangles.vertexStride = x.triangles.vertexStride;
-					geometry.geometry.triangles.vertexFormat = _ConvertFormat(x.triangles.vertexFormat);
+					geometry.geometry.triangles.indexType = x.triangles.index_format == INDEXFORMAT_16BIT ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
+					geometry.geometry.triangles.maxVertex = x.triangles.vertex_count;
+					geometry.geometry.triangles.vertexStride = x.triangles.vertex_stride;
+					geometry.geometry.triangles.vertexFormat = _ConvertFormat(x.triangles.vertex_format);
 
-					primitiveCount = x.triangles.indexCount / 3;
+					primitiveCount = x.triangles.index_count / 3;
 				}
 				else if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::PROCEDURAL_AABBS)
 				{
@@ -5117,7 +5117,7 @@ using namespace Vulkan_Internal;
 
 			internal_state->primitiveCounts.emplace_back();
 			uint32_t& primitiveCount = internal_state->primitiveCounts.back();
-			primitiveCount = pDesc->toplevel.count;
+			primitiveCount = pDesc->top_level.count;
 		}
 		break;
 		}
@@ -5235,7 +5235,7 @@ using namespace Vulkan_Internal;
 		info.flags = 0;
 
 		std::vector<VkPipelineShaderStageCreateInfo> stages;
-		for (auto& x : pDesc->shaderlibraries)
+		for (auto& x : pDesc->shader_libraries)
 		{
 			stages.emplace_back();
 			auto& stage = stages.back();
@@ -5267,8 +5267,8 @@ using namespace Vulkan_Internal;
 		info.pStages = stages.data();
 
 		std::vector<VkRayTracingShaderGroupCreateInfoKHR> groups;
-		groups.reserve(pDesc->hitgroups.size());
-		for (auto& x : pDesc->hitgroups)
+		groups.reserve(pDesc->hit_groups.size());
+		for (auto& x : pDesc->hit_groups)
 		{
 			groups.emplace_back();
 			auto& group = groups.back();
@@ -5288,8 +5288,8 @@ using namespace Vulkan_Internal;
 				break;
 			}
 			group.generalShader = x.general_shader;
-			group.closestHitShader = x.closesthit_shader;
-			group.anyHitShader = x.anyhit_shader;
+			group.closestHitShader = x.closest_hit_shader;
+			group.anyHitShader = x.any_hit_shader;
 			group.intersectionShader = x.intersection_shader;
 		}
 		info.groupCount = (uint32_t)groups.size();
@@ -5297,7 +5297,7 @@ using namespace Vulkan_Internal;
 
 		info.maxPipelineRayRecursionDepth = pDesc->max_trace_recursion_depth;
 
-		info.layout = to_internal(pDesc->shaderlibraries.front().shader)->pipelineLayout_cs; // think better way
+		info.layout = to_internal(pDesc->shader_libraries.front().shader)->pipelineLayout_cs; // think better way
 
 		//VkRayTracingPipelineInterfaceCreateInfoKHR library_interface = {};
 		//library_interface.sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_INTERFACE_CREATE_INFO_KHR;
@@ -5335,11 +5335,11 @@ using namespace Vulkan_Internal;
 		view_desc.subresourceRange.layerCount = sliceCount;
 		view_desc.subresourceRange.baseMipLevel = firstMip;
 		view_desc.subresourceRange.levelCount = mipCount;
-		view_desc.format = _ConvertFormat(texture->desc.Format);
+		view_desc.format = _ConvertFormat(texture->desc.format);
 
 		if (texture->desc.type == TextureDesc::TEXTURE_1D)
 		{
-			if (texture->desc.ArraySize > 1)
+			if (texture->desc.array_size > 1)
 			{
 				view_desc.viewType = VK_IMAGE_VIEW_TYPE_1D_ARRAY;
 			}
@@ -5350,11 +5350,11 @@ using namespace Vulkan_Internal;
 		}
 		else if (texture->desc.type == TextureDesc::TEXTURE_2D)
 		{
-			if (texture->desc.ArraySize > 1)
+			if (texture->desc.array_size > 1)
 			{
-				if (texture->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
+				if (texture->desc.misc_flags & RESOURCE_MISC_TEXTURECUBE)
 				{
-					if (texture->desc.ArraySize > 6 && sliceCount > 6)
+					if (texture->desc.array_size > 6 && sliceCount > 6)
 					{
 						view_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
 					}
@@ -5382,7 +5382,7 @@ using namespace Vulkan_Internal;
 		{
 		case wiGraphics::SRV:
 		{
-			switch (texture->desc.Format)
+			switch (texture->desc.format)
 			{
 			case FORMAT_R16_TYPELESS:
 				view_desc.format = VK_FORMAT_D16_UNORM;
@@ -5514,7 +5514,7 @@ using namespace Vulkan_Internal;
 			view_desc.subresourceRange.levelCount = 1;
 			view_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 
-			switch (texture->desc.Format)
+			switch (texture->desc.format)
 			{
 			case FORMAT_R16_TYPELESS:
 				view_desc.format = VK_FORMAT_D16_UNORM;
@@ -5570,7 +5570,7 @@ using namespace Vulkan_Internal;
 		case wiGraphics::SRV:
 		case wiGraphics::UAV:
 		{
-			if (desc.Format == FORMAT_UNKNOWN)
+			if (desc.format == FORMAT_UNKNOWN)
 			{
 				// Raw buffer
 				int index = allocationhandler->bindlessStorageBuffers.allocate();
@@ -5620,9 +5620,9 @@ using namespace Vulkan_Internal;
 				srv_desc.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
 				srv_desc.buffer = internal_state->resource;
 				srv_desc.flags = 0;
-				srv_desc.format = _ConvertFormat(desc.Format);
+				srv_desc.format = _ConvertFormat(desc.format);
 				srv_desc.offset = AlignTo(offset, properties2.properties.limits.minTexelBufferOffsetAlignment); // damn, if this needs alignment, that could break a lot of things! (index buffer, index offset?)
-				srv_desc.range = std::min(size, (uint64_t)desc.Size - srv_desc.offset);
+				srv_desc.range = std::min(size, (uint64_t)desc.size - srv_desc.offset);
 
 				VkBufferView view;
 				res = vkCreateBufferView(device, &srv_desc, nullptr, &view);
@@ -5810,13 +5810,13 @@ using namespace Vulkan_Internal;
 	{
 		VkAccelerationStructureInstanceKHR* desc = (VkAccelerationStructureInstanceKHR*)dest;
 		memcpy(&desc->transform, &instance->transform, sizeof(desc->transform));
-		desc->instanceCustomIndex = instance->InstanceID;
-		desc->mask = instance->InstanceMask;
-		desc->instanceShaderBindingTableRecordOffset = instance->InstanceContributionToHitGroupIndex;
-		desc->flags = instance->Flags;
+		desc->instanceCustomIndex = instance->instance_id;
+		desc->mask = instance->instance_mask;
+		desc->instanceShaderBindingTableRecordOffset = instance->instance_contribution_to_hit_group_index;
+		desc->flags = instance->flags;
 
-		assert(instance->bottomlevel.IsAccelerationStructure());
-		auto internal_state = to_internal((RaytracingAccelerationStructure*)&instance->bottomlevel);
+		assert(instance->bottom_level.IsAccelerationStructure());
+		auto internal_state = to_internal((RaytracingAccelerationStructure*)&instance->bottom_level);
 		desc->accelerationStructureReference = internal_state->as_address;
 	}
 	void GraphicsDevice_Vulkan::WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) const
@@ -6162,9 +6162,9 @@ using namespace Vulkan_Internal;
 		result.type = GPUResource::GPU_RESOURCE_TYPE::TEXTURE;
 		result.internal_state = internal_state;
 		result.desc.type = TextureDesc::TEXTURE_2D;
-		result.desc.Width = swapchain_internal->swapChainExtent.width;
-		result.desc.Height = swapchain_internal->swapChainExtent.height;
-		result.desc.Format = swapchain->desc.format;
+		result.desc.width = swapchain_internal->swapChainExtent.width;
+		result.desc.height = swapchain_internal->swapChainExtent.height;
+		result.desc.format = swapchain->desc.format;
 		return result;
 	}
 
@@ -6235,10 +6235,10 @@ using namespace Vulkan_Internal;
 		}
 		
 		VkClearValue clearColor = {
-			swapchain->desc.clearcolor[0],
-			swapchain->desc.clearcolor[1],
-			swapchain->desc.clearcolor[2],
-			swapchain->desc.clearcolor[3],
+			swapchain->desc.clear_color[0],
+			swapchain->desc.clear_color[1],
+			swapchain->desc.clear_color[2],
+			swapchain->desc.clear_color[3],
 		};
 		VkRenderPassBeginInfo renderPassInfo = {};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -6287,12 +6287,12 @@ using namespace Vulkan_Internal;
 		assert(NumViewports < properties2.properties.limits.maxViewports);
 		for (uint32_t i = 0; i < NumViewports; ++i)
 		{
-			vp[i].x = pViewports[i].TopLeftX;
-			vp[i].y = pViewports[i].TopLeftY + pViewports[i].Height;
-			vp[i].width = pViewports[i].Width;
-			vp[i].height = -pViewports[i].Height;
-			vp[i].minDepth = pViewports[i].MinDepth;
-			vp[i].maxDepth = pViewports[i].MaxDepth;
+			vp[i].x = pViewports[i].top_left_x;
+			vp[i].y = pViewports[i].top_left_y + pViewports[i].height;
+			vp[i].width = pViewports[i].width;
+			vp[i].height = -pViewports[i].height;
+			vp[i].minDepth = pViewports[i].min_depth;
+			vp[i].maxDepth = pViewports[i].max_depth;
 		}
 		vkCmdSetViewport(GetCommandList(cmd), 0, NumViewports, vp);
 	}
@@ -6659,13 +6659,13 @@ using namespace Vulkan_Internal;
 			const TextureDesc& src_desc = ((const Texture*)pSrc)->GetDesc();
 			const TextureDesc& dst_desc = ((const Texture*)pDst)->GetDesc();
 
-			if (src_desc.Usage == USAGE_UPLOAD)
+			if (src_desc.usage == USAGE_UPLOAD)
 			{
 				VkBufferImageCopy copy = {};
-				copy.imageExtent.width = dst_desc.Width;
-				copy.imageExtent.height = dst_desc.Height;
+				copy.imageExtent.width = dst_desc.width;
+				copy.imageExtent.height = dst_desc.height;
 				copy.imageExtent.depth = 1;
-				copy.imageExtent.width = dst_desc.Width;
+				copy.imageExtent.width = dst_desc.width;
 				copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				copy.imageSubresource.layerCount = 1;
 				vkCmdCopyBufferToImage(
@@ -6677,13 +6677,13 @@ using namespace Vulkan_Internal;
 					&copy
 				);
 			}
-			else if (dst_desc.Usage == USAGE_READBACK)
+			else if (dst_desc.usage == USAGE_READBACK)
 			{
 				VkBufferImageCopy copy = {};
-				copy.imageExtent.width = src_desc.Width;
-				copy.imageExtent.height = src_desc.Height;
+				copy.imageExtent.width = src_desc.width;
+				copy.imageExtent.height = src_desc.height;
 				copy.imageExtent.depth = 1;
-				copy.imageExtent.width = src_desc.Width;
+				copy.imageExtent.width = src_desc.width;
 				copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				copy.imageSubresource.layerCount = 1;
 				vkCmdCopyImageToBuffer(
@@ -6698,9 +6698,9 @@ using namespace Vulkan_Internal;
 			else
 			{
 				VkImageCopy copy = {};
-				copy.extent.width = dst_desc.Width;
-				copy.extent.height = dst_desc.Height;
-				copy.extent.depth = std::max(1u, dst_desc.Depth);
+				copy.extent.width = dst_desc.width;
+				copy.extent.height = dst_desc.height;
+				copy.extent.depth = std::max(1u, dst_desc.depth);
 
 				copy.srcOffset.x = 0;
 				copy.srcOffset.y = 0;
@@ -6710,10 +6710,10 @@ using namespace Vulkan_Internal;
 				copy.dstOffset.y = 0;
 				copy.dstOffset.z = 0;
 
-				if (src_desc.BindFlags & BIND_DEPTH_STENCIL)
+				if (src_desc.bind_flags & BIND_DEPTH_STENCIL)
 				{
 					copy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-					if (IsFormatStencilSupport(src_desc.Format))
+					if (IsFormatStencilSupport(src_desc.format))
 					{
 						copy.srcSubresource.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
 					}
@@ -6723,13 +6723,13 @@ using namespace Vulkan_Internal;
 					copy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				}
 				copy.srcSubresource.baseArrayLayer = 0;
-				copy.srcSubresource.layerCount = src_desc.ArraySize;
+				copy.srcSubresource.layerCount = src_desc.array_size;
 				copy.srcSubresource.mipLevel = 0;
 
-				if (dst_desc.BindFlags & BIND_DEPTH_STENCIL)
+				if (dst_desc.bind_flags & BIND_DEPTH_STENCIL)
 				{
 					copy.dstSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-					if (IsFormatStencilSupport(dst_desc.Format))
+					if (IsFormatStencilSupport(dst_desc.format))
 					{
 						copy.dstSubresource.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
 					}
@@ -6739,7 +6739,7 @@ using namespace Vulkan_Internal;
 					copy.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				}
 				copy.dstSubresource.baseArrayLayer = 0;
-				copy.dstSubresource.layerCount = dst_desc.ArraySize;
+				copy.dstSubresource.layerCount = dst_desc.array_size;
 				copy.dstSubresource.mipLevel = 0;
 
 				vkCmdCopyImage(GetCommandList(cmd),
@@ -6760,7 +6760,7 @@ using namespace Vulkan_Internal;
 			VkBufferCopy copy = {};
 			copy.srcOffset = 0;
 			copy.dstOffset = 0;
-			copy.size = std::min(src_desc.Size, dst_desc.Size);
+			copy.size = std::min(src_desc.size, dst_desc.size);
 
 			vkCmdCopyBuffer(GetCommandList(cmd),
 				internal_state_src->resource,
@@ -6922,10 +6922,10 @@ using namespace Vulkan_Internal;
 				barrierdesc.newLayout = _ConvertImageLayout(barrier.image.layout_after);
 				barrierdesc.srcAccessMask = _ParseResourceState(barrier.image.layout_before);
 				barrierdesc.dstAccessMask = _ParseResourceState(barrier.image.layout_after);
-				if (desc.BindFlags & BIND_DEPTH_STENCIL)
+				if (desc.bind_flags & BIND_DEPTH_STENCIL)
 				{
 					barrierdesc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-					if (IsFormatStencilSupport(desc.Format))
+					if (IsFormatStencilSupport(desc.format))
 					{
 						barrierdesc.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
 					}
@@ -6963,7 +6963,7 @@ using namespace Vulkan_Internal;
 				barrierdesc.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
 				barrierdesc.pNext = nullptr;
 				barrierdesc.buffer = internal_state->resource;
-				barrierdesc.size = desc.Size;
+				barrierdesc.size = desc.size;
 				barrierdesc.offset = 0;
 				barrierdesc.srcAccessMask = _ParseResourceState(barrier.buffer.state_before);
 				barrierdesc.dstAccessMask = _ParseResourceState(barrier.buffer.state_after);
@@ -6972,14 +6972,14 @@ using namespace Vulkan_Internal;
 
 				bufferBarriers.push_back(barrierdesc);
 
-				if (desc.MiscFlags & RESOURCE_MISC_RAY_TRACING)
+				if (desc.misc_flags & RESOURCE_MISC_RAY_TRACING)
 				{
 					assert(CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING));
 					srcStage |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
 					dstStage |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
 				}
 
-				if (desc.MiscFlags & RESOURCE_MISC_PREDICATION)
+				if (desc.misc_flags & RESOURCE_MISC_PREDICATION)
 				{
 					assert(CheckCapability(GRAPHICSDEVICE_CAPABILITY_PREDICATION));
 					srcStage |= VK_PIPELINE_STAGE_CONDITIONAL_RENDERING_BIT_EXT;
@@ -7041,7 +7041,7 @@ using namespace Vulkan_Internal;
 		case RaytracingAccelerationStructureDesc::BOTTOMLEVEL:
 		{
 			size_t i = 0;
-			for (auto& x : dst->desc.bottomlevel.geometries)
+			for (auto& x : dst->desc.bottom_level.geometries)
 			{
 				auto& geometry = geometries[i];
 
@@ -7049,35 +7049,35 @@ using namespace Vulkan_Internal;
 				auto& range = ranges.back();
 				range = {};
 
-				if (x._flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE)
+				if (x.flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE)
 				{
 					geometry.flags |= VK_GEOMETRY_OPAQUE_BIT_KHR;
 				}
-				if (x._flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_NO_DUPLICATE_ANYHIT_INVOCATION)
+				if (x.flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_NO_DUPLICATE_ANYHIT_INVOCATION)
 				{
 					geometry.flags |= VK_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION_BIT_KHR;
 				}
 
 				if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::TRIANGLES)
 				{
-					geometry.geometry.triangles.vertexData.deviceAddress = to_internal(&x.triangles.vertexBuffer)->address +
-						x.triangles.vertexByteOffset;
+					geometry.geometry.triangles.vertexData.deviceAddress = to_internal(&x.triangles.vertex_buffer)->address +
+						x.triangles.vertex_byte_offset;
 
-					geometry.geometry.triangles.indexData.deviceAddress = to_internal(&x.triangles.indexBuffer)->address +
-						x.triangles.indexOffset * (x.triangles.indexFormat == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? sizeof(uint16_t) : sizeof(uint32_t));
+					geometry.geometry.triangles.indexData.deviceAddress = to_internal(&x.triangles.index_buffer)->address +
+						x.triangles.index_offset * (x.triangles.index_format == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? sizeof(uint16_t) : sizeof(uint32_t));
 
-					if (x._flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_USE_TRANSFORM)
+					if (x.flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_USE_TRANSFORM)
 					{
-						geometry.geometry.triangles.transformData.deviceAddress = to_internal(&x.triangles.transform3x4Buffer)->address;
-						range.transformOffset = x.triangles.transform3x4BufferOffset;
+						geometry.geometry.triangles.transformData.deviceAddress = to_internal(&x.triangles.transform_3x4_buffer)->address;
+						range.transformOffset = x.triangles.transform_3x4_buffer_offset;
 					}
 
-					range.primitiveCount = x.triangles.indexCount / 3;
+					range.primitiveCount = x.triangles.index_count / 3;
 					range.primitiveOffset = 0;
 				}
 				else if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::PROCEDURAL_AABBS)
 				{
-					geometry.geometry.aabbs.data.deviceAddress = to_internal(&x.aabbs.aabbBuffer)->address;
+					geometry.geometry.aabbs.data.deviceAddress = to_internal(&x.aabbs.aabb_buffer)->address;
 
 					range.primitiveCount = x.aabbs.count;
 					range.primitiveOffset = x.aabbs.offset;
@@ -7090,13 +7090,13 @@ using namespace Vulkan_Internal;
 		case RaytracingAccelerationStructureDesc::TOPLEVEL:
 		{
 			auto& geometry = geometries.back();
-			geometry.geometry.instances.data.deviceAddress = to_internal(&dst->desc.toplevel.instanceBuffer)->address;
+			geometry.geometry.instances.data.deviceAddress = to_internal(&dst->desc.top_level.instance_buffer)->address;
 
 			ranges.emplace_back();
 			auto& range = ranges.back();
 			range = {};
-			range.primitiveCount = dst->desc.toplevel.count;
-			range.primitiveOffset = dst->desc.toplevel.offset;
+			range.primitiveCount = dst->desc.top_level.count;
+			range.primitiveOffset = dst->desc.top_level.offset;
 		}
 		break;
 		}
@@ -7117,7 +7117,7 @@ using namespace Vulkan_Internal;
 		prev_pipeline_hash[cmd] = 0;
 		active_rt[cmd] = rtpso;
 
-		BindComputeShader(rtpso->desc.shaderlibraries.front().shader, cmd);
+		BindComputeShader(rtpso->desc.shader_libraries.front().shader, cmd);
 
 		vkCmdBindPipeline(GetCommandList(cmd), VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, to_internal(rtpso)->pipeline);
 	}
@@ -7126,9 +7126,9 @@ using namespace Vulkan_Internal;
 		predispatch(cmd);
 
 		VkStridedDeviceAddressRegionKHR raygen = {};
-		raygen.deviceAddress = desc->raygeneration.buffer ? to_internal(desc->raygeneration.buffer)->address : 0;
-		raygen.deviceAddress += desc->raygeneration.offset;
-		raygen.size = desc->raygeneration.size;
+		raygen.deviceAddress = desc->ray_generation.buffer ? to_internal(desc->ray_generation.buffer)->address : 0;
+		raygen.deviceAddress += desc->ray_generation.offset;
+		raygen.size = desc->ray_generation.size;
 		raygen.stride = raygen.size; // raygen specifically must be size == stride
 		
 		VkStridedDeviceAddressRegionKHR miss = {};
@@ -7138,10 +7138,10 @@ using namespace Vulkan_Internal;
 		miss.stride = desc->miss.stride;
 
 		VkStridedDeviceAddressRegionKHR hitgroup = {};
-		hitgroup.deviceAddress = desc->hitgroup.buffer ? to_internal(desc->hitgroup.buffer)->address : 0;
-		hitgroup.deviceAddress += desc->hitgroup.offset;
-		hitgroup.size = desc->hitgroup.size;
-		hitgroup.stride = desc->hitgroup.stride;
+		hitgroup.deviceAddress = desc->hit_group.buffer ? to_internal(desc->hit_group.buffer)->address : 0;
+		hitgroup.deviceAddress += desc->hit_group.offset;
+		hitgroup.size = desc->hit_group.size;
+		hitgroup.stride = desc->hit_group.stride;
 
 		VkStridedDeviceAddressRegionKHR callable = {};
 		callable.deviceAddress = desc->callable.buffer ? to_internal(desc->callable.buffer)->address : 0;
@@ -7155,9 +7155,9 @@ using namespace Vulkan_Internal;
 			&miss,
 			&hitgroup,
 			&callable,
-			desc->Width, 
-			desc->Height, 
-			desc->Depth
+			desc->width, 
+			desc->height, 
+			desc->depth
 		);
 	}
 	void GraphicsDevice_Vulkan::PushConstants(const void* data, uint32_t size, CommandList cmd)

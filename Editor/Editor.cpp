@@ -212,17 +212,17 @@ void EditorComponent::ResizeBuffers()
 		XMUINT2 internalResolution = GetInternalResolution();
 
 		TextureDesc desc;
-		desc.Width = internalResolution.x;
-		desc.Height = internalResolution.y;
+		desc.width = internalResolution.x;
+		desc.height = internalResolution.y;
 
-		desc.Format = FORMAT_R8_UNORM;
-		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
+		desc.format = FORMAT_R8_UNORM;
+		desc.bind_flags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		if (renderPath->getMSAASampleCount() > 1)
 		{
-			desc.SampleCount = renderPath->getMSAASampleCount();
+			desc.sample_count = renderPath->getMSAASampleCount();
 			hr = device->CreateTexture(&desc, nullptr, &rt_selectionOutline_MSAA);
 			assert(hr);
-			desc.SampleCount = 1;
+			desc.sample_count = 1;
 		}
 		hr = device->CreateTexture(&desc, nullptr, &rt_selectionOutline[0]);
 		assert(hr);
@@ -1927,8 +1927,8 @@ void EditorComponent::Render() const
 		device->EventBegin("Editor - Selection Outline Mask", cmd);
 
 		Viewport vp;
-		vp.Width = (float)rt_selectionOutline[0].GetDesc().Width;
-		vp.Height = (float)rt_selectionOutline[0].GetDesc().Height;
+		vp.width = (float)rt_selectionOutline[0].GetDesc().width;
+		vp.height = (float)rt_selectionOutline[0].GetDesc().height;
 		device->BindViewports(1, &vp, cmd);
 
 		wiImageParams fx;

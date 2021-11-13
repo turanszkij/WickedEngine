@@ -47,17 +47,17 @@ bool ImGui_Impl_CreateDeviceObjects()
 
 	// Upload texture to graphics system
 	TextureDesc textureDesc;
-	textureDesc.Width = width;
-	textureDesc.Height = height;
-	textureDesc.MipLevels = 1;
-	textureDesc.ArraySize = 1;
-	textureDesc.Format = FORMAT_R8G8B8A8_UNORM;
-	textureDesc.BindFlags = BIND_SHADER_RESOURCE;
+	textureDesc.width = width;
+	textureDesc.height = height;
+	textureDesc.mip_levels = 1;
+	textureDesc.array_size = 1;
+	textureDesc.format = FORMAT_R8G8B8A8_UNORM;
+	textureDesc.bind_flags = BIND_SHADER_RESOURCE;
 
 	SubresourceData textureData;
-	textureData.pData = pixels;
-	textureData.rowPitch = width * GetFormatStride(textureDesc.Format);
-	textureData.slicePitch = textureData.rowPitch * height;
+	textureData.data_ptr = pixels;
+	textureData.row_pitch = width * GetFormatStride(textureDesc.format);
+	textureData.slice_pitch = textureData.row_pitch * height;
 
 	wiRenderer::GetDevice()->CreateTexture(&textureDesc, &textureData, &fontTexture);
 
@@ -235,8 +235,8 @@ void Example_ImGui::Compose(wiGraphics::CommandList cmd)
 	device->BindIndexBuffer(&indexBufferAllocation.buffer, INDEXFORMAT_16BIT, indexBufferAllocation.offset, cmd);
 
 	Viewport viewport;
-	viewport.Width = (float)fb_width;
-	viewport.Height = (float)fb_height;
+	viewport.width = (float)fb_width;
+	viewport.height = (float)fb_height;
 	device->BindViewports(1, &viewport, cmd);
 
 	device->BindPipelineState(&imguiPSO, cmd);

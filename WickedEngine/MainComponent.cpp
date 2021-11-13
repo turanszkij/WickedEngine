@@ -81,8 +81,8 @@ void MainComponent::Run()
 		wiImage::SetCanvas(canvas, cmd);
 		wiFont::SetCanvas(canvas, cmd);
 		Viewport viewport;
-		viewport.Width = (float)swapChain.desc.width;
-		viewport.Height = (float)swapChain.desc.height;
+		viewport.width = (float)swapChain.desc.width;
+		viewport.height = (float)swapChain.desc.height;
 		device->BindViewports(1, &viewport, cmd);
 		wiFontParams params;
 		params.posX = 5.f;
@@ -174,8 +174,8 @@ void MainComponent::Run()
 	wiImage::SetCanvas(canvas, cmd);
 	wiFont::SetCanvas(canvas, cmd);
 	Viewport viewport;
-	viewport.Width = (float)swapChain.desc.width;
-	viewport.Height = (float)swapChain.desc.height;
+	viewport.width = (float)swapChain.desc.width;
+	viewport.height = (float)swapChain.desc.height;
 	device->BindViewports(1, &viewport, cmd);
 
 	bool colorspace_conversion_required = colorspace == COLOR_SPACE_HDR10_ST2084;
@@ -453,7 +453,7 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 	else
 	{
 		// initialize for the first time
-		desc.buffercount = 3;
+		desc.buffer_count = 3;
 		desc.format = FORMAT_R10G10B10A2_UNORM;
 	}
 	desc.width = canvas.GetPhysicalWidth();
@@ -472,10 +472,10 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 	if (wiRenderer::GetDevice()->GetSwapChainColorSpace(&swapChain))
 	{
 		TextureDesc desc;
-		desc.Width = swapChain.desc.width;
-		desc.Height = swapChain.desc.height;
-		desc.Format = FORMAT_R11G11B10_FLOAT;
-		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
+		desc.width = swapChain.desc.width;
+		desc.height = swapChain.desc.height;
+		desc.format = FORMAT_R11G11B10_FLOAT;
+		desc.bind_flags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
 		bool success = wiRenderer::GetDevice()->CreateTexture(&desc, nullptr, &rendertarget);
 		assert(success);
 		wiRenderer::GetDevice()->SetName(&rendertarget, "MainComponent::rendertarget");

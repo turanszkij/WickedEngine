@@ -33,10 +33,10 @@ namespace wiGPUSortLib
 		wiTimer timer;
 
 		GPUBufferDesc bd;
-		bd.Usage = USAGE_DEFAULT;
-		bd.BindFlags = BIND_UNORDERED_ACCESS;
-		bd.MiscFlags = RESOURCE_MISC_INDIRECT_ARGS | RESOURCE_MISC_BUFFER_RAW;
-		bd.Size = sizeof(IndirectDispatchArgs);
+		bd.usage = USAGE_DEFAULT;
+		bd.bind_flags = BIND_UNORDERED_ACCESS;
+		bd.misc_flags = RESOURCE_MISC_INDIRECT_ARGS | RESOURCE_MISC_BUFFER_RAW;
+		bd.size = sizeof(IndirectDispatchArgs);
 		wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &indirectBuffer);
 
 		static wiEvent::Handle handle = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });

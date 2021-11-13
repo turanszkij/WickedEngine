@@ -1306,8 +1306,8 @@ void wiComboBox::Render(const wiCanvas& canvas, CommandList cmd) const
 		wiMath::ConstructTriangleEquilateral(1, vertices[0].pos, vertices[1].pos, vertices[2].pos);
 
 		GPUBufferDesc desc;
-		desc.BindFlags = BIND_VERTEX_BUFFER;
-		desc.Size = sizeof(vertices);
+		desc.bind_flags = BIND_VERTEX_BUFFER;
+		desc.size = sizeof(vertices);
 		device->CreateBuffer(&desc, &vertices, &vb_triangle);
 	}
 	const XMMATRIX Projection = canvas.GetProjection();
@@ -2340,9 +2340,9 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			}
 
 			GPUBufferDesc desc;
-			desc.BindFlags = BIND_VERTEX_BUFFER;
-			desc.Size = vertices.size() * sizeof(Vertex);
-			desc.Stride = 0;
+			desc.bind_flags = BIND_VERTEX_BUFFER;
+			desc.size = vertices.size() * sizeof(Vertex);
+			desc.stride = 0;
 			device->CreateBuffer(&desc, vertices.data(), &vb_hue);
 		}
 		// saturation picker (small circle)
@@ -2362,9 +2362,9 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			}
 
 			GPUBufferDesc desc;
-			desc.BindFlags = BIND_VERTEX_BUFFER;
-			desc.Size = vertices.size() * sizeof(Vertex);
-			desc.Stride = 0;
+			desc.bind_flags = BIND_VERTEX_BUFFER;
+			desc.size = vertices.size() * sizeof(Vertex);
+			desc.stride = 0;
 			device->CreateBuffer(&desc, vertices.data(), &vb_picker_saturation);
 		}
 		// hue picker (rectangle)
@@ -2398,9 +2398,9 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			};
 
 			GPUBufferDesc desc;
-			desc.BindFlags = BIND_VERTEX_BUFFER;
-			desc.Size = sizeof(vertices);
-			desc.Stride = 0;
+			desc.bind_flags = BIND_VERTEX_BUFFER;
+			desc.size = sizeof(vertices);
+			desc.stride = 0;
 			device->CreateBuffer(&desc, vertices, &vb_picker_hue);
 		}
 		// preview
@@ -2414,8 +2414,8 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			};
 
 			GPUBufferDesc desc;
-			desc.BindFlags = BIND_VERTEX_BUFFER;
-			desc.Size = sizeof(vertices);
+			desc.bind_flags = BIND_VERTEX_BUFFER;
+			desc.size = sizeof(vertices);
 			device->CreateBuffer(&desc, vertices, &vb_preview);
 		}
 
@@ -2496,7 +2496,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			sizeof(Vertex),
 		};
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
-		device->Draw((uint32_t)(vb_hue.GetDesc().Size / sizeof(Vertex)), 0, cmd);
+		device->Draw((uint32_t)(vb_hue.GetDesc().size / sizeof(Vertex)), 0, cmd);
 	}
 
 	// render hue picker
@@ -2523,7 +2523,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			sizeof(Vertex),
 		};
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
-		device->Draw((uint32_t)(vb_picker_hue.GetDesc().Size / sizeof(Vertex)), 0, cmd);
+		device->Draw((uint32_t)(vb_picker_hue.GetDesc().size / sizeof(Vertex)), 0, cmd);
 	}
 
 	// render saturation picker
@@ -2574,7 +2574,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			sizeof(Vertex),
 		};
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
-		device->Draw((uint32_t)(vb_picker_saturation.GetDesc().Size / sizeof(Vertex)), 0, cmd);
+		device->Draw((uint32_t)(vb_picker_saturation.GetDesc().size / sizeof(Vertex)), 0, cmd);
 	}
 
 	// render preview
@@ -2593,7 +2593,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			sizeof(Vertex),
 		};
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
-		device->Draw((uint32_t)(vb_preview.GetDesc().Size / sizeof(Vertex)), 0, cmd);
+		device->Draw((uint32_t)(vb_preview.GetDesc().size / sizeof(Vertex)), 0, cmd);
 	}
 }
 wiColor wiColorPicker::GetPickColor() const
@@ -2922,8 +2922,8 @@ void wiTreeList::Render(const wiCanvas& canvas, CommandList cmd) const
 		wiMath::ConstructTriangleEquilateral(1, vertices[0].pos, vertices[1].pos, vertices[2].pos);
 
 		GPUBufferDesc desc;
-		desc.BindFlags = BIND_VERTEX_BUFFER;
-		desc.Size = sizeof(vertices);
+		desc.bind_flags = BIND_VERTEX_BUFFER;
+		desc.size = sizeof(vertices);
 		device->CreateBuffer(&desc, vertices, &vb_triangle);
 	}
 	const XMMATRIX Projection = canvas.GetProjection();

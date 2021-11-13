@@ -61,13 +61,13 @@ namespace wiProfiler
 
 			GPUQueryHeapDesc desc;
 			desc.type = GPU_QUERY_TYPE_TIMESTAMP;
-			desc.queryCount = 1024;
+			desc.query_count = 1024;
 			bool success = device->CreateQueryHeap(&desc, &queryHeap);
 			assert(success);
 
 			GPUBufferDesc bd;
-			bd.Usage = USAGE_READBACK;
-			bd.Size = desc.queryCount * sizeof(uint64_t);
+			bd.usage = USAGE_READBACK;
+			bd.size = desc.query_count * sizeof(uint64_t);
 
 			for (int i = 0; i < arraysize(queryResultBuffer); ++i)
 			{
@@ -84,7 +84,7 @@ namespace wiProfiler
 		device->QueryReset(
 			&queryHeap,
 			0,
-			queryHeap.desc.queryCount,
+			queryHeap.desc.query_count,
 			cmd
 		);
 

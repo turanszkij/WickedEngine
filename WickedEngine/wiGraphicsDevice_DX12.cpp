@@ -711,9 +711,9 @@ namespace DX12_Internal
 	constexpr D3D12_SUBRESOURCE_DATA _ConvertSubresourceData(const SubresourceData& pInitialData)
 	{
 		D3D12_SUBRESOURCE_DATA data = {};
-		data.pData = pInitialData.pData;
-		data.RowPitch = pInitialData.rowPitch;
-		data.SlicePitch = pInitialData.slicePitch;
+		data.pData = pInitialData.data_ptr;
+		data.RowPitch = pInitialData.row_pitch;
+		data.SlicePitch = pInitialData.slice_pitch;
 
 		return data;
 	}
@@ -767,16 +767,16 @@ namespace DX12_Internal
 	{
 		D3D12_STATIC_SAMPLER_DESC desc = {};
 		desc.ShaderRegister = x.slot;
-		desc.Filter = _ConvertFilter(x.sampler.desc.Filter);
-		desc.AddressU = _ConvertTextureAddressMode(x.sampler.desc.AddressU);
-		desc.AddressV = _ConvertTextureAddressMode(x.sampler.desc.AddressV);
-		desc.AddressW = _ConvertTextureAddressMode(x.sampler.desc.AddressW);
-		desc.MipLODBias = x.sampler.desc.MipLODBias;
-		desc.MaxAnisotropy = x.sampler.desc.MaxAnisotropy;
-		desc.ComparisonFunc = _ConvertComparisonFunc(x.sampler.desc.ComparisonFunc);
-		desc.BorderColor = _ConvertSamplerBorderColor(x.sampler.desc.BorderColor);
-		desc.MinLOD = x.sampler.desc.MinLOD;
-		desc.MaxLOD = x.sampler.desc.MaxLOD;
+		desc.Filter = _ConvertFilter(x.sampler.desc.filter);
+		desc.AddressU = _ConvertTextureAddressMode(x.sampler.desc.address_u);
+		desc.AddressV = _ConvertTextureAddressMode(x.sampler.desc.address_v);
+		desc.AddressW = _ConvertTextureAddressMode(x.sampler.desc.address_w);
+		desc.MipLODBias = x.sampler.desc.mip_lod_bias;
+		desc.MaxAnisotropy = x.sampler.desc.max_anisotropy;
+		desc.ComparisonFunc = _ConvertComparisonFunc(x.sampler.desc.comparison_func);
+		desc.BorderColor = _ConvertSamplerBorderColor(x.sampler.desc.border_color);
+		desc.MinLOD = x.sampler.desc.min_lod;
+		desc.MaxLOD = x.sampler.desc.max_lod;
 		desc.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 		return desc;
 	}
@@ -995,22 +995,22 @@ namespace DX12_Internal
 		{
 		case D3D12_RESOURCE_DIMENSION_TEXTURE1D:
 			retVal.type = TextureDesc::TEXTURE_1D;
-			retVal.ArraySize = desc.DepthOrArraySize;
+			retVal.array_size = desc.DepthOrArraySize;
 			break;
 		default:
 		case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
 			retVal.type = TextureDesc::TEXTURE_2D;
-			retVal.ArraySize = desc.DepthOrArraySize;
+			retVal.array_size = desc.DepthOrArraySize;
 			break;
 		case D3D12_RESOURCE_DIMENSION_TEXTURE3D:
 			retVal.type = TextureDesc::TEXTURE_3D;
-			retVal.Depth = desc.DepthOrArraySize;
+			retVal.depth = desc.DepthOrArraySize;
 			break;
 		}
-		retVal.Format = _ConvertFormat_Inv(desc.Format);
-		retVal.Width = (uint32_t)desc.Width;
-		retVal.Height = desc.Height;
-		retVal.MipLevels = desc.MipLevels;
+		retVal.format = _ConvertFormat_Inv(desc.Format);
+		retVal.width = (uint32_t)desc.Width;
+		retVal.height = desc.Height;
+		retVal.mip_levels = desc.MipLevels;
 
 		return retVal;
 	}
@@ -1534,12 +1534,12 @@ using namespace DX12_Internal;
 		}
 
 		CopyCMD cmd = freelist.back();
-		if (cmd.uploadbuffer.desc.Size < staging_size)
+		if (cmd.uploadbuffer.desc.size < staging_size)
 		{
 			// Try to search for a staging buffer that can fit the request:
 			for (size_t i = 0; i < freelist.size(); ++i)
 			{
-				if (freelist[i].uploadbuffer.desc.Size >= staging_size)
+				if (freelist[i].uploadbuffer.desc.size >= staging_size)
 				{
 					cmd = freelist[i];
 					std::swap(freelist[i], freelist.back());
@@ -1551,11 +1551,11 @@ using namespace DX12_Internal;
 		locker.unlock();
 
 		// If no buffer was found that fits the data, create one:
-		if (cmd.uploadbuffer.desc.Size < staging_size)
+		if (cmd.uploadbuffer.desc.size < staging_size)
 		{
 			GPUBufferDesc uploadBufferDesc;
-			uploadBufferDesc.Size = wiMath::GetNextPowerOfTwo(staging_size);
-			uploadBufferDesc.Usage = USAGE_UPLOAD;
+			uploadBufferDesc.size = wiMath::GetNextPowerOfTwo(staging_size);
+			uploadBufferDesc.usage = USAGE_UPLOAD;
 			bool upload_success = device->CreateBuffer(&uploadBufferDesc, nullptr, &cmd.uploadbuffer);
 			assert(upload_success);
 		}
@@ -1850,7 +1850,7 @@ using namespace DX12_Internal;
 							D3D12_CONSTANT_BUFFER_VIEW_DESC cbv;
 							cbv.BufferLocation = internal_state->gpu_address;
 							cbv.BufferLocation += offset;
-							cbv.SizeInBytes = AlignTo((UINT)buffer.desc.Size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+							cbv.SizeInBytes = AlignTo((UINT)buffer.desc.size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 
 							device->device->CreateConstantBufferView(&cbv, dst);
 						}
@@ -1982,7 +1982,7 @@ using namespace DX12_Internal;
 					switch (attachment.type)
 					{
 					case RenderPassAttachment::RENDERTARGET:
-						switch (attachment.texture->desc.Format)
+						switch (attachment.texture->desc.format)
 						{
 						case FORMAT_R16_TYPELESS:
 							formats.RTFormats[formats.NumRenderTargets] = DXGI_FORMAT_R16_UNORM;
@@ -1997,13 +1997,13 @@ using namespace DX12_Internal;
 							formats.RTFormats[formats.NumRenderTargets] = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
 							break;
 						default:
-							formats.RTFormats[formats.NumRenderTargets] = _ConvertFormat(attachment.texture->desc.Format);
+							formats.RTFormats[formats.NumRenderTargets] = _ConvertFormat(attachment.texture->desc.format);
 							break;
 						}
 						formats.NumRenderTargets++;
 						break;
 					case RenderPassAttachment::DEPTH_STENCIL:
-						switch (attachment.texture->desc.Format)
+						switch (attachment.texture->desc.format)
 						{
 						case FORMAT_R16_TYPELESS:
 							DSFormat = DXGI_FORMAT_D16_UNORM;
@@ -2018,7 +2018,7 @@ using namespace DX12_Internal;
 							DSFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
 							break;
 						default:
-							DSFormat = _ConvertFormat(attachment.texture->desc.Format);
+							DSFormat = _ConvertFormat(attachment.texture->desc.format);
 							break;
 						}
 						break;
@@ -2027,7 +2027,7 @@ using namespace DX12_Internal;
 						break;
 					}
 
-					sampleDesc.Count = attachment.texture->desc.SampleCount;
+					sampleDesc.Count = attachment.texture->desc.sample_count;
 					sampleDesc.Quality = 0;
 				}
 				stream.stream1.DSFormat = DSFormat;
@@ -2682,7 +2682,7 @@ using namespace DX12_Internal;
 			swapChainDesc.SampleDesc.Count = 1;
 			swapChainDesc.SampleDesc.Quality = 0;
 			swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-			swapChainDesc.BufferCount = pDesc->buffercount;
+			swapChainDesc.BufferCount = pDesc->buffer_count;
 			swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 			swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
 			swapChainDesc.Flags = swapChainFlags;
@@ -2736,7 +2736,7 @@ using namespace DX12_Internal;
 			internal_state->backbufferRTV.clear();
 
 			hr = internal_state->swapChain->ResizeBuffers(
-				pDesc->buffercount,
+				pDesc->buffer_count,
 				pDesc->width,
 				pDesc->height,
 				_ConvertFormat(pDesc->format),
@@ -2796,8 +2796,8 @@ using namespace DX12_Internal;
 			}
 		}
 
-		internal_state->backBuffers.resize(pDesc->buffercount);
-		internal_state->backbufferRTV.resize(pDesc->buffercount);
+		internal_state->backBuffers.resize(pDesc->buffer_count);
+		internal_state->backbufferRTV.resize(pDesc->buffer_count);
 
 		// We can create swapchain just with given supported format, thats why we specify format in RTV
 		// For example: BGRA8UNorm for SwapChain BGRA8UNormSrgb for RTV.
@@ -2805,7 +2805,7 @@ using namespace DX12_Internal;
 		rtvDesc.Format = _ConvertFormat(pDesc->format);
 		rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 
-		for (uint32_t i = 0; i < pDesc->buffercount; ++i)
+		for (uint32_t i = 0; i < pDesc->buffer_count; ++i)
 		{
 			hr = internal_state->swapChain->GetBuffer(i, IID_PPV_ARGS(&internal_state->backBuffers[i]));
 			assert(SUCCEEDED(hr));
@@ -2814,7 +2814,7 @@ using namespace DX12_Internal;
 			device->CreateRenderTargetView(internal_state->backBuffers[i].Get(), &rtvDesc, internal_state->backbufferRTV[i]);
 		}
 
-		internal_state->dummyTexture.desc.Format = pDesc->format;
+		internal_state->dummyTexture.desc.format = pDesc->format;
 		internal_state->renderpass = RenderPass();
 		wiHelper::hash_combine(internal_state->renderpass.hash, pDesc->format);
 		internal_state->renderpass.desc.attachments.push_back(RenderPassAttachment::RenderTarget(&internal_state->dummyTexture));
@@ -2834,8 +2834,8 @@ using namespace DX12_Internal;
 
 		HRESULT hr = E_FAIL;
 
-		UINT64 alignedSize = pDesc->Size;
-		if (pDesc->BindFlags & BIND_CONSTANT_BUFFER)
+		UINT64 alignedSize = pDesc->size;
+		if (pDesc->bind_flags & BIND_CONSTANT_BUFFER)
 		{
 			alignedSize = AlignTo(alignedSize, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 		}
@@ -2850,12 +2850,12 @@ using namespace DX12_Internal;
 		resourceDesc.DepthOrArraySize = 1;
 		resourceDesc.Alignment = 0;
 		resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-		if (pDesc->BindFlags & BIND_UNORDERED_ACCESS)
+		if (pDesc->bind_flags & BIND_UNORDERED_ACCESS)
 		{
 			resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 		}
 
-		if (!(pDesc->BindFlags & BIND_SHADER_RESOURCE) && !(pDesc->MiscFlags & RESOURCE_MISC_RAY_TRACING))
+		if (!(pDesc->bind_flags & BIND_SHADER_RESOURCE) && !(pDesc->misc_flags & RESOURCE_MISC_RAY_TRACING))
 		{
 			resourceDesc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 		}
@@ -2867,13 +2867,13 @@ using namespace DX12_Internal;
 
 		D3D12MA::ALLOCATION_DESC allocationDesc = {};
 		allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
-		if (pDesc->Usage == USAGE_READBACK)
+		if (pDesc->usage == USAGE_READBACK)
 		{
 			allocationDesc.HeapType = D3D12_HEAP_TYPE_READBACK;
 			resourceState = D3D12_RESOURCE_STATE_COPY_DEST;
 			resourceDesc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 		}
-		else if (pDesc->Usage == USAGE_UPLOAD)
+		else if (pDesc->usage == USAGE_UPLOAD)
 		{
 			allocationDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
 			resourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
@@ -2893,33 +2893,33 @@ using namespace DX12_Internal;
 
 		internal_state->gpu_address = internal_state->resource->GetGPUVirtualAddress();
 
-		if (pDesc->Usage == USAGE_READBACK)
+		if (pDesc->usage == USAGE_READBACK)
 		{
 			hr = internal_state->resource->Map(0, nullptr, &pBuffer->mapped_data);
 			assert(SUCCEEDED(hr));
-			pBuffer->mapped_rowpitch = static_cast<uint32_t>(pDesc->Size);
+			pBuffer->mapped_rowpitch = static_cast<uint32_t>(pDesc->size);
 		}
-		else if (pDesc->Usage == USAGE_UPLOAD)
+		else if (pDesc->usage == USAGE_UPLOAD)
 		{
 			D3D12_RANGE read_range = {};
 			hr = internal_state->resource->Map(0, &read_range, &pBuffer->mapped_data);
 			assert(SUCCEEDED(hr));
-			pBuffer->mapped_rowpitch = static_cast<uint32_t>(pDesc->Size);
+			pBuffer->mapped_rowpitch = static_cast<uint32_t>(pDesc->size);
 		}
 
 		// Issue data copy on request:
 		if (pInitialData != nullptr)
 		{
-			auto cmd = copyAllocator.allocate(pDesc->Size);
+			auto cmd = copyAllocator.allocate(pDesc->size);
 
-			memcpy(cmd.uploadbuffer.mapped_data, pInitialData, pDesc->Size);
+			memcpy(cmd.uploadbuffer.mapped_data, pInitialData, pDesc->size);
 
 			cmd.commandList->CopyBufferRegion(
 				internal_state->resource.Get(),
 				0,
 				to_internal(&cmd.uploadbuffer)->resource.Get(),
 				0,
-				pDesc->Size
+				pDesc->size
 			);
 
 			copyAllocator.submit(cmd);
@@ -2927,11 +2927,11 @@ using namespace DX12_Internal;
 
 
 		// Create resource views if needed
-		if (pDesc->BindFlags & BIND_SHADER_RESOURCE)
+		if (pDesc->bind_flags & BIND_SHADER_RESOURCE)
 		{
 			CreateSubresource(pBuffer, SRV, 0);
 		}
-		if (pDesc->BindFlags & BIND_UNORDERED_ACCESS)
+		if (pDesc->bind_flags & BIND_UNORDERED_ACCESS)
 		{
 			CreateSubresource(pBuffer, UAV, 0);
 		}
@@ -2956,31 +2956,31 @@ using namespace DX12_Internal;
 		allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 
 		D3D12_RESOURCE_DESC desc;
-		desc.Format = _ConvertFormat(pDesc->Format);
-		desc.Width = pDesc->Width;
-		desc.Height = pDesc->Height;
-		desc.MipLevels = pDesc->MipLevels;
+		desc.Format = _ConvertFormat(pDesc->format);
+		desc.Width = pDesc->width;
+		desc.Height = pDesc->height;
+		desc.MipLevels = pDesc->mip_levels;
 		desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-		desc.DepthOrArraySize = (UINT16)pDesc->ArraySize;
-		desc.SampleDesc.Count = pDesc->SampleCount;
+		desc.DepthOrArraySize = (UINT16)pDesc->array_size;
+		desc.SampleDesc.Count = pDesc->sample_count;
 		desc.SampleDesc.Quality = 0;
 		desc.Alignment = 0;
 		desc.Flags = D3D12_RESOURCE_FLAG_NONE;
-		if (pDesc->BindFlags & BIND_DEPTH_STENCIL)
+		if (pDesc->bind_flags & BIND_DEPTH_STENCIL)
 		{
 			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 			//allocationDesc.Flags |= D3D12MA::ALLOCATION_FLAG_COMMITTED;
-			if (!(pDesc->BindFlags & BIND_SHADER_RESOURCE))
+			if (!(pDesc->bind_flags & BIND_SHADER_RESOURCE))
 			{
 				desc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 			}
 		}
-		if (pDesc->BindFlags & BIND_RENDER_TARGET)
+		if (pDesc->bind_flags & BIND_RENDER_TARGET)
 		{
 			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
 			//allocationDesc.Flags |= D3D12MA::ALLOCATION_FLAG_COMMITTED;
 		}
-		if (pDesc->BindFlags & BIND_UNORDERED_ACCESS)
+		if (pDesc->bind_flags & BIND_UNORDERED_ACCESS)
 		{
 			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 		}
@@ -2995,7 +2995,7 @@ using namespace DX12_Internal;
 			break;
 		case TextureDesc::TEXTURE_3D:
 			desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE3D;
-			desc.DepthOrArraySize = (UINT16)pDesc->Depth;
+			desc.DepthOrArraySize = (UINT16)pDesc->depth;
 			break;
 		default:
 			assert(0);
@@ -3007,8 +3007,8 @@ using namespace DX12_Internal;
 		optimizedClearValue.Color[1] = pTexture->desc.clear.color[1];
 		optimizedClearValue.Color[2] = pTexture->desc.clear.color[2];
 		optimizedClearValue.Color[3] = pTexture->desc.clear.color[3];
-		optimizedClearValue.DepthStencil.Depth = pTexture->desc.clear.depthstencil.depth;
-		optimizedClearValue.DepthStencil.Stencil = pTexture->desc.clear.depthstencil.stencil;
+		optimizedClearValue.DepthStencil.Depth = pTexture->desc.clear.depth_stencil.depth;
+		optimizedClearValue.DepthStencil.Stencil = pTexture->desc.clear.depth_stencil.stencil;
 		optimizedClearValue.Format = desc.Format;
 		if (optimizedClearValue.Format == DXGI_FORMAT_R16_TYPELESS)
 		{
@@ -3022,7 +3022,7 @@ using namespace DX12_Internal;
 		{
 			optimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
 		}
-		bool useClearValue = pDesc->BindFlags & BIND_RENDER_TARGET || pDesc->BindFlags & BIND_DEPTH_STENCIL;
+		bool useClearValue = pDesc->bind_flags & BIND_RENDER_TARGET || pDesc->bind_flags & BIND_DEPTH_STENCIL;
 
 		D3D12_RESOURCE_STATES resourceState = _ParseResourceState(pTexture->desc.layout);
 
@@ -3031,7 +3031,7 @@ using namespace DX12_Internal;
 			resourceState = D3D12_RESOURCE_STATE_COMMON;
 		}
 
-		if (pTexture->desc.Usage == USAGE_READBACK || pTexture->desc.Usage == USAGE_UPLOAD)
+		if (pTexture->desc.usage == USAGE_READBACK || pTexture->desc.usage == USAGE_UPLOAD)
 		{
 			UINT64 RequiredSize = 0;
 			device->GetCopyableFootprints(&desc, 0, 1, 0, &internal_state->footprint, nullptr, nullptr, &RequiredSize);
@@ -3043,12 +3043,12 @@ using namespace DX12_Internal;
 			desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 			desc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
-			if (pTexture->desc.Usage == USAGE_READBACK)
+			if (pTexture->desc.usage == USAGE_READBACK)
 			{
 				allocationDesc.HeapType = D3D12_HEAP_TYPE_READBACK;
 				resourceState = D3D12_RESOURCE_STATE_COPY_DEST;
 			}
-			else if(pTexture->desc.Usage == USAGE_UPLOAD)
+			else if(pTexture->desc.usage == USAGE_UPLOAD)
 			{
 				allocationDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
 				resourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
@@ -3065,13 +3065,13 @@ using namespace DX12_Internal;
 		);
 		assert(SUCCEEDED(hr));
 
-		if (pTexture->desc.Usage == USAGE_READBACK)
+		if (pTexture->desc.usage == USAGE_READBACK)
 		{
 			hr = internal_state->resource->Map(0, nullptr, &pTexture->mapped_data);
 			assert(SUCCEEDED(hr));
 			pTexture->mapped_rowpitch = internal_state->footprint.Footprint.RowPitch;
 		}
-		else if(pTexture->desc.Usage == USAGE_UPLOAD)
+		else if(pTexture->desc.usage == USAGE_UPLOAD)
 		{
 			D3D12_RANGE read_range = {};
 			hr = internal_state->resource->Map(0, &read_range, &pTexture->mapped_data);
@@ -3079,15 +3079,15 @@ using namespace DX12_Internal;
 			pTexture->mapped_rowpitch = internal_state->footprint.Footprint.RowPitch;
 		}
 
-		if (pTexture->desc.MipLevels == 0)
+		if (pTexture->desc.mip_levels == 0)
 		{
-			pTexture->desc.MipLevels = (uint32_t)log2(std::max(pTexture->desc.Width, pTexture->desc.Height)) + 1;
+			pTexture->desc.mip_levels = (uint32_t)log2(std::max(pTexture->desc.width, pTexture->desc.height)) + 1;
 		}
 
 		// Issue data copy on request:
 		if (pInitialData != nullptr)
 		{
-			uint32_t dataCount = pDesc->ArraySize * std::max(1u, pDesc->MipLevels);
+			uint32_t dataCount = pDesc->array_size * std::max(1u, pDesc->mip_levels);
 			std::vector<D3D12_SUBRESOURCE_DATA> data(dataCount);
 			for (uint32_t slice = 0; slice < dataCount; ++slice)
 			{
@@ -3130,19 +3130,19 @@ using namespace DX12_Internal;
 			copyAllocator.submit(cmd);
 		}
 
-		if (pTexture->desc.BindFlags & BIND_RENDER_TARGET)
+		if (pTexture->desc.bind_flags & BIND_RENDER_TARGET)
 		{
 			CreateSubresource(pTexture, RTV, 0, -1, 0, -1);
 		}
-		if (pTexture->desc.BindFlags & BIND_DEPTH_STENCIL)
+		if (pTexture->desc.bind_flags & BIND_DEPTH_STENCIL)
 		{
 			CreateSubresource(pTexture, DSV, 0, -1, 0, -1);
 		}
-		if (pTexture->desc.BindFlags & BIND_SHADER_RESOURCE)
+		if (pTexture->desc.bind_flags & BIND_SHADER_RESOURCE)
 		{
 			CreateSubresource(pTexture, SRV, 0, -1, 0, -1);
 		}
-		if (pTexture->desc.BindFlags & BIND_UNORDERED_ACCESS)
+		if (pTexture->desc.bind_flags & BIND_UNORDERED_ACCESS)
 		{
 			CreateSubresource(pTexture, UAV, 0, -1, 0, -1);
 		}
@@ -3736,14 +3736,14 @@ using namespace DX12_Internal;
 		pSamplerState->internal_state = internal_state;
 
 		D3D12_SAMPLER_DESC desc;
-		desc.Filter = _ConvertFilter(pSamplerDesc->Filter);
-		desc.AddressU = _ConvertTextureAddressMode(pSamplerDesc->AddressU);
-		desc.AddressV = _ConvertTextureAddressMode(pSamplerDesc->AddressV);
-		desc.AddressW = _ConvertTextureAddressMode(pSamplerDesc->AddressW);
-		desc.MipLODBias = pSamplerDesc->MipLODBias;
-		desc.MaxAnisotropy = pSamplerDesc->MaxAnisotropy;
-		desc.ComparisonFunc = _ConvertComparisonFunc(pSamplerDesc->ComparisonFunc);
-		switch (pSamplerDesc->BorderColor)
+		desc.Filter = _ConvertFilter(pSamplerDesc->filter);
+		desc.AddressU = _ConvertTextureAddressMode(pSamplerDesc->address_u);
+		desc.AddressV = _ConvertTextureAddressMode(pSamplerDesc->address_v);
+		desc.AddressW = _ConvertTextureAddressMode(pSamplerDesc->address_w);
+		desc.MipLODBias = pSamplerDesc->mip_lod_bias;
+		desc.MaxAnisotropy = pSamplerDesc->max_anisotropy;
+		desc.ComparisonFunc = _ConvertComparisonFunc(pSamplerDesc->comparison_func);
+		switch (pSamplerDesc->border_color)
 		{
 		case SAMPLER_BORDER_COLOR_OPAQUE_BLACK:
 			desc.BorderColor[0] = 0.0f;
@@ -3766,8 +3766,8 @@ using namespace DX12_Internal;
 			desc.BorderColor[3] = 0.0f;
 			break;
 		}
-		desc.MinLOD = pSamplerDesc->MinLOD;
-		desc.MaxLOD = pSamplerDesc->MaxLOD;
+		desc.MinLOD = pSamplerDesc->min_lod;
+		desc.MaxLOD = pSamplerDesc->max_lod;
 
 		pSamplerState->desc = *pSamplerDesc;
 
@@ -3784,7 +3784,7 @@ using namespace DX12_Internal;
 		pQueryHeap->desc = *pDesc;
 
 		D3D12_QUERY_HEAP_DESC desc = {};
-		desc.Count = pDesc->queryCount;
+		desc.Count = pDesc->query_count;
 
 		switch (pDesc->type)
 		{
@@ -3824,7 +3824,7 @@ using namespace DX12_Internal;
 		wiHelper::hash_combine(pso->hash, pDesc->bs);
 		wiHelper::hash_combine(pso->hash, pDesc->dss);
 		wiHelper::hash_combine(pso->hash, pDesc->pt);
-		wiHelper::hash_combine(pso->hash, pDesc->sampleMask);
+		wiHelper::hash_combine(pso->hash, pDesc->sample_mask);
 
 		HRESULT hr = S_OK;
 
@@ -4205,51 +4205,51 @@ using namespace DX12_Internal;
 
 		RasterizerState pRasterizerStateDesc = pso->desc.rs != nullptr ? *pso->desc.rs : RasterizerState();
 		CD3DX12_RASTERIZER_DESC rs = {};
-		rs.FillMode = _ConvertFillMode(pRasterizerStateDesc.FillMode);
-		rs.CullMode = _ConvertCullMode(pRasterizerStateDesc.CullMode);
-		rs.FrontCounterClockwise = pRasterizerStateDesc.FrontCounterClockwise;
-		rs.DepthBias = pRasterizerStateDesc.DepthBias;
-		rs.DepthBiasClamp = pRasterizerStateDesc.DepthBiasClamp;
-		rs.SlopeScaledDepthBias = pRasterizerStateDesc.SlopeScaledDepthBias;
-		rs.DepthClipEnable = pRasterizerStateDesc.DepthClipEnable;
-		rs.MultisampleEnable = pRasterizerStateDesc.MultisampleEnable;
-		rs.AntialiasedLineEnable = pRasterizerStateDesc.AntialiasedLineEnable;
-		rs.ConservativeRaster = ((CheckCapability(GRAPHICSDEVICE_CAPABILITY_CONSERVATIVE_RASTERIZATION) && pRasterizerStateDesc.ConservativeRasterizationEnable) ? D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
-		rs.ForcedSampleCount = pRasterizerStateDesc.ForcedSampleCount;
+		rs.FillMode = _ConvertFillMode(pRasterizerStateDesc.fill_mode);
+		rs.CullMode = _ConvertCullMode(pRasterizerStateDesc.cull_mode);
+		rs.FrontCounterClockwise = pRasterizerStateDesc.front_counter_clockwise;
+		rs.DepthBias = pRasterizerStateDesc.depth_bias;
+		rs.DepthBiasClamp = pRasterizerStateDesc.depth_bias_clamp;
+		rs.SlopeScaledDepthBias = pRasterizerStateDesc.slope_scaled_depth_bias;
+		rs.DepthClipEnable = pRasterizerStateDesc.depth_clip_enable;
+		rs.MultisampleEnable = pRasterizerStateDesc.multisample_enable;
+		rs.AntialiasedLineEnable = pRasterizerStateDesc.antialiased_line_enable;
+		rs.ConservativeRaster = ((CheckCapability(GRAPHICSDEVICE_CAPABILITY_CONSERVATIVE_RASTERIZATION) && pRasterizerStateDesc.conservative_rasterization_enable) ? D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
+		rs.ForcedSampleCount = pRasterizerStateDesc.forced_sample_count;
 		stream.stream1.RS = rs;
 
 		DepthStencilState pDepthStencilStateDesc = pso->desc.dss != nullptr ? *pso->desc.dss : DepthStencilState();
 		CD3DX12_DEPTH_STENCIL_DESC dss = {};
-		dss.DepthEnable = pDepthStencilStateDesc.DepthEnable;
-		dss.DepthWriteMask = _ConvertDepthWriteMask(pDepthStencilStateDesc.DepthWriteMask);
-		dss.DepthFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.DepthFunc);
-		dss.StencilEnable = pDepthStencilStateDesc.StencilEnable;
-		dss.StencilReadMask = pDepthStencilStateDesc.StencilReadMask;
-		dss.StencilWriteMask = pDepthStencilStateDesc.StencilWriteMask;
-		dss.FrontFace.StencilDepthFailOp = _ConvertStencilOp(pDepthStencilStateDesc.FrontFace.StencilDepthFailOp);
-		dss.FrontFace.StencilFailOp = _ConvertStencilOp(pDepthStencilStateDesc.FrontFace.StencilFailOp);
-		dss.FrontFace.StencilFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.FrontFace.StencilFunc);
-		dss.FrontFace.StencilPassOp = _ConvertStencilOp(pDepthStencilStateDesc.FrontFace.StencilPassOp);
-		dss.BackFace.StencilDepthFailOp = _ConvertStencilOp(pDepthStencilStateDesc.BackFace.StencilDepthFailOp);
-		dss.BackFace.StencilFailOp = _ConvertStencilOp(pDepthStencilStateDesc.BackFace.StencilFailOp);
-		dss.BackFace.StencilFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.BackFace.StencilFunc);
-		dss.BackFace.StencilPassOp = _ConvertStencilOp(pDepthStencilStateDesc.BackFace.StencilPassOp);
+		dss.DepthEnable = pDepthStencilStateDesc.depth_enable;
+		dss.DepthWriteMask = _ConvertDepthWriteMask(pDepthStencilStateDesc.depth_write_mask);
+		dss.DepthFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.depth_func);
+		dss.StencilEnable = pDepthStencilStateDesc.stencil_enable;
+		dss.StencilReadMask = pDepthStencilStateDesc.stencil_read_mask;
+		dss.StencilWriteMask = pDepthStencilStateDesc.stencil_write_mask;
+		dss.FrontFace.StencilDepthFailOp = _ConvertStencilOp(pDepthStencilStateDesc.front_face.stencil_depth_fail_op);
+		dss.FrontFace.StencilFailOp = _ConvertStencilOp(pDepthStencilStateDesc.front_face.stencil_fail_op);
+		dss.FrontFace.StencilFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.front_face.stencil_func);
+		dss.FrontFace.StencilPassOp = _ConvertStencilOp(pDepthStencilStateDesc.front_face.stencil_pass_op);
+		dss.BackFace.StencilDepthFailOp = _ConvertStencilOp(pDepthStencilStateDesc.back_face.stencil_depth_fail_op);
+		dss.BackFace.StencilFailOp = _ConvertStencilOp(pDepthStencilStateDesc.back_face.stencil_fail_op);
+		dss.BackFace.StencilFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.back_face.stencil_func);
+		dss.BackFace.StencilPassOp = _ConvertStencilOp(pDepthStencilStateDesc.back_face.stencil_pass_op);
 		stream.stream1.DSS = dss;
 
 		BlendState pBlendStateDesc = pso->desc.bs != nullptr ? *pso->desc.bs : BlendState();
 		CD3DX12_BLEND_DESC bd = {};
-		bd.AlphaToCoverageEnable = pBlendStateDesc.AlphaToCoverageEnable;
-		bd.IndependentBlendEnable = pBlendStateDesc.IndependentBlendEnable;
+		bd.AlphaToCoverageEnable = pBlendStateDesc.alpha_to_coverage_enable;
+		bd.IndependentBlendEnable = pBlendStateDesc.independent_blend_enable;
 		for (int i = 0; i < 8; ++i)
 		{
-			bd.RenderTarget[i].BlendEnable = pBlendStateDesc.RenderTarget[i].BlendEnable;
-			bd.RenderTarget[i].SrcBlend = _ConvertBlend(pBlendStateDesc.RenderTarget[i].SrcBlend);
-			bd.RenderTarget[i].DestBlend = _ConvertBlend(pBlendStateDesc.RenderTarget[i].DestBlend);
-			bd.RenderTarget[i].BlendOp = _ConvertBlendOp(pBlendStateDesc.RenderTarget[i].BlendOp);
-			bd.RenderTarget[i].SrcBlendAlpha = _ConvertAlphaBlend(pBlendStateDesc.RenderTarget[i].SrcBlendAlpha);
-			bd.RenderTarget[i].DestBlendAlpha = _ConvertAlphaBlend(pBlendStateDesc.RenderTarget[i].DestBlendAlpha);
-			bd.RenderTarget[i].BlendOpAlpha = _ConvertBlendOp(pBlendStateDesc.RenderTarget[i].BlendOpAlpha);
-			bd.RenderTarget[i].RenderTargetWriteMask = _ParseColorWriteMask(pBlendStateDesc.RenderTarget[i].RenderTargetWriteMask);
+			bd.RenderTarget[i].BlendEnable = pBlendStateDesc.render_target[i].blend_enable;
+			bd.RenderTarget[i].SrcBlend = _ConvertBlend(pBlendStateDesc.render_target[i].src_blend);
+			bd.RenderTarget[i].DestBlend = _ConvertBlend(pBlendStateDesc.render_target[i].dest_blend);
+			bd.RenderTarget[i].BlendOp = _ConvertBlendOp(pBlendStateDesc.render_target[i].blend_op);
+			bd.RenderTarget[i].SrcBlendAlpha = _ConvertAlphaBlend(pBlendStateDesc.render_target[i].src_blend_alpha);
+			bd.RenderTarget[i].DestBlendAlpha = _ConvertAlphaBlend(pBlendStateDesc.render_target[i].dest_blend_alpha);
+			bd.RenderTarget[i].BlendOpAlpha = _ConvertBlendOp(pBlendStateDesc.render_target[i].blend_op_alpha);
+			bd.RenderTarget[i].RenderTargetWriteMask = _ParseColorWriteMask(pBlendStateDesc.render_target[i].render_target_write_mask);
 		}
 		stream.stream1.BD = bd;
 
@@ -4261,14 +4261,14 @@ using namespace DX12_Internal;
 			elements.resize(il.NumElements);
 			for (uint32_t i = 0; i < il.NumElements; ++i)
 			{
-				elements[i].SemanticName = pso->desc.il->elements[i].SemanticName.c_str();
-				elements[i].SemanticIndex = pso->desc.il->elements[i].SemanticIndex;
-				elements[i].Format = _ConvertFormat(pso->desc.il->elements[i].Format);
-				elements[i].InputSlot = pso->desc.il->elements[i].InputSlot;
-				elements[i].AlignedByteOffset = pso->desc.il->elements[i].AlignedByteOffset;
+				elements[i].SemanticName = pso->desc.il->elements[i].semantic_name.c_str();
+				elements[i].SemanticIndex = pso->desc.il->elements[i].semantic_index;
+				elements[i].Format = _ConvertFormat(pso->desc.il->elements[i].format);
+				elements[i].InputSlot = pso->desc.il->elements[i].input_slot;
+				elements[i].AlignedByteOffset = pso->desc.il->elements[i].aligned_byte_offset;
 				if (elements[i].AlignedByteOffset == InputLayout::APPEND_ALIGNED_ELEMENT)
 					elements[i].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
-				elements[i].InputSlotClass = _ConvertInputClassification(pso->desc.il->elements[i].InputSlotClass);
+				elements[i].InputSlotClass = _ConvertInputClassification(pso->desc.il->elements[i].input_slot_class);
 				elements[i].InstanceDataStepRate = 0;
 				if (elements[i].InputSlotClass == D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA)
 				{
@@ -4279,9 +4279,9 @@ using namespace DX12_Internal;
 		il.pInputElementDescs = elements.data();
 		stream.stream1.IL = il;
 
-		stream.stream1.SampleMask = pso->desc.sampleMask;
+		stream.stream1.SampleMask = pso->desc.sample_mask;
 
-		internal_state->primitiveTopology = _ConvertPrimitiveTopology(pDesc->pt, pDesc->patchControlPoints);
+		internal_state->primitiveTopology = _ConvertPrimitiveTopology(pDesc->pt, pDesc->patch_control_points);
 		switch (pso->desc.pt)
 		{
 		case POINTLIST:
@@ -4316,7 +4316,7 @@ using namespace DX12_Internal;
 
 		renderpass->desc = *pDesc;
 
-		if (renderpass->desc._flags & RenderPassDesc::FLAG_ALLOW_UAV_WRITES)
+		if (renderpass->desc.flags & RenderPassDesc::FLAG_ALLOW_UAV_WRITES)
 		{
 			internal_state->flags |= D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES;
 		}
@@ -4328,8 +4328,8 @@ using namespace DX12_Internal;
 		{
 			if (attachment.type == RenderPassAttachment::RENDERTARGET || attachment.type == RenderPassAttachment::DEPTH_STENCIL)
 			{
-				wiHelper::hash_combine(renderpass->hash, attachment.texture->desc.Format);
-				wiHelper::hash_combine(renderpass->hash, attachment.texture->desc.SampleCount);
+				wiHelper::hash_combine(renderpass->hash, attachment.texture->desc.format);
+				wiHelper::hash_combine(renderpass->hash, attachment.texture->desc.sample_count);
 			}
 
 			const Texture* texture = attachment.texture;
@@ -4337,7 +4337,7 @@ using namespace DX12_Internal;
 			auto texture_internal = to_internal(texture);
 
 			D3D12_CLEAR_VALUE clear_value;
-			clear_value.Format = _ConvertFormat(texture->desc.Format);
+			clear_value.Format = _ConvertFormat(texture->desc.format);
 
 			if (attachment.type == RenderPassAttachment::RENDERTARGET)
 			{
@@ -4406,8 +4406,8 @@ using namespace DX12_Internal;
 				case RenderPassAttachment::LOADOP_CLEAR:
 					internal_state->DSV.DepthBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
 					internal_state->DSV.StencilBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
-					clear_value.DepthStencil.Depth = texture->desc.clear.depthstencil.depth;
-					clear_value.DepthStencil.Stencil = texture->desc.clear.depthstencil.stencil;
+					clear_value.DepthStencil.Depth = texture->desc.clear.depth_stencil.depth;
+					clear_value.DepthStencil.Stencil = texture->desc.clear.depth_stencil.stencil;
 					internal_state->DSV.DepthBeginningAccess.Clear.ClearValue = clear_value;
 					internal_state->DSV.StencilBeginningAccess.Clear.ClearValue = clear_value;
 					break;
@@ -4454,8 +4454,8 @@ using namespace DX12_Internal;
 
 								src_RTV.EndingAccess.Resolve.pSubresourceParameters = &internal_state->resolve_subresources[resolve_src_counter];
 								internal_state->resolve_subresources[resolve_src_counter].SrcRect.left = 0;
-								internal_state->resolve_subresources[resolve_src_counter].SrcRect.right = (LONG)texture->desc.Width;
-								internal_state->resolve_subresources[resolve_src_counter].SrcRect.bottom = (LONG)texture->desc.Height;
+								internal_state->resolve_subresources[resolve_src_counter].SrcRect.right = (LONG)texture->desc.width;
+								internal_state->resolve_subresources[resolve_src_counter].SrcRect.bottom = (LONG)texture->desc.height;
 								internal_state->resolve_subresources[resolve_src_counter].SrcRect.top = 0;
 
 								break;
@@ -4546,23 +4546,23 @@ using namespace DX12_Internal;
 
 		bvh->desc = *pDesc;
 
-		if (pDesc->_flags & RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE)
+		if (pDesc->flags & RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE)
 		{
 			internal_state->desc.Flags |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_UPDATE;
 		}
-		if (pDesc->_flags & RaytracingAccelerationStructureDesc::FLAG_ALLOW_COMPACTION)
+		if (pDesc->flags & RaytracingAccelerationStructureDesc::FLAG_ALLOW_COMPACTION)
 		{
 			internal_state->desc.Flags |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_COMPACTION;
 		}
-		if (pDesc->_flags & RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_TRACE)
+		if (pDesc->flags & RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_TRACE)
 		{
 			internal_state->desc.Flags |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
 		}
-		if (pDesc->_flags & RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD)
+		if (pDesc->flags & RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD)
 		{
 			internal_state->desc.Flags |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_BUILD;
 		}
-		if (pDesc->_flags & RaytracingAccelerationStructureDesc::FLAG_MINIMIZE_MEMORY)
+		if (pDesc->flags & RaytracingAccelerationStructureDesc::FLAG_MINIMIZE_MEMORY)
 		{
 			internal_state->desc.Flags |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_MINIMIZE_MEMORY;
 		}
@@ -4575,7 +4575,7 @@ using namespace DX12_Internal;
 			internal_state->desc.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
 			internal_state->desc.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
 
-			for (auto& x : pDesc->bottomlevel.geometries)
+			for (auto& x : pDesc->bottom_level.geometries)
 			{
 				auto& geometry = internal_state->geometries.emplace_back();
 				geometry = {};
@@ -4583,25 +4583,25 @@ using namespace DX12_Internal;
 				if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::TRIANGLES)
 				{
 					geometry.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
-					geometry.Triangles.VertexBuffer.StartAddress = to_internal(&x.triangles.vertexBuffer)->gpu_address + (D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.vertexByteOffset;
-					geometry.Triangles.VertexBuffer.StrideInBytes = (UINT64)x.triangles.vertexStride;
-					geometry.Triangles.VertexCount = x.triangles.vertexCount;
-					geometry.Triangles.VertexFormat = _ConvertFormat(x.triangles.vertexFormat);
-					geometry.Triangles.IndexFormat = (x.triangles.indexFormat == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT);
-					geometry.Triangles.IndexBuffer = to_internal(&x.triangles.indexBuffer)->gpu_address +
-						(D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.indexOffset * (x.triangles.indexFormat == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? sizeof(uint16_t) : sizeof(uint32_t));
-					geometry.Triangles.IndexCount = x.triangles.indexCount;
+					geometry.Triangles.VertexBuffer.StartAddress = to_internal(&x.triangles.vertex_buffer)->gpu_address + (D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.vertex_byte_offset;
+					geometry.Triangles.VertexBuffer.StrideInBytes = (UINT64)x.triangles.vertex_stride;
+					geometry.Triangles.VertexCount = x.triangles.vertex_count;
+					geometry.Triangles.VertexFormat = _ConvertFormat(x.triangles.vertex_format);
+					geometry.Triangles.IndexFormat = (x.triangles.index_format == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT);
+					geometry.Triangles.IndexBuffer = to_internal(&x.triangles.index_buffer)->gpu_address +
+						(D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.index_offset * (x.triangles.index_format == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? sizeof(uint16_t) : sizeof(uint32_t));
+					geometry.Triangles.IndexCount = x.triangles.index_count;
 
-					if (x._flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_USE_TRANSFORM)
+					if (x.flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_USE_TRANSFORM)
 					{
-						geometry.Triangles.Transform3x4 = to_internal(&x.triangles.transform3x4Buffer)->gpu_address +
-							(D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.transform3x4BufferOffset;
+						geometry.Triangles.Transform3x4 = to_internal(&x.triangles.transform_3x4_buffer)->gpu_address +
+							(D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.transform_3x4_buffer_offset;
 					}
 				}
 				else if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::PROCEDURAL_AABBS)
 				{
 					geometry.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS; 
-					geometry.AABBs.AABBs.StartAddress = to_internal(&x.aabbs.aabbBuffer)->gpu_address +
+					geometry.AABBs.AABBs.StartAddress = to_internal(&x.aabbs.aabb_buffer)->gpu_address +
 						(D3D12_GPU_VIRTUAL_ADDRESS)x.aabbs.offset;
 					geometry.AABBs.AABBs.StrideInBytes = (UINT64)x.aabbs.stride;
 					geometry.AABBs.AABBCount = x.aabbs.count;
@@ -4617,9 +4617,9 @@ using namespace DX12_Internal;
 			internal_state->desc.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
 			internal_state->desc.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
 
-			internal_state->desc.InstanceDescs = to_internal(&pDesc->toplevel.instanceBuffer)->gpu_address +
-				(D3D12_GPU_VIRTUAL_ADDRESS)pDesc->toplevel.offset;
-			internal_state->desc.NumDescs = (UINT)pDesc->toplevel.count;
+			internal_state->desc.InstanceDescs = to_internal(&pDesc->top_level.instance_buffer)->gpu_address +
+				(D3D12_GPU_VIRTUAL_ADDRESS)pDesc->top_level.offset;
+			internal_state->desc.NumDescs = (UINT)pDesc->top_level.count;
 		}
 		break;
 		}
@@ -4668,7 +4668,7 @@ using namespace DX12_Internal;
 		internal_state->srv.init(this, srv_desc, nullptr);
 
 		GPUBufferDesc scratch_desc;
-		scratch_desc.Size = (uint32_t)std::max(internal_state->info.ScratchDataSizeInBytes, internal_state->info.UpdateScratchDataSizeInBytes);
+		scratch_desc.size = (uint32_t)std::max(internal_state->info.ScratchDataSizeInBytes, internal_state->info.UpdateScratchDataSizeInBytes);
 
 		return CreateBuffer(&scratch_desc, nullptr, &internal_state->scratch);
 	}
@@ -4709,14 +4709,14 @@ using namespace DX12_Internal;
 			auto& subobject = subobjects.emplace_back();
 			subobject = {};
 			subobject.Type = D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE;
-			auto shader_internal = to_internal(pDesc->shaderlibraries.front().shader); // think better way
+			auto shader_internal = to_internal(pDesc->shader_libraries.front().shader); // think better way
 			global_rootsig.pGlobalRootSignature = shader_internal->rootSignature.Get();
 			subobject.pDesc = &global_rootsig;
 		}
 
-		internal_state->exports.reserve(pDesc->shaderlibraries.size());
-		internal_state->library_descs.reserve(pDesc->shaderlibraries.size());
-		for(auto& x : pDesc->shaderlibraries)
+		internal_state->exports.reserve(pDesc->shader_libraries.size());
+		internal_state->library_descs.reserve(pDesc->shader_libraries.size());
+		for(auto& x : pDesc->shader_libraries)
 		{
 			auto& subobject = subobjects.emplace_back();
 			subobject = {};
@@ -4736,8 +4736,8 @@ using namespace DX12_Internal;
 			subobject.pDesc = &library_desc;
 		}
 
-		internal_state->hitgroup_descs.reserve(pDesc->hitgroups.size());
-		for (auto& x : pDesc->hitgroups)
+		internal_state->hitgroup_descs.reserve(pDesc->hit_groups.size());
+		for (auto& x : pDesc->hit_groups)
 		{
 			wiHelper::StringConvert(x.name, internal_state->group_strings.emplace_back());
 
@@ -4762,13 +4762,13 @@ using namespace DX12_Internal;
 			{
 				hitgroup_desc.HitGroupExport = internal_state->group_strings.back().c_str();
 			}
-			if (x.closesthit_shader != ~0)
+			if (x.closest_hit_shader != ~0)
 			{
-				hitgroup_desc.ClosestHitShaderImport = internal_state->exports[x.closesthit_shader].Name;
+				hitgroup_desc.ClosestHitShaderImport = internal_state->exports[x.closest_hit_shader].Name;
 			}
-			if (x.anyhit_shader != ~0)
+			if (x.any_hit_shader != ~0)
 			{
-				hitgroup_desc.AnyHitShaderImport = internal_state->exports[x.anyhit_shader].Name;
+				hitgroup_desc.AnyHitShaderImport = internal_state->exports[x.any_hit_shader].Name;
 			}
 			if (x.intersection_shader != ~0)
 			{
@@ -4798,7 +4798,7 @@ using namespace DX12_Internal;
 			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 
 			// Try to resolve resource format:
-			switch (texture->desc.Format)
+			switch (texture->desc.format)
 			{
 			case FORMAT_R16_TYPELESS:
 				srv_desc.Format = DXGI_FORMAT_R16_UNORM;
@@ -4813,13 +4813,13 @@ using namespace DX12_Internal;
 				srv_desc.Format = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
 				break;
 			default:
-				srv_desc.Format = _ConvertFormat(texture->desc.Format);
+				srv_desc.Format = _ConvertFormat(texture->desc.format);
 				break;
 			}
 
 			if (texture->desc.type == TextureDesc::TEXTURE_1D)
 			{
-				if (texture->desc.ArraySize > 1)
+				if (texture->desc.array_size > 1)
 				{
 					srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE1DARRAY;
 					srv_desc.Texture1DArray.FirstArraySlice = firstSlice;
@@ -4836,15 +4836,15 @@ using namespace DX12_Internal;
 			}
 			else if (texture->desc.type == TextureDesc::TEXTURE_2D)
 			{
-				if (texture->desc.ArraySize > 1)
+				if (texture->desc.array_size > 1)
 				{
-					if (texture->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
+					if (texture->desc.misc_flags & RESOURCE_MISC_TEXTURECUBE)
 					{
-						if (texture->desc.ArraySize > 6)
+						if (texture->desc.array_size > 6)
 						{
 							srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBEARRAY;
 							srv_desc.TextureCubeArray.First2DArrayFace = firstSlice;
-							srv_desc.TextureCubeArray.NumCubes = std::min(texture->desc.ArraySize, sliceCount) / 6;
+							srv_desc.TextureCubeArray.NumCubes = std::min(texture->desc.array_size, sliceCount) / 6;
 							srv_desc.TextureCubeArray.MostDetailedMip = firstMip;
 							srv_desc.TextureCubeArray.MipLevels = mipCount;
 						}
@@ -4857,7 +4857,7 @@ using namespace DX12_Internal;
 					}
 					else
 					{
-						if (texture->desc.SampleCount > 1)
+						if (texture->desc.sample_count > 1)
 						{
 							srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DMSARRAY;
 							srv_desc.Texture2DMSArray.FirstArraySlice = firstSlice;
@@ -4875,7 +4875,7 @@ using namespace DX12_Internal;
 				}
 				else
 				{
-					if (texture->desc.SampleCount > 1)
+					if (texture->desc.sample_count > 1)
 					{
 						srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DMS;
 					}
@@ -4911,7 +4911,7 @@ using namespace DX12_Internal;
 			D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
 
 			// Try to resolve resource format:
-			switch (texture->desc.Format)
+			switch (texture->desc.format)
 			{
 			case FORMAT_R16_TYPELESS:
 				uav_desc.Format = DXGI_FORMAT_R16_UNORM;
@@ -4926,13 +4926,13 @@ using namespace DX12_Internal;
 				uav_desc.Format = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
 				break;
 			default:
-				uav_desc.Format = _ConvertFormat(texture->desc.Format);
+				uav_desc.Format = _ConvertFormat(texture->desc.format);
 				break;
 			}
 
 			if (texture->desc.type == TextureDesc::TEXTURE_1D)
 			{
-				if (texture->desc.ArraySize > 1)
+				if (texture->desc.array_size > 1)
 				{
 					uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE1DARRAY;
 					uav_desc.Texture1DArray.FirstArraySlice = firstSlice;
@@ -4947,7 +4947,7 @@ using namespace DX12_Internal;
 			}
 			else if (texture->desc.type == TextureDesc::TEXTURE_2D)
 			{
-				if (texture->desc.ArraySize > 1)
+				if (texture->desc.array_size > 1)
 				{
 					uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
 					uav_desc.Texture2DArray.FirstArraySlice = firstSlice;
@@ -4985,7 +4985,7 @@ using namespace DX12_Internal;
 			D3D12_RENDER_TARGET_VIEW_DESC rtv_desc = {};
 
 			// Try to resolve resource format:
-			switch (texture->desc.Format)
+			switch (texture->desc.format)
 			{
 			case FORMAT_R16_TYPELESS:
 				rtv_desc.Format = DXGI_FORMAT_R16_UNORM;
@@ -5000,13 +5000,13 @@ using namespace DX12_Internal;
 				rtv_desc.Format = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
 				break;
 			default:
-				rtv_desc.Format = _ConvertFormat(texture->desc.Format);
+				rtv_desc.Format = _ConvertFormat(texture->desc.format);
 				break;
 			}
 
 			if (texture->desc.type == TextureDesc::TEXTURE_1D)
 			{
-				if (texture->desc.ArraySize > 1)
+				if (texture->desc.array_size > 1)
 				{
 					rtv_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE1DARRAY;
 					rtv_desc.Texture1DArray.FirstArraySlice = firstSlice;
@@ -5021,9 +5021,9 @@ using namespace DX12_Internal;
 			}
 			else if (texture->desc.type == TextureDesc::TEXTURE_2D)
 			{
-				if (texture->desc.ArraySize > 1)
+				if (texture->desc.array_size > 1)
 				{
-					if (texture->desc.SampleCount > 1)
+					if (texture->desc.sample_count > 1)
 					{
 						rtv_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DMSARRAY;
 						rtv_desc.Texture2DMSArray.FirstArraySlice = firstSlice;
@@ -5039,7 +5039,7 @@ using namespace DX12_Internal;
 				}
 				else
 				{
-					if (texture->desc.SampleCount > 1)
+					if (texture->desc.sample_count > 1)
 					{
 						rtv_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DMS;
 					}
@@ -5075,7 +5075,7 @@ using namespace DX12_Internal;
 			D3D12_DEPTH_STENCIL_VIEW_DESC dsv_desc = {};
 
 			// Try to resolve resource format:
-			switch (texture->desc.Format)
+			switch (texture->desc.format)
 			{
 			case FORMAT_R16_TYPELESS:
 				dsv_desc.Format = DXGI_FORMAT_D16_UNORM;
@@ -5090,13 +5090,13 @@ using namespace DX12_Internal;
 				dsv_desc.Format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
 				break;
 			default:
-				dsv_desc.Format = _ConvertFormat(texture->desc.Format);
+				dsv_desc.Format = _ConvertFormat(texture->desc.format);
 				break;
 			}
 
 			if (texture->desc.type == TextureDesc::TEXTURE_1D)
 			{
-				if (texture->desc.ArraySize > 1)
+				if (texture->desc.array_size > 1)
 				{
 					dsv_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE1DARRAY;
 					dsv_desc.Texture1DArray.FirstArraySlice = firstSlice;
@@ -5111,9 +5111,9 @@ using namespace DX12_Internal;
 			}
 			else if (texture->desc.type == TextureDesc::TEXTURE_2D)
 			{
-				if (texture->desc.ArraySize > 1)
+				if (texture->desc.array_size > 1)
 				{
-					if (texture->desc.SampleCount > 1)
+					if (texture->desc.sample_count > 1)
 					{
 						dsv_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DMSARRAY;
 						dsv_desc.Texture2DMSArray.FirstArraySlice = firstSlice;
@@ -5129,7 +5129,7 @@ using namespace DX12_Internal;
 				}
 				else
 				{
-					if (texture->desc.SampleCount > 1)
+					if (texture->desc.sample_count > 1)
 					{
 						dsv_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DMS;
 					}
@@ -5171,32 +5171,32 @@ using namespace DX12_Internal;
 			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
 			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 
-			if (desc.MiscFlags & RESOURCE_MISC_BUFFER_RAW)
+			if (desc.misc_flags & RESOURCE_MISC_BUFFER_RAW)
 			{
 				// This is a Raw Buffer
 				srv_desc.Format = DXGI_FORMAT_R32_TYPELESS;
 				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 				srv_desc.Buffer.FirstElement = (UINT)offset / sizeof(uint32_t);
 				srv_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
-				srv_desc.Buffer.NumElements = (UINT)std::min(size, desc.Size - offset) / sizeof(uint32_t);
+				srv_desc.Buffer.NumElements = (UINT)std::min(size, desc.size - offset) / sizeof(uint32_t);
 			}
-			else if (desc.MiscFlags & RESOURCE_MISC_BUFFER_STRUCTURED)
+			else if (desc.misc_flags & RESOURCE_MISC_BUFFER_STRUCTURED)
 			{
 				// This is a Structured Buffer
 				srv_desc.Format = DXGI_FORMAT_UNKNOWN;
 				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-				srv_desc.Buffer.FirstElement = (UINT)offset / desc.Stride;
-				srv_desc.Buffer.NumElements = (UINT)std::min(size, desc.Size - offset) / desc.Stride;
-				srv_desc.Buffer.StructureByteStride = desc.Stride;
+				srv_desc.Buffer.FirstElement = (UINT)offset / desc.stride;
+				srv_desc.Buffer.NumElements = (UINT)std::min(size, desc.size - offset) / desc.stride;
+				srv_desc.Buffer.StructureByteStride = desc.stride;
 			}
 			else
 			{
 				// This is a Typed Buffer
-				uint32_t stride = GetFormatStride(desc.Format);
-				srv_desc.Format = _ConvertFormat(desc.Format);
+				uint32_t stride = GetFormatStride(desc.format);
+				srv_desc.Format = _ConvertFormat(desc.format);
 				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 				srv_desc.Buffer.FirstElement = offset / stride;
-				srv_desc.Buffer.NumElements = (UINT)std::min(size, desc.Size - offset) / stride;
+				srv_desc.Buffer.NumElements = (UINT)std::min(size, desc.size - offset) / stride;
 			}
 
 			SingleDescriptor descriptor;
@@ -5218,29 +5218,29 @@ using namespace DX12_Internal;
 			uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
 			uav_desc.Buffer.FirstElement = 0;
 
-			if (desc.MiscFlags & RESOURCE_MISC_BUFFER_RAW)
+			if (desc.misc_flags & RESOURCE_MISC_BUFFER_RAW)
 			{
 				// This is a Raw Buffer
 				uav_desc.Format = DXGI_FORMAT_R32_TYPELESS;
 				uav_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
 				uav_desc.Buffer.FirstElement = (UINT)offset / sizeof(uint32_t);
-				uav_desc.Buffer.NumElements = (UINT)std::min(size, desc.Size - offset) / sizeof(uint32_t);
+				uav_desc.Buffer.NumElements = (UINT)std::min(size, desc.size - offset) / sizeof(uint32_t);
 			}
-			else if (desc.MiscFlags & RESOURCE_MISC_BUFFER_STRUCTURED)
+			else if (desc.misc_flags & RESOURCE_MISC_BUFFER_STRUCTURED)
 			{
 				// This is a Structured Buffer
 				uav_desc.Format = DXGI_FORMAT_UNKNOWN;
-				uav_desc.Buffer.FirstElement = (UINT)offset / desc.Stride;
-				uav_desc.Buffer.NumElements = (UINT)std::min(size, desc.Size - offset) / desc.Stride;
-				uav_desc.Buffer.StructureByteStride = desc.Stride;
+				uav_desc.Buffer.FirstElement = (UINT)offset / desc.stride;
+				uav_desc.Buffer.NumElements = (UINT)std::min(size, desc.size - offset) / desc.stride;
+				uav_desc.Buffer.StructureByteStride = desc.stride;
 			}
 			else
 			{
 				// This is a Typed Buffer
-				uint32_t stride = GetFormatStride(desc.Format);
-				uav_desc.Format = _ConvertFormat(desc.Format);
+				uint32_t stride = GetFormatStride(desc.format);
+				uav_desc.Format = _ConvertFormat(desc.format);
 				uav_desc.Buffer.FirstElement = (UINT)offset / stride;
-				uav_desc.Buffer.NumElements = (UINT)std::min(size, desc.Size - offset) / stride;
+				uav_desc.Buffer.NumElements = (UINT)std::min(size, desc.size - offset) / stride;
 			}
 
 			SingleDescriptor descriptor;
@@ -5318,12 +5318,12 @@ using namespace DX12_Internal;
 	void GraphicsDevice_DX12::WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) const
 	{
 		D3D12_RAYTRACING_INSTANCE_DESC* desc = (D3D12_RAYTRACING_INSTANCE_DESC*)dest;
-		desc->AccelerationStructure = to_internal(&instance->bottomlevel)->gpu_address;
+		desc->AccelerationStructure = to_internal(&instance->bottom_level)->gpu_address;
 		memcpy(desc->Transform, &instance->transform, sizeof(desc->Transform));
-		desc->InstanceID = instance->InstanceID;
-		desc->InstanceMask = instance->InstanceMask;
-		desc->InstanceContributionToHitGroupIndex = instance->InstanceContributionToHitGroupIndex;
-		desc->Flags = instance->Flags;
+		desc->InstanceID = instance->instance_id;
+		desc->InstanceMask = instance->instance_mask;
+		desc->InstanceContributionToHitGroupIndex = instance->instance_contribution_to_hit_group_index;
+		desc->Flags = instance->flags;
 	}
 	void GraphicsDevice_DX12::WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) const
 	{
@@ -5700,10 +5700,10 @@ using namespace DX12_Internal;
 		D3D12_RENDER_PASS_RENDER_TARGET_DESC RTV = {};
 		RTV.cpuDescriptor = internal_state->backbufferRTV[internal_state->swapChain->GetCurrentBackBufferIndex()];
 		RTV.BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
-		RTV.BeginningAccess.Clear.ClearValue.Color[0] = swapchain->desc.clearcolor[0];
-		RTV.BeginningAccess.Clear.ClearValue.Color[1] = swapchain->desc.clearcolor[1];
-		RTV.BeginningAccess.Clear.ClearValue.Color[2] = swapchain->desc.clearcolor[2];
-		RTV.BeginningAccess.Clear.ClearValue.Color[3] = swapchain->desc.clearcolor[3];
+		RTV.BeginningAccess.Clear.ClearValue.Color[0] = swapchain->desc.clear_color[0];
+		RTV.BeginningAccess.Clear.ClearValue.Color[1] = swapchain->desc.clear_color[1];
+		RTV.BeginningAccess.Clear.ClearValue.Color[2] = swapchain->desc.clear_color[2];
+		RTV.BeginningAccess.Clear.ClearValue.Color[3] = swapchain->desc.clear_color[3];
 		RTV.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
 		GetCommandList(cmd)->BeginRenderPass(1, &RTV, nullptr, D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES);
 
@@ -5782,12 +5782,12 @@ using namespace DX12_Internal;
 		assert(NumViewports < arraysize(d3dViewPorts));
 		for (uint32_t i = 0; i < NumViewports; ++i)
 		{
-			d3dViewPorts[i].TopLeftX = pViewports[i].TopLeftX;
-			d3dViewPorts[i].TopLeftY = pViewports[i].TopLeftY;
-			d3dViewPorts[i].Width = pViewports[i].Width;
-			d3dViewPorts[i].Height = pViewports[i].Height;
-			d3dViewPorts[i].MinDepth = pViewports[i].MinDepth;
-			d3dViewPorts[i].MaxDepth = pViewports[i].MaxDepth;
+			d3dViewPorts[i].TopLeftX = pViewports[i].top_left_x;
+			d3dViewPorts[i].TopLeftY = pViewports[i].top_left_y;
+			d3dViewPorts[i].Width = pViewports[i].width;
+			d3dViewPorts[i].Height = pViewports[i].height;
+			d3dViewPorts[i].MinDepth = pViewports[i].min_depth;
+			d3dViewPorts[i].MaxDepth = pViewports[i].max_depth;
 		}
 		GetCommandList(cmd)->RSSetViewports(NumViewports, d3dViewPorts);
 	}
@@ -5878,7 +5878,7 @@ using namespace DX12_Internal;
 			if (vertexBuffers[i] != nullptr)
 			{
 				res[i].BufferLocation = vertexBuffers[i]->IsValid() ? to_internal(vertexBuffers[i])->gpu_address : 0;
-				res[i].SizeInBytes = (UINT)vertexBuffers[i]->desc.Size;
+				res[i].SizeInBytes = (UINT)vertexBuffers[i]->desc.size;
 				if (offsets != nullptr)
 				{
 					res[i].BufferLocation += offsets[i];
@@ -5898,7 +5898,7 @@ using namespace DX12_Internal;
 
 			res.BufferLocation = internal_state->gpu_address + (D3D12_GPU_VIRTUAL_ADDRESS)offset;
 			res.Format = (format == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT);
-			res.SizeInBytes = (UINT)(indexBuffer->desc.Size - offset);
+			res.SizeInBytes = (UINT)(indexBuffer->desc.size - offset);
 		}
 		GetCommandList(cmd)->IASetIndexBuffer(&res);
 	}
@@ -6238,8 +6238,8 @@ using namespace DX12_Internal;
 						(UINT)std::max(0, barrier.image.mip),
 						(UINT)std::max(0, barrier.image.slice),
 						0,
-						barrier.image.texture->desc.MipLevels,
-						barrier.image.texture->desc.ArraySize
+						barrier.image.texture->desc.mip_levels,
+						barrier.image.texture->desc.array_size
 					);
 				}
 				else
@@ -6298,34 +6298,34 @@ using namespace DX12_Internal;
 		case RaytracingAccelerationStructureDesc::BOTTOMLEVEL:
 		{
 			size_t i = 0;
-			for (auto& x : dst->desc.bottomlevel.geometries)
+			for (auto& x : dst->desc.bottom_level.geometries)
 			{
 				auto& geometry = geometries[i++];
-				if (x._flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE)
+				if (x.flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE)
 				{
 					geometry.Flags |= D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
 				}
-				if (x._flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_NO_DUPLICATE_ANYHIT_INVOCATION)
+				if (x.flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_NO_DUPLICATE_ANYHIT_INVOCATION)
 				{
 					geometry.Flags |= D3D12_RAYTRACING_GEOMETRY_FLAG_NO_DUPLICATE_ANYHIT_INVOCATION;
 				}
 
 				if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::TRIANGLES)
 				{
-					geometry.Triangles.VertexBuffer.StartAddress = to_internal(&x.triangles.vertexBuffer)->gpu_address + 
-						(D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.vertexByteOffset;
-					geometry.Triangles.IndexBuffer = to_internal(&x.triangles.indexBuffer)->gpu_address +
-						(D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.indexOffset * (x.triangles.indexFormat == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? sizeof(uint16_t) : sizeof(uint32_t));
+					geometry.Triangles.VertexBuffer.StartAddress = to_internal(&x.triangles.vertex_buffer)->gpu_address + 
+						(D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.vertex_byte_offset;
+					geometry.Triangles.IndexBuffer = to_internal(&x.triangles.index_buffer)->gpu_address +
+						(D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.index_offset * (x.triangles.index_format == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? sizeof(uint16_t) : sizeof(uint32_t));
 
-					if (x._flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_USE_TRANSFORM)
+					if (x.flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_USE_TRANSFORM)
 					{
-						geometry.Triangles.Transform3x4 = to_internal(&x.triangles.transform3x4Buffer)->gpu_address +
-							(D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.transform3x4BufferOffset;
+						geometry.Triangles.Transform3x4 = to_internal(&x.triangles.transform_3x4_buffer)->gpu_address +
+							(D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.transform_3x4_buffer_offset;
 					}
 				}
 				else if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::PROCEDURAL_AABBS)
 				{
-					geometry.AABBs.AABBs.StartAddress = to_internal(&x.aabbs.aabbBuffer)->gpu_address +
+					geometry.AABBs.AABBs.StartAddress = to_internal(&x.aabbs.aabb_buffer)->gpu_address +
 						(D3D12_GPU_VIRTUAL_ADDRESS)x.aabbs.offset;
 				}
 			}
@@ -6333,8 +6333,8 @@ using namespace DX12_Internal;
 		break;
 		case RaytracingAccelerationStructureDesc::TOPLEVEL:
 		{
-			desc.Inputs.InstanceDescs = to_internal(&dst->desc.toplevel.instanceBuffer)->gpu_address +
-				(D3D12_GPU_VIRTUAL_ADDRESS)dst->desc.toplevel.offset;
+			desc.Inputs.InstanceDescs = to_internal(&dst->desc.top_level.instance_buffer)->gpu_address +
+				(D3D12_GPU_VIRTUAL_ADDRESS)dst->desc.top_level.offset;
 		}
 		break;
 		}
@@ -6357,7 +6357,7 @@ using namespace DX12_Internal;
 		prev_pipeline_hash[cmd] = 0;
 		active_rt[cmd] = rtpso;
 
-		BindComputeShader(rtpso->desc.shaderlibraries.front().shader, cmd);
+		BindComputeShader(rtpso->desc.shader_libraries.front().shader, cmd);
 
 		auto internal_state = to_internal(rtpso);
 		GetCommandList(cmd)->SetPipelineState1(internal_state->resource.Get());
@@ -6368,17 +6368,17 @@ using namespace DX12_Internal;
 
 		D3D12_DISPATCH_RAYS_DESC dispatchrays_desc = {};
 
-		dispatchrays_desc.Width = desc->Width;
-		dispatchrays_desc.Height = desc->Height;
-		dispatchrays_desc.Depth = desc->Depth;
+		dispatchrays_desc.Width = desc->width;
+		dispatchrays_desc.Height = desc->height;
+		dispatchrays_desc.Depth = desc->depth;
 
-		if (desc->raygeneration.buffer != nullptr)
+		if (desc->ray_generation.buffer != nullptr)
 		{
 			dispatchrays_desc.RayGenerationShaderRecord.StartAddress =
-				to_internal(desc->raygeneration.buffer)->gpu_address +
-				(D3D12_GPU_VIRTUAL_ADDRESS)desc->raygeneration.offset;
+				to_internal(desc->ray_generation.buffer)->gpu_address +
+				(D3D12_GPU_VIRTUAL_ADDRESS)desc->ray_generation.offset;
 			dispatchrays_desc.RayGenerationShaderRecord.SizeInBytes =
-				desc->raygeneration.size;
+				desc->ray_generation.size;
 		}
 
 		if (desc->miss.buffer != nullptr)
@@ -6392,15 +6392,15 @@ using namespace DX12_Internal;
 				desc->miss.stride;
 		}
 
-		if (desc->hitgroup.buffer != nullptr)
+		if (desc->hit_group.buffer != nullptr)
 		{
 			dispatchrays_desc.HitGroupTable.StartAddress =
-				to_internal(desc->hitgroup.buffer)->gpu_address +
-				(D3D12_GPU_VIRTUAL_ADDRESS)desc->hitgroup.offset;
+				to_internal(desc->hit_group.buffer)->gpu_address +
+				(D3D12_GPU_VIRTUAL_ADDRESS)desc->hit_group.offset;
 			dispatchrays_desc.HitGroupTable.SizeInBytes =
-				desc->hitgroup.size;
+				desc->hit_group.size;
 			dispatchrays_desc.HitGroupTable.StrideInBytes =
-				desc->hitgroup.stride;
+				desc->hit_group.stride;
 		}
 
 		if (desc->callable.buffer != nullptr)

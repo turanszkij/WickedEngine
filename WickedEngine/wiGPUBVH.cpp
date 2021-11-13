@@ -63,12 +63,12 @@ void wiGPUBVH::Update(const wiScene::Scene& scene)
 	if (totalTriangles > 0 && !primitiveCounterBuffer.IsValid())
 	{
 		GPUBufferDesc desc;
-		desc.BindFlags = BIND_SHADER_RESOURCE;
-		desc.Stride = sizeof(uint);
-		desc.Size = desc.Stride;
-		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
-		desc.Usage = USAGE_DEFAULT;
+		desc.bind_flags = BIND_SHADER_RESOURCE;
+		desc.stride = sizeof(uint);
+		desc.size = desc.stride;
+		desc.format = FORMAT_UNKNOWN;
+		desc.misc_flags = RESOURCE_MISC_BUFFER_RAW;
+		desc.usage = USAGE_DEFAULT;
 		device->CreateBuffer(&desc, nullptr, &primitiveCounterBuffer);
 		device->SetName(&primitiveCounterBuffer, "primitiveCounterBuffer");
 	}
@@ -84,57 +84,57 @@ void wiGPUBVH::Update(const wiScene::Scene& scene)
 
 		GPUBufferDesc desc;
 
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.Stride = sizeof(BVHNode);
-		desc.Size = desc.Stride * primitiveCapacity * 2;
-		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
-		desc.Usage = USAGE_DEFAULT;
+		desc.bind_flags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.stride = sizeof(BVHNode);
+		desc.size = desc.stride * primitiveCapacity * 2;
+		desc.format = FORMAT_UNKNOWN;
+		desc.misc_flags = RESOURCE_MISC_BUFFER_RAW;
+		desc.usage = USAGE_DEFAULT;
 		device->CreateBuffer(&desc, nullptr, &bvhNodeBuffer);
 		device->SetName(&bvhNodeBuffer, "BVHNodeBuffer");
 
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.Stride = sizeof(uint);
-		desc.Size = desc.Stride * primitiveCapacity * 2;
-		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		desc.Usage = USAGE_DEFAULT;
+		desc.bind_flags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.stride = sizeof(uint);
+		desc.size = desc.stride * primitiveCapacity * 2;
+		desc.format = FORMAT_UNKNOWN;
+		desc.misc_flags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.usage = USAGE_DEFAULT;
 		device->CreateBuffer(&desc, nullptr, &bvhParentBuffer);
 		device->SetName(&bvhParentBuffer, "BVHParentBuffer");
 
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.Stride = sizeof(uint);
-		desc.Size = desc.Stride * (((primitiveCapacity - 1) + 31) / 32); // bitfield for internal nodes
-		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		desc.Usage = USAGE_DEFAULT;
+		desc.bind_flags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.stride = sizeof(uint);
+		desc.size = desc.stride * (((primitiveCapacity - 1) + 31) / 32); // bitfield for internal nodes
+		desc.format = FORMAT_UNKNOWN;
+		desc.misc_flags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.usage = USAGE_DEFAULT;
 		device->CreateBuffer(&desc, nullptr, &bvhFlagBuffer);
 		device->SetName(&bvhFlagBuffer, "BVHFlagBuffer");
 
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.Stride = sizeof(uint);
-		desc.Size = desc.Stride * primitiveCapacity;
-		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		desc.Usage = USAGE_DEFAULT;
+		desc.bind_flags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.stride = sizeof(uint);
+		desc.size = desc.stride * primitiveCapacity;
+		desc.format = FORMAT_UNKNOWN;
+		desc.misc_flags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.usage = USAGE_DEFAULT;
 		device->CreateBuffer(&desc, nullptr, &primitiveIDBuffer);
 		device->SetName(&primitiveIDBuffer, "primitiveIDBuffer");
 
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.Stride = sizeof(BVHPrimitive);
-		desc.Size = desc.Stride * primitiveCapacity;
-		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
-		desc.Usage = USAGE_DEFAULT;
+		desc.bind_flags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.stride = sizeof(BVHPrimitive);
+		desc.size = desc.stride * primitiveCapacity;
+		desc.format = FORMAT_UNKNOWN;
+		desc.misc_flags = RESOURCE_MISC_BUFFER_RAW;
+		desc.usage = USAGE_DEFAULT;
 		device->CreateBuffer(&desc, nullptr, &primitiveBuffer);
 		device->SetName(&primitiveBuffer, "primitiveBuffer");
 
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.Size = desc.Stride * primitiveCapacity;
-		desc.Format = FORMAT_UNKNOWN;
-		desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		desc.Usage = USAGE_DEFAULT;
-		desc.Stride = sizeof(float); // morton buffer is float because sorting must be done and gpu sort operates on floats for now!
+		desc.bind_flags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.size = desc.stride * primitiveCapacity;
+		desc.format = FORMAT_UNKNOWN;
+		desc.misc_flags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		desc.usage = USAGE_DEFAULT;
+		desc.stride = sizeof(float); // morton buffer is float because sorting must be done and gpu sort operates on floats for now!
 		device->CreateBuffer(&desc, nullptr, &primitiveMortonBuffer);
 		device->SetName(&primitiveMortonBuffer, "primitiveMortonBuffer");
 	}
@@ -326,9 +326,9 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
 
 		// Download primitive count:
 		readback_desc = primitiveCounterBuffer.GetDesc();
-		readback_desc.Usage = USAGE_STAGING;
+		readback_desc.usage = USAGE_STAGING;
 		readback_desc.CPUAccessFlags = CPU_ACCESS_READ;
-		readback_desc.BindFlags = 0;
+		readback_desc.bind_flags = 0;
 		readback_desc.Flags = 0;
 		GPUBuffer readback_primitiveCounterBuffer;
 		device->CreateBuffer(&readback_desc, nullptr, &readback_primitiveCounterBuffer);
@@ -342,13 +342,13 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
 
 			// Validate node buffer:
 			readback_desc = bvhNodeBuffer.GetDesc();
-			readback_desc.Usage = USAGE_STAGING;
+			readback_desc.usage = USAGE_STAGING;
 			readback_desc.CPUAccessFlags = CPU_ACCESS_READ;
-			readback_desc.BindFlags = 0;
+			readback_desc.bind_flags = 0;
 			readback_desc.Flags = 0;
 			GPUBuffer readback_nodeBuffer;
 			device->CreateBuffer(&readback_desc, nullptr, &readback_nodeBuffer);
-			vector<BVHNode> nodes(readback_desc.Size / sizeof(BVHNode));
+			vector<BVHNode> nodes(readback_desc.size / sizeof(BVHNode));
 			download_success = device->DownloadResource(&bvhNodeBuffer, &readback_nodeBuffer, nodes.data(), cmd);
 			assert(download_success);
 			set<uint> visitedLeafs;
@@ -383,13 +383,13 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
 
 			// Validate flag buffer:
 			readback_desc = bvhFlagBuffer.GetDesc();
-			readback_desc.Usage = USAGE_STAGING;
+			readback_desc.usage = USAGE_STAGING;
 			readback_desc.CPUAccessFlags = CPU_ACCESS_READ;
-			readback_desc.BindFlags = 0;
+			readback_desc.bind_flags = 0;
 			readback_desc.Flags = 0;
 			GPUBuffer readback_flagBuffer;
 			device->CreateBuffer(&readback_desc, nullptr, &readback_flagBuffer);
-			vector<uint> flags(readback_desc.Size / sizeof(uint));
+			vector<uint> flags(readback_desc.size / sizeof(uint));
 			download_success = device->DownloadResource(&bvhFlagBuffer, &readback_flagBuffer, flags.data(), cmd);
 			assert(download_success);
 			for (auto& x : flags)

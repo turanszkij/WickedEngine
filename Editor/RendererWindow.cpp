@@ -422,16 +422,16 @@ void RendererWindow::Create(EditorComponent* editor)
 		switch (args.iValue)
 		{
 		case 0:
-			desc.Filter = wiGraphics::FILTER_MIN_MAG_MIP_POINT;
+			desc.filter = wiGraphics::FILTER_MIN_MAG_MIP_POINT;
 			break;
 		case 1:
-			desc.Filter = wiGraphics::FILTER_MIN_MAG_LINEAR_MIP_POINT;
+			desc.filter = wiGraphics::FILTER_MIN_MAG_LINEAR_MIP_POINT;
 			break;
 		case 2:
-			desc.Filter = wiGraphics::FILTER_MIN_MAG_MIP_LINEAR;
+			desc.filter = wiGraphics::FILTER_MIN_MAG_MIP_LINEAR;
 			break;
 		case 3:
-			desc.Filter = wiGraphics::FILTER_ANISOTROPIC;
+			desc.filter = wiGraphics::FILTER_ANISOTROPIC;
 			break;
 		default:
 			break;
@@ -450,7 +450,7 @@ void RendererWindow::Create(EditorComponent* editor)
 	mipLodBiasSlider.SetPos(XMFLOAT2(x, y += step));
 	mipLodBiasSlider.OnSlide([&](wiEventArgs args) {
 		wiGraphics::SamplerDesc desc = wiRenderer::GetSampler(SSLOT_OBJECTSHADER)->GetDesc();
-		desc.MipLODBias = wiMath::Clamp(args.fValue, -15.9f, 15.9f);
+		desc.mip_lod_bias = wiMath::Clamp(args.fValue, -15.9f, 15.9f);
 		wiRenderer::ModifyObjectSampler(desc);
 	});
 	AddWidget(&mipLodBiasSlider);

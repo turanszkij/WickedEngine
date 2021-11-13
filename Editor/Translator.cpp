@@ -70,9 +70,9 @@ void Translator::Create()
 			vertexCount_Axis = arraysize(verts) / 2;
 
 			GPUBufferDesc bd;
-			bd.Usage = USAGE_DEFAULT;
-			bd.Size = sizeof(verts);
-			bd.BindFlags = BIND_VERTEX_BUFFER;
+			bd.usage = USAGE_DEFAULT;
+			bd.size = sizeof(verts);
+			bd.bind_flags = BIND_VERTEX_BUFFER;
 
 			device->CreateBuffer(&bd, verts, &vertexBuffer_Axis);
 		}
@@ -93,9 +93,9 @@ void Translator::Create()
 			vertexCount_Plane = arraysize(verts) / 2;
 
 			GPUBufferDesc bd;
-			bd.Usage = USAGE_DEFAULT;
-			bd.Size = sizeof(verts);
-			bd.BindFlags = BIND_VERTEX_BUFFER;
+			bd.usage = USAGE_DEFAULT;
+			bd.size = sizeof(verts);
+			bd.bind_flags = BIND_VERTEX_BUFFER;
 
 			device->CreateBuffer(&bd, verts, &vertexBuffer_Plane);
 		}
@@ -146,9 +146,9 @@ void Translator::Create()
 			vertexCount_Origin = arraysize(verts) / 2;
 
 			GPUBufferDesc bd;
-			bd.Usage = USAGE_DEFAULT;
-			bd.Size = sizeof(verts);
-			bd.BindFlags = BIND_VERTEX_BUFFER;
+			bd.usage = USAGE_DEFAULT;
+			bd.size = sizeof(verts);
+			bd.bind_flags = BIND_VERTEX_BUFFER;
 
 			device->CreateBuffer(&bd, verts, &vertexBuffer_Origin);
 		}
