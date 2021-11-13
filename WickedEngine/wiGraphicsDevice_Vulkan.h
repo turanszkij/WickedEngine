@@ -28,7 +28,7 @@
 
 namespace wiGraphics
 {
-	class GraphicsDevice_Vulkan : public GraphicsDevice
+	class GraphicsDevice_Vulkan final : public GraphicsDevice
 	{
 		friend struct CommandQueue;
 	protected:

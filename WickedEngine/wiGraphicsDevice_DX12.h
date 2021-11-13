@@ -24,7 +24,7 @@
 
 namespace wiGraphics
 {
-	class GraphicsDevice_DX12 : public GraphicsDevice
+	class GraphicsDevice_DX12 final : public GraphicsDevice
 	{
 	protected:
 		Microsoft::WRL::ComPtr<IDXGIFactory4> dxgiFactory;
