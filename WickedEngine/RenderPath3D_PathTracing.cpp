@@ -300,7 +300,7 @@ void RenderPath3D_PathTracing::Render() const
 			}
 			else
 			{
-				auto range = wiProfiler::BeginRangeGPU("Traced Scene", cmd);
+				auto range = wiProfiler::BeginRangeGPU("Traced Scene", device, cmd);
 
 				wiRenderer::RayTraceScene(
 					*scene,
@@ -372,7 +372,7 @@ void RenderPath3D_PathTracing::Render() const
 
 		// GUI Background blurring:
 		{
-			auto range = wiProfiler::BeginRangeGPU("GUI Background Blur", cmd);
+			auto range = wiProfiler::BeginRangeGPU("GUI Background Blur", device, cmd);
 			device->EventBegin("GUI Background Blur", cmd);
 			wiRenderer::Postprocess_Downsample4x(rtPostprocess, rtGUIBlurredBackground[0], cmd);
 			wiRenderer::Postprocess_Downsample4x(rtGUIBlurredBackground[0], rtGUIBlurredBackground[2], cmd);

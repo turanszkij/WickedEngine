@@ -66,8 +66,10 @@ void wiGUI::Render(const wiCanvas& canvas, CommandList cmd) const
 		return;
 	}
 
+	GraphicsDevice* device = wiRenderer::GetDevice();
+
 	auto range_cpu = wiProfiler::BeginRangeCPU("GUI Render");
-	auto range_gpu = wiProfiler::BeginRangeGPU("GUI Render", cmd);
+	auto range_gpu = wiProfiler::BeginRangeGPU("GUI Render", device, cmd);
 
 	Rect scissorRect;
 	scissorRect.bottom = (int32_t)(canvas.GetPhysicalHeight());
@@ -75,7 +77,6 @@ void wiGUI::Render(const wiCanvas& canvas, CommandList cmd) const
 	scissorRect.right = (int32_t)(canvas.GetPhysicalWidth());
 	scissorRect.top = (int32_t)(0);
 
-	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	device->EventBegin("GUI", cmd);
 	// Rendering is back to front:

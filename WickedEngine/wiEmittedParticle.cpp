@@ -506,7 +506,7 @@ void wiEmittedParticle::UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex
 
 		if (IsSPHEnabled())
 		{
-			auto range = wiProfiler::BeginRangeGPU("SPH - Simulation", cmd);
+			auto range = wiProfiler::BeginRangeGPU("SPH - Simulation", device, cmd);
 
 			// Smooth Particle Hydrodynamics:
 			device->EventBegin("SPH - Simulation", cmd);

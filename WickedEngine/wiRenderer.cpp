@@ -3265,7 +3265,7 @@ void UpdateRenderData(
 	device->EventBegin("UpdateRenderData", cmd);
 
 	auto prof_updatebuffer_cpu = wiProfiler::BeginRangeCPU("Update Buffers (CPU)");
-	auto prof_updatebuffer_gpu = wiProfiler::BeginRangeGPU("Update Buffers (GPU)", cmd);
+	auto prof_updatebuffer_gpu = wiProfiler::BeginRangeGPU("Update Buffers (GPU)", device.get(), cmd);
 
 	device->UpdateBuffer(&constantBuffers[CBTYPE_FRAME], &frameCB, cmd);
 	barrier_stack[cmd].push_back(GPUBarrier::Buffer(&constantBuffers[CBTYPE_FRAME], RESOURCE_STATE_COPY_DST, RESOURCE_STATE_CONSTANT_BUFFER));
@@ -3619,7 +3619,7 @@ void UpdateRenderData(
 
 	BindCommonResources(cmd);
 
-	auto range = wiProfiler::BeginRangeGPU("Skinning", cmd);
+	auto range = wiProfiler::BeginRangeGPU("Skinning", device.get(), cmd);
 	device->EventBegin("Skinning", cmd);
 	{
 		for (size_t i = 0; i < vis.scene->meshes.GetCount(); ++i)
@@ -3696,7 +3696,7 @@ void UpdateRenderData(
 	//	(This must be non-async too, as prepass will render hairs!)
 	if (!vis.visibleHairs.empty() && frameCB.DeltaTime > 0)
 	{
-		range = wiProfiler::BeginRangeGPU("HairParticles - Simulate", cmd);
+		range = wiProfiler::BeginRangeGPU("HairParticles - Simulate", device.get(), cmd);
 		for (uint32_t hairIndex : vis.visibleHairs)
 		{
 			const wiHairParticle& hair = vis.scene->hairs[hairIndex];
@@ -3871,7 +3871,7 @@ void UpdateRenderDataAsync(
 	// GPU Particle systems simulation/sorting/culling:
 	if (!vis.visibleEmitters.empty() && frameCB.DeltaTime > 0)
 	{
-		auto range = wiProfiler::BeginRangeGPU("EmittedParticles - Simulate", cmd);
+		auto range = wiProfiler::BeginRangeGPU("EmittedParticles - Simulate", device.get(), cmd);
 		for (uint32_t emitterIndex : vis.visibleEmitters)
 		{
 			const wiEmittedParticle& emitter = vis.scene->emitters[emitterIndex];
@@ -3890,7 +3890,7 @@ void UpdateRenderDataAsync(
 	// Compute water simulation:
 	if (vis.scene->weather.IsOceanEnabled())
 	{
-		auto range = wiProfiler::BeginRangeGPU("Ocean - Simulate", cmd);
+		auto range = wiProfiler::BeginRangeGPU("Ocean - Simulate", device.get(), cmd);
 		vis.scene->ocean.UpdateDisplacementMap(vis.scene->weather.oceanParameters, cmd);
 		wiProfiler::EndRange(range);
 	}
@@ -3917,7 +3917,7 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 		// BLAS:
 		{
 			auto rangeCPU = wiProfiler::BeginRangeCPU("BLAS Update (CPU)");
-			auto range = wiProfiler::BeginRangeGPU("BLAS Update (GPU)", cmd);
+			auto range = wiProfiler::BeginRangeGPU("BLAS Update (GPU)", device.get(), cmd);
 			device->EventBegin("BLAS Update", cmd);
 
 			for (size_t i = 0; i < scene.meshes.GetCount(); ++i)
@@ -3977,7 +3977,7 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 		// TLAS:
 		{
 			auto rangeCPU = wiProfiler::BeginRangeCPU("TLAS Update (CPU)");
-			auto range = wiProfiler::BeginRangeGPU("TLAS Update (GPU)", cmd);
+			auto range = wiProfiler::BeginRangeGPU("TLAS Update (GPU)", device.get(), cmd);
 			device->EventBegin("TLAS Update", cmd);
 
 			device->BuildRaytracingAccelerationStructure(&scene.TLAS, cmd, nullptr);
@@ -4036,7 +4036,7 @@ void OcclusionCulling_Render(const CameraComponent& camera, const Visibility& vi
 		return;
 	}
 
-	auto range = wiProfiler::BeginRangeGPU("Occlusion Culling Render", cmd);
+	auto range = wiProfiler::BeginRangeGPU("Occlusion Culling Render", device.get(), cmd);
 
 	device->BindPipelineState(&PSO_occlusionquery, cmd);
 
@@ -4183,8 +4183,8 @@ void DrawSoftParticles(
 		return;
 	}
 	auto range = distortion ?
-		wiProfiler::BeginRangeGPU("EmittedParticles - Render (Distortion)", cmd) :
-		wiProfiler::BeginRangeGPU("EmittedParticles - Render", cmd);
+		wiProfiler::BeginRangeGPU("EmittedParticles - Render (Distortion)", device.get(), cmd) :
+		wiProfiler::BeginRangeGPU("EmittedParticles - Render", device.get(), cmd);
 
 	// Sort emitters based on distance:
 	assert(emitterCount < 0x0000FFFF); // watch out for sorting hash truncation!
@@ -4621,7 +4621,7 @@ void DrawShadowmaps(
 	if (!vis.visibleLights.empty())
 	{
 		device->EventBegin("DrawShadowmaps", cmd);
-		auto range = wiProfiler::BeginRangeGPU("Shadow Rendering", cmd);
+		auto range = wiProfiler::BeginRangeGPU("Shadow Rendering", device.get(), cmd);
 
 		const bool predicationRequest =
 			device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_PREDICATION) &&
@@ -6027,7 +6027,7 @@ void DrawDebugWorld(
 void RenderAtmosphericScatteringTextures(CommandList cmd)
 {
 	device->EventBegin("ComputeAtmosphericScatteringTextures", cmd);
-	auto range = wiProfiler::BeginRangeGPU("Atmospheric Scattering Textures", cmd);
+	auto range = wiProfiler::BeginRangeGPU("Atmospheric Scattering Textures", device.get(), cmd);
 
 	// Transmittance Lut pass:
 	{
@@ -6231,7 +6231,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		return;
 
 	device->EventBegin("EnvironmentProbe Refresh", cmd);
-	auto range = wiProfiler::BeginRangeGPU("Environment Probe Refresh", cmd);
+	auto range = wiProfiler::BeginRangeGPU("Environment Probe Refresh", device.get(), cmd);
 
 	BindCommonResources(cmd);
 
@@ -6530,7 +6530,7 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 	}
 
 	device->EventBegin("Voxel Radiance", cmd);
-	auto range = wiProfiler::BeginRangeGPU("Voxel Radiance", cmd);
+	auto range = wiProfiler::BeginRangeGPU("Voxel Radiance", device.get(), cmd);
 
 	static RenderPass renderpass_voxelize;
 
@@ -7184,7 +7184,7 @@ void RayTraceScene(
 		return;
 
 	device->EventBegin("RayTraceScene", cmd);
-	auto range = wiProfiler::BeginRangeGPU("RayTraceScene", cmd);
+	auto range = wiProfiler::BeginRangeGPU("RayTraceScene", device.get(), cmd);
 
 	const TextureDesc& desc = output.GetDesc();
 
@@ -7256,7 +7256,7 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 {
 	if (scene.lightmap_refresh_needed.load())
 	{
-		auto range = wiProfiler::BeginRangeGPU("Lightmap Processing", cmd);
+		auto range = wiProfiler::BeginRangeGPU("Lightmap Processing", device.get(), cmd);
 
 		if (!scene.TLAS.IsValid() && !scene.BVH.IsValid())
 			return;
@@ -7444,7 +7444,7 @@ void ComputeLuminance(
 )
 {
 	device->EventBegin("Compute Luminance", cmd);
-	auto range = wiProfiler::BeginRangeGPU("Luminance", cmd);
+	auto range = wiProfiler::BeginRangeGPU("Luminance", device.get(), cmd);
 
 	PostProcess postprocess;
 	postprocess.resolution.x = sourceImage.desc.width / 2;
@@ -7544,7 +7544,7 @@ void ComputeBloom(
 )
 {
 	device->EventBegin("Bloom", cmd);
-	auto range = wiProfiler::BeginRangeGPU("Bloom", cmd);
+	auto range = wiProfiler::BeginRangeGPU("Bloom", device.get(), cmd);
 
 	// Separate bright parts of image to bloom texture:
 	{
@@ -7607,7 +7607,7 @@ void ComputeShadingRateClassification(
 )
 {
 	device->EventBegin("ComputeShadingRateClassification", cmd);
-	auto range = wiProfiler::BeginRangeGPU("ComputeShadingRateClassification", cmd);
+	auto range = wiProfiler::BeginRangeGPU("ComputeShadingRateClassification", device.get(), cmd);
 
 	if (GetVariableRateShadingClassificationDebug())
 	{
@@ -7673,7 +7673,7 @@ void VisibilityResolve(
 )
 {
 	device->EventBegin("VisibilityResolve", cmd);
-	auto range = wiProfiler::BeginRangeGPU("VisibilityResolve", cmd);
+	auto range = wiProfiler::BeginRangeGPU("VisibilityResolve", device.get(), cmd);
 
 	BindCommonResources(cmd);
 
@@ -7751,7 +7751,7 @@ void SurfelGI_Coverage(
 )
 {
 	device->EventBegin("SurfelGI - Coverage", cmd);
-	auto prof_range = wiProfiler::BeginRangeGPU("SurfelGI - Coverage", cmd);
+	auto prof_range = wiProfiler::BeginRangeGPU("SurfelGI - Coverage", device.get(), cmd);
 
 
 	// Coverage:
@@ -7838,7 +7838,7 @@ void SurfelGI(
 	if (!scene.TLAS.IsValid() && !scene.BVH.IsValid())
 		return;
 
-	auto prof_range = wiProfiler::BeginRangeGPU("SurfelGI", cmd);
+	auto prof_range = wiProfiler::BeginRangeGPU("SurfelGI", device.get(), cmd);
 	device->EventBegin("SurfelGI", cmd);
 
 	BindCommonResources(cmd);
@@ -8316,7 +8316,7 @@ void Postprocess_SSAO(
 )
 {
 	device->EventBegin("Postprocess_SSAO", cmd);
-	auto prof_range = wiProfiler::BeginRangeGPU("SSAO", cmd);
+	auto prof_range = wiProfiler::BeginRangeGPU("SSAO", device.get(), cmd);
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSAO], cmd);
 
@@ -8375,7 +8375,7 @@ void Postprocess_HBAO(
 )
 {
 	device->EventBegin("Postprocess_HBAO", cmd);
-	auto prof_range = wiProfiler::BeginRangeGPU("HBAO", cmd);
+	auto prof_range = wiProfiler::BeginRangeGPU("HBAO", device.get(), cmd);
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_HBAO], cmd);
 
@@ -8577,7 +8577,7 @@ void Postprocess_MSAO(
 	)
 {
 	device->EventBegin("Postprocess_MSAO", cmd);
-	auto prof_range = wiProfiler::BeginRangeGPU("MSAO", cmd);
+	auto prof_range = wiProfiler::BeginRangeGPU("MSAO", device.get(), cmd);
 
 	// Depth downsampling + deinterleaving pass1:
 	{
@@ -9003,7 +9003,7 @@ void Postprocess_RTAO(
 		return;
 
 	device->EventBegin("Postprocess_RTAO", cmd);
-	auto prof_range = wiProfiler::BeginRangeGPU("RTAO", cmd);
+	auto prof_range = wiProfiler::BeginRangeGPU("RTAO", device.get(), cmd);
 
 	BindCommonResources(cmd);
 
@@ -9250,7 +9250,7 @@ void Postprocess_RTReflection(
 		return;
 
 	device->EventBegin("Postprocess_RTReflection", cmd);
-	auto prof_range = wiProfiler::BeginRangeGPU("RTReflection", cmd);
+	auto prof_range = wiProfiler::BeginRangeGPU("RTReflection", device.get(), cmd);
 
 	const TextureDesc& desc = output.desc;
 
@@ -9427,7 +9427,7 @@ void Postprocess_SSR(
 )
 {
 	device->EventBegin("Postprocess_SSR", cmd);
-	auto range = wiProfiler::BeginRangeGPU("SSR", cmd);
+	auto range = wiProfiler::BeginRangeGPU("SSR", device.get(), cmd);
 
 
 	BindCommonResources(cmd);
@@ -9668,7 +9668,7 @@ void Postprocess_RTShadow(
 		return;
 
 	device->EventBegin("Postprocess_RTShadow", cmd);
-	auto prof_range = wiProfiler::BeginRangeGPU("RTShadow", cmd);
+	auto prof_range = wiProfiler::BeginRangeGPU("RTShadow", device.get(), cmd);
 
 	const TextureDesc& desc = res.temp.GetDesc();
 
@@ -9995,7 +9995,7 @@ void Postprocess_ScreenSpaceShadow(
 )
 {
 	device->EventBegin("Postprocess_ScreenSpaceShadow", cmd);
-	auto prof_range = wiProfiler::BeginRangeGPU("ScreenSpaceShadow", cmd);
+	auto prof_range = wiProfiler::BeginRangeGPU("ScreenSpaceShadow", device.get(), cmd);
 
 	const TextureDesc& desc = output.GetDesc();
 
@@ -10049,7 +10049,7 @@ void Postprocess_LightShafts(
 )
 {
 	device->EventBegin("Postprocess_LightShafts", cmd);
-	auto range = wiProfiler::BeginRangeGPU("LightShafts", cmd);
+	auto range = wiProfiler::BeginRangeGPU("LightShafts", device.get(), cmd);
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_LIGHTSHAFTS], cmd);
 
@@ -10159,7 +10159,7 @@ void Postprocess_DepthOfField(
 )
 {
 	device->EventBegin("Postprocess_DepthOfField", cmd);
-	auto range = wiProfiler::BeginRangeGPU("Depth of Field", cmd);
+	auto range = wiProfiler::BeginRangeGPU("Depth of Field", device.get(), cmd);
 
 	const TextureDesc& desc = output.GetDesc();
 
@@ -10538,7 +10538,7 @@ void Postprocess_Outline(
 )
 {
 	device->EventBegin("Postprocess_Outline", cmd);
-	auto range = wiProfiler::BeginRangeGPU("Outline", cmd);
+	auto range = wiProfiler::BeginRangeGPU("Outline", device.get(), cmd);
 
 	device->BindPipelineState(&PSO_outline, cmd);
 
@@ -10602,7 +10602,7 @@ void Postprocess_MotionBlur(
 )
 {
 	device->EventBegin("Postprocess_MotionBlur", cmd);
-	auto range = wiProfiler::BeginRangeGPU("MotionBlur", cmd);
+	auto range = wiProfiler::BeginRangeGPU("MotionBlur", device.get(), cmd);
 
 	const TextureDesc& desc = output.GetDesc();
 
@@ -10863,7 +10863,7 @@ void Postprocess_VolumetricClouds(
 )
 {
 	device->EventBegin("Postprocess_VolumetricClouds", cmd);
-	auto range = wiProfiler::BeginRangeGPU("Volumetric Clouds", cmd);
+	auto range = wiProfiler::BeginRangeGPU("Volumetric Clouds", device.get(), cmd);
 
 	BindCommonResources(cmd);
 
@@ -11027,7 +11027,7 @@ void Postprocess_FXAA(
 )
 {
 	device->EventBegin("Postprocess_FXAA", cmd);
-	auto range = wiProfiler::BeginRangeGPU("FXAA", cmd);
+	auto range = wiProfiler::BeginRangeGPU("FXAA", device.get(), cmd);
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_FXAA], cmd);
 
@@ -11081,7 +11081,7 @@ void Postprocess_TemporalAA(
 )
 {
 	device->EventBegin("Postprocess_TemporalAA", cmd);
-	auto range = wiProfiler::BeginRangeGPU("Temporal AA Resolve", cmd);
+	auto range = wiProfiler::BeginRangeGPU("Temporal AA Resolve", device.get(), cmd);
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_TEMPORALAA], cmd);
 
@@ -11254,7 +11254,7 @@ void Postprocess_FSR(
 )
 {
 	device->EventBegin("Postprocess_FSR", cmd);
-	auto range = wiProfiler::BeginRangeGPU("Postprocess_FSR", cmd);
+	auto range = wiProfiler::BeginRangeGPU("Postprocess_FSR", device.get(), cmd);
 
 	const TextureDesc& desc = output.GetDesc();
 
