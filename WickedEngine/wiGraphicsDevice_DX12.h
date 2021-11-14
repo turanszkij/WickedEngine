@@ -110,7 +110,7 @@ namespace wiGraphics
 		} cmd_meta[COMMANDLIST_COUNT];
 
 		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList4> commandLists[COMMANDLIST_COUNT][QUEUE_COUNT];
-		inline ID3D12GraphicsCommandList6* GetCommandList(CommandList cmd)
+		inline ID3D12GraphicsCommandList6* GetCommandList(CommandList::index_type cmd)
 		{
 			return (ID3D12GraphicsCommandList6*)commandLists[cmd][cmd_meta[cmd].queue].Get();
 		}
@@ -170,7 +170,7 @@ namespace wiGraphics
 		void predraw(CommandList cmd);
 		void predispatch(CommandList cmd);
 
-		std::atomic<CommandList> cmd_count{ 0 };
+		std::atomic<CommandList::index_type> cmd_count{ 0 };
 
 	public:
 		GraphicsDevice_DX12(bool debuglayer = false, bool gpuvalidation = false);

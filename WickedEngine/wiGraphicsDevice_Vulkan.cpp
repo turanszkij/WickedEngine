@@ -5866,7 +5866,7 @@ using namespace Vulkan_Internal;
 	{
 		VkResult res;
 
-		CommandList cmd = cmd_count.fetch_add(1);
+		CommandList cmd = CommandList { cmd_count.fetch_add(1) };
 		assert(cmd < COMMANDLIST_COUNT);
 		cmd_meta[cmd].queue = queue;
 		cmd_meta[cmd].waits.clear();
@@ -5979,9 +5979,9 @@ using namespace Vulkan_Internal;
 
 			uint64_t copy_sync = copyAllocator.flush();
 
-			CommandList cmd_last = cmd_count.load();
+			CommandList::index_type cmd_last = cmd_count.load();
 			cmd_count.store(0);
-			for (CommandList cmd = 0; cmd < cmd_last; ++cmd)
+			for (CommandList::index_type cmd = 0; cmd < cmd_last; ++cmd)
 			{
 				res = vkEndCommandBuffer(GetCommandList(cmd));
 				assert(res == VK_SUCCESS);

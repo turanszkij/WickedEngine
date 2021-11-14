@@ -5359,7 +5359,7 @@ using namespace DX12_Internal;
 	{
 		HRESULT hr;
 
-		CommandList cmd = cmd_count.fetch_add(1);
+		CommandList cmd = CommandList { cmd_count.fetch_add(1) };
 		assert(cmd < COMMANDLIST_COUNT);
 		cmd_meta[cmd].queue = queue;
 		cmd_meta[cmd].waits.clear();
@@ -5438,9 +5438,9 @@ using namespace DX12_Internal;
 
 			QUEUE_TYPE submit_queue = QUEUE_COUNT;
 
-			CommandList cmd_last = cmd_count.load();
+			CommandList::index_type cmd_last = cmd_count.load();
 			cmd_count.store(0);
-			for (CommandList cmd = 0; cmd < cmd_last; ++cmd)
+			for (CommandList::index_type cmd = 0; cmd < cmd_last; ++cmd)
 			{
 				hr = GetCommandList(cmd)->Close();
 				assert(SUCCEEDED(hr));
@@ -5518,7 +5518,7 @@ using namespace DX12_Internal;
 				assert(SUCCEEDED(hr));
 			}
 
-			for (CommandList cmd = 0; cmd < cmd_last; ++cmd)
+			for (CommandList::index_type cmd = 0; cmd < cmd_last; ++cmd)
 			{
 				for (auto& swapchain : swapchains[cmd])
 				{

@@ -35,14 +35,14 @@ namespace wiProfiler
 		float times[20] = {};
 		int avg_counter = 0;
 		float time = 0;
-		CommandList cmd = COMMANDLIST_COUNT;
+		CommandList cmd = INVALID_COMMANDLIST;
 
 		wiTimer cpuTimer;
 
 		int gpuBegin[arraysize(queryResultBuffer)];
 		int gpuEnd[arraysize(queryResultBuffer)];
 
-		bool IsCPURange() const { return cmd == COMMANDLIST_COUNT; }
+		bool IsCPURange() const { return cmd == INVALID_COMMANDLIST; }
 	};
 	std::unordered_map<size_t, Range> ranges;
 

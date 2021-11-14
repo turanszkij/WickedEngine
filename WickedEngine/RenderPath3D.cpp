@@ -647,10 +647,9 @@ void RenderPath3D::Render() const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	wiJobSystem::context ctx;
-	CommandList cmd;
 
 	// Preparing the frame:
-	cmd = device->BeginCommandList();
+	CommandList cmd = device->BeginCommandList();
 	CommandList cmd_prepareframe = cmd;
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 		wiRenderer::BindCameraCB(

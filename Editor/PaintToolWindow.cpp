@@ -964,6 +964,7 @@ void PaintToolWindow::RecordHistory(bool start, CommandList cmd)
 				subresource_index = device->CreateSubresource(&newTex, UAV, 0, 1, i, 1);
 				assert(subresource_index == i);
 			}
+			assert(cmd != wiGraphics::INVALID_COMMANDLIST);
 			wiRenderer::CopyTexture2D(newTex, -1, 0, 0, editTexture, 0, cmd);
 			ReplaceEditTextureSlot(*material, newTex);
 		}

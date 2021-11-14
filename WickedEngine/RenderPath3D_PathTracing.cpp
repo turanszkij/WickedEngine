@@ -249,12 +249,11 @@ void RenderPath3D_PathTracing::Render() const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 	wiJobSystem::context ctx;
-	CommandList cmd;
 
 	if (sam < target)
 	{
 		// Setup:
-		cmd = device->BeginCommandList();
+		CommandList cmd = device->BeginCommandList();
 		wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
 			wiRenderer::BindCameraCB(
@@ -320,7 +319,7 @@ void RenderPath3D_PathTracing::Render() const
 	}
 
 	// Tonemap etc:
-	cmd = device->BeginCommandList();
+	CommandList cmd = device->BeginCommandList();
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
 		GraphicsDevice* device = wiRenderer::GetDevice();

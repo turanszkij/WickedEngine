@@ -165,7 +165,7 @@ namespace wiGraphics
 			std::vector<CommandList> waits;
 		} cmd_meta[COMMANDLIST_COUNT];
 
-		inline VkCommandBuffer GetCommandList(CommandList cmd)
+		inline VkCommandBuffer GetCommandList(CommandList::index_type cmd)
 		{
 			return GetFrameResources().commandBuffers[cmd][cmd_meta[cmd].queue];
 		}
@@ -230,7 +230,7 @@ namespace wiGraphics
 		void predispatch(CommandList cmd);
 
 
-		std::atomic<CommandList> cmd_count{ 0 };
+		std::atomic<CommandList::index_type> cmd_count{ 0 };
 
 		std::vector<StaticSampler> common_samplers;
 

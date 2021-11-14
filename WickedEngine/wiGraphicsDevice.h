@@ -12,9 +12,20 @@ namespace wiGraphics
 	//	Use GraphicsDevice::BeginCommandList() to start a command list
 	//	Use GraphicsDevice::SubmitCommandLists() to give all started command lists to the GPU for execution
 	//	CommandList recording is not thread safe
-	typedef uint8_t CommandList;
-	static const CommandList COMMANDLIST_COUNT = 32; // If you increase command list count, more memory will be statically allocated for per-command list resources
-	static const CommandList INVALID_COMMANDLIST = COMMANDLIST_COUNT;
+	struct CommandList
+	{
+		using index_type = uint8_t;
+
+		constexpr explicit CommandList(index_type indexValue)
+			: index(indexValue)
+		{}
+		constexpr operator uint8_t() const { return index; }
+
+	private:
+		uint8_t index;
+	};
+	static const CommandList::index_type COMMANDLIST_COUNT = 32; // If you increase command list count, more memory will be statically allocated for per-command list resources
+	static const CommandList INVALID_COMMANDLIST = CommandList { COMMANDLIST_COUNT };
 
 	// Descriptor binding counts:
 	//	It's OK increase these limits if not enough
