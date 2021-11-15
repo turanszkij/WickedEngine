@@ -11213,7 +11213,7 @@ void Postprocess_Tonemap(
 	tonemap_push.texture_colorgrade_lookuptable = device->GetDescriptorIndex(texture_colorgradinglut, SubresourceType::SRV);
 	tonemap_push.texture_bloom = device->GetDescriptorIndex(texture_bloom, SubresourceType::SRV);
 	tonemap_push.texture_output = device->GetDescriptorIndex(&output, SubresourceType::UAV);
-	tonemap_push.display_colorspace = to_underlying(display_colorspace);
+	tonemap_push.display_colorspace = static_cast<uint32_t>(display_colorspace);
 	device->PushConstants(&tonemap_push, sizeof(tonemap_push), cmd);
 
 	{

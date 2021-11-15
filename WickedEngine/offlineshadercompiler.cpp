@@ -8,7 +8,7 @@
 #include <sstream>
 
 std::mutex locker;
-std::vector<std::string> shaders[to_underlying(wiGraphics::ShaderStage::Count)];
+std::vector<std::string> shaders[static_cast<size_t>(wiGraphics::ShaderStage::Count)];
 std::unordered_map<std::string, wiGraphics::ShaderModel> minshadermodels;
 struct Target
 {
@@ -76,7 +76,7 @@ int main(int argc, char* argv[])
 		std::cout << "No shader formats were specified, assuming command arguments: hlsl5 spirv hlsl6" << std::endl;
 	}
 
-	shaders[to_underlying(ShaderStage::CS)] = {
+	shaders[static_cast<size_t>(ShaderStage::CS)] = {
 		"hairparticle_simulateCS.hlsl"								,
 		"hairparticle_finishUpdateCS.hlsl"							,
 		"emittedparticle_simulateCS.hlsl"							,
@@ -235,7 +235,7 @@ int main(int argc, char* argv[])
 		"surfel_raytraceCS.hlsl",
 	};
 
-	shaders[to_underlying(ShaderStage::PS)] = {
+	shaders[static_cast<size_t>(ShaderStage::PS)] = {
 		"emittedparticlePS_soft.hlsl"					,
 		"screenPS.hlsl"									,
 		"imagePS.hlsl"									,
@@ -311,7 +311,7 @@ int main(int argc, char* argv[])
 		"captureImpostorPS_albedo.hlsl"					,
 	};
 
-	shaders[to_underlying(ShaderStage::VS)] = {
+	shaders[static_cast<size_t>(ShaderStage::VS)] = {
 		"hairparticleVS.hlsl"							,
 		"emittedparticleVS.hlsl"						,
 		"imageVS.hlsl"									,
@@ -359,7 +359,7 @@ int main(int argc, char* argv[])
 		"cubeVS.hlsl",
 	};
 
-	shaders[to_underlying(ShaderStage::GS)] = {
+	shaders[static_cast<size_t>(ShaderStage::GS)] = {
 		"envMap_skyGS_emulation.hlsl"				,
 		"envMapGS_emulation.hlsl"					,
 		"cubeShadowGS_emulation.hlsl"				,
@@ -369,29 +369,29 @@ int main(int argc, char* argv[])
 		"objectGS_voxelizer.hlsl"					,
 	};
 
-	shaders[to_underlying(ShaderStage::DS)] = {
+	shaders[static_cast<size_t>(ShaderStage::DS)] = {
 		"objectDS.hlsl",
 		"objectDS_prepass.hlsl",
 		"objectDS_prepass_alphatest.hlsl",
 		"objectDS_simple.hlsl",
 	};
 
-	shaders[to_underlying(ShaderStage::HS)] = {
+	shaders[static_cast<size_t>(ShaderStage::HS)] = {
 		"objectHS.hlsl",
 		"objectHS_prepass.hlsl",
 		"objectHS_prepass_alphatest.hlsl",
 		"objectHS_simple.hlsl",
 	};
 
-	shaders[to_underlying(ShaderStage::AS)] = {
+	shaders[static_cast<size_t>(ShaderStage::AS)] = {
 
 	};
 
-	shaders[to_underlying(ShaderStage::MS)] = {
+	shaders[static_cast<size_t>(ShaderStage::MS)] = {
 		"emittedparticleMS.hlsl",
 	};
 
-	shaders[to_underlying(ShaderStage::LIB)] = {
+	shaders[static_cast<size_t>(ShaderStage::LIB)] = {
 		"rtreflectionLIB.hlsl",
 	};
 
@@ -416,14 +416,14 @@ int main(int argc, char* argv[])
 		std::string SHADERPATH = target.dir;
 		wiHelper::DirectoryCreate(SHADERPATH);
 
-		for (int i = 0; i < to_underlying(ShaderStage::Count); ++i)
+		for (int i = 0; i < static_cast<int>(ShaderStage::Count); ++i)
 		{
 			if (target.format == ShaderFormat::HLSL5)
 			{
 				if (
-					i == to_underlying(ShaderStage::MS) ||
-					i == to_underlying(ShaderStage::AS) ||
-					i == to_underlying(ShaderStage::LIB)
+					i == static_cast<int>(ShaderStage::MS) ||
+					i == static_cast<int>(ShaderStage::AS) ||
+					i == static_cast<int>(ShaderStage::LIB)
 					)
 				{
 					// shader stage not applicable to HLSL5

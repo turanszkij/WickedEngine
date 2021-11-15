@@ -77,12 +77,4 @@ constexpr bool has(E lhs, E rhs)
 	return (lhs & rhs) == rhs;
 }
 
-// convert enum to underlying value (this is part of the standard library in C++23)
-template <typename T>
-constexpr auto to_underlying(T e) noexcept
-	-> std::enable_if_t<std::is_enum<T>::value, std::underlying_type_t<T>>
-{
-	return static_cast<std::underlying_type_t<T>>(e);
-}
-
 #endif //WICKEDENGINE_COMMONINCLUDE_H

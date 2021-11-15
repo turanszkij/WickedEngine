@@ -826,7 +826,7 @@ namespace Vulkan_Internal
 		size_t binding_hash = 0;
 
 		VkGraphicsPipelineCreateInfo pipelineInfo = {};
-		VkPipelineShaderStageCreateInfo shaderStages[to_underlying(ShaderStage::Count)] = {};
+		VkPipelineShaderStageCreateInfo shaderStages[static_cast<size_t>(ShaderStage::Count)] = {};
 		VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
 		VkPipelineRasterizationStateCreateInfo rasterizer = {};
 		VkPipelineRasterizationDepthClipStateCreateInfoEXT depthclip = {};
