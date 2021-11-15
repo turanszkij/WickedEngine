@@ -15,23 +15,23 @@ namespace wiGraphics
 
 	enum class ShaderStage
 	{
-		MS,
-		AS,
-		VS,
-		HS,
-		DS,
-		GS,
-		PS,
-		CS,
-		LIB,
+		MS,		// Mesh Shader
+		AS,		// Amplification Shader
+		VS,		// Vertex Shader
+		HS,		// Hull Shader
+		DS,		// Domain Shader
+		GS,		// Geometry Shader
+		PS,		// Pixel Shader
+		CS,		// Compute Shader
+		LIB,	// Shader Library
 		Count,
 	};
 	enum class ShaderFormat
 	{
-		NONE,
-		HLSL5,
-		HLSL6,
-		SPIRV,
+		NONE,	// Not used
+		HLSL5,	// DXBC
+		HLSL6,	// DXIL
+		SPIRV,	// SPIR-V
 	};
 	enum class ShaderModel
 	{
@@ -47,7 +47,7 @@ namespace wiGraphics
 	};
 	enum class PrimitiveTopology
 	{
-		UNDEFINED_TOPOLOGY,
+		UNDEFINED,
 		TRIANGLELIST,
 		TRIANGLESTRIP,
 		POINTLIST,
@@ -68,8 +68,8 @@ namespace wiGraphics
 	};
 	enum class DepthWriteMask
 	{
-		ZERO,
-		ALL,
+		ZERO,	// Disables depth write
+		ALL,	// Enables depth write
 	};
 	enum class StencilOp
 	{
@@ -285,7 +285,7 @@ namespace wiGraphics
 
 	enum class ShadingRate
 	{
-		RATE_1X1,
+		RATE_1X1,	// Default/full shading rate
 		RATE_1X2,
 		RATE_2X1,
 		RATE_2X2,
@@ -387,6 +387,7 @@ namespace wiGraphics
 		HDR_LINEAR,		// HDR color space (16 bits per channel)
 	};
 
+
 	// Descriptor structs:
 
 	struct Viewport
@@ -398,6 +399,7 @@ namespace wiGraphics
 		float min_depth = 0;
 		float max_depth = 1;
 	};
+
 	struct InputLayout
 	{
 		static const uint32_t APPEND_ALIGNED_ELEMENT = ~0u; // automatically figure out AlignedByteOffset depending on Format
@@ -413,6 +415,7 @@ namespace wiGraphics
 		};
 		std::vector<Element> elements;
 	};
+
 	union ClearValue
 	{
 		float color[4];
@@ -422,6 +425,7 @@ namespace wiGraphics
 			uint32_t stencil;
 		} depth_stencil;
 	};
+
 	struct TextureDesc
 	{
 		enum class Type
@@ -443,6 +447,7 @@ namespace wiGraphics
 		ClearValue clear = {};
 		ResourceState layout = ResourceState::SHADER_RESOURCE;
 	};
+
 	struct SamplerDesc
 	{
 		Filter filter = Filter::MIN_MAG_MIP_POINT;
@@ -456,6 +461,7 @@ namespace wiGraphics
 		float min_lod = 0;
 		float max_lod = FLT_MAX;
 	};
+
 	struct RasterizerState
 	{
 		FillMode fill_mode = FillMode::SOLID;
@@ -470,6 +476,7 @@ namespace wiGraphics
 		bool conservative_rasterization_enable = false;
 		uint32_t forced_sample_count = 0;
 	};
+
 	struct DepthStencilState
 	{
 		bool depth_enable = false;
@@ -489,6 +496,7 @@ namespace wiGraphics
 		DepthStencilOp front_face;
 		DepthStencilOp back_face;
 	};
+
 	struct BlendState
 	{
 		bool alpha_to_coverage_enable = false;
@@ -507,6 +515,7 @@ namespace wiGraphics
 		};
 		RenderTargetBlendState render_target[8];
 	};
+
 	struct GPUBufferDesc
 	{
 		uint64_t size = 0;
@@ -516,11 +525,13 @@ namespace wiGraphics
 		uint32_t stride = 0; // needed for typed and structured buffer types!
 		Format format = Format::UNKNOWN; // only needed for typed buffer!
 	};
+
 	struct GPUQueryHeapDesc
 	{
 		GpuQueryType type = GpuQueryType::TIMESTAMP;
 		uint32_t query_count = 0;
 	};
+
 	struct PipelineStateDesc
 	{
 		const Shader*			vs = nullptr;
@@ -538,6 +549,7 @@ namespace wiGraphics
 		uint32_t                patch_control_points = 3;
 		uint32_t				sample_mask = 0xFFFFFFFF;
 	};
+
 	struct GPUBarrier
 	{
 		enum class Type
@@ -601,6 +613,7 @@ namespace wiGraphics
 			return barrier;
 		}
 	};
+
 	struct RenderPassAttachment
 	{
 		enum class Type
@@ -696,6 +709,7 @@ namespace wiGraphics
 			return attachment;
 		}
 	};
+
 	struct RenderPassDesc
 	{
 		enum class Flags
@@ -718,6 +732,7 @@ namespace wiGraphics
 		float clear_color[4] = { 0,0,0,1 };
 		bool allow_hdr = true;
 	};
+
 	struct IndirectDrawArgsInstanced
 	{
 		uint32_t vertex_count_per_instance = 0;
@@ -725,6 +740,7 @@ namespace wiGraphics
 		uint32_t start_vertex_location = 0;
 		uint32_t start_instance_location = 0;
 	};
+
 	struct IndirectDrawArgsIndexedInstanced
 	{
 		uint32_t index_count_per_instance = 0;
@@ -733,18 +749,21 @@ namespace wiGraphics
 		int32_t base_vertex_location = 0;
 		uint32_t start_instance_location = 0;
 	};
+
 	struct IndirectDispatchArgs
 	{
 		uint32_t thread_group_count_x = 0;
 		uint32_t thread_group_count_y = 0;
 		uint32_t thread_group_count_z = 0;
 	};
+
 	struct SubresourceData
 	{
 		const void *data_ptr = nullptr;
 		uint32_t row_pitch = 0;
 		uint32_t slice_pitch = 0;
 	};
+
 	struct Rect
 	{
 		int32_t left = 0;
@@ -768,6 +787,7 @@ namespace wiGraphics
 
 		const SamplerDesc& GetDesc() const { return desc; }
 	};
+
 	struct StaticSampler
 	{
 		Sampler sampler;
