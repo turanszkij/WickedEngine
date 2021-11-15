@@ -580,7 +580,7 @@ void WeatherWindow::Create(EditorComponent* editor)
 		wiJobSystem::context ctx;
 		for (auto& x : conv)
 		{
-			if (wiHelper::saveTextureToMemory(x.second->texture, x.second->filedata))
+			if (wiHelper::saveTextureToMemory(wiRenderer::GetDevice(), x.second->texture, x.second->filedata))
 			{
 				wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
 					std::vector<uint8_t> filedata_ktx2;

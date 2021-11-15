@@ -1,6 +1,5 @@
 #include "wiHelper.h"
 #include "wiPlatform.h"
-#include "wiRenderer.h"
 #include "wiBackLog.h"
 #include "wiEvent.h"
 
@@ -70,7 +69,7 @@ namespace wiHelper
 #endif // _WIN32
 	}
 
-	void screenshot(const wiGraphics::SwapChain& swapchain, const std::string& name)
+	void screenshot(wiGraphics::GraphicsDevice* device, const wiGraphics::SwapChain& swapchain, const std::string& name)
 	{
 		std::string directory;
 		if (name.empty())
@@ -90,7 +89,8 @@ namespace wiHelper
 			filename = directory + "/sc_" + getCurrentDateTimeAsString() + ".jpg";
 		}
 
-		bool result = saveTextureToFile(wiRenderer::GetDevice()->GetBackBuffer(&swapchain), filename);
+		assert(device != nullptr);
+		bool result = saveTextureToFile(device, device->GetBackBuffer(&swapchain), filename);
 		assert(result);
 
 		if (result)
@@ -100,11 +100,9 @@ namespace wiHelper
 		}
 	}
 
-	bool saveTextureToMemory(const wiGraphics::Texture& texture, std::vector<uint8_t>& texturedata)
+	bool saveTextureToMemory(wiGraphics::GraphicsDevice* device, const wiGraphics::Texture& texture, std::vector<uint8_t>& texturedata)
 	{
 		using namespace wiGraphics;
-
-		GraphicsDevice* device = wiRenderer::GetDevice();
 
 		TextureDesc desc = texture.GetDesc();
 
@@ -115,6 +113,8 @@ namespace wiHelper
 		staging_desc.layout = RESOURCE_STATE_COPY_DST;
 		staging_desc.bind_flags = BIND_NONE;
 		staging_desc.misc_flags = RESOURCE_MISC_NONE;
+
+		assert(device != nullptr);
 		bool success = device->CreateTexture(&staging_desc, nullptr, &stagingTex);
 		assert(success);
 
@@ -175,12 +175,12 @@ namespace wiHelper
 		return stagingTex.mapped_data != nullptr;
 	}
 
-	bool saveTextureToMemoryFile(const wiGraphics::Texture& texture, const std::string& fileExtension, std::vector<uint8_t>& filedata)
+	bool saveTextureToMemoryFile(wiGraphics::GraphicsDevice* device, const wiGraphics::Texture& texture, const std::string& fileExtension, std::vector<uint8_t>& filedata)
 	{
 		using namespace wiGraphics;
 		TextureDesc desc = texture.GetDesc();
 		std::vector<uint8_t> texturedata;
-		if (saveTextureToMemory(texture, texturedata))
+		if (saveTextureToMemory(device, texture, texturedata))
 		{
 			return saveTextureToMemoryFile(texturedata, desc, fileExtension, filedata);
 		}
@@ -422,19 +422,19 @@ namespace wiHelper
 		return write_result != 0;
 	}
 
-	bool saveTextureToFile(const wiGraphics::Texture& texture, const std::string& fileName)
+	bool saveTextureToFile(wiGraphics::GraphicsDevice* device, const wiGraphics::Texture& texture, const std::string& fileName)
 	{
 		using namespace wiGraphics;
 		TextureDesc desc = texture.GetDesc();
 		std::vector<uint8_t> data;
-		if (saveTextureToMemory(texture, data))
+		if (saveTextureToMemory(device, texture, data))
 		{
-			return saveTextureToFile(data, desc, fileName);
+			return saveTextureToFile(device, data, desc, fileName);
 		}
 		return false;
 	}
 
-	bool saveTextureToFile(const std::vector<uint8_t>& texturedata, const wiGraphics::TextureDesc& desc, const std::string& fileName)
+	bool saveTextureToFile(wiGraphics::GraphicsDevice* device, const std::vector<uint8_t>& texturedata, const wiGraphics::TextureDesc& desc, const std::string& fileName)
 	{
 		using namespace wiGraphics;
 

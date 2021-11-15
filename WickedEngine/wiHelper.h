@@ -35,22 +35,22 @@ namespace wiHelper
 
 	void messageBox(const std::string& msg, const std::string& caption = "Warning!");
 
-	void screenshot(const wiGraphics::SwapChain& swapchain, const std::string& name = "");
+	void screenshot(wiGraphics::GraphicsDevice* device, const wiGraphics::SwapChain& swapchain, const std::string& name = "");
 
 	// Save raw pixel data from the texture to memory
-	bool saveTextureToMemory(const wiGraphics::Texture& texture, std::vector<uint8_t>& texturedata);
+	bool saveTextureToMemory(wiGraphics::GraphicsDevice* device, const wiGraphics::Texture& texture, std::vector<uint8_t>& texturedata);
 
 	// Save texture to memory as a file format
-	bool saveTextureToMemoryFile(const wiGraphics::Texture& texture, const std::string& fileExtension, std::vector<uint8_t>& filedata);
+	bool saveTextureToMemoryFile(wiGraphics::GraphicsDevice* device, const wiGraphics::Texture& texture, const std::string& fileExtension, std::vector<uint8_t>& filedata);
 
 	// Save raw texture data to memory as file format
 	bool saveTextureToMemoryFile(const std::vector<uint8_t>& textureData, const wiGraphics::TextureDesc& desc, const std::string& fileExtension, std::vector<uint8_t>& filedata);
 
 	// Save texture to file format
-	bool saveTextureToFile(const wiGraphics::Texture& texture, const std::string& fileName);
+	bool saveTextureToFile(wiGraphics::GraphicsDevice* device, const wiGraphics::Texture& texture, const std::string& fileName);
 
 	// Save raw texture data to file format
-	bool saveTextureToFile(const std::vector<uint8_t>& texturedata, const wiGraphics::TextureDesc& desc, const std::string& fileName);
+	bool saveTextureToFile(wiGraphics::GraphicsDevice* device, const std::vector<uint8_t>& texturedata, const wiGraphics::TextureDesc& desc, const std::string& fileName);
 
 	std::string getCurrentDateTimeAsString();
 

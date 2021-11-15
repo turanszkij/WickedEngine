@@ -180,7 +180,7 @@ void PaintToolWindow::Create(EditorComponent* editor)
 		uint64_t sel = textureSlotComboBox.GetItemUserData(textureSlotComboBox.GetSelected());
 
 		std::vector<uint8_t> texturefiledata;
-		if (wiHelper::saveTextureToMemoryFile(editTexture, "PNG", texturefiledata))
+		if (wiHelper::saveTextureToMemoryFile(wiRenderer::GetDevice(), editTexture, "PNG", texturefiledata))
 		{
 			material->textures[sel].resource->filedata = texturefiledata;
 		}

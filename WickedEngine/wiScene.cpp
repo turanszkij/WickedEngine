@@ -1172,7 +1172,7 @@ namespace wiScene
 		{
 			SetLightmapRenderRequest(false);
 
-			bool success = wiHelper::saveTextureToMemory(lightmap, lightmapTextureData);
+			bool success = wiHelper::saveTextureToMemory(wiRenderer::GetDevice(), lightmap, lightmapTextureData);
 			assert(success);
 
 #ifdef OPEN_IMAGE_DENOISE
