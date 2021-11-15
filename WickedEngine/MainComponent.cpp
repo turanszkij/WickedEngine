@@ -127,7 +127,7 @@ void MainComponent::Run()
 
 	fadeManager.Update(dt);
 
-	COLOR_SPACE colorspace = device->GetSwapChainColorSpace(&swapChain);
+	ColorSpace colorspace = device->GetSwapChainColorSpace(&swapChain);
 
 	if (GetActivePath() != nullptr)
 	{
@@ -178,7 +178,7 @@ void MainComponent::Run()
 	viewport.height = (float)swapChain.desc.height;
 	device->BindViewports(1, &viewport, cmd);
 
-	bool colorspace_conversion_required = colorspace == COLOR_SPACE_HDR10_ST2084;
+	bool colorspace_conversion_required = colorspace == ColorSpace::HDR10_ST2084;
 	if (colorspace_conversion_required)
 	{
 		// In HDR10, we perform the compositing in a custom linear color space render target
@@ -324,17 +324,17 @@ void MainComponent::Compose(CommandList cmd)
 		if (infoDisplay.colorspace)
 		{
 			ss << "Color Space: ";
-			COLOR_SPACE colorSpace = device->GetSwapChainColorSpace(&swapChain);
+			ColorSpace colorSpace = device->GetSwapChainColorSpace(&swapChain);
 			switch (colorSpace)
 			{
 			default:
-			case wiGraphics::COLOR_SPACE_SRGB:
+			case wiGraphics::ColorSpace::SRGB:
 				ss << "sRGB";
 				break;
-			case wiGraphics::COLOR_SPACE_HDR10_ST2084:
+			case wiGraphics::ColorSpace::HDR10_ST2084:
 				ss << "ST.2084 (HDR10)";
 				break;
-			case wiGraphics::COLOR_SPACE_HDR_LINEAR:
+			case wiGraphics::ColorSpace::HDR_LINEAR:
 				ss << "Linear (HDR)";
 				break;
 			}
@@ -454,7 +454,7 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 	{
 		// initialize for the first time
 		desc.buffer_count = 3;
-		desc.format = FORMAT_R10G10B10A2_UNORM;
+		desc.format = Format::R10G10B10A2_UNORM;
 	}
 	desc.width = canvas.GetPhysicalWidth();
 	desc.height = canvas.GetPhysicalHeight();
@@ -469,19 +469,19 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 		assert(success);
 		});
 
-	if (wiRenderer::GetDevice()->GetSwapChainColorSpace(&swapChain))
+	if (wiRenderer::GetDevice()->GetSwapChainColorSpace(&swapChain) == ColorSpace::HDR10_ST2084)
 	{
 		TextureDesc desc;
 		desc.width = swapChain.desc.width;
 		desc.height = swapChain.desc.height;
-		desc.format = FORMAT_R11G11B10_FLOAT;
-		desc.bind_flags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
+		desc.format = Format::R11G11B10_FLOAT;
+		desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
 		bool success = wiRenderer::GetDevice()->CreateTexture(&desc, nullptr, &rendertarget);
 		assert(success);
 		wiRenderer::GetDevice()->SetName(&rendertarget, "MainComponent::rendertarget");
 
 		RenderPassDesc renderpassdesc;
-		renderpassdesc.attachments.push_back(RenderPassAttachment::RenderTarget(&rendertarget, RenderPassAttachment::LOADOP_CLEAR));
+		renderpassdesc.attachments.push_back(RenderPassAttachment::RenderTarget(&rendertarget, RenderPassAttachment::LoadOp::CLEAR));
 		success = wiRenderer::GetDevice()->CreateRenderPass(&renderpassdesc, &renderpass);
 		assert(success);
 	}

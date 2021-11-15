@@ -51,8 +51,8 @@ bool ImGui_Impl_CreateDeviceObjects()
 	textureDesc.height = height;
 	textureDesc.mip_levels = 1;
 	textureDesc.array_size = 1;
-	textureDesc.format = FORMAT_R8G8B8A8_UNORM;
-	textureDesc.bind_flags = BIND_SHADER_RESOURCE;
+	textureDesc.format = Format::R8G8B8A8_UNORM;
+	textureDesc.bind_flags = BindFlag::SHADER_RESOURCE;
 
 	SubresourceData textureData;
 	textureData.data_ptr = pixels;
@@ -66,9 +66,9 @@ bool ImGui_Impl_CreateDeviceObjects()
 
 	imguiInputLayout.elements =
 	{
-		{ "POSITION", 0, FORMAT_R32G32_FLOAT, 0, (uint32_t)IM_OFFSETOF(ImDrawVert, pos), INPUT_PER_VERTEX_DATA },
-		{ "TEXCOORD", 0, FORMAT_R32G32_FLOAT, 0, (uint32_t)IM_OFFSETOF(ImDrawVert, uv), INPUT_PER_VERTEX_DATA },
-		{ "COLOR", 0, FORMAT_R8G8B8A8_UNORM, 0, (uint32_t)IM_OFFSETOF(ImDrawVert, col), INPUT_PER_VERTEX_DATA },
+		{ "POSITION", 0, Format::R32G32_FLOAT, 0, (uint32_t)IM_OFFSETOF(ImDrawVert, pos), InputClassification::PER_VERTEX_DATA },
+		{ "TEXCOORD", 0, Format::R32G32_FLOAT, 0, (uint32_t)IM_OFFSETOF(ImDrawVert, uv), InputClassification::PER_VERTEX_DATA },
+		{ "COLOR", 0, Format::R8G8B8A8_UNORM, 0, (uint32_t)IM_OFFSETOF(ImDrawVert, col), InputClassification::PER_VERTEX_DATA },
 	};
 
 	// Create pipeline
@@ -79,7 +79,7 @@ bool ImGui_Impl_CreateDeviceObjects()
 	desc.dss = wiRenderer::GetDepthStencilState(DSSTYPE_DEPTHREAD);
 	desc.rs = wiRenderer::GetRasterizerState(RSTYPE_DOUBLESIDED);
 	desc.bs = wiRenderer::GetBlendState(BSTYPE_TRANSPARENT);
-	desc.pt = TRIANGLELIST;
+	desc.pt = PrimitiveTopology::TRIANGLELIST;
 	wiRenderer::GetDevice()->CreatePipelineState(&desc, &imguiPSO);
 
 	return true;
@@ -106,8 +106,8 @@ void Example_ImGui::Initialize()
 		auto shaderPath = wiRenderer::GetShaderSourcePath();
 		wiRenderer::SetShaderSourcePath(wiHelper::GetCurrentPath() + "/");
 
-		wiRenderer::LoadShader(VS, imguiVS, "ImGuiVS.cso");
-		wiRenderer::LoadShader(PS, imguiPS, "ImGuiPS.cso");
+		wiRenderer::LoadShader(ShaderStage::VS, imguiVS, "ImGuiVS.cso");
+		wiRenderer::LoadShader(ShaderStage::PS, imguiPS, "ImGuiPS.cso");
 
 		wiRenderer::SetShaderSourcePath(shaderPath);
 	}
@@ -232,7 +232,7 @@ void Example_ImGui::Compose(wiGraphics::CommandList cmd)
 	};
 
 	device->BindVertexBuffers(vbs, 0, 1, strides, offsets, cmd);
-	device->BindIndexBuffer(&indexBufferAllocation.buffer, INDEXFORMAT_16BIT, indexBufferAllocation.offset, cmd);
+	device->BindIndexBuffer(&indexBufferAllocation.buffer, IndexBufferFormat::UINT16, indexBufferAllocation.offset, cmd);
 
 	Viewport viewport;
 	viewport.width = (float)fb_width;

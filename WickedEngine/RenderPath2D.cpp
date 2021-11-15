@@ -18,9 +18,9 @@ void RenderPath2D::ResizeBuffers()
 	if(dsv != nullptr && (resolutionScale != 1.0f ||  dsv->GetDesc().sample_count > 1))
 	{
 		TextureDesc desc = GetDepthStencil()->GetDesc();
-		desc.layout = RESOURCE_STATE_SHADER_RESOURCE;
-		desc.bind_flags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
-		desc.format = FORMAT_R8G8B8A8_UNORM;
+		desc.layout = ResourceState::SHADER_RESOURCE;
+		desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+		desc.format = Format::R8G8B8A8_UNORM;
 		device->CreateTexture(&desc, nullptr, &rtStenciled);
 		device->SetName(&rtStenciled, "rtStenciled");
 
@@ -38,8 +38,8 @@ void RenderPath2D::ResizeBuffers()
 
 	{
 		TextureDesc desc;
-		desc.bind_flags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
-		desc.format = FORMAT_R8G8B8A8_UNORM;
+		desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+		desc.format = Format::R8G8B8A8_UNORM;
 		desc.width = GetPhysicalWidth();
 		desc.height = GetPhysicalHeight();
 		device->CreateTexture(&desc, nullptr, &rtFinal);
@@ -49,15 +49,15 @@ void RenderPath2D::ResizeBuffers()
 	if (rtStenciled.IsValid())
 	{
 		RenderPassDesc desc;
-		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtStenciled, RenderPassAttachment::LOADOP_CLEAR));
+		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtStenciled, RenderPassAttachment::LoadOp::CLEAR));
 		desc.attachments.push_back(
 			RenderPassAttachment::DepthStencil(
 				dsv,
-				RenderPassAttachment::LOADOP_LOAD,
-				RenderPassAttachment::STOREOP_STORE,
-				RESOURCE_STATE_DEPTHSTENCIL_READONLY,
-				RESOURCE_STATE_DEPTHSTENCIL_READONLY,
-				RESOURCE_STATE_DEPTHSTENCIL_READONLY
+				RenderPassAttachment::LoadOp::LOAD,
+				RenderPassAttachment::StoreOp::STORE,
+				ResourceState::DEPTHSTENCIL_READONLY,
+				ResourceState::DEPTHSTENCIL_READONLY,
+				ResourceState::DEPTHSTENCIL_READONLY
 			)
 		);
 
@@ -72,18 +72,18 @@ void RenderPath2D::ResizeBuffers()
 	}
 	{
 		RenderPassDesc desc;
-		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtFinal, RenderPassAttachment::LOADOP_CLEAR));
+		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtFinal, RenderPassAttachment::LoadOp::CLEAR));
 		
 		if(dsv != nullptr && !rtStenciled.IsValid())
 		{
 			desc.attachments.push_back(
 				RenderPassAttachment::DepthStencil(
 					dsv,
-					RenderPassAttachment::LOADOP_LOAD,
-					RenderPassAttachment::STOREOP_STORE,
-					RESOURCE_STATE_DEPTHSTENCIL_READONLY,
-					RESOURCE_STATE_DEPTHSTENCIL_READONLY,
-					RESOURCE_STATE_DEPTHSTENCIL_READONLY
+					RenderPassAttachment::LoadOp::LOAD,
+					RenderPassAttachment::StoreOp::STORE,
+					ResourceState::DEPTHSTENCIL_READONLY,
+					ResourceState::DEPTHSTENCIL_READONLY,
+					ResourceState::DEPTHSTENCIL_READONLY
 				)
 			);
 		}
@@ -135,16 +135,16 @@ void RenderPath2D::Update(float dt)
 		}
 	}
 
-	if (colorspace != COLOR_SPACE_SRGB && (rtLinearColorSpace.desc.width != rtFinal.desc.width || rtLinearColorSpace.desc.height != rtFinal.desc.height))
+	if (colorspace != ColorSpace::SRGB && (rtLinearColorSpace.desc.width != rtFinal.desc.width || rtLinearColorSpace.desc.height != rtFinal.desc.height))
 	{
 		TextureDesc desc = rtFinal.desc;
-		desc.format = FORMAT_R16G16B16A16_FLOAT;
+		desc.format = Format::R16G16B16A16_FLOAT;
 		bool success = wiRenderer::GetDevice()->CreateTexture(&desc, nullptr, &rtLinearColorSpace);
 		assert(success);
 		wiRenderer::GetDevice()->SetName(&rtLinearColorSpace, "rtLinearColorSpace");
 
 		RenderPassDesc renderpassdesc;
-		renderpassdesc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtLinearColorSpace, RenderPassAttachment::LOADOP_CLEAR));
+		renderpassdesc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtLinearColorSpace, RenderPassAttachment::LoadOp::CLEAR));
 		success = wiRenderer::GetDevice()->CreateRenderPass(&renderpassdesc, &renderpass_linearize);
 		assert(success);
 	}
@@ -293,7 +293,7 @@ void RenderPath2D::Render() const
 
 	device->RenderPassEnd(cmd);
 
-	if (colorspace != COLOR_SPACE_SRGB)
+	if (colorspace != ColorSpace::SRGB)
 	{
 		// Convert the regular SRGB result of the render path to linear space for HDR compositing:
 		device->RenderPassBegin(&renderpass_linearize, cmd);

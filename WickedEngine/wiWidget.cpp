@@ -348,7 +348,7 @@ namespace wiWidget_Internal
 		desc.dss = wiRenderer::GetDepthStencilState(DSSTYPE_XRAY);
 		desc.bs = wiRenderer::GetBlendState(BSTYPE_TRANSPARENT);
 		desc.rs = wiRenderer::GetRasterizerState(RSTYPE_DOUBLESIDED);
-		desc.pt = TRIANGLESTRIP;
+		desc.pt = PrimitiveTopology::TRIANGLESTRIP;
 		wiRenderer::GetDevice()->CreatePipelineState(&desc, &PSO_colored);
 	}
 }
@@ -1306,7 +1306,7 @@ void wiComboBox::Render(const wiCanvas& canvas, CommandList cmd) const
 		wiMath::ConstructTriangleEquilateral(1, vertices[0].pos, vertices[1].pos, vertices[2].pos);
 
 		GPUBufferDesc desc;
-		desc.bind_flags = BIND_VERTEX_BUFFER;
+		desc.bind_flags = BindFlag::VERTEX_BUFFER;
 		desc.size = sizeof(vertices);
 		device->CreateBuffer(&desc, &vertices, &vb_triangle);
 	}
@@ -2340,7 +2340,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			}
 
 			GPUBufferDesc desc;
-			desc.bind_flags = BIND_VERTEX_BUFFER;
+			desc.bind_flags = BindFlag::VERTEX_BUFFER;
 			desc.size = vertices.size() * sizeof(Vertex);
 			desc.stride = 0;
 			device->CreateBuffer(&desc, vertices.data(), &vb_hue);
@@ -2362,7 +2362,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			}
 
 			GPUBufferDesc desc;
-			desc.bind_flags = BIND_VERTEX_BUFFER;
+			desc.bind_flags = BindFlag::VERTEX_BUFFER;
 			desc.size = vertices.size() * sizeof(Vertex);
 			desc.stride = 0;
 			device->CreateBuffer(&desc, vertices.data(), &vb_picker_saturation);
@@ -2398,7 +2398,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			};
 
 			GPUBufferDesc desc;
-			desc.bind_flags = BIND_VERTEX_BUFFER;
+			desc.bind_flags = BindFlag::VERTEX_BUFFER;
 			desc.size = sizeof(vertices);
 			desc.stride = 0;
 			device->CreateBuffer(&desc, vertices, &vb_picker_hue);
@@ -2414,7 +2414,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			};
 
 			GPUBufferDesc desc;
-			desc.bind_flags = BIND_VERTEX_BUFFER;
+			desc.bind_flags = BindFlag::VERTEX_BUFFER;
 			desc.size = sizeof(vertices);
 			device->CreateBuffer(&desc, vertices, &vb_preview);
 		}
@@ -2922,7 +2922,7 @@ void wiTreeList::Render(const wiCanvas& canvas, CommandList cmd) const
 		wiMath::ConstructTriangleEquilateral(1, vertices[0].pos, vertices[1].pos, vertices[2].pos);
 
 		GPUBufferDesc desc;
-		desc.bind_flags = BIND_VERTEX_BUFFER;
+		desc.bind_flags = BindFlag::VERTEX_BUFFER;
 		desc.size = sizeof(vertices);
 		device->CreateBuffer(&desc, vertices, &vb_triangle);
 	}

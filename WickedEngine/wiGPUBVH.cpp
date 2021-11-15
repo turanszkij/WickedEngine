@@ -63,12 +63,12 @@ void wiGPUBVH::Update(const wiScene::Scene& scene)
 	if (totalTriangles > 0 && !primitiveCounterBuffer.IsValid())
 	{
 		GPUBufferDesc desc;
-		desc.bind_flags = BIND_SHADER_RESOURCE;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE;
 		desc.stride = sizeof(uint);
 		desc.size = desc.stride;
-		desc.format = FORMAT_UNKNOWN;
-		desc.misc_flags = RESOURCE_MISC_BUFFER_RAW;
-		desc.usage = USAGE_DEFAULT;
+		desc.format = Format::UNKNOWN;
+		desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+		desc.usage = Usage::DEFAULT;
 		device->CreateBuffer(&desc, nullptr, &primitiveCounterBuffer);
 		device->SetName(&primitiveCounterBuffer, "primitiveCounterBuffer");
 	}
@@ -84,56 +84,56 @@ void wiGPUBVH::Update(const wiScene::Scene& scene)
 
 		GPUBufferDesc desc;
 
-		desc.bind_flags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 		desc.stride = sizeof(BVHNode);
 		desc.size = desc.stride * primitiveCapacity * 2;
-		desc.format = FORMAT_UNKNOWN;
-		desc.misc_flags = RESOURCE_MISC_BUFFER_RAW;
-		desc.usage = USAGE_DEFAULT;
+		desc.format = Format::UNKNOWN;
+		desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+		desc.usage = Usage::DEFAULT;
 		device->CreateBuffer(&desc, nullptr, &bvhNodeBuffer);
 		device->SetName(&bvhNodeBuffer, "BVHNodeBuffer");
 
-		desc.bind_flags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 		desc.stride = sizeof(uint);
 		desc.size = desc.stride * primitiveCapacity * 2;
-		desc.format = FORMAT_UNKNOWN;
-		desc.misc_flags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		desc.usage = USAGE_DEFAULT;
+		desc.format = Format::UNKNOWN;
+		desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
+		desc.usage = Usage::DEFAULT;
 		device->CreateBuffer(&desc, nullptr, &bvhParentBuffer);
 		device->SetName(&bvhParentBuffer, "BVHParentBuffer");
 
-		desc.bind_flags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 		desc.stride = sizeof(uint);
 		desc.size = desc.stride * (((primitiveCapacity - 1) + 31) / 32); // bitfield for internal nodes
-		desc.format = FORMAT_UNKNOWN;
-		desc.misc_flags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		desc.usage = USAGE_DEFAULT;
+		desc.format = Format::UNKNOWN;
+		desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
+		desc.usage = Usage::DEFAULT;
 		device->CreateBuffer(&desc, nullptr, &bvhFlagBuffer);
 		device->SetName(&bvhFlagBuffer, "BVHFlagBuffer");
 
-		desc.bind_flags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 		desc.stride = sizeof(uint);
 		desc.size = desc.stride * primitiveCapacity;
-		desc.format = FORMAT_UNKNOWN;
-		desc.misc_flags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		desc.usage = USAGE_DEFAULT;
+		desc.format = Format::UNKNOWN;
+		desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
+		desc.usage = Usage::DEFAULT;
 		device->CreateBuffer(&desc, nullptr, &primitiveIDBuffer);
 		device->SetName(&primitiveIDBuffer, "primitiveIDBuffer");
 
-		desc.bind_flags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 		desc.stride = sizeof(BVHPrimitive);
 		desc.size = desc.stride * primitiveCapacity;
-		desc.format = FORMAT_UNKNOWN;
-		desc.misc_flags = RESOURCE_MISC_BUFFER_RAW;
-		desc.usage = USAGE_DEFAULT;
+		desc.format = Format::UNKNOWN;
+		desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+		desc.usage = Usage::DEFAULT;
 		device->CreateBuffer(&desc, nullptr, &primitiveBuffer);
 		device->SetName(&primitiveBuffer, "primitiveBuffer");
 
-		desc.bind_flags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 		desc.size = desc.stride * primitiveCapacity;
-		desc.format = FORMAT_UNKNOWN;
-		desc.misc_flags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		desc.usage = USAGE_DEFAULT;
+		desc.format = Format::UNKNOWN;
+		desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
+		desc.usage = Usage::DEFAULT;
 		desc.stride = sizeof(float); // morton buffer is float because sorting must be done and gpu sort operates on floats for now!
 		device->CreateBuffer(&desc, nullptr, &primitiveMortonBuffer);
 		device->SetName(&primitiveMortonBuffer, "primitiveMortonBuffer");
@@ -245,14 +245,14 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
 
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Buffer(&primitiveCounterBuffer, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_COPY_DST),
+			GPUBarrier::Buffer(&primitiveCounterBuffer, ResourceState::SHADER_RESOURCE, ResourceState::COPY_DST),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 	device->UpdateBuffer(&primitiveCounterBuffer, &primitiveCount, cmd);
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Buffer(&primitiveCounterBuffer, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE),
+			GPUBarrier::Buffer(&primitiveCounterBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
@@ -415,9 +415,9 @@ namespace wiGPUBVH_Internal
 {
 	void LoadShaders()
 	{
-		wiRenderer::LoadShader(CS, computeShaders[CSTYPE_BVH_PRIMITIVES], "bvh_primitivesCS.cso");
-		wiRenderer::LoadShader(CS, computeShaders[CSTYPE_BVH_HIERARCHY], "bvh_hierarchyCS.cso");
-		wiRenderer::LoadShader(CS, computeShaders[CSTYPE_BVH_PROPAGATEAABB], "bvh_propagateaabbCS.cso");
+		wiRenderer::LoadShader(ShaderStage::CS, computeShaders[CSTYPE_BVH_PRIMITIVES], "bvh_primitivesCS.cso");
+		wiRenderer::LoadShader(ShaderStage::CS, computeShaders[CSTYPE_BVH_HIERARCHY], "bvh_hierarchyCS.cso");
+		wiRenderer::LoadShader(ShaderStage::CS, computeShaders[CSTYPE_BVH_PROPAGATEAABB], "bvh_propagateaabbCS.cso");
 	}
 }
 

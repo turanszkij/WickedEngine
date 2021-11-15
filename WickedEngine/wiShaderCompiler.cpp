@@ -30,6 +30,10 @@
 #include <d3dcompiler.h>
 #endif // SHADERCOMPILER_ENABLED_D3DCOMPILER
 
+using wiGraphics::ShaderFormat;
+using wiGraphics::ShaderStage;
+using wiGraphics::ShaderModel;
+
 namespace wiShaderCompiler
 {
 #ifdef SHADERCOMPILER_ENABLED_DXCOMPILER
@@ -71,10 +75,10 @@ namespace wiShaderCompiler
 
 		switch (input.format)
 		{
-		case wiGraphics::SHADERFORMAT_HLSL6:
+		case ShaderFormat::HLSL6:
 			args.push_back(L"-D"); args.push_back(L"HLSL6");
 			break;
-		case wiGraphics::SHADERFORMAT_SPIRV:
+		case ShaderFormat::SPIRV:
 			args.push_back(L"-D"); args.push_back(L"SPIRV");
 			args.push_back(L"-spirv");
 			args.push_back(L"-fspv-target-env=vulkan1.2");
@@ -93,218 +97,218 @@ namespace wiShaderCompiler
 		args.push_back(L"-T");
 		switch (input.stage)
 		{
-		case wiGraphics::MS:
+		case ShaderStage::MS:
 			switch (input.minshadermodel)
 			{
 			default:
 				args.push_back(L"ms_6_5");
 				break;
-			case wiGraphics::SHADERMODEL_6_6:
+			case ShaderModel::SM_6_6:
 				args.push_back(L"ms_6_6");
 				break;
-			case wiGraphics::SHADERMODEL_6_7:
+			case ShaderModel::SM_6_7:
 				args.push_back(L"ms_6_7");
 				break;
 			}
 			break;
-		case wiGraphics::AS:
+		case ShaderStage::AS:
 			switch (input.minshadermodel)
 			{
 			default:
 				args.push_back(L"as_6_5");
 				break;
-			case wiGraphics::SHADERMODEL_6_6:
+			case ShaderModel::SM_6_6:
 				args.push_back(L"as_6_6");
 				break;
-			case wiGraphics::SHADERMODEL_6_7:
+			case ShaderModel::SM_6_7:
 				args.push_back(L"as_6_7");
 				break;
 			}
 			break;
-		case wiGraphics::VS:
+		case ShaderStage::VS:
 			switch (input.minshadermodel)
 			{
 			default:
 				args.push_back(L"vs_6_0");
 				break;
-			case wiGraphics::SHADERMODEL_6_1:
+			case ShaderModel::SM_6_1:
 				args.push_back(L"vs_6_1");
 				break;
-			case wiGraphics::SHADERMODEL_6_2:
+			case ShaderModel::SM_6_2:
 				args.push_back(L"vs_6_2");
 				break;
-			case wiGraphics::SHADERMODEL_6_3:
+			case ShaderModel::SM_6_3:
 				args.push_back(L"vs_6_3");
 				break;
-			case wiGraphics::SHADERMODEL_6_4:
+			case ShaderModel::SM_6_4:
 				args.push_back(L"vs_6_4");
 				break;
-			case wiGraphics::SHADERMODEL_6_5:
+			case ShaderModel::SM_6_5:
 				args.push_back(L"vs_6_5");
 				break;
-			case wiGraphics::SHADERMODEL_6_6:
+			case ShaderModel::SM_6_6:
 				args.push_back(L"vs_6_6");
 				break;
-			case wiGraphics::SHADERMODEL_6_7:
+			case ShaderModel::SM_6_7:
 				args.push_back(L"vs_6_7");
 				break;
 			}
 			break;
-		case wiGraphics::HS:
+		case ShaderStage::HS:
 			switch (input.minshadermodel)
 			{
 			default:
 				args.push_back(L"hs_6_0");
 				break;
-			case wiGraphics::SHADERMODEL_6_1:
+			case ShaderModel::SM_6_1:
 				args.push_back(L"hs_6_1");
 				break;
-			case wiGraphics::SHADERMODEL_6_2:
+			case ShaderModel::SM_6_2:
 				args.push_back(L"hs_6_2");
 				break;
-			case wiGraphics::SHADERMODEL_6_3:
+			case ShaderModel::SM_6_3:
 				args.push_back(L"hs_6_3");
 				break;
-			case wiGraphics::SHADERMODEL_6_4:
+			case ShaderModel::SM_6_4:
 				args.push_back(L"hs_6_4");
 				break;
-			case wiGraphics::SHADERMODEL_6_5:
+			case ShaderModel::SM_6_5:
 				args.push_back(L"hs_6_5");
 				break;
-			case wiGraphics::SHADERMODEL_6_6:
+			case ShaderModel::SM_6_6:
 				args.push_back(L"hs_6_6");
 				break;
-			case wiGraphics::SHADERMODEL_6_7:
+			case ShaderModel::SM_6_7:
 				args.push_back(L"hs_6_7");
 				break;
 			}
 			break;
-		case wiGraphics::DS:
+		case ShaderStage::DS:
 			switch (input.minshadermodel)
 			{
 			default:
 				args.push_back(L"ds_6_0");
 				break;
-			case wiGraphics::SHADERMODEL_6_1:
+			case ShaderModel::SM_6_1:
 				args.push_back(L"ds_6_1");
 				break;
-			case wiGraphics::SHADERMODEL_6_2:
+			case ShaderModel::SM_6_2:
 				args.push_back(L"ds_6_2");
 				break;
-			case wiGraphics::SHADERMODEL_6_3:
+			case ShaderModel::SM_6_3:
 				args.push_back(L"ds_6_3");
 				break;
-			case wiGraphics::SHADERMODEL_6_4:
+			case ShaderModel::SM_6_4:
 				args.push_back(L"ds_6_4");
 				break;
-			case wiGraphics::SHADERMODEL_6_5:
+			case ShaderModel::SM_6_5:
 				args.push_back(L"ds_6_5");
 				break;
-			case wiGraphics::SHADERMODEL_6_6:
+			case ShaderModel::SM_6_6:
 				args.push_back(L"ds_6_6");
 				break;
-			case wiGraphics::SHADERMODEL_6_7:
+			case ShaderModel::SM_6_7:
 				args.push_back(L"ds_6_7");
 				break;
 			}
 			break;
-		case wiGraphics::GS:
+		case ShaderStage::GS:
 			switch (input.minshadermodel)
 			{
 			default:
 				args.push_back(L"gs_6_0");
 				break;
-			case wiGraphics::SHADERMODEL_6_1:
+			case ShaderModel::SM_6_1:
 				args.push_back(L"gs_6_1");
 				break;
-			case wiGraphics::SHADERMODEL_6_2:
+			case ShaderModel::SM_6_2:
 				args.push_back(L"gs_6_2");
 				break;
-			case wiGraphics::SHADERMODEL_6_3:
+			case ShaderModel::SM_6_3:
 				args.push_back(L"gs_6_3");
 				break;
-			case wiGraphics::SHADERMODEL_6_4:
+			case ShaderModel::SM_6_4:
 				args.push_back(L"gs_6_4");
 				break;
-			case wiGraphics::SHADERMODEL_6_5:
+			case ShaderModel::SM_6_5:
 				args.push_back(L"gs_6_5");
 				break;
-			case wiGraphics::SHADERMODEL_6_6:
+			case ShaderModel::SM_6_6:
 				args.push_back(L"gs_6_6");
 				break;
-			case wiGraphics::SHADERMODEL_6_7:
+			case ShaderModel::SM_6_7:
 				args.push_back(L"gs_6_7");
 				break;
 			}
 			break;
-		case wiGraphics::PS:
+		case ShaderStage::PS:
 			switch (input.minshadermodel)
 			{
 			default:
 				args.push_back(L"ps_6_0");
 				break;
-			case wiGraphics::SHADERMODEL_6_1:
+			case ShaderModel::SM_6_1:
 				args.push_back(L"ps_6_1");
 				break;
-			case wiGraphics::SHADERMODEL_6_2:
+			case ShaderModel::SM_6_2:
 				args.push_back(L"ps_6_2");
 				break;
-			case wiGraphics::SHADERMODEL_6_3:
+			case ShaderModel::SM_6_3:
 				args.push_back(L"ps_6_3");
 				break;
-			case wiGraphics::SHADERMODEL_6_4:
+			case ShaderModel::SM_6_4:
 				args.push_back(L"ps_6_4");
 				break;
-			case wiGraphics::SHADERMODEL_6_5:
+			case ShaderModel::SM_6_5:
 				args.push_back(L"ps_6_5");
 				break;
-			case wiGraphics::SHADERMODEL_6_6:
+			case ShaderModel::SM_6_6:
 				args.push_back(L"ps_6_6");
 				break;
-			case wiGraphics::SHADERMODEL_6_7:
+			case ShaderModel::SM_6_7:
 				args.push_back(L"ps_6_7");
 				break;
 			}
 			break;
-		case wiGraphics::CS:
+		case ShaderStage::CS:
 			switch (input.minshadermodel)
 			{
 			default:
 				args.push_back(L"cs_6_0");
 				break;
-			case wiGraphics::SHADERMODEL_6_1:
+			case ShaderModel::SM_6_1:
 				args.push_back(L"cs_6_1");
 				break;
-			case wiGraphics::SHADERMODEL_6_2:
+			case ShaderModel::SM_6_2:
 				args.push_back(L"cs_6_2");
 				break;
-			case wiGraphics::SHADERMODEL_6_3:
+			case ShaderModel::SM_6_3:
 				args.push_back(L"cs_6_3");
 				break;
-			case wiGraphics::SHADERMODEL_6_4:
+			case ShaderModel::SM_6_4:
 				args.push_back(L"cs_6_4");
 				break;
-			case wiGraphics::SHADERMODEL_6_5:
+			case ShaderModel::SM_6_5:
 				args.push_back(L"cs_6_5");
 				break;
-			case wiGraphics::SHADERMODEL_6_6:
+			case ShaderModel::SM_6_6:
 				args.push_back(L"cs_6_6");
 				break;
-			case wiGraphics::SHADERMODEL_6_7:
+			case ShaderModel::SM_6_7:
 				args.push_back(L"cs_6_7");
 				break;
 			}
 			break;
-		case wiGraphics::LIB:
+		case ShaderStage::LIB:
 			switch (input.minshadermodel)
 			{
 			default:
 				args.push_back(L"lib_6_5");
 				break;
-			case wiGraphics::SHADERMODEL_6_6:
+			case ShaderModel::SM_6_6:
 				args.push_back(L"lib_6_6");
 				break;
-			case wiGraphics::SHADERMODEL_6_7:
+			case ShaderModel::SM_6_7:
 				args.push_back(L"lib_6_7");
 				break;
 			}
@@ -427,7 +431,7 @@ namespace wiShaderCompiler
 			output.internal_state = internal_state;
 		}
 
-		if (input.format == wiGraphics::SHADERFORMAT_HLSL6)
+		if (input.format == ShaderFormat::HLSL6)
 		{
 			CComPtr<IDxcBlob> pHash = nullptr;
 			hr = pResults->GetOutput(DXC_OUT_SHADER_HASH, IID_PPV_ARGS(&pHash), nullptr);
@@ -454,7 +458,7 @@ namespace wiShaderCompiler
 			return;
 		}
 
-		if (input.minshadermodel > wiGraphics::SHADERMODEL_5_0)
+		if (input.minshadermodel > ShaderModel::SM_5_0)
 		{
 			output.error_message = "SHADERFORMAT_HLSL5 cannot support specified minshadermodel!";
 			return;
@@ -642,8 +646,8 @@ namespace wiShaderCompiler
 			break;
 
 #ifdef SHADERCOMPILER_ENABLED_DXCOMPILER
-		case wiGraphics::SHADERFORMAT_HLSL6:
-		case wiGraphics::SHADERFORMAT_SPIRV:
+		case ShaderFormat::HLSL6:
+		case ShaderFormat::SPIRV:
 			Compile_DXCompiler(input, output);
 			break;
 #endif // SHADERCOMPILER_ENABLED_DXCOMPILER

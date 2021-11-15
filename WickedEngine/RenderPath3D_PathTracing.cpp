@@ -46,16 +46,16 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 
 	{
 		TextureDesc desc;
-		desc.bind_flags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE | BIND_RENDER_TARGET;
-		desc.format = FORMAT_R32G32B32A32_FLOAT;
+		desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE | BindFlag::RENDER_TARGET;
+		desc.format = Format::R32G32B32A32_FLOAT;
 		desc.width = internalResolution.x;
 		desc.height = internalResolution.y;
 		device->CreateTexture(&desc, nullptr, &traceResult);
 		device->SetName(&traceResult, "traceResult");
 
 #ifdef OPEN_IMAGE_DENOISE
-		desc.bind_flags = BIND_UNORDERED_ACCESS;
-		desc.layout = RESOURCE_STATE_UNORDERED_ACCESS;
+		desc.bind_flags = BindFlag::UNORDERED_ACCESS;
+		desc.layout = ResourceState::UNORDERED_ACCESS;
 		device->CreateTexture(&desc, nullptr, &denoiserAlbedo);
 		device->SetName(&denoiserAlbedo, "denoiserAlbedo");
 		device->CreateTexture(&desc, nullptr, &denoiserNormal);
@@ -64,8 +64,8 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 	}
 	{
 		TextureDesc desc;
-		desc.bind_flags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.format = FORMAT_R11G11B10_FLOAT;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+		desc.format = Format::R11G11B10_FLOAT;
 		desc.width = internalResolution.x;
 		desc.height = internalResolution.y;
 		device->CreateTexture(&desc, nullptr, &rtPostprocess);
@@ -74,7 +74,7 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 
 		desc.width /= 4;
 		desc.height /= 4;
-		desc.bind_flags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
+		desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
 		device->CreateTexture(&desc, nullptr, &rtGUIBlurredBackground[0]);
 		device->SetName(&rtGUIBlurredBackground[0], "rtGUIBlurredBackground[0]");
 
@@ -88,7 +88,7 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 
 	{
 		RenderPassDesc desc;
-		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&traceResult, RenderPassAttachment::LOADOP_CLEAR));
+		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&traceResult, RenderPassAttachment::LoadOp::CLEAR));
 
 		device->CreateRenderPass(&desc, &renderpass_debugbvh);
 	}
@@ -225,8 +225,8 @@ void RenderPath3D_PathTracing::Update(float dt)
 					TextureDesc desc;
 					desc.width = (uint32_t)width;
 					desc.height = (uint32_t)height;
-					desc.bind_flags = BIND_SHADER_RESOURCE;
-					desc.format = FORMAT_R32G32B32A32_FLOAT;
+					desc.bind_flags = BindFlag::SHADER_RESOURCE;
+					desc.format = Format::R32G32B32A32_FLOAT;
 
 					SubresourceData initdata;
 					initdata.data_ptr = texturedata_dst.data();

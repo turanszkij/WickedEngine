@@ -108,11 +108,11 @@ namespace wiHelper
 
 		Texture stagingTex;
 		TextureDesc staging_desc = desc;
-		staging_desc.usage = USAGE_READBACK;
+		staging_desc.usage = Usage::READBACK;
 		staging_desc.mip_levels = 1;
-		staging_desc.layout = RESOURCE_STATE_COPY_DST;
-		staging_desc.bind_flags = BIND_NONE;
-		staging_desc.misc_flags = RESOURCE_MISC_NONE;
+		staging_desc.layout = ResourceState::COPY_DST;
+		staging_desc.bind_flags = BindFlag::NONE;
+		staging_desc.misc_flags = ResourceMiscFlag::NONE;
 
 		assert(device != nullptr);
 		bool success = device->CreateTexture(&staging_desc, nullptr, &stagingTex);
@@ -122,7 +122,7 @@ namespace wiHelper
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&texture,texture.desc.layout,RESOURCE_STATE_COPY_SRC),
+				GPUBarrier::Image(&texture,texture.desc.layout,ResourceState::COPY_SRC),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -131,7 +131,7 @@ namespace wiHelper
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&texture,RESOURCE_STATE_COPY_SRC,texture.desc.layout),
+				GPUBarrier::Image(&texture,ResourceState::COPY_SRC,texture.desc.layout),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -197,7 +197,7 @@ namespace wiHelper
 		bool ktx2 = !extension.compare("KTX2");
 		basisu::image basis_image;
 
-		if (desc.format == FORMAT_R10G10B10A2_UNORM)
+		if (desc.format == Format::R10G10B10A2_UNORM)
 		{
 			// This will be converted first to rgba8 before saving to common format:
 			uint32_t* data32 = (uint32_t*)texturedata.data();
@@ -219,7 +219,7 @@ namespace wiHelper
 				data32[i] = rgba8;
 			}
 		}
-		else if (desc.format == FORMAT_R32G32B32A32_FLOAT)
+		else if (desc.format == Format::R32G32B32A32_FLOAT)
 		{
 			// This will be converted first to rgba8 before saving to common format:
 			XMFLOAT4* dataSrc = (XMFLOAT4*)texturedata.data();
@@ -242,7 +242,7 @@ namespace wiHelper
 				data32[i] = rgba8;
 			}
 		}
-		else if (desc.format == FORMAT_R16G16B16A16_FLOAT)
+		else if (desc.format == Format::R16G16B16A16_FLOAT)
 		{
 			// This will be converted first to rgba8 before saving to common format:
 			XMHALF4* dataSrc = (XMHALF4*)texturedata.data();
@@ -265,7 +265,7 @@ namespace wiHelper
 				data32[i] = rgba8;
 			}
 		}
-		else if (desc.format == FORMAT_R11G11B10_FLOAT)
+		else if (desc.format == Format::R11G11B10_FLOAT)
 		{
 			// This will be converted first to rgba8 before saving to common format:
 			XMFLOAT3PK* dataSrc = (XMFLOAT3PK*)texturedata.data();
@@ -299,22 +299,22 @@ namespace wiHelper
 			default:
 				assert(0);
 				return false;
-			case FORMAT_BC1_UNORM:
-			case FORMAT_BC1_UNORM_SRGB:
+			case Format::BC1_UNORM:
+			case Format::BC1_UNORM_SRGB:
 				fmt = basisu::texture_format::cBC1;
 				break;
-			case FORMAT_BC3_UNORM:
-			case FORMAT_BC3_UNORM_SRGB:
+			case Format::BC3_UNORM:
+			case Format::BC3_UNORM_SRGB:
 				fmt = basisu::texture_format::cBC3;
 				break;
-			case FORMAT_BC4_UNORM:
+			case Format::BC4_UNORM:
 				fmt = basisu::texture_format::cBC4;
 				break;
-			case FORMAT_BC5_UNORM:
+			case Format::BC5_UNORM:
 				fmt = basisu::texture_format::cBC5;
 				break;
-			case FORMAT_BC7_UNORM:
-			case FORMAT_BC7_UNORM_SRGB:
+			case Format::BC7_UNORM:
+			case Format::BC7_UNORM_SRGB:
 				fmt = basisu::texture_format::cBC7;
 				break;
 			}
@@ -325,7 +325,7 @@ namespace wiHelper
 		}
 		else
 		{
-			assert(desc.format == FORMAT_R8G8B8A8_UNORM); // If you need to save other texture format, implement data conversion for it
+			assert(desc.format == Format::R8G8B8A8_UNORM); // If you need to save other texture format, implement data conversion for it
 		}
 
 		if (basis || ktx2)

@@ -66,10 +66,10 @@ namespace wiRenderer
 	size_t GetShaderDumpCount();
 
 	bool LoadShader(
-		wiGraphics::SHADERSTAGE stage,
+		wiGraphics::ShaderStage stage,
 		wiGraphics::Shader& shader,
 		const std::string& filename,
-		wiGraphics::SHADERMODEL minshadermodel = wiGraphics::SHADERMODEL_6_0
+		wiGraphics::ShaderModel minshadermodel = wiGraphics::ShaderModel::SM_6_0
 	);
 
 
@@ -593,7 +593,7 @@ namespace wiRenderer
 		const wiGraphics::Texture* texture_distortion = nullptr,
 		const wiGraphics::GPUBuffer* buffer_luminance = nullptr,
 		const wiGraphics::Texture* texture_bloom = nullptr,
-		wiGraphics::COLOR_SPACE display_colorspace = wiGraphics::COLOR_SPACE_SRGB
+		wiGraphics::ColorSpace display_colorspace = wiGraphics::ColorSpace::SRGB
 	);
 	void Postprocess_FSR(
 		const wiGraphics::Texture& input,
