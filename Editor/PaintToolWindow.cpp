@@ -954,14 +954,14 @@ void PaintToolWindow::RecordHistory(bool start, CommandList cmd)
 			GraphicsDevice* device = wiRenderer::GetDevice();
 			Texture newTex;
 			TextureDesc desc = editTexture.GetDesc();
-			desc.format = FORMAT_R8G8B8A8_UNORM; // force format to one that is writable by GPU
+			desc.format = Format::R8G8B8A8_UNORM; // force format to one that is writable by GPU
 			device->CreateTexture(&desc, nullptr, &newTex);
 			for (uint32_t i = 0; i < newTex.GetDesc().mip_levels; ++i)
 			{
 				int subresource_index;
-				subresource_index = device->CreateSubresource(&newTex, SRV, 0, 1, i, 1);
+				subresource_index = device->CreateSubresource(&newTex, SubresourceType::SRV, 0, 1, i, 1);
 				assert(subresource_index == i);
-				subresource_index = device->CreateSubresource(&newTex, UAV, 0, 1, i, 1);
+				subresource_index = device->CreateSubresource(&newTex, SubresourceType::UAV, 0, 1, i, 1);
 				assert(subresource_index == i);
 			}
 			assert(cmd != wiGraphics::INVALID_COMMANDLIST);

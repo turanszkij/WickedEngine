@@ -248,14 +248,14 @@ void LoadShaders()
 {
 	std::string path = wiRenderer::GetShaderPath();
 
-	wiRenderer::LoadShader(VS, vertexShader, "fontVS.cso");
+	wiRenderer::LoadShader(ShaderStage::VS, vertexShader, "fontVS.cso");
 
 
 	pixelShader.auto_samplers.emplace_back();
 	pixelShader.auto_samplers.back().sampler = sampler;
 	pixelShader.auto_samplers.back().slot = SSLOT_ONDEMAND1;
 
-	wiRenderer::LoadShader(PS, pixelShader, "fontPS.cso");
+	wiRenderer::LoadShader(ShaderStage::PS, pixelShader, "fontPS.cso");
 
 
 	PipelineStateDesc desc;
@@ -264,7 +264,7 @@ void LoadShaders()
 	desc.bs = &blendState;
 	desc.dss = &depthStencilState;
 	desc.rs = &rasterizerState;
-	desc.pt = TRIANGLESTRIP;
+	desc.pt = PrimitiveTopology::TRIANGLESTRIP;
 	wiRenderer::GetDevice()->CreatePipelineState(&desc, &PSO);
 }
 void Initialize()
@@ -285,8 +285,8 @@ void Initialize()
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	RasterizerState rs;
-	rs.fill_mode = FILL_SOLID;
-	rs.cull_mode = CULL_FRONT;
+	rs.fill_mode = FillMode::SOLID;
+	rs.cull_mode = CullMode::FRONT;
 	rs.front_counter_clockwise = true;
 	rs.depth_bias = 0;
 	rs.depth_bias_clamp = 0;
@@ -298,13 +298,13 @@ void Initialize()
 
 	BlendState bd;
 	bd.render_target[0].blend_enable = true;
-	bd.render_target[0].src_blend = BLEND_ONE;
-	bd.render_target[0].dest_blend = BLEND_INV_SRC_ALPHA;
-	bd.render_target[0].blend_op = BLEND_OP_ADD;
-	bd.render_target[0].src_blend_alpha = BLEND_ONE;
-	bd.render_target[0].dest_blend_alpha = BLEND_INV_SRC_ALPHA;
-	bd.render_target[0].blend_op_alpha = BLEND_OP_ADD;
-	bd.render_target[0].render_target_write_mask = COLOR_WRITE_ENABLE_ALL;
+	bd.render_target[0].src_blend = Blend::ONE;
+	bd.render_target[0].dest_blend = Blend::INV_SRC_ALPHA;
+	bd.render_target[0].blend_op = BlendOp::ADD;
+	bd.render_target[0].src_blend_alpha = Blend::ONE;
+	bd.render_target[0].dest_blend_alpha = Blend::INV_SRC_ALPHA;
+	bd.render_target[0].blend_op_alpha = BlendOp::ADD;
+	bd.render_target[0].render_target_write_mask = ColorWrite::ENABLE_ALL;
 	bd.independent_blend_enable = false;
 	blendState = bd;
 
@@ -314,14 +314,14 @@ void Initialize()
 	depthStencilState = dsd;
 
 	SamplerDesc samplerDesc;
-	samplerDesc.filter = FILTER_MIN_MAG_LINEAR_MIP_POINT;
-	samplerDesc.address_u = TEXTURE_ADDRESS_BORDER;
-	samplerDesc.address_v = TEXTURE_ADDRESS_BORDER;
-	samplerDesc.address_w = TEXTURE_ADDRESS_BORDER;
+	samplerDesc.filter = Filter::MIN_MAG_LINEAR_MIP_POINT;
+	samplerDesc.address_u = TextureAddressMode::BORDER;
+	samplerDesc.address_v = TextureAddressMode::BORDER;
+	samplerDesc.address_w = TextureAddressMode::BORDER;
 	samplerDesc.mip_lod_bias = 0.0f;
 	samplerDesc.max_anisotropy = 0;
-	samplerDesc.comparison_func = COMPARISON_NEVER;
-	samplerDesc.border_color = SAMPLER_BORDER_COLOR_TRANSPARENT_BLACK;
+	samplerDesc.comparison_func = ComparisonFunc::NEVER;
+	samplerDesc.border_color = SamplerBorderColor::TRANSPARENT_BLACK;
 	samplerDesc.min_lod = 0;
 	samplerDesc.max_lod = FLT_MAX;
 	device->CreateSampler(&samplerDesc, &sampler);
@@ -445,7 +445,7 @@ void UpdatePendingGlyphs()
 			}
 
 			// Upload the CPU-side texture atlas bitmap to the GPU:
-			wiTextureHelper::CreateTexture(texture, bitmap.data(), bitmapWidth, bitmapHeight, FORMAT_R8_UNORM);
+			wiTextureHelper::CreateTexture(texture, bitmap.data(), bitmapWidth, bitmapHeight, Format::R8_UNORM);
 		}
 	}
 
@@ -588,9 +588,9 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 		device->BindPipelineState(&PSO, cmd);
 
 		PushConstantsFont push;
-		push.buffer_index = device->GetDescriptorIndex(&mem.buffer, SRV);
+		push.buffer_index = device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV);
 		push.buffer_offset = (uint32_t)mem.offset;
-		push.texture_index = device->GetDescriptorIndex(&texture, SRV);
+		push.texture_index = device->GetDescriptorIndex(&texture, SubresourceType::SRV);
 
 		const wiCanvas& canvas = canvases[cmd];
 		// Asserts will check that a proper canvas was set for this cmd with wiImage::SetCanvas()

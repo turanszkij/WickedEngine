@@ -68,7 +68,7 @@ namespace wiGraphics
 		static const uint32_t BUFFERCOUNT = 2;
 		uint64_t FRAMECOUNT = 0;
 		bool DEBUGDEVICE = false;
-		uint32_t capabilities = 0;
+		GraphicsDeviceCapability capabilities = GraphicsDeviceCapability::NONE;
 		size_t SHADER_IDENTIFIER_SIZE = 0;
 		size_t TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = 0;
 		uint32_t VARIABLE_RATE_SHADING_TILE_SIZE = 0;
@@ -81,7 +81,7 @@ namespace wiGraphics
 		virtual bool CreateSwapChain(const SwapChainDesc* pDesc, wiPlatform::window_type window, SwapChain* swapChain) const = 0;
 		virtual bool CreateBuffer(const GPUBufferDesc *pDesc, const void* pInitialData, GPUBuffer *pBuffer) const = 0;
 		virtual bool CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) const = 0;
-		virtual bool CreateShader(SHADERSTAGE stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) const = 0;
+		virtual bool CreateShader(ShaderStage stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) const = 0;
 		virtual bool CreateSampler(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) const = 0;
 		virtual bool CreateQueryHeap(const GPUQueryHeapDesc *pDesc, GPUQueryHeap *pQueryHeap) const = 0;
 		virtual bool CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) const = 0;
@@ -89,13 +89,13 @@ namespace wiGraphics
 		virtual bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh) const { return false; }
 		virtual bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso) const { return false; }
 		
-		virtual int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) const = 0;
-		virtual int CreateSubresource(GPUBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size = ~0) const = 0;
+		virtual int CreateSubresource(Texture* texture, SubresourceType type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) const = 0;
+		virtual int CreateSubresource(GPUBuffer* buffer, SubresourceType type, uint64_t offset, uint64_t size = ~0) const = 0;
 
-		virtual int GetDescriptorIndex(const GPUResource* resource, SUBRESOURCE_TYPE type, int subresource = -1) const = 0;
+		virtual int GetDescriptorIndex(const GPUResource* resource, SubresourceType type, int subresource = -1) const = 0;
 		virtual int GetDescriptorIndex(const Sampler* sampler) const = 0;
 
-		virtual void WriteShadingRateValue(SHADING_RATE rate, void* dest) const {};
+		virtual void WriteShadingRateValue(ShadingRate rate, void* dest) const {};
 		virtual void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) const {}
 		virtual void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) const {}
 		
@@ -115,7 +115,7 @@ namespace wiGraphics
 
 		constexpr uint64_t GetFrameCount() const { return FRAMECOUNT; }
 
-		inline bool CheckCapability(GRAPHICSDEVICE_CAPABILITY capability) const { return capabilities & capability; }
+		inline bool CheckCapability(GraphicsDeviceCapability capability) const { return has(capabilities, capability); }
 
 		static constexpr uint32_t GetBufferCount() { return BUFFERCOUNT; }
 		constexpr uint32_t GetBufferIndex() const { return GetFrameCount() % BUFFERCOUNT; }
@@ -127,12 +127,12 @@ namespace wiGraphics
 		constexpr uint32_t GetVariableRateShadingTileSize() const { return VARIABLE_RATE_SHADING_TILE_SIZE; }
 		constexpr uint64_t GetTimestampFrequency() const { return TIMESTAMP_FREQUENCY; }
 
-		virtual SHADERFORMAT GetShaderFormat() const = 0;
+		virtual ShaderFormat GetShaderFormat() const = 0;
 
 		virtual Texture GetBackBuffer(const SwapChain* swapchain) const = 0;
 
 		// Returns the current color space of the swapchain output
-		virtual COLOR_SPACE GetSwapChainColorSpace(const SwapChain* swapchain) const = 0;
+		virtual ColorSpace GetSwapChainColorSpace(const SwapChain* swapchain) const = 0;
 		// Returns true if the swapchain could support HDR output regardless of current format
 		//	Returns false if the swapchain couldn't support HDR output
 		virtual bool GetSwapChainHDRSupport(const SwapChain* swapchain) const = 0;
@@ -152,10 +152,10 @@ namespace wiGraphics
 		virtual void BindSampler(const Sampler* sampler, uint32_t slot, CommandList cmd) = 0;
 		virtual void BindConstantBuffer(const GPUBuffer* buffer, uint32_t slot, CommandList cmd, uint64_t offset = 0ull) = 0;
 		virtual void BindVertexBuffers(const GPUBuffer *const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint64_t* offsets, CommandList cmd) = 0;
-		virtual void BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, uint64_t offset, CommandList cmd) = 0;
+		virtual void BindIndexBuffer(const GPUBuffer* indexBuffer, const IndexBufferFormat format, uint64_t offset, CommandList cmd) = 0;
 		virtual void BindStencilRef(uint32_t value, CommandList cmd) = 0;
 		virtual void BindBlendFactor(float r, float g, float b, float a, CommandList cmd) = 0;
-		virtual void BindShadingRate(SHADING_RATE rate, CommandList cmd) {}
+		virtual void BindShadingRate(ShadingRate rate, CommandList cmd) {}
 		virtual void BindPipelineState(const PipelineState* pso, CommandList cmd) = 0;
 		virtual void BindComputeShader(const Shader* cs, CommandList cmd) = 0;
 		virtual void Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd) = 0;
@@ -179,7 +179,7 @@ namespace wiGraphics
 		virtual void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) {}
 		virtual void DispatchRays(const DispatchRaysDesc* desc, CommandList cmd) {}
 		virtual void PushConstants(const void* data, uint32_t size, CommandList cmd) = 0;
-		virtual void PredicationBegin(const GPUBuffer* buffer, uint64_t offset, PREDICATION_OP op, CommandList cmd) {}
+		virtual void PredicationBegin(const GPUBuffer* buffer, uint64_t offset, PredicationOp op, CommandList cmd) {}
 		virtual void PredicationEnd(CommandList cmd) {}
 
 		virtual void EventBegin(const char* name, CommandList cmd) = 0;
@@ -226,10 +226,10 @@ namespace wiGraphics
 			if (dataSize > free_space)
 			{
 				GPUBufferDesc desc;
-				desc.usage = USAGE_UPLOAD;
+				desc.usage = Usage::UPLOAD;
 				desc.size = AlignTo((allocator.buffer.desc.size + dataSize) * 2, ALLOCATION_MIN_ALIGNMENT);
-				desc.bind_flags = BIND_CONSTANT_BUFFER | BIND_VERTEX_BUFFER | BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE;
-				desc.misc_flags = RESOURCE_MISC_BUFFER_RAW;
+				desc.bind_flags = BindFlag::CONSTANT_BUFFER | BindFlag::VERTEX_BUFFER | BindFlag::INDEX_BUFFER | BindFlag::SHADER_RESOURCE;
+				desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
 				CreateBuffer(&desc, nullptr, &allocator.buffer);
 				SetName(&allocator.buffer, "frame_allocator");
 				allocator.offset = 0;
@@ -245,7 +245,7 @@ namespace wiGraphics
 			return allocation;
 		}
 
-		// Updates a USAGE_DEFAULT buffer data
+		// Updates a Usage::DEFAULT buffer data
 		//	Since it uses a GPU Copy operation, appropriate synchronization is expected
 		//	And it cannot be used inside a RenderPass
 		void UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, uint64_t size = ~0, uint64_t offset = 0)

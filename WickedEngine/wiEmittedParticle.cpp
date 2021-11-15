@@ -62,9 +62,9 @@ void wiEmittedParticle::CreateSelfBuffers()
 	if (particleBuffer.desc.size < MAX_PARTICLES * sizeof(Particle))
 	{
 		GPUBufferDesc bd;
-		bd.usage = USAGE_DEFAULT;
-		bd.bind_flags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		bd.misc_flags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		bd.usage = Usage::DEFAULT;
+		bd.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+		bd.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 
 		// Particle buffer:
 		bd.stride = sizeof(Particle);
@@ -94,10 +94,10 @@ void wiEmittedParticle::CreateSelfBuffers()
 		device->SetName(&deadList, "deadList");
 
 
-		bd.misc_flags = RESOURCE_MISC_BUFFER_RAW;
-		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+		bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+		if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 		{
-			bd.misc_flags |= RESOURCE_MISC_RAY_TRACING;
+			bd.misc_flags |= ResourceMiscFlag::RAY_TRACING;
 		}
 		bd.stride = sizeof(MeshComponent::Vertex_POS);
 		bd.size = bd.stride * 4 * MAX_PARTICLES;
@@ -106,31 +106,31 @@ void wiEmittedParticle::CreateSelfBuffers()
 		device->CreateBuffer(&bd, positionData.data(), &vertexBuffer_POS);
 		device->SetName(&vertexBuffer_POS, "vertexBuffer_POS");
 
-		bd.misc_flags = RESOURCE_MISC_BUFFER_RAW;
+		bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
 		bd.stride = sizeof(MeshComponent::Vertex_TEX);
 		bd.size = bd.stride * 4 * MAX_PARTICLES;
 		device->CreateBuffer(&bd, nullptr, &vertexBuffer_TEX);
 		device->SetName(&vertexBuffer_TEX, "vertexBuffer_TEX");
 
-		bd.misc_flags = RESOURCE_MISC_BUFFER_RAW;
+		bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
 		bd.stride = sizeof(MeshComponent::Vertex_TEX);
 		bd.size = bd.stride * 4 * MAX_PARTICLES;
 		device->CreateBuffer(&bd, nullptr, &vertexBuffer_TEX2);
 		device->SetName(&vertexBuffer_TEX2, "vertexBuffer_TEX2");
 
-		bd.misc_flags = RESOURCE_MISC_BUFFER_RAW;
+		bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
 		bd.stride = sizeof(MeshComponent::Vertex_COL);
 		bd.size = bd.stride * 4 * MAX_PARTICLES;
 		device->CreateBuffer(&bd, nullptr, &vertexBuffer_COL);
 		device->SetName(&vertexBuffer_COL, "vertexBuffer_COL");
 
-		bd.bind_flags = BIND_SHADER_RESOURCE;
-		bd.misc_flags = RESOURCE_MISC_NONE;
-		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+		bd.bind_flags = BindFlag::SHADER_RESOURCE;
+		bd.misc_flags = ResourceMiscFlag::NONE;
+		if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 		{
-			bd.misc_flags |= RESOURCE_MISC_RAY_TRACING;
+			bd.misc_flags |= ResourceMiscFlag::RAY_TRACING;
 		}
-		bd.format = FORMAT_R32_UINT;
+		bd.format = Format::R32_UINT;
 		bd.stride = sizeof(uint);
 		bd.size = bd.stride * 6 * MAX_PARTICLES;
 		std::vector<uint> primitiveData(6 * MAX_PARTICLES);
@@ -153,9 +153,9 @@ void wiEmittedParticle::CreateSelfBuffers()
 	{
 		// Distance buffer:
 		GPUBufferDesc bd;
-		bd.usage = USAGE_DEFAULT;
-		bd.bind_flags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		bd.misc_flags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		bd.usage = Usage::DEFAULT;
+		bd.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+		bd.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 		bd.stride = sizeof(float);
 		bd.size = bd.stride * MAX_PARTICLES;
 		std::vector<float> distances(MAX_PARTICLES);
@@ -167,9 +167,9 @@ void wiEmittedParticle::CreateSelfBuffers()
 	if (IsSPHEnabled())
 	{
 		GPUBufferDesc bd;
-		bd.usage = USAGE_DEFAULT;
-		bd.bind_flags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		bd.misc_flags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		bd.usage = Usage::DEFAULT;
+		bd.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+		bd.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 
 		if (sphPartitionCellIndices.desc.size < MAX_PARTICLES * sizeof(float))
 		{
@@ -212,12 +212,12 @@ void wiEmittedParticle::CreateSelfBuffers()
 		counters.aliveCount_afterSimulation = 0;
 
 		GPUBufferDesc bd;
-		bd.usage = USAGE_DEFAULT;
-		bd.bind_flags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		bd.misc_flags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		bd.usage = Usage::DEFAULT;
+		bd.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+		bd.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 		bd.size = sizeof(counters);
 		bd.stride = sizeof(counters);
-		bd.misc_flags = RESOURCE_MISC_BUFFER_RAW;
+		bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
 		device->CreateBuffer(&bd, &counters, &counterBuffer);
 		device->SetName(&counterBuffer, "counterBuffer");
 	}
@@ -227,9 +227,9 @@ void wiEmittedParticle::CreateSelfBuffers()
 		GPUBufferDesc bd;
 
 		// Indirect Execution buffer:
-		bd.usage = USAGE_DEFAULT;
-		bd.bind_flags = BIND_UNORDERED_ACCESS;
-		bd.misc_flags = RESOURCE_MISC_BUFFER_RAW | RESOURCE_MISC_INDIRECT_ARGS;
+		bd.usage = Usage::DEFAULT;
+		bd.bind_flags = BindFlag::UNORDERED_ACCESS;
+		bd.misc_flags = ResourceMiscFlag::BUFFER_RAW | ResourceMiscFlag::INDIRECT_ARGS;
 		bd.size =
 			sizeof(wiGraphics::IndirectDispatchArgs) +
 			sizeof(wiGraphics::IndirectDispatchArgs) +
@@ -238,19 +238,19 @@ void wiEmittedParticle::CreateSelfBuffers()
 		device->SetName(&indirectBuffers, "indirectBuffers");
 
 		// Constant buffer:
-		bd.usage = USAGE_DEFAULT;
+		bd.usage = Usage::DEFAULT;
 		bd.size = sizeof(EmittedParticleCB);
-		bd.bind_flags = BIND_CONSTANT_BUFFER;
-		bd.misc_flags = RESOURCE_MISC_NONE;
+		bd.bind_flags = BindFlag::CONSTANT_BUFFER;
+		bd.misc_flags = ResourceMiscFlag::NONE;
 		device->CreateBuffer(&bd, nullptr, &constantBuffer);
 		device->SetName(&constantBuffer, "constantBuffer");
 
 		// Debug information CPU-readback buffer:
 		{
 			GPUBufferDesc debugBufDesc = counterBuffer.GetDesc();
-			debugBufDesc.usage = USAGE_READBACK;
-			debugBufDesc.bind_flags = BIND_NONE;
-			debugBufDesc.misc_flags = RESOURCE_MISC_NONE;
+			debugBufDesc.usage = Usage::READBACK;
+			debugBufDesc.bind_flags = BindFlag::NONE;
+			debugBufDesc.misc_flags = ResourceMiscFlag::NONE;
 			for (int i = 0; i < arraysize(statisticsReadbackBuffer); ++i)
 			{
 				device->CreateBuffer(&debugBufDesc, nullptr, &statisticsReadbackBuffer[i]);
@@ -264,28 +264,28 @@ void wiEmittedParticle::CreateSelfBuffers()
 		GPUBufferDesc desc;
 		desc.stride = sizeof(ShaderMeshSubset);
 		desc.size = desc.stride;
-		desc.misc_flags = RESOURCE_MISC_BUFFER_RAW;
-		desc.bind_flags = BIND_SHADER_RESOURCE;
+		desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE;
 		device->CreateBuffer(&desc, nullptr, &subsetBuffer);
 	}
 
-	if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING) && primitiveBuffer.IsValid())
+	if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING) && primitiveBuffer.IsValid())
 	{
 		RaytracingAccelerationStructureDesc desc;
-		desc.type = RaytracingAccelerationStructureDesc::BOTTOMLEVEL;
+		desc.type = RaytracingAccelerationStructureDesc::Type::BOTTOMLEVEL;
 		desc.flags |= RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE;
 		desc.flags |= RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD;
 
 		desc.bottom_level.geometries.emplace_back();
 		auto& geometry = desc.bottom_level.geometries.back();
-		geometry.type = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::TRIANGLES;
+		geometry.type = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::Type::TRIANGLES;
 		geometry.triangles.vertex_buffer = vertexBuffer_POS;
 		geometry.triangles.index_buffer = primitiveBuffer;
-		geometry.triangles.index_format = INDEXFORMAT_32BIT;
+		geometry.triangles.index_format = IndexBufferFormat::UINT32;
 		geometry.triangles.index_count = (uint32_t)(primitiveBuffer.desc.size / primitiveBuffer.desc.stride);
 		geometry.triangles.index_offset = 0;
 		geometry.triangles.vertex_count = (uint32_t)(vertexBuffer_POS.desc.size / vertexBuffer_POS.desc.stride);
-		geometry.triangles.vertex_format = FORMAT_R32G32B32_FLOAT;
+		geometry.triangles.vertex_format = Format::R32G32B32_FLOAT;
 		geometry.triangles.vertex_stride = sizeof(MeshComponent::Vertex_POS);
 
 		bool success = device->CreateRaytracingAccelerationStructure(&desc, &BLAS);
@@ -421,7 +421,7 @@ void wiEmittedParticle::UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex
 		{
 			cb.xEmitterOptions |= EMITTER_OPTION_BIT_FRAME_BLENDING_ENABLED;
 		}
-		if (ALLOW_MESH_SHADER && device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_MESH_SHADER))
+		if (ALLOW_MESH_SHADER && device->CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
 		{
 			cb.xEmitterOptions |= EMITTER_OPTION_BIT_MESH_SHADER_ENABLED;
 		}
@@ -441,15 +441,15 @@ void wiEmittedParticle::UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex
 
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Buffer(&constantBuffer, RESOURCE_STATE_CONSTANT_BUFFER, RESOURCE_STATE_COPY_DST),
+				GPUBarrier::Buffer(&constantBuffer, ResourceState::CONSTANT_BUFFER, ResourceState::COPY_DST),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 		device->UpdateBuffer(&constantBuffer, &cb, cmd);
 		{
 			GPUBarrier barriers[] = {
-				GPUBarrier::Buffer(&constantBuffer, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_CONSTANT_BUFFER),
-				GPUBarrier::Buffer(&subsetBuffer, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE),
+				GPUBarrier::Buffer(&constantBuffer, ResourceState::COPY_DST, ResourceState::CONSTANT_BUFFER),
+				GPUBarrier::Buffer(&subsetBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -482,8 +482,8 @@ void wiEmittedParticle::UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex
 			device->BindResources(resources, TEXSLOT_ONDEMAND0, arraysize(resources), cmd);
 		}
 
-		GPUBarrier barrier_indirect_uav = GPUBarrier::Buffer(&indirectBuffers, RESOURCE_STATE_INDIRECT_ARGUMENT, RESOURCE_STATE_UNORDERED_ACCESS);
-		GPUBarrier barrier_uav_indirect = GPUBarrier::Buffer(&indirectBuffers, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_INDIRECT_ARGUMENT);
+		GPUBarrier barrier_indirect_uav = GPUBarrier::Buffer(&indirectBuffers, ResourceState::INDIRECT_ARGUMENT, ResourceState::UNORDERED_ACCESS);
+		GPUBarrier barrier_uav_indirect = GPUBarrier::Buffer(&indirectBuffers, ResourceState::UNORDERED_ACCESS, ResourceState::INDIRECT_ARGUMENT);
 		GPUBarrier barrier_memory = GPUBarrier::Memory();
 
 		device->Barrier(&barrier_indirect_uav, 1, cmd);
@@ -632,8 +632,8 @@ void wiEmittedParticle::UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Memory(),
-				GPUBarrier::Buffer(&counterBuffer, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE),
-				GPUBarrier::Buffer(&distanceBuffer, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE_COMPUTE),
+				GPUBarrier::Buffer(&counterBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+				GPUBarrier::Buffer(&distanceBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
 			};
 		}
 		device->EventEnd(cmd);
@@ -664,7 +664,7 @@ void wiEmittedParticle::UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Memory(),
-				GPUBarrier::Buffer(&indirectBuffers, RESOURCE_STATE_INDIRECT_ARGUMENT, RESOURCE_STATE_UNORDERED_ACCESS),
+				GPUBarrier::Buffer(&indirectBuffers, ResourceState::INDIRECT_ARGUMENT, ResourceState::UNORDERED_ACCESS),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -678,7 +678,7 @@ void wiEmittedParticle::UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex
 	{
 		GPUBarrier barriers[] = {
 			GPUBarrier::Memory(),
-			GPUBarrier::Buffer(&counterBuffer, RESOURCE_STATE_SHADER_RESOURCE, RESOURCE_STATE_COPY_SRC),
+			GPUBarrier::Buffer(&counterBuffer, ResourceState::SHADER_RESOURCE, ResourceState::COPY_SRC),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
@@ -688,16 +688,16 @@ void wiEmittedParticle::UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex
 
 	{
 		const GPUBarrier barriers[] = {
-			GPUBarrier::Buffer(&indirectBuffers, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_INDIRECT_ARGUMENT),
-			GPUBarrier::Buffer(&counterBuffer, RESOURCE_STATE_COPY_SRC, RESOURCE_STATE_SHADER_RESOURCE),
-			GPUBarrier::Buffer(&particleBuffer, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE),
-			GPUBarrier::Buffer(&aliveList[1], RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE),
-			GPUBarrier::Buffer(&vertexBuffer_POS, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE),
-			GPUBarrier::Buffer(&vertexBuffer_TEX, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE),
-			GPUBarrier::Buffer(&vertexBuffer_TEX2, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE),
-			GPUBarrier::Buffer(&vertexBuffer_COL, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE),
-			GPUBarrier::Buffer(&culledIndirectionBuffer, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE_COMPUTE),
-			GPUBarrier::Buffer(&culledIndirectionBuffer2, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE_COMPUTE),
+			GPUBarrier::Buffer(&indirectBuffers, ResourceState::UNORDERED_ACCESS, ResourceState::INDIRECT_ARGUMENT),
+			GPUBarrier::Buffer(&counterBuffer, ResourceState::COPY_SRC, ResourceState::SHADER_RESOURCE),
+			GPUBarrier::Buffer(&particleBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+			GPUBarrier::Buffer(&aliveList[1], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+			GPUBarrier::Buffer(&vertexBuffer_POS, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+			GPUBarrier::Buffer(&vertexBuffer_TEX, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+			GPUBarrier::Buffer(&vertexBuffer_TEX2, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+			GPUBarrier::Buffer(&vertexBuffer_COL, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+			GPUBarrier::Buffer(&culledIndirectionBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
+			GPUBarrier::Buffer(&culledIndirectionBuffer2, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
@@ -733,7 +733,7 @@ void wiEmittedParticle::Draw(const MaterialComponent& material, CommandList cmd)
 	};
 	device->BindResources(res, TEXSLOT_ONDEMAND20, arraysize(res), cmd);
 
-	if (ALLOW_MESH_SHADER && device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_MESH_SHADER))
+	if (ALLOW_MESH_SHADER && device->CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
 	{
 		device->DispatchMeshIndirect(&indirectBuffers, ARGUMENTBUFFER_OFFSET_DRAWPARTICLES, cmd);
 	}
@@ -752,32 +752,32 @@ namespace wiEmittedParticle_Internal
 	{
 		std::string path = wiRenderer::GetShaderPath();
 
-		wiRenderer::LoadShader(VS, vertexShader, "emittedparticleVS.cso");
+		wiRenderer::LoadShader(ShaderStage::VS, vertexShader, "emittedparticleVS.cso");
 
-		if (ALLOW_MESH_SHADER && wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_MESH_SHADER))
+		if (ALLOW_MESH_SHADER && wiRenderer::GetDevice()->CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
 		{
-			wiRenderer::LoadShader(MS, meshShader, "emittedparticleMS.cso");
+			wiRenderer::LoadShader(ShaderStage::MS, meshShader, "emittedparticleMS.cso");
 		}
 
-		wiRenderer::LoadShader(PS, pixelShader[wiEmittedParticle::SOFT], "emittedparticlePS_soft.cso");
-		wiRenderer::LoadShader(PS, pixelShader[wiEmittedParticle::SOFT_DISTORTION], "emittedparticlePS_soft_distortion.cso");
-		wiRenderer::LoadShader(PS, pixelShader[wiEmittedParticle::SIMPLE], "emittedparticlePS_simple.cso");
-		wiRenderer::LoadShader(PS, pixelShader[wiEmittedParticle::SOFT_LIGHTING], "emittedparticlePS_soft_lighting.cso");
+		wiRenderer::LoadShader(ShaderStage::PS, pixelShader[wiEmittedParticle::SOFT], "emittedparticlePS_soft.cso");
+		wiRenderer::LoadShader(ShaderStage::PS, pixelShader[wiEmittedParticle::SOFT_DISTORTION], "emittedparticlePS_soft_distortion.cso");
+		wiRenderer::LoadShader(ShaderStage::PS, pixelShader[wiEmittedParticle::SIMPLE], "emittedparticlePS_simple.cso");
+		wiRenderer::LoadShader(ShaderStage::PS, pixelShader[wiEmittedParticle::SOFT_LIGHTING], "emittedparticlePS_soft_lighting.cso");
 
-		wiRenderer::LoadShader(CS, kickoffUpdateCS, "emittedparticle_kickoffUpdateCS.cso");
-		wiRenderer::LoadShader(CS, finishUpdateCS, "emittedparticle_finishUpdateCS.cso");
-		wiRenderer::LoadShader(CS, emitCS, "emittedparticle_emitCS.cso");
-		wiRenderer::LoadShader(CS, emitCS_VOLUME, "emittedparticle_emitCS_volume.cso");
-		wiRenderer::LoadShader(CS, emitCS_FROMMESH, "emittedparticle_emitCS_FROMMESH.cso");
-		wiRenderer::LoadShader(CS, sphpartitionCS, "emittedparticle_sphpartitionCS.cso");
-		wiRenderer::LoadShader(CS, sphpartitionoffsetsCS, "emittedparticle_sphpartitionoffsetsCS.cso");
-		wiRenderer::LoadShader(CS, sphpartitionoffsetsresetCS, "emittedparticle_sphpartitionoffsetsresetCS.cso");
-		wiRenderer::LoadShader(CS, sphdensityCS, "emittedparticle_sphdensityCS.cso");
-		wiRenderer::LoadShader(CS, sphforceCS, "emittedparticle_sphforceCS.cso");
-		wiRenderer::LoadShader(CS, simulateCS, "emittedparticle_simulateCS.cso");
-		wiRenderer::LoadShader(CS, simulateCS_SORTING, "emittedparticle_simulateCS_SORTING.cso");
-		wiRenderer::LoadShader(CS, simulateCS_DEPTHCOLLISIONS, "emittedparticle_simulateCS_DEPTHCOLLISIONS.cso");
-		wiRenderer::LoadShader(CS, simulateCS_SORTING_DEPTHCOLLISIONS, "emittedparticle_simulateCS_SORTING_DEPTHCOLLISIONS.cso");
+		wiRenderer::LoadShader(ShaderStage::CS, kickoffUpdateCS, "emittedparticle_kickoffUpdateCS.cso");
+		wiRenderer::LoadShader(ShaderStage::CS, finishUpdateCS, "emittedparticle_finishUpdateCS.cso");
+		wiRenderer::LoadShader(ShaderStage::CS, emitCS, "emittedparticle_emitCS.cso");
+		wiRenderer::LoadShader(ShaderStage::CS, emitCS_VOLUME, "emittedparticle_emitCS_volume.cso");
+		wiRenderer::LoadShader(ShaderStage::CS, emitCS_FROMMESH, "emittedparticle_emitCS_FROMMESH.cso");
+		wiRenderer::LoadShader(ShaderStage::CS, sphpartitionCS, "emittedparticle_sphpartitionCS.cso");
+		wiRenderer::LoadShader(ShaderStage::CS, sphpartitionoffsetsCS, "emittedparticle_sphpartitionoffsetsCS.cso");
+		wiRenderer::LoadShader(ShaderStage::CS, sphpartitionoffsetsresetCS, "emittedparticle_sphpartitionoffsetsresetCS.cso");
+		wiRenderer::LoadShader(ShaderStage::CS, sphdensityCS, "emittedparticle_sphdensityCS.cso");
+		wiRenderer::LoadShader(ShaderStage::CS, sphforceCS, "emittedparticle_sphforceCS.cso");
+		wiRenderer::LoadShader(ShaderStage::CS, simulateCS, "emittedparticle_simulateCS.cso");
+		wiRenderer::LoadShader(ShaderStage::CS, simulateCS_SORTING, "emittedparticle_simulateCS_SORTING.cso");
+		wiRenderer::LoadShader(ShaderStage::CS, simulateCS_DEPTHCOLLISIONS, "emittedparticle_simulateCS_DEPTHCOLLISIONS.cso");
+		wiRenderer::LoadShader(ShaderStage::CS, simulateCS_SORTING_DEPTHCOLLISIONS, "emittedparticle_simulateCS_SORTING_DEPTHCOLLISIONS.cso");
 
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
@@ -785,8 +785,8 @@ namespace wiEmittedParticle_Internal
 		for (int i = 0; i < BLENDMODE_COUNT; ++i)
 		{
 			PipelineStateDesc desc;
-			desc.pt = TRIANGLESTRIP;
-			if (ALLOW_MESH_SHADER && wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_MESH_SHADER))
+			desc.pt = PrimitiveTopology::TRIANGLESTRIP;
+			if (ALLOW_MESH_SHADER && wiRenderer::GetDevice()->CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
 			{
 				desc.ms = &meshShader;
 			}
@@ -807,8 +807,8 @@ namespace wiEmittedParticle_Internal
 
 		{
 			PipelineStateDesc desc;
-			desc.pt = TRIANGLESTRIP;
-			if (ALLOW_MESH_SHADER && wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_MESH_SHADER))
+			desc.pt = PrimitiveTopology::TRIANGLESTRIP;
+			if (ALLOW_MESH_SHADER && wiRenderer::GetDevice()->CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
 			{
 				desc.ms = &meshShader;
 			}
@@ -832,8 +832,8 @@ void wiEmittedParticle::Initialize()
 	wiTimer timer;
 
 	RasterizerState rs;
-	rs.fill_mode = FILL_SOLID;
-	rs.cull_mode = CULL_NONE;
+	rs.fill_mode = FillMode::SOLID;
+	rs.cull_mode = CullMode::NONE;
 	rs.front_counter_clockwise = true;
 	rs.depth_bias = 0;
 	rs.depth_bias_clamp = 0;
@@ -844,8 +844,8 @@ void wiEmittedParticle::Initialize()
 	rasterizerState = rs;
 
 
-	rs.fill_mode = FILL_WIREFRAME;
-	rs.cull_mode = CULL_NONE;
+	rs.fill_mode = FillMode::WIREFRAME;
+	rs.cull_mode = CullMode::NONE;
 	rs.front_counter_clockwise = true;
 	rs.depth_bias = 0;
 	rs.depth_bias_clamp = 0;
@@ -858,43 +858,43 @@ void wiEmittedParticle::Initialize()
 
 	DepthStencilState dsd;
 	dsd.depth_enable = true;
-	dsd.depth_write_mask = DEPTH_WRITE_MASK_ZERO;
-	dsd.depth_func = COMPARISON_GREATER_EQUAL;
+	dsd.depth_write_mask = DepthWriteMask::ZERO;
+	dsd.depth_func = ComparisonFunc::GREATER_EQUAL;
 	dsd.stencil_enable = false;
 	depthStencilState = dsd;
 
 
 	BlendState bd;
 	bd.render_target[0].blend_enable = true;
-	bd.render_target[0].src_blend = BLEND_SRC_ALPHA;
-	bd.render_target[0].dest_blend = BLEND_INV_SRC_ALPHA;
-	bd.render_target[0].blend_op = BLEND_OP_ADD;
-	bd.render_target[0].src_blend_alpha = BLEND_ONE;
-	bd.render_target[0].dest_blend_alpha = BLEND_INV_SRC_ALPHA;
-	bd.render_target[0].blend_op_alpha = BLEND_OP_ADD;
-	bd.render_target[0].render_target_write_mask = COLOR_WRITE_ENABLE_ALL;
+	bd.render_target[0].src_blend = Blend::SRC_ALPHA;
+	bd.render_target[0].dest_blend = Blend::INV_SRC_ALPHA;
+	bd.render_target[0].blend_op = BlendOp::ADD;
+	bd.render_target[0].src_blend_alpha = Blend::ONE;
+	bd.render_target[0].dest_blend_alpha = Blend::INV_SRC_ALPHA;
+	bd.render_target[0].blend_op_alpha = BlendOp::ADD;
+	bd.render_target[0].render_target_write_mask = ColorWrite::ENABLE_ALL;
 	bd.independent_blend_enable = false;
 	blendStates[BLENDMODE_ALPHA] = bd;
 
 	bd.render_target[0].blend_enable = true;
-	bd.render_target[0].src_blend = BLEND_SRC_ALPHA;
-	bd.render_target[0].dest_blend = BLEND_ONE;
-	bd.render_target[0].blend_op = BLEND_OP_ADD;
-	bd.render_target[0].src_blend_alpha = BLEND_ZERO;
-	bd.render_target[0].dest_blend_alpha = BLEND_ONE;
-	bd.render_target[0].blend_op_alpha = BLEND_OP_ADD;
-	bd.render_target[0].render_target_write_mask = COLOR_WRITE_ENABLE_ALL;
+	bd.render_target[0].src_blend = Blend::SRC_ALPHA;
+	bd.render_target[0].dest_blend = Blend::ONE;
+	bd.render_target[0].blend_op = BlendOp::ADD;
+	bd.render_target[0].src_blend_alpha = Blend::ZERO;
+	bd.render_target[0].dest_blend_alpha = Blend::ONE;
+	bd.render_target[0].blend_op_alpha = BlendOp::ADD;
+	bd.render_target[0].render_target_write_mask = ColorWrite::ENABLE_ALL;
 	bd.independent_blend_enable = false;
 	blendStates[BLENDMODE_ADDITIVE] = bd;
 
 	bd.render_target[0].blend_enable = true;
-	bd.render_target[0].src_blend = BLEND_ONE;
-	bd.render_target[0].dest_blend = BLEND_INV_SRC_ALPHA;
-	bd.render_target[0].blend_op = BLEND_OP_ADD;
-	bd.render_target[0].src_blend_alpha = BLEND_ONE;
-	bd.render_target[0].dest_blend_alpha = BLEND_ONE;
-	bd.render_target[0].blend_op_alpha = BLEND_OP_ADD;
-	bd.render_target[0].render_target_write_mask = COLOR_WRITE_ENABLE_ALL;
+	bd.render_target[0].src_blend = Blend::ONE;
+	bd.render_target[0].dest_blend = Blend::INV_SRC_ALPHA;
+	bd.render_target[0].blend_op = BlendOp::ADD;
+	bd.render_target[0].src_blend_alpha = Blend::ONE;
+	bd.render_target[0].dest_blend_alpha = Blend::ONE;
+	bd.render_target[0].blend_op_alpha = BlendOp::ADD;
+	bd.render_target[0].render_target_write_mask = ColorWrite::ENABLE_ALL;
 	bd.independent_blend_enable = false;
 	blendStates[BLENDMODE_PREMULTIPLIED] = bd;
 

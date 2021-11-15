@@ -35,7 +35,7 @@ namespace Translator_Internal
 			desc.dss = wiRenderer::GetDepthStencilState(DSSTYPE_XRAY);
 			desc.rs = wiRenderer::GetRasterizerState(RSTYPE_DOUBLESIDED);
 			desc.bs = wiRenderer::GetBlendState(BSTYPE_ADDITIVE);
-			desc.pt = TRIANGLELIST;
+			desc.pt = PrimitiveTopology::TRIANGLELIST;
 
 			device->CreatePipelineState(&desc, &pso_solidpart);
 		}
@@ -49,7 +49,7 @@ namespace Translator_Internal
 			desc.dss = wiRenderer::GetDepthStencilState(DSSTYPE_XRAY);
 			desc.rs = wiRenderer::GetRasterizerState(RSTYPE_WIRE_DOUBLESIDED_SMOOTH);
 			desc.bs = wiRenderer::GetBlendState(BSTYPE_TRANSPARENT);
-			desc.pt = LINELIST;
+			desc.pt = PrimitiveTopology::LINELIST;
 
 			device->CreatePipelineState(&desc, &pso_wirepart);
 		}
@@ -70,9 +70,9 @@ void Translator::Create()
 			vertexCount_Axis = arraysize(verts) / 2;
 
 			GPUBufferDesc bd;
-			bd.usage = USAGE_DEFAULT;
+			bd.usage = Usage::DEFAULT;
 			bd.size = sizeof(verts);
-			bd.bind_flags = BIND_VERTEX_BUFFER;
+			bd.bind_flags = BindFlag::VERTEX_BUFFER;
 
 			device->CreateBuffer(&bd, verts, &vertexBuffer_Axis);
 		}
@@ -93,9 +93,9 @@ void Translator::Create()
 			vertexCount_Plane = arraysize(verts) / 2;
 
 			GPUBufferDesc bd;
-			bd.usage = USAGE_DEFAULT;
+			bd.usage = Usage::DEFAULT;
 			bd.size = sizeof(verts);
-			bd.bind_flags = BIND_VERTEX_BUFFER;
+			bd.bind_flags = BindFlag::VERTEX_BUFFER;
 
 			device->CreateBuffer(&bd, verts, &vertexBuffer_Plane);
 		}
@@ -146,9 +146,9 @@ void Translator::Create()
 			vertexCount_Origin = arraysize(verts) / 2;
 
 			GPUBufferDesc bd;
-			bd.usage = USAGE_DEFAULT;
+			bd.usage = Usage::DEFAULT;
 			bd.size = sizeof(verts);
-			bd.bind_flags = BIND_VERTEX_BUFFER;
+			bd.bind_flags = BindFlag::VERTEX_BUFFER;
 
 			device->CreateBuffer(&bd, verts, &vertexBuffer_Origin);
 		}

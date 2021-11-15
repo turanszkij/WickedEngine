@@ -37,14 +37,14 @@ namespace wiOcean_Internal
 
 		std::string path = wiRenderer::GetShaderPath();
 
-		wiRenderer::LoadShader(CS, updateSpectrumCS, "oceanSimulatorCS.cso");
-		wiRenderer::LoadShader(CS, updateDisplacementMapCS, "oceanUpdateDisplacementMapCS.cso");
-		wiRenderer::LoadShader(CS, updateGradientFoldingCS, "oceanUpdateGradientFoldingCS.cso");
+		wiRenderer::LoadShader(ShaderStage::CS, updateSpectrumCS, "oceanSimulatorCS.cso");
+		wiRenderer::LoadShader(ShaderStage::CS, updateDisplacementMapCS, "oceanUpdateDisplacementMapCS.cso");
+		wiRenderer::LoadShader(ShaderStage::CS, updateGradientFoldingCS, "oceanUpdateGradientFoldingCS.cso");
 
-		wiRenderer::LoadShader(VS, oceanSurfVS, "oceanSurfaceVS.cso");
+		wiRenderer::LoadShader(ShaderStage::VS, oceanSurfVS, "oceanSurfaceVS.cso");
 
-		wiRenderer::LoadShader(PS, oceanSurfPS, "oceanSurfacePS.cso");
-		wiRenderer::LoadShader(PS, wireframePS, "oceanSurfaceSimplePS.cso");
+		wiRenderer::LoadShader(ShaderStage::PS, oceanSurfPS, "oceanSurfacePS.cso");
+		wiRenderer::LoadShader(ShaderStage::PS, wireframePS, "oceanSurfaceSimplePS.cso");
 
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
@@ -124,9 +124,9 @@ void wiOcean::Create(const OceanParameters& params)
 	std::fill(zero_data.begin(), zero_data.end(), 0);
 
 	GPUBufferDesc buf_desc;
-	buf_desc.usage = USAGE_DEFAULT;
-	buf_desc.bind_flags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
-	buf_desc.misc_flags = RESOURCE_MISC_BUFFER_STRUCTURED;
+	buf_desc.usage = Usage::DEFAULT;
+	buf_desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+	buf_desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 
 	// RW buffer allocations
 	// H0
@@ -159,25 +159,25 @@ void wiOcean::Create(const OceanParameters& params)
 	tex_desc.height = hmap_dim;
 	tex_desc.array_size = 1;
 	tex_desc.sample_count = 1;
-	tex_desc.usage = USAGE_DEFAULT;
-	tex_desc.bind_flags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+	tex_desc.usage = Usage::DEFAULT;
+	tex_desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 
-	tex_desc.format = FORMAT_R16G16B16A16_FLOAT;
+	tex_desc.format = Format::R16G16B16A16_FLOAT;
 	tex_desc.mip_levels = 0;
-	tex_desc.layout = RESOURCE_STATE_SHADER_RESOURCE_COMPUTE;
+	tex_desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 	device->CreateTexture(&tex_desc, nullptr, &gradientMap);
 	device->SetName(&gradientMap, "gradientMap");
 
 	for (uint32_t i = 0; i < gradientMap.GetDesc().mip_levels; ++i)
 	{
 		int subresource_index;
-		subresource_index = device->CreateSubresource(&gradientMap, SRV, 0, 1, i, 1);
+		subresource_index = device->CreateSubresource(&gradientMap, SubresourceType::SRV, 0, 1, i, 1);
 		assert(subresource_index == i);
-		subresource_index = device->CreateSubresource(&gradientMap, UAV, 0, 1, i, 1);
+		subresource_index = device->CreateSubresource(&gradientMap, SubresourceType::UAV, 0, 1, i, 1);
 		assert(subresource_index == i);
 	}
 
-	tex_desc.format = FORMAT_R32G32B32A32_FLOAT;
+	tex_desc.format = Format::R32G32B32A32_FLOAT;
 	tex_desc.mip_levels = 1;
 	device->CreateTexture(&tex_desc, nullptr, &displacementMap);
 	device->SetName(&displacementMap, "displacementMap");
@@ -194,12 +194,12 @@ void wiOcean::Create(const OceanParameters& params)
 	Ocean_Simulation_ImmutableCB immutable_consts = { actual_dim, input_width, output_width, output_height, dtx_offset, dty_offset };
 
 	GPUBufferDesc cb_desc;
-	cb_desc.bind_flags = BIND_CONSTANT_BUFFER;
+	cb_desc.bind_flags = BindFlag::CONSTANT_BUFFER;
 	cb_desc.size = sizeof(Ocean_Simulation_ImmutableCB);
 	device->CreateBuffer(&cb_desc, &immutable_consts, &immutableCB);
 
-	cb_desc.usage = USAGE_DEFAULT;
-	cb_desc.bind_flags = BIND_CONSTANT_BUFFER;
+	cb_desc.usage = Usage::DEFAULT;
+	cb_desc.bind_flags = BindFlag::CONSTANT_BUFFER;
 	cb_desc.size = sizeof(Ocean_Simulation_PerFrameCB);
 	device->CreateBuffer(&cb_desc, nullptr, &perFrameCB);
 }
@@ -278,14 +278,14 @@ void wiOcean::UpdateDisplacementMap(const OceanParameters& params, CommandList c
 
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Buffer(&perFrameCB, RESOURCE_STATE_CONSTANT_BUFFER, RESOURCE_STATE_COPY_DST),
+			GPUBarrier::Buffer(&perFrameCB, ResourceState::CONSTANT_BUFFER, ResourceState::COPY_DST),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 	device->UpdateBuffer(&perFrameCB, &perFrameData, cmd);
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Buffer(&perFrameCB, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_CONSTANT_BUFFER),
+			GPUBarrier::Buffer(&perFrameCB, ResourceState::COPY_DST, ResourceState::CONSTANT_BUFFER),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
@@ -324,14 +324,14 @@ void wiOcean::UpdateDisplacementMap(const OceanParameters& params, CommandList c
 	device->BindResources(cs_srvs, TEXSLOT_ONDEMAND0, 1, cmd);
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&displacementMap, displacementMap.desc.layout, RESOURCE_STATE_UNORDERED_ACCESS),
+			GPUBarrier::Image(&displacementMap, displacementMap.desc.layout, ResourceState::UNORDERED_ACCESS),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 	device->Dispatch(params.dmap_dim / OCEAN_COMPUTE_TILESIZE, params.dmap_dim / OCEAN_COMPUTE_TILESIZE, 1, cmd);
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&displacementMap, RESOURCE_STATE_UNORDERED_ACCESS, displacementMap.desc.layout),
+			GPUBarrier::Image(&displacementMap, ResourceState::UNORDERED_ACCESS, displacementMap.desc.layout),
 			GPUBarrier::Memory(),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
@@ -345,14 +345,14 @@ void wiOcean::UpdateDisplacementMap(const OceanParameters& params, CommandList c
 	device->BindResources(cs_srvs, TEXSLOT_ONDEMAND0, 1, cmd);
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&gradientMap, gradientMap.desc.layout, RESOURCE_STATE_UNORDERED_ACCESS),
+			GPUBarrier::Image(&gradientMap, gradientMap.desc.layout, ResourceState::UNORDERED_ACCESS),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 	device->Dispatch(params.dmap_dim / OCEAN_COMPUTE_TILESIZE, params.dmap_dim / OCEAN_COMPUTE_TILESIZE, 1, cmd);
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&gradientMap, RESOURCE_STATE_UNORDERED_ACCESS, gradientMap.desc.layout),
+			GPUBarrier::Image(&gradientMap, ResourceState::UNORDERED_ACCESS, gradientMap.desc.layout),
 			GPUBarrier::Memory(),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
@@ -414,8 +414,8 @@ void wiOcean::Initialize()
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	RasterizerState ras_desc;
-	ras_desc.fill_mode = FILL_SOLID;
-	ras_desc.cull_mode = CULL_NONE;
+	ras_desc.fill_mode = FillMode::SOLID;
+	ras_desc.cull_mode = CullMode::NONE;
 	ras_desc.front_counter_clockwise = false;
 	ras_desc.depth_bias = 0;
 	ras_desc.slope_scaled_depth_bias = 0.0f;
@@ -426,13 +426,13 @@ void wiOcean::Initialize()
 
 	rasterizerState = ras_desc;
 
-	ras_desc.fill_mode = FILL_WIREFRAME;
+	ras_desc.fill_mode = FillMode::WIREFRAME;
 	wireRS = ras_desc;
 
 	DepthStencilState depth_desc;
 	depth_desc.depth_enable = true;
-	depth_desc.depth_write_mask = DEPTH_WRITE_MASK_ALL;
-	depth_desc.depth_func = COMPARISON_GREATER;
+	depth_desc.depth_write_mask = DepthWriteMask::ALL;
+	depth_desc.depth_func = ComparisonFunc::GREATER;
 	depth_desc.stencil_enable = false;
 	depthStencilState = depth_desc;
 
@@ -440,13 +440,13 @@ void wiOcean::Initialize()
 	blend_desc.alpha_to_coverage_enable = false;
 	blend_desc.independent_blend_enable = false;
 	blend_desc.render_target[0].blend_enable = true;
-	blend_desc.render_target[0].src_blend = BLEND_SRC_ALPHA;
-	blend_desc.render_target[0].dest_blend = BLEND_INV_SRC_ALPHA;
-	blend_desc.render_target[0].blend_op = BLEND_OP_ADD;
-	blend_desc.render_target[0].src_blend_alpha = BLEND_ONE;
-	blend_desc.render_target[0].dest_blend_alpha = BLEND_ZERO;
-	blend_desc.render_target[0].blend_op_alpha = BLEND_OP_ADD;
-	blend_desc.render_target[0].render_target_write_mask = COLOR_WRITE_ENABLE_ALL;
+	blend_desc.render_target[0].src_blend = Blend::SRC_ALPHA;
+	blend_desc.render_target[0].dest_blend = Blend::INV_SRC_ALPHA;
+	blend_desc.render_target[0].blend_op = BlendOp::ADD;
+	blend_desc.render_target[0].src_blend_alpha = Blend::ONE;
+	blend_desc.render_target[0].dest_blend_alpha = Blend::ZERO;
+	blend_desc.render_target[0].blend_op_alpha = BlendOp::ADD;
+	blend_desc.render_target[0].render_target_write_mask = ColorWrite::ENABLE_ALL;
 	blendState = blend_desc;
 
 

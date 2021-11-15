@@ -178,7 +178,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 		{
-			material->shadingRate = (SHADING_RATE)args.iValue;
+			material->shadingRate = (ShadingRate)args.iValue;
 		}
 		});
 	shadingRateComboBox.AddItem("1X1");
@@ -800,7 +800,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		clearcoatSlider.SetValue(material->clearcoat);
 		clearcoatRoughnessSlider.SetValue(material->clearcoatRoughness);
 
-		shadingRateComboBox.SetEnabled(wiRenderer::GetDevice()->CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING));
+		shadingRateComboBox.SetEnabled(wiRenderer::GetDevice()->CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING));
 
 		if (material->IsUsingSpecularGlossinessWorkflow())
 		{

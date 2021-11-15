@@ -21,10 +21,10 @@ namespace wiGPUSortLib
 	{
 		std::string path = wiRenderer::GetShaderPath();
 
-		wiRenderer::LoadShader(CS, kickoffSortCS, "gpusortlib_kickoffSortCS.cso");
-		wiRenderer::LoadShader(CS, sortCS, "gpusortlib_sortCS.cso");
-		wiRenderer::LoadShader(CS, sortInnerCS, "gpusortlib_sortInnerCS.cso");
-		wiRenderer::LoadShader(CS, sortStepCS, "gpusortlib_sortStepCS.cso");
+		wiRenderer::LoadShader(ShaderStage::CS, kickoffSortCS, "gpusortlib_kickoffSortCS.cso");
+		wiRenderer::LoadShader(ShaderStage::CS, sortCS, "gpusortlib_sortCS.cso");
+		wiRenderer::LoadShader(ShaderStage::CS, sortInnerCS, "gpusortlib_sortInnerCS.cso");
+		wiRenderer::LoadShader(ShaderStage::CS, sortStepCS, "gpusortlib_sortStepCS.cso");
 
 	}
 
@@ -33,9 +33,9 @@ namespace wiGPUSortLib
 		wiTimer timer;
 
 		GPUBufferDesc bd;
-		bd.usage = USAGE_DEFAULT;
-		bd.bind_flags = BIND_UNORDERED_ACCESS;
-		bd.misc_flags = RESOURCE_MISC_INDIRECT_ARGS | RESOURCE_MISC_BUFFER_RAW;
+		bd.usage = Usage::DEFAULT;
+		bd.bind_flags = BindFlag::UNORDERED_ACCESS;
+		bd.misc_flags = ResourceMiscFlag::INDIRECT_ARGS | ResourceMiscFlag::BUFFER_RAW;
 		bd.size = sizeof(IndirectDispatchArgs);
 		wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &indirectBuffer);
 
@@ -79,7 +79,7 @@ namespace wiGPUSortLib
 
 			{
 				GPUBarrier barriers[] = {
-					GPUBarrier::Buffer(&indirectBuffer, RESOURCE_STATE_INDIRECT_ARGUMENT, RESOURCE_STATE_UNORDERED_ACCESS)
+					GPUBarrier::Buffer(&indirectBuffer, ResourceState::INDIRECT_ARGUMENT, ResourceState::UNORDERED_ACCESS)
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
@@ -89,7 +89,7 @@ namespace wiGPUSortLib
 			{
 				GPUBarrier barriers[] = {
 					GPUBarrier::Memory(),
-					GPUBarrier::Buffer(&indirectBuffer, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_INDIRECT_ARGUMENT)
+					GPUBarrier::Buffer(&indirectBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::INDIRECT_ARGUMENT)
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}

@@ -215,8 +215,8 @@ void EditorComponent::ResizeBuffers()
 		desc.width = internalResolution.x;
 		desc.height = internalResolution.y;
 
-		desc.format = FORMAT_R8_UNORM;
-		desc.bind_flags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
+		desc.format = Format::R8_UNORM;
+		desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
 		if (renderPath->getMSAASampleCount() > 1)
 		{
 			desc.sample_count = renderPath->getMSAASampleCount();
@@ -231,7 +231,7 @@ void EditorComponent::ResizeBuffers()
 
 		{
 			RenderPassDesc desc;
-			desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rt_selectionOutline[0], RenderPassAttachment::LOADOP_CLEAR));
+			desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rt_selectionOutline[0], RenderPassAttachment::LoadOp::CLEAR));
 			if (renderPath->getMSAASampleCount() > 1)
 			{
 				desc.attachments[0].texture = &rt_selectionOutline_MSAA;
@@ -240,11 +240,11 @@ void EditorComponent::ResizeBuffers()
 			desc.attachments.push_back(
 				RenderPassAttachment::DepthStencil(
 					renderPath->GetDepthStencil(),
-					RenderPassAttachment::LOADOP_LOAD,
-					RenderPassAttachment::STOREOP_STORE,
-					RESOURCE_STATE_DEPTHSTENCIL_READONLY,
-					RESOURCE_STATE_DEPTHSTENCIL_READONLY,
-					RESOURCE_STATE_DEPTHSTENCIL_READONLY
+					RenderPassAttachment::LoadOp::LOAD,
+					RenderPassAttachment::StoreOp::STORE,
+					ResourceState::DEPTHSTENCIL_READONLY,
+					ResourceState::DEPTHSTENCIL_READONLY,
+					ResourceState::DEPTHSTENCIL_READONLY
 				)
 			);
 			hr = device->CreateRenderPass(&desc, &renderpass_selectionOutline[0]);

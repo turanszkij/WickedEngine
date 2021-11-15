@@ -97,11 +97,11 @@ namespace wiTextureHelper
 			texDesc.height = height;
 			texDesc.mip_levels = 1;
 			texDesc.array_size = 6;
-			texDesc.format = FORMAT_R8G8B8A8_UNORM;
+			texDesc.format = Format::R8G8B8A8_UNORM;
 			texDesc.sample_count = 1;
-			texDesc.usage = USAGE_DEFAULT;
-			texDesc.bind_flags = BIND_SHADER_RESOURCE;
-			texDesc.misc_flags = RESOURCE_MISC_TEXTURECUBE;
+			texDesc.usage = Usage::DEFAULT;
+			texDesc.bind_flags = BindFlag::SHADER_RESOURCE;
+			texDesc.misc_flags = ResourceMiscFlag::TEXTURECUBE;
 
 			SubresourceData pData[6];
 			vector4b d[6][width * height]; // 6 images of type vector4b = 4 * unsigned char
@@ -126,7 +126,7 @@ namespace wiTextureHelper
 		// UINT4:
 		{
 			uint8_t data[16] = {};
-			CreateTexture(helperTextures[HELPERTEXTURE_UINT4], data, 1, 1, FORMAT_R32G32B32A32_UINT);
+			CreateTexture(helperTextures[HELPERTEXTURE_UINT4], data, 1, 1, Format::R32G32B32A32_UINT);
 			device->SetName(&helperTextures[HELPERTEXTURE_UINT4], "HELPERTEXTURE_UINT4");
 		}
 
@@ -150,7 +150,7 @@ namespace wiTextureHelper
 				}
 			}
 
-			CreateTexture(helperTextures[HELPERTEXTURE_BLUENOISE], (uint8_t*)blueNoise, 128, 128, FORMAT_R8G8B8A8_UNORM);
+			CreateTexture(helperTextures[HELPERTEXTURE_BLUENOISE], (uint8_t*)blueNoise, 128, 128, Format::R8G8B8A8_UNORM);
 			device->SetName(&helperTextures[HELPERTEXTURE_BLUENOISE], "HELPERTEXTURE_BLUENOISE");
 		}
 
@@ -242,7 +242,7 @@ namespace wiTextureHelper
 	}
 
 
-	bool CreateTexture(wiGraphics::Texture& texture, const uint8_t* data, uint32_t width, uint32_t height, FORMAT format)
+	bool CreateTexture(wiGraphics::Texture& texture, const uint8_t* data, uint32_t width, uint32_t height, Format format)
 	{
 		if (data == nullptr)
 		{
@@ -257,7 +257,7 @@ namespace wiTextureHelper
 		textureDesc.array_size = 1;
 		textureDesc.format = format;
 		textureDesc.sample_count = 1;
-		textureDesc.bind_flags = BIND_SHADER_RESOURCE;
+		textureDesc.bind_flags = BindFlag::SHADER_RESOURCE;
 
 		SubresourceData InitData;
 		InitData.data_ptr = data;

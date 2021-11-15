@@ -57,9 +57,9 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 		regenerate_frame = true;
 
 		GPUBufferDesc bd;
-		bd.usage = USAGE_DEFAULT;
-		bd.bind_flags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		bd.misc_flags = RESOURCE_MISC_BUFFER_STRUCTURED;
+		bd.usage = Usage::DEFAULT;
+		bd.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+		bd.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 
 		const uint32_t particleCount = strandCount * segmentCount;
 		if (particleCount > 0)
@@ -69,10 +69,10 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 			device->CreateBuffer(&bd, nullptr, &simulationBuffer);
 			device->SetName(&simulationBuffer, "simulationBuffer");
 
-			bd.misc_flags = RESOURCE_MISC_BUFFER_RAW;
-			if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+			bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+			if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 			{
-				bd.misc_flags |= RESOURCE_MISC_RAY_TRACING;
+				bd.misc_flags |= ResourceMiscFlag::RAY_TRACING;
 			}
 			bd.stride = sizeof(MeshComponent::Vertex_POS);
 			bd.size = bd.stride * 4 * particleCount;
@@ -81,19 +81,19 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 			device->CreateBuffer(&bd, nullptr, &vertexBuffer_POS[1]);
 			device->SetName(&vertexBuffer_POS[1], "vertexBuffer_POS[1]");
 
-			bd.misc_flags = RESOURCE_MISC_BUFFER_RAW;
+			bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
 			bd.stride = sizeof(MeshComponent::Vertex_TEX);
 			bd.size = bd.stride * 4 * particleCount;
 			device->CreateBuffer(&bd, nullptr, &vertexBuffer_TEX);
 			device->SetName(&vertexBuffer_TEX, "vertexBuffer_TEX");
 
-			bd.bind_flags = BIND_SHADER_RESOURCE;
-			bd.misc_flags = RESOURCE_MISC_NONE;
-			if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+			bd.bind_flags = BindFlag::SHADER_RESOURCE;
+			bd.misc_flags = ResourceMiscFlag::NONE;
+			if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 			{
-				bd.misc_flags |= RESOURCE_MISC_RAY_TRACING;
+				bd.misc_flags |= ResourceMiscFlag::RAY_TRACING;
 			}
-			bd.format = FORMAT_R32_UINT;
+			bd.format = Format::R32_UINT;
 			bd.stride = sizeof(uint);
 			bd.size = bd.stride * 6 * particleCount;
 			std::vector<uint> primitiveData(6 * particleCount);
@@ -111,19 +111,19 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 			device->CreateBuffer(&bd, primitiveData.data(), &primitiveBuffer);
 			device->SetName(&primitiveBuffer, "primitiveBuffer");
 
-			bd.bind_flags = BIND_INDEX_BUFFER | BIND_UNORDERED_ACCESS;
-			bd.misc_flags = RESOURCE_MISC_NONE;
-			bd.format = FORMAT_R32_UINT;
+			bd.bind_flags = BindFlag::INDEX_BUFFER | BindFlag::UNORDERED_ACCESS;
+			bd.misc_flags = ResourceMiscFlag::NONE;
+			bd.format = Format::R32_UINT;
 			bd.stride = sizeof(uint);
 			bd.size = bd.stride * 6 * particleCount;
 			device->CreateBuffer(&bd, nullptr, &culledIndexBuffer);
 			device->SetName(&culledIndexBuffer, "culledIndexBuffer");
 		}
 
-		bd.usage = USAGE_DEFAULT;
+		bd.usage = Usage::DEFAULT;
 		bd.size = sizeof(HairParticleCB);
-		bd.bind_flags = BIND_CONSTANT_BUFFER;
-		bd.misc_flags = RESOURCE_MISC_NONE;
+		bd.bind_flags = BindFlag::CONSTANT_BUFFER;
+		bd.misc_flags = ResourceMiscFlag::NONE;
 		device->CreateBuffer(&bd, nullptr, &constantBuffer);
 		device->SetName(&constantBuffer, "constantBuffer");
 
@@ -158,40 +158,40 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 				ulengths.push_back(uint8_t(wiMath::Clamp(x, 0, 1) * 255.0f));
 			}
 
-			bd.misc_flags = RESOURCE_MISC_NONE;
-			bd.bind_flags = BIND_SHADER_RESOURCE;
-			bd.format = FORMAT_R8_UNORM;
+			bd.misc_flags = ResourceMiscFlag::NONE;
+			bd.bind_flags = BindFlag::SHADER_RESOURCE;
+			bd.format = Format::R8_UNORM;
 			bd.stride = sizeof(uint8_t);
 			bd.size = bd.stride * (uint32_t)ulengths.size();
 			device->CreateBuffer(&bd, ulengths.data(), &vertexBuffer_length);
 		}
 		if (!indices.empty())
 		{
-			bd.misc_flags = RESOURCE_MISC_NONE;
-			bd.bind_flags = BIND_SHADER_RESOURCE;
-			bd.format = FORMAT_R32_UINT;
+			bd.misc_flags = ResourceMiscFlag::NONE;
+			bd.bind_flags = BindFlag::SHADER_RESOURCE;
+			bd.format = Format::R32_UINT;
 			bd.stride = sizeof(uint32_t);
 			bd.size = bd.stride * (uint32_t)indices.size();
 			device->CreateBuffer(&bd, indices.data(), &indexBuffer);
 		}
 
-		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING) && primitiveBuffer.IsValid())
+		if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING) && primitiveBuffer.IsValid())
 		{
 			RaytracingAccelerationStructureDesc desc;
-			desc.type = RaytracingAccelerationStructureDesc::BOTTOMLEVEL;
+			desc.type = RaytracingAccelerationStructureDesc::Type::BOTTOMLEVEL;
 			desc.flags |= RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE;
 			desc.flags |= RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD;
 
 			desc.bottom_level.geometries.emplace_back();
 			auto& geometry = desc.bottom_level.geometries.back();
-			geometry.type = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::TRIANGLES;
+			geometry.type = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::Type::TRIANGLES;
 			geometry.triangles.vertex_buffer = vertexBuffer_POS[0];
 			geometry.triangles.index_buffer = primitiveBuffer;
-			geometry.triangles.index_format = INDEXFORMAT_32BIT;
+			geometry.triangles.index_format = IndexBufferFormat::UINT32;
 			geometry.triangles.index_count = (uint32_t)(primitiveBuffer.desc.size / primitiveBuffer.desc.stride);
 			geometry.triangles.index_offset = 0;
 			geometry.triangles.vertex_count = (uint32_t)(vertexBuffer_POS[0].desc.size / vertexBuffer_POS[0].desc.stride);
-			geometry.triangles.vertex_format = FORMAT_R32G32B32_FLOAT;
+			geometry.triangles.vertex_format = Format::R32G32B32_FLOAT;
 			geometry.triangles.vertex_stride = sizeof(MeshComponent::Vertex_POS);
 
 			bool success = device->CreateRaytracingAccelerationStructure(&desc, &BLAS);
@@ -204,8 +204,8 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 	{
 		GPUBufferDesc desc;
 		desc.size = sizeof(uint) + sizeof(IndirectDrawArgsIndexedInstanced); // counter + draw args
-		desc.misc_flags = RESOURCE_MISC_BUFFER_RAW | RESOURCE_MISC_INDIRECT_ARGS;
-		desc.bind_flags = BIND_UNORDERED_ACCESS;
+		desc.misc_flags = ResourceMiscFlag::BUFFER_RAW | ResourceMiscFlag::INDIRECT_ARGS;
+		desc.bind_flags = BindFlag::UNORDERED_ACCESS;
 		device->CreateBuffer(&desc, nullptr, &indirectBuffer);
 	}
 
@@ -214,8 +214,8 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 		GPUBufferDesc desc;
 		desc.stride = sizeof(ShaderMeshSubset);
 		desc.size = desc.stride;
-		desc.misc_flags = RESOURCE_MISC_BUFFER_RAW;
-		desc.bind_flags = BIND_SHADER_RESOURCE;
+		desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE;
 		device->CreateBuffer(&desc, nullptr, &subsetBuffer);
 	}
 
@@ -274,8 +274,8 @@ void wiHairParticle::UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex, c
 
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Buffer(&constantBuffer, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_CONSTANT_BUFFER),
-			GPUBarrier::Buffer(&subsetBuffer, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_SHADER_RESOURCE),
+			GPUBarrier::Buffer(&constantBuffer, ResourceState::COPY_DST, ResourceState::CONSTANT_BUFFER),
+			GPUBarrier::Buffer(&subsetBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
@@ -323,10 +323,10 @@ void wiHairParticle::UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex, c
 
 		GPUBarrier barriers[] = {
 			GPUBarrier::Memory(&indirectBuffer),
-			GPUBarrier::Buffer(&indirectBuffer, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_INDIRECT_ARGUMENT),
-			GPUBarrier::Buffer(&vertexBuffer_POS[0], RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE),
-			GPUBarrier::Buffer(&vertexBuffer_TEX, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE),
-			GPUBarrier::Buffer(&culledIndexBuffer, RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_INDEX_BUFFER),
+			GPUBarrier::Buffer(&indirectBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::INDIRECT_ARGUMENT),
+			GPUBarrier::Buffer(&vertexBuffer_POS[0], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+			GPUBarrier::Buffer(&vertexBuffer_TEX, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+			GPUBarrier::Buffer(&culledIndexBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::INDEX_BUFFER),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 
@@ -371,7 +371,7 @@ void wiHairParticle::Draw(const MaterialComponent& material, RENDERPASS renderPa
 	device->BindConstantBuffer(&constantBuffer, CB_GETBINDSLOT(HairParticleCB), cmd);
 	device->BindResource(&primitiveBuffer, 0, cmd);
 
-	device->BindIndexBuffer(&culledIndexBuffer, INDEXFORMAT_32BIT, 0, cmd);
+	device->BindIndexBuffer(&culledIndexBuffer, IndexBufferFormat::UINT32, 0, cmd);
 
 	device->DrawIndexedInstancedIndirect(&indirectBuffer, 4, cmd);
 
@@ -441,14 +441,14 @@ namespace wiHairParticle_Internal
 	{
 		std::string path = wiRenderer::GetShaderPath();
 
-		wiRenderer::LoadShader(VS, vs, "hairparticleVS.cso");
+		wiRenderer::LoadShader(ShaderStage::VS, vs, "hairparticleVS.cso");
 
-		wiRenderer::LoadShader(PS, ps_simple, "hairparticlePS_simple.cso");
-		wiRenderer::LoadShader(PS, ps_prepass, "hairparticlePS_prepass.cso");
-		wiRenderer::LoadShader(PS, ps, "hairparticlePS.cso");
+		wiRenderer::LoadShader(ShaderStage::PS, ps_simple, "hairparticlePS_simple.cso");
+		wiRenderer::LoadShader(ShaderStage::PS, ps_prepass, "hairparticlePS_prepass.cso");
+		wiRenderer::LoadShader(ShaderStage::PS, ps, "hairparticlePS.cso");
 
-		wiRenderer::LoadShader(CS, cs_simulate, "hairparticle_simulateCS.cso");
-		wiRenderer::LoadShader(CS, cs_finishUpdate, "hairparticle_finishUpdateCS.cso");
+		wiRenderer::LoadShader(ShaderStage::CS, cs_simulate, "hairparticle_simulateCS.cso");
+		wiRenderer::LoadShader(ShaderStage::CS, cs_finishUpdate, "hairparticle_finishUpdateCS.cso");
 
 		GraphicsDevice* device = wiRenderer::GetDevice();
 
@@ -461,7 +461,7 @@ namespace wiHairParticle_Internal
 				desc.bs = &bs;
 				desc.rs = &ncrs;
 				desc.dss = &dss_default;
-				desc.pt = TRIANGLELIST;
+				desc.pt = PrimitiveTopology::TRIANGLELIST;
 
 				switch (i)
 				{
@@ -485,7 +485,7 @@ namespace wiHairParticle_Internal
 			desc.bs = &bs;
 			desc.rs = &wirers;
 			desc.dss = &dss_default;
-			desc.pt = TRIANGLELIST;
+			desc.pt = PrimitiveTopology::TRIANGLELIST;
 			device->CreatePipelineState(&desc, &PSO_wire);
 		}
 
@@ -498,8 +498,8 @@ void wiHairParticle::Initialize()
 	wiTimer timer;
 
 	RasterizerState rsd;
-	rsd.fill_mode = FILL_SOLID;
-	rsd.cull_mode = CULL_BACK;
+	rsd.fill_mode = FillMode::SOLID;
+	rsd.cull_mode = CullMode::BACK;
 	rsd.front_counter_clockwise = true;
 	rsd.depth_bias = 0;
 	rsd.depth_bias_clamp = 0;
@@ -509,8 +509,8 @@ void wiHairParticle::Initialize()
 	rsd.antialiased_line_enable = false;
 	rs = rsd;
 
-	rsd.fill_mode = FILL_SOLID;
-	rsd.cull_mode = CULL_NONE;
+	rsd.fill_mode = FillMode::SOLID;
+	rsd.cull_mode = CullMode::NONE;
 	rsd.front_counter_clockwise = true;
 	rsd.depth_bias = 0;
 	rsd.depth_bias_clamp = 0;
@@ -520,8 +520,8 @@ void wiHairParticle::Initialize()
 	rsd.antialiased_line_enable = false;
 	ncrs = rsd;
 
-	rsd.fill_mode = FILL_WIREFRAME;
-	rsd.cull_mode = CULL_NONE;
+	rsd.fill_mode = FillMode::WIREFRAME;
+	rsd.cull_mode = CullMode::NONE;
 	rsd.front_counter_clockwise = true;
 	rsd.depth_bias = 0;
 	rsd.depth_bias_clamp = 0;
@@ -534,24 +534,24 @@ void wiHairParticle::Initialize()
 
 	DepthStencilState dsd;
 	dsd.depth_enable = true;
-	dsd.depth_write_mask = DEPTH_WRITE_MASK_ALL;
-	dsd.depth_func = COMPARISON_GREATER;
+	dsd.depth_write_mask = DepthWriteMask::ALL;
+	dsd.depth_func = ComparisonFunc::GREATER;
 
 	dsd.stencil_enable = true;
 	dsd.stencil_read_mask = 0xFF;
 	dsd.stencil_write_mask = 0xFF;
-	dsd.front_face.stencil_func = COMPARISON_ALWAYS;
-	dsd.front_face.stencil_pass_op = STENCIL_OP_REPLACE;
-	dsd.front_face.stencil_fail_op = STENCIL_OP_KEEP;
-	dsd.front_face.stencil_depth_fail_op = STENCIL_OP_KEEP;
-	dsd.back_face.stencil_func = COMPARISON_ALWAYS;
-	dsd.back_face.stencil_pass_op = STENCIL_OP_REPLACE;
-	dsd.back_face.stencil_fail_op = STENCIL_OP_KEEP;
-	dsd.back_face.stencil_depth_fail_op = STENCIL_OP_KEEP;
+	dsd.front_face.stencil_func = ComparisonFunc::ALWAYS;
+	dsd.front_face.stencil_pass_op = StencilOp::REPLACE;
+	dsd.front_face.stencil_fail_op = StencilOp::KEEP;
+	dsd.front_face.stencil_depth_fail_op = StencilOp::KEEP;
+	dsd.back_face.stencil_func = ComparisonFunc::ALWAYS;
+	dsd.back_face.stencil_pass_op = StencilOp::REPLACE;
+	dsd.back_face.stencil_fail_op = StencilOp::KEEP;
+	dsd.back_face.stencil_depth_fail_op = StencilOp::KEEP;
 	dss_default = dsd;
 
-	dsd.depth_write_mask = DEPTH_WRITE_MASK_ZERO;
-	dsd.depth_func = COMPARISON_EQUAL;
+	dsd.depth_write_mask = DepthWriteMask::ZERO;
+	dsd.depth_func = ComparisonFunc::EQUAL;
 	dsd.stencil_enable = false;
 	dss_equal = dsd;
 

@@ -40,315 +40,315 @@ namespace wiGraphics
 namespace Vulkan_Internal
 {
 	// Converters:
-	constexpr VkFormat _ConvertFormat(FORMAT value)
+	constexpr VkFormat _ConvertFormat(Format value)
 	{
 		switch (value)
 		{
-		case FORMAT_UNKNOWN:
+		case Format::UNKNOWN:
 			return VK_FORMAT_UNDEFINED;
 			break;
-		case FORMAT_R32G32B32A32_FLOAT:
+		case Format::R32G32B32A32_FLOAT:
 			return VK_FORMAT_R32G32B32A32_SFLOAT;
 			break;
-		case FORMAT_R32G32B32A32_UINT:
+		case Format::R32G32B32A32_UINT:
 			return VK_FORMAT_R32G32B32A32_UINT;
 			break;
-		case FORMAT_R32G32B32A32_SINT:
+		case Format::R32G32B32A32_SINT:
 			return VK_FORMAT_R32G32B32A32_SINT;
 			break;
-		case FORMAT_R32G32B32_FLOAT:
+		case Format::R32G32B32_FLOAT:
 			return VK_FORMAT_R32G32B32_SFLOAT;
 			break;
-		case FORMAT_R32G32B32_UINT:
+		case Format::R32G32B32_UINT:
 			return VK_FORMAT_R32G32B32_UINT;
 			break;
-		case FORMAT_R32G32B32_SINT:
+		case Format::R32G32B32_SINT:
 			return VK_FORMAT_R32G32B32_SINT;
 			break;
-		case FORMAT_R16G16B16A16_FLOAT:
+		case Format::R16G16B16A16_FLOAT:
 			return VK_FORMAT_R16G16B16A16_SFLOAT;
 			break;
-		case FORMAT_R16G16B16A16_UNORM:
+		case Format::R16G16B16A16_UNORM:
 			return VK_FORMAT_R16G16B16A16_UNORM;
 			break;
-		case FORMAT_R16G16B16A16_UINT:
+		case Format::R16G16B16A16_UINT:
 			return VK_FORMAT_R16G16B16A16_UINT;
 			break;
-		case FORMAT_R16G16B16A16_SNORM:
+		case Format::R16G16B16A16_SNORM:
 			return VK_FORMAT_R16G16B16A16_SNORM;
 			break;
-		case FORMAT_R16G16B16A16_SINT:
+		case Format::R16G16B16A16_SINT:
 			return VK_FORMAT_R16G16B16A16_SINT;
 			break;
-		case FORMAT_R32G32_FLOAT:
+		case Format::R32G32_FLOAT:
 			return VK_FORMAT_R32G32_SFLOAT;
 			break;
-		case FORMAT_R32G32_UINT:
+		case Format::R32G32_UINT:
 			return VK_FORMAT_R32G32_UINT;
 			break;
-		case FORMAT_R32G32_SINT:
+		case Format::R32G32_SINT:
 			return VK_FORMAT_R32G32_SINT;
 			break;
-		case FORMAT_R32G8X24_TYPELESS:
+		case Format::R32G8X24_TYPELESS:
 			return VK_FORMAT_D32_SFLOAT_S8_UINT;
 			break;
-		case FORMAT_D32_FLOAT_S8X24_UINT:
+		case Format::D32_FLOAT_S8X24_UINT:
 			return VK_FORMAT_D32_SFLOAT_S8_UINT;
 			break;
-		case FORMAT_R10G10B10A2_UNORM:
+		case Format::R10G10B10A2_UNORM:
 			return VK_FORMAT_A2B10G10R10_UNORM_PACK32;
 			break;
-		case FORMAT_R10G10B10A2_UINT:
+		case Format::R10G10B10A2_UINT:
 			return VK_FORMAT_A2B10G10R10_UINT_PACK32;
 			break;
-		case FORMAT_R11G11B10_FLOAT:
+		case Format::R11G11B10_FLOAT:
 			return VK_FORMAT_B10G11R11_UFLOAT_PACK32;
 			break;
-		case FORMAT_R8G8B8A8_UNORM:
+		case Format::R8G8B8A8_UNORM:
 			return VK_FORMAT_R8G8B8A8_UNORM;
 			break;
-		case FORMAT_R8G8B8A8_UNORM_SRGB:
+		case Format::R8G8B8A8_UNORM_SRGB:
 			return VK_FORMAT_R8G8B8A8_SRGB;
 			break;
-		case FORMAT_R8G8B8A8_UINT:
+		case Format::R8G8B8A8_UINT:
 			return VK_FORMAT_R8G8B8A8_UINT;
 			break;
-		case FORMAT_R8G8B8A8_SNORM:
+		case Format::R8G8B8A8_SNORM:
 			return VK_FORMAT_R8G8B8A8_SNORM;
 			break;
-		case FORMAT_R8G8B8A8_SINT:
+		case Format::R8G8B8A8_SINT:
 			return VK_FORMAT_R8G8B8A8_SINT;
 			break;
-		case FORMAT_R16G16_FLOAT:
+		case Format::R16G16_FLOAT:
 			return VK_FORMAT_R16G16_SFLOAT;
 			break;
-		case FORMAT_R16G16_UNORM:
+		case Format::R16G16_UNORM:
 			return VK_FORMAT_R16G16_UNORM;
 			break;
-		case FORMAT_R16G16_UINT:
+		case Format::R16G16_UINT:
 			return VK_FORMAT_R16G16_UINT;
 			break;
-		case FORMAT_R16G16_SNORM:
+		case Format::R16G16_SNORM:
 			return VK_FORMAT_R16G16_SNORM;
 			break;
-		case FORMAT_R16G16_SINT:
+		case Format::R16G16_SINT:
 			return VK_FORMAT_R16G16_SINT;
 			break;
-		case FORMAT_R32_TYPELESS:
+		case Format::R32_TYPELESS:
 			return VK_FORMAT_D32_SFLOAT;
 			break;
-		case FORMAT_D32_FLOAT:
+		case Format::D32_FLOAT:
 			return VK_FORMAT_D32_SFLOAT;
 			break;
-		case FORMAT_R32_FLOAT:
+		case Format::R32_FLOAT:
 			return VK_FORMAT_R32_SFLOAT;
 			break;
-		case FORMAT_R32_UINT:
+		case Format::R32_UINT:
 			return VK_FORMAT_R32_UINT;
 			break;
-		case FORMAT_R32_SINT:
+		case Format::R32_SINT:
 			return VK_FORMAT_R32_SINT;
 			break;
-		case FORMAT_R24G8_TYPELESS:
+		case Format::R24G8_TYPELESS:
 			return VK_FORMAT_D24_UNORM_S8_UINT;
 			break;
-		case FORMAT_D24_UNORM_S8_UINT:
+		case Format::D24_UNORM_S8_UINT:
 			return VK_FORMAT_D24_UNORM_S8_UINT;
 			break;
-		case FORMAT_R8G8_UNORM:
+		case Format::R8G8_UNORM:
 			return VK_FORMAT_R8G8_UNORM;
 			break;
-		case FORMAT_R8G8_UINT:
+		case Format::R8G8_UINT:
 			return VK_FORMAT_R8G8_UINT;
 			break;
-		case FORMAT_R8G8_SNORM:
+		case Format::R8G8_SNORM:
 			return VK_FORMAT_R8G8_SNORM;
 			break;
-		case FORMAT_R8G8_SINT:
+		case Format::R8G8_SINT:
 			return VK_FORMAT_R8G8_SINT;
 			break;
-		case FORMAT_R16_TYPELESS:
+		case Format::R16_TYPELESS:
 			return VK_FORMAT_D16_UNORM;
 			break;
-		case FORMAT_R16_FLOAT:
+		case Format::R16_FLOAT:
 			return VK_FORMAT_R16_SFLOAT;
 			break;
-		case FORMAT_D16_UNORM:
+		case Format::D16_UNORM:
 			return VK_FORMAT_D16_UNORM;
 			break;
-		case FORMAT_R16_UNORM:
+		case Format::R16_UNORM:
 			return VK_FORMAT_R16_UNORM;
 			break;
-		case FORMAT_R16_UINT:
+		case Format::R16_UINT:
 			return VK_FORMAT_R16_UINT;
 			break;
-		case FORMAT_R16_SNORM:
+		case Format::R16_SNORM:
 			return VK_FORMAT_R16_SNORM;
 			break;
-		case FORMAT_R16_SINT:
+		case Format::R16_SINT:
 			return VK_FORMAT_R16_SINT;
 			break;
-		case FORMAT_R8_UNORM:
+		case Format::R8_UNORM:
 			return VK_FORMAT_R8_UNORM;
 			break;
-		case FORMAT_R8_UINT:
+		case Format::R8_UINT:
 			return VK_FORMAT_R8_UINT;
 			break;
-		case FORMAT_R8_SNORM:
+		case Format::R8_SNORM:
 			return VK_FORMAT_R8_SNORM;
 			break;
-		case FORMAT_R8_SINT:
+		case Format::R8_SINT:
 			return VK_FORMAT_R8_SINT;
 			break;
-		case FORMAT_BC1_UNORM:
+		case Format::BC1_UNORM:
 			return VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
 			break;
-		case FORMAT_BC1_UNORM_SRGB:
+		case Format::BC1_UNORM_SRGB:
 			return VK_FORMAT_BC1_RGBA_SRGB_BLOCK;
 			break;
-		case FORMAT_BC2_UNORM:
+		case Format::BC2_UNORM:
 			return VK_FORMAT_BC2_UNORM_BLOCK;
 			break;
-		case FORMAT_BC2_UNORM_SRGB:
+		case Format::BC2_UNORM_SRGB:
 			return VK_FORMAT_BC2_SRGB_BLOCK;
 			break;
-		case FORMAT_BC3_UNORM:
+		case Format::BC3_UNORM:
 			return VK_FORMAT_BC3_UNORM_BLOCK;
 			break;
-		case FORMAT_BC3_UNORM_SRGB:
+		case Format::BC3_UNORM_SRGB:
 			return VK_FORMAT_BC3_SRGB_BLOCK;
 			break;
-		case FORMAT_BC4_UNORM:
+		case Format::BC4_UNORM:
 			return VK_FORMAT_BC4_UNORM_BLOCK;
 			break;
-		case FORMAT_BC4_SNORM:
+		case Format::BC4_SNORM:
 			return VK_FORMAT_BC4_SNORM_BLOCK;
 			break;
-		case FORMAT_BC5_UNORM:
+		case Format::BC5_UNORM:
 			return VK_FORMAT_BC5_UNORM_BLOCK;
 			break;
-		case FORMAT_BC5_SNORM:
+		case Format::BC5_SNORM:
 			return VK_FORMAT_BC5_SNORM_BLOCK;
 			break;
-		case FORMAT_B8G8R8A8_UNORM:
+		case Format::B8G8R8A8_UNORM:
 			return VK_FORMAT_B8G8R8A8_UNORM;
 			break;
-		case FORMAT_B8G8R8A8_UNORM_SRGB:
+		case Format::B8G8R8A8_UNORM_SRGB:
 			return VK_FORMAT_B8G8R8A8_SRGB;
 			break;
-		case FORMAT_BC6H_UF16:
+		case Format::BC6H_UF16:
 			return VK_FORMAT_BC6H_UFLOAT_BLOCK;
 			break;
-		case FORMAT_BC6H_SF16:
+		case Format::BC6H_SF16:
 			return VK_FORMAT_BC6H_SFLOAT_BLOCK;
 			break;
-		case FORMAT_BC7_UNORM:
+		case Format::BC7_UNORM:
 			return VK_FORMAT_BC7_UNORM_BLOCK;
 			break;
-		case FORMAT_BC7_UNORM_SRGB:
+		case Format::BC7_UNORM_SRGB:
 			return VK_FORMAT_BC7_SRGB_BLOCK;
 			break;
 		}
 		return VK_FORMAT_UNDEFINED;
 	}
-	constexpr VkCompareOp _ConvertComparisonFunc(COMPARISON_FUNC value)
+	constexpr VkCompareOp _ConvertComparisonFunc(ComparisonFunc value)
 	{
 		switch (value)
 		{
-		case COMPARISON_NEVER:
+		case ComparisonFunc::NEVER:
 			return VK_COMPARE_OP_NEVER;
-		case COMPARISON_LESS:
+		case ComparisonFunc::LESS:
 			return VK_COMPARE_OP_LESS;
-		case COMPARISON_EQUAL:
+		case ComparisonFunc::EQUAL:
 			return VK_COMPARE_OP_EQUAL;
-		case COMPARISON_LESS_EQUAL:
+		case ComparisonFunc::LESS_EQUAL:
 			return VK_COMPARE_OP_LESS_OR_EQUAL;
-		case COMPARISON_GREATER:
+		case ComparisonFunc::GREATER:
 			return VK_COMPARE_OP_GREATER;
-		case COMPARISON_NOT_EQUAL:
+		case ComparisonFunc::NOT_EQUAL:
 			return VK_COMPARE_OP_NOT_EQUAL;
-		case COMPARISON_GREATER_EQUAL:
+		case ComparisonFunc::GREATER_EQUAL:
 			return VK_COMPARE_OP_GREATER_OR_EQUAL;
-		case COMPARISON_ALWAYS:
+		case ComparisonFunc::ALWAYS:
 			return VK_COMPARE_OP_ALWAYS;
 		default:
 			return VK_COMPARE_OP_NEVER;
 		}
 	}
-	constexpr VkBlendFactor _ConvertBlend(BLEND value)
+	constexpr VkBlendFactor _ConvertBlend(Blend value)
 	{
 		switch (value)
 		{
-		case BLEND_ZERO:
+		case Blend::ZERO:
 			return VK_BLEND_FACTOR_ZERO;
-		case BLEND_ONE:
+		case Blend::ONE:
 			return VK_BLEND_FACTOR_ONE;
-		case BLEND_SRC_COLOR:
+		case Blend::SRC_COLOR:
 			return VK_BLEND_FACTOR_SRC_COLOR;
-		case BLEND_INV_SRC_COLOR:
+		case Blend::INV_SRC_COLOR:
 			return VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
-		case BLEND_SRC_ALPHA:
+		case Blend::SRC_ALPHA:
 			return VK_BLEND_FACTOR_SRC_ALPHA;
-		case BLEND_INV_SRC_ALPHA:
+		case Blend::INV_SRC_ALPHA:
 			return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-		case BLEND_DEST_ALPHA:
+		case Blend::DEST_ALPHA:
 			return VK_BLEND_FACTOR_DST_ALPHA;
-		case BLEND_INV_DEST_ALPHA:
+		case Blend::INV_DEST_ALPHA:
 			return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
-		case BLEND_DEST_COLOR:
+		case Blend::DEST_COLOR:
 			return VK_BLEND_FACTOR_DST_COLOR;
-		case BLEND_INV_DEST_COLOR:
+		case Blend::INV_DEST_COLOR:
 			return VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
-		case BLEND_SRC_ALPHA_SAT:
+		case Blend::SRC_ALPHA_SAT:
 			return VK_BLEND_FACTOR_SRC_ALPHA_SATURATE;
-		case BLEND_BLEND_FACTOR:
+		case Blend::BLEND_FACTOR:
 			return VK_BLEND_FACTOR_CONSTANT_COLOR;
-		case BLEND_INV_BLEND_FACTOR:
+		case Blend::INV_BLEND_FACTOR:
 			return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR;
 			break;
-		case BLEND_SRC1_COLOR:
+		case Blend::SRC1_COLOR:
 			return VK_BLEND_FACTOR_SRC1_COLOR;
-		case BLEND_INV_SRC1_COLOR:
+		case Blend::INV_SRC1_COLOR:
 			return VK_BLEND_FACTOR_ONE_MINUS_SRC1_COLOR;
-		case BLEND_SRC1_ALPHA:
+		case Blend::SRC1_ALPHA:
 			return VK_BLEND_FACTOR_SRC1_ALPHA;
-		case BLEND_INV_SRC1_ALPHA:
+		case Blend::INV_SRC1_ALPHA:
 			return VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA;
 		default:
 			return VK_BLEND_FACTOR_ZERO;
 		}
 	}
-	constexpr VkBlendOp _ConvertBlendOp(BLEND_OP value)
+	constexpr VkBlendOp _ConvertBlendOp(BlendOp value)
 	{
 		switch (value)
 		{
-		case BLEND_OP_ADD:
+		case BlendOp::ADD:
 			return VK_BLEND_OP_ADD;
-		case BLEND_OP_SUBTRACT:
+		case BlendOp::SUBTRACT:
 			return VK_BLEND_OP_SUBTRACT;
-		case BLEND_OP_REV_SUBTRACT:
+		case BlendOp::REV_SUBTRACT:
 			return VK_BLEND_OP_REVERSE_SUBTRACT;
-		case BLEND_OP_MIN:
+		case BlendOp::MIN:
 			return VK_BLEND_OP_MIN;
-		case BLEND_OP_MAX:
+		case BlendOp::MAX:
 			return VK_BLEND_OP_MAX;
 		default:
 			return VK_BLEND_OP_ADD;
 		}
 	}
-	constexpr VkSamplerAddressMode _ConvertTextureAddressMode(TEXTURE_ADDRESS_MODE value, const VkPhysicalDeviceVulkan12Features& features_1_2)
+	constexpr VkSamplerAddressMode _ConvertTextureAddressMode(TextureAddressMode value, const VkPhysicalDeviceVulkan12Features& features_1_2)
 	{
 		switch (value)
 		{
-		case TEXTURE_ADDRESS_WRAP:
+		case TextureAddressMode::WRAP:
 			return VK_SAMPLER_ADDRESS_MODE_REPEAT;
-		case TEXTURE_ADDRESS_MIRROR:
+		case TextureAddressMode::MIRROR:
 			return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
-		case TEXTURE_ADDRESS_CLAMP:
+		case TextureAddressMode::CLAMP:
 			return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-		case TEXTURE_ADDRESS_BORDER:
+		case TextureAddressMode::BORDER:
 			return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-		case TEXTURE_ADDRESS_MIRROR_ONCE:
+		case TextureAddressMode::MIRROR_ONCE:
 			if (features_1_2.samplerMirrorClampToEdge == VK_TRUE)
 			{
 				return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
@@ -358,46 +358,46 @@ namespace Vulkan_Internal
 			return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 		}
 	}
-	constexpr VkBorderColor _ConvertSamplerBorderColor(SAMPLER_BORDER_COLOR value)
+	constexpr VkBorderColor _ConvertSamplerBorderColor(SamplerBorderColor value)
 	{
 		switch (value)
 		{
-		case SAMPLER_BORDER_COLOR_TRANSPARENT_BLACK:
+		case SamplerBorderColor::TRANSPARENT_BLACK:
 			return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
-		case SAMPLER_BORDER_COLOR_OPAQUE_BLACK:
+		case SamplerBorderColor::OPAQUE_BLACK:
 			return VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
-		case SAMPLER_BORDER_COLOR_OPAQUE_WHITE:
+		case SamplerBorderColor::OPAQUE_WHITE:
 			return VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
 		default:
 			return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
 		}
 	}
-	constexpr VkStencilOp _ConvertStencilOp(STENCIL_OP value)
+	constexpr VkStencilOp _ConvertStencilOp(StencilOp value)
 	{
 		switch (value)
 		{
-		case wiGraphics::STENCIL_OP_KEEP:
+		case wiGraphics::StencilOp::KEEP:
 			return VK_STENCIL_OP_KEEP;
 			break;
-		case wiGraphics::STENCIL_OP_ZERO:
+		case wiGraphics::StencilOp::ZERO:
 			return VK_STENCIL_OP_ZERO;
 			break;
-		case wiGraphics::STENCIL_OP_REPLACE:
+		case wiGraphics::StencilOp::REPLACE:
 			return VK_STENCIL_OP_REPLACE;
 			break;
-		case wiGraphics::STENCIL_OP_INCR_SAT:
+		case wiGraphics::StencilOp::INCR_SAT:
 			return VK_STENCIL_OP_INCREMENT_AND_CLAMP;
 			break;
-		case wiGraphics::STENCIL_OP_DECR_SAT:
+		case wiGraphics::StencilOp::DECR_SAT:
 			return VK_STENCIL_OP_DECREMENT_AND_CLAMP;
 			break;
-		case wiGraphics::STENCIL_OP_INVERT:
+		case wiGraphics::StencilOp::INVERT:
 			return VK_STENCIL_OP_INVERT;
 			break;
-		case wiGraphics::STENCIL_OP_INCR:
+		case wiGraphics::StencilOp::INCR:
 			return VK_STENCIL_OP_INCREMENT_AND_WRAP;
 			break;
-		case wiGraphics::STENCIL_OP_DECR:
+		case wiGraphics::StencilOp::DECR:
 			return VK_STENCIL_OP_DECREMENT_AND_WRAP;
 			break;
 		default:
@@ -405,115 +405,115 @@ namespace Vulkan_Internal
 		}
 		return VK_STENCIL_OP_KEEP;
 	}
-	constexpr VkImageLayout _ConvertImageLayout(RESOURCE_STATE value)
+	constexpr VkImageLayout _ConvertImageLayout(ResourceState value)
 	{
 		switch (value)
 		{
-		case wiGraphics::RESOURCE_STATE_UNDEFINED:
+		case ResourceState::UNDEFINED:
 			return VK_IMAGE_LAYOUT_UNDEFINED;
-		case wiGraphics::RESOURCE_STATE_RENDERTARGET:
+		case ResourceState::RENDERTARGET:
 			return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		case wiGraphics::RESOURCE_STATE_DEPTHSTENCIL:
+		case ResourceState::DEPTHSTENCIL:
 			return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-		case wiGraphics::RESOURCE_STATE_DEPTHSTENCIL_READONLY:
+		case ResourceState::DEPTHSTENCIL_READONLY:
 			return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-		case wiGraphics::RESOURCE_STATE_SHADER_RESOURCE:
-		case wiGraphics::RESOURCE_STATE_SHADER_RESOURCE_COMPUTE:
+		case ResourceState::SHADER_RESOURCE:
+		case ResourceState::SHADER_RESOURCE_COMPUTE:
 			return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		case wiGraphics::RESOURCE_STATE_UNORDERED_ACCESS:
+		case ResourceState::UNORDERED_ACCESS:
 			return VK_IMAGE_LAYOUT_GENERAL;
-		case wiGraphics::RESOURCE_STATE_COPY_SRC:
+		case ResourceState::COPY_SRC:
 			return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-		case wiGraphics::RESOURCE_STATE_COPY_DST:
+		case ResourceState::COPY_DST:
 			return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		case wiGraphics::RESOURCE_STATE_SHADING_RATE_SOURCE:
+		case ResourceState::SHADING_RATE_SOURCE:
 			return VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR;
 		}
 		return VK_IMAGE_LAYOUT_UNDEFINED;
 	}
-	constexpr VkShaderStageFlags _ConvertStageFlags(SHADERSTAGE value)
+	constexpr VkShaderStageFlags _ConvertStageFlags(ShaderStage value)
 	{
 		switch (value)
 		{
-		case wiGraphics::MS:
+		case ShaderStage::MS:
 			return VK_SHADER_STAGE_MESH_BIT_NV;
-		case wiGraphics::AS:
+		case ShaderStage::AS:
 			return VK_SHADER_STAGE_TASK_BIT_NV;
-		case wiGraphics::VS:
+		case ShaderStage::VS:
 			return VK_SHADER_STAGE_VERTEX_BIT;
-		case wiGraphics::HS:
+		case ShaderStage::HS:
 			return VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
-		case wiGraphics::DS:
+		case ShaderStage::DS:
 			return VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
-		case wiGraphics::GS:
+		case ShaderStage::GS:
 			return VK_SHADER_STAGE_GEOMETRY_BIT;
-		case wiGraphics::PS:
+		case ShaderStage::PS:
 			return VK_SHADER_STAGE_FRAGMENT_BIT;
-		case wiGraphics::CS:
+		case ShaderStage::CS:
 			return VK_SHADER_STAGE_COMPUTE_BIT;
 		default:
 			return VK_SHADER_STAGE_ALL;
 		}
 	}
-	constexpr VkAccessFlags _ParseResourceState(RESOURCE_STATE value)
+	constexpr VkAccessFlags _ParseResourceState(ResourceState value)
 	{
 		VkAccessFlags flags = 0;
 
-		if (value & RESOURCE_STATE_SHADER_RESOURCE)
+		if (has(value, ResourceState::SHADER_RESOURCE))
 		{
 			flags |= VK_ACCESS_SHADER_READ_BIT;
 		}
-		if (value & RESOURCE_STATE_SHADER_RESOURCE_COMPUTE)
+		if (has(value, ResourceState::SHADER_RESOURCE_COMPUTE))
 		{
 			flags |= VK_ACCESS_SHADER_READ_BIT;
 		}
-		if (value & RESOURCE_STATE_UNORDERED_ACCESS)
+		if (has(value, ResourceState::UNORDERED_ACCESS))
 		{
 			flags |= VK_ACCESS_SHADER_READ_BIT;
 			flags |= VK_ACCESS_SHADER_WRITE_BIT;
 		}
-		if (value & RESOURCE_STATE_COPY_SRC)
+		if (has(value, ResourceState::COPY_SRC))
 		{
 			flags |= VK_ACCESS_TRANSFER_READ_BIT;
 		}
-		if (value & RESOURCE_STATE_COPY_DST)
+		if (has(value, ResourceState::COPY_DST))
 		{
 			flags |= VK_ACCESS_TRANSFER_WRITE_BIT;
 		}
 
-		if (value & RESOURCE_STATE_RENDERTARGET)
+		if (has(value, ResourceState::RENDERTARGET))
 		{
 			flags |= VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
 			flags |= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 		}
-		if (value & RESOURCE_STATE_DEPTHSTENCIL)
+		if (has(value, ResourceState::DEPTHSTENCIL))
 		{
 			flags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
 			flags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 		}
-		if (value & RESOURCE_STATE_DEPTHSTENCIL_READONLY)
+		if (has(value, ResourceState::DEPTHSTENCIL_READONLY))
 		{
 			flags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
 		}
 
-		if (value & RESOURCE_STATE_VERTEX_BUFFER)
+		if (has(value, ResourceState::VERTEX_BUFFER))
 		{
 			flags |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
 		}
-		if (value & RESOURCE_STATE_INDEX_BUFFER)
+		if (has(value, ResourceState::INDEX_BUFFER))
 		{
 			flags |= VK_ACCESS_INDEX_READ_BIT;
 		}
-		if (value & RESOURCE_STATE_CONSTANT_BUFFER)
+		if (has(value, ResourceState::CONSTANT_BUFFER))
 		{
 			flags |= VK_ACCESS_UNIFORM_READ_BIT;
 		}
-		if (value & RESOURCE_STATE_INDIRECT_ARGUMENT)
+		if (has(value, ResourceState::INDIRECT_ARGUMENT))
 		{
 			flags |= VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
 		}
 
-		if (value & RESOURCE_STATE_PREDICATION)
+		if (has(value, ResourceState::PREDICATION))
 		{
 			flags |= VK_ACCESS_CONDITIONAL_RENDERING_READ_BIT_EXT;
 		}
@@ -826,7 +826,7 @@ namespace Vulkan_Internal
 		size_t binding_hash = 0;
 
 		VkGraphicsPipelineCreateInfo pipelineInfo = {};
-		VkPipelineShaderStageCreateInfo shaderStages[SHADERSTAGE_COUNT] = {};
+		VkPipelineShaderStageCreateInfo shaderStages[to_underlying(ShaderStage::Count)] = {};
 		VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
 		VkPipelineRasterizationStateCreateInfo rasterizer = {};
 		VkPipelineRasterizationDepthClipStateCreateInfoEXT depthclip = {};
@@ -916,7 +916,7 @@ namespace Vulkan_Internal
 		VkSemaphore swapchainAcquireSemaphore = VK_NULL_HANDLE;
 		VkSemaphore swapchainReleaseSemaphore = VK_NULL_HANDLE;
 
-		COLOR_SPACE colorSpace = COLOR_SPACE_SRGB;
+		ColorSpace colorSpace = ColorSpace::SRGB;
 		SwapChainDesc desc;
 		std::mutex locker;
 
@@ -1053,18 +1053,18 @@ namespace Vulkan_Internal
 		}
 
 		// For now, we only include the color spaces that were tested successfully:
-		COLOR_SPACE prev_colorspace = internal_state->colorSpace;
+		ColorSpace prev_colorspace = internal_state->colorSpace;
 		switch (surfaceFormat.colorSpace)
 		{
 		default:
 		case VK_COLOR_SPACE_SRGB_NONLINEAR_KHR:
-			internal_state->colorSpace = COLOR_SPACE_SRGB;
+			internal_state->colorSpace = ColorSpace::SRGB;
 			break;
 		case VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT:
-			internal_state->colorSpace = COLOR_SPACE_HDR_LINEAR;
+			internal_state->colorSpace = ColorSpace::HDR_LINEAR;
 			break;
 		case VK_COLOR_SPACE_HDR10_ST2084_EXT:
-			internal_state->colorSpace = COLOR_SPACE_HDR10_ST2084;
+			internal_state->colorSpace = ColorSpace::HDR10_ST2084;
 			break;
 		}
 
@@ -1416,7 +1416,7 @@ using namespace Vulkan_Internal;
 		{
 			GPUBufferDesc uploaddesc;
 			uploaddesc.size = wiMath::GetNextPowerOfTwo(staging_size);
-			uploaddesc.usage = USAGE_UPLOAD;
+			uploaddesc.usage = Usage::UPLOAD;
 			bool upload_success = device->CreateBuffer(&uploaddesc, nullptr, &cmd.uploadbuffer);
 			assert(upload_success);
 		}
@@ -1542,7 +1542,7 @@ using namespace Vulkan_Internal;
 		poolSizes[7].descriptorCount = DESCRIPTORBINDER_SAMPLER_COUNT * poolSize;
 		count++;
 
-		if (device->CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+		if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 		{
 			poolSizes[8].type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
 			poolSizes[8].descriptorCount = DESCRIPTORBINDER_SRV_COUNT * poolSize;
@@ -1974,7 +1974,7 @@ using namespace Vulkan_Internal;
 		{
 			bindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
 
-			if (device->active_cs[cmd]->stage == LIB)
+			if (device->active_cs[cmd]->stage == ShaderStage::LIB)
 			{
 				bindPoint = VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR;
 			}
@@ -2061,7 +2061,7 @@ using namespace Vulkan_Internal;
 				const size_t blend_loopCount = active_renderpass[cmd]->desc.attachments.size();
 				for (size_t i = 0; i < blend_loopCount; ++i)
 				{
-					if (active_renderpass[cmd]->desc.attachments[i].type != RenderPassAttachment::RENDERTARGET)
+					if (active_renderpass[cmd]->desc.attachments[i].type != RenderPassAttachment::Type::RENDERTARGET)
 					{
 						continue;
 					}
@@ -2077,19 +2077,19 @@ using namespace Vulkan_Internal;
 					attachment.blendEnable = desc.blend_enable ? VK_TRUE : VK_FALSE;
 
 					attachment.colorWriteMask = 0;
-					if (desc.render_target_write_mask & COLOR_WRITE_ENABLE_RED)
+					if (has(desc.render_target_write_mask, ColorWrite::ENABLE_RED))
 					{
 						attachment.colorWriteMask |= VK_COLOR_COMPONENT_R_BIT;
 					}
-					if (desc.render_target_write_mask & COLOR_WRITE_ENABLE_GREEN)
+					if (has(desc.render_target_write_mask, ColorWrite::ENABLE_GREEN))
 					{
 						attachment.colorWriteMask |= VK_COLOR_COMPONENT_G_BIT;
 					}
-					if (desc.render_target_write_mask & COLOR_WRITE_ENABLE_BLUE)
+					if (has(desc.render_target_write_mask, ColorWrite::ENABLE_BLUE))
 					{
 						attachment.colorWriteMask |= VK_COLOR_COMPONENT_B_BIT;
 					}
-					if (desc.render_target_write_mask & COLOR_WRITE_ENABLE_ALPHA)
+					if (has(desc.render_target_write_mask, ColorWrite::ENABLE_ALPHA))
 					{
 						attachment.colorWriteMask |= VK_COLOR_COMPONENT_A_BIT;
 					}
@@ -2130,7 +2130,7 @@ using namespace Vulkan_Internal;
 						lastBinding = x.input_slot;
 						VkVertexInputBindingDescription& bind = bindings.emplace_back();
 						bind.binding = x.input_slot;
-						bind.inputRate = x.input_slot_class == INPUT_PER_VERTEX_DATA ? VK_VERTEX_INPUT_RATE_VERTEX : VK_VERTEX_INPUT_RATE_INSTANCE;
+						bind.inputRate = x.input_slot_class == InputClassification::PER_VERTEX_DATA ? VK_VERTEX_INPUT_RATE_VERTEX : VK_VERTEX_INPUT_RATE_INSTANCE;
 						bind.stride = vb_strides[cmd][x.input_slot];
 					}
 
@@ -2511,15 +2511,15 @@ using namespace Vulkan_Internal;
 
 			if (features2.features.tessellationShader == VK_TRUE)
 			{
-				capabilities |= GRAPHICSDEVICE_CAPABILITY_TESSELLATION;
+				capabilities |= GraphicsDeviceCapability::TESSELLATION;
 			}
 			if (features2.features.shaderStorageImageExtendedFormats == VK_TRUE)
 			{
-				capabilities |= GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_COMMON;
+				capabilities |= GraphicsDeviceCapability::UAV_LOAD_FORMAT_COMMON;
 			}
 			if (features_1_2.shaderOutputLayer == VK_TRUE && features_1_2.shaderOutputViewportIndex)
 			{
-				capabilities |= GRAPHICSDEVICE_CAPABILITY_RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS;
+				capabilities |= GraphicsDeviceCapability::RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS;
 			}
 
 			if (
@@ -2528,38 +2528,38 @@ using namespace Vulkan_Internal;
 				acceleration_structure_features.accelerationStructure == VK_TRUE &&
 				features_1_2.bufferDeviceAddress == VK_TRUE)
 			{
-				capabilities |= GRAPHICSDEVICE_CAPABILITY_RAYTRACING;
+				capabilities |= GraphicsDeviceCapability::RAYTRACING;
 				SHADER_IDENTIFIER_SIZE = raytracing_properties.shaderGroupHandleSize;
 			}
 			if (mesh_shader_features.meshShader == VK_TRUE && mesh_shader_features.taskShader == VK_TRUE)
 			{
-				capabilities |= GRAPHICSDEVICE_CAPABILITY_MESH_SHADER;
+				capabilities |= GraphicsDeviceCapability::MESH_SHADER;
 			}
 			if (fragment_shading_rate_features.pipelineFragmentShadingRate == VK_TRUE)
 			{
-				capabilities |= GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING;
+				capabilities |= GraphicsDeviceCapability::VARIABLE_RATE_SHADING;
 			}
 			if (fragment_shading_rate_features.attachmentFragmentShadingRate == VK_TRUE)
 			{
-				capabilities |= GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2;
+				capabilities |= GraphicsDeviceCapability::VARIABLE_RATE_SHADING_TIER2;
 				VARIABLE_RATE_SHADING_TILE_SIZE = std::min(fragment_shading_rate_properties.maxFragmentShadingRateAttachmentTexelSize.width, fragment_shading_rate_properties.maxFragmentShadingRateAttachmentTexelSize.height);
 			}
 
 			VkFormatProperties formatProperties = {};
-			vkGetPhysicalDeviceFormatProperties(physicalDevice, _ConvertFormat(FORMAT_R11G11B10_FLOAT), &formatProperties);
+			vkGetPhysicalDeviceFormatProperties(physicalDevice, _ConvertFormat(Format::R11G11B10_FLOAT), &formatProperties);
 			if (formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)
 			{
-				capabilities |= GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_R11G11B10_FLOAT;
+				capabilities |= GraphicsDeviceCapability::UAV_LOAD_FORMAT_R11G11B10_FLOAT;
 			}
 
 			if (conditional_rendering_features.conditionalRendering == VK_TRUE)
 			{
-				capabilities |= GRAPHICSDEVICE_CAPABILITY_PREDICATION;
+				capabilities |= GraphicsDeviceCapability::PREDICATION;
 			}
 
 			if (features_1_2.samplerFilterMinmax == VK_TRUE)
 			{
-				capabilities |= GRAPHICSDEVICE_CAPABILITY_SAMPLER_MINMAX;
+				capabilities |= GraphicsDeviceCapability::SAMPLER_MINMAX;
 			}
 
 			// Find queue families:
@@ -2900,7 +2900,7 @@ using namespace Vulkan_Internal;
 		pso_dynamicStates.push_back(VK_DYNAMIC_STATE_SCISSOR);
 		pso_dynamicStates.push_back(VK_DYNAMIC_STATE_STENCIL_REFERENCE);
 		pso_dynamicStates.push_back(VK_DYNAMIC_STATE_BLEND_CONSTANTS);
-		if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING))
+		if (CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING))
 		{
 			pso_dynamicStates.push_back(VK_DYNAMIC_STATE_FRAGMENT_SHADING_RATE_KHR);
 		}
@@ -2934,7 +2934,7 @@ using namespace Vulkan_Internal;
 			allocationhandler->bindlessSamplers.init(device, VK_DESCRIPTOR_TYPE_SAMPLER, 256);
 		}
 
-		if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+		if (CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 		{
 			allocationhandler->bindlessAccelerationStructures.init(device, VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 32);
 		}
@@ -3172,7 +3172,7 @@ using namespace Vulkan_Internal;
 		auto internal_state = std::make_shared<Buffer_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
 		pBuffer->internal_state = internal_state;
-		pBuffer->type = GPUResource::GPU_RESOURCE_TYPE::BUFFER;
+		pBuffer->type = GPUResource::Type::BUFFER;
 		pBuffer->mapped_data = nullptr;
 		pBuffer->mapped_rowpitch = 0;
 
@@ -3182,21 +3182,21 @@ using namespace Vulkan_Internal;
 		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 		bufferInfo.size = pBuffer->desc.size;
 		bufferInfo.usage = 0;
-		if (pBuffer->desc.bind_flags & BIND_VERTEX_BUFFER)
+		if (has(pBuffer->desc.bind_flags, BindFlag::VERTEX_BUFFER))
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 		}
-		if (pBuffer->desc.bind_flags & BIND_INDEX_BUFFER)
+		if (has(pBuffer->desc.bind_flags, BindFlag::INDEX_BUFFER))
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
 		}
-		if (pBuffer->desc.bind_flags & BIND_CONSTANT_BUFFER)
+		if (has(pBuffer->desc.bind_flags, BindFlag::CONSTANT_BUFFER))
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 		}
-		if (pBuffer->desc.bind_flags & BIND_SHADER_RESOURCE)
+		if (has(pBuffer->desc.bind_flags, BindFlag::SHADER_RESOURCE))
 		{
-			if (pBuffer->desc.format == FORMAT_UNKNOWN)
+			if (pBuffer->desc.format == Format::UNKNOWN)
 			{
 				bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 			}
@@ -3205,9 +3205,9 @@ using namespace Vulkan_Internal;
 				bufferInfo.usage |= VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT;
 			}
 		}
-		if (pBuffer->desc.bind_flags & BIND_UNORDERED_ACCESS)
+		if (has(pBuffer->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
 		{
-			if (pBuffer->desc.format == FORMAT_UNKNOWN)
+			if (pBuffer->desc.format == Format::UNKNOWN)
 			{
 				bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 			}
@@ -3216,24 +3216,24 @@ using namespace Vulkan_Internal;
 				bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
 			}
 		}
-		if (pBuffer->desc.misc_flags & RESOURCE_MISC_BUFFER_RAW)
+		if (has(pBuffer->desc.misc_flags, ResourceMiscFlag::BUFFER_RAW))
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 		}
-		if (pBuffer->desc.misc_flags & RESOURCE_MISC_BUFFER_STRUCTURED)
+		if (has(pBuffer->desc.misc_flags, ResourceMiscFlag::BUFFER_STRUCTURED))
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 		}
-		if (pBuffer->desc.misc_flags & RESOURCE_MISC_INDIRECT_ARGS)
+		if (has(pBuffer->desc.misc_flags, ResourceMiscFlag::INDIRECT_ARGS))
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
 		}
-		if (pBuffer->desc.misc_flags & RESOURCE_MISC_RAY_TRACING)
+		if (has(pBuffer->desc.misc_flags, ResourceMiscFlag::RAY_TRACING))
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
 			bufferInfo.usage |= VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR;
 		}
-		if (pBuffer->desc.misc_flags & RESOURCE_MISC_PREDICATION)
+		if (has(pBuffer->desc.misc_flags, ResourceMiscFlag::PREDICATION))
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_CONDITIONAL_RENDERING_BIT_EXT;
 		}
@@ -3261,13 +3261,13 @@ using namespace Vulkan_Internal;
 		//allocInfo.flags = VMA_ALLOCATION_CREATE_STRATEGY_MIN_MEMORY_BIT;
 		//allocInfo.flags = VMA_ALLOCATION_CREATE_STRATEGY_MIN_FRAGMENTATION_BIT;
 		allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-		if (pDesc->usage == USAGE_READBACK)
+		if (pDesc->usage == Usage::READBACK)
 		{
 			allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
 			allocInfo.usage = VMA_MEMORY_USAGE_GPU_TO_CPU;
 			bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 		}
-		else if(pDesc->usage == USAGE_UPLOAD)
+		else if(pDesc->usage == Usage::UPLOAD)
 		{
 			allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
 			allocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY; // yes, not using VMA_MEMORY_USAGE_CPU_TO_GPU, as it had worse performance for CPU write
@@ -3277,7 +3277,7 @@ using namespace Vulkan_Internal;
 		VkResult res = vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &internal_state->resource, &internal_state->allocation, nullptr);
 		assert(res == VK_SUCCESS);
 
-		if (pDesc->usage == USAGE_READBACK || pDesc->usage == USAGE_UPLOAD)
+		if (pDesc->usage == Usage::READBACK || pDesc->usage == Usage::UPLOAD)
 		{
 			pBuffer->mapped_data = internal_state->allocation->GetMappedData();
 			pBuffer->mapped_rowpitch = static_cast<uint32_t>(pDesc->size);
@@ -3333,31 +3333,31 @@ using namespace Vulkan_Internal;
 
 			std::swap(barrier.srcAccessMask, barrier.dstAccessMask);
 
-			if (pBuffer->desc.bind_flags & BIND_CONSTANT_BUFFER)
+			if (has(pBuffer->desc.bind_flags, BindFlag::CONSTANT_BUFFER))
 			{
 				barrier.dstAccessMask |= VK_ACCESS_UNIFORM_READ_BIT;
 			}
-			if (pBuffer->desc.bind_flags & BIND_VERTEX_BUFFER)
+			if (has(pBuffer->desc.bind_flags, BindFlag::VERTEX_BUFFER))
 			{
 				barrier.dstAccessMask |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
 			}
-			if (pBuffer->desc.bind_flags & BIND_INDEX_BUFFER)
+			if (has(pBuffer->desc.bind_flags, BindFlag::INDEX_BUFFER))
 			{
 				barrier.dstAccessMask |= VK_ACCESS_INDEX_READ_BIT;
 			}
-			if(pBuffer->desc.bind_flags & BIND_SHADER_RESOURCE)
+			if (has(pBuffer->desc.bind_flags, BindFlag::SHADER_RESOURCE))
 			{
 				barrier.dstAccessMask |= VK_ACCESS_SHADER_READ_BIT;
 			}
-			if (pBuffer->desc.bind_flags & BIND_UNORDERED_ACCESS)
+			if (has(pBuffer->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
 			{
 				barrier.dstAccessMask |= VK_ACCESS_SHADER_WRITE_BIT;
 			}
-			if (pBuffer->desc.misc_flags & RESOURCE_MISC_INDIRECT_ARGS)
+			if (has(pBuffer->desc.misc_flags, ResourceMiscFlag::INDIRECT_ARGS))
 			{
 				barrier.dstAccessMask |= VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
 			}
-			if (pBuffer->desc.misc_flags & RESOURCE_MISC_RAY_TRACING)
+			if (has(pBuffer->desc.misc_flags, ResourceMiscFlag::RAY_TRACING))
 			{
 				barrier.dstAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
 			}
@@ -3375,7 +3375,7 @@ using namespace Vulkan_Internal;
 			copyAllocator.submit(cmd);
 		}
 
-		if (pDesc->format == FORMAT_UNKNOWN)
+		if (pDesc->format == Format::UNKNOWN)
 		{
 			internal_state->is_typedbuffer = false;
 		}
@@ -3386,13 +3386,13 @@ using namespace Vulkan_Internal;
 
 
 		// Create resource views if needed
-		if (pDesc->bind_flags & BIND_SHADER_RESOURCE)
+		if (has(pDesc->bind_flags, BindFlag::SHADER_RESOURCE))
 		{
-			CreateSubresource(pBuffer, SRV, 0);
+			CreateSubresource(pBuffer, SubresourceType::SRV, 0);
 		}
-		if (pDesc->bind_flags & BIND_UNORDERED_ACCESS)
+		if (has(pDesc->bind_flags, BindFlag::UNORDERED_ACCESS))
 		{
-			CreateSubresource(pBuffer, UAV, 0);
+			CreateSubresource(pBuffer, SubresourceType::UAV, 0);
 		}
 
 		return res == VK_SUCCESS;
@@ -3402,7 +3402,7 @@ using namespace Vulkan_Internal;
 		auto internal_state = std::make_shared<Texture_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
 		pTexture->internal_state = internal_state;
-		pTexture->type = GPUResource::GPU_RESOURCE_TYPE::TEXTURE;
+		pTexture->type = GPUResource::Type::TEXTURE;
 		pTexture->mapped_data = nullptr;
 		pTexture->mapped_rowpitch = 0;
 
@@ -3430,25 +3430,25 @@ using namespace Vulkan_Internal;
 		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
 		imageInfo.usage = 0;
-		if (pTexture->desc.bind_flags & BIND_SHADER_RESOURCE)
+		if (has(pTexture->desc.bind_flags, BindFlag::SHADER_RESOURCE))
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
 		}
-		if (pTexture->desc.bind_flags & BIND_UNORDERED_ACCESS)
+		if (has(pTexture->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
 		}
-		if (pTexture->desc.bind_flags & BIND_RENDER_TARGET)
+		if (has(pTexture->desc.bind_flags, BindFlag::RENDER_TARGET))
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 			//allocInfo.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 		}
-		if (pTexture->desc.bind_flags & BIND_DEPTH_STENCIL)
+		if (has(pTexture->desc.bind_flags, BindFlag::DEPTH_STENCIL))
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 			//allocInfo.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 		}
-		if(pTexture->desc.bind_flags & BIND_SHADING_RATE)
+		if (has(pTexture->desc.bind_flags, BindFlag::SHADING_RATE))
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR;
 		}
@@ -3456,7 +3456,7 @@ using namespace Vulkan_Internal;
 		imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
 		imageInfo.flags = 0;
-		if (pTexture->desc.misc_flags & RESOURCE_MISC_TEXTURECUBE)
+		if (has(pTexture->desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
 		{
 			imageInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 		}
@@ -3474,13 +3474,13 @@ using namespace Vulkan_Internal;
 
 		switch (pTexture->desc.type)
 		{
-		case TextureDesc::TEXTURE_1D:
+		case TextureDesc::Type::TEXTURE_1D:
 			imageInfo.imageType = VK_IMAGE_TYPE_1D;
 			break;
-		case TextureDesc::TEXTURE_2D:
+		case TextureDesc::Type::TEXTURE_2D:
 			imageInfo.imageType = VK_IMAGE_TYPE_2D;
 			break;
-		case TextureDesc::TEXTURE_3D:
+		case TextureDesc::Type::TEXTURE_3D:
 			imageInfo.imageType = VK_IMAGE_TYPE_3D;
 			imageInfo.extent.depth = pTexture->desc.depth;
 			break;
@@ -3491,7 +3491,7 @@ using namespace Vulkan_Internal;
 
 		VkResult res;
 
-		if (pTexture->desc.usage == USAGE_READBACK || pTexture->desc.usage == USAGE_UPLOAD)
+		if (pTexture->desc.usage == Usage::READBACK || pTexture->desc.usage == Usage::UPLOAD)
 		{
 			VkBufferCreateInfo bufferInfo = {};
 			bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -3499,12 +3499,12 @@ using namespace Vulkan_Internal;
 				GetFormatStride(pTexture->desc.format);
 
 			allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
-			if (pTexture->desc.usage == USAGE_READBACK)
+			if (pTexture->desc.usage == Usage::READBACK)
 			{
 				allocInfo.usage = VMA_MEMORY_USAGE_GPU_TO_CPU;
 				bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 			}
-			else if(pTexture->desc.usage == USAGE_UPLOAD)
+			else if(pTexture->desc.usage == Usage::UPLOAD)
 			{
 				allocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY; // yes, not using VMA_MEMORY_USAGE_CPU_TO_GPU, as it had worse performance for CPU write
 				bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
@@ -3522,7 +3522,7 @@ using namespace Vulkan_Internal;
 			subresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 			vkGetImageSubresourceLayout(device, image, &subresource, &internal_state->subresourcelayout);
 
-			if (pDesc->usage == USAGE_READBACK || pTexture->desc.usage == USAGE_UPLOAD)
+			if (pDesc->usage == Usage::READBACK || pTexture->desc.usage == Usage::UPLOAD)
 			{
 				pTexture->mapped_data = internal_state->allocation->GetMappedData();
 				pTexture->mapped_rowpitch = (uint32_t)internal_state->subresourcelayout.rowPitch;
@@ -3643,7 +3643,7 @@ using namespace Vulkan_Internal;
 			barrier.newLayout = _ConvertImageLayout(pTexture->desc.layout);
 			barrier.srcAccessMask = 0;
 			barrier.dstAccessMask = _ParseResourceState(pTexture->desc.layout);
-			if (pTexture->desc.bind_flags & BIND_DEPTH_STENCIL)
+			if (has(pTexture->desc.bind_flags, BindFlag::DEPTH_STENCIL))
 			{
 				barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 				if (IsFormatStencilSupport(pTexture->desc.format))
@@ -3676,26 +3676,26 @@ using namespace Vulkan_Internal;
 			initLocker.unlock();
 		}
 
-		if (pTexture->desc.bind_flags & BIND_RENDER_TARGET)
+		if (has(pTexture->desc.bind_flags, BindFlag::RENDER_TARGET))
 		{
-			CreateSubresource(pTexture, RTV, 0, -1, 0, -1);
+			CreateSubresource(pTexture, SubresourceType::RTV, 0, -1, 0, -1);
 		}
-		if (pTexture->desc.bind_flags & BIND_DEPTH_STENCIL)
+		if (has(pTexture->desc.bind_flags, BindFlag::DEPTH_STENCIL))
 		{
-			CreateSubresource(pTexture, DSV, 0, -1, 0, -1);
+			CreateSubresource(pTexture, SubresourceType::DSV, 0, -1, 0, -1);
 		}
-		if (pTexture->desc.bind_flags & BIND_SHADER_RESOURCE)
+		if (has(pTexture->desc.bind_flags, BindFlag::SHADER_RESOURCE))
 		{
-			CreateSubresource(pTexture, SRV, 0, -1, 0, -1);
+			CreateSubresource(pTexture, SubresourceType::SRV, 0, -1, 0, -1);
 		}
-		if (pTexture->desc.bind_flags & BIND_UNORDERED_ACCESS)
+		if (has(pTexture->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
 		{
-			CreateSubresource(pTexture, UAV, 0, -1, 0, -1);
+			CreateSubresource(pTexture, SubresourceType::UAV, 0, -1, 0, -1);
 		}
 
 		return res == VK_SUCCESS;
 	}
-	bool GraphicsDevice_Vulkan::CreateShader(SHADERSTAGE stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) const
+	bool GraphicsDevice_Vulkan::CreateShader(ShaderStage stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) const
 	{
 		auto internal_state = std::make_shared<Shader_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
@@ -3717,28 +3717,28 @@ using namespace Vulkan_Internal;
 		internal_state->stageInfo.pName = "main";
 		switch (stage)
 		{
-		case wiGraphics::MS:
+		case ShaderStage::MS:
 			internal_state->stageInfo.stage = VK_SHADER_STAGE_MESH_BIT_NV;
 			break;
-		case wiGraphics::AS:
+		case ShaderStage::AS:
 			internal_state->stageInfo.stage = VK_SHADER_STAGE_TASK_BIT_NV;
 			break;
-		case wiGraphics::VS:
+		case ShaderStage::VS:
 			internal_state->stageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
 			break;
-		case wiGraphics::HS:
+		case ShaderStage::HS:
 			internal_state->stageInfo.stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
 			break;
-		case wiGraphics::DS:
+		case ShaderStage::DS:
 			internal_state->stageInfo.stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
 			break;
-		case wiGraphics::GS:
+		case ShaderStage::GS:
 			internal_state->stageInfo.stage = VK_SHADER_STAGE_GEOMETRY_BIT;
 			break;
-		case wiGraphics::PS:
+		case ShaderStage::PS:
 			internal_state->stageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
 			break;
-		case wiGraphics::CS:
+		case ShaderStage::CS:
 			internal_state->stageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
 			break;
 		default:
@@ -3885,7 +3885,7 @@ using namespace Vulkan_Internal;
 
 			spvReflectDestroyShaderModule(&module);
 
-			if (stage == CS || stage == LIB)
+			if (stage == ShaderStage::CS || stage == ShaderStage::LIB)
 			{
 				internal_state->binding_hash = 0;
 				size_t i = 0;
@@ -4000,7 +4000,7 @@ using namespace Vulkan_Internal;
 			}
 		}
 
-		if (stage == CS)
+		if (stage == ShaderStage::CS)
 		{
 			VkComputePipelineCreateInfo pipelineInfo = {};
 			pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
@@ -4033,144 +4033,144 @@ using namespace Vulkan_Internal;
 
 		switch (pSamplerDesc->filter)
 		{
-		case FILTER_MIN_MAG_MIP_POINT:
-		case FILTER_MINIMUM_MIN_MAG_MIP_POINT:
-		case FILTER_MAXIMUM_MIN_MAG_MIP_POINT:
+		case Filter::MIN_MAG_MIP_POINT:
+		case Filter::MINIMUM_MIN_MAG_MIP_POINT:
+		case Filter::MAXIMUM_MIN_MAG_MIP_POINT:
 			createInfo.minFilter = VK_FILTER_NEAREST;
 			createInfo.magFilter = VK_FILTER_NEAREST;
 			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
 			createInfo.anisotropyEnable = false;
 			createInfo.compareEnable = false;
 			break;
-		case FILTER_MIN_MAG_POINT_MIP_LINEAR:
-		case FILTER_MINIMUM_MIN_MAG_POINT_MIP_LINEAR:
-		case FILTER_MAXIMUM_MIN_MAG_POINT_MIP_LINEAR:
+		case Filter::MIN_MAG_POINT_MIP_LINEAR:
+		case Filter::MINIMUM_MIN_MAG_POINT_MIP_LINEAR:
+		case Filter::MAXIMUM_MIN_MAG_POINT_MIP_LINEAR:
 			createInfo.minFilter = VK_FILTER_NEAREST;
 			createInfo.magFilter = VK_FILTER_NEAREST;
 			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 			createInfo.anisotropyEnable = false;
 			createInfo.compareEnable = false;
 			break;
-		case FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT:
-		case FILTER_MINIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT:
-		case FILTER_MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT:
+		case Filter::MIN_POINT_MAG_LINEAR_MIP_POINT:
+		case Filter::MINIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT:
+		case Filter::MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT:
 			createInfo.minFilter = VK_FILTER_NEAREST;
 			createInfo.magFilter = VK_FILTER_LINEAR;
 			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
 			createInfo.anisotropyEnable = false;
 			createInfo.compareEnable = false;
 			break;
-		case FILTER_MIN_POINT_MAG_MIP_LINEAR:
-		case FILTER_MINIMUM_MIN_POINT_MAG_MIP_LINEAR:
-		case FILTER_MAXIMUM_MIN_POINT_MAG_MIP_LINEAR:
+		case Filter::MIN_POINT_MAG_MIP_LINEAR:
+		case Filter::MINIMUM_MIN_POINT_MAG_MIP_LINEAR:
+		case Filter::MAXIMUM_MIN_POINT_MAG_MIP_LINEAR:
 			createInfo.minFilter = VK_FILTER_NEAREST;
 			createInfo.magFilter = VK_FILTER_LINEAR;
 			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 			createInfo.anisotropyEnable = false;
 			createInfo.compareEnable = false;
 			break;
-		case FILTER_MIN_LINEAR_MAG_MIP_POINT:
-		case FILTER_MINIMUM_MIN_LINEAR_MAG_MIP_POINT:
-		case FILTER_MAXIMUM_MIN_LINEAR_MAG_MIP_POINT:
+		case Filter::MIN_LINEAR_MAG_MIP_POINT:
+		case Filter::MINIMUM_MIN_LINEAR_MAG_MIP_POINT:
+		case Filter::MAXIMUM_MIN_LINEAR_MAG_MIP_POINT:
 			createInfo.minFilter = VK_FILTER_LINEAR;
 			createInfo.magFilter = VK_FILTER_NEAREST;
 			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
 			createInfo.anisotropyEnable = false;
 			createInfo.compareEnable = false;
 			break;
-		case FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
-		case FILTER_MINIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
-		case FILTER_MAXIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
+		case Filter::MIN_LINEAR_MAG_POINT_MIP_LINEAR:
+		case Filter::MINIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
+		case Filter::MAXIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
 			createInfo.minFilter = VK_FILTER_LINEAR;
 			createInfo.magFilter = VK_FILTER_NEAREST;
 			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 			createInfo.anisotropyEnable = false;
 			createInfo.compareEnable = false;
 			break;
-		case FILTER_MIN_MAG_LINEAR_MIP_POINT:
-		case FILTER_MINIMUM_MIN_MAG_LINEAR_MIP_POINT:
-		case FILTER_MAXIMUM_MIN_MAG_LINEAR_MIP_POINT:
+		case Filter::MIN_MAG_LINEAR_MIP_POINT:
+		case Filter::MINIMUM_MIN_MAG_LINEAR_MIP_POINT:
+		case Filter::MAXIMUM_MIN_MAG_LINEAR_MIP_POINT:
 			createInfo.minFilter = VK_FILTER_LINEAR;
 			createInfo.magFilter = VK_FILTER_LINEAR;
 			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
 			createInfo.anisotropyEnable = false;
 			createInfo.compareEnable = false;
 			break;
-		case FILTER_MIN_MAG_MIP_LINEAR:
-		case FILTER_MINIMUM_MIN_MAG_MIP_LINEAR:
-		case FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR:
+		case Filter::MIN_MAG_MIP_LINEAR:
+		case Filter::MINIMUM_MIN_MAG_MIP_LINEAR:
+		case Filter::MAXIMUM_MIN_MAG_MIP_LINEAR:
 			createInfo.minFilter = VK_FILTER_LINEAR;
 			createInfo.magFilter = VK_FILTER_LINEAR;
 			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 			createInfo.anisotropyEnable = false;
 			createInfo.compareEnable = false;
 			break;
-		case FILTER_ANISOTROPIC:
-		case FILTER_MINIMUM_ANISOTROPIC:
-		case FILTER_MAXIMUM_ANISOTROPIC:
+		case Filter::ANISOTROPIC:
+		case Filter::MINIMUM_ANISOTROPIC:
+		case Filter::MAXIMUM_ANISOTROPIC:
 			createInfo.minFilter = VK_FILTER_LINEAR;
 			createInfo.magFilter = VK_FILTER_LINEAR;
 			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 			createInfo.anisotropyEnable = true;
 			createInfo.compareEnable = false;
 			break;
-		case FILTER_COMPARISON_MIN_MAG_MIP_POINT:
+		case Filter::COMPARISON_MIN_MAG_MIP_POINT:
 			createInfo.minFilter = VK_FILTER_NEAREST;
 			createInfo.magFilter = VK_FILTER_NEAREST;
 			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
 			createInfo.anisotropyEnable = false;
 			createInfo.compareEnable = true;
 			break;
-		case FILTER_COMPARISON_MIN_MAG_POINT_MIP_LINEAR:
+		case Filter::COMPARISON_MIN_MAG_POINT_MIP_LINEAR:
 			createInfo.minFilter = VK_FILTER_NEAREST;
 			createInfo.magFilter = VK_FILTER_NEAREST;
 			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 			createInfo.anisotropyEnable = false;
 			createInfo.compareEnable = true;
 			break;
-		case FILTER_COMPARISON_MIN_POINT_MAG_LINEAR_MIP_POINT:
+		case Filter::COMPARISON_MIN_POINT_MAG_LINEAR_MIP_POINT:
 			createInfo.minFilter = VK_FILTER_NEAREST;
 			createInfo.magFilter = VK_FILTER_LINEAR;
 			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
 			createInfo.anisotropyEnable = false;
 			createInfo.compareEnable = true;
 			break;
-		case FILTER_COMPARISON_MIN_POINT_MAG_MIP_LINEAR:
+		case Filter::COMPARISON_MIN_POINT_MAG_MIP_LINEAR:
 			createInfo.minFilter = VK_FILTER_NEAREST;
 			createInfo.magFilter = VK_FILTER_NEAREST;
 			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
 			createInfo.anisotropyEnable = false;
 			createInfo.compareEnable = true;
 			break;
-		case FILTER_COMPARISON_MIN_LINEAR_MAG_MIP_POINT:
+		case Filter::COMPARISON_MIN_LINEAR_MAG_MIP_POINT:
 			createInfo.minFilter = VK_FILTER_LINEAR;
 			createInfo.magFilter = VK_FILTER_NEAREST;
 			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
 			createInfo.anisotropyEnable = false;
 			createInfo.compareEnable = true;
 			break;
-		case FILTER_COMPARISON_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
+		case Filter::COMPARISON_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
 			createInfo.minFilter = VK_FILTER_LINEAR;
 			createInfo.magFilter = VK_FILTER_NEAREST;
 			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 			createInfo.anisotropyEnable = false;
 			createInfo.compareEnable = true;
 			break;
-		case FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT:
+		case Filter::COMPARISON_MIN_MAG_LINEAR_MIP_POINT:
 			createInfo.minFilter = VK_FILTER_LINEAR;
 			createInfo.magFilter = VK_FILTER_LINEAR;
 			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
 			createInfo.anisotropyEnable = false;
 			createInfo.compareEnable = true;
 			break;
-		case FILTER_COMPARISON_MIN_MAG_MIP_LINEAR:
+		case Filter::COMPARISON_MIN_MAG_MIP_LINEAR:
 			createInfo.minFilter = VK_FILTER_LINEAR;
 			createInfo.magFilter = VK_FILTER_LINEAR;
 			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 			createInfo.anisotropyEnable = false;
 			createInfo.compareEnable = true;
 			break;
-		case FILTER_COMPARISON_ANISOTROPIC:
+		case Filter::COMPARISON_ANISOTROPIC:
 			createInfo.minFilter = VK_FILTER_LINEAR;
 			createInfo.magFilter = VK_FILTER_LINEAR;
 			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
@@ -4188,31 +4188,31 @@ using namespace Vulkan_Internal;
 
 		VkSamplerReductionModeCreateInfo reductionmode = {};
 		reductionmode.sType = VK_STRUCTURE_TYPE_SAMPLER_REDUCTION_MODE_CREATE_INFO;
-		if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_SAMPLER_MINMAX))
+		if (CheckCapability(GraphicsDeviceCapability::SAMPLER_MINMAX))
 		{
 			switch (pSamplerDesc->filter)
 			{
-			case FILTER_MINIMUM_MIN_MAG_MIP_POINT:
-			case FILTER_MINIMUM_MIN_MAG_POINT_MIP_LINEAR:
-			case FILTER_MINIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT:
-			case FILTER_MINIMUM_MIN_POINT_MAG_MIP_LINEAR:
-			case FILTER_MINIMUM_MIN_LINEAR_MAG_MIP_POINT:
-			case FILTER_MINIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
-			case FILTER_MINIMUM_MIN_MAG_LINEAR_MIP_POINT:
-			case FILTER_MINIMUM_MIN_MAG_MIP_LINEAR:
-			case FILTER_MINIMUM_ANISOTROPIC:
+			case Filter::MINIMUM_MIN_MAG_MIP_POINT:
+			case Filter::MINIMUM_MIN_MAG_POINT_MIP_LINEAR:
+			case Filter::MINIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT:
+			case Filter::MINIMUM_MIN_POINT_MAG_MIP_LINEAR:
+			case Filter::MINIMUM_MIN_LINEAR_MAG_MIP_POINT:
+			case Filter::MINIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
+			case Filter::MINIMUM_MIN_MAG_LINEAR_MIP_POINT:
+			case Filter::MINIMUM_MIN_MAG_MIP_LINEAR:
+			case Filter::MINIMUM_ANISOTROPIC:
 				reductionmode.reductionMode = VK_SAMPLER_REDUCTION_MODE_MIN;
 				createInfo.pNext = &reductionmode;
 				break;
-			case FILTER_MAXIMUM_MIN_MAG_MIP_POINT:
-			case FILTER_MAXIMUM_MIN_MAG_POINT_MIP_LINEAR:
-			case FILTER_MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT:
-			case FILTER_MAXIMUM_MIN_POINT_MAG_MIP_LINEAR:
-			case FILTER_MAXIMUM_MIN_LINEAR_MAG_MIP_POINT:
-			case FILTER_MAXIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
-			case FILTER_MAXIMUM_MIN_MAG_LINEAR_MIP_POINT:
-			case FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR:
-			case FILTER_MAXIMUM_ANISOTROPIC:
+			case Filter::MAXIMUM_MIN_MAG_MIP_POINT:
+			case Filter::MAXIMUM_MIN_MAG_POINT_MIP_LINEAR:
+			case Filter::MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT:
+			case Filter::MAXIMUM_MIN_POINT_MAG_MIP_LINEAR:
+			case Filter::MAXIMUM_MIN_LINEAR_MAG_MIP_POINT:
+			case Filter::MAXIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
+			case Filter::MAXIMUM_MIN_MAG_LINEAR_MIP_POINT:
+			case Filter::MAXIMUM_MIN_MAG_MIP_LINEAR:
+			case Filter::MAXIMUM_ANISOTROPIC:
 				reductionmode.reductionMode = VK_SAMPLER_REDUCTION_MODE_MAX;
 				createInfo.pNext = &reductionmode;
 				break;
@@ -4271,11 +4271,11 @@ using namespace Vulkan_Internal;
 
 		switch (pDesc->type)
 		{
-		case GPU_QUERY_TYPE_TIMESTAMP:
+		case GpuQueryType::TIMESTAMP:
 			poolInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
 			break;
-		case GPU_QUERY_TYPE_OCCLUSION:
-		case GPU_QUERY_TYPE_OCCLUSION_BINARY:
+		case GpuQueryType::OCCLUSION:
+		case GpuQueryType::OCCLUSION_BINARY:
 			poolInfo.queryType = VK_QUERY_TYPE_OCCLUSION;
 			break;
 		}
@@ -4558,22 +4558,22 @@ using namespace Vulkan_Internal;
 		inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 		switch (pso->desc.pt)
 		{
-		case POINTLIST:
+		case PrimitiveTopology::POINTLIST:
 			inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
 			break;
-		case LINELIST:
+		case PrimitiveTopology::LINELIST:
 			inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
 			break;
-		case LINESTRIP:
+		case PrimitiveTopology::LINESTRIP:
 			inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
 			break;
-		case TRIANGLESTRIP:
+		case PrimitiveTopology::TRIANGLESTRIP:
 			inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 			break;
-		case TRIANGLELIST:
+		case PrimitiveTopology::TRIANGLELIST:
 			inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 			break;
-		case PATCHLIST:
+		case PrimitiveTopology::PATCHLIST:
 			inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
 			break;
 		default:
@@ -4613,10 +4613,10 @@ using namespace Vulkan_Internal;
 
 			switch (desc.fill_mode)
 			{
-			case FILL_WIREFRAME:
+			case FillMode::WIREFRAME:
 				rasterizer.polygonMode = VK_POLYGON_MODE_LINE;
 				break;
-			case FILL_SOLID:
+			case FillMode::SOLID:
 			default:
 				rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 				break;
@@ -4624,13 +4624,13 @@ using namespace Vulkan_Internal;
 
 			switch (desc.cull_mode)
 			{
-			case CULL_BACK:
+			case CullMode::BACK:
 				rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
 				break;
-			case CULL_FRONT:
+			case CullMode::FRONT:
 				rasterizer.cullMode = VK_CULL_MODE_FRONT_BIT;
 				break;
-			case CULL_NONE:
+			case CullMode::NONE:
 			default:
 				rasterizer.cullMode = VK_CULL_MODE_NONE;
 				break;
@@ -4678,7 +4678,7 @@ using namespace Vulkan_Internal;
 		if (pso->desc.dss != nullptr)
 		{
 			depthstencil.depthTestEnable = pso->desc.dss->depth_enable ? VK_TRUE : VK_FALSE;
-			depthstencil.depthWriteEnable = pso->desc.dss->depth_write_mask == DEPTH_WRITE_MASK_ZERO ? VK_FALSE : VK_TRUE;
+			depthstencil.depthWriteEnable = pso->desc.dss->depth_write_mask == DepthWriteMask::ZERO ? VK_FALSE : VK_TRUE;
 			depthstencil.depthCompareOp = _ConvertComparisonFunc(pso->desc.dss->depth_func);
 
 			depthstencil.stencilTestEnable = pso->desc.dss->stencil_enable ? VK_TRUE : VK_FALSE;
@@ -4729,7 +4729,7 @@ using namespace Vulkan_Internal;
 		wiHelper::hash_combine(renderpass->hash, pDesc->attachments.size());
 		for (auto& attachment : pDesc->attachments)
 		{
-			if (attachment.type == RenderPassAttachment::RENDERTARGET || attachment.type == RenderPassAttachment::DEPTH_STENCIL)
+			if (attachment.type == RenderPassAttachment::Type::RENDERTARGET || attachment.type == RenderPassAttachment::Type::DEPTH_STENCIL)
 			{
 				wiHelper::hash_combine(renderpass->hash, attachment.texture->desc.format);
 				wiHelper::hash_combine(renderpass->hash, attachment.texture->desc.sample_count);
@@ -4774,13 +4774,13 @@ using namespace Vulkan_Internal;
 			switch (attachment.loadop)
 			{
 			default:
-			case RenderPassAttachment::LOADOP_LOAD:
+			case RenderPassAttachment::LoadOp::LOAD:
 				attachmentDescriptions[validAttachmentCount].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 				break;
-			case RenderPassAttachment::LOADOP_CLEAR:
+			case RenderPassAttachment::LoadOp::CLEAR:
 				attachmentDescriptions[validAttachmentCount].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 				break;
-			case RenderPassAttachment::LOADOP_DONTCARE:
+			case RenderPassAttachment::LoadOp::DONTCARE:
 				attachmentDescriptions[validAttachmentCount].loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 				break;
 			}
@@ -4788,10 +4788,10 @@ using namespace Vulkan_Internal;
 			switch (attachment.storeop)
 			{
 			default:
-			case RenderPassAttachment::STOREOP_STORE:
+			case RenderPassAttachment::StoreOp::STORE:
 				attachmentDescriptions[validAttachmentCount].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 				break;
-			case RenderPassAttachment::STOREOP_DONTCARE:
+			case RenderPassAttachment::StoreOp::DONTCARE:
 				attachmentDescriptions[validAttachmentCount].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 				break;
 			}
@@ -4802,7 +4802,7 @@ using namespace Vulkan_Internal;
 			attachmentDescriptions[validAttachmentCount].initialLayout = _ConvertImageLayout(attachment.initial_layout);
 			attachmentDescriptions[validAttachmentCount].finalLayout = _ConvertImageLayout(attachment.final_layout);
 
-			if (attachment.type == RenderPassAttachment::RENDERTARGET)
+			if (attachment.type == RenderPassAttachment::Type::RENDERTARGET)
 			{
 				if (subresource < 0 || texture_internal_state->subresources_rtv.empty())
 				{
@@ -4825,7 +4825,7 @@ using namespace Vulkan_Internal;
 				subpass.colorAttachmentCount++;
 				subpass.pColorAttachments = colorAttachmentRefs;
 			}
-			else if (attachment.type == RenderPassAttachment::DEPTH_STENCIL)
+			else if (attachment.type == RenderPassAttachment::Type::DEPTH_STENCIL)
 			{
 				if (subresource < 0 || texture_internal_state->subresources_dsv.empty())
 				{
@@ -4853,13 +4853,13 @@ using namespace Vulkan_Internal;
 					switch (attachment.loadop)
 					{
 					default:
-					case RenderPassAttachment::LOADOP_LOAD:
+					case RenderPassAttachment::LoadOp::LOAD:
 						attachmentDescriptions[validAttachmentCount].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 						break;
-					case RenderPassAttachment::LOADOP_CLEAR:
+					case RenderPassAttachment::LoadOp::CLEAR:
 						attachmentDescriptions[validAttachmentCount].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 						break;
-					case RenderPassAttachment::LOADOP_DONTCARE:
+					case RenderPassAttachment::LoadOp::DONTCARE:
 						attachmentDescriptions[validAttachmentCount].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 						break;
 					}
@@ -4867,16 +4867,16 @@ using namespace Vulkan_Internal;
 					switch (attachment.storeop)
 					{
 					default:
-					case RenderPassAttachment::STOREOP_STORE:
+					case RenderPassAttachment::StoreOp::STORE:
 						attachmentDescriptions[validAttachmentCount].stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
 						break;
-					case RenderPassAttachment::STOREOP_DONTCARE:
+					case RenderPassAttachment::StoreOp::DONTCARE:
 						attachmentDescriptions[validAttachmentCount].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 						break;
 					}
 				}
 			}
-			else if (attachment.type == RenderPassAttachment::RESOLVE)
+			else if (attachment.type == RenderPassAttachment::Type::RESOLVE)
 			{
 				resolveAttachmentRefs[resolvecount].sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
 
@@ -4907,7 +4907,7 @@ using namespace Vulkan_Internal;
 				resolvecount++;
 				subpass.pResolveAttachments = resolveAttachmentRefs;
 			}
-			else if (attachment.type == RenderPassAttachment::SHADING_RATE_SOURCE && CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2))
+			else if (attachment.type == RenderPassAttachment::Type::SHADING_RATE_SOURCE && CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING_TIER2))
 			{
 				shadingRateAttachmentRef.sType = VK_STRUCTURE_TYPE_ATTACHMENT_REFERENCE_2;
 
@@ -5003,20 +5003,20 @@ using namespace Vulkan_Internal;
 			int i = 0;
 			for (auto& attachment : desc.attachments)
 			{
-				if (desc.attachments[i].type == RenderPassAttachment::RESOLVE ||
-					desc.attachments[i].type == RenderPassAttachment::SHADING_RATE_SOURCE ||
+				if (desc.attachments[i].type == RenderPassAttachment::Type::RESOLVE ||
+					desc.attachments[i].type == RenderPassAttachment::Type::SHADING_RATE_SOURCE ||
 					attachment.texture == nullptr)
 					continue;
 
 				const ClearValue& clear = desc.attachments[i].texture->desc.clear;
-				if (desc.attachments[i].type == RenderPassAttachment::RENDERTARGET)
+				if (desc.attachments[i].type == RenderPassAttachment::Type::RENDERTARGET)
 				{
 					internal_state->clearColors[i].color.float32[0] = clear.color[0];
 					internal_state->clearColors[i].color.float32[1] = clear.color[1];
 					internal_state->clearColors[i].color.float32[2] = clear.color[2];
 					internal_state->clearColors[i].color.float32[3] = clear.color[3];
 				}
-				else if (desc.attachments[i].type == RenderPassAttachment::DEPTH_STENCIL)
+				else if (desc.attachments[i].type == RenderPassAttachment::Type::DEPTH_STENCIL)
 				{
 					internal_state->clearColors[i].depthStencil.depth = clear.depth_stencil.depth;
 					internal_state->clearColors[i].depthStencil.stencil = clear.depth_stencil.stencil;
@@ -5036,7 +5036,7 @@ using namespace Vulkan_Internal;
 		auto internal_state = std::make_shared<BVH_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
 		bvh->internal_state = internal_state;
-		bvh->type = GPUResource::GPU_RESOURCE_TYPE::RAYTRACING_ACCELERATION_STRUCTURE;
+		bvh->type = GPUResource::Type::RAYTRACING_ACCELERATION_STRUCTURE;
 
 		bvh->desc = *pDesc;
 
@@ -5065,7 +5065,7 @@ using namespace Vulkan_Internal;
 
 		switch (pDesc->type)
 		{
-		case RaytracingAccelerationStructureDesc::BOTTOMLEVEL:
+		case RaytracingAccelerationStructureDesc::Type::BOTTOMLEVEL:
 		{
 			internal_state->buildInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
 
@@ -5079,18 +5079,18 @@ using namespace Vulkan_Internal;
 				internal_state->primitiveCounts.emplace_back();
 				uint32_t& primitiveCount = internal_state->primitiveCounts.back();
 
-				if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::TRIANGLES)
+				if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::Type::TRIANGLES)
 				{
 					geometry.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
 					geometry.geometry.triangles.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
-					geometry.geometry.triangles.indexType = x.triangles.index_format == INDEXFORMAT_16BIT ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
+					geometry.geometry.triangles.indexType = x.triangles.index_format == IndexBufferFormat::UINT16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
 					geometry.geometry.triangles.maxVertex = x.triangles.vertex_count;
 					geometry.geometry.triangles.vertexStride = x.triangles.vertex_stride;
 					geometry.geometry.triangles.vertexFormat = _ConvertFormat(x.triangles.vertex_format);
 
 					primitiveCount = x.triangles.index_count / 3;
 				}
-				else if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::PROCEDURAL_AABBS)
+				else if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::Type::PROCEDURAL_AABBS)
 				{
 					geometry.geometryType = VK_GEOMETRY_TYPE_AABBS_KHR;
 					geometry.geometry.aabbs.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR;
@@ -5103,7 +5103,7 @@ using namespace Vulkan_Internal;
 
 		}
 		break;
-		case RaytracingAccelerationStructureDesc::TOPLEVEL:
+		case RaytracingAccelerationStructureDesc::Type::TOPLEVEL:
 		{
 			internal_state->buildInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
 
@@ -5188,7 +5188,7 @@ using namespace Vulkan_Internal;
 			+ internal_state->sizeInfo.accelerationStructureSize;
 
 
-		if (pDesc->type == RaytracingAccelerationStructureDesc::TOPLEVEL)
+		if (pDesc->type == RaytracingAccelerationStructureDesc::Type::TOPLEVEL)
 		{
 			internal_state->index = allocationhandler->bindlessAccelerationStructures.allocate();
 			if (internal_state->index >= 0)
@@ -5245,19 +5245,19 @@ using namespace Vulkan_Internal;
 			switch (x.type)
 			{
 			default:
-			case ShaderLibrary::RAYGENERATION:
+			case ShaderLibrary::Type::RAYGENERATION:
 				stage.stage = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
 				break;
-			case ShaderLibrary::MISS:
+			case ShaderLibrary::Type::MISS:
 				stage.stage = VK_SHADER_STAGE_MISS_BIT_KHR;
 				break;
-			case ShaderLibrary::CLOSESTHIT:
+			case ShaderLibrary::Type::CLOSESTHIT:
 				stage.stage = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
 				break;
-			case ShaderLibrary::ANYHIT:
+			case ShaderLibrary::Type::ANYHIT:
 				stage.stage = VK_SHADER_STAGE_ANY_HIT_BIT_KHR;
 				break;
-			case ShaderLibrary::INTERSECTION:
+			case ShaderLibrary::Type::INTERSECTION:
 				stage.stage = VK_SHADER_STAGE_INTERSECTION_BIT_KHR;
 				break;
 			}
@@ -5277,13 +5277,13 @@ using namespace Vulkan_Internal;
 			switch (x.type)
 			{
 			default:
-			case ShaderHitGroup::GENERAL:
+			case ShaderHitGroup::Type::GENERAL:
 				group.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
 				break;
-			case ShaderHitGroup::TRIANGLES:
+			case ShaderHitGroup::Type::TRIANGLES:
 				group.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR;
 				break;
-			case ShaderHitGroup::PROCEDURAL:
+			case ShaderHitGroup::Type::PROCEDURAL:
 				group.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_KHR;
 				break;
 			}
@@ -5322,7 +5322,7 @@ using namespace Vulkan_Internal;
 		return res == VK_SUCCESS;
 	}
 	
-	int GraphicsDevice_Vulkan::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) const
+	int GraphicsDevice_Vulkan::CreateSubresource(Texture* texture, SubresourceType type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) const
 	{
 		auto internal_state = to_internal(texture);
 
@@ -5337,7 +5337,7 @@ using namespace Vulkan_Internal;
 		view_desc.subresourceRange.levelCount = mipCount;
 		view_desc.format = _ConvertFormat(texture->desc.format);
 
-		if (texture->desc.type == TextureDesc::TEXTURE_1D)
+		if (texture->desc.type == TextureDesc::Type::TEXTURE_1D)
 		{
 			if (texture->desc.array_size > 1)
 			{
@@ -5348,11 +5348,11 @@ using namespace Vulkan_Internal;
 				view_desc.viewType = VK_IMAGE_VIEW_TYPE_1D;
 			}
 		}
-		else if (texture->desc.type == TextureDesc::TEXTURE_2D)
+		else if (texture->desc.type == TextureDesc::Type::TEXTURE_2D)
 		{
 			if (texture->desc.array_size > 1)
 			{
-				if (texture->desc.misc_flags & RESOURCE_MISC_TEXTURECUBE)
+				if (has(texture->desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
 				{
 					if (texture->desc.array_size > 6 && sliceCount > 6)
 					{
@@ -5373,30 +5373,30 @@ using namespace Vulkan_Internal;
 				view_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
 			}
 		}
-		else if (texture->desc.type == TextureDesc::TEXTURE_3D)
+		else if (texture->desc.type == TextureDesc::Type::TEXTURE_3D)
 		{
 			view_desc.viewType = VK_IMAGE_VIEW_TYPE_3D;
 		}
 
 		switch (type)
 		{
-		case wiGraphics::SRV:
+		case SubresourceType::SRV:
 		{
 			switch (texture->desc.format)
 			{
-			case FORMAT_R16_TYPELESS:
+			case Format::R16_TYPELESS:
 				view_desc.format = VK_FORMAT_D16_UNORM;
 				view_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 				break;
-			case FORMAT_R32_TYPELESS:
+			case Format::R32_TYPELESS:
 				view_desc.format = VK_FORMAT_D32_SFLOAT;
 				view_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 				break;
-			case FORMAT_R24G8_TYPELESS:
+			case Format::R24G8_TYPELESS:
 				view_desc.format = VK_FORMAT_D24_UNORM_S8_UINT;
 				view_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 				break;
-			case FORMAT_R32G8X24_TYPELESS:
+			case Format::R32G8X24_TYPELESS:
 				view_desc.format = VK_FORMAT_D32_SFLOAT_S8_UINT;
 				view_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 				break;
@@ -5440,7 +5440,7 @@ using namespace Vulkan_Internal;
 			}
 		}
 		break;
-		case wiGraphics::UAV:
+		case SubresourceType::UAV:
 		{
 			if (view_desc.viewType == VK_IMAGE_VIEW_TYPE_CUBE || view_desc.viewType == VK_IMAGE_VIEW_TYPE_CUBE_ARRAY)
 			{
@@ -5485,7 +5485,7 @@ using namespace Vulkan_Internal;
 			}
 		}
 		break;
-		case wiGraphics::RTV:
+		case SubresourceType::RTV:
 		{
 			VkImageView rtv;
 			view_desc.subresourceRange.levelCount = 1;
@@ -5509,24 +5509,24 @@ using namespace Vulkan_Internal;
 			}
 		}
 		break;
-		case wiGraphics::DSV:
+		case SubresourceType::DSV:
 		{
 			view_desc.subresourceRange.levelCount = 1;
 			view_desc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 
 			switch (texture->desc.format)
 			{
-			case FORMAT_R16_TYPELESS:
+			case Format::R16_TYPELESS:
 				view_desc.format = VK_FORMAT_D16_UNORM;
 				break;
-			case FORMAT_R32_TYPELESS:
+			case Format::R32_TYPELESS:
 				view_desc.format = VK_FORMAT_D32_SFLOAT;
 				break;
-			case FORMAT_R24G8_TYPELESS:
+			case Format::R24G8_TYPELESS:
 				view_desc.format = VK_FORMAT_D24_UNORM_S8_UINT;
 				view_desc.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
 				break;
-			case FORMAT_R32G8X24_TYPELESS:
+			case Format::R32G8X24_TYPELESS:
 				view_desc.format = VK_FORMAT_D32_SFLOAT_S8_UINT;
 				view_desc.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
 				break;
@@ -5558,7 +5558,7 @@ using namespace Vulkan_Internal;
 		}
 		return -1;
 	}
-	int GraphicsDevice_Vulkan::CreateSubresource(GPUBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size) const
+	int GraphicsDevice_Vulkan::CreateSubresource(GPUBuffer* buffer, SubresourceType type, uint64_t offset, uint64_t size) const
 	{
 		auto internal_state = to_internal(buffer);
 		const GPUBufferDesc& desc = buffer->GetDesc();
@@ -5567,10 +5567,10 @@ using namespace Vulkan_Internal;
 		switch (type)
 		{
 
-		case wiGraphics::SRV:
-		case wiGraphics::UAV:
+		case SubresourceType::SRV:
+		case SubresourceType::UAV:
 		{
-			if (desc.format == FORMAT_UNKNOWN)
+			if (desc.format == Format::UNKNOWN)
 			{
 				// Raw buffer
 				int index = allocationhandler->bindlessStorageBuffers.allocate();
@@ -5591,7 +5591,7 @@ using namespace Vulkan_Internal;
 					vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
 				}
 
-				if (type == SRV)
+				if (type == SubresourceType::SRV)
 				{
 					if (internal_state->srv_index == -1)
 					{
@@ -5629,7 +5629,7 @@ using namespace Vulkan_Internal;
 
 				if (res == VK_SUCCESS)
 				{
-					if (type == SRV)
+					if (type == SubresourceType::SRV)
 					{
 						int index = allocationhandler->bindlessUniformTexelBuffers.allocate();
 						if (index >= 0)
@@ -5696,7 +5696,7 @@ using namespace Vulkan_Internal;
 		return -1;
 	}
 
-	int GraphicsDevice_Vulkan::GetDescriptorIndex(const GPUResource* resource, SUBRESOURCE_TYPE type, int subresource) const
+	int GraphicsDevice_Vulkan::GetDescriptorIndex(const GPUResource* resource, SubresourceType type, int subresource) const
 	{
 		if (resource == nullptr || !resource->IsValid())
 			return -1;
@@ -5704,7 +5704,7 @@ using namespace Vulkan_Internal;
 		switch (type)
 		{
 		default:
-		case wiGraphics::SRV:
+		case SubresourceType::SRV:
 			if (resource->IsBuffer())
 			{
 				auto internal_state = to_internal((const GPUBuffer*)resource);
@@ -5735,7 +5735,7 @@ using namespace Vulkan_Internal;
 				return internal_state->index;
 			}
 			break;
-		case wiGraphics::UAV:
+		case SubresourceType::UAV:
 			if (resource->IsBuffer())
 			{
 				auto internal_state = to_internal((const GPUBuffer*)resource);
@@ -5774,7 +5774,7 @@ using namespace Vulkan_Internal;
 		return internal_state->index;
 	}
 
-	void GraphicsDevice_Vulkan::WriteShadingRateValue(SHADING_RATE rate, void* dest) const
+	void GraphicsDevice_Vulkan::WriteShadingRateValue(ShadingRate rate, void* dest) const
 	{
 		// How to compute shading rate value texel data:
 		// https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/vkspec.html#primsrast-fragment-shading-rate-attachment
@@ -5782,25 +5782,25 @@ using namespace Vulkan_Internal;
 		switch (rate)
 		{
 		default:
-		case wiGraphics::SHADING_RATE_1X1:
+		case ShadingRate::RATE_1X1:
 			*(uint8_t*)dest = 0;
 			break;
-		case wiGraphics::SHADING_RATE_1X2:
+		case ShadingRate::RATE_1X2:
 			*(uint8_t*)dest = 0x1;
 			break;
-		case wiGraphics::SHADING_RATE_2X1:
+		case ShadingRate::RATE_2X1:
 			*(uint8_t*)dest = 0x4;
 			break;
-		case wiGraphics::SHADING_RATE_2X2:
+		case ShadingRate::RATE_2X2:
 			*(uint8_t*)dest = 0x5;
 			break;
-		case wiGraphics::SHADING_RATE_2X4:
+		case ShadingRate::RATE_2X4:
 			*(uint8_t*)dest = 0x6;
 			break;
-		case wiGraphics::SHADING_RATE_4X2:
+		case ShadingRate::RATE_4X2:
 			*(uint8_t*)dest = 0x9;
 			break;
-		case wiGraphics::SHADING_RATE_4X4:
+		case ShadingRate::RATE_4X4:
 			*(uint8_t*)dest = 0xa;
 			break;
 		}
@@ -5948,7 +5948,7 @@ using namespace Vulkan_Internal;
 		active_rt[cmd] = nullptr;
 		active_renderpass[cmd] = nullptr;
 		dirty_pso[cmd] = false;
-		prev_shadingrate[cmd] = SHADING_RATE_INVALID;
+		prev_shadingrate[cmd] = ShadingRate::RATE_INVALID;
 		pushconstants[cmd] = {};
 		vb_hash[cmd] = 0;
 		for (int i = 0; i < arraysize(vb_strides[cmd]); ++i)
@@ -6159,16 +6159,16 @@ using namespace Vulkan_Internal;
 		internal_state->resource = swapchain_internal->swapChainImages[swapchain_internal->swapChainImageIndex];
 
 		Texture result;
-		result.type = GPUResource::GPU_RESOURCE_TYPE::TEXTURE;
+		result.type = GPUResource::Type::TEXTURE;
 		result.internal_state = internal_state;
-		result.desc.type = TextureDesc::TEXTURE_2D;
+		result.desc.type = TextureDesc::Type::TEXTURE_2D;
 		result.desc.width = swapchain_internal->swapChainExtent.width;
 		result.desc.height = swapchain_internal->swapChainExtent.height;
 		result.desc.format = swapchain->desc.format;
 		return result;
 	}
 
-	COLOR_SPACE GraphicsDevice_Vulkan::GetSwapChainColorSpace(const SwapChain* swapchain) const
+	ColorSpace GraphicsDevice_Vulkan::GetSwapChainColorSpace(const SwapChain* swapchain) const
 	{
 		auto internal_state = to_internal(swapchain);
 		return internal_state->colorSpace;
@@ -6398,12 +6398,12 @@ using namespace Vulkan_Internal;
 			dirty_pso[cmd] = true;
 		}
 	}
-	void GraphicsDevice_Vulkan::BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, uint64_t offset, CommandList cmd)
+	void GraphicsDevice_Vulkan::BindIndexBuffer(const GPUBuffer* indexBuffer, const IndexBufferFormat format, uint64_t offset, CommandList cmd)
 	{
 		if (indexBuffer != nullptr)
 		{
 			auto internal_state = to_internal(indexBuffer);
-			vkCmdBindIndexBuffer(GetCommandList(cmd), internal_state->resource, offset, format == INDEXFORMAT_16BIT ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
+			vkCmdBindIndexBuffer(GetCommandList(cmd), internal_state->resource, offset, format == IndexBufferFormat::UINT16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
 		}
 	}
 	void GraphicsDevice_Vulkan::BindStencilRef(uint32_t value, CommandList cmd)
@@ -6415,40 +6415,40 @@ using namespace Vulkan_Internal;
 		float blendConstants[] = { r, g, b, a };
 		vkCmdSetBlendConstants(GetCommandList(cmd), blendConstants);
 	}
-	void GraphicsDevice_Vulkan::BindShadingRate(SHADING_RATE rate, CommandList cmd)
+	void GraphicsDevice_Vulkan::BindShadingRate(ShadingRate rate, CommandList cmd)
 	{
-		if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING) && prev_shadingrate[cmd] != rate)
+		if (CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING) && prev_shadingrate[cmd] != rate)
 		{
 			prev_shadingrate[cmd] = rate;
 
 			VkExtent2D fragmentSize;
 			switch (rate)
 			{
-			case wiGraphics::SHADING_RATE_1X1:
+			case ShadingRate::RATE_1X1:
 				fragmentSize.width = 1;
 				fragmentSize.height = 1;
 				break;
-			case wiGraphics::SHADING_RATE_1X2:
+			case ShadingRate::RATE_1X2:
 				fragmentSize.width = 1;
 				fragmentSize.height = 2;
 				break;
-			case wiGraphics::SHADING_RATE_2X1:
+			case ShadingRate::RATE_2X1:
 				fragmentSize.width = 2;
 				fragmentSize.height = 1;
 				break;
-			case wiGraphics::SHADING_RATE_2X2:
+			case ShadingRate::RATE_2X2:
 				fragmentSize.width = 2;
 				fragmentSize.height = 2;
 				break;
-			case wiGraphics::SHADING_RATE_2X4:
+			case ShadingRate::RATE_2X4:
 				fragmentSize.width = 2;
 				fragmentSize.height = 4;
 				break;
-			case wiGraphics::SHADING_RATE_4X2:
+			case ShadingRate::RATE_4X2:
 				fragmentSize.width = 4;
 				fragmentSize.height = 2;
 				break;
-			case wiGraphics::SHADING_RATE_4X4:
+			case ShadingRate::RATE_4X4:
 				fragmentSize.width = 4;
 				fragmentSize.height = 4;
 				break;
@@ -6559,7 +6559,7 @@ using namespace Vulkan_Internal;
 			active_cs[cmd] = cs;
 			auto internal_state = to_internal(cs);
 
-			if (cs->stage == CS)
+			if (cs->stage == ShaderStage::CS)
 			{
 				vkCmdBindPipeline(GetCommandList(cmd), VK_PIPELINE_BIND_POINT_COMPUTE, internal_state->pipeline_cs);
 
@@ -6577,7 +6577,7 @@ using namespace Vulkan_Internal;
 					);
 				}
 			}
-			else if (cs->stage == LIB)
+			else if (cs->stage == ShaderStage::LIB)
 			{
 				if (!internal_state->bindlessSets.empty())
 				{
@@ -6651,7 +6651,7 @@ using namespace Vulkan_Internal;
 	}
 	void GraphicsDevice_Vulkan::CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd)
 	{
-		if (pDst->type == GPUResource::GPU_RESOURCE_TYPE::TEXTURE && pSrc->type == GPUResource::GPU_RESOURCE_TYPE::TEXTURE)
+		if (pDst->type == GPUResource::Type::TEXTURE && pSrc->type == GPUResource::Type::TEXTURE)
 		{
 			auto internal_state_src = to_internal((const Texture*)pSrc);
 			auto internal_state_dst = to_internal((const Texture*)pDst);
@@ -6659,7 +6659,7 @@ using namespace Vulkan_Internal;
 			const TextureDesc& src_desc = ((const Texture*)pSrc)->GetDesc();
 			const TextureDesc& dst_desc = ((const Texture*)pDst)->GetDesc();
 
-			if (src_desc.usage == USAGE_UPLOAD)
+			if (src_desc.usage == Usage::UPLOAD)
 			{
 				VkBufferImageCopy copy = {};
 				copy.imageExtent.width = dst_desc.width;
@@ -6677,7 +6677,7 @@ using namespace Vulkan_Internal;
 					&copy
 				);
 			}
-			else if (dst_desc.usage == USAGE_READBACK)
+			else if (dst_desc.usage == Usage::READBACK)
 			{
 				VkBufferImageCopy copy = {};
 				copy.imageExtent.width = src_desc.width;
@@ -6710,7 +6710,7 @@ using namespace Vulkan_Internal;
 				copy.dstOffset.y = 0;
 				copy.dstOffset.z = 0;
 
-				if (src_desc.bind_flags & BIND_DEPTH_STENCIL)
+				if (has(src_desc.bind_flags, BindFlag::DEPTH_STENCIL))
 				{
 					copy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 					if (IsFormatStencilSupport(src_desc.format))
@@ -6726,7 +6726,7 @@ using namespace Vulkan_Internal;
 				copy.srcSubresource.layerCount = src_desc.array_size;
 				copy.srcSubresource.mipLevel = 0;
 
-				if (dst_desc.bind_flags & BIND_DEPTH_STENCIL)
+				if (has(dst_desc.bind_flags, BindFlag::DEPTH_STENCIL))
 				{
 					copy.dstSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 					if (IsFormatStencilSupport(dst_desc.format))
@@ -6749,7 +6749,7 @@ using namespace Vulkan_Internal;
 				);
 			}
 		}
-		else if (pDst->type == GPUResource::GPU_RESOURCE_TYPE::BUFFER && pSrc->type == GPUResource::GPU_RESOURCE_TYPE::BUFFER)
+		else if (pDst->type == GPUResource::Type::BUFFER && pSrc->type == GPUResource::Type::BUFFER)
 		{
 			auto internal_state_src = to_internal((const GPUBuffer*)pSrc);
 			auto internal_state_dst = to_internal((const GPUBuffer*)pDst);
@@ -6791,10 +6791,10 @@ using namespace Vulkan_Internal;
 
 		switch (heap->desc.type)
 		{
-		case GPU_QUERY_TYPE_OCCLUSION_BINARY:
+		case GpuQueryType::OCCLUSION_BINARY:
 			vkCmdBeginQuery(GetCommandList(cmd), internal_state->pool, index, 0);
 			break;
-		case GPU_QUERY_TYPE_OCCLUSION:
+		case GpuQueryType::OCCLUSION:
 			vkCmdBeginQuery(GetCommandList(cmd), internal_state->pool, index, VK_QUERY_CONTROL_PRECISE_BIT);
 			break;
 		}
@@ -6805,11 +6805,11 @@ using namespace Vulkan_Internal;
 
 		switch (heap->desc.type)
 		{
-		case GPU_QUERY_TYPE_TIMESTAMP:
+		case GpuQueryType::TIMESTAMP:
 			vkCmdWriteTimestamp(GetCommandList(cmd), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, internal_state->pool, index);
 			break;
-		case GPU_QUERY_TYPE_OCCLUSION_BINARY:
-		case GPU_QUERY_TYPE_OCCLUSION:
+		case GpuQueryType::OCCLUSION_BINARY:
+		case GpuQueryType::OCCLUSION:
 			vkCmdEndQuery(GetCommandList(cmd), internal_state->pool, index);
 			break;
 		}
@@ -6826,7 +6826,7 @@ using namespace Vulkan_Internal;
 
 		switch (heap->desc.type)
 		{
-		case GPU_QUERY_TYPE_OCCLUSION_BINARY:
+		case GpuQueryType::OCCLUSION_BINARY:
 			flags |= VK_QUERY_RESULT_PARTIAL_BIT;
 			break;
 		default:
@@ -6874,15 +6874,15 @@ using namespace Vulkan_Internal;
 		{
 			const GPUBarrier& barrier = barriers[i];
 
-			if (barrier.type == GPUBarrier::IMAGE_BARRIER && (barrier.image.texture == nullptr || !barrier.image.texture->IsValid()))
+			if (barrier.type == GPUBarrier::Type::IMAGE && (barrier.image.texture == nullptr || !barrier.image.texture->IsValid()))
 				continue;
-			if (barrier.type == GPUBarrier::BUFFER_BARRIER && (barrier.buffer.buffer == nullptr || !barrier.buffer.buffer->IsValid()))
+			if (barrier.type == GPUBarrier::Type::BUFFER && (barrier.buffer.buffer == nullptr || !barrier.buffer.buffer->IsValid()))
 				continue;
 
 			switch (barrier.type)
 			{
 			default:
-			case GPUBarrier::MEMORY_BARRIER:
+			case GPUBarrier::Type::MEMORY:
 			{
 				VkMemoryBarrier barrierdesc = {};
 				barrierdesc.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
@@ -6890,7 +6890,7 @@ using namespace Vulkan_Internal;
 				barrierdesc.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
 				barrierdesc.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
 
-				if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+				if (CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 				{
 					barrierdesc.srcAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
 					barrierdesc.dstAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
@@ -6898,7 +6898,7 @@ using namespace Vulkan_Internal;
 					dstStage |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
 				}
 
-				if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_PREDICATION))
+				if (CheckCapability(GraphicsDeviceCapability::PREDICATION))
 				{
 					barrierdesc.srcAccessMask |= VK_ACCESS_CONDITIONAL_RENDERING_READ_BIT_EXT;
 					barrierdesc.dstAccessMask |= VK_ACCESS_CONDITIONAL_RENDERING_READ_BIT_EXT;
@@ -6909,7 +6909,7 @@ using namespace Vulkan_Internal;
 				memoryBarriers.push_back(barrierdesc);
 			}
 			break;
-			case GPUBarrier::IMAGE_BARRIER:
+			case GPUBarrier::Type::IMAGE:
 			{
 				const TextureDesc& desc = barrier.image.texture->desc;
 				auto internal_state = to_internal(barrier.image.texture);
@@ -6922,7 +6922,7 @@ using namespace Vulkan_Internal;
 				barrierdesc.newLayout = _ConvertImageLayout(barrier.image.layout_after);
 				barrierdesc.srcAccessMask = _ParseResourceState(barrier.image.layout_before);
 				barrierdesc.dstAccessMask = _ParseResourceState(barrier.image.layout_after);
-				if (desc.bind_flags & BIND_DEPTH_STENCIL)
+				if (has(desc.bind_flags, BindFlag::DEPTH_STENCIL))
 				{
 					barrierdesc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 					if (IsFormatStencilSupport(desc.format))
@@ -6954,7 +6954,7 @@ using namespace Vulkan_Internal;
 				imageBarriers.push_back(barrierdesc);
 			}
 			break;
-			case GPUBarrier::BUFFER_BARRIER:
+			case GPUBarrier::Type::BUFFER:
 			{
 				const GPUBufferDesc& desc = barrier.buffer.buffer->desc;
 				auto internal_state = to_internal(barrier.buffer.buffer);
@@ -6972,16 +6972,16 @@ using namespace Vulkan_Internal;
 
 				bufferBarriers.push_back(barrierdesc);
 
-				if (desc.misc_flags & RESOURCE_MISC_RAY_TRACING)
+				if (has(desc.misc_flags, ResourceMiscFlag::RAY_TRACING))
 				{
-					assert(CheckCapability(GRAPHICSDEVICE_CAPABILITY_RAYTRACING));
+					assert(CheckCapability(GraphicsDeviceCapability::RAYTRACING));
 					srcStage |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
 					dstStage |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
 				}
 
-				if (desc.misc_flags & RESOURCE_MISC_PREDICATION)
+				if (has(desc.misc_flags, ResourceMiscFlag::PREDICATION))
 				{
-					assert(CheckCapability(GRAPHICSDEVICE_CAPABILITY_PREDICATION));
+					assert(CheckCapability(GraphicsDeviceCapability::PREDICATION));
 					srcStage |= VK_PIPELINE_STAGE_CONDITIONAL_RENDERING_BIT_EXT;
 					dstStage |= VK_PIPELINE_STAGE_CONDITIONAL_RENDERING_BIT_EXT;
 				}
@@ -7038,7 +7038,7 @@ using namespace Vulkan_Internal;
 
 		switch (dst->desc.type)
 		{
-		case RaytracingAccelerationStructureDesc::BOTTOMLEVEL:
+		case RaytracingAccelerationStructureDesc::Type::BOTTOMLEVEL:
 		{
 			size_t i = 0;
 			for (auto& x : dst->desc.bottom_level.geometries)
@@ -7058,13 +7058,13 @@ using namespace Vulkan_Internal;
 					geometry.flags |= VK_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION_BIT_KHR;
 				}
 
-				if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::TRIANGLES)
+				if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::Type::TRIANGLES)
 				{
 					geometry.geometry.triangles.vertexData.deviceAddress = to_internal(&x.triangles.vertex_buffer)->address +
 						x.triangles.vertex_byte_offset;
 
 					geometry.geometry.triangles.indexData.deviceAddress = to_internal(&x.triangles.index_buffer)->address +
-						x.triangles.index_offset * (x.triangles.index_format == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? sizeof(uint16_t) : sizeof(uint32_t));
+						x.triangles.index_offset * (x.triangles.index_format == IndexBufferFormat::UINT16 ? sizeof(uint16_t) : sizeof(uint32_t));
 
 					if (x.flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_USE_TRANSFORM)
 					{
@@ -7075,7 +7075,7 @@ using namespace Vulkan_Internal;
 					range.primitiveCount = x.triangles.index_count / 3;
 					range.primitiveOffset = 0;
 				}
-				else if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::PROCEDURAL_AABBS)
+				else if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::Type::PROCEDURAL_AABBS)
 				{
 					geometry.geometry.aabbs.data.deviceAddress = to_internal(&x.aabbs.aabb_buffer)->address;
 
@@ -7087,7 +7087,7 @@ using namespace Vulkan_Internal;
 			}
 		}
 		break;
-		case RaytracingAccelerationStructureDesc::TOPLEVEL:
+		case RaytracingAccelerationStructureDesc::Type::TOPLEVEL:
 		{
 			auto& geometry = geometries.back();
 			geometry.geometry.instances.data.deviceAddress = to_internal(&dst->desc.top_level.instance_buffer)->address;
@@ -7165,15 +7165,15 @@ using namespace Vulkan_Internal;
 		std::memcpy(pushconstants[cmd].data, data, size);
 		pushconstants[cmd].size = size;
 	}
-	void GraphicsDevice_Vulkan::PredicationBegin(const GPUBuffer* buffer, uint64_t offset, PREDICATION_OP op, CommandList cmd)
+	void GraphicsDevice_Vulkan::PredicationBegin(const GPUBuffer* buffer, uint64_t offset, PredicationOp op, CommandList cmd)
 	{
-		if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_PREDICATION))
+		if (CheckCapability(GraphicsDeviceCapability::PREDICATION))
 		{
 			auto internal_state = to_internal(buffer);
 
 			VkConditionalRenderingBeginInfoEXT info = {};
 			info.sType = VK_STRUCTURE_TYPE_CONDITIONAL_RENDERING_BEGIN_INFO_EXT;
-			if (op == PREDICATION_OP_NOT_EQUAL_ZERO)
+			if (op == PredicationOp::NOT_EQUAL_ZERO)
 			{
 				info.flags = VK_CONDITIONAL_RENDERING_INVERTED_BIT_EXT;
 			}
@@ -7184,7 +7184,7 @@ using namespace Vulkan_Internal;
 	}
 	void GraphicsDevice_Vulkan::PredicationEnd(CommandList cmd)
 	{
-		if (CheckCapability(GRAPHICSDEVICE_CAPABILITY_PREDICATION))
+		if (CheckCapability(GraphicsDeviceCapability::PREDICATION))
 		{
 			vkCmdEndConditionalRenderingEXT(GetCommandList(cmd));
 		}

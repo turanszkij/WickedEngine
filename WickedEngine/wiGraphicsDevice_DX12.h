@@ -153,7 +153,7 @@ namespace wiGraphics
 		const ID3D12RootSignature* active_rootsig_graphics[COMMANDLIST_COUNT] = {};
 		const ID3D12RootSignature* active_rootsig_compute[COMMANDLIST_COUNT] = {};
 		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
-		SHADING_RATE prev_shadingrate[COMMANDLIST_COUNT] = {};
+		ShadingRate prev_shadingrate[COMMANDLIST_COUNT] = {};
 		std::vector<const SwapChain*> swapchains[COMMANDLIST_COUNT];
 		Microsoft::WRL::ComPtr<ID3D12Resource> active_backbuffer[COMMANDLIST_COUNT];
 
@@ -179,7 +179,7 @@ namespace wiGraphics
 		bool CreateSwapChain(const SwapChainDesc* pDesc, wiPlatform::window_type window, SwapChain* swapChain) const override;
 		bool CreateBuffer(const GPUBufferDesc *pDesc, const void* pInitialData, GPUBuffer *pBuffer) const override;
 		bool CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) const override;
-		bool CreateShader(SHADERSTAGE stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) const override;
+		bool CreateShader(ShaderStage stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) const override;
 		bool CreateSampler(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) const override;
 		bool CreateQueryHeap(const GPUQueryHeapDesc* pDesc, GPUQueryHeap* pQueryHeap) const override;
 		bool CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) const override;
@@ -187,13 +187,13 @@ namespace wiGraphics
 		bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh) const override;
 		bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso) const override;
 		
-		int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) const override;
-		int CreateSubresource(GPUBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size = ~0) const override;
+		int CreateSubresource(Texture* texture, SubresourceType type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) const override;
+		int CreateSubresource(GPUBuffer* buffer, SubresourceType type, uint64_t offset, uint64_t size = ~0) const override;
 
-		int GetDescriptorIndex(const GPUResource* resource, SUBRESOURCE_TYPE type, int subresource = -1) const override;
+		int GetDescriptorIndex(const GPUResource* resource, SubresourceType type, int subresource = -1) const override;
 		int GetDescriptorIndex(const Sampler* sampler) const override;
 
-		void WriteShadingRateValue(SHADING_RATE rate, void* dest) const override;
+		void WriteShadingRateValue(ShadingRate rate, void* dest) const override;
 		void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) const override;
 		void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) const override;
 		
@@ -207,11 +207,11 @@ namespace wiGraphics
 		void WaitForGPU() const override;
 		void ClearPipelineStateCache() override;
 
-		SHADERFORMAT GetShaderFormat() const override { return SHADERFORMAT_HLSL6; }
+		ShaderFormat GetShaderFormat() const override { return ShaderFormat::HLSL6; }
 
 		Texture GetBackBuffer(const SwapChain* swapchain) const override;
 
-		COLOR_SPACE GetSwapChainColorSpace(const SwapChain* swapchain) const override;
+		ColorSpace GetSwapChainColorSpace(const SwapChain* swapchain) const override;
 		bool GetSwapChainHDRSupport(const SwapChain* swapchain) const override;
 
 		///////////////Thread-sensitive////////////////////////
@@ -229,10 +229,10 @@ namespace wiGraphics
 		void BindSampler(const Sampler* sampler, uint32_t slot, CommandList cmd) override;
 		void BindConstantBuffer(const GPUBuffer* buffer, uint32_t slot, CommandList cmd, uint64_t offset = 0ull) override;
 		void BindVertexBuffers(const GPUBuffer *const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint64_t* offsets, CommandList cmd) override;
-		void BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, uint64_t offset, CommandList cmd) override;
+		void BindIndexBuffer(const GPUBuffer* indexBuffer, const IndexBufferFormat format, uint64_t offset, CommandList cmd) override;
 		void BindStencilRef(uint32_t value, CommandList cmd) override;
 		void BindBlendFactor(float r, float g, float b, float a, CommandList cmd) override;
-		void BindShadingRate(SHADING_RATE rate, CommandList cmd) override;
+		void BindShadingRate(ShadingRate rate, CommandList cmd) override;
 		void BindPipelineState(const PipelineState* pso, CommandList cmd) override;
 		void BindComputeShader(const Shader* cs, CommandList cmd) override;
 		void Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd) override;
@@ -256,7 +256,7 @@ namespace wiGraphics
 		void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) override;
 		void DispatchRays(const DispatchRaysDesc* desc, CommandList cmd) override;
 		void PushConstants(const void* data, uint32_t size, CommandList cmd) override;
-		void PredicationBegin(const GPUBuffer* buffer, uint64_t offset, PREDICATION_OP op, CommandList cmd) override;
+		void PredicationBegin(const GPUBuffer* buffer, uint64_t offset, PredicationOp op, CommandList cmd) override;
 		void PredicationEnd(CommandList cmd) override;
 
 		void EventBegin(const char* name, CommandList cmd) override;

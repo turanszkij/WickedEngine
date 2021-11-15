@@ -176,7 +176,7 @@ namespace wiScene
 		float clearcoat = 0;
 		float clearcoatRoughness = 0;
 
-		wiGraphics::SHADING_RATE shadingRate = wiGraphics::SHADING_RATE_1X1;
+		wiGraphics::ShadingRate shadingRate = wiGraphics::ShadingRate::RATE_1X1;
 		
 		XMFLOAT2 texAnimDirection = XMFLOAT2(0, 0);
 		float texAnimFrameRate = 0.0f;
@@ -414,8 +414,8 @@ namespace wiScene
 		inline bool IsTerrain() const { return _flags & TERRAIN; }
 
 		inline float GetTessellationFactor() const { return tessellationFactor; }
-		inline wiGraphics::INDEXBUFFER_FORMAT GetIndexFormat() const { return vertex_positions.size() > 65535 ? wiGraphics::INDEXFORMAT_32BIT : wiGraphics::INDEXFORMAT_16BIT; }
-		inline size_t GetIndexStride() const { return GetIndexFormat() == wiGraphics::INDEXFORMAT_32BIT ? sizeof(uint32_t) : sizeof(uint16_t); }
+		inline wiGraphics::IndexBufferFormat GetIndexFormat() const { return vertex_positions.size() > 65535 ? wiGraphics::IndexBufferFormat::UINT32 : wiGraphics::IndexBufferFormat::UINT16; }
+		inline size_t GetIndexStride() const { return GetIndexFormat() == wiGraphics::IndexBufferFormat::UINT32 ? sizeof(uint32_t) : sizeof(uint16_t); }
 		inline bool IsSkinned() const { return armatureID != wiECS::INVALID_ENTITY; }
 
 		// Recreates GPU resources for index/vertex buffers
@@ -491,7 +491,7 @@ namespace wiScene
 				return (normal_wind >> 24) & 0x000000FF;
 			}
 
-			static const wiGraphics::FORMAT FORMAT = wiGraphics::FORMAT::FORMAT_R32G32B32A32_FLOAT;
+			static const wiGraphics::Format FORMAT = wiGraphics::Format::R32G32B32A32_FLOAT;
 		};
 		struct Vertex_TEX
 		{
@@ -502,7 +502,7 @@ namespace wiScene
 				tex = XMHALF2(texcoords.x, texcoords.y);
 			}
 
-			static const wiGraphics::FORMAT FORMAT = wiGraphics::FORMAT::FORMAT_R16G16_FLOAT;
+			static const wiGraphics::Format FORMAT = wiGraphics::Format::R16G16_FLOAT;
 		};
 		struct Vertex_BON
 		{
@@ -550,7 +550,7 @@ namespace wiScene
 		struct Vertex_COL
 		{
 			uint32_t color = 0;
-			static const wiGraphics::FORMAT FORMAT = wiGraphics::FORMAT::FORMAT_R8G8B8A8_UNORM;
+			static const wiGraphics::Format FORMAT = wiGraphics::Format::R8G8B8A8_UNORM;
 		};
 		struct Vertex_TAN
 		{
@@ -570,7 +570,7 @@ namespace wiScene
 				tangent |= (uint)((t.w * 0.5f + 0.5f) * 255.0f) << 24;
 			}
 
-			static const wiGraphics::FORMAT FORMAT = wiGraphics::FORMAT::FORMAT_R8G8B8A8_UNORM;
+			static const wiGraphics::Format FORMAT = wiGraphics::Format::R8G8B8A8_UNORM;
 		};
 		
 		// Non serialized attributes:
