@@ -210,7 +210,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		{
 		case PRINTSCREEN:
 			{
-				wiHelper::screenshot(wiRenderer::GetDevice(), editor.swapChain);
+				wiHelper::screenshot(editor.swapChain);
 			}
 			break;
 		default:
