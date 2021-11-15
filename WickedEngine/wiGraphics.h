@@ -313,10 +313,6 @@ namespace wiGraphics
 		ENABLE_ALPHA = 1 << 3,
 		ENABLE_ALL = ~0,
 	};
-	template<>
-	struct enable_bitmask_operators<ColorWrite> {
-		static const bool enable = true;
-	};
 
 	enum class BindFlag
 	{
@@ -330,10 +326,6 @@ namespace wiGraphics
 		UNORDERED_ACCESS = 1 << 6,
 		SHADING_RATE = 1 << 7,
 	};
-	template<>
-	struct enable_bitmask_operators<BindFlag> {
-		static const bool enable = true;
-	};
 
 	enum class ResourceMiscFlag
 	{
@@ -344,10 +336,6 @@ namespace wiGraphics
 		BUFFER_STRUCTURED = 1 << 3,
 		RAY_TRACING = 1 << 4,
 		PREDICATION = 1 << 5,
-	};
-	template<>
-	struct enable_bitmask_operators<ResourceMiscFlag> {
-		static const bool enable = true;
 	};
 
 	enum class GraphicsDeviceCapability
@@ -365,10 +353,6 @@ namespace wiGraphics
 		RAYTRACING = 1 << 9,
 		PREDICATION = 1 << 10,
 		SAMPLER_MINMAX = 1 << 11,
-	};
-	template<>
-	struct enable_bitmask_operators<GraphicsDeviceCapability> {
-		static const bool enable = true;
 	};
 
 	enum class ResourceState
@@ -394,10 +378,6 @@ namespace wiGraphics
 		INDIRECT_ARGUMENT = 1 << 12,			// argument buffer to DrawIndirect() or DispatchIndirect()
 		RAYTRACING_ACCELERATION_STRUCTURE = 1 << 13, // acceleration structure storage or scratch
 		PREDICATION = 1 << 14				// storage for predication comparison value
-	};
-	template<>
-	struct enable_bitmask_operators<ResourceState> {
-		static const bool enable = true;
 	};
 
 	enum class ColorSpace
@@ -725,10 +705,6 @@ namespace wiGraphics
 		};
 		Flags flags = Flags::EMPTY;
 		std::vector<RenderPassAttachment> attachments;
-	};
-	template<>
-	struct enable_bitmask_operators<RenderPassDesc::Flags> {
-		static const bool enable = true;
 	};
 
 	struct SwapChainDesc
@@ -1184,3 +1160,28 @@ namespace wiGraphics
 	}
 
 }
+
+template<>
+struct enable_bitmask_operators<wiGraphics::ColorWrite> {
+	static const bool enable = true;
+};
+template<>
+struct enable_bitmask_operators<wiGraphics::BindFlag> {
+	static const bool enable = true;
+};
+template<>
+struct enable_bitmask_operators<wiGraphics::ResourceMiscFlag> {
+	static const bool enable = true;
+};
+template<>
+struct enable_bitmask_operators<wiGraphics::GraphicsDeviceCapability> {
+	static const bool enable = true;
+};
+template<>
+struct enable_bitmask_operators<wiGraphics::ResourceState> {
+	static const bool enable = true;
+};
+template<>
+struct enable_bitmask_operators<wiGraphics::RenderPassDesc::Flags> {
+	static const bool enable = true;
+};
