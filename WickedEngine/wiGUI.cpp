@@ -1,5 +1,4 @@
 #include "wiGUI.h"
-#include "wiRenderer.h"
 #include "wiInput.h"
 #include "wiIntersect.h"
 #include "wiProfiler.h"
@@ -75,7 +74,7 @@ void wiGUI::Render(const wiCanvas& canvas, CommandList cmd) const
 	scissorRect.right = (int32_t)(canvas.GetPhysicalWidth());
 	scissorRect.top = (int32_t)(0);
 
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	device->EventBegin("GUI", cmd);
 	// Rendering is back to front:

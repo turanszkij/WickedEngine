@@ -46,11 +46,6 @@ namespace wiRenderer
 	// Clears the scene and the associated renderer resources
 	void ClearWorld(wiScene::Scene& scene);
 
-	// Set the main graphics device globally:
-	void SetDevice(std::shared_ptr<wiGraphics::GraphicsDevice> newDevice);
-	// Retrieve the main graphics device:
-	wiGraphics::GraphicsDevice* GetDevice();
-
 	// Returns the shader binary directory
 	const std::string& GetShaderPath();
 	// Sets the shader binary directory

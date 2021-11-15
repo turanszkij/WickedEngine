@@ -391,16 +391,16 @@ namespace wiGraphics
 
 	struct Viewport
 	{
-		float top_left_x = 0.0f;
-		float top_left_y = 0.0f;
-		float width = 0.0f;
-		float height = 0.0f;
-		float min_depth = 0.0f;
-		float max_depth = 1.0f;
+		float top_left_x = 0;
+		float top_left_y = 0;
+		float width = 0;
+		float height = 0;
+		float min_depth = 0;
+		float max_depth = 1;
 	};
 	struct InputLayout
 	{
-		static const uint32_t APPEND_ALIGNED_ELEMENT = 0xffffffff; // automatically figure out AlignedByteOffset depending on Format
+		static const uint32_t APPEND_ALIGNED_ELEMENT = ~0u; // automatically figure out AlignedByteOffset depending on Format
 
 		struct Element
 		{
@@ -449,11 +449,11 @@ namespace wiGraphics
 		TextureAddressMode address_u = TextureAddressMode::CLAMP;
 		TextureAddressMode address_v = TextureAddressMode::CLAMP;
 		TextureAddressMode address_w = TextureAddressMode::CLAMP;
-		float mip_lod_bias = 0.0f;
+		float mip_lod_bias = 0;
 		uint32_t max_anisotropy = 0;
 		ComparisonFunc comparison_func = ComparisonFunc::NEVER;
 		SamplerBorderColor border_color = SamplerBorderColor::TRANSPARENT_BLACK;
-		float min_lod = 0.0f;
+		float min_lod = 0;
 		float max_lod = FLT_MAX;
 	};
 	struct RasterizerState
@@ -462,8 +462,8 @@ namespace wiGraphics
 		CullMode cull_mode = CullMode::NONE;
 		bool front_counter_clockwise = false;
 		int32_t depth_bias = 0;
-		float depth_bias_clamp = 0.0f;
-		float slope_scaled_depth_bias = 0.0f;
+		float depth_bias_clamp = 0;
+		float slope_scaled_depth_bias = 0;
 		bool depth_clip_enable = false;
 		bool multisample_enable = false;
 		bool antialiased_line_enable = false;

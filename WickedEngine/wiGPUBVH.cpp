@@ -30,7 +30,7 @@ static Shader computeShaders[CSTYPE_BVH_COUNT];
 
 void wiGPUBVH::Update(const wiScene::Scene& scene)
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	// Pre-gather scene properties:
 	uint totalTriangles = 0;
@@ -141,7 +141,7 @@ void wiGPUBVH::Update(const wiScene::Scene& scene)
 }
 void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	auto range = wiProfiler::BeginRangeGPU("BVH Rebuild", cmd);
 

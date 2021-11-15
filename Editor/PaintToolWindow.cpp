@@ -297,7 +297,7 @@ void PaintToolWindow::Update(float dt)
 
 		if (painting)
 		{
-			GraphicsDevice* device = wiRenderer::GetDevice();
+			GraphicsDevice* device = wiGraphics::GetDevice();
 			CommandList cmd = device->BeginCommandList();
 
 			RecordHistory(true, cmd);
@@ -951,7 +951,7 @@ void PaintToolWindow::RecordHistory(bool start, CommandList cmd)
 		if (start)
 		{
 			// Make a copy of texture to edit and replace material resource:
-			GraphicsDevice* device = wiRenderer::GetDevice();
+			GraphicsDevice* device = wiGraphics::GetDevice();
 			Texture newTex;
 			TextureDesc desc = editTexture.GetDesc();
 			desc.format = Format::R8G8B8A8_UNORM; // force format to one that is writable by GPU

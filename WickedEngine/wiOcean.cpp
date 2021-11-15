@@ -34,9 +34,6 @@ namespace wiOcean_Internal
 
 	void LoadShaders()
 	{
-
-		std::string path = wiRenderer::GetShaderPath();
-
 		wiRenderer::LoadShader(ShaderStage::CS, updateSpectrumCS, "oceanSimulatorCS.cso");
 		wiRenderer::LoadShader(ShaderStage::CS, updateDisplacementMapCS, "oceanUpdateDisplacementMapCS.cso");
 		wiRenderer::LoadShader(ShaderStage::CS, updateGradientFoldingCS, "oceanUpdateGradientFoldingCS.cso");
@@ -47,7 +44,7 @@ namespace wiOcean_Internal
 		wiRenderer::LoadShader(ShaderStage::PS, wireframePS, "oceanSurfaceSimplePS.cso");
 
 
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 
 		{
 			PipelineStateDesc desc;
@@ -105,7 +102,7 @@ float Phillips(XMFLOAT2 K, XMFLOAT2 W, float v, float a, float dir_depend)
 
 void wiOcean::Create(const OceanParameters& params)
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	// Height map H(0)
 	int height_map_size = (params.dmap_dim + 4) * (params.dmap_dim + 1);
@@ -253,7 +250,7 @@ void wiOcean::initHeightMap(const OceanParameters& params, XMFLOAT2* out_h0, flo
 
 void wiOcean::UpdateDisplacementMap(const OceanParameters& params, CommandList cmd) const
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	device->EventBegin("Ocean Simulation", cmd);
 
@@ -369,7 +366,7 @@ void wiOcean::UpdateDisplacementMap(const OceanParameters& params, CommandList c
 
 void wiOcean::Render(const CameraComponent& camera, const OceanParameters& params, CommandList cmd) const
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	device->EventBegin("Ocean Rendering", cmd);
 
@@ -411,7 +408,7 @@ void wiOcean::Initialize()
 {
 	wiTimer timer;
 
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	RasterizerState ras_desc;
 	ras_desc.fill_mode = FillMode::SOLID;

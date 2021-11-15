@@ -52,7 +52,7 @@ namespace wiImage
 			return;
 		}
 
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 		device->EventBegin("Image", cmd);
 
 		uint32_t stencilRef = params.stencilRef;
@@ -255,8 +255,6 @@ namespace wiImage
 
 	void LoadShaders()
 	{
-		std::string path = wiRenderer::GetShaderPath();
-
 		wiRenderer::LoadShader(ShaderStage::VS, vertexShader, "imageVS.cso");
 		wiRenderer::LoadShader(ShaderStage::VS, screenVS, "screenVS.cso");
 
@@ -264,7 +262,7 @@ namespace wiImage
 		wiRenderer::LoadShader(ShaderStage::PS, imagePS[IMAGE_SHADER_FULLSCREEN], "screenPS.cso");
 
 
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 
 		for (int i = 0; i < IMAGE_SHADER_COUNT; ++i)
 		{
@@ -302,7 +300,7 @@ namespace wiImage
 	{
 		wiTimer timer;
 
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 
 		RasterizerState rs;
 		rs.fill_mode = FillMode::SOLID;

@@ -12,7 +12,7 @@ void RenderPath2D::ResizeBuffers()
 	current_buffersize = GetInternalResolution();
 	current_layoutscale = 0; // invalidate layout
 
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	const Texture* dsv = GetDepthStencil();
 	if(dsv != nullptr && (resolutionScale != 1.0f ||  dsv->GetDesc().sample_count > 1))
@@ -139,13 +139,13 @@ void RenderPath2D::Update(float dt)
 	{
 		TextureDesc desc = rtFinal.desc;
 		desc.format = Format::R16G16B16A16_FLOAT;
-		bool success = wiRenderer::GetDevice()->CreateTexture(&desc, nullptr, &rtLinearColorSpace);
+		bool success = wiGraphics::GetDevice()->CreateTexture(&desc, nullptr, &rtLinearColorSpace);
 		assert(success);
-		wiRenderer::GetDevice()->SetName(&rtLinearColorSpace, "rtLinearColorSpace");
+		wiGraphics::GetDevice()->SetName(&rtLinearColorSpace, "rtLinearColorSpace");
 
 		RenderPassDesc renderpassdesc;
 		renderpassdesc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtLinearColorSpace, RenderPassAttachment::LoadOp::CLEAR));
-		success = wiRenderer::GetDevice()->CreateRenderPass(&renderpassdesc, &renderpass_linearize);
+		success = wiGraphics::GetDevice()->CreateRenderPass(&renderpassdesc, &renderpass_linearize);
 		assert(success);
 	}
 
@@ -180,7 +180,7 @@ void RenderPath2D::FixedUpdate()
 }
 void RenderPath2D::Render() const
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 	CommandList cmd = device->BeginCommandList();
 	wiImage::SetCanvas(*this, cmd);
 	wiFont::SetCanvas(*this, cmd);

@@ -323,7 +323,7 @@ void wiWidget::ApplyScissor(const wiCanvas& canvas, const Rect rect, CommandList
 		scissor.top = scissor.bottom;
 	}
 
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 	float scale = canvas.GetDPIScaling();
 	scissor.bottom = int32_t((float)scissor.bottom * scale);
 	scissor.top = int32_t((float)scissor.top * scale);
@@ -349,7 +349,7 @@ namespace wiWidget_Internal
 		desc.bs = wiRenderer::GetBlendState(BSTYPE_TRANSPARENT);
 		desc.rs = wiRenderer::GetRasterizerState(RSTYPE_DOUBLESIDED);
 		desc.pt = PrimitiveTopology::TRIANGLESTRIP;
-		wiRenderer::GetDevice()->CreatePipelineState(&desc, &PSO_colored);
+		wiGraphics::GetDevice()->CreatePipelineState(&desc, &PSO_colored);
 	}
 }
 
@@ -1281,7 +1281,7 @@ void wiComboBox::Render(const wiCanvas& canvas, CommandList cmd) const
 	{
 		return;
 	}
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	wiColor color = GetColor();
 	if (combostate != COMBOSTATE_INACTIVE)
@@ -2245,7 +2245,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 		return;
 	}
 
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	struct Vertex
 	{
@@ -2865,7 +2865,7 @@ void wiTreeList::Render(const wiCanvas& canvas, CommandList cmd) const
 	{
 		return;
 	}
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	// control-base
 	sprites[state].Draw(cmd);

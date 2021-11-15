@@ -1,7 +1,6 @@
 #include "wiBackLog.h"
 #include "wiMath.h"
 #include "wiResourceManager.h"
-#include "wiRenderer.h"
 #include "wiTextureHelper.h"
 #include "wiSpinLock.h"
 #include "wiFont.h"
@@ -124,13 +123,13 @@ namespace wiBackLog
 			rect.right = (int32_t)canvas.GetPhysicalWidth();
 			rect.top = 0;
 			rect.bottom = int32_t(canvas.GetPhysicalHeight() * 0.9f);
-			wiRenderer::GetDevice()->BindScissorRects(1, &rect, cmd);
+			wiGraphics::GetDevice()->BindScissorRects(1, &rect, cmd);
 			font.Draw(cmd);
 			rect.left = -INT_MAX;
 			rect.right = INT_MAX;
 			rect.top = -INT_MAX;
 			rect.bottom = INT_MAX;
-			wiRenderer::GetDevice()->BindScissorRects(1, &rect, cmd);
+			wiGraphics::GetDevice()->BindScissorRects(1, &rect, cmd);
 		}
 	}
 

@@ -246,8 +246,6 @@ namespace wiFont
 
 void LoadShaders()
 {
-	std::string path = wiRenderer::GetShaderPath();
-
 	wiRenderer::LoadShader(ShaderStage::VS, vertexShader, "fontVS.cso");
 
 
@@ -265,7 +263,7 @@ void LoadShaders()
 	desc.dss = &depthStencilState;
 	desc.rs = &rasterizerState;
 	desc.pt = PrimitiveTopology::TRIANGLESTRIP;
-	wiRenderer::GetDevice()->CreatePipelineState(&desc, &PSO);
+	wiGraphics::GetDevice()->CreatePipelineState(&desc, &PSO);
 }
 void Initialize()
 {
@@ -282,7 +280,7 @@ void Initialize()
 		AddFontStyle("arial", arial, sizeof(arial));
 	}
 
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	RasterizerState rs;
 	rs.fill_mode = FillMode::SOLID;
@@ -571,7 +569,7 @@ void Draw_internal(const T* text, size_t text_length, const wiFontParams& params
 	else if (params.v_align == WIFALIGN_BOTTOM)
 		newProps.posY -= textHeight_internal(text, newProps);
 
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(FontVertex) * text_length * 4, cmd);
 	if (!mem.IsValid())

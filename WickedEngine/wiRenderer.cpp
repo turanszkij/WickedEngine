@@ -38,7 +38,7 @@ using namespace wiAllocators;
 namespace wiRenderer
 {
 
-std::shared_ptr<GraphicsDevice> device;
+GraphicsDevice* device = nullptr; // not managing lifetime here
 
 Shader				shaders[SHADERTYPE_COUNT];
 Texture				textures[TEXTYPE_COUNT];
@@ -148,140 +148,6 @@ Texture texture_shapeNoise;
 Texture texture_detailNoise;
 Texture texture_curlNoise;
 Texture texture_weatherMap;
-
-
-void SetDevice(std::shared_ptr<GraphicsDevice> newDevice)
-{
-	device = newDevice;
-
-	SamplerDesc samplerDesc;
-	samplerDesc.filter = Filter::MIN_MAG_MIP_LINEAR;
-	samplerDesc.address_u = TextureAddressMode::MIRROR;
-	samplerDesc.address_v = TextureAddressMode::MIRROR;
-	samplerDesc.address_w = TextureAddressMode::MIRROR;
-	samplerDesc.mip_lod_bias = 0.0f;
-	samplerDesc.max_anisotropy = 0;
-	samplerDesc.comparison_func = ComparisonFunc::NEVER;
-	samplerDesc.border_color = SamplerBorderColor::TRANSPARENT_BLACK;
-	samplerDesc.min_lod = 0;
-	samplerDesc.max_lod = FLT_MAX;
-	device->CreateSampler(&samplerDesc, &samplers[SSLOT_LINEAR_MIRROR]);
-
-	samplerDesc.filter = Filter::MIN_MAG_MIP_LINEAR;
-	samplerDesc.address_u = TextureAddressMode::CLAMP;
-	samplerDesc.address_v = TextureAddressMode::CLAMP;
-	samplerDesc.address_w = TextureAddressMode::CLAMP;
-	device->CreateSampler(&samplerDesc, &samplers[SSLOT_LINEAR_CLAMP]);
-
-	samplerDesc.filter = Filter::MIN_MAG_MIP_LINEAR;
-	samplerDesc.address_u = TextureAddressMode::WRAP;
-	samplerDesc.address_v = TextureAddressMode::WRAP;
-	samplerDesc.address_w = TextureAddressMode::WRAP;
-	device->CreateSampler(&samplerDesc, &samplers[SSLOT_LINEAR_WRAP]);
-
-	samplerDesc.filter = Filter::MIN_MAG_MIP_POINT;
-	samplerDesc.address_u = TextureAddressMode::MIRROR;
-	samplerDesc.address_v = TextureAddressMode::MIRROR;
-	samplerDesc.address_w = TextureAddressMode::MIRROR;
-	device->CreateSampler(&samplerDesc, &samplers[SSLOT_POINT_MIRROR]);
-
-	samplerDesc.filter = Filter::MIN_MAG_MIP_POINT;
-	samplerDesc.address_u = TextureAddressMode::WRAP;
-	samplerDesc.address_v = TextureAddressMode::WRAP;
-	samplerDesc.address_w = TextureAddressMode::WRAP;
-	device->CreateSampler(&samplerDesc, &samplers[SSLOT_POINT_WRAP]);
-
-
-	samplerDesc.filter = Filter::MIN_MAG_MIP_POINT;
-	samplerDesc.address_u = TextureAddressMode::CLAMP;
-	samplerDesc.address_v = TextureAddressMode::CLAMP;
-	samplerDesc.address_w = TextureAddressMode::CLAMP;
-	device->CreateSampler(&samplerDesc, &samplers[SSLOT_POINT_CLAMP]);
-
-	samplerDesc.filter = Filter::ANISOTROPIC;
-	samplerDesc.address_u = TextureAddressMode::CLAMP;
-	samplerDesc.address_v = TextureAddressMode::CLAMP;
-	samplerDesc.address_w = TextureAddressMode::CLAMP;
-	samplerDesc.max_anisotropy = 16;
-	device->CreateSampler(&samplerDesc, &samplers[SSLOT_ANISO_CLAMP]);
-
-	samplerDesc.filter = Filter::ANISOTROPIC;
-	samplerDesc.address_u = TextureAddressMode::WRAP;
-	samplerDesc.address_v = TextureAddressMode::WRAP;
-	samplerDesc.address_w = TextureAddressMode::WRAP;
-	samplerDesc.max_anisotropy = 16;
-	device->CreateSampler(&samplerDesc, &samplers[SSLOT_ANISO_WRAP]);
-
-	samplerDesc.filter = Filter::ANISOTROPIC;
-	samplerDesc.address_u = TextureAddressMode::MIRROR;
-	samplerDesc.address_v = TextureAddressMode::MIRROR;
-	samplerDesc.address_w = TextureAddressMode::MIRROR;
-	samplerDesc.max_anisotropy = 16;
-	device->CreateSampler(&samplerDesc, &samplers[SSLOT_ANISO_MIRROR]);
-
-	samplerDesc.filter = Filter::ANISOTROPIC;
-	samplerDesc.address_u = TextureAddressMode::WRAP;
-	samplerDesc.address_v = TextureAddressMode::WRAP;
-	samplerDesc.address_w = TextureAddressMode::WRAP;
-	samplerDesc.max_anisotropy = 16;
-	device->CreateSampler(&samplerDesc, &samplers[SSLOT_OBJECTSHADER]);
-
-	samplerDesc.filter = Filter::COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
-	samplerDesc.address_u = TextureAddressMode::CLAMP;
-	samplerDesc.address_v = TextureAddressMode::CLAMP;
-	samplerDesc.address_w = TextureAddressMode::CLAMP;
-	samplerDesc.mip_lod_bias = 0.0f;
-	samplerDesc.max_anisotropy = 0;
-	samplerDesc.comparison_func = ComparisonFunc::GREATER_EQUAL;
-	device->CreateSampler(&samplerDesc, &samplers[SSLOT_CMP_DEPTH]);
-
-
-	StaticSampler sam;
-
-	sam.sampler = samplers[SSLOT_CMP_DEPTH];
-	sam.slot = SSLOT_CMP_DEPTH;
-	device->SetCommonSampler(&sam);
-
-	sam.sampler = samplers[SSLOT_LINEAR_MIRROR];
-	sam.slot = SSLOT_LINEAR_MIRROR;
-	device->SetCommonSampler(&sam);
-
-	sam.sampler = samplers[SSLOT_LINEAR_CLAMP];
-	sam.slot = SSLOT_LINEAR_CLAMP;
-	device->SetCommonSampler(&sam);
-
-	sam.sampler = samplers[SSLOT_LINEAR_WRAP];
-	sam.slot = SSLOT_LINEAR_WRAP;
-	device->SetCommonSampler(&sam);
-
-	sam.sampler = samplers[SSLOT_POINT_MIRROR];
-	sam.slot = SSLOT_POINT_MIRROR;
-	device->SetCommonSampler(&sam);
-
-	sam.sampler = samplers[SSLOT_POINT_WRAP];
-	sam.slot = SSLOT_POINT_WRAP;
-	device->SetCommonSampler(&sam);
-
-	sam.sampler = samplers[SSLOT_POINT_CLAMP];
-	sam.slot = SSLOT_POINT_CLAMP;
-	device->SetCommonSampler(&sam);
-
-	sam.sampler = samplers[SSLOT_ANISO_CLAMP];
-	sam.slot = SSLOT_ANISO_CLAMP;
-	device->SetCommonSampler(&sam);
-
-	sam.sampler = samplers[SSLOT_ANISO_WRAP];
-	sam.slot = SSLOT_ANISO_WRAP;
-	device->SetCommonSampler(&sam);
-
-	sam.sampler = samplers[SSLOT_ANISO_MIRROR];
-	sam.slot = SSLOT_ANISO_MIRROR;
-	device->SetCommonSampler(&sam);
-}
-GraphicsDevice* GetDevice()
-{
-	return device.get();
-}
 
 // Direct reference to a renderable instance:
 struct RenderBatch
@@ -2197,6 +2063,131 @@ void ReloadShaders()
 void Initialize()
 {
 	wiTimer timer;
+	device = wiGraphics::GetDevice();
+
+	SamplerDesc samplerDesc;
+	samplerDesc.filter = Filter::MIN_MAG_MIP_LINEAR;
+	samplerDesc.address_u = TextureAddressMode::MIRROR;
+	samplerDesc.address_v = TextureAddressMode::MIRROR;
+	samplerDesc.address_w = TextureAddressMode::MIRROR;
+	samplerDesc.mip_lod_bias = 0.0f;
+	samplerDesc.max_anisotropy = 0;
+	samplerDesc.comparison_func = ComparisonFunc::NEVER;
+	samplerDesc.border_color = SamplerBorderColor::TRANSPARENT_BLACK;
+	samplerDesc.min_lod = 0;
+	samplerDesc.max_lod = FLT_MAX;
+	device->CreateSampler(&samplerDesc, &samplers[SSLOT_LINEAR_MIRROR]);
+
+	samplerDesc.filter = Filter::MIN_MAG_MIP_LINEAR;
+	samplerDesc.address_u = TextureAddressMode::CLAMP;
+	samplerDesc.address_v = TextureAddressMode::CLAMP;
+	samplerDesc.address_w = TextureAddressMode::CLAMP;
+	device->CreateSampler(&samplerDesc, &samplers[SSLOT_LINEAR_CLAMP]);
+
+	samplerDesc.filter = Filter::MIN_MAG_MIP_LINEAR;
+	samplerDesc.address_u = TextureAddressMode::WRAP;
+	samplerDesc.address_v = TextureAddressMode::WRAP;
+	samplerDesc.address_w = TextureAddressMode::WRAP;
+	device->CreateSampler(&samplerDesc, &samplers[SSLOT_LINEAR_WRAP]);
+
+	samplerDesc.filter = Filter::MIN_MAG_MIP_POINT;
+	samplerDesc.address_u = TextureAddressMode::MIRROR;
+	samplerDesc.address_v = TextureAddressMode::MIRROR;
+	samplerDesc.address_w = TextureAddressMode::MIRROR;
+	device->CreateSampler(&samplerDesc, &samplers[SSLOT_POINT_MIRROR]);
+
+	samplerDesc.filter = Filter::MIN_MAG_MIP_POINT;
+	samplerDesc.address_u = TextureAddressMode::WRAP;
+	samplerDesc.address_v = TextureAddressMode::WRAP;
+	samplerDesc.address_w = TextureAddressMode::WRAP;
+	device->CreateSampler(&samplerDesc, &samplers[SSLOT_POINT_WRAP]);
+
+
+	samplerDesc.filter = Filter::MIN_MAG_MIP_POINT;
+	samplerDesc.address_u = TextureAddressMode::CLAMP;
+	samplerDesc.address_v = TextureAddressMode::CLAMP;
+	samplerDesc.address_w = TextureAddressMode::CLAMP;
+	device->CreateSampler(&samplerDesc, &samplers[SSLOT_POINT_CLAMP]);
+
+	samplerDesc.filter = Filter::ANISOTROPIC;
+	samplerDesc.address_u = TextureAddressMode::CLAMP;
+	samplerDesc.address_v = TextureAddressMode::CLAMP;
+	samplerDesc.address_w = TextureAddressMode::CLAMP;
+	samplerDesc.max_anisotropy = 16;
+	device->CreateSampler(&samplerDesc, &samplers[SSLOT_ANISO_CLAMP]);
+
+	samplerDesc.filter = Filter::ANISOTROPIC;
+	samplerDesc.address_u = TextureAddressMode::WRAP;
+	samplerDesc.address_v = TextureAddressMode::WRAP;
+	samplerDesc.address_w = TextureAddressMode::WRAP;
+	samplerDesc.max_anisotropy = 16;
+	device->CreateSampler(&samplerDesc, &samplers[SSLOT_ANISO_WRAP]);
+
+	samplerDesc.filter = Filter::ANISOTROPIC;
+	samplerDesc.address_u = TextureAddressMode::MIRROR;
+	samplerDesc.address_v = TextureAddressMode::MIRROR;
+	samplerDesc.address_w = TextureAddressMode::MIRROR;
+	samplerDesc.max_anisotropy = 16;
+	device->CreateSampler(&samplerDesc, &samplers[SSLOT_ANISO_MIRROR]);
+
+	samplerDesc.filter = Filter::ANISOTROPIC;
+	samplerDesc.address_u = TextureAddressMode::WRAP;
+	samplerDesc.address_v = TextureAddressMode::WRAP;
+	samplerDesc.address_w = TextureAddressMode::WRAP;
+	samplerDesc.max_anisotropy = 16;
+	device->CreateSampler(&samplerDesc, &samplers[SSLOT_OBJECTSHADER]);
+
+	samplerDesc.filter = Filter::COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
+	samplerDesc.address_u = TextureAddressMode::CLAMP;
+	samplerDesc.address_v = TextureAddressMode::CLAMP;
+	samplerDesc.address_w = TextureAddressMode::CLAMP;
+	samplerDesc.mip_lod_bias = 0.0f;
+	samplerDesc.max_anisotropy = 0;
+	samplerDesc.comparison_func = ComparisonFunc::GREATER_EQUAL;
+	device->CreateSampler(&samplerDesc, &samplers[SSLOT_CMP_DEPTH]);
+
+
+	StaticSampler sam;
+
+	sam.sampler = samplers[SSLOT_CMP_DEPTH];
+	sam.slot = SSLOT_CMP_DEPTH;
+	device->SetCommonSampler(&sam);
+
+	sam.sampler = samplers[SSLOT_LINEAR_MIRROR];
+	sam.slot = SSLOT_LINEAR_MIRROR;
+	device->SetCommonSampler(&sam);
+
+	sam.sampler = samplers[SSLOT_LINEAR_CLAMP];
+	sam.slot = SSLOT_LINEAR_CLAMP;
+	device->SetCommonSampler(&sam);
+
+	sam.sampler = samplers[SSLOT_LINEAR_WRAP];
+	sam.slot = SSLOT_LINEAR_WRAP;
+	device->SetCommonSampler(&sam);
+
+	sam.sampler = samplers[SSLOT_POINT_MIRROR];
+	sam.slot = SSLOT_POINT_MIRROR;
+	device->SetCommonSampler(&sam);
+
+	sam.sampler = samplers[SSLOT_POINT_WRAP];
+	sam.slot = SSLOT_POINT_WRAP;
+	device->SetCommonSampler(&sam);
+
+	sam.sampler = samplers[SSLOT_POINT_CLAMP];
+	sam.slot = SSLOT_POINT_CLAMP;
+	device->SetCommonSampler(&sam);
+
+	sam.sampler = samplers[SSLOT_ANISO_CLAMP];
+	sam.slot = SSLOT_ANISO_CLAMP;
+	device->SetCommonSampler(&sam);
+
+	sam.sampler = samplers[SSLOT_ANISO_WRAP];
+	sam.slot = SSLOT_ANISO_WRAP;
+	device->SetCommonSampler(&sam);
+
+	sam.sampler = samplers[SSLOT_ANISO_MIRROR];
+	sam.slot = SSLOT_ANISO_MIRROR;
+	device->SetCommonSampler(&sam);
 
 	SetUpStates();
 	LoadBuffers();
@@ -3650,7 +3641,7 @@ void UpdateRenderData(
 			if (mesh.dirty_morph)
 			{
 				mesh.dirty_morph = false;
-				wiRenderer::GetDevice()->UpdateBuffer(&mesh.vertexBuffer_POS, mesh.vertex_positions_morphed.data(), cmd);
+				device->UpdateBuffer(&mesh.vertexBuffer_POS, mesh.vertex_positions_morphed.data(), cmd);
 				barrier_stack[cmd].push_back(GPUBarrier::Buffer(&mesh.vertexBuffer_POS, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
 			}
 

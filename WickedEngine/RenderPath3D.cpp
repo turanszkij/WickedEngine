@@ -10,7 +10,7 @@ using namespace wiGraphics;
 
 void RenderPath3D::ResizeBuffers()
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	XMUINT2 internalResolution = GetInternalResolution();
 
@@ -561,7 +561,7 @@ void RenderPath3D::Update(float dt)
 
 	if (wiRenderer::GetTemporalAAEnabled())
 	{
-		const XMFLOAT4& halton = wiMath::GetHaltonSequence(wiRenderer::GetDevice()->GetFrameCount() % 256);
+		const XMFLOAT4& halton = wiMath::GetHaltonSequence(wiGraphics::GetDevice()->GetFrameCount() % 256);
 		camera->jitter.x = (halton.x * 2 - 1) / (float)internalResolution.x;
 		camera->jitter.y = (halton.y * 2 - 1) / (float)internalResolution.y;
 	}
@@ -592,7 +592,7 @@ void RenderPath3D::Update(float dt)
 		rtShadow = {};
 	}
 
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	if((wiRenderer::GetScreenSpaceShadowsEnabled() || wiRenderer::GetRaytracedShadowsEnabled()) && !rtShadow.IsValid())
 	{
@@ -645,7 +645,7 @@ void RenderPath3D::Update(float dt)
 
 void RenderPath3D::Render() const
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 	wiJobSystem::context ctx;
 
 	// Preparing the frame:
@@ -666,7 +666,7 @@ void RenderPath3D::Render() const
 	device->WaitCommandList(cmd, cmd_prepareframe);
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 
 		wiRenderer::BindCameraCB(
 			*camera,
@@ -707,7 +707,7 @@ void RenderPath3D::Render() const
 	CommandList cmd_maincamera_prepass = cmd;
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 
 		wiRenderer::BindCameraCB(
 			*camera,
@@ -751,7 +751,7 @@ void RenderPath3D::Render() const
 	CommandList cmd_maincamera_compute_effects = cmd;
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 
 		wiRenderer::BindCameraCB(
 			*camera,
@@ -874,7 +874,7 @@ void RenderPath3D::Render() const
 		cmd = device->BeginCommandList();
 		wiJobSystem::Execute(ctx, [cmd, this](wiJobArgs args) {
 
-			GraphicsDevice* device = wiRenderer::GetDevice();
+			GraphicsDevice* device = wiGraphics::GetDevice();
 
 			wiRenderer::BindCameraCB(
 				camera_reflection,
@@ -914,7 +914,7 @@ void RenderPath3D::Render() const
 		cmd = device->BeginCommandList();
 		wiJobSystem::Execute(ctx, [cmd, this](wiJobArgs args) {
 
-			GraphicsDevice* device = wiRenderer::GetDevice();
+			GraphicsDevice* device = wiGraphics::GetDevice();
 
 			wiRenderer::BindCameraCB(
 				camera_reflection,
@@ -965,7 +965,7 @@ void RenderPath3D::Render() const
 	device->WaitCommandList(cmd, cmd_maincamera_compute_effects);
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 		device->EventBegin("Opaque Scene", cmd);
 
 		wiRenderer::BindCameraCB(
@@ -1047,7 +1047,7 @@ void RenderPath3D::Render() const
 	cmd = device->BeginCommandList();
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 
 		wiRenderer::BindCameraCB(
 			*camera,
@@ -1085,7 +1085,7 @@ void RenderPath3D::Render() const
 
 void RenderPath3D::Compose(CommandList cmd) const
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	wiImageParams fx;
 	fx.blendFlag = BLENDMODE_OPAQUE;
@@ -1185,7 +1185,7 @@ void RenderPath3D::RenderLightShafts(CommandList cmd) const
 	XMVECTOR sunDirection = XMLoadFloat3(&scene->weather.sunDirection);
 	if (getLightShaftsEnabled() && XMVectorGetX(XMVector3Dot(sunDirection, camera->GetAt())) > 0)
 	{
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 
 		device->EventBegin("Light Shafts", cmd);
 
@@ -1233,7 +1233,7 @@ void RenderPath3D::RenderVolumetrics(CommandList cmd) const
 	{
 		auto range = wiProfiler::BeginRangeGPU("Volumetric Lights", cmd);
 
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 
 		device->RenderPassBegin(&renderpass_volumetriclight, cmd);
 
@@ -1259,7 +1259,7 @@ void RenderPath3D::RenderVolumetrics(CommandList cmd) const
 }
 void RenderPath3D::RenderSceneMIPChain(CommandList cmd) const
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	auto range = wiProfiler::BeginRangeGPU("Scene MIP Chain", cmd);
 	device->EventBegin("RenderSceneMIPChain", cmd);
@@ -1289,7 +1289,7 @@ void RenderPath3D::RenderSceneMIPChain(CommandList cmd) const
 }
 void RenderPath3D::RenderTransparents(CommandList cmd) const
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	// Water ripple rendering:
 	if(!scene->waterRipples.empty())
@@ -1382,7 +1382,7 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 }
 void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	const Texture* rt_first = nullptr; // not ping-ponged with read / write
 	const Texture* rt_read = &rtMain;
@@ -1392,7 +1392,7 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 	{
 		if (wiRenderer::GetTemporalAAEnabled() && !wiRenderer::GetTemporalAADebugEnabled())
 		{
-			GraphicsDevice* device = wiRenderer::GetDevice();
+			GraphicsDevice* device = wiGraphics::GetDevice();
 
 			int output = device->GetFrameCount() % 2;
 			int history = 1 - output;
@@ -1564,7 +1564,7 @@ void RenderPath3D::setAO(AO value)
 		break;
 	}
 
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 	device->CreateTexture(&desc, nullptr, &rtAO);
 	device->SetName(&rtAO, "rtAO");
 }
@@ -1575,7 +1575,7 @@ void RenderPath3D::setSSREnabled(bool value)
 
 	if (value)
 	{
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 		XMUINT2 internalResolution = GetInternalResolution();
 
 		TextureDesc desc;
@@ -1600,7 +1600,7 @@ void RenderPath3D::setRaytracedReflectionsEnabled(bool value)
 
 	if (value)
 	{
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 		XMUINT2 internalResolution = GetInternalResolution();
 
 		TextureDesc desc;
@@ -1625,7 +1625,7 @@ void RenderPath3D::setFSREnabled(bool value)
 
 	if (resolutionScale < 1.0f && fsrEnabled)
 	{
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 
 		TextureDesc desc;
 		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;

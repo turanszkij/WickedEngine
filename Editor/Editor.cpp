@@ -201,7 +201,7 @@ void EditorComponent::ResizeBuffers()
 	init(main->canvas);
 	RenderPath2D::ResizeBuffers();
 
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 	bool hr;
 
 	renderPath->init(*this);
@@ -1921,7 +1921,7 @@ void EditorComponent::Render() const
 	// Selection outline:
 	if(renderPath->GetDepthStencil() != nullptr && !translator.selected.empty())
 	{
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 		CommandList cmd = device->BeginCommandList();
 
 		device->EventBegin("Editor - Selection Outline Mask", cmd);
@@ -1980,7 +1980,7 @@ void EditorComponent::Compose(CommandList cmd) const
 	const float selectionColorIntensity = std::sin(selectionOutlineTimer * XM_2PI * 0.8f) * 0.5f + 0.5f;
 	if (renderPath->GetDepthStencil() != nullptr && !translator.selected.empty())
 	{
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 		device->EventBegin("Editor - Selection Outline", cmd);
 		wiRenderer::BindCommonResources(cmd);
 		float opacity = wiMath::Lerp(0.4f, 1.0f, selectionColorIntensity);

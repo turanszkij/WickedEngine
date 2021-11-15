@@ -8,11 +8,14 @@
 #include "wiEvent.h"
 #include "wiCanvas.h"
 
+#include <memory>
+
 class RenderPath;
 
 class MainComponent
 {
 protected:
+	std::unique_ptr<wiGraphics::GraphicsDevice> graphicsDevice;
 	wiEvent::Handle swapChainVsyncChangeEvent;
 
 	RenderPath* activePath = nullptr;

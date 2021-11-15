@@ -127,7 +127,7 @@ namespace wiResourceManager
 		{
 		case wiResource::IMAGE:
 		{
-			GraphicsDevice* device = wiRenderer::GetDevice();
+			GraphicsDevice* device = wiGraphics::GetDevice();
 			if (!ext.compare("KTX2"))
 			{
 				basist::ktx2_transcoder transcoder(&g_basis_global_codebook);

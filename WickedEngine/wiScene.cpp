@@ -321,7 +321,7 @@ namespace wiScene
 		}
 		dest->options = options; // ensure that this memory is not read, so bitwise ORs also not performed with it!
 
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 		dest->texture_basecolormap_index = device->GetDescriptorIndex(textures[BASECOLORMAP].GetGPUResource(), SubresourceType::SRV);
 		dest->texture_surfacemap_index = device->GetDescriptorIndex(textures[SURFACEMAP].GetGPUResource(), SubresourceType::SRV);
 		dest->texture_emissivemap_index = device->GetDescriptorIndex(textures[EMISSIVEMAP].GetGPUResource(), SubresourceType::SRV);
@@ -383,7 +383,7 @@ namespace wiScene
 
 	void MeshComponent::CreateRenderData()
 	{
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 
 		vertex_subsets.resize(vertex_positions.size());
 		uint32_t subsetCounter = 0;
@@ -734,7 +734,7 @@ namespace wiScene
 	void MeshComponent::WriteShaderMesh(ShaderMesh* dest) const
 	{
 		dest->init();
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 		dest->ib = device->GetDescriptorIndex(&indexBuffer, SubresourceType::SRV);
 		if (streamoutBuffer_POS.IsValid())
 		{
@@ -1219,7 +1219,7 @@ namespace wiScene
 			CompressLightmap();
 
 			wiTextureHelper::CreateTexture(lightmap, lightmapTextureData.data(), lightmapWidth, lightmapHeight, lightmap.desc.format);
-			wiRenderer::GetDevice()->SetName(&lightmap, "lightmap");
+			wiGraphics::GetDevice()->SetName(&lightmap, "lightmap");
 		}
 	}
 	void ObjectComponent::CompressLightmap()
@@ -1299,7 +1299,7 @@ namespace wiScene
 
 	void ArmatureComponent::CreateRenderData()
 	{
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 
 		GPUBufferDesc bd;
 		bd.size = sizeof(ShaderTransform) * (uint32_t)boneCollection.size();
@@ -1462,7 +1462,7 @@ namespace wiScene
 	{
 		this->dt = dt;
 
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 
 		instanceArraySize = objects.GetCount() + hairs.GetCount() + emitters.GetCount();
 		if (instanceBuffer.desc.size < (instanceArraySize * sizeof(ShaderMeshInstance)))
@@ -2865,7 +2865,7 @@ namespace wiScene
 
 			Entity entity = meshes.GetEntity(args.jobIndex);
 			MeshComponent& mesh = meshes[args.jobIndex];
-			GraphicsDevice* device = wiRenderer::GetDevice();
+			GraphicsDevice* device = wiGraphics::GetDevice();
 
 			if (!mesh.vertexBuffer_PRE.IsValid())
 			{
@@ -3024,7 +3024,7 @@ namespace wiScene
 	{
 		if (impostors.GetCount() > 0 && !impostorArray.IsValid())
 		{
-			GraphicsDevice* device = wiRenderer::GetDevice();
+			GraphicsDevice* device = wiGraphics::GetDevice();
 
 			TextureDesc desc;
 			desc.width = impostorTextureDim;
@@ -3224,7 +3224,7 @@ namespace wiScene
 					XMFLOAT4X4 transformIT;
 					XMStoreFloat4x4(&transformIT, worldMatrixInverseTranspose);
 
-					GraphicsDevice* device = wiRenderer::GetDevice();
+					GraphicsDevice* device = wiGraphics::GetDevice();
 					ShaderMeshInstance& inst = instanceArrayMapped[args.jobIndex];
 					inst.init();
 					inst.transform.Create(worldMatrix);
@@ -3403,7 +3403,7 @@ namespace wiScene
 
 		if (!envmapArray.IsValid()) // even when zero probes, this will be created, since sometimes only the sky will be rendered into it
 		{
-			GraphicsDevice* device = wiRenderer::GetDevice();
+			GraphicsDevice* device = wiGraphics::GetDevice();
 
 			TextureDesc desc;
 			desc.array_size = 6;
@@ -3645,7 +3645,7 @@ namespace wiScene
 
 					hair.UpdateCPU(transform, *mesh, dt);
 
-					GraphicsDevice* device = wiRenderer::GetDevice();
+					GraphicsDevice* device = wiGraphics::GetDevice();
 
 					size_t meshIndex = meshes.GetCount() + args.jobIndex;
 					ShaderMesh& mesh = meshArrayMapped[meshIndex];
@@ -3720,7 +3720,7 @@ namespace wiScene
 			const TransformComponent& transform = *transforms.GetComponent(entity);
 			emitter.UpdateCPU(transform, dt);
 
-			GraphicsDevice* device = wiRenderer::GetDevice();
+			GraphicsDevice* device = wiGraphics::GetDevice();
 
 			size_t meshIndex = meshes.GetCount() + hairs.GetCount() + args.jobIndex;
 			ShaderMesh& mesh = meshArrayMapped[meshIndex];

@@ -57,7 +57,7 @@ void wiEmittedParticle::SetMaxParticleCount(uint32_t value)
 
 void wiEmittedParticle::CreateSelfBuffers()
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	if (particleBuffer.desc.size < MAX_PARTICLES * sizeof(Particle))
 	{
@@ -372,7 +372,7 @@ void wiEmittedParticle::UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex
 		return;
 	}
 
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 	device->EventBegin("UpdateEmittedParticles", cmd);
 
 	if (!IsPaused())
@@ -708,7 +708,7 @@ void wiEmittedParticle::UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex
 
 void wiEmittedParticle::Draw(const MaterialComponent& material, CommandList cmd) const
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 	device->EventBegin("EmittedParticle", cmd);
 
 	if (wiRenderer::IsWireRender())
@@ -750,11 +750,9 @@ namespace wiEmittedParticle_Internal
 {
 	void LoadShaders()
 	{
-		std::string path = wiRenderer::GetShaderPath();
-
 		wiRenderer::LoadShader(ShaderStage::VS, vertexShader, "emittedparticleVS.cso");
 
-		if (ALLOW_MESH_SHADER && wiRenderer::GetDevice()->CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
+		if (ALLOW_MESH_SHADER && wiGraphics::GetDevice()->CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
 		{
 			wiRenderer::LoadShader(ShaderStage::MS, meshShader, "emittedparticleMS.cso");
 		}
@@ -780,13 +778,13 @@ namespace wiEmittedParticle_Internal
 		wiRenderer::LoadShader(ShaderStage::CS, simulateCS_SORTING_DEPTHCOLLISIONS, "emittedparticle_simulateCS_SORTING_DEPTHCOLLISIONS.cso");
 
 
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 
 		for (int i = 0; i < BLENDMODE_COUNT; ++i)
 		{
 			PipelineStateDesc desc;
 			desc.pt = PrimitiveTopology::TRIANGLESTRIP;
-			if (ALLOW_MESH_SHADER && wiRenderer::GetDevice()->CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
+			if (ALLOW_MESH_SHADER && wiGraphics::GetDevice()->CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
 			{
 				desc.ms = &meshShader;
 			}
@@ -808,7 +806,7 @@ namespace wiEmittedParticle_Internal
 		{
 			PipelineStateDesc desc;
 			desc.pt = PrimitiveTopology::TRIANGLESTRIP;
-			if (ALLOW_MESH_SHADER && wiRenderer::GetDevice()->CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
+			if (ALLOW_MESH_SHADER && wiGraphics::GetDevice()->CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
 			{
 				desc.ms = &meshShader;
 			}

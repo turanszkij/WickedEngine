@@ -24,7 +24,7 @@ namespace Translator_Internal
 {
 	void LoadShaders()
 	{
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 
 		{
 			PipelineStateDesc desc;
@@ -58,7 +58,7 @@ namespace Translator_Internal
 
 void Translator::Create()
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	if (!vertexBuffer_Axis.IsValid())
 	{
@@ -429,7 +429,7 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 
 	Scene& scene = wiScene::GetScene();
 
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	device->EventBegin("Editor - Translator", cmd);
 

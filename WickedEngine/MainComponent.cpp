@@ -65,7 +65,6 @@ void MainComponent::ActivatePath(RenderPath* component, float fadeSeconds, wiCol
 
 void MainComponent::Run()
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	if (!initialized)
 	{
@@ -76,14 +75,14 @@ void MainComponent::Run()
 	if (!wiInitializer::IsInitializeFinished())
 	{
 		// Until engine is not loaded, present initialization screen...
-		CommandList cmd = device->BeginCommandList();
-		device->RenderPassBegin(&swapChain, cmd);
+		CommandList cmd = graphicsDevice->BeginCommandList();
+		graphicsDevice->RenderPassBegin(&swapChain, cmd);
 		wiImage::SetCanvas(canvas, cmd);
 		wiFont::SetCanvas(canvas, cmd);
 		Viewport viewport;
 		viewport.width = (float)swapChain.desc.width;
 		viewport.height = (float)swapChain.desc.height;
-		device->BindViewports(1, &viewport, cmd);
+		graphicsDevice->BindViewports(1, &viewport, cmd);
 		wiFontParams params;
 		params.posX = 5.f;
 		params.posY = 5.f;
@@ -95,8 +94,8 @@ void MainComponent::Run()
 			params.posY = screenheight - textheight;
 		}
 		wiFont::Draw(text, params, cmd);
-		device->RenderPassEnd(cmd);
-		device->SubmitCommandLists();
+		graphicsDevice->RenderPassEnd(cmd);
+		graphicsDevice->SubmitCommandLists();
 		return;
 	}
 
@@ -127,7 +126,7 @@ void MainComponent::Run()
 
 	fadeManager.Update(dt);
 
-	ColorSpace colorspace = device->GetSwapChainColorSpace(&swapChain);
+	ColorSpace colorspace = graphicsDevice->GetSwapChainColorSpace(&swapChain);
 
 	if (GetActivePath() != nullptr)
 	{
@@ -170,43 +169,43 @@ void MainComponent::Run()
 	wiInput::Update(window);
 
 	// Begin final compositing:
-	CommandList cmd = device->BeginCommandList();
+	CommandList cmd = graphicsDevice->BeginCommandList();
 	wiImage::SetCanvas(canvas, cmd);
 	wiFont::SetCanvas(canvas, cmd);
 	Viewport viewport;
 	viewport.width = (float)swapChain.desc.width;
 	viewport.height = (float)swapChain.desc.height;
-	device->BindViewports(1, &viewport, cmd);
+	graphicsDevice->BindViewports(1, &viewport, cmd);
 
 	bool colorspace_conversion_required = colorspace == ColorSpace::HDR10_ST2084;
 	if (colorspace_conversion_required)
 	{
 		// In HDR10, we perform the compositing in a custom linear color space render target
-		device->RenderPassBegin(&renderpass, cmd);
+		graphicsDevice->RenderPassBegin(&renderpass, cmd);
 	}
 	else
 	{
 		// If swapchain is SRGB or Linear HDR, it can be used for blending
 		//	- If it is SRGB, the render path will ensure tonemapping to SDR
 		//	- If it is Linear HDR, we can blend trivially in linear space
-		device->RenderPassBegin(&swapChain, cmd);
+		graphicsDevice->RenderPassBegin(&swapChain, cmd);
 	}
 	Compose(cmd);
-	device->RenderPassEnd(cmd);
+	graphicsDevice->RenderPassEnd(cmd);
 
 	if (colorspace_conversion_required)
 	{
 		// In HDR10, we perform a final mapping from linear to HDR10, into the swapchain
-		device->RenderPassBegin(&swapChain, cmd);
+		graphicsDevice->RenderPassBegin(&swapChain, cmd);
 		wiImageParams fx;
 		fx.enableFullScreen();
 		fx.enableHDR10OutputMapping();
 		wiImage::Draw(&rendertarget, fx, cmd);
-		device->RenderPassEnd(cmd);
+		graphicsDevice->RenderPassEnd(cmd);
 	}
 
 	wiProfiler::EndFrame(cmd);
-	device->SubmitCommandLists();
+	graphicsDevice->SubmitCommandLists();
 }
 
 void MainComponent::Update(float dt)
@@ -259,8 +258,6 @@ void MainComponent::Compose(CommandList cmd)
 		GetActivePath()->Compose(cmd);
 	}
 
-	GraphicsDevice* device = wiRenderer::GetDevice();
-
 	if (fadeManager.IsActive())
 	{
 		// display fade rect
@@ -292,13 +289,13 @@ void MainComponent::Compose(CommandList cmd)
 #endif
 
 #ifdef WICKEDENGINE_BUILD_DX12
-			if (dynamic_cast<GraphicsDevice_DX12*>(device))
+			if (dynamic_cast<GraphicsDevice_DX12*>(graphicsDevice.get()))
 			{
 				ss << "[DX12]";
 			}
 #endif
 #ifdef WICKEDENGINE_BUILD_VULKAN
-			if (dynamic_cast<GraphicsDevice_Vulkan*>(device))
+			if (dynamic_cast<GraphicsDevice_Vulkan*>(graphicsDevice.get()))
 			{
 				ss << "[Vulkan]";
 			}
@@ -307,7 +304,7 @@ void MainComponent::Compose(CommandList cmd)
 #ifdef _DEBUG
 			ss << "[DEBUG]";
 #endif
-			if (device->IsDebugDevice())
+			if (graphicsDevice->IsDebugDevice())
 			{
 				ss << "[debugdevice]";
 			}
@@ -324,7 +321,7 @@ void MainComponent::Compose(CommandList cmd)
 		if (infoDisplay.colorspace)
 		{
 			ss << "Color Space: ";
-			ColorSpace colorSpace = device->GetSwapChainColorSpace(&swapChain);
+			ColorSpace colorSpace = graphicsDevice->GetSwapChainColorSpace(&swapChain);
 			switch (colorSpace)
 			{
 			default:
@@ -366,7 +363,7 @@ void MainComponent::Compose(CommandList cmd)
 #ifdef _DEBUG
 		ss << "Warning: This is a [DEBUG] build, performance will be slow!" << std::endl;
 #endif
-		if (wiRenderer::GetDevice()->IsDebugDevice())
+		if (graphicsDevice->IsDebugDevice())
 		{
 			ss << "Warning: Graphics is in [debugdevice] mode, performance will be slow!" << std::endl;
 		}
@@ -392,7 +389,7 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 	this->window = window;
 
 	// User can also create a graphics device if custom logic is desired, but they must do before this function!
-	if (wiRenderer::GetDevice() == nullptr)
+	if (graphicsDevice == nullptr)
 	{
 		bool debugdevice = wiStartupArguments::HasArgument("debugdevice");
 		bool gpuvalidation = wiStartupArguments::HasArgument("gpuvalidation");
@@ -430,17 +427,18 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 		{
 #ifdef WICKEDENGINE_BUILD_VULKAN
 			wiRenderer::SetShaderPath(wiRenderer::GetShaderPath() + "spirv/");
-			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_Vulkan>(window, debugdevice));
+			graphicsDevice = std::make_unique<GraphicsDevice_Vulkan>(window, debugdevice);
 #endif
 		}
 		else if (use_dx12)
 		{
 #ifdef WICKEDENGINE_BUILD_DX12
 			wiRenderer::SetShaderPath(wiRenderer::GetShaderPath() + "hlsl6/");
-			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_DX12>(debugdevice, gpuvalidation));
+			graphicsDevice = std::make_unique<GraphicsDevice_DX12>(debugdevice, gpuvalidation);
 #endif
 		}
 	}
+	wiGraphics::GetDevice() = graphicsDevice.get();
 
 	canvas.init(window);
 
@@ -459,30 +457,30 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 	desc.width = canvas.GetPhysicalWidth();
 	desc.height = canvas.GetPhysicalHeight();
 	desc.allow_hdr = allow_hdr;
-	bool success = wiRenderer::GetDevice()->CreateSwapChain(&desc, window, &swapChain);
+	bool success = graphicsDevice->CreateSwapChain(&desc, window, &swapChain);
 	assert(success);
 
 	swapChainVsyncChangeEvent = wiEvent::Subscribe(SYSTEM_EVENT_SET_VSYNC, [this](uint64_t userdata) {
 		SwapChainDesc desc = swapChain.desc;
 		desc.vsync = userdata != 0;
-		bool success = wiRenderer::GetDevice()->CreateSwapChain(&desc, nullptr, &swapChain);
+		bool success = graphicsDevice->CreateSwapChain(&desc, nullptr, &swapChain);
 		assert(success);
 		});
 
-	if (wiRenderer::GetDevice()->GetSwapChainColorSpace(&swapChain) == ColorSpace::HDR10_ST2084)
+	if (graphicsDevice->GetSwapChainColorSpace(&swapChain) == ColorSpace::HDR10_ST2084)
 	{
 		TextureDesc desc;
 		desc.width = swapChain.desc.width;
 		desc.height = swapChain.desc.height;
 		desc.format = Format::R11G11B10_FLOAT;
 		desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
-		bool success = wiRenderer::GetDevice()->CreateTexture(&desc, nullptr, &rendertarget);
+		bool success = graphicsDevice->CreateTexture(&desc, nullptr, &rendertarget);
 		assert(success);
-		wiRenderer::GetDevice()->SetName(&rendertarget, "MainComponent::rendertarget");
+		graphicsDevice->SetName(&rendertarget, "MainComponent::rendertarget");
 
 		RenderPassDesc renderpassdesc;
 		renderpassdesc.attachments.push_back(RenderPassAttachment::RenderTarget(&rendertarget, RenderPassAttachment::LoadOp::CLEAR));
-		success = wiRenderer::GetDevice()->CreateRenderPass(&renderpassdesc, &renderpass);
+		success = graphicsDevice->CreateRenderPass(&renderpassdesc, &renderpass);
 		assert(success);
 	}
 }

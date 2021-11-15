@@ -1,5 +1,4 @@
 #include "wiTextureHelper.h"
-#include "wiRenderer.h"
 #include "wiRandom.h"
 #include "wiColor.h"
 #include "wiBackLog.h"
@@ -34,7 +33,7 @@ namespace wiTextureHelper
 	{
 		wiTimer timer;
 
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 
 		// Random64x64
 		{
@@ -214,7 +213,7 @@ namespace wiTextureHelper
 			return &it->second;
 		}
 
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 
 		static const int dim = 1;
 		static const int dataLength = dim * dim * 4;
@@ -248,7 +247,7 @@ namespace wiTextureHelper
 		{
 			return false;
 		}
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 
 		TextureDesc textureDesc;
 		textureDesc.width = width;

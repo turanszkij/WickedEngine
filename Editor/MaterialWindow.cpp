@@ -800,7 +800,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		clearcoatSlider.SetValue(material->clearcoat);
 		clearcoatRoughnessSlider.SetValue(material->clearcoatRoughness);
 
-		shadingRateComboBox.SetEnabled(wiRenderer::GetDevice()->CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING));
+		shadingRateComboBox.SetEnabled(wiGraphics::GetDevice()->CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING));
 
 		if (material->IsUsingSpecularGlossinessWorkflow())
 		{

@@ -1,6 +1,5 @@
 #include "wiProfiler.h"
 #include "wiGraphicsDevice.h"
-#include "wiRenderer.h"
 #include "wiFont.h"
 #include "wiImage.h"
 #include "wiTimer.h"
@@ -57,7 +56,7 @@ namespace wiProfiler
 
 			ranges.reserve(100);
 
-			GraphicsDevice* device = wiRenderer::GetDevice();
+			GraphicsDevice* device = wiGraphics::GetDevice();
 
 			GPUQueryHeapDesc desc;
 			desc.type = GpuQueryType::TIMESTAMP;
@@ -78,7 +77,7 @@ namespace wiProfiler
 
 		cpu_frame = BeginRangeCPU("CPU Frame");
 
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 		CommandList cmd = device->BeginCommandList();
 
 		device->QueryReset(
@@ -95,7 +94,7 @@ namespace wiProfiler
 		if (!ENABLED || !initialized)
 			return;
 
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 
 		// note: read the GPU Frame end range manually because it will be on a separate command list than start point:
 		auto& gpu_range = ranges[gpu_frame];
@@ -195,7 +194,7 @@ namespace wiProfiler
 		ranges[id].cmd = cmd;
 
 		ranges[id].gpuBegin[queryheap_idx] = nextQuery.fetch_add(1);
-		wiRenderer::GetDevice()->QueryEnd(&queryHeap, ranges[id].gpuBegin[queryheap_idx], cmd);
+		wiGraphics::GetDevice()->QueryEnd(&queryHeap, ranges[id].gpuBegin[queryheap_idx], cmd);
 
 		lock.unlock();
 
@@ -218,7 +217,7 @@ namespace wiProfiler
 			else
 			{
 				ranges[id].gpuEnd[queryheap_idx] = nextQuery.fetch_add(1);
-				wiRenderer::GetDevice()->QueryEnd(&queryHeap, it->second.gpuEnd[queryheap_idx], it->second.cmd);
+				wiGraphics::GetDevice()->QueryEnd(&queryHeap, it->second.gpuEnd[queryheap_idx], it->second.cmd);
 			}
 		}
 		else

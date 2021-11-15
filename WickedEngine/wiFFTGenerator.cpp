@@ -33,7 +33,7 @@ namespace wiFFTGenerator
 		// Setup execution configuration
 		uint32_t grid = thread_count / COHERENCY_GRANULARITY;
 
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 
 		// Buffers
 		const GPUResource* srvs[1] = { &pSRV_Src };
@@ -71,7 +71,7 @@ namespace wiFFTGenerator
 		CommandList cmd)
 	{
 		const uint32_t thread_count = fft_plan.slices * (512 * 512) / 8;
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 		const GPUBuffer* cs_cbs;
 
 		uint32_t istride = 512 * 512 / 8;
@@ -168,7 +168,7 @@ namespace wiFFTGenerator
 
 	void fft512x512_create_plan(CSFFT512x512_Plan& plan, uint32_t slices)
 	{
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 
 		plan.slices = slices;
 
@@ -189,8 +189,6 @@ namespace wiFFTGenerator
 
 	void LoadShaders()
 	{
-		std::string path = wiRenderer::GetShaderPath();
-
 		wiRenderer::LoadShader(ShaderStage::CS, radix008A_CS, "fft_512x512_c2c_CS.cso");
 		wiRenderer::LoadShader(ShaderStage::CS, radix008A_CS2, "fft_512x512_c2c_v2_CS.cso");
 	}

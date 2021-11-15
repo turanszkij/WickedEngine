@@ -1,6 +1,5 @@
 #include "wiHelper.h"
 #include "wiPlatform.h"
-#include "wiRenderer.h"
 #include "wiBackLog.h"
 #include "wiEvent.h"
 
@@ -90,7 +89,7 @@ namespace wiHelper
 			filename = directory + "/sc_" + getCurrentDateTimeAsString() + ".jpg";
 		}
 
-		bool result = saveTextureToFile(wiRenderer::GetDevice()->GetBackBuffer(&swapchain), filename);
+		bool result = saveTextureToFile(wiGraphics::GetDevice()->GetBackBuffer(&swapchain), filename);
 		assert(result);
 
 		if (result)
@@ -104,7 +103,7 @@ namespace wiHelper
 	{
 		using namespace wiGraphics;
 
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 
 		TextureDesc desc = texture.GetDesc();
 

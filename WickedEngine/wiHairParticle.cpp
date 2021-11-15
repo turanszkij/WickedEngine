@@ -49,7 +49,7 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 	aabb = AABB(_min, _max);
 	aabb = aabb.transform(world);
 
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	if (_flags & REBUILD_BUFFERS || !constantBuffer.IsValid() || (strandCount * segmentCount) != simulationBuffer.GetDesc().size / sizeof(PatchSimulationData))
 	{
@@ -234,7 +234,7 @@ void wiHairParticle::UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex, c
 		return;
 	}
 
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 	device->EventBegin("HairParticle - UpdateGPU", cmd);
 
 	TextureDesc desc;
@@ -344,7 +344,7 @@ void wiHairParticle::Draw(const MaterialComponent& material, RENDERPASS renderPa
 		return;
 	}
 
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 	device->EventBegin("HairParticle - Draw", cmd);
 
 	device->BindStencilRef(STENCILREF_DEFAULT, cmd);
@@ -439,8 +439,6 @@ namespace wiHairParticle_Internal
 {
 	void LoadShaders()
 	{
-		std::string path = wiRenderer::GetShaderPath();
-
 		wiRenderer::LoadShader(ShaderStage::VS, vs, "hairparticleVS.cso");
 
 		wiRenderer::LoadShader(ShaderStage::PS, ps_simple, "hairparticlePS_simple.cso");
@@ -450,7 +448,7 @@ namespace wiHairParticle_Internal
 		wiRenderer::LoadShader(ShaderStage::CS, cs_simulate, "hairparticle_simulateCS.cso");
 		wiRenderer::LoadShader(ShaderStage::CS, cs_finishUpdate, "hairparticle_finishUpdateCS.cso");
 
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 
 		for (int i = 0; i < RENDERPASS_COUNT; ++i)
 		{

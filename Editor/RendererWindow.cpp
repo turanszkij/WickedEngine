@@ -181,7 +181,7 @@ void RendererWindow::Create(EditorComponent* editor)
 		});
 	variableRateShadingClassificationCheckBox.SetCheck(wiRenderer::GetVariableRateShadingClassification());
 	AddWidget(&variableRateShadingClassificationCheckBox);
-	variableRateShadingClassificationCheckBox.SetEnabled(wiRenderer::GetDevice()->CheckCapability(wiGraphics::GraphicsDeviceCapability::VARIABLE_RATE_SHADING_TIER2));
+	variableRateShadingClassificationCheckBox.SetEnabled(wiGraphics::GetDevice()->CheckCapability(wiGraphics::GraphicsDeviceCapability::VARIABLE_RATE_SHADING_TIER2));
 
 	variableRateShadingClassificationDebugCheckBox.Create("DEBUG: ");
 	variableRateShadingClassificationDebugCheckBox.SetTooltip("Toggle visualization of variable rate shading classification feature");
@@ -192,7 +192,7 @@ void RendererWindow::Create(EditorComponent* editor)
 		});
 	variableRateShadingClassificationDebugCheckBox.SetCheck(wiRenderer::GetVariableRateShadingClassificationDebug());
 	AddWidget(&variableRateShadingClassificationDebugCheckBox);
-	variableRateShadingClassificationDebugCheckBox.SetEnabled(wiRenderer::GetDevice()->CheckCapability(wiGraphics::GraphicsDeviceCapability::VARIABLE_RATE_SHADING_TIER2));
+	variableRateShadingClassificationDebugCheckBox.SetEnabled(wiGraphics::GetDevice()->CheckCapability(wiGraphics::GraphicsDeviceCapability::VARIABLE_RATE_SHADING_TIER2));
 
 	advancedLightCullingCheckBox.Create("2.5D Light Culling: ");
 	advancedLightCullingCheckBox.SetTooltip("Enable a more aggressive light culling approach which can result in slower culling but faster rendering (Tiled renderer only)");
@@ -223,7 +223,7 @@ void RendererWindow::Create(EditorComponent* editor)
 	});
 	tessellationCheckBox.SetCheck(wiRenderer::GetTessellationEnabled());
 	AddWidget(&tessellationCheckBox);
-	tessellationCheckBox.SetEnabled(wiRenderer::GetDevice()->CheckCapability(wiGraphics::GraphicsDeviceCapability::TESSELLATION));
+	tessellationCheckBox.SetEnabled(wiGraphics::GetDevice()->CheckCapability(wiGraphics::GraphicsDeviceCapability::TESSELLATION));
 
 	speedMultiplierSlider.Create(0, 4, 1, 100000, "Speed: ");
 	speedMultiplierSlider.SetTooltip("Adjust the global speed (time multiplier)");
@@ -249,7 +249,7 @@ void RendererWindow::Create(EditorComponent* editor)
 	shadowTypeComboBox.SetSize(XMFLOAT2(100, itemheight));
 	shadowTypeComboBox.SetPos(XMFLOAT2(x, y += step));
 	shadowTypeComboBox.AddItem("Shadowmaps");
-	if (wiRenderer::GetDevice()->CheckCapability(wiGraphics::GraphicsDeviceCapability::RAYTRACING))
+	if (wiGraphics::GetDevice()->CheckCapability(wiGraphics::GraphicsDeviceCapability::RAYTRACING))
 	{
 		shadowTypeComboBox.AddItem("Ray traced");
 	}
@@ -729,7 +729,7 @@ void RendererWindow::UpdateSwapChainFormats(wiGraphics::SwapChain* swapChain)
 	swapchainComboBox.ClearItems();
 	swapchainComboBox.AddItem("SDR 8bit", static_cast<uint64_t>(wiGraphics::Format::R8G8B8A8_UNORM));
 	swapchainComboBox.AddItem("SDR 10bit", static_cast<uint64_t>(wiGraphics::Format::R10G10B10A2_UNORM));
-	if (wiRenderer::GetDevice()->GetSwapChainHDRSupport(swapChain))
+	if (wiGraphics::GetDevice()->GetSwapChainHDRSupport(swapChain))
 	{
 		swapchainComboBox.AddItem("HDR 10bit", static_cast<uint64_t>(wiGraphics::Format::R10G10B10A2_UNORM));
 		swapchainComboBox.AddItem("HDR 16bit", static_cast<uint64_t>(wiGraphics::Format::R16G16B16A16_FLOAT));
@@ -788,7 +788,7 @@ void RendererWindow::UpdateSwapChainFormats(wiGraphics::SwapChain* swapChain)
 			break;
 		}
 
-		bool success = wiRenderer::GetDevice()->CreateSwapChain(&swapChain->desc, nullptr, swapChain);
+		bool success = wiGraphics::GetDevice()->CreateSwapChain(&swapChain->desc, nullptr, swapChain);
 		assert(success);
 		});
 }

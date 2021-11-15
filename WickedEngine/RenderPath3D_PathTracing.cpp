@@ -40,7 +40,7 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 {
 	RenderPath2D::ResizeBuffers(); // we don't need to use any buffers from RenderPath3D, so skip those
 
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	XMUINT2 internalResolution = GetInternalResolution();
 
@@ -220,7 +220,7 @@ void RenderPath3D_PathTracing::Update(float dt)
 						}
 					}
 
-					GraphicsDevice* device = wiRenderer::GetDevice();
+					GraphicsDevice* device = wiGraphics::GetDevice();
 
 					TextureDesc desc;
 					desc.width = (uint32_t)width;
@@ -247,7 +247,7 @@ void RenderPath3D_PathTracing::Update(float dt)
 
 void RenderPath3D_PathTracing::Render() const
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 	wiJobSystem::context ctx;
 
 	if (sam < target)
@@ -275,7 +275,7 @@ void RenderPath3D_PathTracing::Render() const
 		cmd = device->BeginCommandList();
 		wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
-			GraphicsDevice* device = wiRenderer::GetDevice();
+			GraphicsDevice* device = wiGraphics::GetDevice();
 
 			wiRenderer::BindCameraCB(
 				*camera,
@@ -322,7 +322,7 @@ void RenderPath3D_PathTracing::Render() const
 	CommandList cmd = device->BeginCommandList();
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 
 		wiRenderer::BindCameraCB(
 			*camera,
@@ -389,7 +389,7 @@ void RenderPath3D_PathTracing::Render() const
 
 void RenderPath3D_PathTracing::Compose(CommandList cmd) const
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	device->EventBegin("RenderPath3D_PathTracing::Compose", cmd);
 

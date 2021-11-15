@@ -272,4 +272,14 @@ namespace wiGraphics
 		}
 	};
 
+
+	// This is a helper to get access to a global device instance
+	//	- The engine uses this, but it is not necessary to use a single global device object
+	//	- This is not a lifetime managing object, just a way to globally expose a reference to an object by pointer
+	inline GraphicsDevice*& GetDevice()
+	{
+		static GraphicsDevice* device = nullptr;
+		return device;
+	}
+
 }

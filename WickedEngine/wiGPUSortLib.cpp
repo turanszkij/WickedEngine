@@ -19,8 +19,6 @@ namespace wiGPUSortLib
 
 	void LoadShaders()
 	{
-		std::string path = wiRenderer::GetShaderPath();
-
 		wiRenderer::LoadShader(ShaderStage::CS, kickoffSortCS, "gpusortlib_kickoffSortCS.cso");
 		wiRenderer::LoadShader(ShaderStage::CS, sortCS, "gpusortlib_sortCS.cso");
 		wiRenderer::LoadShader(ShaderStage::CS, sortInnerCS, "gpusortlib_sortInnerCS.cso");
@@ -37,7 +35,7 @@ namespace wiGPUSortLib
 		bd.bind_flags = BindFlag::UNORDERED_ACCESS;
 		bd.misc_flags = ResourceMiscFlag::INDIRECT_ARGS | ResourceMiscFlag::BUFFER_RAW;
 		bd.size = sizeof(IndirectDispatchArgs);
-		wiRenderer::GetDevice()->CreateBuffer(&bd, nullptr, &indirectBuffer);
+		wiGraphics::GetDevice()->CreateBuffer(&bd, nullptr, &indirectBuffer);
 
 		static wiEvent::Handle handle = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
 		LoadShaders();
@@ -54,7 +52,7 @@ namespace wiGPUSortLib
 		const GPUBuffer& indexBuffer_write,
 		CommandList cmd)
 	{
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 
 		device->EventBegin("GPUSortLib", cmd);
 

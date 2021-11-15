@@ -59,7 +59,7 @@ bool ImGui_Impl_CreateDeviceObjects()
 	textureData.row_pitch = width * GetFormatStride(textureDesc.format);
 	textureData.slice_pitch = textureData.row_pitch * height;
 
-	wiRenderer::GetDevice()->CreateTexture(&textureDesc, &textureData, &fontTexture);
+	wiGraphics::GetDevice()->CreateTexture(&textureDesc, &textureData, &fontTexture);
 
 	// Store our identifier
 	io.Fonts->SetTexID((ImTextureID)&fontTexture);
@@ -80,7 +80,7 @@ bool ImGui_Impl_CreateDeviceObjects()
 	desc.rs = wiRenderer::GetRasterizerState(RSTYPE_DOUBLESIDED);
 	desc.bs = wiRenderer::GetBlendState(BSTYPE_TRANSPARENT);
 	desc.pt = PrimitiveTopology::TRIANGLELIST;
-	wiRenderer::GetDevice()->CreatePipelineState(&desc, &imguiPSO);
+	wiGraphics::GetDevice()->CreatePipelineState(&desc, &imguiPSO);
 
 	return true;
 }
@@ -173,7 +173,7 @@ void Example_ImGui::Compose(wiGraphics::CommandList cmd)
 
 	auto* bd = ImGui_Impl_GetBackendData();
 
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	// Get memory for vertex and index buffers
 	const uint64_t vbSize = sizeof(ImDrawVert) * drawData->TotalVtxCount;
