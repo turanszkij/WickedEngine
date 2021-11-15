@@ -115,7 +115,7 @@ void MainComponent::Run()
 		return;
 	}
 
-	wiProfiler::BeginFrame(device);
+	wiProfiler::BeginFrame();
 
 	deltaTime = float(std::max(0.0, timer.elapsed() / 1000.0));
 	timer.record();
@@ -205,7 +205,7 @@ void MainComponent::Run()
 		device->RenderPassEnd(cmd);
 	}
 
-	wiProfiler::EndFrame(device, cmd);
+	wiProfiler::EndFrame(cmd);
 	device->SubmitCommandLists();
 }
 

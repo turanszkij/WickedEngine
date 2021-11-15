@@ -721,7 +721,7 @@ void RenderPath3D::Render() const
 		device->RenderPassBegin(&renderpass_depthprepass, cmd);
 
 		device->EventBegin("Opaque Z-prepass", cmd);
-		auto range = wiProfiler::BeginRangeGPU("Z-Prepass", device, cmd);
+		auto range = wiProfiler::BeginRangeGPU("Z-Prepass", cmd);
 
 		Viewport vp;
 		vp.width = (float)depthBuffer_Main.GetDesc().width;
@@ -799,7 +799,7 @@ void RenderPath3D::Render() const
 		}
 
 		{
-			auto range = wiProfiler::BeginRangeGPU("Entity Culling", device, cmd);
+			auto range = wiProfiler::BeginRangeGPU("Entity Culling", cmd);
 			wiRenderer::ComputeTiledLightCulling(
 				tiledLightResources,
 				debugUAV,
@@ -884,7 +884,7 @@ void RenderPath3D::Render() const
 			);
 
 			device->EventBegin("Planar reflections Z-Prepass", cmd);
-			auto range = wiProfiler::BeginRangeGPU("Planar Reflections Z-Prepass", device, cmd);
+			auto range = wiProfiler::BeginRangeGPU("Planar Reflections Z-Prepass", cmd);
 
 			Viewport vp;
 			vp.width = (float)depthBuffer_Reflection.GetDesc().width;
@@ -930,7 +930,7 @@ void RenderPath3D::Render() const
 			);
 
 			device->EventBegin("Planar reflections", cmd);
-			auto range = wiProfiler::BeginRangeGPU("Planar Reflections", device, cmd);
+			auto range = wiProfiler::BeginRangeGPU("Planar Reflections", cmd);
 
 			Viewport vp;
 			vp.width = (float)depthBuffer_Reflection.GetDesc().width;
@@ -996,7 +996,7 @@ void RenderPath3D::Render() const
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		auto range = wiProfiler::BeginRangeGPU("Opaque Scene", device, cmd);
+		auto range = wiProfiler::BeginRangeGPU("Opaque Scene", cmd);
 
 		Viewport vp;
 		vp.width = (float)depthBuffer_Main.GetDesc().width;
@@ -1231,9 +1231,9 @@ void RenderPath3D::RenderVolumetrics(CommandList cmd) const
 {
 	if (getVolumeLightsEnabled() && visibility_main.IsRequestedVolumetricLights())
 	{
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		auto range = wiProfiler::BeginRangeGPU("Volumetric Lights", cmd);
 
-		auto range = wiProfiler::BeginRangeGPU("Volumetric Lights", device, cmd);
+		GraphicsDevice* device = wiRenderer::GetDevice();
 
 		device->RenderPassBegin(&renderpass_volumetriclight, cmd);
 
@@ -1261,7 +1261,7 @@ void RenderPath3D::RenderSceneMIPChain(CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	auto range = wiProfiler::BeginRangeGPU("Scene MIP Chain", device, cmd);
+	auto range = wiProfiler::BeginRangeGPU("Scene MIP Chain", cmd);
 	device->EventBegin("RenderSceneMIPChain", cmd);
 
 	device->RenderPassBegin(&renderpass_downsamplescene, cmd);
@@ -1316,7 +1316,7 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 
 	// Transparent scene
 	{
-		auto range = wiProfiler::BeginRangeGPU("Transparent Scene", device, cmd);
+		auto range = wiProfiler::BeginRangeGPU("Transparent Scene", cmd);
 		device->EventBegin("Transparent Scene", cmd);
 
 		uint32_t drawscene_flags = 0;
@@ -1504,7 +1504,7 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 
 		// GUI Background blurring:
 		{
-			auto range = wiProfiler::BeginRangeGPU("GUI Background Blur", device, cmd);
+			auto range = wiProfiler::BeginRangeGPU("GUI Background Blur", cmd);
 			device->EventBegin("GUI Background Blur", cmd);
 			wiRenderer::Postprocess_Downsample4x(*rt_read, rtGUIBlurredBackground[0], cmd);
 			wiRenderer::Postprocess_Downsample4x(rtGUIBlurredBackground[0], rtGUIBlurredBackground[2], cmd);

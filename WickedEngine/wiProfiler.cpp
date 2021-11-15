@@ -1,5 +1,6 @@
 #include "wiProfiler.h"
 #include "wiGraphicsDevice.h"
+#include "wiRenderer.h"
 #include "wiFont.h"
 #include "wiImage.h"
 #include "wiTimer.h"
@@ -35,7 +36,6 @@ namespace wiProfiler
 		int avg_counter = 0;
 		float time = 0;
 		CommandList cmd = INVALID_COMMANDLIST;
-		wiGraphics::GraphicsDevice* device = nullptr;
 
 		wiTimer cpuTimer;
 
@@ -46,17 +46,18 @@ namespace wiProfiler
 	};
 	std::unordered_map<size_t, Range> ranges;
 
-	void BeginFrame(wiGraphics::GraphicsDevice* device)
+	void BeginFrame()
 	{
 		if (!ENABLED)
 			return;
 
-		assert(device != nullptr);
 		if (!initialized)
 		{
 			initialized = true;
 
 			ranges.reserve(100);
+
+			GraphicsDevice* device = wiRenderer::GetDevice();
 
 			GPUQueryHeapDesc desc;
 			desc.type = GpuQueryType::TIMESTAMP;
@@ -77,6 +78,7 @@ namespace wiProfiler
 
 		cpu_frame = BeginRangeCPU("CPU Frame");
 
+		GraphicsDevice* device = wiRenderer::GetDevice();
 		CommandList cmd = device->BeginCommandList();
 
 		device->QueryReset(
@@ -86,17 +88,18 @@ namespace wiProfiler
 			cmd
 		);
 
-		gpu_frame = BeginRangeGPU("GPU Frame", device, cmd);
+		gpu_frame = BeginRangeGPU("GPU Frame", cmd);
 	}
-	void EndFrame(wiGraphics::GraphicsDevice* device, CommandList cmd)
+	void EndFrame(CommandList cmd)
 	{
 		if (!ENABLED || !initialized)
 			return;
 
+		GraphicsDevice* device = wiRenderer::GetDevice();
+
 		// note: read the GPU Frame end range manually because it will be on a separate command list than start point:
 		auto& gpu_range = ranges[gpu_frame];
 		gpu_range.gpuEnd[queryheap_idx] = nextQuery.fetch_add(1);
-		assert(device != nullptr);
 		device->QueryEnd(&queryHeap, gpu_range.gpuEnd[queryheap_idx], cmd);
 
 		EndRange(cpu_frame);
@@ -172,7 +175,7 @@ namespace wiProfiler
 
 		return id;
 	}
-	range_id BeginRangeGPU(const char* name, wiGraphics::GraphicsDevice* device, CommandList cmd)
+	range_id BeginRangeGPU(const char* name, CommandList cmd)
 	{
 		if (!ENABLED || !initialized)
 			return 0;
@@ -190,11 +193,9 @@ namespace wiProfiler
 		ranges[id].in_use = true;
 		ranges[id].name = name;
 		ranges[id].cmd = cmd;
-		ranges[id].device = device;
 
 		ranges[id].gpuBegin[queryheap_idx] = nextQuery.fetch_add(1);
-		assert(device != nullptr);
-		device->QueryEnd(&queryHeap, ranges[id].gpuBegin[queryheap_idx], cmd);
+		wiRenderer::GetDevice()->QueryEnd(&queryHeap, ranges[id].gpuBegin[queryheap_idx], cmd);
 
 		lock.unlock();
 
@@ -217,7 +218,7 @@ namespace wiProfiler
 			else
 			{
 				ranges[id].gpuEnd[queryheap_idx] = nextQuery.fetch_add(1);
-				it->second.device->QueryEnd(&queryHeap, it->second.gpuEnd[queryheap_idx], it->second.cmd);
+				wiRenderer::GetDevice()->QueryEnd(&queryHeap, it->second.gpuEnd[queryheap_idx], it->second.cmd);
 			}
 		}
 		else

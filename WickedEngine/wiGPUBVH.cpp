@@ -143,7 +143,7 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
 {
 	GraphicsDevice* device = wiRenderer::GetDevice();
 
-	auto range = wiProfiler::BeginRangeGPU("BVH Rebuild", device, cmd);
+	auto range = wiProfiler::BeginRangeGPU("BVH Rebuild", cmd);
 
 	uint32_t primitiveCount = 0;
 
