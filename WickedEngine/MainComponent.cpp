@@ -469,7 +469,7 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 		assert(success);
 		});
 
-	if (wiRenderer::GetDevice()->GetSwapChainColorSpace(&swapChain))
+	if (wiRenderer::GetDevice()->GetSwapChainColorSpace(&swapChain) == COLOR_SPACE_HDR10_ST2084)
 	{
 		TextureDesc desc;
 		desc.Width = swapChain.desc.width;
