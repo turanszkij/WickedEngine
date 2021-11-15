@@ -5977,7 +5977,7 @@ using namespace DX12_Internal;
 		active_pso[cmd] = nullptr;
 		active_rt[cmd] = nullptr;
 
-		assert(cs->stage == CS || cs->stage == LIB);
+		assert(cs->stage == ShaderStage::CS || cs->stage == ShaderStage::LIB);
 		if (active_cs[cmd] != cs)
 		{
 			prev_pipeline_hash[cmd] = 0;

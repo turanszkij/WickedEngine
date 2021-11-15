@@ -6539,7 +6539,7 @@ using namespace Vulkan_Internal;
 	}
 	void GraphicsDevice_Vulkan::BindComputeShader(const Shader* cs, CommandList cmd)
 	{
-		assert(cs->stage == CS || cs->stage == LIB);
+		assert(cs->stage == ShaderStage::CS || cs->stage == ShaderStage::LIB);
 		if (active_cs[cmd] != cs)
 		{
 			if (active_cs[cmd] == nullptr)
