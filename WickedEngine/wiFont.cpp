@@ -36,7 +36,6 @@ namespace wiFont_Internal
 	DepthStencilState	depthStencilState;
 	Sampler				sampler;
 
-	InputLayout			inputLayout;
 	Shader				vertexShader;
 	Shader				pixelShader;
 	PipelineState		PSO;

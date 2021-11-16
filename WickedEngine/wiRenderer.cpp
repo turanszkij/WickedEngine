@@ -38,7 +38,7 @@ using namespace wiAllocators;
 namespace wiRenderer
 {
 
-GraphicsDevice* device = nullptr; // not managing lifetime here
+GraphicsDevice*& device = GetDevice();
 
 Shader				shaders[SHADERTYPE_COUNT];
 Texture				textures[TEXTYPE_COUNT];
@@ -2063,7 +2063,6 @@ void ReloadShaders()
 void Initialize()
 {
 	wiTimer timer;
-	device = wiGraphics::GetDevice();
 
 	SamplerDesc samplerDesc;
 	samplerDesc.filter = Filter::MIN_MAG_MIP_LINEAR;
@@ -4831,10 +4830,6 @@ void DrawShadowmaps(
 							PredicationOp::EQUAL_ZERO,
 							cmd
 						);
-
-					MiscCB miscCb;
-					miscCb.g_xColor = float4(light.position.x, light.position.y, light.position.z, 0);
-					device->BindDynamicConstantBuffer(miscCb, CB_GETBINDSLOT(MiscCB), cmd);
 
 					const float zNearP = 0.1f;
 					const float zFarP = std::max(1.0f, light.GetRange());
