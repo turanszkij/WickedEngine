@@ -5504,7 +5504,7 @@ using namespace DX12_Internal;
 
 			// submit last cmd batch:
 			assert(submit_queue < QUEUE_COUNT);
-			assert(queues[submit_queue].submit_cmds > 0);
+			assert(queues[submit_queue].submit_count > 0);
 			queues[submit_queue].queue->ExecuteCommandLists(
 				queues[submit_queue].submit_count,
 				queues[submit_queue].submit_cmds
