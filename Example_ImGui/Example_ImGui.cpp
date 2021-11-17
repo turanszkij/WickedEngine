@@ -47,28 +47,28 @@ bool ImGui_Impl_CreateDeviceObjects()
 
 	// Upload texture to graphics system
 	TextureDesc textureDesc;
-	textureDesc.Width = width;
-	textureDesc.Height = height;
-	textureDesc.MipLevels = 1;
-	textureDesc.ArraySize = 1;
-	textureDesc.Format = FORMAT_R8G8B8A8_UNORM;
-	textureDesc.BindFlags = BIND_SHADER_RESOURCE;
+	textureDesc.width = width;
+	textureDesc.height = height;
+	textureDesc.mip_levels = 1;
+	textureDesc.array_size = 1;
+	textureDesc.format = Format::R8G8B8A8_UNORM;
+	textureDesc.bind_flags = BindFlag::SHADER_RESOURCE;
 
 	SubresourceData textureData;
-	textureData.pData = pixels;
-	textureData.rowPitch = width * GetFormatStride(textureDesc.Format);
-	textureData.slicePitch = textureData.rowPitch * height;
+	textureData.data_ptr = pixels;
+	textureData.row_pitch = width * GetFormatStride(textureDesc.format);
+	textureData.slice_pitch = textureData.row_pitch * height;
 
-	wiRenderer::GetDevice()->CreateTexture(&textureDesc, &textureData, &fontTexture);
+	wiGraphics::GetDevice()->CreateTexture(&textureDesc, &textureData, &fontTexture);
 
 	// Store our identifier
 	io.Fonts->SetTexID((ImTextureID)&fontTexture);
 
 	imguiInputLayout.elements =
 	{
-		{ "POSITION", 0, FORMAT_R32G32_FLOAT, 0, (uint32_t)IM_OFFSETOF(ImDrawVert, pos), INPUT_PER_VERTEX_DATA },
-		{ "TEXCOORD", 0, FORMAT_R32G32_FLOAT, 0, (uint32_t)IM_OFFSETOF(ImDrawVert, uv), INPUT_PER_VERTEX_DATA },
-		{ "COLOR", 0, FORMAT_R8G8B8A8_UNORM, 0, (uint32_t)IM_OFFSETOF(ImDrawVert, col), INPUT_PER_VERTEX_DATA },
+		{ "POSITION", 0, Format::R32G32_FLOAT, 0, (uint32_t)IM_OFFSETOF(ImDrawVert, pos), InputClassification::PER_VERTEX_DATA },
+		{ "TEXCOORD", 0, Format::R32G32_FLOAT, 0, (uint32_t)IM_OFFSETOF(ImDrawVert, uv), InputClassification::PER_VERTEX_DATA },
+		{ "COLOR", 0, Format::R8G8B8A8_UNORM, 0, (uint32_t)IM_OFFSETOF(ImDrawVert, col), InputClassification::PER_VERTEX_DATA },
 	};
 
 	// Create pipeline
@@ -79,8 +79,8 @@ bool ImGui_Impl_CreateDeviceObjects()
 	desc.dss = wiRenderer::GetDepthStencilState(DSSTYPE_DEPTHREAD);
 	desc.rs = wiRenderer::GetRasterizerState(RSTYPE_DOUBLESIDED);
 	desc.bs = wiRenderer::GetBlendState(BSTYPE_TRANSPARENT);
-	desc.pt = TRIANGLELIST;
-	wiRenderer::GetDevice()->CreatePipelineState(&desc, &imguiPSO);
+	desc.pt = PrimitiveTopology::TRIANGLELIST;
+	wiGraphics::GetDevice()->CreatePipelineState(&desc, &imguiPSO);
 
 	return true;
 }
@@ -106,8 +106,8 @@ void Example_ImGui::Initialize()
 		auto shaderPath = wiRenderer::GetShaderSourcePath();
 		wiRenderer::SetShaderSourcePath(wiHelper::GetCurrentPath() + "/");
 
-		wiRenderer::LoadShader(VS, imguiVS, "ImGuiVS.cso");
-		wiRenderer::LoadShader(PS, imguiPS, "ImGuiPS.cso");
+		wiRenderer::LoadShader(ShaderStage::VS, imguiVS, "ImGuiVS.cso");
+		wiRenderer::LoadShader(ShaderStage::PS, imguiPS, "ImGuiPS.cso");
 
 		wiRenderer::SetShaderSourcePath(shaderPath);
 	}
@@ -173,7 +173,7 @@ void Example_ImGui::Compose(wiGraphics::CommandList cmd)
 
 	auto* bd = ImGui_Impl_GetBackendData();
 
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	// Get memory for vertex and index buffers
 	const uint64_t vbSize = sizeof(ImDrawVert) * drawData->TotalVtxCount;
@@ -232,11 +232,11 @@ void Example_ImGui::Compose(wiGraphics::CommandList cmd)
 	};
 
 	device->BindVertexBuffers(vbs, 0, 1, strides, offsets, cmd);
-	device->BindIndexBuffer(&indexBufferAllocation.buffer, INDEXFORMAT_16BIT, indexBufferAllocation.offset, cmd);
+	device->BindIndexBuffer(&indexBufferAllocation.buffer, IndexBufferFormat::UINT16, indexBufferAllocation.offset, cmd);
 
 	Viewport viewport;
-	viewport.Width = (float)fb_width;
-	viewport.Height = (float)fb_height;
+	viewport.width = (float)fb_width;
+	viewport.height = (float)fb_height;
 	device->BindViewports(1, &viewport, cmd);
 
 	device->BindPipelineState(&imguiPSO, cmd);

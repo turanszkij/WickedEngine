@@ -1,7 +1,7 @@
 #pragma once
 #include "wiLua.h"
 #include "wiLuna.h"
-#include "wiRenderer.h"
+#include "wiGraphics.h"
 
 class Texture_BindLua
 {

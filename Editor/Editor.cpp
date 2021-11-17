@@ -201,37 +201,38 @@ void EditorComponent::ResizeBuffers()
 	init(main->canvas);
 	RenderPath2D::ResizeBuffers();
 
-	GraphicsDevice* device = wiRenderer::GetDevice();
-	bool hr;
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	renderPath->init(*this);
 	renderPath->ResizeBuffers();
 
 	if(renderPath->GetDepthStencil() != nullptr)
 	{
+		bool success = false;
+
 		XMUINT2 internalResolution = GetInternalResolution();
 
 		TextureDesc desc;
-		desc.Width = internalResolution.x;
-		desc.Height = internalResolution.y;
+		desc.width = internalResolution.x;
+		desc.height = internalResolution.y;
 
-		desc.Format = FORMAT_R8_UNORM;
-		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
+		desc.format = Format::R8_UNORM;
+		desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
 		if (renderPath->getMSAASampleCount() > 1)
 		{
-			desc.SampleCount = renderPath->getMSAASampleCount();
-			hr = device->CreateTexture(&desc, nullptr, &rt_selectionOutline_MSAA);
-			assert(hr);
-			desc.SampleCount = 1;
+			desc.sample_count = renderPath->getMSAASampleCount();
+			success = device->CreateTexture(&desc, nullptr, &rt_selectionOutline_MSAA);
+			assert(success);
+			desc.sample_count = 1;
 		}
-		hr = device->CreateTexture(&desc, nullptr, &rt_selectionOutline[0]);
-		assert(hr);
-		hr = device->CreateTexture(&desc, nullptr, &rt_selectionOutline[1]);
-		assert(hr);
+		success = device->CreateTexture(&desc, nullptr, &rt_selectionOutline[0]);
+		assert(success);
+		success = device->CreateTexture(&desc, nullptr, &rt_selectionOutline[1]);
+		assert(success);
 
 		{
 			RenderPassDesc desc;
-			desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rt_selectionOutline[0], RenderPassAttachment::LOADOP_CLEAR));
+			desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rt_selectionOutline[0], RenderPassAttachment::LoadOp::CLEAR));
 			if (renderPath->getMSAASampleCount() > 1)
 			{
 				desc.attachments[0].texture = &rt_selectionOutline_MSAA;
@@ -240,15 +241,15 @@ void EditorComponent::ResizeBuffers()
 			desc.attachments.push_back(
 				RenderPassAttachment::DepthStencil(
 					renderPath->GetDepthStencil(),
-					RenderPassAttachment::LOADOP_LOAD,
-					RenderPassAttachment::STOREOP_STORE,
-					RESOURCE_STATE_DEPTHSTENCIL_READONLY,
-					RESOURCE_STATE_DEPTHSTENCIL_READONLY,
-					RESOURCE_STATE_DEPTHSTENCIL_READONLY
+					RenderPassAttachment::LoadOp::LOAD,
+					RenderPassAttachment::StoreOp::STORE,
+					ResourceState::DEPTHSTENCIL_READONLY,
+					ResourceState::DEPTHSTENCIL_READONLY,
+					ResourceState::DEPTHSTENCIL_READONLY
 				)
 			);
-			hr = device->CreateRenderPass(&desc, &renderpass_selectionOutline[0]);
-			assert(hr);
+			success = device->CreateRenderPass(&desc, &renderpass_selectionOutline[0]);
+			assert(success);
 
 			if (renderPath->getMSAASampleCount() == 1)
 			{
@@ -258,8 +259,8 @@ void EditorComponent::ResizeBuffers()
 			{
 				desc.attachments[1].texture = &rt_selectionOutline[1]; // resolve
 			}
-			hr = device->CreateRenderPass(&desc, &renderpass_selectionOutline[1]);
-			assert(hr);
+			success = device->CreateRenderPass(&desc, &renderpass_selectionOutline[1]);
+			assert(success);
 		}
 	}
 
@@ -1921,14 +1922,14 @@ void EditorComponent::Render() const
 	// Selection outline:
 	if(renderPath->GetDepthStencil() != nullptr && !translator.selected.empty())
 	{
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 		CommandList cmd = device->BeginCommandList();
 
 		device->EventBegin("Editor - Selection Outline Mask", cmd);
 
 		Viewport vp;
-		vp.Width = (float)rt_selectionOutline[0].GetDesc().Width;
-		vp.Height = (float)rt_selectionOutline[0].GetDesc().Height;
+		vp.width = (float)rt_selectionOutline[0].GetDesc().width;
+		vp.height = (float)rt_selectionOutline[0].GetDesc().height;
 		device->BindViewports(1, &vp, cmd);
 
 		wiImageParams fx;
@@ -1980,7 +1981,7 @@ void EditorComponent::Compose(CommandList cmd) const
 	const float selectionColorIntensity = std::sin(selectionOutlineTimer * XM_2PI * 0.8f) * 0.5f + 0.5f;
 	if (renderPath->GetDepthStencil() != nullptr && !translator.selected.empty())
 	{
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 		device->EventBegin("Editor - Selection Outline", cmd);
 		wiRenderer::BindCommonResources(cmd);
 		float opacity = wiMath::Lerp(0.4f, 1.0f, selectionColorIntensity);

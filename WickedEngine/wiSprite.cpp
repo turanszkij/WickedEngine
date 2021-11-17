@@ -1,6 +1,5 @@
 #include "wiSprite.h"
 #include "wiImage.h"
-#include "wiRenderer.h"
 #include "wiRandom.h"
 #include "wiTextureHelper.h"
 

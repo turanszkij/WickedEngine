@@ -40,22 +40,22 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 {
 	RenderPath2D::ResizeBuffers(); // we don't need to use any buffers from RenderPath3D, so skip those
 
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	XMUINT2 internalResolution = GetInternalResolution();
 
 	{
 		TextureDesc desc;
-		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE | BIND_RENDER_TARGET;
-		desc.Format = FORMAT_R32G32B32A32_FLOAT;
-		desc.Width = internalResolution.x;
-		desc.Height = internalResolution.y;
+		desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE | BindFlag::RENDER_TARGET;
+		desc.format = Format::R32G32B32A32_FLOAT;
+		desc.width = internalResolution.x;
+		desc.height = internalResolution.y;
 		device->CreateTexture(&desc, nullptr, &traceResult);
 		device->SetName(&traceResult, "traceResult");
 
 #ifdef OPEN_IMAGE_DENOISE
-		desc.BindFlags = BIND_UNORDERED_ACCESS;
-		desc.layout = RESOURCE_STATE_UNORDERED_ACCESS;
+		desc.bind_flags = BindFlag::UNORDERED_ACCESS;
+		desc.layout = ResourceState::UNORDERED_ACCESS;
 		device->CreateTexture(&desc, nullptr, &denoiserAlbedo);
 		device->SetName(&denoiserAlbedo, "denoiserAlbedo");
 		device->CreateTexture(&desc, nullptr, &denoiserNormal);
@@ -64,22 +64,22 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 	}
 	{
 		TextureDesc desc;
-		desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-		desc.Format = FORMAT_R11G11B10_FLOAT;
-		desc.Width = internalResolution.x;
-		desc.Height = internalResolution.y;
+		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+		desc.format = Format::R11G11B10_FLOAT;
+		desc.width = internalResolution.x;
+		desc.height = internalResolution.y;
 		device->CreateTexture(&desc, nullptr, &rtPostprocess);
 		device->SetName(&rtPostprocess, "rtPostprocess");
 
 
-		desc.Width /= 4;
-		desc.Height /= 4;
-		desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
+		desc.width /= 4;
+		desc.height /= 4;
+		desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
 		device->CreateTexture(&desc, nullptr, &rtGUIBlurredBackground[0]);
 		device->SetName(&rtGUIBlurredBackground[0], "rtGUIBlurredBackground[0]");
 
-		desc.Width /= 4;
-		desc.Height /= 4;
+		desc.width /= 4;
+		desc.height /= 4;
 		device->CreateTexture(&desc, nullptr, &rtGUIBlurredBackground[1]);
 		device->SetName(&rtGUIBlurredBackground[1], "rtGUIBlurredBackground[1]");
 		device->CreateTexture(&desc, nullptr, &rtGUIBlurredBackground[2]);
@@ -88,7 +88,7 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 
 	{
 		RenderPassDesc desc;
-		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&traceResult, RenderPassAttachment::LOADOP_CLEAR));
+		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&traceResult, RenderPassAttachment::LoadOp::CLEAR));
 
 		device->CreateRenderPass(&desc, &renderpass_debugbvh);
 	}
@@ -175,8 +175,8 @@ void RenderPath3D_PathTracing::Update(float dt)
 
 				wiJobSystem::Execute(denoiserContext, [&](wiJobArgs args) {
 
-					size_t width = (size_t)traceResult.desc.Width;
-					size_t height = (size_t)traceResult.desc.Height;
+					size_t width = (size_t)traceResult.desc.width;
+					size_t height = (size_t)traceResult.desc.height;
 					{
 						// https://github.com/OpenImageDenoise/oidn#c11-api-example
 
@@ -220,17 +220,17 @@ void RenderPath3D_PathTracing::Update(float dt)
 						}
 					}
 
-					GraphicsDevice* device = wiRenderer::GetDevice();
+					GraphicsDevice* device = wiGraphics::GetDevice();
 
 					TextureDesc desc;
-					desc.Width = (uint32_t)width;
-					desc.Height = (uint32_t)height;
-					desc.BindFlags = BIND_SHADER_RESOURCE;
-					desc.Format = FORMAT_R32G32B32A32_FLOAT;
+					desc.width = (uint32_t)width;
+					desc.height = (uint32_t)height;
+					desc.bind_flags = BindFlag::SHADER_RESOURCE;
+					desc.format = Format::R32G32B32A32_FLOAT;
 
 					SubresourceData initdata;
-					initdata.pData = texturedata_dst.data();
-					initdata.rowPitch = uint32_t(sizeof(XMFLOAT4) * width);
+					initdata.data_ptr = texturedata_dst.data();
+					initdata.row_pitch = uint32_t(sizeof(XMFLOAT4) * width);
 					device->CreateTexture(&desc, &initdata, &denoiserResult);
 
 					});
@@ -247,14 +247,13 @@ void RenderPath3D_PathTracing::Update(float dt)
 
 void RenderPath3D_PathTracing::Render() const
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 	wiJobSystem::context ctx;
-	CommandList cmd;
 
 	if (sam < target)
 	{
 		// Setup:
-		cmd = device->BeginCommandList();
+		CommandList cmd = device->BeginCommandList();
 		wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
 			wiRenderer::BindCameraCB(
@@ -276,7 +275,7 @@ void RenderPath3D_PathTracing::Render() const
 		cmd = device->BeginCommandList();
 		wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
-			GraphicsDevice* device = wiRenderer::GetDevice();
+			GraphicsDevice* device = wiGraphics::GetDevice();
 
 			wiRenderer::BindCameraCB(
 				*camera,
@@ -291,8 +290,8 @@ void RenderPath3D_PathTracing::Render() const
 				device->RenderPassBegin(&renderpass_debugbvh, cmd);
 
 				Viewport vp;
-				vp.Width = (float)traceResult.GetDesc().Width;
-				vp.Height = (float)traceResult.GetDesc().Height;
+				vp.width = (float)traceResult.GetDesc().width;
+				vp.height = (float)traceResult.GetDesc().height;
 				device->BindViewports(1, &vp, cmd);
 
 				wiRenderer::RayTraceSceneBVH(*scene, cmd);
@@ -320,10 +319,10 @@ void RenderPath3D_PathTracing::Render() const
 	}
 
 	// Tonemap etc:
-	cmd = device->BeginCommandList();
+	CommandList cmd = device->BeginCommandList();
 	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
 
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 
 		wiRenderer::BindCameraCB(
 			*camera,
@@ -390,7 +389,7 @@ void RenderPath3D_PathTracing::Render() const
 
 void RenderPath3D_PathTracing::Compose(CommandList cmd) const
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	device->EventBegin("RenderPath3D_PathTracing::Compose", cmd);
 

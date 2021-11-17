@@ -293,11 +293,11 @@ void PaintToolWindow::Update(float dt)
 		uv.y = vertex_uvset[intersect.vertexID0].y * w +
 			vertex_uvset[intersect.vertexID1].y * u +
 			vertex_uvset[intersect.vertexID2].y * v;
-		uint2 center = XMUINT2(uint32_t(uv.x * desc.Width), uint32_t(uv.y * desc.Height));
+		uint2 center = XMUINT2(uint32_t(uv.x * desc.width), uint32_t(uv.y * desc.height));
 
 		if (painting)
 		{
-			GraphicsDevice* device = wiRenderer::GetDevice();
+			GraphicsDevice* device = wiGraphics::GetDevice();
 			CommandList cmd = device->BeginCommandList();
 
 			RecordHistory(true, cmd);
@@ -338,8 +338,8 @@ void PaintToolWindow::Update(float dt)
 		paintrad.radius = radius;
 		paintrad.center = center;
 		paintrad.uvset = uvset;
-		paintrad.dimensions.x = desc.Width;
-		paintrad.dimensions.y = desc.Height;
+		paintrad.dimensions.x = desc.width;
+		paintrad.dimensions.y = desc.height;
 		wiRenderer::DrawPaintRadius(paintrad);
 	}
 	break;
@@ -951,19 +951,20 @@ void PaintToolWindow::RecordHistory(bool start, CommandList cmd)
 		if (start)
 		{
 			// Make a copy of texture to edit and replace material resource:
-			GraphicsDevice* device = wiRenderer::GetDevice();
+			GraphicsDevice* device = wiGraphics::GetDevice();
 			Texture newTex;
 			TextureDesc desc = editTexture.GetDesc();
-			desc.Format = FORMAT_R8G8B8A8_UNORM; // force format to one that is writable by GPU
+			desc.format = Format::R8G8B8A8_UNORM; // force format to one that is writable by GPU
 			device->CreateTexture(&desc, nullptr, &newTex);
-			for (uint32_t i = 0; i < newTex.GetDesc().MipLevels; ++i)
+			for (uint32_t i = 0; i < newTex.GetDesc().mip_levels; ++i)
 			{
 				int subresource_index;
-				subresource_index = device->CreateSubresource(&newTex, SRV, 0, 1, i, 1);
+				subresource_index = device->CreateSubresource(&newTex, SubresourceType::SRV, 0, 1, i, 1);
 				assert(subresource_index == i);
-				subresource_index = device->CreateSubresource(&newTex, UAV, 0, 1, i, 1);
+				subresource_index = device->CreateSubresource(&newTex, SubresourceType::UAV, 0, 1, i, 1);
 				assert(subresource_index == i);
 			}
+			assert(cmd != wiGraphics::INVALID_COMMANDLIST);
 			wiRenderer::CopyTexture2D(newTex, -1, 0, 0, editTexture, 0, cmd);
 			ReplaceEditTextureSlot(*material, newTex);
 		}

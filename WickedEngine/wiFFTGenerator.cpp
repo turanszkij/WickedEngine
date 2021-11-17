@@ -33,7 +33,7 @@ namespace wiFFTGenerator
 		// Setup execution configuration
 		uint32_t grid = thread_count / COHERENCY_GRANULARITY;
 
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 
 		// Buffers
 		const GPUResource* srvs[1] = { &pSRV_Src };
@@ -71,7 +71,7 @@ namespace wiFFTGenerator
 		CommandList cmd)
 	{
 		const uint32_t thread_count = fft_plan.slices * (512 * 512) / 8;
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 		const GPUBuffer* cs_cbs;
 
 		uint32_t istride = 512 * 512 / 8;
@@ -110,9 +110,9 @@ namespace wiFFTGenerator
 		// Create 6 cbuffers for 512x512 transform.
 
 		GPUBufferDesc cb_desc;
-		cb_desc.BindFlags = BIND_CONSTANT_BUFFER;
-		cb_desc.Size = sizeof(FFTGeneratorCB);
-		cb_desc.Stride = 0;
+		cb_desc.bind_flags = BindFlag::CONSTANT_BUFFER;
+		cb_desc.size = sizeof(FFTGeneratorCB);
+		cb_desc.stride = 0;
 
 		// Buffer 0
 		const uint32_t thread_count = slices * (512 * 512) / 8;
@@ -168,7 +168,7 @@ namespace wiFFTGenerator
 
 	void fft512x512_create_plan(CSFFT512x512_Plan& plan, uint32_t slices)
 	{
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 
 		plan.slices = slices;
 
@@ -178,21 +178,19 @@ namespace wiFFTGenerator
 
 		// Temp buffer
 		GPUBufferDesc buf_desc;
-		buf_desc.Size = sizeof(float) * 2 * (512 * slices) * 512;
-		buf_desc.Usage = USAGE_DEFAULT;
-		buf_desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
-		buf_desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
-		buf_desc.Stride = sizeof(float) * 2;
+		buf_desc.size = sizeof(float) * 2 * (512 * slices) * 512;
+		buf_desc.usage = Usage::DEFAULT;
+		buf_desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+		buf_desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
+		buf_desc.stride = sizeof(float) * 2;
 
 		device->CreateBuffer(&buf_desc, nullptr, &plan.pBuffer_Tmp);
 	}
 
 	void LoadShaders()
 	{
-		std::string path = wiRenderer::GetShaderPath();
-
-		wiRenderer::LoadShader(CS, radix008A_CS, "fft_512x512_c2c_CS.cso");
-		wiRenderer::LoadShader(CS, radix008A_CS2, "fft_512x512_c2c_v2_CS.cso");
+		wiRenderer::LoadShader(ShaderStage::CS, radix008A_CS, "fft_512x512_c2c_CS.cso");
+		wiRenderer::LoadShader(ShaderStage::CS, radix008A_CS2, "fft_512x512_c2c_v2_CS.cso");
 	}
 
 }

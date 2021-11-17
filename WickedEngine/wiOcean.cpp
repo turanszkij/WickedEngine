@@ -34,20 +34,17 @@ namespace wiOcean_Internal
 
 	void LoadShaders()
 	{
+		wiRenderer::LoadShader(ShaderStage::CS, updateSpectrumCS, "oceanSimulatorCS.cso");
+		wiRenderer::LoadShader(ShaderStage::CS, updateDisplacementMapCS, "oceanUpdateDisplacementMapCS.cso");
+		wiRenderer::LoadShader(ShaderStage::CS, updateGradientFoldingCS, "oceanUpdateGradientFoldingCS.cso");
 
-		std::string path = wiRenderer::GetShaderPath();
+		wiRenderer::LoadShader(ShaderStage::VS, oceanSurfVS, "oceanSurfaceVS.cso");
 
-		wiRenderer::LoadShader(CS, updateSpectrumCS, "oceanSimulatorCS.cso");
-		wiRenderer::LoadShader(CS, updateDisplacementMapCS, "oceanUpdateDisplacementMapCS.cso");
-		wiRenderer::LoadShader(CS, updateGradientFoldingCS, "oceanUpdateGradientFoldingCS.cso");
-
-		wiRenderer::LoadShader(VS, oceanSurfVS, "oceanSurfaceVS.cso");
-
-		wiRenderer::LoadShader(PS, oceanSurfPS, "oceanSurfacePS.cso");
-		wiRenderer::LoadShader(PS, wireframePS, "oceanSurfaceSimplePS.cso");
+		wiRenderer::LoadShader(ShaderStage::PS, oceanSurfPS, "oceanSurfacePS.cso");
+		wiRenderer::LoadShader(ShaderStage::PS, wireframePS, "oceanSurfaceSimplePS.cso");
 
 
-		GraphicsDevice* device = wiRenderer::GetDevice();
+		GraphicsDevice* device = wiGraphics::GetDevice();
 
 		{
 			PipelineStateDesc desc;
@@ -105,7 +102,7 @@ float Phillips(XMFLOAT2 K, XMFLOAT2 W, float v, float a, float dir_depend)
 
 void wiOcean::Create(const OceanParameters& params)
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	// Height map H(0)
 	int height_map_size = (params.dmap_dim + 4) * (params.dmap_dim + 1);
@@ -124,61 +121,61 @@ void wiOcean::Create(const OceanParameters& params)
 	std::fill(zero_data.begin(), zero_data.end(), 0);
 
 	GPUBufferDesc buf_desc;
-	buf_desc.Usage = USAGE_DEFAULT;
-	buf_desc.BindFlags = BIND_UNORDERED_ACCESS | BIND_SHADER_RESOURCE;
-	buf_desc.MiscFlags = RESOURCE_MISC_BUFFER_STRUCTURED;
+	buf_desc.usage = Usage::DEFAULT;
+	buf_desc.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+	buf_desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 
 	// RW buffer allocations
 	// H0
-	buf_desc.Stride = sizeof(float2);
-	buf_desc.Size = buf_desc.Stride * input_full_size;
+	buf_desc.stride = sizeof(float2);
+	buf_desc.size = buf_desc.stride * input_full_size;
 	device->CreateBuffer(&buf_desc, h0_data.data(), &buffer_Float2_H0);
 
 	// Notice: The following 3 buffers should be half sized buffer because of conjugate symmetric input. But
 	// we use full sized buffers due to the CS4.0 restriction.
 
 	// Put H(t), Dx(t) and Dy(t) into one buffer because CS4.0 allows only 1 UAV at a time
-	buf_desc.Stride = sizeof(float2);
-	buf_desc.Size = buf_desc.Stride * 3 * input_half_size;
+	buf_desc.stride = sizeof(float2);
+	buf_desc.size = buf_desc.stride * 3 * input_half_size;
 	device->CreateBuffer(&buf_desc, zero_data.data(), &buffer_Float2_Ht);
 
 	// omega
-	buf_desc.Stride = sizeof(float);
-	buf_desc.Size = buf_desc.Stride * input_full_size;
+	buf_desc.stride = sizeof(float);
+	buf_desc.size = buf_desc.stride * input_full_size;
 	device->CreateBuffer(&buf_desc, omega_data.data(), &buffer_Float_Omega);
 
 	// Notice: The following 3 should be real number data. But here we use the complex numbers and C2C FFT
 	// due to the CS4.0 restriction.
 	// Put Dz, Dx and Dy into one buffer because CS4.0 allows only 1 UAV at a time
-	buf_desc.Stride = sizeof(float2);
-	buf_desc.Size = buf_desc.Stride * 3 * output_size;
+	buf_desc.stride = sizeof(float2);
+	buf_desc.size = buf_desc.stride * 3 * output_size;
 	device->CreateBuffer(&buf_desc, zero_data.data(), &buffer_Float_Dxyz);
 
 	TextureDesc tex_desc;
-	tex_desc.Width = hmap_dim;
-	tex_desc.Height = hmap_dim;
-	tex_desc.ArraySize = 1;
-	tex_desc.SampleCount = 1;
-	tex_desc.Usage = USAGE_DEFAULT;
-	tex_desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+	tex_desc.width = hmap_dim;
+	tex_desc.height = hmap_dim;
+	tex_desc.array_size = 1;
+	tex_desc.sample_count = 1;
+	tex_desc.usage = Usage::DEFAULT;
+	tex_desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 
-	tex_desc.Format = FORMAT_R16G16B16A16_FLOAT;
-	tex_desc.MipLevels = 0;
-	tex_desc.layout = RESOURCE_STATE_SHADER_RESOURCE_COMPUTE;
+	tex_desc.format = Format::R16G16B16A16_FLOAT;
+	tex_desc.mip_levels = 0;
+	tex_desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 	device->CreateTexture(&tex_desc, nullptr, &gradientMap);
 	device->SetName(&gradientMap, "gradientMap");
 
-	for (uint32_t i = 0; i < gradientMap.GetDesc().MipLevels; ++i)
+	for (uint32_t i = 0; i < gradientMap.GetDesc().mip_levels; ++i)
 	{
 		int subresource_index;
-		subresource_index = device->CreateSubresource(&gradientMap, SRV, 0, 1, i, 1);
+		subresource_index = device->CreateSubresource(&gradientMap, SubresourceType::SRV, 0, 1, i, 1);
 		assert(subresource_index == i);
-		subresource_index = device->CreateSubresource(&gradientMap, UAV, 0, 1, i, 1);
+		subresource_index = device->CreateSubresource(&gradientMap, SubresourceType::UAV, 0, 1, i, 1);
 		assert(subresource_index == i);
 	}
 
-	tex_desc.Format = FORMAT_R32G32B32A32_FLOAT;
-	tex_desc.MipLevels = 1;
+	tex_desc.format = Format::R32G32B32A32_FLOAT;
+	tex_desc.mip_levels = 1;
 	device->CreateTexture(&tex_desc, nullptr, &displacementMap);
 	device->SetName(&displacementMap, "displacementMap");
 
@@ -194,13 +191,13 @@ void wiOcean::Create(const OceanParameters& params)
 	Ocean_Simulation_ImmutableCB immutable_consts = { actual_dim, input_width, output_width, output_height, dtx_offset, dty_offset };
 
 	GPUBufferDesc cb_desc;
-	cb_desc.BindFlags = BIND_CONSTANT_BUFFER;
-	cb_desc.Size = sizeof(Ocean_Simulation_ImmutableCB);
+	cb_desc.bind_flags = BindFlag::CONSTANT_BUFFER;
+	cb_desc.size = sizeof(Ocean_Simulation_ImmutableCB);
 	device->CreateBuffer(&cb_desc, &immutable_consts, &immutableCB);
 
-	cb_desc.Usage = USAGE_DEFAULT;
-	cb_desc.BindFlags = BIND_CONSTANT_BUFFER;
-	cb_desc.Size = sizeof(Ocean_Simulation_PerFrameCB);
+	cb_desc.usage = Usage::DEFAULT;
+	cb_desc.bind_flags = BindFlag::CONSTANT_BUFFER;
+	cb_desc.size = sizeof(Ocean_Simulation_PerFrameCB);
 	device->CreateBuffer(&cb_desc, nullptr, &perFrameCB);
 }
 
@@ -253,7 +250,7 @@ void wiOcean::initHeightMap(const OceanParameters& params, XMFLOAT2* out_h0, flo
 
 void wiOcean::UpdateDisplacementMap(const OceanParameters& params, CommandList cmd) const
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	device->EventBegin("Ocean Simulation", cmd);
 
@@ -278,14 +275,14 @@ void wiOcean::UpdateDisplacementMap(const OceanParameters& params, CommandList c
 
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Buffer(&perFrameCB, RESOURCE_STATE_CONSTANT_BUFFER, RESOURCE_STATE_COPY_DST),
+			GPUBarrier::Buffer(&perFrameCB, ResourceState::CONSTANT_BUFFER, ResourceState::COPY_DST),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 	device->UpdateBuffer(&perFrameCB, &perFrameData, cmd);
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Buffer(&perFrameCB, RESOURCE_STATE_COPY_DST, RESOURCE_STATE_CONSTANT_BUFFER),
+			GPUBarrier::Buffer(&perFrameCB, ResourceState::COPY_DST, ResourceState::CONSTANT_BUFFER),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
@@ -324,14 +321,14 @@ void wiOcean::UpdateDisplacementMap(const OceanParameters& params, CommandList c
 	device->BindResources(cs_srvs, TEXSLOT_ONDEMAND0, 1, cmd);
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&displacementMap, displacementMap.desc.layout, RESOURCE_STATE_UNORDERED_ACCESS),
+			GPUBarrier::Image(&displacementMap, displacementMap.desc.layout, ResourceState::UNORDERED_ACCESS),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 	device->Dispatch(params.dmap_dim / OCEAN_COMPUTE_TILESIZE, params.dmap_dim / OCEAN_COMPUTE_TILESIZE, 1, cmd);
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&displacementMap, RESOURCE_STATE_UNORDERED_ACCESS, displacementMap.desc.layout),
+			GPUBarrier::Image(&displacementMap, ResourceState::UNORDERED_ACCESS, displacementMap.desc.layout),
 			GPUBarrier::Memory(),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
@@ -345,14 +342,14 @@ void wiOcean::UpdateDisplacementMap(const OceanParameters& params, CommandList c
 	device->BindResources(cs_srvs, TEXSLOT_ONDEMAND0, 1, cmd);
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&gradientMap, gradientMap.desc.layout, RESOURCE_STATE_UNORDERED_ACCESS),
+			GPUBarrier::Image(&gradientMap, gradientMap.desc.layout, ResourceState::UNORDERED_ACCESS),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 	device->Dispatch(params.dmap_dim / OCEAN_COMPUTE_TILESIZE, params.dmap_dim / OCEAN_COMPUTE_TILESIZE, 1, cmd);
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&gradientMap, RESOURCE_STATE_UNORDERED_ACCESS, gradientMap.desc.layout),
+			GPUBarrier::Image(&gradientMap, ResourceState::UNORDERED_ACCESS, gradientMap.desc.layout),
 			GPUBarrier::Memory(),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
@@ -369,7 +366,7 @@ void wiOcean::UpdateDisplacementMap(const OceanParameters& params, CommandList c
 
 void wiOcean::Render(const CameraComponent& camera, const OceanParameters& params, CommandList cmd) const
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	device->EventBegin("Ocean Rendering", cmd);
 
@@ -411,42 +408,42 @@ void wiOcean::Initialize()
 {
 	wiTimer timer;
 
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	RasterizerState ras_desc;
-	ras_desc.FillMode = FILL_SOLID;
-	ras_desc.CullMode = CULL_NONE;
-	ras_desc.FrontCounterClockwise = false;
-	ras_desc.DepthBias = 0;
-	ras_desc.SlopeScaledDepthBias = 0.0f;
-	ras_desc.DepthBiasClamp = 0.0f;
-	ras_desc.DepthClipEnable = true;
-	ras_desc.MultisampleEnable = true;
-	ras_desc.AntialiasedLineEnable = false;
+	ras_desc.fill_mode = FillMode::SOLID;
+	ras_desc.cull_mode = CullMode::NONE;
+	ras_desc.front_counter_clockwise = false;
+	ras_desc.depth_bias = 0;
+	ras_desc.slope_scaled_depth_bias = 0.0f;
+	ras_desc.depth_bias_clamp = 0.0f;
+	ras_desc.depth_clip_enable = true;
+	ras_desc.multisample_enable = true;
+	ras_desc.antialiased_line_enable = false;
 
 	rasterizerState = ras_desc;
 
-	ras_desc.FillMode = FILL_WIREFRAME;
+	ras_desc.fill_mode = FillMode::WIREFRAME;
 	wireRS = ras_desc;
 
 	DepthStencilState depth_desc;
-	depth_desc.DepthEnable = true;
-	depth_desc.DepthWriteMask = DEPTH_WRITE_MASK_ALL;
-	depth_desc.DepthFunc = COMPARISON_GREATER;
-	depth_desc.StencilEnable = false;
+	depth_desc.depth_enable = true;
+	depth_desc.depth_write_mask = DepthWriteMask::ALL;
+	depth_desc.depth_func = ComparisonFunc::GREATER;
+	depth_desc.stencil_enable = false;
 	depthStencilState = depth_desc;
 
 	BlendState blend_desc;
-	blend_desc.AlphaToCoverageEnable = false;
-	blend_desc.IndependentBlendEnable = false;
-	blend_desc.RenderTarget[0].BlendEnable = true;
-	blend_desc.RenderTarget[0].SrcBlend = BLEND_SRC_ALPHA;
-	blend_desc.RenderTarget[0].DestBlend = BLEND_INV_SRC_ALPHA;
-	blend_desc.RenderTarget[0].BlendOp = BLEND_OP_ADD;
-	blend_desc.RenderTarget[0].SrcBlendAlpha = BLEND_ONE;
-	blend_desc.RenderTarget[0].DestBlendAlpha = BLEND_ZERO;
-	blend_desc.RenderTarget[0].BlendOpAlpha = BLEND_OP_ADD;
-	blend_desc.RenderTarget[0].RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
+	blend_desc.alpha_to_coverage_enable = false;
+	blend_desc.independent_blend_enable = false;
+	blend_desc.render_target[0].blend_enable = true;
+	blend_desc.render_target[0].src_blend = Blend::SRC_ALPHA;
+	blend_desc.render_target[0].dest_blend = Blend::INV_SRC_ALPHA;
+	blend_desc.render_target[0].blend_op = BlendOp::ADD;
+	blend_desc.render_target[0].src_blend_alpha = Blend::ONE;
+	blend_desc.render_target[0].dest_blend_alpha = Blend::ZERO;
+	blend_desc.render_target[0].blend_op_alpha = BlendOp::ADD;
+	blend_desc.render_target[0].render_target_write_mask = ColorWrite::ENABLE_ALL;
 	blendState = blend_desc;
 
 

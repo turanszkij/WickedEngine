@@ -8,11 +8,14 @@
 #include "wiEvent.h"
 #include "wiCanvas.h"
 
+#include <memory>
+
 class RenderPath;
 
 class MainComponent
 {
 protected:
+	std::unique_ptr<wiGraphics::GraphicsDevice> graphicsDevice;
 	wiEvent::Handle swapChainVsyncChangeEvent;
 
 	RenderPath* activePath = nullptr;
@@ -96,6 +99,8 @@ public:
 		bool colorspace = false;
 		// display number of heap allocations per frame
 		bool heap_allocation_counter = false;
+		// display the active graphics pipeline count
+		bool pipeline_count = false;
 		// text size
 		int size = 16;
 		// display default color grading helper texture in top left corner of the screen

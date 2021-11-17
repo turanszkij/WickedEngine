@@ -19,10 +19,13 @@
 #include "wiGraphicsDevice_DX12.h"
 #include "wiGraphicsDevice_Vulkan.h"
 
-#include "Utility/replace_new.h"
-
 #include <sstream>
 #include <algorithm>
+#include <new>
+#include <cstdlib>
+#include <atomic>
+
+std::atomic<uint32_t> number_of_heap_allocations{ 0 };
 
 using namespace wiGraphics;
 
@@ -65,7 +68,6 @@ void MainComponent::ActivatePath(RenderPath* component, float fadeSeconds, wiCol
 
 void MainComponent::Run()
 {
-	GraphicsDevice* device = wiRenderer::GetDevice();
 
 	if (!initialized)
 	{
@@ -76,14 +78,14 @@ void MainComponent::Run()
 	if (!wiInitializer::IsInitializeFinished())
 	{
 		// Until engine is not loaded, present initialization screen...
-		CommandList cmd = device->BeginCommandList();
-		device->RenderPassBegin(&swapChain, cmd);
+		CommandList cmd = graphicsDevice->BeginCommandList();
+		graphicsDevice->RenderPassBegin(&swapChain, cmd);
 		wiImage::SetCanvas(canvas, cmd);
 		wiFont::SetCanvas(canvas, cmd);
 		Viewport viewport;
-		viewport.Width = (float)swapChain.desc.width;
-		viewport.Height = (float)swapChain.desc.height;
-		device->BindViewports(1, &viewport, cmd);
+		viewport.width = (float)swapChain.desc.width;
+		viewport.height = (float)swapChain.desc.height;
+		graphicsDevice->BindViewports(1, &viewport, cmd);
 		wiFontParams params;
 		params.posX = 5.f;
 		params.posY = 5.f;
@@ -95,8 +97,8 @@ void MainComponent::Run()
 			params.posY = screenheight - textheight;
 		}
 		wiFont::Draw(text, params, cmd);
-		device->RenderPassEnd(cmd);
-		device->SubmitCommandLists();
+		graphicsDevice->RenderPassEnd(cmd);
+		graphicsDevice->SubmitCommandLists();
 		return;
 	}
 
@@ -127,7 +129,7 @@ void MainComponent::Run()
 
 	fadeManager.Update(dt);
 
-	COLOR_SPACE colorspace = device->GetSwapChainColorSpace(&swapChain);
+	ColorSpace colorspace = graphicsDevice->GetSwapChainColorSpace(&swapChain);
 
 	if (GetActivePath() != nullptr)
 	{
@@ -170,43 +172,43 @@ void MainComponent::Run()
 	wiInput::Update(window);
 
 	// Begin final compositing:
-	CommandList cmd = device->BeginCommandList();
+	CommandList cmd = graphicsDevice->BeginCommandList();
 	wiImage::SetCanvas(canvas, cmd);
 	wiFont::SetCanvas(canvas, cmd);
 	Viewport viewport;
-	viewport.Width = (float)swapChain.desc.width;
-	viewport.Height = (float)swapChain.desc.height;
-	device->BindViewports(1, &viewport, cmd);
+	viewport.width = (float)swapChain.desc.width;
+	viewport.height = (float)swapChain.desc.height;
+	graphicsDevice->BindViewports(1, &viewport, cmd);
 
-	bool colorspace_conversion_required = colorspace == COLOR_SPACE_HDR10_ST2084;
+	bool colorspace_conversion_required = colorspace == ColorSpace::HDR10_ST2084;
 	if (colorspace_conversion_required)
 	{
 		// In HDR10, we perform the compositing in a custom linear color space render target
-		device->RenderPassBegin(&renderpass, cmd);
+		graphicsDevice->RenderPassBegin(&renderpass, cmd);
 	}
 	else
 	{
 		// If swapchain is SRGB or Linear HDR, it can be used for blending
 		//	- If it is SRGB, the render path will ensure tonemapping to SDR
 		//	- If it is Linear HDR, we can blend trivially in linear space
-		device->RenderPassBegin(&swapChain, cmd);
+		graphicsDevice->RenderPassBegin(&swapChain, cmd);
 	}
 	Compose(cmd);
-	device->RenderPassEnd(cmd);
+	graphicsDevice->RenderPassEnd(cmd);
 
 	if (colorspace_conversion_required)
 	{
 		// In HDR10, we perform a final mapping from linear to HDR10, into the swapchain
-		device->RenderPassBegin(&swapChain, cmd);
+		graphicsDevice->RenderPassBegin(&swapChain, cmd);
 		wiImageParams fx;
 		fx.enableFullScreen();
 		fx.enableHDR10OutputMapping();
 		wiImage::Draw(&rendertarget, fx, cmd);
-		device->RenderPassEnd(cmd);
+		graphicsDevice->RenderPassEnd(cmd);
 	}
 
 	wiProfiler::EndFrame(cmd);
-	device->SubmitCommandLists();
+	graphicsDevice->SubmitCommandLists();
 }
 
 void MainComponent::Update(float dt)
@@ -259,8 +261,6 @@ void MainComponent::Compose(CommandList cmd)
 		GetActivePath()->Compose(cmd);
 	}
 
-	GraphicsDevice* device = wiRenderer::GetDevice();
-
 	if (fadeManager.IsActive())
 	{
 		// display fade rect
@@ -292,13 +292,13 @@ void MainComponent::Compose(CommandList cmd)
 #endif
 
 #ifdef WICKEDENGINE_BUILD_DX12
-			if (dynamic_cast<GraphicsDevice_DX12*>(device))
+			if (dynamic_cast<GraphicsDevice_DX12*>(graphicsDevice.get()))
 			{
 				ss << "[DX12]";
 			}
 #endif
 #ifdef WICKEDENGINE_BUILD_VULKAN
-			if (dynamic_cast<GraphicsDevice_Vulkan*>(device))
+			if (dynamic_cast<GraphicsDevice_Vulkan*>(graphicsDevice.get()))
 			{
 				ss << "[Vulkan]";
 			}
@@ -307,7 +307,7 @@ void MainComponent::Compose(CommandList cmd)
 #ifdef _DEBUG
 			ss << "[DEBUG]";
 #endif
-			if (device->IsDebugDevice())
+			if (graphicsDevice->IsDebugDevice())
 			{
 				ss << "[debugdevice]";
 			}
@@ -324,17 +324,17 @@ void MainComponent::Compose(CommandList cmd)
 		if (infoDisplay.colorspace)
 		{
 			ss << "Color Space: ";
-			COLOR_SPACE colorSpace = device->GetSwapChainColorSpace(&swapChain);
+			ColorSpace colorSpace = graphicsDevice->GetSwapChainColorSpace(&swapChain);
 			switch (colorSpace)
 			{
 			default:
-			case wiGraphics::COLOR_SPACE_SRGB:
+			case wiGraphics::ColorSpace::SRGB:
 				ss << "sRGB";
 				break;
-			case wiGraphics::COLOR_SPACE_HDR10_ST2084:
+			case wiGraphics::ColorSpace::HDR10_ST2084:
 				ss << "ST.2084 (HDR10)";
 				break;
-			case wiGraphics::COLOR_SPACE_HDR_LINEAR:
+			case wiGraphics::ColorSpace::HDR_LINEAR:
 				ss << "Linear (HDR)";
 				break;
 			}
@@ -359,14 +359,18 @@ void MainComponent::Compose(CommandList cmd)
 		}
 		if (infoDisplay.heap_allocation_counter)
 		{
-			ss << "Heap allocations per frame: " << number_of_allocs.load() << std::endl;
-			number_of_allocs.store(0);
+			ss << "Heap allocations per frame: " << number_of_heap_allocations.load() << std::endl;
+			number_of_heap_allocations.store(0);
+		}
+		if (infoDisplay.pipeline_count)
+		{
+			ss << "Graphics pipelines active: " << graphicsDevice->GetActivePipelineCount() << std::endl;
 		}
 
 #ifdef _DEBUG
 		ss << "Warning: This is a [DEBUG] build, performance will be slow!" << std::endl;
 #endif
-		if (wiRenderer::GetDevice()->IsDebugDevice())
+		if (graphicsDevice->IsDebugDevice())
 		{
 			ss << "Warning: Graphics is in [debugdevice] mode, performance will be slow!" << std::endl;
 		}
@@ -392,7 +396,7 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 	this->window = window;
 
 	// User can also create a graphics device if custom logic is desired, but they must do before this function!
-	if (wiRenderer::GetDevice() == nullptr)
+	if (graphicsDevice == nullptr)
 	{
 		bool debugdevice = wiStartupArguments::HasArgument("debugdevice");
 		bool gpuvalidation = wiStartupArguments::HasArgument("gpuvalidation");
@@ -430,17 +434,18 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 		{
 #ifdef WICKEDENGINE_BUILD_VULKAN
 			wiRenderer::SetShaderPath(wiRenderer::GetShaderPath() + "spirv/");
-			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_Vulkan>(window, debugdevice));
+			graphicsDevice = std::make_unique<GraphicsDevice_Vulkan>(window, debugdevice);
 #endif
 		}
 		else if (use_dx12)
 		{
 #ifdef WICKEDENGINE_BUILD_DX12
 			wiRenderer::SetShaderPath(wiRenderer::GetShaderPath() + "hlsl6/");
-			wiRenderer::SetDevice(std::make_shared<GraphicsDevice_DX12>(debugdevice, gpuvalidation));
+			graphicsDevice = std::make_unique<GraphicsDevice_DX12>(debugdevice, gpuvalidation);
 #endif
 		}
 	}
+	wiGraphics::GetDevice() = graphicsDevice.get();
 
 	canvas.init(window);
 
@@ -453,37 +458,66 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 	else
 	{
 		// initialize for the first time
-		desc.buffercount = 3;
-		desc.format = FORMAT_R10G10B10A2_UNORM;
+		desc.buffer_count = 3;
+		desc.format = Format::R10G10B10A2_UNORM;
 	}
 	desc.width = canvas.GetPhysicalWidth();
 	desc.height = canvas.GetPhysicalHeight();
 	desc.allow_hdr = allow_hdr;
-	bool success = wiRenderer::GetDevice()->CreateSwapChain(&desc, window, &swapChain);
+	bool success = graphicsDevice->CreateSwapChain(&desc, window, &swapChain);
 	assert(success);
 
 	swapChainVsyncChangeEvent = wiEvent::Subscribe(SYSTEM_EVENT_SET_VSYNC, [this](uint64_t userdata) {
 		SwapChainDesc desc = swapChain.desc;
 		desc.vsync = userdata != 0;
-		bool success = wiRenderer::GetDevice()->CreateSwapChain(&desc, nullptr, &swapChain);
+		bool success = graphicsDevice->CreateSwapChain(&desc, nullptr, &swapChain);
 		assert(success);
 		});
 
-	if (wiRenderer::GetDevice()->GetSwapChainColorSpace(&swapChain) == COLOR_SPACE_HDR10_ST2084)
+	if (graphicsDevice->GetSwapChainColorSpace(&swapChain) == ColorSpace::HDR10_ST2084)
 	{
 		TextureDesc desc;
-		desc.Width = swapChain.desc.width;
-		desc.Height = swapChain.desc.height;
-		desc.Format = FORMAT_R11G11B10_FLOAT;
-		desc.BindFlags = BIND_RENDER_TARGET | BIND_SHADER_RESOURCE;
-		bool success = wiRenderer::GetDevice()->CreateTexture(&desc, nullptr, &rendertarget);
+		desc.width = swapChain.desc.width;
+		desc.height = swapChain.desc.height;
+		desc.format = Format::R11G11B10_FLOAT;
+		desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+		bool success = graphicsDevice->CreateTexture(&desc, nullptr, &rendertarget);
 		assert(success);
-		wiRenderer::GetDevice()->SetName(&rendertarget, "MainComponent::rendertarget");
+		graphicsDevice->SetName(&rendertarget, "MainComponent::rendertarget");
 
 		RenderPassDesc renderpassdesc;
-		renderpassdesc.attachments.push_back(RenderPassAttachment::RenderTarget(&rendertarget, RenderPassAttachment::LOADOP_CLEAR));
-		success = wiRenderer::GetDevice()->CreateRenderPass(&renderpassdesc, &renderpass);
+		renderpassdesc.attachments.push_back(RenderPassAttachment::RenderTarget(&rendertarget, RenderPassAttachment::LoadOp::CLEAR));
+		success = graphicsDevice->CreateRenderPass(&renderpassdesc, &renderpass);
 		assert(success);
 	}
 }
 
+
+// Heap alloc replacements are used to count heap allocations:
+//	It is good practice to reduce the amount of heap allocations that happen during the frame,
+//	so keep an eye on the info display of the engine while MainComponent::InfoDisplayer::heap_allocation_counter is enabled
+
+void* operator new(std::size_t size) {
+	number_of_heap_allocations.fetch_add(1);
+	void* p = malloc(size);
+	if (!p) throw std::bad_alloc();
+	return p;
+}
+void* operator new[](std::size_t size) {
+	number_of_heap_allocations.fetch_add(1);
+	void* p = malloc(size);
+	if (!p) throw std::bad_alloc();
+	return p;
+}
+void* operator new[](std::size_t size, const std::nothrow_t&) throw() {
+	number_of_heap_allocations.fetch_add(1);
+	return malloc(size);
+}
+void* operator new(std::size_t size, const std::nothrow_t&) throw() {
+	number_of_heap_allocations.fetch_add(1);
+	return malloc(size);
+}
+void operator delete(void* ptr) throw() { free(ptr); }
+void operator delete (void* ptr, const std::nothrow_t&) throw() { free(ptr); }
+void operator delete[](void* ptr) throw() { free(ptr); }
+void operator delete[](void* ptr, const std::nothrow_t&) throw() { free(ptr); }

@@ -8,17 +8,19 @@
 #include <sstream>
 
 std::mutex locker;
-std::vector<std::string> shaders[wiGraphics::SHADERSTAGE_COUNT];
-std::unordered_map<std::string, wiGraphics::SHADERMODEL> minshadermodels;
+std::vector<std::string> shaders[static_cast<size_t>(wiGraphics::ShaderStage::Count)];
+std::unordered_map<std::string, wiGraphics::ShaderModel> minshadermodels;
 struct Target
 {
-	wiGraphics::SHADERFORMAT format;
+	wiGraphics::ShaderFormat format;
 	std::string dir;
 };
 std::vector<Target> targets;
 std::unordered_map<std::string, wiShaderCompiler::CompilerOutput> results;
 bool rebuild = false;
 bool shaderdump_enabled = false;
+
+using namespace wiGraphics;
 
 int main(int argc, char* argv[])
 {
@@ -35,17 +37,17 @@ int main(int argc, char* argv[])
 
 	if (wiStartupArguments::HasArgument("hlsl5"))
 	{
-		targets.push_back({ wiGraphics::SHADERFORMAT_HLSL5, "shaders/hlsl5/" });
+		targets.push_back({ ShaderFormat::HLSL5, "shaders/hlsl5/" });
 		std::cout << "hlsl5 ";
 	}
 	if (wiStartupArguments::HasArgument("hlsl6"))
 	{
-		targets.push_back({ wiGraphics::SHADERFORMAT_HLSL6, "shaders/hlsl6/" });
+		targets.push_back({ ShaderFormat::HLSL6, "shaders/hlsl6/" });
 		std::cout << "hlsl6 ";
 	}
 	if (wiStartupArguments::HasArgument("spirv"))
 	{
-		targets.push_back({ wiGraphics::SHADERFORMAT_SPIRV, "shaders/spirv/" });
+		targets.push_back({ ShaderFormat::SPIRV, "shaders/spirv/" });
 		std::cout << "spirv ";
 	}
 
@@ -67,14 +69,14 @@ int main(int argc, char* argv[])
 	if (targets.empty())
 	{
 		targets = {
-			//{ wiGraphics::SHADERFORMAT_HLSL5, "shaders/hlsl5/" },
-			{ wiGraphics::SHADERFORMAT_HLSL6, "shaders/hlsl6/" },
-			{ wiGraphics::SHADERFORMAT_SPIRV, "shaders/spirv/" },
+			//{ ShaderFormat::HLSL5, "shaders/hlsl5/" },
+			{ ShaderFormat::HLSL6, "shaders/hlsl6/" },
+			{ ShaderFormat::SPIRV, "shaders/spirv/" },
 		};
 		std::cout << "No shader formats were specified, assuming command arguments: hlsl5 spirv hlsl6" << std::endl;
 	}
 
-	shaders[wiGraphics::CS] = {
+	shaders[static_cast<size_t>(ShaderStage::CS)] = {
 		"hairparticle_simulateCS.hlsl"								,
 		"hairparticle_finishUpdateCS.hlsl"							,
 		"emittedparticle_simulateCS.hlsl"							,
@@ -233,7 +235,7 @@ int main(int argc, char* argv[])
 		"surfel_raytraceCS.hlsl",
 	};
 
-	shaders[wiGraphics::PS] = {
+	shaders[static_cast<size_t>(ShaderStage::PS)] = {
 		"emittedparticlePS_soft.hlsl"					,
 		"screenPS.hlsl"									,
 		"imagePS.hlsl"									,
@@ -309,7 +311,7 @@ int main(int argc, char* argv[])
 		"captureImpostorPS_albedo.hlsl"					,
 	};
 
-	shaders[wiGraphics::VS] = {
+	shaders[static_cast<size_t>(ShaderStage::VS)] = {
 		"hairparticleVS.hlsl"							,
 		"emittedparticleVS.hlsl"						,
 		"imageVS.hlsl"									,
@@ -357,7 +359,7 @@ int main(int argc, char* argv[])
 		"cubeVS.hlsl",
 	};
 
-	shaders[wiGraphics::GS] = {
+	shaders[static_cast<size_t>(ShaderStage::GS)] = {
 		"envMap_skyGS_emulation.hlsl"				,
 		"envMapGS_emulation.hlsl"					,
 		"cubeShadowGS_emulation.hlsl"				,
@@ -367,37 +369,37 @@ int main(int argc, char* argv[])
 		"objectGS_voxelizer.hlsl"					,
 	};
 
-	shaders[wiGraphics::DS] = {
+	shaders[static_cast<size_t>(ShaderStage::DS)] = {
 		"objectDS.hlsl",
 		"objectDS_prepass.hlsl",
 		"objectDS_prepass_alphatest.hlsl",
 		"objectDS_simple.hlsl",
 	};
 
-	shaders[wiGraphics::HS] = {
+	shaders[static_cast<size_t>(ShaderStage::HS)] = {
 		"objectHS.hlsl",
 		"objectHS_prepass.hlsl",
 		"objectHS_prepass_alphatest.hlsl",
 		"objectHS_simple.hlsl",
 	};
 
-	shaders[wiGraphics::AS] = {
+	shaders[static_cast<size_t>(ShaderStage::AS)] = {
 
 	};
 
-	shaders[wiGraphics::MS] = {
+	shaders[static_cast<size_t>(ShaderStage::MS)] = {
 		"emittedparticleMS.hlsl",
 	};
 
-	shaders[wiGraphics::LIB] = {
+	shaders[static_cast<size_t>(ShaderStage::LIB)] = {
 		"rtreflectionLIB.hlsl",
 	};
 
-	minshadermodels["renderlightmapPS_rtapi.hlsl"] = wiGraphics::SHADERMODEL_6_5;
-	minshadermodels["raytraceCS_rtapi.hlsl"] = wiGraphics::SHADERMODEL_6_5;
-	minshadermodels["rtshadowCS.hlsl"] = wiGraphics::SHADERMODEL_6_5;
-	minshadermodels["rtaoCS.hlsl"] = wiGraphics::SHADERMODEL_6_5;
-	minshadermodels["surfel_raytraceCS_rtapi.hlsl"] = wiGraphics::SHADERMODEL_6_5;
+	minshadermodels["renderlightmapPS_rtapi.hlsl"] = ShaderModel::SM_6_5;
+	minshadermodels["raytraceCS_rtapi.hlsl"] = ShaderModel::SM_6_5;
+	minshadermodels["rtshadowCS.hlsl"] = ShaderModel::SM_6_5;
+	minshadermodels["rtaoCS.hlsl"] = ShaderModel::SM_6_5;
+	minshadermodels["surfel_raytraceCS_rtapi.hlsl"] = ShaderModel::SM_6_5;
 
 	wiShaderCompiler::Initialize();
 	wiJobSystem::Initialize();
@@ -414,14 +416,14 @@ int main(int argc, char* argv[])
 		std::string SHADERPATH = target.dir;
 		wiHelper::DirectoryCreate(SHADERPATH);
 
-		for (int i = 0; i < wiGraphics::SHADERSTAGE_COUNT; ++i)
+		for (int i = 0; i < static_cast<int>(ShaderStage::Count); ++i)
 		{
-			if (target.format == wiGraphics::SHADERFORMAT_HLSL5)
+			if (target.format == ShaderFormat::HLSL5)
 			{
 				if (
-					i == wiGraphics::MS ||
-					i == wiGraphics::AS ||
-					i == wiGraphics::LIB
+					i == static_cast<int>(ShaderStage::MS) ||
+					i == static_cast<int>(ShaderStage::AS) ||
+					i == static_cast<int>(ShaderStage::LIB)
 					)
 				{
 					// shader stage not applicable to HLSL5
@@ -440,7 +442,7 @@ int main(int argc, char* argv[])
 
 					wiShaderCompiler::CompilerInput input;
 					input.format = target.format;
-					input.stage = (wiGraphics::SHADERSTAGE)i;
+					input.stage = (wiGraphics::ShaderStage)i;
 					input.shadersourcefilename = SHADERSOURCEPATH + shader;
 					input.include_directories.push_back(SHADERSOURCEPATH);
 
@@ -450,7 +452,7 @@ int main(int argc, char* argv[])
 						// increase min shader model only for specific shaders
 						input.minshadermodel = it->second;
 					}
-					if (input.minshadermodel > wiGraphics::SHADERMODEL_5_0 && target.format == wiGraphics::SHADERFORMAT_HLSL5)
+					if (input.minshadermodel > ShaderModel::SM_5_0 && target.format == ShaderFormat::HLSL5)
 					{
 						// if shader format cannot support shader model, then we cancel the task without returning error
 						return;

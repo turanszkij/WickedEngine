@@ -12,17 +12,22 @@ namespace wiGraphics
 	//	Use GraphicsDevice::BeginCommandList() to start a command list
 	//	Use GraphicsDevice::SubmitCommandLists() to give all started command lists to the GPU for execution
 	//	CommandList recording is not thread safe
-	typedef uint8_t CommandList;
-	static const CommandList COMMANDLIST_COUNT = 32; // If you increase command list count, more memory will be statically allocated for per-command list resources
-	static const CommandList INVALID_COMMANDLIST = COMMANDLIST_COUNT;
+	struct CommandList
+	{
+		using index_type = uint8_t;
+		index_type index = ~0;
+		constexpr operator index_type() const { return index; }
+	};
+	static constexpr CommandList::index_type COMMANDLIST_COUNT = 32;	// If you increase command list count, more memory will be statically allocated for per-command list resources
+	static constexpr CommandList INVALID_COMMANDLIST;					// CommandList is invalid if it's just declared, but not started
 
 	// Descriptor binding counts:
 	//	It's OK increase these limits if not enough
 	//	But it's better to refactor shaders to use bindless descriptors if they require more resources
-	static const uint32_t DESCRIPTORBINDER_CBV_COUNT = 15;
-	static const uint32_t DESCRIPTORBINDER_SRV_COUNT = 64;
-	static const uint32_t DESCRIPTORBINDER_UAV_COUNT = 16;
-	static const uint32_t DESCRIPTORBINDER_SAMPLER_COUNT = 16;
+	static constexpr uint32_t DESCRIPTORBINDER_CBV_COUNT = 15;
+	static constexpr uint32_t DESCRIPTORBINDER_SRV_COUNT = 64;
+	static constexpr uint32_t DESCRIPTORBINDER_UAV_COUNT = 16;
+	static constexpr uint32_t DESCRIPTORBINDER_SAMPLER_COUNT = 16;
 	struct DescriptorBindingTable
 	{
 		GPUBuffer CBV[DESCRIPTORBINDER_CBV_COUNT];
@@ -57,7 +62,7 @@ namespace wiGraphics
 		static const uint32_t BUFFERCOUNT = 2;
 		uint64_t FRAMECOUNT = 0;
 		bool DEBUGDEVICE = false;
-		uint32_t capabilities = 0;
+		GraphicsDeviceCapability capabilities = GraphicsDeviceCapability::NONE;
 		size_t SHADER_IDENTIFIER_SIZE = 0;
 		size_t TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = 0;
 		uint32_t VARIABLE_RATE_SHADING_TILE_SIZE = 0;
@@ -67,10 +72,11 @@ namespace wiGraphics
 	public:
 		virtual ~GraphicsDevice() = default;
 
+		// Create a SwapChain. If the SwapChain is to be recreated, the window handle can be nullptr.
 		virtual bool CreateSwapChain(const SwapChainDesc* pDesc, wiPlatform::window_type window, SwapChain* swapChain) const = 0;
 		virtual bool CreateBuffer(const GPUBufferDesc *pDesc, const void* pInitialData, GPUBuffer *pBuffer) const = 0;
 		virtual bool CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) const = 0;
-		virtual bool CreateShader(SHADERSTAGE stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) const = 0;
+		virtual bool CreateShader(ShaderStage stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) const = 0;
 		virtual bool CreateSampler(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) const = 0;
 		virtual bool CreateQueryHeap(const GPUQueryHeapDesc *pDesc, GPUQueryHeap *pQueryHeap) const = 0;
 		virtual bool CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) const = 0;
@@ -78,18 +84,20 @@ namespace wiGraphics
 		virtual bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh) const { return false; }
 		virtual bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso) const { return false; }
 		
-		virtual int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) const = 0;
-		virtual int CreateSubresource(GPUBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size = ~0) const = 0;
+		virtual int CreateSubresource(Texture* texture, SubresourceType type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) const = 0;
+		virtual int CreateSubresource(GPUBuffer* buffer, SubresourceType type, uint64_t offset, uint64_t size = ~0) const = 0;
 
-		virtual int GetDescriptorIndex(const GPUResource* resource, SUBRESOURCE_TYPE type, int subresource = -1) const = 0;
+		virtual int GetDescriptorIndex(const GPUResource* resource, SubresourceType type, int subresource = -1) const = 0;
 		virtual int GetDescriptorIndex(const Sampler* sampler) const = 0;
 
-		virtual void WriteShadingRateValue(SHADING_RATE rate, void* dest) const {};
+		virtual void WriteShadingRateValue(ShadingRate rate, void* dest) const {};
 		virtual void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) const {}
 		virtual void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) const {}
-		
+
+		// Set a sampler that can be used by any shaders that will be created after this call, without needing to bind that sampler
 		virtual void SetCommonSampler(const StaticSampler* sam) = 0;
 
+		// Set a debug name for the GPUResource, which will be visible in graphics debuggers
 		virtual void SetName(GPUResource* pResource, const char* name) = 0;
 
 		// Begin a new command list for GPU command recording.
@@ -99,16 +107,29 @@ namespace wiGraphics
 		//	This will make every command list to be in "available" state and restarts them
 		virtual void SubmitCommandLists() = 0;
 
+		// The CPU will wait until all submitted GPU work is finished execution
 		virtual void WaitForGPU() const = 0;
+
+		// The current PipelineState cache will be cleared. It is useful to clear this when reloading shaders, to avoid accumulating unused pipeline states
 		virtual void ClearPipelineStateCache() = 0;
 
+		// Returns the number of active pipelines. Active pipelines are the pipelines that were compiled internally for a set of render target formats
+		//	One PipelineState object can be compiled internally for multiple render target or depth-stencil formats, or sample counts
+		virtual size_t GetActivePipelineCount() const = 0;
+
+		// Returns the number of elapsed frames (submits)
+		//	It is incremented when calling SubmitCommandLists()
 		constexpr uint64_t GetFrameCount() const { return FRAMECOUNT; }
 
-		inline bool CheckCapability(GRAPHICSDEVICE_CAPABILITY capability) const { return capabilities & capability; }
+		// Check whether the graphics device supports a feature or not
+		constexpr bool CheckCapability(GraphicsDeviceCapability capability) const { return has_flag(capabilities, capability); }
 
+		// Returns the buffer count, which is the array size of buffered resources used by both the CPU and GPU
 		static constexpr uint32_t GetBufferCount() { return BUFFERCOUNT; }
+		// Returns the current buffer index, which is in range [0, GetBufferCount() - 1]
 		constexpr uint32_t GetBufferIndex() const { return GetFrameCount() % BUFFERCOUNT; }
 
+		// Returns whether the graphics debug layer is enabled. It can be enabled when creating the device.
 		constexpr bool IsDebugDevice() const { return DEBUGDEVICE; }
 
 		constexpr size_t GetShaderIdentifierSize() const { return SHADER_IDENTIFIER_SIZE; }
@@ -116,17 +137,23 @@ namespace wiGraphics
 		constexpr uint32_t GetVariableRateShadingTileSize() const { return VARIABLE_RATE_SHADING_TILE_SIZE; }
 		constexpr uint64_t GetTimestampFrequency() const { return TIMESTAMP_FREQUENCY; }
 
-		virtual SHADERFORMAT GetShaderFormat() const = 0;
+		// Get the shader binary format that the underlying graphics API consumes
+		virtual ShaderFormat GetShaderFormat() const = 0;
 
+		// Get a Texture resource that represents the current back buffer of the SwapChain
 		virtual Texture GetBackBuffer(const SwapChain* swapchain) const = 0;
-
 		// Returns the current color space of the swapchain output
-		virtual COLOR_SPACE GetSwapChainColorSpace(const SwapChain* swapchain) const = 0;
+		virtual ColorSpace GetSwapChainColorSpace(const SwapChain* swapchain) const = 0;
 		// Returns true if the swapchain could support HDR output regardless of current format
 		//	Returns false if the swapchain couldn't support HDR output
-		virtual bool GetSwapChainHDRSupport(const SwapChain* swapchain) const = 0;
+		virtual bool IsSwapChainSupportsHDR(const SwapChain* swapchain) const = 0;
 
-		///////////////Thread-sensitive////////////////////////
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		// Command List functions are below:
+		//	- These are used to record rendering commands to a CommandList
+		//	- To get a CommandList that can be recorded into, call BeginCommandList()
+		//	- These commands are not immediately executed, but they begin executing on the GPU after calling SubmitCommandLists()
+		//	- These are not thread safe, only a single thread should use a single CommandList at one time
 
 		virtual void WaitCommandList(CommandList cmd, CommandList wait_for) = 0;
 		virtual void RenderPassBegin(const SwapChain* swapchain, CommandList cmd) = 0;
@@ -141,10 +168,10 @@ namespace wiGraphics
 		virtual void BindSampler(const Sampler* sampler, uint32_t slot, CommandList cmd) = 0;
 		virtual void BindConstantBuffer(const GPUBuffer* buffer, uint32_t slot, CommandList cmd, uint64_t offset = 0ull) = 0;
 		virtual void BindVertexBuffers(const GPUBuffer *const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint64_t* offsets, CommandList cmd) = 0;
-		virtual void BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, uint64_t offset, CommandList cmd) = 0;
+		virtual void BindIndexBuffer(const GPUBuffer* indexBuffer, const IndexBufferFormat format, uint64_t offset, CommandList cmd) = 0;
 		virtual void BindStencilRef(uint32_t value, CommandList cmd) = 0;
 		virtual void BindBlendFactor(float r, float g, float b, float a, CommandList cmd) = 0;
-		virtual void BindShadingRate(SHADING_RATE rate, CommandList cmd) {}
+		virtual void BindShadingRate(ShadingRate rate, CommandList cmd) {}
 		virtual void BindPipelineState(const PipelineState* pso, CommandList cmd) = 0;
 		virtual void BindComputeShader(const Shader* cs, CommandList cmd) = 0;
 		virtual void Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd) = 0;
@@ -168,7 +195,7 @@ namespace wiGraphics
 		virtual void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) {}
 		virtual void DispatchRays(const DispatchRaysDesc* desc, CommandList cmd) {}
 		virtual void PushConstants(const void* data, uint32_t size, CommandList cmd) = 0;
-		virtual void PredicationBegin(const GPUBuffer* buffer, uint64_t offset, PREDICATION_OP op, CommandList cmd) {}
+		virtual void PredicationBegin(const GPUBuffer* buffer, uint64_t offset, PredicationOp op, CommandList cmd) {}
 		virtual void PredicationEnd(CommandList cmd) {}
 
 		virtual void EventBegin(const char* name, CommandList cmd) = 0;
@@ -211,14 +238,14 @@ namespace wiGraphics
 				allocator.offset = 0;
 			}
 
-			const uint64_t free_space = allocator.buffer.desc.Size - allocator.offset;
+			const uint64_t free_space = allocator.buffer.desc.size - allocator.offset;
 			if (dataSize > free_space)
 			{
 				GPUBufferDesc desc;
-				desc.Usage = USAGE_UPLOAD;
-				desc.Size = AlignTo((allocator.buffer.desc.Size + dataSize) * 2, ALLOCATION_MIN_ALIGNMENT);
-				desc.BindFlags = BIND_CONSTANT_BUFFER | BIND_VERTEX_BUFFER | BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE;
-				desc.MiscFlags = RESOURCE_MISC_BUFFER_RAW;
+				desc.usage = Usage::UPLOAD;
+				desc.size = AlignTo((allocator.buffer.desc.size + dataSize) * 2, ALLOCATION_MIN_ALIGNMENT);
+				desc.bind_flags = BindFlag::CONSTANT_BUFFER | BindFlag::VERTEX_BUFFER | BindFlag::INDEX_BUFFER | BindFlag::SHADER_RESOURCE;
+				desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
 				CreateBuffer(&desc, nullptr, &allocator.buffer);
 				SetName(&allocator.buffer, "frame_allocator");
 				allocator.offset = 0;
@@ -234,14 +261,14 @@ namespace wiGraphics
 			return allocation;
 		}
 
-		// Updates a USAGE_DEFAULT buffer data
+		// Updates a Usage::DEFAULT buffer data
 		//	Since it uses a GPU Copy operation, appropriate synchronization is expected
 		//	And it cannot be used inside a RenderPass
 		void UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, uint64_t size = ~0, uint64_t offset = 0)
 		{
 			if (buffer == nullptr || data == nullptr)
 				return;
-			size = std::min(buffer->desc.Size, size);
+			size = std::min(buffer->desc.size, size);
 			if (size == 0)
 				return;
 			GPUAllocation allocation = AllocateGPU(size, cmd);
@@ -260,5 +287,15 @@ namespace wiGraphics
 			BindConstantBuffer(&allocation.buffer, slot, cmd, allocation.offset);
 		}
 	};
+
+
+	// This is a helper to get access to a global device instance
+	//	- The engine uses this, but it is not necessary to use a single global device object
+	//	- This is not a lifetime managing object, just a way to globally expose a reference to an object by pointer
+	inline GraphicsDevice*& GetDevice()
+	{
+		static GraphicsDevice* device = nullptr;
+		return device;
+	}
 
 }

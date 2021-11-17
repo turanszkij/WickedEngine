@@ -127,33 +127,33 @@ namespace wiResourceManager
 		{
 		case wiResource::IMAGE:
 		{
-			GraphicsDevice* device = wiRenderer::GetDevice();
+			GraphicsDevice* device = wiGraphics::GetDevice();
 			if (!ext.compare("KTX2"))
 			{
 				basist::ktx2_transcoder transcoder(&g_basis_global_codebook);
 				if (transcoder.init(filedata, (uint32_t)filesize))
 				{
 					TextureDesc desc;
-					desc.BindFlags = BIND_SHADER_RESOURCE;
-					desc.Width = transcoder.get_width();
-					desc.Height = transcoder.get_height();
-					desc.ArraySize = std::max(desc.ArraySize, transcoder.get_layers() * transcoder.get_faces());
-					desc.MipLevels = transcoder.get_levels();
+					desc.bind_flags = BindFlag::SHADER_RESOURCE;
+					desc.width = transcoder.get_width();
+					desc.height = transcoder.get_height();
+					desc.array_size = std::max(desc.array_size, transcoder.get_layers() * transcoder.get_faces());
+					desc.mip_levels = transcoder.get_levels();
 					if (transcoder.get_faces() == 6)
 					{
-						desc.MiscFlags = RESOURCE_MISC_TEXTURECUBE;
+						desc.misc_flags = ResourceMiscFlag::TEXTURECUBE;
 					}
 
 					basist::transcoder_texture_format fmt;
 					if (transcoder.get_has_alpha())
 					{
 						fmt = basist::transcoder_texture_format::cTFBC3_RGBA;
-						desc.Format = FORMAT_BC3_UNORM;
+						desc.format = Format::BC3_UNORM;
 					}
 					else
 					{
 						fmt = basist::transcoder_texture_format::cTFBC1_RGB;
-						desc.Format = FORMAT_BC1_UNORM;
+						desc.format = Format::BC1_UNORM;
 					}
 					uint32_t bytes_per_block = basis_get_bytes_per_block_or_pixel(fmt);
 
@@ -198,9 +198,9 @@ namespace wiResourceManager
 										))
 										{
 											SubresourceData subresourceData;
-											subresourceData.pData = data_ptr;
-											subresourceData.rowPitch = level_info.m_num_blocks_x * bytes_per_block;
-											subresourceData.slicePitch = subresourceData.rowPitch * level_info.m_num_blocks_y;
+											subresourceData.data_ptr = data_ptr;
+											subresourceData.row_pitch = level_info.m_num_blocks_x * bytes_per_block;
+											subresourceData.slice_pitch = subresourceData.row_pitch * level_info.m_num_blocks_y;
 											InitData.push_back(subresourceData);
 										}
 									}
@@ -230,21 +230,21 @@ namespace wiResourceManager
 						if (transcoder.get_image_info(filedata, (uint32_t)filesize, info, image_index))
 						{
 							TextureDesc desc;
-							desc.BindFlags = BIND_SHADER_RESOURCE;
-							desc.Width = info.m_width;
-							desc.Height = info.m_height;
-							desc.MipLevels = info.m_total_levels;
+							desc.bind_flags = BindFlag::SHADER_RESOURCE;
+							desc.width = info.m_width;
+							desc.height = info.m_height;
+							desc.mip_levels = info.m_total_levels;
 
 							basist::transcoder_texture_format fmt;
 							if (info.m_alpha_flag)
 							{
 								fmt = basist::transcoder_texture_format::cTFBC3_RGBA;
-								desc.Format = FORMAT_BC3_UNORM;
+								desc.format = Format::BC3_UNORM;
 							}
 							else
 							{
 								fmt = basist::transcoder_texture_format::cTFBC1_RGB;
-								desc.Format = FORMAT_BC1_UNORM;
+								desc.format = Format::BC1_UNORM;
 							}
 							uint32_t bytes_per_block = basis_get_bytes_per_block_or_pixel(fmt);
 
@@ -252,7 +252,7 @@ namespace wiResourceManager
 							{
 								// all subresources will use one allocation for transcoder destination, so compute combined size:
 								size_t transcoded_data_size = 0;
-								for (uint32_t mip = 0; mip < desc.MipLevels; ++mip)
+								for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
 								{
 									basist::basisu_image_level_info level_info;
 									if (transcoder.get_image_level_info(filedata, (uint32_t)filesize, level_info, image_index, mip))
@@ -264,7 +264,7 @@ namespace wiResourceManager
 
 								std::vector<SubresourceData> InitData;
 								size_t transcoded_data_offset = 0;
-								for (uint32_t mip = 0; mip < desc.MipLevels; ++mip)
+								for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
 								{
 									basist::basisu_image_level_info level_info;
 									if (transcoder.get_image_level_info(filedata, (uint32_t)filesize, level_info, 0, mip))
@@ -280,9 +280,9 @@ namespace wiResourceManager
 										))
 										{
 											SubresourceData subresourceData;
-											subresourceData.pData = data_ptr;
-											subresourceData.rowPitch = level_info.m_num_blocks_x * bytes_per_block;
-											subresourceData.slicePitch = subresourceData.rowPitch * level_info.m_num_blocks_y;
+											subresourceData.data_ptr = data_ptr;
+											subresourceData.row_pitch = level_info.m_num_blocks_x * bytes_per_block;
+											subresourceData.slice_pitch = subresourceData.row_pitch * level_info.m_num_blocks_y;
 											InitData.push_back(subresourceData);
 										}
 									}
@@ -308,99 +308,99 @@ namespace wiResourceManager
 				if (result == tinyddsloader::Result::Success)
 				{
 					TextureDesc desc;
-					desc.ArraySize = 1;
-					desc.BindFlags = BIND_SHADER_RESOURCE;
-					desc.Width = dds.GetWidth();
-					desc.Height = dds.GetHeight();
-					desc.Depth = dds.GetDepth();
-					desc.MipLevels = dds.GetMipCount();
-					desc.ArraySize = dds.GetArraySize();
-					desc.Format = FORMAT_R8G8B8A8_UNORM;
-					desc.layout = RESOURCE_STATE_SHADER_RESOURCE;
+					desc.array_size = 1;
+					desc.bind_flags = BindFlag::SHADER_RESOURCE;
+					desc.width = dds.GetWidth();
+					desc.height = dds.GetHeight();
+					desc.depth = dds.GetDepth();
+					desc.mip_levels = dds.GetMipCount();
+					desc.array_size = dds.GetArraySize();
+					desc.format = Format::R8G8B8A8_UNORM;
+					desc.layout = ResourceState::SHADER_RESOURCE;
 
 					if (dds.IsCubemap())
 					{
-						desc.MiscFlags |= RESOURCE_MISC_TEXTURECUBE;
+						desc.misc_flags |= ResourceMiscFlag::TEXTURECUBE;
 					}
 
 					auto ddsFormat = dds.GetFormat();
 
 					switch (ddsFormat)
 					{
-					case tinyddsloader::DDSFile::DXGIFormat::R32G32B32A32_Float: desc.Format = FORMAT_R32G32B32A32_FLOAT; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R32G32B32A32_UInt: desc.Format = FORMAT_R32G32B32A32_UINT; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R32G32B32A32_SInt: desc.Format = FORMAT_R32G32B32A32_SINT; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R32G32B32_Float: desc.Format = FORMAT_R32G32B32_FLOAT; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R32G32B32_UInt: desc.Format = FORMAT_R32G32B32_UINT; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R32G32B32_SInt: desc.Format = FORMAT_R32G32B32_SINT; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R16G16B16A16_Float: desc.Format = FORMAT_R16G16B16A16_FLOAT; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R16G16B16A16_UNorm: desc.Format = FORMAT_R16G16B16A16_UNORM; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R16G16B16A16_UInt: desc.Format = FORMAT_R16G16B16A16_UINT; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R16G16B16A16_SNorm: desc.Format = FORMAT_R16G16B16A16_SNORM; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R16G16B16A16_SInt: desc.Format = FORMAT_R16G16B16A16_SINT; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R32G32_Float: desc.Format = FORMAT_R32G32_FLOAT; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R32G32_UInt: desc.Format = FORMAT_R32G32_UINT; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R32G32_SInt: desc.Format = FORMAT_R32G32_SINT; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R10G10B10A2_UNorm: desc.Format = FORMAT_R10G10B10A2_UNORM; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R10G10B10A2_UInt: desc.Format = FORMAT_R10G10B10A2_UINT; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R11G11B10_Float: desc.Format = FORMAT_R11G11B10_FLOAT; break;
-					case tinyddsloader::DDSFile::DXGIFormat::B8G8R8A8_UNorm: desc.Format = FORMAT_B8G8R8A8_UNORM; break;
-					case tinyddsloader::DDSFile::DXGIFormat::B8G8R8A8_UNorm_SRGB: desc.Format = FORMAT_B8G8R8A8_UNORM_SRGB; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R8G8B8A8_UNorm: desc.Format = FORMAT_R8G8B8A8_UNORM; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R8G8B8A8_UNorm_SRGB: desc.Format = FORMAT_R8G8B8A8_UNORM_SRGB; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R8G8B8A8_UInt: desc.Format = FORMAT_R8G8B8A8_UINT; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R8G8B8A8_SNorm: desc.Format = FORMAT_R8G8B8A8_SNORM; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R8G8B8A8_SInt: desc.Format = FORMAT_R8G8B8A8_SINT; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R16G16_Float: desc.Format = FORMAT_R16G16_FLOAT; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R16G16_UNorm: desc.Format = FORMAT_R16G16_UNORM; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R16G16_UInt: desc.Format = FORMAT_R16G16_UINT; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R16G16_SNorm: desc.Format = FORMAT_R16G16_SNORM; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R16G16_SInt: desc.Format = FORMAT_R16G16_SINT; break;
-					case tinyddsloader::DDSFile::DXGIFormat::D32_Float: desc.Format = FORMAT_D32_FLOAT; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R32_Float: desc.Format = FORMAT_R32_FLOAT; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R32_UInt: desc.Format = FORMAT_R32_UINT; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R32_SInt: desc.Format = FORMAT_R32_SINT; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R8G8_UNorm: desc.Format = FORMAT_R8G8_UNORM; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R8G8_UInt: desc.Format = FORMAT_R8G8_UINT; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R8G8_SNorm: desc.Format = FORMAT_R8G8_SNORM; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R8G8_SInt: desc.Format = FORMAT_R8G8_SINT; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R16_Float: desc.Format = FORMAT_R16_FLOAT; break;
-					case tinyddsloader::DDSFile::DXGIFormat::D16_UNorm: desc.Format = FORMAT_D16_UNORM; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R16_UNorm: desc.Format = FORMAT_R16_UNORM; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R16_UInt: desc.Format = FORMAT_R16_UINT; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R16_SNorm: desc.Format = FORMAT_R16_SNORM; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R16_SInt: desc.Format = FORMAT_R16_SINT; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R8_UNorm: desc.Format = FORMAT_R8_UNORM; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R8_UInt: desc.Format = FORMAT_R8_UINT; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R8_SNorm: desc.Format = FORMAT_R8_SNORM; break;
-					case tinyddsloader::DDSFile::DXGIFormat::R8_SInt: desc.Format = FORMAT_R8_SINT; break;
-					case tinyddsloader::DDSFile::DXGIFormat::BC1_UNorm: desc.Format = FORMAT_BC1_UNORM; break;
-					case tinyddsloader::DDSFile::DXGIFormat::BC1_UNorm_SRGB: desc.Format = FORMAT_BC1_UNORM_SRGB; break;
-					case tinyddsloader::DDSFile::DXGIFormat::BC2_UNorm: desc.Format = FORMAT_BC2_UNORM; break;
-					case tinyddsloader::DDSFile::DXGIFormat::BC2_UNorm_SRGB: desc.Format = FORMAT_BC2_UNORM_SRGB; break;
-					case tinyddsloader::DDSFile::DXGIFormat::BC3_UNorm: desc.Format = FORMAT_BC3_UNORM; break;
-					case tinyddsloader::DDSFile::DXGIFormat::BC3_UNorm_SRGB: desc.Format = FORMAT_BC3_UNORM_SRGB; break;
-					case tinyddsloader::DDSFile::DXGIFormat::BC4_UNorm: desc.Format = FORMAT_BC4_UNORM; break;
-					case tinyddsloader::DDSFile::DXGIFormat::BC4_SNorm: desc.Format = FORMAT_BC4_SNORM; break;
-					case tinyddsloader::DDSFile::DXGIFormat::BC5_UNorm: desc.Format = FORMAT_BC5_UNORM; break;
-					case tinyddsloader::DDSFile::DXGIFormat::BC5_SNorm: desc.Format = FORMAT_BC5_SNORM; break;
-					case tinyddsloader::DDSFile::DXGIFormat::BC7_UNorm: desc.Format = FORMAT_BC7_UNORM; break;
-					case tinyddsloader::DDSFile::DXGIFormat::BC7_UNorm_SRGB: desc.Format = FORMAT_BC7_UNORM_SRGB; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R32G32B32A32_Float: desc.format = Format::R32G32B32A32_FLOAT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R32G32B32A32_UInt: desc.format = Format::R32G32B32A32_UINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R32G32B32A32_SInt: desc.format = Format::R32G32B32A32_SINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R32G32B32_Float: desc.format = Format::R32G32B32_FLOAT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R32G32B32_UInt: desc.format = Format::R32G32B32_UINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R32G32B32_SInt: desc.format = Format::R32G32B32_SINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R16G16B16A16_Float: desc.format = Format::R16G16B16A16_FLOAT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R16G16B16A16_UNorm: desc.format = Format::R16G16B16A16_UNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R16G16B16A16_UInt: desc.format = Format::R16G16B16A16_UINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R16G16B16A16_SNorm: desc.format = Format::R16G16B16A16_SNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R16G16B16A16_SInt: desc.format = Format::R16G16B16A16_SINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R32G32_Float: desc.format = Format::R32G32_FLOAT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R32G32_UInt: desc.format = Format::R32G32_UINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R32G32_SInt: desc.format = Format::R32G32_SINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R10G10B10A2_UNorm: desc.format = Format::R10G10B10A2_UNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R10G10B10A2_UInt: desc.format = Format::R10G10B10A2_UINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R11G11B10_Float: desc.format = Format::R11G11B10_FLOAT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::B8G8R8A8_UNorm: desc.format = Format::B8G8R8A8_UNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::B8G8R8A8_UNorm_SRGB: desc.format = Format::B8G8R8A8_UNORM_SRGB; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R8G8B8A8_UNorm: desc.format = Format::R8G8B8A8_UNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R8G8B8A8_UNorm_SRGB: desc.format = Format::R8G8B8A8_UNORM_SRGB; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R8G8B8A8_UInt: desc.format = Format::R8G8B8A8_UINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R8G8B8A8_SNorm: desc.format = Format::R8G8B8A8_SNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R8G8B8A8_SInt: desc.format = Format::R8G8B8A8_SINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R16G16_Float: desc.format = Format::R16G16_FLOAT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R16G16_UNorm: desc.format = Format::R16G16_UNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R16G16_UInt: desc.format = Format::R16G16_UINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R16G16_SNorm: desc.format = Format::R16G16_SNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R16G16_SInt: desc.format = Format::R16G16_SINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::D32_Float: desc.format = Format::D32_FLOAT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R32_Float: desc.format = Format::R32_FLOAT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R32_UInt: desc.format = Format::R32_UINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R32_SInt: desc.format = Format::R32_SINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R8G8_UNorm: desc.format = Format::R8G8_UNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R8G8_UInt: desc.format = Format::R8G8_UINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R8G8_SNorm: desc.format = Format::R8G8_SNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R8G8_SInt: desc.format = Format::R8G8_SINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R16_Float: desc.format = Format::R16_FLOAT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::D16_UNorm: desc.format = Format::D16_UNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R16_UNorm: desc.format = Format::R16_UNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R16_UInt: desc.format = Format::R16_UINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R16_SNorm: desc.format = Format::R16_SNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R16_SInt: desc.format = Format::R16_SINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R8_UNorm: desc.format = Format::R8_UNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R8_UInt: desc.format = Format::R8_UINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R8_SNorm: desc.format = Format::R8_SNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::R8_SInt: desc.format = Format::R8_SINT; break;
+					case tinyddsloader::DDSFile::DXGIFormat::BC1_UNorm: desc.format = Format::BC1_UNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::BC1_UNorm_SRGB: desc.format = Format::BC1_UNORM_SRGB; break;
+					case tinyddsloader::DDSFile::DXGIFormat::BC2_UNorm: desc.format = Format::BC2_UNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::BC2_UNorm_SRGB: desc.format = Format::BC2_UNORM_SRGB; break;
+					case tinyddsloader::DDSFile::DXGIFormat::BC3_UNorm: desc.format = Format::BC3_UNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::BC3_UNorm_SRGB: desc.format = Format::BC3_UNORM_SRGB; break;
+					case tinyddsloader::DDSFile::DXGIFormat::BC4_UNorm: desc.format = Format::BC4_UNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::BC4_SNorm: desc.format = Format::BC4_SNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::BC5_UNorm: desc.format = Format::BC5_UNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::BC5_SNorm: desc.format = Format::BC5_SNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::BC7_UNorm: desc.format = Format::BC7_UNORM; break;
+					case tinyddsloader::DDSFile::DXGIFormat::BC7_UNorm_SRGB: desc.format = Format::BC7_UNORM_SRGB; break;
 					default:
 						assert(0); // incoming format is not supported 
 						break;
 					}
 
 					std::vector<SubresourceData> InitData;
-					for (uint32_t arrayIndex = 0; arrayIndex < desc.ArraySize; ++arrayIndex)
+					for (uint32_t arrayIndex = 0; arrayIndex < desc.array_size; ++arrayIndex)
 					{
-						for (uint32_t mip = 0; mip < desc.MipLevels; ++mip)
+						for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
 						{
 							auto imageData = dds.GetImageData(mip, arrayIndex);
 							SubresourceData subresourceData;
-							subresourceData.pData = imageData->m_mem;
-							subresourceData.rowPitch = imageData->m_memPitch;
-							subresourceData.slicePitch = imageData->m_memSlicePitch;
+							subresourceData.data_ptr = imageData->m_mem;
+							subresourceData.row_pitch = imageData->m_memPitch;
+							subresourceData.slice_pitch = imageData->m_memSlicePitch;
 							InitData.push_back(subresourceData);
 						}
 					}
@@ -410,17 +410,17 @@ namespace wiResourceManager
 					{
 					case tinyddsloader::DDSFile::TextureDimension::Texture1D:
 					{
-						desc.type = TextureDesc::TEXTURE_1D;
+						desc.type = TextureDesc::Type::TEXTURE_1D;
 					}
 					break;
 					case tinyddsloader::DDSFile::TextureDimension::Texture2D:
 					{
-						desc.type = TextureDesc::TEXTURE_2D;
+						desc.type = TextureDesc::Type::TEXTURE_2D;
 					}
 					break;
 					case tinyddsloader::DDSFile::TextureDimension::Texture3D:
 					{
-						desc.type = TextureDesc::TEXTURE_3D;
+						desc.type = TextureDesc::Type::TEXTURE_3D;
 					}
 					break;
 					default:
@@ -428,10 +428,10 @@ namespace wiResourceManager
 						break;
 					}
 
-					if (IsFormatBlockCompressed(desc.Format))
+					if (IsFormatBlockCompressed(desc.format))
 					{
-						desc.Width = std::max(GetFormatBlockSize(desc.Format), desc.Width);
-						desc.Height = std::max(GetFormatBlockSize(desc.Format), desc.Height);
+						desc.width = std::max(GetFormatBlockSize(desc.format), desc.width);
+						desc.height = std::max(GetFormatBlockSize(desc.format), desc.height);
 					}
 
 					success = device->CreateTexture(&desc, InitData.data(), &resource->texture);
@@ -451,15 +451,15 @@ namespace wiResourceManager
 				if (rgb != nullptr)
 				{
 					TextureDesc desc;
-					desc.Height = uint32_t(height);
-					desc.Width = uint32_t(width);
-					desc.layout = RESOURCE_STATE_SHADER_RESOURCE;
+					desc.height = uint32_t(height);
+					desc.width = uint32_t(width);
+					desc.layout = ResourceState::SHADER_RESOURCE;
 
 					if (flags & IMPORT_COLORGRADINGLUT)
 					{
-						if (desc.type != TextureDesc::TEXTURE_2D ||
-							desc.Width != 256 ||
-							desc.Height != 16)
+						if (desc.type != TextureDesc::Type::TEXTURE_2D ||
+							desc.width != 256 ||
+							desc.height != 16)
 						{
 							wiHelper::messageBox("The Dimensions must be 256 x 16 for color grading LUT!", "Error");
 						}
@@ -479,46 +479,46 @@ namespace wiResourceManager
 								}
 							}
 
-							desc.type = TextureDesc::TEXTURE_3D;
-							desc.Width = 16;
-							desc.Height = 16;
-							desc.Depth = 16;
-							desc.Format = FORMAT_R8G8B8A8_UNORM;
-							desc.BindFlags = BIND_SHADER_RESOURCE;
+							desc.type = TextureDesc::Type::TEXTURE_3D;
+							desc.width = 16;
+							desc.height = 16;
+							desc.depth = 16;
+							desc.format = Format::R8G8B8A8_UNORM;
+							desc.bind_flags = BindFlag::SHADER_RESOURCE;
 							SubresourceData InitData;
-							InitData.pData = data;
-							InitData.rowPitch = 16 * sizeof(uint32_t);
-							InitData.slicePitch = 16 * InitData.rowPitch;
+							InitData.data_ptr = data;
+							InitData.row_pitch = 16 * sizeof(uint32_t);
+							InitData.slice_pitch = 16 * InitData.row_pitch;
 							success = device->CreateTexture(&desc, &InitData, &resource->texture);
 							device->SetName(&resource->texture, name.c_str());
 						}
 					}
 					else
 					{
-						desc.BindFlags = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
-						desc.Format = FORMAT_R8G8B8A8_UNORM;
-						desc.MipLevels = (uint32_t)log2(std::max(width, height)) + 1;
-						desc.Usage = USAGE_DEFAULT;
-						desc.layout = RESOURCE_STATE_SHADER_RESOURCE;
+						desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+						desc.format = Format::R8G8B8A8_UNORM;
+						desc.mip_levels = (uint32_t)log2(std::max(width, height)) + 1;
+						desc.usage = Usage::DEFAULT;
+						desc.layout = ResourceState::SHADER_RESOURCE;
 
 						uint32_t mipwidth = width;
-						std::vector<SubresourceData> InitData(desc.MipLevels);
-						for (uint32_t mip = 0; mip < desc.MipLevels; ++mip)
+						std::vector<SubresourceData> InitData(desc.mip_levels);
+						for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
 						{
-							InitData[mip].pData = rgb; // attention! we don't fill the mips here correctly, just always point to the mip0 data by default. Mip levels will be created using compute shader when needed!
-							InitData[mip].rowPitch = static_cast<uint32_t>(mipwidth * channelCount);
+							InitData[mip].data_ptr = rgb; // attention! we don't fill the mips here correctly, just always point to the mip0 data by default. Mip levels will be created using compute shader when needed!
+							InitData[mip].row_pitch = static_cast<uint32_t>(mipwidth * channelCount);
 							mipwidth = std::max(1u, mipwidth / 2);
 						}
 
 						success = device->CreateTexture(&desc, InitData.data(), &resource->texture);
 						device->SetName(&resource->texture, name.c_str());
 
-						for (uint32_t i = 0; i < resource->texture.desc.MipLevels; ++i)
+						for (uint32_t i = 0; i < resource->texture.desc.mip_levels; ++i)
 						{
 							int subresource_index;
-							subresource_index = device->CreateSubresource(&resource->texture, SRV, 0, 1, i, 1);
+							subresource_index = device->CreateSubresource(&resource->texture, SubresourceType::SRV, 0, 1, i, 1);
 							assert(subresource_index == i);
-							subresource_index = device->CreateSubresource(&resource->texture, UAV, 0, 1, i, 1);
+							subresource_index = device->CreateSubresource(&resource->texture, SubresourceType::UAV, 0, 1, i, 1);
 							assert(subresource_index == i);
 						}
 					}
@@ -551,7 +551,8 @@ namespace wiResourceManager
 				resource->filedata.clear();
 			}
 
-			if (type == wiResource::IMAGE && resource->texture.desc.MipLevels > 1 && resource->texture.desc.BindFlags & BIND_UNORDERED_ACCESS)
+			if (type == wiResource::IMAGE && resource->texture.desc.mip_levels > 1
+				&& has_flag(resource->texture.desc.bind_flags, BindFlag::UNORDERED_ACCESS))
 			{
 				wiRenderer::AddDeferredMIPGen(resource, true);
 			}

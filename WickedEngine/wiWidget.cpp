@@ -323,7 +323,7 @@ void wiWidget::ApplyScissor(const wiCanvas& canvas, const Rect rect, CommandList
 		scissor.top = scissor.bottom;
 	}
 
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 	float scale = canvas.GetDPIScaling();
 	scissor.bottom = int32_t((float)scissor.bottom * scale);
 	scissor.top = int32_t((float)scissor.top * scale);
@@ -348,8 +348,8 @@ namespace wiWidget_Internal
 		desc.dss = wiRenderer::GetDepthStencilState(DSSTYPE_XRAY);
 		desc.bs = wiRenderer::GetBlendState(BSTYPE_TRANSPARENT);
 		desc.rs = wiRenderer::GetRasterizerState(RSTYPE_DOUBLESIDED);
-		desc.pt = TRIANGLESTRIP;
-		wiRenderer::GetDevice()->CreatePipelineState(&desc, &PSO_colored);
+		desc.pt = PrimitiveTopology::TRIANGLESTRIP;
+		wiGraphics::GetDevice()->CreatePipelineState(&desc, &PSO_colored);
 	}
 }
 
@@ -1281,7 +1281,7 @@ void wiComboBox::Render(const wiCanvas& canvas, CommandList cmd) const
 	{
 		return;
 	}
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	wiColor color = GetColor();
 	if (combostate != COMBOSTATE_INACTIVE)
@@ -1306,8 +1306,8 @@ void wiComboBox::Render(const wiCanvas& canvas, CommandList cmd) const
 		wiMath::ConstructTriangleEquilateral(1, vertices[0].pos, vertices[1].pos, vertices[2].pos);
 
 		GPUBufferDesc desc;
-		desc.BindFlags = BIND_VERTEX_BUFFER;
-		desc.Size = sizeof(vertices);
+		desc.bind_flags = BindFlag::VERTEX_BUFFER;
+		desc.size = sizeof(vertices);
 		device->CreateBuffer(&desc, &vertices, &vb_triangle);
 	}
 	const XMMATRIX Projection = canvas.GetProjection();
@@ -2245,7 +2245,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 		return;
 	}
 
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	struct Vertex
 	{
@@ -2340,9 +2340,9 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			}
 
 			GPUBufferDesc desc;
-			desc.BindFlags = BIND_VERTEX_BUFFER;
-			desc.Size = vertices.size() * sizeof(Vertex);
-			desc.Stride = 0;
+			desc.bind_flags = BindFlag::VERTEX_BUFFER;
+			desc.size = vertices.size() * sizeof(Vertex);
+			desc.stride = 0;
 			device->CreateBuffer(&desc, vertices.data(), &vb_hue);
 		}
 		// saturation picker (small circle)
@@ -2362,9 +2362,9 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			}
 
 			GPUBufferDesc desc;
-			desc.BindFlags = BIND_VERTEX_BUFFER;
-			desc.Size = vertices.size() * sizeof(Vertex);
-			desc.Stride = 0;
+			desc.bind_flags = BindFlag::VERTEX_BUFFER;
+			desc.size = vertices.size() * sizeof(Vertex);
+			desc.stride = 0;
 			device->CreateBuffer(&desc, vertices.data(), &vb_picker_saturation);
 		}
 		// hue picker (rectangle)
@@ -2398,9 +2398,9 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			};
 
 			GPUBufferDesc desc;
-			desc.BindFlags = BIND_VERTEX_BUFFER;
-			desc.Size = sizeof(vertices);
-			desc.Stride = 0;
+			desc.bind_flags = BindFlag::VERTEX_BUFFER;
+			desc.size = sizeof(vertices);
+			desc.stride = 0;
 			device->CreateBuffer(&desc, vertices, &vb_picker_hue);
 		}
 		// preview
@@ -2414,8 +2414,8 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			};
 
 			GPUBufferDesc desc;
-			desc.BindFlags = BIND_VERTEX_BUFFER;
-			desc.Size = sizeof(vertices);
+			desc.bind_flags = BindFlag::VERTEX_BUFFER;
+			desc.size = sizeof(vertices);
 			device->CreateBuffer(&desc, vertices, &vb_preview);
 		}
 
@@ -2496,7 +2496,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			sizeof(Vertex),
 		};
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
-		device->Draw((uint32_t)(vb_hue.GetDesc().Size / sizeof(Vertex)), 0, cmd);
+		device->Draw((uint32_t)(vb_hue.GetDesc().size / sizeof(Vertex)), 0, cmd);
 	}
 
 	// render hue picker
@@ -2523,7 +2523,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			sizeof(Vertex),
 		};
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
-		device->Draw((uint32_t)(vb_picker_hue.GetDesc().Size / sizeof(Vertex)), 0, cmd);
+		device->Draw((uint32_t)(vb_picker_hue.GetDesc().size / sizeof(Vertex)), 0, cmd);
 	}
 
 	// render saturation picker
@@ -2574,7 +2574,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			sizeof(Vertex),
 		};
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
-		device->Draw((uint32_t)(vb_picker_saturation.GetDesc().Size / sizeof(Vertex)), 0, cmd);
+		device->Draw((uint32_t)(vb_picker_saturation.GetDesc().size / sizeof(Vertex)), 0, cmd);
 	}
 
 	// render preview
@@ -2593,7 +2593,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 			sizeof(Vertex),
 		};
 		device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
-		device->Draw((uint32_t)(vb_preview.GetDesc().Size / sizeof(Vertex)), 0, cmd);
+		device->Draw((uint32_t)(vb_preview.GetDesc().size / sizeof(Vertex)), 0, cmd);
 	}
 }
 wiColor wiColorPicker::GetPickColor() const
@@ -2865,7 +2865,7 @@ void wiTreeList::Render(const wiCanvas& canvas, CommandList cmd) const
 	{
 		return;
 	}
-	GraphicsDevice* device = wiRenderer::GetDevice();
+	GraphicsDevice* device = wiGraphics::GetDevice();
 
 	// control-base
 	sprites[state].Draw(cmd);
@@ -2922,8 +2922,8 @@ void wiTreeList::Render(const wiCanvas& canvas, CommandList cmd) const
 		wiMath::ConstructTriangleEquilateral(1, vertices[0].pos, vertices[1].pos, vertices[2].pos);
 
 		GPUBufferDesc desc;
-		desc.BindFlags = BIND_VERTEX_BUFFER;
-		desc.Size = sizeof(vertices);
+		desc.bind_flags = BindFlag::VERTEX_BUFFER;
+		desc.size = sizeof(vertices);
 		device->CreateBuffer(&desc, vertices, &vb_triangle);
 	}
 	const XMMATRIX Projection = canvas.GetProjection();

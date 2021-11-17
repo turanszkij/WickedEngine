@@ -13,41 +13,41 @@ namespace wiGraphics
 	struct GPUBuffer;
 	struct Texture;
 
-	enum SHADERSTAGE
+	enum class ShaderStage
 	{
-		MS,
-		AS,
-		VS,
-		HS,
-		DS,
-		GS,
-		PS,
-		CS,
-		LIB,
-		SHADERSTAGE_COUNT,
+		MS,		// Mesh Shader
+		AS,		// Amplification Shader
+		VS,		// Vertex Shader
+		HS,		// Hull Shader
+		DS,		// Domain Shader
+		GS,		// Geometry Shader
+		PS,		// Pixel Shader
+		CS,		// Compute Shader
+		LIB,	// Shader Library
+		Count,
 	};
-	enum SHADERFORMAT
+	enum class ShaderFormat
 	{
-		SHADERFORMAT_NONE,
-		SHADERFORMAT_HLSL5,
-		SHADERFORMAT_HLSL6,
-		SHADERFORMAT_SPIRV,
+		NONE,	// Not used
+		HLSL5,	// DXBC
+		HLSL6,	// DXIL
+		SPIRV,	// SPIR-V
 	};
-	enum SHADERMODEL
+	enum class ShaderModel
 	{
-		SHADERMODEL_5_0,
-		SHADERMODEL_6_0,
-		SHADERMODEL_6_1,
-		SHADERMODEL_6_2,
-		SHADERMODEL_6_3,
-		SHADERMODEL_6_4,
-		SHADERMODEL_6_5,
-		SHADERMODEL_6_6,
-		SHADERMODEL_6_7,
+		SM_5_0,
+		SM_6_0,
+		SM_6_1,
+		SM_6_2,
+		SM_6_3,
+		SM_6_4,
+		SM_6_5,
+		SM_6_6,
+		SM_6_7,
 	};
-	enum PRIMITIVETOPOLOGY
+	enum class PrimitiveTopology
 	{
-		UNDEFINED_TOPOLOGY,
+		UNDEFINED,
 		TRIANGLELIST,
 		TRIANGLESTRIP,
 		POINTLIST,
@@ -55,227 +55,227 @@ namespace wiGraphics
 		LINESTRIP,
 		PATCHLIST,
 	};
-	enum COMPARISON_FUNC
+	enum class ComparisonFunc
 	{
-		COMPARISON_NEVER,
-		COMPARISON_LESS,
-		COMPARISON_EQUAL,
-		COMPARISON_LESS_EQUAL,
-		COMPARISON_GREATER,
-		COMPARISON_NOT_EQUAL,
-		COMPARISON_GREATER_EQUAL,
-		COMPARISON_ALWAYS,
+		NEVER,
+		LESS,
+		EQUAL,
+		LESS_EQUAL,
+		GREATER,
+		NOT_EQUAL,
+		GREATER_EQUAL,
+		ALWAYS,
 	};
-	enum DEPTH_WRITE_MASK
+	enum class DepthWriteMask
 	{
-		DEPTH_WRITE_MASK_ZERO,
-		DEPTH_WRITE_MASK_ALL,
+		ZERO,	// Disables depth write
+		ALL,	// Enables depth write
 	};
-	enum STENCIL_OP
+	enum class StencilOp
 	{
-		STENCIL_OP_KEEP,
-		STENCIL_OP_ZERO,
-		STENCIL_OP_REPLACE,
-		STENCIL_OP_INCR_SAT,
-		STENCIL_OP_DECR_SAT,
-		STENCIL_OP_INVERT,
-		STENCIL_OP_INCR,
-		STENCIL_OP_DECR,
+		KEEP,
+		ZERO,
+		REPLACE,
+		INCR_SAT,
+		DECR_SAT,
+		INVERT,
+		INCR,
+		DECR,
 	};
-	enum BLEND
+	enum class Blend
 	{
-		BLEND_ZERO,
-		BLEND_ONE,
-		BLEND_SRC_COLOR,
-		BLEND_INV_SRC_COLOR,
-		BLEND_SRC_ALPHA,
-		BLEND_INV_SRC_ALPHA,
-		BLEND_DEST_ALPHA,
-		BLEND_INV_DEST_ALPHA,
-		BLEND_DEST_COLOR,
-		BLEND_INV_DEST_COLOR,
-		BLEND_SRC_ALPHA_SAT,
-		BLEND_BLEND_FACTOR,
-		BLEND_INV_BLEND_FACTOR,
-		BLEND_SRC1_COLOR,
-		BLEND_INV_SRC1_COLOR,
-		BLEND_SRC1_ALPHA,
-		BLEND_INV_SRC1_ALPHA,
+		ZERO,
+		ONE,
+		SRC_COLOR,
+		INV_SRC_COLOR,
+		SRC_ALPHA,
+		INV_SRC_ALPHA,
+		DEST_ALPHA,
+		INV_DEST_ALPHA,
+		DEST_COLOR,
+		INV_DEST_COLOR,
+		SRC_ALPHA_SAT,
+		BLEND_FACTOR,
+		INV_BLEND_FACTOR,
+		SRC1_COLOR,
+		INV_SRC1_COLOR,
+		SRC1_ALPHA,
+		INV_SRC1_ALPHA,
 	}; 
-	enum BLEND_OP
+	enum class BlendOp
 	{
-		BLEND_OP_ADD,
-		BLEND_OP_SUBTRACT,
-		BLEND_OP_REV_SUBTRACT,
-		BLEND_OP_MIN,
-		BLEND_OP_MAX,
+		ADD,
+		SUBTRACT,
+		REV_SUBTRACT,
+		MIN,
+		MAX,
 	};
-	enum FILL_MODE
+	enum class FillMode
 	{
-		FILL_WIREFRAME,
-		FILL_SOLID,
+		WIREFRAME,
+		SOLID,
 	};
-	enum CULL_MODE
+	enum class CullMode
 	{
-		CULL_NONE,
-		CULL_FRONT,
-		CULL_BACK,
+		NONE,
+		FRONT,
+		BACK,
 	};
-	enum INPUT_CLASSIFICATION
+	enum class InputClassification
 	{
-		INPUT_PER_VERTEX_DATA,
-		INPUT_PER_INSTANCE_DATA,
+		PER_VERTEX_DATA,
+		PER_INSTANCE_DATA,
 	};
-	enum USAGE
+	enum class Usage
 	{
-		USAGE_DEFAULT,	// CPU no access, GPU read/write
-		USAGE_UPLOAD,	// CPU write, GPU read
-		USAGE_READBACK,	// CPU read, GPU write
+		DEFAULT,	// CPU no access, GPU read/write
+		UPLOAD,	    // CPU write, GPU read
+		READBACK,	// CPU read, GPU write
 	};
-	enum TEXTURE_ADDRESS_MODE
+	enum class TextureAddressMode
 	{
-		TEXTURE_ADDRESS_WRAP,
-		TEXTURE_ADDRESS_MIRROR,
-		TEXTURE_ADDRESS_CLAMP,
-		TEXTURE_ADDRESS_BORDER,
-		TEXTURE_ADDRESS_MIRROR_ONCE,
+		WRAP,
+		MIRROR,
+		CLAMP,
+		BORDER,
+		MIRROR_ONCE,
 	};
-	enum FILTER
+	enum class Filter
 	{
-		FILTER_MIN_MAG_MIP_POINT,
-		FILTER_MIN_MAG_POINT_MIP_LINEAR,
-		FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT,
-		FILTER_MIN_POINT_MAG_MIP_LINEAR,
-		FILTER_MIN_LINEAR_MAG_MIP_POINT,
-		FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR,
-		FILTER_MIN_MAG_LINEAR_MIP_POINT,
-		FILTER_MIN_MAG_MIP_LINEAR,
-		FILTER_ANISOTROPIC,
-		FILTER_COMPARISON_MIN_MAG_MIP_POINT,
-		FILTER_COMPARISON_MIN_MAG_POINT_MIP_LINEAR,
-		FILTER_COMPARISON_MIN_POINT_MAG_LINEAR_MIP_POINT,
-		FILTER_COMPARISON_MIN_POINT_MAG_MIP_LINEAR,
-		FILTER_COMPARISON_MIN_LINEAR_MAG_MIP_POINT,
-		FILTER_COMPARISON_MIN_LINEAR_MAG_POINT_MIP_LINEAR,
-		FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT,
-		FILTER_COMPARISON_MIN_MAG_MIP_LINEAR,
-		FILTER_COMPARISON_ANISOTROPIC,
-		FILTER_MINIMUM_MIN_MAG_MIP_POINT,
-		FILTER_MINIMUM_MIN_MAG_POINT_MIP_LINEAR,
-		FILTER_MINIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT,
-		FILTER_MINIMUM_MIN_POINT_MAG_MIP_LINEAR,
-		FILTER_MINIMUM_MIN_LINEAR_MAG_MIP_POINT,
-		FILTER_MINIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR,
-		FILTER_MINIMUM_MIN_MAG_LINEAR_MIP_POINT,
-		FILTER_MINIMUM_MIN_MAG_MIP_LINEAR,
-		FILTER_MINIMUM_ANISOTROPIC,
-		FILTER_MAXIMUM_MIN_MAG_MIP_POINT,
-		FILTER_MAXIMUM_MIN_MAG_POINT_MIP_LINEAR,
-		FILTER_MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT,
-		FILTER_MAXIMUM_MIN_POINT_MAG_MIP_LINEAR,
-		FILTER_MAXIMUM_MIN_LINEAR_MAG_MIP_POINT,
-		FILTER_MAXIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR,
-		FILTER_MAXIMUM_MIN_MAG_LINEAR_MIP_POINT,
-		FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR,
-		FILTER_MAXIMUM_ANISOTROPIC,
+		MIN_MAG_MIP_POINT,
+		MIN_MAG_POINT_MIP_LINEAR,
+		MIN_POINT_MAG_LINEAR_MIP_POINT,
+		MIN_POINT_MAG_MIP_LINEAR,
+		MIN_LINEAR_MAG_MIP_POINT,
+		MIN_LINEAR_MAG_POINT_MIP_LINEAR,
+		MIN_MAG_LINEAR_MIP_POINT,
+		MIN_MAG_MIP_LINEAR,
+		ANISOTROPIC,
+		COMPARISON_MIN_MAG_MIP_POINT,
+		COMPARISON_MIN_MAG_POINT_MIP_LINEAR,
+		COMPARISON_MIN_POINT_MAG_LINEAR_MIP_POINT,
+		COMPARISON_MIN_POINT_MAG_MIP_LINEAR,
+		COMPARISON_MIN_LINEAR_MAG_MIP_POINT,
+		COMPARISON_MIN_LINEAR_MAG_POINT_MIP_LINEAR,
+		COMPARISON_MIN_MAG_LINEAR_MIP_POINT,
+		COMPARISON_MIN_MAG_MIP_LINEAR,
+		COMPARISON_ANISOTROPIC,
+		MINIMUM_MIN_MAG_MIP_POINT,
+		MINIMUM_MIN_MAG_POINT_MIP_LINEAR,
+		MINIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT,
+		MINIMUM_MIN_POINT_MAG_MIP_LINEAR,
+		MINIMUM_MIN_LINEAR_MAG_MIP_POINT,
+		MINIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR,
+		MINIMUM_MIN_MAG_LINEAR_MIP_POINT,
+		MINIMUM_MIN_MAG_MIP_LINEAR,
+		MINIMUM_ANISOTROPIC,
+		MAXIMUM_MIN_MAG_MIP_POINT,
+		MAXIMUM_MIN_MAG_POINT_MIP_LINEAR,
+		MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT,
+		MAXIMUM_MIN_POINT_MAG_MIP_LINEAR,
+		MAXIMUM_MIN_LINEAR_MAG_MIP_POINT,
+		MAXIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR,
+		MAXIMUM_MIN_MAG_LINEAR_MIP_POINT,
+		MAXIMUM_MIN_MAG_MIP_LINEAR,
+		MAXIMUM_ANISOTROPIC,
 	};
-	enum SAMPLER_BORDER_COLOR
+	enum class SamplerBorderColor
 	{
-		SAMPLER_BORDER_COLOR_TRANSPARENT_BLACK,
-		SAMPLER_BORDER_COLOR_OPAQUE_BLACK,
-		SAMPLER_BORDER_COLOR_OPAQUE_WHITE,
+		TRANSPARENT_BLACK,
+		OPAQUE_BLACK,
+		OPAQUE_WHITE,
 	};
-	enum FORMAT
+	enum class Format
 	{
-		FORMAT_UNKNOWN,
+		UNKNOWN,
 
-		FORMAT_R32G32B32A32_FLOAT,
-		FORMAT_R32G32B32A32_UINT,
-		FORMAT_R32G32B32A32_SINT,
+		R32G32B32A32_FLOAT,
+		R32G32B32A32_UINT,
+		R32G32B32A32_SINT,
 
-		FORMAT_R32G32B32_FLOAT,
-		FORMAT_R32G32B32_UINT,
-		FORMAT_R32G32B32_SINT,
+		R32G32B32_FLOAT,
+		R32G32B32_UINT,
+		R32G32B32_SINT,
 
-		FORMAT_R16G16B16A16_FLOAT,
-		FORMAT_R16G16B16A16_UNORM,
-		FORMAT_R16G16B16A16_UINT,
-		FORMAT_R16G16B16A16_SNORM,
-		FORMAT_R16G16B16A16_SINT,
+		R16G16B16A16_FLOAT,
+		R16G16B16A16_UNORM,
+		R16G16B16A16_UINT,
+		R16G16B16A16_SNORM,
+		R16G16B16A16_SINT,
 
-		FORMAT_R32G32_FLOAT,
-		FORMAT_R32G32_UINT,
-		FORMAT_R32G32_SINT,
-		FORMAT_R32G8X24_TYPELESS,		// depth (32-bit) + stencil (8-bit) + shader resource (32-bit)
-		FORMAT_D32_FLOAT_S8X24_UINT,	// depth (32-bit) + stencil (8-bit)
+		R32G32_FLOAT,
+		R32G32_UINT,
+		R32G32_SINT,
+		R32G8X24_TYPELESS,		// depth (32-bit) + stencil (8-bit) + shader resource (32-bit)
+		D32_FLOAT_S8X24_UINT,	// depth (32-bit) + stencil (8-bit)
 
-		FORMAT_R10G10B10A2_UNORM,
-		FORMAT_R10G10B10A2_UINT,
-		FORMAT_R11G11B10_FLOAT,
-		FORMAT_R8G8B8A8_UNORM,
-		FORMAT_R8G8B8A8_UNORM_SRGB,
-		FORMAT_R8G8B8A8_UINT,
-		FORMAT_R8G8B8A8_SNORM,
-		FORMAT_R8G8B8A8_SINT, 
-		FORMAT_B8G8R8A8_UNORM,
-		FORMAT_B8G8R8A8_UNORM_SRGB,
-		FORMAT_R16G16_FLOAT,
-		FORMAT_R16G16_UNORM,
-		FORMAT_R16G16_UINT,
-		FORMAT_R16G16_SNORM,
-		FORMAT_R16G16_SINT,
-		FORMAT_R32_TYPELESS,			// depth (32-bit) + shader resource (32-bit)
-		FORMAT_D32_FLOAT,				// depth (32-bit)
-		FORMAT_R32_FLOAT,
-		FORMAT_R32_UINT,
-		FORMAT_R32_SINT, 
-		FORMAT_R24G8_TYPELESS,			// depth (24-bit) + stencil (8-bit) + shader resource (24-bit)
-		FORMAT_D24_UNORM_S8_UINT,		// depth (24-bit) + stencil (8-bit)
+		R10G10B10A2_UNORM,
+		R10G10B10A2_UINT,
+		R11G11B10_FLOAT,
+		R8G8B8A8_UNORM,
+		R8G8B8A8_UNORM_SRGB,
+		R8G8B8A8_UINT,
+		R8G8B8A8_SNORM,
+		R8G8B8A8_SINT, 
+		B8G8R8A8_UNORM,
+		B8G8R8A8_UNORM_SRGB,
+		R16G16_FLOAT,
+		R16G16_UNORM,
+		R16G16_UINT,
+		R16G16_SNORM,
+		R16G16_SINT,
+		R32_TYPELESS,			// depth (32-bit) + shader resource (32-bit)
+		D32_FLOAT,				// depth (32-bit)
+		R32_FLOAT,
+		R32_UINT,
+		R32_SINT, 
+		R24G8_TYPELESS,			// depth (24-bit) + stencil (8-bit) + shader resource (24-bit)
+		D24_UNORM_S8_UINT,		// depth (24-bit) + stencil (8-bit)
 
-		FORMAT_R8G8_UNORM,
-		FORMAT_R8G8_UINT,
-		FORMAT_R8G8_SNORM,
-		FORMAT_R8G8_SINT,
-		FORMAT_R16_TYPELESS,			// depth (16-bit) + shader resource (16-bit)
-		FORMAT_R16_FLOAT,
-		FORMAT_D16_UNORM,				// depth (16-bit)
-		FORMAT_R16_UNORM,
-		FORMAT_R16_UINT,
-		FORMAT_R16_SNORM,
-		FORMAT_R16_SINT,
+		R8G8_UNORM,
+		R8G8_UINT,
+		R8G8_SNORM,
+		R8G8_SINT,
+		R16_TYPELESS,			// depth (16-bit) + shader resource (16-bit)
+		R16_FLOAT,
+		D16_UNORM,				// depth (16-bit)
+		R16_UNORM,
+		R16_UINT,
+		R16_SNORM,
+		R16_SINT,
 
-		FORMAT_R8_UNORM,
-		FORMAT_R8_UINT,
-		FORMAT_R8_SNORM,
-		FORMAT_R8_SINT,
+		R8_UNORM,
+		R8_UINT,
+		R8_SNORM,
+		R8_SINT,
 
-		FORMAT_BC1_UNORM,
-		FORMAT_BC1_UNORM_SRGB,
-		FORMAT_BC2_UNORM,
-		FORMAT_BC2_UNORM_SRGB,
-		FORMAT_BC3_UNORM,
-		FORMAT_BC3_UNORM_SRGB,
-		FORMAT_BC4_UNORM,
-		FORMAT_BC4_SNORM,
-		FORMAT_BC5_UNORM,
-		FORMAT_BC5_SNORM,
-		FORMAT_BC6H_UF16,
-		FORMAT_BC6H_SF16,
-		FORMAT_BC7_UNORM,
-		FORMAT_BC7_UNORM_SRGB
+		BC1_UNORM,
+		BC1_UNORM_SRGB,
+		BC2_UNORM,
+		BC2_UNORM_SRGB,
+		BC3_UNORM,
+		BC3_UNORM_SRGB,
+		BC4_UNORM,
+		BC4_SNORM,
+		BC5_UNORM,
+		BC5_SNORM,
+		BC6H_UF16,
+		BC6H_SF16,
+		BC7_UNORM,
+		BC7_UNORM_SRGB
 	};
-	enum GPU_QUERY_TYPE
+	enum class GpuQueryType
 	{
-		GPU_QUERY_TYPE_TIMESTAMP,			// retrieve time point of gpu execution
-		GPU_QUERY_TYPE_OCCLUSION,			// how many samples passed depth test?
-		GPU_QUERY_TYPE_OCCLUSION_BINARY,	// depth test passed or not?
+		TIMESTAMP,			// retrieve time point of gpu execution
+		OCCLUSION,			// how many samples passed depth test?
+		OCCLUSION_BINARY,	// depth test passed or not?
 	};
-	enum INDEXBUFFER_FORMAT
+	enum class IndexBufferFormat
 	{
-		INDEXFORMAT_16BIT,
-		INDEXFORMAT_32BIT,
+		UINT16,
+		UINT32,
 	};
-	enum SUBRESOURCE_TYPE
+	enum class SubresourceType
 	{
 		SRV, // shader resource view
 		UAV, // unordered access view
@@ -283,172 +283,139 @@ namespace wiGraphics
 		DSV, // depth stencil view
 	};
 
-	enum SHADING_RATE
+	enum class ShadingRate
 	{
-		SHADING_RATE_1X1,
-		SHADING_RATE_1X2,
-		SHADING_RATE_2X1,
-		SHADING_RATE_2X2,
-		SHADING_RATE_2X4,
-		SHADING_RATE_4X2,
-		SHADING_RATE_4X4,
+		RATE_1X1,	// Default/full shading rate
+		RATE_1X2,
+		RATE_2X1,
+		RATE_2X2,
+		RATE_2X4,
+		RATE_4X2,
+		RATE_4X4,
 
-		SHADING_RATE_INVALID
+		RATE_INVALID
 	};
 
-	enum PREDICATION_OP
+	enum class PredicationOp
 	{
-		PREDICATION_OP_EQUAL_ZERO,
-		PREDICATION_OP_NOT_EQUAL_ZERO,
+		EQUAL_ZERO,
+		NOT_EQUAL_ZERO,
 	};
 
 	// Flags ////////////////////////////////////////////
 
-	// Enable enum flags:
-	//	https://www.justsoftwaresolutions.co.uk/cplusplus/using-enum-classes-as-bitfields.html
-	template<typename E>
-	struct enable_bitmask_operators {
-		static constexpr bool enable = false;
-	};
-	template<typename E>
-	typename std::enable_if<enable_bitmask_operators<E>::enable, E>::type operator|(E lhs, E rhs)
+	enum class ColorWrite
 	{
-		typedef typename std::underlying_type<E>::type underlying;
-		return static_cast<E>(
-			static_cast<underlying>(lhs) | static_cast<underlying>(rhs));
-	}
-	template<typename E>
-	typename std::enable_if<enable_bitmask_operators<E>::enable, E&>::type operator|=(E& lhs, E rhs)
-	{
-		typedef typename std::underlying_type<E>::type underlying;
-		lhs = static_cast<E>(
-			static_cast<underlying>(lhs) | static_cast<underlying>(rhs));
-		return lhs;
-	}
-
-	enum COLOR_WRITE_ENABLE
-	{
-		COLOR_WRITE_DISABLE = 0,
-		COLOR_WRITE_ENABLE_RED = 1 << 0,
-		COLOR_WRITE_ENABLE_GREEN = 1 << 1,
-		COLOR_WRITE_ENABLE_BLUE = 1 << 2,
-		COLOR_WRITE_ENABLE_ALPHA = 1 << 3,
-		COLOR_WRITE_ENABLE_ALL = ~0,
-	};
-	template<>
-	struct enable_bitmask_operators<COLOR_WRITE_ENABLE> {
-		static const bool enable = true;
+		DISABLE = 0,
+		ENABLE_RED = 1 << 0,
+		ENABLE_GREEN = 1 << 1,
+		ENABLE_BLUE = 1 << 2,
+		ENABLE_ALPHA = 1 << 3,
+		ENABLE_ALL = ~0,
 	};
 
-	enum BIND_FLAG
+	enum class BindFlag
 	{
-		BIND_NONE = 0,
-		BIND_VERTEX_BUFFER = 1 << 0,
-		BIND_INDEX_BUFFER = 1 << 1,
-		BIND_CONSTANT_BUFFER = 1 << 2,
-		BIND_SHADER_RESOURCE = 1 << 3,
-		BIND_RENDER_TARGET = 1 << 4,
-		BIND_DEPTH_STENCIL = 1 << 5,
-		BIND_UNORDERED_ACCESS = 1 << 6,
-		BIND_SHADING_RATE = 1 << 7,
-	};
-	template<>
-	struct enable_bitmask_operators<BIND_FLAG> {
-		static const bool enable = true;
+		NONE = 0,
+		VERTEX_BUFFER = 1 << 0,
+		INDEX_BUFFER = 1 << 1,
+		CONSTANT_BUFFER = 1 << 2,
+		SHADER_RESOURCE = 1 << 3,
+		RENDER_TARGET = 1 << 4,
+		DEPTH_STENCIL = 1 << 5,
+		UNORDERED_ACCESS = 1 << 6,
+		SHADING_RATE = 1 << 7,
 	};
 
-	enum RESOURCE_MISC_FLAG
+	enum class ResourceMiscFlag
 	{
-		RESOURCE_MISC_NONE = 0,
-		RESOURCE_MISC_TEXTURECUBE = 1 << 0,
-		RESOURCE_MISC_INDIRECT_ARGS = 1 << 1,
-		RESOURCE_MISC_BUFFER_RAW = 1 << 2,
-		RESOURCE_MISC_BUFFER_STRUCTURED = 1 << 3,
-		RESOURCE_MISC_RAY_TRACING = 1 << 4,
-		RESOURCE_MISC_PREDICATION = 1 << 5,
-	};
-	template<>
-	struct enable_bitmask_operators<RESOURCE_MISC_FLAG> {
-		static const bool enable = true;
+		NONE = 0,
+		TEXTURECUBE = 1 << 0,
+		INDIRECT_ARGS = 1 << 1,
+		BUFFER_RAW = 1 << 2,
+		BUFFER_STRUCTURED = 1 << 3,
+		RAY_TRACING = 1 << 4,
+		PREDICATION = 1 << 5,
 	};
 
-	enum GRAPHICSDEVICE_CAPABILITY
+	enum class GraphicsDeviceCapability
 	{
-		GRAPHICSDEVICE_CAPABILITY_TESSELLATION = 1 << 0,
-		GRAPHICSDEVICE_CAPABILITY_CONSERVATIVE_RASTERIZATION = 1 << 1,
-		GRAPHICSDEVICE_CAPABILITY_RASTERIZER_ORDERED_VIEWS = 1 << 2,
-		GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_COMMON = 1 << 3, // eg: R16G16B16A16_FLOAT, R8G8B8A8_UNORM and more common ones
-		GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_R11G11B10_FLOAT = 1 << 4,
-		GRAPHICSDEVICE_CAPABILITY_RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS = 1 << 5,
-		GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING = 1 << 6,
-		GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2 = 1 << 7,
-		GRAPHICSDEVICE_CAPABILITY_MESH_SHADER = 1 << 8,
-		GRAPHICSDEVICE_CAPABILITY_RAYTRACING = 1 << 9,
-		GRAPHICSDEVICE_CAPABILITY_PREDICATION = 1 << 10,
-		GRAPHICSDEVICE_CAPABILITY_SAMPLER_MINMAX = 1 << 11,
+		NONE = 0,
+		TESSELLATION = 1 << 0,
+		CONSERVATIVE_RASTERIZATION = 1 << 1,
+		RASTERIZER_ORDERED_VIEWS = 1 << 2,
+		UAV_LOAD_FORMAT_COMMON = 1 << 3, // eg: R16G16B16A16_FLOAT, R8G8B8A8_UNORM and more common ones
+		UAV_LOAD_FORMAT_R11G11B10_FLOAT = 1 << 4,
+		RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS = 1 << 5,
+		VARIABLE_RATE_SHADING = 1 << 6,
+		VARIABLE_RATE_SHADING_TIER2 = 1 << 7,
+		MESH_SHADER = 1 << 8,
+		RAYTRACING = 1 << 9,
+		PREDICATION = 1 << 10,
+		SAMPLER_MINMAX = 1 << 11,
 	};
-	enum RESOURCE_STATE
+
+	enum class ResourceState
 	{
 		// Common resource states:
-		RESOURCE_STATE_UNDEFINED = 0,						// invalid state
-		RESOURCE_STATE_SHADER_RESOURCE = 1 << 0,			// shader resource, read only
-		RESOURCE_STATE_SHADER_RESOURCE_COMPUTE = 1 << 1,	// shader resource, read only, non-pixel shader
-		RESOURCE_STATE_UNORDERED_ACCESS = 1 << 2,			// shader resource, write enabled
-		RESOURCE_STATE_COPY_SRC = 1 << 3,					// copy from
-		RESOURCE_STATE_COPY_DST = 1 << 4,					// copy to
+		UNDEFINED = 0,						// invalid state
+		SHADER_RESOURCE = 1 << 0,			// shader resource, read only
+		SHADER_RESOURCE_COMPUTE = 1 << 1,	// shader resource, read only, non-pixel shader
+		UNORDERED_ACCESS = 1 << 2,			// shader resource, write enabled
+		COPY_SRC = 1 << 3,					// copy from
+		COPY_DST = 1 << 4,					// copy to
 
 		// Texture specific resource states:
-		RESOURCE_STATE_RENDERTARGET = 1 << 5,				// render target, write enabled
-		RESOURCE_STATE_DEPTHSTENCIL = 1 << 6,				// depth stencil, write enabled
-		RESOURCE_STATE_DEPTHSTENCIL_READONLY = 1 << 7,		// depth stencil, read only
-		RESOURCE_STATE_SHADING_RATE_SOURCE = 1 << 8,		// shading rate control per tile
+		RENDERTARGET = 1 << 5,				// render target, write enabled
+		DEPTHSTENCIL = 1 << 6,				// depth stencil, write enabled
+		DEPTHSTENCIL_READONLY = 1 << 7,		// depth stencil, read only
+		SHADING_RATE_SOURCE = 1 << 8,		// shading rate control per tile
 
 		// GPUBuffer specific resource states:
-		RESOURCE_STATE_VERTEX_BUFFER = 1 << 9,				// vertex buffer, read only
-		RESOURCE_STATE_INDEX_BUFFER = 1 << 10,				// index buffer, read only
-		RESOURCE_STATE_CONSTANT_BUFFER = 1 << 11,			// constant buffer, read only
-		RESOURCE_STATE_INDIRECT_ARGUMENT = 1 << 12,			// argument buffer to DrawIndirect() or DispatchIndirect()
-		RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE = 1 << 13, // acceleration structure storage or scratch
-		RESOURCE_STATE_PREDICATION = 1 << 14				// storage for predication comparison value
-	};
-	template<>
-	struct enable_bitmask_operators<RESOURCE_STATE> {
-		static const bool enable = true;
+		VERTEX_BUFFER = 1 << 9,				// vertex buffer, read only
+		INDEX_BUFFER = 1 << 10,				// index buffer, read only
+		CONSTANT_BUFFER = 1 << 11,			// constant buffer, read only
+		INDIRECT_ARGUMENT = 1 << 12,			// argument buffer to DrawIndirect() or DispatchIndirect()
+		RAYTRACING_ACCELERATION_STRUCTURE = 1 << 13, // acceleration structure storage or scratch
+		PREDICATION = 1 << 14				// storage for predication comparison value
 	};
 
-	enum COLOR_SPACE
+	enum class ColorSpace
 	{
-		COLOR_SPACE_SRGB,			// SDR color space (8 or 10 bits per channel)
-		COLOR_SPACE_HDR10_ST2084,	// HDR10 color space (10 bits per channel)
-		COLOR_SPACE_HDR_LINEAR,		// HDR color space (16 bits per channel)
+		SRGB,			// SDR color space (8 or 10 bits per channel)
+		HDR10_ST2084,	// HDR10 color space (10 bits per channel)
+		HDR_LINEAR,		// HDR color space (16 bits per channel)
 	};
+
 
 	// Descriptor structs:
 
 	struct Viewport
 	{
-		float TopLeftX = 0.0f;
-		float TopLeftY = 0.0f;
-		float Width = 0.0f;
-		float Height = 0.0f;
-		float MinDepth = 0.0f;
-		float MaxDepth = 1.0f;
+		float top_left_x = 0;
+		float top_left_y = 0;
+		float width = 0;
+		float height = 0;
+		float min_depth = 0;
+		float max_depth = 1;
 	};
+
 	struct InputLayout
 	{
-		static const uint32_t APPEND_ALIGNED_ELEMENT = 0xffffffff; // automatically figure out AlignedByteOffset depending on Format
+		static const uint32_t APPEND_ALIGNED_ELEMENT = ~0u; // automatically figure out AlignedByteOffset depending on Format
 
 		struct Element
 		{
-			std::string SemanticName;
-			uint32_t SemanticIndex = 0;
-			FORMAT Format = FORMAT_UNKNOWN;
-			uint32_t InputSlot = 0;
-			uint32_t AlignedByteOffset = APPEND_ALIGNED_ELEMENT;
-			INPUT_CLASSIFICATION InputSlotClass = INPUT_CLASSIFICATION::INPUT_PER_VERTEX_DATA;
+			std::string semantic_name;
+			uint32_t semantic_index = 0;
+			Format format = Format::UNKNOWN;
+			uint32_t input_slot = 0;
+			uint32_t aligned_byte_offset = APPEND_ALIGNED_ELEMENT;
+			InputClassification input_slot_class = InputClassification::PER_VERTEX_DATA;
 		};
 		std::vector<Element> elements;
 	};
+
 	union ClearValue
 	{
 		float color[4];
@@ -456,107 +423,115 @@ namespace wiGraphics
 		{
 			float depth;
 			uint32_t stencil;
-		} depthstencil;
+		} depth_stencil;
 	};
+
 	struct TextureDesc
 	{
-		enum TEXTURE_TYPE
+		enum class Type
 		{
 			TEXTURE_1D,
 			TEXTURE_2D,
 			TEXTURE_3D,
-		} type = TEXTURE_2D;
-		uint32_t Width = 0;
-		uint32_t Height = 0;
-		uint32_t Depth = 0;
-		uint32_t ArraySize = 1;
-		uint32_t MipLevels = 1;
-		FORMAT Format = FORMAT_UNKNOWN;
-		uint32_t SampleCount = 1;
-		USAGE Usage = USAGE_DEFAULT;
-		BIND_FLAG BindFlags = BIND_NONE;
-		RESOURCE_MISC_FLAG MiscFlags = RESOURCE_MISC_NONE;
+		} type = Type::TEXTURE_2D;
+		uint32_t width = 0;
+		uint32_t height = 0;
+		uint32_t depth = 0;
+		uint32_t array_size = 1;
+		uint32_t mip_levels = 1;
+		Format format = Format::UNKNOWN;
+		uint32_t sample_count = 1;
+		Usage usage = Usage::DEFAULT;
+		BindFlag bind_flags = BindFlag::NONE;
+		ResourceMiscFlag misc_flags = ResourceMiscFlag::NONE;
 		ClearValue clear = {};
-		RESOURCE_STATE layout = RESOURCE_STATE_SHADER_RESOURCE;
+		ResourceState layout = ResourceState::SHADER_RESOURCE;
 	};
+
 	struct SamplerDesc
 	{
-		FILTER Filter = FILTER_MIN_MAG_MIP_POINT;
-		TEXTURE_ADDRESS_MODE AddressU = TEXTURE_ADDRESS_CLAMP;
-		TEXTURE_ADDRESS_MODE AddressV = TEXTURE_ADDRESS_CLAMP;
-		TEXTURE_ADDRESS_MODE AddressW = TEXTURE_ADDRESS_CLAMP;
-		float MipLODBias = 0.0f;
-		uint32_t MaxAnisotropy = 0;
-		COMPARISON_FUNC ComparisonFunc = COMPARISON_NEVER;
-		SAMPLER_BORDER_COLOR BorderColor = SAMPLER_BORDER_COLOR_TRANSPARENT_BLACK;
-		float MinLOD = 0.0f;
-		float MaxLOD = FLT_MAX;
+		Filter filter = Filter::MIN_MAG_MIP_POINT;
+		TextureAddressMode address_u = TextureAddressMode::CLAMP;
+		TextureAddressMode address_v = TextureAddressMode::CLAMP;
+		TextureAddressMode address_w = TextureAddressMode::CLAMP;
+		float mip_lod_bias = 0;
+		uint32_t max_anisotropy = 0;
+		ComparisonFunc comparison_func = ComparisonFunc::NEVER;
+		SamplerBorderColor border_color = SamplerBorderColor::TRANSPARENT_BLACK;
+		float min_lod = 0;
+		float max_lod = FLT_MAX;
 	};
+
 	struct RasterizerState
 	{
-		FILL_MODE FillMode = FILL_SOLID;
-		CULL_MODE CullMode = CULL_NONE;
-		bool FrontCounterClockwise = false;
-		int32_t DepthBias = 0;
-		float DepthBiasClamp = 0.0f;
-		float SlopeScaledDepthBias = 0.0f;
-		bool DepthClipEnable = false;
-		bool MultisampleEnable = false;
-		bool AntialiasedLineEnable = false;
-		bool ConservativeRasterizationEnable = false;
-		uint32_t ForcedSampleCount = 0;
+		FillMode fill_mode = FillMode::SOLID;
+		CullMode cull_mode = CullMode::NONE;
+		bool front_counter_clockwise = false;
+		int32_t depth_bias = 0;
+		float depth_bias_clamp = 0;
+		float slope_scaled_depth_bias = 0;
+		bool depth_clip_enable = false;
+		bool multisample_enable = false;
+		bool antialiased_line_enable = false;
+		bool conservative_rasterization_enable = false;
+		uint32_t forced_sample_count = 0;
 	};
+
 	struct DepthStencilState
 	{
-		bool DepthEnable = false;
-		DEPTH_WRITE_MASK DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
-		COMPARISON_FUNC DepthFunc = COMPARISON_NEVER;
-		bool StencilEnable = false;
-		uint8_t StencilReadMask = 0xff;
-		uint8_t StencilWriteMask = 0xff;
+		bool depth_enable = false;
+		DepthWriteMask depth_write_mask = DepthWriteMask::ZERO;
+		ComparisonFunc depth_func = ComparisonFunc::NEVER;
+		bool stencil_enable = false;
+		uint8_t stencil_read_mask = 0xff;
+		uint8_t stencil_write_mask = 0xff;
 
 		struct DepthStencilOp
 		{
-			STENCIL_OP StencilFailOp = STENCIL_OP_KEEP;
-			STENCIL_OP StencilDepthFailOp = STENCIL_OP_KEEP;
-			STENCIL_OP StencilPassOp = STENCIL_OP_KEEP;
-			COMPARISON_FUNC StencilFunc = COMPARISON_NEVER;
+			StencilOp stencil_fail_op = StencilOp::KEEP;
+			StencilOp stencil_depth_fail_op = StencilOp::KEEP;
+			StencilOp stencil_pass_op = StencilOp::KEEP;
+			ComparisonFunc stencil_func = ComparisonFunc::NEVER;
 		};
-		DepthStencilOp FrontFace;
-		DepthStencilOp BackFace;
+		DepthStencilOp front_face;
+		DepthStencilOp back_face;
 	};
+
 	struct BlendState
 	{
-		bool AlphaToCoverageEnable = false;
-		bool IndependentBlendEnable = false;
+		bool alpha_to_coverage_enable = false;
+		bool independent_blend_enable = false;
 
 		struct RenderTargetBlendState
 		{
-			bool BlendEnable = false;
-			BLEND SrcBlend = BLEND_SRC_ALPHA;
-			BLEND DestBlend = BLEND_INV_SRC_ALPHA;
-			BLEND_OP BlendOp = BLEND_OP_ADD;
-			BLEND SrcBlendAlpha = BLEND_ONE;
-			BLEND DestBlendAlpha = BLEND_ONE;
-			BLEND_OP BlendOpAlpha = BLEND_OP_ADD;
-			COLOR_WRITE_ENABLE RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
+			bool blend_enable = false;
+			Blend src_blend = Blend::SRC_ALPHA;
+			Blend dest_blend = Blend::INV_SRC_ALPHA;
+			BlendOp blend_op = BlendOp::ADD;
+			Blend src_blend_alpha = Blend::ONE;
+			Blend dest_blend_alpha = Blend::ONE;
+			BlendOp blend_op_alpha = BlendOp::ADD;
+			ColorWrite render_target_write_mask = ColorWrite::ENABLE_ALL;
 		};
-		RenderTargetBlendState RenderTarget[8];
+		RenderTargetBlendState render_target[8];
 	};
+
 	struct GPUBufferDesc
 	{
-		uint64_t Size = 0;
-		USAGE Usage = USAGE_DEFAULT;
-		BIND_FLAG BindFlags = BIND_NONE;
-		RESOURCE_MISC_FLAG MiscFlags = RESOURCE_MISC_NONE;
-		uint32_t Stride = 0; // needed for typed and structured buffer types!
-		FORMAT Format = FORMAT_UNKNOWN; // only needed for typed buffer!
+		uint64_t size = 0;
+		Usage usage = Usage::DEFAULT;
+		BindFlag bind_flags = BindFlag::NONE;
+		ResourceMiscFlag misc_flags = ResourceMiscFlag::NONE;
+		uint32_t stride = 0; // needed for typed and structured buffer types!
+		Format format = Format::UNKNOWN; // only needed for typed buffer!
 	};
+
 	struct GPUQueryHeapDesc
 	{
-		GPU_QUERY_TYPE type = GPU_QUERY_TYPE_TIMESTAMP;
-		uint32_t queryCount = 0;
+		GpuQueryType type = GpuQueryType::TIMESTAMP;
+		uint32_t query_count = 0;
 	};
+
 	struct PipelineStateDesc
 	{
 		const Shader*			vs = nullptr;
@@ -570,18 +545,19 @@ namespace wiGraphics
 		const RasterizerState*	rs = nullptr;
 		const DepthStencilState* dss = nullptr;
 		const InputLayout*		il = nullptr;
-		PRIMITIVETOPOLOGY		pt = TRIANGLELIST;
-		uint32_t                patchControlPoints = 3;
-		uint32_t				sampleMask = 0xFFFFFFFF;
+		PrimitiveTopology		pt = PrimitiveTopology::TRIANGLELIST;
+		uint32_t                patch_control_points = 3;
+		uint32_t				sample_mask = 0xFFFFFFFF;
 	};
+
 	struct GPUBarrier
 	{
-		enum TYPE
+		enum class Type
 		{
-			MEMORY_BARRIER,		// UAV accesses
-			IMAGE_BARRIER,		// image layout transition
-			BUFFER_BARRIER,		// buffer state transition
-		} type = MEMORY_BARRIER;
+			MEMORY,		// UAV accesses
+			IMAGE,		// image layout transition
+			BUFFER,		// buffer state transition
+		} type = Type::MEMORY;
 
 		struct Memory
 		{
@@ -590,16 +566,16 @@ namespace wiGraphics
 		struct Image
 		{
 			const Texture* texture;
-			RESOURCE_STATE layout_before;
-			RESOURCE_STATE layout_after;
+			ResourceState layout_before;
+			ResourceState layout_after;
 			int mip;
 			int slice;
 		};
 		struct Buffer
 		{
 			const GPUBuffer* buffer;
-			RESOURCE_STATE state_before;
-			RESOURCE_STATE state_after;
+			ResourceState state_before;
+			ResourceState state_after;
 		};
 		union
 		{
@@ -611,15 +587,15 @@ namespace wiGraphics
 		static GPUBarrier Memory(const GPUResource* resource = nullptr)
 		{
 			GPUBarrier barrier;
-			barrier.type = MEMORY_BARRIER;
+			barrier.type = Type::MEMORY;
 			barrier.memory.resource = resource;
 			return barrier;
 		}
-		static GPUBarrier Image(const Texture* texture, RESOURCE_STATE before, RESOURCE_STATE after,
+		static GPUBarrier Image(const Texture* texture, ResourceState before, ResourceState after,
 			int mip = -1, int slice = -1)
 		{
 			GPUBarrier barrier;
-			barrier.type = IMAGE_BARRIER;
+			barrier.type = Type::IMAGE;
 			barrier.image.texture = texture;
 			barrier.image.layout_before = before;
 			barrier.image.layout_after = after;
@@ -627,53 +603,54 @@ namespace wiGraphics
 			barrier.image.slice = slice;
 			return barrier;
 		}
-		static GPUBarrier Buffer(const GPUBuffer* buffer, RESOURCE_STATE before, RESOURCE_STATE after)
+		static GPUBarrier Buffer(const GPUBuffer* buffer, ResourceState before, ResourceState after)
 		{
 			GPUBarrier barrier;
-			barrier.type = BUFFER_BARRIER;
+			barrier.type = Type::BUFFER;
 			barrier.buffer.buffer = buffer;
 			barrier.buffer.state_before = before;
 			barrier.buffer.state_after = after;
 			return barrier;
 		}
 	};
+
 	struct RenderPassAttachment
 	{
-		enum TYPE
+		enum class Type
 		{
 			RENDERTARGET,
 			DEPTH_STENCIL,
 			RESOLVE,
 			SHADING_RATE_SOURCE
-		} type = RENDERTARGET;
-		enum LOAD_OPERATION
+		} type = Type::RENDERTARGET;
+		enum class LoadOp
 		{
-			LOADOP_LOAD,
-			LOADOP_CLEAR,
-			LOADOP_DONTCARE,
-		} loadop = LOADOP_LOAD;
+			LOAD,
+			CLEAR,
+			DONTCARE,
+		} loadop = LoadOp::LOAD;
 		const Texture* texture = nullptr;
 		int subresource = -1;
-		enum STORE_OPERATION
+		enum class StoreOp
 		{
-			STOREOP_STORE,
-			STOREOP_DONTCARE,
-		} storeop = STOREOP_STORE;
-		RESOURCE_STATE initial_layout = RESOURCE_STATE_UNDEFINED;	// layout before the render pass
-		RESOURCE_STATE subpass_layout = RESOURCE_STATE_UNDEFINED;	// layout within the render pass
-		RESOURCE_STATE final_layout = RESOURCE_STATE_UNDEFINED;		// layout after the render pass
+			STORE,
+			DONTCARE,
+		} storeop = StoreOp::STORE;
+		ResourceState initial_layout = ResourceState::UNDEFINED;	// layout before the render pass
+		ResourceState subpass_layout = ResourceState::UNDEFINED;	// layout within the render pass
+		ResourceState final_layout = ResourceState::UNDEFINED;		// layout after the render pass
 
 		static RenderPassAttachment RenderTarget(
 			const Texture* resource = nullptr,
-			LOAD_OPERATION load_op = LOADOP_LOAD,
-			STORE_OPERATION store_op = STOREOP_STORE,
-			RESOURCE_STATE initial_layout = RESOURCE_STATE_SHADER_RESOURCE,
-			RESOURCE_STATE subpass_layout = RESOURCE_STATE_RENDERTARGET,
-			RESOURCE_STATE final_layout = RESOURCE_STATE_SHADER_RESOURCE
+			LoadOp load_op = LoadOp::LOAD,
+			StoreOp store_op = StoreOp::STORE,
+			ResourceState initial_layout = ResourceState::SHADER_RESOURCE,
+			ResourceState subpass_layout = ResourceState::RENDERTARGET,
+			ResourceState final_layout = ResourceState::SHADER_RESOURCE
 		)
 		{
 			RenderPassAttachment attachment;
-			attachment.type = RENDERTARGET;
+			attachment.type = Type::RENDERTARGET;
 			attachment.texture = resource;
 			attachment.loadop = load_op;
 			attachment.storeop = store_op;
@@ -685,15 +662,15 @@ namespace wiGraphics
 
 		static RenderPassAttachment DepthStencil(
 			const Texture* resource = nullptr,
-			LOAD_OPERATION load_op = LOADOP_LOAD,
-			STORE_OPERATION store_op = STOREOP_STORE,
-			RESOURCE_STATE initial_layout = RESOURCE_STATE_DEPTHSTENCIL,
-			RESOURCE_STATE subpass_layout = RESOURCE_STATE_DEPTHSTENCIL,
-			RESOURCE_STATE final_layout = RESOURCE_STATE_DEPTHSTENCIL
+			LoadOp load_op = LoadOp::LOAD,
+			StoreOp store_op = StoreOp::STORE,
+			ResourceState initial_layout = ResourceState::DEPTHSTENCIL,
+			ResourceState subpass_layout = ResourceState::DEPTHSTENCIL,
+			ResourceState final_layout = ResourceState::DEPTHSTENCIL
 		)
 		{
 			RenderPassAttachment attachment;
-			attachment.type = DEPTH_STENCIL;
+			attachment.type = Type::DEPTH_STENCIL;
 			attachment.texture = resource;
 			attachment.loadop = load_op;
 			attachment.storeop = store_op;
@@ -705,12 +682,12 @@ namespace wiGraphics
 
 		static RenderPassAttachment Resolve(
 			const Texture* resource = nullptr,
-			RESOURCE_STATE initial_layout = RESOURCE_STATE_SHADER_RESOURCE,
-			RESOURCE_STATE final_layout = RESOURCE_STATE_SHADER_RESOURCE
+			ResourceState initial_layout = ResourceState::SHADER_RESOURCE,
+			ResourceState final_layout = ResourceState::SHADER_RESOURCE
 		)
 		{
 			RenderPassAttachment attachment;
-			attachment.type = RESOLVE;
+			attachment.type = Type::RESOLVE;
 			attachment.texture = resource;
 			attachment.initial_layout = initial_layout;
 			attachment.final_layout = final_layout;
@@ -719,67 +696,74 @@ namespace wiGraphics
 
 		static RenderPassAttachment ShadingRateSource(
 			const Texture* resource = nullptr,
-			RESOURCE_STATE initial_layout = RESOURCE_STATE_SHADING_RATE_SOURCE,
-			RESOURCE_STATE final_layout = RESOURCE_STATE_SHADING_RATE_SOURCE
+			ResourceState initial_layout = ResourceState::SHADING_RATE_SOURCE,
+			ResourceState final_layout = ResourceState::SHADING_RATE_SOURCE
 		)
 		{
 			RenderPassAttachment attachment;
-			attachment.type = SHADING_RATE_SOURCE;
+			attachment.type = Type::SHADING_RATE_SOURCE;
 			attachment.texture = resource;
 			attachment.initial_layout = initial_layout;
-			attachment.subpass_layout = RESOURCE_STATE_SHADING_RATE_SOURCE;
+			attachment.subpass_layout = ResourceState::SHADING_RATE_SOURCE;
 			attachment.final_layout = final_layout;
 			return attachment;
 		}
 	};
+
 	struct RenderPassDesc
 	{
-		enum FLAGS
+		enum class Flags
 		{
-			FLAG_EMPTY = 0,
-			FLAG_ALLOW_UAV_WRITES = 1 << 0,
+			EMPTY = 0,
+			ALLOW_UAV_WRITES = 1 << 0,
 		};
-		uint32_t _flags = FLAG_EMPTY;
+		Flags flags = Flags::EMPTY;
 		std::vector<RenderPassAttachment> attachments;
 	};
+
 	struct SwapChainDesc
 	{
 		uint32_t width = 0;
 		uint32_t height = 0;
-		uint32_t buffercount = 2;
-		FORMAT format = FORMAT_R10G10B10A2_UNORM;
+		uint32_t buffer_count = 2;
+		Format format = Format::R10G10B10A2_UNORM;
 		bool fullscreen = false;
 		bool vsync = true;
-		float clearcolor[4] = { 0,0,0,1 };
+		float clear_color[4] = { 0,0,0,1 };
 		bool allow_hdr = true;
 	};
+
 	struct IndirectDrawArgsInstanced
 	{
-		uint32_t VertexCountPerInstance = 0;
-		uint32_t InstanceCount = 0;
-		uint32_t StartVertexLocation = 0;
-		uint32_t StartInstanceLocation = 0;
+		uint32_t vertex_count_per_instance = 0;
+		uint32_t instance_count = 0;
+		uint32_t start_vertex_location = 0;
+		uint32_t start_instance_location = 0;
 	};
+
 	struct IndirectDrawArgsIndexedInstanced
 	{
-		uint32_t IndexCountPerInstance = 0;
-		uint32_t InstanceCount = 0;
-		uint32_t StartIndexLocation = 0;
-		int32_t BaseVertexLocation = 0;
-		uint32_t StartInstanceLocation = 0;
+		uint32_t index_count_per_instance = 0;
+		uint32_t instance_count = 0;
+		uint32_t start_index_location = 0;
+		int32_t base_vertex_location = 0;
+		uint32_t start_instance_location = 0;
 	};
+
 	struct IndirectDispatchArgs
 	{
-		uint32_t ThreadGroupCountX = 0;
-		uint32_t ThreadGroupCountY = 0;
-		uint32_t ThreadGroupCountZ = 0;
+		uint32_t thread_group_count_x = 0;
+		uint32_t thread_group_count_y = 0;
+		uint32_t thread_group_count_z = 0;
 	};
+
 	struct SubresourceData
 	{
-		const void *pData = nullptr;
-		uint32_t rowPitch = 0;
-		uint32_t slicePitch = 0;
+		const void *data_ptr = nullptr;
+		uint32_t row_pitch = 0;
+		uint32_t slice_pitch = 0;
 	};
+
 	struct Rect
 	{
 		int32_t left = 0;
@@ -803,6 +787,7 @@ namespace wiGraphics
 
 		const SamplerDesc& GetDesc() const { return desc; }
 	};
+
 	struct StaticSampler
 	{
 		Sampler sampler;
@@ -811,22 +796,22 @@ namespace wiGraphics
 
 	struct Shader : public GraphicsDeviceChild
 	{
-		SHADERSTAGE stage = SHADERSTAGE_COUNT;
+		ShaderStage stage = ShaderStage::Count;
 		std::vector<StaticSampler> auto_samplers; // ability to set static samplers without explicit root signature
 	};
 
 	struct GPUResource : public GraphicsDeviceChild
 	{
-		enum class GPU_RESOURCE_TYPE
+		enum class Type
 		{
 			BUFFER,
 			TEXTURE,
 			RAYTRACING_ACCELERATION_STRUCTURE,
 			UNKNOWN_TYPE,
-		} type = GPU_RESOURCE_TYPE::UNKNOWN_TYPE;
-		inline bool IsTexture() const { return type == GPU_RESOURCE_TYPE::TEXTURE; }
-		inline bool IsBuffer() const { return type == GPU_RESOURCE_TYPE::BUFFER; }
-		inline bool IsAccelerationStructure() const { return type == GPU_RESOURCE_TYPE::RAYTRACING_ACCELERATION_STRUCTURE; }
+		} type = Type::UNKNOWN_TYPE;
+		inline bool IsTexture() const { return type == Type::TEXTURE; }
+		inline bool IsBuffer() const { return type == Type::BUFFER; }
+		inline bool IsAccelerationStructure() const { return type == Type::RAYTRACING_ACCELERATION_STRUCTURE; }
 
 		void* mapped_data = nullptr;
 		uint32_t mapped_rowpitch = 0;
@@ -879,7 +864,7 @@ namespace wiGraphics
 
 	struct RaytracingAccelerationStructureDesc
 	{
-		enum FLAGS
+		enum Flags
 		{
 			FLAG_EMPTY = 0,
 			FLAG_ALLOW_UPDATE = 1 << 0,
@@ -888,13 +873,13 @@ namespace wiGraphics
 			FLAG_PREFER_FAST_BUILD = 1 << 3,
 			FLAG_MINIMIZE_MEMORY = 1 << 4,
 		};
-		uint32_t _flags = FLAG_EMPTY;
+		uint32_t flags = FLAG_EMPTY;
 
-		enum TYPE
+		enum class Type
 		{
 			BOTTOMLEVEL,
 			TOPLEVEL,
-		} type = BOTTOMLEVEL;
+		} type = Type::BOTTOMLEVEL;
 
 		struct BottomLevel
 		{
@@ -907,31 +892,31 @@ namespace wiGraphics
 					FLAG_NO_DUPLICATE_ANYHIT_INVOCATION = 1 << 1,
 					FLAG_USE_TRANSFORM = 1 << 2,
 				};
-				uint32_t _flags = FLAG_EMPTY;
+				uint32_t flags = FLAG_EMPTY;
 
-				enum TYPE
+				enum class Type
 				{
 					TRIANGLES,
 					PROCEDURAL_AABBS,
-				} type = TRIANGLES;
+				} type = Type::TRIANGLES;
 
 				struct Triangles
 				{
-					GPUBuffer vertexBuffer;
-					GPUBuffer indexBuffer;
-					uint32_t indexCount = 0;
-					uint32_t indexOffset = 0;
-					uint32_t vertexCount = 0;
-					uint32_t vertexByteOffset = 0;
-					uint32_t vertexStride = 0;
-					INDEXBUFFER_FORMAT indexFormat = INDEXFORMAT_32BIT;
-					FORMAT vertexFormat = FORMAT_R32G32B32_FLOAT;
-					GPUBuffer transform3x4Buffer;
-					uint32_t transform3x4BufferOffset = 0;
+					GPUBuffer vertex_buffer;
+					GPUBuffer index_buffer;
+					uint32_t index_count = 0;
+					uint32_t index_offset = 0;
+					uint32_t vertex_count = 0;
+					uint32_t vertex_byte_offset = 0;
+					uint32_t vertex_stride = 0;
+					IndexBufferFormat index_format = IndexBufferFormat::UINT32;
+					Format vertex_format = Format::R32G32B32_FLOAT;
+					GPUBuffer transform_3x4_buffer;
+					uint32_t transform_3x4_buffer_offset = 0;
 				} triangles;
 				struct Procedural_AABBs
 				{
-					GPUBuffer aabbBuffer;
+					GPUBuffer aabb_buffer;
 					uint32_t offset = 0;
 					uint32_t count = 0;
 					uint32_t stride = 0;
@@ -939,7 +924,7 @@ namespace wiGraphics
 
 			};
 			std::vector<Geometry> geometries;
-		} bottomlevel;
+		} bottom_level;
 
 		struct TopLevel
 		{
@@ -954,16 +939,16 @@ namespace wiGraphics
 					FLAG_FORCE_NON_OPAQUE = 1 << 3,
 				};
 				XMFLOAT3X4 transform;
-				uint32_t InstanceID : 24;
-				uint32_t InstanceMask : 8;
-				uint32_t InstanceContributionToHitGroupIndex : 24;
-				uint32_t Flags : 8;
-				GPUResource bottomlevel;
+				uint32_t instance_id : 24;
+				uint32_t instance_mask : 8;
+				uint32_t instance_contribution_to_hit_group_index : 24;
+				uint32_t flags : 8;
+				GPUResource bottom_level;
 			};
-			GPUBuffer instanceBuffer;
+			GPUBuffer instance_buffer;
 			uint32_t offset = 0;
 			uint32_t count = 0;
-		} toplevel;
+		} top_level;
 	};
 	struct RaytracingAccelerationStructure : public GPUResource
 	{
@@ -974,35 +959,35 @@ namespace wiGraphics
 
 	struct ShaderLibrary
 	{
-		enum TYPE
+		enum class Type
 		{
 			RAYGENERATION,
 			MISS,
 			CLOSESTHIT,
 			ANYHIT,
 			INTERSECTION,
-		} type = RAYGENERATION;
+		} type = Type::RAYGENERATION;
 		const Shader* shader = nullptr;
 		std::string function_name;
 	};
 	struct ShaderHitGroup
 	{
-		enum TYPE
+		enum class Type
 		{
 			GENERAL, // raygen or miss
 			TRIANGLES,
 			PROCEDURAL,
-		} type = TRIANGLES;
+		} type = Type::TRIANGLES;
 		std::string name;
 		uint32_t general_shader = ~0;
-		uint32_t closesthit_shader = ~0;
-		uint32_t anyhit_shader = ~0;
+		uint32_t closest_hit_shader = ~0;
+		uint32_t any_hit_shader = ~0;
 		uint32_t intersection_shader = ~0;
 	};
 	struct RaytracingPipelineStateDesc
 	{
-		std::vector<ShaderLibrary> shaderlibraries;
-		std::vector<ShaderHitGroup> hitgroups;
+		std::vector<ShaderLibrary> shader_libraries;
+		std::vector<ShaderHitGroup> hit_groups;
 		uint32_t max_trace_recursion_depth = 1;
 		uint32_t max_attribute_size_in_bytes = 0;
 		uint32_t max_payload_size_in_bytes = 0;
@@ -1023,74 +1008,74 @@ namespace wiGraphics
 	};
 	struct DispatchRaysDesc
 	{
-		ShaderTable raygeneration;
+		ShaderTable ray_generation;
 		ShaderTable miss;
-		ShaderTable hitgroup;
+		ShaderTable hit_group;
 		ShaderTable callable;
-		uint32_t Width = 1;
-		uint32_t Height = 1;
-		uint32_t Depth = 1;
+		uint32_t width = 1;
+		uint32_t height = 1;
+		uint32_t depth = 1;
 	};
 
 
-	constexpr bool IsFormatUnorm(FORMAT format)
+	constexpr bool IsFormatUnorm(Format format)
 	{
 		switch (format)
 		{
-		case FORMAT_R16G16B16A16_UNORM:
-		case FORMAT_R10G10B10A2_UNORM:
-		case FORMAT_R8G8B8A8_UNORM:
-		case FORMAT_R8G8B8A8_UNORM_SRGB:
-		case FORMAT_B8G8R8A8_UNORM:
-		case FORMAT_B8G8R8A8_UNORM_SRGB:
-		case FORMAT_R16G16_UNORM:
-		case FORMAT_D24_UNORM_S8_UINT:
-		case FORMAT_R8G8_UNORM:
-		case FORMAT_D16_UNORM:
-		case FORMAT_R16_UNORM:
-		case FORMAT_R8_UNORM:
+		case Format::R16G16B16A16_UNORM:
+		case Format::R10G10B10A2_UNORM:
+		case Format::R8G8B8A8_UNORM:
+		case Format::R8G8B8A8_UNORM_SRGB:
+		case Format::B8G8R8A8_UNORM:
+		case Format::B8G8R8A8_UNORM_SRGB:
+		case Format::R16G16_UNORM:
+		case Format::D24_UNORM_S8_UINT:
+		case Format::R8G8_UNORM:
+		case Format::D16_UNORM:
+		case Format::R16_UNORM:
+		case Format::R8_UNORM:
 			return true;
 		}
 
 		return false;
 	}
-	constexpr bool IsFormatBlockCompressed(FORMAT format)
+	constexpr bool IsFormatBlockCompressed(Format format)
 	{
 		switch (format)
 		{
-		case FORMAT_BC1_UNORM:
-		case FORMAT_BC1_UNORM_SRGB:
-		case FORMAT_BC2_UNORM:
-		case FORMAT_BC2_UNORM_SRGB:
-		case FORMAT_BC3_UNORM:
-		case FORMAT_BC3_UNORM_SRGB:
-		case FORMAT_BC4_UNORM:
-		case FORMAT_BC4_SNORM:
-		case FORMAT_BC5_UNORM:
-		case FORMAT_BC5_SNORM:
-		case FORMAT_BC6H_UF16:
-		case FORMAT_BC6H_SF16:
-		case FORMAT_BC7_UNORM:
-		case FORMAT_BC7_UNORM_SRGB:
+		case Format::BC1_UNORM:
+		case Format::BC1_UNORM_SRGB:
+		case Format::BC2_UNORM:
+		case Format::BC2_UNORM_SRGB:
+		case Format::BC3_UNORM:
+		case Format::BC3_UNORM_SRGB:
+		case Format::BC4_UNORM:
+		case Format::BC4_SNORM:
+		case Format::BC5_UNORM:
+		case Format::BC5_SNORM:
+		case Format::BC6H_UF16:
+		case Format::BC6H_SF16:
+		case Format::BC7_UNORM:
+		case Format::BC7_UNORM_SRGB:
 			return true;
 		}
 
 		return false;
 	}
-	constexpr bool IsFormatStencilSupport(FORMAT format)
+	constexpr bool IsFormatStencilSupport(Format format)
 	{
 		switch (format)
 		{
-		case FORMAT_R32G8X24_TYPELESS:
-		case FORMAT_D32_FLOAT_S8X24_UINT:
-		case FORMAT_R24G8_TYPELESS:
-		case FORMAT_D24_UNORM_S8_UINT:
+		case Format::R32G8X24_TYPELESS:
+		case Format::D32_FLOAT_S8X24_UINT:
+		case Format::R24G8_TYPELESS:
+		case Format::D24_UNORM_S8_UINT:
 			return true;
 		}
 
 		return false;
 	}
-	constexpr uint32_t GetFormatBlockSize(FORMAT format)
+	constexpr uint32_t GetFormatBlockSize(Format format)
 	{
 		if(IsFormatBlockCompressed(format))
 		{
@@ -1098,91 +1083,91 @@ namespace wiGraphics
 		}
 		return 1u;
 	}
-	constexpr uint32_t GetFormatStride(FORMAT format)
+	constexpr uint32_t GetFormatStride(Format format)
 	{
 		switch (format)
 		{
-		case FORMAT_BC1_UNORM:
-		case FORMAT_BC1_UNORM_SRGB:
-		case FORMAT_BC4_SNORM:
-		case FORMAT_BC4_UNORM:
+		case Format::BC1_UNORM:
+		case Format::BC1_UNORM_SRGB:
+		case Format::BC4_SNORM:
+		case Format::BC4_UNORM:
 			return 8u;
 
-		case FORMAT_R32G32B32A32_FLOAT:
-		case FORMAT_R32G32B32A32_UINT:
-		case FORMAT_R32G32B32A32_SINT:
-		case FORMAT_BC2_UNORM:
-		case FORMAT_BC2_UNORM_SRGB:
-		case FORMAT_BC3_UNORM:
-		case FORMAT_BC3_UNORM_SRGB:
-		case FORMAT_BC5_SNORM:
-		case FORMAT_BC5_UNORM:
-		case FORMAT_BC6H_UF16:
-		case FORMAT_BC6H_SF16:
-		case FORMAT_BC7_UNORM:
-		case FORMAT_BC7_UNORM_SRGB:
+		case Format::R32G32B32A32_FLOAT:
+		case Format::R32G32B32A32_UINT:
+		case Format::R32G32B32A32_SINT:
+		case Format::BC2_UNORM:
+		case Format::BC2_UNORM_SRGB:
+		case Format::BC3_UNORM:
+		case Format::BC3_UNORM_SRGB:
+		case Format::BC5_SNORM:
+		case Format::BC5_UNORM:
+		case Format::BC6H_UF16:
+		case Format::BC6H_SF16:
+		case Format::BC7_UNORM:
+		case Format::BC7_UNORM_SRGB:
 			return 16u;
 
-		case FORMAT_R32G32B32_FLOAT:
-		case FORMAT_R32G32B32_UINT:
-		case FORMAT_R32G32B32_SINT:
+		case Format::R32G32B32_FLOAT:
+		case Format::R32G32B32_UINT:
+		case Format::R32G32B32_SINT:
 			return 12u;
 
-		case FORMAT_R16G16B16A16_FLOAT:
-		case FORMAT_R16G16B16A16_UNORM:
-		case FORMAT_R16G16B16A16_UINT:
-		case FORMAT_R16G16B16A16_SNORM:
-		case FORMAT_R16G16B16A16_SINT:
+		case Format::R16G16B16A16_FLOAT:
+		case Format::R16G16B16A16_UNORM:
+		case Format::R16G16B16A16_UINT:
+		case Format::R16G16B16A16_SNORM:
+		case Format::R16G16B16A16_SINT:
 			return 8u;
 
-		case FORMAT_R32G32_FLOAT:
-		case FORMAT_R32G32_UINT:
-		case FORMAT_R32G32_SINT:
-		case FORMAT_R32G8X24_TYPELESS:
-		case FORMAT_D32_FLOAT_S8X24_UINT:
+		case Format::R32G32_FLOAT:
+		case Format::R32G32_UINT:
+		case Format::R32G32_SINT:
+		case Format::R32G8X24_TYPELESS:
+		case Format::D32_FLOAT_S8X24_UINT:
 			return 8u;
 
-		case FORMAT_R10G10B10A2_UNORM:
-		case FORMAT_R10G10B10A2_UINT:
-		case FORMAT_R11G11B10_FLOAT:
-		case FORMAT_R8G8B8A8_UNORM:
-		case FORMAT_R8G8B8A8_UNORM_SRGB:
-		case FORMAT_R8G8B8A8_UINT:
-		case FORMAT_R8G8B8A8_SNORM:
-		case FORMAT_R8G8B8A8_SINT:
-		case FORMAT_B8G8R8A8_UNORM:
-		case FORMAT_B8G8R8A8_UNORM_SRGB:
-		case FORMAT_R16G16_FLOAT:
-		case FORMAT_R16G16_UNORM:
-		case FORMAT_R16G16_UINT:
-		case FORMAT_R16G16_SNORM:
-		case FORMAT_R16G16_SINT:
-		case FORMAT_R32_TYPELESS:
-		case FORMAT_D32_FLOAT:
-		case FORMAT_R32_FLOAT:
-		case FORMAT_R32_UINT:
-		case FORMAT_R32_SINT:
-		case FORMAT_R24G8_TYPELESS:
-		case FORMAT_D24_UNORM_S8_UINT:
+		case Format::R10G10B10A2_UNORM:
+		case Format::R10G10B10A2_UINT:
+		case Format::R11G11B10_FLOAT:
+		case Format::R8G8B8A8_UNORM:
+		case Format::R8G8B8A8_UNORM_SRGB:
+		case Format::R8G8B8A8_UINT:
+		case Format::R8G8B8A8_SNORM:
+		case Format::R8G8B8A8_SINT:
+		case Format::B8G8R8A8_UNORM:
+		case Format::B8G8R8A8_UNORM_SRGB:
+		case Format::R16G16_FLOAT:
+		case Format::R16G16_UNORM:
+		case Format::R16G16_UINT:
+		case Format::R16G16_SNORM:
+		case Format::R16G16_SINT:
+		case Format::R32_TYPELESS:
+		case Format::D32_FLOAT:
+		case Format::R32_FLOAT:
+		case Format::R32_UINT:
+		case Format::R32_SINT:
+		case Format::R24G8_TYPELESS:
+		case Format::D24_UNORM_S8_UINT:
 			return 4u;
 
-		case FORMAT_R8G8_UNORM:
-		case FORMAT_R8G8_UINT:
-		case FORMAT_R8G8_SNORM:
-		case FORMAT_R8G8_SINT:
-		case FORMAT_R16_TYPELESS:
-		case FORMAT_R16_FLOAT:
-		case FORMAT_D16_UNORM:
-		case FORMAT_R16_UNORM:
-		case FORMAT_R16_UINT:
-		case FORMAT_R16_SNORM:
-		case FORMAT_R16_SINT:
+		case Format::R8G8_UNORM:
+		case Format::R8G8_UINT:
+		case Format::R8G8_SNORM:
+		case Format::R8G8_SINT:
+		case Format::R16_TYPELESS:
+		case Format::R16_FLOAT:
+		case Format::D16_UNORM:
+		case Format::R16_UNORM:
+		case Format::R16_UINT:
+		case Format::R16_SNORM:
+		case Format::R16_SINT:
 			return 2u;
 
-		case FORMAT_R8_UNORM:
-		case FORMAT_R8_UINT:
-		case FORMAT_R8_SNORM:
-		case FORMAT_R8_SINT:
+		case Format::R8_UNORM:
+		case Format::R8_UINT:
+		case Format::R8_SNORM:
+		case Format::R8_SINT:
 			return 1u;
 
 
@@ -1195,3 +1180,28 @@ namespace wiGraphics
 	}
 
 }
+
+template<>
+struct enable_bitmask_operators<wiGraphics::ColorWrite> {
+	static const bool enable = true;
+};
+template<>
+struct enable_bitmask_operators<wiGraphics::BindFlag> {
+	static const bool enable = true;
+};
+template<>
+struct enable_bitmask_operators<wiGraphics::ResourceMiscFlag> {
+	static const bool enable = true;
+};
+template<>
+struct enable_bitmask_operators<wiGraphics::GraphicsDeviceCapability> {
+	static const bool enable = true;
+};
+template<>
+struct enable_bitmask_operators<wiGraphics::ResourceState> {
+	static const bool enable = true;
+};
+template<>
+struct enable_bitmask_operators<wiGraphics::RenderPassDesc::Flags> {
+	static const bool enable = true;
+};

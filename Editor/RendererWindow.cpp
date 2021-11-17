@@ -181,7 +181,7 @@ void RendererWindow::Create(EditorComponent* editor)
 		});
 	variableRateShadingClassificationCheckBox.SetCheck(wiRenderer::GetVariableRateShadingClassification());
 	AddWidget(&variableRateShadingClassificationCheckBox);
-	variableRateShadingClassificationCheckBox.SetEnabled(wiRenderer::GetDevice()->CheckCapability(wiGraphics::GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2));
+	variableRateShadingClassificationCheckBox.SetEnabled(wiGraphics::GetDevice()->CheckCapability(wiGraphics::GraphicsDeviceCapability::VARIABLE_RATE_SHADING_TIER2));
 
 	variableRateShadingClassificationDebugCheckBox.Create("DEBUG: ");
 	variableRateShadingClassificationDebugCheckBox.SetTooltip("Toggle visualization of variable rate shading classification feature");
@@ -192,7 +192,7 @@ void RendererWindow::Create(EditorComponent* editor)
 		});
 	variableRateShadingClassificationDebugCheckBox.SetCheck(wiRenderer::GetVariableRateShadingClassificationDebug());
 	AddWidget(&variableRateShadingClassificationDebugCheckBox);
-	variableRateShadingClassificationDebugCheckBox.SetEnabled(wiRenderer::GetDevice()->CheckCapability(wiGraphics::GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2));
+	variableRateShadingClassificationDebugCheckBox.SetEnabled(wiGraphics::GetDevice()->CheckCapability(wiGraphics::GraphicsDeviceCapability::VARIABLE_RATE_SHADING_TIER2));
 
 	advancedLightCullingCheckBox.Create("2.5D Light Culling: ");
 	advancedLightCullingCheckBox.SetTooltip("Enable a more aggressive light culling approach which can result in slower culling but faster rendering (Tiled renderer only)");
@@ -223,7 +223,7 @@ void RendererWindow::Create(EditorComponent* editor)
 	});
 	tessellationCheckBox.SetCheck(wiRenderer::GetTessellationEnabled());
 	AddWidget(&tessellationCheckBox);
-	tessellationCheckBox.SetEnabled(wiRenderer::GetDevice()->CheckCapability(wiGraphics::GRAPHICSDEVICE_CAPABILITY_TESSELLATION));
+	tessellationCheckBox.SetEnabled(wiGraphics::GetDevice()->CheckCapability(wiGraphics::GraphicsDeviceCapability::TESSELLATION));
 
 	speedMultiplierSlider.Create(0, 4, 1, 100000, "Speed: ");
 	speedMultiplierSlider.SetTooltip("Adjust the global speed (time multiplier)");
@@ -249,7 +249,7 @@ void RendererWindow::Create(EditorComponent* editor)
 	shadowTypeComboBox.SetSize(XMFLOAT2(100, itemheight));
 	shadowTypeComboBox.SetPos(XMFLOAT2(x, y += step));
 	shadowTypeComboBox.AddItem("Shadowmaps");
-	if (wiRenderer::GetDevice()->CheckCapability(wiGraphics::GRAPHICSDEVICE_CAPABILITY_RAYTRACING))
+	if (wiGraphics::GetDevice()->CheckCapability(wiGraphics::GraphicsDeviceCapability::RAYTRACING))
 	{
 		shadowTypeComboBox.AddItem("Ray traced");
 	}
@@ -422,16 +422,16 @@ void RendererWindow::Create(EditorComponent* editor)
 		switch (args.iValue)
 		{
 		case 0:
-			desc.Filter = wiGraphics::FILTER_MIN_MAG_MIP_POINT;
+			desc.filter = wiGraphics::Filter::MIN_MAG_MIP_POINT;
 			break;
 		case 1:
-			desc.Filter = wiGraphics::FILTER_MIN_MAG_LINEAR_MIP_POINT;
+			desc.filter = wiGraphics::Filter::MIN_MAG_LINEAR_MIP_POINT;
 			break;
 		case 2:
-			desc.Filter = wiGraphics::FILTER_MIN_MAG_MIP_LINEAR;
+			desc.filter = wiGraphics::Filter::MIN_MAG_MIP_LINEAR;
 			break;
 		case 3:
-			desc.Filter = wiGraphics::FILTER_ANISOTROPIC;
+			desc.filter = wiGraphics::Filter::ANISOTROPIC;
 			break;
 		default:
 			break;
@@ -450,7 +450,7 @@ void RendererWindow::Create(EditorComponent* editor)
 	mipLodBiasSlider.SetPos(XMFLOAT2(x, y += step));
 	mipLodBiasSlider.OnSlide([&](wiEventArgs args) {
 		wiGraphics::SamplerDesc desc = wiRenderer::GetSampler(SSLOT_OBJECTSHADER)->GetDesc();
-		desc.MipLODBias = wiMath::Clamp(args.fValue, -15.9f, 15.9f);
+		desc.mip_lod_bias = wiMath::Clamp(args.fValue, -15.9f, 15.9f);
 		wiRenderer::ModifyObjectSampler(desc);
 	});
 	AddWidget(&mipLodBiasSlider);
@@ -727,20 +727,20 @@ void RendererWindow::UpdateSwapChainFormats(wiGraphics::SwapChain* swapChain)
 {
 	swapchainComboBox.OnSelect(nullptr);
 	swapchainComboBox.ClearItems();
-	swapchainComboBox.AddItem("SDR 8bit", wiGraphics::FORMAT_R8G8B8A8_UNORM);
-	swapchainComboBox.AddItem("SDR 10bit", wiGraphics::FORMAT_R10G10B10A2_UNORM);
-	if (wiRenderer::GetDevice()->GetSwapChainHDRSupport(swapChain))
+	swapchainComboBox.AddItem("SDR 8bit", static_cast<uint64_t>(wiGraphics::Format::R8G8B8A8_UNORM));
+	swapchainComboBox.AddItem("SDR 10bit", static_cast<uint64_t>(wiGraphics::Format::R10G10B10A2_UNORM));
+	if (wiGraphics::GetDevice()->IsSwapChainSupportsHDR(swapChain))
 	{
-		swapchainComboBox.AddItem("HDR 10bit", wiGraphics::FORMAT_R10G10B10A2_UNORM);
-		swapchainComboBox.AddItem("HDR 16bit", wiGraphics::FORMAT_R16G16B16A16_FLOAT);
+		swapchainComboBox.AddItem("HDR 10bit", static_cast<uint64_t>(wiGraphics::Format::R10G10B10A2_UNORM));
+		swapchainComboBox.AddItem("HDR 16bit", static_cast<uint64_t>(wiGraphics::Format::R16G16B16A16_FLOAT));
 
 		switch (swapChain->desc.format)
 		{
 		default:
-		case wiGraphics::FORMAT_R8G8B8A8_UNORM:
+		case wiGraphics::Format::R8G8B8A8_UNORM:
 			swapchainComboBox.SetSelected(0);
 			break;
-		case wiGraphics::FORMAT_R10G10B10A2_UNORM:
+		case wiGraphics::Format::R10G10B10A2_UNORM:
 			if (swapChain->desc.allow_hdr)
 			{
 				swapchainComboBox.SetSelected(2);
@@ -750,7 +750,7 @@ void RendererWindow::UpdateSwapChainFormats(wiGraphics::SwapChain* swapChain)
 				swapchainComboBox.SetSelected(1);
 			}
 			break;
-		case wiGraphics::FORMAT_R16G16B16A16_FLOAT:
+		case wiGraphics::Format::R16G16B16A16_FLOAT:
 			swapchainComboBox.SetSelected(4);
 			break;
 		}
@@ -760,13 +760,13 @@ void RendererWindow::UpdateSwapChainFormats(wiGraphics::SwapChain* swapChain)
 		switch (swapChain->desc.format)
 		{
 		default:
-		case wiGraphics::FORMAT_R8G8B8A8_UNORM:
+		case wiGraphics::Format::R8G8B8A8_UNORM:
 			swapchainComboBox.SetSelected(0);
 			break;
-		case wiGraphics::FORMAT_R10G10B10A2_UNORM:
+		case wiGraphics::Format::R10G10B10A2_UNORM:
 			swapchainComboBox.SetSelected(1);
 			break;
-		case wiGraphics::FORMAT_R16G16B16A16_FLOAT:
+		case wiGraphics::Format::R16G16B16A16_FLOAT:
 			swapchainComboBox.SetSelected(1);
 			break;
 		}
@@ -774,7 +774,7 @@ void RendererWindow::UpdateSwapChainFormats(wiGraphics::SwapChain* swapChain)
 
 	swapchainComboBox.OnSelect([=](wiEventArgs args) {
 
-		swapChain->desc.format = (wiGraphics::FORMAT)args.userdata;
+		swapChain->desc.format = (wiGraphics::Format)args.userdata;
 		switch (args.iValue)
 		{
 		default:
@@ -788,7 +788,7 @@ void RendererWindow::UpdateSwapChainFormats(wiGraphics::SwapChain* swapChain)
 			break;
 		}
 
-		bool success = wiRenderer::GetDevice()->CreateSwapChain(&swapChain->desc, nullptr, swapChain);
+		bool success = wiGraphics::GetDevice()->CreateSwapChain(&swapChain->desc, nullptr, swapChain);
 		assert(success);
 		});
 }

@@ -1020,9 +1020,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphics.h">
       <Filter>ENGINE\Graphics\API</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\replace_new.h">
-      <Filter>UTILITY</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiSpriteFont.h">
       <Filter>ENGINE\Graphics</Filter>
     </ClInclude>
