@@ -15,25 +15,19 @@ namespace wiGraphics
 	struct CommandList
 	{
 		using index_type = uint8_t;
-
-		constexpr explicit CommandList(index_type indexValue)
-			: index(indexValue)
-		{}
+		index_type index;
 		constexpr operator uint8_t() const { return index; }
-
-	private:
-		uint8_t index;
 	};
-	static const CommandList::index_type COMMANDLIST_COUNT = 32; // If you increase command list count, more memory will be statically allocated for per-command list resources
-	static const CommandList INVALID_COMMANDLIST = CommandList { COMMANDLIST_COUNT };
+	static constexpr CommandList COMMANDLIST_COUNT{ 32 }; // If you increase command list count, more memory will be statically allocated for per-command list resources
+	static constexpr CommandList INVALID_COMMANDLIST{ COMMANDLIST_COUNT };
 
 	// Descriptor binding counts:
 	//	It's OK increase these limits if not enough
 	//	But it's better to refactor shaders to use bindless descriptors if they require more resources
-	static const uint32_t DESCRIPTORBINDER_CBV_COUNT = 15;
-	static const uint32_t DESCRIPTORBINDER_SRV_COUNT = 64;
-	static const uint32_t DESCRIPTORBINDER_UAV_COUNT = 16;
-	static const uint32_t DESCRIPTORBINDER_SAMPLER_COUNT = 16;
+	static constexpr uint32_t DESCRIPTORBINDER_CBV_COUNT = 15;
+	static constexpr uint32_t DESCRIPTORBINDER_SRV_COUNT = 64;
+	static constexpr uint32_t DESCRIPTORBINDER_UAV_COUNT = 16;
+	static constexpr uint32_t DESCRIPTORBINDER_SAMPLER_COUNT = 16;
 	struct DescriptorBindingTable
 	{
 		GPUBuffer CBV[DESCRIPTORBINDER_CBV_COUNT];
