@@ -16,10 +16,10 @@ namespace wiGraphics
 	{
 		using index_type = uint8_t;
 		index_type index = ~0;
-		constexpr operator uint8_t() const { return index; }
+		constexpr operator index_type() const { return index; }
 	};
-	static constexpr uint8_t COMMANDLIST_COUNT = 32;	// If you increase command list count, more memory will be statically allocated for per-command list resources
-	static constexpr CommandList INVALID_COMMANDLIST;	// CommandList is invalid if it's just declared, not started
+	static constexpr CommandList::index_type COMMANDLIST_COUNT = 32;	// If you increase command list count, more memory will be statically allocated for per-command list resources
+	static constexpr CommandList INVALID_COMMANDLIST;					// CommandList is invalid if it's just declared, but not started
 
 	// Descriptor binding counts:
 	//	It's OK increase these limits if not enough

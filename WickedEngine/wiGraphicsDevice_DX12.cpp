@@ -5359,7 +5359,7 @@ using namespace DX12_Internal;
 	{
 		HRESULT hr;
 
-		CommandList cmd = CommandList { cmd_count.fetch_add(1) };
+		CommandList cmd{ cmd_count.fetch_add(1) };
 		assert(cmd < COMMANDLIST_COUNT);
 		cmd_meta[cmd].queue = queue;
 		cmd_meta[cmd].waits.clear();
