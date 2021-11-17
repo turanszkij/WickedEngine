@@ -202,13 +202,14 @@ void EditorComponent::ResizeBuffers()
 	RenderPath2D::ResizeBuffers();
 
 	GraphicsDevice* device = wiGraphics::GetDevice();
-	bool hr;
 
 	renderPath->init(*this);
 	renderPath->ResizeBuffers();
 
 	if(renderPath->GetDepthStencil() != nullptr)
 	{
+		bool success = false;
+
 		XMUINT2 internalResolution = GetInternalResolution();
 
 		TextureDesc desc;
@@ -220,14 +221,14 @@ void EditorComponent::ResizeBuffers()
 		if (renderPath->getMSAASampleCount() > 1)
 		{
 			desc.sample_count = renderPath->getMSAASampleCount();
-			hr = device->CreateTexture(&desc, nullptr, &rt_selectionOutline_MSAA);
-			assert(hr);
+			success = device->CreateTexture(&desc, nullptr, &rt_selectionOutline_MSAA);
+			assert(success);
 			desc.sample_count = 1;
 		}
-		hr = device->CreateTexture(&desc, nullptr, &rt_selectionOutline[0]);
-		assert(hr);
-		hr = device->CreateTexture(&desc, nullptr, &rt_selectionOutline[1]);
-		assert(hr);
+		success = device->CreateTexture(&desc, nullptr, &rt_selectionOutline[0]);
+		assert(success);
+		success = device->CreateTexture(&desc, nullptr, &rt_selectionOutline[1]);
+		assert(success);
 
 		{
 			RenderPassDesc desc;
@@ -247,8 +248,8 @@ void EditorComponent::ResizeBuffers()
 					ResourceState::DEPTHSTENCIL_READONLY
 				)
 			);
-			hr = device->CreateRenderPass(&desc, &renderpass_selectionOutline[0]);
-			assert(hr);
+			success = device->CreateRenderPass(&desc, &renderpass_selectionOutline[0]);
+			assert(success);
 
 			if (renderPath->getMSAASampleCount() == 1)
 			{
@@ -258,8 +259,8 @@ void EditorComponent::ResizeBuffers()
 			{
 				desc.attachments[1].texture = &rt_selectionOutline[1]; // resolve
 			}
-			hr = device->CreateRenderPass(&desc, &renderpass_selectionOutline[1]);
-			assert(hr);
+			success = device->CreateRenderPass(&desc, &renderpass_selectionOutline[1]);
+			assert(success);
 		}
 	}
 
