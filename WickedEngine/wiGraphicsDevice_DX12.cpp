@@ -71,13 +71,13 @@ namespace DX12_Internal
 		}
 		else
 		{
-			if (has(value, ColorWrite::ENABLE_RED))
+			if (has_flag(value, ColorWrite::ENABLE_RED))
 				_flag |= D3D12_COLOR_WRITE_ENABLE_RED;
-			if (has(value, ColorWrite::ENABLE_GREEN))
+			if (has_flag(value, ColorWrite::ENABLE_GREEN))
 				_flag |= D3D12_COLOR_WRITE_ENABLE_GREEN;
-			if (has(value, ColorWrite::ENABLE_BLUE))
+			if (has_flag(value, ColorWrite::ENABLE_BLUE))
 				_flag |= D3D12_COLOR_WRITE_ENABLE_BLUE;
-			if (has(value, ColorWrite::ENABLE_ALPHA))
+			if (has_flag(value, ColorWrite::ENABLE_ALPHA))
 				_flag |= D3D12_COLOR_WRITE_ENABLE_ALPHA;
 		}
 
@@ -87,39 +87,39 @@ namespace DX12_Internal
 	{
 		D3D12_RESOURCE_STATES ret = {};
 
-		if (has(value, ResourceState::UNDEFINED))
+		if (has_flag(value, ResourceState::UNDEFINED))
 			ret |= D3D12_RESOURCE_STATE_COMMON;
-		if (has(value, ResourceState::SHADER_RESOURCE))
+		if (has_flag(value, ResourceState::SHADER_RESOURCE))
 			ret |= D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-		if (has(value, ResourceState::SHADER_RESOURCE_COMPUTE))
+		if (has_flag(value, ResourceState::SHADER_RESOURCE_COMPUTE))
 			ret |= D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-		if (has(value, ResourceState::UNORDERED_ACCESS))
+		if (has_flag(value, ResourceState::UNORDERED_ACCESS))
 			ret |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-		if (has(value, ResourceState::COPY_SRC))
+		if (has_flag(value, ResourceState::COPY_SRC))
 			ret |= D3D12_RESOURCE_STATE_COPY_SOURCE;
-		if (has(value, ResourceState::COPY_DST))
+		if (has_flag(value, ResourceState::COPY_DST))
 			ret |= D3D12_RESOURCE_STATE_COPY_DEST;
 
-		if (has(value, ResourceState::RENDERTARGET))
+		if (has_flag(value, ResourceState::RENDERTARGET))
 			ret |= D3D12_RESOURCE_STATE_RENDER_TARGET;
-		if (has(value, ResourceState::DEPTHSTENCIL))
+		if (has_flag(value, ResourceState::DEPTHSTENCIL))
 			ret |= D3D12_RESOURCE_STATE_DEPTH_WRITE;
-		if (has(value, ResourceState::DEPTHSTENCIL_READONLY))
+		if (has_flag(value, ResourceState::DEPTHSTENCIL_READONLY))
 			ret |= D3D12_RESOURCE_STATE_DEPTH_READ;
-		if (has(value, ResourceState::SHADING_RATE_SOURCE))
+		if (has_flag(value, ResourceState::SHADING_RATE_SOURCE))
 			ret |= D3D12_RESOURCE_STATE_SHADING_RATE_SOURCE;
 
-		if (has(value, ResourceState::VERTEX_BUFFER))
+		if (has_flag(value, ResourceState::VERTEX_BUFFER))
 			ret |= D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
-		if (has(value, ResourceState::INDEX_BUFFER))
+		if (has_flag(value, ResourceState::INDEX_BUFFER))
 			ret |= D3D12_RESOURCE_STATE_INDEX_BUFFER;
-		if (has(value, ResourceState::CONSTANT_BUFFER))
+		if (has_flag(value, ResourceState::CONSTANT_BUFFER))
 			ret |= D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
-		if (has(value, ResourceState::INDIRECT_ARGUMENT))
+		if (has_flag(value, ResourceState::INDIRECT_ARGUMENT))
 			ret |= D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
-		if (has(value, ResourceState::RAYTRACING_ACCELERATION_STRUCTURE))
+		if (has_flag(value, ResourceState::RAYTRACING_ACCELERATION_STRUCTURE))
 			ret |= D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE;
-		if (has(value, ResourceState::PREDICATION))
+		if (has_flag(value, ResourceState::PREDICATION))
 			ret |= D3D12_RESOURCE_STATE_PREDICATION;
 
 		return ret;
@@ -2835,7 +2835,7 @@ using namespace DX12_Internal;
 		HRESULT hr = E_FAIL;
 
 		UINT64 alignedSize = pDesc->size;
-		if (has(pDesc->bind_flags, BindFlag::CONSTANT_BUFFER))
+		if (has_flag(pDesc->bind_flags, BindFlag::CONSTANT_BUFFER))
 		{
 			alignedSize = AlignTo(alignedSize, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 		}
@@ -2850,12 +2850,12 @@ using namespace DX12_Internal;
 		resourceDesc.DepthOrArraySize = 1;
 		resourceDesc.Alignment = 0;
 		resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-		if (has(pDesc->bind_flags, BindFlag::UNORDERED_ACCESS))
+		if (has_flag(pDesc->bind_flags, BindFlag::UNORDERED_ACCESS))
 		{
 			resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 		}
 
-		if (!has(pDesc->bind_flags, BindFlag::SHADER_RESOURCE) && !has(pDesc->misc_flags, ResourceMiscFlag::RAY_TRACING))
+		if (!has_flag(pDesc->bind_flags, BindFlag::SHADER_RESOURCE) && !has_flag(pDesc->misc_flags, ResourceMiscFlag::RAY_TRACING))
 		{
 			resourceDesc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 		}
@@ -2927,11 +2927,11 @@ using namespace DX12_Internal;
 
 
 		// Create resource views if needed
-		if (has(pDesc->bind_flags, BindFlag::SHADER_RESOURCE))
+		if (has_flag(pDesc->bind_flags, BindFlag::SHADER_RESOURCE))
 		{
 			CreateSubresource(pBuffer, SubresourceType::SRV, 0);
 		}
-		if (has(pDesc->bind_flags, BindFlag::UNORDERED_ACCESS))
+		if (has_flag(pDesc->bind_flags, BindFlag::UNORDERED_ACCESS))
 		{
 			CreateSubresource(pBuffer, SubresourceType::UAV, 0);
 		}
@@ -2966,21 +2966,21 @@ using namespace DX12_Internal;
 		desc.SampleDesc.Quality = 0;
 		desc.Alignment = 0;
 		desc.Flags = D3D12_RESOURCE_FLAG_NONE;
-		if (has(pDesc->bind_flags, BindFlag::DEPTH_STENCIL))
+		if (has_flag(pDesc->bind_flags, BindFlag::DEPTH_STENCIL))
 		{
 			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 			//allocationDesc.Flags |= D3D12MA::ALLOCATION_FLAG_COMMITTED;
-			if (!has(pDesc->bind_flags, BindFlag::SHADER_RESOURCE))
+			if (!has_flag(pDesc->bind_flags, BindFlag::SHADER_RESOURCE))
 			{
 				desc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 			}
 		}
-		if (has(pDesc->bind_flags, BindFlag::RENDER_TARGET))
+		if (has_flag(pDesc->bind_flags, BindFlag::RENDER_TARGET))
 		{
 			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
 			//allocationDesc.Flags |= D3D12MA::ALLOCATION_FLAG_COMMITTED;
 		}
-		if (has(pDesc->bind_flags, BindFlag::UNORDERED_ACCESS))
+		if (has_flag(pDesc->bind_flags, BindFlag::UNORDERED_ACCESS))
 		{
 			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 		}
@@ -3022,7 +3022,7 @@ using namespace DX12_Internal;
 		{
 			optimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
 		}
-		bool useClearValue = has(pDesc->bind_flags, BindFlag::RENDER_TARGET) || has(pDesc->bind_flags, BindFlag::DEPTH_STENCIL);
+		bool useClearValue = has_flag(pDesc->bind_flags, BindFlag::RENDER_TARGET) || has_flag(pDesc->bind_flags, BindFlag::DEPTH_STENCIL);
 
 		D3D12_RESOURCE_STATES resourceState = _ParseResourceState(pTexture->desc.layout);
 
@@ -3130,19 +3130,19 @@ using namespace DX12_Internal;
 			copyAllocator.submit(cmd);
 		}
 
-		if (has(pTexture->desc.bind_flags, BindFlag::RENDER_TARGET))
+		if (has_flag(pTexture->desc.bind_flags, BindFlag::RENDER_TARGET))
 		{
 			CreateSubresource(pTexture, SubresourceType::RTV, 0, -1, 0, -1);
 		}
-		if (has(pTexture->desc.bind_flags, BindFlag::DEPTH_STENCIL))
+		if (has_flag(pTexture->desc.bind_flags, BindFlag::DEPTH_STENCIL))
 		{
 			CreateSubresource(pTexture, SubresourceType::DSV, 0, -1, 0, -1);
 		}
-		if (has(pTexture->desc.bind_flags, BindFlag::SHADER_RESOURCE))
+		if (has_flag(pTexture->desc.bind_flags, BindFlag::SHADER_RESOURCE))
 		{
 			CreateSubresource(pTexture, SubresourceType::SRV, 0, -1, 0, -1);
 		}
-		if (has(pTexture->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
+		if (has_flag(pTexture->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
 		{
 			CreateSubresource(pTexture, SubresourceType::UAV, 0, -1, 0, -1);
 		}
@@ -4316,7 +4316,7 @@ using namespace DX12_Internal;
 
 		renderpass->desc = *pDesc;
 
-		if (has(renderpass->desc.flags, RenderPassDesc::Flags::ALLOW_UAV_WRITES))
+		if (has_flag(renderpass->desc.flags, RenderPassDesc::Flags::ALLOW_UAV_WRITES))
 		{
 			internal_state->flags |= D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES;
 		}
@@ -4838,7 +4838,7 @@ using namespace DX12_Internal;
 			{
 				if (texture->desc.array_size > 1)
 				{
-					if (has(texture->desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
+					if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
 					{
 						if (texture->desc.array_size > 6)
 						{
@@ -5171,7 +5171,7 @@ using namespace DX12_Internal;
 			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
 			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 
-			if (has(desc.misc_flags, ResourceMiscFlag::BUFFER_RAW))
+			if (has_flag(desc.misc_flags, ResourceMiscFlag::BUFFER_RAW))
 			{
 				// This is a Raw Buffer
 				srv_desc.Format = DXGI_FORMAT_R32_TYPELESS;
@@ -5180,7 +5180,7 @@ using namespace DX12_Internal;
 				srv_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
 				srv_desc.Buffer.NumElements = (UINT)std::min(size, desc.size - offset) / sizeof(uint32_t);
 			}
-			else if (has(desc.misc_flags, ResourceMiscFlag::BUFFER_STRUCTURED))
+			else if (has_flag(desc.misc_flags, ResourceMiscFlag::BUFFER_STRUCTURED))
 			{
 				// This is a Structured Buffer
 				srv_desc.Format = DXGI_FORMAT_UNKNOWN;
@@ -5218,7 +5218,7 @@ using namespace DX12_Internal;
 			uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
 			uav_desc.Buffer.FirstElement = 0;
 
-			if (has(desc.misc_flags, ResourceMiscFlag::BUFFER_RAW))
+			if (has_flag(desc.misc_flags, ResourceMiscFlag::BUFFER_RAW))
 			{
 				// This is a Raw Buffer
 				uav_desc.Format = DXGI_FORMAT_R32_TYPELESS;
@@ -5226,7 +5226,7 @@ using namespace DX12_Internal;
 				uav_desc.Buffer.FirstElement = (UINT)offset / sizeof(uint32_t);
 				uav_desc.Buffer.NumElements = (UINT)std::min(size, desc.size - offset) / sizeof(uint32_t);
 			}
-			else if (has(desc.misc_flags, ResourceMiscFlag::BUFFER_STRUCTURED))
+			else if (has_flag(desc.misc_flags, ResourceMiscFlag::BUFFER_STRUCTURED))
 			{
 				// This is a Structured Buffer
 				uav_desc.Format = DXGI_FORMAT_UNKNOWN;

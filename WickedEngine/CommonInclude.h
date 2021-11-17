@@ -72,7 +72,7 @@ constexpr typename std::enable_if<enable_bitmask_operators<E>::enable, E&>::type
 	return lhs;
 }
 template<typename E>
-constexpr bool has(E lhs, E rhs)
+constexpr bool has_flag(E lhs, E rhs)
 {
 	return (lhs & rhs) == rhs;
 }

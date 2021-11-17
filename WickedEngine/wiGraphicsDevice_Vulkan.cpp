@@ -459,61 +459,61 @@ namespace Vulkan_Internal
 	{
 		VkAccessFlags flags = 0;
 
-		if (has(value, ResourceState::SHADER_RESOURCE))
+		if (has_flag(value, ResourceState::SHADER_RESOURCE))
 		{
 			flags |= VK_ACCESS_SHADER_READ_BIT;
 		}
-		if (has(value, ResourceState::SHADER_RESOURCE_COMPUTE))
+		if (has_flag(value, ResourceState::SHADER_RESOURCE_COMPUTE))
 		{
 			flags |= VK_ACCESS_SHADER_READ_BIT;
 		}
-		if (has(value, ResourceState::UNORDERED_ACCESS))
+		if (has_flag(value, ResourceState::UNORDERED_ACCESS))
 		{
 			flags |= VK_ACCESS_SHADER_READ_BIT;
 			flags |= VK_ACCESS_SHADER_WRITE_BIT;
 		}
-		if (has(value, ResourceState::COPY_SRC))
+		if (has_flag(value, ResourceState::COPY_SRC))
 		{
 			flags |= VK_ACCESS_TRANSFER_READ_BIT;
 		}
-		if (has(value, ResourceState::COPY_DST))
+		if (has_flag(value, ResourceState::COPY_DST))
 		{
 			flags |= VK_ACCESS_TRANSFER_WRITE_BIT;
 		}
 
-		if (has(value, ResourceState::RENDERTARGET))
+		if (has_flag(value, ResourceState::RENDERTARGET))
 		{
 			flags |= VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
 			flags |= VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 		}
-		if (has(value, ResourceState::DEPTHSTENCIL))
+		if (has_flag(value, ResourceState::DEPTHSTENCIL))
 		{
 			flags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
 			flags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 		}
-		if (has(value, ResourceState::DEPTHSTENCIL_READONLY))
+		if (has_flag(value, ResourceState::DEPTHSTENCIL_READONLY))
 		{
 			flags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
 		}
 
-		if (has(value, ResourceState::VERTEX_BUFFER))
+		if (has_flag(value, ResourceState::VERTEX_BUFFER))
 		{
 			flags |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
 		}
-		if (has(value, ResourceState::INDEX_BUFFER))
+		if (has_flag(value, ResourceState::INDEX_BUFFER))
 		{
 			flags |= VK_ACCESS_INDEX_READ_BIT;
 		}
-		if (has(value, ResourceState::CONSTANT_BUFFER))
+		if (has_flag(value, ResourceState::CONSTANT_BUFFER))
 		{
 			flags |= VK_ACCESS_UNIFORM_READ_BIT;
 		}
-		if (has(value, ResourceState::INDIRECT_ARGUMENT))
+		if (has_flag(value, ResourceState::INDIRECT_ARGUMENT))
 		{
 			flags |= VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
 		}
 
-		if (has(value, ResourceState::PREDICATION))
+		if (has_flag(value, ResourceState::PREDICATION))
 		{
 			flags |= VK_ACCESS_CONDITIONAL_RENDERING_READ_BIT_EXT;
 		}
@@ -2077,19 +2077,19 @@ using namespace Vulkan_Internal;
 					attachment.blendEnable = desc.blend_enable ? VK_TRUE : VK_FALSE;
 
 					attachment.colorWriteMask = 0;
-					if (has(desc.render_target_write_mask, ColorWrite::ENABLE_RED))
+					if (has_flag(desc.render_target_write_mask, ColorWrite::ENABLE_RED))
 					{
 						attachment.colorWriteMask |= VK_COLOR_COMPONENT_R_BIT;
 					}
-					if (has(desc.render_target_write_mask, ColorWrite::ENABLE_GREEN))
+					if (has_flag(desc.render_target_write_mask, ColorWrite::ENABLE_GREEN))
 					{
 						attachment.colorWriteMask |= VK_COLOR_COMPONENT_G_BIT;
 					}
-					if (has(desc.render_target_write_mask, ColorWrite::ENABLE_BLUE))
+					if (has_flag(desc.render_target_write_mask, ColorWrite::ENABLE_BLUE))
 					{
 						attachment.colorWriteMask |= VK_COLOR_COMPONENT_B_BIT;
 					}
-					if (has(desc.render_target_write_mask, ColorWrite::ENABLE_ALPHA))
+					if (has_flag(desc.render_target_write_mask, ColorWrite::ENABLE_ALPHA))
 					{
 						attachment.colorWriteMask |= VK_COLOR_COMPONENT_A_BIT;
 					}
@@ -3182,19 +3182,19 @@ using namespace Vulkan_Internal;
 		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 		bufferInfo.size = pBuffer->desc.size;
 		bufferInfo.usage = 0;
-		if (has(pBuffer->desc.bind_flags, BindFlag::VERTEX_BUFFER))
+		if (has_flag(pBuffer->desc.bind_flags, BindFlag::VERTEX_BUFFER))
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 		}
-		if (has(pBuffer->desc.bind_flags, BindFlag::INDEX_BUFFER))
+		if (has_flag(pBuffer->desc.bind_flags, BindFlag::INDEX_BUFFER))
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
 		}
-		if (has(pBuffer->desc.bind_flags, BindFlag::CONSTANT_BUFFER))
+		if (has_flag(pBuffer->desc.bind_flags, BindFlag::CONSTANT_BUFFER))
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 		}
-		if (has(pBuffer->desc.bind_flags, BindFlag::SHADER_RESOURCE))
+		if (has_flag(pBuffer->desc.bind_flags, BindFlag::SHADER_RESOURCE))
 		{
 			if (pBuffer->desc.format == Format::UNKNOWN)
 			{
@@ -3205,7 +3205,7 @@ using namespace Vulkan_Internal;
 				bufferInfo.usage |= VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT;
 			}
 		}
-		if (has(pBuffer->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
+		if (has_flag(pBuffer->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
 		{
 			if (pBuffer->desc.format == Format::UNKNOWN)
 			{
@@ -3216,24 +3216,24 @@ using namespace Vulkan_Internal;
 				bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
 			}
 		}
-		if (has(pBuffer->desc.misc_flags, ResourceMiscFlag::BUFFER_RAW))
+		if (has_flag(pBuffer->desc.misc_flags, ResourceMiscFlag::BUFFER_RAW))
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 		}
-		if (has(pBuffer->desc.misc_flags, ResourceMiscFlag::BUFFER_STRUCTURED))
+		if (has_flag(pBuffer->desc.misc_flags, ResourceMiscFlag::BUFFER_STRUCTURED))
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 		}
-		if (has(pBuffer->desc.misc_flags, ResourceMiscFlag::INDIRECT_ARGS))
+		if (has_flag(pBuffer->desc.misc_flags, ResourceMiscFlag::INDIRECT_ARGS))
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
 		}
-		if (has(pBuffer->desc.misc_flags, ResourceMiscFlag::RAY_TRACING))
+		if (has_flag(pBuffer->desc.misc_flags, ResourceMiscFlag::RAY_TRACING))
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
 			bufferInfo.usage |= VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR;
 		}
-		if (has(pBuffer->desc.misc_flags, ResourceMiscFlag::PREDICATION))
+		if (has_flag(pBuffer->desc.misc_flags, ResourceMiscFlag::PREDICATION))
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_CONDITIONAL_RENDERING_BIT_EXT;
 		}
@@ -3333,31 +3333,31 @@ using namespace Vulkan_Internal;
 
 			std::swap(barrier.srcAccessMask, barrier.dstAccessMask);
 
-			if (has(pBuffer->desc.bind_flags, BindFlag::CONSTANT_BUFFER))
+			if (has_flag(pBuffer->desc.bind_flags, BindFlag::CONSTANT_BUFFER))
 			{
 				barrier.dstAccessMask |= VK_ACCESS_UNIFORM_READ_BIT;
 			}
-			if (has(pBuffer->desc.bind_flags, BindFlag::VERTEX_BUFFER))
+			if (has_flag(pBuffer->desc.bind_flags, BindFlag::VERTEX_BUFFER))
 			{
 				barrier.dstAccessMask |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
 			}
-			if (has(pBuffer->desc.bind_flags, BindFlag::INDEX_BUFFER))
+			if (has_flag(pBuffer->desc.bind_flags, BindFlag::INDEX_BUFFER))
 			{
 				barrier.dstAccessMask |= VK_ACCESS_INDEX_READ_BIT;
 			}
-			if (has(pBuffer->desc.bind_flags, BindFlag::SHADER_RESOURCE))
+			if (has_flag(pBuffer->desc.bind_flags, BindFlag::SHADER_RESOURCE))
 			{
 				barrier.dstAccessMask |= VK_ACCESS_SHADER_READ_BIT;
 			}
-			if (has(pBuffer->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
+			if (has_flag(pBuffer->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
 			{
 				barrier.dstAccessMask |= VK_ACCESS_SHADER_WRITE_BIT;
 			}
-			if (has(pBuffer->desc.misc_flags, ResourceMiscFlag::INDIRECT_ARGS))
+			if (has_flag(pBuffer->desc.misc_flags, ResourceMiscFlag::INDIRECT_ARGS))
 			{
 				barrier.dstAccessMask |= VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
 			}
-			if (has(pBuffer->desc.misc_flags, ResourceMiscFlag::RAY_TRACING))
+			if (has_flag(pBuffer->desc.misc_flags, ResourceMiscFlag::RAY_TRACING))
 			{
 				barrier.dstAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
 			}
@@ -3386,11 +3386,11 @@ using namespace Vulkan_Internal;
 
 
 		// Create resource views if needed
-		if (has(pDesc->bind_flags, BindFlag::SHADER_RESOURCE))
+		if (has_flag(pDesc->bind_flags, BindFlag::SHADER_RESOURCE))
 		{
 			CreateSubresource(pBuffer, SubresourceType::SRV, 0);
 		}
-		if (has(pDesc->bind_flags, BindFlag::UNORDERED_ACCESS))
+		if (has_flag(pDesc->bind_flags, BindFlag::UNORDERED_ACCESS))
 		{
 			CreateSubresource(pBuffer, SubresourceType::UAV, 0);
 		}
@@ -3430,25 +3430,25 @@ using namespace Vulkan_Internal;
 		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
 		imageInfo.usage = 0;
-		if (has(pTexture->desc.bind_flags, BindFlag::SHADER_RESOURCE))
+		if (has_flag(pTexture->desc.bind_flags, BindFlag::SHADER_RESOURCE))
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
 		}
-		if (has(pTexture->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
+		if (has_flag(pTexture->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
 		}
-		if (has(pTexture->desc.bind_flags, BindFlag::RENDER_TARGET))
+		if (has_flag(pTexture->desc.bind_flags, BindFlag::RENDER_TARGET))
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 			//allocInfo.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 		}
-		if (has(pTexture->desc.bind_flags, BindFlag::DEPTH_STENCIL))
+		if (has_flag(pTexture->desc.bind_flags, BindFlag::DEPTH_STENCIL))
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 			//allocInfo.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 		}
-		if (has(pTexture->desc.bind_flags, BindFlag::SHADING_RATE))
+		if (has_flag(pTexture->desc.bind_flags, BindFlag::SHADING_RATE))
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR;
 		}
@@ -3456,7 +3456,7 @@ using namespace Vulkan_Internal;
 		imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
 		imageInfo.flags = 0;
-		if (has(pTexture->desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
+		if (has_flag(pTexture->desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
 		{
 			imageInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 		}
@@ -3643,7 +3643,7 @@ using namespace Vulkan_Internal;
 			barrier.newLayout = _ConvertImageLayout(pTexture->desc.layout);
 			barrier.srcAccessMask = 0;
 			barrier.dstAccessMask = _ParseResourceState(pTexture->desc.layout);
-			if (has(pTexture->desc.bind_flags, BindFlag::DEPTH_STENCIL))
+			if (has_flag(pTexture->desc.bind_flags, BindFlag::DEPTH_STENCIL))
 			{
 				barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 				if (IsFormatStencilSupport(pTexture->desc.format))
@@ -3676,19 +3676,19 @@ using namespace Vulkan_Internal;
 			initLocker.unlock();
 		}
 
-		if (has(pTexture->desc.bind_flags, BindFlag::RENDER_TARGET))
+		if (has_flag(pTexture->desc.bind_flags, BindFlag::RENDER_TARGET))
 		{
 			CreateSubresource(pTexture, SubresourceType::RTV, 0, -1, 0, -1);
 		}
-		if (has(pTexture->desc.bind_flags, BindFlag::DEPTH_STENCIL))
+		if (has_flag(pTexture->desc.bind_flags, BindFlag::DEPTH_STENCIL))
 		{
 			CreateSubresource(pTexture, SubresourceType::DSV, 0, -1, 0, -1);
 		}
-		if (has(pTexture->desc.bind_flags, BindFlag::SHADER_RESOURCE))
+		if (has_flag(pTexture->desc.bind_flags, BindFlag::SHADER_RESOURCE))
 		{
 			CreateSubresource(pTexture, SubresourceType::SRV, 0, -1, 0, -1);
 		}
-		if (has(pTexture->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
+		if (has_flag(pTexture->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
 		{
 			CreateSubresource(pTexture, SubresourceType::UAV, 0, -1, 0, -1);
 		}
@@ -5352,7 +5352,7 @@ using namespace Vulkan_Internal;
 		{
 			if (texture->desc.array_size > 1)
 			{
-				if (has(texture->desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
+				if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
 				{
 					if (texture->desc.array_size > 6 && sliceCount > 6)
 					{
@@ -6710,7 +6710,7 @@ using namespace Vulkan_Internal;
 				copy.dstOffset.y = 0;
 				copy.dstOffset.z = 0;
 
-				if (has(src_desc.bind_flags, BindFlag::DEPTH_STENCIL))
+				if (has_flag(src_desc.bind_flags, BindFlag::DEPTH_STENCIL))
 				{
 					copy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 					if (IsFormatStencilSupport(src_desc.format))
@@ -6726,7 +6726,7 @@ using namespace Vulkan_Internal;
 				copy.srcSubresource.layerCount = src_desc.array_size;
 				copy.srcSubresource.mipLevel = 0;
 
-				if (has(dst_desc.bind_flags, BindFlag::DEPTH_STENCIL))
+				if (has_flag(dst_desc.bind_flags, BindFlag::DEPTH_STENCIL))
 				{
 					copy.dstSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 					if (IsFormatStencilSupport(dst_desc.format))
@@ -6922,7 +6922,7 @@ using namespace Vulkan_Internal;
 				barrierdesc.newLayout = _ConvertImageLayout(barrier.image.layout_after);
 				barrierdesc.srcAccessMask = _ParseResourceState(barrier.image.layout_before);
 				barrierdesc.dstAccessMask = _ParseResourceState(barrier.image.layout_after);
-				if (has(desc.bind_flags, BindFlag::DEPTH_STENCIL))
+				if (has_flag(desc.bind_flags, BindFlag::DEPTH_STENCIL))
 				{
 					barrierdesc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 					if (IsFormatStencilSupport(desc.format))
@@ -6972,14 +6972,14 @@ using namespace Vulkan_Internal;
 
 				bufferBarriers.push_back(barrierdesc);
 
-				if (has(desc.misc_flags, ResourceMiscFlag::RAY_TRACING))
+				if (has_flag(desc.misc_flags, ResourceMiscFlag::RAY_TRACING))
 				{
 					assert(CheckCapability(GraphicsDeviceCapability::RAYTRACING));
 					srcStage |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
 					dstStage |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
 				}
 
-				if (has(desc.misc_flags, ResourceMiscFlag::PREDICATION))
+				if (has_flag(desc.misc_flags, ResourceMiscFlag::PREDICATION))
 				{
 					assert(CheckCapability(GraphicsDeviceCapability::PREDICATION));
 					srcStage |= VK_PIPELINE_STAGE_CONDITIONAL_RENDERING_BIT_EXT;

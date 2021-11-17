@@ -122,7 +122,7 @@ namespace wiGraphics
 		constexpr uint64_t GetFrameCount() const { return FRAMECOUNT; }
 
 		// Check whether the graphics device supports a feature or not
-		constexpr bool CheckCapability(GraphicsDeviceCapability capability) const { return has(capabilities, capability); }
+		constexpr bool CheckCapability(GraphicsDeviceCapability capability) const { return has_flag(capabilities, capability); }
 
 		// Returns the buffer count, which is the array size of buffered resources used by both the CPU and GPU
 		static constexpr uint32_t GetBufferCount() { return BUFFERCOUNT; }

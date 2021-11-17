@@ -552,7 +552,7 @@ namespace wiResourceManager
 			}
 
 			if (type == wiResource::IMAGE && resource->texture.desc.mip_levels > 1
-				&& has(resource->texture.desc.bind_flags, BindFlag::UNORDERED_ACCESS))
+				&& has_flag(resource->texture.desc.bind_flags, BindFlag::UNORDERED_ACCESS))
 			{
 				wiRenderer::AddDeferredMIPGen(resource, true);
 			}

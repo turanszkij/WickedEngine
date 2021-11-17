@@ -6818,7 +6818,7 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 	else if (desc.type == TextureDesc::Type::TEXTURE_2D)
 	{
 
-		if (has(desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
+		if (has_flag(desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
 		{
 
 			if (desc.array_size > 6)
@@ -7090,8 +7090,8 @@ void CopyTexture2D(const Texture& dst, int DstMIP, int DstX, int DstY, const Tex
 	const TextureDesc& desc_dst = dst.GetDesc();
 	const TextureDesc& desc_src = src.GetDesc();
 
-	assert(has(desc_dst.bind_flags, BindFlag::UNORDERED_ACCESS));
-	assert(has(desc_src.bind_flags, BindFlag::SHADER_RESOURCE));
+	assert(has_flag(desc_dst.bind_flags, BindFlag::UNORDERED_ACCESS));
+	assert(has_flag(desc_src.bind_flags, BindFlag::SHADER_RESOURCE));
 
 	bool hdr = !IsFormatUnorm(desc_dst.format);
 

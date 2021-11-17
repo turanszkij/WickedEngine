@@ -1168,7 +1168,7 @@ namespace wiScene
 #endif
 	void ObjectComponent::SaveLightmap()
 	{
-		if (lightmap.IsValid() && has(lightmap.desc.bind_flags, BindFlag::RENDER_TARGET))
+		if (lightmap.IsValid() && has_flag(lightmap.desc.bind_flags, BindFlag::RENDER_TARGET))
 		{
 			SetLightmapRenderRequest(false);
 
