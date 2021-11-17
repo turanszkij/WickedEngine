@@ -72,6 +72,7 @@ namespace wiGraphics
 	public:
 		virtual ~GraphicsDevice() = default;
 
+		// Create a SwapChain. If the SwapChain is to be recreated, the window handle can be nullptr.
 		virtual bool CreateSwapChain(const SwapChainDesc* pDesc, wiPlatform::window_type window, SwapChain* swapChain) const = 0;
 		virtual bool CreateBuffer(const GPUBufferDesc *pDesc, const void* pInitialData, GPUBuffer *pBuffer) const = 0;
 		virtual bool CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) const = 0;
@@ -92,9 +93,11 @@ namespace wiGraphics
 		virtual void WriteShadingRateValue(ShadingRate rate, void* dest) const {};
 		virtual void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) const {}
 		virtual void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) const {}
-		
+
+		// Set a sampler that can be used by any shaders that will be created after this call, without needing to bind that sampler
 		virtual void SetCommonSampler(const StaticSampler* sam) = 0;
 
+		// Set a debug name for the GPUResource, which will be visible in graphics debuggers
 		virtual void SetName(GPUResource* pResource, const char* name) = 0;
 
 		// Begin a new command list for GPU command recording.
@@ -104,16 +107,29 @@ namespace wiGraphics
 		//	This will make every command list to be in "available" state and restarts them
 		virtual void SubmitCommandLists() = 0;
 
+		// The CPU will wait until all submitted GPU work is finished execution
 		virtual void WaitForGPU() const = 0;
+
+		// The current PipelineState cache will be cleared. It is useful to clear this when reloading shaders, to avoid accumulating unused pipeline states
 		virtual void ClearPipelineStateCache() = 0;
 
+		// Returns the number of active pipelines. Active pipelines are the pipelines that were compiled internally for a set of render target formats
+		//	One PipelineState object can be compiled internally for multiple render target or depth-stencil formats, or sample counts
+		virtual size_t GetActivePipelineCount() const = 0;
+
+		// Returns the number of elapsed frames (submits)
+		//	It is incremented when calling SubmitCommandLists()
 		constexpr uint64_t GetFrameCount() const { return FRAMECOUNT; }
 
-		inline bool CheckCapability(GraphicsDeviceCapability capability) const { return has(capabilities, capability); }
+		// Check whether the graphics device supports a feature or not
+		constexpr bool CheckCapability(GraphicsDeviceCapability capability) const { return has(capabilities, capability); }
 
+		// Returns the buffer count, which is the array size of buffered resources used by both the CPU and GPU
 		static constexpr uint32_t GetBufferCount() { return BUFFERCOUNT; }
+		// Returns the current buffer index, which is in range [0, GetBufferCount() - 1]
 		constexpr uint32_t GetBufferIndex() const { return GetFrameCount() % BUFFERCOUNT; }
 
+		// Returns whether the graphics debug layer is enabled. It can be enabled when creating the device.
 		constexpr bool IsDebugDevice() const { return DEBUGDEVICE; }
 
 		constexpr size_t GetShaderIdentifierSize() const { return SHADER_IDENTIFIER_SIZE; }
@@ -121,17 +137,23 @@ namespace wiGraphics
 		constexpr uint32_t GetVariableRateShadingTileSize() const { return VARIABLE_RATE_SHADING_TILE_SIZE; }
 		constexpr uint64_t GetTimestampFrequency() const { return TIMESTAMP_FREQUENCY; }
 
+		// Get the shader binary format that the underlying graphics API consumes
 		virtual ShaderFormat GetShaderFormat() const = 0;
 
+		// Get a Texture resource that represents the current back buffer of the SwapChain
 		virtual Texture GetBackBuffer(const SwapChain* swapchain) const = 0;
-
 		// Returns the current color space of the swapchain output
 		virtual ColorSpace GetSwapChainColorSpace(const SwapChain* swapchain) const = 0;
 		// Returns true if the swapchain could support HDR output regardless of current format
 		//	Returns false if the swapchain couldn't support HDR output
-		virtual bool GetSwapChainHDRSupport(const SwapChain* swapchain) const = 0;
+		virtual bool IsSwapChainSupportsHDR(const SwapChain* swapchain) const = 0;
 
-		///////////////Thread-sensitive////////////////////////
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		// Command List functions are below:
+		//	- These are used to record rendering commands to a CommandList
+		//	- To get a CommandList that can be recorded into, call BeginCommandList()
+		//	- These commands are not immediately executed, but they begin executing on the GPU after calling SubmitCommandLists()
+		//	- These are not thread safe, only a single thread should use a single CommandList at one time
 
 		virtual void WaitCommandList(CommandList cmd, CommandList wait_for) = 0;
 		virtual void RenderPassBegin(const SwapChain* swapchain, CommandList cmd) = 0;

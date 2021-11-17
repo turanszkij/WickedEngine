@@ -729,7 +729,7 @@ void RendererWindow::UpdateSwapChainFormats(wiGraphics::SwapChain* swapChain)
 	swapchainComboBox.ClearItems();
 	swapchainComboBox.AddItem("SDR 8bit", static_cast<uint64_t>(wiGraphics::Format::R8G8B8A8_UNORM));
 	swapchainComboBox.AddItem("SDR 10bit", static_cast<uint64_t>(wiGraphics::Format::R10G10B10A2_UNORM));
-	if (wiGraphics::GetDevice()->GetSwapChainHDRSupport(swapChain))
+	if (wiGraphics::GetDevice()->IsSwapChainSupportsHDR(swapChain))
 	{
 		swapchainComboBox.AddItem("HDR 10bit", static_cast<uint64_t>(wiGraphics::Format::R10G10B10A2_UNORM));
 		swapchainComboBox.AddItem("HDR 16bit", static_cast<uint64_t>(wiGraphics::Format::R16G16B16A16_FLOAT));

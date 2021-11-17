@@ -6173,7 +6173,7 @@ using namespace Vulkan_Internal;
 		auto internal_state = to_internal(swapchain);
 		return internal_state->colorSpace;
 	}
-	bool GraphicsDevice_Vulkan::GetSwapChainHDRSupport(const SwapChain* swapchain) const
+	bool GraphicsDevice_Vulkan::IsSwapChainSupportsHDR(const SwapChain* swapchain) const
 	{
 		auto internal_state = to_internal(swapchain);
 

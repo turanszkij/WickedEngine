@@ -45,6 +45,7 @@ public:
 	int SetWatermarkDisplay(lua_State *L);
 	int SetFPSDisplay(lua_State *L);
 	int SetResolutionDisplay(lua_State *L);
+	int SetPipelineCountDisplay(lua_State* L);
 
 	int GetCanvas(lua_State* L);
 

@@ -241,7 +241,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\dxcapi.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\GLSL.std.450.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\include\spirv\unified1\spirv.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\replace_new.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\sal.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\spirv_reflect.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_image.h" />

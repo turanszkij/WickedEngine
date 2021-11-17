@@ -19,10 +19,13 @@
 #include "wiGraphicsDevice_DX12.h"
 #include "wiGraphicsDevice_Vulkan.h"
 
-#include "Utility/replace_new.h"
-
 #include <sstream>
 #include <algorithm>
+#include <new>
+#include <cstdlib>
+#include <atomic>
+
+std::atomic<uint32_t> number_of_heap_allocations{ 0 };
 
 using namespace wiGraphics;
 
@@ -356,8 +359,12 @@ void MainComponent::Compose(CommandList cmd)
 		}
 		if (infoDisplay.heap_allocation_counter)
 		{
-			ss << "Heap allocations per frame: " << number_of_allocs.load() << std::endl;
-			number_of_allocs.store(0);
+			ss << "Heap allocations per frame: " << number_of_heap_allocations.load() << std::endl;
+			number_of_heap_allocations.store(0);
+		}
+		if (infoDisplay.pipeline_count)
+		{
+			ss << "Graphics pipelines active: " << graphicsDevice->GetActivePipelineCount() << std::endl;
 		}
 
 #ifdef _DEBUG
@@ -485,3 +492,32 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 	}
 }
 
+
+// Heap alloc replacements are used to count heap allocations:
+//	It is good practice to reduce the amount of heap allocations that happen during the frame,
+//	so keep an eye on the info display of the engine while MainComponent::InfoDisplayer::heap_allocation_counter is enabled
+
+void* operator new(std::size_t size) {
+	number_of_heap_allocations.fetch_add(1);
+	void* p = malloc(size);
+	if (!p) throw std::bad_alloc();
+	return p;
+}
+void* operator new[](std::size_t size) {
+	number_of_heap_allocations.fetch_add(1);
+	void* p = malloc(size);
+	if (!p) throw std::bad_alloc();
+	return p;
+}
+void* operator new[](std::size_t size, const std::nothrow_t&) throw() {
+	number_of_heap_allocations.fetch_add(1);
+	return malloc(size);
+}
+void* operator new(std::size_t size, const std::nothrow_t&) throw() {
+	number_of_heap_allocations.fetch_add(1);
+	return malloc(size);
+}
+void operator delete(void* ptr) throw() { free(ptr); }
+void operator delete (void* ptr, const std::nothrow_t&) throw() { free(ptr); }
+void operator delete[](void* ptr) throw() { free(ptr); }
+void operator delete[](void* ptr, const std::nothrow_t&) throw() { free(ptr); }

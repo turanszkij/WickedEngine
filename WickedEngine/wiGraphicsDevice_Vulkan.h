@@ -268,13 +268,14 @@ namespace wiGraphics
 
 		void WaitForGPU() const override;
 		void ClearPipelineStateCache() override;
+		size_t GetActivePipelineCount() const override { return pipelines_global.size(); }
 
 		ShaderFormat GetShaderFormat() const override { return ShaderFormat::SPIRV; }
 
 		Texture GetBackBuffer(const SwapChain* swapchain) const override;
 
 		ColorSpace GetSwapChainColorSpace(const SwapChain* swapchain) const override;
-		bool GetSwapChainHDRSupport(const SwapChain* swapchain) const override;
+		bool IsSwapChainSupportsHDR(const SwapChain* swapchain) const override;
 
 		///////////////Thread-sensitive////////////////////////
 

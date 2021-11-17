@@ -2745,7 +2745,7 @@ using namespace DX12_Internal;
 			assert(SUCCEEDED(hr));
 		}
 
-		const bool hdr = pDesc->allow_hdr && GetSwapChainHDRSupport(swapChain);
+		const bool hdr = pDesc->allow_hdr && IsSwapChainSupportsHDR(swapChain);
 
 		// Ensure correct color space:
 		//	https://github.com/microsoft/DirectX-Graphics-Samples/blob/master/Samples/Desktop/D3D12HDR/src/D3D12HDR.cpp
@@ -5652,7 +5652,7 @@ using namespace DX12_Internal;
 		auto internal_state = to_internal(swapchain);
 		return internal_state->colorSpace;
 	}
-	bool GraphicsDevice_DX12::GetSwapChainHDRSupport(const SwapChain* swapchain) const
+	bool GraphicsDevice_DX12::IsSwapChainSupportsHDR(const SwapChain* swapchain) const
 	{
 		auto internal_state = to_internal(swapchain);
 

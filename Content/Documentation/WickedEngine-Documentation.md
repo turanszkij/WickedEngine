@@ -492,7 +492,7 @@ To present content to a HDR display, set the `SwapChainDesc::allow_hdr` to `true
 - `R16G16B16A16_FLOAT`, which supports the `HDR_LINEAR` color space.
 
 If the display associated with the `SwapChain` doesn't support HDR output, HDR will be disabled and the `SwapChain` can fall back to an appropriate format that is supported. To check the final color space of the `SwapChain`, call the `GraphicsDevice::GetSwapChainColorSpace()` function providing a valid `SwapChain` as argument. The function returns the actual `COLOR_SPACE` of the `SwapChain`.
-To check whether the display associated with the `SwapChain` is HDR capable, call the `GraphicsDevice::GetSwapChainHDRSupport()` function providing a valid `SwapChain` as argument. This will return whether the display supports HDR or not, regardless of the current format of the `SwapChain`.
+To check whether the display associated with the `SwapChain` is HDR capable, call the `GraphicsDevice::IsSwapChainSupportsHDR()` function providing a valid `SwapChain` as argument. This will return whether the display supports HDR or not, regardless of the current format of the `SwapChain`.
 
 It is not enough to set up a HDR `SwapChain` to render correct HDR content, because great care must be taken to blend elements in linear color space, and correctly convert to the display's color space before presenting. This is a responsibility of shaders.
 
