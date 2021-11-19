@@ -135,6 +135,7 @@ namespace wiImage
 		{
 			assert(params.isFullScreenEnabled()); // for now, this effect is only usable in full screen rendering
 			push.flags |= IMAGE_FLAG_OUTPUT_COLOR_SPACE_LINEAR;
+			push.corners0.x = params.hdr_scaling;
 		}
 
 		if (params.isFullScreenEnabled())

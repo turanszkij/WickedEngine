@@ -26,6 +26,7 @@ float4 main(float4 pos : SV_Position, float2 uv : TEXCOORD) : SV_TARGET
 	else if (push.flags & IMAGE_FLAG_OUTPUT_COLOR_SPACE_LINEAR)
 	{
 		color.rgb = DEGAMMA(color.rgb);
+		color.rgb *= push.corners0.x; // hdr_scaling (corners0 is not used for anything else in full screen image rendering)
 	}
 
 	return color;

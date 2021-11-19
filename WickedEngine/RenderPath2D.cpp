@@ -299,7 +299,7 @@ void RenderPath2D::Render() const
 		device->RenderPassBegin(&renderpass_linearize, cmd);
 		wiImageParams fx;
 		fx.enableFullScreen();
-		fx.enableLinearOutputMapping();
+		fx.enableLinearOutputMapping(hdr_scaling);
 		wiImage::Draw(&rtFinal, fx, cmd);
 		device->RenderPassEnd(cmd);
 		render_result = rtLinearColorSpace;

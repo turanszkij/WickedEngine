@@ -85,6 +85,7 @@ struct wiImageParams
 	float rotation;
 	float fade;
 	float opacity;
+	float hdr_scaling;
 	XMFLOAT2 corners[4];		// you can deform the image by its corners (0: top left, 1: top right, 2: bottom left, 3: bottom right)
 	const XMMATRIX* customRotation = nullptr;
 	const XMMATRIX* customProjection = nullptr;
@@ -115,6 +116,7 @@ struct wiImageParams
 		fade = 0;
 		rotation = 0;
 		opacity = 1;
+		hdr_scaling = 1.0f;
 		stencilRef = 0;
 		stencilComp = STENCILMODE_DISABLED;
 		stencilRefMode = STENCILREFMODE_ALL;
@@ -157,7 +159,7 @@ struct wiImageParams
 	constexpr void enableHDR10OutputMapping() { _flags |= OUTPUT_COLOR_SPACE_HDR10_ST2084; }
 	// enable linear output mapping, which means removing gamma curve and outputting in linear space (useful for blending in HDR space)
 	//	this only works together with the enableFullScreen() override!
-	constexpr void enableLinearOutputMapping() { _flags |= OUTPUT_COLOR_SPACE_LINEAR; }
+	constexpr void enableLinearOutputMapping(float scaling = 1.0f) { _flags |= OUTPUT_COLOR_SPACE_LINEAR; hdr_scaling = scaling; }
 
 	// disable draw rectangle for base texture (whole texture will be drawn, no cutout)
 	constexpr void disableDrawRect() { _flags &= ~DRAWRECT; }

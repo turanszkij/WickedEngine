@@ -49,6 +49,8 @@ private:
 
 	mutable wiGraphics::Texture render_result = rtFinal;
 
+	float hdr_scaling = 9.0f;
+
 public:
 	// create resolution dependent resources, such as render targets
 	virtual void ResizeBuffers();
@@ -93,5 +95,8 @@ public:
 			uint32_t((float)GetPhysicalHeight() * resolutionScale)
 		);
 	}
+
+	float GetHDRScaling() const { return hdr_scaling; }
+	void SetHDRScaling(float value) { hdr_scaling = value; }
 };
 
