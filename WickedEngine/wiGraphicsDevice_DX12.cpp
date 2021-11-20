@@ -2116,7 +2116,9 @@ using namespace DX12_Internal;
 		if (dxcompiler == nullptr)
 		{
 			std::stringstream ss("");
-			ss << "Failed to load dxcompiler.dll! ERROR: 0x" << std::hex << GetLastError();
+			ss << "Failed to load dxcompiler.dll! ERROR: 0x" << std::hex << GetLastError() << std::endl;
+			ss << "Ensure that dxcompiler.dll is found near the exe" << std::endl;
+			ss << "You might also need to install the latest Visual C++ Redistributable package from Microsoft" << std::endl;
 			wiHelper::messageBox(ss.str(), "Error!");
 			wiPlatform::Exit();
 		}
