@@ -1310,7 +1310,7 @@ using namespace Vulkan_Internal;
 			res = vkQueuePresentKHR(queue, &presentInfo);
 			if (res != VK_SUCCESS)
 			{
-				// Handle outdated error in acquire.
+				// Handle outdated error in present:
 				if (res == VK_SUBOPTIMAL_KHR || res == VK_ERROR_OUT_OF_DATE_KHR)
 				{
 					for (auto& swapchain : swapchain_updates)
@@ -2234,6 +2234,13 @@ using namespace Vulkan_Internal;
 
 		res = volkInitialize();
 		assert(res == VK_SUCCESS);
+		if (res != VK_SUCCESS)
+		{
+			std::stringstream ss("");
+			ss << "volkInitialize failed! ERROR: " << res;
+			wiHelper::messageBox(ss.str(), "Error!");
+			wiPlatform::Exit();
+		}
 
 		// Fill out application info:
 		VkApplicationInfo appInfo = {};
@@ -2324,6 +2331,13 @@ using namespace Vulkan_Internal;
 
 			res = vkCreateInstance(&createInfo, nullptr, &instance);
 			assert(res == VK_SUCCESS);
+			if (res != VK_SUCCESS)
+			{
+				std::stringstream ss("");
+				ss << "vkCreateInstance failed! ERROR: " << res;
+				wiHelper::messageBox(ss.str(), "Error!");
+				wiPlatform::Exit();
+			}
 
 			volkLoadInstanceOnly(instance);
 
@@ -2339,10 +2353,11 @@ using namespace Vulkan_Internal;
 			uint32_t deviceCount = 0;
 			VkResult res = vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
 			assert(res == VK_SUCCESS);
-
-			if (deviceCount == 0) {
-				wiHelper::messageBox("failed to find GPUs with Vulkan support!");
+			if (deviceCount == 0)
+			{
 				assert(0);
+				wiHelper::messageBox("Failed to find GPU with Vulkan support!");
+				wiPlatform::Exit();
 			}
 
 			std::vector<VkPhysicalDevice> devices(deviceCount);
@@ -2492,8 +2507,9 @@ using namespace Vulkan_Internal;
 
 			if (physicalDevice == VK_NULL_HANDLE)
 			{
-				wiHelper::messageBox("failed to find a suitable GPU!");
 				assert(0);
+				wiHelper::messageBox("Failed to find a suitable GPU!");
+				wiPlatform::Exit();
 			}
 
 			assert(properties2.properties.limits.timestampComputeAndGraphics == VK_TRUE);
@@ -2639,6 +2655,13 @@ using namespace Vulkan_Internal;
 
 			res = vkCreateDevice(physicalDevice, &createInfo, nullptr, &device);
 			assert(res == VK_SUCCESS);
+			if (res != VK_SUCCESS)
+			{
+				std::stringstream ss("");
+				ss << "vkCreateDevice failed! ERROR: " << res;
+				wiHelper::messageBox(ss.str(), "Error!");
+				wiPlatform::Exit();
+			}
 
 			volkLoadDevice(device);
 
@@ -2665,8 +2688,22 @@ using namespace Vulkan_Internal;
 
 			res = vkCreateSemaphore(device, &createInfo, nullptr, &queues[QUEUE_GRAPHICS].semaphore);
 			assert(res == VK_SUCCESS);
+			if (res != VK_SUCCESS)
+			{
+				std::stringstream ss("");
+				ss << "vkCreateSemaphore[QUEUE_GRAPHICS] failed! ERROR: " << res;
+				wiHelper::messageBox(ss.str(), "Error!");
+				wiPlatform::Exit();
+			}
 			res = vkCreateSemaphore(device, &createInfo, nullptr, &queues[QUEUE_COMPUTE].semaphore);
 			assert(res == VK_SUCCESS);
+			if (res != VK_SUCCESS)
+			{
+				std::stringstream ss("");
+				ss << "vkCreateSemaphore[QUEUE_COMPUTE] failed! ERROR: " << res;
+				wiHelper::messageBox(ss.str(), "Error!");
+				wiPlatform::Exit();
+			}
 		}
 
 
@@ -2685,6 +2722,13 @@ using namespace Vulkan_Internal;
 		}
 		res = vmaCreateAllocator(&allocatorInfo, &allocationhandler->allocator);
 		assert(res == VK_SUCCESS);
+		if (res != VK_SUCCESS)
+		{
+			std::stringstream ss("");
+			ss << "vmaCreateAllocator failed! ERROR: " << res;
+			wiHelper::messageBox(ss.str(), "Error!");
+			wiPlatform::Exit();
+		}
 
 		copyAllocator.init(this);
 
@@ -2698,6 +2742,13 @@ using namespace Vulkan_Internal;
 				//fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 				VkResult res = vkCreateFence(device, &fenceInfo, nullptr, &frames[fr].fence[queue]);
 				assert(res == VK_SUCCESS);
+				if (res != VK_SUCCESS)
+				{
+					std::stringstream ss("");
+					ss << "vkCreateFence[FRAME] failed! ERROR: " << res;
+					wiHelper::messageBox(ss.str(), "Error!");
+					wiPlatform::Exit();
+				}
 			}
 
 			// Create resources for transition command buffer:
@@ -2709,6 +2760,13 @@ using namespace Vulkan_Internal;
 
 				res = vkCreateCommandPool(device, &poolInfo, nullptr, &frames[fr].initCommandPool);
 				assert(res == VK_SUCCESS);
+				if (res != VK_SUCCESS)
+				{
+					std::stringstream ss("");
+					ss << "vkCreateCommandPool[FRAME_INIT] failed! ERROR: " << res;
+					wiHelper::messageBox(ss.str(), "Error!");
+					wiPlatform::Exit();
+				}
 
 				VkCommandBufferAllocateInfo commandBufferInfo = {};
 				commandBufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -2718,6 +2776,13 @@ using namespace Vulkan_Internal;
 
 				res = vkAllocateCommandBuffers(device, &commandBufferInfo, &frames[fr].initCommandBuffer);
 				assert(res == VK_SUCCESS);
+				if (res != VK_SUCCESS)
+				{
+					std::stringstream ss("");
+					ss << "vkAllocateCommandBuffers[FRAME_INIT] failed! ERROR: " << res;
+					wiHelper::messageBox(ss.str(), "Error!");
+					wiPlatform::Exit();
+				}
 
 				VkCommandBufferBeginInfo beginInfo = {};
 				beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -2726,6 +2791,13 @@ using namespace Vulkan_Internal;
 
 				res = vkBeginCommandBuffer(frames[fr].initCommandBuffer, &beginInfo);
 				assert(res == VK_SUCCESS);
+				if (res != VK_SUCCESS)
+				{
+					std::stringstream ss("");
+					ss << "vkBeginCommandBuffer[FRAME_INIT] failed! ERROR: " << res;
+					wiHelper::messageBox(ss.str(), "Error!");
+					wiPlatform::Exit();
+				}
 			}
 		}
 
@@ -5919,7 +5991,7 @@ using namespace Vulkan_Internal;
 		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 		beginInfo.pInheritanceInfo = nullptr; // Optional
 
-		res = vkBeginCommandBuffer(GetFrameResources().commandBuffers[cmd][queue], &beginInfo);
+		res = vkBeginCommandBuffer(GetCommandList(cmd), &beginInfo);
 		assert(res == VK_SUCCESS);
 
 		// reset descriptor allocators:
@@ -6222,7 +6294,7 @@ using namespace Vulkan_Internal;
 
 		if (res != VK_SUCCESS)
 		{
-			// Handle outdated error in acquire.
+			// Handle outdated error in acquire:
 			if (res == VK_SUBOPTIMAL_KHR || res == VK_ERROR_OUT_OF_DATE_KHR)
 			{
 				if (CreateSwapChainInternal(internal_state, physicalDevice, device, allocationhandler))

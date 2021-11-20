@@ -2113,33 +2113,79 @@ using namespace DX12_Internal;
 		DEBUGDEVICE = debuglayer;
 
 		HMODULE dxcompiler = wiLoadLibrary("dxcompiler.dll");
+		if (dxcompiler == nullptr)
+		{
+			wiHelper::messageBox("Failed to load dxcompiler.dll!", "Error!");
+			wiPlatform::Exit();
+		}
 
-#ifdef PLATFORM_UWP
-#else
+#ifndef PLATFORM_UWP
 		HMODULE dxgi = LoadLibraryExW(L"dxgi.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+		if (dxgi == nullptr)
+		{
+			wiHelper::messageBox("Failed to load dxgi.dll!", "Error!");
+			wiPlatform::Exit();
+		}
+
 		HMODULE dx12 = LoadLibraryExW(L"d3d12.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+		if (dx12 == nullptr)
+		{
+			wiHelper::messageBox("Failed to load d3d12.dll!", "Error!");
+			wiPlatform::Exit();
+		}
 
 		CreateDXGIFactory2 = (PFN_CREATE_DXGI_FACTORY_2)GetProcAddress(dxgi, "CreateDXGIFactory2");
 		assert(CreateDXGIFactory2 != nullptr);
+		if (CreateDXGIFactory2 == nullptr)
+		{
+			wiHelper::messageBox("Failed to load CreateDXGIFactory2!", "Error!");
+			wiPlatform::Exit();
+		}
 
 #ifdef _DEBUG
-		DXGIGetDebugInterface1 = (PFN_DXGI_GET_DEBUG_INTERFACE1)GetProcAddress(dxgi, "DXGIGetDebugInterface1");
+		if (debuglayer)
+		{
+			DXGIGetDebugInterface1 = (PFN_DXGI_GET_DEBUG_INTERFACE1)GetProcAddress(dxgi, "DXGIGetDebugInterface1");
+			assert(DXGIGetDebugInterface1 != nullptr);
+		}
 #endif
 
 		D3D12CreateDevice = (PFN_D3D12_CREATE_DEVICE)GetProcAddress(dx12, "D3D12CreateDevice");
 		assert(D3D12CreateDevice != nullptr);
+		if (D3D12CreateDevice == nullptr)
+		{
+			wiHelper::messageBox("Failed to load D3D12CreateDevice!", "Error!");
+			wiPlatform::Exit();
+		}
 
 		D3D12SerializeVersionedRootSignature = (PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE)GetProcAddress(dx12, "D3D12SerializeVersionedRootSignature");
 		assert(D3D12SerializeVersionedRootSignature != nullptr);
+		if (D3D12SerializeVersionedRootSignature == nullptr)
+		{
+			wiHelper::messageBox("Failed to load D3D12SerializeVersionedRootSignature!", "Error!");
+			wiPlatform::Exit();
+		}
 #endif // PLATFORM_UWP
 
 		DxcCreateInstanceProc DxcCreateInstance = (DxcCreateInstanceProc)GetProcAddress(dxcompiler, "DxcCreateInstance");
 		assert(DxcCreateInstance != nullptr);
+		if (DxcCreateInstance == nullptr)
+		{
+			wiHelper::messageBox("Failed to load DxcCreateInstance!", "Error!");
+			wiPlatform::Exit();
+		}
 
 		HRESULT hr;
 
 		hr = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils));
 		assert(SUCCEEDED(hr));
+		if (FAILED(hr))
+		{
+			std::stringstream ss("");
+			ss << "DxcCreateInstance failed! ERROR: " << std::hex << hr;
+			wiHelper::messageBox(ss.str(), "Error!");
+			wiPlatform::Exit();
+		}
 
 #if !defined(PLATFORM_UWP)
 		if (debuglayer)
@@ -2165,7 +2211,7 @@ using namespace DX12_Internal;
 
 #if defined(_DEBUG)
 			ComPtr<IDXGIInfoQueue> dxgiInfoQueue;
-			if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiInfoQueue.GetAddressOf()))))
+			if (DXGIGetDebugInterface1 != nullptr && SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiInfoQueue.GetAddressOf()))))
 			{
 				dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR, true);
 				dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, true);
@@ -2187,9 +2233,8 @@ using namespace DX12_Internal;
 		if (FAILED(hr))
 		{
 			std::stringstream ss("");
-			ss << "Failed to create DXGI factory! ERROR: " << std::hex << hr;
+			ss << "CreateDXGIFactory2 failed! ERROR: " << std::hex << hr;
 			wiHelper::messageBox(ss.str(), "Error!");
-			assert(0);
 			wiPlatform::Exit();
 		}
 
@@ -2198,7 +2243,7 @@ using namespace DX12_Internal;
 			BOOL allowTearing = FALSE;
 
 			ComPtr<IDXGIFactory5> dxgiFactory5;
-			HRESULT hr = dxgiFactory.As(&dxgiFactory5);
+			hr = dxgiFactory.As(&dxgiFactory5);
 			if (SUCCEEDED(hr))
 			{
 				hr = dxgiFactory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowTearing, sizeof(allowTearing));
@@ -2232,12 +2277,14 @@ using namespace DX12_Internal;
 		for (uint32_t i = 0; NextAdapter(i, dxgiAdapter.ReleaseAndGetAddressOf()) != DXGI_ERROR_NOT_FOUND; ++i)
 		{
 			DXGI_ADAPTER_DESC1 adapterDesc;
-			dxgiAdapter->GetDesc1(&adapterDesc);
-
-			// Don't select the Basic Render Driver adapter.
-			if (adapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+			hr = dxgiAdapter->GetDesc1(&adapterDesc);
+			if (SUCCEEDED(hr))
 			{
-				continue;
+				// Don't select the Basic Render Driver adapter.
+				if (adapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+				{
+					continue;
+				}
 			}
 
 			D3D_FEATURE_LEVEL featurelevels[] = {
@@ -2258,17 +2305,17 @@ using namespace DX12_Internal;
 				break;
 		}
 
+		assert(dxgiAdapter != nullptr);
 		if (dxgiAdapter == nullptr)
 		{
 			wiHelper::messageBox("DXGI: No capable adapter found!", "Error!");
-			assert(0);
 			wiPlatform::Exit();
 		}
 
+		assert(device != nullptr);
 		if (device == nullptr)
 		{
 			wiHelper::messageBox("D3D12: Device couldn't be created!", "Error!");
-			assert(0);
 			wiPlatform::Exit();
 		}
 
@@ -2285,15 +2332,15 @@ using namespace DX12_Internal;
 
 				D3D12_MESSAGE_ID hide[] =
 				{
-					D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,
-					D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,
-					D3D12_MESSAGE_ID_EXECUTECOMMANDLISTS_WRONGSWAPCHAINBUFFERREFERENCE,
+					//D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,
+					//D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,
+					//D3D12_MESSAGE_ID_EXECUTECOMMANDLISTS_WRONGSWAPCHAINBUFFERREFERENCE,
 					D3D12_MESSAGE_ID_SETPRIVATEDATA_CHANGINGPARAMS,
 					// Add more message IDs here as needed
 				};
 
 				D3D12_INFO_QUEUE_FILTER filter = {};
-				filter.DenyList.NumIDs = _countof(hide);
+				filter.DenyList.NumIDs = arraysize(hide);
 				filter.DenyList.pIDList = hide;
 				d3dInfoQueue->AddStorageFilterEntries(&filter);
 			}
@@ -2308,6 +2355,13 @@ using namespace DX12_Internal;
 
 		hr = D3D12MA::CreateAllocator(&allocatorDesc, &allocationhandler->allocator);
 		assert(SUCCEEDED(hr));
+		if (FAILED(hr))
+		{
+			std::stringstream ss("");
+			ss << "D3D12MA::CreateAllocator failed! ERROR: " << std::hex << hr;
+			wiHelper::messageBox(ss.str(), "Error!");
+			wiPlatform::Exit();
+		}
 
 		queues[QUEUE_GRAPHICS].desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
 		queues[QUEUE_GRAPHICS].desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
@@ -2315,8 +2369,22 @@ using namespace DX12_Internal;
 		queues[QUEUE_GRAPHICS].desc.NodeMask = 0;
 		hr = device->CreateCommandQueue(&queues[QUEUE_GRAPHICS].desc, IID_PPV_ARGS(&queues[QUEUE_GRAPHICS].queue));
 		assert(SUCCEEDED(hr));
+		if (FAILED(hr))
+		{
+			std::stringstream ss("");
+			ss << "ID3D12Device::CreateCommandQueue[QUEUE_GRAPHICS] failed! ERROR: " << std::hex << hr;
+			wiHelper::messageBox(ss.str(), "Error!");
+			wiPlatform::Exit();
+		}
 		hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&queues[QUEUE_GRAPHICS].fence));
 		assert(SUCCEEDED(hr));
+		if (FAILED(hr))
+		{
+			std::stringstream ss("");
+			ss << "ID3D12Device::CreateFence[QUEUE_GRAPHICS] failed! ERROR: " << std::hex << hr;
+			wiHelper::messageBox(ss.str(), "Error!");
+			wiPlatform::Exit();
+		}
 
 		queues[QUEUE_COMPUTE].desc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
 		queues[QUEUE_COMPUTE].desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
@@ -2324,8 +2392,22 @@ using namespace DX12_Internal;
 		queues[QUEUE_COMPUTE].desc.NodeMask = 0;
 		hr = device->CreateCommandQueue(&queues[QUEUE_COMPUTE].desc, IID_PPV_ARGS(&queues[QUEUE_COMPUTE].queue));
 		assert(SUCCEEDED(hr));
+		if (FAILED(hr))
+		{
+			std::stringstream ss("");
+			ss << "ID3D12Device::CreateCommandQueue[QUEUE_COMPUTE] failed! ERROR: " << std::hex << hr;
+			wiHelper::messageBox(ss.str(), "Error!");
+			wiPlatform::Exit();
+		}
 		hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&queues[QUEUE_COMPUTE].fence));
 		assert(SUCCEEDED(hr));
+		if (FAILED(hr))
+		{
+			std::stringstream ss("");
+			ss << "ID3D12Device::CreateFence[QUEUE_COMPUTE] failed! ERROR: " << std::hex << hr;
+			wiHelper::messageBox(ss.str(), "Error!");
+			wiPlatform::Exit();
+		}
 
 
 		rtv_descriptor_size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
@@ -2341,12 +2423,26 @@ using namespace DX12_Internal;
 			descriptorheap_res.heapDesc.NumDescriptors = 1000000; // tier 1 limit
 			hr = device->CreateDescriptorHeap(&descriptorheap_res.heapDesc, IID_PPV_ARGS(&descriptorheap_res.heap_GPU));
 			assert(SUCCEEDED(hr));
+			if (FAILED(hr))
+			{
+				std::stringstream ss("");
+				ss << "ID3D12Device::CreateDescriptorHeap[CBV_SRV_UAV] failed! ERROR: " << std::hex << hr;
+				wiHelper::messageBox(ss.str(), "Error!");
+				wiPlatform::Exit();
+			}
 
 			descriptorheap_res.start_cpu = descriptorheap_res.heap_GPU->GetCPUDescriptorHandleForHeapStart();
 			descriptorheap_res.start_gpu = descriptorheap_res.heap_GPU->GetGPUDescriptorHandleForHeapStart();
 
 			hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&descriptorheap_res.fence));
 			assert(SUCCEEDED(hr));
+			if (FAILED(hr))
+			{
+				std::stringstream ss("");
+				ss << "ID3D12Device::CreateFence[CBV_SRV_UAV] failed! ERROR: " << std::hex << hr;
+				wiHelper::messageBox(ss.str(), "Error!");
+				wiPlatform::Exit();
+			}
 			descriptorheap_res.fenceValue = descriptorheap_res.fence->GetCompletedValue();
 
 			for (int i = 0; i < BINDLESS_RESOURCE_CAPACITY; ++i)
@@ -2363,12 +2459,26 @@ using namespace DX12_Internal;
 			descriptorheap_sam.heapDesc.NumDescriptors = 2048; // tier 1 limit
 			hr = device->CreateDescriptorHeap(&descriptorheap_sam.heapDesc, IID_PPV_ARGS(&descriptorheap_sam.heap_GPU));
 			assert(SUCCEEDED(hr));
+			if (FAILED(hr))
+			{
+				std::stringstream ss("");
+				ss << "ID3D12Device::CreateDescriptorHeap[SAMPLER] failed! ERROR: " << std::hex << hr;
+				wiHelper::messageBox(ss.str(), "Error!");
+				wiPlatform::Exit();
+			}
 
 			descriptorheap_sam.start_cpu = descriptorheap_sam.heap_GPU->GetCPUDescriptorHandleForHeapStart();
 			descriptorheap_sam.start_gpu = descriptorheap_sam.heap_GPU->GetGPUDescriptorHandleForHeapStart();
 
 			hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&descriptorheap_sam.fence));
 			assert(SUCCEEDED(hr));
+			if (FAILED(hr))
+			{
+				std::stringstream ss("");
+				ss << "ID3D12Device::CreateFence[SAMPLER] failed! ERROR: " << std::hex << hr;
+				wiHelper::messageBox(ss.str(), "Error!");
+				wiPlatform::Exit();
+			}
 			descriptorheap_sam.fenceValue = descriptorheap_sam.fence->GetCompletedValue();
 
 			for (int i = 0; i < BINDLESS_SAMPLER_CAPACITY; ++i)
@@ -2384,6 +2494,13 @@ using namespace DX12_Internal;
 			{
 				hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&frames[fr].fence[queue]));
 				assert(SUCCEEDED(hr));
+				if (FAILED(hr))
+				{
+					std::stringstream ss("");
+					ss << "ID3D12Device::CreateFence[FRAME] failed! ERROR: " << std::hex << hr;
+					wiHelper::messageBox(ss.str(), "Error!");
+					wiPlatform::Exit();
+				}
 			}
 		}
 
@@ -2456,8 +2573,9 @@ using namespace DX12_Internal;
 
 		if (features.HighestRootSignatureVersion() < D3D_ROOT_SIGNATURE_VERSION_1_1)
 		{
-			wiBackLog::post("DX12: Root signature version 1.1 not supported!");
 			assert(0);
+			wiHelper::messageBox("DX12: Root signature version 1.1 not supported!", "Error!");
+			wiPlatform::Exit();
 		}
 
 		// Create common indirect command signatures:
@@ -2478,18 +2596,39 @@ using namespace DX12_Internal;
 		cmd_desc.pArgumentDescs = dispatchArgs;
 		hr = device->CreateCommandSignature(&cmd_desc, nullptr, IID_PPV_ARGS(&dispatchIndirectCommandSignature));
 		assert(SUCCEEDED(hr));
+		if (FAILED(hr))
+		{
+			std::stringstream ss("");
+			ss << "ID3D12Device::CreateCommandSignature[dispatchIndirect] failed! ERROR: " << std::hex << hr;
+			wiHelper::messageBox(ss.str(), "Error!");
+			wiPlatform::Exit();
+		}
 
 		cmd_desc.ByteStride = sizeof(IndirectDrawArgsInstanced);
 		cmd_desc.NumArgumentDescs = 1;
 		cmd_desc.pArgumentDescs = drawInstancedArgs;
 		hr = device->CreateCommandSignature(&cmd_desc, nullptr, IID_PPV_ARGS(&drawInstancedIndirectCommandSignature));
 		assert(SUCCEEDED(hr));
+		if (FAILED(hr))
+		{
+			std::stringstream ss("");
+			ss << "ID3D12Device::CreateCommandSignature[drawInstancedIndirect] failed! ERROR: " << std::hex << hr;
+			wiHelper::messageBox(ss.str(), "Error!");
+			wiPlatform::Exit();
+		}
 
 		cmd_desc.ByteStride = sizeof(IndirectDrawArgsIndexedInstanced);
 		cmd_desc.NumArgumentDescs = 1;
 		cmd_desc.pArgumentDescs = drawIndexedInstancedArgs;
 		hr = device->CreateCommandSignature(&cmd_desc, nullptr, IID_PPV_ARGS(&drawIndexedInstancedIndirectCommandSignature));
 		assert(SUCCEEDED(hr));
+		if (FAILED(hr))
+		{
+			std::stringstream ss("");
+			ss << "ID3D12Device::CreateCommandSignature[drawIndexedInstancedIndirect] failed! ERROR: " << std::hex << hr;
+			wiHelper::messageBox(ss.str(), "Error!");
+			wiPlatform::Exit();
+		}
 
 		if (CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
 		{
@@ -2501,6 +2640,13 @@ using namespace DX12_Internal;
 			cmd_desc.pArgumentDescs = dispatchMeshArgs;
 			hr = device->CreateCommandSignature(&cmd_desc, nullptr, IID_PPV_ARGS(&dispatchMeshIndirectCommandSignature));
 			assert(SUCCEEDED(hr));
+			if (FAILED(hr))
+			{
+				std::stringstream ss("");
+				ss << "ID3D12Device::CreateCommandSignature[dispatchMeshIndirect] failed! ERROR: " << std::hex << hr;
+				wiHelper::messageBox(ss.str(), "Error!");
+				wiPlatform::Exit();
+			}
 		}
 
 		allocationhandler->descriptors_res.init(this, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
@@ -2642,6 +2788,12 @@ using namespace DX12_Internal;
 
 		hr = queues[QUEUE_GRAPHICS].queue->GetTimestampFrequency(&TIMESTAMP_FREQUENCY);
 		assert(SUCCEEDED(hr));
+		if (FAILED(hr))
+		{
+			std::stringstream ss("");
+			ss << "ID3D12CommandQueue::GetTimestampFrequency[QUEUE_GRAPHICS] failed! ERROR: " << std::hex << hr;
+			wiHelper::messageBox(ss.str(), "Warning!");
+		}
 
 		wiBackLog::post("Created GraphicsDevice_DX12 (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
