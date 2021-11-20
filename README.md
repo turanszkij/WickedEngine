@@ -184,7 +184,6 @@ For further details, please check the scripting API documentation: [Wicked Engin
 
 
 ### Model import/export:
-
 The native model format is the <b>WISCENE</b> format. Any application using Wicked Engine can open this format efficiently.
 
 In addition, the Editor supports the importing of some common model formats (the list will potentially grow): 
@@ -194,7 +193,6 @@ In addition, the Editor supports the importing of some common model formats (the
 The preferred workflow is to import models into the Editor, and save them as <b>WISCENE</b>, then any Wicked Engine application can open them.<br/>
 
 ### Graphics API:
-
 The default renderer is `DirectX 12` on Windows and `Vulkan` on Linux. The `DirectX 11` renderer is no longer available starting from version 0.57.0, but it can be found on the <a href="https://github.com/turanszkij/WickedEngine/tree/dx11-backup">dx11-backup branch</a>.
 You can specify command line arguments (without any prefix) to switch between render devices or other settings. Currently the list of options:
 <table>
@@ -225,10 +223,18 @@ You can specify command line arguments (without any prefix) to switch between re
 <br/>
 
 ### Other software using Wicked Engine
-
 - <a href="https://www.game-guru.com/max">Game Guru MAX</a>: Easy to use game creator software
 - <a href="https://www.youtube.com/watch?v=0SxXmnSQ6Q4">Flytrap</a>: Demoscene production by qop
 - Your project: add your project to this readme and open a pull request
+
+<br/>
+
+### Troubleshooting
+If you are having trouble getting the applications to run, make sure that you satisfy the following conditions:
+- If you built the application with Visual Studio, run it from the Visual Studio environment, where the executable working directory is set up to be the Project directory (not the build directory where the exe will be found)
+- If you want to run an application without Visual Studio, either copy the executable from the BUILD directory to the correct project directory, or set the working directory appropriately. You can also check the Working directory setting in Visual Studio to find out the right working directory of every project. 
+- If starting the application on Windows and you get the error: `Failed to load dxcompiler.dll!`, you might be missing the Visual C++ redistributable package, that you can get from here for your system: https://docs.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170 . An other option is to run with the `vulkan` command line argument to use the Vulkan renderer instead of DirectX 12 (as Vulkan doesn't require dxcompiler.dll).
+- If you want to build UWP application, then you will first need to build the shaders into a shader dump. For that, build and run the `offlineshadercompiler` project with the `hlsl6 shaderdump` command line arguments. If the `wiShaderDump.h` file is successfully generated, rebuilding the engine will embed all the shader files so they are not loaded separately. But embedded shaders also cannot be recompiled during runtime.
 
 <br/>
 
