@@ -2115,63 +2115,77 @@ using namespace DX12_Internal;
 		HMODULE dxcompiler = wiLoadLibrary("dxcompiler.dll");
 		if (dxcompiler == nullptr)
 		{
-			wiHelper::messageBox("Failed to load dxcompiler.dll!", "Error!");
+			std::stringstream ss("");
+			ss << "Failed to load dxcompiler.dll! ERROR: 0x" << std::hex << GetLastError();
+			wiHelper::messageBox(ss.str(), "Error!");
 			wiPlatform::Exit();
 		}
 
 #ifndef PLATFORM_UWP
-		HMODULE dxgi = LoadLibraryExW(L"dxgi.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+		HMODULE dxgi = LoadLibraryEx(L"dxgi.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
 		if (dxgi == nullptr)
 		{
-			wiHelper::messageBox("Failed to load dxgi.dll!", "Error!");
+			std::stringstream ss("");
+			ss << "Failed to load dxgi.dll! ERROR: 0x" << std::hex << GetLastError();
+			wiHelper::messageBox(ss.str(), "Error!");
 			wiPlatform::Exit();
 		}
 
-		HMODULE dx12 = LoadLibraryExW(L"d3d12.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+		HMODULE dx12 = LoadLibraryEx(L"d3d12.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
 		if (dx12 == nullptr)
 		{
-			wiHelper::messageBox("Failed to load d3d12.dll!", "Error!");
+			std::stringstream ss("");
+			ss << "Failed to load d3d12.dll! ERROR: 0x" << std::hex << GetLastError();
+			wiHelper::messageBox(ss.str(), "Error!");
 			wiPlatform::Exit();
 		}
 
-		CreateDXGIFactory2 = (PFN_CREATE_DXGI_FACTORY_2)GetProcAddress(dxgi, "CreateDXGIFactory2");
+		CreateDXGIFactory2 = (PFN_CREATE_DXGI_FACTORY_2)wiGetProcAddress(dxgi, "CreateDXGIFactory2");
 		assert(CreateDXGIFactory2 != nullptr);
 		if (CreateDXGIFactory2 == nullptr)
 		{
-			wiHelper::messageBox("Failed to load CreateDXGIFactory2!", "Error!");
+			std::stringstream ss("");
+			ss << "Failed to load CreateDXGIFactory2! ERROR: 0x" << std::hex << GetLastError();
+			wiHelper::messageBox(ss.str(), "Error!");
 			wiPlatform::Exit();
 		}
 
 #ifdef _DEBUG
 		if (debuglayer)
 		{
-			DXGIGetDebugInterface1 = (PFN_DXGI_GET_DEBUG_INTERFACE1)GetProcAddress(dxgi, "DXGIGetDebugInterface1");
+			DXGIGetDebugInterface1 = (PFN_DXGI_GET_DEBUG_INTERFACE1)wiGetProcAddress(dxgi, "DXGIGetDebugInterface1");
 			assert(DXGIGetDebugInterface1 != nullptr);
 		}
 #endif
 
-		D3D12CreateDevice = (PFN_D3D12_CREATE_DEVICE)GetProcAddress(dx12, "D3D12CreateDevice");
+		D3D12CreateDevice = (PFN_D3D12_CREATE_DEVICE)wiGetProcAddress(dx12, "D3D12CreateDevice");
 		assert(D3D12CreateDevice != nullptr);
 		if (D3D12CreateDevice == nullptr)
 		{
-			wiHelper::messageBox("Failed to load D3D12CreateDevice!", "Error!");
+			std::stringstream ss("");
+			ss << "Failed to load D3D12CreateDevice! ERROR: 0x" << std::hex << GetLastError();
+			wiHelper::messageBox(ss.str(), "Error!");
 			wiPlatform::Exit();
 		}
 
-		D3D12SerializeVersionedRootSignature = (PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE)GetProcAddress(dx12, "D3D12SerializeVersionedRootSignature");
+		D3D12SerializeVersionedRootSignature = (PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE)wiGetProcAddress(dx12, "D3D12SerializeVersionedRootSignature");
 		assert(D3D12SerializeVersionedRootSignature != nullptr);
 		if (D3D12SerializeVersionedRootSignature == nullptr)
 		{
-			wiHelper::messageBox("Failed to load D3D12SerializeVersionedRootSignature!", "Error!");
+			std::stringstream ss("");
+			ss << "Failed to load D3D12SerializeVersionedRootSignature! ERROR: 0x" << std::hex << GetLastError();
+			wiHelper::messageBox(ss.str(), "Error!");
 			wiPlatform::Exit();
 		}
 #endif // PLATFORM_UWP
 
-		DxcCreateInstanceProc DxcCreateInstance = (DxcCreateInstanceProc)GetProcAddress(dxcompiler, "DxcCreateInstance");
+		DxcCreateInstanceProc DxcCreateInstance = (DxcCreateInstanceProc)wiGetProcAddress(dxcompiler, "DxcCreateInstance");
 		assert(DxcCreateInstance != nullptr);
 		if (DxcCreateInstance == nullptr)
 		{
-			wiHelper::messageBox("Failed to load DxcCreateInstance!", "Error!");
+			std::stringstream ss("");
+			ss << "Failed to load DxcCreateInstance! ERROR: 0x" << std::hex << GetLastError();
+			wiHelper::messageBox(ss.str(), "Error!");
 			wiPlatform::Exit();
 		}
 
@@ -2182,7 +2196,7 @@ using namespace DX12_Internal;
 		if (FAILED(hr))
 		{
 			std::stringstream ss("");
-			ss << "DxcCreateInstance failed! ERROR: " << std::hex << hr;
+			ss << "DxcCreateInstance failed! ERROR: 0x" << std::hex << hr;
 			wiHelper::messageBox(ss.str(), "Error!");
 			wiPlatform::Exit();
 		}
@@ -2191,7 +2205,7 @@ using namespace DX12_Internal;
 		if (debuglayer)
 		{
 			// Enable the debug layer.
-			auto D3D12GetDebugInterface = (PFN_D3D12_GET_DEBUG_INTERFACE)GetProcAddress(dx12, "D3D12GetDebugInterface");
+			auto D3D12GetDebugInterface = (PFN_D3D12_GET_DEBUG_INTERFACE)wiGetProcAddress(dx12, "D3D12GetDebugInterface");
 			if (D3D12GetDebugInterface)
 			{
 				ComPtr<ID3D12Debug> d3dDebug;
@@ -2233,7 +2247,7 @@ using namespace DX12_Internal;
 		if (FAILED(hr))
 		{
 			std::stringstream ss("");
-			ss << "CreateDXGIFactory2 failed! ERROR: " << std::hex << hr;
+			ss << "CreateDXGIFactory2 failed! ERROR: 0x" << std::hex << hr;
 			wiHelper::messageBox(ss.str(), "Error!");
 			wiPlatform::Exit();
 		}
@@ -2358,7 +2372,7 @@ using namespace DX12_Internal;
 		if (FAILED(hr))
 		{
 			std::stringstream ss("");
-			ss << "D3D12MA::CreateAllocator failed! ERROR: " << std::hex << hr;
+			ss << "D3D12MA::CreateAllocator failed! ERROR: 0x" << std::hex << hr;
 			wiHelper::messageBox(ss.str(), "Error!");
 			wiPlatform::Exit();
 		}
@@ -2372,7 +2386,7 @@ using namespace DX12_Internal;
 		if (FAILED(hr))
 		{
 			std::stringstream ss("");
-			ss << "ID3D12Device::CreateCommandQueue[QUEUE_GRAPHICS] failed! ERROR: " << std::hex << hr;
+			ss << "ID3D12Device::CreateCommandQueue[QUEUE_GRAPHICS] failed! ERROR: 0x" << std::hex << hr;
 			wiHelper::messageBox(ss.str(), "Error!");
 			wiPlatform::Exit();
 		}
@@ -2381,7 +2395,7 @@ using namespace DX12_Internal;
 		if (FAILED(hr))
 		{
 			std::stringstream ss("");
-			ss << "ID3D12Device::CreateFence[QUEUE_GRAPHICS] failed! ERROR: " << std::hex << hr;
+			ss << "ID3D12Device::CreateFence[QUEUE_GRAPHICS] failed! ERROR: 0x" << std::hex << hr;
 			wiHelper::messageBox(ss.str(), "Error!");
 			wiPlatform::Exit();
 		}
@@ -2395,7 +2409,7 @@ using namespace DX12_Internal;
 		if (FAILED(hr))
 		{
 			std::stringstream ss("");
-			ss << "ID3D12Device::CreateCommandQueue[QUEUE_COMPUTE] failed! ERROR: " << std::hex << hr;
+			ss << "ID3D12Device::CreateCommandQueue[QUEUE_COMPUTE] failed! ERROR: 0x" << std::hex << hr;
 			wiHelper::messageBox(ss.str(), "Error!");
 			wiPlatform::Exit();
 		}
@@ -2404,7 +2418,7 @@ using namespace DX12_Internal;
 		if (FAILED(hr))
 		{
 			std::stringstream ss("");
-			ss << "ID3D12Device::CreateFence[QUEUE_COMPUTE] failed! ERROR: " << std::hex << hr;
+			ss << "ID3D12Device::CreateFence[QUEUE_COMPUTE] failed! ERROR: 0x" << std::hex << hr;
 			wiHelper::messageBox(ss.str(), "Error!");
 			wiPlatform::Exit();
 		}
@@ -2426,7 +2440,7 @@ using namespace DX12_Internal;
 			if (FAILED(hr))
 			{
 				std::stringstream ss("");
-				ss << "ID3D12Device::CreateDescriptorHeap[CBV_SRV_UAV] failed! ERROR: " << std::hex << hr;
+				ss << "ID3D12Device::CreateDescriptorHeap[CBV_SRV_UAV] failed! ERROR: 0x" << std::hex << hr;
 				wiHelper::messageBox(ss.str(), "Error!");
 				wiPlatform::Exit();
 			}
@@ -2439,7 +2453,7 @@ using namespace DX12_Internal;
 			if (FAILED(hr))
 			{
 				std::stringstream ss("");
-				ss << "ID3D12Device::CreateFence[CBV_SRV_UAV] failed! ERROR: " << std::hex << hr;
+				ss << "ID3D12Device::CreateFence[CBV_SRV_UAV] failed! ERROR: 0x" << std::hex << hr;
 				wiHelper::messageBox(ss.str(), "Error!");
 				wiPlatform::Exit();
 			}
@@ -2462,7 +2476,7 @@ using namespace DX12_Internal;
 			if (FAILED(hr))
 			{
 				std::stringstream ss("");
-				ss << "ID3D12Device::CreateDescriptorHeap[SAMPLER] failed! ERROR: " << std::hex << hr;
+				ss << "ID3D12Device::CreateDescriptorHeap[SAMPLER] failed! ERROR: 0x" << std::hex << hr;
 				wiHelper::messageBox(ss.str(), "Error!");
 				wiPlatform::Exit();
 			}
@@ -2475,7 +2489,7 @@ using namespace DX12_Internal;
 			if (FAILED(hr))
 			{
 				std::stringstream ss("");
-				ss << "ID3D12Device::CreateFence[SAMPLER] failed! ERROR: " << std::hex << hr;
+				ss << "ID3D12Device::CreateFence[SAMPLER] failed! ERROR: 0x" << std::hex << hr;
 				wiHelper::messageBox(ss.str(), "Error!");
 				wiPlatform::Exit();
 			}
@@ -2497,7 +2511,7 @@ using namespace DX12_Internal;
 				if (FAILED(hr))
 				{
 					std::stringstream ss("");
-					ss << "ID3D12Device::CreateFence[FRAME] failed! ERROR: " << std::hex << hr;
+					ss << "ID3D12Device::CreateFence[FRAME] failed! ERROR: 0x" << std::hex << hr;
 					wiHelper::messageBox(ss.str(), "Error!");
 					wiPlatform::Exit();
 				}
@@ -2599,7 +2613,7 @@ using namespace DX12_Internal;
 		if (FAILED(hr))
 		{
 			std::stringstream ss("");
-			ss << "ID3D12Device::CreateCommandSignature[dispatchIndirect] failed! ERROR: " << std::hex << hr;
+			ss << "ID3D12Device::CreateCommandSignature[dispatchIndirect] failed! ERROR: 0x" << std::hex << hr;
 			wiHelper::messageBox(ss.str(), "Error!");
 			wiPlatform::Exit();
 		}
@@ -2612,7 +2626,7 @@ using namespace DX12_Internal;
 		if (FAILED(hr))
 		{
 			std::stringstream ss("");
-			ss << "ID3D12Device::CreateCommandSignature[drawInstancedIndirect] failed! ERROR: " << std::hex << hr;
+			ss << "ID3D12Device::CreateCommandSignature[drawInstancedIndirect] failed! ERROR: 0x" << std::hex << hr;
 			wiHelper::messageBox(ss.str(), "Error!");
 			wiPlatform::Exit();
 		}
@@ -2625,7 +2639,7 @@ using namespace DX12_Internal;
 		if (FAILED(hr))
 		{
 			std::stringstream ss("");
-			ss << "ID3D12Device::CreateCommandSignature[drawIndexedInstancedIndirect] failed! ERROR: " << std::hex << hr;
+			ss << "ID3D12Device::CreateCommandSignature[drawIndexedInstancedIndirect] failed! ERROR: 0x" << std::hex << hr;
 			wiHelper::messageBox(ss.str(), "Error!");
 			wiPlatform::Exit();
 		}
@@ -2643,7 +2657,7 @@ using namespace DX12_Internal;
 			if (FAILED(hr))
 			{
 				std::stringstream ss("");
-				ss << "ID3D12Device::CreateCommandSignature[dispatchMeshIndirect] failed! ERROR: " << std::hex << hr;
+				ss << "ID3D12Device::CreateCommandSignature[dispatchMeshIndirect] failed! ERROR: 0x" << std::hex << hr;
 				wiHelper::messageBox(ss.str(), "Error!");
 				wiPlatform::Exit();
 			}
@@ -2791,7 +2805,7 @@ using namespace DX12_Internal;
 		if (FAILED(hr))
 		{
 			std::stringstream ss("");
-			ss << "ID3D12CommandQueue::GetTimestampFrequency[QUEUE_GRAPHICS] failed! ERROR: " << std::hex << hr;
+			ss << "ID3D12CommandQueue::GetTimestampFrequency[QUEUE_GRAPHICS] failed! ERROR: 0x" << std::hex << hr;
 			wiHelper::messageBox(ss.str(), "Warning!");
 		}
 

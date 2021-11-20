@@ -27,7 +27,7 @@
 #include <winrt/Windows.ApplicationModel.Core.h>
 #else
 #define PLATFORM_WINDOWS_DESKTOP
-#define wiLoadLibrary(name) LoadLibrary(_T(name))
+#define wiLoadLibrary(name) LoadLibraryA(name)
 #define wiGetProcAddress(handle,name) GetProcAddress(handle, name)
 #endif // UWP
 
