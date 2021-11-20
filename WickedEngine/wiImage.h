@@ -12,13 +12,13 @@ namespace wiImage
 	// Set canvas to handle DPI-aware image rendering (applied to all image rendering commands on this CommandList)
 	void SetCanvas(const wiCanvas& canvas, wiGraphics::CommandList cmd);
 
-	// Set a background texture (applied to all image rendering commands on this CommandList)
+	// Set a background texture (applied to all image rendering commands on this CommandList that used enableBackground())
 	void SetBackground(const wiGraphics::Texture& texture, wiGraphics::CommandList cmd);
 
 	// Draw the specified texture with the specified parameters
 	void Draw(const wiGraphics::Texture* texture, const wiImageParams& params, wiGraphics::CommandList cmd);
 
-	// Initialize the image renderer
+	// Initializes the image renderer
 	void Initialize();
 };
 
@@ -73,64 +73,38 @@ struct wiImageParams
 	};
 	uint32_t _flags = EMPTY;
 
-	XMFLOAT3 pos;
-	XMFLOAT2 siz;
-	XMFLOAT2 scale;
-	XMFLOAT4 color;
-	XMFLOAT4 drawRect;
-	XMFLOAT4 drawRect2;
-	XMFLOAT2 texOffset;
-	XMFLOAT2 texOffset2;
-	XMFLOAT2 pivot;				// (0,0) : upperleft, (0.5,0.5) : center, (1,1) : bottomright
-	float rotation;
-	float fade;
-	float opacity;
-	float hdr_scaling;
-	XMFLOAT2 corners[4];		// you can deform the image by its corners (0: top left, 1: top right, 2: bottom left, 3: bottom right)
+	XMFLOAT3 pos = XMFLOAT3(0, 0, 0);
+	XMFLOAT2 siz = XMFLOAT2(1, 1);
+	XMFLOAT2 scale = XMFLOAT2(1, 1);
+	XMFLOAT4 color = XMFLOAT4(1, 1, 1, 1);
+	XMFLOAT4 drawRect = XMFLOAT4(0, 0, 0, 0);
+	XMFLOAT4 drawRect2 = XMFLOAT4(0, 0, 0, 0);
+	XMFLOAT2 texOffset = XMFLOAT2(0, 0);
+	XMFLOAT2 texOffset2 = XMFLOAT2(0, 0);
+	XMFLOAT2 pivot = XMFLOAT2(0, 0); // (0,0) : upperleft, (0.5,0.5) : center, (1,1) : bottomright
+	float rotation = 0;
+	float fade = 0;
+	float opacity = 1;
+	float hdr_scaling = 1.0f;
+
+	// you can deform the image by its corners (0: top left, 1: top right, 2: bottom left, 3: bottom right)
+	XMFLOAT2 corners[4] = {
+		XMFLOAT2(0, 0), XMFLOAT2(1, 0),
+		XMFLOAT2(0, 1), XMFLOAT2(1, 1)
+	};		
 	const XMMATRIX* customRotation = nullptr;
 	const XMMATRIX* customProjection = nullptr;
 
-	uint8_t stencilRef;
-	STENCILMODE stencilComp;
-	STENCILREFMODE stencilRefMode;
-	BLENDMODE blendFlag;
-	SAMPLEMODE sampleFlag;
-	QUALITY quality;
+	uint8_t stencilRef = 0;
+	STENCILMODE stencilComp = STENCILMODE_DISABLED;
+	STENCILREFMODE stencilRefMode = STENCILREFMODE_ALL;
+	BLENDMODE blendFlag = BLENDMODE_ALPHA;
+	SAMPLEMODE sampleFlag = SAMPLEMODE_MIRROR;
+	QUALITY quality = QUALITY_LINEAR;
 
-	const wiGraphics::Texture* maskMap;
+	const wiGraphics::Texture* maskMap = nullptr;
 	// Generic texture
 	constexpr void setMaskMap(const wiGraphics::Texture* tex) { maskMap = tex; }
-
-	constexpr void init()
-	{
-		_flags = EMPTY;
-		pos = XMFLOAT3(0, 0, 0);
-		siz = XMFLOAT2(1, 1);
-		scale = XMFLOAT2(1, 1);
-		color = XMFLOAT4(1, 1, 1, 1);
-		drawRect = XMFLOAT4(0, 0, 0, 0);
-		drawRect2 = XMFLOAT4(0, 0, 0, 0);
-		texOffset = XMFLOAT2(0, 0);
-		texOffset2 = XMFLOAT2(0, 0);
-		pivot = XMFLOAT2(0, 0);
-		fade = 0;
-		rotation = 0;
-		opacity = 1;
-		hdr_scaling = 1.0f;
-		stencilRef = 0;
-		stencilComp = STENCILMODE_DISABLED;
-		stencilRefMode = STENCILREFMODE_ALL;
-		blendFlag = BLENDMODE_ALPHA;
-		sampleFlag = SAMPLEMODE_MIRROR;
-		quality = QUALITY_LINEAR;
-		maskMap = nullptr;
-		corners[0] = XMFLOAT2(0, 0);
-		corners[1] = XMFLOAT2(1, 0);
-		corners[2] = XMFLOAT2(0, 1);
-		corners[3] = XMFLOAT2(1, 1);
-		customRotation = nullptr;
-		customProjection = nullptr;
-	}
 
 	constexpr bool isDrawRectEnabled() const { return _flags & DRAWRECT; }
 	constexpr bool isDrawRect2Enabled() const { return _flags & DRAWRECT2; }
@@ -172,22 +146,13 @@ struct wiImageParams
 	constexpr void disableHDR10OutputMapping() { _flags &= ~OUTPUT_COLOR_SPACE_HDR10_ST2084; }
 	constexpr void disableLinearOutputMapping() { _flags &= ~OUTPUT_COLOR_SPACE_LINEAR; }
 
-
-	wiImageParams() 
-	{
-		init();
-	}
-	wiImageParams(float width, float height) 
-	{
-		init();
-		siz = XMFLOAT2(width, height);
-	}
-	wiImageParams(float posX, float posY, float width, float height, const XMFLOAT4& _color = XMFLOAT4(1, 1, 1, 1))
-	{
-		init();
-		pos.x = posX;
-		pos.y = posY;
-		siz = XMFLOAT2(width, height);
-		color = _color;
-	}
+	wiImageParams() = default;
+	wiImageParams(float width, float height):
+		siz(width, height)
+	{}
+	wiImageParams(float posX, float posY, float width, float height, const XMFLOAT4& color = XMFLOAT4(1, 1, 1, 1)) :
+		pos(posX, posY, 0),
+		siz(width, height),
+		color(color)
+	{}
 };

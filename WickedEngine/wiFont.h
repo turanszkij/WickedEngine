@@ -16,11 +16,12 @@ enum wiFontAlign
 	WIFALIGN_BOTTOM
 };
 
-static const int WIFONTSIZE_DEFAULT = 16;
+static constexpr int WIFONTSIZE_DEFAULT = 16;
 
 struct wiFontParams
 {
-	float posX, posY;
+	float posX = 0;
+	float posY = 0;
 	int size = WIFONTSIZE_DEFAULT; // line height in DPI scaled units
 	float scaling = 1;
 	float spacingX = 1, spacingY = 1; // minimum spacing between characters
@@ -30,16 +31,31 @@ struct wiFontParams
 	float h_wrap = -1; // wrap start width (-1 default for no wrap)
 	int style = 0;
 
-	wiFontParams(float posX = 0, float posY = 0, int size = WIFONTSIZE_DEFAULT, wiFontAlign h_align = WIFALIGN_LEFT, wiFontAlign v_align = WIFALIGN_TOP
-		, wiColor color = wiColor(255, 255, 255, 255), wiColor shadowColor = wiColor(0,0,0,0))
-		:posX(posX), posY(posY), size(size), h_align(h_align), v_align(v_align), color(color), shadowColor(shadowColor)
+	wiFontParams(
+		float posX = 0,
+		float posY = 0,
+		int size = WIFONTSIZE_DEFAULT,
+		wiFontAlign h_align = WIFALIGN_LEFT,
+		wiFontAlign v_align = WIFALIGN_TOP,
+		wiColor color = wiColor(255, 255, 255, 255),
+		wiColor shadowColor = wiColor(0,0,0,0)
+	):
+		posX(posX),
+		posY(posY),
+		size(size),
+		h_align(h_align),
+		v_align(v_align),
+		color(color),
+		shadowColor(shadowColor)
 	{}
 };
 
 namespace wiFont
 {
+	// Initializes the font renderer
 	void Initialize();
 
+	// Get the texture that contains currently cached glyphs
 	const wiGraphics::Texture* GetAtlas();
 
 	// Create a font from a file. It must be an existing .ttf file.
