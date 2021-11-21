@@ -45,7 +45,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		texture_lineardepth.SampleLevel(sampler_point_clamp, uv11, lowres_depthchain_mip)
 	);
 
-	const float4 depth_diff = abs(lineardepth_highres - lineardepth_lowres) * GetCamera().ZFarP;
+	const float4 depth_diff = abs(lineardepth_highres - lineardepth_lowres) * GetCamera().z_far;
 	const float accum_diff = dot(depth_diff, float4(1, 1, 1, 1));
 
 	UPSAMPLE_FORMAT color;

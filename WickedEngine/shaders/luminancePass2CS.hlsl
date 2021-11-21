@@ -32,7 +32,7 @@ void main(uint groupIndex : SV_GroupIndex)
 		float weightedLogAverage = (histogram[0].x / max(luminance_pixelcount - countForThisBin, 1.0)) - 1.0;
 		float weightedAverageLuminance = exp2(((weightedLogAverage / (LUMINANCE_NUM_HISTOGRAM_BINS - 2)) * luminance_log_range) + luminance_log_min);
 		float luminanceLastFrame = luminance_histogram.Load<float>(LUMINANCE_BUFFER_OFFSET_LUMINANCE);
-		float adaptedLuminance = luminanceLastFrame + (weightedAverageLuminance - luminanceLastFrame) * (1 - exp(-max(g_xFrame.DeltaTime, 0.01) * luminance_adaptionrate));
+		float adaptedLuminance = luminanceLastFrame + (weightedAverageLuminance - luminanceLastFrame) * (1 - exp(-max(GetFrame().delta_time, 0.01) * luminance_adaptionrate));
 		luminance_histogram.Store<float>(LUMINANCE_BUFFER_OFFSET_LUMINANCE, adaptedLuminance);
 		luminance_histogram.Store<float>(LUMINANCE_BUFFER_OFFSET_EXPOSURE, luminance_eyeadaptionkey / max(adaptedLuminance, 0.0001));
 	}

@@ -21,11 +21,11 @@ void main(
 			element.pos = input[0].pos;
 			element.col = input[0].col;
 
-			element.pos.xyz = element.pos.xyz / g_xFrame.VoxelRadianceDataRes * 2 - 1;
+			element.pos.xyz = element.pos.xyz / GetFrame().voxelradiance_resolution * 2 - 1;
 			element.pos.y = -element.pos.y;
-			element.pos.xyz *= g_xFrame.VoxelRadianceDataRes;
-			element.pos.xyz += (CreateCube(i) - float3(0, 1, 0)) * 2;
-			element.pos.xyz *= g_xFrame.VoxelRadianceDataRes * g_xFrame.VoxelRadianceDataSize / g_xFrame.VoxelRadianceDataRes;
+			element.pos.xyz *= GetFrame().voxelradiance_resolution;
+			element.pos.xyz += (vertexID_create_cube(i) - float3(0, 1, 0)) * 2;
+			element.pos.xyz *= GetFrame().voxelradiance_resolution * GetFrame().voxelradiance_size / GetFrame().voxelradiance_resolution;
 
 			element.pos = mul(g_xTransform, float4(element.pos.xyz, 1));
 			element.col *= g_xColor;

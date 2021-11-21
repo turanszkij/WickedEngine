@@ -26,7 +26,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 		const uint2 pixel = tile_upperleft + unflatten2D(t, TILE_SIZE);
 		const float2 uv = (pixel + 0.5f) * postprocess.resolution_rcp;
 		const float depth = depthbuffer.SampleLevel(sampler_linear_clamp, uv, depth_mip);
-		const float3 position = reconstructPosition(uv, depth);
+		const float3 position = reconstruct_position(uv, depth);
 		tile_XY[t] = position.xy;
 		tile_Z[t] = position.z;
 	}
@@ -50,7 +50,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	const float center_Z = tile_Z[cross_idx[0]];
 
 	[branch]
-	if (center_Z >= GetCamera().ZFarP)
+	if (center_Z >= GetCamera().z_far)
 		return;
 
 	const uint best_Z_horizontal = abs(tile_Z[cross_idx[1]] - center_Z) < abs(tile_Z[cross_idx[2]] - center_Z) ? 1 : 2;

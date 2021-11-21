@@ -9,7 +9,7 @@ struct PSIn
 
 float4 main(PSIn input) : SV_TARGET
 {
-	uint forceFieldID = g_xFrame.ForceFieldArrayOffset + (uint)g_xColor.w;
+	uint forceFieldID = GetFrame().forcefieldarray_offset + (uint)g_xColor.w;
 	ShaderEntity forceField = load_entity(forceFieldID);
 
 	float4 color = forceField.GetEnergy() < 0 ? float4(0, 0, 1, 1) : float4(1, 0, 0, 1);
@@ -30,7 +30,7 @@ float4 main(PSIn input) : SV_TARGET
 	}
 
 	float2 pTex = input.pos2D.xy / input.pos2D.w * float2(0.5f, -0.5f) + 0.5f;
-	float4 depthScene = texture_lineardepth.GatherRed(sampler_linear_clamp, pTex) * GetCamera().ZFarP;
+	float4 depthScene = texture_lineardepth.GatherRed(sampler_linear_clamp, pTex) * GetCamera().z_far;
 	float depthFragment = input.pos2D.w;
 	float fade = saturate(1.0 / forceField.GetConeAngleCos() * abs(forceField.GetEnergy()) * (max(max(depthScene.x, depthScene.y), max(depthScene.z, depthScene.w)) - depthFragment));
 	color.a *= fade;

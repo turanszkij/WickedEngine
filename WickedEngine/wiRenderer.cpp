@@ -2060,10 +2060,8 @@ void ReloadShaders()
 	wiEvent::FireEvent(SYSTEM_EVENT_RELOAD_SHADERS, 0);
 }
 
-void Initialize()
+void InitializeGlobalSamplers()
 {
-	wiTimer timer;
-
 	SamplerDesc samplerDesc;
 	samplerDesc.filter = Filter::MIN_MAG_MIP_LINEAR;
 	samplerDesc.address_u = TextureAddressMode::MIRROR;
@@ -2187,6 +2185,10 @@ void Initialize()
 	sam.sampler = samplers[SSLOT_ANISO_MIRROR];
 	sam.slot = SSLOT_ANISO_MIRROR;
 	device->SetCommonSampler(&sam);
+}
+void Initialize()
+{
+	wiTimer timer;
 
 	SetUpStates();
 	LoadBuffers();
@@ -2213,11 +2215,11 @@ static const uint32_t CASCADE_COUNT = 3;
 // Don't store this structure on heap!
 struct SHCAM
 {
-	XMMATRIX VP;
+	XMMATRIX view_projection;
 	Frustum frustum;					// This frustum can be used for intersection test with wiIntersect primitives
 	BoundingFrustum boundingfrustum;	// This boundingfrustum can be used for frustum vs frustum intersection test
 
-	SHCAM() {}
+	SHCAM() = default;
 	SHCAM(const XMFLOAT3& eyePos, const XMFLOAT4& rotation, float nearPlane, float farPlane, float fov) 
 	{
 		const XMVECTOR E = XMLoadFloat3(&eyePos);
@@ -2227,9 +2229,8 @@ struct SHCAM
 		const XMVECTOR up = XMVector3TransformNormal(XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), rot);
 		const XMMATRIX V = XMMatrixLookToLH(E, to, up);
 		const XMMATRIX P = XMMatrixPerspectiveFovLH(fov, 1, farPlane, nearPlane);
-		VP = XMMatrixMultiply(V, P);
-		frustum.Create(VP);
-
+		view_projection = XMMatrixMultiply(V, P);
+		frustum.Create(view_projection);
 		
 		BoundingFrustum::CreateFromMatrix(boundingfrustum, P);
 		std::swap(boundingfrustum.Near, boundingfrustum.Far);
@@ -2339,8 +2340,8 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 
 		const XMMATRIX lightProjection = XMMatrixOrthographicOffCenterLH(_min.x, _max.x, _min.y, _max.y, _max.z, _min.z); // notice reversed Z!
 
-		shcams[cascade].VP = XMMatrixMultiply(lightView, lightProjection);
-		shcams[cascade].frustum.Create(shcams[cascade].VP);
+		shcams[cascade].view_projection = XMMatrixMultiply(lightView, lightProjection);
+		shcams[cascade].frustum.Create(shcams[cascade].view_projection);
 	}
 
 }
@@ -3040,44 +3041,48 @@ void UpdatePerFrameData(
 	}
 
 	// Update CPU-side frame constant buffer:
-	frameCB.ShadowCascadeCount = CASCADE_COUNT;
-	frameCB.VoxelRadianceMaxDistance = voxelSceneData.maxDistance;
-	frameCB.VoxelRadianceDataSize = voxelSceneData.voxelsize;
-	frameCB.VoxelRadianceDataSize_rcp = 1.0f / (float)frameCB.VoxelRadianceDataSize;
-	frameCB.VoxelRadianceDataRes = GetVoxelRadianceEnabled() ? (uint)voxelSceneData.res : 0;
-	frameCB.VoxelRadianceDataRes_rcp = 1.0f / (float)frameCB.VoxelRadianceDataRes;
-	frameCB.VoxelRadianceDataMIPs = voxelSceneData.mips;
-	frameCB.VoxelRadianceNumCones = std::max(std::min(voxelSceneData.numCones, 16u), 1u);
-	frameCB.VoxelRadianceNumCones_rcp = 1.0f / (float)frameCB.VoxelRadianceNumCones;
-	frameCB.VoxelRadianceRayStepSize = voxelSceneData.rayStepSize;
-	frameCB.VoxelRadianceDataCenter = voxelSceneData.center;
+	frameCB.shadow_cascade_count = CASCADE_COUNT;
+	frameCB.shadow_kernel_2D = 1.0f / SHADOWRES_2D;
+	frameCB.shadow_kernel_cube = 1.0f / SHADOWRES_CUBE;
+	frameCB.delta_time = dt * GetGameSpeed();
+	frameCB.time_previous = frameCB.time;
+	frameCB.time += frameCB.delta_time;
+	frameCB.frame_count = (uint)device->GetFrameCount();
+	frameCB.blue_noise_phase = (frameCB.frame_count & 0xFF) * 1.6180339887f;
+
+	frameCB.voxelradiance_max_distance = voxelSceneData.maxDistance;
+	frameCB.voxelradiance_size = voxelSceneData.voxelsize;
+	frameCB.voxelradiance_size_rcp = 1.0f / (float)frameCB.voxelradiance_size;
+	frameCB.voxelradiance_resolution = GetVoxelRadianceEnabled() ? (uint)voxelSceneData.res : 0;
+	frameCB.voxelradiance_resolution_rcp = 1.0f / (float)frameCB.voxelradiance_resolution;
+	frameCB.voxelradiance_mipcount = voxelSceneData.mips;
+	frameCB.voxelradiance_numcones = std::max(std::min(voxelSceneData.numCones, 16u), 1u);
+	frameCB.voxelradiance_numcones_rcp = 1.0f / (float)frameCB.voxelradiance_numcones;
+	frameCB.voxelradiance_stepsize = voxelSceneData.rayStepSize;
+	frameCB.voxelradiance_center = voxelSceneData.center;
 
 	// The order is very important here:
-	frameCB.DecalArrayOffset = 0;
-	frameCB.DecalArrayCount = (uint)vis.visibleDecals.size();
-	frameCB.EnvProbeArrayOffset = frameCB.DecalArrayCount;
-	frameCB.EnvProbeArrayCount = std::min(vis.scene->envmapCount, (uint)vis.visibleEnvProbes.size());
-	frameCB.LightArrayOffset = frameCB.EnvProbeArrayOffset + frameCB.EnvProbeArrayCount;
-	frameCB.LightArrayCount = (uint)vis.visibleLights.size();
-	frameCB.ForceFieldArrayOffset = frameCB.LightArrayOffset + frameCB.LightArrayCount;
-	frameCB.ForceFieldArrayCount = (uint)vis.scene->forces.GetCount();
+	frameCB.decalarray_offset = 0;
+	frameCB.decalarray_count = (uint)vis.visibleDecals.size();
+	frameCB.envprobearray_offset = frameCB.decalarray_count;
+	frameCB.envprobearray_count = std::min(vis.scene->envmapCount, (uint)vis.visibleEnvProbes.size());
+	frameCB.lightarray_offset = frameCB.envprobearray_offset + frameCB.envprobearray_count;
+	frameCB.lightarray_count = (uint)vis.visibleLights.size();
+	frameCB.forcefieldarray_offset = frameCB.lightarray_offset + frameCB.lightarray_count;
+	frameCB.forcefieldarray_count = (uint)vis.scene->forces.GetCount();
 
-	frameCB.EnvProbeMipCount = 0;
-	frameCB.EnvProbeMipCount_rcp = 1.0f;
+	frameCB.envprobe_mipcount = 0;
+	frameCB.envprobe_mipcount_rcp = 1.0f;
 	if (vis.scene->envmapArray.IsValid())
 	{
-		frameCB.EnvProbeMipCount = vis.scene->envmapArray.GetDesc().mip_levels;
-		frameCB.EnvProbeMipCount_rcp = 1.0f / (float)frameCB.EnvProbeMipCount;
+		frameCB.envprobe_mipcount = vis.scene->envmapArray.GetDesc().mip_levels;
+		frameCB.envprobe_mipcount_rcp = 1.0f / (float)frameCB.envprobe_mipcount;
 	}
 
-	frameCB.DeltaTime = dt * GetGameSpeed();
-	frameCB.TimePrev = frameCB.Time;
-	frameCB.Time += frameCB.DeltaTime;
-	frameCB.FrameCount = (uint)device->GetFrameCount();
-	frameCB.TemporalAASampleRotation = 0;
+	frameCB.temporalaa_samplerotation = 0;
 	if (GetTemporalAAEnabled())
 	{
-		uint id = frameCB.FrameCount % 4;
+		uint id = frameCB.frame_count % 4;
 		uint x = 0;
 		uint y = 0;
 		switch (id)
@@ -3095,73 +3100,69 @@ void UpdatePerFrameData(
 		default:
 			break;
 		}
-		frameCB.TemporalAASampleRotation = (x & 0x000000FF) | ((y & 0x000000FF) << 8);
+		frameCB.temporalaa_samplerotation = (x & 0x000000FF) | ((y & 0x000000FF) << 8);
 	}
-	frameCB.ShadowKernel2D = 1.0f / SHADOWRES_2D;
-	frameCB.ShadowKernelCube = 1.0f / SHADOWRES_CUBE;
 
-	frameCB.BlueNoisePhase = (frameCB.FrameCount & 0xFF) * 1.6180339887f;
-
-	frameCB.Options = 0;
+	frameCB.options = 0;
 	if (GetTemporalAAEnabled())
 	{
-		frameCB.Options |= OPTION_BIT_TEMPORALAA_ENABLED;
+		frameCB.options |= OPTION_BIT_TEMPORALAA_ENABLED;
 	}
 	if (GetTransparentShadowsEnabled())
 	{
-		frameCB.Options |= OPTION_BIT_TRANSPARENTSHADOWS_ENABLED;
+		frameCB.options |= OPTION_BIT_TRANSPARENTSHADOWS_ENABLED;
 	}
 	if (GetVoxelRadianceEnabled())
 	{
-		frameCB.Options |= OPTION_BIT_VOXELGI_ENABLED;
+		frameCB.options |= OPTION_BIT_VOXELGI_ENABLED;
 	}
 	if (GetVoxelRadianceReflectionsEnabled())
 	{
-		frameCB.Options |= OPTION_BIT_VOXELGI_REFLECTIONS_ENABLED;
+		frameCB.options |= OPTION_BIT_VOXELGI_REFLECTIONS_ENABLED;
 	}
 	if (voxelSceneData.centerChangedThisFrame)
 	{
-		frameCB.Options |= OPTION_BIT_VOXELGI_RETARGETTED;
+		frameCB.options |= OPTION_BIT_VOXELGI_RETARGETTED;
 	}
 	if (vis.scene->weather.IsSimpleSky())
 	{
-		frameCB.Options |= OPTION_BIT_SIMPLE_SKY;
+		frameCB.options |= OPTION_BIT_SIMPLE_SKY;
 	}
 	if (vis.scene->weather.IsRealisticSky())
 	{
-		frameCB.Options |= OPTION_BIT_REALISTIC_SKY;
+		frameCB.options |= OPTION_BIT_REALISTIC_SKY;
 	}
 	if (vis.scene->weather.IsHeightFog())
 	{
-		frameCB.Options |= OPTION_BIT_HEIGHT_FOG;
+		frameCB.options |= OPTION_BIT_HEIGHT_FOG;
 	}
 	if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING) && GetRaytracedShadowsEnabled())
 	{
-		frameCB.Options |= OPTION_BIT_RAYTRACED_SHADOWS;
-		frameCB.Options |= OPTION_BIT_SHADOW_MASK;
+		frameCB.options |= OPTION_BIT_RAYTRACED_SHADOWS;
+		frameCB.options |= OPTION_BIT_SHADOW_MASK;
 	}
 	if (GetScreenSpaceShadowsEnabled())
 	{
-		frameCB.Options |= OPTION_BIT_SHADOW_MASK;
+		frameCB.options |= OPTION_BIT_SHADOW_MASK;
 	}
 	if (GetSurfelGIEnabled())
 	{
-		frameCB.Options |= OPTION_BIT_SURFELGI_ENABLED;
+		frameCB.options |= OPTION_BIT_SURFELGI_ENABLED;
 	}
 	if (IsDisableAlbedoMaps())
 	{
-		frameCB.Options |= OPTION_BIT_DISABLE_ALBEDO_MAPS;
+		frameCB.options |= OPTION_BIT_DISABLE_ALBEDO_MAPS;
 	}
 	if (IsForceDiffuseLighting())
 	{
-		frameCB.Options |= OPTION_BIT_FORCE_DIFFUSE_LIGHTING;
+		frameCB.options |= OPTION_BIT_FORCE_DIFFUSE_LIGHTING;
 	}
 	if (vis.scene->weather.skyMap != nullptr)
 	{
 		bool hdr = !IsFormatUnorm(vis.scene->weather.skyMap->texture.desc.format);
 		if (hdr)
 		{
-			frameCB.Options |= OPTION_BIT_STATIC_SKY_HDR;
+			frameCB.options |= OPTION_BIT_STATIC_SKY_HDR;
 		}
 	}
 
@@ -3487,9 +3488,9 @@ void UpdateRenderData(
 				{
 					std::array<SHCAM, CASCADE_COUNT> shcams;
 					CreateDirLightShadowCams(light, *vis.camera, shcams);
-					matrixArray[matrixCounter++] = shcams[0].VP;
-					matrixArray[matrixCounter++] = shcams[1].VP;
-					matrixArray[matrixCounter++] = shcams[2].VP;
+					matrixArray[matrixCounter++] = shcams[0].view_projection;
+					matrixArray[matrixCounter++] = shcams[1].view_projection;
+					matrixArray[matrixCounter++] = shcams[2].view_projection;
 				}
 			}
 			break;
@@ -3516,7 +3517,7 @@ void UpdateRenderData(
 				{
 					SHCAM shcam;
 					CreateSpotLightShadowCam(light, shcam);
-					matrixArray[matrixCounter++] = shcam.VP;
+					matrixArray[matrixCounter++] = shcam.view_projection;
 				}
 			}
 			break;
@@ -3684,7 +3685,7 @@ void UpdateRenderData(
 
 	// Hair particle systems GPU simulation:
 	//	(This must be non-async too, as prepass will render hairs!)
-	if (!vis.visibleHairs.empty() && frameCB.DeltaTime > 0)
+	if (!vis.visibleHairs.empty() && frameCB.delta_time > 0)
 	{
 		range = wiProfiler::BeginRangeGPU("HairParticles - Simulate", cmd);
 		for (uint32_t hairIndex : vis.visibleHairs)
@@ -3859,7 +3860,7 @@ void UpdateRenderDataAsync(
 	BindCommonResources(cmd);
 
 	// GPU Particle systems simulation/sorting/culling:
-	if (!vis.visibleEmitters.empty() && frameCB.DeltaTime > 0)
+	if (!vis.visibleEmitters.empty() && frameCB.delta_time > 0)
 	{
 		auto range = wiProfiler::BeginRangeGPU("EmittedParticles - Simulate", cmd);
 		for (uint32_t emitterIndex : vis.visibleEmitters)
@@ -4688,7 +4689,7 @@ void DrawShadowmaps(
 					if (!renderQueue.empty())
 					{
 						CameraCB cb;
-						XMStoreFloat4x4(&cb.VP, shcams[cascade].VP);
+						XMStoreFloat4x4(&cb.view_projection, shcams[cascade].view_projection);
 						device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 
 						Viewport vp;
@@ -4760,7 +4761,7 @@ void DrawShadowmaps(
 						);
 
 					CameraCB cb;
-					XMStoreFloat4x4(&cb.VP, shcam.VP);
+					XMStoreFloat4x4(&cb.view_projection, shcam.view_projection);
 					device->BindDynamicConstantBuffer(cb, CBSLOT_RENDERER_CAMERA, cmd);
 
 					Viewport vp;
@@ -4849,7 +4850,7 @@ void DrawShadowmaps(
 					{
 						if (cam_frustum.Intersects(cameras[shcam].boundingfrustum))
 						{
-							XMStoreFloat4x4(&cb.xCubemapRenderCams[frustum_count].VP, cameras[shcam].VP);
+							XMStoreFloat4x4(&cb.xCubemapRenderCams[frustum_count].view_projection, cameras[shcam].view_projection);
 							cb.xCubemapRenderCams[frustum_count].properties = uint4(shcam, 0, 0, 0);
 							frusta[frustum_count] = cameras[shcam].frustum;
 							frustum_count++;
@@ -6245,13 +6246,13 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		for (uint32_t i = 0; i < arraysize(cameras); ++i)
 		{
 			frusta[i] = cameras[i].frustum;
-			XMStoreFloat4x4(&cb.xCubemapRenderCams[i].VP, cameras[i].VP);
+			XMStoreFloat4x4(&cb.xCubemapRenderCams[i].view_projection, cameras[i].view_projection);
 			cb.xCubemapRenderCams[i].properties = uint4(i, 0, 0, 0);
 		}
 		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(CubemapRenderCB), cmd);
 
 		CameraCB camcb;
-		camcb.CamPos = probe.position; // only this will be used by envprobe rendering shaders the rest is read from cubemaprenderCB
+		camcb.position = probe.position; // only this will be used by envprobe rendering shaders the rest is read from cubemaprenderCB
 		device->BindDynamicConstantBuffer(camcb, CBSLOT_RENDERER_CAMERA, cmd);
 
 		if (vis.scene->weather.IsRealisticSky())
@@ -7347,51 +7348,50 @@ void BindCameraCB(
 {
 	CameraCB cb;
 
-	XMStoreFloat4x4(&cb.VP, camera.GetViewProjection());
-	XMStoreFloat4x4(&cb.View, camera.GetView());
-	XMStoreFloat4x4(&cb.Proj, camera.GetProjection());
-	cb.CamPos = camera.Eye;
-	cb.DistanceFromOrigin = XMVectorGetX(XMVector3Length(XMLoadFloat3(&cb.CamPos)));
-	XMStoreFloat4x4(&cb.InvV, camera.GetInvView());
-	XMStoreFloat4x4(&cb.InvP, camera.GetInvProjection());
-	XMStoreFloat4x4(&cb.InvVP, camera.GetInvViewProjection());
-	cb.At = camera.At;
-	cb.Up = camera.Up;
-	cb.ZNearP = camera.zNearP;
-	cb.ZFarP = camera.zFarP;
-	cb.ZNearP_rcp = 1.0f / std::max(0.0001f, cb.ZNearP);
-	cb.ZFarP_rcp = 1.0f / std::max(0.0001f, cb.ZFarP);
-	cb.ZRange = abs(cb.ZFarP - cb.ZNearP);
-	cb.ZRange_rcp = 1.0f / std::max(0.0001f, cb.ZRange);
-	cb.ClipPlane = camera.clipPlane;
+	XMStoreFloat4x4(&cb.view_projection, camera.GetViewProjection());
+	XMStoreFloat4x4(&cb.view, camera.GetView());
+	XMStoreFloat4x4(&cb.projection, camera.GetProjection());
+	cb.position = camera.Eye;
+	cb.distance_from_origin = XMVectorGetX(XMVector3Length(XMLoadFloat3(&cb.position)));
+	XMStoreFloat4x4(&cb.inverse_view, camera.GetInvView());
+	XMStoreFloat4x4(&cb.inverse_projection, camera.GetInvProjection());
+	XMStoreFloat4x4(&cb.inverse_view_projection, camera.GetInvViewProjection());
+	cb.forward = camera.At;
+	cb.up = camera.Up;
+	cb.z_near = camera.zNearP;
+	cb.z_far = camera.zFarP;
+	cb.z_near_rcp = 1.0f / std::max(0.0001f, cb.z_near);
+	cb.z_far_rcp = 1.0f / std::max(0.0001f, cb.z_far);
+	cb.z_range = abs(cb.z_far - cb.z_near);
+	cb.z_range_rcp = 1.0f / std::max(0.0001f, cb.z_range);
+	cb.clip_plane = camera.clipPlane;
 
-	static_assert(arraysize(camera.frustum.planes) == arraysize(cb.FrustumPlanes), "Mismatch!");
+	static_assert(arraysize(camera.frustum.planes) == arraysize(cb.frustum.planes), "Mismatch!");
 	for (int i = 0; i < arraysize(camera.frustum.planes); ++i)
 	{
-		cb.FrustumPlanes[i] = camera.frustum.planes[i];
+		cb.frustum.planes[i] = camera.frustum.planes[i];
 	}
 
-	cb.TemporalAAJitter = camera.jitter;
-	cb.TemporalAAJitterPrev = camera_previous.jitter;
+	cb.temporalaa_jitter = camera.jitter;
+	cb.temporalaa_jitter_prev = camera_previous.jitter;
 
-	XMStoreFloat4x4(&cb.PrevV, camera_previous.GetView());
-	XMStoreFloat4x4(&cb.PrevP, camera_previous.GetProjection());
-	XMStoreFloat4x4(&cb.PrevVP, camera_previous.GetViewProjection());
-	XMStoreFloat4x4(&cb.PrevInvVP, camera_previous.GetInvViewProjection());
-	XMStoreFloat4x4(&cb.ReflVP, camera_reflection.GetViewProjection());
-	XMStoreFloat4x4(&cb.Reprojection, camera.GetInvViewProjection() * camera_previous.GetViewProjection());
+	XMStoreFloat4x4(&cb.previous_view, camera_previous.GetView());
+	XMStoreFloat4x4(&cb.previous_projection, camera_previous.GetProjection());
+	XMStoreFloat4x4(&cb.previous_view_projection, camera_previous.GetViewProjection());
+	XMStoreFloat4x4(&cb.previous_inverse_view_projection, camera_previous.GetInvViewProjection());
+	XMStoreFloat4x4(&cb.reflection_view_projection, camera_reflection.GetViewProjection());
+	XMStoreFloat4x4(&cb.reprojection, camera.GetInvViewProjection() * camera_previous.GetViewProjection());
 
-	cb.FocalLength = camera.focal_length;
-	cb.ApertureSize = camera.aperture_size;
-	cb.ApertureShape = camera.aperture_shape;
+	cb.focal_length = camera.focal_length;
+	cb.aperture_size = camera.aperture_size;
+	cb.aperture_shape = camera.aperture_shape;
 
+	cb.canvas_size = float2(camera.canvas.GetLogicalWidth(), camera.canvas.GetLogicalHeight());
+	cb.canvas_size_rcp = float2(1.0f / cb.canvas_size.x, 1.0f / cb.canvas_size.y);
+	cb.internal_resolution = uint2((uint)camera.width, (uint)camera.height);
+	cb.internal_resolution_rcp = float2(1.0f / cb.internal_resolution.x, 1.0f / cb.internal_resolution.y);
 
-	cb.CanvasSize = float2(camera.canvas.GetLogicalWidth(), camera.canvas.GetLogicalHeight());
-	cb.CanvasSize_rcp = float2(1.0f / cb.CanvasSize.x, 1.0f / cb.CanvasSize.y);
-	cb.InternalResolution = uint2((uint)camera.width, (uint)camera.height);
-	cb.InternalResolution_rcp = float2(1.0f / cb.InternalResolution.x, 1.0f / cb.InternalResolution.y);
-
-	cb.EntityCullingTileCount = GetEntityCullingTileCount(cb.InternalResolution);
+	cb.entity_culling_tilecount = GetEntityCullingTileCount(cb.internal_resolution);
 
 	cb.texture_depth_index = camera.texture_depth_index;
 	cb.texture_lineardepth_index = camera.texture_lineardepth_index;

@@ -22,7 +22,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 		const uint2 pixel = tile_upperleft + unflatten2D(t, TILE_SIZE);
 		const float2 uv = (pixel + 0.5f) * postprocess.resolution_rcp;
 		const float depth = texture_depth.SampleLevel(sampler_linear_clamp, uv, 1);
-		const float3 position = reconstructPosition(uv, depth, GetCamera().InvP); // specify matrix to get view-space position!
+		const float3 position = reconstruct_position(uv, depth, GetCamera().inverse_projection); // specify matrix to get view-space position!
 		tile_XY[t] = position.xy;
 		tile_Z[t] = position.z;
 	}
@@ -46,7 +46,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	const float center_Z = tile_Z[cross_idx[0]];
 
 	[branch]
-	if (center_Z >= GetCamera().ZFarP) 
+	if (center_Z >= GetCamera().z_far) 
 		return;
 
 	const uint best_Z_horizontal = abs(tile_Z[cross_idx[1]] - center_Z) < abs(tile_Z[cross_idx[2]] - center_Z) ? 1 : 2;
@@ -95,7 +95,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 		const float ray_range = ssao_range * lerp(0.2f, 1.0f, rand(seed, uv)); // modulate ray-length a bit to avoid uniform look
 		const float3 sam = P + cone * ray_range;
 
-		float4 vProjectedCoord = mul(GetCamera().Proj, float4(sam, 1.0f));
+		float4 vProjectedCoord = mul(GetCamera().projection, float4(sam, 1.0f));
 		vProjectedCoord.xyz /= vProjectedCoord.w;
 		vProjectedCoord.xy = vProjectedCoord.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 
@@ -103,14 +103,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 		if (is_saturated(vProjectedCoord.xy))
 		{
 #ifdef USE_LINEARDEPTH
-			const float ray_depth_real = vProjectedCoord.w; // .w is also linear depth, could be also written as getLinearDepth(vProjectedCoord.z)
-			const float ray_depth_sample = texture_lineardepth.SampleLevel(sampler_point_clamp, vProjectedCoord.xy, 0) * GetCamera().ZFarP;
+			const float ray_depth_real = vProjectedCoord.w; // .w is also linear depth, could be also written as compute_lineardepth(vProjectedCoord.z)
+			const float ray_depth_sample = texture_lineardepth.SampleLevel(sampler_point_clamp, vProjectedCoord.xy, 0) * GetCamera().z_far;
 			const float depth_fix = 1 - saturate(abs(ray_depth_real - ray_depth_sample) * 0.2f); // too much depth difference cancels the effect
 			ao += (ray_depth_sample < ray_depth_real) * depth_fix;
 #else
 			const float ray_depth_real = vProjectedCoord.z;
 			const float ray_depth_sample = texture_depth.SampleLevel(sampler_point_clamp, vProjectedCoord.xy, 0);
-			const float depth_fix = 1 - saturate(abs(vProjectedCoord.w - getLinearDepth(ray_depth_sample)) * 0.2f); // too much depth difference cancels the effect (vProjectedCoord.w is also linear depth)
+			const float depth_fix = 1 - saturate(abs(vProjectedCoord.w - compute_lineardepth(ray_depth_sample)) * 0.2f); // too much depth difference cancels the effect (vProjectedCoord.w is also linear depth)
 			ao += (ray_depth_sample > ray_depth_real) * depth_fix;
 #endif // USE_LINEARDEPTH
 		}

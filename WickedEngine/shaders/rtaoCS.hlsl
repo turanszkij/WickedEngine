@@ -33,7 +33,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	}
 	output_tiles[flatTileIdx] = 0;
 
-	const float3 P = reconstructPosition(uv, depth);
+	const float3 P = reconstruct_position(uv, depth);
 
 	PrimitiveID prim;
 	prim.unpack(texture_gbuffer0[DTid.xy * 2]);
@@ -52,7 +52,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 
 	const float2 bluenoise = blue_noise(DTid.xy).xy;
 
-	ray.Direction = normalize(mul(hemispherepoint_cos(bluenoise.x, bluenoise.y), GetTangentSpace(N)));
+	ray.Direction = normalize(mul(hemispherepoint_cos(bluenoise.x, bluenoise.y), get_tangentspace(N)));
 
 	float shadow = 0;
 

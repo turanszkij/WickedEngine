@@ -21,7 +21,7 @@ float4 main(Input input) : SV_TARGET
 	float seed = xTraceAccumulationFactor;
 	RayDesc ray;
 	ray.Origin = input.pos3D;
-	ray.Direction = SampleHemisphere_cos(surface.N, seed, uv);
+	ray.Direction = sample_hemisphere_cos(surface.N, seed, uv);
 	ray.TMin = 0.001;
 	ray.TMax = FLT_MAX;
 	float3 result = 0;
@@ -34,9 +34,9 @@ float4 main(Input input) : SV_TARGET
 		surface.P = ray.Origin;
 
 		[loop]
-		for (uint iterator = 0; iterator < g_xFrame.LightArrayCount; iterator++)
+		for (uint iterator = 0; iterator < GetFrame().lightarray_count; iterator++)
 		{
-			ShaderEntity light = load_entity(g_xFrame.LightArrayOffset + iterator);
+			ShaderEntity light = load_entity(GetFrame().lightarray_offset + iterator);
 
 			Lighting lighting;
 			lighting.create(0, 0, 0, 0);
@@ -63,7 +63,7 @@ float4 main(Input input) : SV_TARGET
 				if (NdotL > 0)
 				{
 					float3 atmosphereTransmittance = 1.0;
-					if (g_xFrame.Options & OPTION_BIT_REALISTIC_SKY)
+					if (GetFrame().options & OPTION_BIT_REALISTIC_SKY)
 					{
 						atmosphereTransmittance = GetAtmosphericLightTransmittance(GetWeather().atmosphere, surface.P, L, texture_transmittancelut);
 					}
@@ -148,7 +148,7 @@ float4 main(Input input) : SV_TARGET
 
 				RayDesc newRay;
 				newRay.Origin = surface.P;
-				newRay.Direction = normalize(lerp(L, SampleHemisphere_cos(L, seed, uv), 0.025f));
+				newRay.Direction = normalize(lerp(L, sample_hemisphere_cos(L, seed, uv), 0.025f));
 				newRay.TMin = 0.001;
 				newRay.TMax = dist;
 #ifdef RTAPI
@@ -266,7 +266,7 @@ float4 main(Input input) : SV_TARGET
 		{
 			// Refraction
 			const float3 R = refract(ray.Direction, surface.N, 1 - surface.material.refraction);
-			ray.Direction = lerp(R, SampleHemisphere_cos(R, seed, uv), surface.roughnessBRDF);
+			ray.Direction = lerp(R, sample_hemisphere_cos(R, seed, uv), surface.roughnessBRDF);
 			energy *= surface.albedo;
 
 			// Add a new bounce iteration, otherwise the transparent effect can disappear:
@@ -282,13 +282,13 @@ float4 main(Input input) : SV_TARGET
 			{
 				// Specular reflection
 				const float3 R = reflect(ray.Direction, surface.N);
-				ray.Direction = lerp(R, SampleHemisphere_cos(R, seed, uv), surface.roughnessBRDF);
+				ray.Direction = lerp(R, sample_hemisphere_cos(R, seed, uv), surface.roughnessBRDF);
 				energy *= surface.F / specChance;
 			}
 			else
 			{
 				// Diffuse reflection
-				ray.Direction = SampleHemisphere_cos(surface.N, seed, uv);
+				ray.Direction = sample_hemisphere_cos(surface.N, seed, uv);
 				energy *= surface.albedo / (1 - specChance);
 			}
 		}

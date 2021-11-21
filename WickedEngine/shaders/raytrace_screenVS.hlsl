@@ -10,7 +10,7 @@ VSOut main(uint vI : SV_VERTEXID)
 {
 	VSOut Out;
 
-	FullScreenTriangle(vI, Out.pos);
+	vertexID_create_fullscreen_triangle(vI, Out.pos);
 
 	Out.clipspace = Out.pos.xy;
 

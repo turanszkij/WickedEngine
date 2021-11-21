@@ -159,11 +159,11 @@ void CalculateClouds(inout float3 sky, float3 V, bool dark_enabled)
     }
 
     // Trace a cloud layer plane:
-    const float3 o = GetCamera().CamPos;
+    const float3 o = GetCamera().position;
     const float3 d = V;
     const float3 planeOrigin = float3(0, 1000, 0);
     const float3 planeNormal = float3(0, -1, 0);
-    const float t = Trace_plane(o, d, planeOrigin, planeNormal);
+    const float t = trace_plane(o, d, planeOrigin, planeNormal);
 
     if (t < 0)
     {
@@ -172,7 +172,7 @@ void CalculateClouds(inout float3 sky, float3 V, bool dark_enabled)
 
     const float3 cloudPos = o + d * t;
     const float2 cloudUV = cloudPos.xz * GetWeather().cloud_scale;
-    const float cloudTime = g_xFrame.Time * GetWeather().cloud_speed;
+    const float cloudTime = GetFrame().time * GetWeather().cloud_speed;
     const float2x2 m = float2x2(1.6, 1.2, -1.2, 1.6);
     const uint quality = 8;
 
@@ -242,7 +242,7 @@ void CalculateClouds(inout float3 sky, float3 V, bool dark_enabled)
 //	V	: view direction
 float3 GetDynamicSkyColor(in float3 V, bool sun_enabled = true, bool clouds_enabled = true, bool dark_enabled = false, bool realistic_sky_stationary = false)
 {
-    if (g_xFrame.Options & OPTION_BIT_SIMPLE_SKY)
+    if (GetFrame().options & OPTION_BIT_SIMPLE_SKY)
     {
         return lerp(GetHorizonColor(), GetZenithColor(), saturate(V.y * 0.5f + 0.5f)) * GetWeather().sky_exposure;
     }
@@ -253,14 +253,14 @@ float3 GetDynamicSkyColor(in float3 V, bool sun_enabled = true, bool clouds_enab
 
     float3 sky = float3(0, 0, 0);
 
-    if (g_xFrame.Options & OPTION_BIT_REALISTIC_SKY)
+    if (GetFrame().options & OPTION_BIT_REALISTIC_SKY)
     {
         sky = AccurateAtmosphericScattering
         (
             texture_skyviewlut,          // Sky View Lut (combination of precomputed atmospheric LUTs)
             texture_transmittancelut,
             texture_multiscatteringlut,
-            GetCamera().CamPos,           // Ray origin
+            GetCamera().position,           // Ray origin
             V,                          // Ray direction
             sunDirection,               // Position of the sun
             sunEnergy,                  // Sun energy

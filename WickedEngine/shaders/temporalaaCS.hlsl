@@ -101,8 +101,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 
 #if 0
 	// Disocclusion fallback:
-	float depth_current = texture_lineardepth[DTid.xy] * GetCamera().ZFarP;
-	float depth_history = getLinearDepth(texture_depth_history.SampleLevel(sampler_point_clamp, prevUV, 0));
+	float depth_current = texture_lineardepth[DTid.xy] * GetCamera().z_far;
+	float depth_history = compute_lineardepth(texture_depth_history.SampleLevel(sampler_point_clamp, prevUV, 0));
 	if (length(velocity) > 0.01 && abs(depth_current - depth_history) > 1)
 	{
 		output[DTid.xy] = current;
@@ -118,7 +118,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 	history.rgb = clamp(history.rgb, neighborhoodMin, neighborhoodMax);
 
 	// the linear filtering can cause blurry image, try to account for that:
-	float subpixelCorrection = frac(max(abs(velocity.x) * GetCamera().InternalResolution.x, abs(velocity.y) * GetCamera().InternalResolution.y)) * 0.5f;
+	float subpixelCorrection = frac(max(abs(velocity.x) * GetCamera().internal_resolution.x, abs(velocity.y) * GetCamera().internal_resolution.y)) * 0.5f;
 
 	// compute a nice blend factor:
 	float blendfactor = saturate(lerp(0.05f, 0.8f, subpixelCorrection));
@@ -135,7 +135,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 	float3 resolved = lerp(history.rgb, current.rgb, blendfactor);
 
 #ifdef HDR_CORRECTION
-	resolved.rgb = inverseTonemap(resolved.rgb);
+	resolved.rgb = inverse_tonemap(resolved.rgb);
 #endif
 
 	output[DTid.xy] = resolved;

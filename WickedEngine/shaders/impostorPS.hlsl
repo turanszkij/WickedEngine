@@ -22,7 +22,7 @@ float4 main(VSOut input) : SV_Target
 	float metalness = surfaceparams.b;
 	float reflectance = surfaceparams.a;
 
-	float3 V = GetCamera().CamPos - input.pos3D;
+	float3 V = GetCamera().position - input.pos3D;
 	float dist = length(V);
 	V /= dist;
 
@@ -44,7 +44,7 @@ float4 main(VSOut input) : SV_Target
 
 	ApplyLighting(surface, lighting, color);
 
-	ApplyFog(dist, GetCamera().CamPos, V, color);
+	ApplyFog(dist, GetCamera().position, V, color);
 
 	return color;
 }

@@ -35,7 +35,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 	if (DTid.x < aliveCount)
 	{
 		// simulation can be either fixed or variable timestep:
-		const float dt = xEmitterFixedTimestep >= 0 ? xEmitterFixedTimestep : g_xFrame.DeltaTime;
+		const float dt = xEmitterFixedTimestep >= 0 ? xEmitterFixedTimestep : GetFrame().delta_time;
 
 		uint particleIndex = aliveBuffer_CURRENT[DTid.x];
 		Particle particle = particleBuffer[particleIndex];
@@ -44,9 +44,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 		if (particle.life > 0)
 		{
 			// simulate:
-			for (uint i = 0; i < g_xFrame.ForceFieldArrayCount; ++i)
+			for (uint i = 0; i < GetFrame().forcefieldarray_count; ++i)
 			{
-				ShaderEntity forceField = load_entity(g_xFrame.ForceFieldArrayOffset + i);
+				ShaderEntity forceField = load_entity(GetFrame().forcefieldarray_offset + i);
 
 				[branch]
 				if (forceField.layerMask & xEmitterLayerMask)
@@ -69,18 +69,18 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 
 
 #ifdef DEPTHCOLLISIONS
-			// NOTE: We are using the textures from previous frame, so reproject against those! (PrevVP)
+			// NOTE: We are using the textures from previous frame, so reproject against those! (previous_view_projection)
 
-			float4 pos2D = mul(GetCamera().PrevVP, float4(particle.position, 1));
+			float4 pos2D = mul(GetCamera().previous_view_projection, float4(particle.position, 1));
 			pos2D.xyz /= pos2D.w;
 
 			if (pos2D.x > -1 && pos2D.x < 1 && pos2D.y > -1 && pos2D.y < 1)
 			{
 				float2 uv = pos2D.xy * float2(0.5f, -0.5f) + 0.5f;
-				uint2 pixel = uv * GetCamera().InternalResolution;
+				uint2 pixel = uv * GetCamera().internal_resolution;
 
 				float depth0 = texture_depth_history[pixel];
-				float surfaceLinearDepth = getLinearDepth(depth0);
+				float surfaceLinearDepth = compute_lineardepth(depth0);
 				float surfaceThickness = 1.5f;
 
 				float lifeLerp = 1 - particle.life / particle.maxLife;
@@ -93,9 +93,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 					float depth1 = texture_depth_history[pixel + uint2(1, 0)];
 					float depth2 = texture_depth_history[pixel + uint2(0, -1)];
 
-					float3 p0 = reconstructPosition(uv, depth0, GetCamera().PrevInvVP);
-					float3 p1 = reconstructPosition(uv + float2(1, 0) * GetCamera().InternalResolution_rcp, depth1, GetCamera().PrevInvVP);
-					float3 p2 = reconstructPosition(uv + float2(0, -1) * GetCamera().InternalResolution_rcp, depth2, GetCamera().PrevInvVP);
+					float3 p0 = reconstruct_position(uv, depth0, GetCamera().previous_inverse_view_projection);
+					float3 p1 = reconstruct_position(uv + float2(1, 0) * GetCamera().internal_resolution_rcp, depth1, GetCamera().previous_inverse_view_projection);
+					float3 p2 = reconstruct_position(uv + float2(0, -1) * GetCamera().internal_resolution_rcp, depth2, GetCamera().previous_inverse_view_projection);
 
 					float3 surfaceNormal = normalize(cross(p2 - p0, p1 - p0));
 
@@ -220,16 +220,16 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 				quadPos *= particleSize;
 
 				// scale the billboard along view space motion vector:
-				float3 velocity = mul((float3x3)GetCamera().View, particle.velocity);
+				float3 velocity = mul((float3x3)GetCamera().view, particle.velocity);
 				quadPos += dot(quadPos, velocity) * velocity * xParticleMotionBlurAmount;
 
 				// rotate the billboard to face the camera:
-				quadPos = mul(quadPos, (float3x3)GetCamera().View); // reversed mul for inverse camera rotation!
+				quadPos = mul(quadPos, (float3x3)GetCamera().view); // reversed mul for inverse camera rotation!
 
 				// write out vertex:
 				uint4 data;
 				data.xyz = asuint(particle.position + quadPos);
-				data.w = pack_unitvector(normalize(-GetCamera().At));
+				data.w = pack_unitvector(normalize(-GetCamera().forward));
 				vertexBuffer_POS.Store4((v0 + vertexID) * 16, data);
 				vertexBuffer_TEX.Store((v0 + vertexID) * 4, pack_half2(uv));
 				vertexBuffer_TEX2.Store((v0 + vertexID) * 4, pack_half2(uv2));
@@ -237,17 +237,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 			}
 
 			// Frustum culling:
-			uint infrustum = 1;
-			float3 center = particle.position;
-			float radius = -particleSize;
-			infrustum &= dot(GetCamera().FrustumPlanes[0], float4(center, 1)) > radius;
-			infrustum &= dot(GetCamera().FrustumPlanes[1], float4(center, 1)) > radius;
-			infrustum &= dot(GetCamera().FrustumPlanes[2], float4(center, 1)) > radius;
-			infrustum &= dot(GetCamera().FrustumPlanes[3], float4(center, 1)) > radius;
-			infrustum &= dot(GetCamera().FrustumPlanes[4], float4(center, 1)) > radius;
-			infrustum &= dot(GetCamera().FrustumPlanes[5], float4(center, 1)) > radius;
+			ShaderSphere sphere;
+			sphere.center = particle.position;
+			sphere.radius = particleSize;
 
-			if (infrustum)
+			if (GetCamera().frustum.intersects(sphere))
 			{
 				uint prevCount;
 				counterBuffer.InterlockedAdd(PARTICLECOUNTER_OFFSET_CULLEDCOUNT, 1, prevCount);
@@ -257,7 +251,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 
 #ifdef SORTING
 				// store squared distance to main camera:
-				float3 eyeVector = particle.position - GetCamera().CamPos;
+				float3 eyeVector = particle.position - GetCamera().position;
 				float distSQ = dot(eyeVector, eyeVector);
 				distanceBuffer[prevCount] = -distSQ; // this can be negated to modify sorting order here instead of rewriting sorting shaders...
 #endif // SORTING

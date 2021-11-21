@@ -373,7 +373,7 @@ float3 SampleAmbientLight(float heightFraction)
 
 	float isotropicScatteringTopContribution = saturate(GetWeather().volumetric_clouds.CloudAmbientGroundMultiplier + heightFraction);
 	
-	if (g_xFrame.Options & OPTION_BIT_REALISTIC_SKY)
+	if (GetFrame().options & OPTION_BIT_REALISTIC_SKY)
 	{
 		float3 skyLuminance = texture_skyluminancelut.SampleLevel(sampler_point_clamp, float2(0.5, 0.5), 0).rgb;
 		return isotropicScatteringTopContribution * skyLuminance;
@@ -395,7 +395,7 @@ void VolumetricCloudLighting(AtmosphereParameters atmosphere, float3 startPositi
 	float3 extinction = GetWeather().volumetric_clouds.ExtinctionCoefficient * cloudDensity;
 	
 	float3 atmosphereTransmittanceToLight = 1.0;
-	if (g_xFrame.Options & OPTION_BIT_REALISTIC_SKY)
+	if (GetFrame().options & OPTION_BIT_REALISTIC_SKY)
 	{
 		atmosphereTransmittanceToLight = GetAtmosphericLightTransmittance(atmosphere, worldPosition, sunDirection, texture_transmittancelut); // Has to be in meters
 	}
@@ -469,10 +469,10 @@ void RenderClouds(float3 rayOrigin, float3 rayDirection, float t, float steps, f
 {
     // Wind animation offsets
 	float3 windDirection = float3(cos(GetWeather().volumetric_clouds.WindAngle), -GetWeather().volumetric_clouds.WindUpAmount, sin(GetWeather().volumetric_clouds.WindAngle));
-	float3 windOffset = GetWeather().volumetric_clouds.WindSpeed * GetWeather().volumetric_clouds.AnimationMultiplier * windDirection * g_xFrame.Time;
+	float3 windOffset = GetWeather().volumetric_clouds.WindSpeed * GetWeather().volumetric_clouds.AnimationMultiplier * windDirection * GetFrame().time;
     
 	float2 coverageWindDirection = float2(cos(GetWeather().volumetric_clouds.CoverageWindAngle), sin(GetWeather().volumetric_clouds.CoverageWindAngle));
-	float2 coverageWindOffset = GetWeather().volumetric_clouds.CoverageWindSpeed * GetWeather().volumetric_clouds.AnimationMultiplier * coverageWindDirection * g_xFrame.Time;
+	float2 coverageWindOffset = GetWeather().volumetric_clouds.CoverageWindSpeed * GetWeather().volumetric_clouds.AnimationMultiplier * coverageWindDirection * GetFrame().time;
 
 	
 	AtmosphereParameters atmosphere = GetWeather().atmosphere;
@@ -509,7 +509,7 @@ void RenderClouds(float3 rayOrigin, float3 rayDirection, float t, float steps, f
 		}
 
 
-		float rayDepth = distance(GetCamera().CamPos, sampleWorldPosition);
+		float rayDepth = distance(GetCamera().position, sampleWorldPosition);
 		float lod = step(GetWeather().volumetric_clouds.LODDistance, rayDepth) + GetWeather().volumetric_clouds.LODMin;
 		float cloudDensity = saturate(SampleCloudDensity(sampleWorldPosition, heightFraction, weatherData, windOffset, windDirection, lod, true));
         
@@ -574,7 +574,7 @@ int ComputeCheckerBoardIndex(int2 renderCoord, int subPixelIndex)
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	int subPixelIndex = g_xFrame.FrameCount % 4;
+	int subPixelIndex = GetFrame().frame_count % 4;
 	int checkerBoardIndex = ComputeCheckerBoardIndex(DTid.xy, subPixelIndex);
 	uint2 halfResCoord = DTid.xy * 2 + g_HalfResIndexToCoordinateOffset[checkerBoardIndex];
 
@@ -584,10 +584,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float y = (1 - uv.y) * 2 - 1;
 	float2 screenPosition = float2(x, y);
 	
-	float4 unprojected = mul(GetCamera().InvVP, float4(screenPosition, 0, 1));
+	float4 unprojected = mul(GetCamera().inverse_view_projection, float4(screenPosition, 0, 1));
 	unprojected.xyz /= unprojected.w;
 
-	float3 rayOrigin = GetCamera().CamPos;
+	float3 rayOrigin = GetCamera().position;
 	float3 rayDirection = normalize(unprojected.xyz - rayOrigin);
 
 
@@ -651,7 +651,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		
 		// Depth buffer intersection
 		float depth = texture_depth.SampleLevel(sampler_point_clamp, uv, 1).r;
-		float3 depthWorldPosition = reconstructPosition(uv, depth);
+		float3 depthWorldPosition = reconstruct_position(uv, depth);
 		tToDepthBuffer = length(depthWorldPosition - rayOrigin);
 		tMax = depth == 0.0 ? tMax : min(tMax, tToDepthBuffer); // Exclude skybox
 		
@@ -663,7 +663,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 		//float offset = dither(DTid.xy + GetTemporalAASampleRotation());
 		float offset = blue_noise(DTid.xy).x;
-		//float offset = InterleavedGradientNoise(DTid.xy, g_xFrame.FrameCount % 16);
+		//float offset = InterleavedGradientNoise(DTid.xy, GetFrame().frame_count % 16);
 		
         //t = tMin + 0.5 * stepSize;
 		t = tMin + offset * stepSize * GetWeather().volumetric_clouds.BigStepMarch; // offset avg = 0.5

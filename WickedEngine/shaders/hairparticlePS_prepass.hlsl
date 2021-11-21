@@ -20,7 +20,7 @@ uint2 main(VertexToPixel input) : SV_TARGET
 	}
 
 	float alphatest = material.alphaTest;
-	if (g_xFrame.Options & OPTION_BIT_TEMPORALAA_ENABLED)
+	if (GetFrame().options & OPTION_BIT_TEMPORALAA_ENABLED)
 	{
 		alphatest = clamp(blue_noise(input.pos.xy, lineardepth).r, 0, 0.99);
 	}

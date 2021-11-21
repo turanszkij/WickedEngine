@@ -47,7 +47,7 @@ VertexOut main(uint vertexID : SV_VertexID)
 	float2 moddedpos = pos * push.xLensFlareOffset;
 	Out.opacity *= saturate(1 - length(pos - moddedpos));
 
-	Out.pos = float4(moddedpos + BILLBOARD[vertexID] * push.xLensFlareSize * GetCamera().CanvasSize_rcp, 0, 1);
+	Out.pos = float4(moddedpos + BILLBOARD[vertexID] * push.xLensFlareSize * GetCamera().canvas_size_rcp, 0, 1);
 
 	return Out;
 }

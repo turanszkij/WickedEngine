@@ -77,7 +77,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float4 result = hdr;
 
 	[branch]
-	if (tonemap_push.display_colorspace == COLOR_SPACE_SRGB)
+	if (tonemap_push.display_colorspace == (uint)ColorSpace::SRGB)
 	{
 		result.rgb = ACESFitted(hdr.rgb);
 		result.rgb = GAMMA(result.rgb);

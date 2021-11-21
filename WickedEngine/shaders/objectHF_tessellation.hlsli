@@ -28,7 +28,7 @@ ConstantOutput PatchConstantFunction(InputPatch<PixelInput, 3> patch)
 		output.edges[ie] = GetMesh().tessellation_factor;
 #else
 		float3 edge = patch[(ie + 1) % 3].pos.xyz - patch[ie].pos.xyz;
-		float3 vec = (patch[(ie + 1) % 3].pos.xyz + patch[ie].pos.xyz) / 2 - GetCamera().CamPos.xyz;
+		float3 vec = (patch[(ie + 1) % 3].pos.xyz + patch[ie].pos.xyz) / 2 - GetCamera().position.xyz;
 		float len = sqrt(dot(edge, edge) / dot(vec, vec));
 		output.edges[(ie + 1) % 3] = max(1, len * GetMesh().tessellation_factor);
 #endif
@@ -43,11 +43,14 @@ ConstantOutput PatchConstantFunction(InputPatch<PixelInput, 3> patch)
 	for (int ip = 0; ip < 4; ++ip)
 	{
 		culled[ip] = 1;
-		culled[ip] &= dot(GetCamera().FrustumPlanes[ip + 2], patch[0].pos) < -rad;
-		culled[ip] &= dot(GetCamera().FrustumPlanes[ip + 2], patch[1].pos) < -rad;
-		culled[ip] &= dot(GetCamera().FrustumPlanes[ip + 2], patch[2].pos) < -rad;
+		culled[ip] &= dot(GetCamera().frustum.planes[ip + 2], patch[0].pos) < -rad;
+		culled[ip] &= dot(GetCamera().frustum.planes[ip + 2], patch[1].pos) < -rad;
+		culled[ip] &= dot(GetCamera().frustum.planes[ip + 2], patch[2].pos) < -rad;
 	}
-	if (culled[0] || culled[1] || culled[2] || culled[3]) output.edges[0] = 0;
+	if (culled[0] || culled[1] || culled[2] || culled[3])
+	{
+		output.edges[0] = 0;
+	}
 #endif
 
 
@@ -151,16 +154,16 @@ PixelInput main(ConstantOutput input, float3 uvw : SV_DomainLocation, const Outp
 
 
 #ifdef OBJECTSHADER_USE_CLIPPLANE
-	output.clip = dot(output.pos, GetCamera().ClipPlane);
+	output.clip = dot(output.pos, GetCamera().clip_plane);
 #endif // OBJECTSHADER_USE_CLIPPLANE
 
 #ifndef OBJECTSHADER_USE_NOCAMERA
-	output.pos = mul(GetCamera().VP, output.pos);
+	output.pos = mul(GetCamera().view_projection, output.pos);
 #endif // OBJECTSHADER_USE_NOCAMERA
 
 #ifdef OBJECTSHADER_USE_POSITIONPREV
 #ifndef OBJECTSHADER_USE_NOCAMERA
-	output.pre = mul(GetCamera().PrevVP, output.pre);
+	output.pre = mul(GetCamera().previous_view_projection, output.pre);
 #endif // OBJECTSHADER_USE_NOCAMERA
 #endif // OBJECTSHADER_USE_POSITIONPREV
 

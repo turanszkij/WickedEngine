@@ -39,7 +39,7 @@ VSOut main(uint fakeIndex : SV_VERTEXID)
 	//	to the impostor (at least for now)
 	float3 origin = mul(instance.transform.GetMatrix(), float4(0, 0, 0, 1)).xyz;
 	float3 up = normalize(mul((float3x3)instance.transform.GetMatrix(), float3(0, 1, 0)));
-	float3 face = mul((float3x3)instance.transform.GetMatrix(), GetCamera().CamPos - origin);
+	float3 face = mul((float3x3)instance.transform.GetMatrix(), GetCamera().position - origin);
 	face.y = 0; // only rotate around Y axis!
 	face = normalize(face);
 	float3 right = normalize(cross(face, up));
@@ -57,7 +57,7 @@ VSOut main(uint fakeIndex : SV_VERTEXID)
 
 	VSOut Out;
 	Out.pos3D = mul(instance.transform.GetMatrix(), float4(pos, 1)).xyz;
-	Out.pos = mul(GetCamera().VP, float4(Out.pos3D, 1));
+	Out.pos = mul(GetCamera().view_projection, float4(Out.pos3D, 1));
 	Out.uv = uv;
 	Out.slice = slice;
 	Out.dither = poi.GetDither();

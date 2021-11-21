@@ -27,58 +27,62 @@ Texture2D<float2> bindless_textures_float2[] : register(space15);
 Texture2D<uint2> bindless_textures_uint2[] : register(space16);
 Texture2D<uint4> bindless_textures_uint4[] : register(space17);
 
-ShaderScene GetScene()
+inline FrameCB GetFrame()
 {
-	return g_xFrame.scene;
+	return g_xFrame;
 }
-ShaderWeather GetWeather()
-{
-	return GetScene().weather;
-}
-CameraCB GetCamera()
+inline CameraCB GetCamera()
 {
 	return g_xCamera;
 }
-ShaderMeshInstance load_instance(uint instanceIndex)
+inline ShaderScene GetScene()
+{
+	return GetFrame().scene;
+}
+inline ShaderWeather GetWeather()
+{
+	return GetScene().weather;
+}
+inline ShaderMeshInstance load_instance(uint instanceIndex)
 {
 	return bindless_buffers[GetScene().instancebuffer].Load<ShaderMeshInstance>(instanceIndex * sizeof(ShaderMeshInstance));
 }
-ShaderMesh load_mesh(uint meshIndex)
+inline ShaderMesh load_mesh(uint meshIndex)
 {
 	return bindless_buffers[GetScene().meshbuffer].Load<ShaderMesh>(meshIndex * sizeof(ShaderMesh));
 }
-ShaderMeshSubset load_subset(ShaderMesh mesh, uint subsetIndex)
+inline ShaderMeshSubset load_subset(ShaderMesh mesh, uint subsetIndex)
 {
 	return bindless_buffers[NonUniformResourceIndex(mesh.subsetbuffer)].Load<ShaderMeshSubset>(subsetIndex * sizeof(ShaderMeshSubset));
 }
-ShaderMaterial load_material(uint materialIndex)
+inline ShaderMaterial load_material(uint materialIndex)
 {
 	return bindless_buffers[GetScene().materialbuffer].Load<ShaderMaterial>(materialIndex * sizeof(ShaderMaterial));
 }
-ShaderEntity load_entity(uint entityIndex)
+inline ShaderEntity load_entity(uint entityIndex)
 {
-	return bindless_buffers[g_xFrame.buffer_entityarray_index].Load<ShaderEntity>(entityIndex * sizeof(ShaderEntity));
+	return bindless_buffers[GetFrame().buffer_entityarray_index].Load<ShaderEntity>(entityIndex * sizeof(ShaderEntity));
 }
-float4x4 load_entitymatrix(uint matrixIndex)
+inline float4x4 load_entitymatrix(uint matrixIndex)
 {
-	return transpose(bindless_buffers[g_xFrame.buffer_entitymatrixarray_index].Load<float4x4>(matrixIndex * sizeof(float4x4)));
+	return transpose(bindless_buffers[GetFrame().buffer_entitymatrixarray_index].Load<float4x4>(matrixIndex * sizeof(float4x4)));
 }
 
 #define texture_globalenvmap bindless_cubemaps[GetScene().globalenvmap]
 #define texture_envmaparray bindless_cubearrays[GetScene().envmaparray]
 
-#define texture_random64x64 bindless_textures[g_xFrame.texture_random64x64_index]
-#define texture_bluenoise bindless_textures[g_xFrame.texture_bluenoise_index]
-#define texture_sheenlut bindless_textures[g_xFrame.texture_sheenlut_index]
-#define texture_skyviewlut bindless_textures[g_xFrame.texture_skyviewlut_index]
-#define texture_transmittancelut bindless_textures[g_xFrame.texture_transmittancelut_index]
-#define texture_multiscatteringlut bindless_textures[g_xFrame.texture_multiscatteringlut_index]
-#define texture_skyluminancelut bindless_textures[g_xFrame.texture_skyluminancelut_index]
-#define texture_shadowarray_2d bindless_textures2DArray[g_xFrame.texture_shadowarray_2d_index]
-#define texture_shadowarray_cube bindless_cubearrays[g_xFrame.texture_shadowarray_cube_index]
-#define texture_shadowarray_transparent_2d bindless_textures2DArray[g_xFrame.texture_shadowarray_transparent_2d_index]
-#define texture_shadowarray_transparent_cube bindless_cubearrays[g_xFrame.texture_shadowarray_transparent_cube_index]
-#define texture_voxelgi bindless_textures3D[g_xFrame.texture_voxelgi_index]
+#define texture_random64x64 bindless_textures[GetFrame().texture_random64x64_index]
+#define texture_bluenoise bindless_textures[GetFrame().texture_bluenoise_index]
+#define texture_sheenlut bindless_textures[GetFrame().texture_sheenlut_index]
+#define texture_skyviewlut bindless_textures[GetFrame().texture_skyviewlut_index]
+#define texture_transmittancelut bindless_textures[GetFrame().texture_transmittancelut_index]
+#define texture_multiscatteringlut bindless_textures[GetFrame().texture_multiscatteringlut_index]
+#define texture_skyluminancelut bindless_textures[GetFrame().texture_skyluminancelut_index]
+#define texture_shadowarray_2d bindless_textures2DArray[GetFrame().texture_shadowarray_2d_index]
+#define texture_shadowarray_cube bindless_cubearrays[GetFrame().texture_shadowarray_cube_index]
+#define texture_shadowarray_transparent_2d bindless_textures2DArray[GetFrame().texture_shadowarray_transparent_2d_index]
+#define texture_shadowarray_transparent_cube bindless_cubearrays[GetFrame().texture_shadowarray_transparent_cube_index]
+#define texture_voxelgi bindless_textures3D[GetFrame().texture_voxelgi_index]
 #define scene_acceleration_structure bindless_accelerationstructures[GetScene().TLAS]
 
 #define texture_depth bindless_textures_float[GetCamera().texture_depth_index]
@@ -112,7 +116,7 @@ inline bool is_saturated(float2 a) { return is_saturated(a.x) && is_saturated(a.
 inline bool is_saturated(float3 a) { return is_saturated(a.x) && is_saturated(a.y) && is_saturated(a.z); }
 inline bool is_saturated(float4 a) { return is_saturated(a.x) && is_saturated(a.y) && is_saturated(a.z) && is_saturated(a.w); }
 
-#define DEGAMMA_SKY(x)	((g_xFrame.Options & OPTION_BIT_STATIC_SKY_HDR) ? (x) : RemoveSRGBCurve_Fast(x))
+#define DEGAMMA_SKY(x)	((GetFrame().options & OPTION_BIT_STATIC_SKY_HDR) ? (x) : RemoveSRGBCurve_Fast(x))
 #define DEGAMMA(x)		(RemoveSRGBCurve_Fast(x))
 #define GAMMA(x)		(ApplySRGBCurve_Fast(x))
 
@@ -122,9 +126,9 @@ inline float GetSunEnergy() { return GetWeather().sun_energy; }
 inline float3 GetHorizonColor() { return GetWeather().horizon.rgb; }
 inline float3 GetZenithColor() { return GetWeather().zenith.rgb; }
 inline float3 GetAmbientColor() { return GetWeather().ambient.rgb; }
-inline uint2 GetInternalResolution() { return GetCamera().InternalResolution; }
-inline float GetTime() { return g_xFrame.Time; }
-inline uint2 GetTemporalAASampleRotation() { return uint2((g_xFrame.TemporalAASampleRotation >> 0u) & 0x000000FF, (g_xFrame.TemporalAASampleRotation >> 8) & 0x000000FF); }
+inline uint2 GetInternalResolution() { return GetCamera().internal_resolution; }
+inline float GetTime() { return GetFrame().time; }
+inline uint2 GetTemporalAASampleRotation() { return uint2((GetFrame().temporalaa_samplerotation >> 0u) & 0x000000FF, (GetFrame().temporalaa_samplerotation >> 8) & 0x000000FF); }
 inline bool IsStaticSky() { return GetScene().globalenvmap >= 0; }
 
 // Exponential height fog based on: https://www.iquilezles.org/www/articles/fog/fog.htm
@@ -137,7 +141,7 @@ inline float GetFogAmount(float distance, float3 O, float3 V)
 	ShaderFog fog = GetWeather().fog;
 	float fogDensity = saturate((distance - fog.start) / (fog.end - fog.start));
 
-	if (g_xFrame.Options & OPTION_BIT_HEIGHT_FOG)
+	if (GetFrame().options & OPTION_BIT_HEIGHT_FOG)
 	{
 		float fogFalloffScale = 1.0 / max(0.01, fog.height_end - fog.height_start);
 
@@ -169,22 +173,22 @@ inline float GetFogAmount(float distance, float3 O, float3 V)
 	}
 }
 
-float3 tonemap(float3 x)
+inline float3 tonemap(float3 x)
 {
 	return x / (x + 1); // Reinhard tonemap
 }
-float3 inverseTonemap(float3 x)
+inline float3 inverse_tonemap(float3 x)
 {
 	return x / (1 - x);
 }
 
 inline float4 blue_noise(uint2 pixel)
 {
-	return frac(texture_bluenoise[pixel % 128].rgba + g_xFrame.BlueNoisePhase);
+	return frac(texture_bluenoise[pixel % 128].rgba + GetFrame().blue_noise_phase);
 }
 inline float4 blue_noise(uint2 pixel, float depth)
 {
-	return frac(texture_bluenoise[pixel % 128].rgba + g_xFrame.BlueNoisePhase + depth);
+	return frac(texture_bluenoise[pixel % 128].rgba + GetFrame().blue_noise_phase + depth);
 }
 
 // Helpers:
@@ -259,23 +263,23 @@ inline uint3 unflatten3D(uint idx, uint3 dim)
 }
 
 // Creates a unit cube triangle strip from just vertex ID (14 vertices)
-inline float3 CreateCube(in uint vertexID)
+inline float3 vertexID_create_cube(in uint vertexID)
 {
 	uint b = 1u << vertexID;
 	return float3((0x287a & b) != 0, (0x02af & b) != 0, (0x31e3 & b) != 0);
 }
 
 // Creates a full screen triangle from 3 vertices:
-inline void FullScreenTriangle(in uint vertexID, out float4 pos)
+inline void vertexID_create_fullscreen_triangle(in uint vertexID, out float4 pos)
 {
 	pos.x = (float)(vertexID / 2) * 4.0 - 1.0;
 	pos.y = (float)(vertexID % 2) * 4.0 - 1.0;
 	pos.z = 0;
 	pos.w = 1;
 }
-inline void FullScreenTriangle(in uint vertexID, out float4 pos, out float2 uv)
+inline void vertexID_create_fullscreen_triangle(in uint vertexID, out float4 pos, out float2 uv)
 {
-	FullScreenTriangle(vertexID, pos);
+	vertexID_create_fullscreen_triangle(vertexID, pos);
 
 	uv.x = (float)(vertexID / 2) * 2;
 	uv.y = 1 - (float)(vertexID % 2) * 2;
@@ -318,18 +322,18 @@ inline float3x3 compute_tangent_frame(float3 N, float3 P, float2 UV)
 }
 
 // Computes linear depth from post-projection depth
-inline float getLinearDepth(in float z, in float near, in float far)
+inline float compute_lineardepth(in float z, in float near, in float far)
 {
 	float z_n = 2 * z - 1;
 	float lin = 2 * far * near / (near + far - z_n * (near - far));
 	return lin;
 }
-inline float getLinearDepth(in float z)
+inline float compute_lineardepth(in float z)
 {
-	return getLinearDepth(z, GetCamera().ZNearP, GetCamera().ZFarP);
+	return compute_lineardepth(z, GetCamera().z_near, GetCamera().z_far);
 }
 
-inline float3x3 GetTangentSpace(in float3 normal)
+inline float3x3 get_tangentspace(in float3 normal)
 {
 	// Choose a helper vector for the cross product
 	float3 helper = abs(normal.x) > 0.99 ? float3(0, 0, 1) : float3(1, 0, 0);
@@ -357,72 +361,38 @@ float3 hemispherepoint_cos(float u, float v) {
 	return float3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
 }
 // Get random hemisphere sample in world-space along the normal (uniform distribution)
-inline float3 SampleHemisphere_uniform(in float3 normal, inout float seed, in float2 pixel)
+inline float3 sample_hemisphere_uniform(in float3 normal, inout float seed, in float2 pixel)
 {
-	return mul(hemispherepoint_uniform(rand(seed, pixel), rand(seed, pixel)), GetTangentSpace(normal));
+	return mul(hemispherepoint_uniform(rand(seed, pixel), rand(seed, pixel)), get_tangentspace(normal));
 }
 // Get random hemisphere sample in world-space along the normal (cosine-weighted distribution)
-inline float3 SampleHemisphere_cos(in float3 normal, inout float seed, in float2 pixel)
+inline float3 sample_hemisphere_cos(in float3 normal, inout float seed, in float2 pixel)
 {
-	return mul(hemispherepoint_cos(rand(seed, pixel), rand(seed, pixel)), GetTangentSpace(normal));
+	return mul(hemispherepoint_cos(rand(seed, pixel), rand(seed, pixel)), get_tangentspace(normal));
 }
 
 // Reconstructs world-space position from depth buffer
 //	uv		: screen space coordinate in [0, 1] range
 //	z		: depth value at current pixel
 //	InvVP	: Inverse of the View-Projection matrix that was used to generate the depth value
-inline float3 reconstructPosition(in float2 uv, in float z, in float4x4 InvVP)
+inline float3 reconstruct_position(in float2 uv, in float z, in float4x4 inverse_view_projection)
 {
 	float x = uv.x * 2 - 1;
 	float y = (1 - uv.y) * 2 - 1;
 	float4 position_s = float4(x, y, z, 1);
-	float4 position_v = mul(InvVP, position_s);
+	float4 position_v = mul(inverse_view_projection, position_s);
 	return position_v.xyz / position_v.w;
 }
-inline float3 reconstructPosition(in float2 uv, in float z)
+inline float3 reconstruct_position(in float2 uv, in float z)
 {
-	return reconstructPosition(uv, z, GetCamera().InvVP);
+	return reconstruct_position(uv, z, GetCamera().inverse_view_projection);
 }
-
-#if 0
-// http://aras-p.info/texts/CompactNormalStorage.html Method#3: Spherical coords
-//  [Commented out optimized parts, because we don't need to normalize range when storing to float format]
-inline float2 encodeNormal(in float3 N)
-{
-	return float2(atan2(N.y, N.x) /*/ PI*/, N.z)/* * 0.5 + 0.5*/;
-}
-inline float3 decodeNormal(in float2 spherical)
-{
-	float2 sinCosTheta, sinCosPhi;
-	//spherical = spherical * 2 - 1;
-	sincos(spherical.x /** PI*/, sinCosTheta.x, sinCosTheta.y);
-	sinCosPhi = float2(sqrt(1.0 - spherical.y * spherical.y), spherical.y);
-	return float3(sinCosTheta.y * sinCosPhi.x, sinCosTheta.x * sinCosPhi.x, sinCosPhi.y);
-}
-#else
-// http://aras-p.info/texts/CompactNormalStorage.html Method#4: Spheremap transform
-float2 encodeNormal(float3 n)
-{
-	float f = sqrt(8 * n.z + 8);
-	return n.xy / f + 0.5;
-}
-float3 decodeNormal(float2 enc)
-{
-	float2 fenc = enc * 4 - 2;
-	float f = dot(fenc, fenc);
-	float g = sqrt(1 - f / 4);
-	float3 n;
-	n.xy = fenc * g;
-	n.z = 1 - f / 2;
-	return n;
-}
-#endif 
 
 
 // Convert texture coordinates on a cubemap face to cubemap sampling coordinates:
 // uv			: UV texture coordinates on cubemap face in range [0, 1]
 // faceIndex	: cubemap face index as in the backing texture2DArray in range [0, 5]
-inline float3 UV_to_CubeMap(in float2 uv, in uint faceIndex)
+inline float3 uv_to_cubemap(in float2 uv, in uint faceIndex)
 {
 	// get uv in [-1, 1] range:
 	uv = uv * 2 - 1;
@@ -745,7 +715,7 @@ inline float dither(in float2 pixel)
 // center	: sphere center
 // radius	: sphere radius
 // returns distance on the ray to the object if hit, 0 otherwise
-float Trace_sphere(float3 o, float3 d, float3 center, float radius)
+float trace_sphere(float3 o, float3 d, float3 center, float radius)
 {
 	float3 rc = o - center;
 	float c = dot(rc, rc) - (radius * radius);
@@ -758,7 +728,7 @@ float Trace_sphere(float3 o, float3 d, float3 center, float radius)
 // o		: ray origin
 // d		: ray direction
 // returns distance on the ray to the object if hit, 0 otherwise
-float Trace_plane(float3 o, float3 d, float3 planeOrigin, float3 planeNormal)
+float trace_plane(float3 o, float3 d, float3 planeOrigin, float3 planeNormal)
 {
 	return dot(planeNormal, (planeOrigin - o) / dot(planeNormal, d));
 }
@@ -766,10 +736,10 @@ float Trace_plane(float3 o, float3 d, float3 planeOrigin, float3 planeNormal)
 // d		: ray direction
 // A,B,C	: traingle corners
 // returns distance on the ray to the object if hit, 0 otherwise
-float Trace_triangle(float3 o, float3 d, float3 A, float3 B, float3 C)
+float trace_triangle(float3 o, float3 d, float3 A, float3 B, float3 C)
 {
 	float3 planeNormal = normalize(cross(B - A, C - B));
-	float t = Trace_plane(o, d, A, planeNormal);
+	float t = trace_plane(o, d, A, planeNormal);
 	float3 p = o + d * t;
 
 	float3 N1 = normalize(cross(B - A, p - B));
@@ -786,31 +756,31 @@ float Trace_triangle(float3 o, float3 d, float3 A, float3 B, float3 C)
 // d		: ray direction
 // A,B,C,D	: rectangle corners
 // returns distance on the ray to the object if hit, 0 otherwise
-float Trace_rectangle(float3 o, float3 d, float3 A, float3 B, float3 C, float3 D)
+float trace_rectangle(float3 o, float3 d, float3 A, float3 B, float3 C, float3 D)
 {
-	return max(Trace_triangle(o, d, A, B, C), Trace_triangle(o, d, C, D, A));
+	return max(trace_triangle(o, d, A, B, C), trace_triangle(o, d, C, D, A));
 }
 // o		: ray origin
 // d		: ray direction
 // diskNormal : disk facing direction
 // returns distance on the ray to the object if hit, 0 otherwise
-float Trace_disk(float3 o, float3 d, float3 diskCenter, float diskRadius, float3 diskNormal)
+float trace_disk(float3 o, float3 d, float3 diskCenter, float diskRadius, float3 diskNormal)
 {
-	float t = Trace_plane(o, d, diskCenter, diskNormal);
+	float t = trace_plane(o, d, diskCenter, diskNormal);
 	float3 p = o + d * t;
 	float3 diff = p - diskCenter;
 	return dot(diff, diff) < sqr(diskRadius);
 }
 
 // Return the closest point on the line (without limit) 
-float3 ClosestPointOnLine(float3 a, float3 b, float3 c)
+float3 closest_point_on_line(float3 a, float3 b, float3 c)
 {
 	float3 ab = b - a;
 	float t = dot(c - a, ab) / dot(ab, ab);
 	return a + t * ab;
 }
 // Return the closest point on the segment (with limit) 
-float3 ClosestPointOnSegment(float3 a, float3 b, float3 c)
+float3 closest_point_on_segment(float3 a, float3 b, float3 c)
 {
 	float3 ab = b - a;
 	float t = dot(c - a, ab) / dot(ab, ab);
@@ -900,12 +870,12 @@ static const float4 halton64[] = {
 	float4(0.5078125000f, 0.7283950617f, 0.1360000000f, 0.3294460641f),
 };
 
-// This the same as wiGraphics::COLOR_SPACE:
-enum COLOR_SPACE
+// This the same as wiGraphics::ColorSpace
+enum class ColorSpace
 {
-	COLOR_SPACE_SRGB,			// SDR color space (8 or 10 bits per channel)
-	COLOR_SPACE_HDR10_ST2084,	// HDR10 color space (10 bits per channel)
-	COLOR_SPACE_HDR_LINEAR,		// HDR color space (16 bits per channel)
+	SRGB,			// SDR color space (8 or 10 bits per channel)
+	HDR10_ST2084,	// HDR10 color space (10 bits per channel)
+	HDR_LINEAR,		// HDR color space (16 bits per channel)
 };
 
 #endif // WI_SHADER_GLOBALS_HF

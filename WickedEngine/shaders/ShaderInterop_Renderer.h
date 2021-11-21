@@ -461,6 +461,37 @@ struct ShaderEntity
 #endif // __cplusplus
 };
 
+struct ShaderSphere
+{
+	float3 center;
+	float radius;
+};
+struct ShaderFrustum
+{
+	// Frustum planes:
+	//	0 : near
+	//	1 : far
+	//	2 : left
+	//	3 : right
+	//	4 : top
+	//	5 : bottom
+	float4 planes[6];
+
+#ifndef __cplusplus
+	inline bool intersects(ShaderSphere sphere)
+	{
+		uint infrustum = 1;
+		infrustum &= dot(planes[0], float4(sphere.center, 1)) > -sphere.radius;
+		infrustum &= dot(planes[1], float4(sphere.center, 1)) > -sphere.radius;
+		infrustum &= dot(planes[2], float4(sphere.center, 1)) > -sphere.radius;
+		infrustum &= dot(planes[3], float4(sphere.center, 1)) > -sphere.radius;
+		infrustum &= dot(planes[4], float4(sphere.center, 1)) > -sphere.radius;
+		infrustum &= dot(planes[5], float4(sphere.center, 1)) > -sphere.radius;
+		return infrustum != 0;
+	}
+#endif // __cplusplus
+};
+
 static const uint ENTITY_TYPE_DIRECTIONALLIGHT = 0;
 static const uint ENTITY_TYPE_POINTLIGHT = 1;
 static const uint ENTITY_TYPE_SPOTLIGHT = 2;
@@ -482,7 +513,7 @@ static const uint TILED_CULLING_GRANULARITY = TILED_CULLING_BLOCKSIZE / TILED_CU
 
 static const int impostorCaptureAngles = 36;
 
-// These option bits can be read from Options constant buffer value:
+// These option bits can be read from options constant buffer value:
 static const uint OPTION_BIT_TEMPORALAA_ENABLED = 1 << 0;
 static const uint OPTION_BIT_TRANSPARENTSHADOWS_ENABLED = 1 << 1;
 static const uint OPTION_BIT_VOXELGI_ENABLED = 1 << 2;
@@ -502,43 +533,43 @@ static const uint OPTION_BIT_STATIC_SKY_HDR = 1 << 13;
 
 struct FrameCB
 {
-	uint		Options;							// wiRenderer bool options packed into bitmask
-	uint		ShadowCascadeCount;
-	float		ShadowKernel2D;
-	float		ShadowKernelCube;
+	uint		options;							// wiRenderer bool options packed into bitmask
+	uint		shadow_cascade_count;
+	float		shadow_kernel_2D;
+	float		shadow_kernel_cube;
 
-	float		Time;
-	float		TimePrev;
-	float		DeltaTime;
-	uint		FrameCount;
+	float		time;
+	float		time_previous;
+	float		delta_time;
+	uint		frame_count;
 
-	float3		VoxelRadianceDataCenter;			// center of the voxel grid in world space units
-	float		VoxelRadianceMaxDistance;			// maximum raymarch distance for voxel GI in world-space
+	float3		voxelradiance_center;			// center of the voxel grid in world space units
+	float		voxelradiance_max_distance;		// maximum raymarch distance for voxel GI in world-space
 
-	float		VoxelRadianceDataSize;				// voxel half-extent in world space units
-	float		VoxelRadianceDataSize_rcp;			// 1.0 / voxel-half extent
-	uint		VoxelRadianceDataRes;				// voxel grid resolution
-	float		VoxelRadianceDataRes_rcp;			// 1.0 / voxel grid resolution
+	float		voxelradiance_size;				// voxel half-extent in world space units
+	float		voxelradiance_size_rcp;			// 1.0 / voxel-half extent
+	uint		voxelradiance_resolution;		// voxel grid resolution
+	float		voxelradiance_resolution_rcp;	// 1.0 / voxel grid resolution
 
-	uint		VoxelRadianceDataMIPs;				// voxel grid mipmap count
-	uint		VoxelRadianceNumCones;				// number of diffuse cones to trace
-	float		VoxelRadianceNumCones_rcp;			// 1.0 / number of diffuse cones to trace
-	float		VoxelRadianceRayStepSize;			// raymarch step size in voxel space units
+	uint		voxelradiance_mipcount;			// voxel grid mipmap count
+	uint		voxelradiance_numcones;			// number of diffuse cones to trace
+	float		voxelradiance_numcones_rcp;		// 1.0 / number of diffuse cones to trace
+	float		voxelradiance_stepsize;			// raymarch step size in voxel space units
 
-	uint		EnvProbeMipCount;
-	float		EnvProbeMipCount_rcp;
-	uint		LightArrayOffset;			// indexing into entity array
-	uint		LightArrayCount;			// indexing into entity array
+	uint		envprobe_mipcount;
+	float		envprobe_mipcount_rcp;
+	uint		lightarray_offset;			// indexing into entity array
+	uint		lightarray_count;			// indexing into entity array
 
-	uint		DecalArrayOffset;			// indexing into entity array
-	uint		DecalArrayCount;			// indexing into entity array
-	uint		ForceFieldArrayOffset;		// indexing into entity array
-	uint		ForceFieldArrayCount;		// indexing into entity array
+	uint		decalarray_offset;			// indexing into entity array
+	uint		decalarray_count;			// indexing into entity array
+	uint		forcefieldarray_offset;		// indexing into entity array
+	uint		forcefieldarray_count;		// indexing into entity array
 
-	uint		EnvProbeArrayOffset;		// indexing into entity array
-	uint		EnvProbeArrayCount;			// indexing into entity array
-	uint		TemporalAASampleRotation;
-	float		BlueNoisePhase;
+	uint		envprobearray_offset;		// indexing into entity array
+	uint		envprobearray_count;			// indexing into entity array
+	uint		temporalaa_samplerotation;
+	float		blue_noise_phase;
 
 	int			sampler_objectshader_index;
 	int			texture_random64x64_index;
@@ -565,61 +596,53 @@ struct FrameCB
 
 struct CameraCB
 {
-	float4x4	VP;			// View*Projection
+	float4x4	view_projection;
 
-	float4		ClipPlane;
+	float4		clip_plane;
 
-	float3		CamPos;
-	float		DistanceFromOrigin;
+	float3		position;
+	float		distance_from_origin;
 
-	float3		At;
-	float		ZNearP;
+	float3		forward;
+	float		z_near;
 
-	float3		Up;
-	float		ZFarP;
+	float3		up;
+	float		z_far;
 
-	float		ZNearP_rcp;
-	float		ZFarP_rcp;
-	float		ZRange;
-	float		ZRange_rcp;
+	float		z_near_rcp;
+	float		z_far_rcp;
+	float		z_range;
+	float		z_range_rcp;
 
-	float4x4	View;
-	float4x4	Proj;
-	float4x4	InvV;			// Inverse View
-	float4x4	InvP;			// Inverse Projection
-	float4x4	InvVP;		// Inverse View-Projection
+	float4x4	view;
+	float4x4	projection;
+	float4x4	inverse_view;
+	float4x4	inverse_projection;
+	float4x4	inverse_view_projection;
 
-	// Frustum planes:
-	//	0 : near
-	//	1 : far
-	//	2 : left
-	//	3 : right
-	//	4 : top
-	//	5 : bottom
-	float4		FrustumPlanes[6];
+	ShaderFrustum frustum;
 
-	float2		TemporalAAJitter;
-	float2		TemporalAAJitterPrev;
+	float2		temporalaa_jitter;
+	float2		temporalaa_jitter_prev;
 
-	float4x4	PrevV;
-	float4x4	PrevP;
-	float4x4	PrevVP;		// PrevView*PrevProjection
-	float4x4	PrevInvVP;	// Inverse(PrevView*PrevProjection)
-	float4x4	ReflVP;		// ReflectionView*ReflectionProjection
-	float4x4	Reprojection; // view_projection_inverse_matrix * previous_view_projection_matrix
+	float4x4	previous_view;
+	float4x4	previous_projection;
+	float4x4	previous_view_projection;
+	float4x4	previous_inverse_view_projection;
+	float4x4	reflection_view_projection;
+	float4x4	reprojection; // view_projection_inverse_matrix * previous_view_projection_matrix
 
-	float2		ApertureShape;
-	float		ApertureSize;
-	float		FocalLength;
+	float2		aperture_shape;
+	float		aperture_size;
+	float		focal_length;
 
-
-	float2 CanvasSize;
-	float2 CanvasSize_rcp;
+	float2 canvas_size;
+	float2 canvas_size_rcp;
 		   
-	uint2 InternalResolution;
-	float2 InternalResolution_rcp;
+	uint2 internal_resolution;
+	float2 internal_resolution_rcp;
 
-	uint3 EntityCullingTileCount;
+	uint3 entity_culling_tilecount;
 	int padding0;
 
 	int texture_depth_index;
@@ -680,7 +703,7 @@ struct LensFlarePush
 
 struct CubemapRenderCam
 {
-	float4x4 VP;
+	float4x4 view_projection;
 	uint4 properties;
 };
 CBUFFER(CubemapRenderCB, CBSLOT_RENDERER_CUBEMAPRENDER)

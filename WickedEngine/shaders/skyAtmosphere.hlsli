@@ -568,7 +568,7 @@ SingleScatteringResult IntegrateScatteredLuminance(
 
 				//if (Sampling.PerPixelNoise)
 				//{
-				//    t = t0 + (t1 - t0) * InterleavedGradientNoise(pixPos, g_xFrame.FrameCount % 16);
+				//    t = t0 + (t1 - t0) * InterleavedGradientNoise(pixPos, GetFrame().frame_count % 16);
 				//}
 				//else
 				//{

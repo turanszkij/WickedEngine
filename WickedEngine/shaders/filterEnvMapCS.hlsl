@@ -26,9 +26,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		RWTexture2DArray<float4> output = bindless_rwtextures2DArray[push.texture_output];
 
 		float2 uv = (DTid.xy + 0.5f) * push.filterResolution_rcp.xy;
-		float3 N = UV_to_CubeMap(uv, DTid.z);
+		float3 N = uv_to_cubemap(uv, DTid.z);
 
-		float3x3 tangentSpace = GetTangentSpace(N);
+		float3x3 tangentSpace = get_tangentspace(N);
 
 		float4 col = 0;
 

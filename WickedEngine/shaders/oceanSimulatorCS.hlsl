@@ -17,7 +17,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float2 h0_k = g_InputH0[in_index];
 	float2 h0_mk = g_InputH0[in_mindex];
 	float sin_v, cos_v;
-	sincos(g_InputOmega[in_index] * g_xFrame.Time * g_TimeScale, sin_v, cos_v);
+	sincos(g_InputOmega[in_index] * GetFrame().time * g_TimeScale, sin_v, cos_v);
 
 	float2 ht;
 	ht.x = (h0_k.x + h0_mk.x) * cos_v - (h0_k.y + h0_mk.y) * sin_v;

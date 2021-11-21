@@ -62,7 +62,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	// compute final surface position on triangle from barycentric coords:
 	float3 position = pos_nor0.xyz + f * (pos_nor1.xyz - pos_nor0.xyz) + g * (pos_nor2.xyz - pos_nor0.xyz);
 	float3 target = normalize(nor0 + f * (nor1 - nor0) + g * (nor2 - nor0));
-	float3 tangent = normalize(mul(float3(hemispherepoint_cos(rand(seed, uv), rand(seed, uv)).xy, 0), GetTangentSpace(target)));
+	float3 tangent = normalize(mul(float3(hemispherepoint_cos(rand(seed, uv), rand(seed, uv)).xy, 0), get_tangentspace(target)));
 	float3 binormal = cross(target, tangent);
 	float strand_length = length0 + f * (length1 - length0) + g * (length2 - length0);
 
@@ -113,9 +113,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 		// Accumulate forces:
 		float3 force = 0;
-        for (uint i = 0; i < g_xFrame.ForceFieldArrayCount; ++i)
+        for (uint i = 0; i < GetFrame().forcefieldarray_count; ++i)
         {
-			ShaderEntity forceField = load_entity(g_xFrame.ForceFieldArrayOffset + i);
+			ShaderEntity forceField = load_entity(GetFrame().forcefieldarray_offset + i);
 
 			[branch]
 			if (forceField.layerMask & xHairLayerMask)
@@ -126,7 +126,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 				if (forceField.GetType() == ENTITY_TYPE_FORCEFIELD_POINT) // point-based force field
 				{
 					//dist = length(dir);
-					dist = length(forceField.position - ClosestPointOnSegment(base, tip, forceField.position));
+					dist = length(forceField.position - closest_point_on_segment(base, tip, forceField.position));
 				}
 				else // planar force field
 				{
@@ -141,7 +141,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		// Pull back to rest position:
         force += (target - normal) * xStiffness;
 
-        force *= g_xFrame.DeltaTime;
+        force *= GetFrame().delta_time;
 
 		// Simulation buffer load:
         float3 velocity = simulationBuffer[particleID].velocity;
@@ -155,7 +155,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 		// Apply forces:
 		velocity += force;
-		normal += velocity * g_xFrame.DeltaTime;
+		normal += velocity * GetFrame().delta_time;
 
 		// Drag:
 		velocity *= 0.98f;
@@ -203,7 +203,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			// simplistic wind effect only affects the top, but leaves the base as is:
 			const float waveoffset = dot(rootposition, GetWeather().wind.direction) * GetWeather().wind.wavesize + rand / 255.0f * GetWeather().wind.randomness;
 			const float3 wavedir = GetWeather().wind.direction * (segmentID + patchPos.y);
-			const float3 wind = sin(g_xFrame.Time * GetWeather().wind.speed + waveoffset) * wavedir;
+			const float3 wind = sin(GetFrame().time * GetWeather().wind.speed + waveoffset) * wavedir;
 
 			float3 position = rootposition + patchPos + wind;
 
@@ -215,17 +215,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		}
 
 		// Frustum culling:
-		uint infrustum = 1;
-		float3 center = (base + tip) * 0.5;
-		float radius = -len;
-		infrustum &= distance(base, GetCamera().CamPos.xyz) < xHairViewDistance;
-		infrustum &= dot(GetCamera().FrustumPlanes[0], float4(center, 1)) > radius;
-		infrustum &= dot(GetCamera().FrustumPlanes[2], float4(center, 1)) > radius;
-		infrustum &= dot(GetCamera().FrustumPlanes[3], float4(center, 1)) > radius;
-		infrustum &= dot(GetCamera().FrustumPlanes[4], float4(center, 1)) > radius;
-		infrustum &= dot(GetCamera().FrustumPlanes[5], float4(center, 1)) > radius;
+		ShaderSphere sphere;
+		sphere.center = (base + tip) * 0.5;
+		sphere.radius = len;
 
-		if (infrustum)
+		if (GetCamera().frustum.intersects(sphere))
 		{
 			uint prevCount;
 			counterBuffer.InterlockedAdd(0, 1, prevCount);

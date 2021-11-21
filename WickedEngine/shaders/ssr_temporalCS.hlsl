@@ -109,7 +109,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 		return;
 	}
 
-	const float3 P = reconstructPosition(uv, depth, GetCamera().InvP);
+	const float3 P = reconstruct_position(uv, depth, GetCamera().inverse_projection);
 
 	PrimitiveID prim;
 	prim.unpack(texture_gbuffer0[DTid.xy * 2]);
@@ -132,18 +132,18 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 		float rayLength = rayLengths[DTid.xy];
 		if (rayLength > 0)
 		{
-			const float3 P = reconstructPosition(uv, depth);
-			const float3 V = normalize(GetCamera().CamPos - P);
+			const float3 P = reconstruct_position(uv, depth);
+			const float3 V = normalize(GetCamera().position - P);
 			const float3 rayEnd = P - V * rayLength;
-			float4 rayEndPrev = mul(GetCamera().PrevVP, float4(rayEnd, 1));
+			float4 rayEndPrev = mul(GetCamera().previous_view_projection, float4(rayEnd, 1));
 			rayEndPrev.xy /= rayEndPrev.w;
 			prevUV = rayEndPrev.xy * float2(0.5, -0.5) + 0.5;
 		}
 	}
 
 	// Disocclusion fallback:
-	float depth_current = getLinearDepth(depth);
-	float depth_history = getLinearDepth(texture_depth_history.SampleLevel(sampler_point_clamp, prevUV, 1));
+	float depth_current = compute_lineardepth(depth);
+	float depth_history = compute_lineardepth(texture_depth_history.SampleLevel(sampler_point_clamp, prevUV, 1));
 	if (abs(depth_current - depth_history) > 1)
 	{
 		output[DTid.xy] = resolve_current[DTid.xy];

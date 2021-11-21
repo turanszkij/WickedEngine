@@ -31,12 +31,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	RayDesc ray = CreateCameraRay(uv);
 
 	// Depth of field setup:
-	float3 focal_point = ray.Origin + ray.Direction * GetCamera().FocalLength;
+	float3 focal_point = ray.Origin + ray.Direction * GetCamera().focal_length;
 	float3 coc = float3(hemispherepoint_cos(rand(seed, uv), rand(seed, uv)).xy, 0);
-	coc.xy *= GetCamera().ApertureShape.xy;
-	coc = mul(coc, float3x3(cross(GetCamera().Up, GetCamera().At), GetCamera().Up, GetCamera().At));
-	coc *= GetCamera().FocalLength;
-	coc *= GetCamera().ApertureSize;
+	coc.xy *= GetCamera().aperture_shape.xy;
+	coc = mul(coc, float3x3(cross(GetCamera().up, GetCamera().forward), GetCamera().up, GetCamera().forward));
+	coc *= GetCamera().focal_length;
+	coc *= GetCamera().aperture_size;
 	coc *= 0.1f;
 	ray.Origin = ray.Origin + coc;
 	ray.Direction = focal_point - ray.Origin; // will be normalized before tracing!
@@ -135,9 +135,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		{
 			// Light sampling:
 			[loop]
-			for (uint iterator = 0; iterator < g_xFrame.LightArrayCount; iterator++)
+			for (uint iterator = 0; iterator < GetFrame().lightarray_count; iterator++)
 			{
-				ShaderEntity light = load_entity(g_xFrame.LightArrayOffset + iterator);
+				ShaderEntity light = load_entity(GetFrame().lightarray_offset + iterator);
 
 				Lighting lighting;
 				lighting.create(0, 0, 0, 0);
@@ -163,7 +163,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 						lightColor = light.GetColor().rgb * light.GetEnergy();
 
 						float3 atmosphereTransmittance = 1;
-						if (g_xFrame.Options & OPTION_BIT_REALISTIC_SKY)
+						if (GetFrame().options & OPTION_BIT_REALISTIC_SKY)
 						{
 							AtmosphereParameters Atmosphere = GetWeather().atmosphere;
 							atmosphereTransmittance = GetAtmosphericLightTransmittance(Atmosphere, surface.P, L, texture_transmittancelut);
@@ -242,7 +242,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 					RayDesc newRay;
 					newRay.Origin = surface.P;
-					newRay.Direction = normalize(lerp(L, SampleHemisphere_cos(L, seed, uv), 0.025));
+					newRay.Direction = normalize(lerp(L, sample_hemisphere_cos(L, seed, uv), 0.025));
 					newRay.TMin = 0.001;
 					newRay.TMax = dist;
 #ifdef RTAPI
@@ -304,7 +304,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		{
 			// Refraction
 			const float3 R = refract(ray.Direction, surface.N, 1 - surface.material.refraction);
-			ray.Direction = lerp(R, SampleHemisphere_cos(R, seed, uv), surface.roughnessBRDF);
+			ray.Direction = lerp(R, sample_hemisphere_cos(R, seed, uv), surface.roughnessBRDF);
 			energy *= surface.albedo;
 
 			// Add a new bounce iteration, otherwise the transparent effect can disappear:
@@ -319,13 +319,13 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			{
 				// Specular reflection
 				const float3 R = reflect(ray.Direction, surface.N);
-				ray.Direction = lerp(R, SampleHemisphere_cos(R, seed, uv), surface.roughnessBRDF);
+				ray.Direction = lerp(R, sample_hemisphere_cos(R, seed, uv), surface.roughnessBRDF);
 				energy *= surface.F / max(0.00001, specChance);
 			}
 			else
 			{
 				// Diffuse reflection
-				ray.Direction = SampleHemisphere_cos(surface.N, seed, uv);
+				ray.Direction = sample_hemisphere_cos(surface.N, seed, uv);
 				energy *= surface.albedo / max(0.00001, 1 - specChance);
 			}
 

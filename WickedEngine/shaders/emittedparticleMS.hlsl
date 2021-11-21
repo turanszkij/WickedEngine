@@ -68,7 +68,7 @@ void main(
 
 		VertextoPixel Out;
 		Out.P = position;
-		Out.pos = mul(GetCamera().VP, float4(position, 1));
+		Out.pos = mul(GetCamera().view_projection, float4(position, 1));
 		Out.tex = float4(uv, uv2);
 		Out.size = size;
 		Out.color = color;

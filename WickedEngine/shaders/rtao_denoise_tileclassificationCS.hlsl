@@ -26,19 +26,19 @@ float2 FFX_DNSR_Shadows_GetInvBufferDimensions()
 }
 float3 FFX_DNSR_Shadows_GetEye()
 {
-	return GetCamera().CamPos;
+	return GetCamera().position;
 }
 float4x4 FFX_DNSR_Shadows_GetProjectionInverse()
 {
-	return GetCamera().InvP;
+	return GetCamera().inverse_projection;
 }
 float4x4 FFX_DNSR_Shadows_GetViewProjectionInverse()
 {
-	return GetCamera().InvVP;
+	return GetCamera().inverse_view_projection;
 }
 float4x4 FFX_DNSR_Shadows_GetReprojectionMatrix()
 {
-	return GetCamera().Reprojection;
+	return GetCamera().reprojection;
 }
 
 float FFX_DNSR_Shadows_ReadDepth(uint2 did)

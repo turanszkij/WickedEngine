@@ -91,7 +91,7 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	{
 		const uint2 pixel = tile_start + hbao_direction * (i - TILE_BORDER);
 		const float2 uv = (pixel + 0.5f) * postprocess.resolution_rcp;
-		const float z = texture_lineardepth.Load(uint3(tile_start + hbao_direction * (i - TILE_BORDER), 1)) * GetCamera().ZFarP;
+		const float z = texture_lineardepth.Load(uint3(tile_start + hbao_direction * (i - TILE_BORDER), 1)) * GetCamera().z_far;
 		const float2 xy = (hbao_uv_to_view_A * uv + hbao_uv_to_view_B) * z;
 		cache[i] = float2(horizontal ? xy.x : xy.y, z);
 	}
@@ -99,7 +99,7 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
 	const uint2 pixel = tile_start + groupIndex * hbao_direction;
 	const int center = TILE_BORDER + groupIndex;
-	if (pixel.x >= postprocess.resolution.x || pixel.y >= postprocess.resolution.y || cache[center].y >= GetCamera().ZFarP - 0.99)
+	if (pixel.x >= postprocess.resolution.x || pixel.y >= postprocess.resolution.y || cache[center].y >= GetCamera().z_far - 0.99)
 	{
 		return;
 	}

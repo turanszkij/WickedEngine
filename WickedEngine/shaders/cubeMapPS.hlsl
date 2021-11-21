@@ -13,6 +13,6 @@ float4 main(VSOut_Sphere input) : SV_TARGET
 {
 	float3 P = input.pos3D;
 	float3 N = normalize(input.nor);
-	float3 V = normalize(GetCamera().CamPos - P);
+	float3 V = normalize(GetCamera().position - P);
 	return float4(cubeMap.Sample(sampler_linear_clamp, -reflect(V, N)).rgb, 1);
 }

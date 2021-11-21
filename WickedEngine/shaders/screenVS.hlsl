@@ -10,7 +10,7 @@ Output main(uint vI : SV_VERTEXID)
 {
 	Output Out;
 
-	FullScreenTriangle(vI, Out.pos, Out.uv);
+	vertexID_create_fullscreen_triangle(vI, Out.pos, Out.uv);
 
 	return Out;
 }

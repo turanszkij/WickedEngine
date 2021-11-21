@@ -13,5 +13,5 @@ float4 main(uint vID : SV_VERTEXID) : SV_Position
 	//return mul(g_xTransform, CUBE[vID]);
 
 	// This is a 14 vertex count trianglestrip variant:
-	return mul(push.transform, float4(CreateCube(vID) * 2 - 1,1));
+	return mul(push.transform, float4(vertexID_create_cube(vID) * 2 - 1,1));
 }

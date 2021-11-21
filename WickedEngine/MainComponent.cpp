@@ -446,6 +446,7 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 		}
 	}
 	wiGraphics::GetDevice() = graphicsDevice.get();
+	wiRenderer::InitializeGlobalSamplers();
 
 	canvas.init(window);
 

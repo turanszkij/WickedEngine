@@ -17,7 +17,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		RWTexture2DArray<MIP_OUTPUT_FORMAT> output = bindless_rwtextures2DArray[mipgen.texture_output];
 
 		float2 uv = ((float2)DTid.xy + 0.5f) * mipgen.outputResolution_rcp.xy;
-		float3 N = UV_to_CubeMap(uv, DTid.z);
+		float3 N = uv_to_cubemap(uv, DTid.z);
 
 		output[uint3(DTid.xy, DTid.z + mipgen.arrayIndex * 6)] = input.SampleLevel(customsampler, float4(N, mipgen.arrayIndex), 0);
 	}

@@ -15,6 +15,6 @@ VSOut_Sphere main( uint vID : SV_VERTEXID )
 	o.nor = o.pos.xyz;
 	o.pos = mul(g_xTransform, o.pos);
 	o.pos3D = o.pos.xyz;
-	o.pos = mul(GetCamera().VP, o.pos);
+	o.pos = mul(GetCamera().view_projection, o.pos);
 	return o;
 }

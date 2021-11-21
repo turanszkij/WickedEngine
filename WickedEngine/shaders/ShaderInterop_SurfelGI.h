@@ -71,7 +71,7 @@ inline int3 surfel_cell(float3 position)
 #ifdef SURFEL_USE_HASHING
 	return floor(position / SURFEL_MAX_RADIUS);
 #else
-	return floor((position - floor(GetCamera().CamPos)) / SURFEL_MAX_RADIUS) + SURFEL_GRID_DIMENSIONS / 2;
+	return floor((position - floor(GetCamera().position)) / SURFEL_MAX_RADIUS) + SURFEL_GRID_DIMENSIONS / 2;
 #endif // SURFEL_USE_HASHING
 }
 float3 surfel_griduv(float3 position)
@@ -79,7 +79,7 @@ float3 surfel_griduv(float3 position)
 #ifdef SURFEL_USE_HASHING
 	return 0; // hashed grid can't be sampled for colors, it doesn't make sense
 #else
-	return (((position - floor(GetCamera().CamPos)) / SURFEL_MAX_RADIUS) + SURFEL_GRID_DIMENSIONS / 2) / SURFEL_GRID_DIMENSIONS;
+	return (((position - floor(GetCamera().position)) / SURFEL_MAX_RADIUS) + SURFEL_GRID_DIMENSIONS / 2) / SURFEL_GRID_DIMENSIONS;
 #endif // SURFEL_USE_HASHING
 }
 inline uint surfel_cellindex(int3 cell)
@@ -119,8 +119,8 @@ inline bool surfel_cellintersects(Surfel surfel, int3 cell)
 	float3 gridmin = cell * SURFEL_MAX_RADIUS;
 	float3 gridmax = (cell + 1) * SURFEL_MAX_RADIUS;
 #else
-	float3 gridmin = cell - SURFEL_GRID_DIMENSIONS / 2 * SURFEL_MAX_RADIUS + floor(GetCamera().CamPos);
-	float3 gridmax = (cell + 1) - SURFEL_GRID_DIMENSIONS / 2 * SURFEL_MAX_RADIUS + floor(GetCamera().CamPos);
+	float3 gridmin = cell - SURFEL_GRID_DIMENSIONS / 2 * SURFEL_MAX_RADIUS + floor(GetCamera().position);
+	float3 gridmax = (cell + 1) - SURFEL_GRID_DIMENSIONS / 2 * SURFEL_MAX_RADIUS + floor(GetCamera().position);
 #endif // SURFEL_USE_HASHING
 
 	float3 closestPointInAabb = min(max(surfel.position, gridmin), gridmax);
@@ -166,7 +166,7 @@ static const int3 surfel_neighbor_offsets[27] = {
 float2 surfel_moment_pixel(uint surfel_index, float3 normal, float3 direction)
 {
 	uint2 moments_pixel = unflatten2D(surfel_index, SQRT_SURFEL_CAPACITY) * SURFEL_MOMENT_TEXELS;
-	float3 hemi = mul(direction, transpose(GetTangentSpace(normal)));
+	float3 hemi = mul(direction, transpose(get_tangentspace(normal)));
 	hemi.z = abs(hemi.z);
 	hemi = normalize(hemi);
 	float2 moments_uv = encode_hemioct(hemi) * 0.5 + 0.5;

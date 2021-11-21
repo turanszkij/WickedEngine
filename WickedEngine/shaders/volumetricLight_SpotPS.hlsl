@@ -4,19 +4,19 @@
 
 float4 main(VertexToPixel input) : SV_TARGET
 {
-	ShaderEntity light = load_entity(g_xFrame.LightArrayOffset + (uint)g_xColor.x);
+	ShaderEntity light = load_entity(GetFrame().lightarray_offset + (uint)g_xColor.x);
 
 	float2 ScreenCoord = input.pos2D.xy / input.pos2D.w * float2(0.5f, -0.5f) + 0.5f;
 	float depth = max(input.pos.z, texture_depth.SampleLevel(sampler_point_clamp, ScreenCoord, 2));
-	float3 P = reconstructPosition(ScreenCoord, depth);
-	float3 V = GetCamera().CamPos - P;
+	float3 P = reconstruct_position(ScreenCoord, depth);
+	float3 V = GetCamera().position - P;
 	float cameraDistance = length(V);
 	V /= cameraDistance;
 
 	float marchedDistance = 0;
 	float3 accumulation = 0;
 
-	float3 rayEnd = GetCamera().CamPos;
+	float3 rayEnd = GetCamera().position;
 	// todo: rayEnd should be clamped to the closest cone intersection point when camera is outside volume
 	
 	const uint sampleCount = 16;
@@ -48,13 +48,13 @@ float4 main(VertexToPixel input) : SV_TARGET
 			[branch]
 			if (light.IsCastingShadow())
 			{
-				float4 ShPos = mul(load_entitymatrix(light.GetMatrixIndex() + 0), float4(P, 1));
-				ShPos.xyz /= ShPos.w;
-				float2 ShTex = ShPos.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
+				float4 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + 0), float4(P, 1));
+				shadow_pos.xyz /= shadow_pos.w;
+				float2 shadow_uv = shadow_pos.xy * float2(0.5f, -0.5f) + float2(0.5f, 0.5f);
 				[branch]
-				if ((saturate(ShTex.x) == ShTex.x) && (saturate(ShTex.y) == ShTex.y))
+				if ((saturate(shadow_uv.x) == shadow_uv.x) && (saturate(shadow_uv.y) == shadow_uv.y))
 				{
-					attenuation *= shadowCascade(light, ShPos.xyz, ShTex.xy, 0);
+					attenuation *= shadow_2D(light, shadow_pos.xyz, shadow_uv.xy, 0);
 				}
 			}
 

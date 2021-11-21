@@ -13,7 +13,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float2 pixelPosition = float2(DTid.xy) + 0.5;
 	float2 uv = pixelPosition * rcp(skyViewLUTRes);
     
-	float3 skyRelativePosition = GetCamera().CamPos;
+	float3 skyRelativePosition = GetCamera().position;
 	float3 worldPosition = GetCameraPlanetPos(atmosphere, skyRelativePosition);
 
 	float viewHeight = length(worldPosition);

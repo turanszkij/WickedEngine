@@ -27,8 +27,8 @@ void RTReflection_Raygen()
 	if (depth == 0)
 		return;
 
-	const float3 P = reconstructPosition(uv, depth);
-	const float3 V = normalize(GetCamera().CamPos - P);
+	const float3 P = reconstruct_position(uv, depth);
+	const float3 V = normalize(GetCamera().position - P);
 
 	PrimitiveID prim;
 	prim.unpack(texture_gbuffer0[DTid.xy * 2]);
@@ -76,7 +76,7 @@ void RTReflection_Raygen()
 
 	const float3 R = L;
 
-	float seed = g_xFrame.Time;
+	float seed = GetFrame().time;
 
 	RayDesc ray;
 	ray.TMin = 0.01;
@@ -132,9 +132,9 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 		lighting.create(0, 0, GetAmbient(surface.N), 0);
 
 		[loop]
-		for (uint iterator = 0; iterator < g_xFrame.LightArrayCount; iterator++)
+		for (uint iterator = 0; iterator < GetFrame().lightarray_count; iterator++)
 		{
-			ShaderEntity light = load_entity(g_xFrame.LightArrayOffset + iterator);
+			ShaderEntity light = load_entity(GetFrame().lightarray_offset + iterator);
 			if ((light.layerMask & surface.material.layerMask) == 0)
 				continue;
 
@@ -147,17 +147,17 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 			{
 			case ENTITY_TYPE_DIRECTIONALLIGHT:
 			{
-				DirectionalLight(light, surface, lighting);
+				light_directional(light, surface, lighting);
 			}
 			break;
 			case ENTITY_TYPE_POINTLIGHT:
 			{
-				PointLight(light, surface, lighting);
+				light_point(light, surface, lighting);
 			}
 			break;
 			case ENTITY_TYPE_SPOTLIGHT:
 			{
-				SpotLight(light, surface, lighting);
+				light_spot(light, surface, lighting);
 			}
 			break;
 			}

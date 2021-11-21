@@ -39,7 +39,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const float3 N = normalize(unpack_unitvector(surfel.normal));
 
 	float seed = 0.123456;
-	float2 uv = float2(frac(g_xFrame.FrameCount.x / 4096.0), (float)surfel_index / SURFEL_CAPACITY);
+	float2 uv = float2(frac(GetFrame().frame_count.x / 4096.0), (float)surfel_index / SURFEL_CAPACITY);
 
 	uint rayCount = surfel.GetRayCount();
 	for (uint rayIndex = 0; rayIndex < rayCount; ++rayIndex)
@@ -48,7 +48,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		ray.Origin = surfel.position;
 		ray.TMin = 0.0001;
 		ray.TMax = FLT_MAX;
-		ray.Direction = normalize(SampleHemisphere_cos(N, seed, uv));
+		ray.Direction = normalize(sample_hemisphere_cos(N, seed, uv));
 
 		uint2 moments_pixel = surfel_moment_pixel(surfel_index, N, ray.Direction);
 
@@ -133,9 +133,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #if 1
 			// Light sampling:
 			[loop]
-			for (uint iterator = 0; iterator < g_xFrame.LightArrayCount; iterator++)
+			for (uint iterator = 0; iterator < GetFrame().lightarray_count; iterator++)
 			{
-				ShaderEntity light = load_entity(g_xFrame.LightArrayOffset + iterator);
+				ShaderEntity light = load_entity(GetFrame().lightarray_offset + iterator);
 
 				Lighting lighting;
 				lighting.create(0, 0, 0, 0);
@@ -157,7 +157,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 					if (NdotL > 0)
 					{
 						float3 atmosphereTransmittance = 1.0;
-						if (g_xFrame.Options & OPTION_BIT_REALISTIC_SKY)
+						if (GetFrame().options & OPTION_BIT_REALISTIC_SKY)
 						{
 							atmosphereTransmittance = GetAtmosphericLightTransmittance(GetWeather().atmosphere, surface.P, L, texture_transmittancelut);
 						}
@@ -243,7 +243,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 					RayDesc newRay;
 					newRay.Origin = surface.P;
 #if 1
-					newRay.Direction = normalize(lerp(L, SampleHemisphere_cos(L, seed, uv), 0.025f));
+					newRay.Direction = normalize(lerp(L, sample_hemisphere_cos(L, seed, uv), 0.025f));
 #else
 					newRay.Direction = L;
 #endif
@@ -383,20 +383,14 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	life++;
 
-	float3 cam_to_surfel = surfel.position - GetCamera().CamPos;
+	float3 cam_to_surfel = surfel.position - GetCamera().position;
 	if (length(cam_to_surfel) > SURFEL_RECYCLE_DISTANCE)
 	{
-#if 1
-		uint infrustum = 1;
-		float3 center = surfel.position;
-		float radius = -surfel.GetRadius();
-		infrustum &= dot(GetCamera().FrustumPlanes[0], float4(center, 1)) > radius;
-		infrustum &= dot(GetCamera().FrustumPlanes[1], float4(center, 1)) > radius;
-		infrustum &= dot(GetCamera().FrustumPlanes[2], float4(center, 1)) > radius;
-		infrustum &= dot(GetCamera().FrustumPlanes[3], float4(center, 1)) > radius;
-		infrustum &= dot(GetCamera().FrustumPlanes[4], float4(center, 1)) > radius;
-		infrustum &= dot(GetCamera().FrustumPlanes[5], float4(center, 1)) > radius;
-		if (infrustum)
+		ShaderSphere sphere;
+		sphere.center = surfel.position;
+		sphere.radius = surfel.GetRadius();
+
+		if (GetCamera().frustum.intersects(sphere))
 		{
 			recycle = 0;
 		}
@@ -404,16 +398,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		{
 			recycle++;
 		}
-#else
-		if (dot(cam_to_surfel, GetCamera().At) < 0)
-		{
-			recycle++;
-		}
-		else
-		{
-			recycle = 0;
-		}
-#endif
 	}
 	else
 	{

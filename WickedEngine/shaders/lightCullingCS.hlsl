@@ -2,7 +2,7 @@
 #include "cullingShaderHF.hlsli"
 #include "lightingHF.hlsli"
 
-#define entityCount (g_xFrame.LightArrayCount + g_xFrame.DecalArrayCount + g_xFrame.EnvProbeArrayCount)
+#define entityCount (GetFrame().lightarray_count + GetFrame().decalarray_count + GetFrame().envprobearray_count)
 
 STRUCTUREDBUFFER(in_Frustums, Frustum, TEXSLOT_ONDEMAND0);
 
@@ -94,7 +94,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	uint i = 0;
 
 	// Compute addresses and load frustum:
-	const uint flatTileIndex = flatten2D(Gid.xy, GetCamera().EntityCullingTileCount.xy);
+	const uint flatTileIndex = flatten2D(Gid.xy, GetCamera().entity_culling_tilecount.xy);
 	const uint tileBucketsAddress = flatTileIndex * SHADER_ENTITY_TILE_BUCKET_COUNT;
 	const uint bucketIndex = groupIndex;
 	Frustum GroupFrustum = in_Frustums[flatTileIndex];
@@ -182,7 +182,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 
 		// We can perform coarse AABB intersection tests with this:
 		GroupAABB_WS = GroupAABB;
-		AABBtransform(GroupAABB_WS, GetCamera().InvV);
+		AABBtransform(GroupAABB_WS, GetCamera().inverse_view);
 	}
 
 	// Convert depth values to view space.
@@ -223,7 +223,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		{
 		case ENTITY_TYPE_POINTLIGHT:
 		{
-			float3 positionVS = mul(GetCamera().View, float4(entity.position, 1)).xyz;
+			float3 positionVS = mul(GetCamera().view, float4(entity.position, 1)).xyz;
 			Sphere sphere = { positionVS.xyz, entity.GetRange() };
 			if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
 			{
@@ -243,8 +243,8 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		break;
 		case ENTITY_TYPE_SPOTLIGHT:
 		{
-			float3 positionVS = mul(GetCamera().View, float4(entity.position, 1)).xyz;
-			float3 directionVS = mul((float3x3)GetCamera().View, entity.GetDirection());
+			float3 positionVS = mul(GetCamera().view, float4(entity.position, 1)).xyz;
+			float3 directionVS = mul((float3x3)GetCamera().view, entity.GetDirection());
 			// Construct a tight fitting sphere around the spotlight cone:
 			const float r = entity.GetRange() * 0.5f / (entity.GetConeAngleCos() * entity.GetConeAngleCos());
 			Sphere sphere = { positionVS - directionVS * r, r };
@@ -274,7 +274,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		case ENTITY_TYPE_DECAL:
 		case ENTITY_TYPE_ENVMAP:
 		{
-			float3 positionVS = mul(GetCamera().View, float4(entity.position, 1)).xyz;
+			float3 positionVS = mul(GetCamera().view, float4(entity.position, 1)).xyz;
 			Sphere sphere = { positionVS.xyz, entity.GetRange() };
 			if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
 			{

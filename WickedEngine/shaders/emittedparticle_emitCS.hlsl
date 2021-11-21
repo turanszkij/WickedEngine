@@ -23,13 +23,13 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	{
 		// we can emit:
 
-		float2 uv = float2(g_xFrame.Time + xEmitterRandomness, (float)DTid.x / (float)THREADCOUNT_EMIT);
+		float2 uv = float2(GetFrame().time + xEmitterRandomness, (float)DTid.x / (float)THREADCOUNT_EMIT);
 		float seed = 0.12345;
 		
 #ifdef EMIT_FROM_MESH
 		// random triangle on emitter surface:
 		//	(Note that the usual rand() function is not used because that introduces unnatural clustering with high triangle count)
-		uint tri = (uint)((xEmitterMeshIndexCount / 3) * hash1(DTid.x + g_xFrame.FrameCount));
+		uint tri = (uint)((xEmitterMeshIndexCount / 3) * hash1(DTid.x + GetFrame().frame_count));
 
 		// load indices of triangle from index buffer
 		uint i0 = meshIndexBuffer[tri * 3 + 0];

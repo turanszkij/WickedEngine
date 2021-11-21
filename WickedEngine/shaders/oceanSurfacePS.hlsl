@@ -11,7 +11,7 @@ TEXTURE2D(texture_gradientmap, float4, TEXSLOT_ONDEMAND1);
 float4 main(PSIn input) : SV_TARGET
 {
 	float4 color = xOceanWaterColor;
-	float3 V = GetCamera().CamPos - input.pos3D;
+	float3 V = GetCamera().position - input.pos3D;
 	float dist = length(V);
 	V /= dist;
 	float emissive = 0;
@@ -40,7 +40,7 @@ float4 main(PSIn input) : SV_TARGET
 	TiledLighting(surface, lighting);
 
 	float2 refUV = float2(1, -1)*input.ReflectionMapSamplingPos.xy / input.ReflectionMapSamplingPos.w * 0.5f + 0.5f;
-	float2 ScreenCoord = surface.pixel * GetCamera().InternalResolution_rcp;
+	float2 ScreenCoord = surface.pixel * GetCamera().internal_resolution_rcp;
 
 	[branch]
 	if (GetCamera().texture_reflection_index >= 0)
@@ -57,13 +57,13 @@ float4 main(PSIn input) : SV_TARGET
 		// WATER REFRACTION 
 		Texture2D texture_refraction = bindless_textures[GetCamera().texture_refraction_index];
 		float lineardepth = input.pos.w;
-		float sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy + surface.N.xz * 0.04f, 0) * GetCamera().ZFarP;
+		float sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy + surface.N.xz * 0.04f, 0) * GetCamera().z_far;
 		float depth_difference = sampled_lineardepth - lineardepth;
 		surface.refraction.rgb = texture_refraction.SampleLevel(sampler_linear_mirror, ScreenCoord.xy + surface.N.xz * 0.04f * saturate(0.5 * depth_difference), 0).rgb;
 		if (depth_difference < 0)
 		{
 			// Fix cutoff by taking unperturbed depth diff to fill the holes with fog:
-			sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy, 0) * GetCamera().ZFarP;
+			sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy, 0) * GetCamera().z_far;
 			depth_difference = sampled_lineardepth - lineardepth;
 		}
 		// WATER FOG:
@@ -71,11 +71,11 @@ float4 main(PSIn input) : SV_TARGET
 	}
 
 	// Blend out at distance:
-	color.a = pow(saturate(1 - saturate(dist / GetCamera().ZFarP)), 2);
+	color.a = pow(saturate(1 - saturate(dist / GetCamera().z_far)), 2);
 
 	ApplyLighting(surface, lighting, color);
 
-	ApplyFog(dist, GetCamera().CamPos, V, color);
+	ApplyFog(dist, GetCamera().position, V, color);
 
 	return color;
 }

@@ -13,7 +13,7 @@ float4 main(VertexToPixel input) : SV_Target
 	float4 color = 1;
 
 	[branch]
-	if (material.texture_basecolormap_index >= 0 && (g_xFrame.Options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
+	if (material.texture_basecolormap_index >= 0 && (GetFrame().options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 	{
 		color = bindless_textures[material.texture_basecolormap_index].Sample(sampler_linear_wrap, input.tex);
 		color.rgb = DEGAMMA(color.rgb);
@@ -21,13 +21,13 @@ float4 main(VertexToPixel input) : SV_Target
 	color *= material.baseColor;
 
 	float opacity = 1;
-	float3 V = GetCamera().CamPos - input.pos3D;
+	float3 V = GetCamera().position - input.pos3D;
 	float dist = length(V);
 	V /= dist;
 	float emissive = 0;
 
 	const uint2 pixel = input.pos.xy;
-	const float2 ScreenCoord = pixel * GetCamera().InternalResolution_rcp;
+	const float2 ScreenCoord = pixel * GetCamera().internal_resolution_rcp;
 
 	Surface surface;
 	surface.create(material, color, 0);
@@ -61,7 +61,7 @@ float4 main(VertexToPixel input) : SV_Target
 
 	ApplyLighting(surface, lighting, color);
 
-	ApplyFog(dist, GetCamera().CamPos, V, color);
+	ApplyFog(dist, GetCamera().position, V, color);
 
 	return color;
 }
