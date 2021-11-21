@@ -2,8 +2,8 @@
 #include "ShaderInterop_Postprocess.h"
 #include "depthOfFieldHF.hlsli"
 
-RWTEXTURE2D(tile_mindepth_maxcoc, float2, 0);
-RWTEXTURE2D(tile_mincoc, float, 1);
+RWTexture2D<float2> tile_mindepth_maxcoc : register(u0);
+RWTexture2D<float> tile_mincoc : register(u1);
 
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)

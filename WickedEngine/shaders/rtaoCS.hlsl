@@ -5,9 +5,9 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-RWTEXTURE2D(output, unorm float, 0);
-RWTEXTURE2D(output_normals, float3, 1);
-RWSTRUCTUREDBUFFER(output_tiles, uint, 2);
+RWTexture2D<unorm float> output : register(u0);
+RWTexture2D<float3> output_normals : register(u1);
+RWStructuredBuffer<uint> output_tiles : register(u2);
 
 static const uint TILE_BORDER = 1;
 static const uint TILE_SIZE = POSTPROCESS_BLOCKSIZE + TILE_BORDER * 2;

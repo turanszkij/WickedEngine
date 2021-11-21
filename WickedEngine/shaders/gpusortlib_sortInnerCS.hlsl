@@ -34,9 +34,10 @@
 //--------------------------------------------------------------------------------------
 // Structured Buffers
 //--------------------------------------------------------------------------------------
-RAWBUFFER(counterBuffer, 0);
-STRUCTUREDBUFFER(comparisonBuffer, float, 1);
-RWSTRUCTUREDBUFFER(indexBuffer, uint, 0);
+ByteAddressBuffer counterBuffer : register(t0);
+StructuredBuffer<float> comparisonBuffer : register(t1);
+
+RWStructuredBuffer<uint> indexBuffer : register(u0);
 
 
 //--------------------------------------------------------------------------------------

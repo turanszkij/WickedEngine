@@ -1,7 +1,7 @@
 #include "globals.hlsli"
 #include "ShaderInterop_HairParticle.h"
 
-RWRAWBUFFER(counterBuffer, 0);
+RWByteAddressBuffer counterBuffer : register(u0);
 
 [numthreads(1, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )

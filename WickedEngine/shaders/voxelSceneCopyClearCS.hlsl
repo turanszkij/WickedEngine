@@ -1,8 +1,8 @@
 #include "globals.hlsli"
 #include "voxelHF.hlsli"
 
-RWSTRUCTUREDBUFFER(input_output, VoxelType, 0);
-RWTEXTURE3D(output_emission, float4, 1);
+RWStructuredBuffer<VoxelType> input_output : register(u0);
+RWTexture3D<float4> output_emission : register(u1);
 
 [numthreads(256, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )

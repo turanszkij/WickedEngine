@@ -4,7 +4,6 @@
 #include "wiMath.h"
 #include "wiIntersect.h"
 #include "wiRandom.h"
-#include "shaders/ResourceMapping.h"
 #include "wiArchive.h"
 #include "shaders/ShaderInterop.h"
 #include "wiTextureHelper.h"
@@ -299,7 +298,7 @@ void wiHairParticle::UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex, c
 			mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
 			&vertexBuffer_length
 		};
-		device->BindResources(res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
+		device->BindResources(res, 0, arraysize(res), cmd);
 
 		device->Dispatch(hcb.xHairNumDispatchGroups, 1, 1, cmd);
 
@@ -356,7 +355,7 @@ void wiHairParticle::Draw(const MaterialComponent& material, RENDERPASS renderPa
 			return;
 		}
 		device->BindPipelineState(&PSO_wire, cmd);
-		device->BindResource(wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(wiTextureHelper::getWhite(), 0, cmd);
 	}
 	else
 	{

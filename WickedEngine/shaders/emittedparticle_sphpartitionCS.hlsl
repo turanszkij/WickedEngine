@@ -1,11 +1,11 @@
 #include "globals.hlsli"
 #include "ShaderInterop_EmittedParticle.h"
 
-STRUCTUREDBUFFER(aliveBuffer_CURRENT, uint, 0);
-RAWBUFFER(counterBuffer, 1);
-STRUCTUREDBUFFER(particleBuffer, Particle, 2);
+StructuredBuffer<uint> aliveBuffer_CURRENT : register(t0);
+ByteAddressBuffer counterBuffer : register(t1);
+StructuredBuffer<Particle> particleBuffer : register(t2);
 
-RWSTRUCTUREDBUFFER(cellIndexBuffer, float, 0);
+RWStructuredBuffer<float> cellIndexBuffer : register(u0);
 
 [numthreads(THREADCOUNT_SIMULATION, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )

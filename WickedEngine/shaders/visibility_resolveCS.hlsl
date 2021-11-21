@@ -2,27 +2,27 @@
 #include "ShaderInterop_Renderer.h"
 #include "brdf.hlsli"
 
-RWTEXTURE2D(output_velocity, float2, 0);
+RWTexture2D<float2> output_velocity : register(u0);
 
-RWTEXTURE2D(output_depth_mip0, float, 1);
-RWTEXTURE2D(output_depth_mip1, float, 2);
-RWTEXTURE2D(output_depth_mip2, float, 3);
-RWTEXTURE2D(output_depth_mip3, float, 4);
-RWTEXTURE2D(output_depth_mip4, float, 5);
+RWTexture2D<float> output_depth_mip0 : register(u1);
+RWTexture2D<float> output_depth_mip1 : register(u2);
+RWTexture2D<float> output_depth_mip2 : register(u3);
+RWTexture2D<float> output_depth_mip3 : register(u4);
+RWTexture2D<float> output_depth_mip4 : register(u5);
 
-RWTEXTURE2D(output_lineardepth_mip0, float, 6);
-RWTEXTURE2D(output_lineardepth_mip1, float, 7);
-RWTEXTURE2D(output_lineardepth_mip2, float, 8);
-RWTEXTURE2D(output_lineardepth_mip3, float, 9);
-RWTEXTURE2D(output_lineardepth_mip4, float, 10);
+RWTexture2D<float> output_lineardepth_mip0 : register(u6);
+RWTexture2D<float> output_lineardepth_mip1 : register(u7);
+RWTexture2D<float> output_lineardepth_mip2 : register(u8);
+RWTexture2D<float> output_lineardepth_mip3 : register(u9);
+RWTexture2D<float> output_lineardepth_mip4 : register(u10);
 
 #ifdef VISIBILITY_MSAA
-TEXTURE2DMS(texture_primitiveID, uint2, TEXSLOT_ONDEMAND0);
-TEXTURE2DMS(texture_depthbuffer, float, TEXSLOT_ONDEMAND1);
-RWTEXTURE2D(output_primitiveID, uint2, 11);
+Texture2DMS<uint2> texture_primitiveID : register(t0);
+Texture2DMS<float> texture_depthbuffer : register(t1);
+RWTexture2D<uint2> output_primitiveID : register(u11);
 #else
-TEXTURE2D(texture_primitiveID, uint2, TEXSLOT_ONDEMAND0);
-TEXTURE2D(texture_depthbuffer, float, TEXSLOT_ONDEMAND1);
+Texture2D<uint2> texture_primitiveID : register(t0);
+Texture2D<float> texture_depthbuffer : register(t1);
 #endif // VISIBILITY_MSAA
 
 [numthreads(16, 16, 1)]

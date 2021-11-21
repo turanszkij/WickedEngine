@@ -3,9 +3,9 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-TEXTURE2D(texture_horizontalpass, float, TEXSLOT_ONDEMAND0);
+Texture2D<float> texture_horizontalpass : register(t0);
 
-RWTEXTURE2D(output, unorm float, 0);
+RWTexture2D<unorm float> output : register(u0);
 
 // Step size in number of pixels
 #define STEP_SIZE 4

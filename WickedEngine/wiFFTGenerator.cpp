@@ -37,7 +37,7 @@ namespace wiFFTGenerator
 
 		// Buffers
 		const GPUResource* srvs[1] = { &pSRV_Src };
-		device->BindResources(srvs, TEXSLOT_ONDEMAND0, 1, cmd);
+		device->BindResources(srvs, 0, 1, cmd);
 
 		const GPUResource* uavs[1] = { &pUAV_Dst };
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);

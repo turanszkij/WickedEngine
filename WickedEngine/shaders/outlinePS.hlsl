@@ -3,7 +3,7 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-TEXTURE2D(input, float, TEXSLOT_ONDEMAND0);
+Texture2D<float> input : register(t0);
 
 float4 main(float4 pos : SV_Position, float2 uv : TEXCOORD) : SV_TARGET
 {

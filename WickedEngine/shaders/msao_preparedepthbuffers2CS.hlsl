@@ -3,11 +3,12 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
-TEXTURE2D(DS4x, float, TEXSLOT_ONDEMAND0);
-RWTEXTURE2D(DS8x, float, 0);
-RWTEXTURE2DARRAY(DS8xAtlas, float, 1);
-RWTEXTURE2D(DS16x, float, 2);
-RWTEXTURE2DARRAY(DS16xAtlas, float, 3);
+Texture2D<float> DS4x : register(t0);
+
+RWTexture2D<float> DS8x : register(u0);
+RWTexture2DArray<float> DS8xAtlas : register(u1);
+RWTexture2D<float> DS16x : register(u2);
+RWTexture2DArray<float> DS16xAtlas : register(u3);
 
 [numthreads(8, 8, 1)]
 void main(uint3 Gid : SV_GroupID, uint GI : SV_GroupIndex, uint3 GTid : SV_GroupThreadID, uint3 DTid : SV_DispatchThreadID)

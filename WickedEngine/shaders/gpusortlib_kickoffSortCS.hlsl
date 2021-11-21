@@ -1,9 +1,9 @@
 #include "globals.hlsli"
 #include "ShaderInterop_GPUSortLib.h"
 
-RAWBUFFER(counterBuffer, 0);
+ByteAddressBuffer counterBuffer : register(t0);
 
-RWRAWBUFFER(indirectBuffers, 0);
+RWByteAddressBuffer indirectBuffers : register(u0);
 
 [numthreads(1, 1, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )

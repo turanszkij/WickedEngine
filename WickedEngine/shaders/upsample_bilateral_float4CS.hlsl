@@ -7,7 +7,7 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-TEXTURE2D(input, UPSAMPLE_FORMAT, TEXSLOT_ONDEMAND0);
+Texture2D<UPSAMPLE_FORMAT> input : register(t0);
 
 // Note: this post process can be either a pixel shader or compute shader, depending on use case
 
@@ -18,7 +18,7 @@ float4 main(float4 pos : SV_Position, float2 uv : TEXCOORD) : SV_TARGET
 	const uint2 pixel = pos.xy;
 #else
 // Run this post process as compute shader:
-RWTEXTURE2D(output, UPSAMPLE_FORMAT, 0);
+RWTexture2D<UPSAMPLE_FORMAT> output : register(u0);
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {

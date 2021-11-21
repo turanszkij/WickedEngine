@@ -7,9 +7,9 @@ PUSHCONSTANT(postprocess, PostProcess);
 #define BLUR_FORMAT float4
 #endif // BLUR_FORMAT
 
-TEXTURE2D(input, BLUR_FORMAT, TEXSLOT_ONDEMAND0);
+Texture2D<BLUR_FORMAT> input : register(t0);
 
-RWTEXTURE2D(output, BLUR_FORMAT, 0);
+RWTexture2D<BLUR_FORMAT> output : register(u0);
 
 // Calculate gaussian weights online: http://dev.theomader.com/gaussian-kernel-calculator/
 #ifdef BLUR_WIDE

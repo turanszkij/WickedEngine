@@ -3,9 +3,9 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-TEXTURE2D(input, float4, TEXSLOT_ONDEMAND0);
+Texture2D<float4> input : register(t0);
 
-RWTEXTURE2D(output, float4, 0);
+RWTexture2D<float4> output : register(u0);
 
 static const uint NUM_SAMPLES = 32;
 static const uint UNROLL_GRANULARITY = 8;

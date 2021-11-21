@@ -2,7 +2,7 @@
 #include "volumetricCloudsHF.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
-RWTEXTURE2D(output, float4, 0);
+RWTexture2D<float4> output : register(u0);
 
 static const float texSize = 1024;
 

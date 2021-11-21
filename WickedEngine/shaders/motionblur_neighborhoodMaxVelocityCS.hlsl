@@ -1,14 +1,14 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
-TEXTURE2D(tilemax, float2, TEXSLOT_ONDEMAND0);
-TEXTURE2D(tilemin, float2, TEXSLOT_ONDEMAND1);
+Texture2D<float2> tilemax : register(t0);
+Texture2D<float2> tilemin : register(t1);
 
-RWRAWBUFFER(tile_statistics, 0);
-RWSTRUCTUREDBUFFER(tiles_earlyexit, uint, 1);
-RWSTRUCTUREDBUFFER(tiles_cheap, uint, 2);
-RWSTRUCTUREDBUFFER(tiles_expensive, uint, 3);
-RWTEXTURE2D(output, float2, 4);
+RWByteAddressBuffer tile_statistics : register(u0);
+RWStructuredBuffer<uint> tiles_earlyexit : register(u1);
+RWStructuredBuffer<uint> tiles_cheap : register(u2);
+RWStructuredBuffer<uint> tiles_expensive : register(u3);
+RWTexture2D<float2> output : register(u4);
 
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)

@@ -1,6 +1,6 @@
 #include "globals.hlsli"
 
-TEXTURECUBE(cubeMap, float4, TEXSLOT_ONDEMAND0);
+TextureCube<float4> cubeMap : register(t0);
 
 struct VSOut_Sphere
 {

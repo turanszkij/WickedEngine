@@ -4,7 +4,7 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-RWRAWBUFFER(luminance_histogram, 0);
+RWByteAddressBuffer luminance_histogram : register(u0);
 
 groupshared uint histogram[LUMINANCE_NUM_HISTOGRAM_BINS];
 

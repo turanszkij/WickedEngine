@@ -2,7 +2,6 @@
 #include "wiRenderer.h"
 #include "wiResourceManager.h"
 #include "wiHelper.h"
-#include "shaders/ResourceMapping.h"
 #include "shaders/ShaderInterop_Font.h"
 #include "wiBackLog.h"
 #include "wiTextureHelper.h"
@@ -250,7 +249,7 @@ void LoadShaders()
 
 	pixelShader.auto_samplers.emplace_back();
 	pixelShader.auto_samplers.back().sampler = sampler;
-	pixelShader.auto_samplers.back().slot = SSLOT_ONDEMAND1;
+	pixelShader.auto_samplers.back().slot = 0;
 
 	wiRenderer::LoadShader(ShaderStage::PS, pixelShader, "fontPS.cso");
 

@@ -2,7 +2,7 @@
 
 PUSHCONSTANT(push, LensFlarePush);
 
-TEXTURE2D(texture_occlusion, float4, TEXSLOT_ONDEMAND0);
+Texture2D<float4> texture_occlusion : register(t0);
 
 static const float2 BILLBOARD[] = {
 	float2(-1, -1),

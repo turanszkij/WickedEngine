@@ -6,13 +6,12 @@ PUSHCONSTANT(postprocess, PostProcess);
 #define float16_t2 min16float2
 #define float16_t3 min16float3
 
-TEXTURE2D(normals, float16_t3, TEXSLOT_ONDEMAND0);
-STRUCTUREDBUFFER(metadata, uint, TEXSLOT_ONDEMAND1);
+Texture2D<float16_t3> normals : register(t0);
+StructuredBuffer<uint> metadata : register(t1);
+Texture2D<float16_t2> input : register(t2);
 
-TEXTURE2D(input, float16_t2, TEXSLOT_ONDEMAND2);
-
-RWTEXTURE2D(history, float2, 0);
-RWTEXTURE2D(output, unorm float, 1);
+RWTexture2D<float2> history : register(u0);
+RWTexture2D<unorm float> output : register(u1);
 
 uint2 FFX_DNSR_Shadows_GetBufferDimensions()
 {

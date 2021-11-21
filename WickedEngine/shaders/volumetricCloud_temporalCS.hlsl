@@ -3,12 +3,12 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-TEXTURE2D(cloud_reproject, float4, TEXSLOT_ONDEMAND0);
-TEXTURE2D(cloud_reproject_depth, float2, TEXSLOT_ONDEMAND1);
-TEXTURE2D(cloud_history, float4, TEXSLOT_ONDEMAND2);
+Texture2D<float4> cloud_reproject : register(t0);
+Texture2D<float2> cloud_reproject_depth : register(t1);
+Texture2D<float4> cloud_history : register(t2);
 
-RWTEXTURE2D(output, float4, 0);
-RWTEXTURE2D(output_cloudMask, unorm float4, 1);
+RWTexture2D<float4> output : register(u0);
+RWTexture2D<unorm float4> output_cloudMask : register(u1);
 
 
 // If the clouds are moving fast, the upsampling will most likely not be able to keep up. You can modify these values to relax the effect:

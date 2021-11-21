@@ -1,9 +1,10 @@
 #include "globals.hlsli"
 #include "skyAtmosphere.hlsli"
 
-TEXTURE2D(transmittanceLUT, float4, TEXSLOT_ONDEMAND0);
-TEXTURE2D(multiScatteringLUT, float4, TEXSLOT_ONDEMAND1);
-RWTEXTURE2D(output, float4, 0);
+Texture2D<float4> transmittanceLUT : register(t0);
+Texture2D<float4> multiScatteringLUT : register(t1);
+
+RWTexture2D<float4> output : register(u0);
  
 [numthreads(8, 8, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)

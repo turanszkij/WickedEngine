@@ -4,9 +4,9 @@
 #include "raytracingHF.hlsli"
 #include "lightingHF.hlsli"
 
-RWTEXTURE2D(output, float4, 0);
-RWTEXTURE2D(output_albedo, float4, 1);
-RWTEXTURE2D(output_normal, float4, 2);
+RWTexture2D<float4> output : register(u0);
+RWTexture2D<float4> output_albedo : register(u1);
+RWTexture2D<float4> output_normal : register(u2);
 
 [numthreads(RAYTRACING_LAUNCH_BLOCKSIZE, RAYTRACING_LAUNCH_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)

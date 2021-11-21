@@ -2,12 +2,12 @@
 #include "ShaderInterop_Postprocess.h"
 #include "depthOfFieldHF.hlsli"
 
-TEXTURE2D(input, float4, TEXSLOT_ONDEMAND0);
-TEXTURE2D(texture_postfilter, float3, TEXSLOT_ONDEMAND1);
-TEXTURE2D(texture_alpha, float, TEXSLOT_ONDEMAND2);
-TEXTURE2D(neighborhood_mindepth_maxcoc, float2, TEXSLOT_ONDEMAND3);
+Texture2D<float4> input : register(t0);
+Texture2D<float3> texture_postfilter : register(t1);
+Texture2D<float> texture_alpha : register(t2);
+Texture2D<float2> neighborhood_mindepth_maxcoc : register(t3);
 
-RWTEXTURE2D(output, float4, 0);
+RWTexture2D<float4> output : register(u0);
 
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)

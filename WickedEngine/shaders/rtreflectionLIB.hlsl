@@ -10,8 +10,8 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-RWTEXTURE2D(output, float4, 0);
-RWTEXTURE2D(output_rayLengths, float, 1);
+RWTexture2D<float4> output : register(u0);
+RWTexture2D<float> output_rayLengths : register(u1);
 
 struct RayPayload
 {

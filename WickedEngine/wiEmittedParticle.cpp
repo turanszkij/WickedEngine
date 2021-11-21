@@ -5,7 +5,6 @@
 #include "wiResourceManager.h"
 #include "wiIntersect.h"
 #include "wiRandom.h"
-#include "shaders/ResourceMapping.h"
 #include "wiArchive.h"
 #include "wiTextureHelper.h"
 #include "wiGPUSortLib.h"
@@ -479,7 +478,7 @@ void wiEmittedParticle::UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex
 				&mesh->indexBuffer,
 				(mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
 			};
-			device->BindResources(resources, TEXSLOT_ONDEMAND0, arraysize(resources), cmd);
+			device->BindResources(resources, 0, arraysize(resources), cmd);
 		}
 
 		GPUBarrier barrier_indirect_uav = GPUBarrier::Buffer(&indirectBuffers, ResourceState::INDIRECT_ARGUMENT, ResourceState::UNORDERED_ACCESS);
@@ -654,7 +653,7 @@ void wiEmittedParticle::UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex
 		const GPUResource* res[] = {
 			&counterBuffer,
 		};
-		device->BindResources(res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
+		device->BindResources(res, 0, arraysize(res), cmd);
 
 		const GPUResource* uavs[] = {
 			&indirectBuffers,
@@ -731,7 +730,7 @@ void wiEmittedParticle::Draw(const MaterialComponent& material, CommandList cmd)
 		&culledIndirectionBuffer,
 		&culledIndirectionBuffer2,
 	};
-	device->BindResources(res, TEXSLOT_ONDEMAND20, arraysize(res), cmd);
+	device->BindResources(res, 20, arraysize(res), cmd);
 
 	if (ALLOW_MESH_SHADER && device->CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
 	{

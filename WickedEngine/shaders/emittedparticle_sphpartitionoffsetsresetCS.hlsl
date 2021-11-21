@@ -1,7 +1,7 @@
 #include "globals.hlsli"
 #include "ShaderInterop_EmittedParticle.h"
 
-RWSTRUCTUREDBUFFER(cellOffsetBuffer, uint, 0);
+RWStructuredBuffer<uint> cellOffsetBuffer : register(u0);
 
 [numthreads(THREADCOUNT_SIMULATION, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)

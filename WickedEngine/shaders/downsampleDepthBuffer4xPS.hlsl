@@ -1,7 +1,7 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
-TEXTURE2D(input, float, TEXSLOT_ONDEMAND0);
+Texture2D<float> input : register(t0);
 
 float main(float4 pos : SV_Position, float2 uv : TEXCOORD) : SV_DEPTH
 {

@@ -1,9 +1,10 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Ocean.h"
 
-STRUCTUREDBUFFER(g_InputH0, float2, TEXSLOT_ONDEMAND0);
-STRUCTUREDBUFFER(g_InputOmega, float, TEXSLOT_ONDEMAND1);
-RWSTRUCTUREDBUFFER(g_OutputHt, float2, 0);
+StructuredBuffer<float2> g_InputH0 : register(t0);
+StructuredBuffer<float> g_InputOmega : register(t1);
+
+RWStructuredBuffer<float2> g_OutputHt : register(u0);
 
 // H(0) -> H(t)
 [numthreads(OCEAN_COMPUTE_TILESIZE, OCEAN_COMPUTE_TILESIZE, 1)]

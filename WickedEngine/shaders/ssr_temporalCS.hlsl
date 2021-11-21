@@ -4,11 +4,11 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-TEXTURE2D(resolve_current, float4, TEXSLOT_ONDEMAND0);
-TEXTURE2D(resolve_history, float4, TEXSLOT_ONDEMAND1);
-TEXTURE2D(rayLengths, float, TEXSLOT_ONDEMAND3);
+Texture2D<float4> resolve_current : register(t0);
+Texture2D<float4> resolve_history : register(t1);
+Texture2D<float> rayLengths : register(t3);
 
-RWTEXTURE2D(output, float4, 0);
+RWTexture2D<float4> output : register(u0);
 
 static const float temporalResponseMin = 0.75;
 static const float temporalResponseMax = 0.95f;

@@ -1,6 +1,6 @@
 #include "globals.hlsli"
 
-TEXTURE2D(texture_flare, float4, TEXSLOT_ONDEMAND1);
+Texture2D<float4> texture_flare : register(t1);
 
 struct VertexOut
 {

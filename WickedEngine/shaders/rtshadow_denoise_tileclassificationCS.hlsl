@@ -3,17 +3,17 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-TEXTURE2D(normals, float3, TEXSLOT_ONDEMAND0);
-STRUCTUREDBUFFER(tiles, uint4, TEXSLOT_ONDEMAND2);
+Texture2D<float3> normals : register(t0);
+StructuredBuffer<uint4> tiles : register(t2);
 
-RWSTRUCTUREDBUFFER(metadata, uint4, 0);
+RWStructuredBuffer<uint4> metadata : register(u0);
 
 // per-light:
-TEXTURE2D(moments_prev[4], float3, TEXSLOT_ONDEMAND3);
-TEXTURE2D(history[4], float, TEXSLOT_ONDEMAND7);
+Texture2D<float3> moments_prev[4] : register(t3);
+Texture2D<float> history[4] : register(t7);
 
-RWTEXTURE2D(reprojection[4], float2, 1);
-RWTEXTURE2D(moments[4], float3, 5);
+RWTexture2D<float2> reprojection[4] : register(u1);
+RWTexture2D<float3> moments[4] : register(u5);
 
 groupshared uint light_index;
 

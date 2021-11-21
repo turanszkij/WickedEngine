@@ -7,9 +7,9 @@
 
 PUSHCONSTANT(push, CopyTextureCB);
 
-TEXTURE2D(input, float4, TEXSLOT_ONDEMAND0);
+Texture2D<float4> input : register(t0);
 
-RWTEXTURE2D(output, COPY_OUTPUT_FORMAT, 0);
+RWTexture2D<COPY_OUTPUT_FORMAT> output : register(u0);
 
 [numthreads(8, 8, 1)]
 void main(int3 DTid : SV_DispatchThreadID)

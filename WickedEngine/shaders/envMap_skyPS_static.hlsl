@@ -3,7 +3,7 @@
 #include "objectHF.hlsli"
 #include "skyHF.hlsli"
 
-TEXTURECUBE(texture_sky, float4, TEXSLOT_ONDEMAND0);
+TextureCube<float4> texture_sky : register(t0);
 
 float4 main(PixelInput input) : SV_TARGET
 {

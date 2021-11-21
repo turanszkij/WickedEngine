@@ -6,13 +6,12 @@ PUSHCONSTANT(postprocess, PostProcess);
 #define float16_t2 min16float2
 #define float16_t3 min16float3
 
-TEXTURE2D(normals, float16_t3, TEXSLOT_ONDEMAND0);
-STRUCTUREDBUFFER(metadata, uint4, TEXSLOT_ONDEMAND1);
+Texture2D<float16_t3> normals : register(t0);
+StructuredBuffer<uint4> metadata : register(t1);
+Texture2D<float16_t2> input[4] : register(t2);
 
-TEXTURE2D(input[4], float16_t2, TEXSLOT_ONDEMAND2);
-
-RWTEXTURE2D(history[4], float2, 0);
-RWTEXTURE2D(output, unorm float4, 4);
+RWTexture2D<float2> history[4] : register(u0);
+RWTexture2D<unorm float4> output : register(u4);
 
 groupshared uint light_index;
 

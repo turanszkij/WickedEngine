@@ -6,13 +6,13 @@
 PUSHCONSTANT(msao, MSAO);
 
 #ifdef INTERLEAVE_RESULT
-TEXTURE2DARRAY(texture_lineardepth_deinterleaved, float, TEXSLOT_ONDEMAND0);
+Texture2DArray<float> texture_lineardepth_deinterleaved : register(t0);
 #else
-TEXTURE2D(texture_lineardepth_interleaved, float, TEXSLOT_ONDEMAND0);
+Texture2D<float> texture_lineardepth_interleaved : register(t0);
 #define WIDE_SAMPLING 1
 #endif // INTERLEAVE_RESULT
 
-RWTEXTURE2D(output, unorm float, 0);
+RWTexture2D<unorm float> output : register(u0);
 
 #if WIDE_SAMPLING
 // 32x32 cache size:  the 16x16 in the center forms the area of focus with the 8-pixel perimeter used for wide gathering.

@@ -3,10 +3,10 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-TEXTURE2D(input_current, float3, TEXSLOT_ONDEMAND0);
-TEXTURE2D(input_history, float3, TEXSLOT_ONDEMAND1);
+Texture2D<float3> input_current : register(t0);
+Texture2D<float3> input_history : register(t1);
 
-RWTEXTURE2D(output, float3, 0);
+RWTexture2D<float3> output : register(u0);
 
 // Neighborhood load optimization:
 #define USE_LDS

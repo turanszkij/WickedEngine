@@ -83,8 +83,9 @@ void TWIDDLE_8(inout float2 D[8], float phase)
 	TWIDDLE(D[7], 7 * phase);
 }
 
-STRUCTUREDBUFFER(g_SrcData, float2, TEXSLOT_ONDEMAND0);
-RWSTRUCTUREDBUFFER(g_DstData, float2, 0);
+StructuredBuffer<float2> g_SrcData : register(t0);
+
+RWStructuredBuffer<float2> g_DstData : register(u0);
 
 #ifndef FFT_V2
 

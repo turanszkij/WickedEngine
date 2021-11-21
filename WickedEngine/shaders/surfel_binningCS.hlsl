@@ -1,12 +1,12 @@
 #include "globals.hlsli"
 #include "ShaderInterop_SurfelGI.h"
 
-STRUCTUREDBUFFER(surfelBuffer, Surfel, TEXSLOT_ONDEMAND0);
-STRUCTUREDBUFFER(surfelAliveBuffer, uint, TEXSLOT_ONDEMAND1);
-RAWBUFFER(surfelStatsBuffer, TEXSLOT_ONDEMAND2);
+StructuredBuffer<Surfel> surfelBuffer : register(t0);
+StructuredBuffer<uint> surfelAliveBuffer : register(t1);
+ByteAddressBuffer surfelStatsBuffer : register(t2);
 
-RWSTRUCTUREDBUFFER(surfelGridBuffer, SurfelGridCell, 0);
-RWSTRUCTUREDBUFFER(surfelCellBuffer, uint, 1);
+RWStructuredBuffer<SurfelGridCell> surfelGridBuffer : register(u0);
+RWStructuredBuffer<uint> surfelCellBuffer : register(u1);
 
 [numthreads(SURFEL_INDIRECT_NUMTHREADS, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)

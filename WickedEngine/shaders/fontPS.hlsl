@@ -1,7 +1,7 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Font.h"
 
-SAMPLERSTATE(sampler_font, SSLOT_ONDEMAND1);
+SamplerState sampler_font : register(s0);
 
 struct VertextoPixel
 {

@@ -48,7 +48,7 @@ DepthStencilState	depthStencils[DSSTYPE_COUNT];
 BlendState			blendStates[BSTYPE_COUNT];
 GPUBuffer			constantBuffers[CBTYPE_COUNT];
 GPUBuffer			resourceBuffers[RBTYPE_COUNT];
-Sampler				samplers[SSLOT_COUNT];
+Sampler				samplers[SAMPLER_COUNT];
 
 std::string SHADERPATH = "shaders/";
 std::string SHADERSOURCEPATH = "../WickedEngine/shaders/";
@@ -1094,7 +1094,7 @@ void LoadShaders()
 								desc.dss = &depthStencils[DSSTYPE_ENVMAP];
 								break;
 							case RENDERPASS_VOXELIZE:
-								desc.dss = &depthStencils[DSSTYPE_XRAY];
+								desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
 								break;
 							default:
 								if (blendMode == BLENDMODE_ADDITIVE)
@@ -1171,7 +1171,7 @@ void LoadShaders()
 			desc.ps = &shaders[PSTYPE_OBJECT_PREPASS];
 			break;
 		case RENDERPASS_VOXELIZE:
-			desc.dss = &depthStencils[DSSTYPE_XRAY];
+			desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
 			desc.rs = &rasterizers[RSTYPE_VOXELIZE];
 			desc.vs = &shaders[VSTYPE_VOXELIZER];
 			desc.gs = &shaders[GSTYPE_VOXELIZER];
@@ -1346,7 +1346,7 @@ void LoadShaders()
 		// volumetric lights:
 		if (args.jobIndex <= LightComponent::SPOT)
 		{
-			desc.dss = &depthStencils[DSSTYPE_XRAY];
+			desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
 			desc.bs = &blendStates[BSTYPE_ADDITIVE];
 			desc.rs = &rasterizers[RSTYPE_BACK];
 
@@ -1378,7 +1378,7 @@ void LoadShaders()
 		desc.ps = &shaders[PSTYPE_RENDERLIGHTMAP];
 		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
 		desc.bs = &blendStates[BSTYPE_TRANSPARENT];
-		desc.dss = &depthStencils[DSSTYPE_XRAY];
+		desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
 
 		device->CreatePipelineState(&desc, &PSO_renderlightmap);
 		});
@@ -1398,7 +1398,7 @@ void LoadShaders()
 		desc.ps = &shaders[PSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL];
 		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
 		desc.bs = &blendStates[BSTYPE_PREMULTIPLIED];
-		desc.dss = &depthStencils[DSSTYPE_XRAY];
+		desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
 
 		device->CreatePipelineState(&desc, &PSO_upsample_bilateral);
 		});
@@ -1408,7 +1408,7 @@ void LoadShaders()
 		desc.ps = &shaders[PSTYPE_POSTPROCESS_OUTLINE];
 		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
 		desc.bs = &blendStates[BSTYPE_TRANSPARENT];
-		desc.dss = &depthStencils[DSSTYPE_XRAY];
+		desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
 
 		device->CreatePipelineState(&desc, &PSO_outline);
 		});
@@ -1418,7 +1418,7 @@ void LoadShaders()
 		desc.ps = &shaders[PSTYPE_LENSFLARE];
 		desc.bs = &blendStates[BSTYPE_ADDITIVE];
 		desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
-		desc.dss = &depthStencils[DSSTYPE_XRAY];
+		desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
 		desc.pt = PrimitiveTopology::TRIANGLESTRIP;
 
 		device->CreatePipelineState(&desc, &PSO_lensflare);
@@ -1502,7 +1502,7 @@ void LoadShaders()
 			desc.vs = &shaders[VSTYPE_VERTEXCOLOR];
 			desc.ps = &shaders[PSTYPE_VERTEXCOLOR];
 			desc.il = &inputLayouts[ILTYPE_VERTEXCOLOR];
-			desc.dss = &depthStencils[DSSTYPE_XRAY];
+			desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
 			desc.rs = &rasterizers[RSTYPE_WIRE_DOUBLESIDED_SMOOTH];
 			desc.bs = &blendStates[BSTYPE_TRANSPARENT];
 			desc.pt = PrimitiveTopology::LINELIST;
@@ -1554,7 +1554,7 @@ void LoadShaders()
 		case DEBUGRENDERING_FORCEFIELD_POINT:
 			desc.vs = &shaders[VSTYPE_FORCEFIELDVISUALIZER_POINT];
 			desc.ps = &shaders[PSTYPE_FORCEFIELDVISUALIZER];
-			desc.dss = &depthStencils[DSSTYPE_XRAY];
+			desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
 			desc.rs = &rasterizers[RSTYPE_BACK];
 			desc.bs = &blendStates[BSTYPE_ADDITIVE];
 			desc.pt = PrimitiveTopology::TRIANGLELIST;
@@ -1562,7 +1562,7 @@ void LoadShaders()
 		case DEBUGRENDERING_FORCEFIELD_PLANE:
 			desc.vs = &shaders[VSTYPE_FORCEFIELDVISUALIZER_PLANE];
 			desc.ps = &shaders[PSTYPE_FORCEFIELDVISUALIZER];
-			desc.dss = &depthStencils[DSSTYPE_XRAY];
+			desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
 			desc.rs = &rasterizers[RSTYPE_FRONT];
 			desc.bs = &blendStates[BSTYPE_ADDITIVE];
 			desc.pt = PrimitiveTopology::TRIANGLESTRIP;
@@ -1570,7 +1570,7 @@ void LoadShaders()
 		case DEBUGRENDERING_RAYTRACE_BVH:
 			desc.vs = &shaders[VSTYPE_RAYTRACE_SCREEN];
 			desc.ps = &shaders[PSTYPE_RAYTRACE_DEBUGBVH];
-			desc.dss = &depthStencils[DSSTYPE_XRAY];
+			desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
 			desc.rs = &rasterizers[RSTYPE_DOUBLESIDED];
 			desc.bs = &blendStates[BSTYPE_TRANSPARENT];
 			desc.pt = PrimitiveTopology::TRIANGLELIST;
@@ -1876,7 +1876,7 @@ void SetUpStates()
 
 	dsd.depth_enable = false;
 	dsd.stencil_enable = false;
-	depthStencils[DSSTYPE_XRAY] = dsd;
+	depthStencils[DSSTYPE_DEPTHDISABLED] = dsd;
 
 
 	dsd.depth_enable = true;
@@ -1955,30 +1955,6 @@ void SetUpStates()
 	blendStates[BSTYPE_COLORWRITEDISABLE] = bd;
 
 
-	bd.render_target[0].blend_enable = true;
-	bd.render_target[0].src_blend = Blend::ONE;
-	bd.render_target[0].dest_blend = Blend::ONE;
-	bd.render_target[0].blend_op = BlendOp::ADD;
-	bd.render_target[0].src_blend_alpha = Blend::ONE;
-	bd.render_target[0].dest_blend_alpha = Blend::ONE;
-	bd.render_target[0].blend_op_alpha = BlendOp::ADD;
-	bd.render_target[0].render_target_write_mask = ColorWrite::ENABLE_RED | ColorWrite::ENABLE_GREEN | ColorWrite::ENABLE_BLUE; // alpha is not written by deferred lights!
-	bd.independent_blend_enable = false,
-		bd.alpha_to_coverage_enable = false;
-	//device->CreateBlendState(&bd, &blendStates[BSTYPE_DEFERREDLIGHT]);
-
-	bd.render_target[0].blend_enable = true;
-	bd.render_target[0].src_blend = Blend::ONE;
-	bd.render_target[0].dest_blend = Blend::INV_SRC_ALPHA; // can overwrite ambient and lightmap
-	bd.render_target[0].blend_op = BlendOp::ADD;
-	bd.render_target[0].src_blend_alpha = Blend::ONE;
-	bd.render_target[0].dest_blend_alpha = Blend::ONE;
-	bd.render_target[0].blend_op_alpha = BlendOp::ADD;
-	bd.render_target[0].render_target_write_mask = ColorWrite::ENABLE_RED | ColorWrite::ENABLE_GREEN | ColorWrite::ENABLE_BLUE; // alpha is not written by deferred lights!
-	bd.independent_blend_enable = false;
-	bd.alpha_to_coverage_enable = false;
-	blendStates[BSTYPE_ENVIRONMENTALLIGHT] = bd;
-
 	bd.render_target[0].src_blend = Blend::INV_SRC_COLOR;
 	bd.render_target[0].dest_blend = Blend::INV_DEST_COLOR;
 	bd.render_target[0].blend_op = BlendOp::ADD;
@@ -2034,7 +2010,7 @@ void SetUpStates()
 
 void ModifyObjectSampler(const SamplerDesc& desc)
 {
-	device->CreateSampler(&desc, &samplers[SSLOT_OBJECTSHADER]);
+	device->CreateSampler(&desc, &samplers[SAMPLER_OBJECTSHADER]);
 }
 
 const std::string& GetShaderPath()
@@ -2060,7 +2036,7 @@ void ReloadShaders()
 	wiEvent::FireEvent(SYSTEM_EVENT_RELOAD_SHADERS, 0);
 }
 
-void InitializeGlobalSamplers()
+void InitializeCommonSamplers()
 {
 	SamplerDesc samplerDesc;
 	samplerDesc.filter = Filter::MIN_MAG_MIP_LINEAR;
@@ -2073,66 +2049,66 @@ void InitializeGlobalSamplers()
 	samplerDesc.border_color = SamplerBorderColor::TRANSPARENT_BLACK;
 	samplerDesc.min_lod = 0;
 	samplerDesc.max_lod = FLT_MAX;
-	device->CreateSampler(&samplerDesc, &samplers[SSLOT_LINEAR_MIRROR]);
+	device->CreateSampler(&samplerDesc, &samplers[SAMPLER_LINEAR_MIRROR]);
 
 	samplerDesc.filter = Filter::MIN_MAG_MIP_LINEAR;
 	samplerDesc.address_u = TextureAddressMode::CLAMP;
 	samplerDesc.address_v = TextureAddressMode::CLAMP;
 	samplerDesc.address_w = TextureAddressMode::CLAMP;
-	device->CreateSampler(&samplerDesc, &samplers[SSLOT_LINEAR_CLAMP]);
+	device->CreateSampler(&samplerDesc, &samplers[SAMPLER_LINEAR_CLAMP]);
 
 	samplerDesc.filter = Filter::MIN_MAG_MIP_LINEAR;
 	samplerDesc.address_u = TextureAddressMode::WRAP;
 	samplerDesc.address_v = TextureAddressMode::WRAP;
 	samplerDesc.address_w = TextureAddressMode::WRAP;
-	device->CreateSampler(&samplerDesc, &samplers[SSLOT_LINEAR_WRAP]);
+	device->CreateSampler(&samplerDesc, &samplers[SAMPLER_LINEAR_WRAP]);
 
 	samplerDesc.filter = Filter::MIN_MAG_MIP_POINT;
 	samplerDesc.address_u = TextureAddressMode::MIRROR;
 	samplerDesc.address_v = TextureAddressMode::MIRROR;
 	samplerDesc.address_w = TextureAddressMode::MIRROR;
-	device->CreateSampler(&samplerDesc, &samplers[SSLOT_POINT_MIRROR]);
+	device->CreateSampler(&samplerDesc, &samplers[SAMPLER_POINT_MIRROR]);
 
 	samplerDesc.filter = Filter::MIN_MAG_MIP_POINT;
 	samplerDesc.address_u = TextureAddressMode::WRAP;
 	samplerDesc.address_v = TextureAddressMode::WRAP;
 	samplerDesc.address_w = TextureAddressMode::WRAP;
-	device->CreateSampler(&samplerDesc, &samplers[SSLOT_POINT_WRAP]);
+	device->CreateSampler(&samplerDesc, &samplers[SAMPLER_POINT_WRAP]);
 
 
 	samplerDesc.filter = Filter::MIN_MAG_MIP_POINT;
 	samplerDesc.address_u = TextureAddressMode::CLAMP;
 	samplerDesc.address_v = TextureAddressMode::CLAMP;
 	samplerDesc.address_w = TextureAddressMode::CLAMP;
-	device->CreateSampler(&samplerDesc, &samplers[SSLOT_POINT_CLAMP]);
+	device->CreateSampler(&samplerDesc, &samplers[SAMPLER_POINT_CLAMP]);
 
 	samplerDesc.filter = Filter::ANISOTROPIC;
 	samplerDesc.address_u = TextureAddressMode::CLAMP;
 	samplerDesc.address_v = TextureAddressMode::CLAMP;
 	samplerDesc.address_w = TextureAddressMode::CLAMP;
 	samplerDesc.max_anisotropy = 16;
-	device->CreateSampler(&samplerDesc, &samplers[SSLOT_ANISO_CLAMP]);
+	device->CreateSampler(&samplerDesc, &samplers[SAMPLER_ANISO_CLAMP]);
 
 	samplerDesc.filter = Filter::ANISOTROPIC;
 	samplerDesc.address_u = TextureAddressMode::WRAP;
 	samplerDesc.address_v = TextureAddressMode::WRAP;
 	samplerDesc.address_w = TextureAddressMode::WRAP;
 	samplerDesc.max_anisotropy = 16;
-	device->CreateSampler(&samplerDesc, &samplers[SSLOT_ANISO_WRAP]);
+	device->CreateSampler(&samplerDesc, &samplers[SAMPLER_ANISO_WRAP]);
 
 	samplerDesc.filter = Filter::ANISOTROPIC;
 	samplerDesc.address_u = TextureAddressMode::MIRROR;
 	samplerDesc.address_v = TextureAddressMode::MIRROR;
 	samplerDesc.address_w = TextureAddressMode::MIRROR;
 	samplerDesc.max_anisotropy = 16;
-	device->CreateSampler(&samplerDesc, &samplers[SSLOT_ANISO_MIRROR]);
+	device->CreateSampler(&samplerDesc, &samplers[SAMPLER_ANISO_MIRROR]);
 
 	samplerDesc.filter = Filter::ANISOTROPIC;
 	samplerDesc.address_u = TextureAddressMode::WRAP;
 	samplerDesc.address_v = TextureAddressMode::WRAP;
 	samplerDesc.address_w = TextureAddressMode::WRAP;
 	samplerDesc.max_anisotropy = 16;
-	device->CreateSampler(&samplerDesc, &samplers[SSLOT_OBJECTSHADER]);
+	device->CreateSampler(&samplerDesc, &samplers[SAMPLER_OBJECTSHADER]);
 
 	samplerDesc.filter = Filter::COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
 	samplerDesc.address_u = TextureAddressMode::CLAMP;
@@ -2141,49 +2117,50 @@ void InitializeGlobalSamplers()
 	samplerDesc.mip_lod_bias = 0.0f;
 	samplerDesc.max_anisotropy = 0;
 	samplerDesc.comparison_func = ComparisonFunc::GREATER_EQUAL;
-	device->CreateSampler(&samplerDesc, &samplers[SSLOT_CMP_DEPTH]);
+	device->CreateSampler(&samplerDesc, &samplers[SAMPLER_CMP_DEPTH]);
 
 
+	// Static sampler bindings must match with the static sampler declarations in shaders/globals.hlsli
 	StaticSampler sam;
 
-	sam.sampler = samplers[SSLOT_CMP_DEPTH];
-	sam.slot = SSLOT_CMP_DEPTH;
+	sam.sampler = samplers[SAMPLER_LINEAR_CLAMP];
+	sam.slot = 100;
 	device->SetCommonSampler(&sam);
 
-	sam.sampler = samplers[SSLOT_LINEAR_MIRROR];
-	sam.slot = SSLOT_LINEAR_MIRROR;
+	sam.sampler = samplers[SAMPLER_LINEAR_WRAP];
+	sam.slot = 101;
 	device->SetCommonSampler(&sam);
 
-	sam.sampler = samplers[SSLOT_LINEAR_CLAMP];
-	sam.slot = SSLOT_LINEAR_CLAMP;
+	sam.sampler = samplers[SAMPLER_LINEAR_MIRROR];
+	sam.slot = 102;
 	device->SetCommonSampler(&sam);
 
-	sam.sampler = samplers[SSLOT_LINEAR_WRAP];
-	sam.slot = SSLOT_LINEAR_WRAP;
+	sam.sampler = samplers[SAMPLER_POINT_CLAMP];
+	sam.slot = 103;
 	device->SetCommonSampler(&sam);
 
-	sam.sampler = samplers[SSLOT_POINT_MIRROR];
-	sam.slot = SSLOT_POINT_MIRROR;
+	sam.sampler = samplers[SAMPLER_POINT_WRAP];
+	sam.slot = 104;
 	device->SetCommonSampler(&sam);
 
-	sam.sampler = samplers[SSLOT_POINT_WRAP];
-	sam.slot = SSLOT_POINT_WRAP;
+	sam.sampler = samplers[SAMPLER_POINT_MIRROR];
+	sam.slot = 105;
 	device->SetCommonSampler(&sam);
 
-	sam.sampler = samplers[SSLOT_POINT_CLAMP];
-	sam.slot = SSLOT_POINT_CLAMP;
+	sam.sampler = samplers[SAMPLER_ANISO_CLAMP];
+	sam.slot = 106;
 	device->SetCommonSampler(&sam);
 
-	sam.sampler = samplers[SSLOT_ANISO_CLAMP];
-	sam.slot = SSLOT_ANISO_CLAMP;
+	sam.sampler = samplers[SAMPLER_ANISO_WRAP];
+	sam.slot = 107;
 	device->SetCommonSampler(&sam);
 
-	sam.sampler = samplers[SSLOT_ANISO_WRAP];
-	sam.slot = SSLOT_ANISO_WRAP;
+	sam.sampler = samplers[SAMPLER_ANISO_MIRROR];
+	sam.slot = 108;
 	device->SetCommonSampler(&sam);
 
-	sam.sampler = samplers[SSLOT_ANISO_MIRROR];
-	sam.slot = SSLOT_ANISO_MIRROR;
+	sam.sampler = samplers[SAMPLER_CMP_DEPTH];
+	sam.slot = 109;
 	device->SetCommonSampler(&sam);
 }
 void Initialize()
@@ -2713,8 +2690,8 @@ void RenderImpostors(
 
 		device->PushConstants(&instances.offset, sizeof(uint), cmd);
 
-		device->BindResource(&instances.buffer, TEXSLOT_ONDEMAND21, cmd);
-		device->BindResource(&vis.scene->impostorArray, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&instances.buffer, 21, cmd);
+		device->BindResource(&vis.scene->impostorArray, 0, cmd);
 
 		device->Draw(drawableInstanceCount * 6, 0, cmd);
 
@@ -3168,7 +3145,7 @@ void UpdatePerFrameData(
 
 	frameCB.scene = vis.scene->shaderscene;
 
-	frameCB.sampler_objectshader_index = device->GetDescriptorIndex(&samplers[SSLOT_OBJECTSHADER]);
+	frameCB.sampler_objectshader_index = device->GetDescriptorIndex(&samplers[SAMPLER_OBJECTSHADER]);
 	frameCB.texture_random64x64_index = device->GetDescriptorIndex(wiTextureHelper::getRandom64x64(), SubresourceType::SRV);
 	frameCB.texture_bluenoise_index = device->GetDescriptorIndex(wiTextureHelper::getBlueNoise(), SubresourceType::SRV);
 	frameCB.texture_sheenlut_index = device->GetDescriptorIndex(&textures[TEXTYPE_2D_SHEENLUT], SubresourceType::SRV);
@@ -4391,11 +4368,11 @@ void DrawLensFlares(
 				// Directional light can use occlusion texture (eg. clouds):
 				if (texture_directional_occlusion == nullptr)
 				{
-					device->BindResource(wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND0, cmd);
+					device->BindResource(wiTextureHelper::getWhite(), 0, cmd);
 				}
 				else
 				{
-					device->BindResource(texture_directional_occlusion, TEXSLOT_ONDEMAND0, cmd);
+					device->BindResource(texture_directional_occlusion, 0, cmd);
 				}
 			}
 			else
@@ -4404,7 +4381,7 @@ void DrawLensFlares(
 				POS = XMLoadFloat3(&light.position);
 
 				// not using occlusion texture
-				device->BindResource(wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND0, cmd);
+				device->BindResource(wiTextureHelper::getWhite(), 0, cmd);
 			}
 
 			if (XMVectorGetX(XMVector3Dot(XMVectorSubtract(POS, vis.camera->GetEye()), vis.camera->GetAt())) > 0) // check if the camera is facing towards the flare or not
@@ -4434,7 +4411,7 @@ void DrawLensFlares(
 
 						device->PushConstants(&cb, sizeof(cb), cmd);
 
-						device->BindResource(&x->texture, TEXSLOT_ONDEMAND1, cmd);
+						device->BindResource(&x->texture, 1, cmd);
 						device->Draw(4, 0, cmd);
 						i++;
 					}
@@ -5678,11 +5655,11 @@ void DrawDebugWorld(
 
 			if (probe.textureIndex < 0)
 			{
-				device->BindResource(wiTextureHelper::getBlackCubeMap(), TEXSLOT_ONDEMAND0, cmd);
+				device->BindResource(wiTextureHelper::getBlackCubeMap(), 0, cmd);
 			}
 			else
 			{
-				device->BindResource(&scene.envmapArray, TEXSLOT_ONDEMAND0, cmd, scene.envmapArray.GetDesc().mip_levels + probe.textureIndex);
+				device->BindResource(&scene.envmapArray, 0, cmd, scene.envmapArray.GetDesc().mip_levels + probe.textureIndex);
 			}
 
 			device->Draw(2880, 0, cmd); // uv-sphere
@@ -6021,8 +5998,8 @@ void RenderAtmosphericScatteringTextures(CommandList cmd)
 		device->EventBegin("TransmittanceLut", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_SKYATMOSPHERE_TRANSMITTANCELUT], cmd);
 
-		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_ONDEMAND0, cmd); // empty
-		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_ONDEMAND1, cmd); // empty
+		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], 0, cmd); // empty
+		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], 1, cmd); // empty
 
 		const GPUResource* uavs[] = {
 			&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT],
@@ -6061,8 +6038,8 @@ void RenderAtmosphericScatteringTextures(CommandList cmd)
 		device->BindComputeShader(&shaders[CSTYPE_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], cmd);
 
 		// Use transmittance from previous pass
-		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], 0, cmd);
+		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], 1, cmd);
 
 		const GPUResource* uavs[] = {
 			&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT],
@@ -6097,8 +6074,8 @@ void RenderAtmosphericScatteringTextures(CommandList cmd)
 		device->EventBegin("EnvironmentLuminanceLut", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_SKYATMOSPHERE_SKYLUMINANCELUT], cmd);
 
-		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], 0, cmd);
+		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], 1, cmd);
 
 		const GPUResource* uavs[] = {
 			&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT],
@@ -6143,8 +6120,8 @@ void RefreshAtmosphericScatteringTextures(CommandList cmd)
 		device->EventBegin("SkyViewLut", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_SKYATMOSPHERE_SKYVIEWLUT], cmd);
 
-		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], 0, cmd);
+		device->BindResource(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], 1, cmd);
 
 		const GPUResource* uavs[] = {
 			&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT],
@@ -6298,7 +6275,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			if (vis.scene->weather.skyMap != nullptr)
 			{
 				device->BindPipelineState(&PSO_sky[SKYRENDERING_ENVMAPCAPTURE_STATIC], cmd);
-				device->BindResource(&vis.scene->weather.skyMap->texture, TEXSLOT_ONDEMAND0, cmd);
+				device->BindResource(&vis.scene->weather.skyMap->texture, 0, cmd);
 			}
 			else
 			{
@@ -6341,7 +6318,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 				}
 
 				device->BindUAV(&vis.scene->envmapArray, 0, cmd, i);
-				device->BindResource(&vis.scene->envmapArray, TEXSLOT_ONDEMAND0, cmd, std::max(0, (int)i - 2));
+				device->BindResource(&vis.scene->envmapArray, 0, cmd, std::max(0, (int)i - 2));
 
 				FilterEnvmapPushConstants push;
 				push.filterResolution.x = desc.width;
@@ -6721,7 +6698,7 @@ void ComputeTiledLightCulling(
 	{
 		device->EventBegin("Entity Culling", cmd);
 
-		device->BindResource(&res.tileFrustums, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&res.tileFrustums, 0, cmd);
 
 		if (GetDebugLightCulling() && debugUAV.IsValid())
 		{
@@ -6771,7 +6748,7 @@ void ResolveMSAADepthBuffer(const Texture& dst, const Texture& src, CommandList 
 {
 	device->EventBegin("ResolveMSAADepthBuffer", cmd);
 
-	device->BindResource(&src, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(&src, 0, cmd);
 	device->BindUAV(&dst, 0, cmd);
 
 	const TextureDesc& desc = src.GetDesc();
@@ -6789,7 +6766,7 @@ void DownsampleDepthBuffer(const wiGraphics::Texture& src, wiGraphics::CommandLi
 
 	device->BindPipelineState(&PSO_downsampledepthbuffer, cmd);
 
-	device->BindResource(&src, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(&src, 0, cmd);
 
 	device->Draw(3, 0, cmd);
 
@@ -6832,12 +6809,12 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 				case MIPGENFILTER_POINT:
 					device->EventBegin("GenerateMipChain CubeArray - PointFilter", cmd);
 					device->BindComputeShader(&shaders[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4 : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4], cmd);
-					mipgen.sampler_index = device->GetDescriptorIndex(&samplers[SSLOT_POINT_CLAMP]);
+					mipgen.sampler_index = device->GetDescriptorIndex(&samplers[SAMPLER_POINT_CLAMP]);
 					break;
 				case MIPGENFILTER_LINEAR:
 					device->EventBegin("GenerateMipChain CubeArray - LinearFilter", cmd);
 					device->BindComputeShader(&shaders[hdr ? CSTYPE_GENERATEMIPCHAINCUBEARRAY_FLOAT4 : CSTYPE_GENERATEMIPCHAINCUBEARRAY_UNORM4], cmd);
-					mipgen.sampler_index = device->GetDescriptorIndex(&samplers[SSLOT_LINEAR_CLAMP]);
+					mipgen.sampler_index = device->GetDescriptorIndex(&samplers[SAMPLER_LINEAR_CLAMP]);
 					break;
 				default:
 					assert(0);
@@ -6899,12 +6876,12 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 				case MIPGENFILTER_POINT:
 					device->EventBegin("GenerateMipChain Cube - PointFilter", cmd);
 					device->BindComputeShader(&shaders[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4 : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4], cmd);
-					mipgen.sampler_index = device->GetDescriptorIndex(&samplers[SSLOT_POINT_CLAMP]);
+					mipgen.sampler_index = device->GetDescriptorIndex(&samplers[SAMPLER_POINT_CLAMP]);
 					break;
 				case MIPGENFILTER_LINEAR:
 					device->EventBegin("GenerateMipChain Cube - LinearFilter", cmd);
 					device->BindComputeShader(&shaders[hdr ? CSTYPE_GENERATEMIPCHAINCUBE_FLOAT4 : CSTYPE_GENERATEMIPCHAINCUBE_UNORM4], cmd);
-					mipgen.sampler_index = device->GetDescriptorIndex(&samplers[SSLOT_LINEAR_CLAMP]);
+					mipgen.sampler_index = device->GetDescriptorIndex(&samplers[SAMPLER_LINEAR_CLAMP]);
 					break;
 				default:
 					assert(0); // not implemented
@@ -6948,12 +6925,12 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 			case MIPGENFILTER_POINT:
 				device->EventBegin("GenerateMipChain 2D - PointFilter", cmd);
 				device->BindComputeShader(&shaders[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4 : CSTYPE_GENERATEMIPCHAIN2D_UNORM4], cmd);
-				mipgen.sampler_index = device->GetDescriptorIndex(&samplers[SSLOT_POINT_CLAMP]);
+				mipgen.sampler_index = device->GetDescriptorIndex(&samplers[SAMPLER_POINT_CLAMP]);
 				break;
 			case MIPGENFILTER_LINEAR:
 				device->EventBegin("GenerateMipChain 2D - LinearFilter", cmd);
 				device->BindComputeShader(&shaders[hdr ? CSTYPE_GENERATEMIPCHAIN2D_FLOAT4 : CSTYPE_GENERATEMIPCHAIN2D_UNORM4], cmd);
-				mipgen.sampler_index = device->GetDescriptorIndex(&samplers[SSLOT_LINEAR_CLAMP]);
+				mipgen.sampler_index = device->GetDescriptorIndex(&samplers[SAMPLER_LINEAR_CLAMP]);
 				break;
 			case MIPGENFILTER_GAUSSIAN:
 			{
@@ -7025,12 +7002,12 @@ void GenerateMipChain(const Texture& texture, MIPGENFILTER filter, CommandList c
 		case MIPGENFILTER_POINT:
 			device->EventBegin("GenerateMipChain 3D - PointFilter", cmd);
 			device->BindComputeShader(&shaders[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4 : CSTYPE_GENERATEMIPCHAIN3D_UNORM4], cmd);
-			mipgen.sampler_index = device->GetDescriptorIndex(&samplers[SSLOT_POINT_CLAMP]);
+			mipgen.sampler_index = device->GetDescriptorIndex(&samplers[SAMPLER_POINT_CLAMP]);
 			break;
 		case MIPGENFILTER_LINEAR:
 			device->EventBegin("GenerateMipChain 3D - LinearFilter", cmd);
 			device->BindComputeShader(&shaders[hdr ? CSTYPE_GENERATEMIPCHAIN3D_FLOAT4 : CSTYPE_GENERATEMIPCHAIN3D_UNORM4], cmd);
-			mipgen.sampler_index = device->GetDescriptorIndex(&samplers[SSLOT_LINEAR_CLAMP]);
+			mipgen.sampler_index = device->GetDescriptorIndex(&samplers[SAMPLER_LINEAR_CLAMP]);
 			break;
 		default:
 			assert(0); // not implemented
@@ -7132,7 +7109,7 @@ void CopyTexture2D(const Texture& dst, int DstMIP, int DstX, int DstY, const Tex
 	cb.xCopyBorderExpandStyle = (uint)borderExpand;
 	device->PushConstants(&cb, sizeof(cb), cmd);
 
-	device->BindResource(&src, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(&src, 0, cmd);
 
 	device->BindUAV(&dst, 0, cmd, DstMIP);
 
@@ -7458,7 +7435,7 @@ void ComputeLuminance(
 	// Pass 1 : Compute log luminance and reduction
 	{
 		device->BindComputeShader(&shaders[CSTYPE_LUMINANCE_PASS1], cmd);
-		device->BindResource(&sourceImage, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&sourceImage, 0, cmd);
 
 		device->Dispatch(
 			(postprocess.resolution.x + LUMINANCE_BLOCKSIZE - 1) / LUMINANCE_BLOCKSIZE,
@@ -7668,8 +7645,8 @@ void VisibilityResolve(
 	device->BindComputeShader(&shaders[msaa ? CSTYPE_VISIBILITY_RESOLVE_MSAA : CSTYPE_VISIBILITY_RESOLVE], cmd);
 
 
-	device->BindResource(&texture_primitiveID, TEXSLOT_ONDEMAND0, cmd);
-	device->BindResource(&depthbuffer, TEXSLOT_ONDEMAND1, cmd);
+	device->BindResource(&texture_primitiveID, 0, cmd);
+	device->BindResource(&depthbuffer, 1, cmd);
 
 	device->BindUAV(&gbuffer[GBUFFER_VELOCITY], 0, cmd);
 	device->BindUAV(&depthbuffer_resolved, 1, cmd, 0);
@@ -7745,10 +7722,10 @@ void SurfelGI_Coverage(
 		device->EventBegin("Coverage", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_SURFEL_COVERAGE], cmd);
 
-		device->BindResource(&scene.surfelBuffer, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(&scene.surfelGridBuffer, TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(&scene.surfelCellBuffer, TEXSLOT_ONDEMAND2, cmd);
-		device->BindResource(&scene.surfelMomentsTexture[1], TEXSLOT_ONDEMAND3, cmd);
+		device->BindResource(&scene.surfelBuffer, 0, cmd);
+		device->BindResource(&scene.surfelGridBuffer, 1, cmd);
+		device->BindResource(&scene.surfelCellBuffer, 2, cmd);
+		device->BindResource(&scene.surfelMomentsTexture[1], 3, cmd);
 
 		const GPUResource* uavs[] = {
 			&scene.surfelDataBuffer,
@@ -7862,9 +7839,9 @@ void SurfelGI(
 		device->EventBegin("Update", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_SURFEL_UPDATE], cmd);
 
-		device->BindResource(&scene.surfelDataBuffer, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(&scene.surfelAliveBuffer[0], TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(&scene.surfelMomentsTexture[0], TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(&scene.surfelDataBuffer, 0, cmd);
+		device->BindResource(&scene.surfelAliveBuffer[0], 1, cmd);
+		device->BindResource(&scene.surfelMomentsTexture[0], 2, cmd);
 
 		const GPUResource* uavs[] = {
 			&scene.surfelBuffer,
@@ -7939,9 +7916,9 @@ void SurfelGI(
 		device->EventBegin("Binning", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_SURFEL_BINNING], cmd);
 
-		device->BindResource(&scene.surfelBuffer, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(&scene.surfelAliveBuffer[0], TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(&scene.surfelStatsBuffer, TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(&scene.surfelBuffer, 0, cmd);
+		device->BindResource(&scene.surfelAliveBuffer[0], 1, cmd);
+		device->BindResource(&scene.surfelStatsBuffer, 2, cmd);
 
 		const GPUResource* uavs[] = {
 			&scene.surfelGridBuffer,
@@ -7971,12 +7948,12 @@ void SurfelGI(
 
 		device->BindComputeShader(&shaders[CSTYPE_SURFEL_RAYTRACE], cmd);
 
-		device->BindResource(&scene.surfelBuffer, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(&scene.surfelStatsBuffer, TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(&scene.surfelGridBuffer, TEXSLOT_ONDEMAND2, cmd);
-		device->BindResource(&scene.surfelCellBuffer, TEXSLOT_ONDEMAND3, cmd);
-		device->BindResource(&scene.surfelAliveBuffer[0], TEXSLOT_ONDEMAND4, cmd);
-		device->BindResource(&scene.surfelMomentsTexture[0], TEXSLOT_ONDEMAND5, cmd);
+		device->BindResource(&scene.surfelBuffer, 0, cmd);
+		device->BindResource(&scene.surfelStatsBuffer, 1, cmd);
+		device->BindResource(&scene.surfelGridBuffer, 2, cmd);
+		device->BindResource(&scene.surfelCellBuffer, 3, cmd);
+		device->BindResource(&scene.surfelAliveBuffer[0], 4, cmd);
+		device->BindResource(&scene.surfelMomentsTexture[0], 5, cmd);
 
 		const GPUResource* uavs[] = {
 			&scene.surfelDataBuffer,
@@ -8069,7 +8046,7 @@ void Postprocess_Blur_Gaussian(
 		postprocess.params0.y = 0;
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
-		device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd, mip_src);
+		device->BindResource(&input, 0, cmd, mip_src);
 		device->BindUAV(&temp, 0, cmd, mip_dst);
 
 		{
@@ -8114,7 +8091,7 @@ void Postprocess_Blur_Gaussian(
 		postprocess.params0.y = 1;
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
-		device->BindResource(&temp, TEXSLOT_ONDEMAND0, cmd, mip_dst); // <- also mip_dst because it's second pass!
+		device->BindResource(&temp, 0, cmd, mip_dst); // <- also mip_dst because it's second pass!
 		device->BindUAV(&output, 0, cmd, mip_dst);
 
 		{
@@ -8206,7 +8183,7 @@ void Postprocess_Blur_Bilateral(
 		postprocess.params0.w = depth_threshold;
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
-		device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd, mip_src);
+		device->BindResource(&input, 0, cmd, mip_src);
 		device->BindUAV(&temp, 0, cmd, mip_dst);
 
 		{
@@ -8252,7 +8229,7 @@ void Postprocess_Blur_Bilateral(
 		postprocess.params0.w = depth_threshold;
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
-		device->BindResource(&temp, TEXSLOT_ONDEMAND0, cmd, mip_dst); // <- also mip_dst because it's second pass!
+		device->BindResource(&temp, 0, cmd, mip_dst); // <- also mip_dst because it's second pass!
 		device->BindUAV(&output, 0, cmd, mip_dst);
 
 		{
@@ -8396,7 +8373,7 @@ void Postprocess_HBAO(
 
 	// horizontal pass:
 	{
-		device->BindResource(wiTextureHelper::getWhite(), TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(wiTextureHelper::getWhite(), 0, cmd);
 		const GPUResource* uavs[] = {
 			&res.temp,
 		};
@@ -8432,7 +8409,7 @@ void Postprocess_HBAO(
 		postprocess.params0.y = 1;
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
-		device->BindResource(&res.temp, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&res.temp, 0, cmd);
 		const GPUResource* uavs[] = {
 			&output,
 		};
@@ -8607,7 +8584,7 @@ void Postprocess_MSAO(
 	{
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_MSAO_PREPAREDEPTHBUFFERS2], cmd);
 
-		device->BindResource(&res.texture_lineardepth_downsize2, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&res.texture_lineardepth_downsize2, 0, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.texture_lineardepth_downsize3,
@@ -8772,7 +8749,7 @@ void Postprocess_MSAO(
 
 		device->PushConstants(&msao, sizeof(msao), cmd);
 
-		device->BindResource(&read_depth, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&read_depth, 0, cmd);
 
 		const GPUResource* uavs[] = {
 			&write_result,
@@ -8865,19 +8842,19 @@ void Postprocess_MSAO(
 		device->PushConstants(&msao_upsample, sizeof(msao_upsample), cmd);
 		
 		device->BindUAV(&Destination, 0, cmd);
-		device->BindResource(&LoResDepth, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(&HiResDepth, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(&LoResDepth, 0, cmd);
+		device->BindResource(&HiResDepth, 1, cmd);
 		if (InterleavedAO != nullptr)
 		{
-			device->BindResource(InterleavedAO, TEXSLOT_ONDEMAND2, cmd);
+			device->BindResource(InterleavedAO, 2, cmd);
 		}
 		if (HighQualityAO != nullptr)
 		{
-			device->BindResource(HighQualityAO, TEXSLOT_ONDEMAND3, cmd);
+			device->BindResource(HighQualityAO, 3, cmd);
 		}
 		if (HiResAO != nullptr)
 		{
-			device->BindResource(HiResAO, TEXSLOT_ONDEMAND4, cmd);
+			device->BindResource(HiResAO, 4, cmd);
 		}
 
 		{
@@ -9053,10 +9030,10 @@ void Postprocess_RTAO(
 		device->EventBegin("Denoise - Tile Classification", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTAO_DENOISE_TILECLASSIFICATION], cmd);
 
-		device->BindResource(&res.normals, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(&res.tiles, TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(&res.moments[temporal_history], TEXSLOT_ONDEMAND2, cmd);
-		device->BindResource(&res.scratch[1], TEXSLOT_ONDEMAND3, cmd);
+		device->BindResource(&res.normals, 0, cmd);
+		device->BindResource(&res.tiles, 1, cmd);
+		device->BindResource(&res.moments[temporal_history], 2, cmd);
+		device->BindResource(&res.scratch[1], 3, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.scratch[0],
@@ -9099,12 +9076,12 @@ void Postprocess_RTAO(
 		device->EventBegin("Denoise - Filter", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTAO_DENOISE_FILTER], cmd);
 
-		device->BindResource(&res.normals, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(&res.metadata, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(&res.normals, 0, cmd);
+		device->BindResource(&res.metadata, 1, cmd);
 
 		// pass0:
 		{
-			device->BindResource(&res.scratch[0], TEXSLOT_ONDEMAND2, cmd);
+			device->BindResource(&res.scratch[0], 2, cmd);
 			const GPUResource* uavs[] = {
 				&res.scratch[1],
 				&output
@@ -9131,7 +9108,7 @@ void Postprocess_RTAO(
 
 		// pass1:
 		{
-			device->BindResource(&res.scratch[1], TEXSLOT_ONDEMAND2, cmd);
+			device->BindResource(&res.scratch[1], 2, cmd);
 			const GPUResource* uavs[] = {
 				&res.scratch[0],
 				&output
@@ -9160,7 +9137,7 @@ void Postprocess_RTAO(
 
 		// pass2:
 		{
-			device->BindResource(&res.scratch[0], TEXSLOT_ONDEMAND2, cmd);
+			device->BindResource(&res.scratch[0], 2, cmd);
 			const GPUResource* uavs[] = {
 				&res.scratch[1],
 				&output
@@ -9314,9 +9291,9 @@ void Postprocess_RTReflection(
 		device->EventBegin("Temporal pass", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_TEMPORAL], cmd);
 
-		device->BindResource(&output, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(&res.temporal[temporal_history], TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(&res.rayLengths, TEXSLOT_ONDEMAND3, cmd);
+		device->BindResource(&output, 0, cmd);
+		device->BindResource(&res.temporal[temporal_history], 1, cmd);
+		device->BindResource(&res.rayLengths, 3, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.temporal[temporal_output],
@@ -9353,7 +9330,7 @@ void Postprocess_RTReflection(
 		device->EventBegin("Median blur pass", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_MEDIAN], cmd);
 
-		device->BindResource(&res.temporal[temporal_output], TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&res.temporal[temporal_output], 0, cmd);
 
 		const GPUResource* uavs[] = {
 			&output,
@@ -9435,7 +9412,7 @@ void Postprocess_SSR(
 		device->EventBegin("Stochastic Raytrace pass", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_RAYTRACE], cmd);
 
-		device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&input, 0, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.texture_raytrace,
@@ -9473,8 +9450,8 @@ void Postprocess_SSR(
 		device->EventBegin("Resolve pass", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_RESOLVE], cmd);
 
-		device->BindResource(&res.texture_raytrace, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(&input, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(&res.texture_raytrace, 0, cmd);
+		device->BindResource(&input, 1, cmd);
 
 		const GPUResource* uavs[] = {
 			&output,
@@ -9514,9 +9491,9 @@ void Postprocess_SSR(
 		device->EventBegin("Temporal pass", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_TEMPORAL], cmd);
 
-		device->BindResource(&output, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(&res.texture_temporal[temporal_history], TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(&res.rayLengths, TEXSLOT_ONDEMAND3, cmd);
+		device->BindResource(&output, 0, cmd);
+		device->BindResource(&res.texture_temporal[temporal_history], 1, cmd);
+		device->BindResource(&res.rayLengths, 3, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.texture_temporal[temporal_output],
@@ -9553,7 +9530,7 @@ void Postprocess_SSR(
 		device->EventBegin("Median blur pass", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_MEDIAN], cmd);
 
-		device->BindResource(&res.texture_temporal[temporal_output], TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&res.texture_temporal[temporal_output], 0, cmd);
 
 		const GPUResource* uavs[] = {
 			&output,
@@ -9714,16 +9691,16 @@ void Postprocess_RTShadow(
 		device->EventBegin("Denoise - Tile Classification", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTSHADOW_DENOISE_TILECLASSIFICATION], cmd);
 
-		device->BindResource(&res.normals, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(&res.tiles, TEXSLOT_ONDEMAND2, cmd);
-		device->BindResource(&res.moments[0][temporal_history], TEXSLOT_ONDEMAND3, cmd);
-		device->BindResource(&res.moments[1][temporal_history], TEXSLOT_ONDEMAND4, cmd);
-		device->BindResource(&res.moments[2][temporal_history], TEXSLOT_ONDEMAND5, cmd);
-		device->BindResource(&res.moments[3][temporal_history], TEXSLOT_ONDEMAND6, cmd);
-		device->BindResource(&res.scratch[0][1], TEXSLOT_ONDEMAND7, cmd);
-		device->BindResource(&res.scratch[1][1], TEXSLOT_ONDEMAND8, cmd);
-		device->BindResource(&res.scratch[2][1], TEXSLOT_ONDEMAND9, cmd);
-		device->BindResource(&res.scratch[3][1], TEXSLOT_ONDEMAND10, cmd);
+		device->BindResource(&res.normals, 0, cmd);
+		device->BindResource(&res.tiles, 2, cmd);
+		device->BindResource(&res.moments[0][temporal_history], 3, cmd);
+		device->BindResource(&res.moments[1][temporal_history], 4, cmd);
+		device->BindResource(&res.moments[2][temporal_history], 5, cmd);
+		device->BindResource(&res.moments[3][temporal_history], 6, cmd);
+		device->BindResource(&res.scratch[0][1], 7, cmd);
+		device->BindResource(&res.scratch[1][1], 8, cmd);
+		device->BindResource(&res.scratch[2][1], 9, cmd);
+		device->BindResource(&res.scratch[3][1], 10, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.metadata,
@@ -9784,15 +9761,15 @@ void Postprocess_RTShadow(
 		device->EventBegin("Denoise - Filter", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTSHADOW_DENOISE_FILTER], cmd);
 
-		device->BindResource(&res.normals, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(&res.metadata, TEXSLOT_ONDEMAND1, cmd);
+		device->BindResource(&res.normals, 0, cmd);
+		device->BindResource(&res.metadata, 1, cmd);
 
 		// pass0:
 		{
-			device->BindResource(&res.scratch[0][0], TEXSLOT_ONDEMAND2, cmd);
-			device->BindResource(&res.scratch[1][0], TEXSLOT_ONDEMAND3, cmd);
-			device->BindResource(&res.scratch[2][0], TEXSLOT_ONDEMAND4, cmd);
-			device->BindResource(&res.scratch[3][0], TEXSLOT_ONDEMAND5, cmd);
+			device->BindResource(&res.scratch[0][0], 2, cmd);
+			device->BindResource(&res.scratch[1][0], 3, cmd);
+			device->BindResource(&res.scratch[2][0], 4, cmd);
+			device->BindResource(&res.scratch[3][0], 5, cmd);
 			const GPUResource* uavs[] = {
 				&res.scratch[0][1],
 				&res.scratch[1][1],
@@ -9826,10 +9803,10 @@ void Postprocess_RTShadow(
 
 		// pass1:
 		{
-			device->BindResource(&res.scratch[0][1], TEXSLOT_ONDEMAND2, cmd);
-			device->BindResource(&res.scratch[1][1], TEXSLOT_ONDEMAND3, cmd);
-			device->BindResource(&res.scratch[2][1], TEXSLOT_ONDEMAND4, cmd);
-			device->BindResource(&res.scratch[3][1], TEXSLOT_ONDEMAND5, cmd);
+			device->BindResource(&res.scratch[0][1], 2, cmd);
+			device->BindResource(&res.scratch[1][1], 3, cmd);
+			device->BindResource(&res.scratch[2][1], 4, cmd);
+			device->BindResource(&res.scratch[3][1], 5, cmd);
 			const GPUResource* uavs[] = {
 				&res.scratch[0][0],
 				&res.scratch[1][0],
@@ -9867,10 +9844,10 @@ void Postprocess_RTShadow(
 
 		// pass2:
 		{
-			device->BindResource(&res.scratch[0][0], TEXSLOT_ONDEMAND2, cmd);
-			device->BindResource(&res.scratch[1][0], TEXSLOT_ONDEMAND3, cmd);
-			device->BindResource(&res.scratch[2][0], TEXSLOT_ONDEMAND4, cmd);
-			device->BindResource(&res.scratch[3][0], TEXSLOT_ONDEMAND5, cmd);
+			device->BindResource(&res.scratch[0][0], 2, cmd);
+			device->BindResource(&res.scratch[1][0], 3, cmd);
+			device->BindResource(&res.scratch[2][0], 4, cmd);
+			device->BindResource(&res.scratch[3][0], 5, cmd);
 			const GPUResource* uavs[] = {
 				&res.scratch[0][1],
 				&res.scratch[1][1],
@@ -9927,9 +9904,9 @@ void Postprocess_RTShadow(
 		device->EventBegin("Temporal Denoise", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTSHADOW_DENOISE_TEMPORAL], cmd);
 
-		device->BindResource(&res.temp, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(&res.temporal[temporal_history], TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(&res.denoised, TEXSLOT_ONDEMAND3, cmd);
+		device->BindResource(&res.temp, 0, cmd);
+		device->BindResource(&res.temporal[temporal_history], 1, cmd);
+		device->BindResource(&res.denoised, 3, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.temporal[temporal_output],
@@ -10039,7 +10016,7 @@ void Postprocess_LightShafts(
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_LIGHTSHAFTS], cmd);
 
-	device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(&input, 0, cmd);
 
 	const TextureDesc& desc = output.GetDesc();
 
@@ -10205,7 +10182,7 @@ void Postprocess_DepthOfField(
 			&res.texture_tilemax_horizontal,
 			&res.texture_tilemin_horizontal
 		};
-		device->BindResources(resarray, TEXSLOT_ONDEMAND0, arraysize(resarray), cmd);
+		device->BindResources(resarray, 0, arraysize(resarray), cmd);
 
 		const GPUResource* uavs[] = {
 			&res.texture_tilemax,
@@ -10249,7 +10226,7 @@ void Postprocess_DepthOfField(
 			&res.texture_tilemax,
 			&res.texture_tilemin
 		};
-		device->BindResources(resarray, TEXSLOT_ONDEMAND0, arraysize(resarray), cmd);
+		device->BindResources(resarray, 0, arraysize(resarray), cmd);
 
 		const GPUResource* uavs[] = {
 			&res.buffer_tile_statistics,
@@ -10290,7 +10267,7 @@ void Postprocess_DepthOfField(
 		device->EventBegin("Kickjobs", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_KICKJOBS], cmd);
 
-		device->BindResource(&res.texture_tilemax, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&res.texture_tilemax, 0, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.buffer_tile_statistics,
@@ -10326,7 +10303,7 @@ void Postprocess_DepthOfField(
 			&input,
 			&res.texture_neighborhoodmax,
 		};
-		device->BindResources(resarray, TEXSLOT_ONDEMAND0, arraysize(resarray), cmd);
+		device->BindResources(resarray, 0, arraysize(resarray), cmd);
 
 		const GPUResource* uavs[] = {
 			&res.texture_presort,
@@ -10345,15 +10322,15 @@ void Postprocess_DepthOfField(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->BindResource(&res.buffer_tiles_earlyexit, TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(&res.buffer_tiles_earlyexit, 2, cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_PREPASS_EARLYEXIT], cmd);
 		device->DispatchIndirect(&res.buffer_tile_statistics, INDIRECT_OFFSET_EARLYEXIT, cmd);
 
-		device->BindResource(&res.buffer_tiles_cheap, TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(&res.buffer_tiles_cheap, 2, cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_PREPASS], cmd);
 		device->DispatchIndirect(&res.buffer_tile_statistics, INDIRECT_OFFSET_CHEAP, cmd);
 
-		device->BindResource(&res.buffer_tiles_expensive, TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(&res.buffer_tiles_expensive, 2, cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_PREPASS], cmd);
 		device->DispatchIndirect(&res.buffer_tile_statistics, INDIRECT_OFFSET_EXPENSIVE, cmd);
 
@@ -10381,7 +10358,7 @@ void Postprocess_DepthOfField(
 			&res.buffer_tiles_cheap,
 			&res.buffer_tiles_expensive
 		};
-		device->BindResources(resarray, TEXSLOT_ONDEMAND0, arraysize(resarray), cmd);
+		device->BindResources(resarray, 0, arraysize(resarray), cmd);
 
 		const GPUResource* uavs[] = {
 			&res.texture_main,
@@ -10427,7 +10404,7 @@ void Postprocess_DepthOfField(
 			&res.texture_main,
 			&res.texture_alpha1
 		};
-		device->BindResources(resarray, TEXSLOT_ONDEMAND0, arraysize(resarray), cmd);
+		device->BindResources(resarray, 0, arraysize(resarray), cmd);
 
 		const GPUResource* uavs[] = {
 			&res.texture_postfilter,
@@ -10480,7 +10457,7 @@ void Postprocess_DepthOfField(
 			&res.texture_alpha2,
 			&res.texture_neighborhoodmax
 		};
-		device->BindResources(resarray, TEXSLOT_ONDEMAND0, arraysize(resarray), cmd);
+		device->BindResources(resarray, 0, arraysize(resarray), cmd);
 
 		const GPUResource* uavs[] = {
 			&output,
@@ -10528,7 +10505,7 @@ void Postprocess_Outline(
 
 	device->BindPipelineState(&PSO_outline, cmd);
 
-	device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(&input, 0, cmd);
 
 	PostProcess postprocess;
 	postprocess.resolution.x = (uint)input.GetDesc().width;
@@ -10643,7 +10620,7 @@ void Postprocess_MotionBlur(
 		device->EventBegin("TileMax - Vertical", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_MOTIONBLUR_TILEMAXVELOCITY_VERTICAL], cmd);
 
-		device->BindResource(&res.texture_tilemax_horizontal, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&res.texture_tilemax_horizontal, 0, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.texture_tilemax,
@@ -10687,7 +10664,7 @@ void Postprocess_MotionBlur(
 			&res.texture_tilemax,
 			&res.texture_tilemin
 		};
-		device->BindResources(resarray, TEXSLOT_ONDEMAND0, arraysize(resarray), cmd);
+		device->BindResources(resarray, 0, arraysize(resarray), cmd);
 
 		const GPUResource* uavs[] = {
 			&res.buffer_tile_statistics,
@@ -10728,7 +10705,7 @@ void Postprocess_MotionBlur(
 		device->EventBegin("Kickjobs", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_MOTIONBLUR_KICKJOBS], cmd);
 
-		device->BindResource(&res.texture_tilemax, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&res.texture_tilemax, 0, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.buffer_tile_statistics,
@@ -10760,7 +10737,7 @@ void Postprocess_MotionBlur(
 			&res.buffer_tiles_cheap,
 			&res.buffer_tiles_expensive,
 		};
-		device->BindResources(resarray, TEXSLOT_ONDEMAND0, arraysize(resarray), cmd);
+		device->BindResources(resarray, 0, arraysize(resarray), cmd);
 
 		const GPUResource* uavs[] = {
 			&output,
@@ -10870,10 +10847,10 @@ void Postprocess_VolumetricClouds(
 		device->EventBegin("Volumetric Cloud Rendering", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_RENDER], cmd);
 
-		device->BindResource(&texture_shapeNoise, TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(&texture_detailNoise, TEXSLOT_ONDEMAND2, cmd);
-		device->BindResource(&texture_curlNoise, TEXSLOT_ONDEMAND3, cmd);
-		device->BindResource(&texture_weatherMap, TEXSLOT_ONDEMAND4, cmd);
+		device->BindResource(&texture_shapeNoise, 1, cmd);
+		device->BindResource(&texture_detailNoise, 2, cmd);
+		device->BindResource(&texture_curlNoise, 3, cmd);
+		device->BindResource(&texture_weatherMap, 4, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.texture_cloudRender,
@@ -10923,10 +10900,10 @@ void Postprocess_VolumetricClouds(
 		device->EventBegin("Volumetric Cloud Reproject", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_REPROJECT], cmd);
 
-		device->BindResource(&res.texture_cloudRender, TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(&res.texture_cloudDepth, TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(&res.texture_reproject[temporal_history], TEXSLOT_ONDEMAND2, cmd);
-		device->BindResource(&res.texture_reproject_depth[temporal_history], TEXSLOT_ONDEMAND3, cmd);
+		device->BindResource(&res.texture_cloudRender, 0, cmd);
+		device->BindResource(&res.texture_cloudDepth, 1, cmd);
+		device->BindResource(&res.texture_reproject[temporal_history], 2, cmd);
+		device->BindResource(&res.texture_reproject_depth[temporal_history], 3, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.texture_reproject[temporal_output],
@@ -10966,9 +10943,9 @@ void Postprocess_VolumetricClouds(
 		device->EventBegin("Volumetric Cloud Temporal", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_VOLUMETRICCLOUDS_TEMPORAL], cmd);
 
-		device->BindResource(&res.texture_reproject[temporal_output], TEXSLOT_ONDEMAND0, cmd);
-		device->BindResource(&res.texture_reproject_depth[temporal_output], TEXSLOT_ONDEMAND1, cmd);
-		device->BindResource(&res.texture_temporal[temporal_history], TEXSLOT_ONDEMAND2, cmd);
+		device->BindResource(&res.texture_reproject[temporal_output], 0, cmd);
+		device->BindResource(&res.texture_reproject_depth[temporal_output], 1, cmd);
+		device->BindResource(&res.texture_temporal[temporal_history], 2, cmd);
 
 		const GPUResource* uavs[] = {
 			&res.texture_temporal[temporal_output],
@@ -11017,7 +10994,7 @@ void Postprocess_FXAA(
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_FXAA], cmd);
 
-	device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(&input, 0, cmd);
 
 	const TextureDesc& desc = output.GetDesc();
 
@@ -11071,8 +11048,8 @@ void Postprocess_TemporalAA(
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_TEMPORALAA], cmd);
 
-	device->BindResource(&input_current, TEXSLOT_ONDEMAND0, cmd);
-	device->BindResource(&input_history, TEXSLOT_ONDEMAND1, cmd);
+	device->BindResource(&input_current, 0, cmd);
+	device->BindResource(&input_history, 1, cmd);
 
 	const TextureDesc& desc = output.GetDesc();
 
@@ -11125,7 +11102,7 @@ void Postprocess_Sharpen(
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SHARPEN], cmd);
 
-	device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(&input, 0, cmd);
 
 	const TextureDesc& desc = output.GetDesc();
 
@@ -11277,7 +11254,7 @@ void Postprocess_FSR(
 		);
 		device->PushConstants(&fsr, sizeof(fsr), cmd);
 
-		device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&input, 0, cmd);
 
 		const GPUResource* uavs[] = {
 			&temp,
@@ -11310,7 +11287,7 @@ void Postprocess_FSR(
 		FsrRcasCon(fsr.const0, sharpness);
 		device->PushConstants(&fsr, sizeof(fsr), cmd);
 
-		device->BindResource(&temp, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&temp, 0, cmd);
 
 		const GPUResource* uavs[] = {
 			&output,
@@ -11350,7 +11327,7 @@ void Postprocess_Chromatic_Aberration(
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_CHROMATIC_ABERRATION], cmd);
 
-	device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(&input, 0, cmd);
 
 	const TextureDesc& desc = output.GetDesc();
 
@@ -11425,7 +11402,7 @@ void Postprocess_Upsample_Bilateral(
 	{
 		device->BindPipelineState(&PSO_upsample_bilateral, cmd);
 
-		device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&input, 0, cmd);
 
 		device->Draw(3, 0, cmd);
 	}
@@ -11462,7 +11439,7 @@ void Postprocess_Upsample_Bilateral(
 		}
 		device->BindComputeShader(&shaders[cs], cmd);
 
-		device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd);
+		device->BindResource(&input, 0, cmd);
 
 		const GPUResource* uavs[] = {
 			&output,
@@ -11514,7 +11491,7 @@ void Postprocess_Downsample4x(
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_DOWNSAMPLE4X], cmd);
 
-	device->BindResource(&input, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(&input, 0, cmd);
 
 	const GPUResource* uavs[] = {
 		&output,
@@ -11564,7 +11541,7 @@ void Postprocess_NormalsFromDepth(
 	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_NORMALSFROMDEPTH], cmd);
-	device->BindResource(&depthbuffer, TEXSLOT_ONDEMAND0, cmd);
+	device->BindResource(&depthbuffer, 0, cmd);
 
 	const GPUResource* uavs[] = {
 		&output,

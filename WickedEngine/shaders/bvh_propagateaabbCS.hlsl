@@ -7,13 +7,13 @@
 //	Parent node will merge child AABBs and store
 //	Loop until we reach the root...
 
-RAWBUFFER(primitiveCounterBuffer, TEXSLOT_ONDEMAND0);
-STRUCTUREDBUFFER(primitiveIDBuffer, uint, TEXSLOT_ONDEMAND1);
-RAWBUFFER(primitiveBuffer, TEXSLOT_ONDEMAND2);
-STRUCTUREDBUFFER(bvhParentBuffer, uint, TEXSLOT_ONDEMAND3);
+ByteAddressBuffer primitiveCounterBuffer : register(t0);
+StructuredBuffer<uint> primitiveIDBuffer : register(t1);
+ByteAddressBuffer primitiveBuffer : register(t2);
+StructuredBuffer<uint> bvhParentBuffer : register(t3);
 
-RWRAWBUFFER(bvhNodeBuffer, 0);
-RWSTRUCTUREDBUFFER(bvhFlagBuffer, uint, 1);
+RWByteAddressBuffer bvhNodeBuffer : register(u0);
+RWStructuredBuffer<uint> bvhFlagBuffer : register(u1);
 
 [numthreads(BVH_BUILDER_GROUPSIZE, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)

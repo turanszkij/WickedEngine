@@ -4,14 +4,14 @@
 
 #define entityCount (GetFrame().lightarray_count + GetFrame().decalarray_count + GetFrame().envprobearray_count)
 
-STRUCTUREDBUFFER(in_Frustums, Frustum, TEXSLOT_ONDEMAND0);
+StructuredBuffer<Frustum> in_Frustums : register(t0);
 
-RWRAWBUFFER(EntityTiles_Transparent, 0);
-RWRAWBUFFER(EntityTiles_Opaque, 1);
+RWByteAddressBuffer EntityTiles_Transparent : register(u0);
+RWByteAddressBuffer EntityTiles_Opaque : register(u1);
 
 
 #ifdef DEBUG_TILEDLIGHTCULLING
-RWTEXTURE2D(DebugTexture, unorm float4, 3);
+RWTexture2D<unorm float4> DebugTexture : register(u3);
 #endif
 
 // Group shared variables.

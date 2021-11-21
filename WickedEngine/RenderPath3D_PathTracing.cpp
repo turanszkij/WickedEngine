@@ -4,7 +4,6 @@
 #include "wiHelper.h"
 #include "wiTextureHelper.h"
 #include "wiSprite.h"
-#include "shaders/ResourceMapping.h"
 #include "wiProfiler.h"
 #include "wiScene.h"
 #include "wiBackLog.h"

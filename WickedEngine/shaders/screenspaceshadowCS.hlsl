@@ -15,11 +15,11 @@ uint load_entitytile(uint tileIndex)
 }
 
 static const uint MAX_RTSHADOWS = 16;
-RWTEXTURE2D(output, uint4, 0);
+RWTexture2D<uint4> output : register(u0);
 
 #ifdef RTSHADOW
-RWTEXTURE2D(output_normals, float3, 1);
-RWSTRUCTUREDBUFFER(output_tiles, uint4, 2);
+RWTexture2D<float3> output_normals : register(u1);
+RWStructuredBuffer<uint4> output_tiles : register(u2);
 #endif // RTSHADOW
 
 static const uint TILE_BORDER = 1;

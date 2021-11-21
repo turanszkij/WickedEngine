@@ -278,7 +278,7 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
 			&primitiveIDBuffer,
 			&primitiveMortonBuffer,
 		};
-		device->BindResources(res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
+		device->BindResources(res, 0, arraysize(res), cmd);
 
 		device->Dispatch((primitiveCount + BVH_BUILDER_GROUPSIZE - 1) / BVH_BUILDER_GROUPSIZE, 1, 1, cmd);
 
@@ -309,7 +309,7 @@ void wiGPUBVH::Build(const Scene& scene, CommandList cmd) const
 			&primitiveBuffer,
 			&bvhParentBuffer,
 		};
-		device->BindResources(res, TEXSLOT_ONDEMAND0, arraysize(res), cmd);
+		device->BindResources(res, 0, arraysize(res), cmd);
 
 		device->Dispatch((primitiveCount + BVH_BUILDER_GROUPSIZE - 1) / BVH_BUILDER_GROUPSIZE, 1, 1, cmd);
 

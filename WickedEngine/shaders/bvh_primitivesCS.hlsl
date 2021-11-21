@@ -8,9 +8,9 @@
 
 PUSHCONSTANT(push, BVHPushConstants);
 
-RWSTRUCTUREDBUFFER(primitiveIDBuffer, uint, 0);
-RWRAWBUFFER(primitiveBuffer, 1);
-RWSTRUCTUREDBUFFER(primitiveMortonBuffer, float, 2); // morton buffer is float because sorting is written for floats!
+RWStructuredBuffer<uint> primitiveIDBuffer : register(u0);
+RWByteAddressBuffer primitiveBuffer : register(u1);
+RWStructuredBuffer<float> primitiveMortonBuffer : register(u2); // morton buffer is float because sorting is written for floats!
 
 [numthreads(BVH_BUILDER_GROUPSIZE, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)

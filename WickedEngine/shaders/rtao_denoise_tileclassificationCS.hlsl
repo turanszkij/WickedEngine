@@ -3,14 +3,14 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-TEXTURE2D(normals, float3, TEXSLOT_ONDEMAND0);
-STRUCTUREDBUFFER(tiles, uint, TEXSLOT_ONDEMAND1);
-TEXTURE2D(moments_prev, float3, TEXSLOT_ONDEMAND2);
-TEXTURE2D(history, float, TEXSLOT_ONDEMAND3);
+Texture2D<float3> normals : register(t0);
+StructuredBuffer<uint> tiles : register(t1);
+Texture2D<float3> moments_prev : register(t2);
+Texture2D<float> history : register(t3);
 
-RWTEXTURE2D(reprojection, float2, 0);
-RWTEXTURE2D(moments, float3, 1);
-RWSTRUCTUREDBUFFER(metadata, uint, 2);
+RWTexture2D<float2> reprojection : register(u0);
+RWTexture2D<float3> moments : register(u1);
+RWStructuredBuffer<uint> metadata : register(u2);
 
 int FFX_DNSR_Shadows_IsFirstFrame()
 {

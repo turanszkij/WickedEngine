@@ -1,11 +1,11 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
-TEXTURE2D(tile_mindepth_maxcoc_horizontal, float2, TEXSLOT_ONDEMAND0);
-TEXTURE2D(tile_mincoc_horizontal, float, TEXSLOT_ONDEMAND1);
+Texture2D<float2> tile_mindepth_maxcoc_horizontal : register(t0);
+Texture2D<float> tile_mincoc_horizontal : register(t1);
 
-RWTEXTURE2D(mindepth_maxcoc, float2, 0);
-RWTEXTURE2D(mincoc, float, 1);
+RWTexture2D<float2> mindepth_maxcoc : register(u0);
+RWTexture2D<float> mincoc : register(u1);
 
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)

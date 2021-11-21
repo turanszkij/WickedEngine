@@ -1,9 +1,9 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Ocean.h"
 
-TEXTURE2D(texture_displacementmap, float4, TEXSLOT_ONDEMAND0);
+Texture2D<float4> texture_displacementmap : register(t0);
 
-RWTEXTURE2D(output, float4, 0);
+RWTexture2D<float4> output : register(u0);
 
 [numthreads(OCEAN_COMPUTE_TILESIZE, OCEAN_COMPUTE_TILESIZE, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )

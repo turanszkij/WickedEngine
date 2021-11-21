@@ -25,13 +25,13 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-TEXTURE3D(texture_shapeNoise, float4, TEXSLOT_ONDEMAND1);
-TEXTURE3D(texture_detailNoise, float4, TEXSLOT_ONDEMAND2);
-TEXTURE2D(texture_curlNoise, float4, TEXSLOT_ONDEMAND3);
-TEXTURE2D(texture_weatherMap, float4, TEXSLOT_ONDEMAND4);
+Texture3D<float4> texture_shapeNoise : register(t1);
+Texture3D<float4> texture_detailNoise : register(t2);
+Texture2D<float4> texture_curlNoise : register(t3);
+Texture2D<float4> texture_weatherMap : register(t4);
 
-RWTEXTURE2D(texture_render, float4, 0);
-RWTEXTURE2D(texture_cloudDepth, float2, 1);
+RWTexture2D<float4> texture_render : register(u0);
+RWTexture2D<float2> texture_cloudDepth : register(u1);
 
 
 // Octaves for multiple-scattering approximation. 1 means single-scattering only.

@@ -12,13 +12,13 @@
 // in "Maximizing Parallelism in the Construction of BVHs, Octrees,
 // and k-d Trees"
 
-RAWBUFFER(primitiveCounterBuffer, TEXSLOT_ONDEMAND0);
-STRUCTUREDBUFFER(primitiveIDBuffer, uint, TEXSLOT_ONDEMAND1);
-STRUCTUREDBUFFER(primitiveMortonBuffer, float, TEXSLOT_ONDEMAND2); // float because it was sorted
+ByteAddressBuffer primitiveCounterBuffer : register(t0);
+StructuredBuffer<uint> primitiveIDBuffer : register(t1);
+StructuredBuffer<float> primitiveMortonBuffer : register(t2); // float because it was sorted
 
-RWRAWBUFFER(bvhNodeBuffer, 0);
-RWSTRUCTUREDBUFFER(bvhParentBuffer, uint, 1);
-RWSTRUCTUREDBUFFER(bvhFlagBuffer, uint, 2);
+RWByteAddressBuffer bvhNodeBuffer : register(u0);
+RWStructuredBuffer<uint> bvhParentBuffer : register(u1);
+RWStructuredBuffer<uint> bvhFlagBuffer : register(u2);
 
 int CountLeadingZeroes(uint num)
 {

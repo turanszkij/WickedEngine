@@ -5,7 +5,7 @@
 #include "oceanSurfaceHF.hlsli"
 #include "objectHF.hlsli"
 
-TEXTURE2D(texture_gradientmap, float4, TEXSLOT_ONDEMAND1);
+Texture2D<float4> texture_gradientmap : register(t1);
 
 [earlydepthstencil]
 float4 main(PSIn input) : SV_TARGET

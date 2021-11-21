@@ -6,20 +6,20 @@
 
 //#define DEBUG_TILING
 
-TEXTURE2D(neighborhood_mindepth_maxcoc, float2, TEXSLOT_ONDEMAND0);
-TEXTURE2D(texture_presort, float3, TEXSLOT_ONDEMAND1);
-TEXTURE2D(texture_prefilter, float3, TEXSLOT_ONDEMAND2);
+Texture2D<float2> neighborhood_mindepth_maxcoc : register(t0);
+Texture2D<float3> texture_presort : register(t1);
+Texture2D<float3> texture_prefilter : register(t2);
 
 #if defined(DEPTHOFFIELD_EARLYEXIT)
-STRUCTUREDBUFFER(tiles, uint, TEXSLOT_ONDEMAND3);
+StructuredBuffer<uint> tiles : register(t3);
 #elif defined(DEPTHOFFIELD_CHEAP)
-STRUCTUREDBUFFER(tiles, uint, TEXSLOT_ONDEMAND4);
+StructuredBuffer<uint> tiles : register(t4);
 #else
-STRUCTUREDBUFFER(tiles, uint, TEXSLOT_ONDEMAND5);
+StructuredBuffer<uint> tiles : register(t5);
 #endif // DEPTHOFFIELD_EARLYEXIT
 
-RWTEXTURE2D(output_main, float3, 0);
-RWTEXTURE2D(output_alpha, unorm float, 1);
+RWTexture2D<float3> output_main : register(u0);
+RWTexture2D<unorm float> output_alpha : register(u1);
 
 [numthreads(POSTPROCESS_BLOCKSIZE * POSTPROCESS_BLOCKSIZE, 1, 1)]
 void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)

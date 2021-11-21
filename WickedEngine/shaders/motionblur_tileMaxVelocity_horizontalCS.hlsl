@@ -1,8 +1,8 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
-RWTEXTURE2D(tilemax_horizontal, float2, 0);
-RWTEXTURE2D(tilemin_horizontal, float2, 1);
+RWTexture2D<float2> tilemax_horizontal : register(u0);
+RWTexture2D<float2> tilemin_horizontal : register(u1);
 
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)

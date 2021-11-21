@@ -1,7 +1,8 @@
 #include "ShaderInterop_Ocean.h"
 
-STRUCTUREDBUFFER(g_InputDxyz, float2, TEXSLOT_ONDEMAND0);
-RWTEXTURE2D(output, float4, 0);
+StructuredBuffer<float2> g_InputDxyz : register(t0);
+
+RWTexture2D<float4> output : register(u0);
 
 [numthreads(OCEAN_COMPUTE_TILESIZE, OCEAN_COMPUTE_TILESIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)

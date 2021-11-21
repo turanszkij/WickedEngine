@@ -4,9 +4,9 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-TEXTURE2D(input, float3, TEXSLOT_ONDEMAND0);
+Texture2D<float3> input : register(t0);
 
-RWRAWBUFFER(output_histogram, 0);
+RWByteAddressBuffer output_histogram : register(u0);
 
 // groupshared memory is used to perform the high atomic contentions
 //	the atomic contention into global memory will be lower in the general case

@@ -9,15 +9,15 @@ static const float3 HAIRPATCH[] = {
 	float3(1, 1, 0),
 };
 
-RWSTRUCTUREDBUFFER(simulationBuffer, PatchSimulationData, 0);
-RWRAWBUFFER(vertexBuffer_POS, 1);
-RWRAWBUFFER(vertexBuffer_TEX, 2);
-RWTYPEDBUFFER(culledIndexBuffer, uint, 3);
-RWRAWBUFFER(counterBuffer, 4);
+Buffer<uint> meshIndexBuffer : register(t0);
+ByteAddressBuffer meshVertexBuffer_POS : register(t1);
+Buffer<float> meshVertexBuffer_length : register(t2);
 
-TYPEDBUFFER(meshIndexBuffer, uint, TEXSLOT_ONDEMAND0);
-RAWBUFFER(meshVertexBuffer_POS, TEXSLOT_ONDEMAND1);
-TYPEDBUFFER(meshVertexBuffer_length, float, TEXSLOT_ONDEMAND2);
+RWStructuredBuffer<PatchSimulationData> simulationBuffer : register(u0);
+RWByteAddressBuffer vertexBuffer_POS : register(u1);
+RWByteAddressBuffer vertexBuffer_TEX : register(u2);
+RWBuffer<uint> culledIndexBuffer : register(u3);
+RWByteAddressBuffer counterBuffer : register(u4);
 
 [numthreads(THREADCOUNT_SIMULATEHAIR, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)

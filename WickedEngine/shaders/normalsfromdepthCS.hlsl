@@ -6,9 +6,9 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-TEXTURE2D(depthbuffer, float, TEXSLOT_ONDEMAND0);
+Texture2D<float> depthbuffer : register(t0);
 
-RWTEXTURE2D(output, float3, 0);
+RWTexture2D<float3> output : register(u0);
 
 static const uint TILE_BORDER = 1;
 static const uint TILE_SIZE = POSTPROCESS_BLOCKSIZE + TILE_BORDER * 2;

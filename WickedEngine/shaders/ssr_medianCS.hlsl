@@ -3,9 +3,9 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-TEXTURE2D(texture_temporal, float4, TEXSLOT_ONDEMAND0);
+Texture2D<float4> texture_temporal : register(t0);
 
-RWTEXTURE2D(output, float4, 0);
+RWTexture2D<float4> output : register(u0);
 
 // A Fast, Small-Radius GPU Median Filter by Morgan McGuire
 // https://casual-effects.com/research/McGuire2008Median/index.html

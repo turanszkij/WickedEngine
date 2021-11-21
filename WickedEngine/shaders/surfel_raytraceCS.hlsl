@@ -4,15 +4,15 @@
 #include "ShaderInterop_SurfelGI.h"
 
 
-STRUCTUREDBUFFER(surfelBuffer, Surfel, TEXSLOT_ONDEMAND0);
-RAWBUFFER(surfelStatsBuffer, TEXSLOT_ONDEMAND1);
-STRUCTUREDBUFFER(surfelGridBuffer, SurfelGridCell, TEXSLOT_ONDEMAND2);
-STRUCTUREDBUFFER(surfelCellBuffer, uint, TEXSLOT_ONDEMAND3);
-STRUCTUREDBUFFER(surfelAliveBuffer, uint, TEXSLOT_ONDEMAND4);
-TEXTURE2D(surfelMomentsTexturePrev, float2, TEXSLOT_ONDEMAND5);
+StructuredBuffer<Surfel> surfelBuffer : register(t0);
+ByteAddressBuffer surfelStatsBuffer : register(t1);
+StructuredBuffer<SurfelGridCell> surfelGridBuffer : register(t2);
+StructuredBuffer<uint> surfelCellBuffer : register(t3);
+StructuredBuffer<uint> surfelAliveBuffer : register(t4);
+Texture2D<float2> surfelMomentsTexturePrev : register(t5);
 
-RWSTRUCTUREDBUFFER(surfelDataBuffer, SurfelData, 0);
-RWTEXTURE2D(surfelMomentsTexture, float2, 1);
+RWStructuredBuffer<SurfelData> surfelDataBuffer : register(u0);
+RWTexture2D<float2> surfelMomentsTexture : register(u1);
 
 void surfel_moments_write(uint2 moments_pixel, float dist)
 {

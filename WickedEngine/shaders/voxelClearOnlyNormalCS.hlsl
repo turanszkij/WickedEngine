@@ -1,7 +1,7 @@
 #include "globals.hlsli"
 #include "voxelHF.hlsli"
 
-RWSTRUCTUREDBUFFER(input_output, VoxelType, 0);
+RWStructuredBuffer<VoxelType> input_output : register(u0);
 
 [numthreads(256, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)

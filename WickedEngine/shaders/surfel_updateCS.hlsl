@@ -2,16 +2,16 @@
 #include "ShaderInterop_SurfelGI.h"
 #include "brdf.hlsli"
 
-STRUCTUREDBUFFER(surfelDataBuffer, SurfelData, TEXSLOT_ONDEMAND0);
-STRUCTUREDBUFFER(surfelAliveBuffer_CURRENT, uint, TEXSLOT_ONDEMAND1);
-TEXTURE2D(surfelMomentsTexturePrev, float2, TEXSLOT_ONDEMAND2);
+StructuredBuffer<SurfelData> surfelDataBuffer : register(t0);
+StructuredBuffer<uint> surfelAliveBuffer_CURRENT : register(t1);
+Texture2D<float2> surfelMomentsTexturePrev : register(t2);
 
-RWSTRUCTUREDBUFFER(surfelBuffer, Surfel, 0);
-RWSTRUCTUREDBUFFER(surfelGridBuffer, SurfelGridCell, 1);
-RWSTRUCTUREDBUFFER(surfelAliveBuffer_NEXT, uint, 2);
-RWSTRUCTUREDBUFFER(surfelDeadBuffer, uint, 3);
-RWRAWBUFFER(surfelStatsBuffer, 4);
-RWTEXTURE2D(surfelMomentsTexture, float2, 5);
+RWStructuredBuffer<Surfel> surfelBuffer : register(u0);
+RWStructuredBuffer<SurfelGridCell> surfelGridBuffer : register(u1);
+RWStructuredBuffer<uint> surfelAliveBuffer_NEXT : register(u2);
+RWStructuredBuffer<uint> surfelDeadBuffer : register(u3);
+RWByteAddressBuffer surfelStatsBuffer : register(u4);
+RWTexture2D<float2> surfelMomentsTexture : register(u5);
 
 [numthreads(SURFEL_INDIRECT_NUMTHREADS, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)

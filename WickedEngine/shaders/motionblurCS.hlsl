@@ -7,18 +7,18 @@ PUSHCONSTANT(postprocess, PostProcess);
 
 //#define DEBUG_TILING
 
-TEXTURE2D(input, float4, TEXSLOT_ONDEMAND0);
-TEXTURE2D(neighborhoodmax, float2, TEXSLOT_ONDEMAND1);
+Texture2D<float4> input : register(t0);
+Texture2D<float2> neighborhoodmax : register(t1);
 
 #if defined(MOTIONBLUR_EARLYEXIT)
-STRUCTUREDBUFFER(tiles, uint, TEXSLOT_ONDEMAND2);
+StructuredBuffer<uint> tiles : register(t2);
 #elif defined(MOTIONBLUR_CHEAP)
-STRUCTUREDBUFFER(tiles, uint, TEXSLOT_ONDEMAND3);
+StructuredBuffer<uint> tiles : register(t3);
 #else
-STRUCTUREDBUFFER(tiles, uint, TEXSLOT_ONDEMAND4);
+StructuredBuffer<uint> tiles : register(t4);
 #endif // MOTIONBLUR_EARLYEXIT
 
-RWTEXTURE2D(output, float4, 0);
+RWTexture2D<float4> output : register(u0);
 
 inline float2 DepthCmp(in float centerDepth, in float sampleDepth, in float depthScale)
 {

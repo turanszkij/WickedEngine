@@ -5,10 +5,10 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-TEXTURE2D(texture_raytrace, float4, TEXSLOT_ONDEMAND0);
-TEXTURE2D(texture_main, float4, TEXSLOT_ONDEMAND1);
+Texture2D<float4> texture_raytrace : register(t0);
+Texture2D<float4> texture_main : register(t1);
 
-RWTEXTURE2D(texture_resolve, float4, 0);
+RWTexture2D<float4> texture_resolve : register(u0);
 
 
 static const float2 spatialReuseOffsets3x3[9] =

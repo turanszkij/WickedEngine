@@ -1,8 +1,8 @@
 #include "globals.hlsli"
 #include "ShaderInterop_EmittedParticle.h"
 
-RWRAWBUFFER(counterBuffer, 4);
-RWRAWBUFFER(indirectBuffers, 5);
+RWByteAddressBuffer counterBuffer : register(u4);
+RWByteAddressBuffer indirectBuffers : register(u5);
 
 [numthreads(1, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)

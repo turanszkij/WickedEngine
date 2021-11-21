@@ -2,8 +2,6 @@
 #include "wiResourceManager.h"
 #include "wiRenderer.h"
 #include "wiHelper.h"
-#include "shaders/SamplerMapping.h"
-#include "shaders/ResourceMapping.h"
 #include "shaders/ShaderInterop_Image.h"
 #include "wiBackLog.h"
 #include "wiEvent.h"
@@ -62,34 +60,34 @@ namespace wiImage
 		}
 		device->BindStencilRef(stencilRef, cmd);
 
-		const Sampler* sampler = wiRenderer::GetSampler(SSLOT_LINEAR_CLAMP);
+		const Sampler* sampler = wiRenderer::GetSampler(SAMPLER_LINEAR_CLAMP);
 
 		if (params.quality == QUALITY_NEAREST)
 		{
 			if (params.sampleFlag == SAMPLEMODE_MIRROR)
-				sampler = wiRenderer::GetSampler(SSLOT_POINT_MIRROR);
+				sampler = wiRenderer::GetSampler(SAMPLER_POINT_MIRROR);
 			else if (params.sampleFlag == SAMPLEMODE_WRAP)
-				sampler = wiRenderer::GetSampler(SSLOT_POINT_WRAP);
+				sampler = wiRenderer::GetSampler(SAMPLER_POINT_WRAP);
 			else if (params.sampleFlag == SAMPLEMODE_CLAMP)
-				sampler = wiRenderer::GetSampler(SSLOT_POINT_CLAMP);
+				sampler = wiRenderer::GetSampler(SAMPLER_POINT_CLAMP);
 		}
 		else if (params.quality == QUALITY_LINEAR)
 		{
 			if (params.sampleFlag == SAMPLEMODE_MIRROR)
-				sampler = wiRenderer::GetSampler(SSLOT_LINEAR_MIRROR);
+				sampler = wiRenderer::GetSampler(SAMPLER_LINEAR_MIRROR);
 			else if (params.sampleFlag == SAMPLEMODE_WRAP)
-				sampler = wiRenderer::GetSampler(SSLOT_LINEAR_WRAP);
+				sampler = wiRenderer::GetSampler(SAMPLER_LINEAR_WRAP);
 			else if (params.sampleFlag == SAMPLEMODE_CLAMP)
-				sampler = wiRenderer::GetSampler(SSLOT_LINEAR_CLAMP);
+				sampler = wiRenderer::GetSampler(SAMPLER_LINEAR_CLAMP);
 		}
 		else if (params.quality == QUALITY_ANISOTROPIC)
 		{
 			if (params.sampleFlag == SAMPLEMODE_MIRROR)
-				sampler = wiRenderer::GetSampler(SSLOT_ANISO_MIRROR);
+				sampler = wiRenderer::GetSampler(SAMPLER_ANISO_MIRROR);
 			else if (params.sampleFlag == SAMPLEMODE_WRAP)
-				sampler = wiRenderer::GetSampler(SSLOT_ANISO_WRAP);
+				sampler = wiRenderer::GetSampler(SAMPLER_ANISO_WRAP);
 			else if (params.sampleFlag == SAMPLEMODE_CLAMP)
-				sampler = wiRenderer::GetSampler(SSLOT_ANISO_CLAMP);
+				sampler = wiRenderer::GetSampler(SAMPLER_ANISO_CLAMP);
 		}
 
 		PushConstantsImage push;

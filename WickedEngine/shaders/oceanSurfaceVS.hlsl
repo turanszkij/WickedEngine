@@ -1,7 +1,7 @@
 #include "globals.hlsli"
 #include "oceanSurfaceHF.hlsli"
 
-TEXTURE2D(texture_displacementmap, float4, TEXSLOT_ONDEMAND0);
+Texture2D<float4> texture_displacementmap : register(t0);
 
 static const float3 QUAD[] = {
 	float3(0, 0, 0),

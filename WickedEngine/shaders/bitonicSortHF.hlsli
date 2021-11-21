@@ -10,8 +10,9 @@ CBUFFER(CB,0)
 };
 
 
-RAWBUFFER(Input, 0);
-RWRAWBUFFER(Data, 0);
+ByteAddressBuffer Input : register(t0);
+
+RWByteAddressBuffer Data : register(u0);
 
 static const uint _stride = 4; // using 32 bit uints
 

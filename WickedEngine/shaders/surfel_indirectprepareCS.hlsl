@@ -1,7 +1,7 @@
 #include "globals.hlsli"
 #include "ShaderInterop_SurfelGI.h"
 
-RWRAWBUFFER(surfelStatsBuffer, 0);
+RWByteAddressBuffer surfelStatsBuffer : register(u0);
 
 [numthreads(1, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)

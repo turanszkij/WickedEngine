@@ -5,10 +5,10 @@ PUSHCONSTANT(shadingrate, ShadingRateClassification);
 
 static const uint THREAD_COUNT = 64;
 
-RWTEXTURE2D(output, uint, 0);
+RWTexture2D<uint> output : register(u0);
 
 #ifdef DEBUG_SHADINGRATECLASSIFICATION
-RWTEXTURE2D(output_debug, float4, 1);
+RWTexture2D<float4> output_debug : register(u1);
 #endif // DEBUG_SHADINGRATECLASSIFICATION
 
 groupshared uint tile_rate;

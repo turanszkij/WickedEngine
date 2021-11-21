@@ -3,11 +3,11 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-TEXTURE2D(texture_main, float3, TEXSLOT_ONDEMAND0);
-TEXTURE2D(texture_alpha, float, TEXSLOT_ONDEMAND1);
+Texture2D<float3> texture_main : register(t0);
+Texture2D<float> texture_alpha : register(t1);
 
-RWTEXTURE2D(output_postfilter, float3, 0);
-RWTEXTURE2D(output_alpha, unorm float, 1);
+RWTexture2D<float3> output_postfilter : register(u0);
+RWTexture2D<unorm float> output_alpha : register(u1);
 
 float min3(float a, float b, float c)
 {

@@ -3,13 +3,13 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-TEXTURE2D(cloud_current, float4, TEXSLOT_ONDEMAND0);
-TEXTURE2D(cloud_depth_current, float2, TEXSLOT_ONDEMAND1);
-TEXTURE2D(cloud_history, float4, TEXSLOT_ONDEMAND2);
-TEXTURE2D(cloud_depth_history, float2, TEXSLOT_ONDEMAND3);
+Texture2D<float4> cloud_current : register(t0);
+Texture2D<float2> cloud_depth_current : register(t1);
+Texture2D<float4> cloud_history : register(t2);
+Texture2D<float2> cloud_depth_history : register(t3);
 
-RWTEXTURE2D(output, float4, 0);
-RWTEXTURE2D(output_depth, float2, 1);
+RWTexture2D<float4> output : register(u0);
+RWTexture2D<float2> output_depth : register(u1);
 
 // This function compute the checkerboard undersampling position
 int ComputeCheckerBoardIndex(int2 renderCoord, int subPixelIndex)

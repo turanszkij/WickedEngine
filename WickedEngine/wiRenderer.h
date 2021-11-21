@@ -41,7 +41,7 @@ namespace wiRenderer
 	void ModifyObjectSampler(const wiGraphics::SamplerDesc& desc);
 
 	// Initializes the samplers, including the global static samplers for the device
-	void InitializeGlobalSamplers();
+	void InitializeCommonSamplers();
 
 	// Initializes the renderer
 	void Initialize();

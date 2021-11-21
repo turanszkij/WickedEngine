@@ -3,9 +3,10 @@
 #include "voxelHF.hlsli"
 #include "voxelConeTracingHF.hlsli"
 
-TEXTURE3D(input_emission, float4, 0);
-STRUCTUREDBUFFER(input_voxelscene, VoxelType, 1);
-RWTEXTURE3D(output, float4, 0);
+Texture3D<float4> input_emission : register(t0);
+StructuredBuffer<VoxelType> input_voxelscene : register(t1);
+
+RWTexture3D<float4> output : register(u0);
 
 [numthreads(8, 8, 8)]
 void main( uint3 DTid : SV_DispatchThreadID )

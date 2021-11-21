@@ -1,27 +1,23 @@
 #ifndef WI_SHADERINTEROP_H
 #define WI_SHADERINTEROP_H
 
-#include "ConstantBufferMapping.h"
-#include "SamplerMapping.h"
-#include "ResourceMapping.h"
-
 #ifdef __cplusplus // not invoking shader compiler, but included in engine source
 
 // Application-side types:
 
-typedef XMMATRIX matrix;
-typedef XMFLOAT3X4 float3x4;
-typedef XMFLOAT4X4 float4x4;
-typedef XMFLOAT2 float2;
-typedef XMFLOAT3 float3;
-typedef XMFLOAT4 float4;
-typedef uint32_t uint;
-typedef XMUINT2 uint2;
-typedef XMUINT3 uint3;
-typedef XMUINT4 uint4;
-typedef XMINT2 int2;
-typedef XMINT3 int3;
-typedef XMINT4 int4;
+using matrix = XMMATRIX;
+using float3x4 = XMFLOAT3X4;
+using float4x4 = XMFLOAT4X4;
+using float2 = XMFLOAT2;
+using float3 = XMFLOAT3;
+using float4 = XMFLOAT4;
+using uint = uint32_t;
+using uint2 = XMUINT2;
+using uint3 = XMUINT3;
+using uint4 = XMUINT4;
+using int2 = XMINT2;
+using int3 = XMINT3;
+using int4 = XMINT4;
 
 #define column_major
 #define row_major
@@ -38,45 +34,6 @@ typedef XMINT4 int4;
 #define CBUFFER(name, slot) cbuffer name : register(b ## slot)
 #define CONSTANTBUFFER(name, type, slot) ConstantBuffer< type > name : register(b ## slot)
 
-#define RAWBUFFER(name,slot) ByteAddressBuffer name : register(t ## slot)
-#define RWRAWBUFFER(name,slot) RWByteAddressBuffer name : register(u ## slot)
-
-#define TYPEDBUFFER(name, type, slot) Buffer< type > name : register(t ## slot)
-#define RWTYPEDBUFFER(name, type, slot) RWBuffer< type > name : register(u ## slot)
-
-#define STRUCTUREDBUFFER(name, type, slot) StructuredBuffer< type > name : register(t ## slot)
-#define RWSTRUCTUREDBUFFER(name, type, slot) RWStructuredBuffer< type > name : register(u ## slot)
-#define ROVSTRUCTUREDBUFFER(name, type, slot) RasterizerOrderedStructuredBuffer< type > name : register(u ## slot)
-
-
-#define TEXTURE1D(name, type, slot) Texture1D< type > name : register(t ## slot)
-#define TEXTURE1DARRAY(name, type, slot) Texture1DArray< type > name : register(t ## slot)
-#define RWTEXTURE1D(name, type, slot) RWTexture1D< type > name : register(u ## slot)
-
-#define TEXTURE2D(name, type, slot) Texture2D< type > name : register(t ## slot)
-#define TEXTURE2DMS(name, type, slot) Texture2DMS< type > name : register(t ## slot)
-#define TEXTURE2DARRAY(name, type, slot) Texture2DArray< type > name : register(t ## slot)
-#define RWTEXTURE2D(name, type, slot) RWTexture2D< type > name : register(u ## slot)
-#define RWTEXTURE2DARRAY(name, type, slot) RWTexture2DArray< type > name : register(u ## slot)
-#define ROVTEXTURE2D(name, type, slot) RasterizerOrderedTexture2D< type > name : register(u ## slot)
-
-#define TEXTURECUBE(name, type, slot) TextureCube< type > name : register(t ## slot)
-#define TEXTURECUBEARRAY(name, type, slot) TextureCubeArray< type > name : register(t ## slot)
-
-#define TEXTURE3D(name, type, slot) Texture3D< type > name : register(t ## slot)
-#define RWTEXTURE3D(name, type, slot) RWTexture3D< type > name : register(u ## slot)
-#define ROVTEXTURE3D(name, type, slot) RasterizerOrderedTexture3D< type > name : register(u ## slot)
-
-
-#define SAMPLERSTATE(name, slot) SamplerState name : register(s ## slot)
-#define SAMPLERCOMPARISONSTATE(name, slot) SamplerComparisonState name : register(s ## slot)
-
-
-#if defined(HLSL6) || defined(SPIRV)
-#define BINDLESS
-#define RAYTRACINGACCELERATIONSTRUCTURE(name, slot) RaytracingAccelerationStructure name : register(t ## slot)
-#endif // HLSL6 || SPIRV
-
 #ifdef SPIRV
 #define PUSHCONSTANT(name, type) [[vk::push_constant]] type name;
 #endif // SPIRV
@@ -84,11 +41,6 @@ typedef XMINT4 int4;
 #ifdef HLSL6
 #define PUSHCONSTANT(name, type) ConstantBuffer<type> name : register(b999)
 #endif // HLSL6
-
-#ifdef DISABLE_WAVE_INTRINSICS
-#define WaveReadLaneFirst(a) (a)
-#define WaveActiveBitOr(a) (a)
-#endif // DISABLE_WAVE_INTRINSICS
 
 struct IndirectDrawArgsInstanced
 {
@@ -113,6 +65,32 @@ struct IndirectDispatchArgs
 };
 
 #endif // __cplusplus
+
+
+// Common buffers:
+// These are usable by all shaders
+#define CBSLOT_RENDERER_FRAME					0
+#define CBSLOT_RENDERER_CAMERA					1
+
+// On demand buffers:
+// These are bound on demand and alive until another is bound at the same slot
+
+#define CBSLOT_RENDERER_MISC					5
+#define CBSLOT_RENDERER_FORWARD_LIGHTMASK		7
+#define CBSLOT_RENDERER_VOLUMELIGHT				7
+#define CBSLOT_RENDERER_VOXELIZER				7
+#define CBSLOT_RENDERER_TRACED					7
+#define CBSLOT_RENDERER_BVH						7
+#define CBSLOT_RENDERER_CUBEMAPRENDER			8
+
+#define CBSLOT_OTHER_EMITTEDPARTICLE			7
+#define CBSLOT_OTHER_HAIRPARTICLE				7
+#define CBSLOT_OTHER_FFTGENERATOR				7
+#define CBSLOT_OTHER_OCEAN_SIMULATION_IMMUTABLE	7
+#define CBSLOT_OTHER_OCEAN_SIMULATION_PERFRAME	8
+#define CBSLOT_OTHER_OCEAN_RENDER				7
+#define CBSLOT_OTHER_CLOUDGENERATOR				7
+#define CBSLOT_OTHER_GPUSORTLIB					8
 
 
 #endif // WI_SHADERINTEROP_H

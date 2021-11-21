@@ -5,7 +5,7 @@
 
 // Note: the voxelizer uses an overall simplified material and lighting model (no normal maps, only diffuse light and emissive)
 
-RWSTRUCTUREDBUFFER(output, VoxelType, 0);
+RWStructuredBuffer<VoxelType> output : register(u0);
 
 struct PSInput
 {

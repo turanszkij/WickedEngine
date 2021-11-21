@@ -345,7 +345,7 @@ namespace wiWidget_Internal
 		desc.vs = wiRenderer::GetShader(VSTYPE_VERTEXCOLOR);
 		desc.ps = wiRenderer::GetShader(PSTYPE_VERTEXCOLOR);
 		desc.il = wiRenderer::GetInputLayout(ILTYPE_VERTEXCOLOR);
-		desc.dss = wiRenderer::GetDepthStencilState(DSSTYPE_XRAY);
+		desc.dss = wiRenderer::GetDepthStencilState(DSSTYPE_DEPTHDISABLED);
 		desc.bs = wiRenderer::GetBlendState(BSTYPE_TRANSPARENT);
 		desc.rs = wiRenderer::GetRasterizerState(RSTYPE_DOUBLESIDED);
 		desc.pt = PrimitiveTopology::TRIANGLESTRIP;

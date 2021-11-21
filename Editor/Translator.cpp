@@ -32,7 +32,7 @@ namespace Translator_Internal
 			desc.vs = wiRenderer::GetShader(VSTYPE_VERTEXCOLOR);
 			desc.ps = wiRenderer::GetShader(PSTYPE_VERTEXCOLOR);
 			desc.il = wiRenderer::GetInputLayout(ILTYPE_VERTEXCOLOR);
-			desc.dss = wiRenderer::GetDepthStencilState(DSSTYPE_XRAY);
+			desc.dss = wiRenderer::GetDepthStencilState(DSSTYPE_DEPTHDISABLED);
 			desc.rs = wiRenderer::GetRasterizerState(RSTYPE_DOUBLESIDED);
 			desc.bs = wiRenderer::GetBlendState(BSTYPE_ADDITIVE);
 			desc.pt = PrimitiveTopology::TRIANGLELIST;
@@ -46,7 +46,7 @@ namespace Translator_Internal
 			desc.vs = wiRenderer::GetShader(VSTYPE_VERTEXCOLOR);
 			desc.ps = wiRenderer::GetShader(PSTYPE_VERTEXCOLOR);
 			desc.il = wiRenderer::GetInputLayout(ILTYPE_VERTEXCOLOR);
-			desc.dss = wiRenderer::GetDepthStencilState(DSSTYPE_XRAY);
+			desc.dss = wiRenderer::GetDepthStencilState(DSSTYPE_DEPTHDISABLED);
 			desc.rs = wiRenderer::GetRasterizerState(RSTYPE_WIRE_DOUBLESIDED_SMOOTH);
 			desc.bs = wiRenderer::GetBlendState(BSTYPE_TRANSPARENT);
 			desc.pt = PrimitiveTopology::LINELIST;

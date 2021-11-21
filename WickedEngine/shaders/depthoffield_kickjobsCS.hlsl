@@ -1,10 +1,10 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
-RWRAWBUFFER(tile_statistics, 0);
-RWSTRUCTUREDBUFFER(tiles_earlyexit, uint, 1);
-RWSTRUCTUREDBUFFER(tiles_cheap, uint, 2);
-RWSTRUCTUREDBUFFER(tiles_expensive, uint, 3);
+RWByteAddressBuffer tile_statistics : register(u0);
+RWStructuredBuffer<uint> tiles_earlyexit : register(u1);
+RWStructuredBuffer<uint> tiles_cheap : register(u2);
+RWStructuredBuffer<uint> tiles_expensive : register(u3);
 
 [numthreads(1, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)

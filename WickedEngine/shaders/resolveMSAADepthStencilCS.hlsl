@@ -1,8 +1,9 @@
 #include "globals.hlsli"
 // Resolve MSAA depth buffer to a non MSAA texture
 
-TEXTURE2DMS(input, float, TEXSLOT_ONDEMAND0);
-RWTEXTURE2D(output, float, 0);
+Texture2DMS<float> input : register(t0);
+
+RWTexture2D<float> output : register(u0);
 
 [numthreads(8, 8, 1)]
 void main(uint3 dispatchThreadId : SV_DispatchThreadID)

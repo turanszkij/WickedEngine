@@ -15,9 +15,9 @@ static const float fxaaSubpix = 0.75;
 static const float fxaaEdgeThreshold = 0.166;
 static const float fxaaEdgeThresholdMin = 0.0833;
 
-TEXTURE2D(input, float4, TEXSLOT_ONDEMAND0);
+Texture2D<float4> input : register(t0);
 
-RWTEXTURE2D(output, float4, 0);
+RWTexture2D<float4> output : register(u0);
 
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)

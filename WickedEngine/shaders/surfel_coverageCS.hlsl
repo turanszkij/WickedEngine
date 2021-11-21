@@ -29,17 +29,17 @@ float3 random_color(uint index)
 	return random_colors[index % random_colors_size];
 }
 
-STRUCTUREDBUFFER(surfelBuffer, Surfel, TEXSLOT_ONDEMAND0);
-STRUCTUREDBUFFER(surfelGridBuffer, SurfelGridCell, TEXSLOT_ONDEMAND1);
-STRUCTUREDBUFFER(surfelCellBuffer, uint, TEXSLOT_ONDEMAND2);
-TEXTURE2D(surfelMomentsTexture, float2, TEXSLOT_ONDEMAND3);
+StructuredBuffer<Surfel> surfelBuffer : register(t0);
+StructuredBuffer<SurfelGridCell> surfelGridBuffer : register(t1);
+StructuredBuffer<uint> surfelCellBuffer : register(t2);
+Texture2D<float2> surfelMomentsTexture : register(t3);
 
-RWSTRUCTUREDBUFFER(surfelDataBuffer, SurfelData, 0);
-RWSTRUCTUREDBUFFER(surfelDeadBuffer, uint, 1);
-RWSTRUCTUREDBUFFER(surfelAliveBuffer, uint, 2);
-RWRAWBUFFER(surfelStatsBuffer, 3);
-RWTEXTURE2D(result, float3, 4);
-RWTEXTURE2D(debugUAV, unorm float4, 5);
+RWStructuredBuffer<SurfelData> surfelDataBuffer : register(u0);
+RWStructuredBuffer<uint> surfelDeadBuffer : register(u1);
+RWStructuredBuffer<uint> surfelAliveBuffer : register(u2);
+RWByteAddressBuffer surfelStatsBuffer : register(u3);
+RWTexture2D<float3> result : register(u4);
+RWTexture2D<unorm float4> debugUAV : register(u5);
 
 void write_result(uint2 DTid, float4 color)
 {

@@ -9,18 +9,18 @@ static const float3 BILLBOARD[] = {
 	float3(1, 1, 0),	// 4
 };
 
-RWSTRUCTUREDBUFFER(particleBuffer, Particle, 0);
-RWSTRUCTUREDBUFFER(aliveBuffer_CURRENT, uint, 1);
-RWSTRUCTUREDBUFFER(aliveBuffer_NEW, uint, 2);
-RWSTRUCTUREDBUFFER(deadBuffer, uint, 3);
-RWRAWBUFFER(counterBuffer, 4);
-RWSTRUCTUREDBUFFER(distanceBuffer, float, 6);
-RWRAWBUFFER(vertexBuffer_POS, 7);
-RWRAWBUFFER(vertexBuffer_TEX, 8);
-RWRAWBUFFER(vertexBuffer_TEX2, 9);
-RWRAWBUFFER(vertexBuffer_COL, 10);
-RWSTRUCTUREDBUFFER(culledIndirectionBuffer, uint, 11);
-RWSTRUCTUREDBUFFER(culledIndirectionBuffer2, uint, 12);
+RWStructuredBuffer<Particle> particleBuffer : register(u0);
+RWStructuredBuffer<uint> aliveBuffer_CURRENT : register(u1);
+RWStructuredBuffer<uint> aliveBuffer_NEW : register(u2);
+RWStructuredBuffer<uint> deadBuffer : register(u3);
+RWByteAddressBuffer counterBuffer : register(u4);
+RWStructuredBuffer<float> distanceBuffer : register(u6);
+RWByteAddressBuffer vertexBuffer_POS : register(u7);
+RWByteAddressBuffer vertexBuffer_TEX : register(u8);
+RWByteAddressBuffer vertexBuffer_TEX2 : register(u9);
+RWByteAddressBuffer vertexBuffer_COL : register(u10);
+RWStructuredBuffer<uint> culledIndirectionBuffer : register(u11);
+RWStructuredBuffer<uint> culledIndirectionBuffer2 : register(u12);
 
 #define SPH_FLOOR_COLLISION
 #define SPH_BOX_COLLISION

@@ -263,7 +263,7 @@ void wiOcean::UpdateDisplacementMap(const OceanParameters& params, CommandList c
 		&buffer_Float2_H0, 
 		&buffer_Float_Omega
 	};
-	device->BindResources(cs0_srvs, TEXSLOT_ONDEMAND0, arraysize(cs0_srvs), cmd);
+	device->BindResources(cs0_srvs, 0, arraysize(cs0_srvs), cmd);
 
 	const GPUResource* cs0_uavs[1] = { &buffer_Float2_Ht };
 	device->BindUAVs(cs0_uavs, 0, arraysize(cs0_uavs), cmd);
@@ -318,7 +318,7 @@ void wiOcean::UpdateDisplacementMap(const OceanParameters& params, CommandList c
 	const GPUResource* cs_uavs[] = { &displacementMap };
 	device->BindUAVs(cs_uavs, 0, 1, cmd);
 	const GPUResource* cs_srvs[1] = { &buffer_Float_Dxyz };
-	device->BindResources(cs_srvs, TEXSLOT_ONDEMAND0, 1, cmd);
+	device->BindResources(cs_srvs, 0, 1, cmd);
 	{
 		GPUBarrier barriers[] = {
 			GPUBarrier::Image(&displacementMap, displacementMap.desc.layout, ResourceState::UNORDERED_ACCESS),
@@ -339,7 +339,7 @@ void wiOcean::UpdateDisplacementMap(const OceanParameters& params, CommandList c
 	cs_uavs[0] = { &gradientMap };
 	device->BindUAVs(cs_uavs, 0, 1, cmd);
 	cs_srvs[0] = &displacementMap;
-	device->BindResources(cs_srvs, TEXSLOT_ONDEMAND0, 1, cmd);
+	device->BindResources(cs_srvs, 0, 1, cmd);
 	{
 		GPUBarrier barriers[] = {
 			GPUBarrier::Image(&gradientMap, gradientMap.desc.layout, ResourceState::UNORDERED_ACCESS),
@@ -395,8 +395,8 @@ void wiOcean::Render(const CameraComponent& camera, const OceanParameters& param
 
 	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(Ocean_RenderCB), cmd);
 
-	device->BindResource(&displacementMap, TEXSLOT_ONDEMAND0, cmd);
-	device->BindResource(&gradientMap, TEXSLOT_ONDEMAND1, cmd);
+	device->BindResource(&displacementMap, 0, cmd);
+	device->BindResource(&gradientMap, 1, cmd);
 
 	device->Draw(dim.x*dim.y*6, 0, cmd);
 

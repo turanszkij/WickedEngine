@@ -3,9 +3,9 @@
 
 PUSHCONSTANT(push, PaintTextureCB);
 
-TEXTURE2D(texture_brush, float4, TEXSLOT_ONDEMAND0);
+Texture2D<float4> texture_brush : register(t0);
 
-RWTEXTURE2D(output, unorm float4, 0);
+RWTexture2D<unorm float4> output : register(u0);
 
 [numthreads(PAINT_TEXTURE_BLOCKSIZE, PAINT_TEXTURE_BLOCKSIZE, 1)]
 void main( uint3 DTid : SV_DispatchThreadID )

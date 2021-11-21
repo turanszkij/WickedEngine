@@ -4,10 +4,10 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-TEXTURE2D(input, float4, TEXSLOT_ONDEMAND0);
+Texture2D<float4> input : register(t0);
 
-RWTEXTURE2D(texture_raytrace, float4, 0);
-RWTEXTURE2D(texture_rayLengths, float, 1);
+RWTexture2D<float4> texture_raytrace : register(u0);
+RWTexture2D<float> texture_rayLengths : register(u1);
 
 static const float rayTraceStrideMin = 1.0f; // Step in horizontal or vertical pixels between samples.
 static const float rayTraceStrideMax = 10.0f; // Define max stride between samples. Roughness will interpolate between it's min and max counterparts.

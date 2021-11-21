@@ -5,6 +5,19 @@
 #include "ShaderInterop.h"
 #include "ShaderInterop_Renderer.h"
 
+// These are static samplers, they don't need to be bound:
+//	They are also on slots that are not bindable as sampler bind slots must be in [0,15] range!
+SamplerState sampler_linear_clamp : register(s100);
+SamplerState sampler_linear_wrap : register(s101);
+SamplerState sampler_linear_mirror : register(s102);
+SamplerState sampler_point_clamp : register(s103);
+SamplerState sampler_point_wrap : register(s104);
+SamplerState sampler_point_mirror : register(s105);
+SamplerState sampler_aniso_clamp : register(s106);
+SamplerState sampler_aniso_wrap : register(s107);
+SamplerState sampler_aniso_mirror : register(s108);
+SamplerComparisonState sampler_cmp_depth : register(s109);
+
 Texture2D bindless_textures[] : register(space1);
 ByteAddressBuffer bindless_buffers[] : register(space2);
 SamplerState bindless_samplers[] : register(space3);
@@ -90,18 +103,6 @@ inline float4x4 load_entitymatrix(uint matrixIndex)
 #define texture_lineardepth bindless_textures_float[GetCamera().texture_lineardepth_index]
 #define texture_gbuffer0 bindless_textures_uint2[GetCamera().texture_gbuffer0_index]
 #define texture_gbuffer1 bindless_textures_float2[GetCamera().texture_gbuffer1_index]
-
-// These are static samplers, don't need to be bound:
-SAMPLERSTATE(			sampler_linear_clamp,	SSLOT_LINEAR_CLAMP	);
-SAMPLERSTATE(			sampler_linear_wrap,	SSLOT_LINEAR_WRAP	);
-SAMPLERSTATE(			sampler_linear_mirror,	SSLOT_LINEAR_MIRROR	);
-SAMPLERSTATE(			sampler_point_clamp,	SSLOT_POINT_CLAMP	);
-SAMPLERSTATE(			sampler_point_wrap,		SSLOT_POINT_WRAP	);
-SAMPLERSTATE(			sampler_point_mirror,	SSLOT_POINT_MIRROR	);
-SAMPLERSTATE(			sampler_aniso_clamp,	SSLOT_ANISO_CLAMP	);
-SAMPLERSTATE(			sampler_aniso_wrap,		SSLOT_ANISO_WRAP	);
-SAMPLERSTATE(			sampler_aniso_mirror,	SSLOT_ANISO_MIRROR	);
-SAMPLERCOMPARISONSTATE(	sampler_cmp_depth,		SSLOT_CMP_DEPTH		);
 
 #define PI 3.14159265358979323846
 #define SQRT2 1.41421356237309504880

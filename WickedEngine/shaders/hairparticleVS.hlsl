@@ -2,7 +2,7 @@
 #include "hairparticleHF.hlsli"
 #include "ShaderInterop_HairParticle.h"
 
-TYPEDBUFFER(primitiveBuffer, uint, 0);
+Buffer<uint> primitiveBuffer : register(t0);
 
 VertexToPixel main(uint vid : SV_VERTEXID)
 {

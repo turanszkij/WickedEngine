@@ -2,15 +2,15 @@
 #include "emittedparticleHF.hlsli"
 #include "ShaderInterop_EmittedParticle.h"
 
-RWSTRUCTUREDBUFFER(particleBuffer, Particle, 0);
-RWSTRUCTUREDBUFFER(aliveBuffer_CURRENT, uint, 1);
-RWSTRUCTUREDBUFFER(aliveBuffer_NEW, uint, 2);
-RWSTRUCTUREDBUFFER(deadBuffer, uint, 3);
-RWRAWBUFFER(counterBuffer, 4);
+RWStructuredBuffer<Particle> particleBuffer : register(u0);
+RWStructuredBuffer<uint> aliveBuffer_CURRENT : register(u1);
+RWStructuredBuffer<uint> aliveBuffer_NEW : register(u2);
+RWStructuredBuffer<uint> deadBuffer : register(u3);
+RWByteAddressBuffer counterBuffer : register(u4);
 
 #ifdef EMIT_FROM_MESH
-TYPEDBUFFER(meshIndexBuffer, uint, TEXSLOT_ONDEMAND0);
-RAWBUFFER(meshVertexBuffer_POS, TEXSLOT_ONDEMAND1);
+Buffer<uint> meshIndexBuffer : register(t0);
+ByteAddressBuffer meshVertexBuffer_POS : register(t1);
 #endif // EMIT_FROM_MESH
 
 

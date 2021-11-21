@@ -5,17 +5,17 @@
 
 PUSHCONSTANT(msao_upsample, MSAO_UPSAMPLE);
 
-TEXTURE2D(LoResDB, float, TEXSLOT_ONDEMAND0);
-TEXTURE2D(HiResDB, float, TEXSLOT_ONDEMAND1);
-TEXTURE2D(LoResAO1, float, TEXSLOT_ONDEMAND2);
+Texture2D<float> LoResDB : register(t0);
+Texture2D<float> HiResDB : register(t1);
+Texture2D<float> LoResAO1 : register(t2);
 #ifdef COMBINE_LOWER_RESOLUTIONS
-TEXTURE2D(LoResAO2, float, TEXSLOT_ONDEMAND3);
+Texture2D<float> LoResAO2 : register(t3);
 #endif
 #ifdef BLEND_WITH_HIGHER_RESOLUTION
-TEXTURE2D(HiResAO, float, TEXSLOT_ONDEMAND4);
+Texture2D<float> HiResAO : register(t4);
 #endif
 
-RWTEXTURE2D(AoResult, unorm float, 0);
+RWTexture2D<unorm float> AoResult : register(u0);
 
 groupshared float DepthCache[256];
 groupshared float AOCache1[256];

@@ -417,7 +417,7 @@ void RendererWindow::Create(EditorComponent* editor)
 	textureQualityComboBox.AddItem("Trilinear");
 	textureQualityComboBox.AddItem("Anisotropic");
 	textureQualityComboBox.OnSelect([&](wiEventArgs args) {
-		wiGraphics::SamplerDesc desc = wiRenderer::GetSampler(SSLOT_OBJECTSHADER)->GetDesc();
+		wiGraphics::SamplerDesc desc = wiRenderer::GetSampler(SAMPLER_OBJECTSHADER)->GetDesc();
 
 		switch (args.iValue)
 		{
@@ -449,7 +449,7 @@ void RendererWindow::Create(EditorComponent* editor)
 	mipLodBiasSlider.SetSize(XMFLOAT2(100, itemheight));
 	mipLodBiasSlider.SetPos(XMFLOAT2(x, y += step));
 	mipLodBiasSlider.OnSlide([&](wiEventArgs args) {
-		wiGraphics::SamplerDesc desc = wiRenderer::GetSampler(SSLOT_OBJECTSHADER)->GetDesc();
+		wiGraphics::SamplerDesc desc = wiRenderer::GetSampler(SAMPLER_OBJECTSHADER)->GetDesc();
 		desc.mip_lod_bias = wiMath::Clamp(args.fValue, -15.9f, 15.9f);
 		wiRenderer::ModifyObjectSampler(desc);
 	});

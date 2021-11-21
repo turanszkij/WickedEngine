@@ -1,13 +1,13 @@
 #include "globals.hlsli"
 #include "ShaderInterop_EmittedParticle.h"
 
-STRUCTUREDBUFFER(aliveBuffer_CURRENT, uint, 0);
-RAWBUFFER(counterBuffer, 1);
-STRUCTUREDBUFFER(particleBuffer, Particle, 2);
-STRUCTUREDBUFFER(cellIndexBuffer, float, 3);
-STRUCTUREDBUFFER(cellOffsetBuffer, uint, 4);
+StructuredBuffer<uint> aliveBuffer_CURRENT : register(t0);
+ByteAddressBuffer counterBuffer : register(t1);
+StructuredBuffer<Particle> particleBuffer : register(t2);
+StructuredBuffer<float> cellIndexBuffer : register(t3);
+StructuredBuffer<uint> cellOffsetBuffer : register(t4);
 
-RWSTRUCTUREDBUFFER(densityBuffer, float, 0);
+RWStructuredBuffer<float> densityBuffer : register(u0);
 
 #ifndef SPH_USE_ACCELERATION_GRID
 // grid structure is not a good fit to exploit shared memory because one threadgroup can load from different initial cells :(

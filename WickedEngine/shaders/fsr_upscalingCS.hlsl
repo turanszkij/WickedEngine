@@ -9,9 +9,9 @@ PUSHCONSTANT(fsr, FSR);
 
 static const uint4 Sample = 0;
 
-TEXTURE2D(input, float4, TEXSLOT_ONDEMAND0);
+Texture2D<float4> input : register(t0);
 
-RWTEXTURE2D(output, float4, 0);
+RWTexture2D<float4> output : register(u0);
 
 AF4 FsrEasuRF(AF2 p) { AF4 res = input.GatherRed(sampler_linear_clamp, p, int2(0, 0)); return res; }
 AF4 FsrEasuGF(AF2 p) { AF4 res = input.GatherGreen(sampler_linear_clamp, p, int2(0, 0)); return res; }

@@ -10,10 +10,10 @@ static const float3 BILLBOARD[] = {
 };
 static const uint BILLBOARD_VERTEXCOUNT = 4;
 
-RAWBUFFER(counterBuffer, TEXSLOT_ONDEMAND20);
-STRUCTUREDBUFFER(particleBuffer, Particle, TEXSLOT_ONDEMAND21);
-STRUCTUREDBUFFER(culledIndirectionBuffer, uint, TEXSLOT_ONDEMAND22);
-STRUCTUREDBUFFER(culledIndirectionBuffer2, uint, TEXSLOT_ONDEMAND23);
+ByteAddressBuffer counterBuffer : register(t20);
+StructuredBuffer<Particle> particleBuffer, Particle : register(t21);
+StructuredBuffer<uint> culledIndirectionBuffer : register(t22);
+StructuredBuffer<uint> culledIndirectionBuffer2 : register(t23);
 
 static const uint VERTEXCOUNT = THREADCOUNT_MESH_SHADER * BILLBOARD_VERTEXCOUNT;
 static const uint PRIMITIVECOUNT = THREADCOUNT_MESH_SHADER * 2;

@@ -2,7 +2,7 @@
 #include "cullingShaderHF.hlsli"
 
 // View space frustums for the grid cells.
-RWSTRUCTUREDBUFFER(out_Frustums, Frustum, 0);
+RWStructuredBuffer<Frustum> out_Frustums : register(u0);
 
 [numthreads(TILED_CULLING_BLOCKSIZE, TILED_CULLING_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)

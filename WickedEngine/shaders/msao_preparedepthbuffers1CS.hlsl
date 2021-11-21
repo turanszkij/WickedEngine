@@ -3,10 +3,10 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
-RWTEXTURE2D(DS2x, float2, 0);
-RWTEXTURE2DARRAY(DS2xAtlas, float, 1);
-RWTEXTURE2D(DS4x, float2, 2);
-RWTEXTURE2DARRAY(DS4xAtlas, float, 3);
+RWTexture2D<float2> DS2x : register(u0);
+RWTexture2DArray<float> DS2xAtlas : register(u1);
+RWTexture2D<float2> DS4x : register(u2);
+RWTexture2DArray<float> DS4xAtlas : register(u3);
 
 groupshared float g_CacheW[256];
 

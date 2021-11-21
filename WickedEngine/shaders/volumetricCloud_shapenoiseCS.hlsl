@@ -2,7 +2,7 @@
 #include "volumetricCloudsHF.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
-RWTEXTURE3D(output, float4, 0);
+RWTexture3D<float4> output : register(u0);
 
 static const uint texSizeXY = 64;
 static const uint texSizeZ = 64;
