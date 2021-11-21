@@ -11,7 +11,7 @@ static const float3 BILLBOARD[] = {
 static const uint BILLBOARD_VERTEXCOUNT = 4;
 
 ByteAddressBuffer counterBuffer : register(t20);
-StructuredBuffer<Particle> particleBuffer, Particle : register(t21);
+StructuredBuffer<Particle> particleBuffer : register(t21);
 StructuredBuffer<uint> culledIndirectionBuffer : register(t22);
 StructuredBuffer<uint> culledIndirectionBuffer2 : register(t23);
 
