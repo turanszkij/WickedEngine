@@ -9286,7 +9286,7 @@ void Postprocess_RTReflection(
 
 	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
-	int temporal_output = res.frame % 2;
+	int temporal_output = device->GetFrameCount() % 2;
 	int temporal_history = 1 - temporal_output;
 
 	// Temporal pass:
@@ -9491,7 +9491,7 @@ void Postprocess_SSR(
 		device->EventEnd(cmd);
 	}
 
-	int temporal_output = res.frame % 2;
+	int temporal_output = device->GetFrameCount() % 2;
 	int temporal_history = 1 - temporal_output;
 
 	// Temporal pass:
@@ -10905,7 +10905,7 @@ void Postprocess_VolumetricClouds(
 	volumetricclouds_frame = (float)res.frame;
 	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 	
-	int temporal_output = res.frame % 2;
+	int temporal_output = device->GetFrameCount() % 2;
 	int temporal_history = 1 - temporal_output;
 
 	// Reprojection pass:
