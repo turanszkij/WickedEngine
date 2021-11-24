@@ -96,6 +96,12 @@ inline void ResolverAABB(Texture2D<float4> currentColor, SamplerState currentSam
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
+	if ((uint)ssr_frame == 0)
+	{
+		output[DTid.xy] = resolve_current[DTid.xy];
+		return;
+	}
+
 	const float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
 	const float depth = texture_depth.SampleLevel(sampler_linear_clamp, uv, 0);
 	if (depth == 0)

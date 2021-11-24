@@ -432,6 +432,7 @@ namespace wiRenderer
 	);
 	struct RTReflectionResources
 	{
+		mutable int frame = 0;
 		wiGraphics::Texture temporal[2];
 		wiGraphics::Texture rayLengths;
 	};
@@ -445,6 +446,7 @@ namespace wiRenderer
 	);
 	struct SSRResources
 	{
+		mutable int frame = 0;
 		wiGraphics::Texture texture_raytrace;
 		wiGraphics::Texture rayLengths;
 		wiGraphics::Texture texture_temporal[2];
@@ -552,6 +554,7 @@ namespace wiRenderer
 	);
 	struct VolumetricCloudResources
 	{
+		mutable int frame = 0;
 		wiGraphics::Texture texture_cloudRender;
 		wiGraphics::Texture texture_cloudDepth;
 		wiGraphics::Texture texture_reproject[2];

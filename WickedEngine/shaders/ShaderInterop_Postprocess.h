@@ -42,6 +42,7 @@ struct Bloom
 
 #define ssr_input_maxmip postprocess.params0.x
 #define ssr_input_resolution_max postprocess.params0.y
+#define ssr_frame postprocess.params0.w
 
 #define ssao_range postprocess.params0.x
 #define ssao_samplecount postprocess.params0.y
@@ -51,6 +52,7 @@ struct Bloom
 #define rtao_power ssao_power
 
 #define rtreflection_range ssao_range
+#define rtreflection_frame ssr_frame
 
 static const uint POSTPROCESS_HBAO_THREADCOUNT = 320;
 #define hbao_direction postprocess.params0.xy
@@ -58,7 +60,7 @@ static const uint POSTPROCESS_HBAO_THREADCOUNT = 320;
 #define hbao_uv_to_view_A postprocess.params1.xy
 #define hbao_uv_to_view_B postprocess.params1.zw
 
-#define sss_step postprocess.params0
+#define volumetricclouds_frame postprocess.params0.z
 
 static const uint POSTPROCESS_MSAO_BLOCKSIZE = 16;
 struct MSAO

@@ -9182,6 +9182,8 @@ void Postprocess_RTAO(
 }
 void CreateRTReflectionResources(RTReflectionResources& res, XMUINT2 resolution)
 {
+	res.frame = 0;
+
 	TextureDesc desc;
 	desc.width = resolution.x / 2;
 	desc.height = resolution.y / 2;
@@ -9227,6 +9229,7 @@ void Postprocess_RTReflection(
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 	rtreflection_range = range;
+	rtreflection_frame = (float)res.frame;
 	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	size_t shaderIdentifierSize = device->GetShaderIdentifierSize();
@@ -9283,7 +9286,7 @@ void Postprocess_RTReflection(
 
 	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
-	int temporal_output = device->GetFrameCount() % 2;
+	int temporal_output = res.frame % 2;
 	int temporal_history = 1 - temporal_output;
 
 	// Temporal pass:
@@ -9362,11 +9365,15 @@ void Postprocess_RTReflection(
 		device->EventEnd(cmd);
 	}
 
+	res.frame++;
+
 	wiProfiler::EndRange(prof_range);
 	device->EventEnd(cmd);
 }
 void CreateSSRResources(SSRResources& res, XMUINT2 resolution)
 {
+	res.frame = 0;
+
 	TextureDesc desc;
 	desc.type = TextureDesc::Type::TEXTURE_2D;
 	desc.width = resolution.x / 2;
@@ -9405,6 +9412,7 @@ void Postprocess_SSR(
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 	ssr_input_maxmip = float(input_desc.mip_levels - 1);
 	ssr_input_resolution_max = (float)std::max(input_desc.width, input_desc.height);
+	ssr_frame = (float)res.frame;
 	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	// Raytrace pass:
@@ -9483,7 +9491,7 @@ void Postprocess_SSR(
 		device->EventEnd(cmd);
 	}
 
-	int temporal_output = device->GetFrameCount() % 2;
+	int temporal_output = res.frame % 2;
 	int temporal_history = 1 - temporal_output;
 
 	// Temporal pass:
@@ -9561,6 +9569,8 @@ void Postprocess_SSR(
 
 		device->EventEnd(cmd);
 	}
+
+	res.frame++;
 
 	wiProfiler::EndRange(range);
 	device->EventEnd(cmd);
@@ -10779,6 +10789,8 @@ void Postprocess_MotionBlur(
 }
 void CreateVolumetricCloudResources(VolumetricCloudResources& res, XMUINT2 resolution)
 {
+	res.frame = 0;
+
 	XMUINT2 renderResolution = XMUINT2(resolution.x / 4, resolution.y / 4);
 	XMUINT2 reprojectionResolution = XMUINT2(resolution.x / 2, resolution.y / 2);
 	XMUINT2 maskResolution = XMUINT2(resolution.x / 4, resolution.y / 4); // Needs to be half of final cloud output
@@ -10890,9 +10902,10 @@ void Postprocess_VolumetricClouds(
 	postprocess.resolution.y = reprojection_desc.height;
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
+	volumetricclouds_frame = (float)res.frame;
 	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 	
-	int temporal_output = device->GetFrameCount() % 2;
+	int temporal_output = res.frame % 2;
 	int temporal_history = 1 - temporal_output;
 
 	// Reprojection pass:
@@ -10979,6 +10992,8 @@ void Postprocess_VolumetricClouds(
 
 		device->EventEnd(cmd);
 	}
+
+	res.frame++;
 
 	wiProfiler::EndRange(range);
 	device->EventEnd(cmd);

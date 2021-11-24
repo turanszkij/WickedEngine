@@ -192,7 +192,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	float4 result = lerp(previous, current, temporalResponse);
     
-	result = is_saturated(prevUV) ? result : current;
+	result = (is_saturated(prevUV) && volumetricclouds_frame > 0) ? result : current;
 
 	output[DTid.xy] = result;
 
