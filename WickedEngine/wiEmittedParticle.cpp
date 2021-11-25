@@ -330,7 +330,7 @@ void wiEmittedParticle::UpdateCPU(const TransformComponent& transform, float dt)
 	if (IsPaused())
 		return;
 
-	emit = std::max(0.0f, emit - floorf(emit));
+	emit = std::max(0.0f, emit - std::floor(emit));
 
 	center = transform.GetPosition();
 
@@ -537,7 +537,7 @@ void wiEmittedParticle::UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex
 				&sphPartitionCellOffsets,
 			};
 			device->BindUAVs(uav_partitionoffsets, 0, arraysize(uav_partitionoffsets), cmd);
-			device->Dispatch((uint32_t)ceilf((float)SPH_PARTITION_BUCKET_COUNT / (float)THREADCOUNT_SIMULATION), 1, 1, cmd);
+			device->Dispatch((SPH_PARTITION_BUCKET_COUNT + THREADCOUNT_SIMULATION - 1) / THREADCOUNT_SIMULATION, 1, 1, cmd);
 			device->Barrier(&barrier_memory, 1, cmd);
 			device->EventEnd(cmd);
 

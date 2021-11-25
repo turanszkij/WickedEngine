@@ -1,8 +1,6 @@
 #pragma once
 #include "CommonInclude.h"
 
-#include <algorithm>
-
 #if __has_include("DirectXMath.h")
 // In this case, DirectXMath is coming from Windows SDK.
 //	It is better to use this on Windows as some Windows libraries could depend on the same 
@@ -19,21 +17,24 @@
 #include "Utility/DirectXCollision.h"
 #endif
 
+#include <cmath>
+#include <algorithm>
+
 using namespace DirectX;
 using namespace DirectX::PackedVector;
-static const XMFLOAT4X4 IDENTITYMATRIX = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+static constexpr XMFLOAT4X4 IDENTITYMATRIX = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
 
 namespace wiMath
 {
-	inline float saturate(float x) { return std::min(std::max(x, 0.0f), 1.0f); }
+	constexpr float saturate(float x) { return std::min(std::max(x, 0.0f), 1.0f); }
 
 	inline float Length(const XMFLOAT2& v)
 	{
-		return sqrtf(v.x*v.x + v.y*v.y);
+		return std::sqrt(v.x*v.x + v.y*v.y);
 	}
 	inline float Length(const XMFLOAT3& v)
 	{
-		return sqrtf(v.x*v.x + v.y*v.y + v.z*v.z);
+		return std::sqrt(v.x*v.x + v.y*v.y + v.z*v.z);
 	}
 	inline float Distance(const XMVECTOR& v1, const XMVECTOR& v2)
 	{

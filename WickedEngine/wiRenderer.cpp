@@ -3003,7 +3003,7 @@ void UpdatePerFrameData(
 	{
 		// We don't update it if the scene is empty, this even makes it easier to debug
 		const float f = 0.05f / voxelSceneData.voxelsize;
-		XMFLOAT3 center = XMFLOAT3(floorf(vis.camera->Eye.x * f) / f, floorf(vis.camera->Eye.y * f) / f, floorf(vis.camera->Eye.z * f) / f);
+		XMFLOAT3 center = XMFLOAT3(std::floor(vis.camera->Eye.x * f) / f, std::floor(vis.camera->Eye.y * f) / f, std::floor(vis.camera->Eye.z * f) / f);
 		if (wiMath::DistanceSquared(center, voxelSceneData.center) > 0)
 		{
 			voxelSceneData.centerChangedThisFrame = true;
@@ -6332,8 +6332,8 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 				device->PushConstants(&push, sizeof(push), cmd);
 
 				device->Dispatch(
-					std::max(1u, (uint32_t)ceilf((float)desc.width / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
-					std::max(1u, (uint32_t)ceilf((float)desc.height / GENERATEMIPCHAIN_2D_BLOCK_SIZE)),
+					(desc.width + GENERATEMIPCHAIN_2D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_2D_BLOCK_SIZE,
+					(desc.height + GENERATEMIPCHAIN_2D_BLOCK_SIZE - 1) / GENERATEMIPCHAIN_2D_BLOCK_SIZE,
 					6,
 					cmd);
 
@@ -11405,7 +11405,7 @@ void Postprocess_Upsample_Bilateral(
 	postprocess.params0.y = 1.0f / (float)input.GetDesc().width;
 	postprocess.params0.z = 1.0f / (float)input.GetDesc().height;
 	// select mip from lowres depth mipchain:
-	postprocess.params0.w = floorf(std::max(1.0f, log2f(std::max((float)desc.width / (float)input.GetDesc().width, (float)desc.height / (float)input.GetDesc().height))));
+	postprocess.params0.w = std::floor(std::max(1.0f, log2f(std::max((float)desc.width / (float)input.GetDesc().width, (float)desc.height / (float)input.GetDesc().height))));
 	postprocess.params1.x = (float)input.GetDesc().width;
 	postprocess.params1.y = (float)input.GetDesc().height;
 	postprocess.params1.z = 1.0f / postprocess.params1.x;
@@ -11551,7 +11551,7 @@ void Postprocess_NormalsFromDepth(
 	postprocess.resolution.y = desc.height;
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
-	postprocess.params0.x = floorf(std::max(1.0f, log2f(std::max((float)desc.width / (float)depthbuffer.GetDesc().width, (float)desc.height / (float)depthbuffer.GetDesc().height))));
+	postprocess.params0.x = std::floor(std::max(1.0f, log2f(std::max((float)desc.width / (float)depthbuffer.GetDesc().width, (float)desc.height / (float)depthbuffer.GetDesc().height))));
 	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_NORMALSFROMDEPTH], cmd);
