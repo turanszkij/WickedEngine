@@ -927,9 +927,13 @@ namespace wiHelper
 		ss << "const uint8_t " << dataName << "[] = {";
 		for (size_t i = 0; i < size; ++i)
 		{
+			if (i % 32 == 0)
+			{
+				ss << std::endl;
+			}
 			ss << (uint32_t)data[i] << ",";
 		}
-		ss << "};" << std::endl;
+		ss << std::endl << "};" << std::endl;
 		return FileWrite(dst_filename, (uint8_t*)ss.str().c_str(), ss.str().length());
 	}
 

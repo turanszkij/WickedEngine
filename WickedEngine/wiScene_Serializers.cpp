@@ -4,6 +4,7 @@
 #include "wiRandom.h"
 #include "wiHelper.h"
 #include "wiBackLog.h"
+#include "wiTimer.h"
 
 #include <chrono>
 #include <string>
@@ -1295,7 +1296,7 @@ namespace wiScene
 
 	void Scene::Serialize(wiArchive& archive)
 	{
-		std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
+		wiTimer timer;
 
 		if (archive.IsReadMode())
 		{
@@ -1360,10 +1361,7 @@ namespace wiScene
 			animation_datas.Serialize(archive, seri);
 		}
 
-		std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
-		std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
-		double sec = time_span.count();
-		wiBackLog::post((std::string("Scene serialize took ") + std::to_string(sec) + std::string(" sec")).c_str());
+		wiBackLog::post("Scene serialize took " + std::to_string(timer.elapsed_seconds()) + " sec");
 	}
 
 	Entity Scene::Entity_Serialize(wiArchive& archive, Entity entity)

@@ -4,7 +4,7 @@
 #include <fstream>
 
 // this should always be only INCREMENTED and only if a new serialization is implemeted somewhere!
-uint64_t __archiveVersion = 72;
+uint64_t __archiveVersion = 73;
 // this is the version number of which below the archive is not compatible with the current version
 uint64_t __archiveVersionBarrier = 22;
 
@@ -23,17 +23,18 @@ wiArchive::wiArchive(const std::string& fileName, bool readMode) : fileName(file
 		{
 			if (wiHelper::FileRead(fileName, DATA))
 			{
+				data_ptr = DATA.data();
 				(*this) >> version;
 				if (version < __archiveVersionBarrier)
 				{
 					std::string ss = "The archive version (" + std::to_string(version) + ") is no longer supported!";
-					wiHelper::messageBox(ss.c_str(), "Error!");
+					wiHelper::messageBox(ss, "Error!");
 					Close();
 				}
 				if (version > __archiveVersion)
 				{
 					std::string ss = "The archive version (" + std::to_string(version) + ") is higher than the program's (" + std::to_string(__archiveVersion) + ")!";
-					wiHelper::messageBox(ss.c_str(), "Error!");
+					wiHelper::messageBox(ss, "Error!");
 					Close();
 				}
 			}
@@ -45,14 +46,18 @@ wiArchive::wiArchive(const std::string& fileName, bool readMode) : fileName(file
 	}
 }
 
+wiArchive::wiArchive(const uint8_t* data)
+{
+	data_ptr = data;
+	SetReadModeAndResetPos(true);
+}
+
 void wiArchive::CreateEmpty()
 {
-	readMode = false;
-	pos = 0;
-
 	version = __archiveVersion;
 	DATA.resize(128); // starting size
-	(*this) << version;
+	data_ptr = DATA.data();
+	SetReadModeAndResetPos(false);
 }
 
 void wiArchive::SetReadModeAndResetPos(bool isReadMode)
@@ -70,12 +75,6 @@ void wiArchive::SetReadModeAndResetPos(bool isReadMode)
 	}
 }
 
-bool wiArchive::IsOpen()
-{
-	// when it is open, DATA is not null because it contains the version number at least!
-	return !DATA.empty();
-}
-
 void wiArchive::Close()
 {
 	if (!readMode && !fileName.empty())
@@ -87,7 +86,12 @@ void wiArchive::Close()
 
 bool wiArchive::SaveFile(const std::string& fileName)
 {
-	return wiHelper::FileWrite(fileName, DATA.data(), pos);
+	return wiHelper::FileWrite(fileName, data_ptr, pos);
+}
+
+bool wiArchive::SaveHeaderFile(const std::string& fileName, const std::string& dataName)
+{
+	return wiHelper::Bin2H(data_ptr, pos, fileName, dataName.c_str());
 }
 
 const std::string& wiArchive::GetSourceDirectory() const
