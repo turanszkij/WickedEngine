@@ -1,5 +1,6 @@
 This file contains changelog of wiArchive versions
 
+73: wiArchive no longer saves null terminator for strings
 72: Scene::Entity_Serialize() recursive serialization
 71: serialized WeatherComponent::fogHeightStart and fogHeightEnd
 70: serialized VolumetricCloudParameters
