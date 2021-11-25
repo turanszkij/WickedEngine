@@ -4,6 +4,7 @@
 #include <SDL_events.h>
 #include <SDL_scancode.h>
 #include <fstream>
+#include <thread>
 
 #include "stdafx.h"
 #include <SDL2/SDL.h>
@@ -107,6 +108,26 @@ int sdl_loop(Editor &editor)
                 case SDL_WINDOWEVENT_RESIZED:
                     // Tells the engine to reload window configuration (size and dpi)
                     editor.SetWindow(editor.window);
+                    break;
+                case SDL_WINDOWEVENT_FOCUS_GAINED:
+                    editor.is_window_active = true;
+                    std::thread([] {
+                        wiBackLog::post("[Shader check] Started...");
+                        if (wiShaderCompiler::CheckRegisteredShadersOutdated())
+                        {
+                            wiBackLog::post("[Shader check] Changes detected, initiating reload...");
+                            wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [](uint64_t userdata) {
+                                wiRenderer::ReloadShaders();
+                            });
+                        }
+                        else
+                        {
+                            wiBackLog::post("[Shader check] All up to date");
+                        }
+                    }).detach();
+                    break;
+                case SDL_WINDOWEVENT_FOCUS_LOST:
+                    editor.is_window_active = false;
                     break;
                 default:
                     break;
