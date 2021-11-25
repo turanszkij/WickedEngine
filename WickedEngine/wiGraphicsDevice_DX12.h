@@ -8,7 +8,6 @@
 
 #ifdef WICKEDENGINE_BUILD_DX12
 #include "wiGraphicsDevice.h"
-#include "wiMath.h"
 
 #include <dxgi1_6.h>
 #include <wrl/client.h> // ComPtr

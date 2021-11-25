@@ -1,7 +1,6 @@
 #include "wiWidget.h"
 #include "wiImage.h"
 #include "wiTextureHelper.h"
-#include "wiMath.h"
 #include "wiHelper.h"
 #include "wiInput.h"
 #include "wiRenderer.h"

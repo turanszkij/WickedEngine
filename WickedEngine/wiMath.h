@@ -3,6 +3,26 @@
 
 #include <algorithm>
 
+#if __has_include("DirectXMath.h")
+// In this case, DirectXMath is coming from Windows SDK.
+//	It is better to use this on Windows as some Windows libraries could depend on the same 
+//	DirectXMath headers
+#include <DirectXMath.h>
+#include <DirectXPackedVector.h>
+#include <DirectXCollision.h>
+#else
+// In this case, DirectXMath is coming from supplied source code
+//	On platforms that don't have Windows SDK, the source code for DirectXMath is provided
+//	as part of the engine utilities
+#include "Utility/DirectXMath.h"
+#include "Utility/DirectXPackedVector.h"
+#include "Utility/DirectXCollision.h"
+#endif
+
+using namespace DirectX;
+using namespace DirectX::PackedVector;
+static const XMFLOAT4X4 IDENTITYMATRIX = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+
 namespace wiMath
 {
 	inline float saturate(float x) { return std::min(std::max(x, 0.0f), 1.0f); }
@@ -78,27 +98,27 @@ namespace wiMath
 		XMVECTOR T = XMVector3Dot(Point - A, AB) / XMVector3Dot(AB, AB);
 		return A + XMVectorSaturate(T) * AB;
 	}
-	inline constexpr XMFLOAT3 getVectorHalfWayPoint(const XMFLOAT3& a, const XMFLOAT3& b)
+	constexpr XMFLOAT3 getVectorHalfWayPoint(const XMFLOAT3& a, const XMFLOAT3& b)
 	{
 		return XMFLOAT3((a.x + b.x)*0.5f, (a.y + b.y)*0.5f, (a.z + b.z)*0.5f);
 	}
-	inline constexpr float InverseLerp(float value1, float value2, float pos)
+	constexpr float InverseLerp(float value1, float value2, float pos)
 	{
 		return (pos - value1) / (value2 - value1);
 	}
-	inline constexpr float Lerp(float value1, float value2, float amount)
+	constexpr float Lerp(float value1, float value2, float amount)
 	{
 		return value1 + (value2 - value1) * amount;
 	}
-	inline constexpr XMFLOAT2 Lerp(const XMFLOAT2& a, const XMFLOAT2& b, float i)
+	constexpr XMFLOAT2 Lerp(const XMFLOAT2& a, const XMFLOAT2& b, float i)
 	{
 		return XMFLOAT2(Lerp(a.x, b.x, i), Lerp(a.y, b.y, i));
 	}
-	inline constexpr XMFLOAT3 Lerp(const XMFLOAT3& a, const XMFLOAT3& b, float i)
+	constexpr XMFLOAT3 Lerp(const XMFLOAT3& a, const XMFLOAT3& b, float i)
 	{
 		return XMFLOAT3(Lerp(a.x, b.x, i), Lerp(a.y, b.y, i), Lerp(a.z, b.z, i));
 	}
-	inline constexpr XMFLOAT4 Lerp(const XMFLOAT4& a, const XMFLOAT4& b, float i)
+	constexpr XMFLOAT4 Lerp(const XMFLOAT4& a, const XMFLOAT4& b, float i)
 	{
 		return XMFLOAT4(Lerp(a.x, b.x, i), Lerp(a.y, b.y, i), Lerp(a.z, b.z, i), Lerp(a.w, b.w, i));
 	}
@@ -111,24 +131,24 @@ namespace wiMath
 		XMStoreFloat4(&retVal, result);
 		return retVal;
 	}
-	inline constexpr XMFLOAT3 Max(const XMFLOAT3& a, const XMFLOAT3& b) {
+	constexpr XMFLOAT3 Max(const XMFLOAT3& a, const XMFLOAT3& b) {
 		return XMFLOAT3(std::max(a.x, b.x), std::max(a.y, b.y), std::max(a.z, b.z));
 	}
-	inline constexpr XMFLOAT3 Min(const XMFLOAT3& a, const XMFLOAT3& b) {
+	constexpr XMFLOAT3 Min(const XMFLOAT3& a, const XMFLOAT3& b) {
 		return XMFLOAT3(std::min(a.x, b.x), std::min(a.y, b.y), std::min(a.z, b.z));
 	}
-	inline constexpr float Clamp(float val, float min, float max)
+	constexpr float Clamp(float val, float min, float max)
 	{
 		if (val < min) return min;
 		else if (val > max) return max;
 		return val;
 	}
-	inline constexpr float SmoothStep(float value1, float value2, float amount)
+	constexpr float SmoothStep(float value1, float value2, float amount)
 	{
 		amount = Clamp((amount - value1) / (value2 - value1), 0.0f, 1.0f);
 		return amount * amount*amount*(amount*(amount * 6 - 15) + 10);
 	}
-	inline constexpr bool Collision2D(const XMFLOAT2& hitBox1Pos, const XMFLOAT2& hitBox1Siz, const XMFLOAT2& hitBox2Pos, const XMFLOAT2& hitBox2Siz)
+	constexpr bool Collision2D(const XMFLOAT2& hitBox1Pos, const XMFLOAT2& hitBox1Siz, const XMFLOAT2& hitBox2Pos, const XMFLOAT2& hitBox2Siz)
 	{
 		if (hitBox1Pos.x + hitBox1Siz.x < hitBox2Pos.x)
 			return false;
@@ -141,7 +161,7 @@ namespace wiMath
 
 		return true;
 	}
-	inline constexpr uint32_t GetNextPowerOfTwo(uint32_t x)
+	constexpr uint32_t GetNextPowerOfTwo(uint32_t x)
 	{
 		--x;
 		x |= x >> 1;
@@ -151,7 +171,7 @@ namespace wiMath
 		x |= x >> 16;
 		return ++x;
 	}
-	inline constexpr uint64_t GetNextPowerOfTwo(uint64_t x)
+	constexpr uint64_t GetNextPowerOfTwo(uint64_t x)
 	{
 		--x;
 		x |= x >> 1;

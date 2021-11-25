@@ -145,7 +145,7 @@ int wiImageParams_BindLua::SetPos(lua_State* L)
 		Vector_BindLua* vector = Luna<Vector_BindLua>::lightcheck(L, 1);
 		if (vector != nullptr)
 		{
-			XMStoreFloat3(&params.pos, vector->vector);
+			XMStoreFloat3(&params.pos, XMLoadFloat4(vector));
 		}
 	}
 	else
@@ -162,7 +162,7 @@ int wiImageParams_BindLua::SetSize(lua_State* L)
 		Vector_BindLua* vector = Luna<Vector_BindLua>::lightcheck(L, 1);
 		if (vector != nullptr)
 		{
-			XMStoreFloat2(&params.siz, vector->vector);
+			XMStoreFloat2(&params.siz, XMLoadFloat4(vector));
 		}
 	}
 	else
@@ -179,7 +179,7 @@ int wiImageParams_BindLua::SetPivot(lua_State* L)
 		Vector_BindLua* vector = Luna<Vector_BindLua>::lightcheck(L, 1);
 		if (vector != nullptr)
 		{
-			XMStoreFloat2(&params.pivot, vector->vector);
+			XMStoreFloat2(&params.pivot, XMLoadFloat4(vector));
 		}
 	}
 	else
@@ -196,7 +196,7 @@ int wiImageParams_BindLua::SetColor(lua_State* L)
 		Vector_BindLua* param = Luna<Vector_BindLua>::lightcheck(L, 1);
 		if (param != nullptr)
 		{
-			XMStoreFloat4(&params.color, param->vector);
+			XMStoreFloat4(&params.color, XMLoadFloat4(param));
 		}
 	}
 	else
@@ -318,7 +318,7 @@ int wiImageParams_BindLua::SetTexOffset(lua_State* L)
 		Vector_BindLua* vector = Luna<Vector_BindLua>::lightcheck(L, 1);
 		if (vector != nullptr)
 		{
-			XMStoreFloat2(&params.texOffset, vector->vector);
+			XMStoreFloat2(&params.texOffset, XMLoadFloat4(vector));
 		}
 	}
 	else
@@ -335,7 +335,7 @@ int wiImageParams_BindLua::SetTexOffset2(lua_State* L)
 		Vector_BindLua* vector = Luna<Vector_BindLua>::lightcheck(L, 1);
 		if (vector != nullptr)
 		{
-			XMStoreFloat2(&params.texOffset2, vector->vector);
+			XMStoreFloat2(&params.texOffset2, XMLoadFloat4(vector));
 		}
 	}
 	else
@@ -353,7 +353,7 @@ int wiImageParams_BindLua::EnableDrawRect(lua_State* L)
 		if (vector != nullptr)
 		{
 			XMFLOAT4 drawrect;
-			XMStoreFloat4(&drawrect, vector->vector);
+			XMStoreFloat4(&drawrect, XMLoadFloat4(vector));
 			params.enableDrawRect(drawrect);
 		}
 	}
@@ -372,7 +372,7 @@ int wiImageParams_BindLua::EnableDrawRect2(lua_State* L)
 		if (vector != nullptr)
 		{
 			XMFLOAT4 drawrect2;
-			XMStoreFloat4(&drawrect2, vector->vector);
+			XMStoreFloat4(&drawrect2, XMLoadFloat4(vector));
 			params.enableDrawRect2(drawrect2);
 		}
 	}

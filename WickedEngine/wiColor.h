@@ -38,6 +38,7 @@ struct wiColor
 	}
 	constexpr operator XMFLOAT3() const { return toFloat3(); }
 	constexpr operator XMFLOAT4() const { return toFloat4(); }
+	constexpr operator uint32_t() const { return rgba; }
 
 	static constexpr wiColor fromFloat4(const XMFLOAT4& value)
 	{

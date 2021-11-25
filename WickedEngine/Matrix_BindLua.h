@@ -2,17 +2,18 @@
 #include "CommonInclude.h"
 #include "wiLua.h"
 #include "wiLuna.h"
+#include "wiMath.h"
 
-class Matrix_BindLua
+class Matrix_BindLua : public XMFLOAT4X4
 {
 public:
-	DirectX::XMMATRIX matrix;
-
 	static const char className[];
 	static Luna<Matrix_BindLua>::FunctionType methods[];
 	static Luna<Matrix_BindLua>::PropertyType properties[];
 
-	Matrix_BindLua(const DirectX::XMMATRIX& matrix);
+	Matrix_BindLua();
+	Matrix_BindLua(const XMMATRIX& matrix);
+	Matrix_BindLua(const XMFLOAT4X4& matrix);
 	Matrix_BindLua(lua_State* L);
 
 	int GetRow(lua_State* L);
@@ -33,7 +34,5 @@ public:
 	int Inverse(lua_State* L);
 
 	static void Bind();
-
-	ALIGN_16
 };
 

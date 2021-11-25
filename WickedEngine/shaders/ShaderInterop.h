@@ -4,6 +4,7 @@
 #ifdef __cplusplus // not invoking shader compiler, but included in engine source
 
 // Application-side types:
+#include "../wiMath.h"
 
 using matrix = XMMATRIX;
 using float3x4 = XMFLOAT3X4;

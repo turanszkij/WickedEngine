@@ -1,5 +1,4 @@
 #include "wiScene.h"
-#include "wiMath.h"
 #include "wiTextureHelper.h"
 #include "wiResourceManager.h"
 #include "wiPhysicsEngine.h"
@@ -3243,12 +3242,13 @@ namespace wiScene
 					{
 						// TLAS instance data:
 						RaytracingAccelerationStructureDesc::TopLevel::Instance instance = {};
-						instance = {};
-						instance.transform = XMFLOAT3X4(
-							worldMatrix._11, worldMatrix._21, worldMatrix._31, worldMatrix._41,
-							worldMatrix._12, worldMatrix._22, worldMatrix._32, worldMatrix._42,
-							worldMatrix._13, worldMatrix._23, worldMatrix._33, worldMatrix._43
-						);
+						for (int i = 0; i < arraysize(instance.transform); ++i)
+						{
+							for (int j = 0; j < arraysize(instance.transform[i]); ++j)
+							{
+								instance.transform[i][j] = worldMatrix.m[j][i];
+							}
+						}
 						instance.instance_id = args.jobIndex;
 						instance.instance_mask = 1;
 						instance.bottom_level = mesh->BLAS;
@@ -3670,12 +3670,13 @@ namespace wiScene
 					{
 						// TLAS instance data:
 						RaytracingAccelerationStructureDesc::TopLevel::Instance instance = {};
-						instance = {};
-						instance.transform = XMFLOAT3X4(
-							IDENTITYMATRIX._11, IDENTITYMATRIX._21, IDENTITYMATRIX._31, IDENTITYMATRIX._41,
-							IDENTITYMATRIX._12, IDENTITYMATRIX._22, IDENTITYMATRIX._32, IDENTITYMATRIX._42,
-							IDENTITYMATRIX._13, IDENTITYMATRIX._23, IDENTITYMATRIX._33, IDENTITYMATRIX._43
-						);
+						for (int i = 0; i < arraysize(instance.transform); ++i)
+						{
+							for (int j = 0; j < arraysize(instance.transform[i]); ++j)
+							{
+								instance.transform[i][j] = IDENTITYMATRIX.m[j][i];
+							}
+						}
 						instance.instance_id = (uint32_t)instanceIndex;
 						instance.instance_mask = 1;
 						instance.bottom_level = hair.BLAS;
@@ -3746,12 +3747,13 @@ namespace wiScene
 			{
 				// TLAS instance data:
 				RaytracingAccelerationStructureDesc::TopLevel::Instance instance = {};
-				instance = {};
-				instance.transform = XMFLOAT3X4(
-					IDENTITYMATRIX._11, IDENTITYMATRIX._21, IDENTITYMATRIX._31, IDENTITYMATRIX._41,
-					IDENTITYMATRIX._12, IDENTITYMATRIX._22, IDENTITYMATRIX._32, IDENTITYMATRIX._42,
-					IDENTITYMATRIX._13, IDENTITYMATRIX._23, IDENTITYMATRIX._33, IDENTITYMATRIX._43
-				);
+				for (int i = 0; i < arraysize(instance.transform); ++i)
+				{
+					for (int j = 0; j < arraysize(instance.transform[i]); ++j)
+					{
+						instance.transform[i][j] = IDENTITYMATRIX.m[j][i];
+					}
+				}
 				instance.instance_id = (uint32_t)instanceIndex;
 				instance.instance_mask = 1;
 				instance.bottom_level = emitter.BLAS;

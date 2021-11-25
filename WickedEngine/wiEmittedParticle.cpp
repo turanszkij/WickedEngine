@@ -1,5 +1,4 @@
 #include "wiEmittedParticle.h"
-#include "wiMath.h"
 #include "wiScene.h"
 #include "wiRenderer.h"
 #include "wiResourceManager.h"

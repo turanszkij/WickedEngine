@@ -85,8 +85,8 @@ int wiSpriteFont_BindLua::SetPos(lua_State* L)
 		Vector_BindLua* param = Luna<Vector_BindLua>::lightcheck(L, 1);
 		if (param != nullptr)
 		{
-			font.params.posX = XMVectorGetX(param->vector);
-			font.params.posY = XMVectorGetY(param->vector);
+			font.params.posX = param->x;
+			font.params.posY = param->y;
 		}
 		else
 			wiLua::SError(L, "SetPos(Vector pos) argument is not a vector!");
@@ -103,8 +103,8 @@ int wiSpriteFont_BindLua::SetSpacing(lua_State* L)
 		Vector_BindLua* param = Luna<Vector_BindLua>::lightcheck(L, 1);
 		if (param != nullptr)
 		{
-			font.params.spacingX = XMVectorGetX(param->vector);
-			font.params.spacingY = XMVectorGetY(param->vector);
+			font.params.spacingX = param->x;
+			font.params.spacingY = param->y;
 		}
 		else
 			wiLua::SError(L, "SetSpacing(Vector spacing) argument is not a vector!");
@@ -136,9 +136,7 @@ int wiSpriteFont_BindLua::SetColor(lua_State* L)
 		Vector_BindLua* param = Luna<Vector_BindLua>::lightcheck(L, 1);
 		if (param != nullptr)
 		{
-			XMFLOAT4 unpacked;
-			XMStoreFloat4(&unpacked, param->vector);
-			font.params.color = wiColor::fromFloat4(unpacked);
+			font.params.color = wiColor::fromFloat4(*param);
 		}
 		else
 		{
@@ -158,9 +156,7 @@ int wiSpriteFont_BindLua::SetShadowColor(lua_State* L)
 		Vector_BindLua* param = Luna<Vector_BindLua>::lightcheck(L, 1);
 		if (param != nullptr)
 		{
-			XMFLOAT4 unpacked;
-			XMStoreFloat4(&unpacked, param->vector);
-			font.params.shadowColor = wiColor::fromFloat4(unpacked);
+			font.params.shadowColor = wiColor::fromFloat4(*param);
 		}
 		else
 		{

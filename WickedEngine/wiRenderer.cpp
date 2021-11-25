@@ -4,7 +4,6 @@
 #include "wiSprite.h"
 #include "wiScene.h"
 #include "wiHelper.h"
-#include "wiMath.h"
 #include "wiTextureHelper.h"
 #include "wiEnums.h"
 #include "wiRectPacker.h"

@@ -4,6 +4,7 @@
 #include "wiIntersect.h"
 #include "shaders/ShaderInterop_EmittedParticle.h"
 #include "wiEnums.h"
+#include "wiMath.h"
 #include "wiScene_Decl.h"
 #include "wiECS.h"
 

@@ -1,6 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiPlatform.h"
+#include "wiMath.h"
 
 // The canvas specifies a DPI-aware drawing area
 struct wiCanvas

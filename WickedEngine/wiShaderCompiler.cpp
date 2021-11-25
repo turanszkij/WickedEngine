@@ -662,7 +662,7 @@ namespace wiShaderCompiler
 #endif // SHADERCOMPILER_ENABLED
 	}
 
-	static const char* shadermetaextension = "wishadermeta";
+	static constexpr const char* shadermetaextension = "wishadermeta";
 	bool SaveShaderAndMetadata(const std::string& shaderfilename, const CompilerOutput& output)
 	{
 #ifdef SHADERCOMPILER_ENABLED

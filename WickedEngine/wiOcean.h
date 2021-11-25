@@ -3,6 +3,7 @@
 #include "wiGraphicsDevice.h"
 #include "wiFFTGenerator.h"
 #include "wiScene_Decl.h"
+#include "wiMath.h"
 
 #include <vector>
 

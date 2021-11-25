@@ -1,6 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiArchive.h"
+#include "wiMath.h"
 #include "wiECS.h"
 
 struct SPHERE;

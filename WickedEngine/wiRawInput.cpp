@@ -14,7 +14,7 @@
 
 namespace wiRawInput
 {
-	wiAllocators::LinearAllocator allocator;
+	wiAllocators::AlignedLinearAllocator allocator;
 	std::vector<uint8_t*> input_messages;
 
 	wiInput::KeyboardState keyboard;

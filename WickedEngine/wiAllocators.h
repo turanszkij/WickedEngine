@@ -1,45 +1,101 @@
 #pragma once
-#include <cstdint>
 #include <memory>
+#include <cstdint>
 #include <cassert>
+#include <vector>
 
 namespace wiAllocators
 {
-	inline size_t Align(size_t uLocation, size_t uAlign)
-	{
-		if ((0 == uAlign) || (uAlign & (uAlign - 1)))
-		{
-			assert(0);
-		}
-
-		return ((uLocation + (uAlign - 1)) & ~(uAlign - 1));
-	}
-
+	// Simple and efficient allocator that reserves a linear memory buffer and can:
+	//	- allocate bottom-up until there is space
+	//	- free from the last allocation top-down, for temporary allocations
+	//	- reset all allocations at once
 	class LinearAllocator
 	{
 	public:
 
-		~LinearAllocator()
-		{
-			_mm_free(buffer);
-		}
-
-		inline size_t get_capacity() const
+		constexpr size_t get_capacity() const
 		{
 			return capacity;
 		}
 
-		inline void reserve(size_t newCapacity, size_t align = 1)
+		inline void reserve(size_t newCapacity)
+		{
+			capacity = newCapacity;
+
+			std::free(buffer);
+			buffer = (uint8_t*)std::malloc(capacity);
+		}
+
+		constexpr uint8_t* allocate(size_t size)
+		{
+			if (offset + size <= capacity)
+			{
+				uint8_t* ret = &buffer[offset];
+				offset += size;
+				return ret;
+			}
+			return nullptr;
+		}
+
+		constexpr void free(size_t size)
+		{
+			assert(offset >= size);
+			offset -= size;
+		}
+
+		constexpr void reset()
+		{
+			offset = 0;
+		}
+
+		constexpr uint8_t* top()
+		{
+			return buffer + offset;
+		}
+
+	private:
+		uint8_t* buffer = nullptr;
+		size_t capacity = 0;
+		size_t offset = 0;
+		size_t alignment = 1;
+	};
+
+
+	constexpr size_t Align(size_t value, size_t alignment)
+	{
+		return ((value + alignment - 1) / alignment) * alignment;
+	}
+
+	// Simple and efficient allocator that reserves a linear memory buffer and can:
+	//	- enforce alignment of main buffer allocation and suballocations within it
+	//	- allocate bottom-up until there is space
+	//	- free from the last allocation top-down, for temporary allocations
+	//	- reset all allocations at once
+	class AlignedLinearAllocator
+	{
+	public:
+		~AlignedLinearAllocator()
+		{
+			_aligned_free(buffer);
+		}
+
+		constexpr size_t get_capacity() const
+		{
+			return capacity;
+		}
+
+		inline void reserve(size_t newCapacity, size_t align)
 		{
 			alignment = align;
 			newCapacity = Align(newCapacity, alignment);
 			capacity = newCapacity;
 
-			_mm_free(buffer);
-			buffer = (uint8_t*)_mm_malloc(capacity, alignment);
+			_aligned_free(buffer);
+			buffer = (uint8_t*)_aligned_malloc(capacity, alignment);
 		}
 
-		inline uint8_t* allocate(size_t size)
+		constexpr uint8_t* allocate(size_t size)
 		{
 			size = Align(size, alignment);
 			if (offset + size <= capacity)
@@ -51,19 +107,19 @@ namespace wiAllocators
 			return nullptr;
 		}
 
-		inline void free(size_t size)
+		constexpr void free(size_t size)
 		{
 			size = Align(size, alignment);
 			assert(offset >= size);
 			offset -= size;
 		}
 
-		inline void reset()
+		constexpr void reset()
 		{
 			offset = 0;
 		}
 
-		inline uint8_t* top()
+		constexpr uint8_t* top()
 		{
 			return &buffer[offset];
 		}

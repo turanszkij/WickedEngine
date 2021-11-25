@@ -49,7 +49,7 @@ int LoadModel(lua_State* L)
 					Matrix_BindLua* matrix = Luna<Matrix_BindLua>::lightcheck(L, 3);
 					if (matrix != nullptr)
 					{
-						transform = matrix->matrix;
+						transform = XMLoadFloat4x4(matrix);
 					}
 					else
 					{
@@ -77,7 +77,7 @@ int LoadModel(lua_State* L)
 				Matrix_BindLua* matrix = Luna<Matrix_BindLua>::lightcheck(L, 2);
 				if (matrix != nullptr)
 				{
-					transform = matrix->matrix;
+					transform = XMLoadFloat4x4(matrix);
 				}
 				else
 				{
@@ -1255,7 +1255,7 @@ int TransformComponent_BindLua::Scale(lua_State* L)
 		if (v != nullptr)
 		{
 			XMFLOAT3 value;
-			XMStoreFloat3(&value, v->vector);
+			XMStoreFloat3(&value, XMLoadFloat4(v));
 			
 			component->Scale(value);
 		}
@@ -1279,7 +1279,7 @@ int TransformComponent_BindLua::Rotate(lua_State* L)
 		if (v != nullptr)
 		{
 			XMFLOAT3 rollPitchYaw;
-			XMStoreFloat3(&rollPitchYaw, v->vector);
+			XMStoreFloat3(&rollPitchYaw, XMLoadFloat4(v));
 
 			component->RotateRollPitchYaw(rollPitchYaw);
 		}
@@ -1303,7 +1303,7 @@ int TransformComponent_BindLua::Translate(lua_State* L)
 		if (v != nullptr)
 		{
 			XMFLOAT3 value;
-			XMStoreFloat3(&value, v->vector);
+			XMStoreFloat3(&value, XMLoadFloat4(v));
 
 			component->Translate(value);
 		}
@@ -1408,7 +1408,7 @@ int TransformComponent_BindLua::MatrixTransform(lua_State* L)
 		Matrix_BindLua* m = Luna<Matrix_BindLua>::lightcheck(L, 1);
 		if (m != nullptr)
 		{
-			component->MatrixTransform(m->matrix);
+			component->MatrixTransform(XMLoadFloat4x4(m));
 		}
 		else
 		{
@@ -1637,7 +1637,7 @@ int CameraComponent_BindLua::SetApertureShape(lua_State* L)
 		Vector_BindLua* param = Luna<Vector_BindLua>::lightcheck(L, 1);
 		if (param != nullptr)
 		{
-			XMStoreFloat2(&component->aperture_shape, param->vector);
+			XMStoreFloat2(&component->aperture_shape, XMLoadFloat4(param));
 		}
 	}
 	else
@@ -1847,7 +1847,7 @@ int MaterialComponent_BindLua::SetBaseColor(lua_State* L)
 		if (_color)
 		{
 			XMFLOAT4 color;
-			XMStoreFloat4(&color, _color->vector);
+			XMStoreFloat4(&color, XMLoadFloat4(_color));
 			component->SetBaseColor(color);
 		}
 		else
@@ -1871,7 +1871,7 @@ int MaterialComponent_BindLua::SetEmissiveColor(lua_State* L)
 		if (_color)
 		{
 			XMFLOAT4 color;
-			XMStoreFloat4(&color, _color->vector);
+			XMStoreFloat4(&color, XMLoadFloat4(_color));
 			component->SetEmissiveColor(color);
 		}
 		else
@@ -2208,7 +2208,7 @@ int LightComponent_BindLua::SetColor(lua_State* L)
 		Vector_BindLua* value = Luna<Vector_BindLua>::lightcheck(L, 1);
 		if (value)
 		{
-			XMStoreFloat3(&component->color, value->vector);
+			XMStoreFloat3(&component->color, XMLoadFloat4(value));
 		}
 		else
 		{
@@ -2321,7 +2321,7 @@ int ObjectComponent_BindLua::SetColor(lua_State* L)
 		Vector_BindLua* value = Luna<Vector_BindLua>::lightcheck(L, 1);
 		if (value)
 		{
-			XMStoreFloat4(&component->color, value->vector);
+			XMStoreFloat4(&component->color, XMLoadFloat4(value));
 		}
 		else
 		{

@@ -12,6 +12,7 @@
 #include "wiGPUBVH.h"
 #include "wiOcean.h"
 #include "wiSprite.h"
+#include "wiMath.h"
 
 #include "wiECS.h"
 #include "wiScene_Decl.h"

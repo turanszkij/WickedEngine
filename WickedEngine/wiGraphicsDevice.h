@@ -3,6 +3,7 @@
 #include "wiGraphics.h"
 #include "wiPlatform.h"
 
+#include <cassert>
 #include <cstring>
 #include <algorithm>
 
