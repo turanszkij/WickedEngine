@@ -5,6 +5,7 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include <limits>
 
 namespace wiGraphics
 {
@@ -459,7 +460,7 @@ namespace wiGraphics
 		ComparisonFunc comparison_func = ComparisonFunc::NEVER;
 		SamplerBorderColor border_color = SamplerBorderColor::TRANSPARENT_BLACK;
 		float min_lod = 0;
-		float max_lod = FLT_MAX;
+		float max_lod = std::numeric_limits<float>::max();
 	};
 
 	struct RasterizerState

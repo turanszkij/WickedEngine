@@ -2047,7 +2047,7 @@ void InitializeCommonSamplers()
 	samplerDesc.comparison_func = ComparisonFunc::NEVER;
 	samplerDesc.border_color = SamplerBorderColor::TRANSPARENT_BLACK;
 	samplerDesc.min_lod = 0;
-	samplerDesc.max_lod = FLT_MAX;
+	samplerDesc.max_lod = std::numeric_limits<float>::max();
 	device->CreateSampler(&samplerDesc, &samplers[SAMPLER_LINEAR_MIRROR]);
 
 	samplerDesc.filter = Filter::MIN_MAG_MIP_LINEAR;

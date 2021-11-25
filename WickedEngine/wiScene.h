@@ -20,6 +20,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <limits>
 
 class wiArchive;
 
@@ -1496,7 +1497,7 @@ namespace wiScene
 		wiECS::Entity entity = wiECS::INVALID_ENTITY;
 		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 normal = XMFLOAT3(0, 0, 0);
-		float distance = FLT_MAX;
+		float distance = std::numeric_limits<float>::max();
 		int subsetIndex = -1;
 		int vertexID0 = -1;
 		int vertexID1 = -1;

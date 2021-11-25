@@ -12,6 +12,7 @@
 
 #include <mutex>
 #include <deque>
+#include <limits>
 
 using namespace wiGraphics;
 
@@ -23,7 +24,7 @@ namespace wiBackLog
 	std::deque<std::string> history;
 	const float speed = 50.0f;
 	unsigned int deletefromline = 500;
-	float pos = -FLT_MAX;
+	float pos = std::numeric_limits<float>::lowest();
 	float scroll = 0;
 	std::string inputArea;
 	int historyPos = 0;

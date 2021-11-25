@@ -432,8 +432,8 @@ namespace wiScene
 		}
 
 
-		XMFLOAT3 _min = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX);
-		XMFLOAT3 _max = XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+		XMFLOAT3 _min = XMFLOAT3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
+		XMFLOAT3 _max = XMFLOAT3(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
 
 		// vertexBuffer - POSITION + NORMAL + WIND:
 		{
@@ -1316,8 +1316,8 @@ namespace wiScene
 		vertex_tangents_simulation.resize(mesh.vertex_tangents.size());
 
 		XMMATRIX W = XMLoadFloat4x4(&worldMatrix);
-		XMFLOAT3 _min = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX);
-		XMFLOAT3 _max = XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+		XMFLOAT3 _min = XMFLOAT3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
+		XMFLOAT3 _max = XMFLOAT3(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
 		for (size_t i = 0; i < vertex_positions_simulation.size(); ++i)
 		{
 			XMFLOAT3 pos = mesh.vertex_positions[i];
@@ -2826,8 +2826,8 @@ namespace wiScene
 				armature.boneData.resize(armature.boneCollection.size());
 			}
 
-			XMFLOAT3 _min = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX);
-			XMFLOAT3 _max = XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+			XMFLOAT3 _min = XMFLOAT3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
+			XMFLOAT3 _max = XMFLOAT3(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
 
 			int boneIndex = 0;
 			for (Entity boneEntity : armature.boneCollection)
@@ -2945,8 +2945,8 @@ namespace wiScene
 			// Update morph targets if needed:
 			if (mesh.dirty_morph && !mesh.targets.empty())
 			{
-			    XMFLOAT3 _min = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX);
-			    XMFLOAT3 _max = XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+			    XMFLOAT3 _min = XMFLOAT3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
+			    XMFLOAT3 _max = XMFLOAT3(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
 
 			    for (size_t i = 0; i < mesh.vertex_positions.size(); ++i)
 			    {
@@ -3601,7 +3601,7 @@ namespace wiScene
 			{
 			default:
 			case LightComponent::DIRECTIONAL:
-				aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX));
+				aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max()));
 				locker.lock();
 				if (args.jobIndex < weather.most_important_light_index)
 				{

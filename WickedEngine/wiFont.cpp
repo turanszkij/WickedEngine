@@ -319,7 +319,7 @@ void Initialize()
 	samplerDesc.comparison_func = ComparisonFunc::NEVER;
 	samplerDesc.border_color = SamplerBorderColor::TRANSPARENT_BLACK;
 	samplerDesc.min_lod = 0;
-	samplerDesc.max_lod = FLT_MAX;
+	samplerDesc.max_lod = 0;
 	device->CreateSampler(&samplerDesc, &sampler);
 
 	static wiEvent::Handle handle1 = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });

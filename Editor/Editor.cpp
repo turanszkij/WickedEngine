@@ -9,6 +9,7 @@
 #include <cassert>
 #include <cmath>
 #include <filesystem>
+#include <limits>
 
 using namespace wiGraphics;
 using namespace wiRectPacker;
@@ -1863,7 +1864,9 @@ void EditorComponent::Render() const
 	// Selected items box:
 	if (!cinemaModeCheckBox.GetCheck() && !translator.selected.empty())
 	{
-		AABB selectedAABB = AABB(XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX), XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX));
+		AABB selectedAABB = AABB(
+			XMFLOAT3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max()),
+			XMFLOAT3(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest()));
 		for (auto& picked : translator.selected)
 		{
 			if (picked.entity != INVALID_ENTITY)
