@@ -2,6 +2,7 @@
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
 #include "wiEnums.h"
+#include "wiMath.h"
 #include "wiECS.h"
 #include "wiScene_Decl.h"
 #include "wiIntersect.h"

@@ -1,10 +1,11 @@
 #pragma once
 #include "CommonInclude.h"
 
+#include <cassert>
 #include <memory>
 #include <vector>
 #include <string>
-#include <type_traits>
+#include <limits>
 
 namespace wiGraphics
 {
@@ -459,7 +460,7 @@ namespace wiGraphics
 		ComparisonFunc comparison_func = ComparisonFunc::NEVER;
 		SamplerBorderColor border_color = SamplerBorderColor::TRANSPARENT_BLACK;
 		float min_lod = 0;
-		float max_lod = FLT_MAX;
+		float max_lod = std::numeric_limits<float>::max();
 	};
 
 	struct RasterizerState
@@ -938,7 +939,7 @@ namespace wiGraphics
 					FLAG_FORCE_OPAQUE = 1 << 2,
 					FLAG_FORCE_NON_OPAQUE = 1 << 3,
 				};
-				XMFLOAT3X4 transform;
+				float transform[3][4];
 				uint32_t instance_id : 24;
 				uint32_t instance_mask : 8;
 				uint32_t instance_contribution_to_hit_group_index : 24;

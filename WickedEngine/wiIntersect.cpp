@@ -1,6 +1,4 @@
 #include "wiIntersect.h"
-#include "wiMath.h"
-
 
 void AABB::createFromHalfWidth(const XMFLOAT3& center, const XMFLOAT3& halfwidth) 
 {

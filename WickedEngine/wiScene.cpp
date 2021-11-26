@@ -1,5 +1,4 @@
 #include "wiScene.h"
-#include "wiMath.h"
 #include "wiTextureHelper.h"
 #include "wiResourceManager.h"
 #include "wiPhysicsEngine.h"
@@ -433,8 +432,8 @@ namespace wiScene
 		}
 
 
-		XMFLOAT3 _min = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX);
-		XMFLOAT3 _max = XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+		XMFLOAT3 _min = XMFLOAT3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
+		XMFLOAT3 _max = XMFLOAT3(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
 
 		// vertexBuffer - POSITION + NORMAL + WIND:
 		{
@@ -1317,8 +1316,8 @@ namespace wiScene
 		vertex_tangents_simulation.resize(mesh.vertex_tangents.size());
 
 		XMMATRIX W = XMLoadFloat4x4(&worldMatrix);
-		XMFLOAT3 _min = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX);
-		XMFLOAT3 _max = XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+		XMFLOAT3 _min = XMFLOAT3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
+		XMFLOAT3 _max = XMFLOAT3(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
 		for (size_t i = 0; i < vertex_positions_simulation.size(); ++i)
 		{
 			XMFLOAT3 pos = mesh.vertex_positions[i];
@@ -2827,8 +2826,8 @@ namespace wiScene
 				armature.boneData.resize(armature.boneCollection.size());
 			}
 
-			XMFLOAT3 _min = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX);
-			XMFLOAT3 _max = XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+			XMFLOAT3 _min = XMFLOAT3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
+			XMFLOAT3 _max = XMFLOAT3(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
 
 			int boneIndex = 0;
 			for (Entity boneEntity : armature.boneCollection)
@@ -2946,8 +2945,8 @@ namespace wiScene
 			// Update morph targets if needed:
 			if (mesh.dirty_morph && !mesh.targets.empty())
 			{
-			    XMFLOAT3 _min = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX);
-			    XMFLOAT3 _max = XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+			    XMFLOAT3 _min = XMFLOAT3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
+			    XMFLOAT3 _max = XMFLOAT3(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
 
 			    for (size_t i = 0; i < mesh.vertex_positions.size(); ++i)
 			    {
@@ -3243,12 +3242,13 @@ namespace wiScene
 					{
 						// TLAS instance data:
 						RaytracingAccelerationStructureDesc::TopLevel::Instance instance = {};
-						instance = {};
-						instance.transform = XMFLOAT3X4(
-							worldMatrix._11, worldMatrix._21, worldMatrix._31, worldMatrix._41,
-							worldMatrix._12, worldMatrix._22, worldMatrix._32, worldMatrix._42,
-							worldMatrix._13, worldMatrix._23, worldMatrix._33, worldMatrix._43
-						);
+						for (int i = 0; i < arraysize(instance.transform); ++i)
+						{
+							for (int j = 0; j < arraysize(instance.transform[i]); ++j)
+							{
+								instance.transform[i][j] = worldMatrix.m[j][i];
+							}
+						}
 						instance.instance_id = args.jobIndex;
 						instance.instance_mask = 1;
 						instance.bottom_level = mesh->BLAS;
@@ -3601,7 +3601,7 @@ namespace wiScene
 			{
 			default:
 			case LightComponent::DIRECTIONAL:
-				aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX));
+				aabb.createFromHalfWidth(XMFLOAT3(0, 0, 0), XMFLOAT3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max()));
 				locker.lock();
 				if (args.jobIndex < weather.most_important_light_index)
 				{
@@ -3670,12 +3670,13 @@ namespace wiScene
 					{
 						// TLAS instance data:
 						RaytracingAccelerationStructureDesc::TopLevel::Instance instance = {};
-						instance = {};
-						instance.transform = XMFLOAT3X4(
-							IDENTITYMATRIX._11, IDENTITYMATRIX._21, IDENTITYMATRIX._31, IDENTITYMATRIX._41,
-							IDENTITYMATRIX._12, IDENTITYMATRIX._22, IDENTITYMATRIX._32, IDENTITYMATRIX._42,
-							IDENTITYMATRIX._13, IDENTITYMATRIX._23, IDENTITYMATRIX._33, IDENTITYMATRIX._43
-						);
+						for (int i = 0; i < arraysize(instance.transform); ++i)
+						{
+							for (int j = 0; j < arraysize(instance.transform[i]); ++j)
+							{
+								instance.transform[i][j] = IDENTITYMATRIX.m[j][i];
+							}
+						}
 						instance.instance_id = (uint32_t)instanceIndex;
 						instance.instance_mask = 1;
 						instance.bottom_level = hair.BLAS;
@@ -3746,12 +3747,13 @@ namespace wiScene
 			{
 				// TLAS instance data:
 				RaytracingAccelerationStructureDesc::TopLevel::Instance instance = {};
-				instance = {};
-				instance.transform = XMFLOAT3X4(
-					IDENTITYMATRIX._11, IDENTITYMATRIX._21, IDENTITYMATRIX._31, IDENTITYMATRIX._41,
-					IDENTITYMATRIX._12, IDENTITYMATRIX._22, IDENTITYMATRIX._32, IDENTITYMATRIX._42,
-					IDENTITYMATRIX._13, IDENTITYMATRIX._23, IDENTITYMATRIX._33, IDENTITYMATRIX._43
-				);
+				for (int i = 0; i < arraysize(instance.transform); ++i)
+				{
+					for (int j = 0; j < arraysize(instance.transform[i]); ++j)
+					{
+						instance.transform[i][j] = IDENTITYMATRIX.m[j][i];
+					}
+				}
 				instance.instance_id = (uint32_t)instanceIndex;
 				instance.instance_mask = 1;
 				instance.bottom_level = emitter.BLAS;

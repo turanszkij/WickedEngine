@@ -1,7 +1,6 @@
 #include "wiWidget.h"
 #include "wiImage.h"
 #include "wiTextureHelper.h"
-#include "wiMath.h"
 #include "wiHelper.h"
 #include "wiInput.h"
 #include "wiRenderer.h"
@@ -923,7 +922,7 @@ void wiSlider::Update(const wiCanvas& canvas, float dt)
 			value = wiMath::InverseLerp(translation.x, translation.x + scale.x, args.clickPos.x);
 			value = wiMath::Clamp(value, 0, 1);
 			value *= step;
-			value = floorf(value);
+			value = std::floor(value);
 			value /= step;
 			value = wiMath::Lerp(start, end, value);
 			args.fValue = value;

@@ -8,7 +8,6 @@
 
 #ifdef WICKEDENGINE_BUILD_VULKAN
 #include "wiGraphicsDevice.h"
-#include "wiMath.h"
 
 #ifdef _WIN32
 #define VK_USE_PLATFORM_WIN32_KHR

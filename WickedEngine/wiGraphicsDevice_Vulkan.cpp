@@ -1,19 +1,23 @@
 #include "wiGraphicsDevice_Vulkan.h"
 
 #ifdef WICKEDENGINE_BUILD_VULKAN
+#include "wiHelper.h"
+#include "wiBackLog.h"
+#include "wiVersion.h"
+#include "wiTimer.h"
 
 #define VOLK_IMPLEMENTATION
 #include "Utility/volk.h"
 
 #include "Utility/spirv_reflect.h"
 
-#include "wiHelper.h"
-#include "wiBackLog.h"
-#include "wiVersion.h"
-#include "wiTimer.h"
-
 #define VMA_IMPLEMENTATION
 #include "Utility/vk_mem_alloc.h"
+
+#ifdef SDL2
+#include <SDL2/SDL_vulkan.h>
+#include "sdl2.h"
+#endif
 
 #include <sstream>
 #include <vector>
@@ -21,11 +25,6 @@
 #include <iostream>
 #include <set>
 #include <algorithm>
-
-#ifdef SDL2
-#include <SDL2/SDL_vulkan.h>
-#include "sdl2.h"
-#endif
 
 // These shifts are made so that Vulkan resource bindings slots don't interfere with each other across shader stages:
 //	These are also defined in wiShaderCompiler.cpp as hard coded compiler arguments for SPIRV, so they need to be the same

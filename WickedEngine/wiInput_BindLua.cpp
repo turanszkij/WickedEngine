@@ -98,9 +98,7 @@ int wiInput_BindLua::SetPointer(lua_State* L)
 		Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 1);
 		if (vec != nullptr)
 		{
-			XMFLOAT4 props;
-			XMStoreFloat4(&props, vec->vector);
-			wiInput::SetPointer(props);
+			wiInput::SetPointer(*vec);
 		}
 		else
 			wiLua::SError(L, "SetPointer(Vector props) argument is not a Vector!");
@@ -347,9 +345,7 @@ int ControllerFeedback_BindLua::SetLEDColor(lua_State* L)
 		Vector_BindLua* vec = Luna<Vector_BindLua>::lightcheck(L, 1);
 		if (vec != nullptr)
 		{
-			XMFLOAT4 col;
-			XMStoreFloat4(&col, vec->vector);
-			feedback.led_color = wiColor::fromFloat4(col);
+			feedback.led_color = wiColor::fromFloat4(*vec);
 		}
 		else
 		{

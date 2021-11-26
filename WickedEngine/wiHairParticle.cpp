@@ -1,7 +1,6 @@
 #include "wiHairParticle.h"
 #include "wiRenderer.h"
 #include "wiResourceManager.h"
-#include "wiMath.h"
 #include "wiIntersect.h"
 #include "wiRandom.h"
 #include "wiArchive.h"

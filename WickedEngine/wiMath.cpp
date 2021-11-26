@@ -12,14 +12,14 @@ namespace wiMath
 		XMVECTOR areaSq = p * (p - a) * (p - b) * (p - c);
 		float area;
 		XMStoreFloat(&area, areaSq);
-		area = sqrtf(area);
+		area = std::sqrt(area);
 		return area;
 	}
 	float TriangleArea(float a, float b, float c)
 	{
 		// Heron's formula:
 		float p = (a + b + c) * 0.5f;
-		return sqrtf(p * (p - a) * (p - b) * (p - c));
+		return std::sqrt(p * (p - a) * (p - b) * (p - c));
 	}
 
 

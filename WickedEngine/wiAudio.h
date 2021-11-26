@@ -1,5 +1,6 @@
 #pragma once
 #include "CommonInclude.h"
+#include "wiMath.h"
 
 #include <memory>
 #include <string>

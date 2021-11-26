@@ -44,7 +44,7 @@ namespace wiIntersect_BindLua
 			Vector_BindLua* d = Luna<Vector_BindLua>::lightcheck(L, 2);
 			if (o && d)
 			{
-				ray = RAY(o->vector, d->vector);
+				ray = RAY(XMLoadFloat4(o), XMLoadFloat4(d));
 			}
 			else
 			{
@@ -122,15 +122,15 @@ namespace wiIntersect_BindLua
 			if (_minV && _maxV)
 			{
 				XMFLOAT3 _min, _max;
-				XMStoreFloat3(&_min, _minV->vector);
-				XMStoreFloat3(&_max, _maxV->vector);
+				XMStoreFloat3(&_min, XMLoadFloat4(_minV));
+				XMStoreFloat3(&_max, XMLoadFloat4(_maxV));
 
 				aabb = AABB(_min, _max);
 			}
 			else if (_minV)
 			{
 				XMFLOAT3 _min;
-				XMStoreFloat3(&_min, _minV->vector);
+				XMStoreFloat3(&_min, XMLoadFloat4(_minV));
 
 				aabb = AABB(_min);
 			}
@@ -229,7 +229,7 @@ namespace wiIntersect_BindLua
 			Matrix_BindLua* _matrix = Luna<Matrix_BindLua>::lightcheck(L, 1);
 			if (_matrix)
 			{
-				Luna<AABB_BindLua>::push(L, new AABB_BindLua(aabb.transform(_matrix->matrix)));
+				Luna<AABB_BindLua>::push(L, new AABB_BindLua(aabb.transform(*_matrix)));
 				return 1;
 			}
 			else
@@ -271,7 +271,7 @@ namespace wiIntersect_BindLua
 			if (cV)
 			{
 				XMFLOAT3 c;
-				XMStoreFloat3(&c, cV->vector);
+				XMStoreFloat3(&c, XMLoadFloat4(cV));
 
 				float r = wiLua::SGetFloat(L, 2);
 
@@ -339,7 +339,7 @@ namespace wiIntersect_BindLua
 			Vector_BindLua* cV = Luna<Vector_BindLua>::lightcheck(L, 1);
 			if (cV)
 			{
-				XMStoreFloat3(&sphere.center, cV->vector);
+				XMStoreFloat3(&sphere.center, XMLoadFloat4(cV));
 			}
 			else
 			{
@@ -395,9 +395,9 @@ namespace wiIntersect_BindLua
 			if (bV && tV)
 			{
 				XMFLOAT3 b;
-				XMStoreFloat3(&b, bV->vector);
+				XMStoreFloat3(&b, XMLoadFloat4(bV));
 				XMFLOAT3 t;
-				XMStoreFloat3(&t, tV->vector);
+				XMStoreFloat3(&t, XMLoadFloat4(tV));
 
 				float r = wiLua::SGetFloat(L, 3);
 
@@ -464,7 +464,7 @@ namespace wiIntersect_BindLua
 			Vector_BindLua* cV = Luna<Vector_BindLua>::lightcheck(L, 1);
 			if (cV)
 			{
-				XMStoreFloat3(&capsule.base, cV->vector);
+				XMStoreFloat3(&capsule.base, XMLoadFloat4(cV));
 			}
 			else
 			{
@@ -485,7 +485,7 @@ namespace wiIntersect_BindLua
 			Vector_BindLua* cV = Luna<Vector_BindLua>::lightcheck(L, 1);
 			if (cV)
 			{
-				XMStoreFloat3(&capsule.tip, cV->vector);
+				XMStoreFloat3(&capsule.tip, XMLoadFloat4(cV));
 			}
 			else
 			{

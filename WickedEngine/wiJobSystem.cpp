@@ -1,7 +1,7 @@
 #include "wiJobSystem.h"
 #include "wiSpinLock.h"
 #include "wiBackLog.h"
-#include "wiContainers.h"
+#include "wiAllocator.h"
 #include "wiPlatform.h"
 #include "wiTimer.h"
 
@@ -40,7 +40,7 @@ namespace wiJobSystem
 		std::shared_ptr<WorkerState> worker_state = std::make_shared<WorkerState>(); // kept alive by both threads and internal_state
 		std::condition_variable wakeCondition;
 		std::mutex wakeMutex;
-		wiContainers::ThreadSafeRingBuffer<Job, 256> jobQueue;
+		wiAllocator::ThreadSafeRingBuffer<Job, 256> jobQueue;
 		~InternalState()
 		{
 			worker_state->alive.store(false);

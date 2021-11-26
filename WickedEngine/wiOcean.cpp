@@ -74,7 +74,7 @@ float Gauss()
 	float u2 = rand() / (float)RAND_MAX;
 	if (u1 < 1e-6f)
 		u1 = 1e-6f;
-	return sqrtf(-2 * logf(u1)) * cosf(2 * XM_PI * u2);
+	return std::sqrt(-2 * logf(u1)) * cosf(2 * XM_PI * u2);
 }
 
 // Phillips Spectrum
@@ -230,7 +230,7 @@ void wiOcean::initHeightMap(const OceanParameters& params, XMFLOAT2* out_h0, flo
 		{
 			K.x = (-height_map_dim / 2.0f + j) * (2 * XM_PI / patch_length);
 
-			float phil = (K.x == 0 && K.y == 0) ? 0 : sqrtf(Phillips(K, wind_dir, v, a, dir_depend));
+			float phil = (K.x == 0 && K.y == 0) ? 0 : std::sqrt(Phillips(K, wind_dir, v, a, dir_depend));
 
 			out_h0[i * (height_map_dim + 4) + j].x = float(phil * Gauss() * HALF_SQRT_2);
 			out_h0[i * (height_map_dim + 4) + j].y = float(phil * Gauss() * HALF_SQRT_2);
@@ -243,7 +243,7 @@ void wiOcean::initHeightMap(const OceanParameters& params, XMFLOAT2* out_h0, flo
 			// Gerstner wave shows that a point on a simple sinusoid wave is doing a uniform circular
 			// motion with the center (x0, y0, z0), radius A, and the circular plane is parallel to
 			// vector K.
-			out_omega[i * (height_map_dim + 4) + j] = sqrtf(GRAV_ACCEL * sqrtf(K.x * K.x + K.y * K.y));
+			out_omega[i * (height_map_dim + 4) + j] = std::sqrt(GRAV_ACCEL * sqrtf(K.x * K.x + K.y * K.y));
 		}
 	}
 }

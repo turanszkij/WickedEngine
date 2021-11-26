@@ -165,15 +165,15 @@ namespace wiRenderer_BindLua
 			if (a && b)
 			{
 				wiRenderer::RenderableLine line;
-				XMStoreFloat3(&line.start, a->vector);
-				XMStoreFloat3(&line.end, b->vector);
+				XMStoreFloat3(&line.start, XMLoadFloat4(a));
+				XMStoreFloat3(&line.end, XMLoadFloat4(b));
 				if (argc > 2)
 				{
 					Vector_BindLua* c = Luna<Vector_BindLua>::lightcheck(L, 3);
 					if (c)
 					{
-						XMStoreFloat4(&line.color_start, c->vector);
-						XMStoreFloat4(&line.color_end, c->vector);
+						XMStoreFloat4(&line.color_start, XMLoadFloat4(c));
+						XMStoreFloat4(&line.color_end, XMLoadFloat4(c));
 					}
 					else
 						wiLua::SError(L, "DrawLine(Vector origin,end, opt Vector color) one or more arguments are not vectors!");
@@ -197,7 +197,7 @@ namespace wiRenderer_BindLua
 			if (a)
 			{
 				wiRenderer::RenderablePoint point;
-				XMStoreFloat3(&point.position, a->vector);
+				XMStoreFloat3(&point.position, XMLoadFloat4(a));
 				if (argc > 1)
 				{
 					point.size = wiLua::SGetFloat(L, 2);
@@ -205,7 +205,7 @@ namespace wiRenderer_BindLua
 					if (argc > 2)
 					{
 						Vector_BindLua* color = Luna<Vector_BindLua>::lightcheck(L, 3);
-						XMStoreFloat4(&point.color, color->vector);
+						point.color = *color;
 					}
 				}
 				wiRenderer::DrawPoint(point);
@@ -226,22 +226,17 @@ namespace wiRenderer_BindLua
 			Matrix_BindLua* m = Luna<Matrix_BindLua>::lightcheck(L, 1);
 			if (m)
 			{
-				XMFLOAT4X4 mat;
-				XMStoreFloat4x4(&mat, m->matrix);
-
 				if (argc > 1)
 				{
 					Vector_BindLua* color = Luna<Vector_BindLua>::lightcheck(L, 2);
 					if (color)
 					{
-						XMFLOAT4 col;
-						XMStoreFloat4(&col, color->vector);
-						wiRenderer::DrawBox(mat, col);
+						wiRenderer::DrawBox(*m, *color);
 						return 0;
 					}
 				}
 
-				wiRenderer::DrawBox(mat);
+				wiRenderer::DrawBox(*m);
 			}
 			else
 				wiLua::SError(L, "DrawBox(Matrix boxMatrix, opt Vector color) first argument must be a Matrix type!");
@@ -264,9 +259,7 @@ namespace wiRenderer_BindLua
 					Vector_BindLua* color = Luna<Vector_BindLua>::lightcheck(L, 2);
 					if (color)
 					{
-						XMFLOAT4 col;
-						XMStoreFloat4(&col, color->vector);
-						wiRenderer::DrawSphere(sphere->sphere, col);
+						wiRenderer::DrawSphere(sphere->sphere, *color);
 						return 0;
 					}
 				}
@@ -294,9 +287,7 @@ namespace wiRenderer_BindLua
 					Vector_BindLua* color = Luna<Vector_BindLua>::lightcheck(L, 2);
 					if (color)
 					{
-						XMFLOAT4 col;
-						XMStoreFloat4(&col, color->vector);
-						wiRenderer::DrawCapsule(capsule->capsule, col);
+						wiRenderer::DrawCapsule(capsule->capsule, *color);
 						return 0;
 					}
 				}
@@ -321,7 +312,7 @@ namespace wiRenderer_BindLua
 			if (v)
 			{
 				XMFLOAT3 pos;
-				XMStoreFloat3(&pos, v->vector);
+				XMStoreFloat3(&pos, XMLoadFloat4(v));
 				wiScene::GetScene().PutWaterRipple(wiLua::GetScriptPath() + name, pos);
 			}
 			else

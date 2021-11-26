@@ -6,9 +6,11 @@
 #include "wiECS.h"
 #include "wiIntersect.h"
 #include "wiCanvas.h"
+#include "wiMath.h"
 #include "shaders/ShaderInterop_Renderer.h"
 
 #include <memory>
+#include <limits>
 
 struct RAY;
 struct wiResource;
@@ -117,7 +119,7 @@ namespace wiRenderer
 
 		wiSpinLock locker;
 		bool planar_reflection_visible = false;
-		float closestRefPlane = FLT_MAX;
+		float closestRefPlane = std::numeric_limits<float>::max();
 		XMFLOAT4 reflectionPlane = XMFLOAT4(0, 1, 0, 0);
 		std::atomic_bool volumetriclight_request{ false };
 
@@ -134,7 +136,7 @@ namespace wiRenderer
 			light_counter.store(0);
 			decal_counter.store(0);
 
-			closestRefPlane = FLT_MAX;
+			closestRefPlane = std::numeric_limits<float>::max();
 			planar_reflection_visible = false;
 			volumetriclight_request.store(false);
 		}

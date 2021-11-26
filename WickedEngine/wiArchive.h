@@ -1,6 +1,6 @@
 #pragma once
 #include "CommonInclude.h"
-#include <stdint.h>
+#include "wiMath.h"
 
 #include <string>
 #include <vector>

@@ -2,6 +2,7 @@
 #include "wiPlatform.h"
 #include "wiBackLog.h"
 #include "wiEvent.h"
+#include "wiMath.h"
 
 #include "Utility/stb_image_write.h"
 #include "Utility/basis_universal/encoder/basisu_comp.h"

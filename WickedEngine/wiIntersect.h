@@ -1,7 +1,10 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiArchive.h"
+#include "wiMath.h"
 #include "wiECS.h"
+
+#include <limits>
 
 struct SPHERE;
 struct RAY;
@@ -22,7 +25,10 @@ struct AABB
 	XMFLOAT3 _max;
 	uint32_t userdata = 0;
 
-	AABB(const XMFLOAT3& _min = XMFLOAT3(FLT_MAX, FLT_MAX, FLT_MAX), const XMFLOAT3& _max = XMFLOAT3(-FLT_MAX, -FLT_MAX, -FLT_MAX)) : _min(_min), _max(_max) {}
+	AABB(
+		const XMFLOAT3& _min = XMFLOAT3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max()),
+		const XMFLOAT3& _max = XMFLOAT3(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest())
+	) : _min(_min), _max(_max) {}
 	void createFromHalfWidth(const XMFLOAT3& center, const XMFLOAT3& halfwidth);
 	AABB transform(const XMMATRIX& mat) const;
 	AABB transform(const XMFLOAT4X4& mat) const;

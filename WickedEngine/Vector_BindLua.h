@@ -2,17 +2,18 @@
 #include "CommonInclude.h"
 #include "wiLua.h"
 #include "wiLuna.h"
+#include "wiMath.h"
 
-class Vector_BindLua
+class Vector_BindLua : public XMFLOAT4
 {
 public:
-	DirectX::XMVECTOR vector;
-
 	static const char className[];
 	static Luna<Vector_BindLua>::FunctionType methods[];
 	static Luna<Vector_BindLua>::PropertyType properties[];
 
-	Vector_BindLua(const DirectX::XMVECTOR& vector);
+	Vector_BindLua();
+	Vector_BindLua(const XMFLOAT4& vector);
+	Vector_BindLua(const XMVECTOR& vector);
 	Vector_BindLua(lua_State* L);
 
 	int GetX(lua_State* L);
@@ -47,7 +48,5 @@ public:
 	int Slerp(lua_State* L);
 
 	static void Bind();
-
-	ALIGN_16
 };
 

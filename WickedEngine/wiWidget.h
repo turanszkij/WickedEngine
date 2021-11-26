@@ -6,6 +6,7 @@
 #include "wiScene.h"
 #include "wiSprite.h"
 #include "wiSpriteFont.h"
+#include "wiMath.h"
 
 #include <string>
 #include <vector>
