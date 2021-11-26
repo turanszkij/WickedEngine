@@ -638,6 +638,8 @@ void MeshWindow::Create(EditorComponent* editor)
 
 void MeshWindow::SetEntity(Entity entity, int subset)
 {
+	subset = std::max(0, subset);
+
 	this->entity = entity;
 	this->subset = subset;
 
