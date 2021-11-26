@@ -9,9 +9,12 @@ public:
 	void Create(EditorComponent* editor);
 
 	wiECS::Entity entity;
-	void SetEntity(wiECS::Entity entity);
+	int subset = -1;
+	void SetEntity(wiECS::Entity entity, int subset);
 
 	wiLabel meshInfoLabel;
+	wiComboBox subsetComboBox;
+	wiComboBox subsetMaterialComboBox;
 	wiCheckBox doubleSidedCheckBox;
 	wiCheckBox softbodyCheckBox;
 	wiSlider massSlider;

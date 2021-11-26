@@ -821,7 +821,7 @@ void EditorComponent::Load()
 		translator.selected.clear();
 		wiRenderer::ClearWorld(wiScene::GetScene());
 		objectWnd.SetEntity(INVALID_ENTITY);
-		meshWnd.SetEntity(INVALID_ENTITY);
+		meshWnd.SetEntity(INVALID_ENTITY, -1);
 		lightWnd.SetEntity(INVALID_ENTITY);
 		soundWnd.SetEntity(INVALID_ENTITY);
 		decalWnd.SetEntity(INVALID_ENTITY);
@@ -1633,7 +1633,7 @@ void EditorComponent::Update(float dt)
 		objectWnd.SetEntity(INVALID_ENTITY);
 		emitterWnd.SetEntity(INVALID_ENTITY);
 		hairWnd.SetEntity(INVALID_ENTITY);
-		meshWnd.SetEntity(INVALID_ENTITY);
+		meshWnd.SetEntity(INVALID_ENTITY, -1);
 		materialWnd.SetEntity(INVALID_ENTITY);
 		lightWnd.SetEntity(INVALID_ENTITY);
 		soundWnd.SetEntity(INVALID_ENTITY);
@@ -1684,7 +1684,7 @@ void EditorComponent::Update(float dt)
 			const ObjectComponent* object = scene.objects.GetComponent(picked.entity);
 			if (object != nullptr) // maybe it was deleted...
 			{
-				meshWnd.SetEntity(object->meshID);
+				meshWnd.SetEntity(object->meshID, picked.subsetIndex);
 
 				const MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
 				if (mesh != nullptr && (int)mesh->subsets.size() > picked.subsetIndex)
@@ -1695,7 +1695,7 @@ void EditorComponent::Update(float dt)
 		}
 		else
 		{
-			meshWnd.SetEntity(picked.entity);
+			meshWnd.SetEntity(picked.entity, picked.subsetIndex);
 			materialWnd.SetEntity(picked.entity);
 		}
 

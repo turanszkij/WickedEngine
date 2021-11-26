@@ -77,7 +77,7 @@ struct TerraGen : public wiWindow
 void MeshWindow::Create(EditorComponent* editor)
 {
 	wiWindow::Create("Mesh Window");
-	SetSize(XMFLOAT2(580, 540));
+	SetSize(XMFLOAT2(580, 580));
 
 	float x = 150;
 	float y = 0;
@@ -86,10 +86,60 @@ void MeshWindow::Create(EditorComponent* editor)
 
 	meshInfoLabel.Create("Mesh Info");
 	meshInfoLabel.SetPos(XMFLOAT2(x - 50, y += step));
-	meshInfoLabel.SetSize(XMFLOAT2(450, 180));
+	meshInfoLabel.SetSize(XMFLOAT2(450, 190));
+	meshInfoLabel.SetColor(wiColor::Transparent());
 	AddWidget(&meshInfoLabel);
 
-	y += 190;
+	// Left side:
+	y = meshInfoLabel.GetScale().y + 5;
+
+	subsetComboBox.Create("Selected subset: ");
+	subsetComboBox.SetSize(XMFLOAT2(40, hei));
+	subsetComboBox.SetPos(XMFLOAT2(x, y += step));
+	subsetComboBox.SetEnabled(false);
+	subsetComboBox.OnSelect([=](wiEventArgs args) {
+		Scene& scene = wiScene::GetScene();
+		MeshComponent* mesh = scene.meshes.GetComponent(entity);
+		if (mesh != nullptr)
+		{
+			subset = args.iValue;
+			if (!editor->translator.selected.empty())
+			{
+				editor->translator.selected.back().subsetIndex = subset;
+			}
+		}
+	});
+	subsetComboBox.SetTooltip("Select a subset. A subset can also be selected by picking it in the 3D scene.");
+	AddWidget(&subsetComboBox);
+
+	terrainCheckBox.Create("Terrain: ");
+	terrainCheckBox.SetTooltip("If enabled, the mesh will use multiple materials and blend between them based on vertex colors.");
+	terrainCheckBox.SetSize(XMFLOAT2(hei, hei));
+	terrainCheckBox.SetPos(XMFLOAT2(x, y += step));
+	terrainCheckBox.OnClick([&](wiEventArgs args) {
+		MeshComponent* mesh = wiScene::GetScene().meshes.GetComponent(entity);
+		if (mesh != nullptr)
+		{
+			mesh->SetTerrain(args.bValue);
+			if (args.bValue && mesh->vertex_colors.empty())
+			{
+				mesh->vertex_colors.resize(mesh->vertex_positions.size());
+				std::fill(mesh->vertex_colors.begin(), mesh->vertex_colors.end(), wiColor::Red().rgba); // fill red (meaning only blend base material)
+				mesh->CreateRenderData();
+
+				for (auto& subset : mesh->subsets)
+				{
+					MaterialComponent* material = wiScene::GetScene().materials.GetComponent(subset.materialID);
+					if (material != nullptr)
+					{
+						material->SetUseVertexColors(true);
+					}
+				}
+			}
+			SetEntity(entity, subset); // refresh information label
+		}
+		});
+	AddWidget(&terrainCheckBox);
 
 	doubleSidedCheckBox.Create("Double Sided: ");
 	doubleSidedCheckBox.SetTooltip("If enabled, the inside of the mesh will be visible.");
@@ -228,7 +278,7 @@ void MeshWindow::Create(EditorComponent* editor)
 		if (mesh != nullptr)
 		{
 			mesh->FlipCulling();
-			SetEntity(entity);
+			SetEntity(entity, subset);
 		}
 	});
 	AddWidget(&flipCullingButton);
@@ -242,7 +292,7 @@ void MeshWindow::Create(EditorComponent* editor)
 		if (mesh != nullptr)
 		{
 			mesh->FlipNormals();
-			SetEntity(entity);
+			SetEntity(entity, subset);
 		}
 	});
 	AddWidget(&flipNormalsButton);
@@ -256,7 +306,7 @@ void MeshWindow::Create(EditorComponent* editor)
 		if (mesh != nullptr)
 		{
 			mesh->ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH);
-			SetEntity(entity);
+			SetEntity(entity, subset);
 		}
 	});
 	AddWidget(&computeNormalsSmoothButton);
@@ -270,7 +320,7 @@ void MeshWindow::Create(EditorComponent* editor)
 		if (mesh != nullptr)
 		{
 			mesh->ComputeNormals(MeshComponent::COMPUTE_NORMALS_HARD);
-			SetEntity(entity);
+			SetEntity(entity, subset);
 		}
 	});
 	AddWidget(&computeNormalsHardButton);
@@ -284,7 +334,7 @@ void MeshWindow::Create(EditorComponent* editor)
 		if (mesh != nullptr)
 		{
 			mesh->Recenter();
-			SetEntity(entity);
+			SetEntity(entity, subset);
 		}
 	});
 	AddWidget(&recenterButton);
@@ -298,7 +348,7 @@ void MeshWindow::Create(EditorComponent* editor)
 		if (mesh != nullptr)
 		{
 			mesh->RecenterToBottom();
-			SetEntity(entity);
+			SetEntity(entity, subset);
 		}
 	});
 	AddWidget(&recenterToBottomButton);
@@ -322,46 +372,44 @@ void MeshWindow::Create(EditorComponent* editor)
 			mesh->indices = indices;
 
 			mesh->CreateRenderData();
-			SetEntity(entity);
+			SetEntity(entity, subset);
 		}
 		});
 	AddWidget(&optimizeButton);
 
+
+	// Right side:
+
 	x = 150;
-	y = 190;
+	y = meshInfoLabel.GetScale().y + 5;
 
-	terrainCheckBox.Create("Terrain: ");
-	terrainCheckBox.SetTooltip("If enabled, the mesh will use multiple materials and blend between them based on vertex colors.");
-	terrainCheckBox.SetSize(XMFLOAT2(hei, hei));
-	terrainCheckBox.SetPos(XMFLOAT2(x, y += step));
-	terrainCheckBox.OnClick([&](wiEventArgs args) {
-		MeshComponent* mesh = wiScene::GetScene().meshes.GetComponent(entity);
-		if (mesh != nullptr)
+	subsetMaterialComboBox.Create("Subset Material: ");
+	subsetMaterialComboBox.SetSize(XMFLOAT2(200, hei));
+	subsetMaterialComboBox.SetPos(XMFLOAT2(x + 180, y += step));
+	subsetMaterialComboBox.SetEnabled(false);
+	subsetMaterialComboBox.OnSelect([&](wiEventArgs args) {
+		Scene& scene = wiScene::GetScene();
+		MeshComponent* mesh = scene.meshes.GetComponent(entity);
+		if (mesh != nullptr && subset >= 0 && subset < mesh->subsets.size())
 		{
-			mesh->SetTerrain(args.bValue);
-			if (args.bValue && mesh->vertex_colors.empty())
+			MeshComponent::MeshSubset& meshsubset = mesh->subsets[subset];
+			if (args.iValue == 0)
 			{
-				mesh->vertex_colors.resize(mesh->vertex_positions.size());
-				std::fill(mesh->vertex_colors.begin(), mesh->vertex_colors.end(), wiColor::Red().rgba); // fill red (meaning only blend base material)
-				mesh->CreateRenderData();
-
-				for (auto& subset : mesh->subsets)
-				{
-					MaterialComponent* material = wiScene::GetScene().materials.GetComponent(subset.materialID);
-					if (material != nullptr)
-					{
-						material->SetUseVertexColors(true);
-					}
-				}
+				meshsubset.materialID = INVALID_ENTITY;
 			}
-			SetEntity(entity); // refresh information label
+			else
+			{
+				MeshComponent::MeshSubset& meshsubset = mesh->subsets[subset];
+				meshsubset.materialID = scene.materials.GetEntity(args.iValue - 1);
+			}
 		}
-	});
-	AddWidget(&terrainCheckBox);
+		});
+	subsetMaterialComboBox.SetTooltip("Set the base material of the selected MeshSubset");
+	AddWidget(&subsetMaterialComboBox);
 
 	terrainMat1Combo.Create("Terrain Material 1: ");
 	terrainMat1Combo.SetSize(XMFLOAT2(200, hei));
-	terrainMat1Combo.SetPos(XMFLOAT2(x + 180, y));
+	terrainMat1Combo.SetPos(XMFLOAT2(x + 180, y += step));
 	terrainMat1Combo.SetEnabled(false);
 	terrainMat1Combo.OnSelect([&](wiEventArgs args) {
 		MeshComponent* mesh = wiScene::GetScene().meshes.GetComponent(entity);
@@ -509,7 +557,7 @@ void MeshWindow::Create(EditorComponent* editor)
 		pick.entity = entity;
 		pick.subsetIndex = 0;
 		editor->AddSelected(pick);
-		SetEntity(object.meshID);
+		SetEntity(object.meshID, pick.subsetIndex);
 
 
 
@@ -585,14 +633,15 @@ void MeshWindow::Create(EditorComponent* editor)
 	Translate(XMFLOAT3((float)editor->GetLogicalWidth() - 1000, 80, 0));
 	SetVisible(false);
 
-	SetEntity(INVALID_ENTITY);
+	SetEntity(INVALID_ENTITY, -1);
 }
 
-void MeshWindow::SetEntity(Entity entity)
+void MeshWindow::SetEntity(Entity entity, int subset)
 {
 	this->entity = entity;
+	this->subset = subset;
 
-	Scene&scene = wiScene::GetScene();
+	Scene& scene = wiScene::GetScene();
 
 	const MeshComponent* mesh = scene.meshes.GetComponent(entity);
 
@@ -617,16 +666,29 @@ void MeshWindow::SetEntity(Entity entity)
 		if (mesh->vertexBuffer_UV1.IsValid()) ss << "uvset_1; ";
 		if (mesh->vertexBuffer_ATL.IsValid()) ss << "atlas; ";
 		if (mesh->vertexBuffer_COL.IsValid()) ss << "color; ";
-		if (mesh->vertexBuffer_PRE.IsValid()) ss << "prevPos; ";
+		if (mesh->vertexBuffer_PRE.IsValid()) ss << "previous_position; ";
 		if (mesh->vertexBuffer_BON.IsValid()) ss << "bone; ";
 		if (mesh->vertexBuffer_TAN.IsValid()) ss << "tangent; ";
 		if (mesh->streamoutBuffer_POS.IsValid()) ss << "streamout_position; ";
 		if (mesh->streamoutBuffer_TAN.IsValid()) ss << "streamout_tangents; ";
+		if (mesh->subsetBuffer.IsValid()) ss << "subset; ";
 		if (mesh->IsTerrain()) ss << std::endl << std::endl << "Terrain will use 4 blend materials and blend by vertex colors, the default one is always the subset material and uses RED vertex color channel mask, the other 3 are selectable below.";
 		meshInfoLabel.SetText(ss.str());
 
 		terrainCheckBox.SetCheck(mesh->IsTerrain());
 
+		subsetComboBox.ClearItems();
+		for (size_t i = 0; i < mesh->subsets.size(); ++i)
+		{
+			subsetComboBox.AddItem(std::to_string(i));
+		}
+		if (subset >= 0)
+		{
+			subsetComboBox.SetSelected(subset);
+		}
+
+		subsetMaterialComboBox.ClearItems();
+		subsetMaterialComboBox.AddItem("NO MATERIAL");
 		terrainMat1Combo.ClearItems();
 		terrainMat1Combo.AddItem("OFF (Use subset)");
 		terrainMat2Combo.ClearItems();
@@ -637,10 +699,15 @@ void MeshWindow::SetEntity(Entity entity)
 		{
 			Entity entity = scene.materials.GetEntity(i);
 			const NameComponent& name = *scene.names.GetComponent(entity);
+			subsetMaterialComboBox.AddItem(name.name);
 			terrainMat1Combo.AddItem(name.name);
 			terrainMat2Combo.AddItem(name.name);
 			terrainMat3Combo.AddItem(name.name);
 
+			if (subset >= 0 && subset < mesh->subsets.size() && mesh->subsets[subset].materialID == entity)
+			{
+				subsetMaterialComboBox.SetSelected((int)i + 1);
+			}
 			if (mesh->terrain_material1 == entity)
 			{
 				terrainMat1Combo.SetSelected((int)i + 1);
