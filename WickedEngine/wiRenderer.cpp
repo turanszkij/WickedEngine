@@ -11,7 +11,7 @@
 #include "wiProfiler.h"
 #include "wiOcean.h"
 #include "wiGPUSortLib.h"
-#include "wiAllocators.h"
+#include "wiAllocator.h"
 #include "wiGPUBVH.h"
 #include "wiJobSystem.h"
 #include "wiSpinLock.h"
@@ -32,7 +32,7 @@
 using namespace wiGraphics;
 using namespace wiScene;
 using namespace wiECS;
-using namespace wiAllocators;
+using namespace wiAllocator;
 
 namespace wiRenderer
 {

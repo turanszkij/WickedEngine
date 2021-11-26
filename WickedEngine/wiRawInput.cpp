@@ -3,8 +3,6 @@
 
 #if defined(_WIN32) && !defined(PLATFORM_UWP)
 
-#include "wiAllocators.h"
-
 #include <vector>
 #include <string>
 

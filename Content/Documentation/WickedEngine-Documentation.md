@@ -113,10 +113,9 @@ This is a reference for the C++ features of Wicked Engine
 5. [Helpers](#helpers)
 	1. [wiAllocators](#wiallocators)
 		1. [LinearAllocator](#linearallocator)
+		1. [ThreadSafeRingBuffer](#threadsaferingbuffer)
 	2. [wiArchive](#wiarchive)
 	3. [wiColor](#wicolor)
-	4. [wiContainers](#wicontainers)
-		1. [ThreadSafeRingBuffer](#threadsaferingbuffer)
 	5. [wiFadeManager](#wifademanager)
 	6. [wiHelper](#wihelper)
 	7. [wiIntersect](#wiintersect)
@@ -971,6 +970,10 @@ A collection of engine-level helper classes
 [[Header]](../../WickedEngine/wiAllocators.h)
 The linear allocator is used to allocate contiguous blocks of memory. The amount of maximum allocations is defined at creation time. Blocks then can be allocated from beginning to end until there is free space left. Blocks can be freed from the end until the allocator is not empty. This is not thread safe.
 
+#### ThreadSafeRingBuffer
+[[Header]](../../WickedEngine/wiContainers.h)
+This is a thread safe container that can hold elements of one certain data type at once. Elements are added to the end of container, and they are removed from the beginning. The container wraps around, so if the last element would be put after the last valid array index, then it will be put to the first instead (if the first array index is not occupied).
+
 ### wiArchive
 [[Header]](../../WickedEngine/wiArchive.h) [[Cpp]](../../WickedEngine/wiArchive.cpp)
 This is used for serializing binary data to disk or memory. An archive file always starts with the 64-bit version number that it was serialized with. An archive of greater version number than the current archive version of the engine can't be opened safely, so an error message will be shown if this happens. A certain archive version will not be forward compatible with the current engine version if the current archive version barrier number is greater than the archive's own version number.
@@ -978,13 +981,6 @@ This is used for serializing binary data to disk or memory. An archive file alwa
 ### wiColor
 [[Header]](../../WickedEngine/wiColor.h)
 Utility to convert to/from float color data to 32-bit RGBA data (stored in a uint32_t as RGBA, where each channel is 8 bits)
-
-### wiContainers
-[[Header]](../../WickedEngine/wiContainers.h)
-
-#### ThreadSafeRingBuffer
-[[Header]](../../WickedEngine/wiContainers.h)
-This is a thread safe container that can hold elements of one certain data type at once. Elements are added to the end of container, and they are removed from the beginning. The container wraps around, so if the last element would be put after the last valid array index, then it will be put to the first instead (if the first array index is not occupied).
 
 ### wiFadeManager
 [[Header]](../../WickedEngine/wiFadeManager.h) [[Cpp]](../../WickedEngine/wiFadeManager.cpp)
