@@ -5,7 +5,6 @@
 #include "CommonInclude.h"
 #include "wiBackLog.h"
 #include "wiInput.h"
-#include "wiContainer.h"
 
 #include <SDL2/SDL.h>
 #include <SDL_events.h>
@@ -13,6 +12,7 @@
 #include <SDL_joystick.h>
 #include <SDL_stdinc.h>
 #include <iostream>
+#include <vector>
 
 namespace wiSDLInput
 {
