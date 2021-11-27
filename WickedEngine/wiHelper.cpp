@@ -100,7 +100,7 @@ namespace wiHelper
 		}
 	}
 
-	bool saveTextureToMemory(const wiGraphics::Texture& texture, std::vector<uint8_t>& texturedata)
+	bool saveTextureToMemory(const wiGraphics::Texture& texture, wi::vector<uint8_t>& texturedata)
 	{
 		using namespace wiGraphics;
 
@@ -175,11 +175,11 @@ namespace wiHelper
 		return stagingTex.mapped_data != nullptr;
 	}
 
-	bool saveTextureToMemoryFile(const wiGraphics::Texture& texture, const std::string& fileExtension, std::vector<uint8_t>& filedata)
+	bool saveTextureToMemoryFile(const wiGraphics::Texture& texture, const std::string& fileExtension, wi::vector<uint8_t>& filedata)
 	{
 		using namespace wiGraphics;
 		TextureDesc desc = texture.GetDesc();
-		std::vector<uint8_t> texturedata;
+		wi::vector<uint8_t> texturedata;
 		if (saveTextureToMemory(texture, texturedata))
 		{
 			return saveTextureToMemoryFile(texturedata, desc, fileExtension, filedata);
@@ -187,7 +187,7 @@ namespace wiHelper
 		return false;
 	}
 
-	bool saveTextureToMemoryFile(const std::vector<uint8_t>& texturedata, const wiGraphics::TextureDesc& desc, const std::string& fileExtension, std::vector<uint8_t>& filedata)
+	bool saveTextureToMemoryFile(const wi::vector<uint8_t>& texturedata, const wiGraphics::TextureDesc& desc, const std::string& fileExtension, wi::vector<uint8_t>& filedata)
 	{
 		using namespace wiGraphics;
 		uint32_t data_count = desc.width * desc.height;
@@ -385,7 +385,7 @@ namespace wiHelper
 
 		filedata.clear();
 		stbi_write_func* func = [](void* context, void* data, int size) {
-			std::vector<uint8_t>& filedata = *(std::vector<uint8_t>*)context;
+			wi::vector<uint8_t>& filedata = *(wi::vector<uint8_t>*)context;
 			for (int i = 0; i < size; ++i)
 			{
 				filedata.push_back(*((uint8_t*)data + i));
@@ -426,7 +426,7 @@ namespace wiHelper
 	{
 		using namespace wiGraphics;
 		TextureDesc desc = texture.GetDesc();
-		std::vector<uint8_t> data;
+		wi::vector<uint8_t> data;
 		if (saveTextureToMemory(texture, data))
 		{
 			return saveTextureToFile(data, desc, fileName);
@@ -434,12 +434,12 @@ namespace wiHelper
 		return false;
 	}
 
-	bool saveTextureToFile(const std::vector<uint8_t>& texturedata, const wiGraphics::TextureDesc& desc, const std::string& fileName)
+	bool saveTextureToFile(const wi::vector<uint8_t>& texturedata, const wiGraphics::TextureDesc& desc, const std::string& fileName)
 	{
 		using namespace wiGraphics;
 
 		std::string ext = GetExtensionFromFileName(fileName);
-		std::vector<uint8_t> filedata;
+		wi::vector<uint8_t> filedata;
 		if (saveTextureToMemoryFile(texturedata, desc, ext, filedata))
 		{
 			return FileWrite(fileName, filedata.data(), filedata.size());
@@ -557,7 +557,7 @@ namespace wiHelper
 		std::filesystem::create_directories(path);
 	}
 
-	bool FileRead(const std::string& fileName, std::vector<uint8_t>& data)
+	bool FileRead(const std::string& fileName, wi::vector<uint8_t>& data)
 	{
 #ifndef PLATFORM_UWP
 #ifdef SDL_FILESYSTEM_UNIX
@@ -753,7 +753,7 @@ namespace wiHelper
 			//	Second string is extensions, each separated by ';' and at the end of all, a '\0'
 			//	Then the whole container string is closed with an other '\0'
 			//		For example: "model files\0*.model;*.obj;\0"  <-- this string literal has "model files" as description and two accepted extensions "model" and "obj"
-			std::vector<char> filter;
+			wi::vector<char> filter;
 			filter.reserve(256);
 			{
 				for (auto& x : params.description)
@@ -887,7 +887,7 @@ namespace wiHelper
 			std::cerr << message << std::endl;
 		}
 
-		std::vector<std::string> extensions = {params.description, ""};
+		wi::vector<std::string> extensions = {params.description, ""};
 		for (auto& x : params.extensions)
 		{
 			extensions[1] += "*." + x + " ";
@@ -895,7 +895,7 @@ namespace wiHelper
 
 		switch (params.type) {
 			case FileDialogParams::OPEN: {
-				std::vector<std::string> selection = pfd::open_file(
+				wi::vector<std::string> selection = pfd::open_file(
 					"Open file",
 					std::filesystem::current_path().string(),
 					extensions

@@ -9,6 +9,7 @@
 #ifdef WICKEDENGINE_BUILD_DX12
 #include "wiGraphicsDevice.h"
 #include "wiUnorderedMap.h"
+#include "wiVector.h"
 
 #include <dxgi1_6.h>
 #include <wrl/client.h> // ComPtr
@@ -17,7 +18,6 @@
 #define D3D12MA_D3D12_HEADERS_ALREADY_INCLUDED
 #include "Utility/D3D12MemAlloc.h"
 
-#include <vector>
 #include <deque>
 #include <atomic>
 #include <mutex>
@@ -62,7 +62,7 @@ namespace wiGraphics
 		D3D12_CPU_DESCRIPTOR_HANDLE nullUAV_texture2darray = {};
 		D3D12_CPU_DESCRIPTOR_HANDLE nullUAV_texture3d = {};
 
-		std::vector<D3D12_STATIC_SAMPLER_DESC> common_samplers;
+		wi::vector<D3D12_STATIC_SAMPLER_DESC> common_samplers;
 
 		struct CommandQueue
 		{
@@ -86,7 +86,7 @@ namespace wiGraphics
 				Microsoft::WRL::ComPtr<ID3D12Fence> fence;
 				GPUBuffer uploadbuffer;
 			};
-			std::vector<CopyCMD> freelist;
+			wi::vector<CopyCMD> freelist;
 
 			void init(GraphicsDevice_DX12* device);
 			void destroy();
@@ -106,7 +106,7 @@ namespace wiGraphics
 		struct CommandListMetadata
 		{
 			QUEUE_TYPE queue = {};
-			std::vector<CommandList> waits;
+			wi::vector<CommandList> waits;
 		} cmd_meta[COMMANDLIST_COUNT];
 
 		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList4> commandLists[COMMANDLIST_COUNT][QUEUE_COUNT];
@@ -137,7 +137,7 @@ namespace wiGraphics
 		};
 		DescriptorBinder binders[COMMANDLIST_COUNT];
 
-		std::vector<D3D12_RESOURCE_BARRIER> frame_barriers[COMMANDLIST_COUNT];
+		wi::vector<D3D12_RESOURCE_BARRIER> frame_barriers[COMMANDLIST_COUNT];
 
 		D3D_PRIMITIVE_TOPOLOGY prev_pt[COMMANDLIST_COUNT] = {};
 
@@ -145,7 +145,7 @@ namespace wiGraphics
 		mutable std::mutex rootsignature_cache_mutex;
 
 		wi::unordered_map<size_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>> pipelines_global;
-		std::vector<std::pair<size_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>>> pipelines_worker[COMMANDLIST_COUNT];
+		wi::vector<std::pair<size_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>>> pipelines_worker[COMMANDLIST_COUNT];
 		size_t prev_pipeline_hash[COMMANDLIST_COUNT] = {};
 		const PipelineState* active_pso[COMMANDLIST_COUNT] = {};
 		const Shader* active_cs[COMMANDLIST_COUNT] = {};
@@ -154,7 +154,7 @@ namespace wiGraphics
 		const ID3D12RootSignature* active_rootsig_compute[COMMANDLIST_COUNT] = {};
 		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
 		ShadingRate prev_shadingrate[COMMANDLIST_COUNT] = {};
-		std::vector<const SwapChain*> swapchains[COMMANDLIST_COUNT];
+		wi::vector<const SwapChain*> swapchains[COMMANDLIST_COUNT];
 		Microsoft::WRL::ComPtr<ID3D12Resource> active_backbuffer[COMMANDLIST_COUNT];
 
 		struct DeferredPushConstantData
@@ -296,9 +296,9 @@ namespace wiGraphics
 				GraphicsDevice_DX12* device = nullptr;
 				std::mutex locker;
 				D3D12_DESCRIPTOR_HEAP_DESC desc = {};
-				std::vector<Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>> heaps;
+				wi::vector<Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>> heaps;
 				uint32_t descriptor_size = 0;
-				std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> freelist;
+				wi::vector<D3D12_CPU_DESCRIPTOR_HANDLE> freelist;
 
 				void init(GraphicsDevice_DX12* device, D3D12_DESCRIPTOR_HEAP_TYPE type)
 				{
@@ -345,8 +345,8 @@ namespace wiGraphics
 			DescriptorAllocator descriptors_rtv;
 			DescriptorAllocator descriptors_dsv;
 
-			std::vector<int> free_bindless_res;
-			std::vector<int> free_bindless_sam;
+			wi::vector<int> free_bindless_res;
+			wi::vector<int> free_bindless_sam;
 
 			std::deque<std::pair<D3D12MA::Allocation*, uint64_t>> destroyer_allocations;
 			std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12Resource>, uint64_t>> destroyer_resources;

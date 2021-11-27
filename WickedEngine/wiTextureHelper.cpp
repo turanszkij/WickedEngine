@@ -6,8 +6,6 @@
 #include "wiTimer.h"
 #include "wiUnorderedMap.h"
 
-#include <vector>
-
 using namespace wiGraphics;
 
 // from Utility/samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp.cpp

@@ -158,7 +158,7 @@ public:
 
 	wiArchive clipboard;
 
-	std::vector<wiArchive> history;
+	wi::vector<wiArchive> history;
 	int historyPos = -1;
 	enum HistoryOperationType
 	{

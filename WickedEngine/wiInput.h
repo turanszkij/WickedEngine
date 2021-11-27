@@ -2,8 +2,7 @@
 #include "CommonInclude.h"
 #include "wiPlatform.h"
 #include "wiColor.h"
-
-#include <vector>
+#include "wiVector.h"
 
 namespace wiInput
 {
@@ -144,7 +143,7 @@ namespace wiInput
 		// current position of touch
 		XMFLOAT2 pos;
 	};
-	const std::vector<Touch>& GetTouches();
+	const wi::vector<Touch>& GetTouches();
 
 };
 

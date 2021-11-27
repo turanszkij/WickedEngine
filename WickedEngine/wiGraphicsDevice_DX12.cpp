@@ -1215,8 +1215,8 @@ namespace DX12_Internal
 		ComPtr<ID3D12Resource> resource;
 		SingleDescriptor srv;
 		SingleDescriptor uav;
-		std::vector<SingleDescriptor> subresources_srv;
-		std::vector<SingleDescriptor> subresources_uav;
+		wi::vector<SingleDescriptor> subresources_srv;
+		wi::vector<SingleDescriptor> subresources_uav;
 
 		D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint;
 
@@ -1249,8 +1249,8 @@ namespace DX12_Internal
 	{
 		SingleDescriptor rtv = {};
 		SingleDescriptor dsv = {};
-		std::vector<SingleDescriptor> subresources_rtv;
-		std::vector<SingleDescriptor> subresources_dsv;
+		wi::vector<SingleDescriptor> subresources_rtv;
+		wi::vector<SingleDescriptor> subresources_dsv;
 
 		~Texture_DX12() override
 		{
@@ -1303,21 +1303,21 @@ namespace DX12_Internal
 		ComPtr<ID3D12PipelineState> resource;
 		ComPtr<ID3D12RootSignature> rootSignature;
 
-		std::vector<D3D12_ROOT_DESCRIPTOR1> root_cbvs;
-		std::vector<D3D12_DESCRIPTOR_RANGE1> resources;
-		std::vector<D3D12_DESCRIPTOR_RANGE1> samplers;
+		wi::vector<D3D12_ROOT_DESCRIPTOR1> root_cbvs;
+		wi::vector<D3D12_DESCRIPTOR_RANGE1> resources;
+		wi::vector<D3D12_DESCRIPTOR_RANGE1> samplers;
 
 		uint32_t resource_binding_count_unrolled = 0;
 		uint32_t sampler_binding_count_unrolled = 0;
 
-		std::vector<RESOURCEBINDING> resource_bindings;
+		wi::vector<RESOURCEBINDING> resource_bindings;
 
-		std::vector<D3D12_DESCRIPTOR_RANGE1> bindless_res;
-		std::vector<D3D12_DESCRIPTOR_RANGE1> bindless_sam;
+		wi::vector<D3D12_DESCRIPTOR_RANGE1> bindless_res;
+		wi::vector<D3D12_DESCRIPTOR_RANGE1> bindless_sam;
 
 		D3D12_ROOT_PARAMETER1 rootconstants;
 
-		std::vector<D3D12_STATIC_SAMPLER_DESC> staticsamplers;
+		wi::vector<D3D12_STATIC_SAMPLER_DESC> staticsamplers;
 
 		uint32_t bindpoint_rootconstant = 0;
 		uint32_t bindpoint_rootdescriptor = 0;
@@ -1325,8 +1325,8 @@ namespace DX12_Internal
 		uint32_t bindpoint_sam = 0;
 		uint32_t bindpoint_bindless = 0;
 
-		std::vector<uint8_t> shadercode;
-		std::vector<D3D12_INPUT_ELEMENT_DESC> input_elements;
+		wi::vector<uint8_t> shadercode;
+		wi::vector<D3D12_INPUT_ELEMENT_DESC> input_elements;
 		D3D_PRIMITIVE_TOPOLOGY primitiveTopology;
 
 		struct PSO_STREAM
@@ -1370,7 +1370,7 @@ namespace DX12_Internal
 	struct BVH_DX12 : public Resource_DX12
 	{
 		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS desc = {};
-		std::vector<D3D12_RAYTRACING_GEOMETRY_DESC> geometries;
+		wi::vector<D3D12_RAYTRACING_GEOMETRY_DESC> geometries;
 		D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info = {};
 		GPUBuffer scratch;
 	};
@@ -1379,11 +1379,11 @@ namespace DX12_Internal
 		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
 		ComPtr<ID3D12StateObject> resource;
 
-		std::vector<std::wstring> export_strings;
-		std::vector<D3D12_EXPORT_DESC> exports;
-		std::vector<D3D12_DXIL_LIBRARY_DESC> library_descs;
-		std::vector<std::wstring> group_strings;
-		std::vector<D3D12_HIT_GROUP_DESC> hitgroup_descs;
+		wi::vector<std::wstring> export_strings;
+		wi::vector<D3D12_EXPORT_DESC> exports;
+		wi::vector<D3D12_DXIL_LIBRARY_DESC> library_descs;
+		wi::vector<std::wstring> group_strings;
+		wi::vector<D3D12_HIT_GROUP_DESC> hitgroup_descs;
 
 		~RTPipelineState_DX12()
 		{
@@ -1413,8 +1413,8 @@ namespace DX12_Internal
 	{
 		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
 		Microsoft::WRL::ComPtr<IDXGISwapChain3> swapChain;
-		std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> backBuffers;
-		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> backbufferRTV;
+		wi::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> backBuffers;
+		wi::vector<D3D12_CPU_DESCRIPTOR_HANDLE> backbufferRTV;
 
 		Texture dummyTexture;
 		RenderPass renderpass;
@@ -3255,16 +3255,16 @@ using namespace DX12_Internal;
 		if (pInitialData != nullptr)
 		{
 			uint32_t dataCount = pDesc->array_size * std::max(1u, pDesc->mip_levels);
-			std::vector<D3D12_SUBRESOURCE_DATA> data(dataCount);
+			wi::vector<D3D12_SUBRESOURCE_DATA> data(dataCount);
 			for (uint32_t slice = 0; slice < dataCount; ++slice)
 			{
 				data[slice] = _ConvertSubresourceData(pInitialData[slice]);
 			}
 
 			UINT64 RequiredSize = 0;
-			std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> layouts(dataCount);
-			std::vector<UINT64> rowSizesInBytes(dataCount);
-			std::vector<UINT> numRows(dataCount);
+			wi::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> layouts(dataCount);
+			wi::vector<UINT64> rowSizesInBytes(dataCount);
+			wi::vector<UINT> numRows(dataCount);
 			device->GetCopyableFootprints(&desc, 0, dataCount, 0, layouts.data(), numRows.data(), rowSizesInBytes.data(), &RequiredSize);
 
 			auto cmd = copyAllocator.allocate(RequiredSize);
@@ -3668,7 +3668,7 @@ using namespace DX12_Internal;
 
 			if (stage == ShaderStage::CS || stage == ShaderStage::LIB)
 			{
-				std::vector<D3D12_ROOT_PARAMETER1> params;
+				wi::vector<D3D12_ROOT_PARAMETER1> params;
 
 				internal_state->bindpoint_rootconstant = (uint32_t)params.size();
 				if (internal_state->rootconstants.Constants.Num32BitValues > 0)
@@ -3679,8 +3679,8 @@ using namespace DX12_Internal;
 
 				// Split resources into root descriptors and tables:
 				{
-					std::vector<D3D12_DESCRIPTOR_RANGE1> resources;
-					std::vector<RESOURCEBINDING> bindings;
+					wi::vector<D3D12_DESCRIPTOR_RANGE1> resources;
+					wi::vector<RESOURCEBINDING> bindings;
 					int i = 0;
 					for (auto& x : internal_state->resources)
 					{
@@ -4072,7 +4072,7 @@ using namespace DX12_Internal;
 			insert_shader(pDesc->ds);
 			insert_shader(pDesc->gs);
 
-			std::vector<D3D12_ROOT_PARAMETER1> params;
+			wi::vector<D3D12_ROOT_PARAMETER1> params;
 
 			internal_state->bindpoint_rootconstant = (uint32_t)params.size();
 			if (internal_state->rootconstants.Constants.Num32BitValues > 0)
@@ -4083,8 +4083,8 @@ using namespace DX12_Internal;
 
 			// Split resources into root descriptors and tables:
 			{
-				std::vector<D3D12_DESCRIPTOR_RANGE1> resources;
-				std::vector<RESOURCEBINDING> bindings;
+				wi::vector<D3D12_DESCRIPTOR_RANGE1> resources;
+				wi::vector<RESOURCEBINDING> bindings;
 				int i = 0;
 				for (auto& x : internal_state->resources)
 				{
@@ -4850,7 +4850,7 @@ using namespace DX12_Internal;
 		D3D12_STATE_OBJECT_DESC desc = {};
 		desc.Type = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE;
 
-		std::vector<D3D12_STATE_SUBOBJECT> subobjects;
+		wi::vector<D3D12_STATE_SUBOBJECT> subobjects;
 
 		D3D12_RAYTRACING_PIPELINE_CONFIG pipeline_config = {};
 		{
@@ -6455,7 +6455,7 @@ using namespace DX12_Internal;
 		desc.Inputs = dst_internal->desc;
 
 		// Make a copy of geometries, don't overwrite internal_state (thread safety)
-		std::vector<D3D12_RAYTRACING_GEOMETRY_DESC> geometries;
+		wi::vector<D3D12_RAYTRACING_GEOMETRY_DESC> geometries;
 		geometries = dst_internal->geometries;
 		desc.Inputs.pGeometryDescs = geometries.data();
 

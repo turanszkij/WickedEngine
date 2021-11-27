@@ -113,15 +113,15 @@ static Atlas_Dim GenerateMeshAtlas(MeshComponent& meshcomponent, uint32_t resolu
 		// Note: we must recreate all vertex buffers, because the index buffer will be different (the atlas could have removed shared vertices)
 		meshcomponent.indices.clear();
 		meshcomponent.indices.resize(mesh.indexCount);
-		std::vector<XMFLOAT3> positions(mesh.vertexCount);
-		std::vector<XMFLOAT2> atlas(mesh.vertexCount);
-		std::vector<XMFLOAT3> normals;
-		std::vector<XMFLOAT4> tangents;
-		std::vector<XMFLOAT2> uvset_0;
-		std::vector<XMFLOAT2> uvset_1;
-		std::vector<uint32_t> colors;
-		std::vector<XMUINT4> boneindices;
-		std::vector<XMFLOAT4> boneweights;
+		wi::vector<XMFLOAT3> positions(mesh.vertexCount);
+		wi::vector<XMFLOAT2> atlas(mesh.vertexCount);
+		wi::vector<XMFLOAT3> normals;
+		wi::vector<XMFLOAT4> tangents;
+		wi::vector<XMFLOAT2> uvset_0;
+		wi::vector<XMFLOAT2> uvset_1;
+		wi::vector<uint32_t> colors;
+		wi::vector<XMUINT4> boneindices;
+		wi::vector<XMFLOAT4> boneweights;
 		if (!meshcomponent.vertex_normals.empty())
 		{
 			normals.resize(mesh.vertexCount);

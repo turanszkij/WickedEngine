@@ -2,9 +2,9 @@
 #include "wiPlatform.h"
 
 #if defined(_WIN32) && !defined(PLATFORM_UWP)
+#include "wiVector.h"
 
 #include <string>
-#include <vector>
 #include <hidsdi.h>
 
 #pragma comment(lib,"Hid.lib")
@@ -77,7 +77,7 @@ namespace wiRawInput
 	};
 
 	AlignedLinearAllocator allocator;
-	std::vector<uint8_t*> input_messages;
+	wi::vector<uint8_t*> input_messages;
 
 	wiInput::KeyboardState keyboard;
 	wiInput::MouseState mouse;
@@ -89,7 +89,7 @@ namespace wiRawInput
 		std::wstring name;
 		wiInput::ControllerState state;
 	};
-	std::vector<Internal_ControllerState> controllers;
+	wi::vector<Internal_ControllerState> controllers;
 
 	void Initialize()
 	{

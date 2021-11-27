@@ -26,7 +26,7 @@ public:
 		: m_mtlBaseDir(mtl_basedir) {}
 	virtual ~MaterialFileReader() {}
 	virtual bool operator()(const std::string& matId,
-		std::vector<tinyobj::material_t>* materials,
+		wi::vector<tinyobj::material_t>* materials,
 		std::map<std::string, int>* matMap, std::string* err)
 	{
 		std::string filepath;
@@ -38,7 +38,7 @@ public:
 			filepath = matId;
 		}
 
-		std::vector<uint8_t> filedata;
+		wi::vector<uint8_t> filedata;
 		if (!wiHelper::FileRead(filepath, filedata))
 		{
 			std::stringstream ss;
@@ -77,11 +77,11 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 	std::string name = wiHelper::GetFileNameFromPath(fileName);
 
 	tinyobj::attrib_t obj_attrib;
-	std::vector<tinyobj::shape_t> obj_shapes;
-	std::vector<tinyobj::material_t> obj_materials;
+	wi::vector<tinyobj::shape_t> obj_shapes;
+	wi::vector<tinyobj::material_t> obj_materials;
 	std::string obj_errors;
 
-	std::vector<uint8_t> filedata;
+	wi::vector<uint8_t> filedata;
 	bool success = wiHelper::FileRead(fileName, filedata);
 
 	if (success)
@@ -108,7 +108,7 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 		scene.names.Create(rootEntity) = name;
 
 		// Load material library:
-		std::vector<Entity> materialLibrary = {};
+		wi::vector<Entity> materialLibrary = {};
 		for (auto& obj_material : obj_materials)
 		{
 			Entity materialEntity = scene.Entity_CreateMaterial(obj_material.name);

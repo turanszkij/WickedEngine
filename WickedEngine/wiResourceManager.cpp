@@ -41,9 +41,9 @@ namespace wiResourceManager
 		std::make_pair("WAV", wiResource::SOUND),
 		std::make_pair("OGG", wiResource::SOUND),
 	};
-	std::vector<std::string> GetSupportedImageExtensions()
+	wi::vector<std::string> GetSupportedImageExtensions()
 	{
-		std::vector<std::string> ret;
+		wi::vector<std::string> ret;
 		for (auto& x : types)
 		{
 			if (x.second == wiResource::IMAGE)
@@ -53,9 +53,9 @@ namespace wiResourceManager
 		}
 		return ret;
 	}
-	std::vector<std::string> GetSupportedSoundExtensions()
+	wi::vector<std::string> GetSupportedSoundExtensions()
 	{
-		std::vector<std::string> ret;
+		wi::vector<std::string> ret;
 		for (auto& x : types)
 		{
 			if (x.second == wiResource::SOUND)
@@ -177,9 +177,9 @@ namespace wiResourceManager
 								}
 							}
 						}
-						std::vector<uint8_t*> transcoded_data(transcoded_data_size);
+						wi::vector<uint8_t*> transcoded_data(transcoded_data_size);
 
-						std::vector<SubresourceData> InitData;
+						wi::vector<SubresourceData> InitData;
 						size_t transcoded_data_offset = 0;
 						for (uint32_t layer = 0; layer < std::max(1u, transcoder.get_layers()); ++layer)
 						{
@@ -262,9 +262,9 @@ namespace wiResourceManager
 										transcoded_data_size += level_info.m_total_blocks * bytes_per_block;
 									}
 								}
-								std::vector<uint8_t*> transcoded_data(transcoded_data_size);
+								wi::vector<uint8_t*> transcoded_data(transcoded_data_size);
 
-								std::vector<SubresourceData> InitData;
+								wi::vector<SubresourceData> InitData;
 								size_t transcoded_data_offset = 0;
 								for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
 								{
@@ -393,7 +393,7 @@ namespace wiResourceManager
 						break;
 					}
 
-					std::vector<SubresourceData> InitData;
+					wi::vector<SubresourceData> InitData;
 					for (uint32_t arrayIndex = 0; arrayIndex < desc.array_size; ++arrayIndex)
 					{
 						for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
@@ -504,7 +504,7 @@ namespace wiResourceManager
 						desc.layout = ResourceState::SHADER_RESOURCE;
 
 						uint32_t mipwidth = width;
-						std::vector<SubresourceData> InitData(desc.mip_levels);
+						wi::vector<SubresourceData> InitData(desc.mip_levels);
 						for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
 						{
 							InitData[mip].data_ptr = rgb; // attention! we don't fill the mips here correctly, just always point to the mip0 data by default. Mip levels will be created using compute shader when needed!
@@ -598,9 +598,9 @@ namespace wiResourceManager
 			{
 				std::string name;
 				uint32_t flags = 0;
-				std::vector<uint8_t> filedata;
+				wi::vector<uint8_t> filedata;
 			};
-			std::vector<TempResource> temp_resources;
+			wi::vector<TempResource> temp_resources;
 			temp_resources.resize(serializable_count);
 
 			wiJobSystem::context ctx;

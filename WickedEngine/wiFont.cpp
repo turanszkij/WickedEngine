@@ -12,13 +12,13 @@
 #include "wiTimer.h"
 #include "wiUnorderedMap.h"
 #include "wiUnorderedSet.h"
+#include "wiVector.h"
 
 #include "Utility/arial.h"
 #include "Utility/stb_truetype.h"
 
 #include <fstream>
 #include <atomic>
-#include <vector>
 
 using namespace wiGraphics;
 using namespace wiRectPacker;
@@ -71,7 +71,7 @@ namespace wiFont_Internal
 	struct wiFontStyle
 	{
 		std::string name;
-		std::vector<uint8_t> fontBuffer; // only used if loaded from file, need to keep alive
+		wi::vector<uint8_t> fontBuffer; // only used if loaded from file, need to keep alive
 		stbtt_fontinfo fontInfo;
 		int ascent, descent, lineGap;
 		void Create(const std::string& newName, const uint8_t* data, size_t size)
@@ -100,7 +100,7 @@ namespace wiFont_Internal
 			}
 		}
 	};
-	std::vector<wiFontStyle> fontStyles;
+	wi::vector<wiFontStyle> fontStyles;
 
 	struct FontVertex
 	{
@@ -376,7 +376,7 @@ void UpdatePendingGlyphs()
 		pendingGlyphs.clear();
 
 		// This reference array will be used for packing:
-		std::vector<rect_xywh*> out_rects;
+		wi::vector<rect_xywh*> out_rects;
 		out_rects.reserve(rect_lookup.size());
 		for (auto& it : rect_lookup)
 		{
@@ -384,7 +384,7 @@ void UpdatePendingGlyphs()
 		}
 
 		// Perform packing and process the result if successful:
-		std::vector<bin> bins;
+		wi::vector<bin> bins;
 		if (pack(out_rects.data(), (int)out_rects.size(), 4096, bins))
 		{
 			assert(bins.size() == 1 && "The regions won't fit into one texture!");
@@ -396,7 +396,7 @@ void UpdatePendingGlyphs()
 			const float inv_height = 1.0f / bitmapHeight;
 
 			// Create the CPU-side texture atlas and fill with transparency (0):
-			std::vector<uint8_t> bitmap(size_t(bitmapWidth) * size_t(bitmapHeight));
+			wi::vector<uint8_t> bitmap(size_t(bitmapWidth) * size_t(bitmapHeight));
 			std::fill(bitmap.begin(), bitmap.end(), 0);
 
 			// Iterate all packed glyph rectangles:

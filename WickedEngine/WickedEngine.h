@@ -64,6 +64,7 @@
 #include "wiAllocator.h"
 #include "wiUnorderedMap.h"
 #include "wiUnorderedSet.h"
+#include "wiVector.h"
 
 #ifdef _WIN32
 #ifdef PLATFORM_UWP

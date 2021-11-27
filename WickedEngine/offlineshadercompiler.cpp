@@ -6,14 +6,14 @@
 #include <sstream>
 
 std::mutex locker;
-std::vector<std::string> shaders[static_cast<size_t>(wiGraphics::ShaderStage::Count)];
+wi::vector<std::string> shaders[static_cast<size_t>(wiGraphics::ShaderStage::Count)];
 wi::unordered_map<std::string, wiGraphics::ShaderModel> minshadermodels;
 struct Target
 {
 	wiGraphics::ShaderFormat format;
 	std::string dir;
 };
-std::vector<Target> targets;
+wi::vector<Target> targets;
 wi::unordered_map<std::string, wiShaderCompiler::CompilerOutput> results;
 bool rebuild = false;
 bool shaderdump_enabled = false;

@@ -366,7 +366,7 @@ void MeshWindow::Create(EditorComponent* editor)
 			size_t index_count = mesh->indices.size();
 			size_t vertex_count = mesh->vertex_positions.size();
 
-			std::vector<uint32_t> indices(index_count);
+			wi::vector<uint32_t> indices(index_count);
 			meshopt_optimizeVertexCache(indices.data(), mesh->indices.data(), index_count, vertex_count);
 
 			mesh->indices = indices;

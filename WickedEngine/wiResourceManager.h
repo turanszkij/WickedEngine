@@ -4,8 +4,8 @@
 #include "wiAudio.h"
 #include "wiArchive.h"
 #include "wiJobSystem.h"
+#include "wiVector.h"
 
-#include <vector>
 #include <memory>
 
 struct wiResource
@@ -21,7 +21,7 @@ struct wiResource
 	} type = EMPTY;
 
 	uint32_t flags = 0;
-	std::vector<uint8_t> filedata;
+	wi::vector<uint8_t> filedata;
 };
 
 namespace wiResourceManager
@@ -34,8 +34,8 @@ namespace wiResourceManager
 	};
 	void SetMode(MODE param);
 	MODE GetMode();
-	std::vector<std::string> GetSupportedImageExtensions();
-	std::vector<std::string> GetSupportedSoundExtensions();
+	wi::vector<std::string> GetSupportedImageExtensions();
+	wi::vector<std::string> GetSupportedSoundExtensions();
 
 	// Order of these must not change as the flags can be serialized!
 	enum FLAGS
@@ -63,7 +63,7 @@ namespace wiResourceManager
 
 	struct ResourceSerializer
 	{
-		std::vector<std::shared_ptr<wiResource>> resources;
+		wi::vector<std::shared_ptr<wiResource>> resources;
 	};
 	// Serializes all resources that are compatible
 	//	Compatible resources are those whose file data is kept around using the IMPORT_RETAIN_FILEDATA flag when loading.

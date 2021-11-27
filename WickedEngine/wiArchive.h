@@ -1,9 +1,9 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiMath.h"
+#include "wiVector.h"
 
 #include <string>
-#include <vector>
 
 class wiArchive
 {
@@ -11,7 +11,7 @@ private:
 	uint64_t version = 0; // the version number is used for maintaining backwards compatibility with earlier archive versions
 	bool readMode = false; // archive can be either read or write mode, but not both
 	size_t pos = 0; // position of the next memory operation, relative to the data's beginning
-	std::vector<uint8_t> DATA; // data suitable for read/write operations
+	wi::vector<uint8_t> DATA; // data suitable for read/write operations
 	const uint8_t* data_ptr = nullptr; // this can either be a memory mapped pointer (read only), or the DATA's pointer
 
 	std::string fileName; // save to this file on closing if not empty
@@ -171,7 +171,7 @@ public:
 		return *this;
 	}
 	template<typename T>
-	inline wiArchive& operator<<(const std::vector<T>& data)
+	inline wiArchive& operator<<(const wi::vector<T>& data)
 	{
 		// Here we will use the << operator so that non-specified types will have compile error!
 		(*this) << data.size();
@@ -315,7 +315,7 @@ public:
 		return *this;
 	}
 	template<typename T>
-	inline wiArchive& operator>>(std::vector<T>& data)
+	inline wiArchive& operator>>(wi::vector<T>& data)
 	{
 		// Here we will use the >> operator so that non-specified types will have compile error!
 		size_t count;

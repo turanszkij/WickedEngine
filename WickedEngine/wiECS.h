@@ -4,6 +4,7 @@
 #include "wiArchive.h"
 #include "wiJobSystem.h"
 #include "wiUnorderedMap.h"
+#include "wiVector.h"
 
 #include <cstdint>
 #include <cassert>
@@ -324,9 +325,9 @@ namespace wiECS
 
 	private:
 		// This is a linear array of alive components
-		std::vector<Component> components;
+		wi::vector<Component> components;
 		// This is a linear array of entities corresponding to each alive component
-		std::vector<Entity> entities;
+		wi::vector<Entity> entities;
 		// This is a lookup table for entities
 		wi::unordered_map<Entity, size_t> lookup;
 

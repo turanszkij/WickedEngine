@@ -78,7 +78,7 @@ namespace tinygltf
 #endif
 	}
 
-	bool ReadWholeFile(std::vector<unsigned char>* out, std::string* err,
+	bool ReadWholeFile(wi::vector<unsigned char>* out, std::string* err,
 		const std::string& filepath, void*) {
 		return wiHelper::FileRead(filepath, *out);
 	}
@@ -277,7 +277,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 	LoaderState state;
 	state.scene = &scene;
 
-	std::vector<uint8_t> filedata;
+	wi::vector<uint8_t> filedata;
 	ret = wiHelper::FileRead(fileName, filedata);
 
 	if (ret)
