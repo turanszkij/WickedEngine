@@ -1177,8 +1177,6 @@ namespace wiScene
 		inline void SetLooped(bool value = true) { if (value) { _flags |= LOOPED; } else { _flags &= ~LOOPED; } }
 		inline void SetDisable3D(bool value = true) { if (value) { _flags |= DISABLE_3D; } else { _flags &= ~DISABLE_3D; } }
 
-		void LoadAssets(const std::string& content_dir = "");
-
 		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
 	};
 
