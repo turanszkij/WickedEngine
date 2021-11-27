@@ -10,5 +10,4 @@ namespace wi
 	using vector = std::vector<T, A>;
 }
 
-
 #endif // WI_VECTOR_REPLACEMENT
