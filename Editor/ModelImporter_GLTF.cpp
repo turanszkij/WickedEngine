@@ -4,6 +4,7 @@
 #include "wiRandom.h"
 
 #include "Utility/stb_image.h"
+#include "Utility/flat_hash_map.hpp"
 
 #define TINYGLTF_IMPLEMENTATION
 #define TINYGLTF_NO_FS
@@ -141,7 +142,7 @@ struct LoaderState
 {
 	tinygltf::Model gltfModel;
 	Scene* scene;
-	std::unordered_map<int, Entity> entityMap;  // node -> entity
+	ska::flat_hash_map<int, Entity> entityMap;  // node -> entity
 };
 
 // Recursively loads nodes and resolves hierarchy:

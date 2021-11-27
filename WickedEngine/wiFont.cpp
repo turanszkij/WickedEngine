@@ -54,8 +54,8 @@ namespace wiFont_Internal
 		uint16_t tc_top;
 		uint16_t tc_bottom;
 	};
-	std::unordered_map<int32_t, Glyph> glyph_lookup;
-	std::unordered_map<int32_t, rect_xywh> rect_lookup;
+	ska::flat_hash_map<int32_t, Glyph> glyph_lookup;
+	ska::flat_hash_map<int32_t, rect_xywh> rect_lookup;
 	// pack glyph identifiers to a 32-bit hash:
 	//	height:	10 bits	(height supported: 0 - 1023)
 	//	style:	6 bits	(number of font styles supported: 0 - 63)

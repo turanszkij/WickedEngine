@@ -2,7 +2,7 @@
 #include "WeatherWindow.h"
 #include "Editor.h"
 
-#include <thread>
+#include "Utility/flat_hash_map.hpp"
 
 using namespace wiECS;
 using namespace wiScene;
@@ -560,7 +560,7 @@ void WeatherWindow::Create(EditorComponent* editor)
 
 		Scene& scene = wiScene::GetScene();
 
-		std::unordered_map<std::string, std::shared_ptr<wiResource>> conv;
+		ska::flat_hash_map<std::string, std::shared_ptr<wiResource>> conv;
 		for (uint32_t i = 0; i < scene.materials.GetCount(); ++i)
 		{
 			MaterialComponent& material = scene.materials[i];

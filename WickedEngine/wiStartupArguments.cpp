@@ -28,10 +28,10 @@ namespace wiStartupArguments
 
 	void Parse(int argc, char *argv[])
     {
-	    for (int i=1; i<argc; i++)
-        {
-	        params.insert(std::string(argv[i]));
-        }
+		for (int i = 1; i < argc; i++)
+		{
+			params.insert(std::string(argv[i]));
+		}
     }
 
 	bool HasArgument(const std::string& value)

@@ -26,6 +26,8 @@
 #include "shaders/ShaderInterop_BVH.h"
 #include "shaders/ShaderInterop_SurfelGI.h"
 
+#include "Utility/flat_hash_map.hpp" // for shaderdump!
+
 #include <algorithm>
 #include <array>
 

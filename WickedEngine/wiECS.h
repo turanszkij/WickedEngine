@@ -24,7 +24,7 @@ namespace wiECS
 	struct EntitySerializer
 	{
 		wiJobSystem::context ctx; // allow components to spawn serialization subtasks
-		std::unordered_map<uint64_t, Entity> remap;
+		ska::flat_hash_map<uint64_t, Entity> remap;
 		bool allow_remap = true;
 
 		~EntitySerializer()

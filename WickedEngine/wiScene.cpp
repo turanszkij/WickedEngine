@@ -13,6 +13,8 @@
 
 #include "shaders/ShaderInterop_SurfelGI.h"
 
+#include "Utility/flat_hash_map.hpp"
+
 #include <functional>
 
 using namespace wiECS;
@@ -1333,7 +1335,7 @@ namespace wiScene
 		if(physicsToGraphicsVertexMapping.empty())
 		{
 			// Create a mapping that maps unique vertex positions to all vertex indices that share that. Unique vertex positions will make up the physics mesh:
-			std::unordered_map<size_t, uint32_t> uniquePositions;
+			ska::flat_hash_map<size_t, uint32_t> uniquePositions;
 			graphicsToPhysicsVertexMapping.resize(mesh.vertex_positions.size());
 			physicsToGraphicsVertexMapping.clear();
 			weights.clear();
