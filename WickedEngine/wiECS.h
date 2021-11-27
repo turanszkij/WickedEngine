@@ -3,7 +3,7 @@
 
 #include "wiArchive.h"
 #include "wiJobSystem.h"
-#include "wiUnorderedContainer.h"
+#include "wiUnorderedMap.h"
 
 #include <cstdint>
 #include <cassert>

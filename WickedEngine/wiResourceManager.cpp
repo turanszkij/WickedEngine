@@ -2,7 +2,7 @@
 #include "wiRenderer.h"
 #include "wiHelper.h"
 #include "wiTextureHelper.h"
-#include "wiUnorderedContainer.h"
+#include "wiUnorderedMap.h"
 
 #include "Utility/stb_image.h"
 #include "Utility/tinyddsloader.h"

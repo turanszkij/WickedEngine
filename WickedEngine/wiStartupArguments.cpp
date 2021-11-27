@@ -1,6 +1,6 @@
 #include "wiStartupArguments.h"
 #include "wiHelper.h"
-#include "wiUnorderedContainer.h"
+#include "wiUnorderedSet.h"
 
 #include <sstream>
 #include <iterator>

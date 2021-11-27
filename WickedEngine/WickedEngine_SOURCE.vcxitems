@@ -262,7 +262,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGPUSortLib.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX12.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_Vulkan.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiUnorderedContainer.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiUnorderedSet.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiInput.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiInput_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiIntersect.h" />
@@ -353,6 +353,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiStartupArguments.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiTextureHelper.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiTimer.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiUnorderedMap.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiVersion.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiWidget.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiXInput.h" />

@@ -62,7 +62,8 @@
 #include "wiShaderCompiler.h"
 #include "wiCanvas.h"
 #include "wiAllocator.h"
-#include "wiUnorderedContainer.h"
+#include "wiUnorderedMap.h"
+#include "wiUnorderedSet.h"
 
 #ifdef _WIN32
 #ifdef PLATFORM_UWP

@@ -10,7 +10,7 @@
 #include "wiRenderer.h"
 #include "wiBackLog.h"
 #include "wiTimer.h"
-#include "wiUnorderedContainer.h"
+#include "wiUnorderedMap.h"
 
 #include "shaders/ShaderInterop_SurfelGI.h"
 

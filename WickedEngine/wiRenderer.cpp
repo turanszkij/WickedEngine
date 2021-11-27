@@ -20,7 +20,7 @@
 #include "wiSheenLUT.h"
 #include "wiShaderCompiler.h"
 #include "wiTimer.h"
-#include "wiUnorderedContainer.h" // leave it here for shader dump!
+#include "wiUnorderedMap.h" // leave it here for shader dump!
 
 #include "shaders/ShaderInterop_Postprocess.h"
 #include "shaders/ShaderInterop_Raytracing.h"

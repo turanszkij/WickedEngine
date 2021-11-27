@@ -5,7 +5,7 @@
 #include "wiTimer.h"
 #include "wiTextureHelper.h"
 #include "wiHelper.h"
-#include "wiUnorderedContainer.h"
+#include "wiUnorderedMap.h"
 
 #include <string>
 #include <stack>

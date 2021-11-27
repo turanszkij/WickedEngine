@@ -10,7 +10,8 @@
 #include "wiPlatform.h"
 #include "wiEvent.h"
 #include "wiTimer.h"
-#include "wiUnorderedContainer.h"
+#include "wiUnorderedMap.h"
+#include "wiUnorderedSet.h"
 
 #include "Utility/arial.h"
 #include "Utility/stb_truetype.h"

@@ -3,7 +3,7 @@
 #include "wiPlatform.h"
 #include "wiHelper.h"
 #include "wiArchive.h"
-#include "wiUnorderedContainer.h"
+#include "wiUnorderedSet.h"
 
 #include <mutex>
 #include <filesystem>

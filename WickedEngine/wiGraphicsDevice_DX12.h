@@ -8,7 +8,7 @@
 
 #ifdef WICKEDENGINE_BUILD_DX12
 #include "wiGraphicsDevice.h"
-#include "wiUnorderedContainer.h"
+#include "wiUnorderedMap.h"
 
 #include <dxgi1_6.h>
 #include <wrl/client.h> // ComPtr
