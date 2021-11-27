@@ -3,12 +3,11 @@
 #include "wiGraphicsDevice.h"
 #include "wiCanvas.h"
 #include "wiWidget.h"
-#include "wiContainer.h"
 
 class wiGUI
 {
 private:
-	wiContainer::vector<wiWidget*> widgets;
+	std::vector<wiWidget*> widgets;
 	bool focus = false;
 	bool visible = true;
 public:

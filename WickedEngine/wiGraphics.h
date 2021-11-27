@@ -1,10 +1,10 @@
 #pragma once
 #include "CommonInclude.h"
-#include "wiContainer.h"
 
 #include <cassert>
 #include <memory>
 #include <string>
+#include <vector>
 #include <limits>
 
 namespace wiGraphics
@@ -414,7 +414,7 @@ namespace wiGraphics
 			uint32_t aligned_byte_offset = APPEND_ALIGNED_ELEMENT;
 			InputClassification input_slot_class = InputClassification::PER_VERTEX_DATA;
 		};
-		wiContainer::vector<Element> elements;
+		std::vector<Element> elements;
 	};
 
 	union ClearValue
@@ -719,7 +719,7 @@ namespace wiGraphics
 			ALLOW_UAV_WRITES = 1 << 0,
 		};
 		Flags flags = Flags::EMPTY;
-		wiContainer::vector<RenderPassAttachment> attachments;
+		std::vector<RenderPassAttachment> attachments;
 	};
 
 	struct SwapChainDesc
@@ -798,7 +798,7 @@ namespace wiGraphics
 	struct Shader : public GraphicsDeviceChild
 	{
 		ShaderStage stage = ShaderStage::Count;
-		wiContainer::vector<StaticSampler> auto_samplers; // ability to set static samplers without explicit root signature
+		std::vector<StaticSampler> auto_samplers; // ability to set static samplers without explicit root signature
 	};
 
 	struct GPUResource : public GraphicsDeviceChild
@@ -924,7 +924,7 @@ namespace wiGraphics
 				} aabbs;
 
 			};
-			wiContainer::vector<Geometry> geometries;
+			std::vector<Geometry> geometries;
 		} bottom_level;
 
 		struct TopLevel
@@ -987,8 +987,8 @@ namespace wiGraphics
 	};
 	struct RaytracingPipelineStateDesc
 	{
-		wiContainer::vector<ShaderLibrary> shader_libraries;
-		wiContainer::vector<ShaderHitGroup> hit_groups;
+		std::vector<ShaderLibrary> shader_libraries;
+		std::vector<ShaderHitGroup> hit_groups;
 		uint32_t max_trace_recursion_depth = 1;
 		uint32_t max_attribute_size_in_bytes = 0;
 		uint32_t max_payload_size_in_bytes = 0;

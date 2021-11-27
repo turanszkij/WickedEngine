@@ -1,8 +1,9 @@
 #pragma once
 #include "CommonInclude.h"
-#include "wiContainer.h"
 #include "wiPlatform.h"
 #include "wiColor.h"
+
+#include <vector>
 
 namespace wiInput
 {
@@ -143,7 +144,7 @@ namespace wiInput
 		// current position of touch
 		XMFLOAT2 pos;
 	};
-	const wiContainer::vector<Touch>& GetTouches();
+	const std::vector<Touch>& GetTouches();
 
 };
 

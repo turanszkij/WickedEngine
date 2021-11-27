@@ -536,7 +536,7 @@ void RenderPath2D::CleanLayers()
 		{
 			continue;
 		}
-		wiContainer::vector<RenderItem2D> itemsToRetain(0);
+		std::vector<RenderItem2D> itemsToRetain(0);
 		for (auto& y : x.items)
 		{
 			if (y.sprite != nullptr || y.font!=nullptr)

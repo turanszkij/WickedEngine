@@ -231,7 +231,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)CommonInclude.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_PathTracing.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\arial.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\bytell_hash_map.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\D3D12MemAlloc.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\d3dx12.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\DirectXCollision.h" />
@@ -249,7 +248,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_image_write.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_truetype.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\tinyddsloader.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\unordered_map.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\vk_mem_alloc.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\volk.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiAllocator.h" />
@@ -257,7 +255,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiAudio.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiAudio_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiCanvas.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiContainer.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiECS.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiEvent.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiFFTGenerator.h" />

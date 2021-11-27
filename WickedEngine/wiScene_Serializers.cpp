@@ -5,7 +5,8 @@
 #include "wiHelper.h"
 #include "wiBackLog.h"
 #include "wiTimer.h"
-#include "wiContainer.h"
+
+#include <vector>
 
 using namespace wiECS;
 
@@ -609,7 +610,7 @@ namespace wiScene
 
 			if (archive.GetVersion() >= 29 && archive.GetVersion() < 34)
 			{
-				wiContainer::vector<XMFLOAT3> temp;
+				std::vector<XMFLOAT3> temp;
 				archive >> temp;
 			}
 
@@ -2019,7 +2020,7 @@ namespace wiScene
 			if (archive.GetVersion() >= 72)
 			{
 				// Recursive serialization for all children:
-				wiContainer::vector<Entity> children;
+				std::vector<Entity> children;
 				for (size_t i = 0; i < hierarchy.GetCount(); ++i)
 				{
 					const HierarchyComponent& hier = hierarchy[i];

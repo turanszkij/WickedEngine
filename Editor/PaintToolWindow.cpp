@@ -179,7 +179,7 @@ void PaintToolWindow::Create(EditorComponent* editor)
 
 		uint64_t sel = textureSlotComboBox.GetItemUserData(textureSlotComboBox.GetSelected());
 
-		wiContainer::vector<uint8_t> texturefiledata;
+		std::vector<uint8_t> texturefiledata;
 		if (wiHelper::saveTextureToMemoryFile(editTexture, "PNG", texturefiledata))
 		{
 			material->textures[sel].resource->filedata = texturefiledata;
@@ -548,7 +548,7 @@ void PaintToolWindow::Update(float dt)
 				size_t ind;
 				float affection;
 			};
-			static wiContainer::vector<PaintVert> paintindices;
+			static std::vector<PaintVert> paintindices;
 			paintindices.clear();
 			paintindices.reserve(mesh->vertex_positions.size());
 

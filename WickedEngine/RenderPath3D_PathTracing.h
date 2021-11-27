@@ -9,10 +9,10 @@ protected:
 	int target = 1024;
 	wiGraphics::Texture traceResult;
 
-	wiContainer::vector<uint8_t> texturedata_src;
-	wiContainer::vector<uint8_t> texturedata_dst;
-	wiContainer::vector<uint8_t> texturedata_albedo;
-	wiContainer::vector<uint8_t> texturedata_normal;
+	std::vector<uint8_t> texturedata_src;
+	std::vector<uint8_t> texturedata_dst;
+	std::vector<uint8_t> texturedata_albedo;
+	std::vector<uint8_t> texturedata_normal;
 	wiGraphics::Texture denoiserAlbedo;
 	wiGraphics::Texture denoiserNormal;
 	wiGraphics::Texture denoiserResult;

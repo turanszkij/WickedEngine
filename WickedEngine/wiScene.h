@@ -13,12 +13,12 @@
 #include "wiOcean.h"
 #include "wiSprite.h"
 #include "wiMath.h"
-#include "wiContainer.h"
 
 #include "wiECS.h"
 #include "wiScene_Decl.h"
 
 #include <string>
+#include <vector>
 #include <memory>
 #include <limits>
 
@@ -328,17 +328,17 @@ namespace wiScene
 		};
 		uint32_t _flags = RENDERABLE;
 
-		wiContainer::vector<XMFLOAT3> vertex_positions;
-		wiContainer::vector<XMFLOAT3> vertex_normals;
-		wiContainer::vector<XMFLOAT4> vertex_tangents;
-		wiContainer::vector<XMFLOAT2> vertex_uvset_0;
-		wiContainer::vector<XMFLOAT2> vertex_uvset_1;
-		wiContainer::vector<XMUINT4> vertex_boneindices;
-		wiContainer::vector<XMFLOAT4> vertex_boneweights;
-		wiContainer::vector<XMFLOAT2> vertex_atlas;
-		wiContainer::vector<uint32_t> vertex_colors;
-		wiContainer::vector<uint8_t> vertex_windweights;
-		wiContainer::vector<uint32_t> indices;
+		std::vector<XMFLOAT3> vertex_positions;
+		std::vector<XMFLOAT3> vertex_normals;
+		std::vector<XMFLOAT4> vertex_tangents;
+		std::vector<XMFLOAT2> vertex_uvset_0;
+		std::vector<XMFLOAT2> vertex_uvset_1;
+		std::vector<XMUINT4> vertex_boneindices;
+		std::vector<XMFLOAT4> vertex_boneweights;
+		std::vector<XMFLOAT2> vertex_atlas;
+		std::vector<uint32_t> vertex_colors;
+		std::vector<uint8_t> vertex_windweights;
+		std::vector<uint32_t> indices;
 
 		struct MeshSubset
 		{
@@ -349,7 +349,7 @@ namespace wiScene
 			// Non-serialized attributes:
 			uint32_t materialIndex = 0;
 		};
-		wiContainer::vector<MeshSubset> subsets;
+		std::vector<MeshSubset> subsets;
 
 		float tessellationFactor = 0.0f;
 		wiECS::Entity armatureID = wiECS::INVALID_ENTITY;
@@ -366,11 +366,11 @@ namespace wiScene
 		// Morph Targets
 		struct MeshMorphTarget
 		{
-		    wiContainer::vector<XMFLOAT3> vertex_positions;
-		    wiContainer::vector<XMFLOAT3> vertex_normals;
+		    std::vector<XMFLOAT3> vertex_positions;
+		    std::vector<XMFLOAT3> vertex_normals;
 		    float_t weight;
 		};
-		wiContainer::vector<MeshMorphTarget> targets;
+		std::vector<MeshMorphTarget> targets;
 
 		// Non-serialized attributes:
 		AABB aabb;
@@ -385,7 +385,7 @@ namespace wiScene
 		wiGraphics::GPUBuffer vertexBuffer_PRE;
 		wiGraphics::GPUBuffer streamoutBuffer_POS;
 		wiGraphics::GPUBuffer streamoutBuffer_TAN;
-		wiContainer::vector<uint8_t> vertex_subsets;
+		std::vector<uint8_t> vertex_subsets;
 		wiGraphics::GPUBuffer subsetBuffer;
 
 		wiGraphics::RaytracingAccelerationStructure BLAS;
@@ -576,7 +576,7 @@ namespace wiScene
 		};
 		
 		// Non serialized attributes:
-		wiContainer::vector<Vertex_POS> vertex_positions_morphed;
+		std::vector<Vertex_POS> vertex_positions_morphed;
 
 	};
 
@@ -595,7 +595,7 @@ namespace wiScene
 		AABB aabb;
 		XMFLOAT4 color;
 		float fadeThresholdRadius;
-		wiContainer::vector<uint32_t> instances;
+		std::vector<uint32_t> instances;
 		mutable bool render_dirty = false;
 
 		inline void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
@@ -626,7 +626,7 @@ namespace wiScene
 
 		uint32_t lightmapWidth = 0;
 		uint32_t lightmapHeight = 0;
-		wiContainer::vector<uint8_t> lightmapTextureData;
+		std::vector<uint8_t> lightmapTextureData;
 
 		uint8_t userStencilRef = 0;
 
@@ -756,16 +756,16 @@ namespace wiScene
 		float mass = 1.0f;
 		float friction = 0.5f;
 		float restitution = 0.0f;
-		wiContainer::vector<uint32_t> physicsToGraphicsVertexMapping; // maps graphics vertex index to physics vertex index of the same position
-		wiContainer::vector<uint32_t> graphicsToPhysicsVertexMapping; // maps a physics vertex index to first graphics vertex index of the same position
-		wiContainer::vector<float> weights; // weight per physics vertex controlling the mass. (0: disable weight (no physics, only animation), 1: default weight)
+		std::vector<uint32_t> physicsToGraphicsVertexMapping; // maps graphics vertex index to physics vertex index of the same position
+		std::vector<uint32_t> graphicsToPhysicsVertexMapping; // maps a physics vertex index to first graphics vertex index of the same position
+		std::vector<float> weights; // weight per physics vertex controlling the mass. (0: disable weight (no physics, only animation), 1: default weight)
 
 		// Non-serialized attributes:
 		void* physicsobject = nullptr;
 		XMFLOAT4X4 worldMatrix = IDENTITYMATRIX;
-		wiContainer::vector<MeshComponent::Vertex_POS> vertex_positions_simulation; // graphics vertices after simulation (world space)
-		wiContainer::vector<XMFLOAT4>vertex_tangents_tmp;
-		wiContainer::vector<MeshComponent::Vertex_TAN> vertex_tangents_simulation;
+		std::vector<MeshComponent::Vertex_POS> vertex_positions_simulation; // graphics vertices after simulation (world space)
+		std::vector<XMFLOAT4>vertex_tangents_tmp;
+		std::vector<MeshComponent::Vertex_TAN> vertex_tangents_simulation;
 		AABB aabb;
 
 		inline void SetDisableDeactivation(bool value) { if (value) { _flags |= DISABLE_DEACTIVATION; } else { _flags &= ~DISABLE_DEACTIVATION; } }
@@ -786,13 +786,13 @@ namespace wiScene
 		};
 		uint32_t _flags = EMPTY;
 
-		wiContainer::vector<wiECS::Entity> boneCollection;
-		wiContainer::vector<XMFLOAT4X4> inverseBindMatrices;
+		std::vector<wiECS::Entity> boneCollection;
+		std::vector<XMFLOAT4X4> inverseBindMatrices;
 
 		// Non-serialized attributes:
 		AABB aabb;
 
-		wiContainer::vector<ShaderTransform> boneData;
+		std::vector<ShaderTransform> boneData;
 		wiGraphics::GPUBuffer boneBuffer;
 
 		void CreateRenderData();
@@ -830,7 +830,7 @@ namespace wiScene
 		float range_local = 10.0f;
 		float fov = XM_PIDIV4;
 
-		wiContainer::vector<std::string> lensFlareNames;
+		std::vector<std::string> lensFlareNames;
 
 		// Non-serialized attributes:
 		XMFLOAT3 position;
@@ -842,7 +842,7 @@ namespace wiScene
 		XMFLOAT3 right;
 		mutable int occlusionquery = -1;
 
-		wiContainer::vector<std::shared_ptr<wiResource>> lensFlareRimTextures;
+		std::vector<std::shared_ptr<wiResource>> lensFlareRimTextures;
 
 		inline void SetCastShadow(bool value) { if (value) { _flags |= CAST_SHADOW; } else { _flags &= ~CAST_SHADOW; } }
 		inline void SetVolumetricsEnabled(bool value) { if (value) { _flags |= VOLUMETRICS; } else { _flags &= ~VOLUMETRICS; } }
@@ -1010,8 +1010,8 @@ namespace wiScene
 		};
 		uint32_t _flags = EMPTY;
 
-		wiContainer::vector<float> keyframe_times;
-		wiContainer::vector<float> keyframe_data;
+		std::vector<float> keyframe_times;
+		std::vector<float> keyframe_data;
 
 		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
 	};
@@ -1073,11 +1073,11 @@ namespace wiScene
 			// The data is now not part of the sampler, so it can be shared. This is kept only for backwards compatibility with previous versions.
 			AnimationDataComponent backwards_compatibility_data;
 		};
-		wiContainer::vector<AnimationChannel> channels;
-		wiContainer::vector<AnimationSampler> samplers;
+		std::vector<AnimationChannel> channels;
+		std::vector<AnimationSampler> samplers;
 
 		// Non-serialzied attributes:
-		wiContainer::vector<float> morph_weights_temp;
+		std::vector<float> morph_weights_temp;
 
 		inline bool IsPlaying() const { return _flags & PLAYING; }
 		inline bool IsLooped() const { return _flags & LOOPED; }
@@ -1275,7 +1275,7 @@ namespace wiScene
 
 		wiSpinLock locker;
 		AABB bounds;
-		wiContainer::vector<AABB> parallel_bounds;
+		std::vector<AABB> parallel_bounds;
 		WeatherComponent weather;
 		wiGraphics::RaytracingAccelerationStructure TLAS;
 		wiGraphics::GPUBuffer TLAS_instancesUpload[wiGraphics::GraphicsDevice::GetBufferCount()];
@@ -1338,14 +1338,14 @@ namespace wiScene
 		static constexpr uint32_t envmapMIPs = 8;
 		wiGraphics::Texture envrenderingDepthBuffer;
 		wiGraphics::Texture envmapArray;
-		wiContainer::vector<wiGraphics::RenderPass> renderpasses_envmap;
+		std::vector<wiGraphics::RenderPass> renderpasses_envmap;
 
 		// Impostor texture array state:
 		static constexpr uint32_t maxImpostorCount = 8;
 		static constexpr uint32_t impostorTextureDim = 128;
 		wiGraphics::Texture impostorDepthStencil;
 		wiGraphics::Texture impostorArray;
-		wiContainer::vector<wiGraphics::RenderPass> renderpasses_impostor;
+		std::vector<wiGraphics::RenderPass> renderpasses_impostor;
 
 		mutable std::atomic_bool lightmap_refresh_needed{ false };
 
@@ -1354,7 +1354,7 @@ namespace wiScene
 		void OceanRegenerate() { ocean.Create(weather.oceanParameters); }
 
 		// Simple water ripple sprites:
-		mutable wiContainer::vector<wiSprite> waterRipples;
+		mutable std::vector<wiSprite> waterRipples;
 		void PutWaterRipple(const std::string& image, const XMFLOAT3& pos);
 
 		// Update all components by a given timestep (in seconds):

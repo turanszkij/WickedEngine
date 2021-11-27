@@ -560,7 +560,7 @@ void WeatherWindow::Create(EditorComponent* editor)
 
 		Scene& scene = wiScene::GetScene();
 
-		wiContainer::unordered_map<std::string, std::shared_ptr<wiResource>> conv;
+		std::unordered_map<std::string, std::shared_ptr<wiResource>> conv;
 		for (uint32_t i = 0; i < scene.materials.GetCount(); ++i)
 		{
 			MaterialComponent& material = scene.materials[i];
@@ -582,7 +582,7 @@ void WeatherWindow::Create(EditorComponent* editor)
 			if (wiHelper::saveTextureToMemory(x.second->texture, x.second->filedata))
 			{
 				wiJobSystem::Execute(ctx, [&](wiJobArgs args) {
-					wiContainer::vector<uint8_t> filedata_ktx2;
+					std::vector<uint8_t> filedata_ktx2;
 					if (wiHelper::saveTextureToMemoryFile(x.second->filedata, x.second->texture.desc, "KTX2", filedata_ktx2))
 					{
 						x.second = wiResourceManager::Load(x.first, wiResourceManager::IMPORT_RETAIN_FILEDATA, filedata_ktx2.data(), filedata_ktx2.size());

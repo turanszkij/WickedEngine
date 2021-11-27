@@ -10,13 +10,14 @@
 #include "wiPlatform.h"
 #include "wiEvent.h"
 #include "wiTimer.h"
-#include "wiContainer.h"
 
 #include "Utility/arial.h"
 #include "Utility/stb_truetype.h"
+#include "Utility/flat_hash_map.hpp"
 
 #include <fstream>
 #include <atomic>
+#include <vector>
 
 using namespace wiGraphics;
 using namespace wiRectPacker;
@@ -53,8 +54,8 @@ namespace wiFont_Internal
 		uint16_t tc_top;
 		uint16_t tc_bottom;
 	};
-	wiContainer::unordered_map<int32_t, Glyph> glyph_lookup;
-	wiContainer::unordered_map<int32_t, rect_xywh> rect_lookup;
+	std::unordered_map<int32_t, Glyph> glyph_lookup;
+	std::unordered_map<int32_t, rect_xywh> rect_lookup;
 	// pack glyph identifiers to a 32-bit hash:
 	//	height:	10 bits	(height supported: 0 - 1023)
 	//	style:	6 bits	(number of font styles supported: 0 - 63)
@@ -63,13 +64,13 @@ namespace wiFont_Internal
 	constexpr int codefromhash(int64_t hash) { return int((hash >> 16) & 0xFFFF); }
 	constexpr int stylefromhash(int64_t hash) { return int((hash >> 10) & 0x3F); }
 	constexpr int heightfromhash(int64_t hash) { return int((hash >> 0) & 0x3FF); }
-	wiContainer::unordered_set<int32_t> pendingGlyphs;
+	ska::flat_hash_set<int32_t> pendingGlyphs;
 	wiSpinLock glyphLock;
 
 	struct wiFontStyle
 	{
 		std::string name;
-		wiContainer::vector<uint8_t> fontBuffer; // only used if loaded from file, need to keep alive
+		std::vector<uint8_t> fontBuffer; // only used if loaded from file, need to keep alive
 		stbtt_fontinfo fontInfo;
 		int ascent, descent, lineGap;
 		void Create(const std::string& newName, const uint8_t* data, size_t size)
@@ -98,7 +99,7 @@ namespace wiFont_Internal
 			}
 		}
 	};
-	wiContainer::vector<wiFontStyle> fontStyles;
+	std::vector<wiFontStyle> fontStyles;
 
 	struct FontVertex
 	{
@@ -374,7 +375,7 @@ void UpdatePendingGlyphs()
 		pendingGlyphs.clear();
 
 		// This reference array will be used for packing:
-		wiContainer::vector<rect_xywh*> out_rects;
+		std::vector<rect_xywh*> out_rects;
 		out_rects.reserve(rect_lookup.size());
 		for (auto& it : rect_lookup)
 		{
@@ -382,7 +383,7 @@ void UpdatePendingGlyphs()
 		}
 
 		// Perform packing and process the result if successful:
-		wiContainer::vector<bin> bins;
+		std::vector<bin> bins;
 		if (pack(out_rects.data(), (int)out_rects.size(), 4096, bins))
 		{
 			assert(bins.size() == 1 && "The regions won't fit into one texture!");
@@ -394,7 +395,7 @@ void UpdatePendingGlyphs()
 			const float inv_height = 1.0f / bitmapHeight;
 
 			// Create the CPU-side texture atlas and fill with transparency (0):
-			wiContainer::vector<uint8_t> bitmap(size_t(bitmapWidth) * size_t(bitmapHeight));
+			std::vector<uint8_t> bitmap(size_t(bitmapWidth) * size_t(bitmapHeight));
 			std::fill(bitmap.begin(), bitmap.end(), 0);
 
 			// Iterate all packed glyph rectangles:

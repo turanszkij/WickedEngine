@@ -16,7 +16,7 @@ using namespace wiGraphics;
 namespace wiResourceManager
 {
 	std::mutex locker;
-	wiContainer::unordered_map<std::string, std::weak_ptr<wiResource>> resources;
+	std::unordered_map<std::string, std::weak_ptr<wiResource>> resources;
 	MODE mode = MODE_DISCARD_FILEDATA_AFTER_LOAD;
 
 	void SetMode(MODE param)
@@ -28,7 +28,7 @@ namespace wiResourceManager
 		return mode;
 	}
 
-	static const wiContainer::unordered_map<std::string, wiResource::DATA_TYPE> types = {
+	static const std::unordered_map<std::string, wiResource::DATA_TYPE> types = {
 		std::make_pair("BASIS", wiResource::IMAGE),
 		std::make_pair("KTX2", wiResource::IMAGE),
 		std::make_pair("JPG", wiResource::IMAGE),
@@ -40,9 +40,9 @@ namespace wiResourceManager
 		std::make_pair("WAV", wiResource::SOUND),
 		std::make_pair("OGG", wiResource::SOUND),
 	};
-	wiContainer::vector<std::string> GetSupportedImageExtensions()
+	std::vector<std::string> GetSupportedImageExtensions()
 	{
-		wiContainer::vector<std::string> ret;
+		std::vector<std::string> ret;
 		for (auto& x : types)
 		{
 			if (x.second == wiResource::IMAGE)
@@ -52,9 +52,9 @@ namespace wiResourceManager
 		}
 		return ret;
 	}
-	wiContainer::vector<std::string> GetSupportedSoundExtensions()
+	std::vector<std::string> GetSupportedSoundExtensions()
 	{
-		wiContainer::vector<std::string> ret;
+		std::vector<std::string> ret;
 		for (auto& x : types)
 		{
 			if (x.second == wiResource::SOUND)
@@ -176,9 +176,9 @@ namespace wiResourceManager
 								}
 							}
 						}
-						wiContainer::vector<uint8_t*> transcoded_data(transcoded_data_size);
+						std::vector<uint8_t*> transcoded_data(transcoded_data_size);
 
-						wiContainer::vector<SubresourceData> InitData;
+						std::vector<SubresourceData> InitData;
 						size_t transcoded_data_offset = 0;
 						for (uint32_t layer = 0; layer < std::max(1u, transcoder.get_layers()); ++layer)
 						{
@@ -261,9 +261,9 @@ namespace wiResourceManager
 										transcoded_data_size += level_info.m_total_blocks * bytes_per_block;
 									}
 								}
-								wiContainer::vector<uint8_t*> transcoded_data(transcoded_data_size);
+								std::vector<uint8_t*> transcoded_data(transcoded_data_size);
 
-								wiContainer::vector<SubresourceData> InitData;
+								std::vector<SubresourceData> InitData;
 								size_t transcoded_data_offset = 0;
 								for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
 								{
@@ -392,7 +392,7 @@ namespace wiResourceManager
 						break;
 					}
 
-					wiContainer::vector<SubresourceData> InitData;
+					std::vector<SubresourceData> InitData;
 					for (uint32_t arrayIndex = 0; arrayIndex < desc.array_size; ++arrayIndex)
 					{
 						for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
@@ -503,7 +503,7 @@ namespace wiResourceManager
 						desc.layout = ResourceState::SHADER_RESOURCE;
 
 						uint32_t mipwidth = width;
-						wiContainer::vector<SubresourceData> InitData(desc.mip_levels);
+						std::vector<SubresourceData> InitData(desc.mip_levels);
 						for (uint32_t mip = 0; mip < desc.mip_levels; ++mip)
 						{
 							InitData[mip].data_ptr = rgb; // attention! we don't fill the mips here correctly, just always point to the mip0 data by default. Mip levels will be created using compute shader when needed!
@@ -597,9 +597,9 @@ namespace wiResourceManager
 			{
 				std::string name;
 				uint32_t flags = 0;
-				wiContainer::vector<uint8_t> filedata;
+				std::vector<uint8_t> filedata;
 			};
-			wiContainer::vector<TempResource> temp_resources;
+			std::vector<TempResource> temp_resources;
 			temp_resources.resize(serializable_count);
 
 			wiJobSystem::context ctx;

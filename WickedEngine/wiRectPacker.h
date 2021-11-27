@@ -1,6 +1,5 @@
 #pragma once
 #include "CommonInclude.h"
-#include "wiContainer.h"
 
 // NOTE: 
 // This is based on the rectpack2D library hosted here: https://github.com/TeamHypersomnia/rectpack2D
@@ -12,7 +11,7 @@ members:
 int x, y, w, h;
 
 2. bin - structure representing resultant bin object
-3. bool pack(rect_xywh* const * v, int n, int max_side, wiContainer::vector<bin>& bins) - actual packing function
+3. bool pack(rect_xywh* const * v, int n, int max_side, std::vector<bin>& bins) - actual packing function
 Arguments:
 input/output: v - pointer to array of pointers to your rectangles (const here means that the pointers will point to the same rectangles after the call)
 input: n - rectangles count
@@ -36,6 +35,8 @@ For description how to tune the algorithm and how it actually works see the .cpp
 
 
 */
+
+#include <vector>
 
 namespace wiRectPacker
 {
@@ -73,9 +74,9 @@ namespace wiRectPacker
 
 	struct bin {
 		rect_wh size;
-		wiContainer::vector<rect_xywh*> rects;
+		std::vector<rect_xywh*> rects;
 	};
 
-	bool pack(rect_xywh* const * v, int n, int max_side, wiContainer::vector<bin>& bins);
+	bool pack(rect_xywh* const * v, int n, int max_side, std::vector<bin>& bins);
 
 }

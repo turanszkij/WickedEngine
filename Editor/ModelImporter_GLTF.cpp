@@ -141,7 +141,7 @@ struct LoaderState
 {
 	tinygltf::Model gltfModel;
 	Scene* scene;
-	wiContainer::unordered_map<int, Entity> entityMap;  // node -> entity
+	std::unordered_map<int, Entity> entityMap;  // node -> entity
 };
 
 // Recursively loads nodes and resolves hierarchy:

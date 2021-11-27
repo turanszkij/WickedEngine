@@ -1,8 +1,8 @@
 #pragma once
 #include "wiGraphics.h"
-#include "wiContainer.h"
 
 #include <string>
+#include <vector>
 
 namespace wiShaderCompiler
 {
@@ -23,8 +23,8 @@ namespace wiShaderCompiler
 		wiGraphics::ShaderModel minshadermodel = wiGraphics::ShaderModel::SM_5_0;
 		std::string shadersourcefilename;
 		std::string entrypoint = "main";
-		wiContainer::vector<std::string> include_directories;
-		wiContainer::vector<std::string> defines;
+		std::vector<std::string> include_directories;
+		std::vector<std::string> defines;
 	};
 	struct CompilerOutput
 	{
@@ -33,9 +33,9 @@ namespace wiShaderCompiler
 
 		const uint8_t* shaderdata = nullptr;
 		size_t shadersize = 0;
-		wiContainer::vector<uint8_t> shaderhash;
+		std::vector<uint8_t> shaderhash;
 		std::string error_message;
-		wiContainer::vector<std::string> dependencies;
+		std::vector<std::string> dependencies;
 	};
 	void Compile(const CompilerInput& input, CompilerOutput& output);
 

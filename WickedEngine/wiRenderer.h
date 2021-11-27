@@ -8,8 +8,8 @@
 #include "wiCanvas.h"
 #include "wiMath.h"
 #include "shaders/ShaderInterop_Renderer.h"
-#include "wiContainer.h"
 
+#include <vector>
 #include <memory>
 #include <limits>
 
@@ -98,11 +98,11 @@ namespace wiRenderer
 
 		// wiRenderer::UpdateVisibility() fills these:
 		Frustum frustum;
-		wiContainer::vector<uint32_t> visibleObjects;
-		wiContainer::vector<uint32_t> visibleDecals;
-		wiContainer::vector<uint32_t> visibleEnvProbes;
-		wiContainer::vector<uint32_t> visibleEmitters;
-		wiContainer::vector<uint32_t> visibleHairs;
+		std::vector<uint32_t> visibleObjects;
+		std::vector<uint32_t> visibleDecals;
+		std::vector<uint32_t> visibleEnvProbes;
+		std::vector<uint32_t> visibleEmitters;
+		std::vector<uint32_t> visibleHairs;
 
 		struct VisibleLight
 		{
@@ -112,7 +112,7 @@ namespace wiRenderer
 				return uint32_t(index | (uint32_t(distance) << 16)) < uint32_t(other.index | (uint32_t(other.distance) << 16));
 			}
 		};
-		wiContainer::vector<VisibleLight> visibleLights;
+		std::vector<VisibleLight> visibleLights;
 
 		std::atomic<uint32_t> object_counter;
 		std::atomic<uint32_t> light_counter;
@@ -841,7 +841,7 @@ namespace wiRenderer
 	// Registers a custom shader that can be set to materials. 
 	//	Returns the ID of the custom shader that can be used with MaterialComponent::SetCustomShaderID()
 	int RegisterCustomShader(const CustomShader& customShader);
-	const wiContainer::vector<CustomShader>& GetCustomShaders();
+	const std::vector<CustomShader>& GetCustomShaders();
 
 };
 

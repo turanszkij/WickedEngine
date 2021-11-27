@@ -1471,7 +1471,7 @@ void EditorComponent::Update(float dt)
 				if (!translator.selected.empty() && wiInput::Down(wiInput::KEYBOARD_BUTTON_LSHIFT))
 				{
 					// Union selection:
-					wiContainer::vector<wiScene::PickResult> saved = translator.selected;
+					std::vector<wiScene::PickResult> saved = translator.selected;
 					translator.selected.clear(); 
 					for (const wiScene::PickResult& picked : saved)
 					{
@@ -2500,7 +2500,7 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 			{
 				size_t count;
 				archive >> count;
-				wiContainer::vector<Entity> deletedEntities(count);
+				std::vector<Entity> deletedEntities(count);
 				for (size_t i = 0; i < count; ++i)
 				{
 					archive >> deletedEntities[i];
@@ -2527,7 +2527,7 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 			{
 				// Read selections states from archive:
 
-				wiContainer::vector<wiScene::PickResult> selectedBEFORE;
+				std::vector<wiScene::PickResult> selectedBEFORE;
 				size_t selectionCountBEFORE;
 				archive >> selectionCountBEFORE;
 				for (size_t i = 0; i < selectionCountBEFORE; ++i)
@@ -2542,7 +2542,7 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 					selectedBEFORE.push_back(sel);
 				}
 
-				wiContainer::vector<wiScene::PickResult> selectedAFTER;
+				std::vector<wiScene::PickResult> selectedAFTER;
 				size_t selectionCountAFTER;
 				archive >> selectionCountAFTER;
 				for (size_t i = 0; i < selectionCountAFTER; ++i)

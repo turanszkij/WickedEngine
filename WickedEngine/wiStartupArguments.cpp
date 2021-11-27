@@ -2,12 +2,14 @@
 #include "wiHelper.h"
 #include "wiContainer.h"
 
+#include "Utility/flat_hash_map.hpp"
+
 #include <sstream>
 #include <iterator>
 
 namespace wiStartupArguments
 {
-	wiContainer::unordered_set<std::string> params;
+	ska::flat_hash_set<std::string> params;
 
 	void Parse(const wchar_t* args)
 	{

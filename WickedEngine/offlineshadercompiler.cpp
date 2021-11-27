@@ -6,15 +6,15 @@
 #include <sstream>
 
 std::mutex locker;
-wiContainer::vector<std::string> shaders[static_cast<size_t>(wiGraphics::ShaderStage::Count)];
-wiContainer::unordered_map<std::string, wiGraphics::ShaderModel> minshadermodels;
+std::vector<std::string> shaders[static_cast<size_t>(wiGraphics::ShaderStage::Count)];
+std::unordered_map<std::string, wiGraphics::ShaderModel> minshadermodels;
 struct Target
 {
 	wiGraphics::ShaderFormat format;
 	std::string dir;
 };
-wiContainer::vector<Target> targets;
-wiContainer::unordered_map<std::string, wiShaderCompiler::CompilerOutput> results;
+std::vector<Target> targets;
+std::unordered_map<std::string, wiShaderCompiler::CompilerOutput> results;
 bool rebuild = false;
 bool shaderdump_enabled = false;
 
@@ -513,7 +513,7 @@ int main(int argc, char* argv[])
 			ss << "};" << std::endl;
 		}
 		ss << "struct ShaderDumpEntry{const uint8_t* data; size_t size;};" << std::endl;
-		ss << "const wiContainer::unordered_map<std::string, ShaderDumpEntry> shaderdump = {" << std::endl;
+		ss << "const std::unordered_map<std::string, ShaderDumpEntry> shaderdump = {" << std::endl;
 		for (auto& x : results)
 		{
 			auto& name = x.first;

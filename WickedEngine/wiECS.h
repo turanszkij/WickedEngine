@@ -3,7 +3,8 @@
 
 #include "wiArchive.h"
 #include "wiJobSystem.h"
-#include "wiContainer.h"
+
+#include "Utility/flat_hash_map.hpp"
 
 #include <cstdint>
 #include <cassert>
@@ -23,7 +24,7 @@ namespace wiECS
 	struct EntitySerializer
 	{
 		wiJobSystem::context ctx; // allow components to spawn serialization subtasks
-		wiContainer::unordered_map<uint64_t, Entity> remap;
+		std::unordered_map<uint64_t, Entity> remap;
 		bool allow_remap = true;
 
 		~EntitySerializer()
@@ -324,11 +325,11 @@ namespace wiECS
 
 	private:
 		// This is a linear array of alive components
-		wiContainer::vector<Component> components;
+		std::vector<Component> components;
 		// This is a linear array of entities corresponding to each alive component
-		wiContainer::vector<Entity> entities;
+		std::vector<Entity> entities;
 		// This is a lookup table for entities
-		wiContainer::unordered_map<Entity, size_t> lookup;
+		ska::flat_hash_map<Entity, size_t> lookup;
 
 		// Disallow this to be copied by mistake
 		ComponentManager(const ComponentManager&) = delete;

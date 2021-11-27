@@ -56,7 +56,7 @@ namespace wiLua
 			std::string filename = SGetString(L, 1);
 			filename = script_path + filename;
 			script_path = wiHelper::GetDirectoryFromPath(filename);
-			wiContainer::vector<uint8_t> filedata;
+			std::vector<uint8_t> filedata;
 			if (wiHelper::FileRead(filename, filedata))
 			{
 				std::string command = std::string(filedata.begin(), filedata.end());
@@ -163,7 +163,7 @@ namespace wiLua
 	bool RunFile(const std::string& filename)
 	{
 		script_path = wiHelper::GetDirectoryFromPath(filename);
-		wiContainer::vector<uint8_t> filedata;
+		std::vector<uint8_t> filedata;
 		if (wiHelper::FileRead(filename, filedata))
 		{
 			return RunText(std::string(filedata.begin(), filedata.end()));

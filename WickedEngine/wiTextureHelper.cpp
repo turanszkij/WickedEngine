@@ -4,7 +4,10 @@
 #include "wiBackLog.h"
 #include "wiSpinLock.h"
 #include "wiTimer.h"
-#include "wiContainer.h"
+
+#include "Utility/flat_hash_map.hpp"
+
+#include <vector>
 
 using namespace wiGraphics;
 
@@ -25,7 +28,7 @@ namespace wiTextureHelper
 		HELPERTEXTURE_COUNT
 	};
 	wiGraphics::Texture helperTextures[HELPERTEXTURE_COUNT];
-	wiContainer::unordered_map<unsigned long, wiGraphics::Texture> colorTextures;
+	ska::flat_hash_map<unsigned long, wiGraphics::Texture> colorTextures;
 	wiSpinLock colorlock;
 
 	void Initialize()

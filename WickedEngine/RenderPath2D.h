@@ -1,6 +1,5 @@
 #pragma once
 #include "RenderPath.h"
-#include "wiContainer.h"
 #include "wiGUI.h"
 
 #include <string>
@@ -24,7 +23,7 @@ struct RenderItem2D
 };
 struct RenderLayer2D
 {
-	wiContainer::vector<RenderItem2D> items;
+	std::vector<RenderItem2D> items;
 	std::string name;
 	int order = 0;
 };
@@ -77,7 +76,7 @@ public:
 	void ClearFonts();
 	int GetFontOrder(wiSpriteFont* font);
 
-	wiContainer::vector<RenderLayer2D> layers{ 1 };
+	std::vector<RenderLayer2D> layers{ 1 };
 	void AddLayer(const std::string& name);
 	void SetLayerOrder(const std::string& name, int order);
 	void SetSpriteOrder(wiSprite* sprite, int order);
