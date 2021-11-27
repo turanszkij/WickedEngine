@@ -1294,6 +1294,7 @@ namespace wiScene
 		//	contains in order:
 		//		1) objects
 		//		2) hair particles
+		//		3) emitted particles
 		wiGraphics::GPUBuffer instanceUploadBuffer[wiGraphics::GraphicsDevice::GetBufferCount()];
 		ShaderMeshInstance* instanceArrayMapped = nullptr;
 		size_t instanceArraySize = 0;
@@ -1303,6 +1304,7 @@ namespace wiScene
 		//	contains in order:
 		//		1) meshes
 		//		2) hair particles
+		//		3) emitted particles
 		wiGraphics::GPUBuffer meshUploadBuffer[wiGraphics::GraphicsDevice::GetBufferCount()];
 		ShaderMesh* meshArrayMapped = nullptr;
 		size_t meshArraySize = 0;
