@@ -2,13 +2,6 @@
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
 #include "wiScene_Decl.h"
-#include "wiRectPacker.h"
-#include "shaders/ShaderInterop_Renderer.h"
-#include "wiResourceManager.h"
-
-#include <vector>
-#include <unordered_map>
-#include <unordered_set>
 
 struct wiGPUBVH
 {

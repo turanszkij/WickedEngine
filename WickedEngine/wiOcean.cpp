@@ -6,9 +6,9 @@
 #include "wiBackLog.h"
 #include "wiEvent.h"
 #include "wiTimer.h"
+#include "wiContainer.h"
 
 #include <algorithm>
-#include <vector>
 
 using namespace wiGraphics;
 using namespace wiScene;
@@ -106,8 +106,8 @@ void wiOcean::Create(const OceanParameters& params)
 
 	// Height map H(0)
 	int height_map_size = (params.dmap_dim + 4) * (params.dmap_dim + 1);
-	std::vector<XMFLOAT2> h0_data(height_map_size);
-	std::vector<float> omega_data(height_map_size);
+	wiContainer::vector<XMFLOAT2> h0_data(height_map_size);
+	wiContainer::vector<float> omega_data(height_map_size);
 	initHeightMap(params, h0_data.data(), omega_data.data());
 
 	int hmap_dim = params.dmap_dim;
@@ -117,7 +117,7 @@ void wiOcean::Create(const OceanParameters& params)
 	int output_size = hmap_dim * hmap_dim;
 
 	// For filling the buffer with zeroes.
-	std::vector<char> zero_data(3 * output_size * sizeof(float) * 2);
+	wiContainer::vector<char> zero_data(3 * output_size * sizeof(float) * 2);
 	std::fill(zero_data.begin(), zero_data.end(), 0);
 
 	GPUBufferDesc buf_desc;

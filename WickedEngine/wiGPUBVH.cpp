@@ -11,9 +11,6 @@
 #include "wiTimer.h"
 
 //#define BVH_VALIDATE // slow but great for debug!
-#ifdef BVH_VALIDATE
-#include <set>
-#endif // BVH_VALIDATE
 
 using namespace wiGraphics;
 using namespace wiScene;

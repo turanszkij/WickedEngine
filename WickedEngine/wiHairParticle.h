@@ -6,6 +6,7 @@
 #include "wiECS.h"
 #include "wiScene_Decl.h"
 #include "wiIntersect.h"
+#include "wiContainer.h"
 
 #include <memory>
 
@@ -52,7 +53,7 @@ public:
 	float stiffness = 10.0f;
 	float randomness = 0.2f;
 	float viewDistance = 200;
-	std::vector<float> vertex_lengths;
+	wiContainer::vector<float> vertex_lengths;
 
 	// Sprite sheet properties:
 	uint32_t framesX = 1;
@@ -64,7 +65,7 @@ public:
 	XMFLOAT4X4 world;
 	XMFLOAT4X4 worldPrev;
 	AABB aabb;
-	std::vector<uint32_t> indices; // it is dependent on vertex_lengths and contains triangles with non-zero lengths
+	wiContainer::vector<uint32_t> indices; // it is dependent on vertex_lengths and contains triangles with non-zero lengths
 	uint32_t layerMask = ~0u;
 	mutable bool regenerate_frame = true;
 

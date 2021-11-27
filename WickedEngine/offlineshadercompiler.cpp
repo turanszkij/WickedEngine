@@ -1,22 +1,20 @@
 #include "WickedEngine.h"
 
 #include <iostream>
-#include <vector>
 #include <filesystem>
 #include <mutex>
-#include <unordered_map>
 #include <sstream>
 
 std::mutex locker;
-std::vector<std::string> shaders[static_cast<size_t>(wiGraphics::ShaderStage::Count)];
-std::unordered_map<std::string, wiGraphics::ShaderModel> minshadermodels;
+wiContainer::vector<std::string> shaders[static_cast<size_t>(wiGraphics::ShaderStage::Count)];
+wiContainer::unordered_map<std::string, wiGraphics::ShaderModel> minshadermodels;
 struct Target
 {
 	wiGraphics::ShaderFormat format;
 	std::string dir;
 };
-std::vector<Target> targets;
-std::unordered_map<std::string, wiShaderCompiler::CompilerOutput> results;
+wiContainer::vector<Target> targets;
+wiContainer::unordered_map<std::string, wiShaderCompiler::CompilerOutput> results;
 bool rebuild = false;
 bool shaderdump_enabled = false;
 
@@ -515,7 +513,7 @@ int main(int argc, char* argv[])
 			ss << "};" << std::endl;
 		}
 		ss << "struct ShaderDumpEntry{const uint8_t* data; size_t size;};" << std::endl;
-		ss << "const std::unordered_map<std::string, ShaderDumpEntry> shaderdump = {" << std::endl;
+		ss << "const wiContainer::unordered_map<std::string, ShaderDumpEntry> shaderdump = {" << std::endl;
 		for (auto& x : results)
 		{
 			auto& name = x.first;

@@ -1,10 +1,8 @@
 #pragma once
 #include "wiSpinLock.h"
 
-#include <memory>
 #include <cstdint>
 #include <cassert>
-#include <vector>
 
 namespace wiAllocator
 {

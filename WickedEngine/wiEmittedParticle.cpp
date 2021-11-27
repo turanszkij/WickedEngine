@@ -11,6 +11,7 @@
 #include "wiBackLog.h"
 #include "wiEvent.h"
 #include "wiTimer.h"
+#include "wiContainer.h"
 
 #include <algorithm>
 
@@ -83,7 +84,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 		device->SetName(&culledIndirectionBuffer2, "culledIndirectionBuffer2");
 
 		// Dead index list:
-		std::vector<uint32_t> indices(MAX_PARTICLES);
+		wiContainer::vector<uint32_t> indices(MAX_PARTICLES);
 		for (uint32_t i = 0; i < MAX_PARTICLES; ++i)
 		{
 			indices[i] = i;
@@ -99,7 +100,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 		}
 		bd.stride = sizeof(MeshComponent::Vertex_POS);
 		bd.size = bd.stride * 4 * MAX_PARTICLES;
-		std::vector<MeshComponent::Vertex_POS> positionData(4 * MAX_PARTICLES);
+		wiContainer::vector<MeshComponent::Vertex_POS> positionData(4 * MAX_PARTICLES);
 		std::fill(positionData.begin(), positionData.end(), MeshComponent::Vertex_POS());
 		device->CreateBuffer(&bd, positionData.data(), &vertexBuffer_POS);
 		device->SetName(&vertexBuffer_POS, "vertexBuffer_POS");
@@ -131,7 +132,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 		bd.format = Format::R32_UINT;
 		bd.stride = sizeof(uint);
 		bd.size = bd.stride * 6 * MAX_PARTICLES;
-		std::vector<uint> primitiveData(6 * MAX_PARTICLES);
+		wiContainer::vector<uint> primitiveData(6 * MAX_PARTICLES);
 		for (uint particleID = 0; particleID < MAX_PARTICLES; ++particleID)
 		{
 			uint v0 = particleID * 4;
@@ -156,7 +157,7 @@ void wiEmittedParticle::CreateSelfBuffers()
 		bd.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 		bd.stride = sizeof(float);
 		bd.size = bd.stride * MAX_PARTICLES;
-		std::vector<float> distances(MAX_PARTICLES);
+		wiContainer::vector<float> distances(MAX_PARTICLES);
 		std::fill(distances.begin(), distances.end(), 0.0f);
 		device->CreateBuffer(&bd, distances.data(), &distanceBuffer);
 		device->SetName(&distanceBuffer, "distanceBuffer");

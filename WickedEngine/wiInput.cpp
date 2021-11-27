@@ -62,7 +62,7 @@ namespace wiInput
 		};
 	};
 	std::map<Input, uint32_t, Input::LessComparer> inputs;
-	std::vector<Touch> touches;
+	wiContainer::vector<Touch> touches;
 
 	struct Controller
 	{
@@ -77,7 +77,7 @@ namespace wiInput
 		int deviceIndex;
 		ControllerState state;
 	};
-	std::vector<Controller> controllers;
+	wiContainer::vector<Controller> controllers;
 	std::atomic_bool initialized{ false };
 
 	void Initialize()
@@ -838,7 +838,7 @@ namespace wiInput
 		}
 	}
 
-	const std::vector<Touch>& GetTouches()
+	const wiContainer::vector<Touch>& GetTouches()
 	{
 		return touches;
 	}

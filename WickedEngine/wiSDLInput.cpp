@@ -5,6 +5,8 @@
 #include "CommonInclude.h"
 #include "wiBackLog.h"
 #include "wiInput.h"
+#include "wiContainer.h"
+
 #include <SDL2/SDL.h>
 #include <SDL_events.h>
 #include <SDL_gamecontroller.h>
@@ -26,7 +28,7 @@ namespace wiSDLInput
     //    std::wstring name;
     //    wiInput::ControllerState state;
     //};
-    //std::vector<Internal_ControllerState> controllers;
+    //wiContainer::vector<Internal_ControllerState> controllers;
 
     struct Internal_ControllerState
     {
@@ -35,7 +37,7 @@ namespace wiSDLInput
         SDL_GameController* controller;
         wiInput::ControllerState state;
     };
-    std::vector<Internal_ControllerState> controllers;
+    wiContainer::vector<Internal_ControllerState> controllers;
     int numSticks = 0;
 
     int to_wiInput(const SDL_Scancode &key);
@@ -93,7 +95,7 @@ namespace wiSDLInput
             RemoveController();
         }
 
-        std::vector<SDL_Event> events(1000);
+        wiContainer::vector<SDL_Event> events(1000);
 
         // This removes the only the inputs events from the event queue, leaving audio and window events for other
         // section of the code

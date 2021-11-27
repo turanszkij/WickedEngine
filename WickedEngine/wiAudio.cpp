@@ -2,8 +2,7 @@
 #include "wiBackLog.h"
 #include "wiHelper.h"
 #include "wiTimer.h"
-
-#include <vector>
+#include "wiContainer.h"
 
 #define STB_VORBIS_HEADER_ONLY
 #include "Utility/stb_vorbis.c"
@@ -165,7 +164,7 @@ namespace wiAudio
 	{
 		std::shared_ptr<AudioInternal> audio;
 		WAVEFORMATEX wfx = {};
-		std::vector<uint8_t> audioData;
+		wiContainer::vector<uint8_t> audioData;
 	};
 	struct SoundInstanceInternal
 	{
@@ -173,8 +172,8 @@ namespace wiAudio
 		std::shared_ptr<SoundInternal> soundinternal;
 		IXAudio2SourceVoice* sourceVoice = nullptr;
 		XAUDIO2_VOICE_DETAILS voiceDetails = {};
-		std::vector<float> outputMatrix;
-		std::vector<float> channelAzimuths;
+		wiContainer::vector<float> outputMatrix;
+		wiContainer::vector<float> channelAzimuths;
 		XAUDIO2_BUFFER buffer = {};
 
 		~SoundInstanceInternal()
@@ -256,7 +255,7 @@ namespace wiAudio
 
 	bool CreateSound(const std::string& filename, Sound* sound)
 	{
-		std::vector<uint8_t> filedata;
+		wiContainer::vector<uint8_t> filedata;
 		bool success = wiHelper::FileRead(filename, filedata);
 		if (!success)
 		{
@@ -264,7 +263,7 @@ namespace wiAudio
 		}
 		return CreateSound(filedata, sound);
 	}
-	bool CreateSound(const std::vector<uint8_t>& data, Sound* sound)
+	bool CreateSound(const wiContainer::vector<uint8_t>& data, Sound* sound)
 	{
 		return CreateSound(data.data(), data.size(), sound);
 	}
@@ -682,15 +681,15 @@ namespace wiAudio
 	struct SoundInternal{
 		std::shared_ptr<AudioInternal> audio;
 		FAudioWaveFormatEx wfx = {};
-		std::vector<uint8_t> audioData;
+		wiContainer::vector<uint8_t> audioData;
 	};
 	struct SoundInstanceInternal{
 		std::shared_ptr<AudioInternal> audio;
 		std::shared_ptr<SoundInternal> soundinternal;
 		FAudioSourceVoice* sourceVoice = nullptr;
 		FAudioVoiceDetails voiceDetails = {};
-		std::vector<float> outputMatrix;
-		std::vector<float> channelAzimuths;
+		wiContainer::vector<float> outputMatrix;
+		wiContainer::vector<float> channelAzimuths;
 		FAudioBuffer buffer = {};
 
 		~SoundInstanceInternal(){
@@ -769,7 +768,7 @@ namespace wiAudio
 	}
 
 	bool CreateSound(const std::string& filename, Sound* sound) { 
-		std::vector<uint8_t> filedata;
+		wiContainer::vector<uint8_t> filedata;
 		bool success = wiHelper::FileRead(filename, filedata);
 		if (!success)
 		{
@@ -777,7 +776,7 @@ namespace wiAudio
 		}
 		return CreateSound(filedata, sound);
 	}
-	bool CreateSound(const std::vector<uint8_t>& data, Sound* sound) {
+	bool CreateSound(const wiContainer::vector<uint8_t>& data, Sound* sound) {
 		return CreateSound(data.data(), data.size(), sound);
 	}
 	bool CreateSound(const uint8_t* data, size_t size, Sound* sound) {
@@ -1049,7 +1048,7 @@ namespace wiAudio
 	void Initialize() {}
 
 	bool CreateSound(const std::string& filename, Sound* sound) { return false; }
-	bool CreateSound(const std::vector<uint8_t>& data, Sound* sound) { return false; }
+	bool CreateSound(const wiContainer::vector<uint8_t>& data, Sound* sound) { return false; }
 	bool CreateSound(const uint8_t* data, size_t size, Sound* sound) { return false; }
 	bool CreateSoundInstance(const Sound* sound, SoundInstance* instance) { return false; }
 

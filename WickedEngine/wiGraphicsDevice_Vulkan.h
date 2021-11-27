@@ -8,6 +8,7 @@
 
 #ifdef WICKEDENGINE_BUILD_VULKAN
 #include "wiGraphicsDevice.h"
+#include "wiContainer.h"
 
 #ifdef _WIN32
 #define VK_USE_PLATFORM_WIN32_KHR
@@ -18,8 +19,6 @@
 #include "Utility/volk.h"
 #include "Utility/vk_mem_alloc.h"
 
-#include <vector>
-#include <unordered_map>
 #include <deque>
 #include <atomic>
 #include <mutex>
@@ -36,11 +35,11 @@ namespace wiGraphics
 	    VkDebugUtilsMessengerEXT debugUtilsMessenger = VK_NULL_HANDLE;
 		VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 		VkDevice device = VK_NULL_HANDLE;
-		std::vector<VkQueueFamilyProperties> queueFamilies;
+		wiContainer::vector<VkQueueFamilyProperties> queueFamilies;
 		uint32_t graphicsFamily = VK_QUEUE_FAMILY_IGNORED;
 		uint32_t computeFamily = VK_QUEUE_FAMILY_IGNORED;
 		uint32_t copyFamily = VK_QUEUE_FAMILY_IGNORED;
-		std::vector<uint32_t> families;
+		wiContainer::vector<uint32_t> families;
 		VkQueue graphicsQueue = VK_NULL_HANDLE;
 		VkQueue computeQueue = VK_NULL_HANDLE;
 		VkQueue copyQueue = VK_NULL_HANDLE;
@@ -65,7 +64,7 @@ namespace wiGraphics
 		VkPhysicalDeviceConditionalRenderingFeaturesEXT conditional_rendering_features = {};
 		VkPhysicalDeviceDepthClipEnableFeaturesEXT depth_clip_enable_features = {};
 
-		std::vector<VkDynamicState> pso_dynamicStates;
+		wiContainer::vector<VkDynamicState> pso_dynamicStates;
 		VkPipelineDynamicStateCreateInfo dynamicStateInfo = {};
 
 		VkBuffer		nullBuffer = VK_NULL_HANDLE;
@@ -90,15 +89,15 @@ namespace wiGraphics
 		{
 			VkQueue queue = VK_NULL_HANDLE;
 			VkSemaphore semaphore = VK_NULL_HANDLE;
-			std::vector<SwapChain> swapchain_updates;
-			std::vector<VkSwapchainKHR> submit_swapchains;
-			std::vector<uint32_t> submit_swapChainImageIndices;
-			std::vector<VkPipelineStageFlags> submit_waitStages;
-			std::vector<VkSemaphore> submit_waitSemaphores;
-			std::vector<uint64_t> submit_waitValues;
-			std::vector<VkSemaphore> submit_signalSemaphores;
-			std::vector<uint64_t> submit_signalValues;
-			std::vector<VkCommandBuffer> submit_cmds;
+			wiContainer::vector<SwapChain> swapchain_updates;
+			wiContainer::vector<VkSwapchainKHR> submit_swapchains;
+			wiContainer::vector<uint32_t> submit_swapChainImageIndices;
+			wiContainer::vector<VkPipelineStageFlags> submit_waitStages;
+			wiContainer::vector<VkSemaphore> submit_waitSemaphores;
+			wiContainer::vector<uint64_t> submit_waitValues;
+			wiContainer::vector<VkSemaphore> submit_signalSemaphores;
+			wiContainer::vector<uint64_t> submit_signalValues;
+			wiContainer::vector<VkCommandBuffer> submit_cmds;
 
 			void submit(GraphicsDevice_Vulkan* device, VkFence fence);
 
@@ -118,9 +117,9 @@ namespace wiGraphics
 				uint64_t target = 0;
 				GPUBuffer uploadbuffer;
 			};
-			std::vector<CopyCMD> freelist; // available
-			std::vector<CopyCMD> worklist; // in progress
-			std::vector<VkCommandBuffer> submit_cmds; // for next submit
+			wiContainer::vector<CopyCMD> freelist; // available
+			wiContainer::vector<CopyCMD> worklist; // in progress
+			wiContainer::vector<VkCommandBuffer> submit_cmds; // for next submit
 			uint64_t submit_wait = 0; // last submit wait value
 
 			void init(GraphicsDevice_Vulkan* device);
@@ -161,7 +160,7 @@ namespace wiGraphics
 		struct CommandListMetadata
 		{
 			QUEUE_TYPE queue = {};
-			std::vector<CommandList> waits;
+			wiContainer::vector<CommandList> waits;
 		} cmd_meta[COMMANDLIST_COUNT];
 
 		inline VkCommandBuffer GetCommandList(CommandList::index_type cmd)
@@ -174,11 +173,11 @@ namespace wiGraphics
 			DescriptorBindingTable table;
 			GraphicsDevice_Vulkan* device;
 
-			std::vector<VkWriteDescriptorSet> descriptorWrites;
-			std::vector<VkDescriptorBufferInfo> bufferInfos;
-			std::vector<VkDescriptorImageInfo> imageInfos;
-			std::vector<VkBufferView> texelBufferViews;
-			std::vector<VkWriteDescriptorSetAccelerationStructureKHR> accelerationStructureViews;
+			wiContainer::vector<VkWriteDescriptorSet> descriptorWrites;
+			wiContainer::vector<VkDescriptorBufferInfo> bufferInfos;
+			wiContainer::vector<VkDescriptorImageInfo> imageInfos;
+			wiContainer::vector<VkBufferView> texelBufferViews;
+			wiContainer::vector<VkWriteDescriptorSetAccelerationStructureKHR> accelerationStructureViews;
 			bool dirty = false;
 
 			void init(GraphicsDevice_Vulkan* device);
@@ -187,30 +186,30 @@ namespace wiGraphics
 		};
 		DescriptorBinder binders[COMMANDLIST_COUNT];
 
-		std::vector<VkMemoryBarrier> frame_memoryBarriers[COMMANDLIST_COUNT];
-		std::vector<VkImageMemoryBarrier> frame_imageBarriers[COMMANDLIST_COUNT];
-		std::vector<VkBufferMemoryBarrier> frame_bufferBarriers[COMMANDLIST_COUNT];
+		wiContainer::vector<VkMemoryBarrier> frame_memoryBarriers[COMMANDLIST_COUNT];
+		wiContainer::vector<VkImageMemoryBarrier> frame_imageBarriers[COMMANDLIST_COUNT];
+		wiContainer::vector<VkBufferMemoryBarrier> frame_bufferBarriers[COMMANDLIST_COUNT];
 
 		struct PSOLayout
 		{
 			VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
 			VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
-			std::vector<VkDescriptorSet> bindlessSets;
+			wiContainer::vector<VkDescriptorSet> bindlessSets;
 			uint32_t bindlessFirstSet = 0;
 		};
-		mutable std::unordered_map<size_t, PSOLayout> pso_layout_cache;
+		mutable wiContainer::unordered_map<size_t, PSOLayout> pso_layout_cache;
 		mutable std::mutex pso_layout_cache_mutex;
 
 		VkPipelineCache pipelineCache = VK_NULL_HANDLE;
-		std::unordered_map<size_t, VkPipeline> pipelines_global;
-		std::vector<std::pair<size_t, VkPipeline>> pipelines_worker[COMMANDLIST_COUNT];
+		wiContainer::unordered_map<size_t, VkPipeline> pipelines_global;
+		wiContainer::vector<std::pair<size_t, VkPipeline>> pipelines_worker[COMMANDLIST_COUNT];
 		size_t prev_pipeline_hash[COMMANDLIST_COUNT] = {};
 		const PipelineState* active_pso[COMMANDLIST_COUNT] = {};
 		const Shader* active_cs[COMMANDLIST_COUNT] = {};
 		const RaytracingPipelineState* active_rt[COMMANDLIST_COUNT] = {};
 		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
 		ShadingRate prev_shadingrate[COMMANDLIST_COUNT] = {};
-		std::vector<SwapChain> prev_swapchains[COMMANDLIST_COUNT];
+		wiContainer::vector<SwapChain> prev_swapchains[COMMANDLIST_COUNT];
 
 		uint32_t vb_strides[COMMANDLIST_COUNT][8] = {};
 		size_t vb_hash[COMMANDLIST_COUNT] = {};
@@ -231,7 +230,7 @@ namespace wiGraphics
 
 		std::atomic<CommandList::index_type> cmd_count{ 0 };
 
-		std::vector<StaticSampler> common_samplers;
+		wiContainer::vector<StaticSampler> common_samplers;
 
 	public:
 		GraphicsDevice_Vulkan(wiPlatform::window_type window, bool debuglayer = false);
@@ -338,7 +337,7 @@ namespace wiGraphics
 				VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
 				VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
 				VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
-				std::vector<int> freelist;
+				wiContainer::vector<int> freelist;
 				std::mutex locker;
 
 				void init(VkDevice device, VkDescriptorType type, uint32_t descriptorCount)

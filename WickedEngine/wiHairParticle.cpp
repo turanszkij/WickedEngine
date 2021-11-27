@@ -94,7 +94,7 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 			bd.format = Format::R32_UINT;
 			bd.stride = sizeof(uint);
 			bd.size = bd.stride * 6 * particleCount;
-			std::vector<uint> primitiveData(6 * particleCount);
+			wiContainer::vector<uint> primitiveData(6 * particleCount);
 			for (uint particleID = 0; particleID < particleCount; ++particleID)
 			{
 				uint v0 = particleID * 4;
@@ -149,7 +149,7 @@ void wiHairParticle::UpdateCPU(const TransformComponent& transform, const MeshCo
 
 		if (!vertex_lengths.empty())
 		{
-			std::vector<uint8_t> ulengths;
+			wiContainer::vector<uint8_t> ulengths;
 			ulengths.reserve(vertex_lengths.size());
 			for (auto& x : vertex_lengths)
 			{

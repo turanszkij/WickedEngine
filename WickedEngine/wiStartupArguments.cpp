@@ -1,14 +1,13 @@
 #include "wiStartupArguments.h"
 #include "wiHelper.h"
+#include "wiContainer.h"
 
-#include <vector>
 #include <sstream>
 #include <iterator>
-#include <set>
 
 namespace wiStartupArguments
 {
-	std::set<std::string> params;
+	wiContainer::unordered_set<std::string> params;
 
 	void Parse(const wchar_t* args)
 	{

@@ -5,9 +5,9 @@
 #include "wiTimer.h"
 #include "wiTextureHelper.h"
 #include "wiHelper.h"
+#include "wiContainer.h"
 
 #include <string>
-#include <unordered_map>
 #include <stack>
 #include <mutex>
 #include <atomic>
@@ -43,7 +43,7 @@ namespace wiProfiler
 
 		bool IsCPURange() const { return cmd == INVALID_COMMANDLIST; }
 	};
-	std::unordered_map<size_t, Range> ranges;
+	wiContainer::unordered_map<size_t, Range> ranges;
 
 	void BeginFrame()
 	{
@@ -233,8 +233,8 @@ namespace wiProfiler
 		uint32_t num_hits = 0;
 		float total_time = 0;
 	};
-	std::unordered_map<std::string, Hits> time_cache_cpu;
-	std::unordered_map<std::string, Hits> time_cache_gpu;
+	wiContainer::unordered_map<std::string, Hits> time_cache_cpu;
+	wiContainer::unordered_map<std::string, Hits> time_cache_gpu;
 	void DrawData(const wiCanvas& canvas, float x, float y, CommandList cmd)
 	{
 		if (!ENABLED || !initialized)

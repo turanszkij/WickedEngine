@@ -38,7 +38,7 @@ public:
 			filepath = matId;
 		}
 
-		std::vector<uint8_t> filedata;
+		wiContainer::vector<uint8_t> filedata;
 		if (!wiHelper::FileRead(filepath, filedata))
 		{
 			std::stringstream ss;
@@ -108,7 +108,7 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 		scene.names.Create(rootEntity) = name;
 
 		// Load material library:
-		std::vector<Entity> materialLibrary = {};
+		wiContainer::vector<Entity> materialLibrary = {};
 		for (auto& obj_material : obj_materials)
 		{
 			Entity materialEntity = scene.Entity_CreateMaterial(obj_material.name);
@@ -168,8 +168,8 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 
 			object.meshID = meshEntity;
 
-			std::unordered_map<int, int> registered_materialIndices = {};
-			std::unordered_map<size_t, uint32_t> uniqueVertices = {};
+			wiContainer::unordered_map<int, int> registered_materialIndices = {};
+			wiContainer::unordered_map<size_t, uint32_t> uniqueVertices = {};
 
 			for (size_t i = 0; i < shape.mesh.indices.size(); i += 3)
 			{

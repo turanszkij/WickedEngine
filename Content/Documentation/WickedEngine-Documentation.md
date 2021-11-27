@@ -1107,7 +1107,7 @@ The controller force feedback features that might be supported. Can be provided 
 ### Touch
 A touch contact point. Currently it is supported in UWP (Universal Windows Platform) applications.
 - GetTouches <br/>
-Get a std::vector containing current Touch contact points
+Get a vector containing current Touch contact points
 
 ### wiXInput
 [[Header]](../../WickedEngine/wiXInput.h) [[Cpp]](../../WickedEngine/wiXInput.cpp)

@@ -438,7 +438,7 @@ void TestsRenderer::RunJobSystemTest()
 
 	// Simple loop test:
 	{
-		std::vector<wiScene::CameraComponent> dataSet(itemCount);
+		wiContainer::vector<wiScene::CameraComponent> dataSet(itemCount);
 		timer.record();
 		for (uint32_t i = 0; i < itemCount; ++i)
 		{
@@ -450,7 +450,7 @@ void TestsRenderer::RunJobSystemTest()
 
 	// Dispatch test:
 	{
-		std::vector<wiScene::CameraComponent> dataSet(itemCount);
+		wiContainer::vector<wiScene::CameraComponent> dataSet(itemCount);
 		timer.record();
 		wiJobSystem::Dispatch(ctx, itemCount, 1000, [&](wiJobArgs args) {
 			dataSet[args.jobIndex].UpdateCamera();

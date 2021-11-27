@@ -13,7 +13,6 @@
 
 #include <fstream>
 #include <sstream>
-#include <unordered_map>
 
 using namespace wiGraphics;
 using namespace wiScene;
@@ -142,7 +141,7 @@ struct LoaderState
 {
 	tinygltf::Model gltfModel;
 	Scene* scene;
-	std::unordered_map<int, Entity> entityMap;  // node -> entity
+	wiContainer::unordered_map<int, Entity> entityMap;  // node -> entity
 };
 
 // Recursively loads nodes and resolves hierarchy:

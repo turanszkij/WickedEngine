@@ -3,11 +3,10 @@
 
 #include "wiArchive.h"
 #include "wiJobSystem.h"
+#include "wiContainer.h"
 
 #include <cstdint>
 #include <cassert>
-#include <vector>
-#include <unordered_map>
 #include <atomic>
 
 namespace wiECS
@@ -24,7 +23,7 @@ namespace wiECS
 	struct EntitySerializer
 	{
 		wiJobSystem::context ctx; // allow components to spawn serialization subtasks
-		std::unordered_map<uint64_t, Entity> remap;
+		wiContainer::unordered_map<uint64_t, Entity> remap;
 		bool allow_remap = true;
 
 		~EntitySerializer()
@@ -325,11 +324,11 @@ namespace wiECS
 
 	private:
 		// This is a linear array of alive components
-		std::vector<Component> components;
+		wiContainer::vector<Component> components;
 		// This is a linear array of entities corresponding to each alive component
-		std::vector<Entity> entities;
+		wiContainer::vector<Entity> entities;
 		// This is a lookup table for entities
-		std::unordered_map<Entity, size_t> lookup;
+		wiContainer::unordered_map<Entity, size_t> lookup;
 
 		// Disallow this to be copied by mistake
 		ComponentManager(const ComponentManager&) = delete;

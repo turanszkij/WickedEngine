@@ -61,6 +61,8 @@
 #include "wiEvent.h"
 #include "wiShaderCompiler.h"
 #include "wiCanvas.h"
+#include "wiAllocator.h"
+#include "wiContainer.h"
 
 #ifdef _WIN32
 #ifdef PLATFORM_UWP

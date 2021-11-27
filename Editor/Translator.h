@@ -1,8 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiCanvas.h"
-
-#include <vector>
+#include <wiContainer.h>
 
 class Translator
 {
@@ -24,7 +23,7 @@ public:
 	void PostTranslate();
 
 	wiScene::TransformComponent transform;
-	std::vector<wiScene::PickResult> selected;
+	wiContainer::vector<wiScene::PickResult> selected;
 
 	bool enabled = false;
 

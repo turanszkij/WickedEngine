@@ -4,8 +4,7 @@
 #include "wiBackLog.h"
 #include "wiSpinLock.h"
 #include "wiTimer.h"
-
-#include <unordered_map>
+#include "wiContainer.h"
 
 using namespace wiGraphics;
 
@@ -26,7 +25,7 @@ namespace wiTextureHelper
 		HELPERTEXTURE_COUNT
 	};
 	wiGraphics::Texture helperTextures[HELPERTEXTURE_COUNT];
-	std::unordered_map<unsigned long, wiGraphics::Texture> colorTextures;
+	wiContainer::unordered_map<unsigned long, wiGraphics::Texture> colorTextures;
 	wiSpinLock colorlock;
 
 	void Initialize()

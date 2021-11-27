@@ -1,7 +1,6 @@
 #pragma once
 // This file includes platform, os specific libraries and supplies common platform specific resources
 
-#include <vector>
 #include <mutex>
 #include <string>
 #include <iostream>

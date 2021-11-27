@@ -1,9 +1,9 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
+#include "wiContainer.h"
 
 #include <string>
-#include <vector>
 #include <functional>
 
 namespace wiHelper
@@ -38,19 +38,19 @@ namespace wiHelper
 	void screenshot(const wiGraphics::SwapChain& swapchain, const std::string& name = "");
 
 	// Save raw pixel data from the texture to memory
-	bool saveTextureToMemory(const wiGraphics::Texture& texture, std::vector<uint8_t>& texturedata);
+	bool saveTextureToMemory(const wiGraphics::Texture& texture, wiContainer::vector<uint8_t>& texturedata);
 
 	// Save texture to memory as a file format
-	bool saveTextureToMemoryFile(const wiGraphics::Texture& texture, const std::string& fileExtension, std::vector<uint8_t>& filedata);
+	bool saveTextureToMemoryFile(const wiGraphics::Texture& texture, const std::string& fileExtension, wiContainer::vector<uint8_t>& filedata);
 
 	// Save raw texture data to memory as file format
-	bool saveTextureToMemoryFile(const std::vector<uint8_t>& textureData, const wiGraphics::TextureDesc& desc, const std::string& fileExtension, std::vector<uint8_t>& filedata);
+	bool saveTextureToMemoryFile(const wiContainer::vector<uint8_t>& textureData, const wiGraphics::TextureDesc& desc, const std::string& fileExtension, wiContainer::vector<uint8_t>& filedata);
 
 	// Save texture to file format
 	bool saveTextureToFile(const wiGraphics::Texture& texture, const std::string& fileName);
 
 	// Save raw texture data to file format
-	bool saveTextureToFile(const std::vector<uint8_t>& texturedata, const wiGraphics::TextureDesc& desc, const std::string& fileName);
+	bool saveTextureToFile(const wiContainer::vector<uint8_t>& texturedata, const wiGraphics::TextureDesc& desc, const std::string& fileName);
 
 	std::string getCurrentDateTimeAsString();
 
@@ -70,7 +70,7 @@ namespace wiHelper
 
 	void DirectoryCreate(const std::string& path);
 
-	bool FileRead(const std::string& fileName, std::vector<uint8_t>& data);
+	bool FileRead(const std::string& fileName, wiContainer::vector<uint8_t>& data);
 
 	bool FileWrite(const std::string& fileName, const uint8_t* data, size_t size);
 
@@ -87,7 +87,7 @@ namespace wiHelper
 			SAVE,
 		} type = OPEN;
 		std::string description;
-		std::vector<std::string> extensions;
+		wiContainer::vector<std::string> extensions;
 	};
 	void FileDialog(const FileDialogParams& params, std::function<void(std::string fileName)> onSuccess);
 

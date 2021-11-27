@@ -20,10 +20,8 @@
 #endif
 
 #include <sstream>
-#include <vector>
 #include <cstring>
 #include <iostream>
-#include <set>
 #include <algorithm>
 
 // These shifts are made so that Vulkan resource bindings slots don't interfere with each other across shader stages:
@@ -521,7 +519,7 @@ namespace Vulkan_Internal
 	}
 
 
-	bool checkExtensionSupport(const char* checkExtension, const std::vector<VkExtensionProperties>& available_extensions)
+	bool checkExtensionSupport(const char* checkExtension, const wiContainer::vector<VkExtensionProperties>& available_extensions)
 	{
 		for (const auto& x : available_extensions)
 		{
@@ -533,8 +531,8 @@ namespace Vulkan_Internal
 		return false;
 	}
 
-	bool ValidateLayers(const std::vector<const char*>& required,
-		const std::vector<VkLayerProperties>& available)
+	bool ValidateLayers(const wiContainer::vector<const char*>& required,
+		const wiContainer::vector<VkLayerProperties>& available)
 	{
 		for (auto layer : required)
 		{
@@ -557,9 +555,9 @@ namespace Vulkan_Internal
 		return true;
 	}
 
-	std::vector<const char*> GetOptimalValidationLayers(const std::vector<VkLayerProperties>& supported_instance_layers)
+	wiContainer::vector<const char*> GetOptimalValidationLayers(const wiContainer::vector<VkLayerProperties>& supported_instance_layers)
 	{
-		std::vector<std::vector<const char*>> validationLayerPriorityList =
+		wiContainer::vector<wiContainer::vector<const char*>> validationLayerPriorityList =
 		{
 			// The preferred validation layer is "VK_LAYER_KHRONOS_validation"
 			{"VK_LAYER_KHRONOS_validation"},
@@ -629,10 +627,10 @@ namespace Vulkan_Internal
 		int srv_index = -1;
 		VkBufferView uav = VK_NULL_HANDLE;
 		int uav_index = -1;
-		std::vector<VkBufferView> subresources_srv;
-		std::vector<int> subresources_srv_index;
-		std::vector<VkBufferView> subresources_uav;
-		std::vector<int> subresources_uav_index;
+		wiContainer::vector<VkBufferView> subresources_srv;
+		wiContainer::vector<int> subresources_srv_index;
+		wiContainer::vector<VkBufferView> subresources_uav;
+		wiContainer::vector<int> subresources_uav_index;
 		VkDeviceAddress address = 0;
 		bool is_typedbuffer = false;
 
@@ -695,13 +693,13 @@ namespace Vulkan_Internal
 		VkImageView rtv = VK_NULL_HANDLE;
 		VkImageView dsv = VK_NULL_HANDLE;
 		uint32_t framebuffer_layercount = 0;
-		std::vector<VkImageView> subresources_srv;
-		std::vector<int> subresources_srv_index;
-		std::vector<VkImageView> subresources_uav;
-		std::vector<int> subresources_uav_index;
-		std::vector<VkImageView> subresources_rtv;
-		std::vector<VkImageView> subresources_dsv;
-		std::vector<uint32_t> subresources_framebuffer_layercount;
+		wiContainer::vector<VkImageView> subresources_srv;
+		wiContainer::vector<int> subresources_srv_index;
+		wiContainer::vector<VkImageView> subresources_uav;
+		wiContainer::vector<int> subresources_uav_index;
+		wiContainer::vector<VkImageView> subresources_rtv;
+		wiContainer::vector<VkImageView> subresources_dsv;
+		wiContainer::vector<uint32_t> subresources_framebuffer_layercount;
 
 		VkSubresourceLayout subresourcelayout = {};
 
@@ -786,11 +784,11 @@ namespace Vulkan_Internal
 		VkPipelineShaderStageCreateInfo stageInfo = {};
 		VkPipelineLayout pipelineLayout_cs = VK_NULL_HANDLE; // no lifetime management here
 		VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE; // no lifetime management here
-		std::vector<VkDescriptorSetLayoutBinding> layoutBindings;
-		std::vector<VkImageViewType> imageViewTypes;
+		wiContainer::vector<VkDescriptorSetLayoutBinding> layoutBindings;
+		wiContainer::vector<VkImageViewType> imageViewTypes;
 
-		std::vector<VkDescriptorSetLayoutBinding> bindlessBindings;
-		std::vector<VkDescriptorSet> bindlessSets;
+		wiContainer::vector<VkDescriptorSetLayoutBinding> bindlessBindings;
+		wiContainer::vector<VkDescriptorSet> bindlessSets;
 		uint32_t bindlessFirstSet = 0;
 
 		VkPushConstantRange pushconstants = {};
@@ -813,11 +811,11 @@ namespace Vulkan_Internal
 		std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
 		VkPipelineLayout pipelineLayout = VK_NULL_HANDLE; // no lifetime management here
 		VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE; // no lifetime management here
-		std::vector<VkDescriptorSetLayoutBinding> layoutBindings;
-		std::vector<VkImageViewType> imageViewTypes;
+		wiContainer::vector<VkDescriptorSetLayoutBinding> layoutBindings;
+		wiContainer::vector<VkImageViewType> imageViewTypes;
 
-		std::vector<VkDescriptorSetLayoutBinding> bindlessBindings;
-		std::vector<VkDescriptorSet> bindlessSets;
+		wiContainer::vector<VkDescriptorSetLayoutBinding> bindlessBindings;
+		wiContainer::vector<VkDescriptorSet> bindlessSets;
 		uint32_t bindlessFirstSet = 0;
 
 		VkPushConstantRange pushconstants = {};
@@ -866,8 +864,8 @@ namespace Vulkan_Internal
 		VkAccelerationStructureBuildGeometryInfoKHR buildInfo = {};
 		VkAccelerationStructureBuildSizesInfoKHR sizeInfo = {};
 		VkAccelerationStructureCreateInfoKHR createInfo = {};
-		std::vector<VkAccelerationStructureGeometryKHR> geometries;
-		std::vector<uint32_t> primitiveCounts;
+		wiContainer::vector<VkAccelerationStructureGeometryKHR> geometries;
+		wiContainer::vector<uint32_t> primitiveCounts;
 		VkDeviceAddress scratch_address = 0;
 		VkDeviceAddress as_address = 0;
 
@@ -904,9 +902,9 @@ namespace Vulkan_Internal
 		VkSwapchainKHR swapChain = VK_NULL_HANDLE;
 		VkFormat swapChainImageFormat;
 		VkExtent2D swapChainExtent;
-		std::vector<VkImage> swapChainImages;
-		std::vector<VkImageView> swapChainImageViews;
-		std::vector<VkFramebuffer> swapChainFramebuffers;
+		wiContainer::vector<VkImage> swapChainImages;
+		wiContainer::vector<VkImageView> swapChainImageViews;
+		wiContainer::vector<VkFramebuffer> swapChainFramebuffers;
 		RenderPass renderpass;
 
 		VkSurfaceKHR surface = VK_NULL_HANDLE;
@@ -1016,7 +1014,7 @@ namespace Vulkan_Internal
 		res = vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, internal_state->surface, &formatCount, nullptr);
 		assert(res == VK_SUCCESS);
 
-		std::vector<VkSurfaceFormatKHR> swapchain_formats(formatCount);
+		wiContainer::vector<VkSurfaceFormatKHR> swapchain_formats(formatCount);
 		res = vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, internal_state->surface, &formatCount, swapchain_formats.data());
 		assert(res == VK_SUCCESS);
 
@@ -1024,7 +1022,7 @@ namespace Vulkan_Internal
 		res = vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, internal_state->surface, &presentModeCount, nullptr);
 		assert(res == VK_SUCCESS);
 
-		std::vector<VkPresentModeKHR> swapchain_presentModes(presentModeCount);
+		wiContainer::vector<VkPresentModeKHR> swapchain_presentModes(presentModeCount);
 		swapchain_presentModes.resize(presentModeCount);
 		res = vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, internal_state->surface, &presentModeCount, swapchain_presentModes.data());
 		assert(res == VK_SUCCESS);
@@ -2117,8 +2115,8 @@ using namespace Vulkan_Internal;
 				// Input layout:
 				VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
 				vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-				std::vector<VkVertexInputBindingDescription> bindings;
-				std::vector<VkVertexInputAttributeDescription> attributes;
+				wiContainer::vector<VkVertexInputBindingDescription> bindings;
+				wiContainer::vector<VkVertexInputAttributeDescription> attributes;
 				if (pso->desc.il != nullptr)
 				{
 					uint32_t lastBinding = 0xFFFFFFFF;
@@ -2254,19 +2252,19 @@ using namespace Vulkan_Internal;
 		uint32_t instanceLayerCount;
 		res = vkEnumerateInstanceLayerProperties(&instanceLayerCount, nullptr);
 		assert(res == VK_SUCCESS);
-		std::vector<VkLayerProperties> availableInstanceLayers(instanceLayerCount);
+		wiContainer::vector<VkLayerProperties> availableInstanceLayers(instanceLayerCount);
 		res = vkEnumerateInstanceLayerProperties(&instanceLayerCount, availableInstanceLayers.data());
 		assert(res == VK_SUCCESS);
 
 		uint32_t extensionCount = 0;
 		res = vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
 		assert(res == VK_SUCCESS);
-		std::vector<VkExtensionProperties> availableInstanceExtensions(extensionCount);
+		wiContainer::vector<VkExtensionProperties> availableInstanceExtensions(extensionCount);
 		res = vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, availableInstanceExtensions.data());
 		assert(res == VK_SUCCESS);
 
-		std::vector<const char*> instanceLayers;
-		std::vector<const char*> instanceExtensions;
+		wiContainer::vector<const char*> instanceLayers;
+		wiContainer::vector<const char*> instanceExtensions;
 
 		for (auto& availableExtension : availableInstanceExtensions)
 		{
@@ -2293,7 +2291,7 @@ using namespace Vulkan_Internal;
 		{
 			uint32_t extensionCount;
 			SDL_Vulkan_GetInstanceExtensions(window, &extensionCount, nullptr);
-			std::vector<const char *> extensionNames_sdl(extensionCount);
+			wiContainer::vector<const char *> extensionNames_sdl(extensionCount);
 			SDL_Vulkan_GetInstanceExtensions(window, &extensionCount, extensionNames_sdl.data());
 			instanceExtensions.reserve(instanceExtensions.size() + extensionNames_sdl.size());
 			instanceExtensions.insert(instanceExtensions.begin(),
@@ -2304,7 +2302,7 @@ using namespace Vulkan_Internal;
 		if (debuglayer)
 		{
 			// Determine the optimal validation layers to enable that are necessary for useful debugging
-			std::vector<const char*> optimalValidationLyers = GetOptimalValidationLayers(availableInstanceLayers);
+			wiContainer::vector<const char*> optimalValidationLyers = GetOptimalValidationLayers(availableInstanceLayers);
 			instanceLayers.insert(instanceLayers.end(), optimalValidationLyers.begin(), optimalValidationLyers.end());
 		}
 
@@ -2359,14 +2357,14 @@ using namespace Vulkan_Internal;
 				wiPlatform::Exit();
 			}
 
-			std::vector<VkPhysicalDevice> devices(deviceCount);
+			wiContainer::vector<VkPhysicalDevice> devices(deviceCount);
 			res = vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
 			assert(res == VK_SUCCESS);
 
-			const std::vector<const char*> required_deviceExtensions = {
+			const wiContainer::vector<const char*> required_deviceExtensions = {
 				VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 			};
-			std::vector<const char*> enabled_deviceExtensions;
+			wiContainer::vector<const char*> enabled_deviceExtensions;
 
 			for (const auto& dev : devices)
 			{
@@ -2375,7 +2373,7 @@ using namespace Vulkan_Internal;
 				uint32_t extensionCount;
 				VkResult res = vkEnumerateDeviceExtensionProperties(dev, nullptr, &extensionCount, nullptr);
 				assert(res == VK_SUCCESS);
-				std::vector<VkExtensionProperties> available_deviceExtensions(extensionCount);
+				wiContainer::vector<VkExtensionProperties> available_deviceExtensions(extensionCount);
 				res = vkEnumerateDeviceExtensionProperties(dev, nullptr, &extensionCount, available_deviceExtensions.data());
 				assert(res == VK_SUCCESS);
 
@@ -2628,8 +2626,8 @@ using namespace Vulkan_Internal;
 				familyIndex++;
 			}
 
-			std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-			std::set<uint32_t> uniqueQueueFamilies = { graphicsFamily, copyFamily, computeFamily };
+			wiContainer::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+			wiContainer::unordered_set<uint32_t> uniqueQueueFamilies = { graphicsFamily, copyFamily, computeFamily };
 
 			float queuePriority = 1.0f;
 			for (uint32_t queueFamily : uniqueQueueFamilies)
@@ -3021,7 +3019,7 @@ using namespace Vulkan_Internal;
 		// Pipeline Cache
 		{
 			// Try to read pipeline cache file if exists.
-			std::vector<uint8_t> pipelineData;
+			wiContainer::vector<uint8_t> pipelineData;
 
 			std::string cachePath = GetCachePath(); 
 			if (!wiHelper::FileRead(cachePath, pipelineData))
@@ -3159,7 +3157,7 @@ using namespace Vulkan_Internal;
 			assert(res == VK_SUCCESS);
 
 			// Get data of pipeline cache 
-			std::vector<uint8_t> data(size);
+			wiContainer::vector<uint8_t> data(size);
 			res = vkGetPipelineCacheData(device, pipelineCache, &size, data.data());
 			assert(res == VK_SUCCESS);
 
@@ -3613,7 +3611,7 @@ using namespace Vulkan_Internal;
 		{
 			auto cmd = copyAllocator.allocate(internal_state->allocation->GetSize());
 
-			std::vector<VkBufferImageCopy> copyRegions;
+			wiContainer::vector<VkBufferImageCopy> copyRegions;
 
 			VkDeviceSize copyOffset = 0;
 			uint32_t initDataIdx = 0;
@@ -3829,7 +3827,7 @@ using namespace Vulkan_Internal;
 			);
 			assert(result == SPV_REFLECT_RESULT_SUCCESS);
 
-			std::vector<SpvReflectDescriptorBinding*> bindings(binding_count);
+			wiContainer::vector<SpvReflectDescriptorBinding*> bindings(binding_count);
 			result = spvReflectEnumerateDescriptorBindings(
 				&module, &binding_count, bindings.data()
 			);
@@ -3839,11 +3837,11 @@ using namespace Vulkan_Internal;
 			result = spvReflectEnumeratePushConstantBlocks(&module, &push_count, nullptr);
 			assert(result == SPV_REFLECT_RESULT_SUCCESS);
 
-			std::vector<SpvReflectBlockVariable*> pushconstants(push_count);
+			wiContainer::vector<SpvReflectBlockVariable*> pushconstants(push_count);
 			result = spvReflectEnumeratePushConstantBlocks(&module, &push_count, pushconstants.data());
 			assert(result == SPV_REFLECT_RESULT_SUCCESS);
 
-			std::vector<VkSampler> staticsamplers;
+			wiContainer::vector<VkSampler> staticsamplers;
 
 			for (auto& x : pushconstants)
 			{
@@ -3982,7 +3980,7 @@ using namespace Vulkan_Internal;
 				pso_layout_cache_mutex.lock();
 				if (pso_layout_cache[internal_state->binding_hash].pipelineLayout == VK_NULL_HANDLE)
 				{
-					std::vector<VkDescriptorSetLayout> layouts;
+					wiContainer::vector<VkDescriptorSetLayout> layouts;
 
 					{
 						VkDescriptorSetLayoutCreateInfo descriptorSetlayoutInfo = {};
@@ -4491,7 +4489,7 @@ using namespace Vulkan_Internal;
 			pso_layout_cache_mutex.lock();
 			if (pso_layout_cache[internal_state->binding_hash].pipelineLayout == VK_NULL_HANDLE)
 			{
-				std::vector<VkDescriptorSetLayout> layouts;
+				wiContainer::vector<VkDescriptorSetLayout> layouts;
 				{
 					VkDescriptorSetLayoutCreateInfo descriptorSetlayoutInfo = {};
 					descriptorSetlayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -5305,7 +5303,7 @@ using namespace Vulkan_Internal;
 		info.sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR;
 		info.flags = 0;
 
-		std::vector<VkPipelineShaderStageCreateInfo> stages;
+		wiContainer::vector<VkPipelineShaderStageCreateInfo> stages;
 		for (auto& x : pDesc->shader_libraries)
 		{
 			stages.emplace_back();
@@ -5337,7 +5335,7 @@ using namespace Vulkan_Internal;
 		info.stageCount = (uint32_t)stages.size();
 		info.pStages = stages.data();
 
-		std::vector<VkRayTracingShaderGroupCreateInfoKHR> groups;
+		wiContainer::vector<VkRayTracingShaderGroupCreateInfoKHR> groups;
 		groups.reserve(pDesc->hit_groups.size());
 		for (auto& x : pDesc->hit_groups)
 		{
@@ -6252,7 +6250,7 @@ using namespace Vulkan_Internal;
 		VkResult res = vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, internal_state->surface, &formatCount, nullptr);
 		if (res == VK_SUCCESS)
 		{
-			std::vector<VkSurfaceFormatKHR> swapchain_formats(formatCount);
+			wiContainer::vector<VkSurfaceFormatKHR> swapchain_formats(formatCount);
 			res = vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, internal_state->surface, &formatCount, swapchain_formats.data());
 			if (res == VK_SUCCESS)
 			{
@@ -7100,8 +7098,8 @@ using namespace Vulkan_Internal;
 			info.srcAccelerationStructure = src_internal->resource;
 		}
 
-		std::vector<VkAccelerationStructureGeometryKHR> geometries = dst_internal->geometries; // copy!
-		std::vector<VkAccelerationStructureBuildRangeInfoKHR> ranges;
+		wiContainer::vector<VkAccelerationStructureGeometryKHR> geometries = dst_internal->geometries; // copy!
+		wiContainer::vector<VkAccelerationStructureBuildRangeInfoKHR> ranges;
 
 		info.type = dst_internal->createInfo.type;
 		info.geometryCount = (uint32_t)geometries.size();

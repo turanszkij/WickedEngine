@@ -7,9 +7,9 @@
 #include "wiSprite.h"
 #include "wiSpriteFont.h"
 #include "wiMath.h"
+#include "wiContainer.h"
 
 #include <string>
-#include <vector>
 #include <functional>
 
 struct wiEventArgs
@@ -240,7 +240,7 @@ protected:
 	    std::string name;
 	    uint64_t userdata = 0;
 	};
-	std::vector<Item> items;
+	wiContainer::vector<Item> items;
 
 	float GetItemOffset(int index) const;
 public:
@@ -275,7 +275,7 @@ protected:
 	wiButton resizeDragger_BottomRight;
 	wiButton moveDragger;
 	wiLabel label;
-	std::vector<wiWidget*> widgets;
+	wiContainer::vector<wiWidget*> widgets;
 	bool minimized = false;
 public:
 	void Create(const std::string& name, bool window_controls = true);
@@ -365,7 +365,7 @@ protected:
 	Hitbox2D GetHitbox_Item(int visible_count, int level) const;
 	Hitbox2D GetHitbox_ItemOpener(int visible_count, int level) const;
 
-	std::vector<Item> items;
+	wiContainer::vector<Item> items;
 
 	float GetItemOffset(int index) const;
 public:

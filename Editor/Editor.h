@@ -103,8 +103,8 @@ public:
 	wiLabel helpLabel;
 
 	wiTreeList sceneGraphView;
-	std::unordered_set<wiECS::Entity> scenegraphview_added_items;
-	std::unordered_set<wiECS::Entity> scenegraphview_opened_items;
+	wiContainer::unordered_set<wiECS::Entity> scenegraphview_added_items;
+	wiContainer::unordered_set<wiECS::Entity> scenegraphview_opened_items;
 	void PushToSceneGraphView(wiECS::Entity entity, int level);
 	void RefreshSceneGraphView();
 
@@ -158,7 +158,7 @@ public:
 
 	wiArchive clipboard;
 
-	std::vector<wiArchive> history;
+	wiContainer::vector<wiArchive> history;
 	int historyPos = -1;
 	enum HistoryOperationType
 	{

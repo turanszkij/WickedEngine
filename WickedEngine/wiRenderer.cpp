@@ -62,7 +62,7 @@ inline LinearAllocator& GetRenderFrameAllocator(CommandList cmd)
 	return renderFrameAllocators[cmd];
 }
 
-std::vector<GPUBarrier> barrier_stack[COMMANDLIST_COUNT];
+wiContainer::vector<GPUBarrier> barrier_stack[COMMANDLIST_COUNT];
 void barrier_stack_flush(CommandList cmd)
 {
 	if (barrier_stack[cmd].empty())
@@ -125,21 +125,21 @@ Texture shadowMapArray_2D;
 Texture shadowMapArray_Cube;
 Texture shadowMapArray_Transparent_2D;
 Texture shadowMapArray_Transparent_Cube;
-std::vector<RenderPass> renderpasses_shadow2D;
-std::vector<RenderPass> renderpasses_shadowCube;
+wiContainer::vector<RenderPass> renderpasses_shadow2D;
+wiContainer::vector<RenderPass> renderpasses_shadowCube;
 
-std::vector<std::pair<XMFLOAT4X4, XMFLOAT4>> renderableBoxes;
-std::vector<std::pair<SPHERE, XMFLOAT4>> renderableSpheres;
-std::vector<std::pair<CAPSULE, XMFLOAT4>> renderableCapsules;
-std::vector<RenderableLine> renderableLines;
-std::vector<RenderableLine2D> renderableLines2D;
-std::vector<RenderablePoint> renderablePoints;
-std::vector<RenderableTriangle> renderableTriangles_solid;
-std::vector<RenderableTriangle> renderableTriangles_wireframe;
-std::vector<PaintRadius> paintrads;
+wiContainer::vector<std::pair<XMFLOAT4X4, XMFLOAT4>> renderableBoxes;
+wiContainer::vector<std::pair<SPHERE, XMFLOAT4>> renderableSpheres;
+wiContainer::vector<std::pair<CAPSULE, XMFLOAT4>> renderableCapsules;
+wiContainer::vector<RenderableLine> renderableLines;
+wiContainer::vector<RenderableLine2D> renderableLines2D;
+wiContainer::vector<RenderablePoint> renderablePoints;
+wiContainer::vector<RenderableTriangle> renderableTriangles_solid;
+wiContainer::vector<RenderableTriangle> renderableTriangles_wireframe;
+wiContainer::vector<PaintRadius> paintrads;
 
 wiSpinLock deferredMIPGenLock;
-std::vector<std::pair<std::shared_ptr<wiResource>, bool>> deferredMIPGens;
+wiContainer::vector<std::pair<std::shared_ptr<wiResource>, bool>> deferredMIPGens;
 
 
 bool volumetric_clouds_precomputed = false;
@@ -276,14 +276,14 @@ PipelineState PSO_object_terrain[RENDERPASS_COUNT];
 PipelineState PSO_object_wire;
 PipelineState PSO_object_wire_tessellation;
 
-std::vector<CustomShader> customShaders;
+wiContainer::vector<CustomShader> customShaders;
 int RegisterCustomShader(const CustomShader& customShader)
 {
 	int result = (int)customShaders.size();
 	customShaders.push_back(customShader);
 	return result;
 }
-const std::vector<CustomShader>& GetCustomShaders()
+const wiContainer::vector<CustomShader>& GetCustomShaders()
 {
 	return customShaders;
 }
@@ -666,7 +666,7 @@ bool LoadShader(ShaderStage stage, Shader& shader, const std::string& filename, 
 		}
 	}
 
-	std::vector<uint8_t> buffer;
+	wiContainer::vector<uint8_t> buffer;
 	if (wiHelper::FileRead(shaderbinaryfilename, buffer))
 	{
 		return device->CreateShader(stage, buffer.data(), buffer.size(), &shader);
@@ -5451,7 +5451,7 @@ void DrawDebugWorld(
 				XMFLOAT4 position;
 				XMFLOAT4 color;
 			};
-			std::vector<Vertex> vertices;
+			wiContainer::vector<Vertex> vertices;
 
 			const int segmentcount = 36;
 			Vertex vert;
@@ -5485,7 +5485,7 @@ void DrawDebugWorld(
 			bd.bind_flags = BindFlag::VERTEX_BUFFER;
 			device->CreateBuffer(&bd, vertices.data(), &wiresphereVB);
 
-			std::vector<uint16_t> indices;
+			wiContainer::vector<uint16_t> indices;
 			for (int i = 0; i < segmentcount; ++i)
 			{
 				indices.push_back(uint16_t(i));
