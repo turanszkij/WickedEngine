@@ -1,6 +1,6 @@
 #ifndef WI_UNORDERED_SET_REPLACEMENT
 #define WI_UNORDERED_SET_REPLACEMENT
-// This file is used to allow replacement of std::unordered_map and std::unordered_set
+// This file is used to allow replacement of std::unordered_set
 
 #ifndef WI_UNORDERED_SET_TYPE
 #define WI_UNORDERED_SET_TYPE 1
