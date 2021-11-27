@@ -3,6 +3,7 @@
 #include "Editor.h"
 
 #include <fstream>
+#include <thread>
 
 #define MAX_LOADSTRING 100
 
