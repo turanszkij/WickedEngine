@@ -5,6 +5,7 @@
 #include "wiBackLog.h"
 #include "wiVersion.h"
 #include "wiTimer.h"
+#include "wiUnorderedSet.h"
 
 #define VOLK_IMPLEMENTATION
 #include "Utility/volk.h"
@@ -2627,7 +2628,7 @@ using namespace Vulkan_Internal;
 			}
 
 			wi::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-			ska::flat_hash_set<uint32_t> uniqueQueueFamilies = { graphicsFamily, copyFamily, computeFamily };
+			wi::unordered_set<uint32_t> uniqueQueueFamilies = { graphicsFamily, copyFamily, computeFamily };
 
 			float queuePriority = 1.0f;
 			for (uint32_t queueFamily : uniqueQueueFamilies)

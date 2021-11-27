@@ -1,10 +1,10 @@
 #include "wiGraphicsDevice_DX12.h"
 
 #ifdef WICKEDENGINE_BUILD_DX12
-
 #include "wiHelper.h"
 #include "wiBackLog.h"
 #include "wiTimer.h"
+#include "wiUnorderedSet.h"
 
 #include "Utility/dx12/d3dx12.h"
 #include "Utility/D3D12MemAlloc.h"
@@ -3329,7 +3329,7 @@ using namespace DX12_Internal;
 		HRESULT hr = (internal_state->shadercode.empty() ? E_FAIL : S_OK);
 		assert(SUCCEEDED(hr));
 
-		ska::flat_hash_set<std::string> library_binding_resolver;
+		wi::unordered_set<std::string> library_binding_resolver;
 
 		{
 			auto insert_descriptor = [&](const D3D12_SHADER_INPUT_BIND_DESC& desc, const D3D12_SHADER_BUFFER_DESC& bufferdesc)
