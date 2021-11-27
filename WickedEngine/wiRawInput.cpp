@@ -4,7 +4,6 @@
 #if defined(_WIN32) && !defined(PLATFORM_UWP)
 #include "wiContainer.h"
 
-#include <string>
 #include <hidsdi.h>
 
 #pragma comment(lib,"Hid.lib")

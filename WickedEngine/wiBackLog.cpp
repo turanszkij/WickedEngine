@@ -13,6 +13,7 @@
 #include <mutex>
 #include <deque>
 #include <limits>
+#include <iostream>
 
 using namespace wiGraphics;
 

@@ -13,7 +13,6 @@
 #include <SDL_joystick.h>
 #include <SDL_stdinc.h>
 #include <iostream>
-#include <string>
 
 namespace wiSDLInput
 {

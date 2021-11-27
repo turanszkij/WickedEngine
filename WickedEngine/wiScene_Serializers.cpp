@@ -7,8 +7,6 @@
 #include "wiTimer.h"
 #include "wiContainer.h"
 
-#include <string>
-
 using namespace wiECS;
 
 namespace wiScene

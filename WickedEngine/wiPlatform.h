@@ -1,10 +1,6 @@
 #pragma once
 // This file includes platform, os specific libraries and supplies common platform specific resources
 
-#include <mutex>
-#include <string>
-#include <iostream>
-
 #ifdef _WIN32
 
 #ifndef NOMINMAX
@@ -86,8 +82,8 @@ namespace wiPlatform
 		dest->dpi = (float)GetDpiForWindow(window);
 		RECT rect;
 		GetClientRect(window, &rect);
-		dest->width = uint32_t(rect.right - rect.left);
-		dest->height = uint32_t(rect.bottom - rect.top);
+		dest->width = int(rect.right - rect.left);
+		dest->height = int(rect.bottom - rect.top);
 #endif // WINDOWS_DESKTOP
 
 #ifdef PLATFORM_UWP

@@ -17,7 +17,6 @@
 
 #include <fstream>
 #include <atomic>
-#include <string>
 
 using namespace wiGraphics;
 using namespace wiRectPacker;
