@@ -3,8 +3,7 @@
 #include "wiPlatform.h"
 #include "wiHelper.h"
 #include "wiArchive.h"
-
-#include "Utility/flat_hash_map.hpp"
+#include "wiUnorderedContainer.h"
 
 #include <mutex>
 #include <filesystem>
@@ -733,7 +732,7 @@ namespace wiShaderCompiler
 	}
 
 	std::mutex locker;
-	ska::flat_hash_set<std::string> registered_shaders;
+	wi::unordered_set<std::string> registered_shaders;
 	void RegisterShader(const std::string& shaderfilename)
 	{
 #ifdef SHADERCOMPILER_ENABLED

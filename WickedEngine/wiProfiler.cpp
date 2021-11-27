@@ -5,8 +5,7 @@
 #include "wiTimer.h"
 #include "wiTextureHelper.h"
 #include "wiHelper.h"
-
-#include "Utility/flat_hash_map.hpp"
+#include "wiUnorderedContainer.h"
 
 #include <string>
 #include <stack>
@@ -44,7 +43,7 @@ namespace wiProfiler
 
 		bool IsCPURange() const { return cmd == INVALID_COMMANDLIST; }
 	};
-	ska::flat_hash_map<size_t, Range> ranges;
+	wi::unordered_map<size_t, Range> ranges;
 
 	void BeginFrame()
 	{
@@ -234,8 +233,8 @@ namespace wiProfiler
 		uint32_t num_hits = 0;
 		float total_time = 0;
 	};
-	ska::flat_hash_map<std::string, Hits> time_cache_cpu;
-	ska::flat_hash_map<std::string, Hits> time_cache_gpu;
+	wi::unordered_map<std::string, Hits> time_cache_cpu;
+	wi::unordered_map<std::string, Hits> time_cache_gpu;
 	void DrawData(const wiCanvas& canvas, float x, float y, CommandList cmd)
 	{
 		if (!ENABLED || !initialized)

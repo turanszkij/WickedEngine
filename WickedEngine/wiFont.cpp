@@ -10,10 +10,10 @@
 #include "wiPlatform.h"
 #include "wiEvent.h"
 #include "wiTimer.h"
+#include "wiUnorderedContainer.h"
 
 #include "Utility/arial.h"
 #include "Utility/stb_truetype.h"
-#include "Utility/flat_hash_map.hpp"
 
 #include <fstream>
 #include <atomic>
@@ -54,8 +54,8 @@ namespace wiFont_Internal
 		uint16_t tc_top;
 		uint16_t tc_bottom;
 	};
-	ska::flat_hash_map<int32_t, Glyph> glyph_lookup;
-	ska::flat_hash_map<int32_t, rect_xywh> rect_lookup;
+	wi::unordered_map<int32_t, Glyph> glyph_lookup;
+	wi::unordered_map<int32_t, rect_xywh> rect_lookup;
 	// pack glyph identifiers to a 32-bit hash:
 	//	height:	10 bits	(height supported: 0 - 1023)
 	//	style:	6 bits	(number of font styles supported: 0 - 63)
@@ -64,7 +64,7 @@ namespace wiFont_Internal
 	constexpr int codefromhash(int64_t hash) { return int((hash >> 16) & 0xFFFF); }
 	constexpr int stylefromhash(int64_t hash) { return int((hash >> 10) & 0x3F); }
 	constexpr int heightfromhash(int64_t hash) { return int((hash >> 0) & 0x3FF); }
-	ska::flat_hash_set<int32_t> pendingGlyphs;
+	wi::unordered_set<int32_t> pendingGlyphs;
 	wiSpinLock glyphLock;
 
 	struct wiFontStyle

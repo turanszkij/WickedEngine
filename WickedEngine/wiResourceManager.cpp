@@ -2,12 +2,12 @@
 #include "wiRenderer.h"
 #include "wiHelper.h"
 #include "wiTextureHelper.h"
+#include "wiUnorderedContainer.h"
 
 #include "Utility/stb_image.h"
 #include "Utility/tinyddsloader.h"
 #include "Utility/basis_universal/transcoder/basisu_transcoder.h"
 extern basist::etc1_global_selector_codebook g_basis_global_codebook;
-#include "Utility/flat_hash_map.hpp"
 
 #include <algorithm>
 #include <mutex>
@@ -17,7 +17,7 @@ using namespace wiGraphics;
 namespace wiResourceManager
 {
 	std::mutex locker;
-	ska::flat_hash_map<std::string, std::weak_ptr<wiResource>> resources;
+	wi::unordered_map<std::string, std::weak_ptr<wiResource>> resources;
 	MODE mode = MODE_DISCARD_FILEDATA_AFTER_LOAD;
 
 	void SetMode(MODE param)
@@ -29,7 +29,7 @@ namespace wiResourceManager
 		return mode;
 	}
 
-	static const ska::flat_hash_map<std::string, wiResource::DATA_TYPE> types = {
+	static const wi::unordered_map<std::string, wiResource::DATA_TYPE> types = {
 		std::make_pair("BASIS", wiResource::IMAGE),
 		std::make_pair("KTX2", wiResource::IMAGE),
 		std::make_pair("JPG", wiResource::IMAGE),

@@ -8,6 +8,7 @@
 
 #ifdef WICKEDENGINE_BUILD_DX12
 #include "wiGraphicsDevice.h"
+#include "wiUnorderedContainer.h"
 
 #include <dxgi1_6.h>
 #include <wrl/client.h> // ComPtr
@@ -15,7 +16,6 @@
 #include "Utility/dx12/d3d12.h"
 #define D3D12MA_D3D12_HEADERS_ALREADY_INCLUDED
 #include "Utility/D3D12MemAlloc.h"
-#include "Utility/flat_hash_map.hpp"
 
 #include <vector>
 #include <deque>
@@ -141,10 +141,10 @@ namespace wiGraphics
 
 		D3D_PRIMITIVE_TOPOLOGY prev_pt[COMMANDLIST_COUNT] = {};
 
-		mutable ska::flat_hash_map<size_t, Microsoft::WRL::ComPtr<ID3D12RootSignature>> rootsignature_cache;
+		mutable wi::unordered_map<size_t, Microsoft::WRL::ComPtr<ID3D12RootSignature>> rootsignature_cache;
 		mutable std::mutex rootsignature_cache_mutex;
 
-		ska::flat_hash_map<size_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>> pipelines_global;
+		wi::unordered_map<size_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>> pipelines_global;
 		std::vector<std::pair<size_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>>> pipelines_worker[COMMANDLIST_COUNT];
 		size_t prev_pipeline_hash[COMMANDLIST_COUNT] = {};
 		const PipelineState* active_pso[COMMANDLIST_COUNT] = {};

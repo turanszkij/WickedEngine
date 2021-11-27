@@ -2,8 +2,6 @@
 #include "wiScene.h"
 #include "ModelImporter.h"
 
-#include "Utility/flat_hash_map.hpp"
-
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
 
@@ -170,8 +168,8 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 
 			object.meshID = meshEntity;
 
-			ska::flat_hash_map<int, int> registered_materialIndices = {};
-			ska::flat_hash_map<size_t, uint32_t> uniqueVertices = {};
+			wi::unordered_map<int, int> registered_materialIndices = {};
+			wi::unordered_map<size_t, uint32_t> uniqueVertices = {};
 
 			for (size_t i = 0; i < shape.mesh.indices.size(); i += 3)
 			{

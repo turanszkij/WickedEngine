@@ -1,7 +1,5 @@
 #include "WickedEngine.h"
 
-#include "Utility/flat_hash_map.hpp"
-
 #include <iostream>
 #include <filesystem>
 #include <mutex>
@@ -9,14 +7,14 @@
 
 std::mutex locker;
 std::vector<std::string> shaders[static_cast<size_t>(wiGraphics::ShaderStage::Count)];
-ska::flat_hash_map<std::string, wiGraphics::ShaderModel> minshadermodels;
+wi::unordered_map<std::string, wiGraphics::ShaderModel> minshadermodels;
 struct Target
 {
 	wiGraphics::ShaderFormat format;
 	std::string dir;
 };
 std::vector<Target> targets;
-ska::flat_hash_map<std::string, wiShaderCompiler::CompilerOutput> results;
+wi::unordered_map<std::string, wiShaderCompiler::CompilerOutput> results;
 bool rebuild = false;
 bool shaderdump_enabled = false;
 
@@ -515,7 +513,7 @@ int main(int argc, char* argv[])
 			ss << "};" << std::endl;
 		}
 		ss << "struct ShaderDumpEntry{const uint8_t* data; size_t size;};" << std::endl;
-		ss << "const ska::flat_hash_map<std::string, ShaderDumpEntry> shaderdump = {" << std::endl;
+		ss << "const wi::unordered_map<std::string, ShaderDumpEntry> shaderdump = {" << std::endl;
 		for (auto& x : results)
 		{
 			auto& name = x.first;

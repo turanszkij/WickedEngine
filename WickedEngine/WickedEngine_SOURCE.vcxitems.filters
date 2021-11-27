@@ -1077,6 +1077,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\flat_hash_map.hpp">
       <Filter>UTILITY</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiUnorderedContainer.h">
+      <Filter>ENGINE\Helpers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">

@@ -20,13 +20,12 @@
 #include "wiSheenLUT.h"
 #include "wiShaderCompiler.h"
 #include "wiTimer.h"
+#include "wiUnorderedContainer.h" // leave it here for shader dump!
 
 #include "shaders/ShaderInterop_Postprocess.h"
 #include "shaders/ShaderInterop_Raytracing.h"
 #include "shaders/ShaderInterop_BVH.h"
 #include "shaders/ShaderInterop_SurfelGI.h"
-
-#include "Utility/flat_hash_map.hpp" // for shaderdump!
 
 #include <algorithm>
 #include <array>

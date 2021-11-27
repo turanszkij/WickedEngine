@@ -3,8 +3,6 @@
 #include "ObjectWindow.h"
 #include "wiScene.h"
 
-#include "Utility/flat_hash_map.hpp"
-
 #include "xatlas.h"
 
 #include <string>
@@ -651,8 +649,8 @@ void ObjectWindow::Create(EditorComponent* editor)
 		};
 		UV_GEN_TYPE gen_type = (UV_GEN_TYPE)lightmapSourceUVSetComboBox.GetSelected();
 
-		ska::flat_hash_set<ObjectComponent*> gen_objects;
-		ska::flat_hash_map<MeshComponent*, Atlas_Dim> gen_meshes;
+		wi::unordered_set<ObjectComponent*> gen_objects;
+		wi::unordered_map<MeshComponent*, Atlas_Dim> gen_meshes;
 
 		for (auto& x : this->editor->translator.selected)
 		{

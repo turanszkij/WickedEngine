@@ -24,8 +24,6 @@
 #include "LayerWindow.h"
 #include "NameWindow.h"
 
-#include "Utility/flat_hash_map.hpp"
-
 class EditorLoadingScreen : public LoadingScreen
 {
 private:
@@ -105,8 +103,8 @@ public:
 	wiLabel helpLabel;
 
 	wiTreeList sceneGraphView;
-	ska::flat_hash_set<wiECS::Entity> scenegraphview_added_items;
-	ska::flat_hash_set<wiECS::Entity> scenegraphview_opened_items;
+	wi::unordered_set<wiECS::Entity> scenegraphview_added_items;
+	wi::unordered_set<wiECS::Entity> scenegraphview_opened_items;
 	void PushToSceneGraphView(wiECS::Entity entity, int level);
 	void RefreshSceneGraphView();
 

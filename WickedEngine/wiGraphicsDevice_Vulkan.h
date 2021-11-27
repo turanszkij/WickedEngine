@@ -8,6 +8,7 @@
 
 #ifdef WICKEDENGINE_BUILD_VULKAN
 #include "wiGraphicsDevice.h"
+#include "wiUnorderedContainer.h"
 
 #ifdef _WIN32
 #define VK_USE_PLATFORM_WIN32_KHR
@@ -17,7 +18,6 @@
 #include "Utility/vulkan/vulkan.h"
 #include "Utility/volk.h"
 #include "Utility/vk_mem_alloc.h"
-#include "Utility/flat_hash_map.hpp"
 
 #include <vector>
 #include <deque>
@@ -198,11 +198,11 @@ namespace wiGraphics
 			std::vector<VkDescriptorSet> bindlessSets;
 			uint32_t bindlessFirstSet = 0;
 		};
-		mutable ska::flat_hash_map<size_t, PSOLayout> pso_layout_cache;
+		mutable wi::unordered_map<size_t, PSOLayout> pso_layout_cache;
 		mutable std::mutex pso_layout_cache_mutex;
 
 		VkPipelineCache pipelineCache = VK_NULL_HANDLE;
-		ska::flat_hash_map<size_t, VkPipeline> pipelines_global;
+		wi::unordered_map<size_t, VkPipeline> pipelines_global;
 		std::vector<std::pair<size_t, VkPipeline>> pipelines_worker[COMMANDLIST_COUNT];
 		size_t prev_pipeline_hash[COMMANDLIST_COUNT] = {};
 		const PipelineState* active_pso[COMMANDLIST_COUNT] = {};

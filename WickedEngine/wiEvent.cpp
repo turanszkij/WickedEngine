@@ -1,6 +1,5 @@
 #include "wiEvent.h"
-
-#include "Utility/flat_hash_map.hpp"
+#include "wiUnorderedContainer.h"
 
 #include <list>
 #include <mutex>
@@ -9,8 +8,8 @@ namespace wiEvent
 {
 	struct EventManager
 	{
-		ska::flat_hash_map<int, std::list<std::function<void(uint64_t)>*>> subscribers;
-		ska::flat_hash_map<int, std::vector<std::function<void(uint64_t)>>> subscribers_once;
+		wi::unordered_map<int, std::list<std::function<void(uint64_t)>*>> subscribers;
+		wi::unordered_map<int, std::vector<std::function<void(uint64_t)>>> subscribers_once;
 		std::mutex locker;
 	};
 	std::shared_ptr<EventManager> manager = std::make_shared<EventManager>();
