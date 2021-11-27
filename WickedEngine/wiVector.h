@@ -6,7 +6,7 @@
 
 namespace wi
 {
-	template <class T, class A = std::allocator<T>>
+	template<typename T, typename A = std::allocator<T>>
 	using vector = std::vector<T, A>;
 }
 
