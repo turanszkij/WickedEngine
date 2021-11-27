@@ -21,11 +21,12 @@
 #include "wiBackLog_BindLua.h"
 #include "wiNetwork_BindLua.h"
 #include "wiIntersect_BindLua.h"
-#include "wiContainer.h"
 #include "wiTimer.h"
 
 #include <sstream>
 #include <memory>
+#include <string>
+#include <vector>
 
 #define WILUA_ERROR_PREFIX "[Lua Error] "
 

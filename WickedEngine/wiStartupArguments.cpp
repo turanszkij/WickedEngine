@@ -1,6 +1,5 @@
 #include "wiStartupArguments.h"
 #include "wiHelper.h"
-#include "wiContainer.h"
 
 #include "Utility/flat_hash_map.hpp"
 
