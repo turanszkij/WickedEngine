@@ -610,9 +610,13 @@ This is the main entry point and manages the lifetime of the application. Even t
 - SetFrameSkip(bool enabled)	-- enable/disable frame skipping in fixed update 
 - SetTargetFrameRate(float fps)	-- set target frame rate for fixed update and variable rate update when frame rate is locked
 - SetFrameRateLock(bool enabled)	-- if enabled, variable rate update will use a fixed delta time
-- SetInfoDisplay(bool active)
-- SetWatermarkDisplay(bool active)
-- SetFPSDisplay(bool active)
+- SetInfoDisplay(bool active)	-- if enabled, information display will be visible in the top left corner of the application
+- SetWatermarkDisplay(bool active)	-- toggle display of engine watermark, version number, etc. if info display is enabled
+- SetFPSDisplay(bool active)	-- toggle display of frame rate if info display is enabled
+- SetResolutionDisplay(bool active)	-- toggle display of resolution if info display is enabled
+- SetLogicalSizeDisplay(bool active)	-- toggle display of logical size of canvas if info display is enabled
+- SetPipelineCountDisplay(bool active)	-- toggle display of active graphics pipeline count if info display is enabled
+- SetHeapAllocationCountDisplay(bool active)	-- toggle display of heap allocation statistics if info display is enabled
 - GetCanvas() : Canvas canvas
 - [outer]SetProfilerEnabled(bool enabled)
 
