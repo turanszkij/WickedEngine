@@ -16,6 +16,7 @@ public:
 	void RunFontTest();
 	void RunSpriteTest();
 	void RunNetworkTest();
+	void RunUnorderedMapTest();
 };
 
 class Tests : public MainComponent

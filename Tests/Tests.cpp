@@ -4,6 +4,7 @@
 #include <string>
 #include <fstream>
 #include <thread>
+#include <unordered_map>
 
 using namespace wiECS;
 using namespace wiScene;
@@ -119,6 +120,7 @@ void TestsRenderer::Load()
 	testSelector.AddItem("Controller Test");
 	testSelector.AddItem("Inverse Kinematics");
 	testSelector.AddItem("65k Instances");
+	testSelector.AddItem("unordered_map perf");
 	testSelector.SetMaxVisibleItemCount(10);
 	testSelector.OnSelect([=](wiEventArgs args) {
 
@@ -291,6 +293,10 @@ void TestsRenderer::Load()
 			scene.Entity_Remove(cubeentity);
 		}
 		break;
+
+		case 19:
+			RunUnorderedMapTest();
+			break;
 
 		default:
 			assert(0);
@@ -923,4 +929,56 @@ void TestsRenderer::RunNetworkTest()
 	font.params.v_align = WIFALIGN_CENTER;
 	font.params.size = 24;
 	AddFont(&font);
+}
+void TestsRenderer::RunUnorderedMapTest()
+{
+	wiTimer timer;
+
+	const size_t elements = 1000000;
+#define shuffle(i) (i * 345734667877) % 98787546343
+
+	std::string ss = "Unordered map test for " + std::to_string(elements) + " elements:";
+
+	std::unordered_map<size_t, size_t> std_map;
+	{
+		timer.record();
+		for (size_t i = 0; i < elements; ++i)
+		{
+			std_map[shuffle(i)] = i;
+		}
+		ss += "\n\nstd::unordered_map insertion: " + std::to_string(timer.elapsed_milliseconds()) + " ms\n";
+
+		timer.record();
+		for (size_t i = 0; i < std_map.size(); ++i)
+		{
+			std_map[shuffle(i)] = 0;
+		}
+		ss += "std::unordered_map access: " + std::to_string(timer.elapsed_milliseconds()) + " ms";
+	}
+
+	wi::unordered_map<size_t, size_t> wi_map;
+	{
+		timer.record();
+		for (size_t i = 0; i < elements; ++i)
+		{
+			wi_map[shuffle(i)] = i;
+		}
+		ss += "\n\nwi::unordered_map insertion: " + std::to_string(timer.elapsed_milliseconds()) + " ms\n";
+
+		timer.record();
+		for (size_t i = 0; i < wi_map.size(); ++i)
+		{
+			wi_map[shuffle(i)] = 0;
+		}
+		ss += "wi::unordered_map access: " + std::to_string(timer.elapsed_milliseconds()) + " ms";
+	}
+
+	static wiSpriteFont font;
+	font = wiSpriteFont(ss);
+	font.params.posX = GetLogicalWidth() / 2;
+	font.params.posY = GetLogicalHeight() / 2;
+	font.params.h_align = WIFALIGN_CENTER;
+	font.params.v_align = WIFALIGN_CENTER;
+	font.params.size = 24;
+	this->AddFont(&font);
 }
