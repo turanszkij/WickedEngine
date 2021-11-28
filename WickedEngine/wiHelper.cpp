@@ -511,12 +511,24 @@ namespace wiHelper
 	{
 		size_t idx = filename.rfind('.');
 
-		if (idx != std::string::npos)
+		if (idx == std::string::npos)
 		{
-			return filename.substr(0, idx + 1) + extension;
+			// extension not found, append it:
+			return filename + "." + extension;
 		}
+		return filename.substr(0, idx + 1) + extension;
+	}
 
-		return filename;
+	std::string RemoveExtension(const std::string& filename)
+	{
+		size_t idx = filename.rfind('.');
+
+		if (idx == std::string::npos)
+		{
+			// extension not found:
+			return filename;
+		}
+		return filename.substr(0, idx);
 	}
 
 	void MakePathRelative(const std::string& rootdir, std::string& path)

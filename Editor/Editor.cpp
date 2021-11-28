@@ -680,19 +680,24 @@ void EditorComponent::Load()
 	saveButton.SetColor(wiColor(0, 255, 140, 255), wiWidget::WIDGETSTATE::FOCUS);
 	saveButton.OnClick([&](wiEventArgs args) {
 
+		const bool dump_to_header = saveModeComboBox.GetSelected() == 2;
+
 		wiHelper::FileDialogParams params;
 		params.type = wiHelper::FileDialogParams::SAVE;
-		params.description = "Wicked Scene";
-		params.extensions.push_back("wiscene");
-		wiHelper::FileDialog(params, [this](std::string fileName) {
+		if (dump_to_header)
+		{
+			params.description = "C++ header (.h)";
+			params.extensions.push_back("h");
+		}
+		else
+		{
+			params.description = "Wicked Scene (.wiscene)";
+			params.extensions.push_back("wiscene");
+		}
+		wiHelper::FileDialog(params, [=](std::string fileName) {
 			wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-				std::string filename = fileName;
-				std::string extension = wiHelper::GetExtensionFromFileName(filename);
-				if (extension.compare("wiscene"))
-				{
-					filename += ".wiscene";
-				}
-				wiArchive archive(filename, false);
+				std::string filename = wiHelper::ReplaceExtension(fileName, params.extensions.front());
+				wiArchive archive = dump_to_header ? wiArchive() : wiArchive(filename, false);
 				if (archive.IsOpen())
 				{
 					Scene& scene = wiScene::GetScene();
@@ -701,6 +706,11 @@ void EditorComponent::Load()
 					wiResourceManager::SetMode(embed_mode);
 
 					scene.Serialize(archive);
+
+					if (dump_to_header)
+					{
+						archive.SaveHeaderFile(filename, wiHelper::RemoveExtension(wiHelper::GetFileNameFromPath(filename)));
+					}
 
 					ResetHistory();
 				}
@@ -965,7 +975,8 @@ void EditorComponent::Load()
 	saveModeComboBox.SetColor(wiColor(0, 255, 140, 255), wiWidget::WIDGETSTATE::FOCUS);
 	saveModeComboBox.AddItem("Embed resources", wiResourceManager::MODE_ALLOW_RETAIN_FILEDATA);
 	saveModeComboBox.AddItem("No embedding", wiResourceManager::MODE_ALLOW_RETAIN_FILEDATA_BUT_DISABLE_EMBEDDING);
-	saveModeComboBox.SetTooltip("Choose whether to embed resources (textures, sounds...) in the scene file when saving, or keep them as separate files");
+	saveModeComboBox.AddItem("Dump to header", wiResourceManager::MODE_ALLOW_RETAIN_FILEDATA);
+	saveModeComboBox.SetTooltip("Choose whether to embed resources (textures, sounds...) in the scene file when saving, or keep them as separate files.\nThe Dump to header option will use embedding and create a C++ header file with byte data of the scene to be used with wiArchive serialization.");
 	GetGUI().AddWidget(&saveModeComboBox);
 
 
