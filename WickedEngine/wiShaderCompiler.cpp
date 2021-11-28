@@ -736,10 +736,14 @@ namespace wiShaderCompiler
 	void RegisterShader(const std::string& shaderfilename)
 	{
 #ifdef SHADERCOMPILER_ENABLED
-		locker.lock();
+		std::scoped_lock lock(locker);
 		registered_shaders.insert(shaderfilename);
-		locker.unlock();
 #endif // SHADERCOMPILER_ENABLED
+	}
+	size_t GetRegisteredShaderCount()
+	{
+		std::scoped_lock lock(locker);
+		return registered_shaders.size();
 	}
 	bool CheckRegisteredShadersOutdated()
 	{

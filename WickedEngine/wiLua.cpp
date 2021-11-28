@@ -25,7 +25,6 @@
 #include "wiVector.h"
 
 #include <memory>
-#include <string>
 
 #define WILUA_ERROR_PREFIX "[Lua Error] "
 
@@ -75,7 +74,7 @@ namespace wiLua
 					std::string ss;
 					ss += WILUA_ERROR_PREFIX;
 					ss += str;
-					wiBackLog::post(ss.c_str());
+					wiBackLog::post(ss, wiBackLog::LogLevel::Error);
 					lua_pop(L, 1); // remove error message
 				}
 			}
@@ -158,7 +157,7 @@ namespace wiLua
 			std::string ss;
 			ss += WILUA_ERROR_PREFIX;
 			ss += str;
-			wiBackLog::post(ss.c_str());
+			wiBackLog::post(ss, wiBackLog::LogLevel::Error);
 			lua_pop(luainternal.m_luaState, 1); // remove error message
 		}
 	}
@@ -411,7 +410,7 @@ namespace wiLua
 		{
 			ss += error;
 		}
-		wiBackLog::post(ss.c_str());
+		wiBackLog::post(ss);
 	}
 
 	void SAddMetatable(lua_State* L, const std::string& name)

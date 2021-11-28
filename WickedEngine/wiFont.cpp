@@ -81,8 +81,7 @@ namespace wiFont_Internal
 
 			if (!stbtt_InitFont(&fontInfo, data, offset))
 			{
-				std::string error = "Failed to load font: " + name + " (file was unrecognized, it must be a .ttf file)";
-				wiBackLog::post(error.c_str());
+				wiBackLog::post("Failed to load font: " + name + " (file was unrecognized, it must be a .ttf file)");
 			}
 
 			stbtt_GetFontVMetrics(&fontInfo, &ascent, &descent, &lineGap);
@@ -95,8 +94,7 @@ namespace wiFont_Internal
 			}
 			else
 			{
-				std::string error = "Failed to load font: " + name + " (file could not be opened)";
-				wiBackLog::post(error.c_str());
+				wiBackLog::post("Failed to load font: " + name + " (file could not be opened)");
 			}
 		}
 	};
@@ -165,14 +163,12 @@ namespace wiFont_Internal
 			{
 				word_wrap();
 				pos += WHITESPACE_SIZE;
-				start_new_word = true;
 				code_prev = 0;
 			}
 			else if (code == '\t')
 			{
 				word_wrap();
 				pos += TAB_SIZE;
-				start_new_word = true;
 				code_prev = 0;
 			}
 			else
@@ -488,6 +484,7 @@ float textWidth_internal(const T* text, const wiFontParams& params)
 		return 0;
 	}
 
+	// TODO: account for word wrap
 	float maxWidth = 0;
 	float currentLineWidth = 0;
 	size_t i = 0;
@@ -533,6 +530,7 @@ float textHeight_internal(const T* text, const wiFontParams& params)
 		return 0;
 	}
 
+	// TODO: account for word wrap
 	float height = LINEBREAK_SIZE;
 	size_t i = 0;
 	while (text[i] != 0)

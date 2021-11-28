@@ -99,7 +99,7 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 
 	if (!obj_errors.empty())
 	{
-		wiBackLog::post(obj_errors.c_str());
+		wiBackLog::post(obj_errors, wiBackLog::LogLevel::Error);
 	}
 
 	if (success)

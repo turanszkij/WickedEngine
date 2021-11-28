@@ -43,5 +43,6 @@ namespace wiShaderCompiler
 	bool IsShaderOutdated(const std::string& shaderfilename);
 
 	void RegisterShader(const std::string& shaderfilename);
+	size_t GetRegisteredShaderCount();
 	bool CheckRegisteredShadersOutdated();
 }

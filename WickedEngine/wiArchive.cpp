@@ -27,14 +27,12 @@ wiArchive::wiArchive(const std::string& fileName, bool readMode) : fileName(file
 				(*this) >> version;
 				if (version < __archiveVersionBarrier)
 				{
-					std::string ss = "The archive version (" + std::to_string(version) + ") is no longer supported!";
-					wiHelper::messageBox(ss, "Error!");
+					wiHelper::messageBox("The archive version (" + std::to_string(version) + ") is no longer supported!", "Error!");
 					Close();
 				}
 				if (version > __archiveVersion)
 				{
-					std::string ss = "The archive version (" + std::to_string(version) + ") is higher than the program's (" + std::to_string(__archiveVersion) + ")!";
-					wiHelper::messageBox(ss, "Error!");
+					wiHelper::messageBox("The archive version (" + std::to_string(version) + ") is higher than the program's (" + std::to_string(__archiveVersion) + ")!", "Error!");
 					Close();
 				}
 			}

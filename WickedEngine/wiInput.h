@@ -79,7 +79,7 @@ namespace wiInput
 
 	struct KeyboardState
 	{
-		bool buttons[256] = {};
+		bool buttons[256] = {}; // it contains pressed buttons as "keyboard/typewriter" like, so no continuous presses
 	};
 	struct MouseState
 	{
@@ -112,6 +112,7 @@ namespace wiInput
 	// call once per frame
 	void Update(wiPlatform::window_type window);
 
+	const KeyboardState& GetKeyboardState();
 	const MouseState& GetMouseState();
 	
 	// check if a button is down

@@ -5,14 +5,15 @@
 
 #include "Utility/stb_image.h"
 
+#include <string>
+#include <limits>
+#include <fstream>
+
 #define TINYGLTF_IMPLEMENTATION
 #define TINYGLTF_NO_FS
 #define TINYGLTF_NO_STB_IMAGE
 #define TINYGLTF_NO_STB_IMAGE_WRITE
 #include "tiny_gltf.h"
-
-#include <string>
-#include <limits>
 
 using namespace wiGraphics;
 using namespace wiScene;
@@ -717,7 +718,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				}
 				else
 				{
-					wiBackLog::post("[KHR_materials_specular warning] specularTexture must be either in surfaceMap.a or specularColorTexture.a! specularTexture discarded!");
+					wiBackLog::post("[KHR_materials_specular warning] specularTexture must be either in surfaceMap.a or specularColorTexture.a! specularTexture discarded!", wiBackLog::LogLevel::Warning);
 				}
 			}
 			if (ext_specular->second.Has("specularColorTexture"))

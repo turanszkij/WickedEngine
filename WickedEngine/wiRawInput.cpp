@@ -147,7 +147,11 @@ namespace wiRawInput
 			const RAWKEYBOARD& rawkeyboard = raw.data.keyboard;
 			if (rawkeyboard.VKey < arraysize(keyboard.buttons))
 			{
-				keyboard.buttons[rawkeyboard.VKey] = true;
+				if (rawkeyboard.Flags == RI_KEY_MAKE)
+				{
+					// key down
+					keyboard.buttons[rawkeyboard.VKey] = true;
+				}
 			}
 			else
 			{

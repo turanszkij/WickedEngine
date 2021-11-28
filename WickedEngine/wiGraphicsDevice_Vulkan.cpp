@@ -597,26 +597,21 @@ namespace Vulkan_Internal
 		const VkDebugUtilsMessengerCallbackDataEXT* callback_data,
 		void* user_data)
 	{
-		// Log debug messge
+		// Log debug message
 		std::string ss;
 
 		if (message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
 		{
 			ss += "[Vulkan Warning]: ";
 			ss += callback_data->pMessage;
-			ss += "\n";
+			wiBackLog::post(ss, wiBackLog::LogLevel::Warning);
 		}
 		else if (message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
 		{
 			ss += "[Vulkan Error]: ";
 			ss += callback_data->pMessage;
-			ss += "\n";
+			wiBackLog::post(ss, wiBackLog::LogLevel::Error);
 		}
-
-		std::clog << ss;
-#ifdef _WIN32
-		OutputDebugStringA(ss.c_str());
-#endif
 
 		return VK_FALSE;
 	}

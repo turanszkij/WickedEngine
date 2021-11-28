@@ -628,7 +628,7 @@ bool LoadShader(ShaderStage stage, Shader& shader, const std::string& filename, 
 	}
 	else
 	{
-		wiBackLog::post(("shader dump doesn't contain shader: " + shaderbinaryfilename).c_str());
+		wiBackLog::post("shader dump doesn't contain shader: " + shaderbinaryfilename);
 	}
 #endif // SHADERDUMP_ENABLED
 
@@ -656,14 +656,14 @@ bool LoadShader(ShaderStage stage, Shader& shader, const std::string& filename, 
 
 			if (!output.error_message.empty())
 			{
-				wiBackLog::post(output.error_message.c_str());
+				wiBackLog::post(output.error_message);
 			}
-			wiBackLog::post(("shader compiled: " + shaderbinaryfilename).c_str());
+			wiBackLog::post("shader compiled: " + shaderbinaryfilename);
 			return device->CreateShader(stage, output.shaderdata, output.shadersize, &shader);
 		}
 		else
 		{
-			wiBackLog::post(("shader compile FAILED: " + shaderbinaryfilename + "\n" + output.error_message).c_str());
+			wiBackLog::post("shader compile FAILED: " + shaderbinaryfilename + "\n" + output.error_message);
 		}
 	}
 

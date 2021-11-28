@@ -218,6 +218,8 @@ void MainComponent::Update(float dt)
 	wiLua::SetDeltaTime(double(dt));
 	wiLua::Update();
 
+	wiBackLog::Update(canvas, dt);
+
 	if (GetActivePath() != nullptr)
 	{
 		GetActivePath()->Update(dt);
@@ -229,7 +231,6 @@ void MainComponent::Update(float dt)
 
 void MainComponent::FixedUpdate()
 {
-	wiBackLog::Update(canvas);
 	wiLua::FixedUpdate();
 
 	if (GetActivePath() != nullptr)
@@ -424,7 +425,7 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 #elif defined(WICKEDENGINE_BUILD_VULKAN)
 			use_vulkan = true;
 #else
-			wiBackLog::post("No rendering backend is enabled! Please enable at least one so we can use it as default");
+			wiBackLog::post("No rendering backend is enabled! Please enable at least one so we can use it as default", wiBackLog::LogLevel::Error);
 			assert(false);
 #endif
 		}

@@ -26,7 +26,7 @@ namespace wiInitializer
 		ss += "Version: ";
 		ss += wiVersion::GetVersionString();
 		ss += "\n";
-		wiBackLog::post(ss.c_str());
+		wiBackLog::post(ss);
 
 		wiJobSystem::Initialize();
 		wiShaderCompiler::Initialize();
@@ -34,7 +34,7 @@ namespace wiInitializer
 		size_t shaderdump_count = wiRenderer::GetShaderDumpCount();
 		if (shaderdump_count > 0)
 		{
-			wiBackLog::post(("Embedded shaders found: " + std::to_string(shaderdump_count)).c_str());
+			wiBackLog::post("Embedded shaders found: " + std::to_string(shaderdump_count));
 		}
 
 		wiBackLog::post("");

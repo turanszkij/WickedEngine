@@ -9,44 +9,62 @@
 #include "wiLua.h"
 #include "wiInput.h"
 #include "wiPlatform.h"
+#include "wiHelper.h"
 
 #include <mutex>
 #include <deque>
 #include <limits>
+#include <thread>
 #include <iostream>
 
 using namespace wiGraphics;
 
-
 namespace wiBackLog
 {
-	bool enabled = false;
-	std::deque<std::string> stream;
-	std::deque<std::string> history;
-	const float speed = 50.0f;
-	unsigned int deletefromline = 500;
-	float pos = std::numeric_limits<float>::lowest();
-	float scroll = 0;
-	std::string inputArea;
-	int historyPos = 0;
-	wiSpriteFont font;
-	wiSpinLock logLock;
-	Texture backgroundTex;
-	bool refitscroll = false;
+	static bool enabled = false;
+	static std::deque<std::string> stream;
+	static std::deque<std::string> history;
+	static const float speed = 4000.0f;
+	static const size_t deletefromline = 500;
+	static float pos = std::numeric_limits<float>::lowest();
+	static float scroll = 0;
+	static std::string inputArea;
+	static int historyPos = 0;
+	static wiSpriteFont font;
+	static wiSpinLock logLock;
+	static Texture backgroundTex;
+	static bool refitscroll = false;
 
-	bool locked = false;
-	bool blockLuaExec = false;
-	LogLevel logLevel = LogLevel::Default;
+	static bool locked = false;
+	static bool blockLuaExec = false;
+	static LogLevel logLevel = LogLevel::Default;
+
+	static void write_logfile()
+	{
+		std::string filename = wiHelper::GetTempDirectoryPath() + "wiBackLog.txt";
+		std::string text = getText(); // will lock mutex
+		wiHelper::FileWrite(filename, (const uint8_t*)text.c_str(), text.length());
+	}
+
+	// The logwriter object will automatically write out the backlog to the temp folder when it's destroyed
+	//	Should happen on application exit
+	struct LogWriter
+	{
+		~LogWriter()
+		{
+			write_logfile();
+		}
+	} static logwriter;
 
 	void Toggle() 
 	{
 		enabled = !enabled;
 	}
-	void Scroll(int dir) 
+	void Scroll(float dir) 
 	{
 		scroll += dir;
 	}
-	void Update(const wiCanvas& canvas)
+	void Update(const wiCanvas& canvas, float dt)
 	{
 		if (!locked)
 		{
@@ -71,22 +89,22 @@ namespace wiBackLog
 				}
 				if (wiInput::Down(wiInput::KEYBOARD_BUTTON_PAGEUP))
 				{
-					Scroll(10);
+					Scroll(1000.0f * dt);
 				}
 				if (wiInput::Down(wiInput::KEYBOARD_BUTTON_PAGEDOWN))
 				{
-					Scroll(-10);
+					Scroll(-1000.0f * dt);
 				}
 			}
 		}
 
 		if (enabled)
 		{
-			pos += speed;
+			pos += speed * dt;
 		}
 		else
 		{
-			pos -= speed;
+			pos -= speed * dt;
 		}
 		pos = wiMath::Clamp(pos, -canvas.GetLogicalHeight(), 0);
 	}
@@ -104,8 +122,11 @@ namespace wiBackLog
 			fx.pos = XMFLOAT3(0, pos, 0);
 			fx.opacity = wiMath::Lerp(1, 0, -pos / canvas.GetLogicalHeight());
 			wiImage::Draw(&backgroundTex, fx, cmd);
-			wiFont::Draw(inputArea, wiFontParams(10, canvas.GetLogicalHeight() - 10, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_BOTTOM), cmd);
 
+			wiFontParams params = wiFontParams(10, canvas.GetLogicalHeight() - 10, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_BOTTOM);
+			params.h_wrap = canvas.GetLogicalWidth() - params.posX;
+			params.v_align = WIFALIGN_BOTTOM;
+			wiFont::Draw(inputArea, params, cmd);
 
 			font.SetText(getText());
 			if (refitscroll)
@@ -120,6 +141,7 @@ namespace wiBackLog
 			}
 			font.params.posX = 50;
 			font.params.posY = pos + scroll;
+			font.params.h_wrap = canvas.GetLogicalWidth() - font.params.posX;
 			Rect rect;
 			rect.left = 0;
 			rect.right = (int32_t)canvas.GetPhysicalWidth();
@@ -127,10 +149,10 @@ namespace wiBackLog
 			rect.bottom = int32_t(canvas.GetPhysicalHeight() * 0.9f);
 			wiGraphics::GetDevice()->BindScissorRects(1, &rect, cmd);
 			font.Draw(cmd);
-			rect.left = -INT_MAX;
-			rect.right = INT_MAX;
-			rect.top = -INT_MAX;
-			rect.bottom = INT_MAX;
+			rect.left = -std::numeric_limits<int>::max();
+			rect.right = std::numeric_limits<int>::max();
+			rect.top = -std::numeric_limits<int>::max();
+			rect.bottom = std::numeric_limits<int>::max();
 			wiGraphics::GetDevice()->BindScissorRects(1, &rect, cmd);
 		}
 	}
@@ -138,61 +160,83 @@ namespace wiBackLog
 
 	std::string getText()
 	{
-		logLock.lock();
+		std::scoped_lock lock(logLock);
 		std::string retval;
 		for (auto& x : stream)
 		{
 			retval += x;
 		}
-		logLock.unlock();
 		return retval;
 	}
 	void clear() 
 	{
-		logLock.lock();
+		std::scoped_lock lock(logLock);
 		stream.clear();
 		scroll = 0;
-		logLock.unlock();
 	}
 	void post(const std::string& input, LogLevel level)
 	{
-		if (logLevel < level)
+		if (logLevel > level)
 		{
 			return;
 		}
-		logLock.lock();
-		std::string str;
-		switch (level)
+
+		// This is explicitly scoped for scoped_lock!
 		{
-		default:
-		case LogLevel::Default:
-			str = "";
-			break;
-		case LogLevel::Warning:
-			str = "[Warning] ";
-			break;
-		case LogLevel::Error:
-			str = "[Error] ";
-			break;
-		}
-		str += input;
-		str += '\n';
-		stream.push_back(str);
-		if (stream.size() > deletefromline)
-		{
-			stream.pop_front();
-		}
-		refitscroll = true;
-		logLock.unlock();
+			std::scoped_lock lock(logLock);
+
+			std::string str;
+			switch (level)
+			{
+			default:
+			case LogLevel::Default:
+				str = "";
+				break;
+			case LogLevel::Warning:
+				str = "[Warning] ";
+				break;
+			case LogLevel::Error:
+				str = "[Error] ";
+				break;
+			}
+			str += input;
+			str += '\n';
+			stream.push_back(str);
+			if (stream.size() > deletefromline)
+			{
+				stream.pop_front();
+			}
+			refitscroll = true;
 
 #ifdef _WIN32
-		OutputDebugStringA(str.c_str());
+			OutputDebugStringA(str.c_str());
 #endif // _WIN32
 
-        std::cout << str;
+			switch (level)
+			{
+			default:
+			case LogLevel::Default:
+				std::cout << str;
+				break;
+			case LogLevel::Warning:
+				std::clog << str;
+				break;
+			case LogLevel::Error:
+				std::cerr << str;
+				break;
+			}
+
+			// lock released on block end
+		}
+
+		if (level >= LogLevel::Error)
+		{
+			write_logfile(); // will lock mutex
+		}
 	}
 	void input(const char input) 
 	{
+		std::scoped_lock lock(logLock);
 		inputArea += input;
 	}
 	void acceptInput() 
@@ -200,7 +244,8 @@ namespace wiBackLog
 		historyPos = 0;
 		post(inputArea.c_str());
 		history.push_back(inputArea);
-		if (history.size() > deletefromline) {
+		if (history.size() > deletefromline)
+		{
 			history.pop_front();
 		}
 		if (!blockLuaExec)
@@ -215,25 +260,34 @@ namespace wiBackLog
 	}
 	void deletefromInput() 
 	{
-		if(!inputArea.empty())
+		std::scoped_lock lock(logLock);
+		if (!inputArea.empty())
+		{
 			inputArea.pop_back();
+		}
 	}
 
 	void historyPrev() 
 	{
+		std::scoped_lock lock(logLock);
 		if (!history.empty()) 
 		{
 			inputArea = history[history.size() - 1 - historyPos];
 			if ((size_t)historyPos < history.size() - 1)
+			{
 				historyPos++;
+			}
 		}
 	}
 	void historyNext() 
 	{
+		std::scoped_lock lock(logLock);
 		if (!history.empty()) 
 		{
 			if (historyPos > 0)
+			{
 				historyPos--;
+			}
 			inputArea = history[history.size() - 1 - historyPos];
 		}
 	}

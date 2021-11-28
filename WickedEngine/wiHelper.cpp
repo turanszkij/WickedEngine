@@ -95,8 +95,7 @@ namespace wiHelper
 
 		if (result)
 		{
-			std::string msg = "Screenshot saved: " + filename;
-			wiBackLog::post(msg.c_str());
+			wiBackLog::post("Screenshot saved: " + filename);
 		}
 	}
 
@@ -605,7 +604,7 @@ namespace wiHelper
 				switch (ex.code())
 				{
 				case E_ACCESSDENIED:
-					wiBackLog::post(("Opening file failed: " + fileName + " | Reason: Permission Denied!").c_str());
+					wiBackLog::post("Opening file failed: " + fileName + " | Reason: Permission Denied!");
 					break;
 				default:
 					break;
@@ -630,7 +629,7 @@ namespace wiHelper
 
 #endif // PLATFORM_UWP
 
-		wiBackLog::post(("File not found: " + fileName).c_str());
+		wiBackLog::post("File not found: " + fileName);
 		return false;
 	}
 
@@ -680,7 +679,7 @@ namespace wiHelper
 				switch (ex.code())
 				{
 				case E_ACCESSDENIED:
-					wiBackLog::post(("Opening file failed: " + fileName + " | Reason: Permission Denied!").c_str());
+					wiBackLog::post("Opening file failed: " + fileName + " | Reason: Permission Denied!");
 					break;
 				default:
 					break;

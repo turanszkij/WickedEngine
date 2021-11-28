@@ -45,6 +45,7 @@ namespace wiInput
 	KeyboardState keyboard;
 	MouseState mouse;
 
+	const KeyboardState& GetKeyboardState() { return keyboard; }
 	const MouseState& GetMouseState() { return mouse; }
 
 	struct Input 
@@ -110,7 +111,7 @@ namespace wiInput
 
 #ifdef _WIN32
 		wiRawInput::GetMouseState(&mouse); // currently only the relative data can be used from this
-		wiRawInput::GetKeyboardState(&keyboard); // it contains pressed buttons as "keyboard/typewriter" like, so no continuous presses
+		wiRawInput::GetKeyboardState(&keyboard); 
 
 		// apparently checking the mouse here instead of Down() avoids missing the button presses (review!)
         mouse.left_button_press |= KEY_DOWN(VK_LBUTTON);

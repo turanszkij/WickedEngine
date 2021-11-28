@@ -1207,7 +1207,7 @@ namespace wiScene
 					auto error = device.getError(errorMessage);
 					if (error != oidn::Error::None && error != oidn::Error::Cancelled)
 					{
-						wiBackLog::post((std::string("[OpenImageDenoise error] ") + errorMessage).c_str());
+						wiBackLog::post(std::string("[OpenImageDenoise error] ") + errorMessage);
 					}
 				}
 
