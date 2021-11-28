@@ -2,7 +2,7 @@
 #include "wiBackLog.h"
 #include "wiLua.h"
 
-#include <sstream>
+#include <string>
 
 namespace wiBackLog_BindLua
 {
@@ -15,15 +15,17 @@ namespace wiBackLog_BindLua
 	{
 		int argc = wiLua::SGetArgCount(L);
 
-		std::stringstream ss("");
+		std::string ss;
 
 		for (int i = 1; i <= argc; i++)
 		{
-			ss << wiLua::SGetString(L, i);
+			ss += wiLua::SGetString(L, i);
 		}
 
-		if (!ss.str().empty())
-			wiBackLog::post(ss.str().c_str());
+		if (!ss.empty())
+		{
+			wiBackLog::post(ss);
+		}
 
 		return 0;
 	}

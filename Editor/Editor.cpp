@@ -5,7 +5,7 @@
 #include "ModelImporter.h"
 #include "Translator.h"
 
-#include <sstream>
+#include <string>
 #include <cassert>
 #include <cmath>
 #include <filesystem>
@@ -853,36 +853,36 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&helpButton);
 
 	{
-		std::stringstream ss("");
-		ss << "Help:" << std::endl;
-		ss << "Move camera: WASD, or Contoller left stick or D-pad" << std::endl;
-		ss << "Look: Middle mouse button / arrow keys / controller right stick" << std::endl;
-		ss << "Select: Right mouse button" << std::endl;
-		ss << "Interact with water: Left mouse button when nothing is selected" << std::endl;
-		ss << "Camera speed: SHIFT button or controller R2/RT" << std::endl;
-		ss << "Camera up: E, down: Q" << std::endl;
-		ss << "Duplicate entity: Ctrl + D" << std::endl;
-		ss << "Select All: Ctrl + A" << std::endl;
-		ss << "Undo: Ctrl + Z" << std::endl;
-		ss << "Redo: Ctrl + Y" << std::endl;
-		ss << "Copy: Ctrl + C" << std::endl;
-		ss << "Paste: Ctrl + V" << std::endl;
-		ss << "Delete: DELETE button" << std::endl;
-		ss << "Place Instances: Ctrl + Shift + Left mouse click (place clipboard onto clicked surface)" << std::endl;
-		ss << "Script Console / backlog: HOME button" << std::endl;
-		ss << std::endl;
-		ss << "You can find sample scenes in the models directory. Try to load one." << std::endl;
-		ss << "You can also import models from .OBJ, .GLTF, .GLB files." << std::endl;
-		ss << "You can find a program configuration file at Editor/config.ini" << std::endl;
-		ss << "You can find sample LUA scripts in the scripts directory. Try to load one." << std::endl;
-		ss << "You can find a startup script at Editor/startup.lua (this will be executed on program start)" << std::endl;
-		ss << std::endl << "For questions, bug reports, feedback, requests, please open an issue at:" << std::endl;
-		ss << "https://github.com/turanszkij/WickedEngine" << std::endl;
-		ss << std::endl << "Devblog: https://wickedengine.net/" << std::endl;
-		ss << "Discord: https://discord.gg/CFjRYmE" << std::endl;
+		std::string ss;
+		ss += "Help:\n";
+		ss += "Move camera: WASD, or Contoller left stick or D-pad\n";
+		ss += "Look: Middle mouse button / arrow keys / controller right stick\n";
+		ss += "Select: Right mouse button\n";
+		ss += "Interact with water: Left mouse button when nothing is selected\n";
+		ss += "Camera speed: SHIFT button or controller R2/RT\n";
+		ss += "Camera up: E, down: Q\n";
+		ss += "Duplicate entity: Ctrl + D\n";
+		ss += "Select All: Ctrl + A\n";
+		ss += "Undo: Ctrl + Z\n";
+		ss += "Redo: Ctrl + Y\n";
+		ss += "Copy: Ctrl + C\n";
+		ss += "Paste: Ctrl + V\n";
+		ss += "Delete: DELETE button\n";
+		ss += "Place Instances: Ctrl + Shift + Left mouse click (place clipboard onto clicked surface)\n";
+		ss += "Script Console / backlog: HOME button\n";
+		ss += "\n";
+		ss += "You can find sample scenes in the models directory. Try to load one.\n";
+		ss += "You can also import models from .OBJ, .GLTF, .GLB files.\n";
+		ss += "You can find a program configuration file at Editor/config.ini\n";
+		ss += "You can find sample LUA scripts in the scripts directory. Try to load one.\n";
+		ss += "You can find a startup script at Editor/startup.lua (this will be executed on program start)\n";
+		ss += "\nFor questions, bug reports, feedback, requests, please open an issue at:\n";
+		ss += "https://github.com/turanszkij/WickedEngine\n";
+		ss += "\nDevblog: https://wickedengine.net/\n";
+		ss += "Discord: https://discord.gg/CFjRYmE\n";
 
 		helpLabel.Create("HelpLabel");
-		helpLabel.SetText(ss.str());
+		helpLabel.SetText(ss);
 		helpLabel.SetVisible(false);
 		GetGUI().AddWidget(&helpLabel);
 	}
@@ -1762,21 +1762,21 @@ void EditorComponent::Update(float dt)
 	{
 		pathtracer->setTargetSampleCount((int)pathTraceTargetSlider.GetValue());
 
-		std::stringstream ss;
-		ss << "Sample count: " << pathtracer->getCurrentSampleCount() << std::endl;
-		ss << "Trace progress: " << int(pathtracer->getProgress() * 100) << "%" << std::endl;
+		std::string ss;
+		ss += "Sample count: " + std::to_string(pathtracer->getCurrentSampleCount()) + "\n";
+		ss += "Trace progress: " + std::to_string(int(pathtracer->getProgress() * 100)) + "%\n";
 		if (pathtracer->isDenoiserAvailable())
 		{
 			if (pathtracer->getDenoiserProgress() > 0)
 			{
-				ss << "Denoiser progress: " << int(pathtracer->getDenoiserProgress() * 100) << "%" << std::endl;
+				ss += "Denoiser progress: " + std::to_string(int(pathtracer->getDenoiserProgress() * 100)) + "%\n";
 			}
 		}
 		else
 		{
-			ss << "Denoiser not available" << std::endl;
+			ss += "Denoiser not available\n";
 		}
-		pathTraceStatisticsLabel.SetText(ss.str());
+		pathTraceStatisticsLabel.SetText(ss);
 	}
 
 	wiProfiler::EndRange(profrange);

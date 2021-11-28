@@ -924,18 +924,20 @@ namespace wiHelper
 
 	bool Bin2H(const uint8_t* data, size_t size, const std::string& dst_filename, const char* dataName)
 	{
-		std::stringstream ss;
-		ss << "const uint8_t " << dataName << "[] = {";
+		std::string ss;
+		ss += "const uint8_t ";
+		ss += dataName ;
+		ss += "[] = {";
 		for (size_t i = 0; i < size; ++i)
 		{
 			if (i % 32 == 0)
 			{
-				ss << std::endl;
+				ss += "\n";
 			}
-			ss << (uint32_t)data[i] << ",";
+			ss += std::to_string((uint32_t)data[i]) + ",";
 		}
-		ss << std::endl << "};" << std::endl;
-		return FileWrite(dst_filename, (uint8_t*)ss.str().c_str(), ss.str().length());
+		ss += "\n};\n";
+		return FileWrite(dst_filename, (uint8_t*)ss.c_str(), ss.length());
 	}
 
 	void StringConvert(const std::string& from, std::wstring& to)

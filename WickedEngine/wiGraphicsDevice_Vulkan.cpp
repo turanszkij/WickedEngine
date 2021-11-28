@@ -20,7 +20,7 @@
 #include "sdl2.h"
 #endif
 
-#include <sstream>
+#include <string>
 #include <cstring>
 #include <iostream>
 #include <algorithm>
@@ -598,20 +598,24 @@ namespace Vulkan_Internal
 		void* user_data)
 	{
 		// Log debug messge
-		std::stringstream ss("");
+		std::string ss;
 
 		if (message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
 		{
-			ss << "[Vulkan Warning]: " << callback_data->pMessage << std::endl;
+			ss += "[Vulkan Warning]: ";
+			ss += callback_data->pMessage;
+			ss += "\n";
 		}
 		else if (message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
 		{
-			ss << "[Vulkan Error]: " << callback_data->pMessage << std::endl;
+			ss += "[Vulkan Error]: ";
+			ss += callback_data->pMessage;
+			ss += "\n";
 		}
 
-		std::clog << ss.str();
+		std::clog << ss;
 #ifdef _WIN32
-		OutputDebugStringA(ss.str().c_str());
+		OutputDebugStringA(ss.c_str());
 #endif
 
 		return VK_FALSE;
@@ -2234,9 +2238,7 @@ using namespace Vulkan_Internal;
 		assert(res == VK_SUCCESS);
 		if (res != VK_SUCCESS)
 		{
-			std::stringstream ss("");
-			ss << "volkInitialize failed! ERROR: " << res;
-			wiHelper::messageBox(ss.str(), "Error!");
+			wiHelper::messageBox("volkInitialize failed! ERROR: " + std::to_string(res), "Error!");
 			wiPlatform::Exit();
 		}
 
@@ -2331,9 +2333,7 @@ using namespace Vulkan_Internal;
 			assert(res == VK_SUCCESS);
 			if (res != VK_SUCCESS)
 			{
-				std::stringstream ss("");
-				ss << "vkCreateInstance failed! ERROR: " << res;
-				wiHelper::messageBox(ss.str(), "Error!");
+				wiHelper::messageBox("vkCreateInstance failed! ERROR: " + std::to_string(res), "Error!");
 				wiPlatform::Exit();
 			}
 
@@ -2655,9 +2655,7 @@ using namespace Vulkan_Internal;
 			assert(res == VK_SUCCESS);
 			if (res != VK_SUCCESS)
 			{
-				std::stringstream ss("");
-				ss << "vkCreateDevice failed! ERROR: " << res;
-				wiHelper::messageBox(ss.str(), "Error!");
+				wiHelper::messageBox("vkCreateDevice failed! ERROR: " + std::to_string(res), "Error!");
 				wiPlatform::Exit();
 			}
 
@@ -2688,18 +2686,14 @@ using namespace Vulkan_Internal;
 			assert(res == VK_SUCCESS);
 			if (res != VK_SUCCESS)
 			{
-				std::stringstream ss("");
-				ss << "vkCreateSemaphore[QUEUE_GRAPHICS] failed! ERROR: " << res;
-				wiHelper::messageBox(ss.str(), "Error!");
+				wiHelper::messageBox("vkCreateSemaphore[QUEUE_GRAPHICS] failed! ERROR: " + std::to_string(res), "Error!");
 				wiPlatform::Exit();
 			}
 			res = vkCreateSemaphore(device, &createInfo, nullptr, &queues[QUEUE_COMPUTE].semaphore);
 			assert(res == VK_SUCCESS);
 			if (res != VK_SUCCESS)
 			{
-				std::stringstream ss("");
-				ss << "vkCreateSemaphore[QUEUE_COMPUTE] failed! ERROR: " << res;
-				wiHelper::messageBox(ss.str(), "Error!");
+				wiHelper::messageBox("vkCreateSemaphore[QUEUE_COMPUTE] failed! ERROR: " + std::to_string(res), "Error!");
 				wiPlatform::Exit();
 			}
 		}
@@ -2722,9 +2716,7 @@ using namespace Vulkan_Internal;
 		assert(res == VK_SUCCESS);
 		if (res != VK_SUCCESS)
 		{
-			std::stringstream ss("");
-			ss << "vmaCreateAllocator failed! ERROR: " << res;
-			wiHelper::messageBox(ss.str(), "Error!");
+			wiHelper::messageBox("vmaCreateAllocator failed! ERROR: " + std::to_string(res), "Error!");
 			wiPlatform::Exit();
 		}
 
@@ -2742,9 +2734,7 @@ using namespace Vulkan_Internal;
 				assert(res == VK_SUCCESS);
 				if (res != VK_SUCCESS)
 				{
-					std::stringstream ss("");
-					ss << "vkCreateFence[FRAME] failed! ERROR: " << res;
-					wiHelper::messageBox(ss.str(), "Error!");
+					wiHelper::messageBox("vkCreateFence[FRAME] failed! ERROR: " + std::to_string(res), "Error!");
 					wiPlatform::Exit();
 				}
 			}
@@ -2760,9 +2750,7 @@ using namespace Vulkan_Internal;
 				assert(res == VK_SUCCESS);
 				if (res != VK_SUCCESS)
 				{
-					std::stringstream ss("");
-					ss << "vkCreateCommandPool[FRAME_INIT] failed! ERROR: " << res;
-					wiHelper::messageBox(ss.str(), "Error!");
+					wiHelper::messageBox("vkCreateCommandPool[FRAME_INIT] failed! ERROR: " + std::to_string(res), "Error!");
 					wiPlatform::Exit();
 				}
 
@@ -2776,9 +2764,7 @@ using namespace Vulkan_Internal;
 				assert(res == VK_SUCCESS);
 				if (res != VK_SUCCESS)
 				{
-					std::stringstream ss("");
-					ss << "vkAllocateCommandBuffers[FRAME_INIT] failed! ERROR: " << res;
-					wiHelper::messageBox(ss.str(), "Error!");
+					wiHelper::messageBox("vkAllocateCommandBuffers[FRAME_INIT] failed! ERROR: " + std::to_string(res), "Error!");
 					wiPlatform::Exit();
 				}
 
@@ -2791,9 +2777,7 @@ using namespace Vulkan_Internal;
 				assert(res == VK_SUCCESS);
 				if (res != VK_SUCCESS)
 				{
-					std::stringstream ss("");
-					ss << "vkBeginCommandBuffer[FRAME_INIT] failed! ERROR: " << res;
-					wiHelper::messageBox(ss.str(), "Error!");
+					wiHelper::messageBox("vkBeginCommandBuffer[FRAME_INIT] failed! ERROR: " + std::to_string(res), "Error!");
 					wiPlatform::Exit();
 				}
 			}

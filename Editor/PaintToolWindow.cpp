@@ -3,7 +3,6 @@
 #include "PaintToolWindow.h"
 #include "shaders/ShaderInterop_Renderer.h"
 
-#include <sstream>
 #include <cmath>
 
 using namespace wiECS;

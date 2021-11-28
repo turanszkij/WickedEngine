@@ -2,7 +2,7 @@
 #include "wiSprite_BindLua.h"
 #include "wiSpriteFont_BindLua.h"
 
-#include <sstream>
+#include <string>
 
 const char RenderPath2D_BindLua::className[] = "RenderPath2D";
 
@@ -302,12 +302,12 @@ int RenderPath2D_BindLua::GetLayers(lua_State* L)
 	RenderPath2D* ccomp = dynamic_cast<RenderPath2D*>(component);
 	if (ccomp != nullptr)
 	{
-		std::stringstream ss("");
+		std::string ss;
 		for (auto& x : ccomp->layers)
 		{
-			ss << x.name << std::endl;
+			ss += x.name + "\n";
 		}
-		wiLua::SSetString(L, ss.str());
+		wiLua::SSetString(L, ss);
 		return 1;
 	}
 	else

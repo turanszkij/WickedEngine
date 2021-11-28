@@ -24,7 +24,6 @@
 #include "wiTimer.h"
 #include "wiVector.h"
 
-#include <sstream>
 #include <memory>
 #include <string>
 
@@ -73,9 +72,10 @@ namespace wiLua
 					if (str == nullptr)
 						return 0;
 
-					std::stringstream ss("");
-					ss << WILUA_ERROR_PREFIX << str;
-					wiBackLog::post(ss.str().c_str());
+					std::string ss;
+					ss += WILUA_ERROR_PREFIX;
+					ss += str;
+					wiBackLog::post(ss.c_str());
 					lua_pop(L, 1); // remove error message
 				}
 			}
@@ -155,9 +155,10 @@ namespace wiLua
 			const char* str = lua_tostring(luainternal.m_luaState, -1);
 			if (str == nullptr)
 				return;
-			std::stringstream ss("");
-			ss << WILUA_ERROR_PREFIX << str;
-			wiBackLog::post(ss.str().c_str());
+			std::string ss;
+			ss += WILUA_ERROR_PREFIX;
+			ss += str;
+			wiBackLog::post(ss.c_str());
 			lua_pop(luainternal.m_luaState, 1); // remove error message
 		}
 	}
@@ -403,13 +404,14 @@ namespace wiLua
 		lua_getinfo(L, "nSl", &ar);
 		int line = ar.currentline;
 
-		std::stringstream ss("");
-		ss << WILUA_ERROR_PREFIX << "Line " << line << ": ";
+		std::string ss;
+		ss += WILUA_ERROR_PREFIX;
+		ss += "Line " + std::to_string(line) + ": ";
 		if (!error.empty())
 		{
-			ss << error;
+			ss += error;
 		}
-		wiBackLog::post(ss.str().c_str());
+		wiBackLog::post(ss.c_str());
 	}
 
 	void SAddMetatable(lua_State* L, const std::string& name)

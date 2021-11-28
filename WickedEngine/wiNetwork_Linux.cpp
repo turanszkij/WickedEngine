@@ -5,6 +5,7 @@
 #include "wiBackLog.h"
 #include "wiTimer.h"
 
+#include <string>
 #include <unistd.h>
 #include <errno.h>
 
@@ -53,10 +54,9 @@ namespace wiNetwork
 
 		socketinternal->handle = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
-		if(socketinternal->handle == -1){
-			std::stringstream ss;
-			ss << "wiNetwork_Linux error in CreateSocket: Could not create socket";
-			wiBackLog::post(ss.str().c_str());
+		if(socketinternal->handle == -1)
+		{
+			wiBackLog::post("wiNetwork_Linux error in CreateSocket: Could not create socket");
 			return false;
 		}
 
@@ -80,9 +80,7 @@ namespace wiNetwork
 			int result = sendto(socketinternal->handle, (const char*)data, (int)dataSize, 0, (const sockaddr*)&target, sizeof(target));
 			if (result < 0)
 			{
-				std::stringstream ss;
-				ss << "wiNetwork_Linux error in Send: (Error Code: " + std::to_string(result) + ") " + strerror(result);
-				wiBackLog::post(ss.str().c_str());
+				wiBackLog::post("wiNetwork_Linux error in Send: (Error Code: " + std::to_string(result) + ") " + std::to_string(strerror(result)));
 				return false;
 			}
 
@@ -104,9 +102,7 @@ namespace wiNetwork
 			int result = bind(socketinternal->handle, (struct sockaddr *)&target , sizeof(target));
 			if (result < 0)
 			{
-				std::stringstream ss;
-				ss << "wiNetwork_Linux error in Send: (Error Code: " + std::to_string(result) + ") " + strerror(result);
-				wiBackLog::post(ss.str().c_str());
+				wiBackLog::post("wiNetwork_Linux error in Send: (Error Code: " + std::to_string(result) + ") " + std::to_string(strerror(result)));
 				return false;
 			}
 
@@ -130,9 +126,7 @@ namespace wiNetwork
 			int result = select(0, &readfds, NULL, NULL, &timeout);
 			if (result < 0)
 			{
-				std::stringstream ss;
-				ss << "wiNetwork_Linux error in Send: (Error Code: " + std::to_string(result) + ") " + strerror(result);
-				wiBackLog::post(ss.str().c_str());
+				wiBackLog::post("wiNetwork_Linux error in Send: (Error Code: " + std::to_string(result) + ") " + std::to_string(strerror(result)));
 				assert(0);
 				return false;
 			}
@@ -152,9 +146,7 @@ namespace wiNetwork
 			int result = recvfrom(socketinternal->handle, (char*)data, (int)dataSize, 0, (sockaddr*)& sender, (socklen_t*)&targetsize);
 			if (result < 0)
 			{
-				std::stringstream ss;
-				ss << "wiNetwork_Linux error in Send: (Error Code: " + std::to_string(result) + ") " + strerror(result);
-				wiBackLog::post(ss.str().c_str());
+				wiBackLog::post("wiNetwork_Linux error in Send: (Error Code: " + std::to_string(result) + ") " + std::to_string(strerror(result)));
 				assert(0);
 				return false;
 			}

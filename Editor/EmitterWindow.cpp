@@ -2,7 +2,7 @@
 #include "EmitterWindow.h"
 #include "Editor.h"
 
-#include <sstream>
+#include <string>
 
 using namespace wiECS;
 using namespace wiScene;
@@ -755,19 +755,18 @@ void EmitterWindow::UpdateData()
 	NameComponent* name = scene.names.GetComponent(entity);
 	NameComponent* meshName = scene.names.GetComponent(emitter->meshID);
 
-	std::stringstream ss("");
-	ss.precision(2);
-	ss << "Emitter Mesh: " << (meshName != nullptr ? meshName->name : "NO EMITTER MESH") << " (" << emitter->meshID << ")" << std::endl;
-	ss << "Memort Budget: " << emitter->GetMemorySizeInBytes() / 1024.0f / 1024.0f << " MB" << std::endl;
-	ss << std::endl;
+	std::string ss;
+	ss += "Emitter Mesh: " + (meshName != nullptr ? meshName->name : "NO EMITTER MESH") + " (" + std::to_string(emitter->meshID) + ")\n";
+	ss += "Memort Budget: " + std::to_string(emitter->GetMemorySizeInBytes() / 1024.0f / 1024.0f) + " MB\n";
+	ss += "\n";
 
 	auto data = emitter->GetStatistics();
-	ss << "Alive Particle Count = " << data.aliveCount << std::endl;
-	ss << "Dead Particle Count = " << data.deadCount << std::endl;
-	ss << "GPU Emit count = " << data.realEmitCount << std::endl;
-	ss << "Visible after frustum culling = " << data.culledCount << std::endl;
+	ss += "Alive Particle Count = " + std::to_string(data.aliveCount) + "\n";
+	ss += "Dead Particle Count = " + std::to_string(data.deadCount) + "\n";
+	ss += "GPU Emit count = " + std::to_string(data.realEmitCount) + "\n";
+	ss += "Visible after frustum culling = " + std::to_string(data.culledCount) + "\n";
 
-	infoLabel.SetText(ss.str());
+	infoLabel.SetText(ss);
 
 	emitterNameField.SetText(name->name);
 }

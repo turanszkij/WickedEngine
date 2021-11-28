@@ -9,6 +9,7 @@
 #include "wiBackLog.h"
 #include "wiTimer.h"
 
+#include <string>
 #include <sstream>
 
 using namespace wiGraphics;
@@ -152,9 +153,7 @@ void wiWidget::SetName(const std::string& value)
 	if (value.length() <= 0)
 	{
 		static std::atomic<uint32_t> widgetID{ 0 };
-		std::stringstream ss("");
-		ss << "widget_" << widgetID.fetch_add(1);
-		name = ss.str();
+		name = "widget_" + std::to_string(widgetID.fetch_add(1));
 	}
 	else
 	{

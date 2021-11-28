@@ -11,8 +11,8 @@
 #define TINYGLTF_NO_STB_IMAGE_WRITE
 #include "tiny_gltf.h"
 
-#include <fstream>
-#include <sstream>
+#include <string>
+#include <limits>
 
 using namespace wiGraphics;
 using namespace wiScene;
@@ -97,12 +97,12 @@ namespace tinygltf
 		if (image->uri.empty())
 		{
 			// Force some image resource name:
-			std::stringstream ss;
+			std::string ss;
 			do {
-				ss.str("");
-				ss << "gltfimport_" << wiRandom::getRandom(INT_MAX) << ".png";
-			} while (wiResourceManager::Contains(ss.str())); // this is to avoid overwriting an existing imported image
-			image->uri = ss.str();
+				ss.clear();
+				ss += "gltfimport_" + std::to_string(wiRandom::getRandom(std::numeric_limits<int>::max())) + ".png";
+			} while (wiResourceManager::Contains(ss)); // this is to avoid overwriting an existing imported image
+			image->uri = ss;
 		}
 
 		auto resource = wiResourceManager::Load(

@@ -5,6 +5,7 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
 
+#include <string>
 #include <istream>
 #include <streambuf>
 
@@ -41,10 +42,10 @@ public:
 		wi::vector<uint8_t> filedata;
 		if (!wiHelper::FileRead(filepath, filedata))
 		{
-			std::stringstream ss;
-			ss << "WARN: Material file [ " << filepath << " ] not found." << std::endl;
+			std::string ss;
+			ss += "WARN: Material file [ " + filepath + " ] not found.\n";
 			if (err) {
-				(*err) += ss.str();
+				(*err) += ss;
 			}
 			return false;
 		}

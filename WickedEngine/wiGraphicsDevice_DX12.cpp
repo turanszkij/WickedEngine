@@ -5545,9 +5545,8 @@ using namespace DX12_Internal;
 			hr = device->CreateCommandList1(0, queues[queue].desc.Type, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(&commandLists[cmd][queue]));
 			assert(SUCCEEDED(hr));
 
-			std::wstringstream wss;
-			wss << "cmd" << cmd;
-			commandLists[cmd][queue]->SetName(wss.str().c_str());
+			std::wstring ws = L"cmd" + std::to_wstring(cmd);
+			commandLists[cmd][queue]->SetName(ws.c_str());
 
 			binders[cmd].init(this);
 		}

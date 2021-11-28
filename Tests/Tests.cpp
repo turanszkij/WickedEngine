@@ -2,7 +2,6 @@
 #include "Tests.h"
 
 #include <string>
-#include <sstream>
 #include <fstream>
 #include <thread>
 
@@ -403,13 +402,13 @@ void TestsRenderer::RunJobSystemTest()
 
 	// This will simulate going over a big dataset first in a simple loop, then with the Job System and compare timings
 	uint32_t itemCount = 1000000;
-	std::stringstream ss("");
-	ss << "Job System performance test:" << std::endl;
-	ss << "You can find out more in Tests.cpp, RunJobSystemTest() function." << std::endl << std::endl;
+	std::string ss;
+	ss += "Job System performance test:\n";
+	ss += "You can find out more in Tests.cpp, RunJobSystemTest() function.\n\n";
 
-	ss << "wiJobSystem was created with " << wiJobSystem::GetThreadCount() << " worker threads." << std::endl << std::endl;
+	ss += "wiJobSystem was created with " + std::to_string(wiJobSystem::GetThreadCount()) + " worker threads.\n\n";
 
-	ss << "1) Execute() test:" << std::endl;
+	ss += "1) Execute() test:\n";
 
 	// Serial test
 	{
@@ -419,7 +418,7 @@ void TestsRenderer::RunJobSystemTest()
 		wiHelper::Spin(100);
 		wiHelper::Spin(100);
 		double time = timer.elapsed();
-		ss << "Serial took " << time << " milliseconds" << std::endl;
+		ss += "Serial took " + std::to_string(time) + " milliseconds\n";
 	}
 	// Execute test
 	{
@@ -430,11 +429,10 @@ void TestsRenderer::RunJobSystemTest()
 		wiJobSystem::Execute(ctx, [](wiJobArgs args){ wiHelper::Spin(100); });
 		wiJobSystem::Wait(ctx);
 		double time = timer.elapsed();
-		ss << "wiJobSystem::Execute() took " << time << " milliseconds" << std::endl;
+		ss += "wiJobSystem::Execute() took " + std::to_string(time) + " milliseconds\n";
 	}
 
-	ss << std::endl;
-	ss << "2) Dispatch() test:" << std::endl;
+	ss += "\n2) Dispatch() test:\n";
 
 	// Simple loop test:
 	{
@@ -445,7 +443,7 @@ void TestsRenderer::RunJobSystemTest()
 			dataSet[i].UpdateCamera();
 		}
 		double time = timer.elapsed();
-		ss << "Simple loop took " << time << " milliseconds" << std::endl;
+		ss += "Simple loop took " + std::to_string(time) + " milliseconds\n";
 	}
 
 	// Dispatch test:
@@ -457,11 +455,11 @@ void TestsRenderer::RunJobSystemTest()
 		});
 		wiJobSystem::Wait(ctx);
 		double time = timer.elapsed();
-		ss << "wiJobSystem::Dispatch() took " << time << " milliseconds" << std::endl;
+		ss += "wiJobSystem::Dispatch() took " + std::to_string(time) + " milliseconds\n";
 	}
 
 	static wiSpriteFont font;
-	font = wiSpriteFont(ss.str());
+	font = wiSpriteFont(ss);
 	font.params.posX = GetLogicalWidth() / 2;
 	font.params.posY = GetLogicalHeight() / 2;
 	font.params.h_align = WIFALIGN_CENTER;
@@ -509,7 +507,7 @@ void TestsRenderer::RunFontTest()
 	font_aligned2.SetText("Right aligned, purple shadow");
 	AddFont(&font_aligned2);
 
-	std::stringstream ss("");
+	std::string ss;
 	std::ifstream file("font_test.txt");
 	if (file.is_open())
 	{
@@ -517,7 +515,7 @@ void TestsRenderer::RunFontTest()
 		{
 			std::string s;
 			file >> s;
-			ss << s << "\t";
+			ss += s + "\t";
 		}
 	}
 	static wiSpriteFont font_japanese;
@@ -527,7 +525,7 @@ void TestsRenderer::RunFontTest()
 	font_japanese.params.shadowColor = wiColor::Transparent();
 	font_japanese.params.h_align = WIFALIGN_CENTER;
 	font_japanese.params.size = 34;
-	font_japanese.SetText(ss.str());
+	font_japanese.SetText(ss);
 	AddFont(&font_japanese);
 
 	static wiSpriteFont font_colored;

@@ -19,7 +19,7 @@
 #include "wiGraphicsDevice_DX12.h"
 #include "wiGraphicsDevice_Vulkan.h"
 
-#include <sstream>
+#include <string>
 #include <algorithm>
 #include <new>
 #include <cstdlib>
@@ -274,71 +274,73 @@ void MainComponent::Compose(CommandList cmd)
 	// Draw the information display
 	if (infoDisplay.active)
 	{
-		std::stringstream ss("");
+		std::string ss("");
 		if (infoDisplay.watermark)
 		{
-			ss << "Wicked Engine " << wiVersion::GetVersionString() << " ";
+			ss += "Wicked Engine ";
+			ss += wiVersion::GetVersionString();
+			ss += " ";
 
 #if defined(_ARM)
-			ss << "[ARM]";
+			ss += "[ARM]";
 #elif defined(_WIN64)
-			ss << "[64-bit]";
+			ss += "[64-bit]";
 #elif defined(_WIN32)
-			ss << "[32-bit]";
+			ss += "[32-bit]";
 #endif
 
 #ifdef PLATFORM_UWP
-			ss << "[UWP]";
+			ss += "[UWP]";
 #endif
 
 #ifdef WICKEDENGINE_BUILD_DX12
 			if (dynamic_cast<GraphicsDevice_DX12*>(graphicsDevice.get()))
 			{
-				ss << "[DX12]";
+				ss += "[DX12]";
 			}
 #endif
 #ifdef WICKEDENGINE_BUILD_VULKAN
 			if (dynamic_cast<GraphicsDevice_Vulkan*>(graphicsDevice.get()))
 			{
-				ss << "[Vulkan]";
+				ss += "[Vulkan]";
 			}
 #endif
 
 #ifdef _DEBUG
-			ss << "[DEBUG]";
+			ss += "[DEBUG]";
 #endif
 			if (graphicsDevice->IsDebugDevice())
 			{
-				ss << "[debugdevice]";
+				ss += "[debugdevice]";
 			}
-			ss << std::endl;
+			ss += "\n";
 		}
 		if (infoDisplay.resolution)
 		{
-			ss << "Resolution: " << canvas.GetPhysicalWidth() << " x " << canvas.GetPhysicalHeight() << " (" << canvas.GetDPI() << " dpi)" << std::endl;
+			ss += "Resolution: " + std::to_string(canvas.GetPhysicalWidth()) + " x " + std::to_string(canvas.GetPhysicalHeight()) + " (" + std::to_string(int(canvas.GetDPI())) + " dpi)\n";
 		}
 		if (infoDisplay.logical_size)
 		{
-			ss << "Logical Size: " << canvas.GetLogicalWidth() << " x " << canvas.GetLogicalHeight() << std::endl;
+			ss += "Logical Size: " + std::to_string(int(canvas.GetLogicalWidth())) + " x " + std::to_string(int(canvas.GetLogicalHeight())) + "\n";
 		}
 		if (infoDisplay.colorspace)
 		{
-			ss << "Color Space: ";
+			ss += "Color Space: ";
 			ColorSpace colorSpace = graphicsDevice->GetSwapChainColorSpace(&swapChain);
 			switch (colorSpace)
 			{
 			default:
 			case wiGraphics::ColorSpace::SRGB:
-				ss << "sRGB";
+				ss += "sRGB";
 				break;
 			case wiGraphics::ColorSpace::HDR10_ST2084:
-				ss << "ST.2084 (HDR10)";
+				ss += "ST.2084 (HDR10)";
 				break;
 			case wiGraphics::ColorSpace::HDR_LINEAR:
-				ss << "Linear (HDR)";
+				ss += "Linear (HDR)";
 				break;
 			}
-			ss << std::endl;
+			ss += "\n";
 		}
 		if (infoDisplay.fpsinfo)
 		{
@@ -354,29 +356,27 @@ void MainComponent::Compose(CommandList cmd)
 				displaydeltatime = avg_time / arraysize(deltatimes);
 			}
 
-			ss.precision(2);
-			ss << std::fixed << 1.0f / displaydeltatime << " FPS" << std::endl;
+			ss += std::to_string(int(std::round(1.0f / displaydeltatime))) + " FPS\n";
 		}
 		if (infoDisplay.heap_allocation_counter)
 		{
-			ss << "Heap allocations per frame: " << number_of_heap_allocations.load() << std::endl;
+			ss += "Heap allocations per frame: " + std::to_string(number_of_heap_allocations.load()) + "\n";
 			number_of_heap_allocations.store(0);
 		}
 		if (infoDisplay.pipeline_count)
 		{
-			ss << "Graphics pipelines active: " << graphicsDevice->GetActivePipelineCount() << std::endl;
+			ss += "Graphics pipelines active: " + std::to_string(graphicsDevice->GetActivePipelineCount()) + "\n";
 		}
 
 #ifdef _DEBUG
-		ss << "Warning: This is a [DEBUG] build, performance will be slow!" << std::endl;
+		ss += "Warning: This is a [DEBUG] build, performance will be slow!\n";
 #endif
 		if (graphicsDevice->IsDebugDevice())
 		{
-			ss << "Warning: Graphics is in [debugdevice] mode, performance will be slow!" << std::endl;
+			ss += "Warning: Graphics is in [debugdevice] mode, performance will be slow!\n";
 		}
 
-		ss.precision(2);
-		wiFont::Draw(ss.str(), wiFontParams(4, 4, infoDisplay.size, WIFALIGN_LEFT, WIFALIGN_TOP, wiColor(255,255,255,255), wiColor(0,0,0,255)), cmd);
+		wiFont::Draw(ss, wiFontParams(4, 4, infoDisplay.size, WIFALIGN_LEFT, WIFALIGN_TOP, wiColor(255,255,255,255), wiColor(0,0,0,255)), cmd);
 
 		if (infoDisplay.colorgrading_helper)
 		{
