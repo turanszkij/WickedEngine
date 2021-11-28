@@ -6,8 +6,8 @@
 
 namespace wi
 {
-	template<typename T, typename A = std::allocator<T>>
-	using vector = std::vector<T, A>;
+	template<typename T>
+	using vector = std::vector<T>;
 }
 
 #endif // WI_VECTOR_REPLACEMENT

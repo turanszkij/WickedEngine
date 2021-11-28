@@ -14,11 +14,11 @@
 
 namespace wi
 {
-	template<typename T, typename H = std::hash<T>, typename E = std::equal_to<T>, typename A = std::allocator<T> >
+	template<typename T>
 #if WI_UNORDERED_SET_TYPE == 1
-	using unordered_set = ska::flat_hash_set<T, H, E, A>;
+	using unordered_set = ska::flat_hash_set<T>;
 #else
-	using unordered_set = std::unordered_set<T, H, E, A>;
+	using unordered_set = std::unordered_set<T>;
 #endif // WI_UNORDERED_SET_TYPE
 }
 
