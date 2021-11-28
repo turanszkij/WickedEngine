@@ -367,7 +367,7 @@ private:
 	{
 		assert(readMode);
 		assert(data_ptr != nullptr);
-		data = *(T*)(data_ptr + pos);
+		data = *(const T*)(data_ptr + pos);
 		pos += (size_t)(sizeof(data));
 	}
 };
