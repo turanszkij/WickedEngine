@@ -5,6 +5,10 @@
 
 #include <string>
 
+// This is a data container used for serialization purposes.
+//	It can be used to READ or WRITE data, but not both at the same time.
+//	An archive that was created in WRITE mode can be changed to read mode and vica-versa
+//	The data flow is always FIFO (first in, first out)
 class wiArchive
 {
 private:
@@ -165,9 +169,11 @@ public:
 	}
 	inline wiArchive& operator<<(const std::string& data)
 	{
-		uint64_t len = (uint64_t)data.length();
-		_write(len);
-		_write(*data.data(), len);
+		(*this) << data.length();
+		for (const auto& x : data)
+		{
+			(*this) << x;
+		}
 		return *this;
 	}
 	template<typename T>
@@ -304,9 +310,12 @@ public:
 	inline wiArchive& operator>>(std::string& data)
 	{
 		uint64_t len;
-		_read(len);
+		(*this) >> len;
 		data.resize(len);
-		_read(*data.data(), len);
+		for (size_t i = 0; i < len; ++i)
+		{
+			(*this) >> data[i];
+		}
 		if (!data.empty() && GetVersion() < 73)
 		{
 			// earlier versions of archive saved the strings with 0 terminator
@@ -338,33 +347,28 @@ private:
 
 	// Write data using memory operations
 	template<typename T>
-	inline void _write(const T& data, uint64_t count = 1)
+	inline void _write(const T& data)
 	{
 		assert(!readMode);
 		assert(!DATA.empty());
-		if (count == 0)
-			return;
-		size_t _size = (size_t)(sizeof(data)*count);
-		size_t _right = pos + _size;
+		const size_t _right = pos + sizeof(data);
 		if (_right > DATA.size())
 		{
 			DATA.resize(_right * 2);
 			data_ptr = DATA.data();
 		}
-		std::memcpy(DATA.data() + pos, &data, _size);
+		*(T*)(DATA.data() + pos) = data;
 		pos = _right;
 	}
 
 	// Read data using memory operations
 	template<typename T>
-	inline void _read(T& data, uint64_t count = 1)
+	inline void _read(T& data)
 	{
 		assert(readMode);
 		assert(data_ptr != nullptr);
-		if (count == 0)
-			return;
-		std::memcpy(&data, data_ptr + pos, (size_t)(sizeof(data)*count));
-		pos += (size_t)(sizeof(data)*count);
+		data = *(T*)(data_ptr + pos);
+		pos += (size_t)(sizeof(data));
 	}
 };
 
