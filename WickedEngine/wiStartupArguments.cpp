@@ -1,14 +1,13 @@
 #include "wiStartupArguments.h"
 #include "wiHelper.h"
+#include "wiUnorderedSet.h"
 
-#include <vector>
 #include <sstream>
 #include <iterator>
-#include <set>
 
 namespace wiStartupArguments
 {
-	std::set<std::string> params;
+	wi::unordered_set<std::string> params;
 
 	void Parse(const wchar_t* args)
 	{
@@ -28,10 +27,10 @@ namespace wiStartupArguments
 
 	void Parse(int argc, char *argv[])
     {
-	    for (int i=1; i<argc; i++)
-        {
-	        params.insert(std::string(argv[i]));
-        }
+		for (int i = 1; i < argc; i++)
+		{
+			params.insert(std::string(argv[i]));
+		}
     }
 
 	bool HasArgument(const std::string& value)

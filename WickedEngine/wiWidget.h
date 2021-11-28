@@ -7,9 +7,9 @@
 #include "wiSprite.h"
 #include "wiSpriteFont.h"
 #include "wiMath.h"
+#include "wiVector.h"
 
 #include <string>
-#include <vector>
 #include <functional>
 
 struct wiEventArgs
@@ -55,8 +55,11 @@ public:
 	void SetName(const std::string& value);
 	const std::string GetText() const;
 	void SetText(const std::string& value);
+	void SetText(std::string&& value);
 	void SetTooltip(const std::string& value);
+	void SetTooltip(std::string&& value);
 	void SetScriptTip(const std::string& value);
+	void SetScriptTip(std::string&& value);
 	void SetPos(const XMFLOAT2& value);
 	void SetSize(const XMFLOAT2& value);
 	WIDGETSTATE GetState() const;
@@ -240,7 +243,7 @@ protected:
 	    std::string name;
 	    uint64_t userdata = 0;
 	};
-	std::vector<Item> items;
+	wi::vector<Item> items;
 
 	float GetItemOffset(int index) const;
 public:
@@ -275,7 +278,7 @@ protected:
 	wiButton resizeDragger_BottomRight;
 	wiButton moveDragger;
 	wiLabel label;
-	std::vector<wiWidget*> widgets;
+	wi::vector<wiWidget*> widgets;
 	bool minimized = false;
 public:
 	void Create(const std::string& name, bool window_controls = true);
@@ -365,7 +368,7 @@ protected:
 	Hitbox2D GetHitbox_Item(int visible_count, int level) const;
 	Hitbox2D GetHitbox_ItemOpener(int visible_count, int level) const;
 
-	std::vector<Item> items;
+	wi::vector<Item> items;
 
 	float GetItemOffset(int index) const;
 public:

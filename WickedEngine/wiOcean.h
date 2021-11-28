@@ -5,8 +5,6 @@
 #include "wiScene_Decl.h"
 #include "wiMath.h"
 
-#include <vector>
-
 class wiOcean
 {
 public:

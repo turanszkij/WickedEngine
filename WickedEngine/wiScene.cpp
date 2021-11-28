@@ -10,11 +10,11 @@
 #include "wiRenderer.h"
 #include "wiBackLog.h"
 #include "wiTimer.h"
+#include "wiUnorderedMap.h"
 
 #include "shaders/ShaderInterop_SurfelGI.h"
 
 #include <functional>
-#include <unordered_map>
 
 using namespace wiECS;
 using namespace wiGraphics;
@@ -423,7 +423,7 @@ namespace wiScene
 				bd.format = Format::R16_UINT;
 				bd.size = uint32_t(sizeof(uint16_t) * indices.size());
 
-				std::vector<uint16_t> gpuIndexData(indices.size());
+				wi::vector<uint16_t> gpuIndexData(indices.size());
 				std::copy(indices.begin(), indices.end(), gpuIndexData.begin());
 
 				device->CreateBuffer(&bd, gpuIndexData.data(), &indexBuffer);
@@ -443,7 +443,7 @@ namespace wiScene
 				dirty_morph = true;
 		    }
 
-			std::vector<Vertex_POS> vertices(vertex_positions.size());
+			wi::vector<Vertex_POS> vertices(vertex_positions.size());
 			for (size_t i = 0; i < vertices.size(); ++i)
 			{
 				const XMFLOAT3& pos = vertex_positions[i];
@@ -545,7 +545,7 @@ namespace wiScene
 
 			}
 
-			std::vector<Vertex_TAN> vertices(vertex_tangents.size());
+			wi::vector<Vertex_TAN> vertices(vertex_tangents.size());
 			for (size_t i = 0; i < vertex_tangents.size(); ++i)
 			{
 				vertices[i].FromFULL(vertex_tangents[i]);
@@ -567,7 +567,7 @@ namespace wiScene
 		// skinning buffers:
 		if (!vertex_boneindices.empty())
 		{
-			std::vector<Vertex_BON> vertices(vertex_boneindices.size());
+			wi::vector<Vertex_BON> vertices(vertex_boneindices.size());
 			for (size_t i = 0; i < vertices.size(); ++i)
 			{
 				XMFLOAT4& wei = vertex_boneweights[i];
@@ -613,7 +613,7 @@ namespace wiScene
 		// vertexBuffer - UV SET 0
 		if(!vertex_uvset_0.empty())
 		{
-			std::vector<Vertex_TEX> vertices(vertex_uvset_0.size());
+			wi::vector<Vertex_TEX> vertices(vertex_uvset_0.size());
 			for (size_t i = 0; i < vertices.size(); ++i)
 			{
 				vertices[i].FromFULL(vertex_uvset_0[i]);
@@ -632,7 +632,7 @@ namespace wiScene
 		// vertexBuffer - UV SET 1
 		if (!vertex_uvset_1.empty())
 		{
-			std::vector<Vertex_TEX> vertices(vertex_uvset_1.size());
+			wi::vector<Vertex_TEX> vertices(vertex_uvset_1.size());
 			for (size_t i = 0; i < vertices.size(); ++i)
 			{
 				vertices[i].FromFULL(vertex_uvset_1[i]);
@@ -664,7 +664,7 @@ namespace wiScene
 		// vertexBuffer - ATLAS
 		if (!vertex_atlas.empty())
 		{
-			std::vector<Vertex_TEX> vertices(vertex_atlas.size());
+			wi::vector<Vertex_TEX> vertices(vertex_atlas.size());
 			for (size_t i = 0; i < vertices.size(); ++i)
 			{
 				vertices[i].FromFULL(vertex_atlas[i]);
@@ -782,15 +782,15 @@ namespace wiScene
 
 			// Right now they are always computed even before smooth setting
 
-			std::vector<uint32_t> newIndexBuffer;
-			std::vector<XMFLOAT3> newPositionsBuffer;
-			std::vector<XMFLOAT3> newNormalsBuffer;
-			std::vector<XMFLOAT2> newUV0Buffer;
-			std::vector<XMFLOAT2> newUV1Buffer;
-			std::vector<XMFLOAT2> newAtlasBuffer;
-			std::vector<XMUINT4> newBoneIndicesBuffer;
-			std::vector<XMFLOAT4> newBoneWeightsBuffer;
-			std::vector<uint32_t> newColorsBuffer;
+			wi::vector<uint32_t> newIndexBuffer;
+			wi::vector<XMFLOAT3> newPositionsBuffer;
+			wi::vector<XMFLOAT3> newNormalsBuffer;
+			wi::vector<XMFLOAT2> newUV0Buffer;
+			wi::vector<XMFLOAT2> newUV1Buffer;
+			wi::vector<XMFLOAT2> newAtlasBuffer;
+			wi::vector<XMUINT4> newBoneIndicesBuffer;
+			wi::vector<XMFLOAT4> newBoneWeightsBuffer;
+			wi::vector<uint32_t> newColorsBuffer;
 
 			for (size_t face = 0; face < indices.size() / 3; face++)
 			{
@@ -1177,7 +1177,7 @@ namespace wiScene
 #ifdef OPEN_IMAGE_DENOISE
 			if (success)
 			{
-				std::vector<uint8_t> texturedata_dst(lightmapTextureData.size());
+				wi::vector<uint8_t> texturedata_dst(lightmapTextureData.size());
 
 				size_t width = (size_t)lightmapWidth;
 				size_t height = (size_t)lightmapHeight;
@@ -1207,7 +1207,7 @@ namespace wiScene
 					auto error = device.getError(errorMessage);
 					if (error != oidn::Error::None && error != oidn::Error::Cancelled)
 					{
-						wiBackLog::post((std::string("[OpenImageDenoise error] ") + errorMessage).c_str());
+						wiBackLog::post(std::string("[OpenImageDenoise error] ") + errorMessage);
 					}
 				}
 
@@ -1237,7 +1237,7 @@ namespace wiScene
 		static_assert(lightmap_blocksize == 4u);
 		const uint32_t bc6_width = lightmapWidth / lightmap_blocksize;
 		const uint32_t bc6_height = lightmapHeight / lightmap_blocksize;
-		std::vector<uint8_t> bc6_data;
+		wi::vector<uint8_t> bc6_data;
 		bc6_data.resize(sizeof(XMFLOAT4) * bc6_width * bc6_height);
 		const XMFLOAT4* raw_data = (const XMFLOAT4*)lightmapTextureData.data();
 
@@ -1278,7 +1278,7 @@ namespace wiScene
 
 		// Simple compression to R11G11B10_FLOAT format:
 		using namespace PackedVector;
-		std::vector<uint8_t> packed_data;
+		wi::vector<uint8_t> packed_data;
 		packed_data.resize(sizeof(XMFLOAT3PK) * lightmapWidth * lightmapHeight);
 		XMFLOAT3PK* packed_ptr = (XMFLOAT3PK*)packed_data.data();
 		XMFLOAT4* raw_ptr = (XMFLOAT4*)lightmapTextureData.data();
@@ -1334,7 +1334,7 @@ namespace wiScene
 		if(physicsToGraphicsVertexMapping.empty())
 		{
 			// Create a mapping that maps unique vertex positions to all vertex indices that share that. Unique vertex positions will make up the physics mesh:
-			std::unordered_map<size_t, uint32_t> uniquePositions;
+			wi::unordered_map<size_t, uint32_t> uniquePositions;
 			graphicsToPhysicsVertexMapping.resize(mesh.vertex_positions.size());
 			physicsToGraphicsVertexMapping.clear();
 			weights.clear();
@@ -1713,7 +1713,7 @@ namespace wiScene
 				device->CreateBuffer(&desc, nullptr, &surfelAliveBuffer[1]);
 				device->SetName(&surfelAliveBuffer[1], "surfelAliveBuffer[1]");
 
-				std::vector<uint32_t> dead_indices(SURFEL_CAPACITY);
+				wi::vector<uint32_t> dead_indices(SURFEL_CAPACITY);
 				for (uint32_t i = 0; i < dead_indices.size(); ++i)
 				{
 					dead_indices[i] = uint32_t(dead_indices.size() - 1 - i);

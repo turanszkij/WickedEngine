@@ -5,7 +5,7 @@
 #include "ModelImporter.h"
 #include "Translator.h"
 
-#include <sstream>
+#include <string>
 #include <cassert>
 #include <cmath>
 #include <filesystem>
@@ -680,19 +680,24 @@ void EditorComponent::Load()
 	saveButton.SetColor(wiColor(0, 255, 140, 255), wiWidget::WIDGETSTATE::FOCUS);
 	saveButton.OnClick([&](wiEventArgs args) {
 
+		const bool dump_to_header = saveModeComboBox.GetSelected() == 2;
+
 		wiHelper::FileDialogParams params;
 		params.type = wiHelper::FileDialogParams::SAVE;
-		params.description = "Wicked Scene";
-		params.extensions.push_back("wiscene");
-		wiHelper::FileDialog(params, [this](std::string fileName) {
+		if (dump_to_header)
+		{
+			params.description = "C++ header (.h)";
+			params.extensions.push_back("h");
+		}
+		else
+		{
+			params.description = "Wicked Scene (.wiscene)";
+			params.extensions.push_back("wiscene");
+		}
+		wiHelper::FileDialog(params, [=](std::string fileName) {
 			wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-				std::string filename = fileName;
-				std::string extension = wiHelper::GetExtensionFromFileName(filename);
-				if (extension.compare("wiscene"))
-				{
-					filename += ".wiscene";
-				}
-				wiArchive archive(filename, false);
+				std::string filename = wiHelper::ReplaceExtension(fileName, params.extensions.front());
+				wiArchive archive = dump_to_header ? wiArchive() : wiArchive(filename, false);
 				if (archive.IsOpen())
 				{
 					Scene& scene = wiScene::GetScene();
@@ -701,6 +706,11 @@ void EditorComponent::Load()
 					wiResourceManager::SetMode(embed_mode);
 
 					scene.Serialize(archive);
+
+					if (dump_to_header)
+					{
+						archive.SaveHeaderFile(filename, wiHelper::RemoveExtension(wiHelper::GetFileNameFromPath(filename)));
+					}
 
 					ResetHistory();
 				}
@@ -853,36 +863,36 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&helpButton);
 
 	{
-		std::stringstream ss("");
-		ss << "Help:" << std::endl;
-		ss << "Move camera: WASD, or Contoller left stick or D-pad" << std::endl;
-		ss << "Look: Middle mouse button / arrow keys / controller right stick" << std::endl;
-		ss << "Select: Right mouse button" << std::endl;
-		ss << "Interact with water: Left mouse button when nothing is selected" << std::endl;
-		ss << "Camera speed: SHIFT button or controller R2/RT" << std::endl;
-		ss << "Camera up: E, down: Q" << std::endl;
-		ss << "Duplicate entity: Ctrl + D" << std::endl;
-		ss << "Select All: Ctrl + A" << std::endl;
-		ss << "Undo: Ctrl + Z" << std::endl;
-		ss << "Redo: Ctrl + Y" << std::endl;
-		ss << "Copy: Ctrl + C" << std::endl;
-		ss << "Paste: Ctrl + V" << std::endl;
-		ss << "Delete: DELETE button" << std::endl;
-		ss << "Place Instances: Ctrl + Shift + Left mouse click (place clipboard onto clicked surface)" << std::endl;
-		ss << "Script Console / backlog: HOME button" << std::endl;
-		ss << std::endl;
-		ss << "You can find sample scenes in the models directory. Try to load one." << std::endl;
-		ss << "You can also import models from .OBJ, .GLTF, .GLB files." << std::endl;
-		ss << "You can find a program configuration file at Editor/config.ini" << std::endl;
-		ss << "You can find sample LUA scripts in the scripts directory. Try to load one." << std::endl;
-		ss << "You can find a startup script at Editor/startup.lua (this will be executed on program start)" << std::endl;
-		ss << std::endl << "For questions, bug reports, feedback, requests, please open an issue at:" << std::endl;
-		ss << "https://github.com/turanszkij/WickedEngine" << std::endl;
-		ss << std::endl << "Devblog: https://wickedengine.net/" << std::endl;
-		ss << "Discord: https://discord.gg/CFjRYmE" << std::endl;
+		std::string ss;
+		ss += "Help:\n";
+		ss += "Move camera: WASD, or Contoller left stick or D-pad\n";
+		ss += "Look: Middle mouse button / arrow keys / controller right stick\n";
+		ss += "Select: Right mouse button\n";
+		ss += "Interact with water: Left mouse button when nothing is selected\n";
+		ss += "Camera speed: SHIFT button or controller R2/RT\n";
+		ss += "Camera up: E, down: Q\n";
+		ss += "Duplicate entity: Ctrl + D\n";
+		ss += "Select All: Ctrl + A\n";
+		ss += "Undo: Ctrl + Z\n";
+		ss += "Redo: Ctrl + Y\n";
+		ss += "Copy: Ctrl + C\n";
+		ss += "Paste: Ctrl + V\n";
+		ss += "Delete: DELETE button\n";
+		ss += "Place Instances: Ctrl + Shift + Left mouse click (place clipboard onto clicked surface)\n";
+		ss += "Script Console / backlog: HOME button\n";
+		ss += "\n";
+		ss += "You can find sample scenes in the models directory. Try to load one.\n";
+		ss += "You can also import models from .OBJ, .GLTF, .GLB files.\n";
+		ss += "You can find a program configuration file at Editor/config.ini\n";
+		ss += "You can find sample LUA scripts in the scripts directory. Try to load one.\n";
+		ss += "You can find a startup script at Editor/startup.lua (this will be executed on program start)\n";
+		ss += "\nFor questions, bug reports, feedback, requests, please open an issue at:\n";
+		ss += "https://github.com/turanszkij/WickedEngine\n";
+		ss += "\nDevblog: https://wickedengine.net/\n";
+		ss += "Discord: https://discord.gg/CFjRYmE\n";
 
 		helpLabel.Create("HelpLabel");
-		helpLabel.SetText(ss.str());
+		helpLabel.SetText(ss);
 		helpLabel.SetVisible(false);
 		GetGUI().AddWidget(&helpLabel);
 	}
@@ -965,7 +975,8 @@ void EditorComponent::Load()
 	saveModeComboBox.SetColor(wiColor(0, 255, 140, 255), wiWidget::WIDGETSTATE::FOCUS);
 	saveModeComboBox.AddItem("Embed resources", wiResourceManager::MODE_ALLOW_RETAIN_FILEDATA);
 	saveModeComboBox.AddItem("No embedding", wiResourceManager::MODE_ALLOW_RETAIN_FILEDATA_BUT_DISABLE_EMBEDDING);
-	saveModeComboBox.SetTooltip("Choose whether to embed resources (textures, sounds...) in the scene file when saving, or keep them as separate files");
+	saveModeComboBox.AddItem("Dump to header", wiResourceManager::MODE_ALLOW_RETAIN_FILEDATA);
+	saveModeComboBox.SetTooltip("Choose whether to embed resources (textures, sounds...) in the scene file when saving, or keep them as separate files.\nThe Dump to header option will use embedding and create a C++ header file with byte data of the scene to be used with wiArchive serialization.");
 	GetGUI().AddWidget(&saveModeComboBox);
 
 
@@ -1471,7 +1482,7 @@ void EditorComponent::Update(float dt)
 				if (!translator.selected.empty() && wiInput::Down(wiInput::KEYBOARD_BUTTON_LSHIFT))
 				{
 					// Union selection:
-					std::vector<wiScene::PickResult> saved = translator.selected;
+					wi::vector<wiScene::PickResult> saved = translator.selected;
 					translator.selected.clear(); 
 					for (const wiScene::PickResult& picked : saved)
 					{
@@ -1762,21 +1773,21 @@ void EditorComponent::Update(float dt)
 	{
 		pathtracer->setTargetSampleCount((int)pathTraceTargetSlider.GetValue());
 
-		std::stringstream ss;
-		ss << "Sample count: " << pathtracer->getCurrentSampleCount() << std::endl;
-		ss << "Trace progress: " << int(pathtracer->getProgress() * 100) << "%" << std::endl;
+		std::string ss;
+		ss += "Sample count: " + std::to_string(pathtracer->getCurrentSampleCount()) + "\n";
+		ss += "Trace progress: " + std::to_string(int(pathtracer->getProgress() * 100)) + "%\n";
 		if (pathtracer->isDenoiserAvailable())
 		{
 			if (pathtracer->getDenoiserProgress() > 0)
 			{
-				ss << "Denoiser progress: " << int(pathtracer->getDenoiserProgress() * 100) << "%" << std::endl;
+				ss += "Denoiser progress: " + std::to_string(int(pathtracer->getDenoiserProgress() * 100)) + "%\n";
 			}
 		}
 		else
 		{
-			ss << "Denoiser not available" << std::endl;
+			ss += "Denoiser not available\n";
 		}
-		pathTraceStatisticsLabel.SetText(ss.str());
+		pathTraceStatisticsLabel.SetText(ss);
 	}
 
 	wiProfiler::EndRange(profrange);
@@ -2500,7 +2511,7 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 			{
 				size_t count;
 				archive >> count;
-				std::vector<Entity> deletedEntities(count);
+				wi::vector<Entity> deletedEntities(count);
 				for (size_t i = 0; i < count; ++i)
 				{
 					archive >> deletedEntities[i];
@@ -2527,7 +2538,7 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 			{
 				// Read selections states from archive:
 
-			std::vector<wiScene::PickResult> selectedBEFORE;
+				wi::vector<wiScene::PickResult> selectedBEFORE;
 				size_t selectionCountBEFORE;
 				archive >> selectionCountBEFORE;
 				for (size_t i = 0; i < selectionCountBEFORE; ++i)
@@ -2542,7 +2553,7 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 					selectedBEFORE.push_back(sel);
 				}
 
-				std::vector<wiScene::PickResult> selectedAFTER;
+				wi::vector<wiScene::PickResult> selectedAFTER;
 				size_t selectionCountAFTER;
 				archive >> selectionCountAFTER;
 				for (size_t i = 0; i < selectionCountAFTER; ++i)

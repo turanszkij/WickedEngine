@@ -111,20 +111,23 @@ int sdl_loop(Editor &editor)
                     break;
                 case SDL_WINDOWEVENT_FOCUS_GAINED:
                     editor.is_window_active = true;
-                    std::thread([] {
-                        wiBackLog::post("[Shader check] Started...");
-                        if (wiShaderCompiler::CheckRegisteredShadersOutdated())
-                        {
-                            wiBackLog::post("[Shader check] Changes detected, initiating reload...");
-                            wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [](uint64_t userdata) {
-                                wiRenderer::ReloadShaders();
-                            });
-                        }
-                        else
-                        {
-                            wiBackLog::post("[Shader check] All up to date");
-                        }
-                    }).detach();
+					if (wiShaderCompiler::GetRegisteredShaderCount() > 0)
+					{
+						std::thread([] {
+							wiBackLog::post("[Shader check] Started checking " + std::to_string(wiShaderCompiler::GetRegisteredShaderCount()) + " registered shaders for changes...");
+							if (wiShaderCompiler::CheckRegisteredShadersOutdated())
+							{
+								wiBackLog::post("[Shader check] Changes detected, initiating reload...");
+								wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [](uint64_t userdata) {
+									wiRenderer::ReloadShaders();
+									});
+							}
+							else
+							{
+								wiBackLog::post("[Shader check] All up to date");
+							}
+							}).detach();
+					}
                     break;
                 case SDL_WINDOWEVENT_FOCUS_LOST:
                     editor.is_window_active = false;

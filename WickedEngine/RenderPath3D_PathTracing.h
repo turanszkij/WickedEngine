@@ -1,6 +1,6 @@
 #pragma once
 #include "RenderPath3D.h"
-
+#include "wiVector.h"
 
 class RenderPath3D_PathTracing :
 	public RenderPath3D
@@ -10,10 +10,10 @@ protected:
 	int target = 1024;
 	wiGraphics::Texture traceResult;
 
-	std::vector<uint8_t> texturedata_src;
-	std::vector<uint8_t> texturedata_dst;
-	std::vector<uint8_t> texturedata_albedo;
-	std::vector<uint8_t> texturedata_normal;
+	wi::vector<uint8_t> texturedata_src;
+	wi::vector<uint8_t> texturedata_dst;
+	wi::vector<uint8_t> texturedata_albedo;
+	wi::vector<uint8_t> texturedata_normal;
 	wiGraphics::Texture denoiserAlbedo;
 	wiGraphics::Texture denoiserNormal;
 	wiGraphics::Texture denoiserResult;

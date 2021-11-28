@@ -2,7 +2,6 @@
 #include "WickedEngine.h"
 
 #include <string>
-#include <sstream>
 #include <thread>
 
 namespace wiInitializer
@@ -22,10 +21,12 @@ namespace wiInitializer
 
 		initializationStarted = true;
 
-		std::stringstream ss;
-		ss << std::endl << "[wiInitializer] Initializing Wicked Engine, please wait..." << std::endl;
-		ss << "Version: " << wiVersion::GetVersionString() << std::endl;
-		wiBackLog::post(ss.str().c_str());
+		std::string ss;
+		ss += "\n[wiInitializer] Initializing Wicked Engine, please wait...\n";
+		ss += "Version: ";
+		ss += wiVersion::GetVersionString();
+		ss += "\n";
+		wiBackLog::post(ss);
 
 		wiJobSystem::Initialize();
 		wiShaderCompiler::Initialize();
@@ -33,7 +34,7 @@ namespace wiInitializer
 		size_t shaderdump_count = wiRenderer::GetShaderDumpCount();
 		if (shaderdump_count > 0)
 		{
-			wiBackLog::post(("Embedded shaders found: " + std::to_string(shaderdump_count)).c_str());
+			wiBackLog::post("Embedded shaders found: " + std::to_string(shaderdump_count));
 		}
 
 		wiBackLog::post("");

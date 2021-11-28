@@ -2,9 +2,9 @@
 #include "Tests.h"
 
 #include <string>
-#include <sstream>
 #include <fstream>
 #include <thread>
+#include <unordered_map>
 
 using namespace wiECS;
 using namespace wiScene;
@@ -120,6 +120,7 @@ void TestsRenderer::Load()
 	testSelector.AddItem("Controller Test");
 	testSelector.AddItem("Inverse Kinematics");
 	testSelector.AddItem("65k Instances");
+	testSelector.AddItem("unordered_map perf");
 	testSelector.SetMaxVisibleItemCount(10);
 	testSelector.OnSelect([=](wiEventArgs args) {
 
@@ -293,6 +294,10 @@ void TestsRenderer::Load()
 		}
 		break;
 
+		case 19:
+			RunUnorderedMapTest();
+			break;
+
 		default:
 			assert(0);
 			break;
@@ -403,13 +408,13 @@ void TestsRenderer::RunJobSystemTest()
 
 	// This will simulate going over a big dataset first in a simple loop, then with the Job System and compare timings
 	uint32_t itemCount = 1000000;
-	std::stringstream ss("");
-	ss << "Job System performance test:" << std::endl;
-	ss << "You can find out more in Tests.cpp, RunJobSystemTest() function." << std::endl << std::endl;
+	std::string ss;
+	ss += "Job System performance test:\n";
+	ss += "You can find out more in Tests.cpp, RunJobSystemTest() function.\n\n";
 
-	ss << "wiJobSystem was created with " << wiJobSystem::GetThreadCount() << " worker threads." << std::endl << std::endl;
+	ss += "wiJobSystem was created with " + std::to_string(wiJobSystem::GetThreadCount()) + " worker threads.\n\n";
 
-	ss << "1) Execute() test:" << std::endl;
+	ss += "1) Execute() test:\n";
 
 	// Serial test
 	{
@@ -419,7 +424,7 @@ void TestsRenderer::RunJobSystemTest()
 		wiHelper::Spin(100);
 		wiHelper::Spin(100);
 		double time = timer.elapsed();
-		ss << "Serial took " << time << " milliseconds" << std::endl;
+		ss += "Serial took " + std::to_string(time) + " milliseconds\n";
 	}
 	// Execute test
 	{
@@ -430,38 +435,37 @@ void TestsRenderer::RunJobSystemTest()
 		wiJobSystem::Execute(ctx, [](wiJobArgs args){ wiHelper::Spin(100); });
 		wiJobSystem::Wait(ctx);
 		double time = timer.elapsed();
-		ss << "wiJobSystem::Execute() took " << time << " milliseconds" << std::endl;
+		ss += "wiJobSystem::Execute() took " + std::to_string(time) + " milliseconds\n";
 	}
 
-	ss << std::endl;
-	ss << "2) Dispatch() test:" << std::endl;
+	ss += "\n2) Dispatch() test:\n";
 
 	// Simple loop test:
 	{
-		std::vector<wiScene::CameraComponent> dataSet(itemCount);
+		wi::vector<wiScene::CameraComponent> dataSet(itemCount);
 		timer.record();
 		for (uint32_t i = 0; i < itemCount; ++i)
 		{
 			dataSet[i].UpdateCamera();
 		}
 		double time = timer.elapsed();
-		ss << "Simple loop took " << time << " milliseconds" << std::endl;
+		ss += "Simple loop took " + std::to_string(time) + " milliseconds\n";
 	}
 
 	// Dispatch test:
 	{
-		std::vector<wiScene::CameraComponent> dataSet(itemCount);
+		wi::vector<wiScene::CameraComponent> dataSet(itemCount);
 		timer.record();
 		wiJobSystem::Dispatch(ctx, itemCount, 1000, [&](wiJobArgs args) {
 			dataSet[args.jobIndex].UpdateCamera();
 		});
 		wiJobSystem::Wait(ctx);
 		double time = timer.elapsed();
-		ss << "wiJobSystem::Dispatch() took " << time << " milliseconds" << std::endl;
+		ss += "wiJobSystem::Dispatch() took " + std::to_string(time) + " milliseconds\n";
 	}
 
 	static wiSpriteFont font;
-	font = wiSpriteFont(ss.str());
+	font = wiSpriteFont(ss);
 	font.params.posX = GetLogicalWidth() / 2;
 	font.params.posY = GetLogicalHeight() / 2;
 	font.params.h_align = WIFALIGN_CENTER;
@@ -509,7 +513,7 @@ void TestsRenderer::RunFontTest()
 	font_aligned2.SetText("Right aligned, purple shadow");
 	AddFont(&font_aligned2);
 
-	std::stringstream ss("");
+	std::string ss;
 	std::ifstream file("font_test.txt");
 	if (file.is_open())
 	{
@@ -517,7 +521,7 @@ void TestsRenderer::RunFontTest()
 		{
 			std::string s;
 			file >> s;
-			ss << s << "\t";
+			ss += s + "\t";
 		}
 	}
 	static wiSpriteFont font_japanese;
@@ -527,7 +531,7 @@ void TestsRenderer::RunFontTest()
 	font_japanese.params.shadowColor = wiColor::Transparent();
 	font_japanese.params.h_align = WIFALIGN_CENTER;
 	font_japanese.params.size = 34;
-	font_japanese.SetText(ss.str());
+	font_japanese.SetText(ss);
 	AddFont(&font_japanese);
 
 	static wiSpriteFont font_colored;
@@ -925,4 +929,56 @@ void TestsRenderer::RunNetworkTest()
 	font.params.v_align = WIFALIGN_CENTER;
 	font.params.size = 24;
 	AddFont(&font);
+}
+void TestsRenderer::RunUnorderedMapTest()
+{
+	wiTimer timer;
+
+	const size_t elements = 1000000;
+#define shuffle(i) (i * 345734667877) % 98787546343
+
+	std::string ss = "Unordered map test for " + std::to_string(elements) + " elements:";
+
+	std::unordered_map<size_t, size_t> std_map;
+	{
+		timer.record();
+		for (size_t i = 0; i < elements; ++i)
+		{
+			std_map[shuffle(i)] = i;
+		}
+		ss += "\n\nstd::unordered_map insertion: " + std::to_string(timer.elapsed_milliseconds()) + " ms\n";
+
+		timer.record();
+		for (size_t i = 0; i < std_map.size(); ++i)
+		{
+			std_map[shuffle(i)] = 0;
+		}
+		ss += "std::unordered_map access: " + std::to_string(timer.elapsed_milliseconds()) + " ms";
+	}
+
+	wi::unordered_map<size_t, size_t> wi_map;
+	{
+		timer.record();
+		for (size_t i = 0; i < elements; ++i)
+		{
+			wi_map[shuffle(i)] = i;
+		}
+		ss += "\n\nwi::unordered_map insertion: " + std::to_string(timer.elapsed_milliseconds()) + " ms\n";
+
+		timer.record();
+		for (size_t i = 0; i < wi_map.size(); ++i)
+		{
+			wi_map[shuffle(i)] = 0;
+		}
+		ss += "wi::unordered_map access: " + std::to_string(timer.elapsed_milliseconds()) + " ms";
+	}
+
+	static wiSpriteFont font;
+	font = wiSpriteFont(ss);
+	font.params.posX = GetLogicalWidth() / 2;
+	font.params.posY = GetLogicalHeight() / 2;
+	font.params.h_align = WIFALIGN_CENTER;
+	font.params.v_align = WIFALIGN_CENTER;
+	font.params.size = 24;
+	this->AddFont(&font);
 }

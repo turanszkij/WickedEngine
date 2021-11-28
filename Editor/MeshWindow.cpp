@@ -6,7 +6,7 @@
 
 #include "meshoptimizer/meshoptimizer.h"
 
-#include <sstream>
+#include <string>
 
 using namespace wiECS;
 using namespace wiScene;
@@ -366,7 +366,7 @@ void MeshWindow::Create(EditorComponent* editor)
 			size_t index_count = mesh->indices.size();
 			size_t vertex_count = mesh->vertex_positions.size();
 
-			std::vector<uint32_t> indices(index_count);
+			wi::vector<uint32_t> indices(index_count);
 			meshopt_optimizeVertexCache(indices.data(), mesh->indices.data(), index_count, vertex_count);
 
 			mesh->indices = indices;
@@ -657,25 +657,25 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 	{
 		const NameComponent& name = *scene.names.GetComponent(entity);
 
-		std::stringstream ss("");
-		ss << "Mesh name: " << name.name << std::endl;
-		ss << "Vertex count: " << mesh->vertex_positions.size() << std::endl;
-		ss << "Index count: " << mesh->indices.size() << std::endl;
-		ss << "Subset count: " << mesh->subsets.size() << std::endl;
-		ss << std::endl << "Vertex buffers: ";
-		if (mesh->vertexBuffer_POS.IsValid()) ss << "position; ";
-		if (mesh->vertexBuffer_UV0.IsValid()) ss << "uvset_0; ";
-		if (mesh->vertexBuffer_UV1.IsValid()) ss << "uvset_1; ";
-		if (mesh->vertexBuffer_ATL.IsValid()) ss << "atlas; ";
-		if (mesh->vertexBuffer_COL.IsValid()) ss << "color; ";
-		if (mesh->vertexBuffer_PRE.IsValid()) ss << "previous_position; ";
-		if (mesh->vertexBuffer_BON.IsValid()) ss << "bone; ";
-		if (mesh->vertexBuffer_TAN.IsValid()) ss << "tangent; ";
-		if (mesh->streamoutBuffer_POS.IsValid()) ss << "streamout_position; ";
-		if (mesh->streamoutBuffer_TAN.IsValid()) ss << "streamout_tangents; ";
-		if (mesh->subsetBuffer.IsValid()) ss << "subset; ";
-		if (mesh->IsTerrain()) ss << std::endl << std::endl << "Terrain will use 4 blend materials and blend by vertex colors, the default one is always the subset material and uses RED vertex color channel mask, the other 3 are selectable below.";
-		meshInfoLabel.SetText(ss.str());
+		std::string ss;
+		ss += "Mesh name: " + name.name + "\n";
+		ss += "Vertex count: " + std::to_string(mesh->vertex_positions.size()) + "\n";
+		ss += "Index count: " + std::to_string(mesh->indices.size()) + "\n";
+		ss += "Subset count: " + std::to_string(mesh->subsets.size()) + "\n";
+		ss += "\nVertex buffers: ";
+		if (mesh->vertexBuffer_POS.IsValid()) ss += "position; ";
+		if (mesh->vertexBuffer_UV0.IsValid()) ss += "uvset_0; ";
+		if (mesh->vertexBuffer_UV1.IsValid()) ss += "uvset_1; ";
+		if (mesh->vertexBuffer_ATL.IsValid()) ss += "atlas; ";
+		if (mesh->vertexBuffer_COL.IsValid()) ss += "color; ";
+		if (mesh->vertexBuffer_PRE.IsValid()) ss += "previous_position; ";
+		if (mesh->vertexBuffer_BON.IsValid()) ss += "bone; ";
+		if (mesh->vertexBuffer_TAN.IsValid()) ss += "tangent; ";
+		if (mesh->streamoutBuffer_POS.IsValid()) ss += "streamout_position; ";
+		if (mesh->streamoutBuffer_TAN.IsValid()) ss += "streamout_tangents; ";
+		if (mesh->subsetBuffer.IsValid()) ss += "subset; ";
+		if (mesh->IsTerrain()) ss += "\n\nTerrain will use 4 blend materials and blend by vertex colors, the default one is always the subset material and uses RED vertex color channel mask, the other 3 are selectable below.";
+		meshInfoLabel.SetText(ss);
 
 		terrainCheckBox.SetCheck(mesh->IsTerrain());
 

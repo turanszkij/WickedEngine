@@ -1107,7 +1107,7 @@ The controller force feedback features that might be supported. Can be provided 
 ### Touch
 A touch contact point. Currently it is supported in UWP (Universal Windows Platform) applications.
 - GetTouches <br/>
-Get a std::vector containing current Touch contact points
+Get a vector containing current Touch contact points
 
 ### wiXInput
 [[Header]](../../WickedEngine/wiXInput.h) [[Cpp]](../../WickedEngine/wiXInput.cpp)
@@ -1261,6 +1261,7 @@ This is the place for tools that use engine-level systems
 ### wiBackLog
 [[Header]](../../WickedEngine/wiBacklog.h) [[Cpp]](../../WickedEngine/wiBackLog.cpp)
 Used to log any messages by any system, from any thread. It can draw itself to the screen. It can execute Lua scripts.
+If there was a `wiBackLog::LogLevel::Error` or higher severity message posted on the backlog, the contents of the log will be saved to the temporary user directory as wiBackLog.txt.
 ### wiProfiler
 [[Header]](../../WickedEngine/wiProfiler.h) [[Cpp]](../../WickedEngine/wiProfiler.cpp)
 Used to time specific ranges in execution. Support CPU and GPU timing. Can write the result to the screen as simple text at this time.

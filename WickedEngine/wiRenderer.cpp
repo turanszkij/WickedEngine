@@ -20,6 +20,7 @@
 #include "wiSheenLUT.h"
 #include "wiShaderCompiler.h"
 #include "wiTimer.h"
+#include "wiUnorderedMap.h" // leave it here for shader dump!
 
 #include "shaders/ShaderInterop_Postprocess.h"
 #include "shaders/ShaderInterop_Raytracing.h"
@@ -62,7 +63,7 @@ inline LinearAllocator& GetRenderFrameAllocator(CommandList cmd)
 	return renderFrameAllocators[cmd];
 }
 
-std::vector<GPUBarrier> barrier_stack[COMMANDLIST_COUNT];
+wi::vector<GPUBarrier> barrier_stack[COMMANDLIST_COUNT];
 void barrier_stack_flush(CommandList cmd)
 {
 	if (barrier_stack[cmd].empty())
@@ -125,21 +126,21 @@ Texture shadowMapArray_2D;
 Texture shadowMapArray_Cube;
 Texture shadowMapArray_Transparent_2D;
 Texture shadowMapArray_Transparent_Cube;
-std::vector<RenderPass> renderpasses_shadow2D;
-std::vector<RenderPass> renderpasses_shadowCube;
+wi::vector<RenderPass> renderpasses_shadow2D;
+wi::vector<RenderPass> renderpasses_shadowCube;
 
-std::vector<std::pair<XMFLOAT4X4, XMFLOAT4>> renderableBoxes;
-std::vector<std::pair<SPHERE, XMFLOAT4>> renderableSpheres;
-std::vector<std::pair<CAPSULE, XMFLOAT4>> renderableCapsules;
-std::vector<RenderableLine> renderableLines;
-std::vector<RenderableLine2D> renderableLines2D;
-std::vector<RenderablePoint> renderablePoints;
-std::vector<RenderableTriangle> renderableTriangles_solid;
-std::vector<RenderableTriangle> renderableTriangles_wireframe;
-std::vector<PaintRadius> paintrads;
+wi::vector<std::pair<XMFLOAT4X4, XMFLOAT4>> renderableBoxes;
+wi::vector<std::pair<SPHERE, XMFLOAT4>> renderableSpheres;
+wi::vector<std::pair<CAPSULE, XMFLOAT4>> renderableCapsules;
+wi::vector<RenderableLine> renderableLines;
+wi::vector<RenderableLine2D> renderableLines2D;
+wi::vector<RenderablePoint> renderablePoints;
+wi::vector<RenderableTriangle> renderableTriangles_solid;
+wi::vector<RenderableTriangle> renderableTriangles_wireframe;
+wi::vector<PaintRadius> paintrads;
 
 wiSpinLock deferredMIPGenLock;
-std::vector<std::pair<std::shared_ptr<wiResource>, bool>> deferredMIPGens;
+wi::vector<std::pair<std::shared_ptr<wiResource>, bool>> deferredMIPGens;
 
 
 bool volumetric_clouds_precomputed = false;
@@ -276,14 +277,14 @@ PipelineState PSO_object_terrain[RENDERPASS_COUNT];
 PipelineState PSO_object_wire;
 PipelineState PSO_object_wire_tessellation;
 
-std::vector<CustomShader> customShaders;
+wi::vector<CustomShader> customShaders;
 int RegisterCustomShader(const CustomShader& customShader)
 {
 	int result = (int)customShaders.size();
 	customShaders.push_back(customShader);
 	return result;
 }
-const std::vector<CustomShader>& GetCustomShaders()
+const wi::vector<CustomShader>& GetCustomShaders()
 {
 	return customShaders;
 }
@@ -627,7 +628,7 @@ bool LoadShader(ShaderStage stage, Shader& shader, const std::string& filename, 
 	}
 	else
 	{
-		wiBackLog::post(("shader dump doesn't contain shader: " + shaderbinaryfilename).c_str());
+		wiBackLog::post("shader dump doesn't contain shader: " + shaderbinaryfilename);
 	}
 #endif // SHADERDUMP_ENABLED
 
@@ -655,18 +656,18 @@ bool LoadShader(ShaderStage stage, Shader& shader, const std::string& filename, 
 
 			if (!output.error_message.empty())
 			{
-				wiBackLog::post(output.error_message.c_str());
+				wiBackLog::post(output.error_message);
 			}
-			wiBackLog::post(("shader compiled: " + shaderbinaryfilename).c_str());
+			wiBackLog::post("shader compiled: " + shaderbinaryfilename);
 			return device->CreateShader(stage, output.shaderdata, output.shadersize, &shader);
 		}
 		else
 		{
-			wiBackLog::post(("shader compile FAILED: " + shaderbinaryfilename + "\n" + output.error_message).c_str());
+			wiBackLog::post("shader compile FAILED: " + shaderbinaryfilename + "\n" + output.error_message);
 		}
 	}
 
-	std::vector<uint8_t> buffer;
+	wi::vector<uint8_t> buffer;
 	if (wiHelper::FileRead(shaderbinaryfilename, buffer))
 	{
 		return device->CreateShader(stage, buffer.data(), buffer.size(), &shader);
@@ -5451,7 +5452,7 @@ void DrawDebugWorld(
 				XMFLOAT4 position;
 				XMFLOAT4 color;
 			};
-			std::vector<Vertex> vertices;
+			wi::vector<Vertex> vertices;
 
 			const int segmentcount = 36;
 			Vertex vert;
@@ -5485,7 +5486,7 @@ void DrawDebugWorld(
 			bd.bind_flags = BindFlag::VERTEX_BUFFER;
 			device->CreateBuffer(&bd, vertices.data(), &wiresphereVB);
 
-			std::vector<uint16_t> indices;
+			wi::vector<uint16_t> indices;
 			for (int i = 0; i < segmentcount; ++i)
 			{
 				indices.push_back(uint16_t(i));

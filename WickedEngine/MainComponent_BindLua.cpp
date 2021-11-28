@@ -17,7 +17,9 @@ Luna<MainComponent_BindLua>::FunctionType MainComponent_BindLua::methods[] = {
 	lunamethod(MainComponent_BindLua, SetWatermarkDisplay),
 	lunamethod(MainComponent_BindLua, SetFPSDisplay),
 	lunamethod(MainComponent_BindLua, SetResolutionDisplay),
+	lunamethod(MainComponent_BindLua, SetLogicalSizeDisplay),
 	lunamethod(MainComponent_BindLua, SetPipelineCountDisplay),
+	lunamethod(MainComponent_BindLua, SetHeapAllocationCountDisplay),
 	lunamethod(MainComponent_BindLua, GetCanvas),
 	{ NULL, NULL }
 };
@@ -257,6 +259,22 @@ int MainComponent_BindLua::SetResolutionDisplay(lua_State *L)
 		wiLua::SError(L, "SetResolutionDisplay(bool active) not enough arguments!");
 	return 0;
 }
+int MainComponent_BindLua::SetLogicalSizeDisplay(lua_State* L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "SetLogicalSizeDisplay() component is empty!");
+		return 0;
+	}
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->infoDisplay.logical_size = wiLua::SGetBool(L, 1);
+	}
+	else
+		wiLua::SError(L, "SetLogicalSizeDisplay(bool active) not enough arguments!");
+	return 0;
+}
 int MainComponent_BindLua::SetPipelineCountDisplay(lua_State *L)
 {
 	if (component == nullptr)
@@ -271,6 +289,22 @@ int MainComponent_BindLua::SetPipelineCountDisplay(lua_State *L)
 	}
 	else
 		wiLua::SError(L, "SetPipelineCountDisplay(bool active) not enough arguments!");
+	return 0;
+}
+int MainComponent_BindLua::SetHeapAllocationCountDisplay(lua_State* L)
+{
+	if (component == nullptr)
+	{
+		wiLua::SError(L, "SetHeapAllocationCountDisplay() component is empty!");
+		return 0;
+	}
+	int argc = wiLua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		component->infoDisplay.heap_allocation_counter = wiLua::SGetBool(L, 1);
+	}
+	else
+		wiLua::SError(L, "SetHeapAllocationCountDisplay(bool active) not enough arguments!");
 	return 0;
 }
 

@@ -5,6 +5,7 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
 
+#include <string>
 #include <istream>
 #include <streambuf>
 
@@ -26,7 +27,7 @@ public:
 		: m_mtlBaseDir(mtl_basedir) {}
 	virtual ~MaterialFileReader() {}
 	virtual bool operator()(const std::string& matId,
-		std::vector<tinyobj::material_t>* materials,
+		wi::vector<tinyobj::material_t>* materials,
 		std::map<std::string, int>* matMap, std::string* err)
 	{
 		std::string filepath;
@@ -38,13 +39,13 @@ public:
 			filepath = matId;
 		}
 
-		std::vector<uint8_t> filedata;
+		wi::vector<uint8_t> filedata;
 		if (!wiHelper::FileRead(filepath, filedata))
 		{
-			std::stringstream ss;
-			ss << "WARN: Material file [ " << filepath << " ] not found." << std::endl;
+			std::string ss;
+			ss += "WARN: Material file [ " + filepath + " ] not found.\n";
 			if (err) {
-				(*err) += ss.str();
+				(*err) += ss;
 			}
 			return false;
 		}
@@ -77,11 +78,11 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 	std::string name = wiHelper::GetFileNameFromPath(fileName);
 
 	tinyobj::attrib_t obj_attrib;
-	std::vector<tinyobj::shape_t> obj_shapes;
-	std::vector<tinyobj::material_t> obj_materials;
+	wi::vector<tinyobj::shape_t> obj_shapes;
+	wi::vector<tinyobj::material_t> obj_materials;
 	std::string obj_errors;
 
-	std::vector<uint8_t> filedata;
+	wi::vector<uint8_t> filedata;
 	bool success = wiHelper::FileRead(fileName, filedata);
 
 	if (success)
@@ -98,7 +99,7 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 
 	if (!obj_errors.empty())
 	{
-		wiBackLog::post(obj_errors.c_str());
+		wiBackLog::post(obj_errors, wiBackLog::LogLevel::Error);
 	}
 
 	if (success)
@@ -108,7 +109,7 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 		scene.names.Create(rootEntity) = name;
 
 		// Load material library:
-		std::vector<Entity> materialLibrary = {};
+		wi::vector<Entity> materialLibrary = {};
 		for (auto& obj_material : obj_materials)
 		{
 			Entity materialEntity = scene.Entity_CreateMaterial(obj_material.name);
@@ -168,8 +169,8 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 
 			object.meshID = meshEntity;
 
-			std::unordered_map<int, int> registered_materialIndices = {};
-			std::unordered_map<size_t, uint32_t> uniqueVertices = {};
+			wi::unordered_map<int, int> registered_materialIndices = {};
+			wi::unordered_map<size_t, uint32_t> uniqueVertices = {};
 
 			for (size_t i = 0; i < shape.mesh.indices.size(); i += 3)
 			{

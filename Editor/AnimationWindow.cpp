@@ -2,8 +2,6 @@
 #include "AnimationWindow.h"
 #include "Editor.h"
 
-#include <sstream>
-
 using namespace wiECS;
 using namespace wiScene;
 

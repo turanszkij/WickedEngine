@@ -36,7 +36,9 @@ public:
 	float textHeight() const;
 
 	void SetText(const std::string& value);
+	void SetText(std::string&& value);
 	void SetText(const std::wstring& value);
+	void SetText(std::wstring&& value);
 
 	std::string GetTextA() const;
 	const std::wstring& GetText() const;

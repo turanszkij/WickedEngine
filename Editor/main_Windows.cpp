@@ -3,6 +3,7 @@
 #include "Editor.h"
 
 #include <fstream>
+#include <thread>
 
 #define MAX_LOADSTRING 100
 
@@ -247,20 +248,23 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 	case WM_SETFOCUS:
 		editor.is_window_active = true;
-		std::thread([] {
-			wiBackLog::post("[Shader check] Started...");
-			if (wiShaderCompiler::CheckRegisteredShadersOutdated())
-			{
-				wiBackLog::post("[Shader check] Changes detected, initiating reload...");
-				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [](uint64_t userdata) {
-					wiRenderer::ReloadShaders();
-				});
-			}
-			else
-			{
-				wiBackLog::post("[Shader check] All up to date");
-			}
-		}).detach();
+		if (wiShaderCompiler::GetRegisteredShaderCount() > 0)
+		{
+			std::thread([] {
+				wiBackLog::post("[Shader check] Started checking " + std::to_string(wiShaderCompiler::GetRegisteredShaderCount()) + " registered shaders for changes...");
+				if (wiShaderCompiler::CheckRegisteredShadersOutdated())
+				{
+					wiBackLog::post("[Shader check] Changes detected, initiating reload...");
+					wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [](uint64_t userdata) {
+						wiRenderer::ReloadShaders();
+						});
+				}
+				else
+				{
+					wiBackLog::post("[Shader check] All up to date");
+				}
+				}).detach();
+		}
 		break;
     case WM_PAINT:
         {

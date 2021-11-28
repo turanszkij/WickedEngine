@@ -9,11 +9,11 @@
 #include "wiBackLog.h"
 #include "wiTimer.h"
 
+#include <string>
 #include <sstream>
 
 using namespace wiGraphics;
 using namespace wiScene;
-
 
 static wiGraphics::PipelineState PSO_colored;
 
@@ -153,15 +153,12 @@ void wiWidget::SetName(const std::string& value)
 	if (value.length() <= 0)
 	{
 		static std::atomic<uint32_t> widgetID{ 0 };
-		std::stringstream ss("");
-		ss << "widget_" << widgetID.fetch_add(1);
-		name = ss.str();
+		name = "widget_" + std::to_string(widgetID.fetch_add(1));
 	}
 	else
 	{
 		name = value;
 	}
-
 }
 const std::string wiWidget::GetText() const
 {
@@ -171,11 +168,23 @@ void wiWidget::SetText(const std::string& value)
 {
 	font.SetText(value);
 }
+void wiWidget::SetText(std::string&& value)
+{
+	font.SetText(value);
+}
 void wiWidget::SetTooltip(const std::string& value)
 {
 	tooltip = value;
 }
+void wiWidget::SetTooltip(std::string&& value)
+{
+	tooltip = value;
+}
 void wiWidget::SetScriptTip(const std::string& value)
+{
+	scriptTip = value;
+}
+void wiWidget::SetScriptTip(std::string&& value)
 {
 	scriptTip = value;
 }
@@ -1436,7 +1445,7 @@ void wiComboBox::AddItem(const std::string& name, uint64_t userdata)
 }
 void wiComboBox::RemoveItem(int index)
 {
-	std::vector<Item> newItems(0);
+	wi::vector<Item> newItems(0);
 	newItems.reserve(items.size());
 	for (size_t i = 0; i < items.size(); ++i)
 	{
@@ -2256,7 +2265,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 	static wiGraphics::GPUBuffer vb_picker_hue;
 	static wiGraphics::GPUBuffer vb_preview;
 
-	static std::vector<Vertex> vertices_saturation;
+	static wi::vector<Vertex> vertices_saturation;
 
 	static bool buffersComplete = false;
 	if (!buffersComplete)
@@ -2285,7 +2294,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 		// hue
 		{
 			const float edge = 2.0f;
-			std::vector<Vertex> vertices;
+			wi::vector<Vertex> vertices;
 			uint32_t segment_count = 100;
 			// inner alpha blended edge
 			for (uint32_t i = 0; i <= segment_count; ++i)
@@ -2348,7 +2357,7 @@ void wiColorPicker::Render(const wiCanvas& canvas, CommandList cmd) const
 		{
 			float _radius = 3;
 			float _width = 3;
-			std::vector<Vertex> vertices;
+			wi::vector<Vertex> vertices;
 			uint32_t segment_count = 100;
 			for (uint32_t i = 0; i <= segment_count; ++i)
 			{

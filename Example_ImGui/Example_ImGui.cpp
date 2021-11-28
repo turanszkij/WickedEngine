@@ -10,8 +10,6 @@
 #include "ImGui/imgui_impl_sdl.h"
 #endif
 
-#include <string>
-#include <sstream>
 #include <fstream>
 #include <thread>
 

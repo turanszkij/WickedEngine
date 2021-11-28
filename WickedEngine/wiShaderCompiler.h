@@ -1,7 +1,7 @@
 #pragma once
 #include "wiGraphics.h"
+#include "wiVector.h"
 
-#include <vector>
 #include <string>
 
 namespace wiShaderCompiler
@@ -23,8 +23,8 @@ namespace wiShaderCompiler
 		wiGraphics::ShaderModel minshadermodel = wiGraphics::ShaderModel::SM_5_0;
 		std::string shadersourcefilename;
 		std::string entrypoint = "main";
-		std::vector<std::string> include_directories;
-		std::vector<std::string> defines;
+		wi::vector<std::string> include_directories;
+		wi::vector<std::string> defines;
 	};
 	struct CompilerOutput
 	{
@@ -33,9 +33,9 @@ namespace wiShaderCompiler
 
 		const uint8_t* shaderdata = nullptr;
 		size_t shadersize = 0;
-		std::vector<uint8_t> shaderhash;
+		wi::vector<uint8_t> shaderhash;
 		std::string error_message;
-		std::vector<std::string> dependencies;
+		wi::vector<std::string> dependencies;
 	};
 	void Compile(const CompilerInput& input, CompilerOutput& output);
 
@@ -43,5 +43,6 @@ namespace wiShaderCompiler
 	bool IsShaderOutdated(const std::string& shaderfilename);
 
 	void RegisterShader(const std::string& shaderfilename);
+	size_t GetRegisteredShaderCount();
 	bool CheckRegisteredShadersOutdated();
 }

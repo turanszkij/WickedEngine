@@ -5,15 +5,15 @@
 
 #include "Utility/stb_image.h"
 
+#include <string>
+#include <limits>
+#include <fstream>
+
 #define TINYGLTF_IMPLEMENTATION
 #define TINYGLTF_NO_FS
 #define TINYGLTF_NO_STB_IMAGE
 #define TINYGLTF_NO_STB_IMAGE_WRITE
 #include "tiny_gltf.h"
-
-#include <fstream>
-#include <sstream>
-#include <unordered_map>
 
 using namespace wiGraphics;
 using namespace wiScene;
@@ -79,7 +79,7 @@ namespace tinygltf
 #endif
 	}
 
-	bool ReadWholeFile(std::vector<unsigned char>* out, std::string* err,
+	bool ReadWholeFile(wi::vector<unsigned char>* out, std::string* err,
 		const std::string& filepath, void*) {
 		return wiHelper::FileRead(filepath, *out);
 	}
@@ -98,12 +98,12 @@ namespace tinygltf
 		if (image->uri.empty())
 		{
 			// Force some image resource name:
-			std::stringstream ss;
+			std::string ss;
 			do {
-				ss.str("");
-				ss << "gltfimport_" << wiRandom::getRandom(INT_MAX) << ".png";
-			} while (wiResourceManager::Contains(ss.str())); // this is to avoid overwriting an existing imported image
-			image->uri = ss.str();
+				ss.clear();
+				ss += "gltfimport_" + std::to_string(wiRandom::getRandom(std::numeric_limits<int>::max())) + ".png";
+			} while (wiResourceManager::Contains(ss)); // this is to avoid overwriting an existing imported image
+			image->uri = ss;
 		}
 
 		auto resource = wiResourceManager::Load(
@@ -142,7 +142,7 @@ struct LoaderState
 {
 	tinygltf::Model gltfModel;
 	Scene* scene;
-	std::unordered_map<int, Entity> entityMap;  // node -> entity
+	wi::unordered_map<int, Entity> entityMap;  // node -> entity
 };
 
 // Recursively loads nodes and resolves hierarchy:
@@ -278,7 +278,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 	LoaderState state;
 	state.scene = &scene;
 
-	std::vector<uint8_t> filedata;
+	wi::vector<uint8_t> filedata;
 	ret = wiHelper::FileRead(fileName, filedata);
 
 	if (ret)
@@ -718,7 +718,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				}
 				else
 				{
-					wiBackLog::post("[KHR_materials_specular warning] specularTexture must be either in surfaceMap.a or specularColorTexture.a! specularTexture discarded!");
+					wiBackLog::post("[KHR_materials_specular warning] specularTexture must be either in surfaceMap.a or specularColorTexture.a! specularTexture discarded!", wiBackLog::LogLevel::Warning);
 				}
 			}
 			if (ext_specular->second.Has("specularColorTexture"))

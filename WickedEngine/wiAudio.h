@@ -4,7 +4,7 @@
 
 #include <memory>
 #include <string>
-#include <vector>
+
 #ifdef SDL2
 #include <SDL2/SDL.h>
 #endif
@@ -50,7 +50,6 @@ namespace wiAudio
 	};
 
 	bool CreateSound(const std::string& filename, Sound* sound);
-	bool CreateSound(const std::vector<uint8_t>& data, Sound* sound);
 	bool CreateSound(const uint8_t* data, size_t size, Sound* sound);
 #ifdef SDL2
 	bool CreateSound(SDL_RWops* data, Sound* sound);

@@ -4,21 +4,21 @@
 #include "wiCanvas.h"
 
 #include <string>
-#include <fstream>
 
 namespace wiBackLog
 {
-	enum LogLevel
+	// Do not modify the order, as this is exposed to LUA scripts as int!
+	enum class LogLevel
 	{
 		None,
 		Default,
 		Warning,
-		Error
+		Error,
 	};
 
 	void Toggle();
 	void Scroll(int direction);
-	void Update(const wiCanvas& canvas);
+	void Update(const wiCanvas& canvas, float dt = 1.0f / 60.0f);
 	void Draw(const wiCanvas& canvas, wiGraphics::CommandList cmd);
 
 	std::string getText();

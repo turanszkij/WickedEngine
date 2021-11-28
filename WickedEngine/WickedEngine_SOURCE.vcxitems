@@ -239,6 +239,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\DirectXMathCommon.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\DirectXPackedVector.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\dxcapi.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\flat_hash_map.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\GLSL.std.450.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\include\spirv\unified1\spirv.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\sal.h" />
@@ -261,6 +262,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGPUSortLib.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_DX12.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_Vulkan.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiUnorderedSet.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiInput.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiInput_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiIntersect.h" />
@@ -351,6 +353,8 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiStartupArguments.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiTextureHelper.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiTimer.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiUnorderedMap.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiVector.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiVersion.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiWidget.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiXInput.h" />

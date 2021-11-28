@@ -3,8 +3,6 @@
 #include "wiAudio.h"
 #include "Editor.h"
 
-#include <sstream>
-
 using namespace wiGraphics;
 using namespace wiECS;
 using namespace wiScene;

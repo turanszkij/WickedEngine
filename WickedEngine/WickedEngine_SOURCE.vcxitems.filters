@@ -1074,6 +1074,18 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_PathTracing.h">
       <Filter>ENGINE\High level interface</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Utility\flat_hash_map.hpp">
+      <Filter>UTILITY</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiUnorderedSet.h">
+      <Filter>ENGINE\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiUnorderedMap.h">
+      <Filter>ENGINE\Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiVector.h">
+      <Filter>ENGINE\Helpers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">

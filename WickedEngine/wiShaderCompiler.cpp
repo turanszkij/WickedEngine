@@ -3,11 +3,10 @@
 #include "wiPlatform.h"
 #include "wiHelper.h"
 #include "wiArchive.h"
+#include "wiUnorderedSet.h"
 
 #include <mutex>
-#include <unordered_set>
 #include <filesystem>
-
 
 #ifdef PLATFORM_WINDOWS_DESKTOP
 #define SHADERCOMPILER_ENABLED
@@ -48,7 +47,7 @@ namespace wiShaderCompiler
 			return;
 		}
 
-		std::vector<uint8_t> shadersourcedata;
+		wi::vector<uint8_t> shadersourcedata;
 		if (!wiHelper::FileRead(input.shadersourcefilename, shadersourcedata))
 		{
 			return;
@@ -56,7 +55,7 @@ namespace wiShaderCompiler
 
 		// https://github.com/microsoft/DirectXShaderCompiler/wiki/Using-dxc.exe-and-dxcompiler.dll#dxcompiler-dll-interface
 
-		std::vector<LPCWSTR> args = {
+		wi::vector<LPCWSTR> args = {
 			L"-res-may-alias",
 			L"-flegacy-macro-expansion",
 			//L"-no-legacy-cbuf-layout",
@@ -318,7 +317,7 @@ namespace wiShaderCompiler
 			return;
 		}
 
-		std::vector<std::wstring> wstrings;
+		wi::vector<std::wstring> wstrings;
 		wstrings.reserve(input.defines.size() + input.include_directories.size());
 
 		for (auto& x : input.defines)
@@ -464,7 +463,7 @@ namespace wiShaderCompiler
 			return;
 		}
 
-		std::vector<uint8_t> shadersourcedata;
+		wi::vector<uint8_t> shadersourcedata;
 		if (!wiHelper::FileRead(input.shadersourcefilename, shadersourcedata))
 		{
 			return;
@@ -509,7 +508,7 @@ namespace wiShaderCompiler
 		{
 			const CompilerInput* input = nullptr;
 			CompilerOutput* output = nullptr;
-			std::vector<std::vector<uint8_t>> filedatas;
+			wi::vector<wi::vector<uint8_t>> filedatas;
 
 			HRESULT Open(D3D_INCLUDE_TYPE IncludeType, LPCSTR pFileName, LPCVOID pParentData, LPCVOID* ppData, UINT* pBytes) override
 			{
@@ -518,7 +517,7 @@ namespace wiShaderCompiler
 					std::string filename = x + pFileName;
 					if (!wiHelper::FileExists(filename))
 						continue;
-					std::vector<uint8_t>& filedata = filedatas.emplace_back();
+					wi::vector<uint8_t>& filedata = filedatas.emplace_back();
 					if (wiHelper::FileRead(filename, filedata))
 					{
 						output->dependencies.push_back(filename);
@@ -672,7 +671,7 @@ namespace wiShaderCompiler
 		if (dependencyLibrary.IsOpen())
 		{
 			std::string rootdir = dependencyLibrary.GetSourceDirectory();
-			std::vector<std::string> dependencies = output.dependencies;
+			wi::vector<std::string> dependencies = output.dependencies;
 			for (auto& x : dependencies)
 			{
 				wiHelper::MakePathRelative(rootdir, x);
@@ -709,7 +708,7 @@ namespace wiShaderCompiler
 		if (dependencyLibrary.IsOpen())
 		{
 			std::string rootdir = dependencyLibrary.GetSourceDirectory();
-			std::vector<std::string> dependencies;
+			wi::vector<std::string> dependencies;
 			dependencyLibrary >> dependencies;
 
 			for (auto& x : dependencies)
@@ -733,14 +732,18 @@ namespace wiShaderCompiler
 	}
 
 	std::mutex locker;
-	std::unordered_set<std::string> registered_shaders;
+	wi::unordered_set<std::string> registered_shaders;
 	void RegisterShader(const std::string& shaderfilename)
 	{
 #ifdef SHADERCOMPILER_ENABLED
-		locker.lock();
+		std::scoped_lock lock(locker);
 		registered_shaders.insert(shaderfilename);
-		locker.unlock();
 #endif // SHADERCOMPILER_ENABLED
+	}
+	size_t GetRegisteredShaderCount()
+	{
+		std::scoped_lock lock(locker);
+		return registered_shaders.size();
 	}
 	bool CheckRegisteredShadersOutdated()
 	{

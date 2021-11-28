@@ -2,8 +2,7 @@
 #include "CommonInclude.h"
 #include "wiPlatform.h"
 #include "wiColor.h"
-
-#include <vector>
+#include "wiVector.h"
 
 namespace wiInput
 {
@@ -80,7 +79,7 @@ namespace wiInput
 
 	struct KeyboardState
 	{
-		bool buttons[256] = {};
+		bool buttons[256] = {}; // it contains pressed buttons as "keyboard/typewriter" like, so no continuous presses
 	};
 	struct MouseState
 	{
@@ -113,6 +112,7 @@ namespace wiInput
 	// call once per frame
 	void Update(wiPlatform::window_type window);
 
+	const KeyboardState& GetKeyboardState();
 	const MouseState& GetMouseState();
 	
 	// check if a button is down
@@ -144,7 +144,7 @@ namespace wiInput
 		// current position of touch
 		XMFLOAT2 pos;
 	};
-	const std::vector<Touch>& GetTouches();
+	const wi::vector<Touch>& GetTouches();
 
 };
 

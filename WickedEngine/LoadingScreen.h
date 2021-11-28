@@ -2,6 +2,7 @@
 #include "RenderPath2D.h"
 #include "wiColor.h"
 #include "wiJobSystem.h"
+#include "wiVector.h"
 
 #include <functional>
 
@@ -12,7 +13,7 @@ class LoadingScreen :
 {
 private:
 	wiJobSystem::context ctx;
-	std::vector<std::function<void(wiJobArgs)>> tasks;
+	wi::vector<std::function<void(wiJobArgs)>> tasks;
 	std::function<void()> finish;
 public:
 

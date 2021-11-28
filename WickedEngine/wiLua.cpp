@@ -22,10 +22,9 @@
 #include "wiNetwork_BindLua.h"
 #include "wiIntersect_BindLua.h"
 #include "wiTimer.h"
+#include "wiVector.h"
 
-#include <sstream>
 #include <memory>
-#include <vector>
 
 #define WILUA_ERROR_PREFIX "[Lua Error] "
 
@@ -56,7 +55,7 @@ namespace wiLua
 			std::string filename = SGetString(L, 1);
 			filename = script_path + filename;
 			script_path = wiHelper::GetDirectoryFromPath(filename);
-			std::vector<uint8_t> filedata;
+			wi::vector<uint8_t> filedata;
 			if (wiHelper::FileRead(filename, filedata))
 			{
 				std::string command = std::string(filedata.begin(), filedata.end());
@@ -72,9 +71,10 @@ namespace wiLua
 					if (str == nullptr)
 						return 0;
 
-					std::stringstream ss("");
-					ss << WILUA_ERROR_PREFIX << str;
-					wiBackLog::post(ss.str().c_str());
+					std::string ss;
+					ss += WILUA_ERROR_PREFIX;
+					ss += str;
+					wiBackLog::post(ss, wiBackLog::LogLevel::Error);
 					lua_pop(L, 1); // remove error message
 				}
 			}
@@ -154,16 +154,17 @@ namespace wiLua
 			const char* str = lua_tostring(luainternal.m_luaState, -1);
 			if (str == nullptr)
 				return;
-			std::stringstream ss("");
-			ss << WILUA_ERROR_PREFIX << str;
-			wiBackLog::post(ss.str().c_str());
+			std::string ss;
+			ss += WILUA_ERROR_PREFIX;
+			ss += str;
+			wiBackLog::post(ss, wiBackLog::LogLevel::Error);
 			lua_pop(luainternal.m_luaState, 1); // remove error message
 		}
 	}
 	bool RunFile(const std::string& filename)
 	{
 		script_path = wiHelper::GetDirectoryFromPath(filename);
-		std::vector<uint8_t> filedata;
+		wi::vector<uint8_t> filedata;
 		if (wiHelper::FileRead(filename, filedata))
 		{
 			return RunText(std::string(filedata.begin(), filedata.end()));
@@ -250,28 +251,28 @@ namespace wiLua
 		SSetDouble(luainternal.m_luaState, dt);
 		lua_call(luainternal.m_luaState, 1, 0);
 	}
+
+	inline void SignalHelper(lua_State* L, const char* str)
+	{
+		lua_getglobal(L, "signal");
+		lua_pushstring(L, str);
+		lua_call(L, 1, 0);
+	}
 	void FixedUpdate()
 	{
-		Signal("wickedengine_fixed_update_tick");
+		SignalHelper(luainternal.m_luaState, "wickedengine_fixed_update_tick");
 	}
 	void Update()
 	{
-		Signal("wickedengine_update_tick");
+		SignalHelper(luainternal.m_luaState, "wickedengine_update_tick");
 	}
 	void Render()
 	{
-		Signal("wickedengine_render_tick");
-	}
-
-	inline void SignalHelper(lua_State* L, const std::string& name)
-	{
-		lua_getglobal(L, "signal");
-		SSetString(L, name.c_str());
-		lua_call(L, 1, 0);
+		SignalHelper(luainternal.m_luaState, "wickedengine_render_tick");
 	}
 	void Signal(const std::string& name)
 	{
-		SignalHelper(luainternal.m_luaState, name);
+		SignalHelper(luainternal.m_luaState, name.c_str());
 	}
 
 	void KillProcesses()
@@ -402,13 +403,14 @@ namespace wiLua
 		lua_getinfo(L, "nSl", &ar);
 		int line = ar.currentline;
 
-		std::stringstream ss("");
-		ss << WILUA_ERROR_PREFIX << "Line " << line << ": ";
+		std::string ss;
+		ss += WILUA_ERROR_PREFIX;
+		ss += "Line " + std::to_string(line) + ": ";
 		if (!error.empty())
 		{
-			ss << error;
+			ss += error;
 		}
-		wiBackLog::post(ss.str().c_str());
+		wiBackLog::post(ss);
 	}
 
 	void SAddMetatable(lua_State* L, const std::string& name)

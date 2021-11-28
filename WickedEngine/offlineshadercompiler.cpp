@@ -1,22 +1,20 @@
 #include "WickedEngine.h"
 
 #include <iostream>
-#include <vector>
 #include <filesystem>
 #include <mutex>
-#include <unordered_map>
-#include <sstream>
+#include <string>
 
 std::mutex locker;
-std::vector<std::string> shaders[static_cast<size_t>(wiGraphics::ShaderStage::Count)];
-std::unordered_map<std::string, wiGraphics::ShaderModel> minshadermodels;
+wi::vector<std::string> shaders[static_cast<size_t>(wiGraphics::ShaderStage::Count)];
+wi::unordered_map<std::string, wiGraphics::ShaderModel> minshadermodels;
 struct Target
 {
 	wiGraphics::ShaderFormat format;
 	std::string dir;
 };
-std::vector<Target> targets;
-std::unordered_map<std::string, wiShaderCompiler::CompilerOutput> results;
+wi::vector<Target> targets;
+wi::unordered_map<std::string, wiShaderCompiler::CompilerOutput> results;
 bool rebuild = false;
 bool shaderdump_enabled = false;
 
@@ -497,8 +495,8 @@ int main(int argc, char* argv[])
 	{
 		std::cout << "[Wicked Engine Offline Shader Compiler] Creating ShaderDump..." << std::endl;
 		timer.record();
-		std::stringstream ss;
-		ss << "namespace wiShaderDump {" << std::endl;
+		std::string ss;
+		ss += "namespace wiShaderDump {\n";
 		for (auto& x : results)
 		{
 			auto& name = x.first;
@@ -507,15 +505,15 @@ int main(int argc, char* argv[])
 			std::string name_repl = name;
 			std::replace(name_repl.begin(), name_repl.end(), '/', '_');
 			std::replace(name_repl.begin(), name_repl.end(), '.', '_');
-			ss << "const uint8_t " << name_repl << "[] = {";
+			ss += "const uint8_t " + name_repl + "[] = {";
 			for (size_t i = 0; i < output.shadersize; ++i)
 			{
-				ss << (uint32_t)output.shaderdata[i] << ",";
+				ss += std::to_string((uint32_t)output.shaderdata[i]) + ",";
 			}
-			ss << "};" << std::endl;
+			ss += "};\n";
 		}
-		ss << "struct ShaderDumpEntry{const uint8_t* data; size_t size;};" << std::endl;
-		ss << "const std::unordered_map<std::string, ShaderDumpEntry> shaderdump = {" << std::endl;
+		ss += "struct ShaderDumpEntry{const uint8_t* data; size_t size;};\n";
+		ss += "const wi::unordered_map<std::string, ShaderDumpEntry> shaderdump = {\n";
 		for (auto& x : results)
 		{
 			auto& name = x.first;
@@ -524,11 +522,11 @@ int main(int argc, char* argv[])
 			std::string name_repl = name;
 			std::replace(name_repl.begin(), name_repl.end(), '/', '_');
 			std::replace(name_repl.begin(), name_repl.end(), '.', '_');
-			ss << "std::pair<std::string, ShaderDumpEntry>(\"" << name << "\", {" << name_repl << ",sizeof(" << name_repl << ")})," << std::endl;
+			ss += "std::pair<std::string, ShaderDumpEntry>(\"" + name + "\", {" + name_repl + ",sizeof(" + name_repl + ")}),\n";
 		}
-		ss << "};" << std::endl; // map end
-		ss << "}" << std::endl; // namespace end
-		wiHelper::FileWrite("wiShaderDump.h", (uint8_t*)ss.str().c_str(), ss.str().length());
+		ss += "};\n"; // map end
+		ss += "}\n"; // namespace end
+		wiHelper::FileWrite("wiShaderDump.h", (uint8_t*)ss.c_str(), ss.length());
 		std::cout << "[Wicked Engine Offline Shader Compiler] ShaderDump written to wiShaderDump.h in " << std::setprecision(4) << timer.elapsed_seconds() << " seconds" << std::endl;
 	}
 

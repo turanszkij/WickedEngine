@@ -5,7 +5,7 @@
 #include "wiBackLog.h"
 #include "wiTimer.h"
 
-#include <sstream>
+#include <string>
 
 #include <winsock.h>
 #pragma comment(lib,"ws2_32.lib")
@@ -55,9 +55,7 @@ namespace wiNetwork
 		if (result)
 		{
 			int error = WSAGetLastError();
-			std::stringstream ss("");
-			ss << "wiNetwork Initialization FAILED with error: " << error;
-			wiBackLog::post(ss.str().c_str());
+			wiBackLog::post("wiNetwork Initialization FAILED with error: " + std::to_string(error));
 			assert(0);
 		}
 
@@ -74,9 +72,7 @@ namespace wiNetwork
 		if (socketinternal->handle == INVALID_SOCKET)
 		{
 			int error = WSAGetLastError();
-			std::stringstream ss;
-			ss << "wiNetwork error in CreateSocket: " << error;
-			wiBackLog::post(ss.str().c_str());
+			wiBackLog::post("wiNetwork error in CreateSocket: " + std::to_string(error));
 			return false;
 		}
 
@@ -101,9 +97,7 @@ namespace wiNetwork
 			if (result == SOCKET_ERROR)
 			{
 				int error = WSAGetLastError();
-				std::stringstream ss;
-				ss << "wiNetwork error in Send: " << error;
-				wiBackLog::post(ss.str().c_str());
+				wiBackLog::post("wiNetwork error in Send: " + std::to_string(error));
 				return false;
 			}
 
@@ -127,9 +121,7 @@ namespace wiNetwork
 			if (result == SOCKET_ERROR)
 			{
 				int error = WSAGetLastError();
-				std::stringstream ss;
-				ss << "wiNetwork error in ListenPort: " << error;
-				wiBackLog::post(ss.str().c_str());
+				wiBackLog::post("wiNetwork error in ListenPort: " + std::to_string(error));
 				return false;
 			}
 
@@ -153,9 +145,8 @@ namespace wiNetwork
 			int result = select(0, &readfds, NULL, NULL, &timeout);
 			if (result < 0)
 			{
-				std::stringstream ss;
-				ss << "wiNetwork error in CanReceive: " << WSAGetLastError();
-				wiBackLog::post(ss.str().c_str());
+				int error = WSAGetLastError();
+				wiBackLog::post("wiNetwork error in CanReceive: " + std::to_string(error));
 				assert(0);
 				return false;
 			}
@@ -177,9 +168,7 @@ namespace wiNetwork
 			if (result == SOCKET_ERROR)
 			{
 				int error = WSAGetLastError();
-				std::stringstream ss;
-				ss << "wiNetwork error in Receive: " << error;
-				wiBackLog::post(ss.str().c_str());
+				wiBackLog::post("wiNetwork error in Receive: " + std::to_string(error));
 				return false;
 			}
 

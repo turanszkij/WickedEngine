@@ -10,16 +10,15 @@
 #include "wiPlatform.h"
 #include "wiEvent.h"
 #include "wiTimer.h"
+#include "wiUnorderedMap.h"
+#include "wiUnorderedSet.h"
+#include "wiVector.h"
 
 #include "Utility/arial.h"
 #include "Utility/stb_truetype.h"
 
 #include <fstream>
 #include <atomic>
-#include <unordered_map>
-#include <unordered_set>
-#include <vector>
-#include <string>
 
 using namespace wiGraphics;
 using namespace wiRectPacker;
@@ -56,8 +55,8 @@ namespace wiFont_Internal
 		uint16_t tc_top;
 		uint16_t tc_bottom;
 	};
-	std::unordered_map<int32_t, Glyph> glyph_lookup;
-	std::unordered_map<int32_t, rect_xywh> rect_lookup;
+	wi::unordered_map<int32_t, Glyph> glyph_lookup;
+	wi::unordered_map<int32_t, rect_xywh> rect_lookup;
 	// pack glyph identifiers to a 32-bit hash:
 	//	height:	10 bits	(height supported: 0 - 1023)
 	//	style:	6 bits	(number of font styles supported: 0 - 63)
@@ -66,13 +65,13 @@ namespace wiFont_Internal
 	constexpr int codefromhash(int64_t hash) { return int((hash >> 16) & 0xFFFF); }
 	constexpr int stylefromhash(int64_t hash) { return int((hash >> 10) & 0x3F); }
 	constexpr int heightfromhash(int64_t hash) { return int((hash >> 0) & 0x3FF); }
-	std::unordered_set<int32_t> pendingGlyphs;
+	wi::unordered_set<int32_t> pendingGlyphs;
 	wiSpinLock glyphLock;
 
 	struct wiFontStyle
 	{
 		std::string name;
-		std::vector<uint8_t> fontBuffer; // only used if loaded from file, need to keep alive
+		wi::vector<uint8_t> fontBuffer; // only used if loaded from file, need to keep alive
 		stbtt_fontinfo fontInfo;
 		int ascent, descent, lineGap;
 		void Create(const std::string& newName, const uint8_t* data, size_t size)
@@ -82,8 +81,7 @@ namespace wiFont_Internal
 
 			if (!stbtt_InitFont(&fontInfo, data, offset))
 			{
-				std::string error = "Failed to load font: " + name + " (file was unrecognized, it must be a .ttf file)";
-				wiBackLog::post(error.c_str());
+				wiBackLog::post("Failed to load font: " + name + " (file was unrecognized, it must be a .ttf file)");
 			}
 
 			stbtt_GetFontVMetrics(&fontInfo, &ascent, &descent, &lineGap);
@@ -96,12 +94,11 @@ namespace wiFont_Internal
 			}
 			else
 			{
-				std::string error = "Failed to load font: " + name + " (file could not be opened)";
-				wiBackLog::post(error.c_str());
+				wiBackLog::post("Failed to load font: " + name + " (file could not be opened)");
 			}
 		}
 	};
-	std::vector<wiFontStyle> fontStyles;
+	wi::vector<wiFontStyle> fontStyles;
 
 	struct FontVertex
 	{
@@ -166,14 +163,12 @@ namespace wiFont_Internal
 			{
 				word_wrap();
 				pos += WHITESPACE_SIZE;
-				start_new_word = true;
 				code_prev = 0;
 			}
 			else if (code == '\t')
 			{
 				word_wrap();
 				pos += TAB_SIZE;
-				start_new_word = true;
 				code_prev = 0;
 			}
 			else
@@ -377,7 +372,7 @@ void UpdatePendingGlyphs()
 		pendingGlyphs.clear();
 
 		// This reference array will be used for packing:
-		std::vector<rect_xywh*> out_rects;
+		wi::vector<rect_xywh*> out_rects;
 		out_rects.reserve(rect_lookup.size());
 		for (auto& it : rect_lookup)
 		{
@@ -385,7 +380,7 @@ void UpdatePendingGlyphs()
 		}
 
 		// Perform packing and process the result if successful:
-		std::vector<bin> bins;
+		wi::vector<bin> bins;
 		if (pack(out_rects.data(), (int)out_rects.size(), 4096, bins))
 		{
 			assert(bins.size() == 1 && "The regions won't fit into one texture!");
@@ -397,7 +392,7 @@ void UpdatePendingGlyphs()
 			const float inv_height = 1.0f / bitmapHeight;
 
 			// Create the CPU-side texture atlas and fill with transparency (0):
-			std::vector<uint8_t> bitmap(size_t(bitmapWidth) * size_t(bitmapHeight));
+			wi::vector<uint8_t> bitmap(size_t(bitmapWidth) * size_t(bitmapHeight));
 			std::fill(bitmap.begin(), bitmap.end(), 0);
 
 			// Iterate all packed glyph rectangles:
@@ -489,6 +484,7 @@ float textWidth_internal(const T* text, const wiFontParams& params)
 		return 0;
 	}
 
+	// TODO: account for word wrap
 	float maxWidth = 0;
 	float currentLineWidth = 0;
 	size_t i = 0;
@@ -534,6 +530,7 @@ float textHeight_internal(const T* text, const wiFontParams& params)
 		return 0;
 	}
 
+	// TODO: account for word wrap
 	float height = LINEBREAK_SIZE;
 	size_t i = 0;
 	while (text[i] != 0)
