@@ -5,12 +5,7 @@
 
 struct wiTimer
 {
-	std::chrono::high_resolution_clock::time_point timestamp;
-
-	wiTimer()
-	{
-		record();
-	}
+	std::chrono::high_resolution_clock::time_point timestamp = std::chrono::high_resolution_clock::now();
 
 	// Record a reference timestamp
 	inline void record()
