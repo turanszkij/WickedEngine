@@ -9,6 +9,7 @@
 #include "wiCanvas.h"
 
 #include <memory>
+#include <string>
 
 class RenderPath;
 
@@ -37,6 +38,8 @@ protected:
 	//	Because we want to blend in linear color space, but HDR10 is non-linear
 	wiGraphics::Texture rendertarget;
 	wiGraphics::RenderPass renderpass;
+
+	std::string infodisplay_str;
 
 public:
 	virtual ~MainComponent() = default;

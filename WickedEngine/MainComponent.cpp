@@ -26,6 +26,7 @@
 #include <atomic>
 
 std::atomic<uint32_t> number_of_heap_allocations{ 0 };
+std::atomic<size_t> size_of_heap_allocations{ 0 };
 
 using namespace wiGraphics;
 
@@ -275,73 +276,73 @@ void MainComponent::Compose(CommandList cmd)
 	// Draw the information display
 	if (infoDisplay.active)
 	{
-		std::string ss("");
+		infodisplay_str.clear();
 		if (infoDisplay.watermark)
 		{
-			ss += "Wicked Engine ";
-			ss += wiVersion::GetVersionString();
-			ss += " ";
+			infodisplay_str += "Wicked Engine ";
+			infodisplay_str += wiVersion::GetVersionString();
+			infodisplay_str += " ";
 
 #if defined(_ARM)
-			ss += "[ARM]";
+			infodisplay_str += "[ARM]";
 #elif defined(_WIN64)
-			ss += "[64-bit]";
+			infodisplay_str += "[64-bit]";
 #elif defined(_WIN32)
-			ss += "[32-bit]";
+			infodisplay_str += "[32-bit]";
 #endif
 
 #ifdef PLATFORM_UWP
-			ss += "[UWP]";
+			infodisplay_str += "[UWP]";
 #endif
 
 #ifdef WICKEDENGINE_BUILD_DX12
 			if (dynamic_cast<GraphicsDevice_DX12*>(graphicsDevice.get()))
 			{
-				ss += "[DX12]";
+				infodisplay_str += "[DX12]";
 			}
 #endif
 #ifdef WICKEDENGINE_BUILD_VULKAN
 			if (dynamic_cast<GraphicsDevice_Vulkan*>(graphicsDevice.get()))
 			{
-				ss += "[Vulkan]";
+				infodisplay_str += "[Vulkan]";
 			}
 #endif
 
 #ifdef _DEBUG
-			ss += "[DEBUG]";
+			infodisplay_str += "[DEBUG]";
 #endif
 			if (graphicsDevice->IsDebugDevice())
 			{
-				ss += "[debugdevice]";
+				infodisplay_str += "[debugdevice]";
 			}
-			ss += "\n";
+			infodisplay_str += "\n";
 		}
 		if (infoDisplay.resolution)
 		{
-			ss += "Resolution: " + std::to_string(canvas.GetPhysicalWidth()) + " x " + std::to_string(canvas.GetPhysicalHeight()) + " (" + std::to_string(int(canvas.GetDPI())) + " dpi)\n";
+			infodisplay_str += "Resolution: " + std::to_string(canvas.GetPhysicalWidth()) + " x " + std::to_string(canvas.GetPhysicalHeight()) + " (" + std::to_string(int(canvas.GetDPI())) + " dpi)\n";
 		}
 		if (infoDisplay.logical_size)
 		{
-			ss += "Logical Size: " + std::to_string(int(canvas.GetLogicalWidth())) + " x " + std::to_string(int(canvas.GetLogicalHeight())) + "\n";
+			infodisplay_str += "Logical Size: " + std::to_string(int(canvas.GetLogicalWidth())) + " x " + std::to_string(int(canvas.GetLogicalHeight())) + "\n";
 		}
 		if (infoDisplay.colorspace)
 		{
-			ss += "Color Space: ";
+			infodisplay_str += "Color Space: ";
 			ColorSpace colorSpace = graphicsDevice->GetSwapChainColorSpace(&swapChain);
 			switch (colorSpace)
 			{
 			default:
 			case wiGraphics::ColorSpace::SRGB:
-				ss += "sRGB";
+				infodisplay_str += "sRGB";
 				break;
 			case wiGraphics::ColorSpace::HDR10_ST2084:
-				ss += "ST.2084 (HDR10)";
+				infodisplay_str += "ST.2084 (HDR10)";
 				break;
 			case wiGraphics::ColorSpace::HDR_LINEAR:
-				ss += "Linear (HDR)";
+				infodisplay_str += "Linear (HDR)";
 				break;
 			}
-			ss += "\n";
+			infodisplay_str += "\n";
 		}
 		if (infoDisplay.fpsinfo)
 		{
@@ -357,27 +358,28 @@ void MainComponent::Compose(CommandList cmd)
 				displaydeltatime = avg_time / arraysize(deltatimes);
 			}
 
-			ss += std::to_string(int(std::round(1.0f / displaydeltatime))) + " FPS\n";
+			infodisplay_str += std::to_string(int(std::round(1.0f / displaydeltatime))) + " FPS\n";
 		}
 		if (infoDisplay.heap_allocation_counter)
 		{
-			ss += "Heap allocations per frame: " + std::to_string(number_of_heap_allocations.load()) + "\n";
+			infodisplay_str += "Heap allocations per frame: " + std::to_string(number_of_heap_allocations.load()) + " (" + std::to_string(size_of_heap_allocations.load()) + " bytes)\n";
 			number_of_heap_allocations.store(0);
+			size_of_heap_allocations.store(0);
 		}
 		if (infoDisplay.pipeline_count)
 		{
-			ss += "Graphics pipelines active: " + std::to_string(graphicsDevice->GetActivePipelineCount()) + "\n";
+			infodisplay_str += "Graphics pipelines active: " + std::to_string(graphicsDevice->GetActivePipelineCount()) + "\n";
 		}
 
 #ifdef _DEBUG
-		ss += "Warning: This is a [DEBUG] build, performance will be slow!\n";
+		infodisplay_str += "Warning: This is a [DEBUG] build, performance will be slow!\n";
 #endif
 		if (graphicsDevice->IsDebugDevice())
 		{
-			ss += "Warning: Graphics is in [debugdevice] mode, performance will be slow!\n";
+			infodisplay_str += "Warning: Graphics is in [debugdevice] mode, performance will be slow!\n";
 		}
 
-		wiFont::Draw(ss, wiFontParams(4, 4, infoDisplay.size, WIFALIGN_LEFT, WIFALIGN_TOP, wiColor(255,255,255,255), wiColor(0,0,0,255)), cmd);
+		wiFont::Draw(infodisplay_str, wiFontParams(4, 4, infoDisplay.size, WIFALIGN_LEFT, WIFALIGN_TOP, wiColor(255,255,255,255), wiColor(0,0,0,255)), cmd);
 
 		if (infoDisplay.colorgrading_helper)
 		{
@@ -501,22 +503,26 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 
 void* operator new(std::size_t size) {
 	number_of_heap_allocations.fetch_add(1);
+	size_of_heap_allocations.fetch_add(size);
 	void* p = malloc(size);
 	if (!p) throw std::bad_alloc();
 	return p;
 }
 void* operator new[](std::size_t size) {
 	number_of_heap_allocations.fetch_add(1);
+	size_of_heap_allocations.fetch_add(size);
 	void* p = malloc(size);
 	if (!p) throw std::bad_alloc();
 	return p;
 }
 void* operator new[](std::size_t size, const std::nothrow_t&) throw() {
 	number_of_heap_allocations.fetch_add(1);
+	size_of_heap_allocations.fetch_add(size);
 	return malloc(size);
 }
 void* operator new(std::size_t size, const std::nothrow_t&) throw() {
 	number_of_heap_allocations.fetch_add(1);
+	size_of_heap_allocations.fetch_add(size);
 	return malloc(size);
 }
 void operator delete(void* ptr) throw() { free(ptr); }

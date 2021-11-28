@@ -34,7 +34,15 @@ void wiSpriteFont::SetText(const std::string& value)
 {
 	wiHelper::StringConvert(value, text);
 }
+void wiSpriteFont::SetText(std::string&& value)
+{
+	wiHelper::StringConvert(value, text);
+}
 void wiSpriteFont::SetText(const std::wstring& value)
+{
+	text = value;
+}
+void wiSpriteFont::SetText(std::wstring&& value)
 {
 	text = value;
 }

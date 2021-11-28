@@ -55,8 +55,11 @@ public:
 	void SetName(const std::string& value);
 	const std::string GetText() const;
 	void SetText(const std::string& value);
+	void SetText(std::string&& value);
 	void SetTooltip(const std::string& value);
+	void SetTooltip(std::string&& value);
 	void SetScriptTip(const std::string& value);
+	void SetScriptTip(std::string&& value);
 	void SetPos(const XMFLOAT2& value);
 	void SetSize(const XMFLOAT2& value);
 	WIDGETSTATE GetState() const;

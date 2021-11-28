@@ -251,28 +251,28 @@ namespace wiLua
 		SSetDouble(luainternal.m_luaState, dt);
 		lua_call(luainternal.m_luaState, 1, 0);
 	}
+
+	inline void SignalHelper(lua_State* L, const char* str)
+	{
+		lua_getglobal(L, "signal");
+		lua_pushstring(L, str);
+		lua_call(L, 1, 0);
+	}
 	void FixedUpdate()
 	{
-		Signal("wickedengine_fixed_update_tick");
+		SignalHelper(luainternal.m_luaState, "wickedengine_fixed_update_tick");
 	}
 	void Update()
 	{
-		Signal("wickedengine_update_tick");
+		SignalHelper(luainternal.m_luaState, "wickedengine_update_tick");
 	}
 	void Render()
 	{
-		Signal("wickedengine_render_tick");
-	}
-
-	inline void SignalHelper(lua_State* L, const std::string& name)
-	{
-		lua_getglobal(L, "signal");
-		SSetString(L, name.c_str());
-		lua_call(L, 1, 0);
+		SignalHelper(luainternal.m_luaState, "wickedengine_render_tick");
 	}
 	void Signal(const std::string& name)
 	{
-		SignalHelper(luainternal.m_luaState, name);
+		SignalHelper(luainternal.m_luaState, name.c_str());
 	}
 
 	void KillProcesses()

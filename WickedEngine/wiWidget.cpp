@@ -159,7 +159,6 @@ void wiWidget::SetName(const std::string& value)
 	{
 		name = value;
 	}
-
 }
 const std::string wiWidget::GetText() const
 {
@@ -169,11 +168,23 @@ void wiWidget::SetText(const std::string& value)
 {
 	font.SetText(value);
 }
+void wiWidget::SetText(std::string&& value)
+{
+	font.SetText(value);
+}
 void wiWidget::SetTooltip(const std::string& value)
 {
 	tooltip = value;
 }
+void wiWidget::SetTooltip(std::string&& value)
+{
+	tooltip = value;
+}
 void wiWidget::SetScriptTip(const std::string& value)
+{
+	scriptTip = value;
+}
+void wiWidget::SetScriptTip(std::string&& value)
 {
 	scriptTip = value;
 }
