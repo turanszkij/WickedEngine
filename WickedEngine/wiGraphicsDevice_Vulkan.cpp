@@ -26,16 +26,16 @@
 #include <algorithm>
 
 // These shifts are made so that Vulkan resource bindings slots don't interfere with each other across shader stages:
-//	These are also defined in wiShaderCompiler.cpp as hard coded compiler arguments for SPIRV, so they need to be the same
+//	These are also defined in wi::shadercompiler.cpp as hard coded compiler arguments for SPIRV, so they need to be the same
 #define VULKAN_BINDING_SHIFT_B 0
 #define VULKAN_BINDING_SHIFT_T 1000
 #define VULKAN_BINDING_SHIFT_U 2000
 #define VULKAN_BINDING_SHIFT_S 3000
 
-namespace wiGraphics
+namespace wi::graphics
 {
 
-namespace Vulkan_Internal
+namespace vulkan_internal
 {
 	// Converters:
 	constexpr VkFormat _ConvertFormat(Format value)
@@ -374,28 +374,28 @@ namespace Vulkan_Internal
 	{
 		switch (value)
 		{
-		case wiGraphics::StencilOp::KEEP:
+		case wi::graphics::StencilOp::KEEP:
 			return VK_STENCIL_OP_KEEP;
 			break;
-		case wiGraphics::StencilOp::ZERO:
+		case wi::graphics::StencilOp::ZERO:
 			return VK_STENCIL_OP_ZERO;
 			break;
-		case wiGraphics::StencilOp::REPLACE:
+		case wi::graphics::StencilOp::REPLACE:
 			return VK_STENCIL_OP_REPLACE;
 			break;
-		case wiGraphics::StencilOp::INCR_SAT:
+		case wi::graphics::StencilOp::INCR_SAT:
 			return VK_STENCIL_OP_INCREMENT_AND_CLAMP;
 			break;
-		case wiGraphics::StencilOp::DECR_SAT:
+		case wi::graphics::StencilOp::DECR_SAT:
 			return VK_STENCIL_OP_DECREMENT_AND_CLAMP;
 			break;
-		case wiGraphics::StencilOp::INVERT:
+		case wi::graphics::StencilOp::INVERT:
 			return VK_STENCIL_OP_INVERT;
 			break;
-		case wiGraphics::StencilOp::INCR:
+		case wi::graphics::StencilOp::INCR:
 			return VK_STENCIL_OP_INCREMENT_AND_WRAP;
 			break;
-		case wiGraphics::StencilOp::DECR:
+		case wi::graphics::StencilOp::DECR:
 			return VK_STENCIL_OP_DECREMENT_AND_WRAP;
 			break;
 		default:
@@ -604,13 +604,13 @@ namespace Vulkan_Internal
 		{
 			ss += "[Vulkan Warning]: ";
 			ss += callback_data->pMessage;
-			wiBackLog::post(ss, wiBackLog::LogLevel::Warning);
+			wi::backlog::post(ss, wi::backlog::LogLevel::Warning);
 		}
 		else if (message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
 		{
 			ss += "[Vulkan Error]: ";
 			ss += callback_data->pMessage;
-			wiBackLog::post(ss, wiBackLog::LogLevel::Error);
+			wi::backlog::post(ss, wi::backlog::LogLevel::Error);
 		}
 
 		return VK_FALSE;
@@ -990,7 +990,7 @@ namespace Vulkan_Internal
 
 	inline const std::string GetCachePath()
 	{
-		return wiHelper::GetTempDirectoryPath() + "WickedVkPipelineCache.data";
+		return wi::helper::GetTempDirectoryPath() + "WickedVkPipelineCache.data";
 	}
 
 	bool CreateSwapChainInternal(
@@ -1183,7 +1183,7 @@ namespace Vulkan_Internal
 			renderPassInfo.pDependencies = &dependency;
 
 			internal_state->renderpass = RenderPass();
-			wiHelper::hash_combine(internal_state->renderpass.hash, internal_state->swapChainImageFormat);
+			wi::helper::hash_combine(internal_state->renderpass.hash, internal_state->swapChainImageFormat);
 			auto renderpass_internal = std::make_shared<RenderPass_Vulkan>();
 			renderpass_internal->allocationhandler = allocationhandler;
 			internal_state->renderpass.internal_state = renderpass_internal;
@@ -1264,7 +1264,7 @@ namespace Vulkan_Internal
 		return true;
 	}
 }
-using namespace Vulkan_Internal;
+using namespace vulkan_internal;
 
 
 
@@ -1412,7 +1412,7 @@ using namespace Vulkan_Internal;
 		if (cmd.uploadbuffer.desc.size < staging_size)
 		{
 			GPUBufferDesc uploaddesc;
-			uploaddesc.size = wiMath::GetNextPowerOfTwo(staging_size);
+			uploaddesc.size = wi::math::GetNextPowerOfTwo(staging_size);
 			uploaddesc.usage = Usage::UPLOAD;
 			bool upload_success = device->CreateBuffer(&uploaddesc, nullptr, &cmd.uploadbuffer);
 			assert(upload_success);
@@ -1996,7 +1996,7 @@ using namespace Vulkan_Internal;
 
 		const PipelineState* pso = active_pso[cmd];
 		size_t pipeline_hash = prev_pipeline_hash[cmd];
-		wiHelper::hash_combine(pipeline_hash, vb_hash[cmd]);
+		wi::helper::hash_combine(pipeline_hash, vb_hash[cmd]);
 		auto internal_state = to_internal(pso);
 
 		VkPipeline pipeline = VK_NULL_HANDLE;
@@ -2219,9 +2219,9 @@ using namespace Vulkan_Internal;
 	}
 
 	// Engine functions
-	GraphicsDevice_Vulkan::GraphicsDevice_Vulkan(wiPlatform::window_type window, bool debuglayer)
+	GraphicsDevice_Vulkan::GraphicsDevice_Vulkan(wi::platform::window_type window, bool debuglayer)
 	{
-		wiTimer timer;
+		wi::Timer timer;
 
 		TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = sizeof(VkAccelerationStructureInstanceKHR);
 
@@ -2233,8 +2233,8 @@ using namespace Vulkan_Internal;
 		assert(res == VK_SUCCESS);
 		if (res != VK_SUCCESS)
 		{
-			wiHelper::messageBox("volkInitialize failed! ERROR: " + std::to_string(res), "Error!");
-			wiPlatform::Exit();
+			wi::helper::messageBox("volkInitialize failed! ERROR: " + std::to_string(res), "Error!");
+			wi::platform::Exit();
 		}
 
 		// Fill out application info:
@@ -2243,7 +2243,7 @@ using namespace Vulkan_Internal;
 		appInfo.pApplicationName = "Wicked Engine Application";
 		appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
 		appInfo.pEngineName = "Wicked Engine";
-		appInfo.engineVersion = VK_MAKE_VERSION(wiVersion::GetMajor(), wiVersion::GetMinor(), wiVersion::GetRevision());
+		appInfo.engineVersion = VK_MAKE_VERSION(wi::version::GetMajor(), wi::version::GetMinor(), wi::version::GetRevision());
 		appInfo.apiVersion = VK_API_VERSION_1_2;
 
 		// Enumerate available layers and extensions:
@@ -2328,8 +2328,8 @@ using namespace Vulkan_Internal;
 			assert(res == VK_SUCCESS);
 			if (res != VK_SUCCESS)
 			{
-				wiHelper::messageBox("vkCreateInstance failed! ERROR: " + std::to_string(res), "Error!");
-				wiPlatform::Exit();
+				wi::helper::messageBox("vkCreateInstance failed! ERROR: " + std::to_string(res), "Error!");
+				wi::platform::Exit();
 			}
 
 			volkLoadInstanceOnly(instance);
@@ -2349,8 +2349,8 @@ using namespace Vulkan_Internal;
 			if (deviceCount == 0)
 			{
 				assert(0);
-				wiHelper::messageBox("Failed to find GPU with Vulkan support!");
-				wiPlatform::Exit();
+				wi::helper::messageBox("Failed to find GPU with Vulkan support!");
+				wi::platform::Exit();
 			}
 
 			wi::vector<VkPhysicalDevice> devices(deviceCount);
@@ -2501,8 +2501,8 @@ using namespace Vulkan_Internal;
 			if (physicalDevice == VK_NULL_HANDLE)
 			{
 				assert(0);
-				wiHelper::messageBox("Failed to find a suitable GPU!");
-				wiPlatform::Exit();
+				wi::helper::messageBox("Failed to find a suitable GPU!");
+				wi::platform::Exit();
 			}
 
 			assert(properties2.properties.limits.timestampComputeAndGraphics == VK_TRUE);
@@ -2650,8 +2650,8 @@ using namespace Vulkan_Internal;
 			assert(res == VK_SUCCESS);
 			if (res != VK_SUCCESS)
 			{
-				wiHelper::messageBox("vkCreateDevice failed! ERROR: " + std::to_string(res), "Error!");
-				wiPlatform::Exit();
+				wi::helper::messageBox("vkCreateDevice failed! ERROR: " + std::to_string(res), "Error!");
+				wi::platform::Exit();
 			}
 
 			volkLoadDevice(device);
@@ -2681,15 +2681,15 @@ using namespace Vulkan_Internal;
 			assert(res == VK_SUCCESS);
 			if (res != VK_SUCCESS)
 			{
-				wiHelper::messageBox("vkCreateSemaphore[QUEUE_GRAPHICS] failed! ERROR: " + std::to_string(res), "Error!");
-				wiPlatform::Exit();
+				wi::helper::messageBox("vkCreateSemaphore[QUEUE_GRAPHICS] failed! ERROR: " + std::to_string(res), "Error!");
+				wi::platform::Exit();
 			}
 			res = vkCreateSemaphore(device, &createInfo, nullptr, &queues[QUEUE_COMPUTE].semaphore);
 			assert(res == VK_SUCCESS);
 			if (res != VK_SUCCESS)
 			{
-				wiHelper::messageBox("vkCreateSemaphore[QUEUE_COMPUTE] failed! ERROR: " + std::to_string(res), "Error!");
-				wiPlatform::Exit();
+				wi::helper::messageBox("vkCreateSemaphore[QUEUE_COMPUTE] failed! ERROR: " + std::to_string(res), "Error!");
+				wi::platform::Exit();
 			}
 		}
 
@@ -2711,8 +2711,8 @@ using namespace Vulkan_Internal;
 		assert(res == VK_SUCCESS);
 		if (res != VK_SUCCESS)
 		{
-			wiHelper::messageBox("vmaCreateAllocator failed! ERROR: " + std::to_string(res), "Error!");
-			wiPlatform::Exit();
+			wi::helper::messageBox("vmaCreateAllocator failed! ERROR: " + std::to_string(res), "Error!");
+			wi::platform::Exit();
 		}
 
 		copyAllocator.init(this);
@@ -2729,8 +2729,8 @@ using namespace Vulkan_Internal;
 				assert(res == VK_SUCCESS);
 				if (res != VK_SUCCESS)
 				{
-					wiHelper::messageBox("vkCreateFence[FRAME] failed! ERROR: " + std::to_string(res), "Error!");
-					wiPlatform::Exit();
+					wi::helper::messageBox("vkCreateFence[FRAME] failed! ERROR: " + std::to_string(res), "Error!");
+					wi::platform::Exit();
 				}
 			}
 
@@ -2745,8 +2745,8 @@ using namespace Vulkan_Internal;
 				assert(res == VK_SUCCESS);
 				if (res != VK_SUCCESS)
 				{
-					wiHelper::messageBox("vkCreateCommandPool[FRAME_INIT] failed! ERROR: " + std::to_string(res), "Error!");
-					wiPlatform::Exit();
+					wi::helper::messageBox("vkCreateCommandPool[FRAME_INIT] failed! ERROR: " + std::to_string(res), "Error!");
+					wi::platform::Exit();
 				}
 
 				VkCommandBufferAllocateInfo commandBufferInfo = {};
@@ -2759,8 +2759,8 @@ using namespace Vulkan_Internal;
 				assert(res == VK_SUCCESS);
 				if (res != VK_SUCCESS)
 				{
-					wiHelper::messageBox("vkAllocateCommandBuffers[FRAME_INIT] failed! ERROR: " + std::to_string(res), "Error!");
-					wiPlatform::Exit();
+					wi::helper::messageBox("vkAllocateCommandBuffers[FRAME_INIT] failed! ERROR: " + std::to_string(res), "Error!");
+					wi::platform::Exit();
 				}
 
 				VkCommandBufferBeginInfo beginInfo = {};
@@ -2772,8 +2772,8 @@ using namespace Vulkan_Internal;
 				assert(res == VK_SUCCESS);
 				if (res != VK_SUCCESS)
 				{
-					wiHelper::messageBox("vkBeginCommandBuffer[FRAME_INIT] failed! ERROR: " + std::to_string(res), "Error!");
-					wiPlatform::Exit();
+					wi::helper::messageBox("vkBeginCommandBuffer[FRAME_INIT] failed! ERROR: " + std::to_string(res), "Error!");
+					wi::platform::Exit();
 				}
 			}
 		}
@@ -3002,7 +3002,7 @@ using namespace Vulkan_Internal;
 			wi::vector<uint8_t> pipelineData;
 
 			std::string cachePath = GetCachePath(); 
-			if (!wiHelper::FileRead(cachePath, pipelineData))
+			if (!wi::helper::FileRead(cachePath, pipelineData))
 			{
 				pipelineData.clear();
 			}
@@ -3065,7 +3065,7 @@ using namespace Vulkan_Internal;
 			assert(res == VK_SUCCESS);
 		}
 
-		wiBackLog::post("Created GraphicsDevice_Vulkan (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
+		wi::backlog::post("Created GraphicsDevice_Vulkan (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
 	GraphicsDevice_Vulkan::~GraphicsDevice_Vulkan()
 	{
@@ -3143,7 +3143,7 @@ using namespace Vulkan_Internal;
 
 			// Write pipeline cache data to a file in binary format
 			std::string cachePath = GetCachePath();
-			wiHelper::FileWrite(cachePath, data.data(), size);
+			wi::helper::FileWrite(cachePath, data.data(), size);
 
 			// Destroy Vulkan pipeline cache 
 			vkDestroyPipelineCache(device, pipelineCache, nullptr);
@@ -3156,7 +3156,7 @@ using namespace Vulkan_Internal;
 		}
 	}
 
-	bool GraphicsDevice_Vulkan::CreateSwapChain(const SwapChainDesc* pDesc, wiPlatform::window_type window, SwapChain* swapChain) const
+	bool GraphicsDevice_Vulkan::CreateSwapChain(const SwapChainDesc* pDesc, wi::platform::window_type window, SwapChain* swapChain) const
 	{
 		auto internal_state = std::static_pointer_cast<SwapChain_Vulkan>(swapChain->internal_state);
 		if (swapChain->internal_state == nullptr)
@@ -3940,22 +3940,22 @@ using namespace Vulkan_Internal;
 				size_t i = 0;
 				for (auto& x : internal_state->layoutBindings)
 				{
-					wiHelper::hash_combine(internal_state->binding_hash, x.binding);
-					wiHelper::hash_combine(internal_state->binding_hash, x.descriptorCount);
-					wiHelper::hash_combine(internal_state->binding_hash, x.descriptorType);
-					wiHelper::hash_combine(internal_state->binding_hash, x.stageFlags);
-					wiHelper::hash_combine(internal_state->binding_hash, internal_state->imageViewTypes[i++]);
+					wi::helper::hash_combine(internal_state->binding_hash, x.binding);
+					wi::helper::hash_combine(internal_state->binding_hash, x.descriptorCount);
+					wi::helper::hash_combine(internal_state->binding_hash, x.descriptorType);
+					wi::helper::hash_combine(internal_state->binding_hash, x.stageFlags);
+					wi::helper::hash_combine(internal_state->binding_hash, internal_state->imageViewTypes[i++]);
 				}
 				for (auto& x : internal_state->bindlessBindings)
 				{
-					wiHelper::hash_combine(internal_state->binding_hash, x.binding);
-					wiHelper::hash_combine(internal_state->binding_hash, x.descriptorCount);
-					wiHelper::hash_combine(internal_state->binding_hash, x.descriptorType);
-					wiHelper::hash_combine(internal_state->binding_hash, x.stageFlags);
+					wi::helper::hash_combine(internal_state->binding_hash, x.binding);
+					wi::helper::hash_combine(internal_state->binding_hash, x.descriptorCount);
+					wi::helper::hash_combine(internal_state->binding_hash, x.descriptorType);
+					wi::helper::hash_combine(internal_state->binding_hash, x.stageFlags);
 				}
-				wiHelper::hash_combine(internal_state->binding_hash, internal_state->pushconstants.offset);
-				wiHelper::hash_combine(internal_state->binding_hash, internal_state->pushconstants.size);
-				wiHelper::hash_combine(internal_state->binding_hash, internal_state->pushconstants.stageFlags);
+				wi::helper::hash_combine(internal_state->binding_hash, internal_state->pushconstants.offset);
+				wi::helper::hash_combine(internal_state->binding_hash, internal_state->pushconstants.size);
+				wi::helper::hash_combine(internal_state->binding_hash, internal_state->pushconstants.stageFlags);
 
 				pso_layout_cache_mutex.lock();
 				if (pso_layout_cache[internal_state->binding_hash].pipelineLayout == VK_NULL_HANDLE)
@@ -4343,19 +4343,19 @@ using namespace Vulkan_Internal;
 		pso->desc = *pDesc;
 
 		pso->hash = 0;
-		wiHelper::hash_combine(pso->hash, pDesc->ms);
-		wiHelper::hash_combine(pso->hash, pDesc->as);
-		wiHelper::hash_combine(pso->hash, pDesc->vs);
-		wiHelper::hash_combine(pso->hash, pDesc->ps);
-		wiHelper::hash_combine(pso->hash, pDesc->hs);
-		wiHelper::hash_combine(pso->hash, pDesc->ds);
-		wiHelper::hash_combine(pso->hash, pDesc->gs);
-		wiHelper::hash_combine(pso->hash, pDesc->il);
-		wiHelper::hash_combine(pso->hash, pDesc->rs);
-		wiHelper::hash_combine(pso->hash, pDesc->bs);
-		wiHelper::hash_combine(pso->hash, pDesc->dss);
-		wiHelper::hash_combine(pso->hash, pDesc->pt);
-		wiHelper::hash_combine(pso->hash, pDesc->sample_mask);
+		wi::helper::hash_combine(pso->hash, pDesc->ms);
+		wi::helper::hash_combine(pso->hash, pDesc->as);
+		wi::helper::hash_combine(pso->hash, pDesc->vs);
+		wi::helper::hash_combine(pso->hash, pDesc->ps);
+		wi::helper::hash_combine(pso->hash, pDesc->hs);
+		wi::helper::hash_combine(pso->hash, pDesc->ds);
+		wi::helper::hash_combine(pso->hash, pDesc->gs);
+		wi::helper::hash_combine(pso->hash, pDesc->il);
+		wi::helper::hash_combine(pso->hash, pDesc->rs);
+		wi::helper::hash_combine(pso->hash, pDesc->bs);
+		wi::helper::hash_combine(pso->hash, pDesc->dss);
+		wi::helper::hash_combine(pso->hash, pDesc->pt);
+		wi::helper::hash_combine(pso->hash, pDesc->sample_mask);
 
 		VkResult res = VK_SUCCESS;
 
@@ -4448,22 +4448,22 @@ using namespace Vulkan_Internal;
 			size_t i = 0;
 			for (auto& x : internal_state->layoutBindings)
 			{
-				wiHelper::hash_combine(internal_state->binding_hash, x.binding);
-				wiHelper::hash_combine(internal_state->binding_hash, x.descriptorCount);
-				wiHelper::hash_combine(internal_state->binding_hash, x.descriptorType);
-				wiHelper::hash_combine(internal_state->binding_hash, x.stageFlags);
-				wiHelper::hash_combine(internal_state->binding_hash, internal_state->imageViewTypes[i++]);
+				wi::helper::hash_combine(internal_state->binding_hash, x.binding);
+				wi::helper::hash_combine(internal_state->binding_hash, x.descriptorCount);
+				wi::helper::hash_combine(internal_state->binding_hash, x.descriptorType);
+				wi::helper::hash_combine(internal_state->binding_hash, x.stageFlags);
+				wi::helper::hash_combine(internal_state->binding_hash, internal_state->imageViewTypes[i++]);
 			}
 			for (auto& x : internal_state->bindlessBindings)
 			{
-				wiHelper::hash_combine(internal_state->binding_hash, x.binding);
-				wiHelper::hash_combine(internal_state->binding_hash, x.descriptorCount);
-				wiHelper::hash_combine(internal_state->binding_hash, x.descriptorType);
-				wiHelper::hash_combine(internal_state->binding_hash, x.stageFlags);
+				wi::helper::hash_combine(internal_state->binding_hash, x.binding);
+				wi::helper::hash_combine(internal_state->binding_hash, x.descriptorCount);
+				wi::helper::hash_combine(internal_state->binding_hash, x.descriptorType);
+				wi::helper::hash_combine(internal_state->binding_hash, x.stageFlags);
 			}
-			wiHelper::hash_combine(internal_state->binding_hash, internal_state->pushconstants.offset);
-			wiHelper::hash_combine(internal_state->binding_hash, internal_state->pushconstants.size);
-			wiHelper::hash_combine(internal_state->binding_hash, internal_state->pushconstants.stageFlags);
+			wi::helper::hash_combine(internal_state->binding_hash, internal_state->pushconstants.offset);
+			wi::helper::hash_combine(internal_state->binding_hash, internal_state->pushconstants.size);
+			wi::helper::hash_combine(internal_state->binding_hash, internal_state->pushconstants.stageFlags);
 
 
 			pso_layout_cache_mutex.lock();
@@ -4775,13 +4775,13 @@ using namespace Vulkan_Internal;
 		renderpass->desc = *pDesc;
 
 		renderpass->hash = 0;
-		wiHelper::hash_combine(renderpass->hash, pDesc->attachments.size());
+		wi::helper::hash_combine(renderpass->hash, pDesc->attachments.size());
 		for (auto& attachment : pDesc->attachments)
 		{
 			if (attachment.type == RenderPassAttachment::Type::RENDERTARGET || attachment.type == RenderPassAttachment::Type::DEPTH_STENCIL)
 			{
-				wiHelper::hash_combine(renderpass->hash, attachment.texture->desc.format);
-				wiHelper::hash_combine(renderpass->hash, attachment.texture->desc.sample_count);
+				wi::helper::hash_combine(renderpass->hash, attachment.texture->desc.format);
+				wi::helper::hash_combine(renderpass->hash, attachment.texture->desc.sample_count);
 			}
 		}
 
@@ -5930,10 +5930,10 @@ using namespace Vulkan_Internal;
 				poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 				switch (queue)
 				{
-				case wiGraphics::QUEUE_GRAPHICS:
+				case wi::graphics::QUEUE_GRAPHICS:
 					poolInfo.queueFamilyIndex = graphicsFamily;
 					break;
-				case wiGraphics::QUEUE_COMPUTE:
+				case wi::graphics::QUEUE_COMPUTE:
 					poolInfo.queueFamilyIndex = computeFamily;
 					break;
 				default:
@@ -6417,7 +6417,7 @@ using namespace Vulkan_Internal;
 		assert(count <= 8);
 		for (uint32_t i = 0; i < count; ++i)
 		{
-			wiHelper::hash_combine(hash, strides[i]);
+			wi::helper::hash_combine(hash, strides[i]);
 			vb_strides[cmd][i] = strides[i];
 
 			if (vertexBuffers[i] == nullptr || !vertexBuffers[i]->IsValid())
@@ -6543,10 +6543,10 @@ using namespace Vulkan_Internal;
 	void GraphicsDevice_Vulkan::BindPipelineState(const PipelineState* pso, CommandList cmd)
 	{
 		size_t pipeline_hash = 0;
-		wiHelper::hash_combine(pipeline_hash, pso->hash);
+		wi::helper::hash_combine(pipeline_hash, pso->hash);
 		if (active_renderpass[cmd] != nullptr)
 		{
-			wiHelper::hash_combine(pipeline_hash, active_renderpass[cmd]->hash);
+			wi::helper::hash_combine(pipeline_hash, active_renderpass[cmd]->hash);
 		}
 		if (prev_pipeline_hash[cmd] == pipeline_hash)
 		{
@@ -7273,6 +7273,5 @@ using namespace Vulkan_Internal;
 		vkCmdInsertDebugUtilsLabelEXT(GetCommandList(cmd), &label);
 	}
 }
-
 
 #endif // WICKEDENGINE_BUILD_VULKAN

@@ -8,27 +8,27 @@ class RenderPath3D_PathTracing :
 protected:
 	int sam = -1;
 	int target = 1024;
-	wiGraphics::Texture traceResult;
+	wi::graphics::Texture traceResult;
 
 	wi::vector<uint8_t> texturedata_src;
 	wi::vector<uint8_t> texturedata_dst;
 	wi::vector<uint8_t> texturedata_albedo;
 	wi::vector<uint8_t> texturedata_normal;
-	wiGraphics::Texture denoiserAlbedo;
-	wiGraphics::Texture denoiserNormal;
-	wiGraphics::Texture denoiserResult;
-	wiJobSystem::context denoiserContext;
+	wi::graphics::Texture denoiserAlbedo;
+	wi::graphics::Texture denoiserNormal;
+	wi::graphics::Texture denoiserResult;
+	wi::jobsystem::context denoiserContext;
 
-	wiGraphics::RenderPass renderpass_debugbvh;
+	wi::graphics::RenderPass renderpass_debugbvh;
 
 	void ResizeBuffers() override;
 
 public:
-	const wiGraphics::Texture* GetDepthStencil() const override { return nullptr; };
+	const wi::graphics::Texture* GetDepthStencil() const override { return nullptr; };
 
 	void Update(float dt) override;
 	void Render() const override;
-	void Compose(wiGraphics::CommandList cmd) const override;
+	void Compose(wi::graphics::CommandList cmd) const override;
 
 	int getCurrentSampleCount() const { return sam; }
 	void setTargetSampleCount(int value) { target = value; }

@@ -38,7 +38,7 @@ For description how to tune the algorithm and how it actually works see the .cpp
 
 #include "wiVector.h"
 
-namespace wiRectPacker
+namespace wi::rectpacker
 {
 
 	struct rect_ltrb;

@@ -3,21 +3,23 @@
 #include "wiLuna.h"
 #include "RenderPath.h"
 
-class RenderPath_BindLua
+namespace wi::lua
 {
-public:
-	RenderPath* component = nullptr;
-	static const char className[];
-	static Luna<RenderPath_BindLua>::FunctionType methods[];
-	static Luna<RenderPath_BindLua>::PropertyType properties[];
+	class RenderPath_BindLua
+	{
+	public:
+		RenderPath* component = nullptr;
+		static const char className[];
+		static Luna<RenderPath_BindLua>::FunctionType methods[];
+		static Luna<RenderPath_BindLua>::PropertyType properties[];
 
-	RenderPath_BindLua() = default;
-	RenderPath_BindLua(RenderPath* component) :component(component) {}
-	RenderPath_BindLua(lua_State* L) {}
+		RenderPath_BindLua() = default;
+		RenderPath_BindLua(RenderPath* component) :component(component) {}
+		RenderPath_BindLua(lua_State* L) {}
 
-	virtual int GetLayerMask(lua_State* L);
-	virtual int SetLayerMask(lua_State* L);
+		virtual int GetLayerMask(lua_State* L);
+		virtual int SetLayerMask(lua_State* L);
 
-	static void Bind();
-};
-
+		static void Bind();
+	};
+}

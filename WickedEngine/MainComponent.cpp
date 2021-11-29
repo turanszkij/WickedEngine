@@ -28,7 +28,7 @@
 std::atomic<uint32_t> number_of_heap_allocations{ 0 };
 std::atomic<size_t> size_of_heap_allocations{ 0 };
 
-using namespace wiGraphics;
+using namespace wi::graphics;
 
 void MainComponent::Initialize()
 {
@@ -38,10 +38,10 @@ void MainComponent::Initialize()
 	}
 	initialized = true;
 
-	wiInitializer::InitializeComponentsAsync();
+	wi::initializer::InitializeComponentsAsync();
 }
 
-void MainComponent::ActivatePath(RenderPath* component, float fadeSeconds, wiColor fadeColor)
+void MainComponent::ActivatePath(RenderPath* component, float fadeSeconds, wi::Color fadeColor)
 {
 	if (component != nullptr)
 	{
@@ -76,28 +76,28 @@ void MainComponent::Run()
 		Initialize();
 		initialized = true;
 	}
-	if (!wiInitializer::IsInitializeFinished())
+	if (!wi::initializer::IsInitializeFinished())
 	{
 		// Until engine is not loaded, present initialization screen...
 		CommandList cmd = graphicsDevice->BeginCommandList();
 		graphicsDevice->RenderPassBegin(&swapChain, cmd);
-		wiImage::SetCanvas(canvas, cmd);
-		wiFont::SetCanvas(canvas, cmd);
+		wi::image::SetCanvas(canvas, cmd);
+		wi::font::SetCanvas(canvas, cmd);
 		Viewport viewport;
 		viewport.width = (float)swapChain.desc.width;
 		viewport.height = (float)swapChain.desc.height;
 		graphicsDevice->BindViewports(1, &viewport, cmd);
-		wiFontParams params;
+		wi::font::Params params;
 		params.posX = 5.f;
 		params.posY = 5.f;
-		std::string text = wiBackLog::getText();
-		float textheight = wiFont::textHeight(text, params);
+		std::string text = wi::backlog::getText();
+		float textheight = wi::font::textHeight(text, params);
 		float screenheight = canvas.GetLogicalHeight();
 		if (textheight > screenheight)
 		{
 			params.posY = screenheight - textheight;
 		}
-		wiFont::Draw(text, params, cmd);
+		wi::font::Draw(text, params, cmd);
 		graphicsDevice->RenderPassEnd(cmd);
 		graphicsDevice->SubmitCommandLists();
 		return;
@@ -107,8 +107,8 @@ void MainComponent::Run()
 	if (!startup_script)
 	{
 		startup_script = true;
-		wiLua::RegisterObject(MainComponent_BindLua::className, "main", new MainComponent_BindLua(this));
-		wiLua::RunFile("startup.lua");
+		wi::lua::RegisterObject(wi::lua::MainComponent_BindLua::className, "main", new wi::lua::MainComponent_BindLua(this));
+		wi::lua::RunFile("startup.lua");
 	}
 
 	if (!is_window_active)
@@ -118,13 +118,13 @@ void MainComponent::Run()
 		return;
 	}
 
-	wiProfiler::BeginFrame();
+	wi::profiler::BeginFrame();
 
 	deltaTime = float(std::max(0.0, timer.elapsed() / 1000.0));
 	timer.record();
 
 	// Wake up the events that need to be executed on the main thread, in thread safe manner:
-	wiEvent::FireEvent(SYSTEM_EVENT_THREAD_SAFE_POINT, 0);
+	wi::event::FireEvent(SYSTEM_EVENT_THREAD_SAFE_POINT, 0);
 
 	const float dt = framerate_lock ? (1.0f / targetFrameRate) : deltaTime;
 
@@ -140,7 +140,7 @@ void MainComponent::Run()
 	}
 
 	// Fixed time update:
-	auto range = wiProfiler::BeginRangeCPU("Fixed Update");
+	auto range = wi::profiler::BeginRangeCPU("Fixed Update");
 	{
 		if (frameskip)
 		{
@@ -163,19 +163,19 @@ void MainComponent::Run()
 			FixedUpdate();
 		}
 	}
-	wiProfiler::EndRange(range); // Fixed Update
+	wi::profiler::EndRange(range); // Fixed Update
 
 	// Variable-timed update:
 	Update(dt);
 
 	Render();
 
-	wiInput::Update(window);
+	wi::input::Update(window);
 
 	// Begin final compositing:
 	CommandList cmd = graphicsDevice->BeginCommandList();
-	wiImage::SetCanvas(canvas, cmd);
-	wiFont::SetCanvas(canvas, cmd);
+	wi::image::SetCanvas(canvas, cmd);
+	wi::font::SetCanvas(canvas, cmd);
 	Viewport viewport;
 	viewport.width = (float)swapChain.desc.width;
 	viewport.height = (float)swapChain.desc.height;
@@ -201,25 +201,25 @@ void MainComponent::Run()
 	{
 		// In HDR10, we perform a final mapping from linear to HDR10, into the swapchain
 		graphicsDevice->RenderPassBegin(&swapChain, cmd);
-		wiImageParams fx;
+		wi::image::Params fx;
 		fx.enableFullScreen();
 		fx.enableHDR10OutputMapping();
-		wiImage::Draw(&rendertarget, fx, cmd);
+		wi::image::Draw(&rendertarget, fx, cmd);
 		graphicsDevice->RenderPassEnd(cmd);
 	}
 
-	wiProfiler::EndFrame(cmd);
+	wi::profiler::EndFrame(cmd);
 	graphicsDevice->SubmitCommandLists();
 }
 
 void MainComponent::Update(float dt)
 {
-	auto range = wiProfiler::BeginRangeCPU("Update");
+	auto range = wi::profiler::BeginRangeCPU("Update");
 
-	wiLua::SetDeltaTime(double(dt));
-	wiLua::Update();
+	wi::lua::SetDeltaTime(double(dt));
+	wi::lua::Update();
 
-	wiBackLog::Update(canvas, dt);
+	wi::backlog::Update(canvas, dt);
 
 	if (GetActivePath() != nullptr)
 	{
@@ -227,12 +227,12 @@ void MainComponent::Update(float dt)
 		GetActivePath()->PostUpdate();
 	}
 
-	wiProfiler::EndRange(range); // Update
+	wi::profiler::EndRange(range); // Update
 }
 
 void MainComponent::FixedUpdate()
 {
-	wiLua::FixedUpdate();
+	wi::lua::FixedUpdate();
 
 	if (GetActivePath() != nullptr)
 	{
@@ -242,21 +242,21 @@ void MainComponent::FixedUpdate()
 
 void MainComponent::Render()
 {
-	auto range = wiProfiler::BeginRangeCPU("Render");
+	auto range = wi::profiler::BeginRangeCPU("Render");
 
-	wiLua::Render();
+	wi::lua::Render();
 
 	if (GetActivePath() != nullptr)
 	{
 		GetActivePath()->Render();
 	}
 
-	wiProfiler::EndRange(range); // Render
+	wi::profiler::EndRange(range); // Render
 }
 
 void MainComponent::Compose(CommandList cmd)
 {
-	auto range = wiProfiler::BeginRangeCPU("Compose");
+	auto range = wi::profiler::BeginRangeCPU("Compose");
 
 	if (GetActivePath() != nullptr)
 	{
@@ -266,11 +266,11 @@ void MainComponent::Compose(CommandList cmd)
 	if (fadeManager.IsActive())
 	{
 		// display fade rect
-		static wiImageParams fx;
+		static wi::image::Params fx;
 		fx.siz.x = canvas.GetLogicalWidth();
 		fx.siz.y = canvas.GetLogicalHeight();
 		fx.opacity = fadeManager.opacity;
-		wiImage::Draw(wiTextureHelper::getColor(fadeManager.color), fx, cmd);
+		wi::image::Draw(wi::texturehelper::getColor(fadeManager.color), fx, cmd);
 	}
 
 	// Draw the information display
@@ -280,7 +280,7 @@ void MainComponent::Compose(CommandList cmd)
 		if (infoDisplay.watermark)
 		{
 			infodisplay_str += "Wicked Engine ";
-			infodisplay_str += wiVersion::GetVersionString();
+			infodisplay_str += wi::version::GetVersionString();
 			infodisplay_str += " ";
 
 #if defined(_ARM)
@@ -332,13 +332,13 @@ void MainComponent::Compose(CommandList cmd)
 			switch (colorSpace)
 			{
 			default:
-			case wiGraphics::ColorSpace::SRGB:
+			case wi::graphics::ColorSpace::SRGB:
 				infodisplay_str += "sRGB";
 				break;
-			case wiGraphics::ColorSpace::HDR10_ST2084:
+			case wi::graphics::ColorSpace::HDR10_ST2084:
 				infodisplay_str += "ST.2084 (HDR10)";
 				break;
-			case wiGraphics::ColorSpace::HDR_LINEAR:
+			case wi::graphics::ColorSpace::HDR_LINEAR:
 				infodisplay_str += "Linear (HDR)";
 				break;
 			}
@@ -379,43 +379,43 @@ void MainComponent::Compose(CommandList cmd)
 			infodisplay_str += "Warning: Graphics is in [debugdevice] mode, performance will be slow!\n";
 		}
 
-		wiFont::Draw(infodisplay_str, wiFontParams(4, 4, infoDisplay.size, WIFALIGN_LEFT, WIFALIGN_TOP, wiColor(255,255,255,255), wiColor(0,0,0,255)), cmd);
+		wi::font::Draw(infodisplay_str, wi::font::Params(4, 4, infoDisplay.size, wi::font::WIFALIGN_LEFT, wi::font::WIFALIGN_TOP, wi::Color(255,255,255,255), wi::Color(0,0,0,255)), cmd);
 
 		if (infoDisplay.colorgrading_helper)
 		{
-			wiImage::Draw(wiTextureHelper::getColorGradeDefault(), wiImageParams(0, 0, 256.0f / canvas.GetDPIScaling(), 16.0f / canvas.GetDPIScaling()), cmd);
+			wi::image::Draw(wi::texturehelper::getColorGradeDefault(), wi::image::Params(0, 0, 256.0f / canvas.GetDPIScaling(), 16.0f / canvas.GetDPIScaling()), cmd);
 		}
 	}
 
-	wiProfiler::DrawData(canvas, 4, 120, cmd);
+	wi::profiler::DrawData(canvas, 4, 120, cmd);
 
-	wiBackLog::Draw(canvas, cmd);
+	wi::backlog::Draw(canvas, cmd);
 
-	wiProfiler::EndRange(range); // Compose
+	wi::profiler::EndRange(range); // Compose
 }
 
-void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
+void MainComponent::SetWindow(wi::platform::window_type window, bool fullscreen)
 {
 	this->window = window;
 
 	// User can also create a graphics device if custom logic is desired, but they must do before this function!
 	if (graphicsDevice == nullptr)
 	{
-		bool debugdevice = wiStartupArguments::HasArgument("debugdevice");
-		bool gpuvalidation = wiStartupArguments::HasArgument("gpuvalidation");
+		bool debugdevice = wi::startup_arguments::HasArgument("debugdevice");
+		bool gpuvalidation = wi::startup_arguments::HasArgument("gpuvalidation");
 
-		bool use_dx12 = wiStartupArguments::HasArgument("dx12");
-		bool use_vulkan = wiStartupArguments::HasArgument("vulkan");
+		bool use_dx12 = wi::startup_arguments::HasArgument("dx12");
+		bool use_vulkan = wi::startup_arguments::HasArgument("vulkan");
 
 #ifndef WICKEDENGINE_BUILD_DX12
 		if (use_dx12) {
-			wiHelper::messageBox("The engine was built without DX12 support!", "Error");
+			wi::helper::messageBox("The engine was built without DX12 support!", "Error");
 			use_dx12 = false;
 		}
 #endif
 #ifndef WICKEDENGINE_BUILD_VULKAN
 		if (use_vulkan) {
-			wiHelper::messageBox("The engine was built without Vulkan support!", "Error");
+			wi::helper::messageBox("The engine was built without Vulkan support!", "Error");
 			use_vulkan = false;
 		}
 #endif
@@ -427,7 +427,7 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 #elif defined(WICKEDENGINE_BUILD_VULKAN)
 			use_vulkan = true;
 #else
-			wiBackLog::post("No rendering backend is enabled! Please enable at least one so we can use it as default", wiBackLog::LogLevel::Error);
+			wi::backlog::post("No rendering backend is enabled! Please enable at least one so we can use it as default", wi::backlog::LogLevel::Error);
 			assert(false);
 #endif
 		}
@@ -436,20 +436,20 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 		if (use_vulkan)
 		{
 #ifdef WICKEDENGINE_BUILD_VULKAN
-			wiRenderer::SetShaderPath(wiRenderer::GetShaderPath() + "spirv/");
+			wi::renderer::SetShaderPath(wi::renderer::GetShaderPath() + "spirv/");
 			graphicsDevice = std::make_unique<GraphicsDevice_Vulkan>(window, debugdevice);
 #endif
 		}
 		else if (use_dx12)
 		{
 #ifdef WICKEDENGINE_BUILD_DX12
-			wiRenderer::SetShaderPath(wiRenderer::GetShaderPath() + "hlsl6/");
+			wi::renderer::SetShaderPath(wi::renderer::GetShaderPath() + "hlsl6/");
 			graphicsDevice = std::make_unique<GraphicsDevice_DX12>(debugdevice, gpuvalidation);
 #endif
 		}
 	}
-	wiGraphics::GetDevice() = graphicsDevice.get();
-	wiRenderer::InitializeCommonSamplers();
+	wi::graphics::GetDevice() = graphicsDevice.get();
+	wi::renderer::InitializeCommonSamplers();
 
 	canvas.init(window);
 
@@ -471,7 +471,7 @@ void MainComponent::SetWindow(wiPlatform::window_type window, bool fullscreen)
 	bool success = graphicsDevice->CreateSwapChain(&desc, window, &swapChain);
 	assert(success);
 
-	swapChainVsyncChangeEvent = wiEvent::Subscribe(SYSTEM_EVENT_SET_VSYNC, [this](uint64_t userdata) {
+	swapChainVsyncChangeEvent = wi::event::Subscribe(SYSTEM_EVENT_SET_VSYNC, [this](uint64_t userdata) {
 		SwapChainDesc desc = swapChain.desc;
 		desc.vsync = userdata != 0;
 		bool success = graphicsDevice->CreateSwapChain(&desc, nullptr, &swapChain);

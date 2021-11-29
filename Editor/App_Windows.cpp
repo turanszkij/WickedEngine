@@ -167,15 +167,15 @@ protected:
 
 			if (c == '\b')
 			{
-				if (wiBackLog::isActive())
-					wiBackLog::deletefromInput();
-				wiTextInputField::DeleteFromInput();
+				if (wi::backlog::isActive())
+					wi::backlog::deletefromInput();
+				wi::widget::TextInputField::DeleteFromInput();
 			}
 			else
 			{
-				if (wiBackLog::isActive())
-					wiBackLog::input(c);
-				wiTextInputField::AddInput(c);
+				if (wi::backlog::isActive())
+					wi::backlog::input(c);
+				wi::widget::TextInputField::AddInput(c);
 			}
 
 		}

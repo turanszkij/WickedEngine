@@ -5,345 +5,348 @@
 #include "LoadingScreen_BindLua.h"
 #include "wiProfiler.h"
 
-const char MainComponent_BindLua::className[] = "MainComponent";
-
-Luna<MainComponent_BindLua>::FunctionType MainComponent_BindLua::methods[] = {
-	lunamethod(MainComponent_BindLua, GetActivePath),
-	lunamethod(MainComponent_BindLua, SetActivePath),
-	lunamethod(MainComponent_BindLua, SetFrameSkip),
-	lunamethod(MainComponent_BindLua, SetTargetFrameRate),
-	lunamethod(MainComponent_BindLua, SetFrameRateLock),
-	lunamethod(MainComponent_BindLua, SetInfoDisplay),
-	lunamethod(MainComponent_BindLua, SetWatermarkDisplay),
-	lunamethod(MainComponent_BindLua, SetFPSDisplay),
-	lunamethod(MainComponent_BindLua, SetResolutionDisplay),
-	lunamethod(MainComponent_BindLua, SetLogicalSizeDisplay),
-	lunamethod(MainComponent_BindLua, SetPipelineCountDisplay),
-	lunamethod(MainComponent_BindLua, SetHeapAllocationCountDisplay),
-	lunamethod(MainComponent_BindLua, GetCanvas),
-	{ NULL, NULL }
-};
-Luna<MainComponent_BindLua>::PropertyType MainComponent_BindLua::properties[] = {
-	{ NULL, NULL }
-};
-
-MainComponent_BindLua::MainComponent_BindLua(MainComponent* component) :component(component)
+namespace wi::lua
 {
-}
 
-MainComponent_BindLua::MainComponent_BindLua(lua_State *L)
-{
-	component = nullptr;
-}
+	const char MainComponent_BindLua::className[] = "MainComponent";
 
-int MainComponent_BindLua::GetActivePath(lua_State *L)
-{
-	if (component == nullptr)
+	Luna<MainComponent_BindLua>::FunctionType MainComponent_BindLua::methods[] = {
+		lunamethod(MainComponent_BindLua, GetActivePath),
+		lunamethod(MainComponent_BindLua, SetActivePath),
+		lunamethod(MainComponent_BindLua, SetFrameSkip),
+		lunamethod(MainComponent_BindLua, SetTargetFrameRate),
+		lunamethod(MainComponent_BindLua, SetFrameRateLock),
+		lunamethod(MainComponent_BindLua, SetInfoDisplay),
+		lunamethod(MainComponent_BindLua, SetWatermarkDisplay),
+		lunamethod(MainComponent_BindLua, SetFPSDisplay),
+		lunamethod(MainComponent_BindLua, SetResolutionDisplay),
+		lunamethod(MainComponent_BindLua, SetLogicalSizeDisplay),
+		lunamethod(MainComponent_BindLua, SetPipelineCountDisplay),
+		lunamethod(MainComponent_BindLua, SetHeapAllocationCountDisplay),
+		lunamethod(MainComponent_BindLua, GetCanvas),
+		{ NULL, NULL }
+	};
+	Luna<MainComponent_BindLua>::PropertyType MainComponent_BindLua::properties[] = {
+		{ NULL, NULL }
+	};
+
+	MainComponent_BindLua::MainComponent_BindLua(MainComponent* component) :component(component)
 	{
-		wiLua::SError(L, "GetActivePath() component is empty!");
-		return 0;
 	}
 
-	//return 3d component if the active one is of that type
-	RenderPath3D* comp3D = dynamic_cast<RenderPath3D*>(component->GetActivePath());
-	if (comp3D != nullptr)
+	MainComponent_BindLua::MainComponent_BindLua(lua_State* L)
 	{
-		Luna<RenderPath3D_BindLua>::push(L, new RenderPath3D_BindLua(comp3D));
-		return 1;
+		component = nullptr;
 	}
 
-	//return loading component if the active one is of that type
-	LoadingScreen* compLoad = dynamic_cast<LoadingScreen*>(component->GetActivePath());
-	if (compLoad != nullptr)
+	int MainComponent_BindLua::GetActivePath(lua_State* L)
 	{
-		Luna<LoadingScreen_BindLua>::push(L, new LoadingScreen_BindLua(compLoad));
-		return 1;
-	}
-
-	//return 2d component if the active one is of that type
-	RenderPath2D* comp2D = dynamic_cast<RenderPath2D*>(component->GetActivePath());
-	if (comp2D != nullptr)
-	{
-		Luna<RenderPath2D_BindLua>::push(L, new RenderPath2D_BindLua(comp2D));
-		return 1;
-	}
-
-	//return component if the active one is of that type
-	RenderPath* comp = dynamic_cast<RenderPath*>(component->GetActivePath());
-	if (comp != nullptr)
-	{
-		Luna<RenderPath_BindLua>::push(L, new RenderPath_BindLua(comp));
-		return 1;
-	}
-
-	wiLua::SError(L, "GetActivePath() Warning: type of active component not registered!");
-	return 0;
-}
-int MainComponent_BindLua::SetActivePath(lua_State *L)
-{
-	if (component == nullptr)
-	{
-		wiLua::SError(L, "SetActivePath(RenderPath component) component is empty!");
-		return 0;
-	}
-
-	int argc = wiLua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		float fadeSeconds = 0;
-		wiColor fadeColor = wiColor(0, 0, 0, 255);
-		if (argc > 1)
+		if (component == nullptr)
 		{
-			fadeSeconds = wiLua::SGetFloat(L, 2);
-			if (argc > 2)
+			wi::lua::SError(L, "GetActivePath() component is empty!");
+			return 0;
+		}
+
+		//return 3d component if the active one is of that type
+		RenderPath3D* comp3D = dynamic_cast<RenderPath3D*>(component->GetActivePath());
+		if (comp3D != nullptr)
+		{
+			Luna<RenderPath3D_BindLua>::push(L, new RenderPath3D_BindLua(comp3D));
+			return 1;
+		}
+
+		//return loading component if the active one is of that type
+		LoadingScreen* compLoad = dynamic_cast<LoadingScreen*>(component->GetActivePath());
+		if (compLoad != nullptr)
+		{
+			Luna<LoadingScreen_BindLua>::push(L, new LoadingScreen_BindLua(compLoad));
+			return 1;
+		}
+
+		//return 2d component if the active one is of that type
+		RenderPath2D* comp2D = dynamic_cast<RenderPath2D*>(component->GetActivePath());
+		if (comp2D != nullptr)
+		{
+			Luna<RenderPath2D_BindLua>::push(L, new RenderPath2D_BindLua(comp2D));
+			return 1;
+		}
+
+		//return component if the active one is of that type
+		RenderPath* comp = dynamic_cast<RenderPath*>(component->GetActivePath());
+		if (comp != nullptr)
+		{
+			Luna<RenderPath_BindLua>::push(L, new RenderPath_BindLua(comp));
+			return 1;
+		}
+
+		wi::lua::SError(L, "GetActivePath() Warning: type of active component not registered!");
+		return 0;
+	}
+	int MainComponent_BindLua::SetActivePath(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetActivePath(RenderPath component) component is empty!");
+			return 0;
+		}
+
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			float fadeSeconds = 0;
+			wi::Color fadeColor = wi::Color(0, 0, 0, 255);
+			if (argc > 1)
 			{
-				fadeColor.setR((uint8_t)wiLua::SGetInt(L, 3));
-				if (argc > 3)
+				fadeSeconds = wi::lua::SGetFloat(L, 2);
+				if (argc > 2)
 				{
-					fadeColor.setG((uint8_t)wiLua::SGetInt(L, 4));
-					if (argc > 4)
+					fadeColor.setR((uint8_t)wi::lua::SGetInt(L, 3));
+					if (argc > 3)
 					{
-						fadeColor.setB((uint8_t)wiLua::SGetInt(L, 5));
+						fadeColor.setG((uint8_t)wi::lua::SGetInt(L, 4));
+						if (argc > 4)
+						{
+							fadeColor.setB((uint8_t)wi::lua::SGetInt(L, 5));
+						}
 					}
 				}
 			}
-		}
 
-		RenderPath3D_BindLua* comp3D = Luna<RenderPath3D_BindLua>::lightcheck(L, 1);
-		if (comp3D != nullptr)
+			RenderPath3D_BindLua* comp3D = Luna<RenderPath3D_BindLua>::lightcheck(L, 1);
+			if (comp3D != nullptr)
+			{
+				component->ActivatePath(comp3D->component, fadeSeconds, fadeColor);
+				return 0;
+			}
+
+			LoadingScreen_BindLua* compLoad = Luna<LoadingScreen_BindLua>::lightcheck(L, 1);
+			if (compLoad != nullptr)
+			{
+				component->ActivatePath(compLoad->component, fadeSeconds, fadeColor);
+				return 0;
+			}
+
+			RenderPath2D_BindLua* comp2D = Luna<RenderPath2D_BindLua>::lightcheck(L, 1);
+			if (comp2D != nullptr)
+			{
+				component->ActivatePath(comp2D->component, fadeSeconds, fadeColor);
+				return 0;
+			}
+
+			RenderPath_BindLua* comp = Luna<RenderPath_BindLua>::lightcheck(L, 1);
+			if (comp != nullptr)
+			{
+				component->ActivatePath(comp->component, fadeSeconds, fadeColor);
+				return 0;
+			}
+		}
+		else
 		{
-			component->ActivatePath(comp3D->component, fadeSeconds, fadeColor);
+			wi::lua::SError(L, "SetActivePath(RenderPath component, opt int fadeFrames,fadeColorR,fadeColorG,fadeColorB) not enought arguments!");
+			return 0;
+		}
+		return 0;
+	}
+	int MainComponent_BindLua::SetFrameSkip(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetFrameSkip(bool enabled) component is empty!");
 			return 0;
 		}
 
-		LoadingScreen_BindLua* compLoad = Luna<LoadingScreen_BindLua>::lightcheck(L, 1);
-		if (compLoad != nullptr)
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
 		{
-			component->ActivatePath(compLoad->component, fadeSeconds, fadeColor);
+			component->setFrameSkip(wi::lua::SGetBool(L, 1));
+		}
+		else
+			wi::lua::SError(L, "SetFrameSkip(bool enabled) not enought arguments!");
+		return 0;
+	}
+	int MainComponent_BindLua::SetTargetFrameRate(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetTargetFrameRate(float value) component is empty!");
 			return 0;
 		}
 
-		RenderPath2D_BindLua* comp2D = Luna<RenderPath2D_BindLua>::lightcheck(L, 1);
-		if (comp2D != nullptr)
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
 		{
-			component->ActivatePath(comp2D->component, fadeSeconds, fadeColor);
+			component->setTargetFrameRate(wi::lua::SGetFloat(L, 1));
+		}
+		else
+			wi::lua::SError(L, "SetTargetFrameRate(float value) not enought arguments!");
+		return 0;
+	}
+	int MainComponent_BindLua::SetFrameRateLock(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetFrameRateLock(bool enabled) component is empty!");
 			return 0;
 		}
 
-		RenderPath_BindLua* comp = Luna<RenderPath_BindLua>::lightcheck(L, 1);
-		if (comp != nullptr)
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
 		{
-			component->ActivatePath(comp->component, fadeSeconds, fadeColor);
+			component->setFrameRateLock(wi::lua::SGetBool(L, 1));
+		}
+		else
+			wi::lua::SError(L, "SetFrameRateLock(bool enabled) not enought arguments!");
+		return 0;
+	}
+	int MainComponent_BindLua::SetInfoDisplay(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetInfoDisplay() component is empty!");
 			return 0;
 		}
-	}
-	else
-	{
-		wiLua::SError(L, "SetActivePath(RenderPath component, opt int fadeFrames,fadeColorR,fadeColorG,fadeColorB) not enought arguments!");
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			component->infoDisplay.active = wi::lua::SGetBool(L, 1);
+		}
+		else
+			wi::lua::SError(L, "SetInfoDisplay(bool active) not enough arguments!");
 		return 0;
 	}
-	return 0;
-}
-int MainComponent_BindLua::SetFrameSkip(lua_State *L)
-{
-	if (component == nullptr)
+	int MainComponent_BindLua::SetWatermarkDisplay(lua_State* L)
 	{
-		wiLua::SError(L, "SetFrameSkip(bool enabled) component is empty!");
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetWatermarkDisplay() component is empty!");
+			return 0;
+		}
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			component->infoDisplay.watermark = wi::lua::SGetBool(L, 1);
+		}
+		else
+			wi::lua::SError(L, "SetWatermarkDisplay(bool active) not enough arguments!");
+		return 0;
+	}
+	int MainComponent_BindLua::SetFPSDisplay(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetFPSDisplay() component is empty!");
+			return 0;
+		}
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			component->infoDisplay.fpsinfo = wi::lua::SGetBool(L, 1);
+		}
+		else
+			wi::lua::SError(L, "SetFPSDisplay(bool active) not enough arguments!");
+		return 0;
+	}
+	int MainComponent_BindLua::SetResolutionDisplay(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetResolutionDisplay() component is empty!");
+			return 0;
+		}
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			component->infoDisplay.resolution = wi::lua::SGetBool(L, 1);
+		}
+		else
+			wi::lua::SError(L, "SetResolutionDisplay(bool active) not enough arguments!");
+		return 0;
+	}
+	int MainComponent_BindLua::SetLogicalSizeDisplay(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetLogicalSizeDisplay() component is empty!");
+			return 0;
+		}
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			component->infoDisplay.logical_size = wi::lua::SGetBool(L, 1);
+		}
+		else
+			wi::lua::SError(L, "SetLogicalSizeDisplay(bool active) not enough arguments!");
+		return 0;
+	}
+	int MainComponent_BindLua::SetPipelineCountDisplay(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetPipelineCountDisplay() component is empty!");
+			return 0;
+		}
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			component->infoDisplay.pipeline_count = wi::lua::SGetBool(L, 1);
+		}
+		else
+			wi::lua::SError(L, "SetPipelineCountDisplay(bool active) not enough arguments!");
+		return 0;
+	}
+	int MainComponent_BindLua::SetHeapAllocationCountDisplay(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetHeapAllocationCountDisplay() component is empty!");
+			return 0;
+		}
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			component->infoDisplay.heap_allocation_counter = wi::lua::SGetBool(L, 1);
+		}
+		else
+			wi::lua::SError(L, "SetHeapAllocationCountDisplay(bool active) not enough arguments!");
 		return 0;
 	}
 
-	int argc = wiLua::SGetArgCount(L);
-	if (argc > 0)
+	int MainComponent_BindLua::GetCanvas(lua_State* L)
 	{
-		component->setFrameSkip(wiLua::SGetBool(L, 1));
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "GetCanvas() component is empty!");
+			return 0;
+		}
+		Luna<Canvas_BindLua>::push(L, new Canvas_BindLua(component->canvas));
+		return 1;
 	}
-	else
-		wiLua::SError(L, "SetFrameSkip(bool enabled) not enought arguments!");
-	return 0;
-}
-int MainComponent_BindLua::SetTargetFrameRate(lua_State *L)
-{
-	if (component == nullptr)
+
+
+	int SetProfilerEnabled(lua_State* L)
 	{
-		wiLua::SError(L, "SetTargetFrameRate(float value) component is empty!");
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			wi::profiler::SetEnabled(wi::lua::SGetBool(L, 1));
+		}
+		else
+			wi::lua::SError(L, "SetProfilerEnabled(bool active) not enough arguments!");
+
 		return 0;
 	}
 
-	int argc = wiLua::SGetArgCount(L);
-	if (argc > 0)
+	void MainComponent_BindLua::Bind()
 	{
-		component->setTargetFrameRate(wiLua::SGetFloat(L, 1));
-	}
-	else
-		wiLua::SError(L, "SetTargetFrameRate(float value) not enought arguments!");
-	return 0;
-}
-int MainComponent_BindLua::SetFrameRateLock(lua_State *L)
-{
-	if (component == nullptr)
-	{
-		wiLua::SError(L, "SetFrameRateLock(bool enabled) component is empty!");
-		return 0;
-	}
+		static bool initialized = false;
+		if (!initialized)
+		{
+			initialized = true;
+			Luna<MainComponent_BindLua>::Register(wi::lua::GetLuaState());
 
-	int argc = wiLua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		component->setFrameRateLock(wiLua::SGetBool(L, 1));
+			wi::lua::RegisterFunc("SetProfilerEnabled", SetProfilerEnabled);
+		}
 	}
-	else
-		wiLua::SError(L, "SetFrameRateLock(bool enabled) not enought arguments!");
-	return 0;
-}
-int MainComponent_BindLua::SetInfoDisplay(lua_State *L)
-{
-	if (component == nullptr)
-	{
-		wiLua::SError(L, "SetInfoDisplay() component is empty!");
-		return 0;
-	}
-	int argc = wiLua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		component->infoDisplay.active = wiLua::SGetBool(L, 1);
-	}
-	else
-		wiLua::SError(L, "SetInfoDisplay(bool active) not enough arguments!");
-	return 0;
-}
-int MainComponent_BindLua::SetWatermarkDisplay(lua_State *L)
-{
-	if (component == nullptr)
-	{
-		wiLua::SError(L, "SetWatermarkDisplay() component is empty!");
-		return 0;
-	}
-	int argc = wiLua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		component->infoDisplay.watermark = wiLua::SGetBool(L, 1);
-	}
-	else
-		wiLua::SError(L, "SetWatermarkDisplay(bool active) not enough arguments!");
-	return 0;
-}
-int MainComponent_BindLua::SetFPSDisplay(lua_State *L)
-{
-	if (component == nullptr)
-	{
-		wiLua::SError(L, "SetFPSDisplay() component is empty!");
-		return 0;
-	}
-	int argc = wiLua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		component->infoDisplay.fpsinfo = wiLua::SGetBool(L, 1);
-	}
-	else
-		wiLua::SError(L, "SetFPSDisplay(bool active) not enough arguments!");
-	return 0;
-}
-int MainComponent_BindLua::SetResolutionDisplay(lua_State *L)
-{
-	if (component == nullptr)
-	{
-		wiLua::SError(L, "SetResolutionDisplay() component is empty!");
-		return 0;
-	}
-	int argc = wiLua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		component->infoDisplay.resolution = wiLua::SGetBool(L, 1);
-	}
-	else
-		wiLua::SError(L, "SetResolutionDisplay(bool active) not enough arguments!");
-	return 0;
-}
-int MainComponent_BindLua::SetLogicalSizeDisplay(lua_State* L)
-{
-	if (component == nullptr)
-	{
-		wiLua::SError(L, "SetLogicalSizeDisplay() component is empty!");
-		return 0;
-	}
-	int argc = wiLua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		component->infoDisplay.logical_size = wiLua::SGetBool(L, 1);
-	}
-	else
-		wiLua::SError(L, "SetLogicalSizeDisplay(bool active) not enough arguments!");
-	return 0;
-}
-int MainComponent_BindLua::SetPipelineCountDisplay(lua_State *L)
-{
-	if (component == nullptr)
-	{
-		wiLua::SError(L, "SetPipelineCountDisplay() component is empty!");
-		return 0;
-	}
-	int argc = wiLua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		component->infoDisplay.pipeline_count = wiLua::SGetBool(L, 1);
-	}
-	else
-		wiLua::SError(L, "SetPipelineCountDisplay(bool active) not enough arguments!");
-	return 0;
-}
-int MainComponent_BindLua::SetHeapAllocationCountDisplay(lua_State* L)
-{
-	if (component == nullptr)
-	{
-		wiLua::SError(L, "SetHeapAllocationCountDisplay() component is empty!");
-		return 0;
-	}
-	int argc = wiLua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		component->infoDisplay.heap_allocation_counter = wiLua::SGetBool(L, 1);
-	}
-	else
-		wiLua::SError(L, "SetHeapAllocationCountDisplay(bool active) not enough arguments!");
-	return 0;
-}
-
-int MainComponent_BindLua::GetCanvas(lua_State* L)
-{
-	if (component == nullptr)
-	{
-		wiLua::SError(L, "GetCanvas() component is empty!");
-		return 0;
-	}
-	Luna<Canvas_BindLua>::push(L, new Canvas_BindLua(component->canvas));
-	return 1;
-}
-
-
-int SetProfilerEnabled(lua_State* L)
-{
-	int argc = wiLua::SGetArgCount(L);
-	if (argc > 0)
-	{
-		wiProfiler::SetEnabled(wiLua::SGetBool(L, 1));
-	}
-	else
-		wiLua::SError(L, "SetProfilerEnabled(bool active) not enough arguments!");
-
-	return 0;
-}
-
-void MainComponent_BindLua::Bind()
-{
-	static bool initialized = false;
-	if (!initialized)
-	{
-		initialized = true;
-		Luna<MainComponent_BindLua>::Register(wiLua::GetLuaState()); 
-		
-		wiLua::RegisterFunc("SetProfilerEnabled", SetProfilerEnabled);
-	}
-}
 
 
 
@@ -354,59 +357,61 @@ void MainComponent_BindLua::Bind()
 
 
 
-const char Canvas_BindLua::className[] = "Canvas";
+	const char Canvas_BindLua::className[] = "Canvas";
 
-Luna<Canvas_BindLua>::FunctionType Canvas_BindLua::methods[] = {
-	lunamethod(Canvas_BindLua, GetDPI),
-	lunamethod(Canvas_BindLua, GetDPIScaling),
-	lunamethod(Canvas_BindLua, GetPhysicalWidth),
-	lunamethod(Canvas_BindLua, GetPhysicalHeight),
-	lunamethod(Canvas_BindLua, GetLogicalWidth),
-	lunamethod(Canvas_BindLua, GetLogicalHeight),
-	{ NULL, NULL }
-};
-Luna<Canvas_BindLua>::PropertyType Canvas_BindLua::properties[] = {
-	{ NULL, NULL }
-};
+	Luna<Canvas_BindLua>::FunctionType Canvas_BindLua::methods[] = {
+		lunamethod(Canvas_BindLua, GetDPI),
+		lunamethod(Canvas_BindLua, GetDPIScaling),
+		lunamethod(Canvas_BindLua, GetPhysicalWidth),
+		lunamethod(Canvas_BindLua, GetPhysicalHeight),
+		lunamethod(Canvas_BindLua, GetLogicalWidth),
+		lunamethod(Canvas_BindLua, GetLogicalHeight),
+		{ NULL, NULL }
+	};
+	Luna<Canvas_BindLua>::PropertyType Canvas_BindLua::properties[] = {
+		{ NULL, NULL }
+	};
 
 
-int Canvas_BindLua::GetDPI(lua_State* L)
-{
-	wiLua::SSetFloat(L, canvas.GetDPI());
-	return 1;
-}
-int Canvas_BindLua::GetDPIScaling(lua_State* L)
-{
-	wiLua::SSetFloat(L, canvas.GetDPIScaling());
-	return 1;
-}
-int Canvas_BindLua::GetPhysicalWidth(lua_State* L)
-{
-	wiLua::SSetInt(L, canvas.GetPhysicalWidth());
-	return 1;
-}
-int Canvas_BindLua::GetPhysicalHeight(lua_State* L)
-{
-	wiLua::SSetInt(L, canvas.GetPhysicalHeight());
-	return 1;
-}
-int Canvas_BindLua::GetLogicalWidth(lua_State* L)
-{
-	wiLua::SSetFloat(L, canvas.GetLogicalWidth());
-	return 1;
-}
-int Canvas_BindLua::GetLogicalHeight(lua_State* L)
-{
-	wiLua::SSetFloat(L, canvas.GetLogicalHeight());
-	return 1;
-}
-
-void Canvas_BindLua::Bind()
-{
-	static bool initialized = false;
-	if (!initialized)
+	int Canvas_BindLua::GetDPI(lua_State* L)
 	{
-		initialized = true;
-		Luna<Canvas_BindLua>::Register(wiLua::GetLuaState());
+		wi::lua::SSetFloat(L, canvas.GetDPI());
+		return 1;
 	}
+	int Canvas_BindLua::GetDPIScaling(lua_State* L)
+	{
+		wi::lua::SSetFloat(L, canvas.GetDPIScaling());
+		return 1;
+	}
+	int Canvas_BindLua::GetPhysicalWidth(lua_State* L)
+	{
+		wi::lua::SSetInt(L, canvas.GetPhysicalWidth());
+		return 1;
+	}
+	int Canvas_BindLua::GetPhysicalHeight(lua_State* L)
+	{
+		wi::lua::SSetInt(L, canvas.GetPhysicalHeight());
+		return 1;
+	}
+	int Canvas_BindLua::GetLogicalWidth(lua_State* L)
+	{
+		wi::lua::SSetFloat(L, canvas.GetLogicalWidth());
+		return 1;
+	}
+	int Canvas_BindLua::GetLogicalHeight(lua_State* L)
+	{
+		wi::lua::SSetFloat(L, canvas.GetLogicalHeight());
+		return 1;
+	}
+
+	void Canvas_BindLua::Bind()
+	{
+		static bool initialized = false;
+		if (!initialized)
+		{
+			initialized = true;
+			Luna<Canvas_BindLua>::Register(wi::lua::GetLuaState());
+		}
+	}
+
 }

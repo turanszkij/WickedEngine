@@ -164,9 +164,9 @@ AABB AABB::operator* (float a)
 }
 AABB AABB::Merge(const AABB& a, const AABB& b)
 {
-	return AABB(wiMath::Min(a.getMin(), b.getMin()), wiMath::Max(a.getMax(), b.getMax()));
+	return AABB(wi::math::Min(a.getMin(), b.getMin()), wi::math::Max(a.getMax(), b.getMax()));
 }
-void AABB::Serialize(wiArchive& archive, wiECS::EntitySerializer& seri)
+void AABB::Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri)
 {
 	if (archive.IsReadMode())
 	{
@@ -200,12 +200,12 @@ void AABB::Serialize(wiArchive& archive, wiECS::EntitySerializer& seri)
 bool SPHERE::intersects(const AABB& b) const {
 	XMFLOAT3 min = b.getMin();
 	XMFLOAT3 max = b.getMax();
-	XMFLOAT3 closestPointInAabb = wiMath::Min(wiMath::Max(center, min), max);
-	double distanceSquared = wiMath::Distance(closestPointInAabb, center);
+	XMFLOAT3 closestPointInAabb = wi::math::Min(wi::math::Max(center, min), max);
+	double distanceSquared = wi::math::Distance(closestPointInAabb, center);
 	return distanceSquared < radius;
 }
 bool SPHERE::intersects(const SPHERE& b)const {
-	return wiMath::Distance(center, b.center) <= radius + b.radius;
+	return wi::math::Distance(center, b.center) <= radius + b.radius;
 }
 bool SPHERE::intersects(const RAY& b) const {
 	XMVECTOR o = XMLoadFloat3(&b.origin);
@@ -261,10 +261,10 @@ bool CAPSULE::intersects(const CAPSULE& other, XMFLOAT3& position, XMFLOAT3& inc
 	}
 
 	// Select point on capsule B line segment nearest to best potential endpoint on A capsule:
-	XMVECTOR bestB = wiMath::ClosestPointOnLineSegment(b_A, b_B, bestA);
+	XMVECTOR bestB = wi::math::ClosestPointOnLineSegment(b_A, b_B, bestA);
 
 	// Now do the same for capsule A segment:
-	bestA = wiMath::ClosestPointOnLineSegment(a_A, a_B, bestB);
+	bestA = wi::math::ClosestPointOnLineSegment(a_A, a_B, bestB);
 
 	// Finally, sphere collision:
 	XMVECTOR N = bestA - bestB;
@@ -396,5 +396,5 @@ const XMFLOAT4& Frustum::getBottomPlane() const { return planes[5]; }
 
 bool Hitbox2D::intersects(const Hitbox2D& b) const
 {
-	return wiMath::Collision2D(pos, siz, b.pos, b.siz);
+	return wi::math::Collision2D(pos, siz, b.pos, b.siz);
 }

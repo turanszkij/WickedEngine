@@ -26,10 +26,10 @@
 
 using namespace Microsoft::WRL;
 
-namespace wiGraphics
+namespace wi::graphics
 {
 
-namespace DX12_Internal
+namespace dx12_internal
 {
 	// Bindless allocation limits:
 #define BINDLESS_RESOURCE_CAPACITY		500000
@@ -1482,7 +1482,7 @@ namespace DX12_Internal
 		return static_cast<SwapChain_DX12*>(param->internal_state.get());
 	}
 }
-using namespace DX12_Internal;
+using namespace dx12_internal;
 
 	// Allocators:
 
@@ -1553,7 +1553,7 @@ using namespace DX12_Internal;
 		if (cmd.uploadbuffer.desc.size < staging_size)
 		{
 			GPUBufferDesc uploadBufferDesc;
-			uploadBufferDesc.size = wiMath::GetNextPowerOfTwo(staging_size);
+			uploadBufferDesc.size = wi::math::GetNextPowerOfTwo(staging_size);
 			uploadBufferDesc.usage = Usage::UPLOAD;
 			bool upload_success = device->CreateBuffer(&uploadBufferDesc, nullptr, &cmd.uploadbuffer);
 			assert(upload_success);
@@ -2103,7 +2103,7 @@ using namespace DX12_Internal;
 	// Engine functions
 	GraphicsDevice_DX12::GraphicsDevice_DX12(bool debuglayer, bool gpuvalidation)
 	{
-		wiTimer timer;
+		wi::Timer timer;
 
 		ALLOCATION_MIN_ALIGNMENT = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
 		SHADER_IDENTIFIER_SIZE = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
@@ -2118,8 +2118,8 @@ using namespace DX12_Internal;
 			ss << "Failed to load dxcompiler.dll! ERROR: 0x" << std::hex << GetLastError() << std::endl;
 			ss << "Ensure that dxcompiler.dll is found near the exe" << std::endl;
 			ss << "You might also need to install the latest Visual C++ Redistributable package from Microsoft" << std::endl;
-			wiHelper::messageBox(ss.str(), "Error!");
-			wiPlatform::Exit();
+			wi::helper::messageBox(ss.str(), "Error!");
+			wi::platform::Exit();
 		}
 
 #ifndef PLATFORM_UWP
@@ -2128,8 +2128,8 @@ using namespace DX12_Internal;
 		{
 			std::stringstream ss("");
 			ss << "Failed to load dxgi.dll! ERROR: 0x" << std::hex << GetLastError();
-			wiHelper::messageBox(ss.str(), "Error!");
-			wiPlatform::Exit();
+			wi::helper::messageBox(ss.str(), "Error!");
+			wi::platform::Exit();
 		}
 
 		HMODULE dx12 = LoadLibraryEx(L"d3d12.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
@@ -2137,8 +2137,8 @@ using namespace DX12_Internal;
 		{
 			std::stringstream ss("");
 			ss << "Failed to load d3d12.dll! ERROR: 0x" << std::hex << GetLastError();
-			wiHelper::messageBox(ss.str(), "Error!");
-			wiPlatform::Exit();
+			wi::helper::messageBox(ss.str(), "Error!");
+			wi::platform::Exit();
 		}
 
 		CreateDXGIFactory2 = (PFN_CREATE_DXGI_FACTORY_2)wiGetProcAddress(dxgi, "CreateDXGIFactory2");
@@ -2147,8 +2147,8 @@ using namespace DX12_Internal;
 		{
 			std::stringstream ss("");
 			ss << "Failed to load CreateDXGIFactory2! ERROR: 0x" << std::hex << GetLastError();
-			wiHelper::messageBox(ss.str(), "Error!");
-			wiPlatform::Exit();
+			wi::helper::messageBox(ss.str(), "Error!");
+			wi::platform::Exit();
 		}
 
 #ifdef _DEBUG
@@ -2165,8 +2165,8 @@ using namespace DX12_Internal;
 		{
 			std::stringstream ss("");
 			ss << "Failed to load D3D12CreateDevice! ERROR: 0x" << std::hex << GetLastError();
-			wiHelper::messageBox(ss.str(), "Error!");
-			wiPlatform::Exit();
+			wi::helper::messageBox(ss.str(), "Error!");
+			wi::platform::Exit();
 		}
 
 		D3D12SerializeVersionedRootSignature = (PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE)wiGetProcAddress(dx12, "D3D12SerializeVersionedRootSignature");
@@ -2175,8 +2175,8 @@ using namespace DX12_Internal;
 		{
 			std::stringstream ss("");
 			ss << "Failed to load D3D12SerializeVersionedRootSignature! ERROR: 0x" << std::hex << GetLastError();
-			wiHelper::messageBox(ss.str(), "Error!");
-			wiPlatform::Exit();
+			wi::helper::messageBox(ss.str(), "Error!");
+			wi::platform::Exit();
 		}
 #endif // PLATFORM_UWP
 
@@ -2186,8 +2186,8 @@ using namespace DX12_Internal;
 		{
 			std::stringstream ss("");
 			ss << "Failed to load DxcCreateInstance! ERROR: 0x" << std::hex << GetLastError();
-			wiHelper::messageBox(ss.str(), "Error!");
-			wiPlatform::Exit();
+			wi::helper::messageBox(ss.str(), "Error!");
+			wi::platform::Exit();
 		}
 
 		HRESULT hr;
@@ -2198,8 +2198,8 @@ using namespace DX12_Internal;
 		{
 			std::stringstream ss("");
 			ss << "DxcCreateInstance failed! ERROR: 0x" << std::hex << hr;
-			wiHelper::messageBox(ss.str(), "Error!");
-			wiPlatform::Exit();
+			wi::helper::messageBox(ss.str(), "Error!");
+			wi::platform::Exit();
 		}
 
 #if !defined(PLATFORM_UWP)
@@ -2249,8 +2249,8 @@ using namespace DX12_Internal;
 		{
 			std::stringstream ss("");
 			ss << "CreateDXGIFactory2 failed! ERROR: 0x" << std::hex << hr;
-			wiHelper::messageBox(ss.str(), "Error!");
-			wiPlatform::Exit();
+			wi::helper::messageBox(ss.str(), "Error!");
+			wi::platform::Exit();
 		}
 
 		// Determines whether tearing support is available for fullscreen borderless windows.
@@ -2323,15 +2323,15 @@ using namespace DX12_Internal;
 		assert(dxgiAdapter != nullptr);
 		if (dxgiAdapter == nullptr)
 		{
-			wiHelper::messageBox("DXGI: No capable adapter found!", "Error!");
-			wiPlatform::Exit();
+			wi::helper::messageBox("DXGI: No capable adapter found!", "Error!");
+			wi::platform::Exit();
 		}
 
 		assert(device != nullptr);
 		if (device == nullptr)
 		{
-			wiHelper::messageBox("D3D12: Device couldn't be created!", "Error!");
-			wiPlatform::Exit();
+			wi::helper::messageBox("D3D12: Device couldn't be created!", "Error!");
+			wi::platform::Exit();
 		}
 
 		if (debuglayer)
@@ -2374,8 +2374,8 @@ using namespace DX12_Internal;
 		{
 			std::stringstream ss("");
 			ss << "D3D12MA::CreateAllocator failed! ERROR: 0x" << std::hex << hr;
-			wiHelper::messageBox(ss.str(), "Error!");
-			wiPlatform::Exit();
+			wi::helper::messageBox(ss.str(), "Error!");
+			wi::platform::Exit();
 		}
 
 		queues[QUEUE_GRAPHICS].desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
@@ -2388,8 +2388,8 @@ using namespace DX12_Internal;
 		{
 			std::stringstream ss("");
 			ss << "ID3D12Device::CreateCommandQueue[QUEUE_GRAPHICS] failed! ERROR: 0x" << std::hex << hr;
-			wiHelper::messageBox(ss.str(), "Error!");
-			wiPlatform::Exit();
+			wi::helper::messageBox(ss.str(), "Error!");
+			wi::platform::Exit();
 		}
 		hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&queues[QUEUE_GRAPHICS].fence));
 		assert(SUCCEEDED(hr));
@@ -2397,8 +2397,8 @@ using namespace DX12_Internal;
 		{
 			std::stringstream ss("");
 			ss << "ID3D12Device::CreateFence[QUEUE_GRAPHICS] failed! ERROR: 0x" << std::hex << hr;
-			wiHelper::messageBox(ss.str(), "Error!");
-			wiPlatform::Exit();
+			wi::helper::messageBox(ss.str(), "Error!");
+			wi::platform::Exit();
 		}
 
 		queues[QUEUE_COMPUTE].desc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
@@ -2411,8 +2411,8 @@ using namespace DX12_Internal;
 		{
 			std::stringstream ss("");
 			ss << "ID3D12Device::CreateCommandQueue[QUEUE_COMPUTE] failed! ERROR: 0x" << std::hex << hr;
-			wiHelper::messageBox(ss.str(), "Error!");
-			wiPlatform::Exit();
+			wi::helper::messageBox(ss.str(), "Error!");
+			wi::platform::Exit();
 		}
 		hr = device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&queues[QUEUE_COMPUTE].fence));
 		assert(SUCCEEDED(hr));
@@ -2420,8 +2420,8 @@ using namespace DX12_Internal;
 		{
 			std::stringstream ss("");
 			ss << "ID3D12Device::CreateFence[QUEUE_COMPUTE] failed! ERROR: 0x" << std::hex << hr;
-			wiHelper::messageBox(ss.str(), "Error!");
-			wiPlatform::Exit();
+			wi::helper::messageBox(ss.str(), "Error!");
+			wi::platform::Exit();
 		}
 
 
@@ -2442,8 +2442,8 @@ using namespace DX12_Internal;
 			{
 				std::stringstream ss("");
 				ss << "ID3D12Device::CreateDescriptorHeap[CBV_SRV_UAV] failed! ERROR: 0x" << std::hex << hr;
-				wiHelper::messageBox(ss.str(), "Error!");
-				wiPlatform::Exit();
+				wi::helper::messageBox(ss.str(), "Error!");
+				wi::platform::Exit();
 			}
 
 			descriptorheap_res.start_cpu = descriptorheap_res.heap_GPU->GetCPUDescriptorHandleForHeapStart();
@@ -2455,8 +2455,8 @@ using namespace DX12_Internal;
 			{
 				std::stringstream ss("");
 				ss << "ID3D12Device::CreateFence[CBV_SRV_UAV] failed! ERROR: 0x" << std::hex << hr;
-				wiHelper::messageBox(ss.str(), "Error!");
-				wiPlatform::Exit();
+				wi::helper::messageBox(ss.str(), "Error!");
+				wi::platform::Exit();
 			}
 			descriptorheap_res.fenceValue = descriptorheap_res.fence->GetCompletedValue();
 
@@ -2478,8 +2478,8 @@ using namespace DX12_Internal;
 			{
 				std::stringstream ss("");
 				ss << "ID3D12Device::CreateDescriptorHeap[SAMPLER] failed! ERROR: 0x" << std::hex << hr;
-				wiHelper::messageBox(ss.str(), "Error!");
-				wiPlatform::Exit();
+				wi::helper::messageBox(ss.str(), "Error!");
+				wi::platform::Exit();
 			}
 
 			descriptorheap_sam.start_cpu = descriptorheap_sam.heap_GPU->GetCPUDescriptorHandleForHeapStart();
@@ -2491,8 +2491,8 @@ using namespace DX12_Internal;
 			{
 				std::stringstream ss("");
 				ss << "ID3D12Device::CreateFence[SAMPLER] failed! ERROR: 0x" << std::hex << hr;
-				wiHelper::messageBox(ss.str(), "Error!");
-				wiPlatform::Exit();
+				wi::helper::messageBox(ss.str(), "Error!");
+				wi::platform::Exit();
 			}
 			descriptorheap_sam.fenceValue = descriptorheap_sam.fence->GetCompletedValue();
 
@@ -2513,8 +2513,8 @@ using namespace DX12_Internal;
 				{
 					std::stringstream ss("");
 					ss << "ID3D12Device::CreateFence[FRAME] failed! ERROR: 0x" << std::hex << hr;
-					wiHelper::messageBox(ss.str(), "Error!");
-					wiPlatform::Exit();
+					wi::helper::messageBox(ss.str(), "Error!");
+					wi::platform::Exit();
 				}
 			}
 		}
@@ -2589,8 +2589,8 @@ using namespace DX12_Internal;
 		if (features.HighestRootSignatureVersion() < D3D_ROOT_SIGNATURE_VERSION_1_1)
 		{
 			assert(0);
-			wiHelper::messageBox("DX12: Root signature version 1.1 not supported!", "Error!");
-			wiPlatform::Exit();
+			wi::helper::messageBox("DX12: Root signature version 1.1 not supported!", "Error!");
+			wi::platform::Exit();
 		}
 
 		// Create common indirect command signatures:
@@ -2615,8 +2615,8 @@ using namespace DX12_Internal;
 		{
 			std::stringstream ss("");
 			ss << "ID3D12Device::CreateCommandSignature[dispatchIndirect] failed! ERROR: 0x" << std::hex << hr;
-			wiHelper::messageBox(ss.str(), "Error!");
-			wiPlatform::Exit();
+			wi::helper::messageBox(ss.str(), "Error!");
+			wi::platform::Exit();
 		}
 
 		cmd_desc.ByteStride = sizeof(IndirectDrawArgsInstanced);
@@ -2628,8 +2628,8 @@ using namespace DX12_Internal;
 		{
 			std::stringstream ss("");
 			ss << "ID3D12Device::CreateCommandSignature[drawInstancedIndirect] failed! ERROR: 0x" << std::hex << hr;
-			wiHelper::messageBox(ss.str(), "Error!");
-			wiPlatform::Exit();
+			wi::helper::messageBox(ss.str(), "Error!");
+			wi::platform::Exit();
 		}
 
 		cmd_desc.ByteStride = sizeof(IndirectDrawArgsIndexedInstanced);
@@ -2641,8 +2641,8 @@ using namespace DX12_Internal;
 		{
 			std::stringstream ss("");
 			ss << "ID3D12Device::CreateCommandSignature[drawIndexedInstancedIndirect] failed! ERROR: 0x" << std::hex << hr;
-			wiHelper::messageBox(ss.str(), "Error!");
-			wiPlatform::Exit();
+			wi::helper::messageBox(ss.str(), "Error!");
+			wi::platform::Exit();
 		}
 
 		if (CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
@@ -2659,8 +2659,8 @@ using namespace DX12_Internal;
 			{
 				std::stringstream ss("");
 				ss << "ID3D12Device::CreateCommandSignature[dispatchMeshIndirect] failed! ERROR: 0x" << std::hex << hr;
-				wiHelper::messageBox(ss.str(), "Error!");
-				wiPlatform::Exit();
+				wi::helper::messageBox(ss.str(), "Error!");
+				wi::platform::Exit();
 			}
 		}
 
@@ -2807,10 +2807,10 @@ using namespace DX12_Internal;
 		{
 			std::stringstream ss("");
 			ss << "ID3D12CommandQueue::GetTimestampFrequency[QUEUE_GRAPHICS] failed! ERROR: 0x" << std::hex << hr;
-			wiHelper::messageBox(ss.str(), "Warning!");
+			wi::helper::messageBox(ss.str(), "Warning!");
 		}
 
-		wiBackLog::post("Created GraphicsDevice_DX12 (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
+		wi::backlog::post("Created GraphicsDevice_DX12 (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
 	GraphicsDevice_DX12::~GraphicsDevice_DX12()
 	{
@@ -2818,7 +2818,7 @@ using namespace DX12_Internal;
 		copyAllocator.destroy();
 	}
 
-	bool GraphicsDevice_DX12::CreateSwapChain(const SwapChainDesc* pDesc, wiPlatform::window_type window, SwapChain* swapChain) const
+	bool GraphicsDevice_DX12::CreateSwapChain(const SwapChainDesc* pDesc, wi::platform::window_type window, SwapChain* swapChain) const
 	{
 		auto internal_state = std::static_pointer_cast<SwapChain_DX12>(swapChain->internal_state);
 		if (swapChain->internal_state == nullptr)
@@ -2983,7 +2983,7 @@ using namespace DX12_Internal;
 
 		internal_state->dummyTexture.desc.format = pDesc->format;
 		internal_state->renderpass = RenderPass();
-		wiHelper::hash_combine(internal_state->renderpass.hash, pDesc->format);
+		wi::helper::hash_combine(internal_state->renderpass.hash, pDesc->format);
 		internal_state->renderpass.desc.attachments.push_back(RenderPassAttachment::RenderTarget(&internal_state->dummyTexture));
 
 		return true;
@@ -3759,83 +3759,83 @@ using namespace DX12_Internal;
 				}
 
 				size_t rootconstant_hash = 0;
-				wiHelper::hash_combine(rootconstant_hash, internal_state->rootconstants.ShaderVisibility);
-				wiHelper::hash_combine(rootconstant_hash, internal_state->rootconstants.ParameterType);
-				wiHelper::hash_combine(rootconstant_hash, internal_state->rootconstants.Constants.Num32BitValues);
-				wiHelper::hash_combine(rootconstant_hash, internal_state->rootconstants.Constants.RegisterSpace);
-				wiHelper::hash_combine(rootconstant_hash, internal_state->rootconstants.Constants.ShaderRegister);
+				wi::helper::hash_combine(rootconstant_hash, internal_state->rootconstants.ShaderVisibility);
+				wi::helper::hash_combine(rootconstant_hash, internal_state->rootconstants.ParameterType);
+				wi::helper::hash_combine(rootconstant_hash, internal_state->rootconstants.Constants.Num32BitValues);
+				wi::helper::hash_combine(rootconstant_hash, internal_state->rootconstants.Constants.RegisterSpace);
+				wi::helper::hash_combine(rootconstant_hash, internal_state->rootconstants.Constants.ShaderRegister);
 
 				size_t root_binding_hash = 0;
 				for (auto& x : internal_state->root_cbvs)
 				{
-					wiHelper::hash_combine(root_binding_hash, x.Flags);
-					wiHelper::hash_combine(root_binding_hash, x.ShaderRegister);
-					wiHelper::hash_combine(root_binding_hash, x.RegisterSpace);
+					wi::helper::hash_combine(root_binding_hash, x.Flags);
+					wi::helper::hash_combine(root_binding_hash, x.ShaderRegister);
+					wi::helper::hash_combine(root_binding_hash, x.RegisterSpace);
 				}
 
 				size_t resource_binding_hash = 0;
 				for (auto& x : internal_state->resources)
 				{
-					wiHelper::hash_combine(resource_binding_hash, x.BaseShaderRegister);
-					wiHelper::hash_combine(resource_binding_hash, x.NumDescriptors);
-					wiHelper::hash_combine(resource_binding_hash, x.Flags);
-					wiHelper::hash_combine(resource_binding_hash, x.OffsetInDescriptorsFromTableStart);
-					wiHelper::hash_combine(resource_binding_hash, x.RangeType);
-					wiHelper::hash_combine(resource_binding_hash, x.RegisterSpace);
+					wi::helper::hash_combine(resource_binding_hash, x.BaseShaderRegister);
+					wi::helper::hash_combine(resource_binding_hash, x.NumDescriptors);
+					wi::helper::hash_combine(resource_binding_hash, x.Flags);
+					wi::helper::hash_combine(resource_binding_hash, x.OffsetInDescriptorsFromTableStart);
+					wi::helper::hash_combine(resource_binding_hash, x.RangeType);
+					wi::helper::hash_combine(resource_binding_hash, x.RegisterSpace);
 				}
 
 				size_t sampler_binding_hash = 0;
 				for (auto& x : internal_state->samplers)
 				{
-					wiHelper::hash_combine(sampler_binding_hash, x.BaseShaderRegister);
-					wiHelper::hash_combine(sampler_binding_hash, x.NumDescriptors);
-					wiHelper::hash_combine(sampler_binding_hash, x.Flags);
-					wiHelper::hash_combine(sampler_binding_hash, x.OffsetInDescriptorsFromTableStart);
-					wiHelper::hash_combine(sampler_binding_hash, x.RangeType);
-					wiHelper::hash_combine(sampler_binding_hash, x.RegisterSpace);
+					wi::helper::hash_combine(sampler_binding_hash, x.BaseShaderRegister);
+					wi::helper::hash_combine(sampler_binding_hash, x.NumDescriptors);
+					wi::helper::hash_combine(sampler_binding_hash, x.Flags);
+					wi::helper::hash_combine(sampler_binding_hash, x.OffsetInDescriptorsFromTableStart);
+					wi::helper::hash_combine(sampler_binding_hash, x.RangeType);
+					wi::helper::hash_combine(sampler_binding_hash, x.RegisterSpace);
 				}
 
 				size_t bindless_hash = 0;
 				for (auto& x : internal_state->bindless_res)
 				{
-					wiHelper::hash_combine(bindless_hash, x.BaseShaderRegister);
-					wiHelper::hash_combine(bindless_hash, x.NumDescriptors);
-					wiHelper::hash_combine(bindless_hash, x.Flags);
-					wiHelper::hash_combine(bindless_hash, x.OffsetInDescriptorsFromTableStart);
-					wiHelper::hash_combine(bindless_hash, x.RangeType);
-					wiHelper::hash_combine(bindless_hash, x.RegisterSpace);
+					wi::helper::hash_combine(bindless_hash, x.BaseShaderRegister);
+					wi::helper::hash_combine(bindless_hash, x.NumDescriptors);
+					wi::helper::hash_combine(bindless_hash, x.Flags);
+					wi::helper::hash_combine(bindless_hash, x.OffsetInDescriptorsFromTableStart);
+					wi::helper::hash_combine(bindless_hash, x.RangeType);
+					wi::helper::hash_combine(bindless_hash, x.RegisterSpace);
 				}
 				for (auto& x : internal_state->bindless_sam)
 				{
-					wiHelper::hash_combine(bindless_hash, x.BaseShaderRegister);
-					wiHelper::hash_combine(bindless_hash, x.NumDescriptors);
-					wiHelper::hash_combine(bindless_hash, x.Flags);
-					wiHelper::hash_combine(bindless_hash, x.OffsetInDescriptorsFromTableStart);
-					wiHelper::hash_combine(bindless_hash, x.RangeType);
-					wiHelper::hash_combine(bindless_hash, x.RegisterSpace);
+					wi::helper::hash_combine(bindless_hash, x.BaseShaderRegister);
+					wi::helper::hash_combine(bindless_hash, x.NumDescriptors);
+					wi::helper::hash_combine(bindless_hash, x.Flags);
+					wi::helper::hash_combine(bindless_hash, x.OffsetInDescriptorsFromTableStart);
+					wi::helper::hash_combine(bindless_hash, x.RangeType);
+					wi::helper::hash_combine(bindless_hash, x.RegisterSpace);
 				}
 
 				size_t rootsig_hash = 0;
-				wiHelper::hash_combine(rootsig_hash, rootconstant_hash);
-				wiHelper::hash_combine(rootsig_hash, root_binding_hash);
-				wiHelper::hash_combine(rootsig_hash, resource_binding_hash);
-				wiHelper::hash_combine(rootsig_hash, sampler_binding_hash);
-				wiHelper::hash_combine(rootsig_hash, bindless_hash);
+				wi::helper::hash_combine(rootsig_hash, rootconstant_hash);
+				wi::helper::hash_combine(rootsig_hash, root_binding_hash);
+				wi::helper::hash_combine(rootsig_hash, resource_binding_hash);
+				wi::helper::hash_combine(rootsig_hash, sampler_binding_hash);
+				wi::helper::hash_combine(rootsig_hash, bindless_hash);
 				for (auto& x : internal_state->staticsamplers)
 				{
-					wiHelper::hash_combine(rootsig_hash, x.AddressU);
-					wiHelper::hash_combine(rootsig_hash, x.AddressV);
-					wiHelper::hash_combine(rootsig_hash, x.AddressW);
-					wiHelper::hash_combine(rootsig_hash, x.BorderColor);
-					wiHelper::hash_combine(rootsig_hash, x.ComparisonFunc);
-					wiHelper::hash_combine(rootsig_hash, x.Filter);
-					wiHelper::hash_combine(rootsig_hash, x.MaxAnisotropy);
-					wiHelper::hash_combine(rootsig_hash, x.MaxLOD);
-					wiHelper::hash_combine(rootsig_hash, x.MinLOD);
-					wiHelper::hash_combine(rootsig_hash, x.MipLODBias);
-					wiHelper::hash_combine(rootsig_hash, x.RegisterSpace);
-					wiHelper::hash_combine(rootsig_hash, x.ShaderRegister);
-					wiHelper::hash_combine(rootsig_hash, x.ShaderVisibility);
+					wi::helper::hash_combine(rootsig_hash, x.AddressU);
+					wi::helper::hash_combine(rootsig_hash, x.AddressV);
+					wi::helper::hash_combine(rootsig_hash, x.AddressW);
+					wi::helper::hash_combine(rootsig_hash, x.BorderColor);
+					wi::helper::hash_combine(rootsig_hash, x.ComparisonFunc);
+					wi::helper::hash_combine(rootsig_hash, x.Filter);
+					wi::helper::hash_combine(rootsig_hash, x.MaxAnisotropy);
+					wi::helper::hash_combine(rootsig_hash, x.MaxLOD);
+					wi::helper::hash_combine(rootsig_hash, x.MinLOD);
+					wi::helper::hash_combine(rootsig_hash, x.MipLODBias);
+					wi::helper::hash_combine(rootsig_hash, x.RegisterSpace);
+					wi::helper::hash_combine(rootsig_hash, x.ShaderRegister);
+					wi::helper::hash_combine(rootsig_hash, x.ShaderVisibility);
 				}
 
 				rootsignature_cache_mutex.lock();
@@ -3979,19 +3979,19 @@ using namespace DX12_Internal;
 		pso->desc = *pDesc;
 
 		pso->hash = 0;
-		wiHelper::hash_combine(pso->hash, pDesc->ms);
-		wiHelper::hash_combine(pso->hash, pDesc->as);
-		wiHelper::hash_combine(pso->hash, pDesc->vs);
-		wiHelper::hash_combine(pso->hash, pDesc->ps);
-		wiHelper::hash_combine(pso->hash, pDesc->hs);
-		wiHelper::hash_combine(pso->hash, pDesc->ds);
-		wiHelper::hash_combine(pso->hash, pDesc->gs);
-		wiHelper::hash_combine(pso->hash, pDesc->il);
-		wiHelper::hash_combine(pso->hash, pDesc->rs);
-		wiHelper::hash_combine(pso->hash, pDesc->bs);
-		wiHelper::hash_combine(pso->hash, pDesc->dss);
-		wiHelper::hash_combine(pso->hash, pDesc->pt);
-		wiHelper::hash_combine(pso->hash, pDesc->sample_mask);
+		wi::helper::hash_combine(pso->hash, pDesc->ms);
+		wi::helper::hash_combine(pso->hash, pDesc->as);
+		wi::helper::hash_combine(pso->hash, pDesc->vs);
+		wi::helper::hash_combine(pso->hash, pDesc->ps);
+		wi::helper::hash_combine(pso->hash, pDesc->hs);
+		wi::helper::hash_combine(pso->hash, pDesc->ds);
+		wi::helper::hash_combine(pso->hash, pDesc->gs);
+		wi::helper::hash_combine(pso->hash, pDesc->il);
+		wi::helper::hash_combine(pso->hash, pDesc->rs);
+		wi::helper::hash_combine(pso->hash, pDesc->bs);
+		wi::helper::hash_combine(pso->hash, pDesc->dss);
+		wi::helper::hash_combine(pso->hash, pDesc->pt);
+		wi::helper::hash_combine(pso->hash, pDesc->sample_mask);
 
 		HRESULT hr = S_OK;
 
@@ -4211,84 +4211,84 @@ using namespace DX12_Internal;
 			}
 
 			size_t rootconstant_hash = 0;
-			wiHelper::hash_combine(rootconstant_hash, internal_state->rootconstants.ShaderVisibility);
-			wiHelper::hash_combine(rootconstant_hash, internal_state->rootconstants.ParameterType);
-			wiHelper::hash_combine(rootconstant_hash, internal_state->rootconstants.Constants.Num32BitValues);
-			wiHelper::hash_combine(rootconstant_hash, internal_state->rootconstants.Constants.RegisterSpace);
-			wiHelper::hash_combine(rootconstant_hash, internal_state->rootconstants.Constants.ShaderRegister);
+			wi::helper::hash_combine(rootconstant_hash, internal_state->rootconstants.ShaderVisibility);
+			wi::helper::hash_combine(rootconstant_hash, internal_state->rootconstants.ParameterType);
+			wi::helper::hash_combine(rootconstant_hash, internal_state->rootconstants.Constants.Num32BitValues);
+			wi::helper::hash_combine(rootconstant_hash, internal_state->rootconstants.Constants.RegisterSpace);
+			wi::helper::hash_combine(rootconstant_hash, internal_state->rootconstants.Constants.ShaderRegister);
 
 			size_t root_binding_hash = 0;
 			for (auto& x : internal_state->root_cbvs)
 			{
-				wiHelper::hash_combine(root_binding_hash, x.Flags);
-				wiHelper::hash_combine(root_binding_hash, x.ShaderRegister);
-				wiHelper::hash_combine(root_binding_hash, x.RegisterSpace);
+				wi::helper::hash_combine(root_binding_hash, x.Flags);
+				wi::helper::hash_combine(root_binding_hash, x.ShaderRegister);
+				wi::helper::hash_combine(root_binding_hash, x.RegisterSpace);
 			}
 
 			size_t resource_binding_hash = 0;
 			for (auto& x : internal_state->resources)
 			{
-				wiHelper::hash_combine(resource_binding_hash, x.BaseShaderRegister);
-				wiHelper::hash_combine(resource_binding_hash, x.NumDescriptors);
-				wiHelper::hash_combine(resource_binding_hash, x.Flags);
-				wiHelper::hash_combine(resource_binding_hash, x.OffsetInDescriptorsFromTableStart);
-				wiHelper::hash_combine(resource_binding_hash, x.RangeType);
-				wiHelper::hash_combine(resource_binding_hash, x.RegisterSpace);
+				wi::helper::hash_combine(resource_binding_hash, x.BaseShaderRegister);
+				wi::helper::hash_combine(resource_binding_hash, x.NumDescriptors);
+				wi::helper::hash_combine(resource_binding_hash, x.Flags);
+				wi::helper::hash_combine(resource_binding_hash, x.OffsetInDescriptorsFromTableStart);
+				wi::helper::hash_combine(resource_binding_hash, x.RangeType);
+				wi::helper::hash_combine(resource_binding_hash, x.RegisterSpace);
 			}
 
 			size_t sampler_binding_hash = 0;
 			for (auto& x : internal_state->samplers)
 			{
-				wiHelper::hash_combine(sampler_binding_hash, x.BaseShaderRegister);
-				wiHelper::hash_combine(sampler_binding_hash, x.NumDescriptors);
-				wiHelper::hash_combine(sampler_binding_hash, x.Flags);
-				wiHelper::hash_combine(sampler_binding_hash, x.OffsetInDescriptorsFromTableStart);
-				wiHelper::hash_combine(sampler_binding_hash, x.RangeType);
-				wiHelper::hash_combine(sampler_binding_hash, x.RegisterSpace);
+				wi::helper::hash_combine(sampler_binding_hash, x.BaseShaderRegister);
+				wi::helper::hash_combine(sampler_binding_hash, x.NumDescriptors);
+				wi::helper::hash_combine(sampler_binding_hash, x.Flags);
+				wi::helper::hash_combine(sampler_binding_hash, x.OffsetInDescriptorsFromTableStart);
+				wi::helper::hash_combine(sampler_binding_hash, x.RangeType);
+				wi::helper::hash_combine(sampler_binding_hash, x.RegisterSpace);
 			}
 
 			size_t bindless_hash = 0;
 			for (auto& x : internal_state->bindless_res)
 			{
-				wiHelper::hash_combine(bindless_hash, x.BaseShaderRegister);
-				wiHelper::hash_combine(bindless_hash, x.NumDescriptors);
-				wiHelper::hash_combine(bindless_hash, x.Flags);
-				wiHelper::hash_combine(bindless_hash, x.OffsetInDescriptorsFromTableStart);
-				wiHelper::hash_combine(bindless_hash, x.RangeType);
-				wiHelper::hash_combine(bindless_hash, x.RegisterSpace);
+				wi::helper::hash_combine(bindless_hash, x.BaseShaderRegister);
+				wi::helper::hash_combine(bindless_hash, x.NumDescriptors);
+				wi::helper::hash_combine(bindless_hash, x.Flags);
+				wi::helper::hash_combine(bindless_hash, x.OffsetInDescriptorsFromTableStart);
+				wi::helper::hash_combine(bindless_hash, x.RangeType);
+				wi::helper::hash_combine(bindless_hash, x.RegisterSpace);
 			}
 			for (auto& x : internal_state->bindless_sam)
 			{
-				wiHelper::hash_combine(bindless_hash, x.BaseShaderRegister);
-				wiHelper::hash_combine(bindless_hash, x.NumDescriptors);
-				wiHelper::hash_combine(bindless_hash, x.Flags);
-				wiHelper::hash_combine(bindless_hash, x.OffsetInDescriptorsFromTableStart);
-				wiHelper::hash_combine(bindless_hash, x.RangeType);
-				wiHelper::hash_combine(bindless_hash, x.RegisterSpace);
+				wi::helper::hash_combine(bindless_hash, x.BaseShaderRegister);
+				wi::helper::hash_combine(bindless_hash, x.NumDescriptors);
+				wi::helper::hash_combine(bindless_hash, x.Flags);
+				wi::helper::hash_combine(bindless_hash, x.OffsetInDescriptorsFromTableStart);
+				wi::helper::hash_combine(bindless_hash, x.RangeType);
+				wi::helper::hash_combine(bindless_hash, x.RegisterSpace);
 			}
 
 			size_t rootsig_hash = 0;
-			wiHelper::hash_combine(rootsig_hash, pDesc->il);
-			wiHelper::hash_combine(rootsig_hash, rootconstant_hash);
-			wiHelper::hash_combine(rootsig_hash, root_binding_hash);
-			wiHelper::hash_combine(rootsig_hash, resource_binding_hash);
-			wiHelper::hash_combine(rootsig_hash, sampler_binding_hash);
-			wiHelper::hash_combine(rootsig_hash, bindless_hash);
+			wi::helper::hash_combine(rootsig_hash, pDesc->il);
+			wi::helper::hash_combine(rootsig_hash, rootconstant_hash);
+			wi::helper::hash_combine(rootsig_hash, root_binding_hash);
+			wi::helper::hash_combine(rootsig_hash, resource_binding_hash);
+			wi::helper::hash_combine(rootsig_hash, sampler_binding_hash);
+			wi::helper::hash_combine(rootsig_hash, bindless_hash);
 			for (auto& x : internal_state->staticsamplers)
 			{
-				wiHelper::hash_combine(rootsig_hash, x.AddressU);
-				wiHelper::hash_combine(rootsig_hash, x.AddressV);
-				wiHelper::hash_combine(rootsig_hash, x.AddressW);
-				wiHelper::hash_combine(rootsig_hash, x.BorderColor);
-				wiHelper::hash_combine(rootsig_hash, x.ComparisonFunc);
-				wiHelper::hash_combine(rootsig_hash, x.Filter);
-				wiHelper::hash_combine(rootsig_hash, x.MaxAnisotropy);
-				wiHelper::hash_combine(rootsig_hash, x.MaxLOD);
-				wiHelper::hash_combine(rootsig_hash, x.MinLOD);
-				wiHelper::hash_combine(rootsig_hash, x.MipLODBias);
-				wiHelper::hash_combine(rootsig_hash, x.RegisterSpace);
-				wiHelper::hash_combine(rootsig_hash, x.ShaderRegister);
-				wiHelper::hash_combine(rootsig_hash, x.ShaderVisibility);
+				wi::helper::hash_combine(rootsig_hash, x.AddressU);
+				wi::helper::hash_combine(rootsig_hash, x.AddressV);
+				wi::helper::hash_combine(rootsig_hash, x.AddressW);
+				wi::helper::hash_combine(rootsig_hash, x.BorderColor);
+				wi::helper::hash_combine(rootsig_hash, x.ComparisonFunc);
+				wi::helper::hash_combine(rootsig_hash, x.Filter);
+				wi::helper::hash_combine(rootsig_hash, x.MaxAnisotropy);
+				wi::helper::hash_combine(rootsig_hash, x.MaxLOD);
+				wi::helper::hash_combine(rootsig_hash, x.MinLOD);
+				wi::helper::hash_combine(rootsig_hash, x.MipLODBias);
+				wi::helper::hash_combine(rootsig_hash, x.RegisterSpace);
+				wi::helper::hash_combine(rootsig_hash, x.ShaderRegister);
+				wi::helper::hash_combine(rootsig_hash, x.ShaderVisibility);
 			}
 
 			rootsignature_cache_mutex.lock();
@@ -4489,14 +4489,14 @@ using namespace DX12_Internal;
 		}
 
 		renderpass->hash = 0;
-		wiHelper::hash_combine(renderpass->hash, pDesc->attachments.size());
+		wi::helper::hash_combine(renderpass->hash, pDesc->attachments.size());
 		int resolve_dst_counter = 0;
 		for (auto& attachment : pDesc->attachments)
 		{
 			if (attachment.type == RenderPassAttachment::Type::RENDERTARGET || attachment.type == RenderPassAttachment::Type::DEPTH_STENCIL)
 			{
-				wiHelper::hash_combine(renderpass->hash, attachment.texture->desc.format);
-				wiHelper::hash_combine(renderpass->hash, attachment.texture->desc.sample_count);
+				wi::helper::hash_combine(renderpass->hash, attachment.texture->desc.format);
+				wi::helper::hash_combine(renderpass->hash, attachment.texture->desc.sample_count);
 			}
 
 			const Texture* texture = attachment.texture;
@@ -4896,7 +4896,7 @@ using namespace DX12_Internal;
 			library_desc.NumExports = 1;
 
 			D3D12_EXPORT_DESC& export_desc = internal_state->exports.emplace_back();
-			wiHelper::StringConvert(x.function_name, internal_state->export_strings.emplace_back());
+			wi::helper::StringConvert(x.function_name, internal_state->export_strings.emplace_back());
 			export_desc.Name = internal_state->export_strings.back().c_str();
 			library_desc.pExports = &export_desc;
 
@@ -4906,7 +4906,7 @@ using namespace DX12_Internal;
 		internal_state->hitgroup_descs.reserve(pDesc->hit_groups.size());
 		for (auto& x : pDesc->hit_groups)
 		{
-			wiHelper::StringConvert(x.name, internal_state->group_strings.emplace_back());
+			wi::helper::StringConvert(x.name, internal_state->group_strings.emplace_back());
 
 			if (x.type == ShaderHitGroup::Type::GENERAL)
 				continue;
@@ -5512,7 +5512,7 @@ using namespace DX12_Internal;
 	void GraphicsDevice_DX12::SetName(GPUResource* pResource, const char* name)
 	{
 		wchar_t text[256];
-		if (wiHelper::StringConvert(name, text) > 0)
+		if (wi::helper::StringConvert(name, text) > 0)
 		{
 			auto internal_state = to_internal(pResource);
 			if (internal_state->resource != nullptr)
@@ -6100,10 +6100,10 @@ using namespace DX12_Internal;
 		active_rt[cmd] = nullptr;
 
 		size_t pipeline_hash = 0;
-		wiHelper::hash_combine(pipeline_hash, pso->hash);
+		wi::helper::hash_combine(pipeline_hash, pso->hash);
 		if (active_renderpass[cmd] != nullptr)
 		{
-			wiHelper::hash_combine(pipeline_hash, active_renderpass[cmd]->hash);
+			wi::helper::hash_combine(pipeline_hash, active_renderpass[cmd]->hash);
 		}
 		if (prev_pipeline_hash[cmd] == pipeline_hash)
 		{
@@ -6611,7 +6611,7 @@ using namespace DX12_Internal;
 	void GraphicsDevice_DX12::EventBegin(const char* name, CommandList cmd)
 	{
 		wchar_t text[128];
-		if (wiHelper::StringConvert(name, text) > 0)
+		if (wi::helper::StringConvert(name, text) > 0)
 		{
 			PIXBeginEvent(GetCommandList(cmd), 0xFF000000, text);
 		}
@@ -6623,7 +6623,7 @@ using namespace DX12_Internal;
 	void GraphicsDevice_DX12::SetMarker(const char* name, CommandList cmd)
 	{
 		wchar_t text[128];
-		if (wiHelper::StringConvert(name, text) > 0)
+		if (wi::helper::StringConvert(name, text) > 0)
 		{
 			PIXSetMarker(GetCommandList(cmd), 0xFFFF0000, text);
 		}

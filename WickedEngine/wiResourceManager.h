@@ -8,23 +8,26 @@
 
 #include <memory>
 
-struct wiResource
+namespace wi
 {
-	wiGraphics::Texture texture;
-	wiAudio::Sound sound;
-
-	enum DATA_TYPE
+	struct Resource
 	{
-		EMPTY,
-		IMAGE,
-		SOUND,
-	} type = EMPTY;
+		wi::graphics::Texture texture;
+		wi::audio::Sound sound;
 
-	uint32_t flags = 0;
-	wi::vector<uint8_t> filedata;
-};
+		enum DATA_TYPE
+		{
+			EMPTY,
+			IMAGE,
+			SOUND,
+		} type = EMPTY;
 
-namespace wiResourceManager
+		uint32_t flags = 0;
+		wi::vector<uint8_t> filedata;
+	};
+}
+
+namespace wi::resource_manager
 {
 	enum MODE
 	{
@@ -50,7 +53,7 @@ namespace wiResourceManager
 	//	flags : specify flags that modify behaviour (optional)
 	//	filedata : pointer to file data, if file was loaded manually (optional)
 	//	filesize : size of file data, if file was loaded manually (optional)
-	std::shared_ptr<wiResource> Load(
+	std::shared_ptr<wi::Resource> Load(
 		const std::string& name,
 		uint32_t flags = EMPTY,
 		const uint8_t* filedata = nullptr,
@@ -63,9 +66,9 @@ namespace wiResourceManager
 
 	struct ResourceSerializer
 	{
-		wi::vector<std::shared_ptr<wiResource>> resources;
+		wi::vector<std::shared_ptr<wi::Resource>> resources;
 	};
 	// Serializes all resources that are compatible
 	//	Compatible resources are those whose file data is kept around using the IMPORT_RETAIN_FILEDATA flag when loading.
-	void Serialize(wiArchive& archive, ResourceSerializer& seri);
+	void Serialize(wi::Archive& archive, ResourceSerializer& seri);
 };

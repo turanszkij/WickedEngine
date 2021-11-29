@@ -2,13 +2,13 @@
 #include "DecalWindow.h"
 #include "Editor.h"
 
-using namespace wiECS;
-using namespace wiScene;
+using namespace wi::ecs;
+using namespace wi::scene;
 
 
 void DecalWindow::Create(EditorComponent* editor)
 {
-	wiWindow::Create("Decal Window");
+	wi::widget::Window::Create("Decal Window");
 	SetSize(XMFLOAT2(400, 200));
 
 	float x = 200;
@@ -29,15 +29,15 @@ void DecalWindow::Create(EditorComponent* editor)
 	infoLabel.SetText("Selecting decals will select the according material. Set decal properties (texture, color, etc.) in the Material window.");
 	infoLabel.SetSize(XMFLOAT2(400 - 20, 100));
 	infoLabel.SetPos(XMFLOAT2(10, y));
-	infoLabel.SetColor(wiColor::Transparent());
+	infoLabel.SetColor(wi::Color::Transparent());
 	AddWidget(&infoLabel);
 	y += infoLabel.GetScale().y - step + 5;
 
 	decalNameField.Create("Decal Name");
 	decalNameField.SetPos(XMFLOAT2(10, y+=step));
 	decalNameField.SetSize(XMFLOAT2(300, hei));
-	decalNameField.OnInputAccepted([=](wiEventArgs args) {
-		NameComponent* name = wiScene::GetScene().names.GetComponent(entity);
+	decalNameField.OnInputAccepted([=](wi::widget::EventArgs args) {
+		NameComponent* name = wi::scene::GetScene().names.GetComponent(entity);
 		if (name != nullptr)
 		{
 			*name = args.sValue;
@@ -57,7 +57,7 @@ void DecalWindow::SetEntity(Entity entity)
 {
 	this->entity = entity;
 
-	Scene& scene = wiScene::GetScene();
+	Scene& scene = wi::scene::GetScene();
 	const DecalComponent* decal = scene.decals.GetComponent(entity);
 
 	if (decal != nullptr)

@@ -6,19 +6,19 @@
 #include <string>
 
 std::mutex locker;
-wi::vector<std::string> shaders[static_cast<size_t>(wiGraphics::ShaderStage::Count)];
-wi::unordered_map<std::string, wiGraphics::ShaderModel> minshadermodels;
+wi::vector<std::string> shaders[static_cast<size_t>(wi::graphics::ShaderStage::Count)];
+wi::unordered_map<std::string, wi::graphics::ShaderModel> minshadermodels;
 struct Target
 {
-	wiGraphics::ShaderFormat format;
+	wi::graphics::ShaderFormat format;
 	std::string dir;
 };
 wi::vector<Target> targets;
-wi::unordered_map<std::string, wiShaderCompiler::CompilerOutput> results;
+wi::unordered_map<std::string, wi::shadercompiler::CompilerOutput> results;
 bool rebuild = false;
 bool shaderdump_enabled = false;
 
-using namespace wiGraphics;
+using namespace wi::graphics;
 
 int main(int argc, char* argv[])
 {
@@ -31,32 +31,32 @@ int main(int argc, char* argv[])
 	std::cout << "\tshaderdump : \tShaders will be saved to wiShaderDump.h C++ header file (rebuild is assumed)" << std::endl;
 	std::cout << "Command arguments used: ";
 
-	wiStartupArguments::Parse(argc, argv);
+	wi::startup_arguments::Parse(argc, argv);
 
-	if (wiStartupArguments::HasArgument("hlsl5"))
+	if (wi::startup_arguments::HasArgument("hlsl5"))
 	{
 		targets.push_back({ ShaderFormat::HLSL5, "shaders/hlsl5/" });
 		std::cout << "hlsl5 ";
 	}
-	if (wiStartupArguments::HasArgument("hlsl6"))
+	if (wi::startup_arguments::HasArgument("hlsl6"))
 	{
 		targets.push_back({ ShaderFormat::HLSL6, "shaders/hlsl6/" });
 		std::cout << "hlsl6 ";
 	}
-	if (wiStartupArguments::HasArgument("spirv"))
+	if (wi::startup_arguments::HasArgument("spirv"))
 	{
 		targets.push_back({ ShaderFormat::SPIRV, "shaders/spirv/" });
 		std::cout << "spirv ";
 	}
 
-	if (wiStartupArguments::HasArgument("shaderdump"))
+	if (wi::startup_arguments::HasArgument("shaderdump"))
 	{
 		shaderdump_enabled = true;
 		rebuild = true;
 		std::cout << "shaderdump ";
 	}
 
-	if (wiStartupArguments::HasArgument("rebuild"))
+	if (wi::startup_arguments::HasArgument("rebuild"))
 	{
 		rebuild = true;
 		std::cout << "rebuild ";
@@ -399,20 +399,20 @@ int main(int argc, char* argv[])
 	minshadermodels["rtaoCS.hlsl"] = ShaderModel::SM_6_5;
 	minshadermodels["surfel_raytraceCS_rtapi.hlsl"] = ShaderModel::SM_6_5;
 
-	wiShaderCompiler::Initialize();
-	wiJobSystem::Initialize();
-	wiJobSystem::context ctx;
+	wi::shadercompiler::Initialize();
+	wi::jobsystem::Initialize();
+	wi::jobsystem::context ctx;
 
-	std::string SHADERSOURCEPATH = wiRenderer::GetShaderSourcePath();
-	wiHelper::MakePathAbsolute(SHADERSOURCEPATH);
+	std::string SHADERSOURCEPATH = wi::renderer::GetShaderSourcePath();
+	wi::helper::MakePathAbsolute(SHADERSOURCEPATH);
 
 	std::cout << "[Wicked Engine Offline Shader Compiler] Searching for outdated shaders..." << std::endl;
-	wiTimer timer;
+	wi::Timer timer;
 
 	for (auto& target : targets)
 	{
 		std::string SHADERPATH = target.dir;
-		wiHelper::DirectoryCreate(SHADERPATH);
+		wi::helper::DirectoryCreate(SHADERPATH);
 
 		for (int i = 0; i < static_cast<int>(ShaderStage::Count); ++i)
 		{
@@ -431,16 +431,16 @@ int main(int argc, char* argv[])
 
 			for (auto& shader : shaders[i])
 			{
-				wiJobSystem::Execute(ctx, [=](wiJobArgs args) {
-					std::string shaderbinaryfilename = wiHelper::ReplaceExtension(SHADERPATH + shader, "cso");
-					if (!rebuild && !wiShaderCompiler::IsShaderOutdated(shaderbinaryfilename))
+				wi::jobsystem::Execute(ctx, [=](wi::jobsystem::JobArgs args) {
+					std::string shaderbinaryfilename = wi::helper::ReplaceExtension(SHADERPATH + shader, "cso");
+					if (!rebuild && !wi::shadercompiler::IsShaderOutdated(shaderbinaryfilename))
 					{
 						return;
 					}
 
-					wiShaderCompiler::CompilerInput input;
+					wi::shadercompiler::CompilerInput input;
 					input.format = target.format;
-					input.stage = (wiGraphics::ShaderStage)i;
+					input.stage = (wi::graphics::ShaderStage)i;
 					input.shadersourcefilename = SHADERSOURCEPATH + shader;
 					input.include_directories.push_back(SHADERSOURCEPATH);
 
@@ -456,12 +456,12 @@ int main(int argc, char* argv[])
 						return;
 					}
 
-					wiShaderCompiler::CompilerOutput output;
-					wiShaderCompiler::Compile(input, output);
+					wi::shadercompiler::CompilerOutput output;
+					wi::shadercompiler::Compile(input, output);
 
 					if (output.IsValid())
 					{
-						wiShaderCompiler::SaveShaderAndMetadata(shaderbinaryfilename, output);
+						wi::shadercompiler::SaveShaderAndMetadata(shaderbinaryfilename, output);
 
 						locker.lock();
 						if (!output.error_message.empty())
@@ -487,7 +487,7 @@ int main(int argc, char* argv[])
 			}
 		}
 	}
-	wiJobSystem::Wait(ctx);
+	wi::jobsystem::Wait(ctx);
 
 	std::cout << "[Wicked Engine Offline Shader Compiler] Finished in " << std::setprecision(4) << timer.elapsed_seconds() << " seconds" << std::endl;
 
@@ -526,7 +526,7 @@ int main(int argc, char* argv[])
 		}
 		ss += "};\n"; // map end
 		ss += "}\n"; // namespace end
-		wiHelper::FileWrite("wiShaderDump.h", (uint8_t*)ss.c_str(), ss.length());
+		wi::helper::FileWrite("wiShaderDump.h", (uint8_t*)ss.c_str(), ss.length());
 		std::cout << "[Wicked Engine Offline Shader Compiler] ShaderDump written to wiShaderDump.h in " << std::setprecision(4) << timer.elapsed_seconds() << " seconds" << std::endl;
 	}
 

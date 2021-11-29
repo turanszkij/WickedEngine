@@ -14,12 +14,12 @@
 #include <pthread.h>
 #endif
 
-namespace wiJobSystem
+namespace wi::jobsystem
 {
 	struct Job
 	{
 		context* ctx;
-		std::function<void(wiJobArgs)> task;
+		std::function<void(JobArgs)> task;
 		uint32_t groupID;
 		uint32_t groupJobOffset;
 		uint32_t groupJobEnd;
@@ -40,7 +40,7 @@ namespace wiJobSystem
 		uint32_t numCores = 0;
 		uint32_t numThreads = 0;
 		std::shared_ptr<WorkerState> worker_state = std::make_shared<WorkerState>(); // kept alive by both threads and internal_state
-		wiAllocator::ThreadSafeRingBuffer<Job, 256> jobQueue;
+		wi::allocator::ThreadSafeRingBuffer<Job, 256> jobQueue;
 		~InternalState()
 		{
 			worker_state->alive.store(false);
@@ -54,7 +54,7 @@ namespace wiJobSystem
 		Job job;
 		if (internal_state.jobQueue.pop_front(job))
 		{
-			wiJobArgs args;
+			JobArgs args;
 			args.groupID = job.groupID;
 			if (job.sharedmemory_size > 0)
 			{
@@ -82,7 +82,7 @@ namespace wiJobSystem
 
 	void Initialize()
 	{
-		wiTimer timer;
+		wi::Timer timer;
 
 		// Retrieve the number of hardware threads in this system:
 		internal_state.numCores = std::thread::hardware_concurrency();
@@ -121,7 +121,7 @@ namespace wiJobSystem
 			//assert(priority_result != 0);
 
 			// Name the thread:
-			std::wstring wthreadname =  L"wiJobSystem_" + std::to_wstring(threadID);
+			std::wstring wthreadname =  L"wi::jobsystem_" + std::to_wstring(threadID);
 			HRESULT hr = SetThreadDescription(handle, wthreadname.c_str());
 			assert(SUCCEEDED(hr));
 #elif defined(PLATFORM_LINUX)
@@ -139,7 +139,7 @@ namespace wiJobSystem
                 handle_error_en(ret, std::string(" pthread_setaffinity_np[" + std::to_string(threadID) + ']').c_str());
 
             // Name the thread
-            std::string thread_name = "wiJobSystem_" + std::to_string(threadID);
+            std::string thread_name = "wi::jobsystem_" + std::to_string(threadID);
             ret = pthread_setname_np(worker.native_handle(), thread_name.c_str());
             if(ret != 0)
                 handle_error_en(ret, std::string(" pthread_setname_np[" + std::to_string(threadID) + ']').c_str());
@@ -149,7 +149,7 @@ namespace wiJobSystem
 			worker.detach();
 		}
 
-		wiBackLog::post("wiJobSystem Initialized with [" + std::to_string(internal_state.numCores) + " cores] [" + std::to_string(internal_state.numThreads) + " threads] (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
+		wi::backlog::post("wi::jobsystem Initialized with [" + std::to_string(internal_state.numCores) + " cores] [" + std::to_string(internal_state.numThreads) + " threads] (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
 
 	uint32_t GetThreadCount()
@@ -157,7 +157,7 @@ namespace wiJobSystem
 		return internal_state.numThreads;
 	}
 
-	void Execute(context& ctx, const std::function<void(wiJobArgs)>& task)
+	void Execute(context& ctx, const std::function<void(JobArgs)>& task)
 	{
 		// Context state is updated:
 		ctx.counter.fetch_add(1);
@@ -177,7 +177,7 @@ namespace wiJobSystem
 		internal_state.worker_state->wakeCondition.notify_one();
 	}
 
-	void Dispatch(context& ctx, uint32_t jobCount, uint32_t groupSize, const std::function<void(wiJobArgs)>& task, size_t sharedmemory_size)
+	void Dispatch(context& ctx, uint32_t jobCount, uint32_t groupSize, const std::function<void(JobArgs)>& task, size_t sharedmemory_size)
 	{
 		if (jobCount == 0 || groupSize == 0)
 		{

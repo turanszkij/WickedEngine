@@ -6,8 +6,8 @@
 #include <thread>
 #include <unordered_map>
 
-using namespace wiECS;
-using namespace wiScene;
+using namespace wi::ecs;
+using namespace wi::scene;
 
 void Tests::Initialize()
 {
@@ -41,37 +41,37 @@ void TestsRenderer::Load()
 
 	label.Create("Label1");
 	label.SetText("Wicked Engine Test Framework");
-	label.font.params.h_align = WIFALIGN_CENTER;
+	label.font.params.h_align = wi::font::WIFALIGN_CENTER;
 	label.SetSize(XMFLOAT2(240,20));
 	GetGUI().AddWidget(&label);
 
-	static wiAudio::Sound sound;
-	static wiAudio::SoundInstance soundinstance;
+	static wi::audio::Sound sound;
+	static wi::audio::SoundInstance soundinstance;
 
-	static wiButton audioTest;
+	static wi::widget::Button audioTest;
 	audioTest.Create("AudioTest");
 	audioTest.SetText("Play Test Audio");
 	audioTest.SetSize(XMFLOAT2(200, 20));
 	audioTest.SetPos(XMFLOAT2(10, 140));
-	audioTest.SetColor(wiColor(255, 205, 43, 200), wiWidget::WIDGETSTATE::IDLE);
-	audioTest.SetColor(wiColor(255, 235, 173, 255), wiWidget::WIDGETSTATE::FOCUS);
-	audioTest.OnClick([&](wiEventArgs args) {
+	audioTest.SetColor(wi::Color(255, 205, 43, 200), wi::widget::WIDGETSTATE::IDLE);
+	audioTest.SetColor(wi::Color(255, 235, 173, 255), wi::widget::WIDGETSTATE::FOCUS);
+	audioTest.OnClick([&](wi::widget::EventArgs args) {
 		static bool playing = false;
 
 		if (!sound.IsValid())
 		{
-			wiAudio::CreateSound("sound/music.wav", &sound);
-			wiAudio::CreateSoundInstance(&sound, &soundinstance);
+			wi::audio::CreateSound("sound/music.wav", &sound);
+			wi::audio::CreateSoundInstance(&sound, &soundinstance);
 		}
 
 		if (playing)
 		{
-			wiAudio::Stop(&soundinstance);
+			wi::audio::Stop(&soundinstance);
 			audioTest.SetText("Play Test Audio");
 		}
 		else
 		{
-			wiAudio::Play(&soundinstance);
+			wi::audio::Play(&soundinstance);
 			audioTest.SetText("Stop Test Audio");
 		}
 
@@ -80,17 +80,17 @@ void TestsRenderer::Load()
 	GetGUI().AddWidget(&audioTest);
 
 
-	static wiSlider volume;
+	static wi::widget::Slider volume;
 	volume.Create(0, 100, 50, 100, "Volume");
 	volume.SetText("Volume: ");
 	volume.SetSize(XMFLOAT2(100, 20));
 	volume.SetPos(XMFLOAT2(65, 170));
-	volume.sprites_knob[wiWidget::WIDGETSTATE::IDLE].params.color = wiColor(255, 205, 43, 200);
-	volume.sprites_knob[wiWidget::WIDGETSTATE::FOCUS].params.color = wiColor(255, 235, 173, 255);
-	volume.sprites[wiWidget::WIDGETSTATE::IDLE].params.color = wiMath::Lerp(wiColor::Transparent(), volume.sprites_knob[wiWidget::WIDGETSTATE::IDLE].params.color, 0.5f);
-	volume.sprites[wiWidget::WIDGETSTATE::FOCUS].params.color = wiMath::Lerp(wiColor::Transparent(), volume.sprites_knob[wiWidget::WIDGETSTATE::FOCUS].params.color, 0.5f);
-	volume.OnSlide([](wiEventArgs args) {
-		wiAudio::SetVolume(args.fValue / 100.0f, &soundinstance);
+	volume.sprites_knob[wi::widget::WIDGETSTATE::IDLE].params.color = wi::Color(255, 205, 43, 200);
+	volume.sprites_knob[wi::widget::WIDGETSTATE::FOCUS].params.color = wi::Color(255, 235, 173, 255);
+	volume.sprites[wi::widget::WIDGETSTATE::IDLE].params.color = wi::math::Lerp(wi::Color::Transparent(), volume.sprites_knob[wi::widget::WIDGETSTATE::IDLE].params.color, 0.5f);
+	volume.sprites[wi::widget::WIDGETSTATE::FOCUS].params.color = wi::math::Lerp(wi::Color::Transparent(), volume.sprites_knob[wi::widget::WIDGETSTATE::FOCUS].params.color, 0.5f);
+	volume.OnSlide([](wi::widget::EventArgs args) {
+		wi::audio::SetVolume(args.fValue / 100.0f, &soundinstance);
 	});
 	GetGUI().AddWidget(&volume);
 
@@ -99,8 +99,8 @@ void TestsRenderer::Load()
 	testSelector.SetText("Demo: ");
 	testSelector.SetSize(XMFLOAT2(140, 20));
 	testSelector.SetPos(XMFLOAT2(50, 200));
-	testSelector.SetColor(wiColor(255, 205, 43, 200), wiWidget::WIDGETSTATE::IDLE);
-	testSelector.SetColor(wiColor(255, 235, 173, 255), wiWidget::WIDGETSTATE::FOCUS);
+	testSelector.SetColor(wi::Color(255, 205, 43, 200), wi::widget::WIDGETSTATE::IDLE);
+	testSelector.SetColor(wi::Color(255, 235, 173, 255), wi::widget::WIDGETSTATE::FOCUS);
 	testSelector.AddItem("HelloWorld");
 	testSelector.AddItem("Model");
 	testSelector.AddItem("EmittedParticle 1");
@@ -122,25 +122,25 @@ void TestsRenderer::Load()
 	testSelector.AddItem("65k Instances");
 	testSelector.AddItem("unordered_map perf");
 	testSelector.SetMaxVisibleItemCount(10);
-	testSelector.OnSelect([=](wiEventArgs args) {
+	testSelector.OnSelect([=](wi::widget::EventArgs args) {
 
 		// Reset all state that tests might have modified:
-		wiEvent::SetVSync(true);
-		wiRenderer::SetToDrawGridHelper(false);
-		wiRenderer::SetTemporalAAEnabled(false);
-		wiRenderer::ClearWorld(wiScene::GetScene());
-		wiScene::GetScene().weather = WeatherComponent();
+		wi::event::SetVSync(true);
+		wi::renderer::SetToDrawGridHelper(false);
+		wi::renderer::SetTemporalAAEnabled(false);
+		wi::renderer::ClearWorld(wi::scene::GetScene());
+		wi::scene::GetScene().weather = WeatherComponent();
 		this->ClearSprites();
 		this->ClearFonts();
-		if (wiLua::GetLuaState() != nullptr) {
-            wiLua::KillProcesses();
+		if (wi::lua::GetLuaState() != nullptr) {
+            wi::lua::KillProcesses();
         }
 
 		// Reset camera position:
 		TransformComponent transform;
 		transform.Translate(XMFLOAT3(0, 2.f, -4.5f));
 		transform.UpdateTransform();
-		wiScene::GetCamera().TransformCamera(transform);
+		wi::scene::GetCamera().TransformCamera(transform);
 
 		float screenW = GetLogicalWidth();
 		float screenH = GetLogicalHeight();
@@ -154,8 +154,8 @@ void TestsRenderer::Load()
 			//	The second texture is a static image of "hello world" written on it
 			//	Then add some animations to the sprite to get a nice wobbly and color changing effect.
 			//	You can learn more in the Sprite test in RunSpriteTest() function
-			static wiSprite sprite;
-			sprite = wiSprite("images/movingtex.png", "images/HelloWorld.png");
+			static wi::Sprite sprite;
+			sprite = wi::Sprite("images/movingtex.png", "images/HelloWorld.png");
 			sprite.params.pos = XMFLOAT3(screenW / 2, screenH / 2, 0);
 			sprite.params.siz = XMFLOAT2(200, 100);
 			sprite.params.pivot = XMFLOAT2(0.5f, 0.5f);
@@ -167,36 +167,36 @@ void TestsRenderer::Load()
 			break;
 		}
 		case 1:
-			wiRenderer::SetTemporalAAEnabled(true);
-			wiScene::LoadModel("../Content/models/teapot.wiscene");
+			wi::renderer::SetTemporalAAEnabled(true);
+			wi::scene::LoadModel("../Content/models/teapot.wiscene");
 			break;
 		case 2:
-			wiScene::LoadModel("../Content/models/emitter_smoke.wiscene");
+			wi::scene::LoadModel("../Content/models/emitter_smoke.wiscene");
 			break;
 		case 3:
-			wiScene::LoadModel("../Content/models/emitter_skinned.wiscene");
+			wi::scene::LoadModel("../Content/models/emitter_skinned.wiscene");
 			break;
 		case 4:
-			wiScene::LoadModel("../Content/models/hairparticle_torus.wiscene", XMMatrixTranslation(0, 1, 0));
+			wi::scene::LoadModel("../Content/models/hairparticle_torus.wiscene", XMMatrixTranslation(0, 1, 0));
 			break;
 		case 5:
-			wiRenderer::SetToDrawGridHelper(true);
-			wiLua::RunFile("test_script.lua");
+			wi::renderer::SetToDrawGridHelper(true);
+			wi::lua::RunFile("test_script.lua");
 			break;
 		case 6:
-			wiRenderer::SetTemporalAAEnabled(true);
-			wiScene::LoadModel("../Content/models/water_test.wiscene", XMMatrixTranslation(0, 1, 0));
+			wi::renderer::SetTemporalAAEnabled(true);
+			wi::scene::LoadModel("../Content/models/water_test.wiscene", XMMatrixTranslation(0, 1, 0));
 			break;
 		case 7:
-			wiRenderer::SetTemporalAAEnabled(true);
-			wiScene::LoadModel("../Content/models/shadows_test.wiscene", XMMatrixTranslation(0, 1, 0));
+			wi::renderer::SetTemporalAAEnabled(true);
+			wi::scene::LoadModel("../Content/models/shadows_test.wiscene", XMMatrixTranslation(0, 1, 0));
 			break;
 		case 8:
-			wiRenderer::SetTemporalAAEnabled(true);
-			wiScene::LoadModel("../Content/models/physics_test.wiscene");
+			wi::renderer::SetTemporalAAEnabled(true);
+			wi::scene::LoadModel("../Content/models/physics_test.wiscene");
 			break;
 		case 9:
-			wiScene::LoadModel("../Content/models/cloth_test.wiscene", XMMatrixTranslation(0, 3, 4));
+			wi::scene::LoadModel("../Content/models/cloth_test.wiscene", XMMatrixTranslation(0, 3, 4));
 			break;
 		case 10:
 			RunJobSystemTest();
@@ -205,34 +205,34 @@ void TestsRenderer::Load()
 			RunFontTest();
 			break;
 		case 12:
-			wiRenderer::SetTemporalAAEnabled(true);
-			wiScene::LoadModel("../Content/models/volumetric_test.wiscene", XMMatrixTranslation(0, 0, 4));
+			wi::renderer::SetTemporalAAEnabled(true);
+			wi::scene::LoadModel("../Content/models/volumetric_test.wiscene", XMMatrixTranslation(0, 0, 4));
 			break;
 		case 13:
 			RunSpriteTest();
 			break;
 		case 14:
-			wiEvent::SetVSync(false); // turn off vsync if we can to accelerate the baking
-			wiRenderer::SetTemporalAAEnabled(true);
-			wiScene::LoadModel("../Content/models/lightmap_bake_test.wiscene", XMMatrixTranslation(0, 0, 4));
+			wi::event::SetVSync(false); // turn off vsync if we can to accelerate the baking
+			wi::renderer::SetTemporalAAEnabled(true);
+			wi::scene::LoadModel("../Content/models/lightmap_bake_test.wiscene", XMMatrixTranslation(0, 0, 4));
 			break;
 		case 15:
 			RunNetworkTest();
 			break;
 		case 16:
 		{
-			static wiSpriteFont font("This test plays a vibration on the first controller's left motor (if device supports it) \n and changes the LED to a random color (if device supports it)");
-			font.params.h_align = WIFALIGN_CENTER;
-			font.params.v_align = WIFALIGN_CENTER;
+			static wi::SpriteFont font("This test plays a vibration on the first controller's left motor (if device supports it) \n and changes the LED to a random color (if device supports it)");
+			font.params.h_align = wi::font::WIFALIGN_CENTER;
+			font.params.v_align = wi::font::WIFALIGN_CENTER;
 			font.params.size = 20;
 			font.params.posX = screenW / 2;
 			font.params.posY = screenH / 2;
 			AddFont(&font);
 
-			wiInput::ControllerFeedback feedback;
-			feedback.led_color.rgba = wiRandom::getRandom(0xFFFFFF);
+			wi::input::ControllerFeedback feedback;
+			feedback.led_color.rgba = wi::random::getRandom(0xFFFFFF);
 			feedback.vibration_left = 0.9f;
-			wiInput::SetControllerFeedback(feedback, 0);
+			wi::input::SetControllerFeedback(feedback, 0);
 		}
 		break;
 		case 17:
@@ -265,15 +265,15 @@ void TestsRenderer::Load()
 			weather.zenith = XMFLOAT3(0.42f, 0.42f, 0.42f);
 			weather.cloudiness = 0.75f;
 
-			wiScene::GetScene().Merge(scene); // add lodaded scene to global scene
+			wi::scene::GetScene().Merge(scene); // add lodaded scene to global scene
 		}
 		break;
 
 		case 18:
 		{
-			wiScene::LoadModel("../Content/models/cube.wiscene");
-			wiProfiler::SetEnabled(true);
-			Scene& scene = wiScene::GetScene();
+			wi::scene::LoadModel("../Content/models/cube.wiscene");
+			wi::profiler::SetEnabled(true);
+			Scene& scene = wi::scene::GetScene();
 			scene.Entity_CreateLight("testlight", XMFLOAT3(0, 2, -4), XMFLOAT3(1, 1, 1), 4, 10);
 			Entity cubeentity = scene.Entity_FindByName("Cube");
 			const float scale = 0.06f;
@@ -315,23 +315,23 @@ void TestsRenderer::Update(float dt)
 	{
     case 1:
     {
-        Scene& scene = wiScene::GetScene();
+        Scene& scene = wi::scene::GetScene();
         // teapot_material Base Base_mesh Top Top_mesh editorLight
-        wiECS::Entity e_teapot_base = scene.Entity_FindByName("Base");
-        wiECS::Entity e_teapot_top = scene.Entity_FindByName("Top");
-        assert(e_teapot_base != wiECS::INVALID_ENTITY);
-        assert(e_teapot_top != wiECS::INVALID_ENTITY);
+        wi::ecs::Entity e_teapot_base = scene.Entity_FindByName("Base");
+        wi::ecs::Entity e_teapot_top = scene.Entity_FindByName("Top");
+        assert(e_teapot_base != wi::ecs::INVALID_ENTITY);
+        assert(e_teapot_top != wi::ecs::INVALID_ENTITY);
         TransformComponent* transform_base = scene.transforms.GetComponent(e_teapot_base);
         TransformComponent* transform_top = scene.transforms.GetComponent(e_teapot_top);
         assert(transform_base != nullptr);
         assert(transform_top != nullptr);
         float rotation = dt;
-        if (wiInput::Down(wiInput::KEYBOARD_BUTTON_LEFT))
+        if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LEFT))
         {
             transform_base->Rotate(XMVectorSet(0,rotation,0,1));
             transform_top->Rotate(XMVectorSet(0,rotation,0,1));
         }
-        else if (wiInput::Down(wiInput::KEYBOARD_BUTTON_RIGHT))
+        else if (wi::input::Down(wi::input::KEYBOARD_BUTTON_RIGHT))
         {
             transform_base->Rotate(XMVectorSet(0,-rotation,0,1));
             transform_top->Rotate(XMVectorSet(0,-rotation,0,1));
@@ -343,12 +343,12 @@ void TestsRenderer::Update(float dt)
 		if (ik_entity != INVALID_ENTITY)
 		{
 			// Inverse kinematics test:
-			Scene& scene = wiScene::GetScene();
+			Scene& scene = wi::scene::GetScene();
 			InverseKinematicsComponent& ik = *scene.inverse_kinematics.GetComponent(ik_entity);
 			TransformComponent& target = *scene.transforms.GetComponent(ik.target);
 
 			// place ik target on a plane intersected by mouse ray:
-			RAY ray = wiRenderer::GetPickRay((long)wiInput::GetPointer().x, (long)wiInput::GetPointer().y, *this);
+			RAY ray = wi::renderer::GetPickRay((long)wi::input::GetPointer().x, (long)wi::input::GetPointer().y, *this);
 			XMVECTOR plane = XMVectorSet(0, 0, 1, 0.2f);
 			XMVECTOR I = XMPlaneIntersectLine(plane, XMLoadFloat3(&ray.origin), XMLoadFloat3(&ray.origin) + XMLoadFloat3(&ray.direction) * 10000);
 			target.ClearTransform();
@@ -358,26 +358,26 @@ void TestsRenderer::Update(float dt)
 			target.UpdateTransform();
 
 			// draw debug ik target position:
-			wiRenderer::RenderablePoint pp;
+			wi::renderer::RenderablePoint pp;
 			pp.position = target.GetPosition();
 			pp.color = XMFLOAT4(0, 1, 1, 1);
 			pp.size = 0.2f;
-			wiRenderer::DrawPoint(pp);
+			wi::renderer::DrawPoint(pp);
 
 			pp.position = scene.transforms.GetComponent(ik_entity)->GetPosition();
 			pp.color = XMFLOAT4(1, 0, 0, 1);
 			pp.size = 0.1f;
-			wiRenderer::DrawPoint(pp);
+			wi::renderer::DrawPoint(pp);
 		}
 	}
 	break;
 
 	case 18:
 	{
-		static wiTimer timer;
+		static wi::Timer timer;
 		float sec = (float)timer.elapsed_seconds();
-		wiJobSystem::context ctx;
-		wiJobSystem::Dispatch(ctx, (uint32_t)scene->transforms.GetCount(), 1024, [&](wiJobArgs args) {
+		wi::jobsystem::context ctx;
+		wi::jobsystem::Dispatch(ctx, (uint32_t)scene->transforms.GetCount(), 1024, [&](wi::jobsystem::JobArgs args) {
 			TransformComponent& transform = scene->transforms[args.jobIndex];
 			XMStoreFloat4x4(
 				&transform.world,
@@ -385,12 +385,12 @@ void TestsRenderer::Update(float dt)
 			);
 		});
 		scene->materials[0].SetEmissiveColor(XMFLOAT4(1, 1, 1, 1));
-		wiJobSystem::Dispatch(ctx, (uint32_t)scene->objects.GetCount(), 1024, [&](wiJobArgs args) {
+		wi::jobsystem::Dispatch(ctx, (uint32_t)scene->objects.GetCount(), 1024, [&](wi::jobsystem::JobArgs args) {
 			ObjectComponent& object = scene->objects[args.jobIndex];
 			float f = std::pow(std::sin(-sec * 2 + 4 * (float)args.jobIndex / (float)scene->objects.GetCount()) * 0.5f + 0.5f, 32.0f);
 			object.emissiveColor = XMFLOAT4(0, 0.25f, 1, f * 3);
 		});
-		wiJobSystem::Wait(ctx);
+		wi::jobsystem::Wait(ctx);
 	}
 	break;
 
@@ -401,10 +401,10 @@ void TestsRenderer::Update(float dt)
 
 void TestsRenderer::RunJobSystemTest()
 {
-	wiTimer timer;
+	wi::Timer timer;
 
 	// This is created to be able to wait on the workload independently from other workload:
-	wiJobSystem::context ctx;
+	wi::jobsystem::context ctx;
 
 	// This will simulate going over a big dataset first in a simple loop, then with the Job System and compare timings
 	uint32_t itemCount = 1000000;
@@ -412,37 +412,37 @@ void TestsRenderer::RunJobSystemTest()
 	ss += "Job System performance test:\n";
 	ss += "You can find out more in Tests.cpp, RunJobSystemTest() function.\n\n";
 
-	ss += "wiJobSystem was created with " + std::to_string(wiJobSystem::GetThreadCount()) + " worker threads.\n\n";
+	ss += "wi::jobsystem was created with " + std::to_string(wi::jobsystem::GetThreadCount()) + " worker threads.\n\n";
 
 	ss += "1) Execute() test:\n";
 
 	// Serial test
 	{
 		timer.record();
-		wiHelper::Spin(100);
-		wiHelper::Spin(100);
-		wiHelper::Spin(100);
-		wiHelper::Spin(100);
+		wi::helper::Spin(100);
+		wi::helper::Spin(100);
+		wi::helper::Spin(100);
+		wi::helper::Spin(100);
 		double time = timer.elapsed();
 		ss += "Serial took " + std::to_string(time) + " milliseconds\n";
 	}
 	// Execute test
 	{
 		timer.record();
-		wiJobSystem::Execute(ctx, [](wiJobArgs args){ wiHelper::Spin(100); });
-		wiJobSystem::Execute(ctx, [](wiJobArgs args){ wiHelper::Spin(100); });
-		wiJobSystem::Execute(ctx, [](wiJobArgs args){ wiHelper::Spin(100); });
-		wiJobSystem::Execute(ctx, [](wiJobArgs args){ wiHelper::Spin(100); });
-		wiJobSystem::Wait(ctx);
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args){ wi::helper::Spin(100); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args){ wi::helper::Spin(100); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args){ wi::helper::Spin(100); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args){ wi::helper::Spin(100); });
+		wi::jobsystem::Wait(ctx);
 		double time = timer.elapsed();
-		ss += "wiJobSystem::Execute() took " + std::to_string(time) + " milliseconds\n";
+		ss += "wi::jobsystem::Execute() took " + std::to_string(time) + " milliseconds\n";
 	}
 
 	ss += "\n2) Dispatch() test:\n";
 
 	// Simple loop test:
 	{
-		wi::vector<wiScene::CameraComponent> dataSet(itemCount);
+		wi::vector<wi::scene::CameraComponent> dataSet(itemCount);
 		timer.record();
 		for (uint32_t i = 0; i < itemCount; ++i)
 		{
@@ -454,32 +454,32 @@ void TestsRenderer::RunJobSystemTest()
 
 	// Dispatch test:
 	{
-		wi::vector<wiScene::CameraComponent> dataSet(itemCount);
+		wi::vector<wi::scene::CameraComponent> dataSet(itemCount);
 		timer.record();
-		wiJobSystem::Dispatch(ctx, itemCount, 1000, [&](wiJobArgs args) {
+		wi::jobsystem::Dispatch(ctx, itemCount, 1000, [&](wi::jobsystem::JobArgs args) {
 			dataSet[args.jobIndex].UpdateCamera();
 		});
-		wiJobSystem::Wait(ctx);
+		wi::jobsystem::Wait(ctx);
 		double time = timer.elapsed();
-		ss += "wiJobSystem::Dispatch() took " + std::to_string(time) + " milliseconds\n";
+		ss += "wi::jobsystem::Dispatch() took " + std::to_string(time) + " milliseconds\n";
 	}
 
-	static wiSpriteFont font;
-	font = wiSpriteFont(ss);
+	static wi::SpriteFont font;
+	font = wi::SpriteFont(ss);
 	font.params.posX = GetLogicalWidth() / 2;
 	font.params.posY = GetLogicalHeight() / 2;
-	font.params.h_align = WIFALIGN_CENTER;
-	font.params.v_align = WIFALIGN_CENTER;
+	font.params.h_align = wi::font::WIFALIGN_CENTER;
+	font.params.v_align = wi::font::WIFALIGN_CENTER;
 	font.params.size = 24;
 	this->AddFont(&font);
 }
 void TestsRenderer::RunFontTest()
 {
-	static wiSpriteFont font;
-	static wiSpriteFont font_upscaled;
+	static wi::SpriteFont font;
+	static wi::SpriteFont font_upscaled;
 
-	font.SetText("This is Arial, size 32 wiFont");
-	font_upscaled.SetText("This is Arial, size 14 wiFont, but upscaled to 32");
+	font.SetText("This is Arial, size 32 wi::font");
+	font_upscaled.SetText("This is Arial, size 14 wi::font, but upscaled to 32");
 
 	font.params.posX = GetLogicalWidth() / 2.0f;
 	font.params.posY = GetLogicalHeight() / 6.0f;
@@ -496,20 +496,20 @@ void TestsRenderer::RunFontTest()
 	AddFont(&font);
 	AddFont(&font_upscaled);
 
-	static wiSpriteFont font_aligned;
+	static wi::SpriteFont font_aligned;
 	font_aligned = font;
 	font_aligned.params.posY += font.textHeight() * 2;
 	font_aligned.params.size = 38;
-	font_aligned.params.shadowColor = wiColor::Red();
-	font_aligned.params.h_align = WIFALIGN_CENTER;
+	font_aligned.params.shadowColor = wi::Color::Red();
+	font_aligned.params.h_align = wi::font::WIFALIGN_CENTER;
 	font_aligned.SetText("Center aligned, red shadow, bigger");
 	AddFont(&font_aligned);
 
-	static wiSpriteFont font_aligned2;
+	static wi::SpriteFont font_aligned2;
 	font_aligned2 = font_aligned;
 	font_aligned2.params.posY += font_aligned.textHeight();
-	font_aligned2.params.shadowColor = wiColor::Purple();
-	font_aligned2.params.h_align = WIFALIGN_RIGHT;
+	font_aligned2.params.shadowColor = wi::Color::Purple();
+	font_aligned2.params.h_align = wi::font::WIFALIGN_RIGHT;
 	font_aligned2.SetText("Right aligned, purple shadow");
 	AddFont(&font_aligned2);
 
@@ -524,20 +524,20 @@ void TestsRenderer::RunFontTest()
 			ss += s + "\t";
 		}
 	}
-	static wiSpriteFont font_japanese;
+	static wi::SpriteFont font_japanese;
 	font_japanese = font_aligned2;
 	font_japanese.params.posY += font_aligned2.textHeight();
-	font_japanese.params.style = wiFont::AddFontStyle("yumin.ttf");
-	font_japanese.params.shadowColor = wiColor::Transparent();
-	font_japanese.params.h_align = WIFALIGN_CENTER;
+	font_japanese.params.style = wi::font::AddFontStyle("yumin.ttf");
+	font_japanese.params.shadowColor = wi::Color::Transparent();
+	font_japanese.params.h_align = wi::font::WIFALIGN_CENTER;
 	font_japanese.params.size = 34;
 	font_japanese.SetText(ss);
 	AddFont(&font_japanese);
 
-	static wiSpriteFont font_colored;
-	font_colored.params.color = wiColor::Cyan();
-	font_colored.params.h_align = WIFALIGN_CENTER;
-	font_colored.params.v_align = WIFALIGN_TOP;
+	static wi::SpriteFont font_colored;
+	font_colored.params.color = wi::Color::Cyan();
+	font_colored.params.h_align = wi::font::WIFALIGN_CENTER;
+	font_colored.params.v_align = wi::font::WIFALIGN_TOP;
 	font_colored.params.size = 26;
 	font_colored.params.posX = GetLogicalWidth() / 2;
 	font_colored.params.posY = font_japanese.params.posY + font_japanese.textHeight();
@@ -550,17 +550,17 @@ void TestsRenderer::RunSpriteTest()
 	const float screenW = GetLogicalWidth();
 	const float screenH = GetLogicalHeight();
 	const XMFLOAT3 startPos = XMFLOAT3(screenW * 0.3f, screenH * 0.2f, 0);
-	wiImageParams params;
+	wi::image::Params params;
 	params.pos = startPos;
 	params.siz = XMFLOAT2(128, 128);
 	params.pivot = XMFLOAT2(0.5f, 0.5f);
-	params.quality = QUALITY_LINEAR;
-	params.sampleFlag = SAMPLEMODE_CLAMP;
+	params.quality = wi::image::QUALITY_LINEAR;
+	params.sampleFlag = wi::image::SAMPLEMODE_CLAMP;
 	params.blendFlag = BLENDMODE_ALPHA;
 
 	// Info:
 	{
-		static wiSpriteFont font("For more information, please see \nTests.cpp, RunSpriteTest() function.");
+		static wi::SpriteFont font("For more information, please see \nTests.cpp, RunSpriteTest() function.");
 		font.params.posX = 10;
 		font.params.posY = screenH / 2;
 		AddFont(&font);
@@ -568,13 +568,13 @@ void TestsRenderer::RunSpriteTest()
 
 	// Simple sprite, no animation:
 	{
-		static wiSprite sprite("../Content/logo_small.png");
+		static wi::Sprite sprite("../Content/logo_small.png");
 		sprite.params = params;
 		AddSprite(&sprite);
 
-		static wiSpriteFont font("No animation: ");
-		font.params.h_align = WIFALIGN_CENTER;
-		font.params.v_align = WIFALIGN_BOTTOM;
+		static wi::SpriteFont font("No animation: ");
+		font.params.h_align = wi::font::WIFALIGN_CENTER;
+		font.params.v_align = wi::font::WIFALIGN_BOTTOM;
 		font.params.posX = sprite.params.pos.x;
 		font.params.posY = sprite.params.pos.y - sprite.params.siz.y * 0.5f;
 		AddFont(&font);
@@ -584,16 +584,16 @@ void TestsRenderer::RunSpriteTest()
 
 	// Simple sprite, fade animation:
 	{
-		static wiSprite sprite("../Content/logo_small.png");
+		static wi::Sprite sprite("../Content/logo_small.png");
 		sprite.params = params;
-		sprite.anim = wiSprite::Anim();
+		sprite.anim = wi::Sprite::Anim();
 		sprite.anim.fad = 1.2f; // (you can also do opacity animation with sprite.anim.opa)
 		sprite.anim.repeatable = true;
 		AddSprite(&sprite);
 
-		static wiSpriteFont font("Fade animation: ");
-		font.params.h_align = WIFALIGN_CENTER;
-		font.params.v_align = WIFALIGN_BOTTOM;
+		static wi::SpriteFont font("Fade animation: ");
+		font.params.h_align = wi::font::WIFALIGN_CENTER;
+		font.params.v_align = wi::font::WIFALIGN_BOTTOM;
 		font.params.posX = sprite.params.pos.x;
 		font.params.posY = sprite.params.pos.y - sprite.params.siz.y * 0.5f;
 		AddFont(&font);
@@ -603,16 +603,16 @@ void TestsRenderer::RunSpriteTest()
 
 	// Simple sprite, wobble animation:
 	{
-		static wiSprite sprite("../Content/logo_small.png");
+		static wi::Sprite sprite("../Content/logo_small.png");
 		sprite.params = params;
-		sprite.anim = wiSprite::Anim();
+		sprite.anim = wi::Sprite::Anim();
 		sprite.anim.wobbleAnim.amount = XMFLOAT2(0.11f, 0.18f);
 		sprite.anim.wobbleAnim.speed = 1.4f;
 		AddSprite(&sprite);
 
-		static wiSpriteFont font("Wobble animation: ");
-		font.params.h_align = WIFALIGN_CENTER;
-		font.params.v_align = WIFALIGN_BOTTOM;
+		static wi::SpriteFont font("Wobble animation: ");
+		font.params.h_align = wi::font::WIFALIGN_CENTER;
+		font.params.v_align = wi::font::WIFALIGN_BOTTOM;
 		font.params.posX = sprite.params.pos.x;
 		font.params.posY = sprite.params.pos.y - sprite.params.siz.y * 0.5f;
 		AddFont(&font);
@@ -622,16 +622,16 @@ void TestsRenderer::RunSpriteTest()
 
 	// Simple sprite, rotate animation:
 	{
-		static wiSprite sprite("../Content/logo_small.png");
+		static wi::Sprite sprite("../Content/logo_small.png");
 		sprite.params = params;
-		sprite.anim = wiSprite::Anim();
+		sprite.anim = wi::Sprite::Anim();
 		sprite.anim.rot = 2.8f;
 		sprite.anim.repeatable = true;
 		AddSprite(&sprite);
 
-		static wiSpriteFont font("Rotate animation: ");
-		font.params.h_align = WIFALIGN_CENTER;
-		font.params.v_align = WIFALIGN_BOTTOM;
+		static wi::SpriteFont font("Rotate animation: ");
+		font.params.h_align = wi::font::WIFALIGN_CENTER;
+		font.params.v_align = wi::font::WIFALIGN_BOTTOM;
 		font.params.posX = sprite.params.pos.x;
 		font.params.posY = sprite.params.pos.y - sprite.params.siz.y * 0.5f;
 		AddFont(&font);
@@ -641,20 +641,20 @@ void TestsRenderer::RunSpriteTest()
 
 	// Simple sprite, movingtex:
 	{
-		static wiSprite sprite("images/movingtex.png", "../Content/logo_small.png"); // first param is the texture we will display (and also scroll here). Second param is a mask texture
+		static wi::Sprite sprite("images/movingtex.png", "../Content/logo_small.png"); // first param is the texture we will display (and also scroll here). Second param is a mask texture
 		// Don't overwrite all params for this, because we want to keep the mask...
 		sprite.params.pos = params.pos;
 		sprite.params.siz = params.siz;
 		sprite.params.pivot = params.pivot;
 		sprite.params.color = XMFLOAT4(2, 2, 2, 1); // increase brightness a bit
-		sprite.params.sampleFlag = SAMPLEMODE_MIRROR; // texcoords will be scrolled out of bounds, so set up a wrap mode other than clamp
+		sprite.params.sampleFlag = wi::image::SAMPLEMODE_MIRROR; // texcoords will be scrolled out of bounds, so set up a wrap mode other than clamp
 		sprite.anim.movingTexAnim.speedX = 0;
 		sprite.anim.movingTexAnim.speedY = 2; // scroll the texture vertically. This value is pixels/second. So because our texture here is 1x2 pixels, just scroll it once fully per second with a value of 2
 		AddSprite(&sprite);
 
-		static wiSpriteFont font("MovingTex + mask: ");
-		font.params.h_align = WIFALIGN_CENTER;
-		font.params.v_align = WIFALIGN_BOTTOM;
+		static wi::SpriteFont font("MovingTex + mask: ");
+		font.params.h_align = wi::font::WIFALIGN_CENTER;
+		font.params.v_align = wi::font::WIFALIGN_BOTTOM;
 		font.params.posX = sprite.params.pos.x;
 		font.params.posY = sprite.params.pos.y - sprite.params.siz.y * 0.5f;
 		AddFont(&font);
@@ -668,13 +668,13 @@ void TestsRenderer::RunSpriteTest()
 
 	// Spritesheet, no anim:
 	{
-		static wiSprite sprite("images/spritesheet_grid.png");
+		static wi::Sprite sprite("images/spritesheet_grid.png");
 		sprite.params = params; // nothing extra, just display the full spritesheet
 		AddSprite(&sprite);
 
-		static wiSpriteFont font("Spritesheet: \n(without animation)");
-		font.params.h_align = WIFALIGN_CENTER;
-		font.params.v_align = WIFALIGN_BOTTOM;
+		static wi::SpriteFont font("Spritesheet: \n(without animation)");
+		font.params.h_align = wi::font::WIFALIGN_CENTER;
+		font.params.v_align = wi::font::WIFALIGN_BOTTOM;
 		font.params.posX = sprite.params.pos.x;
 		font.params.posY = sprite.params.pos.y - sprite.params.siz.y * 0.5f;
 		AddFont(&font);
@@ -684,18 +684,18 @@ void TestsRenderer::RunSpriteTest()
 
 	// Spritesheet, single line:
 	{
-		static wiSprite sprite("images/spritesheet_grid.png");
+		static wi::Sprite sprite("images/spritesheet_grid.png");
 		sprite.params = params;
 		sprite.params.enableDrawRect(XMFLOAT4(0, 0, 128, 128)); // drawrect cutout for a 0,0,128,128 pixel rect, this is also the first frame of animation
-		sprite.anim = wiSprite::Anim();
+		sprite.anim = wi::Sprite::Anim();
 		sprite.anim.repeatable = true; // enable looping
 		sprite.anim.drawRectAnim.frameRate = 3; // 3 FPS, to be easily readable
 		sprite.anim.drawRectAnim.frameCount = 4; // animate only a single line horizontally
 		AddSprite(&sprite);
 
-		static wiSpriteFont font("single line anim: \n(4 frames)");
-		font.params.h_align = WIFALIGN_CENTER;
-		font.params.v_align = WIFALIGN_BOTTOM;
+		static wi::SpriteFont font("single line anim: \n(4 frames)");
+		font.params.h_align = wi::font::WIFALIGN_CENTER;
+		font.params.v_align = wi::font::WIFALIGN_BOTTOM;
 		font.params.posX = sprite.params.pos.x;
 		font.params.posY = sprite.params.pos.y - sprite.params.siz.y * 0.5f;
 		AddFont(&font);
@@ -705,19 +705,19 @@ void TestsRenderer::RunSpriteTest()
 
 	// Spritesheet, single vertical line:
 	{
-		static wiSprite sprite("images/spritesheet_grid.png");
+		static wi::Sprite sprite("images/spritesheet_grid.png");
 		sprite.params = params;
 		sprite.params.enableDrawRect(XMFLOAT4(0, 0, 128, 128)); // drawrect cutout for a 0,0,128,128 pixel rect, this is also the first frame of animation
-		sprite.anim = wiSprite::Anim();
+		sprite.anim = wi::Sprite::Anim();
 		sprite.anim.repeatable = true; // enable looping
 		sprite.anim.drawRectAnim.frameRate = 3; // 3 FPS, to be easily readable
 		sprite.anim.drawRectAnim.frameCount = 4; // again, specify 4 total frames to loop...
 		sprite.anim.drawRectAnim.horizontalFrameCount = 1; // ...but this time, limit the horizontal frame count. This way, we can get it to only animate vertically
 		AddSprite(&sprite);
 
-		static wiSpriteFont font("single line: \n(4 vertical frames)");
-		font.params.h_align = WIFALIGN_CENTER;
-		font.params.v_align = WIFALIGN_BOTTOM;
+		static wi::SpriteFont font("single line: \n(4 vertical frames)");
+		font.params.h_align = wi::font::WIFALIGN_CENTER;
+		font.params.v_align = wi::font::WIFALIGN_BOTTOM;
 		font.params.posX = sprite.params.pos.x;
 		font.params.posY = sprite.params.pos.y - sprite.params.siz.y * 0.5f;
 		AddFont(&font);
@@ -727,19 +727,19 @@ void TestsRenderer::RunSpriteTest()
 
 	// Spritesheet, multiline:
 	{
-		static wiSprite sprite("images/spritesheet_grid.png");
+		static wi::Sprite sprite("images/spritesheet_grid.png");
 		sprite.params = params;
 		sprite.params.enableDrawRect(XMFLOAT4(0, 0, 128, 128)); // drawrect cutout for a 0,0,128,128 pixel rect, this is also the first frame of animation
-		sprite.anim = wiSprite::Anim();
+		sprite.anim = wi::Sprite::Anim();
 		sprite.anim.repeatable = true; // enable looping
 		sprite.anim.drawRectAnim.frameRate = 3; // 3 FPS, to be easily readable
 		sprite.anim.drawRectAnim.frameCount = 16; // all frames
 		sprite.anim.drawRectAnim.horizontalFrameCount = 4; // all horizontal frames
 		AddSprite(&sprite);
 
-		static wiSpriteFont font("multiline: \n(all 16 frames)");
-		font.params.h_align = WIFALIGN_CENTER;
-		font.params.v_align = WIFALIGN_BOTTOM;
+		static wi::SpriteFont font("multiline: \n(all 16 frames)");
+		font.params.h_align = wi::font::WIFALIGN_CENTER;
+		font.params.v_align = wi::font::WIFALIGN_BOTTOM;
 		font.params.posX = sprite.params.pos.x;
 		font.params.posY = sprite.params.pos.y - sprite.params.siz.y * 0.5f;
 		AddFont(&font);
@@ -749,19 +749,19 @@ void TestsRenderer::RunSpriteTest()
 
 	// Spritesheet, multiline, irregular:
 	{
-		static wiSprite sprite("images/spritesheet_grid.png");
+		static wi::Sprite sprite("images/spritesheet_grid.png");
 		sprite.params = params;
 		sprite.params.enableDrawRect(XMFLOAT4(0, 0, 128, 128)); // drawrect cutout for a 0,0,128,128 pixel rect, this is also the first frame of animation
-		sprite.anim = wiSprite::Anim();
+		sprite.anim = wi::Sprite::Anim();
 		sprite.anim.repeatable = true; // enable looping
 		sprite.anim.drawRectAnim.frameRate = 3; // 3 FPS, to be easily readable
 		sprite.anim.drawRectAnim.frameCount = 14; // NOT all frames, which makes it irregular, so the last line will not contain all horizontal frames
 		sprite.anim.drawRectAnim.horizontalFrameCount = 4; // all horizontal frames
 		AddSprite(&sprite);
 
-		static wiSpriteFont font("irregular multiline: \n(14 frames)");
-		font.params.h_align = WIFALIGN_CENTER;
-		font.params.v_align = WIFALIGN_BOTTOM;
+		static wi::SpriteFont font("irregular multiline: \n(14 frames)");
+		font.params.h_align = wi::font::WIFALIGN_CENTER;
+		font.params.v_align = wi::font::WIFALIGN_BOTTOM;
 		font.params.posX = sprite.params.pos.x;
 		font.params.posY = sprite.params.pos.y - sprite.params.siz.y * 0.5f;
 		AddFont(&font);
@@ -776,18 +776,18 @@ void TestsRenderer::RunSpriteTest()
 	// And the nice ones:
 
 	{
-		static wiSprite sprite("images/fire_001.png");
+		static wi::Sprite sprite("images/fire_001.png");
 		sprite.params = params;
 		sprite.params.enableDrawRect(XMFLOAT4(0, 0, 192, 192)); // set the draw rect (texture cutout). This will also be the first frame of the animation
-		sprite.anim = wiSprite::Anim(); // reset animation state
+		sprite.anim = wi::Sprite::Anim(); // reset animation state
 		sprite.anim.drawRectAnim.frameCount = 20; // set the total frame count of the animation
 		sprite.anim.drawRectAnim.horizontalFrameCount = 5; // this is a multiline spritesheet, so also set how many maximum frames there are in a line
 		sprite.anim.drawRectAnim.frameRate = 40; // animation frames per second
 		sprite.anim.repeatable = true; // looping
 		AddSprite(&sprite);
 
-		static wiSpriteFont font("For the following spritesheets, credits belong to: https://mrbubblewand.wordpress.com/download/");
-		font.params.v_align = WIFALIGN_BOTTOM;
+		static wi::SpriteFont font("For the following spritesheets, credits belong to: https://mrbubblewand.wordpress.com/download/");
+		font.params.v_align = wi::font::WIFALIGN_BOTTOM;
 		font.params.posX = sprite.params.pos.x - sprite.params.siz.x * 0.5f;
 		font.params.posY = sprite.params.pos.y - sprite.params.siz.y * 0.5f;
 		AddFont(&font);
@@ -796,10 +796,10 @@ void TestsRenderer::RunSpriteTest()
 	}
 
 	{
-		static wiSprite sprite("images/wind_002.png");
+		static wi::Sprite sprite("images/wind_002.png");
 		sprite.params = params;
 		sprite.params.enableDrawRect(XMFLOAT4(0, 0, 192, 192));
-		sprite.anim = wiSprite::Anim();
+		sprite.anim = wi::Sprite::Anim();
 		sprite.anim.drawRectAnim.frameCount = 30;
 		sprite.anim.drawRectAnim.horizontalFrameCount = 5;
 		sprite.anim.drawRectAnim.frameRate = 30;
@@ -810,10 +810,10 @@ void TestsRenderer::RunSpriteTest()
 	}
 
 	{
-		static wiSprite sprite("images/water_003.png");
+		static wi::Sprite sprite("images/water_003.png");
 		sprite.params = params;
 		sprite.params.enableDrawRect(XMFLOAT4(0, 0, 192, 192));
-		sprite.anim = wiSprite::Anim();
+		sprite.anim = wi::Sprite::Anim();
 		sprite.anim.drawRectAnim.frameCount = 50;
 		sprite.anim.drawRectAnim.horizontalFrameCount = 5;
 		sprite.anim.drawRectAnim.frameRate = 27;
@@ -824,10 +824,10 @@ void TestsRenderer::RunSpriteTest()
 	}
 
 	{
-		static wiSprite sprite("images/earth_001.png");
+		static wi::Sprite sprite("images/earth_001.png");
 		sprite.params = params;
 		sprite.params.enableDrawRect(XMFLOAT4(0, 0, 192, 192));
-		sprite.anim = wiSprite::Anim();
+		sprite.anim = wi::Sprite::Anim();
 		sprite.anim.drawRectAnim.frameCount = 20;
 		sprite.anim.drawRectAnim.horizontalFrameCount = 5;
 		sprite.anim.drawRectAnim.frameRate = 27;
@@ -838,10 +838,10 @@ void TestsRenderer::RunSpriteTest()
 	}
 
 	{
-		static wiSprite sprite("images/special_001.png");
+		static wi::Sprite sprite("images/special_001.png");
 		sprite.params = params;
 		sprite.params.enableDrawRect(XMFLOAT4(0, 0, 192, 192));
-		sprite.anim = wiSprite::Anim();
+		sprite.anim = wi::Sprite::Anim();
 		sprite.anim.drawRectAnim.frameCount = 40;
 		sprite.anim.drawRectAnim.horizontalFrameCount = 5;
 		sprite.anim.drawRectAnim.frameRate = 27;
@@ -854,53 +854,53 @@ void TestsRenderer::RunSpriteTest()
 }
 void TestsRenderer::RunNetworkTest()
 {
-	static wiSpriteFont font;
+	static wi::SpriteFont font;
 
-	wiNetwork::Connection connection;
+	wi::network::Connection connection;
 	connection.ipaddress = { 127,0,0,1 }; // localhost
 	connection.port = 12345; // just any random port really
 
 	std::thread sender([&] {
 		// Create sender socket:
-		wiNetwork::Socket sock;
-		wiNetwork::CreateSocket(&sock);
+		wi::network::Socket sock;
+		wi::network::CreateSocket(&sock);
 
 		// Create a text message:
 		const char message[] = "Hi, this is a text message sent over the network!\nYou can find out more in Tests.cpp, RunNetworkTest() function.";
 		const size_t message_size = sizeof(message);
 
 		// First, send the text message size:
-		wiNetwork::Send(&sock, &connection, &message_size, sizeof(message_size));
+		wi::network::Send(&sock, &connection, &message_size, sizeof(message_size));
 
 		// Then send the actual text message:
-		wiNetwork::Send(&sock, &connection, message, message_size);
+		wi::network::Send(&sock, &connection, message, message_size);
 
 		});
 
 	std::thread receiver([&] {
 		// Create receiver socket:
-		wiNetwork::Socket sock;
-		wiNetwork::CreateSocket(&sock);
+		wi::network::Socket sock;
+		wi::network::CreateSocket(&sock);
 
 		// Listen on the port which the sender uses:
-		wiNetwork::ListenPort(&sock, connection.port);
+		wi::network::ListenPort(&sock, connection.port);
 		
 		// We can check for incoming messages with CanReceive(). A timeout value can be specified in microseconds
 		//	to let the function block for some time, otherwise it returns imediately
-		//	It is not necessary to use this, but the wiNetwork::Receive() will block until there is a message
-		if (wiNetwork::CanReceive(&sock, 1000000))
+		//	It is not necessary to use this, but the wi::network::Receive() will block until there is a message
+		if (wi::network::CanReceive(&sock, 1000000))
 		{
 			// We know that we want a text message in this simple example, but we don't know the size.
 			//	We also know that the sender sends the text size before the actual text, so first we will receive the text size:
 			size_t message_size;
-			wiNetwork::Connection sender_connection; // this will be filled out with the sender's address
-			wiNetwork::Receive(&sock, &sender_connection, &message_size, sizeof(message_size));
+			wi::network::Connection sender_connection; // this will be filled out with the sender's address
+			wi::network::Receive(&sock, &sender_connection, &message_size, sizeof(message_size));
 
-			if (wiNetwork::CanReceive(&sock, 1000000))
+			if (wi::network::CanReceive(&sock, 1000000))
 			{
 				// Once we know the text message length, we can receive the message itself:
 				char* message = new char[message_size]; // allocate text buffer
-				wiNetwork::Receive(&sock, &sender_connection, message, message_size);
+				wi::network::Receive(&sock, &sender_connection, message, message_size);
 
 				// Write the message to the screen:
 				font.SetText(message);
@@ -925,14 +925,14 @@ void TestsRenderer::RunNetworkTest()
 
 	font.params.posX = GetLogicalWidth() / 2;
 	font.params.posY = GetLogicalHeight() / 2;
-	font.params.h_align = WIFALIGN_CENTER;
-	font.params.v_align = WIFALIGN_CENTER;
+	font.params.h_align = wi::font::WIFALIGN_CENTER;
+	font.params.v_align = wi::font::WIFALIGN_CENTER;
 	font.params.size = 24;
 	AddFont(&font);
 }
 void TestsRenderer::RunUnorderedMapTest()
 {
-	wiTimer timer;
+	wi::Timer timer;
 
 	const size_t elements = 1000000;
 #define shuffle(i) (i * 345734667877) % 98787546343
@@ -973,12 +973,12 @@ void TestsRenderer::RunUnorderedMapTest()
 		ss += "wi::unordered_map access: " + std::to_string(timer.elapsed_milliseconds()) + " ms";
 	}
 
-	static wiSpriteFont font;
-	font = wiSpriteFont(ss);
+	static wi::SpriteFont font;
+	font = wi::SpriteFont(ss);
 	font.params.posX = GetLogicalWidth() / 2;
 	font.params.posY = GetLogicalHeight() / 2;
-	font.params.h_align = WIFALIGN_CENTER;
-	font.params.v_align = WIFALIGN_CENTER;
+	font.params.h_align = wi::font::WIFALIGN_CENTER;
+	font.params.v_align = wi::font::WIFALIGN_CENTER;
 	font.params.size = 24;
 	this->AddFont(&font);
 }

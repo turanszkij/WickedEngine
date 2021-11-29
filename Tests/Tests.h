@@ -4,9 +4,9 @@
 
 class TestsRenderer : public RenderPath3D
 {
-	wiLabel label;
-	wiComboBox testSelector;
-	wiECS::Entity ik_entity = wiECS::INVALID_ENTITY;
+	wi::widget::Label label;
+	wi::widget::ComboBox testSelector;
+	wi::ecs::Entity ik_entity = wi::ecs::INVALID_ENTITY;
 public:
 	void Load() override;
 	void Update(float dt) override;

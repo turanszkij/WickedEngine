@@ -3,22 +3,22 @@
 #include "wiLuna.h"
 #include "wiScene.h"
 
-namespace wiScene_BindLua
+namespace wi::lua::scene
 {
 	void Bind();
 
 	class Scene_BindLua
 	{
 	private:
-		wiScene::Scene customScene;
+		wi::scene::Scene customScene;
 	public:
-		wiScene::Scene* scene = nullptr;
+		wi::scene::Scene* scene = nullptr;
 
 		static const char className[];
 		static Luna<Scene_BindLua>::FunctionType methods[];
 		static Luna<Scene_BindLua>::PropertyType properties[];
 
-		Scene_BindLua(wiScene::Scene* scene) :scene(scene) {}
+		Scene_BindLua(wi::scene::Scene* scene) :scene(scene) {}
 		Scene_BindLua(lua_State* L)
 		{
 			this->scene = &customScene;
@@ -85,13 +85,13 @@ namespace wiScene_BindLua
 	{
 	public:
 		bool owning = false;
-		wiScene::NameComponent* component = nullptr;
+		wi::scene::NameComponent* component = nullptr;
 
 		static const char className[];
 		static Luna<NameComponent_BindLua>::FunctionType methods[];
 		static Luna<NameComponent_BindLua>::PropertyType properties[];
 
-		NameComponent_BindLua(wiScene::NameComponent* component) :component(component) {}
+		NameComponent_BindLua(wi::scene::NameComponent* component) :component(component) {}
 		NameComponent_BindLua(lua_State *L);
 		~NameComponent_BindLua();
 
@@ -103,13 +103,13 @@ namespace wiScene_BindLua
 	{
 	public:
 		bool owning = false;
-		wiScene::LayerComponent* component = nullptr;
+		wi::scene::LayerComponent* component = nullptr;
 
 		static const char className[];
 		static Luna<LayerComponent_BindLua>::FunctionType methods[];
 		static Luna<LayerComponent_BindLua>::PropertyType properties[];
 
-		LayerComponent_BindLua(wiScene::LayerComponent* component) :component(component) {}
+		LayerComponent_BindLua(wi::scene::LayerComponent* component) :component(component) {}
 		LayerComponent_BindLua(lua_State *L);
 		~LayerComponent_BindLua();
 
@@ -121,13 +121,13 @@ namespace wiScene_BindLua
 	{
 	public:
 		bool owning = false;
-		wiScene::TransformComponent* component = nullptr;
+		wi::scene::TransformComponent* component = nullptr;
 
 		static const char className[];
 		static Luna<TransformComponent_BindLua>::FunctionType methods[];
 		static Luna<TransformComponent_BindLua>::PropertyType properties[];
 
-		TransformComponent_BindLua(wiScene::TransformComponent* component) :component(component) {}
+		TransformComponent_BindLua(wi::scene::TransformComponent* component) :component(component) {}
 		TransformComponent_BindLua(lua_State *L);
 		~TransformComponent_BindLua();
 
@@ -149,13 +149,13 @@ namespace wiScene_BindLua
 	{
 	public:
 		bool owning = false;
-		wiScene::CameraComponent* component = nullptr;
+		wi::scene::CameraComponent* component = nullptr;
 
 		static const char className[];
 		static Luna<CameraComponent_BindLua>::FunctionType methods[];
 		static Luna<CameraComponent_BindLua>::PropertyType properties[];
 
-		CameraComponent_BindLua(wiScene::CameraComponent* component) :component(component) {}
+		CameraComponent_BindLua(wi::scene::CameraComponent* component) :component(component) {}
 		CameraComponent_BindLua(lua_State *L);
 		~CameraComponent_BindLua();
 
@@ -185,13 +185,13 @@ namespace wiScene_BindLua
 	{
 	public:
 		bool owning = false;
-		wiScene::AnimationComponent* component = nullptr;
+		wi::scene::AnimationComponent* component = nullptr;
 
 		static const char className[];
 		static Luna<AnimationComponent_BindLua>::FunctionType methods[];
 		static Luna<AnimationComponent_BindLua>::PropertyType properties[];
 
-		AnimationComponent_BindLua(wiScene::AnimationComponent* component) :component(component) {}
+		AnimationComponent_BindLua(wi::scene::AnimationComponent* component) :component(component) {}
 		AnimationComponent_BindLua(lua_State *L);
 		~AnimationComponent_BindLua();
 
@@ -212,13 +212,13 @@ namespace wiScene_BindLua
 	{
 	public:
 		bool owning = false;
-		wiScene::MaterialComponent* component = nullptr;
+		wi::scene::MaterialComponent* component = nullptr;
 
 		static const char className[];
 		static Luna<MaterialComponent_BindLua>::FunctionType methods[];
 		static Luna<MaterialComponent_BindLua>::PropertyType properties[];
 
-		MaterialComponent_BindLua(wiScene::MaterialComponent* component) :component(component) {}
+		MaterialComponent_BindLua(wi::scene::MaterialComponent* component) :component(component) {}
 		MaterialComponent_BindLua(lua_State *L);
 		~MaterialComponent_BindLua();
 
@@ -233,13 +233,13 @@ namespace wiScene_BindLua
 	{
 	public:
 		bool owning = false;
-		wiScene::wiEmittedParticle* component = nullptr;
+		wi::scene::EmittedParticleSystem* component = nullptr;
 
 		static const char className[];
 		static Luna<EmitterComponent_BindLua>::FunctionType methods[];
 		static Luna<EmitterComponent_BindLua>::PropertyType properties[];
 
-		EmitterComponent_BindLua(wiScene::wiEmittedParticle* component) :component(component) {}
+		EmitterComponent_BindLua(wi::scene::EmittedParticleSystem* component) :component(component) {}
 		EmitterComponent_BindLua(lua_State *L);
 		~EmitterComponent_BindLua();
 
@@ -260,13 +260,13 @@ namespace wiScene_BindLua
 	{
 	public:
 		bool owning = false;
-		wiScene::LightComponent* component = nullptr;
+		wi::scene::LightComponent* component = nullptr;
 
 		static const char className[];
 		static Luna<LightComponent_BindLua>::FunctionType methods[];
 		static Luna<LightComponent_BindLua>::PropertyType properties[];
 
-		LightComponent_BindLua(wiScene::LightComponent* component) :component(component) {}
+		LightComponent_BindLua(wi::scene::LightComponent* component) :component(component) {}
 		LightComponent_BindLua(lua_State *L);
 		~LightComponent_BindLua();
 
@@ -283,13 +283,13 @@ namespace wiScene_BindLua
 	{
 	public:
 		bool owning = false;
-		wiScene::ObjectComponent* component = nullptr;
+		wi::scene::ObjectComponent* component = nullptr;
 
 		static const char className[];
 		static Luna<ObjectComponent_BindLua>::FunctionType methods[];
 		static Luna<ObjectComponent_BindLua>::PropertyType properties[];
 
-		ObjectComponent_BindLua(wiScene::ObjectComponent* component) :component(component) {}
+		ObjectComponent_BindLua(wi::scene::ObjectComponent* component) :component(component) {}
 		ObjectComponent_BindLua(lua_State* L);
 		~ObjectComponent_BindLua();
 
@@ -306,13 +306,13 @@ namespace wiScene_BindLua
 	{
 	public:
 		bool owning = false;
-		wiScene::InverseKinematicsComponent* component = nullptr;
+		wi::scene::InverseKinematicsComponent* component = nullptr;
 
 		static const char className[];
 		static Luna<InverseKinematicsComponent_BindLua>::FunctionType methods[];
 		static Luna<InverseKinematicsComponent_BindLua>::PropertyType properties[];
 
-		InverseKinematicsComponent_BindLua(wiScene::InverseKinematicsComponent* component) :component(component) {}
+		InverseKinematicsComponent_BindLua(wi::scene::InverseKinematicsComponent* component) :component(component) {}
 		InverseKinematicsComponent_BindLua(lua_State* L);
 		~InverseKinematicsComponent_BindLua();
 
@@ -330,13 +330,13 @@ namespace wiScene_BindLua
 	{
 	public:
 		bool owning = false;
-		wiScene::SpringComponent* component = nullptr;
+		wi::scene::SpringComponent* component = nullptr;
 
 		static const char className[];
 		static Luna<SpringComponent_BindLua>::FunctionType methods[];
 		static Luna<SpringComponent_BindLua>::PropertyType properties[];
 
-		SpringComponent_BindLua(wiScene::SpringComponent* component) :component(component) {}
+		SpringComponent_BindLua(wi::scene::SpringComponent* component) :component(component) {}
 		SpringComponent_BindLua(lua_State* L);
 		~SpringComponent_BindLua();
 

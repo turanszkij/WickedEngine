@@ -8,7 +8,7 @@ static const int SYSTEM_EVENT_THREAD_SAFE_POINT = -1;
 static const int SYSTEM_EVENT_RELOAD_SHADERS = -2;
 static const int SYSTEM_EVENT_SET_VSYNC = -3;
 
-namespace wiEvent
+namespace wi::event
 {
 	struct Handle
 	{
@@ -24,7 +24,7 @@ namespace wiEvent
 	// helper event wrappers can be placed below:
 	inline void SetVSync(bool enabled)
 	{
-		wiEvent::FireEvent(SYSTEM_EVENT_SET_VSYNC, enabled ? 1ull : 0ull);
+		wi::event::FireEvent(SYSTEM_EVENT_SET_VSYNC, enabled ? 1ull : 0ull);
 	}
 }
 

@@ -9,7 +9,7 @@
 
 #pragma comment(lib,"Hid.lib")
 
-namespace wiRawInput
+namespace wi::input::rawinput
 {
 
 	constexpr size_t Align(size_t value, size_t alignment)
@@ -79,15 +79,15 @@ namespace wiRawInput
 	AlignedLinearAllocator allocator;
 	wi::vector<uint8_t*> input_messages;
 
-	wiInput::KeyboardState keyboard;
-	wiInput::MouseState mouse;
+	wi::input::KeyboardState keyboard;
+	wi::input::MouseState mouse;
 
 	struct Internal_ControllerState
 	{
 		HANDLE handle = NULL;
 		bool is_xinput = false;
 		std::wstring name;
-		wiInput::ControllerState state;
+		wi::input::ControllerState state;
 	};
 	wi::vector<Internal_ControllerState> controllers;
 
@@ -299,12 +299,12 @@ namespace wiRawInput
 				);
 				assert(status == HIDP_STATUS_SUCCESS);
 
-				wiInput::ControllerState& controller = internal_controller.state;
+				wi::input::ControllerState& controller = internal_controller.state;
 
 				for (ULONG i = 0; i < numberOfButtons; i++)
 				{
 					int button = usage[i] - pButtonCaps->Range.UsageMin;
-					controller.buttons |= 1 << (button + wiInput::GAMEPAD_BUTTON_1 - wiInput::GAMEPAD_RANGE_START - 1);
+					controller.buttons |= 1 << (button + wi::input::GAMEPAD_BUTTON_1 - wi::input::GAMEPAD_RANGE_START - 1);
 				}
 
 				for (USHORT i = 0; i < Caps.NumberInputValueCaps; i++)
@@ -356,7 +356,7 @@ namespace wiRawInput
 						case POV_UP:
 						case POV_UPRIGHT:
 						case POV_LEFTUP:
-							controller.buttons |= 1 << (wiInput::GAMEPAD_BUTTON_UP - wiInput::GAMEPAD_RANGE_START - 1);
+							controller.buttons |= 1 << (wi::input::GAMEPAD_BUTTON_UP - wi::input::GAMEPAD_RANGE_START - 1);
 							break;
 						}
 						switch (pov)
@@ -364,7 +364,7 @@ namespace wiRawInput
 						case POV_RIGHT:
 						case POV_UPRIGHT:
 						case POV_RIGHTDOWN:
-							controller.buttons |= 1 << (wiInput::GAMEPAD_BUTTON_RIGHT - wiInput::GAMEPAD_RANGE_START - 1);
+							controller.buttons |= 1 << (wi::input::GAMEPAD_BUTTON_RIGHT - wi::input::GAMEPAD_RANGE_START - 1);
 							break;
 						}
 						switch (pov)
@@ -372,7 +372,7 @@ namespace wiRawInput
 						case POV_DOWN:
 						case POV_RIGHTDOWN:
 						case POV_DOWNLEFT:
-							controller.buttons |= 1 << (wiInput::GAMEPAD_BUTTON_DOWN - wiInput::GAMEPAD_RANGE_START - 1);
+							controller.buttons |= 1 << (wi::input::GAMEPAD_BUTTON_DOWN - wi::input::GAMEPAD_RANGE_START - 1);
 							break;
 						}
 						switch (pov)
@@ -380,7 +380,7 @@ namespace wiRawInput
 						case POV_LEFT:
 						case POV_DOWNLEFT:
 						case POV_LEFTUP:
-							controller.buttons |= 1 << (wiInput::GAMEPAD_BUTTON_LEFT - wiInput::GAMEPAD_RANGE_START - 1);
+							controller.buttons |= 1 << (wi::input::GAMEPAD_BUTTON_LEFT - wi::input::GAMEPAD_RANGE_START - 1);
 							break;
 						}
 					}
@@ -396,11 +396,11 @@ namespace wiRawInput
 
 	void Update()
 	{
-		keyboard = wiInput::KeyboardState();
-		mouse = wiInput::MouseState();
+		keyboard = wi::input::KeyboardState();
+		mouse = wi::input::MouseState();
 		for (auto& internal_controller : controllers)
 		{
-			internal_controller.state = wiInput::ControllerState();
+			internal_controller.state = wi::input::ControllerState();
 		}
 
 		// Enumerate devices to detect lost devices:
@@ -508,12 +508,12 @@ namespace wiRawInput
 		}
 	}
 
-	void GetKeyboardState(wiInput::KeyboardState* state)
+	void GetKeyboardState(wi::input::KeyboardState* state)
 	{
 		*state = keyboard;
 	}
 
-	void GetMouseState(wiInput::MouseState* state)
+	void GetMouseState(wi::input::MouseState* state)
 	{
 		*state = mouse;
 	}
@@ -522,7 +522,7 @@ namespace wiRawInput
 	{
 		return (int)controllers.size();
 	}
-	bool GetControllerState(wiInput::ControllerState* state, int index)
+	bool GetControllerState(wi::input::ControllerState* state, int index)
 	{
 		if (index < (int)controllers.size() && controllers[index].handle && !controllers[index].is_xinput)
 		{
@@ -534,7 +534,7 @@ namespace wiRawInput
 		}
 		return false;
 	}
-	void SetControllerFeedback(const wiInput::ControllerFeedback& data, int index)
+	void SetControllerFeedback(const wi::input::ControllerFeedback& data, int index)
 	{
 		if (index < (int)controllers.size() && controllers[index].handle && !controllers[index].is_xinput)
 		{
@@ -564,14 +564,14 @@ namespace wiRawInput
 }
 
 #else
-namespace wiRawInput
+namespace wi::input::rawinput
 {
 	void Initialize() {}
 	void Update() {}
-	void GetKeyboardState(wiInput::KeyboardState* state) {}
-	void GetMouseState(wiInput::MouseState* state) {}
+	void GetKeyboardState(wi::input::KeyboardState* state) {}
+	void GetMouseState(wi::input::MouseState* state) {}
 	int GetMaxControllerCount() { return 0; }
-	bool GetControllerState(wiInput::ControllerState* state, int index) { return false; }
-	void SetControllerFeedback(const wiInput::ControllerFeedback& data, int index) {}
+	bool GetControllerState(wi::input::ControllerState* state, int index) { return false; }
+	void SetControllerFeedback(const wi::input::ControllerFeedback& data, int index) {}
 }
 #endif // _WIN32

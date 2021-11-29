@@ -5,7 +5,7 @@
 #include <list>
 #include <mutex>
 
-namespace wiEvent
+namespace wi::event
 {
 	struct EventManager
 	{

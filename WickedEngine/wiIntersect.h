@@ -10,7 +10,6 @@ struct SPHERE;
 struct RAY;
 struct AABB;
 
-
 struct AABB 
 {
 	enum INTERSECTION_TYPE 
@@ -65,7 +64,7 @@ struct AABB
 		return XMFLOAT3(0, 0, 0);
 	}
 
-	void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
+	void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 };
 struct SPHERE 
 {
@@ -140,7 +139,6 @@ struct Frustum
 	const XMFLOAT4& getBottomPlane() const;
 };
 
-
 class Hitbox2D
 {
 public:
@@ -153,5 +151,3 @@ public:
 
 	bool intersects(const Hitbox2D& b) const;
 };
-
-

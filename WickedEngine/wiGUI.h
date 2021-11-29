@@ -5,25 +5,27 @@
 #include "wiWidget.h"
 #include "wiVector.h"
 
-class wiGUI
+namespace wi
 {
-private:
-	wi::vector<wiWidget*> widgets;
-	bool focus = false;
-	bool visible = true;
-public:
+	class GUI
+	{
+	private:
+		wi::vector<wi::widget::Widget*> widgets;
+		bool focus = false;
+		bool visible = true;
+	public:
 
-	void Update(const wiCanvas& canvas, float dt);
-	void Render(const wiCanvas& canvas, wiGraphics::CommandList cmd) const;
+		void Update(const wi::Canvas& canvas, float dt);
+		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const;
 
-	void AddWidget(wiWidget* widget);
-	void RemoveWidget(wiWidget* widget);
-	wiWidget* GetWidget(const std::string& name);
+		void AddWidget(wi::widget::Widget* widget);
+		void RemoveWidget(wi::widget::Widget* widget);
+		wi::widget::Widget* GetWidget(const std::string& name);
 
-	// returns true if any gui element has the focus
-	bool HasFocus();
+		// returns true if any gui element has the focus
+		bool HasFocus();
 
-	void SetVisible(bool value) { visible = value; }
-	bool IsVisible() { return visible; }
-};
-
+		void SetVisible(bool value) { visible = value; }
+		bool IsVisible() { return visible; }
+	};
+}

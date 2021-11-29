@@ -13,9 +13,9 @@
 #include <fstream>
 #include <thread>
 
-using namespace wiECS;
-using namespace wiGraphics;
-using namespace wiScene;
+using namespace wi::ecs;
+using namespace wi::graphics;
+using namespace wi::scene;
 
 Shader imguiVS;
 Shader imguiPS;
@@ -57,7 +57,7 @@ bool ImGui_Impl_CreateDeviceObjects()
 	textureData.row_pitch = width * GetFormatStride(textureDesc.format);
 	textureData.slice_pitch = textureData.row_pitch * height;
 
-	wiGraphics::GetDevice()->CreateTexture(&textureDesc, &textureData, &fontTexture);
+	wi::graphics::GetDevice()->CreateTexture(&textureDesc, &textureData, &fontTexture);
 
 	// Store our identifier
 	io.Fonts->SetTexID((ImTextureID)&fontTexture);
@@ -74,11 +74,11 @@ bool ImGui_Impl_CreateDeviceObjects()
 	desc.vs = &imguiVS;
 	desc.ps = &imguiPS;
 	desc.il = &imguiInputLayout;
-	desc.dss = wiRenderer::GetDepthStencilState(DSSTYPE_DEPTHREAD);
-	desc.rs = wiRenderer::GetRasterizerState(RSTYPE_DOUBLESIDED);
-	desc.bs = wiRenderer::GetBlendState(BSTYPE_TRANSPARENT);
+	desc.dss = wi::renderer::GetDepthStencilState(DSSTYPE_DEPTHREAD);
+	desc.rs = wi::renderer::GetRasterizerState(RSTYPE_DOUBLESIDED);
+	desc.bs = wi::renderer::GetBlendState(BSTYPE_TRANSPARENT);
 	desc.pt = PrimitiveTopology::TRIANGLELIST;
-	wiGraphics::GetDevice()->CreatePipelineState(&desc, &imguiPSO);
+	wi::graphics::GetDevice()->CreatePipelineState(&desc, &imguiPSO);
 
 	return true;
 }
@@ -99,15 +99,15 @@ void Example_ImGui::Initialize()
 {
 	// Compile shaders
 	{
-		wiShaderCompiler::Initialize();
+		wi::shadercompiler::Initialize();
 
-		auto shaderPath = wiRenderer::GetShaderSourcePath();
-		wiRenderer::SetShaderSourcePath(wiHelper::GetCurrentPath() + "/");
+		auto shaderPath = wi::renderer::GetShaderSourcePath();
+		wi::renderer::SetShaderSourcePath(wi::helper::GetCurrentPath() + "/");
 
-		wiRenderer::LoadShader(ShaderStage::VS, imguiVS, "ImGuiVS.cso");
-		wiRenderer::LoadShader(ShaderStage::PS, imguiPS, "ImGuiPS.cso");
+		wi::renderer::LoadShader(ShaderStage::VS, imguiVS, "ImGuiVS.cso");
+		wi::renderer::LoadShader(ShaderStage::PS, imguiPS, "ImGuiPS.cso");
 
-		wiRenderer::SetShaderSourcePath(shaderPath);
+		wi::renderer::SetShaderSourcePath(shaderPath);
 	}
 
 	// Setup Dear ImGui context
@@ -149,7 +149,7 @@ void Example_ImGui::Initialize()
 	ActivatePath(&renderer);
 }
 
-void Example_ImGui::Compose(wiGraphics::CommandList cmd)
+void Example_ImGui::Compose(wi::graphics::CommandList cmd)
 {
 	MainComponent::Compose(cmd);
 
@@ -171,7 +171,7 @@ void Example_ImGui::Compose(wiGraphics::CommandList cmd)
 
 	auto* bd = ImGui_Impl_GetBackendData();
 
-	GraphicsDevice* device = wiGraphics::GetDevice();
+	GraphicsDevice* device = wi::graphics::GetDevice();
 
 	// Get memory for vertex and index buffers
 	const uint64_t vbSize = sizeof(ImDrawVert) * drawData->TotalVtxCount;
@@ -326,25 +326,25 @@ void Example_ImGuiRenderer::Load()
 	GetGUI().AddWidget(&label);
 
 	// Reset all state that tests might have modified:
-	wiEvent::SetVSync(true);
-	wiRenderer::SetToDrawGridHelper(false);
-	wiRenderer::SetTemporalAAEnabled(true);
-	wiRenderer::ClearWorld(wiScene::GetScene());
-	wiScene::GetScene().weather = WeatherComponent();
+	wi::event::SetVSync(true);
+	wi::renderer::SetToDrawGridHelper(false);
+	wi::renderer::SetTemporalAAEnabled(true);
+	wi::renderer::ClearWorld(wi::scene::GetScene());
+	wi::scene::GetScene().weather = WeatherComponent();
 	this->ClearSprites();
 	this->ClearFonts();
-	if (wiLua::GetLuaState() != nullptr) {
-		wiLua::KillProcesses();
+	if (wi::lua::GetLuaState() != nullptr) {
+		wi::lua::KillProcesses();
 	}
 
 	// Reset camera position:
 	TransformComponent transform;
 	transform.Translate(XMFLOAT3(0, 2.f, -4.5f));
 	transform.UpdateTransform();
-	wiScene::GetCamera().TransformCamera(transform);
+	wi::scene::GetCamera().TransformCamera(transform);
 
 	// Load model.
-	wiScene::LoadModel("../Content/models/teapot.wiscene");
+	wi::scene::LoadModel("../Content/models/teapot.wiscene");
 
 	RenderPath3D::Load();
 }
@@ -408,23 +408,23 @@ void Example_ImGuiRenderer::Update(float dt)
 		ImGui::End();
 	}
 
-	Scene& scene = wiScene::GetScene();
+	Scene& scene = wi::scene::GetScene();
 	// teapot_material Base Base_mesh Top Top_mesh editorLight
-	wiECS::Entity e_teapot_base = scene.Entity_FindByName("Base");
-	wiECS::Entity e_teapot_top = scene.Entity_FindByName("Top");
-	assert(e_teapot_base != wiECS::INVALID_ENTITY);
-	assert(e_teapot_top != wiECS::INVALID_ENTITY);
+	wi::ecs::Entity e_teapot_base = scene.Entity_FindByName("Base");
+	wi::ecs::Entity e_teapot_top = scene.Entity_FindByName("Top");
+	assert(e_teapot_base != wi::ecs::INVALID_ENTITY);
+	assert(e_teapot_top != wi::ecs::INVALID_ENTITY);
 	TransformComponent* transform_base = scene.transforms.GetComponent(e_teapot_base);
 	TransformComponent* transform_top = scene.transforms.GetComponent(e_teapot_top);
 	assert(transform_base != nullptr);
 	assert(transform_top != nullptr);
 	float rotation = dt;
-	if (wiInput::Down(wiInput::KEYBOARD_BUTTON_LEFT))
+	if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LEFT))
 	{
 		transform_base->Rotate(XMVectorSet(0, rotation, 0, 1));
 		transform_top->Rotate(XMVectorSet(0, rotation, 0, 1));
 	}
-	else if (wiInput::Down(wiInput::KEYBOARD_BUTTON_RIGHT))
+	else if (wi::input::Down(wi::input::KEYBOARD_BUTTON_RIGHT))
 	{
 		transform_base->Rotate(XMVectorSet(0, -rotation, 0, 1));
 		transform_top->Rotate(XMVectorSet(0, -rotation, 0, 1));

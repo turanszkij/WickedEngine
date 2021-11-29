@@ -5,10 +5,10 @@
 
 bool LoadingScreen::isActive()
 {
-	return wiJobSystem::IsBusy(ctx);
+	return wi::jobsystem::IsBusy(ctx);
 }
 
-void LoadingScreen::addLoadingFunction(std::function<void(wiJobArgs)> loadingFunction)
+void LoadingScreen::addLoadingFunction(std::function<void(wi::jobsystem::JobArgs)> loadingFunction)
 {
 	if (loadingFunction != nullptr)
 	{
@@ -16,9 +16,9 @@ void LoadingScreen::addLoadingFunction(std::function<void(wiJobArgs)> loadingFun
 	}
 }
 
-void LoadingScreen::addLoadingComponent(RenderPath* component, MainComponent* main, float fadeSeconds, wiColor fadeColor)
+void LoadingScreen::addLoadingComponent(RenderPath* component, MainComponent* main, float fadeSeconds, wi::Color fadeColor)
 {
-	addLoadingFunction([=](wiJobArgs args) {
+	addLoadingFunction([=](wi::jobsystem::JobArgs args) {
 		component->Load();
 	});
 	onFinished([=] {
@@ -36,10 +36,10 @@ void LoadingScreen::Start()
 {
 	for (auto& x : tasks)
 	{
-		wiJobSystem::Execute(ctx, x);
+		wi::jobsystem::Execute(ctx, x);
 	}
 	std::thread([this]() {
-		wiJobSystem::Wait(ctx);
+		wi::jobsystem::Wait(ctx);
 		finish();
 	}).detach();
 

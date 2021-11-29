@@ -7,7 +7,7 @@
 #include <string>
 #include <limits>
 
-namespace wiGraphics
+namespace wi::graphics
 {
 	struct Shader;
 	struct GPUResource;
@@ -1183,26 +1183,26 @@ namespace wiGraphics
 }
 
 template<>
-struct enable_bitmask_operators<wiGraphics::ColorWrite> {
+struct enable_bitmask_operators<wi::graphics::ColorWrite> {
 	static const bool enable = true;
 };
 template<>
-struct enable_bitmask_operators<wiGraphics::BindFlag> {
+struct enable_bitmask_operators<wi::graphics::BindFlag> {
 	static const bool enable = true;
 };
 template<>
-struct enable_bitmask_operators<wiGraphics::ResourceMiscFlag> {
+struct enable_bitmask_operators<wi::graphics::ResourceMiscFlag> {
 	static const bool enable = true;
 };
 template<>
-struct enable_bitmask_operators<wiGraphics::GraphicsDeviceCapability> {
+struct enable_bitmask_operators<wi::graphics::GraphicsDeviceCapability> {
 	static const bool enable = true;
 };
 template<>
-struct enable_bitmask_operators<wiGraphics::ResourceState> {
+struct enable_bitmask_operators<wi::graphics::ResourceState> {
 	static const bool enable = true;
 };
 template<>
-struct enable_bitmask_operators<wiGraphics::RenderPassDesc::Flags> {
+struct enable_bitmask_operators<wi::graphics::RenderPassDesc::Flags> {
 	static const bool enable = true;
 };

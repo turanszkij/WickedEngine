@@ -4,7 +4,7 @@
 
 #include <string>
 
-namespace wiShaderCompiler
+namespace wi::shadercompiler
 {
 	void Initialize();
 
@@ -16,11 +16,11 @@ namespace wiShaderCompiler
 	struct CompilerInput
 	{
 		uint64_t flags = FLAG_NONE;
-		wiGraphics::ShaderFormat format = wiGraphics::ShaderFormat::NONE;
-		wiGraphics::ShaderStage stage = wiGraphics::ShaderStage::Count;
+		wi::graphics::ShaderFormat format = wi::graphics::ShaderFormat::NONE;
+		wi::graphics::ShaderStage stage = wi::graphics::ShaderStage::Count;
 		// if the shader relies on a higher shader model feature, it must be declared here.
 		//	But the compiler can also choose a higher one internally, if needed
-		wiGraphics::ShaderModel minshadermodel = wiGraphics::ShaderModel::SM_5_0;
+		wi::graphics::ShaderModel minshadermodel = wi::graphics::ShaderModel::SM_5_0;
 		std::string shadersourcefilename;
 		std::string entrypoint = "main";
 		wi::vector<std::string> include_directories;

@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <cassert>
 
-namespace wiAllocator
+namespace wi::allocator
 {
 	// Simple and efficient allocator that reserves a linear memory buffer and can:
 	//	- allocate bottom-up until there is space
@@ -107,7 +107,7 @@ namespace wiAllocator
 		T data[capacity];
 		size_t head = 0;
 		size_t tail = 0;
-		wiSpinLock lock;
+		wi::spinlock lock;
 	};
 
 }

@@ -14,16 +14,16 @@ private:
 public:
 	void Create();
 
-	void Update(const wiCanvas& canvas);
-	void Draw(const wiScene::CameraComponent& camera, wiGraphics::CommandList cmd) const;
+	void Update(const wi::Canvas& canvas);
+	void Draw(const wi::scene::CameraComponent& camera, wi::graphics::CommandList cmd) const;
 
 	// Attach selection to translator temporarily
 	void PreTranslate();
 	// Apply translator to selection
 	void PostTranslate();
 
-	wiScene::TransformComponent transform;
-	wi::vector<wiScene::PickResult> selected;
+	wi::scene::TransformComponent transform;
+	wi::vector<wi::scene::PickResult> selected;
 
 	bool enabled = false;
 

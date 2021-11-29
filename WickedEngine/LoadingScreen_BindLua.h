@@ -4,27 +4,31 @@
 #include "LoadingScreen.h"
 #include "RenderPath2D_BindLua.h"
 
-class LoadingScreen_BindLua : public RenderPath2D_BindLua
+namespace wi::lua
 {
-private:
-	LoadingScreen loadingscreen;
-public:
-	static const char className[];
-	static Luna<LoadingScreen_BindLua>::FunctionType methods[];
-	static Luna<LoadingScreen_BindLua>::PropertyType properties[];
 
-	LoadingScreen_BindLua(LoadingScreen* component)
+	class LoadingScreen_BindLua : public RenderPath2D_BindLua
 	{
-		this->component = component;
-	}
-	LoadingScreen_BindLua(lua_State* L)
-	{
-		this->component = &loadingscreen;
-	}
+	private:
+		LoadingScreen loadingscreen;
+	public:
+		static const char className[];
+		static Luna<LoadingScreen_BindLua>::FunctionType methods[];
+		static Luna<LoadingScreen_BindLua>::PropertyType properties[];
 
-	int AddLoadingTask(lua_State* L);
-	int OnFinished(lua_State* L);
+		LoadingScreen_BindLua(LoadingScreen* component)
+		{
+			this->component = component;
+		}
+		LoadingScreen_BindLua(lua_State* L)
+		{
+			this->component = &loadingscreen;
+		}
 
-	static void Bind();
-};
+		int AddLoadingTask(lua_State* L);
+		int OnFinished(lua_State* L);
 
+		static void Bind();
+	};
+
+}

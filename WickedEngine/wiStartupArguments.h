@@ -2,7 +2,7 @@
 
 #include <string>
 
-namespace wiStartupArguments
+namespace wi::startup_arguments
 {
 	void Parse(const wchar_t* args);
     void Parse(int argc, char *argv[]);

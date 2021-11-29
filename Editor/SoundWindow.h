@@ -3,22 +3,22 @@
 
 class EditorComponent;
 
-class SoundWindow : public wiWindow
+class SoundWindow : public wi::widget::Window
 {
 public:
 	void Create(EditorComponent* editor);
 
-	wiECS::Entity entity = wiECS::INVALID_ENTITY;
-	void SetEntity(wiECS::Entity entity);
+	wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
+	void SetEntity(wi::ecs::Entity entity);
 
-	wiComboBox reverbComboBox;
-	wiButton addButton;
-	wiLabel filenameLabel;
-	wiTextInputField nameField;
-	wiButton playstopButton;
-	wiCheckBox loopedCheckbox;
-	wiCheckBox reverbCheckbox;
-	wiCheckBox disable3dCheckbox;
-	wiSlider volumeSlider;
-	wiComboBox submixComboBox;
+	wi::widget::ComboBox reverbComboBox;
+	wi::widget::Button addButton;
+	wi::widget::Label filenameLabel;
+	wi::widget::TextInputField nameField;
+	wi::widget::Button playstopButton;
+	wi::widget::CheckBox loopedCheckbox;
+	wi::widget::CheckBox reverbCheckbox;
+	wi::widget::CheckBox disable3dCheckbox;
+	wi::widget::Slider volumeSlider;
+	wi::widget::ComboBox submixComboBox;
 };

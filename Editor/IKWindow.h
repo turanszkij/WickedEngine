@@ -3,18 +3,18 @@
 
 class EditorComponent;
 
-class IKWindow : public wiWindow
+class IKWindow : public wi::widget::Window
 {
 public:
 	void Create(EditorComponent* editor);
 
-	wiECS::Entity entity;
-	void SetEntity(wiECS::Entity entity);
+	wi::ecs::Entity entity;
+	void SetEntity(wi::ecs::Entity entity);
 
-	wiButton createButton;
-	wiComboBox targetCombo;
-	wiCheckBox disabledCheckBox;
-	wiSlider chainLengthSlider;
-	wiSlider iterationCountSlider;
+	wi::widget::Button createButton;
+	wi::widget::ComboBox targetCombo;
+	wi::widget::CheckBox disabledCheckBox;
+	wi::widget::Slider chainLengthSlider;
+	wi::widget::Slider iterationCountSlider;
 };
 

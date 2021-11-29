@@ -31,15 +31,15 @@ bool RenderPath3D_PathTracing::isDenoiserAvailable() const { return false; }
 #endif
 
 
-using namespace wiGraphics;
-using namespace wiScene;
+using namespace wi::graphics;
+using namespace wi::scene;
 
 
 void RenderPath3D_PathTracing::ResizeBuffers()
 {
 	RenderPath2D::ResizeBuffers(); // we don't need to use any buffers from RenderPath3D, so skip those
 
-	GraphicsDevice* device = wiGraphics::GetDevice();
+	GraphicsDevice* device = wi::graphics::GetDevice();
 
 	XMUINT2 internalResolution = GetInternalResolution();
 
@@ -92,8 +92,8 @@ void RenderPath3D_PathTracing::ResizeBuffers()
 		device->CreateRenderPass(&desc, &renderpass_debugbvh);
 	}
 
-	wiRenderer::CreateLuminanceResources(luminanceResources, internalResolution);
-	wiRenderer::CreateBloomResources(bloomResources, internalResolution);
+	wi::renderer::CreateLuminanceResources(luminanceResources, internalResolution);
+	wi::renderer::CreateBloomResources(bloomResources, internalResolution);
 
 	// also reset accumulation buffer state:
 	sam = -1;
@@ -155,24 +155,24 @@ void RenderPath3D_PathTracing::Update(float dt)
 #ifdef OPEN_IMAGE_DENOISE
 	if (sam == target)
 	{
-		if (!denoiserResult.IsValid() && !wiJobSystem::IsBusy(denoiserContext))
+		if (!denoiserResult.IsValid() && !wi::jobsystem::IsBusy(denoiserContext))
 		{
-			//wiHelper::saveTextureToFile(denoiserAlbedo, "C:/PROJECTS/WickedEngine/Editor/_albedo.png");
-			//wiHelper::saveTextureToFile(denoiserNormal, "C:/PROJECTS/WickedEngine/Editor/_normal.png");
+			//wi::helper::saveTextureToFile(denoiserAlbedo, "C:/PROJECTS/WickedEngine/Editor/_albedo.png");
+			//wi::helper::saveTextureToFile(denoiserNormal, "C:/PROJECTS/WickedEngine/Editor/_normal.png");
 
 			texturedata_src.clear();
 			texturedata_dst.clear();
 			texturedata_albedo.clear();
 			texturedata_normal.clear();
 
-			if (wiHelper::saveTextureToMemory(traceResult, texturedata_src))
+			if (wi::helper::saveTextureToMemory(traceResult, texturedata_src))
 			{
-				wiHelper::saveTextureToMemory(denoiserAlbedo, texturedata_albedo);
-				wiHelper::saveTextureToMemory(denoiserNormal, texturedata_normal);
+				wi::helper::saveTextureToMemory(denoiserAlbedo, texturedata_albedo);
+				wi::helper::saveTextureToMemory(denoiserNormal, texturedata_normal);
 
 				texturedata_dst.resize(texturedata_src.size());
 
-				wiJobSystem::Execute(denoiserContext, [&](wiJobArgs args) {
+				wi::jobsystem::Execute(denoiserContext, [&](wi::jobsystem::JobArgs args) {
 
 					size_t width = (size_t)traceResult.desc.width;
 					size_t height = (size_t)traceResult.desc.height;
@@ -215,11 +215,11 @@ void RenderPath3D_PathTracing::Update(float dt)
 						auto error = device.getError(errorMessage);
 						if (error != oidn::Error::None && error != oidn::Error::Cancelled)
 						{
-							wiBackLog::post(std::string("[OpenImageDenoise error] ") + errorMessage);
+							wi::backlog::post(std::string("[OpenImageDenoise error] ") + errorMessage);
 						}
 					}
 
-					GraphicsDevice* device = wiGraphics::GetDevice();
+					GraphicsDevice* device = wi::graphics::GetDevice();
 
 					TextureDesc desc;
 					desc.width = (uint32_t)width;
@@ -246,45 +246,45 @@ void RenderPath3D_PathTracing::Update(float dt)
 
 void RenderPath3D_PathTracing::Render() const
 {
-	GraphicsDevice* device = wiGraphics::GetDevice();
-	wiJobSystem::context ctx;
+	GraphicsDevice* device = wi::graphics::GetDevice();
+	wi::jobsystem::context ctx;
 
 	if (sam < target)
 	{
 		// Setup:
 		CommandList cmd = device->BeginCommandList();
-		wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
+		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
 
-			wiRenderer::BindCameraCB(
+			wi::renderer::BindCameraCB(
 				*camera,
 				camera_previous,
 				camera_reflection,
 				cmd
 			);
-			wiRenderer::UpdateRenderData(visibility_main, frameCB, cmd);
-			wiRenderer::UpdateRenderDataAsync(visibility_main, frameCB, cmd);
+			wi::renderer::UpdateRenderData(visibility_main, frameCB, cmd);
+			wi::renderer::UpdateRenderDataAsync(visibility_main, frameCB, cmd);
 
 			if (scene->IsAccelerationStructureUpdateRequested())
 			{
-				wiRenderer::UpdateRaytracingAccelerationStructures(*scene, cmd);
+				wi::renderer::UpdateRaytracingAccelerationStructures(*scene, cmd);
 			}
 			});
 
 		// Main scene:
 		cmd = device->BeginCommandList();
-		wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
+		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
 
-			GraphicsDevice* device = wiGraphics::GetDevice();
+			GraphicsDevice* device = wi::graphics::GetDevice();
 
-			wiRenderer::BindCameraCB(
+			wi::renderer::BindCameraCB(
 				*camera,
 				*camera,
 				*camera,
 				cmd
 			);
-			wiRenderer::BindCommonResources(cmd);
+			wi::renderer::BindCommonResources(cmd);
 
-			if (wiRenderer::GetRaytraceDebugBVHVisualizerEnabled())
+			if (wi::renderer::GetRaytraceDebugBVHVisualizerEnabled())
 			{
 				device->RenderPassBegin(&renderpass_debugbvh, cmd);
 
@@ -293,15 +293,15 @@ void RenderPath3D_PathTracing::Render() const
 				vp.height = (float)traceResult.GetDesc().height;
 				device->BindViewports(1, &vp, cmd);
 
-				wiRenderer::RayTraceSceneBVH(*scene, cmd);
+				wi::renderer::RayTraceSceneBVH(*scene, cmd);
 
 				device->RenderPassEnd(cmd);
 			}
 			else
 			{
-				auto range = wiProfiler::BeginRangeGPU("Traced Scene", cmd);
+				auto range = wi::profiler::BeginRangeGPU("Traced Scene", cmd);
 
-				wiRenderer::RayTraceScene(
+				wi::renderer::RayTraceScene(
 					*scene,
 					traceResult,
 					sam,
@@ -311,7 +311,7 @@ void RenderPath3D_PathTracing::Render() const
 				);
 
 
-				wiProfiler::EndRange(range); // Traced Scene
+				wi::profiler::EndRange(range); // Traced Scene
 			}
 
 			});
@@ -319,23 +319,23 @@ void RenderPath3D_PathTracing::Render() const
 
 	// Tonemap etc:
 	CommandList cmd = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
+	wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
 
-		GraphicsDevice* device = wiGraphics::GetDevice();
+		GraphicsDevice* device = wi::graphics::GetDevice();
 
-		wiRenderer::BindCameraCB(
+		wi::renderer::BindCameraCB(
 			*camera,
 			*camera,
 			*camera,
 			cmd
 		);
-		wiRenderer::BindCommonResources(cmd);
+		wi::renderer::BindCommonResources(cmd);
 
-		Texture srcTex = denoiserResult.IsValid() && !wiJobSystem::IsBusy(denoiserContext) ? denoiserResult : traceResult;
+		Texture srcTex = denoiserResult.IsValid() && !wi::jobsystem::IsBusy(denoiserContext) ? denoiserResult : traceResult;
 
 		if (getEyeAdaptionEnabled())
 		{
-			wiRenderer::ComputeLuminance(
+			wi::renderer::ComputeLuminance(
 				luminanceResources,
 				srcTex,
 				cmd,
@@ -345,7 +345,7 @@ void RenderPath3D_PathTracing::Render() const
 		}
 		if (getBloomEnabled())
 		{
-			wiRenderer::ComputeBloom(
+			wi::renderer::ComputeBloom(
 				bloomResources,
 				srcTex,
 				cmd,
@@ -355,7 +355,7 @@ void RenderPath3D_PathTracing::Render() const
 			);
 		}
 
-		wiRenderer::Postprocess_Tonemap(
+		wi::renderer::Postprocess_Tonemap(
 			srcTex,
 			rtPostprocess,
 			cmd,
@@ -371,34 +371,34 @@ void RenderPath3D_PathTracing::Render() const
 
 		// GUI Background blurring:
 		{
-			auto range = wiProfiler::BeginRangeGPU("GUI Background Blur", cmd);
+			auto range = wi::profiler::BeginRangeGPU("GUI Background Blur", cmd);
 			device->EventBegin("GUI Background Blur", cmd);
-			wiRenderer::Postprocess_Downsample4x(rtPostprocess, rtGUIBlurredBackground[0], cmd);
-			wiRenderer::Postprocess_Downsample4x(rtGUIBlurredBackground[0], rtGUIBlurredBackground[2], cmd);
-			wiRenderer::Postprocess_Blur_Gaussian(rtGUIBlurredBackground[2], rtGUIBlurredBackground[1], rtGUIBlurredBackground[2], cmd, -1, -1, true);
+			wi::renderer::Postprocess_Downsample4x(rtPostprocess, rtGUIBlurredBackground[0], cmd);
+			wi::renderer::Postprocess_Downsample4x(rtGUIBlurredBackground[0], rtGUIBlurredBackground[2], cmd);
+			wi::renderer::Postprocess_Blur_Gaussian(rtGUIBlurredBackground[2], rtGUIBlurredBackground[1], rtGUIBlurredBackground[2], cmd, -1, -1, true);
 			device->EventEnd(cmd);
-			wiProfiler::EndRange(range);
+			wi::profiler::EndRange(range);
 		}
 		});
 
 	RenderPath2D::Render();
 
-	wiJobSystem::Wait(ctx);
+	wi::jobsystem::Wait(ctx);
 }
 
 void RenderPath3D_PathTracing::Compose(CommandList cmd) const
 {
-	GraphicsDevice* device = wiGraphics::GetDevice();
+	GraphicsDevice* device = wi::graphics::GetDevice();
 
 	device->EventBegin("RenderPath3D_PathTracing::Compose", cmd);
 
-	wiRenderer::BindCommonResources(cmd);
+	wi::renderer::BindCommonResources(cmd);
 
-	wiImageParams fx;
+	wi::image::Params fx;
 	fx.enableFullScreen();
 	fx.blendFlag = BLENDMODE_OPAQUE;
-	fx.quality = QUALITY_LINEAR;
-	wiImage::Draw(&rtPostprocess, fx, cmd);
+	fx.quality = wi::image::QUALITY_LINEAR;
+	wi::image::Draw(&rtPostprocess, fx, cmd);
 
 	device->EventEnd(cmd);
 

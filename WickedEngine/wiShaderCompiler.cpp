@@ -29,11 +29,11 @@
 #include <d3dcompiler.h>
 #endif // SHADERCOMPILER_ENABLED_D3DCOMPILER
 
-using wiGraphics::ShaderFormat;
-using wiGraphics::ShaderStage;
-using wiGraphics::ShaderModel;
+using wi::graphics::ShaderFormat;
+using wi::graphics::ShaderStage;
+using wi::graphics::ShaderModel;
 
-namespace wiShaderCompiler
+namespace wi::shadercompiler
 {
 #ifdef SHADERCOMPILER_ENABLED_DXCOMPILER
 	CComPtr<IDxcUtils> dxcUtils;
@@ -48,7 +48,7 @@ namespace wiShaderCompiler
 		}
 
 		wi::vector<uint8_t> shadersourcedata;
-		if (!wiHelper::FileRead(input.shadersourcefilename, shadersourcedata))
+		if (!wi::helper::FileRead(input.shadersourcefilename, shadersourcedata))
 		{
 			return;
 		}
@@ -323,7 +323,7 @@ namespace wiShaderCompiler
 		for (auto& x : input.defines)
 		{
 			std::wstring& wstr = wstrings.emplace_back();
-			wiHelper::StringConvert(x, wstr);
+			wi::helper::StringConvert(x, wstr);
 			args.push_back(L"-D");
 			args.push_back(wstr.c_str());
 		}
@@ -331,20 +331,20 @@ namespace wiShaderCompiler
 		for (auto& x : input.include_directories)
 		{
 			std::wstring& wstr = wstrings.emplace_back();
-			wiHelper::StringConvert(x, wstr);
+			wi::helper::StringConvert(x, wstr);
 			args.push_back(L"-I");
 			args.push_back(wstr.c_str());
 		}
 
 		// Entry point parameter:
 		std::wstring wentry;
-		wiHelper::StringConvert(input.entrypoint, wentry);
+		wi::helper::StringConvert(input.entrypoint, wentry);
 		args.push_back(L"-E");
 		args.push_back(wentry.c_str());
 
 		// Add source file name as last parameter. This will be displayed in error messages
 		std::wstring wsource;
-		wiHelper::StringConvert(wiHelper::GetFileNameFromPath(input.shadersourcefilename), wsource);
+		wi::helper::StringConvert(wi::helper::GetFileNameFromPath(input.shadersourcefilename), wsource);
 		args.push_back(wsource.c_str());
 
 		DxcBuffer Source;
@@ -366,7 +366,7 @@ namespace wiShaderCompiler
 				if (SUCCEEDED(hr))
 				{
 					std::string& filename = output->dependencies.emplace_back();
-					wiHelper::StringConvert(pFilename, filename);
+					wi::helper::StringConvert(pFilename, filename);
 				}
 				return hr;
 			}
@@ -464,7 +464,7 @@ namespace wiShaderCompiler
 		}
 
 		wi::vector<uint8_t> shadersourcedata;
-		if (!wiHelper::FileRead(input.shadersourcefilename, shadersourcedata))
+		if (!wi::helper::FileRead(input.shadersourcefilename, shadersourcedata))
 		{
 			return;
 		}
@@ -479,27 +479,27 @@ namespace wiShaderCompiler
 		switch (input.stage)
 		{
 		default:
-		case wiGraphics::MS:
-		case wiGraphics::AS:
-		case wiGraphics::LIB:
+		case wi::graphics::MS:
+		case wi::graphics::AS:
+		case wi::graphics::LIB:
 			// not applicable
 			return;
-		case wiGraphics::VS:
+		case wi::graphics::VS:
 			target = "vs_5_0";
 			break;
-		case wiGraphics::HS:
+		case wi::graphics::HS:
 			target = "hs_5_0";
 			break;
-		case wiGraphics::DS:
+		case wi::graphics::DS:
 			target = "ds_5_0";
 			break;
-		case wiGraphics::GS:
+		case wi::graphics::GS:
 			target = "gs_5_0";
 			break;
-		case wiGraphics::PS:
+		case wi::graphics::PS:
 			target = "ps_5_0";
 			break;
-		case wiGraphics::CS:
+		case wi::graphics::CS:
 			target = "cs_5_0";
 			break;
 		}
@@ -515,10 +515,10 @@ namespace wiShaderCompiler
 				for (auto& x : input->include_directories)
 				{
 					std::string filename = x + pFileName;
-					if (!wiHelper::FileExists(filename))
+					if (!wi::helper::FileExists(filename))
 						continue;
 					wi::vector<uint8_t>& filedata = filedatas.emplace_back();
-					if (wiHelper::FileRead(filename, filedata))
+					if (wi::helper::FileRead(filename, filedata))
 					{
 						output->dependencies.push_back(filename);
 						*ppData = filedata.data();
@@ -606,12 +606,12 @@ namespace wiShaderCompiler
 				assert(SUCCEEDED(hr));
 				hr = dxcUtils->CreateDefaultIncludeHandler(&dxcIncludeHandler);
 				assert(SUCCEEDED(hr));
-				wiBackLog::post("wiShaderCompiler: loaded " LIBDXCOMPILER);
+				wi::backlog::post("wi::shadercompiler: loaded " LIBDXCOMPILER);
 			}
 		}
 		else
 		{
-            wiBackLog::post("wiShaderCompiler: could not load library " LIBDXCOMPILER);
+            wi::backlog::post("wi::shadercompiler: could not load library " LIBDXCOMPILER);
         }
 #endif // SHADERCOMPILER_ENABLED_DXCOMPILER
 
@@ -627,7 +627,7 @@ namespace wiShaderCompiler
 			D3DCompile = (PFN_D3DCOMPILE)wiGetProcAddress(d3dcompiler, "D3DCompile");
 			if (D3DCompile != nullptr)
 			{
-				wiBackLog::post("wiShaderCompiler: loaded d3dcompiler_47.dll");
+				wi::backlog::post("wi::shadercompiler: loaded d3dcompiler_47.dll");
 			}
 		}
 #endif // SHADERCOMPILER_ENABLED_D3DCOMPILER
@@ -652,7 +652,7 @@ namespace wiShaderCompiler
 #endif // SHADERCOMPILER_ENABLED_DXCOMPILER
 
 #ifdef SHADERCOMPILER_ENABLED_D3DCOMPILER
-		case wiGraphics::SHADERFORMAT_HLSL5:
+		case wi::graphics::SHADERFORMAT_HLSL5:
 			Compile_D3DCompiler(input, output);
 			break;
 #endif // SHADERCOMPILER_ENABLED_D3DCOMPILER
@@ -665,21 +665,21 @@ namespace wiShaderCompiler
 	bool SaveShaderAndMetadata(const std::string& shaderfilename, const CompilerOutput& output)
 	{
 #ifdef SHADERCOMPILER_ENABLED
-		wiHelper::DirectoryCreate(wiHelper::GetDirectoryFromPath(shaderfilename));
+		wi::helper::DirectoryCreate(wi::helper::GetDirectoryFromPath(shaderfilename));
 
-		wiArchive dependencyLibrary(wiHelper::ReplaceExtension(shaderfilename, shadermetaextension), false);
+		wi::Archive dependencyLibrary(wi::helper::ReplaceExtension(shaderfilename, shadermetaextension), false);
 		if (dependencyLibrary.IsOpen())
 		{
 			std::string rootdir = dependencyLibrary.GetSourceDirectory();
 			wi::vector<std::string> dependencies = output.dependencies;
 			for (auto& x : dependencies)
 			{
-				wiHelper::MakePathRelative(rootdir, x);
+				wi::helper::MakePathRelative(rootdir, x);
 			}
 			dependencyLibrary << dependencies;
 		}
 
-		if (wiHelper::FileWrite(shaderfilename, output.shaderdata, output.shadersize))
+		if (wi::helper::FileWrite(shaderfilename, output.shaderdata, output.shadersize))
 		{
 			return true;
 		}
@@ -691,20 +691,20 @@ namespace wiShaderCompiler
 	{
 #ifdef SHADERCOMPILER_ENABLED
 		std::string filepath = shaderfilename;
-		wiHelper::MakePathAbsolute(filepath);
-		if (!wiHelper::FileExists(filepath))
+		wi::helper::MakePathAbsolute(filepath);
+		if (!wi::helper::FileExists(filepath))
 		{
 			return true; // no shader file = outdated shader, apps can attempt to rebuild it
 		}
-		std::string dependencylibrarypath = wiHelper::ReplaceExtension(shaderfilename, shadermetaextension);
-		if (!wiHelper::FileExists(dependencylibrarypath))
+		std::string dependencylibrarypath = wi::helper::ReplaceExtension(shaderfilename, shadermetaextension);
+		if (!wi::helper::FileExists(dependencylibrarypath))
 		{
 			return false; // no metadata file = no dependency, up to date (for example packaged builds)
 		}
 
 		const auto tim = std::filesystem::last_write_time(filepath);
 
-		wiArchive dependencyLibrary(dependencylibrarypath);
+		wi::Archive dependencyLibrary(dependencylibrarypath);
 		if (dependencyLibrary.IsOpen())
 		{
 			std::string rootdir = dependencyLibrary.GetSourceDirectory();
@@ -714,8 +714,8 @@ namespace wiShaderCompiler
 			for (auto& x : dependencies)
 			{
 				std::string dependencypath = rootdir + x;
-				wiHelper::MakePathAbsolute(dependencypath);
-				if (wiHelper::FileExists(dependencypath))
+				wi::helper::MakePathAbsolute(dependencypath);
+				if (wi::helper::FileExists(dependencypath))
 				{
 					const auto dep_tim = std::filesystem::last_write_time(dependencypath);
 

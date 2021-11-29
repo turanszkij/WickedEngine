@@ -2,7 +2,7 @@
 
 #include <string>
 
-namespace wiVersion
+namespace wi::version
 {
 	// main engine core
 	const int major = 0;

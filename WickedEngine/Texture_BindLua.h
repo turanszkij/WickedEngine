@@ -3,19 +3,23 @@
 #include "wiLuna.h"
 #include "wiGraphics.h"
 
-class Texture_BindLua
+namespace wi::lua
 {
-public:
-	wiGraphics::Texture texture;
 
-	static const char className[];
-	static Luna<Texture_BindLua>::FunctionType methods[];
-	static Luna<Texture_BindLua>::PropertyType properties[];
+	class Texture_BindLua
+	{
+	public:
+		wi::graphics::Texture texture;
 
-	Texture_BindLua() = default;
-	Texture_BindLua(wiGraphics::Texture texture);
-	Texture_BindLua(lua_State *L);
+		static const char className[];
+		static Luna<Texture_BindLua>::FunctionType methods[];
+		static Luna<Texture_BindLua>::PropertyType properties[];
 
-	static void Bind();
-};
+		Texture_BindLua() = default;
+		Texture_BindLua(wi::graphics::Texture texture);
+		Texture_BindLua(lua_State* L);
 
+		static void Bind();
+	};
+
+}

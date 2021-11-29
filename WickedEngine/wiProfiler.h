@@ -2,7 +2,7 @@
 #include "wiGraphicsDevice.h"
 #include "wiCanvas.h"
 
-namespace wiProfiler
+namespace wi::profiler
 {
 	typedef size_t range_id;
 
@@ -10,19 +10,19 @@ namespace wiProfiler
 	void BeginFrame();
 
 	// Finalize collecting profiling data for the current frame
-	void EndFrame(wiGraphics::CommandList cmd);
+	void EndFrame(wi::graphics::CommandList cmd);
 
 	// Start a CPU profiling range
 	range_id BeginRangeCPU(const char* name);
 
 	// Start a GPU profiling range
-	range_id BeginRangeGPU(const char* name, wiGraphics::CommandList cmd);
+	range_id BeginRangeGPU(const char* name, wi::graphics::CommandList cmd);
 
 	// End a profiling range
 	void EndRange(range_id id);
 
 	// Renders a basic text of the Profiling results to the (x,y) screen coordinate
-	void DrawData(const wiCanvas& canvas, float x, float y, wiGraphics::CommandList cmd);
+	void DrawData(const wi::Canvas& canvas, float x, float y, wi::graphics::CommandList cmd);
 
 	// Enable/disable profiling
 	void SetEnabled(bool value);

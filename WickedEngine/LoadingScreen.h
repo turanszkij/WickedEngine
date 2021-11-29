@@ -12,16 +12,16 @@ class LoadingScreen :
 	public RenderPath2D
 {
 private:
-	wiJobSystem::context ctx;
-	wi::vector<std::function<void(wiJobArgs)>> tasks;
+	wi::jobsystem::context ctx;
+	wi::vector<std::function<void(wi::jobsystem::JobArgs)>> tasks;
 	std::function<void()> finish;
 public:
 
 	//Add a loading task which should be executed
 	//use std::bind( YourFunctionPointer )
-	void addLoadingFunction(std::function<void(wiJobArgs)> loadingFunction);
+	void addLoadingFunction(std::function<void(wi::jobsystem::JobArgs)> loadingFunction);
 	//Helper for loading a whole renderable component
-	void addLoadingComponent(RenderPath* component, MainComponent* main, float fadeSeconds = 0, wiColor fadeColor = wiColor(0, 0, 0, 255));
+	void addLoadingComponent(RenderPath* component, MainComponent* main, float fadeSeconds = 0, wi::Color fadeColor = wi::Color(0, 0, 0, 255));
 	//Set a function that should be called when the loading finishes
 	//use std::bind( YourFunctionPointer )
 	void onFinished(std::function<void()> finishFunction);

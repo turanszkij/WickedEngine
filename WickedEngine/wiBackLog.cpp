@@ -17,9 +17,9 @@
 #include <thread>
 #include <iostream>
 
-using namespace wiGraphics;
+using namespace wi::graphics;
 
-namespace wiBackLog
+namespace wi::backlog
 {
 	static bool enabled = false;
 	static std::deque<std::string> stream;
@@ -30,8 +30,8 @@ namespace wiBackLog
 	static float scroll = 0;
 	static std::string inputArea;
 	static int historyPos = 0;
-	static wiSpriteFont font;
-	static wiSpinLock logLock;
+	static wi::SpriteFont font;
+	static wi::spinlock logLock;
 	static Texture backgroundTex;
 	static bool refitscroll = false;
 
@@ -41,9 +41,9 @@ namespace wiBackLog
 
 	static void write_logfile()
 	{
-		std::string filename = wiHelper::GetTempDirectoryPath() + "wiBackLog.txt";
+		std::string filename = wi::helper::GetTempDirectoryPath() + "wiBackLog.txt";
 		std::string text = getText(); // will lock mutex
-		wiHelper::FileWrite(filename, (const uint8_t*)text.c_str(), text.length());
+		wi::helper::FileWrite(filename, (const uint8_t*)text.c_str(), text.length());
 	}
 
 	// The logwriter object will automatically write out the backlog to the temp folder when it's destroyed
@@ -64,34 +64,34 @@ namespace wiBackLog
 	{
 		scroll += dir;
 	}
-	void Update(const wiCanvas& canvas, float dt)
+	void Update(const wi::Canvas& canvas, float dt)
 	{
 		if (!locked)
 		{
-			if (wiInput::Press(wiInput::KEYBOARD_BUTTON_HOME))
+			if (wi::input::Press(wi::input::KEYBOARD_BUTTON_HOME))
 			{
 				Toggle();
 			}
 
 			if (isActive())
 			{
-				if (wiInput::Press(wiInput::KEYBOARD_BUTTON_UP))
+				if (wi::input::Press(wi::input::KEYBOARD_BUTTON_UP))
 				{
 					historyPrev();
 				}
-				if (wiInput::Press(wiInput::KEYBOARD_BUTTON_DOWN))
+				if (wi::input::Press(wi::input::KEYBOARD_BUTTON_DOWN))
 				{
 					historyNext();
 				}
-				if (wiInput::Press(wiInput::KEYBOARD_BUTTON_ENTER))
+				if (wi::input::Press(wi::input::KEYBOARD_BUTTON_ENTER))
 				{
 					acceptInput();
 				}
-				if (wiInput::Down(wiInput::KEYBOARD_BUTTON_PAGEUP))
+				if (wi::input::Down(wi::input::KEYBOARD_BUTTON_PAGEUP))
 				{
 					Scroll(1000.0f * dt);
 				}
-				if (wiInput::Down(wiInput::KEYBOARD_BUTTON_PAGEDOWN))
+				if (wi::input::Down(wi::input::KEYBOARD_BUTTON_PAGEDOWN))
 				{
 					Scroll(-1000.0f * dt);
 				}
@@ -106,27 +106,27 @@ namespace wiBackLog
 		{
 			pos -= speed * dt;
 		}
-		pos = wiMath::Clamp(pos, -canvas.GetLogicalHeight(), 0);
+		pos = wi::math::Clamp(pos, -canvas.GetLogicalHeight(), 0);
 	}
-	void Draw(const wiCanvas& canvas, CommandList cmd)
+	void Draw(const wi::Canvas& canvas, CommandList cmd)
 	{
 		if (pos > -canvas.GetLogicalHeight())
 		{
 			if (!backgroundTex.IsValid())
 			{
 				const uint8_t colorData[] = { 0, 0, 43, 200, 43, 31, 141, 223 };
-				wiTextureHelper::CreateTexture(backgroundTex, colorData, 1, 2);
+				wi::texturehelper::CreateTexture(backgroundTex, colorData, 1, 2);
 			}
 
-			wiImageParams fx = wiImageParams((float)canvas.GetLogicalWidth(), (float)canvas.GetLogicalHeight());
+			wi::image::Params fx = wi::image::Params((float)canvas.GetLogicalWidth(), (float)canvas.GetLogicalHeight());
 			fx.pos = XMFLOAT3(0, pos, 0);
-			fx.opacity = wiMath::Lerp(1, 0, -pos / canvas.GetLogicalHeight());
-			wiImage::Draw(&backgroundTex, fx, cmd);
+			fx.opacity = wi::math::Lerp(1, 0, -pos / canvas.GetLogicalHeight());
+			wi::image::Draw(&backgroundTex, fx, cmd);
 
-			wiFontParams params = wiFontParams(10, canvas.GetLogicalHeight() - 10, WIFONTSIZE_DEFAULT, WIFALIGN_LEFT, WIFALIGN_BOTTOM);
+			wi::font::Params params = wi::font::Params(10, canvas.GetLogicalHeight() - 10, wi::font::WIFONTSIZE_DEFAULT, wi::font::WIFALIGN_LEFT, wi::font::WIFALIGN_BOTTOM);
 			params.h_wrap = canvas.GetLogicalWidth() - params.posX;
-			params.v_align = WIFALIGN_BOTTOM;
-			wiFont::Draw(inputArea, params, cmd);
+			params.v_align = wi::font::WIFALIGN_BOTTOM;
+			wi::font::Draw(inputArea, params, cmd);
 
 			font.SetText(getText());
 			if (refitscroll)
@@ -147,13 +147,13 @@ namespace wiBackLog
 			rect.right = (int32_t)canvas.GetPhysicalWidth();
 			rect.top = 0;
 			rect.bottom = int32_t(canvas.GetPhysicalHeight() * 0.9f);
-			wiGraphics::GetDevice()->BindScissorRects(1, &rect, cmd);
+			wi::graphics::GetDevice()->BindScissorRects(1, &rect, cmd);
 			font.Draw(cmd);
 			rect.left = -std::numeric_limits<int>::max();
 			rect.right = std::numeric_limits<int>::max();
 			rect.top = -std::numeric_limits<int>::max();
 			rect.bottom = std::numeric_limits<int>::max();
-			wiGraphics::GetDevice()->BindScissorRects(1, &rect, cmd);
+			wi::graphics::GetDevice()->BindScissorRects(1, &rect, cmd);
 		}
 	}
 
@@ -250,11 +250,11 @@ namespace wiBackLog
 		}
 		if (!blockLuaExec)
 		{
-			wiLua::RunText(inputArea);
+			wi::lua::RunText(inputArea);
 		}
 		else
 		{
-			wiBackLog::post("Lua execution is disabled", LogLevel::Error);
+			post("Lua execution is disabled", LogLevel::Error);
 		}
 		inputArea.clear();
 	}

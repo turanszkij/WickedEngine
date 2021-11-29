@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-namespace wiRandom
+namespace wi::random
 {
 	int getRandom(int minValue, int maxValue);
 	int getRandom(int maxValue);

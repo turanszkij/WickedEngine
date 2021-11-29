@@ -3,41 +3,41 @@
 
 class EditorComponent;
 
-class ObjectWindow : public wiWindow
+class ObjectWindow : public wi::widget::Window
 {
 public:
 	void Create(EditorComponent* editor);
 
 	EditorComponent* editor;
-	wiECS::Entity entity;
-	void SetEntity(wiECS::Entity entity);
+	wi::ecs::Entity entity;
+	void SetEntity(wi::ecs::Entity entity);
 
-	wiLabel nameLabel;
-	wiCheckBox renderableCheckBox;
-	wiCheckBox shadowCheckBox;
-	wiSlider ditherSlider;
-	wiSlider cascadeMaskSlider;
+	wi::widget::Label nameLabel;
+	wi::widget::CheckBox renderableCheckBox;
+	wi::widget::CheckBox shadowCheckBox;
+	wi::widget::Slider ditherSlider;
+	wi::widget::Slider cascadeMaskSlider;
 
-	wiComboBox colorComboBox;
-	wiColorPicker colorPicker;
+	wi::widget::ComboBox colorComboBox;
+	wi::widget::ColorPicker colorPicker;
 
-	wiLabel physicsLabel;
-	wiComboBox collisionShapeComboBox;
-	wiSlider XSlider;
-	wiSlider YSlider;
-	wiSlider ZSlider;
-	wiSlider massSlider;
-	wiSlider frictionSlider;
-	wiSlider restitutionSlider;
-	wiSlider lineardampingSlider;
-	wiSlider angulardampingSlider;
-	wiCheckBox disabledeactivationCheckBox;
-	wiCheckBox kinematicCheckBox;
+	wi::widget::Label physicsLabel;
+	wi::widget::ComboBox collisionShapeComboBox;
+	wi::widget::Slider XSlider;
+	wi::widget::Slider YSlider;
+	wi::widget::Slider ZSlider;
+	wi::widget::Slider massSlider;
+	wi::widget::Slider frictionSlider;
+	wi::widget::Slider restitutionSlider;
+	wi::widget::Slider lineardampingSlider;
+	wi::widget::Slider angulardampingSlider;
+	wi::widget::CheckBox disabledeactivationCheckBox;
+	wi::widget::CheckBox kinematicCheckBox;
 
-	wiSlider lightmapResolutionSlider;
-	wiComboBox lightmapSourceUVSetComboBox;
-	wiButton generateLightmapButton;
-	wiButton stopLightmapGenButton;
-	wiButton clearLightmapButton;
+	wi::widget::Slider lightmapResolutionSlider;
+	wi::widget::ComboBox lightmapSourceUVSetComboBox;
+	wi::widget::Button generateLightmapButton;
+	wi::widget::Button stopLightmapGenButton;
+	wi::widget::Button clearLightmapButton;
 };
 

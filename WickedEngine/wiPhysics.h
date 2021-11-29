@@ -1,9 +1,9 @@
 #pragma once
 #include "wiECS.h"
-#include "wiScene_Decl.h"
+#include "wiScene.h"
 #include "wiJobSystem.h"
 
-namespace wiPhysicsEngine
+namespace wi::physics
 {
 	// Initializes the physics engine
 	void Initialize();
@@ -30,31 +30,31 @@ namespace wiPhysicsEngine
 
 	// Update the physics state, run simulation, etc.
 	void RunPhysicsUpdateSystem(
-		wiJobSystem::context& ctx,
-		wiScene::Scene& scene,
+		wi::jobsystem::context& ctx,
+		wi::scene::Scene& scene,
 		float dt
 	);
 
 	// Apply force at body center
 	void ApplyForce(
-		const wiScene::RigidBodyPhysicsComponent& physicscomponent,
+		const wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const XMFLOAT3& force
 	);
 	// Apply force at body local position
 	void ApplyForceAt(
-		const wiScene::RigidBodyPhysicsComponent& physicscomponent,
+		const wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const XMFLOAT3& force,
 		const XMFLOAT3& at
 	);
 
 	// Apply impulse at body center
 	void ApplyBodyImpulse(
-		const wiScene::RigidBodyPhysicsComponent& physicscomponent,
+		const wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const XMFLOAT3& impulse
 	);
 	// Apply impulse at body local position
 	void ApplyImpulseAt(
-		const wiScene::RigidBodyPhysicsComponent& physicscomponent,
+		const wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const XMFLOAT3& impulse,
 		const XMFLOAT3& at
 	);

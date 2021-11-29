@@ -5,11 +5,11 @@
 #include "wiTextureHelper.h"
 #include "wiProfiler.h"
 
-using namespace wiGraphics;
+using namespace wi::graphics;
 
 void RenderPath3D::ResizeBuffers()
 {
-	GraphicsDevice* device = wiGraphics::GetDevice();
+	GraphicsDevice* device = wi::graphics::GetDevice();
 
 	XMUINT2 internalResolution = GetInternalResolution();
 
@@ -207,7 +207,7 @@ void RenderPath3D::ResizeBuffers()
 		device->SetName(&rtGUIBlurredBackground[2], "rtGUIBlurredBackground[2]");
 	}
 	if(device->CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING_TIER2) &&
-		wiRenderer::GetVariableRateShadingClassification())
+		wi::renderer::GetVariableRateShadingClassification())
 	{
 		uint32_t tileSize = device->GetVariableRateShadingTileSize();
 
@@ -477,20 +477,20 @@ void RenderPath3D::ResizeBuffers()
 		device->CreateTexture(&desc, nullptr, &debugUAV);
 		device->SetName(&debugUAV, "debugUAV");
 	}
-	wiRenderer::CreateTiledLightResources(tiledLightResources, internalResolution);
-	wiRenderer::CreateTiledLightResources(tiledLightResources_planarReflection, XMUINT2(depthBuffer_Reflection.desc.width, depthBuffer_Reflection.desc.height));
-	wiRenderer::CreateLuminanceResources(luminanceResources, internalResolution);
-	wiRenderer::CreateScreenSpaceShadowResources(screenspaceshadowResources, internalResolution);
-	wiRenderer::CreateDepthOfFieldResources(depthoffieldResources, internalResolution);
-	wiRenderer::CreateMotionBlurResources(motionblurResources, internalResolution);
-	wiRenderer::CreateVolumetricCloudResources(volumetriccloudResources, internalResolution);
-	wiRenderer::CreateVolumetricCloudResources(volumetriccloudResources_reflection, XMUINT2(depthBuffer_Reflection.desc.width, depthBuffer_Reflection.desc.height));
-	wiRenderer::CreateBloomResources(bloomResources, internalResolution);
-	wiRenderer::CreateSurfelGIResources(surfelGIResources, internalResolution);
+	wi::renderer::CreateTiledLightResources(tiledLightResources, internalResolution);
+	wi::renderer::CreateTiledLightResources(tiledLightResources_planarReflection, XMUINT2(depthBuffer_Reflection.desc.width, depthBuffer_Reflection.desc.height));
+	wi::renderer::CreateLuminanceResources(luminanceResources, internalResolution);
+	wi::renderer::CreateScreenSpaceShadowResources(screenspaceshadowResources, internalResolution);
+	wi::renderer::CreateDepthOfFieldResources(depthoffieldResources, internalResolution);
+	wi::renderer::CreateMotionBlurResources(motionblurResources, internalResolution);
+	wi::renderer::CreateVolumetricCloudResources(volumetriccloudResources, internalResolution);
+	wi::renderer::CreateVolumetricCloudResources(volumetriccloudResources_reflection, XMUINT2(depthBuffer_Reflection.desc.width, depthBuffer_Reflection.desc.height));
+	wi::renderer::CreateBloomResources(bloomResources, internalResolution);
+	wi::renderer::CreateSurfelGIResources(surfelGIResources, internalResolution);
 
 	if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 	{
-		wiRenderer::CreateRTShadowResources(rtshadowResources, internalResolution);
+		wi::renderer::CreateRTShadowResources(rtshadowResources, internalResolution);
 	}
 
 	setAO(ao);
@@ -518,23 +518,23 @@ void RenderPath3D::Update(float dt)
 
 	if (getSceneUpdateEnabled())
 	{
-		if (wiRenderer::GetSurfelGIEnabled() ||
-			wiRenderer::GetRaytracedShadowsEnabled() ||
+		if (wi::renderer::GetSurfelGIEnabled() ||
+			wi::renderer::GetRaytracedShadowsEnabled() ||
 			getAO() == AO_RTAO ||
 			getRaytracedReflectionEnabled())
 		{
 			scene->SetAccelerationStructureUpdateRequested(true);
 		}
 
-		scene->Update(dt * wiRenderer::GetGameSpeed());
+		scene->Update(dt * wi::renderer::GetGameSpeed());
 	}
 
 	// Frustum culling for main camera:
 	visibility_main.layerMask = getLayerMask();
 	visibility_main.scene = scene;
 	visibility_main.camera = camera;
-	visibility_main.flags = wiRenderer::Visibility::ALLOW_EVERYTHING;
-	wiRenderer::UpdateVisibility(visibility_main);
+	visibility_main.flags = wi::renderer::Visibility::ALLOW_EVERYTHING;
+	wi::renderer::UpdateVisibility(visibility_main);
 
 	if (visibility_main.planar_reflection_visible)
 	{
@@ -545,22 +545,22 @@ void RenderPath3D::Update(float dt)
 		visibility_reflection.layerMask = getLayerMask();
 		visibility_reflection.scene = scene;
 		visibility_reflection.camera = &camera_reflection;
-		visibility_reflection.flags = wiRenderer::Visibility::ALLOW_OBJECTS;
-		wiRenderer::UpdateVisibility(visibility_reflection);
+		visibility_reflection.flags = wi::renderer::Visibility::ALLOW_OBJECTS;
+		wi::renderer::UpdateVisibility(visibility_reflection);
 	}
 
 	XMUINT2 internalResolution = GetInternalResolution();
 
-	wiRenderer::UpdatePerFrameData(
+	wi::renderer::UpdatePerFrameData(
 		*scene,
 		visibility_main,
 		frameCB,
 		getSceneUpdateEnabled() ? dt : 0
 	);
 
-	if (wiRenderer::GetTemporalAAEnabled())
+	if (wi::renderer::GetTemporalAAEnabled())
 	{
-		const XMFLOAT4& halton = wiMath::GetHaltonSequence(wiGraphics::GetDevice()->GetFrameCount() % 256);
+		const XMFLOAT4& halton = wi::math::GetHaltonSequence(wi::graphics::GetDevice()->GetFrameCount() % 256);
 		camera->jitter.x = (halton.x * 2 - 1) / (float)internalResolution.x;
 		camera->jitter.y = (halton.y * 2 - 1) / (float)internalResolution.y;
 	}
@@ -574,7 +574,7 @@ void RenderPath3D::Update(float dt)
 	{
 		rtaoResources.frame = 0;
 	}
-	if (!wiRenderer::GetRaytracedShadowsEnabled())
+	if (!wi::renderer::GetRaytracedShadowsEnabled())
 	{
 		rtshadowResources.frame = 0;
 	}
@@ -586,14 +586,14 @@ void RenderPath3D::Update(float dt)
 	{
 		rtAO = {};
 	}
-	if (!wiRenderer::GetScreenSpaceShadowsEnabled() && !wiRenderer::GetRaytracedShadowsEnabled())
+	if (!wi::renderer::GetScreenSpaceShadowsEnabled() && !wi::renderer::GetRaytracedShadowsEnabled())
 	{
 		rtShadow = {};
 	}
 
-	GraphicsDevice* device = wiGraphics::GetDevice();
+	GraphicsDevice* device = wi::graphics::GetDevice();
 
-	if((wiRenderer::GetScreenSpaceShadowsEnabled() || wiRenderer::GetRaytracedShadowsEnabled()) && !rtShadow.IsValid())
+	if((wi::renderer::GetScreenSpaceShadowsEnabled() || wi::renderer::GetRaytracedShadowsEnabled()) && !rtShadow.IsValid())
 	{
 		TextureDesc desc;
 		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
@@ -644,45 +644,45 @@ void RenderPath3D::Update(float dt)
 
 void RenderPath3D::Render() const
 {
-	GraphicsDevice* device = wiGraphics::GetDevice();
-	wiJobSystem::context ctx;
+	GraphicsDevice* device = wi::graphics::GetDevice();
+	wi::jobsystem::context ctx;
 
 	// Preparing the frame:
 	CommandList cmd = device->BeginCommandList();
 	CommandList cmd_prepareframe = cmd;
-	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
-		wiRenderer::BindCameraCB(
+	wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
+		wi::renderer::BindCameraCB(
 			*camera,
 			camera_previous,
 			camera_reflection,
 			cmd
 		);
-		wiRenderer::UpdateRenderData(visibility_main, frameCB, cmd);
+		wi::renderer::UpdateRenderData(visibility_main, frameCB, cmd);
 		});
 
 	//	async compute parallel with depth prepass
 	cmd = device->BeginCommandList(QUEUE_COMPUTE);
 	device->WaitCommandList(cmd, cmd_prepareframe);
-	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
+	wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
 
-		GraphicsDevice* device = wiGraphics::GetDevice();
+		GraphicsDevice* device = wi::graphics::GetDevice();
 
-		wiRenderer::BindCameraCB(
+		wi::renderer::BindCameraCB(
 			*camera,
 			camera_previous,
 			camera_reflection,
 			cmd
 		);
-		wiRenderer::UpdateRenderDataAsync(visibility_main, frameCB, cmd);
+		wi::renderer::UpdateRenderDataAsync(visibility_main, frameCB, cmd);
 
 		if (scene->IsAccelerationStructureUpdateRequested())
 		{
-			wiRenderer::UpdateRaytracingAccelerationStructures(*scene, cmd);
+			wi::renderer::UpdateRaytracingAccelerationStructures(*scene, cmd);
 		}
 
-		if (wiRenderer::GetSurfelGIEnabled())
+		if (wi::renderer::GetSurfelGIEnabled())
 		{
-			wiRenderer::SurfelGI(
+			wi::renderer::SurfelGI(
 				surfelGIResources,
 				*scene,
 				cmd
@@ -692,53 +692,53 @@ void RenderPath3D::Render() const
 		});
 
 	static const uint32_t drawscene_flags =
-		wiRenderer::DRAWSCENE_OPAQUE |
-		wiRenderer::DRAWSCENE_HAIRPARTICLE |
-		wiRenderer::DRAWSCENE_TESSELLATION |
-		wiRenderer::DRAWSCENE_OCCLUSIONCULLING
+		wi::renderer::DRAWSCENE_OPAQUE |
+		wi::renderer::DRAWSCENE_HAIRPARTICLE |
+		wi::renderer::DRAWSCENE_TESSELLATION |
+		wi::renderer::DRAWSCENE_OCCLUSIONCULLING
 		;
 	static const uint32_t drawscene_flags_reflections =
-		wiRenderer::DRAWSCENE_OPAQUE
+		wi::renderer::DRAWSCENE_OPAQUE
 		;
 
 	// Main camera depth prepass + occlusion culling:
 	cmd = device->BeginCommandList();
 	CommandList cmd_maincamera_prepass = cmd;
-	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
+	wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
 
-		GraphicsDevice* device = wiGraphics::GetDevice();
+		GraphicsDevice* device = wi::graphics::GetDevice();
 
-		wiRenderer::BindCameraCB(
+		wi::renderer::BindCameraCB(
 			*camera,
 			camera_previous,
 			camera_reflection,
 			cmd
 		);
 
-		wiRenderer::OcclusionCulling_Reset(visibility_main, cmd); // must be outside renderpass!
+		wi::renderer::OcclusionCulling_Reset(visibility_main, cmd); // must be outside renderpass!
 
 		device->RenderPassBegin(&renderpass_depthprepass, cmd);
 
 		device->EventBegin("Opaque Z-prepass", cmd);
-		auto range = wiProfiler::BeginRangeGPU("Z-Prepass", cmd);
+		auto range = wi::profiler::BeginRangeGPU("Z-Prepass", cmd);
 
 		Viewport vp;
 		vp.width = (float)depthBuffer_Main.GetDesc().width;
 		vp.height = (float)depthBuffer_Main.GetDesc().height;
 		device->BindViewports(1, &vp, cmd);
-		wiRenderer::DrawScene(visibility_main, RENDERPASS_PREPASS, cmd, drawscene_flags);
+		wi::renderer::DrawScene(visibility_main, RENDERPASS_PREPASS, cmd, drawscene_flags);
 
-		wiProfiler::EndRange(range);
+		wi::profiler::EndRange(range);
 		device->EventEnd(cmd);
 
 		if (getOcclusionCullingEnabled())
 		{
-			wiRenderer::OcclusionCulling_Render(*camera, visibility_main, cmd);
+			wi::renderer::OcclusionCulling_Render(*camera, visibility_main, cmd);
 		}
 
 		device->RenderPassEnd(cmd);
 
-		wiRenderer::OcclusionCulling_Resolve(visibility_main, cmd); // must be outside renderpass!
+		wi::renderer::OcclusionCulling_Resolve(visibility_main, cmd); // must be outside renderpass!
 
 		});
 
@@ -748,18 +748,18 @@ void RenderPath3D::Render() const
 	cmd = device->BeginCommandList(QUEUE_COMPUTE);
 	device->WaitCommandList(cmd, cmd_maincamera_prepass);
 	CommandList cmd_maincamera_compute_effects = cmd;
-	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
+	wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
 
-		GraphicsDevice* device = wiGraphics::GetDevice();
+		GraphicsDevice* device = wi::graphics::GetDevice();
 
-		wiRenderer::BindCameraCB(
+		wi::renderer::BindCameraCB(
 			*camera,
 			camera_previous,
 			camera_reflection,
 			cmd
 		);
 
-		wiRenderer::VisibilityResolve(
+		wi::renderer::VisibilityResolve(
 			depthBuffer_Main,
 			rtPrimitiveID_render,
 			rtGbuffer,
@@ -768,9 +768,9 @@ void RenderPath3D::Render() const
 			cmd
 		);
 
-		if (wiRenderer::GetSurfelGIEnabled())
+		if (wi::renderer::GetSurfelGIEnabled())
 		{
-			wiRenderer::SurfelGI_Coverage(
+			wi::renderer::SurfelGI_Coverage(
 				surfelGIResources,
 				*scene,
 				debugUAV,
@@ -780,9 +780,9 @@ void RenderPath3D::Render() const
 
 		RenderAO(cmd);
 
-		if (wiRenderer::GetVariableRateShadingClassification() && device->CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING_TIER2))
+		if (wi::renderer::GetVariableRateShadingClassification() && device->CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING_TIER2))
 		{
-			wiRenderer::ComputeShadingRateClassification(
+			wi::renderer::ComputeShadingRateClassification(
 				rtShadingRate,
 				debugUAV,
 				cmd
@@ -791,27 +791,27 @@ void RenderPath3D::Render() const
 
 		if (scene->weather.IsVolumetricClouds())
 		{
-			wiRenderer::Postprocess_VolumetricClouds(
+			wi::renderer::Postprocess_VolumetricClouds(
 				volumetriccloudResources,
 				cmd
 			);
 		}
 
 		{
-			auto range = wiProfiler::BeginRangeGPU("Entity Culling", cmd);
-			wiRenderer::ComputeTiledLightCulling(
+			auto range = wi::profiler::BeginRangeGPU("Entity Culling", cmd);
+			wi::renderer::ComputeTiledLightCulling(
 				tiledLightResources,
 				debugUAV,
 				cmd
 			);
-			wiProfiler::EndRange(range);
+			wi::profiler::EndRange(range);
 		}
 
 		RenderSSR(cmd);
 
-		if (wiRenderer::GetScreenSpaceShadowsEnabled())
+		if (wi::renderer::GetScreenSpaceShadowsEnabled())
 		{
-			wiRenderer::Postprocess_ScreenSpaceShadow(
+			wi::renderer::Postprocess_ScreenSpaceShadow(
 				screenspaceshadowResources,
 				tiledLightResources.entityTiles_Opaque,
 				rtShadow,
@@ -821,9 +821,9 @@ void RenderPath3D::Render() const
 			);
 		}
 
-		if (wiRenderer::GetRaytracedShadowsEnabled())
+		if (wi::renderer::GetRaytracedShadowsEnabled())
 		{
-			wiRenderer::Postprocess_RTShadow(
+			wi::renderer::Postprocess_RTShadow(
 				rtshadowResources,
 				*scene,
 				tiledLightResources.entityTiles_Opaque,
@@ -838,32 +838,32 @@ void RenderPath3D::Render() const
 	if (getShadowsEnabled())
 	{
 		cmd = device->BeginCommandList();
-		wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
-			wiRenderer::DrawShadowmaps(visibility_main, cmd);
+		wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
+			wi::renderer::DrawShadowmaps(visibility_main, cmd);
 			});
 	}
 
 	// Updating textures:
 	cmd = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [cmd, this](wiJobArgs args) {
-		wiRenderer::BindCommonResources(cmd);
-		wiRenderer::BindCameraCB(
+	wi::jobsystem::Execute(ctx, [cmd, this](wi::jobsystem::JobArgs args) {
+		wi::renderer::BindCommonResources(cmd);
+		wi::renderer::BindCameraCB(
 			*camera,
 			camera_previous,
 			camera_reflection,
 			cmd
 		);
-		wiRenderer::RefreshLightmaps(*scene, cmd);
-		wiRenderer::RefreshEnvProbes(visibility_main, cmd);
-		wiRenderer::RefreshImpostors(*scene, cmd);
+		wi::renderer::RefreshLightmaps(*scene, cmd);
+		wi::renderer::RefreshEnvProbes(visibility_main, cmd);
+		wi::renderer::RefreshImpostors(*scene, cmd);
 		});
 
 	// Voxel GI:
-	if (wiRenderer::GetVoxelRadianceEnabled())
+	if (wi::renderer::GetVoxelRadianceEnabled())
 	{
 		cmd = device->BeginCommandList();
-		wiJobSystem::Execute(ctx, [cmd, this](wiJobArgs args) {
-			wiRenderer::VoxelRadiance(visibility_main, cmd);
+		wi::jobsystem::Execute(ctx, [cmd, this](wi::jobsystem::JobArgs args) {
+			wi::renderer::VoxelRadiance(visibility_main, cmd);
 			});
 	}
 
@@ -871,11 +871,11 @@ void RenderPath3D::Render() const
 	{
 		// Planar reflections depth prepass:
 		cmd = device->BeginCommandList();
-		wiJobSystem::Execute(ctx, [cmd, this](wiJobArgs args) {
+		wi::jobsystem::Execute(ctx, [cmd, this](wi::jobsystem::JobArgs args) {
 
-			GraphicsDevice* device = wiGraphics::GetDevice();
+			GraphicsDevice* device = wi::graphics::GetDevice();
 
-			wiRenderer::BindCameraCB(
+			wi::renderer::BindCameraCB(
 				camera_reflection,
 				camera_reflection_previous,
 				camera_reflection,
@@ -883,7 +883,7 @@ void RenderPath3D::Render() const
 			);
 
 			device->EventBegin("Planar reflections Z-Prepass", cmd);
-			auto range = wiProfiler::BeginRangeGPU("Planar Reflections Z-Prepass", cmd);
+			auto range = wi::profiler::BeginRangeGPU("Planar Reflections Z-Prepass", cmd);
 
 			Viewport vp;
 			vp.width = (float)depthBuffer_Reflection.GetDesc().width;
@@ -892,44 +892,44 @@ void RenderPath3D::Render() const
 
 			device->RenderPassBegin(&renderpass_reflection_depthprepass, cmd);
 
-			wiRenderer::DrawScene(visibility_reflection, RENDERPASS_PREPASS, cmd, drawscene_flags_reflections);
+			wi::renderer::DrawScene(visibility_reflection, RENDERPASS_PREPASS, cmd, drawscene_flags_reflections);
 
 			device->RenderPassEnd(cmd);
 
 			if (scene->weather.IsVolumetricClouds())
 			{
-				wiRenderer::Postprocess_VolumetricClouds(
+				wi::renderer::Postprocess_VolumetricClouds(
 					volumetriccloudResources_reflection,
 					cmd
 				);
 			}
 
-			wiProfiler::EndRange(range); // Planar Reflections
+			wi::profiler::EndRange(range); // Planar Reflections
 			device->EventEnd(cmd);
 
 			});
 
 		// Planar reflections opaque color pass:
 		cmd = device->BeginCommandList();
-		wiJobSystem::Execute(ctx, [cmd, this](wiJobArgs args) {
+		wi::jobsystem::Execute(ctx, [cmd, this](wi::jobsystem::JobArgs args) {
 
-			GraphicsDevice* device = wiGraphics::GetDevice();
+			GraphicsDevice* device = wi::graphics::GetDevice();
 
-			wiRenderer::BindCameraCB(
+			wi::renderer::BindCameraCB(
 				camera_reflection,
 				camera_reflection_previous,
 				camera_reflection,
 				cmd
 			);
 
-			wiRenderer::ComputeTiledLightCulling(
+			wi::renderer::ComputeTiledLightCulling(
 				tiledLightResources_planarReflection,
 				Texture(),
 				cmd
 			);
 
 			device->EventBegin("Planar reflections", cmd);
-			auto range = wiProfiler::BeginRangeGPU("Planar Reflections", cmd);
+			auto range = wi::profiler::BeginRangeGPU("Planar Reflections", cmd);
 
 			Viewport vp;
 			vp.width = (float)depthBuffer_Reflection.GetDesc().width;
@@ -939,22 +939,22 @@ void RenderPath3D::Render() const
 
 			device->RenderPassBegin(&renderpass_reflection, cmd);
 
-			wiRenderer::DrawScene(visibility_reflection, RENDERPASS_MAIN, cmd, drawscene_flags_reflections);
-			wiRenderer::DrawSky(*scene, cmd);
+			wi::renderer::DrawScene(visibility_reflection, RENDERPASS_MAIN, cmd, drawscene_flags_reflections);
+			wi::renderer::DrawSky(*scene, cmd);
 
 			// Blend the volumetric clouds on top:
 			if (scene->weather.IsVolumetricClouds())
 			{
 				device->EventBegin("Volumetric Clouds Reflection Blend", cmd);
-				wiImageParams fx;
+				wi::image::Params fx;
 				fx.enableFullScreen();
-				wiImage::Draw(&volumetriccloudResources_reflection.texture_temporal[device->GetFrameCount() % 2], fx, cmd);
+				wi::image::Draw(&volumetriccloudResources_reflection.texture_temporal[device->GetFrameCount() % 2], fx, cmd);
 				device->EventEnd(cmd);
 			}
 
 			device->RenderPassEnd(cmd);
 
-			wiProfiler::EndRange(range); // Planar Reflections
+			wi::profiler::EndRange(range); // Planar Reflections
 			device->EventEnd(cmd);
 			});
 	}
@@ -962,12 +962,12 @@ void RenderPath3D::Render() const
 	// Main camera opaque color pass:
 	cmd = device->BeginCommandList();
 	device->WaitCommandList(cmd, cmd_maincamera_compute_effects);
-	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
+	wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
 
-		GraphicsDevice* device = wiGraphics::GetDevice();
+		GraphicsDevice* device = wi::graphics::GetDevice();
 		device->EventBegin("Opaque Scene", cmd);
 
-		wiRenderer::BindCameraCB(
+		wi::renderer::BindCameraCB(
 			*camera,
 			camera_previous,
 			camera_reflection,
@@ -978,7 +978,7 @@ void RenderPath3D::Render() const
 		//	because it depends on shadow maps, and envmaps
 		if (getRaytracedReflectionEnabled())
 		{
-			wiRenderer::Postprocess_RTReflection(
+			wi::renderer::Postprocess_RTReflection(
 				rtreflectionResources,
 				*scene,
 				rtSSR,
@@ -995,14 +995,14 @@ void RenderPath3D::Render() const
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		auto range = wiProfiler::BeginRangeGPU("Opaque Scene", cmd);
+		auto range = wi::profiler::BeginRangeGPU("Opaque Scene", cmd);
 
 		Viewport vp;
 		vp.width = (float)depthBuffer_Main.GetDesc().width;
 		vp.height = (float)depthBuffer_Main.GetDesc().height;
 		device->BindViewports(1, &vp, cmd);
 
-		if (wiRenderer::GetRaytracedShadowsEnabled() || wiRenderer::GetScreenSpaceShadowsEnabled())
+		if (wi::renderer::GetRaytracedShadowsEnabled() || wi::renderer::GetScreenSpaceShadowsEnabled())
 		{
 			GPUBarrier barrier = GPUBarrier::Image(&rtShadow, rtShadow.desc.layout, ResourceState::SHADER_RESOURCE);
 			device->Barrier(&barrier, 1, cmd);
@@ -1010,10 +1010,10 @@ void RenderPath3D::Render() const
 
 		device->RenderPassBegin(&renderpass_main, cmd);
 
-		wiRenderer::DrawScene(visibility_main, RENDERPASS_MAIN, cmd, drawscene_flags);
-		wiRenderer::DrawSky(*scene, cmd);
+		wi::renderer::DrawScene(visibility_main, RENDERPASS_MAIN, cmd, drawscene_flags);
+		wi::renderer::DrawSky(*scene, cmd);
 
-		wiProfiler::EndRange(range); // Opaque Scene
+		wi::profiler::EndRange(range); // Opaque Scene
 
 		RenderOutline(cmd);
 
@@ -1021,7 +1021,7 @@ void RenderPath3D::Render() const
 		if (scene->weather.IsVolumetricClouds())
 		{
 			device->EventBegin("Volumetric Clouds Upsample + Blend", cmd);
-			wiRenderer::Postprocess_Upsample_Bilateral(
+			wi::renderer::Postprocess_Upsample_Bilateral(
 				volumetriccloudResources.texture_temporal[device->GetFrameCount() % 2],
 				rtLinearDepth,
 				rtMain_render, // only desc is taken if pixel shader upsampling is used
@@ -1033,7 +1033,7 @@ void RenderPath3D::Render() const
 
 		device->RenderPassEnd(cmd);
 
-		if (wiRenderer::GetRaytracedShadowsEnabled() || wiRenderer::GetScreenSpaceShadowsEnabled())
+		if (wi::renderer::GetRaytracedShadowsEnabled() || wi::renderer::GetScreenSpaceShadowsEnabled())
 		{
 			GPUBarrier barrier = GPUBarrier::Image(&rtShadow, ResourceState::SHADER_RESOURCE, rtShadow.desc.layout);
 			device->Barrier(&barrier, 1, cmd);
@@ -1044,17 +1044,17 @@ void RenderPath3D::Render() const
 
 	// Transparents, post processes, etc:
 	cmd = device->BeginCommandList();
-	wiJobSystem::Execute(ctx, [this, cmd](wiJobArgs args) {
+	wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
 
-		GraphicsDevice* device = wiGraphics::GetDevice();
+		GraphicsDevice* device = wi::graphics::GetDevice();
 
-		wiRenderer::BindCameraCB(
+		wi::renderer::BindCameraCB(
 			*camera,
 			camera_previous,
 			camera_reflection,
 			cmd
 		);
-		wiRenderer::BindCommonResources(cmd);
+		wi::renderer::BindCommonResources(cmd);
 
 		RenderLightShafts(cmd);
 
@@ -1079,31 +1079,31 @@ void RenderPath3D::Render() const
 
 	RenderPath2D::Render();
 
-	wiJobSystem::Wait(ctx);
+	wi::jobsystem::Wait(ctx);
 }
 
 void RenderPath3D::Compose(CommandList cmd) const
 {
-	GraphicsDevice* device = wiGraphics::GetDevice();
+	GraphicsDevice* device = wi::graphics::GetDevice();
 
-	wiImageParams fx;
+	wi::image::Params fx;
 	fx.blendFlag = BLENDMODE_OPAQUE;
-	fx.quality = QUALITY_LINEAR;
+	fx.quality = wi::image::QUALITY_LINEAR;
 	fx.enableFullScreen();
 
 	device->EventBegin("Composition", cmd);
-	wiImage::Draw(GetLastPostprocessRT(), fx, cmd);
+	wi::image::Draw(GetLastPostprocessRT(), fx, cmd);
 	device->EventEnd(cmd);
 
 	if (
-		wiRenderer::GetDebugLightCulling() ||
-		wiRenderer::GetVariableRateShadingClassificationDebug() ||
-		wiRenderer::GetSurfelGIDebugEnabled()
+		wi::renderer::GetDebugLightCulling() ||
+		wi::renderer::GetVariableRateShadingClassificationDebug() ||
+		wi::renderer::GetSurfelGIDebugEnabled()
 		)
 	{
 		fx.enableFullScreen();
 		fx.blendFlag = BLENDMODE_PREMULTIPLIED;
-		wiImage::Draw(&debugUAV, fx, cmd);
+		wi::image::Draw(&debugUAV, fx, cmd);
 	}
 
 	RenderPath2D::Compose(cmd);
@@ -1117,7 +1117,7 @@ void RenderPath3D::RenderAO(CommandList cmd) const
 		switch (getAO())
 		{
 		case AO_SSAO:
-			wiRenderer::Postprocess_SSAO(
+			wi::renderer::Postprocess_SSAO(
 				ssaoResources,
 				rtLinearDepth,
 				rtAO,
@@ -1128,7 +1128,7 @@ void RenderPath3D::RenderAO(CommandList cmd) const
 				);
 			break;
 		case AO_HBAO:
-			wiRenderer::Postprocess_HBAO(
+			wi::renderer::Postprocess_HBAO(
 				ssaoResources,
 				*camera,
 				rtLinearDepth,
@@ -1138,7 +1138,7 @@ void RenderPath3D::RenderAO(CommandList cmd) const
 				);
 			break;
 		case AO_MSAO:
-			wiRenderer::Postprocess_MSAO(
+			wi::renderer::Postprocess_MSAO(
 				msaoResources,
 				*camera,
 				rtLinearDepth,
@@ -1148,7 +1148,7 @@ void RenderPath3D::RenderAO(CommandList cmd) const
 				);
 			break;
 		case AO_RTAO:
-			wiRenderer::Postprocess_RTAO(
+			wi::renderer::Postprocess_RTAO(
 				rtaoResources,
 				*scene,
 				rtAO,
@@ -1164,7 +1164,7 @@ void RenderPath3D::RenderSSR(CommandList cmd) const
 {
 	if (getSSREnabled() && !getRaytracedReflectionEnabled())
 	{
-		wiRenderer::Postprocess_SSR(
+		wi::renderer::Postprocess_SSR(
 			ssrResources,
 			rtSceneCopy,
 			rtSSR, 
@@ -1176,7 +1176,7 @@ void RenderPath3D::RenderOutline(CommandList cmd) const
 {
 	if (getOutlineEnabled())
 	{
-		wiRenderer::Postprocess_Outline(rtLinearDepth, cmd, getOutlineThreshold(), getOutlineThickness(), getOutlineColor());
+		wi::renderer::Postprocess_Outline(rtLinearDepth, cmd, getOutlineThreshold(), getOutlineThickness(), getOutlineColor());
 	}
 }
 void RenderPath3D::RenderLightShafts(CommandList cmd) const
@@ -1184,7 +1184,7 @@ void RenderPath3D::RenderLightShafts(CommandList cmd) const
 	XMVECTOR sunDirection = XMLoadFloat3(&scene->weather.sunDirection);
 	if (getLightShaftsEnabled() && XMVectorGetX(XMVector3Dot(sunDirection, camera->GetAt())) > 0)
 	{
-		GraphicsDevice* device = wiGraphics::GetDevice();
+		GraphicsDevice* device = wi::graphics::GetDevice();
 
 		device->EventBegin("Light Shafts", cmd);
 
@@ -1197,15 +1197,15 @@ void RenderPath3D::RenderLightShafts(CommandList cmd) const
 			vp.height = (float)depthBuffer_Main.GetDesc().height;
 			device->BindViewports(1, &vp, cmd);
 
-			wiRenderer::DrawSun(cmd);
+			wi::renderer::DrawSun(cmd);
 
 			if (scene->weather.IsVolumetricClouds())
 			{
 				device->EventBegin("Volumetric cloud occlusion mask", cmd);
-				wiImageParams fx;
+				wi::image::Params fx;
 				fx.enableFullScreen();
 				fx.blendFlag = BLENDMODE_MULTIPLY;
-				wiImage::Draw(&volumetriccloudResources.texture_cloudMask, fx, cmd);
+				wi::image::Draw(&volumetriccloudResources.texture_cloudMask, fx, cmd);
 				device->EventEnd(cmd);
 			}
 
@@ -1220,7 +1220,7 @@ void RenderPath3D::RenderLightShafts(CommandList cmd) const
 			{
 				XMFLOAT2 sun;
 				XMStoreFloat2(&sun, sunPos);
-				wiRenderer::Postprocess_LightShafts(*renderpass_lightshafts.desc.attachments.back().texture, rtSun[1], cmd, sun);
+				wi::renderer::Postprocess_LightShafts(*renderpass_lightshafts.desc.attachments.back().texture, rtSun[1], cmd, sun);
 			}
 		}
 		device->EventEnd(cmd);
@@ -1230,9 +1230,9 @@ void RenderPath3D::RenderVolumetrics(CommandList cmd) const
 {
 	if (getVolumeLightsEnabled() && visibility_main.IsRequestedVolumetricLights())
 	{
-		auto range = wiProfiler::BeginRangeGPU("Volumetric Lights", cmd);
+		auto range = wi::profiler::BeginRangeGPU("Volumetric Lights", cmd);
 
-		GraphicsDevice* device = wiGraphics::GetDevice();
+		GraphicsDevice* device = wi::graphics::GetDevice();
 
 		device->RenderPassBegin(&renderpass_volumetriclight, cmd);
 
@@ -1241,11 +1241,11 @@ void RenderPath3D::RenderVolumetrics(CommandList cmd) const
 		vp.height = (float)rtVolumetricLights[0].GetDesc().height;
 		device->BindViewports(1, &vp, cmd);
 
-		wiRenderer::DrawVolumeLights(visibility_main, cmd);
+		wi::renderer::DrawVolumeLights(visibility_main, cmd);
 
 		device->RenderPassEnd(cmd);
 
-		wiRenderer::Postprocess_Blur_Bilateral(
+		wi::renderer::Postprocess_Blur_Bilateral(
 			rtVolumetricLights[0],
 			rtLinearDepth,
 			rtVolumetricLights[1],
@@ -1253,14 +1253,14 @@ void RenderPath3D::RenderVolumetrics(CommandList cmd) const
 			cmd
 		);
 
-		wiProfiler::EndRange(range);
+		wi::profiler::EndRange(range);
 	}
 }
 void RenderPath3D::RenderSceneMIPChain(CommandList cmd) const
 {
-	GraphicsDevice* device = wiGraphics::GetDevice();
+	GraphicsDevice* device = wi::graphics::GetDevice();
 
-	auto range = wiProfiler::BeginRangeGPU("Scene MIP Chain", cmd);
+	auto range = wi::profiler::BeginRangeGPU("Scene MIP Chain", cmd);
 	device->EventBegin("RenderSceneMIPChain", cmd);
 
 	device->RenderPassBegin(&renderpass_downsamplescene, cmd);
@@ -1270,25 +1270,25 @@ void RenderPath3D::RenderSceneMIPChain(CommandList cmd) const
 	vp.height = (float)rtSceneCopy.GetDesc().height;
 	device->BindViewports(1, &vp, cmd);
 
-	wiImageParams fx;
+	wi::image::Params fx;
 	fx.enableFullScreen();
-	fx.sampleFlag = SAMPLEMODE_CLAMP;
-	fx.quality = QUALITY_LINEAR;
+	fx.sampleFlag = wi::image::SAMPLEMODE_CLAMP;
+	fx.quality = wi::image::QUALITY_LINEAR;
 	fx.blendFlag = BLENDMODE_OPAQUE;
-	wiImage::Draw(&rtMain, fx, cmd);
+	wi::image::Draw(&rtMain, fx, cmd);
 
 	device->RenderPassEnd(cmd);
 
-	wiRenderer::MIPGEN_OPTIONS mipopt;
+	wi::renderer::MIPGEN_OPTIONS mipopt;
 	mipopt.gaussian_temp = &rtSceneCopy_tmp;
-	wiRenderer::GenerateMipChain(rtSceneCopy, wiRenderer::MIPGENFILTER_GAUSSIAN, cmd, mipopt);
+	wi::renderer::GenerateMipChain(rtSceneCopy, wi::renderer::MIPGENFILTER_GAUSSIAN, cmd, mipopt);
 
 	device->EventEnd(cmd);
-	wiProfiler::EndRange(range);
+	wi::profiler::EndRange(range);
 }
 void RenderPath3D::RenderTransparents(CommandList cmd) const
 {
-	GraphicsDevice* device = wiGraphics::GetDevice();
+	GraphicsDevice* device = wi::graphics::GetDevice();
 
 	// Water ripple rendering:
 	if(!scene->waterRipples.empty())
@@ -1300,7 +1300,7 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 		vp.height = (float)rtWaterRipple.GetDesc().height;
 		device->BindViewports(1, &vp, cmd);
 
-		wiRenderer::DrawWaterRipples(visibility_main, cmd);
+		wi::renderer::DrawWaterRipples(visibility_main, cmd);
 
 		device->RenderPassEnd(cmd);
 	}
@@ -1315,28 +1315,28 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 
 	// Transparent scene
 	{
-		auto range = wiProfiler::BeginRangeGPU("Transparent Scene", cmd);
+		auto range = wi::profiler::BeginRangeGPU("Transparent Scene", cmd);
 		device->EventBegin("Transparent Scene", cmd);
 
 		uint32_t drawscene_flags = 0;
-		drawscene_flags |= wiRenderer::DRAWSCENE_TRANSPARENT;
-		drawscene_flags |= wiRenderer::DRAWSCENE_OCCLUSIONCULLING;
-		drawscene_flags |= wiRenderer::DRAWSCENE_HAIRPARTICLE;
-		drawscene_flags |= wiRenderer::DRAWSCENE_TESSELLATION;
-		wiRenderer::DrawScene(visibility_main, RENDERPASS_MAIN, cmd, drawscene_flags);
+		drawscene_flags |= wi::renderer::DRAWSCENE_TRANSPARENT;
+		drawscene_flags |= wi::renderer::DRAWSCENE_OCCLUSIONCULLING;
+		drawscene_flags |= wi::renderer::DRAWSCENE_HAIRPARTICLE;
+		drawscene_flags |= wi::renderer::DRAWSCENE_TESSELLATION;
+		wi::renderer::DrawScene(visibility_main, RENDERPASS_MAIN, cmd, drawscene_flags);
 
 		device->EventEnd(cmd);
-		wiProfiler::EndRange(range); // Transparent Scene
+		wi::profiler::EndRange(range); // Transparent Scene
 	}
 
-	wiRenderer::DrawLightVisualizers(visibility_main, cmd);
+	wi::renderer::DrawLightVisualizers(visibility_main, cmd);
 
-	wiRenderer::DrawSoftParticles(visibility_main, rtLinearDepth, false, cmd);
+	wi::renderer::DrawSoftParticles(visibility_main, rtLinearDepth, false, cmd);
 
 	if (getVolumeLightsEnabled() && visibility_main.IsRequestedVolumetricLights())
 	{
 		device->EventBegin("Contribute Volumetric Lights", cmd);
-		wiRenderer::Postprocess_Upsample_Bilateral(rtVolumetricLights[0], rtLinearDepth, 
+		wi::renderer::Postprocess_Upsample_Bilateral(rtVolumetricLights[0], rtLinearDepth, 
 			*renderpass_transparent.desc.attachments[0].texture, cmd, true, 1.5f);
 		device->EventEnd(cmd);
 	}
@@ -1345,23 +1345,23 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 	if (getLightShaftsEnabled() && XMVectorGetX(XMVector3Dot(sunDirection, camera->GetAt())) > 0)
 	{
 		device->EventBegin("Contribute LightShafts", cmd);
-		wiImageParams fx;
+		wi::image::Params fx;
 		fx.enableFullScreen();
 		fx.blendFlag = BLENDMODE_ADDITIVE;
-		wiImage::Draw(&rtSun[1], fx, cmd);
+		wi::image::Draw(&rtSun[1], fx, cmd);
 		device->EventEnd(cmd);
 	}
 
 	if (getLensFlareEnabled())
 	{
-		wiRenderer::DrawLensFlares(
+		wi::renderer::DrawLensFlares(
 			visibility_main,
 			cmd,
 			scene->weather.IsVolumetricClouds() ? &volumetriccloudResources.texture_cloudMask : nullptr
 		);
 	}
 
-	wiRenderer::DrawDebugWorld(*scene, *camera, *this, cmd);
+	wi::renderer::DrawDebugWorld(*scene, *camera, *this, cmd);
 
 	device->RenderPassEnd(cmd);
 
@@ -1374,14 +1374,14 @@ void RenderPath3D::RenderTransparents(CommandList cmd) const
 		vp.height = (float)rtParticleDistortion.GetDesc().height;
 		device->BindViewports(1, &vp, cmd);
 
-		wiRenderer::DrawSoftParticles(visibility_main, rtLinearDepth, true, cmd);
+		wi::renderer::DrawSoftParticles(visibility_main, rtLinearDepth, true, cmd);
 
 		device->RenderPassEnd(cmd);
 	}
 }
 void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 {
-	GraphicsDevice* device = wiGraphics::GetDevice();
+	GraphicsDevice* device = wi::graphics::GetDevice();
 
 	const Texture* rt_first = nullptr; // not ping-ponged with read / write
 	const Texture* rt_read = &rtMain;
@@ -1389,13 +1389,13 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 
 	// 1.) HDR post process chain
 	{
-		if (wiRenderer::GetTemporalAAEnabled() && !wiRenderer::GetTemporalAADebugEnabled())
+		if (wi::renderer::GetTemporalAAEnabled() && !wi::renderer::GetTemporalAADebugEnabled())
 		{
-			GraphicsDevice* device = wiGraphics::GetDevice();
+			GraphicsDevice* device = wi::graphics::GetDevice();
 
 			int output = device->GetFrameCount() % 2;
 			int history = 1 - output;
-			wiRenderer::Postprocess_TemporalAA(
+			wi::renderer::Postprocess_TemporalAA(
 				*rt_read,
 				rtTemporalAA[history],
 				rtTemporalAA[output], 
@@ -1406,7 +1406,7 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 
 		if (getDepthOfFieldEnabled() && camera->aperture_size > 0 && getDepthOfFieldStrength() > 0)
 		{
-			wiRenderer::Postprocess_DepthOfField(
+			wi::renderer::Postprocess_DepthOfField(
 				depthoffieldResources,
 				rt_first == nullptr ? *rt_read : *rt_first,
 				*rt_write,
@@ -1420,7 +1420,7 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 
 		if (getMotionBlurEnabled() && getMotionBlurStrength() > 0)
 		{
-			wiRenderer::Postprocess_MotionBlur(
+			wi::renderer::Postprocess_MotionBlur(
 				motionblurResources,
 				rt_first == nullptr ? *rt_read : *rt_first,
 				*rt_write,
@@ -1439,7 +1439,7 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 		//	because they will be applied to the screen in tonemap
 		if (getEyeAdaptionEnabled())
 		{
-			wiRenderer::ComputeLuminance(
+			wi::renderer::ComputeLuminance(
 				luminanceResources,
 				rt_first == nullptr ? *rt_read : *rt_first,
 				cmd,
@@ -1449,7 +1449,7 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 		}
 		if (getBloomEnabled())
 		{
-			wiRenderer::ComputeBloom(
+			wi::renderer::ComputeBloom(
 				bloomResources,
 				rt_first == nullptr ? *rt_read : *rt_first,
 				cmd,
@@ -1459,7 +1459,7 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 			);
 		}
 
-		wiRenderer::Postprocess_Tonemap(
+		wi::renderer::Postprocess_Tonemap(
 			rt_first == nullptr ? *rt_read : *rt_first,
 			*rt_write,
 			cmd,
@@ -1480,21 +1480,21 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 	{
 		if (getSharpenFilterEnabled())
 		{
-			wiRenderer::Postprocess_Sharpen(*rt_read, *rt_write, cmd, getSharpenFilterAmount());
+			wi::renderer::Postprocess_Sharpen(*rt_read, *rt_write, cmd, getSharpenFilterAmount());
 
 			std::swap(rt_read, rt_write);
 		}
 
 		if (getFXAAEnabled())
 		{
-			wiRenderer::Postprocess_FXAA(*rt_read, *rt_write, cmd);
+			wi::renderer::Postprocess_FXAA(*rt_read, *rt_write, cmd);
 
 			std::swap(rt_read, rt_write);
 		}
 
 		if (getChromaticAberrationEnabled())
 		{
-			wiRenderer::Postprocess_Chromatic_Aberration(*rt_read, *rt_write, cmd, getChromaticAberrationAmount());
+			wi::renderer::Postprocess_Chromatic_Aberration(*rt_read, *rt_write, cmd, getChromaticAberrationAmount());
 
 			std::swap(rt_read, rt_write);
 		}
@@ -1503,18 +1503,18 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 
 		// GUI Background blurring:
 		{
-			auto range = wiProfiler::BeginRangeGPU("GUI Background Blur", cmd);
+			auto range = wi::profiler::BeginRangeGPU("GUI Background Blur", cmd);
 			device->EventBegin("GUI Background Blur", cmd);
-			wiRenderer::Postprocess_Downsample4x(*rt_read, rtGUIBlurredBackground[0], cmd);
-			wiRenderer::Postprocess_Downsample4x(rtGUIBlurredBackground[0], rtGUIBlurredBackground[2], cmd);
-			wiRenderer::Postprocess_Blur_Gaussian(rtGUIBlurredBackground[2], rtGUIBlurredBackground[1], rtGUIBlurredBackground[2], cmd, -1,-1, true);
+			wi::renderer::Postprocess_Downsample4x(*rt_read, rtGUIBlurredBackground[0], cmd);
+			wi::renderer::Postprocess_Downsample4x(rtGUIBlurredBackground[0], rtGUIBlurredBackground[2], cmd);
+			wi::renderer::Postprocess_Blur_Gaussian(rtGUIBlurredBackground[2], rtGUIBlurredBackground[1], rtGUIBlurredBackground[2], cmd, -1,-1, true);
 			device->EventEnd(cmd);
-			wiProfiler::EndRange(range);
+			wi::profiler::EndRange(range);
 		}
 
 		if (rtFSR[0].IsValid() && getFSREnabled())
 		{
-			wiRenderer::Postprocess_FSR(*rt_read, rtFSR[1], rtFSR[0], cmd, getFSRSharpness());
+			wi::renderer::Postprocess_FSR(*rt_read, rtFSR[1], rtFSR[0], cmd, getFSRSharpness());
 			lastPostprocessRT = &rtFSR[0];
 		}
 	}
@@ -1547,23 +1547,23 @@ void RenderPath3D::setAO(AO value)
 	case RenderPath3D::AO_HBAO:
 		desc.width = internalResolution.x / 2;
 		desc.height = internalResolution.y / 2;
-		wiRenderer::CreateSSAOResources(ssaoResources, internalResolution);
+		wi::renderer::CreateSSAOResources(ssaoResources, internalResolution);
 		break;
 	case RenderPath3D::AO_MSAO:
 		desc.width = internalResolution.x;
 		desc.height = internalResolution.y;
-		wiRenderer::CreateMSAOResources(msaoResources, internalResolution);
+		wi::renderer::CreateMSAOResources(msaoResources, internalResolution);
 		break;
 	case RenderPath3D::AO_RTAO:
 		desc.width = internalResolution.x / 2;
 		desc.height = internalResolution.y / 2;
-		wiRenderer::CreateRTAOResources(rtaoResources, internalResolution);
+		wi::renderer::CreateRTAOResources(rtaoResources, internalResolution);
 		break;
 	default:
 		break;
 	}
 
-	GraphicsDevice* device = wiGraphics::GetDevice();
+	GraphicsDevice* device = wi::graphics::GetDevice();
 	device->CreateTexture(&desc, nullptr, &rtAO);
 	device->SetName(&rtAO, "rtAO");
 }
@@ -1574,7 +1574,7 @@ void RenderPath3D::setSSREnabled(bool value)
 
 	if (value)
 	{
-		GraphicsDevice* device = wiGraphics::GetDevice();
+		GraphicsDevice* device = wi::graphics::GetDevice();
 		XMUINT2 internalResolution = GetInternalResolution();
 
 		TextureDesc desc;
@@ -1585,7 +1585,7 @@ void RenderPath3D::setSSREnabled(bool value)
 		device->CreateTexture(&desc, nullptr, &rtSSR);
 		device->SetName(&rtSSR, "rtSSR");
 
-		wiRenderer::CreateSSRResources(ssrResources, internalResolution);
+		wi::renderer::CreateSSRResources(ssrResources, internalResolution);
 	}
 	else
 	{
@@ -1599,7 +1599,7 @@ void RenderPath3D::setRaytracedReflectionsEnabled(bool value)
 
 	if (value)
 	{
-		GraphicsDevice* device = wiGraphics::GetDevice();
+		GraphicsDevice* device = wi::graphics::GetDevice();
 		XMUINT2 internalResolution = GetInternalResolution();
 
 		TextureDesc desc;
@@ -1610,7 +1610,7 @@ void RenderPath3D::setRaytracedReflectionsEnabled(bool value)
 		device->CreateTexture(&desc, nullptr, &rtSSR);
 		device->SetName(&rtSSR, "rtSSR");
 
-		wiRenderer::CreateRTReflectionResources(rtreflectionResources, internalResolution);
+		wi::renderer::CreateRTReflectionResources(rtreflectionResources, internalResolution);
 	}
 	else
 	{
@@ -1624,7 +1624,7 @@ void RenderPath3D::setFSREnabled(bool value)
 
 	if (resolutionScale < 1.0f && fsrEnabled)
 	{
-		GraphicsDevice* device = wiGraphics::GetDevice();
+		GraphicsDevice* device = wi::graphics::GetDevice();
 
 		TextureDesc desc;
 		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;

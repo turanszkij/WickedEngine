@@ -3,35 +3,35 @@
 
 class EditorComponent;
 
-class PaintToolWindow : public wiWindow
+class PaintToolWindow : public wi::widget::Window
 {
 	float rot = 0;
 	float stroke_dist = 0;
 	bool history_needs_recording_start = false;
 	bool history_needs_recording_end = false;
 	size_t history_textureIndex = 0;
-	wi::vector<wiGraphics::Texture> history_textures; // we'd like to keep history textures in GPU memory to avoid GPU readback
-	wiGraphics::Texture GetEditTextureSlot(const wiScene::MaterialComponent& material, int* uvset = nullptr);
-	void ReplaceEditTextureSlot(wiScene::MaterialComponent& material, const wiGraphics::Texture& texture);
+	wi::vector<wi::graphics::Texture> history_textures; // we'd like to keep history textures in GPU memory to avoid GPU readback
+	wi::graphics::Texture GetEditTextureSlot(const wi::scene::MaterialComponent& material, int* uvset = nullptr);
+	void ReplaceEditTextureSlot(wi::scene::MaterialComponent& material, const wi::graphics::Texture& texture);
 public:
 	void Create(EditorComponent* editor);
 
 	EditorComponent* editor = nullptr;
-	wiECS::Entity entity = wiECS::INVALID_ENTITY;
+	wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
 	int subset = -1;
 
-	wiComboBox modeComboBox;
-	wiLabel infoLabel;
-	wiSlider radiusSlider;
-	wiSlider amountSlider;
-	wiSlider falloffSlider;
-	wiSlider spacingSlider;
-	wiCheckBox backfaceCheckBox;
-	wiCheckBox wireCheckBox;
-	wiCheckBox pressureCheckBox;
-	wiColorPicker colorPicker;
-	wiComboBox textureSlotComboBox;
-	wiButton saveTextureButton;
+	wi::widget::ComboBox modeComboBox;
+	wi::widget::Label infoLabel;
+	wi::widget::Slider radiusSlider;
+	wi::widget::Slider amountSlider;
+	wi::widget::Slider falloffSlider;
+	wi::widget::Slider spacingSlider;
+	wi::widget::CheckBox backfaceCheckBox;
+	wi::widget::CheckBox wireCheckBox;
+	wi::widget::CheckBox pressureCheckBox;
+	wi::widget::ColorPicker colorPicker;
+	wi::widget::ComboBox textureSlotComboBox;
+	wi::widget::Button saveTextureButton;
 
 	void Update(float dt);
 	void DrawBrush() const;
@@ -53,9 +53,9 @@ public:
 		MODE_WIND,
 	};
 	MODE GetMode() const;
-	void SetEntity(wiECS::Entity value, int subsetindex = -1);
+	void SetEntity(wi::ecs::Entity value, int subsetindex = -1);
 
-	wiArchive* currentHistory = nullptr;
-	void RecordHistory(bool start, wiGraphics::CommandList cmd = wiGraphics::INVALID_COMMANDLIST);
-	void ConsumeHistoryOperation(wiArchive& archive, bool undo);
+	wi::Archive* currentHistory = nullptr;
+	void RecordHistory(bool start, wi::graphics::CommandList cmd = wi::graphics::INVALID_COMMANDLIST);
+	void ConsumeHistoryOperation(wi::Archive& archive, bool undo);
 };

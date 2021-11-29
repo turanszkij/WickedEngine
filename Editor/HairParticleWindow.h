@@ -5,31 +5,31 @@ class EditorComponent;
 
 class MaterialWindow;
 
-class HairParticleWindow : public wiWindow
+class HairParticleWindow : public wi::widget::Window
 {
 public:
 	void Create(EditorComponent* editor);
 
-	wiECS::Entity entity;
-	void SetEntity(wiECS::Entity entity);
+	wi::ecs::Entity entity;
+	void SetEntity(wi::ecs::Entity entity);
 
 	void UpdateData();
 
-	wiScene::wiHairParticle* GetHair();
+	wi::scene::HairParticleSystem* GetHair();
 
-	wiButton addButton;
-	wiComboBox	meshComboBox;
-	wiSlider lengthSlider;
-	wiSlider stiffnessSlider;
-	wiSlider randomnessSlider;
-	wiSlider countSlider;
-	wiSlider segmentcountSlider;
-	wiSlider randomSeedSlider;
-	wiSlider viewDistanceSlider;
-	wiTextInputField framesXInput;
-	wiTextInputField framesYInput;
-	wiTextInputField frameCountInput;
-	wiTextInputField frameStartInput;
+	wi::widget::Button addButton;
+	wi::widget::ComboBox	meshComboBox;
+	wi::widget::Slider lengthSlider;
+	wi::widget::Slider stiffnessSlider;
+	wi::widget::Slider randomnessSlider;
+	wi::widget::Slider countSlider;
+	wi::widget::Slider segmentcountSlider;
+	wi::widget::Slider randomSeedSlider;
+	wi::widget::Slider viewDistanceSlider;
+	wi::widget::TextInputField framesXInput;
+	wi::widget::TextInputField framesYInput;
+	wi::widget::TextInputField frameCountInput;
+	wi::widget::TextInputField frameStartInput;
 
 };
 

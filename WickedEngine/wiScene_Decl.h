@@ -1,7 +1,6 @@
 #pragma once
 
-
-namespace wiScene
+namespace wi::scene
 {
 	struct NameComponent;
 	struct LayerComponent;
@@ -28,6 +27,6 @@ namespace wiScene
 	struct SpringComponent;
 	struct Scene;
 
-	class wiEmittedParticle; // todo: rename
-	class wiHairParticle; // todo: rename
+	class EmittedParticleSystem;
+	class HairParticleSystem;
 }

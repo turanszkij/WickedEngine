@@ -5,8 +5,8 @@
 
 #include <string>
 
-class wiSprite;
-class wiSpriteFont;
+class wi::Sprite;
+class wi::SpriteFont;
 
 struct RenderItem2D
 {
@@ -17,8 +17,8 @@ struct RenderItem2D
 	} type = SPRITE;
 	union
 	{
-		wiSprite* sprite = nullptr;
-		wiSpriteFont* font;
+		wi::Sprite* sprite = nullptr;
+		wi::SpriteFont* font;
 	};
 	int order = 0;
 };
@@ -33,22 +33,22 @@ class RenderPath2D :
 	public RenderPath
 {
 private:
-	wiGraphics::Texture rtStenciled;
-	wiGraphics::Texture rtStenciled_resolved;
-	wiGraphics::Texture rtFinal;
+	wi::graphics::Texture rtStenciled;
+	wi::graphics::Texture rtStenciled_resolved;
+	wi::graphics::Texture rtFinal;
 
-	wiGraphics::RenderPass renderpass_stenciled;
-	wiGraphics::RenderPass renderpass_final;
+	wi::graphics::RenderPass renderpass_stenciled;
+	wi::graphics::RenderPass renderpass_final;
 
-	wiGraphics::Texture rtLinearColorSpace;
-	wiGraphics::RenderPass renderpass_linearize;
+	wi::graphics::Texture rtLinearColorSpace;
+	wi::graphics::RenderPass renderpass_linearize;
 
-	wiGUI GUI;
+	wi::GUI GUI;
 
 	XMUINT2 current_buffersize{};
 	float current_layoutscale{};
 
-	mutable wiGraphics::Texture render_result = rtFinal;
+	mutable wi::graphics::Texture render_result = rtFinal;
 
 	float hdr_scaling = 9.0f;
 
@@ -61,32 +61,32 @@ public:
 	void Update(float dt) override;
 	void FixedUpdate() override;
 	void Render() const override;
-	void Compose(wiGraphics::CommandList cmd) const override;
+	void Compose(wi::graphics::CommandList cmd) const override;
 
-	const wiGraphics::Texture& GetRenderResult() const { return render_result; }
-	virtual const wiGraphics::Texture* GetDepthStencil() const { return nullptr; }
-	virtual const wiGraphics::Texture* GetGUIBlurredBackground() const { return nullptr; }
+	const wi::graphics::Texture& GetRenderResult() const { return render_result; }
+	virtual const wi::graphics::Texture* GetDepthStencil() const { return nullptr; }
+	virtual const wi::graphics::Texture* GetGUIBlurredBackground() const { return nullptr; }
 
-	void AddSprite(wiSprite* sprite, const std::string& layer = "");
-	void RemoveSprite(wiSprite* sprite);
+	void AddSprite(wi::Sprite* sprite, const std::string& layer = "");
+	void RemoveSprite(wi::Sprite* sprite);
 	void ClearSprites();
-	int GetSpriteOrder(wiSprite* sprite);
+	int GetSpriteOrder(wi::Sprite* sprite);
 
-	void AddFont(wiSpriteFont* font, const std::string& layer = "");
-	void RemoveFont(wiSpriteFont* font);
+	void AddFont(wi::SpriteFont* font, const std::string& layer = "");
+	void RemoveFont(wi::SpriteFont* font);
 	void ClearFonts();
-	int GetFontOrder(wiSpriteFont* font);
+	int GetFontOrder(wi::SpriteFont* font);
 
 	wi::vector<RenderLayer2D> layers{ 1 };
 	void AddLayer(const std::string& name);
 	void SetLayerOrder(const std::string& name, int order);
-	void SetSpriteOrder(wiSprite* sprite, int order);
-	void SetFontOrder(wiSpriteFont* font, int order);
+	void SetSpriteOrder(wi::Sprite* sprite, int order);
+	void SetFontOrder(wi::SpriteFont* font, int order);
 	void SortLayers();
 	void CleanLayers();
 
-	const wiGUI& GetGUI() const { return GUI; }
-	wiGUI& GetGUI() { return GUI; }
+	const wi::GUI& GetGUI() const { return GUI; }
+	wi::GUI& GetGUI() { return GUI; }
 
 	float resolutionScale = 1.0f;
 	XMUINT2 GetInternalResolution() const

@@ -4,11 +4,11 @@
 #include "wiNetwork.h"
 #include "wiBackLog.h"
 
-namespace wiNetwork
+namespace wi::network
 {
 	void Initialize()
 	{
-		wiBackLog::post("TODO wiNetwork_UWP");
+		wi::backlog::post("TODO wi::network_UWP");
 	}
 
 	bool CreateSocket(Socket* sock)

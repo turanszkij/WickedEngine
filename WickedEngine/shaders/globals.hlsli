@@ -871,7 +871,7 @@ static const float4 halton64[] = {
 	float4(0.5078125000f, 0.7283950617f, 0.1360000000f, 0.3294460641f),
 };
 
-// This the same as wiGraphics::ColorSpace
+// This the same as wi::graphics::ColorSpace
 enum class ColorSpace
 {
 	SRGB,			// SDR color space (8 or 10 bits per channel)

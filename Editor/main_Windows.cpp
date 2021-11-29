@@ -39,7 +39,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	BOOL dpi_success = SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 	assert(dpi_success);
 
-	wiStartupArguments::Parse(lpCmdLine); // if you wish to use command line arguments, here is a good place to parse them...
+	wi::startup_arguments::Parse(lpCmdLine); // if you wish to use command line arguments, here is a good place to parse them...
 
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
@@ -211,7 +211,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		{
 		case PRINTSCREEN:
 			{
-				wiHelper::screenshot(editor.swapChain);
+				wi::helper::screenshot(editor.swapChain);
 			}
 			break;
 		default:
@@ -222,46 +222,46 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		switch (wParam)
 		{
 		case VK_BACK:
-			if (wiBackLog::isActive())
-				wiBackLog::deletefromInput();
-			wiTextInputField::DeleteFromInput();
+			if (wi::backlog::isActive())
+				wi::backlog::deletefromInput();
+			wi::widget::TextInputField::DeleteFromInput();
 			break;
 		case VK_RETURN:
 			break;
 		default:
 			{
 				const char c = (const char)(TCHAR)wParam;
-				if (wiBackLog::isActive())
+				if (wi::backlog::isActive())
 				{
-					wiBackLog::input(c);
+					wi::backlog::input(c);
 				}
-				wiTextInputField::AddInput(c);
+				wi::widget::TextInputField::AddInput(c);
 			}
 			break;
 		}
 		break;
 	case WM_INPUT:
-		wiRawInput::ParseMessage((void*)lParam);
+		wi::input::rawinput::ParseMessage((void*)lParam);
 		break;
 	case WM_KILLFOCUS:
 		editor.is_window_active = false;
 		break;
 	case WM_SETFOCUS:
 		editor.is_window_active = true;
-		if (wiShaderCompiler::GetRegisteredShaderCount() > 0)
+		if (wi::shadercompiler::GetRegisteredShaderCount() > 0)
 		{
 			std::thread([] {
-				wiBackLog::post("[Shader check] Started checking " + std::to_string(wiShaderCompiler::GetRegisteredShaderCount()) + " registered shaders for changes...");
-				if (wiShaderCompiler::CheckRegisteredShadersOutdated())
+				wi::backlog::post("[Shader check] Started checking " + std::to_string(wi::shadercompiler::GetRegisteredShaderCount()) + " registered shaders for changes...");
+				if (wi::shadercompiler::CheckRegisteredShadersOutdated())
 				{
-					wiBackLog::post("[Shader check] Changes detected, initiating reload...");
-					wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [](uint64_t userdata) {
-						wiRenderer::ReloadShaders();
+					wi::backlog::post("[Shader check] Changes detected, initiating reload...");
+					wi::event::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [](uint64_t userdata) {
+						wi::renderer::ReloadShaders();
 						});
 				}
 				else
 				{
-					wiBackLog::post("[Shader check] All up to date");
+					wi::backlog::post("[Shader check] All up to date");
 				}
 				}).detach();
 		}

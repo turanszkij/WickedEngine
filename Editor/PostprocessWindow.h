@@ -3,44 +3,44 @@
 
 class EditorComponent;
 
-class PostprocessWindow : public wiWindow
+class PostprocessWindow : public wi::widget::Window
 {
 public:
 	void Create(EditorComponent* editor);
 
-	wiSlider exposureSlider;
-	wiCheckBox lensFlareCheckBox;
-	wiCheckBox lightShaftsCheckBox;
-	wiComboBox aoComboBox;
-	wiSlider aoPowerSlider;
-	wiSlider aoRangeSlider;
-	wiSlider aoSampleCountSlider;
-	wiCheckBox ssrCheckBox;
-	wiCheckBox raytracedReflectionsCheckBox;
-	wiCheckBox screenSpaceShadowsCheckBox;
-	wiSlider screenSpaceShadowsStepCountSlider;
-	wiSlider screenSpaceShadowsRangeSlider;
-	wiCheckBox eyeAdaptionCheckBox;
-	wiSlider eyeAdaptionKeySlider;
-	wiSlider eyeAdaptionRateSlider;
-	wiCheckBox motionBlurCheckBox;
-	wiSlider motionBlurStrengthSlider;
-	wiCheckBox depthOfFieldCheckBox;
-	wiSlider depthOfFieldScaleSlider;
-	wiCheckBox bloomCheckBox;
-	wiSlider bloomStrengthSlider;
-	wiCheckBox fxaaCheckBox;
-	wiCheckBox colorGradingCheckBox;
-	wiCheckBox ditherCheckBox;
-	wiCheckBox sharpenFilterCheckBox;
-	wiSlider sharpenFilterAmountSlider;
-	wiCheckBox outlineCheckBox;
-	wiSlider outlineThresholdSlider;
-	wiSlider outlineThicknessSlider;
-	wiCheckBox chromaticaberrationCheckBox;
-	wiSlider chromaticaberrationSlider;
-	wiCheckBox fsrCheckBox;
-	wiSlider fsrSlider;
+	wi::widget::Slider exposureSlider;
+	wi::widget::CheckBox lensFlareCheckBox;
+	wi::widget::CheckBox lightShaftsCheckBox;
+	wi::widget::ComboBox aoComboBox;
+	wi::widget::Slider aoPowerSlider;
+	wi::widget::Slider aoRangeSlider;
+	wi::widget::Slider aoSampleCountSlider;
+	wi::widget::CheckBox ssrCheckBox;
+	wi::widget::CheckBox raytracedReflectionsCheckBox;
+	wi::widget::CheckBox screenSpaceShadowsCheckBox;
+	wi::widget::Slider screenSpaceShadowsStepCountSlider;
+	wi::widget::Slider screenSpaceShadowsRangeSlider;
+	wi::widget::CheckBox eyeAdaptionCheckBox;
+	wi::widget::Slider eyeAdaptionKeySlider;
+	wi::widget::Slider eyeAdaptionRateSlider;
+	wi::widget::CheckBox motionBlurCheckBox;
+	wi::widget::Slider motionBlurStrengthSlider;
+	wi::widget::CheckBox depthOfFieldCheckBox;
+	wi::widget::Slider depthOfFieldScaleSlider;
+	wi::widget::CheckBox bloomCheckBox;
+	wi::widget::Slider bloomStrengthSlider;
+	wi::widget::CheckBox fxaaCheckBox;
+	wi::widget::CheckBox colorGradingCheckBox;
+	wi::widget::CheckBox ditherCheckBox;
+	wi::widget::CheckBox sharpenFilterCheckBox;
+	wi::widget::Slider sharpenFilterAmountSlider;
+	wi::widget::CheckBox outlineCheckBox;
+	wi::widget::Slider outlineThresholdSlider;
+	wi::widget::Slider outlineThicknessSlider;
+	wi::widget::CheckBox chromaticaberrationCheckBox;
+	wi::widget::Slider chromaticaberrationSlider;
+	wi::widget::CheckBox fsrCheckBox;
+	wi::widget::Slider fsrSlider;
 
 
 };

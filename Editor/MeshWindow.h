@@ -3,41 +3,41 @@
 
 class EditorComponent;
 
-class MeshWindow : public wiWindow
+class MeshWindow : public wi::widget::Window
 {
 public:
 	void Create(EditorComponent* editor);
 
-	wiECS::Entity entity;
+	wi::ecs::Entity entity;
 	int subset = -1;
-	void SetEntity(wiECS::Entity entity, int subset);
+	void SetEntity(wi::ecs::Entity entity, int subset);
 
-	wiLabel meshInfoLabel;
-	wiComboBox subsetComboBox;
-	wiComboBox subsetMaterialComboBox;
-	wiCheckBox doubleSidedCheckBox;
-	wiCheckBox softbodyCheckBox;
-	wiSlider massSlider;
-	wiSlider frictionSlider;
-	wiSlider restitutionSlider;
-	wiButton impostorCreateButton;
-	wiSlider impostorDistanceSlider;
-	wiSlider tessellationFactorSlider;
-	wiButton flipCullingButton;
-	wiButton flipNormalsButton;
-	wiButton computeNormalsSmoothButton;
-	wiButton computeNormalsHardButton;
-	wiButton recenterButton;
-	wiButton recenterToBottomButton;
-	wiButton optimizeButton;
+	wi::widget::Label meshInfoLabel;
+	wi::widget::ComboBox subsetComboBox;
+	wi::widget::ComboBox subsetMaterialComboBox;
+	wi::widget::CheckBox doubleSidedCheckBox;
+	wi::widget::CheckBox softbodyCheckBox;
+	wi::widget::Slider massSlider;
+	wi::widget::Slider frictionSlider;
+	wi::widget::Slider restitutionSlider;
+	wi::widget::Button impostorCreateButton;
+	wi::widget::Slider impostorDistanceSlider;
+	wi::widget::Slider tessellationFactorSlider;
+	wi::widget::Button flipCullingButton;
+	wi::widget::Button flipNormalsButton;
+	wi::widget::Button computeNormalsSmoothButton;
+	wi::widget::Button computeNormalsHardButton;
+	wi::widget::Button recenterButton;
+	wi::widget::Button recenterToBottomButton;
+	wi::widget::Button optimizeButton;
 
-	wiCheckBox terrainCheckBox;
-	wiComboBox terrainMat1Combo;
-	wiComboBox terrainMat2Combo;
-	wiComboBox terrainMat3Combo;
-	wiButton terrainGenButton;
+	wi::widget::CheckBox terrainCheckBox;
+	wi::widget::ComboBox terrainMat1Combo;
+	wi::widget::ComboBox terrainMat2Combo;
+	wi::widget::ComboBox terrainMat3Combo;
+	wi::widget::Button terrainGenButton;
 
-	wiComboBox morphTargetCombo;
-	wiSlider morphTargetSlider;
+	wi::widget::ComboBox morphTargetCombo;
+	wi::widget::Slider morphTargetSlider;
 };
 

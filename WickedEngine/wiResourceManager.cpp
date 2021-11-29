@@ -12,12 +12,12 @@ extern basist::etc1_global_selector_codebook g_basis_global_codebook;
 #include <algorithm>
 #include <mutex>
 
-using namespace wiGraphics;
+using namespace wi::graphics;
 
-namespace wiResourceManager
+namespace wi::resource_manager
 {
 	std::mutex locker;
-	wi::unordered_map<std::string, std::weak_ptr<wiResource>> resources;
+	wi::unordered_map<std::string, std::weak_ptr<wi::Resource>> resources;
 	MODE mode = MODE_DISCARD_FILEDATA_AFTER_LOAD;
 
 	void SetMode(MODE param)
@@ -29,24 +29,24 @@ namespace wiResourceManager
 		return mode;
 	}
 
-	static const wi::unordered_map<std::string, wiResource::DATA_TYPE> types = {
-		std::make_pair("BASIS", wiResource::IMAGE),
-		std::make_pair("KTX2", wiResource::IMAGE),
-		std::make_pair("JPG", wiResource::IMAGE),
-		std::make_pair("JPEG", wiResource::IMAGE),
-		std::make_pair("PNG", wiResource::IMAGE),
-		std::make_pair("BMP", wiResource::IMAGE),
-		std::make_pair("DDS", wiResource::IMAGE),
-		std::make_pair("TGA", wiResource::IMAGE),
-		std::make_pair("WAV", wiResource::SOUND),
-		std::make_pair("OGG", wiResource::SOUND),
+	static const wi::unordered_map<std::string, wi::Resource::DATA_TYPE> types = {
+		std::make_pair("BASIS", wi::Resource::IMAGE),
+		std::make_pair("KTX2", wi::Resource::IMAGE),
+		std::make_pair("JPG", wi::Resource::IMAGE),
+		std::make_pair("JPEG", wi::Resource::IMAGE),
+		std::make_pair("PNG", wi::Resource::IMAGE),
+		std::make_pair("BMP", wi::Resource::IMAGE),
+		std::make_pair("DDS", wi::Resource::IMAGE),
+		std::make_pair("TGA", wi::Resource::IMAGE),
+		std::make_pair("WAV", wi::Resource::SOUND),
+		std::make_pair("OGG", wi::Resource::SOUND),
 	};
 	wi::vector<std::string> GetSupportedImageExtensions()
 	{
 		wi::vector<std::string> ret;
 		for (auto& x : types)
 		{
-			if (x.second == wiResource::IMAGE)
+			if (x.second == wi::Resource::IMAGE)
 			{
 				ret.push_back(x.first);
 			}
@@ -58,7 +58,7 @@ namespace wiResourceManager
 		wi::vector<std::string> ret;
 		for (auto& x : types)
 		{
-			if (x.second == wiResource::SOUND)
+			if (x.second == wi::Resource::SOUND)
 			{
 				ret.push_back(x.first);
 			}
@@ -66,7 +66,7 @@ namespace wiResourceManager
 		return ret;
 	}
 
-	std::shared_ptr<wiResource> Load(const std::string& name, uint32_t flags, const uint8_t* filedata, size_t filesize)
+	std::shared_ptr<wi::Resource> Load(const std::string& name, uint32_t flags, const uint8_t* filedata, size_t filesize)
 	{
 		if (mode == MODE_DISCARD_FILEDATA_AFTER_LOAD)
 		{
@@ -74,8 +74,8 @@ namespace wiResourceManager
 		}
 
 		locker.lock();
-		std::weak_ptr<wiResource>& weak_resource = resources[name];
-		std::shared_ptr<wiResource> resource = weak_resource.lock();
+		std::weak_ptr<wi::Resource>& weak_resource = resources[name];
+		std::shared_ptr<wi::Resource> resource = weak_resource.lock();
 
 		static bool basis_init = false; // within lock!
 		if (!basis_init)
@@ -86,7 +86,7 @@ namespace wiResourceManager
 
 		if (resource == nullptr)
 		{
-			resource = std::make_shared<wiResource>();
+			resource = std::make_shared<wi::Resource>();
 			resources[name] = resource;
 			locker.unlock();
 		}
@@ -98,7 +98,7 @@ namespace wiResourceManager
 
 		if (filedata == nullptr || filesize == 0)
 		{
-			if (!wiHelper::FileRead(name, resource->filedata))
+			if (!wi::helper::FileRead(name, resource->filedata))
 			{
 				resource.reset();
 				return nullptr;
@@ -107,8 +107,8 @@ namespace wiResourceManager
 			filesize = resource->filedata.size();
 		}
 
-		std::string ext = wiHelper::toUpper(wiHelper::GetExtensionFromFileName(name));
-		wiResource::DATA_TYPE type;
+		std::string ext = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(name));
+		wi::Resource::DATA_TYPE type;
 
 		// dynamic type selection:
 		{
@@ -127,9 +127,9 @@ namespace wiResourceManager
 
 		switch (type)
 		{
-		case wiResource::IMAGE:
+		case wi::Resource::IMAGE:
 		{
-			GraphicsDevice* device = wiGraphics::GetDevice();
+			GraphicsDevice* device = wi::graphics::GetDevice();
 			if (!ext.compare("KTX2"))
 			{
 				basist::ktx2_transcoder transcoder(&g_basis_global_codebook);
@@ -463,7 +463,7 @@ namespace wiResourceManager
 							desc.width != 256 ||
 							desc.height != 16)
 						{
-							wiHelper::messageBox("The Dimensions must be 256 x 16 for color grading LUT!", "Error");
+							wi::helper::messageBox("The Dimensions must be 256 x 16 for color grading LUT!", "Error");
 						}
 						else
 						{
@@ -529,9 +529,9 @@ namespace wiResourceManager
 			}
 		}
 		break;
-		case wiResource::SOUND:
+		case wi::Resource::SOUND:
 		{
-			success = wiAudio::CreateSound(filedata, filesize, &resource->sound);
+			success = wi::audio::CreateSound(filedata, filesize, &resource->sound);
 		}
 		break;
 		};
@@ -553,10 +553,10 @@ namespace wiResourceManager
 				resource->filedata.clear();
 			}
 
-			if (type == wiResource::IMAGE && resource->texture.desc.mip_levels > 1
+			if (type == wi::Resource::IMAGE && resource->texture.desc.mip_levels > 1
 				&& has_flag(resource->texture.desc.bind_flags, BindFlag::UNORDERED_ACCESS))
 			{
-				wiRenderer::AddDeferredMIPGen(resource, true);
+				wi::renderer::AddDeferredMIPGen(resource, true);
 			}
 
 			return resource;
@@ -573,7 +573,7 @@ namespace wiResourceManager
 		if (it != resources.end())
 		{
 			auto resource = it->second.lock();
-			result = resource != nullptr && resource->type != wiResource::EMPTY;
+			result = resource != nullptr && resource->type != wi::Resource::EMPTY;
 		}
 		locker.unlock();
 		return result;
@@ -587,7 +587,7 @@ namespace wiResourceManager
 	}
 
 
-	void Serialize(wiArchive& archive, ResourceSerializer& seri)
+	void Serialize(wi::Archive& archive, ResourceSerializer& seri)
 	{
 		if (archive.IsReadMode())
 		{
@@ -603,7 +603,7 @@ namespace wiResourceManager
 			wi::vector<TempResource> temp_resources;
 			temp_resources.resize(serializable_count);
 
-			wiJobSystem::context ctx;
+			wi::jobsystem::context ctx;
 			std::mutex seri_locker;
 			for (size_t i = 0; i < serializable_count; ++i)
 			{
@@ -616,7 +616,7 @@ namespace wiResourceManager
 				resource.name = archive.GetSourceDirectory() + resource.name;
 
 				// "Loading" the resource can happen asynchronously to serialization of file data, to improve performance
-				wiJobSystem::Execute(ctx, [i, &temp_resources, &seri_locker, &seri](wiJobArgs args) {
+				wi::jobsystem::Execute(ctx, [i, &temp_resources, &seri_locker, &seri](wi::jobsystem::JobArgs args) {
 					auto& tmp_resource = temp_resources[i];
 					auto res = Load(tmp_resource.name, tmp_resource.flags, tmp_resource.filedata.data(), tmp_resource.filedata.size());
 					seri_locker.lock();
@@ -625,7 +625,7 @@ namespace wiResourceManager
 				});
 			}
 
-			wiJobSystem::Wait(ctx);
+			wi::jobsystem::Wait(ctx);
 		}
 		else
 		{
@@ -643,7 +643,7 @@ namespace wiResourceManager
 				// Count embedded resources:
 				for (auto& it : resources)
 				{
-					std::shared_ptr<wiResource> resource = it.second.lock();
+					std::shared_ptr<wi::Resource> resource = it.second.lock();
 					if (resource != nullptr && !resource->filedata.empty())
 					{
 						serializable_count++;
@@ -654,12 +654,12 @@ namespace wiResourceManager
 				archive << serializable_count;
 				for (auto& it : resources)
 				{
-					std::shared_ptr<wiResource> resource = it.second.lock();
+					std::shared_ptr<wi::Resource> resource = it.second.lock();
 
 					if (resource != nullptr && !resource->filedata.empty())
 					{
 						std::string name = it.first;
-						wiHelper::MakePathRelative(archive.GetSourceDirectory(), name);
+						wi::helper::MakePathRelative(archive.GetSourceDirectory(), name);
 
 						archive << name;
 						archive << resource->flags;

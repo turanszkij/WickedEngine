@@ -3,7 +3,7 @@
 #include "wiLuna.h"
 #include "wiIntersect.h"
 
-namespace wiIntersect_BindLua
+namespace wi::lua::intersect
 {
 	void Bind();
 

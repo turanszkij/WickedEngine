@@ -3,38 +3,38 @@
 
 class EditorComponent;
 
-class CameraWindow : public wiWindow
+class CameraWindow : public wi::widget::Window
 {
 public:
 	void Create(EditorComponent* editor);
 
 	void ResetCam();
 
-	wiECS::Entity proxy = wiECS::INVALID_ENTITY;
-	void SetEntity(wiECS::Entity entity);
+	wi::ecs::Entity proxy = wi::ecs::INVALID_ENTITY;
+	void SetEntity(wi::ecs::Entity entity);
 	void Update();
 
 	XMFLOAT3 move = {};
 
 
-	wiScene::TransformComponent camera_transform;
-	wiScene::TransformComponent camera_target;
+	wi::scene::TransformComponent camera_transform;
+	wi::scene::TransformComponent camera_target;
 
-	wiSlider farPlaneSlider;
-	wiSlider nearPlaneSlider;
-	wiSlider fovSlider;
-	wiSlider focalLengthSlider;
-	wiSlider apertureSizeSlider;
-	wiSlider apertureShapeXSlider;
-	wiSlider apertureShapeYSlider;
-	wiSlider movespeedSlider;
-	wiSlider rotationspeedSlider;
-	wiSlider accelerationSlider;
-	wiButton resetButton;
-	wiCheckBox fpsCheckBox;
+	wi::widget::Slider farPlaneSlider;
+	wi::widget::Slider nearPlaneSlider;
+	wi::widget::Slider fovSlider;
+	wi::widget::Slider focalLengthSlider;
+	wi::widget::Slider apertureSizeSlider;
+	wi::widget::Slider apertureShapeXSlider;
+	wi::widget::Slider apertureShapeYSlider;
+	wi::widget::Slider movespeedSlider;
+	wi::widget::Slider rotationspeedSlider;
+	wi::widget::Slider accelerationSlider;
+	wi::widget::Button resetButton;
+	wi::widget::CheckBox fpsCheckBox;
 
-	wiButton proxyButton;
-	wiCheckBox followCheckBox;
-	wiSlider followSlider;
+	wi::widget::Button proxyButton;
+	wi::widget::CheckBox followCheckBox;
+	wi::widget::Slider followSlider;
 };
 

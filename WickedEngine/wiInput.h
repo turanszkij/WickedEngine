@@ -4,7 +4,7 @@
 #include "wiColor.h"
 #include "wiVector.h"
 
-namespace wiInput
+namespace wi::input
 {
 	// Do not alter order as it is bound to lua manually!
 	enum BUTTON
@@ -103,14 +103,14 @@ namespace wiInput
 	{
 		float vibration_left = 0;	// left vibration motor (0: no vibration, 1: maximum vibration)
 		float vibration_right = 0;	// right vibration motor (0: no vibration, 1: maximum vibration)
-		wiColor led_color;			// led color
+		wi::Color led_color;			// led color
 	};
 
 	// call once at app start
 	void Initialize();
 
 	// call once per frame
-	void Update(wiPlatform::window_type window);
+	void Update(wi::platform::window_type window);
 
 	const KeyboardState& GetKeyboardState();
 	const MouseState& GetMouseState();

@@ -3,20 +3,20 @@
 
 class EditorComponent;
 
-class AnimationWindow : public wiWindow
+class AnimationWindow : public wi::widget::Window
 {
 public:
 	void Create(EditorComponent* editor);
 	
-	wiECS::Entity entity = wiECS::INVALID_ENTITY;
+	wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
 
-	wiComboBox	animationsComboBox;
-	wiCheckBox loopedCheckBox;
-	wiButton	playButton;
-	wiButton	stopButton;
-	wiSlider	timerSlider;
-	wiSlider	amountSlider;
-	wiSlider	speedSlider;
+	wi::widget::ComboBox	animationsComboBox;
+	wi::widget::CheckBox loopedCheckBox;
+	wi::widget::Button	playButton;
+	wi::widget::Button	stopButton;
+	wi::widget::Slider	timerSlider;
+	wi::widget::Slider	amountSlider;
+	wi::widget::Slider	speedSlider;
 
 	void Update();
 };

@@ -1,4 +1,4 @@
-#include "wiPhysicsEngine.h"
+#include "wiPhysics.h"
 #include "wiScene.h"
 #include "wiProfiler.h"
 #include "wiBackLog.h"
@@ -15,11 +15,10 @@
 #include <mutex>
 #include <memory>
 
-using namespace wiECS;
-using namespace wiScene;
+using namespace wi::ecs;
+using namespace wi::scene;
 
-
-namespace wiPhysicsEngine
+namespace wi::physics
 {
 	bool ENABLED = true;
 	bool SIMULATION_ENABLED = true;
@@ -39,18 +38,18 @@ namespace wiPhysicsEngine
 	{
 		void drawLine(const btVector3& from, const btVector3& to, const btVector3& color) override
 		{
-			wiRenderer::RenderableLine line;
+			wi::renderer::RenderableLine line;
 			line.start = XMFLOAT3(from.x(), from.y(), from.z());
 			line.end = XMFLOAT3(to.x(), to.y(), to.z());
 			line.color_start = line.color_end = XMFLOAT4(color.x(), color.y(), color.z(), 1.0f);
-			wiRenderer::DrawLine(line);
+			wi::renderer::DrawLine(line);
 		}
 		void drawContactPoint(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector3& color) override
 		{
 		}
 		void reportErrorWarning(const char* warningString) override
 		{
-			wiBackLog::post(warningString);
+			wi::backlog::post(warningString);
 		}
 		void draw3dText(const btVector3& location, const char* textString) override
 		{
@@ -67,7 +66,7 @@ namespace wiPhysicsEngine
 
 	void Initialize()
 	{
-		wiTimer timer;
+		wi::Timer timer;
 
 		dispatcher = std::make_unique<btCollisionDispatcher>(&collisionConfiguration);
 		dynamicsWorld = std::make_unique<btSoftRigidDynamicsWorld>(dispatcher.get(), &overlappingPairCache, &solver, &collisionConfiguration);
@@ -89,7 +88,7 @@ namespace wiPhysicsEngine
 
 		softRigidWorld->setDebugDrawer(&debugDraw);
 
-		wiBackLog::post("wiPhysicsEngine_Bullet Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
+		wi::backlog::post("wi::physics Initialized [Bullet] (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
 
 	bool IsEnabled() { return ENABLED; }
@@ -104,7 +103,7 @@ namespace wiPhysicsEngine
 	int GetAccuracy() { return ACCURACY; }
 	void SetAccuracy(int value) { ACCURACY = value; }
 
-	void AddRigidBody(Entity entity, wiScene::RigidBodyPhysicsComponent& physicscomponent, const wiScene::TransformComponent& transform, const wiScene::MeshComponent* mesh)
+	void AddRigidBody(Entity entity, wi::scene::RigidBodyPhysicsComponent& physicscomponent, const wi::scene::TransformComponent& transform, const wi::scene::MeshComponent* mesh)
 	{
 		btCollisionShape* shape = nullptr;
 
@@ -139,7 +138,7 @@ namespace wiPhysicsEngine
 			}
 			else
 			{
-				wiBackLog::post("Convex Hull physics requested, but no MeshComponent provided!");
+				wi::backlog::post("Convex Hull physics requested, but no MeshComponent provided!");
 				assert(0);
 			}
 			break;
@@ -183,7 +182,7 @@ namespace wiPhysicsEngine
 			}
 			else
 			{
-				wiBackLog::post("Triangle Mesh physics requested, but no MeshComponent provided!");
+				wi::backlog::post("Triangle Mesh physics requested, but no MeshComponent provided!");
 				assert(0);
 			}
 			break;
@@ -237,7 +236,7 @@ namespace wiPhysicsEngine
 			physicscomponent.physicsobject = rigidbody;
 		}
 	}
-	void AddSoftBody(Entity entity, wiScene::SoftBodyPhysicsComponent& physicscomponent, const wiScene::MeshComponent& mesh)
+	void AddSoftBody(Entity entity, wi::scene::SoftBodyPhysicsComponent& physicscomponent, const wi::scene::MeshComponent& mesh)
 	{
 		physicscomponent.CreateFromMesh(mesh);
 
@@ -335,7 +334,7 @@ namespace wiPhysicsEngine
 	}
 
 	void RunPhysicsUpdateSystem(
-		wiJobSystem::context& ctx,
+		wi::jobsystem::context& ctx,
 		Scene& scene,
 		float dt
 	)
@@ -343,12 +342,12 @@ namespace wiPhysicsEngine
 		if (!IsEnabled() || dt <= 0)
 			return;
 
-		auto range = wiProfiler::BeginRangeCPU("Physics");
+		auto range = wi::profiler::BeginRangeCPU("Physics");
 
 		btVector3 wind = btVector3(scene.weather.windDirection.x, scene.weather.windDirection.y, scene.weather.windDirection.z);
 
 		// System will register rigidbodies to objects, and update physics engine state for kinematics:
-		wiJobSystem::Dispatch(ctx, (uint32_t)scene.rigidbodies.GetCount(), 256, [&](wiJobArgs args) {
+		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.rigidbodies.GetCount(), 256, [&](wi::jobsystem::JobArgs args) {
 
 			RigidBodyPhysicsComponent& physicscomponent = scene.rigidbodies[args.jobIndex];
 			Entity entity = scene.rigidbodies.GetEntity(args.jobIndex);
@@ -420,7 +419,7 @@ namespace wiPhysicsEngine
 		});
 
 		// System will register softbodies to meshes and update physics engine state:
-		wiJobSystem::Dispatch(ctx, (uint32_t)scene.softbodies.GetCount(), 1, [&](wiJobArgs args) {
+		wi::jobsystem::Dispatch(ctx, (uint32_t)scene.softbodies.GetCount(), 1, [&](wi::jobsystem::JobArgs args) {
 
 			SoftBodyPhysicsComponent& physicscomponent = scene.softbodies[args.jobIndex];
 			Entity entity = scene.softbodies.GetEntity(args.jobIndex);
@@ -466,7 +465,7 @@ namespace wiPhysicsEngine
 						btSoftBody::Node& node = softbody->m_nodes[(uint32_t)ind];
 						uint32_t graphicsInd = physicscomponent.physicsToGraphicsVertexMapping[ind];
 						XMFLOAT3 position = mesh.vertex_positions[graphicsInd];
-						XMVECTOR P = armature == nullptr ? XMLoadFloat3(&position) : wiScene::SkinVertex(mesh, *armature, graphicsInd);
+						XMVECTOR P = armature == nullptr ? XMLoadFloat3(&position) : wi::scene::SkinVertex(mesh, *armature, graphicsInd);
 						P = XMVector3Transform(P, worldMatrix);
 						XMStoreFloat3(&position, P);
 						node.m_x = btVector3(position.x, position.y, position.z);
@@ -475,7 +474,7 @@ namespace wiPhysicsEngine
 			}
 		});
 
-		wiJobSystem::Wait(ctx);
+		wi::jobsystem::Wait(ctx);
 
 		// Perform internal simulation step:
 		if (IsSimulationEnabled())
@@ -638,13 +637,13 @@ namespace wiPhysicsEngine
 			dynamicsWorld->debugDrawWorld();
 		}
 
-		wiProfiler::EndRange(range); // Physics
+		wi::profiler::EndRange(range); // Physics
 	}
 
 
 
 	void ApplyForce(
-		const wiScene::RigidBodyPhysicsComponent& physicscomponent,
+		const wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const XMFLOAT3& force
 	)
 	{
@@ -655,7 +654,7 @@ namespace wiPhysicsEngine
 		}
 	}
 	void ApplyForceAt(
-		const wiScene::RigidBodyPhysicsComponent& physicscomponent,
+		const wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const XMFLOAT3& force,
 		const XMFLOAT3& at
 	)
@@ -668,7 +667,7 @@ namespace wiPhysicsEngine
 	}
 
 	void ApplyImpulse(
-		const wiScene::RigidBodyPhysicsComponent& physicscomponent,
+		const wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const XMFLOAT3& impulse
 	)
 	{
@@ -679,7 +678,7 @@ namespace wiPhysicsEngine
 		}
 	}
 	void ApplyImpulseAt(
-		const wiScene::RigidBodyPhysicsComponent& physicscomponent,
+		const wi::scene::RigidBodyPhysicsComponent& physicscomponent,
 		const XMFLOAT3& impulse,
 		const XMFLOAT3& at
 	)

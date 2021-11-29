@@ -28,7 +28,7 @@
 
 #define WILUA_ERROR_PREFIX "[Lua Error] "
 
-namespace wiLua
+namespace wi::lua
 {
 	struct LuaInternal
 	{
@@ -54,9 +54,9 @@ namespace wiLua
 		{
 			std::string filename = SGetString(L, 1);
 			filename = script_path + filename;
-			script_path = wiHelper::GetDirectoryFromPath(filename);
+			script_path = wi::helper::GetDirectoryFromPath(filename);
 			wi::vector<uint8_t> filedata;
-			if (wiHelper::FileRead(filename, filedata))
+			if (wi::helper::FileRead(filename, filedata))
 			{
 				std::string command = std::string(filedata.begin(), filedata.end());
 				int status = luaL_loadstring(L, command.c_str());
@@ -74,7 +74,7 @@ namespace wiLua
 					std::string ss;
 					ss += WILUA_ERROR_PREFIX;
 					ss += str;
-					wiBackLog::post(ss, wiBackLog::LogLevel::Error);
+					wi::backlog::post(ss, wi::backlog::LogLevel::Error);
 					lua_pop(L, 1); // remove error message
 				}
 			}
@@ -89,7 +89,7 @@ namespace wiLua
 
 	void Initialize()
 	{
-		wiTimer timer;
+		wi::Timer timer;
 
 		luainternal.m_luaState = luaL_newstate();
 		luaL_openlibs(luainternal.m_luaState);
@@ -103,21 +103,21 @@ namespace wiLua
 		LoadingScreen_BindLua::Bind();
 		RenderPath3D_BindLua::Bind();
 		Texture_BindLua::Bind();
-		wiRenderer_BindLua::Bind();
-		wiAudio_BindLua::Bind();
-		wiSprite_BindLua::Bind();
-		wiImageParams_BindLua::Bind();
+		renderer::Bind();
+		Audio_BindLua::Bind();
+		Sprite_BindLua::Bind();
+		ImageParams_BindLua::Bind();
 		SpriteAnim_BindLua::Bind();
-		wiScene_BindLua::Bind();
+		scene::Bind();
 		Vector_BindLua::Bind();
 		Matrix_BindLua::Bind();
-		wiInput_BindLua::Bind();
-		wiSpriteFont_BindLua::Bind();
-		wiBackLog_BindLua::Bind();
-		wiNetwork_BindLua::Bind();
-		wiIntersect_BindLua::Bind();
+		Input_BindLua::Bind();
+		SpriteFont_BindLua::Bind();
+		backlog::Bind();
+		Network_BindLua::Bind();
+		intersect::Bind();
 
-		wiBackLog::post("wiLua Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
+		wi::backlog::post("wi::lua Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
 
 	lua_State* GetLuaState()
@@ -157,15 +157,15 @@ namespace wiLua
 			std::string ss;
 			ss += WILUA_ERROR_PREFIX;
 			ss += str;
-			wiBackLog::post(ss, wiBackLog::LogLevel::Error);
+			wi::backlog::post(ss, wi::backlog::LogLevel::Error);
 			lua_pop(luainternal.m_luaState, 1); // remove error message
 		}
 	}
 	bool RunFile(const std::string& filename)
 	{
-		script_path = wiHelper::GetDirectoryFromPath(filename);
+		script_path = wi::helper::GetDirectoryFromPath(filename);
 		wi::vector<uint8_t> filedata;
-		if (wiHelper::FileRead(filename, filedata))
+		if (wi::helper::FileRead(filename, filedata))
 		{
 			return RunText(std::string(filedata.begin(), filedata.end()));
 		}
@@ -410,7 +410,7 @@ namespace wiLua
 		{
 			ss += error;
 		}
-		wiBackLog::post(ss);
+		wi::backlog::post(ss);
 	}
 
 	void SAddMetatable(lua_State* L, const std::string& name)

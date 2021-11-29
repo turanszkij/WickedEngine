@@ -924,7 +924,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiECS.h">
       <Filter>ENGINE\System</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiPhysicsEngine.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiPhysics.h">
       <Filter>ENGINE\Physics</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGPUBVH.h">
@@ -1724,7 +1724,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\utility_common.cpp">
       <Filter>UTILITY</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiPhysicsEngine_Bullet.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiPhysics_Bullet.cpp">
       <Filter>ENGINE\Physics</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGPUBVH.cpp">

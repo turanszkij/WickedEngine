@@ -10,22 +10,22 @@
 #include <winsock.h>
 #pragma comment(lib,"ws2_32.lib")
 
-namespace wiNetwork
+namespace wi::network
 {
-	struct wiNetworkInternal
+	struct NetworkInternal
 	{
 		WSAData wsadata;
 
-		~wiNetworkInternal()
+		~NetworkInternal()
 		{
 			WSACleanup();
 		}
 	};
-	std::shared_ptr<wiNetworkInternal> networkinternal;
+	std::shared_ptr<NetworkInternal> networkinternal;
 
 	struct SocketInternal
 	{
-		std::shared_ptr<wiNetworkInternal> networkinternal;
+		std::shared_ptr<NetworkInternal> networkinternal;
 		SOCKET handle = NULL;
 
 		~SocketInternal()
@@ -45,21 +45,21 @@ namespace wiNetwork
 
 	void Initialize()
 	{
-		wiTimer timer;
+		wi::Timer timer;
 
 		int result;
 
-		networkinternal = std::make_shared<wiNetworkInternal>();
+		networkinternal = std::make_shared<NetworkInternal>();
 
 		result = WSAStartup(MAKEWORD(2, 2), &networkinternal->wsadata); 
 		if (result)
 		{
 			int error = WSAGetLastError();
-			wiBackLog::post("wiNetwork Initialization FAILED with error: " + std::to_string(error));
+			wi::backlog::post("wi::network Initialization FAILED with error: " + std::to_string(error));
 			assert(0);
 		}
 
-		wiBackLog::post("wiNetwork Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
+		wi::backlog::post("wi::network Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
 
 	bool CreateSocket(Socket* sock)
@@ -72,7 +72,7 @@ namespace wiNetwork
 		if (socketinternal->handle == INVALID_SOCKET)
 		{
 			int error = WSAGetLastError();
-			wiBackLog::post("wiNetwork error in CreateSocket: " + std::to_string(error));
+			wi::backlog::post("wi::network error in CreateSocket: " + std::to_string(error));
 			return false;
 		}
 
@@ -97,7 +97,7 @@ namespace wiNetwork
 			if (result == SOCKET_ERROR)
 			{
 				int error = WSAGetLastError();
-				wiBackLog::post("wiNetwork error in Send: " + std::to_string(error));
+				wi::backlog::post("wi::network error in Send: " + std::to_string(error));
 				return false;
 			}
 
@@ -121,7 +121,7 @@ namespace wiNetwork
 			if (result == SOCKET_ERROR)
 			{
 				int error = WSAGetLastError();
-				wiBackLog::post("wiNetwork error in ListenPort: " + std::to_string(error));
+				wi::backlog::post("wi::network error in ListenPort: " + std::to_string(error));
 				return false;
 			}
 
@@ -146,7 +146,7 @@ namespace wiNetwork
 			if (result < 0)
 			{
 				int error = WSAGetLastError();
-				wiBackLog::post("wiNetwork error in CanReceive: " + std::to_string(error));
+				wi::backlog::post("wi::network error in CanReceive: " + std::to_string(error));
 				assert(0);
 				return false;
 			}
@@ -168,7 +168,7 @@ namespace wiNetwork
 			if (result == SOCKET_ERROR)
 			{
 				int error = WSAGetLastError();
-				wiBackLog::post("wiNetwork error in Receive: " + std::to_string(error));
+				wi::backlog::post("wi::network error in Receive: " + std::to_string(error));
 				return false;
 			}
 

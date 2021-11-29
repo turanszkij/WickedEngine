@@ -1,7 +1,8 @@
 #include "wiRandom.h"
+
 #include <random>
 
-namespace wiRandom
+namespace wi::random
 {
 	std::mt19937 &generator() {
 		static std::random_device rand_dev;

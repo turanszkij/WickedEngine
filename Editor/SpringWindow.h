@@ -3,21 +3,21 @@
 
 class EditorComponent;
 
-class SpringWindow : public wiWindow
+class SpringWindow : public wi::widget::Window
 {
 public:
 	void Create(EditorComponent* editor);
 
-	wiECS::Entity entity;
-	void SetEntity(wiECS::Entity entity);
+	wi::ecs::Entity entity;
+	void SetEntity(wi::ecs::Entity entity);
 
-	wiButton createButton;
-	wiCheckBox debugCheckBox;
-	wiCheckBox disabledCheckBox;
-	wiCheckBox stretchCheckBox;
-	wiCheckBox gravityCheckBox;
-	wiSlider stiffnessSlider;
-	wiSlider dampingSlider;
-	wiSlider windSlider;
+	wi::widget::Button createButton;
+	wi::widget::CheckBox debugCheckBox;
+	wi::widget::CheckBox disabledCheckBox;
+	wi::widget::CheckBox stretchCheckBox;
+	wi::widget::CheckBox gravityCheckBox;
+	wi::widget::Slider stiffnessSlider;
+	wi::widget::Slider dampingSlider;
+	wi::widget::Slider windSlider;
 };
 

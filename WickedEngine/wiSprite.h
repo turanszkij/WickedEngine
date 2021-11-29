@@ -7,97 +7,99 @@
 #include <memory>
 #include <string>
 
-class wiSprite
+namespace wi
 {
-private:
-	enum FLAGS
+	class Sprite
 	{
-		EMPTY = 0,
-		HIDDEN = 1 << 0,
-		DISABLE_UPDATE = 1 << 1,
-	};
-	uint32_t _flags = EMPTY;
-
-	std::string textureName, maskName;
-public:
-	wiSprite(const std::string& newTexture = "", const std::string& newMask = "");
-
-	virtual void FixedUpdate();
-	virtual void Update(float dt);
-	virtual void Draw(wiGraphics::CommandList cmd) const;
-
-	constexpr void SetHidden(bool value = true) { if (value) { _flags |= HIDDEN; } else { _flags &= ~HIDDEN; } }
-	constexpr bool IsHidden() const { return _flags & HIDDEN; }
-	constexpr void SetDisableUpdate(bool value = true) { if (value) { _flags |= DISABLE_UPDATE; } else { _flags &= ~DISABLE_UPDATE; } }
-	constexpr bool IsDisableUpdate() const { return _flags & DISABLE_UPDATE; }
-
-	wiImageParams params;
-	std::shared_ptr<wiResource> textureResource;
-	std::shared_ptr<wiResource> maskResource;
-
-	struct Anim
-	{
-		struct MovingTexAnim
+	private:
+		enum FLAGS
 		{
-			float speedX = 0; // the speed of texture scrolling animation in horizontal direction
-			float speedY = 0; // the speed of texture scrolling animation in vertical direction
+			EMPTY = 0,
+			HIDDEN = 1 << 0,
+			DISABLE_UPDATE = 1 << 1,
 		};
-		struct DrawRectAnim
-		{
-			float frameRate = 30; // target frame rate of the spritesheet animation (eg. 30, 60, etc.)
-			int frameCount = 1; // how many frames are in the animation in total
-			int horizontalFrameCount = 0; // how many horizontal frames there are (optional, use if the spritesheet contains multiple rows)
+		uint32_t _flags = EMPTY;
 
-			float _elapsedTime = 0; // internal use; you don't need to initialize
-			int _currentFrame = 0; // internal use; you don't need to initialize
-		};
-		struct WobbleAnim
-		{
-			XMFLOAT2 amount = XMFLOAT2(0, 0);	// how much the sprite wobbles in X and Y direction
-			float speed = 1; // how fast the sprite wobbles
+		std::string textureName, maskName;
+	public:
+		Sprite(const std::string& newTexture = "", const std::string& newMask = "");
 
-			float corner_angles[4]; // internal use; you don't need to initialize
-			float corner_speeds[4]; // internal use; you don't need to initialize
-			float corner_angles2[4]; // internal use; you don't need to initialize
-			float corner_speeds2[4]; // internal use; you don't need to initialize
-			WobbleAnim()
+		virtual void FixedUpdate();
+		virtual void Update(float dt);
+		virtual void Draw(wi::graphics::CommandList cmd) const;
+
+		constexpr void SetHidden(bool value = true) { if (value) { _flags |= HIDDEN; } else { _flags &= ~HIDDEN; } }
+		constexpr bool IsHidden() const { return _flags & HIDDEN; }
+		constexpr void SetDisableUpdate(bool value = true) { if (value) { _flags |= DISABLE_UPDATE; } else { _flags &= ~DISABLE_UPDATE; } }
+		constexpr bool IsDisableUpdate() const { return _flags & DISABLE_UPDATE; }
+
+		wi::image::Params params;
+		std::shared_ptr<wi::Resource> textureResource;
+		std::shared_ptr<wi::Resource> maskResource;
+
+		struct Anim
+		{
+			struct MovingTexAnim
 			{
-				for (int i = 0; i < 4; ++i)
+				float speedX = 0; // the speed of texture scrolling animation in horizontal direction
+				float speedY = 0; // the speed of texture scrolling animation in vertical direction
+			};
+			struct DrawRectAnim
+			{
+				float frameRate = 30; // target frame rate of the spritesheet animation (eg. 30, 60, etc.)
+				int frameCount = 1; // how many frames are in the animation in total
+				int horizontalFrameCount = 0; // how many horizontal frames there are (optional, use if the spritesheet contains multiple rows)
+
+				float _elapsedTime = 0; // internal use; you don't need to initialize
+				int _currentFrame = 0; // internal use; you don't need to initialize
+			};
+			struct WobbleAnim
+			{
+				XMFLOAT2 amount = XMFLOAT2(0, 0);	// how much the sprite wobbles in X and Y direction
+				float speed = 1; // how fast the sprite wobbles
+
+				float corner_angles[4]; // internal use; you don't need to initialize
+				float corner_speeds[4]; // internal use; you don't need to initialize
+				float corner_angles2[4]; // internal use; you don't need to initialize
+				float corner_speeds2[4]; // internal use; you don't need to initialize
+				WobbleAnim()
 				{
-					corner_angles[i] = wiRandom::getRandom(0, 1000) / 1000.0f * XM_2PI;
-					corner_speeds[i] = wiRandom::getRandom(500, 1000) / 1000.0f;
-					if (wiRandom::getRandom(0, 1) == 0)
+					for (int i = 0; i < 4; ++i)
 					{
-						corner_speeds[i] *= -1;
-					}
-					corner_angles2[i] = wiRandom::getRandom(0, 1000) / 1000.0f * XM_2PI;
-					corner_speeds2[i] = wiRandom::getRandom(500, 1000) / 1000.0f;
-					if (wiRandom::getRandom(0, 1) == 0)
-					{
-						corner_speeds2[i] *= -1;
+						corner_angles[i] = wi::random::getRandom(0, 1000) / 1000.0f * XM_2PI;
+						corner_speeds[i] = wi::random::getRandom(500, 1000) / 1000.0f;
+						if (wi::random::getRandom(0, 1) == 0)
+						{
+							corner_speeds[i] *= -1;
+						}
+						corner_angles2[i] = wi::random::getRandom(0, 1000) / 1000.0f * XM_2PI;
+						corner_speeds2[i] = wi::random::getRandom(500, 1000) / 1000.0f;
+						if (wi::random::getRandom(0, 1) == 0)
+						{
+							corner_speeds2[i] *= -1;
+						}
 					}
 				}
-			}
+			};
+
+			bool repeatable = false;
+			XMFLOAT3 vel = XMFLOAT3(0, 0, 0);
+			float rot = 0;
+			float scaleX = 0;
+			float scaleY = 0;
+			float opa = 0;
+			float fad = 0;
+			MovingTexAnim movingTexAnim;
+			DrawRectAnim drawRectAnim;
+			WobbleAnim wobbleAnim;
 		};
+		Anim anim;
 
-		bool repeatable = false;
-		XMFLOAT3 vel = XMFLOAT3(0, 0, 0);
-		float rot = 0;
-		float scaleX = 0;
-		float scaleY = 0;
-		float opa = 0;
-		float fad = 0;
-		MovingTexAnim movingTexAnim;
-		DrawRectAnim drawRectAnim;
-		WobbleAnim wobbleAnim;
+		const wi::graphics::Texture* getTexture() const
+		{
+			if (textureResource != nullptr)
+				return &textureResource->texture;
+			return nullptr;
+		}
 	};
-	Anim anim;
-
-	const wiGraphics::Texture* getTexture() const
-	{
-		if(textureResource != nullptr)
-			return &textureResource->texture;
-		return nullptr;
-	}
-};
-
+}

@@ -3,140 +3,145 @@
 #include "wiIntersect.h"
 #include "wiProfiler.h"
 
-using namespace wiGraphics;
+using namespace wi::graphics;
 
-void wiGUI::Update(const wiCanvas& canvas, float dt)
+namespace wi
 {
-	if (!visible)
+
+	void GUI::Update(const wi::Canvas& canvas, float dt)
 	{
-		return;
-	}
-
-	auto range = wiProfiler::BeginRangeCPU("GUI Update");
-
-	XMFLOAT4 pointer = wiInput::GetPointer();
-	Hitbox2D pointerHitbox = Hitbox2D(XMFLOAT2(pointer.x, pointer.y), XMFLOAT2(1, 1));
-
-	uint32_t priority = 0;
-
-	focus = false;
-	for (auto& widget : widgets)
-	{
-		widget->force_disable = focus;
-		widget->Update(canvas, dt);
-		widget->force_disable = false;
-
-		if (widget->priority_change)
+		if (!visible)
 		{
-			widget->priority_change = false;
-			widget->priority = priority++;
-		}
-		else
-		{
-			widget->priority = ~0u;
+			return;
 		}
 
-		if (widget->IsVisible() && widget->hitBox.intersects(pointerHitbox))
+		auto range = wi::profiler::BeginRangeCPU("GUI Update");
+
+		XMFLOAT4 pointer = wi::input::GetPointer();
+		Hitbox2D pointerHitbox = Hitbox2D(XMFLOAT2(pointer.x, pointer.y), XMFLOAT2(1, 1));
+
+		uint32_t priority = 0;
+
+		focus = false;
+		for (auto& widget : widgets)
 		{
-			focus = true;
+			widget->force_disable = focus;
+			widget->Update(canvas, dt);
+			widget->force_disable = false;
+
+			if (widget->priority_change)
+			{
+				widget->priority_change = false;
+				widget->priority = priority++;
+			}
+			else
+			{
+				widget->priority = ~0u;
+			}
+
+			if (widget->IsVisible() && widget->hitBox.intersects(pointerHitbox))
+			{
+				focus = true;
+			}
+			if (widget->GetState() > wi::widget::IDLE)
+			{
+				focus = true;
+			}
 		}
-		if (widget->GetState() > wiWidget::IDLE)
+
+		//Sort only if there are priority changes
+		if (priority > 0)
 		{
-			focus = true;
+			//Use std::stable_sort instead of std::sort to preserve UI element order with equal priorities
+			std::stable_sort(widgets.begin(), widgets.end(), [](const wi::widget::Widget* a, const wi::widget::Widget* b) {
+				return a->priority < b->priority;
+				});
 		}
+
+		wi::profiler::EndRange(range);
 	}
 
-	//Sort only if there are priority changes
-	if (priority > 0)
+	void GUI::Render(const wi::Canvas& canvas, CommandList cmd) const
 	{
-		//Use std::stable_sort instead of std::sort to preserve UI element order with equal priorities
-		std::stable_sort(widgets.begin(), widgets.end(), [](const wiWidget* a, const wiWidget* b) {
-			return a->priority < b->priority;
-			});
-	}
+		if (!visible)
+		{
+			return;
+		}
 
-	wiProfiler::EndRange(range);
-}
+		auto range_cpu = wi::profiler::BeginRangeCPU("GUI Render");
+		auto range_gpu = wi::profiler::BeginRangeGPU("GUI Render", cmd);
 
-void wiGUI::Render(const wiCanvas& canvas, CommandList cmd) const
-{
-	if (!visible)
-	{
-		return;
-	}
+		Rect scissorRect;
+		scissorRect.bottom = (int32_t)(canvas.GetPhysicalHeight());
+		scissorRect.left = (int32_t)(0);
+		scissorRect.right = (int32_t)(canvas.GetPhysicalWidth());
+		scissorRect.top = (int32_t)(0);
 
-	auto range_cpu = wiProfiler::BeginRangeCPU("GUI Render");
-	auto range_gpu = wiProfiler::BeginRangeGPU("GUI Render", cmd);
+		GraphicsDevice* device = wi::graphics::GetDevice();
 
-	Rect scissorRect;
-	scissorRect.bottom = (int32_t)(canvas.GetPhysicalHeight());
-	scissorRect.left = (int32_t)(0);
-	scissorRect.right = (int32_t)(canvas.GetPhysicalWidth());
-	scissorRect.top = (int32_t)(0);
+		device->EventBegin("GUI", cmd);
+		// Rendering is back to front:
+		for (auto it = widgets.rbegin(); it != widgets.rend(); ++it)
+		{
+			const wi::widget::Widget* widget = (*it);
+			device->BindScissorRects(1, &scissorRect, cmd);
+			widget->Render(canvas, cmd);
+		}
 
-	GraphicsDevice* device = wiGraphics::GetDevice();
-
-	device->EventBegin("GUI", cmd);
-	// Rendering is back to front:
-	for (auto it = widgets.rbegin(); it != widgets.rend(); ++it)
-	{
-		const wiWidget* widget = (*it);
 		device->BindScissorRects(1, &scissorRect, cmd);
-		widget->Render(canvas, cmd);
-	}
-
-	device->BindScissorRects(1, &scissorRect, cmd);
-	for (auto& x : widgets)
-	{
-		x->RenderTooltip(canvas, cmd);
-	}
-
-	device->EventEnd(cmd);
-
-	wiProfiler::EndRange(range_cpu);
-	wiProfiler::EndRange(range_gpu);
-}
-
-void wiGUI::AddWidget(wiWidget* widget)
-{
-	if (widget != nullptr)
-	{
-		assert(std::find(widgets.begin(), widgets.end(), widget) == widgets.end()); // don't attach one widget twice!
-		widgets.push_back(widget);
-	}
-}
-
-void wiGUI::RemoveWidget(wiWidget* widget)
-{
-	for (auto& x : widgets)
-	{
-		if (x == widget)
+		for (auto& x : widgets)
 		{
-			x = widgets.back();
-			widgets.pop_back();
-			break;
+			x->RenderTooltip(canvas, cmd);
+		}
+
+		device->EventEnd(cmd);
+
+		wi::profiler::EndRange(range_cpu);
+		wi::profiler::EndRange(range_gpu);
+	}
+
+	void GUI::AddWidget(wi::widget::Widget* widget)
+	{
+		if (widget != nullptr)
+		{
+			assert(std::find(widgets.begin(), widgets.end(), widget) == widgets.end()); // don't attach one widget twice!
+			widgets.push_back(widget);
 		}
 	}
-}
 
-wiWidget* wiGUI::GetWidget(const std::string& name)
-{
-	for (auto& x : widgets)
+	void GUI::RemoveWidget(wi::widget::Widget* widget)
 	{
-		if (x->GetName() == name)
+		for (auto& x : widgets)
 		{
-			return x;
+			if (x == widget)
+			{
+				x = widgets.back();
+				widgets.pop_back();
+				break;
+			}
 		}
 	}
-	return nullptr;
-}
 
-bool wiGUI::HasFocus()
-{
-	if (!visible)
+	wi::widget::Widget* GUI::GetWidget(const std::string& name)
 	{
-		return false;
+		for (auto& x : widgets)
+		{
+			if (x->GetName() == name)
+			{
+				return x;
+			}
+		}
+		return nullptr;
 	}
 
-	return focus;
+	bool GUI::HasFocus()
+	{
+		if (!visible)
+		{
+			return false;
+		}
+
+		return focus;
+	}
+
 }

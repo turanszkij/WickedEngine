@@ -14,16 +14,15 @@
 #include "wiSprite.h"
 #include "wiMath.h"
 #include "wiECS.h"
-#include "wiScene_Decl.h"
 #include "wiVector.h"
 
 #include <string>
 #include <memory>
 #include <limits>
 
-class wiArchive;
+class wi::Archive;
 
-namespace wiScene
+namespace wi::scene
 {
 	struct NameComponent
 	{
@@ -33,7 +32,7 @@ namespace wiScene
 		inline void operator=(std::string&& str) { name = std::move(str); }
 		inline bool operator==(const std::string& str) const { return name.compare(str) == 0; }
 
-		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
 	struct LayerComponent
@@ -45,7 +44,7 @@ namespace wiScene
 
 		inline uint32_t GetLayerMask() const { return layerMask & propagationMask; }
 
-		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 	
 	struct TransformComponent
@@ -99,7 +98,7 @@ namespace wiScene
 		void Lerp(const TransformComponent& a, const TransformComponent& b, float t);
 		void CatmullRom(const TransformComponent& a, const TransformComponent& b, const TransformComponent& c, const TransformComponent& d, float t);
 
-		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
 	struct PreviousFrameTransformComponent
@@ -107,15 +106,15 @@ namespace wiScene
 		// Non-serialized attributes:
 		XMFLOAT4X4 world_prev;
 
-		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
 	struct HierarchyComponent
 	{
-		wiECS::Entity parentID = wiECS::INVALID_ENTITY;
+		wi::ecs::Entity parentID = wi::ecs::INVALID_ENTITY;
 		uint32_t layerMask_bind; // saved child layermask at the time of binding
 
-		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
 	struct MaterialComponent
@@ -177,7 +176,7 @@ namespace wiScene
 		float clearcoat = 0;
 		float clearcoatRoughness = 0;
 
-		wiGraphics::ShadingRate shadingRate = wiGraphics::ShadingRate::RATE_1X1;
+		wi::graphics::ShadingRate shadingRate = wi::graphics::ShadingRate::RATE_1X1;
 		
 		XMFLOAT2 texAnimDirection = XMFLOAT2(0, 0);
 		float texAnimFrameRate = 0.0f;
@@ -205,8 +204,8 @@ namespace wiScene
 		{
 			std::string name;
 			uint32_t uvset = 0;
-			std::shared_ptr<wiResource> resource;
-			const wiGraphics::GPUResource* GetGPUResource() const
+			std::shared_ptr<wi::Resource> resource;
+			const wi::graphics::GPUResource* GetGPUResource() const
 			{
 				if (resource == nullptr || !resource->texture.IsValid())
 					return nullptr;
@@ -301,7 +300,7 @@ namespace wiScene
 		void WriteShaderMaterial(ShaderMaterial* dest) const;
 
 		// Retrieve the array of textures from the material
-		void WriteTextures(const wiGraphics::GPUResource** dest, int count) const;
+		void WriteTextures(const wi::graphics::GPUResource** dest, int count) const;
 
 		// Returns the bitwise OR of all the RENDERTYPE flags applicable to this material
 		uint32_t GetRenderTypes() const;
@@ -309,7 +308,7 @@ namespace wiScene
 		// Create constant buffer and texture resources for GPU
 		void CreateRenderData();
 
-		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
 	struct MeshComponent
@@ -341,7 +340,7 @@ namespace wiScene
 
 		struct MeshSubset
 		{
-			wiECS::Entity materialID = wiECS::INVALID_ENTITY;
+			wi::ecs::Entity materialID = wi::ecs::INVALID_ENTITY;
 			uint32_t indexOffset = 0;
 			uint32_t indexCount = 0;
 
@@ -351,16 +350,16 @@ namespace wiScene
 		wi::vector<MeshSubset> subsets;
 
 		float tessellationFactor = 0.0f;
-		wiECS::Entity armatureID = wiECS::INVALID_ENTITY;
+		wi::ecs::Entity armatureID = wi::ecs::INVALID_ENTITY;
 
 		// Terrain blend materials:
 		//	There are 4 blend materials, the first one (default) being the subset material
 		//	Must have TERRAIN flag enabled
 		//	Must have vertex colors to blend between materials
 		//	extra materials that are not set will use the base subset material
-		wiECS::Entity terrain_material1 = wiECS::INVALID_ENTITY;
-		wiECS::Entity terrain_material2 = wiECS::INVALID_ENTITY;
-		wiECS::Entity terrain_material3 = wiECS::INVALID_ENTITY;
+		wi::ecs::Entity terrain_material1 = wi::ecs::INVALID_ENTITY;
+		wi::ecs::Entity terrain_material2 = wi::ecs::INVALID_ENTITY;
+		wi::ecs::Entity terrain_material3 = wi::ecs::INVALID_ENTITY;
 
 		// Morph Targets
 		struct MeshMorphTarget
@@ -373,21 +372,21 @@ namespace wiScene
 
 		// Non-serialized attributes:
 		AABB aabb;
-		wiGraphics::GPUBuffer indexBuffer;
-		wiGraphics::GPUBuffer vertexBuffer_POS;
-		wiGraphics::GPUBuffer vertexBuffer_TAN;
-		wiGraphics::GPUBuffer vertexBuffer_UV0;
-		wiGraphics::GPUBuffer vertexBuffer_UV1;
-		wiGraphics::GPUBuffer vertexBuffer_BON;
-		wiGraphics::GPUBuffer vertexBuffer_COL;
-		wiGraphics::GPUBuffer vertexBuffer_ATL;
-		wiGraphics::GPUBuffer vertexBuffer_PRE;
-		wiGraphics::GPUBuffer streamoutBuffer_POS;
-		wiGraphics::GPUBuffer streamoutBuffer_TAN;
+		wi::graphics::GPUBuffer indexBuffer;
+		wi::graphics::GPUBuffer vertexBuffer_POS;
+		wi::graphics::GPUBuffer vertexBuffer_TAN;
+		wi::graphics::GPUBuffer vertexBuffer_UV0;
+		wi::graphics::GPUBuffer vertexBuffer_UV1;
+		wi::graphics::GPUBuffer vertexBuffer_BON;
+		wi::graphics::GPUBuffer vertexBuffer_COL;
+		wi::graphics::GPUBuffer vertexBuffer_ATL;
+		wi::graphics::GPUBuffer vertexBuffer_PRE;
+		wi::graphics::GPUBuffer streamoutBuffer_POS;
+		wi::graphics::GPUBuffer streamoutBuffer_TAN;
 		wi::vector<uint8_t> vertex_subsets;
-		wiGraphics::GPUBuffer subsetBuffer;
+		wi::graphics::GPUBuffer subsetBuffer;
 
-		wiGraphics::RaytracingAccelerationStructure BLAS;
+		wi::graphics::RaytracingAccelerationStructure BLAS;
 		enum BLAS_STATE
 		{
 			BLAS_STATE_NEEDS_REBUILD,
@@ -415,9 +414,9 @@ namespace wiScene
 		inline bool IsTerrain() const { return _flags & TERRAIN; }
 
 		inline float GetTessellationFactor() const { return tessellationFactor; }
-		inline wiGraphics::IndexBufferFormat GetIndexFormat() const { return vertex_positions.size() > 65535 ? wiGraphics::IndexBufferFormat::UINT32 : wiGraphics::IndexBufferFormat::UINT16; }
-		inline size_t GetIndexStride() const { return GetIndexFormat() == wiGraphics::IndexBufferFormat::UINT32 ? sizeof(uint32_t) : sizeof(uint16_t); }
-		inline bool IsSkinned() const { return armatureID != wiECS::INVALID_ENTITY; }
+		inline wi::graphics::IndexBufferFormat GetIndexFormat() const { return vertex_positions.size() > 65535 ? wi::graphics::IndexBufferFormat::UINT32 : wi::graphics::IndexBufferFormat::UINT16; }
+		inline size_t GetIndexStride() const { return GetIndexFormat() == wi::graphics::IndexBufferFormat::UINT32 ? sizeof(uint32_t) : sizeof(uint16_t); }
+		inline bool IsSkinned() const { return armatureID != wi::ecs::INVALID_ENTITY; }
 
 		// Recreates GPU resources for index/vertex buffers
 		void CreateRenderData();
@@ -436,7 +435,7 @@ namespace wiScene
 		void RecenterToBottom();
 		SPHERE GetBoundingSphere() const;
 
-		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 
 
 		struct Vertex_POS
@@ -492,7 +491,7 @@ namespace wiScene
 				return (normal_wind >> 24) & 0x000000FF;
 			}
 
-			static const wiGraphics::Format FORMAT = wiGraphics::Format::R32G32B32A32_FLOAT;
+			static const wi::graphics::Format FORMAT = wi::graphics::Format::R32G32B32A32_FLOAT;
 		};
 		struct Vertex_TEX
 		{
@@ -503,7 +502,7 @@ namespace wiScene
 				tex = XMHALF2(texcoords.x, texcoords.y);
 			}
 
-			static const wiGraphics::Format FORMAT = wiGraphics::Format::R16G16_FLOAT;
+			static const wi::graphics::Format FORMAT = wi::graphics::Format::R16G16_FLOAT;
 		};
 		struct Vertex_BON
 		{
@@ -551,7 +550,7 @@ namespace wiScene
 		struct Vertex_COL
 		{
 			uint32_t color = 0;
-			static const wiGraphics::Format FORMAT = wiGraphics::Format::R8G8B8A8_UNORM;
+			static const wi::graphics::Format FORMAT = wi::graphics::Format::R8G8B8A8_UNORM;
 		};
 		struct Vertex_TAN
 		{
@@ -571,7 +570,7 @@ namespace wiScene
 				tangent |= (uint)((t.w * 0.5f + 0.5f) * 255.0f) << 24;
 			}
 
-			static const wiGraphics::Format FORMAT = wiGraphics::Format::R8G8B8A8_UNORM;
+			static const wi::graphics::Format FORMAT = wi::graphics::Format::R8G8B8A8_UNORM;
 		};
 		
 		// Non serialized attributes:
@@ -600,7 +599,7 @@ namespace wiScene
 		inline void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
 		inline bool IsDirty() const { return _flags & DIRTY; }
 
-		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
 	struct ObjectComponent
@@ -617,7 +616,7 @@ namespace wiScene
 		};
 		uint32_t _flags = RENDERABLE | CAST_SHADOW;
 
-		wiECS::Entity meshID = wiECS::INVALID_ENTITY;
+		wi::ecs::Entity meshID = wi::ecs::INVALID_ENTITY;
 		uint32_t cascadeMask = 0; // which shadow cascades to skip from lowest detail to highest detail (0: skip none, 1: skip first, etc...)
 		uint32_t rendertypeMask = 0;
 		XMFLOAT4 color = XMFLOAT4(1, 1, 1, 1);
@@ -631,9 +630,9 @@ namespace wiScene
 
 		// Non-serialized attributes:
 
-		wiGraphics::Texture lightmap;
-		wiGraphics::RenderPass renderpass_lightmap_clear;
-		wiGraphics::RenderPass renderpass_lightmap_accumulate;
+		wi::graphics::Texture lightmap;
+		wi::graphics::RenderPass renderpass_lightmap_clear;
+		wi::graphics::RenderPass renderpass_lightmap_accumulate;
 		mutable uint32_t lightmapIterationCount = 0;
 
 		XMFLOAT3 center = XMFLOAT3(0, 0, 0);
@@ -646,7 +645,7 @@ namespace wiScene
 
 		// occlusion result history bitfield (32 bit->32 frame history)
 		mutable uint32_t occlusionHistory = ~0;
-		mutable int occlusionQueries[wiGraphics::GraphicsDevice::GetBufferCount() + 1];
+		mutable int occlusionQueries[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
 
 		inline bool IsOccluded() const
 		{
@@ -686,7 +685,7 @@ namespace wiScene
 		void SaveLightmap();
 		void CompressLightmap();
 
-		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
 	struct RigidBodyPhysicsComponent
@@ -738,7 +737,7 @@ namespace wiScene
 		inline bool IsDisableDeactivation() const { return _flags & DISABLE_DEACTIVATION; }
 		inline bool IsKinematic() const { return _flags & KINEMATIC; }
 
-		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
 	struct SoftBodyPhysicsComponent
@@ -774,7 +773,7 @@ namespace wiScene
 		// Create physics represenation of graphics mesh
 		void CreateFromMesh(const MeshComponent& mesh);
 
-		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
 	struct ArmatureComponent
@@ -785,18 +784,18 @@ namespace wiScene
 		};
 		uint32_t _flags = EMPTY;
 
-		wi::vector<wiECS::Entity> boneCollection;
+		wi::vector<wi::ecs::Entity> boneCollection;
 		wi::vector<XMFLOAT4X4> inverseBindMatrices;
 
 		// Non-serialized attributes:
 		AABB aabb;
 
 		wi::vector<ShaderTransform> boneData;
-		wiGraphics::GPUBuffer boneBuffer;
+		wi::graphics::GPUBuffer boneBuffer;
 
 		void CreateRenderData();
 
-		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
 	struct LightComponent
@@ -841,7 +840,7 @@ namespace wiScene
 		XMFLOAT3 right;
 		mutable int occlusionquery = -1;
 
-		wi::vector<std::shared_ptr<wiResource>> lensFlareRimTextures;
+		wi::vector<std::shared_ptr<wi::Resource>> lensFlareRimTextures;
 
 		inline void SetCastShadow(bool value) { if (value) { _flags |= CAST_SHADOW; } else { _flags &= ~CAST_SHADOW; } }
 		inline void SetVolumetricsEnabled(bool value) { if (value) { _flags |= VOLUMETRICS; } else { _flags &= ~VOLUMETRICS; } }
@@ -858,7 +857,7 @@ namespace wiScene
 		inline void SetType(LightType val) { type = val; }
 		inline LightType GetType() const { return type; }
 
-		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
 	struct CameraComponent
@@ -890,7 +889,7 @@ namespace wiScene
 		XMFLOAT4X4 InvView, InvProjection, InvVP;
 		XMFLOAT2 jitter;
 		XMFLOAT4 clipPlane = XMFLOAT4(0, 0, 0, 0); // default: no clip plane
-		wiCanvas canvas;
+		wi::Canvas canvas;
 		int texture_depth_index = -1;
 		int texture_lineardepth_index = -1;
 		int texture_gbuffer0_index = -1;
@@ -926,7 +925,7 @@ namespace wiScene
 		inline bool IsDirty() const { return _flags & DIRTY; }
 		inline bool IsCustomProjectionEnabled() const { return _flags & CUSTOM_PROJECTION; }
 
-		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
 	struct EnvironmentProbeComponent
@@ -952,7 +951,7 @@ namespace wiScene
 		inline bool IsDirty() const { return _flags & DIRTY; }
 		inline bool IsRealTime() const { return _flags & REALTIME; }
 
-		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
 	struct ForceFieldComponent
@@ -974,7 +973,7 @@ namespace wiScene
 
 		inline float GetRange() const { return range_global; }
 
-		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
 	struct DecalComponent
@@ -993,12 +992,12 @@ namespace wiScene
 		float range;
 		XMFLOAT4X4 world;
 
-		std::shared_ptr<wiResource> texture;
-		std::shared_ptr<wiResource> normal;
+		std::shared_ptr<wi::Resource> texture;
+		std::shared_ptr<wi::Resource> normal;
 
 		inline float GetOpacity() const { return color.w; }
 
-		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
 	struct AnimationDataComponent
@@ -1012,7 +1011,7 @@ namespace wiScene
 		wi::vector<float> keyframe_times;
 		wi::vector<float> keyframe_data;
 
-		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
 	struct AnimationComponent
@@ -1038,7 +1037,7 @@ namespace wiScene
 			};
 			uint32_t _flags = LOOPED;
 
-			wiECS::Entity target = wiECS::INVALID_ENTITY;
+			wi::ecs::Entity target = wi::ecs::INVALID_ENTITY;
 			int samplerIndex = -1;
 
 			enum Path
@@ -1059,7 +1058,7 @@ namespace wiScene
 			};
 			uint32_t _flags = LOOPED;
 
-			wiECS::Entity data = wiECS::INVALID_ENTITY;
+			wi::ecs::Entity data = wi::ecs::INVALID_ENTITY;
 
 			enum Mode
 			{
@@ -1088,7 +1087,7 @@ namespace wiScene
 		inline void Stop() { Pause(); timer = 0.0f; }
 		inline void SetLooped(bool value = true) { if (value) { _flags |= LOOPED; } else { _flags &= ~LOOPED; } }
 
-		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
 	struct WeatherComponent
@@ -1136,7 +1135,7 @@ namespace wiScene
 		float windWaveSize = 1;
 		float windSpeed = 1;
 
-		wiOcean::OceanParameters oceanParameters;
+		wi::Ocean::OceanParameters oceanParameters;
 		AtmosphereParameters atmosphereParameters;
 		VolumetricCloudParameters volumetricCloudParameters;
 
@@ -1145,10 +1144,10 @@ namespace wiScene
 
 		// Non-serialized attributes:
 		uint32_t most_important_light_index = ~0;
-		std::shared_ptr<wiResource> skyMap;
-		std::shared_ptr<wiResource> colorGradingMap;
+		std::shared_ptr<wi::Resource> skyMap;
+		std::shared_ptr<wi::Resource> colorGradingMap;
 
-		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
 	struct SoundComponent
@@ -1163,8 +1162,8 @@ namespace wiScene
 		uint32_t _flags = LOOPED;
 
 		std::string filename;
-		std::shared_ptr<wiResource> soundResource;
-		wiAudio::SoundInstance soundinstance;
+		std::shared_ptr<wi::Resource> soundResource;
+		wi::audio::SoundInstance soundinstance;
 		float volume = 1;
 
 		inline bool IsPlaying() const { return _flags & PLAYING; }
@@ -1176,7 +1175,7 @@ namespace wiScene
 		inline void SetLooped(bool value = true) { if (value) { _flags |= LOOPED; } else { _flags &= ~LOOPED; } }
 		inline void SetDisable3D(bool value = true) { if (value) { _flags |= DISABLE_3D; } else { _flags &= ~DISABLE_3D; } }
 
-		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
 	struct InverseKinematicsComponent
@@ -1188,14 +1187,14 @@ namespace wiScene
 		};
 		uint32_t _flags = EMPTY;
 
-		wiECS::Entity target = wiECS::INVALID_ENTITY; // which entity to follow (must have a transform component)
+		wi::ecs::Entity target = wi::ecs::INVALID_ENTITY; // which entity to follow (must have a transform component)
 		uint32_t chain_length = ~0; // ~0 means: compute until the root
 		uint32_t iteration_count = 1;
 
 		inline void SetDisabled(bool value = true) { if (value) { _flags |= DISABLED; } else { _flags &= ~DISABLED; } }
 		inline bool IsDisabled() const { return _flags & DISABLED; }
 
-		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
 	struct SpringComponent
@@ -1228,40 +1227,40 @@ namespace wiScene
 		inline bool IsStretchEnabled() const { return _flags & STRETCH_ENABLED; }
 		inline bool IsGravityEnabled() const { return _flags & GRAVITY_ENABLED; }
 
-		void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
 	struct Scene
 	{
-		wiECS::ComponentManager<NameComponent> names;
-		wiECS::ComponentManager<LayerComponent> layers;
-		wiECS::ComponentManager<TransformComponent> transforms;
-		wiECS::ComponentManager<PreviousFrameTransformComponent> prev_transforms;
-		wiECS::ComponentManager<HierarchyComponent> hierarchy;
-		wiECS::ComponentManager<MaterialComponent> materials;
-		wiECS::ComponentManager<MeshComponent> meshes;
-		wiECS::ComponentManager<ImpostorComponent> impostors;
-		wiECS::ComponentManager<ObjectComponent> objects;
-		wiECS::ComponentManager<AABB> aabb_objects;
-		wiECS::ComponentManager<RigidBodyPhysicsComponent> rigidbodies;
-		wiECS::ComponentManager<SoftBodyPhysicsComponent> softbodies;
-		wiECS::ComponentManager<ArmatureComponent> armatures;
-		wiECS::ComponentManager<LightComponent> lights;
-		wiECS::ComponentManager<AABB> aabb_lights;
-		wiECS::ComponentManager<CameraComponent> cameras;
-		wiECS::ComponentManager<EnvironmentProbeComponent> probes;
-		wiECS::ComponentManager<AABB> aabb_probes;
-		wiECS::ComponentManager<ForceFieldComponent> forces;
-		wiECS::ComponentManager<DecalComponent> decals;
-		wiECS::ComponentManager<AABB> aabb_decals;
-		wiECS::ComponentManager<AnimationComponent> animations;
-		wiECS::ComponentManager<AnimationDataComponent> animation_datas;
-		wiECS::ComponentManager<wiEmittedParticle> emitters;
-		wiECS::ComponentManager<wiHairParticle> hairs;
-		wiECS::ComponentManager<WeatherComponent> weathers;
-		wiECS::ComponentManager<SoundComponent> sounds;
-		wiECS::ComponentManager<InverseKinematicsComponent> inverse_kinematics;
-		wiECS::ComponentManager<SpringComponent> springs;
+		wi::ecs::ComponentManager<NameComponent> names;
+		wi::ecs::ComponentManager<LayerComponent> layers;
+		wi::ecs::ComponentManager<TransformComponent> transforms;
+		wi::ecs::ComponentManager<PreviousFrameTransformComponent> prev_transforms;
+		wi::ecs::ComponentManager<HierarchyComponent> hierarchy;
+		wi::ecs::ComponentManager<MaterialComponent> materials;
+		wi::ecs::ComponentManager<MeshComponent> meshes;
+		wi::ecs::ComponentManager<ImpostorComponent> impostors;
+		wi::ecs::ComponentManager<ObjectComponent> objects;
+		wi::ecs::ComponentManager<AABB> aabb_objects;
+		wi::ecs::ComponentManager<RigidBodyPhysicsComponent> rigidbodies;
+		wi::ecs::ComponentManager<SoftBodyPhysicsComponent> softbodies;
+		wi::ecs::ComponentManager<ArmatureComponent> armatures;
+		wi::ecs::ComponentManager<LightComponent> lights;
+		wi::ecs::ComponentManager<AABB> aabb_lights;
+		wi::ecs::ComponentManager<CameraComponent> cameras;
+		wi::ecs::ComponentManager<EnvironmentProbeComponent> probes;
+		wi::ecs::ComponentManager<AABB> aabb_probes;
+		wi::ecs::ComponentManager<ForceFieldComponent> forces;
+		wi::ecs::ComponentManager<DecalComponent> decals;
+		wi::ecs::ComponentManager<AABB> aabb_decals;
+		wi::ecs::ComponentManager<AnimationComponent> animations;
+		wi::ecs::ComponentManager<AnimationDataComponent> animation_datas;
+		wi::ecs::ComponentManager<EmittedParticleSystem> emitters;
+		wi::ecs::ComponentManager<HairParticleSystem> hairs;
+		wi::ecs::ComponentManager<WeatherComponent> weathers;
+		wi::ecs::ComponentManager<SoundComponent> sounds;
+		wi::ecs::ComponentManager<InverseKinematicsComponent> inverse_kinematics;
+		wi::ecs::ComponentManager<SpringComponent> springs;
 
 		// Non-serialized attributes:
 		float dt = 0;
@@ -1272,14 +1271,14 @@ namespace wiScene
 		uint32_t flags = EMPTY;
 
 
-		wiSpinLock locker;
+		wi::spinlock locker;
 		AABB bounds;
 		wi::vector<AABB> parallel_bounds;
 		WeatherComponent weather;
-		wiGraphics::RaytracingAccelerationStructure TLAS;
-		wiGraphics::GPUBuffer TLAS_instancesUpload[wiGraphics::GraphicsDevice::GetBufferCount()];
+		wi::graphics::RaytracingAccelerationStructure TLAS;
+		wi::graphics::GPUBuffer TLAS_instancesUpload[wi::graphics::GraphicsDevice::GetBufferCount()];
 		void* TLAS_instancesMapped = nullptr;
-		wiGPUBVH BVH; // this is for non-hardware accelerated raytracing
+		wi::GPUBVH BVH; // this is for non-hardware accelerated raytracing
 		mutable bool acceleration_structure_update_requested = false;
 		void SetAccelerationStructureUpdateRequested(bool value = true) { acceleration_structure_update_requested = value; }
 		bool IsAccelerationStructureUpdateRequested() const { return acceleration_structure_update_requested; }
@@ -1292,68 +1291,68 @@ namespace wiScene
 		//		1) objects
 		//		2) hair particles
 		//		3) emitted particles
-		wiGraphics::GPUBuffer instanceUploadBuffer[wiGraphics::GraphicsDevice::GetBufferCount()];
+		wi::graphics::GPUBuffer instanceUploadBuffer[wi::graphics::GraphicsDevice::GetBufferCount()];
 		ShaderMeshInstance* instanceArrayMapped = nullptr;
 		size_t instanceArraySize = 0;
-		wiGraphics::GPUBuffer instanceBuffer;
+		wi::graphics::GPUBuffer instanceBuffer;
 
 		// Meshes for bindless visiblity indexing:
 		//	contains in order:
 		//		1) meshes
 		//		2) hair particles
 		//		3) emitted particles
-		wiGraphics::GPUBuffer meshUploadBuffer[wiGraphics::GraphicsDevice::GetBufferCount()];
+		wi::graphics::GPUBuffer meshUploadBuffer[wi::graphics::GraphicsDevice::GetBufferCount()];
 		ShaderMesh* meshArrayMapped = nullptr;
 		size_t meshArraySize = 0;
-		wiGraphics::GPUBuffer meshBuffer;
+		wi::graphics::GPUBuffer meshBuffer;
 
 		// Materials for bindless visibility indexing:
-		wiGraphics::GPUBuffer materialUploadBuffer[wiGraphics::GraphicsDevice::GetBufferCount()];
+		wi::graphics::GPUBuffer materialUploadBuffer[wi::graphics::GraphicsDevice::GetBufferCount()];
 		ShaderMaterial* materialArrayMapped = nullptr;
 		size_t materialArraySize = 0;
-		wiGraphics::GPUBuffer materialBuffer;
+		wi::graphics::GPUBuffer materialBuffer;
 
 		// Occlusion query state:
-		wiGraphics::GPUQueryHeap queryHeap;
-		wiGraphics::GPUBuffer queryResultBuffer[arraysize(ObjectComponent::occlusionQueries)];
-		wiGraphics::GPUBuffer queryPredicationBuffer;
+		wi::graphics::GPUQueryHeap queryHeap;
+		wi::graphics::GPUBuffer queryResultBuffer[arraysize(ObjectComponent::occlusionQueries)];
+		wi::graphics::GPUBuffer queryPredicationBuffer;
 		int queryheap_idx = 0;
 		mutable std::atomic<uint32_t> queryAllocator{ 0 };
 
 		// Surfel GI resources:
-		wiGraphics::GPUBuffer surfelBuffer;
-		wiGraphics::GPUBuffer surfelDataBuffer;
-		wiGraphics::GPUBuffer surfelAliveBuffer[2];
-		wiGraphics::GPUBuffer surfelDeadBuffer;
-		wiGraphics::GPUBuffer surfelStatsBuffer;
-		wiGraphics::GPUBuffer surfelGridBuffer;
-		wiGraphics::GPUBuffer surfelCellBuffer;
-		wiGraphics::Texture surfelMomentsTexture[2];
+		wi::graphics::GPUBuffer surfelBuffer;
+		wi::graphics::GPUBuffer surfelDataBuffer;
+		wi::graphics::GPUBuffer surfelAliveBuffer[2];
+		wi::graphics::GPUBuffer surfelDeadBuffer;
+		wi::graphics::GPUBuffer surfelStatsBuffer;
+		wi::graphics::GPUBuffer surfelGridBuffer;
+		wi::graphics::GPUBuffer surfelCellBuffer;
+		wi::graphics::Texture surfelMomentsTexture[2];
 
 
 		// Environment probe cubemap array state:
 		static constexpr uint32_t envmapCount = 16;
 		static constexpr uint32_t envmapRes = 128;
 		static constexpr uint32_t envmapMIPs = 8;
-		wiGraphics::Texture envrenderingDepthBuffer;
-		wiGraphics::Texture envmapArray;
-		wi::vector<wiGraphics::RenderPass> renderpasses_envmap;
+		wi::graphics::Texture envrenderingDepthBuffer;
+		wi::graphics::Texture envmapArray;
+		wi::vector<wi::graphics::RenderPass> renderpasses_envmap;
 
 		// Impostor texture array state:
 		static constexpr uint32_t maxImpostorCount = 8;
 		static constexpr uint32_t impostorTextureDim = 128;
-		wiGraphics::Texture impostorDepthStencil;
-		wiGraphics::Texture impostorArray;
-		wi::vector<wiGraphics::RenderPass> renderpasses_impostor;
+		wi::graphics::Texture impostorDepthStencil;
+		wi::graphics::Texture impostorArray;
+		wi::vector<wi::graphics::RenderPass> renderpasses_impostor;
 
 		mutable std::atomic_bool lightmap_refresh_needed{ false };
 
 		// Ocean GPU state:
-		wiOcean ocean;
+		wi::Ocean ocean;
 		void OceanRegenerate() { ocean.Create(weather.oceanParameters); }
 
 		// Simple water ripple sprites:
-		mutable wi::vector<wiSprite> waterRipples;
+		mutable wi::vector<wi::Sprite> waterRipples;
 		void PutWaterRipple(const std::string& image, const XMFLOAT3& pos);
 
 		// Update all components by a given timestep (in seconds):
@@ -1366,26 +1365,26 @@ namespace wiScene
 		void Merge(Scene& other);
 
 		// Removes a specific entity from the scene (if it exists):
-		void Entity_Remove(wiECS::Entity entity);
+		void Entity_Remove(wi::ecs::Entity entity);
 		// Finds the first entity by the name (if it exists, otherwise returns INVALID_ENTITY):
-		wiECS::Entity Entity_FindByName(const std::string& name);
+		wi::ecs::Entity Entity_FindByName(const std::string& name);
 		// Duplicates all of an entity's components and creates a new entity with them (recursively keeps hierarchy):
-		wiECS::Entity Entity_Duplicate(wiECS::Entity entity);
+		wi::ecs::Entity Entity_Duplicate(wi::ecs::Entity entity);
 		// Serializes entity and all of its components to archive:
 		//	Returns either the new entity that was read, or the original entity that was written
 		//	This serialization is recursive and serializes entity hierarchy as well
-		wiECS::Entity Entity_Serialize(wiArchive& archive, wiECS::Entity entity = wiECS::INVALID_ENTITY);
+		wi::ecs::Entity Entity_Serialize(wi::Archive& archive, wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY);
 
-		wiECS::Entity Entity_CreateMaterial(
+		wi::ecs::Entity Entity_CreateMaterial(
 			const std::string& name
 		);
-		wiECS::Entity Entity_CreateObject(
+		wi::ecs::Entity Entity_CreateObject(
 			const std::string& name
 		);
-		wiECS::Entity Entity_CreateMesh(
+		wi::ecs::Entity Entity_CreateMesh(
 			const std::string& name
 		);
-		wiECS::Entity Entity_CreateLight(
+		wi::ecs::Entity Entity_CreateLight(
 			const std::string& name, 
 			const XMFLOAT3& position = XMFLOAT3(0, 0, 0), 
 			const XMFLOAT3& color = XMFLOAT3(1, 1, 1), 
@@ -1393,32 +1392,32 @@ namespace wiScene
 			float range = 10,
 			LightComponent::LightType type = LightComponent::POINT
 		);
-		wiECS::Entity Entity_CreateForce(
+		wi::ecs::Entity Entity_CreateForce(
 			const std::string& name,
 			const XMFLOAT3& position = XMFLOAT3(0, 0, 0)
 		);
-		wiECS::Entity Entity_CreateEnvironmentProbe(
+		wi::ecs::Entity Entity_CreateEnvironmentProbe(
 			const std::string& name,
 			const XMFLOAT3& position = XMFLOAT3(0, 0, 0)
 		);
-		wiECS::Entity Entity_CreateDecal(
+		wi::ecs::Entity Entity_CreateDecal(
 			const std::string& name,
 			const std::string& textureName,
 			const std::string& normalMapName = ""
 		);
-		wiECS::Entity Entity_CreateCamera(
+		wi::ecs::Entity Entity_CreateCamera(
 			const std::string& name,
 			float width, float height, float nearPlane = 0.01f, float farPlane = 1000.0f, float fov = XM_PIDIV4
 		);
-		wiECS::Entity Entity_CreateEmitter(
+		wi::ecs::Entity Entity_CreateEmitter(
 			const std::string& name,
 			const XMFLOAT3& position = XMFLOAT3(0, 0, 0)
 		);
-		wiECS::Entity Entity_CreateHair(
+		wi::ecs::Entity Entity_CreateHair(
 			const std::string& name,
 			const XMFLOAT3& position = XMFLOAT3(0, 0, 0)
 		);
-		wiECS::Entity Entity_CreateSound(
+		wi::ecs::Entity Entity_CreateSound(
 			const std::string& name,
 			const std::string& filename,
 			const XMFLOAT3& position = XMFLOAT3(0, 0, 0)
@@ -1426,33 +1425,33 @@ namespace wiScene
 
 		// Attaches an entity to a parent:
 		//	child_already_in_local_space	:	child won't be transformed from world space to local space
-		void Component_Attach(wiECS::Entity entity, wiECS::Entity parent, bool child_already_in_local_space = false);
+		void Component_Attach(wi::ecs::Entity entity, wi::ecs::Entity parent, bool child_already_in_local_space = false);
 		// Detaches the entity from its parent (if it is attached):
-		void Component_Detach(wiECS::Entity entity);
+		void Component_Detach(wi::ecs::Entity entity);
 		// Detaches all children from an entity (if there are any):
-		void Component_DetachChildren(wiECS::Entity parent);
+		void Component_DetachChildren(wi::ecs::Entity parent);
 
-		void Serialize(wiArchive& archive);
+		void Serialize(wi::Archive& archive);
 
-		void RunPreviousFrameTransformUpdateSystem(wiJobSystem::context& ctx);
-		void RunAnimationUpdateSystem(wiJobSystem::context& ctx);
-		void RunTransformUpdateSystem(wiJobSystem::context& ctx);
-		void RunHierarchyUpdateSystem(wiJobSystem::context& ctx);
-		void RunSpringUpdateSystem(wiJobSystem::context& ctx);
-		void RunInverseKinematicsUpdateSystem(wiJobSystem::context& ctx);
-		void RunArmatureUpdateSystem(wiJobSystem::context& ctx);
-		void RunMeshUpdateSystem(wiJobSystem::context& ctx);
-		void RunMaterialUpdateSystem(wiJobSystem::context& ctx);
-		void RunImpostorUpdateSystem(wiJobSystem::context& ctx);
-		void RunObjectUpdateSystem(wiJobSystem::context& ctx);
-		void RunCameraUpdateSystem(wiJobSystem::context& ctx);
-		void RunDecalUpdateSystem(wiJobSystem::context& ctx);
-		void RunProbeUpdateSystem(wiJobSystem::context& ctx);
-		void RunForceUpdateSystem(wiJobSystem::context& ctx);
-		void RunLightUpdateSystem(wiJobSystem::context& ctx);
-		void RunParticleUpdateSystem(wiJobSystem::context& ctx);
-		void RunWeatherUpdateSystem(wiJobSystem::context& ctx);
-		void RunSoundUpdateSystem(wiJobSystem::context& ctx);
+		void RunPreviousFrameTransformUpdateSystem(wi::jobsystem::context& ctx);
+		void RunAnimationUpdateSystem(wi::jobsystem::context& ctx);
+		void RunTransformUpdateSystem(wi::jobsystem::context& ctx);
+		void RunHierarchyUpdateSystem(wi::jobsystem::context& ctx);
+		void RunSpringUpdateSystem(wi::jobsystem::context& ctx);
+		void RunInverseKinematicsUpdateSystem(wi::jobsystem::context& ctx);
+		void RunArmatureUpdateSystem(wi::jobsystem::context& ctx);
+		void RunMeshUpdateSystem(wi::jobsystem::context& ctx);
+		void RunMaterialUpdateSystem(wi::jobsystem::context& ctx);
+		void RunImpostorUpdateSystem(wi::jobsystem::context& ctx);
+		void RunObjectUpdateSystem(wi::jobsystem::context& ctx);
+		void RunCameraUpdateSystem(wi::jobsystem::context& ctx);
+		void RunDecalUpdateSystem(wi::jobsystem::context& ctx);
+		void RunProbeUpdateSystem(wi::jobsystem::context& ctx);
+		void RunForceUpdateSystem(wi::jobsystem::context& ctx);
+		void RunLightUpdateSystem(wi::jobsystem::context& ctx);
+		void RunParticleUpdateSystem(wi::jobsystem::context& ctx);
+		void RunWeatherUpdateSystem(wi::jobsystem::context& ctx);
+		void RunSoundUpdateSystem(wi::jobsystem::context& ctx);
 	};
 
 	// Returns skinned vertex position in armature local space
@@ -1480,7 +1479,7 @@ namespace wiScene
 	//	attached		:	everything will be attached to a base entity
 	//
 	//	returns INVALID_ENTITY if attached argument was false, else it returns the base entity handle
-	wiECS::Entity LoadModel(const std::string& fileName, const XMMATRIX& transformMatrix = XMMatrixIdentity(), bool attached = false);
+	wi::ecs::Entity LoadModel(const std::string& fileName, const XMMATRIX& transformMatrix = XMMatrixIdentity(), bool attached = false);
 
 	// Helper function to open a wiscene file and add the contents to the specified scene. This is thread safe as it doesn't modify global scene
 	//	scene			:	the scene that will contain the model
@@ -1489,11 +1488,11 @@ namespace wiScene
 	//	attached		:	everything will be attached to a base entity
 	//
 	//	returns INVALID_ENTITY if attached argument was false, else it returns the base entity handle
-	wiECS::Entity LoadModel(Scene& scene, const std::string& fileName, const XMMATRIX& transformMatrix = XMMatrixIdentity(), bool attached = false);
+	wi::ecs::Entity LoadModel(Scene& scene, const std::string& fileName, const XMMATRIX& transformMatrix = XMMatrixIdentity(), bool attached = false);
 
 	struct PickResult
 	{
-		wiECS::Entity entity = wiECS::INVALID_ENTITY;
+		wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
 		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 normal = XMFLOAT3(0, 0, 0);
 		float distance = std::numeric_limits<float>::max();
@@ -1518,7 +1517,7 @@ namespace wiScene
 
 	struct SceneIntersectSphereResult
 	{
-		wiECS::Entity entity = wiECS::INVALID_ENTITY;
+		wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
 		XMFLOAT3 position = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 normal = XMFLOAT3(0, 0, 0);
 		float depth = 0;
@@ -1527,4 +1526,3 @@ namespace wiScene
 	SceneIntersectSphereResult SceneIntersectCapsule(const CAPSULE& capsule, uint32_t renderTypeMask = RENDERTYPE_OPAQUE, uint32_t layerMask = ~0, const Scene& scene = GetScene());
 
 }
-

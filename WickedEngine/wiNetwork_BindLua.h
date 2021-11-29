@@ -2,14 +2,19 @@
 #include "wiLua.h"
 #include "wiLuna.h"
 
-class wiNetwork_BindLua
+namespace wi::lua
 {
-public:
-	static const char className[];
-	static Luna<wiNetwork_BindLua>::FunctionType methods[];
-	static Luna<wiNetwork_BindLua>::PropertyType properties[];
 
-	wiNetwork_BindLua(lua_State* L) {}
+	class Network_BindLua
+	{
+	public:
+		static const char className[];
+		static Luna<Network_BindLua>::FunctionType methods[];
+		static Luna<Network_BindLua>::PropertyType properties[];
 
-	static void Bind();
-};
+		Network_BindLua(lua_State* L) {}
+
+		static void Bind();
+	};
+
+}

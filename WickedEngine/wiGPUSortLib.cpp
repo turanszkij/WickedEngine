@@ -6,9 +6,9 @@
 #include "wiTimer.h"
 #include "wiBackLog.h"
 
-using namespace wiGraphics;
+using namespace wi::graphics;
 
-namespace wiGPUSortLib
+namespace wi::gpusortlib
 {
 	static GPUBuffer indirectBuffer;
 	static Shader kickoffSortCS;
@@ -19,28 +19,28 @@ namespace wiGPUSortLib
 
 	void LoadShaders()
 	{
-		wiRenderer::LoadShader(ShaderStage::CS, kickoffSortCS, "gpusortlib_kickoffSortCS.cso");
-		wiRenderer::LoadShader(ShaderStage::CS, sortCS, "gpusortlib_sortCS.cso");
-		wiRenderer::LoadShader(ShaderStage::CS, sortInnerCS, "gpusortlib_sortInnerCS.cso");
-		wiRenderer::LoadShader(ShaderStage::CS, sortStepCS, "gpusortlib_sortStepCS.cso");
+		wi::renderer::LoadShader(ShaderStage::CS, kickoffSortCS, "gpusortlib_kickoffSortCS.cso");
+		wi::renderer::LoadShader(ShaderStage::CS, sortCS, "gpusortlib_sortCS.cso");
+		wi::renderer::LoadShader(ShaderStage::CS, sortInnerCS, "gpusortlib_sortInnerCS.cso");
+		wi::renderer::LoadShader(ShaderStage::CS, sortStepCS, "gpusortlib_sortStepCS.cso");
 
 	}
 
 	void Initialize()
 	{
-		wiTimer timer;
+		wi::Timer timer;
 
 		GPUBufferDesc bd;
 		bd.usage = Usage::DEFAULT;
 		bd.bind_flags = BindFlag::UNORDERED_ACCESS;
 		bd.misc_flags = ResourceMiscFlag::INDIRECT_ARGS | ResourceMiscFlag::BUFFER_RAW;
 		bd.size = sizeof(IndirectDispatchArgs);
-		wiGraphics::GetDevice()->CreateBuffer(&bd, nullptr, &indirectBuffer);
+		wi::graphics::GetDevice()->CreateBuffer(&bd, nullptr, &indirectBuffer);
 
-		static wiEvent::Handle handle = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
+		static wi::event::Handle handle = wi::event::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
 		LoadShaders();
 
-		wiBackLog::post("wiGPUSortLib Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
+		wi::backlog::post("wi::gpusortlib Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
 
 
@@ -52,7 +52,7 @@ namespace wiGPUSortLib
 		const GPUBuffer& indexBuffer_write,
 		CommandList cmd)
 	{
-		GraphicsDevice* device = wiGraphics::GetDevice();
+		GraphicsDevice* device = wi::graphics::GetDevice();
 
 		device->EventBegin("GPUSortLib", cmd);
 

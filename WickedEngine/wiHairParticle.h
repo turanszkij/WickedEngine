@@ -4,74 +4,73 @@
 #include "wiEnums.h"
 #include "wiMath.h"
 #include "wiECS.h"
-#include "wiScene_Decl.h"
+#include "wiScene.h"
 #include "wiIntersect.h"
 #include "wiVector.h"
+#include "wiScene_Decl.h"
 
 #include <memory>
 
-class wiArchive;
+class wi::Archive;
 
-namespace wiScene
+namespace wi::scene
 {
-
-class wiHairParticle
-{
-public:
-	wiGraphics::GPUBuffer constantBuffer;
-	wiGraphics::GPUBuffer simulationBuffer;
-	wiGraphics::GPUBuffer vertexBuffer_POS[2];
-	wiGraphics::GPUBuffer vertexBuffer_TEX;
-	wiGraphics::GPUBuffer primitiveBuffer;
-	wiGraphics::GPUBuffer culledIndexBuffer;
-	wiGraphics::GPUBuffer indirectBuffer;
-	wiGraphics::GPUBuffer subsetBuffer;
-
-	wiGraphics::GPUBuffer indexBuffer;
-	wiGraphics::GPUBuffer vertexBuffer_length;
-
-	wiGraphics::RaytracingAccelerationStructure BLAS;
-
-	void UpdateCPU(const TransformComponent& transform, const MeshComponent& mesh, float dt);
-	void UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex, const MeshComponent& mesh, const MaterialComponent& material, wiGraphics::CommandList cmd) const;
-	void Draw(const MaterialComponent& material, RENDERPASS renderPass, wiGraphics::CommandList cmd) const;
-
-	enum FLAGS
+	class HairParticleSystem
 	{
-		EMPTY = 0,
-		_DEPRECATED_REGENERATE_FRAME = 1 << 0,
-		REBUILD_BUFFERS = 1 << 1,
+	public:
+		wi::graphics::GPUBuffer constantBuffer;
+		wi::graphics::GPUBuffer simulationBuffer;
+		wi::graphics::GPUBuffer vertexBuffer_POS[2];
+		wi::graphics::GPUBuffer vertexBuffer_TEX;
+		wi::graphics::GPUBuffer primitiveBuffer;
+		wi::graphics::GPUBuffer culledIndexBuffer;
+		wi::graphics::GPUBuffer indirectBuffer;
+		wi::graphics::GPUBuffer subsetBuffer;
+
+		wi::graphics::GPUBuffer indexBuffer;
+		wi::graphics::GPUBuffer vertexBuffer_length;
+
+		wi::graphics::RaytracingAccelerationStructure BLAS;
+
+		void UpdateCPU(const TransformComponent& transform, const MeshComponent& mesh, float dt);
+		void UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex, const MeshComponent& mesh, const MaterialComponent& material, wi::graphics::CommandList cmd) const;
+		void Draw(const MaterialComponent& material, RENDERPASS renderPass, wi::graphics::CommandList cmd) const;
+
+		enum FLAGS
+		{
+			EMPTY = 0,
+			_DEPRECATED_REGENERATE_FRAME = 1 << 0,
+			REBUILD_BUFFERS = 1 << 1,
+		};
+		uint32_t _flags = EMPTY;
+
+		wi::ecs::Entity meshID = wi::ecs::INVALID_ENTITY;
+
+		uint32_t strandCount = 0;
+		uint32_t segmentCount = 1;
+		uint32_t randomSeed = 1;
+		float length = 1.0f;
+		float stiffness = 10.0f;
+		float randomness = 0.2f;
+		float viewDistance = 200;
+		wi::vector<float> vertex_lengths;
+
+		// Sprite sheet properties:
+		uint32_t framesX = 1;
+		uint32_t framesY = 1;
+		uint32_t frameCount = 1;
+		uint32_t frameStart = 0;
+
+		// Non-serialized attributes:
+		XMFLOAT4X4 world;
+		XMFLOAT4X4 worldPrev;
+		AABB aabb;
+		wi::vector<uint32_t> indices; // it is dependent on vertex_lengths and contains triangles with non-zero lengths
+		uint32_t layerMask = ~0u;
+		mutable bool regenerate_frame = true;
+
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+
+		static void Initialize();
 	};
-	uint32_t _flags = EMPTY;
-
-	wiECS::Entity meshID = wiECS::INVALID_ENTITY;
-
-	uint32_t strandCount = 0;
-	uint32_t segmentCount = 1;
-	uint32_t randomSeed = 1;
-	float length = 1.0f;
-	float stiffness = 10.0f;
-	float randomness = 0.2f;
-	float viewDistance = 200;
-	wi::vector<float> vertex_lengths;
-
-	// Sprite sheet properties:
-	uint32_t framesX = 1;
-	uint32_t framesY = 1;
-	uint32_t frameCount = 1;
-	uint32_t frameStart = 0;
-
-	// Non-serialized attributes:
-	XMFLOAT4X4 world;
-	XMFLOAT4X4 worldPrev;
-	AABB aabb;
-	wi::vector<uint32_t> indices; // it is dependent on vertex_lengths and contains triangles with non-zero lengths
-	uint32_t layerMask = ~0u;
-	mutable bool regenerate_frame = true;
-
-	void Serialize(wiArchive& archive, wiECS::EntitySerializer& seri);
-
-	static void Initialize();
-};
-
 }

@@ -4,89 +4,89 @@
 
 #include <string>
 
-namespace wiBackLog_BindLua
+namespace wi::lua::backlog
 {
 	int backlog_clear(lua_State* L)
 	{
-		wiBackLog::clear();
+		wi::backlog::clear();
 		return 0;
 	}
 	int backlog_post(lua_State* L)
 	{
-		int argc = wiLua::SGetArgCount(L);
+		int argc = wi::lua::SGetArgCount(L);
 
 		std::string ss;
 
 		for (int i = 1; i <= argc; i++)
 		{
-			ss += wiLua::SGetString(L, i);
+			ss += wi::lua::SGetString(L, i);
 		}
 
 		if (!ss.empty())
 		{
-			wiBackLog::post(ss);
+			wi::backlog::post(ss);
 		}
 
 		return 0;
 	}
 	int backlog_fontsize(lua_State* L)
 	{
-		int argc = wiLua::SGetArgCount(L);
+		int argc = wi::lua::SGetArgCount(L);
 
 		if (argc > 0)
 		{
-			wiBackLog::setFontSize(wiLua::SGetInt(L, 1));
+			wi::backlog::setFontSize(wi::lua::SGetInt(L, 1));
 		}
 		else
-			wiLua::SError(L, "backlog_fontsize(int val) not enough arguments!");
+			wi::lua::SError(L, "backlog_fontsize(int val) not enough arguments!");
 
 		return 0;
 	}
 	int backlog_isactive(lua_State* L)
 	{
-		wiLua::SSetBool(L, wiBackLog::isActive());
+		wi::lua::SSetBool(L, wi::backlog::isActive());
 		return 1;
 	}
 	int backlog_fontrowspacing(lua_State* L)
 	{
-		int argc = wiLua::SGetArgCount(L);
+		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 0)
 		{
-			wiBackLog::setFontRowspacing(wiLua::SGetFloat(L, 1));
+			wi::backlog::setFontRowspacing(wi::lua::SGetFloat(L, 1));
 		}
 		else
-			wiLua::SError(L, "backlog_fontrowspacing(int val) not enough arguments!");
+			wi::lua::SError(L, "backlog_fontrowspacing(int val) not enough arguments!");
 		return 0;
 	}
 	int backlog_setlevel(lua_State* L)
 	{
-		int argc = wiLua::SGetArgCount(L);
+		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 0)
 		{
-			wiBackLog::SetLogLevel((wiBackLog::LogLevel)wiLua::SGetInt(L, 1));
+			wi::backlog::SetLogLevel((wi::backlog::LogLevel)wi::lua::SGetInt(L, 1));
 		}
 		else
-			wiLua::SError(L, "backlog_setlevel(int val) not enough arguments!");
+			wi::lua::SError(L, "backlog_setlevel(int val) not enough arguments!");
 		return 0;
 	}
 	int backlog_lock(lua_State* L)
 	{
-		wiBackLog::Lock();
+		wi::backlog::Lock();
 		return 0;
 	}
 	int backlog_unlock(lua_State* L)
 	{
-		wiBackLog::Unlock();
+		wi::backlog::Unlock();
 		return 0;
 	}
 	int backlog_blocklua(lua_State* L)
 	{
-		wiBackLog::BlockLuaExecution();
+		wi::backlog::BlockLuaExecution();
 		return 0;
 	}
 	int backlog_unblocklua(lua_State* L)
 	{
-		wiBackLog::UnblockLuaExecution();
+		wi::backlog::UnblockLuaExecution();
 		return 0;
 	}
 
@@ -96,16 +96,16 @@ namespace wiBackLog_BindLua
 		if (!initialized)
 		{
 			initialized = true;
-			wiLua::RegisterFunc("backlog_clear", backlog_clear);
-			wiLua::RegisterFunc("backlog_post", backlog_post);
-			wiLua::RegisterFunc("backlog_fontsize", backlog_fontsize);
-			wiLua::RegisterFunc("backlog_isactive", backlog_isactive);
-			wiLua::RegisterFunc("backlog_fontrowspacing", backlog_fontrowspacing);
-			wiLua::RegisterFunc("backlog_setlevel", backlog_setlevel);
-			wiLua::RegisterFunc("backlog_lock", backlog_lock);
-			wiLua::RegisterFunc("backlog_unlock", backlog_unlock);
-			wiLua::RegisterFunc("backlog_blocklua", backlog_blocklua);
-			wiLua::RegisterFunc("backlog_unblocklua", backlog_unblocklua);
+			wi::lua::RegisterFunc("backlog_clear", backlog_clear);
+			wi::lua::RegisterFunc("backlog_post", backlog_post);
+			wi::lua::RegisterFunc("backlog_fontsize", backlog_fontsize);
+			wi::lua::RegisterFunc("backlog_isactive", backlog_isactive);
+			wi::lua::RegisterFunc("backlog_fontrowspacing", backlog_fontrowspacing);
+			wi::lua::RegisterFunc("backlog_setlevel", backlog_setlevel);
+			wi::lua::RegisterFunc("backlog_lock", backlog_lock);
+			wi::lua::RegisterFunc("backlog_unlock", backlog_unlock);
+			wi::lua::RegisterFunc("backlog_blocklua", backlog_blocklua);
+			wi::lua::RegisterFunc("backlog_unblocklua", backlog_unblocklua);
 		}
 	}
 }

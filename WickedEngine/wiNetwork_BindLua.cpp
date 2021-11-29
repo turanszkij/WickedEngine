@@ -2,24 +2,28 @@
 #include "wiNetwork.h"
 #include "wiHelper.h"
 
-const char wiNetwork_BindLua::className[] = "Network";
-
-Luna<wiNetwork_BindLua>::FunctionType wiNetwork_BindLua::methods[] = {
-	{ NULL, NULL }
-};
-Luna<wiNetwork_BindLua>::PropertyType wiNetwork_BindLua::properties[] = {
-	{ NULL, NULL }
-};
-
-void wiNetwork_BindLua::Bind()
+namespace wi::lua
 {
-	static bool initialized = false;
-	if (!initialized)
+
+	const char Network_BindLua::className[] = "Network";
+
+	Luna<Network_BindLua>::FunctionType Network_BindLua::methods[] = {
+		{ NULL, NULL }
+	};
+	Luna<Network_BindLua>::PropertyType Network_BindLua::properties[] = {
+		{ NULL, NULL }
+	};
+
+	void Network_BindLua::Bind()
 	{
-		initialized = true;
-		Luna<wiNetwork_BindLua>::Register(wiLua::GetLuaState());
+		static bool initialized = false;
+		if (!initialized)
+		{
+			initialized = true;
+			Luna<Network_BindLua>::Register(wi::lua::GetLuaState());
 
-		wiLua::RunText("network = Network()");
+			wi::lua::RunText("network = Network()");
+		}
 	}
-}
 
+}

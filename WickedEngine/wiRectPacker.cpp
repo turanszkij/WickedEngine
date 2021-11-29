@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-namespace wiRectPacker
+namespace wi::rectpacker
 {
 
 	bool area(rect_xywh* a, rect_xywh* b) {

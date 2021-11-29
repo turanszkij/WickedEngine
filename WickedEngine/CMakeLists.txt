@@ -80,7 +80,7 @@ add_library(${TARGET_NAME} STATIC
 	wiNetwork_Windows.cpp
 	wiNetwork_UWP.cpp
 	wiOcean.cpp
-	wiPhysicsEngine_Bullet.cpp
+	wiPhysics_Bullet.cpp
 	wiProfiler.cpp
 	wiRandom.cpp
 	wiRawInput.cpp

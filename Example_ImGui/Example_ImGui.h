@@ -4,7 +4,7 @@
 
 class Example_ImGuiRenderer : public RenderPath3D
 {
-	wiLabel label;
+	wi::widget::Label label;
 public:
 	void Load() override;
 	void Update(float dt) override;
@@ -19,6 +19,6 @@ class Example_ImGui : public MainComponent
 public:
 	~Example_ImGui() override;
 	void Initialize() override;
-	void Compose(wiGraphics::CommandList cmd) override;
+	void Compose(wi::graphics::CommandList cmd) override;
 };
 

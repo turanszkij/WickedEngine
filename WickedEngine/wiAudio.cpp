@@ -23,7 +23,7 @@
 #define fourccXWMA 'AMWX'
 #define fourccDPDS 'sdpd'
 
-namespace wiAudio
+namespace wi::audio
 {
 	static const XAUDIO2FX_REVERB_I3DL2_PARAMETERS reverbPresets[] =
 	{
@@ -91,7 +91,7 @@ namespace wiAudio
 
 			if (masteringVoice == nullptr)
 			{
-				wiBackLog::post("Failed to create XAudio2 mastering voice!");
+				wi::backlog::post("Failed to create XAudio2 mastering voice!");
 				return;
 			}
 
@@ -193,13 +193,13 @@ namespace wiAudio
 
 	void Initialize()
 	{
-		wiTimer timer;
+		wi::Timer timer;
 
 		audio = std::make_shared<AudioInternal>();
 
 		if (audio->success)
 		{
-			wiBackLog::post("wiAudio Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
+			wi::backlog::post("wi::audio Initialized [XAudio2] (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 		}
 	}
 
@@ -256,7 +256,7 @@ namespace wiAudio
 	bool CreateSound(const std::string& filename, Sound* sound)
 	{
 		wi::vector<uint8_t> filedata;
-		bool success = wiHelper::FileRead(filename, filedata);
+		bool success = wi::helper::FileRead(filename, filedata);
 		if (!success)
 		{
 			return false;
@@ -562,7 +562,7 @@ namespace wiAudio
 #define fourccFMT 0x20746d66
 #define fourccDATA 0x61746164
 
-namespace wiAudio
+namespace wi::audio
 {
 	static const FAudioFXReverbI3DL2Parameters reverbPresets[] = {
 		FAUDIOFX_I3DL2_PRESET_DEFAULT,
@@ -695,13 +695,13 @@ namespace wiAudio
 	};
 
 	void Initialize() {
-		wiTimer timer;
+		wi::Timer timer;
 
 		audio = std::make_shared<AudioInternal>();
 
 		if (audio->success)
 		{
-			wiBackLog::post("wiAudio Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
+			wi::backlog::post("wi::audio Initialized [FAudio] (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 		}
 	}
 	SoundInternal* to_internal(const Sound* param)
@@ -765,7 +765,7 @@ namespace wiAudio
 
 	bool CreateSound(const std::string& filename, Sound* sound) { 
 		wi::vector<uint8_t> filedata;
-		bool success = wiHelper::FileRead(filename, filedata);
+		bool success = wi::helper::FileRead(filename, filedata);
 		if (!success)
 		{
 			return false;
@@ -1036,7 +1036,7 @@ namespace wiAudio
 
 #else
 
-namespace wiAudio
+namespace wi::audio
 {
 	void Initialize() {}
 

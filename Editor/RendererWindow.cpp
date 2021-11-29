@@ -7,11 +7,11 @@
 
 void RendererWindow::Create(EditorComponent* editor)
 {
-	wiWindow::Create("Renderer Window");
+	wi::widget::Window::Create("Renderer Window");
 
-	wiRenderer::SetToDrawDebugEnvProbes(true);
-	wiRenderer::SetToDrawGridHelper(true);
-	wiRenderer::SetToDrawDebugCameras(true);
+	wi::renderer::SetToDrawDebugEnvProbes(true);
+	wi::renderer::SetToDrawGridHelper(true);
+	wi::renderer::SetToDrawDebugCameras(true);
 
 	SetSize(XMFLOAT2(580, 550));
 
@@ -23,8 +23,8 @@ void RendererWindow::Create(EditorComponent* editor)
 	vsyncCheckBox.SetPos(XMFLOAT2(x, y += step));
 	vsyncCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	vsyncCheckBox.SetCheck(editor->main->swapChain.desc.vsync);
-	vsyncCheckBox.OnClick([=](wiEventArgs args) {
-		wiEvent::SetVSync(args.bValue);
+	vsyncCheckBox.OnClick([=](wi::widget::EventArgs args) {
+		wi::event::SetVSync(args.bValue);
 	});
 	AddWidget(&vsyncCheckBox);
 
@@ -40,10 +40,10 @@ void RendererWindow::Create(EditorComponent* editor)
 	occlusionCullingCheckBox.SetScriptTip("SetOcclusionCullingEnabled(bool enabled)");
 	occlusionCullingCheckBox.SetPos(XMFLOAT2(x, y += step));
 	occlusionCullingCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	occlusionCullingCheckBox.OnClick([](wiEventArgs args) {
-		wiRenderer::SetOcclusionCullingEnabled(args.bValue);
+	occlusionCullingCheckBox.OnClick([](wi::widget::EventArgs args) {
+		wi::renderer::SetOcclusionCullingEnabled(args.bValue);
 	});
-	occlusionCullingCheckBox.SetCheck(wiRenderer::GetOcclusionCullingEnabled());
+	occlusionCullingCheckBox.SetCheck(wi::renderer::GetOcclusionCullingEnabled());
 	AddWidget(&occlusionCullingCheckBox);
 
 	resolutionScaleSlider.Create(0.25f, 2.0f, 1.0f, 7.0f, "Resolution Scale: ");
@@ -51,7 +51,7 @@ void RendererWindow::Create(EditorComponent* editor)
 	resolutionScaleSlider.SetSize(XMFLOAT2(100, itemheight));
 	resolutionScaleSlider.SetPos(XMFLOAT2(x, y += step));
 	resolutionScaleSlider.SetValue(editor->resolutionScale);
-	resolutionScaleSlider.OnSlide([editor](wiEventArgs args) {
+	resolutionScaleSlider.OnSlide([editor](wi::widget::EventArgs args) {
 		if (editor->resolutionScale != args.fValue)
 		{
 			editor->renderPath->resolutionScale = args.fValue;
@@ -65,69 +65,69 @@ void RendererWindow::Create(EditorComponent* editor)
 	surfelGICheckBox.SetTooltip("Surfel GI is a raytraced diffuse GI using raytracing and surface cache.");
 	surfelGICheckBox.SetPos(XMFLOAT2(x, y += step));
 	surfelGICheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	surfelGICheckBox.OnClick([](wiEventArgs args) {
-		wiRenderer::SetSurfelGIEnabled(args.bValue);
+	surfelGICheckBox.OnClick([](wi::widget::EventArgs args) {
+		wi::renderer::SetSurfelGIEnabled(args.bValue);
 		});
-	surfelGICheckBox.SetCheck(wiRenderer::GetSurfelGIEnabled());
+	surfelGICheckBox.SetCheck(wi::renderer::GetSurfelGIEnabled());
 	AddWidget(&surfelGICheckBox);
 
 	surfelGIDebugCheckBox.Create("DEBUG: ");
 	surfelGIDebugCheckBox.SetTooltip("Toggle Surfel GI visualization.");
 	surfelGIDebugCheckBox.SetPos(XMFLOAT2(x + 122, y));
 	surfelGIDebugCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	surfelGIDebugCheckBox.OnClick([](wiEventArgs args) {
-		wiRenderer::SetSurfelGIDebugEnabled(args.bValue);
+	surfelGIDebugCheckBox.OnClick([](wi::widget::EventArgs args) {
+		wi::renderer::SetSurfelGIDebugEnabled(args.bValue);
 		});
-	surfelGIDebugCheckBox.SetCheck(wiRenderer::GetSurfelGIDebugEnabled());
+	surfelGIDebugCheckBox.SetCheck(wi::renderer::GetSurfelGIDebugEnabled());
 	AddWidget(&surfelGIDebugCheckBox);
 
 	voxelRadianceCheckBox.Create("Voxel GI: ");
 	voxelRadianceCheckBox.SetTooltip("Toggle voxel Global Illumination computation.");
 	voxelRadianceCheckBox.SetPos(XMFLOAT2(x, y += step));
 	voxelRadianceCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	voxelRadianceCheckBox.OnClick([](wiEventArgs args) {
-		wiRenderer::SetVoxelRadianceEnabled(args.bValue);
+	voxelRadianceCheckBox.OnClick([](wi::widget::EventArgs args) {
+		wi::renderer::SetVoxelRadianceEnabled(args.bValue);
 	});
-	voxelRadianceCheckBox.SetCheck(wiRenderer::GetVoxelRadianceEnabled());
+	voxelRadianceCheckBox.SetCheck(wi::renderer::GetVoxelRadianceEnabled());
 	AddWidget(&voxelRadianceCheckBox);
 
 	voxelRadianceDebugCheckBox.Create("DEBUG: ");
 	voxelRadianceDebugCheckBox.SetTooltip("Toggle Voxel GI visualization.");
 	voxelRadianceDebugCheckBox.SetPos(XMFLOAT2(x + 122, y));
 	voxelRadianceDebugCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	voxelRadianceDebugCheckBox.OnClick([](wiEventArgs args) {
-		wiRenderer::SetToDrawVoxelHelper(args.bValue);
+	voxelRadianceDebugCheckBox.OnClick([](wi::widget::EventArgs args) {
+		wi::renderer::SetToDrawVoxelHelper(args.bValue);
 	});
-	voxelRadianceDebugCheckBox.SetCheck(wiRenderer::GetToDrawVoxelHelper());
+	voxelRadianceDebugCheckBox.SetCheck(wi::renderer::GetToDrawVoxelHelper());
 	AddWidget(&voxelRadianceDebugCheckBox);
 
 	voxelRadianceSecondaryBounceCheckBox.Create("Secondary Light Bounce: ");
 	voxelRadianceSecondaryBounceCheckBox.SetTooltip("Toggle secondary light bounce computation for Voxel GI.");
 	voxelRadianceSecondaryBounceCheckBox.SetPos(XMFLOAT2(x, y += step));
 	voxelRadianceSecondaryBounceCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	voxelRadianceSecondaryBounceCheckBox.OnClick([](wiEventArgs args) {
-		wiRenderer::SetVoxelRadianceSecondaryBounceEnabled(args.bValue);
+	voxelRadianceSecondaryBounceCheckBox.OnClick([](wi::widget::EventArgs args) {
+		wi::renderer::SetVoxelRadianceSecondaryBounceEnabled(args.bValue);
 	});
-	voxelRadianceSecondaryBounceCheckBox.SetCheck(wiRenderer::GetVoxelRadianceSecondaryBounceEnabled());
+	voxelRadianceSecondaryBounceCheckBox.SetCheck(wi::renderer::GetVoxelRadianceSecondaryBounceEnabled());
 	AddWidget(&voxelRadianceSecondaryBounceCheckBox);
 
 	voxelRadianceReflectionsCheckBox.Create("Reflections: ");
 	voxelRadianceReflectionsCheckBox.SetTooltip("Toggle specular reflections computation for Voxel GI.");
 	voxelRadianceReflectionsCheckBox.SetPos(XMFLOAT2(x + 122, y));
 	voxelRadianceReflectionsCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	voxelRadianceReflectionsCheckBox.OnClick([](wiEventArgs args) {
-		wiRenderer::SetVoxelRadianceReflectionsEnabled(args.bValue);
+	voxelRadianceReflectionsCheckBox.OnClick([](wi::widget::EventArgs args) {
+		wi::renderer::SetVoxelRadianceReflectionsEnabled(args.bValue);
 	});
-	voxelRadianceReflectionsCheckBox.SetCheck(wiRenderer::GetVoxelRadianceReflectionsEnabled());
+	voxelRadianceReflectionsCheckBox.SetCheck(wi::renderer::GetVoxelRadianceReflectionsEnabled());
 	AddWidget(&voxelRadianceReflectionsCheckBox);
 
 	voxelRadianceVoxelSizeSlider.Create(0.25, 2, 1, 7, "Voxel GI Voxel Size: ");
 	voxelRadianceVoxelSizeSlider.SetTooltip("Adjust the voxel size for Voxel GI calculations.");
 	voxelRadianceVoxelSizeSlider.SetSize(XMFLOAT2(100, itemheight));
 	voxelRadianceVoxelSizeSlider.SetPos(XMFLOAT2(x, y += step));
-	voxelRadianceVoxelSizeSlider.SetValue(wiRenderer::GetVoxelRadianceVoxelSize());
-	voxelRadianceVoxelSizeSlider.OnSlide([&](wiEventArgs args) {
-		wiRenderer::SetVoxelRadianceVoxelSize(args.fValue);
+	voxelRadianceVoxelSizeSlider.SetValue(wi::renderer::GetVoxelRadianceVoxelSize());
+	voxelRadianceVoxelSizeSlider.OnSlide([&](wi::widget::EventArgs args) {
+		wi::renderer::SetVoxelRadianceVoxelSize(args.fValue);
 	});
 	AddWidget(&voxelRadianceVoxelSizeSlider);
 
@@ -135,9 +135,9 @@ void RendererWindow::Create(EditorComponent* editor)
 	voxelRadianceConeTracingSlider.SetTooltip("Adjust the number of cones sampled in the radiance gathering phase.");
 	voxelRadianceConeTracingSlider.SetSize(XMFLOAT2(100, itemheight));
 	voxelRadianceConeTracingSlider.SetPos(XMFLOAT2(x, y += step));
-	voxelRadianceConeTracingSlider.SetValue((float)wiRenderer::GetVoxelRadianceNumCones());
-	voxelRadianceConeTracingSlider.OnSlide([&](wiEventArgs args) {
-		wiRenderer::SetVoxelRadianceNumCones(args.iValue);
+	voxelRadianceConeTracingSlider.SetValue((float)wi::renderer::GetVoxelRadianceNumCones());
+	voxelRadianceConeTracingSlider.OnSlide([&](wi::widget::EventArgs args) {
+		wi::renderer::SetVoxelRadianceNumCones(args.iValue);
 	});
 	AddWidget(&voxelRadianceConeTracingSlider);
 
@@ -145,9 +145,9 @@ void RendererWindow::Create(EditorComponent* editor)
 	voxelRadianceRayStepSizeSlider.SetTooltip("Adjust the precision of ray marching for cone tracing step. Lower values = more precision but slower performance.");
 	voxelRadianceRayStepSizeSlider.SetSize(XMFLOAT2(100, itemheight));
 	voxelRadianceRayStepSizeSlider.SetPos(XMFLOAT2(x, y += step));
-	voxelRadianceRayStepSizeSlider.SetValue(wiRenderer::GetVoxelRadianceRayStepSize());
-	voxelRadianceRayStepSizeSlider.OnSlide([&](wiEventArgs args) {
-		wiRenderer::SetVoxelRadianceRayStepSize(args.fValue);
+	voxelRadianceRayStepSizeSlider.SetValue(wi::renderer::GetVoxelRadianceRayStepSize());
+	voxelRadianceRayStepSizeSlider.OnSlide([&](wi::widget::EventArgs args) {
+		wi::renderer::SetVoxelRadianceRayStepSize(args.fValue);
 	});
 	AddWidget(&voxelRadianceRayStepSizeSlider);
 
@@ -155,9 +155,9 @@ void RendererWindow::Create(EditorComponent* editor)
 	voxelRadianceMaxDistanceSlider.SetTooltip("Adjust max raymarching distance for voxel GI.");
 	voxelRadianceMaxDistanceSlider.SetSize(XMFLOAT2(100, itemheight));
 	voxelRadianceMaxDistanceSlider.SetPos(XMFLOAT2(x, y += step));
-	voxelRadianceMaxDistanceSlider.SetValue(wiRenderer::GetVoxelRadianceMaxDistance());
-	voxelRadianceMaxDistanceSlider.OnSlide([&](wiEventArgs args) {
-		wiRenderer::SetVoxelRadianceMaxDistance(args.fValue);
+	voxelRadianceMaxDistanceSlider.SetValue(wi::renderer::GetVoxelRadianceMaxDistance());
+	voxelRadianceMaxDistanceSlider.OnSlide([&](wi::widget::EventArgs args) {
+		wi::renderer::SetVoxelRadianceMaxDistance(args.fValue);
 	});
 	AddWidget(&voxelRadianceMaxDistanceSlider);
 
@@ -165,73 +165,73 @@ void RendererWindow::Create(EditorComponent* editor)
 	wireFrameCheckBox.SetTooltip("Visualize the scene as a wireframe");
 	wireFrameCheckBox.SetPos(XMFLOAT2(x, y += step));
 	wireFrameCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	wireFrameCheckBox.OnClick([](wiEventArgs args) {
-		wiRenderer::SetWireRender(args.bValue);
+	wireFrameCheckBox.OnClick([](wi::widget::EventArgs args) {
+		wi::renderer::SetWireRender(args.bValue);
 	});
-	wireFrameCheckBox.SetCheck(wiRenderer::IsWireRender());
+	wireFrameCheckBox.SetCheck(wi::renderer::IsWireRender());
 	AddWidget(&wireFrameCheckBox);
 
 	variableRateShadingClassificationCheckBox.Create("VRS Classification: ");
 	variableRateShadingClassificationCheckBox.SetTooltip("Enable classification of variable rate shading on the screen. Less important parts will be shaded with lesser resolution.\nRequires Tier2 support for variable shading rate");
 	variableRateShadingClassificationCheckBox.SetPos(XMFLOAT2(x, y += step));
 	variableRateShadingClassificationCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	variableRateShadingClassificationCheckBox.OnClick([editor](wiEventArgs args) {
-		wiRenderer::SetVariableRateShadingClassification(args.bValue);
+	variableRateShadingClassificationCheckBox.OnClick([editor](wi::widget::EventArgs args) {
+		wi::renderer::SetVariableRateShadingClassification(args.bValue);
 		editor->ResizeBuffers();
 		});
-	variableRateShadingClassificationCheckBox.SetCheck(wiRenderer::GetVariableRateShadingClassification());
+	variableRateShadingClassificationCheckBox.SetCheck(wi::renderer::GetVariableRateShadingClassification());
 	AddWidget(&variableRateShadingClassificationCheckBox);
-	variableRateShadingClassificationCheckBox.SetEnabled(wiGraphics::GetDevice()->CheckCapability(wiGraphics::GraphicsDeviceCapability::VARIABLE_RATE_SHADING_TIER2));
+	variableRateShadingClassificationCheckBox.SetEnabled(wi::graphics::GetDevice()->CheckCapability(wi::graphics::GraphicsDeviceCapability::VARIABLE_RATE_SHADING_TIER2));
 
 	variableRateShadingClassificationDebugCheckBox.Create("DEBUG: ");
 	variableRateShadingClassificationDebugCheckBox.SetTooltip("Toggle visualization of variable rate shading classification feature");
 	variableRateShadingClassificationDebugCheckBox.SetPos(XMFLOAT2(x + 122, y));
 	variableRateShadingClassificationDebugCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	variableRateShadingClassificationDebugCheckBox.OnClick([](wiEventArgs args) {
-		wiRenderer::SetVariableRateShadingClassificationDebug(args.bValue);
+	variableRateShadingClassificationDebugCheckBox.OnClick([](wi::widget::EventArgs args) {
+		wi::renderer::SetVariableRateShadingClassificationDebug(args.bValue);
 		});
-	variableRateShadingClassificationDebugCheckBox.SetCheck(wiRenderer::GetVariableRateShadingClassificationDebug());
+	variableRateShadingClassificationDebugCheckBox.SetCheck(wi::renderer::GetVariableRateShadingClassificationDebug());
 	AddWidget(&variableRateShadingClassificationDebugCheckBox);
-	variableRateShadingClassificationDebugCheckBox.SetEnabled(wiGraphics::GetDevice()->CheckCapability(wiGraphics::GraphicsDeviceCapability::VARIABLE_RATE_SHADING_TIER2));
+	variableRateShadingClassificationDebugCheckBox.SetEnabled(wi::graphics::GetDevice()->CheckCapability(wi::graphics::GraphicsDeviceCapability::VARIABLE_RATE_SHADING_TIER2));
 
 	advancedLightCullingCheckBox.Create("2.5D Light Culling: ");
 	advancedLightCullingCheckBox.SetTooltip("Enable a more aggressive light culling approach which can result in slower culling but faster rendering (Tiled renderer only)");
 	advancedLightCullingCheckBox.SetPos(XMFLOAT2(x, y += step));
 	advancedLightCullingCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	advancedLightCullingCheckBox.OnClick([](wiEventArgs args) {
-		wiRenderer::SetAdvancedLightCulling(args.bValue);
+	advancedLightCullingCheckBox.OnClick([](wi::widget::EventArgs args) {
+		wi::renderer::SetAdvancedLightCulling(args.bValue);
 	});
-	advancedLightCullingCheckBox.SetCheck(wiRenderer::GetAdvancedLightCulling());
+	advancedLightCullingCheckBox.SetCheck(wi::renderer::GetAdvancedLightCulling());
 	AddWidget(&advancedLightCullingCheckBox);
 
 	debugLightCullingCheckBox.Create("DEBUG: ");
 	debugLightCullingCheckBox.SetTooltip("Toggle visualization of the screen space light culling heatmap grid (Tiled renderer only)");
 	debugLightCullingCheckBox.SetPos(XMFLOAT2(x + 122, y));
 	debugLightCullingCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	debugLightCullingCheckBox.OnClick([](wiEventArgs args) {
-		wiRenderer::SetDebugLightCulling(args.bValue);
+	debugLightCullingCheckBox.OnClick([](wi::widget::EventArgs args) {
+		wi::renderer::SetDebugLightCulling(args.bValue);
 	});
-	debugLightCullingCheckBox.SetCheck(wiRenderer::GetDebugLightCulling());
+	debugLightCullingCheckBox.SetCheck(wi::renderer::GetDebugLightCulling());
 	AddWidget(&debugLightCullingCheckBox);
 
 	tessellationCheckBox.Create("Tessellation Enabled: ");
 	tessellationCheckBox.SetTooltip("Enable tessellation feature. You also need to specify a tessellation factor for individual objects.");
 	tessellationCheckBox.SetPos(XMFLOAT2(x, y += step));
 	tessellationCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	tessellationCheckBox.OnClick([=](wiEventArgs args) {
-		wiRenderer::SetTessellationEnabled(args.bValue);
+	tessellationCheckBox.OnClick([=](wi::widget::EventArgs args) {
+		wi::renderer::SetTessellationEnabled(args.bValue);
 	});
-	tessellationCheckBox.SetCheck(wiRenderer::GetTessellationEnabled());
+	tessellationCheckBox.SetCheck(wi::renderer::GetTessellationEnabled());
 	AddWidget(&tessellationCheckBox);
-	tessellationCheckBox.SetEnabled(wiGraphics::GetDevice()->CheckCapability(wiGraphics::GraphicsDeviceCapability::TESSELLATION));
+	tessellationCheckBox.SetEnabled(wi::graphics::GetDevice()->CheckCapability(wi::graphics::GraphicsDeviceCapability::TESSELLATION));
 
 	speedMultiplierSlider.Create(0, 4, 1, 100000, "Speed: ");
 	speedMultiplierSlider.SetTooltip("Adjust the global speed (time multiplier)");
 	speedMultiplierSlider.SetSize(XMFLOAT2(100, itemheight));
 	speedMultiplierSlider.SetPos(XMFLOAT2(x, y += step));
-	speedMultiplierSlider.SetValue(wiRenderer::GetGameSpeed());
-	speedMultiplierSlider.OnSlide([&](wiEventArgs args) {
-		wiRenderer::SetGameSpeed(args.fValue);
+	speedMultiplierSlider.SetValue(wi::renderer::GetGameSpeed());
+	speedMultiplierSlider.OnSlide([&](wi::widget::EventArgs args) {
+		wi::renderer::SetGameSpeed(args.fValue);
 	});
 	AddWidget(&speedMultiplierSlider);
 
@@ -239,9 +239,9 @@ void RendererWindow::Create(EditorComponent* editor)
 	transparentShadowsCheckBox.SetTooltip("Enables color tinted shadows and refraction caustics effects for transparent objects and water.");
 	transparentShadowsCheckBox.SetPos(XMFLOAT2(x, y += step));
 	transparentShadowsCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	transparentShadowsCheckBox.SetCheck(wiRenderer::GetTransparentShadowsEnabled());
-	transparentShadowsCheckBox.OnClick([=](wiEventArgs args) {
-		wiRenderer::SetTransparentShadowsEnabled(args.bValue);
+	transparentShadowsCheckBox.SetCheck(wi::renderer::GetTransparentShadowsEnabled());
+	transparentShadowsCheckBox.OnClick([=](wi::widget::EventArgs args) {
+		wi::renderer::SetTransparentShadowsEnabled(args.bValue);
 	});
 	AddWidget(&transparentShadowsCheckBox);
 
@@ -249,20 +249,20 @@ void RendererWindow::Create(EditorComponent* editor)
 	shadowTypeComboBox.SetSize(XMFLOAT2(100, itemheight));
 	shadowTypeComboBox.SetPos(XMFLOAT2(x, y += step));
 	shadowTypeComboBox.AddItem("Shadowmaps");
-	if (wiGraphics::GetDevice()->CheckCapability(wiGraphics::GraphicsDeviceCapability::RAYTRACING))
+	if (wi::graphics::GetDevice()->CheckCapability(wi::graphics::GraphicsDeviceCapability::RAYTRACING))
 	{
 		shadowTypeComboBox.AddItem("Ray traced");
 	}
-	shadowTypeComboBox.OnSelect([&](wiEventArgs args) {
+	shadowTypeComboBox.OnSelect([&](wi::widget::EventArgs args) {
 
 		switch (args.iValue)
 		{
 		default:
 		case 0:
-			wiRenderer::SetRaytracedShadowsEnabled(false);
+			wi::renderer::SetRaytracedShadowsEnabled(false);
 			break;
 		case 1:
-			wiRenderer::SetRaytracedShadowsEnabled(true);
+			wi::renderer::SetRaytracedShadowsEnabled(true);
 			break;
 		}
 		});
@@ -280,30 +280,30 @@ void RendererWindow::Create(EditorComponent* editor)
 	shadowProps2DComboBox.AddItem("1024");
 	shadowProps2DComboBox.AddItem("2048");
 	shadowProps2DComboBox.AddItem("4096");
-	shadowProps2DComboBox.OnSelect([&](wiEventArgs args) {
+	shadowProps2DComboBox.OnSelect([&](wi::widget::EventArgs args) {
 
 		switch (args.iValue)
 		{
 		case 0:
-			wiRenderer::SetShadowProps2D(0, -1);
+			wi::renderer::SetShadowProps2D(0, -1);
 			break;
 		case 1:
-			wiRenderer::SetShadowProps2D(128, -1);
+			wi::renderer::SetShadowProps2D(128, -1);
 			break;
 		case 2:
-			wiRenderer::SetShadowProps2D(256, -1);
+			wi::renderer::SetShadowProps2D(256, -1);
 			break;
 		case 3:
-			wiRenderer::SetShadowProps2D(512, -1);
+			wi::renderer::SetShadowProps2D(512, -1);
 			break;
 		case 4:
-			wiRenderer::SetShadowProps2D(1024, -1);
+			wi::renderer::SetShadowProps2D(1024, -1);
 			break;
 		case 5:
-			wiRenderer::SetShadowProps2D(2048, -1);
+			wi::renderer::SetShadowProps2D(2048, -1);
 			break;
 		case 6:
-			wiRenderer::SetShadowProps2D(4096, -1);
+			wi::renderer::SetShadowProps2D(4096, -1);
 			break;
 		default:
 			break;
@@ -324,29 +324,29 @@ void RendererWindow::Create(EditorComponent* editor)
 	shadowPropsCubeComboBox.AddItem("1024");
 	shadowPropsCubeComboBox.AddItem("2048");
 	shadowPropsCubeComboBox.AddItem("4096");
-	shadowPropsCubeComboBox.OnSelect([&](wiEventArgs args) {
+	shadowPropsCubeComboBox.OnSelect([&](wi::widget::EventArgs args) {
 		switch (args.iValue)
 		{
 		case 0:
-			wiRenderer::SetShadowPropsCube(0, -1);
+			wi::renderer::SetShadowPropsCube(0, -1);
 			break;
 		case 1:
-			wiRenderer::SetShadowPropsCube(128, -1);
+			wi::renderer::SetShadowPropsCube(128, -1);
 			break;
 		case 2:
-			wiRenderer::SetShadowPropsCube(256, -1);
+			wi::renderer::SetShadowPropsCube(256, -1);
 			break;
 		case 3:
-			wiRenderer::SetShadowPropsCube(512, -1);
+			wi::renderer::SetShadowPropsCube(512, -1);
 			break;
 		case 4:
-			wiRenderer::SetShadowPropsCube(1024, -1);
+			wi::renderer::SetShadowPropsCube(1024, -1);
 			break;
 		case 5:
-			wiRenderer::SetShadowPropsCube(2048, -1);
+			wi::renderer::SetShadowPropsCube(2048, -1);
 			break;
 		case 6:
-			wiRenderer::SetShadowPropsCube(4096, -1);
+			wi::renderer::SetShadowPropsCube(4096, -1);
 			break;
 		default:
 			break;
@@ -364,7 +364,7 @@ void RendererWindow::Create(EditorComponent* editor)
 	MSAAComboBox.AddItem("2");
 	MSAAComboBox.AddItem("4");
 	MSAAComboBox.AddItem("8");
-	MSAAComboBox.OnSelect([=](wiEventArgs args) {
+	MSAAComboBox.OnSelect([=](wi::widget::EventArgs args) {
 		switch (args.iValue)
 		{
 		case 0:
@@ -392,10 +392,10 @@ void RendererWindow::Create(EditorComponent* editor)
 	temporalAACheckBox.SetTooltip("Toggle Temporal Anti Aliasing. It is a supersampling techique which is performed across multiple frames.");
 	temporalAACheckBox.SetPos(XMFLOAT2(x, y += step));
 	temporalAACheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	temporalAACheckBox.OnClick([](wiEventArgs args) {
-		wiRenderer::SetTemporalAAEnabled(args.bValue);
+	temporalAACheckBox.OnClick([](wi::widget::EventArgs args) {
+		wi::renderer::SetTemporalAAEnabled(args.bValue);
 	});
-	temporalAACheckBox.SetCheck(wiRenderer::GetTemporalAAEnabled());
+	temporalAACheckBox.SetCheck(wi::renderer::GetTemporalAAEnabled());
 	AddWidget(&temporalAACheckBox);
 
 	temporalAADebugCheckBox.Create("DEBUGJitter: ");
@@ -403,10 +403,10 @@ void RendererWindow::Create(EditorComponent* editor)
 	temporalAADebugCheckBox.SetTooltip("Disable blending of frame history. Camera Subpixel jitter will be visible.");
 	temporalAADebugCheckBox.SetPos(XMFLOAT2(x + 122, y));
 	temporalAADebugCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	temporalAADebugCheckBox.OnClick([](wiEventArgs args) {
-		wiRenderer::SetTemporalAADebugEnabled(args.bValue);
+	temporalAADebugCheckBox.OnClick([](wi::widget::EventArgs args) {
+		wi::renderer::SetTemporalAADebugEnabled(args.bValue);
 	});
-	temporalAADebugCheckBox.SetCheck(wiRenderer::GetTemporalAADebugEnabled());
+	temporalAADebugCheckBox.SetCheck(wi::renderer::GetTemporalAADebugEnabled());
 	AddWidget(&temporalAADebugCheckBox);
 
 	textureQualityComboBox.Create("Texture Quality: ");
@@ -416,28 +416,28 @@ void RendererWindow::Create(EditorComponent* editor)
 	textureQualityComboBox.AddItem("Bilinear");
 	textureQualityComboBox.AddItem("Trilinear");
 	textureQualityComboBox.AddItem("Anisotropic");
-	textureQualityComboBox.OnSelect([&](wiEventArgs args) {
-		wiGraphics::SamplerDesc desc = wiRenderer::GetSampler(SAMPLER_OBJECTSHADER)->GetDesc();
+	textureQualityComboBox.OnSelect([&](wi::widget::EventArgs args) {
+		wi::graphics::SamplerDesc desc = wi::renderer::GetSampler(SAMPLER_OBJECTSHADER)->GetDesc();
 
 		switch (args.iValue)
 		{
 		case 0:
-			desc.filter = wiGraphics::Filter::MIN_MAG_MIP_POINT;
+			desc.filter = wi::graphics::Filter::MIN_MAG_MIP_POINT;
 			break;
 		case 1:
-			desc.filter = wiGraphics::Filter::MIN_MAG_LINEAR_MIP_POINT;
+			desc.filter = wi::graphics::Filter::MIN_MAG_LINEAR_MIP_POINT;
 			break;
 		case 2:
-			desc.filter = wiGraphics::Filter::MIN_MAG_MIP_LINEAR;
+			desc.filter = wi::graphics::Filter::MIN_MAG_MIP_LINEAR;
 			break;
 		case 3:
-			desc.filter = wiGraphics::Filter::ANISOTROPIC;
+			desc.filter = wi::graphics::Filter::ANISOTROPIC;
 			break;
 		default:
 			break;
 		}
 
-		wiRenderer::ModifyObjectSampler(desc);
+		wi::renderer::ModifyObjectSampler(desc);
 
 	});
 	textureQualityComboBox.SetSelected(3);
@@ -448,10 +448,10 @@ void RendererWindow::Create(EditorComponent* editor)
 	mipLodBiasSlider.SetTooltip("Bias the rendered mip map level of the material textures.");
 	mipLodBiasSlider.SetSize(XMFLOAT2(100, itemheight));
 	mipLodBiasSlider.SetPos(XMFLOAT2(x, y += step));
-	mipLodBiasSlider.OnSlide([&](wiEventArgs args) {
-		wiGraphics::SamplerDesc desc = wiRenderer::GetSampler(SAMPLER_OBJECTSHADER)->GetDesc();
-		desc.mip_lod_bias = wiMath::Clamp(args.fValue, -15.9f, 15.9f);
-		wiRenderer::ModifyObjectSampler(desc);
+	mipLodBiasSlider.OnSlide([&](wi::widget::EventArgs args) {
+		wi::graphics::SamplerDesc desc = wi::renderer::GetSampler(SAMPLER_OBJECTSHADER)->GetDesc();
+		desc.mip_lod_bias = wi::math::Clamp(args.fValue, -15.9f, 15.9f);
+		wi::renderer::ModifyObjectSampler(desc);
 	});
 	AddWidget(&mipLodBiasSlider);
 
@@ -459,9 +459,9 @@ void RendererWindow::Create(EditorComponent* editor)
 	raytraceBounceCountSlider.SetTooltip("How many light bounces to compute when doing ray tracing.");
 	raytraceBounceCountSlider.SetSize(XMFLOAT2(100, itemheight));
 	raytraceBounceCountSlider.SetPos(XMFLOAT2(x, y += step));
-	raytraceBounceCountSlider.SetValue((float)wiRenderer::GetRaytraceBounceCount());
-	raytraceBounceCountSlider.OnSlide([&](wiEventArgs args) {
-		wiRenderer::SetRaytraceBounceCount((uint32_t)args.iValue);
+	raytraceBounceCountSlider.SetValue((float)wi::renderer::GetRaytraceBounceCount());
+	raytraceBounceCountSlider.OnSlide([&](wi::widget::EventArgs args) {
+		wi::renderer::SetRaytraceBounceCount((uint32_t)args.iValue);
 	});
 	AddWidget(&raytraceBounceCountSlider);
 
@@ -474,10 +474,10 @@ void RendererWindow::Create(EditorComponent* editor)
 	physicsDebugCheckBox.SetTooltip("Visualize the physics world");
 	physicsDebugCheckBox.SetPos(XMFLOAT2(x, y += step));
 	physicsDebugCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	physicsDebugCheckBox.OnClick([](wiEventArgs args) {
-		wiPhysicsEngine::SetDebugDrawEnabled(args.bValue);
+	physicsDebugCheckBox.OnClick([](wi::widget::EventArgs args) {
+		wi::physics::SetDebugDrawEnabled(args.bValue);
 		});
-	physicsDebugCheckBox.SetCheck(wiPhysicsEngine::IsDebugDrawEnabled());
+	physicsDebugCheckBox.SetCheck(wi::physics::IsDebugDrawEnabled());
 	AddWidget(&physicsDebugCheckBox);
 
 	partitionBoxesCheckBox.Create("SPTree visualizer: ");
@@ -485,10 +485,10 @@ void RendererWindow::Create(EditorComponent* editor)
 	partitionBoxesCheckBox.SetScriptTip("SetDebugPartitionTreeEnabled(bool enabled)");
 	partitionBoxesCheckBox.SetPos(XMFLOAT2(x, y += step));
 	partitionBoxesCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	partitionBoxesCheckBox.OnClick([](wiEventArgs args) {
-		wiRenderer::SetToDrawDebugPartitionTree(args.bValue);
+	partitionBoxesCheckBox.OnClick([](wi::widget::EventArgs args) {
+		wi::renderer::SetToDrawDebugPartitionTree(args.bValue);
 	});
-	partitionBoxesCheckBox.SetCheck(wiRenderer::GetToDrawDebugPartitionTree());
+	partitionBoxesCheckBox.SetCheck(wi::renderer::GetToDrawDebugPartitionTree());
 	AddWidget(&partitionBoxesCheckBox);
 
 	boneLinesCheckBox.Create("Bone line visualizer: ");
@@ -496,10 +496,10 @@ void RendererWindow::Create(EditorComponent* editor)
 	boneLinesCheckBox.SetScriptTip("SetDebugBonesEnabled(bool enabled)");
 	boneLinesCheckBox.SetPos(XMFLOAT2(x, y += step));
 	boneLinesCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	boneLinesCheckBox.OnClick([](wiEventArgs args) {
-		wiRenderer::SetToDrawDebugBoneLines(args.bValue);
+	boneLinesCheckBox.OnClick([](wi::widget::EventArgs args) {
+		wi::renderer::SetToDrawDebugBoneLines(args.bValue);
 	});
-	boneLinesCheckBox.SetCheck(wiRenderer::GetToDrawDebugBoneLines());
+	boneLinesCheckBox.SetCheck(wi::renderer::GetToDrawDebugBoneLines());
 	AddWidget(&boneLinesCheckBox);
 
 	debugEmittersCheckBox.Create("Emitter visualizer: ");
@@ -507,10 +507,10 @@ void RendererWindow::Create(EditorComponent* editor)
 	debugEmittersCheckBox.SetScriptTip("SetDebugEmittersEnabled(bool enabled)");
 	debugEmittersCheckBox.SetPos(XMFLOAT2(x, y += step));
 	debugEmittersCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	debugEmittersCheckBox.OnClick([](wiEventArgs args) {
-		wiRenderer::SetToDrawDebugEmitters(args.bValue);
+	debugEmittersCheckBox.OnClick([](wi::widget::EventArgs args) {
+		wi::renderer::SetToDrawDebugEmitters(args.bValue);
 	});
-	debugEmittersCheckBox.SetCheck(wiRenderer::GetToDrawDebugEmitters());
+	debugEmittersCheckBox.SetCheck(wi::renderer::GetToDrawDebugEmitters());
 	AddWidget(&debugEmittersCheckBox);
 
 	debugForceFieldsCheckBox.Create("Force Field visualizer: ");
@@ -518,50 +518,50 @@ void RendererWindow::Create(EditorComponent* editor)
 	debugForceFieldsCheckBox.SetScriptTip("SetDebugForceFieldsEnabled(bool enabled)");
 	debugForceFieldsCheckBox.SetPos(XMFLOAT2(x, y += step));
 	debugForceFieldsCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	debugForceFieldsCheckBox.OnClick([](wiEventArgs args) {
-		wiRenderer::SetToDrawDebugForceFields(args.bValue);
+	debugForceFieldsCheckBox.OnClick([](wi::widget::EventArgs args) {
+		wi::renderer::SetToDrawDebugForceFields(args.bValue);
 	});
-	debugForceFieldsCheckBox.SetCheck(wiRenderer::GetToDrawDebugForceFields());
+	debugForceFieldsCheckBox.SetCheck(wi::renderer::GetToDrawDebugForceFields());
 	AddWidget(&debugForceFieldsCheckBox);
 
 	debugRaytraceBVHCheckBox.Create("Raytrace BVH visualizer: ");
 	debugRaytraceBVHCheckBox.SetTooltip("Visualize scene BVH if raytracing is enabled");
 	debugRaytraceBVHCheckBox.SetPos(XMFLOAT2(x, y += step));
 	debugRaytraceBVHCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	debugRaytraceBVHCheckBox.OnClick([](wiEventArgs args) {
-		wiRenderer::SetRaytraceDebugBVHVisualizerEnabled(args.bValue);
+	debugRaytraceBVHCheckBox.OnClick([](wi::widget::EventArgs args) {
+		wi::renderer::SetRaytraceDebugBVHVisualizerEnabled(args.bValue);
 	});
-	debugRaytraceBVHCheckBox.SetCheck(wiRenderer::GetRaytraceDebugBVHVisualizerEnabled());
+	debugRaytraceBVHCheckBox.SetCheck(wi::renderer::GetRaytraceDebugBVHVisualizerEnabled());
 	AddWidget(&debugRaytraceBVHCheckBox);
 
 	envProbesCheckBox.Create("Env probe visualizer: ");
 	envProbesCheckBox.SetTooltip("Toggle visualization of environment probes as reflective spheres");
 	envProbesCheckBox.SetPos(XMFLOAT2(x, y += step));
 	envProbesCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	envProbesCheckBox.OnClick([](wiEventArgs args) {
-		wiRenderer::SetToDrawDebugEnvProbes(args.bValue);
+	envProbesCheckBox.OnClick([](wi::widget::EventArgs args) {
+		wi::renderer::SetToDrawDebugEnvProbes(args.bValue);
 	});
-	envProbesCheckBox.SetCheck(wiRenderer::GetToDrawDebugEnvProbes());
+	envProbesCheckBox.SetCheck(wi::renderer::GetToDrawDebugEnvProbes());
 	AddWidget(&envProbesCheckBox);
 
 	cameraVisCheckBox.Create("Camera Proxy visualizer: ");
 	cameraVisCheckBox.SetTooltip("Toggle visualization of camera proxies in the scene");
 	cameraVisCheckBox.SetPos(XMFLOAT2(x, y += step));
 	cameraVisCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	cameraVisCheckBox.OnClick([](wiEventArgs args) {
-		wiRenderer::SetToDrawDebugCameras(args.bValue);
+	cameraVisCheckBox.OnClick([](wi::widget::EventArgs args) {
+		wi::renderer::SetToDrawDebugCameras(args.bValue);
 	});
-	cameraVisCheckBox.SetCheck(wiRenderer::GetToDrawDebugCameras());
+	cameraVisCheckBox.SetCheck(wi::renderer::GetToDrawDebugCameras());
 	AddWidget(&cameraVisCheckBox);
 
 	gridHelperCheckBox.Create("Grid helper: ");
 	gridHelperCheckBox.SetTooltip("Toggle showing of unit visualizer grid in the world origin");
 	gridHelperCheckBox.SetPos(XMFLOAT2(x, y += step));
 	gridHelperCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	gridHelperCheckBox.OnClick([](wiEventArgs args) {
-		wiRenderer::SetToDrawGridHelper(args.bValue);
+	gridHelperCheckBox.OnClick([](wi::widget::EventArgs args) {
+		wi::renderer::SetToDrawGridHelper(args.bValue);
 	});
-	gridHelperCheckBox.SetCheck(wiRenderer::GetToDrawGridHelper());
+	gridHelperCheckBox.SetCheck(wi::renderer::GetToDrawGridHelper());
 	AddWidget(&gridHelperCheckBox);
 
 
@@ -641,10 +641,10 @@ void RendererWindow::Create(EditorComponent* editor)
 	freezeCullingCameraCheckBox.SetTooltip("Freeze culling camera update. Scene culling will not be updated with the view");
 	freezeCullingCameraCheckBox.SetPos(XMFLOAT2(x, y += step * 2));
 	freezeCullingCameraCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	freezeCullingCameraCheckBox.OnClick([](wiEventArgs args) {
-		wiRenderer::SetFreezeCullingCameraEnabled(args.bValue);
+	freezeCullingCameraCheckBox.OnClick([](wi::widget::EventArgs args) {
+		wi::renderer::SetFreezeCullingCameraEnabled(args.bValue);
 	});
-	freezeCullingCameraCheckBox.SetCheck(wiRenderer::GetFreezeCullingCameraEnabled());
+	freezeCullingCameraCheckBox.SetCheck(wi::renderer::GetFreezeCullingCameraEnabled());
 	AddWidget(&freezeCullingCameraCheckBox);
 
 
@@ -653,10 +653,10 @@ void RendererWindow::Create(EditorComponent* editor)
 	disableAlbedoMapsCheckBox.SetTooltip("Disables albedo maps on objects for easier lighting debugging");
 	disableAlbedoMapsCheckBox.SetPos(XMFLOAT2(x, y += step));
 	disableAlbedoMapsCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	disableAlbedoMapsCheckBox.OnClick([](wiEventArgs args) {
-		wiRenderer::SetDisableAlbedoMaps(args.bValue);
+	disableAlbedoMapsCheckBox.OnClick([](wi::widget::EventArgs args) {
+		wi::renderer::SetDisableAlbedoMaps(args.bValue);
 		});
-	disableAlbedoMapsCheckBox.SetCheck(wiRenderer::IsDisableAlbedoMaps());
+	disableAlbedoMapsCheckBox.SetCheck(wi::renderer::IsDisableAlbedoMaps());
 	AddWidget(&disableAlbedoMapsCheckBox);
 
 
@@ -664,10 +664,10 @@ void RendererWindow::Create(EditorComponent* editor)
 	forceDiffuseLightingCheckBox.SetTooltip("Sets every surface fully diffuse, with zero specularity");
 	forceDiffuseLightingCheckBox.SetPos(XMFLOAT2(x, y += step));
 	forceDiffuseLightingCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	forceDiffuseLightingCheckBox.OnClick([](wiEventArgs args) {
-		wiRenderer::SetForceDiffuseLighting(args.bValue);
+	forceDiffuseLightingCheckBox.OnClick([](wi::widget::EventArgs args) {
+		wi::renderer::SetForceDiffuseLighting(args.bValue);
 		});
-	forceDiffuseLightingCheckBox.SetCheck(wiRenderer::IsForceDiffuseLighting());
+	forceDiffuseLightingCheckBox.SetCheck(wi::renderer::IsForceDiffuseLighting());
 	AddWidget(&forceDiffuseLightingCheckBox);
 
 
@@ -723,24 +723,24 @@ uint32_t RendererWindow::GetPickType() const
 	return pickType;
 }
 
-void RendererWindow::UpdateSwapChainFormats(wiGraphics::SwapChain* swapChain)
+void RendererWindow::UpdateSwapChainFormats(wi::graphics::SwapChain* swapChain)
 {
 	swapchainComboBox.OnSelect(nullptr);
 	swapchainComboBox.ClearItems();
-	swapchainComboBox.AddItem("SDR 8bit", static_cast<uint64_t>(wiGraphics::Format::R8G8B8A8_UNORM));
-	swapchainComboBox.AddItem("SDR 10bit", static_cast<uint64_t>(wiGraphics::Format::R10G10B10A2_UNORM));
-	if (wiGraphics::GetDevice()->IsSwapChainSupportsHDR(swapChain))
+	swapchainComboBox.AddItem("SDR 8bit", static_cast<uint64_t>(wi::graphics::Format::R8G8B8A8_UNORM));
+	swapchainComboBox.AddItem("SDR 10bit", static_cast<uint64_t>(wi::graphics::Format::R10G10B10A2_UNORM));
+	if (wi::graphics::GetDevice()->IsSwapChainSupportsHDR(swapChain))
 	{
-		swapchainComboBox.AddItem("HDR 10bit", static_cast<uint64_t>(wiGraphics::Format::R10G10B10A2_UNORM));
-		swapchainComboBox.AddItem("HDR 16bit", static_cast<uint64_t>(wiGraphics::Format::R16G16B16A16_FLOAT));
+		swapchainComboBox.AddItem("HDR 10bit", static_cast<uint64_t>(wi::graphics::Format::R10G10B10A2_UNORM));
+		swapchainComboBox.AddItem("HDR 16bit", static_cast<uint64_t>(wi::graphics::Format::R16G16B16A16_FLOAT));
 
 		switch (swapChain->desc.format)
 		{
 		default:
-		case wiGraphics::Format::R8G8B8A8_UNORM:
+		case wi::graphics::Format::R8G8B8A8_UNORM:
 			swapchainComboBox.SetSelected(0);
 			break;
-		case wiGraphics::Format::R10G10B10A2_UNORM:
+		case wi::graphics::Format::R10G10B10A2_UNORM:
 			if (swapChain->desc.allow_hdr)
 			{
 				swapchainComboBox.SetSelected(2);
@@ -750,7 +750,7 @@ void RendererWindow::UpdateSwapChainFormats(wiGraphics::SwapChain* swapChain)
 				swapchainComboBox.SetSelected(1);
 			}
 			break;
-		case wiGraphics::Format::R16G16B16A16_FLOAT:
+		case wi::graphics::Format::R16G16B16A16_FLOAT:
 			swapchainComboBox.SetSelected(4);
 			break;
 		}
@@ -760,21 +760,21 @@ void RendererWindow::UpdateSwapChainFormats(wiGraphics::SwapChain* swapChain)
 		switch (swapChain->desc.format)
 		{
 		default:
-		case wiGraphics::Format::R8G8B8A8_UNORM:
+		case wi::graphics::Format::R8G8B8A8_UNORM:
 			swapchainComboBox.SetSelected(0);
 			break;
-		case wiGraphics::Format::R10G10B10A2_UNORM:
+		case wi::graphics::Format::R10G10B10A2_UNORM:
 			swapchainComboBox.SetSelected(1);
 			break;
-		case wiGraphics::Format::R16G16B16A16_FLOAT:
+		case wi::graphics::Format::R16G16B16A16_FLOAT:
 			swapchainComboBox.SetSelected(1);
 			break;
 		}
 	}
 
-	swapchainComboBox.OnSelect([=](wiEventArgs args) {
+	swapchainComboBox.OnSelect([=](wi::widget::EventArgs args) {
 
-		swapChain->desc.format = (wiGraphics::Format)args.userdata;
+		swapChain->desc.format = (wi::graphics::Format)args.userdata;
 		switch (args.iValue)
 		{
 		default:
@@ -788,7 +788,7 @@ void RendererWindow::UpdateSwapChainFormats(wiGraphics::SwapChain* swapChain)
 			break;
 		}
 
-		bool success = wiGraphics::GetDevice()->CreateSwapChain(&swapChain->desc, nullptr, swapChain);
+		bool success = wi::graphics::GetDevice()->CreateSwapChain(&swapChain->desc, nullptr, swapChain);
 		assert(success);
 		});
 }

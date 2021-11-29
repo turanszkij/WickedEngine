@@ -9,9 +9,9 @@
 #include <istream>
 #include <streambuf>
 
-using namespace wiGraphics;
-using namespace wiScene;
-using namespace wiECS;
+using namespace wi::graphics;
+using namespace wi::scene;
+using namespace wi::ecs;
 
 struct membuf : std::streambuf
 {
@@ -40,7 +40,7 @@ public:
 		}
 
 		wi::vector<uint8_t> filedata;
-		if (!wiHelper::FileRead(filepath, filedata))
+		if (!wi::helper::FileRead(filepath, filedata))
 		{
 			std::string ss;
 			ss += "WARN: Material file [ " + filepath + " ] not found.\n";
@@ -74,8 +74,8 @@ static const bool transform_to_LH = true;
 
 void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 {
-	std::string directory = wiHelper::GetDirectoryFromPath(fileName);
-	std::string name = wiHelper::GetFileNameFromPath(fileName);
+	std::string directory = wi::helper::GetDirectoryFromPath(fileName);
+	std::string name = wi::helper::GetFileNameFromPath(fileName);
 
 	tinyobj::attrib_t obj_attrib;
 	wi::vector<tinyobj::shape_t> obj_shapes;
@@ -83,7 +83,7 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 	std::string obj_errors;
 
 	wi::vector<uint8_t> filedata;
-	bool success = wiHelper::FileRead(fileName, filedata);
+	bool success = wi::helper::FileRead(fileName, filedata);
 
 	if (success)
 	{
@@ -99,7 +99,7 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 
 	if (!obj_errors.empty())
 	{
-		wiBackLog::post(obj_errors, wiBackLog::LogLevel::Error);
+		wi::backlog::post(obj_errors, wi::backlog::LogLevel::Error);
 	}
 
 	if (success)
@@ -232,10 +232,10 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 
 					// eliminate duplicate vertices by means of hashing:
 					size_t vertexHash = 0;
-					wiHelper::hash_combine(vertexHash, index.vertex_index);
-					wiHelper::hash_combine(vertexHash, index.normal_index);
-					wiHelper::hash_combine(vertexHash, index.texcoord_index);
-					wiHelper::hash_combine(vertexHash, materialIndex);
+					wi::helper::hash_combine(vertexHash, index.vertex_index);
+					wi::helper::hash_combine(vertexHash, index.normal_index);
+					wi::helper::hash_combine(vertexHash, index.texcoord_index);
+					wi::helper::hash_combine(vertexHash, materialIndex);
 
 					if (uniqueVertices.count(vertexHash) == 0)
 					{
@@ -254,6 +254,6 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 	}
 	else
 	{
-		wiHelper::messageBox("OBJ import failed! Check backlog for errors!", "Error!");
+		wi::helper::messageBox("OBJ import failed! Check backlog for errors!", "Error!");
 	}
 }

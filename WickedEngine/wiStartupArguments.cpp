@@ -5,7 +5,7 @@
 #include <sstream>
 #include <iterator>
 
-namespace wiStartupArguments
+namespace wi::startup_arguments
 {
 	wi::unordered_set<std::string> params;
 
@@ -13,7 +13,7 @@ namespace wiStartupArguments
 	{
 		std::wstring from = args;
 		std::string to;
-		wiHelper::StringConvert(from, to);
+		wi::helper::StringConvert(from, to);
 
 		std::istringstream iss(to);
 

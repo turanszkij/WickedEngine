@@ -24,7 +24,7 @@ using namespace DirectX;
 using namespace DirectX::PackedVector;
 static constexpr XMFLOAT4X4 IDENTITYMATRIX = XMFLOAT4X4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
 
-namespace wiMath
+namespace wi::math
 {
 	constexpr float saturate(float x) { return std::min(std::max(x, 0.0f), 1.0f); }
 
