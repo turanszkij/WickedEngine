@@ -111,20 +111,20 @@ int sdl_loop(Editor &editor)
                     break;
                 case SDL_WINDOWEVENT_FOCUS_GAINED:
                     editor.is_window_active = true;
-					if (wiShaderCompiler::GetRegisteredShaderCount() > 0)
+					if (wi::shadercompiler::GetRegisteredShaderCount() > 0)
 					{
 						std::thread([] {
-							wiBackLog::post("[Shader check] Started checking " + std::to_string(wiShaderCompiler::GetRegisteredShaderCount()) + " registered shaders for changes...");
-							if (wiShaderCompiler::CheckRegisteredShadersOutdated())
+							wi::backlog::post("[Shader check] Started checking " + std::to_string(wi::shadercompiler::GetRegisteredShaderCount()) + " registered shaders for changes...");
+							if (wi::shadercompiler::CheckRegisteredShadersOutdated())
 							{
-								wiBackLog::post("[Shader check] Changes detected, initiating reload...");
-								wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [](uint64_t userdata) {
-									wiRenderer::ReloadShaders();
+								wi::backlog::post("[Shader check] Changes detected, initiating reload...");
+								wi::event::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [](uint64_t userdata) {
+									wi::renderer::ReloadShaders();
 									});
 							}
 							else
 							{
-								wiBackLog::post("[Shader check] All up to date");
+								wi::backlog::post("[Shader check] All up to date");
 							}
 							}).detach();
 					}
@@ -146,15 +146,15 @@ int sdl_loop(Editor &editor)
         {
             if(c == 127)
             {
-                if (wiBackLog::isActive())
-	        		wiBackLog::deletefromInput();
-	        	wiTextInputField::DeleteFromInput();
+                if (wi::backlog::isActive())
+	        		wi::backlog::deletefromInput();
+	        	wi::widget::TextInputField::DeleteFromInput();
             }
             else if (c != -1)
             {
-                if (wiBackLog::isActive())
-	        		wiBackLog::input(c);
-	        	wiTextInputField::AddInput(c);
+                if (wi::backlog::isActive())
+	        		wi::backlog::input(c);
+	        	wi::widget::TextInputField::AddInput(c);
             }
         }
         cbuf = c;
@@ -193,7 +193,7 @@ int main(int argc, char *argv[])
 {
     Editor editor;
 
-    wiStartupArguments::Parse(argc, argv);
+    wi::startup_arguments::Parse(argc, argv);
 
     sdl2::sdlsystem_ptr_t system = sdl2::make_sdlsystem(SDL_INIT_EVERYTHING | SDL_INIT_EVENTS);
     if (!system) {
