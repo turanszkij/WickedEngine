@@ -29,8 +29,8 @@ namespace wi::input::sdlinput
     wi::vector<Internal_ControllerState> controllers;
     int numSticks = 0;
 
-    int to_wi::input(const SDL_Scancode &key);
-    void controller_to_wi::input(uint32_t *current, Uint8 button, bool pressed);
+    int to_wicked(const SDL_Scancode &key);
+    void controller_to_wicked(uint32_t *current, Uint8 button, bool pressed);
 
     void AddController(Sint32 id);
     void RemoveController(Sint32 id);
@@ -100,7 +100,7 @@ namespace wi::input::sdlinput
                     // Keyboard events
                     case SDL_KEYDOWN:             // Key pressed
                     {
-                        int converted = to_wi::input(event.key.keysym.scancode);
+                        int converted = to_wicked(event.key.keysym.scancode);
                         if (converted >= 0) {
                             keyboard.buttons[converted] = true;
                         }
@@ -108,7 +108,7 @@ namespace wi::input::sdlinput
                     }
                     case SDL_KEYUP:               // Key released
                     {
-                        int converted = to_wi::input(event.key.keysym.scancode);
+                        int converted = to_wicked(event.key.keysym.scancode);
                         if (converted >= 0) {
                             keyboard.buttons[converted] = false;
                         }
@@ -191,7 +191,7 @@ namespace wi::input::sdlinput
             if(controller.controller){
                 //Get controller buttons
                 for(int btn=SDL_CONTROLLER_BUTTON_INVALID; btn<SDL_CONTROLLER_BUTTON_MAX; btn++){
-                    controller_to_wi::input(&controller.state.buttons,
+                    controller_to_wicked(&controller.state.buttons,
                         btn,
                         (bool)SDL_GameControllerGetButton(controller.controller, (SDL_GameControllerButton)btn));
                 }
@@ -235,7 +235,7 @@ namespace wi::input::sdlinput
     void SetControllerFeedback(const wi::input::ControllerFeedback& data, int index) {}
 
 
-    int to_wi::input(const SDL_Scancode &key) {
+    int to_wicked(const SDL_Scancode &key) {
         if (key < arraysize(keyboard.buttons))
         {
             return key;
@@ -243,7 +243,7 @@ namespace wi::input::sdlinput
         return -1;
     }
 
-    void controller_to_wi::input(uint32_t *current, Uint8 button, bool pressed){
+    void controller_to_wicked(uint32_t *current, Uint8 button, bool pressed){
         uint32_t btnenum;
         switch(button){
             case SDL_CONTROLLER_BUTTON_DPAD_UP: btnenum = wi::input::GAMEPAD_BUTTON_UP; break;
