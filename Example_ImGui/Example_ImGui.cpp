@@ -321,7 +321,7 @@ void Example_ImGuiRenderer::Load()
 
 	label.Create("Label1");
 	label.SetText("Wicked Engine ImGui integration");
-	label.font.params.h_align = WIFALIGN_CENTER;
+	label.font.params.h_align = wi::font::WIFALIGN_CENTER;
 	label.SetSize(XMFLOAT2(240, 20));
 	GetGUI().AddWidget(&label);
 

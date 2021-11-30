@@ -2,7 +2,7 @@
 #include "RendererWindow.h"
 #include "RenderPath3D.h"
 #include "Editor.h"
-#include "wiPhysicsEngine.h"
+#include "wiPhysics.h"
 
 
 void RendererWindow::Create(EditorComponent* editor)
