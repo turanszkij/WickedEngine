@@ -1305,7 +1305,7 @@ local function Character(face, skin_color, shirt_color, hair_color, shoe_color)
 
 
 			-- HP bar, etc. sprites:
-			local renderPath = main.GetActivePath()
+			local renderPath = application.GetActivePath()
 
 			self.sprite_hpbar_background = Sprite("hp_bar.png")
 			local fx = self.sprite_hpbar_background.GetParams()
@@ -1903,14 +1903,14 @@ runProcess(function()
 	--	We lock the framerate to 60 FPS, so if frame rate goes below, game will play slower
 	--	
 	--	There is also the possibility to implement game logic in fixed_update() instead, but that is not common for fighting games
-	main.SetTargetFrameRate(60)
-	main.SetFrameRateLock(true)
+	application.SetTargetFrameRate(60)
+	application.SetFrameRateLock(true)
 
 	-- We will override the render path so we can invoke the script from Editor and controls won't collide with editor scripts
 	--	Also save the active component that we can restore when ESCAPE is pressed
-	local prevPath = main.GetActivePath()
+	local prevPath = application.GetActivePath()
 	local path = RenderPath3D()
-	main.SetActivePath(path)
+	application.SetActivePath(path)
 
 	local help_text = ""
 	help_text = help_text .. "Wicked Engine Fighting game sample script\n"
@@ -2026,14 +2026,14 @@ runProcess(function()
 			--	so if you loaded this script from the editor, you can go back to the editor with ESC
 			backlog_post("EXIT")
 			killProcesses()
-			main.SetActivePath(prevPath)
+			application.SetActivePath(prevPath)
 			return
 		end
 		if(input.Press(string.byte('R'))) then
 			-- reload script
 			backlog_post("RELOAD")
 			killProcesses()
-			main.SetActivePath(prevPath)
+			application.SetActivePath(prevPath)
 			dofile("fighting_game.lua")
 			return
 		end

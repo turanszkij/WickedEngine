@@ -405,10 +405,10 @@ runProcess(function()
 
 	-- We will override the render path so we can invoke the script from Editor and controls won't collide with editor scripts
 	--	Also save the active component that we can restore when ESCAPE is pressed
-	local prevPath = main.GetActivePath()
+	local prevPath = application.GetActivePath()
 	local path = RenderPath3D()
 	path.SetLightShaftsEnabled(true)
-	main.SetActivePath(path)
+	application.SetActivePath(path)
 
 	local font = SpriteFont("This script is showcasing how to perform scene collision with raycasts for character and camera.\nControls:\n#####################\n\nWASD/arrows/left analog stick: walk\nSHIFT/right shoulder button: movement speed\nSPACE/gamepad X/gamepad button 2: Jump\nRight Mouse Button/Right thumbstick: rotate camera\nScoll middle mouse/Left-Right triggers: adjust camera distance\nESCAPE key: quit\nR: reload script");
 	font.SetSize(14)
@@ -433,14 +433,14 @@ runProcess(function()
 			--	so if you loaded this script from the editor, you can go back to the editor with ESC
 			backlog_post("EXIT")
 			killProcesses()
-			main.SetActivePath(prevPath)
+			application.SetActivePath(prevPath)
 			return
 		end
 		if(input.Press(string.byte('R'))) then
 			-- reload script
 			backlog_post("RELOAD")
 			killProcesses()
-			main.SetActivePath(prevPath)
+			application.SetActivePath(prevPath)
 			dofile("character_controller_tps.lua")
 			return
 		end
