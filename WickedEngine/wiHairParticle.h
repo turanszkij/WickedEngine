@@ -11,7 +11,10 @@
 
 #include <memory>
 
-class wi::Archive;
+namespace wi
+{
+	class Archive;
+}
 
 namespace wi::scene
 {

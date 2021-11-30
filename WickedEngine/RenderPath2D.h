@@ -5,8 +5,11 @@
 
 #include <string>
 
-class wi::Sprite;
-class wi::SpriteFont;
+namespace wi
+{
+	class Sprite;
+	class SpriteFont;
+}
 
 struct RenderItem2D
 {

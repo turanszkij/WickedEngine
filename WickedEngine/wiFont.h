@@ -27,18 +27,18 @@ namespace wi::font
 		int size = WIFONTSIZE_DEFAULT; // line height in DPI scaled units
 		float scaling = 1;
 		float spacingX = 1, spacingY = 1; // minimum spacing between characters
-		wi::font::Alignment h_align, v_align;
+		Alignment h_align, v_align;
 		wi::Color color;
 		wi::Color shadowColor;
 		float h_wrap = -1; // wrap start width (-1 default for no wrap)
 		int style = 0;
 
-		wi::font::Params(
+		Params(
 			float posX = 0,
 			float posY = 0,
 			int size = WIFONTSIZE_DEFAULT,
-			wi::font::Alignment h_align = WIFALIGN_LEFT,
-			wi::font::Alignment v_align = WIFALIGN_TOP,
+			Alignment h_align = WIFALIGN_LEFT,
+			Alignment v_align = WIFALIGN_TOP,
 			wi::Color color = wi::Color(255, 255, 255, 255),
 			wi::Color shadowColor = wi::Color(0, 0, 0, 0)
 		) :
@@ -75,19 +75,19 @@ namespace wi::font
 	// Set canvas for the CommandList to handle DPI-aware font rendering
 	void SetCanvas(const wi::Canvas& canvas, wi::graphics::CommandList cmd);
 
-	void Draw(const char* text, const wi::font::Params& params, wi::graphics::CommandList cmd);
-	void Draw(const wchar_t* text, const wi::font::Params& params, wi::graphics::CommandList cmd);
-	void Draw(const std::string& text, const wi::font::Params& params, wi::graphics::CommandList cmd);
-	void Draw(const std::wstring& text, const wi::font::Params& params, wi::graphics::CommandList cmd);
+	void Draw(const char* text, const Params& params, wi::graphics::CommandList cmd);
+	void Draw(const wchar_t* text, const Params& params, wi::graphics::CommandList cmd);
+	void Draw(const std::string& text, const Params& params, wi::graphics::CommandList cmd);
+	void Draw(const std::wstring& text, const Params& params, wi::graphics::CommandList cmd);
 
-	float textWidth(const char* text, const wi::font::Params& params);
-	float textWidth(const wchar_t* text, const wi::font::Params& params);
-	float textWidth(const std::string& text, const wi::font::Params& params);
-	float textWidth(const std::wstring& text, const wi::font::Params& params);
+	float textWidth(const char* text, const Params& params);
+	float textWidth(const wchar_t* text, const Params& params);
+	float textWidth(const std::string& text, const Params& params);
+	float textWidth(const std::wstring& text, const Params& params);
 
-	float textHeight(const char* text, const wi::font::Params& params);
-	float textHeight(const wchar_t* text, const wi::font::Params& params);
-	float textHeight(const std::string& text, const wi::font::Params& params);
-	float textHeight(const std::wstring& text, const wi::font::Params& params);
+	float textHeight(const char* text, const Params& params);
+	float textHeight(const wchar_t* text, const Params& params);
+	float textHeight(const std::string& text, const Params& params);
+	float textHeight(const std::wstring& text, const Params& params);
 
 }

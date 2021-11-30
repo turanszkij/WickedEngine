@@ -14,7 +14,10 @@
 #include <limits>
 
 struct RAY;
-struct wi::Resource;
+namespace wi
+{
+	struct Resource;
+}
 
 namespace wi::renderer
 {

@@ -20,7 +20,10 @@
 #include <memory>
 #include <limits>
 
-class wi::Archive;
+namespace wi
+{
+	class Archive;
+}
 
 namespace wi::scene
 {
