@@ -147,7 +147,7 @@ void SoundWindow::Create(EditorComponent* editor)
 		if (sound != nullptr)
 		{
 			sound->soundinstance.SetEnableReverb(args.bValue);
-			wi::audio::CreateSoundInstance(&sound->soundResource->sound, &sound->soundinstance);
+			wi::audio::CreateSoundInstance(&sound->soundResource.GetSound(), &sound->soundinstance);
 		}
 	});
 	AddWidget(&reverbCheckbox);
@@ -162,7 +162,7 @@ void SoundWindow::Create(EditorComponent* editor)
 		if (sound != nullptr)
 		{
 			sound->SetDisable3D(args.bValue);
-			wi::audio::CreateSoundInstance(&sound->soundResource->sound, &sound->soundinstance);
+			wi::audio::CreateSoundInstance(&sound->soundResource.GetSound(), &sound->soundinstance);
 		}
 	});
 	AddWidget(&disable3dCheckbox);
@@ -190,7 +190,7 @@ void SoundWindow::Create(EditorComponent* editor)
 		if (sound != nullptr)
 		{
 			sound->soundinstance.type = (wi::audio::SUBMIX_TYPE)args.iValue;
-			wi::audio::CreateSoundInstance(&sound->soundResource->sound, &sound->soundinstance);
+			wi::audio::CreateSoundInstance(&sound->soundResource.GetSound(), &sound->soundinstance);
 		}
 	});
 	submixComboBox.AddItem("SOUNDEFFECT");

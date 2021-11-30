@@ -173,7 +173,7 @@ void WeatherWindow::Create(EditorComponent* editor)
 	skyButton.OnClick([=](wi::widget::EventArgs args) {
 		auto& weather = GetWeather();
 
-		if (weather.skyMap == nullptr)
+		if (!weather.skyMap.IsValid())
 		{
 			wi::helper::FileDialogParams params;
 			params.type = wi::helper::FileDialogParams::OPEN;
@@ -190,7 +190,7 @@ void WeatherWindow::Create(EditorComponent* editor)
 		}
 		else
 		{
-			weather.skyMap.reset();
+			weather.skyMap = {};
 			weather.skyMapName.clear();
 			skyButton.SetText("Load Sky");
 		}
@@ -208,7 +208,7 @@ void WeatherWindow::Create(EditorComponent* editor)
 	colorgradingButton.OnClick([=](wi::widget::EventArgs args) {
 		auto& weather = GetWeather();
 
-		if (weather.colorGradingMap == nullptr)
+		if (!weather.colorGradingMap.IsValid())
 		{
 			wi::helper::FileDialogParams params;
 			params.type = wi::helper::FileDialogParams::OPEN;
@@ -225,7 +225,7 @@ void WeatherWindow::Create(EditorComponent* editor)
 		}
 		else
 		{
-			weather.colorGradingMap.reset();
+			weather.colorGradingMap = {};
 			weather.colorGradingMapName.clear();
 			colorgradingButton.SetText("Load Color Grading LUT");
 		}
@@ -558,7 +558,7 @@ void WeatherWindow::Create(EditorComponent* editor)
 
 		Scene& scene = wi::scene::GetScene();
 
-		wi::unordered_map<std::string, std::shared_ptr<wi::Resource>> conv;
+		wi::unordered_map<std::string, wi::Resource> conv;
 		for (uint32_t i = 0; i < scene.materials.GetCount(); ++i)
 		{
 			MaterialComponent& material = scene.materials[i];
@@ -577,11 +577,13 @@ void WeatherWindow::Create(EditorComponent* editor)
 		wi::jobsystem::context ctx;
 		for (auto& x : conv)
 		{
-			if (wi::helper::saveTextureToMemory(x.second->texture, x.second->filedata))
+			std::vector<uint8_t> filedata;
+			if (wi::helper::saveTextureToMemory(x.second.GetTexture(), filedata))
 			{
+				x.second.SetFileData(std::move(filedata));
 				wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
 					wi::vector<uint8_t> filedata_ktx2;
-					if (wi::helper::saveTextureToMemoryFile(x.second->filedata, x.second->texture.desc, "KTX2", filedata_ktx2))
+					if (wi::helper::saveTextureToMemoryFile(x.second.GetFileData(), x.second.GetTexture().desc, "KTX2", filedata_ktx2))
 					{
 						x.second = wi::resource_manager::Load(x.first, wi::resource_manager::IMPORT_RETAIN_FILEDATA, filedata_ktx2.data(), filedata_ktx2.size());
 					}

@@ -1241,7 +1241,7 @@ namespace wi::scene
 				{
 					filename = dir + filename;
 					soundResource = wi::resource_manager::Load(filename, wi::resource_manager::IMPORT_RETAIN_FILEDATA);
-					wi::audio::CreateSoundInstance(&soundResource->sound, &soundinstance);
+					wi::audio::CreateSoundInstance(&soundResource.GetSound(), &soundinstance);
 				}
 			});
 		}

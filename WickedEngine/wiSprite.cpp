@@ -19,7 +19,7 @@ namespace wi
 		{
 			maskName = newMask;
 			maskResource = wi::resource_manager::Load(newMask);
-			params.setMaskMap(&maskResource->texture);
+			params.setMaskMap(&maskResource.GetTexture());
 		}
 	}
 
@@ -27,7 +27,7 @@ namespace wi
 	{
 		if (IsHidden())
 			return;
-		wi::image::Draw(textureResource != nullptr ? &textureResource->texture : wi::texturehelper::getWhite(), params, cmd);
+		wi::image::Draw(textureResource.IsValid() ? &textureResource.GetTexture() : wi::texturehelper::getWhite(), params, cmd);
 	}
 
 	void Sprite::FixedUpdate()

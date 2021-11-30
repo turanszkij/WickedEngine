@@ -237,7 +237,7 @@ namespace wi::scene
 		dest->reflectance = reflectance;
 		dest->metalness = metalness;
 		dest->refraction = refraction;
-		dest->normalMapStrength = (textures[NORMALMAP].resource == nullptr ? 0 : normalMapStrength);
+		dest->normalMapStrength = (textures[NORMALMAP].resource.IsValid() ? normalMapStrength : 0);
 		dest->parallaxOcclusionMapping = parallaxOcclusionMapping;
 		dest->displacementMapping = displacementMapping;
 		XMFLOAT4 sss = subsurfaceScattering;
@@ -1760,13 +1760,13 @@ namespace wi::scene
 		shaderscene.meshbuffer = device->GetDescriptorIndex(&meshBuffer, SubresourceType::SRV);
 		shaderscene.materialbuffer = device->GetDescriptorIndex(&materialBuffer, SubresourceType::SRV);
 		shaderscene.envmaparray = device->GetDescriptorIndex(&envmapArray, SubresourceType::SRV);
-		if (weather.skyMap == nullptr)
+		if (weather.skyMap.IsValid())
 		{
-			shaderscene.globalenvmap = -1;
+			shaderscene.globalenvmap = device->GetDescriptorIndex(&weather.skyMap.GetTexture(), SubresourceType::SRV);
 		}
 		else
 		{
-			shaderscene.globalenvmap = device->GetDescriptorIndex(&weather.skyMap->texture, SubresourceType::SRV);
+			shaderscene.globalenvmap = -1;
 		}
 		shaderscene.TLAS = device->GetDescriptorIndex(&TLAS, SubresourceType::SRV);
 		shaderscene.BVH_counter = device->GetDescriptorIndex(&BVH.primitiveCounterBuffer, SubresourceType::SRV);
@@ -2152,7 +2152,7 @@ namespace wi::scene
 		SoundComponent& sound = sounds.Create(entity);
 		sound.filename = filename;
 		sound.soundResource = wi::resource_manager::Load(filename, wi::resource_manager::IMPORT_RETAIN_FILEDATA);
-		wi::audio::CreateSoundInstance(&sound.soundResource->sound, &sound.soundinstance);
+		wi::audio::CreateSoundInstance(&sound.soundResource.GetSound(), &sound.soundinstance);
 
 		TransformComponent& transform = transforms.Create(entity);
 		transform.Translate(position);

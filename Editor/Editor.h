@@ -38,7 +38,7 @@ class Editor;
 class EditorComponent : public RenderPath2D
 {
 private:
-	std::shared_ptr<wi::Resource> pointLightTex, spotLightTex, dirLightTex, areaLightTex, decalTex, forceFieldTex, emitterTex, hairTex, cameraTex, armatureTex, soundTex;
+	wi::Resource pointLightTex, spotLightTex, dirLightTex, areaLightTex, decalTex, forceFieldTex, emitterTex, hairTex, cameraTex, armatureTex, soundTex;
 public:
 	MaterialWindow materialWnd;
 	PostprocessWindow postprocessWnd;

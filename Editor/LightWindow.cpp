@@ -247,10 +247,10 @@ void LightWindow::Create(EditorComponent* editor)
 				light->lensFlareNames.resize(i + 1);
 			}
 
-			if (light->lensFlareRimTextures[i] != nullptr)
+			if (light->lensFlareRimTextures[i].IsValid())
 			{
 				light->lensFlareNames[i] = "";
-				light->lensFlareRimTextures[i] = nullptr;
+				light->lensFlareRimTextures[i] = {};
 				lensflare_Button[i].SetText("");
 			}
 			else
@@ -309,7 +309,7 @@ void LightWindow::SetEntity(Entity entity)
 
 		for (size_t i = 0; i < arraysize(lensflare_Button); ++i)
 		{
-			if (light->lensFlareRimTextures.size() > i && light->lensFlareRimTextures[i] && !light->lensFlareNames[i].empty())
+			if (light->lensFlareRimTextures.size() > i && light->lensFlareRimTextures[i].IsValid() && !light->lensFlareNames[i].empty())
 			{
 				lensflare_Button[i].SetText(wi::helper::GetFileNameFromPath(light->lensFlareNames[i]));
 			}

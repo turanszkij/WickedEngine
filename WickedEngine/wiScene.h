@@ -207,16 +207,16 @@ namespace wi::scene
 		{
 			std::string name;
 			uint32_t uvset = 0;
-			std::shared_ptr<wi::Resource> resource;
+			wi::Resource resource;
 			const wi::graphics::GPUResource* GetGPUResource() const
 			{
-				if (resource == nullptr || !resource->texture.IsValid())
+				if (!resource.IsValid() || !resource.GetTexture().IsValid())
 					return nullptr;
-				return &resource->texture;
+				return &resource.GetTexture();
 			}
 			int GetUVSet() const
 			{
-				if (resource == nullptr || !resource->texture.IsValid())
+				if (!resource.IsValid() || !resource.GetTexture().IsValid())
 					return -1;
 				return (int)uvset;
 			}
@@ -843,7 +843,7 @@ namespace wi::scene
 		XMFLOAT3 right;
 		mutable int occlusionquery = -1;
 
-		wi::vector<std::shared_ptr<wi::Resource>> lensFlareRimTextures;
+		wi::vector<wi::Resource> lensFlareRimTextures;
 
 		inline void SetCastShadow(bool value) { if (value) { _flags |= CAST_SHADOW; } else { _flags &= ~CAST_SHADOW; } }
 		inline void SetVolumetricsEnabled(bool value) { if (value) { _flags |= VOLUMETRICS; } else { _flags &= ~VOLUMETRICS; } }
@@ -995,8 +995,8 @@ namespace wi::scene
 		float range;
 		XMFLOAT4X4 world;
 
-		std::shared_ptr<wi::Resource> texture;
-		std::shared_ptr<wi::Resource> normal;
+		wi::Resource texture;
+		wi::Resource normal;
 
 		inline float GetOpacity() const { return color.w; }
 
@@ -1147,8 +1147,8 @@ namespace wi::scene
 
 		// Non-serialized attributes:
 		uint32_t most_important_light_index = ~0;
-		std::shared_ptr<wi::Resource> skyMap;
-		std::shared_ptr<wi::Resource> colorGradingMap;
+		wi::Resource skyMap;
+		wi::Resource colorGradingMap;
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
@@ -1165,7 +1165,7 @@ namespace wi::scene
 		uint32_t _flags = LOOPED;
 
 		std::string filename;
-		std::shared_ptr<wi::Resource> soundResource;
+		wi::Resource soundResource;
 		wi::audio::SoundInstance soundinstance;
 		float volume = 1;
 

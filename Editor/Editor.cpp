@@ -108,7 +108,7 @@ void Editor::Initialize()
 	MainComponent::Initialize();
 
 	// With this mode, file data for resources will be kept around. This allows serializing embedded resource data inside scenes
-	wi::resource_manager::SetMode(wi::resource_manager::MODE_ALLOW_RETAIN_FILEDATA);
+	wi::resource_manager::SetMode(wi::resource_manager::Mode::ALLOW_RETAIN_FILEDATA);
 
 	infoDisplay.active = true;
 	infoDisplay.watermark = true;
@@ -701,7 +701,7 @@ void EditorComponent::Load()
 				{
 					Scene& scene = wi::scene::GetScene();
 
-					wi::resource_manager::MODE embed_mode = (wi::resource_manager::MODE)saveModeComboBox.GetItemUserData(saveModeComboBox.GetSelected());
+					wi::resource_manager::Mode embed_mode = (wi::resource_manager::Mode)saveModeComboBox.GetItemUserData(saveModeComboBox.GetSelected());
 					wi::resource_manager::SetMode(embed_mode);
 
 					scene.Serialize(archive);
@@ -972,9 +972,9 @@ void EditorComponent::Load()
 	saveModeComboBox.Create("Save Mode: ");
 	saveModeComboBox.SetColor(wi::Color(0, 198, 101, 180), wi::widget::WIDGETSTATE::IDLE);
 	saveModeComboBox.SetColor(wi::Color(0, 255, 140, 255), wi::widget::WIDGETSTATE::FOCUS);
-	saveModeComboBox.AddItem("Embed resources", wi::resource_manager::MODE_ALLOW_RETAIN_FILEDATA);
-	saveModeComboBox.AddItem("No embedding", wi::resource_manager::MODE_ALLOW_RETAIN_FILEDATA_BUT_DISABLE_EMBEDDING);
-	saveModeComboBox.AddItem("Dump to header", wi::resource_manager::MODE_ALLOW_RETAIN_FILEDATA);
+	saveModeComboBox.AddItem("Embed resources", (uint64_t)wi::resource_manager::Mode::ALLOW_RETAIN_FILEDATA);
+	saveModeComboBox.AddItem("No embedding", (uint64_t)wi::resource_manager::Mode::ALLOW_RETAIN_FILEDATA_BUT_DISABLE_EMBEDDING);
+	saveModeComboBox.AddItem("Dump to header", (uint64_t)wi::resource_manager::Mode::ALLOW_RETAIN_FILEDATA);
 	saveModeComboBox.SetTooltip("Choose whether to embed resources (textures, sounds...) in the scene file when saving, or keep them as separate files.\nThe Dump to header option will use embedding and create a C++ header file with byte data of the scene to be used with wi::Archive serialization.");
 	GetGUI().AddWidget(&saveModeComboBox);
 
@@ -2059,16 +2059,16 @@ void EditorComponent::Compose(CommandList cmd) const
 			switch (light.GetType())
 			{
 			case LightComponent::POINT:
-				wi::image::Draw(&pointLightTex->texture, fx, cmd);
+				wi::image::Draw(&pointLightTex.GetTexture(), fx, cmd);
 				break;
 			case LightComponent::SPOT:
-				wi::image::Draw(&spotLightTex->texture, fx, cmd);
+				wi::image::Draw(&spotLightTex.GetTexture(), fx, cmd);
 				break;
 			case LightComponent::DIRECTIONAL:
-				wi::image::Draw(&dirLightTex->texture, fx, cmd);
+				wi::image::Draw(&dirLightTex.GetTexture(), fx, cmd);
 				break;
 			default:
-				wi::image::Draw(&areaLightTex->texture, fx, cmd);
+				wi::image::Draw(&areaLightTex.GetTexture(), fx, cmd);
 				break;
 			}
 		}
@@ -2103,7 +2103,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			}
 
 
-			wi::image::Draw(&decalTex->texture, fx, cmd);
+			wi::image::Draw(&decalTex.GetTexture(), fx, cmd);
 
 		}
 	}
@@ -2136,7 +2136,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			}
 
 
-			wi::image::Draw(&forceFieldTex->texture, fx, cmd);
+			wi::image::Draw(&forceFieldTex.GetTexture(), fx, cmd);
 		}
 	}
 
@@ -2169,7 +2169,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			}
 
 
-			wi::image::Draw(&cameraTex->texture, fx, cmd);
+			wi::image::Draw(&cameraTex.GetTexture(), fx, cmd);
 		}
 	}
 
@@ -2201,7 +2201,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			}
 
 
-			wi::image::Draw(&armatureTex->texture, fx, cmd);
+			wi::image::Draw(&armatureTex.GetTexture(), fx, cmd);
 		}
 	}
 
@@ -2233,7 +2233,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			}
 
 
-			wi::image::Draw(&emitterTex->texture, fx, cmd);
+			wi::image::Draw(&emitterTex.GetTexture(), fx, cmd);
 		}
 	}
 
@@ -2265,7 +2265,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			}
 
 
-			wi::image::Draw(&hairTex->texture, fx, cmd);
+			wi::image::Draw(&hairTex.GetTexture(), fx, cmd);
 		}
 	}
 
@@ -2297,7 +2297,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			}
 
 
-			wi::image::Draw(&soundTex->texture, fx, cmd);
+			wi::image::Draw(&soundTex.GetTexture(), fx, cmd);
 		}
 	}
 

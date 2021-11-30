@@ -113,13 +113,13 @@ namespace tinygltf
 			(size_t)size
 		);
 
-		if (resource == nullptr)
+		if (!resource.IsValid())
 		{
 			return false;
 		}
 
-		image->width = resource->texture.desc.width;
-		image->height = resource->texture.desc.height;
+		image->width = resource.GetTexture().desc.width;
+		image->height = resource.GetTexture().desc.height;
 		image->component = 4;
 
 		wi::resource_manager::ResourceSerializer* seri = (wi::resource_manager::ResourceSerializer*)userdata;
@@ -686,7 +686,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			}
 			if (ext_specular->second.Has("specularTexture"))
 			{
-				if (material.textures[MaterialComponent::SURFACEMAP].resource == nullptr)
+				if (!material.textures[MaterialComponent::SURFACEMAP].resource.IsValid())
 				{
 					auto& param = ext_specular->second.Get("specularTexture");
 					int index = param.Get("index").Get<int>();
@@ -701,7 +701,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 					material.textures[MaterialComponent::SURFACEMAP].name = img.uri;
 					material.textures[MaterialComponent::SURFACEMAP].uvset = (uint32_t)param.Get("texCoord").Get<int>();
 				}
-				else if (material.textures[MaterialComponent::SPECULARMAP].resource == nullptr)
+				else if (!material.textures[MaterialComponent::SPECULARMAP].resource.IsValid())
 				{
 					auto& param = ext_specular->second.Get("specularTexture");
 					int index = param.Get("index").Get<int>();

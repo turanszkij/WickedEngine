@@ -3134,9 +3134,9 @@ void UpdatePerFrameData(
 	{
 		frameCB.options |= OPTION_BIT_FORCE_DIFFUSE_LIGHTING;
 	}
-	if (vis.scene->weather.skyMap != nullptr)
+	if (vis.scene->weather.skyMap.IsValid())
 	{
-		bool hdr = !IsFormatUnorm(vis.scene->weather.skyMap->texture.desc.format);
+		bool hdr = !IsFormatUnorm(vis.scene->weather.skyMap.GetTexture().desc.format);
 		if (hdr)
 		{
 			frameCB.options |= OPTION_BIT_STATIC_SKY_HDR;
@@ -3326,14 +3326,14 @@ void UpdateRenderData(
 			matrixArray[matrixCounter] = XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal.world));
 
 			int texture = -1;
-			if (decal.texture != nullptr)
+			if (decal.texture.IsValid())
 			{
-				texture = device->GetDescriptorIndex(&decal.texture->texture, SubresourceType::SRV);
+				texture = device->GetDescriptorIndex(&decal.texture.GetTexture(), SubresourceType::SRV);
 			}
 			int normal = -1;
-			if (decal.normal != nullptr)
+			if (decal.normal.IsValid())
 			{
-				normal = device->GetDescriptorIndex(&decal.normal->texture, SubresourceType::SRV);
+				normal = device->GetDescriptorIndex(&decal.normal.GetTexture(), SubresourceType::SRV);
 			}
 			matrixArray[matrixCounter].r[0] = XMVectorSetW(matrixArray[matrixCounter].r[0], *(float*)&texture);
 			matrixArray[matrixCounter].r[1] = XMVectorSetW(matrixArray[matrixCounter].r[1], *(float*)&normal);
@@ -4397,7 +4397,7 @@ void DrawLensFlares(
 				uint32_t i = 0;
 				for (auto& x : light.lensFlareRimTextures)
 				{
-					if (x != nullptr)
+					if (x.IsValid())
 					{
 						// pre-baked offsets
 						// These values work well for me, but should be tweakable
@@ -4406,12 +4406,12 @@ void DrawLensFlares(
 							break;
 
 						cb.xLensFlareOffset = mods[i];
-						cb.xLensFlareSize.x = (float)x->texture.desc.width;
-						cb.xLensFlareSize.y = (float)x->texture.desc.height;
+						cb.xLensFlareSize.x = (float)x.GetTexture().desc.width;
+						cb.xLensFlareSize.y = (float)x.GetTexture().desc.height;
 
 						device->PushConstants(&cb, sizeof(cb), cmd);
 
-						device->BindResource(&x->texture, 1, cmd);
+						device->BindResource(&x.GetTexture(), 1, cmd);
 						device->Draw(4, 0, cmd);
 						i++;
 					}
@@ -6160,7 +6160,7 @@ void DrawSky(const Scene& scene, CommandList cmd)
 {
 	device->EventBegin("DrawSky", cmd);
 	
-	if (scene.weather.skyMap != nullptr)
+	if (scene.weather.skyMap.IsValid())
 	{
 		device->BindPipelineState(&PSO_sky[SKYRENDERING_STATIC], cmd);
 	}
@@ -6272,10 +6272,10 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 
 		// sky
 		{
-			if (vis.scene->weather.skyMap != nullptr)
+			if (vis.scene->weather.skyMap.IsValid())
 			{
 				device->BindPipelineState(&PSO_sky[SKYRENDERING_ENVMAPCAPTURE_STATIC], cmd);
-				device->BindResource(&vis.scene->weather.skyMap->texture, 0, cmd);
+				device->BindResource(&vis.scene->weather.skyMap.GetTexture(), 0, cmd);
 			}
 			else
 			{

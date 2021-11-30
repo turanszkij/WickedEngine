@@ -235,9 +235,9 @@ namespace wi::scene
 		device->EventBegin("HairParticle - UpdateGPU", cmd);
 
 		TextureDesc desc;
-		if (material.textures[MaterialComponent::BASECOLORMAP].resource != nullptr)
+		if (material.textures[MaterialComponent::BASECOLORMAP].resource.IsValid())
 		{
-			desc = material.textures[MaterialComponent::BASECOLORMAP].resource->texture.GetDesc();
+			desc = material.textures[MaterialComponent::BASECOLORMAP].resource.GetTexture().GetDesc();
 		}
 		HairParticleCB hcb;
 		hcb.xHairWorld = world;

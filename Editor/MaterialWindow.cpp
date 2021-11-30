@@ -631,9 +631,9 @@ void MaterialWindow::Create(EditorComponent* editor)
 
 		int slot = textureSlotComboBox.GetSelected();
 
-		if (material->textures[slot].resource != nullptr)
+		if (material->textures[slot].resource.IsValid())
 		{
-			material->textures[slot].resource = nullptr;
+			material->textures[slot].resource = {};
 			material->textures[slot].name = "";
 			material->SetDirty();
 			textureSlotLabel.SetText("");
@@ -818,7 +818,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		colorComboBox.SetEnabled(false);
 		colorPicker.SetEnabled(false);
 
-		textureSlotButton.SetImage(nullptr);
+		textureSlotButton.SetImage(wi::Resource());
 		textureSlotLabel.SetText("");
 		textureSlotUvsetField.SetText("");
 	}

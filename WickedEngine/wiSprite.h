@@ -34,8 +34,8 @@ namespace wi
 		constexpr bool IsDisableUpdate() const { return _flags & DISABLE_UPDATE; }
 
 		wi::image::Params params;
-		std::shared_ptr<wi::Resource> textureResource;
-		std::shared_ptr<wi::Resource> maskResource;
+		wi::Resource textureResource;
+		wi::Resource maskResource;
 
 		struct Anim
 		{
@@ -97,8 +97,10 @@ namespace wi
 
 		const wi::graphics::Texture* getTexture() const
 		{
-			if (textureResource != nullptr)
-				return &textureResource->texture;
+			if (textureResource.IsValid())
+			{
+				return &textureResource.GetTexture();
+			}
 			return nullptr;
 		}
 	};

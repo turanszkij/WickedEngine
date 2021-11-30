@@ -292,7 +292,7 @@ wi::Color Widget::GetColor() const
 {
 	return wi::Color::fromFloat4(sprites[GetState()].params.color);
 }
-void Widget::SetImage(std::shared_ptr<wi::Resource> textureResource, WIDGETSTATE state)
+void Widget::SetImage(wi::Resource textureResource, WIDGETSTATE state)
 {
 	if (state == WIDGETSTATE_COUNT)
 	{

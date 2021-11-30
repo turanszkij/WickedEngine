@@ -181,7 +181,7 @@ void PaintToolWindow::Create(EditorComponent* editor)
 		wi::vector<uint8_t> texturefiledata;
 		if (wi::helper::saveTextureToMemoryFile(editTexture, "PNG", texturefiledata))
 		{
-			material->textures[sel].resource->filedata = texturefiledata;
+			material->textures[sel].resource.SetFileData(texturefiledata);
 		}
 		else
 		{
@@ -1237,17 +1237,17 @@ void PaintToolWindow::ConsumeHistoryOperation(wi::Archive& archive, bool undo)
 Texture PaintToolWindow::GetEditTextureSlot(const MaterialComponent& material, int* uvset)
 {
 	uint64_t sel = textureSlotComboBox.GetItemUserData(textureSlotComboBox.GetSelected());
-	if (material.textures[sel].resource == nullptr)
+	if (!material.textures[sel].resource.IsValid())
 	{
 		return Texture();
 	}
 	if (uvset)
 		*uvset = material.textures[sel].uvset;
-	return material.textures[sel].resource->texture;
+	return material.textures[sel].resource.GetTexture();
 }
 void PaintToolWindow::ReplaceEditTextureSlot(wi::scene::MaterialComponent& material, const Texture& texture)
 {
 	uint64_t sel = textureSlotComboBox.GetItemUserData(textureSlotComboBox.GetSelected());
-	material.textures[sel].resource->texture = texture;
+	material.textures[sel].resource.SetTexture(texture);
 	material.SetDirty();
 }

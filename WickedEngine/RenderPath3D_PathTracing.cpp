@@ -361,7 +361,7 @@ void RenderPath3D_PathTracing::Render() const
 			cmd,
 			getExposure(),
 			getDitherEnabled(),
-			getColorGradingEnabled() ? (scene->weather.colorGradingMap == nullptr ? nullptr : &scene->weather.colorGradingMap->texture) : nullptr,
+			getColorGradingEnabled() ? (scene->weather.colorGradingMap.IsValid() ? &scene->weather.colorGradingMap.GetTexture(): nullptr) : nullptr,
 			nullptr,
 			getEyeAdaptionEnabled() ? &luminanceResources.luminance : nullptr,
 			getBloomEnabled() ? &bloomResources.texture_bloom : nullptr,

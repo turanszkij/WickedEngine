@@ -76,7 +76,7 @@ namespace wi::widget
 		void SetColor(wi::Color color, WIDGETSTATE state = WIDGETSTATE_COUNT);
 		wi::Color GetColor() const;
 		// last param default: set color for all states
-		void SetImage(std::shared_ptr<wi::Resource> textureResource, WIDGETSTATE state = WIDGETSTATE_COUNT);
+		void SetImage(wi::Resource textureResource, WIDGETSTATE state = WIDGETSTATE_COUNT);
 
 		virtual void Update(const wi::Canvas& canvas, float dt);
 		virtual void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const = 0;

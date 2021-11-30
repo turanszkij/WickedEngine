@@ -1465,7 +1465,7 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 			cmd,
 			getExposure(),
 			getDitherEnabled(),
-			getColorGradingEnabled() ? (scene->weather.colorGradingMap == nullptr ? nullptr : &scene->weather.colorGradingMap->texture) : nullptr,
+			getColorGradingEnabled() ? (scene->weather.colorGradingMap.IsValid() ? &scene->weather.colorGradingMap.GetTexture() : nullptr) : nullptr,
 			getMSAASampleCount() > 1 ? &rtParticleDistortion_Resolved : &rtParticleDistortion,
 			getEyeAdaptionEnabled() ? &luminanceResources.luminance : nullptr,
 			getBloomEnabled() ? &bloomResources.texture_bloom : nullptr,
