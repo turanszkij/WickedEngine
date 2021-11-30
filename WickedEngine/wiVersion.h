@@ -1,6 +1,5 @@
 #ifndef WICKEDENGINE_VERSION_DEFINED
 #define WICKEDENGINE_VERSION_DEFINED
-#include "CommonInclude.h"
 
 namespace wi::version
 {

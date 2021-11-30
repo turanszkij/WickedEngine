@@ -963,9 +963,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiInitializer.h">
       <Filter>ENGINE\System</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiAllocator.h">
-      <Filter>ENGINE\Helpers</Filter>
-    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiImageParams_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>

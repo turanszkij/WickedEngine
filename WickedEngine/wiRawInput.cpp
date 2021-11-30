@@ -4,6 +4,7 @@
 #if defined(_WIN32) && !defined(PLATFORM_UWP)
 #include "wiVector.h"
 
+#include <cassert>
 #include <string>
 #include <hidsdi.h>
 
@@ -11,12 +12,7 @@
 
 namespace wi::input::rawinput
 {
-
-	constexpr size_t Align(size_t value, size_t alignment)
-	{
-		return ((value + alignment - 1) / alignment) * alignment;
-	}
-
+	// Simple LinearAllocator that will enforce data alignment
 	class AlignedLinearAllocator
 	{
 	public:
@@ -24,12 +20,10 @@ namespace wi::input::rawinput
 		{
 			_aligned_free(buffer);
 		}
-
 		constexpr size_t get_capacity() const
 		{
 			return capacity;
 		}
-
 		inline void reserve(size_t newCapacity, size_t align)
 		{
 			alignment = align;
@@ -39,7 +33,6 @@ namespace wi::input::rawinput
 			_aligned_free(buffer);
 			buffer = (uint8_t*)_aligned_malloc(capacity, alignment);
 		}
-
 		constexpr uint8_t* allocate(size_t size)
 		{
 			size = Align(size, alignment);
@@ -51,19 +44,16 @@ namespace wi::input::rawinput
 			}
 			return nullptr;
 		}
-
 		constexpr void free(size_t size)
 		{
 			size = Align(size, alignment);
 			assert(offset >= size);
 			offset -= size;
 		}
-
 		constexpr void reset()
 		{
 			offset = 0;
 		}
-
 		constexpr uint8_t* top()
 		{
 			return &buffer[offset];
@@ -74,6 +64,11 @@ namespace wi::input::rawinput
 		size_t capacity = 0;
 		size_t offset = 0;
 		size_t alignment = 1;
+
+		constexpr size_t Align(size_t value, size_t alignment)
+		{
+			return ((value + alignment - 1) / alignment) * alignment;
+		}
 	};
 
 	AlignedLinearAllocator allocator;

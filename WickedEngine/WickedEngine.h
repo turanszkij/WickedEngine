@@ -65,7 +65,6 @@
 #include "wiEvent.h"
 #include "wiShaderCompiler.h"
 #include "wiCanvas.h"
-#include "wiAllocator.h"
 #include "wiUnorderedMap.h"
 #include "wiUnorderedSet.h"
 #include "wiVector.h"

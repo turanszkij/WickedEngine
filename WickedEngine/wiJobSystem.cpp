@@ -1,7 +1,6 @@
 #include "wiJobSystem.h"
 #include "wiSpinLock.h"
 #include "wiBacklog.h"
-#include "wiAllocator.h"
 #include "wiPlatform.h"
 #include "wiTimer.h"
 
@@ -32,6 +31,53 @@ namespace wi::jobsystem
 		std::mutex wakeMutex;
 	};
 
+	// Fixed size very simple thread safe ring buffer
+	template <typename T, size_t capacity>
+	class ThreadSafeRingBuffer
+	{
+	public:
+		// Push an item to the end if there is free space
+		//	Returns true if succesful
+		//	Returns false if there is not enough space
+		inline bool push_back(const T& item)
+		{
+			bool result = false;
+			lock.lock();
+			size_t next = (head + 1) % capacity;
+			if (next != tail)
+			{
+				data[head] = item;
+				head = next;
+				result = true;
+			}
+			lock.unlock();
+			return result;
+		}
+
+		// Get an item if there are any
+		//	Returns true if succesful
+		//	Returns false if there are no items
+		inline bool pop_front(T& item)
+		{
+			bool result = false;
+			lock.lock();
+			if (tail != head)
+			{
+				item = data[tail];
+				tail = (tail + 1) % capacity;
+				result = true;
+			}
+			lock.unlock();
+			return result;
+		}
+
+	private:
+		T data[capacity];
+		size_t head = 0;
+		size_t tail = 0;
+		wi::spinlock lock;
+	};
+
 	// This structure is responsible to stop worker thread loops.
 	//	Once this is destroyed, worker threads will be woken up and end their loops.
 	//	This is to workaround a problem on Linux, where threads still running their loops don't let the main thread to exit
@@ -40,7 +86,7 @@ namespace wi::jobsystem
 		uint32_t numCores = 0;
 		uint32_t numThreads = 0;
 		std::shared_ptr<WorkerState> worker_state = std::make_shared<WorkerState>(); // kept alive by both threads and internal_state
-		wi::allocator::ThreadSafeRingBuffer<Job, 256> jobQueue;
+		ThreadSafeRingBuffer<Job, 256> jobQueue;
 		~InternalState()
 		{
 			worker_state->alive.store(false);
