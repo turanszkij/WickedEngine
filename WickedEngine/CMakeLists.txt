@@ -36,8 +36,8 @@ add_subdirectory(Utility)
 add_library(${TARGET_NAME} STATIC
 	LoadingScreen.cpp
 	LoadingScreen_BindLua.cpp
-	MainComponent.cpp
-	MainComponent_BindLua.cpp
+	Application.cpp
+	Application_BindLua.cpp
 	Matrix_BindLua.cpp
 	RenderPath_BindLua.cpp
 	RenderPath2D.cpp
