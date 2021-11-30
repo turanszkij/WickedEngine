@@ -2,41 +2,46 @@
 #include "RenderPath3D.h"
 #include "wiVector.h"
 
-class RenderPath3D_PathTracing :
-	public RenderPath3D
+namespace wi
 {
-protected:
-	int sam = -1;
-	int target = 1024;
-	wi::graphics::Texture traceResult;
 
-	wi::vector<uint8_t> texturedata_src;
-	wi::vector<uint8_t> texturedata_dst;
-	wi::vector<uint8_t> texturedata_albedo;
-	wi::vector<uint8_t> texturedata_normal;
-	wi::graphics::Texture denoiserAlbedo;
-	wi::graphics::Texture denoiserNormal;
-	wi::graphics::Texture denoiserResult;
-	wi::jobsystem::context denoiserContext;
+	class RenderPath3D_PathTracing :
+		public RenderPath3D
+	{
+	protected:
+		int sam = -1;
+		int target = 1024;
+		wi::graphics::Texture traceResult;
 
-	wi::graphics::RenderPass renderpass_debugbvh;
+		wi::vector<uint8_t> texturedata_src;
+		wi::vector<uint8_t> texturedata_dst;
+		wi::vector<uint8_t> texturedata_albedo;
+		wi::vector<uint8_t> texturedata_normal;
+		wi::graphics::Texture denoiserAlbedo;
+		wi::graphics::Texture denoiserNormal;
+		wi::graphics::Texture denoiserResult;
+		wi::jobsystem::context denoiserContext;
 
-	void ResizeBuffers() override;
+		wi::graphics::RenderPass renderpass_debugbvh;
 
-public:
-	const wi::graphics::Texture* GetDepthStencil() const override { return nullptr; };
+		void ResizeBuffers() override;
 
-	void Update(float dt) override;
-	void Render() const override;
-	void Compose(wi::graphics::CommandList cmd) const override;
+	public:
+		const wi::graphics::Texture* GetDepthStencil() const override { return nullptr; };
 
-	int getCurrentSampleCount() const { return sam; }
-	void setTargetSampleCount(int value) { target = value; }
-	float getProgress() const { return (float)sam / (float)target; }
+		void Update(float dt) override;
+		void Render() const override;
+		void Compose(wi::graphics::CommandList cmd) const override;
 
-	float denoiserProgress = 0;
-	float getDenoiserProgress() const { return denoiserProgress; }
-	bool isDenoiserAvailable() const;
+		int getCurrentSampleCount() const { return sam; }
+		void setTargetSampleCount(int value) { target = value; }
+		float getProgress() const { return (float)sam / (float)target; }
 
-	void resetProgress() { sam = -1; denoiserProgress = 0; }
-};
+		float denoiserProgress = 0;
+		float getDenoiserProgress() const { return denoiserProgress; }
+		bool isDenoiserAvailable() const;
+
+		void resetProgress() { sam = -1; denoiserProgress = 0; }
+	};
+
+}

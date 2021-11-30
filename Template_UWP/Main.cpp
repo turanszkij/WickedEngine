@@ -195,7 +195,7 @@ private:
     float m_DPI = 96;
     float m_logicalWidth = 800;
     float m_logicalHeight = 600;
-	MainComponent main;
+	Application main;
 
     inline int ConvertDipsToPixels(float dips) const noexcept
     {

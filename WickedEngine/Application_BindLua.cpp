@@ -1,4 +1,4 @@
-#include "MainComponent_BindLua.h"
+#include "Application_BindLua.h"
 #include "RenderPath_BindLua.h"
 #include "RenderPath3D_BindLua.h"
 #include "RenderPath2D_BindLua.h"
@@ -8,38 +8,38 @@
 namespace wi::lua
 {
 
-	const char MainComponent_BindLua::className[] = "MainComponent";
+	const char Application_BindLua::className[] = "Application";
 
-	Luna<MainComponent_BindLua>::FunctionType MainComponent_BindLua::methods[] = {
-		lunamethod(MainComponent_BindLua, GetActivePath),
-		lunamethod(MainComponent_BindLua, SetActivePath),
-		lunamethod(MainComponent_BindLua, SetFrameSkip),
-		lunamethod(MainComponent_BindLua, SetTargetFrameRate),
-		lunamethod(MainComponent_BindLua, SetFrameRateLock),
-		lunamethod(MainComponent_BindLua, SetInfoDisplay),
-		lunamethod(MainComponent_BindLua, SetWatermarkDisplay),
-		lunamethod(MainComponent_BindLua, SetFPSDisplay),
-		lunamethod(MainComponent_BindLua, SetResolutionDisplay),
-		lunamethod(MainComponent_BindLua, SetLogicalSizeDisplay),
-		lunamethod(MainComponent_BindLua, SetPipelineCountDisplay),
-		lunamethod(MainComponent_BindLua, SetHeapAllocationCountDisplay),
-		lunamethod(MainComponent_BindLua, GetCanvas),
+	Luna<Application_BindLua>::FunctionType Application_BindLua::methods[] = {
+		lunamethod(Application_BindLua, GetActivePath),
+		lunamethod(Application_BindLua, SetActivePath),
+		lunamethod(Application_BindLua, SetFrameSkip),
+		lunamethod(Application_BindLua, SetTargetFrameRate),
+		lunamethod(Application_BindLua, SetFrameRateLock),
+		lunamethod(Application_BindLua, SetInfoDisplay),
+		lunamethod(Application_BindLua, SetWatermarkDisplay),
+		lunamethod(Application_BindLua, SetFPSDisplay),
+		lunamethod(Application_BindLua, SetResolutionDisplay),
+		lunamethod(Application_BindLua, SetLogicalSizeDisplay),
+		lunamethod(Application_BindLua, SetPipelineCountDisplay),
+		lunamethod(Application_BindLua, SetHeapAllocationCountDisplay),
+		lunamethod(Application_BindLua, GetCanvas),
 		{ NULL, NULL }
 	};
-	Luna<MainComponent_BindLua>::PropertyType MainComponent_BindLua::properties[] = {
+	Luna<Application_BindLua>::PropertyType Application_BindLua::properties[] = {
 		{ NULL, NULL }
 	};
 
-	MainComponent_BindLua::MainComponent_BindLua(MainComponent* component) :component(component)
+	Application_BindLua::Application_BindLua(Application* component) :component(component)
 	{
 	}
 
-	MainComponent_BindLua::MainComponent_BindLua(lua_State* L)
+	Application_BindLua::Application_BindLua(lua_State* L)
 	{
 		component = nullptr;
 	}
 
-	int MainComponent_BindLua::GetActivePath(lua_State* L)
+	int Application_BindLua::GetActivePath(lua_State* L)
 	{
 		if (component == nullptr)
 		{
@@ -82,7 +82,7 @@ namespace wi::lua
 		wi::lua::SError(L, "GetActivePath() Warning: type of active component not registered!");
 		return 0;
 	}
-	int MainComponent_BindLua::SetActivePath(lua_State* L)
+	int Application_BindLua::SetActivePath(lua_State* L)
 	{
 		if (component == nullptr)
 		{
@@ -147,7 +147,7 @@ namespace wi::lua
 		}
 		return 0;
 	}
-	int MainComponent_BindLua::SetFrameSkip(lua_State* L)
+	int Application_BindLua::SetFrameSkip(lua_State* L)
 	{
 		if (component == nullptr)
 		{
@@ -164,7 +164,7 @@ namespace wi::lua
 			wi::lua::SError(L, "SetFrameSkip(bool enabled) not enought arguments!");
 		return 0;
 	}
-	int MainComponent_BindLua::SetTargetFrameRate(lua_State* L)
+	int Application_BindLua::SetTargetFrameRate(lua_State* L)
 	{
 		if (component == nullptr)
 		{
@@ -181,7 +181,7 @@ namespace wi::lua
 			wi::lua::SError(L, "SetTargetFrameRate(float value) not enought arguments!");
 		return 0;
 	}
-	int MainComponent_BindLua::SetFrameRateLock(lua_State* L)
+	int Application_BindLua::SetFrameRateLock(lua_State* L)
 	{
 		if (component == nullptr)
 		{
@@ -198,7 +198,7 @@ namespace wi::lua
 			wi::lua::SError(L, "SetFrameRateLock(bool enabled) not enought arguments!");
 		return 0;
 	}
-	int MainComponent_BindLua::SetInfoDisplay(lua_State* L)
+	int Application_BindLua::SetInfoDisplay(lua_State* L)
 	{
 		if (component == nullptr)
 		{
@@ -214,7 +214,7 @@ namespace wi::lua
 			wi::lua::SError(L, "SetInfoDisplay(bool active) not enough arguments!");
 		return 0;
 	}
-	int MainComponent_BindLua::SetWatermarkDisplay(lua_State* L)
+	int Application_BindLua::SetWatermarkDisplay(lua_State* L)
 	{
 		if (component == nullptr)
 		{
@@ -230,7 +230,7 @@ namespace wi::lua
 			wi::lua::SError(L, "SetWatermarkDisplay(bool active) not enough arguments!");
 		return 0;
 	}
-	int MainComponent_BindLua::SetFPSDisplay(lua_State* L)
+	int Application_BindLua::SetFPSDisplay(lua_State* L)
 	{
 		if (component == nullptr)
 		{
@@ -246,7 +246,7 @@ namespace wi::lua
 			wi::lua::SError(L, "SetFPSDisplay(bool active) not enough arguments!");
 		return 0;
 	}
-	int MainComponent_BindLua::SetResolutionDisplay(lua_State* L)
+	int Application_BindLua::SetResolutionDisplay(lua_State* L)
 	{
 		if (component == nullptr)
 		{
@@ -262,7 +262,7 @@ namespace wi::lua
 			wi::lua::SError(L, "SetResolutionDisplay(bool active) not enough arguments!");
 		return 0;
 	}
-	int MainComponent_BindLua::SetLogicalSizeDisplay(lua_State* L)
+	int Application_BindLua::SetLogicalSizeDisplay(lua_State* L)
 	{
 		if (component == nullptr)
 		{
@@ -278,7 +278,7 @@ namespace wi::lua
 			wi::lua::SError(L, "SetLogicalSizeDisplay(bool active) not enough arguments!");
 		return 0;
 	}
-	int MainComponent_BindLua::SetPipelineCountDisplay(lua_State* L)
+	int Application_BindLua::SetPipelineCountDisplay(lua_State* L)
 	{
 		if (component == nullptr)
 		{
@@ -294,7 +294,7 @@ namespace wi::lua
 			wi::lua::SError(L, "SetPipelineCountDisplay(bool active) not enough arguments!");
 		return 0;
 	}
-	int MainComponent_BindLua::SetHeapAllocationCountDisplay(lua_State* L)
+	int Application_BindLua::SetHeapAllocationCountDisplay(lua_State* L)
 	{
 		if (component == nullptr)
 		{
@@ -311,7 +311,7 @@ namespace wi::lua
 		return 0;
 	}
 
-	int MainComponent_BindLua::GetCanvas(lua_State* L)
+	int Application_BindLua::GetCanvas(lua_State* L)
 	{
 		if (component == nullptr)
 		{
@@ -336,13 +336,13 @@ namespace wi::lua
 		return 0;
 	}
 
-	void MainComponent_BindLua::Bind()
+	void Application_BindLua::Bind()
 	{
 		static bool initialized = false;
 		if (!initialized)
 		{
 			initialized = true;
-			Luna<MainComponent_BindLua>::Register(wi::lua::GetLuaState());
+			Luna<Application_BindLua>::Register(wi::lua::GetLuaState());
 
 			wi::lua::RegisterFunc("SetProfilerEnabled", SetProfilerEnabled);
 		}

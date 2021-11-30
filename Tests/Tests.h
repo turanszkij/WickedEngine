@@ -19,7 +19,7 @@ public:
 	void RunUnorderedMapTest();
 };
 
-class Tests : public MainComponent
+class Tests : public wi::Application
 {
 	TestsRenderer renderer;
 public:

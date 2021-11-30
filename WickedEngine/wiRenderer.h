@@ -13,8 +13,6 @@
 #include <memory>
 #include <limits>
 
-struct RAY;
-
 namespace wi::renderer
 {
 	inline uint32_t CombineStencilrefs(STENCILREF engineStencilRef, uint8_t userStencilRef)

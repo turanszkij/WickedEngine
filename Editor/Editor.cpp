@@ -105,7 +105,7 @@ winrt::fire_and_forget uwp_copy_assets()
 
 void Editor::Initialize()
 {
-	MainComponent::Initialize();
+	Application::Initialize();
 
 	// With this mode, file data for resources will be kept around. This allows serializing embedded resource data inside scenes
 	wi::resource_manager::SetMode(wi::resource_manager::Mode::ALLOW_RETAIN_FILEDATA);

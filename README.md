@@ -84,22 +84,22 @@ If you have questions or stuck, please use the `linux` communication channel on 
 // Include engine headers:
 #include "WickedEngine.h"
 
-// Declare main component once per application:
-MainComponent main;
+// Create the Wicked Engine application:
+wi::Application application;
 
 // Assign window that you will render to:
-main.SetWindow(hWnd);
+application.SetWindow(hWnd);
 
 // Run the application:
 while(true) {
-   main.Run(); 
+   application.Run(); 
 }
 ```
 
 #### Basics (C++):
 ```cpp
-RenderPath3D myGame; // Declare a game screen component, aka "RenderPath" (you could also override its Update(), Render() etc. functions). 
-main.ActivatePath(&myGame); // Register your game to the application. It will call Start(), Update(), Render(), etc. from now on...
+wi::RenderPath3D myGame; // Declare a game screen component, aka "RenderPath" (you could also override its Update(), Render() etc. functions). 
+application.ActivatePath(&myGame); // Register your game to the application. It will call Start(), Update(), Render(), etc. from now on...
 
 wi::scene::LoadModel("myModel.wiscene"); // Simply load a model into the current global scene
 wi::scene::GetScene(); // Get the current global scene
@@ -110,8 +110,8 @@ wi::scene::GetScene().Merge(scene2); // Combine separate scene with global scene
 
 myGame.setFXAAEnabled(true); // You can enable post process effects this way...
 
-RenderPath2D myMenuScreen; // This is an other render path, but now a simple 2D one. It can only render 2D graphics by default (like a menu for example)
-main.ActivatePath(&myMenuScreen); // activate the menu, the previous path (myGame) will be stopped
+wi::RenderPath2D myMenuScreen; // This is an other render path, but now a simple 2D one. It can only render 2D graphics by default (like a menu for example)
+application.ActivatePath(&myMenuScreen); // activate the menu, the previous path (myGame) will be stopped
 
 wi::Sprite mySprite("image.png"); // There are many utilities, such as a "sprite" helper class
 myMenuScreen.AddSprite(&mySprite); // The 2D render path is ready to handle sprite and font rendering for you
@@ -130,9 +130,9 @@ if (wi::input::Down(wi::input::KEYBOARD_BUTTON_SPACE)) { wi::audio::Play(&mySoun
 
 #### Scripting (LUA):
 ```lua
--- Set a rendering path for the application main component
+-- Set a rendering path for the application
 path = RenderPath3D;
-main.SetActivePath(path);    -- "main" is created automatically
+application.SetActivePath(path);    -- "application" is created automatically by wi::Application
 
 -- Load a model entity into the global scene:
 entity = LoadModel("myModel.wiscene");
@@ -152,9 +152,9 @@ transform = scene.Component_GetTransform(entity);
 transform.Translate(Vector(2, 0, 0));
 
 -- Print any WickedEngine class information to the backlog:
-getprops(main);    -- prints the main component methods
-getprops(scene);    -- prints the Scene class methods
-getprops(path);    -- prints the deferred render path methods
+getprops(application);	-- prints the application methods
+getprops(scene);	-- prints the Scene class methods
+getprops(path);	-- prints the deferred render path methods
 
 -- Play a sound:
 sound = Sound()

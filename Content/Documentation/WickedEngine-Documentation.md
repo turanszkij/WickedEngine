@@ -5,7 +5,7 @@ This is a reference for the C++ features of Wicked Engine
 
 ## Contents
 1. [High Level Interface](#high-level-interface)
-	1. [MainComponent](#maincomponent)
+	1. [Application](#application)
 	2. [RenderPath](#renderpath)
 	3. [RenderPath2D](#renderpath2d)
 	4. [RenderPath3D](#renderpath3d)
@@ -168,14 +168,14 @@ This is a reference for the C++ features of Wicked Engine
 ## High Level Interface
 The high level interface consists of classes that allow for extending the engine with custom functionality. This is usually done by overriding the classes.
 
-### MainComponent
-[[Header]](../../WickedEngine/MainComponent.h) [[Cpp]](../../WickedEngine/MainComponent.cpp)
+### Application
+[[Header]](../../WickedEngine/Application.h) [[Cpp]](../../WickedEngine/Application.cpp)
 This is the main runtime component that has the Run() function. It should be included in the application entry point while calling Run() in an infinite loop. <br/>
 The user should call the SetWindow() function to associate it with a window of the operating system. This window will be used to render to.<br/>
-The MainComponent has many uses that the user is not necessarily interested in. The most important part is that it manages the RenderPaths. There can be one active RenderPath at a time, which will be updated and rendered to the screen every frame. However, because a RenderPath is a highly customizable class, there is no limitation what can be done within the RenderPath, for example supporting multiple concurrent RenderPaths if required. RenderPaths can be switched wit ha Fade out screen easily. Loading Screen can be activated as an active Renderpath and it will load and switch to an other RenderPath if desired. A RenderPath can be simply activated with the MainComponent::ActivatePath() function.<br/>
-The MainComponent does the following every frame while it is running:<br/>
+The `Application` has many uses that the user is not necessarily interested in. The most important part is that it manages the RenderPaths. There can be one active RenderPath at a time, which will be updated and rendered to the screen every frame. However, because a RenderPath is a highly customizable class, there is no limitation what can be done within the RenderPath, for example supporting multiple concurrent RenderPaths if required. RenderPaths can be switched wit ha Fade out screen easily. Loading Screen can be activated as an active Renderpath and it will load and switch to an other RenderPath if desired. A RenderPath can be simply activated with the `Application`::ActivatePath() function.<br/>
+The `Application` does the following every frame while it is running:<br/>
 1. FixedUpdate() <br/>
-Calls FixedUpdate for the active RenderPath and wakes up scripts that are waiting for fixedupdate(). The frequency off calls will be determined by MainComponent::setTargetFrameRate(float framespersecond). By default (parameter = 60), FixedUpdate will be called 60 times per second.
+Calls FixedUpdate for the active RenderPath and wakes up scripts that are waiting for fixedupdate(). The frequency off calls will be determined by `Application`::setTargetFrameRate(float framespersecond). By default (parameter = 60), FixedUpdate will be called 60 times per second.
 2. Update(float deltatime) <br/>
 Calls Update for the active RenderPath and wakes up scripts that are waiting for update()
 3. Render() <br/>
@@ -185,12 +185,12 @@ Calls Compose for the active RenderPath
 
 ### RenderPath
 [[Header]](../../WickedEngine/RenderPath.h)
-This is an empty base class that can be activated with a MainComponent. It calls its Start(), Update(), FixedUpdate(), Render(), Compose(), Stop() functions as needed. Override this to perform custom gameplay or rendering logic. The RenderPath inherits from [wiCanvas](#wicanvas), and the canvas properties will be set by the [MainComponent](#maincomponent) when the RenderPath was activated, and while the RenderPath is active. <br/>
+This is an empty base class that can be activated with a `Application`. It calls its Start(), Update(), FixedUpdate(), Render(), Compose(), Stop() functions as needed. Override this to perform custom gameplay or rendering logic. The RenderPath inherits from [wiCanvas](#wicanvas), and the canvas properties will be set by the [Application](#application) when the RenderPath was activated, and while the RenderPath is active. <br/>
 The order in which the functions are executed every frame: <br/>
 1. PreUpdate() <br/>
 This will be called once per frame before any script that calls Update().
 2. FixedUpdate() <br/>
-This will be called in a manner that is deterministic, so logic will be running in the frequency that is specified with MainComponent::setTargetFrameRate(float framespersecond)
+This will be called in a manner that is deterministic, so logic will be running in the frequency that is specified with `Application`::setTargetFrameRate(float framespersecond)
 3. Update(float deltatime) <br/>
 This will be called once per frame, and the elapsed time in seconds since the last Update() is provided as parameter
 4. PostUpdate() <br/>
@@ -204,9 +204,9 @@ Apart from the functions that will be run every frame, the RenderPath has the fo
 1. Load() <br/> 
 Intended for loading resources before the first time the RenderPath will be used. It will be callsed by [LoadingScreen](#loadingscreen) to load resources in the background.
 2. Start() <br/>
-Start will always be called when a RenderPath is activated by the MainComponent
+Start will always be called when a RenderPath is activated by the `Application`
 3. Stop() <br/>
-Stop will be always called when the current RenderPath was the active one in MainComponent, but an other one was activated.
+Stop will be always called when the current RenderPath was the active one in `Application`, but an other one was activated.
 
 ### RenderPath2D
 [[Header]](../../WickedEngine/RenderPath2D.h) [[Cpp]](../../WickedEngine/RenderPath2D.cpp)
@@ -984,7 +984,7 @@ Utility to convert to/from float color data to 32-bit RGBA data (stored in a uin
 
 ### wiFadeManager
 [[Header]](../../WickedEngine/wiFadeManager.h) [[Cpp]](../../WickedEngine/wiFadeManager.cpp)
-Simple helper to manage a fadeout screen. Fadeout starts at transparent, then fades smoothly to an opaque color (such as black, in most cases), then a callback occurs which the user can handle with their own event. After that, the color will fade back to transperent. This is used by the [MainComponent](#maincomponent) to fade from one RenderPath to an other.
+Simple helper to manage a fadeout screen. Fadeout starts at transparent, then fades smoothly to an opaque color (such as black, in most cases), then a callback occurs which the user can handle with their own event. After that, the color will fade back to transperent. This is used by the [Application](#application) to fade from one RenderPath to an other.
 
 ### wiHelper
 [[Header]](../../WickedEngine/wiHelper.h) [[Cpp]](../../WickedEngine/wiHelper.cpp)
@@ -1067,7 +1067,7 @@ This is the high level input interface. Use this to read input devices in a plat
 - Initialize <br/>
 Creates all necessary resources, the engine initialization already does this via [wiInitializer](#wiinitializer), so the user probably doesn't have to worry about this.
 - Update <br/>
-This is called once per frame and necessary to process inputs. This is automatically called in [MainComponent](#maincomponent), so the user doesn't need to worry about it, unless they are reimplementing the high level interface for themselves.
+This is called once per frame and necessary to process inputs. This is automatically called in [Application](#application), so the user doesn't need to worry about it, unless they are reimplementing the high level interface for themselves.
 - Down <br/>
 Checks whether a button is currently held down.
 - Press <br/>

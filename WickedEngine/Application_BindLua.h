@@ -1,7 +1,7 @@
 #pragma once
 #include "wiLua.h"
 #include "wiLuna.h"
-#include "MainComponent.h"
+#include "Application.h"
 
 namespace wi::lua
 {
@@ -27,17 +27,17 @@ namespace wi::lua
 		static void Bind();
 	};
 
-	class MainComponent_BindLua
+	class Application_BindLua
 	{
 	private:
-		MainComponent* component = nullptr;
+		Application* component = nullptr;
 	public:
 		static const char className[];
-		static Luna<MainComponent_BindLua>::FunctionType methods[];
-		static Luna<MainComponent_BindLua>::PropertyType properties[];
+		static Luna<Application_BindLua>::FunctionType methods[];
+		static Luna<Application_BindLua>::PropertyType properties[];
 
-		MainComponent_BindLua(MainComponent* component = nullptr);
-		MainComponent_BindLua(lua_State* L);
+		Application_BindLua(Application* component = nullptr);
+		Application_BindLua(lua_State* L);
 
 		int GetActivePath(lua_State* L);
 		int SetActivePath(lua_State* L);

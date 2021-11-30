@@ -174,7 +174,7 @@ public:
 	void ConsumeHistoryOperation(bool undo);
 };
 
-class Editor : public MainComponent
+class Editor : public Application
 {
 public:
 	EditorComponent renderComponent;

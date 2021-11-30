@@ -144,10 +144,10 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)WickedEngine.h">
       <Filter>ENGINE\Common</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)MainComponent.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)Application.h">
       <Filter>ENGINE\High level interface</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)MainComponent_BindLua.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)Application_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)Matrix_BindLua.h">
@@ -1190,10 +1190,10 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiVersion.cpp">
       <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)MainComponent.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)Application.cpp">
       <Filter>ENGINE\High level interface</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)MainComponent_BindLua.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)Application_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)Matrix_BindLua.cpp">

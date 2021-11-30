@@ -293,8 +293,8 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)LUA\lundump.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)LUA\lvm.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)LUA\lzio.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)MainComponent.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)MainComponent_BindLua.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Application.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Application_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Matrix_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath2D.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath2D_BindLua.h" />
@@ -636,8 +636,8 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lzio.c">
       <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)MainComponent.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)MainComponent_BindLua.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Application.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Application_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Matrix_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath2D.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath2D_BindLua.cpp" />

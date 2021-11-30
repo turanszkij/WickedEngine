@@ -2,7 +2,7 @@
 #include "wiLua_Globals.h"
 #include "wiBacklog.h"
 #include "wiHelper.h"
-#include "MainComponent_BindLua.h"
+#include "Application_BindLua.h"
 #include "RenderPath_BindLua.h"
 #include "RenderPath2D_BindLua.h"
 #include "LoadingScreen_BindLua.h"
@@ -96,7 +96,7 @@ namespace wi::lua
 		RegisterFunc("dofile", Internal_DoFile);
 		RunText(wiLua_Globals);
 
-		MainComponent_BindLua::Bind();
+		Application_BindLua::Bind();
 		Canvas_BindLua::Bind();
 		RenderPath_BindLua::Bind();
 		RenderPath2D_BindLua::Bind();

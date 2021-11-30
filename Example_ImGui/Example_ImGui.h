@@ -12,7 +12,7 @@ public:
 	void Render() const override;
 };
 
-class Example_ImGui : public MainComponent
+class Example_ImGui : public Application
 {
 	Example_ImGuiRenderer renderer;
 

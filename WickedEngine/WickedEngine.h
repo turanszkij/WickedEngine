@@ -14,7 +14,7 @@
 #include "RenderPath3D.h"
 #include "RenderPath3D_PathTracing.h"
 #include "LoadingScreen.h"
-#include "MainComponent.h"
+#include "Application.h"
 
 // Engine-level systems
 #include "wiVersion.h"
@@ -76,6 +76,18 @@
 #pragma comment(lib,"WickedEngine_Windows.lib")
 #endif // PLATFORM_UWP
 #endif // _WIN32
+
+
+// After version 0.59.11, namespaces were refactored into nested namespaces under the wi:: root namespace.
+// To allow compatibility with older user code, the backwards compatibility definitions are included below.
+// Consider defining the definition below if you don't need backwards compatibility features:
+//#define WICKEDENGINE_NO_BACKWARDS_COMPATIBILITY_0_59_11
+#ifndef WICKEDENGINE_NO_BACKWARDS_COMPATIBILITY_0_59_11
+
+using namespace wi;
+using MainComponent = wi::Application;
+
+#endif // WICKEDENGINE_NO_BACKWARDS_COMPATIBILITY_0_59_11
 
 
 

@@ -135,7 +135,7 @@ void Example_ImGui::Initialize()
 	io.BackendRendererName = "Wicked";
 	io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 
-	MainComponent::Initialize();
+	Application::Initialize();
 
 	infoDisplay.active = true;
 	infoDisplay.watermark = true;
@@ -151,7 +151,7 @@ void Example_ImGui::Initialize()
 
 void Example_ImGui::Compose(wi::graphics::CommandList cmd)
 {
-	MainComponent::Compose(cmd);
+	Application::Compose(cmd);
 
 	// Rendering
 	ImGui::Render();

@@ -7,6 +7,9 @@
 
 using namespace wi::graphics;
 
+namespace wi
+{
+
 void RenderPath3D::ResizeBuffers()
 {
 	GraphicsDevice* device = wi::graphics::GetDevice();
@@ -1641,4 +1644,6 @@ void RenderPath3D::setFSREnabled(bool value)
 		rtFSR[0] = {};
 		rtFSR[1] = {};
 	}
+}
+
 }
