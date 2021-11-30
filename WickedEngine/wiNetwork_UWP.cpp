@@ -2,7 +2,7 @@
 
 #if defined(_WIN32) && defined(PLATFORM_UWP)
 #include "wiNetwork.h"
-#include "wiBackLog.h"
+#include "wiBacklog.h"
 
 namespace wi::network
 {

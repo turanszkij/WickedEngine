@@ -3,7 +3,7 @@
 #include "wiArchive.h"
 #include "wiRandom.h"
 #include "wiHelper.h"
-#include "wiBackLog.h"
+#include "wiBacklog.h"
 #include "wiTimer.h"
 #include "wiVector.h"
 

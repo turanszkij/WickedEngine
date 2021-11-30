@@ -4,7 +4,7 @@
 #include "shaders/ShaderInterop_GPUSortLib.h"
 #include "wiEvent.h"
 #include "wiTimer.h"
-#include "wiBackLog.h"
+#include "wiBacklog.h"
 
 using namespace wi::graphics;
 

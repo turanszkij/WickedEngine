@@ -1,5 +1,5 @@
 #include "wiShaderCompiler.h"
-#include "wiBackLog.h"
+#include "wiBacklog.h"
 #include "wiPlatform.h"
 #include "wiHelper.h"
 #include "wiArchive.h"

@@ -2,7 +2,7 @@
 
 #ifdef PLATFORM_LINUX
 #include "wiNetwork.h"
-#include "wiBackLog.h"
+#include "wiBacklog.h"
 #include "wiTimer.h"
 
 #include <string>

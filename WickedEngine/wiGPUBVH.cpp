@@ -6,7 +6,7 @@
 #include "wiResourceManager.h"
 #include "wiGPUSortLib.h"
 #include "wiTextureHelper.h"
-#include "wiBackLog.h"
+#include "wiBacklog.h"
 #include "wiEvent.h"
 #include "wiTimer.h"
 

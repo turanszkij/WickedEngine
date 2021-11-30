@@ -1,4 +1,4 @@
-#include "wiBackLog.h"
+#include "wiBacklog.h"
 #include "wiMath.h"
 #include "wiResourceManager.h"
 #include "wiTextureHelper.h"
@@ -41,7 +41,7 @@ namespace wi::backlog
 
 	static void write_logfile()
 	{
-		std::string filename = wi::helper::GetTempDirectoryPath() + "wiBackLog.txt";
+		std::string filename = wi::helper::GetTempDirectoryPath() + "wiBacklog.txt";
 		std::string text = getText(); // will lock mutex
 		wi::helper::FileWrite(filename, (const uint8_t*)text.c_str(), text.length());
 	}

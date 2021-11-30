@@ -7,7 +7,7 @@
 #include "wiTextureHelper.h"
 #include "wiEnums.h"
 #include "wiRectPacker.h"
-#include "wiBackLog.h"
+#include "wiBacklog.h"
 #include "wiProfiler.h"
 #include "wiOcean.h"
 #include "wiGPUSortLib.h"

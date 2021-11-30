@@ -2,7 +2,7 @@
 
 #ifdef WICKEDENGINE_BUILD_DX12
 #include "wiHelper.h"
-#include "wiBackLog.h"
+#include "wiBacklog.h"
 #include "wiTimer.h"
 #include "wiUnorderedSet.h"
 

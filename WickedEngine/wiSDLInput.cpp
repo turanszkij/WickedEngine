@@ -3,7 +3,7 @@
 #ifdef SDL2
 
 #include "CommonInclude.h"
-#include "wiBackLog.h"
+#include "wiBacklog.h"
 #include "wiInput.h"
 #include "wiVector.h"
 

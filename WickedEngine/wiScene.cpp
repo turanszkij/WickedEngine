@@ -8,7 +8,7 @@
 #include "wiSpinLock.h"
 #include "wiHelper.h"
 #include "wiRenderer.h"
-#include "wiBackLog.h"
+#include "wiBacklog.h"
 #include "wiTimer.h"
 #include "wiUnorderedMap.h"
 

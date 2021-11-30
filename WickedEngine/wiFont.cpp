@@ -3,7 +3,7 @@
 #include "wiResourceManager.h"
 #include "wiHelper.h"
 #include "shaders/ShaderInterop_Font.h"
-#include "wiBackLog.h"
+#include "wiBacklog.h"
 #include "wiTextureHelper.h"
 #include "wiRectPacker.h"
 #include "wiSpinLock.h"

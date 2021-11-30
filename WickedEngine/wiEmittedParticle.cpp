@@ -8,7 +8,7 @@
 #include "wiTextureHelper.h"
 #include "wiGPUSortLib.h"
 #include "wiProfiler.h"
-#include "wiBackLog.h"
+#include "wiBacklog.h"
 #include "wiEvent.h"
 #include "wiTimer.h"
 #include "wiVector.h"

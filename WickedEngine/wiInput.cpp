@@ -4,7 +4,7 @@
 #include "wiRawInput.h"
 #include "wiSDLInput.h"
 #include "wiHelper.h"
-#include "wiBackLog.h"
+#include "wiBacklog.h"
 #include "wiProfiler.h"
 #include "wiColor.h"
 #include "wiTimer.h"

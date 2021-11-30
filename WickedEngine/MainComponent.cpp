@@ -4,7 +4,7 @@
 #include "wiHelper.h"
 #include "wiTimer.h"
 #include "wiInput.h"
-#include "wiBackLog.h"
+#include "wiBacklog.h"
 #include "MainComponent_BindLua.h"
 #include "wiVersion.h"
 #include "wiEnums.h"

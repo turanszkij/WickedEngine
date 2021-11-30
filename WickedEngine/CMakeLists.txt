@@ -51,8 +51,8 @@ add_library(${TARGET_NAME} STATIC
 	wiArchive.cpp
 	wiAudio.cpp
 	wiAudio_BindLua.cpp
-	wiBackLog.cpp
-	wiBackLog_BindLua.cpp
+	wiBacklog.cpp
+	wiBacklog_BindLua.cpp
 	wiEmittedParticle.cpp
 	wiEvent.cpp
 	wiFadeManager.cpp

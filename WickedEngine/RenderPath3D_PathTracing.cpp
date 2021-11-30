@@ -6,7 +6,7 @@
 #include "wiSprite.h"
 #include "wiProfiler.h"
 #include "wiScene.h"
-#include "wiBackLog.h"
+#include "wiBacklog.h"
 
 #if __has_include("OpenImageDenoise/oidn.hpp")
 #define OPEN_IMAGE_DENOISE

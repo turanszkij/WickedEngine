@@ -141,10 +141,10 @@ This is a reference for the C++ features of Wicked Engine
 	5. [SUBMIX_TYPE](#submix_type)
 	6. [REVERB_PRESET](#reverb_preset)
 8. [Physics](#physics)
-	1. [wiPhysicsEngine](#wiphysicsengine)
+	1. [wiPhysics](#wiphysics)
 		1. [Rigid Body Physics](#rigid-body-physics)
 		2. [Soft Body Physics](#soft-body-physics)
-	2. [wiPhysicsEngine_BULLET](#wiphysicsengine_bullet)
+	2. [wiPhysics_BULLET](#wiphysics_bullet)
 9. [Network](#network)
 	1. [wiNetwork](#winetwork)
 	2. [Socket](#socket)
@@ -1181,8 +1181,8 @@ Can make different sounding 3D reverb effect globally
 ## Physics
 You can find the physics system related functionality under ENGINE/Physics filter in the solution.
 It uses the entity-component system to perform updating all physics components in the world.
-### wiPhysicsEngine
-[[Header]](../../WickedEngine/wiPhysicsEngine.h) [[Cpp]](../../WickedEngine/wiPhysicsEngine.cpp)
+### wiPhysics
+[[Header]](../../WickedEngine/wiPhysics.h) [[Cpp]](../../WickedEngine/wiPhysics.cpp)
 - Initialize<br/>
 This must be called before using the physics system, but it is automatically done by [wiInitializer](#wiinitializer)
 - IsEnabled<br/>
@@ -1258,10 +1258,10 @@ Helper to allow bind engine classes from C++ to Lua
 
 ## Tools
 This is the place for tools that use engine-level systems
-### wiBackLog
-[[Header]](../../WickedEngine/wiBacklog.h) [[Cpp]](../../WickedEngine/wiBackLog.cpp)
+### wiBacklog
+[[Header]](../../WickedEngine/wiBacklog.h) [[Cpp]](../../WickedEngine/wiBacklog.cpp)
 Used to log any messages by any system, from any thread. It can draw itself to the screen. It can execute Lua scripts.
-If there was a `wiBackLog::LogLevel::Error` or higher severity message posted on the backlog, the contents of the log will be saved to the temporary user directory as wiBackLog.txt.
+If there was a `wiBacklog::LogLevel::Error` or higher severity message posted on the backlog, the contents of the log will be saved to the temporary user directory as wiBacklog.txt.
 ### wiProfiler
 [[Header]](../../WickedEngine/wiProfiler.h) [[Cpp]](../../WickedEngine/wiProfiler.cpp)
 Used to time specific ranges in execution. Support CPU and GPU timing. Can write the result to the screen as simple text at this time.

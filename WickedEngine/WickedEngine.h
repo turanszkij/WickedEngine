@@ -19,7 +19,7 @@
 // Engine-level systems
 #include "wiVersion.h"
 #include "wiPlatform.h"
-#include "wiBackLog.h"
+#include "wiBacklog.h"
 #include "wiIntersect.h"
 #include "wiImage.h"
 #include "wiFont.h"

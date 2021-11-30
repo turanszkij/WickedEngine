@@ -2,7 +2,7 @@
 
 #ifdef WICKEDENGINE_BUILD_VULKAN
 #include "wiHelper.h"
-#include "wiBackLog.h"
+#include "wiBacklog.h"
 #include "wiVersion.h"
 #include "wiTimer.h"
 #include "wiUnorderedSet.h"

@@ -3,7 +3,7 @@
 #include "wiRenderer.h"
 #include "wiHelper.h"
 #include "shaders/ShaderInterop_Image.h"
-#include "wiBackLog.h"
+#include "wiBacklog.h"
 #include "wiEvent.h"
 #include "wiTimer.h"
 

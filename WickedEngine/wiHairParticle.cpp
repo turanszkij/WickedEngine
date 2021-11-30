@@ -8,7 +8,7 @@
 #include "wiTextureHelper.h"
 #include "wiScene.h"
 #include "shaders/ShaderInterop_HairParticle.h"
-#include "wiBackLog.h"
+#include "wiBacklog.h"
 #include "wiEvent.h"
 #include "wiTimer.h"
 

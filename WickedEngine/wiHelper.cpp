@@ -1,6 +1,6 @@
 #include "wiHelper.h"
 #include "wiPlatform.h"
-#include "wiBackLog.h"
+#include "wiBacklog.h"
 #include "wiEvent.h"
 #include "wiMath.h"
 
