@@ -140,7 +140,7 @@ wi::vector<RenderableTriangle> renderableTriangles_wireframe;
 wi::vector<PaintRadius> paintrads;
 
 wi::spinlock deferredMIPGenLock;
-wi::vector<std::pair<std::shared_ptr<wi::Resource>, bool>> deferredMIPGens;
+wi::vector<std::pair<Texture, bool>> deferredMIPGens;
 
 
 bool volumetric_clouds_precomputed = false;
@@ -2706,7 +2706,7 @@ void ProcessDeferredMipGenRequests(CommandList cmd)
 	{
 		MIPGEN_OPTIONS mipopt;
 		mipopt.preserve_coverage = it.second;
-		GenerateMipChain(it.first->texture, MIPGENFILTER_LINEAR, cmd, mipopt);
+		GenerateMipChain(it.first, MIPGENFILTER_LINEAR, cmd, mipopt);
 	}
 	deferredMIPGens.clear();
 	deferredMIPGenLock.unlock();
@@ -11643,10 +11643,10 @@ void DrawPaintRadius(const PaintRadius& paintrad)
 	paintrads.push_back(paintrad);
 }
 
-void AddDeferredMIPGen(std::shared_ptr<wi::Resource> resource, bool preserve_coverage)
+void AddDeferredMIPGen(const Texture& texture, bool preserve_coverage)
 {
 	deferredMIPGenLock.lock();
-	deferredMIPGens.push_back(std::make_pair(resource, preserve_coverage));
+	deferredMIPGens.push_back(std::make_pair(texture, preserve_coverage));
 	deferredMIPGenLock.unlock();
 }
 

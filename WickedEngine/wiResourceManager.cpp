@@ -556,7 +556,7 @@ namespace wi::resource_manager
 			if (type == wi::Resource::IMAGE && resource->texture.desc.mip_levels > 1
 				&& has_flag(resource->texture.desc.bind_flags, BindFlag::UNORDERED_ACCESS))
 			{
-				wi::renderer::AddDeferredMIPGen(resource, true);
+				wi::renderer::AddDeferredMIPGen(resource->texture, true);
 			}
 
 			return resource;
