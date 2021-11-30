@@ -725,7 +725,7 @@ namespace wi::scene
 					if (!lensFlareNames[i].empty())
 					{
 						lensFlareNames[i] = dir + lensFlareNames[i];
-						lensFlareRimTextures[i] = wi::resource_manager::Load(lensFlareNames[i], wi::resource_manager::IMPORT_RETAIN_FILEDATA);
+						lensFlareRimTextures[i] = wi::resource_manager::Load(lensFlareNames[i], wi::resource_manager::Flags::IMPORT_RETAIN_FILEDATA);
 					}
 				}
 			});
@@ -988,7 +988,7 @@ namespace wi::scene
 				if (!skyMapName.empty())
 				{
 					skyMapName = dir + skyMapName;
-					skyMap = wi::resource_manager::Load(skyMapName, wi::resource_manager::IMPORT_RETAIN_FILEDATA);
+					skyMap = wi::resource_manager::Load(skyMapName, wi::resource_manager::Flags::IMPORT_RETAIN_FILEDATA);
 				}
 			}
 			if (archive.GetVersion() >= 40)
@@ -1001,7 +1001,7 @@ namespace wi::scene
 				if (!colorGradingMapName.empty())
 				{
 					colorGradingMapName = dir + colorGradingMapName;
-					colorGradingMap = wi::resource_manager::Load(colorGradingMapName, wi::resource_manager::IMPORT_COLORGRADINGLUT | wi::resource_manager::IMPORT_RETAIN_FILEDATA);
+					colorGradingMap = wi::resource_manager::Load(colorGradingMapName, wi::resource_manager::Flags::IMPORT_COLORGRADINGLUT | wi::resource_manager::Flags::IMPORT_RETAIN_FILEDATA);
 				}
 			}
 
@@ -1240,7 +1240,7 @@ namespace wi::scene
 				if (!filename.empty())
 				{
 					filename = dir + filename;
-					soundResource = wi::resource_manager::Load(filename, wi::resource_manager::IMPORT_RETAIN_FILEDATA);
+					soundResource = wi::resource_manager::Load(filename, wi::resource_manager::Flags::IMPORT_RETAIN_FILEDATA);
 					wi::audio::CreateSoundInstance(&soundResource.GetSound(), &soundinstance);
 				}
 			});

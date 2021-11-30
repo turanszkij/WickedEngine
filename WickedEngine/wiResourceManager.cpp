@@ -18,7 +18,7 @@ namespace wi
 {
 	struct ResourceInternal
 	{
-		uint32_t flags = 0;
+		resource_manager::Flags flags = resource_manager::Flags::NONE;
 		wi::graphics::Texture texture;
 		wi::audio::Sound sound;
 		wi::vector<uint8_t> filedata;
@@ -134,11 +134,11 @@ namespace wi
 			return ret;
 		}
 
-		Resource Load(const std::string& name, uint32_t flags, const uint8_t* filedata, size_t filesize)
+		Resource Load(const std::string& name, Flags flags, const uint8_t* filedata, size_t filesize)
 		{
 			if (mode == Mode::DISCARD_FILEDATA_AFTER_LOAD)
 			{
-				flags &= ~IMPORT_RETAIN_FILEDATA;
+				flags &= ~Flags::IMPORT_RETAIN_FILEDATA;
 			}
 
 			locker.lock();
@@ -527,7 +527,7 @@ namespace wi
 						desc.width = uint32_t(width);
 						desc.layout = ResourceState::SHADER_RESOURCE;
 
-						if (flags & IMPORT_COLORGRADINGLUT)
+						if (has_flag(flags, Flags::IMPORT_COLORGRADINGLUT))
 						{
 							if (desc.type != TextureDesc::Type::TEXTURE_2D ||
 								desc.width != 256 ||
@@ -610,13 +610,13 @@ namespace wi
 			{
 				resource->flags = flags;
 
-				if (resource->filedata.empty() && (flags & IMPORT_RETAIN_FILEDATA))
+				if (resource->filedata.empty() && has_flag(flags, Flags::IMPORT_RETAIN_FILEDATA))
 				{
 					// resource was loaded with external filedata, and we want to retain filedata
 					resource->filedata.resize(filesize);
 					std::memcpy(resource->filedata.data(), filedata, filesize);
 				}
-				else if (!resource->filedata.empty() && (flags & IMPORT_RETAIN_FILEDATA) == 0)
+				else if (!resource->filedata.empty() && has_flag(flags, Flags::IMPORT_RETAIN_FILEDATA) == 0)
 				{
 					// resource was loaded using file name, and we want to discard filedata
 					resource->filedata.clear();
@@ -668,7 +668,7 @@ namespace wi
 				struct TempResource
 				{
 					std::string name;
-					uint32_t flags = 0;
+					Flags flags = Flags::NONE;
 					wi::vector<uint8_t> filedata;
 				};
 				wi::vector<TempResource> temp_resources;
@@ -681,7 +681,9 @@ namespace wi
 					auto& resource = temp_resources[i];
 
 					archive >> resource.name;
-					archive >> resource.flags;
+					uint32_t flags_temp;
+					archive >> flags_temp;
+					resource.flags = (Flags)flags_temp;
 					archive >> resource.filedata;
 
 					resource.name = archive.GetSourceDirectory() + resource.name;
@@ -733,7 +735,7 @@ namespace wi
 							wi::helper::MakePathRelative(archive.GetSourceDirectory(), name);
 
 							archive << name;
-							archive << resource->flags;
+							archive << (uint32_t)resource->flags;
 							archive << resource->filedata;
 						}
 					}

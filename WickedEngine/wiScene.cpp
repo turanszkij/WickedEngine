@@ -371,7 +371,7 @@ namespace wi::scene
 		{
 			if (!x.name.empty())
 			{
-				x.resource = wi::resource_manager::Load(x.name, wi::resource_manager::IMPORT_RETAIN_FILEDATA);
+				x.resource = wi::resource_manager::Load(x.name, wi::resource_manager::Flags::IMPORT_RETAIN_FILEDATA);
 			}
 		}
 	}
@@ -2151,7 +2151,7 @@ namespace wi::scene
 
 		SoundComponent& sound = sounds.Create(entity);
 		sound.filename = filename;
-		sound.soundResource = wi::resource_manager::Load(filename, wi::resource_manager::IMPORT_RETAIN_FILEDATA);
+		sound.soundResource = wi::resource_manager::Load(filename, wi::resource_manager::Flags::IMPORT_RETAIN_FILEDATA);
 		wi::audio::CreateSoundInstance(&sound.soundResource.GetSound(), &sound.soundinstance);
 
 		TransformComponent& transform = transforms.Create(entity);

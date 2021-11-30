@@ -183,7 +183,7 @@ void WeatherWindow::Create(EditorComponent* editor)
 				wi::event::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					auto& weather = GetWeather();
 					weather.skyMapName = fileName;
-					weather.skyMap = wi::resource_manager::Load(fileName, wi::resource_manager::IMPORT_RETAIN_FILEDATA);
+					weather.skyMap = wi::resource_manager::Load(fileName, wi::resource_manager::Flags::IMPORT_RETAIN_FILEDATA);
 					skyButton.SetText(wi::helper::GetFileNameFromPath(fileName));
 				});
 			});
@@ -218,7 +218,7 @@ void WeatherWindow::Create(EditorComponent* editor)
 				wi::event::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					auto& weather = GetWeather();
 					weather.colorGradingMapName = fileName;
-					weather.colorGradingMap = wi::resource_manager::Load(fileName, wi::resource_manager::IMPORT_COLORGRADINGLUT | wi::resource_manager::IMPORT_RETAIN_FILEDATA);
+					weather.colorGradingMap = wi::resource_manager::Load(fileName, wi::resource_manager::Flags::IMPORT_COLORGRADINGLUT | wi::resource_manager::Flags::IMPORT_RETAIN_FILEDATA);
 					colorgradingButton.SetText(wi::helper::GetFileNameFromPath(fileName));
 					});
 				});
@@ -585,7 +585,7 @@ void WeatherWindow::Create(EditorComponent* editor)
 					wi::vector<uint8_t> filedata_ktx2;
 					if (wi::helper::saveTextureToMemoryFile(x.second.GetFileData(), x.second.GetTexture().desc, "KTX2", filedata_ktx2))
 					{
-						x.second = wi::resource_manager::Load(x.first, wi::resource_manager::IMPORT_RETAIN_FILEDATA, filedata_ktx2.data(), filedata_ktx2.size());
+						x.second = wi::resource_manager::Load(x.first, wi::resource_manager::Flags::IMPORT_RETAIN_FILEDATA, filedata_ktx2.data(), filedata_ktx2.size());
 					}
 					});
 			}

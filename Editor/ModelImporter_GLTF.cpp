@@ -108,7 +108,7 @@ namespace tinygltf
 
 		auto resource = wi::resource_manager::Load(
 			image->uri,
-			wi::resource_manager::IMPORT_RETAIN_FILEDATA,
+			wi::resource_manager::Flags::IMPORT_RETAIN_FILEDATA,
 			(const uint8_t*)bytes,
 			(size_t)size
 		);
