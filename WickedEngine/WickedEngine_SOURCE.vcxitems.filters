@@ -162,7 +162,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Vector_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiBacklog_BindLua.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiBacklog_BindLua2.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiNetwork_BindLua.h">
@@ -879,7 +879,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiRawInput.h">
       <Filter>ENGINE\Input</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiBacklog.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiBacklog2.h">
       <Filter>ENGINE\Tools</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiArchive.h">
@@ -1211,7 +1211,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)Vector_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiBacklog_BindLua.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiBacklog_BindLua2.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiNetwork_BindLua.cpp">
@@ -1694,7 +1694,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiRawInput.cpp">
       <Filter>ENGINE\Input</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiBacklog.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiBacklog2.cpp">
       <Filter>ENGINE\Tools</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiArchive.cpp">
