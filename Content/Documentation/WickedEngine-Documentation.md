@@ -130,7 +130,7 @@ This is a reference for the C++ features of Wicked Engine
 	10. [wiRectPacker](#wirectpacker)
 	11. [wiResourceManager](#wiresourcemanager)
 	12. [wiSpinLock](#wispinlock)
-	13. [wiStartupArguments](#wistartuparguments)
+	13. [wiArguments](#wiarguments)
 	14. [wiTimer](#witimer)
 6. [Input](#input)
 7. [Audio](#audio)
@@ -1049,8 +1049,8 @@ The resource manager can always be serialized in read mode. File data retention 
 [[Header]](../../WickedEngine/wiSpinLock.h) [[Cpp]](../../WickedEngine/wiSpinLock.cpp)
 This can be used to guarantee exclusive access to a block in multithreaded race condition scenario instead of a mutex. The difference to a mutex that this doesn't let the thread to yield, but instead spin on an atomic flag until the spinlock can be locked.
 
-### wiStartupArguments
-[[Header]](../../WickedEngine/wiStartupArguments.h) [[Cpp]](../../WickedEngine/wiStartupArguments.cpp)
+### wiArguments
+[[Header]](../../WickedEngine/wiArguments.h) [[Cpp]](../../WickedEngine/wiArguments.cpp)
 This is to store the startup parameters that were passed to the application from the operating system "command line". The user can query these arguments by name.
 
 ### wiTimer

@@ -13,12 +13,12 @@ namespace wi
 		if (!newTexture.empty())
 		{
 			textureName = newTexture;
-			textureResource = wi::resource_manager::Load(newTexture);
+			textureResource = wi::resourcemanager::Load(newTexture);
 		}
 		if (!newMask.empty())
 		{
 			maskName = newMask;
-			maskResource = wi::resource_manager::Load(newMask);
+			maskResource = wi::resourcemanager::Load(newMask);
 			params.setMaskMap(&maskResource.GetTexture());
 		}
 	}

@@ -102,13 +102,13 @@ namespace tinygltf
 			do {
 				ss.clear();
 				ss += "gltfimport_" + std::to_string(wi::random::GetRandom(std::numeric_limits<int>::max())) + ".png";
-			} while (wi::resource_manager::Contains(ss)); // this is to avoid overwriting an existing imported image
+			} while (wi::resourcemanager::Contains(ss)); // this is to avoid overwriting an existing imported image
 			image->uri = ss;
 		}
 
-		auto resource = wi::resource_manager::Load(
+		auto resource = wi::resourcemanager::Load(
 			image->uri,
-			wi::resource_manager::Flags::IMPORT_RETAIN_FILEDATA,
+			wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA,
 			(const uint8_t*)bytes,
 			(size_t)size
 		);
@@ -122,7 +122,7 @@ namespace tinygltf
 		image->height = resource.GetTexture().desc.height;
 		image->component = 4;
 
-		wi::resource_manager::ResourceSerializer* seri = (wi::resource_manager::ResourceSerializer*)userdata;
+		wi::resourcemanager::ResourceSerializer* seri = (wi::resourcemanager::ResourceSerializer*)userdata;
 		seri->resources.push_back(resource);
 
 		return true;
@@ -271,7 +271,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 	callbacks.ExpandFilePath = tinygltf::ExpandFilePath;
 	loader.SetFsCallbacks(callbacks);
 
-	wi::resource_manager::ResourceSerializer seri; // keep this alive to not delete loaded images while importing gltf
+	wi::resourcemanager::ResourceSerializer seri; // keep this alive to not delete loaded images while importing gltf
 	loader.SetImageLoader(tinygltf::LoadImageData, &seri);
 	loader.SetImageWriter(tinygltf::WriteImageData, nullptr);
 	
@@ -349,7 +349,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				img_source = tex.extensions["KHR_texture_basisu"].Get("source").Get<int>();
 			}
 			auto& img = state.gltfModel.images[img_source];
-			material.textures[MaterialComponent::BASECOLORMAP].resource = wi::resource_manager::Load(img.uri);
+			material.textures[MaterialComponent::BASECOLORMAP].resource = wi::resourcemanager::Load(img.uri);
 			material.textures[MaterialComponent::BASECOLORMAP].name = img.uri;
 			material.textures[MaterialComponent::BASECOLORMAP].uvset = baseColorTexture->second.TextureTexCoord();
 		}
@@ -362,7 +362,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				img_source = tex.extensions["KHR_texture_basisu"].Get("source").Get<int>();
 			}
 			auto& img = state.gltfModel.images[img_source];
-			material.textures[MaterialComponent::NORMALMAP].resource = wi::resource_manager::Load(img.uri);
+			material.textures[MaterialComponent::NORMALMAP].resource = wi::resourcemanager::Load(img.uri);
 			material.textures[MaterialComponent::NORMALMAP].name = img.uri;
 			material.textures[MaterialComponent::NORMALMAP].uvset = normalTexture->second.TextureTexCoord();
 		}
@@ -375,7 +375,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				img_source = tex.extensions["KHR_texture_basisu"].Get("source").Get<int>();
 			}
 			auto& img = state.gltfModel.images[img_source];
-			material.textures[MaterialComponent::SURFACEMAP].resource = wi::resource_manager::Load(img.uri);
+			material.textures[MaterialComponent::SURFACEMAP].resource = wi::resourcemanager::Load(img.uri);
 			material.textures[MaterialComponent::SURFACEMAP].name = img.uri;
 			material.textures[MaterialComponent::SURFACEMAP].uvset = metallicRoughnessTexture->second.TextureTexCoord();
 		}
@@ -388,7 +388,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				img_source = tex.extensions["KHR_texture_basisu"].Get("source").Get<int>();
 			}
 			auto& img = state.gltfModel.images[img_source];
-			material.textures[MaterialComponent::EMISSIVEMAP].resource = wi::resource_manager::Load(img.uri);
+			material.textures[MaterialComponent::EMISSIVEMAP].resource = wi::resourcemanager::Load(img.uri);
 			material.textures[MaterialComponent::EMISSIVEMAP].name = img.uri;
 			material.textures[MaterialComponent::EMISSIVEMAP].uvset = emissiveTexture->second.TextureTexCoord();
 		}
@@ -401,7 +401,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				img_source = tex.extensions["KHR_texture_basisu"].Get("source").Get<int>();
 			}
 			auto& img = state.gltfModel.images[img_source];
-			material.textures[MaterialComponent::OCCLUSIONMAP].resource = wi::resource_manager::Load(img.uri);
+			material.textures[MaterialComponent::OCCLUSIONMAP].resource = wi::resourcemanager::Load(img.uri);
 			material.textures[MaterialComponent::OCCLUSIONMAP].name = img.uri;
 			material.textures[MaterialComponent::OCCLUSIONMAP].uvset = occlusionTexture->second.TextureTexCoord();
 			material.SetOcclusionEnabled_Secondary(true);
@@ -469,7 +469,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 					img_source = tex.extensions["KHR_texture_basisu"].Get("source").Get<int>();
 				}
 				auto& img = state.gltfModel.images[img_source];
-				material.textures[MaterialComponent::TRANSMISSIONMAP].resource = wi::resource_manager::Load(img.uri);
+				material.textures[MaterialComponent::TRANSMISSIONMAP].resource = wi::resourcemanager::Load(img.uri);
 				material.textures[MaterialComponent::TRANSMISSIONMAP].name = img.uri;
 				material.textures[MaterialComponent::TRANSMISSIONMAP].uvset = (uint32_t)ext_transmission->second.Get("transmissionTexture").Get("texCoord").Get<int>();
 			}
@@ -493,7 +493,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 					img_source = tex.extensions["KHR_texture_basisu"].Get("source").Get<int>();
 				}
 				auto& img = state.gltfModel.images[img_source];
-				material.textures[MaterialComponent::BASECOLORMAP].resource = wi::resource_manager::Load(img.uri);
+				material.textures[MaterialComponent::BASECOLORMAP].resource = wi::resourcemanager::Load(img.uri);
 				material.textures[MaterialComponent::BASECOLORMAP].name = img.uri;
 				material.textures[MaterialComponent::BASECOLORMAP].uvset = (uint32_t)specularGlossinessWorkflow->second.Get("diffuseTexture").Get("texCoord").Get<int>();
 			}
@@ -507,7 +507,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 					img_source = tex.extensions["KHR_texture_basisu"].Get("source").Get<int>();
 				}
 				auto& img = state.gltfModel.images[img_source];
-				material.textures[MaterialComponent::SURFACEMAP].resource = wi::resource_manager::Load(img.uri);
+				material.textures[MaterialComponent::SURFACEMAP].resource = wi::resourcemanager::Load(img.uri);
 				material.textures[MaterialComponent::SURFACEMAP].name = img.uri;
 				material.textures[MaterialComponent::SURFACEMAP].uvset = (uint32_t)specularGlossinessWorkflow->second.Get("specularGlossinessTexture").Get("texCoord").Get<int>();
 			}
@@ -561,7 +561,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 					img_source = tex.extensions["KHR_texture_basisu"].Get("source").Get<int>();
 				}
 				auto& img = state.gltfModel.images[img_source];
-				material.textures[MaterialComponent::SHEENCOLORMAP].resource = wi::resource_manager::Load(img.uri);
+				material.textures[MaterialComponent::SHEENCOLORMAP].resource = wi::resourcemanager::Load(img.uri);
 				material.textures[MaterialComponent::SHEENCOLORMAP].name = img.uri;
 				material.textures[MaterialComponent::SHEENCOLORMAP].uvset = (uint32_t)param.Get("texCoord").Get<int>();
 			}
@@ -581,7 +581,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 					img_source = tex.extensions["KHR_texture_basisu"].Get("source").Get<int>();
 				}
 				auto& img = state.gltfModel.images[img_source];
-				material.textures[MaterialComponent::SHEENROUGHNESSMAP].resource = wi::resource_manager::Load(img.uri);
+				material.textures[MaterialComponent::SHEENROUGHNESSMAP].resource = wi::resourcemanager::Load(img.uri);
 				material.textures[MaterialComponent::SHEENROUGHNESSMAP].name = img.uri;
 				material.textures[MaterialComponent::SHEENROUGHNESSMAP].uvset = (uint32_t)param.Get("texCoord").Get<int>();
 			}
@@ -617,7 +617,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 					img_source = tex.extensions["KHR_texture_basisu"].Get("source").Get<int>();
 				}
 				auto& img = state.gltfModel.images[img_source];
-				material.textures[MaterialComponent::CLEARCOATMAP].resource = wi::resource_manager::Load(img.uri);
+				material.textures[MaterialComponent::CLEARCOATMAP].resource = wi::resourcemanager::Load(img.uri);
 				material.textures[MaterialComponent::CLEARCOATMAP].name = img.uri;
 				material.textures[MaterialComponent::CLEARCOATMAP].uvset = (uint32_t)param.Get("texCoord").Get<int>();
 			}
@@ -637,7 +637,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 					img_source = tex.extensions["KHR_texture_basisu"].Get("source").Get<int>();
 				}
 				auto& img = state.gltfModel.images[img_source];
-				material.textures[MaterialComponent::CLEARCOATROUGHNESSMAP].resource = wi::resource_manager::Load(img.uri);
+				material.textures[MaterialComponent::CLEARCOATROUGHNESSMAP].resource = wi::resourcemanager::Load(img.uri);
 				material.textures[MaterialComponent::CLEARCOATROUGHNESSMAP].name = img.uri;
 				material.textures[MaterialComponent::CLEARCOATROUGHNESSMAP].uvset = (uint32_t)param.Get("texCoord").Get<int>();
 			}
@@ -652,7 +652,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 					img_source = tex.extensions["KHR_texture_basisu"].Get("source").Get<int>();
 				}
 				auto& img = state.gltfModel.images[img_source];
-				material.textures[MaterialComponent::CLEARCOATNORMALMAP].resource = wi::resource_manager::Load(img.uri);
+				material.textures[MaterialComponent::CLEARCOATNORMALMAP].resource = wi::resourcemanager::Load(img.uri);
 				material.textures[MaterialComponent::CLEARCOATNORMALMAP].name = img.uri;
 				material.textures[MaterialComponent::CLEARCOATNORMALMAP].uvset = (uint32_t)param.Get("texCoord").Get<int>();
 			}
@@ -697,7 +697,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 						img_source = tex.extensions["KHR_texture_basisu"].Get("source").Get<int>();
 					}
 					auto& img = state.gltfModel.images[img_source];
-					material.textures[MaterialComponent::SURFACEMAP].resource = wi::resource_manager::Load(img.uri);
+					material.textures[MaterialComponent::SURFACEMAP].resource = wi::resourcemanager::Load(img.uri);
 					material.textures[MaterialComponent::SURFACEMAP].name = img.uri;
 					material.textures[MaterialComponent::SURFACEMAP].uvset = (uint32_t)param.Get("texCoord").Get<int>();
 				}
@@ -712,7 +712,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 						img_source = tex.extensions["KHR_texture_basisu"].Get("source").Get<int>();
 					}
 					auto& img = state.gltfModel.images[img_source];
-					material.textures[MaterialComponent::SPECULARMAP].resource = wi::resource_manager::Load(img.uri);
+					material.textures[MaterialComponent::SPECULARMAP].resource = wi::resourcemanager::Load(img.uri);
 					material.textures[MaterialComponent::SPECULARMAP].name = img.uri;
 					material.textures[MaterialComponent::SPECULARMAP].uvset = (uint32_t)param.Get("texCoord").Get<int>();
 				}
@@ -732,7 +732,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 					img_source = tex.extensions["KHR_texture_basisu"].Get("source").Get<int>();
 				}
 				auto& img = state.gltfModel.images[img_source];
-				material.textures[MaterialComponent::SPECULARMAP].resource = wi::resource_manager::Load(img.uri);
+				material.textures[MaterialComponent::SPECULARMAP].resource = wi::resourcemanager::Load(img.uri);
 				material.textures[MaterialComponent::SPECULARMAP].name = img.uri;
 				material.textures[MaterialComponent::SPECULARMAP].uvset = (uint32_t)param.Get("texCoord").Get<int>();
 			}

@@ -725,7 +725,7 @@ namespace wi::scene
 					if (!lensFlareNames[i].empty())
 					{
 						lensFlareNames[i] = dir + lensFlareNames[i];
-						lensFlareRimTextures[i] = wi::resource_manager::Load(lensFlareNames[i], wi::resource_manager::Flags::IMPORT_RETAIN_FILEDATA);
+						lensFlareRimTextures[i] = wi::resourcemanager::Load(lensFlareNames[i], wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
 					}
 				}
 			});
@@ -988,7 +988,7 @@ namespace wi::scene
 				if (!skyMapName.empty())
 				{
 					skyMapName = dir + skyMapName;
-					skyMap = wi::resource_manager::Load(skyMapName, wi::resource_manager::Flags::IMPORT_RETAIN_FILEDATA);
+					skyMap = wi::resourcemanager::Load(skyMapName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
 				}
 			}
 			if (archive.GetVersion() >= 40)
@@ -1001,7 +1001,7 @@ namespace wi::scene
 				if (!colorGradingMapName.empty())
 				{
 					colorGradingMapName = dir + colorGradingMapName;
-					colorGradingMap = wi::resource_manager::Load(colorGradingMapName, wi::resource_manager::Flags::IMPORT_COLORGRADINGLUT | wi::resource_manager::Flags::IMPORT_RETAIN_FILEDATA);
+					colorGradingMap = wi::resourcemanager::Load(colorGradingMapName, wi::resourcemanager::Flags::IMPORT_COLORGRADINGLUT | wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
 				}
 			}
 
@@ -1240,7 +1240,7 @@ namespace wi::scene
 				if (!filename.empty())
 				{
 					filename = dir + filename;
-					soundResource = wi::resource_manager::Load(filename, wi::resource_manager::Flags::IMPORT_RETAIN_FILEDATA);
+					soundResource = wi::resourcemanager::Load(filename, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
 					wi::audio::CreateSoundInstance(&soundResource.GetSound(), &soundinstance);
 				}
 			});
@@ -1308,10 +1308,10 @@ namespace wi::scene
 		}
 
 		// Keeping this alive to keep serialized resources alive until entity serialization ends:
-		wi::resource_manager::ResourceSerializer resource_seri;
+		wi::resourcemanager::ResourceSerializer resource_seri;
 		if (archive.GetVersion() >= 63)
 		{
-			wi::resource_manager::Serialize(archive, resource_seri);
+			wi::resourcemanager::Serialize(archive, resource_seri);
 		}
 
 		// With this we will ensure that serialized entities are unique and persistent across the scene:

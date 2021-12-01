@@ -258,10 +258,10 @@ void LightWindow::Create(EditorComponent* editor)
 				wi::helper::FileDialogParams params;
 				params.type = wi::helper::FileDialogParams::OPEN;
 				params.description = "Texture";
-				params.extensions = wi::resource_manager::GetSupportedImageExtensions();
+				params.extensions = wi::resourcemanager::GetSupportedImageExtensions();
 				wi::helper::FileDialog(params, [this, light, i](std::string fileName) {
-					wi::eventhandler::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-						light->lensFlareRimTextures[i] = wi::resource_manager::Load(fileName, wi::resource_manager::Flags::IMPORT_RETAIN_FILEDATA);
+					wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+						light->lensFlareRimTextures[i] = wi::resourcemanager::Load(fileName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
 						light->lensFlareNames[i] = fileName;
 						lensflare_Button[i].SetText(wi::helper::GetFileNameFromPath(fileName));
 					});

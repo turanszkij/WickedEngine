@@ -18,7 +18,7 @@ namespace wi
 {
 	struct ResourceInternal
 	{
-		resource_manager::Flags flags = resource_manager::Flags::NONE;
+		resourcemanager::Flags flags = resourcemanager::Flags::NONE;
 		wi::graphics::Texture texture;
 		wi::audio::Sound sound;
 		wi::vector<uint8_t> filedata;
@@ -77,7 +77,7 @@ namespace wi
 		resourceinternal->sound = sound;
 	}
 
-	namespace resource_manager
+	namespace resourcemanager
 	{
 		static std::mutex locker;
 		static wi::unordered_map<std::string, std::weak_ptr<ResourceInternal>> resources;

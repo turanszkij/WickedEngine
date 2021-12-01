@@ -57,7 +57,7 @@
 #include "wiProfiler.h"
 #include "wiOcean.h"
 #include "wiFFTGenerator.h"
-#include "wiStartupArguments.h"
+#include "wiArguments.h"
 #include "wiGPUBVH.h"
 #include "wiGPUSortLib.h"
 #include "wiJobSystem.h"
@@ -81,7 +81,7 @@
 // After version 0.59.11, namespaces were refactored into nested namespaces under the wi:: root namespace.
 // To allow compatibility with older user code, the backwards compatibility definitions are included below.
 // If you need backwards compatibility features, define the following before including this file:
-#define WICKEDENGINE_BACKWARDS_COMPATIBILITY_0_59_11
+//#define WICKEDENGINE_BACKWARDS_COMPATIBILITY_0_59_11
 #ifdef WICKEDENGINE_BACKWARDS_COMPATIBILITY_0_59_11
 
 using namespace wi;
@@ -99,8 +99,8 @@ namespace wiHelper = wi::helper;
 namespace wiMath = wi::math;
 namespace wiRandom = wi::random;
 namespace wiRectPacker = wi::rectpacker;
-namespace wiResourceManager = wi::resource_manager;
-namespace wiStartupArguments = wi::startup_arguments;
+namespace wiResourceManager = wi::resourcemanager;
+namespace wiStartupArguments = wi::arguments;
 namespace wiInput = wi::input;
 namespace wiXInput = wi::input::xinput;
 namespace wiRawInput = wi::input::rawinput;

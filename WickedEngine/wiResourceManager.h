@@ -11,7 +11,7 @@
 namespace wi
 {
 	// This can hold an asset
-	//	It can be loaded from file or memory using wi::resource_manager::Load()
+	//	It can be loaded from file or memory using wi::resourcemanager::Load()
 	struct Resource
 	{
 		std::shared_ptr<void> internal_state;
@@ -27,7 +27,7 @@ namespace wi
 		void SetSound(const wi::audio::Sound& sound);
 	};
 
-	namespace resource_manager
+	namespace resourcemanager
 	{
 		enum class Mode
 		{
@@ -76,6 +76,6 @@ namespace wi
 }
 
 template<>
-struct enable_bitmask_operators<wi::resource_manager::Flags> {
+struct enable_bitmask_operators<wi::resourcemanager::Flags> {
 	static const bool enable = true;
 };

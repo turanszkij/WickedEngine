@@ -180,10 +180,10 @@ void WeatherWindow::Create(EditorComponent* editor)
 			params.description = "Cubemap texture";
 			params.extensions.push_back("dds");
 			wi::helper::FileDialog(params, [=](std::string fileName) {
-				wi::eventhandler::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					auto& weather = GetWeather();
 					weather.skyMapName = fileName;
-					weather.skyMap = wi::resource_manager::Load(fileName, wi::resource_manager::Flags::IMPORT_RETAIN_FILEDATA);
+					weather.skyMap = wi::resourcemanager::Load(fileName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
 					skyButton.SetText(wi::helper::GetFileNameFromPath(fileName));
 				});
 			});
@@ -213,12 +213,12 @@ void WeatherWindow::Create(EditorComponent* editor)
 			wi::helper::FileDialogParams params;
 			params.type = wi::helper::FileDialogParams::OPEN;
 			params.description = "Texture";
-			params.extensions = wi::resource_manager::GetSupportedImageExtensions();
+			params.extensions = wi::resourcemanager::GetSupportedImageExtensions();
 			wi::helper::FileDialog(params, [=](std::string fileName) {
-				wi::eventhandler::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					auto& weather = GetWeather();
 					weather.colorGradingMapName = fileName;
-					weather.colorGradingMap = wi::resource_manager::Load(fileName, wi::resource_manager::Flags::IMPORT_COLORGRADINGLUT | wi::resource_manager::Flags::IMPORT_RETAIN_FILEDATA);
+					weather.colorGradingMap = wi::resourcemanager::Load(fileName, wi::resourcemanager::Flags::IMPORT_COLORGRADINGLUT | wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
 					colorgradingButton.SetText(wi::helper::GetFileNameFromPath(fileName));
 					});
 				});
@@ -585,7 +585,7 @@ void WeatherWindow::Create(EditorComponent* editor)
 					wi::vector<uint8_t> filedata_ktx2;
 					if (wi::helper::saveTextureToMemoryFile(x.second.GetFileData(), x.second.GetTexture().desc, "KTX2", filedata_ktx2))
 					{
-						x.second = wi::resource_manager::Load(x.first, wi::resource_manager::Flags::IMPORT_RETAIN_FILEDATA, filedata_ktx2.data(), filedata_ktx2.size());
+						x.second = wi::resourcemanager::Load(x.first, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA, filedata_ktx2.data(), filedata_ktx2.size());
 					}
 					});
 			}

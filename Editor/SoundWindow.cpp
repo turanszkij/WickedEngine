@@ -66,9 +66,9 @@ void SoundWindow::Create(EditorComponent* editor)
 		wi::helper::FileDialogParams params;
 		params.type = wi::helper::FileDialogParams::OPEN;
 		params.description = "Sound";
-		params.extensions = wi::resource_manager::GetSupportedSoundExtensions();
+		params.extensions = wi::resourcemanager::GetSupportedSoundExtensions();
 		wi::helper::FileDialog(params, [=](std::string fileName) {
-			wi::eventhandler::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 				Entity entity = GetScene().Entity_CreateSound("editorSound", fileName);
 				editor->ClearSelected();
 				editor->AddSelected(entity);

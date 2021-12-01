@@ -11,7 +11,7 @@
 #include "wiTextureHelper.h"
 #include "wiProfiler.h"
 #include "wiInitializer.h"
-#include "wiStartupArguments.h"
+#include "wiArguments.h"
 #include "wiFont.h"
 #include "wiImage.h"
 #include "wiEventHandler.h"
@@ -405,11 +405,11 @@ namespace wi
 		// User can also create a graphics device if custom logic is desired, but they must do before this function!
 		if (graphicsDevice == nullptr)
 		{
-			bool debugdevice = wi::startup_arguments::HasArgument("debugdevice");
-			bool gpuvalidation = wi::startup_arguments::HasArgument("gpuvalidation");
+			bool debugdevice = wi::arguments::HasArgument("debugdevice");
+			bool gpuvalidation = wi::arguments::HasArgument("gpuvalidation");
 
-			bool use_dx12 = wi::startup_arguments::HasArgument("dx12");
-			bool use_vulkan = wi::startup_arguments::HasArgument("vulkan");
+			bool use_dx12 = wi::arguments::HasArgument("dx12");
+			bool use_vulkan = wi::arguments::HasArgument("vulkan");
 
 #ifndef WICKEDENGINE_BUILD_DX12
 			if (use_dx12) {

@@ -1,11 +1,11 @@
-#include "wiStartupArguments.h"
+#include "wiArguments.h"
 #include "wiHelper.h"
 #include "wiUnorderedSet.h"
 
 #include <sstream>
 #include <iterator>
 
-namespace wi::startup_arguments
+namespace wi::arguments
 {
 	wi::unordered_set<std::string> params;
 

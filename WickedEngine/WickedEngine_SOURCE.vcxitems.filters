@@ -909,7 +909,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_image.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiStartupArguments.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiArguments.h">
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGPUSortLib.h">
@@ -1706,7 +1706,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGraphicsDevice_Vulkan.cpp">
       <Filter>ENGINE\Graphics\API</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiStartupArguments.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiArguments.cpp">
       <Filter>ENGINE\Helpers</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGPUSortLib.cpp">

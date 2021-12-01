@@ -31,32 +31,32 @@ int main(int argc, char* argv[])
 	std::cout << "\tshaderdump : \tShaders will be saved to wiShaderDump.h C++ header file (rebuild is assumed)" << std::endl;
 	std::cout << "Command arguments used: ";
 
-	wi::startup_arguments::Parse(argc, argv);
+	wi::arguments::Parse(argc, argv);
 
-	if (wi::startup_arguments::HasArgument("hlsl5"))
+	if (wi::arguments::HasArgument("hlsl5"))
 	{
 		targets.push_back({ ShaderFormat::HLSL5, "shaders/hlsl5/" });
 		std::cout << "hlsl5 ";
 	}
-	if (wi::startup_arguments::HasArgument("hlsl6"))
+	if (wi::arguments::HasArgument("hlsl6"))
 	{
 		targets.push_back({ ShaderFormat::HLSL6, "shaders/hlsl6/" });
 		std::cout << "hlsl6 ";
 	}
-	if (wi::startup_arguments::HasArgument("spirv"))
+	if (wi::arguments::HasArgument("spirv"))
 	{
 		targets.push_back({ ShaderFormat::SPIRV, "shaders/spirv/" });
 		std::cout << "spirv ";
 	}
 
-	if (wi::startup_arguments::HasArgument("shaderdump"))
+	if (wi::arguments::HasArgument("shaderdump"))
 	{
 		shaderdump_enabled = true;
 		rebuild = true;
 		std::cout << "shaderdump ";
 	}
 
-	if (wi::startup_arguments::HasArgument("rebuild"))
+	if (wi::arguments::HasArgument("rebuild"))
 	{
 		rebuild = true;
 		std::cout << "rebuild ";

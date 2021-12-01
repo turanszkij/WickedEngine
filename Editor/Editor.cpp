@@ -108,7 +108,7 @@ void Editor::Initialize()
 	Application::Initialize();
 
 	// With this mode, file data for resources will be kept around. This allows serializing embedded resource data inside scenes
-	wi::resource_manager::SetMode(wi::resource_manager::Mode::ALLOW_RETAIN_FILEDATA);
+	wi::resourcemanager::SetMode(wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA);
 
 	infoDisplay.active = true;
 	infoDisplay.watermark = true;
@@ -416,17 +416,17 @@ void EditorComponent::Load()
 #endif // PLATFORM_UWP
 
 	wi::jobsystem::context ctx;
-	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { pointLightTex = wi::resource_manager::Load("images/pointlight.dds"); });
-	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { spotLightTex = wi::resource_manager::Load("images/spotlight.dds"); });
-	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { dirLightTex = wi::resource_manager::Load("images/directional_light.dds"); });
-	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { areaLightTex = wi::resource_manager::Load("images/arealight.dds"); });
-	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { decalTex = wi::resource_manager::Load("images/decal.dds"); });
-	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { forceFieldTex = wi::resource_manager::Load("images/forcefield.dds"); });
-	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { emitterTex = wi::resource_manager::Load("images/emitter.dds"); });
-	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { hairTex = wi::resource_manager::Load("images/hair.dds"); });
-	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { cameraTex = wi::resource_manager::Load("images/camera.dds"); });
-	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { armatureTex = wi::resource_manager::Load("images/armature.dds"); });
-	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { soundTex = wi::resource_manager::Load("images/sound.dds"); });
+	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { pointLightTex = wi::resourcemanager::Load("images/pointlight.dds"); });
+	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { spotLightTex = wi::resourcemanager::Load("images/spotlight.dds"); });
+	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { dirLightTex = wi::resourcemanager::Load("images/directional_light.dds"); });
+	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { areaLightTex = wi::resourcemanager::Load("images/arealight.dds"); });
+	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { decalTex = wi::resourcemanager::Load("images/decal.dds"); });
+	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { forceFieldTex = wi::resourcemanager::Load("images/forcefield.dds"); });
+	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { emitterTex = wi::resourcemanager::Load("images/emitter.dds"); });
+	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { hairTex = wi::resourcemanager::Load("images/hair.dds"); });
+	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { cameraTex = wi::resourcemanager::Load("images/camera.dds"); });
+	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { armatureTex = wi::resourcemanager::Load("images/armature.dds"); });
+	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { soundTex = wi::resourcemanager::Load("images/sound.dds"); });
 	// wait for ctx is at the end of this function!
 
 	translator.Create();
@@ -694,15 +694,15 @@ void EditorComponent::Load()
 			params.extensions.push_back("wiscene");
 		}
 		wi::helper::FileDialog(params, [=](std::string fileName) {
-			wi::eventhandler::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 				std::string filename = wi::helper::ReplaceExtension(fileName, params.extensions.front());
 				wi::Archive archive = dump_to_header ? wi::Archive() : wi::Archive(filename, false);
 				if (archive.IsOpen())
 				{
 					Scene& scene = wi::scene::GetScene();
 
-					wi::resource_manager::Mode embed_mode = (wi::resource_manager::Mode)saveModeComboBox.GetItemUserData(saveModeComboBox.GetSelected());
-					wi::resource_manager::SetMode(embed_mode);
+					wi::resourcemanager::Mode embed_mode = (wi::resourcemanager::Mode)saveModeComboBox.GetItemUserData(saveModeComboBox.GetSelected());
+					wi::resourcemanager::SetMode(embed_mode);
 
 					scene.Serialize(archive);
 
@@ -736,7 +736,7 @@ void EditorComponent::Load()
 		params.extensions.push_back("gltf");
 		params.extensions.push_back("glb");
 		wi::helper::FileDialog(params, [&](std::string fileName) {
-			wi::eventhandler::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 
 				size_t camera_count_prev = wi::scene::GetScene().cameras.GetCount();
 
@@ -814,7 +814,7 @@ void EditorComponent::Load()
 		params.description = "Lua script";
 		params.extensions.push_back("lua");
 		wi::helper::FileDialog(params, [](std::string fileName) {
-			wi::eventhandler::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 				wi::lua::RunFile(fileName);
 			});
 		});
@@ -972,9 +972,9 @@ void EditorComponent::Load()
 	saveModeComboBox.Create("Save Mode: ");
 	saveModeComboBox.SetColor(wi::Color(0, 198, 101, 180), wi::widget::WIDGETSTATE::IDLE);
 	saveModeComboBox.SetColor(wi::Color(0, 255, 140, 255), wi::widget::WIDGETSTATE::FOCUS);
-	saveModeComboBox.AddItem("Embed resources", (uint64_t)wi::resource_manager::Mode::ALLOW_RETAIN_FILEDATA);
-	saveModeComboBox.AddItem("No embedding", (uint64_t)wi::resource_manager::Mode::ALLOW_RETAIN_FILEDATA_BUT_DISABLE_EMBEDDING);
-	saveModeComboBox.AddItem("Dump to header", (uint64_t)wi::resource_manager::Mode::ALLOW_RETAIN_FILEDATA);
+	saveModeComboBox.AddItem("Embed resources", (uint64_t)wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA);
+	saveModeComboBox.AddItem("No embedding", (uint64_t)wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA_BUT_DISABLE_EMBEDDING);
+	saveModeComboBox.AddItem("Dump to header", (uint64_t)wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA);
 	saveModeComboBox.SetTooltip("Choose whether to embed resources (textures, sounds...) in the scene file when saving, or keep them as separate files.\nThe Dump to header option will use embedding and create a C++ header file with byte data of the scene to be used with wi::Archive serialization.");
 	GetGUI().AddWidget(&saveModeComboBox);
 
