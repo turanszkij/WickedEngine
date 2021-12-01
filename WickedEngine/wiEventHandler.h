@@ -4,12 +4,12 @@
 #include <memory>
 #include <functional>
 
-static const int SYSTEM_EVENT_THREAD_SAFE_POINT = -1;
-static const int SYSTEM_EVENT_RELOAD_SHADERS = -2;
-static const int SYSTEM_EVENT_SET_VSYNC = -3;
-
-namespace wi::event
+namespace wi::eventhandler
 {
+	static constexpr int EVENT_THREAD_SAFE_POINT = -1;
+	static constexpr int EVENT_RELOAD_SHADERS = -2;
+	static constexpr int EVENT_SET_VSYNC = -3;
+
 	struct Handle
 	{
 		std::shared_ptr<void> internal_state;
@@ -24,7 +24,6 @@ namespace wi::event
 	// helper event wrappers can be placed below:
 	inline void SetVSync(bool enabled)
 	{
-		wi::event::FireEvent(SYSTEM_EVENT_SET_VSYNC, enabled ? 1ull : 0ull);
+		FireEvent(EVENT_SET_VSYNC, enabled ? 1ull : 0ull);
 	}
 }
-

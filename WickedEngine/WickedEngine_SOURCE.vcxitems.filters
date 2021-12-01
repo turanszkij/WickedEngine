@@ -1038,7 +1038,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\GLSL.std.450.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiEvent.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiEventHandler.h">
       <Filter>ENGINE\System</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiSDLInput.h">
@@ -1802,7 +1802,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiNetwork_Linux.cpp">
       <Filter>ENGINE\Network</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiEvent.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiEventHandler.cpp">
       <Filter>ENGINE\System</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSDLInput.cpp">

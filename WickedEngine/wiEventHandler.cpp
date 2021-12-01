@@ -1,11 +1,11 @@
-#include "wiEvent.h"
+#include "wiEventHandler.h"
 #include "wiUnorderedMap.h"
 #include "wiVector.h"
 
 #include <list>
 #include <mutex>
 
-namespace wi::event
+namespace wi::eventhandler
 {
 	struct EventManager
 	{

@@ -5,7 +5,7 @@
 #include "wiColor.h"
 #include "wiFadeManager.h"
 #include "wiGraphics.h"
-#include "wiEvent.h"
+#include "wiEventHandler.h"
 #include "wiCanvas.h"
 
 #include <memory>
@@ -20,7 +20,7 @@ namespace wi
 	{
 	protected:
 		std::unique_ptr<wi::graphics::GraphicsDevice> graphicsDevice;
-		wi::event::Handle swapChainVsyncChangeEvent;
+		wi::eventhandler::Handle swapChainVsyncChangeEvent;
 
 		RenderPath* activePath = nullptr;
 		float targetFrameRate = 60;

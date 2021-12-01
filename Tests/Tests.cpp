@@ -125,7 +125,7 @@ void TestsRenderer::Load()
 	testSelector.OnSelect([=](wi::widget::EventArgs args) {
 
 		// Reset all state that tests might have modified:
-		wi::event::SetVSync(true);
+		wi::eventhandler::SetVSync(true);
 		wi::renderer::SetToDrawGridHelper(false);
 		wi::renderer::SetTemporalAAEnabled(false);
 		wi::renderer::ClearWorld(wi::scene::GetScene());
@@ -212,7 +212,7 @@ void TestsRenderer::Load()
 			RunSpriteTest();
 			break;
 		case 14:
-			wi::event::SetVSync(false); // turn off vsync if we can to accelerate the baking
+			wi::eventhandler::SetVSync(false); // turn off vsync if we can to accelerate the baking
 			wi::renderer::SetTemporalAAEnabled(true);
 			wi::scene::LoadModel("../Content/models/lightmap_bake_test.wiscene", XMMatrixTranslation(0, 0, 4));
 			break;
@@ -348,7 +348,7 @@ void TestsRenderer::Update(float dt)
 			TransformComponent& target = *scene.transforms.GetComponent(ik.target);
 
 			// place ik target on a plane intersected by mouse ray:
-			wi::RAY ray = wi::renderer::GetPickRay((long)wi::input::GetPointer().x, (long)wi::input::GetPointer().y, *this);
+			wi::primitive::Ray ray = wi::renderer::GetPickRay((long)wi::input::GetPointer().x, (long)wi::input::GetPointer().y, *this);
 			XMVECTOR plane = XMVectorSet(0, 0, 1, 0.2f);
 			XMVECTOR I = XMPlaneIntersectLine(plane, XMLoadFloat3(&ray.origin), XMLoadFloat3(&ray.origin) + XMLoadFloat3(&ray.direction) * 10000);
 			target.ClearTransform();

@@ -180,7 +180,7 @@ void WeatherWindow::Create(EditorComponent* editor)
 			params.description = "Cubemap texture";
 			params.extensions.push_back("dds");
 			wi::helper::FileDialog(params, [=](std::string fileName) {
-				wi::event::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+				wi::eventhandler::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					auto& weather = GetWeather();
 					weather.skyMapName = fileName;
 					weather.skyMap = wi::resource_manager::Load(fileName, wi::resource_manager::Flags::IMPORT_RETAIN_FILEDATA);
@@ -215,7 +215,7 @@ void WeatherWindow::Create(EditorComponent* editor)
 			params.description = "Texture";
 			params.extensions = wi::resource_manager::GetSupportedImageExtensions();
 			wi::helper::FileDialog(params, [=](std::string fileName) {
-				wi::event::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+				wi::eventhandler::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					auto& weather = GetWeather();
 					weather.colorGradingMapName = fileName;
 					weather.colorGradingMap = wi::resource_manager::Load(fileName, wi::resource_manager::Flags::IMPORT_COLORGRADINGLUT | wi::resource_manager::Flags::IMPORT_RETAIN_FILEDATA);

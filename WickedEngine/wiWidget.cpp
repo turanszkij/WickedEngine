@@ -5,7 +5,7 @@
 #include "wiInput.h"
 #include "wiRenderer.h"
 #include "shaders/ShaderInterop_Renderer.h"
-#include "wiEvent.h"
+#include "wiEventHandler.h"
 #include "wiBacklog.h"
 #include "wiTimer.h"
 
@@ -41,7 +41,7 @@ void Initialize()
 {
 	wi::Timer timer;
 
-	static wi::event::Handle handle = wi::event::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { widget_internal::LoadShaders(); });
+	static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { widget_internal::LoadShaders(); });
 	widget_internal::LoadShaders();
 
 	wi::backlog::post("wi::widget Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");

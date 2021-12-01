@@ -694,7 +694,7 @@ void EditorComponent::Load()
 			params.extensions.push_back("wiscene");
 		}
 		wi::helper::FileDialog(params, [=](std::string fileName) {
-			wi::event::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+			wi::eventhandler::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 				std::string filename = wi::helper::ReplaceExtension(fileName, params.extensions.front());
 				wi::Archive archive = dump_to_header ? wi::Archive() : wi::Archive(filename, false);
 				if (archive.IsOpen())
@@ -736,7 +736,7 @@ void EditorComponent::Load()
 		params.extensions.push_back("gltf");
 		params.extensions.push_back("glb");
 		wi::helper::FileDialog(params, [&](std::string fileName) {
-			wi::event::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+			wi::eventhandler::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 
 				size_t camera_count_prev = wi::scene::GetScene().cameras.GetCount();
 
@@ -814,7 +814,7 @@ void EditorComponent::Load()
 		params.description = "Lua script";
 		params.extensions.push_back("lua");
 		wi::helper::FileDialog(params, [](std::string fileName) {
-			wi::event::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+			wi::eventhandler::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 				wi::lua::RunFile(fileName);
 			});
 		});

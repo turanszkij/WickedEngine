@@ -4,7 +4,7 @@
 #include "wiInput.h"
 #include "wiMath.h"
 #include "shaders/ShaderInterop_Renderer.h"
-#include "wiEvent.h"
+#include "wiEventHandler.h"
 
 using namespace wi::ecs;
 using namespace wi::scene;
@@ -424,7 +424,7 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 	if (!shaders_loaded)
 	{
 		shaders_loaded = true;
-		static wi::event::Handle handle = wi::event::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { Translator_Internal::LoadShaders(); });
+		static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { Translator_Internal::LoadShaders(); });
 		Translator_Internal::LoadShaders();
 	}
 

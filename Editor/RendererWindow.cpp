@@ -21,7 +21,7 @@ void RendererWindow::Create(EditorComponent* editor)
 	vsyncCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	vsyncCheckBox.SetCheck(editor->main->swapChain.desc.vsync);
 	vsyncCheckBox.OnClick([=](wi::widget::EventArgs args) {
-		wi::event::SetVSync(args.bValue);
+		wi::eventhandler::SetVSync(args.bValue);
 	});
 	AddWidget(&vsyncCheckBox);
 

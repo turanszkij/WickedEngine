@@ -14,7 +14,7 @@
 #include "wiStartupArguments.h"
 #include "wiFont.h"
 #include "wiImage.h"
-#include "wiEvent.h"
+#include "wiEventHandler.h"
 
 #include "wiGraphicsDevice_DX12.h"
 #include "wiGraphicsDevice_Vulkan.h"
@@ -128,7 +128,7 @@ namespace wi
 		timer.record();
 
 		// Wake up the events that need to be executed on the main thread, in thread safe manner:
-		wi::event::FireEvent(SYSTEM_EVENT_THREAD_SAFE_POINT, 0);
+		wi::eventhandler::FireEvent(wi::eventhandler::EVENT_THREAD_SAFE_POINT, 0);
 
 		const float dt = framerate_lock ? (1.0f / targetFrameRate) : deltaTime;
 
@@ -475,7 +475,7 @@ namespace wi
 		bool success = graphicsDevice->CreateSwapChain(&desc, window, &swapChain);
 		assert(success);
 
-		swapChainVsyncChangeEvent = wi::event::Subscribe(SYSTEM_EVENT_SET_VSYNC, [this](uint64_t userdata) {
+		swapChainVsyncChangeEvent = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_SET_VSYNC, [this](uint64_t userdata) {
 			SwapChainDesc desc = swapChain.desc;
 			desc.vsync = userdata != 0;
 			bool success = graphicsDevice->CreateSwapChain(&desc, nullptr, &swapChain);

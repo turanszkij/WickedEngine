@@ -62,7 +62,7 @@
 #include "wiGPUSortLib.h"
 #include "wiJobSystem.h"
 #include "wiNetwork.h"
-#include "wiEvent.h"
+#include "wiEventHandler.h"
 #include "wiShaderCompiler.h"
 #include "wiCanvas.h"
 #include "wiUnorderedMap.h"
@@ -81,7 +81,7 @@
 // After version 0.59.11, namespaces were refactored into nested namespaces under the wi:: root namespace.
 // To allow compatibility with older user code, the backwards compatibility definitions are included below.
 // If you need backwards compatibility features, define the following before including this file:
-//#define WICKEDENGINE_BACKWARDS_COMPATIBILITY_0_59_11
+#define WICKEDENGINE_BACKWARDS_COMPATIBILITY_0_59_11
 #ifdef WICKEDENGINE_BACKWARDS_COMPATIBILITY_0_59_11
 
 using namespace wi;
@@ -109,7 +109,7 @@ namespace wiNetwork = wi::network;
 namespace wiPhysicsEngine = wi::physics;
 namespace wiLua = wi::lua;
 namespace wiECS = wi::ecs;
-namespace wiEvent = wi::event;
+namespace wiEvent = wi::eventhandler;
 namespace wiInitializer = wi::initializer;
 namespace wiJobSystem = wi::jobsystem;
 namespace wiPlatform = wi::platform;
@@ -158,6 +158,10 @@ using wi::image::STENCILREFMODE;
 using wi::image::SAMPLEMODE;
 using wi::image::QUALITY;
 using wi::font::Alignment;
+
+static constexpr int SYSTEM_EVENT_THREAD_SAFE_POINT = wi::eventhandler::EVENT_THREAD_SAFE_POINT;
+static constexpr int SYSTEM_EVENT_RELOAD_SHADERS = wi::eventhandler::EVENT_RELOAD_SHADERS;
+static constexpr int SYSTEM_EVENT_SET_VSYNC = wi::eventhandler::EVENT_SET_VSYNC;
 
 #endif // WICKEDENGINE_BACKWARDS_COMPATIBILITY_0_59_11
 

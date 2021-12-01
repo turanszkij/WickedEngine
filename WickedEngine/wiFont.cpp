@@ -8,7 +8,7 @@
 #include "wiRectPacker.h"
 #include "wiSpinLock.h"
 #include "wiPlatform.h"
-#include "wiEvent.h"
+#include "wiEventHandler.h"
 #include "wiTimer.h"
 #include "wiUnorderedMap.h"
 #include "wiUnorderedSet.h"
@@ -315,7 +315,7 @@ namespace wi::font
 		samplerDesc.max_lod = 0;
 		device->CreateSampler(&samplerDesc, &sampler);
 
-		static wi::event::Handle handle1 = wi::event::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
+		static wi::eventhandler::Handle handle1 = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
 		LoadShaders();
 
 

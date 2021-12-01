@@ -4,7 +4,7 @@
 #include "wiHelper.h"
 #include "shaders/ShaderInterop_Image.h"
 #include "wiBacklog.h"
-#include "wiEvent.h"
+#include "wiEventHandler.h"
 #include "wiTimer.h"
 
 #include <atomic>
@@ -423,7 +423,7 @@ namespace wi::image
 		bd.independent_blend_enable = false;
 		blendStates[BLENDMODE_MULTIPLY] = bd;
 
-		static wi::event::Handle handle = wi::event::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
+		static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
 		LoadShaders();
 
 		wi::backlog::post("wi::image Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");

@@ -9,7 +9,7 @@
 #include "wiGPUSortLib.h"
 #include "wiProfiler.h"
 #include "wiBacklog.h"
-#include "wiEvent.h"
+#include "wiEventHandler.h"
 #include "wiTimer.h"
 #include "wiVector.h"
 
@@ -898,7 +898,7 @@ namespace wi
 		bd.render_target[0].blend_enable = false;
 		blendStates[BLENDMODE_OPAQUE] = bd;
 
-		static wi::event::Handle handle = wi::event::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { EmittedParticleSystem_Internal::LoadShaders(); });
+		static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { EmittedParticleSystem_Internal::LoadShaders(); });
 		EmittedParticleSystem_Internal::LoadShaders();
 
 		wi::backlog::post("wi::EmittedParticleSystem Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");

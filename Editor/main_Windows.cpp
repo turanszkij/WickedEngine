@@ -255,7 +255,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				if (wi::shadercompiler::CheckRegisteredShadersOutdated())
 				{
 					wi::backlog::post("[Shader check] Changes detected, initiating reload...");
-					wi::event::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [](uint64_t userdata) {
+					wi::eventhandler::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [](uint64_t userdata) {
 						wi::renderer::ReloadShaders();
 						});
 				}

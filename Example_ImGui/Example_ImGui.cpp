@@ -326,7 +326,7 @@ void Example_ImGuiRenderer::Load()
 	GetGUI().AddWidget(&label);
 
 	// Reset all state that tests might have modified:
-	wi::event::SetVSync(true);
+	wi::eventhandler::SetVSync(true);
 	wi::renderer::SetToDrawGridHelper(false);
 	wi::renderer::SetTemporalAAEnabled(true);
 	wi::renderer::ClearWorld(wi::scene::GetScene());

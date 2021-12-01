@@ -9,7 +9,7 @@
 #include "wiScene.h"
 #include "shaders/ShaderInterop_HairParticle.h"
 #include "wiBacklog.h"
-#include "wiEvent.h"
+#include "wiEventHandler.h"
 #include "wiTimer.h"
 
 using namespace wi::primitive;
@@ -558,7 +558,7 @@ namespace wi
 		bld.alpha_to_coverage_enable = false; // maybe for msaa
 		bs = bld;
 
-		static wi::event::Handle handle = wi::event::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { HairParticleSystem_Internal::LoadShaders(); });
+		static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { HairParticleSystem_Internal::LoadShaders(); });
 		HairParticleSystem_Internal::LoadShaders();
 
 		wi::backlog::post("wi::HairParticleSystem Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");

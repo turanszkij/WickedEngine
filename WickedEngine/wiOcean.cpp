@@ -4,7 +4,7 @@
 #include "shaders/ShaderInterop_Ocean.h"
 #include "wiScene.h"
 #include "wiBacklog.h"
-#include "wiEvent.h"
+#include "wiEventHandler.h"
 #include "wiTimer.h"
 #include "wiVector.h"
 
@@ -449,7 +449,7 @@ namespace wi
 		blendState = blend_desc;
 
 
-		static wi::event::Handle handle = wi::event::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); wi::fftgenerator::LoadShaders(); });
+		static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); wi::fftgenerator::LoadShaders(); });
 
 		LoadShaders();
 		wi::fftgenerator::LoadShaders();

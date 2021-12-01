@@ -8,7 +8,7 @@
 #include "wiEmittedParticle.h"
 #include "wiHairParticle.h"
 #include "wiPrimitive_BindLua.h"
-#include "wiEvent.h"
+#include "wiEventHandler.h"
 
 using namespace wi::ecs;
 using namespace wi::graphics;
@@ -118,7 +118,7 @@ namespace wi::lua::renderer
 		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 0)
 		{
-			wi::event::SetVSync(wi::lua::SGetBool(L, 1));
+			wi::eventhandler::SetVSync(wi::lua::SGetBool(L, 1));
 		}
 		return 0;
 	}

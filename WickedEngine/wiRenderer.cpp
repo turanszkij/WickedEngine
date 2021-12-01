@@ -14,7 +14,7 @@
 #include "wiGPUBVH.h"
 #include "wiJobSystem.h"
 #include "wiSpinLock.h"
-#include "wiEvent.h"
+#include "wiEventHandler.h"
 #include "wiPlatform.h"
 #include "wiSheenLUT.h"
 #include "wiShaderCompiler.h"
@@ -2080,7 +2080,7 @@ void ReloadShaders()
 {
 	device->ClearPipelineStateCache();
 
-	wi::event::FireEvent(SYSTEM_EVENT_RELOAD_SHADERS, 0);
+	wi::eventhandler::FireEvent(wi::eventhandler::EVENT_RELOAD_SHADERS, 0);
 }
 
 void InitializeCommonSamplers()
@@ -2217,7 +2217,7 @@ void Initialize()
 	SetUpStates();
 	LoadBuffers();
 
-	static wi::event::Handle handle2 = wi::event::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
+	static wi::eventhandler::Handle handle2 = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
 	LoadShaders();
 
 	SetShadowProps2D(SHADOWRES_2D, SHADOWCOUNT_2D);
