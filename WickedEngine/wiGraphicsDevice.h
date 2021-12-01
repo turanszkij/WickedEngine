@@ -216,9 +216,9 @@ namespace wi::graphics
 
 		struct GPUAllocation
 		{
-			void* data = nullptr;				// application can write to this. Reads might be not supported or slow. The offset is already applied
-			GPUBuffer buffer;					// application can bind it to the GPU
-			uint64_t offset = 0;				// allocation's offset from the GPUbuffer's beginning
+			void* data = nullptr;	// application can write to this. Reads might be not supported or slow. The offset is already applied
+			GPUBuffer buffer;		// application can bind it to the GPU
+			uint64_t offset = 0;	// allocation's offset from the GPUbuffer's beginning
 
 			// Returns true if the allocation was successful
 			inline bool IsValid() const { return data != nullptr && buffer.IsValid(); }

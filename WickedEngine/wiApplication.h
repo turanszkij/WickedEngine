@@ -13,9 +13,11 @@
 
 namespace wi
 {
-
 	class RenderPath;
 
+	// This can be used as a Wicked Engine application
+	//	- SetWindow() will set a window from operating system and initialize graphics device
+	//	- Run() will run the main application logic. It needs to be called every frame
 	class Application
 	{
 	protected:
