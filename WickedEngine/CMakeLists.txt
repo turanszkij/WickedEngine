@@ -53,7 +53,7 @@ add_library(${TARGET_NAME} STATIC
 	wiBacklog.cpp
 	wiBacklog_BindLua.cpp
 	wiEmittedParticle.cpp
-	wiEvent.cpp
+	wiEventHandler.cpp
 	wiFadeManager.cpp
 	wiFFTGenerator.cpp
 	wiFont.cpp
