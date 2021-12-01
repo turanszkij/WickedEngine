@@ -437,7 +437,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		{
 			if (alphaMode->second.string_value.compare("BLEND") == 0)
 			{
-				material.userBlendMode = BLENDMODE_ALPHA;
+				material.userBlendMode = wi::BLENDMODE_ALPHA;
 			}
 		}
 

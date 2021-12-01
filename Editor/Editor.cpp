@@ -11,11 +11,11 @@
 #include <filesystem>
 #include <limits>
 
+using namespace wi;
 using namespace wi::graphics;
 using namespace wi::rectpacker;
 using namespace wi::scene;
 using namespace wi::ecs;
-
 
 #ifdef PLATFORM_UWP
 #include <winrt/Windows.Storage.h>

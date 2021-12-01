@@ -185,7 +185,7 @@ wi::vector<RenderableTriangle> renderableTriangles_solid;
 wi::vector<RenderableTriangle> renderableTriangles_wireframe;
 wi::vector<PaintRadius> paintrads;
 
-wi::spinlock deferredMIPGenLock;
+wi::SpinLock deferredMIPGenLock;
 wi::vector<std::pair<Texture, bool>> deferredMIPGens;
 
 

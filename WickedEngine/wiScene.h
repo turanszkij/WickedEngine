@@ -1274,7 +1274,7 @@ namespace wi::scene
 		uint32_t flags = EMPTY;
 
 
-		wi::spinlock locker;
+		wi::SpinLock locker;
 		AABB bounds;
 		wi::vector<AABB> parallel_bounds;
 		WeatherComponent weather;

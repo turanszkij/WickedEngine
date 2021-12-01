@@ -68,7 +68,7 @@ namespace wi::font
 		constexpr int stylefromhash(int64_t hash) { return int((hash >> 10) & 0x3F); }
 		constexpr int heightfromhash(int64_t hash) { return int((hash >> 0) & 0x3FF); }
 		wi::unordered_set<int32_t> pendingGlyphs;
-		wi::spinlock glyphLock;
+		wi::SpinLock glyphLock;
 
 		struct FontStyle
 		{

@@ -115,7 +115,7 @@ namespace wi::renderer
 		std::atomic<uint32_t> light_counter;
 		std::atomic<uint32_t> decal_counter;
 
-		wi::spinlock locker;
+		wi::SpinLock locker;
 		bool planar_reflection_visible = false;
 		float closestRefPlane = std::numeric_limits<float>::max();
 		XMFLOAT4 reflectionPlane = XMFLOAT4(0, 1, 0, 0);

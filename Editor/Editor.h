@@ -24,7 +24,7 @@
 #include "LayerWindow.h"
 #include "NameWindow.h"
 
-class EditorLoadingScreen : public LoadingScreen
+class EditorLoadingScreen : public wi::LoadingScreen
 {
 private:
 	wi::Sprite sprite;
@@ -35,7 +35,7 @@ public:
 };
 
 class Editor;
-class EditorComponent : public RenderPath2D
+class EditorComponent : public wi::RenderPath2D
 {
 private:
 	wi::Resource pointLightTex, spotLightTex, dirLightTex, areaLightTex, decalTex, forceFieldTex, emitterTex, hairTex, cameraTex, armatureTex, soundTex;
@@ -111,7 +111,7 @@ public:
 	wi::widget::Slider pathTraceTargetSlider;
 	wi::widget::Label pathTraceStatisticsLabel;
 
-	std::unique_ptr<RenderPath3D> renderPath;
+	std::unique_ptr<wi::RenderPath3D> renderPath;
 	enum RENDERPATH
 	{
 		RENDERPATH_DEFAULT,
@@ -174,7 +174,7 @@ public:
 	void ConsumeHistoryOperation(bool undo);
 };
 
-class Editor : public Application
+class Editor : public wi::Application
 {
 public:
 	EditorComponent renderComponent;

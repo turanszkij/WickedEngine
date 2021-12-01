@@ -2,6 +2,7 @@
 #include "RendererWindow.h"
 #include "Editor.h"
 
+using namespace wi;
 
 void RendererWindow::Create(EditorComponent* editor)
 {

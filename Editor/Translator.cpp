@@ -6,6 +6,7 @@
 #include "shaders/ShaderInterop_Renderer.h"
 #include "wiEvent.h"
 
+using namespace wi;
 using namespace wi::graphics;
 using namespace wi::ecs;
 using namespace wi::scene;

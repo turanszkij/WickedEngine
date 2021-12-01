@@ -4,8 +4,8 @@
 
 #include <thread>
 
+using namespace wi;
 using namespace wi::graphics;
-
 
 void PostprocessWindow::Create(EditorComponent* editor)
 {

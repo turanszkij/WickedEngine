@@ -75,7 +75,7 @@ namespace wi::jobsystem
 		T data[capacity];
 		size_t head = 0;
 		size_t tail = 0;
-		wi::spinlock lock;
+		wi::SpinLock lock;
 	};
 
 	// This structure is responsible to stop worker thread loops.

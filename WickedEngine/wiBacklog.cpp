@@ -31,7 +31,7 @@ namespace wi::backlog
 	static std::string inputArea;
 	static int historyPos = 0;
 	static wi::SpriteFont font;
-	static wi::spinlock logLock;
+	static wi::SpinLock logLock;
 	static Texture backgroundTex;
 	static bool refitscroll = false;
 

@@ -5,6 +5,7 @@
 
 #include <cmath>
 
+using namespace wi;
 using namespace wi::ecs;
 using namespace wi::scene;
 using namespace wi::graphics;

@@ -11,7 +11,7 @@ using namespace wi::scene;
 
 void Tests::Initialize()
 {
-    MainComponent::Initialize();
+    wi::Application::Initialize();
 
 	infoDisplay.active = true;
 	infoDisplay.watermark = true;
@@ -53,8 +53,8 @@ void TestsRenderer::Load()
 	audioTest.SetText("Play Test Audio");
 	audioTest.SetSize(XMFLOAT2(200, 20));
 	audioTest.SetPos(XMFLOAT2(10, 140));
-	audioTest.SetColor(wi::Color(255, 205, 43, 200), wi::widget::WIDGETSTATE::IDLE);
-	audioTest.SetColor(wi::Color(255, 235, 173, 255), wi::widget::WIDGETSTATE::FOCUS);
+	audioTest.SetColor(wi::Color(255, 205, 43, 200), wi::widget::IDLE);
+	audioTest.SetColor(wi::Color(255, 235, 173, 255), wi::widget::FOCUS);
 	audioTest.OnClick([&](wi::widget::EventArgs args) {
 		static bool playing = false;
 
@@ -85,10 +85,10 @@ void TestsRenderer::Load()
 	volume.SetText("Volume: ");
 	volume.SetSize(XMFLOAT2(100, 20));
 	volume.SetPos(XMFLOAT2(65, 170));
-	volume.sprites_knob[wi::widget::WIDGETSTATE::IDLE].params.color = wi::Color(255, 205, 43, 200);
-	volume.sprites_knob[wi::widget::WIDGETSTATE::FOCUS].params.color = wi::Color(255, 235, 173, 255);
-	volume.sprites[wi::widget::WIDGETSTATE::IDLE].params.color = wi::math::Lerp(wi::Color::Transparent(), volume.sprites_knob[wi::widget::WIDGETSTATE::IDLE].params.color, 0.5f);
-	volume.sprites[wi::widget::WIDGETSTATE::FOCUS].params.color = wi::math::Lerp(wi::Color::Transparent(), volume.sprites_knob[wi::widget::WIDGETSTATE::FOCUS].params.color, 0.5f);
+	volume.sprites_knob[wi::widget::IDLE].params.color = wi::Color(255, 205, 43, 200);
+	volume.sprites_knob[wi::widget::FOCUS].params.color = wi::Color(255, 235, 173, 255);
+	volume.sprites[wi::widget::IDLE].params.color = wi::math::Lerp(wi::Color::Transparent(), volume.sprites_knob[wi::widget::WIDGETSTATE::IDLE].params.color, 0.5f);
+	volume.sprites[wi::widget::FOCUS].params.color = wi::math::Lerp(wi::Color::Transparent(), volume.sprites_knob[wi::widget::WIDGETSTATE::FOCUS].params.color, 0.5f);
 	volume.OnSlide([](wi::widget::EventArgs args) {
 		wi::audio::SetVolume(args.fValue / 100.0f, &soundinstance);
 	});
@@ -99,8 +99,8 @@ void TestsRenderer::Load()
 	testSelector.SetText("Demo: ");
 	testSelector.SetSize(XMFLOAT2(140, 20));
 	testSelector.SetPos(XMFLOAT2(50, 200));
-	testSelector.SetColor(wi::Color(255, 205, 43, 200), wi::widget::WIDGETSTATE::IDLE);
-	testSelector.SetColor(wi::Color(255, 235, 173, 255), wi::widget::WIDGETSTATE::FOCUS);
+	testSelector.SetColor(wi::Color(255, 205, 43, 200), wi::widget::IDLE);
+	testSelector.SetColor(wi::Color(255, 235, 173, 255), wi::widget::FOCUS);
 	testSelector.AddItem("HelloWorld");
 	testSelector.AddItem("Model");
 	testSelector.AddItem("EmittedParticle 1");
@@ -348,7 +348,7 @@ void TestsRenderer::Update(float dt)
 			TransformComponent& target = *scene.transforms.GetComponent(ik.target);
 
 			// place ik target on a plane intersected by mouse ray:
-			RAY ray = wi::renderer::GetPickRay((long)wi::input::GetPointer().x, (long)wi::input::GetPointer().y, *this);
+			wi::RAY ray = wi::renderer::GetPickRay((long)wi::input::GetPointer().x, (long)wi::input::GetPointer().y, *this);
 			XMVECTOR plane = XMVectorSet(0, 0, 1, 0.2f);
 			XMVECTOR I = XMPlaneIntersectLine(plane, XMLoadFloat3(&ray.origin), XMLoadFloat3(&ray.origin) + XMLoadFloat3(&ray.direction) * 10000);
 			target.ClearTransform();
@@ -556,7 +556,7 @@ void TestsRenderer::RunSpriteTest()
 	params.pivot = XMFLOAT2(0.5f, 0.5f);
 	params.quality = wi::image::QUALITY_LINEAR;
 	params.sampleFlag = wi::image::SAMPLEMODE_CLAMP;
-	params.blendFlag = BLENDMODE_ALPHA;
+	params.blendFlag = wi::BLENDMODE_ALPHA;
 
 	// Info:
 	{

@@ -10,7 +10,7 @@
 HINSTANCE hInst;                                // current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
-Application main;								// Wicked Engine Main Runtime Component
+wi::Application application;					// Wicked Engine Application
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -47,10 +47,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_TEMPLATEWINDOWS));
 
 	// just show some basic info:
-	main.infoDisplay.active = true;
-	main.infoDisplay.watermark = true;
-	main.infoDisplay.resolution = true;
-	main.infoDisplay.fpsinfo = true;
+	application.infoDisplay.active = true;
+	application.infoDisplay.watermark = true;
+	application.infoDisplay.resolution = true;
+	application.infoDisplay.fpsinfo = true;
 
 	MSG msg = { 0 };
 	while (msg.message != WM_QUIT)
@@ -61,7 +61,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		}
 		else {
 
-			main.Run(); // run the update - render loop (mandatory)
+			application.Run(); // run the update - render loop (mandatory)
 
 		}
 	}
@@ -123,7 +123,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    UpdateWindow(hWnd);
 
 
-   main.SetWindow(hWnd); // assign window handle (mandatory)
+   application.SetWindow(hWnd); // assign window handle (mandatory)
 
 
    return TRUE;
@@ -162,8 +162,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
     case WM_SIZE:
     case WM_DPICHANGED:
-		if (main.is_window_active)
-			main.SetWindow(hWnd);
+		if (application.is_window_active)
+			application.SetWindow(hWnd);
         break;
 	case WM_CHAR:
 		switch (wParam)
@@ -188,10 +188,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		break;
 	case WM_KILLFOCUS:
-		main.is_window_active = false;
+		application.is_window_active = false;
 		break;
 	case WM_SETFOCUS:
-		main.is_window_active = true;
+		application.is_window_active = true;
 		break;
     case WM_PAINT:
         {

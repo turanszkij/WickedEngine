@@ -3,7 +3,7 @@
 
 namespace wi
 {
-	class spinlock
+	class SpinLock
 	{
 	private:
 		std::atomic_flag lck = ATOMIC_FLAG_INIT;

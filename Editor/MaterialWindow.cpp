@@ -2,6 +2,7 @@
 #include "MaterialWindow.h"
 #include "Editor.h"
 
+using namespace wi;
 using namespace wi::graphics;
 using namespace wi::ecs;
 using namespace wi::scene;
