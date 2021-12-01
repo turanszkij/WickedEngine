@@ -15,6 +15,7 @@
 using namespace wi::primitive;
 using namespace wi::graphics;
 using namespace wi::scene;
+using namespace wi::enums;
 
 namespace wi
 {
@@ -336,7 +337,7 @@ namespace wi
 		regenerate_frame = false;
 	}
 
-	void HairParticleSystem::Draw(const MaterialComponent& material, RENDERPASS renderPass, CommandList cmd) const
+	void HairParticleSystem::Draw(const MaterialComponent& material, wi::enums::RENDERPASS renderPass, CommandList cmd) const
 	{
 		if (strandCount == 0 || !constantBuffer.IsValid())
 		{

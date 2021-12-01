@@ -155,9 +155,9 @@ namespace wi::scene
 			SHADERTYPE_COUNT
 		} shaderType = SHADERTYPE_PBR;
 
-		STENCILREF engineStencilRef = STENCILREF_DEFAULT;
+		wi::enums::STENCILREF engineStencilRef = wi::enums::STENCILREF_DEFAULT;
 		uint8_t userStencilRef = 0;
-		BLENDMODE userBlendMode = BLENDMODE_OPAQUE;
+		wi::enums::BLENDMODE userBlendMode = wi::enums::BLENDMODE_OPAQUE;
 
 		XMFLOAT4 baseColor = XMFLOAT4(1, 1, 1, 1);
 		XMFLOAT4 specularColor = XMFLOAT4(1, 1, 1, 1);
@@ -250,7 +250,7 @@ namespace wi::scene
 		inline void SetOcclusionEnabled_Primary(bool value) { SetDirty(); if (value) { _flags |= OCCLUSION_PRIMARY; } else { _flags &= ~OCCLUSION_PRIMARY; } }
 		inline void SetOcclusionEnabled_Secondary(bool value) { SetDirty(); if (value) { _flags |= OCCLUSION_SECONDARY; } else { _flags &= ~OCCLUSION_SECONDARY; } }
 
-		inline BLENDMODE GetBlendMode() const { if (userBlendMode == BLENDMODE_OPAQUE && (GetRenderTypes() & RENDERTYPE_TRANSPARENT)) return BLENDMODE_ALPHA; else return userBlendMode; }
+		inline wi::enums::BLENDMODE GetBlendMode() const { if (userBlendMode == wi::enums::BLENDMODE_OPAQUE && (GetRenderTypes() & wi::enums::RENDERTYPE_TRANSPARENT)) return wi::enums::BLENDMODE_ALPHA; else return userBlendMode; }
 		inline bool IsCastingShadow() const { return _flags & CAST_SHADOW; }
 		inline bool IsAlphaTestEnabled() const { return alphaRef <= 1.0f - 1.0f / 256.0f; }
 		inline bool IsUsingVertexColors() const { return _flags & USE_VERTEXCOLORS; }
@@ -1516,7 +1516,7 @@ namespace wi::scene
 	//	renderTypeMask	:	filter based on render type
 	//	layerMask		:	filter based on layer
 	//	scene			:	the scene that will be traced against the ray
-	PickResult Pick(const wi::primitive::Ray& ray, uint32_t renderTypeMask = RENDERTYPE_OPAQUE, uint32_t layerMask = ~0, const Scene& scene = GetScene());
+	PickResult Pick(const wi::primitive::Ray& ray, uint32_t renderTypeMask = wi::enums::RENDERTYPE_OPAQUE, uint32_t layerMask = ~0, const Scene& scene = GetScene());
 
 	struct SceneIntersectSphereResult
 	{
@@ -1525,7 +1525,7 @@ namespace wi::scene
 		XMFLOAT3 normal = XMFLOAT3(0, 0, 0);
 		float depth = 0;
 	};
-	SceneIntersectSphereResult SceneIntersectSphere(const wi::primitive::Sphere& sphere, uint32_t renderTypeMask = RENDERTYPE_OPAQUE, uint32_t layerMask = ~0, const Scene& scene = GetScene());
-	SceneIntersectSphereResult SceneIntersectCapsule(const wi::primitive::Capsule& capsule, uint32_t renderTypeMask = RENDERTYPE_OPAQUE, uint32_t layerMask = ~0, const Scene& scene = GetScene());
+	SceneIntersectSphereResult SceneIntersectSphere(const wi::primitive::Sphere& sphere, uint32_t renderTypeMask = wi::enums::RENDERTYPE_OPAQUE, uint32_t layerMask = ~0, const Scene& scene = GetScene());
+	SceneIntersectSphereResult SceneIntersectCapsule(const wi::primitive::Capsule& capsule, uint32_t renderTypeMask = wi::enums::RENDERTYPE_OPAQUE, uint32_t layerMask = ~0, const Scene& scene = GetScene());
 
 }

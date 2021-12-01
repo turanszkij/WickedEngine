@@ -102,7 +102,7 @@ int Pick(lua_State* L)
 		Ray_BindLua* ray = Luna<Ray_BindLua>::lightcheck(L, 1);
 		if (ray != nullptr)
 		{
-			uint32_t renderTypeMask = RENDERTYPE_OPAQUE;
+			uint32_t renderTypeMask = wi::enums::RENDERTYPE_OPAQUE;
 			uint32_t layerMask = 0xFFFFFFFF;
 			Scene* scene = &wi::scene::GetScene();
 			if (argc > 1)
@@ -152,7 +152,7 @@ int SceneIntersectSphere(lua_State* L)
 		Sphere_BindLua* sphere = Luna<Sphere_BindLua>::lightcheck(L, 1);
 		if (sphere != nullptr)
 		{
-			uint32_t renderTypeMask = RENDERTYPE_OPAQUE;
+			uint32_t renderTypeMask = wi::enums::RENDERTYPE_OPAQUE;
 			uint32_t layerMask = 0xFFFFFFFF;
 			Scene* scene = &wi::scene::GetScene();
 			if (argc > 1)
@@ -202,7 +202,7 @@ int SceneIntersectCapsule(lua_State* L)
 		Capsule_BindLua* capsule = Luna<Capsule_BindLua>::lightcheck(L, 1);
 		if (capsule != nullptr)
 		{
-			uint32_t renderTypeMask = RENDERTYPE_OPAQUE;
+			uint32_t renderTypeMask = wi::enums::RENDERTYPE_OPAQUE;
 			uint32_t layerMask = 0xFFFFFFFF;
 			Scene* scene = &wi::scene::GetScene();
 			if (argc > 1)
@@ -1890,7 +1890,7 @@ int MaterialComponent_BindLua::SetEngineStencilRef(lua_State* L)
 	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		component->engineStencilRef = (STENCILREF)wi::lua::SGetInt(L, 1);
+		component->engineStencilRef = (wi::enums::STENCILREF)wi::lua::SGetInt(L, 1);
 	}
 	else
 	{

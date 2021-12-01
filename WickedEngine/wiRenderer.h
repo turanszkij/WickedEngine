@@ -15,7 +15,14 @@
 
 namespace wi::renderer
 {
-	inline uint32_t CombineStencilrefs(STENCILREF engineStencilRef, uint8_t userStencilRef)
+	enum GBUFFER
+	{
+		GBUFFER_PRIMITIVEID,
+		GBUFFER_VELOCITY,
+		GBUFFER_COUNT
+	};
+
+	inline uint32_t CombineStencilrefs(wi::enums::STENCILREF engineStencilRef, uint8_t userStencilRef)
 	{
 		return (userStencilRef << 4) | static_cast<uint8_t>(engineStencilRef);
 	}
@@ -29,14 +36,14 @@ namespace wi::renderer
 		);
 	}
 
-	const wi::graphics::Sampler* GetSampler(int slot);
-	const wi::graphics::Shader* GetShader(SHADERTYPE id);
-	const wi::graphics::InputLayout* GetInputLayout(ILTYPES id);
-	const wi::graphics::RasterizerState* GetRasterizerState(RSTYPES id);
-	const wi::graphics::DepthStencilState* GetDepthStencilState(DSSTYPES id);
-	const wi::graphics::BlendState* GetBlendState(BSTYPES id);
-	const wi::graphics::GPUBuffer* GetConstantBuffer(CBTYPES id);
-	const wi::graphics::Texture* GetTexture(TEXTYPES id);
+	const wi::graphics::Sampler* GetSampler(wi::enums::SAMPLERTYPES id);
+	const wi::graphics::Shader* GetShader(wi::enums::SHADERTYPE id);
+	const wi::graphics::InputLayout* GetInputLayout(wi::enums::ILTYPES id);
+	const wi::graphics::RasterizerState* GetRasterizerState(wi::enums::RSTYPES id);
+	const wi::graphics::DepthStencilState* GetDepthStencilState(wi::enums::DSSTYPES id);
+	const wi::graphics::BlendState* GetBlendState(wi::enums::BSTYPES id);
+	const wi::graphics::GPUBuffer* GetConstantBuffer(wi::enums::CBTYPES id);
+	const wi::graphics::Texture* GetTexture(wi::enums::TEXTYPES id);
 
 	void ModifyObjectSampler(const wi::graphics::SamplerDesc& desc);
 
@@ -199,7 +206,7 @@ namespace wi::renderer
 	// Draw the world from a camera. You must call BindCameraCB() at least once in this frame prior to this
 	void DrawScene(
 		const Visibility& vis,
-		RENDERPASS renderPass,
+		wi::enums::RENDERPASS renderPass,
 		wi::graphics::CommandList cmd,
 		uint32_t flags = DRAWSCENE_OPAQUE
 	);
@@ -832,8 +839,8 @@ namespace wi::renderer
 	struct CustomShader
 	{
 		std::string name;
-		uint32_t renderTypeFlags = RENDERTYPE_OPAQUE;
-		wi::graphics::PipelineState pso[RENDERPASS_COUNT] = {};
+		uint32_t renderTypeFlags = wi::enums::RENDERTYPE_OPAQUE;
+		wi::graphics::PipelineState pso[wi::enums::RENDERPASS_COUNT] = {};
 	};
 	// Registers a custom shader that can be set to materials. 
 	//	Returns the ID of the custom shader that can be used with MaterialComponent::SetCustomShaderID()

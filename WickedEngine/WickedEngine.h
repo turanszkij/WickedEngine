@@ -85,6 +85,7 @@
 #ifdef WICKEDENGINE_BACKWARDS_COMPATIBILITY_0_59_11
 
 using namespace wi;
+using namespace wi::enums;
 
 namespace wiGraphics = wi::graphics;
 namespace wiShaderCompiler = wi::shadercompiler;

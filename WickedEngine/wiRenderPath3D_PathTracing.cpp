@@ -399,7 +399,7 @@ namespace wi
 
 		wi::image::Params fx;
 		fx.enableFullScreen();
-		fx.blendFlag = BLENDMODE_OPAQUE;
+		fx.blendFlag = wi::enums::BLENDMODE_OPAQUE;
 		fx.quality = wi::image::QUALITY_LINEAR;
 		wi::image::Draw(&rtPostprocess, fx, cmd);
 

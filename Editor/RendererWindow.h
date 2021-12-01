@@ -6,7 +6,7 @@ class EditorComponent;
 enum PICKTYPE
 {
 	PICK_VOID				= 0,
-	PICK_OBJECT				= wi::RENDERTYPE_ALL,
+	PICK_OBJECT				= wi::enums::RENDERTYPE_ALL,
 	PICK_LIGHT				= 8,
 	PICK_DECAL				= 16,
 	PICK_ENVPROBE			= 32,

@@ -48,7 +48,7 @@ namespace wi
 		) const;
 		void Draw(
 			const wi::scene::MaterialComponent& material,
-			RENDERPASS renderPass,
+			wi::enums::RENDERPASS renderPass,
 			wi::graphics::CommandList cmd
 		) const;
 

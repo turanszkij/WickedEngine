@@ -74,9 +74,9 @@ bool ImGui_Impl_CreateDeviceObjects()
 	desc.vs = &imguiVS;
 	desc.ps = &imguiPS;
 	desc.il = &imguiInputLayout;
-	desc.dss = wi::renderer::GetDepthStencilState(wi::DSSTYPE_DEPTHREAD);
-	desc.rs = wi::renderer::GetRasterizerState(wi::RSTYPE_DOUBLESIDED);
-	desc.bs = wi::renderer::GetBlendState(wi::BSTYPE_TRANSPARENT);
+	desc.dss = wi::renderer::GetDepthStencilState(wi::enums::DSSTYPE_DEPTHREAD);
+	desc.rs = wi::renderer::GetRasterizerState(wi::enums::RSTYPE_DOUBLESIDED);
+	desc.bs = wi::renderer::GetBlendState(wi::enums::BSTYPE_TRANSPARENT);
 	desc.pt = PrimitiveTopology::TRIANGLELIST;
 	wi::graphics::GetDevice()->CreatePipelineState(&desc, &imguiPSO);
 

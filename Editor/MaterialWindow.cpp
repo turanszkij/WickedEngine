@@ -156,7 +156,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr && args.iValue >= 0)
 		{
-			material->userBlendMode = (wi::BLENDMODE)args.iValue;
+			material->userBlendMode = (wi::enums::BLENDMODE)args.iValue;
 		}
 		});
 	blendModeComboBox.AddItem("Opaque");

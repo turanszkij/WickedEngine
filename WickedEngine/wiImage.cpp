@@ -10,6 +10,7 @@
 #include <atomic>
 
 using namespace wi::graphics;
+using namespace wi::enums;
 
 namespace wi::image
 {

@@ -556,7 +556,7 @@ void TestsRenderer::RunSpriteTest()
 	params.pivot = XMFLOAT2(0.5f, 0.5f);
 	params.quality = wi::image::QUALITY_LINEAR;
 	params.sampleFlag = wi::image::SAMPLEMODE_CLAMP;
-	params.blendFlag = wi::BLENDMODE_ALPHA;
+	params.blendFlag = wi::enums::BLENDMODE_ALPHA;
 
 	// Info:
 	{

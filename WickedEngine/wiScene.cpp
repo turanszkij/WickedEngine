@@ -17,6 +17,7 @@
 #include <functional>
 
 using namespace wi::ecs;
+using namespace wi::enums;
 using namespace wi::graphics;
 using namespace wi::primitive;
 

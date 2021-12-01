@@ -265,7 +265,7 @@ namespace wi::lua
 		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 0)
 		{
-			params.blendFlag = (BLENDMODE)wi::lua::SGetInt(L, 1);
+			params.blendFlag = (wi::enums::BLENDMODE)wi::lua::SGetInt(L, 1);
 		}
 		else
 		{

@@ -17,6 +17,7 @@
 
 using namespace wi::graphics;
 using namespace wi::scene;
+using namespace wi::enums;
 
 namespace wi
 {
@@ -716,7 +717,7 @@ namespace wi
 		}
 		else
 		{
-			const BLENDMODE blendMode = material.GetBlendMode();
+			const wi::enums::BLENDMODE blendMode = material.GetBlendMode();
 			device->BindPipelineState(&PSO[blendMode][shaderType], cmd);
 
 			device->BindShadingRate(material.shadingRate, cmd);

@@ -30,12 +30,12 @@ namespace Translator_Internal
 		{
 			PipelineStateDesc desc;
 
-			desc.vs = wi::renderer::GetShader(wi::VSTYPE_VERTEXCOLOR);
-			desc.ps = wi::renderer::GetShader(wi::PSTYPE_VERTEXCOLOR);
-			desc.il = wi::renderer::GetInputLayout(wi::ILTYPE_VERTEXCOLOR);
-			desc.dss = wi::renderer::GetDepthStencilState(wi::DSSTYPE_DEPTHDISABLED);
-			desc.rs = wi::renderer::GetRasterizerState(wi::RSTYPE_DOUBLESIDED);
-			desc.bs = wi::renderer::GetBlendState(wi::BSTYPE_ADDITIVE);
+			desc.vs = wi::renderer::GetShader(wi::enums::VSTYPE_VERTEXCOLOR);
+			desc.ps = wi::renderer::GetShader(wi::enums::PSTYPE_VERTEXCOLOR);
+			desc.il = wi::renderer::GetInputLayout(wi::enums::ILTYPE_VERTEXCOLOR);
+			desc.dss = wi::renderer::GetDepthStencilState(wi::enums::DSSTYPE_DEPTHDISABLED);
+			desc.rs = wi::renderer::GetRasterizerState(wi::enums::RSTYPE_DOUBLESIDED);
+			desc.bs = wi::renderer::GetBlendState(wi::enums::BSTYPE_ADDITIVE);
 			desc.pt = PrimitiveTopology::TRIANGLELIST;
 
 			device->CreatePipelineState(&desc, &pso_solidpart);
@@ -44,12 +44,12 @@ namespace Translator_Internal
 		{
 			PipelineStateDesc desc;
 
-			desc.vs = wi::renderer::GetShader(wi::VSTYPE_VERTEXCOLOR);
-			desc.ps = wi::renderer::GetShader(wi::PSTYPE_VERTEXCOLOR);
-			desc.il = wi::renderer::GetInputLayout(wi::ILTYPE_VERTEXCOLOR);
-			desc.dss = wi::renderer::GetDepthStencilState(wi::DSSTYPE_DEPTHDISABLED);
-			desc.rs = wi::renderer::GetRasterizerState(wi::RSTYPE_WIRE_DOUBLESIDED_SMOOTH);
-			desc.bs = wi::renderer::GetBlendState(wi::BSTYPE_TRANSPARENT);
+			desc.vs = wi::renderer::GetShader(wi::enums::VSTYPE_VERTEXCOLOR);
+			desc.ps = wi::renderer::GetShader(wi::enums::PSTYPE_VERTEXCOLOR);
+			desc.il = wi::renderer::GetInputLayout(wi::enums::ILTYPE_VERTEXCOLOR);
+			desc.dss = wi::renderer::GetDepthStencilState(wi::enums::DSSTYPE_DEPTHDISABLED);
+			desc.rs = wi::renderer::GetRasterizerState(wi::enums::RSTYPE_WIRE_DOUBLESIDED_SMOOTH);
+			desc.bs = wi::renderer::GetBlendState(wi::enums::BSTYPE_TRANSPARENT);
 			desc.pt = PrimitiveTopology::LINELIST;
 
 			device->CreatePipelineState(&desc, &pso_wirepart);

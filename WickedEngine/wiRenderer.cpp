@@ -31,6 +31,7 @@
 
 using namespace wi::primitive;
 using namespace wi::graphics;
+using namespace wi::enums;
 using namespace wi::scene;
 using namespace wi::ecs;
 
@@ -260,9 +261,9 @@ struct RenderQueue
 };
 
 
-const Sampler* GetSampler(int slot)
+const Sampler* GetSampler(SAMPLERTYPES id)
 {
-	return &samplers[slot];
+	return &samplers[id];
 }
 const Shader* GetShader(SHADERTYPE id)
 {
@@ -2000,35 +2001,6 @@ void SetUpStates()
 	bd.independent_blend_enable = false,
 		bd.alpha_to_coverage_enable = false;
 	blendStates[BSTYPE_COLORWRITEDISABLE] = bd;
-
-
-	bd.render_target[0].src_blend = Blend::INV_SRC_COLOR;
-	bd.render_target[0].dest_blend = Blend::INV_DEST_COLOR;
-	bd.render_target[0].blend_op = BlendOp::ADD;
-	bd.render_target[0].src_blend_alpha = Blend::ONE;
-	bd.render_target[0].dest_blend_alpha = Blend::ONE;
-	bd.render_target[0].blend_op_alpha = BlendOp::ADD;
-	bd.render_target[0].blend_enable = true;
-	bd.render_target[0].render_target_write_mask = ColorWrite::ENABLE_ALL;
-	bd.alpha_to_coverage_enable = false;
-	bd.independent_blend_enable = false;
-	blendStates[BSTYPE_INVERSE] = bd;
-
-
-	bd.render_target[0].src_blend = Blend::SRC_ALPHA;
-	bd.render_target[0].dest_blend = Blend::INV_SRC_ALPHA;
-	bd.render_target[0].blend_op = BlendOp::ADD;
-	bd.render_target[0].src_blend_alpha = Blend::ONE;
-	bd.render_target[0].dest_blend_alpha = Blend::ONE;
-	bd.render_target[0].blend_op_alpha = BlendOp::ADD;
-	bd.render_target[0].blend_enable = true;
-	bd.render_target[0].render_target_write_mask = ColorWrite::ENABLE_RED | ColorWrite::ENABLE_GREEN | ColorWrite::ENABLE_BLUE;
-	bd.render_target[1] = bd.render_target[0];
-	bd.render_target[1].render_target_write_mask = ColorWrite::ENABLE_RED | ColorWrite::ENABLE_GREEN;
-	bd.alpha_to_coverage_enable = false;
-	bd.independent_blend_enable = true;
-	blendStates[BSTYPE_DECAL] = bd;
-
 
 	bd.render_target[0].src_blend = Blend::DEST_COLOR;
 	bd.render_target[0].dest_blend = Blend::ZERO;

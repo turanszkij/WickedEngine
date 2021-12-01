@@ -1,6 +1,6 @@
 #pragma once
 
-namespace wi
+namespace wi::enums
 {
 	// Common blendmodes used across multiple systems
 	enum BLENDMODE
@@ -11,13 +11,6 @@ namespace wi
 		BLENDMODE_ADDITIVE,
 		BLENDMODE_MULTIPLY,
 		BLENDMODE_COUNT
-	};
-
-	enum GBUFFER
-	{
-		GBUFFER_PRIMITIVEID,
-		GBUFFER_VELOCITY,
-		GBUFFER_COUNT
 	};
 
 	// Do not alter order or value because it is bound to lua manually!
@@ -403,11 +396,9 @@ namespace wi
 	{
 		BSTYPE_OPAQUE,
 		BSTYPE_TRANSPARENT,
-		BSTYPE_INVERSE,
 		BSTYPE_ADDITIVE,
 		BSTYPE_PREMULTIPLIED,
 		BSTYPE_COLORWRITEDISABLE,
-		BSTYPE_DECAL,
 		BSTYPE_MULTIPLY,
 		BSTYPE_TRANSPARENTSHADOW,
 		BSTYPE_COUNT

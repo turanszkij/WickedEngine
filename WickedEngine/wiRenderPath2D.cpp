@@ -317,7 +317,7 @@ namespace wi
 	{
 		wi::image::Params fx;
 		fx.enableFullScreen();
-		fx.blendFlag = BLENDMODE_PREMULTIPLIED;
+		fx.blendFlag = wi::enums::BLENDMODE_PREMULTIPLIED;
 		wi::image::Draw(&render_result, fx, cmd);
 
 		RenderPath::Compose(cmd);

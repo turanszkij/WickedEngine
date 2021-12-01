@@ -6,6 +6,7 @@
 #include "wiProfiler.h"
 
 using namespace wi::graphics;
+using namespace wi::enums;
 
 namespace wi
 {
@@ -53,17 +54,17 @@ void RenderPath3D::ResizeBuffers()
 
 		desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 		desc.format = Format::R32G32_UINT;
-		device->CreateTexture(&desc, nullptr, &rtGbuffer[GBUFFER_PRIMITIVEID]);
-		device->SetName(&rtGbuffer[GBUFFER_PRIMITIVEID], "rtGbuffer[GBUFFER_PRIMITIVEID]");
+		device->CreateTexture(&desc, nullptr, &rtGbuffer[wi::renderer::GBUFFER_PRIMITIVEID]);
+		device->SetName(&rtGbuffer[wi::renderer::GBUFFER_PRIMITIVEID], "rtGbuffer[GBUFFER_PRIMITIVEID]");
 
 		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 		desc.format = Format::R16G16_FLOAT;
-		device->CreateTexture(&desc, nullptr, &rtGbuffer[GBUFFER_VELOCITY]);
-		device->SetName(&rtGbuffer[GBUFFER_VELOCITY], "rtGbuffer[GBUFFER_VELOCITY]");
+		device->CreateTexture(&desc, nullptr, &rtGbuffer[wi::renderer::GBUFFER_VELOCITY]);
+		device->SetName(&rtGbuffer[wi::renderer::GBUFFER_VELOCITY], "rtGbuffer[GBUFFER_VELOCITY]");
 
 		if (getMSAASampleCount() > 1)
 		{
-			desc = rtGbuffer[GBUFFER_PRIMITIVEID].desc;
+			desc = rtGbuffer[wi::renderer::GBUFFER_PRIMITIVEID].desc;
 			desc.sample_count = getMSAASampleCount();
 			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
 
@@ -72,7 +73,7 @@ void RenderPath3D::ResizeBuffers()
 		}
 		else
 		{
-			rtPrimitiveID_render = rtGbuffer[GBUFFER_PRIMITIVEID];
+			rtPrimitiveID_render = rtGbuffer[wi::renderer::GBUFFER_PRIMITIVEID];
 		}
 	}
 	{
@@ -615,8 +616,8 @@ void RenderPath3D::Update(float dt)
 	camera->height = (float)internalResolution.y;
 	camera->texture_depth_index = device->GetDescriptorIndex(&depthBuffer_Copy, SubresourceType::SRV);
 	camera->texture_lineardepth_index = device->GetDescriptorIndex(&rtLinearDepth, SubresourceType::SRV);
-	camera->texture_gbuffer0_index = device->GetDescriptorIndex(&rtGbuffer[GBUFFER_PRIMITIVEID], SubresourceType::SRV);
-	camera->texture_gbuffer1_index = device->GetDescriptorIndex(&rtGbuffer[GBUFFER_VELOCITY], SubresourceType::SRV);
+	camera->texture_gbuffer0_index = device->GetDescriptorIndex(&rtGbuffer[wi::renderer::GBUFFER_PRIMITIVEID], SubresourceType::SRV);
+	camera->texture_gbuffer1_index = device->GetDescriptorIndex(&rtGbuffer[wi::renderer::GBUFFER_VELOCITY], SubresourceType::SRV);
 	camera->buffer_entitytiles_opaque_index = device->GetDescriptorIndex(&tiledLightResources.entityTiles_Opaque, SubresourceType::SRV);
 	camera->buffer_entitytiles_transparent_index = device->GetDescriptorIndex(&tiledLightResources.entityTiles_Transparent, SubresourceType::SRV);
 	camera->texture_reflection_index = device->GetDescriptorIndex(&rtReflection, SubresourceType::SRV);

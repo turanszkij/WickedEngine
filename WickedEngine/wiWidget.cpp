@@ -26,12 +26,12 @@ namespace widget_internal
 	void LoadShaders()
 	{
 		PipelineStateDesc desc;
-		desc.vs = wi::renderer::GetShader(VSTYPE_VERTEXCOLOR);
-		desc.ps = wi::renderer::GetShader(PSTYPE_VERTEXCOLOR);
-		desc.il = wi::renderer::GetInputLayout(ILTYPE_VERTEXCOLOR);
-		desc.dss = wi::renderer::GetDepthStencilState(DSSTYPE_DEPTHDISABLED);
-		desc.bs = wi::renderer::GetBlendState(BSTYPE_TRANSPARENT);
-		desc.rs = wi::renderer::GetRasterizerState(RSTYPE_DOUBLESIDED);
+		desc.vs = wi::renderer::GetShader(wi::enums::VSTYPE_VERTEXCOLOR);
+		desc.ps = wi::renderer::GetShader(wi::enums::PSTYPE_VERTEXCOLOR);
+		desc.il = wi::renderer::GetInputLayout(wi::enums::ILTYPE_VERTEXCOLOR);
+		desc.dss = wi::renderer::GetDepthStencilState(wi::enums::DSSTYPE_DEPTHDISABLED);
+		desc.bs = wi::renderer::GetBlendState(wi::enums::BSTYPE_TRANSPARENT);
+		desc.rs = wi::renderer::GetRasterizerState(wi::enums::RSTYPE_DOUBLESIDED);
 		desc.pt = PrimitiveTopology::TRIANGLESTRIP;
 		wi::graphics::GetDevice()->CreatePipelineState(&desc, &PSO_colored);
 	}
@@ -57,7 +57,7 @@ Widget::Widget()
 
 	for (int i = IDLE; i < WIDGETSTATE_COUNT; ++i)
 	{
-		sprites[i].params.blendFlag = BLENDMODE_OPAQUE;
+		sprites[i].params.blendFlag = wi::enums::BLENDMODE_OPAQUE;
 		sprites[i].params.enableBackground();
 	}
 }

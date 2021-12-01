@@ -69,7 +69,7 @@ namespace wi
 	public:
 		wi::graphics::Texture rtMain;
 		wi::graphics::Texture rtMain_render; // can be MSAA
-		wi::graphics::Texture rtGbuffer[GBUFFER_COUNT];
+		wi::graphics::Texture rtGbuffer[wi::renderer::GBUFFER_COUNT];
 		wi::graphics::Texture rtPrimitiveID_render; // can be MSAA
 		wi::graphics::Texture rtReflection; // contains the scene rendered for planar reflections
 		wi::graphics::Texture rtSSR; // standard screen-space reflection results

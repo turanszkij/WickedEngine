@@ -141,7 +141,7 @@ void EditorLoadingScreen::Load()
 	sprite.params.siz = XMFLOAT2(128, 128);
 	sprite.params.pivot = XMFLOAT2(0.5f, 1.0f);
 	sprite.params.quality = wi::image::QUALITY_LINEAR;
-	sprite.params.blendFlag = wi::BLENDMODE_ALPHA;
+	sprite.params.blendFlag = wi::enums::BLENDMODE_ALPHA;
 	AddSprite(&sprite);
 
 	LoadingScreen::Load();
@@ -1410,7 +1410,7 @@ void EditorComponent::Update(float dt)
 				const ObjectComponent* object = scene.objects.GetComponent(hovered.entity);
 				if (object != nullptr)
 				{	
-					if (translator.selected.empty() && object->GetRenderTypes() & wi::RENDERTYPE_WATER)
+					if (translator.selected.empty() && object->GetRenderTypes() & wi::enums::RENDERTYPE_WATER)
 					{
 						if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
 						{

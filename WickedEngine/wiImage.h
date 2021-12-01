@@ -83,7 +83,7 @@ namespace wi::image
 		uint8_t stencilRef = 0;
 		STENCILMODE stencilComp = STENCILMODE_DISABLED;
 		STENCILREFMODE stencilRefMode = STENCILREFMODE_ALL;
-		BLENDMODE blendFlag = BLENDMODE_ALPHA;
+		wi::enums::BLENDMODE blendFlag = wi::enums::BLENDMODE_ALPHA;
 		SAMPLEMODE sampleFlag = SAMPLEMODE_MIRROR;
 		QUALITY quality = QUALITY_LINEAR;
 
