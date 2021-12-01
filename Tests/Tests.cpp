@@ -230,7 +230,7 @@ void TestsRenderer::Load()
 			AddFont(&font);
 
 			wi::input::ControllerFeedback feedback;
-			feedback.led_color.rgba = wi::random::getRandom(0xFFFFFF);
+			feedback.led_color.rgba = wi::random::GetRandom(0xFFFFFF);
 			feedback.vibration_left = 0.9f;
 			wi::input::SetControllerFeedback(feedback, 0);
 		}

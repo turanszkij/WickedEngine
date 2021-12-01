@@ -45,8 +45,8 @@ namespace wi::initializer
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::audio::Initialize(); });
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::network::Initialize(); });
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::texturehelper::Initialize(); });
-		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::scene::HairParticleSystem::Initialize(); });
-		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::scene::EmittedParticleSystem::Initialize(); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::HairParticleSystem::Initialize(); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::EmittedParticleSystem::Initialize(); });
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::Ocean::Initialize(); });
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::gpusortlib::Initialize(); });
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::GPUBVH::Initialize(); });

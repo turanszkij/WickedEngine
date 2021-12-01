@@ -15,7 +15,7 @@ public:
 
 	void UpdateData();
 
-	wi::scene::EmittedParticleSystem* GetEmitter();
+	wi::EmittedParticleSystem* GetEmitter();
 
 	wi::widget::TextInputField emitterNameField;
 	wi::widget::Button addButton;

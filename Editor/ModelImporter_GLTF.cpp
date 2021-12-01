@@ -101,7 +101,7 @@ namespace tinygltf
 			std::string ss;
 			do {
 				ss.clear();
-				ss += "gltfimport_" + std::to_string(wi::random::getRandom(std::numeric_limits<int>::max())) + ".png";
+				ss += "gltfimport_" + std::to_string(wi::random::GetRandom(std::numeric_limits<int>::max())) + ".png";
 			} while (wi::resource_manager::Contains(ss)); // this is to avoid overwriting an existing imported image
 			image->uri = ss;
 		}

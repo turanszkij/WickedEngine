@@ -4,7 +4,6 @@
 #include "wiEnums.h"
 #include "wiMath.h"
 #include "wiECS.h"
-#include "wiScene.h"
 #include "wiIntersect.h"
 #include "wiVector.h"
 #include "wiScene_Decl.h"
@@ -16,7 +15,7 @@ namespace wi
 	class Archive;
 }
 
-namespace wi::scene
+namespace wi
 {
 	class HairParticleSystem
 	{
@@ -35,9 +34,23 @@ namespace wi::scene
 
 		wi::graphics::RaytracingAccelerationStructure BLAS;
 
-		void UpdateCPU(const TransformComponent& transform, const MeshComponent& mesh, float dt);
-		void UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex, const MeshComponent& mesh, const MaterialComponent& material, wi::graphics::CommandList cmd) const;
-		void Draw(const MaterialComponent& material, RENDERPASS renderPass, wi::graphics::CommandList cmd) const;
+		void UpdateCPU(
+			const wi::scene::TransformComponent& transform,
+			const wi::scene::MeshComponent& mesh,
+			float dt
+		);
+		void UpdateGPU(
+			uint32_t instanceIndex,
+			uint32_t materialIndex,
+			const wi::scene::MeshComponent& mesh,
+			const wi::scene::MaterialComponent& material,
+			wi::graphics::CommandList cmd
+		) const;
+		void Draw(
+			const wi::scene::MaterialComponent& material,
+			RENDERPASS renderPass,
+			wi::graphics::CommandList cmd
+		) const;
 
 		enum FLAGS
 		{

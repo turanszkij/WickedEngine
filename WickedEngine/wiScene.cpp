@@ -3825,7 +3825,7 @@ namespace wi::scene
 		img.anim.scaleX = 0.2f;
 		img.anim.scaleY = 0.2f;
 		img.params.pos = pos;
-		img.params.rotation = (wi::random::getRandom(0, 1000) * 0.001f) * 2 * 3.1415f;
+		img.params.rotation = (wi::random::GetRandom(0, 1000) * 0.001f) * 2 * 3.1415f;
 		img.params.siz = XMFLOAT2(1, 1);
 		img.params.quality = wi::image::QUALITY_ANISOTROPIC;
 		img.params.pivot = XMFLOAT2(0.5f, 0.5f);

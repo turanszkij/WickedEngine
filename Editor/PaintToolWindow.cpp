@@ -731,7 +731,7 @@ void PaintToolWindow::Update(float dt)
 	case MODE_HAIRPARTICLE_REMOVE_TRIANGLE:
 	case MODE_HAIRPARTICLE_LENGTH:
 	{
-		wi::scene::HairParticleSystem* hair = scene.hairs.GetComponent(entity);
+		wi::HairParticleSystem* hair = scene.hairs.GetComponent(entity);
 		if (hair == nullptr || hair->meshID == INVALID_ENTITY)
 			break;
 
@@ -795,7 +795,7 @@ void PaintToolWindow::Update(float dt)
 						}
 						break;
 					}
-					hair->_flags |= wi::scene::HairParticleSystem::REBUILD_BUFFERS;
+					hair->_flags |= wi::HairParticleSystem::REBUILD_BUFFERS;
 				}
 			}
 		}
@@ -1030,7 +1030,7 @@ void PaintToolWindow::RecordHistory(bool start, CommandList cmd)
 	case PaintToolWindow::MODE_HAIRPARTICLE_REMOVE_TRIANGLE:
 	case PaintToolWindow::MODE_HAIRPARTICLE_LENGTH:
 	{
-		wi::scene::HairParticleSystem* hair = scene.hairs.GetComponent(entity);
+		wi::HairParticleSystem* hair = scene.hairs.GetComponent(entity);
 		if (hair == nullptr)
 			break;
 
@@ -1209,13 +1209,13 @@ void PaintToolWindow::ConsumeHistoryOperation(wi::Archive& archive, bool undo)
 	case PaintToolWindow::MODE_HAIRPARTICLE_REMOVE_TRIANGLE:
 	case PaintToolWindow::MODE_HAIRPARTICLE_LENGTH:
 	{
-		wi::scene::HairParticleSystem* hair = scene.hairs.GetComponent(entity);
+		wi::HairParticleSystem* hair = scene.hairs.GetComponent(entity);
 		if (hair == nullptr)
 			break;
 
-		wi::scene::HairParticleSystem undo_hair;
+		wi::HairParticleSystem undo_hair;
 		archive >> undo_hair.vertex_lengths;
-		wi::scene::HairParticleSystem redo_hair;
+		wi::HairParticleSystem redo_hair;
 		archive >> redo_hair.vertex_lengths;
 
 		if (undo)
@@ -1227,7 +1227,7 @@ void PaintToolWindow::ConsumeHistoryOperation(wi::Archive& archive, bool undo)
 			hair->vertex_lengths = redo_hair.vertex_lengths;
 		}
 
-		hair->_flags |= wi::scene::HairParticleSystem::REBUILD_BUFFERS;
+		hair->_flags |= wi::HairParticleSystem::REBUILD_BUFFERS;
 	}
 	break;
 	default:

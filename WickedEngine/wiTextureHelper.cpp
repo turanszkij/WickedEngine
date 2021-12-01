@@ -39,10 +39,10 @@ namespace wi::texturehelper
 			uint8_t data[64 * 64 * 4];
 			for (int i = 0; i < arraysize(data); i += 4)
 			{
-				data[i] = wi::random::getRandom(0, 255);
-				data[i + 1] = wi::random::getRandom(0, 255);
-				data[i + 2] = wi::random::getRandom(0, 255);
-				data[i + 3] = wi::random::getRandom(0, 255);
+				data[i] = wi::random::GetRandom(0, 255);
+				data[i + 1] = wi::random::GetRandom(0, 255);
+				data[i + 2] = wi::random::GetRandom(0, 255);
+				data[i + 3] = wi::random::GetRandom(0, 255);
 			}
 
 			CreateTexture(helperTextures[HELPERTEXTURE_RANDOM64X64], data, 64, 64);

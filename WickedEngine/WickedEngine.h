@@ -122,8 +122,8 @@ using MainComponent = wi::Application;
 using wiFontParams = wi::font::Params;
 using wiImageParams = wi::image::Params;
 using wiGPUBVH = wi::GPUBVH;
-using wiEmittedParticle = wi::scene::EmittedParticleSystem;
-using wiHairParticle = wi::scene::HairParticleSystem;
+using wiEmittedParticle = wi::EmittedParticleSystem;
+using wiHairParticle = wi::HairParticleSystem;
 using wiOcean = wi::Ocean;
 using wiSprite = wi::Sprite;
 using wiSpriteFont = wi::SpriteFont;
@@ -151,6 +151,7 @@ using wi::image::STENCILMODE;
 using wi::image::STENCILREFMODE;
 using wi::image::SAMPLEMODE;
 using wi::image::QUALITY;
+using wi::font::Alignment;
 
 #endif // WICKEDENGINE_BACKWARDS_COMPATIBILITY_0_59_11
 

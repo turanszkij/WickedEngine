@@ -8,14 +8,14 @@ namespace wi::shadercompiler
 {
 	void Initialize();
 
-	enum FLAGS
+	enum class Flags
 	{
-		FLAG_NONE = 0,
-		FLAG_DISABLE_OPTIMIZATION = 1 << 0,
+		NONE = 0,
+		DISABLE_OPTIMIZATION = 1 << 0,
 	};
 	struct CompilerInput
 	{
-		uint64_t flags = FLAG_NONE;
+		Flags flags = Flags::NONE;
 		wi::graphics::ShaderFormat format = wi::graphics::ShaderFormat::NONE;
 		wi::graphics::ShaderStage stage = wi::graphics::ShaderStage::Count;
 		// if the shader relies on a higher shader model feature, it must be declared here.
@@ -46,3 +46,8 @@ namespace wi::shadercompiler
 	size_t GetRegisteredShaderCount();
 	bool CheckRegisteredShadersOutdated();
 }
+
+template<>
+struct enable_bitmask_operators<wi::shadercompiler::Flags> {
+	static const bool enable = true;
+};

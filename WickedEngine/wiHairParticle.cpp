@@ -13,8 +13,9 @@
 #include "wiTimer.h"
 
 using namespace wi::graphics;
+using namespace wi::scene;
 
-namespace wi::scene
+namespace wi
 {
 	static Shader vs;
 	static Shader ps_prepass;
@@ -559,6 +560,6 @@ namespace wi::scene
 		static wi::event::Handle handle = wi::event::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { HairParticleSystem_Internal::LoadShaders(); });
 		HairParticleSystem_Internal::LoadShaders();
 
-		wi::backlog::post("wi::scene::HairParticleSystem Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
+		wi::backlog::post("wi::HairParticleSystem Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
 }

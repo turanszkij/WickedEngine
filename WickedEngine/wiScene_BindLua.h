@@ -233,13 +233,13 @@ namespace wi::lua::scene
 	{
 	public:
 		bool owning = false;
-		wi::scene::EmittedParticleSystem* component = nullptr;
+		wi::EmittedParticleSystem* component = nullptr;
 
 		static const char className[];
 		static Luna<EmitterComponent_BindLua>::FunctionType methods[];
 		static Luna<EmitterComponent_BindLua>::PropertyType properties[];
 
-		EmitterComponent_BindLua(wi::scene::EmittedParticleSystem* component) :component(component) {}
+		EmitterComponent_BindLua(wi::EmittedParticleSystem* component) :component(component) {}
 		EmitterComponent_BindLua(lua_State *L);
 		~EmitterComponent_BindLua();
 

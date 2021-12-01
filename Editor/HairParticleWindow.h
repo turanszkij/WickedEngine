@@ -15,7 +15,7 @@ public:
 
 	void UpdateData();
 
-	wi::scene::HairParticleSystem* GetHair();
+	wi::HairParticleSystem* GetHair();
 
 	wi::widget::Button addButton;
 	wi::widget::ComboBox	meshComboBox;

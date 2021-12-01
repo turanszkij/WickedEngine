@@ -714,7 +714,7 @@ int Scene_BindLua::Component_GetEmitter(lua_State* L)
 	{
 		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
 
-		wi::scene::EmittedParticleSystem* component = scene->emitters.GetComponent(entity);
+		wi::EmittedParticleSystem* component = scene->emitters.GetComponent(entity);
 		if (component == nullptr)
 		{
 			return 0;
@@ -1952,7 +1952,7 @@ Luna<EmitterComponent_BindLua>::PropertyType EmitterComponent_BindLua::propertie
 EmitterComponent_BindLua::EmitterComponent_BindLua(lua_State *L)
 {
 	owning = true;
-	component = new wi::scene::EmittedParticleSystem;
+	component = new wi::EmittedParticleSystem;
 }
 EmitterComponent_BindLua::~EmitterComponent_BindLua()
 {

@@ -15,7 +15,7 @@ namespace wi
 	class Archive;
 }
 
-namespace wi::scene
+namespace wi
 {
 	class EmittedParticleSystem
 	{
@@ -65,13 +65,13 @@ namespace wi::scene
 		uint32_t MAX_PARTICLES = 1000;
 
 	public:
-		void UpdateCPU(const TransformComponent& transform, float dt);
+		void UpdateCPU(const wi::scene::TransformComponent& transform, float dt);
 		void Burst(int num);
 		void Restart();
 
 		// Must have a transform and material component, but mesh is optional
-		void UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex, const TransformComponent& transform, const MeshComponent* mesh, wi::graphics::CommandList cmd) const;
-		void Draw(const MaterialComponent& material, wi::graphics::CommandList cmd) const;
+		void UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex, const wi::scene::TransformComponent& transform, const wi::scene::MeshComponent* mesh, wi::graphics::CommandList cmd) const;
+		void Draw(const wi::scene::MaterialComponent& material, wi::graphics::CommandList cmd) const;
 
 		ParticleCounters GetStatistics() { return statistics; }
 

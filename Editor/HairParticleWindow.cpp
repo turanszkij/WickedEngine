@@ -251,7 +251,7 @@ void HairParticleWindow::SetEntity(Entity entity)
 	addButton.SetEnabled(true);
 }
 
-wi::scene::HairParticleSystem* HairParticleWindow::GetHair()
+wi::HairParticleSystem* HairParticleWindow::GetHair()
 {
 	if (entity == INVALID_ENTITY)
 	{
@@ -259,7 +259,7 @@ wi::scene::HairParticleSystem* HairParticleWindow::GetHair()
 	}
 
 	Scene& scene = wi::scene::GetScene();
-	wi::scene::HairParticleSystem* hair = scene.hairs.GetComponent(entity);
+	wi::HairParticleSystem* hair = scene.hairs.GetComponent(entity);
 
 	return hair;
 }

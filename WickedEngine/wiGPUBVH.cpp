@@ -47,7 +47,7 @@ namespace wi
 		}
 		for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
 		{
-			const wi::scene::HairParticleSystem& hair = scene.hairs[i];
+			const wi::HairParticleSystem& hair = scene.hairs[i];
 
 			if (hair.meshID != INVALID_ENTITY)
 			{
@@ -56,7 +56,7 @@ namespace wi
 		}
 		for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
 		{
-			const wi::scene::EmittedParticleSystem& emitter = scene.emitters[i];
+			const wi::EmittedParticleSystem& emitter = scene.emitters[i];
 			totalTriangles += emitter.GetMaxParticleCount() * 2;
 		}
 
@@ -191,7 +191,7 @@ namespace wi
 
 			for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
 			{
-				const wi::scene::HairParticleSystem& hair = scene.hairs[i];
+				const wi::HairParticleSystem& hair = scene.hairs[i];
 
 				if (hair.meshID != INVALID_ENTITY)
 				{
@@ -215,7 +215,7 @@ namespace wi
 
 			for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
 			{
-				const wi::scene::EmittedParticleSystem& emitter = scene.emitters[i];
+				const wi::EmittedParticleSystem& emitter = scene.emitters[i];
 
 				if (emitter.GetMaxParticleCount() > 0)
 				{

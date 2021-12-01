@@ -66,15 +66,15 @@ namespace wi
 				{
 					for (int i = 0; i < 4; ++i)
 					{
-						corner_angles[i] = wi::random::getRandom(0, 1000) / 1000.0f * XM_2PI;
-						corner_speeds[i] = wi::random::getRandom(500, 1000) / 1000.0f;
-						if (wi::random::getRandom(0, 1) == 0)
+						corner_angles[i] = wi::random::GetRandom(0, 1000) / 1000.0f * XM_2PI;
+						corner_speeds[i] = wi::random::GetRandom(500, 1000) / 1000.0f;
+						if (wi::random::GetRandom(0, 1) == 0)
 						{
 							corner_speeds[i] *= -1;
 						}
-						corner_angles2[i] = wi::random::getRandom(0, 1000) / 1000.0f * XM_2PI;
-						corner_speeds2[i] = wi::random::getRandom(500, 1000) / 1000.0f;
-						if (wi::random::getRandom(0, 1) == 0)
+						corner_angles2[i] = wi::random::GetRandom(0, 1000) / 1000.0f * XM_2PI;
+						corner_speeds2[i] = wi::random::GetRandom(500, 1000) / 1000.0f;
+						if (wi::random::GetRandom(0, 1) == 0)
 						{
 							corner_speeds2[i] *= -1;
 						}

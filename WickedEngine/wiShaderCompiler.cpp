@@ -29,9 +29,7 @@
 #include <d3dcompiler.h>
 #endif // SHADERCOMPILER_ENABLED_D3DCOMPILER
 
-using wi::graphics::ShaderFormat;
-using wi::graphics::ShaderStage;
-using wi::graphics::ShaderModel;
+using namespace wi::graphics;
 
 namespace wi::shadercompiler
 {
@@ -67,7 +65,7 @@ namespace wi::shadercompiler
 			//L"-O0", // Optimization Level 0
 		};
 
-		if (input.flags & FLAG_DISABLE_OPTIMIZATION)
+		if (has_flag(input.flags, Flags::DISABLE_OPTIMIZATION))
 		{
 			args.push_back(L"-Od");
 		}
@@ -479,27 +477,27 @@ namespace wi::shadercompiler
 		switch (input.stage)
 		{
 		default:
-		case wi::graphics::MS:
-		case wi::graphics::AS:
-		case wi::graphics::LIB:
+		case ShaderStage::MS:
+		case ShaderStage::AS:
+		case ShaderStage::LIB:
 			// not applicable
 			return;
-		case wi::graphics::VS:
+		case ShaderStage::VS:
 			target = "vs_5_0";
 			break;
-		case wi::graphics::HS:
+		case ShaderStage::HS:
 			target = "hs_5_0";
 			break;
-		case wi::graphics::DS:
+		case ShaderStage::DS:
 			target = "ds_5_0";
 			break;
-		case wi::graphics::GS:
+		case ShaderStage::GS:
 			target = "gs_5_0";
 			break;
-		case wi::graphics::PS:
+		case ShaderStage::PS:
 			target = "ps_5_0";
 			break;
-		case wi::graphics::CS:
+		case ShaderStage::CS:
 			target = "cs_5_0";
 			break;
 		}
@@ -652,7 +650,7 @@ namespace wi::shadercompiler
 #endif // SHADERCOMPILER_ENABLED_DXCOMPILER
 
 #ifdef SHADERCOMPILER_ENABLED_D3DCOMPILER
-		case wi::graphics::SHADERFORMAT_HLSL5:
+		case ShaderFormat::HLSL5:
 			Compile_D3DCompiler(input, output);
 			break;
 #endif // SHADERCOMPILER_ENABLED_D3DCOMPILER

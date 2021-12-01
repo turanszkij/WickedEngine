@@ -92,7 +92,7 @@ void EmitterWindow::Create(EditorComponent* editor)
 		auto emitter = GetEmitter();
 		if (emitter != nullptr)
 		{
-			emitter->shaderType = (wi::scene::EmittedParticleSystem::PARTICLESHADERTYPE)args.iValue;
+			emitter->shaderType = (wi::EmittedParticleSystem::PARTICLESHADERTYPE)args.iValue;
 		}
 	});
 	shaderTypeComboBox.SetEnabled(false);
@@ -715,7 +715,7 @@ void EmitterWindow::SetEntity(Entity entity)
 
 }
 
-wi::scene::EmittedParticleSystem* EmitterWindow::GetEmitter()
+wi::EmittedParticleSystem* EmitterWindow::GetEmitter()
 {
 	if (entity == INVALID_ENTITY)
 	{
@@ -723,7 +723,7 @@ wi::scene::EmittedParticleSystem* EmitterWindow::GetEmitter()
 	}
 
 	Scene& scene = wi::scene::GetScene();
-	wi::scene::EmittedParticleSystem* emitter = scene.emitters.GetComponent(entity);
+	wi::EmittedParticleSystem* emitter = scene.emitters.GetComponent(entity);
 
 	return emitter;
 }

@@ -26,7 +26,4 @@ namespace wi::scene
 	struct InverseKinematicsComponent;
 	struct SpringComponent;
 	struct Scene;
-
-	class EmittedParticleSystem;
-	class HairParticleSystem;
 }

@@ -2979,7 +2979,7 @@ void UpdateVisibility(Visibility& vis)
 			// Cull emitters:
 			for (size_t i = 0; i < vis.scene->emitters.GetCount(); ++i)
 			{
-				const wi::scene::EmittedParticleSystem& emitter = vis.scene->emitters[i];
+				const wi::EmittedParticleSystem& emitter = vis.scene->emitters[i];
 				if (!(emitter.layerMask & vis.layerMask))
 				{
 					continue;
@@ -2995,7 +2995,7 @@ void UpdateVisibility(Visibility& vis)
 			// Cull hairs:
 			for (size_t i = 0; i < vis.scene->hairs.GetCount(); ++i)
 			{
-				const wi::scene::HairParticleSystem& hair = vis.scene->hairs[i];
+				const wi::HairParticleSystem& hair = vis.scene->hairs[i];
 				if (!(hair.layerMask & vis.layerMask))
 				{
 					continue;
@@ -3713,7 +3713,7 @@ void UpdateRenderData(
 		range = wi::profiler::BeginRangeGPU("HairParticles - Simulate", cmd);
 		for (uint32_t hairIndex : vis.visibleHairs)
 		{
-			const wi::scene::HairParticleSystem& hair = vis.scene->hairs[hairIndex];
+			const wi::HairParticleSystem& hair = vis.scene->hairs[hairIndex];
 			const MeshComponent* mesh = vis.scene->meshes.GetComponent(hair.meshID);
 
 			if (mesh != nullptr)
@@ -3888,7 +3888,7 @@ void UpdateRenderDataAsync(
 		auto range = wi::profiler::BeginRangeGPU("EmittedParticles - Simulate", cmd);
 		for (uint32_t emitterIndex : vis.visibleEmitters)
 		{
-			const wi::scene::EmittedParticleSystem& emitter = vis.scene->emitters[emitterIndex];
+			const wi::EmittedParticleSystem& emitter = vis.scene->emitters[emitterIndex];
 			Entity entity = vis.scene->emitters.GetEntity(emitterIndex);
 			const TransformComponent& transform = *vis.scene->transforms.GetComponent(entity);
 			const MaterialComponent& material = *vis.scene->materials.GetComponent(entity);
@@ -3957,7 +3957,7 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 
 			for (size_t i = 0; i < scene.hairs.GetCount(); ++i)
 			{
-				const wi::scene::HairParticleSystem& hair = scene.hairs[i];
+				const wi::HairParticleSystem& hair = scene.hairs[i];
 
 				if (hair.meshID != INVALID_ENTITY && hair.BLAS.IsValid())
 				{
@@ -3967,7 +3967,7 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 
 			for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
 			{
-				const wi::scene::EmittedParticleSystem& emitter = scene.emitters[i];
+				const wi::EmittedParticleSystem& emitter = scene.emitters[i];
 
 				if (emitter.BLAS.IsValid())
 				{
@@ -4206,7 +4206,7 @@ void DrawSoftParticles(
 	for (size_t i = 0; i < emitterCount; ++i)
 	{
 		const uint32_t emitterIndex = vis.visibleEmitters[i];
-		const wi::scene::EmittedParticleSystem& emitter = vis.scene->emitters[emitterIndex];
+		const wi::EmittedParticleSystem& emitter = vis.scene->emitters[emitterIndex];
 		float distance = wi::math::DistanceEstimated(emitter.center, vis.camera->Eye);
 		emitterSortingHashes[i] = 0;
 		emitterSortingHashes[i] |= (uint32_t)i & 0x0000FFFF;
@@ -4217,15 +4217,15 @@ void DrawSoftParticles(
 	for (size_t i = 0; i < emitterCount; ++i)
 	{
 		const uint32_t emitterIndex = vis.visibleEmitters[emitterSortingHashes[i] & 0x0000FFFF];
-		const wi::scene::EmittedParticleSystem& emitter = vis.scene->emitters[emitterIndex];
+		const wi::EmittedParticleSystem& emitter = vis.scene->emitters[emitterIndex];
 		const Entity entity = vis.scene->emitters.GetEntity(emitterIndex);
 		const MaterialComponent& material = *vis.scene->materials.GetComponent(entity);
 
-		if (distortion && emitter.shaderType == wi::scene::EmittedParticleSystem::SOFT_DISTORTION)
+		if (distortion && emitter.shaderType == wi::EmittedParticleSystem::SOFT_DISTORTION)
 		{
 			emitter.Draw(material, cmd);
 		}
-		else if (!distortion && (emitter.shaderType == wi::scene::EmittedParticleSystem::SOFT || emitter.shaderType == wi::scene::EmittedParticleSystem::SOFT_LIGHTING || emitter.shaderType == wi::scene::EmittedParticleSystem::SIMPLE || IsWireRender()))
+		else if (!distortion && (emitter.shaderType == wi::EmittedParticleSystem::SOFT || emitter.shaderType == wi::EmittedParticleSystem::SOFT_LIGHTING || emitter.shaderType == wi::EmittedParticleSystem::SIMPLE || IsWireRender()))
 		{
 			emitter.Draw(material, cmd);
 		}
@@ -4943,7 +4943,7 @@ void DrawScene(
 		{
 			for (uint32_t hairIndex : vis.visibleHairs)
 			{
-				const wi::scene::HairParticleSystem& hair = vis.scene->hairs[hairIndex];
+				const wi::HairParticleSystem& hair = vis.scene->hairs[hairIndex];
 				Entity entity = vis.scene->hairs.GetEntity(hairIndex);
 				const MaterialComponent& material = *vis.scene->materials.GetComponent(entity);
 
@@ -5833,7 +5833,7 @@ void DrawDebugWorld(
 		MiscCB sb;
 		for (size_t i = 0; i < scene.emitters.GetCount(); ++i)
 		{
-			const wi::scene::EmittedParticleSystem& emitter = scene.emitters[i];
+			const wi::EmittedParticleSystem& emitter = scene.emitters[i];
 			Entity entity = scene.emitters.GetEntity(i);
 			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 			const MeshComponent* mesh = scene.meshes.GetComponent(emitter.meshID);

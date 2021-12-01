@@ -16,8 +16,9 @@
 #include <algorithm>
 
 using namespace wi::graphics;
+using namespace wi::scene;
 
-namespace wi::scene
+namespace wi
 {
 	static Shader vertexShader;
 	static Shader meshShader;
@@ -380,7 +381,7 @@ namespace wi::scene
 			cb.xEmitCount = (uint32_t)emit;
 			cb.xEmitterMeshIndexCount = mesh == nullptr ? 0 : (uint32_t)mesh->indices.size();
 			cb.xEmitterMeshVertexPositionStride = sizeof(MeshComponent::Vertex_POS);
-			cb.xEmitterRandomness = wi::random::getRandom(0, 1000) * 0.001f;
+			cb.xEmitterRandomness = wi::random::GetRandom(0, 1000) * 0.001f;
 			cb.xParticleLifeSpan = life;
 			cb.xParticleLifeSpanRandomness = random_life;
 			cb.xParticleNormalFactor = normal_factor;
@@ -900,7 +901,7 @@ namespace wi::scene
 		static wi::event::Handle handle = wi::event::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { EmittedParticleSystem_Internal::LoadShaders(); });
 		EmittedParticleSystem_Internal::LoadShaders();
 
-		wi::backlog::post("wi::scene::EmittedParticleSystem Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
+		wi::backlog::post("wi::EmittedParticleSystem Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
 
 

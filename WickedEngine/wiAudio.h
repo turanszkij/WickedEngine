@@ -13,6 +13,8 @@ namespace wi::audio
 {
 	void Initialize();
 
+	// SUBMIX_TYPE specifies the playback channel of sound instances
+	//	Do not change the order as this enum can be serialized!
 	enum SUBMIX_TYPE
 	{
 		SUBMIX_TYPE_SOUNDEFFECT,
@@ -24,11 +26,14 @@ namespace wi::audio
 		ENUM_FORCE_UINT32 = 0xFFFFFFFF, // submix type can be serialized
 	};
 
+	// Sound is holding the sound data needed for playback, but it can't be played by itself.
+	//	Use SoundInstance for playback the sound data
 	struct Sound
 	{
 		std::shared_ptr<void> internal_state;
 		inline bool IsValid() const { return internal_state.get() != nullptr; }
 	};
+	// SoundInstance can be used to play back a Sound with specified effects
 	struct SoundInstance
 	{
 		std::shared_ptr<void> internal_state;
@@ -66,6 +71,7 @@ namespace wi::audio
 	void SetSubmixVolume(SUBMIX_TYPE type, float volume);
 	float GetSubmixVolume(SUBMIX_TYPE type);
 
+	// SoundInstance3D can be attached to a SoundInstance for a 3D effect
 	struct SoundInstance3D
 	{
 		XMFLOAT3 listenerPos = XMFLOAT3(0, 0, 0);
@@ -78,8 +84,10 @@ namespace wi::audio
 		XMFLOAT3 emitterVelocity = XMFLOAT3(0, 0, 0);
 		float emitterRadius = 0;
 	};
+	// Call this every frame the listener or the sound instance 3D orientation changes
 	void Update3D(SoundInstance* instance, const SoundInstance3D& instance3D);
 
+	// Reverb effects can be used for 3D sound instances globally
 	enum REVERB_PRESET
 	{
 		REVERB_PRESET_DEFAULT,

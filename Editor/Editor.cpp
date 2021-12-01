@@ -1847,7 +1847,7 @@ void EditorComponent::Render() const
 				wi::renderer::DrawBox(hoverBox, XMFLOAT4(0.5f, 0.5f, 0.5f, 0.5f));
 			}
 
-			const wi::scene::HairParticleSystem* hair = scene.hairs.GetComponent(hovered.entity);
+			const wi::HairParticleSystem* hair = scene.hairs.GetComponent(hovered.entity);
 			if (hair != nullptr)
 			{
 				XMFLOAT4X4 hoverBox;
@@ -1914,7 +1914,7 @@ void EditorComponent::Render() const
 					selectedAABB = AABB::Merge(selectedAABB, aabb);
 				}
 
-				const wi::scene::HairParticleSystem* hair = scene.hairs.GetComponent(picked.entity);
+				const wi::HairParticleSystem* hair = scene.hairs.GetComponent(picked.entity);
 				if (hair != nullptr)
 				{
 					selectedAABB = AABB::Merge(selectedAABB, hair->aabb);
