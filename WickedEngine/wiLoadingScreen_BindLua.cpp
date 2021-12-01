@@ -1,4 +1,4 @@
-#include "LoadingScreen_BindLua.h"
+#include "wiLoadingScreen_BindLua.h"
 
 namespace wi::lua
 {

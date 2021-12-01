@@ -3,18 +3,18 @@
 
 // NOTE:
 // The purpose of this file is to expose all engine features.
-// It should be included in the engine's implementing project not the engine itself!
+// It should be included in the engine's implementing application not the engine itself!
 // It should be included in the precompiled header if available.
 
 #include "CommonInclude.h"
 
 // High-level interface:
-#include "RenderPath.h"
-#include "RenderPath2D.h"
-#include "RenderPath3D.h"
-#include "RenderPath3D_PathTracing.h"
-#include "LoadingScreen.h"
-#include "Application.h"
+#include "wiApplication.h"
+#include "wiRenderPath.h"
+#include "wiRenderPath2D.h"
+#include "wiRenderPath3D.h"
+#include "wiRenderPath3D_PathTracing.h"
+#include "wiLoadingScreen.h"
 
 // Engine-level systems
 #include "wiVersion.h"
@@ -80,14 +80,14 @@
 
 // After version 0.59.11, namespaces were refactored into nested namespaces under the wi:: root namespace.
 // To allow compatibility with older user code, the backwards compatibility definitions are included below.
-// Consider defining the definition below if you don't need backwards compatibility features:
-//#define WICKEDENGINE_NO_BACKWARDS_COMPATIBILITY_0_59_11
-#ifndef WICKEDENGINE_NO_BACKWARDS_COMPATIBILITY_0_59_11
+// Consider defining the definition below if you need backwards compatibility features:
+#define WICKEDENGINE_BACKWARDS_COMPATIBILITY_0_59_11
+#ifdef WICKEDENGINE_BACKWARDS_COMPATIBILITY_0_59_11
 
 using namespace wi;
 using MainComponent = wi::Application;
 
-#endif // WICKEDENGINE_NO_BACKWARDS_COMPATIBILITY_0_59_11
+#endif // WICKEDENGINE_BACKWARDS_COMPATIBILITY_0_59_11
 
 
 

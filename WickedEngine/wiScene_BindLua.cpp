@@ -1,9 +1,8 @@
 #include "wiScene_BindLua.h"
 #include "wiScene.h"
-#include "Vector_BindLua.h"
-#include "Matrix_BindLua.h"
+#include "wiMath_BindLua.h"
 #include "wiEmittedParticle.h"
-#include "Texture_BindLua.h"
+#include "wiTexture_BindLua.h"
 #include "wiIntersect_BindLua.h"
 
 using namespace wi::ecs;

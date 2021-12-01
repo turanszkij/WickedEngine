@@ -1,4 +1,4 @@
-#include "RenderPath3D_PathTracing.h"
+#include "wiRenderPath3D_PathTracing.h"
 #include "wiRenderer.h"
 #include "wiImage.h"
 #include "wiHelper.h"

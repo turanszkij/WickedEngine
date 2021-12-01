@@ -1,5 +1,5 @@
 #include "wiInput_BindLua.h"
-#include "Vector_BindLua.h"
+#include "wiMath_BindLua.h"
 
 namespace wi::lua
 {

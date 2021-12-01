@@ -1,4 +1,4 @@
-#include "Texture_BindLua.h"
+#include "wiTexture_BindLua.h"
 
 using namespace wi::graphics;
 

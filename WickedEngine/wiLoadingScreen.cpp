@@ -1,5 +1,5 @@
-#include "LoadingScreen.h"
-#include "Application.h"
+#include "wiLoadingScreen.h"
+#include "wiApplication.h"
 
 #include <thread>
 

@@ -144,22 +144,19 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)WickedEngine.h">
       <Filter>ENGINE\Common</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Application.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiApplication.h">
       <Filter>ENGINE\High level interface</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Application_BindLua.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiApplication_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Matrix_BindLua.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiSpriteAnim_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)SpriteAnim_BindLua.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiTexture_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Texture_BindLua.h">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Vector_BindLua.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiMath_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiBacklog_BindLua.h">
@@ -933,28 +930,28 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\stb_truetype.h">
       <Filter>UTILITY</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_BindLua.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiRenderPath3D_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath2D_BindLua.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiRenderPath2D_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath_BindLua.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiRenderPath_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)LoadingScreen_BindLua.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiLoadingScreen_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiRenderPath.h">
       <Filter>ENGINE\High level interface</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath2D.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiRenderPath2D.h">
       <Filter>ENGINE\High level interface</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiRenderPath3D.h">
       <Filter>ENGINE\High level interface</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)LoadingScreen.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiLoadingScreen.h">
       <Filter>ENGINE\High level interface</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiJobSystem.h">
@@ -1068,7 +1065,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiCanvas.h">
       <Filter>ENGINE\System</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)RenderPath3D_PathTracing.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiRenderPath3D_PathTracing.h">
       <Filter>ENGINE\High level interface</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\flat_hash_map.hpp">
@@ -1190,22 +1187,19 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiVersion.cpp">
       <Filter>ENGINE</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Application.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiApplication.cpp">
       <Filter>ENGINE\High level interface</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Application_BindLua.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiApplication_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Matrix_BindLua.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiSpriteAnim_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)SpriteAnim_BindLua.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiTexture_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Texture_BindLua.cpp">
-      <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Vector_BindLua.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiMath_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiBacklog_BindLua.cpp">
@@ -1727,28 +1721,28 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiGPUBVH.cpp">
       <Filter>ENGINE\Graphics</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_BindLua.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderPath3D_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath2D_BindLua.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderPath2D_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath_BindLua.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderPath_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)LoadingScreen_BindLua.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiLoadingScreen_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath2D.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderPath2D.cpp">
       <Filter>ENGINE\High level interface</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderPath3D.cpp">
       <Filter>ENGINE\High level interface</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)RenderPath3D_PathTracing.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiRenderPath3D_PathTracing.cpp">
       <Filter>ENGINE\High level interface</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)LoadingScreen.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiLoadingScreen.cpp">
       <Filter>ENGINE\High level interface</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiJobSystem.cpp">

@@ -1,5 +1,5 @@
 #pragma once
-#include "RenderPath2D.h"
+#include "wiRenderPath2D.h"
 #include "wiRenderer.h"
 #include "wiGraphicsDevice.h"
 #include "wiResourceManager.h"

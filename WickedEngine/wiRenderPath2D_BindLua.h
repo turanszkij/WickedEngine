@@ -1,8 +1,8 @@
 #pragma once
 #include "wiLua.h"
 #include "wiLuna.h"
-#include "RenderPath2D.h"
-#include "RenderPath_BindLua.h"
+#include "wiRenderPath2D.h"
+#include "wiRenderPath_BindLua.h"
 
 
 namespace wi::lua

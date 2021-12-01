@@ -1,4 +1,4 @@
-#include "RenderPath2D_BindLua.h"
+#include "wiRenderPath2D_BindLua.h"
 #include "wiSprite_BindLua.h"
 #include "wiSpriteFont_BindLua.h"
 

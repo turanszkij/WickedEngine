@@ -34,20 +34,19 @@ add_subdirectory(LUA)
 add_subdirectory(Utility)
 
 add_library(${TARGET_NAME} STATIC
-	LoadingScreen.cpp
-	LoadingScreen_BindLua.cpp
-	Application.cpp
-	Application_BindLua.cpp
-	Matrix_BindLua.cpp
-	RenderPath_BindLua.cpp
-	RenderPath2D.cpp
-	RenderPath2D_BindLua.cpp
-	RenderPath3D.cpp
-	RenderPath3D_BindLua.cpp
-	RenderPath3D_PathTracing.cpp
-	SpriteAnim_BindLua.cpp
-	Texture_BindLua.cpp
-	Vector_BindLua.cpp
+	wiLoadingScreen.cpp
+	wiLoadingScreen_BindLua.cpp
+	wiApplication.cpp
+	wiApplication_BindLua.cpp
+	wiRenderPath_BindLua.cpp
+	wiRenderPath2D.cpp
+	wiRenderPath2D_BindLua.cpp
+	wiRenderPath3D.cpp
+	wiRenderPath3D_BindLua.cpp
+	wiRenderPath3D_PathTracing.cpp
+	wiSpriteAnim_BindLua.cpp
+	wiTexture_BindLua.cpp
+	wiMath_BindLua.cpp
 	wiArchive.cpp
 	wiAudio.cpp
 	wiAudio_BindLua.cpp

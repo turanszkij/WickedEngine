@@ -1,7 +1,6 @@
 #include "wiSpriteFont_BindLua.h"
 #include "wiFont.h"
-#include "CommonInclude.h"
-#include "Vector_BindLua.h"
+#include "wiMath_BindLua.h"
 
 namespace wi::lua
 {

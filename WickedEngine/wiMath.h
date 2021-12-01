@@ -1,6 +1,9 @@
 #pragma once
 #include "CommonInclude.h"
 
+#include <cmath>
+#include <algorithm>
+
 #if __has_include("DirectXMath.h")
 // In this case, DirectXMath is coming from Windows SDK.
 //	It is better to use this on Windows as some Windows libraries could depend on the same 
@@ -16,9 +19,6 @@
 #include "Utility/DirectXPackedVector.h"
 #include "Utility/DirectXCollision.h"
 #endif
-
-#include <cmath>
-#include <algorithm>
 
 using namespace DirectX;
 using namespace DirectX::PackedVector;

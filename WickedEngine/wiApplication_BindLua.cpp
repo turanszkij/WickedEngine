@@ -1,8 +1,8 @@
-#include "Application_BindLua.h"
-#include "RenderPath_BindLua.h"
-#include "RenderPath3D_BindLua.h"
-#include "RenderPath2D_BindLua.h"
-#include "LoadingScreen_BindLua.h"
+#include "wiApplication_BindLua.h"
+#include "wiRenderPath_BindLua.h"
+#include "wiRenderPath3D_BindLua.h"
+#include "wiRenderPath2D_BindLua.h"
+#include "wiLoadingScreen_BindLua.h"
 #include "wiProfiler.h"
 
 namespace wi::lua

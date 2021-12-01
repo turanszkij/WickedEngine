@@ -1,4 +1,4 @@
-#include "RenderPath_BindLua.h"
+#include "wiRenderPath_BindLua.h"
 
 namespace wi::lua
 {

@@ -1,6 +1,6 @@
 #include "wiSprite_BindLua.h"
 #include "wiImageParams_BindLua.h"
-#include "SpriteAnim_BindLua.h"
+#include "wiSpriteAnim_BindLua.h"
 
 namespace wi::lua
 {

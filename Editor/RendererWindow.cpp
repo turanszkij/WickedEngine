@@ -1,8 +1,6 @@
 #include "stdafx.h"
 #include "RendererWindow.h"
-#include "RenderPath3D.h"
 #include "Editor.h"
-#include "wiPhysics.h"
 
 
 void RendererWindow::Create(EditorComponent* editor)
