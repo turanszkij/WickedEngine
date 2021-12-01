@@ -61,7 +61,7 @@ namespace wi::helper
 		StringConvert(msg, wmessage);
 		StringConvert(caption, wcaption);
 		// UWP can only show message box on main thread:
-		wi::eventhandler::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+		wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 			winrt::Windows::UI::Popups::MessageDialog(wmessage, wcaption).ShowAsync();
 		});
 #endif // PLATFORM_UWP
