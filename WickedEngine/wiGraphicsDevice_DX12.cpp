@@ -1678,8 +1678,7 @@ using namespace dx12_internal;
 			if (resources > 0)
 			{
 				// The reservation is the maximum amount of descriptors that can be allocated once
-				//	It can be increased if needed
-				const uint32_t wrap_reservation = 1000;
+				static constexpr uint32_t wrap_reservation = DESCRIPTORBINDER_CBV_COUNT + DESCRIPTORBINDER_SRV_COUNT + DESCRIPTORBINDER_UAV_COUNT;
 				const uint32_t wrap_effective_size = device->descriptorheap_res.heapDesc.NumDescriptors - BINDLESS_RESOURCE_CAPACITY - wrap_reservation;
 				assert(wrap_reservation > resources); // for correct lockless wrap behaviour
 
@@ -1876,8 +1875,7 @@ using namespace dx12_internal;
 			if (samplers > 0)
 			{
 				// The reservation is the maximum amount of descriptors that can be allocated once
-				//	It can be increased if needed
-				const uint32_t wrap_reservation = 16;
+				static constexpr uint32_t wrap_reservation = DESCRIPTORBINDER_SAMPLER_COUNT;
 				const uint32_t wrap_effective_size = device->descriptorheap_sam.heapDesc.NumDescriptors - BINDLESS_SAMPLER_CAPACITY - wrap_reservation;
 				assert(wrap_reservation > samplers); // for correct lockless wrap behaviour
 
