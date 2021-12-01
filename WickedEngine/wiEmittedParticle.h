@@ -1,7 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
-#include "wiIntersect.h"
+#include "wiPrimitive.h"
 #include "shaders/ShaderInterop_EmittedParticle.h"
 #include "wiEnums.h"
 #include "wiMath.h"

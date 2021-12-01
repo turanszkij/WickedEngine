@@ -118,7 +118,7 @@ This is a reference for the C++ features of Wicked Engine
 	3. [wiColor](#wicolor)
 	5. [wiFadeManager](#wifademanager)
 	6. [wiHelper](#wihelper)
-	7. [wiIntersect](#wiintersect)
+	7. [wiPrimitive](#wiprimitive)
 		1. [AABB](#aabb)
 		2. [SPHERE](#sphere)
 		2. [CAPSULE](#capsule)
@@ -990,32 +990,32 @@ Simple helper to manage a fadeout screen. Fadeout starts at transparent, then fa
 [[Header]](../../WickedEngine/wiHelper.h) [[Cpp]](../../WickedEngine/wiHelper.cpp)
 Many helper utility functions, like screenshot, readfile, messagebox, splitpath, sleep, etc...
 
-### wiIntersect
-[[Header]](../../WickedEngine/wiIntersect.h) [[Cpp]](../../WickedEngine/wiIntersect.cpp)
+### wiPrimitive
+[[Header]](../../WickedEngine/wiPrimitive.h) [[Cpp]](../../WickedEngine/wiPrimitive.cpp)
 Primitives that can be intersected with each other
 
 #### AABB
-[[Header]](../../WickedEngine/wiIntersect.h) [[Cpp]](../../WickedEngine/wiIntersect.cpp)
+[[Header]](../../WickedEngine/wiPrimitive.h) [[Cpp]](../../WickedEngine/wiPrimitive.cpp)
 Axis aligned bounding box. There are multiple ways to construct it, for example from min-max corners, or center and halfextent. 
 
-#### SPHERE
-[[Header]](../../WickedEngine/wiIntersect.h) [[Cpp]](../../WickedEngine/wiIntersect.cpp)
+#### Sphere
+[[Header]](../../WickedEngine/wiPrimitive.h) [[Cpp]](../../WickedEngine/wiPrimitive.cpp)
 Sphere with a center and radius.
 
-#### CAPSULE
-[[Header]](../../WickedEngine/wiIntersect.h) [[Cpp]](../../WickedEngine/wiIntersect.cpp)
+#### Capsule
+[[Header]](../../WickedEngine/wiPrimitive.h) [[Cpp]](../../WickedEngine/wiPrimitive.cpp)
 It's like two spheres connected by a cylinder. Base and Tip are the two endpoints, radius is the cylinder's radius.
 
-#### RAY
-[[Header]](../../WickedEngine/wiIntersect.h) [[Cpp]](../../WickedEngine/wiIntersect.cpp)
+#### Ray
+[[Header]](../../WickedEngine/wiPrimitive.h) [[Cpp]](../../WickedEngine/wiPrimitive.cpp)
 Line with a starting point (origin) and direction. The direction's reciprocal is precomputed to perform fast intersection of many primitives with one ray.
 
 #### Frustum
-[[Header]](../../WickedEngine/wiIntersect.h) [[Cpp]](../../WickedEngine/wiIntersect.cpp)
+[[Header]](../../WickedEngine/wiPrimitive.h) [[Cpp]](../../WickedEngine/wiPrimitive.cpp)
 Six planes, most commonly used for checking if an intersectable primitive is inside a camera.
 
 #### Hitbox2D
-[[Header]](../../WickedEngine/wiIntersect.h) [[Cpp]](../../WickedEngine/wiIntersect.cpp)
+[[Header]](../../WickedEngine/wiPrimitive.h) [[Cpp]](../../WickedEngine/wiPrimitive.cpp)
 A rectangle, essentially an 2D AABB.
 
 ### wiMath

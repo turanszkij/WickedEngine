@@ -1,9 +1,9 @@
 #pragma once
 #include "wiLua.h"
 #include "wiLuna.h"
-#include "wiIntersect.h"
+#include "wiPrimitive.h"
 
-namespace wi::lua::intersect
+namespace wi::lua::primitive
 {
 	void Bind();
 
@@ -11,13 +11,13 @@ namespace wi::lua::intersect
 	class Ray_BindLua
 	{
 	public:
-		RAY ray;
+		wi::primitive::Ray ray;
 
 		static const char className[];
 		static Luna<Ray_BindLua>::FunctionType methods[];
 		static Luna<Ray_BindLua>::PropertyType properties[];
 
-		Ray_BindLua(const RAY& ray) : ray(ray) {}
+		Ray_BindLua(const wi::primitive::Ray& ray) : ray(ray) {}
 		Ray_BindLua(lua_State *L);
 
 		int Intersects(lua_State* L);
@@ -28,13 +28,13 @@ namespace wi::lua::intersect
 	class AABB_BindLua
 	{
 	public:
-		AABB aabb;
+		wi::primitive::AABB aabb;
 
 		static const char className[];
 		static Luna<AABB_BindLua>::FunctionType methods[];
 		static Luna<AABB_BindLua>::PropertyType properties[];
 
-		AABB_BindLua(const AABB& aabb) : aabb(aabb) {}
+		AABB_BindLua(const wi::primitive::AABB& aabb) : aabb(aabb) {}
 		AABB_BindLua(lua_State *L);
 
 		int Intersects(lua_State* L);
@@ -50,13 +50,13 @@ namespace wi::lua::intersect
 	class Sphere_BindLua
 	{
 	public:
-		SPHERE sphere;
+		wi::primitive::Sphere sphere;
 
 		static const char className[];
 		static Luna<Sphere_BindLua>::FunctionType methods[];
 		static Luna<Sphere_BindLua>::PropertyType properties[];
 
-		Sphere_BindLua(const SPHERE& sphere) : sphere(sphere) {}
+		Sphere_BindLua(const wi::primitive::Sphere& sphere) : sphere(sphere) {}
 		Sphere_BindLua(lua_State *L);
 
 		int Intersects(lua_State* L);
@@ -69,13 +69,13 @@ namespace wi::lua::intersect
 	class Capsule_BindLua
 	{
 	public:
-		CAPSULE capsule;
+		wi::primitive::Capsule capsule;
 
 		static const char className[];
 		static Luna<Capsule_BindLua>::FunctionType methods[];
 		static Luna<Capsule_BindLua>::PropertyType properties[];
 
-		Capsule_BindLua(const CAPSULE& capsule) : capsule(capsule) {}
+		Capsule_BindLua(const wi::primitive::Capsule& capsule) : capsule(capsule) {}
 		Capsule_BindLua(lua_State* L);
 
 		int Intersects(lua_State* L);

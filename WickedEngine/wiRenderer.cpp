@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <array>
 
+using namespace wi::primitive;
 using namespace wi::graphics;
 using namespace wi::scene;
 using namespace wi::ecs;
@@ -176,8 +177,8 @@ wi::vector<RenderPass> renderpasses_shadow2D;
 wi::vector<RenderPass> renderpasses_shadowCube;
 
 wi::vector<std::pair<XMFLOAT4X4, XMFLOAT4>> renderableBoxes;
-wi::vector<std::pair<SPHERE, XMFLOAT4>> renderableSpheres;
-wi::vector<std::pair<CAPSULE, XMFLOAT4>> renderableCapsules;
+wi::vector<std::pair<Sphere, XMFLOAT4>> renderableSpheres;
+wi::vector<std::pair<Capsule, XMFLOAT4>> renderableCapsules;
 wi::vector<RenderableLine> renderableLines;
 wi::vector<RenderableLine2D> renderableLines2D;
 wi::vector<RenderablePoint> renderablePoints;
@@ -2239,7 +2240,7 @@ static const uint32_t CASCADE_COUNT = 3;
 struct SHCAM
 {
 	XMMATRIX view_projection;
-	Frustum frustum;					// This frustum can be used for intersection test with wiIntersect primitives
+	Frustum frustum;					// This frustum can be used for intersection test with wiPrimitive primitives
 	BoundingFrustum boundingfrustum;	// This boundingfrustum can be used for frustum vs frustum intersection test
 
 	SHCAM() = default;
@@ -4819,7 +4820,7 @@ void DrawShadowmaps(
 				uint32_t slice = shadowCounter_Cube;
 				shadowCounter_Cube += 1;
 
-				SPHERE boundingsphere = SPHERE(light.position, light.GetRange());
+				Sphere boundingsphere(light.position, light.GetRange());
 
 				RenderQueue renderQueue;
 				bool transparentShadowsRequested = false;
@@ -5570,7 +5571,7 @@ void DrawDebugWorld(
 
 		for (auto& x : renderableSpheres)
 		{
-			const SPHERE& sphere = x.first;
+			const Sphere& sphere = x.first;
 			XMStoreFloat4x4(&sb.g_xTransform,
 				XMMatrixScaling(sphere.radius, sphere.radius, sphere.radius) *
 				XMMatrixTranslation(sphere.center.x, sphere.center.y, sphere.center.z) *
@@ -5614,7 +5615,7 @@ void DrawDebugWorld(
 		int j = 0;
 		for (auto& it : renderableCapsules)
 		{
-			const CAPSULE& capsule = it.first;
+			const Capsule& capsule = it.first;
 			const float radius = capsule.radius;
 
 			XMVECTOR Base = XMLoadFloat3(&capsule.base);
@@ -6289,7 +6290,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		// Scene will only be rendered if this is a real probe entity:
 		if (probe_aabb.layerMask & vis.layerMask)
 		{
-			SPHERE culler = SPHERE(probe.position, zFarP);
+			Sphere culler(probe.position, zFarP);
 
 			RenderQueue renderQueue;
 			for (size_t i = 0; i < vis.scene->aabb_objects.GetCount(); ++i)
@@ -6454,7 +6455,7 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 		const MeshComponent& mesh = *scene.meshes.GetComponent(entity);
 
 		// impostor camera will fit around mesh bounding sphere:
-		const SPHERE boundingsphere = mesh.GetBoundingSphere();
+		const Sphere boundingsphere = mesh.GetBoundingSphere();
 
 		device->BindIndexBuffer(&mesh.indexBuffer, mesh.GetIndexFormat(), 0, cmd);
 
@@ -11635,7 +11636,7 @@ void Postprocess_NormalsFromDepth(
 }
 
 
-RAY GetPickRay(long cursorX, long cursorY, const wi::Canvas& canvas, const CameraComponent& camera)
+Ray GetPickRay(long cursorX, long cursorY, const wi::Canvas& canvas, const CameraComponent& camera)
 {
 	float screenW = canvas.GetLogicalWidth();
 	float screenH = canvas.GetLogicalHeight();
@@ -11646,18 +11647,18 @@ RAY GetPickRay(long cursorX, long cursorY, const wi::Canvas& canvas, const Camer
 	XMVECTOR lineStart = XMVector3Unproject(XMVectorSet((float)cursorX, (float)cursorY, 1, 1), 0, 0, screenW, screenH, 0.0f, 1.0f, P, V, W);
 	XMVECTOR lineEnd = XMVector3Unproject(XMVectorSet((float)cursorX, (float)cursorY, 0, 1), 0, 0, screenW, screenH, 0.0f, 1.0f, P, V, W);
 	XMVECTOR rayDirection = XMVector3Normalize(XMVectorSubtract(lineEnd, lineStart));
-	return RAY(lineStart, rayDirection);
+	return Ray(lineStart, rayDirection);
 }
 
 void DrawBox(const XMFLOAT4X4& boxMatrix, const XMFLOAT4& color)
 {
 	renderableBoxes.push_back(std::make_pair(boxMatrix,color));
 }
-void DrawSphere(const SPHERE& sphere, const XMFLOAT4& color)
+void DrawSphere(const Sphere& sphere, const XMFLOAT4& color)
 {
 	renderableSpheres.push_back(std::make_pair(sphere, color));
 }
-void DrawCapsule(const CAPSULE& capsule, const XMFLOAT4& color)
+void DrawCapsule(const Capsule& capsule, const XMFLOAT4& color)
 {
 	renderableCapsules.push_back(std::make_pair(capsule, color));
 }

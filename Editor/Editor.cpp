@@ -11,8 +11,8 @@
 #include <filesystem>
 #include <limits>
 
-using namespace wi;
 using namespace wi::graphics;
+using namespace wi::primitive;
 using namespace wi::rectpacker;
 using namespace wi::scene;
 using namespace wi::ecs;
@@ -141,7 +141,7 @@ void EditorLoadingScreen::Load()
 	sprite.params.siz = XMFLOAT2(128, 128);
 	sprite.params.pivot = XMFLOAT2(0.5f, 1.0f);
 	sprite.params.quality = wi::image::QUALITY_LINEAR;
-	sprite.params.blendFlag = BLENDMODE_ALPHA;
+	sprite.params.blendFlag = wi::BLENDMODE_ALPHA;
 	AddSprite(&sprite);
 
 	LoadingScreen::Load();
@@ -161,12 +161,12 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	switch (path)
 	{
 	case EditorComponent::RENDERPATH_DEFAULT:
-		renderPath = std::make_unique<RenderPath3D>();
+		renderPath = std::make_unique<wi::RenderPath3D>();
 		pathTraceTargetSlider.SetVisible(false);
 		pathTraceStatisticsLabel.SetVisible(false);
 		break;
 	case EditorComponent::RENDERPATH_PATHTRACING:
-		renderPath = std::make_unique<RenderPath3D_PathTracing>();
+		renderPath = std::make_unique<wi::RenderPath3D_PathTracing>();
 		pathTraceTargetSlider.SetVisible(true);
 		pathTraceStatisticsLabel.SetVisible(true);
 		break;
@@ -1226,7 +1226,7 @@ void EditorComponent::Update(float dt)
 
 		// Begin picking:
 		unsigned int pickMask = rendererWnd.GetPickType();
-		RAY pickRay = wi::renderer::GetPickRay((long)currentMouse.x, (long)currentMouse.y, *this);
+		Ray pickRay = wi::renderer::GetPickRay((long)currentMouse.x, (long)currentMouse.y, *this);
 		{
 			hovered = wi::scene::PickResult();
 
@@ -1322,7 +1322,7 @@ void EditorComponent::Update(float dt)
 					Entity entity = scene.probes.GetEntity(i);
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-					if (SPHERE(transform.GetPosition(), 1).intersects(pickRay))
+					if (Sphere(transform.GetPosition(), 1).intersects(pickRay))
 					{
 						float dis = wi::math::Distance(transform.GetPosition(), pickRay.origin);
 						if (dis < hovered.distance)
@@ -1410,7 +1410,7 @@ void EditorComponent::Update(float dt)
 				const ObjectComponent* object = scene.objects.GetComponent(hovered.entity);
 				if (object != nullptr)
 				{	
-					if (translator.selected.empty() && object->GetRenderTypes() & RENDERTYPE_WATER)
+					if (translator.selected.empty() && object->GetRenderTypes() & wi::RENDERTYPE_WATER)
 					{
 						if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
 						{
@@ -1767,7 +1767,7 @@ void EditorComponent::Update(float dt)
 	camera.TransformCamera(cameraWnd.camera_transform);
 	camera.UpdateCamera();
 
-	RenderPath3D_PathTracing* pathtracer = dynamic_cast<RenderPath3D_PathTracing*>(renderPath.get());
+	wi::RenderPath3D_PathTracing* pathtracer = dynamic_cast<wi::RenderPath3D_PathTracing*>(renderPath.get());
 	if (pathtracer != nullptr)
 	{
 		pathtracer->setTargetSampleCount((int)pathTraceTargetSlider.GetValue());

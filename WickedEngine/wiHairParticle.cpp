@@ -1,7 +1,7 @@
 #include "wiHairParticle.h"
 #include "wiRenderer.h"
 #include "wiResourceManager.h"
-#include "wiIntersect.h"
+#include "wiPrimitive.h"
 #include "wiRandom.h"
 #include "wiArchive.h"
 #include "shaders/ShaderInterop.h"
@@ -12,6 +12,7 @@
 #include "wiEvent.h"
 #include "wiTimer.h"
 
+using namespace wi::primitive;
 using namespace wi::graphics;
 using namespace wi::scene;
 

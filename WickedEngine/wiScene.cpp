@@ -18,6 +18,7 @@
 
 using namespace wi::ecs;
 using namespace wi::graphics;
+using namespace wi::primitive;
 
 namespace wi::scene
 {
@@ -1137,11 +1138,11 @@ namespace wi::scene
 
 		CreateRenderData();
 	}
-	SPHERE MeshComponent::GetBoundingSphere() const
+	Sphere MeshComponent::GetBoundingSphere() const
 	{
 		XMFLOAT3 halfwidth = aabb.getHalfWidth();
 
-		SPHERE sphere;
+		Sphere sphere;
 		sphere.center = aabb.getCenter();
 		sphere.radius = std::max(halfwidth.x, std::max(halfwidth.y, halfwidth.z));
 
@@ -3184,7 +3185,7 @@ namespace wi::scene
 						impostor->color = object.color;
 						impostor->fadeThresholdRadius = object.impostorFadeThresholdRadius;
 
-						const SPHERE boundingsphere = mesh->GetBoundingSphere();
+						const Sphere boundingsphere = mesh->GetBoundingSphere();
 
 						locker.lock();
 						impostor->instances.push_back(args.jobIndex);
@@ -3937,7 +3938,7 @@ namespace wi::scene
 		return INVALID_ENTITY;
 	}
 
-	PickResult Pick(const RAY& ray, uint32_t renderTypeMask, uint32_t layerMask, const Scene& scene)
+	PickResult Pick(const Ray& ray, uint32_t renderTypeMask, uint32_t layerMask, const Scene& scene)
 	{
 		PickResult result;
 
@@ -4068,7 +4069,7 @@ namespace wi::scene
 		return result;
 	}
 
-	SceneIntersectSphereResult SceneIntersectSphere(const SPHERE& sphere, uint32_t renderTypeMask, uint32_t layerMask, const Scene& scene)
+	SceneIntersectSphereResult SceneIntersectSphere(const Sphere& sphere, uint32_t renderTypeMask, uint32_t layerMask, const Scene& scene)
 	{
 		SceneIntersectSphereResult result;
 		XMVECTOR Center = XMLoadFloat3(&sphere.center);
@@ -4269,7 +4270,7 @@ namespace wi::scene
 
 		return result;
 	}
-	SceneIntersectSphereResult SceneIntersectCapsule(const CAPSULE& capsule, uint32_t renderTypeMask, uint32_t layerMask, const Scene& scene)
+	SceneIntersectSphereResult SceneIntersectCapsule(const Capsule& capsule, uint32_t renderTypeMask, uint32_t layerMask, const Scene& scene)
 	{
 		SceneIntersectSphereResult result;
 		XMVECTOR Base = XMLoadFloat3(&capsule.base);

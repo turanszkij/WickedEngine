@@ -1,7 +1,9 @@
-#include "wiIntersect_BindLua.h"
+#include "wiPrimitive_BindLua.h"
 #include "wiMath_BindLua.h"
 
-namespace wi::lua::intersect
+using namespace wi::primitive;
+
+namespace wi::lua::primitive
 {
 	void Bind()
 	{
@@ -43,7 +45,7 @@ namespace wi::lua::intersect
 			Vector_BindLua* d = Luna<Vector_BindLua>::lightcheck(L, 2);
 			if (o && d)
 			{
-				ray = RAY(XMLoadFloat4(o), XMLoadFloat4(d));
+				ray = Ray(XMLoadFloat4(o), XMLoadFloat4(d));
 			}
 			else
 			{
@@ -274,7 +276,7 @@ namespace wi::lua::intersect
 
 				float r = wi::lua::SGetFloat(L, 2);
 
-				sphere = SPHERE(c, r);
+				sphere = Sphere(c, r);
 			}
 			else
 			{
@@ -400,7 +402,7 @@ namespace wi::lua::intersect
 
 				float r = wi::lua::SGetFloat(L, 3);
 
-				capsule = CAPSULE(b, t, r);
+				capsule = Capsule(b, t, r);
 			}
 			else
 			{

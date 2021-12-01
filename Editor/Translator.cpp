@@ -6,10 +6,10 @@
 #include "shaders/ShaderInterop_Renderer.h"
 #include "wiEvent.h"
 
-using namespace wi;
-using namespace wi::graphics;
 using namespace wi::ecs;
 using namespace wi::scene;
+using namespace wi::graphics;
+using namespace wi::primitive;
 
 PipelineState pso_solidpart;
 PipelineState pso_wirepart;
@@ -30,12 +30,12 @@ namespace Translator_Internal
 		{
 			PipelineStateDesc desc;
 
-			desc.vs = wi::renderer::GetShader(VSTYPE_VERTEXCOLOR);
-			desc.ps = wi::renderer::GetShader(PSTYPE_VERTEXCOLOR);
-			desc.il = wi::renderer::GetInputLayout(ILTYPE_VERTEXCOLOR);
-			desc.dss = wi::renderer::GetDepthStencilState(DSSTYPE_DEPTHDISABLED);
-			desc.rs = wi::renderer::GetRasterizerState(RSTYPE_DOUBLESIDED);
-			desc.bs = wi::renderer::GetBlendState(BSTYPE_ADDITIVE);
+			desc.vs = wi::renderer::GetShader(wi::VSTYPE_VERTEXCOLOR);
+			desc.ps = wi::renderer::GetShader(wi::PSTYPE_VERTEXCOLOR);
+			desc.il = wi::renderer::GetInputLayout(wi::ILTYPE_VERTEXCOLOR);
+			desc.dss = wi::renderer::GetDepthStencilState(wi::DSSTYPE_DEPTHDISABLED);
+			desc.rs = wi::renderer::GetRasterizerState(wi::RSTYPE_DOUBLESIDED);
+			desc.bs = wi::renderer::GetBlendState(wi::BSTYPE_ADDITIVE);
 			desc.pt = PrimitiveTopology::TRIANGLELIST;
 
 			device->CreatePipelineState(&desc, &pso_solidpart);
@@ -44,12 +44,12 @@ namespace Translator_Internal
 		{
 			PipelineStateDesc desc;
 
-			desc.vs = wi::renderer::GetShader(VSTYPE_VERTEXCOLOR);
-			desc.ps = wi::renderer::GetShader(PSTYPE_VERTEXCOLOR);
-			desc.il = wi::renderer::GetInputLayout(ILTYPE_VERTEXCOLOR);
-			desc.dss = wi::renderer::GetDepthStencilState(DSSTYPE_DEPTHDISABLED);
-			desc.rs = wi::renderer::GetRasterizerState(RSTYPE_WIRE_DOUBLESIDED_SMOOTH);
-			desc.bs = wi::renderer::GetBlendState(BSTYPE_TRANSPARENT);
+			desc.vs = wi::renderer::GetShader(wi::VSTYPE_VERTEXCOLOR);
+			desc.ps = wi::renderer::GetShader(wi::PSTYPE_VERTEXCOLOR);
+			desc.il = wi::renderer::GetInputLayout(wi::ILTYPE_VERTEXCOLOR);
+			desc.dss = wi::renderer::GetDepthStencilState(wi::DSSTYPE_DEPTHDISABLED);
+			desc.rs = wi::renderer::GetRasterizerState(wi::RSTYPE_WIRE_DOUBLESIDED_SMOOTH);
+			desc.bs = wi::renderer::GetBlendState(wi::BSTYPE_TRANSPARENT);
 			desc.pt = PrimitiveTopology::LINELIST;
 
 			device->CreatePipelineState(&desc, &pso_wirepart);
@@ -183,7 +183,7 @@ void Translator::Update(const wi::Canvas& canvas)
 
 			dist = wi::math::Distance(p, cam.Eye) * 0.05f;
 
-			RAY ray = wi::renderer::GetPickRay((long)pointer.x, (long)pointer.y, canvas);
+			Ray ray = wi::renderer::GetPickRay((long)pointer.x, (long)pointer.y, canvas);
 
 			XMVECTOR x, y, z, xy, xz, yz;
 
@@ -314,7 +314,7 @@ void Translator::Update(const wi::Canvas& canvas)
 			}
 			plane = XMPlaneFromPointNormal(pos, XMVector3Normalize(planeNormal));
 
-			RAY ray = wi::renderer::GetPickRay((long)pointer.x, (long)pointer.y, canvas);
+			Ray ray = wi::renderer::GetPickRay((long)pointer.x, (long)pointer.y, canvas);
 			XMVECTOR rayOrigin = XMLoadFloat3(&ray.origin);
 			XMVECTOR rayDir = XMLoadFloat3(&ray.direction);
 			XMVECTOR intersection = XMPlaneIntersectLine(plane, rayOrigin, rayOrigin + rayDir*cam.zFarP);

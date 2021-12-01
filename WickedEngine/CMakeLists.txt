@@ -69,8 +69,8 @@ add_library(${TARGET_NAME} STATIC
 	wiInitializer.cpp
 	wiInput.cpp
 	wiInput_BindLua.cpp
-	wiIntersect.cpp
-	wiIntersect_BindLua.cpp
+	wiPrimitive.cpp
+	wiPrimitive_BindLua.cpp
 	wiJobSystem.cpp
 	wiLua.cpp
 	wiMath.cpp

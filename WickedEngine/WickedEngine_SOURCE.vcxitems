@@ -264,7 +264,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiUnorderedSet.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiInput.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiInput_BindLua.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiIntersect.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiPrimitive.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLoadingScreen.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiLoadingScreen_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)LUA\lapi.h" />
@@ -323,7 +323,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiImage.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiImageParams_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiInitializer.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiIntersect_BindLua.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiPrimitive_BindLua.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiJobSystem.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiNetwork.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiPhysics.h" />
@@ -662,8 +662,8 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiInitializer.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiInput.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiInput_BindLua.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiIntersect.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiIntersect_BindLua.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiPrimitive.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiPrimitive_BindLua.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiJobSystem.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiNetwork_UWP.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiNetwork_Windows.cpp" />

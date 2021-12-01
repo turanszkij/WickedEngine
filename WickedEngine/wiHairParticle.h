@@ -4,7 +4,7 @@
 #include "wiEnums.h"
 #include "wiMath.h"
 #include "wiECS.h"
-#include "wiIntersect.h"
+#include "wiPrimitive.h"
 #include "wiVector.h"
 #include "wiScene_Decl.h"
 
@@ -80,7 +80,7 @@ namespace wi
 		// Non-serialized attributes:
 		XMFLOAT4X4 world;
 		XMFLOAT4X4 worldPrev;
-		AABB aabb;
+		wi::primitive::AABB aabb;
 		wi::vector<uint32_t> indices; // it is dependent on vertex_lengths and contains triangles with non-zero lengths
 		uint32_t layerMask = ~0u;
 		mutable bool regenerate_frame = true;

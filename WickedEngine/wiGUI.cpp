@@ -1,9 +1,10 @@
 #include "wiGUI.h"
 #include "wiInput.h"
-#include "wiIntersect.h"
+#include "wiPrimitive.h"
 #include "wiProfiler.h"
 
 using namespace wi::graphics;
+using namespace wi::primitive;
 
 namespace wi
 {

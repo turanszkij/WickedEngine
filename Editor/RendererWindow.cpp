@@ -2,8 +2,6 @@
 #include "RendererWindow.h"
 #include "Editor.h"
 
-using namespace wi;
-
 void RendererWindow::Create(EditorComponent* editor)
 {
 	wi::widget::Window::Create("Renderer Window");
@@ -416,7 +414,7 @@ void RendererWindow::Create(EditorComponent* editor)
 	textureQualityComboBox.AddItem("Trilinear");
 	textureQualityComboBox.AddItem("Anisotropic");
 	textureQualityComboBox.OnSelect([&](wi::widget::EventArgs args) {
-		wi::graphics::SamplerDesc desc = wi::renderer::GetSampler(SAMPLER_OBJECTSHADER)->GetDesc();
+		wi::graphics::SamplerDesc desc = wi::renderer::GetSampler(wi::SAMPLER_OBJECTSHADER)->GetDesc();
 
 		switch (args.iValue)
 		{
@@ -448,7 +446,7 @@ void RendererWindow::Create(EditorComponent* editor)
 	mipLodBiasSlider.SetSize(XMFLOAT2(100, itemheight));
 	mipLodBiasSlider.SetPos(XMFLOAT2(x, y += step));
 	mipLodBiasSlider.OnSlide([&](wi::widget::EventArgs args) {
-		wi::graphics::SamplerDesc desc = wi::renderer::GetSampler(SAMPLER_OBJECTSHADER)->GetDesc();
+		wi::graphics::SamplerDesc desc = wi::renderer::GetSampler(wi::SAMPLER_OBJECTSHADER)->GetDesc();
 		desc.mip_lod_bias = wi::math::Clamp(args.fValue, -15.9f, 15.9f);
 		wi::renderer::ModifyObjectSampler(desc);
 	});

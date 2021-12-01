@@ -2,7 +2,6 @@
 #include "MaterialWindow.h"
 #include "Editor.h"
 
-using namespace wi;
 using namespace wi::graphics;
 using namespace wi::ecs;
 using namespace wi::scene;
@@ -157,7 +156,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr && args.iValue >= 0)
 		{
-			material->userBlendMode = (BLENDMODE)args.iValue;
+			material->userBlendMode = (wi::BLENDMODE)args.iValue;
 		}
 		});
 	blendModeComboBox.AddItem("Opaque");

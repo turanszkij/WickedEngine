@@ -12,6 +12,7 @@
 #include <string>
 #include <sstream>
 
+using namespace wi::primitive;
 using namespace wi::graphics;
 using namespace wi::scene;
 

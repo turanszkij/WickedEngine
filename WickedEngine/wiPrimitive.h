@@ -6,10 +6,10 @@
 
 #include <limits>
 
-namespace wi
+namespace wi::primitive
 {
-	struct SPHERE;
-	struct RAY;
+	struct Sphere;
+	struct Ray;
 	struct AABB;
 
 	struct AABB
@@ -41,8 +41,8 @@ namespace wi
 		INTERSECTION_TYPE intersects2D(const AABB& b) const;
 		INTERSECTION_TYPE intersects(const AABB& b) const;
 		bool intersects(const XMFLOAT3& p) const;
-		bool intersects(const RAY& ray) const;
-		bool intersects(const SPHERE& sphere) const;
+		bool intersects(const Ray& ray) const;
+		bool intersects(const Sphere& sphere) const;
 		bool intersects(const BoundingFrustum& frustum) const;
 		AABB operator* (float a);
 		static AABB Merge(const AABB& a, const AABB& b);
@@ -68,24 +68,24 @@ namespace wi
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
-	struct SPHERE
+	struct Sphere
 	{
 		XMFLOAT3 center;
 		float radius;
-		SPHERE() :center(XMFLOAT3(0, 0, 0)), radius(0) {}
-		SPHERE(const XMFLOAT3& c, float r) :center(c), radius(r) {}
+		Sphere() :center(XMFLOAT3(0, 0, 0)), radius(0) {}
+		Sphere(const XMFLOAT3& c, float r) :center(c), radius(r) {}
 		bool intersects(const AABB& b) const;
-		bool intersects(const SPHERE& b) const;
-		bool intersects(const RAY& b) const;
+		bool intersects(const Sphere& b) const;
+		bool intersects(const Ray& b) const;
 	};
-	struct CAPSULE
+	struct Capsule
 	{
 		XMFLOAT3 base = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 tip = XMFLOAT3(0, 0, 0);
 		float radius = 0;
-		CAPSULE() = default;
-		CAPSULE(const XMFLOAT3& base, const XMFLOAT3& tip, float radius) :base(base), tip(tip), radius(radius) {}
-		CAPSULE(const SPHERE& sphere, float height) :
+		Capsule() = default;
+		Capsule(const XMFLOAT3& base, const XMFLOAT3& tip, float radius) :base(base), tip(tip), radius(radius) {}
+		Capsule(const Sphere& sphere, float height) :
 			base(XMFLOAT3(sphere.center.x, sphere.center.y - sphere.radius, sphere.center.z)),
 			tip(XMFLOAT3(base.x, base.y + height, base.z)),
 			radius(sphere.radius)
@@ -99,20 +99,20 @@ namespace wi
 			tip_aabb.createFromHalfWidth(tip, halfWidth);
 			return AABB::Merge(base_aabb, tip_aabb);
 		}
-		bool intersects(const CAPSULE& b, XMFLOAT3& position, XMFLOAT3& incident_normal, float& penetration_depth) const;
+		bool intersects(const Capsule& b, XMFLOAT3& position, XMFLOAT3& incident_normal, float& penetration_depth) const;
 	};
-	struct RAY
+	struct Ray
 	{
 		XMFLOAT3 origin, direction, direction_inverse;
 
-		RAY(const XMFLOAT3& newOrigin = XMFLOAT3(0, 0, 0), const XMFLOAT3& newDirection = XMFLOAT3(0, 0, 1)) : RAY(XMLoadFloat3(&newOrigin), XMLoadFloat3(&newDirection)) {}
-		RAY(const XMVECTOR& newOrigin, const XMVECTOR& newDirection) {
+		Ray(const XMFLOAT3& newOrigin = XMFLOAT3(0, 0, 0), const XMFLOAT3& newDirection = XMFLOAT3(0, 0, 1)) : Ray(XMLoadFloat3(&newOrigin), XMLoadFloat3(&newDirection)) {}
+		Ray(const XMVECTOR& newOrigin, const XMVECTOR& newDirection) {
 			XMStoreFloat3(&origin, newOrigin);
 			XMStoreFloat3(&direction, newDirection);
 			XMStoreFloat3(&direction_inverse, XMVectorDivide(XMVectorReplicate(1.0f), newDirection));
 		}
 		bool intersects(const AABB& b) const;
-		bool intersects(const SPHERE& b) const;
+		bool intersects(const Sphere& b) const;
 	};
 
 	struct Frustum

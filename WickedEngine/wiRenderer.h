@@ -4,7 +4,7 @@
 #include "wiGraphicsDevice.h"
 #include "wiScene.h"
 #include "wiECS.h"
-#include "wiIntersect.h"
+#include "wiPrimitive.h"
 #include "wiCanvas.h"
 #include "wiMath.h"
 #include "shaders/ShaderInterop_Renderer.h"
@@ -94,7 +94,7 @@ namespace wi::renderer
 		uint32_t flags = EMPTY;
 
 		// wi::renderer::UpdateVisibility() fills these:
-		Frustum frustum;
+		wi::primitive::Frustum frustum;
 		wi::vector<uint32_t> visibleObjects;
 		wi::vector<uint32_t> visibleDecals;
 		wi::vector<uint32_t> visibleEnvProbes;
@@ -766,15 +766,15 @@ namespace wi::renderer
 	bool GetSurfelGIDebugEnabled();
 
 	// Gets pick ray according to the current screen resolution and pointer coordinates. Can be used as input into RayIntersectWorld()
-	RAY GetPickRay(long cursorX, long cursorY, const wi::Canvas& canvas, const wi::scene::CameraComponent& camera = wi::scene::GetCamera());
+	wi::primitive::Ray GetPickRay(long cursorX, long cursorY, const wi::Canvas& canvas, const wi::scene::CameraComponent& camera = wi::scene::GetCamera());
 
 
 	// Add box to render in next frame. It will be rendered in DrawDebugWorld()
 	void DrawBox(const XMFLOAT4X4& boxMatrix, const XMFLOAT4& color = XMFLOAT4(1,1,1,1));
 	// Add sphere to render in next frame. It will be rendered in DrawDebugWorld()
-	void DrawSphere(const SPHERE& sphere, const XMFLOAT4& color = XMFLOAT4(1, 1, 1, 1));
+	void DrawSphere(const wi::primitive::Sphere& sphere, const XMFLOAT4& color = XMFLOAT4(1, 1, 1, 1));
 	// Add capsule to render in next frame. It will be rendered in DrawDebugWorld()
-	void DrawCapsule(const CAPSULE& capsule, const XMFLOAT4& color = XMFLOAT4(1, 1, 1, 1));
+	void DrawCapsule(const wi::primitive::Capsule& capsule, const XMFLOAT4& color = XMFLOAT4(1, 1, 1, 1));
 
 	struct RenderableLine
 	{

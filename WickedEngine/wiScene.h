@@ -1,7 +1,7 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiEnums.h"
-#include "wiIntersect.h"
+#include "wiPrimitive.h"
 #include "wiEmittedParticle.h"
 #include "wiHairParticle.h"
 #include "shaders/ShaderInterop_Renderer.h"
@@ -374,7 +374,7 @@ namespace wi::scene
 		wi::vector<MeshMorphTarget> targets;
 
 		// Non-serialized attributes:
-		AABB aabb;
+		wi::primitive::AABB aabb;
 		wi::graphics::GPUBuffer indexBuffer;
 		wi::graphics::GPUBuffer vertexBuffer_POS;
 		wi::graphics::GPUBuffer vertexBuffer_TAN;
@@ -436,7 +436,7 @@ namespace wi::scene
 		void FlipNormals();
 		void Recenter();
 		void RecenterToBottom();
-		SPHERE GetBoundingSphere() const;
+		wi::primitive::Sphere GetBoundingSphere() const;
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 
@@ -593,7 +593,7 @@ namespace wi::scene
 		float swapInDistance = 100.0f;
 
 		// Non-serialized attributes:
-		AABB aabb;
+		wi::primitive::AABB aabb;
 		XMFLOAT4 color;
 		float fadeThresholdRadius;
 		wi::vector<uint32_t> instances;
@@ -767,7 +767,7 @@ namespace wi::scene
 		wi::vector<MeshComponent::Vertex_POS> vertex_positions_simulation; // graphics vertices after simulation (world space)
 		wi::vector<XMFLOAT4>vertex_tangents_tmp;
 		wi::vector<MeshComponent::Vertex_TAN> vertex_tangents_simulation;
-		AABB aabb;
+		wi::primitive::AABB aabb;
 
 		inline void SetDisableDeactivation(bool value) { if (value) { _flags |= DISABLE_DEACTIVATION; } else { _flags &= ~DISABLE_DEACTIVATION; } }
 
@@ -791,7 +791,7 @@ namespace wi::scene
 		wi::vector<XMFLOAT4X4> inverseBindMatrices;
 
 		// Non-serialized attributes:
-		AABB aabb;
+		wi::primitive::AABB aabb;
 
 		wi::vector<ShaderTransform> boneData;
 		wi::graphics::GPUBuffer boneBuffer;
@@ -888,7 +888,7 @@ namespace wi::scene
 		XMFLOAT3 Up = XMFLOAT3(0, 1, 0);
 		XMFLOAT3X3 rotationMatrix;
 		XMFLOAT4X4 View, Projection, VP;
-		Frustum frustum;
+		wi::primitive::Frustum frustum;
 		XMFLOAT4X4 InvView, InvProjection, InvVP;
 		XMFLOAT2 jitter;
 		XMFLOAT4 clipPlane = XMFLOAT4(0, 0, 0, 0); // default: no clip plane
@@ -1244,18 +1244,18 @@ namespace wi::scene
 		wi::ecs::ComponentManager<MeshComponent> meshes;
 		wi::ecs::ComponentManager<ImpostorComponent> impostors;
 		wi::ecs::ComponentManager<ObjectComponent> objects;
-		wi::ecs::ComponentManager<AABB> aabb_objects;
+		wi::ecs::ComponentManager<wi::primitive::AABB> aabb_objects;
 		wi::ecs::ComponentManager<RigidBodyPhysicsComponent> rigidbodies;
 		wi::ecs::ComponentManager<SoftBodyPhysicsComponent> softbodies;
 		wi::ecs::ComponentManager<ArmatureComponent> armatures;
 		wi::ecs::ComponentManager<LightComponent> lights;
-		wi::ecs::ComponentManager<AABB> aabb_lights;
+		wi::ecs::ComponentManager<wi::primitive::AABB> aabb_lights;
 		wi::ecs::ComponentManager<CameraComponent> cameras;
 		wi::ecs::ComponentManager<EnvironmentProbeComponent> probes;
-		wi::ecs::ComponentManager<AABB> aabb_probes;
+		wi::ecs::ComponentManager<wi::primitive::AABB> aabb_probes;
 		wi::ecs::ComponentManager<ForceFieldComponent> forces;
 		wi::ecs::ComponentManager<DecalComponent> decals;
-		wi::ecs::ComponentManager<AABB> aabb_decals;
+		wi::ecs::ComponentManager<wi::primitive::AABB> aabb_decals;
 		wi::ecs::ComponentManager<AnimationComponent> animations;
 		wi::ecs::ComponentManager<AnimationDataComponent> animation_datas;
 		wi::ecs::ComponentManager<EmittedParticleSystem> emitters;
@@ -1275,8 +1275,8 @@ namespace wi::scene
 
 
 		wi::SpinLock locker;
-		AABB bounds;
-		wi::vector<AABB> parallel_bounds;
+		wi::primitive::AABB bounds;
+		wi::vector<wi::primitive::AABB> parallel_bounds;
 		WeatherComponent weather;
 		wi::graphics::RaytracingAccelerationStructure TLAS;
 		wi::graphics::GPUBuffer TLAS_instancesUpload[wi::graphics::GraphicsDevice::GetBufferCount()];
@@ -1516,7 +1516,7 @@ namespace wi::scene
 	//	renderTypeMask	:	filter based on render type
 	//	layerMask		:	filter based on layer
 	//	scene			:	the scene that will be traced against the ray
-	PickResult Pick(const RAY& ray, uint32_t renderTypeMask = RENDERTYPE_OPAQUE, uint32_t layerMask = ~0, const Scene& scene = GetScene());
+	PickResult Pick(const wi::primitive::Ray& ray, uint32_t renderTypeMask = RENDERTYPE_OPAQUE, uint32_t layerMask = ~0, const Scene& scene = GetScene());
 
 	struct SceneIntersectSphereResult
 	{
@@ -1525,7 +1525,7 @@ namespace wi::scene
 		XMFLOAT3 normal = XMFLOAT3(0, 0, 0);
 		float depth = 0;
 	};
-	SceneIntersectSphereResult SceneIntersectSphere(const SPHERE& sphere, uint32_t renderTypeMask = RENDERTYPE_OPAQUE, uint32_t layerMask = ~0, const Scene& scene = GetScene());
-	SceneIntersectSphereResult SceneIntersectCapsule(const CAPSULE& capsule, uint32_t renderTypeMask = RENDERTYPE_OPAQUE, uint32_t layerMask = ~0, const Scene& scene = GetScene());
+	SceneIntersectSphereResult SceneIntersectSphere(const wi::primitive::Sphere& sphere, uint32_t renderTypeMask = RENDERTYPE_OPAQUE, uint32_t layerMask = ~0, const Scene& scene = GetScene());
+	SceneIntersectSphereResult SceneIntersectCapsule(const wi::primitive::Capsule& capsule, uint32_t renderTypeMask = RENDERTYPE_OPAQUE, uint32_t layerMask = ~0, const Scene& scene = GetScene());
 
 }

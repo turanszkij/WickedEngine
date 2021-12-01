@@ -1,6 +1,6 @@
-#include "wiIntersect.h"
+#include "wiPrimitive.h"
 
-namespace wi
+namespace wi::primitive
 {
 
 	void AABB::createFromHalfWidth(const XMFLOAT3& center, const XMFLOAT3& halfwidth)
@@ -116,7 +116,7 @@ namespace wi
 		if (p.z < min.z) return false;
 		return true;
 	}
-	bool AABB::intersects(const RAY& ray) const {
+	bool AABB::intersects(const Ray& ray) const {
 		if (intersects(ray.origin))
 			return true;
 
@@ -143,7 +143,7 @@ namespace wi
 
 		return tmax >= tmin;
 	}
-	bool AABB::intersects(const SPHERE& sphere) const
+	bool AABB::intersects(const Sphere& sphere) const
 	{
 		return sphere.intersects(*this);
 	}
@@ -200,17 +200,17 @@ namespace wi
 
 
 
-	bool SPHERE::intersects(const AABB& b) const {
+	bool Sphere::intersects(const AABB& b) const {
 		XMFLOAT3 min = b.getMin();
 		XMFLOAT3 max = b.getMax();
 		XMFLOAT3 closestPointInAabb = wi::math::Min(wi::math::Max(center, min), max);
 		double distanceSquared = wi::math::Distance(closestPointInAabb, center);
 		return distanceSquared < radius;
 	}
-	bool SPHERE::intersects(const SPHERE& b)const {
+	bool Sphere::intersects(const Sphere& b)const {
 		return wi::math::Distance(center, b.center) <= radius + b.radius;
 	}
-	bool SPHERE::intersects(const RAY& b) const {
+	bool Sphere::intersects(const Ray& b) const {
 		XMVECTOR o = XMLoadFloat3(&b.origin);
 		XMVECTOR r = XMLoadFloat3(&b.direction);
 		XMVECTOR dist = XMVector3LinePointDistance(o, o + r, XMLoadFloat3(&center));
@@ -219,7 +219,7 @@ namespace wi
 
 
 
-	bool CAPSULE::intersects(const CAPSULE& other, XMFLOAT3& position, XMFLOAT3& incident_normal, float& penetration_depth) const
+	bool Capsule::intersects(const Capsule& other, XMFLOAT3& position, XMFLOAT3& incident_normal, float& penetration_depth) const
 	{
 		if (getAABB().intersects(other.getAABB()) == AABB::INTERSECTION_TYPE::OUTSIDE)
 			return false;
@@ -284,10 +284,10 @@ namespace wi
 
 
 
-	bool RAY::intersects(const AABB& b) const {
+	bool Ray::intersects(const AABB& b) const {
 		return b.intersects(*this);
 	}
-	bool RAY::intersects(const SPHERE& b) const {
+	bool Ray::intersects(const Sphere& b) const {
 		return b.intersects(*this);
 	}
 

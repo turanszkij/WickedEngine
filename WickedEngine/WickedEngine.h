@@ -20,7 +20,7 @@
 #include "wiVersion.h"
 #include "wiPlatform.h"
 #include "wiBacklog.h"
-#include "wiIntersect.h"
+#include "wiPrimitive.h"
 #include "wiImage.h"
 #include "wiFont.h"
 #include "wiSprite.h"
@@ -81,7 +81,7 @@
 // After version 0.59.11, namespaces were refactored into nested namespaces under the wi:: root namespace.
 // To allow compatibility with older user code, the backwards compatibility definitions are included below.
 // If you need backwards compatibility features, define the following before including this file:
-#define WICKEDENGINE_BACKWARDS_COMPATIBILITY_0_59_11
+//#define WICKEDENGINE_BACKWARDS_COMPATIBILITY_0_59_11
 #ifdef WICKEDENGINE_BACKWARDS_COMPATIBILITY_0_59_11
 
 using namespace wi;
@@ -146,6 +146,12 @@ using wiResource = wi::Resource;
 using wiSpinLock = wi::SpinLock;
 using wiTimer = wi::Timer;
 using wiCanvas = wi::Canvas;
+using AABB = wi::primitive::AABB;
+using SPHERE = wi::primitive::Sphere;
+using CAPSULE = wi::primitive::Capsule;
+using RAY = wi::primitive::Ray;
+using Frustum = wi::primitive::Frustum;
+using Hitbox2D = wi::primitive::Hitbox2D;
 
 using wi::image::STENCILMODE;
 using wi::image::STENCILREFMODE;

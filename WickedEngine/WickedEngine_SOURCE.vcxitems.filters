@@ -963,10 +963,10 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiImageParams_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiIntersect.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiPrimitive.h">
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiIntersect_BindLua.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiPrimitive_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiAudio.h">
@@ -1754,10 +1754,10 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiImageParams_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiIntersect.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiPrimitive.cpp">
       <Filter>ENGINE\Helpers</Filter>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiIntersect_BindLua.cpp">
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiPrimitive_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiAudio.cpp">

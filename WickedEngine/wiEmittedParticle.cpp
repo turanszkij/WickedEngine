@@ -2,7 +2,7 @@
 #include "wiScene.h"
 #include "wiRenderer.h"
 #include "wiResourceManager.h"
-#include "wiIntersect.h"
+#include "wiPrimitive.h"
 #include "wiRandom.h"
 #include "wiArchive.h"
 #include "wiTextureHelper.h"

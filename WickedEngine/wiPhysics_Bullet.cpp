@@ -536,7 +536,7 @@ namespace wi::physics
 					btVector3 aabb_min;
 					btVector3 aabb_max;
 					softbody->getAabb(aabb_min, aabb_max);
-					physicscomponent->aabb = AABB(XMFLOAT3(aabb_min.x(), aabb_min.y(), aabb_min.z()), XMFLOAT3(aabb_max.x(), aabb_max.y(), aabb_max.z()));
+					physicscomponent->aabb = wi::primitive::AABB(XMFLOAT3(aabb_min.x(), aabb_min.y(), aabb_min.z()), XMFLOAT3(aabb_max.x(), aabb_max.y(), aabb_max.z()));
 
 					// Soft body simulation nodes will update graphics mesh:
 					for (size_t ind = 0; ind < physicscomponent->vertex_positions_simulation.size(); ++ind)

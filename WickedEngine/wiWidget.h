@@ -2,7 +2,7 @@
 #include "CommonInclude.h"
 #include "wiColor.h"
 #include "wiGraphicsDevice.h"
-#include "wiIntersect.h"
+#include "wiPrimitive.h"
 #include "wiScene.h"
 #include "wiSprite.h"
 #include "wiSpriteFont.h"
@@ -88,7 +88,7 @@ namespace wi::widget
 		XMFLOAT3 translation = XMFLOAT3(0, 0, 0);
 		XMFLOAT3 scale = XMFLOAT3(1, 1, 1);
 
-		Hitbox2D hitBox;
+		wi::primitive::Hitbox2D hitBox;
 		wi::graphics::Rect scissorRect;
 
 		Widget* parent = nullptr;
@@ -99,7 +99,7 @@ namespace wi::widget
 		void Deactivate();
 
 		void ApplyScissor(const wi::Canvas& canvas, const wi::graphics::Rect rect, wi::graphics::CommandList cmd, bool constrain_to_parent = true) const;
-		Hitbox2D GetPointerHitbox() const;
+		wi::primitive::Hitbox2D GetPointerHitbox() const;
 
 		bool priority_change = true;
 		uint32_t priority = 0;
@@ -367,9 +367,9 @@ namespace wi::widget
 		float scrollbar_height = 0;
 		float scrollbar_value = 0;
 
-		Hitbox2D GetHitbox_ListArea() const;
-		Hitbox2D GetHitbox_Item(int visible_count, int level) const;
-		Hitbox2D GetHitbox_ItemOpener(int visible_count, int level) const;
+		wi::primitive::Hitbox2D GetHitbox_ListArea() const;
+		wi::primitive::Hitbox2D GetHitbox_Item(int visible_count, int level) const;
+		wi::primitive::Hitbox2D GetHitbox_ItemOpener(int visible_count, int level) const;
 
 		wi::vector<Item> items;
 

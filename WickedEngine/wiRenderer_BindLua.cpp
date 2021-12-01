@@ -7,14 +7,14 @@
 #include "wiTexture_BindLua.h"
 #include "wiEmittedParticle.h"
 #include "wiHairParticle.h"
-#include "wiIntersect_BindLua.h"
+#include "wiPrimitive_BindLua.h"
 #include "wiEvent.h"
 
 using namespace wi::ecs;
 using namespace wi::graphics;
 using namespace wi::scene;
 using namespace wi::lua::scene;
-using namespace wi::lua::intersect;
+using namespace wi::lua::primitive;
 
 namespace wi::lua::renderer
 {

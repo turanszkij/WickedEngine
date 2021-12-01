@@ -19,7 +19,7 @@
 #include "wiSpriteFont_BindLua.h"
 #include "wiBacklog_BindLua.h"
 #include "wiNetwork_BindLua.h"
-#include "wiIntersect_BindLua.h"
+#include "wiPrimitive_BindLua.h"
 #include "wiTimer.h"
 #include "wiVector.h"
 
@@ -114,7 +114,7 @@ namespace wi::lua
 		SpriteFont_BindLua::Bind();
 		backlog::Bind();
 		Network_BindLua::Bind();
-		intersect::Bind();
+		primitive::Bind();
 
 		wi::backlog::post("wi::lua Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}

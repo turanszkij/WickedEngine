@@ -4,7 +4,6 @@
 
 #include <thread>
 
-using namespace wi;
 using namespace wi::graphics;
 
 void PostprocessWindow::Create(EditorComponent* editor)
@@ -65,17 +64,17 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	}
 	aoComboBox.SetSelected(editor->renderPath->getAO());
 	aoComboBox.OnSelect([=](wi::widget::EventArgs args) {
-		editor->renderPath->setAO((RenderPath3D::AO)args.iValue);
+		editor->renderPath->setAO((wi::RenderPath3D::AO)args.iValue);
 
 		switch (editor->renderPath->getAO())
 		{
-		case RenderPath3D::AO_SSAO:
+		case wi::RenderPath3D::AO_SSAO:
 			aoRangeSlider.SetEnabled(true); 
 			aoRangeSlider.SetValue(2.0f);
 			aoSampleCountSlider.SetEnabled(true); 
 			aoSampleCountSlider.SetValue(9.0f);
 			break;
-		case RenderPath3D::AO_RTAO:
+		case wi::RenderPath3D::AO_RTAO:
 			aoRangeSlider.SetEnabled(true); 
 			aoRangeSlider.SetValue(10.0f);
 			aoSampleCountSlider.SetEnabled(false);
