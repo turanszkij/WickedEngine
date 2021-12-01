@@ -475,7 +475,7 @@ namespace wi::font
 
 
 	template<typename T>
-	float textWidth_internal(const T* text, const Params& params)
+	float TextWidth_internal(const T* text, const Params& params)
 	{
 		if (params.style >= (int)fontStyles.size())
 		{
@@ -521,7 +521,7 @@ namespace wi::font
 	}
 
 	template<typename T>
-	float textHeight_internal(const T* text, const Params& params)
+	float TextHeight_internal(const T* text, const Params& params)
 	{
 		if (params.style >= (int)fontStyles.size())
 		{
@@ -554,13 +554,13 @@ namespace wi::font
 		Params newProps = params;
 
 		if (params.h_align == WIFALIGN_CENTER)
-			newProps.posX -= textWidth_internal(text, newProps) / 2;
+			newProps.posX -= TextWidth_internal(text, newProps) / 2;
 		else if (params.h_align == WIFALIGN_RIGHT)
-			newProps.posX -= textWidth_internal(text, newProps);
+			newProps.posX -= TextWidth_internal(text, newProps);
 		if (params.v_align == WIFALIGN_CENTER)
-			newProps.posY -= textHeight_internal(text, newProps) / 2;
+			newProps.posY -= TextHeight_internal(text, newProps) / 2;
 		else if (params.v_align == WIFALIGN_BOTTOM)
-			newProps.posY -= textHeight_internal(text, newProps);
+			newProps.posY -= TextHeight_internal(text, newProps);
 
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
@@ -652,38 +652,38 @@ namespace wi::font
 		Draw_internal(text.c_str(), text.length(), params, cmd);
 	}
 
-	float textWidth(const char* text, const Params& params)
+	float TextWidth(const char* text, const Params& params)
 	{
-		return textWidth_internal(text, params);
+		return TextWidth_internal(text, params);
 	}
-	float textWidth(const wchar_t* text, const Params& params)
+	float TextWidth(const wchar_t* text, const Params& params)
 	{
-		return textWidth_internal(text, params);
+		return TextWidth_internal(text, params);
 	}
-	float textWidth(const std::string& text, const Params& params)
+	float TextWidth(const std::string& text, const Params& params)
 	{
-		return textWidth_internal(text.c_str(), params);
+		return TextWidth_internal(text.c_str(), params);
 	}
-	float textWidth(const std::wstring& text, const Params& params)
+	float TextWidth(const std::wstring& text, const Params& params)
 	{
-		return textWidth_internal(text.c_str(), params);
+		return TextWidth_internal(text.c_str(), params);
 	}
 
-	float textHeight(const char* text, const Params& params)
+	float TextHeight(const char* text, const Params& params)
 	{
-		return textHeight_internal(text, params);
+		return TextHeight_internal(text, params);
 	}
-	float textHeight(const wchar_t* text, const Params& params)
+	float TextHeight(const wchar_t* text, const Params& params)
 	{
-		return textHeight_internal(text, params);
+		return TextHeight_internal(text, params);
 	}
-	float textHeight(const std::string& text, const Params& params)
+	float TextHeight(const std::string& text, const Params& params)
 	{
-		return textHeight_internal(text.c_str(), params);
+		return TextHeight_internal(text.c_str(), params);
 	}
-	float textHeight(const std::wstring& text, const Params& params)
+	float TextHeight(const std::wstring& text, const Params& params)
 	{
-		return textHeight_internal(text.c_str(), params);
+		return TextHeight_internal(text.c_str(), params);
 	}
 
 }

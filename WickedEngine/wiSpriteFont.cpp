@@ -24,13 +24,13 @@ namespace wi
 		wi::font::Draw(text, params, cmd);
 	}
 
-	float SpriteFont::textWidth() const
+	float SpriteFont::TextWidth() const
 	{
-		return wi::font::textWidth(text, params);
+		return wi::font::TextWidth(text, params);
 	}
-	float SpriteFont::textHeight() const
+	float SpriteFont::TextHeight() const
 	{
-		return wi::font::textHeight(text, params);
+		return wi::font::TextHeight(text, params);
 	}
 
 	void SpriteFont::SetText(const std::string& value)

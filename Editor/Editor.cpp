@@ -150,7 +150,7 @@ void EditorLoadingScreen::Update(float dt)
 {
 	font.params.posX = GetLogicalWidth()*0.5f;
 	font.params.posY = GetLogicalHeight()*0.5f;
-	sprite.params.pos = XMFLOAT3(GetLogicalWidth()*0.5f, GetLogicalHeight()*0.5f - font.textHeight(), 0);
+	sprite.params.pos = XMFLOAT3(GetLogicalWidth()*0.5f, GetLogicalHeight()*0.5f - font.TextHeight(), 0);
 
 	LoadingScreen::Update(dt);
 }

@@ -132,7 +132,7 @@ namespace wi::backlog
 			if (refitscroll)
 			{
 				refitscroll = false;
-				float textheight = font.textHeight();
+				float textheight = font.TextHeight();
 				float limit = canvas.GetLogicalHeight() * 0.9f;
 				if (scroll + textheight > limit)
 				{

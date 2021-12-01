@@ -94,7 +94,7 @@ namespace wi
 			params.posX = 5.f;
 			params.posY = 5.f;
 			std::string text = wi::backlog::getText();
-			float textheight = wi::font::textHeight(text, params);
+			float textheight = wi::font::TextHeight(text, params);
 			float screenheight = canvas.GetLogicalHeight();
 			if (textheight > screenheight)
 			{

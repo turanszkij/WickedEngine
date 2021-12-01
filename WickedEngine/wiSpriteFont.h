@@ -34,8 +34,8 @@ namespace wi
 		constexpr void SetDisableUpdate(bool value = true) { if (value) { _flags |= DISABLE_UPDATE; } else { _flags &= ~DISABLE_UPDATE; } }
 		constexpr bool IsDisableUpdate() const { return _flags & DISABLE_UPDATE; }
 
-		float textWidth() const;
-		float textHeight() const;
+		float TextWidth() const;
+		float TextHeight() const;
 
 		void SetText(const std::string& value);
 		void SetText(std::string&& value);

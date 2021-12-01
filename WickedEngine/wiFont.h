@@ -80,14 +80,14 @@ namespace wi::font
 	void Draw(const std::string& text, const Params& params, wi::graphics::CommandList cmd);
 	void Draw(const std::wstring& text, const Params& params, wi::graphics::CommandList cmd);
 
-	float textWidth(const char* text, const Params& params);
-	float textWidth(const wchar_t* text, const Params& params);
-	float textWidth(const std::string& text, const Params& params);
-	float textWidth(const std::wstring& text, const Params& params);
+	float TextWidth(const char* text, const Params& params);
+	float TextWidth(const wchar_t* text, const Params& params);
+	float TextWidth(const std::string& text, const Params& params);
+	float TextWidth(const std::wstring& text, const Params& params);
 
-	float textHeight(const char* text, const Params& params);
-	float textHeight(const wchar_t* text, const Params& params);
-	float textHeight(const std::string& text, const Params& params);
-	float textHeight(const std::wstring& text, const Params& params);
+	float TextHeight(const char* text, const Params& params);
+	float TextHeight(const wchar_t* text, const Params& params);
+	float TextHeight(const std::string& text, const Params& params);
+	float TextHeight(const std::wstring& text, const Params& params);
 
 }

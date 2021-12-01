@@ -135,8 +135,8 @@ void Widget::RenderTooltip(const wi::Canvas& canvas, CommandList cmd) const
 		}
 
 		static const float _border = 2;
-		float textWidth = tooltipFont.textWidth() + _border * 2;
-		float textHeight = tooltipFont.textHeight() + _border * 2;
+		float textWidth = tooltipFont.TextWidth() + _border * 2;
+		float textHeight = tooltipFont.TextHeight() + _border * 2;
 
 		XMFLOAT2 pointer = GetPointerHitbox().pos;
 		tooltipFont.params.posX = pointer.x;
@@ -854,7 +854,7 @@ void Slider::Update(const wi::Canvas& canvas, float dt)
 	Widget::Update(canvas, dt);
 
 	valueInputField.Detach();
-	valueInputField.SetSize(XMFLOAT2(std::max(scale.y * 2, wi::font::textWidth(valueInputField.GetText(), valueInputField.font.params) + 4), scale.y));
+	valueInputField.SetSize(XMFLOAT2(std::max(scale.y * 2, wi::font::TextWidth(valueInputField.GetText(), valueInputField.font.params) + 4), scale.y));
 	valueInputField.SetPos(XMFLOAT2(translation.x + scale.x + 2, translation.y));
 	valueInputField.AttachTo(this);
 

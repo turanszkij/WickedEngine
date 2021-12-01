@@ -304,8 +304,8 @@ namespace wi::profiler
 		wi::image::Params fx;
 		fx.pos.x = (float)params.posX;
 		fx.pos.y = (float)params.posY;
-		fx.siz.x = (float)wi::font::textWidth(ss.str(), params);
-		fx.siz.y = (float)wi::font::textHeight(ss.str(), params);
+		fx.siz.x = (float)wi::font::TextWidth(ss.str(), params);
+		fx.siz.y = (float)wi::font::TextHeight(ss.str(), params);
 		fx.color = wi::Color(20, 20, 20, 230);
 		wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 

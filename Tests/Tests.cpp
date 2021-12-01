@@ -486,7 +486,7 @@ void TestsRenderer::RunFontTest()
 	font.params.size = 32;
 
 	font_upscaled.params = font.params;
-	font_upscaled.params.posY += font.textHeight();
+	font_upscaled.params.posY += font.TextHeight();
 
 	font.params.style = 0; // 0 = default font
 	font_upscaled.params.style = 0; // 0 = default font
@@ -498,7 +498,7 @@ void TestsRenderer::RunFontTest()
 
 	static wi::SpriteFont font_aligned;
 	font_aligned = font;
-	font_aligned.params.posY += font.textHeight() * 2;
+	font_aligned.params.posY += font.TextHeight() * 2;
 	font_aligned.params.size = 38;
 	font_aligned.params.shadowColor = wi::Color::Red();
 	font_aligned.params.h_align = wi::font::WIFALIGN_CENTER;
@@ -507,7 +507,7 @@ void TestsRenderer::RunFontTest()
 
 	static wi::SpriteFont font_aligned2;
 	font_aligned2 = font_aligned;
-	font_aligned2.params.posY += font_aligned.textHeight();
+	font_aligned2.params.posY += font_aligned.TextHeight();
 	font_aligned2.params.shadowColor = wi::Color::Purple();
 	font_aligned2.params.h_align = wi::font::WIFALIGN_RIGHT;
 	font_aligned2.SetText("Right aligned, purple shadow");
@@ -526,7 +526,7 @@ void TestsRenderer::RunFontTest()
 	}
 	static wi::SpriteFont font_japanese;
 	font_japanese = font_aligned2;
-	font_japanese.params.posY += font_aligned2.textHeight();
+	font_japanese.params.posY += font_aligned2.TextHeight();
 	font_japanese.params.style = wi::font::AddFontStyle("yumin.ttf");
 	font_japanese.params.shadowColor = wi::Color::Transparent();
 	font_japanese.params.h_align = wi::font::WIFALIGN_CENTER;
@@ -540,7 +540,7 @@ void TestsRenderer::RunFontTest()
 	font_colored.params.v_align = wi::font::WIFALIGN_TOP;
 	font_colored.params.size = 26;
 	font_colored.params.posX = GetLogicalWidth() / 2;
-	font_colored.params.posY = font_japanese.params.posY + font_japanese.textHeight();
+	font_colored.params.posY = font_japanese.params.posY + font_japanese.TextHeight();
 	font_colored.SetText("Colored font");
 	AddFont(&font_colored);
 }
