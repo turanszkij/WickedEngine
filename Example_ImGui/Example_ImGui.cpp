@@ -14,8 +14,8 @@
 #include <thread>
 
 using namespace wi::ecs;
-using namespace wi::graphics;
 using namespace wi::scene;
+using namespace wi::graphics;
 
 Shader imguiVS;
 Shader imguiPS;
@@ -74,9 +74,9 @@ bool ImGui_Impl_CreateDeviceObjects()
 	desc.vs = &imguiVS;
 	desc.ps = &imguiPS;
 	desc.il = &imguiInputLayout;
-	desc.dss = wi::renderer::GetDepthStencilState(DSSTYPE_DEPTHREAD);
-	desc.rs = wi::renderer::GetRasterizerState(RSTYPE_DOUBLESIDED);
-	desc.bs = wi::renderer::GetBlendState(BSTYPE_TRANSPARENT);
+	desc.dss = wi::renderer::GetDepthStencilState(wi::DSSTYPE_DEPTHREAD);
+	desc.rs = wi::renderer::GetRasterizerState(wi::RSTYPE_DOUBLESIDED);
+	desc.bs = wi::renderer::GetBlendState(wi::BSTYPE_TRANSPARENT);
 	desc.pt = PrimitiveTopology::TRIANGLELIST;
 	wi::graphics::GetDevice()->CreatePipelineState(&desc, &imguiPSO);
 

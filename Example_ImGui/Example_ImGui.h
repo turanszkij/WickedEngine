@@ -2,7 +2,7 @@
 #include "WickedEngine.h"
 
 
-class Example_ImGuiRenderer : public RenderPath3D
+class Example_ImGuiRenderer : public wi::RenderPath3D
 {
 	wi::widget::Label label;
 public:
@@ -12,7 +12,7 @@ public:
 	void Render() const override;
 };
 
-class Example_ImGui : public Application
+class Example_ImGui : public wi::Application
 {
 	Example_ImGuiRenderer renderer;
 
