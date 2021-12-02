@@ -156,13 +156,13 @@ void main(uint3 DTid : SV_DispatchThreadID)
 					[branch]
 					if (NdotL > 0)
 					{
-						float3 atmosphereTransmittance = 1.0;
+						float3 lightColor = light.GetColor().rgb * light.GetEnergy();
+
+						[branch]
 						if (GetFrame().options & OPTION_BIT_REALISTIC_SKY)
 						{
-							atmosphereTransmittance = GetAtmosphericLightTransmittance(GetWeather().atmosphere, surface.P, L, texture_transmittancelut);
+							lightColor *= GetAtmosphericLightTransmittance(GetWeather().atmosphere, surface.P, L, texture_transmittancelut);
 						}
-
-						float3 lightColor = light.GetColor().rgb * light.GetEnergy() * atmosphereTransmittance;
 
 						lighting.direct.diffuse = lightColor;
 					}

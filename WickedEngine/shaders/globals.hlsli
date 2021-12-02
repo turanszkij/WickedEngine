@@ -154,7 +154,7 @@ inline float GetFogAmount(float distance, float3 O, float3 V)
 		float Z = -V.y;
 		float effectiveZ = max(abs(Z), 0.001);
 
-		float endLineHeight = originHeight + distance * Z; // Isolated vector equation for y
+		float endLineHeight = mad(distance, Z, originHeight); // Isolated vector equation for y
 		float minLineHeight = min(originHeight, endLineHeight);
 		float heightLineFalloff = max(minLineHeight - fog.height_start, 0);
 		

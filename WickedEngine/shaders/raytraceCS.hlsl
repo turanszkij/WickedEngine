@@ -128,7 +128,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		surface.V = -ray.Direction;
 		surface.update();
 
-
 		result += max(0, energy * surface.emissiveColor);
 
 		if (!surface.material.IsUnlit())
@@ -158,17 +157,15 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 					surfaceToLight.create(surface, L);
 
 					[branch]
-					if (surfaceToLight.NdotL > 0)
+					if (any(surfaceToLight.NdotL_sss))
 					{
 						lightColor = light.GetColor().rgb * light.GetEnergy();
 
-						float3 atmosphereTransmittance = 1;
+						[branch]
 						if (GetFrame().options & OPTION_BIT_REALISTIC_SKY)
 						{
-							AtmosphereParameters Atmosphere = GetWeather().atmosphere;
-							atmosphereTransmittance = GetAtmosphericLightTransmittance(Atmosphere, surface.P, L, texture_transmittancelut);
+							lightColor *= GetAtmosphericLightTransmittance(GetWeather().atmosphere, surface.P, L, texture_transmittancelut);
 						}
-						lightColor *= atmosphereTransmittance;
 					}
 				}
 				break;
@@ -187,7 +184,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 						surfaceToLight.create(surface, L);
 
 						[branch]
-						if (surfaceToLight.NdotL > 0)
+						if (any(surfaceToLight.NdotL_sss))
 						{
 							lightColor = light.GetColor().rgb * light.GetEnergy();
 
@@ -214,7 +211,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 						surfaceToLight.create(surface, L);
 
 						[branch]
-						if (surfaceToLight.NdotL > 0)
+						if (any(surfaceToLight.NdotL_sss))
 						{
 							const float SpotFactor = dot(L, light.GetDirection());
 							const float spotCutOff = light.GetConeAngleCos();
@@ -236,13 +233,13 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 				break;
 				}
 
-				if (surfaceToLight.NdotL > 0 && dist > 0)
+				if (any(surfaceToLight.NdotL_sss) && dist > 0)
 				{
-					float3 shadow = surfaceToLight.NdotL * energy;
+					float3 shadow = energy;
 
 					RayDesc newRay;
 					newRay.Origin = surface.P;
-					newRay.Direction = normalize(lerp(L, sample_hemisphere_cos(L, seed, uv), 0.025));
+					newRay.Direction = normalize(lerp(L, sample_hemisphere_cos(L, seed, uv), 0.025 + max3(surface.sss)));
 					newRay.TMin = 0.001;
 					newRay.TMax = dist;
 #ifdef RTAPI
@@ -276,9 +273,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 #endif // RTAPI
 					if (any(shadow))
 					{
+						lightColor *= shadow;
 						lighting.direct.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
 						lighting.direct.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
-						result += max(0, shadow * (surface.albedo * (1 - surface.transmission) * lighting.direct.diffuse + lighting.direct.specular)) * surface.opacity;
+						result = mad(mad(surface.albedo * (1 - surface.transmission), lighting.direct.diffuse, lighting.direct.specular), surface.opacity, result);
 					}
 				}
 			}

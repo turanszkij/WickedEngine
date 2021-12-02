@@ -269,7 +269,7 @@ struct VertexSurface
 		tangent = input.GetTangent();
 		tangent.xyz = normalize(mul((float3x3)input.GetInstance().transformInverseTranspose.GetMatrix(), tangent.xyz));
 
-		uvsets = float4(input.GetUV0() * material.texMulAdd.xy + material.texMulAdd.zw, input.GetUV1());
+		uvsets = float4(mad(input.GetUV0(), material.texMulAdd.xy, material.texMulAdd.zw), input.GetUV1());
 
 		atlas = input.GetAtlasUV();
 
@@ -280,9 +280,9 @@ struct VertexSurface
 		if (material.IsUsingWind())
 		{
 			const float windweight = input.GetWindWeight();
-			const float waveoffset = dot(position.xyz, GetWeather().wind.direction) * GetWeather().wind.wavesize + (position.x + position.y + position.z) * GetWeather().wind.randomness;
+			const float waveoffset = mad(dot(position.xyz, GetWeather().wind.direction), GetWeather().wind.wavesize, (position.x + position.y + position.z) * GetWeather().wind.randomness);
 			const float3 wavedir = GetWeather().wind.direction * windweight;
-			const float3 wind = sin(GetFrame().time * GetWeather().wind.speed + waveoffset) * wavedir;
+			const float3 wind = sin(mad(GetFrame().time, GetWeather().wind.speed, waveoffset)) * wavedir;
 			position.xyz += wind;
 		}
 #endif // OBJECTSHADER_USE_WIND
@@ -423,7 +423,7 @@ inline void ParallaxOcclusionMapping(inout float4 uvsets, in float3 V, in float3
 		float nextH = heightFromTexture - curLayerHeight;
 		float prevH = 1 - texture_displacementmap.SampleGrad(sampler_linear_wrap, prevTCoords, derivX, derivY).r - curLayerHeight + layerHeight;
 		float weight = nextH / (nextH - prevH);
-		float2 finalTextureCoords = prevTCoords * weight + currentTextureCoords * (1.0 - weight);
+		float2 finalTextureCoords = mad(prevTCoords, weight, currentTextureCoords * (1.0 - weight));
 		float2 difference = finalTextureCoords - originalTextureCoords;
 		uvsets += difference.xyxy;
 	}
@@ -483,8 +483,8 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 					lighting.direct.specular += max(0, decalColor.rgb * decal.GetEmissive() * edgeBlend);
 					// perform manual blending of decals:
 					//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
-					decalAccumulation.rgb = (1 - decalAccumulation.a) * (decalColor.a*decalColor.rgb) + decalAccumulation.rgb;
-					decalAccumulation.a = decalColor.a + (1 - decalColor.a) * decalAccumulation.a;
+					decalAccumulation.rgb = mad(1 - decalAccumulation.a, decalColor.a * decalColor.rgb, decalAccumulation.rgb);
+					decalAccumulation.a = mad(1 - decalColor.a, decalAccumulation.a, decalColor.a);
 					[branch]
 					if (decalAccumulation.a >= 1.0)
 					{
@@ -541,8 +541,8 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 					const float4 envmapColor = EnvironmentReflection_Local(surface, probe, probeProjection, clipSpacePos);
 					// perform manual blending of probes:
 					//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
-					envmapAccumulation.rgb = (1 - envmapAccumulation.a) * (envmapColor.a * envmapColor.rgb) + envmapAccumulation.rgb;
-					envmapAccumulation.a = envmapColor.a + (1 - envmapColor.a) * envmapAccumulation.a;
+					envmapAccumulation.rgb = mad(1 - envmapAccumulation.a, envmapColor.a * envmapColor.rgb, envmapAccumulation.rgb);
+					envmapAccumulation.a = mad(1 - envmapColor.a, envmapAccumulation.a, envmapColor.a);
 					[branch]
 					if (envmapAccumulation.a >= 1.0)
 					{
@@ -698,8 +698,8 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 						lighting.direct.specular += max(0, decalColor.rgb * decal.GetEmissive() * edgeBlend);
 						// perform manual blending of decals:
 						//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
-						decalAccumulation.rgb = (1 - decalAccumulation.a) * (decalColor.a*decalColor.rgb) + decalAccumulation.rgb;
-						decalAccumulation.a = decalColor.a + (1 - decalColor.a) * decalAccumulation.a;
+						decalAccumulation.rgb = mad(1 - decalAccumulation.a, decalColor.a*decalColor.rgb, decalAccumulation.rgb);
+						decalAccumulation.a = mad(1 - decalColor.a, decalAccumulation.a, decalColor.a);
 						[branch]
 						if (decalAccumulation.a >= 1.0)
 						{
@@ -769,8 +769,8 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 						const float4 envmapColor = EnvironmentReflection_Local(surface, probe, probeProjection, clipSpacePos);
 						// perform manual blending of probes:
 						//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
-						envmapAccumulation.rgb = (1 - envmapAccumulation.a) * (envmapColor.a * envmapColor.rgb) + envmapAccumulation.rgb;
-						envmapAccumulation.a = envmapColor.a + (1 - envmapColor.a) * envmapAccumulation.a;
+						envmapAccumulation.rgb = mad(1 - envmapAccumulation.a, envmapColor.a * envmapColor.rgb, envmapAccumulation.rgb);
+						envmapAccumulation.a = mad(1 - envmapColor.a, envmapAccumulation.a, envmapColor.a);
 						[branch]
 						if (envmapAccumulation.a >= 1.0)
 						{

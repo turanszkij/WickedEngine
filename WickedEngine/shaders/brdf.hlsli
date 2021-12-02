@@ -326,7 +326,7 @@ struct Surface
 		float v = barycentrics.y;
 		float w = 1 - u - v;
 
-		P = p0 * w + p1 * u + p2 * v;
+		P = mad(p0, w, mad(p1, u, p2 * v)); // p0 * w + p1 * u + p2 * v
 		P = mul(inst.transform.GetMatrix(), float4(P, 1)).xyz;
 		V = normalize(GetCamera().position - P);
 
@@ -345,8 +345,8 @@ struct Surface
 			uv1.zw = unpack_half2(bindless_buffers[NonUniformResourceIndex(mesh.vb_uv1)].Load(i1 * 4));
 			uv2.zw = unpack_half2(bindless_buffers[NonUniformResourceIndex(mesh.vb_uv1)].Load(i2 * 4));
 		}
-		float4 uvsets = uv0 * w + uv1 * u + uv2 * v;
-		uvsets.xy = uvsets.xy * material.texMulAdd.xy + material.texMulAdd.zw;
+		float4 uvsets = mad(uv0, w, mad(uv1, u, uv2 * v)); // uv0 * w + uv1 * u + uv2 * v
+		uvsets.xy = mad(uvsets.xy, material.texMulAdd.xy, material.texMulAdd.zw);
 
 		float4 baseColor = is_emittedparticle ? 1 : material.baseColor;
 		[branch]
@@ -373,7 +373,7 @@ struct Surface
 			c0 = unpack_rgba(bindless_buffers[NonUniformResourceIndex(mesh.vb_col)].Load(i0 * stride_COL));
 			c1 = unpack_rgba(bindless_buffers[NonUniformResourceIndex(mesh.vb_col)].Load(i1 * stride_COL));
 			c2 = unpack_rgba(bindless_buffers[NonUniformResourceIndex(mesh.vb_col)].Load(i2 * stride_COL));
-			float4 vertexColor = c0 * w + c1 * u + c2 * v;
+			float4 vertexColor = mad(c0, w, mad(c1, u, c2 * v)); // c0 * w + c1 * u + c2 * v
 			baseColor *= vertexColor;
 		}
 
@@ -437,7 +437,7 @@ struct Surface
 			occlusion *= bindless_textures[NonUniformResourceIndex(material.texture_occlusionmap_index)].SampleLevel(sampler_linear_wrap, UV_occlusionMap, 0).r;
 		}
 
-		N = n0 * w + n1 * u + n2 * v;
+		N = mad(n0, w, mad(n1, u, n2 * v)); // n0 * w + n1 * u + n2 * v
 		N = mul((float3x3)inst.transformInverseTranspose.GetMatrix(), N);
 		N = normalize(N);
 		if (is_frontface == false && !is_hairparticle && !is_emittedparticle)
@@ -454,7 +454,7 @@ struct Surface
 			t0 = unpack_utangent(bindless_buffers[NonUniformResourceIndex(mesh.vb_tan)].Load(i0 * stride_TAN));
 			t1 = unpack_utangent(bindless_buffers[NonUniformResourceIndex(mesh.vb_tan)].Load(i1 * stride_TAN));
 			t2 = unpack_utangent(bindless_buffers[NonUniformResourceIndex(mesh.vb_tan)].Load(i2 * stride_TAN));
-			float4 T = t0 * w + t1 * u + t2 * v;
+			float4 T = mad(t0, w, mad(t1, u, t2 * v)); // t0 * w + t1 * u + t2 * v
 			T = T * 2 - 1;
 			T.xyz = mul((float3x3)inst.transformInverseTranspose.GetMatrix(), T.xyz);
 			T.xyz = normalize(T.xyz);
@@ -474,8 +474,11 @@ struct Surface
 			p1 = asfloat(bindless_buffers[mesh.vb_pre].Load3(i1 * 16));
 			p2 = asfloat(bindless_buffers[mesh.vb_pre].Load3(i2 * 16));
 		}
-		pre = p0 * w + p1 * u + p2 * v;
+		pre = mad(p0, w, mad(p1, u, p2 * v)); // p0 * w + p1 * u + p2 * v
 		pre = mul(inst.transformPrev.GetMatrix(), float4(pre, 1)).xyz;
+
+		sss = material.subsurfaceScattering;
+		sss_inv = material.subsurfaceScattering_inv;
 
 		update();
 
@@ -607,7 +610,7 @@ float3 BRDF_GetSpecular(in Surface surface, in SurfaceToLight surfaceToLight)
 	specular += D * Vis * surface.clearcoat.F;
 #endif // BRDF_CLEARCOAT
 
-	return specular;
+	return specular * surfaceToLight.NdotL;
 }
 float3 BRDF_GetDiffuse(in Surface surface, in SurfaceToLight surfaceToLight)
 {
@@ -623,7 +626,7 @@ float3 BRDF_GetDiffuse(in Surface surface, in SurfaceToLight surfaceToLight)
 	diffuse *= 1 - surface.clearcoat.F;
 #endif // BRDF_CLEARCOAT
 
-	return diffuse;
+	return diffuse * surfaceToLight.NdotL_sss;
 }
 
 #endif // WI_BRDF_HF
