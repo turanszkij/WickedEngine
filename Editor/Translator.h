@@ -7,7 +7,7 @@ class Translator
 {
 private:
 	XMFLOAT4 prevPointer = XMFLOAT4(0, 0, 0, 0);
-	XMFLOAT4X4 dragDeltaMatrix = IDENTITYMATRIX;
+	XMFLOAT4X4 dragDeltaMatrix = wi::math::IDENTITY_MATRIX;
 	bool dragging = false;
 	bool dragStarted = false;
 	bool dragEnded = false;

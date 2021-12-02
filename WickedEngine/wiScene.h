@@ -68,7 +68,7 @@ namespace wi::scene
 		// The world matrix can be computed from local scale, rotation, translation
 		//	- by calling UpdateTransform()
 		//	- or by calling SetDirty() and letting the TransformUpdateSystem handle the updating
-		XMFLOAT4X4 world = IDENTITYMATRIX;
+		XMFLOAT4X4 world = wi::math::IDENTITY_MATRIX;
 
 		inline void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
 		inline bool IsDirty() const { return _flags & DIRTY; }
@@ -763,7 +763,7 @@ namespace wi::scene
 
 		// Non-serialized attributes:
 		void* physicsobject = nullptr;
-		XMFLOAT4X4 worldMatrix = IDENTITYMATRIX;
+		XMFLOAT4X4 worldMatrix = wi::math::IDENTITY_MATRIX;
 		wi::vector<MeshComponent::Vertex_POS> vertex_positions_simulation; // graphics vertices after simulation (world space)
 		wi::vector<XMFLOAT4>vertex_tangents_tmp;
 		wi::vector<MeshComponent::Vertex_TAN> vertex_tangents_simulation;
@@ -1504,7 +1504,7 @@ namespace wi::scene
 		int vertexID1 = -1;
 		int vertexID2 = -1;
 		XMFLOAT2 bary = XMFLOAT2(0, 0);
-		XMFLOAT4X4 orientation = IDENTITYMATRIX;
+		XMFLOAT4X4 orientation = wi::math::IDENTITY_MATRIX;
 
 		bool operator==(const PickResult& other)
 		{

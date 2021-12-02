@@ -445,7 +445,7 @@ namespace wi::lua
 
 	Matrix_BindLua::Matrix_BindLua()
 	{
-		std::memcpy(this, &IDENTITYMATRIX, sizeof(IDENTITYMATRIX));
+		std::memcpy(this, &wi::math::IDENTITY_MATRIX, sizeof(wi::math::IDENTITY_MATRIX));
 	}
 	Matrix_BindLua::Matrix_BindLua(const XMFLOAT4X4& matrix)
 	{
@@ -457,7 +457,7 @@ namespace wi::lua
 	}
 	Matrix_BindLua::Matrix_BindLua(lua_State* L)
 	{
-		std::memcpy(this, &IDENTITYMATRIX, sizeof(IDENTITYMATRIX));
+		std::memcpy(this, &wi::math::IDENTITY_MATRIX, sizeof(wi::math::IDENTITY_MATRIX));
 
 		int argc = wi::lua::SGetArgCount(L);
 

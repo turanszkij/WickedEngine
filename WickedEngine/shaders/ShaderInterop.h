@@ -6,8 +6,6 @@
 // Application-side types:
 #include "../wiMath.h"
 
-using matrix = XMMATRIX;
-using float3x4 = XMFLOAT3X4;
 using float4x4 = XMFLOAT4X4;
 using float2 = XMFLOAT2;
 using float3 = XMFLOAT3;

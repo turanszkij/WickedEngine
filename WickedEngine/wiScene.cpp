@@ -3216,8 +3216,8 @@ namespace wi::scene
 					}
 
 					// Create GPU instance data:
-					const XMFLOAT4X4& worldMatrix = object.transform_index >= 0 ? transforms[object.transform_index].world : IDENTITYMATRIX;
-					const XMFLOAT4X4& worldMatrixPrev = object.prev_transform_index >= 0 ? prev_transforms[object.prev_transform_index].world_prev : IDENTITYMATRIX;
+					const XMFLOAT4X4& worldMatrix = object.transform_index >= 0 ? transforms[object.transform_index].world : wi::math::IDENTITY_MATRIX;
+					const XMFLOAT4X4& worldMatrixPrev = object.prev_transform_index >= 0 ? prev_transforms[object.prev_transform_index].world_prev : wi::math::IDENTITY_MATRIX;
 
 					XMMATRIX worldMatrixInverseTranspose = XMLoadFloat4x4(&worldMatrix);
 					worldMatrixInverseTranspose = XMMatrixInverse(nullptr, worldMatrixInverseTranspose);
@@ -3664,8 +3664,8 @@ namespace wi::scene
 					inst.init();
 					inst.uid = entity;
 					// every vertex is pretransformed and simulated in worldspace for hair particle:
-					inst.transform.Create(IDENTITYMATRIX);
-					inst.transformPrev.Create(IDENTITYMATRIX);
+					inst.transform.Create(wi::math::IDENTITY_MATRIX);
+					inst.transformPrev.Create(wi::math::IDENTITY_MATRIX);
 					inst.meshIndex = (uint)meshIndex;
 
 					if (TLAS_instancesMapped != nullptr && hair.BLAS.IsValid())
@@ -3676,7 +3676,7 @@ namespace wi::scene
 						{
 							for (int j = 0; j < arraysize(instance.transform[i]); ++j)
 							{
-								instance.transform[i][j] = IDENTITYMATRIX.m[j][i];
+								instance.transform[i][j] = wi::math::IDENTITY_MATRIX.m[j][i];
 							}
 						}
 						instance.instance_id = (uint32_t)instanceIndex;
@@ -3741,8 +3741,8 @@ namespace wi::scene
 			inst.init();
 			inst.uid = entity;
 			// every vertex is pretransformed and simulated in worldspace for emitted particle:
-			inst.transform.Create(IDENTITYMATRIX);
-			inst.transformPrev.Create(IDENTITYMATRIX);
+			inst.transform.Create(wi::math::IDENTITY_MATRIX);
+			inst.transformPrev.Create(wi::math::IDENTITY_MATRIX);
 			inst.meshIndex = (uint)meshIndex;
 
 			if (TLAS_instancesMapped != nullptr && emitter.BLAS.IsValid())
@@ -3753,7 +3753,7 @@ namespace wi::scene
 				{
 					for (int j = 0; j < arraysize(instance.transform[i]); ++j)
 					{
-						instance.transform[i][j] = IDENTITYMATRIX.m[j][i];
+						instance.transform[i][j] = wi::math::IDENTITY_MATRIX.m[j][i];
 					}
 				}
 				instance.instance_id = (uint32_t)instanceIndex;

@@ -273,7 +273,7 @@ void Translator::Update(const wi::Canvas& canvas)
 			if (!dragging)
 			{
 				dragStarted = true;
-				dragDeltaMatrix = IDENTITYMATRIX;
+				dragDeltaMatrix = wi::math::IDENTITY_MATRIX;
 			}
 
 			XMVECTOR plane, planeNormal;
