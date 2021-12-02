@@ -1,4 +1,5 @@
-#ifndef WICKED_ENGINE
+#ifndef WICKEDENGINE
+#define WICKEDENGINE
 #define WICKED_ENGINE
 
 // NOTE:
@@ -163,10 +164,10 @@ using wi::font::Alignment;
 static constexpr int SYSTEM_EVENT_THREAD_SAFE_POINT = wi::eventhandler::EVENT_THREAD_SAFE_POINT;
 static constexpr int SYSTEM_EVENT_RELOAD_SHADERS = wi::eventhandler::EVENT_RELOAD_SHADERS;
 static constexpr int SYSTEM_EVENT_SET_VSYNC = wi::eventhandler::EVENT_SET_VSYNC;
-static constexpr XMFLOAT4X4 IDENTITY_MATRIX = wi::math::IDENTITY_MATRIX;
+static constexpr XMFLOAT4X4 IDENTITYMATRIX = wi::math::IDENTITY_MATRIX;
 
 #endif // WICKEDENGINE_BACKWARDS_COMPATIBILITY_0_59_11
 
 
 
-#endif // WICKED_ENGINE
+#endif // WICKEDENGINE
