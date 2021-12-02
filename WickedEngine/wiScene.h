@@ -893,6 +893,7 @@ namespace wi::scene
 		XMFLOAT2 jitter;
 		XMFLOAT4 clipPlane = XMFLOAT4(0, 0, 0, 0); // default: no clip plane
 		wi::Canvas canvas;
+		uint32_t sample_count = 1;
 		int texture_depth_index = -1;
 		int texture_lineardepth_index = -1;
 		int texture_gbuffer0_index = -1;

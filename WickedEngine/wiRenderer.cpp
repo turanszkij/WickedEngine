@@ -7388,6 +7388,7 @@ void BindCameraCB(
 	cb.internal_resolution_rcp = float2(1.0f / cb.internal_resolution.x, 1.0f / cb.internal_resolution.y);
 
 	cb.entity_culling_tilecount = GetEntityCullingTileCount(cb.internal_resolution);
+	cb.sample_count = camera.sample_count;
 
 	cb.texture_depth_index = camera.texture_depth_index;
 	cb.texture_lineardepth_index = camera.texture_lineardepth_index;

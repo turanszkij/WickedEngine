@@ -934,6 +934,20 @@ inline void ApplyFog(in float distance, float3 P, float3 V, inout float4 color)
 	}
 }
 
+inline uint AlphaToCoverage(float alpha, float alphaTest, uint2 pixel)
+{
+	if (GetCamera().sample_count <= 1 || alphaTest == 0)
+	{
+		return ~0u;
+	}
+	alpha -= dither(pixel) / GetCamera().sample_count;
+	if (alpha > 0)
+	{
+		return ~0u >> (31u - uint(alpha * GetCamera().sample_count));
+	}
+	return 0;
+}
+
 
 // OBJECT SHADER PROTOTYPE
 ///////////////////////////
@@ -1022,16 +1036,27 @@ PixelInput main(VertexInput input)
 //	TERRAIN				-	include specialized terrain material blending code
 
 
+// entry point:
+#ifdef PREPASS
+struct PSOut
+{
+	uint2 primitiveID : SV_Target0;
+	uint coverage : SV_Coverage;
+};
 #ifdef DISABLE_ALPHATEST
 [earlydepthstencil]
 #endif // DISABLE_ALPHATEST
-
-
-// entry point:
-#ifdef PREPASS
-uint2 main(PixelInput input, in uint primitiveID : SV_PrimitiveID) : SV_TARGET
+PSOut main(PixelInput input, in uint primitiveID : SV_PrimitiveID)
 #else
-float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
+struct PSOut
+{
+	float4 color : SV_Target0;
+	uint coverage : SV_Coverage;
+};
+#ifdef DISABLE_ALPHATEST
+[earlydepthstencil]
+#endif // DISABLE_ALPHATEST
+PSOut main(PixelInput input, in bool is_frontface : SV_IsFrontFace)
 #endif // PREPASS
 
 
@@ -1113,7 +1138,6 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 #ifdef OBJECTSHADER_USE_COLOR
 	color *= input.color;
 #endif // OBJECTSHADER_USE_COLOR
-
 
 
 #ifndef DISABLE_ALPHATEST
@@ -1710,15 +1734,18 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 
 
 	// end point:
+	PSOut Out;
 #ifdef PREPASS
 	PrimitiveID prim;
 	prim.primitiveIndex = primitiveID;
 	prim.instanceIndex = input.instanceID;
 	prim.subsetIndex = GetSubsetIndex();
-	return prim.pack();
+	Out.primitiveID = prim.pack();
 #else
-	return color;
+	Out.color = color;
 #endif // PREPASS
+	Out.coverage = AlphaToCoverage(color.a, GetMaterial().alphaTest, pixel);
+	return Out;
 
 }
 

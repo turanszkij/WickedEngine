@@ -5,8 +5,14 @@
 #include "objectHF.hlsli"
 #include "hairparticleHF.hlsli"
 
+struct PSOut
+{
+	float4 color : SV_Target0;
+	uint coverage : SV_Coverage;
+};
+
 [earlydepthstencil]
-float4 main(VertexToPixel input) : SV_Target
+PSOut main(VertexToPixel input)
 {
 	ShaderMaterial material = HairGetMaterial();
 
@@ -62,5 +68,8 @@ float4 main(VertexToPixel input) : SV_Target
 
 	ApplyFog(dist, GetCamera().position, V, color);
 
-	return color;
+	PSOut Out;
+	Out.color = color;
+	Out.coverage = AlphaToCoverage(color.a, material.alphaTest, pixel);
+	return Out;
 }

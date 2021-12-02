@@ -3,13 +3,20 @@
 #include "hairparticleHF.hlsli"
 #include "ShaderInterop_HairParticle.h"
 
-uint2 main(VertexToPixel input) : SV_TARGET
+struct PSOut
+{
+	uint2 primitiveID : SV_Target0;
+	uint coverage : SV_Coverage;
+};
+
+PSOut main(VertexToPixel input)
 {
 	ShaderMaterial material = HairGetMaterial();
 
 	const float lineardepth = input.pos.w;
 
-	clip(dither(input.pos.xy + GetTemporalAASampleRotation()) - input.fade);
+	const uint2 pixel = input.pos.xy;
+	clip(dither(pixel + GetTemporalAASampleRotation()) - input.fade);
 
 	float4 color = 1;
 
@@ -30,5 +37,9 @@ uint2 main(VertexToPixel input) : SV_TARGET
 	prim.primitiveIndex = input.primitiveID;
 	prim.instanceIndex = xHairInstanceIndex;
 	prim.subsetIndex = 0;
-	return prim.pack();
+
+	PSOut Out;
+	Out.primitiveID = prim.pack();
+	Out.coverage = AlphaToCoverage(color.a, material.alphaTest, pixel);
+	return Out;
 }

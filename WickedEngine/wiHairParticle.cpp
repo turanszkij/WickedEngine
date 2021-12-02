@@ -556,7 +556,7 @@ namespace wi
 
 		BlendState bld;
 		bld.render_target[0].blend_enable = false;
-		bld.alpha_to_coverage_enable = false; // maybe for msaa
+		bld.alpha_to_coverage_enable = false;
 		bs = bld;
 
 		static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { HairParticleSystem_Internal::LoadShaders(); });

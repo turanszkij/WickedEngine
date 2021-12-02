@@ -614,6 +614,7 @@ void RenderPath3D::Update(float dt)
 	camera->canvas = *this;
 	camera->width = (float)internalResolution.x;
 	camera->height = (float)internalResolution.y;
+	camera->sample_count = depthBuffer_Main.desc.sample_count;
 	camera->texture_depth_index = device->GetDescriptorIndex(&depthBuffer_Copy, SubresourceType::SRV);
 	camera->texture_lineardepth_index = device->GetDescriptorIndex(&rtLinearDepth, SubresourceType::SRV);
 	camera->texture_gbuffer0_index = device->GetDescriptorIndex(&rtGbuffer[wi::renderer::GBUFFER_PRIMITIVEID], SubresourceType::SRV);
@@ -631,6 +632,7 @@ void RenderPath3D::Update(float dt)
 	camera_reflection.canvas = *this;
 	camera_reflection.width = (float)depthBuffer_Reflection.desc.width;
 	camera_reflection.height = (float)depthBuffer_Reflection.desc.height;
+	camera_reflection.sample_count = depthBuffer_Reflection.desc.sample_count;
 	camera_reflection.texture_depth_index = device->GetDescriptorIndex(&depthBuffer_Reflection, SubresourceType::SRV);
 	camera_reflection.texture_lineardepth_index = -1;
 	camera_reflection.texture_gbuffer0_index = -1;

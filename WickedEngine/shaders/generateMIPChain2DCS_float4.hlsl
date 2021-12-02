@@ -23,11 +23,14 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		if (mipgen.mipgen_options & MIPGEN_OPTION_BIT_PRESERVE_COVERAGE)
 		{
 			float4 alphas = input.GatherAlpha(customsampler, uv, 0);
+#if 0
 			alphas = pow(saturate(alphas), 2.2f);
 			float alpha = (alphas.x + alphas.y + alphas.z + alphas.w) / 4.0f;
 			alpha = pow(saturate(alpha), 1.0f / 2.2f);
 			color.a = alpha;
-			//color.a = max(alphas.x, max(alphas.y, max(alphas.z, alphas.w)));
+#else
+			color.a = max(alphas.x, max(alphas.y, max(alphas.z, alphas.w)));
+#endif
 		}
 
 		output[DTid.xy] = color;
