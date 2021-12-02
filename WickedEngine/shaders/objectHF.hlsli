@@ -1140,18 +1140,22 @@ PSOut main(PixelInput input, in bool is_frontface : SV_IsFrontFace)
 #endif // OBJECTSHADER_USE_COLOR
 
 
+	[branch]
+	if (GetCamera().sample_count <= 1)
+	{
 #ifndef DISABLE_ALPHATEST
-	float alphatest = GetMaterial().alphaTest;
+		float alphatest = GetMaterial().alphaTest;
 #ifndef TRANSPARENT
 #ifndef ENVMAPRENDERING
-	if (GetFrame().options & OPTION_BIT_TEMPORALAA_ENABLED)
-	{
-		alphatest = clamp(blue_noise(pixel, lineardepth).r, 0, 0.99);
-	}
+		if (GetFrame().options & OPTION_BIT_TEMPORALAA_ENABLED)
+		{
+			alphatest = clamp(blue_noise(pixel, lineardepth).r, 0, 0.99);
+		}
 #endif // ENVMAPRENDERING
 #endif // TRANSPARENT
-	clip(color.a - alphatest);
+		clip(color.a - alphatest);
 #endif // DISABLE_ALPHATEST
+	}
 
 
 

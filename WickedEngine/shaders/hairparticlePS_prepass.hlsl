@@ -26,12 +26,16 @@ PSOut main(VertexToPixel input)
 		color = bindless_textures[material.texture_basecolormap_index].Sample(sampler_linear_clamp, input.tex);
 	}
 
-	float alphatest = material.alphaTest;
-	if (GetFrame().options & OPTION_BIT_TEMPORALAA_ENABLED)
+	[branch]
+	if (GetCamera().sample_count <= 1)
 	{
-		alphatest = clamp(blue_noise(input.pos.xy, lineardepth).r, 0, 0.99);
+		float alphatest = material.alphaTest;
+		if (GetFrame().options & OPTION_BIT_TEMPORALAA_ENABLED)
+		{
+			alphatest = clamp(blue_noise(input.pos.xy, lineardepth).r, 0, 0.99);
+		}
+		clip(color.a - alphatest);
 	}
-	clip(color.a - alphatest);
 
 	PrimitiveID prim;
 	prim.primitiveIndex = input.primitiveID;
