@@ -3,47 +3,29 @@
 #include "hairparticleHF.hlsli"
 #include "ShaderInterop_HairParticle.h"
 
-struct PSOut
-{
-	uint2 primitiveID : SV_Target0;
-	uint coverage : SV_Coverage;
-};
-
-PSOut main(VertexToPixel input)
+uint2 main(VertexToPixel input, out uint coverage : SV_Coverage) : SV_Target
 {
 	ShaderMaterial material = HairGetMaterial();
 
-	const float lineardepth = input.pos.w;
-
-	const uint2 pixel = input.pos.xy;
-	clip(dither(pixel + GetTemporalAASampleRotation()) - input.fade);
-
-	float4 color = 1;
+	float alpha = 1;
 
 	[branch]
 	if (material.texture_basecolormap_index >= 0)
 	{
-		color = bindless_textures[material.texture_basecolormap_index].Sample(sampler_linear_clamp, input.tex);
+		alpha = bindless_textures[material.texture_basecolormap_index].Sample(sampler_linear_clamp, input.tex).a;
 	}
 
-	[branch]
-	if (GetCamera().sample_count <= 1)
+	// Distance dithered fade:
+	if (dither(input.pos.xy + GetTemporalAASampleRotation()) - input.fade < 0)
 	{
-		float alphatest = material.alphaTest;
-		if (GetFrame().options & OPTION_BIT_TEMPORALAA_ENABLED)
-		{
-			alphatest = clamp(blue_noise(input.pos.xy, lineardepth).r, 0, 0.99);
-		}
-		clip(color.a - alphatest);
+		alpha = 0;
 	}
+
+	coverage = AlphaToCoverage(alpha, material.alphaTest, input.pos);
 
 	PrimitiveID prim;
 	prim.primitiveIndex = input.primitiveID;
 	prim.instanceIndex = xHairInstanceIndex;
 	prim.subsetIndex = 0;
-
-	PSOut Out;
-	Out.primitiveID = prim.pack();
-	Out.coverage = AlphaToCoverage(color.a, material.alphaTest, pixel);
-	return Out;
+	return prim.pack();
 }

@@ -934,13 +934,30 @@ inline void ApplyFog(in float distance, float3 P, float3 V, inout float4 color)
 	}
 }
 
-inline uint AlphaToCoverage(float alpha, float alphaTest, uint2 pixel)
+inline uint AlphaToCoverage(float alpha, float alphaTest, float4 svposition)
 {
-	if (GetCamera().sample_count <= 1 || alphaTest == 0)
+	if (alphaTest == 0)
 	{
+		// No alpha test, force full coverage:
 		return ~0u;
 	}
-	alpha -= dither(pixel) / GetCamera().sample_count;
+
+	if (GetFrame().options & OPTION_BIT_TEMPORALAA_ENABLED)
+	{
+		// When Temporal AA is enabled, dither the alpha mask with animated blue noise:
+		alpha -= blue_noise(svposition.xy, svposition.w).x / GetCamera().sample_count;
+	}
+	else if (GetCamera().sample_count > 1)
+	{
+		// Without Temporal AA, use static dithering:
+		alpha -= dither(svposition.xy) / GetCamera().sample_count;
+	}
+	else
+	{
+		// Without Temporal AA and MSAA, regular alpha test behaviour will be used:
+		alpha -= alphaTest;
+	}
+
 	if (alpha > 0)
 	{
 		return ~0u >> (31u - uint(alpha * GetCamera().sample_count));
@@ -1035,22 +1052,14 @@ PixelInput main(VertexInput input)
 //	WATER				-	include specialized water shader code
 //	TERRAIN				-	include specialized terrain material blending code
 
+#ifdef DISABLE_ALPHATEST
+[earlydepthstencil]
+#endif // DISABLE_ALPHATEST
 
 // entry point:
 #ifdef PREPASS
-struct PSOut
-{
-	uint2 primitiveID : SV_Target0;
-	uint coverage : SV_Coverage;
-};
-#ifdef DISABLE_ALPHATEST
-[earlydepthstencil]
-#endif // DISABLE_ALPHATEST
-PSOut main(PixelInput input, in uint primitiveID : SV_PrimitiveID)
+uint2 main(PixelInput input, in uint primitiveID : SV_PrimitiveID, out uint coverage : SV_Coverage) : SV_Target
 #else
-#ifdef DISABLE_ALPHATEST
-[earlydepthstencil]
-#endif // DISABLE_ALPHATEST
 float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // PREPASS
 
@@ -1135,27 +1144,14 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // OBJECTSHADER_USE_COLOR
 
 
-#ifdef PREPASS
-	// - In prepass, alpha test will be only done if rendering is non-MSAA
-	// - In opaque pass, there is no alpha test, only Z test EQUAL
-	// - In transparent pass, there is normal alpha test and blend
-	[branch]
-	if (GetCamera().sample_count <= 1)
-#endif // PREPASS
-	{
+#ifdef TRANSPARENT
 #ifndef DISABLE_ALPHATEST
-		float alphatest = GetMaterial().alphaTest;
-#ifndef TRANSPARENT
-#ifndef ENVMAPRENDERING
-		if (GetFrame().options & OPTION_BIT_TEMPORALAA_ENABLED)
-		{
-			alphatest = clamp(blue_noise(pixel, lineardepth).r, 0, 0.99);
-		}
-#endif // ENVMAPRENDERING
-#endif // TRANSPARENT
-		clip(color.a - alphatest);
+	// Alpha test is only done for transparents
+	//	- Prepass will write alpha coverage mask
+	//	- Opaque will 
+	clip(color.a - GetMaterial().alphaTest);
 #endif // DISABLE_ALPHATEST
-	}
+#endif // TRANSPARENT
 
 
 
@@ -1739,15 +1735,13 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 
 	// end point:
 #ifdef PREPASS
+	coverage = AlphaToCoverage(color.a, GetMaterial().alphaTest, input.pos);
+
 	PrimitiveID prim;
 	prim.primitiveIndex = primitiveID;
 	prim.instanceIndex = input.instanceID;
 	prim.subsetIndex = GetSubsetIndex();
-
-	PSOut Out;
-	Out.primitiveID = prim.pack();
-	Out.coverage = AlphaToCoverage(color.a, GetMaterial().alphaTest, pixel);
-	return Out;
+	return prim.pack();
 #else
 	return color;
 #endif // PREPASS
