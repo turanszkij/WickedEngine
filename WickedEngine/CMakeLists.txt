@@ -98,7 +98,6 @@ add_library(${TARGET_NAME} STATIC
 	wiArguments.cpp
 	wiTextureHelper.cpp
 	wiVersion.cpp
-	wiWidget.cpp
 	wiXInput.cpp
 	wiShaderCompiler.cpp
 )
