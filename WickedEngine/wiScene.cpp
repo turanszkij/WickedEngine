@@ -1470,7 +1470,7 @@ namespace wi::scene
 		{
 			GPUBufferDesc desc;
 			desc.stride = sizeof(ShaderMeshInstance);
-			desc.size = desc.stride * instanceArraySize;
+			desc.size = desc.stride * instanceArraySize * 2; // *2 to grow fast
 			desc.bind_flags = BindFlag::SHADER_RESOURCE;
 			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
 			device->CreateBuffer(&desc, nullptr, &instanceBuffer);
@@ -1492,7 +1492,7 @@ namespace wi::scene
 		{
 			GPUBufferDesc desc;
 			desc.stride = sizeof(ShaderMesh);
-			desc.size = desc.stride * meshArraySize;
+			desc.size = desc.stride * meshArraySize * 2; // *2 to grow fast
 			desc.bind_flags = BindFlag::SHADER_RESOURCE;
 			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
 			device->CreateBuffer(&desc, nullptr, &meshBuffer);
@@ -1514,7 +1514,7 @@ namespace wi::scene
 		{
 			GPUBufferDesc desc;
 			desc.stride = sizeof(ShaderMaterial);
-			desc.size = desc.stride * materialArraySize;
+			desc.size = desc.stride * materialArraySize * 2; // *2 to grow fast
 			desc.bind_flags = BindFlag::SHADER_RESOURCE;
 			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
 			device->CreateBuffer(&desc, nullptr, &materialBuffer);
@@ -1536,7 +1536,7 @@ namespace wi::scene
 		{
 			GPUBufferDesc desc;
 			desc.stride = (uint32_t)device->GetTopLevelAccelerationStructureInstanceSize();
-			desc.size = desc.stride * instanceArraySize;
+			desc.size = desc.stride * instanceArraySize * 2; // *2 to grow fast
 			desc.usage = Usage::UPLOAD;
 			if (TLAS_instancesUpload->desc.size < desc.size)
 			{
@@ -1588,6 +1588,11 @@ namespace wi::scene
 		}
 
 		wi::jobsystem::context ctx;
+
+		wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
+			// Must not keep inactive TLAS instances, so zero them out for safety:
+			std::memset(TLAS_instancesMapped, 0, TLAS_instancesUpload->desc.size);
+		});
 
 		RunPreviousFrameTransformUpdateSystem(ctx);
 
@@ -1650,12 +1655,12 @@ namespace wi::scene
 		if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 		{
 			// Recreate top level acceleration structure if the object count changed:
-			if (instanceArraySize > 0 && (uint32_t)instanceArraySize != TLAS.desc.top_level.count)
+			if (TLAS.desc.top_level.count < instanceArraySize)
 			{
 				RaytracingAccelerationStructureDesc desc;
 				desc.flags = RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD;
 				desc.type = RaytracingAccelerationStructureDesc::Type::TOPLEVEL;
-				desc.top_level.count = (uint32_t)instanceArraySize;
+				desc.top_level.count = (uint32_t)instanceArraySize * 2; // *2 to grow fast
 				GPUBufferDesc bufdesc;
 				bufdesc.misc_flags |= ResourceMiscFlag::RAY_TRACING;
 				bufdesc.stride = (uint32_t)device->GetTopLevelAccelerationStructureInstanceSize();
