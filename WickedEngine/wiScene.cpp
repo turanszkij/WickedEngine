@@ -888,10 +888,10 @@ namespace wi::scene
 
 		switch (compute)
 		{
-		case wi::scene::MeshComponent::COMPUTE_NORMALS_HARD: 
+		case MeshComponent::COMPUTE_NORMALS_HARD: 
 		break;
 
-		case wi::scene::MeshComponent::COMPUTE_NORMALS_SMOOTH:
+		case MeshComponent::COMPUTE_NORMALS_SMOOTH:
 		{
 			// Compute smooth surface normals:
 
@@ -1047,7 +1047,7 @@ namespace wi::scene
 		}
 		break;
 
-		case wi::scene::MeshComponent::COMPUTE_NORMALS_SMOOTH_FAST:
+		case MeshComponent::COMPUTE_NORMALS_SMOOTH_FAST:
 		{
 			for (size_t i = 0; i < vertex_normals.size(); i++)
 			{

@@ -51,7 +51,6 @@
 #include "wiGraphics.h"
 #include "wiGraphicsDevice.h"
 #include "wiGUI.h"
-#include "wiWidget.h"
 #include "wiArchive.h"
 #include "wiSpinLock.h"
 #include "wiRectPacker.h"
@@ -129,18 +128,18 @@ using wiHairParticle = wi::HairParticleSystem;
 using wiOcean = wi::Ocean;
 using wiSprite = wi::Sprite;
 using wiSpriteFont = wi::SpriteFont;
-using wiGUI = wi::GUI;
-using wiEventArgs = wi::widget::EventArgs;
-using wiWidget = wi::widget::Widget;
-using wiButton = wi::widget::Button;
-using wiLabel = wi::widget::Label;
-using wiTextInputField = wi::widget::TextInputField;
-using wiSlider = wi::widget::Slider;
-using wiCheckBox = wi::widget::CheckBox;
-using wiComboBox = wi::widget::ComboBox;
-using wiWindow = wi::widget::Window;
-using wiColorPicker = wi::widget::ColorPicker;
-using wiTreeList = wi::widget::TreeList;
+using wiGUI = wi::gui::GUI;
+using wiEventArgs = wi::gui::EventArgs;
+using wiWidget = wi::gui::Widget;
+using wiButton = wi::gui::Button;
+using wiLabel = wi::gui::Label;
+using wiTextInputField = wi::gui::TextInputField;
+using wiSlider = wi::gui::Slider;
+using wiCheckBox = wi::gui::CheckBox;
+using wiComboBox = wi::gui::ComboBox;
+using wiWindow = wi::gui::Window;
+using wiColorPicker = wi::gui::ColorPicker;
+using wiTreeList = wi::gui::TreeList;
 using wiArchive = wi::Archive;
 using wiColor = wi::Color;
 using wiFadeManager = wi::FadeManager;

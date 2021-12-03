@@ -3,7 +3,7 @@
 
 class EditorComponent;
 
-class ForceFieldWindow : public wi::widget::Window
+class ForceFieldWindow : public wi::gui::Window
 {
 public:
 	void Create(EditorComponent* editor);
@@ -11,9 +11,9 @@ public:
 	wi::ecs::Entity entity;
 	void SetEntity(wi::ecs::Entity entity);
 
-	wi::widget::ComboBox typeComboBox;
-	wi::widget::Slider gravitySlider;
-	wi::widget::Slider rangeSlider;
-	wi::widget::Button addButton;
+	wi::gui::ComboBox typeComboBox;
+	wi::gui::Slider gravitySlider;
+	wi::gui::Slider rangeSlider;
+	wi::gui::Button addButton;
 };
 

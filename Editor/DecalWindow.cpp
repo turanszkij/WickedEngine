@@ -8,7 +8,7 @@ using namespace wi::scene;
 
 void DecalWindow::Create(EditorComponent* editor)
 {
-	wi::widget::Window::Create("Decal Window");
+	wi::gui::Window::Create("Decal Window");
 	SetSize(XMFLOAT2(400, 200));
 
 	float x = 200;
@@ -36,7 +36,7 @@ void DecalWindow::Create(EditorComponent* editor)
 	decalNameField.Create("Decal Name");
 	decalNameField.SetPos(XMFLOAT2(10, y+=step));
 	decalNameField.SetSize(XMFLOAT2(300, hei));
-	decalNameField.OnInputAccepted([=](wi::widget::EventArgs args) {
+	decalNameField.OnInputAccepted([=](wi::gui::EventArgs args) {
 		NameComponent* name = wi::scene::GetScene().names.GetComponent(entity);
 		if (name != nullptr)
 		{

@@ -4,7 +4,7 @@
 
 class Example_ImGuiRenderer : public wi::RenderPath3D
 {
-	wi::widget::Label label;
+	wi::gui::Label label;
 public:
 	void Load() override;
 	void Update(float dt) override;

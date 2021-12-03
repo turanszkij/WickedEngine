@@ -70,6 +70,7 @@ namespace wi::ecs
 		}
 	}
 
+	// The ComponentManager is a container that stores components and matches them with entities
 	template<typename Component>
 	class ComponentManager
 	{

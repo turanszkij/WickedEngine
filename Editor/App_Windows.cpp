@@ -169,13 +169,13 @@ protected:
 			{
 				if (wi::backlog::isActive())
 					wi::backlog::deletefromInput();
-				wi::widget::TextInputField::DeleteFromInput();
+				wi::gui::TextInputField::DeleteFromInput();
 			}
 			else
 			{
 				if (wi::backlog::isActive())
 					wi::backlog::input(c);
-				wi::widget::TextInputField::AddInput(c);
+				wi::gui::TextInputField::AddInput(c);
 			}
 
 		}

@@ -3,7 +3,7 @@
 
 class EditorComponent;
 
-class CameraWindow : public wi::widget::Window
+class CameraWindow : public wi::gui::Window
 {
 public:
 	void Create(EditorComponent* editor);
@@ -20,21 +20,21 @@ public:
 	wi::scene::TransformComponent camera_transform;
 	wi::scene::TransformComponent camera_target;
 
-	wi::widget::Slider farPlaneSlider;
-	wi::widget::Slider nearPlaneSlider;
-	wi::widget::Slider fovSlider;
-	wi::widget::Slider focalLengthSlider;
-	wi::widget::Slider apertureSizeSlider;
-	wi::widget::Slider apertureShapeXSlider;
-	wi::widget::Slider apertureShapeYSlider;
-	wi::widget::Slider movespeedSlider;
-	wi::widget::Slider rotationspeedSlider;
-	wi::widget::Slider accelerationSlider;
-	wi::widget::Button resetButton;
-	wi::widget::CheckBox fpsCheckBox;
+	wi::gui::Slider farPlaneSlider;
+	wi::gui::Slider nearPlaneSlider;
+	wi::gui::Slider fovSlider;
+	wi::gui::Slider focalLengthSlider;
+	wi::gui::Slider apertureSizeSlider;
+	wi::gui::Slider apertureShapeXSlider;
+	wi::gui::Slider apertureShapeYSlider;
+	wi::gui::Slider movespeedSlider;
+	wi::gui::Slider rotationspeedSlider;
+	wi::gui::Slider accelerationSlider;
+	wi::gui::Button resetButton;
+	wi::gui::CheckBox fpsCheckBox;
 
-	wi::widget::Button proxyButton;
-	wi::widget::CheckBox followCheckBox;
-	wi::widget::Slider followSlider;
+	wi::gui::Button proxyButton;
+	wi::gui::CheckBox followCheckBox;
+	wi::gui::Slider followSlider;
 };
 

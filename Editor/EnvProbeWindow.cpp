@@ -7,7 +7,7 @@ using namespace wi::scene;
 
 void EnvProbeWindow::Create(EditorComponent* editor)
 {
-	wi::widget::Window::Create("Environment Probe Window");
+	wi::gui::Window::Create("Environment Probe Window");
 	SetSize(XMFLOAT2(300, 200));
 
 	float x = 100, y = 5, step = 35;
@@ -15,7 +15,7 @@ void EnvProbeWindow::Create(EditorComponent* editor)
 	realTimeCheckBox.Create("RealTime: ");
 	realTimeCheckBox.SetPos(XMFLOAT2(x, y += step));
 	realTimeCheckBox.SetEnabled(false);
-	realTimeCheckBox.OnClick([&](wi::widget::EventArgs args) {
+	realTimeCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		EnvironmentProbeComponent* probe = wi::scene::GetScene().probes.GetComponent(entity);
 		if (probe != nullptr)
 		{
@@ -27,7 +27,7 @@ void EnvProbeWindow::Create(EditorComponent* editor)
 
 	generateButton.Create("Put");
 	generateButton.SetPos(XMFLOAT2(x, y += step));
-	generateButton.OnClick([=](wi::widget::EventArgs args) {
+	generateButton.OnClick([=](wi::gui::EventArgs args) {
 		XMFLOAT3 pos;
 		XMStoreFloat3(&pos, XMVectorAdd(wi::scene::GetCamera().GetEye(), wi::scene::GetCamera().GetAt() * 4));
 		Entity entity = wi::scene::GetScene().Entity_CreateEnvironmentProbe("editorProbe", pos);
@@ -41,7 +41,7 @@ void EnvProbeWindow::Create(EditorComponent* editor)
 	refreshButton.Create("Refresh");
 	refreshButton.SetPos(XMFLOAT2(x, y += step));
 	refreshButton.SetEnabled(false);
-	refreshButton.OnClick([&](wi::widget::EventArgs args) {
+	refreshButton.OnClick([&](wi::gui::EventArgs args) {
 		EnvironmentProbeComponent* probe = wi::scene::GetScene().probes.GetComponent(entity);
 		if (probe != nullptr)
 		{
@@ -53,7 +53,7 @@ void EnvProbeWindow::Create(EditorComponent* editor)
 	refreshAllButton.Create("Refresh All");
 	refreshAllButton.SetPos(XMFLOAT2(x, y += step));
 	refreshAllButton.SetEnabled(true);
-	refreshAllButton.OnClick([&](wi::widget::EventArgs args) {
+	refreshAllButton.OnClick([&](wi::gui::EventArgs args) {
 		Scene& scene = wi::scene::GetScene();
 		for (size_t i = 0; i < scene.probes.GetCount(); ++i)
 		{

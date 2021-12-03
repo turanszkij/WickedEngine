@@ -3,7 +3,7 @@
 
 class EditorComponent;
 
-class PaintToolWindow : public wi::widget::Window
+class PaintToolWindow : public wi::gui::Window
 {
 	float rot = 0;
 	float stroke_dist = 0;
@@ -20,18 +20,18 @@ public:
 	wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
 	int subset = -1;
 
-	wi::widget::ComboBox modeComboBox;
-	wi::widget::Label infoLabel;
-	wi::widget::Slider radiusSlider;
-	wi::widget::Slider amountSlider;
-	wi::widget::Slider falloffSlider;
-	wi::widget::Slider spacingSlider;
-	wi::widget::CheckBox backfaceCheckBox;
-	wi::widget::CheckBox wireCheckBox;
-	wi::widget::CheckBox pressureCheckBox;
-	wi::widget::ColorPicker colorPicker;
-	wi::widget::ComboBox textureSlotComboBox;
-	wi::widget::Button saveTextureButton;
+	wi::gui::ComboBox modeComboBox;
+	wi::gui::Label infoLabel;
+	wi::gui::Slider radiusSlider;
+	wi::gui::Slider amountSlider;
+	wi::gui::Slider falloffSlider;
+	wi::gui::Slider spacingSlider;
+	wi::gui::CheckBox backfaceCheckBox;
+	wi::gui::CheckBox wireCheckBox;
+	wi::gui::CheckBox pressureCheckBox;
+	wi::gui::ColorPicker colorPicker;
+	wi::gui::ComboBox textureSlotComboBox;
+	wi::gui::Button saveTextureButton;
 
 	void Update(float dt);
 	void DrawBrush() const;

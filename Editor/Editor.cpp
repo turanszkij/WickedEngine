@@ -179,7 +179,7 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 
 	renderPath->Load();
 
-	wi::GUI& gui = GetGUI();
+	wi::gui::GUI& gui = GetGUI();
 
 	// Destroy and recreate renderer and postprocess windows:
 
@@ -436,21 +436,21 @@ void EditorComponent::Load()
 
 	rendererWnd_Toggle.Create("Renderer");
 	rendererWnd_Toggle.SetTooltip("Renderer settings window");
-	rendererWnd_Toggle.OnClick([&](wi::widget::EventArgs args) {
+	rendererWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		rendererWnd.SetVisible(!rendererWnd.IsVisible());
 		});
 	GetGUI().AddWidget(&rendererWnd_Toggle);
 
 	postprocessWnd_Toggle.Create("PostProcess");
 	postprocessWnd_Toggle.SetTooltip("Postprocess settings window");
-	postprocessWnd_Toggle.OnClick([&](wi::widget::EventArgs args) {
+	postprocessWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		postprocessWnd.SetVisible(!postprocessWnd.IsVisible());
 		});
 	GetGUI().AddWidget(&postprocessWnd_Toggle);
 
 	paintToolWnd_Toggle.Create("Paint Tool");
 	paintToolWnd_Toggle.SetTooltip("Paint tool window");
-	paintToolWnd_Toggle.OnClick([&](wi::widget::EventArgs args) {
+	paintToolWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		paintToolWnd.SetVisible(!paintToolWnd.IsVisible());
 		});
 	GetGUI().AddWidget(&paintToolWnd_Toggle);
@@ -462,163 +462,163 @@ void EditorComponent::Load()
 
 
 	weatherWnd_Toggle.Create("Weather");
-	weatherWnd_Toggle.SetColor(option_color_idle, wi::widget::IDLE);
-	weatherWnd_Toggle.SetColor(option_color_focus, wi::widget::FOCUS);
+	weatherWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
+	weatherWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
 	weatherWnd_Toggle.SetTooltip("Weather settings window");
-	weatherWnd_Toggle.OnClick([&](wi::widget::EventArgs args) {
+	weatherWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		weatherWnd.SetVisible(!weatherWnd.IsVisible());
 	});
 	GetGUI().AddWidget(&weatherWnd_Toggle);
 
 	objectWnd_Toggle.Create("Object");
-	objectWnd_Toggle.SetColor(option_color_idle, wi::widget::IDLE);
-	objectWnd_Toggle.SetColor(option_color_focus, wi::widget::FOCUS);
+	objectWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
+	objectWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
 	objectWnd_Toggle.SetTooltip("Object settings window");
-	objectWnd_Toggle.OnClick([&](wi::widget::EventArgs args) {
+	objectWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		objectWnd.SetVisible(!objectWnd.IsVisible());
 	});
 	GetGUI().AddWidget(&objectWnd_Toggle);
 
 	meshWnd_Toggle.Create("Mesh");
-	meshWnd_Toggle.SetColor(option_color_idle, wi::widget::IDLE);
-	meshWnd_Toggle.SetColor(option_color_focus, wi::widget::FOCUS);
+	meshWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
+	meshWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
 	meshWnd_Toggle.SetTooltip("Mesh settings window");
-	meshWnd_Toggle.OnClick([&](wi::widget::EventArgs args) {
+	meshWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		meshWnd.SetVisible(!meshWnd.IsVisible());
 	});
 	GetGUI().AddWidget(&meshWnd_Toggle);
 
 	materialWnd_Toggle.Create("Material");
-	materialWnd_Toggle.SetColor(option_color_idle, wi::widget::IDLE);
-	materialWnd_Toggle.SetColor(option_color_focus, wi::widget::FOCUS);
+	materialWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
+	materialWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
 	materialWnd_Toggle.SetTooltip("Material settings window");
-	materialWnd_Toggle.OnClick([&](wi::widget::EventArgs args) {
+	materialWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		materialWnd.SetVisible(!materialWnd.IsVisible());
 	});
 	GetGUI().AddWidget(&materialWnd_Toggle);
 
 	cameraWnd_Toggle.Create("Camera");
-	cameraWnd_Toggle.SetColor(option_color_idle, wi::widget::IDLE);
-	cameraWnd_Toggle.SetColor(option_color_focus, wi::widget::FOCUS);
+	cameraWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
+	cameraWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
 	cameraWnd_Toggle.SetTooltip("Camera settings window");
-	cameraWnd_Toggle.OnClick([&](wi::widget::EventArgs args) {
+	cameraWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		cameraWnd.SetVisible(!cameraWnd.IsVisible());
 	});
 	GetGUI().AddWidget(&cameraWnd_Toggle);
 
 	envProbeWnd_Toggle.Create("EnvProbe");
-	envProbeWnd_Toggle.SetColor(option_color_idle, wi::widget::IDLE);
-	envProbeWnd_Toggle.SetColor(option_color_focus, wi::widget::FOCUS);
+	envProbeWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
+	envProbeWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
 	envProbeWnd_Toggle.SetTooltip("Environment probe settings window");
-	envProbeWnd_Toggle.OnClick([&](wi::widget::EventArgs args) {
+	envProbeWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		envProbeWnd.SetVisible(!envProbeWnd.IsVisible());
 	});
 	GetGUI().AddWidget(&envProbeWnd_Toggle);
 
 	decalWnd_Toggle.Create("Decal");
-	decalWnd_Toggle.SetColor(option_color_idle, wi::widget::IDLE);
-	decalWnd_Toggle.SetColor(option_color_focus, wi::widget::FOCUS);
+	decalWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
+	decalWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
 	decalWnd_Toggle.SetTooltip("Decal settings window");
-	decalWnd_Toggle.OnClick([&](wi::widget::EventArgs args) {
+	decalWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		decalWnd.SetVisible(!decalWnd.IsVisible());
 	});
 	GetGUI().AddWidget(&decalWnd_Toggle);
 
 	soundWnd_Toggle.Create("Sound");
-	soundWnd_Toggle.SetColor(option_color_idle, wi::widget::IDLE);
-	soundWnd_Toggle.SetColor(option_color_focus, wi::widget::FOCUS);
+	soundWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
+	soundWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
 	soundWnd_Toggle.SetTooltip("Sound settings window");
-	soundWnd_Toggle.OnClick([&](wi::widget::EventArgs args) {
+	soundWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		soundWnd.SetVisible(!soundWnd.IsVisible());
 		});
 	GetGUI().AddWidget(&soundWnd_Toggle);
 
 	lightWnd_Toggle.Create("Light");
-	lightWnd_Toggle.SetColor(option_color_idle, wi::widget::IDLE);
-	lightWnd_Toggle.SetColor(option_color_focus, wi::widget::FOCUS);
+	lightWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
+	lightWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
 	lightWnd_Toggle.SetTooltip("Light settings window");
-	lightWnd_Toggle.OnClick([&](wi::widget::EventArgs args) {
+	lightWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		lightWnd.SetVisible(!lightWnd.IsVisible());
 	});
 	GetGUI().AddWidget(&lightWnd_Toggle);
 
 	animWnd_Toggle.Create("Animation");
-	animWnd_Toggle.SetColor(option_color_idle, wi::widget::IDLE);
-	animWnd_Toggle.SetColor(option_color_focus, wi::widget::FOCUS);
+	animWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
+	animWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
 	animWnd_Toggle.SetTooltip("Animation inspector window");
-	animWnd_Toggle.OnClick([&](wi::widget::EventArgs args) {
+	animWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		animWnd.SetVisible(!animWnd.IsVisible());
 	});
 	GetGUI().AddWidget(&animWnd_Toggle);
 
 	emitterWnd_Toggle.Create("Emitter");
-	emitterWnd_Toggle.SetColor(option_color_idle, wi::widget::IDLE);
-	emitterWnd_Toggle.SetColor(option_color_focus, wi::widget::FOCUS);
+	emitterWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
+	emitterWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
 	emitterWnd_Toggle.SetTooltip("Emitter Particle System properties");
-	emitterWnd_Toggle.OnClick([&](wi::widget::EventArgs args) {
+	emitterWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		emitterWnd.SetVisible(!emitterWnd.IsVisible());
 	});
 	GetGUI().AddWidget(&emitterWnd_Toggle);
 
 	hairWnd_Toggle.Create("HairParticle");
-	hairWnd_Toggle.SetColor(option_color_idle, wi::widget::IDLE);
-	hairWnd_Toggle.SetColor(option_color_focus, wi::widget::FOCUS);
+	hairWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
+	hairWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
 	hairWnd_Toggle.SetTooltip("Hair Particle System properties");
-	hairWnd_Toggle.OnClick([&](wi::widget::EventArgs args) {
+	hairWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		hairWnd.SetVisible(!hairWnd.IsVisible());
 	});
 	GetGUI().AddWidget(&hairWnd_Toggle);
 
 	forceFieldWnd_Toggle.Create("ForceField");
-	forceFieldWnd_Toggle.SetColor(option_color_idle, wi::widget::IDLE);
-	forceFieldWnd_Toggle.SetColor(option_color_focus, wi::widget::FOCUS);
+	forceFieldWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
+	forceFieldWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
 	forceFieldWnd_Toggle.SetTooltip("Force Field properties");
-	forceFieldWnd_Toggle.OnClick([&](wi::widget::EventArgs args) {
+	forceFieldWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		forceFieldWnd.SetVisible(!forceFieldWnd.IsVisible());
 	});
 	GetGUI().AddWidget(&forceFieldWnd_Toggle);
 
 	springWnd_Toggle.Create("Spring");
-	springWnd_Toggle.SetColor(option_color_idle, wi::widget::IDLE);
-	springWnd_Toggle.SetColor(option_color_focus, wi::widget::FOCUS);
+	springWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
+	springWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
 	springWnd_Toggle.SetTooltip("Spring properties");
-	springWnd_Toggle.OnClick([&](wi::widget::EventArgs args) {
+	springWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		springWnd.SetVisible(!springWnd.IsVisible());
 		});
 	GetGUI().AddWidget(&springWnd_Toggle);
 
 	ikWnd_Toggle.Create("IK");
-	ikWnd_Toggle.SetColor(option_color_idle, wi::widget::IDLE);
-	ikWnd_Toggle.SetColor(option_color_focus, wi::widget::FOCUS);
+	ikWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
+	ikWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
 	ikWnd_Toggle.SetTooltip("Inverse Kinematics properties");
-	ikWnd_Toggle.OnClick([&](wi::widget::EventArgs args) {
+	ikWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		ikWnd.SetVisible(!ikWnd.IsVisible());
 		});
 	GetGUI().AddWidget(&ikWnd_Toggle);
 
 	transformWnd_Toggle.Create("Transform");
-	transformWnd_Toggle.SetColor(option_color_idle, wi::widget::IDLE);
-	transformWnd_Toggle.SetColor(option_color_focus, wi::widget::FOCUS);
+	transformWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
+	transformWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
 	transformWnd_Toggle.SetTooltip("Transform properties");
-	transformWnd_Toggle.OnClick([&](wi::widget::EventArgs args) {
+	transformWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		transformWnd.SetVisible(!transformWnd.IsVisible());
 		});
 	GetGUI().AddWidget(&transformWnd_Toggle);
 
 	layerWnd_Toggle.Create("Layer");
-	layerWnd_Toggle.SetColor(option_color_idle, wi::widget::IDLE);
-	layerWnd_Toggle.SetColor(option_color_focus, wi::widget::FOCUS);
+	layerWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
+	layerWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
 	layerWnd_Toggle.SetTooltip("Layer Component");
-	layerWnd_Toggle.OnClick([&](wi::widget::EventArgs args) {
+	layerWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		layerWnd.SetVisible(!layerWnd.IsVisible());
 		});
 	GetGUI().AddWidget(&layerWnd_Toggle);
 
 	nameWnd_Toggle.Create("Name");
-	nameWnd_Toggle.SetColor(option_color_idle, wi::widget::IDLE);
-	nameWnd_Toggle.SetColor(option_color_focus, wi::widget::FOCUS);
+	nameWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
+	nameWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
 	nameWnd_Toggle.SetTooltip("Name Component");
-	nameWnd_Toggle.OnClick([&](wi::widget::EventArgs args) {
+	nameWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		nameWnd.SetVisible(!nameWnd.IsVisible());
 		});
 	GetGUI().AddWidget(&nameWnd_Toggle);
@@ -629,7 +629,7 @@ void EditorComponent::Load()
 
 	translatorCheckBox.Create("Translator: ");
 	translatorCheckBox.SetTooltip("Enable the translator tool");
-	translatorCheckBox.OnClick([&](wi::widget::EventArgs args) {
+	translatorCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		translator.enabled = args.bValue;
 	});
 	GetGUI().AddWidget(&translatorCheckBox);
@@ -639,7 +639,7 @@ void EditorComponent::Load()
 	isTranslatorCheckBox.Create("T: ");
 	{
 		isScalatorCheckBox.SetTooltip("Scale");
-		isScalatorCheckBox.OnClick([&](wi::widget::EventArgs args) {
+		isScalatorCheckBox.OnClick([&](wi::gui::EventArgs args) {
 			translator.isScalator = args.bValue;
 			translator.isTranslator = false;
 			translator.isRotator = false;
@@ -650,7 +650,7 @@ void EditorComponent::Load()
 		GetGUI().AddWidget(&isScalatorCheckBox);
 
 		isRotatorCheckBox.SetTooltip("Rotate");
-		isRotatorCheckBox.OnClick([&](wi::widget::EventArgs args) {
+		isRotatorCheckBox.OnClick([&](wi::gui::EventArgs args) {
 			translator.isRotator = args.bValue;
 			translator.isScalator = false;
 			translator.isTranslator = false;
@@ -661,7 +661,7 @@ void EditorComponent::Load()
 		GetGUI().AddWidget(&isRotatorCheckBox);
 
 		isTranslatorCheckBox.SetTooltip("Translate");
-		isTranslatorCheckBox.OnClick([&](wi::widget::EventArgs args) {
+		isTranslatorCheckBox.OnClick([&](wi::gui::EventArgs args) {
 			translator.isTranslator = args.bValue;
 			translator.isScalator = false;
 			translator.isRotator = false;
@@ -675,9 +675,9 @@ void EditorComponent::Load()
 
 	saveButton.Create("Save");
 	saveButton.SetTooltip("Save the current scene");
-	saveButton.SetColor(wi::Color(0, 198, 101, 180), wi::widget::WIDGETSTATE::IDLE);
-	saveButton.SetColor(wi::Color(0, 255, 140, 255), wi::widget::WIDGETSTATE::FOCUS);
-	saveButton.OnClick([&](wi::widget::EventArgs args) {
+	saveButton.SetColor(wi::Color(0, 198, 101, 180), wi::gui::WIDGETSTATE::IDLE);
+	saveButton.SetColor(wi::Color(0, 255, 140, 255), wi::gui::WIDGETSTATE::FOCUS);
+	saveButton.OnClick([&](wi::gui::EventArgs args) {
 
 		const bool dump_to_header = saveModeComboBox.GetSelected() == 2;
 
@@ -725,9 +725,9 @@ void EditorComponent::Load()
 
 	modelButton.Create("Load Model");
 	modelButton.SetTooltip("Load a scene / import model into the editor...");
-	modelButton.SetColor(wi::Color(0, 89, 255, 180), wi::widget::WIDGETSTATE::IDLE);
-	modelButton.SetColor(wi::Color(112, 155, 255, 255), wi::widget::WIDGETSTATE::FOCUS);
-	modelButton.OnClick([&](wi::widget::EventArgs args) {
+	modelButton.SetColor(wi::Color(0, 89, 255, 180), wi::gui::WIDGETSTATE::IDLE);
+	modelButton.SetColor(wi::Color(112, 155, 255, 255), wi::gui::WIDGETSTATE::FOCUS);
+	modelButton.OnClick([&](wi::gui::EventArgs args) {
 		wi::helper::FileDialogParams params;
 		params.type = wi::helper::FileDialogParams::OPEN;
 		params.description = "Model formats (.wiscene, .obj, .gltf, .glb)";
@@ -806,9 +806,9 @@ void EditorComponent::Load()
 
 	scriptButton.Create("Load Script");
 	scriptButton.SetTooltip("Load a Lua script...");
-	scriptButton.SetColor(wi::Color(255, 33, 140, 180), wi::widget::WIDGETSTATE::IDLE);
-	scriptButton.SetColor(wi::Color(255, 100, 140, 255), wi::widget::WIDGETSTATE::FOCUS);
-	scriptButton.OnClick([&](wi::widget::EventArgs args) {
+	scriptButton.SetColor(wi::Color(255, 33, 140, 180), wi::gui::WIDGETSTATE::IDLE);
+	scriptButton.SetColor(wi::Color(255, 100, 140, 255), wi::gui::WIDGETSTATE::FOCUS);
+	scriptButton.OnClick([&](wi::gui::EventArgs args) {
 		wi::helper::FileDialogParams params;
 		params.type = wi::helper::FileDialogParams::OPEN;
 		params.description = "Lua script";
@@ -824,9 +824,9 @@ void EditorComponent::Load()
 
 	clearButton.Create("Clear World");
 	clearButton.SetTooltip("Delete every model from the scene");
-	clearButton.SetColor(wi::Color(255, 173, 43, 180), wi::widget::WIDGETSTATE::IDLE);
-	clearButton.SetColor(wi::Color(255, 235, 173, 255), wi::widget::WIDGETSTATE::FOCUS);
-	clearButton.OnClick([&](wi::widget::EventArgs args) {
+	clearButton.SetColor(wi::Color(255, 173, 43, 180), wi::gui::WIDGETSTATE::IDLE);
+	clearButton.SetColor(wi::Color(255, 235, 173, 255), wi::gui::WIDGETSTATE::FOCUS);
+	clearButton.OnClick([&](wi::gui::EventArgs args) {
 		translator.selected.clear();
 		wi::renderer::ClearWorld(wi::scene::GetScene());
 		objectWnd.SetEntity(INVALID_ENTITY);
@@ -854,9 +854,9 @@ void EditorComponent::Load()
 
 	helpButton.Create("?");
 	helpButton.SetTooltip("Help");
-	helpButton.SetColor(wi::Color(34, 158, 214, 180), wi::widget::WIDGETSTATE::IDLE);
-	helpButton.SetColor(wi::Color(113, 183, 214, 255), wi::widget::WIDGETSTATE::FOCUS);
-	helpButton.OnClick([&](wi::widget::EventArgs args) {
+	helpButton.SetColor(wi::Color(34, 158, 214, 180), wi::gui::WIDGETSTATE::IDLE);
+	helpButton.SetColor(wi::Color(113, 183, 214, 255), wi::gui::WIDGETSTATE::FOCUS);
+	helpButton.OnClick([&](wi::gui::EventArgs args) {
 		helpLabel.SetVisible(!helpLabel.IsVisible());
 	});
 	GetGUI().AddWidget(&helpButton);
@@ -898,9 +898,9 @@ void EditorComponent::Load()
 
 	exitButton.Create("X");
 	exitButton.SetTooltip("Exit");
-	exitButton.SetColor(wi::Color(190, 0, 0, 180), wi::widget::WIDGETSTATE::IDLE);
-	exitButton.SetColor(wi::Color(255, 0, 0, 255), wi::widget::WIDGETSTATE::FOCUS);
-	exitButton.OnClick([this](wi::widget::EventArgs args) {
+	exitButton.SetColor(wi::Color(190, 0, 0, 180), wi::gui::WIDGETSTATE::IDLE);
+	exitButton.SetColor(wi::Color(255, 0, 0, 255), wi::gui::WIDGETSTATE::FOCUS);
+	exitButton.OnClick([this](wi::gui::EventArgs args) {
 		wi::platform::Exit();
 	});
 	GetGUI().AddWidget(&exitButton);
@@ -908,7 +908,7 @@ void EditorComponent::Load()
 
 	profilerEnabledCheckBox.Create("Profiler Enabled: ");
 	profilerEnabledCheckBox.SetTooltip("Toggle Profiler On/Off");
-	profilerEnabledCheckBox.OnClick([&](wi::widget::EventArgs args) {
+	profilerEnabledCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		wi::profiler::SetEnabled(args.bValue);
 		});
 	profilerEnabledCheckBox.SetCheck(wi::profiler::IsEnabled());
@@ -916,7 +916,7 @@ void EditorComponent::Load()
 
 	physicsEnabledCheckBox.Create("Physics Simulation: ");
 	physicsEnabledCheckBox.SetTooltip("Toggle Physics Simulation On/Off");
-	physicsEnabledCheckBox.OnClick([&](wi::widget::EventArgs args) {
+	physicsEnabledCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		wi::physics::SetSimulationEnabled(args.bValue);
 	});
 	physicsEnabledCheckBox.SetCheck(wi::physics::IsSimulationEnabled());
@@ -924,7 +924,7 @@ void EditorComponent::Load()
 
 	cinemaModeCheckBox.Create("Cinema Mode: ");
 	cinemaModeCheckBox.SetTooltip("Toggle Cinema Mode (All HUD disabled). Press ESC to exit.");
-	cinemaModeCheckBox.OnClick([&](wi::widget::EventArgs args) {
+	cinemaModeCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		if (renderPath != nullptr)
 		{
 			renderPath->GetGUI().SetVisible(false);
@@ -937,13 +937,13 @@ void EditorComponent::Load()
 
 
 	sceneGraphView.Create("Scene graph view");
-	sceneGraphView.OnSelect([this](wi::widget::EventArgs args) {
+	sceneGraphView.OnSelect([this](wi::gui::EventArgs args) {
 
 		translator.selected.clear();
 
 		for (int i = 0; i < sceneGraphView.GetItemCount(); ++i)
 		{
-			const wi::widget::TreeList::Item& item = sceneGraphView.GetItem(i);
+			const wi::gui::TreeList::Item& item = sceneGraphView.GetItem(i);
 			if (item.selected)
 			{
 				wi::scene::PickResult pick;
@@ -953,14 +953,14 @@ void EditorComponent::Load()
 		}
 
 		});
-	sceneGraphView.SetColor(wi::Color(100, 100, 100, 100), wi::widget::IDLE);
+	sceneGraphView.SetColor(wi::Color(100, 100, 100, 100), wi::gui::IDLE);
 	GetGUI().AddWidget(&sceneGraphView);
 
 
 	renderPathComboBox.Create("Render Path: ");
 	renderPathComboBox.AddItem("Default");
 	renderPathComboBox.AddItem("Path Tracing");
-	renderPathComboBox.OnSelect([&](wi::widget::EventArgs args) {
+	renderPathComboBox.OnSelect([&](wi::gui::EventArgs args) {
 		ChangeRenderPath((RENDERPATH)args.iValue);
 	});
 	renderPathComboBox.SetSelected(RENDERPATH_DEFAULT);
@@ -970,8 +970,8 @@ void EditorComponent::Load()
 
 
 	saveModeComboBox.Create("Save Mode: ");
-	saveModeComboBox.SetColor(wi::Color(0, 198, 101, 180), wi::widget::WIDGETSTATE::IDLE);
-	saveModeComboBox.SetColor(wi::Color(0, 255, 140, 255), wi::widget::WIDGETSTATE::FOCUS);
+	saveModeComboBox.SetColor(wi::Color(0, 198, 101, 180), wi::gui::WIDGETSTATE::IDLE);
+	saveModeComboBox.SetColor(wi::Color(0, 255, 140, 255), wi::gui::WIDGETSTATE::FOCUS);
 	saveModeComboBox.AddItem("Embed resources", (uint64_t)wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA);
 	saveModeComboBox.AddItem("No embedding", (uint64_t)wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA_BUT_DISABLE_EMBEDDING);
 	saveModeComboBox.AddItem("Dump to header", (uint64_t)wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA);
@@ -1009,7 +1009,7 @@ void EditorComponent::Load()
 	layerWnd.Create(this);
 	nameWnd.Create(this);
 
-	wi::GUI& gui = GetGUI();
+	wi::gui::GUI& gui = GetGUI();
 	gui.AddWidget(&materialWnd);
 	gui.AddWidget(&weatherWnd);
 	gui.AddWidget(&objectWnd);
@@ -2318,7 +2318,7 @@ void EditorComponent::PushToSceneGraphView(wi::ecs::Entity entity, int level)
 	}
 	const Scene& scene = wi::scene::GetScene();
 
-	wi::widget::TreeList::Item item;
+	wi::gui::TreeList::Item item;
 	item.level = level;
 	item.userdata = entity;
 	item.selected = IsSelected(entity);
@@ -2343,7 +2343,7 @@ void EditorComponent::RefreshSceneGraphView()
 
 	for (int i = 0; i < sceneGraphView.GetItemCount(); ++i)
 	{
-		const wi::widget::TreeList::Item& item = sceneGraphView.GetItem(i);
+		const wi::gui::TreeList::Item& item = sceneGraphView.GetItem(i);
 		if (item.open)
 		{
 			scenegraphview_opened_items.insert((Entity)item.userdata);
@@ -2373,7 +2373,7 @@ void EditorComponent::RefreshSceneGraphView()
 			continue;
 		}
 
-		wi::widget::TreeList::Item item;
+		wi::gui::TreeList::Item item;
 		item.userdata = entity;
 		item.selected = IsSelected(entity);
 		item.open = scenegraphview_opened_items.count(entity) != 0;
@@ -2393,7 +2393,7 @@ void EditorComponent::RefreshSceneGraphView()
 			continue;
 		}
 
-		wi::widget::TreeList::Item item;
+		wi::gui::TreeList::Item item;
 		item.userdata = entity;
 		item.selected = IsSelected(entity);
 		item.open = scenegraphview_opened_items.count(entity) != 0;

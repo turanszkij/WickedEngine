@@ -8,7 +8,7 @@ using namespace wi::scene;
 
 void LayerWindow::Create(EditorComponent* editor)
 {
-	wi::widget::Window::Create("Layer Window");
+	wi::gui::Window::Create("Layer Window");
 	SetSize(XMFLOAT2(410, 160));
 
 	float x = 30;
@@ -21,7 +21,7 @@ void LayerWindow::Create(EditorComponent* editor)
 		layers[i].Create("");
 		layers[i].SetText(std::to_string(i) + ": ");
 		layers[i].SetPos(XMFLOAT2(x + (i % 8) * 50, y + (i / 8 + 1) * step));
-		layers[i].OnClick([=](wi::widget::EventArgs args) {
+		layers[i].OnClick([=](wi::gui::EventArgs args) {
 
 			LayerComponent* layer = wi::scene::GetScene().layers.GetComponent(entity);
 			if (layer == nullptr)
@@ -46,7 +46,7 @@ void LayerWindow::Create(EditorComponent* editor)
 
 	enableAllButton.Create("Enable ALL");
 	enableAllButton.SetPos(XMFLOAT2(x, y));
-	enableAllButton.OnClick([this](wi::widget::EventArgs args) {
+	enableAllButton.OnClick([this](wi::gui::EventArgs args) {
 		LayerComponent* layer = wi::scene::GetScene().layers.GetComponent(entity);
 		if (layer == nullptr)
 		{
@@ -60,7 +60,7 @@ void LayerWindow::Create(EditorComponent* editor)
 
 	enableNoneButton.Create("Enable NONE");
 	enableNoneButton.SetPos(XMFLOAT2(x + 120, y));
-	enableNoneButton.OnClick([this](wi::widget::EventArgs args) {
+	enableNoneButton.OnClick([this](wi::gui::EventArgs args) {
 		LayerComponent* layer = wi::scene::GetScene().layers.GetComponent(entity);
 		if (layer == nullptr)
 		{

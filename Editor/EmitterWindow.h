@@ -5,7 +5,7 @@ class EditorComponent;
 
 class MaterialWindow;
 
-class EmitterWindow : public wi::widget::Window
+class EmitterWindow : public wi::gui::Window
 {
 public:
 	void Create(EditorComponent* editor);
@@ -17,50 +17,50 @@ public:
 
 	wi::EmittedParticleSystem* GetEmitter();
 
-	wi::widget::TextInputField emitterNameField;
-	wi::widget::Button addButton;
-	wi::widget::Button restartButton;
-	wi::widget::ComboBox meshComboBox;
-	wi::widget::ComboBox shaderTypeComboBox;
-	wi::widget::Label infoLabel;
-	wi::widget::Slider maxParticlesSlider;
-	wi::widget::CheckBox sortCheckBox;
-	wi::widget::CheckBox depthCollisionsCheckBox;
-	wi::widget::CheckBox sphCheckBox;
-	wi::widget::CheckBox pauseCheckBox;
-	wi::widget::CheckBox debugCheckBox;
-	wi::widget::CheckBox volumeCheckBox;
-	wi::widget::CheckBox frameBlendingCheckBox;
-	wi::widget::Slider emitCountSlider;
-	wi::widget::Slider emitSizeSlider;
-	wi::widget::Slider emitRotationSlider;
-	wi::widget::Slider emitNormalSlider;
-	wi::widget::Slider emitScalingSlider;
-	wi::widget::Slider emitLifeSlider;
-	wi::widget::Slider emitRandomnessSlider;
-	wi::widget::Slider emitLifeRandomnessSlider;
-	wi::widget::Slider emitColorRandomnessSlider;
-	wi::widget::Slider emitMotionBlurSlider;
-	wi::widget::Slider emitMassSlider;
-	wi::widget::Slider timestepSlider;
-	wi::widget::Slider dragSlider;
-	wi::widget::TextInputField VelocityXInput;
-	wi::widget::TextInputField VelocityYInput;
-	wi::widget::TextInputField VelocityZInput;
-	wi::widget::TextInputField GravityXInput;
-	wi::widget::TextInputField GravityYInput;
-	wi::widget::TextInputField GravityZInput;
+	wi::gui::TextInputField emitterNameField;
+	wi::gui::Button addButton;
+	wi::gui::Button restartButton;
+	wi::gui::ComboBox meshComboBox;
+	wi::gui::ComboBox shaderTypeComboBox;
+	wi::gui::Label infoLabel;
+	wi::gui::Slider maxParticlesSlider;
+	wi::gui::CheckBox sortCheckBox;
+	wi::gui::CheckBox depthCollisionsCheckBox;
+	wi::gui::CheckBox sphCheckBox;
+	wi::gui::CheckBox pauseCheckBox;
+	wi::gui::CheckBox debugCheckBox;
+	wi::gui::CheckBox volumeCheckBox;
+	wi::gui::CheckBox frameBlendingCheckBox;
+	wi::gui::Slider emitCountSlider;
+	wi::gui::Slider emitSizeSlider;
+	wi::gui::Slider emitRotationSlider;
+	wi::gui::Slider emitNormalSlider;
+	wi::gui::Slider emitScalingSlider;
+	wi::gui::Slider emitLifeSlider;
+	wi::gui::Slider emitRandomnessSlider;
+	wi::gui::Slider emitLifeRandomnessSlider;
+	wi::gui::Slider emitColorRandomnessSlider;
+	wi::gui::Slider emitMotionBlurSlider;
+	wi::gui::Slider emitMassSlider;
+	wi::gui::Slider timestepSlider;
+	wi::gui::Slider dragSlider;
+	wi::gui::TextInputField VelocityXInput;
+	wi::gui::TextInputField VelocityYInput;
+	wi::gui::TextInputField VelocityZInput;
+	wi::gui::TextInputField GravityXInput;
+	wi::gui::TextInputField GravityYInput;
+	wi::gui::TextInputField GravityZInput;
 
-	wi::widget::Slider sph_h_Slider;
-	wi::widget::Slider sph_K_Slider;
-	wi::widget::Slider sph_p0_Slider;
-	wi::widget::Slider sph_e_Slider;
+	wi::gui::Slider sph_h_Slider;
+	wi::gui::Slider sph_K_Slider;
+	wi::gui::Slider sph_p0_Slider;
+	wi::gui::Slider sph_e_Slider;
 
-	wi::widget::TextInputField frameRateInput;
-	wi::widget::TextInputField framesXInput;
-	wi::widget::TextInputField framesYInput;
-	wi::widget::TextInputField frameCountInput;
-	wi::widget::TextInputField frameStartInput;
+	wi::gui::TextInputField frameRateInput;
+	wi::gui::TextInputField framesXInput;
+	wi::gui::TextInputField framesYInput;
+	wi::gui::TextInputField frameCountInput;
+	wi::gui::TextInputField frameStartInput;
 
 };
 

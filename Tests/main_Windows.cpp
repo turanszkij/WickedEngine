@@ -164,7 +164,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		case VK_BACK:
 			if (wi::backlog::isActive())
 				wi::backlog::deletefromInput();
-			wi::widget::TextInputField::DeleteFromInput();
+			wi::gui::TextInputField::DeleteFromInput();
 			break;
 		case VK_RETURN:
 			break;
@@ -175,7 +175,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			{
 				wi::backlog::input(c);
 			}
-			wi::widget::TextInputField::AddInput(c);
+			wi::gui::TextInputField::AddInput(c);
 		}
 		break;
 		}

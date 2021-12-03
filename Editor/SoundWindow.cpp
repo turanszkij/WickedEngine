@@ -9,7 +9,7 @@ using namespace wi::scene;
 
 void SoundWindow::Create(EditorComponent* editor)
 {
-	wi::widget::Window::Create("Sound Window");
+	wi::gui::Window::Create("Sound Window");
 	SetSize(XMFLOAT2(440, 220));
 
 	float x = 20;
@@ -20,7 +20,7 @@ void SoundWindow::Create(EditorComponent* editor)
 	reverbComboBox.Create("Reverb: ");
 	reverbComboBox.SetPos(XMFLOAT2(x + 80, y += step));
 	reverbComboBox.SetSize(XMFLOAT2(180, hei));
-	reverbComboBox.OnSelect([&](wi::widget::EventArgs args) {
+	reverbComboBox.OnSelect([&](wi::gui::EventArgs args) {
 		wi::audio::SetReverb((wi::audio::REVERB_PRESET)args.iValue);
 	});
 	reverbComboBox.AddItem("DEFAULT");
@@ -62,7 +62,7 @@ void SoundWindow::Create(EditorComponent* editor)
 	addButton.SetTooltip("Add a sound file to the scene.");
 	addButton.SetPos(XMFLOAT2(x, y += step));
 	addButton.SetSize(XMFLOAT2(80, hei));
-	addButton.OnClick([=](wi::widget::EventArgs args) {
+	addButton.OnClick([=](wi::gui::EventArgs args) {
 		wi::helper::FileDialogParams params;
 		params.type = wi::helper::FileDialogParams::OPEN;
 		params.description = "Sound";
@@ -88,7 +88,7 @@ void SoundWindow::Create(EditorComponent* editor)
 	nameField.SetTooltip("Enter a sound name to identify this entity...");
 	nameField.SetPos(XMFLOAT2(x, y += step));
 	nameField.SetSize(XMFLOAT2(300, hei));
-	nameField.OnInputAccepted([=](wi::widget::EventArgs args) {
+	nameField.OnInputAccepted([=](wi::gui::EventArgs args) {
 		NameComponent* name = wi::scene::GetScene().names.GetComponent(entity);
 		if (name == nullptr)
 		{
@@ -105,7 +105,7 @@ void SoundWindow::Create(EditorComponent* editor)
 	playstopButton.SetTooltip("Play/Stop selected sound instance.");
 	playstopButton.SetPos(XMFLOAT2(x, y += step));
 	playstopButton.SetSize(XMFLOAT2(80, hei));
-	playstopButton.OnClick([&](wi::widget::EventArgs args) {
+	playstopButton.OnClick([&](wi::gui::EventArgs args) {
 		SoundComponent* sound = GetScene().sounds.GetComponent(entity);
 		if (sound != nullptr)
 		{
@@ -128,7 +128,7 @@ void SoundWindow::Create(EditorComponent* editor)
 	loopedCheckbox.SetTooltip("Enable looping for the selected sound instance.");
 	loopedCheckbox.SetPos(XMFLOAT2(x + 150, y));
 	loopedCheckbox.SetSize(XMFLOAT2(hei, hei));
-	loopedCheckbox.OnClick([&](wi::widget::EventArgs args) {
+	loopedCheckbox.OnClick([&](wi::gui::EventArgs args) {
 		SoundComponent* sound = GetScene().sounds.GetComponent(entity);
 		if (sound != nullptr)
 		{
@@ -142,7 +142,7 @@ void SoundWindow::Create(EditorComponent* editor)
 	reverbCheckbox.SetTooltip("Enable/disable reverb.");
 	reverbCheckbox.SetPos(XMFLOAT2(x + 240, y));
 	reverbCheckbox.SetSize(XMFLOAT2(hei, hei));
-	reverbCheckbox.OnClick([&](wi::widget::EventArgs args) {
+	reverbCheckbox.OnClick([&](wi::gui::EventArgs args) {
 		SoundComponent* sound = GetScene().sounds.GetComponent(entity);
 		if (sound != nullptr)
 		{
@@ -157,7 +157,7 @@ void SoundWindow::Create(EditorComponent* editor)
 	disable3dCheckbox.SetTooltip("Sounds in the scene are 3D spatial by default. Select this to disable 3D effect.");
 	disable3dCheckbox.SetPos(XMFLOAT2(x + 300, y));
 	disable3dCheckbox.SetSize(XMFLOAT2(hei, hei));
-	disable3dCheckbox.OnClick([&](wi::widget::EventArgs args) {
+	disable3dCheckbox.OnClick([&](wi::gui::EventArgs args) {
 		SoundComponent* sound = GetScene().sounds.GetComponent(entity);
 		if (sound != nullptr)
 		{
@@ -172,7 +172,7 @@ void SoundWindow::Create(EditorComponent* editor)
 	volumeSlider.SetTooltip("Set volume level for the selected sound instance.");
 	volumeSlider.SetPos(XMFLOAT2(x + 60, y += step));
 	volumeSlider.SetSize(XMFLOAT2(240, hei));
-	volumeSlider.OnSlide([&](wi::widget::EventArgs args) {
+	volumeSlider.OnSlide([&](wi::gui::EventArgs args) {
 		SoundComponent* sound = GetScene().sounds.GetComponent(entity);
 		if (sound != nullptr)
 		{
@@ -185,7 +185,7 @@ void SoundWindow::Create(EditorComponent* editor)
 	submixComboBox.Create("Submix: ");
 	submixComboBox.SetPos(XMFLOAT2(x + 80, y += step));
 	submixComboBox.SetSize(XMFLOAT2(180, hei));
-	submixComboBox.OnSelect([&](wi::widget::EventArgs args) {
+	submixComboBox.OnSelect([&](wi::gui::EventArgs args) {
 		SoundComponent* sound = GetScene().sounds.GetComponent(entity);
 		if (sound != nullptr)
 		{

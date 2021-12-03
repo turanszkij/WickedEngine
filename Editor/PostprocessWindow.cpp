@@ -8,7 +8,7 @@ using namespace wi::graphics;
 
 void PostprocessWindow::Create(EditorComponent* editor)
 {
-	wi::widget::Window::Create("PostProcess Window");
+	wi::gui::Window::Create("PostProcess Window");
 	SetSize(XMFLOAT2(420, 500));
 
 	float x = 150;
@@ -22,7 +22,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	exposureSlider.SetSize(XMFLOAT2(100, hei));
 	exposureSlider.SetPos(XMFLOAT2(x, y += step));
 	exposureSlider.SetValue(editor->renderPath->getExposure());
-	exposureSlider.OnSlide([=](wi::widget::EventArgs args) {
+	exposureSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setExposure(args.fValue);
 	});
 	AddWidget(&exposureSlider);
@@ -33,7 +33,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	lensFlareCheckBox.SetSize(XMFLOAT2(hei, hei));
 	lensFlareCheckBox.SetPos(XMFLOAT2(x, y += step));
 	lensFlareCheckBox.SetCheck(editor->renderPath->getLensFlareEnabled());
-	lensFlareCheckBox.OnClick([=](wi::widget::EventArgs args) {
+	lensFlareCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->renderPath->setLensFlareEnabled(args.bValue);
 	});
 	AddWidget(&lensFlareCheckBox);
@@ -44,7 +44,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	lightShaftsCheckBox.SetSize(XMFLOAT2(hei, hei));
 	lightShaftsCheckBox.SetPos(XMFLOAT2(x, y += step));
 	lightShaftsCheckBox.SetCheck(editor->renderPath->getLightShaftsEnabled());
-	lightShaftsCheckBox.OnClick([=](wi::widget::EventArgs args) {
+	lightShaftsCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->renderPath->setLightShaftsEnabled(args.bValue);
 	});
 	AddWidget(&lightShaftsCheckBox);
@@ -63,7 +63,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 		aoComboBox.AddItem("RTAO");
 	}
 	aoComboBox.SetSelected(editor->renderPath->getAO());
-	aoComboBox.OnSelect([=](wi::widget::EventArgs args) {
+	aoComboBox.OnSelect([=](wi::gui::EventArgs args) {
 		editor->renderPath->setAO((wi::RenderPath3D::AO)args.iValue);
 
 		switch (editor->renderPath->getAO())
@@ -95,7 +95,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	aoPowerSlider.SetSize(XMFLOAT2(100, hei));
 	aoPowerSlider.SetPos(XMFLOAT2(x + 100, y += step));
 	aoPowerSlider.SetValue((float)editor->renderPath->getAOPower());
-	aoPowerSlider.OnSlide([=](wi::widget::EventArgs args) {
+	aoPowerSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setAOPower(args.fValue);
 		});
 	AddWidget(&aoPowerSlider);
@@ -105,7 +105,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	aoRangeSlider.SetSize(XMFLOAT2(100, hei));
 	aoRangeSlider.SetPos(XMFLOAT2(x + 100, y += step));
 	aoRangeSlider.SetValue((float)editor->renderPath->getAOPower());
-	aoRangeSlider.OnSlide([=](wi::widget::EventArgs args) {
+	aoRangeSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setAORange(args.fValue);
 		});
 	AddWidget(&aoRangeSlider);
@@ -115,7 +115,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	aoSampleCountSlider.SetSize(XMFLOAT2(100, hei));
 	aoSampleCountSlider.SetPos(XMFLOAT2(x + 100, y += step));
 	aoSampleCountSlider.SetValue((float)editor->renderPath->getAOPower());
-	aoSampleCountSlider.OnSlide([=](wi::widget::EventArgs args) {
+	aoSampleCountSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setAOSampleCount(args.iValue);
 		});
 	AddWidget(&aoSampleCountSlider);
@@ -126,7 +126,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	ssrCheckBox.SetSize(XMFLOAT2(hei, hei));
 	ssrCheckBox.SetPos(XMFLOAT2(x, y += step));
 	ssrCheckBox.SetCheck(editor->renderPath->getSSREnabled());
-	ssrCheckBox.OnClick([=](wi::widget::EventArgs args) {
+	ssrCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->renderPath->setSSREnabled(args.bValue);
 	});
 	AddWidget(&ssrCheckBox);
@@ -137,7 +137,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	raytracedReflectionsCheckBox.SetSize(XMFLOAT2(hei, hei));
 	raytracedReflectionsCheckBox.SetPos(XMFLOAT2(x + 200, y));
 	raytracedReflectionsCheckBox.SetCheck(editor->renderPath->getRaytracedReflectionEnabled());
-	raytracedReflectionsCheckBox.OnClick([=](wi::widget::EventArgs args) {
+	raytracedReflectionsCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->renderPath->setRaytracedReflectionsEnabled(args.bValue);
 		});
 	AddWidget(&raytracedReflectionsCheckBox);
@@ -148,7 +148,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	screenSpaceShadowsCheckBox.SetSize(XMFLOAT2(hei, hei));
 	screenSpaceShadowsCheckBox.SetPos(XMFLOAT2(x, y += step));
 	screenSpaceShadowsCheckBox.SetCheck(wi::renderer::GetScreenSpaceShadowsEnabled());
-	screenSpaceShadowsCheckBox.OnClick([=](wi::widget::EventArgs args) {
+	screenSpaceShadowsCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		wi::renderer::SetScreenSpaceShadowsEnabled(args.bValue);
 		});
 	AddWidget(&screenSpaceShadowsCheckBox);
@@ -158,7 +158,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	screenSpaceShadowsRangeSlider.SetSize(XMFLOAT2(100, hei));
 	screenSpaceShadowsRangeSlider.SetPos(XMFLOAT2(x + 100, y));
 	screenSpaceShadowsRangeSlider.SetValue((float)editor->renderPath->getScreenSpaceShadowRange());
-	screenSpaceShadowsRangeSlider.OnSlide([=](wi::widget::EventArgs args) {
+	screenSpaceShadowsRangeSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setScreenSpaceShadowRange(args.fValue);
 		});
 	AddWidget(&screenSpaceShadowsRangeSlider);
@@ -168,7 +168,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	screenSpaceShadowsStepCountSlider.SetSize(XMFLOAT2(100, hei));
 	screenSpaceShadowsStepCountSlider.SetPos(XMFLOAT2(x + 100, y += step));
 	screenSpaceShadowsStepCountSlider.SetValue((float)editor->renderPath->getScreenSpaceShadowSampleCount());
-	screenSpaceShadowsStepCountSlider.OnSlide([=](wi::widget::EventArgs args) {
+	screenSpaceShadowsStepCountSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setScreenSpaceShadowSampleCount(args.iValue);
 		});
 	AddWidget(&screenSpaceShadowsStepCountSlider);
@@ -178,7 +178,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	eyeAdaptionCheckBox.SetSize(XMFLOAT2(hei, hei));
 	eyeAdaptionCheckBox.SetPos(XMFLOAT2(x, y += step));
 	eyeAdaptionCheckBox.SetCheck(editor->renderPath->getEyeAdaptionEnabled());
-	eyeAdaptionCheckBox.OnClick([=](wi::widget::EventArgs args) {
+	eyeAdaptionCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->renderPath->setEyeAdaptionEnabled(args.bValue);
 	});
 	AddWidget(&eyeAdaptionCheckBox);
@@ -188,7 +188,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	eyeAdaptionKeySlider.SetSize(XMFLOAT2(100, hei));
 	eyeAdaptionKeySlider.SetPos(XMFLOAT2(x + 100, y));
 	eyeAdaptionKeySlider.SetValue(editor->renderPath->getEyeAdaptionKey());
-	eyeAdaptionKeySlider.OnSlide([=](wi::widget::EventArgs args) {
+	eyeAdaptionKeySlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setEyeAdaptionKey(args.fValue);
 		});
 	AddWidget(&eyeAdaptionKeySlider);
@@ -198,7 +198,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	eyeAdaptionRateSlider.SetSize(XMFLOAT2(100, hei));
 	eyeAdaptionRateSlider.SetPos(XMFLOAT2(x + 100, y += step));
 	eyeAdaptionRateSlider.SetValue(editor->renderPath->getEyeAdaptionRate());
-	eyeAdaptionRateSlider.OnSlide([=](wi::widget::EventArgs args) {
+	eyeAdaptionRateSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setEyeAdaptionRate(args.fValue);
 		});
 	AddWidget(&eyeAdaptionRateSlider);
@@ -209,7 +209,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	motionBlurCheckBox.SetSize(XMFLOAT2(hei, hei));
 	motionBlurCheckBox.SetPos(XMFLOAT2(x, y += step));
 	motionBlurCheckBox.SetCheck(editor->renderPath->getMotionBlurEnabled());
-	motionBlurCheckBox.OnClick([=](wi::widget::EventArgs args) {
+	motionBlurCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->renderPath->setMotionBlurEnabled(args.bValue);
 	});
 	AddWidget(&motionBlurCheckBox);
@@ -220,7 +220,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	motionBlurStrengthSlider.SetSize(XMFLOAT2(100, hei));
 	motionBlurStrengthSlider.SetPos(XMFLOAT2(x + 100, y));
 	motionBlurStrengthSlider.SetValue(editor->renderPath->getMotionBlurStrength());
-	motionBlurStrengthSlider.OnSlide([=](wi::widget::EventArgs args) {
+	motionBlurStrengthSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setMotionBlurStrength(args.fValue);
 		});
 	AddWidget(&motionBlurStrengthSlider);
@@ -231,7 +231,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	depthOfFieldCheckBox.SetSize(XMFLOAT2(hei, hei));
 	depthOfFieldCheckBox.SetPos(XMFLOAT2(x, y += step));
 	depthOfFieldCheckBox.SetCheck(editor->renderPath->getDepthOfFieldEnabled());
-	depthOfFieldCheckBox.OnClick([=](wi::widget::EventArgs args) {
+	depthOfFieldCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->renderPath->setDepthOfFieldEnabled(args.bValue);
 	});
 	AddWidget(&depthOfFieldCheckBox);
@@ -242,7 +242,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	depthOfFieldScaleSlider.SetSize(XMFLOAT2(100, hei));
 	depthOfFieldScaleSlider.SetPos(XMFLOAT2(x + 100, y));
 	depthOfFieldScaleSlider.SetValue(editor->renderPath->getDepthOfFieldStrength());
-	depthOfFieldScaleSlider.OnSlide([=](wi::widget::EventArgs args) {
+	depthOfFieldScaleSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setDepthOfFieldStrength(args.fValue);
 	});
 	AddWidget(&depthOfFieldScaleSlider);
@@ -253,7 +253,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	bloomCheckBox.SetSize(XMFLOAT2(hei, hei));
 	bloomCheckBox.SetPos(XMFLOAT2(x, y += step));
 	bloomCheckBox.SetCheck(editor->renderPath->getBloomEnabled());
-	bloomCheckBox.OnClick([=](wi::widget::EventArgs args) {
+	bloomCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->renderPath->setBloomEnabled(args.bValue);
 	});
 	AddWidget(&bloomCheckBox);
@@ -263,7 +263,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	bloomStrengthSlider.SetSize(XMFLOAT2(100, hei));
 	bloomStrengthSlider.SetPos(XMFLOAT2(x + 100, y));
 	bloomStrengthSlider.SetValue(editor->renderPath->getBloomThreshold());
-	bloomStrengthSlider.OnSlide([=](wi::widget::EventArgs args) {
+	bloomStrengthSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setBloomThreshold(args.fValue);
 	});
 	AddWidget(&bloomStrengthSlider);
@@ -274,7 +274,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	fxaaCheckBox.SetSize(XMFLOAT2(hei, hei));
 	fxaaCheckBox.SetPos(XMFLOAT2(x, y += step));
 	fxaaCheckBox.SetCheck(editor->renderPath->getFXAAEnabled());
-	fxaaCheckBox.OnClick([=](wi::widget::EventArgs args) {
+	fxaaCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->renderPath->setFXAAEnabled(args.bValue);
 	});
 	AddWidget(&fxaaCheckBox);
@@ -284,7 +284,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	colorGradingCheckBox.SetSize(XMFLOAT2(hei, hei));
 	colorGradingCheckBox.SetPos(XMFLOAT2(x, y += step));
 	colorGradingCheckBox.SetCheck(editor->renderPath->getColorGradingEnabled());
-	colorGradingCheckBox.OnClick([=](wi::widget::EventArgs args) {
+	colorGradingCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->renderPath->setColorGradingEnabled(args.bValue);
 	});
 	AddWidget(&colorGradingCheckBox);
@@ -294,7 +294,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	ditherCheckBox.SetSize(XMFLOAT2(hei, hei));
 	ditherCheckBox.SetPos(XMFLOAT2(x, y += step));
 	ditherCheckBox.SetCheck(editor->renderPath->getDitherEnabled());
-	ditherCheckBox.OnClick([=](wi::widget::EventArgs args) {
+	ditherCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->renderPath->setDitherEnabled(args.bValue);
 		});
 	AddWidget(&ditherCheckBox);
@@ -305,7 +305,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	sharpenFilterCheckBox.SetSize(XMFLOAT2(hei, hei));
 	sharpenFilterCheckBox.SetPos(XMFLOAT2(x, y += step));
 	sharpenFilterCheckBox.SetCheck(editor->renderPath->getSharpenFilterEnabled());
-	sharpenFilterCheckBox.OnClick([=](wi::widget::EventArgs args) {
+	sharpenFilterCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->renderPath->setSharpenFilterEnabled(args.bValue);
 	});
 	AddWidget(&sharpenFilterCheckBox);
@@ -316,7 +316,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	sharpenFilterAmountSlider.SetSize(XMFLOAT2(100, hei));
 	sharpenFilterAmountSlider.SetPos(XMFLOAT2(x + 100, y));
 	sharpenFilterAmountSlider.SetValue(editor->renderPath->getSharpenFilterAmount());
-	sharpenFilterAmountSlider.OnSlide([=](wi::widget::EventArgs args) {
+	sharpenFilterAmountSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setSharpenFilterAmount(args.fValue);
 	});
 	AddWidget(&sharpenFilterAmountSlider);
@@ -326,7 +326,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	outlineCheckBox.SetSize(XMFLOAT2(hei, hei));
 	outlineCheckBox.SetPos(XMFLOAT2(x, y += step));
 	outlineCheckBox.SetCheck(editor->renderPath->getOutlineEnabled());
-	outlineCheckBox.OnClick([=](wi::widget::EventArgs args) {
+	outlineCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->renderPath->setOutlineEnabled(args.bValue);
 	});
 	AddWidget(&outlineCheckBox);
@@ -336,7 +336,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	outlineThresholdSlider.SetSize(XMFLOAT2(100, hei));
 	outlineThresholdSlider.SetPos(XMFLOAT2(x + 100, y));
 	outlineThresholdSlider.SetValue(editor->renderPath->getOutlineThreshold());
-	outlineThresholdSlider.OnSlide([=](wi::widget::EventArgs args) {
+	outlineThresholdSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setOutlineThreshold(args.fValue);
 	});
 	AddWidget(&outlineThresholdSlider);
@@ -346,7 +346,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	outlineThicknessSlider.SetSize(XMFLOAT2(100, hei));
 	outlineThicknessSlider.SetPos(XMFLOAT2(x + 100, y += step));
 	outlineThicknessSlider.SetValue(editor->renderPath->getOutlineThickness());
-	outlineThicknessSlider.OnSlide([=](wi::widget::EventArgs args) {
+	outlineThicknessSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setOutlineThickness(args.fValue);
 	});
 	AddWidget(&outlineThicknessSlider);
@@ -356,7 +356,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	chromaticaberrationCheckBox.SetSize(XMFLOAT2(hei, hei));
 	chromaticaberrationCheckBox.SetPos(XMFLOAT2(x, y += step));
 	chromaticaberrationCheckBox.SetCheck(editor->renderPath->getOutlineEnabled());
-	chromaticaberrationCheckBox.OnClick([=](wi::widget::EventArgs args) {
+	chromaticaberrationCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->renderPath->setChromaticAberrationEnabled(args.bValue);
 		});
 	AddWidget(&chromaticaberrationCheckBox);
@@ -366,7 +366,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	chromaticaberrationSlider.SetSize(XMFLOAT2(100, hei));
 	chromaticaberrationSlider.SetPos(XMFLOAT2(x + 100, y));
 	chromaticaberrationSlider.SetValue(editor->renderPath->getChromaticAberrationAmount());
-	chromaticaberrationSlider.OnSlide([=](wi::widget::EventArgs args) {
+	chromaticaberrationSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setChromaticAberrationAmount(args.fValue);
 		});
 	AddWidget(&chromaticaberrationSlider);
@@ -376,7 +376,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	fsrCheckBox.SetSize(XMFLOAT2(hei, hei));
 	fsrCheckBox.SetPos(XMFLOAT2(x, y += step));
 	fsrCheckBox.SetCheck(editor->renderPath->getFSREnabled());
-	fsrCheckBox.OnClick([=](wi::widget::EventArgs args) {
+	fsrCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		editor->renderPath->setFSREnabled(args.bValue);
 		});
 	AddWidget(&fsrCheckBox);
@@ -386,7 +386,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	fsrSlider.SetSize(XMFLOAT2(100, hei));
 	fsrSlider.SetPos(XMFLOAT2(x + 100, y));
 	fsrSlider.SetValue(editor->renderPath->getFSRSharpness());
-	fsrSlider.OnSlide([=](wi::widget::EventArgs args) {
+	fsrSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setFSRSharpness(args.fValue);
 		});
 	AddWidget(&fsrSlider);

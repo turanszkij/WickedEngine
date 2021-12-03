@@ -45,7 +45,7 @@ namespace wi
 		wi::graphics::Texture rtLinearColorSpace;
 		wi::graphics::RenderPass renderpass_linearize;
 
-		wi::GUI GUI;
+		wi::gui::GUI GUI;
 
 		XMUINT2 current_buffersize{};
 		float current_layoutscale{};
@@ -87,8 +87,8 @@ namespace wi
 		void SortLayers();
 		void CleanLayers();
 
-		const wi::GUI& GetGUI() const { return GUI; }
-		wi::GUI& GetGUI() { return GUI; }
+		const wi::gui::GUI& GetGUI() const { return GUI; }
+		wi::gui::GUI& GetGUI() { return GUI; }
 
 		float resolutionScale = 1.0f;
 		XMUINT2 GetInternalResolution() const

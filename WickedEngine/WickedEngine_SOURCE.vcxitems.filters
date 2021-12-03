@@ -13,9 +13,6 @@
     <Filter Include="ENGINE\Common">
       <UniqueIdentifier>{3c39405f-ec30-4b72-9c32-68aefb4fb7a5}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ENGINE\GUI">
-      <UniqueIdentifier>{a637b1af-3cc6-48c3-89b4-8b931a1eb23e}</UniqueIdentifier>
-    </Filter>
     <Filter Include="BULLET">
       <UniqueIdentifier>{d6f94528-ce59-4fa3-a0b9-d5c04994ac71}</UniqueIdentifier>
     </Filter>
@@ -170,12 +167,6 @@
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)wiSprite_BindLua.h">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiGUI.h">
-      <Filter>ENGINE\GUI</Filter>
-    </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiWidget.h">
-      <Filter>ENGINE\GUI</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btDefaultSoftBodySolver.h">
       <Filter>BULLET</Filter>
@@ -1080,6 +1071,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiVector.h">
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiGUI.h">
+      <Filter>ENGINE\System</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
@@ -1213,12 +1207,6 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)wiSprite_BindLua.cpp">
       <Filter>ENGINE\Scripting\LuaBindings</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiGUI.cpp">
-      <Filter>ENGINE\GUI</Filter>
-    </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiWidget.cpp">
-      <Filter>ENGINE\GUI</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)BULLET\BulletSoftBody\btDefaultSoftBodySolver.cpp">
       <Filter>BULLET</Filter>
@@ -1819,6 +1807,9 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)Utility\samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp.cpp">
       <Filter>UTILITY</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)wiGUI.cpp">
+      <Filter>ENGINE\System</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -3,7 +3,7 @@
 
 class EditorComponent;
 
-class ObjectWindow : public wi::widget::Window
+class ObjectWindow : public wi::gui::Window
 {
 public:
 	void Create(EditorComponent* editor);
@@ -12,32 +12,32 @@ public:
 	wi::ecs::Entity entity;
 	void SetEntity(wi::ecs::Entity entity);
 
-	wi::widget::Label nameLabel;
-	wi::widget::CheckBox renderableCheckBox;
-	wi::widget::CheckBox shadowCheckBox;
-	wi::widget::Slider ditherSlider;
-	wi::widget::Slider cascadeMaskSlider;
+	wi::gui::Label nameLabel;
+	wi::gui::CheckBox renderableCheckBox;
+	wi::gui::CheckBox shadowCheckBox;
+	wi::gui::Slider ditherSlider;
+	wi::gui::Slider cascadeMaskSlider;
 
-	wi::widget::ComboBox colorComboBox;
-	wi::widget::ColorPicker colorPicker;
+	wi::gui::ComboBox colorComboBox;
+	wi::gui::ColorPicker colorPicker;
 
-	wi::widget::Label physicsLabel;
-	wi::widget::ComboBox collisionShapeComboBox;
-	wi::widget::Slider XSlider;
-	wi::widget::Slider YSlider;
-	wi::widget::Slider ZSlider;
-	wi::widget::Slider massSlider;
-	wi::widget::Slider frictionSlider;
-	wi::widget::Slider restitutionSlider;
-	wi::widget::Slider lineardampingSlider;
-	wi::widget::Slider angulardampingSlider;
-	wi::widget::CheckBox disabledeactivationCheckBox;
-	wi::widget::CheckBox kinematicCheckBox;
+	wi::gui::Label physicsLabel;
+	wi::gui::ComboBox collisionShapeComboBox;
+	wi::gui::Slider XSlider;
+	wi::gui::Slider YSlider;
+	wi::gui::Slider ZSlider;
+	wi::gui::Slider massSlider;
+	wi::gui::Slider frictionSlider;
+	wi::gui::Slider restitutionSlider;
+	wi::gui::Slider lineardampingSlider;
+	wi::gui::Slider angulardampingSlider;
+	wi::gui::CheckBox disabledeactivationCheckBox;
+	wi::gui::CheckBox kinematicCheckBox;
 
-	wi::widget::Slider lightmapResolutionSlider;
-	wi::widget::ComboBox lightmapSourceUVSetComboBox;
-	wi::widget::Button generateLightmapButton;
-	wi::widget::Button stopLightmapGenButton;
-	wi::widget::Button clearLightmapButton;
+	wi::gui::Slider lightmapResolutionSlider;
+	wi::gui::ComboBox lightmapSourceUVSetComboBox;
+	wi::gui::Button generateLightmapButton;
+	wi::gui::Button stopLightmapGenButton;
+	wi::gui::Button clearLightmapButton;
 };
 

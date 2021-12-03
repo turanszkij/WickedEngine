@@ -3,7 +3,7 @@
 
 class EditorComponent;
 
-class WeatherWindow : public wi::widget::Window
+class WeatherWindow : public wi::gui::Window
 {
 	void UpdateWind();
 public:
@@ -14,52 +14,52 @@ public:
 	wi::scene::WeatherComponent& GetWeather() const;
 	void InvalidateProbes() const;
 
-	wi::widget::CheckBox heightFogCheckBox;
-	wi::widget::Slider fogStartSlider;
-	wi::widget::Slider fogEndSlider;
-	wi::widget::Slider fogHeightStartSlider;
-	wi::widget::Slider fogHeightEndSlider;
-	wi::widget::Slider fogHeightSkySlider;
-	wi::widget::Slider cloudinessSlider;
-	wi::widget::Slider cloudScaleSlider;
-	wi::widget::Slider cloudSpeedSlider;
-	wi::widget::Slider windSpeedSlider;
-	wi::widget::Slider windMagnitudeSlider;
-	wi::widget::Slider windDirectionSlider;
-	wi::widget::Slider windWaveSizeSlider;
-	wi::widget::Slider windRandomnessSlider;
-	wi::widget::Slider skyExposureSlider;
-	wi::widget::CheckBox simpleskyCheckBox;
-	wi::widget::CheckBox realisticskyCheckBox;
-	wi::widget::Button skyButton;
-	wi::widget::Button colorgradingButton;
+	wi::gui::CheckBox heightFogCheckBox;
+	wi::gui::Slider fogStartSlider;
+	wi::gui::Slider fogEndSlider;
+	wi::gui::Slider fogHeightStartSlider;
+	wi::gui::Slider fogHeightEndSlider;
+	wi::gui::Slider fogHeightSkySlider;
+	wi::gui::Slider cloudinessSlider;
+	wi::gui::Slider cloudScaleSlider;
+	wi::gui::Slider cloudSpeedSlider;
+	wi::gui::Slider windSpeedSlider;
+	wi::gui::Slider windMagnitudeSlider;
+	wi::gui::Slider windDirectionSlider;
+	wi::gui::Slider windWaveSizeSlider;
+	wi::gui::Slider windRandomnessSlider;
+	wi::gui::Slider skyExposureSlider;
+	wi::gui::CheckBox simpleskyCheckBox;
+	wi::gui::CheckBox realisticskyCheckBox;
+	wi::gui::Button skyButton;
+	wi::gui::Button colorgradingButton;
 
 	// ocean params:
-	wi::widget::CheckBox ocean_enabledCheckBox;
-	wi::widget::Slider ocean_patchSizeSlider;
-	wi::widget::Slider ocean_waveAmplitudeSlider;
-	wi::widget::Slider ocean_choppyScaleSlider;
-	wi::widget::Slider ocean_windDependencySlider;
-	wi::widget::Slider ocean_timeScaleSlider;
-	wi::widget::Slider ocean_heightSlider;
-	wi::widget::Slider ocean_detailSlider;
-	wi::widget::Slider ocean_toleranceSlider;
-	wi::widget::Button ocean_resetButton;
+	wi::gui::CheckBox ocean_enabledCheckBox;
+	wi::gui::Slider ocean_patchSizeSlider;
+	wi::gui::Slider ocean_waveAmplitudeSlider;
+	wi::gui::Slider ocean_choppyScaleSlider;
+	wi::gui::Slider ocean_windDependencySlider;
+	wi::gui::Slider ocean_timeScaleSlider;
+	wi::gui::Slider ocean_heightSlider;
+	wi::gui::Slider ocean_detailSlider;
+	wi::gui::Slider ocean_toleranceSlider;
+	wi::gui::Button ocean_resetButton;
 
-	wi::widget::ComboBox colorComboBox;
-	wi::widget::ColorPicker colorPicker;
+	wi::gui::ComboBox colorComboBox;
+	wi::gui::ColorPicker colorPicker;
 
 	// volumetric clouds:
-	wi::widget::CheckBox volumetricCloudsCheckBox;
-	wi::widget::Slider coverageAmountSlider;
-	wi::widget::Slider coverageMinimumSlider;
+	wi::gui::CheckBox volumetricCloudsCheckBox;
+	wi::gui::Slider coverageAmountSlider;
+	wi::gui::Slider coverageMinimumSlider;
 
-	wi::widget::Button preset0Button;
-	wi::widget::Button preset1Button;
-	wi::widget::Button preset2Button;
-	wi::widget::Button preset3Button;
-	wi::widget::Button preset4Button;
-	wi::widget::Button eliminateCoarseCascadesButton;
-	wi::widget::Button ktxConvButton;
+	wi::gui::Button preset0Button;
+	wi::gui::Button preset1Button;
+	wi::gui::Button preset2Button;
+	wi::gui::Button preset3Button;
+	wi::gui::Button preset4Button;
+	wi::gui::Button eliminateCoarseCascadesButton;
+	wi::gui::Button ktxConvButton;
 };
 

@@ -8,7 +8,7 @@ using namespace wi::scene;
 
 void SpringWindow::Create(EditorComponent* editor)
 {
-	wi::widget::Window::Create("Spring Window");
+	wi::gui::Window::Create("Spring Window");
 	SetSize(XMFLOAT2(460, 200));
 
 	float x = 150;
@@ -33,7 +33,7 @@ void SpringWindow::Create(EditorComponent* editor)
 	disabledCheckBox.SetTooltip("Disable simulation.");
 	disabledCheckBox.SetPos(XMFLOAT2(x, y += step));
 	disabledCheckBox.SetSize(XMFLOAT2(hei, hei));
-	disabledCheckBox.OnClick([=](wi::widget::EventArgs args) {
+	disabledCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		wi::scene::GetScene().springs.GetComponent(entity)->SetDisabled(args.bValue);
 		});
 	AddWidget(&disabledCheckBox);
@@ -42,7 +42,7 @@ void SpringWindow::Create(EditorComponent* editor)
 	stretchCheckBox.SetTooltip("Stretch means that length from parent transform won't be preserved.");
 	stretchCheckBox.SetPos(XMFLOAT2(x, y += step));
 	stretchCheckBox.SetSize(XMFLOAT2(hei, hei));
-	stretchCheckBox.OnClick([=](wi::widget::EventArgs args) {
+	stretchCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		wi::scene::GetScene().springs.GetComponent(entity)->SetStretchEnabled(args.bValue);
 		});
 	AddWidget(&stretchCheckBox);
@@ -51,7 +51,7 @@ void SpringWindow::Create(EditorComponent* editor)
 	gravityCheckBox.SetTooltip("Whether global gravity should affect the spring");
 	gravityCheckBox.SetPos(XMFLOAT2(x, y += step));
 	gravityCheckBox.SetSize(XMFLOAT2(hei, hei));
-	gravityCheckBox.OnClick([=](wi::widget::EventArgs args) {
+	gravityCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		wi::scene::GetScene().springs.GetComponent(entity)->SetGravityEnabled(args.bValue);
 		});
 	AddWidget(&gravityCheckBox);
@@ -60,7 +60,7 @@ void SpringWindow::Create(EditorComponent* editor)
 	stiffnessSlider.SetTooltip("The stiffness affects how strongly the spring tries to orient itself to rest pose (higher values increase the jiggliness)");
 	stiffnessSlider.SetPos(XMFLOAT2(x, y += step));
 	stiffnessSlider.SetSize(XMFLOAT2(siz, hei));
-	stiffnessSlider.OnSlide([&](wi::widget::EventArgs args) {
+	stiffnessSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::GetScene().springs.GetComponent(entity)->stiffness = args.fValue;
 		});
 	AddWidget(&stiffnessSlider);
@@ -69,7 +69,7 @@ void SpringWindow::Create(EditorComponent* editor)
 	dampingSlider.SetTooltip("The damping affects how fast energy is lost (higher values make the spring come to rest faster)");
 	dampingSlider.SetPos(XMFLOAT2(x, y += step));
 	dampingSlider.SetSize(XMFLOAT2(siz, hei));
-	dampingSlider.OnSlide([&](wi::widget::EventArgs args) {
+	dampingSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::GetScene().springs.GetComponent(entity)->damping = args.fValue;
 		});
 	AddWidget(&dampingSlider);
@@ -78,7 +78,7 @@ void SpringWindow::Create(EditorComponent* editor)
 	windSlider.SetTooltip("How much the global wind effect affects the spring");
 	windSlider.SetPos(XMFLOAT2(x, y += step));
 	windSlider.SetSize(XMFLOAT2(siz, hei));
-	windSlider.OnSlide([&](wi::widget::EventArgs args) {
+	windSlider.OnSlide([&](wi::gui::EventArgs args) {
 		wi::scene::GetScene().springs.GetComponent(entity)->wind_affection = args.fValue;
 		});
 	AddWidget(&windSlider);
@@ -119,7 +119,7 @@ void SpringWindow::SetEntity(Entity entity)
 		if (spring == nullptr)
 		{
 			createButton.SetText("Create");
-			createButton.OnClick([=](wi::widget::EventArgs args) {
+			createButton.OnClick([=](wi::gui::EventArgs args) {
 				wi::scene::GetScene().springs.Create(entity);
 				SetEntity(entity);
 				});
@@ -127,7 +127,7 @@ void SpringWindow::SetEntity(Entity entity)
 		else
 		{
 			createButton.SetText("Remove");
-			createButton.OnClick([=](wi::widget::EventArgs args) {
+			createButton.OnClick([=](wi::gui::EventArgs args) {
 				wi::scene::GetScene().springs.Remove_KeepSorted(entity);
 				SetEntity(entity);
 				});

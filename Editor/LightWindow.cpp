@@ -11,7 +11,7 @@ using namespace wi::scene;
 
 void LightWindow::Create(EditorComponent* editor)
 {
-	wi::widget::Window::Create("Light Window");
+	wi::gui::Window::Create("Light Window");
 	SetSize(XMFLOAT2(650, 500));
 
 	float x = 450;
@@ -22,7 +22,7 @@ void LightWindow::Create(EditorComponent* editor)
 	energySlider.Create(0.1f, 64, 0, 100000, "Energy: ");
 	energySlider.SetSize(XMFLOAT2(100, hei));
 	energySlider.SetPos(XMFLOAT2(x, y += step));
-	energySlider.OnSlide([&](wi::widget::EventArgs args) {
+	energySlider.OnSlide([&](wi::gui::EventArgs args) {
 		LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
@@ -36,7 +36,7 @@ void LightWindow::Create(EditorComponent* editor)
 	rangeSlider.Create(1, 1000, 0, 100000, "Range: ");
 	rangeSlider.SetSize(XMFLOAT2(100, hei));
 	rangeSlider.SetPos(XMFLOAT2(x, y += step));
-	rangeSlider.OnSlide([&](wi::widget::EventArgs args) {
+	rangeSlider.OnSlide([&](wi::gui::EventArgs args) {
 		LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
@@ -50,7 +50,7 @@ void LightWindow::Create(EditorComponent* editor)
 	//radiusSlider.Create(0.01f, 10, 0, 100000, "Radius: ");
 	//radiusSlider.SetSize(XMFLOAT2(100, hei));
 	//radiusSlider.SetPos(XMFLOAT2(x, y += step));
-	//radiusSlider.OnSlide([&](wi::widget::EventArgs args) {
+	//radiusSlider.OnSlide([&](wi::gui::EventArgs args) {
 	//	LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
 	//	if (light != nullptr)
 	//	{
@@ -64,7 +64,7 @@ void LightWindow::Create(EditorComponent* editor)
 	//widthSlider.Create(1, 10, 0, 100000, "Width: ");
 	//widthSlider.SetSize(XMFLOAT2(100, hei));
 	//widthSlider.SetPos(XMFLOAT2(x, y += step));
-	//widthSlider.OnSlide([&](wi::widget::EventArgs args) {
+	//widthSlider.OnSlide([&](wi::gui::EventArgs args) {
 	//	LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
 	//	if (light != nullptr)
 	//	{
@@ -78,7 +78,7 @@ void LightWindow::Create(EditorComponent* editor)
 	//heightSlider.Create(1, 10, 0, 100000, "Height: ");
 	//heightSlider.SetSize(XMFLOAT2(100, hei));
 	//heightSlider.SetPos(XMFLOAT2(x, y += step));
-	//heightSlider.OnSlide([&](wi::widget::EventArgs args) {
+	//heightSlider.OnSlide([&](wi::gui::EventArgs args) {
 	//	LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
 	//	if (light != nullptr)
 	//	{
@@ -92,7 +92,7 @@ void LightWindow::Create(EditorComponent* editor)
 	fovSlider.Create(0.1f, XM_PI - 0.01f, 0, 100000, "FOV: ");
 	fovSlider.SetSize(XMFLOAT2(100, hei));
 	fovSlider.SetPos(XMFLOAT2(x, y += step));
-	fovSlider.OnSlide([&](wi::widget::EventArgs args) {
+	fovSlider.OnSlide([&](wi::gui::EventArgs args) {
 		LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
@@ -106,7 +106,7 @@ void LightWindow::Create(EditorComponent* editor)
 	shadowCheckBox.Create("Shadow: ");
 	shadowCheckBox.SetSize(XMFLOAT2(hei, hei));
 	shadowCheckBox.SetPos(XMFLOAT2(x, y += step));
-	shadowCheckBox.OnClick([&](wi::widget::EventArgs args) {
+	shadowCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
@@ -120,7 +120,7 @@ void LightWindow::Create(EditorComponent* editor)
 	volumetricsCheckBox.Create("Volumetric: ");
 	volumetricsCheckBox.SetSize(XMFLOAT2(hei, hei));
 	volumetricsCheckBox.SetPos(XMFLOAT2(x, y += step));
-	volumetricsCheckBox.OnClick([&](wi::widget::EventArgs args) {
+	volumetricsCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
@@ -134,7 +134,7 @@ void LightWindow::Create(EditorComponent* editor)
 	haloCheckBox.Create("Visualizer: ");
 	haloCheckBox.SetSize(XMFLOAT2(hei, hei));
 	haloCheckBox.SetPos(XMFLOAT2(x, y += step));
-	haloCheckBox.OnClick([&](wi::widget::EventArgs args) {
+	haloCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
@@ -148,7 +148,7 @@ void LightWindow::Create(EditorComponent* editor)
 	staticCheckBox.Create("Static: ");
 	staticCheckBox.SetSize(XMFLOAT2(hei, hei));
 	staticCheckBox.SetPos(XMFLOAT2(x, y += step));
-	staticCheckBox.OnClick([&](wi::widget::EventArgs args) {
+	staticCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
@@ -162,7 +162,7 @@ void LightWindow::Create(EditorComponent* editor)
 	addLightButton.Create("Add Light");
 	addLightButton.SetPos(XMFLOAT2(x, y += step));
 	addLightButton.SetSize(XMFLOAT2(150, hei));
-	addLightButton.OnClick([=](wi::widget::EventArgs args) {
+	addLightButton.OnClick([=](wi::gui::EventArgs args) {
 		Entity entity = wi::scene::GetScene().Entity_CreateLight("editorLight", XMFLOAT3(0, 3, 0), XMFLOAT3(1, 1, 1), 2, 60);
 		LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
@@ -186,7 +186,7 @@ void LightWindow::Create(EditorComponent* editor)
 	colorPicker.SetPos(XMFLOAT2(10, 30));
 	colorPicker.SetVisible(true);
 	colorPicker.SetEnabled(false);
-	colorPicker.OnColorChanged([&](wi::widget::EventArgs args) {
+	colorPicker.OnColorChanged([&](wi::gui::EventArgs args) {
 		LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)
 		{
@@ -198,7 +198,7 @@ void LightWindow::Create(EditorComponent* editor)
 	typeSelectorComboBox.Create("Type: ");
 	typeSelectorComboBox.SetSize(XMFLOAT2(150, hei));
 	typeSelectorComboBox.SetPos(XMFLOAT2(x, y += step));
-	typeSelectorComboBox.OnSelect([&](wi::widget::EventArgs args) {
+	typeSelectorComboBox.OnSelect([&](wi::gui::EventArgs args) {
 		LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
 		if (light != nullptr && args.iValue >= 0)
 		{
@@ -236,7 +236,7 @@ void LightWindow::Create(EditorComponent* editor)
 		lensflare_Button[i].SetTooltip("Load a lensflare texture to this slot");
 		lensflare_Button[i].SetPos(XMFLOAT2(x, y += step));
 		lensflare_Button[i].SetSize(XMFLOAT2(260, hei));
-		lensflare_Button[i].OnClick([=](wi::widget::EventArgs args) {
+		lensflare_Button[i].OnClick([=](wi::gui::EventArgs args) {
 			LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
 			if (light == nullptr)
 				return;

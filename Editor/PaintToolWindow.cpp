@@ -13,7 +13,7 @@ void PaintToolWindow::Create(EditorComponent* editor)
 {
 	this->editor = editor;
 
-	wi::widget::Window::Create("Paint Tool Window");
+	wi::gui::Window::Create("Paint Tool Window");
 	SetSize(XMFLOAT2(400, 600));
 
 	float x = 100;
@@ -37,7 +37,7 @@ void PaintToolWindow::Create(EditorComponent* editor)
 	modeComboBox.AddItem("Hairparticle - Length (Alpha)");
 	modeComboBox.AddItem("Wind weight (Alpha)");
 	modeComboBox.SetSelected(0);
-	modeComboBox.OnSelect([&](wi::widget::EventArgs args) {
+	modeComboBox.OnSelect([&](wi::gui::EventArgs args) {
 		textureSlotComboBox.SetEnabled(false);
 		saveTextureButton.SetEnabled(false);
 		switch (args.iValue)
@@ -159,7 +159,7 @@ void PaintToolWindow::Create(EditorComponent* editor)
 	saveTextureButton.SetSize(XMFLOAT2(200, hei));
 	saveTextureButton.SetPos(XMFLOAT2(x, y += step));
 	saveTextureButton.SetEnabled(false);
-	saveTextureButton.OnClick([this] (wi::widget::EventArgs args) {
+	saveTextureButton.OnClick([this] (wi::gui::EventArgs args) {
 
 		Scene& scene = wi::scene::GetScene();
 		ObjectComponent* object = scene.objects.GetComponent(entity);

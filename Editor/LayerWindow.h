@@ -3,7 +3,7 @@
 
 class EditorComponent;
 
-class LayerWindow : public wi::widget::Window
+class LayerWindow : public wi::gui::Window
 {
 public:
 	void Create(EditorComponent* editor);
@@ -11,8 +11,8 @@ public:
 	wi::ecs::Entity entity;
 	void SetEntity(wi::ecs::Entity entity);
 
-	wi::widget::CheckBox layers[32];
-	wi::widget::Button enableAllButton;
-	wi::widget::Button enableNoneButton;
+	wi::gui::CheckBox layers[32];
+	wi::gui::Button enableAllButton;
+	wi::gui::Button enableNoneButton;
 };
 

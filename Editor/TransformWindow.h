@@ -3,7 +3,7 @@
 
 class EditorComponent;
 
-class TransformWindow : public wi::widget::Window
+class TransformWindow : public wi::gui::Window
 {
 public:
 	void Create(EditorComponent* editor);
@@ -11,21 +11,21 @@ public:
 	wi::ecs::Entity entity;
 	void SetEntity(wi::ecs::Entity entity);
 
-	wi::widget::Button createButton;
+	wi::gui::Button createButton;
 
-	wi::widget::ComboBox parentCombo;
+	wi::gui::ComboBox parentCombo;
 
-	wi::widget::TextInputField txInput;
-	wi::widget::TextInputField tyInput;
-	wi::widget::TextInputField tzInput;
+	wi::gui::TextInputField txInput;
+	wi::gui::TextInputField tyInput;
+	wi::gui::TextInputField tzInput;
 					 
-	wi::widget::TextInputField rxInput;
-	wi::widget::TextInputField ryInput;
-	wi::widget::TextInputField rzInput;
-	wi::widget::TextInputField rwInput;
+	wi::gui::TextInputField rxInput;
+	wi::gui::TextInputField ryInput;
+	wi::gui::TextInputField rzInput;
+	wi::gui::TextInputField rwInput;
 					 
-	wi::widget::TextInputField sxInput;
-	wi::widget::TextInputField syInput;
-	wi::widget::TextInputField szInput;
+	wi::gui::TextInputField sxInput;
+	wi::gui::TextInputField syInput;
+	wi::gui::TextInputField szInput;
 };
 

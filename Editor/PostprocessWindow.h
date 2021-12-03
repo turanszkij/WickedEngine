@@ -3,44 +3,44 @@
 
 class EditorComponent;
 
-class PostprocessWindow : public wi::widget::Window
+class PostprocessWindow : public wi::gui::Window
 {
 public:
 	void Create(EditorComponent* editor);
 
-	wi::widget::Slider exposureSlider;
-	wi::widget::CheckBox lensFlareCheckBox;
-	wi::widget::CheckBox lightShaftsCheckBox;
-	wi::widget::ComboBox aoComboBox;
-	wi::widget::Slider aoPowerSlider;
-	wi::widget::Slider aoRangeSlider;
-	wi::widget::Slider aoSampleCountSlider;
-	wi::widget::CheckBox ssrCheckBox;
-	wi::widget::CheckBox raytracedReflectionsCheckBox;
-	wi::widget::CheckBox screenSpaceShadowsCheckBox;
-	wi::widget::Slider screenSpaceShadowsStepCountSlider;
-	wi::widget::Slider screenSpaceShadowsRangeSlider;
-	wi::widget::CheckBox eyeAdaptionCheckBox;
-	wi::widget::Slider eyeAdaptionKeySlider;
-	wi::widget::Slider eyeAdaptionRateSlider;
-	wi::widget::CheckBox motionBlurCheckBox;
-	wi::widget::Slider motionBlurStrengthSlider;
-	wi::widget::CheckBox depthOfFieldCheckBox;
-	wi::widget::Slider depthOfFieldScaleSlider;
-	wi::widget::CheckBox bloomCheckBox;
-	wi::widget::Slider bloomStrengthSlider;
-	wi::widget::CheckBox fxaaCheckBox;
-	wi::widget::CheckBox colorGradingCheckBox;
-	wi::widget::CheckBox ditherCheckBox;
-	wi::widget::CheckBox sharpenFilterCheckBox;
-	wi::widget::Slider sharpenFilterAmountSlider;
-	wi::widget::CheckBox outlineCheckBox;
-	wi::widget::Slider outlineThresholdSlider;
-	wi::widget::Slider outlineThicknessSlider;
-	wi::widget::CheckBox chromaticaberrationCheckBox;
-	wi::widget::Slider chromaticaberrationSlider;
-	wi::widget::CheckBox fsrCheckBox;
-	wi::widget::Slider fsrSlider;
+	wi::gui::Slider exposureSlider;
+	wi::gui::CheckBox lensFlareCheckBox;
+	wi::gui::CheckBox lightShaftsCheckBox;
+	wi::gui::ComboBox aoComboBox;
+	wi::gui::Slider aoPowerSlider;
+	wi::gui::Slider aoRangeSlider;
+	wi::gui::Slider aoSampleCountSlider;
+	wi::gui::CheckBox ssrCheckBox;
+	wi::gui::CheckBox raytracedReflectionsCheckBox;
+	wi::gui::CheckBox screenSpaceShadowsCheckBox;
+	wi::gui::Slider screenSpaceShadowsStepCountSlider;
+	wi::gui::Slider screenSpaceShadowsRangeSlider;
+	wi::gui::CheckBox eyeAdaptionCheckBox;
+	wi::gui::Slider eyeAdaptionKeySlider;
+	wi::gui::Slider eyeAdaptionRateSlider;
+	wi::gui::CheckBox motionBlurCheckBox;
+	wi::gui::Slider motionBlurStrengthSlider;
+	wi::gui::CheckBox depthOfFieldCheckBox;
+	wi::gui::Slider depthOfFieldScaleSlider;
+	wi::gui::CheckBox bloomCheckBox;
+	wi::gui::Slider bloomStrengthSlider;
+	wi::gui::CheckBox fxaaCheckBox;
+	wi::gui::CheckBox colorGradingCheckBox;
+	wi::gui::CheckBox ditherCheckBox;
+	wi::gui::CheckBox sharpenFilterCheckBox;
+	wi::gui::Slider sharpenFilterAmountSlider;
+	wi::gui::CheckBox outlineCheckBox;
+	wi::gui::Slider outlineThresholdSlider;
+	wi::gui::Slider outlineThicknessSlider;
+	wi::gui::CheckBox chromaticaberrationCheckBox;
+	wi::gui::Slider chromaticaberrationSlider;
+	wi::gui::CheckBox fsrCheckBox;
+	wi::gui::Slider fsrSlider;
 
 
 };

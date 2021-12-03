@@ -48,14 +48,14 @@ void TestsRenderer::Load()
 	static wi::audio::Sound sound;
 	static wi::audio::SoundInstance soundinstance;
 
-	static wi::widget::Button audioTest;
+	static wi::gui::Button audioTest;
 	audioTest.Create("AudioTest");
 	audioTest.SetText("Play Test Audio");
 	audioTest.SetSize(XMFLOAT2(200, 20));
 	audioTest.SetPos(XMFLOAT2(10, 140));
-	audioTest.SetColor(wi::Color(255, 205, 43, 200), wi::widget::IDLE);
-	audioTest.SetColor(wi::Color(255, 235, 173, 255), wi::widget::FOCUS);
-	audioTest.OnClick([&](wi::widget::EventArgs args) {
+	audioTest.SetColor(wi::Color(255, 205, 43, 200), wi::gui::IDLE);
+	audioTest.SetColor(wi::Color(255, 235, 173, 255), wi::gui::FOCUS);
+	audioTest.OnClick([&](wi::gui::EventArgs args) {
 		static bool playing = false;
 
 		if (!sound.IsValid())
@@ -80,16 +80,16 @@ void TestsRenderer::Load()
 	GetGUI().AddWidget(&audioTest);
 
 
-	static wi::widget::Slider volume;
+	static wi::gui::Slider volume;
 	volume.Create(0, 100, 50, 100, "Volume");
 	volume.SetText("Volume: ");
 	volume.SetSize(XMFLOAT2(100, 20));
 	volume.SetPos(XMFLOAT2(65, 170));
-	volume.sprites_knob[wi::widget::IDLE].params.color = wi::Color(255, 205, 43, 200);
-	volume.sprites_knob[wi::widget::FOCUS].params.color = wi::Color(255, 235, 173, 255);
-	volume.sprites[wi::widget::IDLE].params.color = wi::math::Lerp(wi::Color::Transparent(), volume.sprites_knob[wi::widget::WIDGETSTATE::IDLE].params.color, 0.5f);
-	volume.sprites[wi::widget::FOCUS].params.color = wi::math::Lerp(wi::Color::Transparent(), volume.sprites_knob[wi::widget::WIDGETSTATE::FOCUS].params.color, 0.5f);
-	volume.OnSlide([](wi::widget::EventArgs args) {
+	volume.sprites_knob[wi::gui::IDLE].params.color = wi::Color(255, 205, 43, 200);
+	volume.sprites_knob[wi::gui::FOCUS].params.color = wi::Color(255, 235, 173, 255);
+	volume.sprites[wi::gui::IDLE].params.color = wi::math::Lerp(wi::Color::Transparent(), volume.sprites_knob[wi::gui::WIDGETSTATE::IDLE].params.color, 0.5f);
+	volume.sprites[wi::gui::FOCUS].params.color = wi::math::Lerp(wi::Color::Transparent(), volume.sprites_knob[wi::gui::WIDGETSTATE::FOCUS].params.color, 0.5f);
+	volume.OnSlide([](wi::gui::EventArgs args) {
 		wi::audio::SetVolume(args.fValue / 100.0f, &soundinstance);
 	});
 	GetGUI().AddWidget(&volume);
@@ -99,8 +99,8 @@ void TestsRenderer::Load()
 	testSelector.SetText("Demo: ");
 	testSelector.SetSize(XMFLOAT2(140, 20));
 	testSelector.SetPos(XMFLOAT2(50, 200));
-	testSelector.SetColor(wi::Color(255, 205, 43, 200), wi::widget::IDLE);
-	testSelector.SetColor(wi::Color(255, 235, 173, 255), wi::widget::FOCUS);
+	testSelector.SetColor(wi::Color(255, 205, 43, 200), wi::gui::IDLE);
+	testSelector.SetColor(wi::Color(255, 235, 173, 255), wi::gui::FOCUS);
 	testSelector.AddItem("HelloWorld");
 	testSelector.AddItem("Model");
 	testSelector.AddItem("EmittedParticle 1");
@@ -122,7 +122,7 @@ void TestsRenderer::Load()
 	testSelector.AddItem("65k Instances");
 	testSelector.AddItem("unordered_map perf");
 	testSelector.SetMaxVisibleItemCount(10);
-	testSelector.OnSelect([=](wi::widget::EventArgs args) {
+	testSelector.OnSelect([=](wi::gui::EventArgs args) {
 
 		// Reset all state that tests might have modified:
 		wi::eventhandler::SetVSync(true);

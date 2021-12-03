@@ -8,7 +8,7 @@ using namespace wi::scene;
 
 void NameWindow::Create(EditorComponent* editor)
 {
-	wi::widget::Window::Create("Name Window");
+	wi::gui::Window::Create("Name Window");
 	SetSize(XMFLOAT2(360, 80));
 
 	float x = 60;
@@ -21,7 +21,7 @@ void NameWindow::Create(EditorComponent* editor)
 	nameInput.SetDescription("Name: ");
 	nameInput.SetPos(XMFLOAT2(x, y += step));
 	nameInput.SetSize(XMFLOAT2(siz, hei));
-	nameInput.OnInputAccepted([=](wi::widget::EventArgs args) {
+	nameInput.OnInputAccepted([=](wi::gui::EventArgs args) {
 		NameComponent* name = wi::scene::GetScene().names.GetComponent(entity);
 		if (name == nullptr)
 		{

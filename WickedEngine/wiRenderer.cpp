@@ -514,34 +514,34 @@ SHADERTYPE GetPSTYPE(RENDERPASS renderPass, bool alphatest, bool transparent, Ma
 	case RENDERPASS_MAIN:
 		switch (shaderType)
 		{
-		case wi::scene::MaterialComponent::SHADERTYPE_PBR:
+		case MaterialComponent::SHADERTYPE_PBR:
 			realPS = transparent ? PSTYPE_OBJECT_TRANSPARENT : PSTYPE_OBJECT;
 			break;
-		case wi::scene::MaterialComponent::SHADERTYPE_PBR_PLANARREFLECTION:
+		case MaterialComponent::SHADERTYPE_PBR_PLANARREFLECTION:
 			realPS = transparent ? PSTYPE_OBJECT_TRANSPARENT_PLANARREFLECTION : PSTYPE_OBJECT_PLANARREFLECTION;
 			break;
-		case wi::scene::MaterialComponent::SHADERTYPE_PBR_PARALLAXOCCLUSIONMAPPING:
+		case MaterialComponent::SHADERTYPE_PBR_PARALLAXOCCLUSIONMAPPING:
 			realPS = transparent ? PSTYPE_OBJECT_TRANSPARENT_POM : PSTYPE_OBJECT_POM;
 			break;
-		case wi::scene::MaterialComponent::SHADERTYPE_PBR_ANISOTROPIC:
+		case MaterialComponent::SHADERTYPE_PBR_ANISOTROPIC:
 			realPS = transparent ? PSTYPE_OBJECT_TRANSPARENT_ANISOTROPIC : PSTYPE_OBJECT_ANISOTROPIC;
 			break;
-		case wi::scene::MaterialComponent::SHADERTYPE_PBR_CLOTH:
+		case MaterialComponent::SHADERTYPE_PBR_CLOTH:
 			realPS = transparent ? PSTYPE_OBJECT_TRANSPARENT_CLOTH : PSTYPE_OBJECT_CLOTH;
 			break;
-		case wi::scene::MaterialComponent::SHADERTYPE_PBR_CLEARCOAT:
+		case MaterialComponent::SHADERTYPE_PBR_CLEARCOAT:
 			realPS = transparent ? PSTYPE_OBJECT_TRANSPARENT_CLEARCOAT : PSTYPE_OBJECT_CLEARCOAT;
 			break;
-		case wi::scene::MaterialComponent::SHADERTYPE_PBR_CLOTH_CLEARCOAT:
+		case MaterialComponent::SHADERTYPE_PBR_CLOTH_CLEARCOAT:
 			realPS = transparent ? PSTYPE_OBJECT_TRANSPARENT_CLOTH_CLEARCOAT : PSTYPE_OBJECT_CLOTH_CLEARCOAT;
 			break;
-		case wi::scene::MaterialComponent::SHADERTYPE_WATER:
+		case MaterialComponent::SHADERTYPE_WATER:
 			realPS = transparent ? PSTYPE_OBJECT_WATER : SHADERTYPE_COUNT;
 			break;
-		case wi::scene::MaterialComponent::SHADERTYPE_CARTOON:
+		case MaterialComponent::SHADERTYPE_CARTOON:
 			realPS = transparent ? PSTYPE_OBJECT_TRANSPARENT_CARTOON : PSTYPE_OBJECT_CARTOON;
 			break;
-		case wi::scene::MaterialComponent::SHADERTYPE_UNLIT:
+		case MaterialComponent::SHADERTYPE_UNLIT:
 			realPS = transparent ? PSTYPE_OBJECT_TRANSPARENT_UNLIT : PSTYPE_OBJECT_UNLIT;
 			break;
 		default:
@@ -6779,7 +6779,7 @@ void ResolveMSAADepthBuffer(const Texture& dst, const Texture& src, CommandList 
 
 	device->EventEnd(cmd);
 }
-void DownsampleDepthBuffer(const wi::graphics::Texture& src, wi::graphics::CommandList cmd)
+void DownsampleDepthBuffer(const Texture& src, CommandList cmd)
 {
 	device->EventBegin("DownsampleDepthBuffer", cmd);
 
@@ -7814,8 +7814,8 @@ void SurfelGI_Coverage(
 }
 void SurfelGI(
 	const SurfelGIResources& res,
-	const wi::scene::Scene& scene,
-	wi::graphics::CommandList cmd
+	const Scene& scene,
+	CommandList cmd
 )
 {
 	if (!scene.TLAS.IsValid() && !scene.BVH.IsValid())

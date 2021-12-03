@@ -354,7 +354,6 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiUnorderedMap.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiVector.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiVersion.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiWidget.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiXInput.h" />
   </ItemGroup>
   <ItemGroup>
@@ -688,7 +687,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)wiArguments.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiTextureHelper.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiVersion.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)wiWidget.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)wiXInput.cpp" />
   </ItemGroup>
   <ItemGroup>

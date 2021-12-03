@@ -8,7 +8,7 @@ using namespace wi::scene;
 
 void ForceFieldWindow::Create(EditorComponent* editor)
 {
-	wi::widget::Window::Create("Force Field Window");
+	wi::gui::Window::Create("Force Field Window");
 	SetSize(XMFLOAT2(420, 120));
 
 	float x = 150;
@@ -19,7 +19,7 @@ void ForceFieldWindow::Create(EditorComponent* editor)
 	addButton.Create("Add Force Field");
 	addButton.SetSize(XMFLOAT2(150, hei));
 	addButton.SetPos(XMFLOAT2(x, y += step));
-	addButton.OnClick([=](wi::widget::EventArgs args) {
+	addButton.OnClick([=](wi::gui::EventArgs args) {
 		Entity entity = wi::scene::GetScene().Entity_CreateForce("editorForce");
 		ForceFieldComponent* force = wi::scene::GetScene().forces.GetComponent(entity);
 		if (force != nullptr)
@@ -53,7 +53,7 @@ void ForceFieldWindow::Create(EditorComponent* editor)
 	typeComboBox.Create("Force Field type: ");
 	typeComboBox.SetPos(XMFLOAT2(x, y += step));
 	typeComboBox.SetSize(XMFLOAT2(200, hei));
-	typeComboBox.OnSelect([&](wi::widget::EventArgs args) {
+	typeComboBox.OnSelect([&](wi::gui::EventArgs args) {
 		ForceFieldComponent* force = wi::scene::GetScene().forces.GetComponent(entity);
 		if (force != nullptr && args.iValue >= 0)
 		{
@@ -81,7 +81,7 @@ void ForceFieldWindow::Create(EditorComponent* editor)
 	gravitySlider.Create(-10, 10, 0, 100000, "Gravity: ");
 	gravitySlider.SetSize(XMFLOAT2(200, hei));
 	gravitySlider.SetPos(XMFLOAT2(x, y += step));
-	gravitySlider.OnSlide([&](wi::widget::EventArgs args) {
+	gravitySlider.OnSlide([&](wi::gui::EventArgs args) {
 		ForceFieldComponent* force = wi::scene::GetScene().forces.GetComponent(entity);
 		if (force != nullptr)
 		{
@@ -96,7 +96,7 @@ void ForceFieldWindow::Create(EditorComponent* editor)
 	rangeSlider.Create(0.0f, 100.0f, 10, 100000, "Range: ");
 	rangeSlider.SetSize(XMFLOAT2(200, hei));
 	rangeSlider.SetPos(XMFLOAT2(x, y += step));
-	rangeSlider.OnSlide([&](wi::widget::EventArgs args) {
+	rangeSlider.OnSlide([&](wi::gui::EventArgs args) {
 		ForceFieldComponent* force = wi::scene::GetScene().forces.GetComponent(entity);
 		if (force != nullptr)
 		{

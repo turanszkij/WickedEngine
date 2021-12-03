@@ -30,7 +30,7 @@ void CameraWindow::ResetCam()
 
 void CameraWindow::Create(EditorComponent* editor)
 {
-	wi::widget::Window::Create("Camera Window");
+	wi::gui::Window::Create("Camera Window");
 	camera_transform.MatrixTransform(wi::scene::GetCamera().GetInvView());
 	camera_transform.UpdateTransform();
 
@@ -46,7 +46,7 @@ void CameraWindow::Create(EditorComponent* editor)
 	farPlaneSlider.SetSize(XMFLOAT2(100, hei));
 	farPlaneSlider.SetPos(XMFLOAT2(x, y += step));
 	farPlaneSlider.SetValue(wi::scene::GetCamera().zFarP);
-	farPlaneSlider.OnSlide([&](wi::widget::EventArgs args) {
+	farPlaneSlider.OnSlide([&](wi::gui::EventArgs args) {
 		Scene& scene = wi::scene::GetScene();
 		CameraComponent& camera = wi::scene::GetCamera();
 		camera.zFarP = args.fValue;
@@ -60,7 +60,7 @@ void CameraWindow::Create(EditorComponent* editor)
 	nearPlaneSlider.SetSize(XMFLOAT2(100, hei));
 	nearPlaneSlider.SetPos(XMFLOAT2(x, y += step));
 	nearPlaneSlider.SetValue(wi::scene::GetCamera().zNearP);
-	nearPlaneSlider.OnSlide([&](wi::widget::EventArgs args) {
+	nearPlaneSlider.OnSlide([&](wi::gui::EventArgs args) {
 		Scene& scene = wi::scene::GetScene();
 		CameraComponent& camera = wi::scene::GetCamera();
 		camera.zNearP = args.fValue;
@@ -73,7 +73,7 @@ void CameraWindow::Create(EditorComponent* editor)
 	fovSlider.SetTooltip("Controls the camera's top-down field of view (in degrees)");
 	fovSlider.SetSize(XMFLOAT2(100, hei));
 	fovSlider.SetPos(XMFLOAT2(x, y += step));
-	fovSlider.OnSlide([&](wi::widget::EventArgs args) {
+	fovSlider.OnSlide([&](wi::gui::EventArgs args) {
 		Scene& scene = wi::scene::GetScene();
 		CameraComponent& camera = wi::scene::GetCamera();
 		camera.fov = args.fValue / 180.f * XM_PI;
@@ -86,7 +86,7 @@ void CameraWindow::Create(EditorComponent* editor)
 	focalLengthSlider.SetTooltip("Controls the depth of field effect's focus distance");
 	focalLengthSlider.SetSize(XMFLOAT2(100, hei));
 	focalLengthSlider.SetPos(XMFLOAT2(x, y += step));
-	focalLengthSlider.OnSlide([&](wi::widget::EventArgs args) {
+	focalLengthSlider.OnSlide([&](wi::gui::EventArgs args) {
 		Scene& scene = wi::scene::GetScene();
 		CameraComponent& camera = wi::scene::GetCamera();
 		camera.focal_length = args.fValue;
@@ -99,7 +99,7 @@ void CameraWindow::Create(EditorComponent* editor)
 	apertureSizeSlider.SetTooltip("Controls the depth of field effect's strength");
 	apertureSizeSlider.SetSize(XMFLOAT2(100, hei));
 	apertureSizeSlider.SetPos(XMFLOAT2(x, y += step));
-	apertureSizeSlider.OnSlide([&](wi::widget::EventArgs args) {
+	apertureSizeSlider.OnSlide([&](wi::gui::EventArgs args) {
 		Scene& scene = wi::scene::GetScene();
 		CameraComponent& camera = wi::scene::GetCamera();
 		camera.aperture_size = args.fValue;
@@ -112,7 +112,7 @@ void CameraWindow::Create(EditorComponent* editor)
 	apertureShapeXSlider.SetTooltip("Controls the depth of field effect's bokeh shape");
 	apertureShapeXSlider.SetSize(XMFLOAT2(100, hei));
 	apertureShapeXSlider.SetPos(XMFLOAT2(x, y += step));
-	apertureShapeXSlider.OnSlide([&](wi::widget::EventArgs args) {
+	apertureShapeXSlider.OnSlide([&](wi::gui::EventArgs args) {
 		Scene& scene = wi::scene::GetScene();
 		CameraComponent& camera = wi::scene::GetCamera();
 		camera.aperture_shape.x = args.fValue;
@@ -125,7 +125,7 @@ void CameraWindow::Create(EditorComponent* editor)
 	apertureShapeYSlider.SetTooltip("Controls the depth of field effect's bokeh shape");
 	apertureShapeYSlider.SetSize(XMFLOAT2(100, hei));
 	apertureShapeYSlider.SetPos(XMFLOAT2(x, y += step));
-	apertureShapeYSlider.OnSlide([&](wi::widget::EventArgs args) {
+	apertureShapeYSlider.OnSlide([&](wi::gui::EventArgs args) {
 		Scene& scene = wi::scene::GetScene();
 		CameraComponent& camera = wi::scene::GetCamera();
 		camera.aperture_shape.y = args.fValue;
@@ -152,7 +152,7 @@ void CameraWindow::Create(EditorComponent* editor)
 	resetButton.Create("Reset Camera");
 	resetButton.SetSize(XMFLOAT2(140, hei));
 	resetButton.SetPos(XMFLOAT2(x, y += step));
-	resetButton.OnClick([&](wi::widget::EventArgs args) {
+	resetButton.OnClick([&](wi::gui::EventArgs args) {
 		ResetCam();
 	});
 	AddWidget(&resetButton);
@@ -169,7 +169,7 @@ void CameraWindow::Create(EditorComponent* editor)
 	proxyButton.SetTooltip("Copy the current camera and place a proxy of it in the world.");
 	proxyButton.SetSize(XMFLOAT2(140, hei));
 	proxyButton.SetPos(XMFLOAT2(x, y += step * 2));
-	proxyButton.OnClick([=](wi::widget::EventArgs args) {
+	proxyButton.OnClick([=](wi::gui::EventArgs args) {
 
 		const CameraComponent& camera = wi::scene::GetCamera();
 

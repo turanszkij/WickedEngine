@@ -3,7 +3,7 @@
 
 class EditorComponent;
 
-class NameWindow : public wi::widget::Window
+class NameWindow : public wi::gui::Window
 {
 public:
 	void Create(EditorComponent* editor);
@@ -11,6 +11,6 @@ public:
 	wi::ecs::Entity entity;
 	void SetEntity(wi::ecs::Entity entity);
 
-	wi::widget::TextInputField nameInput;
+	wi::gui::TextInputField nameInput;
 };
 

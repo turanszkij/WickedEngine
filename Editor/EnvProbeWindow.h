@@ -3,7 +3,7 @@
 
 class EditorComponent;
 
-class EnvProbeWindow : public wi::widget::Window
+class EnvProbeWindow : public wi::gui::Window
 {
 public:
 	void Create(EditorComponent* editor);
@@ -11,9 +11,9 @@ public:
 	wi::ecs::Entity entity;
 	void SetEntity(wi::ecs::Entity entity);
 
-	wi::widget::CheckBox realTimeCheckBox;
-	wi::widget::Button generateButton;
-	wi::widget::Button refreshButton;
-	wi::widget::Button refreshAllButton;
+	wi::gui::CheckBox realTimeCheckBox;
+	wi::gui::Button generateButton;
+	wi::gui::Button refreshButton;
+	wi::gui::Button refreshAllButton;
 };
 
