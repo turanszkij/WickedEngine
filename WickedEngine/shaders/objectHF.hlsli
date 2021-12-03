@@ -1048,15 +1048,10 @@ struct PSOut
 #endif // DISABLE_ALPHATEST
 PSOut main(PixelInput input, in uint primitiveID : SV_PrimitiveID)
 #else
-struct PSOut
-{
-	float4 color : SV_Target0;
-	uint coverage : SV_Coverage;
-};
 #ifdef DISABLE_ALPHATEST
 [earlydepthstencil]
 #endif // DISABLE_ALPHATEST
-PSOut main(PixelInput input, in bool is_frontface : SV_IsFrontFace)
+float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // PREPASS
 
 
@@ -1140,8 +1135,13 @@ PSOut main(PixelInput input, in bool is_frontface : SV_IsFrontFace)
 #endif // OBJECTSHADER_USE_COLOR
 
 
+#ifdef PREPASS
+	// - In prepass, alpha test will be only done if rendering is non-MSAA
+	// - In opaque pass, there is no alpha test, only Z test EQUAL
+	// - In transparent pass, there is normal alpha test and blend
 	[branch]
 	if (GetCamera().sample_count <= 1)
+#endif // PREPASS
 	{
 #ifndef DISABLE_ALPHATEST
 		float alphatest = GetMaterial().alphaTest;
@@ -1738,19 +1738,19 @@ PSOut main(PixelInput input, in bool is_frontface : SV_IsFrontFace)
 
 
 	// end point:
-	PSOut Out;
 #ifdef PREPASS
 	PrimitiveID prim;
 	prim.primitiveIndex = primitiveID;
 	prim.instanceIndex = input.instanceID;
 	prim.subsetIndex = GetSubsetIndex();
+
+	PSOut Out;
 	Out.primitiveID = prim.pack();
-#else
-	Out.color = color;
-#endif // PREPASS
 	Out.coverage = AlphaToCoverage(color.a, GetMaterial().alphaTest, pixel);
 	return Out;
-
+#else
+	return color;
+#endif // PREPASS
 }
 
 
