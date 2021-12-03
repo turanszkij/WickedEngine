@@ -3,31 +3,31 @@
 
 class EditorComponent;
 
-class LightWindow : public wiWindow
+class LightWindow : public wi::gui::Window
 {
 public:
 	void Create(EditorComponent* editor);
 
-	wiECS::Entity entity;
-	void SetEntity(wiECS::Entity entity);
+	wi::ecs::Entity entity;
+	void SetEntity(wi::ecs::Entity entity);
 
-	void SetLightType(wiScene::LightComponent::LightType type);
+	void SetLightType(wi::scene::LightComponent::LightType type);
 
-	wiSlider energySlider;
-	wiSlider rangeSlider;
-	wiSlider radiusSlider;
-	wiSlider widthSlider;
-	wiSlider heightSlider;
-	wiSlider fovSlider;
-	wiCheckBox	shadowCheckBox;
-	wiCheckBox	haloCheckBox;
-	wiCheckBox	volumetricsCheckBox;
-	wiCheckBox	staticCheckBox;
-	wiButton addLightButton;
-	wiColorPicker colorPicker;
-	wiComboBox typeSelectorComboBox;
+	wi::gui::Slider energySlider;
+	wi::gui::Slider rangeSlider;
+	wi::gui::Slider radiusSlider;
+	wi::gui::Slider widthSlider;
+	wi::gui::Slider heightSlider;
+	wi::gui::Slider fovSlider;
+	wi::gui::CheckBox	shadowCheckBox;
+	wi::gui::CheckBox	haloCheckBox;
+	wi::gui::CheckBox	volumetricsCheckBox;
+	wi::gui::CheckBox	staticCheckBox;
+	wi::gui::Button addLightButton;
+	wi::gui::ColorPicker colorPicker;
+	wi::gui::ComboBox typeSelectorComboBox;
 
-	wiLabel lensflare_Label;
-	wiButton lensflare_Button[7];
+	wi::gui::Label lensflare_Label;
+	wi::gui::Button lensflare_Button[7];
 };
 

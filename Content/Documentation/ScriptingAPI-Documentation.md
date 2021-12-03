@@ -43,6 +43,11 @@ This is a reference and explanation of Lua scripting features in Wicked Engine.
 			1. [RenderPath2D](#renderpath2d)
 			2. [RenderPath3D](#renderpath3d)
 			3. [LoadingScreen](#loadingscreen)
+	12. [Primitives](#primitives)
+		1. [Ray](#ray)
+		2. [AABB](#aabb)
+		3. [Sphere](#sphere)
+		4. [Capsule](#capsule)
 	12. [Input](#input)
 		
 ## Introduction and usage
@@ -682,7 +687,7 @@ It inherits functions from RenderPath2D.
 - AddLoadingTask(string taskScript)
 - OnFinished(string taskScript)
 
-### Intersects
+### Primitives
 
 #### Ray
 A ray is defined by an origin Vector and a normalized direction Vector. It can be used to intersect with other primitives or the scene

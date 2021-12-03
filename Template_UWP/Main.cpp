@@ -45,10 +45,10 @@ public:
 
         CoreApplication::Resuming({ this, &ViewProvider::OnResuming });
 
-		main.infoDisplay.active = true;
-		main.infoDisplay.watermark = true;
-		main.infoDisplay.resolution = true;
-		main.infoDisplay.fpsinfo = true;
+		application.infoDisplay.active = true;
+		application.infoDisplay.watermark = true;
+		application.infoDisplay.resolution = true;
+		application.infoDisplay.fpsinfo = true;
 	}
 
     void Uninitialize() noexcept
@@ -87,7 +87,7 @@ public:
         m_logicalWidth = window.Bounds().Width;
         m_logicalHeight = window.Bounds().Height;
 
-		main.SetWindow(&window);
+		application.SetWindow(&window);
 	}
 
     void Load(winrt::hstring const &) noexcept
@@ -100,7 +100,7 @@ public:
         {
             if (m_visible)
             {
-				main.Run();
+				application.Run();
 
                 CoreWindow::GetForCurrentThread().Dispatcher().ProcessEvents(CoreProcessEventsOption::ProcessAllIfPresent);
             }
@@ -134,7 +134,7 @@ protected:
 
     void OnWindowSizeChanged(CoreWindow const & sender, WindowSizeChangedEventArgs const & /*args*/)
     {
-		main.SetWindow(&sender);
+		application.SetWindow(&sender);
     }
 
     void OnVisibilityChanged(CoreWindow const & /*sender*/, VisibilityChangedEventArgs const & args)
@@ -166,15 +166,15 @@ protected:
 
 			if (c == '\b')
 			{
-				if (wiBackLog::isActive())
-					wiBackLog::deletefromInput();
-				wiTextInputField::DeleteFromInput();
+				if (wi::backlog::isActive())
+					wi::backlog::deletefromInput();
+				wi::gui::TextInputField::DeleteFromInput();
 			}
 			else
 			{
-				if (wiBackLog::isActive())
-					wiBackLog::input(c);
-				wiTextInputField::AddInput(c);
+				if (wi::backlog::isActive())
+					wi::backlog::input(c);
+				wi::gui::TextInputField::AddInput(c);
 			}
 
 		}
@@ -182,7 +182,7 @@ protected:
 
     void OnDpiChanged(DisplayInformation const & sender, IInspectable const & /*args*/)
     {
-		main.SetWindow(&CoreWindow::GetForCurrentThread());
+		application.SetWindow(&CoreWindow::GetForCurrentThread());
     }
 
     void OnDisplayContentsInvalidated(DisplayInformation const & /*sender*/, IInspectable const & /*args*/)
@@ -195,7 +195,7 @@ private:
     float m_DPI = 96;
     float m_logicalWidth = 800;
     float m_logicalHeight = 600;
-	MainComponent main;
+	wi::Application application;
 
     inline int ConvertDipsToPixels(float dips) const noexcept
     {

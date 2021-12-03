@@ -2,13 +2,13 @@
 #include "MaterialWindow.h"
 #include "Editor.h"
 
-using namespace wiGraphics;
-using namespace wiECS;
-using namespace wiScene;
+using namespace wi::graphics;
+using namespace wi::ecs;
+using namespace wi::scene;
 
 void MaterialWindow::Create(EditorComponent* editor)
 {
-	wiWindow::Create("Material Window");
+	wi::gui::Window::Create("Material Window");
 	SetSize(XMFLOAT2(720, 620));
 
 	float x = 670, y = 0;
@@ -19,8 +19,8 @@ void MaterialWindow::Create(EditorComponent* editor)
 	shadowReceiveCheckBox.SetTooltip("Receives shadow or not?");
 	shadowReceiveCheckBox.SetPos(XMFLOAT2(540, y += step));
 	shadowReceiveCheckBox.SetSize(XMFLOAT2(hei, hei));
-	shadowReceiveCheckBox.OnClick([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+	shadowReceiveCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetReceiveShadow(args.bValue);
 		});
@@ -30,8 +30,8 @@ void MaterialWindow::Create(EditorComponent* editor)
 	shadowCasterCheckBox.SetTooltip("The subset will contribute to the scene shadows if enabled.");
 	shadowCasterCheckBox.SetPos(XMFLOAT2(670, y));
 	shadowCasterCheckBox.SetSize(XMFLOAT2(hei, hei));
-	shadowCasterCheckBox.OnClick([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+	shadowCasterCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetCastShadow(args.bValue);
 	});
@@ -41,8 +41,8 @@ void MaterialWindow::Create(EditorComponent* editor)
 	useVertexColorsCheckBox.SetTooltip("Enable if you want to render the mesh with vertex colors (must have appropriate vertex buffer)");
 	useVertexColorsCheckBox.SetPos(XMFLOAT2(670, y += step));
 	useVertexColorsCheckBox.SetSize(XMFLOAT2(hei, hei));
-	useVertexColorsCheckBox.OnClick([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+	useVertexColorsCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetUseVertexColors(args.bValue);
 	});
@@ -52,8 +52,8 @@ void MaterialWindow::Create(EditorComponent* editor)
 	specularGlossinessCheckBox.SetTooltip("If enabled, surface map will be viewed like it contains specular color (RGB) and smoothness (A)");
 	specularGlossinessCheckBox.SetPos(XMFLOAT2(670, y += step));
 	specularGlossinessCheckBox.SetSize(XMFLOAT2(hei, hei));
-	specularGlossinessCheckBox.OnClick([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+	specularGlossinessCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetUseSpecularGlossinessWorkflow(args.bValue);
 		SetEntity(entity);
@@ -64,8 +64,8 @@ void MaterialWindow::Create(EditorComponent* editor)
 	occlusionPrimaryCheckBox.SetTooltip("If enabled, surface map's RED channel will be used as occlusion map");
 	occlusionPrimaryCheckBox.SetPos(XMFLOAT2(670, y += step));
 	occlusionPrimaryCheckBox.SetSize(XMFLOAT2(hei, hei));
-	occlusionPrimaryCheckBox.OnClick([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+	occlusionPrimaryCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetOcclusionEnabled_Primary(args.bValue);
 	});
@@ -75,8 +75,8 @@ void MaterialWindow::Create(EditorComponent* editor)
 	occlusionSecondaryCheckBox.SetTooltip("If enabled, occlusion map's RED channel will be used as occlusion map");
 	occlusionSecondaryCheckBox.SetPos(XMFLOAT2(670, y += step));
 	occlusionSecondaryCheckBox.SetSize(XMFLOAT2(hei, hei));
-	occlusionSecondaryCheckBox.OnClick([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+	occlusionSecondaryCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetOcclusionEnabled_Secondary(args.bValue);
 	});
@@ -86,8 +86,8 @@ void MaterialWindow::Create(EditorComponent* editor)
 	windCheckBox.SetTooltip("If enabled, vertex wind weights will affect how much wind offset affects the subset.");
 	windCheckBox.SetPos(XMFLOAT2(670, y += step));
 	windCheckBox.SetSize(XMFLOAT2(hei, hei));
-	windCheckBox.OnClick([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+	windCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetUseWind(args.bValue);
 		});
@@ -97,8 +97,8 @@ void MaterialWindow::Create(EditorComponent* editor)
 	doubleSidedCheckBox.SetTooltip("Decide whether to render both sides of the material (It's also possible to set this behaviour per mesh).");
 	doubleSidedCheckBox.SetPos(XMFLOAT2(540, y));
 	doubleSidedCheckBox.SetSize(XMFLOAT2(hei, hei));
-	doubleSidedCheckBox.OnClick([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+	doubleSidedCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetDoubleSided(args.bValue);
 		});
@@ -111,11 +111,11 @@ void MaterialWindow::Create(EditorComponent* editor)
 
 
 	shaderTypeComboBox.Create("Shader: ");
-	shaderTypeComboBox.SetTooltip("Select a shader for this material. \nCustom shaders (*) will also show up here (see wiRenderer:RegisterCustomShader() for more info.)\nNote that custom shaders (*) can't select between blend modes, as they are created with an explicit blend mode.");
+	shaderTypeComboBox.SetTooltip("Select a shader for this material. \nCustom shaders (*) will also show up here (see wi::renderer:RegisterCustomShader() for more info.)\nNote that custom shaders (*) can't select between blend modes, as they are created with an explicit blend mode.");
 	shaderTypeComboBox.SetPos(XMFLOAT2(x, y += step));
 	shaderTypeComboBox.SetSize(XMFLOAT2(wid, hei));
-	shaderTypeComboBox.OnSelect([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+	shaderTypeComboBox.OnSelect([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 		{
 			if (args.iValue >= MaterialComponent::SHADERTYPE_COUNT)
@@ -141,7 +141,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 	shaderTypeComboBox.AddItem("Water", MaterialComponent::SHADERTYPE_WATER);
 	shaderTypeComboBox.AddItem("Cartoon", MaterialComponent::SHADERTYPE_CARTOON);
 	shaderTypeComboBox.AddItem("Unlit", MaterialComponent::SHADERTYPE_UNLIT);
-	for (auto& x : wiRenderer::GetCustomShaders())
+	for (auto& x : wi::renderer::GetCustomShaders())
 	{
 		shaderTypeComboBox.AddItem("*" + x.name);
 	}
@@ -152,11 +152,11 @@ void MaterialWindow::Create(EditorComponent* editor)
 	blendModeComboBox.Create("Blend mode: ");
 	blendModeComboBox.SetPos(XMFLOAT2(x, y += step));
 	blendModeComboBox.SetSize(XMFLOAT2(wid, hei));
-	blendModeComboBox.OnSelect([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+	blendModeComboBox.OnSelect([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr && args.iValue >= 0)
 		{
-			material->userBlendMode = (BLENDMODE)args.iValue;
+			material->userBlendMode = (wi::enums::BLENDMODE)args.iValue;
 		}
 		});
 	blendModeComboBox.AddItem("Opaque");
@@ -172,8 +172,8 @@ void MaterialWindow::Create(EditorComponent* editor)
 	shadingRateComboBox.SetTooltip("Select shading rate for this material. \nSelecting larger shading rate will decrease rendering quality of this material, \nbut increases performance.\nRequires hardware support for variable shading rate");
 	shadingRateComboBox.SetPos(XMFLOAT2(x, y += step));
 	shadingRateComboBox.SetSize(XMFLOAT2(wid, hei));
-	shadingRateComboBox.OnSelect([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+	shadingRateComboBox.OnSelect([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 		{
 			material->shadingRate = (ShadingRate)args.iValue;
@@ -200,8 +200,8 @@ void MaterialWindow::Create(EditorComponent* editor)
 	normalMapSlider.SetTooltip("How much the normal map should distort the face normals (bumpiness).");
 	normalMapSlider.SetSize(XMFLOAT2(wid, hei));
 	normalMapSlider.SetPos(XMFLOAT2(x, y += step));
-	normalMapSlider.OnSlide([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+	normalMapSlider.OnSlide([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetNormalMapStrength(args.fValue);
 	});
@@ -211,8 +211,8 @@ void MaterialWindow::Create(EditorComponent* editor)
 	roughnessSlider.SetTooltip("Adjust the surface roughness. Rough surfaces are less shiny, more matte.");
 	roughnessSlider.SetSize(XMFLOAT2(wid, hei));
 	roughnessSlider.SetPos(XMFLOAT2(x, y += step));
-	roughnessSlider.OnSlide([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+	roughnessSlider.OnSlide([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetRoughness(args.fValue);
 	});
@@ -222,8 +222,8 @@ void MaterialWindow::Create(EditorComponent* editor)
 	reflectanceSlider.SetTooltip("Adjust the surface [non-metal] reflectivity (also called specularFactor).\nNote: this is not available in specular-glossiness workflow");
 	reflectanceSlider.SetSize(XMFLOAT2(wid, hei));
 	reflectanceSlider.SetPos(XMFLOAT2(x, y += step));
-	reflectanceSlider.OnSlide([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+	reflectanceSlider.OnSlide([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetReflectance(args.fValue);
 	});
@@ -233,8 +233,8 @@ void MaterialWindow::Create(EditorComponent* editor)
 	metalnessSlider.SetTooltip("The more metal-like the surface is, the more the its color will contribute to the reflection color.\nNote: this is not available in specular-glossiness workflow");
 	metalnessSlider.SetSize(XMFLOAT2(wid, hei));
 	metalnessSlider.SetPos(XMFLOAT2(x, y += step));
-	metalnessSlider.OnSlide([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+	metalnessSlider.OnSlide([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetMetalness(args.fValue);
 	});
@@ -244,8 +244,8 @@ void MaterialWindow::Create(EditorComponent* editor)
 	alphaRefSlider.SetTooltip("Adjust the alpha cutoff threshold. Alpha cutout can affect performance");
 	alphaRefSlider.SetSize(XMFLOAT2(wid, hei));
 	alphaRefSlider.SetPos(XMFLOAT2(x, y += step));
-	alphaRefSlider.OnSlide([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+	alphaRefSlider.OnSlide([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetAlphaRef(args.fValue);
 	});
@@ -255,8 +255,8 @@ void MaterialWindow::Create(EditorComponent* editor)
 	emissiveSlider.SetTooltip("Adjust the light emission of the surface. The color of the light emitted is that of the color of the material.");
 	emissiveSlider.SetSize(XMFLOAT2(wid, hei));
 	emissiveSlider.SetPos(XMFLOAT2(x, y += step));
-	emissiveSlider.OnSlide([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+	emissiveSlider.OnSlide([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetEmissiveStrength(args.fValue);
 	});
@@ -266,8 +266,8 @@ void MaterialWindow::Create(EditorComponent* editor)
 	transmissionSlider.SetTooltip("Adjust the transmissiveness. More transmissiveness means more diffuse light is transmitted instead of absorbed.");
 	transmissionSlider.SetSize(XMFLOAT2(wid, hei));
 	transmissionSlider.SetPos(XMFLOAT2(x, y += step));
-	transmissionSlider.OnSlide([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+	transmissionSlider.OnSlide([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetTransmissionAmount(args.fValue);
 		});
@@ -277,8 +277,8 @@ void MaterialWindow::Create(EditorComponent* editor)
 	refractionSlider.SetTooltip("Adjust the refraction amount for transmissive materials.");
 	refractionSlider.SetSize(XMFLOAT2(wid, hei));
 	refractionSlider.SetPos(XMFLOAT2(x, y += step));
-	refractionSlider.OnSlide([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+	refractionSlider.OnSlide([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetRefractionAmount(args.fValue);
 		});
@@ -288,8 +288,8 @@ void MaterialWindow::Create(EditorComponent* editor)
 	pomSlider.SetTooltip("Adjust how much the bump map should modulate the surface parallax effect. \nOnly works with PBR + Parallax shader.");
 	pomSlider.SetSize(XMFLOAT2(wid, hei));
 	pomSlider.SetPos(XMFLOAT2(x, y += step));
-	pomSlider.OnSlide([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+	pomSlider.OnSlide([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetParallaxOcclusionMapping(args.fValue);
 	});
@@ -299,8 +299,8 @@ void MaterialWindow::Create(EditorComponent* editor)
 	displacementMappingSlider.SetTooltip("Adjust how much the bump map should modulate the geometry when using tessellation.");
 	displacementMappingSlider.SetSize(XMFLOAT2(wid, hei));
 	displacementMappingSlider.SetPos(XMFLOAT2(x, y += step));
-	displacementMappingSlider.OnSlide([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+	displacementMappingSlider.OnSlide([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetDisplacementMapping(args.fValue);
 	});
@@ -310,8 +310,8 @@ void MaterialWindow::Create(EditorComponent* editor)
 	subsurfaceScatteringSlider.SetTooltip("Subsurface scattering amount. \nYou can also adjust the subsurface color by selecting it in the color picker");
 	subsurfaceScatteringSlider.SetSize(XMFLOAT2(wid, hei));
 	subsurfaceScatteringSlider.SetPos(XMFLOAT2(x, y += step));
-	subsurfaceScatteringSlider.OnSlide([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+	subsurfaceScatteringSlider.OnSlide([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 			material->SetSubsurfaceScatteringAmount(args.fValue);
 	});
@@ -321,8 +321,8 @@ void MaterialWindow::Create(EditorComponent* editor)
 	texAnimFrameRateSlider.SetTooltip("Adjust the texture animation frame rate (frames per second). Any value above 0 will make the material dynamic.");
 	texAnimFrameRateSlider.SetSize(XMFLOAT2(wid, hei));
 	texAnimFrameRateSlider.SetPos(XMFLOAT2(x, y += step));
-	texAnimFrameRateSlider.OnSlide([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+	texAnimFrameRateSlider.OnSlide([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 		{
 			material->texAnimFrameRate = args.fValue;
@@ -334,8 +334,8 @@ void MaterialWindow::Create(EditorComponent* editor)
 	texAnimDirectionSliderU.SetTooltip("Adjust the texture animation speed along the U direction in texture space.");
 	texAnimDirectionSliderU.SetSize(XMFLOAT2(wid, hei));
 	texAnimDirectionSliderU.SetPos(XMFLOAT2(x, y += step));
-	texAnimDirectionSliderU.OnSlide([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+	texAnimDirectionSliderU.OnSlide([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 		{
 			material->texAnimDirection.x = args.fValue;
@@ -347,8 +347,8 @@ void MaterialWindow::Create(EditorComponent* editor)
 	texAnimDirectionSliderV.SetTooltip("Adjust the texture animation speed along the V direction in texture space.");
 	texAnimDirectionSliderV.SetSize(XMFLOAT2(wid, hei));
 	texAnimDirectionSliderV.SetPos(XMFLOAT2(x, y += step));
-	texAnimDirectionSliderV.OnSlide([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+	texAnimDirectionSliderV.OnSlide([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 		{
 			material->texAnimDirection.y = args.fValue;
@@ -360,8 +360,8 @@ void MaterialWindow::Create(EditorComponent* editor)
 	texMulSliderX.SetTooltip("Adjust the texture mapping size.");
 	texMulSliderX.SetSize(XMFLOAT2(wid, hei));
 	texMulSliderX.SetPos(XMFLOAT2(x, y += step));
-	texMulSliderX.OnSlide([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+	texMulSliderX.OnSlide([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 		{
 			material->SetDirty();
@@ -374,8 +374,8 @@ void MaterialWindow::Create(EditorComponent* editor)
 	texMulSliderY.SetTooltip("Adjust the texture mapping size.");
 	texMulSliderY.SetSize(XMFLOAT2(wid, hei));
 	texMulSliderY.SetPos(XMFLOAT2(x, y += step));
-	texMulSliderY.OnSlide([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+	texMulSliderY.OnSlide([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 		{
 			material->SetDirty();
@@ -389,8 +389,8 @@ void MaterialWindow::Create(EditorComponent* editor)
 	sheenRoughnessSlider.SetTooltip("This affects roughness of sheen layer for cloth shading.");
 	sheenRoughnessSlider.SetSize(XMFLOAT2(wid, hei));
 	sheenRoughnessSlider.SetPos(XMFLOAT2(x, y += step));
-	sheenRoughnessSlider.OnSlide([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+	sheenRoughnessSlider.OnSlide([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 		{
 			material->SetSheenRoughness(args.fValue);
@@ -402,8 +402,8 @@ void MaterialWindow::Create(EditorComponent* editor)
 	clearcoatSlider.SetTooltip("This affects clearcoat layer blending.");
 	clearcoatSlider.SetSize(XMFLOAT2(wid, hei));
 	clearcoatSlider.SetPos(XMFLOAT2(x, y += step));
-	clearcoatSlider.OnSlide([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+	clearcoatSlider.OnSlide([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 		{
 			material->SetClearcoatFactor(args.fValue);
@@ -415,8 +415,8 @@ void MaterialWindow::Create(EditorComponent* editor)
 	clearcoatRoughnessSlider.SetTooltip("This affects roughness of clear coat layer.");
 	clearcoatRoughnessSlider.SetSize(XMFLOAT2(wid, hei));
 	clearcoatRoughnessSlider.SetPos(XMFLOAT2(x, y += step));
-	clearcoatRoughnessSlider.OnSlide([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+	clearcoatRoughnessSlider.OnSlide([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 		{
 			material->SetClearcoatRoughness(args.fValue);
@@ -435,8 +435,8 @@ void MaterialWindow::Create(EditorComponent* editor)
 	materialNameField.SetTooltip("Set a name for the material...");
 	materialNameField.SetPos(XMFLOAT2(10, y += step));
 	materialNameField.SetSize(XMFLOAT2(300, hei));
-	materialNameField.OnInputAccepted([=](wiEventArgs args) {
-		NameComponent* name = wiScene::GetScene().names.GetComponent(entity);
+	materialNameField.OnInputAccepted([=](wi::gui::EventArgs args) {
+		NameComponent* name = wi::scene::GetScene().names.GetComponent(entity);
 		if (name != nullptr)
 		{
 			*name = args.sValue;
@@ -449,8 +449,8 @@ void MaterialWindow::Create(EditorComponent* editor)
 	newMaterialButton.Create("New Material");
 	newMaterialButton.SetPos(XMFLOAT2(10 + 5 + 300, y));
 	newMaterialButton.SetSize(XMFLOAT2(100, hei));
-	newMaterialButton.OnClick([=](wiEventArgs args) {
-		Scene& scene = wiScene::GetScene();
+	newMaterialButton.OnClick([=](wi::gui::EventArgs args) {
+		Scene& scene = wi::scene::GetScene();
 		Entity entity = scene.Entity_CreateMaterial("editorMaterial");
 		editor->ClearSelected();
 		editor->AddSelected(entity);
@@ -474,8 +474,8 @@ void MaterialWindow::Create(EditorComponent* editor)
 	colorPicker.SetPos(XMFLOAT2(10, y += step));
 	colorPicker.SetVisible(true);
 	colorPicker.SetEnabled(true);
-	colorPicker.OnColorChanged([&](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+	colorPicker.OnColorChanged([&](wi::gui::EventArgs args) {
+		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 		{
 			switch (colorComboBox.GetSelected())
@@ -559,7 +559,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 			break;
 		}
 	}
-	textureSlotComboBox.OnSelect([this](wiEventArgs args)
+	textureSlotComboBox.OnSelect([this](wi::gui::EventArgs args)
 		{
 
 			switch (args.iValue)
@@ -607,7 +607,7 @@ void MaterialWindow::Create(EditorComponent* editor)
 				break;
 			}
 
-			MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+			MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 			if (material == nullptr)
 				return;
 			textureSlotButton.SetImage(material->textures[args.iValue].resource);
@@ -620,36 +620,36 @@ void MaterialWindow::Create(EditorComponent* editor)
 	textureSlotButton.Create("");
 	textureSlotButton.SetSize(XMFLOAT2(180, 180));
 	textureSlotButton.SetPos(XMFLOAT2(textureSlotComboBox.GetPosition().x + textureSlotComboBox.GetScale().x - textureSlotButton.GetScale().x, y += step));
-	textureSlotButton.sprites[wiWidget::IDLE].params.color = wiColor::White();
-	textureSlotButton.sprites[wiWidget::FOCUS].params.color = wiColor::Gray();
-	textureSlotButton.sprites[wiWidget::ACTIVE].params.color = wiColor::White();
-	textureSlotButton.sprites[wiWidget::DEACTIVATING].params.color = wiColor::Gray();
-	textureSlotButton.OnClick([this](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+	textureSlotButton.sprites[wi::gui::IDLE].params.color = wi::Color::White();
+	textureSlotButton.sprites[wi::gui::FOCUS].params.color = wi::Color::Gray();
+	textureSlotButton.sprites[wi::gui::ACTIVE].params.color = wi::Color::White();
+	textureSlotButton.sprites[wi::gui::DEACTIVATING].params.color = wi::Color::Gray();
+	textureSlotButton.OnClick([this](wi::gui::EventArgs args) {
+		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 		if (material == nullptr)
 			return;
 
 		int slot = textureSlotComboBox.GetSelected();
 
-		if (material->textures[slot].resource != nullptr)
+		if (material->textures[slot].resource.IsValid())
 		{
-			material->textures[slot].resource = nullptr;
+			material->textures[slot].resource = {};
 			material->textures[slot].name = "";
 			material->SetDirty();
 			textureSlotLabel.SetText("");
 		}
 		else
 		{
-			wiHelper::FileDialogParams params;
-			params.type = wiHelper::FileDialogParams::OPEN;
+			wi::helper::FileDialogParams params;
+			params.type = wi::helper::FileDialogParams::OPEN;
 			params.description = "Texture";
-			params.extensions = wiResourceManager::GetSupportedImageExtensions();
-			wiHelper::FileDialog(params, [this, material, slot](std::string fileName) {
-				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-					material->textures[slot].resource = wiResourceManager::Load(fileName, wiResourceManager::IMPORT_RETAIN_FILEDATA);
+			params.extensions = wi::resourcemanager::GetSupportedImageExtensions();
+			wi::helper::FileDialog(params, [this, material, slot](std::string fileName) {
+				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					material->textures[slot].resource = wi::resourcemanager::Load(fileName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
 					material->textures[slot].name = fileName;
 					material->SetDirty();
-					textureSlotLabel.SetText(wiHelper::GetFileNameFromPath(fileName));
+					textureSlotLabel.SetText(wi::helper::GetFileNameFromPath(fileName));
 					});
 				});
 		}
@@ -668,8 +668,8 @@ void MaterialWindow::Create(EditorComponent* editor)
 	textureSlotUvsetField.SetTooltip("uv set number");
 	textureSlotUvsetField.SetPos(XMFLOAT2(x + textureSlotLabel.GetScale().x + 2, y));
 	textureSlotUvsetField.SetSize(XMFLOAT2(hei, hei));
-	textureSlotUvsetField.OnInputAccepted([this](wiEventArgs args) {
-		MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+	textureSlotUvsetField.OnInputAccepted([this](wi::gui::EventArgs args) {
+		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 		if (material != nullptr)
 		{
 			int slot = textureSlotComboBox.GetSelected();
@@ -691,7 +691,7 @@ void MaterialWindow::SetEntity(Entity entity)
 {
 	this->entity = entity;
 
-	Scene& scene = wiScene::GetScene();
+	Scene& scene = wi::scene::GetScene();
 	MaterialComponent* material = scene.materials.GetComponent(entity);
 
 	if (material != nullptr)
@@ -743,19 +743,19 @@ void MaterialWindow::SetEntity(Entity entity)
 		{
 		default:
 		case 0:
-			colorPicker.SetPickColor(wiColor::fromFloat4(material->baseColor));
+			colorPicker.SetPickColor(wi::Color::fromFloat4(material->baseColor));
 			break;
 		case 1:
-			colorPicker.SetPickColor(wiColor::fromFloat4(material->specularColor));
+			colorPicker.SetPickColor(wi::Color::fromFloat4(material->specularColor));
 			break;
 		case 2:
-			colorPicker.SetPickColor(wiColor::fromFloat3(XMFLOAT3(material->emissiveColor.x, material->emissiveColor.y, material->emissiveColor.z)));
+			colorPicker.SetPickColor(wi::Color::fromFloat3(XMFLOAT3(material->emissiveColor.x, material->emissiveColor.y, material->emissiveColor.z)));
 			break;
 		case 3:
-			colorPicker.SetPickColor(wiColor::fromFloat3(XMFLOAT3(material->subsurfaceScattering.x, material->subsurfaceScattering.y, material->subsurfaceScattering.z)));
+			colorPicker.SetPickColor(wi::Color::fromFloat3(XMFLOAT3(material->subsurfaceScattering.x, material->subsurfaceScattering.y, material->subsurfaceScattering.z)));
 			break;
 		case 4:
-			colorPicker.SetPickColor(wiColor::fromFloat3(XMFLOAT3(material->sheenColor.x, material->sheenColor.y, material->sheenColor.z)));
+			colorPicker.SetPickColor(wi::Color::fromFloat3(XMFLOAT3(material->sheenColor.x, material->sheenColor.y, material->sheenColor.z)));
 			break;
 		}
 
@@ -798,7 +798,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		clearcoatSlider.SetValue(material->clearcoat);
 		clearcoatRoughnessSlider.SetValue(material->clearcoatRoughness);
 
-		shadingRateComboBox.SetEnabled(wiGraphics::GetDevice()->CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING));
+		shadingRateComboBox.SetEnabled(wi::graphics::GetDevice()->CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING));
 
 		if (material->IsUsingSpecularGlossinessWorkflow())
 		{
@@ -808,7 +808,7 @@ void MaterialWindow::SetEntity(Entity entity)
 
 		int slot = textureSlotComboBox.GetSelected();
 		textureSlotButton.SetImage(material->textures[slot].resource);
-		textureSlotLabel.SetText(wiHelper::GetFileNameFromPath(material->textures[slot].name));
+		textureSlotLabel.SetText(wi::helper::GetFileNameFromPath(material->textures[slot].name));
 		textureSlotUvsetField.SetText(std::to_string(material->textures[slot].uvset));
 	}
 	else
@@ -818,7 +818,7 @@ void MaterialWindow::SetEntity(Entity entity)
 		colorComboBox.SetEnabled(false);
 		colorPicker.SetEnabled(false);
 
-		textureSlotButton.SetImage(nullptr);
+		textureSlotButton.SetImage(wi::Resource());
 		textureSlotLabel.SetText("");
 		textureSlotUvsetField.SetText("");
 	}

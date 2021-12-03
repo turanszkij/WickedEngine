@@ -4,11 +4,12 @@
 #include "wiInput.h"
 #include "wiMath.h"
 #include "shaders/ShaderInterop_Renderer.h"
-#include "wiEvent.h"
+#include "wiEventHandler.h"
 
-using namespace wiGraphics;
-using namespace wiECS;
-using namespace wiScene;
+using namespace wi::ecs;
+using namespace wi::scene;
+using namespace wi::graphics;
+using namespace wi::primitive;
 
 PipelineState pso_solidpart;
 PipelineState pso_wirepart;
@@ -24,17 +25,17 @@ namespace Translator_Internal
 {
 	void LoadShaders()
 	{
-		GraphicsDevice* device = wiGraphics::GetDevice();
+		GraphicsDevice* device = wi::graphics::GetDevice();
 
 		{
 			PipelineStateDesc desc;
 
-			desc.vs = wiRenderer::GetShader(VSTYPE_VERTEXCOLOR);
-			desc.ps = wiRenderer::GetShader(PSTYPE_VERTEXCOLOR);
-			desc.il = wiRenderer::GetInputLayout(ILTYPE_VERTEXCOLOR);
-			desc.dss = wiRenderer::GetDepthStencilState(DSSTYPE_DEPTHDISABLED);
-			desc.rs = wiRenderer::GetRasterizerState(RSTYPE_DOUBLESIDED);
-			desc.bs = wiRenderer::GetBlendState(BSTYPE_ADDITIVE);
+			desc.vs = wi::renderer::GetShader(wi::enums::VSTYPE_VERTEXCOLOR);
+			desc.ps = wi::renderer::GetShader(wi::enums::PSTYPE_VERTEXCOLOR);
+			desc.il = wi::renderer::GetInputLayout(wi::enums::ILTYPE_VERTEXCOLOR);
+			desc.dss = wi::renderer::GetDepthStencilState(wi::enums::DSSTYPE_DEPTHDISABLED);
+			desc.rs = wi::renderer::GetRasterizerState(wi::enums::RSTYPE_DOUBLESIDED);
+			desc.bs = wi::renderer::GetBlendState(wi::enums::BSTYPE_ADDITIVE);
 			desc.pt = PrimitiveTopology::TRIANGLELIST;
 
 			device->CreatePipelineState(&desc, &pso_solidpart);
@@ -43,12 +44,12 @@ namespace Translator_Internal
 		{
 			PipelineStateDesc desc;
 
-			desc.vs = wiRenderer::GetShader(VSTYPE_VERTEXCOLOR);
-			desc.ps = wiRenderer::GetShader(PSTYPE_VERTEXCOLOR);
-			desc.il = wiRenderer::GetInputLayout(ILTYPE_VERTEXCOLOR);
-			desc.dss = wiRenderer::GetDepthStencilState(DSSTYPE_DEPTHDISABLED);
-			desc.rs = wiRenderer::GetRasterizerState(RSTYPE_WIRE_DOUBLESIDED_SMOOTH);
-			desc.bs = wiRenderer::GetBlendState(BSTYPE_TRANSPARENT);
+			desc.vs = wi::renderer::GetShader(wi::enums::VSTYPE_VERTEXCOLOR);
+			desc.ps = wi::renderer::GetShader(wi::enums::PSTYPE_VERTEXCOLOR);
+			desc.il = wi::renderer::GetInputLayout(wi::enums::ILTYPE_VERTEXCOLOR);
+			desc.dss = wi::renderer::GetDepthStencilState(wi::enums::DSSTYPE_DEPTHDISABLED);
+			desc.rs = wi::renderer::GetRasterizerState(wi::enums::RSTYPE_WIRE_DOUBLESIDED_SMOOTH);
+			desc.bs = wi::renderer::GetBlendState(wi::enums::BSTYPE_TRANSPARENT);
 			desc.pt = PrimitiveTopology::LINELIST;
 
 			device->CreatePipelineState(&desc, &pso_wirepart);
@@ -58,7 +59,7 @@ namespace Translator_Internal
 
 void Translator::Create()
 {
-	GraphicsDevice* device = wiGraphics::GetDevice();
+	GraphicsDevice* device = wi::graphics::GetDevice();
 
 	if (!vertexBuffer_Axis.IsValid())
 	{
@@ -155,7 +156,7 @@ void Translator::Create()
 	}
 }
 
-void Translator::Update(const wiCanvas& canvas)
+void Translator::Update(const wi::Canvas& canvas)
 {
 	if (selected.empty())
 	{
@@ -165,8 +166,8 @@ void Translator::Update(const wiCanvas& canvas)
 	dragStarted = false;
 	dragEnded = false;
 
-	XMFLOAT4 pointer = wiInput::GetPointer();
-	const CameraComponent& cam = wiScene::GetCamera();
+	XMFLOAT4 pointer = wi::input::GetPointer();
+	const CameraComponent& cam = wi::scene::GetCamera();
 	XMVECTOR pos = transform.GetPositionV();
 
 	if (enabled)
@@ -180,9 +181,9 @@ void Translator::Update(const wiCanvas& canvas)
 			XMMATRIX W = XMMatrixIdentity();
 			XMFLOAT3 p = transform.GetPosition();
 
-			dist = wiMath::Distance(p, cam.Eye) * 0.05f;
+			dist = wi::math::Distance(p, cam.Eye) * 0.05f;
 
-			RAY ray = wiRenderer::GetPickRay((long)pointer.x, (long)pointer.y, canvas);
+			Ray ray = wi::renderer::GetPickRay((long)pointer.x, (long)pointer.y, canvas);
 
 			XMVECTOR x, y, z, xy, xz, yz;
 
@@ -267,12 +268,12 @@ void Translator::Update(const wiCanvas& canvas)
 			}
 		}
 
-		if (dragging || (state != TRANSLATOR_IDLE && wiInput::Press(wiInput::MOUSE_BUTTON_LEFT)))
+		if (dragging || (state != TRANSLATOR_IDLE && wi::input::Press(wi::input::MOUSE_BUTTON_LEFT)))
 		{
 			if (!dragging)
 			{
 				dragStarted = true;
-				dragDeltaMatrix = IDENTITYMATRIX;
+				dragDeltaMatrix = wi::math::IDENTITY_MATRIX;
 			}
 
 			XMVECTOR plane, planeNormal;
@@ -313,12 +314,12 @@ void Translator::Update(const wiCanvas& canvas)
 			}
 			plane = XMPlaneFromPointNormal(pos, XMVector3Normalize(planeNormal));
 
-			RAY ray = wiRenderer::GetPickRay((long)pointer.x, (long)pointer.y, canvas);
+			Ray ray = wi::renderer::GetPickRay((long)pointer.x, (long)pointer.y, canvas);
 			XMVECTOR rayOrigin = XMLoadFloat3(&ray.origin);
 			XMVECTOR rayDir = XMLoadFloat3(&ray.direction);
 			XMVECTOR intersection = XMPlaneIntersectLine(plane, rayOrigin, rayOrigin + rayDir*cam.zFarP);
 
-			ray = wiRenderer::GetPickRay((long)prevPointer.x, (long)prevPointer.y, canvas);
+			ray = wi::renderer::GetPickRay((long)prevPointer.x, (long)prevPointer.y, canvas);
 			rayOrigin = XMLoadFloat3(&ray.origin);
 			rayDir = XMLoadFloat3(&ray.direction);
 			XMVECTOR intersectionPrev = XMPlaneIntersectLine(plane, rayOrigin, rayOrigin + rayDir*cam.zFarP);
@@ -327,22 +328,22 @@ void Translator::Update(const wiCanvas& canvas)
 			if (state == TRANSLATOR_X)
 			{
 				XMVECTOR A = pos, B = pos + XMVectorSet(1, 0, 0, 0);
-				XMVECTOR P = wiMath::GetClosestPointToLine(A, B, intersection);
-				XMVECTOR PPrev = wiMath::GetClosestPointToLine(A, B, intersectionPrev);
+				XMVECTOR P = wi::math::GetClosestPointToLine(A, B, intersection);
+				XMVECTOR PPrev = wi::math::GetClosestPointToLine(A, B, intersectionPrev);
 				deltaV = P - PPrev;
 			}
 			else if (state == TRANSLATOR_Y)
 			{
 				XMVECTOR A = pos, B = pos + XMVectorSet(0, 1, 0, 0);
-				XMVECTOR P = wiMath::GetClosestPointToLine(A, B, intersection);
-				XMVECTOR PPrev = wiMath::GetClosestPointToLine(A, B, intersectionPrev);
+				XMVECTOR P = wi::math::GetClosestPointToLine(A, B, intersection);
+				XMVECTOR PPrev = wi::math::GetClosestPointToLine(A, B, intersectionPrev);
 				deltaV = P - PPrev;
 			}
 			else if (state == TRANSLATOR_Z)
 			{
 				XMVECTOR A = pos, B = pos + XMVectorSet(0, 0, 1, 0);
-				XMVECTOR P = wiMath::GetClosestPointToLine(A, B, intersection);
-				XMVECTOR PPrev = wiMath::GetClosestPointToLine(A, B, intersectionPrev);
+				XMVECTOR P = wi::math::GetClosestPointToLine(A, B, intersection);
+				XMVECTOR PPrev = wi::math::GetClosestPointToLine(A, B, intersectionPrev);
 				deltaV = P - PPrev;
 			}
 			else
@@ -389,7 +390,7 @@ void Translator::Update(const wiCanvas& canvas)
 			dragging = true;
 		}
 
-		if (!wiInput::Down(wiInput::MOUSE_BUTTON_LEFT))
+		if (!wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
 		{
 			if (dragging)
 			{
@@ -423,13 +424,13 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 	if (!shaders_loaded)
 	{
 		shaders_loaded = true;
-		static wiEvent::Handle handle = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { Translator_Internal::LoadShaders(); });
+		static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { Translator_Internal::LoadShaders(); });
 		Translator_Internal::LoadShaders();
 	}
 
-	Scene& scene = wiScene::GetScene();
+	Scene& scene = wi::scene::GetScene();
 
-	GraphicsDevice* device = wiGraphics::GetDevice();
+	GraphicsDevice* device = wi::graphics::GetDevice();
 
 	device->EventBegin("Editor - Translator", cmd);
 
@@ -523,7 +524,7 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 
 void Translator::PreTranslate()
 {
-	Scene& scene = wiScene::GetScene();
+	Scene& scene = wi::scene::GetScene();
 
 	// Find the center of all the entities that are selected:
 	XMVECTOR centerV = XMVectorSet(0, 0, 0, 0);
@@ -567,7 +568,7 @@ void Translator::PreTranslate()
 }
 void Translator::PostTranslate()
 {
-	Scene& scene = wiScene::GetScene();
+	Scene& scene = wi::scene::GetScene();
 
 	for (auto& x : selected)
 	{

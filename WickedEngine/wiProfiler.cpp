@@ -13,9 +13,9 @@
 #include <atomic>
 #include <sstream>
 
-using namespace wiGraphics;
+using namespace wi::graphics;
 
-namespace wiProfiler
+namespace wi::profiler
 {
 	bool ENABLED = false;
 	bool initialized = false;
@@ -36,7 +36,7 @@ namespace wiProfiler
 		float time = 0;
 		CommandList cmd = INVALID_COMMANDLIST;
 
-		wiTimer cpuTimer;
+		wi::Timer cpuTimer;
 
 		int gpuBegin[arraysize(queryResultBuffer)];
 		int gpuEnd[arraysize(queryResultBuffer)];
@@ -56,7 +56,7 @@ namespace wiProfiler
 
 			ranges.reserve(100);
 
-			GraphicsDevice* device = wiGraphics::GetDevice();
+			GraphicsDevice* device = wi::graphics::GetDevice();
 
 			GPUQueryHeapDesc desc;
 			desc.type = GpuQueryType::TIMESTAMP;
@@ -77,7 +77,7 @@ namespace wiProfiler
 
 		cpu_frame = BeginRangeCPU("CPU Frame");
 
-		GraphicsDevice* device = wiGraphics::GetDevice();
+		GraphicsDevice* device = wi::graphics::GetDevice();
 		CommandList cmd = device->BeginCommandList();
 
 		device->QueryReset(
@@ -94,7 +94,7 @@ namespace wiProfiler
 		if (!ENABLED || !initialized)
 			return;
 
-		GraphicsDevice* device = wiGraphics::GetDevice();
+		GraphicsDevice* device = wi::graphics::GetDevice();
 
 		// note: read the GPU Frame end range manually because it will be on a separate command list than start point:
 		auto& gpu_range = ranges[gpu_frame];
@@ -156,7 +156,7 @@ namespace wiProfiler
 		if (!ENABLED || !initialized)
 			return 0;
 
-		range_id id = wiHelper::string_hash(name);
+		range_id id = wi::helper::string_hash(name);
 
 		lock.lock();
 
@@ -164,7 +164,7 @@ namespace wiProfiler
 		size_t differentiator = 0;
 		while (ranges[id].in_use)
 		{
-			wiHelper::hash_combine(id, differentiator++);
+			wi::helper::hash_combine(id, differentiator++);
 		}
 		ranges[id].in_use = true;
 		ranges[id].name = name;
@@ -179,7 +179,7 @@ namespace wiProfiler
 		if (!ENABLED || !initialized)
 			return 0;
 
-		range_id id = wiHelper::string_hash(name);
+		range_id id = wi::helper::string_hash(name);
 
 		lock.lock();
 
@@ -187,14 +187,14 @@ namespace wiProfiler
 		size_t differentiator = 0;
 		while (ranges[id].in_use)
 		{
-			wiHelper::hash_combine(id, differentiator++);
+			wi::helper::hash_combine(id, differentiator++);
 		}
 		ranges[id].in_use = true;
 		ranges[id].name = name;
 		ranges[id].cmd = cmd;
 
 		ranges[id].gpuBegin[queryheap_idx] = nextQuery.fetch_add(1);
-		wiGraphics::GetDevice()->QueryEnd(&queryHeap, ranges[id].gpuBegin[queryheap_idx], cmd);
+		wi::graphics::GetDevice()->QueryEnd(&queryHeap, ranges[id].gpuBegin[queryheap_idx], cmd);
 
 		lock.unlock();
 
@@ -217,7 +217,7 @@ namespace wiProfiler
 			else
 			{
 				ranges[id].gpuEnd[queryheap_idx] = nextQuery.fetch_add(1);
-				wiGraphics::GetDevice()->QueryEnd(&queryHeap, it->second.gpuEnd[queryheap_idx], it->second.cmd);
+				wi::graphics::GetDevice()->QueryEnd(&queryHeap, it->second.gpuEnd[queryheap_idx], it->second.cmd);
 			}
 		}
 		else
@@ -235,13 +235,13 @@ namespace wiProfiler
 	};
 	wi::unordered_map<std::string, Hits> time_cache_cpu;
 	wi::unordered_map<std::string, Hits> time_cache_gpu;
-	void DrawData(const wiCanvas& canvas, float x, float y, CommandList cmd)
+	void DrawData(const wi::Canvas& canvas, float x, float y, CommandList cmd)
 	{
 		if (!ENABLED || !initialized)
 			return;
 
-		wiImage::SetCanvas(canvas, cmd);
-		wiFont::SetCanvas(canvas, cmd);
+		wi::image::SetCanvas(canvas, cmd);
+		wi::font::SetCanvas(canvas, cmd);
 
 		std::stringstream ss("");
 		ss.precision(2);
@@ -299,17 +299,17 @@ namespace wiProfiler
 			x.second.total_time = 0;
 		}
 
-		wiFontParams params = wiFontParams(x, y, WIFONTSIZE_DEFAULT - 4, WIFALIGN_LEFT, WIFALIGN_TOP, wiColor(255, 255, 255, 255), wiColor(0, 0, 0, 255));
+		wi::font::Params params = wi::font::Params(x, y, wi::font::WIFONTSIZE_DEFAULT - 4, wi::font::WIFALIGN_LEFT, wi::font::WIFALIGN_TOP, wi::Color(255, 255, 255, 255), wi::Color(0, 0, 0, 255));
 
-		wiImageParams fx;
+		wi::image::Params fx;
 		fx.pos.x = (float)params.posX;
 		fx.pos.y = (float)params.posY;
-		fx.siz.x = (float)wiFont::textWidth(ss.str(), params);
-		fx.siz.y = (float)wiFont::textHeight(ss.str(), params);
-		fx.color = wiColor(20, 20, 20, 230);
-		wiImage::Draw(wiTextureHelper::getWhite(), fx, cmd);
+		fx.siz.x = (float)wi::font::TextWidth(ss.str(), params);
+		fx.siz.y = (float)wi::font::TextHeight(ss.str(), params);
+		fx.color = wi::Color(20, 20, 20, 230);
+		wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 
-		wiFont::Draw(ss.str(), params, cmd);
+		wi::font::Draw(ss.str(), params, cmd);
 	}
 
 	void SetEnabled(bool value)

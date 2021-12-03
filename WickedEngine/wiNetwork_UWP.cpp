@@ -2,13 +2,13 @@
 
 #if defined(_WIN32) && defined(PLATFORM_UWP)
 #include "wiNetwork.h"
-#include "wiBackLog.h"
+#include "wiBacklog.h"
 
-namespace wiNetwork
+namespace wi::network
 {
 	void Initialize()
 	{
-		wiBackLog::post("TODO wiNetwork_UWP");
+		wi::backlog::post("TODO wi::network_UWP");
 	}
 
 	bool CreateSocket(Socket* sock)

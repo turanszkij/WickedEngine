@@ -3,28 +3,25 @@
 #include "hairparticleHF.hlsli"
 #include "ShaderInterop_HairParticle.h"
 
-uint2 main(VertexToPixel input) : SV_TARGET
+uint2 main(VertexToPixel input, out uint coverage : SV_Coverage) : SV_Target
 {
 	ShaderMaterial material = HairGetMaterial();
 
-	const float lineardepth = input.pos.w;
-
-	clip(dither(input.pos.xy + GetTemporalAASampleRotation()) - input.fade);
-
-	float4 color = 1;
+	float alpha = 1;
 
 	[branch]
 	if (material.texture_basecolormap_index >= 0)
 	{
-		color = bindless_textures[material.texture_basecolormap_index].Sample(sampler_linear_clamp, input.tex);
+		alpha = bindless_textures[material.texture_basecolormap_index].Sample(sampler_linear_clamp, input.tex).a;
 	}
 
-	float alphatest = material.alphaTest;
-	if (GetFrame().options & OPTION_BIT_TEMPORALAA_ENABLED)
+	// Distance dithered fade:
+	if (dither(input.pos.xy + GetTemporalAASampleRotation()) - input.fade < 0)
 	{
-		alphatest = clamp(blue_noise(input.pos.xy, lineardepth).r, 0, 0.99);
+		alpha = 0;
 	}
-	clip(color.a - alphatest);
+
+	coverage = AlphaToCoverage(alpha, material.alphaTest, input.pos);
 
 	PrimitiveID prim;
 	prim.primitiveIndex = input.primitiveID;

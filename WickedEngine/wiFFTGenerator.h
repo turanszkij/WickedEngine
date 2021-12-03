@@ -2,7 +2,7 @@
 #include "CommonInclude.h"
 #include "wiGraphicsDevice.h"
 
-namespace wiFFTGenerator
+namespace wi::fftgenerator
 {
 
 	struct CSFFT512x512_Plan
@@ -11,9 +11,9 @@ namespace wiFFTGenerator
 		uint32_t slices;
 
 		// For 512x512 config, we need 6 constant buffers
-		wiGraphics::GPUBuffer pRadix008A_CB[6];
+		wi::graphics::GPUBuffer pRadix008A_CB[6];
 
-		wiGraphics::GPUBuffer pBuffer_Tmp;
+		wi::graphics::GPUBuffer pBuffer_Tmp;
 	};
 
 
@@ -21,10 +21,10 @@ namespace wiFFTGenerator
 
 	void fft_512x512_c2c(
 		const CSFFT512x512_Plan& fft_plan,
-		const wiGraphics::GPUResource& pUAV_Dst,
-		const wiGraphics::GPUResource& pSRV_Dst,
-		const wiGraphics::GPUResource& pSRV_Src,
-		wiGraphics::CommandList cmd);
+		const wi::graphics::GPUResource& pUAV_Dst,
+		const wi::graphics::GPUResource& pSRV_Dst,
+		const wi::graphics::GPUResource& pSRV_Src,
+		wi::graphics::CommandList cmd);
 
 	void LoadShaders();
 }

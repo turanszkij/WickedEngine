@@ -3,168 +3,167 @@
 #include "wiHelper.h"
 #include "wiScene.h"
 #include "wiScene_BindLua.h"
-#include "Vector_BindLua.h"
-#include "Matrix_BindLua.h"
-#include "Texture_BindLua.h"
+#include "wiMath_BindLua.h"
+#include "wiTexture_BindLua.h"
 #include "wiEmittedParticle.h"
 #include "wiHairParticle.h"
-#include "wiIntersect_BindLua.h"
-#include "wiEvent.h"
+#include "wiPrimitive_BindLua.h"
+#include "wiEventHandler.h"
 
-using namespace wiECS;
-using namespace wiGraphics;
-using namespace wiScene;
-using namespace wiScene_BindLua;
-using namespace wiIntersect_BindLua;
+using namespace wi::ecs;
+using namespace wi::graphics;
+using namespace wi::scene;
+using namespace wi::lua::scene;
+using namespace wi::lua::primitive;
 
-namespace wiRenderer_BindLua
+namespace wi::lua::renderer
 {
 	int SetGamma(lua_State* L)
 	{
-		int argc = wiLua::SGetArgCount(L);
+		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 0)
 		{
-			wiLua::SSetString(L, "SetGamma() no longer supported!");
+			wi::lua::SSetString(L, "SetGamma() no longer supported!");
 		}
 		else
 		{
-			wiLua::SError(L, "SetGamma(float) not enough arguments!");
+			wi::lua::SError(L, "SetGamma(float) not enough arguments!");
 		}
 		return 0;
 	}
 	int SetGameSpeed(lua_State* L)
 	{
-		int argc = wiLua::SGetArgCount(L);
+		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 0)
 		{
-			wiRenderer::SetGameSpeed(wiLua::SGetFloat(L, 1));
+			wi::renderer::SetGameSpeed(wi::lua::SGetFloat(L, 1));
 		}
 		else
 		{
-			wiLua::SError(L,"SetGameSpeed(float) not enough arguments!");
+			wi::lua::SError(L,"SetGameSpeed(float) not enough arguments!");
 		}
 		return 0;
 	}
 	int GetGameSpeed(lua_State* L)
 	{
-		wiLua::SSetFloat(L, wiRenderer::GetGameSpeed());
+		wi::lua::SSetFloat(L, wi::renderer::GetGameSpeed());
 		return 1;
 	}
 
 	int SetShadowProps2D(lua_State* L)
 	{
-		int argc = wiLua::SGetArgCount(L);
+		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 1)
 		{
-			wiRenderer::SetShadowProps2D(wiLua::SGetInt(L, 1), wiLua::SGetInt(L, 2));
+			wi::renderer::SetShadowProps2D(wi::lua::SGetInt(L, 1), wi::lua::SGetInt(L, 2));
 		}
 		else
-			wiLua::SError(L, "SetShadowProps2D(int resolution, int count) not enough arguments!");
+			wi::lua::SError(L, "SetShadowProps2D(int resolution, int count) not enough arguments!");
 		return 0;
 	}
 	int SetShadowPropsCube(lua_State* L)
 	{
-		int argc = wiLua::SGetArgCount(L);
+		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 1)
 		{
-			wiRenderer::SetShadowPropsCube(wiLua::SGetInt(L, 1), wiLua::SGetInt(L, 2));
+			wi::renderer::SetShadowPropsCube(wi::lua::SGetInt(L, 1), wi::lua::SGetInt(L, 2));
 		}
 		else
-			wiLua::SError(L, "SetShadowPropsCube(int resolution, int count) not enough arguments!");
+			wi::lua::SError(L, "SetShadowPropsCube(int resolution, int count) not enough arguments!");
 		return 0;
 	}
 	int SetDebugPartitionTreeEnabled(lua_State* L)
 	{
-		int argc = wiLua::SGetArgCount(L);
+		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 0)
 		{
-			wiRenderer::SetToDrawDebugPartitionTree(wiLua::SGetBool(L, 1));
+			wi::renderer::SetToDrawDebugPartitionTree(wi::lua::SGetBool(L, 1));
 		}
 		return 0;
 	}
 	int SetDebugBoxesEnabled(lua_State* L)
 	{
-		wiLua::SError(L, "SetDebugBoxesEnabled is obsolete! Use SetDebugPartitionTreeEnabled(bool value) instead to draw a partition tree!");
+		wi::lua::SError(L, "SetDebugBoxesEnabled is obsolete! Use SetDebugPartitionTreeEnabled(bool value) instead to draw a partition tree!");
 		return 0;
 	}
 	int SetDebugBonesEnabled(lua_State* L)
 	{
-		int argc = wiLua::SGetArgCount(L);
+		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 0)
 		{
-			wiRenderer::SetToDrawDebugBoneLines(wiLua::SGetBool(L, 1));
+			wi::renderer::SetToDrawDebugBoneLines(wi::lua::SGetBool(L, 1));
 		}
 		return 0;
 	}
 	int SetDebugEmittersEnabled(lua_State* L)
 	{
-		int argc = wiLua::SGetArgCount(L);
+		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 0)
 		{
-			wiRenderer::SetToDrawDebugEmitters(wiLua::SGetBool(L, 1));
+			wi::renderer::SetToDrawDebugEmitters(wi::lua::SGetBool(L, 1));
 		}
 		return 0;
 	}
 	int SetDebugForceFieldsEnabled(lua_State* L)
 	{
-		int argc = wiLua::SGetArgCount(L);
+		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 0)
 		{
-			wiRenderer::SetToDrawDebugForceFields(wiLua::SGetBool(L, 1));
+			wi::renderer::SetToDrawDebugForceFields(wi::lua::SGetBool(L, 1));
 		}
 		return 0;
 	}
 	int SetVSyncEnabled(lua_State* L)
 	{
-		int argc = wiLua::SGetArgCount(L);
+		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 0)
 		{
-			wiEvent::SetVSync(wiLua::SGetBool(L, 1));
+			wi::eventhandler::SetVSync(wi::lua::SGetBool(L, 1));
 		}
 		return 0;
 	}
 	int SetResolution(lua_State* L)
 	{
-		wiLua::SError(L, "SetResolution() is deprecated, now it's handled by window events!");
+		wi::lua::SError(L, "SetResolution() is deprecated, now it's handled by window events!");
 		return 0;
 	}
 	int SetDebugLightCulling(lua_State* L)
 	{
-		int argc = wiLua::SGetArgCount(L);
+		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 0)
 		{
-			wiRenderer::SetDebugLightCulling(wiLua::SGetBool(L, 1));
+			wi::renderer::SetDebugLightCulling(wi::lua::SGetBool(L, 1));
 		}
 		else
 		{
-			wiLua::SError(L, "SetDebugLightCulling(bool enabled) not enough arguments!");
+			wi::lua::SError(L, "SetDebugLightCulling(bool enabled) not enough arguments!");
 		}
 		return 0;
 	}
 	int SetOcclusionCullingEnabled(lua_State* L)
 	{
-		int argc = wiLua::SGetArgCount(L);
+		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 0)
 		{
-			wiRenderer::SetOcclusionCullingEnabled(wiLua::SGetBool(L, 1));
+			wi::renderer::SetOcclusionCullingEnabled(wi::lua::SGetBool(L, 1));
 		}
 		else
 		{
-			wiLua::SError(L, "SetOcclusionCullingEnabled(bool enabled) not enough arguments!");
+			wi::lua::SError(L, "SetOcclusionCullingEnabled(bool enabled) not enough arguments!");
 		}
 		return 0;
 	}
 
 	int DrawLine(lua_State* L)
 	{
-		int argc = wiLua::SGetArgCount(L);
+		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 1)
 		{
 			Vector_BindLua* a = Luna<Vector_BindLua>::lightcheck(L, 1);
 			Vector_BindLua* b = Luna<Vector_BindLua>::lightcheck(L, 2);
 			if (a && b)
 			{
-				wiRenderer::RenderableLine line;
+				wi::renderer::RenderableLine line;
 				XMStoreFloat3(&line.start, XMLoadFloat4(a));
 				XMStoreFloat3(&line.end, XMLoadFloat4(b));
 				if (argc > 2)
@@ -176,31 +175,31 @@ namespace wiRenderer_BindLua
 						XMStoreFloat4(&line.color_end, XMLoadFloat4(c));
 					}
 					else
-						wiLua::SError(L, "DrawLine(Vector origin,end, opt Vector color) one or more arguments are not vectors!");
+						wi::lua::SError(L, "DrawLine(Vector origin,end, opt Vector color) one or more arguments are not vectors!");
 				}
-				wiRenderer::DrawLine(line);
+				wi::renderer::DrawLine(line);
 			}
 			else
-				wiLua::SError(L, "DrawLine(Vector origin,end, opt Vector color) one or more arguments are not vectors!");
+				wi::lua::SError(L, "DrawLine(Vector origin,end, opt Vector color) one or more arguments are not vectors!");
 		}
 		else
-			wiLua::SError(L, "DrawLine(Vector origin,end, opt Vector color) not enough arguments!");
+			wi::lua::SError(L, "DrawLine(Vector origin,end, opt Vector color) not enough arguments!");
 
 		return 0;
 	}
 	int DrawPoint(lua_State* L)
 	{
-		int argc = wiLua::SGetArgCount(L);
+		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 0)
 		{
 			Vector_BindLua* a = Luna<Vector_BindLua>::lightcheck(L, 1);
 			if (a)
 			{
-				wiRenderer::RenderablePoint point;
+				wi::renderer::RenderablePoint point;
 				XMStoreFloat3(&point.position, XMLoadFloat4(a));
 				if (argc > 1)
 				{
-					point.size = wiLua::SGetFloat(L, 2);
+					point.size = wi::lua::SGetFloat(L, 2);
 
 					if (argc > 2)
 					{
@@ -208,19 +207,19 @@ namespace wiRenderer_BindLua
 						point.color = *color;
 					}
 				}
-				wiRenderer::DrawPoint(point);
+				wi::renderer::DrawPoint(point);
 			}
 			else
-				wiLua::SError(L, "DrawPoint(Vector origin, opt float size, opt Vector color) first argument must be a Vector type!");
+				wi::lua::SError(L, "DrawPoint(Vector origin, opt float size, opt Vector color) first argument must be a Vector type!");
 		}
 		else
-			wiLua::SError(L, "DrawPoint(Vector origin, opt float size, opt Vector color) not enough arguments!");
+			wi::lua::SError(L, "DrawPoint(Vector origin, opt float size, opt Vector color) not enough arguments!");
 
 		return 0;
 	}
 	int DrawBox(lua_State* L)
 	{
-		int argc = wiLua::SGetArgCount(L);
+		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 0)
 		{
 			Matrix_BindLua* m = Luna<Matrix_BindLua>::lightcheck(L, 1);
@@ -231,24 +230,24 @@ namespace wiRenderer_BindLua
 					Vector_BindLua* color = Luna<Vector_BindLua>::lightcheck(L, 2);
 					if (color)
 					{
-						wiRenderer::DrawBox(*m, *color);
+						wi::renderer::DrawBox(*m, *color);
 						return 0;
 					}
 				}
 
-				wiRenderer::DrawBox(*m);
+				wi::renderer::DrawBox(*m);
 			}
 			else
-				wiLua::SError(L, "DrawBox(Matrix boxMatrix, opt Vector color) first argument must be a Matrix type!");
+				wi::lua::SError(L, "DrawBox(Matrix boxMatrix, opt Vector color) first argument must be a Matrix type!");
 		}
 		else
-			wiLua::SError(L, "DrawBox(Matrix boxMatrix, opt Vector color) not enough arguments!");
+			wi::lua::SError(L, "DrawBox(Matrix boxMatrix, opt Vector color) not enough arguments!");
 
 		return 0;
 	}
 	int DrawSphere(lua_State* L)
 	{
-		int argc = wiLua::SGetArgCount(L);
+		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 0)
 		{
 			Sphere_BindLua* sphere = Luna<Sphere_BindLua>::lightcheck(L, 1);
@@ -259,24 +258,24 @@ namespace wiRenderer_BindLua
 					Vector_BindLua* color = Luna<Vector_BindLua>::lightcheck(L, 2);
 					if (color)
 					{
-						wiRenderer::DrawSphere(sphere->sphere, *color);
+						wi::renderer::DrawSphere(sphere->sphere, *color);
 						return 0;
 					}
 				}
 
-				wiRenderer::DrawSphere(sphere->sphere);
+				wi::renderer::DrawSphere(sphere->sphere);
 			}
 			else
-				wiLua::SError(L, "DrawSphere(Sphere sphere, opt Vector color) first argument must be a Matrix type!");
+				wi::lua::SError(L, "DrawSphere(Sphere sphere, opt Vector color) first argument must be a Matrix type!");
 		}
 		else
-			wiLua::SError(L, "DrawSphere(Sphere sphere, opt Vector color) not enough arguments!");
+			wi::lua::SError(L, "DrawSphere(Sphere sphere, opt Vector color) not enough arguments!");
 
 		return 0;
 	}
 	int DrawCapsule(lua_State* L)
 	{
-		int argc = wiLua::SGetArgCount(L);
+		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 0)
 		{
 			Capsule_BindLua* capsule = Luna<Capsule_BindLua>::lightcheck(L, 1);
@@ -287,39 +286,39 @@ namespace wiRenderer_BindLua
 					Vector_BindLua* color = Luna<Vector_BindLua>::lightcheck(L, 2);
 					if (color)
 					{
-						wiRenderer::DrawCapsule(capsule->capsule, *color);
+						wi::renderer::DrawCapsule(capsule->capsule, *color);
 						return 0;
 					}
 				}
 
-				wiRenderer::DrawCapsule(capsule->capsule);
+				wi::renderer::DrawCapsule(capsule->capsule);
 			}
 			else
-				wiLua::SError(L, "DrawCapsule(Capsule capsule, opt Vector color) first argument must be a Matrix type!");
+				wi::lua::SError(L, "DrawCapsule(Capsule capsule, opt Vector color) first argument must be a Matrix type!");
 		}
 		else
-			wiLua::SError(L, "DrawCapsule(Capsule capsule, opt Vector color) not enough arguments!");
+			wi::lua::SError(L, "DrawCapsule(Capsule capsule, opt Vector color) not enough arguments!");
 
 		return 0;
 	}
 	int PutWaterRipple(lua_State* L)
 	{
-		int argc = wiLua::SGetArgCount(L);
+		int argc = wi::lua::SGetArgCount(L);
 		if (argc > 1)
 		{
-			std::string name = wiLua::SGetString(L, 1);
+			std::string name = wi::lua::SGetString(L, 1);
 			Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 2);
 			if (v)
 			{
 				XMFLOAT3 pos;
 				XMStoreFloat3(&pos, XMLoadFloat4(v));
-				wiScene::GetScene().PutWaterRipple(wiLua::GetScriptPath() + name, pos);
+				wi::scene::GetScene().PutWaterRipple(wi::lua::GetScriptPath() + name, pos);
 			}
 			else
-				wiLua::SError(L, "PutWaterRipple(String imagename, Vector position) argument is not a Vector!");
+				wi::lua::SError(L, "PutWaterRipple(String imagename, Vector position) argument is not a Vector!");
 		}
 		else
-			wiLua::SError(L, "PutWaterRipple(String imagename, Vector position) not enough arguments!");
+			wi::lua::SError(L, "PutWaterRipple(String imagename, Vector position) not enough arguments!");
 		return 0;
 	}
 
@@ -328,17 +327,17 @@ namespace wiRenderer_BindLua
 		Scene_BindLua* scene = Luna<Scene_BindLua>::lightcheck(L, 1);
 		if (scene == nullptr)
 		{
-			wiRenderer::ClearWorld(wiScene::GetScene());
+			wi::renderer::ClearWorld(wi::scene::GetScene());
 		}
 		else
 		{
-			wiRenderer::ClearWorld(*scene->scene);
+			wi::renderer::ClearWorld(*scene->scene);
 		}
 		return 0;
 	}
 	int ReloadShaders(lua_State* L)
 	{
-		wiRenderer::ReloadShaders();
+		wi::renderer::ReloadShaders();
 		return 0;
 	}
 
@@ -349,41 +348,41 @@ namespace wiRenderer_BindLua
 		{
 			initialized = true;
 
-			wiLua::RegisterFunc("SetGamma", SetGamma);
-			wiLua::RegisterFunc("SetGameSpeed", SetGameSpeed);
-			wiLua::RegisterFunc("GetGameSpeed", GetGameSpeed);
+			wi::lua::RegisterFunc("SetGamma", SetGamma);
+			wi::lua::RegisterFunc("SetGameSpeed", SetGameSpeed);
+			wi::lua::RegisterFunc("GetGameSpeed", GetGameSpeed);
 
-			wiLua::RunText("GetScreenWidth = function() return main.GetCanvas().GetLogicalWidth() end");
-			wiLua::RunText("GetScreenHeight = function() return main.GetCanvas().GetLogicalHeight() end");
+			wi::lua::RunText("GetScreenWidth = function() return main.GetCanvas().GetLogicalWidth() end");
+			wi::lua::RunText("GetScreenHeight = function() return main.GetCanvas().GetLogicalHeight() end");
 
-			wiLua::RegisterFunc("SetShadowProps2D", SetShadowProps2D);
-			wiLua::RegisterFunc("SetShadowPropsCube", SetShadowPropsCube);
-			wiLua::RegisterFunc("SetDebugBoxesEnabled", SetDebugBoxesEnabled);
-			wiLua::RegisterFunc("SetDebugPartitionTreeEnabled", SetDebugPartitionTreeEnabled);
-			wiLua::RegisterFunc("SetDebugBonesEnabled", SetDebugBonesEnabled);
-			wiLua::RegisterFunc("SetDebugEmittersEnabled", SetDebugEmittersEnabled);
-			wiLua::RegisterFunc("SetDebugForceFieldsEnabled", SetDebugForceFieldsEnabled);
-			wiLua::RegisterFunc("SetVSyncEnabled", SetVSyncEnabled);
-			wiLua::RegisterFunc("SetResolution", SetResolution);
-			wiLua::RegisterFunc("SetDebugLightCulling", SetDebugLightCulling);
-			wiLua::RegisterFunc("SetOcclusionCullingEnabled", SetOcclusionCullingEnabled);
+			wi::lua::RegisterFunc("SetShadowProps2D", SetShadowProps2D);
+			wi::lua::RegisterFunc("SetShadowPropsCube", SetShadowPropsCube);
+			wi::lua::RegisterFunc("SetDebugBoxesEnabled", SetDebugBoxesEnabled);
+			wi::lua::RegisterFunc("SetDebugPartitionTreeEnabled", SetDebugPartitionTreeEnabled);
+			wi::lua::RegisterFunc("SetDebugBonesEnabled", SetDebugBonesEnabled);
+			wi::lua::RegisterFunc("SetDebugEmittersEnabled", SetDebugEmittersEnabled);
+			wi::lua::RegisterFunc("SetDebugForceFieldsEnabled", SetDebugForceFieldsEnabled);
+			wi::lua::RegisterFunc("SetVSyncEnabled", SetVSyncEnabled);
+			wi::lua::RegisterFunc("SetResolution", SetResolution);
+			wi::lua::RegisterFunc("SetDebugLightCulling", SetDebugLightCulling);
+			wi::lua::RegisterFunc("SetOcclusionCullingEnabled", SetOcclusionCullingEnabled);
 
-			wiLua::RegisterFunc("DrawLine", DrawLine);
-			wiLua::RegisterFunc("DrawPoint", DrawPoint);
-			wiLua::RegisterFunc("DrawBox", DrawBox);
-			wiLua::RegisterFunc("DrawSphere", DrawSphere);
-			wiLua::RegisterFunc("DrawCapsule", DrawCapsule);
-			wiLua::RegisterFunc("PutWaterRipple", PutWaterRipple);
-
-
-			wiLua::RunText("PICK_VOID = 0");
-			wiLua::RunText("PICK_OPAQUE = 1");
-			wiLua::RunText("PICK_TRANSPARENT = 2");
-			wiLua::RunText("PICK_WATER = 4");
+			wi::lua::RegisterFunc("DrawLine", DrawLine);
+			wi::lua::RegisterFunc("DrawPoint", DrawPoint);
+			wi::lua::RegisterFunc("DrawBox", DrawBox);
+			wi::lua::RegisterFunc("DrawSphere", DrawSphere);
+			wi::lua::RegisterFunc("DrawCapsule", DrawCapsule);
+			wi::lua::RegisterFunc("PutWaterRipple", PutWaterRipple);
 
 
-			wiLua::RegisterFunc("ClearWorld", ClearWorld);
-			wiLua::RegisterFunc("ReloadShaders", ReloadShaders);
+			wi::lua::RunText("PICK_VOID = 0");
+			wi::lua::RunText("PICK_OPAQUE = 1");
+			wi::lua::RunText("PICK_TRANSPARENT = 2");
+			wi::lua::RunText("PICK_WATER = 4");
+
+
+			wi::lua::RegisterFunc("ClearWorld", ClearWorld);
+			wi::lua::RegisterFunc("ReloadShaders", ReloadShaders);
 		}
 	}
 };

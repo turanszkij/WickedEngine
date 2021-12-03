@@ -84,55 +84,55 @@ If you have questions or stuck, please use the `linux` communication channel on 
 // Include engine headers:
 #include "WickedEngine.h"
 
-// Declare main component once per application:
-MainComponent main;
+// Create the Wicked Engine application:
+wi::Application application;
 
 // Assign window that you will render to:
-main.SetWindow(hWnd);
+application.SetWindow(hWnd);
 
 // Run the application:
 while(true) {
-   main.Run(); 
+   application.Run(); 
 }
 ```
 
 #### Basics (C++):
 ```cpp
-RenderPath3D myGame; // Declare a game screen component, aka "RenderPath" (you could also override its Update(), Render() etc. functions). 
-main.ActivatePath(&myGame); // Register your game to the application. It will call Start(), Update(), Render(), etc. from now on...
+wi::RenderPath3D myGame; // Declare a game screen component, aka "RenderPath" (you could also override its Update(), Render() etc. functions). 
+application.ActivatePath(&myGame); // Register your game to the application. It will call Start(), Update(), Render(), etc. from now on...
 
-wiScene::LoadModel("myModel.wiscene"); // Simply load a model into the current global scene
-wiScene::GetScene(); // Get the current global scene
+wi::scene::LoadModel("myModel.wiscene"); // Simply load a model into the current global scene
+wi::scene::GetScene(); // Get the current global scene
 
-wiScene::Scene scene2; // create a separate scene
-wiScene::LoadModel(scene2, "myModel2.wiscene"); // Load model into a separate scene
-wiScene::GetScene().Merge(scene2); // Combine separate scene with global scene
+wi::scene::Scene scene2; // create a separate scene
+wi::scene::LoadModel(scene2, "myModel2.wiscene"); // Load model into a separate scene
+wi::scene::GetScene().Merge(scene2); // Combine separate scene with global scene
 
 myGame.setFXAAEnabled(true); // You can enable post process effects this way...
 
-RenderPath2D myMenuScreen; // This is an other render path, but now a simple 2D one. It can only render 2D graphics by default (like a menu for example)
-main.ActivatePath(&myMenuScreen); // activate the menu, the previous path (myGame) will be stopped
+wi::RenderPath2D myMenuScreen; // This is an other render path, but now a simple 2D one. It can only render 2D graphics by default (like a menu for example)
+application.ActivatePath(&myMenuScreen); // activate the menu, the previous path (myGame) will be stopped
 
-wiSprite mySprite("image.png"); // There are many utilities, such as a "sprite" helper class
+wi::Sprite mySprite("image.png"); // There are many utilities, such as a "sprite" helper class
 myMenuScreen.AddSprite(&mySprite); // The 2D render path is ready to handle sprite and font rendering for you
 
-wiAudio::Sound mySound;
-wiAudio::CreateSound("explosion.wav", &mySound); // Loads a sound file
-wiAudio::SoundInstance mySoundInstance;
-wiAudio::CreateSoundInstance(&mySound, &mySoundInstance); // Instances the sound file, it can be played now
-wiAudio::Play(&mySoundInstance); // Play the sound instance
-wiAudio::SetVolume(0.6, &mySoundInstance); // Set the volume of this soundinstance
-wiAudio::SetVolume(0.2); // Set the master volume
+wi::audio::Sound mySound;
+wi::audio::CreateSound("explosion.wav", &mySound); // Loads a sound file
+wi::audio::SoundInstance mySoundInstance;
+wi::audio::CreateSoundInstance(&mySound, &mySoundInstance); // Instances the sound file, it can be played now
+wi::audio::Play(&mySoundInstance); // Play the sound instance
+wi::audio::SetVolume(0.6, &mySoundInstance); // Set the volume of this soundinstance
+wi::audio::SetVolume(0.2); // Set the master volume
 
-if (wiInput::Press(wiInput::KEYBOARD_BUTTON_SPACE)) { wiAudio::Stop(&mySoundInstance); } // You can check if a button is pressed or not (this only triggers once)
-if (wiInput::Down(wiInput::KEYBOARD_BUTTON_SPACE)) { wiAudio::Play(&mySoundInstance); } // You can check if a button is pushed down or not (this triggers repeatedly)
+if (wi::input::Press(wi::input::KEYBOARD_BUTTON_SPACE)) { wi::audio::Stop(&mySoundInstance); } // You can check if a button is pressed or not (this only triggers once)
+if (wi::input::Down(wi::input::KEYBOARD_BUTTON_SPACE)) { wi::audio::Play(&mySoundInstance); } // You can check if a button is pushed down or not (this triggers repeatedly)
 ```
 
 #### Scripting (LUA):
 ```lua
--- Set a rendering path for the application main component
+-- Set a rendering path for the application
 path = RenderPath3D;
-main.SetActivePath(path);    -- "main" is created automatically
+application.SetActivePath(path);    -- "application" is created automatically by wi::Application
 
 -- Load a model entity into the global scene:
 entity = LoadModel("myModel.wiscene");
@@ -152,9 +152,9 @@ transform = scene.Component_GetTransform(entity);
 transform.Translate(Vector(2, 0, 0));
 
 -- Print any WickedEngine class information to the backlog:
-getprops(main);    -- prints the main component methods
-getprops(scene);    -- prints the Scene class methods
-getprops(path);    -- prints the deferred render path methods
+getprops(application);	-- prints the application methods
+getprops(scene);	-- prints the Scene class methods
+getprops(path);	-- prints the deferred render path methods
 
 -- Play a sound:
 sound = Sound()

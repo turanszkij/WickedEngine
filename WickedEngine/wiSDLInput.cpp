@@ -3,7 +3,7 @@
 #ifdef SDL2
 
 #include "CommonInclude.h"
-#include "wiBackLog.h"
+#include "wiBacklog.h"
 #include "wiInput.h"
 #include "wiVector.h"
 
@@ -14,23 +14,23 @@
 #include <SDL_stdinc.h>
 #include <iostream>
 
-namespace wiSDLInput
+namespace wi::input::sdlinput
 {
-    wiInput::KeyboardState keyboard;
-    wiInput::MouseState mouse;
+    wi::input::KeyboardState keyboard;
+    wi::input::MouseState mouse;
 
     struct Internal_ControllerState
     {
         Sint32 portID;
         SDL_JoystickID internalID;
         SDL_GameController* controller;
-        wiInput::ControllerState state;
+        wi::input::ControllerState state;
     };
     wi::vector<Internal_ControllerState> controllers;
     int numSticks = 0;
 
-    int to_wiInput(const SDL_Scancode &key);
-    void controller_to_wiInput(uint32_t *current, Uint8 button, bool pressed);
+    int to_wicked(const SDL_Scancode &key);
+    void controller_to_wicked(uint32_t *current, Uint8 button, bool pressed);
 
     void AddController(Sint32 id);
     void RemoveController(Sint32 id);
@@ -38,7 +38,7 @@ namespace wiSDLInput
 
     void Initialize() {
         if(!SDL_GameControllerAddMappingsFromFile("gamecontrollerdb.txt")){
-            wiBackLog::post("[SDL Input] No controller config loaded, add gamecontrollerdb.txt file next to the executable or download it from https://github.com/gabomdq/SDL_GameControllerDB");
+            wi::backlog::post("[SDL Input] No controller config loaded, add gamecontrollerdb.txt file next to the executable or download it from https://github.com/gabomdq/SDL_GameControllerDB");
         }
         
         // Attempt to add joysticks at initialization
@@ -56,11 +56,11 @@ namespace wiSDLInput
         auto saved_y = mouse.position.y;
 
         // update keyboard and mouse to the latest value (in case of other input systems I suppose)
-//        keyboard = wiInput::KeyboardState();
-//        mouse = wiInput::MouseState();
+//        keyboard = wi::input::KeyboardState();
+//        mouse = wi::input::MouseState();
 //        for (auto& internal_controller : controllers)
 //        {
-//            internal_controller.state = wiInput::ControllerState();
+//            internal_controller.state = wi::input::ControllerState();
 //        }
         // mouse.position.x = saved_x;
         // mouse.position.y = saved_y;
@@ -100,7 +100,7 @@ namespace wiSDLInput
                     // Keyboard events
                     case SDL_KEYDOWN:             // Key pressed
                     {
-                        int converted = to_wiInput(event.key.keysym.scancode);
+                        int converted = to_wicked(event.key.keysym.scancode);
                         if (converted >= 0) {
                             keyboard.buttons[converted] = true;
                         }
@@ -108,7 +108,7 @@ namespace wiSDLInput
                     }
                     case SDL_KEYUP:               // Key released
                     {
-                        int converted = to_wiInput(event.key.keysym.scancode);
+                        int converted = to_wicked(event.key.keysym.scancode);
                         if (converted >= 0) {
                             keyboard.buttons[converted] = false;
                         }
@@ -191,7 +191,7 @@ namespace wiSDLInput
             if(controller.controller){
                 //Get controller buttons
                 for(int btn=SDL_CONTROLLER_BUTTON_INVALID; btn<SDL_CONTROLLER_BUTTON_MAX; btn++){
-                    controller_to_wiInput(&controller.state.buttons,
+                    controller_to_wicked(&controller.state.buttons,
                         btn,
                         (bool)SDL_GameControllerGetButton(controller.controller, (SDL_GameControllerButton)btn));
                 }
@@ -214,14 +214,14 @@ namespace wiSDLInput
         }
     }
 
-    void GetKeyboardState(wiInput::KeyboardState* state) {
+    void GetKeyboardState(wi::input::KeyboardState* state) {
         *state = keyboard;
     }
-    void GetMouseState(wiInput::MouseState* state) {
+    void GetMouseState(wi::input::MouseState* state) {
         *state = mouse;
     }
     int GetMaxControllerCount() { return numSticks; }
-    bool GetControllerState(wiInput::ControllerState* state, int index) { 
+    bool GetControllerState(wi::input::ControllerState* state, int index) { 
         if(index < controllers.size()){
             if(controllers[index].controller){
                 if(state){
@@ -232,10 +232,10 @@ namespace wiSDLInput
         }
         return false; 
     }
-    void SetControllerFeedback(const wiInput::ControllerFeedback& data, int index) {}
+    void SetControllerFeedback(const wi::input::ControllerFeedback& data, int index) {}
 
 
-    int to_wiInput(const SDL_Scancode &key) {
+    int to_wicked(const SDL_Scancode &key) {
         if (key < arraysize(keyboard.buttons))
         {
             return key;
@@ -243,25 +243,25 @@ namespace wiSDLInput
         return -1;
     }
 
-    void controller_to_wiInput(uint32_t *current, Uint8 button, bool pressed){
+    void controller_to_wicked(uint32_t *current, Uint8 button, bool pressed){
         uint32_t btnenum;
         switch(button){
-            case SDL_CONTROLLER_BUTTON_DPAD_UP: btnenum = wiInput::GAMEPAD_BUTTON_UP; break;
-            case SDL_CONTROLLER_BUTTON_DPAD_LEFT: btnenum = wiInput::GAMEPAD_BUTTON_LEFT; break;
-            case SDL_CONTROLLER_BUTTON_DPAD_DOWN: btnenum = wiInput::GAMEPAD_BUTTON_DOWN; break;
-            case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: btnenum = wiInput::GAMEPAD_BUTTON_RIGHT; break;
-            case SDL_CONTROLLER_BUTTON_X: btnenum = wiInput::GAMEPAD_BUTTON_1; break;
-            case SDL_CONTROLLER_BUTTON_A: btnenum = wiInput::GAMEPAD_BUTTON_2; break;
-            case SDL_CONTROLLER_BUTTON_B: btnenum = wiInput::GAMEPAD_BUTTON_3; break;
-            case SDL_CONTROLLER_BUTTON_Y: btnenum = wiInput::GAMEPAD_BUTTON_4; break;
-            case SDL_CONTROLLER_BUTTON_LEFTSHOULDER: btnenum = wiInput::GAMEPAD_BUTTON_5; break;
-            case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER: btnenum = wiInput::GAMEPAD_BUTTON_6; break;
-            case SDL_CONTROLLER_BUTTON_LEFTSTICK: btnenum = wiInput::GAMEPAD_BUTTON_7; break;
-            case SDL_CONTROLLER_BUTTON_RIGHTSTICK: btnenum = wiInput::GAMEPAD_BUTTON_8; break;
-            case SDL_CONTROLLER_BUTTON_BACK: btnenum = wiInput::GAMEPAD_BUTTON_9; break;
-            case SDL_CONTROLLER_BUTTON_START: btnenum = wiInput::GAMEPAD_BUTTON_10; break;
+            case SDL_CONTROLLER_BUTTON_DPAD_UP: btnenum = wi::input::GAMEPAD_BUTTON_UP; break;
+            case SDL_CONTROLLER_BUTTON_DPAD_LEFT: btnenum = wi::input::GAMEPAD_BUTTON_LEFT; break;
+            case SDL_CONTROLLER_BUTTON_DPAD_DOWN: btnenum = wi::input::GAMEPAD_BUTTON_DOWN; break;
+            case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: btnenum = wi::input::GAMEPAD_BUTTON_RIGHT; break;
+            case SDL_CONTROLLER_BUTTON_X: btnenum = wi::input::GAMEPAD_BUTTON_1; break;
+            case SDL_CONTROLLER_BUTTON_A: btnenum = wi::input::GAMEPAD_BUTTON_2; break;
+            case SDL_CONTROLLER_BUTTON_B: btnenum = wi::input::GAMEPAD_BUTTON_3; break;
+            case SDL_CONTROLLER_BUTTON_Y: btnenum = wi::input::GAMEPAD_BUTTON_4; break;
+            case SDL_CONTROLLER_BUTTON_LEFTSHOULDER: btnenum = wi::input::GAMEPAD_BUTTON_5; break;
+            case SDL_CONTROLLER_BUTTON_RIGHTSHOULDER: btnenum = wi::input::GAMEPAD_BUTTON_6; break;
+            case SDL_CONTROLLER_BUTTON_LEFTSTICK: btnenum = wi::input::GAMEPAD_BUTTON_7; break;
+            case SDL_CONTROLLER_BUTTON_RIGHTSTICK: btnenum = wi::input::GAMEPAD_BUTTON_8; break;
+            case SDL_CONTROLLER_BUTTON_BACK: btnenum = wi::input::GAMEPAD_BUTTON_9; break;
+            case SDL_CONTROLLER_BUTTON_START: btnenum = wi::input::GAMEPAD_BUTTON_10; break;
         }
-        btnenum = 1 << (btnenum - wiInput::GAMEPAD_RANGE_START - 1);
+        btnenum = 1 << (btnenum - wi::input::GAMEPAD_RANGE_START - 1);
         if(pressed){
             *current |= btnenum;
         }else{
@@ -306,14 +306,14 @@ namespace wiSDLInput
 }
 
 #else
-namespace wiSDLInput
+namespace wi::input::sdlinput
 {
     void Initialize() {}
     void Update() {}
-    void GetKeyboardState(wiInput::KeyboardState* state) {}
-    void GetMouseState(wiInput::MouseState* state) {}
+    void GetKeyboardState(wi::input::KeyboardState* state) {}
+    void GetMouseState(wi::input::MouseState* state) {}
     int GetMaxControllerCount() { return 0; }
-    bool GetControllerState(wiInput::ControllerState* state, int index) { return false; }
-    void SetControllerFeedback(const wiInput::ControllerFeedback& data, int index) {}
+    bool GetControllerState(wi::input::ControllerState* state, int index) { return false; }
+    void SetControllerFeedback(const wi::input::ControllerFeedback& data, int index) {}
 }
 #endif // _WIN32

@@ -1,6 +1,6 @@
 #include "wiMath.h"
 
-namespace wiMath
+namespace wi::math
 {
 	float TriangleArea(const XMVECTOR& A, const XMVECTOR& B, const XMVECTOR& C)
 	{

@@ -1,38 +1,37 @@
 #include "wiScene_BindLua.h"
 #include "wiScene.h"
-#include "Vector_BindLua.h"
-#include "Matrix_BindLua.h"
+#include "wiMath_BindLua.h"
 #include "wiEmittedParticle.h"
-#include "Texture_BindLua.h"
-#include "wiIntersect_BindLua.h"
+#include "wiTexture_BindLua.h"
+#include "wiPrimitive_BindLua.h"
 
-using namespace wiECS;
-using namespace wiScene;
-using namespace wiIntersect_BindLua;
+using namespace wi::ecs;
+using namespace wi::scene;
+using namespace wi::lua::primitive;
 
-namespace wiScene_BindLua
+namespace wi::lua::scene
 {
 
 int CreateEntity_BindLua(lua_State* L)
 {
 	Entity entity = CreateEntity();
-	wiLua::SSetLongLong(L, entity);
+	wi::lua::SSetLongLong(L, entity);
 	return 1;
 }
 
 int GetCamera(lua_State* L)
 {
-	Luna<CameraComponent_BindLua>::push(L, new CameraComponent_BindLua(&wiScene::GetCamera()));
+	Luna<CameraComponent_BindLua>::push(L, new CameraComponent_BindLua(&wi::scene::GetCamera()));
 	return 1;
 }
 int GetScene(lua_State* L)
 {
-	Luna<Scene_BindLua>::push(L, new Scene_BindLua(&wiScene::GetScene()));
+	Luna<Scene_BindLua>::push(L, new Scene_BindLua(&wi::scene::GetScene()));
 	return 1;
 }
 int LoadModel(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
 		Scene_BindLua* custom_scene = Luna<Scene_BindLua>::lightcheck(L, 1);
@@ -41,8 +40,8 @@ int LoadModel(lua_State* L)
 			// Overload 1: thread safe version
 			if (argc > 1)
 			{
-				std::string fileName = wiLua::SGetString(L, 2);
-				fileName = wiLua::GetScriptPath() + fileName;
+				std::string fileName = wi::lua::SGetString(L, 2);
+				fileName = wi::lua::GetScriptPath() + fileName;
 				XMMATRIX transform = XMMatrixIdentity();
 				if (argc > 2)
 				{
@@ -53,24 +52,24 @@ int LoadModel(lua_State* L)
 					}
 					else
 					{
-						wiLua::SError(L, "LoadModel(Scene scene, string fileName, opt Matrix transform) argument is not a matrix!");
+						wi::lua::SError(L, "LoadModel(Scene scene, string fileName, opt Matrix transform) argument is not a matrix!");
 					}
 				}
-				Entity root = wiScene::LoadModel(*custom_scene->scene, fileName, transform, true);
-				wiLua::SSetLongLong(L, root);
+				Entity root = wi::scene::LoadModel(*custom_scene->scene, fileName, transform, true);
+				wi::lua::SSetLongLong(L, root);
 				return 1;
 			}
 			else
 			{
-				wiLua::SError(L, "LoadModel(Scene scene, string fileName, opt Matrix transform) not enough arguments!");
+				wi::lua::SError(L, "LoadModel(Scene scene, string fileName, opt Matrix transform) not enough arguments!");
 				return 0;
 			}
 		}
 		else
 		{
 			// Overload 2: global scene version
-			std::string fileName = wiLua::SGetString(L, 1);
-			fileName = wiLua::GetScriptPath() + fileName;
+			std::string fileName = wi::lua::SGetString(L, 1);
+			fileName = wi::lua::GetScriptPath() + fileName;
 			XMMATRIX transform = XMMatrixIdentity();
 			if (argc > 1)
 			{
@@ -81,37 +80,37 @@ int LoadModel(lua_State* L)
 				}
 				else
 				{
-					wiLua::SError(L, "LoadModel(string fileName, opt Matrix transform) argument is not a matrix!");
+					wi::lua::SError(L, "LoadModel(string fileName, opt Matrix transform) argument is not a matrix!");
 				}
 			}
-			Entity root = wiScene::LoadModel(fileName, transform, true);
-			wiLua::SSetLongLong(L, root);
+			Entity root = wi::scene::LoadModel(fileName, transform, true);
+			wi::lua::SSetLongLong(L, root);
 			return 1;
 		}
 	}
 	else
 	{
-		wiLua::SError(L, "LoadModel(string fileName, opt Matrix transform) not enough arguments!");
+		wi::lua::SError(L, "LoadModel(string fileName, opt Matrix transform) not enough arguments!");
 	}
 	return 0;
 }
 int Pick(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
 		Ray_BindLua* ray = Luna<Ray_BindLua>::lightcheck(L, 1);
 		if (ray != nullptr)
 		{
-			uint32_t renderTypeMask = RENDERTYPE_OPAQUE;
+			uint32_t renderTypeMask = wi::enums::RENDERTYPE_OPAQUE;
 			uint32_t layerMask = 0xFFFFFFFF;
-			Scene* scene = &wiScene::GetScene();
+			Scene* scene = &wi::scene::GetScene();
 			if (argc > 1)
 			{
-				renderTypeMask = (uint32_t)wiLua::SGetInt(L, 2);
+				renderTypeMask = (uint32_t)wi::lua::SGetInt(L, 2);
 				if (argc > 2)
 				{
-					int mask = wiLua::SGetInt(L, 3);
+					int mask = wi::lua::SGetInt(L, 3);
 					layerMask = *reinterpret_cast<uint32_t*>(&mask);
 
 					if (argc > 3)
@@ -123,45 +122,45 @@ int Pick(lua_State* L)
 						}
 						else
 						{
-							wiLua::SError(L, "Pick(Ray ray, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) last argument is not of type Scene!");
+							wi::lua::SError(L, "Pick(Ray ray, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) last argument is not of type Scene!");
 						}
 					}
 				}
 			}
-			auto pick = wiScene::Pick(ray->ray, renderTypeMask, layerMask, *scene);
-			wiLua::SSetLongLong(L, pick.entity);
+			auto pick = wi::scene::Pick(ray->ray, renderTypeMask, layerMask, *scene);
+			wi::lua::SSetLongLong(L, pick.entity);
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.position)));
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.normal)));
-			wiLua::SSetFloat(L, pick.distance);
+			wi::lua::SSetFloat(L, pick.distance);
 			return 4;
 		}
 
-		wiLua::SError(L, "Pick(Ray ray, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) first argument must be of Ray type!");
+		wi::lua::SError(L, "Pick(Ray ray, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) first argument must be of Ray type!");
 	}
 	else
 	{
-		wiLua::SError(L, "Pick(Ray ray, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) not enough arguments!");
+		wi::lua::SError(L, "Pick(Ray ray, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) not enough arguments!");
 	}
 
 	return 0;
 }
 int SceneIntersectSphere(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
 		Sphere_BindLua* sphere = Luna<Sphere_BindLua>::lightcheck(L, 1);
 		if (sphere != nullptr)
 		{
-			uint32_t renderTypeMask = RENDERTYPE_OPAQUE;
+			uint32_t renderTypeMask = wi::enums::RENDERTYPE_OPAQUE;
 			uint32_t layerMask = 0xFFFFFFFF;
-			Scene* scene = &wiScene::GetScene();
+			Scene* scene = &wi::scene::GetScene();
 			if (argc > 1)
 			{
-				renderTypeMask = (uint32_t)wiLua::SGetInt(L, 2);
+				renderTypeMask = (uint32_t)wi::lua::SGetInt(L, 2);
 				if (argc > 2)
 				{
-					int mask = wiLua::SGetInt(L, 3);
+					int mask = wi::lua::SGetInt(L, 3);
 					layerMask = *reinterpret_cast<uint32_t*>(&mask);
 
 					if (argc > 3)
@@ -173,45 +172,45 @@ int SceneIntersectSphere(lua_State* L)
 						}
 						else
 						{
-							wiLua::SError(L, "SceneIntersectSphere(Sphere sphere, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) last argument is not of type Scene!");
+							wi::lua::SError(L, "SceneIntersectSphere(Sphere sphere, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) last argument is not of type Scene!");
 						}
 					}
 				}
 			}
-			auto pick = wiScene::SceneIntersectSphere(sphere->sphere, renderTypeMask, layerMask, *scene);
-			wiLua::SSetLongLong(L, pick.entity);
+			auto pick = wi::scene::SceneIntersectSphere(sphere->sphere, renderTypeMask, layerMask, *scene);
+			wi::lua::SSetLongLong(L, pick.entity);
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.position)));
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.normal)));
-			wiLua::SSetFloat(L, pick.depth);
+			wi::lua::SSetFloat(L, pick.depth);
 			return 4;
 		}
 
-		wiLua::SError(L, "SceneIntersectSphere(Sphere sphere, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) first argument must be of Sphere type!");
+		wi::lua::SError(L, "SceneIntersectSphere(Sphere sphere, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) first argument must be of Sphere type!");
 	}
 	else
 	{
-		wiLua::SError(L, "SceneIntersectSphere(Sphere sphere, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) not enough arguments!");
+		wi::lua::SError(L, "SceneIntersectSphere(Sphere sphere, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) not enough arguments!");
 	}
 
 	return 0;
 }
 int SceneIntersectCapsule(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
 		Capsule_BindLua* capsule = Luna<Capsule_BindLua>::lightcheck(L, 1);
 		if (capsule != nullptr)
 		{
-			uint32_t renderTypeMask = RENDERTYPE_OPAQUE;
+			uint32_t renderTypeMask = wi::enums::RENDERTYPE_OPAQUE;
 			uint32_t layerMask = 0xFFFFFFFF;
-			Scene* scene = &wiScene::GetScene();
+			Scene* scene = &wi::scene::GetScene();
 			if (argc > 1)
 			{
-				renderTypeMask = (uint32_t)wiLua::SGetInt(L, 2);
+				renderTypeMask = (uint32_t)wi::lua::SGetInt(L, 2);
 				if (argc > 2)
 				{
-					int mask = wiLua::SGetInt(L, 3);
+					int mask = wi::lua::SGetInt(L, 3);
 					layerMask = *reinterpret_cast<uint32_t*>(&mask);
 
 					if (argc > 3)
@@ -223,24 +222,24 @@ int SceneIntersectCapsule(lua_State* L)
 						}
 						else
 						{
-							wiLua::SError(L, "SceneIntersectCapsule(Capsule capsule, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) last argument is not of type Scene!");
+							wi::lua::SError(L, "SceneIntersectCapsule(Capsule capsule, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) last argument is not of type Scene!");
 						}
 					}
 				}
 			}
-			auto pick = wiScene::SceneIntersectCapsule(capsule->capsule, renderTypeMask, layerMask, *scene);
-			wiLua::SSetLongLong(L, pick.entity);
+			auto pick = wi::scene::SceneIntersectCapsule(capsule->capsule, renderTypeMask, layerMask, *scene);
+			wi::lua::SSetLongLong(L, pick.entity);
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.position)));
 			Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat3(&pick.normal)));
-			wiLua::SSetFloat(L, pick.depth);
+			wi::lua::SSetFloat(L, pick.depth);
 			return 4;
 		}
 
-		wiLua::SError(L, "SceneIntersectCapsule(Capsule capsule, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) first argument must be of Capsule type!");
+		wi::lua::SError(L, "SceneIntersectCapsule(Capsule capsule, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) first argument must be of Capsule type!");
 	}
 	else
 	{
-		wiLua::SError(L, "SceneIntersectCapsule(Capsule capsule, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) not enough arguments!");
+		wi::lua::SError(L, "SceneIntersectCapsule(Capsule capsule, opt PICKTYPE pickType, opt uint layerMask, opt Scene scene) not enough arguments!");
 	}
 
 	return 0;
@@ -253,31 +252,31 @@ void Bind()
 	{
 		initialized = true;
 
-		lua_State* L = wiLua::GetLuaState();
+		lua_State* L = wi::lua::GetLuaState();
 
-		wiLua::RegisterFunc("CreateEntity", CreateEntity_BindLua);
-		wiLua::RunText("INVALID_ENTITY = 0");
+		wi::lua::RegisterFunc("CreateEntity", CreateEntity_BindLua);
+		wi::lua::RunText("INVALID_ENTITY = 0");
 
-		wiLua::RunText("DIRECTIONAL = 0");
-		wiLua::RunText("POINT = 1");
-		wiLua::RunText("SPOT = 2");
-		wiLua::RunText("SPHERE = 3");
-		wiLua::RunText("DISC = 4");
-		wiLua::RunText("RECTANGLE = 5");
-		wiLua::RunText("TUBE = 6");
+		wi::lua::RunText("DIRECTIONAL = 0");
+		wi::lua::RunText("POINT = 1");
+		wi::lua::RunText("SPOT = 2");
+		wi::lua::RunText("SPHERE = 3");
+		wi::lua::RunText("DISC = 4");
+		wi::lua::RunText("RECTANGLE = 5");
+		wi::lua::RunText("TUBE = 6");
 
-		wiLua::RunText("STENCILREF_EMPTY = 0");
-		wiLua::RunText("STENCILREF_DEFAULT = 1");
-		wiLua::RunText("STENCILREF_CUSTOMSHADER = 2");
-		wiLua::RunText("STENCILREF_SKIN = 3");
-		wiLua::RunText("STENCILREF_SNOW = 4");
+		wi::lua::RunText("STENCILREF_EMPTY = 0");
+		wi::lua::RunText("STENCILREF_DEFAULT = 1");
+		wi::lua::RunText("STENCILREF_CUSTOMSHADER = 2");
+		wi::lua::RunText("STENCILREF_SKIN = 3");
+		wi::lua::RunText("STENCILREF_SNOW = 4");
 
-		wiLua::RegisterFunc("GetCamera", GetCamera);
-		wiLua::RegisterFunc("GetScene", GetScene);
-		wiLua::RegisterFunc("LoadModel", LoadModel);
-		wiLua::RegisterFunc("Pick", Pick);
-		wiLua::RegisterFunc("SceneIntersectSphere", SceneIntersectSphere);
-		wiLua::RegisterFunc("SceneIntersectCapsule", SceneIntersectCapsule);
+		wi::lua::RegisterFunc("GetCamera", GetCamera);
+		wi::lua::RegisterFunc("GetScene", GetScene);
+		wi::lua::RegisterFunc("LoadModel", LoadModel);
+		wi::lua::RegisterFunc("Pick", Pick);
+		wi::lua::RegisterFunc("SceneIntersectSphere", SceneIntersectSphere);
+		wi::lua::RegisterFunc("SceneIntersectCapsule", SceneIntersectCapsule);
 
 		Luna<Scene_BindLua>::Register(L);
 		Luna<NameComponent_BindLua>::Register(L);
@@ -361,15 +360,15 @@ Luna<Scene_BindLua>::PropertyType Scene_BindLua::properties[] = {
 
 int Scene_BindLua::Update(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		float dt = wiLua::SGetFloat(L, 1);
+		float dt = wi::lua::SGetFloat(L, 1);
 		scene->Update(dt);
 	}
 	else
 	{
-		wiLua::SError(L, "Scene::Update(float dt) not enough arguments!");
+		wi::lua::SError(L, "Scene::Update(float dt) not enough arguments!");
 	}
 	return 0;
 }
@@ -380,7 +379,7 @@ int Scene_BindLua::Clear(lua_State* L)
 }
 int Scene_BindLua::Merge(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
 		Scene_BindLua* other = Luna<Scene_BindLua>::lightcheck(L, 1);
@@ -390,74 +389,74 @@ int Scene_BindLua::Merge(lua_State* L)
 		}
 		else
 		{
-			wiLua::SError(L, "Scene::Merge(Scene other) argument is not of type Scene!");
+			wi::lua::SError(L, "Scene::Merge(Scene other) argument is not of type Scene!");
 		}
 	}
 	else
 	{
-		wiLua::SError(L, "Scene::Merge(Scene other) not enough arguments!");
+		wi::lua::SError(L, "Scene::Merge(Scene other) not enough arguments!");
 	}
 	return 0;
 }
 
 int Scene_BindLua::Entity_FindByName(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		std::string name = wiLua::SGetString(L, 1);
+		std::string name = wi::lua::SGetString(L, 1);
 
 		Entity entity = scene->Entity_FindByName(name);
 
-		wiLua::SSetLongLong(L, entity);
+		wi::lua::SSetLongLong(L, entity);
 		return 1;
 	}
 	else
 	{
-		wiLua::SError(L, "Scene::Entity_FindByName(string name) not enough arguments!");
+		wi::lua::SError(L, "Scene::Entity_FindByName(string name) not enough arguments!");
 	}
 	return 0;
 }
 int Scene_BindLua::Entity_Remove(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
 
 		scene->Entity_Remove(entity);
 	}
 	else
 	{
-		wiLua::SError(L, "Scene::Entity_Remove(Entity entity) not enough arguments!");
+		wi::lua::SError(L, "Scene::Entity_Remove(Entity entity) not enough arguments!");
 	}
 	return 0;
 }
 int Scene_BindLua::Entity_Duplicate(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
 
 		Entity clone = scene->Entity_Duplicate(entity);
 
-		wiLua::SSetLongLong(L, clone);
+		wi::lua::SSetLongLong(L, clone);
 		return 1;
 	}
 	else
 	{
-		wiLua::SError(L, "Scene::Entity_Duplicate(Entity entity) not enough arguments!");
+		wi::lua::SError(L, "Scene::Entity_Duplicate(Entity entity) not enough arguments!");
 	}
 	return 0;
 }
 
 int Scene_BindLua::Component_CreateName(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
 
 		NameComponent& component = scene->names.Create(entity);
 		Luna<NameComponent_BindLua>::push(L, new NameComponent_BindLua(&component));
@@ -465,16 +464,16 @@ int Scene_BindLua::Component_CreateName(lua_State* L)
 	}
 	else
 	{
-		wiLua::SError(L, "Scene::Component_CreateName(Entity entity) not enough arguments!");
+		wi::lua::SError(L, "Scene::Component_CreateName(Entity entity) not enough arguments!");
 	}
 	return 0;
 }
 int Scene_BindLua::Component_CreateLayer(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
 
 		LayerComponent& component = scene->layers.Create(entity);
 		Luna<LayerComponent_BindLua>::push(L, new LayerComponent_BindLua(&component));
@@ -482,16 +481,16 @@ int Scene_BindLua::Component_CreateLayer(lua_State* L)
 	}
 	else
 	{
-		wiLua::SError(L, "Scene::Component_CreateLayer(Entity entity) not enough arguments!");
+		wi::lua::SError(L, "Scene::Component_CreateLayer(Entity entity) not enough arguments!");
 	}
 	return 0;
 }
 int Scene_BindLua::Component_CreateTransform(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
 
 		TransformComponent& component = scene->transforms.Create(entity);
 		Luna<TransformComponent_BindLua>::push(L, new TransformComponent_BindLua(&component));
@@ -499,16 +498,16 @@ int Scene_BindLua::Component_CreateTransform(lua_State* L)
 	}
 	else
 	{
-		wiLua::SError(L, "Scene::Component_CreateTransform(Entity entity) not enough arguments!");
+		wi::lua::SError(L, "Scene::Component_CreateTransform(Entity entity) not enough arguments!");
 	}
 	return 0;
 }
 int Scene_BindLua::Component_CreateLight(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
 
 		scene->aabb_lights.Create(entity);
 
@@ -518,16 +517,16 @@ int Scene_BindLua::Component_CreateLight(lua_State* L)
 	}
 	else
 	{
-		wiLua::SError(L, "Scene::Component_CreateLight(Entity entity) not enough arguments!");
+		wi::lua::SError(L, "Scene::Component_CreateLight(Entity entity) not enough arguments!");
 	}
 	return 0;
 }
 int Scene_BindLua::Component_CreateObject(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
 
 		scene->aabb_objects.Create(entity);
 
@@ -537,16 +536,16 @@ int Scene_BindLua::Component_CreateObject(lua_State* L)
 	}
 	else
 	{
-		wiLua::SError(L, "Scene::Component_CreateObject(Entity entity) not enough arguments!");
+		wi::lua::SError(L, "Scene::Component_CreateObject(Entity entity) not enough arguments!");
 	}
 	return 0;
 }
 int Scene_BindLua::Component_CreateInverseKinematics(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
 
 		InverseKinematicsComponent& component = scene->inverse_kinematics.Create(entity);
 		Luna<InverseKinematicsComponent_BindLua>::push(L, new InverseKinematicsComponent_BindLua(&component));
@@ -554,16 +553,16 @@ int Scene_BindLua::Component_CreateInverseKinematics(lua_State* L)
 	}
 	else
 	{
-		wiLua::SError(L, "Scene::Component_CreateInverseKinematics(Entity entity) not enough arguments!");
+		wi::lua::SError(L, "Scene::Component_CreateInverseKinematics(Entity entity) not enough arguments!");
 	}
 	return 0;
 }
 int Scene_BindLua::Component_CreateSpring(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
 
 		SpringComponent& component = scene->springs.Create(entity);
 		Luna<SpringComponent_BindLua>::push(L, new SpringComponent_BindLua(&component));
@@ -571,17 +570,17 @@ int Scene_BindLua::Component_CreateSpring(lua_State* L)
 	}
 	else
 	{
-		wiLua::SError(L, "Scene::Component_CreateSpring(Entity entity) not enough arguments!");
+		wi::lua::SError(L, "Scene::Component_CreateSpring(Entity entity) not enough arguments!");
 	}
 	return 0;
 }
 
 int Scene_BindLua::Component_GetName(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
 
 		NameComponent* component = scene->names.GetComponent(entity);
 		if (component == nullptr)
@@ -594,16 +593,16 @@ int Scene_BindLua::Component_GetName(lua_State* L)
 	}
 	else
 	{
-		wiLua::SError(L, "Scene::Component_GetName(Entity entity) not enough arguments!");
+		wi::lua::SError(L, "Scene::Component_GetName(Entity entity) not enough arguments!");
 	}
 	return 0;
 }
 int Scene_BindLua::Component_GetLayer(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
 
 		LayerComponent* component = scene->layers.GetComponent(entity);
 		if (component == nullptr)
@@ -616,16 +615,16 @@ int Scene_BindLua::Component_GetLayer(lua_State* L)
 	}
 	else
 	{
-		wiLua::SError(L, "Scene::Component_GetLayer(Entity entity) not enough arguments!");
+		wi::lua::SError(L, "Scene::Component_GetLayer(Entity entity) not enough arguments!");
 	}
 	return 0;
 }
 int Scene_BindLua::Component_GetTransform(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
 
 		TransformComponent* component = scene->transforms.GetComponent(entity);
 		if (component == nullptr)
@@ -638,16 +637,16 @@ int Scene_BindLua::Component_GetTransform(lua_State* L)
 	}
 	else
 	{
-		wiLua::SError(L, "Scene::Component_GetTransform(Entity entity) not enough arguments!");
+		wi::lua::SError(L, "Scene::Component_GetTransform(Entity entity) not enough arguments!");
 	}
 	return 0;
 }
 int Scene_BindLua::Component_GetCamera(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
 
 		CameraComponent* component = scene->cameras.GetComponent(entity);
 		if (component == nullptr)
@@ -660,16 +659,16 @@ int Scene_BindLua::Component_GetCamera(lua_State* L)
 	}
 	else
 	{
-		wiLua::SError(L, "Scene::Component_GetCamera(Entity entity) not enough arguments!");
+		wi::lua::SError(L, "Scene::Component_GetCamera(Entity entity) not enough arguments!");
 	}
 	return 0;
 }
 int Scene_BindLua::Component_GetAnimation(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
 
 		AnimationComponent* component = scene->animations.GetComponent(entity);
 		if (component == nullptr)
@@ -682,16 +681,16 @@ int Scene_BindLua::Component_GetAnimation(lua_State* L)
 	}
 	else
 	{
-		wiLua::SError(L, "Scene::Component_GetAnimation(Entity entity) not enough arguments!");
+		wi::lua::SError(L, "Scene::Component_GetAnimation(Entity entity) not enough arguments!");
 	}
 	return 0;
 }
 int Scene_BindLua::Component_GetMaterial(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
 
 		MaterialComponent* component = scene->materials.GetComponent(entity);
 		if (component == nullptr)
@@ -704,18 +703,18 @@ int Scene_BindLua::Component_GetMaterial(lua_State* L)
 	}
 	else
 	{
-		wiLua::SError(L, "Scene::Component_GetMaterial(Entity entity) not enough arguments!");
+		wi::lua::SError(L, "Scene::Component_GetMaterial(Entity entity) not enough arguments!");
 	}
 	return 0;
 }
 int Scene_BindLua::Component_GetEmitter(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
 
-		wiEmittedParticle* component = scene->emitters.GetComponent(entity);
+		wi::EmittedParticleSystem* component = scene->emitters.GetComponent(entity);
 		if (component == nullptr)
 		{
 			return 0;
@@ -726,16 +725,16 @@ int Scene_BindLua::Component_GetEmitter(lua_State* L)
 	}
 	else
 	{
-		wiLua::SError(L, "Scene::Component_GetEmitter(Entity entity) not enough arguments!");
+		wi::lua::SError(L, "Scene::Component_GetEmitter(Entity entity) not enough arguments!");
 	}
 	return 0;
 }
 int Scene_BindLua::Component_GetLight(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
 
 		LightComponent* component = scene->lights.GetComponent(entity);
 		if (component == nullptr)
@@ -748,16 +747,16 @@ int Scene_BindLua::Component_GetLight(lua_State* L)
 	}
 	else
 	{
-		wiLua::SError(L, "Scene::Component_GetLight(Entity entity) not enough arguments!");
+		wi::lua::SError(L, "Scene::Component_GetLight(Entity entity) not enough arguments!");
 	}
 	return 0;
 }
 int Scene_BindLua::Component_GetObject(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
 
 		ObjectComponent* component = scene->objects.GetComponent(entity);
 		if (component == nullptr)
@@ -770,16 +769,16 @@ int Scene_BindLua::Component_GetObject(lua_State* L)
 	}
 	else
 	{
-		wiLua::SError(L, "Scene::Component_GetObject(Entity entity) not enough arguments!");
+		wi::lua::SError(L, "Scene::Component_GetObject(Entity entity) not enough arguments!");
 	}
 	return 0;
 }
 int Scene_BindLua::Component_GetInverseKinematics(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
 
 		InverseKinematicsComponent* component = scene->inverse_kinematics.GetComponent(entity);
 		if (component == nullptr)
@@ -792,16 +791,16 @@ int Scene_BindLua::Component_GetInverseKinematics(lua_State* L)
 	}
 	else
 	{
-		wiLua::SError(L, "Scene::Component_GetInverseKinematics(Entity entity) not enough arguments!");
+		wi::lua::SError(L, "Scene::Component_GetInverseKinematics(Entity entity) not enough arguments!");
 	}
 	return 0;
 }
 int Scene_BindLua::Component_GetSpring(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
 
 		SpringComponent* component = scene->springs.GetComponent(entity);
 		if (component == nullptr)
@@ -814,7 +813,7 @@ int Scene_BindLua::Component_GetSpring(lua_State* L)
 	}
 	else
 	{
-		wiLua::SError(L, "Scene::Component_GetSpring(Entity entity) not enough arguments!");
+		wi::lua::SError(L, "Scene::Component_GetSpring(Entity entity) not enough arguments!");
 	}
 	return 0;
 }
@@ -947,7 +946,7 @@ int Scene_BindLua::Entity_GetNameArray(lua_State* L)
 	int newTable = lua_gettop(L);
 	for (size_t i = 0; i < scene->names.GetCount(); ++i)
 	{
-		wiLua::SSetLongLong(L, scene->names.GetEntity(i));
+		wi::lua::SSetLongLong(L, scene->names.GetEntity(i));
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -958,7 +957,7 @@ int Scene_BindLua::Entity_GetLayerArray(lua_State* L)
 	int newTable = lua_gettop(L);
 	for (size_t i = 0; i < scene->layers.GetCount(); ++i)
 	{
-		wiLua::SSetLongLong(L, scene->layers.GetEntity(i));
+		wi::lua::SSetLongLong(L, scene->layers.GetEntity(i));
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -969,7 +968,7 @@ int Scene_BindLua::Entity_GetTransformArray(lua_State* L)
 	int newTable = lua_gettop(L);
 	for (size_t i = 0; i < scene->transforms.GetCount(); ++i)
 	{
-		wiLua::SSetLongLong(L, scene->transforms.GetEntity(i));
+		wi::lua::SSetLongLong(L, scene->transforms.GetEntity(i));
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -980,7 +979,7 @@ int Scene_BindLua::Entity_GetCameraArray(lua_State* L)
 	int newTable = lua_gettop(L);
 	for (size_t i = 0; i < scene->cameras.GetCount(); ++i)
 	{
-		wiLua::SSetLongLong(L, scene->cameras.GetEntity(i));
+		wi::lua::SSetLongLong(L, scene->cameras.GetEntity(i));
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -991,7 +990,7 @@ int Scene_BindLua::Entity_GetAnimationArray(lua_State* L)
 	int newTable = lua_gettop(L);
 	for (size_t i = 0; i < scene->animations.GetCount(); ++i)
 	{
-		wiLua::SSetLongLong(L, scene->animations.GetEntity(i));
+		wi::lua::SSetLongLong(L, scene->animations.GetEntity(i));
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -1002,7 +1001,7 @@ int Scene_BindLua::Entity_GetMaterialArray(lua_State* L)
 	int newTable = lua_gettop(L);
 	for (size_t i = 0; i < scene->materials.GetCount(); ++i)
 	{
-		wiLua::SSetLongLong(L, scene->materials.GetEntity(i));
+		wi::lua::SSetLongLong(L, scene->materials.GetEntity(i));
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -1013,7 +1012,7 @@ int Scene_BindLua::Entity_GetEmitterArray(lua_State* L)
 	int newTable = lua_gettop(L);
 	for (size_t i = 0; i < scene->emitters.GetCount(); ++i)
 	{
-		wiLua::SSetLongLong(L, scene->emitters.GetEntity(i));
+		wi::lua::SSetLongLong(L, scene->emitters.GetEntity(i));
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -1024,7 +1023,7 @@ int Scene_BindLua::Entity_GetLightArray(lua_State* L)
 	int newTable = lua_gettop(L);
 	for (size_t i = 0; i < scene->lights.GetCount(); ++i)
 	{
-		wiLua::SSetLongLong(L, scene->lights.GetEntity(i));
+		wi::lua::SSetLongLong(L, scene->lights.GetEntity(i));
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -1035,7 +1034,7 @@ int Scene_BindLua::Entity_GetObjectArray(lua_State* L)
 	int newTable = lua_gettop(L);
 	for (size_t i = 0; i < scene->objects.GetCount(); ++i)
 	{
-		wiLua::SSetLongLong(L, scene->objects.GetEntity(i));
+		wi::lua::SSetLongLong(L, scene->objects.GetEntity(i));
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -1046,7 +1045,7 @@ int Scene_BindLua::Entity_GetInverseKinematicsArray(lua_State* L)
 	int newTable = lua_gettop(L);
 	for (size_t i = 0; i < scene->inverse_kinematics.GetCount(); ++i)
 	{
-		wiLua::SSetLongLong(L, scene->inverse_kinematics.GetEntity(i));
+		wi::lua::SSetLongLong(L, scene->inverse_kinematics.GetEntity(i));
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -1057,7 +1056,7 @@ int Scene_BindLua::Entity_GetSpringArray(lua_State* L)
 	int newTable = lua_gettop(L);
 	for (size_t i = 0; i < scene->springs.GetCount(); ++i)
 	{
-		wiLua::SSetLongLong(L, scene->springs.GetEntity(i));
+		wi::lua::SSetLongLong(L, scene->springs.GetEntity(i));
 		lua_rawseti(L, newTable, lua_Integer(i + 1));
 	}
 	return 1;
@@ -1065,47 +1064,47 @@ int Scene_BindLua::Entity_GetSpringArray(lua_State* L)
 
 int Scene_BindLua::Component_Attach(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 1)
 	{
-		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
-		Entity parent = (Entity)wiLua::SGetLongLong(L, 2);
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
+		Entity parent = (Entity)wi::lua::SGetLongLong(L, 2);
 
 		scene->Component_Attach(entity, parent);
 	}
 	else
 	{
-		wiLua::SError(L, "Scene::Component_Attach(Entity entity,parent) not enough arguments!");
+		wi::lua::SError(L, "Scene::Component_Attach(Entity entity,parent) not enough arguments!");
 	}
 	return 0;
 }
 int Scene_BindLua::Component_Detach(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
 
 		scene->Component_Detach(entity);
 	}
 	else
 	{
-		wiLua::SError(L, "Scene::Component_Detach(Entity entity) not enough arguments!");
+		wi::lua::SError(L, "Scene::Component_Detach(Entity entity) not enough arguments!");
 	}
 	return 0;
 }
 int Scene_BindLua::Component_DetachChildren(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity parent = (Entity)wiLua::SGetLongLong(L, 1);
+		Entity parent = (Entity)wi::lua::SGetLongLong(L, 1);
 
 		scene->Component_DetachChildren(parent);
 	}
 	else
 	{
-		wiLua::SError(L, "Scene::Component_DetachChildren(Entity parent) not enough arguments!");
+		wi::lua::SError(L, "Scene::Component_DetachChildren(Entity parent) not enough arguments!");
 	}
 	return 0;
 }
@@ -1141,21 +1140,21 @@ NameComponent_BindLua::~NameComponent_BindLua()
 
 int NameComponent_BindLua::SetName(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		std::string name = wiLua::SGetString(L, 1);
+		std::string name = wi::lua::SGetString(L, 1);
 		*component = name;
 	}
 	else
 	{
-		wiLua::SError(L, "SetName(string value) not enough arguments!");
+		wi::lua::SError(L, "SetName(string value) not enough arguments!");
 	}
 	return 0;
 }
 int NameComponent_BindLua::GetName(lua_State* L)
 {
-	wiLua::SSetString(L, component->name);
+	wi::lua::SSetString(L, component->name);
 	return 1;
 }
 
@@ -1189,21 +1188,21 @@ LayerComponent_BindLua::~LayerComponent_BindLua()
 
 int LayerComponent_BindLua::SetLayerMask(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		int mask = wiLua::SGetInt(L, 1);
+		int mask = wi::lua::SGetInt(L, 1);
 		component->layerMask = *reinterpret_cast<uint32_t*>(&mask);
 	}
 	else
 	{
-		wiLua::SError(L, "SetLayerMask(int value) not enough arguments!");
+		wi::lua::SError(L, "SetLayerMask(int value) not enough arguments!");
 	}
 	return 0;
 }
 int LayerComponent_BindLua::GetLayerMask(lua_State* L)
 {
-	wiLua::SSetInt(L, component->GetLayerMask());
+	wi::lua::SSetInt(L, component->GetLayerMask());
 	return 1;
 }
 
@@ -1248,7 +1247,7 @@ TransformComponent_BindLua::~TransformComponent_BindLua()
 
 int TransformComponent_BindLua::Scale(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
 		Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 1);
@@ -1261,18 +1260,18 @@ int TransformComponent_BindLua::Scale(lua_State* L)
 		}
 		else
 		{
-			wiLua::SError(L, "Scale(Vector vector) argument is not a vector!");
+			wi::lua::SError(L, "Scale(Vector vector) argument is not a vector!");
 		}
 	}
 	else
 	{
-		wiLua::SError(L, "Scale(Vector vector) not enough arguments!");
+		wi::lua::SError(L, "Scale(Vector vector) not enough arguments!");
 	}
 	return 0;
 }
 int TransformComponent_BindLua::Rotate(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
 		Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 1);
@@ -1285,18 +1284,18 @@ int TransformComponent_BindLua::Rotate(lua_State* L)
 		}
 		else
 		{
-			wiLua::SError(L, "Rotate(Vector vectorRollPitchYaw) argument is not a vector!");
+			wi::lua::SError(L, "Rotate(Vector vectorRollPitchYaw) argument is not a vector!");
 		}
 	}
 	else
 	{
-		wiLua::SError(L, "Rotate(Vector vectorRollPitchYaw) not enough arguments!");
+		wi::lua::SError(L, "Rotate(Vector vectorRollPitchYaw) not enough arguments!");
 	}
 	return 0;
 }
 int TransformComponent_BindLua::Translate(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
 		Vector_BindLua* v = Luna<Vector_BindLua>::lightcheck(L, 1);
@@ -1309,18 +1308,18 @@ int TransformComponent_BindLua::Translate(lua_State* L)
 		}
 		else
 		{
-			wiLua::SError(L, "Translate(Vector vector) argument is not a vector!");
+			wi::lua::SError(L, "Translate(Vector vector) argument is not a vector!");
 		}
 	}
 	else
 	{
-		wiLua::SError(L, "Translate(Vector vector) not enough arguments!");
+		wi::lua::SError(L, "Translate(Vector vector) not enough arguments!");
 	}
 	return 0;
 }
 int TransformComponent_BindLua::Lerp(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 2)
 	{
 		TransformComponent_BindLua* a = Luna<TransformComponent_BindLua>::lightcheck(L, 1);
@@ -1330,29 +1329,29 @@ int TransformComponent_BindLua::Lerp(lua_State* L)
 
 			if (b != nullptr)
 			{
-				float t = wiLua::SGetFloat(L, 3);
+				float t = wi::lua::SGetFloat(L, 3);
 
 				component->Lerp(*a->component, *b->component, t);
 			}
 			else
 			{
-				wiLua::SError(L, "Lerp(TransformComponent a,b, float t) argument (b) is not a Transform!");
+				wi::lua::SError(L, "Lerp(TransformComponent a,b, float t) argument (b) is not a Transform!");
 			}
 		}
 		else
 		{
-			wiLua::SError(L, "Lerp(TransformComponent a,b, float t) argument (a) is not a Transform!");
+			wi::lua::SError(L, "Lerp(TransformComponent a,b, float t) argument (a) is not a Transform!");
 		}
 	}
 	else
 	{
-		wiLua::SError(L, "Lerp(TransformComponent a,b, float t) not enough arguments!");
+		wi::lua::SError(L, "Lerp(TransformComponent a,b, float t) not enough arguments!");
 	}
 	return 0;
 }
 int TransformComponent_BindLua::CatmullRom(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 4)
 	{
 		TransformComponent_BindLua* a = Luna<TransformComponent_BindLua>::lightcheck(L, 1);
@@ -1370,39 +1369,39 @@ int TransformComponent_BindLua::CatmullRom(lua_State* L)
 
 					if (d != nullptr)
 					{
-						float t = wiLua::SGetFloat(L, 5);
+						float t = wi::lua::SGetFloat(L, 5);
 
 						component->CatmullRom(*a->component, *b->component, *c->component, *d->component, t);
 					}
 					else
 					{
-						wiLua::SError(L, "CatmullRom(TransformComponent a,b,c,d, float t) argument (d) is not a Transform!");
+						wi::lua::SError(L, "CatmullRom(TransformComponent a,b,c,d, float t) argument (d) is not a Transform!");
 					}
 				}
 				else
 				{
-					wiLua::SError(L, "CatmullRom(TransformComponent a,b,c,d, float t) argument (c) is not a Transform!");
+					wi::lua::SError(L, "CatmullRom(TransformComponent a,b,c,d, float t) argument (c) is not a Transform!");
 				}
 			}
 			else
 			{
-				wiLua::SError(L, "CatmullRom(TransformComponent a,b,c,d, float t) argument (b) is not a Transform!");
+				wi::lua::SError(L, "CatmullRom(TransformComponent a,b,c,d, float t) argument (b) is not a Transform!");
 			}
 		}
 		else
 		{
-			wiLua::SError(L, "CatmullRom(TransformComponent a,b,c,d, float t) argument (a) is not a Transform!");
+			wi::lua::SError(L, "CatmullRom(TransformComponent a,b,c,d, float t) argument (a) is not a Transform!");
 		}
 	}
 	else
 	{
-		wiLua::SError(L, "CatmullRom(TransformComponent a,b,c,d, float t) not enough arguments!");
+		wi::lua::SError(L, "CatmullRom(TransformComponent a,b,c,d, float t) not enough arguments!");
 	}
 	return 0;
 }
 int TransformComponent_BindLua::MatrixTransform(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
 		Matrix_BindLua* m = Luna<Matrix_BindLua>::lightcheck(L, 1);
@@ -1412,12 +1411,12 @@ int TransformComponent_BindLua::MatrixTransform(lua_State* L)
 		}
 		else
 		{
-			wiLua::SError(L, "MatrixTransform(Matrix matrix) argument is not a matrix!");
+			wi::lua::SError(L, "MatrixTransform(Matrix matrix) argument is not a matrix!");
 		}
 	}
 	else
 	{
-		wiLua::SError(L, "MatrixTransform(Matrix matrix) not enough arguments!");
+		wi::lua::SError(L, "MatrixTransform(Matrix matrix) not enough arguments!");
 	}
 	return 0;
 }
@@ -1514,7 +1513,7 @@ int CameraComponent_BindLua::UpdateCamera(lua_State* L)
 }
 int CameraComponent_BindLua::TransformCamera(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
 		TransformComponent_BindLua* transform = Luna<TransformComponent_BindLua>::lightcheck(L, 1);
@@ -1525,102 +1524,102 @@ int CameraComponent_BindLua::TransformCamera(lua_State* L)
 		}
 		else
 		{
-			wiLua::SError(L, "TransformCamera(TransformComponent transform) invalid argument!");
+			wi::lua::SError(L, "TransformCamera(TransformComponent transform) invalid argument!");
 		}
 	}
 	else
 	{
-		wiLua::SError(L, "TransformCamera(TransformComponent transform) not enough arguments!");
+		wi::lua::SError(L, "TransformCamera(TransformComponent transform) not enough arguments!");
 	}
 	return 0;
 }
 int CameraComponent_BindLua::GetFOV(lua_State* L)
 {
-	wiLua::SSetFloat(L, component->fov);
+	wi::lua::SSetFloat(L, component->fov);
 	return 1;
 }
 int CameraComponent_BindLua::SetFOV(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		component->fov = wiLua::SGetFloat(L, 1);
+		component->fov = wi::lua::SGetFloat(L, 1);
 	}
 	else
 	{
-		wiLua::SError(L, "SetFOV(float value) not enough arguments!");
+		wi::lua::SError(L, "SetFOV(float value) not enough arguments!");
 	}
 	return 0;
 }
 int CameraComponent_BindLua::GetNearPlane(lua_State* L)
 {
-	wiLua::SSetFloat(L, component->zNearP);
+	wi::lua::SSetFloat(L, component->zNearP);
 	return 1;
 }
 int CameraComponent_BindLua::SetNearPlane(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		component->zNearP = wiLua::SGetFloat(L, 1);
+		component->zNearP = wi::lua::SGetFloat(L, 1);
 	}
 	else
 	{
-		wiLua::SError(L, "SetNearPlane(float value) not enough arguments!");
+		wi::lua::SError(L, "SetNearPlane(float value) not enough arguments!");
 	}
 	return 0;
 }
 int CameraComponent_BindLua::GetFarPlane(lua_State* L)
 {
-	wiLua::SSetFloat(L, component->zFarP);
+	wi::lua::SSetFloat(L, component->zFarP);
 	return 1;
 }
 int CameraComponent_BindLua::SetFarPlane(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		component->zFarP = wiLua::SGetFloat(L, 1);
+		component->zFarP = wi::lua::SGetFloat(L, 1);
 	}
 	else
 	{
-		wiLua::SError(L, "SetFarPlane(float value) not enough arguments!");
+		wi::lua::SError(L, "SetFarPlane(float value) not enough arguments!");
 	}
 	return 0;
 }
 int CameraComponent_BindLua::GetFocalLength(lua_State* L)
 {
-	wiLua::SSetFloat(L, component->focal_length);
+	wi::lua::SSetFloat(L, component->focal_length);
 	return 1;
 }
 int CameraComponent_BindLua::SetFocalLength(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		component->focal_length = wiLua::SGetFloat(L, 1);
+		component->focal_length = wi::lua::SGetFloat(L, 1);
 	}
 	else
 	{
-		wiLua::SError(L, "SetFocalLength(float value) not enough arguments!");
+		wi::lua::SError(L, "SetFocalLength(float value) not enough arguments!");
 	}
 	return 0;
 }
 int CameraComponent_BindLua::GetApertureSize(lua_State* L)
 {
-	wiLua::SSetFloat(L, component->aperture_size);
+	wi::lua::SSetFloat(L, component->aperture_size);
 	return 1;
 }
 int CameraComponent_BindLua::SetApertureSize(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		component->aperture_size = wiLua::SGetFloat(L, 1);
+		component->aperture_size = wi::lua::SGetFloat(L, 1);
 	}
 	else
 	{
-		wiLua::SError(L, "SetApertureSize(float value) not enough arguments!");
+		wi::lua::SError(L, "SetApertureSize(float value) not enough arguments!");
 	}
 	return 0;
 }
@@ -1631,7 +1630,7 @@ int CameraComponent_BindLua::GetApertureShape(lua_State* L)
 }
 int CameraComponent_BindLua::SetApertureShape(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
 		Vector_BindLua* param = Luna<Vector_BindLua>::lightcheck(L, 1);
@@ -1642,7 +1641,7 @@ int CameraComponent_BindLua::SetApertureShape(lua_State* L)
 	}
 	else
 	{
-		wiLua::SError(L, "SetApertureShape(Vector value) not enough arguments!");
+		wi::lua::SError(L, "SetApertureShape(Vector value) not enough arguments!");
 	}
 	return 0;
 }
@@ -1736,69 +1735,69 @@ int AnimationComponent_BindLua::Stop(lua_State* L)
 }
 int AnimationComponent_BindLua::SetLooped(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		bool looped = wiLua::SGetBool(L, 1);
+		bool looped = wi::lua::SGetBool(L, 1);
 		component->SetLooped(looped);
 	}
 	else
 	{
-		wiLua::SError(L, "SetLooped(bool value) not enough arguments!");
+		wi::lua::SError(L, "SetLooped(bool value) not enough arguments!");
 	}
 	return 0;
 }
 int AnimationComponent_BindLua::IsLooped(lua_State* L)
 {
-	wiLua::SSetBool(L, component->IsLooped());
+	wi::lua::SSetBool(L, component->IsLooped());
 	return 1;
 }
 int AnimationComponent_BindLua::IsPlaying(lua_State* L)
 {
-	wiLua::SSetBool(L, component->IsPlaying());
+	wi::lua::SSetBool(L, component->IsPlaying());
 	return 1;
 }
 int AnimationComponent_BindLua::IsEnded(lua_State* L)
 {
-	wiLua::SSetBool(L, component->IsEnded());
+	wi::lua::SSetBool(L, component->IsEnded());
 	return 1;
 }
 int AnimationComponent_BindLua::SetTimer(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		float value = wiLua::SGetFloat(L, 1);
+		float value = wi::lua::SGetFloat(L, 1);
 		component->timer = value;
 	}
 	else
 	{
-		wiLua::SError(L, "SetTimer(float value) not enough arguments!");
+		wi::lua::SError(L, "SetTimer(float value) not enough arguments!");
 	}
 	return 0;
 }
 int AnimationComponent_BindLua::GetTimer(lua_State* L)
 {
-	wiLua::SSetFloat(L, component->timer);
+	wi::lua::SSetFloat(L, component->timer);
 	return 1;
 }
 int AnimationComponent_BindLua::SetAmount(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		float value = wiLua::SGetFloat(L, 1);
+		float value = wi::lua::SGetFloat(L, 1);
 		component->amount = value;
 	}
 	else
 	{
-		wiLua::SError(L, "SetAmount(float value) not enough arguments!");
+		wi::lua::SError(L, "SetAmount(float value) not enough arguments!");
 	}
 	return 0;
 }
 int AnimationComponent_BindLua::GetAmount(lua_State* L)
 {
-	wiLua::SSetFloat(L, component->amount);
+	wi::lua::SSetFloat(L, component->amount);
 	return 1;
 }
 
@@ -1840,7 +1839,7 @@ MaterialComponent_BindLua::~MaterialComponent_BindLua()
 
 int MaterialComponent_BindLua::SetBaseColor(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
 		Vector_BindLua* _color = Luna<Vector_BindLua>::lightcheck(L, 1);
@@ -1852,19 +1851,19 @@ int MaterialComponent_BindLua::SetBaseColor(lua_State* L)
 		}
 		else
 		{
-			wiLua::SError(L, "SetBaseColor(Vector color) first argument must be of Vector type!");
+			wi::lua::SError(L, "SetBaseColor(Vector color) first argument must be of Vector type!");
 		}
 	}
 	else
 	{
-		wiLua::SError(L, "SetBaseColor(Vector color) not enough arguments!");
+		wi::lua::SError(L, "SetBaseColor(Vector color) not enough arguments!");
 	}
 
 	return 0;
 }
 int MaterialComponent_BindLua::SetEmissiveColor(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
 		Vector_BindLua* _color = Luna<Vector_BindLua>::lightcheck(L, 1);
@@ -1876,48 +1875,48 @@ int MaterialComponent_BindLua::SetEmissiveColor(lua_State* L)
 		}
 		else
 		{
-			wiLua::SError(L, "SetEmissiveColor(Vector color) first argument must be of Vector type!");
+			wi::lua::SError(L, "SetEmissiveColor(Vector color) first argument must be of Vector type!");
 		}
 	}
 	else
 	{
-		wiLua::SError(L, "SetEmissiveColor(Vector color) not enough arguments!");
+		wi::lua::SError(L, "SetEmissiveColor(Vector color) not enough arguments!");
 	}
 
 	return 0;
 }
 int MaterialComponent_BindLua::SetEngineStencilRef(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		component->engineStencilRef = (STENCILREF)wiLua::SGetInt(L, 1);
+		component->engineStencilRef = (wi::enums::STENCILREF)wi::lua::SGetInt(L, 1);
 	}
 	else
 	{
-		wiLua::SError(L, "SetEngineStencilRef(int value) not enough arguments!");
+		wi::lua::SError(L, "SetEngineStencilRef(int value) not enough arguments!");
 	}
 
 	return 0;
 }
 int MaterialComponent_BindLua::SetUserStencilRef(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		uint8_t value = (uint8_t)wiLua::SGetInt(L, 1);
+		uint8_t value = (uint8_t)wi::lua::SGetInt(L, 1);
 		component->SetUserStencilRef(value);
 	}
 	else
 	{
-		wiLua::SError(L, "SetUserStencilRef(int value) not enough arguments!");
+		wi::lua::SError(L, "SetUserStencilRef(int value) not enough arguments!");
 	}
 
 	return 0;
 }
 int MaterialComponent_BindLua::GetStencilRef(lua_State* L)
 {
-	wiLua::SSetInt(L, (int)component->GetStencilRef());
+	wi::lua::SSetInt(L, (int)component->GetStencilRef());
 	return 1;
 }
 
@@ -1953,7 +1952,7 @@ Luna<EmitterComponent_BindLua>::PropertyType EmitterComponent_BindLua::propertie
 EmitterComponent_BindLua::EmitterComponent_BindLua(lua_State *L)
 {
 	owning = true;
-	component = new wiEmittedParticle;
+	component = new wi::EmittedParticleSystem;
 }
 EmitterComponent_BindLua::~EmitterComponent_BindLua()
 {
@@ -1965,154 +1964,154 @@ EmitterComponent_BindLua::~EmitterComponent_BindLua()
 
 int EmitterComponent_BindLua::Burst(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		component->Burst(wiLua::SGetInt(L, 1));
+		component->Burst(wi::lua::SGetInt(L, 1));
 	}
 	else
 	{
-		wiLua::SError(L, "Burst(int value) not enough arguments!");
+		wi::lua::SError(L, "Burst(int value) not enough arguments!");
 	}
 
 	return 0;
 }
 int EmitterComponent_BindLua::SetEmitCount(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		component->count = wiLua::SGetFloat(L, 1);
+		component->count = wi::lua::SGetFloat(L, 1);
 	}
 	else
 	{
-		wiLua::SError(L, "SetEmitCount(float value) not enough arguments!");
+		wi::lua::SError(L, "SetEmitCount(float value) not enough arguments!");
 	}
 
 	return 0;
 }
 int EmitterComponent_BindLua::SetSize(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		component->size = wiLua::SGetFloat(L, 1);
+		component->size = wi::lua::SGetFloat(L, 1);
 	}
 	else
 	{
-		wiLua::SError(L, "SetSize(float value) not enough arguments!");
+		wi::lua::SError(L, "SetSize(float value) not enough arguments!");
 	}
 
 	return 0;
 }
 int EmitterComponent_BindLua::SetLife(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		component->life = wiLua::SGetFloat(L, 1);
+		component->life = wi::lua::SGetFloat(L, 1);
 	}
 	else
 	{
-		wiLua::SError(L, "SetLife(float value) not enough arguments!");
+		wi::lua::SError(L, "SetLife(float value) not enough arguments!");
 	}
 
 	return 0;
 }
 int EmitterComponent_BindLua::SetNormalFactor(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		component->normal_factor = wiLua::SGetFloat(L, 1);
+		component->normal_factor = wi::lua::SGetFloat(L, 1);
 	}
 	else
 	{
-		wiLua::SError(L, "SetNormalFactor(float value) not enough arguments!");
+		wi::lua::SError(L, "SetNormalFactor(float value) not enough arguments!");
 	}
 
 	return 0;
 }
 int EmitterComponent_BindLua::SetRandomness(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		component->random_factor = wiLua::SGetFloat(L, 1);
+		component->random_factor = wi::lua::SGetFloat(L, 1);
 	}
 	else
 	{
-		wiLua::SError(L, "SetRandomness(float value) not enough arguments!");
+		wi::lua::SError(L, "SetRandomness(float value) not enough arguments!");
 	}
 
 	return 0;
 }
 int EmitterComponent_BindLua::SetLifeRandomness(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		component->random_life = wiLua::SGetFloat(L, 1);
+		component->random_life = wi::lua::SGetFloat(L, 1);
 	}
 	else
 	{
-		wiLua::SError(L, "SetLifeRandomness(float value) not enough arguments!");
+		wi::lua::SError(L, "SetLifeRandomness(float value) not enough arguments!");
 	}
 
 	return 0;
 }
 int EmitterComponent_BindLua::SetScaleX(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		component->scaleX = wiLua::SGetFloat(L, 1);
+		component->scaleX = wi::lua::SGetFloat(L, 1);
 	}
 	else
 	{
-		wiLua::SError(L, "SetScaleX(float value) not enough arguments!");
+		wi::lua::SError(L, "SetScaleX(float value) not enough arguments!");
 	}
 
 	return 0;
 }
 int EmitterComponent_BindLua::SetScaleY(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		component->scaleY = wiLua::SGetFloat(L, 1);
+		component->scaleY = wi::lua::SGetFloat(L, 1);
 	}
 	else
 	{
-		wiLua::SError(L, "SetScaleY(float value) not enough arguments!");
+		wi::lua::SError(L, "SetScaleY(float value) not enough arguments!");
 	}
 
 	return 0;
 }
 int EmitterComponent_BindLua::SetRotation(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		component->rotation = wiLua::SGetFloat(L, 1);
+		component->rotation = wi::lua::SGetFloat(L, 1);
 	}
 	else
 	{
-		wiLua::SError(L, "SetRotation(float value) not enough arguments!");
+		wi::lua::SError(L, "SetRotation(float value) not enough arguments!");
 	}
 
 	return 0;
 }
 int EmitterComponent_BindLua::SetMotionBlurAmount(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		component->motionBlurAmount = wiLua::SGetFloat(L, 1);
+		component->motionBlurAmount = wi::lua::SGetFloat(L, 1);
 	}
 	else
 	{
-		wiLua::SError(L, "SetMotionBlurAmount(float value) not enough arguments!");
+		wi::lua::SError(L, "SetMotionBlurAmount(float value) not enough arguments!");
 	}
 
 	return 0;
@@ -2157,52 +2156,52 @@ LightComponent_BindLua::~LightComponent_BindLua()
 
 int LightComponent_BindLua::SetType(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		int value = wiLua::SGetInt(L, 1);
+		int value = wi::lua::SGetInt(L, 1);
 		component->SetType((LightComponent::LightType)value);
 	}
 	else
 	{
-		wiLua::SError(L, "SetType(int value) not enough arguments!");
+		wi::lua::SError(L, "SetType(int value) not enough arguments!");
 	}
 
 	return 0;
 }
 int LightComponent_BindLua::SetRange(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		float value = wiLua::SGetFloat(L, 1);
+		float value = wi::lua::SGetFloat(L, 1);
 		component->range_local = value;
 	}
 	else
 	{
-		wiLua::SError(L, "SetRange(float value) not enough arguments!");
+		wi::lua::SError(L, "SetRange(float value) not enough arguments!");
 	}
 
 	return 0;
 }
 int LightComponent_BindLua::SetEnergy(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		float value = wiLua::SGetFloat(L, 1);
+		float value = wi::lua::SGetFloat(L, 1);
 		component->energy = value;
 	}
 	else
 	{
-		wiLua::SError(L, "SetEnergy(float value) not enough arguments!");
+		wi::lua::SError(L, "SetEnergy(float value) not enough arguments!");
 	}
 
 	return 0;
 }
 int LightComponent_BindLua::SetColor(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
 		Vector_BindLua* value = Luna<Vector_BindLua>::lightcheck(L, 1);
@@ -2212,26 +2211,26 @@ int LightComponent_BindLua::SetColor(lua_State* L)
 		}
 		else
 		{
-			wiLua::SError(L, "SetColor(Vector value) argument must be Vector type!");
+			wi::lua::SError(L, "SetColor(Vector value) argument must be Vector type!");
 		}
 	}
 	else
 	{
-		wiLua::SError(L, "SetColor(Vector value) not enough arguments!");
+		wi::lua::SError(L, "SetColor(Vector value) not enough arguments!");
 	}
 
 	return 0;
 }
 int LightComponent_BindLua::SetCastShadow(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		component->SetCastShadow(wiLua::SGetBool(L, 1));
+		component->SetCastShadow(wi::lua::SGetBool(L, 1));
 	}
 	else
 	{
-		wiLua::SError(L, "SetCastShadow(bool value) not enough arguments!");
+		wi::lua::SError(L, "SetCastShadow(bool value) not enough arguments!");
 	}
 
 	return 0;
@@ -2239,7 +2238,7 @@ int LightComponent_BindLua::SetCastShadow(lua_State* L)
 
 int LightComponent_BindLua::GetType(lua_State* L)
 {
-	wiLua::SSetInt(L, (int)component->GetType());
+	wi::lua::SSetInt(L, (int)component->GetType());
 	return 1;
 }
 
@@ -2284,7 +2283,7 @@ ObjectComponent_BindLua::~ObjectComponent_BindLua()
 
 int ObjectComponent_BindLua::GetMeshID(lua_State* L)
 {
-	wiLua::SSetLongLong(L, component->meshID);
+	wi::lua::SSetLongLong(L, component->meshID);
 	return 1;
 }
 int ObjectComponent_BindLua::GetColor(lua_State* L)
@@ -2294,28 +2293,28 @@ int ObjectComponent_BindLua::GetColor(lua_State* L)
 }
 int ObjectComponent_BindLua::GetUserStencilRef(lua_State* L)
 {
-	wiLua::SSetInt(L, (int)component->userStencilRef);
+	wi::lua::SSetInt(L, (int)component->userStencilRef);
 	return 1;
 }
 
 int ObjectComponent_BindLua::SetMeshID(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity meshID = (Entity)wiLua::SGetLongLong(L, 1);
+		Entity meshID = (Entity)wi::lua::SGetLongLong(L, 1);
 		component->meshID = meshID;
 	}
 	else
 	{
-		wiLua::SError(L, "SetMeshID(Entity entity) not enough arguments!");
+		wi::lua::SError(L, "SetMeshID(Entity entity) not enough arguments!");
 	}
 
 	return 0;
 }
 int ObjectComponent_BindLua::SetColor(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
 		Vector_BindLua* value = Luna<Vector_BindLua>::lightcheck(L, 1);
@@ -2325,27 +2324,27 @@ int ObjectComponent_BindLua::SetColor(lua_State* L)
 		}
 		else
 		{
-			wiLua::SError(L, "SetColor(Vector value) argument must be Vector type!");
+			wi::lua::SError(L, "SetColor(Vector value) argument must be Vector type!");
 		}
 	}
 	else
 	{
-		wiLua::SError(L, "SetColor(Vector value) not enough arguments!");
+		wi::lua::SError(L, "SetColor(Vector value) not enough arguments!");
 	}
 
 	return 0;
 }
 int ObjectComponent_BindLua::SetUserStencilRef(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		int value = wiLua::SGetInt(L, 1);
+		int value = wi::lua::SGetInt(L, 1);
 		component->SetUserStencilRef((uint8_t)value);
 	}
 	else
 	{
-		wiLua::SError(L, "SetUserStencilRef(int value) not enough arguments!");
+		wi::lua::SError(L, "SetUserStencilRef(int value) not enough arguments!");
 	}
 
 	return 0;
@@ -2388,43 +2387,43 @@ InverseKinematicsComponent_BindLua::~InverseKinematicsComponent_BindLua()
 
 int InverseKinematicsComponent_BindLua::SetTarget(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		Entity entity = (Entity)wiLua::SGetLongLong(L, 1);
+		Entity entity = (Entity)wi::lua::SGetLongLong(L, 1);
 		component->target = entity;
 	}
 	else
 	{
-		wiLua::SError(L, "SetTarget(Entity entity) not enough arguments!");
+		wi::lua::SError(L, "SetTarget(Entity entity) not enough arguments!");
 	}
 	return 0;
 }
 int InverseKinematicsComponent_BindLua::SetChainLength(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		uint32_t value = (uint32_t)wiLua::SGetInt(L, 1);
+		uint32_t value = (uint32_t)wi::lua::SGetInt(L, 1);
 		component->chain_length = value;
 	}
 	else
 	{
-		wiLua::SError(L, "SetChainLength(int value) not enough arguments!");
+		wi::lua::SError(L, "SetChainLength(int value) not enough arguments!");
 	}
 	return 0;
 }
 int InverseKinematicsComponent_BindLua::SetIterationCount(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		uint32_t value = (uint32_t)wiLua::SGetInt(L, 1);
+		uint32_t value = (uint32_t)wi::lua::SGetInt(L, 1);
 		component->iteration_count = value;
 	}
 	else
 	{
-		wiLua::SError(L, "SetIterationCount(int value) not enough arguments!");
+		wi::lua::SError(L, "SetIterationCount(int value) not enough arguments!");
 	}
 	return 0;
 }
@@ -2432,10 +2431,10 @@ int InverseKinematicsComponent_BindLua::SetDisabled(lua_State* L)
 {
 	bool value = true;
 
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		value = wiLua::SGetBool(L, 1);
+		value = wi::lua::SGetBool(L, 1);
 	}
 
 	component->SetDisabled(value);
@@ -2444,22 +2443,22 @@ int InverseKinematicsComponent_BindLua::SetDisabled(lua_State* L)
 }
 int InverseKinematicsComponent_BindLua::GetTarget(lua_State* L)
 {
-	wiLua::SSetLongLong(L, component->target);
+	wi::lua::SSetLongLong(L, component->target);
 	return 1;
 }
 int InverseKinematicsComponent_BindLua::GetChainLength(lua_State* L)
 {
-	wiLua::SSetInt(L, (int)component->chain_length);
+	wi::lua::SSetInt(L, (int)component->chain_length);
 	return 1;
 }
 int InverseKinematicsComponent_BindLua::GetIterationCount(lua_State* L)
 {
-	wiLua::SSetInt(L, (int)component->iteration_count);
+	wi::lua::SSetInt(L, (int)component->iteration_count);
 	return 1;
 }
 int InverseKinematicsComponent_BindLua::IsDisabled(lua_State* L)
 {
-	wiLua::SSetBool(L, component->IsDisabled());
+	wi::lua::SSetBool(L, component->IsDisabled());
 	return 1;
 }
 
@@ -2495,43 +2494,43 @@ SpringComponent_BindLua::~SpringComponent_BindLua()
 
 int SpringComponent_BindLua::SetStiffness(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		float value = wiLua::SGetFloat(L, 1);
+		float value = wi::lua::SGetFloat(L, 1);
 		component->stiffness = value;
 	}
 	else
 	{
-		wiLua::SError(L, "SetStiffness(float value) not enough arguments!");
+		wi::lua::SError(L, "SetStiffness(float value) not enough arguments!");
 	}
 	return 0;
 }
 int SpringComponent_BindLua::SetDamping(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		float value = wiLua::SGetFloat(L, 1);
+		float value = wi::lua::SGetFloat(L, 1);
 		component->damping = value;
 	}
 	else
 	{
-		wiLua::SError(L, "SetDamping(float value) not enough arguments!");
+		wi::lua::SError(L, "SetDamping(float value) not enough arguments!");
 	}
 	return 0;
 }
 int SpringComponent_BindLua::SetWindAffection(lua_State* L)
 {
-	int argc = wiLua::SGetArgCount(L);
+	int argc = wi::lua::SGetArgCount(L);
 	if (argc > 0)
 	{
-		float value = wiLua::SGetFloat(L, 1);
+		float value = wi::lua::SGetFloat(L, 1);
 		component->wind_affection = value;
 	}
 	else
 	{
-		wiLua::SError(L, "SetWindAffection(float value) not enough arguments!");
+		wi::lua::SError(L, "SetWindAffection(float value) not enough arguments!");
 	}
 	return 0;
 }

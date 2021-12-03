@@ -6,7 +6,7 @@ class EditorComponent;
 enum PICKTYPE
 {
 	PICK_VOID				= 0,
-	PICK_OBJECT				= RENDERTYPE_OPAQUE | RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER,
+	PICK_OBJECT				= wi::enums::RENDERTYPE_ALL,
 	PICK_LIGHT				= 8,
 	PICK_DECAL				= 16,
 	PICK_ENVPROBE			= 32,
@@ -18,68 +18,68 @@ enum PICKTYPE
 	PICK_SOUND				= 2048,
 };
 
-class RendererWindow : public wiWindow
+class RendererWindow : public wi::gui::Window
 {
 public:
 	void Create(EditorComponent* editorcomponent);
 
-	wiCheckBox vsyncCheckBox;
-	wiComboBox swapchainComboBox;
-	wiCheckBox occlusionCullingCheckBox;
-	wiSlider resolutionScaleSlider;
-	wiCheckBox surfelGICheckBox;
-	wiCheckBox surfelGIDebugCheckBox;
-	wiCheckBox voxelRadianceCheckBox;
-	wiCheckBox voxelRadianceDebugCheckBox;
-	wiCheckBox voxelRadianceSecondaryBounceCheckBox;
-	wiCheckBox voxelRadianceReflectionsCheckBox;
-	wiSlider voxelRadianceVoxelSizeSlider;
-	wiSlider voxelRadianceConeTracingSlider;
-	wiSlider voxelRadianceRayStepSizeSlider;
-	wiSlider voxelRadianceMaxDistanceSlider;
-	wiCheckBox physicsDebugCheckBox;
-	wiCheckBox partitionBoxesCheckBox;
-	wiCheckBox boneLinesCheckBox;
-	wiCheckBox debugEmittersCheckBox;
-	wiCheckBox debugForceFieldsCheckBox;
-	wiCheckBox debugRaytraceBVHCheckBox;
-	wiCheckBox wireFrameCheckBox;
-	wiCheckBox variableRateShadingClassificationCheckBox;
-	wiCheckBox variableRateShadingClassificationDebugCheckBox;
-	wiCheckBox advancedLightCullingCheckBox;
-	wiCheckBox debugLightCullingCheckBox;
-	wiCheckBox tessellationCheckBox;
-	wiCheckBox envProbesCheckBox;
-	wiCheckBox gridHelperCheckBox;
-	wiCheckBox cameraVisCheckBox;
-	wiCheckBox pickTypeObjectCheckBox;
-	wiCheckBox pickTypeEnvProbeCheckBox;
-	wiCheckBox pickTypeLightCheckBox;
-	wiCheckBox pickTypeDecalCheckBox;
-	wiCheckBox pickTypeForceFieldCheckBox;
-	wiCheckBox pickTypeEmitterCheckBox;
-	wiCheckBox pickTypeHairCheckBox;
-	wiCheckBox pickTypeCameraCheckBox;
-	wiCheckBox pickTypeArmatureCheckBox;
-	wiCheckBox pickTypeSoundCheckBox;
-	wiSlider speedMultiplierSlider;
-	wiCheckBox transparentShadowsCheckBox;
-	wiComboBox shadowTypeComboBox;
-	wiComboBox shadowProps2DComboBox;
-	wiComboBox shadowPropsCubeComboBox;
-	wiComboBox MSAAComboBox;
-	wiCheckBox temporalAACheckBox;
-	wiCheckBox temporalAADebugCheckBox;
-	wiComboBox textureQualityComboBox;
-	wiSlider mipLodBiasSlider;
-	wiSlider raytraceBounceCountSlider;
+	wi::gui::CheckBox vsyncCheckBox;
+	wi::gui::ComboBox swapchainComboBox;
+	wi::gui::CheckBox occlusionCullingCheckBox;
+	wi::gui::Slider resolutionScaleSlider;
+	wi::gui::CheckBox surfelGICheckBox;
+	wi::gui::CheckBox surfelGIDebugCheckBox;
+	wi::gui::CheckBox voxelRadianceCheckBox;
+	wi::gui::CheckBox voxelRadianceDebugCheckBox;
+	wi::gui::CheckBox voxelRadianceSecondaryBounceCheckBox;
+	wi::gui::CheckBox voxelRadianceReflectionsCheckBox;
+	wi::gui::Slider voxelRadianceVoxelSizeSlider;
+	wi::gui::Slider voxelRadianceConeTracingSlider;
+	wi::gui::Slider voxelRadianceRayStepSizeSlider;
+	wi::gui::Slider voxelRadianceMaxDistanceSlider;
+	wi::gui::CheckBox physicsDebugCheckBox;
+	wi::gui::CheckBox partitionBoxesCheckBox;
+	wi::gui::CheckBox boneLinesCheckBox;
+	wi::gui::CheckBox debugEmittersCheckBox;
+	wi::gui::CheckBox debugForceFieldsCheckBox;
+	wi::gui::CheckBox debugRaytraceBVHCheckBox;
+	wi::gui::CheckBox wireFrameCheckBox;
+	wi::gui::CheckBox variableRateShadingClassificationCheckBox;
+	wi::gui::CheckBox variableRateShadingClassificationDebugCheckBox;
+	wi::gui::CheckBox advancedLightCullingCheckBox;
+	wi::gui::CheckBox debugLightCullingCheckBox;
+	wi::gui::CheckBox tessellationCheckBox;
+	wi::gui::CheckBox envProbesCheckBox;
+	wi::gui::CheckBox gridHelperCheckBox;
+	wi::gui::CheckBox cameraVisCheckBox;
+	wi::gui::CheckBox pickTypeObjectCheckBox;
+	wi::gui::CheckBox pickTypeEnvProbeCheckBox;
+	wi::gui::CheckBox pickTypeLightCheckBox;
+	wi::gui::CheckBox pickTypeDecalCheckBox;
+	wi::gui::CheckBox pickTypeForceFieldCheckBox;
+	wi::gui::CheckBox pickTypeEmitterCheckBox;
+	wi::gui::CheckBox pickTypeHairCheckBox;
+	wi::gui::CheckBox pickTypeCameraCheckBox;
+	wi::gui::CheckBox pickTypeArmatureCheckBox;
+	wi::gui::CheckBox pickTypeSoundCheckBox;
+	wi::gui::Slider speedMultiplierSlider;
+	wi::gui::CheckBox transparentShadowsCheckBox;
+	wi::gui::ComboBox shadowTypeComboBox;
+	wi::gui::ComboBox shadowProps2DComboBox;
+	wi::gui::ComboBox shadowPropsCubeComboBox;
+	wi::gui::ComboBox MSAAComboBox;
+	wi::gui::CheckBox temporalAACheckBox;
+	wi::gui::CheckBox temporalAADebugCheckBox;
+	wi::gui::ComboBox textureQualityComboBox;
+	wi::gui::Slider mipLodBiasSlider;
+	wi::gui::Slider raytraceBounceCountSlider;
 
-	wiCheckBox freezeCullingCameraCheckBox;
-	wiCheckBox disableAlbedoMapsCheckBox;
-	wiCheckBox forceDiffuseLightingCheckBox;
+	wi::gui::CheckBox freezeCullingCameraCheckBox;
+	wi::gui::CheckBox disableAlbedoMapsCheckBox;
+	wi::gui::CheckBox forceDiffuseLightingCheckBox;
 
     uint32_t GetPickType() const;
 
-	void UpdateSwapChainFormats(wiGraphics::SwapChain* swapChain);
+	void UpdateSwapChainFormats(wi::graphics::SwapChain* swapChain);
 };
 

@@ -5,15 +5,15 @@
 
 #include <cmath>
 
-using namespace wiECS;
-using namespace wiScene;
-using namespace wiGraphics;
+using namespace wi::ecs;
+using namespace wi::scene;
+using namespace wi::graphics;
 
 void PaintToolWindow::Create(EditorComponent* editor)
 {
 	this->editor = editor;
 
-	wiWindow::Create("Paint Tool Window");
+	wi::gui::Window::Create("Paint Tool Window");
 	SetSize(XMFLOAT2(400, 600));
 
 	float x = 100;
@@ -37,7 +37,7 @@ void PaintToolWindow::Create(EditorComponent* editor)
 	modeComboBox.AddItem("Hairparticle - Length (Alpha)");
 	modeComboBox.AddItem("Wind weight (Alpha)");
 	modeComboBox.SetSelected(0);
-	modeComboBox.OnSelect([&](wiEventArgs args) {
+	modeComboBox.OnSelect([&](wi::gui::EventArgs args) {
 		textureSlotComboBox.SetEnabled(false);
 		saveTextureButton.SetEnabled(false);
 		switch (args.iValue)
@@ -86,7 +86,7 @@ void PaintToolWindow::Create(EditorComponent* editor)
 	infoLabel.Create("Paint Tool is disabled.");
 	infoLabel.SetSize(XMFLOAT2(400 - 20, 100));
 	infoLabel.SetPos(XMFLOAT2(10, y));
-	infoLabel.SetColor(wiColor::Transparent());
+	infoLabel.SetColor(wi::Color::Transparent());
 	AddWidget(&infoLabel);
 	y += infoLabel.GetScale().y - step + 5;
 
@@ -159,9 +159,9 @@ void PaintToolWindow::Create(EditorComponent* editor)
 	saveTextureButton.SetSize(XMFLOAT2(200, hei));
 	saveTextureButton.SetPos(XMFLOAT2(x, y += step));
 	saveTextureButton.SetEnabled(false);
-	saveTextureButton.OnClick([this] (wiEventArgs args) {
+	saveTextureButton.OnClick([this] (wi::gui::EventArgs args) {
 
-		Scene& scene = wiScene::GetScene();
+		Scene& scene = wi::scene::GetScene();
 		ObjectComponent* object = scene.objects.GetComponent(entity);
 		if (object == nullptr || object->meshID == INVALID_ENTITY)
 			return;
@@ -179,13 +179,13 @@ void PaintToolWindow::Create(EditorComponent* editor)
 		uint64_t sel = textureSlotComboBox.GetItemUserData(textureSlotComboBox.GetSelected());
 
 		wi::vector<uint8_t> texturefiledata;
-		if (wiHelper::saveTextureToMemoryFile(editTexture, "PNG", texturefiledata))
+		if (wi::helper::saveTextureToMemoryFile(editTexture, "PNG", texturefiledata))
 		{
-			material->textures[sel].resource->filedata = texturefiledata;
+			material->textures[sel].resource.SetFileData(texturefiledata);
 		}
 		else
 		{
-			wiHelper::messageBox("Saving texture failed! :(");
+			wi::helper::messageBox("Saving texture failed! :(");
 		}
 
 	});
@@ -208,21 +208,21 @@ void PaintToolWindow::Update(float dt)
 	XMFLOAT2 posNew;
 	posNew.x = editor->GetLogicalWidth() * 0.5f;
 	posNew.y = editor->GetLogicalHeight() * 0.5f;
-	if (editor->GetGUI().HasFocus() || wiBackLog::isActive() || entity == INVALID_ENTITY)
+	if (editor->GetGUI().HasFocus() || wi::backlog::isActive() || entity == INVALID_ENTITY)
 	{
 		pos = posNew;
 		return;
 	}
 
-	const bool pointer_down = wiInput::Down(wiInput::MOUSE_BUTTON_LEFT);
+	const bool pointer_down = wi::input::Down(wi::input::MOUSE_BUTTON_LEFT);
 	if (!pointer_down)
 	{
 		stroke_dist = FLT_MAX;
 	}
 
-	auto pointer = wiInput::GetPointer();
+	auto pointer = wi::input::GetPointer();
 	posNew = XMFLOAT2(pointer.x, pointer.y);
-	stroke_dist += wiMath::Distance(pos, posNew);
+	stroke_dist += wi::math::Distance(pos, posNew);
 	const float pressure = pressureCheckBox.GetCheck() ? pointer.w : 1.0f;
 
 	const float spacing = spacingSlider.GetValue();
@@ -241,13 +241,13 @@ void PaintToolWindow::Update(float dt)
 	const float pressure_radius = radius * pressure;
 	const float amount = amountSlider.GetValue();
 	const float falloff = falloffSlider.GetValue();
-	const wiColor color = colorPicker.GetPickColor();
+	const wi::Color color = colorPicker.GetPickColor();
 	const XMFLOAT4 color_float = color.toFloat4();
 	const bool backfaces = backfaceCheckBox.GetCheck();
 	const bool wireframe = wireCheckBox.GetCheck();
 
-	Scene& scene = wiScene::GetScene();
-	const CameraComponent& camera = wiScene::GetCamera();
+	Scene& scene = wi::scene::GetScene();
+	const CameraComponent& camera = wi::scene::GetCamera();
 	const XMVECTOR C = XMLoadFloat2(&pos);
 	const XMMATRIX VP = camera.GetViewProjection();
 	const XMVECTOR MUL = XMVectorSet(0.5f, -0.5f, 1, 1);
@@ -259,7 +259,7 @@ void PaintToolWindow::Update(float dt)
 	{
 	case MODE_TEXTURE:
 	{
-		const wiScene::PickResult& intersect = editor->hovered;
+		const wi::scene::PickResult& intersect = editor->hovered;
 		if (intersect.entity != entity)
 			break;
 
@@ -296,7 +296,7 @@ void PaintToolWindow::Update(float dt)
 
 		if (painting)
 		{
-			GraphicsDevice* device = wiGraphics::GetDevice();
+			GraphicsDevice* device = wi::graphics::GetDevice();
 			CommandList cmd = device->BeginCommandList();
 
 			RecordHistory(true, cmd);
@@ -304,10 +304,10 @@ void PaintToolWindow::Update(float dt)
 			// Need to requery this because RecordHistory might swap textures on material:
 			editTexture = GetEditTextureSlot(*material, &uvset);
 
-			device->BindComputeShader(wiRenderer::GetShader(CSTYPE_PAINT_TEXTURE), cmd);
+			device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_PAINT_TEXTURE), cmd);
 
-			wiRenderer::BindCommonResources(cmd);
-			device->BindResource(wiTextureHelper::getWhite(), 0, cmd);
+			wi::renderer::BindCommonResources(cmd);
+			device->BindResource(wi::texturehelper::getWhite(), 0, cmd);
 			device->BindUAV(&editTexture, 0, cmd);
 
 			PaintTextureCB cb;
@@ -328,10 +328,10 @@ void PaintToolWindow::Update(float dt)
 			device->Barrier(barriers, arraysize(barriers), cmd);
 
 
-			wiRenderer::GenerateMipChain(editTexture, wiRenderer::MIPGENFILTER::MIPGENFILTER_LINEAR, cmd);
+			wi::renderer::GenerateMipChain(editTexture, wi::renderer::MIPGENFILTER::MIPGENFILTER_LINEAR, cmd);
 		}
 
-		wiRenderer::PaintRadius paintrad;
+		wi::renderer::PaintRadius paintrad;
 		paintrad.objectEntity = entity;
 		paintrad.subset = subset;
 		paintrad.radius = radius;
@@ -339,7 +339,7 @@ void PaintToolWindow::Update(float dt)
 		paintrad.uvset = uvset;
 		paintrad.dimensions.x = desc.width;
 		paintrad.dimensions.y = desc.height;
-		wiRenderer::DrawPaintRadius(paintrad);
+		wi::renderer::DrawPaintRadius(paintrad);
 	}
 	break;
 
@@ -404,7 +404,7 @@ void PaintToolWindow::Update(float dt)
 			if (mesh->vertex_colors.empty())
 			{
 				mesh->vertex_colors.resize(mesh->vertex_positions.size());
-				std::fill(mesh->vertex_colors.begin(), mesh->vertex_colors.end(), wiColor::White().rgba); // fill white
+				std::fill(mesh->vertex_colors.begin(), mesh->vertex_colors.end(), wi::Color::White().rgba); // fill white
 				rebuild = true;
 			}
 			break;
@@ -430,7 +430,7 @@ void PaintToolWindow::Update(float dt)
 				}
 				else
 				{
-					P = wiScene::SkinVertex(*mesh, *armature, (uint32_t)j, &N);
+					P = wi::scene::SkinVertex(*mesh, *armature, (uint32_t)j, &N);
 				}
 				P = XMVector3Transform(P, W);
 				N = XMVector3Normalize(XMVector3TransformNormal(N, W));
@@ -457,15 +457,15 @@ void PaintToolWindow::Update(float dt)
 					{
 					case MODE_VERTEXCOLOR:
 					{
-						wiColor vcol = mesh->vertex_colors[j];
-						vcol = wiColor::lerp(vcol, color, affection);
+						wi::Color vcol = mesh->vertex_colors[j];
+						vcol = wi::Color::lerp(vcol, color, affection);
 						mesh->vertex_colors[j] = vcol.rgba;
 					}
 					break;
 					case MODE_WIND:
 					{
-						wiColor vcol = wiColor(0, 0, 0, mesh->vertex_windweights[j]);
-						vcol = wiColor::lerp(vcol, color, affection);
+						wi::Color vcol = wi::Color(0, 0, 0, mesh->vertex_windweights[j]);
+						vcol = wi::Color::lerp(vcol, color, affection);
 						mesh->vertex_windweights[j] = vcol.getA();
 					}
 					break;
@@ -487,20 +487,20 @@ void PaintToolWindow::Update(float dt)
 					continue;
 
 				const XMVECTOR P[arraysize(triangle)] = {
-					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[0]]) : wiScene::SkinVertex(*mesh, *armature, triangle[0]), W),
-					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[1]]) : wiScene::SkinVertex(*mesh, *armature, triangle[1]), W),
-					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[2]]) : wiScene::SkinVertex(*mesh, *armature, triangle[2]), W),
+					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[0]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[0]), W),
+					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[1]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[1]), W),
+					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[2]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[2]), W),
 				};
 
-				wiRenderer::RenderableTriangle tri;
+				wi::renderer::RenderableTriangle tri;
 				XMStoreFloat3(&tri.positionA, P[0]);
 				XMStoreFloat3(&tri.positionB, P[1]);
 				XMStoreFloat3(&tri.positionC, P[2]);
 				if (mode == MODE_WIND)
 				{
-					tri.colorA = wiColor(mesh->vertex_windweights[triangle[0]], 0, 0, 255);
-					tri.colorB = wiColor(mesh->vertex_windweights[triangle[1]], 0, 0, 255);
-					tri.colorC = wiColor(mesh->vertex_windweights[triangle[2]], 0, 0, 255);
+					tri.colorA = wi::Color(mesh->vertex_windweights[triangle[0]], 0, 0, 255);
+					tri.colorB = wi::Color(mesh->vertex_windweights[triangle[1]], 0, 0, 255);
+					tri.colorC = wi::Color(mesh->vertex_windweights[triangle[2]], 0, 0, 255);
 				}
 				else
 				{
@@ -508,7 +508,7 @@ void PaintToolWindow::Update(float dt)
 					tri.colorB.w = 0.8f;
 					tri.colorC.w = 0.8f;
 				}
-				wiRenderer::DrawTriangle(tri, true);
+				wi::renderer::DrawTriangle(tri, true);
 			}
 		}
 
@@ -561,7 +561,7 @@ void PaintToolWindow::Update(float dt)
 				}
 				else
 				{
-					P = wiScene::SkinVertex(*mesh, *armature, (uint32_t)j, &N);
+					P = wi::scene::SkinVertex(*mesh, *armature, (uint32_t)j, &N);
 				}
 				P = XMVector3Transform(P, W);
 				N = XMVector3Normalize(XMVector3TransformNormal(N, W));
@@ -616,19 +616,19 @@ void PaintToolWindow::Update(float dt)
 					mesh->indices[j + 2],
 				};
 				const XMVECTOR P[arraysize(triangle)] = {
-					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[0]]) : wiScene::SkinVertex(*mesh, *armature, triangle[0]), W),
-					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[1]]) : wiScene::SkinVertex(*mesh, *armature, triangle[1]), W),
-					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[2]]) : wiScene::SkinVertex(*mesh, *armature, triangle[2]), W),
+					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[0]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[0]), W),
+					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[1]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[1]), W),
+					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[2]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[2]), W),
 				};
 
-				wiRenderer::RenderableTriangle tri;
+				wi::renderer::RenderableTriangle tri;
 				XMStoreFloat3(&tri.positionA, P[0]);
 				XMStoreFloat3(&tri.positionB, P[1]);
 				XMStoreFloat3(&tri.positionC, P[2]);
 				tri.colorA.w = 0.8f;
 				tri.colorB.w = 0.8f;
 				tri.colorC.w = 0.8f;
-				wiRenderer::DrawTriangle(tri, true);
+				wi::renderer::DrawTriangle(tri, true);
 			}
 		}
 
@@ -655,7 +655,7 @@ void PaintToolWindow::Update(float dt)
 			break;
 
 		// Painting:
-		if (pointer_moved && wiInput::Down(wiInput::MOUSE_BUTTON_LEFT))
+		if (pointer_moved && wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
 		{
 			size_t j = 0;
 			for (auto& ind : softbody->physicsToGraphicsVertexMapping)
@@ -688,7 +688,7 @@ void PaintToolWindow::Update(float dt)
 			const float weight0 = softbody->weights[physicsIndex0];
 			const float weight1 = softbody->weights[physicsIndex1];
 			const float weight2 = softbody->weights[physicsIndex2];
-			wiRenderer::RenderableTriangle tri;
+			wi::renderer::RenderableTriangle tri;
 			if (softbody->vertex_positions_simulation.empty())
 			{
 				XMStoreFloat3(&tri.positionA, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[graphicsIndex0]), W));
@@ -715,12 +715,12 @@ void PaintToolWindow::Update(float dt)
 				tri.colorC = XMFLOAT4(1, 1, 1, 1);
 			if (wireframe)
 			{
-				wiRenderer::DrawTriangle(tri, true);
+				wi::renderer::DrawTriangle(tri, true);
 			}
 			if (weight0 == 0 && weight1 == 0 && weight2 == 0)
 			{
 				tri.colorA = tri.colorB = tri.colorC = XMFLOAT4(1, 0, 0, 0.8f);
-				wiRenderer::DrawTriangle(tri);
+				wi::renderer::DrawTriangle(tri);
 			}
 		}
 	}
@@ -730,7 +730,7 @@ void PaintToolWindow::Update(float dt)
 	case MODE_HAIRPARTICLE_REMOVE_TRIANGLE:
 	case MODE_HAIRPARTICLE_LENGTH:
 	{
-		wiHairParticle* hair = scene.hairs.GetComponent(entity);
+		wi::HairParticleSystem* hair = scene.hairs.GetComponent(entity);
 		if (hair == nullptr || hair->meshID == INVALID_ENTITY)
 			break;
 
@@ -758,7 +758,7 @@ void PaintToolWindow::Update(float dt)
 				}
 				else
 				{
-					P = wiScene::SkinVertex(*mesh, *armature, (uint32_t)j, &N);
+					P = wi::scene::SkinVertex(*mesh, *armature, (uint32_t)j, &N);
 				}
 				P = XMVector3Transform(P, W);
 				N = XMVector3Normalize(XMVector3TransformNormal(N, W));
@@ -787,14 +787,14 @@ void PaintToolWindow::Update(float dt)
 						if (hair->vertex_lengths[j] > 0) // don't change distribution
 						{
 							const float affection = amount * std::pow(1.0f - (dist / pressure_radius), falloff);
-							hair->vertex_lengths[j] = wiMath::Lerp(hair->vertex_lengths[j], color_float.w, affection);
+							hair->vertex_lengths[j] = wi::math::Lerp(hair->vertex_lengths[j], color_float.w, affection);
 							// don't let it "remove" the vertex by keeping its length above zero:
 							//	(because if removed, distribution also changes which might be distracting)
-							hair->vertex_lengths[j] = wiMath::Clamp(hair->vertex_lengths[j], 1.0f / 255.0f, 1.0f);
+							hair->vertex_lengths[j] = wi::math::Clamp(hair->vertex_lengths[j], 1.0f / 255.0f, 1.0f);
 						}
 						break;
 					}
-					hair->_flags |= wiHairParticle::REBUILD_BUFFERS;
+					hair->_flags |= wi::HairParticleSystem::REBUILD_BUFFERS;
 				}
 			}
 		}
@@ -809,16 +809,16 @@ void PaintToolWindow::Update(float dt)
 					mesh->indices[j + 2],
 				};
 				const XMVECTOR P[arraysize(triangle)] = {
-					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[0]]) : wiScene::SkinVertex(*mesh, *armature, triangle[0]), W),
-					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[1]]) : wiScene::SkinVertex(*mesh, *armature, triangle[1]), W),
-					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[2]]) : wiScene::SkinVertex(*mesh, *armature, triangle[2]), W),
+					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[0]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[0]), W),
+					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[1]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[1]), W),
+					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[2]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[2]), W),
 				};
 
-				wiRenderer::RenderableTriangle tri;
+				wi::renderer::RenderableTriangle tri;
 				XMStoreFloat3(&tri.positionA, P[0]);
 				XMStoreFloat3(&tri.positionB, P[1]);
 				XMStoreFloat3(&tri.positionC, P[2]);
-				wiRenderer::DrawTriangle(tri, true);
+				wi::renderer::DrawTriangle(tri, true);
 			}
 
 			for (size_t j = 0; j < hair->indices.size() && wireframe; j += 3)
@@ -829,17 +829,17 @@ void PaintToolWindow::Update(float dt)
 					hair->indices[j + 2],
 				};
 				const XMVECTOR P[arraysize(triangle)] = {
-					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[0]]) : wiScene::SkinVertex(*mesh, *armature, triangle[0]), W),
-					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[1]]) : wiScene::SkinVertex(*mesh, *armature, triangle[1]), W),
-					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[2]]) : wiScene::SkinVertex(*mesh, *armature, triangle[2]), W),
+					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[0]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[0]), W),
+					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[1]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[1]), W),
+					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[2]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[2]), W),
 				};
 
-				wiRenderer::RenderableTriangle tri;
+				wi::renderer::RenderableTriangle tri;
 				XMStoreFloat3(&tri.positionA, P[0]);
 				XMStoreFloat3(&tri.positionB, P[1]);
 				XMStoreFloat3(&tri.positionC, P[2]);
 				tri.colorA = tri.colorB = tri.colorC = XMFLOAT4(1, 0, 1, 0.9f);
-				wiRenderer::DrawTriangle(tri, false);
+				wi::renderer::DrawTriangle(tri, false);
 			}
 		}
 	}
@@ -850,7 +850,7 @@ void PaintToolWindow::Update(float dt)
 void PaintToolWindow::DrawBrush() const
 {
 	const MODE mode = GetMode();
-	if (mode == MODE_DISABLED || mode == MODE_TEXTURE || entity == INVALID_ENTITY || wiBackLog::isActive())
+	if (mode == MODE_DISABLED || mode == MODE_TEXTURE || entity == INVALID_ENTITY || wi::backlog::isActive())
 		return;
 
 	const int segmentcount = 36;
@@ -860,13 +860,13 @@ void PaintToolWindow::DrawBrush() const
 	{
 		const float angle0 = rot + (float)i / (float)segmentcount * XM_2PI;
 		const float angle1 = rot + (float)(i + 1) / (float)segmentcount * XM_2PI;
-		wiRenderer::RenderableLine2D line;
+		wi::renderer::RenderableLine2D line;
 		line.start.x = pos.x + sinf(angle0) * radius;
 		line.start.y = pos.y + cosf(angle0) * radius;
 		line.end.x = pos.x + sinf(angle1) * radius;
 		line.end.y = pos.y + cosf(angle1) * radius;
 		line.color_end = line.color_start = i%2 == 0 ? XMFLOAT4(0, 0, 0, 0.8f): XMFLOAT4(1,1,1,1);
-		wiRenderer::DrawLine(line);
+		wi::renderer::DrawLine(line);
 	}
 
 }
@@ -875,7 +875,7 @@ PaintToolWindow::MODE PaintToolWindow::GetMode() const
 {
 	return (MODE)modeComboBox.GetSelected();
 }
-void PaintToolWindow::SetEntity(wiECS::Entity value, int subsetindex)
+void PaintToolWindow::SetEntity(wi::ecs::Entity value, int subsetindex)
 {
 	entity = value;
 	subset = subsetindex;
@@ -901,14 +901,14 @@ void PaintToolWindow::RecordHistory(bool start, CommandList cmd)
 
 		// Start history recording (undo)
 		currentHistory = &editor->AdvanceHistory();
-		wiArchive& archive = *currentHistory;
+		wi::Archive& archive = *currentHistory;
 		archive << EditorComponent::HISTORYOP_PAINTTOOL;
 		archive << (uint32_t)GetMode();
 		archive << entity;
 	}
 	else
 	{
-		if (!history_needs_recording_end || wiInput::Down(wiInput::MOUSE_BUTTON_LEFT))
+		if (!history_needs_recording_end || wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
 			return;
 		history_needs_recording_end = false;
 		history_needs_recording_start = false;
@@ -916,8 +916,8 @@ void PaintToolWindow::RecordHistory(bool start, CommandList cmd)
 		// End history recording (redo)
 	}
 
-	wiArchive& archive = *currentHistory;
-	Scene& scene = wiScene::GetScene();
+	wi::Archive& archive = *currentHistory;
+	Scene& scene = wi::scene::GetScene();
 
 	switch (GetMode())
 	{
@@ -950,7 +950,7 @@ void PaintToolWindow::RecordHistory(bool start, CommandList cmd)
 		if (start)
 		{
 			// Make a copy of texture to edit and replace material resource:
-			GraphicsDevice* device = wiGraphics::GetDevice();
+			GraphicsDevice* device = wi::graphics::GetDevice();
 			Texture newTex;
 			TextureDesc desc = editTexture.GetDesc();
 			desc.format = Format::R8G8B8A8_UNORM; // force format to one that is writable by GPU
@@ -963,8 +963,8 @@ void PaintToolWindow::RecordHistory(bool start, CommandList cmd)
 				subresource_index = device->CreateSubresource(&newTex, SubresourceType::UAV, 0, 1, i, 1);
 				assert(subresource_index == i);
 			}
-			assert(cmd != wiGraphics::INVALID_COMMANDLIST);
-			wiRenderer::CopyTexture2D(newTex, -1, 0, 0, editTexture, 0, cmd);
+			assert(cmd != wi::graphics::INVALID_COMMANDLIST);
+			wi::renderer::CopyTexture2D(newTex, -1, 0, 0, editTexture, 0, cmd);
 			ReplaceEditTextureSlot(*material, newTex);
 		}
 
@@ -1029,7 +1029,7 @@ void PaintToolWindow::RecordHistory(bool start, CommandList cmd)
 	case PaintToolWindow::MODE_HAIRPARTICLE_REMOVE_TRIANGLE:
 	case PaintToolWindow::MODE_HAIRPARTICLE_LENGTH:
 	{
-		wiHairParticle* hair = scene.hairs.GetComponent(entity);
+		wi::HairParticleSystem* hair = scene.hairs.GetComponent(entity);
 		if (hair == nullptr)
 			break;
 
@@ -1041,7 +1041,7 @@ void PaintToolWindow::RecordHistory(bool start, CommandList cmd)
 		break;
 	}
 }
-void PaintToolWindow::ConsumeHistoryOperation(wiArchive& archive, bool undo)
+void PaintToolWindow::ConsumeHistoryOperation(wi::Archive& archive, bool undo)
 {
 	MODE historymode;
 	archive >> (uint32_t&)historymode;
@@ -1049,7 +1049,7 @@ void PaintToolWindow::ConsumeHistoryOperation(wiArchive& archive, bool undo)
 
 	modeComboBox.SetSelected(historymode);
 
-	Scene& scene = wiScene::GetScene();
+	Scene& scene = wi::scene::GetScene();
 
 	switch (historymode)
 	{
@@ -1208,13 +1208,13 @@ void PaintToolWindow::ConsumeHistoryOperation(wiArchive& archive, bool undo)
 	case PaintToolWindow::MODE_HAIRPARTICLE_REMOVE_TRIANGLE:
 	case PaintToolWindow::MODE_HAIRPARTICLE_LENGTH:
 	{
-		wiHairParticle* hair = scene.hairs.GetComponent(entity);
+		wi::HairParticleSystem* hair = scene.hairs.GetComponent(entity);
 		if (hair == nullptr)
 			break;
 
-		wiHairParticle undo_hair;
+		wi::HairParticleSystem undo_hair;
 		archive >> undo_hair.vertex_lengths;
-		wiHairParticle redo_hair;
+		wi::HairParticleSystem redo_hair;
 		archive >> redo_hair.vertex_lengths;
 
 		if (undo)
@@ -1226,7 +1226,7 @@ void PaintToolWindow::ConsumeHistoryOperation(wiArchive& archive, bool undo)
 			hair->vertex_lengths = redo_hair.vertex_lengths;
 		}
 
-		hair->_flags |= wiHairParticle::REBUILD_BUFFERS;
+		hair->_flags |= wi::HairParticleSystem::REBUILD_BUFFERS;
 	}
 	break;
 	default:
@@ -1237,17 +1237,17 @@ void PaintToolWindow::ConsumeHistoryOperation(wiArchive& archive, bool undo)
 Texture PaintToolWindow::GetEditTextureSlot(const MaterialComponent& material, int* uvset)
 {
 	uint64_t sel = textureSlotComboBox.GetItemUserData(textureSlotComboBox.GetSelected());
-	if (material.textures[sel].resource == nullptr)
+	if (!material.textures[sel].resource.IsValid())
 	{
 		return Texture();
 	}
 	if (uvset)
 		*uvset = material.textures[sel].uvset;
-	return material.textures[sel].resource->texture;
+	return material.textures[sel].resource.GetTexture();
 }
-void PaintToolWindow::ReplaceEditTextureSlot(wiScene::MaterialComponent& material, const Texture& texture)
+void PaintToolWindow::ReplaceEditTextureSlot(wi::scene::MaterialComponent& material, const Texture& texture)
 {
 	uint64_t sel = textureSlotComboBox.GetItemUserData(textureSlotComboBox.GetSelected());
-	material.textures[sel].resource->texture = texture;
+	material.textures[sel].resource.SetTexture(texture);
 	material.SetDirty();
 }

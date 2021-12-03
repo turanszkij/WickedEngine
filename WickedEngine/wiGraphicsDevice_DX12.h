@@ -22,7 +22,7 @@
 #include <atomic>
 #include <mutex>
 
-namespace wiGraphics
+namespace wi::graphics
 {
 	class GraphicsDevice_DX12 final : public GraphicsDevice
 	{
@@ -176,7 +176,7 @@ namespace wiGraphics
 		GraphicsDevice_DX12(bool debuglayer = false, bool gpuvalidation = false);
 		virtual ~GraphicsDevice_DX12();
 
-		bool CreateSwapChain(const SwapChainDesc* pDesc, wiPlatform::window_type window, SwapChain* swapChain) const override;
+		bool CreateSwapChain(const SwapChainDesc* pDesc, wi::platform::window_type window, SwapChain* swapChain) const override;
 		bool CreateBuffer(const GPUBufferDesc *pDesc, const void* pInitialData, GPUBuffer *pBuffer) const override;
 		bool CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) const override;
 		bool CreateShader(ShaderStage stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) const override;

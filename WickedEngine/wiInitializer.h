@@ -1,7 +1,6 @@
 #pragma once
 
-
-namespace wiInitializer
+namespace wi::initializer
 {
 	// Initializes systems and blocks CPU until it is complete
 	void InitializeComponentsImmediate();
@@ -10,5 +9,3 @@ namespace wiInitializer
 	// Check if systems have been initialized or not
 	bool IsInitializeFinished();
 }
-
-

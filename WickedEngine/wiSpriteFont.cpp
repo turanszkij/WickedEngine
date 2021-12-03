@@ -1,59 +1,64 @@
 #include "wiSpriteFont.h"
 #include "wiHelper.h"
 
-using namespace wiGraphics;
+using namespace wi::graphics;
 
-void wiSpriteFont::FixedUpdate()
+namespace wi
 {
-	if (IsDisableUpdate())
-		return;
-}
-void wiSpriteFont::Update(float dt)
-{
-	if (IsDisableUpdate())
-		return;
-}
 
-void wiSpriteFont::Draw(CommandList cmd) const
-{
-	if (IsHidden())
-		return;
-	wiFont::Draw(text, params, cmd);
-}
+	void SpriteFont::FixedUpdate()
+	{
+		if (IsDisableUpdate())
+			return;
+	}
+	void SpriteFont::Update(float dt)
+	{
+		if (IsDisableUpdate())
+			return;
+	}
 
-float wiSpriteFont::textWidth() const
-{
-	return wiFont::textWidth(text, params);
-}
-float wiSpriteFont::textHeight() const
-{
-	return wiFont::textHeight(text, params);
-}
+	void SpriteFont::Draw(CommandList cmd) const
+	{
+		if (IsHidden())
+			return;
+		wi::font::Draw(text, params, cmd);
+	}
 
-void wiSpriteFont::SetText(const std::string& value)
-{
-	wiHelper::StringConvert(value, text);
-}
-void wiSpriteFont::SetText(std::string&& value)
-{
-	wiHelper::StringConvert(value, text);
-}
-void wiSpriteFont::SetText(const std::wstring& value)
-{
-	text = value;
-}
-void wiSpriteFont::SetText(std::wstring&& value)
-{
-	text = value;
-}
+	float SpriteFont::TextWidth() const
+	{
+		return wi::font::TextWidth(text, params);
+	}
+	float SpriteFont::TextHeight() const
+	{
+		return wi::font::TextHeight(text, params);
+	}
 
-std::string wiSpriteFont::GetTextA() const
-{
-	std::string retVal;
-	wiHelper::StringConvert(text, retVal);
-	return retVal;
-}
-const std::wstring& wiSpriteFont::GetText() const
-{
-	return text;
+	void SpriteFont::SetText(const std::string& value)
+	{
+		wi::helper::StringConvert(value, text);
+	}
+	void SpriteFont::SetText(std::string&& value)
+	{
+		wi::helper::StringConvert(value, text);
+	}
+	void SpriteFont::SetText(const std::wstring& value)
+	{
+		text = value;
+	}
+	void SpriteFont::SetText(std::wstring&& value)
+	{
+		text = value;
+	}
+
+	std::string SpriteFont::GetTextA() const
+	{
+		std::string retVal;
+		wi::helper::StringConvert(text, retVal);
+		return retVal;
+	}
+	const std::wstring& SpriteFont::GetText() const
+	{
+		return text;
+	}
+
 }

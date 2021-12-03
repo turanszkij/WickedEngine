@@ -3,17 +3,17 @@
 #include "wiRenderer.h"
 #include "wiHelper.h"
 #include "shaders/ShaderInterop_Image.h"
-#include "wiBackLog.h"
-#include "wiEvent.h"
+#include "wiBacklog.h"
+#include "wiEventHandler.h"
 #include "wiTimer.h"
 
 #include <atomic>
 
-using namespace wiGraphics;
+using namespace wi::graphics;
+using namespace wi::enums;
 
-namespace wiImage
+namespace wi::image
 {
-
 	enum IMAGE_SHADER
 	{
 		IMAGE_SHADER_STANDARD,
@@ -29,7 +29,7 @@ namespace wiImage
 	DepthStencilState		depthStencilStates[STENCILMODE_COUNT][STENCILREFMODE_COUNT];
 	PipelineState			imagePSO[IMAGE_SHADER_COUNT][BLENDMODE_COUNT][STENCILMODE_COUNT][STENCILREFMODE_COUNT];
 	Texture					backgroundTextures[COMMANDLIST_COUNT];
-	wiCanvas				canvases[COMMANDLIST_COUNT];
+	wi::Canvas				canvases[COMMANDLIST_COUNT];
 
 	std::atomic_bool initialized{ false };
 
@@ -38,56 +38,56 @@ namespace wiImage
 		backgroundTextures[cmd] = texture;
 	}
 
-	void SetCanvas(const wiCanvas& canvas, wiGraphics::CommandList cmd)
+	void SetCanvas(const wi::Canvas& canvas, wi::graphics::CommandList cmd)
 	{
 		canvases[cmd] = canvas;
 	}
 
-	void Draw(const Texture* texture, const wiImageParams& params, CommandList cmd)
+	void Draw(const Texture* texture, const Params& params, CommandList cmd)
 	{
 		if (!initialized.load())
 		{
 			return;
 		}
 
-		GraphicsDevice* device = wiGraphics::GetDevice();
+		GraphicsDevice* device = wi::graphics::GetDevice();
 		device->EventBegin("Image", cmd);
 
 		uint32_t stencilRef = params.stencilRef;
 		if (params.stencilRefMode == STENCILREFMODE_USER)
 		{
-			stencilRef = wiRenderer::CombineStencilrefs(STENCILREF_EMPTY, (uint8_t)stencilRef);
+			stencilRef = wi::renderer::CombineStencilrefs(STENCILREF_EMPTY, (uint8_t)stencilRef);
 		}
 		device->BindStencilRef(stencilRef, cmd);
 
-		const Sampler* sampler = wiRenderer::GetSampler(SAMPLER_LINEAR_CLAMP);
+		const Sampler* sampler = wi::renderer::GetSampler(SAMPLER_LINEAR_CLAMP);
 
 		if (params.quality == QUALITY_NEAREST)
 		{
 			if (params.sampleFlag == SAMPLEMODE_MIRROR)
-				sampler = wiRenderer::GetSampler(SAMPLER_POINT_MIRROR);
+				sampler = wi::renderer::GetSampler(SAMPLER_POINT_MIRROR);
 			else if (params.sampleFlag == SAMPLEMODE_WRAP)
-				sampler = wiRenderer::GetSampler(SAMPLER_POINT_WRAP);
+				sampler = wi::renderer::GetSampler(SAMPLER_POINT_WRAP);
 			else if (params.sampleFlag == SAMPLEMODE_CLAMP)
-				sampler = wiRenderer::GetSampler(SAMPLER_POINT_CLAMP);
+				sampler = wi::renderer::GetSampler(SAMPLER_POINT_CLAMP);
 		}
 		else if (params.quality == QUALITY_LINEAR)
 		{
 			if (params.sampleFlag == SAMPLEMODE_MIRROR)
-				sampler = wiRenderer::GetSampler(SAMPLER_LINEAR_MIRROR);
+				sampler = wi::renderer::GetSampler(SAMPLER_LINEAR_MIRROR);
 			else if (params.sampleFlag == SAMPLEMODE_WRAP)
-				sampler = wiRenderer::GetSampler(SAMPLER_LINEAR_WRAP);
+				sampler = wi::renderer::GetSampler(SAMPLER_LINEAR_WRAP);
 			else if (params.sampleFlag == SAMPLEMODE_CLAMP)
-				sampler = wiRenderer::GetSampler(SAMPLER_LINEAR_CLAMP);
+				sampler = wi::renderer::GetSampler(SAMPLER_LINEAR_CLAMP);
 		}
 		else if (params.quality == QUALITY_ANISOTROPIC)
 		{
 			if (params.sampleFlag == SAMPLEMODE_MIRROR)
-				sampler = wiRenderer::GetSampler(SAMPLER_ANISO_MIRROR);
+				sampler = wi::renderer::GetSampler(SAMPLER_ANISO_MIRROR);
 			else if (params.sampleFlag == SAMPLEMODE_WRAP)
-				sampler = wiRenderer::GetSampler(SAMPLER_ANISO_WRAP);
+				sampler = wi::renderer::GetSampler(SAMPLER_ANISO_WRAP);
 			else if (params.sampleFlag == SAMPLEMODE_CLAMP)
-				sampler = wiRenderer::GetSampler(SAMPLER_ANISO_CLAMP);
+				sampler = wi::renderer::GetSampler(SAMPLER_ANISO_CLAMP);
 		}
 
 		PushConstantsImage push;
@@ -163,8 +163,8 @@ namespace wiImage
 		}
 		else
 		{
-			const wiCanvas& canvas = canvases[cmd];
-			// Asserts will check that a proper canvas was set for this cmd with wiImage::SetCanvas()
+			const wi::Canvas& canvas = canvases[cmd];
+			// Asserts will check that a proper canvas was set for this cmd with wi::image::SetCanvas()
 			//	The canvas must be set to have dpi aware rendering
 			assert(canvas.width > 0);
 			assert(canvas.height > 0);
@@ -254,14 +254,14 @@ namespace wiImage
 
 	void LoadShaders()
 	{
-		wiRenderer::LoadShader(ShaderStage::VS, vertexShader, "imageVS.cso");
-		wiRenderer::LoadShader(ShaderStage::VS, screenVS, "screenVS.cso");
+		wi::renderer::LoadShader(ShaderStage::VS, vertexShader, "imageVS.cso");
+		wi::renderer::LoadShader(ShaderStage::VS, screenVS, "screenVS.cso");
 
-		wiRenderer::LoadShader(ShaderStage::PS, imagePS[IMAGE_SHADER_STANDARD], "imagePS.cso");
-		wiRenderer::LoadShader(ShaderStage::PS, imagePS[IMAGE_SHADER_FULLSCREEN], "screenPS.cso");
+		wi::renderer::LoadShader(ShaderStage::PS, imagePS[IMAGE_SHADER_STANDARD], "imagePS.cso");
+		wi::renderer::LoadShader(ShaderStage::PS, imagePS[IMAGE_SHADER_FULLSCREEN], "screenPS.cso");
 
 
-		GraphicsDevice* device = wiGraphics::GetDevice();
+		GraphicsDevice* device = wi::graphics::GetDevice();
 
 		for (int i = 0; i < IMAGE_SHADER_COUNT; ++i)
 		{
@@ -297,9 +297,9 @@ namespace wiImage
 
 	void Initialize()
 	{
-		wiTimer timer;
+		wi::Timer timer;
 
-		GraphicsDevice* device = wiGraphics::GetDevice();
+		GraphicsDevice* device = wi::graphics::GetDevice();
 
 		RasterizerState rs;
 		rs.fill_mode = FillMode::SOLID;
@@ -424,10 +424,10 @@ namespace wiImage
 		bd.independent_blend_enable = false;
 		blendStates[BLENDMODE_MULTIPLY] = bd;
 
-		static wiEvent::Handle handle = wiEvent::Subscribe(SYSTEM_EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
+		static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
 		LoadShaders();
 
-		wiBackLog::post("wiImage Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
+		wi::backlog::post("wi::image Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 		initialized.store(true);
 	}
 

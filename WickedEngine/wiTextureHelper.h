@@ -3,22 +3,22 @@
 #include "wiGraphicsDevice.h"
 #include "wiColor.h"
 
-namespace wiTextureHelper
+namespace wi::texturehelper
 {
 	void Initialize();
 
-	const wiGraphics::Texture* getRandom64x64();
-	const wiGraphics::Texture* getColorGradeDefault();
-	const wiGraphics::Texture* getNormalMapDefault();
-	const wiGraphics::Texture* getBlackCubeMap();
-	const wiGraphics::Texture* getUINT4();
-	const wiGraphics::Texture* getBlueNoise();
+	const wi::graphics::Texture* getRandom64x64();
+	const wi::graphics::Texture* getColorGradeDefault();
+	const wi::graphics::Texture* getNormalMapDefault();
+	const wi::graphics::Texture* getBlackCubeMap();
+	const wi::graphics::Texture* getUINT4();
+	const wi::graphics::Texture* getBlueNoise();
 
-	const wiGraphics::Texture* getWhite();
-	const wiGraphics::Texture* getBlack();
-	const wiGraphics::Texture* getTransparent();
-	const wiGraphics::Texture* getColor(wiColor color);
+	const wi::graphics::Texture* getWhite();
+	const wi::graphics::Texture* getBlack();
+	const wi::graphics::Texture* getTransparent();
+	const wi::graphics::Texture* getColor(wi::Color color);
 
-	bool CreateTexture(wiGraphics::Texture& texture, const uint8_t* data, uint32_t width, uint32_t height, wiGraphics::Format format = wiGraphics::Format::R8G8B8A8_UNORM);
+	bool CreateTexture(wi::graphics::Texture& texture, const uint8_t* data, uint32_t width, uint32_t height, wi::graphics::Format format = wi::graphics::Format::R8G8B8A8_UNORM);
 };
 

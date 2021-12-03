@@ -13,7 +13,7 @@ extern "C"
 
 typedef int(*lua_CFunction) (lua_State* L);
 
-namespace wiLua
+namespace wi::lua
 {
 	void Initialize();
 

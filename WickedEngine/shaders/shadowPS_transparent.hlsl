@@ -19,6 +19,8 @@ float4 main(PixelInput input) : SV_TARGET
 	}
 	color *= input.color;
 
+	clip(color.a - GetMaterial().alphaTest);
+
 	float opacity = color.a;
 
 	[branch]

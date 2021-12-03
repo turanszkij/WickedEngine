@@ -7,23 +7,23 @@ class Translator
 {
 private:
 	XMFLOAT4 prevPointer = XMFLOAT4(0, 0, 0, 0);
-	XMFLOAT4X4 dragDeltaMatrix = IDENTITYMATRIX;
+	XMFLOAT4X4 dragDeltaMatrix = wi::math::IDENTITY_MATRIX;
 	bool dragging = false;
 	bool dragStarted = false;
 	bool dragEnded = false;
 public:
 	void Create();
 
-	void Update(const wiCanvas& canvas);
-	void Draw(const wiScene::CameraComponent& camera, wiGraphics::CommandList cmd) const;
+	void Update(const wi::Canvas& canvas);
+	void Draw(const wi::scene::CameraComponent& camera, wi::graphics::CommandList cmd) const;
 
 	// Attach selection to translator temporarily
 	void PreTranslate();
 	// Apply translator to selection
 	void PostTranslate();
 
-	wiScene::TransformComponent transform;
-	wi::vector<wiScene::PickResult> selected;
+	wi::scene::TransformComponent transform;
+	wi::vector<wi::scene::PickResult> selected;
 
 	bool enabled = false;
 

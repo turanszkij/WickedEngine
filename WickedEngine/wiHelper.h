@@ -6,7 +6,7 @@
 #include <string>
 #include <functional>
 
-namespace wiHelper
+namespace wi::helper
 {
 	template <class T>
 	constexpr void hash_combine(std::size_t& seed, const T& v)
@@ -35,22 +35,22 @@ namespace wiHelper
 
 	void messageBox(const std::string& msg, const std::string& caption = "Warning!");
 
-	void screenshot(const wiGraphics::SwapChain& swapchain, const std::string& name = "");
+	void screenshot(const wi::graphics::SwapChain& swapchain, const std::string& name = "");
 
 	// Save raw pixel data from the texture to memory
-	bool saveTextureToMemory(const wiGraphics::Texture& texture, wi::vector<uint8_t>& texturedata);
+	bool saveTextureToMemory(const wi::graphics::Texture& texture, wi::vector<uint8_t>& texturedata);
 
 	// Save texture to memory as a file format
-	bool saveTextureToMemoryFile(const wiGraphics::Texture& texture, const std::string& fileExtension, wi::vector<uint8_t>& filedata);
+	bool saveTextureToMemoryFile(const wi::graphics::Texture& texture, const std::string& fileExtension, wi::vector<uint8_t>& filedata);
 
 	// Save raw texture data to memory as file format
-	bool saveTextureToMemoryFile(const wi::vector<uint8_t>& textureData, const wiGraphics::TextureDesc& desc, const std::string& fileExtension, wi::vector<uint8_t>& filedata);
+	bool saveTextureToMemoryFile(const wi::vector<uint8_t>& textureData, const wi::graphics::TextureDesc& desc, const std::string& fileExtension, wi::vector<uint8_t>& filedata);
 
 	// Save texture to file format
-	bool saveTextureToFile(const wiGraphics::Texture& texture, const std::string& fileName);
+	bool saveTextureToFile(const wi::graphics::Texture& texture, const std::string& fileName);
 
 	// Save raw texture data to file format
-	bool saveTextureToFile(const wi::vector<uint8_t>& texturedata, const wiGraphics::TextureDesc& desc, const std::string& fileName);
+	bool saveTextureToFile(const wi::vector<uint8_t>& texturedata, const wi::graphics::TextureDesc& desc, const std::string& fileName);
 
 	std::string getCurrentDateTimeAsString();
 

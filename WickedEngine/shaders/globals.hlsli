@@ -154,7 +154,7 @@ inline float GetFogAmount(float distance, float3 O, float3 V)
 		float Z = -V.y;
 		float effectiveZ = max(abs(Z), 0.001);
 
-		float endLineHeight = originHeight + distance * Z; // Isolated vector equation for y
+		float endLineHeight = mad(distance, Z, originHeight); // Isolated vector equation for y
 		float minLineHeight = min(originHeight, endLineHeight);
 		float heightLineFalloff = max(minLineHeight - fog.height_start, 0);
 		
@@ -871,7 +871,7 @@ static const float4 halton64[] = {
 	float4(0.5078125000f, 0.7283950617f, 0.1360000000f, 0.3294460641f),
 };
 
-// This the same as wiGraphics::ColorSpace
+// This the same as wi::graphics::ColorSpace
 enum class ColorSpace
 {
 	SRGB,			// SDR color space (8 or 10 bits per channel)

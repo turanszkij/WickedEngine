@@ -533,7 +533,7 @@ static const uint OPTION_BIT_STATIC_SKY_HDR = 1 << 13;
 
 struct FrameCB
 {
-	uint		options;							// wiRenderer bool options packed into bitmask
+	uint		options;							// wi::renderer bool options packed into bitmask
 	uint		shadow_cascade_count;
 	float		shadow_kernel_2D;
 	float		shadow_kernel_cube;
@@ -643,7 +643,7 @@ struct CameraCB
 	float2 internal_resolution_rcp;
 
 	uint3 entity_culling_tilecount;
-	int padding0;
+	uint sample_count;
 
 	int texture_depth_index;
 	int texture_lineardepth_index;

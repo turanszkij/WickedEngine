@@ -8,15 +8,15 @@
 
 #include <string>
 
-using namespace wiECS;
-using namespace wiScene;
+using namespace wi::ecs;
+using namespace wi::scene;
 
-struct TerraGen : public wiWindow
+struct TerraGen : public wi::gui::Window
 {
-	wiSlider dimXSlider;
-	wiSlider dimYSlider;
-	wiSlider dimZSlider;
-	wiButton heightmapButton;
+	wi::gui::Slider dimXSlider;
+	wi::gui::Slider dimYSlider;
+	wi::gui::Slider dimZSlider;
+	wi::gui::Button heightmapButton;
 
 	// heightmap texture:
 	unsigned char* rgb = nullptr;
@@ -25,7 +25,7 @@ struct TerraGen : public wiWindow
 
 	TerraGen()
 	{
-		wiWindow::Create("TerraGen");
+		wi::gui::Window::Create("TerraGen");
 		SetSize(XMFLOAT2(260, 130));
 
 		float xx = 20;
@@ -76,7 +76,7 @@ struct TerraGen : public wiWindow
 
 void MeshWindow::Create(EditorComponent* editor)
 {
-	wiWindow::Create("Mesh Window");
+	wi::gui::Window::Create("Mesh Window");
 	SetSize(XMFLOAT2(580, 580));
 
 	float x = 150;
@@ -87,7 +87,7 @@ void MeshWindow::Create(EditorComponent* editor)
 	meshInfoLabel.Create("Mesh Info");
 	meshInfoLabel.SetPos(XMFLOAT2(x - 50, y += step));
 	meshInfoLabel.SetSize(XMFLOAT2(450, 190));
-	meshInfoLabel.SetColor(wiColor::Transparent());
+	meshInfoLabel.SetColor(wi::Color::Transparent());
 	AddWidget(&meshInfoLabel);
 
 	// Left side:
@@ -97,8 +97,8 @@ void MeshWindow::Create(EditorComponent* editor)
 	subsetComboBox.SetSize(XMFLOAT2(40, hei));
 	subsetComboBox.SetPos(XMFLOAT2(x, y += step));
 	subsetComboBox.SetEnabled(false);
-	subsetComboBox.OnSelect([=](wiEventArgs args) {
-		Scene& scene = wiScene::GetScene();
+	subsetComboBox.OnSelect([=](wi::gui::EventArgs args) {
+		Scene& scene = wi::scene::GetScene();
 		MeshComponent* mesh = scene.meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
@@ -116,20 +116,20 @@ void MeshWindow::Create(EditorComponent* editor)
 	terrainCheckBox.SetTooltip("If enabled, the mesh will use multiple materials and blend between them based on vertex colors.");
 	terrainCheckBox.SetSize(XMFLOAT2(hei, hei));
 	terrainCheckBox.SetPos(XMFLOAT2(x, y += step));
-	terrainCheckBox.OnClick([&](wiEventArgs args) {
-		MeshComponent* mesh = wiScene::GetScene().meshes.GetComponent(entity);
+	terrainCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		MeshComponent* mesh = wi::scene::GetScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
 			mesh->SetTerrain(args.bValue);
 			if (args.bValue && mesh->vertex_colors.empty())
 			{
 				mesh->vertex_colors.resize(mesh->vertex_positions.size());
-				std::fill(mesh->vertex_colors.begin(), mesh->vertex_colors.end(), wiColor::Red().rgba); // fill red (meaning only blend base material)
+				std::fill(mesh->vertex_colors.begin(), mesh->vertex_colors.end(), wi::Color::Red().rgba); // fill red (meaning only blend base material)
 				mesh->CreateRenderData();
 
 				for (auto& subset : mesh->subsets)
 				{
-					MaterialComponent* material = wiScene::GetScene().materials.GetComponent(subset.materialID);
+					MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(subset.materialID);
 					if (material != nullptr)
 					{
 						material->SetUseVertexColors(true);
@@ -145,8 +145,8 @@ void MeshWindow::Create(EditorComponent* editor)
 	doubleSidedCheckBox.SetTooltip("If enabled, the inside of the mesh will be visible.");
 	doubleSidedCheckBox.SetSize(XMFLOAT2(hei, hei));
 	doubleSidedCheckBox.SetPos(XMFLOAT2(x, y += step));
-	doubleSidedCheckBox.OnClick([&](wiEventArgs args) {
-		MeshComponent* mesh = wiScene::GetScene().meshes.GetComponent(entity);
+	doubleSidedCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		MeshComponent* mesh = wi::scene::GetScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
 			mesh->SetDoubleSided(args.bValue);
@@ -158,9 +158,9 @@ void MeshWindow::Create(EditorComponent* editor)
 	softbodyCheckBox.SetTooltip("Enable soft body simulation. Tip: Use the Paint Tool to control vertex pinning.");
 	softbodyCheckBox.SetSize(XMFLOAT2(hei, hei));
 	softbodyCheckBox.SetPos(XMFLOAT2(x, y += step));
-	softbodyCheckBox.OnClick([&](wiEventArgs args) {
+	softbodyCheckBox.OnClick([&](wi::gui::EventArgs args) {
 
-		Scene& scene = wiScene::GetScene();
+		Scene& scene = wi::scene::GetScene();
 		SoftBodyPhysicsComponent* physicscomponent = scene.softbodies.GetComponent(entity);
 
 		if (args.bValue)
@@ -188,8 +188,8 @@ void MeshWindow::Create(EditorComponent* editor)
 	massSlider.SetTooltip("Set the mass amount for the physics engine.");
 	massSlider.SetSize(XMFLOAT2(100, hei));
 	massSlider.SetPos(XMFLOAT2(x, y += step));
-	massSlider.OnSlide([&](wiEventArgs args) {
-		SoftBodyPhysicsComponent* physicscomponent = wiScene::GetScene().softbodies.GetComponent(entity);
+	massSlider.OnSlide([&](wi::gui::EventArgs args) {
+		SoftBodyPhysicsComponent* physicscomponent = wi::scene::GetScene().softbodies.GetComponent(entity);
 		if (physicscomponent != nullptr)
 		{
 			physicscomponent->mass = args.fValue;
@@ -201,8 +201,8 @@ void MeshWindow::Create(EditorComponent* editor)
 	frictionSlider.SetTooltip("Set the friction amount for the physics engine.");
 	frictionSlider.SetSize(XMFLOAT2(100, hei));
 	frictionSlider.SetPos(XMFLOAT2(x, y += step));
-	frictionSlider.OnSlide([&](wiEventArgs args) {
-		SoftBodyPhysicsComponent* physicscomponent = wiScene::GetScene().softbodies.GetComponent(entity);
+	frictionSlider.OnSlide([&](wi::gui::EventArgs args) {
+		SoftBodyPhysicsComponent* physicscomponent = wi::scene::GetScene().softbodies.GetComponent(entity);
 		if (physicscomponent != nullptr)
 		{
 			physicscomponent->friction = args.fValue;
@@ -214,8 +214,8 @@ void MeshWindow::Create(EditorComponent* editor)
 	restitutionSlider.SetTooltip("Set the restitution amount for the physics engine.");
 	restitutionSlider.SetSize(XMFLOAT2(100, hei));
 	restitutionSlider.SetPos(XMFLOAT2(x, y += step));
-	restitutionSlider.OnSlide([&](wiEventArgs args) {
-		SoftBodyPhysicsComponent* physicscomponent = wiScene::GetScene().softbodies.GetComponent(entity);
+	restitutionSlider.OnSlide([&](wi::gui::EventArgs args) {
+		SoftBodyPhysicsComponent* physicscomponent = wi::scene::GetScene().softbodies.GetComponent(entity);
 		if (physicscomponent != nullptr)
 		{
 			physicscomponent->restitution = args.fValue;
@@ -227,8 +227,8 @@ void MeshWindow::Create(EditorComponent* editor)
 	impostorCreateButton.SetTooltip("Create an impostor image of the mesh. The mesh will be replaced by this image when far away, to render faster.");
 	impostorCreateButton.SetSize(XMFLOAT2(240, hei));
 	impostorCreateButton.SetPos(XMFLOAT2(x - 50, y += step));
-	impostorCreateButton.OnClick([&](wiEventArgs args) {
-	    Scene& scene = wiScene::GetScene();
+	impostorCreateButton.OnClick([&](wi::gui::EventArgs args) {
+	    Scene& scene = wi::scene::GetScene();
 		ImpostorComponent* impostor = scene.impostors.GetComponent(entity);
 	    if (impostor == nullptr)
 		{
@@ -247,8 +247,8 @@ void MeshWindow::Create(EditorComponent* editor)
 	impostorDistanceSlider.SetTooltip("Assign the distance where the mesh geometry should be switched to the impostor image.");
 	impostorDistanceSlider.SetSize(XMFLOAT2(100, hei));
 	impostorDistanceSlider.SetPos(XMFLOAT2(x, y += step));
-	impostorDistanceSlider.OnSlide([&](wiEventArgs args) {
-		ImpostorComponent* impostor = wiScene::GetScene().impostors.GetComponent(entity);
+	impostorDistanceSlider.OnSlide([&](wi::gui::EventArgs args) {
+		ImpostorComponent* impostor = wi::scene::GetScene().impostors.GetComponent(entity);
 		if (impostor != nullptr)
 		{
 			impostor->swapInDistance = args.fValue;
@@ -260,8 +260,8 @@ void MeshWindow::Create(EditorComponent* editor)
 	tessellationFactorSlider.SetTooltip("Set the dynamic tessellation amount. Tessellation should be enabled in the Renderer window and your GPU must support it!");
 	tessellationFactorSlider.SetSize(XMFLOAT2(100, hei));
 	tessellationFactorSlider.SetPos(XMFLOAT2(x, y += step));
-	tessellationFactorSlider.OnSlide([&](wiEventArgs args) {
-		MeshComponent* mesh = wiScene::GetScene().meshes.GetComponent(entity);
+	tessellationFactorSlider.OnSlide([&](wi::gui::EventArgs args) {
+		MeshComponent* mesh = wi::scene::GetScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
 			mesh->tessellationFactor = args.fValue;
@@ -273,8 +273,8 @@ void MeshWindow::Create(EditorComponent* editor)
 	flipCullingButton.SetTooltip("Flip faces to reverse triangle culling order.");
 	flipCullingButton.SetSize(XMFLOAT2(240, hei));
 	flipCullingButton.SetPos(XMFLOAT2(x - 50, y += step));
-	flipCullingButton.OnClick([&](wiEventArgs args) {
-		MeshComponent* mesh = wiScene::GetScene().meshes.GetComponent(entity);
+	flipCullingButton.OnClick([&](wi::gui::EventArgs args) {
+		MeshComponent* mesh = wi::scene::GetScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
 			mesh->FlipCulling();
@@ -287,8 +287,8 @@ void MeshWindow::Create(EditorComponent* editor)
 	flipNormalsButton.SetTooltip("Flip surface normals.");
 	flipNormalsButton.SetSize(XMFLOAT2(240, hei));
 	flipNormalsButton.SetPos(XMFLOAT2(x - 50, y += step));
-	flipNormalsButton.OnClick([&](wiEventArgs args) {
-		MeshComponent* mesh = wiScene::GetScene().meshes.GetComponent(entity);
+	flipNormalsButton.OnClick([&](wi::gui::EventArgs args) {
+		MeshComponent* mesh = wi::scene::GetScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
 			mesh->FlipNormals();
@@ -301,8 +301,8 @@ void MeshWindow::Create(EditorComponent* editor)
 	computeNormalsSmoothButton.SetTooltip("Compute surface normals of the mesh. Resulting normals will be unique per vertex. This can reduce vertex count, but is slow.");
 	computeNormalsSmoothButton.SetSize(XMFLOAT2(240, hei));
 	computeNormalsSmoothButton.SetPos(XMFLOAT2(x - 50, y += step));
-	computeNormalsSmoothButton.OnClick([&](wiEventArgs args) {
-		MeshComponent* mesh = wiScene::GetScene().meshes.GetComponent(entity);
+	computeNormalsSmoothButton.OnClick([&](wi::gui::EventArgs args) {
+		MeshComponent* mesh = wi::scene::GetScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
 			mesh->ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH);
@@ -315,8 +315,8 @@ void MeshWindow::Create(EditorComponent* editor)
 	computeNormalsHardButton.SetTooltip("Compute surface normals of the mesh. Resulting normals will be unique per face. This can increase vertex count.");
 	computeNormalsHardButton.SetSize(XMFLOAT2(240, hei));
 	computeNormalsHardButton.SetPos(XMFLOAT2(x - 50, y += step));
-	computeNormalsHardButton.OnClick([&](wiEventArgs args) {
-		MeshComponent* mesh = wiScene::GetScene().meshes.GetComponent(entity);
+	computeNormalsHardButton.OnClick([&](wi::gui::EventArgs args) {
+		MeshComponent* mesh = wi::scene::GetScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
 			mesh->ComputeNormals(MeshComponent::COMPUTE_NORMALS_HARD);
@@ -329,8 +329,8 @@ void MeshWindow::Create(EditorComponent* editor)
 	recenterButton.SetTooltip("Recenter mesh to AABB center.");
 	recenterButton.SetSize(XMFLOAT2(240, hei));
 	recenterButton.SetPos(XMFLOAT2(x - 50, y += step));
-	recenterButton.OnClick([&](wiEventArgs args) {
-		MeshComponent* mesh = wiScene::GetScene().meshes.GetComponent(entity);
+	recenterButton.OnClick([&](wi::gui::EventArgs args) {
+		MeshComponent* mesh = wi::scene::GetScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
 			mesh->Recenter();
@@ -343,8 +343,8 @@ void MeshWindow::Create(EditorComponent* editor)
 	recenterToBottomButton.SetTooltip("Recenter mesh to AABB bottom.");
 	recenterToBottomButton.SetSize(XMFLOAT2(240, hei));
 	recenterToBottomButton.SetPos(XMFLOAT2(x - 50, y += step));
-	recenterToBottomButton.OnClick([&](wiEventArgs args) {
-		MeshComponent* mesh = wiScene::GetScene().meshes.GetComponent(entity);
+	recenterToBottomButton.OnClick([&](wi::gui::EventArgs args) {
+		MeshComponent* mesh = wi::scene::GetScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
 			mesh->RecenterToBottom();
@@ -357,8 +357,8 @@ void MeshWindow::Create(EditorComponent* editor)
 	optimizeButton.SetTooltip("Run the meshoptimizer library.");
 	optimizeButton.SetSize(XMFLOAT2(240, hei));
 	optimizeButton.SetPos(XMFLOAT2(x - 50, y += step));
-	optimizeButton.OnClick([&](wiEventArgs args) {
-		MeshComponent* mesh = wiScene::GetScene().meshes.GetComponent(entity);
+	optimizeButton.OnClick([&](wi::gui::EventArgs args) {
+		MeshComponent* mesh = wi::scene::GetScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
 			// https://github.com/zeux/meshoptimizer#vertex-cache-optimization
@@ -387,8 +387,8 @@ void MeshWindow::Create(EditorComponent* editor)
 	subsetMaterialComboBox.SetSize(XMFLOAT2(200, hei));
 	subsetMaterialComboBox.SetPos(XMFLOAT2(x + 180, y += step));
 	subsetMaterialComboBox.SetEnabled(false);
-	subsetMaterialComboBox.OnSelect([&](wiEventArgs args) {
-		Scene& scene = wiScene::GetScene();
+	subsetMaterialComboBox.OnSelect([&](wi::gui::EventArgs args) {
+		Scene& scene = wi::scene::GetScene();
 		MeshComponent* mesh = scene.meshes.GetComponent(entity);
 		if (mesh != nullptr && subset >= 0 && subset < mesh->subsets.size())
 		{
@@ -411,8 +411,8 @@ void MeshWindow::Create(EditorComponent* editor)
 	terrainMat1Combo.SetSize(XMFLOAT2(200, hei));
 	terrainMat1Combo.SetPos(XMFLOAT2(x + 180, y += step));
 	terrainMat1Combo.SetEnabled(false);
-	terrainMat1Combo.OnSelect([&](wiEventArgs args) {
-		MeshComponent* mesh = wiScene::GetScene().meshes.GetComponent(entity);
+	terrainMat1Combo.OnSelect([&](wi::gui::EventArgs args) {
+		MeshComponent* mesh = wi::scene::GetScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
 			if (args.iValue == 0)
@@ -421,7 +421,7 @@ void MeshWindow::Create(EditorComponent* editor)
 			}
 			else
 			{
-				Scene& scene = wiScene::GetScene();
+				Scene& scene = wi::scene::GetScene();
 				mesh->terrain_material1 = scene.materials.GetEntity(args.iValue - 1);
 			}
 		}
@@ -433,8 +433,8 @@ void MeshWindow::Create(EditorComponent* editor)
 	terrainMat2Combo.SetSize(XMFLOAT2(200, hei));
 	terrainMat2Combo.SetPos(XMFLOAT2(x + 180, y += step));
 	terrainMat2Combo.SetEnabled(false);
-	terrainMat2Combo.OnSelect([&](wiEventArgs args) {
-		MeshComponent* mesh = wiScene::GetScene().meshes.GetComponent(entity);
+	terrainMat2Combo.OnSelect([&](wi::gui::EventArgs args) {
+		MeshComponent* mesh = wi::scene::GetScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
 			if (args.iValue == 0)
@@ -443,7 +443,7 @@ void MeshWindow::Create(EditorComponent* editor)
 			}
 			else
 			{
-				Scene& scene = wiScene::GetScene();
+				Scene& scene = wi::scene::GetScene();
 				mesh->terrain_material2 = scene.materials.GetEntity(args.iValue - 1);
 			}
 		}
@@ -455,8 +455,8 @@ void MeshWindow::Create(EditorComponent* editor)
 	terrainMat3Combo.SetSize(XMFLOAT2(200, hei));
 	terrainMat3Combo.SetPos(XMFLOAT2(x + 180, y += step));
 	terrainMat3Combo.SetEnabled(false);
-	terrainMat3Combo.OnSelect([&](wiEventArgs args) {
-		MeshComponent* mesh = wiScene::GetScene().meshes.GetComponent(entity);
+	terrainMat3Combo.OnSelect([&](wi::gui::EventArgs args) {
+		MeshComponent* mesh = wi::scene::GetScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
 			if (args.iValue == 0)
@@ -465,7 +465,7 @@ void MeshWindow::Create(EditorComponent* editor)
 			}
 			else
 			{
-				Scene& scene = wiScene::GetScene();
+				Scene& scene = wi::scene::GetScene();
 				mesh->terrain_material3 = scene.materials.GetEntity(args.iValue - 1);
 			}
 		}
@@ -477,7 +477,7 @@ void MeshWindow::Create(EditorComponent* editor)
 	terrainGenButton.SetTooltip("Generate terrain meshes.");
 	terrainGenButton.SetSize(XMFLOAT2(200, hei));
 	terrainGenButton.SetPos(XMFLOAT2(x + 180, y += step));
-	terrainGenButton.OnClick([=](wiEventArgs args) {
+	terrainGenButton.OnClick([=](wi::gui::EventArgs args) {
 
 		terragen.Cleanup();
 		terragen.SetVisible(true);
@@ -490,7 +490,7 @@ void MeshWindow::Create(EditorComponent* editor)
 			terrainGenButton.translation.y)
 		);
 
-		Scene& scene = wiScene::GetScene();
+		Scene& scene = wi::scene::GetScene();
 		Entity entity = scene.Entity_CreateObject("editorTerrain");
 		ObjectComponent& object = *scene.objects.GetComponent(entity);
 		object.meshID = scene.Entity_CreateMesh("terrainMesh");
@@ -519,7 +519,7 @@ void MeshWindow::Create(EditorComponent* editor)
 					mesh->vertex_positions[index] = XMFLOAT3((float)i - (float)width * 0.5f, 0, (float)j - (float)height * 0.5f);
 					if (rgb != nullptr)
 						mesh->vertex_positions[index].y = ((float)rgb[index * channelCount] - 127.0f) * heightmap_scale;
-					mesh->vertex_colors[index] = wiColor::Red().rgba;
+					mesh->vertex_colors[index] = wi::Color::Red().rgba;
 					XMFLOAT2 uv = XMFLOAT2((float)i / (float)width, (float)j / (float)height);
 					mesh->vertex_uvset_0[index] = uv;
 					mesh->vertex_uvset_1[index] = uv;
@@ -553,7 +553,7 @@ void MeshWindow::Create(EditorComponent* editor)
 		generate_mesh(128, 128);
 		
 		editor->ClearSelected();
-		wiScene::PickResult pick;
+		wi::scene::PickResult pick;
 		pick.entity = entity;
 		pick.subsetIndex = 0;
 		editor->AddSelected(pick);
@@ -563,28 +563,28 @@ void MeshWindow::Create(EditorComponent* editor)
 
 
 
-		terragen.dimXSlider.OnSlide([=](wiEventArgs args) {
+		terragen.dimXSlider.OnSlide([=](wi::gui::EventArgs args) {
 			terragen.width = (int)terragen.dimXSlider.GetValue();
 			terragen.height = (int)terragen.dimZSlider.GetValue();
 			generate_mesh(terragen.width, terragen.height);
 		});
-		terragen.dimZSlider.OnSlide([=](wiEventArgs args) {
+		terragen.dimZSlider.OnSlide([=](wi::gui::EventArgs args) {
 			terragen.width = (int)terragen.dimXSlider.GetValue();
 			terragen.height = (int)terragen.dimZSlider.GetValue();
 			generate_mesh(terragen.width, terragen.height);
 		});
-		terragen.dimYSlider.OnSlide([=](wiEventArgs args) {
+		terragen.dimYSlider.OnSlide([=](wi::gui::EventArgs args) {
 			generate_mesh(terragen.width, terragen.height, terragen.rgb, terragen.channelCount, args.fValue);
 		});
 
-		terragen.heightmapButton.OnClick([=](wiEventArgs args) {
+		terragen.heightmapButton.OnClick([=](wi::gui::EventArgs args) {
 
-			wiHelper::FileDialogParams params;
-			params.type = wiHelper::FileDialogParams::OPEN;
+			wi::helper::FileDialogParams params;
+			params.type = wi::helper::FileDialogParams::OPEN;
 			params.description = "Texture";
-			params.extensions = wiResourceManager::GetSupportedImageExtensions();
-			wiHelper::FileDialog(params, [=](std::string fileName) {
-				wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+			params.extensions = wi::resourcemanager::GetSupportedImageExtensions();
+			wi::helper::FileDialog(params, [=](std::string fileName) {
+				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 					if (terragen.rgb != nullptr)
 					{
 						stbi_image_free(terragen.rgb);
@@ -606,8 +606,8 @@ void MeshWindow::Create(EditorComponent* editor)
 	morphTargetCombo.Create("Morph Target:");
 	morphTargetCombo.SetSize(XMFLOAT2(100, hei));
 	morphTargetCombo.SetPos(XMFLOAT2(x + 280, y += step));
-	morphTargetCombo.OnSelect([&](wiEventArgs args) {
-	    MeshComponent* mesh = wiScene::GetScene().meshes.GetComponent(entity);
+	morphTargetCombo.OnSelect([&](wi::gui::EventArgs args) {
+	    MeshComponent* mesh = wi::scene::GetScene().meshes.GetComponent(entity);
 	    if (mesh != nullptr && args.iValue < (int)mesh->targets.size())
 	    {
 			morphTargetSlider.SetValue(mesh->targets[args.iValue].weight);
@@ -620,8 +620,8 @@ void MeshWindow::Create(EditorComponent* editor)
 	morphTargetSlider.SetTooltip("Set the weight for morph target");
 	morphTargetSlider.SetSize(XMFLOAT2(100, hei));
 	morphTargetSlider.SetPos(XMFLOAT2(x + 280, y += step));
-	morphTargetSlider.OnSlide([&](wiEventArgs args) {
-	    MeshComponent* mesh = wiScene::GetScene().meshes.GetComponent(entity);
+	morphTargetSlider.OnSlide([&](wi::gui::EventArgs args) {
+	    MeshComponent* mesh = wi::scene::GetScene().meshes.GetComponent(entity);
 	    if (mesh != nullptr && morphTargetCombo.GetSelected() < (int)mesh->targets.size())
 	    {
 			mesh->targets[morphTargetCombo.GetSelected()].weight = args.fValue;
@@ -643,7 +643,7 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 	this->entity = entity;
 	this->subset = subset;
 
-	Scene& scene = wiScene::GetScene();
+	Scene& scene = wi::scene::GetScene();
 
 	const MeshComponent* mesh = scene.meshes.GetComponent(entity);
 
@@ -735,7 +735,7 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 
 		softbodyCheckBox.SetCheck(false);
 
-		SoftBodyPhysicsComponent* physicscomponent = wiScene::GetScene().softbodies.GetComponent(entity);
+		SoftBodyPhysicsComponent* physicscomponent = wi::scene::GetScene().softbodies.GetComponent(entity);
 		if (physicscomponent != nullptr)
 		{
 			softbodyCheckBox.SetCheck(true);

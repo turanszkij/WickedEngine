@@ -3,14 +3,14 @@
 
 class EditorComponent;
 
-class NameWindow : public wiWindow
+class NameWindow : public wi::gui::Window
 {
 public:
 	void Create(EditorComponent* editor);
 
-	wiECS::Entity entity;
-	void SetEntity(wiECS::Entity entity);
+	wi::ecs::Entity entity;
+	void SetEntity(wi::ecs::Entity entity);
 
-	wiTextInputField nameInput;
+	wi::gui::TextInputField nameInput;
 };
 

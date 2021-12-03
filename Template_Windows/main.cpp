@@ -10,7 +10,7 @@
 HINSTANCE hInst;                                // current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
-MainComponent main;								// Wicked Engine Main Runtime Component
+wi::Application application;					// Wicked Engine Application
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -31,7 +31,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     BOOL dpi_success = SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
     assert(dpi_success);
 
-	wiStartupArguments::Parse(lpCmdLine); // if you wish to use command line arguments, here is a good place to parse them...
+	wi::arguments::Parse(lpCmdLine); // if you wish to use command line arguments, here is a good place to parse them...
 
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
@@ -47,10 +47,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_TEMPLATEWINDOWS));
 
 	// just show some basic info:
-	main.infoDisplay.active = true;
-	main.infoDisplay.watermark = true;
-	main.infoDisplay.resolution = true;
-	main.infoDisplay.fpsinfo = true;
+	application.infoDisplay.active = true;
+	application.infoDisplay.watermark = true;
+	application.infoDisplay.resolution = true;
+	application.infoDisplay.fpsinfo = true;
 
 	MSG msg = { 0 };
 	while (msg.message != WM_QUIT)
@@ -61,7 +61,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		}
 		else {
 
-			main.Run(); // run the update - render loop (mandatory)
+			application.Run(); // run the update - render loop (mandatory)
 
 		}
 	}
@@ -123,7 +123,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    UpdateWindow(hWnd);
 
 
-   main.SetWindow(hWnd); // assign window handle (mandatory)
+   application.SetWindow(hWnd); // assign window handle (mandatory)
 
 
    return TRUE;
@@ -162,36 +162,36 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
     case WM_SIZE:
     case WM_DPICHANGED:
-		if (main.is_window_active)
-			main.SetWindow(hWnd);
+		if (application.is_window_active)
+			application.SetWindow(hWnd);
         break;
 	case WM_CHAR:
 		switch (wParam)
 		{
 		case VK_BACK:
-			if (wiBackLog::isActive())
-				wiBackLog::deletefromInput();
-			wiTextInputField::DeleteFromInput();
+			if (wi::backlog::isActive())
+				wi::backlog::deletefromInput();
+			wi::gui::TextInputField::DeleteFromInput();
 			break;
 		case VK_RETURN:
 			break;
 		default:
 		{
 			const char c = (const char)(TCHAR)wParam;
-			if (wiBackLog::isActive())
+			if (wi::backlog::isActive())
 			{
-				wiBackLog::input(c);
+				wi::backlog::input(c);
 			}
-			wiTextInputField::AddInput(c);
+			wi::gui::TextInputField::AddInput(c);
 		}
 		break;
 		}
 		break;
 	case WM_KILLFOCUS:
-		main.is_window_active = false;
+		application.is_window_active = false;
 		break;
 	case WM_SETFOCUS:
-		main.is_window_active = true;
+		application.is_window_active = true;
 		break;
     case WM_PAINT:
         {

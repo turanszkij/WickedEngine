@@ -20,7 +20,6 @@ float4 main(VertexToPixel input) : SV_Target
 	}
 	color *= material.baseColor;
 
-	float opacity = 1;
 	float3 V = GetCamera().position - input.pos3D;
 	float dist = length(V);
 	V /= dist;

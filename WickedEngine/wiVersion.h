@@ -1,8 +1,7 @@
 #ifndef WICKEDENGINE_VERSION_DEFINED
 #define WICKEDENGINE_VERSION_DEFINED
-#include "CommonInclude.h"
 
-namespace wiVersion
+namespace wi::version
 {
 	long GetVersion();
 	// major features

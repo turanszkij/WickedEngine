@@ -25,7 +25,7 @@
 #include <mutex>
 #include <algorithm>
 
-namespace wiGraphics
+namespace wi::graphics
 {
 	class GraphicsDevice_Vulkan final : public GraphicsDevice
 	{
@@ -234,10 +234,10 @@ namespace wiGraphics
 		wi::vector<StaticSampler> common_samplers;
 
 	public:
-		GraphicsDevice_Vulkan(wiPlatform::window_type window, bool debuglayer = false);
+		GraphicsDevice_Vulkan(wi::platform::window_type window, bool debuglayer = false);
 		virtual ~GraphicsDevice_Vulkan();
 
-		bool CreateSwapChain(const SwapChainDesc* pDesc, wiPlatform::window_type window, SwapChain* swapChain) const override;
+		bool CreateSwapChain(const SwapChainDesc* pDesc, wi::platform::window_type window, SwapChain* swapChain) const override;
 		bool CreateBuffer(const GPUBufferDesc *pDesc, const void* pInitialData, GPUBuffer *pBuffer) const override;
 		bool CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) const override;
 		bool CreateShader(ShaderStage stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) const override;

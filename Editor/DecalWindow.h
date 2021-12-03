@@ -3,16 +3,16 @@
 
 class EditorComponent;
 
-class DecalWindow : public wiWindow
+class DecalWindow : public wi::gui::Window
 {
 public:
 	void Create(EditorComponent* editor);
 
-	wiECS::Entity entity;
-	void SetEntity(wiECS::Entity entity);
+	wi::ecs::Entity entity;
+	void SetEntity(wi::ecs::Entity entity);
 
-	wiCheckBox placementCheckBox;
-	wiLabel infoLabel;
-	wiTextInputField decalNameField;
+	wi::gui::CheckBox placementCheckBox;
+	wi::gui::Label infoLabel;
+	wi::gui::TextInputField decalNameField;
 };
 

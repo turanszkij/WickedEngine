@@ -6,57 +6,57 @@
 
 #include <string>
 
-// Do not alter order because it is bound to lua manually
-enum wiFontAlign
+namespace wi::font
 {
-	WIFALIGN_LEFT,
-	WIFALIGN_CENTER,
-	WIFALIGN_RIGHT,
-	WIFALIGN_TOP,
-	WIFALIGN_BOTTOM
-};
+	// Do not alter order because it is bound to lua manually
+	enum Alignment
+	{
+		WIFALIGN_LEFT,
+		WIFALIGN_CENTER,
+		WIFALIGN_RIGHT,
+		WIFALIGN_TOP,
+		WIFALIGN_BOTTOM
+	};
 
-static constexpr int WIFONTSIZE_DEFAULT = 16;
+	static constexpr int WIFONTSIZE_DEFAULT = 16;
 
-struct wiFontParams
-{
-	float posX = 0;
-	float posY = 0;
-	int size = WIFONTSIZE_DEFAULT; // line height in DPI scaled units
-	float scaling = 1;
-	float spacingX = 1, spacingY = 1; // minimum spacing between characters
-	wiFontAlign h_align, v_align;
-	wiColor color;
-	wiColor shadowColor;
-	float h_wrap = -1; // wrap start width (-1 default for no wrap)
-	int style = 0;
+	struct Params
+	{
+		float posX = 0;
+		float posY = 0;
+		int size = WIFONTSIZE_DEFAULT; // line height in DPI scaled units
+		float scaling = 1;
+		float spacingX = 1, spacingY = 1; // minimum spacing between characters
+		Alignment h_align, v_align;
+		wi::Color color;
+		wi::Color shadowColor;
+		float h_wrap = -1; // wrap start width (-1 default for no wrap)
+		int style = 0;
 
-	wiFontParams(
-		float posX = 0,
-		float posY = 0,
-		int size = WIFONTSIZE_DEFAULT,
-		wiFontAlign h_align = WIFALIGN_LEFT,
-		wiFontAlign v_align = WIFALIGN_TOP,
-		wiColor color = wiColor(255, 255, 255, 255),
-		wiColor shadowColor = wiColor(0,0,0,0)
-	):
-		posX(posX),
-		posY(posY),
-		size(size),
-		h_align(h_align),
-		v_align(v_align),
-		color(color),
-		shadowColor(shadowColor)
-	{}
-};
+		Params(
+			float posX = 0,
+			float posY = 0,
+			int size = WIFONTSIZE_DEFAULT,
+			Alignment h_align = WIFALIGN_LEFT,
+			Alignment v_align = WIFALIGN_TOP,
+			wi::Color color = wi::Color(255, 255, 255, 255),
+			wi::Color shadowColor = wi::Color(0, 0, 0, 0)
+		) :
+			posX(posX),
+			posY(posY),
+			size(size),
+			h_align(h_align),
+			v_align(v_align),
+			color(color),
+			shadowColor(shadowColor)
+		{}
+	};
 
-namespace wiFont
-{
 	// Initializes the font renderer
 	void Initialize();
 
 	// Get the texture that contains currently cached glyphs
-	const wiGraphics::Texture* GetAtlas();
+	const wi::graphics::Texture* GetAtlas();
 
 	// Create a font from a file. It must be an existing .ttf file.
 	//	fontName : path to .ttf font
@@ -73,21 +73,21 @@ namespace wiFont
 	int AddFontStyle(const std::string& fontName, const uint8_t* data, size_t size);
 
 	// Set canvas for the CommandList to handle DPI-aware font rendering
-	void SetCanvas(const wiCanvas& canvas, wiGraphics::CommandList cmd);
+	void SetCanvas(const wi::Canvas& canvas, wi::graphics::CommandList cmd);
 
-	void Draw(const char* text, const wiFontParams& params, wiGraphics::CommandList cmd);
-	void Draw(const wchar_t* text, const wiFontParams& params, wiGraphics::CommandList cmd);
-	void Draw(const std::string& text, const wiFontParams& params, wiGraphics::CommandList cmd);
-	void Draw(const std::wstring& text, const wiFontParams& params, wiGraphics::CommandList cmd);
+	void Draw(const char* text, const Params& params, wi::graphics::CommandList cmd);
+	void Draw(const wchar_t* text, const Params& params, wi::graphics::CommandList cmd);
+	void Draw(const std::string& text, const Params& params, wi::graphics::CommandList cmd);
+	void Draw(const std::wstring& text, const Params& params, wi::graphics::CommandList cmd);
 
-	float textWidth(const char* text, const wiFontParams& params);
-	float textWidth(const wchar_t* text, const wiFontParams& params);
-	float textWidth(const std::string& text, const wiFontParams& params);
-	float textWidth(const std::wstring& text, const wiFontParams& params);
+	float TextWidth(const char* text, const Params& params);
+	float TextWidth(const wchar_t* text, const Params& params);
+	float TextWidth(const std::string& text, const Params& params);
+	float TextWidth(const std::wstring& text, const Params& params);
 
-	float textHeight(const char* text, const wiFontParams& params);
-	float textHeight(const wchar_t* text, const wiFontParams& params);
-	float textHeight(const std::string& text, const wiFontParams& params);
-	float textHeight(const std::wstring& text, const wiFontParams& params);
+	float TextHeight(const char* text, const Params& params);
+	float TextHeight(const wchar_t* text, const Params& params);
+	float TextHeight(const std::string& text, const Params& params);
+	float TextHeight(const std::wstring& text, const Params& params);
 
-};
+}

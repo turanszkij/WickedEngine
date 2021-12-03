@@ -4,23 +4,23 @@
 
 #include <string>
 
-namespace wiShaderCompiler
+namespace wi::shadercompiler
 {
 	void Initialize();
 
-	enum FLAGS
+	enum class Flags
 	{
-		FLAG_NONE = 0,
-		FLAG_DISABLE_OPTIMIZATION = 1 << 0,
+		NONE = 0,
+		DISABLE_OPTIMIZATION = 1 << 0,
 	};
 	struct CompilerInput
 	{
-		uint64_t flags = FLAG_NONE;
-		wiGraphics::ShaderFormat format = wiGraphics::ShaderFormat::NONE;
-		wiGraphics::ShaderStage stage = wiGraphics::ShaderStage::Count;
+		Flags flags = Flags::NONE;
+		wi::graphics::ShaderFormat format = wi::graphics::ShaderFormat::NONE;
+		wi::graphics::ShaderStage stage = wi::graphics::ShaderStage::Count;
 		// if the shader relies on a higher shader model feature, it must be declared here.
 		//	But the compiler can also choose a higher one internally, if needed
-		wiGraphics::ShaderModel minshadermodel = wiGraphics::ShaderModel::SM_5_0;
+		wi::graphics::ShaderModel minshadermodel = wi::graphics::ShaderModel::SM_5_0;
 		std::string shadersourcefilename;
 		std::string entrypoint = "main";
 		wi::vector<std::string> include_directories;
@@ -46,3 +46,8 @@ namespace wiShaderCompiler
 	size_t GetRegisteredShaderCount();
 	bool CheckRegisteredShadersOutdated();
 }
+
+template<>
+struct enable_bitmask_operators<wi::shadercompiler::Flags> {
+	static const bool enable = true;
+};

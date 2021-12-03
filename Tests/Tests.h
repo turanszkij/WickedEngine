@@ -2,11 +2,11 @@
 #include "WickedEngine.h"
 
 
-class TestsRenderer : public RenderPath3D
+class TestsRenderer : public wi::RenderPath3D
 {
-	wiLabel label;
-	wiComboBox testSelector;
-	wiECS::Entity ik_entity = wiECS::INVALID_ENTITY;
+	wi::gui::Label label;
+	wi::gui::ComboBox testSelector;
+	wi::ecs::Entity ik_entity = wi::ecs::INVALID_ENTITY;
 public:
 	void Load() override;
 	void Update(float dt) override;
@@ -19,7 +19,7 @@ public:
 	void RunUnorderedMapTest();
 };
 
-class Tests : public MainComponent
+class Tests : public wi::Application
 {
 	TestsRenderer renderer;
 public:

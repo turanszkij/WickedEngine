@@ -4,16 +4,16 @@
 #include <string>
 #include <thread>
 
-namespace wiInitializer
+namespace wi::initializer
 {
 	bool initializationStarted = false;
-	wiJobSystem::context ctx;
-	wiTimer timer;
+	wi::jobsystem::context ctx;
+	wi::Timer timer;
 
 	void InitializeComponentsImmediate()
 	{
 		InitializeComponentsAsync();
-		wiJobSystem::Wait(ctx);
+		wi::jobsystem::Wait(ctx);
 	}
 	void InitializeComponentsAsync()
 	{
@@ -22,48 +22,48 @@ namespace wiInitializer
 		initializationStarted = true;
 
 		std::string ss;
-		ss += "\n[wiInitializer] Initializing Wicked Engine, please wait...\n";
+		ss += "\n[wi::initializer] Initializing Wicked Engine, please wait...\n";
 		ss += "Version: ";
-		ss += wiVersion::GetVersionString();
+		ss += wi::version::GetVersionString();
 		ss += "\n";
-		wiBackLog::post(ss);
+		wi::backlog::post(ss);
 
-		wiJobSystem::Initialize();
-		wiShaderCompiler::Initialize();
+		wi::jobsystem::Initialize();
+		wi::shadercompiler::Initialize();
 
-		size_t shaderdump_count = wiRenderer::GetShaderDumpCount();
+		size_t shaderdump_count = wi::renderer::GetShaderDumpCount();
 		if (shaderdump_count > 0)
 		{
-			wiBackLog::post("Embedded shaders found: " + std::to_string(shaderdump_count));
+			wi::backlog::post("Embedded shaders found: " + std::to_string(shaderdump_count));
 		}
 
-		wiBackLog::post("");
-		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiFont::Initialize(); });
-		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiImage::Initialize(); });
-		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiInput::Initialize(); });
-		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiRenderer::Initialize(); wiWidget::Initialize(); });
-		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiAudio::Initialize(); });
-		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiNetwork::Initialize(); });
-		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiTextureHelper::Initialize(); });
-		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiScene::wiHairParticle::Initialize(); });
-		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiScene::wiEmittedParticle::Initialize(); });
-		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiOcean::Initialize(); });
-		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiGPUSortLib::Initialize(); });
-		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiGPUBVH::Initialize(); });
-		wiJobSystem::Execute(ctx, [](wiJobArgs args) { wiPhysicsEngine::Initialize(); });
+		wi::backlog::post("");
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::font::Initialize(); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::image::Initialize(); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::input::Initialize(); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::renderer::Initialize(); wi::gui::Initialize(); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::audio::Initialize(); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::network::Initialize(); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::texturehelper::Initialize(); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::HairParticleSystem::Initialize(); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::EmittedParticleSystem::Initialize(); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::Ocean::Initialize(); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::gpusortlib::Initialize(); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::GPUBVH::Initialize(); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::physics::Initialize(); });
 
 		// Initialize this immediately:
-		wiLua::Initialize();
+		wi::lua::Initialize();
 
 		std::thread([] {
-			wiJobSystem::Wait(ctx);
-			wiBackLog::post("\n[wiInitializer] Wicked Engine Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
+			wi::jobsystem::Wait(ctx);
+			wi::backlog::post("\n[wi::initializer] Wicked Engine Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 		}).detach();
 
 	}
 
 	bool IsInitializeFinished()
 	{
-		return initializationStarted && !wiJobSystem::IsBusy(ctx);
+		return initializationStarted && !wi::jobsystem::IsBusy(ctx);
 	}
 }

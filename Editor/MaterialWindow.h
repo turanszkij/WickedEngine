@@ -3,53 +3,53 @@
 
 class EditorComponent;
 
-class MaterialWindow : public wiWindow
+class MaterialWindow : public wi::gui::Window
 {
 public:
 	void Create(EditorComponent* editor);
 
-	wiECS::Entity entity;
-	void SetEntity(wiECS::Entity entity);
+	wi::ecs::Entity entity;
+	void SetEntity(wi::ecs::Entity entity);
 
-	wiTextInputField materialNameField;
-	wiButton newMaterialButton;
-	wiCheckBox shadowReceiveCheckBox;
-	wiCheckBox shadowCasterCheckBox;
-	wiCheckBox useVertexColorsCheckBox;
-	wiCheckBox specularGlossinessCheckBox;
-	wiCheckBox occlusionPrimaryCheckBox;
-	wiCheckBox occlusionSecondaryCheckBox;
-	wiCheckBox windCheckBox;
-	wiCheckBox doubleSidedCheckBox;
-	wiSlider normalMapSlider;
-	wiSlider roughnessSlider;
-	wiSlider reflectanceSlider;
-	wiSlider metalnessSlider;
-	wiSlider emissiveSlider;
-	wiSlider transmissionSlider;
-	wiSlider refractionSlider;
-	wiSlider pomSlider;
-	wiSlider displacementMappingSlider;
-	wiSlider subsurfaceScatteringSlider;
-	wiSlider texAnimFrameRateSlider;
-	wiSlider texAnimDirectionSliderU;
-	wiSlider texAnimDirectionSliderV;
-	wiSlider texMulSliderX;
-	wiSlider texMulSliderY;
-	wiSlider alphaRefSlider;
-	wiComboBox shaderTypeComboBox;
-	wiComboBox blendModeComboBox;
-	wiComboBox shadingRateComboBox;
-	wiSlider sheenRoughnessSlider;
-	wiSlider clearcoatSlider;
-	wiSlider clearcoatRoughnessSlider;
+	wi::gui::TextInputField materialNameField;
+	wi::gui::Button newMaterialButton;
+	wi::gui::CheckBox shadowReceiveCheckBox;
+	wi::gui::CheckBox shadowCasterCheckBox;
+	wi::gui::CheckBox useVertexColorsCheckBox;
+	wi::gui::CheckBox specularGlossinessCheckBox;
+	wi::gui::CheckBox occlusionPrimaryCheckBox;
+	wi::gui::CheckBox occlusionSecondaryCheckBox;
+	wi::gui::CheckBox windCheckBox;
+	wi::gui::CheckBox doubleSidedCheckBox;
+	wi::gui::Slider normalMapSlider;
+	wi::gui::Slider roughnessSlider;
+	wi::gui::Slider reflectanceSlider;
+	wi::gui::Slider metalnessSlider;
+	wi::gui::Slider emissiveSlider;
+	wi::gui::Slider transmissionSlider;
+	wi::gui::Slider refractionSlider;
+	wi::gui::Slider pomSlider;
+	wi::gui::Slider displacementMappingSlider;
+	wi::gui::Slider subsurfaceScatteringSlider;
+	wi::gui::Slider texAnimFrameRateSlider;
+	wi::gui::Slider texAnimDirectionSliderU;
+	wi::gui::Slider texAnimDirectionSliderV;
+	wi::gui::Slider texMulSliderX;
+	wi::gui::Slider texMulSliderY;
+	wi::gui::Slider alphaRefSlider;
+	wi::gui::ComboBox shaderTypeComboBox;
+	wi::gui::ComboBox blendModeComboBox;
+	wi::gui::ComboBox shadingRateComboBox;
+	wi::gui::Slider sheenRoughnessSlider;
+	wi::gui::Slider clearcoatSlider;
+	wi::gui::Slider clearcoatRoughnessSlider;
 
-	wiComboBox colorComboBox;
-	wiColorPicker colorPicker;
+	wi::gui::ComboBox colorComboBox;
+	wi::gui::ColorPicker colorPicker;
 
-	wiComboBox textureSlotComboBox;
-	wiButton textureSlotButton;
-	wiLabel textureSlotLabel;
-	wiTextInputField textureSlotUvsetField;
+	wi::gui::ComboBox textureSlotComboBox;
+	wi::gui::Button textureSlotButton;
+	wi::gui::Label textureSlotLabel;
+	wi::gui::TextInputField textureSlotUvsetField;
 };
 

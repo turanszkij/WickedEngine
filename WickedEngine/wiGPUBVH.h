@@ -3,23 +3,26 @@
 #include "wiGraphicsDevice.h"
 #include "wiScene_Decl.h"
 
-struct wiGPUBVH
+namespace wi
 {
-	// Scene BVH intersection resources:
-	wiGraphics::GPUBuffer bvhNodeBuffer;
-	wiGraphics::GPUBuffer bvhParentBuffer;
-	wiGraphics::GPUBuffer bvhFlagBuffer;
-	wiGraphics::GPUBuffer primitiveCounterBuffer;
-	wiGraphics::GPUBuffer primitiveIDBuffer;
-	wiGraphics::GPUBuffer primitiveBuffer;
-	wiGraphics::GPUBuffer primitiveMortonBuffer;
-	uint32_t primitiveCapacity = 0;
-	bool IsValid() const { return primitiveCounterBuffer.IsValid(); }
+	struct GPUBVH
+	{
+		// Scene BVH intersection resources:
+		wi::graphics::GPUBuffer bvhNodeBuffer;
+		wi::graphics::GPUBuffer bvhParentBuffer;
+		wi::graphics::GPUBuffer bvhFlagBuffer;
+		wi::graphics::GPUBuffer primitiveCounterBuffer;
+		wi::graphics::GPUBuffer primitiveIDBuffer;
+		wi::graphics::GPUBuffer primitiveBuffer;
+		wi::graphics::GPUBuffer primitiveMortonBuffer;
+		uint32_t primitiveCapacity = 0;
+		bool IsValid() const { return primitiveCounterBuffer.IsValid(); }
 
-	void Update(const wiScene::Scene& scene);
-	void Build(const wiScene::Scene& scene, wiGraphics::CommandList cmd) const;
+		void Update(const wi::scene::Scene& scene);
+		void Build(const wi::scene::Scene& scene, wi::graphics::CommandList cmd) const;
 
-	void Clear();
+		void Clear();
 
-	static void Initialize();
-};
+		static void Initialize();
+	};
+}

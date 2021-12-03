@@ -2,7 +2,7 @@
 
 #ifdef PLATFORM_LINUX
 #include "wiNetwork.h"
-#include "wiBackLog.h"
+#include "wiBacklog.h"
 #include "wiTimer.h"
 
 #include <string>
@@ -12,7 +12,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-namespace wiNetwork
+namespace wi::network
 {
 	//For easy address conversion
 	struct in_addr_union {
@@ -40,11 +40,11 @@ namespace wiNetwork
 
 	void Initialize()
 	{
-		wiTimer timer;
+		wi::Timer timer;
 
 		int result;
 
-		wiBackLog::post("wiNetwork_Linux Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
+		wi::backlog::post("wi::network_Linux Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
 
 	bool CreateSocket(Socket* sock)
@@ -56,7 +56,7 @@ namespace wiNetwork
 
 		if(socketinternal->handle == -1)
 		{
-			wiBackLog::post("wiNetwork_Linux error in CreateSocket: Could not create socket");
+			wi::backlog::post("wi::network_Linux error in CreateSocket: Could not create socket");
 			return false;
 		}
 
@@ -80,7 +80,7 @@ namespace wiNetwork
 			int result = sendto(socketinternal->handle, (const char*)data, (int)dataSize, 0, (const sockaddr*)&target, sizeof(target));
 			if (result < 0)
 			{
-				wiBackLog::post("wiNetwork_Linux error in Send: (Error Code: " + std::to_string(result) + ") " + std::string(strerror(result)));
+				wi::backlog::post("wi::network_Linux error in Send: (Error Code: " + std::to_string(result) + ") " + std::string(strerror(result)));
 				return false;
 			}
 
@@ -102,7 +102,7 @@ namespace wiNetwork
 			int result = bind(socketinternal->handle, (struct sockaddr *)&target , sizeof(target));
 			if (result < 0)
 			{
-				wiBackLog::post("wiNetwork_Linux error in Send: (Error Code: " + std::to_string(result) + ") " + std::string(strerror(result)));
+				wi::backlog::post("wi::network_Linux error in Send: (Error Code: " + std::to_string(result) + ") " + std::string(strerror(result)));
 				return false;
 			}
 
@@ -126,7 +126,7 @@ namespace wiNetwork
 			int result = select(0, &readfds, NULL, NULL, &timeout);
 			if (result < 0)
 			{
-				wiBackLog::post("wiNetwork_Linux error in Send: (Error Code: " + std::to_string(result) + ") " + std::string(strerror(result)));
+				wi::backlog::post("wi::network_Linux error in Send: (Error Code: " + std::to_string(result) + ") " + std::string(strerror(result)));
 				assert(0);
 				return false;
 			}
@@ -146,7 +146,7 @@ namespace wiNetwork
 			int result = recvfrom(socketinternal->handle, (char*)data, (int)dataSize, 0, (sockaddr*)& sender, (socklen_t*)&targetsize);
 			if (result < 0)
 			{
-				wiBackLog::post("wiNetwork_Linux error in Send: (Error Code: " + std::to_string(result) + ") " + std::string(strerror(result)));
+				wi::backlog::post("wi::network_Linux error in Send: (Error Code: " + std::to_string(result) + ") " + std::string(strerror(result)));
 				assert(0);
 				return false;
 			}

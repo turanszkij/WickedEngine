@@ -10,8 +10,13 @@
 #include <cassert>
 #include <atomic>
 
-namespace wiECS
+// Entity-Component System
+namespace wi::ecs
 {
+	// The Entity is a global unique persistent identifier within the entity-component system
+	//	It can be stored and used for the duration of the application
+	//	The entity can be a different value on a different run of the application, if it was serialized
+	//	It must be only serialized with the SerializeEntity() function. It will ensure that entities still match with their components correctly after serialization
 	using Entity = uint32_t;
 	static const Entity INVALID_ENTITY = 0;
 	// Runtime can create a new entity with this
@@ -23,17 +28,17 @@ namespace wiECS
 
 	struct EntitySerializer
 	{
-		wiJobSystem::context ctx; // allow components to spawn serialization subtasks
+		wi::jobsystem::context ctx; // allow components to spawn serialization subtasks
 		wi::unordered_map<uint64_t, Entity> remap;
 		bool allow_remap = true;
 
 		~EntitySerializer()
 		{
-			wiJobSystem::Wait(ctx); // automatically wait for all subtasks after serialization
+			wi::jobsystem::Wait(ctx); // automatically wait for all subtasks after serialization
 		}
 	};
 	// This is the safe way to serialize an entity
-	inline void SerializeEntity(wiArchive& archive, Entity& entity, EntitySerializer& seri)
+	inline void SerializeEntity(wi::Archive& archive, Entity& entity, EntitySerializer& seri)
 	{
 		if (archive.IsReadMode())
 		{
@@ -65,6 +70,7 @@ namespace wiECS
 		}
 	}
 
+	// The ComponentManager is a container that stores components and matches them with entities
 	template<typename Component>
 	class ComponentManager
 	{
@@ -117,7 +123,7 @@ namespace wiECS
 		}
 
 		// Read/Write everything to an archive depending on the archive state
-		inline void Serialize(wiArchive& archive, EntitySerializer& seri)
+		inline void Serialize(wi::Archive& archive, EntitySerializer& seri)
 		{
 			if (archive.IsReadMode())
 			{

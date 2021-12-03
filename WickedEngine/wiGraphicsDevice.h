@@ -7,7 +7,7 @@
 #include <cstring>
 #include <algorithm>
 
-namespace wiGraphics
+namespace wi::graphics
 {
 	// CommandList can be used to record graphics commands from a CPU thread
 	//	Use GraphicsDevice::BeginCommandList() to start a command list
@@ -74,7 +74,7 @@ namespace wiGraphics
 		virtual ~GraphicsDevice() = default;
 
 		// Create a SwapChain. If the SwapChain is to be recreated, the window handle can be nullptr.
-		virtual bool CreateSwapChain(const SwapChainDesc* pDesc, wiPlatform::window_type window, SwapChain* swapChain) const = 0;
+		virtual bool CreateSwapChain(const SwapChainDesc* pDesc, wi::platform::window_type window, SwapChain* swapChain) const = 0;
 		virtual bool CreateBuffer(const GPUBufferDesc *pDesc, const void* pInitialData, GPUBuffer *pBuffer) const = 0;
 		virtual bool CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) const = 0;
 		virtual bool CreateShader(ShaderStage stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) const = 0;
@@ -216,9 +216,9 @@ namespace wiGraphics
 
 		struct GPUAllocation
 		{
-			void* data = nullptr;				// application can write to this. Reads might be not supported or slow. The offset is already applied
-			GPUBuffer buffer;					// application can bind it to the GPU
-			uint64_t offset = 0;				// allocation's offset from the GPUbuffer's beginning
+			void* data = nullptr;	// application can write to this. Reads might be not supported or slow. The offset is already applied
+			GPUBuffer buffer;		// application can bind it to the GPU
+			uint64_t offset = 0;	// allocation's offset from the GPUbuffer's beginning
 
 			// Returns true if the allocation was successful
 			inline bool IsValid() const { return data != nullptr && buffer.IsValid(); }
@@ -281,7 +281,7 @@ namespace wiGraphics
 		//	This will be done on the CPU to an UPLOAD buffer, so this can be used inside a RenderPass
 		//	But this will be only visible on the command list it was bound to
 		template<typename T>
-		void BindDynamicConstantBuffer(const T& data, uint32_t slot, wiGraphics::CommandList cmd)
+		void BindDynamicConstantBuffer(const T& data, uint32_t slot, CommandList cmd)
 		{
 			GPUAllocation allocation = AllocateGPU(sizeof(T), cmd);
 			std::memcpy(allocation.data, &data, sizeof(T));

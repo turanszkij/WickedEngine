@@ -11,11 +11,11 @@
 #include <filesystem>
 #include <limits>
 
-using namespace wiGraphics;
-using namespace wiRectPacker;
-using namespace wiScene;
-using namespace wiECS;
-
+using namespace wi::graphics;
+using namespace wi::primitive;
+using namespace wi::rectpacker;
+using namespace wi::scene;
+using namespace wi::ecs;
 
 #ifdef PLATFORM_UWP
 #include <winrt/Windows.Storage.h>
@@ -61,7 +61,7 @@ winrt::fire_and_forget uwp_copy_assets()
 
 	// scripts:
 	{
-		wiHelper::StringConvert(rootdir + "scripts\\", wstr);
+		wi::helper::StringConvert(rootdir + "scripts\\", wstr);
 		auto src = co_await StorageFolder::GetFolderFromPathAsync(wstr.c_str());
 		if (src)
 		{
@@ -75,7 +75,7 @@ winrt::fire_and_forget uwp_copy_assets()
 
 	// models:
 	{
-		wiHelper::StringConvert(rootdir + "models\\", wstr);
+		wi::helper::StringConvert(rootdir + "models\\", wstr);
 		auto src = co_await StorageFolder::GetFolderFromPathAsync(wstr.c_str());
 		if (src)
 		{
@@ -89,7 +89,7 @@ winrt::fire_and_forget uwp_copy_assets()
 
 	// Documentation:
 	{
-		wiHelper::StringConvert(rootdir + "Documentation\\", wstr);
+		wi::helper::StringConvert(rootdir + "Documentation\\", wstr);
 		auto src = co_await StorageFolder::GetFolderFromPathAsync(wstr.c_str());
 		if (src)
 		{
@@ -105,10 +105,10 @@ winrt::fire_and_forget uwp_copy_assets()
 
 void Editor::Initialize()
 {
-	MainComponent::Initialize();
+	Application::Initialize();
 
 	// With this mode, file data for resources will be kept around. This allows serializing embedded resource data inside scenes
-	wiResourceManager::SetMode(wiResourceManager::MODE_ALLOW_RETAIN_FILEDATA);
+	wi::resourcemanager::SetMode(wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA);
 
 	infoDisplay.active = true;
 	infoDisplay.watermark = true;
@@ -118,7 +118,7 @@ void Editor::Initialize()
 	infoDisplay.colorspace = true;
 	infoDisplay.heap_allocation_counter = true;
 
-	wiRenderer::SetOcclusionCullingEnabled(true);
+	wi::renderer::SetOcclusionCullingEnabled(true);
 
 	loader.Load();
 
@@ -132,17 +132,16 @@ void Editor::Initialize()
 
 void EditorLoadingScreen::Load()
 {
-	font = wiSpriteFont("Loading...", wiFontParams(0, 0, 36,
-		WIFALIGN_CENTER, WIFALIGN_CENTER));
+	font = wi::SpriteFont("Loading...", wi::font::Params(0, 0, 36, wi::font::WIFALIGN_CENTER, wi::font::WIFALIGN_CENTER));
 	AddFont(&font);
 
-	sprite = wiSprite("images/logo_small.png");
+	sprite = wi::Sprite("images/logo_small.png");
 	sprite.anim.opa = 1;
 	sprite.anim.repeatable = true;
 	sprite.params.siz = XMFLOAT2(128, 128);
 	sprite.params.pivot = XMFLOAT2(0.5f, 1.0f);
-	sprite.params.quality = QUALITY_LINEAR;
-	sprite.params.blendFlag = BLENDMODE_ALPHA;
+	sprite.params.quality = wi::image::QUALITY_LINEAR;
+	sprite.params.blendFlag = wi::enums::BLENDMODE_ALPHA;
 	AddSprite(&sprite);
 
 	LoadingScreen::Load();
@@ -151,7 +150,7 @@ void EditorLoadingScreen::Update(float dt)
 {
 	font.params.posX = GetLogicalWidth()*0.5f;
 	font.params.posY = GetLogicalHeight()*0.5f;
-	sprite.params.pos = XMFLOAT3(GetLogicalWidth()*0.5f, GetLogicalHeight()*0.5f - font.textHeight(), 0);
+	sprite.params.pos = XMFLOAT3(GetLogicalWidth()*0.5f, GetLogicalHeight()*0.5f - font.TextHeight(), 0);
 
 	LoadingScreen::Update(dt);
 }
@@ -162,12 +161,12 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 	switch (path)
 	{
 	case EditorComponent::RENDERPATH_DEFAULT:
-		renderPath = std::make_unique<RenderPath3D>();
+		renderPath = std::make_unique<wi::RenderPath3D>();
 		pathTraceTargetSlider.SetVisible(false);
 		pathTraceStatisticsLabel.SetVisible(false);
 		break;
 	case EditorComponent::RENDERPATH_PATHTRACING:
-		renderPath = std::make_unique<RenderPath3D_PathTracing>();
+		renderPath = std::make_unique<wi::RenderPath3D_PathTracing>();
 		pathTraceTargetSlider.SetVisible(true);
 		pathTraceStatisticsLabel.SetVisible(true);
 		break;
@@ -180,7 +179,7 @@ void EditorComponent::ChangeRenderPath(RENDERPATH path)
 
 	renderPath->Load();
 
-	wiGUI& gui = GetGUI();
+	wi::gui::GUI& gui = GetGUI();
 
 	// Destroy and recreate renderer and postprocess windows:
 
@@ -202,7 +201,7 @@ void EditorComponent::ResizeBuffers()
 	init(main->canvas);
 	RenderPath2D::ResizeBuffers();
 
-	GraphicsDevice* device = wiGraphics::GetDevice();
+	GraphicsDevice* device = wi::graphics::GetDevice();
 
 	renderPath->init(*this);
 	renderPath->ResizeBuffers();
@@ -416,18 +415,18 @@ void EditorComponent::Load()
 	uwp_copy_assets();
 #endif // PLATFORM_UWP
 
-	wiJobSystem::context ctx;
-	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { pointLightTex = wiResourceManager::Load("images/pointlight.dds"); });
-	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { spotLightTex = wiResourceManager::Load("images/spotlight.dds"); });
-	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { dirLightTex = wiResourceManager::Load("images/directional_light.dds"); });
-	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { areaLightTex = wiResourceManager::Load("images/arealight.dds"); });
-	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { decalTex = wiResourceManager::Load("images/decal.dds"); });
-	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { forceFieldTex = wiResourceManager::Load("images/forcefield.dds"); });
-	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { emitterTex = wiResourceManager::Load("images/emitter.dds"); });
-	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { hairTex = wiResourceManager::Load("images/hair.dds"); });
-	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { cameraTex = wiResourceManager::Load("images/camera.dds"); });
-	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { armatureTex = wiResourceManager::Load("images/armature.dds"); });
-	wiJobSystem::Execute(ctx, [this](wiJobArgs args) { soundTex = wiResourceManager::Load("images/sound.dds"); });
+	wi::jobsystem::context ctx;
+	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { pointLightTex = wi::resourcemanager::Load("images/pointlight.dds"); });
+	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { spotLightTex = wi::resourcemanager::Load("images/spotlight.dds"); });
+	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { dirLightTex = wi::resourcemanager::Load("images/directional_light.dds"); });
+	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { areaLightTex = wi::resourcemanager::Load("images/arealight.dds"); });
+	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { decalTex = wi::resourcemanager::Load("images/decal.dds"); });
+	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { forceFieldTex = wi::resourcemanager::Load("images/forcefield.dds"); });
+	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { emitterTex = wi::resourcemanager::Load("images/emitter.dds"); });
+	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { hairTex = wi::resourcemanager::Load("images/hair.dds"); });
+	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { cameraTex = wi::resourcemanager::Load("images/camera.dds"); });
+	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { armatureTex = wi::resourcemanager::Load("images/armature.dds"); });
+	wi::jobsystem::Execute(ctx, [this](wi::jobsystem::JobArgs args) { soundTex = wi::resourcemanager::Load("images/sound.dds"); });
 	// wait for ctx is at the end of this function!
 
 	translator.Create();
@@ -437,189 +436,189 @@ void EditorComponent::Load()
 
 	rendererWnd_Toggle.Create("Renderer");
 	rendererWnd_Toggle.SetTooltip("Renderer settings window");
-	rendererWnd_Toggle.OnClick([&](wiEventArgs args) {
+	rendererWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		rendererWnd.SetVisible(!rendererWnd.IsVisible());
 		});
 	GetGUI().AddWidget(&rendererWnd_Toggle);
 
 	postprocessWnd_Toggle.Create("PostProcess");
 	postprocessWnd_Toggle.SetTooltip("Postprocess settings window");
-	postprocessWnd_Toggle.OnClick([&](wiEventArgs args) {
+	postprocessWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		postprocessWnd.SetVisible(!postprocessWnd.IsVisible());
 		});
 	GetGUI().AddWidget(&postprocessWnd_Toggle);
 
 	paintToolWnd_Toggle.Create("Paint Tool");
 	paintToolWnd_Toggle.SetTooltip("Paint tool window");
-	paintToolWnd_Toggle.OnClick([&](wiEventArgs args) {
+	paintToolWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		paintToolWnd.SetVisible(!paintToolWnd.IsVisible());
 		});
 	GetGUI().AddWidget(&paintToolWnd_Toggle);
 
 
 	///////////////////////
-	wiColor option_color_idle = wiColor(255, 145, 145, 100);
-	wiColor option_color_focus = wiColor(255, 197, 193, 200);
+	wi::Color option_color_idle = wi::Color(255, 145, 145, 100);
+	wi::Color option_color_focus = wi::Color(255, 197, 193, 200);
 
 
 	weatherWnd_Toggle.Create("Weather");
-	weatherWnd_Toggle.SetColor(option_color_idle, wiWidget::IDLE);
-	weatherWnd_Toggle.SetColor(option_color_focus, wiWidget::FOCUS);
+	weatherWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
+	weatherWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
 	weatherWnd_Toggle.SetTooltip("Weather settings window");
-	weatherWnd_Toggle.OnClick([&](wiEventArgs args) {
+	weatherWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		weatherWnd.SetVisible(!weatherWnd.IsVisible());
 	});
 	GetGUI().AddWidget(&weatherWnd_Toggle);
 
 	objectWnd_Toggle.Create("Object");
-	objectWnd_Toggle.SetColor(option_color_idle, wiWidget::IDLE);
-	objectWnd_Toggle.SetColor(option_color_focus, wiWidget::FOCUS);
+	objectWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
+	objectWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
 	objectWnd_Toggle.SetTooltip("Object settings window");
-	objectWnd_Toggle.OnClick([&](wiEventArgs args) {
+	objectWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		objectWnd.SetVisible(!objectWnd.IsVisible());
 	});
 	GetGUI().AddWidget(&objectWnd_Toggle);
 
 	meshWnd_Toggle.Create("Mesh");
-	meshWnd_Toggle.SetColor(option_color_idle, wiWidget::IDLE);
-	meshWnd_Toggle.SetColor(option_color_focus, wiWidget::FOCUS);
+	meshWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
+	meshWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
 	meshWnd_Toggle.SetTooltip("Mesh settings window");
-	meshWnd_Toggle.OnClick([&](wiEventArgs args) {
+	meshWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		meshWnd.SetVisible(!meshWnd.IsVisible());
 	});
 	GetGUI().AddWidget(&meshWnd_Toggle);
 
 	materialWnd_Toggle.Create("Material");
-	materialWnd_Toggle.SetColor(option_color_idle, wiWidget::IDLE);
-	materialWnd_Toggle.SetColor(option_color_focus, wiWidget::FOCUS);
+	materialWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
+	materialWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
 	materialWnd_Toggle.SetTooltip("Material settings window");
-	materialWnd_Toggle.OnClick([&](wiEventArgs args) {
+	materialWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		materialWnd.SetVisible(!materialWnd.IsVisible());
 	});
 	GetGUI().AddWidget(&materialWnd_Toggle);
 
 	cameraWnd_Toggle.Create("Camera");
-	cameraWnd_Toggle.SetColor(option_color_idle, wiWidget::IDLE);
-	cameraWnd_Toggle.SetColor(option_color_focus, wiWidget::FOCUS);
+	cameraWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
+	cameraWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
 	cameraWnd_Toggle.SetTooltip("Camera settings window");
-	cameraWnd_Toggle.OnClick([&](wiEventArgs args) {
+	cameraWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		cameraWnd.SetVisible(!cameraWnd.IsVisible());
 	});
 	GetGUI().AddWidget(&cameraWnd_Toggle);
 
 	envProbeWnd_Toggle.Create("EnvProbe");
-	envProbeWnd_Toggle.SetColor(option_color_idle, wiWidget::IDLE);
-	envProbeWnd_Toggle.SetColor(option_color_focus, wiWidget::FOCUS);
+	envProbeWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
+	envProbeWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
 	envProbeWnd_Toggle.SetTooltip("Environment probe settings window");
-	envProbeWnd_Toggle.OnClick([&](wiEventArgs args) {
+	envProbeWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		envProbeWnd.SetVisible(!envProbeWnd.IsVisible());
 	});
 	GetGUI().AddWidget(&envProbeWnd_Toggle);
 
 	decalWnd_Toggle.Create("Decal");
-	decalWnd_Toggle.SetColor(option_color_idle, wiWidget::IDLE);
-	decalWnd_Toggle.SetColor(option_color_focus, wiWidget::FOCUS);
+	decalWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
+	decalWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
 	decalWnd_Toggle.SetTooltip("Decal settings window");
-	decalWnd_Toggle.OnClick([&](wiEventArgs args) {
+	decalWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		decalWnd.SetVisible(!decalWnd.IsVisible());
 	});
 	GetGUI().AddWidget(&decalWnd_Toggle);
 
 	soundWnd_Toggle.Create("Sound");
-	soundWnd_Toggle.SetColor(option_color_idle, wiWidget::IDLE);
-	soundWnd_Toggle.SetColor(option_color_focus, wiWidget::FOCUS);
+	soundWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
+	soundWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
 	soundWnd_Toggle.SetTooltip("Sound settings window");
-	soundWnd_Toggle.OnClick([&](wiEventArgs args) {
+	soundWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		soundWnd.SetVisible(!soundWnd.IsVisible());
 		});
 	GetGUI().AddWidget(&soundWnd_Toggle);
 
 	lightWnd_Toggle.Create("Light");
-	lightWnd_Toggle.SetColor(option_color_idle, wiWidget::IDLE);
-	lightWnd_Toggle.SetColor(option_color_focus, wiWidget::FOCUS);
+	lightWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
+	lightWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
 	lightWnd_Toggle.SetTooltip("Light settings window");
-	lightWnd_Toggle.OnClick([&](wiEventArgs args) {
+	lightWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		lightWnd.SetVisible(!lightWnd.IsVisible());
 	});
 	GetGUI().AddWidget(&lightWnd_Toggle);
 
 	animWnd_Toggle.Create("Animation");
-	animWnd_Toggle.SetColor(option_color_idle, wiWidget::IDLE);
-	animWnd_Toggle.SetColor(option_color_focus, wiWidget::FOCUS);
+	animWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
+	animWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
 	animWnd_Toggle.SetTooltip("Animation inspector window");
-	animWnd_Toggle.OnClick([&](wiEventArgs args) {
+	animWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		animWnd.SetVisible(!animWnd.IsVisible());
 	});
 	GetGUI().AddWidget(&animWnd_Toggle);
 
 	emitterWnd_Toggle.Create("Emitter");
-	emitterWnd_Toggle.SetColor(option_color_idle, wiWidget::IDLE);
-	emitterWnd_Toggle.SetColor(option_color_focus, wiWidget::FOCUS);
+	emitterWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
+	emitterWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
 	emitterWnd_Toggle.SetTooltip("Emitter Particle System properties");
-	emitterWnd_Toggle.OnClick([&](wiEventArgs args) {
+	emitterWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		emitterWnd.SetVisible(!emitterWnd.IsVisible());
 	});
 	GetGUI().AddWidget(&emitterWnd_Toggle);
 
 	hairWnd_Toggle.Create("HairParticle");
-	hairWnd_Toggle.SetColor(option_color_idle, wiWidget::IDLE);
-	hairWnd_Toggle.SetColor(option_color_focus, wiWidget::FOCUS);
+	hairWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
+	hairWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
 	hairWnd_Toggle.SetTooltip("Hair Particle System properties");
-	hairWnd_Toggle.OnClick([&](wiEventArgs args) {
+	hairWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		hairWnd.SetVisible(!hairWnd.IsVisible());
 	});
 	GetGUI().AddWidget(&hairWnd_Toggle);
 
 	forceFieldWnd_Toggle.Create("ForceField");
-	forceFieldWnd_Toggle.SetColor(option_color_idle, wiWidget::IDLE);
-	forceFieldWnd_Toggle.SetColor(option_color_focus, wiWidget::FOCUS);
+	forceFieldWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
+	forceFieldWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
 	forceFieldWnd_Toggle.SetTooltip("Force Field properties");
-	forceFieldWnd_Toggle.OnClick([&](wiEventArgs args) {
+	forceFieldWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		forceFieldWnd.SetVisible(!forceFieldWnd.IsVisible());
 	});
 	GetGUI().AddWidget(&forceFieldWnd_Toggle);
 
 	springWnd_Toggle.Create("Spring");
-	springWnd_Toggle.SetColor(option_color_idle, wiWidget::IDLE);
-	springWnd_Toggle.SetColor(option_color_focus, wiWidget::FOCUS);
+	springWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
+	springWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
 	springWnd_Toggle.SetTooltip("Spring properties");
-	springWnd_Toggle.OnClick([&](wiEventArgs args) {
+	springWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		springWnd.SetVisible(!springWnd.IsVisible());
 		});
 	GetGUI().AddWidget(&springWnd_Toggle);
 
 	ikWnd_Toggle.Create("IK");
-	ikWnd_Toggle.SetColor(option_color_idle, wiWidget::IDLE);
-	ikWnd_Toggle.SetColor(option_color_focus, wiWidget::FOCUS);
+	ikWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
+	ikWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
 	ikWnd_Toggle.SetTooltip("Inverse Kinematics properties");
-	ikWnd_Toggle.OnClick([&](wiEventArgs args) {
+	ikWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		ikWnd.SetVisible(!ikWnd.IsVisible());
 		});
 	GetGUI().AddWidget(&ikWnd_Toggle);
 
 	transformWnd_Toggle.Create("Transform");
-	transformWnd_Toggle.SetColor(option_color_idle, wiWidget::IDLE);
-	transformWnd_Toggle.SetColor(option_color_focus, wiWidget::FOCUS);
+	transformWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
+	transformWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
 	transformWnd_Toggle.SetTooltip("Transform properties");
-	transformWnd_Toggle.OnClick([&](wiEventArgs args) {
+	transformWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		transformWnd.SetVisible(!transformWnd.IsVisible());
 		});
 	GetGUI().AddWidget(&transformWnd_Toggle);
 
 	layerWnd_Toggle.Create("Layer");
-	layerWnd_Toggle.SetColor(option_color_idle, wiWidget::IDLE);
-	layerWnd_Toggle.SetColor(option_color_focus, wiWidget::FOCUS);
+	layerWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
+	layerWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
 	layerWnd_Toggle.SetTooltip("Layer Component");
-	layerWnd_Toggle.OnClick([&](wiEventArgs args) {
+	layerWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		layerWnd.SetVisible(!layerWnd.IsVisible());
 		});
 	GetGUI().AddWidget(&layerWnd_Toggle);
 
 	nameWnd_Toggle.Create("Name");
-	nameWnd_Toggle.SetColor(option_color_idle, wiWidget::IDLE);
-	nameWnd_Toggle.SetColor(option_color_focus, wiWidget::FOCUS);
+	nameWnd_Toggle.SetColor(option_color_idle, wi::gui::IDLE);
+	nameWnd_Toggle.SetColor(option_color_focus, wi::gui::FOCUS);
 	nameWnd_Toggle.SetTooltip("Name Component");
-	nameWnd_Toggle.OnClick([&](wiEventArgs args) {
+	nameWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 		nameWnd.SetVisible(!nameWnd.IsVisible());
 		});
 	GetGUI().AddWidget(&nameWnd_Toggle);
@@ -630,7 +629,7 @@ void EditorComponent::Load()
 
 	translatorCheckBox.Create("Translator: ");
 	translatorCheckBox.SetTooltip("Enable the translator tool");
-	translatorCheckBox.OnClick([&](wiEventArgs args) {
+	translatorCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		translator.enabled = args.bValue;
 	});
 	GetGUI().AddWidget(&translatorCheckBox);
@@ -640,7 +639,7 @@ void EditorComponent::Load()
 	isTranslatorCheckBox.Create("T: ");
 	{
 		isScalatorCheckBox.SetTooltip("Scale");
-		isScalatorCheckBox.OnClick([&](wiEventArgs args) {
+		isScalatorCheckBox.OnClick([&](wi::gui::EventArgs args) {
 			translator.isScalator = args.bValue;
 			translator.isTranslator = false;
 			translator.isRotator = false;
@@ -651,7 +650,7 @@ void EditorComponent::Load()
 		GetGUI().AddWidget(&isScalatorCheckBox);
 
 		isRotatorCheckBox.SetTooltip("Rotate");
-		isRotatorCheckBox.OnClick([&](wiEventArgs args) {
+		isRotatorCheckBox.OnClick([&](wi::gui::EventArgs args) {
 			translator.isRotator = args.bValue;
 			translator.isScalator = false;
 			translator.isTranslator = false;
@@ -662,7 +661,7 @@ void EditorComponent::Load()
 		GetGUI().AddWidget(&isRotatorCheckBox);
 
 		isTranslatorCheckBox.SetTooltip("Translate");
-		isTranslatorCheckBox.OnClick([&](wiEventArgs args) {
+		isTranslatorCheckBox.OnClick([&](wi::gui::EventArgs args) {
 			translator.isTranslator = args.bValue;
 			translator.isScalator = false;
 			translator.isRotator = false;
@@ -676,14 +675,14 @@ void EditorComponent::Load()
 
 	saveButton.Create("Save");
 	saveButton.SetTooltip("Save the current scene");
-	saveButton.SetColor(wiColor(0, 198, 101, 180), wiWidget::WIDGETSTATE::IDLE);
-	saveButton.SetColor(wiColor(0, 255, 140, 255), wiWidget::WIDGETSTATE::FOCUS);
-	saveButton.OnClick([&](wiEventArgs args) {
+	saveButton.SetColor(wi::Color(0, 198, 101, 180), wi::gui::WIDGETSTATE::IDLE);
+	saveButton.SetColor(wi::Color(0, 255, 140, 255), wi::gui::WIDGETSTATE::FOCUS);
+	saveButton.OnClick([&](wi::gui::EventArgs args) {
 
 		const bool dump_to_header = saveModeComboBox.GetSelected() == 2;
 
-		wiHelper::FileDialogParams params;
-		params.type = wiHelper::FileDialogParams::SAVE;
+		wi::helper::FileDialogParams params;
+		params.type = wi::helper::FileDialogParams::SAVE;
 		if (dump_to_header)
 		{
 			params.description = "C++ header (.h)";
@@ -694,29 +693,29 @@ void EditorComponent::Load()
 			params.description = "Wicked Scene (.wiscene)";
 			params.extensions.push_back("wiscene");
 		}
-		wiHelper::FileDialog(params, [=](std::string fileName) {
-			wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-				std::string filename = wiHelper::ReplaceExtension(fileName, params.extensions.front());
-				wiArchive archive = dump_to_header ? wiArchive() : wiArchive(filename, false);
+		wi::helper::FileDialog(params, [=](std::string fileName) {
+			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+				std::string filename = wi::helper::ReplaceExtension(fileName, params.extensions.front());
+				wi::Archive archive = dump_to_header ? wi::Archive() : wi::Archive(filename, false);
 				if (archive.IsOpen())
 				{
-					Scene& scene = wiScene::GetScene();
+					Scene& scene = wi::scene::GetScene();
 
-					wiResourceManager::MODE embed_mode = (wiResourceManager::MODE)saveModeComboBox.GetItemUserData(saveModeComboBox.GetSelected());
-					wiResourceManager::SetMode(embed_mode);
+					wi::resourcemanager::Mode embed_mode = (wi::resourcemanager::Mode)saveModeComboBox.GetItemUserData(saveModeComboBox.GetSelected());
+					wi::resourcemanager::SetMode(embed_mode);
 
 					scene.Serialize(archive);
 
 					if (dump_to_header)
 					{
-						archive.SaveHeaderFile(filename, wiHelper::RemoveExtension(wiHelper::GetFileNameFromPath(filename)));
+						archive.SaveHeaderFile(filename, wi::helper::RemoveExtension(wi::helper::GetFileNameFromPath(filename)));
 					}
 
 					ResetHistory();
 				}
 				else
 				{
-					wiHelper::messageBox("Could not create " + fileName + "!");
+					wi::helper::messageBox("Could not create " + fileName + "!");
 				}
 			});
 		});
@@ -726,78 +725,78 @@ void EditorComponent::Load()
 
 	modelButton.Create("Load Model");
 	modelButton.SetTooltip("Load a scene / import model into the editor...");
-	modelButton.SetColor(wiColor(0, 89, 255, 180), wiWidget::WIDGETSTATE::IDLE);
-	modelButton.SetColor(wiColor(112, 155, 255, 255), wiWidget::WIDGETSTATE::FOCUS);
-	modelButton.OnClick([&](wiEventArgs args) {
-		wiHelper::FileDialogParams params;
-		params.type = wiHelper::FileDialogParams::OPEN;
+	modelButton.SetColor(wi::Color(0, 89, 255, 180), wi::gui::WIDGETSTATE::IDLE);
+	modelButton.SetColor(wi::Color(112, 155, 255, 255), wi::gui::WIDGETSTATE::FOCUS);
+	modelButton.OnClick([&](wi::gui::EventArgs args) {
+		wi::helper::FileDialogParams params;
+		params.type = wi::helper::FileDialogParams::OPEN;
 		params.description = "Model formats (.wiscene, .obj, .gltf, .glb)";
 		params.extensions.push_back("wiscene");
 		params.extensions.push_back("obj");
 		params.extensions.push_back("gltf");
 		params.extensions.push_back("glb");
-		wiHelper::FileDialog(params, [&](std::string fileName) {
-			wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+		wi::helper::FileDialog(params, [&](std::string fileName) {
+			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 
-				size_t camera_count_prev = wiScene::GetScene().cameras.GetCount();
+				size_t camera_count_prev = wi::scene::GetScene().cameras.GetCount();
 
-				main->loader.addLoadingFunction([=](wiJobArgs args) {
-					std::string extension = wiHelper::toUpper(wiHelper::GetExtensionFromFileName(fileName));
+				main->loader.addLoadingFunction([=](wi::jobsystem::JobArgs args) {
+					std::string extension = wi::helper::toUpper(wi::helper::GetExtensionFromFileName(fileName));
 
 					if (!extension.compare("WISCENE")) // engine-serialized
 					{
-						wiScene::LoadModel(fileName);
+						wi::scene::LoadModel(fileName);
 					}
 					else if (!extension.compare("OBJ")) // wavefront-obj
 					{
 						Scene scene;
 						ImportModel_OBJ(fileName, scene);
-						wiScene::GetScene().Merge(scene);
+						wi::scene::GetScene().Merge(scene);
 					}
 					else if (!extension.compare("GLTF")) // text-based gltf
 					{
 						Scene scene;
 						ImportModel_GLTF(fileName, scene);
-						wiScene::GetScene().Merge(scene);
+						wi::scene::GetScene().Merge(scene);
 					}
 					else if (!extension.compare("GLB")) // binary gltf
 					{
 						Scene scene;
 						ImportModel_GLTF(fileName, scene);
-						wiScene::GetScene().Merge(scene);
+						wi::scene::GetScene().Merge(scene);
 					}
 					});
 				main->loader.onFinished([=] {
 
 					// Detect when the new scene contains a new camera, and snap the camera onto it:
-					size_t camera_count = wiScene::GetScene().cameras.GetCount();
+					size_t camera_count = wi::scene::GetScene().cameras.GetCount();
 					if (camera_count > 0 && camera_count > camera_count_prev)
 					{
-						Entity entity = wiScene::GetScene().cameras.GetEntity(camera_count_prev);
+						Entity entity = wi::scene::GetScene().cameras.GetEntity(camera_count_prev);
 						if (entity != INVALID_ENTITY)
 						{
-							TransformComponent* camera_transform = wiScene::GetScene().transforms.GetComponent(entity);
+							TransformComponent* camera_transform = wi::scene::GetScene().transforms.GetComponent(entity);
 							if (camera_transform != nullptr)
 							{
 								cameraWnd.camera_transform = *camera_transform;
 							}
 
-							CameraComponent* cam = wiScene::GetScene().cameras.GetComponent(entity);
+							CameraComponent* cam = wi::scene::GetScene().cameras.GetComponent(entity);
 							if (cam != nullptr)
 							{
-								wiScene::GetCamera() = *cam;
+								wi::scene::GetCamera() = *cam;
 								// camera aspect should be always for the current screen
-								wiScene::GetCamera().width = (float)renderPath->GetInternalResolution().x;
-								wiScene::GetCamera().height = (float)renderPath->GetInternalResolution().y;
+								wi::scene::GetCamera().width = (float)renderPath->GetInternalResolution().x;
+								wi::scene::GetCamera().height = (float)renderPath->GetInternalResolution().y;
 							}
 						}
 					}
 
-					main->ActivatePath(this, 0.2f, wiColor::Black());
+					main->ActivatePath(this, 0.2f, wi::Color::Black());
 					weatherWnd.Update();
 					RefreshSceneGraphView();
 					});
-				main->ActivatePath(&main->loader, 0.2f, wiColor::Black());
+				main->ActivatePath(&main->loader, 0.2f, wi::Color::Black());
 				ResetHistory();
 			});
 		});
@@ -807,16 +806,16 @@ void EditorComponent::Load()
 
 	scriptButton.Create("Load Script");
 	scriptButton.SetTooltip("Load a Lua script...");
-	scriptButton.SetColor(wiColor(255, 33, 140, 180), wiWidget::WIDGETSTATE::IDLE);
-	scriptButton.SetColor(wiColor(255, 100, 140, 255), wiWidget::WIDGETSTATE::FOCUS);
-	scriptButton.OnClick([&](wiEventArgs args) {
-		wiHelper::FileDialogParams params;
-		params.type = wiHelper::FileDialogParams::OPEN;
+	scriptButton.SetColor(wi::Color(255, 33, 140, 180), wi::gui::WIDGETSTATE::IDLE);
+	scriptButton.SetColor(wi::Color(255, 100, 140, 255), wi::gui::WIDGETSTATE::FOCUS);
+	scriptButton.OnClick([&](wi::gui::EventArgs args) {
+		wi::helper::FileDialogParams params;
+		params.type = wi::helper::FileDialogParams::OPEN;
 		params.description = "Lua script";
 		params.extensions.push_back("lua");
-		wiHelper::FileDialog(params, [](std::string fileName) {
-			wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-				wiLua::RunFile(fileName);
+		wi::helper::FileDialog(params, [](std::string fileName) {
+			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+				wi::lua::RunFile(fileName);
 			});
 		});
 	});
@@ -825,11 +824,11 @@ void EditorComponent::Load()
 
 	clearButton.Create("Clear World");
 	clearButton.SetTooltip("Delete every model from the scene");
-	clearButton.SetColor(wiColor(255, 173, 43, 180), wiWidget::WIDGETSTATE::IDLE);
-	clearButton.SetColor(wiColor(255, 235, 173, 255), wiWidget::WIDGETSTATE::FOCUS);
-	clearButton.OnClick([&](wiEventArgs args) {
+	clearButton.SetColor(wi::Color(255, 173, 43, 180), wi::gui::WIDGETSTATE::IDLE);
+	clearButton.SetColor(wi::Color(255, 235, 173, 255), wi::gui::WIDGETSTATE::FOCUS);
+	clearButton.OnClick([&](wi::gui::EventArgs args) {
 		translator.selected.clear();
-		wiRenderer::ClearWorld(wiScene::GetScene());
+		wi::renderer::ClearWorld(wi::scene::GetScene());
 		objectWnd.SetEntity(INVALID_ENTITY);
 		meshWnd.SetEntity(INVALID_ENTITY, -1);
 		lightWnd.SetEntity(INVALID_ENTITY);
@@ -855,9 +854,9 @@ void EditorComponent::Load()
 
 	helpButton.Create("?");
 	helpButton.SetTooltip("Help");
-	helpButton.SetColor(wiColor(34, 158, 214, 180), wiWidget::WIDGETSTATE::IDLE);
-	helpButton.SetColor(wiColor(113, 183, 214, 255), wiWidget::WIDGETSTATE::FOCUS);
-	helpButton.OnClick([&](wiEventArgs args) {
+	helpButton.SetColor(wi::Color(34, 158, 214, 180), wi::gui::WIDGETSTATE::IDLE);
+	helpButton.SetColor(wi::Color(113, 183, 214, 255), wi::gui::WIDGETSTATE::FOCUS);
+	helpButton.OnClick([&](wi::gui::EventArgs args) {
 		helpLabel.SetVisible(!helpLabel.IsVisible());
 	});
 	GetGUI().AddWidget(&helpButton);
@@ -899,69 +898,69 @@ void EditorComponent::Load()
 
 	exitButton.Create("X");
 	exitButton.SetTooltip("Exit");
-	exitButton.SetColor(wiColor(190, 0, 0, 180), wiWidget::WIDGETSTATE::IDLE);
-	exitButton.SetColor(wiColor(255, 0, 0, 255), wiWidget::WIDGETSTATE::FOCUS);
-	exitButton.OnClick([this](wiEventArgs args) {
-		wiPlatform::Exit();
+	exitButton.SetColor(wi::Color(190, 0, 0, 180), wi::gui::WIDGETSTATE::IDLE);
+	exitButton.SetColor(wi::Color(255, 0, 0, 255), wi::gui::WIDGETSTATE::FOCUS);
+	exitButton.OnClick([this](wi::gui::EventArgs args) {
+		wi::platform::Exit();
 	});
 	GetGUI().AddWidget(&exitButton);
 
 
 	profilerEnabledCheckBox.Create("Profiler Enabled: ");
 	profilerEnabledCheckBox.SetTooltip("Toggle Profiler On/Off");
-	profilerEnabledCheckBox.OnClick([&](wiEventArgs args) {
-		wiProfiler::SetEnabled(args.bValue);
+	profilerEnabledCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		wi::profiler::SetEnabled(args.bValue);
 		});
-	profilerEnabledCheckBox.SetCheck(wiProfiler::IsEnabled());
+	profilerEnabledCheckBox.SetCheck(wi::profiler::IsEnabled());
 	GetGUI().AddWidget(&profilerEnabledCheckBox);
 
 	physicsEnabledCheckBox.Create("Physics Simulation: ");
 	physicsEnabledCheckBox.SetTooltip("Toggle Physics Simulation On/Off");
-	physicsEnabledCheckBox.OnClick([&](wiEventArgs args) {
-		wiPhysicsEngine::SetSimulationEnabled(args.bValue);
+	physicsEnabledCheckBox.OnClick([&](wi::gui::EventArgs args) {
+		wi::physics::SetSimulationEnabled(args.bValue);
 	});
-	physicsEnabledCheckBox.SetCheck(wiPhysicsEngine::IsSimulationEnabled());
+	physicsEnabledCheckBox.SetCheck(wi::physics::IsSimulationEnabled());
 	GetGUI().AddWidget(&physicsEnabledCheckBox);
 
 	cinemaModeCheckBox.Create("Cinema Mode: ");
 	cinemaModeCheckBox.SetTooltip("Toggle Cinema Mode (All HUD disabled). Press ESC to exit.");
-	cinemaModeCheckBox.OnClick([&](wiEventArgs args) {
+	cinemaModeCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		if (renderPath != nullptr)
 		{
 			renderPath->GetGUI().SetVisible(false);
 		}
 		GetGUI().SetVisible(false);
-		wiProfiler::SetEnabled(false);
+		wi::profiler::SetEnabled(false);
 		main->infoDisplay.active = false;
 	});
 	GetGUI().AddWidget(&cinemaModeCheckBox);
 
 
 	sceneGraphView.Create("Scene graph view");
-	sceneGraphView.OnSelect([this](wiEventArgs args) {
+	sceneGraphView.OnSelect([this](wi::gui::EventArgs args) {
 
 		translator.selected.clear();
 
 		for (int i = 0; i < sceneGraphView.GetItemCount(); ++i)
 		{
-			const wiTreeList::Item& item = sceneGraphView.GetItem(i);
+			const wi::gui::TreeList::Item& item = sceneGraphView.GetItem(i);
 			if (item.selected)
 			{
-				wiScene::PickResult pick;
+				wi::scene::PickResult pick;
 				pick.entity = (Entity)item.userdata;
 				AddSelected(pick);
 			}
 		}
 
 		});
-	sceneGraphView.SetColor(wiColor(100, 100, 100, 100), wiWidget::IDLE);
+	sceneGraphView.SetColor(wi::Color(100, 100, 100, 100), wi::gui::IDLE);
 	GetGUI().AddWidget(&sceneGraphView);
 
 
 	renderPathComboBox.Create("Render Path: ");
 	renderPathComboBox.AddItem("Default");
 	renderPathComboBox.AddItem("Path Tracing");
-	renderPathComboBox.OnSelect([&](wiEventArgs args) {
+	renderPathComboBox.OnSelect([&](wi::gui::EventArgs args) {
 		ChangeRenderPath((RENDERPATH)args.iValue);
 	});
 	renderPathComboBox.SetSelected(RENDERPATH_DEFAULT);
@@ -971,12 +970,12 @@ void EditorComponent::Load()
 
 
 	saveModeComboBox.Create("Save Mode: ");
-	saveModeComboBox.SetColor(wiColor(0, 198, 101, 180), wiWidget::WIDGETSTATE::IDLE);
-	saveModeComboBox.SetColor(wiColor(0, 255, 140, 255), wiWidget::WIDGETSTATE::FOCUS);
-	saveModeComboBox.AddItem("Embed resources", wiResourceManager::MODE_ALLOW_RETAIN_FILEDATA);
-	saveModeComboBox.AddItem("No embedding", wiResourceManager::MODE_ALLOW_RETAIN_FILEDATA_BUT_DISABLE_EMBEDDING);
-	saveModeComboBox.AddItem("Dump to header", wiResourceManager::MODE_ALLOW_RETAIN_FILEDATA);
-	saveModeComboBox.SetTooltip("Choose whether to embed resources (textures, sounds...) in the scene file when saving, or keep them as separate files.\nThe Dump to header option will use embedding and create a C++ header file with byte data of the scene to be used with wiArchive serialization.");
+	saveModeComboBox.SetColor(wi::Color(0, 198, 101, 180), wi::gui::WIDGETSTATE::IDLE);
+	saveModeComboBox.SetColor(wi::Color(0, 255, 140, 255), wi::gui::WIDGETSTATE::FOCUS);
+	saveModeComboBox.AddItem("Embed resources", (uint64_t)wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA);
+	saveModeComboBox.AddItem("No embedding", (uint64_t)wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA_BUT_DISABLE_EMBEDDING);
+	saveModeComboBox.AddItem("Dump to header", (uint64_t)wi::resourcemanager::Mode::ALLOW_RETAIN_FILEDATA);
+	saveModeComboBox.SetTooltip("Choose whether to embed resources (textures, sounds...) in the scene file when saving, or keep them as separate files.\nThe Dump to header option will use embedding and create a C++ header file with byte data of the scene to be used with wi::Archive serialization.");
 	GetGUI().AddWidget(&saveModeComboBox);
 
 
@@ -1010,7 +1009,7 @@ void EditorComponent::Load()
 	layerWnd.Create(this);
 	nameWnd.Create(this);
 
-	wiGUI& gui = GetGUI();
+	wi::gui::GUI& gui = GetGUI();
 	gui.AddWidget(&materialWnd);
 	gui.AddWidget(&weatherWnd);
 	gui.AddWidget(&objectWnd);
@@ -1033,7 +1032,7 @@ void EditorComponent::Load()
 
 	cameraWnd.ResetCam();
 
-	wiJobSystem::Wait(ctx);
+	wi::jobsystem::Wait(ctx);
 
     RenderPath2D::Load();
 }
@@ -1055,10 +1054,10 @@ void EditorComponent::FixedUpdate()
 }
 void EditorComponent::Update(float dt)
 {
-	wiProfiler::range_id profrange = wiProfiler::BeginRangeCPU("Editor Update");
+	wi::profiler::range_id profrange = wi::profiler::BeginRangeCPU("Editor Update");
 
-	Scene& scene = wiScene::GetScene();
-	CameraComponent& camera = wiScene::GetCamera();
+	Scene& scene = wi::scene::GetScene();
+	CameraComponent& camera = wi::scene::GetCamera();
 
 	cameraWnd.Update();
 	animWnd.Update();
@@ -1068,7 +1067,7 @@ void EditorComponent::Update(float dt)
 	selectionOutlineTimer += dt;
 
 	bool clear_selected = false;
-	if (wiInput::Press(wiInput::KEYBOARD_BUTTON_ESCAPE))
+	if (wi::input::Press(wi::input::KEYBOARD_BUTTON_ESCAPE))
 	{
 		if (cinemaModeCheckBox.GetCheck())
 		{
@@ -1089,19 +1088,19 @@ void EditorComponent::Update(float dt)
 	}
 
 	// Camera control:
-	XMFLOAT4 currentMouse = wiInput::GetPointer();
-	if (!wiBackLog::isActive() && !GetGUI().HasFocus())
+	XMFLOAT4 currentMouse = wi::input::GetPointer();
+	if (!wi::backlog::isActive() && !GetGUI().HasFocus())
 	{
 		static XMFLOAT4 originalMouse = XMFLOAT4(0, 0, 0, 0);
 		static bool camControlStart = true;
 		if (camControlStart)
 		{
-			originalMouse = wiInput::GetPointer();
+			originalMouse = wi::input::GetPointer();
 		}
 
 		float xDif = 0, yDif = 0;
 
-		if (wiInput::Down(wiInput::MOUSE_BUTTON_MIDDLE))
+		if (wi::input::Down(wi::input::MOUSE_BUTTON_MIDDLE))
 		{
 			camControlStart = false;
 #if 0
@@ -1110,41 +1109,41 @@ void EditorComponent::Update(float dt)
 			yDif = currentMouse.y - originalMouse.y;
 #else
 			// Mouse delta from hardware read:
-			xDif = wiInput::GetMouseState().delta_position.x;
-			yDif = wiInput::GetMouseState().delta_position.y;
+			xDif = wi::input::GetMouseState().delta_position.x;
+			yDif = wi::input::GetMouseState().delta_position.y;
 #endif
 			xDif = 0.1f * xDif * (1.0f / 60.0f);
 			yDif = 0.1f * yDif * (1.0f / 60.0f);
-			wiInput::SetPointer(originalMouse);
-			wiInput::HidePointer(true);
+			wi::input::SetPointer(originalMouse);
+			wi::input::HidePointer(true);
 	}
 		else
 		{
 			camControlStart = true;
-			wiInput::HidePointer(false);
+			wi::input::HidePointer(false);
 		}
 
 		const float buttonrotSpeed = 2.0f * dt;
-		if (wiInput::Down(wiInput::KEYBOARD_BUTTON_LEFT))
+		if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LEFT))
 		{
 			xDif -= buttonrotSpeed;
 		}
-		if (wiInput::Down(wiInput::KEYBOARD_BUTTON_RIGHT))
+		if (wi::input::Down(wi::input::KEYBOARD_BUTTON_RIGHT))
 		{
 			xDif += buttonrotSpeed;
 		}
-		if (wiInput::Down(wiInput::KEYBOARD_BUTTON_UP))
+		if (wi::input::Down(wi::input::KEYBOARD_BUTTON_UP))
 		{
 			yDif -= buttonrotSpeed;
 		}
-		if (wiInput::Down(wiInput::KEYBOARD_BUTTON_DOWN))
+		if (wi::input::Down(wi::input::KEYBOARD_BUTTON_DOWN))
 		{
 			yDif += buttonrotSpeed;
 		}
 
-		const XMFLOAT4 leftStick = wiInput::GetAnalog(wiInput::GAMEPAD_ANALOG_THUMBSTICK_L, 0);
-		const XMFLOAT4 rightStick = wiInput::GetAnalog(wiInput::GAMEPAD_ANALOG_THUMBSTICK_R, 0);
-		const XMFLOAT4 rightTrigger = wiInput::GetAnalog(wiInput::GAMEPAD_ANALOG_TRIGGER_R, 0);
+		const XMFLOAT4 leftStick = wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_THUMBSTICK_L, 0);
+		const XMFLOAT4 rightStick = wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_THUMBSTICK_R, 0);
+		const XMFLOAT4 rightTrigger = wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_TRIGGER_R, 0);
 
 		const float jostickrotspeed = 0.05f;
 		xDif += rightStick.x * jostickrotspeed;
@@ -1159,19 +1158,19 @@ void EditorComponent::Update(float dt)
 			// FPS Camera
 			const float clampedDT = std::min(dt, 0.1f); // if dt > 100 millisec, don't allow the camera to jump too far...
 
-			const float speed = ((wiInput::Down(wiInput::KEYBOARD_BUTTON_LSHIFT) ? 10.0f : 1.0f) + rightTrigger.x * 10.0f) * cameraWnd.movespeedSlider.GetValue() * clampedDT;
+			const float speed = ((wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT) ? 10.0f : 1.0f) + rightTrigger.x * 10.0f) * cameraWnd.movespeedSlider.GetValue() * clampedDT;
 			XMVECTOR move = XMLoadFloat3(&cameraWnd.move);
 			XMVECTOR moveNew = XMVectorSet(leftStick.x, 0, leftStick.y, 0);
 
-			if (!wiInput::Down(wiInput::KEYBOARD_BUTTON_LCONTROL))
+			if (!wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL))
 			{
 				// Only move camera if control not pressed
-				if (wiInput::Down((wiInput::BUTTON)'A') || wiInput::Down(wiInput::GAMEPAD_BUTTON_LEFT)) { moveNew += XMVectorSet(-1, 0, 0, 0); }
-				if (wiInput::Down((wiInput::BUTTON)'D') || wiInput::Down(wiInput::GAMEPAD_BUTTON_RIGHT)) { moveNew += XMVectorSet(1, 0, 0, 0); }
-				if (wiInput::Down((wiInput::BUTTON)'W') || wiInput::Down(wiInput::GAMEPAD_BUTTON_UP)) { moveNew += XMVectorSet(0, 0, 1, 0); }
-				if (wiInput::Down((wiInput::BUTTON)'S') || wiInput::Down(wiInput::GAMEPAD_BUTTON_DOWN)) { moveNew += XMVectorSet(0, 0, -1, 0); }
-				if (wiInput::Down((wiInput::BUTTON)'E') || wiInput::Down(wiInput::GAMEPAD_BUTTON_2)) { moveNew += XMVectorSet(0, 1, 0, 0); }
-				if (wiInput::Down((wiInput::BUTTON)'Q') || wiInput::Down(wiInput::GAMEPAD_BUTTON_1)) { moveNew += XMVectorSet(0, -1, 0, 0); }
+				if (wi::input::Down((wi::input::BUTTON)'A') || wi::input::Down(wi::input::GAMEPAD_BUTTON_LEFT)) { moveNew += XMVectorSet(-1, 0, 0, 0); }
+				if (wi::input::Down((wi::input::BUTTON)'D') || wi::input::Down(wi::input::GAMEPAD_BUTTON_RIGHT)) { moveNew += XMVectorSet(1, 0, 0, 0); }
+				if (wi::input::Down((wi::input::BUTTON)'W') || wi::input::Down(wi::input::GAMEPAD_BUTTON_UP)) { moveNew += XMVectorSet(0, 0, 1, 0); }
+				if (wi::input::Down((wi::input::BUTTON)'S') || wi::input::Down(wi::input::GAMEPAD_BUTTON_DOWN)) { moveNew += XMVectorSet(0, 0, -1, 0); }
+				if (wi::input::Down((wi::input::BUTTON)'E') || wi::input::Down(wi::input::GAMEPAD_BUTTON_2)) { moveNew += XMVectorSet(0, 1, 0, 0); }
+				if (wi::input::Down((wi::input::BUTTON)'Q') || wi::input::Down(wi::input::GAMEPAD_BUTTON_1)) { moveNew += XMVectorSet(0, -1, 0, 0); }
 				moveNew += XMVector3Normalize(moveNew);
 			}
 			moveNew *= speed;
@@ -1202,14 +1201,14 @@ void EditorComponent::Update(float dt)
 		{
 			// Orbital Camera
 
-			if (wiInput::Down(wiInput::KEYBOARD_BUTTON_LSHIFT))
+			if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT))
 			{
 				XMVECTOR V = XMVectorAdd(camera.GetRight() * xDif, camera.GetUp() * yDif) * 10;
 				XMFLOAT3 vec;
 				XMStoreFloat3(&vec, V);
 				cameraWnd.camera_target.Translate(vec);
 			}
-			else if (wiInput::Down(wiInput::KEYBOARD_BUTTON_LCONTROL) || currentMouse.z != 0.0f)
+			else if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL) || currentMouse.z != 0.0f)
 			{
 				cameraWnd.camera_transform.Translate(XMFLOAT3(0, 0, yDif * 4 + currentMouse.z));
 				cameraWnd.camera_transform.translation_local.z = std::min(0.0f, cameraWnd.camera_transform.translation_local.z);
@@ -1227,9 +1226,9 @@ void EditorComponent::Update(float dt)
 
 		// Begin picking:
 		unsigned int pickMask = rendererWnd.GetPickType();
-		RAY pickRay = wiRenderer::GetPickRay((long)currentMouse.x, (long)currentMouse.y, *this);
+		Ray pickRay = wi::renderer::GetPickRay((long)currentMouse.x, (long)currentMouse.y, *this);
 		{
-			hovered = wiScene::PickResult();
+			hovered = wi::scene::PickResult();
 
 			if (pickMask & PICK_LIGHT)
 			{
@@ -1240,9 +1239,9 @@ void EditorComponent::Update(float dt)
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
 					float dis = XMVectorGetX(disV);
-					if (dis > 0.01f && dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
+					if (dis > 0.01f && dis < wi::math::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
-						hovered = wiScene::PickResult();
+						hovered = wi::scene::PickResult();
 						hovered.entity = entity;
 						hovered.distance = dis;
 					}
@@ -1257,9 +1256,9 @@ void EditorComponent::Update(float dt)
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
 					float dis = XMVectorGetX(disV);
-					if (dis > 0.01f && dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
+					if (dis > 0.01f && dis < wi::math::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
-						hovered = wiScene::PickResult();
+						hovered = wi::scene::PickResult();
 						hovered.entity = entity;
 						hovered.distance = dis;
 					}
@@ -1274,9 +1273,9 @@ void EditorComponent::Update(float dt)
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
 					float dis = XMVectorGetX(disV);
-					if (dis > 0.01f && dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
+					if (dis > 0.01f && dis < wi::math::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
-						hovered = wiScene::PickResult();
+						hovered = wi::scene::PickResult();
 						hovered.entity = entity;
 						hovered.distance = dis;
 					}
@@ -1291,9 +1290,9 @@ void EditorComponent::Update(float dt)
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
 					float dis = XMVectorGetX(disV);
-					if (dis > 0.01f && dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
+					if (dis > 0.01f && dis < wi::math::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
-						hovered = wiScene::PickResult();
+						hovered = wi::scene::PickResult();
 						hovered.entity = entity;
 						hovered.distance = dis;
 					}
@@ -1308,9 +1307,9 @@ void EditorComponent::Update(float dt)
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
 					float dis = XMVectorGetX(disV);
-					if (dis > 0.01f && dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
+					if (dis > 0.01f && dis < wi::math::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
-						hovered = wiScene::PickResult();
+						hovered = wi::scene::PickResult();
 						hovered.entity = entity;
 						hovered.distance = dis;
 					}
@@ -1323,12 +1322,12 @@ void EditorComponent::Update(float dt)
 					Entity entity = scene.probes.GetEntity(i);
 					const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-					if (SPHERE(transform.GetPosition(), 1).intersects(pickRay))
+					if (Sphere(transform.GetPosition(), 1).intersects(pickRay))
 					{
-						float dis = wiMath::Distance(transform.GetPosition(), pickRay.origin);
+						float dis = wi::math::Distance(transform.GetPosition(), pickRay.origin);
 						if (dis < hovered.distance)
 						{
-							hovered = wiScene::PickResult();
+							hovered = wi::scene::PickResult();
 							hovered.entity = entity;
 							hovered.distance = dis;
 						}
@@ -1345,9 +1344,9 @@ void EditorComponent::Update(float dt)
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
 					float dis = XMVectorGetX(disV);
-					if (dis > 0.01f && dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
+					if (dis > 0.01f && dis < wi::math::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
-						hovered = wiScene::PickResult();
+						hovered = wi::scene::PickResult();
 						hovered.entity = entity;
 						hovered.distance = dis;
 					}
@@ -1362,9 +1361,9 @@ void EditorComponent::Update(float dt)
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
 					float dis = XMVectorGetX(disV);
-					if (dis > 0.01f && dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
+					if (dis > 0.01f && dis < wi::math::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
-						hovered = wiScene::PickResult();
+						hovered = wi::scene::PickResult();
 						hovered.entity = entity;
 						hovered.distance = dis;
 					}
@@ -1379,9 +1378,9 @@ void EditorComponent::Update(float dt)
 
 					XMVECTOR disV = XMVector3LinePointDistance(XMLoadFloat3(&pickRay.origin), XMLoadFloat3(&pickRay.origin) + XMLoadFloat3(&pickRay.direction), transform.GetPositionV());
 					float dis = XMVectorGetX(disV);
-					if (dis > 0.01f && dis < wiMath::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
+					if (dis > 0.01f && dis < wi::math::Distance(transform.GetPosition(), pickRay.origin) * 0.05f && dis < hovered.distance)
 					{
-						hovered = wiScene::PickResult();
+						hovered = wi::scene::PickResult();
 						hovered.entity = entity;
 						hovered.distance = dis;
 					}
@@ -1392,12 +1391,12 @@ void EditorComponent::Update(float dt)
 			{
 				// Object picking only when mouse button down, because it can be slow with high polycount
 				if (
-					wiInput::Down(wiInput::MOUSE_BUTTON_LEFT) ||
-					wiInput::Down(wiInput::MOUSE_BUTTON_RIGHT) ||
+					wi::input::Down(wi::input::MOUSE_BUTTON_LEFT) ||
+					wi::input::Down(wi::input::MOUSE_BUTTON_RIGHT) ||
 					paintToolWnd.GetMode() != PaintToolWindow::MODE_DISABLED
 					)
 				{
-					hovered = wiScene::Pick(pickRay, pickMask);
+					hovered = wi::scene::Pick(pickRay, pickMask);
 				}
 			}
 		}
@@ -1411,15 +1410,15 @@ void EditorComponent::Update(float dt)
 				const ObjectComponent* object = scene.objects.GetComponent(hovered.entity);
 				if (object != nullptr)
 				{	
-					if (translator.selected.empty() && object->GetRenderTypes() & RENDERTYPE_WATER)
+					if (translator.selected.empty() && object->GetRenderTypes() & wi::enums::RENDERTYPE_WATER)
 					{
-						if (wiInput::Down(wiInput::MOUSE_BUTTON_LEFT))
+						if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
 						{
 							// if water, then put a water ripple onto it:
 							scene.PutWaterRipple("images/ripple.png", hovered.position);
 						}
 					}
-					else if (decalWnd.placementCheckBox.GetCheck() && wiInput::Press(wiInput::MOUSE_BUTTON_LEFT))
+					else if (decalWnd.placementCheckBox.GetCheck() && wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
 					{
 						// if not water or softbody, put a decal on it:
 						static int decalselector = 0;
@@ -1440,10 +1439,10 @@ void EditorComponent::Update(float dt)
 
 		// Select...
 		static bool selectAll = false;
-		if (wiInput::Press(wiInput::MOUSE_BUTTON_RIGHT) || selectAll || clear_selected)
+		if (wi::input::Press(wi::input::MOUSE_BUTTON_RIGHT) || selectAll || clear_selected)
 		{
 
-			wiArchive& archive = AdvanceHistory();
+			wi::Archive& archive = AdvanceHistory();
 			archive << HISTORYOP_SELECTION;
 			// record PREVIOUS selection state...
 			archive << translator.selected.size();
@@ -1470,7 +1469,7 @@ void EditorComponent::Update(float dt)
 						// Parented objects won't be attached, but only the parents instead. Otherwise it would cause "double translation"
 						continue;
 					}
-					wiScene::PickResult picked;
+					wi::scene::PickResult picked;
 					picked.entity = entity;
 					AddSelected(picked);
 				}
@@ -1479,12 +1478,12 @@ void EditorComponent::Update(float dt)
 			{
 				// Add the hovered item to the selection:
 
-				if (!translator.selected.empty() && wiInput::Down(wiInput::KEYBOARD_BUTTON_LSHIFT))
+				if (!translator.selected.empty() && wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT))
 				{
 					// Union selection:
-					wi::vector<wiScene::PickResult> saved = translator.selected;
+					wi::vector<wi::scene::PickResult> saved = translator.selected;
 					translator.selected.clear(); 
-					for (const wiScene::PickResult& picked : saved)
+					for (const wi::scene::PickResult& picked : saved)
 					{
 						AddSelected(picked);
 					}
@@ -1523,15 +1522,15 @@ void EditorComponent::Update(float dt)
 		}
 
 		// Control operations...
-		if (wiInput::Down(wiInput::KEYBOARD_BUTTON_LCONTROL))
+		if (wi::input::Down(wi::input::KEYBOARD_BUTTON_LCONTROL))
 		{
 			// Select All
-			if (wiInput::Press((wiInput::BUTTON)'A'))
+			if (wi::input::Press((wi::input::BUTTON)'A'))
 			{
 				selectAll = true;
 			}
 			// Copy
-			if (wiInput::Press((wiInput::BUTTON)'C'))
+			if (wi::input::Press((wi::input::BUTTON)'C'))
 			{
 				auto prevSel = translator.selected;
 
@@ -1543,7 +1542,7 @@ void EditorComponent::Update(float dt)
 				}
 			}
 			// Paste
-			if (wiInput::Press((wiInput::BUTTON)'V'))
+			if (wi::input::Press((wi::input::BUTTON)'V'))
 			{
 				auto prevSel = translator.selected;
 				translator.selected.clear();
@@ -1553,7 +1552,7 @@ void EditorComponent::Update(float dt)
 				clipboard >> count;
 				for (size_t i = 0; i < count; ++i)
 				{
-					wiScene::PickResult picked;
+					wi::scene::PickResult picked;
 					picked.entity = scene.Entity_Serialize(clipboard);
 					AddSelected(picked);
 				}
@@ -1561,13 +1560,13 @@ void EditorComponent::Update(float dt)
 				RefreshSceneGraphView();
 			}
 			// Duplicate Instances
-			if (wiInput::Press((wiInput::BUTTON)'D'))
+			if (wi::input::Press((wi::input::BUTTON)'D'))
 			{
 				auto prevSel = translator.selected;
 				translator.selected.clear();
 				for (auto& x : prevSel)
 				{
-					wiScene::PickResult picked;
+					wi::scene::PickResult picked;
 					picked.entity = scene.Entity_Duplicate(x.entity);
 					AddSelected(picked);
 				}
@@ -1575,7 +1574,7 @@ void EditorComponent::Update(float dt)
 				RefreshSceneGraphView();
 			}
 			// Put Instances
-			if (clipboard.IsOpen() && hovered.subsetIndex >= 0 && wiInput::Down(wiInput::KEYBOARD_BUTTON_LSHIFT) && wiInput::Press(wiInput::MOUSE_BUTTON_LEFT))
+			if (clipboard.IsOpen() && hovered.subsetIndex >= 0 && wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT) && wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
 			{
 				clipboard.SetReadModeAndResetPos(true);
 				size_t count;
@@ -1595,14 +1594,14 @@ void EditorComponent::Update(float dt)
 				RefreshSceneGraphView();
 			}
 			// Undo
-			if (wiInput::Press((wiInput::BUTTON)'Z'))
+			if (wi::input::Press((wi::input::BUTTON)'Z'))
 			{
 				ConsumeHistoryOperation(true);
 
 				RefreshSceneGraphView();
 			}
 			// Redo
-			if (wiInput::Press((wiInput::BUTTON)'Y'))
+			if (wi::input::Press((wi::input::BUTTON)'Y'))
 			{
 				ConsumeHistoryOperation(false);
 
@@ -1614,9 +1613,9 @@ void EditorComponent::Update(float dt)
 
 
 	// Delete
-	if (wiInput::Press(wiInput::KEYBOARD_BUTTON_DELETE))
+	if (wi::input::Press(wi::input::KEYBOARD_BUTTON_DELETE))
 	{
-		wiArchive& archive = AdvanceHistory();
+		wi::Archive& archive = AdvanceHistory();
 		archive << HISTORYOP_DELETE;
 
 		archive << translator.selected.size();
@@ -1661,7 +1660,7 @@ void EditorComponent::Update(float dt)
 	}
 	else
 	{
-		const wiScene::PickResult& picked = translator.selected.back();
+		const wi::scene::PickResult& picked = translator.selected.back();
 
 		assert(picked.entity != INVALID_ENTITY);
 		objectWnd.SetEntity(picked.entity);
@@ -1746,7 +1745,7 @@ void EditorComponent::Update(float dt)
 
 	if (translator.IsDragEnded())
 	{
-		wiArchive& archive = AdvanceHistory();
+		wi::Archive& archive = AdvanceHistory();
 		archive << HISTORYOP_TRANSLATOR;
 		archive << translator.GetDragDeltaMatrix();
 	}
@@ -1768,7 +1767,7 @@ void EditorComponent::Update(float dt)
 	camera.TransformCamera(cameraWnd.camera_transform);
 	camera.UpdateCamera();
 
-	RenderPath3D_PathTracing* pathtracer = dynamic_cast<RenderPath3D_PathTracing*>(renderPath.get());
+	wi::RenderPath3D_PathTracing* pathtracer = dynamic_cast<wi::RenderPath3D_PathTracing*>(renderPath.get());
 	if (pathtracer != nullptr)
 	{
 		pathtracer->setTargetSampleCount((int)pathTraceTargetSlider.GetValue());
@@ -1790,7 +1789,7 @@ void EditorComponent::Update(float dt)
 		pathTraceStatisticsLabel.SetText(ss);
 	}
 
-	wiProfiler::EndRange(profrange);
+	wi::profiler::EndRange(profrange);
 
 	RenderPath2D::Update(dt);
 
@@ -1805,7 +1804,7 @@ void EditorComponent::PostUpdate()
 }
 void EditorComponent::Render() const
 {
-	Scene& scene = wiScene::GetScene();
+	Scene& scene = wi::scene::GetScene();
 
 	// Hovered item boxes:
 	if (!cinemaModeCheckBox.GetCheck())
@@ -1819,7 +1818,7 @@ void EditorComponent::Render() const
 
 				XMFLOAT4X4 hoverBox;
 				XMStoreFloat4x4(&hoverBox, aabb.getAsBoxMatrix());
-				wiRenderer::DrawBox(hoverBox, XMFLOAT4(0.5f, 0.5f, 0.5f, 0.5f));
+				wi::renderer::DrawBox(hoverBox, XMFLOAT4(0.5f, 0.5f, 0.5f, 0.5f));
 			}
 
 			const LightComponent* light = scene.lights.GetComponent(hovered.entity);
@@ -1829,13 +1828,13 @@ void EditorComponent::Render() const
 
 				XMFLOAT4X4 hoverBox;
 				XMStoreFloat4x4(&hoverBox, aabb.getAsBoxMatrix());
-				wiRenderer::DrawBox(hoverBox, XMFLOAT4(0.5f, 0.5f, 0, 0.5f));
+				wi::renderer::DrawBox(hoverBox, XMFLOAT4(0.5f, 0.5f, 0, 0.5f));
 			}
 
 			const DecalComponent* decal = scene.decals.GetComponent(hovered.entity);
 			if (decal != nullptr)
 			{
-				wiRenderer::DrawBox(decal->world, XMFLOAT4(0.5f, 0, 0.5f, 0.5f));
+				wi::renderer::DrawBox(decal->world, XMFLOAT4(0.5f, 0, 0.5f, 0.5f));
 			}
 
 			const EnvironmentProbeComponent* probe = scene.probes.GetComponent(hovered.entity);
@@ -1845,15 +1844,15 @@ void EditorComponent::Render() const
 
 				XMFLOAT4X4 hoverBox;
 				XMStoreFloat4x4(&hoverBox, aabb.getAsBoxMatrix());
-				wiRenderer::DrawBox(hoverBox, XMFLOAT4(0.5f, 0.5f, 0.5f, 0.5f));
+				wi::renderer::DrawBox(hoverBox, XMFLOAT4(0.5f, 0.5f, 0.5f, 0.5f));
 			}
 
-			const wiHairParticle* hair = scene.hairs.GetComponent(hovered.entity);
+			const wi::HairParticleSystem* hair = scene.hairs.GetComponent(hovered.entity);
 			if (hair != nullptr)
 			{
 				XMFLOAT4X4 hoverBox;
 				XMStoreFloat4x4(&hoverBox, hair->aabb.getAsBoxMatrix());
-				wiRenderer::DrawBox(hoverBox, XMFLOAT4(0, 0.5f, 0, 0.5f));
+				wi::renderer::DrawBox(hoverBox, XMFLOAT4(0, 0.5f, 0, 0.5f));
 			}
 		}
 
@@ -1863,11 +1862,11 @@ void EditorComponent::Render() const
 			for (size_t i = 0; i < scene.springs.GetCount(); ++i)
 			{
 				const SpringComponent& spring = scene.springs[i];
-				wiRenderer::RenderablePoint point;
+				wi::renderer::RenderablePoint point;
 				point.position = spring.center_of_mass;
 				point.size = 0.05f;
 				point.color = XMFLOAT4(1, 1, 0, 1);
-				wiRenderer::DrawPoint(point);
+				wi::renderer::DrawPoint(point);
 			}
 		}
 	}
@@ -1905,7 +1904,7 @@ void EditorComponent::Render() const
 					// also display decal OBB:
 					XMFLOAT4X4 selectionBox;
 					selectionBox = decal->world;
-					wiRenderer::DrawBox(selectionBox, XMFLOAT4(1, 0, 1, 1));
+					wi::renderer::DrawBox(selectionBox, XMFLOAT4(1, 0, 1, 1));
 				}
 
 				const EnvironmentProbeComponent* probe = scene.probes.GetComponent(picked.entity);
@@ -1915,7 +1914,7 @@ void EditorComponent::Render() const
 					selectedAABB = AABB::Merge(selectedAABB, aabb);
 				}
 
-				const wiHairParticle* hair = scene.hairs.GetComponent(picked.entity);
+				const wi::HairParticleSystem* hair = scene.hairs.GetComponent(picked.entity);
 				if (hair != nullptr)
 				{
 					selectedAABB = AABB::Merge(selectedAABB, hair->aabb);
@@ -1926,7 +1925,7 @@ void EditorComponent::Render() const
 
 		XMFLOAT4X4 selectionBox;
 		XMStoreFloat4x4(&selectionBox, selectedAABB.getAsBoxMatrix());
-		wiRenderer::DrawBox(selectionBox, XMFLOAT4(1, 1, 1, 1));
+		wi::renderer::DrawBox(selectionBox, XMFLOAT4(1, 1, 1, 1));
 	}
 
 	paintToolWnd.DrawBrush();
@@ -1936,7 +1935,7 @@ void EditorComponent::Render() const
 	// Selection outline:
 	if(renderPath->GetDepthStencil() != nullptr && !translator.selected.empty())
 	{
-		GraphicsDevice* device = wiGraphics::GetDevice();
+		GraphicsDevice* device = wi::graphics::GetDevice();
 		CommandList cmd = device->BeginCommandList();
 
 		device->EventBegin("Editor - Selection Outline Mask", cmd);
@@ -1946,13 +1945,13 @@ void EditorComponent::Render() const
 		vp.height = (float)rt_selectionOutline[0].GetDesc().height;
 		device->BindViewports(1, &vp, cmd);
 
-		wiImageParams fx;
+		wi::image::Params fx;
 		fx.enableFullScreen();
-		fx.stencilComp = STENCILMODE::STENCILMODE_EQUAL;
+		fx.stencilComp = wi::image::STENCILMODE::STENCILMODE_EQUAL;
 
 		// We will specify the stencil ref in user-space, don't care about engine stencil refs here:
 		//	Otherwise would need to take into account engine ref and draw multiple permutations of stencil refs.
-		fx.stencilRefMode = STENCILREFMODE_USER;
+		fx.stencilRefMode = wi::image::STENCILREFMODE_USER;
 
 		// Materials outline:
 		{
@@ -1960,7 +1959,7 @@ void EditorComponent::Render() const
 
 			// Draw solid blocks of selected materials
 			fx.stencilRef = EDITORSTENCILREF_HIGHLIGHT_MATERIAL;
-			wiImage::Draw(wiTextureHelper::getWhite(), fx, cmd);
+			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 
 			device->RenderPassEnd(cmd);
 		}
@@ -1971,7 +1970,7 @@ void EditorComponent::Render() const
 
 			// Draw solid blocks of selected objects
 			fx.stencilRef = EDITORSTENCILREF_HIGHLIGHT_OBJECT;
-			wiImage::Draw(wiTextureHelper::getWhite(), fx, cmd);
+			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 
 			device->RenderPassEnd(cmd);
 		}
@@ -1995,27 +1994,27 @@ void EditorComponent::Compose(CommandList cmd) const
 	const float selectionColorIntensity = std::sin(selectionOutlineTimer * XM_2PI * 0.8f) * 0.5f + 0.5f;
 	if (renderPath->GetDepthStencil() != nullptr && !translator.selected.empty())
 	{
-		GraphicsDevice* device = wiGraphics::GetDevice();
+		GraphicsDevice* device = wi::graphics::GetDevice();
 		device->EventBegin("Editor - Selection Outline", cmd);
-		wiRenderer::BindCommonResources(cmd);
-		float opacity = wiMath::Lerp(0.4f, 1.0f, selectionColorIntensity);
+		wi::renderer::BindCommonResources(cmd);
+		float opacity = wi::math::Lerp(0.4f, 1.0f, selectionColorIntensity);
 		XMFLOAT4 col = selectionColor2;
 		col.w *= opacity;
-		wiRenderer::Postprocess_Outline(rt_selectionOutline[0], cmd, 0.1f, 1, col);
+		wi::renderer::Postprocess_Outline(rt_selectionOutline[0], cmd, 0.1f, 1, col);
 		col = selectionColor;
 		col.w *= opacity;
-		wiRenderer::Postprocess_Outline(rt_selectionOutline[1], cmd, 0.1f, 1, col);
+		wi::renderer::Postprocess_Outline(rt_selectionOutline[1], cmd, 0.1f, 1, col);
 		device->EventEnd(cmd);
 	}
 
-	const CameraComponent& camera = wiScene::GetCamera();
+	const CameraComponent& camera = wi::scene::GetCamera();
 
-	Scene& scene = wiScene::GetScene();
+	Scene& scene = wi::scene::GetScene();
 
-	const wiColor inactiveEntityColor = wiColor::fromFloat4(XMFLOAT4(1, 1, 1, 0.5f));
-	const wiColor hoveredEntityColor = wiColor::fromFloat4(XMFLOAT4(1, 1, 1, 1));
-	const XMFLOAT4 glow = wiMath::Lerp(wiMath::Lerp(XMFLOAT4(1, 1, 1, 1), selectionColor, 0.4f), selectionColor, selectionColorIntensity);
-	const wiColor selectedEntityColor = wiColor::fromFloat4(glow);
+	const wi::Color inactiveEntityColor = wi::Color::fromFloat4(XMFLOAT4(1, 1, 1, 0.5f));
+	const wi::Color hoveredEntityColor = wi::Color::fromFloat4(XMFLOAT4(1, 1, 1, 1));
+	const XMFLOAT4 glow = wi::math::Lerp(wi::math::Lerp(XMFLOAT4(1, 1, 1, 1), selectionColor, 0.4f), selectionColor, selectionColorIntensity);
+	const wi::Color selectedEntityColor = wi::Color::fromFloat4(glow);
 
 	// remove camera jittering
 	CameraComponent cam = *renderPath->camera;
@@ -2025,7 +2024,7 @@ void EditorComponent::Compose(CommandList cmd) const
 
 	const XMMATRIX R = XMLoadFloat3x3(&cam.rotationMatrix);
 
-	wiImageParams fx;
+	wi::image::Params fx;
 	fx.customRotation = &R;
 	fx.customProjection = &VP;
 
@@ -2037,7 +2036,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			Entity entity = scene.lights.GetEntity(i);
 			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-			float dist = wiMath::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
+			float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
 
 			fx.pos = transform.GetPosition();
 			fx.siz = XMFLOAT2(dist, dist);
@@ -2060,16 +2059,16 @@ void EditorComponent::Compose(CommandList cmd) const
 			switch (light.GetType())
 			{
 			case LightComponent::POINT:
-				wiImage::Draw(&pointLightTex->texture, fx, cmd);
+				wi::image::Draw(&pointLightTex.GetTexture(), fx, cmd);
 				break;
 			case LightComponent::SPOT:
-				wiImage::Draw(&spotLightTex->texture, fx, cmd);
+				wi::image::Draw(&spotLightTex.GetTexture(), fx, cmd);
 				break;
 			case LightComponent::DIRECTIONAL:
-				wiImage::Draw(&dirLightTex->texture, fx, cmd);
+				wi::image::Draw(&dirLightTex.GetTexture(), fx, cmd);
 				break;
 			default:
-				wiImage::Draw(&areaLightTex->texture, fx, cmd);
+				wi::image::Draw(&areaLightTex.GetTexture(), fx, cmd);
 				break;
 			}
 		}
@@ -2083,7 +2082,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			Entity entity = scene.decals.GetEntity(i);
 			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-			float dist = wiMath::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
+			float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
 
 			fx.pos = transform.GetPosition();
 			fx.siz = XMFLOAT2(dist, dist);
@@ -2104,7 +2103,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			}
 
 
-			wiImage::Draw(&decalTex->texture, fx, cmd);
+			wi::image::Draw(&decalTex.GetTexture(), fx, cmd);
 
 		}
 	}
@@ -2116,7 +2115,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			Entity entity = scene.forces.GetEntity(i);
 			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-			float dist = wiMath::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
+			float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
 
 			fx.pos = transform.GetPosition();
 			fx.siz = XMFLOAT2(dist, dist);
@@ -2137,7 +2136,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			}
 
 
-			wiImage::Draw(&forceFieldTex->texture, fx, cmd);
+			wi::image::Draw(&forceFieldTex.GetTexture(), fx, cmd);
 		}
 	}
 
@@ -2149,7 +2148,7 @@ void EditorComponent::Compose(CommandList cmd) const
 
 			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-			float dist = wiMath::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
+			float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
 
 			fx.pos = transform.GetPosition();
 			fx.siz = XMFLOAT2(dist, dist);
@@ -2170,7 +2169,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			}
 
 
-			wiImage::Draw(&cameraTex->texture, fx, cmd);
+			wi::image::Draw(&cameraTex.GetTexture(), fx, cmd);
 		}
 	}
 
@@ -2181,7 +2180,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			Entity entity = scene.armatures.GetEntity(i);
 			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-			float dist = wiMath::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
+			float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
 
 			fx.pos = transform.GetPosition();
 			fx.siz = XMFLOAT2(dist, dist);
@@ -2202,7 +2201,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			}
 
 
-			wiImage::Draw(&armatureTex->texture, fx, cmd);
+			wi::image::Draw(&armatureTex.GetTexture(), fx, cmd);
 		}
 	}
 
@@ -2213,7 +2212,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			Entity entity = scene.emitters.GetEntity(i);
 			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-			float dist = wiMath::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
+			float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
 
 			fx.pos = transform.GetPosition();
 			fx.siz = XMFLOAT2(dist, dist);
@@ -2234,7 +2233,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			}
 
 
-			wiImage::Draw(&emitterTex->texture, fx, cmd);
+			wi::image::Draw(&emitterTex.GetTexture(), fx, cmd);
 		}
 	}
 
@@ -2245,7 +2244,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			Entity entity = scene.hairs.GetEntity(i);
 			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-			float dist = wiMath::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
+			float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
 
 			fx.pos = transform.GetPosition();
 			fx.siz = XMFLOAT2(dist, dist);
@@ -2266,7 +2265,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			}
 
 
-			wiImage::Draw(&hairTex->texture, fx, cmd);
+			wi::image::Draw(&hairTex.GetTexture(), fx, cmd);
 		}
 	}
 
@@ -2277,7 +2276,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			Entity entity = scene.sounds.GetEntity(i);
 			const TransformComponent& transform = *scene.transforms.GetComponent(entity);
 
-			float dist = wiMath::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
+			float dist = wi::math::Distance(transform.GetPosition(), camera.Eye) * 0.08f;
 
 			fx.pos = transform.GetPosition();
 			fx.siz = XMFLOAT2(dist, dist);
@@ -2298,7 +2297,7 @@ void EditorComponent::Compose(CommandList cmd) const
 			}
 
 
-			wiImage::Draw(&soundTex->texture, fx, cmd);
+			wi::image::Draw(&soundTex.GetTexture(), fx, cmd);
 		}
 	}
 
@@ -2311,15 +2310,15 @@ void EditorComponent::Compose(CommandList cmd) const
 	RenderPath2D::Compose(cmd);
 }
 
-void EditorComponent::PushToSceneGraphView(wiECS::Entity entity, int level)
+void EditorComponent::PushToSceneGraphView(wi::ecs::Entity entity, int level)
 {
 	if (scenegraphview_added_items.count(entity) != 0)
 	{
 		return;
 	}
-	const Scene& scene = wiScene::GetScene();
+	const Scene& scene = wi::scene::GetScene();
 
-	wiTreeList::Item item;
+	wi::gui::TreeList::Item item;
 	item.level = level;
 	item.userdata = entity;
 	item.selected = IsSelected(entity);
@@ -2340,11 +2339,11 @@ void EditorComponent::PushToSceneGraphView(wiECS::Entity entity, int level)
 }
 void EditorComponent::RefreshSceneGraphView()
 {
-	const Scene& scene = wiScene::GetScene();
+	const Scene& scene = wi::scene::GetScene();
 
 	for (int i = 0; i < sceneGraphView.GetItemCount(); ++i)
 	{
-		const wiTreeList::Item& item = sceneGraphView.GetItem(i);
+		const wi::gui::TreeList::Item& item = sceneGraphView.GetItem(i);
 		if (item.open)
 		{
 			scenegraphview_opened_items.insert((Entity)item.userdata);
@@ -2374,7 +2373,7 @@ void EditorComponent::RefreshSceneGraphView()
 			continue;
 		}
 
-		wiTreeList::Item item;
+		wi::gui::TreeList::Item item;
 		item.userdata = entity;
 		item.selected = IsSelected(entity);
 		item.open = scenegraphview_opened_items.count(entity) != 0;
@@ -2394,7 +2393,7 @@ void EditorComponent::RefreshSceneGraphView()
 			continue;
 		}
 
-		wiTreeList::Item item;
+		wi::gui::TreeList::Item item;
 		item.userdata = entity;
 		item.selected = IsSelected(entity);
 		item.open = scenegraphview_opened_items.count(entity) != 0;
@@ -2415,7 +2414,7 @@ void EditorComponent::ClearSelected()
 }
 void EditorComponent::AddSelected(Entity entity)
 {
-	wiScene::PickResult res;
+	wi::scene::PickResult res;
 	res.entity = entity;
 	AddSelected(res);
 }
@@ -2456,7 +2455,7 @@ void EditorComponent::ResetHistory()
 	historyPos = -1;
 	history.clear();
 }
-wiArchive& EditorComponent::AdvanceHistory()
+wi::Archive& EditorComponent::AdvanceHistory()
 {
 	historyPos++;
 
@@ -2479,9 +2478,9 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 			historyPos++;
 		}
 
-		Scene& scene = wiScene::GetScene();
+		Scene& scene = wi::scene::GetScene();
 
-		wiArchive& archive = history[historyPos];
+		wi::Archive& archive = history[historyPos];
 		archive.SetReadModeAndResetPos(true);
 
 		int temp;
@@ -2538,12 +2537,12 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 			{
 				// Read selections states from archive:
 
-				wi::vector<wiScene::PickResult> selectedBEFORE;
+				wi::vector<wi::scene::PickResult> selectedBEFORE;
 				size_t selectionCountBEFORE;
 				archive >> selectionCountBEFORE;
 				for (size_t i = 0; i < selectionCountBEFORE; ++i)
 				{
-					wiScene::PickResult sel;
+					wi::scene::PickResult sel;
 					archive >> sel.entity;
 					archive >> sel.position;
 					archive >> sel.normal;
@@ -2553,12 +2552,12 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 					selectedBEFORE.push_back(sel);
 				}
 
-				wi::vector<wiScene::PickResult> selectedAFTER;
+				wi::vector<wi::scene::PickResult> selectedAFTER;
 				size_t selectionCountAFTER;
 				archive >> selectionCountAFTER;
 				for (size_t i = 0; i < selectionCountAFTER; ++i)
 				{
-					wiScene::PickResult sel;
+					wi::scene::PickResult sel;
 					archive >> sel.entity;
 					archive >> sel.position;
 					archive >> sel.normal;

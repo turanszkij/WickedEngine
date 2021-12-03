@@ -34,27 +34,26 @@ add_subdirectory(LUA)
 add_subdirectory(Utility)
 
 add_library(${TARGET_NAME} STATIC
-	LoadingScreen.cpp
-	LoadingScreen_BindLua.cpp
-	MainComponent.cpp
-	MainComponent_BindLua.cpp
-	Matrix_BindLua.cpp
-	RenderPath_BindLua.cpp
-	RenderPath2D.cpp
-	RenderPath2D_BindLua.cpp
-	RenderPath3D.cpp
-	RenderPath3D_BindLua.cpp
-	RenderPath3D_PathTracing.cpp
-	SpriteAnim_BindLua.cpp
-	Texture_BindLua.cpp
-	Vector_BindLua.cpp
+	wiLoadingScreen.cpp
+	wiLoadingScreen_BindLua.cpp
+	wiApplication.cpp
+	wiApplication_BindLua.cpp
+	wiRenderPath_BindLua.cpp
+	wiRenderPath2D.cpp
+	wiRenderPath2D_BindLua.cpp
+	wiRenderPath3D.cpp
+	wiRenderPath3D_BindLua.cpp
+	wiRenderPath3D_PathTracing.cpp
+	wiSpriteAnim_BindLua.cpp
+	wiTexture_BindLua.cpp
+	wiMath_BindLua.cpp
 	wiArchive.cpp
 	wiAudio.cpp
 	wiAudio_BindLua.cpp
-	wiBackLog.cpp
-	wiBackLog_BindLua.cpp
+	wiBacklog.cpp
+	wiBacklog_BindLua.cpp
 	wiEmittedParticle.cpp
-	wiEvent.cpp
+	wiEventHandler.cpp
 	wiFadeManager.cpp
 	wiFFTGenerator.cpp
 	wiFont.cpp
@@ -70,8 +69,8 @@ add_library(${TARGET_NAME} STATIC
 	wiInitializer.cpp
 	wiInput.cpp
 	wiInput_BindLua.cpp
-	wiIntersect.cpp
-	wiIntersect_BindLua.cpp
+	wiPrimitive.cpp
+	wiPrimitive_BindLua.cpp
 	wiJobSystem.cpp
 	wiLua.cpp
 	wiMath.cpp
@@ -80,7 +79,7 @@ add_library(${TARGET_NAME} STATIC
 	wiNetwork_Windows.cpp
 	wiNetwork_UWP.cpp
 	wiOcean.cpp
-	wiPhysicsEngine_Bullet.cpp
+	wiPhysics_Bullet.cpp
 	wiProfiler.cpp
 	wiRandom.cpp
 	wiRawInput.cpp
@@ -96,10 +95,9 @@ add_library(${TARGET_NAME} STATIC
 	wiSprite_BindLua.cpp
 	wiSpriteFont.cpp
 	wiSpriteFont_BindLua.cpp
-	wiStartupArguments.cpp
+	wiArguments.cpp
 	wiTextureHelper.cpp
 	wiVersion.cpp
-	wiWidget.cpp
 	wiXInput.cpp
 	wiShaderCompiler.cpp
 )

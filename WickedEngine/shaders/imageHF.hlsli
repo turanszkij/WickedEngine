@@ -50,8 +50,8 @@ struct VertextoPixel
 		float4 texMulAdd = unpack_half4(push.texMulAdd);
 		float4 texMulAdd2 = unpack_half4(push.texMulAdd2);
 
-		float2 uv0 = uv * texMulAdd.xy + texMulAdd.zw;
-		float2 uv1 = uv * texMulAdd2.xy + texMulAdd2.zw;
+		float2 uv0 = mad(uv, texMulAdd.xy, texMulAdd.zw);
+		float2 uv1 = mad(uv, texMulAdd2.xy, texMulAdd2.zw);
 		return float4(uv0, uv1);
 	}
 };

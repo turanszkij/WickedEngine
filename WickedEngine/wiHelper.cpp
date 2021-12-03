@@ -1,7 +1,7 @@
 #include "wiHelper.h"
 #include "wiPlatform.h"
-#include "wiBackLog.h"
-#include "wiEvent.h"
+#include "wiBacklog.h"
+#include "wiEventHandler.h"
 #include "wiMath.h"
 
 #include "Utility/stb_image_write.h"
@@ -37,7 +37,7 @@ extern basist::etc1_global_selector_codebook g_basis_global_codebook;
 #endif // _WIN32
 
 
-namespace wiHelper
+namespace wi::helper
 {
 
 	std::string toUpper(const std::string& s)
@@ -61,7 +61,7 @@ namespace wiHelper
 		StringConvert(msg, wmessage);
 		StringConvert(caption, wcaption);
 		// UWP can only show message box on main thread:
-		wiEvent::Subscribe_Once(SYSTEM_EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+		wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 			winrt::Windows::UI::Popups::MessageDialog(wmessage, wcaption).ShowAsync();
 		});
 #endif // PLATFORM_UWP
@@ -70,7 +70,7 @@ namespace wiHelper
 #endif // _WIN32
 	}
 
-	void screenshot(const wiGraphics::SwapChain& swapchain, const std::string& name)
+	void screenshot(const wi::graphics::SwapChain& swapchain, const std::string& name)
 	{
 		std::string directory;
 		if (name.empty())
@@ -90,20 +90,20 @@ namespace wiHelper
 			filename = directory + "/sc_" + getCurrentDateTimeAsString() + ".jpg";
 		}
 
-		bool result = saveTextureToFile(wiGraphics::GetDevice()->GetBackBuffer(&swapchain), filename);
+		bool result = saveTextureToFile(wi::graphics::GetDevice()->GetBackBuffer(&swapchain), filename);
 		assert(result);
 
 		if (result)
 		{
-			wiBackLog::post("Screenshot saved: " + filename);
+			wi::backlog::post("Screenshot saved: " + filename);
 		}
 	}
 
-	bool saveTextureToMemory(const wiGraphics::Texture& texture, wi::vector<uint8_t>& texturedata)
+	bool saveTextureToMemory(const wi::graphics::Texture& texture, wi::vector<uint8_t>& texturedata)
 	{
-		using namespace wiGraphics;
+		using namespace wi::graphics;
 
-		GraphicsDevice* device = wiGraphics::GetDevice();
+		GraphicsDevice* device = wi::graphics::GetDevice();
 
 		TextureDesc desc = texture.GetDesc();
 
@@ -174,9 +174,9 @@ namespace wiHelper
 		return stagingTex.mapped_data != nullptr;
 	}
 
-	bool saveTextureToMemoryFile(const wiGraphics::Texture& texture, const std::string& fileExtension, wi::vector<uint8_t>& filedata)
+	bool saveTextureToMemoryFile(const wi::graphics::Texture& texture, const std::string& fileExtension, wi::vector<uint8_t>& filedata)
 	{
-		using namespace wiGraphics;
+		using namespace wi::graphics;
 		TextureDesc desc = texture.GetDesc();
 		wi::vector<uint8_t> texturedata;
 		if (saveTextureToMemory(texture, texturedata))
@@ -186,12 +186,12 @@ namespace wiHelper
 		return false;
 	}
 
-	bool saveTextureToMemoryFile(const wi::vector<uint8_t>& texturedata, const wiGraphics::TextureDesc& desc, const std::string& fileExtension, wi::vector<uint8_t>& filedata)
+	bool saveTextureToMemoryFile(const wi::vector<uint8_t>& texturedata, const wi::graphics::TextureDesc& desc, const std::string& fileExtension, wi::vector<uint8_t>& filedata)
 	{
-		using namespace wiGraphics;
+		using namespace wi::graphics;
 		uint32_t data_count = desc.width * desc.height;
 
-		std::string extension = wiHelper::toUpper(fileExtension);
+		std::string extension = wi::helper::toUpper(fileExtension);
 		bool basis = !extension.compare("BASIS");
 		bool ktx2 = !extension.compare("KTX2");
 		basisu::image basis_image;
@@ -421,9 +421,9 @@ namespace wiHelper
 		return write_result != 0;
 	}
 
-	bool saveTextureToFile(const wiGraphics::Texture& texture, const std::string& fileName)
+	bool saveTextureToFile(const wi::graphics::Texture& texture, const std::string& fileName)
 	{
-		using namespace wiGraphics;
+		using namespace wi::graphics;
 		TextureDesc desc = texture.GetDesc();
 		wi::vector<uint8_t> data;
 		if (saveTextureToMemory(texture, data))
@@ -433,9 +433,9 @@ namespace wiHelper
 		return false;
 	}
 
-	bool saveTextureToFile(const wi::vector<uint8_t>& texturedata, const wiGraphics::TextureDesc& desc, const std::string& fileName)
+	bool saveTextureToFile(const wi::vector<uint8_t>& texturedata, const wi::graphics::TextureDesc& desc, const std::string& fileName)
 	{
-		using namespace wiGraphics;
+		using namespace wi::graphics;
 
 		std::string ext = GetExtensionFromFileName(fileName);
 		wi::vector<uint8_t> filedata;
@@ -616,7 +616,7 @@ namespace wiHelper
 				switch (ex.code())
 				{
 				case E_ACCESSDENIED:
-					wiBackLog::post("Opening file failed: " + fileName + " | Reason: Permission Denied!");
+					wi::backlog::post("Opening file failed: " + fileName + " | Reason: Permission Denied!");
 					break;
 				default:
 					break;
@@ -641,7 +641,7 @@ namespace wiHelper
 
 #endif // PLATFORM_UWP
 
-		wiBackLog::post("File not found: " + fileName);
+		wi::backlog::post("File not found: " + fileName);
 		return false;
 	}
 
@@ -691,7 +691,7 @@ namespace wiHelper
 				switch (ex.code())
 				{
 				case E_ACCESSDENIED:
-					wiBackLog::post("Opening file failed: " + fileName + " | Reason: Permission Denied!");
+					wi::backlog::post("Opening file failed: " + fileName + " | Reason: Permission Denied!");
 					break;
 				default:
 					break;

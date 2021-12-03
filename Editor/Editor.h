@@ -24,21 +24,21 @@
 #include "LayerWindow.h"
 #include "NameWindow.h"
 
-class EditorLoadingScreen : public LoadingScreen
+class EditorLoadingScreen : public wi::LoadingScreen
 {
 private:
-	wiSprite sprite;
-	wiSpriteFont font;
+	wi::Sprite sprite;
+	wi::SpriteFont font;
 public:
 	void Load() override;
 	void Update(float dt) override;
 };
 
 class Editor;
-class EditorComponent : public RenderPath2D
+class EditorComponent : public wi::RenderPath2D
 {
 private:
-	std::shared_ptr<wiResource> pointLightTex, spotLightTex, dirLightTex, areaLightTex, decalTex, forceFieldTex, emitterTex, hairTex, cameraTex, armatureTex, soundTex;
+	wi::Resource pointLightTex, spotLightTex, dirLightTex, areaLightTex, decalTex, forceFieldTex, emitterTex, hairTex, cameraTex, armatureTex, soundTex;
 public:
 	MaterialWindow materialWnd;
 	PostprocessWindow postprocessWnd;
@@ -64,61 +64,61 @@ public:
 
 	Editor* main = nullptr;
 
-	wiButton rendererWnd_Toggle;
-	wiButton postprocessWnd_Toggle;
-	wiButton paintToolWnd_Toggle;
-	wiButton weatherWnd_Toggle;
-	wiButton objectWnd_Toggle;
-	wiButton meshWnd_Toggle;
-	wiButton materialWnd_Toggle;
-	wiButton cameraWnd_Toggle;
-	wiButton envProbeWnd_Toggle;
-	wiButton decalWnd_Toggle;
-	wiButton soundWnd_Toggle;
-	wiButton lightWnd_Toggle;
-	wiButton animWnd_Toggle;
-	wiButton emitterWnd_Toggle;
-	wiButton hairWnd_Toggle;
-	wiButton forceFieldWnd_Toggle;
-	wiButton springWnd_Toggle;
-	wiButton ikWnd_Toggle;
-	wiButton transformWnd_Toggle;
-	wiButton layerWnd_Toggle;
-	wiButton nameWnd_Toggle;
-	wiCheckBox translatorCheckBox;
-	wiCheckBox isScalatorCheckBox;
-	wiCheckBox isRotatorCheckBox;
-	wiCheckBox isTranslatorCheckBox;
-	wiButton saveButton;
-	wiComboBox saveModeComboBox;
-	wiButton modelButton;
-	wiButton scriptButton;
-	wiButton clearButton;
-	wiButton helpButton;
-	wiButton exitButton;
-	wiCheckBox profilerEnabledCheckBox;
-	wiCheckBox physicsEnabledCheckBox;
-	wiCheckBox cinemaModeCheckBox;
-	wiComboBox renderPathComboBox;
-	wiLabel helpLabel;
+	wi::gui::Button rendererWnd_Toggle;
+	wi::gui::Button postprocessWnd_Toggle;
+	wi::gui::Button paintToolWnd_Toggle;
+	wi::gui::Button weatherWnd_Toggle;
+	wi::gui::Button objectWnd_Toggle;
+	wi::gui::Button meshWnd_Toggle;
+	wi::gui::Button materialWnd_Toggle;
+	wi::gui::Button cameraWnd_Toggle;
+	wi::gui::Button envProbeWnd_Toggle;
+	wi::gui::Button decalWnd_Toggle;
+	wi::gui::Button soundWnd_Toggle;
+	wi::gui::Button lightWnd_Toggle;
+	wi::gui::Button animWnd_Toggle;
+	wi::gui::Button emitterWnd_Toggle;
+	wi::gui::Button hairWnd_Toggle;
+	wi::gui::Button forceFieldWnd_Toggle;
+	wi::gui::Button springWnd_Toggle;
+	wi::gui::Button ikWnd_Toggle;
+	wi::gui::Button transformWnd_Toggle;
+	wi::gui::Button layerWnd_Toggle;
+	wi::gui::Button nameWnd_Toggle;
+	wi::gui::CheckBox translatorCheckBox;
+	wi::gui::CheckBox isScalatorCheckBox;
+	wi::gui::CheckBox isRotatorCheckBox;
+	wi::gui::CheckBox isTranslatorCheckBox;
+	wi::gui::Button saveButton;
+	wi::gui::ComboBox saveModeComboBox;
+	wi::gui::Button modelButton;
+	wi::gui::Button scriptButton;
+	wi::gui::Button clearButton;
+	wi::gui::Button helpButton;
+	wi::gui::Button exitButton;
+	wi::gui::CheckBox profilerEnabledCheckBox;
+	wi::gui::CheckBox physicsEnabledCheckBox;
+	wi::gui::CheckBox cinemaModeCheckBox;
+	wi::gui::ComboBox renderPathComboBox;
+	wi::gui::Label helpLabel;
 
-	wiTreeList sceneGraphView;
-	wi::unordered_set<wiECS::Entity> scenegraphview_added_items;
-	wi::unordered_set<wiECS::Entity> scenegraphview_opened_items;
-	void PushToSceneGraphView(wiECS::Entity entity, int level);
+	wi::gui::TreeList sceneGraphView;
+	wi::unordered_set<wi::ecs::Entity> scenegraphview_added_items;
+	wi::unordered_set<wi::ecs::Entity> scenegraphview_opened_items;
+	void PushToSceneGraphView(wi::ecs::Entity entity, int level);
 	void RefreshSceneGraphView();
 
-	wiSlider pathTraceTargetSlider;
-	wiLabel pathTraceStatisticsLabel;
+	wi::gui::Slider pathTraceTargetSlider;
+	wi::gui::Label pathTraceStatisticsLabel;
 
-	std::unique_ptr<RenderPath3D> renderPath;
+	std::unique_ptr<wi::RenderPath3D> renderPath;
 	enum RENDERPATH
 	{
 		RENDERPATH_DEFAULT,
 		RENDERPATH_PATHTRACING,
 	};
 	void ChangeRenderPath(RENDERPATH path);
-	const wiGraphics::Texture* GetGUIBlurredBackground() const override { return renderPath->GetGUIBlurredBackground(); }
+	const wi::graphics::Texture* GetGUIBlurredBackground() const override { return renderPath->GetGUIBlurredBackground(); }
 
 	void ResizeBuffers() override;
 	void ResizeLayout() override;
@@ -129,7 +129,7 @@ public:
 	void Update(float dt) override;
 	void PostUpdate() override;
 	void Render() const override;
-	void Compose(wiGraphics::CommandList cmd) const override;
+	void Compose(wi::graphics::CommandList cmd) const override;
 
 
 	enum EDITORSTENCILREF
@@ -139,26 +139,26 @@ public:
 		EDITORSTENCILREF_HIGHLIGHT_MATERIAL = 0x02,
 		EDITORSTENCILREF_LAST = 0x0F,
 	};
-	wiGraphics::Texture rt_selectionOutline_MSAA;
-	wiGraphics::Texture rt_selectionOutline[2];
-	wiGraphics::RenderPass renderpass_selectionOutline[2];
+	wi::graphics::Texture rt_selectionOutline_MSAA;
+	wi::graphics::Texture rt_selectionOutline[2];
+	wi::graphics::RenderPass renderpass_selectionOutline[2];
 	float selectionOutlineTimer = 0;
 	const XMFLOAT4 selectionColor = XMFLOAT4(1, 0.6f, 0, 1);
 	const XMFLOAT4 selectionColor2 = XMFLOAT4(0, 1, 0.6f, 0.35f);
 
 	Translator translator;
-	wiScene::PickResult hovered;
+	wi::scene::PickResult hovered;
 
 	void ClearSelected();
-	void AddSelected(wiECS::Entity entity);
-	void AddSelected(const wiScene::PickResult& picked);
-	bool IsSelected(wiECS::Entity entity) const;
+	void AddSelected(wi::ecs::Entity entity);
+	void AddSelected(const wi::scene::PickResult& picked);
+	bool IsSelected(wi::ecs::Entity entity) const;
 
 
 
-	wiArchive clipboard;
+	wi::Archive clipboard;
 
-	wi::vector<wiArchive> history;
+	wi::vector<wi::Archive> history;
 	int historyPos = -1;
 	enum HistoryOperationType
 	{
@@ -170,11 +170,11 @@ public:
 	};
 
 	void ResetHistory();
-	wiArchive& AdvanceHistory();
+	wi::Archive& AdvanceHistory();
 	void ConsumeHistoryOperation(bool undo);
 };
 
-class Editor : public MainComponent
+class Editor : public wi::Application
 {
 public:
 	EditorComponent renderComponent;

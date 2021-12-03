@@ -3,16 +3,16 @@
 #include "wiArchive.h"
 #include "wiRandom.h"
 #include "wiHelper.h"
-#include "wiBackLog.h"
+#include "wiBacklog.h"
 #include "wiTimer.h"
 #include "wiVector.h"
 
-using namespace wiECS;
+using namespace wi::ecs;
 
-namespace wiScene
+namespace wi::scene
 {
 
-	void NameComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
+	void NameComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
 	{
 		if (archive.IsReadMode())
 		{
@@ -23,7 +23,7 @@ namespace wiScene
 			archive << name;
 		}
 	}
-	void LayerComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
+	void LayerComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
 	{
 		if (archive.IsReadMode())
 		{
@@ -34,7 +34,7 @@ namespace wiScene
 			archive << layerMask;
 		}
 	}
-	void TransformComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
+	void TransformComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
 	{
 		if (archive.IsReadMode())
 		{
@@ -54,12 +54,12 @@ namespace wiScene
 			archive << translation_local;
 		}
 	}
-	void PreviousFrameTransformComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
+	void PreviousFrameTransformComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
 	{
 		// NOTHING! We just need a serialize function for this to be able serialize with ComponentManager!
 		//	This structure has no persistent state!
 	}
-	void HierarchyComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
+	void HierarchyComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
 	{
 		SerializeEntity(archive, parentID, seri);
 
@@ -77,7 +77,7 @@ namespace wiScene
 			archive << layerMask_bind;
 		}
 	}
-	void MaterialComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
+	void MaterialComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
 	{
 		const std::string& dir = archive.GetSourceDirectory();
 
@@ -222,7 +222,7 @@ namespace wiScene
 				}
 			}
 
-			wiJobSystem::Execute(seri.ctx, [&](wiJobArgs args) {
+			wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
 				CreateRenderData();
 			});
 		}
@@ -260,7 +260,7 @@ namespace wiScene
 
 			for (auto& x : textures)
 			{
-				wiHelper::MakePathRelative(dir, x.name);
+				wi::helper::MakePathRelative(dir, x.name);
 			}
 
 			archive << textures[BASECOLORMAP].name;
@@ -341,7 +341,7 @@ namespace wiScene
 			}
 		}
 	}
-	void MeshComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
+	void MeshComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
 	{
 
 		if (archive.IsReadMode())
@@ -404,7 +404,7 @@ namespace wiScene
 			    }
 			}
 
-			wiJobSystem::Execute(seri.ctx, [&](wiJobArgs args) {
+			wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
 				CreateRenderData();
 			});
 		}
@@ -466,7 +466,7 @@ namespace wiScene
 
 		}
 	}
-	void ImpostorComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
+	void ImpostorComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
 	{
 		if (archive.IsReadMode())
 		{
@@ -481,7 +481,7 @@ namespace wiScene
 			archive << swapInDistance;
 		}
 	}
-	void ObjectComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
+	void ObjectComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
 	{
 		if (archive.IsReadMode())
 		{
@@ -503,7 +503,7 @@ namespace wiScene
 					if (expected_datasize != lightmapTextureData.size())
 					{
 						// This means it's from an old version, when lightmap data was stored in raw format, so compress it...
-						wiJobSystem::Execute(seri.ctx, [this](wiJobArgs args) {
+						wi::jobsystem::Execute(seri.ctx, [this](wi::jobsystem::JobArgs args) {
 							CompressLightmap();
 							});
 					}
@@ -542,7 +542,7 @@ namespace wiScene
 			}
 		}
 	}
-	void RigidBodyPhysicsComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
+	void RigidBodyPhysicsComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
 	{
 		if (archive.IsReadMode())
 		{
@@ -596,7 +596,7 @@ namespace wiScene
 			}
 		}
 	}
-	void SoftBodyPhysicsComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
+	void SoftBodyPhysicsComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
 	{
 		if (archive.IsReadMode())
 		{
@@ -640,7 +640,7 @@ namespace wiScene
 			}
 		}
 	}
-	void ArmatureComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
+	void ArmatureComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
 	{
 		if (archive.IsReadMode())
 		{
@@ -688,7 +688,7 @@ namespace wiScene
 			}
 		}
 	}
-	void LightComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
+	void LightComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
 	{
 		const std::string& dir = archive.GetSourceDirectory();
 
@@ -718,14 +718,14 @@ namespace wiScene
 
 			archive >> lensFlareNames;
 
-			wiJobSystem::Execute(seri.ctx, [&](wiJobArgs args) {
+			wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
 				lensFlareRimTextures.resize(lensFlareNames.size());
 				for (size_t i = 0; i < lensFlareNames.size(); ++i)
 				{
 					if (!lensFlareNames[i].empty())
 					{
 						lensFlareNames[i] = dir + lensFlareNames[i];
-						lensFlareRimTextures[i] = wiResourceManager::Load(lensFlareNames[i], wiResourceManager::IMPORT_RETAIN_FILEDATA);
+						lensFlareRimTextures[i] = wi::resourcemanager::Load(lensFlareNames[i], wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
 					}
 				}
 			});
@@ -755,13 +755,13 @@ namespace wiScene
 			{
 				for (size_t i = 0; i < lensFlareNames.size(); ++i)
 				{
-					wiHelper::MakePathRelative(dir, lensFlareNames[i]);
+					wi::helper::MakePathRelative(dir, lensFlareNames[i]);
 				}
 			}
 			archive << lensFlareNames;
 		}
 	}
-	void CameraComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
+	void CameraComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
 	{
 		if (archive.IsReadMode())
 		{
@@ -798,7 +798,7 @@ namespace wiScene
 			}
 		}
 	}
-	void EnvironmentProbeComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
+	void EnvironmentProbeComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
 	{
 		if (archive.IsReadMode())
 		{
@@ -811,7 +811,7 @@ namespace wiScene
 			archive << _flags;
 		}
 	}
-	void ForceFieldComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
+	void ForceFieldComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
 	{
 		if (archive.IsReadMode())
 		{
@@ -828,7 +828,7 @@ namespace wiScene
 			archive << range_local;
 		}
 	}
-	void DecalComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
+	void DecalComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
 	{
 		if (archive.IsReadMode())
 		{
@@ -839,7 +839,7 @@ namespace wiScene
 			archive << _flags;
 		}
 	}
-	void AnimationComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
+	void AnimationComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
 	{
 		if (archive.IsReadMode())
 		{
@@ -921,7 +921,7 @@ namespace wiScene
 			}
 		}
 	}
-	void AnimationDataComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
+	void AnimationDataComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
 	{
 		if (archive.IsReadMode())
 		{
@@ -936,7 +936,7 @@ namespace wiScene
 			archive << keyframe_data;
 		}
 	}
-	void WeatherComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
+	void WeatherComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
 	{
 		std::string dir = archive.GetSourceDirectory();
 
@@ -988,7 +988,7 @@ namespace wiScene
 				if (!skyMapName.empty())
 				{
 					skyMapName = dir + skyMapName;
-					skyMap = wiResourceManager::Load(skyMapName, wiResourceManager::IMPORT_RETAIN_FILEDATA);
+					skyMap = wi::resourcemanager::Load(skyMapName, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
 				}
 			}
 			if (archive.GetVersion() >= 40)
@@ -1001,7 +1001,7 @@ namespace wiScene
 				if (!colorGradingMapName.empty())
 				{
 					colorGradingMapName = dir + colorGradingMapName;
-					colorGradingMap = wiResourceManager::Load(colorGradingMapName, wiResourceManager::IMPORT_COLORGRADINGLUT | wiResourceManager::IMPORT_RETAIN_FILEDATA);
+					colorGradingMap = wi::resourcemanager::Load(colorGradingMapName, wi::resourcemanager::Flags::IMPORT_COLORGRADINGLUT | wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
 				}
 			}
 
@@ -1122,8 +1122,8 @@ namespace wiScene
 			archive << oceanParameters.surfaceDetail;
 			archive << oceanParameters.surfaceDisplacementTolerance;
 
-			wiHelper::MakePathRelative(dir, skyMapName);
-			wiHelper::MakePathRelative(dir, colorGradingMapName);
+			wi::helper::MakePathRelative(dir, skyMapName);
+			wi::helper::MakePathRelative(dir, colorGradingMapName);
 
 			if (archive.GetVersion() >= 32)
 			{
@@ -1225,7 +1225,7 @@ namespace wiScene
 			}
 		}
 	}
-	void SoundComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
+	void SoundComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
 	{
 		const std::string& dir = archive.GetSourceDirectory();
 
@@ -1236,18 +1236,18 @@ namespace wiScene
 			archive >> volume;
 			archive >> (uint32_t&)soundinstance.type;
 
-			wiJobSystem::Execute(seri.ctx, [&](wiJobArgs args) {
+			wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
 				if (!filename.empty())
 				{
 					filename = dir + filename;
-					soundResource = wiResourceManager::Load(filename, wiResourceManager::IMPORT_RETAIN_FILEDATA);
-					wiAudio::CreateSoundInstance(&soundResource->sound, &soundinstance);
+					soundResource = wi::resourcemanager::Load(filename, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA);
+					wi::audio::CreateSoundInstance(&soundResource.GetSound(), &soundinstance);
 				}
 			});
 		}
 		else
 		{
-			wiHelper::MakePathRelative(dir, filename);
+			wi::helper::MakePathRelative(dir, filename);
 
 			archive << _flags;
 			archive << filename;
@@ -1255,7 +1255,7 @@ namespace wiScene
 			archive << soundinstance.type;
 		}
 	}
-	void InverseKinematicsComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
+	void InverseKinematicsComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
 	{
 		SerializeEntity(archive, target, seri);
 
@@ -1272,7 +1272,7 @@ namespace wiScene
 			archive << iteration_count;
 		}
 	}
-	void SpringComponent::Serialize(wiArchive& archive, EntitySerializer& seri)
+	void SpringComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
 	{
 		if (archive.IsReadMode())
 		{
@@ -1292,9 +1292,9 @@ namespace wiScene
 		}
 	}
 
-	void Scene::Serialize(wiArchive& archive)
+	void Scene::Serialize(wi::Archive& archive)
 	{
-		wiTimer timer;
+		wi::Timer timer;
 
 		if (archive.IsReadMode())
 		{
@@ -1308,10 +1308,10 @@ namespace wiScene
 		}
 
 		// Keeping this alive to keep serialized resources alive until entity serialization ends:
-		wiResourceManager::ResourceSerializer resource_seri;
+		wi::resourcemanager::ResourceSerializer resource_seri;
 		if (archive.GetVersion() >= 63)
 		{
-			wiResourceManager::Serialize(archive, resource_seri);
+			wi::resourcemanager::Serialize(archive, resource_seri);
 		}
 
 		// With this we will ensure that serialized entities are unique and persistent across the scene:
@@ -1359,10 +1359,10 @@ namespace wiScene
 			animation_datas.Serialize(archive, seri);
 		}
 
-		wiBackLog::post("Scene serialize took " + std::to_string(timer.elapsed_seconds()) + " sec");
+		wi::backlog::post("Scene serialize took " + std::to_string(timer.elapsed_seconds()) + " sec");
 	}
 
-	Entity Scene::Entity_Serialize(wiArchive& archive, Entity entity)
+	Entity Scene::Entity_Serialize(wi::Archive& archive, Entity entity)
 	{
 		EntitySerializer seri;
 

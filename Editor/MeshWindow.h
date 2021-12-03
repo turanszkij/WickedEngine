@@ -3,41 +3,41 @@
 
 class EditorComponent;
 
-class MeshWindow : public wiWindow
+class MeshWindow : public wi::gui::Window
 {
 public:
 	void Create(EditorComponent* editor);
 
-	wiECS::Entity entity;
+	wi::ecs::Entity entity;
 	int subset = -1;
-	void SetEntity(wiECS::Entity entity, int subset);
+	void SetEntity(wi::ecs::Entity entity, int subset);
 
-	wiLabel meshInfoLabel;
-	wiComboBox subsetComboBox;
-	wiComboBox subsetMaterialComboBox;
-	wiCheckBox doubleSidedCheckBox;
-	wiCheckBox softbodyCheckBox;
-	wiSlider massSlider;
-	wiSlider frictionSlider;
-	wiSlider restitutionSlider;
-	wiButton impostorCreateButton;
-	wiSlider impostorDistanceSlider;
-	wiSlider tessellationFactorSlider;
-	wiButton flipCullingButton;
-	wiButton flipNormalsButton;
-	wiButton computeNormalsSmoothButton;
-	wiButton computeNormalsHardButton;
-	wiButton recenterButton;
-	wiButton recenterToBottomButton;
-	wiButton optimizeButton;
+	wi::gui::Label meshInfoLabel;
+	wi::gui::ComboBox subsetComboBox;
+	wi::gui::ComboBox subsetMaterialComboBox;
+	wi::gui::CheckBox doubleSidedCheckBox;
+	wi::gui::CheckBox softbodyCheckBox;
+	wi::gui::Slider massSlider;
+	wi::gui::Slider frictionSlider;
+	wi::gui::Slider restitutionSlider;
+	wi::gui::Button impostorCreateButton;
+	wi::gui::Slider impostorDistanceSlider;
+	wi::gui::Slider tessellationFactorSlider;
+	wi::gui::Button flipCullingButton;
+	wi::gui::Button flipNormalsButton;
+	wi::gui::Button computeNormalsSmoothButton;
+	wi::gui::Button computeNormalsHardButton;
+	wi::gui::Button recenterButton;
+	wi::gui::Button recenterToBottomButton;
+	wi::gui::Button optimizeButton;
 
-	wiCheckBox terrainCheckBox;
-	wiComboBox terrainMat1Combo;
-	wiComboBox terrainMat2Combo;
-	wiComboBox terrainMat3Combo;
-	wiButton terrainGenButton;
+	wi::gui::CheckBox terrainCheckBox;
+	wi::gui::ComboBox terrainMat1Combo;
+	wi::gui::ComboBox terrainMat2Combo;
+	wi::gui::ComboBox terrainMat3Combo;
+	wi::gui::Button terrainGenButton;
 
-	wiComboBox morphTargetCombo;
-	wiSlider morphTargetSlider;
+	wi::gui::ComboBox morphTargetCombo;
+	wi::gui::Slider morphTargetSlider;
 };
 

@@ -2,13 +2,13 @@
 #include "LayerWindow.h"
 #include "Editor.h"
 
-using namespace wiECS;
-using namespace wiScene;
+using namespace wi::ecs;
+using namespace wi::scene;
 
 
 void LayerWindow::Create(EditorComponent* editor)
 {
-	wiWindow::Create("Layer Window");
+	wi::gui::Window::Create("Layer Window");
 	SetSize(XMFLOAT2(410, 160));
 
 	float x = 30;
@@ -21,12 +21,12 @@ void LayerWindow::Create(EditorComponent* editor)
 		layers[i].Create("");
 		layers[i].SetText(std::to_string(i) + ": ");
 		layers[i].SetPos(XMFLOAT2(x + (i % 8) * 50, y + (i / 8 + 1) * step));
-		layers[i].OnClick([=](wiEventArgs args) {
+		layers[i].OnClick([=](wi::gui::EventArgs args) {
 
-			LayerComponent* layer = wiScene::GetScene().layers.GetComponent(entity);
+			LayerComponent* layer = wi::scene::GetScene().layers.GetComponent(entity);
 			if (layer == nullptr)
 			{
-				layer = &wiScene::GetScene().layers.Create(entity);
+				layer = &wi::scene::GetScene().layers.Create(entity);
 			}
 
 			if (args.bValue)
@@ -46,11 +46,11 @@ void LayerWindow::Create(EditorComponent* editor)
 
 	enableAllButton.Create("Enable ALL");
 	enableAllButton.SetPos(XMFLOAT2(x, y));
-	enableAllButton.OnClick([this](wiEventArgs args) {
-		LayerComponent* layer = wiScene::GetScene().layers.GetComponent(entity);
+	enableAllButton.OnClick([this](wi::gui::EventArgs args) {
+		LayerComponent* layer = wi::scene::GetScene().layers.GetComponent(entity);
 		if (layer == nullptr)
 		{
-			layer = &wiScene::GetScene().layers.Create(entity);
+			layer = &wi::scene::GetScene().layers.Create(entity);
 		}
 		if (layer == nullptr)
 			return;
@@ -60,11 +60,11 @@ void LayerWindow::Create(EditorComponent* editor)
 
 	enableNoneButton.Create("Enable NONE");
 	enableNoneButton.SetPos(XMFLOAT2(x + 120, y));
-	enableNoneButton.OnClick([this](wiEventArgs args) {
-		LayerComponent* layer = wiScene::GetScene().layers.GetComponent(entity);
+	enableNoneButton.OnClick([this](wi::gui::EventArgs args) {
+		LayerComponent* layer = wi::scene::GetScene().layers.GetComponent(entity);
 		if (layer == nullptr)
 		{
-			layer = &wiScene::GetScene().layers.Create(entity);
+			layer = &wi::scene::GetScene().layers.Create(entity);
 		}
 		if (layer == nullptr)
 			return;
@@ -86,7 +86,7 @@ void LayerWindow::SetEntity(Entity entity)
 	{
 		SetEnabled(true);
 
-		LayerComponent* layer = wiScene::GetScene().layers.GetComponent(entity);
+		LayerComponent* layer = wi::scene::GetScene().layers.GetComponent(entity);
 		if (layer == nullptr)
 		{
 			for (uint32_t i = 0; i < 32; ++i)
@@ -101,13 +101,13 @@ void LayerWindow::SetEntity(Entity entity)
 				layers[i].SetCheck(layer->GetLayerMask() & 1 << i);
 			}
 
-			HierarchyComponent* hier = wiScene::GetScene().hierarchy.GetComponent(entity);
+			HierarchyComponent* hier = wi::scene::GetScene().hierarchy.GetComponent(entity);
 			if (hier != nullptr)
 			{
 				hier->layerMask_bind = layer->layerMask;
 			}
 
-			MaterialComponent* material = wiScene::GetScene().materials.GetComponent(entity);
+			MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
 			if (material != nullptr)
 			{
 				material->SetDirty();

@@ -1,17 +1,17 @@
 #include "wiTextureHelper.h"
 #include "wiRandom.h"
 #include "wiColor.h"
-#include "wiBackLog.h"
+#include "wiBacklog.h"
 #include "wiSpinLock.h"
 #include "wiTimer.h"
 #include "wiUnorderedMap.h"
 
-using namespace wiGraphics;
+using namespace wi::graphics;
 
 // from Utility/samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp.cpp
 extern float samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d_1spp(int pixel_i, int pixel_j, int sampleIndex, int sampleDimension);
 
-namespace wiTextureHelper
+namespace wi::texturehelper
 {
 
 	enum HELPERTEXTURES
@@ -24,25 +24,25 @@ namespace wiTextureHelper
 		HELPERTEXTURE_BLUENOISE,
 		HELPERTEXTURE_COUNT
 	};
-	wiGraphics::Texture helperTextures[HELPERTEXTURE_COUNT];
-	wi::unordered_map<unsigned long, wiGraphics::Texture> colorTextures;
-	wiSpinLock colorlock;
+	wi::graphics::Texture helperTextures[HELPERTEXTURE_COUNT];
+	wi::unordered_map<unsigned long, wi::graphics::Texture> colorTextures;
+	wi::SpinLock colorlock;
 
 	void Initialize()
 	{
-		wiTimer timer;
+		wi::Timer timer;
 
-		GraphicsDevice* device = wiGraphics::GetDevice();
+		GraphicsDevice* device = wi::graphics::GetDevice();
 
 		// Random64x64
 		{
 			uint8_t data[64 * 64 * 4];
 			for (int i = 0; i < arraysize(data); i += 4)
 			{
-				data[i] = wiRandom::getRandom(0, 255);
-				data[i + 1] = wiRandom::getRandom(0, 255);
-				data[i + 2] = wiRandom::getRandom(0, 255);
-				data[i + 3] = wiRandom::getRandom(0, 255);
+				data[i] = wi::random::GetRandom(0, 255);
+				data[i + 1] = wi::random::GetRandom(0, 255);
+				data[i + 2] = wi::random::GetRandom(0, 255);
+				data[i + 3] = wi::random::GetRandom(0, 255);
 			}
 
 			CreateTexture(helperTextures[HELPERTEXTURE_RANDOM64X64], data, 64, 64);
@@ -152,7 +152,7 @@ namespace wiTextureHelper
 			device->SetName(&helperTextures[HELPERTEXTURE_BLUENOISE], "HELPERTEXTURE_BLUENOISE");
 		}
 
-		wiBackLog::post("wiTextureHelper Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
+		wi::backlog::post("wi::texturehelper Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
 
 	const Texture* getRandom64x64()
@@ -167,7 +167,7 @@ namespace wiTextureHelper
 
 	const Texture* getNormalMapDefault()
 	{
-		return getColor(wiColor(127, 127, 255, 255));
+		return getColor(wi::Color(127, 127, 255, 255));
 	}
 
 	const Texture* getBlackCubeMap()
@@ -187,20 +187,20 @@ namespace wiTextureHelper
 
 	const Texture* getWhite()
 	{
-		return getColor(wiColor(255, 255, 255, 255));
+		return getColor(wi::Color(255, 255, 255, 255));
 	}
 
 	const Texture* getBlack()
 	{
-		return getColor(wiColor(0, 0, 0, 255));
+		return getColor(wi::Color(0, 0, 0, 255));
 	}
 
 	const Texture* getTransparent()
 	{
-		return getColor(wiColor(0, 0, 0, 0));
+		return getColor(wi::Color(0, 0, 0, 0));
 	}
 
-	const Texture* getColor(wiColor color)
+	const Texture* getColor(wi::Color color)
 	{
 		colorlock.lock();
 		auto it = colorTextures.find(color.rgba);
@@ -212,7 +212,7 @@ namespace wiTextureHelper
 			return &it->second;
 		}
 
-		GraphicsDevice* device = wiGraphics::GetDevice();
+		GraphicsDevice* device = wi::graphics::GetDevice();
 
 		static const int dim = 1;
 		static const int dataLength = dim * dim * 4;
@@ -240,13 +240,13 @@ namespace wiTextureHelper
 	}
 
 
-	bool CreateTexture(wiGraphics::Texture& texture, const uint8_t* data, uint32_t width, uint32_t height, Format format)
+	bool CreateTexture(wi::graphics::Texture& texture, const uint8_t* data, uint32_t width, uint32_t height, Format format)
 	{
 		if (data == nullptr)
 		{
 			return false;
 		}
-		GraphicsDevice* device = wiGraphics::GetDevice();
+		GraphicsDevice* device = wi::graphics::GetDevice();
 
 		TextureDesc textureDesc;
 		textureDesc.width = width;

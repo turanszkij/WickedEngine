@@ -269,7 +269,7 @@ struct VertexSurface
 		tangent = input.GetTangent();
 		tangent.xyz = normalize(mul((float3x3)input.GetInstance().transformInverseTranspose.GetMatrix(), tangent.xyz));
 
-		uvsets = float4(input.GetUV0() * material.texMulAdd.xy + material.texMulAdd.zw, input.GetUV1());
+		uvsets = float4(mad(input.GetUV0(), material.texMulAdd.xy, material.texMulAdd.zw), input.GetUV1());
 
 		atlas = input.GetAtlasUV();
 
@@ -280,9 +280,9 @@ struct VertexSurface
 		if (material.IsUsingWind())
 		{
 			const float windweight = input.GetWindWeight();
-			const float waveoffset = dot(position.xyz, GetWeather().wind.direction) * GetWeather().wind.wavesize + (position.x + position.y + position.z) * GetWeather().wind.randomness;
+			const float waveoffset = mad(dot(position.xyz, GetWeather().wind.direction), GetWeather().wind.wavesize, (position.x + position.y + position.z) * GetWeather().wind.randomness);
 			const float3 wavedir = GetWeather().wind.direction * windweight;
-			const float3 wind = sin(GetFrame().time * GetWeather().wind.speed + waveoffset) * wavedir;
+			const float3 wind = sin(mad(GetFrame().time, GetWeather().wind.speed, waveoffset)) * wavedir;
 			position.xyz += wind;
 		}
 #endif // OBJECTSHADER_USE_WIND
@@ -423,7 +423,7 @@ inline void ParallaxOcclusionMapping(inout float4 uvsets, in float3 V, in float3
 		float nextH = heightFromTexture - curLayerHeight;
 		float prevH = 1 - texture_displacementmap.SampleGrad(sampler_linear_wrap, prevTCoords, derivX, derivY).r - curLayerHeight + layerHeight;
 		float weight = nextH / (nextH - prevH);
-		float2 finalTextureCoords = prevTCoords * weight + currentTextureCoords * (1.0 - weight);
+		float2 finalTextureCoords = mad(prevTCoords, weight, currentTextureCoords * (1.0 - weight));
 		float2 difference = finalTextureCoords - originalTextureCoords;
 		uvsets += difference.xyxy;
 	}
@@ -483,8 +483,8 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 					lighting.direct.specular += max(0, decalColor.rgb * decal.GetEmissive() * edgeBlend);
 					// perform manual blending of decals:
 					//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
-					decalAccumulation.rgb = (1 - decalAccumulation.a) * (decalColor.a*decalColor.rgb) + decalAccumulation.rgb;
-					decalAccumulation.a = decalColor.a + (1 - decalColor.a) * decalAccumulation.a;
+					decalAccumulation.rgb = mad(1 - decalAccumulation.a, decalColor.a * decalColor.rgb, decalAccumulation.rgb);
+					decalAccumulation.a = mad(1 - decalColor.a, decalAccumulation.a, decalColor.a);
 					[branch]
 					if (decalAccumulation.a >= 1.0)
 					{
@@ -541,8 +541,8 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 					const float4 envmapColor = EnvironmentReflection_Local(surface, probe, probeProjection, clipSpacePos);
 					// perform manual blending of probes:
 					//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
-					envmapAccumulation.rgb = (1 - envmapAccumulation.a) * (envmapColor.a * envmapColor.rgb) + envmapAccumulation.rgb;
-					envmapAccumulation.a = envmapColor.a + (1 - envmapColor.a) * envmapAccumulation.a;
+					envmapAccumulation.rgb = mad(1 - envmapAccumulation.a, envmapColor.a * envmapColor.rgb, envmapAccumulation.rgb);
+					envmapAccumulation.a = mad(1 - envmapColor.a, envmapAccumulation.a, envmapColor.a);
 					[branch]
 					if (envmapAccumulation.a >= 1.0)
 					{
@@ -698,8 +698,8 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 						lighting.direct.specular += max(0, decalColor.rgb * decal.GetEmissive() * edgeBlend);
 						// perform manual blending of decals:
 						//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
-						decalAccumulation.rgb = (1 - decalAccumulation.a) * (decalColor.a*decalColor.rgb) + decalAccumulation.rgb;
-						decalAccumulation.a = decalColor.a + (1 - decalColor.a) * decalAccumulation.a;
+						decalAccumulation.rgb = mad(1 - decalAccumulation.a, decalColor.a*decalColor.rgb, decalAccumulation.rgb);
+						decalAccumulation.a = mad(1 - decalColor.a, decalAccumulation.a, decalColor.a);
 						[branch]
 						if (decalAccumulation.a >= 1.0)
 						{
@@ -769,8 +769,8 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 						const float4 envmapColor = EnvironmentReflection_Local(surface, probe, probeProjection, clipSpacePos);
 						// perform manual blending of probes:
 						//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
-						envmapAccumulation.rgb = (1 - envmapAccumulation.a) * (envmapColor.a * envmapColor.rgb) + envmapAccumulation.rgb;
-						envmapAccumulation.a = envmapColor.a + (1 - envmapColor.a) * envmapAccumulation.a;
+						envmapAccumulation.rgb = mad(1 - envmapAccumulation.a, envmapColor.a * envmapColor.rgb, envmapAccumulation.rgb);
+						envmapAccumulation.a = mad(1 - envmapColor.a, envmapAccumulation.a, envmapColor.a);
 						[branch]
 						if (envmapAccumulation.a >= 1.0)
 						{
@@ -934,6 +934,37 @@ inline void ApplyFog(in float distance, float3 P, float3 V, inout float4 color)
 	}
 }
 
+inline uint AlphaToCoverage(float alpha, float alphaTest, float4 svposition)
+{
+	if (alphaTest == 0)
+	{
+		// No alpha test, force full coverage:
+		return ~0u;
+	}
+
+	if (GetFrame().options & OPTION_BIT_TEMPORALAA_ENABLED)
+	{
+		// When Temporal AA is enabled, dither the alpha mask with animated blue noise:
+		alpha -= blue_noise(svposition.xy, svposition.w).x / GetCamera().sample_count;
+	}
+	else if (GetCamera().sample_count > 1)
+	{
+		// Without Temporal AA, use static dithering:
+		alpha -= dither(svposition.xy) / GetCamera().sample_count;
+	}
+	else
+	{
+		// Without Temporal AA and MSAA, regular alpha test behaviour will be used:
+		alpha -= alphaTest;
+	}
+
+	if (alpha > 0)
+	{
+		return ~0u >> (31u - uint(alpha * GetCamera().sample_count));
+	}
+	return 0;
+}
+
 
 // OBJECT SHADER PROTOTYPE
 ///////////////////////////
@@ -1021,17 +1052,15 @@ PixelInput main(VertexInput input)
 //	WATER				-	include specialized water shader code
 //	TERRAIN				-	include specialized terrain material blending code
 
-
 #ifdef DISABLE_ALPHATEST
 [earlydepthstencil]
 #endif // DISABLE_ALPHATEST
 
-
 // entry point:
 #ifdef PREPASS
-uint2 main(PixelInput input, in uint primitiveID : SV_PrimitiveID) : SV_TARGET
+uint2 main(PixelInput input, in uint primitiveID : SV_PrimitiveID, out uint coverage : SV_Coverage) : SV_Target
 #else
-float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
+float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // PREPASS
 
 
@@ -1115,19 +1144,14 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 #endif // OBJECTSHADER_USE_COLOR
 
 
-
+#ifdef TRANSPARENT
 #ifndef DISABLE_ALPHATEST
-	float alphatest = GetMaterial().alphaTest;
-#ifndef TRANSPARENT
-#ifndef ENVMAPRENDERING
-	if (GetFrame().options & OPTION_BIT_TEMPORALAA_ENABLED)
-	{
-		alphatest = clamp(blue_noise(pixel, lineardepth).r, 0, 0.99);
-	}
-#endif // ENVMAPRENDERING
-#endif // TRANSPARENT
-	clip(color.a - alphatest);
+	// Alpha test is only done for transparents
+	//	- Prepass will write alpha coverage mask
+	//	- Opaque will 
+	clip(color.a - GetMaterial().alphaTest);
 #endif // DISABLE_ALPHATEST
+#endif // TRANSPARENT
 
 
 
@@ -1711,6 +1735,8 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 
 	// end point:
 #ifdef PREPASS
+	coverage = AlphaToCoverage(color.a, GetMaterial().alphaTest, input.pos);
+
 	PrimitiveID prim;
 	prim.primitiveIndex = primitiveID;
 	prim.instanceIndex = input.instanceID;
@@ -1719,7 +1745,6 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_TARGET
 #else
 	return color;
 #endif // PREPASS
-
 }
 
 

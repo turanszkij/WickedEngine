@@ -1,6 +1,6 @@
-This file contains changelog of wiArchive versions
+This file contains changelog of wi::Archive versions
 
-73: wiArchive no longer saves null terminator for strings
+73: wi::Archive no longer saves null terminator for strings
 72: Scene::Entity_Serialize() recursive serialization
 71: serialized WeatherComponent::fogHeightStart and fogHeightEnd
 70: serialized VolumetricCloudParameters
@@ -10,7 +10,7 @@ This file contains changelog of wiArchive versions
 66: serialized WeatherComponent::atmosphereParameters and skyExposure
 65: serialized CameraComponent focal_length, aperture_size and aperture_shape
 64: serialized per-emitter gravity, velocity, drag and random_color
-63: serialized wiResourceManager embedded resources
+63: serialized wi::resource_manager embedded resources
 62: serialized WeatherComponent::colorGradingMapName property
 61: serialized sheen and clearcoat material properties
 60: serializer ObjectComponent::emissiveColor

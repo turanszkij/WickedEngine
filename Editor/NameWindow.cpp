@@ -2,13 +2,13 @@
 #include "NameWindow.h"
 #include "Editor.h"
 
-using namespace wiECS;
-using namespace wiScene;
+using namespace wi::ecs;
+using namespace wi::scene;
 
 
 void NameWindow::Create(EditorComponent* editor)
 {
-	wiWindow::Create("Name Window");
+	wi::gui::Window::Create("Name Window");
 	SetSize(XMFLOAT2(360, 80));
 
 	float x = 60;
@@ -21,11 +21,11 @@ void NameWindow::Create(EditorComponent* editor)
 	nameInput.SetDescription("Name: ");
 	nameInput.SetPos(XMFLOAT2(x, y += step));
 	nameInput.SetSize(XMFLOAT2(siz, hei));
-	nameInput.OnInputAccepted([=](wiEventArgs args) {
-		NameComponent* name = wiScene::GetScene().names.GetComponent(entity);
+	nameInput.OnInputAccepted([=](wi::gui::EventArgs args) {
+		NameComponent* name = wi::scene::GetScene().names.GetComponent(entity);
 		if (name == nullptr)
 		{
-			name = &wiScene::GetScene().names.Create(entity);
+			name = &wi::scene::GetScene().names.Create(entity);
 		}
 		name->name = args.sValue;
 
@@ -47,7 +47,7 @@ void NameWindow::SetEntity(Entity entity)
 	{
 		SetEnabled(true);
 
-		NameComponent* name = wiScene::GetScene().names.GetComponent(entity);
+		NameComponent* name = wi::scene::GetScene().names.GetComponent(entity);
 		if (name != nullptr)
 		{
 			nameInput.SetValue(name->name);

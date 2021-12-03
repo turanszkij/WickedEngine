@@ -3,44 +3,44 @@
 
 class EditorComponent;
 
-class PostprocessWindow : public wiWindow
+class PostprocessWindow : public wi::gui::Window
 {
 public:
 	void Create(EditorComponent* editor);
 
-	wiSlider exposureSlider;
-	wiCheckBox lensFlareCheckBox;
-	wiCheckBox lightShaftsCheckBox;
-	wiComboBox aoComboBox;
-	wiSlider aoPowerSlider;
-	wiSlider aoRangeSlider;
-	wiSlider aoSampleCountSlider;
-	wiCheckBox ssrCheckBox;
-	wiCheckBox raytracedReflectionsCheckBox;
-	wiCheckBox screenSpaceShadowsCheckBox;
-	wiSlider screenSpaceShadowsStepCountSlider;
-	wiSlider screenSpaceShadowsRangeSlider;
-	wiCheckBox eyeAdaptionCheckBox;
-	wiSlider eyeAdaptionKeySlider;
-	wiSlider eyeAdaptionRateSlider;
-	wiCheckBox motionBlurCheckBox;
-	wiSlider motionBlurStrengthSlider;
-	wiCheckBox depthOfFieldCheckBox;
-	wiSlider depthOfFieldScaleSlider;
-	wiCheckBox bloomCheckBox;
-	wiSlider bloomStrengthSlider;
-	wiCheckBox fxaaCheckBox;
-	wiCheckBox colorGradingCheckBox;
-	wiCheckBox ditherCheckBox;
-	wiCheckBox sharpenFilterCheckBox;
-	wiSlider sharpenFilterAmountSlider;
-	wiCheckBox outlineCheckBox;
-	wiSlider outlineThresholdSlider;
-	wiSlider outlineThicknessSlider;
-	wiCheckBox chromaticaberrationCheckBox;
-	wiSlider chromaticaberrationSlider;
-	wiCheckBox fsrCheckBox;
-	wiSlider fsrSlider;
+	wi::gui::Slider exposureSlider;
+	wi::gui::CheckBox lensFlareCheckBox;
+	wi::gui::CheckBox lightShaftsCheckBox;
+	wi::gui::ComboBox aoComboBox;
+	wi::gui::Slider aoPowerSlider;
+	wi::gui::Slider aoRangeSlider;
+	wi::gui::Slider aoSampleCountSlider;
+	wi::gui::CheckBox ssrCheckBox;
+	wi::gui::CheckBox raytracedReflectionsCheckBox;
+	wi::gui::CheckBox screenSpaceShadowsCheckBox;
+	wi::gui::Slider screenSpaceShadowsStepCountSlider;
+	wi::gui::Slider screenSpaceShadowsRangeSlider;
+	wi::gui::CheckBox eyeAdaptionCheckBox;
+	wi::gui::Slider eyeAdaptionKeySlider;
+	wi::gui::Slider eyeAdaptionRateSlider;
+	wi::gui::CheckBox motionBlurCheckBox;
+	wi::gui::Slider motionBlurStrengthSlider;
+	wi::gui::CheckBox depthOfFieldCheckBox;
+	wi::gui::Slider depthOfFieldScaleSlider;
+	wi::gui::CheckBox bloomCheckBox;
+	wi::gui::Slider bloomStrengthSlider;
+	wi::gui::CheckBox fxaaCheckBox;
+	wi::gui::CheckBox colorGradingCheckBox;
+	wi::gui::CheckBox ditherCheckBox;
+	wi::gui::CheckBox sharpenFilterCheckBox;
+	wi::gui::Slider sharpenFilterAmountSlider;
+	wi::gui::CheckBox outlineCheckBox;
+	wi::gui::Slider outlineThresholdSlider;
+	wi::gui::Slider outlineThicknessSlider;
+	wi::gui::CheckBox chromaticaberrationCheckBox;
+	wi::gui::Slider chromaticaberrationSlider;
+	wi::gui::CheckBox fsrCheckBox;
+	wi::gui::Slider fsrSlider;
 
 
 };
