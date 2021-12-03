@@ -13,8 +13,8 @@ This is a reference for the C++ features of Wicked Engine
 		1.[Denoiser](#denoiser)
 	10. [LoadingScreen](#loadingscreen)
 2. [System](#system)
-	1. [wiECS (Entity-Component System)](#wiecs)
-	2. [wiScene](#wiscene)
+	1. [Entity-Component System](#entity-component-system)
+	2. [Scene System](#scene-system)
 		1. [NameComponent](#namecomponent)
 		2. [LayerComponent](#layercomponent)
 		3. [TransformComponent](#transformcomponent)
@@ -38,13 +38,13 @@ This is a reference for the C++ features of Wicked Engine
 		21. [InverseKinematicsComponent](#inversekinematicscomponent)
 		22. [SpringComponent](#springcomponent)
 		23. [Scene](#scene)
-	3. [wiJobSystem](#wijobsystem)
-	4. [wiInitializer](#wiinitializer)
-	5. [wiPlatform](#wiplatform)
-	6. [wiEvent](#wievent)
-	7. [wiCanvas](#wicanvas)
+	3. [Job System](#job-system)
+	4. [Initializer](#initializer)
+	5. [Platform](#platform)
+	6. [EventHandler](#event-handler)
+	7. [Canvas](#canvas)
 3. [Graphics](#graphics)
-	1. [wiGraphics](#wigraphics)
+	1. [Graphics API](#graphics-api)
 		1. [GraphicsDevice](#wigraphicsdevice)
 			1. [Debug device](#debug-device)
 			2. [Creating resources](#creating-resources)
@@ -69,7 +69,7 @@ This is a reference for the C++ features of Wicked Engine
 		2. [GraphicsDevice_DX11](#wigraphicsdevice_dx11)
 		3. [GraphicsDevice_DX12](#wigraphicsdevice_dx12)
 		4. [GraphicsDevice_Vulkan](#wigraphicsdevice_vulkan)
-	2. [wiRenderer](#wirenderer)
+	2. [Renderer](#renderer)
 		1. [DrawScene](#drawscene)
 		2. [DrawScene_Transparent](#drawscene_transparent)
 		3. [Tessellation](#tessellation)
@@ -89,40 +89,38 @@ This is a reference for the C++ features of Wicked Engine
 		16. [Debug Draw](#debug-draw)
 		17. [Animation Skinning](#animation-skinning)
 		18. [Custom Shaders](#custom-shaders)
-	3. [wiEnums](#wienums)
-	4. [wiImage](#wiimage)
-	5. [wiFont](#wifont)
-	6. [wiEmittedParticle](#wiemittedparticle)
-	7. [wiHairParticle](#wihairparticle)
-	8. [wiOcean](#wiocean)
-	9. [wiSprite](#wisprite)
-	10. [wiSpriteFont](#wispritefont)
-	11. [wiGPUSortLib](#wigpusortlib)
-	12. [wiGPUBVH](#wigpubvh)
+	3. [Enums](#enums)
+	4. [Image Renderer](#image-renderer)
+	5. [Font Renderer](#font-renderer)
+	6. [Emitted Particle System](#emitted-particle-system)
+	7. [Hair Particle System](#hair-particle-system)
+	8. [Ocean](#ocean)
+	9. [Sprite](#sprite)
+	10. [SpriteFont](#spritefont)
+	11. [GPUSortLib](#gpusortlib)
+	12. [GPUBVH](#gpubvh)
 4. [GUI](#gui)
-	1. [wiGUI](#wigui)
-	2. [wiWidget](#wiwidget)
-	3. [wiButton](#wibutton)
-	4. [wiLabel](#wilabel)
-	5. [wiTextInputField](#witextinputfield)
-	6. [wiSlider](#wislider)
-	7. [wiCheckBox](#wicheckbox)
-	8. [wiComboBox](#wicombobox)
-	9. [wiWindow](#wiwindow)
-	10. [wiColorPicker](#wicolorpicker)
+	1. [GUI](#gui)
+	2. [Widget](#widget)
+	3. [Button](#button)
+	4. [Label](#label)
+	5. [TextInputField](#textinputfield)
+	6. [Slider](#slider)
+	7. [CheckBox](#checkbox)
+	8. [ComboBox](#combobox)
+	9. [Window](#window)
+	10. [ColorPicker](#colorpicker)
+	11. [TreeList](#treelist)
 5. [Helpers](#helpers)
-	1. [wiAllocators](#wiallocators)
-		1. [LinearAllocator](#linearallocator)
-		1. [ThreadSafeRingBuffer](#threadsaferingbuffer)
-	2. [wiArchive](#wiarchive)
-	3. [wiColor](#wicolor)
-	5. [wiFadeManager](#wifademanager)
-	6. [wiHelper](#wihelper)
-	7. [wiPrimitive](#wiprimitive)
+	2. [Archive](#archive)
+	3. [Color](#color)
+	5. [FadeManager](#fademanager)
+	6. [Helper](#helper)
+	7. [Primitive](#primitive)
 		1. [AABB](#aabb)
-		2. [SPHERE](#sphere)
-		2. [CAPSULE](#capsule)
-		3. [RAY](#ray)
+		2. [Sphere](#sphere)
+		2. [Capsule](#capsule)
+		3. [Ray](#ray)
 		4. [Frustum](#frustum)
 		5. [Hitbox2D](#hitbox2d)
 	8. [wiMath](#wimath)
@@ -134,28 +132,24 @@ This is a reference for the C++ features of Wicked Engine
 	14. [wiTimer](#witimer)
 6. [Input](#input)
 7. [Audio](#audio)
-	1. [wiAudio](#wiaudio)
-	2. [Sound](#sound)
-	3. [SoundInstance](#soundinstance)
-	4. [SoundInstance3D](#soundinstance3d)
-	5. [SUBMIX_TYPE](#submix_type)
-	6. [REVERB_PRESET](#reverb_preset)
+	1. [Sound](#sound)
+	2. [SoundInstance](#soundinstance)
+	3. [SoundInstance3D](#soundinstance3d)
+	4. [SUBMIX_TYPE](#submix_type)
+	5. [REVERB_PRESET](#reverb_preset)
 8. [Physics](#physics)
-	1. [wiPhysics](#wiphysics)
-		1. [Rigid Body Physics](#rigid-body-physics)
-		2. [Soft Body Physics](#soft-body-physics)
-	2. [wiPhysics_BULLET](#wiphysics_bullet)
+	1. [Rigid Body Physics](#rigid-body-physics)
+	2. [Soft Body Physics](#soft-body-physics)
 9. [Network](#network)
-	1. [wiNetwork](#winetwork)
 	2. [Socket](#socket)
 	3. [Connection](#connection)
 10. [Scripting](#scripting)
-	1. [wiLua](#wilua)
-	2. [wiLua_Globals](#wilua_globals)
-	3. [wiLuna](#wiluna)
+	1. [Lua](#lua)
+	2. [Lua_Globals](#lua_globals)
+	3. [Luna](#luna)
 11. [Tools](#tools)
-	1. [wiBacklog](#wibacklog)
-	2. [wiProfiler](#wiprofiler)
+	1. [Backlog](#backlog)
+	2. [Profiler](#profiler)
 12. [Shaders](#shaders)
 	1. [Interop](#interop)
 		1. [ConstantBufferMapping](#constantbuffermapping)
@@ -169,7 +163,7 @@ This is a reference for the C++ features of Wicked Engine
 The high level interface consists of classes that allow for extending the engine with custom functionality. This is usually done by overriding the classes.
 
 ### Application
-[[Header]](../../WickedEngine/Application.h) [[Cpp]](../../WickedEngine/Application.cpp)
+[[Header]](../../WickedEngine/wiApplication.h) [[Cpp]](../../WickedEngine/wiApplication.cpp)
 This is the main runtime component that has the Run() function. It should be included in the application entry point while calling Run() in an infinite loop. <br/>
 The user should call the SetWindow() function to associate it with a window of the operating system. This window will be used to render to.<br/>
 The `Application` has many uses that the user is not necessarily interested in. The most important part is that it manages the RenderPaths. There can be one active RenderPath at a time, which will be updated and rendered to the screen every frame. However, because a RenderPath is a highly customizable class, there is no limitation what can be done within the RenderPath, for example supporting multiple concurrent RenderPaths if required. RenderPaths can be switched wit ha Fade out screen easily. Loading Screen can be activated as an active Renderpath and it will load and switch to an other RenderPath if desired. A RenderPath can be simply activated with the `Application`::ActivatePath() function.<br/>
@@ -184,7 +178,7 @@ Calls Render for the active RenderPath and wakes up scripts that are waiting for
 Calls Compose for the active RenderPath
 
 ### RenderPath
-[[Header]](../../WickedEngine/RenderPath.h)
+[[Header]](../../WickedEngine/wiRenderPath.h)
 This is an empty base class that can be activated with a `Application`. It calls its Start(), Update(), FixedUpdate(), Render(), Compose(), Stop() functions as needed. Override this to perform custom gameplay or rendering logic. The RenderPath inherits from [wiCanvas](#wicanvas), and the canvas properties will be set by the [Application](#application) when the RenderPath was activated, and while the RenderPath is active. <br/>
 The order in which the functions are executed every frame: <br/>
 1. PreUpdate() <br/>
@@ -209,14 +203,14 @@ Start will always be called when a RenderPath is activated by the `Application`
 Stop will be always called when the current RenderPath was the active one in `Application`, but an other one was activated.
 
 ### RenderPath2D
-[[Header]](../../WickedEngine/RenderPath2D.h) [[Cpp]](../../WickedEngine/RenderPath2D.cpp)
+[[Header]](../../WickedEngine/wiRenderPath2D.h) [[Cpp]](../../WickedEngine/wiRenderPath2D.cpp)
 Capable of handling 2D rendering to offscreen buffer in Render() function, or just the screen in Compose() function. It has some functionality to render wiSprite and wiSpriteFont onto rendering layers and stenciling with 3D rendered scene. It has a [GUI](#gui) that is automatically updated and rendered if any elements have been added to it.
 
 ### RenderPath3D
-[[Header]](../../WickedEngine/RenderPath3D.h) [[Cpp]](../../WickedEngine/RenderPath3D.cpp)
+[[Header]](../../WickedEngine/wiRenderPath3D.h) [[Cpp]](../../WickedEngine/wiRenderPath3D.cpp)
 Base class for implementing 3D rendering paths. It also supports everything that the Renderpath2D does.
 
-The post process chain is also implemented here. This means that the order of the post processes and the resources that they use are defined here, but the individual post process rendering on a lower level is implemented in the `wiRenderer` as core engine features. Read more about post process implementation in the [wiRenderer section](#post-processing). 
+The post process chain is also implemented here. This means that the order of the post processes and the resources that they use are defined here, but the individual post process rendering on a lower level is implemented in the `wi::renderer` as core engine features. Read more about post process implementation in the [wi::renderer section](#post-processing). 
 
 The post process chain is implemented in `RenderPath3D::RenderPostprocessChain()` function and divided into multiple parts:
 - HDR<br/>
@@ -229,19 +223,19 @@ These are running in more specific locations, depending on the render path. For 
 The HDR and LDR post process chain are using the "ping-ponging" technique, which means when the first post process consumes texture1 and produces texture2, then the following post process will consume texture2 and produce texture1, until all post processes are rendered.
 
 ### RenderPath3D_PathTracing
-[[Header]](../../WickedEngine/RenderPath3D_PathTracing.h) [[Cpp]](../../WickedEngine/RenderPath3D_PathTracing.cpp)
-Implements a compute shader based path tracing solution. In a static scene, the rendering will converge to ground truth. When something changes in the scene (something moves, ot material changes, etc...), the convergence will be restarted from the beginning. The raytracing is implemented in [wiRenderer](#wirenderer) and multiple [shaders](#shaders). The ray tracing is available on any GPU that supports compute shaders.
+[[Header]](../../WickedEngine/wiRenderPath3D_PathTracing.h) [[Cpp]](../../WickedEngine/wiRenderPath3D_PathTracing.cpp)
+Implements a compute shader based path tracing solution. In a static scene, the rendering will converge to ground truth. When something changes in the scene (something moves, ot material changes, etc...), the convergence will be restarted from the beginning. The raytracing is implemented in [wi::renderer](#wi::renderer) and multiple [shaders](#shaders). The ray tracing is available on any GPU that supports compute shaders.
 
 #### Denoiser
 To enable denoising for path traced images, you can use the [Open Image Denoise library](https://github.com/OpenImageDenoise/oidn). To enable this functionality, the engine will try to include the "OpenImageDenoise/oidn.hpp" file. If this file could be included, it will attampt to link with OpenImageDenoise.lib and tbb.lib. It is also required to provide the OpenImageDenoise.dll and tbb.dll near the exe to correctly launch the application after this. If you satisfy these steps, the denoiser will work automatically after the path tracer reached the target sample count. The final path traced image will be denoised and presented to the screen.
 
 ### LoadingScreen
-[[Header]](../../WickedEngine/LoadingScreen.h) [[Cpp]](../../WickedEngine/LoadingScreen.cpp)
+[[Header]](../../WickedEngine/wiLoadingScreen.h) [[Cpp]](../../WickedEngine/wiLoadingScreen.cpp)
 Render path that can be easily used for loading screen. It is able to load content or RenderPath in the background and switch to an other RenderPath onceit finished.
 
 ## System
 You can find out more about the Entity-Component system and other engine-level systems under ENGINE/System filter in the solution.
-### wiECS
+### Entity-Component System
 [[Header]](../../WickedEngine/wiECS.h)
 
 #### ComponentManager
@@ -250,11 +244,11 @@ This is the core entity-component relationship handler class. The purpose of thi
 #### Entity
 Entity is a number, it can reference components through ComponentManager containers. An entity is always valid if it exists. It's not required that an entity has any components. An entity has a component, if there is a ComponentManager that has a component which is associated with the same entity.
 
-### wiScene
+### Scene System
 [[Header]](../../WickedEngine/wiScene.h) [[Cpp]](../../WickedEngine/wiScene.cpp)
 The logical scene representation using the Entity-Component System
 - GetScene <br/>
-Returns a global scene instance. The wiRenderer will use this scene instance to render the scene. The user can create multiple scenes as well, and merge those into the global scene so that those will be rendered as well.
+Returns a global scene instance. The wi::renderer will use this scene instance to render the scene. The user can create multiple scenes as well, and merge those into the global scene so that those will be rendered as well.
 - LoadModel() <br/>
 There are two flavours to this. One of them immediately loads into the global scene. The other loads into a custom scene, which is usefult to manage the contents separately. This function will return an Entity that represents the root transform of the scene - if the attached parameter was true, otherwise it will return INVALID_ENTITY and no root transform will be created.
 - Pick <br/>
@@ -376,11 +370,11 @@ An entity can have a `SpringComponent` to achieve a "jiggle" or "soft" animation
 
 #### Scene
 [[Header]](../../WickedEngine/wiScene.h) [[Cpp]](../../WickedEngine/wiScene.cpp)
-A scene is a collection of component arrays. The scene is updating all the components in an efficient manner using the [job system](#wijobsystem). It can be serialized and saved/loaded from disk efficiently.
+A scene is a collection of component arrays. The scene is updating all the components in an efficient manner using the [job system](#job-system). It can be serialized and saved/loaded from disk efficiently.
 - Update(float deltatime) <br/>
 This function runs all the requied systems to update all components contained within the Scene.
 
-### wiJobSystem
+### Job System
 [[Header]](../../WickedEngine/wiJobSystem.h) [[Cpp]](../../WickedEngine/wiJobSystem.cpp)
 Manages the execution of concurrent tasks
 - context <br/>
@@ -392,11 +386,11 @@ This will schedule a task for execution on multiple parallel threads for a given
 - Wait <br/>
 This function will block until all jobs have finished for a given workload. The current thread starts working on any work left to be finished.
 
-### wiInitializer
+### Initializer
 [[Header]](../../WickedEngine/wiInitializer.h) [[Cpp]](../../WickedEngine/wiInitializer.cpp)
 Initializes all engine systems either in a blocking or an asynchronous way.
 
-### wiPlatform
+### Platform
 [[Header]](../../WickedEngine/wiPlatform.h)
 You can get native platform specific handles here, such as window handle.
 - GetWindow <br/>
@@ -404,20 +398,20 @@ Returns the platform specific window handle
 - IsWindowActive <br/>
 Returns true if the current window is the topmost one, false if it is not in focus
 
-### wiEvent
-[[Header]](../../WickedEngine/wiEvent.h)
+### Event Handler
+[[Header]](../../WickedEngine/wiEventHandler.h)
 The event system can be used to execute system-wide tasks. Any system can "subscribe" to events and any system can "fire" events.
 - Subscribe <br/>
 The first parameter is the event ID. Core system events are negative numbers. The user can choose any positive number to create custom events. 
 The second parameter is a function to be executed, with a userdata argument. The userdata argument can hold any custom data that the user desires.
-The return value is a wiEvent::Handle type. When this is object is destroyed, the event is subscription for the function will be removed.
+The return value is a `wi::eventhandler::Handle` type. When this is object is destroyed, the event is subscription for the function will be removed.
 Multiple functions can be subscribed to a single event ID.
 - FireEvent <br/>
 The first argument is the event id, that says which events to invoke. 
 The second argument will be passed to the subscribed event's userdata parameter.
 All events that are subsribed to the specified event id will run immediately at the time of the call of FireEvent. The order of execution among events is the order of which they were subscribed.
 
-### wiCanvas
+### Canvas
 [[Header]](../../WickedEngine/wiCanvas.h)
 The canvas specifies a DPI-aware drawing area. Use the GetLogical... functions to get parameters with DPI aware scale factors applied. Use the GetPhysical... functions to get the real pixel counts.
 
@@ -425,7 +419,7 @@ The canvas specifies a DPI-aware drawing area. Use the GetLogical... functions t
 ## Graphics
 Everything related to rendering graphics will be discussed below
 
-### wiGraphics
+### Graphics API
 [[Header]](../../WickedEngine/wiGraphics.h)
 The graphics API wrappers
 
@@ -705,12 +699,12 @@ The DirectX11 interface has been removed after version 0.56
 [[Header]](../../WickedEngine/wiGraphicsDevice_DX12.h) [[Cpp]](../../WickedEngine/wiGraphicsDevice_DX12.cpp)
 DirectX12 implementation for rendering interface
 
-#### wiGraphicsDevice_Vulkan
+#### GraphicsDevice_Vulkan
 [[Header]](../../WickedEngine/wiGraphicsDevice_Vulkan.h) [[Cpp]](../../WickedEngine/wiGraphicsDevice_Vulkan.cpp)
 Vulkan implementation for rendering interface
 
 
-### wiRenderer
+### Renderer
 [[Header]](../../WickedEngine/wiRenderer.h) [[Cpp]](../../WickedEngine/wiRenderer.cpp)
 This is a collection of graphics technique implentations and functions to draw a scene, shadows, post processes and other things. It is also the manager of the GraphicsDevice instance, and provides other helper functions to load shaders from files on disk.
 
@@ -731,15 +725,15 @@ The `flags` argument can contain various modifiers that determine what kind of o
 
 - `DRAWSCENE_OPAQUE`: Opaque object will be rendered
 - `DRAWSCENE_TRANSPARENT`: Transparent objects will be rendered. Objects will be sorted back-to front, for blending purposes
-- `DRAWSCENE_OCCLUSIONCULLING`: Occluded objects won't be rendered. [Occlusion culling](#occlusion-culling) can be globally switched on/off using `wiRenderer::SetOcclusionCullingEnabled()`
-- `DRAWSCENE_TESSELLATION`: Enable [tessellation](#tessellation) (if hardware supports it). [Tessellation](#tessellation) can be globally switched on/off using `wiRenderer::SetTessellationEnabled()`
+- `DRAWSCENE_OCCLUSIONCULLING`: Occluded objects won't be rendered. [Occlusion culling](#occlusion-culling) can be globally switched on/off using `wi::renderer::SetOcclusionCullingEnabled()`
+- `DRAWSCENE_TESSELLATION`: Enable [tessellation](#tessellation) (if hardware supports it). [Tessellation](#tessellation) can be globally switched on/off using `wi::renderer::SetTessellationEnabled()`
 - `DRAWSCENE_HAIRPARTICLE`: Draw hair particles
 
 #### Tessellation
 Tessellation can be used when rendering objects. Tessellation requires a GPU hardware feature and can enable displacement mapping on vertices or smoothing mesh silhouettes dynamically while rendering objects. Tessellation will be used when `tessellation` parameter to the [DrawScene](#drawscene) was set to `true` and the GPU supports the tessellation feature. Tessellation level can be specified per [MeshComponent](#meshcomponent)'s `tessellationFactor` parameter. Tessellation level will be modulated by distance from camera, so that tessellation factor will fade out on more distant objects. Greater tessellation factor means more detailed geometry will be generated.
 
 #### Occlusion Culling
-Occlusion culling is a technique to determine which objects are within the camera, but are completely behind an other objects, such that they wouldn't be rendered. The depth buffer already does occlusion culling on the GPU, however, we would like to perform this earlier than submitting the mesh to the GPU for drawing, so essentially do the occlusion culling on CPU. A hybrid approach is used here, which uses the results from a previously rendered frame (that was rendered by GPU) to determine if an object will be visible in the current frame. For this, we first render the object into the previous frame's depth buffer, and use the previous frame's camera matrices, however, the current position of the object. In fact, we only render bounding boxes instead of objects, for performance reasons. Occlusion queries are used while rendering, and the CPU can read the results of the queries in a later frame. We keep track of how many frames the object was not visible, and if it was not visible for a certain amount, we omit it from rendering. If it suddenly becomes visible later, we immediately enable rendering it again. This technique means that results will lag behind for a few frames (latency between cpu and gpu and latency of using previous frame's depth buffer). These are implemented in the functions `wiRenderer::OcclusionCulling_Render()` and `wiRenderer::OcclusionCulling_Read()`. 
+Occlusion culling is a technique to determine which objects are within the camera, but are completely behind an other objects, such that they wouldn't be rendered. The depth buffer already does occlusion culling on the GPU, however, we would like to perform this earlier than submitting the mesh to the GPU for drawing, so essentially do the occlusion culling on CPU. A hybrid approach is used here, which uses the results from a previously rendered frame (that was rendered by GPU) to determine if an object will be visible in the current frame. For this, we first render the object into the previous frame's depth buffer, and use the previous frame's camera matrices, however, the current position of the object. In fact, we only render bounding boxes instead of objects, for performance reasons. Occlusion queries are used while rendering, and the CPU can read the results of the queries in a later frame. We keep track of how many frames the object was not visible, and if it was not visible for a certain amount, we omit it from rendering. If it suddenly becomes visible later, we immediately enable rendering it again. This technique means that results will lag behind for a few frames (latency between cpu and gpu and latency of using previous frame's depth buffer). These are implemented in the functions `wi::renderer::OcclusionCulling_Render()` and `wi::renderer::OcclusionCulling_Read()`. 
 
 #### Shadow Maps
 The `DrawShadowmaps()` function will render shadow maps for each active dynamic light that are within the camera [frustum](#frustum). There are two types of shadow maps, 2D and Cube shadow maps. The maximum number of usable shadow maps are set up with calling `SetShadowProps2D()` or `SetShadowPropsCube()` functions, where the parameters will specify the maximum number of shadow maps and resolution. The shadow slots for each light must be already assigned, because this is a rendering function and is not allowed to modify the state of the [Scene](#scene) and [lights](#lightcomponent). The shadow slots will be set up in the [UpdatePerFrameData()](#updateperframedata) function that is called every frame by the `RenderPath3D`.
@@ -752,26 +746,26 @@ Begin rendering the frame on GPU. This means that GPU compute jobs are kicked, s
 
 #### Ray tracing (hardware accelerated)
 
-Hardware accelerated ray tracing API is now available, so a variety of renderer features are available using that. If the hardware support is available, the `Scene` will allocate a top level acceleration structure, and the meshes will allocate bottom level acceleration structures for themselves. Updating these is done by simply calling `wiRenderer::UpdateRaytracingAccelerationStructures(cmd)`. The updates will happen on the GPU timeline, so provide a [CommandList](#work-submission) as argument. The top level acceleration structure will be rebuilt from scratch. The bottom level acceleration structures will be rebuilt from scratch once, and then they will be updated (refitted).
+Hardware accelerated ray tracing API is now available, so a variety of renderer features are available using that. If the hardware support is available, the `Scene` will allocate a top level acceleration structure, and the meshes will allocate bottom level acceleration structures for themselves. Updating these is done by simply calling `wi::renderer::UpdateRaytracingAccelerationStructures(cmd)`. The updates will happen on the GPU timeline, so provide a [CommandList](#work-submission) as argument. The top level acceleration structure will be rebuilt from scratch. The bottom level acceleration structures will be rebuilt from scratch once, and then they will be updated (refitted).
 
 After the acceleration structures are updated, ray tracing shaders can use it after binding to a shader resource slot.
 
 #### Ray tracing (legacy)
-Ray tracing can be used in multiple ways to render the scene. The `RayTraceScene()` function will render the scene with the rays that are provided as the `RayBuffers` type argument. For example, to render the scene from the camera perspective, first create rays that originate from the camera and shoot towards the caera far plane for every pixel. The `GenerateScreenRayBuffers()` helper function implements this functionality, by expecting a [CameraComponent](#cameracomponent) argument and returns a `RayBuffers` structure. The result will be written to a texture that is provided as parameter. The texture must have been created with `UNORDERED_ACCESS` bind flags, because it will be written in compute shaders. The scene BVH structure must have been already built to use this, it can be accomplished by calling [wiRenderer::BuildSceneBVH()](#build-scene-bvh). The [RenderPath3D_Pathracing](#renderpath3d_pathtracing) uses this ray tracing functionality to render a path traced scene.
+Ray tracing can be used in multiple ways to render the scene. The `RayTraceScene()` function will render the scene with the rays that are provided as the `RayBuffers` type argument. For example, to render the scene from the camera perspective, first create rays that originate from the camera and shoot towards the caera far plane for every pixel. The `GenerateScreenRayBuffers()` helper function implements this functionality, by expecting a [CameraComponent](#cameracomponent) argument and returns a `RayBuffers` structure. The result will be written to a texture that is provided as parameter. The texture must have been created with `UNORDERED_ACCESS` bind flags, because it will be written in compute shaders. The scene BVH structure must have been already built to use this, it can be accomplished by calling [wi::renderer::BuildSceneBVH()](#build-scene-bvh). The [RenderPath3D_Pathracing](#renderpath3d_pathtracing) uses this ray tracing functionality to render a path traced scene.
 
 Other than path tracing, the scene BVH can be rendered by using the `RayTraceSceneBVH` function. This will render the bounding box hierarchy to the screen as a heatmap. Blue colors mean that few boxes were hit per pixel, and with more bounding box hits the colors go to green, yellow, red, and finaly white. This is useful to determine how expensive a the scene is with regards to ray tracing performance.
 
-The lightmap baking is also using ray tracing on the GPU to precompute static lighting for objects in the scene. [Objects](#objectcomponent) that contain lightmap atlas texture coordinate set can start lightmap rendering by setting `ObjectComponent::SetLightmapRenderRequest(true)`. Every object that have this flag set will have their lightmaps updated by performing ray traced rendering by the [wiRenderer](#wirenderer) internally. Lightmap texture coordinates can be generated by a separate tool, such as the Wicked Engine Editor application. Lightmaps will be rendered to a global lightmap atlas that can be used by all shaders to read static lighting data. The global lightmap atlas texture contains lightmaps from all objects inside the scene in a compact format for performance. Apart from that, each object contains its own lightmap in a full precision texture format that can be post-processed and saved to disc for later use. To denoise lightmaps, follow the same steps as the path tracer denoiser setup described in the [Denoiser](#denoiser) section.
+The lightmap baking is also using ray tracing on the GPU to precompute static lighting for objects in the scene. [Objects](#objectcomponent) that contain lightmap atlas texture coordinate set can start lightmap rendering by setting `ObjectComponent::SetLightmapRenderRequest(true)`. Every object that have this flag set will have their lightmaps updated by performing ray traced rendering by the [wi::renderer](#wi::renderer) internally. Lightmap texture coordinates can be generated by a separate tool, such as the Wicked Engine Editor application. Lightmaps will be rendered to a global lightmap atlas that can be used by all shaders to read static lighting data. The global lightmap atlas texture contains lightmaps from all objects inside the scene in a compact format for performance. Apart from that, each object contains its own lightmap in a full precision texture format that can be post-processed and saved to disc for later use. To denoise lightmaps, follow the same steps as the path tracer denoiser setup described in the [Denoiser](#denoiser) section.
 
 #### Scene BVH
-The scene BVH can be rebuilt from scratch using the `wiRenderer::BuildSceneBVH()` function. This will use the global scene to build the BVH hierarchy and global material atlases. The [ray tracing](#ray-tracing) features require the scene BVH to be built before using them. This is using the [wiGPUBVH](#wigpubvh) facility to build the BVH using compute shaders running on the GPU. 
+The scene BVH can be rebuilt from scratch using the `wi::renderer::BuildSceneBVH()` function. This will use the global scene to build the BVH hierarchy and global material atlases. The [ray tracing](#ray-tracing) features require the scene BVH to be built before using them. This is using the [wiGPUBVH](#wigpubvh) facility to build the BVH using compute shaders running on the GPU. 
 
 #### Decals
 The [DecalComponents](#decalcomponent) in the scene can be rendered differently based on the rendering technique that is being used. The two main rendering techinques are forward and deferred rendering. 
 
 <b>Forward rendering</b> is aimed at low bandwidth consumption, so the scene lighting is computed in one rendering pass, right when rendering the scene objects to the screen. In this case, all of the decals are also processed in the object rendering shaders automatically. In this case a decal atlas will need to be generated, because all decal textures must be available to sample in a single shader, but this is handled automatically inside the [UpdateRenderData](#updaterenderdata) function.
 
-<b>Deferred rendering</b> techniques are outputting G-buffers, and compute lighting in a separate pass that is decoupled from the object rendering pass. Decals are rendered one by one on top of the albedo buffer using the function `wiRenderer::DrawDeferredDecals()`. All the lighting will be computed on top after the decals were rendered to the albedo in a separate render pass to complete the final scene.
+<b>Deferred rendering</b> techniques are outputting G-buffers, and compute lighting in a separate pass that is decoupled from the object rendering pass. Decals are rendered one by one on top of the albedo buffer using the function `wi::renderer::DrawDeferredDecals()`. All the lighting will be computed on top after the decals were rendered to the albedo in a separate render pass to complete the final scene.
 
 #### Environment probes
 [EnvironmentProbeComponents](#environmentprobecomponent) can be placed into the scene and if they are tagged as invalid using the `EnvironmentProbeComponent::SetDirty(true)` flag, they will be rendered to a cubemap array that is accessible in all shaders. They will also be rendered in real time every frame if the `EnvironmentProbeComponent::SetRealTime(true)` flag is set. The cubemaps of these contain indirect specular information from a point source that can be used as approximate reflections for close by objects.
@@ -779,7 +773,7 @@ The [DecalComponents](#decalcomponent) in the scene can be rendered differently 
 The probes also must have [TransformComponent](#transformcomponent) associated to the same entity. This will be used to position the probes in the scene, but also to scale and rotate them. The scale/position/rotation defines an oriented bounding box (OBB) that will be used to perform parallax corrected environment mapping. This means that reflections inside the box volume will not appear as infinitely distant, but constrained inside the volume, to achieve more believable illusion.
 
 #### Post processing
-There are several post processing effects implemented in the `wiRenderer`. They are all implemented in a single function with their name starting with Postprocess_, like for example: `wiRenderer::Postprocess_SSAO()`. They are aimed to be stateless functions, with their function signature clearly indicating input-output parameters and resources.
+There are several post processing effects implemented in the `wi::renderer`. They are all implemented in a single function with their name starting with Postprocess_, like for example: `wi::renderer::Postprocess_SSAO()`. They are aimed to be stateless functions, with their function signature clearly indicating input-output parameters and resources.
 
 The chain/order of post processes is not implemented here, only the single effects themselves. The order of post proceses is more of a user responsibility, so it should be implemented in the [High Ievel Interface](#high-level-interface). For reference, a default post processchain is implemented in [RenderPath3D::RenderPostProcessChain()](#renderpath3d) function.
 
@@ -788,22 +782,22 @@ Instanced rendering will be always used automatically when rendering objects. Th
 
 [ObjectComponents](#objectcomponent) can override [stencil](#stencil) settings for the [material](#materialcomponent). In case multiple [ObjectComponents](#objectcomponent) share the same mesh, but some are using different stencil overrides, those could be removed from the instanced batch, so there is some overhead to modifying stencil overrides for objects.
 
-<i>Tip: to find out more about how instancing is used to batch objects together, take a look at the `RenderMeshes()` function inside [wiRenderer.cpp](../WickedEngine/wiRenderer.cpp)</i>
+<i>Tip: to find out more about how instancing is used to batch objects together, take a look at the `RenderMeshes()` function inside [wi::renderer.cpp](../WickedEngine/wi::renderer.cpp)</i>
 
 #### Stencil
 If a depth stencil buffer is bound when using [DrawScene()](#drawscene), or [DrawScene_Transparent()](#drawscene_transparent), the stencil buffer will be written. The stencil is a 8-bit mask that can be used to achieve different kinds of screen space effects for different objects. [MaterialComponents](#materialcomponent) and [ObjectComponents](#objectcomponent) have the ability to set the stencil value that will be rendered. The 8-bit stencil value is separated into two parts:
 - The first 4 bits are reseved for engine-specific values, such as to separate skin, sky, common materials from each other. these values are contained in [wiEnums](#wienums) in the `STENCILREF` enum.
 - The last 4 bits are reserved for user stencil values. The application can decide what it wants to use these for.
 
-Please use the `wiRenderer::CombineStencilrefs()` function to specify stencil masks in a future-proof way.
+Please use the `wi::renderer::CombineStencilrefs()` function to specify stencil masks in a future-proof way.
 
 The [Pipeline States](#pipeline-states) have a `DepthStencilState` type member which will control how the stencil mask is used in the graphics pipeline for any custom rendering effect. The functionality is supposed to be equivalent and closely matching of what DirectX 11 provides, so for further information, refer to the [DirectX 11 documentation of Depth Stencil States](https://docs.microsoft.com/en-us/windows/win32/direct3d11/d3d10-graphics-programming-guide-depth-stencil).
 
 #### Loading Shaders
-While the [GraphicsDevice is responsible of creating shaders and pipeline states](#pipeline-states-and-shaders), loading the shader files themselves are not handled by the graphics device. The `wiRenderer::LoadShader(ShaderStage::)` is a helper function that provides this feature. This is internally loading shaders from a common shader path, that is by default the "../WickedEngine/shaders" directory (relative to the application working directory), so the filename provided to this function must be relative to that path. Every system in the engine that loads shaders uses this function to load shaders from the same folder, which makes it very easy to reload shaders on demand with the `wiRenderer::ReloadShaders()` function. This is useful for when the developer modifies a shader and recompiles it, the engine can reload it while the application is running. The developer can modify the common shader path with the `wiRenderer::SetShaderPath()` to any path of preference. The developer is free to load shaders with a custom loader, from any path too, but the `wiRenderer::ReloadShaders()` functionality might not work in that case for those shaders.
+While the [GraphicsDevice is responsible of creating shaders and pipeline states](#pipeline-states-and-shaders), loading the shader files themselves are not handled by the graphics device. The `wi::renderer::LoadShader(ShaderStage::)` is a helper function that provides this feature. This is internally loading shaders from a common shader path, that is by default the "../WickedEngine/shaders" directory (relative to the application working directory), so the filename provided to this function must be relative to that path. Every system in the engine that loads shaders uses this function to load shaders from the same folder, which makes it very easy to reload shaders on demand with the `wi::renderer::ReloadShaders()` function. This is useful for when the developer modifies a shader and recompiles it, the engine can reload it while the application is running. The developer can modify the common shader path with the `wi::renderer::SetShaderPath()` to any path of preference. The developer is free to load shaders with a custom loader, from any path too, but the `wi::renderer::ReloadShaders()` functionality might not work in that case for those shaders.
 
 #### Debug Draw
-Debug geometry can be rendered by calling the `wiRenderer::DrawDebugWorld()` function and setting up debug geometries, or enabling debug features. The `DrawDebugWorld()` is already called by [RenderPath3D](#renderpath3d), so the developer can simply just worry about configure debug drawing features and add debug geometries and drawing will happen at the right place (if the developer decided to use [RenderPath3D](#renderpath3d) in their application). 
+Debug geometry can be rendered by calling the `wi::renderer::DrawDebugWorld()` function and setting up debug geometries, or enabling debug features. The `DrawDebugWorld()` is already called by [RenderPath3D](#renderpath3d), so the developer can simply just worry about configure debug drawing features and add debug geometries and drawing will happen at the right place (if the developer decided to use [RenderPath3D](#renderpath3d) in their application). 
 
 The user provided debug geometry features at present are: 
 - `DrawBox()`: provide a transformation matrix and color to render a wireframe box mesh with the desired transformation and color. The box will be only rendered for a single frame.
@@ -822,19 +816,18 @@ Configuring other debug rendering functionality:
 - `SetToDrawDebugCameras()`: Cameras will be rendered as oriented boxes.
 
 #### Animation Skinning
-[MeshComponents](#meshcomponent) that have their `armatureID` associated with an [ArmatureComponent](#armaturecomponent) will be skinned inside the `wiRenderer::UpdateRenderData()` function. This means that their vertex buffer will be animated with compute shaders, and the animated vertex buffer will be used throughout the rest of the frame. 
+[MeshComponents](#meshcomponent) that have their `armatureID` associated with an [ArmatureComponent](#armaturecomponent) will be skinned inside the `wi::renderer::UpdateRenderData()` function. This means that their vertex buffer will be animated with compute shaders, and the animated vertex buffer will be used throughout the rest of the frame. 
 
-If the [ArmatureComponent](#armaturecomponent) has less than `SKINNING_COMPUTE_THREADCOUNT` amount of bones, an optimized version of the skinning will be performed that uses shared memory. The user can disable this with the `wiRenderer::SetLDSSkinningEnabled()` function if the optimization proves to be worse on the target platform.
 
 #### Custom Shaders
-Apart from the built in material shaders, the developer can create a library of custom shaders from the application side and assign them to materials. The `wiRenderer::RegisterCustomShader()` function is used to register a custom shader from the application. The function returns the ID of the custom shader that can be input to the `MaterialComponent::SetCustomShaderID()` function. 
+Apart from the built in material shaders, the developer can create a library of custom shaders from the application side and assign them to materials. The `wi::renderer::RegisterCustomShader()` function is used to register a custom shader from the application. The function returns the ID of the custom shader that can be input to the `MaterialComponent::SetCustomShaderID()` function. 
 
 The custom shader is essentially the combination of a [Pipeline State Object](#pipeline-states-and-shaders) for each `RENDERPASS` and a `RENDERTYPE` flag that specifies whether it is to be drawn in a transparent or opaque, or other kind of pass within a `RENDERPASS`. The developer is responsible of creating a fully valid pipeline state to render a mesh. If a pipeline state is left as empty for a combination of `RENDERPASS` and `RENDERTYPE`, then the material will simply be skipped and not rendered.
 
 
-### wiEnums
+### Enums
 [[Header]](../../WickedEngine/wiEnums.h)
-This is a collection of enum values used by the wiRenderer to identify graphics resources. Usually arrays of the same resource type are declared and the XYZENUM_COUNT values tell the length of the array. The other XYZENUM_VALUE represents a single element within that array. This makes the code easy to manage, for example:
+This is a collection of enum values used by the wi::renderer to identify graphics resources. Usually arrays of the same resource type are declared and the XYZENUM_COUNT values tell the length of the array. The other XYZENUM_VALUE represents a single element within that array. This makes the code easy to manage, for example:
 
 ```cpp
 enum CBTYPE
@@ -851,23 +844,23 @@ device->BindConstantBuffer(&buffers[CBTYPE_MESH], 0, cmd); // makes it easy to r
 
 This is widely used to make code straight forward and easy to add new objects, without needing to create additional declarations, except for the enum values.
 
-### wiImage
+### Image Renderer
 [[Header]](../../WickedEngine/wiImage.h) [[Cpp]](../../WickedEngine/wiImage.cpp)
 This can render images to the screen in a simple manner. You can draw an image like this:
 ```cpp
-wiImage::SetCanvas(canvas, cmd); // setting the canvas area is required to set the drawing area and perform DPI scaling (the canvas will remain for the duration of the command list)
-wiImage::Draw(myTexture, wiImageParams(10, 20, 256, 128), cmd);
+wi::image::SetCanvas(canvas, cmd); // setting the canvas area is required to set the drawing area and perform DPI scaling (the canvas will remain for the duration of the command list)
+wi::image::Draw(myTexture, wiImageParams(10, 20, 256, 128), cmd);
 ```
 The example will draw a 2D texture image to the position (10, 20), with a size of 256 x 128 pixels to the current render pass. There are a lot of other parameters to customize the rendered image, for more information see wiImageParams structure.
-- wiImageParams <br/>
+- wi::image::Params <br/>
 Describe all parameters of how and where to draw the image on the screen.
 
-### wiFont
+### Font Renderer
 [[Header]](../../WickedEngine/wiFont.h) [[Cpp]](../../WickedEngine/wiFont.cpp)
 This can render fonts to the screen in a simple manner. You can render a font as simple as this:
 ```cpp
-wiFont::SetCanvas(canvas, cmd); // setting the canvas area is required to set the drawing area and perform DPI scaling (the canvas will remain for the duration of the command list)
-wiFont::Draw("write this!", wiFontParams(10, 20), cmd);
+wi::font::SetCanvas(canvas, cmd); // setting the canvas area is required to set the drawing area and perform DPI scaling (the canvas will remain for the duration of the command list)
+wi::font::Draw("write this!", wiFontParams(10, 20), cmd);
 ```
 Which will write the text <i>write this!</i> to 10, 20 pixel position onto the screen. There are many other parameters to describe the font's position, size, color, etc. See the wiFontParams structure for more details.
 - wiFontParams <br/>
@@ -875,37 +868,37 @@ Describe all parameters of how and where to draw the font on the screen.
 
 The wiFont can load and render .ttf (TrueType) fonts. The default arial font style is embedded into the engine ([[arial.h]](../WickedEngine/Utility/arial.h) file). The developer can load additional fonts from files by using `wiFont::AddFontStyle()` functions. These can either load from a file, or take a provided byte data for the font. The `AddFontStyle()` will return an `int` that will indicate the font ID within the loaded font library. The `wiFontParams::style` can be set to the font ID to use a specific font that was previously loaded. If the developer added a font before wiFont::Initialize was called, then that will be the default font and the arial font will not be created.
 
-### wiEmittedParticle
+### Emitted Particle System
 [[Header]](../../WickedEngine/wiEmittedParticle.h) [[Cpp]](../../WickedEngine/wiEmittedParticle.cpp)
 GPU driven emitter particle system, used to draw large amount of camera facing quad billboards. Supports simulation with force fields and fluid simulation based on Smooth Particle Hydrodynamics computation.
 
-### wiHairParticle
+### Hair Particle System
 [[Header]](../../WickedEngine/wiHairParticle.h) [[Cpp]](../../WickedEngine/wiHairParticle.cpp)
 GPU driven particles that are attached to a mesh surface. It can be used to render vegetation. It participates in force fields simulation.
 
-### wiOcean
+### Ocean
 [[Header]](../../WickedEngine/wiOcean.h) [[Cpp]](../../WickedEngine/wiOcean.cpp)
 Ocean renderer using Fast Fourier Transforms simulation. The ocean surface is always rendered relative to the camera, like an infinitely large water body.
 
-### wiSprite
+### Sprite
 [[Header]](../../WickedEngine/wiSprite.h) [[Cpp]](../../WickedEngine/wiSprite.cpp)
 A helper facility to render and animate images. It uses the [wiImage](#wiimage) renderer internally
 - Anim <br/>
 Several different simple animation utilities, like animated textures, wobbling, rotation, fade out, etc...
 
-### wiSpriteFont
+### SpriteFont
 [[Header]](../../WickedEngine/wiSprite.h) [[Cpp]](../../WickedEngine/wiSprite.cpp)
 A helper facility to render fonts. It uses the [wiFont](#wifont) renderer internally. It performs string conversion
 
-### wiTextureHelper
+### TextureHelper
 [[Header]](../../WickedEngine/wiTextureHelper.h) [[Cpp]](../../WickedEngine/wiTextureHelper.cpp)
 This is used to generate procedural textures, such as uniform colors, noise, etc...
 
-### wiGPUSortLib
+### GPUSortLib
 [[Header]](../../WickedEngine/wiGPUSortLib.h) [[Cpp]](../../WickedEngine/wiGPUSortLib.cpp)
 This is a GPU sorting facility using the Bitonic Sort algorithm. It can be used to sort an index list based on a list of floats as comparison keys entirely on the GPU.
 
-### wiGPUBVH
+### GPUBVH
 [[Header]](../../WickedEngine/wiGPUBVH.h) [[Cpp]](../../WickedEngine/wiGPUBVH.cpp)
 This facility can generate a BVH (Bounding Volume Hierarcy) on the GPU for a [Scene](#scene). The BVH structure can be used to perform efficient RAY-triangle intersections on the GPU, for example in ray tracing. This is not using the ray tracing API hardware acceleration, but implemented in compute, so it has wide hardware support.
 
@@ -913,84 +906,63 @@ This facility can generate a BVH (Bounding Volume Hierarcy) on the GPU for a [Sc
 ## GUI
 The custom GUI, implemented with engine features
 
-### wiGUI
+### GUI
 [[Header]](../../WickedEngine/wiGUI.h) [[Cpp]](../../WickedEngine/wiGUI.cpp)
 The wiGUI is responsible to run a GUI interface and manage widgets. 
 
 <b>GUI Scaling:</b> To ensure correct GUI scaling, GUI elements should be designed for the current window size. If they are placed inside `RenderPath2D::ResizeLayout()` function according to current screen size, it will ensure that GUI will be scaled on a Resolution or DPI change event, which is recommended.
 
-### wiEventArgs
-[[Header]](../../WickedEngine/wiWidget.h) [[Cpp]](../../WickedEngine/wiWidget.cpp)
+### EventArgs
 This will be sent to widget callbacks to provide event arguments in different formats
 
 ### wiWidget
-[[Header]](../../WickedEngine/wiWidget.h) [[Cpp]](../../WickedEngine/wiWidget.cpp)
 The base widget interface can be extended with specific functionality. The GUI will store and process widgets by this interface. 
 
-#### wiButton
-[[Header]](../../WickedEngine/wiWidget.h) [[Cpp]](../../WickedEngine/wiWidget.cpp)
+#### Button
 A simple clickable button. Supports the OnClick event callback.
 
-#### wiLabel
-[[Header]](../../WickedEngine/wiWidget.h) [[Cpp]](../../WickedEngine/wiWidget.cpp)
+#### Label
 A simple static text field.
 
-#### wiTextInputField
-[[Header]](../../WickedEngine/wiWidget.h) [[Cpp]](../../WickedEngine/wiWidget.cpp)
+#### TextInputField
 Supports text input when activated. Pressing Enter will accept the input and fire the OnInputAccepted callback. Pressing the Escape key while active will cancel the text input and restoe the previous state. There can be only one active text input field at a time.
 
-#### wiSlider
-[[Header]](../../WickedEngine/wiWidget.h) [[Cpp]](../../WickedEngine/wiWidget.cpp)
+#### Slider
 A slider, that can represent float or integer values. The slider also accepts text input to input number values. If the number input is outside of the slider's range, it will expand its range to support the newly assigned value. Upon changing the slider value, whether by text input or sliding, the OnSlide event callback will be fired.
 
-#### wiCheckBox
-[[Header]](../../WickedEngine/wiWidget.h) [[Cpp]](../../WickedEngine/wiWidget.cpp)
+#### CheckBox
 The checkbox is a two state item which can represent true/false state. The OnClick event callback will be fired upon changing the value (by clicking on it)
 
-#### wiComboBox
-[[Header]](../../WickedEngine/wiWidget.h) [[Cpp]](../../WickedEngine/wiWidget.cpp)
+#### ComboBox
 Supports item selection from a list of text. Can set the maximum number of visible items. If the list of items is greater than the max allowed visible items, then a vertical scrollbar will be presented to allow showing hidden items. Upon selection, the OnSelect event callback will be triggered.
 
-#### wiWindow
-[[Header]](../../WickedEngine/wiWidget.h) [[Cpp]](../../WickedEngine/wiWidget.cpp)
+#### Window
 A window widget is able to hold any number of other widgets. It can be moved across the screen, minimized and resized by the user. The window does not manage lifetime of attached widgets since 0.49.0!
 
-#### wiColorPicker
-[[Header]](../../WickedEngine/wiWidget.h) [[Cpp]](../../WickedEngine/wiWidget.cpp)
+#### ColorPicker
 Supports picking a HSV (or HSL) color, displaying its RGB values. On selection, the OnColorChanged event callback will be fired and the user can read the new RGB value from the event argument.
 
 
 ## Helpers
 A collection of engine-level helper classes
 
-### wiAllocators
-[[Header]](../../WickedEngine/wiAllocators.h)
-
-#### LinearAllocator
-[[Header]](../../WickedEngine/wiAllocators.h)
-The linear allocator is used to allocate contiguous blocks of memory. The amount of maximum allocations is defined at creation time. Blocks then can be allocated from beginning to end until there is free space left. Blocks can be freed from the end until the allocator is not empty. This is not thread safe.
-
-#### ThreadSafeRingBuffer
-[[Header]](../../WickedEngine/wiContainers.h)
-This is a thread safe container that can hold elements of one certain data type at once. Elements are added to the end of container, and they are removed from the beginning. The container wraps around, so if the last element would be put after the last valid array index, then it will be put to the first instead (if the first array index is not occupied).
-
-### wiArchive
+### Archive
 [[Header]](../../WickedEngine/wiArchive.h) [[Cpp]](../../WickedEngine/wiArchive.cpp)
 This is used for serializing binary data to disk or memory. An archive file always starts with the 64-bit version number that it was serialized with. An archive of greater version number than the current archive version of the engine can't be opened safely, so an error message will be shown if this happens. A certain archive version will not be forward compatible with the current engine version if the current archive version barrier number is greater than the archive's own version number.
 
-### wiColor
+### Color
 [[Header]](../../WickedEngine/wiColor.h)
 Utility to convert to/from float color data to 32-bit RGBA data (stored in a uint32_t as RGBA, where each channel is 8 bits)
 
-### wiFadeManager
+### FadeManager
 [[Header]](../../WickedEngine/wiFadeManager.h) [[Cpp]](../../WickedEngine/wiFadeManager.cpp)
 Simple helper to manage a fadeout screen. Fadeout starts at transparent, then fades smoothly to an opaque color (such as black, in most cases), then a callback occurs which the user can handle with their own event. After that, the color will fade back to transperent. This is used by the [Application](#application) to fade from one RenderPath to an other.
 
-### wiHelper
+### Helper
 [[Header]](../../WickedEngine/wiHelper.h) [[Cpp]](../../WickedEngine/wiHelper.cpp)
 Many helper utility functions, like screenshot, readfile, messagebox, splitpath, sleep, etc...
 
-### wiPrimitive
+### Primitive
 [[Header]](../../WickedEngine/wiPrimitive.h) [[Cpp]](../../WickedEngine/wiPrimitive.cpp)
 Primitives that can be intersected with each other
 
@@ -1018,19 +990,19 @@ Six planes, most commonly used for checking if an intersectable primitive is ins
 [[Header]](../../WickedEngine/wiPrimitive.h) [[Cpp]](../../WickedEngine/wiPrimitive.cpp)
 A rectangle, essentially an 2D AABB.
 
-### wiMath
+### Math
 [[Header]](../../WickedEngine/wiMath.h) [[Cpp]](../../WickedEngine/wiMath.cpp)
 Math related helper functions, like lerp, triangleArea, HueToRGB, etc...
 
-### wiRandom
+### Random
 [[Header]](../../WickedEngine/wiRandom.h) [[Cpp]](../../WickedEngine/wiRandom.cpp)
 Uniform random number generator with a good distribution.
 
-### wiRectPacker
+### RectPacker
 [[Header]](../../WickedEngine/wiRectPacker.h) [[Cpp]](../../WickedEngine/wiRectPacker.cpp)
 Provides the ability to pack multiple rectangles into a bigger rectangle, while taking up the least amount of space from the containing rectangle.
 
-### wiResourceManager
+### ResourceManager
 [[Header]](../../WickedEngine/wiResourceManager.h) [[Cpp]](../../WickedEngine/wiResourceManager.cpp)
 This can load images and sounds. It will hold on to resources until there is at least something that is referencing them, otherwise deletes them. One resource can have multiple owners, too. This is thread safe.
 
@@ -1039,29 +1011,26 @@ This can load images and sounds. It will hold on to resources until there is at 
 - `Clear()` : Clear all resources. This will clear the resource library, but resources that are still used somewhere will remain usable. 
 
 The resource manager can support different modes that can be set with `SetMode(MODE param)` function:
-- `MODE_DISCARD_FILEDATA_AFTER_LOAD` : this is the default behaviour. The resource will not hold on to file data, even if the user specified `IMPORT_RETAIN_FILEDATA` flag when loading the resource. This will result in the resource manager unable to serialize (save) itself.
-- `MODE_ALLOW_RETAIN_FILEDATA` : this mode can be used to keep the file data buffers alive inside resources. This way the resource manager can be serialized (saved). Only the resources that still hold onto their file data will be serialized (saved). When loading a resource, the user can specify `IMPORT_RETAIN_FILEDATA` flag to keep the file data for a specific resource instead of discarding it.
-- `MODE_ALLOW_RETAIN_FILEDATA_BUT_DISABLE_EMBEDDING` : Keep all file data, but don't write them while serializing. This is useful to disable resource embedding temporarily without destroying file data buffers.
+- `DISCARD_FILEDATA_AFTER_LOAD` : this is the default behaviour. The resource will not hold on to file data, even if the user specified `IMPORT_RETAIN_FILEDATA` flag when loading the resource. This will result in the resource manager unable to serialize (save) itself.
+- `ALLOW_RETAIN_FILEDATA` : this mode can be used to keep the file data buffers alive inside resources. This way the resource manager can be serialized (saved). Only the resources that still hold onto their file data will be serialized (saved). When loading a resource, the user can specify `IMPORT_RETAIN_FILEDATA` flag to keep the file data for a specific resource instead of discarding it.
+- `ALLOW_RETAIN_FILEDATA_BUT_DISABLE_EMBEDDING` : Keep all file data, but don't write them while serializing. This is useful to disable resource embedding temporarily without destroying file data buffers.
 
 The resource manager can always be serialized in read mode. File data retention will be based on existing file import flags and the global resource manager mode.
 
-### wiSpinLock
+### SpinLock
 [[Header]](../../WickedEngine/wiSpinLock.h) [[Cpp]](../../WickedEngine/wiSpinLock.cpp)
 This can be used to guarantee exclusive access to a block in multithreaded race condition scenario instead of a mutex. The difference to a mutex that this doesn't let the thread to yield, but instead spin on an atomic flag until the spinlock can be locked.
 
-### wiArguments
+### Arguments
 [[Header]](../../WickedEngine/wiArguments.h) [[Cpp]](../../WickedEngine/wiArguments.cpp)
 This is to store the startup parameters that were passed to the application from the operating system "command line". The user can query these arguments by name.
 
-### wiTimer
+### Timer
 [[Header]](../../WickedEngine/wiTimer.h) [[Cpp]](../../WickedEngine/wiTimer.cpp)
 High resolution stopwatch timer
 
 
 ## Input
-The input interface
-
-### wiInput
 [[Header]](../../WickedEngine/wiInput.h) [[Cpp]](../../WickedEngine/wiInput.cpp)
 This is the high level input interface. Use this to read input devices in a platform-independent way.
 - Initialize <br/>
@@ -1109,21 +1078,19 @@ A touch contact point. Currently it is supported in UWP (Universal Windows Platf
 - GetTouches <br/>
 Get a vector containing current Touch contact points
 
-### wiXInput
+### XInput
 [[Header]](../../WickedEngine/wiXInput.h) [[Cpp]](../../WickedEngine/wiXInput.cpp)
 Low level wrapper for XInput API (capable of handling Xbox controllers). This functionality is used by the more generic wiInput interface, so the user probably doesn't need to use this.
 
-### wiRawInput
+### RawInput
 [[Header]](../../WickedEngine/wiRawInput.h) [[Cpp]](../../WickedEngine/wiRawInput.cpp)
 Low level wrapper for RAWInput API (capable of handling human interface devices, such as mouse, keyboard, controllers). This functionality is used by the more generic wiInput interface, so the user probably doesn't need to use this.
 
 
 
 ## Audio
-Handles audio playback and spatial audio.
-### wiAudio
 [[Header]](../../WickedEngine/wiAudio.h) [[Cpp]](../../WickedEngine/wiAudio.cpp)
-The namespace that is a collection of audio related functionality. It is currently implemented with XAudio2
+The namespace that is a collection of audio related functionality.
 - CreateSound
 - CreateSoundInstance
 - Play
@@ -1179,10 +1146,9 @@ Can make different sounding 3D reverb effect globally
 
 
 ## Physics
+[[Header]](../../WickedEngine/wiPhysics.h) [[Cpp]](../../WickedEngine/wiPhysics_Bullet.cpp)
 You can find the physics system related functionality under ENGINE/Physics filter in the solution.
 It uses the entity-component system to perform updating all physics components in the world.
-### wiPhysics
-[[Header]](../../WickedEngine/wiPhysics.h) [[Cpp]](../../WickedEngine/wiPhysics.cpp)
 - Initialize<br/>
 This must be called before using the physics system, but it is automatically done by [wiInitializer](#wiinitializer)
 - IsEnabled<br/>
@@ -1220,13 +1186,8 @@ The pinned vertices can also be manipulated via <b>skinning animation</b>. If th
 <b>Resetting</b> a soft body can be accomplished by setting the `SoftBodyPhysicsComponent::FORCE_RESET` flag. This means that the next physics update will reset the soft body mesh to the initial pose.
 
 
-### wiPhysicsEngine_Bullet
-[[Header]](../../WickedEngine/wiPhysicsEngine_BULLET.h) [[Cpp]](../../WickedEngine/wiPhysicsEngine_BULLET.cpp)
-Bullet physics engine implementation of the physics update system
-
 
 ## Network
-### wiNetwork
 [[Header]](../../WickedEngine/wiNetwork.h) [[Cpp]](../../WickedEngine/wiNetwork.cpp)
 Simple interface that provides UDP networking features.
 - Initialize
@@ -1245,24 +1206,24 @@ An IP address and a port number that identifies the target of communication
 This is the place for the Lua scipt interface. For a complete reference about Lua scripting interface, please see the [ScriptingAPI-Documentation](ScriptingAPI-Documentation.md)
 ### LuaBindings
 The systems that are bound to Lua have the name of the system as their filename, postfixed by _BindLua.
-### wiLua
+### Lua
 [[Header]](../../WickedEngine/wiLua.h) [[Cpp]](../../WickedEngine/wiLua.cpp)
 The Lua scripting interface on the C++ side. This allows to execute lua commands from the C++ side and manipulate the lua stack, such as pushing values to lua and getting values from lua, among other things.
-### wiLua_Globals
+### Lua_Globals
 [[Header]](../../WickedEngine/wiLua_Globals.h)
 Hardcoded lua script in text format. This will be always executed and provides some commonly used helper functionality for lua scripts.
-### wiLuna
+### Luna
 [[Header]](../../WickedEngine/wiLuna.h)
 Helper to allow bind engine classes from C++ to Lua
 
 
 ## Tools
 This is the place for tools that use engine-level systems
-### wiBacklog
+### Backlog
 [[Header]](../../WickedEngine/wiBacklog.h) [[Cpp]](../../WickedEngine/wiBacklog.cpp)
 Used to log any messages by any system, from any thread. It can draw itself to the screen. It can execute Lua scripts.
-If there was a `wiBacklog::LogLevel::Error` or higher severity message posted on the backlog, the contents of the log will be saved to the temporary user directory as wiBacklog.txt.
-### wiProfiler
+If there was a `wii:backlog::LogLevel::Error` or higher severity message posted on the backlog, the contents of the log will be saved to the temporary user directory as wiBacklog.txt.
+### Profiler
 [[Header]](../../WickedEngine/wiProfiler.h) [[Cpp]](../../WickedEngine/wiProfiler.cpp)
 Used to time specific ranges in execution. Support CPU and GPU timing. Can write the result to the screen as simple text at this time.
 
