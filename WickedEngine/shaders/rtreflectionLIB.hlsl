@@ -90,7 +90,7 @@ void RTReflection_Raygen()
 	TraceRay(
 		scene_acceleration_structure,   // AccelerationStructure
 		0,                              // RayFlags
-		~0,                             // InstanceInclusionMask
+		asuint(postprocess.params1.x),	// InstanceInclusionMask
 		0,                              // RayContributionToHitGroupIndex
 		0,                              // MultiplierForGeomtryContributionToShaderIndex
 		0,                              // MissShaderIndex

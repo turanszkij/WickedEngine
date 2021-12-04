@@ -223,7 +223,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 						q.TraceRayInline(
 							scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
 							0,								// uint RayFlags
-							0xFF,							// uint InstanceInclusionMask
+							asuint(postprocess.params1.x),	// uint InstanceInclusionMask
 							ray								// RayDesc Ray
 						);
 						while (q.Proceed())
@@ -247,7 +247,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 						}
 						shadow = q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ? 0 : 1;
 #else
-						shadow = TraceRay_Any(newRay, groupIndex) ? 0 : 1;
+						shadow = TraceRay_Any(newRay, asuint(postprocess.params1.x), groupIndex) ? 0 : 1;
 #endif // RTAPI
 
 #else

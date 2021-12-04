@@ -33,6 +33,10 @@ struct SurfelData
 	uint GetLife() { return life_recycle & 0xFFFF; }
 	uint GetRecycle() { return (life_recycle >> 16u) & 0xFFFF; }
 };
+struct PushConstantsSurfelRaytrace
+{
+	uint instanceInclusionMask;
+};
 static const uint SURFEL_CAPACITY = 100000;
 static const uint SQRT_SURFEL_CAPACITY = (uint)ceil(sqrt((float)SURFEL_CAPACITY));
 static const uint SURFEL_MOMENT_TEXELS = 4 + 2;

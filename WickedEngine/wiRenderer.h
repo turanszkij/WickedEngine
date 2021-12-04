@@ -262,7 +262,7 @@ namespace wi::renderer
 	// Call once per frame to re-render out of date impostors
 	void RefreshImpostors(const wi::scene::Scene& scene, wi::graphics::CommandList cmd);
 	// Call once per frame to repack out of date lightmaps in the atlas
-	void RefreshLightmaps(const wi::scene::Scene& scene, wi::graphics::CommandList cmd);
+	void RefreshLightmaps(const wi::scene::Scene& scene, wi::graphics::CommandList cmd, uint8_t instanceInclusionMask = 0xFF);
 	// Voxelize the scene into a voxel grid 3D texture
 	void VoxelRadiance(const Visibility& vis, wi::graphics::CommandList cmd);
 	// Run a compute shader that will resolve a MSAA depth buffer to a single-sample texture
@@ -342,7 +342,8 @@ namespace wi::renderer
 	void SurfelGI(
 		const SurfelGIResources& res,
 		const wi::scene::Scene& scene,
-		wi::graphics::CommandList cmd
+		wi::graphics::CommandList cmd,
+		uint8_t instanceInclusionMask = 0xFF
 	);
 
 	void Postprocess_Blur_Gaussian(
@@ -435,7 +436,8 @@ namespace wi::renderer
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd,
 		float range = 1.0f,
-		float power = 1.0f
+		float power = 1.0f,
+		uint8_t instanceInclusionMask = 0xFF
 	);
 	struct RTReflectionResources
 	{
@@ -449,7 +451,8 @@ namespace wi::renderer
 		const wi::scene::Scene& scene,
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd,
-		float range = 1000.0f
+		float range = 1000.0f,
+		uint8_t instanceInclusionMask = 0xFF
 	);
 	struct SSRResources
 	{
@@ -484,7 +487,8 @@ namespace wi::renderer
 		const wi::scene::Scene& scene,
 		const wi::graphics::GPUBuffer& entityTiles_Opaque,
 		const wi::graphics::Texture& output,
-		wi::graphics::CommandList cmd
+		wi::graphics::CommandList cmd,
+		uint8_t instanceInclusionMask = 0xFF
 	);
 	struct ScreenSpaceShadowResources
 	{
@@ -641,6 +645,7 @@ namespace wi::renderer
 		const wi::graphics::Texture& output,
 		int accumulation_sample,
 		wi::graphics::CommandList cmd,
+		uint8_t instanceInclusionMask = 0xFF,
 		const wi::graphics::Texture* output_albedo = nullptr,
 		const wi::graphics::Texture* output_normal = nullptr
 	);

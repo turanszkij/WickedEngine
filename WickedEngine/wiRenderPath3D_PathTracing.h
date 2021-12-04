@@ -42,6 +42,8 @@ namespace wi
 		bool isDenoiserAvailable() const;
 
 		void resetProgress() { sam = -1; denoiserProgress = 0; }
+
+		uint8_t instanceInclusionMask_PathTrace = 0xFF;
 	};
 
 }

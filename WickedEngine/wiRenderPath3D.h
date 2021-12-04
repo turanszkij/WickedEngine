@@ -156,6 +156,12 @@ namespace wi
 
 		FrameCB frameCB = {};
 
+		uint8_t instanceInclusionMask_RTAO = 0xFF;
+		uint8_t instanceInclusionMask_RTShadow = 0xFF;
+		uint8_t instanceInclusionMask_RTReflection = 0xFF;
+		uint8_t instanceInclusionMask_SurfelGI = 0xFF;
+		uint8_t instanceInclusionMask_Lightmap = 0xFF;
+
 		const wi::graphics::Texture* GetDepthStencil() const override { return &depthBuffer_Main; }
 		const wi::graphics::Texture* GetGUIBlurredBackground() const override { return &rtGUIBlurredBackground[2]; }
 

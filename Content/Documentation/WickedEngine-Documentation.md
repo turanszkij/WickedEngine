@@ -287,7 +287,9 @@ A string to identify an entity with a human readable name.
 
 #### LayerComponent
 [[Header]](../../WickedEngine/wiScene.h) [[Cpp]](../../WickedEngine/wiScene.cpp)
-A bitmask that can be used to filter entities.
+A bitmask that can be used to filter entities. Depending on what other components the entity has, the layer will be used by different systems, to for example determine visibility, filter collisions, or picking.
+A bitmask of 0 will make the entity inactive in most systems.
+The lower 8 bits will be used by ray tracing as an instance inclusion mask for instances (ObjectComponent, EmittedParticle, HairParticle..)
 
 #### TransformComponent
 [[Header]](../../WickedEngine/wiScene.h) [[Cpp]](../../WickedEngine/wiScene.cpp)

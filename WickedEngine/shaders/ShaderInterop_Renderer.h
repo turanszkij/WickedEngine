@@ -225,12 +225,12 @@ struct ShaderMeshInstance
 {
 	uint uid;
 	uint flags;
+	uint layerMask;
 	uint meshIndex;
 	uint color;
 	uint emissive;
 	int lightmap;
 	int padding0;
-	int padding1;
 	ShaderTransform transform;
 	ShaderTransform transformInverseTranspose; // This correctly handles non uniform scaling for normals
 	ShaderTransform transformPrev;
@@ -239,6 +239,7 @@ struct ShaderMeshInstance
 	{
 		uid = 0;
 		flags = 0;
+		layerMask = 0;
 		meshIndex = ~0;
 		color = ~0u;
 		emissive = ~0u;

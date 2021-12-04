@@ -3,6 +3,7 @@
 #include "lightingHF.hlsli"
 #include "ShaderInterop_SurfelGI.h"
 
+PUSHCONSTANT(push, PushConstantsSurfelRaytrace);
 
 StructuredBuffer<Surfel> surfelBuffer : register(t0);
 ByteAddressBuffer surfelStatsBuffer : register(t1);
@@ -61,13 +62,13 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		q.TraceRayInline(
 			scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
 			0,								// uint RayFlags
-			0xFF,							// uint InstanceInclusionMask
+			push.instanceInclusionMask,		// uint InstanceInclusionMask
 			ray								// RayDesc Ray
 		);
 		q.Proceed();
 		if (q.CommittedStatus() != COMMITTED_TRIANGLE_HIT)
 #else
-		RayHit hit = TraceRay_Closest(ray, seed, uv);
+		RayHit hit = TraceRay_Closest(ray, push.instanceInclusionMask, seed, uv);
 
 		if (hit.distance >= FLT_MAX - 1)
 #endif // RTAPI
@@ -259,7 +260,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 					q.Proceed();
 					shadow = q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ? 0 : shadow;
 #else
-					shadow = TraceRay_Any(newRay, seed, uv) ? 0 : shadow;
+					shadow = TraceRay_Any(newRay, push.instanceInclusionMask, seed, uv) ? 0 : shadow;
 #endif // RTAPI
 					if (any(shadow))
 					{

@@ -57,7 +57,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			RAY_FLAG_CULL_BACK_FACING_TRIANGLES |
 #endif // RAY_BACKFACE_CULLING
 			0,								// uint RayFlags
-			0xFF,							// uint InstanceInclusionMask
+			xTraceUserData.y,				// uint InstanceInclusionMask
 			ray								// RayDesc Ray
 		);
 		while (q.Proceed())
@@ -78,7 +78,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		}
 		if (q.CommittedStatus() != COMMITTED_TRIANGLE_HIT)
 #else
-		RayHit hit = TraceRay_Closest(ray, seed, uv, groupIndex);
+		RayHit hit = TraceRay_Closest(ray, xTraceUserData.y, seed, uv, groupIndex);
 
 		if (hit.distance >= FLT_MAX - 1)
 #endif // RTAPI
@@ -269,7 +269,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 					}
 					shadow = q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ? 0 : shadow;
 #else
-					shadow = TraceRay_Any(newRay, seed, uv, groupIndex) ? 0 : shadow;
+					shadow = TraceRay_Any(newRay, xTraceUserData.y, seed, uv, groupIndex) ? 0 : shadow;
 #endif // RTAPI
 					if (any(shadow))
 					{

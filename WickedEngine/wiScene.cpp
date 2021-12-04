@@ -3102,6 +3102,7 @@ namespace wi::scene
 		
 		wi::jobsystem::Dispatch(ctx, (uint32_t)objects.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
 
+			Entity entity = objects.GetEntity(args.jobIndex);
 			ObjectComponent& object = objects[args.jobIndex];
 			AABB& aabb = aabb_objects[args.jobIndex];
 
@@ -3125,6 +3126,17 @@ namespace wi::scene
 			}
 			object.occlusionQueries[queryheap_idx] = -1; // invalidate query
 
+			const LayerComponent* layer = layers.GetComponent(entity);
+			uint32_t layerMask;
+			if (layer == nullptr)
+			{
+				layerMask = ~0;
+			}
+			else
+			{
+				layerMask = layer->GetLayerMask();
+			}
+
 			aabb = AABB();
 			object.rendertypeMask = 0;
 			object.SetDynamic(false);
@@ -3133,7 +3145,6 @@ namespace wi::scene
 
 			if (object.meshID != INVALID_ENTITY)
 			{
-				Entity entity = objects.GetEntity(args.jobIndex);
 
 				const MeshComponent* mesh = meshes.GetComponent(object.meshID);
 
@@ -3241,6 +3252,7 @@ namespace wi::scene
 						inst.lightmap = device->GetDescriptorIndex(&object.lightmap, SubresourceType::SRV);
 					}
 					inst.uid = entity;
+					inst.layerMask = layerMask;
 					inst.color = wi::math::CompressColor(object.color);
 					inst.emissive = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(object.emissiveColor.x * object.emissiveColor.w, object.emissiveColor.y * object.emissiveColor.w, object.emissiveColor.z * object.emissiveColor.w));
 					inst.meshIndex = (uint)meshes.GetIndex(object.meshID);
@@ -3257,7 +3269,7 @@ namespace wi::scene
 							}
 						}
 						instance.instance_id = args.jobIndex;
-						instance.instance_mask = 1;
+						instance.instance_mask = layerMask & 0xFF;
 						instance.bottom_level = mesh->BLAS;
 
 						if (mesh->IsDoubleSided() || mesh->_flags & MeshComponent::TLAS_FORCE_DOUBLE_SIDED)
@@ -3318,15 +3330,7 @@ namespace wi::scene
 					}
 				}
 
-				const LayerComponent* layer = layers.GetComponent(entity);
-				if (layer == nullptr)
-				{
-					aabb.layerMask = ~0;
-				}
-				else
-				{
-					aabb.layerMask = layer->GetLayerMask();
-				}
+				aabb.layerMask = layerMask;
 
 				// parallel bounds computation using shared memory:
 				AABB* shared_bounds = (AABB*)args.sharedmemory;
@@ -3668,6 +3672,7 @@ namespace wi::scene
 					ShaderMeshInstance& inst = instanceArrayMapped[instanceIndex];
 					inst.init();
 					inst.uid = entity;
+					inst.layerMask = hair.layerMask;
 					// every vertex is pretransformed and simulated in worldspace for hair particle:
 					inst.transform.Create(wi::math::IDENTITY_MATRIX);
 					inst.transformPrev.Create(wi::math::IDENTITY_MATRIX);
@@ -3685,7 +3690,7 @@ namespace wi::scene
 							}
 						}
 						instance.instance_id = (uint32_t)instanceIndex;
-						instance.instance_mask = 1;
+						instance.instance_mask = hair.layerMask & 0xFF;
 						instance.bottom_level = hair.BLAS;
 						instance.flags = RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_CULL_DISABLE;
 
@@ -3745,6 +3750,7 @@ namespace wi::scene
 			ShaderMeshInstance& inst = instanceArrayMapped[instanceIndex];
 			inst.init();
 			inst.uid = entity;
+			inst.layerMask = emitter.layerMask;
 			// every vertex is pretransformed and simulated in worldspace for emitted particle:
 			inst.transform.Create(wi::math::IDENTITY_MATRIX);
 			inst.transformPrev.Create(wi::math::IDENTITY_MATRIX);
@@ -3762,7 +3768,7 @@ namespace wi::scene
 					}
 				}
 				instance.instance_id = (uint32_t)instanceIndex;
-				instance.instance_mask = 1;
+				instance.instance_mask = emitter.layerMask & 0xFF;
 				instance.bottom_level = emitter.BLAS;
 				instance.flags = RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_CULL_DISABLE;
 

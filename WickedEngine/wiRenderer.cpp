@@ -7159,6 +7159,7 @@ void RayTraceScene(
 	const Texture& output,
 	int accumulation_sample, 
 	CommandList cmd,
+	uint8_t instanceInclusionMask,
 	const Texture* output_albedo,
 	const Texture* output_normal
 )
@@ -7173,7 +7174,6 @@ void RayTraceScene(
 
 	BindCommonResources(cmd);
 
-
 	const XMFLOAT4& halton = wi::math::GetHaltonSequence(accumulation_sample);
 	RaytracingCB cb;
 	cb.xTracePixelOffset = XMFLOAT2(halton.x, halton.y);
@@ -7183,6 +7183,7 @@ void RayTraceScene(
 	cb.xTraceResolution_rcp.x = 1.0f / cb.xTraceResolution.x;
 	cb.xTraceResolution_rcp.y = 1.0f / cb.xTraceResolution.y;
 	cb.xTraceUserData.x = raytraceBounceCount;
+	cb.xTraceUserData.y = instanceInclusionMask;
 	cb.xTraceSampleIndex = (uint32_t)accumulation_sample;
 	device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(RaytracingCB), cmd);
 
@@ -7235,7 +7236,7 @@ void RayTraceSceneBVH(const Scene& scene, CommandList cmd)
 	device->EventEnd(cmd);
 }
 
-void RefreshLightmaps(const Scene& scene, CommandList cmd)
+void RefreshLightmaps(const Scene& scene, CommandList cmd, uint8_t instanceInclusionMask)
 {
 	if (scene.lightmap_refresh_needed.load())
 	{
@@ -7311,6 +7312,7 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd)
 				cb.xTracePixelOffset.y *= 1.4f;	// boost the jitter by a bit
 				cb.xTraceAccumulationFactor = 1.0f / (object.lightmapIterationCount + 1.0f); // accumulation factor (alpha)
 				cb.xTraceUserData.x = raytraceBounceCount;
+				cb.xTraceUserData.y = instanceInclusionMask;
 				cb.xTraceSampleIndex = object.lightmapIterationCount;
 				device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(RaytracingCB), cmd);
 
@@ -7815,7 +7817,8 @@ void SurfelGI_Coverage(
 void SurfelGI(
 	const SurfelGIResources& res,
 	const Scene& scene,
-	CommandList cmd
+	CommandList cmd,
+	uint8_t instanceInclusionMask
 )
 {
 	if (!scene.TLAS.IsValid() && !scene.BVH.IsValid())
@@ -7967,6 +7970,10 @@ void SurfelGI(
 		device->EventBegin("Raytrace", cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_SURFEL_RAYTRACE], cmd);
+
+		PushConstantsSurfelRaytrace push;
+		push.instanceInclusionMask = instanceInclusionMask;
+		device->PushConstants(&push, sizeof(push), cmd);
 
 		device->BindResource(&scene.surfelBuffer, 0, cmd);
 		device->BindResource(&scene.surfelStatsBuffer, 1, cmd);
@@ -8976,7 +8983,8 @@ void Postprocess_RTAO(
 	const Texture& output,
 	CommandList cmd,
 	float range,
-	float power
+	float power,
+	uint8_t instanceInclusionMask
 )
 {
 	if (!device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
@@ -9011,6 +9019,7 @@ void Postprocess_RTAO(
 	rtao_range = range;
 	rtao_power = power;
 	postprocess.params0.w = (float)res.frame;
+	std::memcpy(&postprocess.params1.x, &instanceInclusionMask, sizeof(instanceInclusionMask));
 	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	{
@@ -9225,7 +9234,8 @@ void Postprocess_RTReflection(
 	const Scene& scene,
 	const Texture& output,
 	CommandList cmd,
-	float range
+	float range,
+	uint8_t instanceInclusionMask
 )
 {
 	if (!device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
@@ -9250,6 +9260,7 @@ void Postprocess_RTReflection(
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 	rtreflection_range = range;
 	rtreflection_frame = (float)res.frame;
+	std::memcpy(&postprocess.params1.x, &instanceInclusionMask, sizeof(instanceInclusionMask));
 	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	size_t shaderIdentifierSize = device->GetShaderIdentifierSize();
@@ -9651,7 +9662,8 @@ void Postprocess_RTShadow(
 	const Scene& scene,
 	const GPUBuffer& entityTiles_Opaque,
 	const Texture& output,
-	CommandList cmd
+	CommandList cmd,
+	uint8_t instanceInclusionMask
 )
 {
 	if (!device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
@@ -9675,6 +9687,7 @@ void Postprocess_RTShadow(
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 	postprocess.params0.w = (float)res.frame;
+	std::memcpy(&postprocess.params1.x, &instanceInclusionMask, sizeof(instanceInclusionMask));
 	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTSHADOW], cmd);

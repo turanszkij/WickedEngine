@@ -46,6 +46,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	BVHPrimitive bvhprim;
 	bvhprim.packed_prim = prim.pack();
 	bvhprim.flags = 0;
+	bvhprim.flags |= inst.layerMask & 0xFF;
 	if (mesh.flags & SHADERMESH_FLAG_DOUBLE_SIDED)
 	{
 		bvhprim.flags |= BVH_PRIMITIVE_FLAG_DOUBLE_SIDED;

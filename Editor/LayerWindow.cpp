@@ -9,18 +9,26 @@ using namespace wi::scene;
 void LayerWindow::Create(EditorComponent* editor)
 {
 	wi::gui::Window::Create("Layer Window");
-	SetSize(XMFLOAT2(410, 160));
+	SetSize(XMFLOAT2(410, 290));
 
 	float x = 30;
-	float y = 0;
+	float y = 25;
 	float step = 25;
 	float siz = 20;
+
+	label.Create("LayerWindowLabel");
+	label.SetText("The layer is a 32-bit mask (uint32_t), which can be used for filtering by multiple systems (visibility, collision, picking, etc.).\n- If all bits are disabled, it means the layer will be inactive in most systems.\n- For ray tracing, the lower 8 bits will be used as instance inclusion mask.");
+	label.SetPos(XMFLOAT2(x, y));
+	label.SetSize(XMFLOAT2(370, 120));
+	label.SetColor(wi::Color::Transparent());
+	AddWidget(&label);
+	y += label.GetScale().y + 5;
 
 	for (uint32_t i = 0; i < arraysize(layers); ++i)
 	{
 		layers[i].Create("");
 		layers[i].SetText(std::to_string(i) + ": ");
-		layers[i].SetPos(XMFLOAT2(x + (i % 8) * 50, y + (i / 8 + 1) * step));
+		layers[i].SetPos(XMFLOAT2(x + (i % 8) * 50, y + (i / 8) * step));
 		layers[i].OnClick([=](wi::gui::EventArgs args) {
 
 			LayerComponent* layer = wi::scene::GetScene().layers.GetComponent(entity);
@@ -42,7 +50,7 @@ void LayerWindow::Create(EditorComponent* editor)
 		AddWidget(&layers[i]);
 	}
 
-	y += step * 5;
+	y += step * 4;
 
 	enableAllButton.Create("Enable ALL");
 	enableAllButton.SetPos(XMFLOAT2(x, y));

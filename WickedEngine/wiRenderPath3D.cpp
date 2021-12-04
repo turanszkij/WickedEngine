@@ -691,7 +691,8 @@ void RenderPath3D::Render() const
 			wi::renderer::SurfelGI(
 				surfelGIResources,
 				*scene,
-				cmd
+				cmd,
+				instanceInclusionMask_SurfelGI
 			);
 		}
 
@@ -834,7 +835,8 @@ void RenderPath3D::Render() const
 				*scene,
 				tiledLightResources.entityTiles_Opaque,
 				rtShadow,
-				cmd
+				cmd,
+				instanceInclusionMask_RTShadow
 			);
 		}
 
@@ -859,7 +861,7 @@ void RenderPath3D::Render() const
 			camera_reflection,
 			cmd
 		);
-		wi::renderer::RefreshLightmaps(*scene, cmd);
+		wi::renderer::RefreshLightmaps(*scene, cmd, instanceInclusionMask_Lightmap);
 		wi::renderer::RefreshEnvProbes(visibility_main, cmd);
 		wi::renderer::RefreshImpostors(*scene, cmd);
 		});
@@ -988,7 +990,8 @@ void RenderPath3D::Render() const
 				rtreflectionResources,
 				*scene,
 				rtSSR,
-				cmd
+				cmd,
+				instanceInclusionMask_RTReflection
 			);
 		}
 
@@ -1160,7 +1163,8 @@ void RenderPath3D::RenderAO(CommandList cmd) const
 				rtAO,
 				cmd,
 				getAORange(),
-				getAOPower()
+				getAOPower(),
+				instanceInclusionMask_RTAO
 			);
 			break;
 		}

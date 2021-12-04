@@ -158,7 +158,7 @@ float4 main(Input input) : SV_TARGET
 				q.TraceRayInline(
 					scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
 					0,								// uint RayFlags
-					0xFF,							// uint InstanceInclusionMask
+					xTraceUserData.y,				// uint InstanceInclusionMask
 					newRay							// RayDesc Ray
 				);
 				while (q.Proceed())
@@ -181,7 +181,7 @@ float4 main(Input input) : SV_TARGET
 				}
 				shadow = q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ? 0 : shadow;
 #else
-				shadow = TraceRay_Any(newRay, seed, uv) ? 0 : shadow;
+				shadow = TraceRay_Any(newRay, xTraceUserData.y, seed, uv) ? 0 : shadow;
 #endif // RTAPI
 				if (any(shadow))
 				{
@@ -204,13 +204,13 @@ float4 main(Input input) : SV_TARGET
 #endif // RAY_BACKFACE_CULLING
 			RAY_FLAG_FORCE_OPAQUE |
 			0,								// uint RayFlags
-			0xFF,							// uint InstanceInclusionMask
+			xTraceUserData.y,							// uint InstanceInclusionMask
 			ray								// RayDesc Ray
 		);
 		q.Proceed();
 		if (q.CommittedStatus() != COMMITTED_TRIANGLE_HIT)
 #else
-		RayHit hit = TraceRay_Closest(ray, seed, uv);
+		RayHit hit = TraceRay_Closest(ray, xTraceUserData.y, seed, uv);
 
 		if (hit.distance >= FLT_MAX - 1)
 #endif // RTAPI
