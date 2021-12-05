@@ -25,10 +25,7 @@ namespace wi::initializer
 		ss += "\n[wi::initializer] Initializing Wicked Engine, please wait...\n";
 		ss += "Version: ";
 		ss += wi::version::GetVersionString();
-		ss += "\n";
 		wi::backlog::post(ss);
-
-		wi::shadercompiler::Initialize();
 
 		size_t shaderdump_count = wi::renderer::GetShaderDumpCount();
 		if (shaderdump_count > 0)

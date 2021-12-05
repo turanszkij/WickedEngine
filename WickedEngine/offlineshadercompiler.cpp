@@ -399,7 +399,6 @@ int main(int argc, char* argv[])
 	minshadermodels["rtaoCS.hlsl"] = ShaderModel::SM_6_5;
 	minshadermodels["surfel_raytraceCS_rtapi.hlsl"] = ShaderModel::SM_6_5;
 
-	wi::shadercompiler::Initialize();
 	wi::jobsystem::context ctx;
 
 	std::string SHADERSOURCEPATH = wi::renderer::GetShaderSourcePath();

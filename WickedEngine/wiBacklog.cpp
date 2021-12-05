@@ -21,25 +21,25 @@ using namespace wi::graphics;
 
 namespace wi::backlog
 {
-	static bool enabled = false;
-	static std::deque<std::string> stream;
-	static std::deque<std::string> history;
-	static const float speed = 4000.0f;
-	static const size_t deletefromline = 500;
-	static float pos = std::numeric_limits<float>::lowest();
-	static float scroll = 0;
-	static std::string inputArea;
-	static int historyPos = 0;
-	static wi::SpriteFont font;
-	static wi::SpinLock logLock;
-	static Texture backgroundTex;
-	static bool refitscroll = false;
+	bool enabled = false;
+	std::deque<std::string> stream;
+	std::deque<std::string> history;
+	const float speed = 4000.0f;
+	const size_t deletefromline = 500;
+	float pos = std::numeric_limits<float>::lowest();
+	float scroll = 0;
+	std::string inputArea;
+	int historyPos = 0;
+	wi::SpriteFont font;
+	wi::SpinLock logLock;
+	Texture backgroundTex;
+	bool refitscroll = false;
 
-	static bool locked = false;
-	static bool blockLuaExec = false;
-	static LogLevel logLevel = LogLevel::Default;
+	bool locked = false;
+	bool blockLuaExec = false;
+	LogLevel logLevel = LogLevel::Default;
 
-	static void write_logfile()
+	void write_logfile()
 	{
 		std::string filename = wi::helper::GetTempDirectoryPath() + "wiBacklog.txt";
 		std::string text = getText(); // will lock mutex
@@ -54,7 +54,7 @@ namespace wi::backlog
 		{
 			write_logfile();
 		}
-	} static logwriter;
+	} logwriter;
 
 	void Toggle() 
 	{

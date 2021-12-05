@@ -6,7 +6,6 @@
 
 namespace wi::shadercompiler
 {
-	void Initialize();
 
 	enum class Flags
 	{

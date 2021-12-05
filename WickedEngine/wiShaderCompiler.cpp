@@ -33,14 +33,85 @@ using namespace wi::graphics;
 
 namespace wi::shadercompiler
 {
+	struct InternalState
+	{
 #ifdef SHADERCOMPILER_ENABLED_DXCOMPILER
-	CComPtr<IDxcUtils> dxcUtils;
-	CComPtr<IDxcCompiler3> dxcCompiler;
-	CComPtr<IDxcIncludeHandler> dxcIncludeHandler;
-	DxcCreateInstanceProc DxcCreateInstance = nullptr;
+		CComPtr<IDxcUtils> dxcUtils;
+		CComPtr<IDxcCompiler3> dxcCompiler;
+		CComPtr<IDxcIncludeHandler> dxcIncludeHandler;
+		DxcCreateInstanceProc DxcCreateInstance = nullptr;
+#endif // SHADERCOMPILER_ENABLED_DXCOMPILER
+
+#ifdef SHADERCOMPILER_ENABLED_D3DCOMPILER
+		using PFN_D3DCOMPILE = decltype(&D3DCompile);
+		PFN_D3DCOMPILE D3DCompile = nullptr;
+#endif // SHADERCOMPILER_ENABLED_D3DCOMPILER
+
+		InternalState()
+		{
+#ifdef SHADERCOMPILER_ENABLED_DXCOMPILER
+			if (dxcCompiler != nullptr)
+			{
+				return; // already initialized
+			}
+
+#ifdef _WIN32
+#define LIBDXCOMPILER "dxcompiler.dll"
+			HMODULE dxcompiler = wiLoadLibrary(LIBDXCOMPILER);
+#elif defined(PLATFORM_LINUX)
+#define LIBDXCOMPILER "libdxcompiler.so"
+			HMODULE dxcompiler = wiLoadLibrary("./" LIBDXCOMPILER);
+#endif
+			if (dxcompiler != nullptr)
+			{
+				DxcCreateInstance = (DxcCreateInstanceProc)wiGetProcAddress(dxcompiler, "DxcCreateInstance");
+				if (DxcCreateInstance != nullptr)
+				{
+					HRESULT hr = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils));
+					assert(SUCCEEDED(hr));
+					hr = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&dxcCompiler));
+					assert(SUCCEEDED(hr));
+					hr = dxcUtils->CreateDefaultIncludeHandler(&dxcIncludeHandler);
+					assert(SUCCEEDED(hr));
+					wi::backlog::post("wi::shadercompiler: loaded " LIBDXCOMPILER);
+				}
+			}
+			else
+			{
+				wi::backlog::post("wi::shadercompiler: could not load library " LIBDXCOMPILER);
+			}
+#endif // SHADERCOMPILER_ENABLED_DXCOMPILER
+
+
+#ifdef SHADERCOMPILER_ENABLED_D3DCOMPILER
+			if (D3DCompile != nullptr)
+			{
+				return; // already initialized
+			}
+
+			HMODULE d3dcompiler = wiLoadLibrary("d3dcompiler_47.dll");
+			if (d3dcompiler != nullptr)
+			{
+				D3DCompile = (PFN_D3DCOMPILE)wiGetProcAddress(d3dcompiler, "D3DCompile");
+				if (D3DCompile != nullptr)
+				{
+					wi::backlog::post("wi::shadercompiler: loaded d3dcompiler_47.dll");
+				}
+			}
+#endif // SHADERCOMPILER_ENABLED_D3DCOMPILER
+
+		}
+	};
+	inline InternalState& compiler_internal()
+	{
+		static InternalState internal_state;
+		return internal_state;
+	}
+
+#ifdef SHADERCOMPILER_ENABLED_DXCOMPILER
 	void Compile_DXCompiler(const CompilerInput& input, CompilerOutput& output)
 	{
-		if (dxcCompiler == nullptr)
+		if (compiler_internal().dxcCompiler == nullptr)
 		{
 			return;
 		}
@@ -360,7 +431,7 @@ namespace wi::shadercompiler
 				_COM_Outptr_result_maybenull_ IDxcBlob** ppIncludeSource  // Resultant source object for included file, nullptr if not found.
 			) override
 			{
-				HRESULT hr = dxcIncludeHandler->LoadSource(pFilename, ppIncludeSource);
+				HRESULT hr = compiler_internal().dxcIncludeHandler->LoadSource(pFilename, ppIncludeSource);
 				if (SUCCEEDED(hr))
 				{
 					std::string& filename = output->dependencies.emplace_back();
@@ -372,7 +443,7 @@ namespace wi::shadercompiler
 				/* [in] */ REFIID riid,
 				/* [iid_is][out] */ _COM_Outptr_ void __RPC_FAR* __RPC_FAR* ppvObject) override
 			{
-				return dxcIncludeHandler->QueryInterface(riid, ppvObject);
+				return compiler_internal().dxcIncludeHandler->QueryInterface(riid, ppvObject);
 			}
 
 			ULONG STDMETHODCALLTYPE AddRef(void) override
@@ -388,7 +459,7 @@ namespace wi::shadercompiler
 		includehandler.output = &output;
 
 		CComPtr<IDxcResult> pResults;
-		HRESULT hr = dxcCompiler->Compile(
+		HRESULT hr = compiler_internal().dxcCompiler->Compile(
 			&Source,                // Source buffer.
 			args.data(),            // Array of pointers to arguments.
 			(uint32_t)args.size(),	// Number of arguments.
@@ -446,11 +517,9 @@ namespace wi::shadercompiler
 #endif // SHADERCOMPILER_ENABLED_DXCOMPILER
 
 #ifdef SHADERCOMPILER_ENABLED_D3DCOMPILER
-	using PFN_D3DCOMPILE = decltype(&D3DCompile);
-	PFN_D3DCOMPILE D3DCompile = nullptr;
 	void Compile_D3DCompiler(const CompilerInput& input, CompilerOutput& output)
 	{
-		if (D3DCompile == nullptr)
+		if (compiler_internal().D3DCompile == nullptr)
 		{
 			return;
 		}
@@ -537,7 +606,7 @@ namespace wi::shadercompiler
 
 		// https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/d3dcompile-constants
 		UINT Flags1 = 0;
-		if (input.flags & FLAG_DISABLE_OPTIMIZATION)
+		if (has_flag(input.flags, Flags::DISABLE_OPTIMIZATION))
 		{
 			Flags1 |= D3DCOMPILE_SKIP_OPTIMIZATION;
 		}
@@ -545,7 +614,7 @@ namespace wi::shadercompiler
 
 		CComPtr<ID3DBlob> code;
 		CComPtr<ID3DBlob> errors;
-		HRESULT hr = D3DCompile(
+		HRESULT hr = compiler_internal().D3DCompile(
 			shadersourcedata.data(),
 			shadersourcedata.size(),
 			input.shadersourcefilename.c_str(),
@@ -578,60 +647,6 @@ namespace wi::shadercompiler
 	}
 #endif // SHADERCOMPILER_ENABLED_D3DCOMPILER
 
-	void Initialize()
-	{
-#ifdef SHADERCOMPILER_ENABLED_DXCOMPILER
-		if (dxcCompiler != nullptr)
-		{
-			return; // already initialized
-		}
-
-#ifdef _WIN32
-#define LIBDXCOMPILER "dxcompiler.dll"
-        HMODULE dxcompiler = wiLoadLibrary(LIBDXCOMPILER);
-#elif defined(PLATFORM_LINUX)
-#define LIBDXCOMPILER "libdxcompiler.so"
-        HMODULE dxcompiler = wiLoadLibrary("./" LIBDXCOMPILER);
-#endif
-		if(dxcompiler != nullptr)
-		{
-			DxcCreateInstance = (DxcCreateInstanceProc)wiGetProcAddress(dxcompiler, "DxcCreateInstance");
-			if (DxcCreateInstance != nullptr)
-			{
-				HRESULT hr = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils));
-				assert(SUCCEEDED(hr));
-				hr = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&dxcCompiler));
-				assert(SUCCEEDED(hr));
-				hr = dxcUtils->CreateDefaultIncludeHandler(&dxcIncludeHandler);
-				assert(SUCCEEDED(hr));
-				wi::backlog::post("wi::shadercompiler: loaded " LIBDXCOMPILER);
-			}
-		}
-		else
-		{
-            wi::backlog::post("wi::shadercompiler: could not load library " LIBDXCOMPILER);
-        }
-#endif // SHADERCOMPILER_ENABLED_DXCOMPILER
-
-#ifdef SHADERCOMPILER_ENABLED_D3DCOMPILER
-		if (D3DCompile != nullptr)
-		{
-			return; // already initialized
-		}
-
-		HMODULE d3dcompiler = wiLoadLibrary("d3dcompiler_47.dll");
-		if(d3dcompiler != nullptr)
-		{
-			D3DCompile = (PFN_D3DCOMPILE)wiGetProcAddress(d3dcompiler, "D3DCompile");
-			if (D3DCompile != nullptr)
-			{
-				wi::backlog::post("wi::shadercompiler: loaded d3dcompiler_47.dll");
-			}
-		}
-#endif // SHADERCOMPILER_ENABLED_D3DCOMPILER
-
-	}
-
 	void Compile(const CompilerInput& input, CompilerOutput& output)
 	{
 		output = CompilerOutput();
@@ -659,7 +674,7 @@ namespace wi::shadercompiler
 #endif // SHADERCOMPILER_ENABLED
 	}
 
-	static constexpr const char* shadermetaextension = "wishadermeta";
+	constexpr const char* shadermetaextension = "wishadermeta";
 	bool SaveShaderAndMetadata(const std::string& shaderfilename, const CompilerOutput& output)
 	{
 #ifdef SHADERCOMPILER_ENABLED

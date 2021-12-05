@@ -103,15 +103,16 @@ namespace wi::jobsystem
 
 			for (uint32_t threadID = 0; threadID < numThreads; ++threadID)
 			{
-				std::thread worker([=] { // copy the shared_ptr<WorkerState>, so it will remain alive for the thread's lifetime
+				std::thread worker([&] { 
 
-					while (worker_state->alive.load())
+					std::shared_ptr<WorkerState> current_worker_state = worker_state; // copy the shared_ptr<WorkerState>, so it will remain alive for the thread's lifetime
+					while (current_worker_state->alive.load())
 					{
 						if (!work())
 						{
 							// no job, put thread to sleep
-							std::unique_lock<std::mutex> lock(worker_state->wakeMutex);
-							worker_state->wakeCondition.wait(lock);
+							std::unique_lock<std::mutex> lock(current_worker_state->wakeMutex);
+							current_worker_state->wakeCondition.wait(lock);
 						}
 					}
 
@@ -166,13 +167,18 @@ namespace wi::jobsystem
 			worker_state->alive.store(false);
 			worker_state->wakeCondition.notify_all(); // wakes up sleeping worker threads
 		}
-	} internal_state;
+	};
+	inline InternalState& jobsystem_internal()
+	{
+		static InternalState internal_state;
+		return internal_state;
+	}
 
 	// This function executes the next item from the job queue. Returns true if successful, false if there was no job available
 	bool work()
 	{
 		Job job;
-		if (internal_state.jobQueue.pop_front(job))
+		if (jobsystem_internal().jobQueue.pop_front(job))
 		{
 			JobArgs args;
 			args.groupID = job.groupID;
@@ -206,7 +212,7 @@ namespace wi::jobsystem
 
 	uint32_t GetThreadCount()
 	{
-		return internal_state.numThreads;
+		return jobsystem_internal().numThreads;
 	}
 
 	void Execute(context& ctx, const std::function<void(JobArgs)>& task)
@@ -223,10 +229,10 @@ namespace wi::jobsystem
 		job.sharedmemory_size = 0;
 
 		// Try to push a new job until it is pushed successfully:
-		while (!internal_state.jobQueue.push_back(job)) { internal_state.worker_state->wakeCondition.notify_all(); work(); }
+		while (!jobsystem_internal().jobQueue.push_back(job)) { jobsystem_internal().worker_state->wakeCondition.notify_all(); work(); }
 
 		// Wake any one thread that might be sleeping:
-		internal_state.worker_state->wakeCondition.notify_one();
+		jobsystem_internal().worker_state->wakeCondition.notify_one();
 	}
 
 	void Dispatch(context& ctx, uint32_t jobCount, uint32_t groupSize, const std::function<void(JobArgs)>& task, size_t sharedmemory_size)
@@ -254,11 +260,11 @@ namespace wi::jobsystem
 			job.groupJobEnd = std::min(job.groupJobOffset + groupSize, jobCount);
 
 			// Try to push a new job until it is pushed successfully:
-			while (!internal_state.jobQueue.push_back(job)) { internal_state.worker_state->wakeCondition.notify_all(); work(); }
+			while (!jobsystem_internal().jobQueue.push_back(job)) { jobsystem_internal().worker_state->wakeCondition.notify_all(); work(); }
 		}
 
 		// Wake any threads that might be sleeping:
-		internal_state.worker_state->wakeCondition.notify_all();
+		jobsystem_internal().worker_state->wakeCondition.notify_all();
 	}
 
 	uint32_t DispatchGroupCount(uint32_t jobCount, uint32_t groupSize)
@@ -276,7 +282,7 @@ namespace wi::jobsystem
 	void Wait(const context& ctx)
 	{
 		// Wake any threads that might be sleeping:
-		internal_state.worker_state->wakeCondition.notify_all();
+		jobsystem_internal().worker_state->wakeCondition.notify_all();
 
 		// Waiting will also put the current thread to good use by working on an other job if it can:
 		while (IsBusy(ctx)) { work(); }
