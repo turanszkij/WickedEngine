@@ -2257,8 +2257,10 @@ using namespace vulkan_internal;
 			wi::vector<const char *> extensionNames_sdl(extensionCount);
 			SDL_Vulkan_GetInstanceExtensions(window, &extensionCount, extensionNames_sdl.data());
 			instanceExtensions.reserve(instanceExtensions.size() + extensionNames_sdl.size());
-			instanceExtensions.insert(instanceExtensions.begin(),
-					extensionNames_sdl.cbegin(), extensionNames_sdl.cend());
+			for (auto& x : extensionNames_sdl)
+			{
+				instanceExtensions.push_back(x);
+			}
 		}
 #endif // _WIN32
 		
