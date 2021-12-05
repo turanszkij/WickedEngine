@@ -34,6 +34,7 @@ extern basist::etc1_global_selector_codebook g_basis_global_codebook;
 #endif // PLATFORM_UWP
 #else
 #include "Utility/portable-file-dialogs.h"
+#include <vector>
 #endif // _WIN32
 
 
@@ -898,7 +899,7 @@ namespace wi::helper
 			std::cerr << message << std::endl;
 		}
 
-		wi::vector<std::string> extensions = {params.description, ""};
+		std::vector<std::string> extensions = {params.description, ""};
 		for (auto& x : params.extensions)
 		{
 			extensions[1] += "*." + x + " ";
@@ -906,7 +907,7 @@ namespace wi::helper
 
 		switch (params.type) {
 			case FileDialogParams::OPEN: {
-				wi::vector<std::string> selection = pfd::open_file(
+				std::vector<std::string> selection = pfd::open_file(
 					"Open file",
 					std::filesystem::current_path().string(),
 					extensions
