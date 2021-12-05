@@ -96,15 +96,15 @@ namespace wi::jobsystem
 #endif
 		std::shared_ptr<WorkerState> worker_state = std::make_shared<WorkerState>(); // kept alive by both threads and internal_state
 		ThreadSafeRingBuffer<Job, 256> jobQueue;
+
 		InternalState()
 		{
 			wi::Timer timer;
 
-			for (uint32_t threadID = 0; threadID < internal_state.numThreads; ++threadID)
+			for (uint32_t threadID = 0; threadID < numThreads; ++threadID)
 			{
-				std::thread worker([] {
+				std::thread worker([=] { // copy the shared_ptr<WorkerState>, so it will remain alive for the thread's lifetime
 
-					std::shared_ptr<WorkerState> worker_state = internal_state.worker_state; // this is a copy of shared_ptr<WorkerState>, so it will remain alive for the thread's lifetime
 					while (worker_state->alive.load())
 					{
 						if (!work())
@@ -159,14 +159,14 @@ namespace wi::jobsystem
 				worker.detach();
 			}
 
-			wi::backlog::post("wi::jobsystem Initialized with [" + std::to_string(internal_state.numCores) + " cores] [" + std::to_string(internal_state.numThreads) + " threads] (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
+			wi::backlog::post("wi::jobsystem Initialized with [" + std::to_string(numCores) + " cores] [" + std::to_string(numThreads) + " threads] (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 		}
 		~InternalState()
 		{
 			worker_state->alive.store(false);
 			worker_state->wakeCondition.notify_all(); // wakes up sleeping worker threads
 		}
-	} static internal_state;
+	} internal_state;
 
 	// This function executes the next item from the job queue. Returns true if successful, false if there was no job available
 	bool work()
