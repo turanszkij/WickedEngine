@@ -83,7 +83,11 @@ namespace wi
 		{
 			if (amount > m_capacity)
 			{
-				data_allocate(amount);
+				T* old_data = data_allocate(amount);
+				if (old_data != nullptr)
+				{
+					std::free(old_data);
+				}
 			}
 		}
 		inline void resize(size_t amount)
@@ -112,16 +116,32 @@ namespace wi
 		{
 			if (m_capacity > m_size)
 			{
-				data_allocate(m_size);
+				T* old_data = data_allocate(m_size);
+				if (old_data != nullptr)
+				{
+					std::free(old_data);
+				}
 			}
 		}
 
 		template<typename... ARG>
 		inline T& emplace_back(ARG&&... args)
 		{
-			grow(1);
+			T* old_data = nullptr;
+			const size_t required_capacity = m_size + 1;
+			if (required_capacity > m_capacity)
+			{
+				old_data = data_allocate(required_capacity * 2); // *2: faster grow rate
+			}
 			T* ptr = new (m_data + m_size) T(std::forward<ARG>(args)...);
 			m_size++;
+
+			// Iterator invalidation can only happen after the new item was constructed,
+			//	because the call stack might still contain references to the old data
+			if (old_data != nullptr)
+			{
+				std::free(old_data);
+			}
 			return *ptr;
 		}
 		inline void push_back(const T& item)
@@ -222,7 +242,10 @@ namespace wi
 		}
 
 	private:
-		inline void data_allocate(size_t amount)
+		// returns old data ptr if allocation happened. It needs to be freed.
+		//	This function must not free it, as iterator invalidation can't happen yet.
+		//	References to the old data could be still on current call stack.
+		inline T* data_allocate(size_t amount)
 		{
 			if (amount > m_size) // allocation must always fit all existing items
 			{
@@ -230,17 +253,15 @@ namespace wi
 				// We don't use new[] because we don't want to construct every item in the capacity
 				//	Instead, placement new is used when a new object is created in the container
 				//	Placement new is also used to realloc existing items when reservation grows
-				T* newData = (T*)std::malloc(sizeof(T) * m_capacity);
+				T* allocation = (T*)std::malloc(sizeof(T) * m_capacity);
 				for (size_t i = 0; i < m_size; ++i)
 				{
-					new (newData + i) T(std::move(m_data[i]));
+					new (allocation + i) T(std::move(m_data[i]));
 				}
-				if (m_data != nullptr)
-				{
-					std::free(m_data);
-				}
-				m_data = newData;
+				std::swap(m_data, allocation);
+				return allocation;
 			}
+			return nullptr;
 		}
 		inline void copy_from(const vector<T>& other)
 		{
@@ -263,14 +284,6 @@ namespace wi
 			other.m_data = nullptr;
 			other.m_size = 0;
 			other.m_capacity = 0;
-		}
-		inline void grow(size_t amount)
-		{
-			const size_t required_capacity = m_size + amount;
-			if (required_capacity > m_capacity)
-			{
-				data_allocate(required_capacity * 2); // *2: faster grow rate
-			}
 		}
 
 		T* m_data = nullptr;
