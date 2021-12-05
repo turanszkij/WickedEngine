@@ -79,9 +79,22 @@ namespace tinygltf
 #endif
 	}
 
-	bool ReadWholeFile(wi::vector<unsigned char>* out, std::string* err,
+	bool ReadWholeFile(std::vector<unsigned char>* out, std::string* err,
 		const std::string& filepath, void*) {
+#if WI_VECTOR_TYPE == 1
+		// If we have custom wi::vector implementation, we need to copy to std::vector:
+		wi::vector<uint8_t> filedata;
+		bool success = wi::helper::FileRead(filepath, filedata);
+		if (success)
+		{
+			out->resize(filedata.size());
+			std::memcpy(out->data(), filedata.data(), filedata.size());
+		}
+		return success;
+#else
+		// If wi::vector == std::vector, we can just use it as is:
 		return wi::helper::FileRead(filepath, *out);
+#endif // WI_VECTOR_TYPE
 	}
 
 	bool WriteWholeFile(std::string* err, const std::string& filepath,

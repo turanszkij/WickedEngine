@@ -577,7 +577,7 @@ void WeatherWindow::Create(EditorComponent* editor)
 		wi::jobsystem::context ctx;
 		for (auto& x : conv)
 		{
-			std::vector<uint8_t> filedata;
+			wi::vector<uint8_t> filedata;
 			if (wi::helper::saveTextureToMemory(x.second.GetTexture(), filedata))
 			{
 				x.second.SetFileData(std::move(filedata));

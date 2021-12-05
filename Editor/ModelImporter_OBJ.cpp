@@ -27,7 +27,7 @@ public:
 		: m_mtlBaseDir(mtl_basedir) {}
 	virtual ~MaterialFileReader() {}
 	virtual bool operator()(const std::string& matId,
-		wi::vector<tinyobj::material_t>* materials,
+		std::vector<tinyobj::material_t>* materials,
 		std::map<std::string, int>* matMap, std::string* err)
 	{
 		std::string filepath;
@@ -78,8 +78,8 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 	std::string name = wi::helper::GetFileNameFromPath(fileName);
 
 	tinyobj::attrib_t obj_attrib;
-	wi::vector<tinyobj::shape_t> obj_shapes;
-	wi::vector<tinyobj::material_t> obj_materials;
+	std::vector<tinyobj::shape_t> obj_shapes;
+	std::vector<tinyobj::material_t> obj_materials;
 	std::string obj_errors;
 
 	wi::vector<uint8_t> filedata;

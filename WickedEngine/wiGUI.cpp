@@ -115,9 +115,9 @@ namespace wi::gui
 
 		device->EventBegin("GUI", cmd);
 		// Rendering is back to front:
-		for (auto it = widgets.rbegin(); it != widgets.rend(); ++it)
+		for (size_t i = 0; i < widgets.size(); ++i)
 		{
-			const Widget* widget = (*it);
+			const Widget* widget = widgets[widgets.size() - i - 1];
 			device->BindScissorRects(1, &scissorRect, cmd);
 			widget->Render(canvas, cmd);
 		}
@@ -1960,9 +1960,9 @@ namespace wi::gui
 			sprites[state].Draw(cmd);
 		}
 
-		for (auto it = widgets.rbegin(); it != widgets.rend(); ++it)
+		for (size_t i = 0; i < widgets.size(); ++i)
 		{
-			const Widget* widget = (*it);
+			const Widget* widget = widgets[widgets.size() - i - 1];
 			ApplyScissor(canvas, scissorRect, cmd);
 			widget->Render(canvas, cmd);
 		}

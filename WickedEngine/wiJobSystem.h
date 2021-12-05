@@ -15,8 +15,6 @@ namespace wi::jobsystem
 		void* sharedmemory;		// stack memory shared within the current group (jobs within a group execute serially)
 	};
 
-	void Initialize();
-
 	uint32_t GetThreadCount();
 
 	// Defines a state of execution, can be waited on

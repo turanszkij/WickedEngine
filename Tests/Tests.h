@@ -16,7 +16,7 @@ public:
 	void RunFontTest();
 	void RunSpriteTest();
 	void RunNetworkTest();
-	void RunUnorderedMapTest();
+	void ContainerTest();
 };
 
 class Tests : public wi::Application

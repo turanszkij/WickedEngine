@@ -28,7 +28,6 @@ namespace wi::initializer
 		ss += "\n";
 		wi::backlog::post(ss);
 
-		wi::jobsystem::Initialize();
 		wi::shadercompiler::Initialize();
 
 		size_t shaderdump_count = wi::renderer::GetShaderDumpCount();

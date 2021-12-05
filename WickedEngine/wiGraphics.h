@@ -980,10 +980,10 @@ namespace wi::graphics
 			PROCEDURAL,
 		} type = Type::TRIANGLES;
 		std::string name;
-		uint32_t general_shader = ~0;
-		uint32_t closest_hit_shader = ~0;
-		uint32_t any_hit_shader = ~0;
-		uint32_t intersection_shader = ~0;
+		uint32_t general_shader = ~0u;
+		uint32_t closest_hit_shader = ~0u;
+		uint32_t any_hit_shader = ~0u;
+		uint32_t intersection_shader = ~0u;
 	};
 	struct RaytracingPipelineStateDesc
 	{
