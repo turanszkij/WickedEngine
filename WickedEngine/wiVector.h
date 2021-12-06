@@ -9,7 +9,6 @@
 #if WI_VECTOR_TYPE == 1
 #include <cassert>
 #include <cstdint>
-#include <cstdlib>
 #include <memory>
 #include <utility>
 #include <initializer_list>
@@ -52,13 +51,11 @@ namespace wi
 		}
 		inline ~vector()
 		{
-			clear();
+			clear(); // need to destroy objects, not just deallocate!
 			if (m_data != nullptr)
 			{
-				allocator.deallocate(m_data, m_capacity);
+				m_allocator.deallocate(m_data, m_capacity);
 			}
-			m_data = nullptr;
-			m_capacity = 0;
 		}
 		inline vector<T>& operator=(const vector<T>& other)
 		{
@@ -89,7 +86,7 @@ namespace wi
 				T* old_data = data_allocate(amount);
 				if (old_data != nullptr)
 				{
-					allocator.deallocate(old_data, old_capacity);
+					m_allocator.deallocate(old_data, old_capacity);
 				}
 			}
 		}
@@ -123,7 +120,7 @@ namespace wi
 				T* old_data = data_allocate(m_size);
 				if (old_data != nullptr)
 				{
-					allocator.deallocate(old_data, old_capacity);
+					m_allocator.deallocate(old_data, old_capacity);
 				}
 			}
 		}
@@ -138,6 +135,8 @@ namespace wi
 			{
 				old_data = data_allocate(required_capacity * 2); // *2: faster grow rate
 			}
+
+			// Allocation is separate from construction, this will call object constructor:
 			T* ptr = new (m_data + m_size) T(std::forward<ARG>(args)...);
 			m_size++;
 
@@ -145,7 +144,7 @@ namespace wi
 			//	because the call stack might still contain references to the old data
 			if (old_data != nullptr)
 			{
-				allocator.deallocate(old_data, old_capacity);
+				m_allocator.deallocate(old_data, old_capacity);
 			}
 			return *ptr;
 		}
@@ -258,8 +257,7 @@ namespace wi
 				// We don't use new[] because we don't want to construct every item in the capacity
 				//	Instead, placement new is used when a new object is created in the container
 				//	Placement new is also used to realloc existing items when reservation grows
-				T* allocation = allocator.allocate(m_capacity);
-				//T* allocation = (T*)std::malloc(sizeof(T) * m_capacity);
+				T* allocation = m_allocator.allocate(m_capacity);
 				for (size_t i = 0; i < m_size; ++i)
 				{
 					new (allocation + i) T(std::move(m_data[i]));
@@ -282,7 +280,7 @@ namespace wi
 			clear();
 			if (m_data != nullptr)
 			{
-				allocator.deallocate(m_data, m_capacity);
+				m_allocator.deallocate(m_data, m_capacity);
 			}
 			m_capacity = other.m_capacity;
 			m_size = other.m_size;
@@ -295,7 +293,7 @@ namespace wi
 		T* m_data = nullptr;
 		size_t m_size = 0;
 		size_t m_capacity = 0;
-		A allocator;
+		A m_allocator;
 	};
 #endif // WI_VECTOR_TYPE
 }

@@ -986,9 +986,9 @@ void TestsRenderer::ContainerTest()
 		ss += "\n\nstd::vector append: " + std::to_string(timer.elapsed_milliseconds()) + " ms\n";
 
 		timer.record();
-		for (size_t i = 0; i < std_vector.size(); ++i)
+		for (auto& x : std_vector)
 		{
-			std_vector[i].aperture_size = 8;
+			x.aperture_size = 8;
 		}
 		ss += "std::vector access: " + std::to_string(timer.elapsed_milliseconds()) + " ms";
 	}
@@ -1003,9 +1003,9 @@ void TestsRenderer::ContainerTest()
 		ss += "\nwi::vector append: " + std::to_string(timer.elapsed_milliseconds()) + " ms\n";
 
 		timer.record();
-		for (size_t i = 0; i < wi_vector.size(); ++i)
+		for (auto& x : wi_vector)
 		{
-			wi_vector[i].aperture_size = 8;
+			x.aperture_size = 8;
 		}
 		ss += "wi::vector access: " + std::to_string(timer.elapsed_milliseconds()) + " ms";
 	}
