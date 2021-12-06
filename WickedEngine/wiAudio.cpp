@@ -343,15 +343,15 @@ namespace wi::audio
 		instanceinternal->soundinternal = soundinternal;
 
 		XAUDIO2_SEND_DESCRIPTOR SFXSend[] = { 
-			{ XAUDIO2_SEND_USEFILTER, audio_internal()->submixVoices[instance->type] },
-			{ XAUDIO2_SEND_USEFILTER, audio_internal()->reverbSubmix }, // this should be last to enable/disable reverb simply
+			{ XAUDIO2_SEND_USEFILTER, instanceinternal->audio->submixVoices[instance->type] },
+			{ XAUDIO2_SEND_USEFILTER, instanceinternal->audio->reverbSubmix }, // this should be last to enable/disable reverb simply
 		};
 		XAUDIO2_VOICE_SENDS SFXSendList = { 
 			instance->IsEnableReverb() ? arraysize(SFXSend) : 1, 
 			SFXSend 
 		};
 
-		hr = audio_internal()->audioEngine->CreateSourceVoice(&instanceinternal->sourceVoice, &soundinternal->wfx,
+		hr = instanceinternal->audio->audioEngine->CreateSourceVoice(&instanceinternal->sourceVoice, &soundinternal->wfx,
 			0, XAUDIO2_DEFAULT_FREQ_RATIO, NULL, &SFXSendList, NULL);
 		if (FAILED(hr))
 		{
@@ -361,7 +361,7 @@ namespace wi::audio
 
 		instanceinternal->sourceVoice->GetVoiceDetails(&instanceinternal->voiceDetails);
 		
-		instanceinternal->outputMatrix.resize(size_t(instanceinternal->voiceDetails.InputChannels) * size_t(audio_internal()->masteringVoiceDetails.InputChannels));
+		instanceinternal->outputMatrix.resize(size_t(instanceinternal->voiceDetails.InputChannels) * size_t(instanceinternal->audio->masteringVoiceDetails.InputChannels));
 		instanceinternal->channelAzimuths.resize(instanceinternal->voiceDetails.InputChannels);
 		for (size_t i = 0; i < instanceinternal->channelAzimuths.size(); ++i)
 		{
@@ -372,8 +372,8 @@ namespace wi::audio
 		instanceinternal->buffer.pAudioData = soundinternal->audioData.data();
 		instanceinternal->buffer.Flags = XAUDIO2_END_OF_STREAM;
 		instanceinternal->buffer.LoopCount = XAUDIO2_LOOP_INFINITE;
-		instanceinternal->buffer.LoopBegin = UINT32(instance->loop_begin * audio_internal()->masteringVoiceDetails.InputSampleRate);
-		instanceinternal->buffer.LoopLength = UINT32(instance->loop_length * audio_internal()->masteringVoiceDetails.InputSampleRate);
+		instanceinternal->buffer.LoopBegin = UINT32(instance->loop_begin * instanceinternal->audio->masteringVoiceDetails.InputSampleRate);
+		instanceinternal->buffer.LoopLength = UINT32(instance->loop_length * instanceinternal->audio->masteringVoiceDetails.InputSampleRate);
 
 		hr = instanceinternal->sourceVoice->SubmitSourceBuffer(&instanceinternal->buffer);
 		if (FAILED(hr))
@@ -503,10 +503,10 @@ namespace wi::audio
 
 			X3DAUDIO_DSP_SETTINGS settings = {};
 			settings.SrcChannelCount = instanceinternal->voiceDetails.InputChannels;
-			settings.DstChannelCount = audio_internal()->masteringVoiceDetails.InputChannels;
+			settings.DstChannelCount = instanceinternal->audio->masteringVoiceDetails.InputChannels;
 			settings.pMatrixCoefficients = instanceinternal->outputMatrix.data();
 
-			X3DAudioCalculate(audio_internal()->audio3D, &listener, &emitter, flags, &settings);
+			X3DAudioCalculate(instanceinternal->audio->audio3D, &listener, &emitter, flags, &settings);
 
 			HRESULT hr;
 
@@ -514,7 +514,7 @@ namespace wi::audio
 			assert(SUCCEEDED(hr));
 
 			hr = instanceinternal->sourceVoice->SetOutputMatrix(
-				audio_internal()->submixVoices[instance->type],
+				instanceinternal->audio->submixVoices[instance->type],
 				settings.SrcChannelCount, 
 				settings.DstChannelCount, 
 				settings.pMatrixCoefficients
@@ -522,15 +522,15 @@ namespace wi::audio
 			assert(SUCCEEDED(hr));
 			
 			XAUDIO2_FILTER_PARAMETERS FilterParametersDirect = { LowPassFilter, 2.0f * sinf(X3DAUDIO_PI / 6.0f * settings.LPFDirectCoefficient), 1.0f };
-			hr = instanceinternal->sourceVoice->SetOutputFilterParameters(audio_internal()->submixVoices[instance->type], &FilterParametersDirect);
+			hr = instanceinternal->sourceVoice->SetOutputFilterParameters(instanceinternal->audio->submixVoices[instance->type], &FilterParametersDirect);
 			assert(SUCCEEDED(hr));
 
 			if (instance->IsEnableReverb())
 			{
-				hr = instanceinternal->sourceVoice->SetOutputMatrix(audio_internal()->reverbSubmix, settings.SrcChannelCount, 1, &settings.ReverbLevel);
+				hr = instanceinternal->sourceVoice->SetOutputMatrix(instanceinternal->audio->reverbSubmix, settings.SrcChannelCount, 1, &settings.ReverbLevel);
 				assert(SUCCEEDED(hr));
 				XAUDIO2_FILTER_PARAMETERS FilterParametersReverb = { LowPassFilter, 2.0f * sinf(X3DAUDIO_PI / 6.0f * settings.LPFReverbCoefficient), 1.0f };
-				hr = instanceinternal->sourceVoice->SetOutputFilterParameters(audio_internal()->reverbSubmix, &FilterParametersReverb);
+				hr = instanceinternal->sourceVoice->SetOutputFilterParameters(instanceinternal->audio->reverbSubmix, &FilterParametersReverb);
 				assert(SUCCEEDED(hr));
 			}
 		}
@@ -605,6 +605,8 @@ namespace wi::audio
 		FAudioSubmixVoice* reverbSubmix = nullptr;
 
 		AudioInternal(){
+			wi::Timer timer;
+
 			uint32_t res;
 			res = FAudioCreate(&audioEngine, 0, FAUDIO_DEFAULT_PROCESSOR);
 			assert(res == 0);
@@ -653,6 +655,11 @@ namespace wi::audio
 					nullptr, 
 					&effectChain);
 			}
+
+			if (success)
+			{
+				wi::backlog::post("wi::audio Initialized [FAudio] (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
+			}
 		}
 		~AudioInternal(){
 			if(reverbSubmix != nullptr)
@@ -695,16 +702,6 @@ namespace wi::audio
 		}
 	};
 
-	void Initialize() {
-		wi::Timer timer;
-
-		audio = std::make_shared<AudioInternal>();
-
-		if (audio_internal()->success)
-		{
-			wi::backlog::post("wi::audio Initialized [FAudio] (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
-		}
-	}
 	SoundInternal* to_internal(const Sound* param)
 	{
 		return static_cast<SoundInternal*>(param->internal_state.get());
@@ -775,7 +772,7 @@ namespace wi::audio
 	}
 	bool CreateSound(const uint8_t* data, size_t size, Sound* sound) {
 		std::shared_ptr<SoundInternal> soundinternal = std::make_shared<SoundInternal>();
-		soundinternal->audio = audio;
+		soundinternal->audio = audio_internal();
 		sound->internal_state = soundinternal;
 
 		uint32_t dwChunkSize;
@@ -850,12 +847,12 @@ namespace wi::audio
 		std::shared_ptr<SoundInstanceInternal> instanceinternal = std::make_shared<SoundInstanceInternal>();
 		instance->internal_state = instanceinternal;
 
-		instanceinternal->audio = audio;
+		instanceinternal->audio = audio_internal();
 		instanceinternal->soundinternal = soundinternal;
 
 		FAudioSendDescriptor SFXSend[] = {
-			{ FAUDIO_SEND_USEFILTER, audio_internal()->submixVoices[instance->type] },
-			{ FAUDIO_SEND_USEFILTER, audio_internal()->reverbSubmix }, // this should be last to enable/disable reverb simply
+			{ FAUDIO_SEND_USEFILTER, instanceinternal->audio->submixVoices[instance->type] },
+			{ FAUDIO_SEND_USEFILTER, instanceinternal->audio->reverbSubmix }, // this should be last to enable/disable reverb simply
 		};
 
 		FAudioVoiceSends SFXSendList = {
@@ -863,7 +860,7 @@ namespace wi::audio
 			SFXSend
 		};
 		
-		res = FAudio_CreateSourceVoice(instanceinternal->audio_internal()->audioEngine, &instanceinternal->sourceVoice, &soundinternal->wfx,
+		res = FAudio_CreateSourceVoice(instanceinternal->audio->audioEngine, &instanceinternal->sourceVoice, &soundinternal->wfx,
 			0, FAUDIO_DEFAULT_FREQ_RATIO, NULL, &SFXSendList, NULL);
 		if(res != 0){
 			assert(0);
@@ -871,7 +868,7 @@ namespace wi::audio
 		}
 
 		FAudioVoice_GetVoiceDetails(instanceinternal->sourceVoice, &instanceinternal->voiceDetails);
-		instanceinternal->outputMatrix.resize(size_t(instanceinternal->voiceDetails.InputChannels) * size_t(audio_internal()->masteringVoiceDetails.InputChannels));
+		instanceinternal->outputMatrix.resize(size_t(instanceinternal->voiceDetails.InputChannels) * size_t(instanceinternal->audio->masteringVoiceDetails.InputChannels));
 		instanceinternal->channelAzimuths.resize(instanceinternal->voiceDetails.InputChannels);
 		for (size_t i = 0; i < instanceinternal->channelAzimuths.size(); ++i)
 		{
@@ -882,8 +879,8 @@ namespace wi::audio
 		instanceinternal->buffer.pAudioData = soundinternal->audioData.data();
 		instanceinternal->buffer.Flags = FAUDIO_END_OF_STREAM;
 		instanceinternal->buffer.LoopCount = FAUDIO_LOOP_INFINITE;
-		instanceinternal->buffer.LoopBegin = uint32_t(instance->loop_begin * audio_internal()->masteringVoiceDetails.InputSampleRate);
-		instanceinternal->buffer.LoopLength = uint32_t(instance->loop_length * audio_internal()->masteringVoiceDetails.InputSampleRate);
+		instanceinternal->buffer.LoopBegin = uint32_t(instance->loop_begin * instanceinternal->audio->masteringVoiceDetails.InputSampleRate);
+		instanceinternal->buffer.LoopLength = uint32_t(instance->loop_length * instanceinternal->audio->masteringVoiceDetails.InputSampleRate);
 
 		res = FAudioSourceVoice_SubmitSourceBuffer(instanceinternal->sourceVoice, &(instanceinternal->buffer), nullptr);
 		if(res != 0){
@@ -994,10 +991,10 @@ namespace wi::audio
 
 			F3DAUDIO_DSP_SETTINGS settings = {};
 			settings.SrcChannelCount = instanceinternal->voiceDetails.InputChannels;
-			settings.DstChannelCount = audio_internal()->masteringVoiceDetails.InputChannels;
+			settings.DstChannelCount = instanceinternal->audio->masteringVoiceDetails.InputChannels;
 			settings.pMatrixCoefficients = instanceinternal->outputMatrix.data();
 
-			F3DAudioCalculate(audio_internal()->audio3D, &listener, &emitter, flags, &settings);
+			F3DAudioCalculate(instanceinternal->audio->audio3D, &listener, &emitter, flags, &settings);
 
 			uint32_t res;
 
@@ -1006,7 +1003,7 @@ namespace wi::audio
 
 			res = FAudioVoice_SetOutputMatrix(
 				instanceinternal->sourceVoice, 
-				audio_internal()->submixVoices[instance->type],
+				instanceinternal->audio->submixVoices[instance->type],
 				settings.SrcChannelCount, 
 				settings.DstChannelCount, 
 				settings.pMatrixCoefficients, 
@@ -1014,14 +1011,14 @@ namespace wi::audio
 			assert(res == 0);
 
 			FAudioFilterParameters FilterParametersDirect = { FAudioLowPassFilter, 2.0f * sinf(F3DAUDIO_PI / 6.0f * settings.LPFDirectCoefficient), 1.0f };
-			res = FAudioVoice_SetOutputFilterParameters(instanceinternal->sourceVoice, audio_internal()->submixVoices[instance->type], &FilterParametersDirect, FAUDIO_COMMIT_NOW);
+			res = FAudioVoice_SetOutputFilterParameters(instanceinternal->sourceVoice, instanceinternal->audio->submixVoices[instance->type], &FilterParametersDirect, FAUDIO_COMMIT_NOW);
 			assert(res == 0);
 
 			if(instance->IsEnableReverb()){
-				res = FAudioVoice_SetOutputMatrix(instanceinternal->sourceVoice, audio_internal()->reverbSubmix, settings.SrcChannelCount, 1, &settings.ReverbLevel, FAUDIO_COMMIT_NOW);
+				res = FAudioVoice_SetOutputMatrix(instanceinternal->sourceVoice, instanceinternal->audio->reverbSubmix, settings.SrcChannelCount, 1, &settings.ReverbLevel, FAUDIO_COMMIT_NOW);
 				assert(res == 0);
 				FAudioFilterParameters FilterParametersReverb = { FAudioLowPassFilter, 2.0f * sinf(F3DAUDIO_PI / 6.0f * settings.LPFReverbCoefficient), 1.0f };
-				res = FAudioVoice_SetOutputFilterParameters(instanceinternal->sourceVoice, audio_internal()->reverbSubmix, &FilterParametersReverb, FAUDIO_COMMIT_NOW);
+				res = FAudioVoice_SetOutputFilterParameters(instanceinternal->sourceVoice, instanceinternal->audio->reverbSubmix, &FilterParametersReverb, FAUDIO_COMMIT_NOW);
 				assert(res == 0);
 			}
 		}
@@ -1039,8 +1036,6 @@ namespace wi::audio
 
 namespace wi::audio
 {
-	void Initialize() {}
-
 	bool CreateSound(const std::string& filename, Sound* sound) { return false; }
 	bool CreateSound(const uint8_t* data, size_t size, Sound* sound) { return false; }
 	bool CreateSoundInstance(const Sound* sound, SoundInstance* instance) { return false; }
