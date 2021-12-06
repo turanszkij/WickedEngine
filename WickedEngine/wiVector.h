@@ -20,7 +20,7 @@
 namespace wi
 {
 #if WI_VECTOR_TYPE == 0
-	template<typename T>
+	template<typename T, typename A = std::allocator<T>>
 	using vector = std::vector<T>;
 #elif WI_VECTOR_TYPE == 1
 	template<typename T, typename A = std::allocator<T>>

@@ -16,12 +16,32 @@ namespace wi::network
 	{
 		WSAData wsadata;
 
+		NetworkInternal()
+		{
+			wi::Timer timer;
+
+			int result;
+
+			result = WSAStartup(MAKEWORD(2, 2), &wsadata);
+			if (result)
+			{
+				int error = WSAGetLastError();
+				wi::backlog::post("wi::network Initialization FAILED with error: " + std::to_string(error));
+				assert(0);
+			}
+
+			wi::backlog::post("wi::network Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
+		}
 		~NetworkInternal()
 		{
 			WSACleanup();
 		}
 	};
-	std::shared_ptr<NetworkInternal> networkinternal;
+	inline std::shared_ptr<NetworkInternal>& network_internal()
+	{
+		static std::shared_ptr<NetworkInternal> internal_state = std::make_shared<NetworkInternal>();
+		return internal_state;
+	}
 
 	struct SocketInternal
 	{
@@ -43,29 +63,10 @@ namespace wi::network
 		return static_cast<SocketInternal*>(param->internal_state.get());
 	}
 
-	void Initialize()
-	{
-		wi::Timer timer;
-
-		int result;
-
-		networkinternal = std::make_shared<NetworkInternal>();
-
-		result = WSAStartup(MAKEWORD(2, 2), &networkinternal->wsadata); 
-		if (result)
-		{
-			int error = WSAGetLastError();
-			wi::backlog::post("wi::network Initialization FAILED with error: " + std::to_string(error));
-			assert(0);
-		}
-
-		wi::backlog::post("wi::network Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
-	}
-
 	bool CreateSocket(Socket* sock)
 	{
 		std::shared_ptr<SocketInternal> socketinternal = std::make_shared<SocketInternal>();
-		socketinternal->networkinternal = networkinternal;
+		socketinternal->networkinternal = network_internal();
 		sock->internal_state = socketinternal;
 
 		socketinternal->handle = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);

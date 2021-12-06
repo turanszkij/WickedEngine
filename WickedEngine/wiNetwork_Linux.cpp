@@ -38,15 +38,6 @@ namespace wi::network
 		return static_cast<SocketInternal*>(param->internal_state.get());
 	}
 
-	void Initialize()
-	{
-		wi::Timer timer;
-
-		int result;
-
-		wi::backlog::post("wi::network_Linux Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
-	}
-
 	bool CreateSocket(Socket* sock)
 	{
 		std::shared_ptr<SocketInternal> socketinternal = std::make_shared<SocketInternal>();

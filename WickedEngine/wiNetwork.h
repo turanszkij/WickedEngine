@@ -19,8 +19,6 @@ namespace wi::network
 		uint16_t port = DEFAULT_PORT;
 	};
 
-	void Initialize();
-
 	// Creates a socket that can be used to send or receive data
 	bool CreateSocket(Socket* sock);
 
