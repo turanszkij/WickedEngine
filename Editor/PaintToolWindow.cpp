@@ -88,6 +88,7 @@ void PaintToolWindow::Create(EditorComponent* editor)
 	infoLabel.SetPos(XMFLOAT2(10, y));
 	infoLabel.SetColor(wi::Color::Transparent());
 	AddWidget(&infoLabel);
+
 	y += infoLabel.GetScale().y - step + 5;
 
 	radiusSlider.Create(1.0f, 500.0f, 50, 10000, "Brush Radius: ");

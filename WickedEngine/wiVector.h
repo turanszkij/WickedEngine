@@ -10,6 +10,7 @@
 #include <cassert>
 #include <cstdint>
 #include <cstdlib>
+#include <memory>
 #include <utility>
 #include <initializer_list>
 #include <new>
@@ -23,9 +24,10 @@ namespace wi
 	template<typename T>
 	using vector = std::vector<T>;
 #elif WI_VECTOR_TYPE == 1
-	template<typename T>
-	struct vector
+	template<typename T, typename A = std::allocator<T>>
+	class vector
 	{
+	public:
 		using value_type = T;
 
 		inline vector(size_t size = 0)
@@ -53,7 +55,7 @@ namespace wi
 			clear();
 			if (m_data != nullptr)
 			{
-				std::free(m_data);
+				allocator.deallocate(m_data, m_capacity);
 			}
 			m_data = nullptr;
 			m_capacity = 0;
@@ -68,12 +70,12 @@ namespace wi
 			move_from(std::move(other));
 			return *this;
 		}
-		constexpr T& operator[](size_t index)
+		constexpr T& operator[](size_t index) noexcept
 		{
 			assert(m_size > 0 && index < m_size);
 			return m_data[index];
 		}
-		constexpr const T& operator[](size_t index) const
+		constexpr const T& operator[](size_t index) const noexcept
 		{
 			assert(m_size > 0 && index < m_size);
 			return m_data[index];
@@ -83,10 +85,11 @@ namespace wi
 		{
 			if (amount > m_capacity)
 			{
+				size_t old_capacity = m_capacity;
 				T* old_data = data_allocate(amount);
 				if (old_data != nullptr)
 				{
-					std::free(old_data);
+					allocator.deallocate(old_data, old_capacity);
 				}
 			}
 		}
@@ -116,10 +119,11 @@ namespace wi
 		{
 			if (m_capacity > m_size)
 			{
+				size_t old_capacity = m_capacity;
 				T* old_data = data_allocate(m_size);
 				if (old_data != nullptr)
 				{
-					std::free(old_data);
+					allocator.deallocate(old_data, old_capacity);
 				}
 			}
 		}
@@ -127,6 +131,7 @@ namespace wi
 		template<typename... ARG>
 		inline T& emplace_back(ARG&&... args)
 		{
+			size_t old_capacity = m_capacity;
 			T* old_data = nullptr;
 			const size_t required_capacity = m_size + 1;
 			if (required_capacity > m_capacity)
@@ -140,7 +145,7 @@ namespace wi
 			//	because the call stack might still contain references to the old data
 			if (old_data != nullptr)
 			{
-				std::free(old_data);
+				allocator.deallocate(old_data, old_capacity);
 			}
 			return *ptr;
 		}
@@ -153,7 +158,7 @@ namespace wi
 			emplace_back(std::move(item));
 		}
 
-		constexpr void clear()
+		constexpr void clear() noexcept
 		{
 			for (size_t i = 0; i < m_size; ++i)
 			{
@@ -161,12 +166,12 @@ namespace wi
 			}
 			m_size = 0;
 		}
-		constexpr void pop_back()
+		constexpr void pop_back() noexcept
 		{
 			assert(m_size > 0);
 			m_data[--m_size].~T();
 		}
-		constexpr void erase(T* pos)
+		constexpr void erase(T* pos) noexcept
 		{
 			assert(pos >= begin());
 			assert(pos < end());
@@ -178,65 +183,65 @@ namespace wi
 			pop_back();
 		}
 
-		constexpr T& back()
+		constexpr T& back() noexcept
 		{
 			assert(m_size > 0);
 			return m_data[m_size - 1];
 		}
-		constexpr const T& back() const
+		constexpr const T& back() const noexcept
 		{
 			assert(m_size > 0);
 			return m_data[m_size - 1];
 		}
-		constexpr T& front()
+		constexpr T& front() noexcept
 		{
 			assert(m_size > 0);
 			return m_data[0];
 		}
-		constexpr const T& front() const
+		constexpr const T& front() const noexcept
 		{
 			assert(m_size > 0);
 			return m_data[0];
 		}
-		constexpr T* data()
+		constexpr T* data() noexcept
 		{
 			return m_data;
 		}
-		constexpr const T* data() const
+		constexpr const T* data() const noexcept
 		{
 			return m_data;
 		}
-		constexpr T& at(size_t index)
+		constexpr T& at(size_t index) noexcept
 		{
 			assert(m_size > 0 && index < m_size);
 			return m_data[index];
 		}
-		constexpr const T& at(size_t index) const
+		constexpr const T& at(size_t index) const noexcept
 		{
 			assert(m_size > 0 && index < m_size);
 			return m_data[index];
 		}
-		constexpr size_t size() const
+		constexpr size_t size() const noexcept
 		{
 			return m_size;
 		}
-		constexpr bool empty() const
+		constexpr bool empty() const noexcept
 		{
 			return m_size == 0;
 		}
-		constexpr T* begin()
+		constexpr T* begin() noexcept
 		{
 			return m_data;
 		}
-		constexpr const T* begin() const
+		constexpr const T* begin() const noexcept
 		{
 			return m_data;
 		}
-		constexpr T* end()
+		constexpr T* end() noexcept
 		{
 			return m_data + m_size;
 		}
-		constexpr const T* end() const
+		constexpr const T* end() const noexcept
 		{
 			return m_data + m_size;
 		}
@@ -253,7 +258,8 @@ namespace wi
 				// We don't use new[] because we don't want to construct every item in the capacity
 				//	Instead, placement new is used when a new object is created in the container
 				//	Placement new is also used to realloc existing items when reservation grows
-				T* allocation = (T*)std::malloc(sizeof(T) * m_capacity);
+				T* allocation = allocator.allocate(m_capacity);
+				//T* allocation = (T*)std::malloc(sizeof(T) * m_capacity);
 				for (size_t i = 0; i < m_size; ++i)
 				{
 					new (allocation + i) T(std::move(m_data[i]));
@@ -276,7 +282,7 @@ namespace wi
 			clear();
 			if (m_data != nullptr)
 			{
-				std::free(m_data);
+				allocator.deallocate(m_data, m_capacity);
 			}
 			m_capacity = other.m_capacity;
 			m_size = other.m_size;
@@ -289,6 +295,7 @@ namespace wi
 		T* m_data = nullptr;
 		size_t m_size = 0;
 		size_t m_capacity = 0;
+		A allocator;
 	};
 #endif // WI_VECTOR_TYPE
 }

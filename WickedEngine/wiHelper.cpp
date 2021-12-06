@@ -17,6 +17,7 @@ extern basist::etc1_global_selector_codebook g_basis_global_codebook;
 #include <sstream>
 #include <codecvt> // string conversion
 #include <filesystem>
+#include <vector>
 
 #ifdef _WIN32
 #include <direct.h>
@@ -34,7 +35,6 @@ extern basist::etc1_global_selector_codebook g_basis_global_codebook;
 #endif // PLATFORM_UWP
 #else
 #include "Utility/portable-file-dialogs.h"
-#include <vector>
 #endif // _WIN32
 
 
@@ -569,7 +569,8 @@ namespace wi::helper
 		std::filesystem::create_directories(path);
 	}
 
-	bool FileRead(const std::string& fileName, wi::vector<uint8_t>& data)
+	template<template<typename T, typename A> typename vector_interface>
+	bool FileRead_Impl(const std::string& fileName, vector_interface<uint8_t, std::allocator<uint8_t>>& data)
 	{
 #ifndef PLATFORM_UWP
 #ifdef SDL_FILESYSTEM_UNIX
@@ -645,6 +646,16 @@ namespace wi::helper
 		wi::backlog::post("File not found: " + fileName);
 		return false;
 	}
+	bool FileRead(const std::string& fileName, wi::vector<uint8_t>& data)
+	{
+		return FileRead_Impl(fileName, data);
+	}
+#if WI_VECTOR_TYPE != 0
+	bool FileRead(const std::string& fileName, std::vector<uint8_t>& data)
+	{
+		return FileRead_Impl(fileName, data);
+	}
+#endif // WI_VECTOR_TYPE
 
 	bool FileWrite(const std::string& fileName, const uint8_t* data, size_t size)
 	{
