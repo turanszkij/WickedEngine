@@ -328,7 +328,7 @@ namespace wi::gui
 	}
 	void Widget::SetText(std::string&& value)
 	{
-		font.SetText(value);
+		font.SetText(std::move(value));
 	}
 	void Widget::SetTooltip(const std::string& value)
 	{
@@ -336,7 +336,7 @@ namespace wi::gui
 	}
 	void Widget::SetTooltip(std::string&& value)
 	{
-		tooltip = value;
+		tooltip = std::move(value);
 	}
 	void Widget::SetScriptTip(const std::string& value)
 	{
@@ -344,7 +344,7 @@ namespace wi::gui
 	}
 	void Widget::SetScriptTip(std::string&& value)
 	{
-		scriptTip = value;
+		scriptTip = std::move(value);
 	}
 	void Widget::SetPos(const XMFLOAT2& value)
 	{

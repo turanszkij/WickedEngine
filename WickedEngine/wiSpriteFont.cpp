@@ -47,7 +47,7 @@ namespace wi
 	}
 	void SpriteFont::SetText(std::wstring&& value)
 	{
-		text = value;
+		text = std::move(value);
 	}
 
 	std::string SpriteFont::GetTextA() const
