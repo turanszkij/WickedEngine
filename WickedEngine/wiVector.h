@@ -3,7 +3,7 @@
 // This file is used to allow replacement of std::vector
 
 #ifndef WI_VECTOR_TYPE
-#define WI_VECTOR_TYPE 1
+#define WI_VECTOR_TYPE 0
 #endif // WI_VECTOR_TYPE
 
 #if WI_VECTOR_TYPE == 1

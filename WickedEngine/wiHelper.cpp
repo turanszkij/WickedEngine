@@ -650,7 +650,7 @@ namespace wi::helper
 	{
 		return FileRead_Impl(fileName, data);
 	}
-#if WI_VECTOR_TYPE != 0
+#if WI_VECTOR_TYPE
 	bool FileRead(const std::string& fileName, std::vector<uint8_t>& data)
 	{
 		return FileRead_Impl(fileName, data);

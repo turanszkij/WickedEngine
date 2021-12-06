@@ -938,8 +938,9 @@ void TestsRenderer::ContainerTest()
 	const size_t elements = 1000000;
 #define shuffle(i) (i * 345734667877) % 98787546343
 
-	std::string ss = "Container test for " + std::to_string(elements) + " elements:";
+	std::string ss = "Container test for " + std::to_string(elements) + " elements:\n";
 
+#if WI_UNORDERED_MAP_TYPE
 	std::unordered_map<size_t, size_t> std_map;
 	{
 		timer.record();
@@ -947,7 +948,7 @@ void TestsRenderer::ContainerTest()
 		{
 			std_map[shuffle(i)] = i;
 		}
-		ss += "\n\nstd::unordered_map insertion: " + std::to_string(timer.elapsed_milliseconds()) + " ms\n";
+		ss += "\nstd::unordered_map insertion: " + std::to_string(timer.elapsed_milliseconds()) + " ms\n";
 
 		timer.record();
 		for (size_t i = 0; i < std_map.size(); ++i)
@@ -971,11 +972,15 @@ void TestsRenderer::ContainerTest()
 		{
 			wi_map[shuffle(i)] = 0;
 		}
-		ss += "wi::unordered_map access: " + std::to_string(timer.elapsed_milliseconds()) + " ms";
+		ss += "wi::unordered_map access: " + std::to_string(timer.elapsed_milliseconds()) + " ms\n";
 	}
+#else
+	ss += "wi::unordered_map implementation uses std::unordered_map. There is nothing to test.";
+#endif // WI_UNORDERED_MAP_TYPE
 
 	ss += "\n";
 
+#if WI_VECTOR_TYPE
 	std::vector<CameraComponent> std_vector;
 	{
 		timer.record();
@@ -983,7 +988,7 @@ void TestsRenderer::ContainerTest()
 		{
 			std_vector.emplace_back();
 		}
-		ss += "\n\nstd::vector append: " + std::to_string(timer.elapsed_milliseconds()) + " ms\n";
+		ss += "\nstd::vector append: " + std::to_string(timer.elapsed_milliseconds()) + " ms\n";
 
 		timer.record();
 		for (auto& x : std_vector)
@@ -1007,8 +1012,11 @@ void TestsRenderer::ContainerTest()
 		{
 			x.aperture_size = 8;
 		}
-		ss += "wi::vector access: " + std::to_string(timer.elapsed_milliseconds()) + " ms";
+		ss += "wi::vector access: " + std::to_string(timer.elapsed_milliseconds()) + " ms\n";
 	}
+#else
+	ss += "wi::vector implementation uses std::vector. There is nothing to test.";
+#endif // WI_VECTOR_TYPE
 
 	static wi::SpriteFont font;
 	font = wi::SpriteFont(ss);

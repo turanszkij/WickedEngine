@@ -6,7 +6,7 @@
 #include <string>
 #include <functional>
 
-#if WI_VECTOR_TYPE != 0
+#if WI_VECTOR_TYPE
 namespace std
 {
 	template < typename, typename > class vector;
@@ -81,7 +81,7 @@ namespace wi::helper
 
 	bool FileRead(const std::string& fileName, wi::vector<uint8_t>& data);
 
-#if WI_VECTOR_TYPE != 0
+#if WI_VECTOR_TYPE
 	// This version is provided if std::vector != wi::vector
 	bool FileRead(const std::string& fileName, std::vector<uint8_t>& data);
 #endif // WI_VECTOR_TYPE
