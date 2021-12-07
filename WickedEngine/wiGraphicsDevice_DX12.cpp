@@ -1340,7 +1340,7 @@ namespace dx12_internal
 				CD3DX12_PIPELINE_STATE_STREAM_GS GS;
 				CD3DX12_PIPELINE_STATE_STREAM_PS PS;
 				CD3DX12_PIPELINE_STATE_STREAM_RASTERIZER RS;
-				CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL DSS;
+				CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL1 DSS;
 				CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC BD;
 				CD3DX12_PIPELINE_STATE_STREAM_PRIMITIVE_TOPOLOGY PT;
 				CD3DX12_PIPELINE_STATE_STREAM_INPUT_LAYOUT IL;
@@ -2582,6 +2582,11 @@ using namespace dx12_internal;
 		if (features.MeshShaderTier() >= D3D12_MESH_SHADER_TIER_1)
 		{
 			capabilities |= GraphicsDeviceCapability::MESH_SHADER;
+		}
+
+		if (features.DepthBoundsTestSupported() == TRUE)
+		{
+			capabilities |= GraphicsDeviceCapability::DEPTH_BOUNDS_TEST;
 		}
 
 		if (features.HighestRootSignatureVersion() < D3D_ROOT_SIGNATURE_VERSION_1_1)
@@ -4384,7 +4389,7 @@ using namespace dx12_internal;
 		stream.stream1.RS = rs;
 
 		DepthStencilState pDepthStencilStateDesc = pso->desc.dss != nullptr ? *pso->desc.dss : DepthStencilState();
-		CD3DX12_DEPTH_STENCIL_DESC dss = {};
+		CD3DX12_DEPTH_STENCIL_DESC1 dss = {};
 		dss.DepthEnable = pDepthStencilStateDesc.depth_enable;
 		dss.DepthWriteMask = _ConvertDepthWriteMask(pDepthStencilStateDesc.depth_write_mask);
 		dss.DepthFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.depth_func);
@@ -4399,6 +4404,14 @@ using namespace dx12_internal;
 		dss.BackFace.StencilFailOp = _ConvertStencilOp(pDepthStencilStateDesc.back_face.stencil_fail_op);
 		dss.BackFace.StencilFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.back_face.stencil_func);
 		dss.BackFace.StencilPassOp = _ConvertStencilOp(pDepthStencilStateDesc.back_face.stencil_pass_op);
+		if (CheckCapability(GraphicsDeviceCapability::DEPTH_BOUNDS_TEST))
+		{
+			dss.DepthBoundsTestEnable = pDepthStencilStateDesc.depth_bounds_test_enable;
+		}
+		else
+		{
+			dss.DepthBoundsTestEnable = FALSE;
+		}
 		stream.stream1.DSS = dss;
 
 		BlendState pBlendStateDesc = pso->desc.bs != nullptr ? *pso->desc.bs : BlendState();
@@ -6177,6 +6190,13 @@ using namespace dx12_internal;
 				}
 			}
 
+		}
+	}
+	void GraphicsDevice_DX12::BindDepthBounds(float min_bounds, float max_bounds, CommandList cmd)
+	{
+		if (CheckCapability(GraphicsDeviceCapability::DEPTH_BOUNDS_TEST))
+		{
+			GetCommandList(cmd)->OMSetDepthBounds(min_bounds, max_bounds);
 		}
 	}
 	void GraphicsDevice_DX12::Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd)

@@ -354,6 +354,7 @@ namespace wi::graphics
 		RAYTRACING = 1 << 9,
 		PREDICATION = 1 << 10,
 		SAMPLER_MINMAX = 1 << 11,
+		DEPTH_BOUNDS_TEST = 1 << 12,
 	};
 
 	enum class ResourceState
@@ -496,6 +497,7 @@ namespace wi::graphics
 		};
 		DepthStencilOp front_face;
 		DepthStencilOp back_face;
+		bool depth_bounds_test_enable = false;
 	};
 
 	struct BlendState
