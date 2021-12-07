@@ -72,7 +72,6 @@ namespace wi
 
 	void Application::Run()
 	{
-
 		if (!initialized)
 		{
 			// Initialize in a lazy way, so the user application doesn't have to call this explicitly

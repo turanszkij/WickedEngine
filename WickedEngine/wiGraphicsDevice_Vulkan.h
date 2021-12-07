@@ -297,6 +297,7 @@ namespace wi::graphics
 		void BindShadingRate(ShadingRate rate, CommandList cmd) override;
 		void BindPipelineState(const PipelineState* pso, CommandList cmd) override;
 		void BindComputeShader(const Shader* cs, CommandList cmd) override;
+		void BindDepthBounds(float min_bounds, float max_bounds, CommandList cmd) override;
 		void Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd) override;
 		void DrawIndexed(uint32_t indexCount, uint32_t startIndexLocation, int32_t baseVertexLocation, CommandList cmd) override;
 		void DrawInstanced(uint32_t vertexCount, uint32_t instanceCount, uint32_t startVertexLocation, uint32_t startInstanceLocation, CommandList cmd) override;
