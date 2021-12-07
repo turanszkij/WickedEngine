@@ -2949,6 +2949,7 @@ using namespace vulkan_internal;
 		pso_dynamicStates.push_back(VK_DYNAMIC_STATE_SCISSOR);
 		pso_dynamicStates.push_back(VK_DYNAMIC_STATE_STENCIL_REFERENCE);
 		pso_dynamicStates.push_back(VK_DYNAMIC_STATE_BLEND_CONSTANTS);
+		pso_dynamicStates.push_back(VK_DYNAMIC_STATE_DEPTH_BOUNDS);
 		if (CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING))
 		{
 			pso_dynamicStates.push_back(VK_DYNAMIC_STATE_FRAGMENT_SHADING_RATE_KHR);
@@ -5989,6 +5990,7 @@ using namespace vulkan_internal;
 
 			float blendConstants[] = { 1,1,1,1 };
 			vkCmdSetBlendConstants(GetCommandList(cmd), blendConstants);
+			vkCmdSetDepthBounds(GetCommandList(cmd), 0.0f, 1.0f);
 		}
 
 		prev_pipeline_hash[cmd] = 0;
@@ -6643,6 +6645,10 @@ using namespace vulkan_internal;
 				}
 			}
 		}
+	}
+	void GraphicsDevice_Vulkan::SetDepthBounds(float min_bounds, float max_bounds, CommandList cmd)
+	{
+		vkCmdSetDepthBounds(GetCommandList(cmd), min_bounds, max_bounds);
 	}
 	void GraphicsDevice_Vulkan::Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd)
 	{

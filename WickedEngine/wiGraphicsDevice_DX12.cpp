@@ -6179,6 +6179,10 @@ using namespace dx12_internal;
 
 		}
 	}
+	void GraphicsDevice_DX12::SetDepthBounds(float min_bounds, float max_bounds, CommandList cmd)
+	{
+		GetCommandList(cmd)->OMSetDepthBounds(min_bounds, max_bounds);
+	}
 	void GraphicsDevice_DX12::Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd)
 	{
 		predraw(cmd);
