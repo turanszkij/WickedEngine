@@ -21,52 +21,60 @@ using namespace wi::graphics;
 
 namespace wi::backlog
 {
-	bool enabled = false;
-	std::deque<std::string> stream;
-	std::deque<std::string> history;
-	const float speed = 4000.0f;
-	const size_t deletefromline = 500;
-	float pos = std::numeric_limits<float>::lowest();
-	float scroll = 0;
-	std::string inputArea;
-	int historyPos = 0;
-	wi::SpriteFont font;
-	wi::SpinLock logLock;
-	Texture backgroundTex;
-	bool refitscroll = false;
-
-	bool locked = false;
-	bool blockLuaExec = false;
-	LogLevel logLevel = LogLevel::Default;
-
-	void write_logfile()
+	struct InternalState
 	{
-		std::string filename = wi::helper::GetTempDirectoryPath() + "wiBacklog.txt";
-		std::string text = getText(); // will lock mutex
-		wi::helper::FileWrite(filename, (const uint8_t*)text.c_str(), text.length());
-	}
+		bool enabled = false;
+		std::deque<std::string> stream;
+		std::deque<std::string> history;
+		const float speed = 4000.0f;
+		const size_t deletefromline = 500;
+		float pos = std::numeric_limits<float>::lowest();
+		float scroll = 0;
+		std::string inputArea;
+		int historyPos = 0;
+		wi::SpriteFont font;
+		wi::SpinLock logLock;
+		Texture backgroundTex;
+		bool refitscroll = false;
 
-	// The logwriter object will automatically write out the backlog to the temp folder when it's destroyed
-	//	Should happen on application exit
-	struct LogWriter
-	{
-		~LogWriter()
+		bool locked = false;
+		bool blockLuaExec = false;
+		LogLevel logLevel = LogLevel::Default;
+
+		// The logwriter object will automatically write out the backlog to the temp folder when it's destroyed
+		//	Should happen on application exit
+		struct LogWriter
 		{
-			write_logfile();
-		}
-	} logwriter;
+			void write_logfile()
+			{
+				std::string filename = wi::helper::GetTempDirectoryPath() + "wiBacklog.txt";
+				std::string text = getText(); // will lock mutex
+				wi::helper::FileWrite(filename, (const uint8_t*)text.c_str(), text.length());
+			}
+
+			~LogWriter()
+			{
+				write_logfile();
+			}
+		} logwriter;
+	};
+	inline InternalState& backlog_internal()
+	{
+		static InternalState internal_state;
+		return internal_state;
+	}
 
 	void Toggle() 
 	{
-		enabled = !enabled;
+		backlog_internal().enabled = !backlog_internal().enabled;
 	}
 	void Scroll(float dir) 
 	{
-		scroll += dir;
+		backlog_internal().scroll += dir;
 	}
 	void Update(const wi::Canvas& canvas, float dt)
 	{
-		if (!locked)
+		if (!backlog_internal().locked)
 		{
 			if (wi::input::Press(wi::input::KEYBOARD_BUTTON_HOME))
 			{
@@ -98,57 +106,57 @@ namespace wi::backlog
 			}
 		}
 
-		if (enabled)
+		if (backlog_internal().enabled)
 		{
-			pos += speed * dt;
+			backlog_internal().pos += backlog_internal().speed * dt;
 		}
 		else
 		{
-			pos -= speed * dt;
+			backlog_internal().pos -= backlog_internal().speed * dt;
 		}
-		pos = wi::math::Clamp(pos, -canvas.GetLogicalHeight(), 0);
+		backlog_internal().pos = wi::math::Clamp(backlog_internal().pos, -canvas.GetLogicalHeight(), 0);
 	}
 	void Draw(const wi::Canvas& canvas, CommandList cmd)
 	{
-		if (pos > -canvas.GetLogicalHeight())
+		if (backlog_internal().pos > -canvas.GetLogicalHeight())
 		{
-			if (!backgroundTex.IsValid())
+			if (!backlog_internal().backgroundTex.IsValid())
 			{
 				const uint8_t colorData[] = { 0, 0, 43, 200, 43, 31, 141, 223 };
-				wi::texturehelper::CreateTexture(backgroundTex, colorData, 1, 2);
+				wi::texturehelper::CreateTexture(backlog_internal().backgroundTex, colorData, 1, 2);
 			}
 
 			wi::image::Params fx = wi::image::Params((float)canvas.GetLogicalWidth(), (float)canvas.GetLogicalHeight());
-			fx.pos = XMFLOAT3(0, pos, 0);
-			fx.opacity = wi::math::Lerp(1, 0, -pos / canvas.GetLogicalHeight());
-			wi::image::Draw(&backgroundTex, fx, cmd);
+			fx.pos = XMFLOAT3(0, backlog_internal().pos, 0);
+			fx.opacity = wi::math::Lerp(1, 0, -backlog_internal().pos / canvas.GetLogicalHeight());
+			wi::image::Draw(&backlog_internal().backgroundTex, fx, cmd);
 
 			wi::font::Params params = wi::font::Params(10, canvas.GetLogicalHeight() - 10, wi::font::WIFONTSIZE_DEFAULT, wi::font::WIFALIGN_LEFT, wi::font::WIFALIGN_BOTTOM);
 			params.h_wrap = canvas.GetLogicalWidth() - params.posX;
 			params.v_align = wi::font::WIFALIGN_BOTTOM;
-			wi::font::Draw(inputArea, params, cmd);
+			wi::font::Draw(backlog_internal().inputArea, params, cmd);
 
-			font.SetText(getText());
-			if (refitscroll)
+			backlog_internal().font.SetText(getText());
+			if (backlog_internal().refitscroll)
 			{
-				refitscroll = false;
-				float textheight = font.TextHeight();
+				backlog_internal().refitscroll = false;
+				float textheight = backlog_internal().font.TextHeight();
 				float limit = canvas.GetLogicalHeight() * 0.9f;
-				if (scroll + textheight > limit)
+				if (backlog_internal().scroll + textheight > limit)
 				{
-					scroll = limit - textheight;
+					backlog_internal().scroll = limit - textheight;
 				}
 			}
-			font.params.posX = 50;
-			font.params.posY = pos + scroll;
-			font.params.h_wrap = canvas.GetLogicalWidth() - font.params.posX;
+			backlog_internal().font.params.posX = 50;
+			backlog_internal().font.params.posY = backlog_internal().pos + backlog_internal().scroll;
+			backlog_internal().font.params.h_wrap = canvas.GetLogicalWidth() - backlog_internal().font.params.posX;
 			Rect rect;
 			rect.left = 0;
 			rect.right = (int32_t)canvas.GetPhysicalWidth();
 			rect.top = 0;
 			rect.bottom = int32_t(canvas.GetPhysicalHeight() * 0.9f);
 			wi::graphics::GetDevice()->BindScissorRects(1, &rect, cmd);
-			font.Draw(cmd);
+			backlog_internal().font.Draw(cmd);
 			rect.left = -std::numeric_limits<int>::max();
 			rect.right = std::numeric_limits<int>::max();
 			rect.top = -std::numeric_limits<int>::max();
@@ -160,9 +168,9 @@ namespace wi::backlog
 
 	std::string getText()
 	{
-		std::scoped_lock lock(logLock);
+		std::scoped_lock lock(backlog_internal().logLock);
 		std::string retval;
-		for (auto& x : stream)
+		for (auto& x : backlog_internal().stream)
 		{
 			retval += x;
 		}
@@ -170,20 +178,20 @@ namespace wi::backlog
 	}
 	void clear() 
 	{
-		std::scoped_lock lock(logLock);
-		stream.clear();
-		scroll = 0;
+		std::scoped_lock lock(backlog_internal().logLock);
+		backlog_internal().stream.clear();
+		backlog_internal().scroll = 0;
 	}
 	void post(const std::string& input, LogLevel level)
 	{
-		if (logLevel > level)
+		if (backlog_internal().logLevel > level)
 		{
 			return;
 		}
 
 		// This is explicitly scoped for scoped_lock!
 		{
-			std::scoped_lock lock(logLock);
+			std::scoped_lock lock(backlog_internal().logLock);
 
 			std::string str;
 			switch (level)
@@ -201,12 +209,12 @@ namespace wi::backlog
 			}
 			str += input;
 			str += '\n';
-			stream.push_back(str);
-			if (stream.size() > deletefromline)
+			backlog_internal().stream.push_back(str);
+			if (backlog_internal().stream.size() > backlog_internal().deletefromline)
 			{
-				stream.pop_front();
+				backlog_internal().stream.pop_front();
 			}
-			refitscroll = true;
+			backlog_internal().refitscroll = true;
 
 #ifdef _WIN32
 			OutputDebugStringA(str.c_str());
@@ -231,103 +239,103 @@ namespace wi::backlog
 
 		if (level >= LogLevel::Error)
 		{
-			write_logfile(); // will lock mutex
+			backlog_internal().logwriter.write_logfile(); // will lock mutex
 		}
 	}
 	void input(const char input) 
 	{
-		std::scoped_lock lock(logLock);
-		inputArea += input;
+		std::scoped_lock lock(backlog_internal().logLock);
+		backlog_internal().inputArea += input;
 	}
 	void acceptInput() 
 	{
-		historyPos = 0;
-		post(inputArea.c_str());
-		history.push_back(inputArea);
-		if (history.size() > deletefromline)
+		backlog_internal().historyPos = 0;
+		post(backlog_internal().inputArea.c_str());
+		backlog_internal().history.push_back(backlog_internal().inputArea);
+		if (backlog_internal().history.size() > backlog_internal().deletefromline)
 		{
-			history.pop_front();
+			backlog_internal().history.pop_front();
 		}
-		if (!blockLuaExec)
+		if (!backlog_internal().blockLuaExec)
 		{
-			wi::lua::RunText(inputArea);
+			wi::lua::RunText(backlog_internal().inputArea);
 		}
 		else
 		{
 			post("Lua execution is disabled", LogLevel::Error);
 		}
-		inputArea.clear();
+		backlog_internal().inputArea.clear();
 	}
 	void deletefromInput() 
 	{
-		std::scoped_lock lock(logLock);
-		if (!inputArea.empty())
+		std::scoped_lock lock(backlog_internal().logLock);
+		if (!backlog_internal().inputArea.empty())
 		{
-			inputArea.pop_back();
+			backlog_internal().inputArea.pop_back();
 		}
 	}
 
 	void historyPrev() 
 	{
-		std::scoped_lock lock(logLock);
-		if (!history.empty()) 
+		std::scoped_lock lock(backlog_internal().logLock);
+		if (!backlog_internal().history.empty())
 		{
-			inputArea = history[history.size() - 1 - historyPos];
-			if ((size_t)historyPos < history.size() - 1)
+			backlog_internal().inputArea = backlog_internal().history[backlog_internal().history.size() - 1 - backlog_internal().historyPos];
+			if ((size_t)backlog_internal().historyPos < backlog_internal().history.size() - 1)
 			{
-				historyPos++;
+				backlog_internal().historyPos++;
 			}
 		}
 	}
 	void historyNext() 
 	{
-		std::scoped_lock lock(logLock);
-		if (!history.empty()) 
+		std::scoped_lock lock(backlog_internal().logLock);
+		if (!backlog_internal().history.empty())
 		{
-			if (historyPos > 0)
+			if (backlog_internal().historyPos > 0)
 			{
-				historyPos--;
+				backlog_internal().historyPos--;
 			}
-			inputArea = history[history.size() - 1 - historyPos];
+			backlog_internal().inputArea = backlog_internal().history[backlog_internal().history.size() - 1 - backlog_internal().historyPos];
 		}
 	}
 
 	void setBackground(Texture* texture)
 	{
-		backgroundTex = *texture;
+		backlog_internal().backgroundTex = *texture;
 	}
 	void setFontSize(int value)
 	{
-		font.params.size = value;
+		backlog_internal().font.params.size = value;
 	}
 	void setFontRowspacing(float value)
 	{
-		font.params.spacingY = value;
+		backlog_internal().font.params.spacingY = value;
 	}
 
-	bool isActive() { return enabled; }
+	bool isActive() { return backlog_internal().enabled; }
 
 	void Lock()
 	{
-		locked = true;
-		enabled = false;
+		backlog_internal().locked = true;
+		backlog_internal().enabled = false;
 	}
 	void Unlock()
 	{
-		locked = false;
+		backlog_internal().locked = false;
 	}
 
 	void BlockLuaExecution()
 	{
-		blockLuaExec = true;
+		backlog_internal().blockLuaExec = true;
 	}
 	void UnblockLuaExecution()
 	{
-		blockLuaExec = false;
+		backlog_internal().blockLuaExec = false;
 	}
 
 	void SetLogLevel(LogLevel newLevel)
 	{
-		logLevel = newLevel;
+		backlog_internal().logLevel = newLevel;
 	}
 }
