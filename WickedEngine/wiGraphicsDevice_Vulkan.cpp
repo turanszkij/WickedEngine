@@ -4749,7 +4749,7 @@ using namespace vulkan_internal;
 			depthstencil.back.failOp = _ConvertStencilOp(pso->desc.dss->back_face.stencil_fail_op);
 			depthstencil.back.depthFailOp = _ConvertStencilOp(pso->desc.dss->back_face.stencil_depth_fail_op);
 
-			depthstencil.depthBoundsTestEnable = VK_FALSE;
+			depthstencil.depthBoundsTestEnable = pso->desc.dss->depth_bounds_test_enable ? VK_TRUE : VK_FALSE;
 		}
 
 		pipelineInfo.pDepthStencilState = &depthstencil;
@@ -6646,7 +6646,7 @@ using namespace vulkan_internal;
 			}
 		}
 	}
-	void GraphicsDevice_Vulkan::SetDepthBounds(float min_bounds, float max_bounds, CommandList cmd)
+	void GraphicsDevice_Vulkan::BindDepthBounds(float min_bounds, float max_bounds, CommandList cmd)
 	{
 		vkCmdSetDepthBounds(GetCommandList(cmd), min_bounds, max_bounds);
 	}

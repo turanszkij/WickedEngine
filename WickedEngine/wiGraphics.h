@@ -496,6 +496,7 @@ namespace wi::graphics
 		};
 		DepthStencilOp front_face;
 		DepthStencilOp back_face;
+		bool depth_bounds_test_enable = false;
 	};
 
 	struct BlendState
