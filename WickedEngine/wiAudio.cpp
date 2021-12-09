@@ -163,10 +163,11 @@ namespace wi::audio
 			CoUninitialize();
 		}
 	};
-	inline std::shared_ptr<AudioInternal>& audio_internal()
+	static std::shared_ptr<AudioInternal> audio_internal;
+
+	void Initialize()
 	{
-		static std::shared_ptr<AudioInternal> internal_state = std::make_shared<AudioInternal>();
-		return internal_state;
+		audio_internal = std::make_shared<AudioInternal>();
 	}
 
 	struct SoundInternal
@@ -263,7 +264,7 @@ namespace wi::audio
 	bool CreateSound(const uint8_t* data, size_t size, Sound* sound)
 	{
 		std::shared_ptr<SoundInternal> soundinternal = std::make_shared<SoundInternal>();
-		soundinternal->audio = audio_internal();
+		soundinternal->audio = audio_internal;
 		sound->internal_state = soundinternal;
 
 		DWORD dwChunkSize;
@@ -339,7 +340,7 @@ namespace wi::audio
 		std::shared_ptr<SoundInstanceInternal> instanceinternal = std::make_shared<SoundInstanceInternal>();
 		instance->internal_state = instanceinternal;
 
-		instanceinternal->audio = audio_internal();
+		instanceinternal->audio = audio_internal;
 		instanceinternal->soundinternal = soundinternal;
 
 		XAUDIO2_SEND_DESCRIPTOR SFXSend[] = { 
@@ -419,7 +420,7 @@ namespace wi::audio
 	{
 		if (instance == nullptr || !instance->IsValid())
 		{
-			HRESULT hr = audio_internal()->masteringVoice->SetVolume(volume);
+			HRESULT hr = audio_internal->masteringVoice->SetVolume(volume);
 			assert(SUCCEEDED(hr));
 		}
 		else
@@ -434,7 +435,7 @@ namespace wi::audio
 		float volume = 0;
 		if (instance == nullptr || !instance->IsValid())
 		{
-			audio_internal()->masteringVoice->GetVolume(&volume);
+			audio_internal->masteringVoice->GetVolume(&volume);
 		}
 		else
 		{
@@ -455,13 +456,13 @@ namespace wi::audio
 
 	void SetSubmixVolume(SUBMIX_TYPE type, float volume)
 	{
-		HRESULT hr = audio_internal()->submixVoices[type]->SetVolume(volume);
+		HRESULT hr = audio_internal->submixVoices[type]->SetVolume(volume);
 		assert(SUCCEEDED(hr));
 	}
 	float GetSubmixVolume(SUBMIX_TYPE type)
 	{
 		float volume;
-		audio_internal()->submixVoices[type]->GetVolume(&volume);
+		audio_internal->submixVoices[type]->GetVolume(&volume);
 		return volume;
 	}
 
@@ -540,7 +541,7 @@ namespace wi::audio
 	{
 		XAUDIO2FX_REVERB_PARAMETERS native;
 		ReverbConvertI3DL2ToNative(&reverbPresets[preset], &native);
-		HRESULT hr = audio_internal()->reverbSubmix->SetEffectParameters(0, &native, sizeof(native));
+		HRESULT hr = audio_internal->reverbSubmix->SetEffectParameters(0, &native, sizeof(native));
 		assert(SUCCEEDED(hr));
 	}
 }
@@ -676,10 +677,11 @@ namespace wi::audio
 			FAudio_StopEngine(audioEngine);
 		}
 	};
-	inline std::shared_ptr<AudioInternal>& audio_internal()
+	static std::shared_ptr<AudioInternal> audio_internal;
+
+	void Initialize()
 	{
-		static std::shared_ptr<AudioInternal> internal_state = std::make_shared<AudioInternal>();
-		return internal_state;
+		audio_internal = std::make_shared<AudioInternal>();
 	}
 
 	struct SoundInternal{
@@ -772,7 +774,7 @@ namespace wi::audio
 	}
 	bool CreateSound(const uint8_t* data, size_t size, Sound* sound) {
 		std::shared_ptr<SoundInternal> soundinternal = std::make_shared<SoundInternal>();
-		soundinternal->audio = audio_internal();
+		soundinternal->audio = audio_internal;
 		sound->internal_state = soundinternal;
 
 		uint32_t dwChunkSize;
@@ -847,7 +849,7 @@ namespace wi::audio
 		std::shared_ptr<SoundInstanceInternal> instanceinternal = std::make_shared<SoundInstanceInternal>();
 		instance->internal_state = instanceinternal;
 
-		instanceinternal->audio = audio_internal();
+		instanceinternal->audio = audio_internal;
 		instanceinternal->soundinternal = soundinternal;
 
 		FAudioSendDescriptor SFXSend[] = {
@@ -918,7 +920,7 @@ namespace wi::audio
 	}
 	void SetVolume(float volume, SoundInstance* instance) {
 		if (instance == nullptr || !instance->IsValid()){
-			uint32_t res = FAudioVoice_SetVolume(audio_internal()->masteringVoice, volume, FAUDIO_COMMIT_NOW);
+			uint32_t res = FAudioVoice_SetVolume(audio_internal->masteringVoice, volume, FAUDIO_COMMIT_NOW);
 			assert(res == 0);
 		}
 		else {
@@ -930,7 +932,7 @@ namespace wi::audio
 	float GetVolume(const SoundInstance* instance) {
 		float volume = 0;
 		if (instance == nullptr || !instance->IsValid()){
-			FAudioVoice_GetVolume(audio_internal()->masteringVoice, &volume);
+			FAudioVoice_GetVolume(audio_internal->masteringVoice, &volume);
 		}
 		else {
 			auto instanceinternal = to_internal(instance);
@@ -947,12 +949,12 @@ namespace wi::audio
 	}
 
 	void SetSubmixVolume(SUBMIX_TYPE type, float volume) {
-		uint32_t res = FAudioVoice_SetVolume(audio_internal()->submixVoices[type], volume, FAUDIO_COMMIT_NOW);
+		uint32_t res = FAudioVoice_SetVolume(audio_internal->submixVoices[type], volume, FAUDIO_COMMIT_NOW);
 		assert(res == 0);
 	}
 	float GetSubmixVolume(SUBMIX_TYPE type) { 
 		float volume;
-		FAudioVoice_GetVolume(audio_internal()->submixVoices[type], &volume);
+		FAudioVoice_GetVolume(audio_internal->submixVoices[type], &volume);
 		return volume; 
 	}
 
@@ -1027,7 +1029,7 @@ namespace wi::audio
 	void SetReverb(REVERB_PRESET preset) {
 		FAudioFXReverbParameters native;
 		ReverbConvertI3DL2ToNative(&reverbPresets[preset], &native);
-		uint32_t res = FAudioVoice_SetEffectParameters(audio_internal()->reverbSubmix, 0, &native, sizeof(native), FAUDIO_COMMIT_NOW);
+		uint32_t res = FAudioVoice_SetEffectParameters(audio_internal->reverbSubmix, 0, &native, sizeof(native), FAUDIO_COMMIT_NOW);
 		assert(res == 0);
 	}
 }

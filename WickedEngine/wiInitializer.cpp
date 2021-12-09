@@ -3,12 +3,14 @@
 
 #include <string>
 #include <thread>
+#include <atomic>
 
 namespace wi::initializer
 {
 	bool initializationStarted = false;
 	wi::jobsystem::context ctx;
 	wi::Timer timer;
+	static std::atomic_bool systems[INITIALIZED_SYSTEM_COUNT]{};
 
 	void InitializeComponentsImmediate()
 	{
@@ -34,20 +36,21 @@ namespace wi::initializer
 		}
 
 		wi::backlog::post("");
-		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::font::Initialize(); });
-		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::image::Initialize(); });
-		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::input::Initialize(); });
-		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::renderer::Initialize(); });
-		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::texturehelper::Initialize(); });
-		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::HairParticleSystem::Initialize(); });
-		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::EmittedParticleSystem::Initialize(); });
-		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::Ocean::Initialize(); });
-		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::gpusortlib::Initialize(); });
-		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::GPUBVH::Initialize(); });
-		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::physics::Initialize(); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::font::Initialize(); systems[INITIALIZED_SYSTEM_FONT].store(true); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::image::Initialize(); systems[INITIALIZED_SYSTEM_IMAGE].store(true); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::input::Initialize(); systems[INITIALIZED_SYSTEM_INPUT].store(true); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::renderer::Initialize(); systems[INITIALIZED_SYSTEM_RENDERER].store(true); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::texturehelper::Initialize(); systems[INITIALIZED_SYSTEM_TEXTUREHELPER].store(true); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::HairParticleSystem::Initialize(); systems[INITIALIZED_SYSTEM_HAIRPARTICLESYSTEM].store(true); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::EmittedParticleSystem::Initialize(); systems[INITIALIZED_SYSTEM_EMITTEDPARTICLESYSTEM].store(true); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::Ocean::Initialize(); systems[INITIALIZED_SYSTEM_OCEAN].store(true); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::gpusortlib::Initialize(); systems[INITIALIZED_SYSTEM_GPUSORTLIB].store(true); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::GPUBVH::Initialize(); systems[INITIALIZED_SYSTEM_GPUBVH].store(true); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::physics::Initialize(); systems[INITIALIZED_SYSTEM_PHYSICS].store(true); });
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::audio::Initialize(); systems[INITIALIZED_SYSTEM_AUDIO].store(true); });
 
 		// Initialize this immediately:
-		wi::lua::Initialize();
+		wi::lua::Initialize(); systems[INITIALIZED_SYSTEM_LUA].store(true);
 
 		std::thread([] {
 			wi::jobsystem::Wait(ctx);
@@ -56,8 +59,15 @@ namespace wi::initializer
 
 	}
 
-	bool IsInitializeFinished()
+	bool IsInitializeFinished(INITIALIZED_SYSTEM system)
 	{
-		return initializationStarted && !wi::jobsystem::IsBusy(ctx);
+		if (system == INITIALIZED_SYSTEM_COUNT)
+		{
+			return initializationStarted && !wi::jobsystem::IsBusy(ctx);
+		}
+		else
+		{
+			return systems[system].load();
+		}
 	}
 }

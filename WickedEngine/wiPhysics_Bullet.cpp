@@ -31,8 +31,8 @@ namespace wi::physics
 	btSoftBodyRigidBodyCollisionConfiguration collisionConfiguration;
 	btDbvtBroadphase overlappingPairCache;
 	btSequentialImpulseConstraintSolver solver;
-	std::unique_ptr<btCollisionDispatcher> dispatcher;
-	std::unique_ptr<btDynamicsWorld> dynamicsWorld;
+	btCollisionDispatcher dispatcher(&collisionConfiguration);
+	btSoftRigidDynamicsWorld dynamicsWorld(&dispatcher, &overlappingPairCache, &solver, &collisionConfiguration);
 
 	class DebugDraw : public btIDebugDraw
 	{
@@ -68,25 +68,19 @@ namespace wi::physics
 	{
 		wi::Timer timer;
 
-		dispatcher = std::make_unique<btCollisionDispatcher>(&collisionConfiguration);
-		dynamicsWorld = std::make_unique<btSoftRigidDynamicsWorld>(dispatcher.get(), &overlappingPairCache, &solver, &collisionConfiguration);
+		dynamicsWorld.getSolverInfo().m_solverMode |= SOLVER_RANDMIZE_ORDER;
+		dynamicsWorld.getDispatchInfo().m_enableSatConvex = true;
+		dynamicsWorld.getSolverInfo().m_splitImpulse = true;
+		dynamicsWorld.setGravity(gravity);
+		dynamicsWorld.setDebugDrawer(&debugDraw);
 
-		dynamicsWorld->getSolverInfo().m_solverMode |= SOLVER_RANDMIZE_ORDER;
-		dynamicsWorld->getDispatchInfo().m_enableSatConvex = true;
-		dynamicsWorld->getSolverInfo().m_splitImpulse = true;
-
-		dynamicsWorld->setGravity(gravity);
-
-		btSoftRigidDynamicsWorld* softRigidWorld = (btSoftRigidDynamicsWorld*)dynamicsWorld.get();
-		btSoftBodyWorldInfo& softWorldInfo = softRigidWorld->getWorldInfo();
+		btSoftBodyWorldInfo& softWorldInfo = dynamicsWorld.getWorldInfo();
 		softWorldInfo.air_density = btScalar(1.2f);
 		softWorldInfo.water_density = 0;
 		softWorldInfo.water_offset = 0;
 		softWorldInfo.water_normal = btVector3(0, 0, 0);
 		softWorldInfo.m_gravity.setValue(gravity.x(), gravity.y(), gravity.z());
 		softWorldInfo.m_sparsesdf.Initialize();
-
-		softRigidWorld->setDebugDrawer(&debugDraw);
 
 		wi::backlog::post("wi::physics Initialized [Bullet] (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
@@ -232,7 +226,7 @@ namespace wi::physics
 				rigidbody->setActivationState(DISABLE_DEACTIVATION);
 			}
 
-			dynamicsWorld->addRigidBody(rigidbody);
+			dynamicsWorld.addRigidBody(rigidbody);
 			physicscomponent.physicsobject = rigidbody;
 		}
 	}
@@ -269,7 +263,7 @@ namespace wi::physics
 		}
 
 		btSoftBody* softbody = btSoftBodyHelpers::CreateFromTriMesh(
-			((btSoftRigidDynamicsWorld*)dynamicsWorld.get())->getWorldInfo()
+			dynamicsWorld.getWorldInfo()
 			, btVerts
 			, btInd
 			, tCount
@@ -328,7 +322,7 @@ namespace wi::physics
 
 			softbody->setPose(true, true);
 
-			((btSoftRigidDynamicsWorld*)dynamicsWorld.get())->addSoftBody(softbody);
+			dynamicsWorld.addSoftBody(softbody);
 			physicscomponent.physicsobject = softbody;
 		}
 	}
@@ -432,7 +426,7 @@ namespace wi::physics
 				physicscomponent._flags &= ~SoftBodyPhysicsComponent::FORCE_RESET;
 				if (physicscomponent.physicsobject != nullptr)
 				{
-					((btSoftRigidDynamicsWorld*)dynamicsWorld.get())->removeSoftBody((btSoftBody*)physicscomponent.physicsobject);
+					dynamicsWorld.removeSoftBody((btSoftBody*)physicscomponent.physicsobject);
 					physicscomponent.physicsobject = nullptr;
 				}
 			}
@@ -479,13 +473,13 @@ namespace wi::physics
 		// Perform internal simulation step:
 		if (IsSimulationEnabled())
 		{
-			dynamicsWorld->stepSimulation(dt, ACCURACY);
+			dynamicsWorld.stepSimulation(dt, ACCURACY);
 		}
 
 		// Feedback physics engine state to system:
-		for (int i = 0; i < dynamicsWorld->getCollisionObjectArray().size(); ++i)
+		for (int i = 0; i < dynamicsWorld.getCollisionObjectArray().size(); ++i)
 		{
-			btCollisionObject* collisionobject = dynamicsWorld->getCollisionObjectArray()[i];
+			btCollisionObject* collisionobject = dynamicsWorld.getCollisionObjectArray()[i];
 			Entity entity = (Entity)collisionobject->getUserIndex();
 
 			btRigidBody* rigidbody = btRigidBody::upcast(collisionobject);
@@ -494,7 +488,7 @@ namespace wi::physics
 				RigidBodyPhysicsComponent* physicscomponent = scene.rigidbodies.GetComponent(entity);
 				if (physicscomponent == nullptr || physicscomponent->physicsobject != rigidbody)
 				{
-					dynamicsWorld->removeRigidBody(rigidbody);
+					dynamicsWorld.removeRigidBody(rigidbody);
 					i--;
 					continue;
 				}
@@ -525,7 +519,7 @@ namespace wi::physics
 					SoftBodyPhysicsComponent* physicscomponent = scene.softbodies.GetComponent(entity);
 					if (physicscomponent == nullptr || physicscomponent->physicsobject != softbody)
 					{
-						((btSoftRigidDynamicsWorld*)dynamicsWorld.get())->removeSoftBody(softbody);
+						dynamicsWorld.removeSoftBody(softbody);
 						i--;
 						continue;
 					}
@@ -634,7 +628,7 @@ namespace wi::physics
 
 		if (IsDebugDrawEnabled())
 		{
-			dynamicsWorld->debugDrawWorld();
+			dynamicsWorld.debugDrawWorld();
 		}
 
 		wi::profiler::EndRange(range); // Physics

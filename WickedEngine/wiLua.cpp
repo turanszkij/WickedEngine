@@ -25,10 +25,9 @@
 
 #include <memory>
 
-#define WILUA_ERROR_PREFIX "[Lua Error] "
-
 namespace wi::lua
 {
+	static const char* WILUA_ERROR_PREFIX = "[Lua Error] ";
 	struct LuaInternal
 	{
 		lua_State* m_luaState = NULL;
