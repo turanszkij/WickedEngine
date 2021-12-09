@@ -5,6 +5,8 @@
 
 namespace wi::jobsystem
 {
+	void Initialize(uint32_t maxThreadCount = ~0u);
+
 	struct JobArgs
 	{
 		uint32_t jobIndex;		// job index relative to dispatch (like SV_DispatchThreadID in HLSL)

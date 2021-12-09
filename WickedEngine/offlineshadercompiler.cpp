@@ -31,6 +31,8 @@ int main(int argc, char* argv[])
 	std::cout << "\tshaderdump : \tShaders will be saved to wiShaderDump.h C++ header file (rebuild is assumed)" << std::endl;
 	std::cout << "Command arguments used: ";
 
+	wi::jobsystem::Initialize();
+
 	wi::arguments::Parse(argc, argv);
 
 	if (wi::arguments::HasArgument("hlsl5"))

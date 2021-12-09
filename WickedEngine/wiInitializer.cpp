@@ -36,6 +36,9 @@ namespace wi::initializer
 		}
 
 		wi::backlog::post("");
+		wi::jobsystem::Initialize();
+
+		wi::backlog::post("");
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::font::Initialize(); systems[INITIALIZED_SYSTEM_FONT].store(true); });
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::image::Initialize(); systems[INITIALIZED_SYSTEM_IMAGE].store(true); });
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::input::Initialize(); systems[INITIALIZED_SYSTEM_INPUT].store(true); });
