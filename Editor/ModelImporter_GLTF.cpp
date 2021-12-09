@@ -79,7 +79,7 @@ namespace tinygltf
 #endif
 	}
 
-	bool ReadWholeFile(wi::vector<unsigned char>* out, std::string* err,
+	bool ReadWholeFile(std::vector<unsigned char>* out, std::string* err,
 		const std::string& filepath, void*) {
 		return wi::helper::FileRead(filepath, *out);
 	}

@@ -99,8 +99,6 @@ void Example_ImGui::Initialize()
 {
 	// Compile shaders
 	{
-		wi::shadercompiler::Initialize();
-
 		auto shaderPath = wi::renderer::GetShaderSourcePath();
 		wi::renderer::SetShaderSourcePath(wi::helper::GetCurrentPath() + "/");
 

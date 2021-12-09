@@ -556,41 +556,6 @@ namespace vulkan_internal
 		return true;
 	}
 
-	wi::vector<const char*> GetOptimalValidationLayers(const wi::vector<VkLayerProperties>& supported_instance_layers)
-	{
-		wi::vector<wi::vector<const char*>> validationLayerPriorityList =
-		{
-			// The preferred validation layer is "VK_LAYER_KHRONOS_validation"
-			{"VK_LAYER_KHRONOS_validation"},
-
-			// Otherwise we fallback to using the LunarG meta layer
-			{"VK_LAYER_LUNARG_standard_validation"},
-
-			// Otherwise we attempt to enable the individual layers that compose the LunarG meta layer since it doesn't exist
-			{
-				"VK_LAYER_GOOGLE_threading",
-				"VK_LAYER_LUNARG_parameter_validation",
-				"VK_LAYER_LUNARG_object_tracker",
-				"VK_LAYER_LUNARG_core_validation",
-				"VK_LAYER_GOOGLE_unique_objects",
-			},
-
-			// Otherwise as a last resort we fallback to attempting to enable the LunarG core layer
-			{"VK_LAYER_LUNARG_core_validation"}
-		};
-
-		for (auto& validationLayers : validationLayerPriorityList)
-		{
-			if (ValidateLayers(validationLayers, supported_instance_layers))
-			{
-				return validationLayers;
-			}
-		}
-
-		// Else return nothing
-		return {};
-	}
-
 	VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsMessengerCallback(
 		VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, 
 		VkDebugUtilsMessageTypeFlagsEXT message_type,
@@ -2292,16 +2257,48 @@ using namespace vulkan_internal;
 			wi::vector<const char *> extensionNames_sdl(extensionCount);
 			SDL_Vulkan_GetInstanceExtensions(window, &extensionCount, extensionNames_sdl.data());
 			instanceExtensions.reserve(instanceExtensions.size() + extensionNames_sdl.size());
-			instanceExtensions.insert(instanceExtensions.begin(),
-					extensionNames_sdl.cbegin(), extensionNames_sdl.cend());
+			for (auto& x : extensionNames_sdl)
+			{
+				instanceExtensions.push_back(x);
+			}
 		}
 #endif // _WIN32
 		
 		if (debuglayer)
 		{
 			// Determine the optimal validation layers to enable that are necessary for useful debugging
-			wi::vector<const char*> optimalValidationLyers = GetOptimalValidationLayers(availableInstanceLayers);
-			instanceLayers.insert(instanceLayers.end(), optimalValidationLyers.begin(), optimalValidationLyers.end());
+			static const wi::vector<const char*> validationLayerPriorityList[] =
+			{
+				// The preferred validation layer is "VK_LAYER_KHRONOS_validation"
+				{"VK_LAYER_KHRONOS_validation"},
+
+				// Otherwise we fallback to using the LunarG meta layer
+				{"VK_LAYER_LUNARG_standard_validation"},
+
+				// Otherwise we attempt to enable the individual layers that compose the LunarG meta layer since it doesn't exist
+				{
+					"VK_LAYER_GOOGLE_threading",
+					"VK_LAYER_LUNARG_parameter_validation",
+					"VK_LAYER_LUNARG_object_tracker",
+					"VK_LAYER_LUNARG_core_validation",
+					"VK_LAYER_GOOGLE_unique_objects",
+				},
+
+				// Otherwise as a last resort we fallback to attempting to enable the LunarG core layer
+				{"VK_LAYER_LUNARG_core_validation"}
+			};
+
+			for (auto& validationLayers : validationLayerPriorityList)
+			{
+				if (ValidateLayers(validationLayers, availableInstanceLayers))
+				{
+					for (auto& x : validationLayers)
+					{
+						instanceLayers.push_back(x);
+					}
+					break;
+				}
+			}
 		}
 
 		// Create instance:

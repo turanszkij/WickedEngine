@@ -7,8 +7,6 @@
 #include "wiEventHandler.h"
 #include "wiTimer.h"
 
-#include <atomic>
-
 using namespace wi::graphics;
 using namespace wi::enums;
 
@@ -31,8 +29,6 @@ namespace wi::image
 	Texture					backgroundTextures[COMMANDLIST_COUNT];
 	wi::Canvas				canvases[COMMANDLIST_COUNT];
 
-	std::atomic_bool initialized{ false };
-
 	void SetBackground(const Texture& texture, CommandList cmd)
 	{
 		backgroundTextures[cmd] = texture;
@@ -45,11 +41,6 @@ namespace wi::image
 
 	void Draw(const Texture* texture, const Params& params, CommandList cmd)
 	{
-		if (!initialized.load())
-		{
-			return;
-		}
-
 		GraphicsDevice* device = wi::graphics::GetDevice();
 		device->EventBegin("Image", cmd);
 
@@ -428,7 +419,6 @@ namespace wi::image
 		LoadShaders();
 
 		wi::backlog::post("wi::image Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
-		initialized.store(true);
 	}
 
 }

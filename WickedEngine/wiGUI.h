@@ -14,8 +14,6 @@
 
 namespace wi::gui
 {
-	void Initialize();
-
 	class Widget;
 
 	class GUI

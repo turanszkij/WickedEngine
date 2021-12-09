@@ -5,6 +5,7 @@
 #include <fstream>
 #include <thread>
 #include <unordered_map>
+#include <vector>
 
 using namespace wi::ecs;
 using namespace wi::scene;
@@ -120,7 +121,7 @@ void TestsRenderer::Load()
 	testSelector.AddItem("Controller Test");
 	testSelector.AddItem("Inverse Kinematics");
 	testSelector.AddItem("65k Instances");
-	testSelector.AddItem("unordered_map perf");
+	testSelector.AddItem("Container perf");
 	testSelector.SetMaxVisibleItemCount(10);
 	testSelector.OnSelect([=](wi::gui::EventArgs args) {
 
@@ -295,7 +296,7 @@ void TestsRenderer::Load()
 		break;
 
 		case 19:
-			RunUnorderedMapTest();
+			ContainerTest();
 			break;
 
 		default:
@@ -930,15 +931,16 @@ void TestsRenderer::RunNetworkTest()
 	font.params.size = 24;
 	AddFont(&font);
 }
-void TestsRenderer::RunUnorderedMapTest()
+void TestsRenderer::ContainerTest()
 {
 	wi::Timer timer;
 
 	const size_t elements = 1000000;
 #define shuffle(i) (i * 345734667877) % 98787546343
 
-	std::string ss = "Unordered map test for " + std::to_string(elements) + " elements:";
+	std::string ss = "Container test for " + std::to_string(elements) + " elements:\n";
 
+#if WI_UNORDERED_MAP_TYPE
 	std::unordered_map<size_t, size_t> std_map;
 	{
 		timer.record();
@@ -946,7 +948,7 @@ void TestsRenderer::RunUnorderedMapTest()
 		{
 			std_map[shuffle(i)] = i;
 		}
-		ss += "\n\nstd::unordered_map insertion: " + std::to_string(timer.elapsed_milliseconds()) + " ms\n";
+		ss += "\nstd::unordered_map insertion: " + std::to_string(timer.elapsed_milliseconds()) + " ms\n";
 
 		timer.record();
 		for (size_t i = 0; i < std_map.size(); ++i)
@@ -963,15 +965,58 @@ void TestsRenderer::RunUnorderedMapTest()
 		{
 			wi_map[shuffle(i)] = i;
 		}
-		ss += "\n\nwi::unordered_map insertion: " + std::to_string(timer.elapsed_milliseconds()) + " ms\n";
+		ss += "\nwi::unordered_map insertion: " + std::to_string(timer.elapsed_milliseconds()) + " ms\n";
 
 		timer.record();
 		for (size_t i = 0; i < wi_map.size(); ++i)
 		{
 			wi_map[shuffle(i)] = 0;
 		}
-		ss += "wi::unordered_map access: " + std::to_string(timer.elapsed_milliseconds()) + " ms";
+		ss += "wi::unordered_map access: " + std::to_string(timer.elapsed_milliseconds()) + " ms\n";
 	}
+#else
+	ss += "wi::unordered_map implementation uses std::unordered_map. There is nothing to test.";
+#endif // WI_UNORDERED_MAP_TYPE
+
+	ss += "\n";
+
+#if WI_VECTOR_TYPE
+	std::vector<CameraComponent> std_vector;
+	{
+		timer.record();
+		for (size_t i = 0; i < elements; ++i)
+		{
+			std_vector.emplace_back();
+		}
+		ss += "\nstd::vector append: " + std::to_string(timer.elapsed_milliseconds()) + " ms\n";
+
+		timer.record();
+		for (auto& x : std_vector)
+		{
+			x.aperture_size = 8;
+		}
+		ss += "std::vector access: " + std::to_string(timer.elapsed_milliseconds()) + " ms";
+	}
+
+	wi::vector<CameraComponent> wi_vector;
+	{
+		timer.record();
+		for (size_t i = 0; i < elements; ++i)
+		{
+			wi_vector.emplace_back();
+		}
+		ss += "\nwi::vector append: " + std::to_string(timer.elapsed_milliseconds()) + " ms\n";
+
+		timer.record();
+		for (auto& x : wi_vector)
+		{
+			x.aperture_size = 8;
+		}
+		ss += "wi::vector access: " + std::to_string(timer.elapsed_milliseconds()) + " ms\n";
+	}
+#else
+	ss += "wi::vector implementation uses std::vector. There is nothing to test.";
+#endif // WI_VECTOR_TYPE
 
 	static wi::SpriteFont font;
 	font = wi::SpriteFont(ss);

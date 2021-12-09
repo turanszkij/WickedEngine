@@ -126,15 +126,19 @@ namespace wi::jobsystem
 		return false;
 	}
 
-	void Initialize()
+	void Initialize(uint32_t maxThreadCount)
 	{
+		if (internal_state.numThreads > 0)
+			return;
+		maxThreadCount = std::max(1u, maxThreadCount);
+
 		wi::Timer timer;
 
 		// Retrieve the number of hardware threads in this system:
 		internal_state.numCores = std::thread::hardware_concurrency();
 
 		// Calculate the actual number of worker threads we want (-1 main thread):
-		internal_state.numThreads = std::max(1u, internal_state.numCores - 1);
+		internal_state.numThreads = std::min(maxThreadCount, std::max(1u, internal_state.numCores - 1));
 
 		for (uint32_t threadID = 0; threadID < internal_state.numThreads; ++threadID)
 		{
@@ -151,7 +155,7 @@ namespace wi::jobsystem
 					}
 				}
 
-			});
+				});
 
 #ifdef _WIN32
 			// Do Windows-specific thread setup:
@@ -167,28 +171,28 @@ namespace wi::jobsystem
 			//assert(priority_result != 0);
 
 			// Name the thread:
-			std::wstring wthreadname =  L"wi::jobsystem_" + std::to_wstring(threadID);
+			std::wstring wthreadname = L"wi::jobsystem_" + std::to_wstring(threadID);
 			HRESULT hr = SetThreadDescription(handle, wthreadname.c_str());
 			assert(SUCCEEDED(hr));
 #elif defined(PLATFORM_LINUX)
 #define handle_error_en(en, msg) \
                do { errno = en; perror(msg); } while (0)
 
-            int ret;
-            cpu_set_t cpuset;
-            CPU_ZERO(&cpuset);
-            size_t cpusetsize = sizeof (cpuset);
+			int ret;
+			cpu_set_t cpuset;
+			CPU_ZERO(&cpuset);
+			size_t cpusetsize = sizeof(cpuset);
 
-            CPU_SET(threadID, &cpuset);
-            ret = pthread_setaffinity_np(worker.native_handle(), cpusetsize, &cpuset);
-            if(ret != 0)
-                handle_error_en(ret, std::string(" pthread_setaffinity_np[" + std::to_string(threadID) + ']').c_str());
+			CPU_SET(threadID, &cpuset);
+			ret = pthread_setaffinity_np(worker.native_handle(), cpusetsize, &cpuset);
+			if (ret != 0)
+				handle_error_en(ret, std::string(" pthread_setaffinity_np[" + std::to_string(threadID) + ']').c_str());
 
-            // Name the thread
-            std::string thread_name = "wi::jobsystem_" + std::to_string(threadID);
-            ret = pthread_setname_np(worker.native_handle(), thread_name.c_str());
-            if(ret != 0)
-                handle_error_en(ret, std::string(" pthread_setname_np[" + std::to_string(threadID) + ']').c_str());
+			// Name the thread
+			std::string thread_name = "wi::jobsystem_" + std::to_string(threadID);
+			ret = pthread_setname_np(worker.native_handle(), thread_name.c_str());
+			if (ret != 0)
+				handle_error_en(ret, std::string(" pthread_setname_np[" + std::to_string(threadID) + ']').c_str());
 #undef handle_error_en
 #endif // _WIN32
 

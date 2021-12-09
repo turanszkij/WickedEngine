@@ -6,11 +6,6 @@
 
 namespace wi::network
 {
-	void Initialize()
-	{
-		wi::backlog::post("TODO wi::network_UWP");
-	}
-
 	bool CreateSocket(Socket* sock)
 	{
 		return false;

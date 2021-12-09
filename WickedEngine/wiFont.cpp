@@ -18,7 +18,6 @@
 #include "Utility/stb_truetype.h"
 
 #include <fstream>
-#include <atomic>
 
 using namespace wi::graphics;
 using namespace wi::rectpacker;
@@ -41,8 +40,6 @@ namespace wi::font
 		PipelineState		PSO;
 
 		wi::Canvas canvases[COMMANDLIST_COUNT];
-
-		std::atomic_bool initialized{ false };
 
 		Texture texture;
 
@@ -258,11 +255,6 @@ namespace wi::font
 	}
 	void Initialize()
 	{
-		if (initialized)
-		{
-			return;
-		}
-
 		wi::Timer timer;
 
 		// add default font if there is none yet:
@@ -318,9 +310,7 @@ namespace wi::font
 		static wi::eventhandler::Handle handle1 = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
 		LoadShaders();
 
-
 		wi::backlog::post("wi::font Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
-		initialized.store(true);
 	}
 
 	void UpdatePendingGlyphs()
@@ -546,7 +536,7 @@ namespace wi::font
 	template<typename T>
 	void Draw_internal(const T* text, size_t text_length, const Params& params, CommandList cmd)
 	{
-		if (text_length <= 0 || !initialized.load())
+		if (text_length <= 0)
 		{
 			return;
 		}

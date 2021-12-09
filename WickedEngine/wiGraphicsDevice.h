@@ -16,7 +16,7 @@ namespace wi::graphics
 	struct CommandList
 	{
 		using index_type = uint8_t;
-		index_type index = ~0;
+		index_type index = 0xFF;
 		constexpr operator index_type() const { return index; }
 	};
 	static constexpr CommandList::index_type COMMANDLIST_COUNT = 32;	// If you increase command list count, more memory will be statically allocated for per-command list resources

@@ -10,6 +10,9 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="wickedengine.natvis" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{06163DCB-B183-4ED9-9C62-13EF1658E049}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>

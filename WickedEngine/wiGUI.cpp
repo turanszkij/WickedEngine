@@ -17,29 +17,37 @@ using namespace wi::primitive;
 
 namespace wi::gui
 {
-	static wi::graphics::PipelineState PSO_colored;
-
-	void LoadShaders()
+	struct InternalState
 	{
-		PipelineStateDesc desc;
-		desc.vs = wi::renderer::GetShader(wi::enums::VSTYPE_VERTEXCOLOR);
-		desc.ps = wi::renderer::GetShader(wi::enums::PSTYPE_VERTEXCOLOR);
-		desc.il = wi::renderer::GetInputLayout(wi::enums::ILTYPE_VERTEXCOLOR);
-		desc.dss = wi::renderer::GetDepthStencilState(wi::enums::DSSTYPE_DEPTHDISABLED);
-		desc.bs = wi::renderer::GetBlendState(wi::enums::BSTYPE_TRANSPARENT);
-		desc.rs = wi::renderer::GetRasterizerState(wi::enums::RSTYPE_DOUBLESIDED);
-		desc.pt = PrimitiveTopology::TRIANGLESTRIP;
-		wi::graphics::GetDevice()->CreatePipelineState(&desc, &PSO_colored);
-	}
+		wi::graphics::PipelineState PSO_colored;
 
-	void Initialize()
+		InternalState()
+		{
+			wi::Timer timer;
+
+			static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [this](uint64_t userdata) { LoadShaders(); });
+			LoadShaders();
+
+			wi::backlog::post("wi::gui Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
+		}
+
+		void LoadShaders()
+		{
+			PipelineStateDesc desc;
+			desc.vs = wi::renderer::GetShader(wi::enums::VSTYPE_VERTEXCOLOR);
+			desc.ps = wi::renderer::GetShader(wi::enums::PSTYPE_VERTEXCOLOR);
+			desc.il = wi::renderer::GetInputLayout(wi::enums::ILTYPE_VERTEXCOLOR);
+			desc.dss = wi::renderer::GetDepthStencilState(wi::enums::DSSTYPE_DEPTHDISABLED);
+			desc.bs = wi::renderer::GetBlendState(wi::enums::BSTYPE_TRANSPARENT);
+			desc.rs = wi::renderer::GetRasterizerState(wi::enums::RSTYPE_DOUBLESIDED);
+			desc.pt = PrimitiveTopology::TRIANGLESTRIP;
+			wi::graphics::GetDevice()->CreatePipelineState(&desc, &PSO_colored);
+		}
+	};
+	inline InternalState& gui_internal()
 	{
-		wi::Timer timer;
-
-		static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
-		LoadShaders();
-
-		wi::backlog::post("wi::gui Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
+		static InternalState internal_state;
+		return internal_state;
 	}
 
 
@@ -115,9 +123,9 @@ namespace wi::gui
 
 		device->EventBegin("GUI", cmd);
 		// Rendering is back to front:
-		for (auto it = widgets.rbegin(); it != widgets.rend(); ++it)
+		for (size_t i = 0; i < widgets.size(); ++i)
 		{
-			const Widget* widget = (*it);
+			const Widget* widget = widgets[widgets.size() - i - 1];
 			device->BindScissorRects(1, &scissorRect, cmd);
 			widget->Render(canvas, cmd);
 		}
@@ -328,7 +336,7 @@ namespace wi::gui
 	}
 	void Widget::SetText(std::string&& value)
 	{
-		font.SetText(value);
+		font.SetText(std::move(value));
 	}
 	void Widget::SetTooltip(const std::string& value)
 	{
@@ -336,7 +344,7 @@ namespace wi::gui
 	}
 	void Widget::SetTooltip(std::string&& value)
 	{
-		tooltip = value;
+		tooltip = std::move(value);
 	}
 	void Widget::SetScriptTip(const std::string& value)
 	{
@@ -344,7 +352,7 @@ namespace wi::gui
 	}
 	void Widget::SetScriptTip(std::string&& value)
 	{
-		scriptTip = value;
+		scriptTip = std::move(value);
 	}
 	void Widget::SetPos(const XMFLOAT2& value)
 	{
@@ -1462,7 +1470,7 @@ namespace wi::gui
 
 		// control-arrow-triangle
 		{
-			device->BindPipelineState(&PSO_colored, cmd);
+			device->BindPipelineState(&gui_internal().PSO_colored, cmd);
 
 			MiscCB cb;
 			cb.g_xColor = sprites[ACTIVE].params.color;
@@ -1960,9 +1968,9 @@ namespace wi::gui
 			sprites[state].Draw(cmd);
 		}
 
-		for (auto it = widgets.rbegin(); it != widgets.rend(); ++it)
+		for (size_t i = 0; i < widgets.size(); ++i)
 		{
-			const Widget* widget = (*it);
+			const Widget* widget = widgets[widgets.size() - i - 1];
 			ApplyScissor(canvas, scissorRect, cmd);
 			widget->Render(canvas, cmd);
 		}
@@ -2568,7 +2576,7 @@ namespace wi::gui
 
 		const XMMATRIX Projection = canvas.GetProjection();
 
-		device->BindPipelineState(&PSO_colored, cmd);
+		device->BindPipelineState(&gui_internal().PSO_colored, cmd);
 
 		ApplyScissor(canvas, scissorRect, cmd);
 
@@ -3104,7 +3112,7 @@ namespace wi::gui
 
 			// opened flag triangle:
 			{
-				device->BindPipelineState(&PSO_colored, cmd);
+				device->BindPipelineState(&gui_internal().PSO_colored, cmd);
 
 				MiscCB cb;
 				cb.g_xColor = opener_highlight == i ? wi::Color::White().toFloat4() : sprites[FOCUS].params.color;

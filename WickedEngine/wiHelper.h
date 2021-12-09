@@ -6,6 +6,13 @@
 #include <string>
 #include <functional>
 
+#if WI_VECTOR_TYPE
+namespace std
+{
+	template < typename, typename > class vector;
+}
+#endif // WI_VECTOR_TYPE
+
 namespace wi::helper
 {
 	template <class T>
@@ -73,6 +80,11 @@ namespace wi::helper
 	void DirectoryCreate(const std::string& path);
 
 	bool FileRead(const std::string& fileName, wi::vector<uint8_t>& data);
+
+#if WI_VECTOR_TYPE
+	// This version is provided if std::vector != wi::vector
+	bool FileRead(const std::string& fileName, std::vector<uint8_t>& data);
+#endif // WI_VECTOR_TYPE
 
 	bool FileWrite(const std::string& fileName, const uint8_t* data, size_t size);
 

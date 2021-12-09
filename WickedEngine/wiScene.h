@@ -40,10 +40,10 @@ namespace wi::scene
 
 	struct LayerComponent
 	{
-		uint32_t layerMask = ~0;
+		uint32_t layerMask = ~0u;
 
 		// Non-serialized attributes:
-		uint32_t propagationMask = ~0; // This shouldn't be modified by user usually
+		uint32_t propagationMask = ~0u; // This shouldn't be modified by user usually
 
 		inline uint32_t GetLayerMask() const { return layerMask & propagationMask; }
 
@@ -647,7 +647,7 @@ namespace wi::scene
 		int prev_transform_index = -1;
 
 		// occlusion result history bitfield (32 bit->32 frame history)
-		mutable uint32_t occlusionHistory = ~0;
+		mutable uint32_t occlusionHistory = ~0u;
 		mutable int occlusionQueries[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
 
 		inline bool IsOccluded() const
@@ -1147,7 +1147,7 @@ namespace wi::scene
 		std::string colorGradingMapName;
 
 		// Non-serialized attributes:
-		uint32_t most_important_light_index = ~0;
+		uint32_t most_important_light_index = ~0u;
 		wi::Resource skyMap;
 		wi::Resource colorGradingMap;
 
@@ -1192,7 +1192,7 @@ namespace wi::scene
 		uint32_t _flags = EMPTY;
 
 		wi::ecs::Entity target = wi::ecs::INVALID_ENTITY; // which entity to follow (must have a transform component)
-		uint32_t chain_length = ~0; // ~0 means: compute until the root
+		uint32_t chain_length = ~0u; // ~0 means: compute until the root
 		uint32_t iteration_count = 1;
 
 		inline void SetDisabled(bool value = true) { if (value) { _flags |= DISABLED; } else { _flags &= ~DISABLED; } }
