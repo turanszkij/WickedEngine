@@ -145,6 +145,8 @@ namespace wi::shadercompiler
 		{
 		case ShaderFormat::HLSL6:
 			args.push_back(L"-D"); args.push_back(L"HLSL6");
+			args.push_back(L"-rootsig-define"); args.push_back(L"WICKED_ENGINE_ROOTSIGNATURE");
+			args.push_back(L"-Qstrip_reflect");
 			break;
 		case ShaderFormat::SPIRV:
 			args.push_back(L"-D"); args.push_back(L"SPIRV");

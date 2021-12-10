@@ -1,4 +1,5 @@
 #include "globals.hlsli"
+#include "imageHF.hlsli"
 
 struct Output
 {

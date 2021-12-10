@@ -18,27 +18,73 @@ SamplerState sampler_aniso_wrap : register(s107);
 SamplerState sampler_aniso_mirror : register(s108);
 SamplerComparisonState sampler_cmp_depth : register(s109);
 
-Texture2D bindless_textures[] : register(space1);
-ByteAddressBuffer bindless_buffers[] : register(space2);
-SamplerState bindless_samplers[] : register(space3);
+SamplerState bindless_samplers[] : register(space1);
+Texture2D bindless_textures[] : register(space2);
+ByteAddressBuffer bindless_buffers[] : register(space3);
 Buffer<uint> bindless_ib[] : register(space4);
 #ifdef RTAPI
 RaytracingAccelerationStructure bindless_accelerationstructures[] : register(space5);
 #endif // RTAPI
-
 Texture2DArray bindless_textures2DArray[] : register(space6);
 TextureCube bindless_cubemaps[] : register(space7);
 TextureCubeArray bindless_cubearrays[] : register(space8);
 Texture3D bindless_textures3D[] : register(space9);
-RWTexture2D<float4> bindless_rwtextures[] : register(space10);
-RWByteAddressBuffer bindless_rwbuffers[] : register(space11);
-RWTexture2DArray<float4> bindless_rwtextures2DArray[] : register(space12);
-RWTexture3D<float4> bindless_rwtextures3D[] : register(space13);
+Texture2D<float> bindless_textures_float[] : register(space10);
+Texture2D<float2> bindless_textures_float2[] : register(space11);
+Texture2D<uint2> bindless_textures_uint2[] : register(space12);
+Texture2D<uint4> bindless_textures_uint4[] : register(space13);
 
-Texture2D<float> bindless_textures_float[] : register(space14);
-Texture2D<float2> bindless_textures_float2[] : register(space15);
-Texture2D<uint2> bindless_textures_uint2[] : register(space16);
-Texture2D<uint4> bindless_textures_uint4[] : register(space17);
+RWTexture2D<float4> bindless_rwtextures[] : register(space14);
+RWByteAddressBuffer bindless_rwbuffers[] : register(space15);
+RWTexture2DArray<float4> bindless_rwtextures2DArray[] : register(space16);
+RWTexture3D<float4> bindless_rwtextures3D[] : register(space17);
+
+#ifndef WICKED_ENGINE_ROOTSIGNATURE
+#define WICKED_ENGINE_ROOTSIGNATURE \
+	"RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT), " \
+	"CBV(b0, space = 0, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE), " \
+	"CBV(b1, space = 0, flags = DATA_STATIC), " \
+	"RootConstants(num32BitConstants=32, b999), " \
+	"DescriptorTable( " \
+		"CBV(b5, offset = DESCRIPTOR_RANGE_OFFSET_APPEND , numDescriptors = 5, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, offset = DESCRIPTOR_RANGE_OFFSET_APPEND , numDescriptors = 64, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"UAV(u0, offset = DESCRIPTOR_RANGE_OFFSET_APPEND , numDescriptors = 16, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)" \
+	")," \
+	"DescriptorTable( " \
+		"Sampler(s0, offset = DESCRIPTOR_RANGE_OFFSET_APPEND , numDescriptors = 16, flags = DESCRIPTORS_VOLATILE)" \
+	")," \
+	"DescriptorTable( " \
+		"Sampler(s0, space = 1, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE)" \
+	")," \
+	"DescriptorTable( " \
+		"SRV(t0, space = 2, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 3, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 4, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 5, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 6, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 7, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 8, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 9, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 10, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 11, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 12, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 13, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"UAV(u0, space = 14, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"UAV(u0, space = 15, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"UAV(u0, space = 16, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"UAV(u0, space = 17, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)" \
+	"), " \
+	"StaticSampler(s100, addressU = TEXTURE_ADDRESS_CLAMP, addressV = TEXTURE_ADDRESS_CLAMP, addressW = TEXTURE_ADDRESS_CLAMP, filter = FILTER_MIN_MAG_MIP_LINEAR)," \
+	"StaticSampler(s101, addressU = TEXTURE_ADDRESS_WRAP, addressV = TEXTURE_ADDRESS_WRAP, addressW = TEXTURE_ADDRESS_WRAP, filter = FILTER_MIN_MAG_MIP_LINEAR)," \
+	"StaticSampler(s102, addressU = TEXTURE_ADDRESS_MIRROR, addressV = TEXTURE_ADDRESS_MIRROR, addressW = TEXTURE_ADDRESS_MIRROR, filter = FILTER_MIN_MAG_MIP_LINEAR)," \
+	"StaticSampler(s103, addressU = TEXTURE_ADDRESS_CLAMP, addressV = TEXTURE_ADDRESS_CLAMP, addressW = TEXTURE_ADDRESS_CLAMP, filter = FILTER_MIN_MAG_MIP_POINT)," \
+	"StaticSampler(s104, addressU = TEXTURE_ADDRESS_WRAP, addressV = TEXTURE_ADDRESS_WRAP, addressW = TEXTURE_ADDRESS_WRAP, filter = FILTER_MIN_MAG_MIP_POINT)," \
+	"StaticSampler(s105, addressU = TEXTURE_ADDRESS_MIRROR, addressV = TEXTURE_ADDRESS_MIRROR, addressW = TEXTURE_ADDRESS_MIRROR, filter = FILTER_MIN_MAG_MIP_POINT)," \
+	"StaticSampler(s106, addressU = TEXTURE_ADDRESS_CLAMP, addressV = TEXTURE_ADDRESS_CLAMP, addressW = TEXTURE_ADDRESS_CLAMP, filter = FILTER_ANISOTROPIC)," \
+	"StaticSampler(s107, addressU = TEXTURE_ADDRESS_WRAP, addressV = TEXTURE_ADDRESS_WRAP, addressW = TEXTURE_ADDRESS_WRAP, filter = FILTER_ANISOTROPIC)," \
+	"StaticSampler(s108, addressU = TEXTURE_ADDRESS_MIRROR, addressV = TEXTURE_ADDRESS_MIRROR, addressW = TEXTURE_ADDRESS_MIRROR, filter = FILTER_ANISOTROPIC)," \
+	"StaticSampler(s109, addressU = TEXTURE_ADDRESS_CLAMP, addressV = TEXTURE_ADDRESS_CLAMP, addressW = TEXTURE_ADDRESS_CLAMP, filter = FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT, comparisonFunc = COMPARISON_GREATER_EQUAL),"
+#endif // WICKED_ENGINE_ROOTSIGNATURE
 
 inline FrameCB GetFrame()
 {

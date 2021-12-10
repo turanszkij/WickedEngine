@@ -9,9 +9,6 @@
 #include "Utility/dx12/d3dx12.h"
 #include "Utility/D3D12MemAlloc.h"
 
-#include "Utility/dxcapi.h"
-#include "Utility/dx12/d3d12shader.h"
-
 #include <string>
 
 #include <pix.h>
@@ -54,10 +51,8 @@ namespace dx12_internal
 #endif
 
 	static PFN_D3D12_CREATE_DEVICE D3D12CreateDevice = nullptr;
-	static PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE D3D12SerializeVersionedRootSignature = nullptr;
+	static PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER D3D12CreateVersionedRootSignatureDeserializer = nullptr;
 #endif // PLATFORM_UWP
-
-	ComPtr<IDxcUtils> dxcUtils;
 
 	// Engine -> Native converters
 	constexpr uint32_t _ParseColorWriteMask(ColorWrite value)
@@ -1015,32 +1010,6 @@ namespace dx12_internal
 	}
 
 
-	enum RESOURCEBINDING
-	{
-		CONSTANTBUFFER,
-		RAWBUFFER,
-		STRUCTUREDBUFFER,
-		TYPEDBUFFER,
-		TEXTURE1D,
-		TEXTURE1DARRAY,
-		TEXTURE2D,
-		TEXTURE2DARRAY,
-		TEXTURECUBE,
-		TEXTURECUBEARRAY,
-		TEXTURE3D,
-		ACCELERATIONSTRUCTURE,
-		RWRAWBUFFER,
-		RWSTRUCTUREDBUFFER,
-		RWTYPEDBUFFER,
-		RWTEXTURE1D,
-		RWTEXTURE1DARRAY,
-		RWTEXTURE2D,
-		RWTEXTURE2DARRAY,
-		RWTEXTURE3D,
-
-		RESOURCEBINDING_COUNT
-	};
-
 	struct SingleDescriptor
 	{
 		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
@@ -1303,37 +1272,17 @@ namespace dx12_internal
 		ComPtr<ID3D12PipelineState> resource;
 		ComPtr<ID3D12RootSignature> rootSignature;
 
-		wi::vector<D3D12_ROOT_DESCRIPTOR1> root_cbvs;
-		wi::vector<D3D12_DESCRIPTOR_RANGE1> resources;
-		wi::vector<D3D12_DESCRIPTOR_RANGE1> samplers;
-
-		uint32_t resource_binding_count_unrolled = 0;
-		uint32_t sampler_binding_count_unrolled = 0;
-
-		wi::vector<RESOURCEBINDING> resource_bindings;
-
-		wi::vector<D3D12_DESCRIPTOR_RANGE1> bindless_res;
-		wi::vector<D3D12_DESCRIPTOR_RANGE1> bindless_sam;
-
-		D3D12_ROOT_PARAMETER1 rootconstants;
-
-		wi::vector<D3D12_STATIC_SAMPLER_DESC> staticsamplers;
-
-		uint32_t bindpoint_rootconstant = 0;
-		uint32_t bindpoint_rootdescriptor = 0;
-		uint32_t bindpoint_res = 0;
-		uint32_t bindpoint_sam = 0;
-		uint32_t bindpoint_bindless = 0;
-
 		wi::vector<uint8_t> shadercode;
 		wi::vector<D3D12_INPUT_ELEMENT_DESC> input_elements;
 		D3D_PRIMITIVE_TOPOLOGY primitiveTopology;
+
+		ComPtr<ID3D12VersionedRootSignatureDeserializer> rootsig_deserializer;
+		const D3D12_VERSIONED_ROOT_SIGNATURE_DESC* rootsig_desc = nullptr;
 
 		struct PSO_STREAM
 		{
 			struct PSO_STREAM1
 			{
-				CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE pRootSignature;
 				CD3DX12_PIPELINE_STATE_STREAM_VS VS;
 				CD3DX12_PIPELINE_STATE_STREAM_HS HS;
 				CD3DX12_PIPELINE_STATE_STREAM_DS DS;
@@ -1607,33 +1556,255 @@ using namespace dx12_internal;
 	{
 		auto pso_internal = graphics ? to_internal(device->active_pso[cmd]) : to_internal(device->active_cs[cmd]);
 
-		// Bind root descriptors:
-		if (dirty_root_cbvs != 0)
+		ID3D12GraphicsCommandList6* commandlist = device->GetCommandList(cmd);
+
+		if (graphics)
 		{
-			uint32_t root_param = pso_internal->bindpoint_rootdescriptor;
-			for (auto& x : pso_internal->root_cbvs)
+			commandlist->SetGraphicsRootSignature(pso_internal->rootSignature.Get());
+		}
+		else
+		{
+			commandlist->SetComputeRootSignature(pso_internal->rootSignature.Get());
+		}
+
+		UINT root_parameter_index = 0;
+		for (UINT root_parameter_index = 0; root_parameter_index < pso_internal->rootsig_desc->Desc_1_1.NumParameters; ++root_parameter_index)
+		{
+			const D3D12_ROOT_PARAMETER1& param = pso_internal->rootsig_desc->Desc_1_1.pParameters[root_parameter_index];
+
+			switch (param.ParameterType)
 			{
-				bool dirty = dirty_root_cbvs & (1 << x.ShaderRegister);
-				if (!dirty)
+
+			case D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE:
+			{
+				bool sampler_table = false;
+				UINT numResources = 0;
+				UINT numSamplers = 0;
+				for (UINT i = 0; i < param.DescriptorTable.NumDescriptorRanges; ++i)
 				{
-					root_param++;
-					continue;
+					const D3D12_DESCRIPTOR_RANGE1& range = param.DescriptorTable.pDescriptorRanges[i];
+					switch (range.RangeType)
+					{
+					case D3D12_DESCRIPTOR_RANGE_TYPE_SRV:
+					case D3D12_DESCRIPTOR_RANGE_TYPE_UAV:
+					case D3D12_DESCRIPTOR_RANGE_TYPE_CBV:
+						if (range.NumDescriptors != UINT_MAX)
+						{
+							numResources += range.NumDescriptors;
+						}
+						break;
+					case D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER:
+						sampler_table = true;
+						if (range.NumDescriptors != UINT_MAX)
+						{
+							numSamplers += range.NumDescriptors;
+						}
+						break;
+					default:
+						assert(0);
+						break;
+					}
 				}
 
-				const GPUBuffer& buffer = table.CBV[x.ShaderRegister];
-				uint64_t offset = table.CBV_offset[x.ShaderRegister];
+				DescriptorHeap& heap = sampler_table ? device->descriptorheap_sam : device->descriptorheap_res;
+				D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle = heap.start_gpu;
 
-				D3D12_GPU_VIRTUAL_ADDRESS address;
-
-				if (!buffer.IsValid())
+				if ((numResources > 0 /*&& dirty_res*/) || (numSamplers > 0 /*&& dirty_sam*/))
 				{
-					// this must not happen, root descriptor must be always valid!
-					// this happens when constant buffer was not bound by engine
-					//	TODO: use a null initialized GPU VA here for safety?
-					address = 0;
-					assert(0);
+					dirty_res = false;
+					dirty_sam = false;
+
+					// Remarks:
+					//	This is allocating from the global shader visible descriptor heaps in a simple incrementing
+					//	lockless ring buffer fashion.
+					//	In this lockless method, a descriptor array that is to be allocated might not fit without
+					//	completely wrapping the beginning of the allocation.
+					//	But completely wrapping after the fact we discovered that the array couldn't fit,
+					//	it wouldn't be thread safe any more without introducing locks
+					//	For that reason, we are reserving an excess amount of descriptors at the end which can't be normally
+					//	allocated, but any out of bounds descriptors can still be safely written into it
+					//
+					//	This method wastes a number of descriptors essentially at the end of the heap, but it is simple
+					//	and safe to implement
+					//
+					//	The excess amount is essentially equal to the maximum number of descriptors that can be allocated at once.
+
+					if (sampler_table)
+					{
+						// The reservation is the maximum amount of descriptors that can be allocated once
+						static constexpr uint32_t wrap_reservation = DESCRIPTORBINDER_SAMPLER_COUNT + 1;
+						const uint32_t wrap_effective_size = heap.heapDesc.NumDescriptors - BINDLESS_SAMPLER_CAPACITY - wrap_reservation;
+						assert(wrap_reservation > numSamplers); // for correct lockless wrap behaviour
+
+						const uint64_t offset = heap.allocationOffset.fetch_add(numSamplers);
+						const uint64_t wrapped_offset = BINDLESS_SAMPLER_CAPACITY + offset % wrap_effective_size;
+						ringOffset_sam = (uint32_t)wrapped_offset;
+						const uint64_t wrapped_offset_end = wrapped_offset + numSamplers;
+
+						uint64_t gpu_offset = heap.cached_completedValue;
+						uint64_t wrapped_gpu_offset = gpu_offset % wrap_effective_size;
+						while (wrapped_offset < wrapped_gpu_offset && wrapped_offset_end > wrapped_gpu_offset)
+						{
+							assert(heap.fenceValue > wrapped_offset_end); // simply not enough space, even with GPU drain
+							gpu_offset = heap.fence->GetCompletedValue();
+							wrapped_gpu_offset = gpu_offset % wrap_effective_size;
+						}
+
+						gpu_handle.ptr += (size_t)ringOffset_sam * (size_t)device->sampler_descriptor_size;
+					}
+					else
+					{
+						// The reservation is the maximum amount of descriptors that can be allocated once
+						static constexpr uint32_t wrap_reservation = DESCRIPTORBINDER_CBV_COUNT + DESCRIPTORBINDER_SRV_COUNT + DESCRIPTORBINDER_UAV_COUNT + 1;
+						const uint32_t wrap_effective_size = heap.heapDesc.NumDescriptors - BINDLESS_RESOURCE_CAPACITY - wrap_reservation;
+						assert(wrap_reservation > numResources); // for correct lockless wrap behaviour
+
+						const uint64_t offset = heap.allocationOffset.fetch_add(numResources);
+						const uint64_t wrapped_offset = BINDLESS_RESOURCE_CAPACITY + offset % wrap_effective_size;
+						ringOffset_res = (uint32_t)wrapped_offset;
+						const uint64_t wrapped_offset_end = wrapped_offset + numResources;
+
+						uint64_t gpu_offset = heap.cached_completedValue;
+						uint64_t wrapped_gpu_offset = gpu_offset % wrap_effective_size;
+						while (wrapped_offset < wrapped_gpu_offset && wrapped_offset_end > wrapped_gpu_offset)
+						{
+							assert(heap.fenceValue > wrapped_offset_end); // simply not enough space, even with GPU drain
+							gpu_offset = heap.fence->GetCompletedValue();
+							wrapped_gpu_offset = gpu_offset % wrap_effective_size;
+						}
+
+						gpu_handle.ptr += (size_t)ringOffset_res * (size_t)device->resource_descriptor_size;
+					}
+
+					for (UINT i = 0; i < param.DescriptorTable.NumDescriptorRanges; ++i)
+					{
+						const D3D12_DESCRIPTOR_RANGE1& range = param.DescriptorTable.pDescriptorRanges[i];
+						switch (range.RangeType)
+						{
+						case D3D12_DESCRIPTOR_RANGE_TYPE_SRV:
+							for (UINT idx = 0; idx < range.NumDescriptors; ++idx)
+							{
+								D3D12_CPU_DESCRIPTOR_HANDLE dst_handle = heap.start_cpu;
+								uint32_t ringoffset = ringOffset_res++;
+								dst_handle.ptr += ringoffset * device->resource_descriptor_size;
+
+								UINT reg = range.BaseShaderRegister + idx;
+								const GPUResource& resource = table.SRV[reg];
+								if (resource.IsValid())
+								{
+									int subresource = table.SRV_index[reg];
+									auto internal_state = to_internal(&resource);
+									D3D12_CPU_DESCRIPTOR_HANDLE src_handle = subresource < 0 ? internal_state->srv.handle : internal_state->subresources_srv[subresource].handle;
+									device->device->CopyDescriptorsSimple(1, dst_handle, src_handle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+								}
+								else
+								{
+									device->device->CopyDescriptorsSimple(1, dst_handle, device->nullSRV_buffer, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+								}
+							}
+							break;
+						case D3D12_DESCRIPTOR_RANGE_TYPE_UAV:
+							for (UINT idx = 0; idx < range.NumDescriptors; ++idx)
+							{
+								D3D12_CPU_DESCRIPTOR_HANDLE dst_handle = heap.start_cpu;
+								uint32_t ringoffset = ringOffset_res++;
+								dst_handle.ptr += ringoffset * device->resource_descriptor_size;
+
+								UINT reg = range.BaseShaderRegister + idx;
+								const GPUResource& resource = table.UAV[reg];
+								if (resource.IsValid())
+								{
+									int subresource = table.UAV_index[reg];
+									auto internal_state = to_internal(&resource);
+									D3D12_CPU_DESCRIPTOR_HANDLE src_handle = subresource < 0 ? internal_state->uav.handle : internal_state->subresources_uav[subresource].handle;
+									device->device->CopyDescriptorsSimple(1, dst_handle, src_handle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+								}
+								else
+								{
+									device->device->CopyDescriptorsSimple(1, dst_handle, device->nullUAV_buffer, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+								}
+							}
+							break;
+						case D3D12_DESCRIPTOR_RANGE_TYPE_CBV:
+							for (UINT idx = 0; idx < range.NumDescriptors; ++idx)
+							{
+								D3D12_CPU_DESCRIPTOR_HANDLE dst_handle = heap.start_cpu;
+								uint32_t ringoffset = ringOffset_res++;
+								dst_handle.ptr += ringoffset * device->resource_descriptor_size;
+
+								UINT reg = range.BaseShaderRegister + idx;
+								const GPUBuffer& buffer = table.CBV[reg];
+								if (buffer.IsValid())
+								{
+									uint64_t offset = table.CBV_offset[reg];
+									auto internal_state = to_internal(&buffer);
+
+									D3D12_CONSTANT_BUFFER_VIEW_DESC cbv;
+									cbv.BufferLocation = internal_state->gpu_address;
+									cbv.BufferLocation += offset;
+									cbv.SizeInBytes = (UINT)AlignTo(buffer.desc.size - offset, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+									cbv.SizeInBytes = std::min(cbv.SizeInBytes, 655535u);
+
+									device->device->CreateConstantBufferView(&cbv, dst_handle);
+								}
+								else
+								{
+									device->device->CopyDescriptorsSimple(1, dst_handle, device->nullCBV, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+								}
+							}
+							break;
+						case D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER:
+							for (UINT idx = 0; idx < range.NumDescriptors; ++idx)
+							{
+								D3D12_CPU_DESCRIPTOR_HANDLE dst_handle = heap.start_cpu;
+								uint32_t ringoffset = ringOffset_sam++;
+								dst_handle.ptr += ringoffset * device->sampler_descriptor_size;
+
+								UINT reg = range.BaseShaderRegister + idx;
+								const Sampler& sam = table.SAM[reg];
+								if (sam.IsValid())
+								{
+									auto internal_state = to_internal(&sam);
+									D3D12_CPU_DESCRIPTOR_HANDLE src_handle = internal_state->descriptor.handle;
+									device->device->CopyDescriptorsSimple(1, dst_handle, src_handle, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+								}
+								else
+								{
+									device->device->CopyDescriptorsSimple(1, dst_handle, device->nullSAM, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+								}
+							}
+							break;
+						default:
+							assert(0);
+							break;
+						}
+					}
+				}
+
+				if (graphics)
+				{
+					commandlist->SetGraphicsRootDescriptorTable(
+						root_parameter_index,
+						gpu_handle
+					);
 				}
 				else
+				{
+					commandlist->SetComputeRootDescriptorTable(
+						root_parameter_index,
+						gpu_handle
+					);
+				}
+			}
+			break;
+
+			case D3D12_ROOT_PARAMETER_TYPE_CBV:
+			{
+				const GPUBuffer& buffer = table.CBV[param.Descriptor.ShaderRegister];
+				uint64_t offset = table.CBV_offset[param.Descriptor.ShaderRegister];
+
+				D3D12_GPU_VIRTUAL_ADDRESS address = {};
+				if (buffer.IsValid())
 				{
 					auto internal_state = to_internal(&buffer);
 					address = internal_state->gpu_address;
@@ -1642,293 +1813,103 @@ using namespace dx12_internal;
 
 				if (graphics)
 				{
-					device->GetCommandList(cmd)->SetGraphicsRootConstantBufferView(root_param, address);
+					commandlist->SetGraphicsRootConstantBufferView(
+						root_parameter_index,
+						address
+					);
 				}
 				else
 				{
-					device->GetCommandList(cmd)->SetComputeRootConstantBufferView(root_param, address);
+					commandlist->SetComputeRootConstantBufferView(
+						root_parameter_index,
+						address
+					);
 				}
-				root_param++;
 			}
+			break;
 
-			dirty_root_cbvs = 0;
-		}
-
-
-		// Remarks:
-		//	This is allocating from the global shader visible descriptor heaps in a simple incrementing
-		//	lockless ring buffer fashion.
-		//	In this lockless method, a descriptor array that is to be allocated might not fit without
-		//	completely wrapping the beginning of the allocation.
-		//	But completely wrapping after the fact we discovered that the array couldn't fit,
-		//	it wouldn't be thread safe any more without introducing locks
-		//	For that reason, we are reserving an excess amount of descriptors at the end which can't be normally
-		//	allocated, but any out of bounds descriptors can still be safely written into it
-		//
-		//	This method wastes a number of descriptors essentially at the end of the heap, but it is simple
-		//	and safe to implement
-		//
-		//	The excess amount is essentially equal to the maximum number of descriptors that can be allocated at once.
-
-
-		// Resources:
-		if (pso_internal->resource_binding_count_unrolled > 0 && dirty_res)
-		{
-			uint32_t resources = pso_internal->resource_binding_count_unrolled;
-			if (resources > 0)
+			case D3D12_ROOT_PARAMETER_TYPE_SRV:
 			{
-				// The reservation is the maximum amount of descriptors that can be allocated once
-				static constexpr uint32_t wrap_reservation = DESCRIPTORBINDER_CBV_COUNT + DESCRIPTORBINDER_SRV_COUNT + DESCRIPTORBINDER_UAV_COUNT;
-				const uint32_t wrap_effective_size = device->descriptorheap_res.heapDesc.NumDescriptors - BINDLESS_RESOURCE_CAPACITY - wrap_reservation;
-				assert(wrap_reservation > resources); // for correct lockless wrap behaviour
+				const GPUResource& resource = table.SRV[param.Descriptor.ShaderRegister];
+				int subresource = table.SRV_index[param.Descriptor.ShaderRegister];
 
-				const uint64_t offset = device->descriptorheap_res.allocationOffset.fetch_add(resources);
-				const uint64_t wrapped_offset = BINDLESS_RESOURCE_CAPACITY + offset % wrap_effective_size;
-				ringOffset_res = (uint32_t)wrapped_offset;
-				const uint64_t wrapped_offset_end = wrapped_offset + resources;
-
-				uint64_t gpu_offset = device->descriptorheap_res.cached_completedValue;
-				uint64_t wrapped_gpu_offset = gpu_offset % wrap_effective_size;
-				while (wrapped_offset < wrapped_gpu_offset && wrapped_offset_end > wrapped_gpu_offset)
+				D3D12_GPU_VIRTUAL_ADDRESS address = {};
+				if (resource.IsValid())
 				{
-					assert(device->descriptorheap_res.fenceValue > wrapped_offset_end); // simply not enough space, even with GPU drain
-					gpu_offset = device->descriptorheap_res.fence->GetCompletedValue();
-					wrapped_gpu_offset = gpu_offset % wrap_effective_size;
+					auto internal_state = to_internal(&resource);
+					address = internal_state->gpu_address;
+				}
+
+				if (graphics)
+				{
+					commandlist->SetGraphicsRootShaderResourceView(
+						root_parameter_index,
+						address
+					);
+				}
+				else
+				{
+					commandlist->SetComputeRootShaderResourceView(
+						root_parameter_index,
+						address
+					);
 				}
 			}
+			break;
 
-			dirty_res = false;
-			auto& heap = device->descriptorheap_res;
-			D3D12_GPU_DESCRIPTOR_HANDLE binding_table = heap.start_gpu;
-			binding_table.ptr += (UINT64)ringOffset_res * (UINT64)device->resource_descriptor_size;
-
-			int i = 0;
-			for (auto& x : pso_internal->resources)
+			case D3D12_ROOT_PARAMETER_TYPE_UAV:
 			{
-				RESOURCEBINDING binding = pso_internal->resource_bindings[i++];
+				const GPUResource& resource = table.UAV[param.Descriptor.ShaderRegister];
+				int subresource = table.UAV_index[param.Descriptor.ShaderRegister];
 
-				for (UINT descriptor_index = 0; descriptor_index < x.NumDescriptors; ++descriptor_index)
+				D3D12_GPU_VIRTUAL_ADDRESS address = {};
+				if (resource.IsValid())
 				{
-					D3D12_CPU_DESCRIPTOR_HANDLE dst = heap.start_cpu;
-					uint32_t ringOffset = ringOffset_res++;
-					dst.ptr += ringOffset * device->resource_descriptor_size;
+					auto internal_state = to_internal(&resource);
+					address = internal_state->gpu_address;
+				}
 
-					UINT ShaderRegister = x.BaseShaderRegister + descriptor_index;
-
-					switch (x.RangeType)
-					{
-					default:
-					case D3D12_DESCRIPTOR_RANGE_TYPE_SRV:
-					{
-						const GPUResource& resource = table.SRV[ShaderRegister];
-						const int subresource = table.SRV_index[ShaderRegister];
-						if (!resource.IsValid())
-						{
-							switch (binding)
-							{
-							case RAWBUFFER:
-							case STRUCTUREDBUFFER:
-							case TYPEDBUFFER:
-								device->device->CopyDescriptorsSimple(1, dst, device->nullSRV_buffer, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-								break;
-							case TEXTURE1D:
-								device->device->CopyDescriptorsSimple(1, dst, device->nullSRV_texture1d, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-								break;
-							case TEXTURE1DARRAY:
-								device->device->CopyDescriptorsSimple(1, dst, device->nullSRV_texture1darray, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-								break;
-							case TEXTURE2D:
-								device->device->CopyDescriptorsSimple(1, dst, device->nullSRV_texture2d, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-								break;
-							case TEXTURE2DARRAY:
-								device->device->CopyDescriptorsSimple(1, dst, device->nullSRV_texture2darray, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-								break;
-							case TEXTURECUBE:
-								device->device->CopyDescriptorsSimple(1, dst, device->nullSRV_texturecube, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-								break;
-							case TEXTURECUBEARRAY:
-								device->device->CopyDescriptorsSimple(1, dst, device->nullSRV_texturecubearray, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-								break;
-							case TEXTURE3D:
-								device->device->CopyDescriptorsSimple(1, dst, device->nullSRV_texture3d, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-								break;
-							case ACCELERATIONSTRUCTURE:
-								device->device->CopyDescriptorsSimple(1, dst, device->nullSRV_accelerationstructure, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-								break;
-							default:
-								assert(0);
-								break;
-							}
-						}
-						else
-						{
-							auto internal_state = to_internal(&resource);
-
-							if (resource.IsAccelerationStructure())
-							{
-								device->device->CopyDescriptorsSimple(1, dst, internal_state->srv.handle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-							}
-							else
-							{
-								if (subresource < 0)
-								{
-									device->device->CopyDescriptorsSimple(1, dst, internal_state->srv.handle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-								}
-								else
-								{
-									device->device->CopyDescriptorsSimple(1, dst, internal_state->subresources_srv[subresource].handle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-								}
-							}
-						}
-					}
-					break;
-
-					case D3D12_DESCRIPTOR_RANGE_TYPE_UAV:
-					{
-						const GPUResource& resource = table.UAV[ShaderRegister];
-						const int subresource = table.UAV_index[ShaderRegister];
-						if (!resource.IsValid())
-						{
-							switch (binding)
-							{
-							case RWRAWBUFFER:
-							case RWSTRUCTUREDBUFFER:
-							case RWTYPEDBUFFER:
-								device->device->CopyDescriptorsSimple(1, dst, device->nullUAV_buffer, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-								break;
-							case RWTEXTURE1D:
-								device->device->CopyDescriptorsSimple(1, dst, device->nullUAV_texture1d, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-								break;
-							case RWTEXTURE1DARRAY:
-								device->device->CopyDescriptorsSimple(1, dst, device->nullUAV_texture1darray, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-								break;
-							case RWTEXTURE2D:
-								device->device->CopyDescriptorsSimple(1, dst, device->nullUAV_texture2d, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-								break;
-							case RWTEXTURE2DARRAY:
-								device->device->CopyDescriptorsSimple(1, dst, device->nullUAV_texture2darray, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-								break;
-							case RWTEXTURE3D:
-								device->device->CopyDescriptorsSimple(1, dst, device->nullUAV_texture3d, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-								break;
-							default:
-								assert(0);
-								break;
-							}
-						}
-						else
-						{
-							auto internal_state = to_internal(&resource);
-
-							if (subresource < 0)
-							{
-								device->device->CopyDescriptorsSimple(1, dst, internal_state->uav.handle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-							}
-							else
-							{
-								device->device->CopyDescriptorsSimple(1, dst, internal_state->subresources_uav[subresource].handle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-							}
-						}
-					}
-					break;
-
-					case D3D12_DESCRIPTOR_RANGE_TYPE_CBV:
-					{
-						const GPUBuffer& buffer = table.CBV[ShaderRegister];
-						uint64_t offset = table.CBV_offset[ShaderRegister];
-
-						if (!buffer.IsValid())
-						{
-							device->device->CopyDescriptorsSimple(1, dst, device->nullCBV, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-						}
-						else
-						{
-							auto internal_state = to_internal(&buffer);
-
-							D3D12_CONSTANT_BUFFER_VIEW_DESC cbv;
-							cbv.BufferLocation = internal_state->gpu_address;
-							cbv.BufferLocation += offset;
-							cbv.SizeInBytes = AlignTo((UINT)buffer.desc.size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
-
-							device->device->CreateConstantBufferView(&cbv, dst);
-						}
-					}
-					break;
-					}
+				if (graphics)
+				{
+					commandlist->SetGraphicsRootUnorderedAccessView(
+						root_parameter_index,
+						address
+					);
+				}
+				else
+				{
+					commandlist->SetComputeRootUnorderedAccessView(
+						root_parameter_index,
+						address
+					);
 				}
 			}
+			break;
 
+			case D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS:
 			if (graphics)
 			{
-				device->GetCommandList(cmd)->SetGraphicsRootDescriptorTable(pso_internal->bindpoint_res, binding_table);
+				commandlist->SetGraphicsRoot32BitConstants(
+					root_parameter_index,
+					param.Constants.Num32BitValues,
+					device->pushconstants[cmd].data,
+					0
+				);
 			}
 			else
 			{
-				device->GetCommandList(cmd)->SetComputeRootDescriptorTable(pso_internal->bindpoint_res, binding_table);
+				commandlist->SetComputeRoot32BitConstants(
+					root_parameter_index,
+					param.Constants.Num32BitValues,
+					device->pushconstants[cmd].data,
+					0
+				);
 			}
-		}
+			break;
 
-		// Samplers:
-		if (pso_internal->sampler_binding_count_unrolled > 0 && dirty_sam)
-		{
-			uint32_t samplers = pso_internal->sampler_binding_count_unrolled;
-			if (samplers > 0)
-			{
-				// The reservation is the maximum amount of descriptors that can be allocated once
-				static constexpr uint32_t wrap_reservation = DESCRIPTORBINDER_SAMPLER_COUNT;
-				const uint32_t wrap_effective_size = device->descriptorheap_sam.heapDesc.NumDescriptors - BINDLESS_SAMPLER_CAPACITY - wrap_reservation;
-				assert(wrap_reservation > samplers); // for correct lockless wrap behaviour
-
-				const uint64_t offset = device->descriptorheap_sam.allocationOffset.fetch_add(samplers);
-				const uint64_t wrapped_offset = BINDLESS_SAMPLER_CAPACITY + offset % wrap_effective_size;
-				ringOffset_sam = (uint32_t)wrapped_offset;
-				const uint64_t wrapped_offset_end = wrapped_offset + samplers;
-
-				uint64_t gpu_offset = device->descriptorheap_sam.cached_completedValue;
-				uint64_t wrapped_gpu_offset = gpu_offset % wrap_effective_size;
-				while (wrapped_offset < wrapped_gpu_offset && wrapped_offset_end > wrapped_gpu_offset)
-				{
-					assert(device->descriptorheap_sam.fenceValue > wrapped_offset_end); // simply not enough space, even with GPU drain
-					gpu_offset = device->descriptorheap_sam.fence->GetCompletedValue();
-					wrapped_gpu_offset = gpu_offset % wrap_effective_size;
-				}
-			}
-
-			dirty_sam = false;
-			auto& heap = device->descriptorheap_sam;
-			D3D12_GPU_DESCRIPTOR_HANDLE binding_table = heap.start_gpu;
-			binding_table.ptr += (UINT64)ringOffset_sam * (UINT64)device->sampler_descriptor_size;
-
-			for (auto& x : pso_internal->samplers)
-			{
-				for (UINT descriptor_index = 0; descriptor_index < x.NumDescriptors; ++descriptor_index)
-				{
-					D3D12_CPU_DESCRIPTOR_HANDLE dst = heap.start_cpu;
-					uint32_t ringOffset = ringOffset_sam++;
-					dst.ptr += ringOffset * device->sampler_descriptor_size;
-
-					UINT ShaderRegister = x.BaseShaderRegister + descriptor_index;
-
-					const Sampler& sampler = table.SAM[ShaderRegister];
-					if (!sampler.IsValid())
-					{
-						device->device->CopyDescriptorsSimple(1, dst, device->nullSAM, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-					}
-					else
-					{
-						auto internal_state = to_internal(&sampler);
-						device->device->CopyDescriptorsSimple(1, dst, internal_state->descriptor.handle, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-					}
-				}
-			}
-
-			if (graphics)
-			{
-				device->GetCommandList(cmd)->SetGraphicsRootDescriptorTable(pso_internal->bindpoint_sam, binding_table);
-			}
-			else
-			{
-				device->GetCommandList(cmd)->SetComputeRootDescriptorTable(pso_internal->bindpoint_sam, binding_table);
+			default:
+				assert(0);
+				break;
 			}
 		}
 
@@ -2069,32 +2050,10 @@ using namespace dx12_internal;
 		pso_validate(cmd);
 
 		binders[cmd].flush(true, cmd);
-
-		auto pso_internal = to_internal(active_pso[cmd]);
-		if (pso_internal->rootconstants.Constants.Num32BitValues > 0)
-		{
-			GetCommandList(cmd)->SetGraphicsRoot32BitConstants(
-				pso_internal->bindpoint_rootconstant,
-				pso_internal->rootconstants.Constants.Num32BitValues,
-				pushconstants[cmd].data,
-				0
-			);
-		}
 	}
 	void GraphicsDevice_DX12::predispatch(CommandList cmd)
 	{
 		binders[cmd].flush(false, cmd);
-
-		auto cs_internal = to_internal(active_cs[cmd]);
-		if (cs_internal->rootconstants.Constants.Num32BitValues > 0)
-		{
-			GetCommandList(cmd)->SetComputeRoot32BitConstants(
-				cs_internal->bindpoint_rootconstant,
-				cs_internal->rootconstants.Constants.Num32BitValues,
-				pushconstants[cmd].data,
-				0
-			);
-		}
 	}
 
 
@@ -2108,17 +2067,6 @@ using namespace dx12_internal;
 		TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
 
 		DEBUGDEVICE = debuglayer;
-
-		HMODULE dxcompiler = wiLoadLibrary("dxcompiler.dll");
-		if (dxcompiler == nullptr)
-		{
-			std::stringstream ss("");
-			ss << "Failed to load dxcompiler.dll! ERROR: 0x" << std::hex << GetLastError() << std::endl;
-			ss << "Ensure that dxcompiler.dll is found near the exe" << std::endl;
-			ss << "You might also need to install the latest Visual C++ Redistributable package from Microsoft" << std::endl;
-			wi::helper::messageBox(ss.str(), "Error!");
-			wi::platform::Exit();
-		}
 
 #ifndef PLATFORM_UWP
 		HMODULE dxgi = LoadLibraryEx(L"dxgi.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
@@ -2167,38 +2115,16 @@ using namespace dx12_internal;
 			wi::platform::Exit();
 		}
 
-		D3D12SerializeVersionedRootSignature = (PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE)wiGetProcAddress(dx12, "D3D12SerializeVersionedRootSignature");
-		assert(D3D12SerializeVersionedRootSignature != nullptr);
-		if (D3D12SerializeVersionedRootSignature == nullptr)
+		D3D12CreateVersionedRootSignatureDeserializer = (PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER)wiGetProcAddress(dx12, "D3D12CreateVersionedRootSignatureDeserializer");
+		assert(D3D12CreateVersionedRootSignatureDeserializer != nullptr);
+		if (D3D12CreateVersionedRootSignatureDeserializer == nullptr)
 		{
 			std::stringstream ss("");
-			ss << "Failed to load D3D12SerializeVersionedRootSignature! ERROR: 0x" << std::hex << GetLastError();
+			ss << "Failed to load D3D12CreateVersionedRootSignatureDeserializer! ERROR: 0x" << std::hex << GetLastError();
 			wi::helper::messageBox(ss.str(), "Error!");
 			wi::platform::Exit();
 		}
 #endif // PLATFORM_UWP
-
-		DxcCreateInstanceProc DxcCreateInstance = (DxcCreateInstanceProc)wiGetProcAddress(dxcompiler, "DxcCreateInstance");
-		assert(DxcCreateInstance != nullptr);
-		if (DxcCreateInstance == nullptr)
-		{
-			std::stringstream ss("");
-			ss << "Failed to load DxcCreateInstance! ERROR: 0x" << std::hex << GetLastError();
-			wi::helper::messageBox(ss.str(), "Error!");
-			wi::platform::Exit();
-		}
-
-		HRESULT hr;
-
-		hr = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils));
-		assert(SUCCEEDED(hr));
-		if (FAILED(hr))
-		{
-			std::stringstream ss("");
-			ss << "DxcCreateInstance failed! ERROR: 0x" << std::hex << hr;
-			wi::helper::messageBox(ss.str(), "Error!");
-			wi::platform::Exit();
-		}
 
 #if !defined(PLATFORM_UWP)
 		if (debuglayer)
@@ -2241,6 +2167,8 @@ using namespace dx12_internal;
 #endif
 		}
 #endif
+
+		HRESULT hr;
 
 		hr = CreateDXGIFactory2(debuglayer ? DXGI_CREATE_FACTORY_DEBUG : 0u, IID_PPV_ARGS(&dxgiFactory));
 		if (FAILED(hr))
@@ -3332,549 +3260,26 @@ using namespace dx12_internal;
 		HRESULT hr = (internal_state->shadercode.empty() ? E_FAIL : S_OK);
 		assert(SUCCEEDED(hr));
 
-		wi::unordered_set<std::string> library_binding_resolver;
+		hr = device->CreateRootSignature(
+			0,
+			internal_state->shadercode.data(),
+			internal_state->shadercode.size(),
+			IID_PPV_ARGS(&internal_state->rootSignature)
+		);
+		assert(SUCCEEDED(hr));
 
+		hr = D3D12CreateVersionedRootSignatureDeserializer(
+			internal_state->shadercode.data(),
+			internal_state->shadercode.size(),
+			IID_PPV_ARGS(&internal_state->rootsig_deserializer)
+		);
+		assert(SUCCEEDED(hr));
+		if (SUCCEEDED(hr))
 		{
-			auto insert_descriptor = [&](const D3D12_SHADER_INPUT_BIND_DESC& desc, const D3D12_SHADER_BUFFER_DESC& bufferdesc)
+			hr = internal_state->rootsig_deserializer->GetRootSignatureDescAtVersion(D3D_ROOT_SIGNATURE_VERSION_1_1, &internal_state->rootsig_desc);
+			if (SUCCEEDED(hr))
 			{
-				if (library_binding_resolver.count(desc.Name) != 0)
-				{
-					return;
-				}
-				library_binding_resolver.insert(desc.Name);
-
-				if (desc.Type == D3D_SIT_CBUFFER && desc.BindPoint >= 999)
-				{
-					internal_state->rootconstants.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-					internal_state->rootconstants.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-					internal_state->rootconstants.Constants.ShaderRegister = desc.BindPoint;
-					internal_state->rootconstants.Constants.RegisterSpace = desc.Space;
-					internal_state->rootconstants.Constants.Num32BitValues = bufferdesc.Size / sizeof(uint32_t);
-					return;
-				}
-
-				const bool bindless = desc.Space > 0;
-
-				if (desc.Type == D3D_SIT_SAMPLER)
-				{
-					if (!bindless && desc.Space == 0)
-					{
-						for (auto& sam : pShader->auto_samplers)
-						{
-							if (desc.BindPoint == sam.slot)
-							{
-								internal_state->staticsamplers.push_back(_ConvertStaticSampler(sam));
-								return; // static sampler will be used instead
-							}
-						}
-						for (auto& sam : common_samplers)
-						{
-							if (desc.BindPoint == sam.ShaderRegister)
-							{
-								internal_state->staticsamplers.push_back(sam);
-								return; // static sampler will be used instead
-							}
-						}
-					}
-
-					D3D12_DESCRIPTOR_RANGE1& descriptor = bindless ? internal_state->bindless_sam.emplace_back() : internal_state->samplers.emplace_back();
-
-					descriptor.Flags = D3D12_DESCRIPTOR_RANGE_FLAG_NONE;
-
-					if (bindless)
-					{
-						descriptor.Flags = D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE;
-					}
-
-					descriptor.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
-					descriptor.BaseShaderRegister = desc.BindPoint;
-					descriptor.NumDescriptors = desc.BindCount == 0 ? ~0 : desc.BindCount;
-					descriptor.RegisterSpace = desc.Space;
-					descriptor.OffsetInDescriptorsFromTableStart = bindless ? 0 : D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-				}
-				else
-				{
-					D3D12_DESCRIPTOR_RANGE1& descriptor = bindless ? internal_state->bindless_res.emplace_back() : internal_state->resources.emplace_back();
-
-					descriptor.Flags = D3D12_DESCRIPTOR_RANGE_FLAG_NONE;
-
-					switch (desc.Type)
-					{
-					default:
-					case D3D_SIT_CBUFFER:
-						descriptor.Flags |= D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE;
-						descriptor.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
-						break;
-					case D3D_SIT_TBUFFER:
-					case D3D_SIT_STRUCTURED:
-					case D3D_SIT_BYTEADDRESS:
-						descriptor.Flags |= D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE;
-						descriptor.Flags |= D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE;
-						descriptor.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-						break;
-					case D3D_SIT_TEXTURE:
-					case D3D_SIT_RTACCELERATIONSTRUCTURE:
-						descriptor.Flags |= D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE;
-						descriptor.Flags |= D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE;
-						descriptor.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-						break;
-					case D3D_SIT_UAV_RWSTRUCTURED:
-					case D3D_SIT_UAV_RWBYTEADDRESS:
-					case D3D_SIT_UAV_APPEND_STRUCTURED:
-					case D3D_SIT_UAV_CONSUME_STRUCTURED:
-					case D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER:
-					case D3D_SIT_UAV_RWTYPED:
-					case D3D_SIT_UAV_FEEDBACKTEXTURE:
-						descriptor.Flags |= D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE;
-						descriptor.Flags |= D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE;
-						descriptor.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
-						break;
-					}
-
-					if (bindless)
-					{
-						// bindless is always volatile
-						descriptor.Flags = D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE | D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE;
-					}
-
-					descriptor.BaseShaderRegister = desc.BindPoint;
-					descriptor.NumDescriptors = desc.BindCount == 0 ? ~0 : desc.BindCount;
-					descriptor.RegisterSpace = desc.Space;
-					descriptor.OffsetInDescriptorsFromTableStart = bindless ? 0 : D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-
-					if (bindless)
-					{
-						return;
-					}
-
-					RESOURCEBINDING& binding = internal_state->resource_bindings.emplace_back();
-
-					switch (desc.Type)
-					{
-					default:
-					case D3D_SIT_CBUFFER:
-						binding = CONSTANTBUFFER;
-						break;
-					case D3D_SIT_TBUFFER:
-						binding = TYPEDBUFFER;
-						break;
-					case D3D_SIT_STRUCTURED:
-						binding = STRUCTUREDBUFFER;
-						break;
-					case D3D_SIT_BYTEADDRESS:
-						binding = RAWBUFFER;
-						break;
-					case D3D_SIT_TEXTURE:
-						switch (desc.Dimension)
-						{
-						case D3D_SRV_DIMENSION_BUFFER:
-							binding = TYPEDBUFFER;
-							break;
-						case D3D_SRV_DIMENSION_TEXTURE1D:
-							binding = TEXTURE1D;
-							break;
-						case D3D_SRV_DIMENSION_TEXTURE1DARRAY:
-							binding = TEXTURE1DARRAY;
-							break;
-						case D3D_SRV_DIMENSION_TEXTURE2D:
-						case D3D_SRV_DIMENSION_TEXTURE2DMS:
-							binding = TEXTURE2D;
-							break;
-						case D3D_SRV_DIMENSION_TEXTURE2DARRAY:
-						case D3D_SRV_DIMENSION_TEXTURE2DMSARRAY:
-							binding = TEXTURE2DARRAY;
-							break;
-						case D3D_SRV_DIMENSION_TEXTURE3D:
-							binding = TEXTURE3D;
-							break;
-						case D3D_SRV_DIMENSION_TEXTURECUBE:
-							binding = TEXTURECUBE;
-							break;
-						case D3D_SRV_DIMENSION_TEXTURECUBEARRAY:
-							binding = TEXTURECUBEARRAY;
-							break;
-						default:
-							assert(0);
-							break;
-						}
-						break;
-					case D3D_SIT_RTACCELERATIONSTRUCTURE:
-						binding = ACCELERATIONSTRUCTURE;
-						break;
-					case D3D_SIT_UAV_RWSTRUCTURED:
-					case D3D_SIT_UAV_APPEND_STRUCTURED:
-					case D3D_SIT_UAV_CONSUME_STRUCTURED:
-					case D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER:
-						binding = RWSTRUCTUREDBUFFER;
-						break;
-					case D3D_SIT_UAV_RWBYTEADDRESS:
-						binding = RWRAWBUFFER;
-						break;
-					case D3D_SIT_UAV_RWTYPED:
-						switch (desc.Dimension)
-						{
-						case D3D_SRV_DIMENSION_BUFFER:
-							binding = RWTYPEDBUFFER;
-							break;
-						case D3D_SRV_DIMENSION_TEXTURE1D:
-							binding = RWTEXTURE1D;
-							break;
-						case D3D_SRV_DIMENSION_TEXTURE1DARRAY:
-							binding = RWTEXTURE1DARRAY;
-							break;
-						case D3D_SRV_DIMENSION_TEXTURE2D:
-							binding = RWTEXTURE2D;
-							break;
-						case D3D_SRV_DIMENSION_TEXTURE2DARRAY:
-							binding = RWTEXTURE2DARRAY;
-							break;
-						case D3D_SRV_DIMENSION_TEXTURE3D:
-							binding = RWTEXTURE3D;
-							break;
-						default:
-							assert(0);
-							break;
-						}
-						break;
-					case D3D_SIT_UAV_FEEDBACKTEXTURE:
-						switch (desc.Dimension)
-						{
-						case D3D_SRV_DIMENSION_BUFFER:
-							binding = RWTYPEDBUFFER;
-							break;
-						case D3D_SRV_DIMENSION_TEXTURE1D:
-							binding = RWTEXTURE1D;
-							break;
-						case D3D_SRV_DIMENSION_TEXTURE1DARRAY:
-							binding = RWTEXTURE1DARRAY;
-							break;
-						case D3D_SRV_DIMENSION_TEXTURE2D:
-							binding = RWTEXTURE2D;
-							break;
-						case D3D_SRV_DIMENSION_TEXTURE2DARRAY:
-							binding = RWTEXTURE2DARRAY;
-							break;
-						case D3D_SRV_DIMENSION_TEXTURE3D:
-							binding = RWTEXTURE3D;
-							break;
-						default:
-							assert(0);
-							break;
-						}
-						break;
-					}
-				}
-			};
-
-			DxcBuffer ReflectionData;
-			ReflectionData.Encoding = DXC_CP_ACP;
-			ReflectionData.Ptr = pShaderBytecode;
-			ReflectionData.Size = (SIZE_T)BytecodeLength;
-
-			if (stage == ShaderStage::LIB)
-			{
-				ComPtr<ID3D12LibraryReflection> reflection;
-				hr = dxcUtils->CreateReflection(&ReflectionData, IID_PPV_ARGS(&reflection));
-				assert(SUCCEEDED(hr));
-
-				D3D12_LIBRARY_DESC library_desc;
-				hr = reflection->GetDesc(&library_desc);
-				assert(SUCCEEDED(hr));
-
-				for (UINT i = 0; i < library_desc.FunctionCount; ++i)
-				{
-					ID3D12FunctionReflection* function_reflection = reflection->GetFunctionByIndex((INT)i);
-					assert(function_reflection != nullptr);
-					D3D12_FUNCTION_DESC function_desc;
-					hr = function_reflection->GetDesc(&function_desc);
-					assert(SUCCEEDED(hr));
-
-					for (UINT i = 0; i < function_desc.BoundResources; ++i)
-					{
-						D3D12_SHADER_INPUT_BIND_DESC desc;
-						hr = function_reflection->GetResourceBindingDesc(i, &desc);
-						assert(SUCCEEDED(hr));
-						D3D12_SHADER_BUFFER_DESC bufferdesc = {};
-						if (desc.Type == D3D_SIT_CBUFFER)
-						{
-							auto constantbuffer = function_reflection->GetConstantBufferByIndex(i);
-							if (constantbuffer != nullptr)
-							{
-								hr = constantbuffer->GetDesc(&bufferdesc);
-								assert(SUCCEEDED(hr));
-							}
-						}
-						insert_descriptor(desc, bufferdesc);
-					}
-				}
-			}
-			else // Shader reflection
-			{
-				ComPtr<ID3D12ShaderReflection > reflection;
-				hr = dxcUtils->CreateReflection(&ReflectionData, IID_PPV_ARGS(&reflection));
-				assert(SUCCEEDED(hr));
-
-				D3D12_SHADER_DESC shader_desc;
-				hr = reflection->GetDesc(&shader_desc);
-				assert(SUCCEEDED(hr));
-
-				for (UINT i = 0; i < shader_desc.BoundResources; ++i)
-				{
-					D3D12_SHADER_INPUT_BIND_DESC desc;
-					hr = reflection->GetResourceBindingDesc(i, &desc);
-					assert(SUCCEEDED(hr));
-					D3D12_SHADER_BUFFER_DESC bufferdesc = {};
-					if (desc.Type == D3D_SIT_CBUFFER)
-					{
-						auto constantbuffer = reflection->GetConstantBufferByIndex(i);
-						if (constantbuffer != nullptr)
-						{
-							hr = constantbuffer->GetDesc(&bufferdesc);
-							assert(SUCCEEDED(hr));
-						}
-					}
-					insert_descriptor(desc, bufferdesc);
-				}
-			}
-
-			for (auto& sam : internal_state->staticsamplers)
-			{
-				switch (stage)
-				{
-				case ShaderStage::MS:
-					sam.ShaderVisibility = D3D12_SHADER_VISIBILITY_MESH;
-					break;
-				case ShaderStage::AS:
-					sam.ShaderVisibility = D3D12_SHADER_VISIBILITY_AMPLIFICATION;
-					break;
-				case ShaderStage::VS:
-					sam.ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
-					break;
-				case ShaderStage::HS:
-					sam.ShaderVisibility = D3D12_SHADER_VISIBILITY_HULL;
-					break;
-				case ShaderStage::DS:
-					sam.ShaderVisibility = D3D12_SHADER_VISIBILITY_DOMAIN;
-					break;
-				case ShaderStage::GS:
-					sam.ShaderVisibility = D3D12_SHADER_VISIBILITY_GEOMETRY;
-					break;
-				case ShaderStage::PS:
-					sam.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-					break;
-				default:
-					sam.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-					break;
-				}
-			}
-
-
-			if (stage == ShaderStage::CS || stage == ShaderStage::LIB)
-			{
-				wi::vector<D3D12_ROOT_PARAMETER1> params;
-
-				internal_state->bindpoint_rootconstant = (uint32_t)params.size();
-				if (internal_state->rootconstants.Constants.Num32BitValues > 0)
-				{
-					auto& param = params.emplace_back();
-					param = internal_state->rootconstants;
-				}
-
-				// Split resources into root descriptors and tables:
-				{
-					wi::vector<D3D12_DESCRIPTOR_RANGE1> resources;
-					wi::vector<RESOURCEBINDING> bindings;
-					int i = 0;
-					for (auto& x : internal_state->resources)
-					{
-						RESOURCEBINDING binding = internal_state->resource_bindings[i++];
-						if (x.NumDescriptors == 1 && x.RegisterSpace == 0 && binding == CONSTANTBUFFER && internal_state->root_cbvs.size() < CONSTANT_BUFFER_AUTO_PLACEMENT_IN_ROOT)
-						{
-							D3D12_ROOT_DESCRIPTOR1& descriptor = internal_state->root_cbvs.emplace_back();
-							descriptor.Flags = D3D12_ROOT_DESCRIPTOR_FLAG_NONE;
-							descriptor.ShaderRegister = x.BaseShaderRegister;
-							descriptor.RegisterSpace = x.RegisterSpace;
-						}
-						else
-						{
-							resources.push_back(x);
-							bindings.push_back(binding);
-						}
-					}
-					internal_state->resources = resources;
-					internal_state->resource_bindings = bindings;
-				}
-
-				for (auto& x : internal_state->resources)
-				{
-					internal_state->resource_binding_count_unrolled += x.NumDescriptors;
-				}
-				for (auto& x : internal_state->samplers)
-				{
-					internal_state->sampler_binding_count_unrolled += x.NumDescriptors;
-				}
-
-				internal_state->bindpoint_rootdescriptor = (uint32_t)params.size();
-				for (auto& x : internal_state->root_cbvs)
-				{
-					D3D12_ROOT_PARAMETER1& param = params.emplace_back();
-					param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-					param.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-					param.Descriptor = x;
-				}
-
-				internal_state->bindpoint_res = (uint32_t)params.size();
-				if (!internal_state->resources.empty())
-				{
-					D3D12_ROOT_PARAMETER1& param = params.emplace_back();
-					param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-					param.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-					param.DescriptorTable.NumDescriptorRanges = (UINT)internal_state->resources.size();
-					param.DescriptorTable.pDescriptorRanges = internal_state->resources.data();
-				}
-
-				internal_state->bindpoint_sam = (uint32_t)params.size();
-				if (!internal_state->samplers.empty())
-				{
-					D3D12_ROOT_PARAMETER1& param = params.emplace_back();
-					param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-					param.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-					param.DescriptorTable.NumDescriptorRanges = (UINT)internal_state->samplers.size();
-					param.DescriptorTable.pDescriptorRanges = internal_state->samplers.data();
-				}
-
-				internal_state->bindpoint_bindless = (uint32_t)params.size();
-				if(!internal_state->bindless_res.empty())
-				{
-					D3D12_ROOT_PARAMETER1& param = params.emplace_back();
-					param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-					param.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-					param.DescriptorTable.NumDescriptorRanges = (UINT)internal_state->bindless_res.size();
-					param.DescriptorTable.pDescriptorRanges = internal_state->bindless_res.data();
-				}
-				if (!internal_state->bindless_sam.empty())
-				{
-					D3D12_ROOT_PARAMETER1& param = params.emplace_back();
-					param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-					param.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-					param.DescriptorTable.NumDescriptorRanges = (UINT)internal_state->bindless_sam.size();
-					param.DescriptorTable.pDescriptorRanges = internal_state->bindless_sam.data();
-				}
-
-				size_t rootconstant_hash = 0;
-				wi::helper::hash_combine(rootconstant_hash, internal_state->rootconstants.ShaderVisibility);
-				wi::helper::hash_combine(rootconstant_hash, internal_state->rootconstants.ParameterType);
-				wi::helper::hash_combine(rootconstant_hash, internal_state->rootconstants.Constants.Num32BitValues);
-				wi::helper::hash_combine(rootconstant_hash, internal_state->rootconstants.Constants.RegisterSpace);
-				wi::helper::hash_combine(rootconstant_hash, internal_state->rootconstants.Constants.ShaderRegister);
-
-				size_t root_binding_hash = 0;
-				for (auto& x : internal_state->root_cbvs)
-				{
-					wi::helper::hash_combine(root_binding_hash, x.Flags);
-					wi::helper::hash_combine(root_binding_hash, x.ShaderRegister);
-					wi::helper::hash_combine(root_binding_hash, x.RegisterSpace);
-				}
-
-				size_t resource_binding_hash = 0;
-				for (auto& x : internal_state->resources)
-				{
-					wi::helper::hash_combine(resource_binding_hash, x.BaseShaderRegister);
-					wi::helper::hash_combine(resource_binding_hash, x.NumDescriptors);
-					wi::helper::hash_combine(resource_binding_hash, x.Flags);
-					wi::helper::hash_combine(resource_binding_hash, x.OffsetInDescriptorsFromTableStart);
-					wi::helper::hash_combine(resource_binding_hash, x.RangeType);
-					wi::helper::hash_combine(resource_binding_hash, x.RegisterSpace);
-				}
-
-				size_t sampler_binding_hash = 0;
-				for (auto& x : internal_state->samplers)
-				{
-					wi::helper::hash_combine(sampler_binding_hash, x.BaseShaderRegister);
-					wi::helper::hash_combine(sampler_binding_hash, x.NumDescriptors);
-					wi::helper::hash_combine(sampler_binding_hash, x.Flags);
-					wi::helper::hash_combine(sampler_binding_hash, x.OffsetInDescriptorsFromTableStart);
-					wi::helper::hash_combine(sampler_binding_hash, x.RangeType);
-					wi::helper::hash_combine(sampler_binding_hash, x.RegisterSpace);
-				}
-
-				size_t bindless_hash = 0;
-				for (auto& x : internal_state->bindless_res)
-				{
-					wi::helper::hash_combine(bindless_hash, x.BaseShaderRegister);
-					wi::helper::hash_combine(bindless_hash, x.NumDescriptors);
-					wi::helper::hash_combine(bindless_hash, x.Flags);
-					wi::helper::hash_combine(bindless_hash, x.OffsetInDescriptorsFromTableStart);
-					wi::helper::hash_combine(bindless_hash, x.RangeType);
-					wi::helper::hash_combine(bindless_hash, x.RegisterSpace);
-				}
-				for (auto& x : internal_state->bindless_sam)
-				{
-					wi::helper::hash_combine(bindless_hash, x.BaseShaderRegister);
-					wi::helper::hash_combine(bindless_hash, x.NumDescriptors);
-					wi::helper::hash_combine(bindless_hash, x.Flags);
-					wi::helper::hash_combine(bindless_hash, x.OffsetInDescriptorsFromTableStart);
-					wi::helper::hash_combine(bindless_hash, x.RangeType);
-					wi::helper::hash_combine(bindless_hash, x.RegisterSpace);
-				}
-
-				size_t rootsig_hash = 0;
-				wi::helper::hash_combine(rootsig_hash, rootconstant_hash);
-				wi::helper::hash_combine(rootsig_hash, root_binding_hash);
-				wi::helper::hash_combine(rootsig_hash, resource_binding_hash);
-				wi::helper::hash_combine(rootsig_hash, sampler_binding_hash);
-				wi::helper::hash_combine(rootsig_hash, bindless_hash);
-				for (auto& x : internal_state->staticsamplers)
-				{
-					wi::helper::hash_combine(rootsig_hash, x.AddressU);
-					wi::helper::hash_combine(rootsig_hash, x.AddressV);
-					wi::helper::hash_combine(rootsig_hash, x.AddressW);
-					wi::helper::hash_combine(rootsig_hash, x.BorderColor);
-					wi::helper::hash_combine(rootsig_hash, x.ComparisonFunc);
-					wi::helper::hash_combine(rootsig_hash, x.Filter);
-					wi::helper::hash_combine(rootsig_hash, x.MaxAnisotropy);
-					wi::helper::hash_combine(rootsig_hash, x.MaxLOD);
-					wi::helper::hash_combine(rootsig_hash, x.MinLOD);
-					wi::helper::hash_combine(rootsig_hash, x.MipLODBias);
-					wi::helper::hash_combine(rootsig_hash, x.RegisterSpace);
-					wi::helper::hash_combine(rootsig_hash, x.ShaderRegister);
-					wi::helper::hash_combine(rootsig_hash, x.ShaderVisibility);
-				}
-
-				rootsignature_cache_mutex.lock();
-				if (rootsignature_cache[rootsig_hash])
-				{
-					internal_state->rootSignature = rootsignature_cache[rootsig_hash];
-				}
-				else
-				{
-					D3D12_ROOT_SIGNATURE_DESC1 rootSigDesc = {};
-					rootSigDesc.NumStaticSamplers = (UINT)internal_state->staticsamplers.size();
-					rootSigDesc.pStaticSamplers = internal_state->staticsamplers.data();
-					rootSigDesc.NumParameters = (UINT)params.size();
-					rootSigDesc.pParameters = params.data();
-					rootSigDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
-
-					D3D12_VERSIONED_ROOT_SIGNATURE_DESC versioned_rs = {};
-					versioned_rs.Version = D3D_ROOT_SIGNATURE_VERSION_1_1;
-					versioned_rs.Desc_1_1 = rootSigDesc;
-
-					ID3DBlob* rootSigBlob;
-					ID3DBlob* rootSigError;
-					hr = D3D12SerializeVersionedRootSignature(&versioned_rs, &rootSigBlob, &rootSigError);
-					if (FAILED(hr))
-					{
-						OutputDebugStringA((char*)rootSigError->GetBufferPointer());
-						assert(0);
-					}
-					hr = device->CreateRootSignature(0, rootSigBlob->GetBufferPointer(), rootSigBlob->GetBufferSize(), IID_PPV_ARGS(&internal_state->rootSignature));
-					assert(SUCCEEDED(hr));
-					if (SUCCEEDED(hr))
-					{
-						rootsignature_cache[rootsig_hash] = internal_state->rootSignature;
-					}
-				}
-				rootsignature_cache_mutex.unlock();
+				assert(internal_state->rootsig_desc->Version == D3D_ROOT_SIGNATURE_VERSION_1_1);
 			}
 		}
 
@@ -3882,11 +3287,9 @@ using namespace dx12_internal;
 		{
 			struct PSO_STREAM
 			{
-				CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE pRootSignature;
 				CD3DX12_PIPELINE_STATE_STREAM_CS CS;
 			} stream;
 
-			stream.pRootSignature = internal_state->rootSignature.Get();
 			stream.CS = { internal_state->shadercode.data(), internal_state->shadercode.size() };
 
 			D3D12_PIPELINE_STATE_STREAM_DESC streamDesc = {};
@@ -3996,350 +3399,16 @@ using namespace dx12_internal;
 		wi::helper::hash_combine(pso->hash, pDesc->pt);
 		wi::helper::hash_combine(pso->hash, pDesc->sample_mask);
 
-		HRESULT hr = S_OK;
-
-		{
-			// Root signature comes from reflection data when there is no root signature specified:
-
-			auto insert_shader = [&](const Shader* shader)
-			{
-				if (shader == nullptr)
-					return;
-
-				auto shader_internal = to_internal(shader);
-
-				size_t check_max = internal_state->resources.size(); // dont't check for duplicates within self table
-				int b = 0;
-				for (auto& x : shader_internal->resources)
-				{
-					RESOURCEBINDING binding = shader_internal->resource_bindings[b++];
-
-					bool found = false;
-					size_t i = 0;
-					for (auto& y : internal_state->resources)
-					{
-						if (x.BaseShaderRegister == y.BaseShaderRegister && x.RangeType == y.RangeType)
-						{
-							found = true;
-							break;
-						}
-						if (i++ >= check_max)
-							break;
-					}
-
-					if (!found)
-					{
-						internal_state->resources.push_back(x);
-						internal_state->resource_bindings.push_back(binding);
-					}
-				}
-
-				check_max = internal_state->samplers.size(); // dont't check for duplicates within self table
-				for (auto& x : shader_internal->samplers)
-				{
-					bool found = false;
-					size_t i = 0;
-					for (auto& y : internal_state->samplers)
-					{
-						if (x.BaseShaderRegister == y.BaseShaderRegister && x.RangeType == y.RangeType)
-						{
-							found = true;
-							break;
-						}
-						if (i++ >= check_max)
-							break;
-					}
-
-					if (!found)
-					{
-						internal_state->samplers.push_back(x);
-					}
-				}
-
-				for (auto& x : shader_internal->staticsamplers)
-				{
-					internal_state->staticsamplers.push_back(x);
-				}
-
-				if (shader_internal->rootconstants.Constants.Num32BitValues > 0)
-				{
-					internal_state->rootconstants = shader_internal->rootconstants;
-				}
-			};
-
-			insert_shader(pDesc->ps); // prioritize ps root descriptor assignment
-			insert_shader(pDesc->ms);
-			insert_shader(pDesc->as);
-			insert_shader(pDesc->vs);
-			insert_shader(pDesc->hs);
-			insert_shader(pDesc->ds);
-			insert_shader(pDesc->gs);
-
-			wi::vector<D3D12_ROOT_PARAMETER1> params;
-
-			internal_state->bindpoint_rootconstant = (uint32_t)params.size();
-			if (internal_state->rootconstants.Constants.Num32BitValues > 0)
-			{
-				auto& param = params.emplace_back();
-				param = internal_state->rootconstants;
-			}
-
-			// Split resources into root descriptors and tables:
-			{
-				wi::vector<D3D12_DESCRIPTOR_RANGE1> resources;
-				wi::vector<RESOURCEBINDING> bindings;
-				int i = 0;
-				for (auto& x : internal_state->resources)
-				{
-					RESOURCEBINDING binding = internal_state->resource_bindings[i++];
-					if (x.NumDescriptors == 1 && binding == CONSTANTBUFFER && internal_state->root_cbvs.size() < CONSTANT_BUFFER_AUTO_PLACEMENT_IN_ROOT)
-					{
-						D3D12_ROOT_DESCRIPTOR1& descriptor = internal_state->root_cbvs.emplace_back();
-						descriptor.Flags = D3D12_ROOT_DESCRIPTOR_FLAG_NONE;
-						descriptor.ShaderRegister = x.BaseShaderRegister;
-						descriptor.RegisterSpace = x.RegisterSpace;
-					}
-					else
-					{
-						resources.push_back(x);
-						bindings.push_back(binding);
-					}
-				}
-				internal_state->resources = resources;
-				internal_state->resource_bindings = bindings;
-			}
-
-			for (auto& x : internal_state->resources)
-			{
-				internal_state->resource_binding_count_unrolled += x.NumDescriptors;
-			}
-			for (auto& x : internal_state->samplers)
-			{
-				internal_state->sampler_binding_count_unrolled += x.NumDescriptors;
-			}
-
-			internal_state->bindpoint_rootdescriptor = (uint32_t)params.size();
-			for (auto& x : internal_state->root_cbvs)
-			{
-				D3D12_ROOT_PARAMETER1& param = params.emplace_back();
-				param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-				param.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-				param.Descriptor = x;
-			}
-
-			internal_state->bindpoint_res = (uint32_t)params.size();
-			if (!internal_state->resources.empty())
-			{
-				D3D12_ROOT_PARAMETER1& param = params.emplace_back();
-				param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-				param.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-				param.DescriptorTable.NumDescriptorRanges = (UINT)internal_state->resources.size();
-				param.DescriptorTable.pDescriptorRanges = internal_state->resources.data();
-			}
-
-			internal_state->bindpoint_sam = (uint32_t)params.size();
-			if (!internal_state->samplers.empty())
-			{
-				D3D12_ROOT_PARAMETER1& param = params.emplace_back();
-				param = {};
-				param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-				param.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-				param.DescriptorTable.NumDescriptorRanges = (UINT)internal_state->samplers.size();
-				param.DescriptorTable.pDescriptorRanges = internal_state->samplers.data();
-			}
-
-			internal_state->bindpoint_bindless = (uint32_t)params.size();
-
-			auto insert_shader_bindless = [&](const Shader* shader, D3D12_SHADER_VISIBILITY stage) {
-				if (shader == nullptr)
-					return;
-
-				auto shader_internal = to_internal(shader);
-
-				for (auto& x : shader_internal->bindless_res)
-				{
-					bool found = false;
-					for (auto& y : internal_state->bindless_res)
-					{
-						if (x.RegisterSpace == y.RegisterSpace)
-						{
-							found = true;
-							break;
-						}
-					}
-					if (!found)
-						internal_state->bindless_res.push_back(x);
-				}
-
-				for (auto& x : shader_internal->bindless_sam)
-				{
-					bool found = false;
-					for (auto& y : internal_state->bindless_sam)
-					{
-						if (x.RegisterSpace == y.RegisterSpace)
-						{
-							found = true;
-							break;
-						}
-					}
-					if (!found)
-						internal_state->bindless_sam.push_back(x);
-				}
-			};
-
-			insert_shader_bindless(pDesc->ms, D3D12_SHADER_VISIBILITY_MESH);
-			insert_shader_bindless(pDesc->as, D3D12_SHADER_VISIBILITY_AMPLIFICATION);
-			insert_shader_bindless(pDesc->vs, D3D12_SHADER_VISIBILITY_VERTEX);
-			insert_shader_bindless(pDesc->hs, D3D12_SHADER_VISIBILITY_HULL);
-			insert_shader_bindless(pDesc->ds, D3D12_SHADER_VISIBILITY_DOMAIN);
-			insert_shader_bindless(pDesc->gs, D3D12_SHADER_VISIBILITY_GEOMETRY);
-			insert_shader_bindless(pDesc->ps, D3D12_SHADER_VISIBILITY_PIXEL);
-
-			internal_state->bindpoint_bindless = (uint32_t)params.size();
-			if (!internal_state->bindless_res.empty())
-			{
-				D3D12_ROOT_PARAMETER1& param = params.emplace_back();
-				param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-				param.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-				param.DescriptorTable.NumDescriptorRanges = (UINT)internal_state->bindless_res.size();
-				param.DescriptorTable.pDescriptorRanges = internal_state->bindless_res.data();
-			}
-			if (!internal_state->bindless_sam.empty())
-			{
-				D3D12_ROOT_PARAMETER1& param = params.emplace_back();
-				param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-				param.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-				param.DescriptorTable.NumDescriptorRanges = (UINT)internal_state->bindless_sam.size();
-				param.DescriptorTable.pDescriptorRanges = internal_state->bindless_sam.data();
-			}
-
-			size_t rootconstant_hash = 0;
-			wi::helper::hash_combine(rootconstant_hash, internal_state->rootconstants.ShaderVisibility);
-			wi::helper::hash_combine(rootconstant_hash, internal_state->rootconstants.ParameterType);
-			wi::helper::hash_combine(rootconstant_hash, internal_state->rootconstants.Constants.Num32BitValues);
-			wi::helper::hash_combine(rootconstant_hash, internal_state->rootconstants.Constants.RegisterSpace);
-			wi::helper::hash_combine(rootconstant_hash, internal_state->rootconstants.Constants.ShaderRegister);
-
-			size_t root_binding_hash = 0;
-			for (auto& x : internal_state->root_cbvs)
-			{
-				wi::helper::hash_combine(root_binding_hash, x.Flags);
-				wi::helper::hash_combine(root_binding_hash, x.ShaderRegister);
-				wi::helper::hash_combine(root_binding_hash, x.RegisterSpace);
-			}
-
-			size_t resource_binding_hash = 0;
-			for (auto& x : internal_state->resources)
-			{
-				wi::helper::hash_combine(resource_binding_hash, x.BaseShaderRegister);
-				wi::helper::hash_combine(resource_binding_hash, x.NumDescriptors);
-				wi::helper::hash_combine(resource_binding_hash, x.Flags);
-				wi::helper::hash_combine(resource_binding_hash, x.OffsetInDescriptorsFromTableStart);
-				wi::helper::hash_combine(resource_binding_hash, x.RangeType);
-				wi::helper::hash_combine(resource_binding_hash, x.RegisterSpace);
-			}
-
-			size_t sampler_binding_hash = 0;
-			for (auto& x : internal_state->samplers)
-			{
-				wi::helper::hash_combine(sampler_binding_hash, x.BaseShaderRegister);
-				wi::helper::hash_combine(sampler_binding_hash, x.NumDescriptors);
-				wi::helper::hash_combine(sampler_binding_hash, x.Flags);
-				wi::helper::hash_combine(sampler_binding_hash, x.OffsetInDescriptorsFromTableStart);
-				wi::helper::hash_combine(sampler_binding_hash, x.RangeType);
-				wi::helper::hash_combine(sampler_binding_hash, x.RegisterSpace);
-			}
-
-			size_t bindless_hash = 0;
-			for (auto& x : internal_state->bindless_res)
-			{
-				wi::helper::hash_combine(bindless_hash, x.BaseShaderRegister);
-				wi::helper::hash_combine(bindless_hash, x.NumDescriptors);
-				wi::helper::hash_combine(bindless_hash, x.Flags);
-				wi::helper::hash_combine(bindless_hash, x.OffsetInDescriptorsFromTableStart);
-				wi::helper::hash_combine(bindless_hash, x.RangeType);
-				wi::helper::hash_combine(bindless_hash, x.RegisterSpace);
-			}
-			for (auto& x : internal_state->bindless_sam)
-			{
-				wi::helper::hash_combine(bindless_hash, x.BaseShaderRegister);
-				wi::helper::hash_combine(bindless_hash, x.NumDescriptors);
-				wi::helper::hash_combine(bindless_hash, x.Flags);
-				wi::helper::hash_combine(bindless_hash, x.OffsetInDescriptorsFromTableStart);
-				wi::helper::hash_combine(bindless_hash, x.RangeType);
-				wi::helper::hash_combine(bindless_hash, x.RegisterSpace);
-			}
-
-			size_t rootsig_hash = 0;
-			wi::helper::hash_combine(rootsig_hash, pDesc->il);
-			wi::helper::hash_combine(rootsig_hash, rootconstant_hash);
-			wi::helper::hash_combine(rootsig_hash, root_binding_hash);
-			wi::helper::hash_combine(rootsig_hash, resource_binding_hash);
-			wi::helper::hash_combine(rootsig_hash, sampler_binding_hash);
-			wi::helper::hash_combine(rootsig_hash, bindless_hash);
-			for (auto& x : internal_state->staticsamplers)
-			{
-				wi::helper::hash_combine(rootsig_hash, x.AddressU);
-				wi::helper::hash_combine(rootsig_hash, x.AddressV);
-				wi::helper::hash_combine(rootsig_hash, x.AddressW);
-				wi::helper::hash_combine(rootsig_hash, x.BorderColor);
-				wi::helper::hash_combine(rootsig_hash, x.ComparisonFunc);
-				wi::helper::hash_combine(rootsig_hash, x.Filter);
-				wi::helper::hash_combine(rootsig_hash, x.MaxAnisotropy);
-				wi::helper::hash_combine(rootsig_hash, x.MaxLOD);
-				wi::helper::hash_combine(rootsig_hash, x.MinLOD);
-				wi::helper::hash_combine(rootsig_hash, x.MipLODBias);
-				wi::helper::hash_combine(rootsig_hash, x.RegisterSpace);
-				wi::helper::hash_combine(rootsig_hash, x.ShaderRegister);
-				wi::helper::hash_combine(rootsig_hash, x.ShaderVisibility);
-			}
-
-			rootsignature_cache_mutex.lock();
-			if (rootsignature_cache[rootsig_hash])
-			{
-				internal_state->rootSignature = rootsignature_cache[rootsig_hash];
-			}
-			else
-			{
-				D3D12_ROOT_SIGNATURE_DESC1 rootSigDesc = {};
-				rootSigDesc.NumStaticSamplers = (UINT)internal_state->staticsamplers.size();
-				rootSigDesc.pStaticSamplers = internal_state->staticsamplers.data();
-				rootSigDesc.NumParameters = (UINT)params.size();
-				rootSigDesc.pParameters = params.data();
-				if (pDesc->il != nullptr)
-				{
-					rootSigDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-				}
-
-				D3D12_VERSIONED_ROOT_SIGNATURE_DESC versioned_rs = {};
-				versioned_rs.Version = D3D_ROOT_SIGNATURE_VERSION_1_1;
-				versioned_rs.Desc_1_1 = rootSigDesc;
-
-				ID3DBlob* rootSigBlob;
-				ID3DBlob* rootSigError;
-				hr = D3D12SerializeVersionedRootSignature(&versioned_rs, &rootSigBlob, &rootSigError);
-				if (FAILED(hr))
-				{
-					OutputDebugStringA((char*)rootSigError->GetBufferPointer());
-					assert(0);
-					rootsignature_cache_mutex.unlock();
-					return false;
-				}
-				hr = device->CreateRootSignature(0, rootSigBlob->GetBufferPointer(), rootSigBlob->GetBufferSize(), IID_PPV_ARGS(&internal_state->rootSignature));
-				assert(SUCCEEDED(hr));
-				if (SUCCEEDED(hr))
-				{
-					rootsignature_cache[rootsig_hash] = internal_state->rootSignature;
-				}
-			}
-			rootsignature_cache_mutex.unlock();
-		}
-
 		auto& stream = internal_state->stream;
 		if (pso->desc.vs != nullptr)
 		{
 			auto shader_internal = to_internal(pso->desc.vs);
 			stream.stream1.VS = { shader_internal->shadercode.data(), shader_internal->shadercode.size() };
+			if (internal_state->rootSignature == nullptr)
+			{
+				internal_state->rootSignature = shader_internal->rootSignature;
+				internal_state->rootsig_desc = shader_internal->rootsig_desc;
+			}
 		}
 		if (pso->desc.hs != nullptr)
 		{
@@ -4366,11 +3435,21 @@ using namespace dx12_internal;
 		{
 			auto shader_internal = to_internal(pso->desc.ms);
 			stream.stream2.MS = { shader_internal->shadercode.data(), shader_internal->shadercode.size() };
+			if (internal_state->rootSignature == nullptr)
+			{
+				internal_state->rootSignature = shader_internal->rootSignature;
+				internal_state->rootsig_desc = shader_internal->rootsig_desc;
+			}
 		}
 		if (pso->desc.as != nullptr)
 		{
 			auto shader_internal = to_internal(pso->desc.as);
 			stream.stream2.AS = { shader_internal->shadercode.data(), shader_internal->shadercode.size() };
+			if (internal_state->rootSignature == nullptr)
+			{
+				internal_state->rootSignature = shader_internal->rootSignature;
+				internal_state->rootsig_desc = shader_internal->rootsig_desc;
+			}
 		}
 
 		RasterizerState pRasterizerStateDesc = pso->desc.rs != nullptr ? *pso->desc.rs : RasterizerState();
@@ -4483,9 +3562,7 @@ using namespace dx12_internal;
 
 		stream.stream1.STRIP = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
 
-		stream.stream1.pRootSignature = internal_state->rootSignature.Get();
-
-		return SUCCEEDED(hr);
+		return true;
 	}
 	bool GraphicsDevice_DX12::CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) const
 	{
@@ -6133,17 +5210,6 @@ using namespace dx12_internal;
 			binders[cmd].dirty_res = true;
 			binders[cmd].dirty_sam = true;
 			binders[cmd].dirty_root_cbvs = ~0;
-
-			// Set the bindless tables:
-			uint32_t bindpoint = internal_state->bindpoint_bindless;
-			if (!internal_state->bindless_res.empty())
-			{
-				GetCommandList(cmd)->SetGraphicsRootDescriptorTable(bindpoint++, descriptorheap_res.start_gpu);
-			}
-			if (!internal_state->bindless_sam.empty())
-			{
-				GetCommandList(cmd)->SetGraphicsRootDescriptorTable(bindpoint++, descriptorheap_sam.start_gpu);
-			}
 		}
 
 		active_pso[cmd] = pso;
@@ -6177,17 +5243,6 @@ using namespace dx12_internal;
 				binders[cmd].dirty_res = true;
 				binders[cmd].dirty_sam = true;
 				binders[cmd].dirty_root_cbvs = ~0;
-
-				// Set the bindless tables:
-				uint32_t bindpoint = internal_state->bindpoint_bindless;
-				if (!internal_state->bindless_res.empty())
-				{
-					GetCommandList(cmd)->SetComputeRootDescriptorTable(bindpoint++, descriptorheap_res.start_gpu);
-				}
-				if (!internal_state->bindless_sam.empty())
-				{
-					GetCommandList(cmd)->SetComputeRootDescriptorTable(bindpoint++, descriptorheap_sam.start_gpu);
-				}
 			}
 
 		}

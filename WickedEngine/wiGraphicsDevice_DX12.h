@@ -29,7 +29,6 @@ namespace wi::graphics
 	protected:
 		Microsoft::WRL::ComPtr<IDXGIFactory4> dxgiFactory;
 		Microsoft::WRL::ComPtr<IDXGIAdapter1> dxgiAdapter;
-		bool tearingSupported = false;
 		Microsoft::WRL::ComPtr<ID3D12Device5> device;
 
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> dispatchIndirectCommandSignature;
@@ -37,6 +36,7 @@ namespace wi::graphics
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> drawIndexedInstancedIndirectCommandSignature;
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> dispatchMeshIndirectCommandSignature;
 
+		bool tearingSupported = false;
 		bool additionalShadingRatesSupported = false;
 
 		uint32_t rtv_descriptor_size = 0;

@@ -12,5 +12,13 @@ struct PushConstantsFont
 };
 PUSHCONSTANT(push, PushConstantsFont);
 
+#define WICKED_ENGINE_ROOTSIGNATURE \
+	"RootConstants(num32BitConstants=32, b999), " \
+	"DescriptorTable( " \
+		"SRV(t0, space = 2, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"SRV(t0, space = 3, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)" \
+	"), " \
+	"StaticSampler(s0, addressU = TEXTURE_ADDRESS_CLAMP, filter = FILTER_MIN_MAG_MIP_LINEAR)"
+
 
 #endif // WI_SHADERINTEROP_FONT_H

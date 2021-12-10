@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#include "globals.hlsli"
 #include "ShaderInterop_GPUSortLib.h"
 
 #define SORT_SIZE 512

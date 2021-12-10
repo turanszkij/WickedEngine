@@ -36,7 +36,7 @@ namespace wi::initializer
 		}
 
 		wi::backlog::post("");
-		wi::jobsystem::Initialize();
+		wi::jobsystem::Initialize(1);
 
 		wi::backlog::post("");
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { wi::font::Initialize(); systems[INITIALIZED_SYSTEM_FONT].store(true); });
