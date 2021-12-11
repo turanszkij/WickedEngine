@@ -40,13 +40,9 @@ RWTexture2DArray<float4> bindless_rwtextures2DArray[] : register(space16);
 RWTexture3D<float4> bindless_rwtextures3D[] : register(space17);
 
 #define WICKED_ENGINE_ROOTSIGNATURE_PART_BINDINGS \
-	"CBV(b0, space = 0), " \
-	"CBV(b1, space = 0), " \
-	"CBV(b2, space = 0), " \
-	"CBV(b3, space = 0), " \
-	"CBV(b4, space = 0), " \
 	"RootConstants(num32BitConstants=32, b999), " \
 	"DescriptorTable( " \
+		"CBV(b0, offset = DESCRIPTOR_RANGE_OFFSET_APPEND , numDescriptors = 16, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE)," \
 		"SRV(t0, offset = DESCRIPTOR_RANGE_OFFSET_APPEND , numDescriptors = 16, flags = DESCRIPTORS_VOLATILE | DATA_STATIC_WHILE_SET_AT_EXECUTE)," \
 		"UAV(u0, offset = DESCRIPTOR_RANGE_OFFSET_APPEND , numDescriptors = 16, flags = DESCRIPTORS_VOLATILE | DATA_STATIC_WHILE_SET_AT_EXECUTE)" \
 	")," \

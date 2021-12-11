@@ -3,8 +3,8 @@
 
 struct VertextoPixel
 {
-	float4 pos				: SV_POSITION;
-	float2 tex				: TEXCOORD0;
+	float4 pos : SV_POSITION;
+	float2 tex : TEXCOORD0;
 };
 
 VertextoPixel main(uint vertexID : SV_VERTEXID, uint instanceID : SV_InstanceID)
