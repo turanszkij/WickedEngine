@@ -117,12 +117,12 @@ namespace wi
 			wi::lua::RunFile("startup.lua");
 		}
 
-		//if (!is_window_active)
-		//{
-		//	// If the application is not active, disable Update loops:
-		//	deltaTimeAccumulator = 0;
-		//	return;
-		//}
+		if (!is_window_active)
+		{
+			// If the application is not active, disable Update loops:
+			deltaTimeAccumulator = 0;
+			return;
+		}
 
 		wi::profiler::BeginFrame();
 
