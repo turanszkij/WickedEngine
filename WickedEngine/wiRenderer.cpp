@@ -2709,7 +2709,7 @@ void RenderImpostors(
 
 		device->PushConstants(&instances.offset, sizeof(uint), cmd);
 
-		device->BindResource(&instances.buffer, 21, cmd);
+		device->BindResource(&instances.buffer, 0, cmd);
 		device->BindResource(&vis.scene->impostorArray, 0, cmd);
 
 		device->Draw(drawableInstanceCount * 6, 0, cmd);

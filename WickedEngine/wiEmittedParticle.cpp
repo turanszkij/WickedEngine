@@ -731,7 +731,7 @@ namespace wi
 			&culledIndirectionBuffer,
 			&culledIndirectionBuffer2,
 		};
-		device->BindResources(res, 20, arraysize(res), cmd);
+		device->BindResources(res, 0, arraysize(res), cmd);
 
 		if (ALLOW_MESH_SHADER && device->CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
 		{

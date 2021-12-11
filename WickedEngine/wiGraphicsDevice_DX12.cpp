@@ -1743,7 +1743,7 @@ using namespace dx12_internal;
 									cbv.BufferLocation = internal_state->gpu_address;
 									cbv.BufferLocation += offset;
 									cbv.SizeInBytes = (UINT)AlignTo(buffer.desc.size - offset, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
-									cbv.SizeInBytes = std::min(cbv.SizeInBytes, 655535u);
+									cbv.SizeInBytes = std::min(cbv.SizeInBytes, 65536u);
 
 									device->device->CreateConstantBufferView(&cbv, dst_handle);
 								}

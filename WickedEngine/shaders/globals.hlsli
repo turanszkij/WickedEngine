@@ -46,8 +46,8 @@ RWTexture3D<float4> bindless_rwtextures3D[] : register(space17);
 	"CBV(b1, space = 0, flags = DATA_STATIC), " \
 	"RootConstants(num32BitConstants=32, b999), " \
 	"DescriptorTable( " \
-		"CBV(b5, offset = DESCRIPTOR_RANGE_OFFSET_APPEND , numDescriptors = 5, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
-		"SRV(t0, offset = DESCRIPTOR_RANGE_OFFSET_APPEND , numDescriptors = 64, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
+		"CBV(b5, offset = DESCRIPTOR_RANGE_OFFSET_APPEND , numDescriptors = 5, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE)," \
+		"SRV(t0, offset = DESCRIPTOR_RANGE_OFFSET_APPEND , numDescriptors = 16, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
 		"UAV(u0, offset = DESCRIPTOR_RANGE_OFFSET_APPEND , numDescriptors = 16, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)" \
 	")," \
 	"DescriptorTable( " \
