@@ -119,17 +119,20 @@ namespace wi::graphics
 		{
 			DescriptorBindingTable table;
 			GraphicsDevice_DX12* device = nullptr;
-			uint32_t ringOffset_res = 0;
-			uint32_t ringOffset_sam = 0;
-			bool dirty_res = false;
-			bool dirty_sam = false;
-			uint32_t dirty_root_cbvs = 0; // bitmask
 
-			struct DescriptorHandles
+			enum DIRTY_FLAGS
 			{
-				D3D12_GPU_DESCRIPTOR_HANDLE sampler_handle = {};
-				D3D12_GPU_DESCRIPTOR_HANDLE resource_handle = {};
+				DIRTY_NONE = 0,
+				DIRTY_CBV = 1 << 1,
+				DIRTY_SRV = 1 << 2,
+				DIRTY_UAV = 1 << 3,
+				DIRTY_SAM = 1 << 4,
+				DIRTY_PUSH = 1 << 5,
+
+				DIRTY_CBV_SRV_UAV = DIRTY_CBV | DIRTY_SRV | DIRTY_UAV,
+				DIRTY_ALL = ~0,
 			};
+			uint32_t dirty = DIRTY_NONE;
 
 			void init(GraphicsDevice_DX12* device);
 			void reset();

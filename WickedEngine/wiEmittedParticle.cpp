@@ -635,6 +635,7 @@ namespace wi
 					GPUBarrier::Buffer(&counterBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 					GPUBarrier::Buffer(&distanceBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
 				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
 			device->EventEnd(cmd);
 

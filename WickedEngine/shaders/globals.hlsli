@@ -43,15 +43,14 @@ RWTexture3D<float4> bindless_rwtextures3D[] : register(space17);
 #define WICKED_ENGINE_ROOTSIGNATURE \
 	"RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT), " \
 	"CBV(b0, space = 0, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE), " \
-	"CBV(b1, space = 0, flags = DATA_STATIC), " \
+	"CBV(b1, space = 0, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE), " \
+	"CBV(b2, space = 0, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE), " \
+	"CBV(b3, space = 0, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE), " \
+	"CBV(b4, space = 0, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE), " \
 	"RootConstants(num32BitConstants=32, b999), " \
 	"DescriptorTable( " \
-		"CBV(b5, offset = DESCRIPTOR_RANGE_OFFSET_APPEND , numDescriptors = 5, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE)," \
-		"SRV(t0, offset = DESCRIPTOR_RANGE_OFFSET_APPEND , numDescriptors = 16, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)," \
-		"UAV(u0, offset = DESCRIPTOR_RANGE_OFFSET_APPEND , numDescriptors = 16, flags = DESCRIPTORS_VOLATILE | DATA_VOLATILE)" \
-	")," \
-	"DescriptorTable( " \
-		"Sampler(s0, offset = DESCRIPTOR_RANGE_OFFSET_APPEND , numDescriptors = 16, flags = DESCRIPTORS_VOLATILE)" \
+		"SRV(t0, offset = DESCRIPTOR_RANGE_OFFSET_APPEND , numDescriptors = 16, flags = DESCRIPTORS_VOLATILE | DATA_STATIC_WHILE_SET_AT_EXECUTE)," \
+		"UAV(u0, offset = DESCRIPTOR_RANGE_OFFSET_APPEND , numDescriptors = 16, flags = DESCRIPTORS_VOLATILE | DATA_STATIC_WHILE_SET_AT_EXECUTE)" \
 	")," \
 	"DescriptorTable( " \
 		"Sampler(s0, space = 1, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE)" \

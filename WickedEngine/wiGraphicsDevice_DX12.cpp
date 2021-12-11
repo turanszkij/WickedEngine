@@ -1191,9 +1191,6 @@ namespace dx12_internal
 
 		D3D12_GPU_VIRTUAL_ADDRESS gpu_address = 0;
 
-		uint64_t cbv_mask_frame[COMMANDLIST_COUNT] = {};
-		uint32_t cbv_mask[COMMANDLIST_COUNT] = {};
-
 		virtual ~Resource_DX12()
 		{
 			allocationhandler->destroylocker.lock();
@@ -1547,25 +1544,16 @@ using namespace dx12_internal;
 	void GraphicsDevice_DX12::DescriptorBinder::reset()
 	{
 		table = {};
-		dirty_res = true;
-		dirty_sam = true;
-		ringOffset_res = 0;
-		ringOffset_sam = 0;
+		dirty = DIRTY_NONE;
 	}
 	void GraphicsDevice_DX12::DescriptorBinder::flush(bool graphics, CommandList cmd)
 	{
+		if (dirty == DIRTY_NONE)
+			return;
+
 		auto pso_internal = graphics ? to_internal(device->active_pso[cmd]) : to_internal(device->active_cs[cmd]);
 
 		ID3D12GraphicsCommandList6* commandlist = device->GetCommandList(cmd);
-
-		if (graphics)
-		{
-			commandlist->SetGraphicsRootSignature(pso_internal->rootSignature.Get());
-		}
-		else
-		{
-			commandlist->SetComputeRootSignature(pso_internal->rootSignature.Get());
-		}
 
 		UINT root_parameter_index = 0;
 		for (UINT root_parameter_index = 0; root_parameter_index < pso_internal->rootsig_desc->Desc_1_1.NumParameters; ++root_parameter_index)
@@ -1609,11 +1597,12 @@ using namespace dx12_internal;
 				DescriptorHeap& heap = sampler_table ? device->descriptorheap_sam : device->descriptorheap_res;
 				D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle = heap.start_gpu;
 
-				if ((numResources > 0 /*&& dirty_res*/) || (numSamplers > 0 /*&& dirty_sam*/))
+				if (numResources > 0  || numSamplers > 0)
 				{
-					dirty_res = false;
-					dirty_sam = false;
-
+					if (numResources > 0 && (dirty & DIRTY_CBV_SRV_UAV) == 0)
+						continue; // skip binding table
+					if (numSamplers > 0 && (dirty & DIRTY_SAM) == 0)
+						continue; // skip binding table
 					// Remarks:
 					//	This is allocating from the global shader visible descriptor heaps in a simple incrementing
 					//	lockless ring buffer fashion.
@@ -1629,6 +1618,7 @@ using namespace dx12_internal;
 					//
 					//	The excess amount is essentially equal to the maximum number of descriptors that can be allocated at once.
 
+					uint64_t ringoffset;
 					if (sampler_table)
 					{
 						// The reservation is the maximum amount of descriptors that can be allocated once
@@ -1638,7 +1628,7 @@ using namespace dx12_internal;
 
 						const uint64_t offset = heap.allocationOffset.fetch_add(numSamplers);
 						const uint64_t wrapped_offset = BINDLESS_SAMPLER_CAPACITY + offset % wrap_effective_size;
-						ringOffset_sam = (uint32_t)wrapped_offset;
+						ringoffset = (uint32_t)wrapped_offset;
 						const uint64_t wrapped_offset_end = wrapped_offset + numSamplers;
 
 						uint64_t gpu_offset = heap.cached_completedValue;
@@ -1650,7 +1640,7 @@ using namespace dx12_internal;
 							wrapped_gpu_offset = gpu_offset % wrap_effective_size;
 						}
 
-						gpu_handle.ptr += (size_t)ringOffset_sam * (size_t)device->sampler_descriptor_size;
+						gpu_handle.ptr += (size_t)ringoffset * (size_t)device->sampler_descriptor_size;
 					}
 					else
 					{
@@ -1661,7 +1651,7 @@ using namespace dx12_internal;
 
 						const uint64_t offset = heap.allocationOffset.fetch_add(numResources);
 						const uint64_t wrapped_offset = BINDLESS_RESOURCE_CAPACITY + offset % wrap_effective_size;
-						ringOffset_res = (uint32_t)wrapped_offset;
+						ringoffset = (uint32_t)wrapped_offset;
 						const uint64_t wrapped_offset_end = wrapped_offset + numResources;
 
 						uint64_t gpu_offset = heap.cached_completedValue;
@@ -1673,7 +1663,7 @@ using namespace dx12_internal;
 							wrapped_gpu_offset = gpu_offset % wrap_effective_size;
 						}
 
-						gpu_handle.ptr += (size_t)ringOffset_res * (size_t)device->resource_descriptor_size;
+						gpu_handle.ptr += (size_t)ringoffset * (size_t)device->resource_descriptor_size;
 					}
 
 					for (UINT i = 0; i < param.DescriptorTable.NumDescriptorRanges; ++i)
@@ -1685,8 +1675,8 @@ using namespace dx12_internal;
 							for (UINT idx = 0; idx < range.NumDescriptors; ++idx)
 							{
 								D3D12_CPU_DESCRIPTOR_HANDLE dst_handle = heap.start_cpu;
-								uint32_t ringoffset = ringOffset_res++;
 								dst_handle.ptr += ringoffset * device->resource_descriptor_size;
+								ringoffset++;
 
 								UINT reg = range.BaseShaderRegister + idx;
 								const GPUResource& resource = table.SRV[reg];
@@ -1707,8 +1697,8 @@ using namespace dx12_internal;
 							for (UINT idx = 0; idx < range.NumDescriptors; ++idx)
 							{
 								D3D12_CPU_DESCRIPTOR_HANDLE dst_handle = heap.start_cpu;
-								uint32_t ringoffset = ringOffset_res++;
 								dst_handle.ptr += ringoffset * device->resource_descriptor_size;
+								ringoffset++;
 
 								UINT reg = range.BaseShaderRegister + idx;
 								const GPUResource& resource = table.UAV[reg];
@@ -1729,8 +1719,8 @@ using namespace dx12_internal;
 							for (UINT idx = 0; idx < range.NumDescriptors; ++idx)
 							{
 								D3D12_CPU_DESCRIPTOR_HANDLE dst_handle = heap.start_cpu;
-								uint32_t ringoffset = ringOffset_res++;
 								dst_handle.ptr += ringoffset * device->resource_descriptor_size;
+								ringoffset++;
 
 								UINT reg = range.BaseShaderRegister + idx;
 								const GPUBuffer& buffer = table.CBV[reg];
@@ -1757,8 +1747,8 @@ using namespace dx12_internal;
 							for (UINT idx = 0; idx < range.NumDescriptors; ++idx)
 							{
 								D3D12_CPU_DESCRIPTOR_HANDLE dst_handle = heap.start_cpu;
-								uint32_t ringoffset = ringOffset_sam++;
 								dst_handle.ptr += ringoffset * device->sampler_descriptor_size;
+								ringoffset++;
 
 								UINT reg = range.BaseShaderRegister + idx;
 								const Sampler& sam = table.SAM[reg];
@@ -1799,113 +1789,119 @@ using namespace dx12_internal;
 			break;
 
 			case D3D12_ROOT_PARAMETER_TYPE_CBV:
-			{
-				const GPUBuffer& buffer = table.CBV[param.Descriptor.ShaderRegister];
-				uint64_t offset = table.CBV_offset[param.Descriptor.ShaderRegister];
+				if(dirty & DIRTY_CBV)
+				{
+					const GPUBuffer& buffer = table.CBV[param.Descriptor.ShaderRegister];
+					uint64_t offset = table.CBV_offset[param.Descriptor.ShaderRegister];
 
-				D3D12_GPU_VIRTUAL_ADDRESS address = {};
-				if (buffer.IsValid())
-				{
-					auto internal_state = to_internal(&buffer);
-					address = internal_state->gpu_address;
-					address += offset;
-				}
+					D3D12_GPU_VIRTUAL_ADDRESS address = {};
+					if (buffer.IsValid())
+					{
+						auto internal_state = to_internal(&buffer);
+						address = internal_state->gpu_address;
+						address += offset;
+					}
 
-				if (graphics)
-				{
-					commandlist->SetGraphicsRootConstantBufferView(
-						root_parameter_index,
-						address
-					);
+					if (graphics)
+					{
+						commandlist->SetGraphicsRootConstantBufferView(
+							root_parameter_index,
+							address
+						);
+					}
+					else
+					{
+						commandlist->SetComputeRootConstantBufferView(
+							root_parameter_index,
+							address
+						);
+					}
 				}
-				else
-				{
-					commandlist->SetComputeRootConstantBufferView(
-						root_parameter_index,
-						address
-					);
-				}
-			}
-			break;
+				break;
 
 			case D3D12_ROOT_PARAMETER_TYPE_SRV:
-			{
-				const GPUResource& resource = table.SRV[param.Descriptor.ShaderRegister];
-				int subresource = table.SRV_index[param.Descriptor.ShaderRegister];
+				if(dirty & DIRTY_SRV)
+				{
+					const GPUResource& resource = table.SRV[param.Descriptor.ShaderRegister];
+					int subresource = table.SRV_index[param.Descriptor.ShaderRegister];
 
-				D3D12_GPU_VIRTUAL_ADDRESS address = {};
-				if (resource.IsValid())
-				{
-					auto internal_state = to_internal(&resource);
-					address = internal_state->gpu_address;
-				}
+					D3D12_GPU_VIRTUAL_ADDRESS address = {};
+					if (resource.IsValid())
+					{
+						auto internal_state = to_internal(&resource);
+						address = internal_state->gpu_address;
+					}
 
-				if (graphics)
-				{
-					commandlist->SetGraphicsRootShaderResourceView(
-						root_parameter_index,
-						address
-					);
+					if (graphics)
+					{
+						commandlist->SetGraphicsRootShaderResourceView(
+							root_parameter_index,
+							address
+						);
+					}
+					else
+					{
+						commandlist->SetComputeRootShaderResourceView(
+							root_parameter_index,
+							address
+						);
+					}
 				}
-				else
-				{
-					commandlist->SetComputeRootShaderResourceView(
-						root_parameter_index,
-						address
-					);
-				}
-			}
-			break;
+				break;
 
 			case D3D12_ROOT_PARAMETER_TYPE_UAV:
-			{
-				const GPUResource& resource = table.UAV[param.Descriptor.ShaderRegister];
-				int subresource = table.UAV_index[param.Descriptor.ShaderRegister];
+				if(dirty & DIRTY_UAV)
+				{
+					const GPUResource& resource = table.UAV[param.Descriptor.ShaderRegister];
+					int subresource = table.UAV_index[param.Descriptor.ShaderRegister];
 
-				D3D12_GPU_VIRTUAL_ADDRESS address = {};
-				if (resource.IsValid())
-				{
-					auto internal_state = to_internal(&resource);
-					address = internal_state->gpu_address;
-				}
+					D3D12_GPU_VIRTUAL_ADDRESS address = {};
+					if (resource.IsValid())
+					{
+						auto internal_state = to_internal(&resource);
+						address = internal_state->gpu_address;
+					}
 
-				if (graphics)
-				{
-					commandlist->SetGraphicsRootUnorderedAccessView(
-						root_parameter_index,
-						address
-					);
+					if (graphics)
+					{
+						commandlist->SetGraphicsRootUnorderedAccessView(
+							root_parameter_index,
+							address
+						);
+					}
+					else
+					{
+						commandlist->SetComputeRootUnorderedAccessView(
+							root_parameter_index,
+							address
+						);
+					}
 				}
-				else
-				{
-					commandlist->SetComputeRootUnorderedAccessView(
-						root_parameter_index,
-						address
-					);
-				}
-			}
-			break;
+				break;
 
 			case D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS:
-			if (graphics)
-			{
-				commandlist->SetGraphicsRoot32BitConstants(
-					root_parameter_index,
-					param.Constants.Num32BitValues,
-					device->pushconstants[cmd].data,
-					0
-				);
-			}
-			else
-			{
-				commandlist->SetComputeRoot32BitConstants(
-					root_parameter_index,
-					param.Constants.Num32BitValues,
-					device->pushconstants[cmd].data,
-					0
-				);
-			}
-			break;
+				if (dirty & DIRTY_PUSH)
+				{
+					if (graphics)
+					{
+						commandlist->SetGraphicsRoot32BitConstants(
+							root_parameter_index,
+							param.Constants.Num32BitValues,
+							device->pushconstants[cmd].data,
+							0
+						);
+					}
+					else
+					{
+						commandlist->SetComputeRoot32BitConstants(
+							root_parameter_index,
+							param.Constants.Num32BitValues,
+							device->pushconstants[cmd].data,
+							0
+						);
+					}
+				}
+				break;
 
 			default:
 				assert(0);
@@ -1913,6 +1909,7 @@ using namespace dx12_internal;
 			}
 		}
 
+		dirty = DIRTY_NONE;
 	}
 
 
@@ -5053,7 +5050,7 @@ using namespace dx12_internal;
 		{
 			binder.table.SRV[slot] = *resource;
 			binder.table.SRV_index[slot] = subresource;
-			binder.dirty_res = true;
+			binders[cmd].dirty |= DescriptorBinder::DIRTY_SRV;
 		}
 	}
 	void GraphicsDevice_DX12::BindResources(const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd)
@@ -5074,7 +5071,7 @@ using namespace dx12_internal;
 		{
 			binder.table.UAV[slot] = *resource;
 			binder.table.UAV_index[slot] = subresource;
-			binder.dirty_res = true;
+			binders[cmd].dirty |= DescriptorBinder::DIRTY_UAV;
 		}
 	}
 	void GraphicsDevice_DX12::BindUAVs(const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd)
@@ -5094,7 +5091,7 @@ using namespace dx12_internal;
 		if (binder.table.SAM[slot].internal_state != sampler->internal_state)
 		{
 			binder.table.SAM[slot] = *sampler;
-			binder.dirty_sam = true;
+			binders[cmd].dirty |= DescriptorBinder::DIRTY_SAM;
 		}
 	}
 	void GraphicsDevice_DX12::BindConstantBuffer(const GPUBuffer* buffer, uint32_t slot, CommandList cmd, uint64_t offset)
@@ -5105,22 +5102,7 @@ using namespace dx12_internal;
 		{
 			binder.table.CBV[slot] = *buffer;
 			binder.table.CBV_offset[slot] = offset;
-			binder.dirty_res = true;
-
-			// Root constant buffer root signature state tracking:
-			auto internal_state = to_internal(buffer);
-			if (internal_state->cbv_mask_frame[cmd] != FRAMECOUNT)
-			{
-				// This is the first binding as constant buffer in this frame for this resource,
-				//	so clear the cbv flags completely
-				internal_state->cbv_mask[cmd] = 0;
-				internal_state->cbv_mask_frame[cmd] = FRAMECOUNT;
-			}
-
-			// CBV flag marked as bound for this slot:
-			//	Also, the corresponding slot is marked dirty
-			internal_state->cbv_mask[cmd] |= 1 << slot;
-			binder.dirty_root_cbvs |= 1 << slot;
+			binders[cmd].dirty |= DescriptorBinder::DIRTY_CBV;
 		}
 	}
 	void GraphicsDevice_DX12::BindVertexBuffers(const GPUBuffer* const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint64_t* offsets, CommandList cmd)
@@ -5205,11 +5187,7 @@ using namespace dx12_internal;
 		{
 			active_rootsig_graphics[cmd] = internal_state->rootSignature.Get();
 			GetCommandList(cmd)->SetGraphicsRootSignature(internal_state->rootSignature.Get());
-
-			// Invalidate graphics root bindings:
-			binders[cmd].dirty_res = true;
-			binders[cmd].dirty_sam = true;
-			binders[cmd].dirty_root_cbvs = ~0;
+			binders[cmd].dirty |= DescriptorBinder::DIRTY_ALL;
 		}
 
 		active_pso[cmd] = pso;
@@ -5238,11 +5216,7 @@ using namespace dx12_internal;
 			{
 				active_rootsig_compute[cmd] = internal_state->rootSignature.Get();
 				GetCommandList(cmd)->SetComputeRootSignature(internal_state->rootSignature.Get());
-
-				// Invalidate compute root bindings:
-				binders[cmd].dirty_res = true;
-				binders[cmd].dirty_sam = true;
-				binders[cmd].dirty_root_cbvs = ~0;
+				binders[cmd].dirty |= DescriptorBinder::DIRTY_ALL;
 			}
 
 		}
@@ -5657,8 +5631,10 @@ using namespace dx12_internal;
 	}
 	void GraphicsDevice_DX12::PushConstants(const void* data, uint32_t size, CommandList cmd)
 	{
+		assert(size <= sizeof(pushconstants[cmd]));
 		std::memcpy(pushconstants[cmd].data, data, size);
 		pushconstants[cmd].size = size;
+		binders[cmd].dirty |= DescriptorBinder::DIRTY_PUSH;
 	}
 	void GraphicsDevice_DX12::PredicationBegin(const GPUBuffer* buffer, uint64_t offset, PredicationOp op, CommandList cmd)
 	{

@@ -179,7 +179,16 @@ namespace wi::graphics
 			wi::vector<VkDescriptorImageInfo> imageInfos;
 			wi::vector<VkBufferView> texelBufferViews;
 			wi::vector<VkWriteDescriptorSetAccelerationStructureKHR> accelerationStructureViews;
-			bool dirty = false;
+
+			enum DIRTY_FLAGS
+			{
+				DIRTY_NONE = 0,
+				DIRTY_DESCRIPTOR = 1 << 1,
+				DIRTY_PUSH = 1 << 2,
+
+				DIRTY_ALL = ~0,
+			};
+			uint32_t dirty = DIRTY_NONE;
 
 			void init(GraphicsDevice_Vulkan* device);
 			void reset();

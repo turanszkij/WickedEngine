@@ -11,6 +11,6 @@ struct VSOut
 	uint instanceID					: INSTANCEID;
 };
 
-Texture2DArray<float4> impostorTex : register(t0);
+Texture2DArray<float4> impostorTex : register(t1);
 
 #endif // WI_IMPOSTOR_HF
