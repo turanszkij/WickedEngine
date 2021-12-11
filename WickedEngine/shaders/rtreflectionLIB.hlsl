@@ -18,6 +18,13 @@ struct RayPayload
 	float4 data;
 };
 
+#ifndef SPIRV
+GlobalRootSignature MyGlobalRootSignature =
+{
+	WICKED_ENGINE_ROOTSIGNATURE_COMPUTE
+};
+#endif // SPIRV
+
 [shader("raygeneration")]
 void RTReflection_Raygen()
 {
@@ -33,8 +40,18 @@ void RTReflection_Raygen()
 	PrimitiveID prim;
 	prim.unpack(texture_gbuffer0[DTid.xy * 2]);
 
+	//output[DTid] = float4(saturate(P * 0.1), 1);
+	////output[DTid] = float4(texture_gbuffer0[DTid.xy * 2].xy, 0, 1);
+	////output[DTid] = float4(depth.xxx, 1);
+	////output[DTid] = float4(V, 1);
+	////output[DTid] = float4(prim.primitiveIndex * 0.000001, 0, 0, 1);
+	//return;
+
 	Surface surface;
-	surface.load(prim, P);
+	if (!surface.load(prim, P))
+	{
+		return;
+	}
 	if (surface.roughness > 0.6)
 	{
 		output[DTid.xy] = float4(max(0, EnvironmentReflection_Global(surface)), 1);

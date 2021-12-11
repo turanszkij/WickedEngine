@@ -39,19 +39,22 @@ RWByteAddressBuffer bindless_rwbuffers[] : register(space15);
 RWTexture2DArray<float4> bindless_rwtextures2DArray[] : register(space16);
 RWTexture3D<float4> bindless_rwtextures3D[] : register(space17);
 
-#ifndef WICKED_ENGINE_ROOTSIGNATURE
-#define WICKED_ENGINE_ROOTSIGNATURE \
-	"RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT), " \
-	"CBV(b0, space = 0, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE), " \
-	"CBV(b1, space = 0, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE), " \
-	"CBV(b2, space = 0, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE), " \
-	"CBV(b3, space = 0, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE), " \
-	"CBV(b4, space = 0, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE), " \
+#define WICKED_ENGINE_ROOTSIGNATURE_PART_BINDINGS \
+	"CBV(b0, space = 0), " \
+	"CBV(b1, space = 0), " \
+	"CBV(b2, space = 0), " \
+	"CBV(b3, space = 0), " \
+	"CBV(b4, space = 0), " \
 	"RootConstants(num32BitConstants=32, b999), " \
 	"DescriptorTable( " \
 		"SRV(t0, offset = DESCRIPTOR_RANGE_OFFSET_APPEND , numDescriptors = 16, flags = DESCRIPTORS_VOLATILE | DATA_STATIC_WHILE_SET_AT_EXECUTE)," \
 		"UAV(u0, offset = DESCRIPTOR_RANGE_OFFSET_APPEND , numDescriptors = 16, flags = DESCRIPTORS_VOLATILE | DATA_STATIC_WHILE_SET_AT_EXECUTE)" \
 	")," \
+	"DescriptorTable( " \
+		"Sampler(s0, space = 0, offset = 0, numDescriptors = 16, flags = DESCRIPTORS_VOLATILE)" \
+	"),"
+
+#define WICKED_ENGINE_ROOTSIGNATURE_PART_BINDLESS \
 	"DescriptorTable( " \
 		"Sampler(s0, space = 1, offset = 0, numDescriptors = unbounded, flags = DESCRIPTORS_VOLATILE)" \
 	")," \
@@ -83,7 +86,15 @@ RWTexture3D<float4> bindless_rwtextures3D[] : register(space17);
 	"StaticSampler(s107, addressU = TEXTURE_ADDRESS_WRAP, addressV = TEXTURE_ADDRESS_WRAP, addressW = TEXTURE_ADDRESS_WRAP, filter = FILTER_ANISOTROPIC)," \
 	"StaticSampler(s108, addressU = TEXTURE_ADDRESS_MIRROR, addressV = TEXTURE_ADDRESS_MIRROR, addressW = TEXTURE_ADDRESS_MIRROR, filter = FILTER_ANISOTROPIC)," \
 	"StaticSampler(s109, addressU = TEXTURE_ADDRESS_CLAMP, addressV = TEXTURE_ADDRESS_CLAMP, addressW = TEXTURE_ADDRESS_CLAMP, filter = FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT, comparisonFunc = COMPARISON_GREATER_EQUAL),"
-#endif // WICKED_ENGINE_ROOTSIGNATURE
+
+#define WICKED_ENGINE_ROOTSIGNATURE_GRAPHICS \
+	"RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT), " \
+	WICKED_ENGINE_ROOTSIGNATURE_PART_BINDINGS \
+	WICKED_ENGINE_ROOTSIGNATURE_PART_BINDLESS
+
+#define WICKED_ENGINE_ROOTSIGNATURE_COMPUTE \
+	WICKED_ENGINE_ROOTSIGNATURE_PART_BINDINGS \
+	WICKED_ENGINE_ROOTSIGNATURE_PART_BINDLESS
 
 inline FrameCB GetFrame()
 {

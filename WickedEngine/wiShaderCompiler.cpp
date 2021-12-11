@@ -13,6 +13,7 @@
 #define SHADERCOMPILER_ENABLED_DXCOMPILER
 //#define SHADERCOMPILER_ENABLED_D3DCOMPILER
 #include <atlbase.h> // ComPtr
+#include <d3d12shader.h>
 #endif // _WIN32
 
 #ifdef PLATFORM_LINUX
@@ -36,9 +37,6 @@ namespace wi::shadercompiler
 	struct InternalState
 	{
 #ifdef SHADERCOMPILER_ENABLED_DXCOMPILER
-		CComPtr<IDxcUtils> dxcUtils;
-		CComPtr<IDxcCompiler3> dxcCompiler;
-		CComPtr<IDxcIncludeHandler> dxcIncludeHandler;
 		DxcCreateInstanceProc DxcCreateInstance = nullptr;
 #endif // SHADERCOMPILER_ENABLED_DXCOMPILER
 
@@ -50,10 +48,6 @@ namespace wi::shadercompiler
 		InternalState()
 		{
 #ifdef SHADERCOMPILER_ENABLED_DXCOMPILER
-			if (dxcCompiler != nullptr)
-			{
-				return; // already initialized
-			}
 
 #ifdef _WIN32
 #define LIBDXCOMPILER "dxcompiler.dll"
@@ -67,12 +61,6 @@ namespace wi::shadercompiler
 				DxcCreateInstance = (DxcCreateInstanceProc)wiGetProcAddress(dxcompiler, "DxcCreateInstance");
 				if (DxcCreateInstance != nullptr)
 				{
-					HRESULT hr = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils));
-					assert(SUCCEEDED(hr));
-					hr = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&dxcCompiler));
-					assert(SUCCEEDED(hr));
-					hr = dxcUtils->CreateDefaultIncludeHandler(&dxcIncludeHandler);
-					assert(SUCCEEDED(hr));
 					wi::backlog::post("wi::shadercompiler: loaded " LIBDXCOMPILER);
 				}
 			}
@@ -111,7 +99,15 @@ namespace wi::shadercompiler
 #ifdef SHADERCOMPILER_ENABLED_DXCOMPILER
 	void Compile_DXCompiler(const CompilerInput& input, CompilerOutput& output)
 	{
-		if (compiler_internal().dxcCompiler == nullptr)
+		CComPtr<IDxcUtils> dxcUtils;
+		CComPtr<IDxcCompiler3> dxcCompiler;
+
+		HRESULT hr = compiler_internal().DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&dxcUtils));
+		assert(SUCCEEDED(hr));
+		hr = compiler_internal().DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&dxcCompiler));
+		assert(SUCCEEDED(hr));
+
+		if (dxcCompiler == nullptr)
 		{
 			return;
 		}
@@ -145,8 +141,19 @@ namespace wi::shadercompiler
 		{
 		case ShaderFormat::HLSL6:
 			args.push_back(L"-D"); args.push_back(L"HLSL6");
-			args.push_back(L"-rootsig-define"); args.push_back(L"WICKED_ENGINE_ROOTSIGNATURE");
-			args.push_back(L"-Qstrip_reflect");
+			switch (input.stage)
+			{
+			case ShaderStage::CS:
+			case ShaderStage::AS:
+			case ShaderStage::MS:
+				args.push_back(L"-rootsig-define"); args.push_back(L"WICKED_ENGINE_ROOTSIGNATURE_COMPUTE");
+				break;
+			case ShaderStage::LIB:
+				break;
+			default:
+				args.push_back(L"-rootsig-define"); args.push_back(L"WICKED_ENGINE_ROOTSIGNATURE_GRAPHICS");
+				break;
+			}
 			break;
 		case ShaderFormat::SPIRV:
 			args.push_back(L"-D"); args.push_back(L"SPIRV");
@@ -427,13 +434,14 @@ namespace wi::shadercompiler
 		{
 			const CompilerInput* input = nullptr;
 			CompilerOutput* output = nullptr;
+			CComPtr<IDxcIncludeHandler> dxcIncludeHandler;
 
 			HRESULT STDMETHODCALLTYPE LoadSource(
 				_In_z_ LPCWSTR pFilename,                                 // Candidate filename.
 				_COM_Outptr_result_maybenull_ IDxcBlob** ppIncludeSource  // Resultant source object for included file, nullptr if not found.
 			) override
 			{
-				HRESULT hr = compiler_internal().dxcIncludeHandler->LoadSource(pFilename, ppIncludeSource);
+				HRESULT hr = dxcIncludeHandler->LoadSource(pFilename, ppIncludeSource);
 				if (SUCCEEDED(hr))
 				{
 					std::string& filename = output->dependencies.emplace_back();
@@ -445,7 +453,7 @@ namespace wi::shadercompiler
 				/* [in] */ REFIID riid,
 				/* [iid_is][out] */ _COM_Outptr_ void __RPC_FAR* __RPC_FAR* ppvObject) override
 			{
-				return compiler_internal().dxcIncludeHandler->QueryInterface(riid, ppvObject);
+				return dxcIncludeHandler->QueryInterface(riid, ppvObject);
 			}
 
 			ULONG STDMETHODCALLTYPE AddRef(void) override
@@ -460,8 +468,11 @@ namespace wi::shadercompiler
 		includehandler.input = &input;
 		includehandler.output = &output;
 
+		hr = dxcUtils->CreateDefaultIncludeHandler(&includehandler.dxcIncludeHandler);
+		assert(SUCCEEDED(hr));
+
 		CComPtr<IDxcResult> pResults;
-		HRESULT hr = compiler_internal().dxcCompiler->Compile(
+		hr = dxcCompiler->Compile(
 			&Source,                // Source buffer.
 			args.data(),            // Array of pointers to arguments.
 			(uint32_t)args.size(),	// Number of arguments.

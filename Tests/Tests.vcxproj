@@ -133,6 +133,12 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <CopyFileToFolders Include="..\WickedEngine\dxcompiler.dll">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="..\WickedEngine\dxil.dll">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
     <None Include="test_script.lua">
       <DeploymentContent>true</DeploymentContent>
     </None>

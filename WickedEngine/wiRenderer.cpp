@@ -1628,58 +1628,58 @@ void LoadShaders()
 		device->CreatePipelineState(&desc, &PSO_debug[args.jobIndex]);
 		});
 
-	//if(device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
-	//{
-	//	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
+	if(device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
+	{
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
 
-	//		bool success = LoadShader(ShaderStage::LIB, shaders[RTTYPE_RTREFLECTION], "rtreflectionLIB.cso");
-	//		assert(success);
+			bool success = LoadShader(ShaderStage::LIB, shaders[RTTYPE_RTREFLECTION], "rtreflectionLIB.cso");
+			assert(success);
 
-	//		RaytracingPipelineStateDesc rtdesc;
-	//		rtdesc.shader_libraries.emplace_back();
-	//		rtdesc.shader_libraries.back().shader = &shaders[RTTYPE_RTREFLECTION];
-	//		rtdesc.shader_libraries.back().function_name = "RTReflection_Raygen";
-	//		rtdesc.shader_libraries.back().type = ShaderLibrary::Type::RAYGENERATION;
+			RaytracingPipelineStateDesc rtdesc;
+			rtdesc.shader_libraries.emplace_back();
+			rtdesc.shader_libraries.back().shader = &shaders[RTTYPE_RTREFLECTION];
+			rtdesc.shader_libraries.back().function_name = "RTReflection_Raygen";
+			rtdesc.shader_libraries.back().type = ShaderLibrary::Type::RAYGENERATION;
 
-	//		rtdesc.shader_libraries.emplace_back();
-	//		rtdesc.shader_libraries.back().shader = &shaders[RTTYPE_RTREFLECTION];
-	//		rtdesc.shader_libraries.back().function_name = "RTReflection_ClosestHit";
-	//		rtdesc.shader_libraries.back().type = ShaderLibrary::Type::CLOSESTHIT;
+			rtdesc.shader_libraries.emplace_back();
+			rtdesc.shader_libraries.back().shader = &shaders[RTTYPE_RTREFLECTION];
+			rtdesc.shader_libraries.back().function_name = "RTReflection_ClosestHit";
+			rtdesc.shader_libraries.back().type = ShaderLibrary::Type::CLOSESTHIT;
 
-	//		rtdesc.shader_libraries.emplace_back();
-	//		rtdesc.shader_libraries.back().shader = &shaders[RTTYPE_RTREFLECTION];
-	//		rtdesc.shader_libraries.back().function_name = "RTReflection_AnyHit";
-	//		rtdesc.shader_libraries.back().type = ShaderLibrary::Type::ANYHIT;
+			rtdesc.shader_libraries.emplace_back();
+			rtdesc.shader_libraries.back().shader = &shaders[RTTYPE_RTREFLECTION];
+			rtdesc.shader_libraries.back().function_name = "RTReflection_AnyHit";
+			rtdesc.shader_libraries.back().type = ShaderLibrary::Type::ANYHIT;
 
-	//		rtdesc.shader_libraries.emplace_back();
-	//		rtdesc.shader_libraries.back().shader = &shaders[RTTYPE_RTREFLECTION];
-	//		rtdesc.shader_libraries.back().function_name = "RTReflection_Miss";
-	//		rtdesc.shader_libraries.back().type = ShaderLibrary::Type::MISS;
+			rtdesc.shader_libraries.emplace_back();
+			rtdesc.shader_libraries.back().shader = &shaders[RTTYPE_RTREFLECTION];
+			rtdesc.shader_libraries.back().function_name = "RTReflection_Miss";
+			rtdesc.shader_libraries.back().type = ShaderLibrary::Type::MISS;
 
-	//		rtdesc.hit_groups.emplace_back();
-	//		rtdesc.hit_groups.back().type = ShaderHitGroup::Type::GENERAL;
-	//		rtdesc.hit_groups.back().name = "RTReflection_Raygen";
-	//		rtdesc.hit_groups.back().general_shader = 0;
+			rtdesc.hit_groups.emplace_back();
+			rtdesc.hit_groups.back().type = ShaderHitGroup::Type::GENERAL;
+			rtdesc.hit_groups.back().name = "RTReflection_Raygen";
+			rtdesc.hit_groups.back().general_shader = 0;
 
-	//		rtdesc.hit_groups.emplace_back();
-	//		rtdesc.hit_groups.back().type = ShaderHitGroup::Type::GENERAL;
-	//		rtdesc.hit_groups.back().name = "RTReflection_Miss";
-	//		rtdesc.hit_groups.back().general_shader = 3;
+			rtdesc.hit_groups.emplace_back();
+			rtdesc.hit_groups.back().type = ShaderHitGroup::Type::GENERAL;
+			rtdesc.hit_groups.back().name = "RTReflection_Miss";
+			rtdesc.hit_groups.back().general_shader = 3;
 
-	//		rtdesc.hit_groups.emplace_back();
-	//		rtdesc.hit_groups.back().type = ShaderHitGroup::Type::TRIANGLES;
-	//		rtdesc.hit_groups.back().name = "RTReflection_Hitgroup";
-	//		rtdesc.hit_groups.back().closest_hit_shader = 1;
-	//		rtdesc.hit_groups.back().any_hit_shader = 2;
+			rtdesc.hit_groups.emplace_back();
+			rtdesc.hit_groups.back().type = ShaderHitGroup::Type::TRIANGLES;
+			rtdesc.hit_groups.back().name = "RTReflection_Hitgroup";
+			rtdesc.hit_groups.back().closest_hit_shader = 1;
+			rtdesc.hit_groups.back().any_hit_shader = 2;
 
-	//		rtdesc.max_trace_recursion_depth = 1;
-	//		rtdesc.max_payload_size_in_bytes = sizeof(float4);
-	//		rtdesc.max_attribute_size_in_bytes = sizeof(float2); // bary
-	//		success = device->CreateRaytracingPipelineState(&rtdesc, &RTPSO_reflection);
+			rtdesc.max_trace_recursion_depth = 1;
+			rtdesc.max_payload_size_in_bytes = sizeof(float4);
+			rtdesc.max_attribute_size_in_bytes = sizeof(float2); // bary
+			success = device->CreateRaytracingPipelineState(&rtdesc, &RTPSO_reflection);
 
 
-	//		});
-	//};
+		});
+	};
 
 	wi::jobsystem::Wait(ctx);
 

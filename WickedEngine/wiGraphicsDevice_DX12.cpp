@@ -1568,20 +1568,35 @@ using namespace dx12_internal;
 				bool sampler_table = false;
 				UINT numResources = 0;
 				UINT numSamplers = 0;
+				uint32_t dirty_flag_check = 0;
 				for (UINT i = 0; i < param.DescriptorTable.NumDescriptorRanges; ++i)
 				{
 					const D3D12_DESCRIPTOR_RANGE1& range = param.DescriptorTable.pDescriptorRanges[i];
 					switch (range.RangeType)
 					{
 					case D3D12_DESCRIPTOR_RANGE_TYPE_SRV:
+						dirty_flag_check |= DIRTY_SRV;
+						if (range.NumDescriptors != UINT_MAX)
+						{
+							numResources += range.NumDescriptors;
+						}
+						break;
 					case D3D12_DESCRIPTOR_RANGE_TYPE_UAV:
+						dirty_flag_check |= DIRTY_UAV;
+						if (range.NumDescriptors != UINT_MAX)
+						{
+							numResources += range.NumDescriptors;
+						}
+						break;
 					case D3D12_DESCRIPTOR_RANGE_TYPE_CBV:
+						dirty_flag_check |= DIRTY_CBV;
 						if (range.NumDescriptors != UINT_MAX)
 						{
 							numResources += range.NumDescriptors;
 						}
 						break;
 					case D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER:
+						dirty_flag_check |= DIRTY_SAM;
 						sampler_table = true;
 						if (range.NumDescriptors != UINT_MAX)
 						{
@@ -1593,16 +1608,14 @@ using namespace dx12_internal;
 						break;
 					}
 				}
+				if ((dirty & dirty_flag_check) == 0)
+					continue; // skip binding table
 
 				DescriptorHeap& heap = sampler_table ? device->descriptorheap_sam : device->descriptorheap_res;
 				D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle = heap.start_gpu;
 
 				if (numResources > 0  || numSamplers > 0)
 				{
-					if (numResources > 0 && (dirty & DIRTY_CBV_SRV_UAV) == 0)
-						continue; // skip binding table
-					if (numSamplers > 0 && (dirty & DIRTY_SAM) == 0)
-						continue; // skip binding table
 					// Remarks:
 					//	This is allocating from the global shader visible descriptor heaps in a simple incrementing
 					//	lockless ring buffer fashion.
@@ -1792,11 +1805,11 @@ using namespace dx12_internal;
 				if(dirty & DIRTY_CBV)
 				{
 					const GPUBuffer& buffer = table.CBV[param.Descriptor.ShaderRegister];
-					uint64_t offset = table.CBV_offset[param.Descriptor.ShaderRegister];
 
 					D3D12_GPU_VIRTUAL_ADDRESS address = {};
 					if (buffer.IsValid())
 					{
+						uint64_t offset = table.CBV_offset[param.Descriptor.ShaderRegister];
 						auto internal_state = to_internal(&buffer);
 						address = internal_state->gpu_address;
 						address += offset;
@@ -3961,7 +3974,7 @@ using namespace dx12_internal;
 			auto& subobject = subobjects.emplace_back();
 			subobject = {};
 			subobject.Type = D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE;
-			auto shader_internal = to_internal(pDesc->shader_libraries.front().shader); // think better way
+			auto shader_internal = to_internal(pDesc->shader_libraries.front().shader);
 			global_rootsig.pGlobalRootSignature = shader_internal->rootSignature.Get();
 			subobject.pDesc = &global_rootsig;
 		}
@@ -5183,7 +5196,7 @@ using namespace dx12_internal;
 
 		auto internal_state = to_internal(pso);
 
-		if (active_rootsig_graphics[cmd] != internal_state->rootSignature.Get())
+		//if (active_rootsig_graphics[cmd] != internal_state->rootSignature.Get())
 		{
 			active_rootsig_graphics[cmd] = internal_state->rootSignature.Get();
 			GetCommandList(cmd)->SetGraphicsRootSignature(internal_state->rootSignature.Get());
@@ -5212,7 +5225,7 @@ using namespace dx12_internal;
 				GetCommandList(cmd)->SetPipelineState(internal_state->resource.Get());
 			}
 
-			if (active_rootsig_compute[cmd] != internal_state->rootSignature.Get())
+			//if (active_rootsig_compute[cmd] != internal_state->rootSignature.Get())
 			{
 				active_rootsig_compute[cmd] = internal_state->rootSignature.Get();
 				GetCommandList(cmd)->SetComputeRootSignature(internal_state->rootSignature.Get());

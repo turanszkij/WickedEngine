@@ -129,7 +129,6 @@ namespace wi::graphics
 				DIRTY_SAM = 1 << 4,
 				DIRTY_PUSH = 1 << 5,
 
-				DIRTY_CBV_SRV_UAV = DIRTY_CBV | DIRTY_SRV | DIRTY_UAV,
 				DIRTY_ALL = ~0,
 			};
 			uint32_t dirty = DIRTY_NONE;

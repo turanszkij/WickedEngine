@@ -133,6 +133,12 @@
     <ResourceCompile Include="Editor.rc" />
   </ItemGroup>
   <ItemGroup>
+    <CopyFileToFolders Include="..\WickedEngine\dxcompiler.dll">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="..\WickedEngine\dxil.dll">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
     <None Include="config.ini">
       <FileType>Discomap</FileType>
       <DeploymentContent>true</DeploymentContent>

@@ -5369,7 +5369,7 @@ using namespace vulkan_internal;
 
 		info.maxPipelineRayRecursionDepth = pDesc->max_trace_recursion_depth;
 
-		info.layout = to_internal(pDesc->shader_libraries.front().shader)->pipelineLayout_cs; // think better way
+		info.layout = to_internal(pDesc->shader_libraries.front().shader)->pipelineLayout_cs;
 
 		//VkRayTracingPipelineInterfaceCreateInfoKHR library_interface = {};
 		//library_interface.sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_INTERFACE_CREATE_INFO_KHR;
