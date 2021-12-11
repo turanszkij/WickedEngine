@@ -5196,7 +5196,7 @@ using namespace dx12_internal;
 
 		auto internal_state = to_internal(pso);
 
-		//if (active_rootsig_graphics[cmd] != internal_state->rootSignature.Get())
+		if (active_rootsig_graphics[cmd] != internal_state->rootSignature.Get())
 		{
 			active_rootsig_graphics[cmd] = internal_state->rootSignature.Get();
 			GetCommandList(cmd)->SetGraphicsRootSignature(internal_state->rootSignature.Get());
@@ -5225,7 +5225,7 @@ using namespace dx12_internal;
 				GetCommandList(cmd)->SetPipelineState(internal_state->resource.Get());
 			}
 
-			//if (active_rootsig_compute[cmd] != internal_state->rootSignature.Get())
+			if (active_rootsig_compute[cmd] != internal_state->rootSignature.Get())
 			{
 				active_rootsig_compute[cmd] = internal_state->rootSignature.Get();
 				GetCommandList(cmd)->SetComputeRootSignature(internal_state->rootSignature.Get());
