@@ -22,6 +22,16 @@
 #include "lightingHF.hlsli"
 #include "ShaderInterop_SurfelGI.h"
 
+#define ROOTSIGNATURE_OBJECT \
+	"RootConstants(num32BitConstants=16, b999), " \
+	"CBV(b0, space = 0), " \
+	"CBV(b1, space = 0), " \
+	"CBV(b2, space = 0), " \
+	"CBV(b3, space = 0), " \
+	"CBV(b4, space = 0), " \
+	"UAV(u0, space = 0), " \
+	WICKED_ENGINE_ROOTSIGNATURE_PART_BINDLESS
+
 // DEFINITIONS
 //////////////////
 
@@ -971,6 +981,9 @@ inline uint AlphaToCoverage(float alpha, float alphaTest, float4 svposition)
 
 #ifdef OBJECTSHADER_COMPILE_VS
 
+#undef WICKED_ENGINE_ROOTSIGNATURE_GRAPHICS
+#define WICKED_ENGINE_ROOTSIGNATURE_GRAPHICS ROOTSIGNATURE_OBJECT
+
 // Vertex shader base:
 PixelInput main(VertexInput input)
 {
@@ -1051,6 +1064,9 @@ PixelInput main(VertexInput input)
 //	POM					-	include parallax occlusion mapping computation
 //	WATER				-	include specialized water shader code
 //	TERRAIN				-	include specialized terrain material blending code
+
+#undef WICKED_ENGINE_ROOTSIGNATURE_GRAPHICS
+#define WICKED_ENGINE_ROOTSIGNATURE_GRAPHICS ROOTSIGNATURE_OBJECT
 
 #ifdef DISABLE_ALPHATEST
 [earlydepthstencil]

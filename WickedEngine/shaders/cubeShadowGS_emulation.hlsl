@@ -13,6 +13,7 @@ struct GSOutput
 	uint RTIndex : SV_RenderTargetArrayIndex;
 };
 
+[RootSignature()]
 [maxvertexcount(3)]
 void main(
 	triangle GSInput input[3], 

@@ -71,6 +71,9 @@ ConstantOutput PatchConstantFunction(InputPatch<PixelInput, 3> patch)
 	return output;
 }
 
+#undef WICKED_ENGINE_ROOTSIGNATURE_GRAPHICS
+#define WICKED_ENGINE_ROOTSIGNATURE_GRAPHICS ROOTSIGNATURE_OBJECT
+
 [domain("tri")]
 [partitioning("fractional_odd")]
 //[partitioning("integer")]
@@ -86,6 +89,9 @@ PixelInput main(InputPatch<PixelInput, 3> patch, uint pointID : SV_OutputControl
 
 
 #ifdef OBJECTSHADER_COMPILE_DS
+
+#undef WICKED_ENGINE_ROOTSIGNATURE_GRAPHICS
+#define WICKED_ENGINE_ROOTSIGNATURE_GRAPHICS ROOTSIGNATURE_OBJECT
 
 [domain("tri")]
 PixelInput main(ConstantOutput input, float3 uvw : SV_DomainLocation, const OutputPatch<PixelInput, 3> patch)

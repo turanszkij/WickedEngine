@@ -3,6 +3,9 @@
 #include "objectHF.hlsli"
 #include "voxelHF.hlsli"
 
+#undef WICKED_ENGINE_ROOTSIGNATURE_GRAPHICS
+#define WICKED_ENGINE_ROOTSIGNATURE_GRAPHICS ROOTSIGNATURE_OBJECT
+
 // Note: the voxelizer uses an overall simplified material and lighting model (no normal maps, only diffuse light and emissive)
 
 RWStructuredBuffer<VoxelType> output : register(u0);

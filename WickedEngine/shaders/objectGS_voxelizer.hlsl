@@ -1,4 +1,8 @@
 #include "globals.hlsli"
+#include "objectHF.hlsli"
+
+#undef WICKED_ENGINE_ROOTSIGNATURE_GRAPHICS
+#define WICKED_ENGINE_ROOTSIGNATURE_GRAPHICS ROOTSIGNATURE_OBJECT
 
 struct GSInput
 {

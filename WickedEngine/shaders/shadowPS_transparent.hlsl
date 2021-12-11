@@ -2,6 +2,9 @@
 #define OBJECTSHADER_USE_COLOR
 #include "objectHF.hlsli"
 
+#undef WICKED_ENGINE_ROOTSIGNATURE_GRAPHICS
+#define WICKED_ENGINE_ROOTSIGNATURE_GRAPHICS ROOTSIGNATURE_OBJECT
+
 [earlydepthstencil]
 float4 main(PixelInput input) : SV_TARGET
 {
