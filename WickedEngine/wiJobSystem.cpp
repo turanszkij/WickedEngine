@@ -128,6 +128,7 @@ namespace wi::jobsystem
 
 	void Initialize(uint32_t maxThreadCount)
 	{
+		maxThreadCount = 1;
 		if (internal_state.numThreads > 0)
 			return;
 		maxThreadCount = std::max(1u, maxThreadCount);

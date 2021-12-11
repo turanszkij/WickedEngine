@@ -56,5 +56,10 @@ struct VertextoPixel
 	}
 };
 
+#undef WICKED_ENGINE_ROOTSIGNATURE_GRAPHICS
+#define WICKED_ENGINE_ROOTSIGNATURE_GRAPHICS \
+	"RootConstants(num32BitConstants=32, b999), " \
+	WICKED_ENGINE_ROOTSIGNATURE_PART_BINDLESS
+
 #endif // WI_IMAGE_HF
 

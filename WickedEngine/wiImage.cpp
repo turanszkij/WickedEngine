@@ -246,10 +246,10 @@ namespace wi::image
 	void LoadShaders()
 	{
 		wi::renderer::LoadShader(ShaderStage::VS, vertexShader, "imageVS.cso");
-		wi::renderer::LoadShader(ShaderStage::VS, screenVS, "screenVS.cso");
+		wi::renderer::LoadShader(ShaderStage::VS, screenVS, "imageVS_fullscreen.cso");
 
 		wi::renderer::LoadShader(ShaderStage::PS, imagePS[IMAGE_SHADER_STANDARD], "imagePS.cso");
-		wi::renderer::LoadShader(ShaderStage::PS, imagePS[IMAGE_SHADER_FULLSCREEN], "screenPS.cso");
+		wi::renderer::LoadShader(ShaderStage::PS, imagePS[IMAGE_SHADER_FULLSCREEN], "imagePS_fullscreen.cso");
 
 
 		GraphicsDevice* device = wi::graphics::GetDevice();

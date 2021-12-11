@@ -3424,21 +3424,41 @@ using namespace dx12_internal;
 		{
 			auto shader_internal = to_internal(pso->desc.hs);
 			stream.stream1.HS = { shader_internal->shadercode.data(), shader_internal->shadercode.size() };
+			if (internal_state->rootSignature == nullptr)
+			{
+				internal_state->rootSignature = shader_internal->rootSignature;
+				internal_state->rootsig_desc = shader_internal->rootsig_desc;
+			}
 		}
 		if (pso->desc.ds != nullptr)
 		{
 			auto shader_internal = to_internal(pso->desc.ds);
 			stream.stream1.DS = { shader_internal->shadercode.data(),shader_internal->shadercode.size() };
+			if (internal_state->rootSignature == nullptr)
+			{
+				internal_state->rootSignature = shader_internal->rootSignature;
+				internal_state->rootsig_desc = shader_internal->rootsig_desc;
+			}
 		}
 		if (pso->desc.gs != nullptr)
 		{
 			auto shader_internal = to_internal(pso->desc.gs);
 			stream.stream1.GS = { shader_internal->shadercode.data(), shader_internal->shadercode.size() };
+			if (internal_state->rootSignature == nullptr)
+			{
+				internal_state->rootSignature = shader_internal->rootSignature;
+				internal_state->rootsig_desc = shader_internal->rootsig_desc;
+			}
 		}
 		if (pso->desc.ps != nullptr)
 		{
 			auto shader_internal = to_internal(pso->desc.ps);
 			stream.stream1.PS = { shader_internal->shadercode.data(), shader_internal->shadercode.size() };
+			if (internal_state->rootSignature == nullptr)
+			{
+				internal_state->rootSignature = shader_internal->rootSignature;
+				internal_state->rootsig_desc = shader_internal->rootsig_desc;
+			}
 		}
 
 		if (pso->desc.ms != nullptr)
