@@ -33,7 +33,6 @@ namespace wi::font
 		BlendState			blendState;
 		RasterizerState		rasterizerState;
 		DepthStencilState	depthStencilState;
-		Sampler				sampler;
 
 		Shader				vertexShader;
 		Shader				pixelShader;
@@ -49,10 +48,10 @@ namespace wi::font
 			float y;
 			float width;
 			float height;
-			uint16_t tc_left;
-			uint16_t tc_right;
-			uint16_t tc_top;
-			uint16_t tc_bottom;
+			float tc_left;
+			float tc_right;
+			float tc_top;
+			float tc_bottom;
 		};
 		wi::unordered_map<int32_t, Glyph> glyph_lookup;
 		wi::unordered_map<int32_t, rect_xywh> rect_lookup;
@@ -99,14 +98,8 @@ namespace wi::font
 		};
 		wi::vector<FontStyle> fontStyles;
 
-		struct FontVertex
-		{
-			XMFLOAT2 Pos;
-			XMHALF2 Tex;
-		};
-
 		template<typename T>
-		uint32_t WriteVertices(volatile FontVertex* vertexList, const T* text, Params params)
+		uint32_t WriteVertices(FontVertex* vertexList, const T* text, Params params)
 		{
 			const FontStyle& fontStyle = fontStyles[params.style];
 			const float fontScale = stbtt_ScaleForPixelHeight(&fontStyle.fontInfo, (float)params.size);
@@ -123,11 +116,11 @@ namespace wi::font
 				if (last_word_begin > 0 && params.h_wrap >= 0 && pos >= params.h_wrap - 1)
 				{
 					// Word ended and wrap detected, push down last word by one line:
-					float word_offset = vertexList[last_word_begin].Pos.x;
+					float word_offset = vertexList[last_word_begin].pos.x; // possibly uncached memory read?
 					for (size_t i = last_word_begin; i < quadCount * 4; ++i)
 					{
-						vertexList[i].Pos.x -= word_offset;
-						vertexList[i].Pos.y += LINEBREAK_SIZE;
+						vertexList[i].pos.x -= word_offset; // possibly uncached memory read?
+						vertexList[i].pos.y += LINEBREAK_SIZE; // possibly uncached memory read?
 					}
 					line += LINEBREAK_SIZE;
 					pos -= word_offset;
@@ -198,23 +191,15 @@ namespace wi::font
 					const float top = line + glyphOffsetY;
 					const float bottom = top + glyphHeight;
 
-					vertexList[vertexID + 0].Pos.x = left;
-					vertexList[vertexID + 0].Pos.y = top;
-					vertexList[vertexID + 1].Pos.x = right;
-					vertexList[vertexID + 1].Pos.y = top;
-					vertexList[vertexID + 2].Pos.x = left;
-					vertexList[vertexID + 2].Pos.y = bottom;
-					vertexList[vertexID + 3].Pos.x = right;
-					vertexList[vertexID + 3].Pos.y = bottom;
+					vertexList[vertexID + 0].pos = float2(left, top);
+					vertexList[vertexID + 1].pos = float2(right, top);
+					vertexList[vertexID + 2].pos = float2(left, bottom);
+					vertexList[vertexID + 3].pos = float2(right, bottom);
 
-					vertexList[vertexID + 0].Tex.x = glyph.tc_left;
-					vertexList[vertexID + 0].Tex.y = glyph.tc_top;
-					vertexList[vertexID + 1].Tex.x = glyph.tc_right;
-					vertexList[vertexID + 1].Tex.y = glyph.tc_top;
-					vertexList[vertexID + 2].Tex.x = glyph.tc_left;
-					vertexList[vertexID + 2].Tex.y = glyph.tc_bottom;
-					vertexList[vertexID + 3].Tex.x = glyph.tc_right;
-					vertexList[vertexID + 3].Tex.y = glyph.tc_bottom;
+					vertexList[vertexID + 0].uv = float2(glyph.tc_left, glyph.tc_top);
+					vertexList[vertexID + 1].uv = float2(glyph.tc_right, glyph.tc_top);
+					vertexList[vertexID + 2].uv = float2(glyph.tc_left, glyph.tc_bottom);
+					vertexList[vertexID + 3].uv = float2(glyph.tc_right, glyph.tc_bottom);
 
 					pos += glyph.width * params.scaling + params.spacingX;
 					pos_last_letter = pos;
@@ -235,14 +220,7 @@ namespace wi::font
 	void LoadShaders()
 	{
 		wi::renderer::LoadShader(ShaderStage::VS, vertexShader, "fontVS.cso");
-
-
-		pixelShader.auto_samplers.emplace_back();
-		pixelShader.auto_samplers.back().sampler = sampler;
-		pixelShader.auto_samplers.back().slot = 0;
-
 		wi::renderer::LoadShader(ShaderStage::PS, pixelShader, "fontPS.cso");
-
 
 		PipelineStateDesc desc;
 		desc.vs = &vertexShader;
@@ -293,19 +271,6 @@ namespace wi::font
 		dsd.depth_enable = false;
 		dsd.stencil_enable = false;
 		depthStencilState = dsd;
-
-		SamplerDesc samplerDesc;
-		samplerDesc.filter = Filter::MIN_MAG_LINEAR_MIP_POINT;
-		samplerDesc.address_u = TextureAddressMode::BORDER;
-		samplerDesc.address_v = TextureAddressMode::BORDER;
-		samplerDesc.address_w = TextureAddressMode::BORDER;
-		samplerDesc.mip_lod_bias = 0.0f;
-		samplerDesc.max_anisotropy = 0;
-		samplerDesc.comparison_func = ComparisonFunc::NEVER;
-		samplerDesc.border_color = SamplerBorderColor::TRANSPARENT_BLACK;
-		samplerDesc.min_lod = 0;
-		samplerDesc.max_lod = 0;
-		device->CreateSampler(&samplerDesc, &sampler);
 
 		static wi::eventhandler::Handle handle1 = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
 		LoadShaders();
@@ -407,20 +372,15 @@ namespace wi::font
 					stbtt_MakeCodepointBitmap(&fontStyle.fontInfo, bitmap.data() + byteOffset, rect.w, rect.h, bitmapWidth, fontScaling, fontScaling, code);
 
 					// Compute texture coordinates for the glyph:
-					float tc_left = float(rect.x);
-					float tc_right = tc_left + float(rect.w);
-					float tc_top = float(rect.y);
-					float tc_bottom = tc_top + float(rect.h);
+					glyph.tc_left = float(rect.x);
+					glyph.tc_right = glyph.tc_left + float(rect.w);
+					glyph.tc_top = float(rect.y);
+					glyph.tc_bottom = glyph.tc_top + float(rect.h);
 
-					tc_left *= inv_width;
-					tc_right *= inv_width;
-					tc_top *= inv_height;
-					tc_bottom *= inv_height;
-
-					glyph.tc_left = XMConvertFloatToHalf(tc_left);
-					glyph.tc_right = XMConvertFloatToHalf(tc_right);
-					glyph.tc_top = XMConvertFloatToHalf(tc_top);
-					glyph.tc_bottom = XMConvertFloatToHalf(tc_bottom);
+					glyph.tc_left *= inv_width;
+					glyph.tc_right *= inv_width;
+					glyph.tc_top *= inv_height;
+					glyph.tc_bottom *= inv_height;
 				}
 
 				// Upload the CPU-side texture atlas bitmap to the GPU:
@@ -559,7 +519,7 @@ namespace wi::font
 		{
 			return;
 		}
-		volatile FontVertex* textBuffer = (volatile FontVertex*)mem.data;
+		FontVertex* textBuffer = (FontVertex*)mem.data;
 		const uint32_t quadCount = WriteVertices(textBuffer, text, newProps);
 
 		if (quadCount > 0)
@@ -568,10 +528,10 @@ namespace wi::font
 
 			device->BindPipelineState(&PSO, cmd);
 
-			PushConstantsFont push;
-			push.buffer_index = device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV);
-			push.buffer_offset = (uint32_t)mem.offset;
-			push.texture_index = device->GetDescriptorIndex(&texture, SubresourceType::SRV);
+			FontConstants font;
+			font.buffer_index = device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV);
+			font.buffer_offset = (uint32_t)mem.offset;
+			font.texture_index = device->GetDescriptorIndex(&texture, SubresourceType::SRV);
 
 			const wi::Canvas& canvas = canvases[cmd];
 			// Asserts will check that a proper canvas was set for this cmd with wi::image::SetCanvas()
@@ -584,24 +544,24 @@ namespace wi::font
 			if (newProps.shadowColor.getA() > 0)
 			{
 				// font shadow render:
-				XMStoreFloat4x4(&push.transform,
+				XMStoreFloat4x4(&font.transform,
 					XMMatrixTranslation((float)newProps.posX + 1, (float)newProps.posY + 1, 0)
 					* Projection
 				);
-				push.color = newProps.shadowColor.rgba;
+				font.color = newProps.shadowColor.rgba;
 
-				device->PushConstants(&push, sizeof(push), cmd);
+				device->BindDynamicConstantBuffer(font, CBSLOT_FONT, cmd);
 				device->DrawInstanced(4, quadCount, 0, 0, cmd);
 			}
 
 			// font base render:
-			XMStoreFloat4x4(&push.transform,
+			XMStoreFloat4x4(&font.transform,
 				XMMatrixTranslation((float)newProps.posX, (float)newProps.posY, 0)
 				* Projection
 			);
-			push.color = newProps.color.rgba;
+			font.color = newProps.color.rgba;
 
-			device->PushConstants(&push, sizeof(push), cmd);
+			device->BindDynamicConstantBuffer(font, CBSLOT_FONT, cmd);
 			device->DrawInstanced(4, quadCount, 0, 0, cmd);
 
 			device->EventEnd(cmd);

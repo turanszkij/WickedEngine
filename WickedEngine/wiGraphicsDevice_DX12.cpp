@@ -1325,6 +1325,8 @@ namespace dx12_internal
 		std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
 		ComPtr<ID3D12StateObject> resource;
 
+		ComPtr<ID3D12StateObjectProperties> stateObjectProperties;
+
 		wi::vector<std::wstring> export_strings;
 		wi::vector<D3D12_EXPORT_DESC> exports;
 		wi::vector<D3D12_DXIL_LIBRARY_DESC> library_descs;
@@ -1555,7 +1557,6 @@ using namespace dx12_internal;
 
 		ID3D12GraphicsCommandList6* commandlist = device->GetCommandList(cmd);
 
-		UINT root_parameter_index = 0;
 		for (UINT root_parameter_index = 0; root_parameter_index < pso_internal->rootsig_desc->Desc_1_1.NumParameters; ++root_parameter_index)
 		{
 			const D3D12_ROOT_PARAMETER1& param = pso_internal->rootsig_desc->Desc_1_1.pParameters[root_parameter_index];
@@ -1702,7 +1703,7 @@ using namespace dx12_internal;
 								}
 								else
 								{
-									device->device->CopyDescriptorsSimple(1, dst_handle, device->nullSRV_buffer, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+									device->device->CopyDescriptorsSimple(1, dst_handle, device->nullSRV, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 								}
 							}
 							break;
@@ -1724,7 +1725,7 @@ using namespace dx12_internal;
 								}
 								else
 								{
-									device->device->CopyDescriptorsSimple(1, dst_handle, device->nullUAV_buffer, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+									device->device->CopyDescriptorsSimple(1, dst_handle, device->nullUAV, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 								}
 							}
 							break;
@@ -2616,6 +2617,21 @@ using namespace dx12_internal;
 			device->CreateConstantBufferView(&cbv_desc, nullCBV);
 		}
 		{
+			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
+			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			srv_desc.Format = DXGI_FORMAT_R32_UINT;
+			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+			nullSRV = allocationhandler->descriptors_res.allocate();
+			device->CreateShaderResourceView(nullptr, &srv_desc, nullSRV);
+		}
+		{
+			D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
+			uav_desc.Format = DXGI_FORMAT_R32_UINT;
+			uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+			nullUAV = allocationhandler->descriptors_res.allocate();
+			device->CreateUnorderedAccessView(nullptr, nullptr, &uav_desc, nullUAV);
+		}
+		{
 			D3D12_SAMPLER_DESC sampler_desc = {};
 			sampler_desc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
 			sampler_desc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
@@ -2625,122 +2641,6 @@ using namespace dx12_internal;
 			nullSAM = allocationhandler->descriptors_sam.allocate();
 			device->CreateSampler(&sampler_desc, nullSAM);
 		}
-		{
-			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
-			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-			srv_desc.Format = DXGI_FORMAT_R32_UINT;
-			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-			nullSRV_buffer = allocationhandler->descriptors_res.allocate();
-			device->CreateShaderResourceView(nullptr, &srv_desc, nullSRV_buffer);
-		}
-		{
-			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
-			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-			srv_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE1D;
-			nullSRV_texture1d = allocationhandler->descriptors_res.allocate();
-			device->CreateShaderResourceView(nullptr, &srv_desc, nullSRV_texture1d);
-		}
-		{
-			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
-			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-			srv_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE1DARRAY;
-			nullSRV_texture1darray = allocationhandler->descriptors_res.allocate();
-			device->CreateShaderResourceView(nullptr, &srv_desc, nullSRV_texture1darray);
-		}
-		{
-			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
-			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-			srv_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-			nullSRV_texture2d = allocationhandler->descriptors_res.allocate();
-			device->CreateShaderResourceView(nullptr, &srv_desc, nullSRV_texture2d);
-		}
-		{
-			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
-			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-			srv_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
-			nullSRV_texture2darray = allocationhandler->descriptors_res.allocate();
-			device->CreateShaderResourceView(nullptr, &srv_desc, nullSRV_texture2darray);
-		}
-		{
-			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
-			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-			srv_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
-			nullSRV_texturecube = allocationhandler->descriptors_res.allocate();
-			device->CreateShaderResourceView(nullptr, &srv_desc, nullSRV_texturecube);
-		}
-		{
-			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
-			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-			srv_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBEARRAY;
-			nullSRV_texturecubearray = allocationhandler->descriptors_res.allocate();
-			device->CreateShaderResourceView(nullptr, &srv_desc, nullSRV_texturecubearray);
-		}
-		{
-			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
-			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-			srv_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
-			nullSRV_texture3d = allocationhandler->descriptors_res.allocate();
-			device->CreateShaderResourceView(nullptr, &srv_desc, nullSRV_texture3d);
-		}
-		if(CheckCapability(GraphicsDeviceCapability::RAYTRACING))
-		{
-			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
-			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-			srv_desc.Format = DXGI_FORMAT_UNKNOWN;
-			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
-			nullSRV_accelerationstructure = allocationhandler->descriptors_res.allocate();
-			device->CreateShaderResourceView(nullptr, &srv_desc, nullSRV_accelerationstructure);
-		}
-		{
-			D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
-			uav_desc.Format = DXGI_FORMAT_R32_UINT;
-			uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-			nullUAV_buffer = allocationhandler->descriptors_res.allocate();
-			device->CreateUnorderedAccessView(nullptr, nullptr, &uav_desc, nullUAV_buffer);
-		}
-		{
-			D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
-			uav_desc.Format = DXGI_FORMAT_R32_UINT;
-			uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE1D;
-			nullUAV_texture1d = allocationhandler->descriptors_res.allocate();
-			device->CreateUnorderedAccessView(nullptr, nullptr, &uav_desc, nullUAV_texture1d);
-		}
-		{
-			D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
-			uav_desc.Format = DXGI_FORMAT_R32_UINT;
-			uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE1DARRAY;
-			nullUAV_texture1darray = allocationhandler->descriptors_res.allocate();
-			device->CreateUnorderedAccessView(nullptr, nullptr, &uav_desc, nullUAV_texture1darray);
-		}
-		{
-			D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
-			uav_desc.Format = DXGI_FORMAT_R32_UINT;
-			uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
-			nullUAV_texture2d = allocationhandler->descriptors_res.allocate();
-			device->CreateUnorderedAccessView(nullptr, nullptr, &uav_desc, nullUAV_texture2d);
-		}
-		{
-			D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
-			uav_desc.Format = DXGI_FORMAT_R32_UINT;
-			uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
-			nullUAV_texture2darray = allocationhandler->descriptors_res.allocate();
-			device->CreateUnorderedAccessView(nullptr, nullptr, &uav_desc, nullUAV_texture2darray);
-		}
-		{
-			D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
-			uav_desc.Format = DXGI_FORMAT_R32_UINT;
-			uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE3D;
-			nullUAV_texture3d = allocationhandler->descriptors_res.allocate();
-			device->CreateUnorderedAccessView(nullptr, nullptr, &uav_desc, nullUAV_texture3d);
-		}
-
 
 		hr = queues[QUEUE_GRAPHICS].queue->GetTimestampFrequency(&TIMESTAMP_FREQUENCY);
 		assert(SUCCEEDED(hr));
@@ -2923,7 +2823,9 @@ using namespace dx12_internal;
 		}
 
 		internal_state->dummyTexture.desc.format = pDesc->format;
-		internal_state->renderpass = RenderPass();
+		internal_state->dummyTexture.desc.width = pDesc->width;
+		internal_state->dummyTexture.desc.height = pDesc->height;
+		internal_state->renderpass = {};
 		wi::helper::hash_combine(internal_state->renderpass.hash, pDesc->format);
 		internal_state->renderpass.desc.attachments.push_back(RenderPassAttachment::RenderTarget(&internal_state->dummyTexture));
 
@@ -3020,7 +2922,7 @@ using namespace dx12_internal;
 		{
 			auto cmd = copyAllocator.allocate(pDesc->size);
 
-			memcpy(cmd.uploadbuffer.mapped_data, pInitialData, pDesc->size);
+			std::memcpy(cmd.uploadbuffer.mapped_data, pInitialData, pDesc->size);
 
 			cmd.commandList->CopyBufferRegion(
 				internal_state->resource.Get(),
@@ -4068,6 +3970,9 @@ using namespace dx12_internal;
 		HRESULT hr = device->CreateStateObject(&desc, IID_PPV_ARGS(&internal_state->resource));
 		assert(SUCCEEDED(hr));
 
+		hr = internal_state->resource.As(&internal_state->stateObjectProperties);
+		assert(SUCCEEDED(hr));
+
 		return SUCCEEDED(hr);
 	}
 
@@ -4604,7 +4509,7 @@ using namespace dx12_internal;
 	{
 		D3D12_RAYTRACING_INSTANCE_DESC* desc = (D3D12_RAYTRACING_INSTANCE_DESC*)dest;
 		desc->AccelerationStructure = to_internal(&instance->bottom_level)->gpu_address;
-		memcpy(desc->Transform, &instance->transform, sizeof(desc->Transform));
+		std::memcpy(desc->Transform, &instance->transform, sizeof(desc->Transform));
 		desc->InstanceID = instance->instance_id;
 		desc->InstanceMask = instance->instance_mask;
 		desc->InstanceContributionToHitGroupIndex = instance->instance_contribution_to_hit_group_index;
@@ -4614,19 +4519,10 @@ using namespace dx12_internal;
 	{
 		auto internal_state = to_internal(rtpso);
 
-		ComPtr<ID3D12StateObjectProperties> stateObjectProperties;
-		HRESULT hr = internal_state->resource.As(&stateObjectProperties);
-		assert(SUCCEEDED(hr));
-
-		void* identifier = stateObjectProperties->GetShaderIdentifier(internal_state->group_strings[group_index].c_str());
-		memcpy(dest, identifier, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+		void* identifier = internal_state->stateObjectProperties->GetShaderIdentifier(internal_state->group_strings[group_index].c_str());
+		std::memcpy(dest, identifier, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
 	}
 	
-	void GraphicsDevice_DX12::SetCommonSampler(const StaticSampler* sam)
-	{
-		common_samplers.push_back(_ConvertStaticSampler(*sam));
-	}
-
 	void GraphicsDevice_DX12::SetName(GPUResource* pResource, const char* name)
 	{
 		wchar_t text[256];
@@ -5711,6 +5607,10 @@ using namespace dx12_internal;
 		}
 	}
 
+	const RenderPass* GraphicsDevice_DX12::GetCurrentRenderPass(CommandList cmd) const
+	{
+		return active_renderpass[cmd];
+	}
 
 }
 

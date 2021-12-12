@@ -335,6 +335,8 @@ namespace wi::graphics
 		void EventEnd(CommandList cmd) override;
 		void SetMarker(const char* name, CommandList cmd) override;
 
+		const RenderPass* GetCurrentRenderPass(CommandList cmd) const override;
+
 		struct AllocationHandler
 		{
 			VmaAllocator allocator = VK_NULL_HANDLE;

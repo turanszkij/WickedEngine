@@ -23,13 +23,13 @@
 #include "ShaderInterop_SurfelGI.h"
 
 #define ROOTSIGNATURE_OBJECT \
-	"RootConstants(num32BitConstants=16, b999), " \
-	"CBV(b0, space = 0), " \
-	"CBV(b1, space = 0), " \
-	"CBV(b2, space = 0), " \
-	"CBV(b3, space = 0), " \
-	"CBV(b4, space = 0), " \
-	"UAV(u0, space = 0), " \
+	"RootConstants(num32BitConstants=4, b999), " \
+	"CBV(b0, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE), " \
+	"CBV(b1, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE), " \
+	"CBV(b2, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE), " \
+	"CBV(b3, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE), " \
+	"CBV(b4, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE), " \
+	"UAV(u0, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE), " \
 	WICKED_ENGINE_ROOTSIGNATURE_PART_BINDLESS
 
 // DEFINITIONS

@@ -800,7 +800,6 @@ namespace wi::graphics
 	struct Shader : public GraphicsDeviceChild
 	{
 		ShaderStage stage = ShaderStage::Count;
-		wi::vector<StaticSampler> auto_samplers; // ability to set static samplers without explicit root signature
 	};
 
 	struct GPUResource : public GraphicsDeviceChild

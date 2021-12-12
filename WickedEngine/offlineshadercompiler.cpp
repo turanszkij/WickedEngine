@@ -238,7 +238,6 @@ int main(int argc, char* argv[])
 	shaders[static_cast<size_t>(ShaderStage::PS)] = {
 		"emittedparticlePS_soft.hlsl"					,
 		"imagePS.hlsl"									,
-		"imagePS_fullscreen.hlsl"						,
 		"emittedparticlePS_soft_lighting.hlsl"			,
 		"oceanSurfacePS.hlsl"							,
 		"hairparticlePS.hlsl"							,
@@ -315,7 +314,6 @@ int main(int argc, char* argv[])
 		"hairparticleVS.hlsl"							,
 		"emittedparticleVS.hlsl"						,
 		"imageVS.hlsl"									,
-		"imageVS_fullscreen.hlsl"						,
 		"fontVS.hlsl"									,
 		"voxelVS.hlsl"									,
 		"vertexcolorVS.hlsl"							,

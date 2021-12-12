@@ -870,6 +870,8 @@ namespace vulkan_internal
 		wi::vector<VkImage> swapChainImages;
 		wi::vector<VkImageView> swapChainImageViews;
 		wi::vector<VkFramebuffer> swapChainFramebuffers;
+
+		Texture dummyTexture;
 		RenderPass renderpass;
 
 		VkSurfaceKHR surface = VK_NULL_HANDLE;
@@ -1147,12 +1149,15 @@ namespace vulkan_internal
 			renderPassInfo.dependencyCount = 1;
 			renderPassInfo.pDependencies = &dependency;
 
-			internal_state->renderpass = RenderPass();
+			internal_state->dummyTexture.desc.format = internal_state->desc.format;
+			internal_state->dummyTexture.desc.width = internal_state->desc.width;
+			internal_state->dummyTexture.desc.height = internal_state->desc.height;
+			internal_state->renderpass = {};
 			wi::helper::hash_combine(internal_state->renderpass.hash, internal_state->swapChainImageFormat);
 			auto renderpass_internal = std::make_shared<RenderPass_Vulkan>();
 			renderpass_internal->allocationhandler = allocationhandler;
 			internal_state->renderpass.internal_state = renderpass_internal;
-			internal_state->renderpass.desc.attachments.push_back(RenderPassAttachment::RenderTarget());
+			internal_state->renderpass.desc.attachments.push_back(RenderPassAttachment::RenderTarget(&internal_state->dummyTexture));
 			res = vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderpass_internal->renderpass);
 			assert(res == VK_SUCCESS);
 
@@ -3032,11 +3037,11 @@ using namespace vulkan_internal;
 				uint32_t deviceID = 0;
 				uint8_t pipelineCacheUUID[VK_UUID_SIZE] = {};
 
-				memcpy(&headerLength, (uint8_t*)pipelineData.data() + 0, 4);
-				memcpy(&cacheHeaderVersion, (uint8_t*)pipelineData.data() + 4, 4);
-				memcpy(&vendorID, (uint8_t*)pipelineData.data() + 8, 4);
-				memcpy(&deviceID, (uint8_t*)pipelineData.data() + 12, 4);
-				memcpy(pipelineCacheUUID, (uint8_t*)pipelineData.data() + 16, VK_UUID_SIZE);
+				std::memcpy(&headerLength, (uint8_t*)pipelineData.data() + 0, 4);
+				std::memcpy(&cacheHeaderVersion, (uint8_t*)pipelineData.data() + 4, 4);
+				std::memcpy(&vendorID, (uint8_t*)pipelineData.data() + 8, 4);
+				std::memcpy(&deviceID, (uint8_t*)pipelineData.data() + 12, 4);
+				std::memcpy(pipelineCacheUUID, (uint8_t*)pipelineData.data() + 16, VK_UUID_SIZE);
 
 				bool badCache = false;
 
@@ -3361,7 +3366,7 @@ using namespace vulkan_internal;
 		{
 			auto cmd = copyAllocator.allocate(pDesc->size);
 
-			memcpy(cmd.uploadbuffer.mapped_data, pInitialData, pBuffer->desc.size);
+			std::memcpy(cmd.uploadbuffer.mapped_data, pInitialData, pBuffer->desc.size);
 
 			VkBufferMemoryBarrier barrier = {};
 			barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
@@ -3621,7 +3626,7 @@ using namespace vulkan_internal;
 					const SubresourceData& subresourceData = pInitialData[initDataIdx++];
 					VkDeviceSize copySize = subresourceData.row_pitch * height * depth / GetFormatBlockSize(pDesc->format);
 					uint8_t* cpyaddr = (uint8_t*)cmd.uploadbuffer.mapped_data + copyOffset;
-					memcpy(cpyaddr, subresourceData.data_ptr, copySize);
+					std::memcpy(cpyaddr, subresourceData.data_ptr, copySize);
 
 					VkBufferImageCopy copyRegion = {};
 					copyRegion.bufferOffset = copyOffset;
@@ -3874,25 +3879,13 @@ using namespace vulkan_internal;
 				if (x->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER)
 				{
 					bool staticsampler = false;
-					for (auto& sam : pShader->auto_samplers)
+					for (auto& sam : common_samplers)
 					{
 						if (x->binding == sam.slot + VULKAN_BINDING_SHIFT_S)
 						{
 							descriptor.pImmutableSamplers = &to_internal(&sam.sampler)->resource;
 							staticsampler = true;
 							break; // static sampler will be used instead
-						}
-					}
-					if (!staticsampler)
-					{
-						for (auto& sam : common_samplers)
-						{
-							if (x->binding == sam.slot + VULKAN_BINDING_SHIFT_S)
-							{
-								descriptor.pImmutableSamplers = &to_internal(&sam.sampler)->resource;
-								staticsampler = true;
-								break; // static sampler will be used instead
-							}
 						}
 					}
 					if (staticsampler)
@@ -5881,7 +5874,7 @@ using namespace vulkan_internal;
 	void GraphicsDevice_Vulkan::WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) const
 	{
 		VkAccelerationStructureInstanceKHR* desc = (VkAccelerationStructureInstanceKHR*)dest;
-		memcpy(&desc->transform, &instance->transform, sizeof(desc->transform));
+		std::memcpy(&desc->transform, &instance->transform, sizeof(desc->transform));
 		desc->instanceCustomIndex = instance->instance_id;
 		desc->mask = instance->instance_mask;
 		desc->instanceShaderBindingTableRecordOffset = instance->instance_contribution_to_hit_group_index;
@@ -7304,6 +7297,11 @@ using namespace vulkan_internal;
 		label.color[2] = 0.0f;
 		label.color[3] = 1.0f;
 		vkCmdInsertDebugUtilsLabelEXT(GetCommandList(cmd), &label);
+	}
+
+	const RenderPass* GraphicsDevice_Vulkan::GetCurrentRenderPass(CommandList cmd) const
+	{
+		return active_renderpass[cmd];
 	}
 }
 

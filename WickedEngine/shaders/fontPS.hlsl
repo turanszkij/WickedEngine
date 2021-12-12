@@ -3,11 +3,11 @@
 
 struct VertextoPixel
 {
-	float4 pos : SV_POSITION;
-	float2 tex : TEXCOORD0;
+	float4 pos : SV_Position;
+	float2 uv : TEXCOORD0;
 };
 
-float4 main(VertextoPixel PSIn) : SV_TARGET
+float4 main(VertextoPixel input) : SV_TARGET
 {
-	return bindless_textures[push.texture_index].SampleLevel(sampler_linear_clamp, PSIn.tex, 0).rrrr * unpack_rgba(push.color);
+	return bindless_textures[font.texture_index].SampleLevel(sampler_linear_clamp, input.uv, 0).rrrr * unpack_rgba(font.color);
 }

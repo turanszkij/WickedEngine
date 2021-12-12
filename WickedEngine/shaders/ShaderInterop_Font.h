@@ -2,7 +2,13 @@
 #define WI_SHADERINTEROP_FONT_H
 #include "ShaderInterop.h"
 
-struct PushConstantsFont
+struct FontVertex
+{
+	float2 pos;
+	float2 uv;
+};
+
+struct FontConstants
 {
 	float4x4 transform;
 	uint color;
@@ -10,11 +16,11 @@ struct PushConstantsFont
 	uint buffer_offset;
 	int texture_index;
 };
-PUSHCONSTANT(push, PushConstantsFont);
+CONSTANTBUFFER(font, FontConstants, CBSLOT_FONT);
 
 #undef WICKED_ENGINE_ROOTSIGNATURE_GRAPHICS
 #define WICKED_ENGINE_ROOTSIGNATURE_GRAPHICS \
-	"RootConstants(num32BitConstants=32, b999), " \
+	"CBV(b5), " \
 	WICKED_ENGINE_ROOTSIGNATURE_PART_BINDLESS
 
 

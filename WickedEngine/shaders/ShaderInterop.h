@@ -91,5 +91,8 @@ struct IndirectDispatchArgs
 #define CBSLOT_OTHER_CLOUDGENERATOR				3
 #define CBSLOT_OTHER_GPUSORTLIB					4
 
+#define CBSLOT_IMAGE							5
+#define CBSLOT_FONT								5
+
 
 #endif // WI_SHADERINTEROP_H

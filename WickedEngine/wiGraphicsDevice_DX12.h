@@ -45,24 +45,9 @@ namespace wi::graphics
 		uint32_t sampler_descriptor_size = 0;
 
 		D3D12_CPU_DESCRIPTOR_HANDLE nullCBV = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullUAV = {};
 		D3D12_CPU_DESCRIPTOR_HANDLE nullSAM = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV_buffer = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV_texture1d = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV_texture1darray = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV_texture2d = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV_texture2darray = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV_texturecube = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV_texturecubearray = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV_texture3d = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV_accelerationstructure = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE nullUAV_buffer = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE nullUAV_texture1d = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE nullUAV_texture1darray = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE nullUAV_texture2d = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE nullUAV_texture2darray = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE nullUAV_texture3d = {};
-
-		wi::vector<D3D12_STATIC_SAMPLER_DESC> common_samplers;
 
 		struct CommandQueue
 		{
@@ -198,8 +183,6 @@ namespace wi::graphics
 		void WriteShadingRateValue(ShadingRate rate, void* dest) const override;
 		void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) const override;
 		void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) const override;
-		
-		void SetCommonSampler(const StaticSampler* sam) override;
 
 		void SetName(GPUResource* pResource, const char* name) override;
 
@@ -267,6 +250,7 @@ namespace wi::graphics
 		void EventEnd(CommandList cmd) override;
 		void SetMarker(const char* name, CommandList cmd) override;
 
+		const RenderPass* GetCurrentRenderPass(CommandList cmd) const override;
 
 
 		struct DescriptorHeap

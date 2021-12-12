@@ -494,9 +494,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)emittedparticlePS_soft.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)imagePS_fullscreen.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)imagePS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
@@ -666,9 +663,6 @@
       <Filter>VS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)shadowVS_alphatest.hlsl">
-      <Filter>VS</Filter>
-    </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)imageVS_fullscreen.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)renderlightmapVS.hlsl">

@@ -41,13 +41,12 @@ RWTexture3D<float4> bindless_rwtextures3D[] : register(space17);
 
 #define WICKED_ENGINE_ROOTSIGNATURE_PART_BINDINGS \
 	"RootConstants(num32BitConstants=16, b999), " \
-	"CBV(b0, space = 0), " \
-	"CBV(b1, space = 0), " \
-	"CBV(b2, space = 0), " \
-	"CBV(b3, space = 0), " \
-	"CBV(b4, space = 0), " \
+	"CBV(b0, space = 0, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE), " \
+	"CBV(b1, space = 0, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE), " \
+	"CBV(b2, space = 0, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE), " \
+	"CBV(b3, space = 0, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE), " \
+	"CBV(b4, space = 0, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE), " \
 	"DescriptorTable( " \
-		"CBV(b5, offset = DESCRIPTOR_RANGE_OFFSET_APPEND , numDescriptors = 10, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE)," \
 		"SRV(t0, offset = DESCRIPTOR_RANGE_OFFSET_APPEND , numDescriptors = 16, flags = DESCRIPTORS_VOLATILE | DATA_STATIC_WHILE_SET_AT_EXECUTE)," \
 		"UAV(u0, offset = DESCRIPTOR_RANGE_OFFSET_APPEND , numDescriptors = 16, flags = DESCRIPTORS_VOLATILE | DATA_STATIC_WHILE_SET_AT_EXECUTE)" \
 	")," \

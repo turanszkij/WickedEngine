@@ -96,7 +96,7 @@ namespace wi::graphics
 		virtual void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) const {}
 
 		// Set a sampler that can be used by any shaders that will be created after this call, without needing to bind that sampler
-		virtual void SetCommonSampler(const StaticSampler* sam) = 0;
+		virtual void SetCommonSampler(const StaticSampler* sam) {};
 
 		// Set a debug name for the GPUResource, which will be visible in graphics debuggers
 		virtual void SetName(GPUResource* pResource, const char* name) = 0;
@@ -204,6 +204,7 @@ namespace wi::graphics
 		virtual void EventEnd(CommandList cmd) = 0;
 		virtual void SetMarker(const char* name, CommandList cmd) = 0;
 
+		virtual const RenderPass* GetCurrentRenderPass(CommandList cmd) const = 0;
 
 
 		// Some useful helpers:
