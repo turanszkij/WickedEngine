@@ -50,7 +50,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 	else if (image.flags & IMAGE_FLAG_OUTPUT_COLOR_SPACE_LINEAR)
 	{
 		color.rgb = DEGAMMA(color.rgb);
-		color.rgb *= image.hdr_scaling; // hdr_scaling (corners0 is not used for anything else in full screen image rendering)
+		color.rgb *= image.hdr_scaling;
 	}
 
 	return color;
