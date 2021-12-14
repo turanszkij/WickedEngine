@@ -2163,8 +2163,9 @@ using namespace dx12_internal;
 			ComPtr<IDXGIInfoQueue> dxgiInfoQueue;
 			if (DXGIGetDebugInterface1 != nullptr && SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiInfoQueue.GetAddressOf()))))
 			{
-				dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR, true);
 				dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, true);
+				dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR, true);
+				//dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_WARNING, true);
 
 				DXGI_INFO_QUEUE_MESSAGE_ID hide[] =
 				{
@@ -2280,6 +2281,7 @@ using namespace dx12_internal;
 #ifdef _DEBUG
 				d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
 				d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
+				//d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE);
 #endif
 
 				D3D12_MESSAGE_ID hide[] =
@@ -3172,26 +3174,25 @@ using namespace dx12_internal;
 		HRESULT hr = (internal_state->shadercode.empty() ? E_FAIL : S_OK);
 		assert(SUCCEEDED(hr));
 
-		hr = device->CreateRootSignature(
-			0,
-			internal_state->shadercode.data(),
-			internal_state->shadercode.size(),
-			IID_PPV_ARGS(&internal_state->rootSignature)
-		);
-		assert(SUCCEEDED(hr));
-
 		hr = D3D12CreateVersionedRootSignatureDeserializer(
 			internal_state->shadercode.data(),
 			internal_state->shadercode.size(),
 			IID_PPV_ARGS(&internal_state->rootsig_deserializer)
 		);
-		assert(SUCCEEDED(hr));
 		if (SUCCEEDED(hr))
 		{
 			hr = internal_state->rootsig_deserializer->GetRootSignatureDescAtVersion(D3D_ROOT_SIGNATURE_VERSION_1_1, &internal_state->rootsig_desc);
 			if (SUCCEEDED(hr))
 			{
 				assert(internal_state->rootsig_desc->Version == D3D_ROOT_SIGNATURE_VERSION_1_1);
+
+				hr = device->CreateRootSignature(
+					0,
+					internal_state->shadercode.data(),
+					internal_state->shadercode.size(),
+					IID_PPV_ARGS(&internal_state->rootSignature)
+				);
+				assert(SUCCEEDED(hr));
 			}
 		}
 
@@ -4894,7 +4895,10 @@ using namespace dx12_internal;
 
 		auto internal_state = to_internal(active_renderpass[cmd]);
 
-		GetCommandList(cmd)->ResourceBarrier(internal_state->num_barriers_begin, internal_state->barrierdescs_begin);
+		if (internal_state->num_barriers_begin > 0)
+		{
+			GetCommandList(cmd)->ResourceBarrier(internal_state->num_barriers_begin, internal_state->barrierdescs_begin);
+		}
 
 		if (internal_state->shading_rate_image != nullptr)
 		{
@@ -4922,7 +4926,10 @@ using namespace dx12_internal;
 				GetCommandList(cmd)->RSSetShadingRateImage(nullptr);
 			}
 
-			GetCommandList(cmd)->ResourceBarrier(internal_state->num_barriers_end, internal_state->barrierdescs_end);
+			if (internal_state->num_barriers_end > 0)
+			{
+				GetCommandList(cmd)->ResourceBarrier(internal_state->num_barriers_end, internal_state->barrierdescs_end);
+			}
 		}
 
 		active_renderpass[cmd] = nullptr;
