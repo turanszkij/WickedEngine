@@ -44,6 +44,8 @@ namespace wi::graphics
 		uint32_t resource_descriptor_size = 0;
 		uint32_t sampler_descriptor_size = 0;
 
+		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> nulldescriptorheap_cbv_srv_uav;
+		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> nulldescriptorheap_sampler;
 		D3D12_CPU_DESCRIPTOR_HANDLE nullCBV = {};
 		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV = {};
 		D3D12_CPU_DESCRIPTOR_HANDLE nullUAV = {};
@@ -288,11 +290,11 @@ namespace wi::graphics
 				uint32_t descriptor_size = 0;
 				wi::vector<D3D12_CPU_DESCRIPTOR_HANDLE> freelist;
 
-				void init(GraphicsDevice_DX12* device, D3D12_DESCRIPTOR_HEAP_TYPE type)
+				void init(GraphicsDevice_DX12* device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT numDescriptorsPerBlock)
 				{
 					this->device = device;
 					desc.Type = type;
-					desc.NumDescriptors = 1024;
+					desc.NumDescriptors = numDescriptorsPerBlock;
 					descriptor_size = device->device->GetDescriptorHandleIncrementSize(type);
 				}
 				void block_allocate()

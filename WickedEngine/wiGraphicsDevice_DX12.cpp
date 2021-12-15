@@ -1760,9 +1760,10 @@ using namespace dx12_internal;
 						switch (range.RangeType)
 						{
 						case D3D12_DESCRIPTOR_RANGE_TYPE_SRV:
+							device->device->CopyDescriptorsSimple(range.NumDescriptors, dst_handle, device->nullSRV, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 							for (UINT idx = 0; idx < range.NumDescriptors; ++idx)
 							{
-								UINT reg = range.BaseShaderRegister + idx;
+								const UINT reg = range.BaseShaderRegister + idx;
 								const GPUResource& resource = table.SRV[reg];
 								if (resource.IsValid())
 								{
@@ -1771,17 +1772,14 @@ using namespace dx12_internal;
 									D3D12_CPU_DESCRIPTOR_HANDLE src_handle = subresource < 0 ? internal_state->srv.handle : internal_state->subresources_srv[subresource].handle;
 									device->device->CopyDescriptorsSimple(1, dst_handle, src_handle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 								}
-								else
-								{
-									device->device->CopyDescriptorsSimple(1, dst_handle, device->nullSRV, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-								}
 								dst_handle.ptr += descriptorSize;
 							}
 							break;
 						case D3D12_DESCRIPTOR_RANGE_TYPE_UAV:
+							device->device->CopyDescriptorsSimple(range.NumDescriptors, dst_handle, device->nullUAV, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 							for (UINT idx = 0; idx < range.NumDescriptors; ++idx)
 							{
-								UINT reg = range.BaseShaderRegister + idx;
+								const UINT reg = range.BaseShaderRegister + idx;
 								const GPUResource& resource = table.UAV[reg];
 								if (resource.IsValid())
 								{
@@ -1790,17 +1788,14 @@ using namespace dx12_internal;
 									D3D12_CPU_DESCRIPTOR_HANDLE src_handle = subresource < 0 ? internal_state->uav.handle : internal_state->subresources_uav[subresource].handle;
 									device->device->CopyDescriptorsSimple(1, dst_handle, src_handle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 								}
-								else
-								{
-									device->device->CopyDescriptorsSimple(1, dst_handle, device->nullUAV, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-								}
 								dst_handle.ptr += descriptorSize;
 							}
 							break;
 						case D3D12_DESCRIPTOR_RANGE_TYPE_CBV:
+							device->device->CopyDescriptorsSimple(range.NumDescriptors, dst_handle, device->nullCBV, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 							for (UINT idx = 0; idx < range.NumDescriptors; ++idx)
 							{
-								UINT reg = range.BaseShaderRegister + idx;
+								const UINT reg = range.BaseShaderRegister + idx;
 								const GPUBuffer& buffer = table.CBV[reg];
 								if (buffer.IsValid())
 								{
@@ -1815,27 +1810,20 @@ using namespace dx12_internal;
 
 									device->device->CreateConstantBufferView(&cbv, dst_handle);
 								}
-								else
-								{
-									device->device->CopyDescriptorsSimple(1, dst_handle, device->nullCBV, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-								}
 								dst_handle.ptr += descriptorSize;
 							}
 							break;
 						case D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER:
+							device->device->CopyDescriptorsSimple(range.NumDescriptors, dst_handle, device->nullSAM, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 							for (UINT idx = 0; idx < range.NumDescriptors; ++idx)
 							{
-								UINT reg = range.BaseShaderRegister + idx;
+								const UINT reg = range.BaseShaderRegister + idx;
 								const Sampler& sam = table.SAM[reg];
 								if (sam.IsValid())
 								{
 									auto internal_state = to_internal(&sam);
 									D3D12_CPU_DESCRIPTOR_HANDLE src_handle = internal_state->descriptor.handle;
 									device->device->CopyDescriptorsSimple(1, dst_handle, src_handle, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-								}
-								else
-								{
-									device->device->CopyDescriptorsSimple(1, dst_handle, device->nullSAM, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 								}
 								dst_handle.ptr += descriptorSize;
 							}
@@ -2666,31 +2654,70 @@ using namespace dx12_internal;
 			}
 		}
 
-		allocationhandler->descriptors_res.init(this, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		allocationhandler->descriptors_sam.init(this, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-		allocationhandler->descriptors_rtv.init(this, D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-		allocationhandler->descriptors_dsv.init(this, D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+		allocationhandler->descriptors_res.init(this, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 4096);
+		allocationhandler->descriptors_sam.init(this, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 256);
+		allocationhandler->descriptors_rtv.init(this, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 512);
+		allocationhandler->descriptors_dsv.init(this, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 128);
 
+		D3D12_DESCRIPTOR_HEAP_DESC nullHeapDesc = {};
+		nullHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+		nullHeapDesc.NumDescriptors = DESCRIPTORBINDER_CBV_COUNT + DESCRIPTORBINDER_SRV_COUNT + DESCRIPTORBINDER_UAV_COUNT;
+		hr = device->CreateDescriptorHeap(&nullHeapDesc, IID_PPV_ARGS(&nulldescriptorheap_cbv_srv_uav));
+		assert(SUCCEEDED(hr));
+		if (FAILED(hr))
+		{
+			std::stringstream ss("");
+			ss << "ID3D12Device::CreateDescriptorHeap[nulldescriptorheap_cbv_srv_uav] failed! ERROR: 0x" << std::hex << hr;
+			wi::helper::messageBox(ss.str(), "Error!");
+		}
+
+		nullHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+		nullHeapDesc.NumDescriptors = DESCRIPTORBINDER_SAMPLER_COUNT;
+		device->CreateDescriptorHeap(&nullHeapDesc, IID_PPV_ARGS(&nulldescriptorheap_sampler));
+		assert(SUCCEEDED(hr));
+		if (FAILED(hr))
+		{
+			std::stringstream ss("");
+			ss << "ID3D12Device::CreateDescriptorHeap[nulldescriptorheap_sampler] failed! ERROR: 0x" << std::hex << hr;
+			wi::helper::messageBox(ss.str(), "Error!");
+		}
+
+		nullCBV = nulldescriptorheap_cbv_srv_uav->GetCPUDescriptorHandleForHeapStart();
+		for (uint32_t i = 0; i < DESCRIPTORBINDER_CBV_COUNT; ++i)
 		{
 			D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc = {};
-			nullCBV = allocationhandler->descriptors_res.allocate();
-			device->CreateConstantBufferView(&cbv_desc, nullCBV);
+			D3D12_CPU_DESCRIPTOR_HANDLE handle = nullCBV;
+			handle.ptr += i * resource_descriptor_size;
+			device->CreateConstantBufferView(&cbv_desc, handle);
 		}
+
+		nullSRV = nullCBV;
+		nullSRV.ptr += DESCRIPTORBINDER_CBV_COUNT * resource_descriptor_size;
+		for (uint32_t i = 0; i < DESCRIPTORBINDER_SRV_COUNT; ++i)
 		{
 			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
 			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 			srv_desc.Format = DXGI_FORMAT_R32_UINT;
 			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-			nullSRV = allocationhandler->descriptors_res.allocate();
-			device->CreateShaderResourceView(nullptr, &srv_desc, nullSRV);
+			D3D12_CPU_DESCRIPTOR_HANDLE handle = nullSRV;
+			handle.ptr += i * resource_descriptor_size;
+			device->CreateShaderResourceView(nullptr, &srv_desc, handle);
 		}
+
+		nullUAV = nullSRV;
+		nullUAV.ptr += DESCRIPTORBINDER_SRV_COUNT * resource_descriptor_size;
+		for (uint32_t i = 0; i < DESCRIPTORBINDER_UAV_COUNT; ++i)
 		{
 			D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
 			uav_desc.Format = DXGI_FORMAT_R32_UINT;
 			uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-			nullUAV = allocationhandler->descriptors_res.allocate();
+			D3D12_CPU_DESCRIPTOR_HANDLE handle = nullUAV;
+			handle.ptr += i * resource_descriptor_size;
 			device->CreateUnorderedAccessView(nullptr, nullptr, &uav_desc, nullUAV);
 		}
+
+		nullSAM = nulldescriptorheap_sampler->GetCPUDescriptorHandleForHeapStart();
+		for (uint32_t i = 0; i < DESCRIPTORBINDER_SAMPLER_COUNT; ++i)
 		{
 			D3D12_SAMPLER_DESC sampler_desc = {};
 			sampler_desc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
@@ -2698,7 +2725,8 @@ using namespace dx12_internal;
 			sampler_desc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
 			sampler_desc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
 			sampler_desc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-			nullSAM = allocationhandler->descriptors_sam.allocate();
+			D3D12_CPU_DESCRIPTOR_HANDLE handle = nullSAM;
+			handle.ptr += i * sampler_descriptor_size;
 			device->CreateSampler(&sampler_desc, nullSAM);
 		}
 
