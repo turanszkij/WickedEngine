@@ -30,8 +30,10 @@ using int4 = XMINT4;
 
 // Shader - side types:
 
-#define CBUFFER(name, slot) cbuffer name : register(b ## slot)
-#define CONSTANTBUFFER(name, type, slot) ConstantBuffer< type > name : register(b ## slot)
+#define PASTE1(a, b) a##b
+#define PASTE(a, b) PASTE1(a, b)
+#define CBUFFER(name, slot) cbuffer name : register(PASTE(b, slot))
+#define CONSTANTBUFFER(name, type, slot) ConstantBuffer< type > name : register(PASTE(b, slot))
 
 #ifdef SPIRV
 #define PUSHCONSTANT(name, type) [[vk::push_constant]] type name;

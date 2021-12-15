@@ -105,18 +105,10 @@ namespace wi::graphics
 			DescriptorBindingTable table;
 			GraphicsDevice_DX12* device = nullptr;
 
-			enum DIRTY_FLAGS
-			{
-				DIRTY_NONE = 0,
-				DIRTY_CBV = 1 << 1,
-				DIRTY_SRV = 1 << 2,
-				DIRTY_UAV = 1 << 3,
-				DIRTY_SAM = 1 << 4,
-				DIRTY_PUSH = 1 << 5,
-
-				DIRTY_ALL = ~0,
-			};
-			uint32_t dirty = DIRTY_NONE;
+			const void* optimizer_graphics = nullptr;
+			uint64_t dirty_graphics = 0ull; // 1 dirty bit flag per root parameter
+			const void* optimizer_compute = nullptr;
+			uint64_t dirty_compute = 0ull; // 1 dirty bit flag per root parameter
 
 			void init(GraphicsDevice_DX12* device);
 			void reset();
@@ -253,7 +245,7 @@ namespace wi::graphics
 		const RenderPass* GetCurrentRenderPass(CommandList cmd) const override;
 
 
-		struct DescriptorHeap
+		struct DescriptorHeapGPU
 		{
 			D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
 			Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> heap_GPU;
@@ -267,9 +259,18 @@ namespace wi::graphics
 			Microsoft::WRL::ComPtr<ID3D12Fence> fence;
 			uint64_t fenceValue = 0;
 			uint64_t cached_completedValue = 0;
+
+			void SignalGPU(ID3D12CommandQueue* queue)
+			{
+				// Descriptor heaps' progress is recorded by the GPU:
+				fenceValue = allocationOffset.load();
+				HRESULT hr = queue->Signal(fence.Get(), fenceValue);
+				assert(SUCCEEDED(hr));
+				cached_completedValue = fence->GetCompletedValue();
+			}
 		};
-		DescriptorHeap descriptorheap_res;
-		DescriptorHeap descriptorheap_sam;
+		DescriptorHeapGPU descriptorheap_res;
+		DescriptorHeapGPU descriptorheap_sam;
 
 		struct AllocationHandler
 		{

@@ -20,6 +20,7 @@ using namespace wi::graphics;
 Shader imguiVS;
 Shader imguiPS;
 Texture fontTexture;
+Sampler sampler;
 InputLayout	imguiInputLayout;
 PipelineState imguiPSO;
 
@@ -58,6 +59,13 @@ bool ImGui_Impl_CreateDeviceObjects()
 	textureData.slice_pitch = textureData.row_pitch * height;
 
 	wi::graphics::GetDevice()->CreateTexture(&textureDesc, &textureData, &fontTexture);
+
+	SamplerDesc samplerDesc;
+	samplerDesc.address_u = TextureAddressMode::WRAP;
+	samplerDesc.address_v = TextureAddressMode::WRAP;
+	samplerDesc.address_w = TextureAddressMode::WRAP;
+	samplerDesc.filter = Filter::MAXIMUM_MIN_MAG_MIP_LINEAR;
+	wi::graphics::GetDevice()->CreateSampler(&samplerDesc, &sampler);
 
 	// Store our identifier
 	io.Fonts->SetTexID((ImTextureID)&fontTexture);
@@ -236,6 +244,8 @@ void Example_ImGui::Compose(wi::graphics::CommandList cmd)
 	device->BindViewports(1, &viewport, cmd);
 
 	device->BindPipelineState(&imguiPSO, cmd);
+
+	device->BindSampler(&sampler, 0, cmd);
 
 	// Will project scissor/clipping rectangles into framebuffer space
 	ImVec2 clip_off = drawData->DisplayPos;         // (0,0) unless using multi-viewports

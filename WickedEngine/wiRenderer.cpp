@@ -6757,9 +6757,16 @@ void ComputeTiledLightCulling(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-
 		device->EventEnd(cmd);
 	}
+
+	// Unbind from UAV slots:
+	GPUResource empty;
+	const GPUResource* uavs[] = {
+		&empty,
+		&empty
+	};
+	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 }
 
 
