@@ -4072,7 +4072,7 @@ void OcclusionCulling_Render(const CameraComponent& camera, const Visibility& vi
 
 				const XMMATRIX transform = aabb.getAsBoxMatrix() * VP;
 
-				device->PushConstants(&transform, sizeof(transform), cmd);
+				device->BindDynamicConstantBuffer(transform, 0, cmd);
 
 				device->QueryBegin(&queryHeap, queryIndex, cmd);
 				device->Draw(14, 0, cmd);

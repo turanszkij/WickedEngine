@@ -112,6 +112,12 @@ namespace wi::graphics
 			const void* optimizer_compute = nullptr;
 			uint64_t dirty_compute = 0ull; // 1 dirty bit flag per root parameter
 
+			struct DeferredPushConstantData
+			{
+				uint8_t data[128];
+				uint32_t size;
+			} pushconstants;
+
 			void init(GraphicsDevice_DX12* device);
 			void reset();
 			void flush(bool graphics, CommandList cmd);
@@ -137,13 +143,6 @@ namespace wi::graphics
 		ShadingRate prev_shadingrate[COMMANDLIST_COUNT] = {};
 		wi::vector<const SwapChain*> swapchains[COMMANDLIST_COUNT];
 		Microsoft::WRL::ComPtr<ID3D12Resource> active_backbuffer[COMMANDLIST_COUNT];
-
-		struct DeferredPushConstantData
-		{
-			uint8_t data[128];
-			uint32_t size;
-		};
-		DeferredPushConstantData pushconstants[COMMANDLIST_COUNT] = {};
 
 		bool dirty_pso[COMMANDLIST_COUNT] = {};
 		void pso_validate(CommandList cmd);

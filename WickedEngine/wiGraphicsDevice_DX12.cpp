@@ -1675,6 +1675,7 @@ using namespace dx12_internal;
 	void GraphicsDevice_DX12::DescriptorBinder::reset()
 	{
 		table = {};
+		pushconstants = {};
 		optimizer_graphics = nullptr;
 		dirty_graphics = 0ull;
 		optimizer_compute = nullptr;
@@ -1942,12 +1943,14 @@ using namespace dx12_internal;
 
 			case D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS:
 				{
+					assert(pushconstants.size <= param.Constants.Num32BitValues * sizeof(uint32_t)); // if this fires, not enough root constants were declared in root signature!
+					pushconstants.size = 0;
 					if (graphics)
 					{
 						commandlist->SetGraphicsRoot32BitConstants(
 							root_parameter_index,
 							param.Constants.Num32BitValues,
-							device->pushconstants[cmd].data,
+							pushconstants.data,
 							0
 						);
 					}
@@ -1956,7 +1959,7 @@ using namespace dx12_internal;
 						commandlist->SetComputeRoot32BitConstants(
 							root_parameter_index,
 							param.Constants.Num32BitValues,
-							device->pushconstants[cmd].data,
+							pushconstants.data,
 							0
 						);
 					}
@@ -4698,7 +4701,6 @@ using namespace dx12_internal;
 		active_renderpass[cmd] = nullptr;
 		prev_shadingrate[cmd] = ShadingRate::RATE_INVALID;
 		dirty_pso[cmd] = false;
-		pushconstants[cmd] = {};
 		swapchains[cmd].clear();
 		active_backbuffer[cmd] = nullptr;
 
@@ -5723,11 +5725,11 @@ using namespace dx12_internal;
 	}
 	void GraphicsDevice_DX12::PushConstants(const void* data, uint32_t size, CommandList cmd)
 	{
-		assert(size <= sizeof(pushconstants[cmd]));
-		std::memcpy(pushconstants[cmd].data, data, size);
-		pushconstants[cmd].size = size;
-
 		auto& binder = binders[cmd];
+		assert(size <= sizeof(binder.pushconstants));
+		std::memcpy(binder.pushconstants.data, data, size);
+		binder.pushconstants.size = size;
+
 		if (binder.optimizer_graphics != nullptr)
 		{
 			const RootSignatureOptimizer& optimizer = *(RootSignatureOptimizer*)binder.optimizer_graphics;
