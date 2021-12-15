@@ -27,10 +27,10 @@
 
 #define ROOTSIGNATURE_OBJECT \
 	"RootConstants(num32BitConstants=4, b999), " \
+	"CBV(b0, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE)," \
+	"CBV(b1, flags = DATA_STATIC)," \
 	"CBV(b2, flags = DATA_STATIC), " \
 	"DescriptorTable( " \
-		"CBV(b0, numDescriptors = 1, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE)," \
-		"CBV(b1, numDescriptors = 1, flags = DATA_STATIC)," \
 		"CBV(b3, numDescriptors = 1, flags = DATA_STATIC)," \
 		"CBV(b4, numDescriptors = 1, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE)," \
 		"UAV(u0, numDescriptors = 1)" \
