@@ -3701,6 +3701,20 @@ void UpdateRenderData(
 		wi::profiler::EndRange(range);
 	}
 
+	device->EventEnd(cmd);
+}
+
+
+void UpdateRenderDataAsync(
+	const Visibility& vis,
+	const FrameCB& frameCB,
+	CommandList cmd
+)
+{
+	device->EventBegin("UpdateRenderDataAsync", cmd);
+
+	BindCommonResources(cmd);
+
 	if (vis.scene->weather.IsRealisticSky())
 	{
 		// Render Atmospheric Scattering textures for lighting and sky
@@ -3840,20 +3854,6 @@ void UpdateRenderData(
 		}
 		volumetric_clouds_precomputed = true;
 	}
-
-	device->EventEnd(cmd);
-}
-
-
-void UpdateRenderDataAsync(
-	const Visibility& vis,
-	const FrameCB& frameCB,
-	CommandList cmd
-)
-{
-	device->EventBegin("UpdateRenderDataAsync", cmd);
-
-	BindCommonResources(cmd);
 
 	// GPU Particle systems simulation/sorting/culling:
 	if (!vis.visibleEmitters.empty() && frameCB.delta_time > 0)
