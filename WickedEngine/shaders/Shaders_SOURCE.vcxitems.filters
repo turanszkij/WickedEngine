@@ -713,7 +713,7 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)cubeShadowVS_alphatest.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)cubeVS.hlsl">
+    <FxCompile Include="$(MSBuildThisFileDirectory)occludeeVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)voxelGS.hlsl">

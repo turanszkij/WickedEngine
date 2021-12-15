@@ -2,20 +2,6 @@
 #define WI_SHADERINTEROP_POSTPROCESS_H
 #include "ShaderInterop.h"
 
-#undef WICKED_ENGINE_ROOTSIGNATURE_GRAPHICS
-#define WICKED_ENGINE_ROOTSIGNATURE_GRAPHICS \
-	"RootConstants(num32BitConstants=16, b999), " \
-	"CBV(b0, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE), " \
-	"CBV(b1, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE), " \
-	"CBV(b2, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE), " \
-	"CBV(b3, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE), " \
-	"CBV(b4, flags = DATA_STATIC_WHILE_SET_AT_EXECUTE), " \
-	"DescriptorTable( " \
-		"SRV(t0, offset = DESCRIPTOR_RANGE_OFFSET_APPEND , numDescriptors = 16, flags = DESCRIPTORS_VOLATILE | DATA_STATIC_WHILE_SET_AT_EXECUTE)," \
-		"UAV(u0, offset = DESCRIPTOR_RANGE_OFFSET_APPEND , numDescriptors = 16, flags = DESCRIPTORS_VOLATILE | DATA_STATIC_WHILE_SET_AT_EXECUTE)" \
-	")," \
-	WICKED_ENGINE_ROOTSIGNATURE_PART_BINDLESS
-
 #undef WICKED_ENGINE_ROOTSIGNATURE_COMPUTE
 #define WICKED_ENGINE_ROOTSIGNATURE_COMPUTE WICKED_ENGINE_ROOTSIGNATURE_GRAPHICS
 
@@ -88,6 +74,8 @@ struct MSAO
 	float xRejectFadeoff;
 	float xRcpAccentuation;
 };
+CONSTANTBUFFER(msao, MSAO, CBSLOT_MSAO);
+
 //#define MSAO_SAMPLE_EXHAUSTIVELY
 struct MSAO_UPSAMPLE
 {
@@ -119,6 +107,7 @@ struct FSR
 	uint4 Const2;
 	uint4 Const3;
 };
+CONSTANTBUFFER(fsr, FSR, CBSLOT_FSR);
 
 static const uint MOTIONBLUR_TILESIZE = 32;
 #define motionblur_strength postprocess.params0.x

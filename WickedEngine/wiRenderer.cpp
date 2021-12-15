@@ -788,7 +788,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_LIGHTVISUALIZER_SPOTLIGHT], "vSpotLightVS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_LIGHTVISUALIZER_POINTLIGHT], "vPointLightVS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_SPHERE], "sphereVS.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_CUBE], "cubeVS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_OCCLUDEE], "occludeeVS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_SKY], "skyVS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_VOXELIZER], "objectVS_voxelizer.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_VOXEL], "voxelVS.cso"); });
@@ -1286,7 +1286,7 @@ void LoadShaders()
 		});
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
 		PipelineStateDesc desc;
-		desc.vs = &shaders[VSTYPE_CUBE];
+		desc.vs = &shaders[VSTYPE_OCCLUDEE];
 		desc.rs = &rasterizers[RSTYPE_OCCLUDEE];
 		desc.bs = &blendStates[BSTYPE_COLORWRITEDISABLE];
 		desc.dss = &depthStencils[DSSTYPE_DEPTHREAD];
@@ -4044,10 +4044,8 @@ void OcclusionCulling_Render(const CameraComponent& camera, const Visibility& vi
 			if (queryIndex >= 0)
 			{
 				const AABB& aabb = vis.scene->aabb_objects[instanceIndex];
-
 				const XMMATRIX transform = aabb.getAsBoxMatrix() * VP;
-
-				device->PushConstants(&transform, sizeof(transform), cmd);
+				device->BindDynamicConstantBuffer(transform, 0, cmd);
 
 				// render bounding box to later read the occlusion status
 				device->QueryBegin(&queryHeap, queryIndex, cmd);
@@ -8781,7 +8779,7 @@ void Postprocess_MSAO(
 		msao.xRejectFadeoff = 1.0f / -RejectionFalloff;
 		msao.xRcpAccentuation = 1.0f / (1.0f + Accentuation);
 
-		device->PushConstants(&msao, sizeof(msao), cmd);
+		device->BindDynamicConstantBuffer(msao, CBSLOT_MSAO, cmd);
 
 		device->BindResource(&read_depth, 0, cmd);
 
@@ -11307,7 +11305,7 @@ void Postprocess_FSR(
 			static_cast<AF1>(temp.desc.height)
 
 		);
-		device->PushConstants(&fsr, sizeof(fsr), cmd);
+		device->BindDynamicConstantBuffer(fsr, CBSLOT_FSR, cmd);
 
 		device->BindResource(&input, 0, cmd);
 
@@ -11340,7 +11338,7 @@ void Postprocess_FSR(
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_FSR_SHARPEN], cmd);
 
 		FsrRcasCon(fsr.const0, sharpness);
-		device->PushConstants(&fsr, sizeof(fsr), cmd);
+		device->BindDynamicConstantBuffer(fsr, CBSLOT_FSR, cmd);
 
 		device->BindResource(&temp, 0, cmd);
 

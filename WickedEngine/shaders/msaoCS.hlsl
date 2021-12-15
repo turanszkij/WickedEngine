@@ -3,8 +3,6 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
-PUSHCONSTANT(msao, MSAO);
-
 #ifdef INTERLEAVE_RESULT
 Texture2DArray<float> texture_lineardepth_deinterleaved : register(t0);
 #else

@@ -13,7 +13,6 @@
 #define SHADERCOMPILER_ENABLED_DXCOMPILER
 //#define SHADERCOMPILER_ENABLED_D3DCOMPILER
 #include <atlbase.h> // ComPtr
-#include <d3d12shader.h>
 #endif // _WIN32
 
 #ifdef PLATFORM_LINUX

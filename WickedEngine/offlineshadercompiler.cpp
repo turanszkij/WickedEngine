@@ -355,7 +355,7 @@ int main(int argc, char* argv[])
 		"cubeShadowVS_alphatest_emulation.hlsl"			,
 		"cubeShadowVS_transparent.hlsl"					,
 		"cubeShadowVS_transparent_emulation.hlsl"		,
-		"cubeVS.hlsl",
+		"occludeeVS.hlsl",
 	};
 
 	shaders[static_cast<size_t>(ShaderStage::GS)] = {

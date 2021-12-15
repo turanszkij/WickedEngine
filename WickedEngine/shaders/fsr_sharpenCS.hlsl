@@ -1,8 +1,6 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 
-PUSHCONSTANT(fsr, FSR);
-
 #define A_GPU 1
 #define A_HLSL 1
 #include "ffx-fsr/ffx_a.h"
