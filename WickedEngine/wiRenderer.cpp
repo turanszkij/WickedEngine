@@ -4054,7 +4054,7 @@ void OcclusionCulling_Render(const CameraComponent& camera, const Visibility& vi
 			{
 				const AABB& aabb = vis.scene->aabb_objects[instanceIndex];
 				const XMMATRIX transform = aabb.getAsBoxMatrix() * VP;
-				device->BindDynamicConstantBuffer(transform, 0, cmd);
+				device->PushConstants(&transform, sizeof(transform), cmd);
 
 				// render bounding box to later read the occlusion status
 				device->QueryBegin(&queryHeap, queryIndex, cmd);
@@ -4079,7 +4079,7 @@ void OcclusionCulling_Render(const CameraComponent& camera, const Visibility& vi
 				uint32_t queryIndex = (uint32_t)light.occlusionquery;
 				const AABB& aabb = vis.scene->aabb_lights[lightIndex];
 				const XMMATRIX transform = aabb.getAsBoxMatrix() * VP;
-				device->BindDynamicConstantBuffer(transform, 0, cmd);
+				device->PushConstants(&transform, sizeof(transform), cmd);
 
 				device->QueryBegin(&queryHeap, queryIndex, cmd);
 				device->Draw(14, 0, cmd);
