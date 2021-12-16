@@ -8,8 +8,10 @@
 #include "wiUnorderedMap.h"
 #include "wiBacklog.h"
 
-#include "Utility/Superluminal/PerformanceAPI_capi.h"
-#include "Utility/Superluminal/PerformanceAPI_loader.h"
+#if __has_include("Superluminal/PerformanceAPI_capi.h")
+#include "Superluminal/PerformanceAPI_capi.h"
+#include "Superluminal/PerformanceAPI_loader.h"
+#endif // superluminal
 
 #include <string>
 #include <stack>
@@ -31,8 +33,10 @@ namespace wi::profiler
 	std::atomic<uint32_t> nextQuery{ 0 };
 	int queryheap_idx = 0;
 
+#if PERFORMANCEAPI_ENABLED
 	PerformanceAPI_ModuleHandle superluminal_handle = {};
 	PerformanceAPI_Functions superluminal_functions = {};
+#endif // PERFORMANCEAPI_ENABLED
 
 	struct Range
 	{
@@ -81,11 +85,13 @@ namespace wi::profiler
 				assert(success);
 			}
 
+#if PERFORMANCEAPI_ENABLED
 			superluminal_handle = PerformanceAPI_LoadFrom(L"PerformanceAPI.dll", &superluminal_functions);
 			if (superluminal_handle)
 			{
 				wi::backlog::post("[wi::profiler] Superluminal Performance API loaded");
 			}
+#endif // PERFORMANCEAPI_ENABLED
 		}
 
 		cpu_frame = BeginRangeCPU("CPU Frame");
@@ -169,10 +175,12 @@ namespace wi::profiler
 		if (!ENABLED || !initialized)
 			return 0;
 
+#if PERFORMANCEAPI_ENABLED
 		if (superluminal_handle)
 		{
 			superluminal_functions.BeginEvent(name, nullptr, 0xFF0000FF);
 		}
+#endif // PERFORMANCEAPI_ENABLED
 
 		range_id id = wi::helper::string_hash(name);
 
@@ -232,10 +240,12 @@ namespace wi::profiler
 			{
 				it->second.time = (float)it->second.cpuTimer.elapsed();
 
+#if PERFORMANCEAPI_ENABLED
 				if (superluminal_handle)
 				{
 					superluminal_functions.EndEvent();
 				}
+#endif // PERFORMANCEAPI_ENABLED
 			}
 			else
 			{
