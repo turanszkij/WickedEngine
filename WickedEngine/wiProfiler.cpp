@@ -6,6 +6,10 @@
 #include "wiTextureHelper.h"
 #include "wiHelper.h"
 #include "wiUnorderedMap.h"
+#include "wiBacklog.h"
+
+#include "Utility/Superluminal/PerformanceAPI_capi.h"
+#include "Utility/Superluminal/PerformanceAPI_loader.h"
 
 #include <string>
 #include <stack>
@@ -26,6 +30,9 @@ namespace wi::profiler
 	GPUBuffer queryResultBuffer[GraphicsDevice::GetBufferCount() + 1];
 	std::atomic<uint32_t> nextQuery{ 0 };
 	int queryheap_idx = 0;
+
+	PerformanceAPI_ModuleHandle superluminal_handle = {};
+	PerformanceAPI_Functions superluminal_functions = {};
 
 	struct Range
 	{
@@ -72,6 +79,12 @@ namespace wi::profiler
 			{
 				success = device->CreateBuffer(&bd, nullptr, &queryResultBuffer[i]);
 				assert(success);
+			}
+
+			superluminal_handle = PerformanceAPI_LoadFrom(L"PerformanceAPI.dll", &superluminal_functions);
+			if (superluminal_handle)
+			{
+				wi::backlog::post("[wi::profiler] Superluminal Performance API loaded");
 			}
 		}
 
@@ -156,6 +169,11 @@ namespace wi::profiler
 		if (!ENABLED || !initialized)
 			return 0;
 
+		if (superluminal_handle)
+		{
+			superluminal_functions.BeginEvent(name, nullptr, 0xFF0000FF);
+		}
+
 		range_id id = wi::helper::string_hash(name);
 
 		lock.lock();
@@ -213,6 +231,11 @@ namespace wi::profiler
 			if (it->second.IsCPURange())
 			{
 				it->second.time = (float)it->second.cpuTimer.elapsed();
+
+				if (superluminal_handle)
+				{
+					superluminal_functions.EndEvent();
+				}
 			}
 			else
 			{
