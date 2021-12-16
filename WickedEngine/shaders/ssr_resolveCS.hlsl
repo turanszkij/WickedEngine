@@ -105,7 +105,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	prim.unpack(texture_gbuffer0[DTid.xy * 2]);
 
 	Surface surface;
-	surface.load(prim, P);
+	if (!surface.load(prim, P))
+	{
+		return;
+	}
 
 	const float3 N = normalize(mul((float3x3)GetCamera().view, surface.N));
 	const float roughness = GetRoughness(surface.roughness);

@@ -169,7 +169,8 @@ float4 main(Input input) : SV_TARGET
 					prim.subsetIndex = q.CandidateGeometryIndex();
 
 					Surface surface;
-					surface.load(prim, q.CandidateTriangleBarycentrics());
+					if (!surface.load(prim, q.CandidateTriangleBarycentrics()))
+						break;
 
 					shadow *= lerp(1, surface.albedo * surface.transmission, surface.opacity);
 
@@ -243,13 +244,15 @@ float4 main(Input input) : SV_TARGET
 		prim.instanceIndex = q.CommittedInstanceID();
 		prim.subsetIndex = q.CommittedGeometryIndex();
 
-		surface.load(prim, q.CommittedTriangleBarycentrics());
+		if (!surface.load(prim, q.CommittedTriangleBarycentrics()))
+			return 0;
 
 #else
 		// ray origin updated for next bounce:
 		ray.Origin = ray.Origin + ray.Direction * hit.distance;
 
-		surface.load(hit.primitiveID, hit.bary);
+		if (!surface.load(hit.primitiveID, hit.bary))
+			return 0;
 
 #endif // RTAPI
 

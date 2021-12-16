@@ -32,10 +32,6 @@ namespace dx12_internal
 	static constexpr int BINDLESS_RESOURCE_CAPACITY = 500000;
 	static constexpr int BINDLESS_SAMPLER_CAPACITY = 256;
 
-// Choose how many constant buffers will be placed in root in auto root signature:
-#define CONSTANT_BUFFER_AUTO_PLACEMENT_IN_ROOT 4
-	static_assert(DESCRIPTORBINDER_CBV_COUNT < 32, "cbv root mask must fit into uint32_t!");
-
 
 #ifdef PLATFORM_UWP
 	// UWP will use static link + /DELAYLOAD linker feature for the dlls (optionally)
@@ -5096,7 +5092,7 @@ using namespace dx12_internal;
 				const RootSignatureOptimizer& optimizer = *(RootSignatureOptimizer*)binder.optimizer_graphics;
 				if (optimizer.SRV[slot] != RootSignatureOptimizer::INVALID_ROOT_PARAMETER)
 				{
-					binders[cmd].dirty_graphics |= 1ull << optimizer.SRV[slot];
+					binder.dirty_graphics |= 1ull << optimizer.SRV[slot];
 				}
 			}
 			if (binder.optimizer_compute != nullptr)
@@ -5104,7 +5100,7 @@ using namespace dx12_internal;
 				const RootSignatureOptimizer& optimizer = *(RootSignatureOptimizer*)binder.optimizer_compute;
 				if (optimizer.SRV[slot] != RootSignatureOptimizer::INVALID_ROOT_PARAMETER)
 				{
-					binders[cmd].dirty_compute |= 1ull << optimizer.SRV[slot];
+					binder.dirty_compute |= 1ull << optimizer.SRV[slot];
 				}
 			}
 		}
@@ -5133,7 +5129,7 @@ using namespace dx12_internal;
 				const RootSignatureOptimizer& optimizer = *(RootSignatureOptimizer*)binder.optimizer_graphics;
 				if (optimizer.UAV[slot] != RootSignatureOptimizer::INVALID_ROOT_PARAMETER)
 				{
-					binders[cmd].dirty_graphics |= 1ull << optimizer.UAV[slot];
+					binder.dirty_graphics |= 1ull << optimizer.UAV[slot];
 				}
 			}
 			if (binder.optimizer_compute != nullptr)
@@ -5141,7 +5137,7 @@ using namespace dx12_internal;
 				const RootSignatureOptimizer& optimizer = *(RootSignatureOptimizer*)binder.optimizer_compute;
 				if (optimizer.UAV[slot] != RootSignatureOptimizer::INVALID_ROOT_PARAMETER)
 				{
-					binders[cmd].dirty_compute |= 1ull << optimizer.UAV[slot];
+					binder.dirty_compute |= 1ull << optimizer.UAV[slot];
 				}
 			}
 		}
@@ -5169,7 +5165,7 @@ using namespace dx12_internal;
 				const RootSignatureOptimizer& optimizer = *(RootSignatureOptimizer*)binder.optimizer_graphics;
 				if (optimizer.SAM[slot] != RootSignatureOptimizer::INVALID_ROOT_PARAMETER)
 				{
-					binders[cmd].dirty_graphics |= 1ull << optimizer.SAM[slot];
+					binder.dirty_graphics |= 1ull << optimizer.SAM[slot];
 				}
 			}
 			if (binder.optimizer_compute != nullptr)
@@ -5177,7 +5173,7 @@ using namespace dx12_internal;
 				const RootSignatureOptimizer& optimizer = *(RootSignatureOptimizer*)binder.optimizer_compute;
 				if (optimizer.SAM[slot] != RootSignatureOptimizer::INVALID_ROOT_PARAMETER)
 				{
-					binders[cmd].dirty_compute |= 1ull << optimizer.SAM[slot];
+					binder.dirty_compute |= 1ull << optimizer.SAM[slot];
 				}
 			}
 		}
@@ -5196,7 +5192,7 @@ using namespace dx12_internal;
 				const RootSignatureOptimizer& optimizer = *(RootSignatureOptimizer*)binder.optimizer_graphics;
 				if (optimizer.CBV[slot] != RootSignatureOptimizer::INVALID_ROOT_PARAMETER)
 				{
-					binders[cmd].dirty_graphics |= 1ull << optimizer.CBV[slot];
+					binder.dirty_graphics |= 1ull << optimizer.CBV[slot];
 				}
 			}
 			if (binder.optimizer_compute != nullptr)
@@ -5204,7 +5200,7 @@ using namespace dx12_internal;
 				const RootSignatureOptimizer& optimizer = *(RootSignatureOptimizer*)binder.optimizer_compute;
 				if (optimizer.CBV[slot] != RootSignatureOptimizer::INVALID_ROOT_PARAMETER)
 				{
-					binders[cmd].dirty_compute |= 1ull << optimizer.CBV[slot];
+					binder.dirty_compute |= 1ull << optimizer.CBV[slot];
 				}
 			}
 		}
@@ -5292,8 +5288,9 @@ using namespace dx12_internal;
 			active_rootsig_graphics[cmd] = internal_state->rootSignature.Get();
 			GetCommandList(cmd)->SetGraphicsRootSignature(internal_state->rootSignature.Get());
 
-			binders[cmd].optimizer_graphics = &internal_state->rootsig_optimizer;
-			binders[cmd].dirty_graphics = internal_state->rootsig_optimizer.root_mask; // invalidates all root bindings
+			auto& binder = binders[cmd];
+			binder.optimizer_graphics = &internal_state->rootsig_optimizer;
+			binder.dirty_graphics = internal_state->rootsig_optimizer.root_mask; // invalidates all root bindings
 		}
 
 		active_pso[cmd] = pso;
@@ -5323,8 +5320,9 @@ using namespace dx12_internal;
 				active_rootsig_compute[cmd] = internal_state->rootSignature.Get();
 				GetCommandList(cmd)->SetComputeRootSignature(internal_state->rootSignature.Get());
 
-				binders[cmd].optimizer_compute = &internal_state->rootsig_optimizer;
-				binders[cmd].dirty_compute = internal_state->rootsig_optimizer.root_mask; // invalidates all root bindings
+				auto& binder = binders[cmd];
+				binder.optimizer_compute = &internal_state->rootsig_optimizer;
+				binder.dirty_compute = internal_state->rootsig_optimizer.root_mask; // invalidates all root bindings
 			}
 
 		}
@@ -5749,7 +5747,7 @@ using namespace dx12_internal;
 			const RootSignatureOptimizer& optimizer = *(RootSignatureOptimizer*)binder.optimizer_graphics;
 			if (optimizer.PUSH != RootSignatureOptimizer::INVALID_ROOT_PARAMETER)
 			{
-				binders[cmd].dirty_graphics |= 1ull << optimizer.PUSH;
+				binder.dirty_graphics |= 1ull << optimizer.PUSH;
 			}
 		}
 		if (binder.optimizer_compute != nullptr)
@@ -5757,7 +5755,7 @@ using namespace dx12_internal;
 			const RootSignatureOptimizer& optimizer = *(RootSignatureOptimizer*)binder.optimizer_compute;
 			if (optimizer.PUSH != RootSignatureOptimizer::INVALID_ROOT_PARAMETER)
 			{
-				binders[cmd].dirty_compute |= 1ull << optimizer.PUSH;
+				binder.dirty_compute |= 1ull << optimizer.PUSH;
 			}
 		}
 	}

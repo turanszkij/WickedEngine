@@ -74,7 +74,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 		prim.subsetIndex = q.CandidateGeometryIndex();
 
 		Surface surface;
-		surface.load(prim, q.CandidateTriangleBarycentrics());
+		if (!surface.load(prim, q.CandidateTriangleBarycentrics()))
+			break;
 
 		float alphatest = clamp(blue_noise(DTid.xy, q.CandidateTriangleRayT()).r, 0, 0.99);
 

@@ -68,7 +68,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			prim.subsetIndex = q.CandidateGeometryIndex();
 
 			Surface surface;
-			surface.load(prim, q.CandidateTriangleBarycentrics());
+			if (!surface.load(prim, q.CandidateTriangleBarycentrics()))
+				break;
 
 			[branch]
 			if (surface.opacity - rand(seed, uv) >= 0)
@@ -114,13 +115,15 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		prim.subsetIndex = q.CommittedGeometryIndex();
 
 		surface.is_frontface = q.CommittedTriangleFrontFace();
-		surface.load(prim, q.CommittedTriangleBarycentrics());
+		if (!surface.load(prim, q.CommittedTriangleBarycentrics()))
+			return;
 
 #else
 		// ray origin updated for next bounce:
 		ray.Origin = ray.Origin + ray.Direction * hit.distance;
 
-		surface.load(hit.primitiveID, hit.bary);
+		if (!surface.load(hit.primitiveID, hit.bary))
+			return;
 
 #endif // RTAPI
 
@@ -257,7 +260,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 						prim.subsetIndex = q.CandidateGeometryIndex();
 
 						Surface surface;
-						surface.load(prim, q.CandidateTriangleBarycentrics());
+						if (!surface.load(prim, q.CandidateTriangleBarycentrics()))
+							break;
 
 						shadow *= lerp(1, surface.albedo * surface.transmission, surface.opacity);
 

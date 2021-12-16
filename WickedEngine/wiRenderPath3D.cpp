@@ -1594,6 +1594,7 @@ void RenderPath3D::setSSREnabled(bool value)
 		desc.format = Format::R16G16B16A16_FLOAT;
 		desc.width = internalResolution.x / 2;
 		desc.height = internalResolution.y / 2;
+		desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 		device->CreateTexture(&desc, nullptr, &rtSSR);
 		device->SetName(&rtSSR, "rtSSR");
 

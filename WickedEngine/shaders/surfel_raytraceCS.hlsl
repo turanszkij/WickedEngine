@@ -108,7 +108,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			prim.instanceIndex = q.CommittedInstanceID();
 			prim.subsetIndex = q.CommittedGeometryIndex();
 
-			surface.load(prim, q.CommittedTriangleBarycentrics());
+			if(!surface.load(prim, q.CommittedTriangleBarycentrics()))
+				break;
 
 #else
 
@@ -116,7 +117,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			ray.Origin = ray.Origin + ray.Direction * hit.distance;
 			hit_depth = hit.distance;
 
-			surface.load(hit.primitiveID, hit.bary);
+			if (!surface.load(hit.primitiveID, hit.bary))
+				break;
 
 #endif // RTAPI
 

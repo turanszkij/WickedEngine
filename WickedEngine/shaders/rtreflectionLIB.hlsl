@@ -129,7 +129,8 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 
 	Surface surface;
 	surface.is_frontface = (HitKind() == HIT_KIND_TRIANGLE_FRONT_FACE);
-	surface.load(prim, attr.barycentrics);
+	if (!surface.load(prim, attr.barycentrics))
+		return;
 
 	surface.pixel = DispatchRaysIndex().xy;
 	surface.screenUV = surface.pixel / (float2)DispatchRaysDimensions().xy;
@@ -197,7 +198,8 @@ void RTReflection_AnyHit(inout RayPayload payload, in BuiltInTriangleIntersectio
 	prim.subsetIndex = GeometryIndex();
 
 	Surface surface;
-	surface.load(prim, attr.barycentrics);
+	if (!surface.load(prim, attr.barycentrics))
+		return;
 
 	float alphatest = clamp(blue_noise(DispatchRaysIndex().xy, RayTCurrent()).r, 0, 0.99);
 
