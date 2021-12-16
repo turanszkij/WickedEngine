@@ -1694,7 +1694,7 @@ void LoadBuffers()
 	bd.size = sizeof(FrameCB);
 	bd.bind_flags = BindFlag::CONSTANT_BUFFER;
 	device->CreateBuffer(&bd, nullptr, &constantBuffers[CBTYPE_FRAME]);
-	device->SetName(&constantBuffers[CBTYPE_FRAME], "FrameCB");
+	device->SetName(&constantBuffers[CBTYPE_FRAME], "constantBuffers[CBTYPE_FRAME]");
 
 
 	bd.size = sizeof(ShaderEntity) * SHADER_ENTITY_COUNT;
@@ -1702,14 +1702,14 @@ void LoadBuffers()
 	bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
 	bd.stride = sizeof(ShaderEntity);
 	device->CreateBuffer(&bd, nullptr, &resourceBuffers[RBTYPE_ENTITYARRAY]);
-	device->SetName(&resourceBuffers[RBTYPE_ENTITYARRAY], "EntityArray");
+	device->SetName(&resourceBuffers[RBTYPE_ENTITYARRAY], "resourceBuffers[RBTYPE_ENTITYARRAY]");
 
 	bd.size = sizeof(XMMATRIX) * MATRIXARRAY_COUNT;
 	bd.bind_flags = BindFlag::SHADER_RESOURCE;
 	bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
 	bd.stride = sizeof(XMMATRIX);
 	device->CreateBuffer(&bd, nullptr, &resourceBuffers[RBTYPE_MATRIXARRAY]);
-	device->SetName(&resourceBuffers[RBTYPE_MATRIXARRAY], "MatrixArray");
+	device->SetName(&resourceBuffers[RBTYPE_MATRIXARRAY], "resourceBuffers[RBTYPE_MATRIXARRAY]");
 
 	{
 		TextureDesc desc;
@@ -1721,6 +1721,7 @@ void LoadBuffers()
 		InitData.data_ptr = sheenLUTdata;
 		InitData.row_pitch = desc.width;
 		device->CreateTexture(&desc, &InitData, &textures[TEXTYPE_2D_SHEENLUT]);
+		device->SetName(&textures[TEXTYPE_2D_SHEENLUT], "textures[TEXTYPE_2D_SHEENLUT]");
 	}
 
 	{
@@ -1730,7 +1731,9 @@ void LoadBuffers()
 		desc.height = 64;
 		desc.format = Format::R16G16B16A16_FLOAT;
 		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+		desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT]);
+		device->SetName(&textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT], "textures[TEXTYPE_2D_SKYATMOSPHERE_TRANSMITTANCELUT]");
 	}
 	{
 		TextureDesc desc;
@@ -1739,7 +1742,9 @@ void LoadBuffers()
 		desc.height = 32;
 		desc.format = Format::R16G16B16A16_FLOAT;
 		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+		desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT]);
+		device->SetName(&textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT], "textures[TEXTYPE_2D_SKYATMOSPHERE_MULTISCATTEREDLUMINANCELUT]");
 	}
 	{
 		TextureDesc desc;
@@ -1748,7 +1753,9 @@ void LoadBuffers()
 		desc.height = 104;
 		desc.format = Format::R16G16B16A16_FLOAT;
 		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+		desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT]);
+		device->SetName(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT], "textures[TEXTYPE_2D_SKYATMOSPHERE_SKYVIEWLUT]");
 	}
 	{
 		TextureDesc desc;
@@ -1757,7 +1764,9 @@ void LoadBuffers()
 		desc.height = 1;
 		desc.format = Format::R16G16B16A16_FLOAT;
 		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+		desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 		device->CreateTexture(&desc, nullptr, &textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT]);
+		device->SetName(&textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT], "textures[TEXTYPE_2D_SKYATMOSPHERE_SKYLUMINANCELUT]");
 	}
 }
 void SetUpStates()
@@ -4069,9 +4078,7 @@ void OcclusionCulling_Render(const CameraComponent& camera, const Visibility& vi
 			{
 				uint32_t queryIndex = (uint32_t)light.occlusionquery;
 				const AABB& aabb = vis.scene->aabb_lights[lightIndex];
-
 				const XMMATRIX transform = aabb.getAsBoxMatrix() * VP;
-
 				device->BindDynamicConstantBuffer(transform, 0, cmd);
 
 				device->QueryBegin(&queryHeap, queryIndex, cmd);
