@@ -4,14 +4,14 @@
 struct GSInput
 {
 	float4 pos : SV_POSITION;
-	float2 uv : UV;
+	float4 uvsets : UVSETS;
 	uint RTIndex : RTINDEX;
 };
 
 struct GSOutput
 {
 	float4 pos : SV_POSITION;
-	float2 uv : UV;
+	float4 uvsets : UVSETS;
 	uint RTIndex : SV_RenderTargetArrayIndex;
 };
 
@@ -25,7 +25,7 @@ void main(
 	{
 		GSOutput element;
 		element.pos = input[i].pos;
-		element.uv = input[i].uv;
+		element.uvsets = input[i].uvsets;
 		element.RTIndex = input[i].RTIndex;
 		output.Append(element);
 	}

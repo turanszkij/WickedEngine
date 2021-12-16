@@ -4,6 +4,8 @@
 struct GSInput
 {
 	float4 pos : SV_POSITION;
+	uint instanceID : INSTANCEID;
+	uint emissiveColor : EMISSIVECOLOR;
 	float4 color : COLOR;
 	float4 uvsets : UVSETS;
 	float2 atl : ATLAS;
@@ -16,6 +18,8 @@ struct GSInput
 struct GSOutput
 {
 	float4 pos : SV_POSITION;
+	uint instanceID : INSTANCEID;
+	uint emissiveColor : EMISSIVECOLOR;
 	float4 color : COLOR;
 	float4 uvsets : UVSETS;
 	float2 atl : ATLAS;
@@ -35,6 +39,8 @@ void main(
 	{
 		GSOutput element;
 		element.pos = input[i].pos;
+		element.instanceID = input[i].instanceID;
+		element.emissiveColor = input[i].emissiveColor;
 		element.color = input[i].color;
 		element.uvsets = input[i].uvsets;
 		element.atl = input[i].atl;
