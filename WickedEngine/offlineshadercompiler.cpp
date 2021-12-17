@@ -108,11 +108,12 @@ int main(int argc, char* argv[])
 		"tonemapCS.hlsl"											,
 		"fsr_upscalingCS.hlsl"										,
 		"fsr_sharpenCS.hlsl"										,
+		"ssaoCS.hlsl"												,
+		"rtreflectionCS.hlsl"										,
+		"ssr_raytraceCS.hlsl"										,
 		"ssr_resolveCS.hlsl"										,
 		"ssr_temporalCS.hlsl"										,
-		"ssaoCS.hlsl"												,
 		"ssr_medianCS.hlsl"											,
-		"ssr_raytraceCS.hlsl"										,
 		"sharpenCS.hlsl"											,
 		"skinningCS.hlsl"											,
 		"resolveMSAADepthStencilCS.hlsl"							,
@@ -399,6 +400,7 @@ int main(int argc, char* argv[])
 	minshadermodels["rtshadowCS.hlsl"] = ShaderModel::SM_6_5;
 	minshadermodels["rtaoCS.hlsl"] = ShaderModel::SM_6_5;
 	minshadermodels["surfel_raytraceCS_rtapi.hlsl"] = ShaderModel::SM_6_5;
+	minshadermodels["rtreflectionCS.hlsl"] = ShaderModel::SM_6_5;
 
 	wi::jobsystem::context ctx;
 

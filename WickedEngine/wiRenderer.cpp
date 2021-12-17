@@ -53,6 +53,10 @@ Sampler				samplers[SAMPLER_COUNT];
 std::string SHADERPATH = "shaders/";
 std::string SHADERSOURCEPATH = "../WickedEngine/shaders/";
 
+// define this to use raytracing pipeline for raytraced reflections:
+//	Currently the DX12 device could crash for unknown reasons with the global root signature export
+//#define RTREFLECTION_WITH_RAYTRACING_PIPELINE
+
 // Simple and efficient allocator that reserves a linear memory buffer and can:
 //	- allocate bottom-up until there is space
 //	- free from the last allocation top-down, for temporary allocations
@@ -1016,6 +1020,8 @@ void LoadShaders()
 
 	if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 	{
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_RTREFLECTION], "rtreflectionCS.cso", ShaderModel::SM_6_5); });
+
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_RTSHADOW], "rtshadowCS.cso", ShaderModel::SM_6_5); });
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_RTSHADOW_DENOISE_TILECLASSIFICATION], "rtshadow_denoise_tileclassificationCS.cso"); });
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_RTSHADOW_DENOISE_FILTER], "rtshadow_denoise_filterCS.cso"); });
@@ -1628,6 +1634,7 @@ void LoadShaders()
 		device->CreatePipelineState(&desc, &PSO_debug[args.jobIndex]);
 		});
 
+#ifdef RTREFLECTION_WITH_RAYTRACING_PIPELINE
 	if(device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 	{
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) {
@@ -1680,6 +1687,7 @@ void LoadShaders()
 
 		});
 	};
+#endif // RTREFLECTION_WITH_RAYTRACING_PIPELINE
 
 	wi::jobsystem::Wait(ctx);
 
@@ -9261,7 +9269,11 @@ void Postprocess_RTReflection(
 
 	const TextureDesc& desc = output.desc;
 
+#ifdef RTREFLECTION_WITH_RAYTRACING_PIPELINE
 	device->BindRaytracingPipelineState(&RTPSO_reflection, cmd);
+#else
+	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTREFLECTION], cmd);
+#endif // RTREFLECTION_WITH_RAYTRACING_PIPELINE
 
 	BindCommonResources(cmd);
 
@@ -9275,6 +9287,21 @@ void Postprocess_RTReflection(
 	std::memcpy(&postprocess.params1.x, &instanceInclusionMask, sizeof(instanceInclusionMask));
 	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
+	const GPUResource* uavs[] = {
+		&output,
+		&res.rayLengths
+	};
+	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.rayLengths, res.rayLengths.desc.layout, ResourceState::UNORDERED_ACCESS),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+#ifdef RTREFLECTION_WITH_RAYTRACING_PIPELINE
 	size_t shaderIdentifierSize = device->GetShaderIdentifierSize();
 	GraphicsDevice::GPUAllocation shadertable_raygen = device->AllocateGPU(shaderIdentifierSize, cmd);
 	GraphicsDevice::GPUAllocation shadertable_miss = device->AllocateGPU(shaderIdentifierSize, cmd);
@@ -9302,21 +9329,18 @@ void Postprocess_RTReflection(
 	dispatchraysdesc.width = desc.width;
 	dispatchraysdesc.height = desc.height;
 
-	const GPUResource* uavs[] = {
-		&output,
-		&res.rayLengths
-	};
-	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
-
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS),
-			GPUBarrier::Image(&res.rayLengths, res.rayLengths.desc.layout, ResourceState::UNORDERED_ACCESS),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
-
 	device->DispatchRays(&dispatchraysdesc, cmd);
+
+#else
+
+	device->Dispatch(
+		(desc.width + 7) / 8,
+		(desc.height + 3) / 4,
+		1,
+		cmd
+	);
+
+#endif // RTREFLECTION_WITH_RAYTRACING_PIPELINE
 
 	{
 		GPUBarrier barriers[] = {

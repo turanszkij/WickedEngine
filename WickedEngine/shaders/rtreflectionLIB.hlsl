@@ -41,10 +41,6 @@ void RTReflection_Raygen()
 	prim.unpack(texture_gbuffer0[DTid.xy * 2]);
 
 	//output[DTid] = float4(saturate(P * 0.1), 1);
-	////output[DTid] = float4(texture_gbuffer0[DTid.xy * 2].xy, 0, 1);
-	////output[DTid] = float4(depth.xxx, 1);
-	////output[DTid] = float4(V, 1);
-	////output[DTid] = float4(prim.primitiveIndex * 0.000001, 0, 0, 1);
 	//return;
 
 	Surface surface;
