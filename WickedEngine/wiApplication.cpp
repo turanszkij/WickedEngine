@@ -117,7 +117,7 @@ namespace wi
 			wi::lua::RunFile("startup.lua");
 		}
 
-		if (!is_window_active)
+		if (!is_window_active && !wi::arguments::HasArgument("alwaysactive"))
 		{
 			// If the application is not active, disable Update loops:
 			deltaTimeAccumulator = 0;

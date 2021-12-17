@@ -214,7 +214,11 @@ You can specify command line arguments (without any prefix) to switch between re
   </tr>
   <tr>
     <td>gpuvalidation</td>
-    <td>Use GPU Based Validation for graphics. This must be used together with `debugdevice` argument.</td>
+    <td>Use GPU Based Validation for graphics. This must be used together with the debugdevice argument. Currently DX12 only.</td>
+  </tr>
+  <tr>
+    <td>alwaysactive</td>
+    <td>The application will not be paused when the window is in the background.</td>
   </tr>
 </table>
 
