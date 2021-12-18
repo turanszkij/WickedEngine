@@ -20,6 +20,7 @@
 
 #include <sstream>
 #include <algorithm>
+#include <intrin.h> // _BitScanReverse64
 
 using namespace Microsoft::WRL;
 
@@ -998,7 +999,7 @@ namespace dx12_internal
 		uint8_t SAM[DESCRIPTORBINDER_SAMPLER_COUNT];
 		uint8_t PUSH;
 		// This is the bitflag of root all parameters:
-		uint64_t root_mask;
+		uint64_t root_mask = 0ull;
 		// For each root parameter, store some statistics:
 		struct RootParameterStatistics
 		{
@@ -1006,9 +1007,12 @@ namespace dx12_internal
 			bool sampler_table = false;
 		};
 		wi::vector<RootParameterStatistics> root_stats;
+		const D3D12_VERSIONED_ROOT_SIGNATURE_DESC* rootsig_desc = nullptr;
 
 		void init(const D3D12_VERSIONED_ROOT_SIGNATURE_DESC& desc)
 		{
+			rootsig_desc = &desc;
+
 			// First, initialize all to point to invalid root parameter:
 			for (int i = 0; i < arraysize(CBV); ++i)
 			{
@@ -1029,12 +1033,16 @@ namespace dx12_internal
 			PUSH = INVALID_ROOT_PARAMETER;
 
 			assert(desc.Desc_1_1.NumParameters < 64u); // root parameter indices should fit into 64-bit root_mask
-			root_mask = ~0ull >> 1ull >> (63ull - desc.Desc_1_1.NumParameters); // dirty flag can mark all root parameter slots as dirty
 			root_stats.resize(desc.Desc_1_1.NumParameters); // one stat for each root parameter
 			for (UINT root_parameter_index = 0; root_parameter_index < desc.Desc_1_1.NumParameters; ++root_parameter_index)
 			{
 				const D3D12_ROOT_PARAMETER1& param = desc.Desc_1_1.pParameters[root_parameter_index];
 				RootParameterStatistics& stats = root_stats[root_parameter_index];
+
+				if (param.ParameterType != D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS) // root constant dirtyness is not tracked, because those are set immediately
+				{
+					root_mask |= 1ull << root_parameter_index;
+				}
 
 				switch (param.ParameterType)
 				{
@@ -1654,7 +1662,6 @@ using namespace dx12_internal;
 	void GraphicsDevice_DX12::DescriptorBinder::reset()
 	{
 		table = {};
-		pushconstants = {};
 		optimizer_graphics = nullptr;
 		dirty_graphics = 0ull;
 		optimizer_compute = nullptr;
@@ -1670,20 +1677,11 @@ using namespace dx12_internal;
 		auto pso_internal = graphics ? to_internal(device->active_pso[cmd]) : to_internal(device->active_cs[cmd]);
 		const RootSignatureOptimizer& optimizer = pso_internal->rootsig_optimizer;
 
-#if 1
-		while (dirty != 0ull)
+		DWORD index;
+		while (_BitScanReverse64(&index, dirty)) // This will make sure that only the dirty root params are iterated, bit-by-bit
 		{
-			const UINT root_parameter_index = 63u - (UINT)__lzcnt64(dirty); // This will make sure that only the dirty root params are iterated
+			const UINT root_parameter_index = (UINT)index;
 			const uint64_t parameter_mask = 1ull << root_parameter_index;
-#else
-		for (UINT root_parameter_index = 0; root_parameter_index < pso_internal->rootsig_desc->Desc_1_1.NumParameters; ++root_parameter_index)
-		{
-			if (dirty == 0ull) // if the mask becomes clean, skip the rest
-				return;
-			const uint64_t parameter_mask = 1ull << root_parameter_index;
-			if ((dirty & parameter_mask) == 0ull) // check dirty bit of this root parameter
-				continue;
-#endif
 			dirty &= ~parameter_mask; // remove dirty bit of this root parameter
 			const D3D12_ROOT_PARAMETER1& param = pso_internal->rootsig_desc->Desc_1_1.pParameters[root_parameter_index];
 			const RootSignatureOptimizer::RootParameterStatistics& stats = optimizer.root_stats[root_parameter_index];
@@ -1935,31 +1933,6 @@ using namespace dx12_internal;
 						commandlist->SetComputeRootUnorderedAccessView(
 							root_parameter_index,
 							address
-						);
-					}
-				}
-				break;
-
-			case D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS:
-				{
-					assert(pushconstants.size <= param.Constants.Num32BitValues * sizeof(uint32_t)); // if this fires, not enough root constants were declared in root signature!
-					pushconstants.size = 0;
-					if (graphics)
-					{
-						commandlist->SetGraphicsRoot32BitConstants(
-							root_parameter_index,
-							param.Constants.Num32BitValues,
-							pushconstants.data,
-							0
-						);
-					}
-					else
-					{
-						commandlist->SetComputeRoot32BitConstants(
-							root_parameter_index,
-							param.Constants.Num32BitValues,
-							pushconstants.data,
-							0
 						);
 					}
 				}
@@ -5724,29 +5697,41 @@ using namespace dx12_internal;
 
 		GetCommandList(cmd)->DispatchRays(&dispatchrays_desc);
 	}
-	void GraphicsDevice_DX12::PushConstants(const void* data, uint32_t size, CommandList cmd)
+	void GraphicsDevice_DX12::PushConstants(const void* data, uint32_t size, CommandList cmd, uint32_t offset)
 	{
-		auto& binder = binders[cmd];
-		assert(size <= sizeof(binder.pushconstants.data));
-		std::memcpy(binder.pushconstants.data, data, size);
-		binder.pushconstants.size = size;
+		assert(size % sizeof(uint32_t) == 0);
+		assert(offset % sizeof(uint32_t) == 0);
 
-		if (binder.optimizer_graphics != nullptr)
+		auto& binder = binders[cmd];
+		if (active_pso[cmd] != nullptr)
 		{
-			const RootSignatureOptimizer& optimizer = *(RootSignatureOptimizer*)binder.optimizer_graphics;
-			if (optimizer.PUSH != RootSignatureOptimizer::INVALID_ROOT_PARAMETER)
-			{
-				binder.dirty_graphics |= 1ull << optimizer.PUSH;
-			}
+			const RootSignatureOptimizer* optimizer = (const RootSignatureOptimizer*)binder.optimizer_graphics;
+			const D3D12_ROOT_PARAMETER1& param = optimizer->rootsig_desc->Desc_1_1.pParameters[optimizer->PUSH];
+			assert(param.ParameterType == D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS);
+			assert(size <= param.Constants.Num32BitValues * sizeof(uint32_t)); // if this fires, not enough root constants were declared in root signature!
+			GetCommandList(cmd)->SetGraphicsRoot32BitConstants(
+				optimizer->PUSH,
+				size / sizeof(uint32_t),
+				data,
+				offset / sizeof(uint32_t)
+			);
+			return;
 		}
-		if (binder.optimizer_compute != nullptr)
+		if (active_cs[cmd] != nullptr)
 		{
-			const RootSignatureOptimizer& optimizer = *(RootSignatureOptimizer*)binder.optimizer_compute;
-			if (optimizer.PUSH != RootSignatureOptimizer::INVALID_ROOT_PARAMETER)
-			{
-				binder.dirty_compute |= 1ull << optimizer.PUSH;
-			}
+			const RootSignatureOptimizer* optimizer = (const RootSignatureOptimizer*)binder.optimizer_compute;
+			const D3D12_ROOT_PARAMETER1& param = optimizer->rootsig_desc->Desc_1_1.pParameters[optimizer->PUSH];
+			assert(param.ParameterType == D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS);
+			assert(size <= param.Constants.Num32BitValues * sizeof(uint32_t)); // if this fires, not enough root constants were declared in root signature!
+			GetCommandList(cmd)->SetComputeRoot32BitConstants(
+				optimizer->PUSH,
+				size / sizeof(uint32_t),
+				data,
+				offset / sizeof(uint32_t)
+			);
+			return;
 		}
+		assert(0); // there was no active pipeline!
 	}
 	void GraphicsDevice_DX12::PredicationBegin(const GPUBuffer* buffer, uint64_t offset, PredicationOp op, CommandList cmd)
 	{

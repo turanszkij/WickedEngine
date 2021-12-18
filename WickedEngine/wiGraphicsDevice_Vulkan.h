@@ -180,18 +180,10 @@ namespace wi::graphics
 			wi::vector<VkBufferView> texelBufferViews;
 			wi::vector<VkWriteDescriptorSetAccelerationStructureKHR> accelerationStructureViews;
 
-			struct DeferredPushConstantData
-			{
-				uint8_t data[128];
-				uint32_t size;
-			};
-			DeferredPushConstantData pushconstants = {};
-
 			enum DIRTY_FLAGS
 			{
 				DIRTY_NONE = 0,
 				DIRTY_DESCRIPTOR = 1 << 1,
-				DIRTY_PUSH = 1 << 2,
 
 				DIRTY_ALL = ~0,
 			};
@@ -326,7 +318,7 @@ namespace wi::graphics
 		void BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src = nullptr) override;
 		void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) override;
 		void DispatchRays(const DispatchRaysDesc* desc, CommandList cmd) override;
-		void PushConstants(const void* data, uint32_t size, CommandList cmd) override;
+		void PushConstants(const void* data, uint32_t size, CommandList cmd, uint32_t offset = 0) override;
 		void PredicationBegin(const GPUBuffer* buffer, uint64_t offset, PredicationOp op, CommandList cmd) override;
 		void PredicationEnd(CommandList cmd) override;
 

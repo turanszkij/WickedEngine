@@ -1563,7 +1563,6 @@ using namespace vulkan_internal;
 	void GraphicsDevice_Vulkan::DescriptorBinder::reset()
 	{
 		table = {};
-		pushconstants = {};
 		dirty = true;
 	}
 	void GraphicsDevice_Vulkan::DescriptorBinder::flush(bool graphics, CommandList cmd)
@@ -1960,38 +1959,6 @@ using namespace vulkan_internal;
 				0,
 				nullptr
 			);
-		}
-
-		if (dirty & DIRTY_PUSH)
-		{
-			if (graphics)
-			{
-				if (pso_internal->pushconstants.size > 0)
-				{
-					vkCmdPushConstants(
-						commandBuffer,
-						pso_internal->pipelineLayout,
-						pso_internal->pushconstants.stageFlags,
-						pso_internal->pushconstants.offset,
-						pso_internal->pushconstants.size,
-						pushconstants.data
-					);
-				}
-			}
-			else
-			{
-				if (cs_internal->pushconstants.size > 0)
-				{
-					vkCmdPushConstants(
-						commandBuffer,
-						cs_internal->pipelineLayout_cs,
-						cs_internal->pushconstants.stageFlags,
-						cs_internal->pushconstants.offset,
-						cs_internal->pushconstants.size,
-						pushconstants.data
-					);
-				}
-			}
 		}
 
 		dirty = DIRTY_NONE;
@@ -6668,6 +6635,9 @@ using namespace vulkan_internal;
 	}
 	void GraphicsDevice_Vulkan::BindPipelineState(const PipelineState* pso, CommandList cmd)
 	{
+		active_cs[cmd] = nullptr;
+		active_rt[cmd] = nullptr;
+
 		size_t pipeline_hash = 0;
 		wi::helper::hash_combine(pipeline_hash, pso->hash);
 		if (active_renderpass[cmd] != nullptr)
@@ -6714,6 +6684,9 @@ using namespace vulkan_internal;
 	}
 	void GraphicsDevice_Vulkan::BindComputeShader(const Shader* cs, CommandList cmd)
 	{
+		active_pso[cmd] = nullptr;
+		active_rt[cmd] = nullptr;
+
 		assert(cs->stage == ShaderStage::CS || cs->stage == ShaderStage::LIB);
 		if (active_cs[cmd] != cs)
 		{
@@ -7342,13 +7315,43 @@ using namespace vulkan_internal;
 			desc->depth
 		);
 	}
-	void GraphicsDevice_Vulkan::PushConstants(const void* data, uint32_t size, CommandList cmd)
+	void GraphicsDevice_Vulkan::PushConstants(const void* data, uint32_t size, CommandList cmd, uint32_t offset)
 	{
 		auto& binder = binders[cmd];
-		assert(size <= sizeof(binder.pushconstants.data));
-		std::memcpy(binder.pushconstants.data, data, size);
-		binder.pushconstants.size = size;
-		binder.dirty |= DescriptorBinder::DIRTY_PUSH;
+
+		if (active_pso[cmd] != nullptr)
+		{
+			auto pso_internal = to_internal(active_pso[cmd]);
+			if (pso_internal->pushconstants.size > 0)
+			{
+				vkCmdPushConstants(
+					GetCommandList(cmd),
+					pso_internal->pipelineLayout,
+					pso_internal->pushconstants.stageFlags,
+					offset,
+					size,
+					data
+				);
+				return;
+			}
+		}
+		if(active_cs[cmd] != nullptr)
+		{
+			auto cs_internal = to_internal(active_cs[cmd]);
+			if (cs_internal->pushconstants.size > 0)
+			{
+				vkCmdPushConstants(
+					GetCommandList(cmd),
+					cs_internal->pipelineLayout_cs,
+					cs_internal->pushconstants.stageFlags,
+					offset,
+					size,
+					data
+				);
+				return;
+			}
+		}
+		assert(0); // there was no active pipeline!
 	}
 	void GraphicsDevice_Vulkan::PredicationBegin(const GPUBuffer* buffer, uint64_t offset, PredicationOp op, CommandList cmd)
 	{

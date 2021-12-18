@@ -112,12 +112,6 @@ namespace wi::graphics
 			const void* optimizer_compute = nullptr;
 			uint64_t dirty_compute = 0ull; // 1 dirty bit flag per root parameter
 
-			struct DeferredPushConstantData
-			{
-				uint8_t data[128];
-				uint32_t size;
-			} pushconstants;
-
 			void init(GraphicsDevice_DX12* device);
 			void reset();
 			void flush(bool graphics, CommandList cmd);
@@ -235,7 +229,7 @@ namespace wi::graphics
 		void BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src = nullptr) override;
 		void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) override;
 		void DispatchRays(const DispatchRaysDesc* desc, CommandList cmd) override;
-		void PushConstants(const void* data, uint32_t size, CommandList cmd) override;
+		void PushConstants(const void* data, uint32_t size, CommandList cmd, uint32_t offset = 0) override;
 		void PredicationBegin(const GPUBuffer* buffer, uint64_t offset, PredicationOp op, CommandList cmd) override;
 		void PredicationEnd(CommandList cmd) override;
 
