@@ -753,23 +753,6 @@ namespace dx12_internal
 		}
 		return D3D12_SHADING_RATE_1X1;
 	}
-	constexpr D3D12_STATIC_SAMPLER_DESC _ConvertStaticSampler(const StaticSampler& x)
-	{
-		D3D12_STATIC_SAMPLER_DESC desc = {};
-		desc.ShaderRegister = x.slot;
-		desc.Filter = _ConvertFilter(x.sampler.desc.filter);
-		desc.AddressU = _ConvertTextureAddressMode(x.sampler.desc.address_u);
-		desc.AddressV = _ConvertTextureAddressMode(x.sampler.desc.address_v);
-		desc.AddressW = _ConvertTextureAddressMode(x.sampler.desc.address_w);
-		desc.MipLODBias = x.sampler.desc.mip_lod_bias;
-		desc.MaxAnisotropy = x.sampler.desc.max_anisotropy;
-		desc.ComparisonFunc = _ConvertComparisonFunc(x.sampler.desc.comparison_func);
-		desc.BorderColor = _ConvertSamplerBorderColor(x.sampler.desc.border_color);
-		desc.MinLOD = x.sampler.desc.min_lod;
-		desc.MaxLOD = x.sampler.desc.max_lod;
-		desc.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-		return desc;
-	}
 
 	// Native -> Engine converters
 	constexpr Format _ConvertFormat_Inv(DXGI_FORMAT value)
@@ -5738,7 +5721,7 @@ using namespace dx12_internal;
 	void GraphicsDevice_DX12::PushConstants(const void* data, uint32_t size, CommandList cmd)
 	{
 		auto& binder = binders[cmd];
-		assert(size <= sizeof(binder.pushconstants));
+		assert(size <= sizeof(binder.pushconstants.data));
 		std::memcpy(binder.pushconstants.data, data, size);
 		binder.pushconstants.size = size;
 

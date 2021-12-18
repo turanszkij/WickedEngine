@@ -455,7 +455,6 @@ namespace wi
 			}
 		}
 		wi::graphics::GetDevice() = graphicsDevice.get();
-		wi::renderer::InitializeCommonSamplers();
 
 		canvas.init(window);
 

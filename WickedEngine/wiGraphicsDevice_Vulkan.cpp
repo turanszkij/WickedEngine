@@ -1563,6 +1563,7 @@ using namespace vulkan_internal;
 	void GraphicsDevice_Vulkan::DescriptorBinder::reset()
 	{
 		table = {};
+		pushconstants = {};
 		dirty = true;
 	}
 	void GraphicsDevice_Vulkan::DescriptorBinder::flush(bool graphics, CommandList cmd)
@@ -1572,6 +1573,7 @@ using namespace vulkan_internal;
 
 		auto pso_internal = graphics ? to_internal(device->active_pso[cmd]) : nullptr;
 		auto cs_internal = graphics ? nullptr : to_internal(device->active_cs[cmd]);
+		VkCommandBuffer commandBuffer = device->GetCommandList(cmd);
 
 		if (dirty & DIRTY_DESCRIPTOR)
 		{
@@ -1949,7 +1951,7 @@ using namespace vulkan_internal;
 			}
 
 			vkCmdBindDescriptorSets(
-				device->GetCommandList(cmd),
+				commandBuffer,
 				bindPoint,
 				pipelineLayout,
 				0,
@@ -1967,12 +1969,12 @@ using namespace vulkan_internal;
 				if (pso_internal->pushconstants.size > 0)
 				{
 					vkCmdPushConstants(
-						device->GetCommandList(cmd),
+						commandBuffer,
 						pso_internal->pipelineLayout,
 						pso_internal->pushconstants.stageFlags,
 						pso_internal->pushconstants.offset,
 						pso_internal->pushconstants.size,
-						device->pushconstants[cmd].data
+						pushconstants.data
 					);
 				}
 			}
@@ -1981,12 +1983,12 @@ using namespace vulkan_internal;
 				if (cs_internal->pushconstants.size > 0)
 				{
 					vkCmdPushConstants(
-						device->GetCommandList(cmd),
+						commandBuffer,
 						cs_internal->pipelineLayout_cs,
 						cs_internal->pushconstants.stageFlags,
 						cs_internal->pushconstants.offset,
 						cs_internal->pushconstants.size,
-						device->pushconstants[cmd].data
+						pushconstants.data
 					);
 				}
 			}
@@ -3086,6 +3088,133 @@ using namespace vulkan_internal;
 			assert(res == VK_SUCCESS);
 		}
 
+		// Static samplers:
+		{
+			VkSamplerCreateInfo createInfo = {};
+			createInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+			createInfo.pNext = nullptr;
+			createInfo.flags = 0;
+			createInfo.compareEnable = false;
+			createInfo.compareOp = VK_COMPARE_OP_NEVER;
+			createInfo.minLod = 0;
+			createInfo.maxLod = FLT_MAX;
+			createInfo.mipLodBias = 0;
+			createInfo.anisotropyEnable = false;
+			createInfo.maxAnisotropy = 0;
+
+			// sampler_linear_clamp:
+			createInfo.minFilter = VK_FILTER_LINEAR;
+			createInfo.magFilter = VK_FILTER_LINEAR;
+			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+			createInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+			createInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+			createInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+			res = vkCreateSampler(device, &createInfo, nullptr, &immutable_samplers.emplace_back());
+			assert(res == VK_SUCCESS);
+
+			// sampler_linear_wrap:
+			createInfo.minFilter = VK_FILTER_LINEAR;
+			createInfo.magFilter = VK_FILTER_LINEAR;
+			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+			createInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+			createInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+			createInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+			res = vkCreateSampler(device, &createInfo, nullptr, &immutable_samplers.emplace_back());
+			assert(res == VK_SUCCESS);
+
+			//sampler_linear_mirror:
+			createInfo.minFilter = VK_FILTER_LINEAR;
+			createInfo.magFilter = VK_FILTER_LINEAR;
+			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+			createInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+			createInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+			createInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+			res = vkCreateSampler(device, &createInfo, nullptr, &immutable_samplers.emplace_back());
+			assert(res == VK_SUCCESS);
+
+			// sampler_point_clamp:
+			createInfo.minFilter = VK_FILTER_NEAREST;
+			createInfo.magFilter = VK_FILTER_NEAREST;
+			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+			createInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+			createInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+			createInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+			res = vkCreateSampler(device, &createInfo, nullptr, &immutable_samplers.emplace_back());
+			assert(res == VK_SUCCESS);
+
+			// sampler_point_wrap:
+			createInfo.minFilter = VK_FILTER_NEAREST;
+			createInfo.magFilter = VK_FILTER_NEAREST;
+			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+			createInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+			createInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+			createInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+			res = vkCreateSampler(device, &createInfo, nullptr, &immutable_samplers.emplace_back());
+			assert(res == VK_SUCCESS);
+
+			// sampler_point_mirror:
+			createInfo.minFilter = VK_FILTER_NEAREST;
+			createInfo.magFilter = VK_FILTER_NEAREST;
+			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+			createInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+			createInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+			createInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+			res = vkCreateSampler(device, &createInfo, nullptr, &immutable_samplers.emplace_back());
+			assert(res == VK_SUCCESS);
+
+			// sampler_aniso_clamp:
+			createInfo.minFilter = VK_FILTER_LINEAR;
+			createInfo.magFilter = VK_FILTER_LINEAR;
+			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+			createInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+			createInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+			createInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+			createInfo.anisotropyEnable = true;
+			createInfo.maxAnisotropy = 16;
+			res = vkCreateSampler(device, &createInfo, nullptr, &immutable_samplers.emplace_back());
+			assert(res == VK_SUCCESS);
+
+			// sampler_aniso_wrap:
+			createInfo.minFilter = VK_FILTER_LINEAR;
+			createInfo.magFilter = VK_FILTER_LINEAR;
+			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+			createInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+			createInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+			createInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+			createInfo.anisotropyEnable = true;
+			createInfo.maxAnisotropy = 16;
+			res = vkCreateSampler(device, &createInfo, nullptr, &immutable_samplers.emplace_back());
+			assert(res == VK_SUCCESS);
+
+			// sampler_aniso_mirror:
+			createInfo.minFilter = VK_FILTER_LINEAR;
+			createInfo.magFilter = VK_FILTER_LINEAR;
+			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+			createInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+			createInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+			createInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+			createInfo.anisotropyEnable = true;
+			createInfo.maxAnisotropy = 16;
+			res = vkCreateSampler(device, &createInfo, nullptr, &immutable_samplers.emplace_back());
+			assert(res == VK_SUCCESS);
+
+			// sampler_cmp_depth:
+			createInfo.minFilter = VK_FILTER_LINEAR;
+			createInfo.magFilter = VK_FILTER_LINEAR;
+			createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+			createInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+			createInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+			createInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+			createInfo.anisotropyEnable = false;
+			createInfo.maxAnisotropy = 0;
+			createInfo.compareEnable = true;
+			createInfo.compareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
+			createInfo.minLod = 0;
+			createInfo.maxLod = 0;
+			res = vkCreateSampler(device, &createInfo, nullptr, &immutable_samplers.emplace_back());
+			assert(res == VK_SUCCESS);
+		}
+
 		wi::backlog::post("Created GraphicsDevice_Vulkan (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
 	GraphicsDevice_Vulkan::~GraphicsDevice_Vulkan()
@@ -3842,8 +3971,6 @@ using namespace vulkan_internal;
 			result = spvReflectEnumeratePushConstantBlocks(&module, &push_count, pushconstants.data());
 			assert(result == SPV_REFLECT_RESULT_SUCCESS);
 
-			wi::vector<VkSampler> staticsamplers;
-
 			for (auto& x : pushconstants)
 			{
 				auto& push = internal_state->pushconstants;
@@ -3876,22 +4003,10 @@ using namespace vulkan_internal;
 				auto& imageViewType = internal_state->imageViewTypes.emplace_back();
 				imageViewType = VK_IMAGE_VIEW_TYPE_MAX_ENUM;
 
-				if (x->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER)
+				if (x->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER && x->binding >= VULKAN_BINDING_SHIFT_S + immutable_sampler_slot_begin)
 				{
-					bool staticsampler = false;
-					for (auto& sam : common_samplers)
-					{
-						if (x->binding == sam.slot + VULKAN_BINDING_SHIFT_S)
-						{
-							descriptor.pImmutableSamplers = &to_internal(&sam.sampler)->resource;
-							staticsampler = true;
-							break; // static sampler will be used instead
-						}
-					}
-					if (staticsampler)
-					{
-						continue;
-					}
+					descriptor.pImmutableSamplers = immutable_samplers.data() + x->binding - VULKAN_BINDING_SHIFT_S - immutable_sampler_slot_begin;
+					continue;
 				}
 
 				switch (x->descriptor_type)
@@ -5890,11 +6005,6 @@ using namespace vulkan_internal;
 		assert(res == VK_SUCCESS);
 	}
 	
-	void GraphicsDevice_Vulkan::SetCommonSampler(const StaticSampler* sam)
-	{
-		common_samplers.push_back(*sam);
-	}
-
 	void GraphicsDevice_Vulkan::SetName(GPUResource* pResource, const char* name)
 	{
 		if (debugUtils)
@@ -6015,7 +6125,6 @@ using namespace vulkan_internal;
 		active_renderpass[cmd] = nullptr;
 		dirty_pso[cmd] = false;
 		prev_shadingrate[cmd] = ShadingRate::RATE_INVALID;
-		pushconstants[cmd] = {};
 		vb_hash[cmd] = 0;
 		for (int i = 0; i < arraysize(vb_strides[cmd]); ++i)
 		{
@@ -7235,10 +7344,11 @@ using namespace vulkan_internal;
 	}
 	void GraphicsDevice_Vulkan::PushConstants(const void* data, uint32_t size, CommandList cmd)
 	{
-		assert(size <= sizeof(pushconstants[cmd]));
-		std::memcpy(pushconstants[cmd].data, data, size);
-		pushconstants[cmd].size = size;
-		binders[cmd].dirty |= DescriptorBinder::DIRTY_PUSH;
+		auto& binder = binders[cmd];
+		assert(size <= sizeof(binder.pushconstants.data));
+		std::memcpy(binder.pushconstants.data, data, size);
+		binder.pushconstants.size = size;
+		binder.dirty |= DescriptorBinder::DIRTY_PUSH;
 	}
 	void GraphicsDevice_Vulkan::PredicationBegin(const GPUBuffer* buffer, uint64_t offset, PredicationOp op, CommandList cmd)
 	{

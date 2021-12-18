@@ -791,12 +791,6 @@ namespace wi::graphics
 		const SamplerDesc& GetDesc() const { return desc; }
 	};
 
-	struct StaticSampler
-	{
-		Sampler sampler;
-		uint32_t slot = 0;
-	};
-
 	struct Shader : public GraphicsDeviceChild
 	{
 		ShaderStage stage = ShaderStage::Count;

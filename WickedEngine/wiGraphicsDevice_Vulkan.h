@@ -180,6 +180,13 @@ namespace wi::graphics
 			wi::vector<VkBufferView> texelBufferViews;
 			wi::vector<VkWriteDescriptorSetAccelerationStructureKHR> accelerationStructureViews;
 
+			struct DeferredPushConstantData
+			{
+				uint8_t data[128];
+				uint32_t size;
+			};
+			DeferredPushConstantData pushconstants = {};
+
 			enum DIRTY_FLAGS
 			{
 				DIRTY_NONE = 0,
@@ -224,13 +231,6 @@ namespace wi::graphics
 		uint32_t vb_strides[COMMANDLIST_COUNT][8] = {};
 		size_t vb_hash[COMMANDLIST_COUNT] = {};
 
-		struct DeferredPushConstantData
-		{
-			uint8_t data[128];
-			uint32_t size;
-		};
-		DeferredPushConstantData pushconstants[COMMANDLIST_COUNT] = {};
-
 		bool dirty_pso[COMMANDLIST_COUNT] = {};
 		void pso_validate(CommandList cmd);
 
@@ -240,7 +240,8 @@ namespace wi::graphics
 
 		std::atomic<CommandList::index_type> cmd_count{ 0 };
 
-		wi::vector<StaticSampler> common_samplers;
+		static constexpr uint32_t immutable_sampler_slot_begin = 100;
+		wi::vector<VkSampler> immutable_samplers;
 
 	public:
 		GraphicsDevice_Vulkan(wi::platform::window_type window, bool debuglayer = false);
@@ -266,8 +267,6 @@ namespace wi::graphics
 		void WriteShadingRateValue(ShadingRate rate, void* dest) const override;
 		void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) const override;
 		void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) const override;
-		
-		void SetCommonSampler(const StaticSampler* sam) override;
 
 		void SetName(GPUResource* pResource, const char* name) override;
 

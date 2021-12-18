@@ -2042,38 +2042,11 @@ void SetUpStates()
 	bd.alpha_to_coverage_enable = false;
 	bd.independent_blend_enable = false;
 	blendStates[BSTYPE_TRANSPARENTSHADOW] = bd;
-}
 
-void ModifyObjectSampler(const SamplerDesc& desc)
-{
-	device->CreateSampler(&desc, &samplers[SAMPLER_OBJECTSHADER]);
-}
 
-const std::string& GetShaderPath()
-{
-	return SHADERPATH;
-}
-void SetShaderPath(const std::string& path)
-{
-	SHADERPATH = path;
-}
-const std::string& GetShaderSourcePath()
-{
-	return SHADERSOURCEPATH;
-}
-void SetShaderSourcePath(const std::string& path)
-{
-	SHADERSOURCEPATH = path;
-}
-void ReloadShaders()
-{
-	device->ClearPipelineStateCache();
 
-	wi::eventhandler::FireEvent(wi::eventhandler::EVENT_RELOAD_SHADERS, 0);
-}
 
-void InitializeCommonSamplers()
-{
+
 	SamplerDesc samplerDesc;
 	samplerDesc.filter = Filter::MIN_MAG_MIP_LINEAR;
 	samplerDesc.address_u = TextureAddressMode::MIRROR;
@@ -2154,51 +2127,36 @@ void InitializeCommonSamplers()
 	samplerDesc.max_anisotropy = 0;
 	samplerDesc.comparison_func = ComparisonFunc::GREATER_EQUAL;
 	device->CreateSampler(&samplerDesc, &samplers[SAMPLER_CMP_DEPTH]);
-
-
-	// Static sampler bindings must match with the static sampler declarations in shaders/globals.hlsli
-	StaticSampler sam;
-
-	sam.sampler = samplers[SAMPLER_LINEAR_CLAMP];
-	sam.slot = 100;
-	device->SetCommonSampler(&sam);
-
-	sam.sampler = samplers[SAMPLER_LINEAR_WRAP];
-	sam.slot = 101;
-	device->SetCommonSampler(&sam);
-
-	sam.sampler = samplers[SAMPLER_LINEAR_MIRROR];
-	sam.slot = 102;
-	device->SetCommonSampler(&sam);
-
-	sam.sampler = samplers[SAMPLER_POINT_CLAMP];
-	sam.slot = 103;
-	device->SetCommonSampler(&sam);
-
-	sam.sampler = samplers[SAMPLER_POINT_WRAP];
-	sam.slot = 104;
-	device->SetCommonSampler(&sam);
-
-	sam.sampler = samplers[SAMPLER_POINT_MIRROR];
-	sam.slot = 105;
-	device->SetCommonSampler(&sam);
-
-	sam.sampler = samplers[SAMPLER_ANISO_CLAMP];
-	sam.slot = 106;
-	device->SetCommonSampler(&sam);
-
-	sam.sampler = samplers[SAMPLER_ANISO_WRAP];
-	sam.slot = 107;
-	device->SetCommonSampler(&sam);
-
-	sam.sampler = samplers[SAMPLER_ANISO_MIRROR];
-	sam.slot = 108;
-	device->SetCommonSampler(&sam);
-
-	sam.sampler = samplers[SAMPLER_CMP_DEPTH];
-	sam.slot = 109;
-	device->SetCommonSampler(&sam);
 }
+
+void ModifyObjectSampler(const SamplerDesc& desc)
+{
+	device->CreateSampler(&desc, &samplers[SAMPLER_OBJECTSHADER]);
+}
+
+const std::string& GetShaderPath()
+{
+	return SHADERPATH;
+}
+void SetShaderPath(const std::string& path)
+{
+	SHADERPATH = path;
+}
+const std::string& GetShaderSourcePath()
+{
+	return SHADERSOURCEPATH;
+}
+void SetShaderSourcePath(const std::string& path)
+{
+	SHADERSOURCEPATH = path;
+}
+void ReloadShaders()
+{
+	device->ClearPipelineStateCache();
+
+	wi::eventhandler::FireEvent(wi::eventhandler::EVENT_RELOAD_SHADERS, 0);
+}
+
 void Initialize()
 {
 	wi::Timer timer;
