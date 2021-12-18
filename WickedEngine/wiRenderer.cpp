@@ -64,20 +64,17 @@ std::string SHADERSOURCEPATH = "../WickedEngine/shaders/";
 class LinearAllocator
 {
 public:
-	constexpr size_t get_capacity() const
+	inline size_t get_capacity() const
 	{
-		return capacity;
+		return buffer.size();
 	}
 	inline void reserve(size_t newCapacity)
 	{
-		capacity = newCapacity;
-
-		std::free(buffer);
-		buffer = (uint8_t*)std::malloc(capacity);
+		buffer.resize(newCapacity);
 	}
-	constexpr uint8_t* allocate(size_t size)
+	inline uint8_t* allocate(size_t size)
 	{
-		if (offset + size <= capacity)
+		if (offset + size <= buffer.size())
 		{
 			uint8_t* ret = &buffer[offset];
 			offset += size;
@@ -85,25 +82,23 @@ public:
 		}
 		return nullptr;
 	}
-	constexpr void free(size_t size)
+	inline void free(size_t size)
 	{
 		assert(offset >= size);
 		offset -= size;
 	}
-	constexpr void reset()
+	inline void reset()
 	{
 		offset = 0;
 	}
-	constexpr uint8_t* top()
+	inline uint8_t* top()
 	{
-		return buffer + offset;
+		return buffer.data() + offset;
 	}
 
 private:
-	uint8_t* buffer = nullptr;
-	size_t capacity = 0;
+	wi::vector<uint8_t> buffer;
 	size_t offset = 0;
-	size_t alignment = 1;
 };
 LinearAllocator renderFrameAllocators[COMMANDLIST_COUNT]; // can be used by graphics threads
 inline LinearAllocator& GetRenderFrameAllocator(CommandList cmd)
