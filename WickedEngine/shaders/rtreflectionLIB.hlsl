@@ -21,7 +21,7 @@ struct RayPayload
 #ifndef SPIRV
 GlobalRootSignature MyGlobalRootSignature =
 {
-	WICKED_ENGINE_ROOTSIGNATURE_COMPUTE
+	WICKED_ENGINE_DEFAULT_ROOTSIGNATURE
 };
 #endif // SPIRV
 

@@ -26,7 +26,7 @@ namespace wi::graphics
 	//	It's OK increase these limits if not enough
 	//	But it's better to refactor shaders to use bindless descriptors if they require more resources
 	static constexpr uint32_t DESCRIPTORBINDER_CBV_COUNT = 14;
-	static constexpr uint32_t DESCRIPTORBINDER_SRV_COUNT = 64;
+	static constexpr uint32_t DESCRIPTORBINDER_SRV_COUNT = 16;
 	static constexpr uint32_t DESCRIPTORBINDER_UAV_COUNT = 16;
 	static constexpr uint32_t DESCRIPTORBINDER_SAMPLER_COUNT = 16;
 	struct DescriptorBindingTable

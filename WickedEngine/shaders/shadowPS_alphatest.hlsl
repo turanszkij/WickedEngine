@@ -1,9 +1,6 @@
 #define OBJECTSHADER_LAYOUT_SHADOW_TEX
 #include "objectHF.hlsli"
 
-#undef WICKED_ENGINE_ROOTSIGNATURE_GRAPHICS
-#define WICKED_ENGINE_ROOTSIGNATURE_GRAPHICS ROOTSIGNATURE_OBJECT
-
 void main(PixelInput input)
 {
 	[branch]

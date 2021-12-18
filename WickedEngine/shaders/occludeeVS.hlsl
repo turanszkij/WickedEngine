@@ -6,7 +6,7 @@ struct CubeConstants
 };
 PUSHCONSTANT(cube, CubeConstants);
 
-#undef WICKED_ENGINE_ROOTSIGNATURE_GRAPHICS // don't use auto root signature!
+#undef WICKED_ENGINE_DEFAULT_ROOTSIGNATURE // don't use auto root signature!
 [RootSignature("RootConstants(num32BitConstants=16, b999)")]
 float4 main(uint vID : SV_VertexID) : SV_Position
 {

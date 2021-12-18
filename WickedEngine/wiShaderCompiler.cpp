@@ -140,19 +140,7 @@ namespace wi::shadercompiler
 		{
 		case ShaderFormat::HLSL6:
 			args.push_back(L"-D"); args.push_back(L"HLSL6");
-			switch (input.stage)
-			{
-			case ShaderStage::CS:
-			case ShaderStage::AS:
-			case ShaderStage::MS:
-				args.push_back(L"-rootsig-define"); args.push_back(L"WICKED_ENGINE_ROOTSIGNATURE_COMPUTE");
-				break;
-			case ShaderStage::LIB:
-				break;
-			default:
-				args.push_back(L"-rootsig-define"); args.push_back(L"WICKED_ENGINE_ROOTSIGNATURE_GRAPHICS");
-				break;
-			}
+			args.push_back(L"-rootsig-define"); args.push_back(L"WICKED_ENGINE_DEFAULT_ROOTSIGNATURE");
 			break;
 		case ShaderFormat::SPIRV:
 			args.push_back(L"-D"); args.push_back(L"SPIRV");

@@ -70,6 +70,8 @@ struct IndirectDispatchArgs
 
 // Common buffers:
 // These are usable by all shaders
+#define CBSLOT_IMAGE							0
+#define CBSLOT_FONT								0
 #define CBSLOT_RENDERER_FRAME					0
 #define CBSLOT_RENDERER_CAMERA					1
 
@@ -93,9 +95,6 @@ struct IndirectDispatchArgs
 #define CBSLOT_OTHER_GPUSORTLIB					4
 #define CBSLOT_MSAO								4
 #define CBSLOT_FSR								4
-
-#define CBSLOT_IMAGE							5
-#define CBSLOT_FONT								5
 
 
 #endif // WI_SHADERINTEROP_H

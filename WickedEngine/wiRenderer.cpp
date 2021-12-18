@@ -4144,6 +4144,8 @@ void DrawSoftParticles(
 		wi::profiler::BeginRangeGPU("EmittedParticles - Render (Distortion)", cmd) :
 		wi::profiler::BeginRangeGPU("EmittedParticles - Render", cmd);
 
+	BindCommonResources(cmd);
+
 	// Sort emitters based on distance:
 	assert(emitterCount < 0x0000FFFF); // watch out for sorting hash truncation!
 	uint32_t* emitterSortingHashes = (uint32_t*)GetRenderFrameAllocator(cmd).allocate(sizeof(uint32_t) * emitterCount);
@@ -4189,6 +4191,8 @@ void DrawLightVisualizers(
 	if (!vis.visibleLights.empty())
 	{
 		device->EventBegin("Light Visualizer Render", cmd);
+
+		BindCommonResources(cmd);
 
 		XMMATRIX camrot = XMLoadFloat3x3(&vis.camera->rotationMatrix);
 		XMMATRIX VP = vis.camera->GetViewProjection();
@@ -4337,6 +4341,8 @@ void DrawLensFlares(
 		return;
 
 	device->EventBegin("Lens Flares", cmd);
+
+	BindCommonResources(cmd);
 
 	for (auto visibleLight : vis.visibleLights)
 	{
