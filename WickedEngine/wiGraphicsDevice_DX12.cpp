@@ -1733,7 +1733,13 @@ using namespace dx12_internal;
 					uint64_t wrapped_gpu_offset = gpu_offset % wrap_effective_size;
 					while (wrapped_offset < wrapped_gpu_offset && wrapped_offset_end > wrapped_gpu_offset)
 					{
-						assert(heap.fenceValue > wrapped_offset_end); // simply not enough space, even with GPU drain
+						if(heap.fenceValue < wrapped_offset_end)
+						{
+							// simply not enough space, even with GPU drain, so take our chances and try writing the descriptors anyway
+							wi::backlog::post("DX12: GPU didn't finish with descriptor heap, but there are no more free descriptors. Application might become unstable.", wi::backlog::LogLevel::Error);
+							assert(0);
+							break;
+						}
 						gpu_offset = heap.fence->GetCompletedValue();
 						wrapped_gpu_offset = gpu_offset % wrap_effective_size;
 					}
