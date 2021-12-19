@@ -494,9 +494,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)emittedparticlePS_soft.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)screenPS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)imagePS.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
@@ -668,9 +665,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)shadowVS_alphatest.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)screenVS.hlsl">
-      <Filter>VS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)renderlightmapVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
@@ -719,7 +713,7 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)cubeShadowVS_alphatest.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)cubeVS.hlsl">
+    <FxCompile Include="$(MSBuildThisFileDirectory)occludeeVS.hlsl">
       <Filter>VS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)voxelGS.hlsl">
@@ -1002,6 +996,12 @@
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)surfel_binningCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)postprocessVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)rtreflectionCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>

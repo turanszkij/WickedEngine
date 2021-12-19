@@ -791,16 +791,9 @@ namespace wi::graphics
 		const SamplerDesc& GetDesc() const { return desc; }
 	};
 
-	struct StaticSampler
-	{
-		Sampler sampler;
-		uint32_t slot = 0;
-	};
-
 	struct Shader : public GraphicsDeviceChild
 	{
 		ShaderStage stage = ShaderStage::Count;
-		wi::vector<StaticSampler> auto_samplers; // ability to set static samplers without explicit root signature
 	};
 
 	struct GPUResource : public GraphicsDeviceChild

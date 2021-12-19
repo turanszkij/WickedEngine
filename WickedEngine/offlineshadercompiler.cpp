@@ -108,11 +108,12 @@ int main(int argc, char* argv[])
 		"tonemapCS.hlsl"											,
 		"fsr_upscalingCS.hlsl"										,
 		"fsr_sharpenCS.hlsl"										,
+		"ssaoCS.hlsl"												,
+		"rtreflectionCS.hlsl"										,
+		"ssr_raytraceCS.hlsl"										,
 		"ssr_resolveCS.hlsl"										,
 		"ssr_temporalCS.hlsl"										,
-		"ssaoCS.hlsl"												,
 		"ssr_medianCS.hlsl"											,
-		"ssr_raytraceCS.hlsl"										,
 		"sharpenCS.hlsl"											,
 		"skinningCS.hlsl"											,
 		"resolveMSAADepthStencilCS.hlsl"							,
@@ -237,7 +238,6 @@ int main(int argc, char* argv[])
 
 	shaders[static_cast<size_t>(ShaderStage::PS)] = {
 		"emittedparticlePS_soft.hlsl"					,
-		"screenPS.hlsl"									,
 		"imagePS.hlsl"									,
 		"emittedparticlePS_soft_lighting.hlsl"			,
 		"oceanSurfacePS.hlsl"							,
@@ -328,7 +328,7 @@ int main(int argc, char* argv[])
 		"shadowVS_transparent.hlsl"						,
 		"shadowVS.hlsl"									,
 		"shadowVS_alphatest.hlsl"						,
-		"screenVS.hlsl"									,
+		"postprocessVS.hlsl"							,
 		"renderlightmapVS.hlsl"							,
 		"raytrace_screenVS.hlsl"						,
 		"oceanSurfaceVS.hlsl"							,
@@ -340,7 +340,7 @@ int main(int argc, char* argv[])
 		"objectVS_prepass_alphatest.hlsl"				,
 		"objectVS_prepass_tessellation.hlsl"			,
 		"objectVS_prepass_alphatest_tessellation.hlsl"	,
-		"objectVS_simple_tessellation.hlsl"	,
+		"objectVS_simple_tessellation.hlsl"				,
 		"objectVS_debug.hlsl"							,
 		"lensFlareVS.hlsl"								,
 		"impostorVS.hlsl"								,
@@ -356,7 +356,7 @@ int main(int argc, char* argv[])
 		"cubeShadowVS_alphatest_emulation.hlsl"			,
 		"cubeShadowVS_transparent.hlsl"					,
 		"cubeShadowVS_transparent_emulation.hlsl"		,
-		"cubeVS.hlsl",
+		"occludeeVS.hlsl",
 	};
 
 	shaders[static_cast<size_t>(ShaderStage::GS)] = {
@@ -400,6 +400,7 @@ int main(int argc, char* argv[])
 	minshadermodels["rtshadowCS.hlsl"] = ShaderModel::SM_6_5;
 	minshadermodels["rtaoCS.hlsl"] = ShaderModel::SM_6_5;
 	minshadermodels["surfel_raytraceCS_rtapi.hlsl"] = ShaderModel::SM_6_5;
+	minshadermodels["rtreflectionCS.hlsl"] = ShaderModel::SM_6_5;
 
 	wi::jobsystem::context ctx;
 

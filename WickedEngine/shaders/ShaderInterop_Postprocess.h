@@ -71,6 +71,8 @@ struct MSAO
 	float xRejectFadeoff;
 	float xRcpAccentuation;
 };
+CONSTANTBUFFER(msao, MSAO, CBSLOT_MSAO);
+
 //#define MSAO_SAMPLE_EXHAUSTIVELY
 struct MSAO_UPSAMPLE
 {
@@ -102,6 +104,7 @@ struct FSR
 	uint4 Const2;
 	uint4 Const3;
 };
+CONSTANTBUFFER(fsr, FSR, CBSLOT_FSR);
 
 static const uint MOTIONBLUR_TILESIZE = 32;
 #define motionblur_strength postprocess.params0.x

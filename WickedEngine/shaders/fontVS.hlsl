@@ -3,18 +3,17 @@
 
 struct VertextoPixel
 {
-	float4 pos				: SV_POSITION;
-	float2 tex				: TEXCOORD0;
+	float4 pos : SV_Position;
+	float2 uv : TEXCOORD0;
 };
 
-VertextoPixel main(uint vertexID : SV_VERTEXID, uint instanceID : SV_InstanceID)
+VertextoPixel main(uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID)
 {
-	VertextoPixel Out;
-
 	uint vID = instanceID * 4 + vertexID;
-	uint3 raw = bindless_buffers[push.buffer_index].Load3(push.buffer_offset + vID * 12);
-	Out.pos = mul(push.transform, float4(asfloat(raw.xy), 0, 1));
-	Out.tex = unpack_half2(raw.z);
+	FontVertex vertex = bindless_buffers[font_push.buffer_index].Load<FontVertex>(font_push.buffer_offset + vID * sizeof(FontVertex));
 
+	VertextoPixel Out;
+	Out.pos = mul(font.transform, float4(asfloat(vertex.pos), 0, 1));
+	Out.uv = vertex.uv;
 	return Out;
 }

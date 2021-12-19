@@ -29,7 +29,6 @@ namespace wi::graphics
 	protected:
 		Microsoft::WRL::ComPtr<IDXGIFactory4> dxgiFactory;
 		Microsoft::WRL::ComPtr<IDXGIAdapter1> dxgiAdapter;
-		bool tearingSupported = false;
 		Microsoft::WRL::ComPtr<ID3D12Device5> device;
 
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> dispatchIndirectCommandSignature;
@@ -37,6 +36,7 @@ namespace wi::graphics
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> drawIndexedInstancedIndirectCommandSignature;
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> dispatchMeshIndirectCommandSignature;
 
+		bool tearingSupported = false;
 		bool additionalShadingRatesSupported = false;
 
 		uint32_t rtv_descriptor_size = 0;
@@ -44,25 +44,12 @@ namespace wi::graphics
 		uint32_t resource_descriptor_size = 0;
 		uint32_t sampler_descriptor_size = 0;
 
+		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> nulldescriptorheap_cbv_srv_uav;
+		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> nulldescriptorheap_sampler;
 		D3D12_CPU_DESCRIPTOR_HANDLE nullCBV = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV = {};
+		D3D12_CPU_DESCRIPTOR_HANDLE nullUAV = {};
 		D3D12_CPU_DESCRIPTOR_HANDLE nullSAM = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV_buffer = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV_texture1d = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV_texture1darray = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV_texture2d = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV_texture2darray = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV_texturecube = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV_texturecubearray = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV_texture3d = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE nullSRV_accelerationstructure = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE nullUAV_buffer = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE nullUAV_texture1d = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE nullUAV_texture1darray = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE nullUAV_texture2d = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE nullUAV_texture2darray = {};
-		D3D12_CPU_DESCRIPTOR_HANDLE nullUAV_texture3d = {};
-
-		wi::vector<D3D12_STATIC_SAMPLER_DESC> common_samplers;
 
 		struct CommandQueue
 		{
@@ -119,17 +106,11 @@ namespace wi::graphics
 		{
 			DescriptorBindingTable table;
 			GraphicsDevice_DX12* device = nullptr;
-			uint32_t ringOffset_res = 0;
-			uint32_t ringOffset_sam = 0;
-			bool dirty_res = false;
-			bool dirty_sam = false;
-			uint32_t dirty_root_cbvs = 0; // bitmask
 
-			struct DescriptorHandles
-			{
-				D3D12_GPU_DESCRIPTOR_HANDLE sampler_handle = {};
-				D3D12_GPU_DESCRIPTOR_HANDLE resource_handle = {};
-			};
+			const void* optimizer_graphics = nullptr;
+			uint64_t dirty_graphics = 0ull; // 1 dirty bit flag per root parameter
+			const void* optimizer_compute = nullptr;
+			uint64_t dirty_compute = 0ull; // 1 dirty bit flag per root parameter
 
 			void init(GraphicsDevice_DX12* device);
 			void reset();
@@ -156,13 +137,6 @@ namespace wi::graphics
 		ShadingRate prev_shadingrate[COMMANDLIST_COUNT] = {};
 		wi::vector<const SwapChain*> swapchains[COMMANDLIST_COUNT];
 		Microsoft::WRL::ComPtr<ID3D12Resource> active_backbuffer[COMMANDLIST_COUNT];
-
-		struct DeferredPushConstantData
-		{
-			uint8_t data[128];
-			uint32_t size;
-		};
-		DeferredPushConstantData pushconstants[COMMANDLIST_COUNT] = {};
 
 		bool dirty_pso[COMMANDLIST_COUNT] = {};
 		void pso_validate(CommandList cmd);
@@ -196,8 +170,6 @@ namespace wi::graphics
 		void WriteShadingRateValue(ShadingRate rate, void* dest) const override;
 		void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) const override;
 		void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) const override;
-		
-		void SetCommonSampler(const StaticSampler* sam) override;
 
 		void SetName(GPUResource* pResource, const char* name) override;
 
@@ -257,7 +229,7 @@ namespace wi::graphics
 		void BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src = nullptr) override;
 		void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) override;
 		void DispatchRays(const DispatchRaysDesc* desc, CommandList cmd) override;
-		void PushConstants(const void* data, uint32_t size, CommandList cmd) override;
+		void PushConstants(const void* data, uint32_t size, CommandList cmd, uint32_t offset = 0) override;
 		void PredicationBegin(const GPUBuffer* buffer, uint64_t offset, PredicationOp op, CommandList cmd) override;
 		void PredicationEnd(CommandList cmd) override;
 
@@ -265,9 +237,10 @@ namespace wi::graphics
 		void EventEnd(CommandList cmd) override;
 		void SetMarker(const char* name, CommandList cmd) override;
 
+		const RenderPass* GetCurrentRenderPass(CommandList cmd) const override;
 
 
-		struct DescriptorHeap
+		struct DescriptorHeapGPU
 		{
 			D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
 			Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> heap_GPU;
@@ -281,9 +254,18 @@ namespace wi::graphics
 			Microsoft::WRL::ComPtr<ID3D12Fence> fence;
 			uint64_t fenceValue = 0;
 			uint64_t cached_completedValue = 0;
+
+			void SignalGPU(ID3D12CommandQueue* queue)
+			{
+				// Descriptor heaps' progress is recorded by the GPU:
+				fenceValue = allocationOffset.load();
+				HRESULT hr = queue->Signal(fence.Get(), fenceValue);
+				assert(SUCCEEDED(hr));
+				cached_completedValue = fence->GetCompletedValue();
+			}
 		};
-		DescriptorHeap descriptorheap_res;
-		DescriptorHeap descriptorheap_sam;
+		DescriptorHeapGPU descriptorheap_res;
+		DescriptorHeapGPU descriptorheap_sam;
 
 		struct AllocationHandler
 		{
@@ -301,11 +283,11 @@ namespace wi::graphics
 				uint32_t descriptor_size = 0;
 				wi::vector<D3D12_CPU_DESCRIPTOR_HANDLE> freelist;
 
-				void init(GraphicsDevice_DX12* device, D3D12_DESCRIPTOR_HEAP_TYPE type)
+				void init(GraphicsDevice_DX12* device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT numDescriptorsPerBlock)
 				{
 					this->device = device;
 					desc.Type = type;
-					desc.NumDescriptors = 1024;
+					desc.NumDescriptors = numDescriptorsPerBlock;
 					descriptor_size = device->device->GetDescriptorHandleIncrementSize(type);
 				}
 				void block_allocate()

@@ -12,20 +12,13 @@ using namespace wi::enums;
 
 namespace wi::image
 {
-	enum IMAGE_SHADER
-	{
-		IMAGE_SHADER_STANDARD,
-		IMAGE_SHADER_FULLSCREEN,
-		IMAGE_SHADER_COUNT
-	};
-
+	Sampler					samplers[SAMPLER_COUNT];
 	Shader					vertexShader;
-	Shader					screenVS;
-	Shader					imagePS[IMAGE_SHADER_COUNT];
+	Shader					pixelShader;
 	BlendState				blendStates[BLENDMODE_COUNT];
 	RasterizerState			rasterizerState;
 	DepthStencilState		depthStencilStates[STENCILMODE_COUNT][STENCILREFMODE_COUNT];
-	PipelineState			imagePSO[IMAGE_SHADER_COUNT][BLENDMODE_COUNT][STENCILMODE_COUNT][STENCILREFMODE_COUNT];
+	PipelineState			imagePSO[BLENDMODE_COUNT][STENCILMODE_COUNT][STENCILREFMODE_COUNT];
 	Texture					backgroundTextures[COMMANDLIST_COUNT];
 	wi::Canvas				canvases[COMMANDLIST_COUNT];
 
@@ -51,48 +44,58 @@ namespace wi::image
 		}
 		device->BindStencilRef(stencilRef, cmd);
 
-		const Sampler* sampler = wi::renderer::GetSampler(SAMPLER_LINEAR_CLAMP);
+		const Sampler* sampler = &samplers[SAMPLER_LINEAR_CLAMP];
 
 		if (params.quality == QUALITY_NEAREST)
 		{
 			if (params.sampleFlag == SAMPLEMODE_MIRROR)
-				sampler = wi::renderer::GetSampler(SAMPLER_POINT_MIRROR);
+				sampler = &samplers[SAMPLER_POINT_MIRROR];
 			else if (params.sampleFlag == SAMPLEMODE_WRAP)
-				sampler = wi::renderer::GetSampler(SAMPLER_POINT_WRAP);
+				sampler = &samplers[SAMPLER_POINT_WRAP];
 			else if (params.sampleFlag == SAMPLEMODE_CLAMP)
-				sampler = wi::renderer::GetSampler(SAMPLER_POINT_CLAMP);
+				sampler = &samplers[SAMPLER_POINT_CLAMP];
 		}
 		else if (params.quality == QUALITY_LINEAR)
 		{
 			if (params.sampleFlag == SAMPLEMODE_MIRROR)
-				sampler = wi::renderer::GetSampler(SAMPLER_LINEAR_MIRROR);
+				sampler = &samplers[SAMPLER_LINEAR_MIRROR];
 			else if (params.sampleFlag == SAMPLEMODE_WRAP)
-				sampler = wi::renderer::GetSampler(SAMPLER_LINEAR_WRAP);
+				sampler = &samplers[SAMPLER_LINEAR_WRAP];
 			else if (params.sampleFlag == SAMPLEMODE_CLAMP)
-				sampler = wi::renderer::GetSampler(SAMPLER_LINEAR_CLAMP);
+				sampler = &samplers[SAMPLER_LINEAR_CLAMP];
 		}
 		else if (params.quality == QUALITY_ANISOTROPIC)
 		{
 			if (params.sampleFlag == SAMPLEMODE_MIRROR)
-				sampler = wi::renderer::GetSampler(SAMPLER_ANISO_MIRROR);
+				sampler = &samplers[SAMPLER_ANISO_MIRROR];
 			else if (params.sampleFlag == SAMPLEMODE_WRAP)
-				sampler = wi::renderer::GetSampler(SAMPLER_ANISO_WRAP);
+				sampler = &samplers[SAMPLER_ANISO_WRAP];
 			else if (params.sampleFlag == SAMPLEMODE_CLAMP)
-				sampler = wi::renderer::GetSampler(SAMPLER_ANISO_CLAMP);
+				sampler = &samplers[SAMPLER_ANISO_CLAMP];
 		}
 
-		PushConstantsImage push;
-		push.texture_base_index = device->GetDescriptorIndex(texture, SubresourceType::SRV);
-		push.texture_mask_index = device->GetDescriptorIndex(params.maskMap, SubresourceType::SRV);
+		ImageConstants image;
+		ImagePushConstants image_push;
+		image_push.texture_base_index = device->GetDescriptorIndex(texture, SubresourceType::SRV);
+		image_push.texture_mask_index = device->GetDescriptorIndex(params.maskMap, SubresourceType::SRV);
 		if (params.isBackgroundEnabled())
 		{
-			push.texture_background_index = device->GetDescriptorIndex(&backgroundTextures[cmd], SubresourceType::SRV);
+			image_push.texture_background_index = device->GetDescriptorIndex(&backgroundTextures[cmd], SubresourceType::SRV);
 		}
 		else
 		{
-			push.texture_background_index = -1;
+			image_push.texture_background_index = -1;
 		}
-		push.sampler_index = device->GetDescriptorIndex(sampler);
+		image_push.sampler_index = device->GetDescriptorIndex(sampler);
+
+		const RenderPass* renderpass = device->GetCurrentRenderPass(cmd);
+		assert(renderpass != nullptr); // image renderer must draw inside render pass!
+		assert(!renderpass->GetDesc().attachments.empty());
+		assert(renderpass->GetDesc().attachments.front().texture != nullptr);
+		image.output_resolution.x = renderpass->GetDesc().attachments.front().texture->GetDesc().width;
+		image.output_resolution.y = renderpass->GetDesc().attachments.front().texture->GetDesc().height;
+		image.output_resolution_rcp.x = 1.0f / image.output_resolution.x;
+		image.output_resolution_rcp.y = 1.0f / image.output_resolution.y;
 
 		XMFLOAT4 color = params.color;
 		const float darken = 1 - params.fade;
@@ -107,34 +110,26 @@ namespace wi::image
 		packed_color.z = XMConvertFloatToHalf(color.z);
 		packed_color.w = XMConvertFloatToHalf(color.w);
 
-		push.packed_color.x = uint(packed_color.v);
-		push.packed_color.y = uint(packed_color.v >> 32ull);
+		image_push.packed_color.x = uint(packed_color.v);
+		image_push.packed_color.y = uint(packed_color.v >> 32ull);
 
-		push.flags = 0;
+		image_push.flags = 0;
 		if (params.isExtractNormalMapEnabled())
 		{
-			push.flags |= IMAGE_FLAG_EXTRACT_NORMALMAP;
+			image_push.flags |= IMAGE_FLAG_EXTRACT_NORMALMAP;
 		}
 		if (params.isHDR10OutputMappingEnabled())
 		{
-			assert(params.isFullScreenEnabled()); // for now, this effect is only usable in full screen rendering
-			push.flags |= IMAGE_FLAG_OUTPUT_COLOR_SPACE_HDR10_ST2084;
+			image_push.flags |= IMAGE_FLAG_OUTPUT_COLOR_SPACE_HDR10_ST2084;
 		}
 		if (params.isLinearOutputMappingEnabled())
 		{
-			assert(params.isFullScreenEnabled()); // for now, this effect is only usable in full screen rendering
-			push.flags |= IMAGE_FLAG_OUTPUT_COLOR_SPACE_LINEAR;
-			push.corners0.x = params.hdr_scaling;
+			image_push.flags |= IMAGE_FLAG_OUTPUT_COLOR_SPACE_LINEAR;
+			image_push.hdr_scaling = params.hdr_scaling;
 		}
-
 		if (params.isFullScreenEnabled())
 		{
-			// Full screen image uses a fast path with full screen triangle and no effects
-			device->BindPipelineState(&imagePSO[IMAGE_SHADER_FULLSCREEN][params.blendFlag][params.stencilComp][params.stencilRefMode], cmd);
-			device->PushConstants(&push, sizeof(push), cmd);
-			device->Draw(3, 0, cmd);
-			device->EventEnd(cmd);
-			return;
+			image_push.flags |= IMAGE_FLAG_FULLSCREEN;
 		}
 
 		XMMATRIX M = XMMatrixScaling(params.scale.x * params.siz.x, params.scale.y * params.siz.y, 1);
@@ -147,42 +142,45 @@ namespace wi::image
 
 		M = M * XMMatrixTranslation(params.pos.x, params.pos.y, params.pos.z);
 
-		if (params.customProjection != nullptr)
+		if (!params.isFullScreenEnabled())
 		{
-			M = XMMatrixScaling(1, -1, 1) * M; // reason: screen projection is Y down (like UV-space) and that is the common case for image rendering. But custom projections will use the "world space"
-			M = M * (*params.customProjection);
-		}
-		else
-		{
-			const wi::Canvas& canvas = canvases[cmd];
-			// Asserts will check that a proper canvas was set for this cmd with wi::image::SetCanvas()
-			//	The canvas must be set to have dpi aware rendering
-			assert(canvas.width > 0);
-			assert(canvas.height > 0);
-			assert(canvas.dpi > 0);
-			M = M * canvas.GetProjection();
+			if (params.customProjection != nullptr)
+			{
+				M = XMMatrixScaling(1, -1, 1) * M; // reason: screen projection is Y down (like UV-space) and that is the common case for image rendering. But custom projections will use the "world space"
+				M = M * (*params.customProjection);
+			}
+			else
+			{
+				const wi::Canvas& canvas = canvases[cmd];
+				// Asserts will check that a proper canvas was set for this cmd with wi::image::SetCanvas()
+				//	The canvas must be set to have dpi aware rendering
+				assert(canvas.width > 0);
+				assert(canvas.height > 0);
+				assert(canvas.dpi > 0);
+				M = M * canvas.GetProjection();
+			}
 		}
 
 		XMVECTOR V = XMVectorSet(params.corners[0].x - params.pivot.x, params.corners[0].y - params.pivot.y, 0, 1);
 		V = XMVector2Transform(V, M); // division by w will happen on GPU
-		XMStoreFloat4(&push.corners0, V);
+		XMStoreFloat4(&image.corners0, V);
 
 		V = XMVectorSet(params.corners[1].x - params.pivot.x, params.corners[1].y - params.pivot.y, 0, 1);
 		V = XMVector2Transform(V, M); // division by w will happen on GPU
-		XMStoreFloat4(&push.corners1, V);
+		XMStoreFloat4(&image.corners1, V);
 
 		V = XMVectorSet(params.corners[2].x - params.pivot.x, params.corners[2].y - params.pivot.y, 0, 1);
 		V = XMVector2Transform(V, M); // division by w will happen on GPU
-		XMStoreFloat4(&push.corners2, V);
+		XMStoreFloat4(&image.corners2, V);
 
 		V = XMVectorSet(params.corners[3].x - params.pivot.x, params.corners[3].y - params.pivot.y, 0, 1);
 		V = XMVector2Transform(V, M); // division by w will happen on GPU
-		XMStoreFloat4(&push.corners3, V);
+		XMStoreFloat4(&image.corners3, V);
 
 		if (params.isMirrorEnabled())
 		{
-			std::swap(push.corners0, push.corners1);
-			std::swap(push.corners2, push.corners3);
+			std::swap(image.corners0, image.corners1);
+			std::swap(image.corners2, image.corners3);
 		}
 
 		const TextureDesc& desc = texture->GetDesc();
@@ -208,8 +206,8 @@ namespace wi::image
 		half_texMulAdd.y = XMConvertFloatToHalf(texMulAdd.y);
 		half_texMulAdd.z = XMConvertFloatToHalf(texMulAdd.z);
 		half_texMulAdd.w = XMConvertFloatToHalf(texMulAdd.w);
-		push.texMulAdd.x = uint(half_texMulAdd.v);
-		push.texMulAdd.y = uint(half_texMulAdd.v >> 32ull);
+		image.texMulAdd.x = uint(half_texMulAdd.v);
+		image.texMulAdd.y = uint(half_texMulAdd.v >> 32ull);
 
 		XMFLOAT4 texMulAdd2;
 		if (params.isDrawRect2Enabled())
@@ -230,14 +228,22 @@ namespace wi::image
 		half_texMulAdd2.y = XMConvertFloatToHalf(texMulAdd2.y);
 		half_texMulAdd2.z = XMConvertFloatToHalf(texMulAdd2.z);
 		half_texMulAdd2.w = XMConvertFloatToHalf(texMulAdd2.w);
-		push.texMulAdd2.x = uint(half_texMulAdd2.v);
-		push.texMulAdd2.y = uint(half_texMulAdd2.v >> 32ull);
+		image.texMulAdd2.x = uint(half_texMulAdd2.v);
+		image.texMulAdd2.y = uint(half_texMulAdd2.v >> 32ull);
 
-		device->BindPipelineState(&imagePSO[IMAGE_SHADER_STANDARD][params.blendFlag][params.stencilComp][params.stencilRefMode], cmd);
+		device->BindPipelineState(&imagePSO[params.blendFlag][params.stencilComp][params.stencilRefMode], cmd);
 
-		device->PushConstants(&push, sizeof(push), cmd);
+		device->BindDynamicConstantBuffer(image, CBSLOT_IMAGE, cmd);
+		device->PushConstants(&image_push, sizeof(image_push), cmd);
 
-		device->Draw(4, 0, cmd);
+		if (params.isFullScreenEnabled())
+		{
+			device->Draw(3, 0, cmd);
+		}
+		else
+		{
+			device->Draw(4, 0, cmd);
+		}
 
 		device->EventEnd(cmd);
 	}
@@ -246,44 +252,30 @@ namespace wi::image
 	void LoadShaders()
 	{
 		wi::renderer::LoadShader(ShaderStage::VS, vertexShader, "imageVS.cso");
-		wi::renderer::LoadShader(ShaderStage::VS, screenVS, "screenVS.cso");
-
-		wi::renderer::LoadShader(ShaderStage::PS, imagePS[IMAGE_SHADER_STANDARD], "imagePS.cso");
-		wi::renderer::LoadShader(ShaderStage::PS, imagePS[IMAGE_SHADER_FULLSCREEN], "screenPS.cso");
-
+		wi::renderer::LoadShader(ShaderStage::PS, pixelShader, "imagePS.cso");
 
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
-		for (int i = 0; i < IMAGE_SHADER_COUNT; ++i)
+		PipelineStateDesc desc;
+		desc.vs = &vertexShader;
+		desc.ps = &pixelShader;
+		desc.rs = &rasterizerState;
+		desc.pt = PrimitiveTopology::TRIANGLESTRIP;
+
+		for (int j = 0; j < BLENDMODE_COUNT; ++j)
 		{
-			PipelineStateDesc desc;
-			desc.vs = &vertexShader;
-			if (i == IMAGE_SHADER_FULLSCREEN)
+			desc.bs = &blendStates[j];
+			for (int k = 0; k < STENCILMODE_COUNT; ++k)
 			{
-				desc.vs = &screenVS;
-			}
-			desc.rs = &rasterizerState;
-			desc.pt = PrimitiveTopology::TRIANGLESTRIP;
-
-			desc.ps = &imagePS[i];
-
-			for (int j = 0; j < BLENDMODE_COUNT; ++j)
-			{
-				desc.bs = &blendStates[j];
-				for (int k = 0; k < STENCILMODE_COUNT; ++k)
+				for (int m = 0; m < STENCILREFMODE_COUNT; ++m)
 				{
-					for (int m = 0; m < STENCILREFMODE_COUNT; ++m)
-					{
-						desc.dss = &depthStencilStates[k][m];
+					desc.dss = &depthStencilStates[k][m];
 
-						device->CreatePipelineState(&desc, &imagePSO[i][j][k][m]);
+					device->CreatePipelineState(&desc, &imagePSO[j][k][m]);
 
-					}
 				}
 			}
 		}
-
-
 	}
 
 	void Initialize()
@@ -414,6 +406,71 @@ namespace wi::image
 		bd.render_target[0].render_target_write_mask = ColorWrite::ENABLE_ALL;
 		bd.independent_blend_enable = false;
 		blendStates[BLENDMODE_MULTIPLY] = bd;
+
+		SamplerDesc samplerDesc;
+		samplerDesc.filter = Filter::MIN_MAG_MIP_LINEAR;
+		samplerDesc.address_u = TextureAddressMode::MIRROR;
+		samplerDesc.address_v = TextureAddressMode::MIRROR;
+		samplerDesc.address_w = TextureAddressMode::MIRROR;
+		samplerDesc.mip_lod_bias = 0.0f;
+		samplerDesc.max_anisotropy = 0;
+		samplerDesc.comparison_func = ComparisonFunc::NEVER;
+		samplerDesc.border_color = SamplerBorderColor::TRANSPARENT_BLACK;
+		samplerDesc.min_lod = 0;
+		samplerDesc.max_lod = std::numeric_limits<float>::max();
+		device->CreateSampler(&samplerDesc, &samplers[SAMPLER_LINEAR_MIRROR]);
+
+		samplerDesc.filter = Filter::MIN_MAG_MIP_LINEAR;
+		samplerDesc.address_u = TextureAddressMode::CLAMP;
+		samplerDesc.address_v = TextureAddressMode::CLAMP;
+		samplerDesc.address_w = TextureAddressMode::CLAMP;
+		device->CreateSampler(&samplerDesc, &samplers[SAMPLER_LINEAR_CLAMP]);
+
+		samplerDesc.filter = Filter::MIN_MAG_MIP_LINEAR;
+		samplerDesc.address_u = TextureAddressMode::WRAP;
+		samplerDesc.address_v = TextureAddressMode::WRAP;
+		samplerDesc.address_w = TextureAddressMode::WRAP;
+		device->CreateSampler(&samplerDesc, &samplers[SAMPLER_LINEAR_WRAP]);
+
+		samplerDesc.filter = Filter::MIN_MAG_MIP_POINT;
+		samplerDesc.address_u = TextureAddressMode::MIRROR;
+		samplerDesc.address_v = TextureAddressMode::MIRROR;
+		samplerDesc.address_w = TextureAddressMode::MIRROR;
+		device->CreateSampler(&samplerDesc, &samplers[SAMPLER_POINT_MIRROR]);
+
+		samplerDesc.filter = Filter::MIN_MAG_MIP_POINT;
+		samplerDesc.address_u = TextureAddressMode::WRAP;
+		samplerDesc.address_v = TextureAddressMode::WRAP;
+		samplerDesc.address_w = TextureAddressMode::WRAP;
+		device->CreateSampler(&samplerDesc, &samplers[SAMPLER_POINT_WRAP]);
+
+
+		samplerDesc.filter = Filter::MIN_MAG_MIP_POINT;
+		samplerDesc.address_u = TextureAddressMode::CLAMP;
+		samplerDesc.address_v = TextureAddressMode::CLAMP;
+		samplerDesc.address_w = TextureAddressMode::CLAMP;
+		device->CreateSampler(&samplerDesc, &samplers[SAMPLER_POINT_CLAMP]);
+
+		samplerDesc.filter = Filter::ANISOTROPIC;
+		samplerDesc.address_u = TextureAddressMode::CLAMP;
+		samplerDesc.address_v = TextureAddressMode::CLAMP;
+		samplerDesc.address_w = TextureAddressMode::CLAMP;
+		samplerDesc.max_anisotropy = 16;
+		device->CreateSampler(&samplerDesc, &samplers[SAMPLER_ANISO_CLAMP]);
+
+		samplerDesc.filter = Filter::ANISOTROPIC;
+		samplerDesc.address_u = TextureAddressMode::WRAP;
+		samplerDesc.address_v = TextureAddressMode::WRAP;
+		samplerDesc.address_w = TextureAddressMode::WRAP;
+		samplerDesc.max_anisotropy = 16;
+		device->CreateSampler(&samplerDesc, &samplers[SAMPLER_ANISO_WRAP]);
+
+		samplerDesc.filter = Filter::ANISOTROPIC;
+		samplerDesc.address_u = TextureAddressMode::MIRROR;
+		samplerDesc.address_v = TextureAddressMode::MIRROR;
+		samplerDesc.address_w = TextureAddressMode::MIRROR;
+		samplerDesc.max_anisotropy = 16;
+		device->CreateSampler(&samplerDesc, &samplers[SAMPLER_ANISO_MIRROR]);
 
 		static wi::eventhandler::Handle handle = wi::eventhandler::Subscribe(wi::eventhandler::EVENT_RELOAD_SHADERS, [](uint64_t userdata) { LoadShaders(); });
 		LoadShaders();

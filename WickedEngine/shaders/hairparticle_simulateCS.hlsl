@@ -155,7 +155,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 		// Apply forces:
 		velocity += force;
-		normal += velocity * GetFrame().delta_time;
+		normal += velocity * clamp(GetFrame().delta_time, 0, 0.1); // clamp delta time to avoid simulation blowing up
 
 		// Drag:
 		velocity *= 0.98f;

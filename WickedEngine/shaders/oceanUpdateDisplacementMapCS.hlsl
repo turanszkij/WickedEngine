@@ -1,3 +1,4 @@
+#include "globals.hlsli"
 #include "ShaderInterop_Ocean.h"
 
 StructuredBuffer<float2> g_InputDxyz : register(t0);

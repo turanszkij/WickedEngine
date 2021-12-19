@@ -668,6 +668,7 @@ void RenderPath3D::Render() const
 
 	//	async compute parallel with depth prepass
 	cmd = device->BeginCommandList(QUEUE_COMPUTE);
+	CommandList cmd_prepareframe_async = cmd;
 	device->WaitCommandList(cmd, cmd_prepareframe);
 	wi::jobsystem::Execute(ctx, [this, cmd](wi::jobsystem::JobArgs args) {
 
@@ -853,6 +854,7 @@ void RenderPath3D::Render() const
 
 	// Updating textures:
 	cmd = device->BeginCommandList();
+	device->WaitCommandList(cmd, cmd_prepareframe_async);
 	wi::jobsystem::Execute(ctx, [cmd, this](wi::jobsystem::JobArgs args) {
 		wi::renderer::BindCommonResources(cmd);
 		wi::renderer::BindCameraCB(
@@ -1592,6 +1594,7 @@ void RenderPath3D::setSSREnabled(bool value)
 		desc.format = Format::R16G16B16A16_FLOAT;
 		desc.width = internalResolution.x / 2;
 		desc.height = internalResolution.y / 2;
+		desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 		device->CreateTexture(&desc, nullptr, &rtSSR);
 		device->SetName(&rtSSR, "rtSSR");
 

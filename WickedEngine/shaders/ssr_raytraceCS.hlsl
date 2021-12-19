@@ -232,7 +232,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	prim.unpack(texture_gbuffer0[DTid.xy * 2]);
 
 	Surface surface;
-	surface.load(prim, reconstruct_position(uv, depth));
+	if (!surface.load(prim, reconstruct_position(uv, depth)))
+	{
+		return;
+	}
 	if (surface.roughness > 0.6)
 	{
 		texture_raytrace[DTid.xy] = 0;

@@ -1,4 +1,5 @@
 #include "globals.hlsli"
+#include "objectHF.hlsli"
 
 struct GSInput
 {

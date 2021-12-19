@@ -48,7 +48,7 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <CopyFileToFolders Include="..\WickedEngine\dxil.dll" />
     <CopyFileToFolders Include="..\WickedEngine\dxcompiler.dll" />
+    <CopyFileToFolders Include="..\WickedEngine\dxil.dll" />
   </ItemGroup>
 </Project>

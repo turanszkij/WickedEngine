@@ -1422,8 +1422,9 @@ namespace wi::gui
 				}
 			}
 		}
-
 		font.params.posY = translation.y + sprites[state].params.siz.y * 0.5f;
+
+		selected = std::min((int)items.size(), selected);
 	}
 	void ComboBox::Render(const wi::Canvas& canvas, CommandList cmd) const
 	{

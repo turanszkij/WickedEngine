@@ -1,3 +1,4 @@
+#include "globals.hlsli"
 #include "ShaderInterop_FFTGenerator.h"
 
 #define COS_PI_4_16 0.70710678118654752440084436210485f

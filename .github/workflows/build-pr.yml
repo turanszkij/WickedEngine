@@ -25,10 +25,8 @@ jobs:
       shell: cmd
       run: |
         move BUILD\x64\Release\Editor_Windows\Editor_Windows.exe Editor\
-        xcopy WickedEngine\*.dll Editor\
 
         move BUILD\x64\Release\Tests\Tests.exe Tests\
-        xcopy WickedEngine\*.dll Tests\
         
     - name: Package Editor
       uses: actions/upload-artifact@v2
@@ -46,7 +44,6 @@ jobs:
           Editor/*.ico
           Editor/*.lua
           Editor/*.exe
-          Editor/*.dll
           
     - name: Package Tests
       uses: actions/upload-artifact@v2
@@ -65,7 +62,6 @@ jobs:
           Tests/*.lua
           Tests/*.ttf
           Tests/*.exe
-          Tests/*.dll
 
     
   linux:

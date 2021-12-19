@@ -546,7 +546,7 @@ Wicked Engine supports bindless resource management, this can greatly improve pe
 
 Related functions to this feature:
 - `GetDescriptorIndex()` : returns an `int` that identifies the resource in bindless space. The queried resource can be a `Sampler` or a `GPUResource`. If the resource is not usable (for example if it was not created), then the function returns `-1`. **In this case, the shaders must not use the resource, but instead rely on dynamic branching to avoid it, because this would be undefined behaviour and could result in a GPU hang**. Otherwise, the index can be used by shaders to index into a descriptor heap.
-- `PushConstants()` : This is an easy way to set a small amount of 32-bit values on the GPU, usable by shaders that declared a `PUSHCONSTANT(name, type)` block. There can be one push constant block per pipeline (graphics, compute or raytracing).
+- `PushConstants()` : This is an easy way to set a small amount of 32-bit values on the GPU, usable by shaders that declared a `PUSHCONSTANT(name, type)` block. There can be one push constant block per pipeline (graphics, compute or raytracing). The push constants will be bound to the last set pipeline, so only use this after binding a graphics pipeline state or compute shader.
 
 The shaders can use bindless descriptors with the following syntax example:
 

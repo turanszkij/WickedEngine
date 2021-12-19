@@ -3,10 +3,11 @@
 
 #include "ShaderInterop.h"
 
-CBUFFER(SortConstants, CBSLOT_OTHER_GPUSORTLIB)
+struct SortConstants
 {
 	int3 job_params;
 	uint counterReadOffset;
 };
+PUSHCONSTANT(sort, SortConstants);
 
 #endif // WI_SHADERINTEROP_GPUSORTLIB_H

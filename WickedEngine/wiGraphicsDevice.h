@@ -25,10 +25,10 @@ namespace wi::graphics
 	// Descriptor binding counts:
 	//	It's OK increase these limits if not enough
 	//	But it's better to refactor shaders to use bindless descriptors if they require more resources
-	static constexpr uint32_t DESCRIPTORBINDER_CBV_COUNT = 15;
-	static constexpr uint32_t DESCRIPTORBINDER_SRV_COUNT = 64;
+	static constexpr uint32_t DESCRIPTORBINDER_CBV_COUNT = 14;
+	static constexpr uint32_t DESCRIPTORBINDER_SRV_COUNT = 16;
 	static constexpr uint32_t DESCRIPTORBINDER_UAV_COUNT = 16;
-	static constexpr uint32_t DESCRIPTORBINDER_SAMPLER_COUNT = 16;
+	static constexpr uint32_t DESCRIPTORBINDER_SAMPLER_COUNT = 8;
 	struct DescriptorBindingTable
 	{
 		GPUBuffer CBV[DESCRIPTORBINDER_CBV_COUNT];
@@ -94,9 +94,6 @@ namespace wi::graphics
 		virtual void WriteShadingRateValue(ShadingRate rate, void* dest) const {};
 		virtual void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) const {}
 		virtual void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) const {}
-
-		// Set a sampler that can be used by any shaders that will be created after this call, without needing to bind that sampler
-		virtual void SetCommonSampler(const StaticSampler* sam) = 0;
 
 		// Set a debug name for the GPUResource, which will be visible in graphics debuggers
 		virtual void SetName(GPUResource* pResource, const char* name) = 0;
@@ -196,7 +193,7 @@ namespace wi::graphics
 		virtual void BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src = nullptr) {}
 		virtual void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) {}
 		virtual void DispatchRays(const DispatchRaysDesc* desc, CommandList cmd) {}
-		virtual void PushConstants(const void* data, uint32_t size, CommandList cmd) = 0;
+		virtual void PushConstants(const void* data, uint32_t size, CommandList cmd, uint32_t offset = 0) = 0;
 		virtual void PredicationBegin(const GPUBuffer* buffer, uint64_t offset, PredicationOp op, CommandList cmd) {}
 		virtual void PredicationEnd(CommandList cmd) {}
 
@@ -204,6 +201,7 @@ namespace wi::graphics
 		virtual void EventEnd(CommandList cmd) = 0;
 		virtual void SetMarker(const char* name, CommandList cmd) = 0;
 
+		virtual const RenderPass* GetCurrentRenderPass(CommandList cmd) const = 0;
 
 
 		// Some useful helpers:

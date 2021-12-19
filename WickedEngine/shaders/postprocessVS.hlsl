@@ -1,4 +1,5 @@
 #include "globals.hlsli"
+#include "ShaderInterop_Postprocess.h"
 
 struct Output
 {

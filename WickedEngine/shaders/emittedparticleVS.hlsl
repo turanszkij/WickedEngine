@@ -9,9 +9,9 @@ static const float3 BILLBOARD[] = {
 	float3(1, 1, 0),	// 4
 };
 
-StructuredBuffer<Particle> particleBuffer : register(t21);
-StructuredBuffer<uint> culledIndirectionBuffer : register(t22);
-StructuredBuffer<uint> culledIndirectionBuffer2 : register(t23);
+StructuredBuffer<Particle> particleBuffer : register(t1);
+StructuredBuffer<uint> culledIndirectionBuffer : register(t2);
+StructuredBuffer<uint> culledIndirectionBuffer2 : register(t3);
 
 VertextoPixel main(uint vid : SV_VertexID, uint instanceID : SV_InstanceID)
 {

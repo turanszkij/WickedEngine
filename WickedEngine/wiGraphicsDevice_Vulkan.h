@@ -179,7 +179,15 @@ namespace wi::graphics
 			wi::vector<VkDescriptorImageInfo> imageInfos;
 			wi::vector<VkBufferView> texelBufferViews;
 			wi::vector<VkWriteDescriptorSetAccelerationStructureKHR> accelerationStructureViews;
-			bool dirty = false;
+
+			enum DIRTY_FLAGS
+			{
+				DIRTY_NONE = 0,
+				DIRTY_DESCRIPTOR = 1 << 1,
+
+				DIRTY_ALL = ~0,
+			};
+			uint32_t dirty = DIRTY_NONE;
 
 			void init(GraphicsDevice_Vulkan* device);
 			void reset();
@@ -215,13 +223,6 @@ namespace wi::graphics
 		uint32_t vb_strides[COMMANDLIST_COUNT][8] = {};
 		size_t vb_hash[COMMANDLIST_COUNT] = {};
 
-		struct DeferredPushConstantData
-		{
-			uint8_t data[128];
-			uint32_t size;
-		};
-		DeferredPushConstantData pushconstants[COMMANDLIST_COUNT] = {};
-
 		bool dirty_pso[COMMANDLIST_COUNT] = {};
 		void pso_validate(CommandList cmd);
 
@@ -231,7 +232,8 @@ namespace wi::graphics
 
 		std::atomic<CommandList::index_type> cmd_count{ 0 };
 
-		wi::vector<StaticSampler> common_samplers;
+		static constexpr uint32_t immutable_sampler_slot_begin = 100;
+		wi::vector<VkSampler> immutable_samplers;
 
 	public:
 		GraphicsDevice_Vulkan(wi::platform::window_type window, bool debuglayer = false);
@@ -257,8 +259,6 @@ namespace wi::graphics
 		void WriteShadingRateValue(ShadingRate rate, void* dest) const override;
 		void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) const override;
 		void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) const override;
-		
-		void SetCommonSampler(const StaticSampler* sam) override;
 
 		void SetName(GPUResource* pResource, const char* name) override;
 
@@ -318,13 +318,15 @@ namespace wi::graphics
 		void BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src = nullptr) override;
 		void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) override;
 		void DispatchRays(const DispatchRaysDesc* desc, CommandList cmd) override;
-		void PushConstants(const void* data, uint32_t size, CommandList cmd) override;
+		void PushConstants(const void* data, uint32_t size, CommandList cmd, uint32_t offset = 0) override;
 		void PredicationBegin(const GPUBuffer* buffer, uint64_t offset, PredicationOp op, CommandList cmd) override;
 		void PredicationEnd(CommandList cmd) override;
 
 		void EventBegin(const char* name, CommandList cmd) override;
 		void EventEnd(CommandList cmd) override;
 		void SetMarker(const char* name, CommandList cmd) override;
+
+		const RenderPass* GetCurrentRenderPass(CommandList cmd) const override;
 
 		struct AllocationHandler
 		{

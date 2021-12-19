@@ -635,6 +635,7 @@ namespace wi
 					GPUBarrier::Buffer(&counterBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 					GPUBarrier::Buffer(&distanceBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
 				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
 			device->EventEnd(cmd);
 
@@ -731,7 +732,7 @@ namespace wi
 			&culledIndirectionBuffer,
 			&culledIndirectionBuffer2,
 		};
-		device->BindResources(res, 20, arraysize(res), cmd);
+		device->BindResources(res, 0, arraysize(res), cmd);
 
 		if (ALLOW_MESH_SHADER && device->CheckCapability(GraphicsDeviceCapability::MESH_SHADER))
 		{

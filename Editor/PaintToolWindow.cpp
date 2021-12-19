@@ -307,7 +307,6 @@ void PaintToolWindow::Update(float dt)
 
 			device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_PAINT_TEXTURE), cmd);
 
-			wi::renderer::BindCommonResources(cmd);
 			device->BindResource(wi::texturehelper::getWhite(), 0, cmd);
 			device->BindUAV(&editTexture, 0, cmd);
 
