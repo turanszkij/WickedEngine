@@ -732,8 +732,53 @@ namespace wi::helper
 
 	bool FileExists(const std::string& fileName)
 	{
+#ifndef PLATFORM_UWP
 		bool exists = std::filesystem::exists(fileName);
 		return exists;
+#else
+		using namespace winrt::Windows::Storage;
+		using namespace winrt::Windows::Storage::Streams;
+		using namespace winrt::Windows::Foundation;
+		std::wstring wstr;
+		std::filesystem::path filepath = fileName;
+		filepath = std::filesystem::absolute(filepath);
+		StringConvert(filepath.string(), wstr);
+		bool success = false;
+
+		auto async_helper = [&]() -> IAsyncAction {
+			try
+			{
+				auto file = co_await StorageFile::GetFileFromPathAsync(wstr);
+				success = true;
+			}
+			catch (winrt::hresult_error const& ex)
+			{
+				switch (ex.code())
+				{
+				case E_ACCESSDENIED:
+					wi::backlog::post("Opening file failed: " + fileName + " | Reason: Permission Denied!");
+					break;
+				default:
+					break;
+				}
+			}
+
+		};
+
+		if (winrt::impl::is_sta_thread())
+		{
+			std::thread([&] { async_helper().get(); }).join(); // can't block coroutine from ui thread
+		}
+		else
+		{
+			async_helper().get();
+		}
+
+		if (success)
+		{
+			return true;
+		}
+#endif // PLATFORM_UWP
 	}
 
 	std::string GetTempDirectoryPath()

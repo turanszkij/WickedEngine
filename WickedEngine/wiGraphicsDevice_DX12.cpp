@@ -1732,20 +1732,18 @@ using namespace dx12_internal;
 					const uint64_t wrapped_offset_end = wrapped_offset + stats.descriptorCopyCount;
 
 					// Check that gpu offset doesn't intersect with our newly allocated range, if it does, we need to wait until gpu finishes with it:
+					//	First check is with the cached completed value to avoid API call into fence object
 					uint64_t wrapped_gpu_offset = heap.cached_completedValue % wrap_effective_size;
-					int loop_cnt = 0; // safety
-					while (wrapped_offset < wrapped_gpu_offset && wrapped_gpu_offset <= wrapped_offset_end)
+					if ((wrapped_offset < wrapped_gpu_offset) && (wrapped_gpu_offset < wrapped_offset_end))
 					{
-						wrapped_gpu_offset = device->descriptorheap_res.fence->GetCompletedValue() % wrap_effective_size;
-
-						// Check that the GPU has even a chance of freeing up the requested descriptors:
-						const uint64_t wrapped_signaled_offset = heap.fenceValue % wrap_effective_size;
-						if (wrapped_signaled_offset <= wrapped_offset_end || loop_cnt > 10)
+						// Second check is with current fence value with API call:
+						wrapped_gpu_offset = heap.fence->GetCompletedValue() % wrap_effective_size;
+						if ((wrapped_offset < wrapped_gpu_offset) && (wrapped_gpu_offset < wrapped_offset_end))
 						{
-							assert(0);
-							break; // break out from waiting for GPU, because it might cause infinite loop
+							// Third step is actual wait until GPU updates fence so that requested descriptors are free:
+							HRESULT hr = heap.fence->SetEventOnCompletion(heap.fenceValue, nullptr);
+							assert(SUCCEEDED(hr));
 						}
-						loop_cnt++;
 					}
 
 					gpu_handle.ptr += (size_t)ringoffset;
