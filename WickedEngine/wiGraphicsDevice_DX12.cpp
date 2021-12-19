@@ -1720,11 +1720,11 @@ using namespace dx12_internal;
 					//	The excess amount is essentially equal to the maximum number of descriptors that can be allocated at once.
 
 					// The reservation is the maximum amount of descriptors that can be allocated once
-					static constexpr uint32_t wrap_reservation_cbv_srv_uav = DESCRIPTORBINDER_CBV_COUNT + DESCRIPTORBINDER_SRV_COUNT + DESCRIPTORBINDER_UAV_COUNT + 1;
-					static constexpr uint32_t wrap_reservation_sampler = DESCRIPTORBINDER_SAMPLER_COUNT + 1;
+					static constexpr uint32_t wrap_reservation_cbv_srv_uav = DESCRIPTORBINDER_CBV_COUNT + DESCRIPTORBINDER_SRV_COUNT + DESCRIPTORBINDER_UAV_COUNT;
+					static constexpr uint32_t wrap_reservation_sampler = DESCRIPTORBINDER_SAMPLER_COUNT;
 					const uint32_t wrap_reservation = stats.sampler_table ? wrap_reservation_sampler : wrap_reservation_cbv_srv_uav;
 					const uint32_t wrap_effective_size = heap.heapDesc.NumDescriptors - bindless_capacity - wrap_reservation;
-					assert(wrap_reservation > stats.descriptorCopyCount); // for correct lockless wrap behaviour
+					assert(wrap_reservation >= stats.descriptorCopyCount); // for correct lockless wrap behaviour
 
 					const uint64_t offset = heap.allocationOffset.fetch_add(stats.descriptorCopyCount);
 					const uint64_t wrapped_offset = offset % wrap_effective_size;
@@ -1732,35 +1732,20 @@ using namespace dx12_internal;
 					const uint64_t wrapped_offset_end = wrapped_offset + stats.descriptorCopyCount;
 
 					// Check that gpu offset doesn't intersect with our newly allocated range, if it does, we need to wait until gpu finishes with it:
-					uint64_t gpu_offset = heap.cached_completedValue;
-					uint64_t wrapped_gpu_offset = gpu_offset % wrap_effective_size;
-					while (wrapped_offset < wrapped_gpu_offset && wrapped_gpu_offset < wrapped_offset_end)
+					uint64_t wrapped_gpu_offset = heap.cached_completedValue % wrap_effective_size;
+					int loop_cnt = 0; // safety
+					while (wrapped_offset < wrapped_gpu_offset && wrapped_gpu_offset <= wrapped_offset_end)
 					{
-						if (stats.sampler_table)
-						{
-							wi::backlog::post("DX12 descriptor heap [sampler] allocation caused GPU drain.", wi::backlog::LogLevel::Warning);
-						}
-						else
-						{
-							wi::backlog::post("DX12 descriptor heap [cbv/srv/uav] allocation caused GPU drain.", wi::backlog::LogLevel::Warning);
-						}
-						gpu_offset = device->descriptorheap_res.fence->GetCompletedValue();
-						wrapped_gpu_offset = gpu_offset % wrap_effective_size;
+						wrapped_gpu_offset = device->descriptorheap_res.fence->GetCompletedValue() % wrap_effective_size;
 
 						// Check that the GPU has even a chance of freeing up the requested descriptors:
 						const uint64_t wrapped_signaled_offset = heap.fenceValue % wrap_effective_size;
-						if (wrapped_signaled_offset <= wrapped_offset_end)
+						if (wrapped_signaled_offset <= wrapped_offset_end || loop_cnt > 10)
 						{
-							if (stats.sampler_table)
-							{
-								wi::backlog::post("DX12 descriptor heap [sampler] oversubscription might cause application instability.", wi::backlog::LogLevel::Error);
-							}
-							else
-							{
-								wi::backlog::post("DX12 descriptor heap [cbv/srv/uav] oversubscription might cause application instability.", wi::backlog::LogLevel::Error);
-							}
+							assert(0);
 							break; // break out from waiting for GPU, because it might cause infinite loop
 						}
+						loop_cnt++;
 					}
 
 					gpu_handle.ptr += (size_t)ringoffset;
