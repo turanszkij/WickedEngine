@@ -109,9 +109,7 @@ namespace wi::renderer
 		{
 			uint16_t index;
 			uint16_t distance;
-			bool operator<(const VisibleLight& other) {
-				return uint32_t(index | (uint32_t(distance) << 16)) < uint32_t(other.index | (uint32_t(other.distance) << 16));
-			}
+			constexpr operator uint32_t() const { return index | (uint32_t(distance) << 16u); }
 		};
 		wi::vector<VisibleLight> visibleLights;
 
