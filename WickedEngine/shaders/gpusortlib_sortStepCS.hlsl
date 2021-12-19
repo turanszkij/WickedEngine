@@ -35,7 +35,7 @@ RWStructuredBuffer<uint> indexBuffer : register(u0);
 void main(uint3 Gid	: SV_GroupID,
 	uint3 GTid : SV_GroupThreadID)
 {
-	uint NumElements = counterBuffer.Load(counterReadOffset);
+	uint NumElements = counterBuffer.Load(sort.counterReadOffset);
 
 	uint4 tgp;
 
@@ -46,11 +46,11 @@ void main(uint3 Gid	: SV_GroupID,
 
 	uint localID = tgp.x + GTid.x; // calculate threadID within this sortable-array
 
-	uint index_low = localID & (job_params.x - 1);
+	uint index_low = localID & (sort.job_params.x - 1);
 	uint index_high = 2 * (localID - index_low);
 
 	uint index = tgp.y + index_high + index_low;
-	uint nSwapElem = tgp.y + index_high + job_params.y + job_params.z*index_low;
+	uint nSwapElem = tgp.y + index_high + sort.job_params.y + sort.job_params.z*index_low;
 
 	if (nSwapElem < tgp.y + tgp.z)
 	{

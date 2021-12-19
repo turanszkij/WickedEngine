@@ -57,9 +57,8 @@ namespace wi::gpusortlib
 		device->EventBegin("GPUSortLib", cmd);
 
 
-		SortConstants sc;
-		sc.counterReadOffset = counterReadOffset;
-		device->BindDynamicConstantBuffer(sc, CB_GETBINDSLOT(SortConstants), cmd);
+		SortConstants sort;
+		sort.counterReadOffset = counterReadOffset;
 
 		// initialize sorting arguments:
 		{
@@ -82,6 +81,7 @@ namespace wi::gpusortlib
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
 
+			device->PushConstants(&sort, sizeof(sort), cmd);
 			device->Dispatch(1, 1, 1, cmd);
 
 			{
@@ -125,6 +125,7 @@ namespace wi::gpusortlib
 
 			// sort all buffers of size 512 (and presort bigger ones)
 			device->BindComputeShader(&sortCS, cmd);
+			device->PushConstants(&sort, sizeof(sort), cmd);
 			device->DispatchIndirect(&indirectBuffer, 0, cmd);
 
 			GPUBarrier barriers[] = {
@@ -158,22 +159,21 @@ namespace wi::gpusortlib
 			uint32_t nMergeSize = presorted * 2;
 			for (uint32_t nMergeSubSize = nMergeSize >> 1; nMergeSubSize > 256; nMergeSubSize = nMergeSubSize >> 1)
 			{
-				SortConstants sc;
-				sc.job_params.x = nMergeSubSize;
+				SortConstants sort;
+				sort.job_params.x = nMergeSubSize;
 				if (nMergeSubSize == nMergeSize >> 1)
 				{
-					sc.job_params.y = (2 * nMergeSubSize - 1);
-					sc.job_params.z = -1;
+					sort.job_params.y = (2 * nMergeSubSize - 1);
+					sort.job_params.z = -1;
 				}
 				else
 				{
-					sc.job_params.y = nMergeSubSize;
-					sc.job_params.z = 1;
+					sort.job_params.y = nMergeSubSize;
+					sort.job_params.z = 1;
 				}
-				sc.counterReadOffset = counterReadOffset;
+				sort.counterReadOffset = counterReadOffset;
 
-				device->BindDynamicConstantBuffer(sc, CB_GETBINDSLOT(SortConstants), cmd);
-
+				device->PushConstants(&sort, sizeof(sort), cmd);
 				device->Dispatch(numThreadGroups, 1, 1, cmd);
 
 				GPUBarrier barriers[] = {
@@ -183,6 +183,7 @@ namespace wi::gpusortlib
 			}
 
 			device->BindComputeShader(&sortInnerCS, cmd);
+			device->PushConstants(&sort, sizeof(sort), cmd);
 			device->Dispatch(numThreadGroups, 1, 1, cmd);
 
 			GPUBarrier barriers[] = {

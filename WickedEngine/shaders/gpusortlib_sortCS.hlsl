@@ -58,7 +58,7 @@ void main(uint3 Gid	: SV_GroupID,
 	uint3 GTid : SV_GroupThreadID,
 	uint	GI : SV_GroupIndex)
 {
-	uint NumElements = counterBuffer.Load(counterReadOffset);
+	uint NumElements = counterBuffer.Load(sort.counterReadOffset);
 
 	uint GlobalBaseIndex = (Gid.x * SORT_SIZE) + GTid.x;
 	uint LocalBaseIndex = GI;

@@ -9,7 +9,7 @@ RWByteAddressBuffer indirectBuffers : register(u0);
 void main( uint3 DTid : SV_DispatchThreadID )
 {
 	// retrieve GPU itemcount:
-	uint itemCount = counterBuffer.Load(counterReadOffset);
+	uint itemCount = counterBuffer.Load(sort.counterReadOffset);
 
 	if (itemCount > 0)
 	{
