@@ -6,7 +6,7 @@ VertextoPixel main(uint vI : SV_VertexID)
 	VertextoPixel Out;
 
 	[branch]
-	if (image.flags & IMAGE_FLAG_FULLSCREEN)
+	if (image_push.flags & IMAGE_FLAG_FULLSCREEN)
 	{
 		vertexID_create_fullscreen_triangle(vI, Out.pos);
 	}

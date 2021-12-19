@@ -11,12 +11,16 @@ struct FontVertex
 struct FontConstants
 {
 	float4x4 transform;
+};
+CONSTANTBUFFER(font, FontConstants, CBSLOT_FONT);
+
+struct FontPushConstants
+{
 	uint color;
 	int buffer_index;
 	uint buffer_offset;
 	int texture_index;
 };
-CONSTANTBUFFER(font, FontConstants, CBSLOT_FONT);
-
+PUSHCONSTANT(font_push, FontPushConstants);
 
 #endif // WI_SHADERINTEROP_FONT_H

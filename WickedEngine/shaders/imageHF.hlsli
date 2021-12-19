@@ -26,7 +26,7 @@ struct VertextoPixel
 		float2 uv1;
 
 		[branch]
-		if (image.flags & IMAGE_FLAG_FULLSCREEN)
+		if (image_push.flags & IMAGE_FLAG_FULLSCREEN)
 		{
 			uv0 = uv_screen();
 			uv1 = uv0;

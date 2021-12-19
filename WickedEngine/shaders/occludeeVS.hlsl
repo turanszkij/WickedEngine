@@ -7,7 +7,7 @@ struct CubeConstants
 PUSHCONSTANT(cube, CubeConstants);
 
 #undef WICKED_ENGINE_DEFAULT_ROOTSIGNATURE // don't use auto root signature!
-[RootSignature("RootConstants(num32BitConstants=16, b999)")]
+[RootSignature("RootConstants(num32BitConstants=16, b999, visibility = SHADER_VISIBILITY_VERTEX)")]
 float4 main(uint vID : SV_VertexID) : SV_Position
 {
 	// This is a 14 vertex count trianglestrip cube:

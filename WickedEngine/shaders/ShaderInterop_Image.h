@@ -19,7 +19,11 @@ struct ImageConstants
 
 	uint2 output_resolution;
 	float2 output_resolution_rcp;
+};
+CONSTANTBUFFER(image, ImageConstants, CBSLOT_IMAGE);
 
+struct ImagePushConstants
+{
 	uint2 packed_color; // packed half4
 	uint flags;
 	float hdr_scaling;
@@ -29,7 +33,6 @@ struct ImageConstants
 	int texture_mask_index;
 	int texture_background_index;
 };
-CONSTANTBUFFER(image, ImageConstants, CBSLOT_IMAGE);
-
+PUSHCONSTANT(image_push, ImagePushConstants);
 
 #endif // WI_SHADERINTEROP_IMAGE_H

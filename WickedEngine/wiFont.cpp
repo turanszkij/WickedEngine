@@ -529,9 +529,10 @@ namespace wi::font
 			device->BindPipelineState(&PSO, cmd);
 
 			FontConstants font;
-			font.buffer_index = device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV);
-			font.buffer_offset = (uint32_t)mem.offset;
-			font.texture_index = device->GetDescriptorIndex(&texture, SubresourceType::SRV);
+			FontPushConstants font_push;
+			font_push.buffer_index = device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV);
+			font_push.buffer_offset = (uint32_t)mem.offset;
+			font_push.texture_index = device->GetDescriptorIndex(&texture, SubresourceType::SRV);
 
 			const wi::Canvas& canvas = canvases[cmd];
 			// Asserts will check that a proper canvas was set for this cmd with wi::image::SetCanvas()
@@ -548,9 +549,11 @@ namespace wi::font
 					XMMatrixTranslation((float)newProps.posX + 1, (float)newProps.posY + 1, 0)
 					* Projection
 				);
-				font.color = newProps.shadowColor.rgba;
-
 				device->BindDynamicConstantBuffer(font, CBSLOT_FONT, cmd);
+
+				font_push.color = newProps.shadowColor.rgba;
+				device->PushConstants(&font_push, sizeof(font_push), cmd);
+
 				device->DrawInstanced(4, quadCount, 0, 0, cmd);
 			}
 
@@ -559,9 +562,11 @@ namespace wi::font
 				XMMatrixTranslation((float)newProps.posX, (float)newProps.posY, 0)
 				* Projection
 			);
-			font.color = newProps.color.rgba;
-
 			device->BindDynamicConstantBuffer(font, CBSLOT_FONT, cmd);
+
+			font_push.color = newProps.color.rgba;
+			device->PushConstants(&font_push, sizeof(font_push), cmd);
+
 			device->DrawInstanced(4, quadCount, 0, 0, cmd);
 
 			device->EventEnd(cmd);
