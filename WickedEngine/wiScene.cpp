@@ -3911,6 +3911,12 @@ namespace wi::scene
 			// Serialize it from file:
 			scene.Serialize(archive);
 
+			if (!attached && XMMatrixIsIdentity(transformMatrix))
+			{
+				// fast path: no attaching, no tansformation, scene is loaded as-is
+				return INVALID_ENTITY;
+			}
+
 			// First, create new root:
 			Entity root = CreateEntity();
 			scene.transforms.Create(root);
