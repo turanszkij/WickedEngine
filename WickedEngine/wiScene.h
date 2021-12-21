@@ -83,7 +83,7 @@ namespace wi::scene
 		XMMATRIX GetLocalMatrix() const;
 		// Applies the local space to the world space matrix. This overwrites world matrix
 		void UpdateTransform();
-		// Apply a parent transform relative to the loacl space. This overwrites world matrix
+		// Apply a parent transform relative to the local space. This overwrites world matrix
 		void UpdateTransform_Parented(const TransformComponent& parent);
 		// Apply the world matrix to the local space. This overwrites scale, rotation, translation
 		void ApplyTransform();

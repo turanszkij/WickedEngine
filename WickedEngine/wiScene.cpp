@@ -14,8 +14,6 @@
 
 #include "shaders/ShaderInterop_SurfelGI.h"
 
-#include <functional>
-
 using namespace wi::ecs;
 using namespace wi::enums;
 using namespace wi::graphics;
@@ -1604,15 +1602,17 @@ namespace wi::scene
 
 		RunHierarchyUpdateSystem(ctx);
 
+		RunMeshUpdateSystem(ctx);
+
+		RunMaterialUpdateSystem(ctx);
+
+		wi::jobsystem::Wait(ctx); // dependencies
+
 		RunSpringUpdateSystem(ctx);
 
 		RunInverseKinematicsUpdateSystem(ctx);
 
 		RunArmatureUpdateSystem(ctx);
-
-		RunMeshUpdateSystem(ctx);
-
-		RunMaterialUpdateSystem(ctx);
 
 		RunImpostorUpdateSystem(ctx);
 
@@ -2177,32 +2177,8 @@ namespace wi::scene
 			Component_Detach(entity);
 		}
 
-		// Add a new hierarchy node to the end of container:
-		hierarchy.Create(entity).parentID = parent;
-
-		// Detect breaks in the tree and fix them:
-		//	when children are before parents, we move the parents before the children while keeping ordering of other components intact
-		if (hierarchy.GetCount() > 1)
-		{
-			for (size_t i = hierarchy.GetCount() - 1; i > 0; --i)
-			{
-				Entity parent_candidate_entity = hierarchy.GetEntity(i);
-				for (size_t j = 0; j < i; ++j)
-				{
-					const HierarchyComponent& child_candidate = hierarchy[j];
-
-					if (child_candidate.parentID == parent_candidate_entity)
-					{
-						hierarchy.MoveItem(i, j);
-						++i; // next outer iteration will check the same index again as parent candidate, however things were moved upwards, so it will be a different entity!
-						break;
-					}
-				}
-			}
-		}
-
-		// Re-query parent after potential MoveItem(), because it invalidates references:
-		HierarchyComponent& parentcomponent = *hierarchy.GetComponent(entity);
+		HierarchyComponent& parentcomponent = hierarchy.Create(entity);
+		parentcomponent.parentID = parent;
 
 		TransformComponent* transform_parent = transforms.GetComponent(parent);
 		if (transform_parent == nullptr)
@@ -2213,7 +2189,7 @@ namespace wi::scene
 		TransformComponent* transform_child = transforms.GetComponent(entity);
 		if (transform_child == nullptr)
 		{
-			transform_child = &transforms.Create(entity); 
+			transform_child = &transforms.Create(entity);
 			transform_parent = transforms.GetComponent(parent); // after transforms.Create(), transform_parent pointer could have become invalidated!
 		}
 		if (!child_already_in_local_space)
@@ -2234,7 +2210,6 @@ namespace wi::scene
 		{
 			layer_child = &layers.Create(entity);
 		}
-		layer_child->propagationMask = layer_parent->GetLayerMask();
 	}
 	void Scene::Component_Detach(Entity entity)
 	{
@@ -2254,7 +2229,7 @@ namespace wi::scene
 				layer->propagationMask = ~0;
 			}
 
-			hierarchy.Remove_KeepSorted(entity);
+			hierarchy.Remove(entity);
 		}
 	}
 	void Scene::Component_DetachChildren(Entity parent)
@@ -2597,29 +2572,59 @@ namespace wi::scene
 	}
 	void Scene::RunHierarchyUpdateSystem(wi::jobsystem::context& ctx)
 	{
-		// This needs serialized execution because there are dependencies enforced by component order!
+		wi::jobsystem::Dispatch(ctx, (uint32_t)hierarchy.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
 
-		for (size_t i = 0; i < hierarchy.GetCount(); ++i)
-		{
-			const HierarchyComponent& parentcomponent = hierarchy[i];
-			Entity entity = hierarchy.GetEntity(i);
+			HierarchyComponent& hier = hierarchy[args.jobIndex];
+			Entity entity = hierarchy.GetEntity(args.jobIndex);
 
 			TransformComponent* transform_child = transforms.GetComponent(entity);
-			TransformComponent* transform_parent = transforms.GetComponent(parentcomponent.parentID);
-			if (transform_child != nullptr && transform_parent != nullptr)
+			XMMATRIX worldmatrix;
+			if (transform_child != nullptr)
 			{
-				transform_child->UpdateTransform_Parented(*transform_parent);
+				worldmatrix = transform_child->GetLocalMatrix();
 			}
-
 
 			LayerComponent* layer_child = layers.GetComponent(entity);
-			LayerComponent* layer_parent = layers.GetComponent(parentcomponent.parentID);
-			if (layer_child != nullptr && layer_parent != nullptr)
+			if (layer_child != nullptr)
 			{
-				layer_child->propagationMask = layer_parent->GetLayerMask();
+				layer_child->propagationMask = ~0u; // clear propagation mask to full
 			}
 
-		}
+			if (transform_child == nullptr && layer_child == nullptr)
+				return;
+
+			Entity parentID = hier.parentID;
+			while (parentID != INVALID_ENTITY)
+			{
+				TransformComponent* transform_parent = transforms.GetComponent(parentID);
+				if (transform_child != nullptr && transform_parent != nullptr)
+				{
+					worldmatrix *= transform_parent->GetLocalMatrix();
+				}
+
+				LayerComponent* layer_parent = layers.GetComponent(parentID);
+				if (layer_child != nullptr && layer_parent != nullptr)
+				{
+					layer_child->propagationMask &= layer_parent->layerMask;
+				}
+
+				const HierarchyComponent* hier_recursive = hierarchy.GetComponent(parentID);
+				if (hier_recursive != nullptr)
+				{
+					parentID = hier_recursive->parentID;
+				}
+				else
+				{
+					parentID = INVALID_ENTITY;
+				}
+			}
+
+			if (transform_child != nullptr)
+			{
+				XMStoreFloat4x4(&transform_child->world, worldmatrix);
+			}
+
+		});
 	}
 	void Scene::RunSpringUpdateSystem(wi::jobsystem::context& ctx)
 	{
