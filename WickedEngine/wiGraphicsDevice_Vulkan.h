@@ -180,10 +180,16 @@ namespace wi::graphics
 			wi::vector<VkBufferView> texelBufferViews;
 			wi::vector<VkWriteDescriptorSetAccelerationStructureKHR> accelerationStructureViews;
 
+			uint32_t uniform_buffer_dynamic_offsets[DESCRIPTORBINDER_CBV_COUNT] = {};
+
+			VkDescriptorSet descriptorSet_graphics = VK_NULL_HANDLE;
+			VkDescriptorSet descriptorSet_compute = VK_NULL_HANDLE;
+
 			enum DIRTY_FLAGS
 			{
 				DIRTY_NONE = 0,
 				DIRTY_DESCRIPTOR = 1 << 1,
+				DIRTY_OFFSET = 1 << 2,
 
 				DIRTY_ALL = ~0,
 			};

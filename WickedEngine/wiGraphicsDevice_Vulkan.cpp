@@ -758,6 +758,9 @@ namespace vulkan_internal
 
 		VkPushConstantRange pushconstants = {};
 
+		VkDeviceSize uniform_buffer_sizes[DESCRIPTORBINDER_CBV_COUNT] = {};
+		wi::vector<uint32_t> uniform_buffer_dynamic_slots;
+
 		size_t binding_hash = 0;
 
 		~Shader_Vulkan()
@@ -784,6 +787,9 @@ namespace vulkan_internal
 		uint32_t bindlessFirstSet = 0;
 
 		VkPushConstantRange pushconstants = {};
+
+		VkDeviceSize uniform_buffer_sizes[DESCRIPTORBINDER_CBV_COUNT] = {};
+		wi::vector<uint32_t> uniform_buffer_dynamic_slots;
 
 		size_t binding_hash = 0;
 
@@ -1474,45 +1480,49 @@ using namespace vulkan_internal;
 		VkResult res;
 
 		// Create descriptor pool:
-		VkDescriptorPoolSize poolSizes[9] = {};
+		VkDescriptorPoolSize poolSizes[10] = {};
 		uint32_t count = 0;
 
 		poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		poolSizes[0].descriptorCount = DESCRIPTORBINDER_CBV_COUNT * poolSize;
 		count++;
 
-		poolSizes[1].type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-		poolSizes[1].descriptorCount = DESCRIPTORBINDER_SRV_COUNT * poolSize;
+		poolSizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+		poolSizes[1].descriptorCount = DESCRIPTORBINDER_CBV_COUNT * poolSize;
 		count++;
 
-		poolSizes[2].type = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
+		poolSizes[2].type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
 		poolSizes[2].descriptorCount = DESCRIPTORBINDER_SRV_COUNT * poolSize;
 		count++;
 
-		poolSizes[3].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		poolSizes[3].type = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
 		poolSizes[3].descriptorCount = DESCRIPTORBINDER_SRV_COUNT * poolSize;
 		count++;
 
-		poolSizes[4].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-		poolSizes[4].descriptorCount = DESCRIPTORBINDER_UAV_COUNT * poolSize;
+		poolSizes[4].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		poolSizes[4].descriptorCount = DESCRIPTORBINDER_SRV_COUNT * poolSize;
 		count++;
 
-		poolSizes[5].type = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+		poolSizes[5].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 		poolSizes[5].descriptorCount = DESCRIPTORBINDER_UAV_COUNT * poolSize;
 		count++;
 
-		poolSizes[6].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		poolSizes[6].type = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
 		poolSizes[6].descriptorCount = DESCRIPTORBINDER_UAV_COUNT * poolSize;
 		count++;
 
-		poolSizes[7].type = VK_DESCRIPTOR_TYPE_SAMPLER;
-		poolSizes[7].descriptorCount = DESCRIPTORBINDER_SAMPLER_COUNT * poolSize;
+		poolSizes[7].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		poolSizes[7].descriptorCount = DESCRIPTORBINDER_UAV_COUNT * poolSize;
+		count++;
+
+		poolSizes[8].type = VK_DESCRIPTOR_TYPE_SAMPLER;
+		poolSizes[8].descriptorCount = DESCRIPTORBINDER_SAMPLER_COUNT * poolSize;
 		count++;
 
 		if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 		{
-			poolSizes[8].type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
-			poolSizes[8].descriptorCount = DESCRIPTORBINDER_SRV_COUNT * poolSize;
+			poolSizes[9].type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+			poolSizes[9].descriptorCount = DESCRIPTORBINDER_SRV_COUNT * poolSize;
 			count++;
 		}
 
@@ -1521,7 +1531,6 @@ using namespace vulkan_internal;
 		poolInfo.poolSizeCount = count;
 		poolInfo.pPoolSizes = poolSizes;
 		poolInfo.maxSets = poolSize;
-		//poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
 		res = vkCreateDescriptorPool(device->device, &poolInfo, nullptr, &descriptorPool);
 		assert(res == VK_SUCCESS);
@@ -1574,21 +1583,36 @@ using namespace vulkan_internal;
 		auto cs_internal = graphics ? nullptr : to_internal(device->active_cs[cmd]);
 		VkCommandBuffer commandBuffer = device->GetCommandList(cmd);
 
+		VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
+		VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
+		VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
+		uint32_t uniform_buffer_dynamic_count = 0;
+		if (graphics)
+		{
+			pipelineLayout = pso_internal->pipelineLayout;
+			descriptorSetLayout = pso_internal->descriptorSetLayout;
+			descriptorSet = descriptorSet_graphics;
+			uniform_buffer_dynamic_count = (uint32_t)pso_internal->uniform_buffer_dynamic_slots.size();
+			for (size_t i = 0; i < pso_internal->uniform_buffer_dynamic_slots.size(); ++i)
+			{
+				uniform_buffer_dynamic_offsets[i] = (uint32_t)table.CBV_offset[pso_internal->uniform_buffer_dynamic_slots[i]];
+			}
+		}
+		else
+		{
+			pipelineLayout = cs_internal->pipelineLayout_cs;
+			descriptorSetLayout = cs_internal->descriptorSetLayout;
+			descriptorSet = descriptorSet_compute;
+			uniform_buffer_dynamic_count = (uint32_t)cs_internal->uniform_buffer_dynamic_slots.size();
+			for (size_t i = 0; i < cs_internal->uniform_buffer_dynamic_slots.size(); ++i)
+			{
+				uniform_buffer_dynamic_offsets[i] = (uint32_t)table.CBV_offset[cs_internal->uniform_buffer_dynamic_slots[i]];
+			}
+		}
+
 		if (dirty & DIRTY_DESCRIPTOR)
 		{
 			auto& binder_pool = device->GetFrameResources().binder_pools[cmd];
-			VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
-			VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
-			if (graphics)
-			{
-				pipelineLayout = pso_internal->pipelineLayout;
-				descriptorSetLayout = pso_internal->descriptorSetLayout;
-			}
-			else
-			{
-				pipelineLayout = cs_internal->pipelineLayout_cs;
-				descriptorSetLayout = cs_internal->descriptorSetLayout;
-			}
 
 			VkDescriptorSetAllocateInfo allocInfo = {};
 			allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -1596,7 +1620,6 @@ using namespace vulkan_internal;
 			allocInfo.descriptorSetCount = 1;
 			allocInfo.pSetLayouts = &descriptorSetLayout;
 
-			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 			VkResult res = vkAllocateDescriptorSets(device->device, &allocInfo, &descriptorSet);
 			while (res == VK_ERROR_OUT_OF_POOL_MEMORY)
 			{
@@ -1798,7 +1821,52 @@ using namespace vulkan_internal;
 							auto internal_state = to_internal(&buffer);
 							bufferInfos.back().buffer = internal_state->resource;
 							bufferInfos.back().offset = offset;
-							bufferInfos.back().range = std::min(buffer.desc.size - offset, (uint64_t)device->properties2.properties.limits.maxUniformBufferRange);
+							if (graphics)
+							{
+								bufferInfos.back().range = pso_internal->uniform_buffer_sizes[original_binding];
+							}
+							else
+							{
+								bufferInfos.back().range = cs_internal->uniform_buffer_sizes[original_binding];
+							}
+							if (bufferInfos.back().range == 0ull)
+							{
+								bufferInfos.back().range = VK_WHOLE_SIZE;
+							}
+						}
+					}
+					break;
+
+					case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+					{
+						bufferInfos.emplace_back();
+						write.pBufferInfo = &bufferInfos.back();
+						bufferInfos.back() = {};
+
+						const uint32_t original_binding = unrolled_binding - VULKAN_BINDING_SHIFT_B;
+						const GPUBuffer& buffer = table.CBV[original_binding];
+
+						if (!buffer.IsValid())
+						{
+							bufferInfos.back().buffer = device->nullBuffer;
+							bufferInfos.back().range = VK_WHOLE_SIZE;
+						}
+						else
+						{
+							auto internal_state = to_internal(&buffer);
+							bufferInfos.back().buffer = internal_state->resource;
+							if (graphics)
+							{
+								bufferInfos.back().range = pso_internal->uniform_buffer_sizes[original_binding];
+							}
+							else
+							{
+								bufferInfos.back().range = cs_internal->uniform_buffer_sizes[original_binding];
+							}
+							if (bufferInfos.back().range == 0ull)
+							{
+								bufferInfos.back().range = VK_WHOLE_SIZE;
+							}
 						}
 					}
 					break;
@@ -1937,28 +2005,38 @@ using namespace vulkan_internal;
 				0,
 				nullptr
 			);
+		}
 
-			VkPipelineBindPoint bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-			if (!graphics)
+		VkPipelineBindPoint bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+		if (!graphics)
+		{
+			bindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
+
+			if (device->active_cs[cmd]->stage == ShaderStage::LIB)
 			{
-				bindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
-
-				if (device->active_cs[cmd]->stage == ShaderStage::LIB)
-				{
-					bindPoint = VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR;
-				}
+				bindPoint = VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR;
 			}
+		}
+		vkCmdBindDescriptorSets(
+			commandBuffer,
+			bindPoint,
+			pipelineLayout,
+			0,
+			1,
+			&descriptorSet,
+			uniform_buffer_dynamic_count,
+			uniform_buffer_dynamic_offsets
+		);
 
-			vkCmdBindDescriptorSets(
-				commandBuffer,
-				bindPoint,
-				pipelineLayout,
-				0,
-				1,
-				&descriptorSet,
-				0,
-				nullptr
-			);
+		// Save last used descriptor set handles:
+		//	This is needed to handle the case when descriptorSet is not allocated, but only dynamic offsets are updated
+		if (graphics)
+		{
+			descriptorSet_graphics = descriptorSet;
+		}
+		else
+		{
+			descriptorSet_compute = descriptorSet;
 		}
 
 		dirty = DIRTY_NONE;
@@ -3976,6 +4054,19 @@ using namespace vulkan_internal;
 					continue;
 				}
 
+				if (descriptor.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
+				{
+					// For now, always replace VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER with VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC
+					//	It would be quite messy to track which buffer is dynamic and which is not in the binding code, consider multiple pipeline bind points too
+					//	But maybe the dynamic uniform buffer is not always best because it occupies more registers (like DX12 root descriptor)?
+					descriptor.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+					for (uint32_t i = 0; i < descriptor.descriptorCount; ++i)
+					{
+						internal_state->uniform_buffer_sizes[descriptor.binding + i] = x->block.size;
+						internal_state->uniform_buffer_dynamic_slots.push_back(descriptor.binding + i);
+					}
+				}
+
 				switch (x->descriptor_type)
 				{
 				default:
@@ -4142,6 +4233,9 @@ using namespace vulkan_internal;
 
 		if (stage == ShaderStage::CS)
 		{
+			// sort because dynamic offsets array is tightly packed to match slot numbers:
+			std::sort(internal_state->uniform_buffer_dynamic_slots.begin(), internal_state->uniform_buffer_dynamic_slots.end());
+
 			VkComputePipelineCreateInfo pipelineInfo = {};
 			pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
 			pipelineInfo.layout = internal_state->pipelineLayout_cs;
@@ -4451,8 +4545,6 @@ using namespace vulkan_internal;
 		VkResult res = VK_SUCCESS;
 
 		{
-			// Descriptor set layout comes from reflection data when there is no root signature specified:
-
 			auto insert_shader = [&](const Shader* shader) {
 				if (shader == nullptr)
 					return;
@@ -4485,6 +4577,20 @@ using namespace vulkan_internal;
 					{
 						internal_state->layoutBindings.push_back(x);
 						internal_state->imageViewTypes.push_back(shader_internal->imageViewTypes[i]);
+						if (x.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER || x.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)
+						{
+							for (uint32_t k = 0; k < x.descriptorCount; ++k)
+							{
+								internal_state->uniform_buffer_sizes[x.binding + k] = shader_internal->uniform_buffer_sizes[x.binding + k];
+							}
+						}
+						if (x.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)
+						{
+							for (uint32_t k = 0; k < x.descriptorCount; ++k)
+							{
+								internal_state->uniform_buffer_dynamic_slots.push_back(x.binding + k);
+							}
+						}
 					}
 					i++;
 				}
@@ -4504,6 +4610,9 @@ using namespace vulkan_internal;
 			insert_shader(pDesc->ds);
 			insert_shader(pDesc->gs);
 			insert_shader(pDesc->ps);
+
+			// sort because dynamic offsets array is tightly packed to match slot numbers:
+			std::sort(internal_state->uniform_buffer_dynamic_slots.begin(), internal_state->uniform_buffer_dynamic_slots.end());
 
 			auto insert_shader_bindless = [&](const Shader* shader) {
 				if (shader == nullptr)
@@ -6494,11 +6603,17 @@ using namespace vulkan_internal;
 	{
 		assert(slot < DESCRIPTORBINDER_CBV_COUNT);
 		auto& binder = binders[cmd];
-		if (binder.table.CBV[slot].internal_state != buffer->internal_state || binder.table.CBV_offset[slot] != offset)
+
+		if (binder.table.CBV[slot].internal_state != buffer->internal_state)
 		{
 			binder.table.CBV[slot] = *buffer;
-			binder.table.CBV_offset[slot] = offset;
 			binders[cmd].dirty |= DescriptorBinder::DIRTY_DESCRIPTOR;
+		}
+
+		if (binder.table.CBV_offset[slot] != offset)
+		{
+			binder.table.CBV_offset[slot] = offset;
+			binders[cmd].dirty |= DescriptorBinder::DIRTY_OFFSET;
 		}
 	}
 	void GraphicsDevice_Vulkan::BindVertexBuffers(const GPUBuffer *const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint64_t* offsets, CommandList cmd)
