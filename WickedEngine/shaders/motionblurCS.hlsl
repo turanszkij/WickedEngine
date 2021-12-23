@@ -60,11 +60,13 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 
 #else
 
-	const float2 neighborhood_velocity = neighborhoodmax[(pixel + (dither((float2)pixel) - 0.5f) * 16) / MOTIONBLUR_TILESIZE] * motionblur_strength; // dither to reduce tile artifact
+	const float strength = motionblur_strength / GetFrame().delta_time;
+
+	const float2 neighborhood_velocity = neighborhoodmax[(pixel + (dither((float2)pixel) - 0.5f) * 16) / MOTIONBLUR_TILESIZE] * strength; // dither to reduce tile artifact
 	const float neighborhood_velocity_magnitude = length(neighborhood_velocity);
 	const float4 center_color = input[pixel];
 
-	const float2 center_velocity = texture_gbuffer1[pixel].xy * motionblur_strength;
+	const float2 center_velocity = texture_gbuffer1[pixel].xy * strength;
 	const float center_velocity_magnitude = length(center_velocity);
 	const float center_depth = texture_lineardepth[pixel];
 

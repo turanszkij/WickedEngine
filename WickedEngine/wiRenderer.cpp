@@ -10631,7 +10631,7 @@ void Postprocess_MotionBlur(
 	postprocess.resolution.y = desc.height;
 	postprocess.resolution_rcp.x = 1.0f / postprocess.resolution.x;
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
-	motionblur_strength = strength;
+	motionblur_strength = strength / 60.0f; // align to shutter speed
 
 	// Compute tile max velocities (horizontal):
 	{
