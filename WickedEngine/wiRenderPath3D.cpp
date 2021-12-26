@@ -1226,7 +1226,7 @@ void RenderPath3D::RenderLightShafts(CommandList cmd) const
 
 		// Radial blur on the sun:
 		{
-			XMVECTOR sunPos = XMVector3Project(sunDirection * 100000, 0, 0,
+			XMVECTOR sunPos = XMVector3Project(camera->GetEye() + sunDirection * camera->zFarP, 0, 0,
 				1.0f, 1.0f, 0.1f, 1.0f,
 				camera->GetProjection(), camera->GetView(), XMMatrixIdentity());
 			{
