@@ -197,28 +197,28 @@ The default renderer is `DirectX 12` on Windows and `Vulkan` on Linux. The `Dire
 You can specify command line arguments (without any prefix) to switch between render devices or other settings. Currently the list of options:
 <table>
   <tr>
-    <th>Argument</th>
-    <th>Description</th>
+	<th>Argument</th>
+	<th>Description</th>
   </tr>
   <tr>
-    <td>dx12</td>
-    <td>Use DirectX 12 rendering device</td>
+	<td>dx12</td>
+	<td>Use DirectX 12 rendering device</td>
   </tr>
   <tr>
-    <td>vulkan</td>
-    <td>Use Vulkan rendering device</td>
+	<td>vulkan</td>
+	<td>Use Vulkan rendering device</td>
   </tr>
   <tr>
-    <td>debugdevice</td>
-    <td>Use debug layer for graphics API validation. Performance will be degraded, but graphics warnings and errors will be written to "Output" window</td>
+	<td>debugdevice</td>
+	<td>Use debug layer for graphics API validation. Performance will be degraded, but graphics warnings and errors will be written to "Output" window</td>
   </tr>
   <tr>
-    <td>gpuvalidation</td>
-    <td>Use GPU Based Validation for graphics. This must be used together with the debugdevice argument. Currently DX12 only.</td>
+	<td>gpuvalidation</td>
+	<td>Use GPU Based Validation for graphics. This must be used together with the debugdevice argument. Currently DX12 only.</td>
   </tr>
   <tr>
-    <td>alwaysactive</td>
-    <td>The application will not be paused when the window is in the background.</td>
+	<td>alwaysactive</td>
+	<td>The application will not be paused when the window is in the background.</td>
   </tr>
 </table>
 
@@ -237,8 +237,12 @@ You can specify command line arguments (without any prefix) to switch between re
 If you are having trouble getting the applications to run, make sure that you satisfy the following conditions:
 - If you built the application with Visual Studio, run it from the Visual Studio environment, where the executable working directory is set up to be the Project directory (not the build directory where the exe will be found)
 - If you want to run an application without Visual Studio, either copy the executable from the BUILD directory to the correct project directory, or set the working directory appropriately. You can also check the Working directory setting in Visual Studio to find out the right working directory of every project. 
-- If starting the application on Windows and you get the error: `Failed to load dxcompiler.dll!`, you might be missing the Visual C++ redistributable package, that you can get from here for your system: https://docs.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170 . An other option is to run with the `vulkan` command line argument to use the Vulkan renderer instead of DirectX 12 (as Vulkan doesn't require dxcompiler.dll).
 - If you want to build UWP application, then you will first need to build the shaders into a shader dump. For that, build and run the `offlineshadercompiler` project with the `hlsl6 shaderdump` command line arguments. If the `wiShaderDump.h` file is successfully generated, rebuilding the engine will embed all the shader files so they are not loaded separately. But embedded shaders also cannot be recompiled during runtime.
+- If you experience crashes, follow these steps to find out the problem:
+	- make sure your environment is up to date, with latest graphics drivers and operating system updates.
+	- see if there is a wiBackLog.txt in your user temp folder (for example: C:\Users\username\AppData\Local\Temp), and request help on Discord or Github issue
+	- build the engine in Debug mode and try to run it, see where it crashes, provide call stack on Discord or Github issue
+	- run the engine with the `debugdevice` command argument and post the text from your console output window when the crash happens
 
 <br/>
 
