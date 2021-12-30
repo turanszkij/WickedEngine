@@ -110,6 +110,7 @@ namespace wi
 		XMFLOAT3 velocity = {}; // starting velocity of all new particles
 		XMFLOAT3 gravity = {}; // constant gravity force
 		float drag = 1.0f; // constant drag (per frame velocity multiplier, reducing it will make particles slow down over time)
+		float restitution = 0.98f; // if the particles have collision enabled, then after collision this is a multiplier for their bouncing velocities
 
 		float SPH_h = 1.0f;		// smoothing radius
 		float SPH_K = 250.0f;	// pressure constant

@@ -394,6 +394,7 @@ namespace wi
 			cb.xParticleMass = mass;
 			cb.xEmitterMaxParticleCount = MAX_PARTICLES;
 			cb.xEmitterFixedTimestep = FIXED_TIMESTEP;
+			cb.xEmitterRestitution = restitution;
 			cb.xEmitterFramesXY = uint2(std::max(1u, framesX), std::max(1u, framesY));
 			cb.xEmitterFrameCount = std::max(1u, frameCount);
 			cb.xEmitterFrameStart = frameStart;
@@ -962,6 +963,12 @@ namespace wi
 					drag = 0.98f;
 				}
 			}
+
+			if (archive.GetVersion() >= 74)
+			{
+				archive >> restitution;
+			}
+
 		}
 		else
 		{
@@ -1001,6 +1008,11 @@ namespace wi
 				archive << gravity;
 				archive << drag;
 				archive << random_color;
+			}
+
+			if (archive.GetVersion() >= 74)
+			{
+				archive << restitution;
 			}
 		}
 	}

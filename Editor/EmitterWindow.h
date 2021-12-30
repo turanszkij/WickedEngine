@@ -44,6 +44,7 @@ public:
 	wi::gui::Slider emitMassSlider;
 	wi::gui::Slider timestepSlider;
 	wi::gui::Slider dragSlider;
+	wi::gui::Slider restitutionSlider;
 	wi::gui::TextInputField VelocityXInput;
 	wi::gui::TextInputField VelocityYInput;
 	wi::gui::TextInputField VelocityZInput;

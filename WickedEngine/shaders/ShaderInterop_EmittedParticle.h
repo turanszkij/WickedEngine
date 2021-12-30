@@ -79,7 +79,7 @@ CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 	float		xSPH_e;					// viscosity constant
 	uint		xEmitterOptions;
 	float		xEmitterFixedTimestep;	// we can force a fixed timestep (>0) onto the simulation to avoid blowing up
-	float		xEmitter_padding2;
+	float		xEmitterRestitution;
 
 	float3		xParticleGravity;
 	float		xParticleDrag;

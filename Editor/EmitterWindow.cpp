@@ -10,7 +10,7 @@ using namespace wi::scene;
 void EmitterWindow::Create(EditorComponent* editor)
 {
 	wi::gui::Window::Create("Emitter Window");
-	SetSize(XMFLOAT2(680, 700));
+	SetSize(XMFLOAT2(680, 720));
 
 	float x = 200;
 	float y = 5;
@@ -566,7 +566,7 @@ void EmitterWindow::Create(EditorComponent* editor)
 
 
 
-	dragSlider.Create(-1, 0.016f, -1, 100000, "Drag: ");
+	dragSlider.Create(0, 1, 1, 100000, "Drag: ");
 	dragSlider.SetSize(XMFLOAT2(360, itemheight));
 	dragSlider.SetPos(XMFLOAT2(x, y += step));
 	dragSlider.OnSlide([&](wi::gui::EventArgs args) {
@@ -579,6 +579,20 @@ void EmitterWindow::Create(EditorComponent* editor)
 	dragSlider.SetEnabled(false);
 	dragSlider.SetTooltip("The velocity will be multiplied with this value, so lower than 1 will slow decelerate the particles.");
 	AddWidget(&dragSlider);
+
+	restitutionSlider.Create(0, 1, 1, 100000, "Restitution: ");
+	restitutionSlider.SetSize(XMFLOAT2(360, itemheight));
+	restitutionSlider.SetPos(XMFLOAT2(x, y += step));
+	restitutionSlider.OnSlide([&](wi::gui::EventArgs args) {
+		auto emitter = GetEmitter();
+		if (emitter != nullptr)
+		{
+			emitter->restitution = args.fValue;
+		}
+		});
+	restitutionSlider.SetEnabled(false);
+	restitutionSlider.SetTooltip("If the particles have collision enabled, then after collision this is a multiplier for their bouncing velocities");
+	AddWidget(&restitutionSlider);
 
 
 
@@ -690,6 +704,7 @@ void EmitterWindow::SetEntity(Entity entity)
 		emitMassSlider.SetValue(emitter->mass);
 		timestepSlider.SetValue(emitter->FIXED_TIMESTEP);
 		dragSlider.SetValue(emitter->drag);
+		restitutionSlider.SetValue(emitter->restitution);
 		VelocityXInput.SetValue(emitter->velocity.x);
 		VelocityYInput.SetValue(emitter->velocity.y);
 		VelocityZInput.SetValue(emitter->velocity.z);

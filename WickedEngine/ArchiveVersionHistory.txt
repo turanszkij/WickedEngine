@@ -1,5 +1,6 @@
 This file contains changelog of wi::Archive versions
 
+74: serialized emitter restitution
 73: wi::Archive no longer saves null terminator for strings
 72: Scene::Entity_Serialize() recursive serialization
 71: serialized WeatherComponent::fogHeightStart and fogHeightEnd
