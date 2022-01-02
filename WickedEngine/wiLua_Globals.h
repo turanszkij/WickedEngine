@@ -95,7 +95,7 @@ function waitSignal(signalName)
     local co = coroutine.running()
     assert(co ~= nil, "The main thread cannot wait!")
 
-    if WAITING_ON_SIGNAL[signalStr] == nil then
+    if WAITING_ON_SIGNAL[signalName] == nil then
         -- If there wasn't already a list for this signal, start a new one.
         WAITING_ON_SIGNAL[signalName] = { co }
     else
