@@ -4152,7 +4152,7 @@ void DrawSoftParticles(
 		float distance = wi::math::DistanceEstimated(emitter.center, vis.camera->Eye);
 		emitterSortingHashes[i] = 0;
 		emitterSortingHashes[i] |= (uint32_t)i & 0x0000FFFF;
-		emitterSortingHashes[i] |= ((uint32_t)(distance * 10) & 0x0000FFFF) << 16;
+		emitterSortingHashes[i] |= (uint32_t)XMConvertFloatToHalf(distance) << 16u;
 	}
 	std::sort(emitterSortingHashes, emitterSortingHashes + emitterCount, std::greater<uint32_t>());
 
