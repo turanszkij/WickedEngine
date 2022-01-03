@@ -152,10 +152,6 @@ This is a reference for the C++ features of Wicked Engine
 	2. [Profiler](#profiler)
 12. [Shaders](#shaders)
 	1. [Interop](#interop)
-		1. [ConstantBufferMapping](#constantbuffermapping)
-		2. [ResourceMapping](#resourcemapping)
-		3. [SamplerMapping](#samplermapping)
-		4. [ShaderInterop](#shaderinterop)
 	2. [Shader Compiler](#shader-compiler)
 
 
@@ -492,33 +488,26 @@ To check whether the display associated with the `SwapChain` is HDR capable, cal
 It is not enough to set up a HDR `SwapChain` to render correct HDR content, because great care must be taken to blend elements in linear color space, and correctly convert to the display's color space before presenting. This is a responsibility of shaders.
 
 ##### Resource binding
-The resource binding model is based on DirectX 11. That means, resources are bound to slot numbers that are simple integers. This makes it easy to share binding information between shaders and C++ code, just define the bind slot number as global constants in [shared header files](#shaderinterop). For sharing, the bind slot numbers can be easily defined as compile time constants using:
+The resource binding model is based on DirectX 11. That means, resources are bound to slot numbers that are simple integers.
 
+Declare a resource bind point with HLSL syntax:
 ```cpp
-static const uint my_texture_bind_slot = 5;
+Texture2D<float4> myTexture : register(t5);
 ```
-Watch out that it must be defined as `static const`, otherwise the shader compiler can interpret it as a constant buffer member (uniform). In that case, the initial value might be lost because the shader expect the CPU to feed it at runtime from a buffer. Optionally, an other choice is to use macros to define the bind point constants:
-```cpp
-#define MY_TEXTURE_BIND_SLOT 5
-```
-After this, you can declare a texture in shader and put it to the desired bind point:
-```cpp
-TEXTURE2D(myTexture, float4, my_texture_bind_slot);
-```
-Note that using the TEXTURE2D() macro to declare the resource is a cross platform way to declare a texture resource on a specified slot. For information about other resource declaration macros like this, visit the [Shaders](#shaders) section.
+The slot number `t5` must be specified to avoid the HLSL compiler assign an arbitrary slot to it and will be accessible from the CPU. 
 
-After this, the user can bind the texture resource from the CPU side:
+The user can bind the texture resource from the CPU side:
 ```cpp
 Texture myTexture;
 // after texture was created, etc:
-device->BindResource(myTexture, my_texture_bind_slot, cmd);
+device->BindResource(&myTexture, 5, cmd);
 ```
 
 Other than this, resources like `Texture` can have different subresources, so an extra parameter can be specified to the `BindResources()` function called `subresource`:
 ```cpp
 Texture myTexture;
 // after texture was created, etc:
-device->BindResource(myTexture, my_texture_bind_slot, cmd, 42);
+device->BindResource(&myTexture, 5, cmd, 42);
 ```
 By default, the `subresource` parameter is `-1`, which means that the entire resource will be bound. For more information about subresources, see the [Subresources](#subresources) section.
 
@@ -536,9 +525,7 @@ There are some limitations on the maximum value of slots that can be used, these
 
 Remarks:
 - Vulkan and DX12 devices make an effort to combine descriptors across shader stages, so overlapping descriptors will not be supported with those APIs to some extent. For example it is OK, to have a constant buffer on slot 0 (b0) in a vertex shader while having a Texture2D on slot 0 (t0) in pixel shader. However, having a StructuredBuffer on vertex shader slot 0 (t0) and a Texture2D in pixel shader slot 0 (t0) will not work correctly, as only one of them will be bound to a pipeline state. This is made for performance reasons.
-- Auto samplers can be added to `Shader`s. These samplers will always be bound to the shader stage as static samplers. The user doesn't need to use `BindSampler()` function for these.
-- Common Samplers can be set on the graphics device. These samplers will be bound to all shaders that are created after the common sampler have been set. The user doesn't need to use `BindSampler()` function for these.
-- This slot based binding model has a CPU overhead that has to be kept in mind. Avoid binding massive amount of resources. The maximum slot numbers that should be used are: 15 for `BindConstantBuffer()`, 64 for `BindResource()` and 8 for `BindUAV()`. Consider using a [bindless model](#bindless-resources) when you need to bind more than a couple of resources.
+- This slot based binding model has a CPU overhead that has to be kept in mind. Avoid binding massive amount of resources. The maximum slot numbers that should be used are: 14 for `BindConstantBuffer()`, 16 for `BindResource()`, 16 for `BindUAV()` and 8 for `BindSampler()`. Consider using a [bindless model](#bindless-resources) when you need to bind more than a couple of resources.
 
 ##### Bindless resources
 
@@ -1273,7 +1260,6 @@ CBUFFER(cbuf, 0)
 ### Interop
 The interop between shaders and C++ code is handled by shared header (.h) files. Modifying the shared header files will need recompilation of both engine and shaders, otherwise undefined behaviour will occur. For cases when only shaders need visibility, consider using shader header files (.hlsli), which should not be shared with the engine C++ code.
 
-#### ShaderInterop
 [[Header]](../../WickedEngine/shaders/ShaderInterop.h)
 Shader Interop is used for declaring shared structures or values between C++ Engine code and shader code. There are several ShaderInterop files, postfixed by the subsystem they are used for to keep them minimal and more readable: <br/>
 [ShaderInterop_BVH.h](../WickedEngine/ShaderInterop_BVH.h) <br/>
