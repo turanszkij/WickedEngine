@@ -272,11 +272,11 @@ namespace wi
 		if (fadeManager.IsActive())
 		{
 			// display fade rect
-			static wi::image::Params fx;
-			fx.siz.x = canvas.GetLogicalWidth();
-			fx.siz.y = canvas.GetLogicalHeight();
+			wi::image::Params fx;
+			fx.enableFullScreen();
+			fx.color = fadeManager.color;
 			fx.opacity = fadeManager.opacity;
-			wi::image::Draw(wi::texturehelper::getColor(fadeManager.color), fx, cmd);
+			wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 		}
 
 		// Draw the information display

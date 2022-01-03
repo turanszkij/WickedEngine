@@ -393,7 +393,7 @@ namespace wi::helper
 		};
 
 		const void* src_data = texturedata.data();
-		if (basis_image.get_ptr() != nullptr)
+		if (basis_image.get_width() > 0 && basis_image.get_ptr() != nullptr)
 		{
 			src_data = basis_image.get_ptr();
 		}
