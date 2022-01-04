@@ -436,6 +436,7 @@ namespace wi
 			const float h9 = h6 * cb.xSPH_h3;
 			cb.xSPH_poly6_constant = (315.0f / (64.0f * XM_PI * h9));
 			cb.xSPH_spiky_constant = (-45.0f / (XM_PI * h6));
+			cb.xSPH_visc_constant = (45.0f / (XM_PI * h6));
 			cb.xSPH_K = SPH_K;
 			cb.xSPH_p0 = SPH_p0;
 			cb.xSPH_e = SPH_e;

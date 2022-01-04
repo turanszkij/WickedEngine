@@ -73,6 +73,7 @@ CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 
 	float		xSPH_poly6_constant;	// precomputed Poly6 kernel constant term
 	float		xSPH_spiky_constant;	// precomputed Spiky kernel function constant term
+	float		xSPH_visc_constant;	    // precomputed viscosity kernel function constant term
 	float		xSPH_K;					// pressure constant
 	float		xSPH_p0;				// reference density
 
