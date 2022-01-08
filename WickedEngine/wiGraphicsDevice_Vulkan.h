@@ -10,6 +10,7 @@
 #include "wiGraphicsDevice.h"
 #include "wiUnorderedMap.h"
 #include "wiVector.h"
+#include "wiSpinLock.h"
 
 #ifdef _WIN32
 #define VK_USE_PLATFORM_WIN32_KHR
@@ -252,6 +253,7 @@ namespace wi::graphics
 		};
 		wi::vector<std::unique_ptr<CommandList_Vulkan>> commandlists;
 		uint32_t cmd_count = 0;
+		wi::SpinLock cmd_locker;
 
 		constexpr CommandList_Vulkan& GetCommandList(CommandList cmd)
 		{

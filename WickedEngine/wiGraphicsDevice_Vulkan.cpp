@@ -6123,6 +6123,7 @@ using namespace vulkan_internal;
 	{
 		VkResult res;
 
+		cmd_locker.lock();
 		uint32_t cmd_current = cmd_count++;
 		if (cmd_current >= commandlists.size())
 		{
@@ -6130,6 +6131,7 @@ using namespace vulkan_internal;
 		}
 		CommandList cmd;
 		cmd.internal_state = commandlists[cmd_current].get();
+		cmd_locker.unlock();
 
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 		commandlist.reset(GetBufferIndex());

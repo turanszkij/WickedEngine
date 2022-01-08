@@ -10,6 +10,7 @@
 #include "wiGraphicsDevice.h"
 #include "wiUnorderedMap.h"
 #include "wiVector.h"
+#include "wiSpinLock.h"
 
 #include <dxgi1_6.h>
 #include <wrl/client.h> // ComPtr
@@ -158,6 +159,7 @@ namespace wi::graphics
 		};
 		wi::vector<std::unique_ptr<CommandList_DX12>> commandlists;
 		uint32_t cmd_count = 0;
+		wi::SpinLock cmd_locker;
 
 		constexpr CommandList_DX12& GetCommandList(CommandList cmd)
 		{

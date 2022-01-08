@@ -4621,6 +4621,7 @@ using namespace dx12_internal;
 	{
 		HRESULT hr;
 
+		cmd_locker.lock();
 		uint32_t cmd_current = cmd_count++;
 		if (cmd_current >= commandlists.size())
 		{
@@ -4628,6 +4629,7 @@ using namespace dx12_internal;
 		}
 		CommandList cmd;
 		cmd.internal_state = commandlists[cmd_current].get();
+		cmd_locker.unlock();
 
 		CommandList_DX12& commandlist = GetCommandList(cmd);
 		commandlist.reset(GetBufferIndex());
