@@ -57,66 +57,13 @@ std::string SHADERSOURCEPATH = "../WickedEngine/shaders/";
 //	Currently the DX12 device could crash for unknown reasons with the global root signature export
 //#define RTREFLECTION_WITH_RAYTRACING_PIPELINE
 
-// Simple and efficient allocator that reserves a linear memory buffer and can:
-//	- allocate bottom-up until there is space
-//	- free from the last allocation top-down, for temporary allocations
-//	- reset all allocations at once
-class LinearAllocator
-{
-public:
-	inline size_t get_capacity() const
-	{
-		return buffer.size();
-	}
-	inline void reserve(size_t newCapacity)
-	{
-		buffer.resize(newCapacity);
-	}
-	inline uint8_t* allocate(size_t size)
-	{
-		if (offset + size <= buffer.size())
-		{
-			uint8_t* ret = &buffer[offset];
-			offset += size;
-			return ret;
-		}
-		return nullptr;
-	}
-	inline void free(size_t size)
-	{
-		assert(offset >= size);
-		offset -= size;
-	}
-	inline void reset()
-	{
-		offset = 0;
-	}
-	inline uint8_t* top()
-	{
-		return buffer.data() + offset;
-	}
-
-private:
-	wi::vector<uint8_t> buffer;
-	size_t offset = 0;
-};
-LinearAllocator renderFrameAllocators[COMMANDLIST_COUNT]; // can be used by graphics threads
-inline LinearAllocator& GetRenderFrameAllocator(CommandList cmd)
-{
-	if (renderFrameAllocators[cmd].get_capacity() == 0)
-	{
-		renderFrameAllocators[cmd].reserve(4 * 1024 * 1024);
-	}
-	return renderFrameAllocators[cmd];
-}
-
-wi::vector<GPUBarrier> barrier_stack[COMMANDLIST_COUNT];
+static thread_local wi::vector<GPUBarrier> barrier_stack;
 void barrier_stack_flush(CommandList cmd)
 {
-	if (barrier_stack[cmd].empty())
+	if (barrier_stack.empty())
 		return;
-	device->Barrier(barrier_stack[cmd].data(), (uint32_t)barrier_stack[cmd].size(), cmd);
-	barrier_stack[cmd].clear();
+	device->Barrier(barrier_stack.data(), (uint32_t)barrier_stack.size(), cmd);
+	barrier_stack.clear();
 }
 
 uint32_t SHADOWRES_2D = 1024;
@@ -229,8 +176,7 @@ struct RenderBatch
 // This is just a utility that points to a linear array of render batches:
 struct RenderQueue
 {
-	RenderBatch* batchArray = nullptr;
-	uint32_t batchCount = 0;
+	wi::vector<RenderBatch> batches;
 
 	enum RenderQueueSortType
 	{
@@ -238,24 +184,30 @@ struct RenderQueue
 		SORT_BACK_TO_FRONT,
 	};
 
-	inline bool empty() const { return batchArray == nullptr || batchCount == 0; }
-	inline void add(RenderBatch* item) 
-	{ 
-		assert(item != nullptr); 
-		if (empty())
-		{
-			batchArray = item;
-		}
-		batchCount++; 
+	inline void init()
+	{
+		batches.clear();
+	}
+	inline void add(size_t meshIndex, size_t instanceIndex, float distance)
+	{
+		batches.emplace_back().Create(meshIndex, instanceIndex, distance);
 	}
 	inline void sort(RenderQueueSortType sortType = SORT_FRONT_TO_BACK)
 	{
-		if (batchCount > 1)
+		if (!batches.empty())
 		{
-			std::sort(batchArray, batchArray + batchCount, [sortType](const RenderBatch& a, const RenderBatch& b) -> bool {
+			std::sort(batches.begin(), batches.end(), [sortType](const RenderBatch& a, const RenderBatch& b) -> bool {
 				return ((sortType == SORT_FRONT_TO_BACK) ? (a.data < b.data) : (a.data > b.data));
 			});
 		}
+	}
+	inline bool empty() const
+	{
+		return batches.empty();
+	}
+	inline size_t size() const
+	{
+		return batches.size();
 	}
 };
 
@@ -2392,7 +2344,7 @@ void RenderMeshes(
 
 	// Pre-allocate space for all the instances in GPU-buffer:
 	uint32_t instanceDataSize = sizeof(ShaderMeshInstancePointer);
-	size_t alloc_size = renderQueue.batchCount * frustum_count * instanceDataSize;
+	size_t alloc_size = renderQueue.size() * frustum_count * instanceDataSize;
 	GraphicsDevice::GPUAllocation instances = device->AllocateGPU(alloc_size, cmd);
 
 	// This will correspond to a single draw call
@@ -2533,9 +2485,8 @@ void RenderMeshes(
 	// The following loop is writing the instancing batches to a GPUBuffer:
 	//	RenderQueue is sorted based on mesh index, so when a new mesh or stencil request is encountered, we need to flush the batch
 	uint32_t instanceCount = 0;
-	for (uint32_t batchID = 0; batchID < renderQueue.batchCount; ++batchID) // Do not break out of this loop!
+	for (const RenderBatch& batch : renderQueue.batches) // Do not break out of this loop!
 	{
-		const RenderBatch& batch = renderQueue.batchArray[batchID];
 		const uint32_t meshIndex = batch.GetMeshIndex();
 		const uint32_t instanceIndex = batch.GetInstanceIndex();
 		const ObjectComponent& instance = vis.scene->objects[instanceIndex];
@@ -2984,11 +2935,6 @@ void UpdatePerFrameData(
 	float dt
 )
 {
-	for (int i = 0; i < COMMANDLIST_COUNT; ++i)
-	{
-		renderFrameAllocators[i].reset();
-	}
-
 	// Update Voxelization parameters:
 	if (scene.objects.GetCount() > 0)
 	{
@@ -3226,7 +3172,7 @@ void UpdateRenderData(
 	auto prof_updatebuffer_gpu = wi::profiler::BeginRangeGPU("Update Buffers (GPU)", cmd);
 
 	device->UpdateBuffer(&constantBuffers[CBTYPE_FRAME], &frameCB, cmd);
-	barrier_stack[cmd].push_back(GPUBarrier::Buffer(&constantBuffers[CBTYPE_FRAME], ResourceState::COPY_DST, ResourceState::CONSTANT_BUFFER));
+	barrier_stack.push_back(GPUBarrier::Buffer(&constantBuffers[CBTYPE_FRAME], ResourceState::COPY_DST, ResourceState::CONSTANT_BUFFER));
 
 	if (vis.scene->instanceBuffer.IsValid() && vis.scene->instanceArraySize > 0)
 	{
@@ -3238,7 +3184,7 @@ void UpdateRenderData(
 			vis.scene->instanceArraySize * sizeof(ShaderMeshInstance),
 			cmd
 		);
-		barrier_stack[cmd].push_back(GPUBarrier::Buffer(&vis.scene->instanceBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
+		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->instanceBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
 	}
 
 	if (vis.scene->meshBuffer.IsValid() && vis.scene->meshArraySize > 0)
@@ -3251,7 +3197,7 @@ void UpdateRenderData(
 			vis.scene->meshArraySize * sizeof(ShaderMesh),
 			cmd
 		);
-		barrier_stack[cmd].push_back(GPUBarrier::Buffer(&vis.scene->meshBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
+		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->meshBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
 	}
 
 	if (vis.scene->materialBuffer.IsValid() && vis.scene->materialArraySize > 0)
@@ -3264,14 +3210,16 @@ void UpdateRenderData(
 			vis.scene->materialArraySize * sizeof(ShaderMaterial),
 			cmd
 		);
-		barrier_stack[cmd].push_back(GPUBarrier::Buffer(&vis.scene->materialBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
+		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->materialBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
 	}
 
 	// Fill Entity Array with decals + envprobes + lights in the frustum:
 	{
 		// Reserve temporary entity array for GPU data upload:
-		ShaderEntity* entityArray = (ShaderEntity*)GetRenderFrameAllocator(cmd).allocate(sizeof(ShaderEntity)*SHADER_ENTITY_COUNT);
-		XMMATRIX* matrixArray = (XMMATRIX*)GetRenderFrameAllocator(cmd).allocate(sizeof(XMMATRIX)*MATRIXARRAY_COUNT);
+		auto allocation_entityarray = device->AllocateGPU(sizeof(ShaderEntity) * SHADER_ENTITY_COUNT, cmd);
+		auto allocation_matrixarray = device->AllocateGPU(sizeof(XMMATRIX) * MATRIXARRAY_COUNT, cmd);
+		ShaderEntity* entityArray = (ShaderEntity*)allocation_entityarray.data;
+		XMMATRIX* matrixArray = (XMMATRIX*)allocation_matrixarray.data;
 
 		const XMMATRIX viewMatrix = vis.camera->GetView();
 
@@ -3532,15 +3480,31 @@ void UpdateRenderData(
 		}
 
 		// Issue GPU entity array update:
-		device->UpdateBuffer(&resourceBuffers[RBTYPE_ENTITYARRAY], entityArray, cmd, sizeof(ShaderEntity)*entityCounter);
-		device->UpdateBuffer(&resourceBuffers[RBTYPE_MATRIXARRAY], matrixArray, cmd, sizeof(XMMATRIX)*matrixCounter);
+		if (entityCounter > 0)
+		{
+			device->CopyBuffer(
+				&resourceBuffers[RBTYPE_ENTITYARRAY],
+				0,
+				&allocation_entityarray.buffer,
+				allocation_entityarray.offset,
+				sizeof(ShaderEntity) * entityCounter,
+				cmd
+			);
+			barrier_stack.push_back(GPUBarrier::Buffer(&resourceBuffers[RBTYPE_ENTITYARRAY], ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
+		}
+		if (matrixCounter > 0)
+		{
+			device->CopyBuffer(
+				&resourceBuffers[RBTYPE_MATRIXARRAY],
+				0,
+				&allocation_matrixarray.buffer,
+				allocation_matrixarray.offset,
+				sizeof(XMMATRIX) * matrixCounter,
+				cmd
+			);
+			barrier_stack.push_back(GPUBarrier::Buffer(&resourceBuffers[RBTYPE_MATRIXARRAY], ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
+		}
 
-		barrier_stack[cmd].push_back(GPUBarrier::Buffer(&resourceBuffers[RBTYPE_ENTITYARRAY], ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
-		barrier_stack[cmd].push_back(GPUBarrier::Buffer(&resourceBuffers[RBTYPE_MATRIXARRAY], ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
-
-		// Temporary array for GPU entities can be freed now:
-		GetRenderFrameAllocator(cmd).free(sizeof(ShaderEntity)*SHADER_ENTITY_COUNT);
-		GetRenderFrameAllocator(cmd).free(sizeof(XMMATRIX)*MATRIXARRAY_COUNT);
 	}
 
 	// Upload bones for skinning to shader:
@@ -3549,7 +3513,7 @@ void UpdateRenderData(
 		const ArmatureComponent& armature = vis.scene->armatures[i];
 		device->UpdateBuffer(&armature.boneBuffer, armature.boneData.data(), cmd);
 
-		barrier_stack[cmd].push_back(GPUBarrier::Buffer(&armature.boneBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
+		barrier_stack.push_back(GPUBarrier::Buffer(&armature.boneBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
 	}
 
 	// Soft body updates:
@@ -3564,8 +3528,8 @@ void UpdateRenderData(
 			device->UpdateBuffer(&mesh->streamoutBuffer_POS, softbody.vertex_positions_simulation.data(), cmd);
 			device->UpdateBuffer(&mesh->streamoutBuffer_TAN, softbody.vertex_tangents_simulation.data(), cmd);
 
-			barrier_stack[cmd].push_back(GPUBarrier::Buffer(&mesh->streamoutBuffer_POS, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
-			barrier_stack[cmd].push_back(GPUBarrier::Buffer(&mesh->streamoutBuffer_TAN, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
+			barrier_stack.push_back(GPUBarrier::Buffer(&mesh->streamoutBuffer_POS, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
+			barrier_stack.push_back(GPUBarrier::Buffer(&mesh->streamoutBuffer_TAN, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
 		}
 	}
 
@@ -3584,14 +3548,15 @@ void UpdateRenderData(
 		{
 			Entity entity = vis.scene->meshes.GetEntity(i);
 			const MeshComponent& mesh = vis.scene->meshes[i];
-			barrier_stack[cmd].push_back(GPUBarrier::Buffer(&mesh.indexBuffer, ResourceState::UNDEFINED, ResourceState::INDEX_BUFFER | ResourceState::SHADER_RESOURCE));
+			barrier_stack.push_back(GPUBarrier::Buffer(&mesh.indexBuffer, ResourceState::UNDEFINED, ResourceState::INDEX_BUFFER | ResourceState::SHADER_RESOURCE));
 
 			if (mesh.dirty_subsets)
 			{
 				mesh.dirty_subsets = false;
 
 				size_t tmp_alloc = sizeof(ShaderMeshSubset) * mesh.subsets.size();
-				ShaderMeshSubset* subsetarray = (ShaderMeshSubset*)GetRenderFrameAllocator(cmd).allocate(tmp_alloc);
+				auto allocation = device->AllocateGPU(tmp_alloc, cmd);
+				ShaderMeshSubset* subsetarray = (ShaderMeshSubset*)allocation.data;
 				int j = 0;
 				for (auto& x : mesh.subsets)
 				{
@@ -3599,17 +3564,23 @@ void UpdateRenderData(
 					shadersubset.indexOffset = x.indexOffset;
 					shadersubset.materialIndex = (uint)vis.scene->materials.GetIndex(x.materialID);
 				}
-				GetRenderFrameAllocator(cmd).free(tmp_alloc);
 
-				device->UpdateBuffer(&mesh.subsetBuffer, subsetarray, cmd);
-				barrier_stack[cmd].push_back(GPUBarrier::Buffer(&mesh.subsetBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
+				device->CopyBuffer(
+					&mesh.subsetBuffer,
+					0,
+					&allocation.buffer,
+					allocation.offset,
+					tmp_alloc,
+					cmd
+				);
+				barrier_stack.push_back(GPUBarrier::Buffer(&mesh.subsetBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
 			}
 
 			if (mesh.dirty_morph)
 			{
 				mesh.dirty_morph = false;
 				device->UpdateBuffer(&mesh.vertexBuffer_POS, mesh.vertex_positions_morphed.data(), cmd);
-				barrier_stack[cmd].push_back(GPUBarrier::Buffer(&mesh.vertexBuffer_POS, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
+				barrier_stack.push_back(GPUBarrier::Buffer(&mesh.vertexBuffer_POS, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
 			}
 
 			if (mesh.IsSkinned() && vis.scene->armatures.Contains(mesh.armatureID))
@@ -3637,8 +3608,8 @@ void UpdateRenderData(
 
 				device->Dispatch(((uint32_t)mesh.vertex_positions.size() + 63) / 64, 1, 1, cmd);
 
-				barrier_stack[cmd].push_back(GPUBarrier::Buffer(&mesh.streamoutBuffer_POS, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
-				barrier_stack[cmd].push_back(GPUBarrier::Buffer(&mesh.streamoutBuffer_TAN, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
+				barrier_stack.push_back(GPUBarrier::Buffer(&mesh.streamoutBuffer_POS, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
+				barrier_stack.push_back(GPUBarrier::Buffer(&mesh.streamoutBuffer_TAN, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
 
 			}
 
@@ -4144,7 +4115,8 @@ void DrawSoftParticles(
 
 	// Sort emitters based on distance:
 	assert(emitterCount < 0x0000FFFF); // watch out for sorting hash truncation!
-	uint32_t* emitterSortingHashes = (uint32_t*)GetRenderFrameAllocator(cmd).allocate(sizeof(uint32_t) * emitterCount);
+	static thread_local wi::vector<uint32_t> emitterSortingHashes;
+	emitterSortingHashes.resize(emitterCount);
 	for (size_t i = 0; i < emitterCount; ++i)
 	{
 		const uint32_t emitterIndex = vis.visibleEmitters[i];
@@ -4154,7 +4126,7 @@ void DrawSoftParticles(
 		emitterSortingHashes[i] |= (uint32_t)i & 0x0000FFFF;
 		emitterSortingHashes[i] |= (uint32_t)XMConvertFloatToHalf(distance) << 16u;
 	}
-	std::sort(emitterSortingHashes, emitterSortingHashes + emitterCount, std::greater<uint32_t>());
+	std::sort(emitterSortingHashes.begin(), emitterSortingHashes.end(), std::greater<uint32_t>());
 
 	for (size_t i = 0; i < emitterCount; ++i)
 	{
@@ -4172,8 +4144,6 @@ void DrawSoftParticles(
 			emitter.Draw(material, cmd);
 		}
 	}
-
-	GetRenderFrameAllocator(cmd).free(sizeof(uint32_t) * emitterCount);
 
 	device->BindShadingRate(ShadingRate::RATE_1X1, cmd);
 
@@ -4599,6 +4569,8 @@ void DrawShadowmaps(
 		uint32_t shadowCounter_2D = SHADOWRES_2D > 0 ? 0 : SHADOWCOUNT_2D;
 		uint32_t shadowCounter_Cube = SHADOWRES_CUBE > 0 ? 0 : SHADOWCOUNT_CUBE;
 
+		static thread_local RenderQueue renderQueue;
+
 		for (const auto& visibleLight : vis.visibleLights)
 		{
 			if (shadowCounter_2D >= SHADOWCOUNT_2D && shadowCounter_Cube >= SHADOWCOUNT_CUBE)
@@ -4629,7 +4601,7 @@ void DrawShadowmaps(
 
 				for (uint32_t cascade = 0; cascade < CASCADE_COUNT; ++cascade)
 				{
-					RenderQueue renderQueue;
+					renderQueue.init();
 					bool transparentShadowsRequested = false;
 					for (size_t i = 0; i < vis.scene->aabb_objects.GetCount(); ++i)
 					{
@@ -4641,10 +4613,8 @@ void DrawShadowmaps(
 							{
 								Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
 
-								RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
 								size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
-								batch->Create(meshIndex, i, 0);
-								renderQueue.add(batch);
+								renderQueue.add(meshIndex, i, 0);
 
 								if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT || object.GetRenderTypes() & RENDERTYPE_WATER)
 								{
@@ -4675,8 +4645,6 @@ void DrawShadowmaps(
 						{
 							RenderMeshes(vis, renderQueue, RENDERPASS_SHADOW, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd);
 						}
-
-						GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
 					}
 					device->RenderPassEnd(cmd);
 
@@ -4695,7 +4663,7 @@ void DrawShadowmaps(
 				if (!cam_frustum.Intersects(shcam.boundingfrustum))
 					break;
 
-				RenderQueue renderQueue;
+				renderQueue.init();
 				bool transparentShadowsRequested = false;
 				for (size_t i = 0; i < vis.scene->aabb_objects.GetCount(); ++i)
 				{
@@ -4707,10 +4675,8 @@ void DrawShadowmaps(
 						{
 							Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
 
-							RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
 							size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
-							batch->Create(meshIndex, i, 0);
-							renderQueue.add(batch);
+							renderQueue.add(meshIndex, i, 0);
 
 							if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT || object.GetRenderTypes() & RENDERTYPE_WATER)
 							{
@@ -4750,8 +4716,6 @@ void DrawShadowmaps(
 					}
 					device->RenderPassEnd(cmd);
 
-					GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
-
 					if (predicationRequest && light.occlusionquery >= 0)
 						device->PredicationEnd(cmd);
 				}
@@ -4767,7 +4731,7 @@ void DrawShadowmaps(
 
 				Sphere boundingsphere(light.position, light.GetRange());
 
-				RenderQueue renderQueue;
+				renderQueue.init();
 				bool transparentShadowsRequested = false;
 				for (size_t i = 0; i < vis.scene->aabb_objects.GetCount(); ++i)
 				{
@@ -4779,10 +4743,8 @@ void DrawShadowmaps(
 						{
 							Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
 
-							RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
 							size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
-							batch->Create(meshIndex, i, 0);
-							renderQueue.add(batch);
+							renderQueue.add(meshIndex, i, 0);
 
 							if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT || object.GetRenderTypes() & RENDERTYPE_WATER)
 							{
@@ -4843,8 +4805,6 @@ void DrawShadowmaps(
 						RenderMeshes(vis, renderQueue, RENDERPASS_SHADOWCUBE, RENDERTYPE_TRANSPARENT | RENDERTYPE_WATER, cmd, false, frusta, frustum_count);
 					}
 					device->RenderPassEnd(cmd);
-
-					GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
 
 					if (predicationRequest && light.occlusionquery >= 0)
 						device->PredicationEnd(cmd);
@@ -4919,7 +4879,8 @@ void DrawScene(
 		renderTypeFlags = RENDERTYPE_ALL;
 	}
 
-	RenderQueue renderQueue;
+	static thread_local RenderQueue renderQueue;
+	renderQueue.init();
 	for (uint32_t instanceIndex : vis.visibleObjects)
 	{
 		const ObjectComponent& object = vis.scene->objects[instanceIndex];
@@ -4934,18 +4895,14 @@ void DrawScene(
 			{
 				continue;
 			}
-			RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
 			size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
-			batch->Create(meshIndex, instanceIndex, distance);
-			renderQueue.add(batch);
+			renderQueue.add(meshIndex, instanceIndex, distance);
 		}
 	}
 	if (!renderQueue.empty())
 	{
 		renderQueue.sort(transparent ? RenderQueue::SORT_BACK_TO_FRONT : RenderQueue::SORT_FRONT_TO_BACK);
 		RenderMeshes(vis, renderQueue, renderPass, renderTypeFlags, cmd, tessellation);
-
-		GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
 	}
 
 	device->BindShadingRate(ShadingRate::RATE_1X1, cmd);
@@ -6237,7 +6194,8 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 		{
 			Sphere culler(probe.position, zFarP);
 
-			RenderQueue renderQueue;
+			static thread_local RenderQueue renderQueue;
+			renderQueue.init();
 			for (size_t i = 0; i < vis.scene->aabb_objects.GetCount(); ++i)
 			{
 				const AABB& aabb = vis.scene->aabb_objects[i];
@@ -6246,10 +6204,8 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 					const ObjectComponent& object = vis.scene->objects[i];
 					if (object.IsRenderable())
 					{
-						RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
 						size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
-						batch->Create(meshIndex, i, 0);
-						renderQueue.add(batch);
+						renderQueue.add(meshIndex, i, 0);
 					}
 				}
 			}
@@ -6257,8 +6213,6 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 			if (!renderQueue.empty())
 			{
 				RenderMeshes(vis, renderQueue, RENDERPASS_ENVMAPCAPTURE, RENDERTYPE_ALL, cmd, false, frusta, arraysize(frusta));
-
-				GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
 			}
 		}
 
@@ -6505,7 +6459,7 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 	bbox.createFromHalfWidth(center, extents);
 
 
-	RenderQueue renderQueue;
+	static thread_local RenderQueue renderQueue;
 	for (size_t i = 0; i < vis.scene->aabb_objects.GetCount(); ++i)
 	{
 		const AABB& aabb = vis.scene->aabb_objects[i];
@@ -6514,10 +6468,8 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 			const ObjectComponent& object = vis.scene->objects[i];
 			if (object.IsRenderable())
 			{
-				RenderBatch* batch = (RenderBatch*)GetRenderFrameAllocator(cmd).allocate(sizeof(RenderBatch));
 				size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
-				batch->Create(meshIndex, i, 0);
-				renderQueue.add(batch);
+				renderQueue.add(meshIndex, i, 0);
 			}
 		}
 	}
@@ -6538,8 +6490,6 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 		device->RenderPassBegin(&renderpass_voxelize, cmd);
 		RenderMeshes(vis, renderQueue, RENDERPASS_VOXELIZE, RENDERTYPE_OPAQUE, cmd, false, nullptr, 1);
 		device->RenderPassEnd(cmd);
-
-		GetRenderFrameAllocator(cmd).free(sizeof(RenderBatch) * renderQueue.batchCount);
 
 		{
 			GPUBarrier barriers[] = {
@@ -7663,14 +7613,14 @@ void VisibilityResolve(
 	device->BindUAV(&lineardepth, 9, cmd, 3);
 	device->BindUAV(&lineardepth, 10, cmd, 4);
 
-	barrier_stack[cmd].push_back(GPUBarrier::Image(&gbuffer[GBUFFER_VELOCITY], gbuffer[GBUFFER_VELOCITY].desc.layout, ResourceState::UNORDERED_ACCESS));
-	barrier_stack[cmd].push_back(GPUBarrier::Image(&depthbuffer_resolved, depthbuffer_resolved.desc.layout, ResourceState::UNORDERED_ACCESS));
-	barrier_stack[cmd].push_back(GPUBarrier::Image(&lineardepth, lineardepth.desc.layout, ResourceState::UNORDERED_ACCESS));
+	barrier_stack.push_back(GPUBarrier::Image(&gbuffer[GBUFFER_VELOCITY], gbuffer[GBUFFER_VELOCITY].desc.layout, ResourceState::UNORDERED_ACCESS));
+	barrier_stack.push_back(GPUBarrier::Image(&depthbuffer_resolved, depthbuffer_resolved.desc.layout, ResourceState::UNORDERED_ACCESS));
+	barrier_stack.push_back(GPUBarrier::Image(&lineardepth, lineardepth.desc.layout, ResourceState::UNORDERED_ACCESS));
 
 	if (msaa)
 	{
 		device->BindUAV(&gbuffer[GBUFFER_PRIMITIVEID], 11, cmd);
-		barrier_stack[cmd].push_back(GPUBarrier::Image(&gbuffer[GBUFFER_PRIMITIVEID], gbuffer[GBUFFER_PRIMITIVEID].desc.layout, ResourceState::UNORDERED_ACCESS));
+		barrier_stack.push_back(GPUBarrier::Image(&gbuffer[GBUFFER_PRIMITIVEID], gbuffer[GBUFFER_PRIMITIVEID].desc.layout, ResourceState::UNORDERED_ACCESS));
 	}
 
 	barrier_stack_flush(cmd);
@@ -7682,14 +7632,14 @@ void VisibilityResolve(
 		cmd
 	);
 
-	barrier_stack[cmd].push_back(GPUBarrier::Memory());
-	barrier_stack[cmd].push_back(GPUBarrier::Image(&gbuffer[GBUFFER_VELOCITY], ResourceState::UNORDERED_ACCESS, gbuffer[GBUFFER_VELOCITY].desc.layout));
-	barrier_stack[cmd].push_back(GPUBarrier::Image(&depthbuffer_resolved, ResourceState::UNORDERED_ACCESS, depthbuffer_resolved.desc.layout));
-	barrier_stack[cmd].push_back(GPUBarrier::Image(&lineardepth, ResourceState::UNORDERED_ACCESS, lineardepth.desc.layout));
+	barrier_stack.push_back(GPUBarrier::Memory());
+	barrier_stack.push_back(GPUBarrier::Image(&gbuffer[GBUFFER_VELOCITY], ResourceState::UNORDERED_ACCESS, gbuffer[GBUFFER_VELOCITY].desc.layout));
+	barrier_stack.push_back(GPUBarrier::Image(&depthbuffer_resolved, ResourceState::UNORDERED_ACCESS, depthbuffer_resolved.desc.layout));
+	barrier_stack.push_back(GPUBarrier::Image(&lineardepth, ResourceState::UNORDERED_ACCESS, lineardepth.desc.layout));
 
 	if (msaa)
 	{
-		barrier_stack[cmd].push_back(GPUBarrier::Image(&gbuffer[GBUFFER_PRIMITIVEID], ResourceState::UNORDERED_ACCESS, gbuffer[GBUFFER_PRIMITIVEID].desc.layout));
+		barrier_stack.push_back(GPUBarrier::Image(&gbuffer[GBUFFER_PRIMITIVEID], ResourceState::UNORDERED_ACCESS, gbuffer[GBUFFER_PRIMITIVEID].desc.layout));
 	}
 
 	barrier_stack_flush(cmd);

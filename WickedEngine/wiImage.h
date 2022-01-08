@@ -143,11 +143,11 @@ namespace wi::image
 	};
 
 
-	// Set canvas to handle DPI-aware image rendering (applied to all image rendering commands on this CommandList)
-	void SetCanvas(const wi::Canvas& canvas, wi::graphics::CommandList cmd);
+	// Set canvas to handle DPI-aware image rendering (applied to all image rendering commands on the current thread)
+	void SetCanvas(const wi::Canvas& current_canvas);
 
-	// Set a background texture (applied to all image rendering commands on this CommandList that used enableBackground())
-	void SetBackground(const wi::graphics::Texture& texture, wi::graphics::CommandList cmd);
+	// Set a background texture (applied to all image rendering commands on the current thread that used enableBackground())
+	void SetBackground(const wi::graphics::Texture& texture);
 
 	// Draw the specified texture with the specified parameters
 	void Draw(const wi::graphics::Texture* texture, const Params& params, wi::graphics::CommandList cmd);

@@ -30,17 +30,17 @@ namespace wi::font
 
 	namespace font_internal
 	{
-		BlendState			blendState;
-		RasterizerState		rasterizerState;
-		DepthStencilState	depthStencilState;
+		static BlendState blendState;
+		static RasterizerState rasterizerState;
+		static DepthStencilState depthStencilState;
 
-		Shader				vertexShader;
-		Shader				pixelShader;
-		PipelineState		PSO;
+		static Shader vertexShader;
+		static Shader pixelShader;
+		static PipelineState PSO;
 
-		wi::Canvas canvases[COMMANDLIST_COUNT];
+		static thread_local wi::Canvas canvas;
 
-		Texture texture;
+		static Texture texture;
 
 		struct Glyph
 		{
@@ -53,8 +53,8 @@ namespace wi::font
 			float tc_top;
 			float tc_bottom;
 		};
-		wi::unordered_map<int32_t, Glyph> glyph_lookup;
-		wi::unordered_map<int32_t, rect_xywh> rect_lookup;
+		static wi::unordered_map<int32_t, Glyph> glyph_lookup;
+		static wi::unordered_map<int32_t, rect_xywh> rect_lookup;
 		// pack glyph identifiers to a 32-bit hash:
 		//	height:	10 bits	(height supported: 0 - 1023)
 		//	style:	6 bits	(number of font styles supported: 0 - 63)
@@ -63,8 +63,8 @@ namespace wi::font
 		constexpr int codefromhash(int64_t hash) { return int((hash >> 16) & 0xFFFF); }
 		constexpr int stylefromhash(int64_t hash) { return int((hash >> 10) & 0x3F); }
 		constexpr int heightfromhash(int64_t hash) { return int((hash >> 0) & 0x3FF); }
-		wi::unordered_set<int32_t> pendingGlyphs;
-		wi::SpinLock glyphLock;
+		static wi::unordered_set<int32_t> pendingGlyphs;
+		static wi::SpinLock glyphLock;
 
 		struct FontStyle
 		{
@@ -96,7 +96,7 @@ namespace wi::font
 				}
 			}
 		};
-		wi::vector<FontStyle> fontStyles;
+		static wi::vector<FontStyle> fontStyles;
 
 		template<typename T>
 		uint32_t WriteVertices(FontVertex* vertexList, const T* text, Params params)
@@ -534,7 +534,6 @@ namespace wi::font
 			font_push.buffer_offset = (uint32_t)mem.offset;
 			font_push.texture_index = device->GetDescriptorIndex(&texture, SubresourceType::SRV);
 
-			const wi::Canvas& canvas = canvases[cmd];
 			// Asserts will check that a proper canvas was set for this cmd with wi::image::SetCanvas()
 			//	The canvas must be set to have dpi aware rendering
 			assert(canvas.width > 0);
@@ -575,9 +574,9 @@ namespace wi::font
 		UpdatePendingGlyphs();
 	}
 
-	void SetCanvas(const wi::Canvas& canvas, wi::graphics::CommandList cmd)
+	void SetCanvas(const wi::Canvas& current_canvas)
 	{
-		canvases[cmd] = canvas;
+		canvas = current_canvas;
 	}
 
 	void Draw(const char* text, const Params& params, CommandList cmd)

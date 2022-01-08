@@ -56,8 +56,7 @@ namespace wi::graphics
 			D3D12_COMMAND_QUEUE_DESC desc = {};
 			Microsoft::WRL::ComPtr<ID3D12CommandQueue> queue;
 			Microsoft::WRL::ComPtr<ID3D12Fence> fence;
-			ID3D12CommandList* submit_cmds[COMMANDLIST_COUNT] = {};
-			uint32_t submit_count = 0;
+			wi::vector<ID3D12CommandList*> submit_cmds;
 		} queues[QUEUE_COUNT];
 
 		struct CopyAllocator
@@ -82,69 +81,95 @@ namespace wi::graphics
 		};
 		mutable CopyAllocator copyAllocator;
 
-		struct FrameResources
-		{
-			Microsoft::WRL::ComPtr<ID3D12Fence> fence[QUEUE_COUNT];
-			Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocators[COMMANDLIST_COUNT][QUEUE_COUNT];
-		};
-		FrameResources frames[BUFFERCOUNT];
-		FrameResources& GetFrameResources() { return frames[GetBufferIndex()]; }
+		Microsoft::WRL::ComPtr<ID3D12Fence> frame_fence[BUFFERCOUNT][QUEUE_COUNT];
 
-		struct CommandListMetadata
+		struct CommandListResources
 		{
+			Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocators[BUFFERCOUNT][QUEUE_COUNT];
+			Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList6> commandLists[QUEUE_COUNT];
 			QUEUE_TYPE queue = {};
 			wi::vector<CommandList> waits;
-		} cmd_meta[COMMANDLIST_COUNT];
 
-		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList4> commandLists[COMMANDLIST_COUNT][QUEUE_COUNT];
+			wi::vector<D3D12_RESOURCE_BARRIER> frame_barriers;
+			D3D_PRIMITIVE_TOPOLOGY prev_pt = {};
+
+			wi::vector<std::pair<size_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>>> pipelines_worker;
+			size_t prev_pipeline_hash = {};
+			const PipelineState* active_pso = {};
+			const Shader* active_cs = {};
+			const RaytracingPipelineState* active_rt = {};
+			const ID3D12RootSignature* active_rootsig_graphics = {};
+			const ID3D12RootSignature* active_rootsig_compute = {};
+			const RenderPass* active_renderpass = {};
+			ShadingRate prev_shadingrate = {};
+			wi::vector<const SwapChain*> swapchains;
+			Microsoft::WRL::ComPtr<ID3D12Resource> active_backbuffer;
+			bool dirty_pso = {};
+
+			struct DescriptorBinder
+			{
+				DescriptorBindingTable table;
+				GraphicsDevice_DX12* device = nullptr;
+
+				const void* optimizer_graphics = nullptr;
+				uint64_t dirty_graphics = 0ull; // 1 dirty bit flag per root parameter
+				const void* optimizer_compute = nullptr;
+				uint64_t dirty_compute = 0ull; // 1 dirty bit flag per root parameter
+
+				void init(GraphicsDevice_DX12* device);
+				void reset();
+				void flush(bool graphics, CommandList cmd);
+			};
+			DescriptorBinder binder;
+
+			GPULinearAllocator frame_allocators[BUFFERCOUNT];
+
+			void reset(uint32_t bufferindex)
+			{
+				binder.reset();
+				prev_pt = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
+				prev_pipeline_hash = 0;
+				active_pso = nullptr;
+				active_cs = nullptr;
+				active_rt = nullptr;
+				active_rootsig_graphics = nullptr;
+				active_rootsig_compute = nullptr;
+				active_renderpass = nullptr;
+				prev_shadingrate = ShadingRate::RATE_INVALID;
+				dirty_pso = false;
+				swapchains.clear();
+				active_backbuffer = nullptr;
+				frame_allocators[bufferindex].offset = 0;
+			}
+
+		};
+		wi::vector<CommandListResources> commandlists;
+		CommandList::index_type cmd_count{ 0 };
+
+		inline CommandListResources& GetCommandListResources(CommandList::index_type cmd)
+		{
+			return commandlists[cmd];
+		}
+		inline const CommandListResources& GetCommandListResources(CommandList::index_type cmd) const
+		{
+			return commandlists[cmd];
+		}
 		inline ID3D12GraphicsCommandList6* GetCommandList(CommandList::index_type cmd)
 		{
-			return (ID3D12GraphicsCommandList6*)commandLists[cmd][cmd_meta[cmd].queue].Get();
+			CommandListResources& commandlist = commandlists[cmd];
+			return (ID3D12GraphicsCommandList6*)commandlist.commandLists[commandlist.queue].Get();
 		}
 
-		struct DescriptorBinder
-		{
-			DescriptorBindingTable table;
-			GraphicsDevice_DX12* device = nullptr;
-
-			const void* optimizer_graphics = nullptr;
-			uint64_t dirty_graphics = 0ull; // 1 dirty bit flag per root parameter
-			const void* optimizer_compute = nullptr;
-			uint64_t dirty_compute = 0ull; // 1 dirty bit flag per root parameter
-
-			void init(GraphicsDevice_DX12* device);
-			void reset();
-			void flush(bool graphics, CommandList cmd);
-		};
-		DescriptorBinder binders[COMMANDLIST_COUNT];
-
-		wi::vector<D3D12_RESOURCE_BARRIER> frame_barriers[COMMANDLIST_COUNT];
-
-		D3D_PRIMITIVE_TOPOLOGY prev_pt[COMMANDLIST_COUNT] = {};
 
 		mutable wi::unordered_map<size_t, Microsoft::WRL::ComPtr<ID3D12RootSignature>> rootsignature_cache;
 		mutable std::mutex rootsignature_cache_mutex;
 
 		wi::unordered_map<size_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>> pipelines_global;
-		wi::vector<std::pair<size_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>>> pipelines_worker[COMMANDLIST_COUNT];
-		size_t prev_pipeline_hash[COMMANDLIST_COUNT] = {};
-		const PipelineState* active_pso[COMMANDLIST_COUNT] = {};
-		const Shader* active_cs[COMMANDLIST_COUNT] = {};
-		const RaytracingPipelineState* active_rt[COMMANDLIST_COUNT] = {};
-		const ID3D12RootSignature* active_rootsig_graphics[COMMANDLIST_COUNT] = {};
-		const ID3D12RootSignature* active_rootsig_compute[COMMANDLIST_COUNT] = {};
-		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
-		ShadingRate prev_shadingrate[COMMANDLIST_COUNT] = {};
-		wi::vector<const SwapChain*> swapchains[COMMANDLIST_COUNT];
-		Microsoft::WRL::ComPtr<ID3D12Resource> active_backbuffer[COMMANDLIST_COUNT];
 
-		bool dirty_pso[COMMANDLIST_COUNT] = {};
 		void pso_validate(CommandList cmd);
 
 		void predraw(CommandList cmd);
 		void predispatch(CommandList cmd);
-
-		std::atomic<CommandList::index_type> cmd_count{ 0 };
 
 	public:
 		GraphicsDevice_DX12(bool debuglayer = false, bool gpuvalidation = false);
@@ -239,6 +264,10 @@ namespace wi::graphics
 
 		const RenderPass* GetCurrentRenderPass(CommandList cmd) const override;
 
+		GPULinearAllocator& GetFrameAllocator(CommandList cmd) override
+		{
+			return GetCommandListResources(cmd).frame_allocators[GetBufferIndex()];
+		}
 
 		struct DescriptorHeapGPU
 		{

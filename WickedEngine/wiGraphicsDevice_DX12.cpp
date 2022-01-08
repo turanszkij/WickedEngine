@@ -1656,14 +1656,14 @@ using namespace dx12_internal;
 		locker.unlock();
 	}
 
-	void GraphicsDevice_DX12::DescriptorBinder::init(GraphicsDevice_DX12* device)
+	void GraphicsDevice_DX12::CommandListResources::DescriptorBinder::init(GraphicsDevice_DX12* device)
 	{
 		this->device = device;
 
 		// Reset state to empty:
 		reset();
 	}
-	void GraphicsDevice_DX12::DescriptorBinder::reset()
+	void GraphicsDevice_DX12::CommandListResources::DescriptorBinder::reset()
 	{
 		table = {};
 		optimizer_graphics = nullptr;
@@ -1671,14 +1671,15 @@ using namespace dx12_internal;
 		optimizer_compute = nullptr;
 		dirty_compute = 0ull;
 	}
-	void GraphicsDevice_DX12::DescriptorBinder::flush(bool graphics, CommandList cmd)
+	void GraphicsDevice_DX12::CommandListResources::DescriptorBinder::flush(bool graphics, CommandList cmd)
 	{
 		uint64_t& dirty = graphics ? dirty_graphics : dirty_compute;
 		if (dirty == 0ull)
 			return;
 
-		ID3D12GraphicsCommandList6* commandlist = device->GetCommandList(cmd);
-		auto pso_internal = graphics ? to_internal(device->active_pso[cmd]) : to_internal(device->active_cs[cmd]);
+		CommandListResources& commandlist = device->GetCommandListResources(cmd);
+		ID3D12GraphicsCommandList6* graphicscommandlist = device->GetCommandList(cmd);
+		auto pso_internal = graphics ? to_internal(commandlist.active_pso) : to_internal(commandlist.active_cs);
 		const RootSignatureOptimizer& optimizer = pso_internal->rootsig_optimizer;
 
 		DWORD index;
@@ -1836,14 +1837,14 @@ using namespace dx12_internal;
 
 				if (graphics)
 				{
-					commandlist->SetGraphicsRootDescriptorTable(
+					graphicscommandlist->SetGraphicsRootDescriptorTable(
 						root_parameter_index,
 						gpu_handle
 					);
 				}
 				else
 				{
-					commandlist->SetComputeRootDescriptorTable(
+					graphicscommandlist->SetComputeRootDescriptorTable(
 						root_parameter_index,
 						gpu_handle
 					);
@@ -1867,14 +1868,14 @@ using namespace dx12_internal;
 
 					if (graphics)
 					{
-						commandlist->SetGraphicsRootConstantBufferView(
+						graphicscommandlist->SetGraphicsRootConstantBufferView(
 							root_parameter_index,
 							address
 						);
 					}
 					else
 					{
-						commandlist->SetComputeRootConstantBufferView(
+						graphicscommandlist->SetComputeRootConstantBufferView(
 							root_parameter_index,
 							address
 						);
@@ -1897,14 +1898,14 @@ using namespace dx12_internal;
 
 					if (graphics)
 					{
-						commandlist->SetGraphicsRootShaderResourceView(
+						graphicscommandlist->SetGraphicsRootShaderResourceView(
 							root_parameter_index,
 							address
 						);
 					}
 					else
 					{
-						commandlist->SetComputeRootShaderResourceView(
+						graphicscommandlist->SetComputeRootShaderResourceView(
 							root_parameter_index,
 							address
 						);
@@ -1927,14 +1928,14 @@ using namespace dx12_internal;
 
 					if (graphics)
 					{
-						commandlist->SetGraphicsRootUnorderedAccessView(
+						graphicscommandlist->SetGraphicsRootUnorderedAccessView(
 							root_parameter_index,
 							address
 						);
 					}
 					else
 					{
-						commandlist->SetComputeRootUnorderedAccessView(
+						graphicscommandlist->SetComputeRootUnorderedAccessView(
 							root_parameter_index,
 							address
 						);
@@ -1954,11 +1955,12 @@ using namespace dx12_internal;
 
 	void GraphicsDevice_DX12::pso_validate(CommandList cmd)
 	{
-		if (!dirty_pso[cmd])
+		CommandListResources& commandlist = GetCommandListResources(cmd);
+		if (!commandlist.dirty_pso)
 			return;
 
-		const PipelineState* pso = active_pso[cmd];
-		size_t pipeline_hash = prev_pipeline_hash[cmd];
+		const PipelineState* pso = commandlist.active_pso;
+		size_t pipeline_hash = commandlist.prev_pipeline_hash;
 
 		auto internal_state = to_internal(pso);
 
@@ -1966,7 +1968,7 @@ using namespace dx12_internal;
 		auto it = pipelines_global.find(pipeline_hash);
 		if (it == pipelines_global.end())
 		{
-			for (auto& x : pipelines_worker[cmd])
+			for (auto& x : commandlist.pipelines_worker)
 			{
 				if (pipeline_hash == x.first)
 				{
@@ -1986,7 +1988,7 @@ using namespace dx12_internal;
 				DXGI_SAMPLE_DESC sampleDesc = {};
 				sampleDesc.Count = 1;
 				sampleDesc.Quality = 0;
-				for (auto& attachment : active_renderpass[cmd]->desc.attachments)
+				for (auto& attachment : commandlist.active_renderpass->desc.attachments)
 				{
 					if (attachment.type == RenderPassAttachment::Type::RESOLVE ||
 						attachment.type == RenderPassAttachment::Type::SHADING_RATE_SOURCE ||
@@ -2060,7 +2062,7 @@ using namespace dx12_internal;
 				HRESULT hr = device->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&newpso));
 				assert(SUCCEEDED(hr));
 
-				pipelines_worker[cmd].push_back(std::make_pair(pipeline_hash, newpso));
+				commandlist.pipelines_worker.push_back(std::make_pair(pipeline_hash, newpso));
 				pipeline = newpso.Get();
 			}
 		}
@@ -2071,11 +2073,11 @@ using namespace dx12_internal;
 		assert(pipeline != nullptr);
 
 		GetCommandList(cmd)->SetPipelineState(pipeline);
-		dirty_pso[cmd] = false;
+		commandlist.dirty_pso = false;
 
-		if (prev_pt[cmd] != internal_state->primitiveTopology)
+		if (commandlist.prev_pt != internal_state->primitiveTopology)
 		{
-			prev_pt[cmd] = internal_state->primitiveTopology;
+			commandlist.prev_pt = internal_state->primitiveTopology;
 
 			GetCommandList(cmd)->IASetPrimitiveTopology(internal_state->primitiveTopology);
 		}
@@ -2085,11 +2087,13 @@ using namespace dx12_internal;
 	{
 		pso_validate(cmd);
 
-		binders[cmd].flush(true, cmd);
+		CommandListResources& commandlist = GetCommandListResources(cmd);
+		commandlist.binder.flush(true, cmd);
 	}
 	void GraphicsDevice_DX12::predispatch(CommandList cmd)
 	{
-		binders[cmd].flush(false, cmd);
+		CommandListResources& commandlist = GetCommandListResources(cmd);
+		commandlist.binder.flush(false, cmd);
 	}
 
 
@@ -2467,11 +2471,11 @@ using namespace dx12_internal;
 		}
 
 		// Create frame-resident resources:
-		for (uint32_t fr = 0; fr < BUFFERCOUNT; ++fr)
+		for (uint32_t buffer = 0; buffer < BUFFERCOUNT; ++buffer)
 		{
 			for (int queue = 0; queue < QUEUE_COUNT; ++queue)
 			{
-				hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&frames[fr].fence[queue]));
+				hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&frame_fence[buffer][queue]));
 				assert(SUCCEEDED(hr));
 				if (FAILED(hr))
 				{
@@ -2717,6 +2721,8 @@ using namespace dx12_internal;
 			ss << "ID3D12CommandQueue::GetTimestampFrequency[QUEUE_GRAPHICS] failed! ERROR: 0x" << std::hex << hr;
 			wi::helper::messageBox(ss.str(), "Warning!");
 		}
+
+		commandlists.reserve(256);
 
 		wi::backlog::post("Created GraphicsDevice_DX12 (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
@@ -4617,35 +4623,42 @@ using namespace dx12_internal;
 	{
 		HRESULT hr;
 
-		CommandList cmd{ cmd_count.fetch_add(1) };
-		assert(cmd < COMMANDLIST_COUNT);
-		cmd_meta[cmd].queue = queue;
-		cmd_meta[cmd].waits.clear();
+		CommandList cmd{ cmd_count++ };
+		if (cmd >= commandlists.size())
+		{
+			commandlists.resize(cmd + 1);
+		}
+
+		CommandListResources& commandlist = GetCommandListResources(cmd);
+		commandlist.queue = queue;
+		commandlist.waits.clear();
 
 		if (GetCommandList(cmd) == nullptr)
 		{
 			// need to create one more command list:
 
-			for (uint32_t fr = 0; fr < BUFFERCOUNT; ++fr)
+			for (uint32_t buffer = 0; buffer < BUFFERCOUNT; ++buffer)
 			{
-				hr = device->CreateCommandAllocator(queues[queue].desc.Type, IID_PPV_ARGS(&frames[fr].commandAllocators[cmd][queue]));
+				hr = device->CreateCommandAllocator(queues[queue].desc.Type, IID_PPV_ARGS(&commandlist.commandAllocators[buffer][queue]));
 				assert(SUCCEEDED(hr));
 			}
 
-			hr = device->CreateCommandList1(0, queues[queue].desc.Type, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(&commandLists[cmd][queue]));
+			hr = device->CreateCommandList1(0, queues[queue].desc.Type, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(&commandlist.commandLists[queue]));
 			assert(SUCCEEDED(hr));
 
 			std::wstring ws = L"cmd" + std::to_wstring(cmd);
-			commandLists[cmd][queue]->SetName(ws.c_str());
+			commandlist.commandLists[queue]->SetName(ws.c_str());
 
-			binders[cmd].init(this);
+			commandlist.binder.init(this);
 		}
 
 		// Start the command list in a default state:
-		hr = GetFrameResources().commandAllocators[cmd][queue]->Reset();
+		hr = commandlist.commandAllocators[GetBufferIndex()][queue]->Reset();
 		assert(SUCCEEDED(hr));
-		hr = GetCommandList(cmd)->Reset(GetFrameResources().commandAllocators[cmd][queue].Get(), nullptr);
+		hr = GetCommandList(cmd)->Reset(commandlist.commandAllocators[GetBufferIndex()][queue].Get(), nullptr);
 		assert(SUCCEEDED(hr));
+
+		commandlist.reset(GetBufferIndex());
 
 		ID3D12DescriptorHeap* heaps[2] = {
 			descriptorheap_res.heap_GPU.Get(),
@@ -4666,20 +4679,6 @@ using namespace dx12_internal;
 			GetCommandList(cmd)->RSSetScissorRects(arraysize(pRects), pRects);
 		}
 
-		binders[cmd].reset();
-		prev_pt[cmd] = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
-		prev_pipeline_hash[cmd] = 0;
-		active_pso[cmd] = nullptr;
-		active_cs[cmd] = nullptr;
-		active_rt[cmd] = nullptr;
-		active_rootsig_graphics[cmd] = nullptr;
-		active_rootsig_compute[cmd] = nullptr;
-		active_renderpass[cmd] = nullptr;
-		prev_shadingrate[cmd] = ShadingRate::RATE_INVALID;
-		dirty_pso[cmd] = false;
-		swapchains[cmd].clear();
-		active_backbuffer[cmd] = nullptr;
-
 		return cmd;
 	}
 	void GraphicsDevice_DX12::SubmitCommandLists()
@@ -4688,59 +4687,57 @@ using namespace dx12_internal;
 
 		// Submit current frame:
 		{
-			auto& frame = GetFrameResources();
-
 			QUEUE_TYPE submit_queue = QUEUE_COUNT;
 
-			CommandList::index_type cmd_last = cmd_count.load();
-			cmd_count.store(0);
+			CommandList::index_type cmd_last = cmd_count;
+			cmd_count = 0;
 			for (CommandList::index_type cmd = 0; cmd < cmd_last; ++cmd)
 			{
+				CommandListResources& commandlist = GetCommandListResources(cmd);
 				hr = GetCommandList(cmd)->Close();
 				assert(SUCCEEDED(hr));
 
-				const CommandListMetadata& meta = cmd_meta[cmd];
 				if (submit_queue == QUEUE_COUNT)
 				{
-					submit_queue = meta.queue;
+					submit_queue = commandlist.queue;
 				}
-				if (meta.queue != submit_queue || !meta.waits.empty()) // new queue type or wait breaks submit batch
+				if (commandlist.queue != submit_queue || !commandlist.waits.empty()) // new queue type or wait breaks submit batch
 				{
 					// submit previous cmd batch:
-					if (queues[submit_queue].submit_count > 0)
+					if (!queues[submit_queue].submit_cmds.empty())
 					{
 						queues[submit_queue].queue->ExecuteCommandLists(
-							queues[submit_queue].submit_count,
-							queues[submit_queue].submit_cmds
+							(UINT)queues[submit_queue].submit_cmds.size(),
+							queues[submit_queue].submit_cmds.data()
 						);
-						queues[submit_queue].submit_count = 0;
+						queues[submit_queue].submit_cmds.clear();
 					}
 
 					// signal status in case any future waits needed:
 					hr = queues[submit_queue].queue->Signal(
 						queues[submit_queue].fence.Get(),
-						FRAMECOUNT * COMMANDLIST_COUNT + (uint64_t)cmd
+						FRAMECOUNT * commandlists.size() + (uint64_t)cmd
 					);
 					assert(SUCCEEDED(hr));
 
-					submit_queue = meta.queue;
+					submit_queue = commandlist.queue;
 
-					for (auto& wait : meta.waits)
+					for (auto& wait : commandlist.waits)
 					{
 						// record wait for signal on a previous submit:
-						const CommandListMetadata& wait_meta = cmd_meta[wait];
+						const CommandListResources& waitcommandlist = GetCommandListResources(wait);
 						hr = queues[submit_queue].queue->Wait(
-							queues[wait_meta.queue].fence.Get(),
-							FRAMECOUNT * COMMANDLIST_COUNT + (uint64_t)wait
+							queues[waitcommandlist.queue].fence.Get(),
+							FRAMECOUNT * commandlists.size() + (uint64_t)wait
 						);
 						assert(SUCCEEDED(hr));
 					}
 				}
 
 				assert(submit_queue < QUEUE_COUNT);
-				queues[submit_queue].submit_cmds[queues[submit_queue].submit_count++] = GetCommandList(cmd);
+				queues[submit_queue].submit_cmds.push_back(GetCommandList(cmd));
 
-				for (auto& x : pipelines_worker[cmd])
+				for (auto& x : commandlist.pipelines_worker)
 				{
 					if (pipelines_global.count(x.first) == 0)
 					{
@@ -4753,28 +4750,29 @@ using namespace dx12_internal;
 						allocationhandler->destroylocker.unlock();
 					}
 				}
-				pipelines_worker[cmd].clear();
+				commandlist.pipelines_worker.clear();
 			}
 
 			// submit last cmd batch:
 			assert(submit_queue < QUEUE_COUNT);
-			assert(queues[submit_queue].submit_count > 0);
+			assert(!queues[submit_queue].submit_cmds.empty());
 			queues[submit_queue].queue->ExecuteCommandLists(
-				queues[submit_queue].submit_count,
-				queues[submit_queue].submit_cmds
+				(UINT)queues[submit_queue].submit_cmds.size(),
+				queues[submit_queue].submit_cmds.data()
 			);
-			queues[submit_queue].submit_count = 0;
+			queues[submit_queue].submit_cmds.clear();
 
 			// Mark the completion of queues for this frame:
 			for (int queue = 0; queue < QUEUE_COUNT; ++queue)
 			{
-				hr = queues[queue].queue->Signal(frame.fence[queue].Get(), 1);
+				hr = queues[queue].queue->Signal(frame_fence[GetBufferIndex()][queue].Get(), 1);
 				assert(SUCCEEDED(hr));
 			}
 
 			for (CommandList::index_type cmd = 0; cmd < cmd_last; ++cmd)
 			{
-				for (auto& swapchain : swapchains[cmd])
+				CommandListResources& commandlist = GetCommandListResources(cmd);
+				for (auto& swapchain : commandlist.swapchains)
 				{
 					UINT presentFlags = 0;
 					if (!swapchain->desc.vsync && !swapchain->desc.fullscreen)
@@ -4804,24 +4802,22 @@ using namespace dx12_internal;
 		descriptorheap_res.SignalGPU(queues[QUEUE_GRAPHICS].queue.Get());
 		descriptorheap_sam.SignalGPU(queues[QUEUE_GRAPHICS].queue.Get());
 
-		// From here, we begin a new frame, this affects GetFrameResources()!
+		// From here, we begin a new frame, this affects GetBufferIndex()!
 		FRAMECOUNT++;
 
 		// Begin next frame:
 		{
-			auto& frame = GetFrameResources();
-
 			// Initiate stalling CPU when GPU is not yet finished with next frame:
 			for (int queue = 0; queue < QUEUE_COUNT; ++queue)
 			{
-				if (FRAMECOUNT >= BUFFERCOUNT && frame.fence[queue]->GetCompletedValue() < 1)
+				if (FRAMECOUNT >= BUFFERCOUNT && frame_fence[GetBufferIndex()][queue]->GetCompletedValue() < 1)
 				{
 					// NULL event handle will simply wait immediately:
 					//	https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12fence-seteventoncompletion#remarks
-					hr = frame.fence[queue]->SetEventOnCompletion(1, NULL);
+					hr = frame_fence[GetBufferIndex()][queue]->SetEventOnCompletion(1, NULL);
 					assert(SUCCEEDED(hr));
 				}
-				hr = frame.fence[queue]->Signal(0);
+				hr = frame_fence[GetBufferIndex()][queue]->Signal(0);
 			}
 			assert(SUCCEEDED(hr));
 
@@ -4865,13 +4861,13 @@ using namespace dx12_internal;
 		}
 		pipelines_global.clear();
 
-		for (int i = 0; i < arraysize(pipelines_worker); ++i)
+		for (auto& x : commandlists)
 		{
-			for (auto& x : pipelines_worker[i])
+			for (auto& y : x.pipelines_worker)
 			{
-				allocationhandler->destroyer_pipelines.push_back(std::make_pair(x.second, FRAMECOUNT));
+				allocationhandler->destroyer_pipelines.push_back(std::make_pair(y.second, FRAMECOUNT));
 			}
-			pipelines_worker[i].clear();
+			x.pipelines_worker.clear();
 		}
 		allocationhandler->destroylocker.unlock();
 	}
@@ -4926,14 +4922,16 @@ using namespace dx12_internal;
 	void GraphicsDevice_DX12::WaitCommandList(CommandList cmd, CommandList wait_for)
 	{
 		assert(wait_for < cmd); // command list cannot wait for future command list!
-		cmd_meta[cmd].waits.push_back(wait_for);
+		CommandListResources& commandlist = GetCommandListResources(cmd);
+		commandlist.waits.push_back(wait_for);
 	}
 	void GraphicsDevice_DX12::RenderPassBegin(const SwapChain* swapchain, CommandList cmd)
 	{
-		swapchains[cmd].push_back(swapchain);
+		CommandListResources& commandlist = GetCommandListResources(cmd);
+		commandlist.swapchains.push_back(swapchain);
 		auto internal_state = to_internal(swapchain);
-		active_renderpass[cmd] = &internal_state->renderpass;
-		active_backbuffer[cmd] = internal_state->backBuffers[internal_state->swapChain->GetCurrentBackBufferIndex()];
+		commandlist.active_renderpass = &internal_state->renderpass;
+		commandlist.active_backbuffer = internal_state->backBuffers[internal_state->swapChain->GetCurrentBackBufferIndex()];
 
 		D3D12_RESOURCE_BARRIER barrier = {};
 		barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
@@ -4957,9 +4955,10 @@ using namespace dx12_internal;
 	}
 	void GraphicsDevice_DX12::RenderPassBegin(const RenderPass* renderpass, CommandList cmd)
 	{
-		active_renderpass[cmd] = renderpass;
+		CommandListResources& commandlist = GetCommandListResources(cmd);
+		commandlist.active_renderpass = renderpass;
 
-		auto internal_state = to_internal(active_renderpass[cmd]);
+		auto internal_state = to_internal(commandlist.active_renderpass);
 
 		if (internal_state->num_barriers_begin > 0)
 		{
@@ -4981,9 +4980,10 @@ using namespace dx12_internal;
 	}
 	void GraphicsDevice_DX12::RenderPassEnd(CommandList cmd)
 	{
+		CommandListResources& commandlist = GetCommandListResources(cmd);
 		GetCommandList(cmd)->EndRenderPass();
 
-		auto internal_state = to_internal(active_renderpass[cmd]);
+		auto internal_state = to_internal(commandlist.active_renderpass);
 
 		if (internal_state != nullptr)
 		{
@@ -4998,20 +4998,20 @@ using namespace dx12_internal;
 			}
 		}
 
-		active_renderpass[cmd] = nullptr;
+		commandlist.active_renderpass = nullptr;
 
-		if (active_backbuffer[cmd])
+		if (commandlist.active_backbuffer)
 		{
 			D3D12_RESOURCE_BARRIER barrier = {};
 			barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-			barrier.Transition.pResource = active_backbuffer[cmd].Get();
+			barrier.Transition.pResource = commandlist.active_backbuffer.Get();
 			barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 			barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 			barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 			GetCommandList(cmd)->ResourceBarrier(1, &barrier);
 
-			active_backbuffer[cmd] = nullptr;
+			commandlist.active_backbuffer = nullptr;
 		}
 	}
 	void GraphicsDevice_DX12::BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd)
@@ -5047,7 +5047,8 @@ using namespace dx12_internal;
 	void GraphicsDevice_DX12::BindResource(const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
 	{
 		assert(slot < DESCRIPTORBINDER_SRV_COUNT);
-		auto& binder = binders[cmd];
+		CommandListResources& commandlist = GetCommandListResources(cmd);
+		auto& binder = commandlist.binder;
 		if (binder.table.SRV[slot].internal_state != resource->internal_state || binder.table.SRV_index[slot] != subresource)
 		{
 			binder.table.SRV[slot] = *resource;
@@ -5084,7 +5085,8 @@ using namespace dx12_internal;
 	void GraphicsDevice_DX12::BindUAV(const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
 	{
 		assert(slot < DESCRIPTORBINDER_UAV_COUNT);
-		auto& binder = binders[cmd];
+		CommandListResources& commandlist = GetCommandListResources(cmd);
+		auto& binder = commandlist.binder;
 		if (binder.table.UAV[slot].internal_state != resource->internal_state || binder.table.UAV_index[slot] != subresource)
 		{
 			binder.table.UAV[slot] = *resource;
@@ -5121,7 +5123,8 @@ using namespace dx12_internal;
 	void GraphicsDevice_DX12::BindSampler(const Sampler* sampler, uint32_t slot, CommandList cmd)
 	{
 		assert(slot < DESCRIPTORBINDER_SAMPLER_COUNT);
-		auto& binder = binders[cmd];
+		CommandListResources& commandlist = GetCommandListResources(cmd);
+		auto& binder = commandlist.binder;
 		if (binder.table.SAM[slot].internal_state != sampler->internal_state)
 		{
 			binder.table.SAM[slot] = *sampler;
@@ -5147,7 +5150,8 @@ using namespace dx12_internal;
 	void GraphicsDevice_DX12::BindConstantBuffer(const GPUBuffer* buffer, uint32_t slot, CommandList cmd, uint64_t offset)
 	{
 		assert(slot < DESCRIPTORBINDER_CBV_COUNT);
-		auto& binder = binders[cmd];
+		CommandListResources& commandlist = GetCommandListResources(cmd);
+		auto& binder = commandlist.binder;
 		if (binder.table.CBV[slot].internal_state != buffer->internal_state || binder.table.CBV_offset[slot] != offset)
 		{
 			binder.table.CBV[slot] = *buffer;
@@ -5215,9 +5219,10 @@ using namespace dx12_internal;
 	}
 	void GraphicsDevice_DX12::BindShadingRate(ShadingRate rate, CommandList cmd)
 	{
-		if (CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING) && prev_shadingrate[cmd] != rate)
+		CommandListResources& commandlist = GetCommandListResources(cmd);
+		if (CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING) && commandlist.prev_shadingrate != rate)
 		{
-			prev_shadingrate[cmd] = rate;
+			commandlist.prev_shadingrate = rate;
 
 			D3D12_SHADING_RATE _rate = D3D12_SHADING_RATE_1X1;
 			WriteShadingRateValue(rate, &_rate);
@@ -5232,47 +5237,49 @@ using namespace dx12_internal;
 	}
 	void GraphicsDevice_DX12::BindPipelineState(const PipelineState* pso, CommandList cmd)
 	{
-		active_cs[cmd] = nullptr;
-		active_rt[cmd] = nullptr;
+		CommandListResources& commandlist = GetCommandListResources(cmd);
+		commandlist.active_cs = nullptr;
+		commandlist.active_rt = nullptr;
 
 		size_t pipeline_hash = 0;
 		wi::helper::hash_combine(pipeline_hash, pso->hash);
-		if (active_renderpass[cmd] != nullptr)
+		if (commandlist.active_renderpass != nullptr)
 		{
-			wi::helper::hash_combine(pipeline_hash, active_renderpass[cmd]->hash);
+			wi::helper::hash_combine(pipeline_hash, commandlist.active_renderpass->hash);
 		}
-		if (prev_pipeline_hash[cmd] == pipeline_hash)
+		if (commandlist.prev_pipeline_hash == pipeline_hash)
 		{
 			return;
 		}
-		prev_pipeline_hash[cmd] = pipeline_hash;
+		commandlist.prev_pipeline_hash = pipeline_hash;
 
 		auto internal_state = to_internal(pso);
 
-		if (active_rootsig_graphics[cmd] != internal_state->rootSignature.Get())
+		if (commandlist.active_rootsig_graphics != internal_state->rootSignature.Get())
 		{
-			active_rootsig_graphics[cmd] = internal_state->rootSignature.Get();
+			commandlist.active_rootsig_graphics = internal_state->rootSignature.Get();
 			GetCommandList(cmd)->SetGraphicsRootSignature(internal_state->rootSignature.Get());
 
-			auto& binder = binders[cmd];
+			auto& binder = commandlist.binder;
 			binder.optimizer_graphics = &internal_state->rootsig_optimizer;
 			binder.dirty_graphics = internal_state->rootsig_optimizer.root_mask; // invalidates all root bindings
 		}
 
-		active_pso[cmd] = pso;
-		dirty_pso[cmd] = true;
+		commandlist.active_pso = pso;
+		commandlist.dirty_pso = true;
 	}
 	void GraphicsDevice_DX12::BindComputeShader(const Shader* cs, CommandList cmd)
 	{
-		active_pso[cmd] = nullptr;
-		active_rt[cmd] = nullptr;
+		CommandListResources& commandlist = GetCommandListResources(cmd);
+		commandlist.active_pso = nullptr;
+		commandlist.active_rt = nullptr;
 
 		assert(cs->stage == ShaderStage::CS || cs->stage == ShaderStage::LIB);
-		if (active_cs[cmd] != cs)
+		if (commandlist.active_cs != cs)
 		{
-			prev_pipeline_hash[cmd] = 0;
+			commandlist.prev_pipeline_hash = 0;
 
-			active_cs[cmd] = cs;
+			commandlist.active_cs = cs;
 
 			auto internal_state = to_internal(cs);
 
@@ -5281,12 +5288,12 @@ using namespace dx12_internal;
 				GetCommandList(cmd)->SetPipelineState(internal_state->resource.Get());
 			}
 
-			if (active_rootsig_compute[cmd] != internal_state->rootSignature.Get())
+			if (commandlist.active_rootsig_compute != internal_state->rootSignature.Get())
 			{
-				active_rootsig_compute[cmd] = internal_state->rootSignature.Get();
+				commandlist.active_rootsig_compute = internal_state->rootSignature.Get();
 				GetCommandList(cmd)->SetComputeRootSignature(internal_state->rootSignature.Get());
 
-				auto& binder = binders[cmd];
+				auto& binder = commandlist.binder;
 				binder.optimizer_compute = &internal_state->rootsig_optimizer;
 				binder.dirty_compute = internal_state->rootsig_optimizer.root_mask; // invalidates all root bindings
 			}
@@ -5444,7 +5451,7 @@ using namespace dx12_internal;
 	}
 	void GraphicsDevice_DX12::QueryResolve(const GPUQueryHeap* heap, uint32_t index, uint32_t count, const GPUBuffer* dest, uint64_t dest_offset, CommandList cmd)
 	{
-		assert(active_renderpass[cmd] == nullptr); // Can't resolve inside renderpass!
+		assert(GetCommandListResources(cmd).active_renderpass == nullptr); // Can't resolve inside renderpass!
 
 		auto internal_state = to_internal(heap);
 		auto dst_internal = to_internal(dest);
@@ -5485,9 +5492,10 @@ using namespace dx12_internal;
 	}
 	void GraphicsDevice_DX12::Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd)
 	{
-		assert(active_renderpass[cmd] == nullptr);
+		CommandListResources& commandlist = GetCommandListResources(cmd);
+		assert(commandlist.active_renderpass == nullptr);
 
-		auto& barrierdescs = frame_barriers[cmd];
+		auto& barrierdescs = commandlist.frame_barriers;
 
 		for (uint32_t i = 0; i < numBarriers; ++i)
 		{
@@ -5545,8 +5553,7 @@ using namespace dx12_internal;
 			break;
 			}
 
-			if (barrierdesc.Type == D3D12_RESOURCE_BARRIER_TYPE_TRANSITION &&
-				cmd_meta[cmd].queue > QUEUE_GRAPHICS)
+			if (barrierdesc.Type == D3D12_RESOURCE_BARRIER_TYPE_TRANSITION && commandlist.queue > QUEUE_GRAPHICS)
 			{
 				// Only graphics queue can do pixel shader state:
 				barrierdesc.Transition.StateBefore &= ~D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
@@ -5637,10 +5644,11 @@ using namespace dx12_internal;
 	}
 	void GraphicsDevice_DX12::BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd)
 	{
-		active_cs[cmd] = nullptr;
-		active_pso[cmd] = nullptr;
-		prev_pipeline_hash[cmd] = 0;
-		active_rt[cmd] = rtpso;
+		CommandListResources& commandlist = GetCommandListResources(cmd);
+		commandlist.active_cs = nullptr;
+		commandlist.active_pso = nullptr;
+		commandlist.prev_pipeline_hash = 0;
+		commandlist.active_rt = rtpso;
 
 		BindComputeShader(rtpso->desc.shader_libraries.front().shader, cmd);
 
@@ -5706,8 +5714,9 @@ using namespace dx12_internal;
 		assert(size % sizeof(uint32_t) == 0);
 		assert(offset % sizeof(uint32_t) == 0);
 
-		auto& binder = binders[cmd];
-		if (active_pso[cmd] != nullptr)
+		CommandListResources& commandlist = GetCommandListResources(cmd);
+		auto& binder = commandlist.binder;
+		if (commandlist.active_pso != nullptr)
 		{
 			const RootSignatureOptimizer* optimizer = (const RootSignatureOptimizer*)binder.optimizer_graphics;
 			const D3D12_ROOT_PARAMETER1& param = optimizer->rootsig_desc->Desc_1_1.pParameters[optimizer->PUSH];
@@ -5721,7 +5730,7 @@ using namespace dx12_internal;
 			);
 			return;
 		}
-		if (active_cs[cmd] != nullptr)
+		if (commandlist.active_cs != nullptr)
 		{
 			const RootSignatureOptimizer* optimizer = (const RootSignatureOptimizer*)binder.optimizer_compute;
 			const D3D12_ROOT_PARAMETER1& param = optimizer->rootsig_desc->Desc_1_1.pParameters[optimizer->PUSH];
@@ -5781,7 +5790,8 @@ using namespace dx12_internal;
 
 	const RenderPass* GraphicsDevice_DX12::GetCurrentRenderPass(CommandList cmd) const
 	{
-		return active_renderpass[cmd];
+		const CommandListResources& commandlist = GetCommandListResources(cmd);
+		return commandlist.active_renderpass;
 	}
 
 }

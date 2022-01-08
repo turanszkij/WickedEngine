@@ -15,12 +15,12 @@ namespace wi::graphics
 	//	CommandList recording is not thread safe
 	struct CommandList
 	{
-		using index_type = uint8_t;
-		index_type index = 0xFF;
+		using index_type = uint32_t;
+		index_type index = ~0u;
 		constexpr operator index_type() const { return index; }
+
+		inline bool IsValid() const { return index != ~0; }
 	};
-	static constexpr CommandList::index_type COMMANDLIST_COUNT = 32;	// If you increase command list count, more memory will be statically allocated for per-command list resources
-	static constexpr CommandList INVALID_COMMANDLIST;					// CommandList is invalid if it's just declared, but not started
 
 	// Descriptor binding counts:
 	//	It's OK increase these limits if not enough
@@ -210,8 +210,8 @@ namespace wi::graphics
 		{
 			GPUBuffer buffer;
 			uint64_t offset = 0;
-			uint64_t frame_index = 0;
-		} frame_allocators[BUFFERCOUNT][COMMANDLIST_COUNT];
+		};
+		virtual GPULinearAllocator& GetFrameAllocator(CommandList cmd) = 0;
 
 		struct GPUAllocation
 		{
@@ -231,12 +231,7 @@ namespace wi::graphics
 			if (dataSize == 0)
 				return allocation;
 
-			GPULinearAllocator& allocator = frame_allocators[GetBufferIndex()][cmd];
-			if (FRAMECOUNT != allocator.frame_index)
-			{
-				allocator.frame_index = FRAMECOUNT;
-				allocator.offset = 0;
-			}
+			GPULinearAllocator& allocator = GetFrameAllocator(cmd);
 
 			const uint64_t free_space = allocator.buffer.desc.size - allocator.offset;
 			if (dataSize > free_space)

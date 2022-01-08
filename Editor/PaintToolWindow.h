@@ -56,6 +56,6 @@ public:
 	void SetEntity(wi::ecs::Entity value, int subsetindex = -1);
 
 	wi::Archive* currentHistory = nullptr;
-	void RecordHistory(bool start, wi::graphics::CommandList cmd = wi::graphics::INVALID_COMMANDLIST);
+	void RecordHistory(bool start, wi::graphics::CommandList cmd = wi::graphics::CommandList());
 	void ConsumeHistoryOperation(wi::Archive& archive, bool undo);
 };
