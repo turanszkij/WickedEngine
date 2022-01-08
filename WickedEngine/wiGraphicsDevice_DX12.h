@@ -83,11 +83,29 @@ namespace wi::graphics
 
 		Microsoft::WRL::ComPtr<ID3D12Fence> frame_fence[BUFFERCOUNT][QUEUE_COUNT];
 
-		struct CommandListResources
+		struct DescriptorBinder
+		{
+			DescriptorBindingTable table;
+			GraphicsDevice_DX12* device = nullptr;
+
+			const void* optimizer_graphics = nullptr;
+			uint64_t dirty_graphics = 0ull; // 1 dirty bit flag per root parameter
+			const void* optimizer_compute = nullptr;
+			uint64_t dirty_compute = 0ull; // 1 dirty bit flag per root parameter
+
+			void init(GraphicsDevice_DX12* device);
+			void reset();
+			void flush(bool graphics, CommandList cmd);
+		};
+
+		struct CommandList_DX12
 		{
 			Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocators[BUFFERCOUNT][QUEUE_COUNT];
 			Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList6> commandLists[QUEUE_COUNT];
+			uint32_t buffer_index = 0;
+
 			QUEUE_TYPE queue = {};
+			uint32_t id = 0;
 			wi::vector<CommandList> waits;
 
 			wi::vector<D3D12_RESOURCE_BARRIER> frame_barriers;
@@ -106,26 +124,13 @@ namespace wi::graphics
 			Microsoft::WRL::ComPtr<ID3D12Resource> active_backbuffer;
 			bool dirty_pso = {};
 
-			struct DescriptorBinder
-			{
-				DescriptorBindingTable table;
-				GraphicsDevice_DX12* device = nullptr;
-
-				const void* optimizer_graphics = nullptr;
-				uint64_t dirty_graphics = 0ull; // 1 dirty bit flag per root parameter
-				const void* optimizer_compute = nullptr;
-				uint64_t dirty_compute = 0ull; // 1 dirty bit flag per root parameter
-
-				void init(GraphicsDevice_DX12* device);
-				void reset();
-				void flush(bool graphics, CommandList cmd);
-			};
 			DescriptorBinder binder;
-
 			GPULinearAllocator frame_allocators[BUFFERCOUNT];
 
 			void reset(uint32_t bufferindex)
 			{
+				buffer_index = bufferindex;
+				waits.clear();
 				binder.reset();
 				prev_pt = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
 				prev_pipeline_hash = 0;
@@ -142,22 +147,27 @@ namespace wi::graphics
 				frame_allocators[bufferindex].offset = 0;
 			}
 
+			inline ID3D12CommandAllocator* GetCommandAllocator()
+			{
+				return commandAllocators[buffer_index][queue].Get();
+			}
+			inline ID3D12GraphicsCommandList6* GetGraphicsCommandList()
+			{
+				return (ID3D12GraphicsCommandList6*)commandLists[queue].Get();
+			}
 		};
-		wi::vector<CommandListResources> commandlists;
-		CommandList::index_type cmd_count{ 0 };
+		wi::vector<std::unique_ptr<CommandList_DX12>> commandlists;
+		uint32_t cmd_count = 0;
 
-		inline CommandListResources& GetCommandListResources(CommandList::index_type cmd)
+		constexpr CommandList_DX12& GetCommandList(CommandList cmd)
 		{
-			return commandlists[cmd];
+			assert(cmd.IsValid());
+			return *(CommandList_DX12*)cmd.internal_state;
 		}
-		inline const CommandListResources& GetCommandListResources(CommandList::index_type cmd) const
+		constexpr const CommandList_DX12& GetCommandList(CommandList cmd) const
 		{
-			return commandlists[cmd];
-		}
-		inline ID3D12GraphicsCommandList6* GetCommandList(CommandList::index_type cmd)
-		{
-			CommandListResources& commandlist = commandlists[cmd];
-			return (ID3D12GraphicsCommandList6*)commandlist.commandLists[commandlist.queue].Get();
+			assert(cmd.IsValid());
+			return *(const CommandList_DX12*)cmd.internal_state;
 		}
 
 
@@ -262,11 +272,14 @@ namespace wi::graphics
 		void EventEnd(CommandList cmd) override;
 		void SetMarker(const char* name, CommandList cmd) override;
 
-		const RenderPass* GetCurrentRenderPass(CommandList cmd) const override;
-
+		const RenderPass* GetCurrentRenderPass(CommandList cmd) const override
+		{
+			const CommandList_DX12& commandlist = GetCommandList(cmd);
+			return commandlist.active_renderpass;
+		}
 		GPULinearAllocator& GetFrameAllocator(CommandList cmd) override
 		{
-			return GetCommandListResources(cmd).frame_allocators[GetBufferIndex()];
+			return GetCommandList(cmd).frame_allocators[GetBufferIndex()];
 		}
 
 		struct DescriptorHeapGPU

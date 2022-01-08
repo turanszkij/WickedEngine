@@ -1473,7 +1473,7 @@ using namespace vulkan_internal;
 		return value;
 	}
 
-	void GraphicsDevice_Vulkan::CommandListResources::DescriptorBinderPool::init(GraphicsDevice_Vulkan* device)
+	void GraphicsDevice_Vulkan::DescriptorBinderPool::init(GraphicsDevice_Vulkan* device)
 	{
 		this->device = device;
 
@@ -1539,7 +1539,7 @@ using namespace vulkan_internal;
 		//	This is because init can be called mid-frame when there is allocation error, but the bindings must be retained!
 
 	}
-	void GraphicsDevice_Vulkan::CommandListResources::DescriptorBinderPool::destroy()
+	void GraphicsDevice_Vulkan::DescriptorBinderPool::destroy()
 	{
 		if (descriptorPool != VK_NULL_HANDLE)
 		{
@@ -1549,7 +1549,7 @@ using namespace vulkan_internal;
 			device->allocationhandler->destroylocker.unlock();
 		}
 	}
-	void GraphicsDevice_Vulkan::CommandListResources::DescriptorBinderPool::reset()
+	void GraphicsDevice_Vulkan::DescriptorBinderPool::reset()
 	{
 		if (descriptorPool != VK_NULL_HANDLE)
 		{
@@ -1558,7 +1558,7 @@ using namespace vulkan_internal;
 		}
 	}
 
-	void GraphicsDevice_Vulkan::CommandListResources::DescriptorBinder::init(GraphicsDevice_Vulkan* device)
+	void GraphicsDevice_Vulkan::DescriptorBinder::init(GraphicsDevice_Vulkan* device)
 	{
 		this->device = device;
 
@@ -1569,20 +1569,20 @@ using namespace vulkan_internal;
 		texelBufferViews.reserve(128);
 		accelerationStructureViews.reserve(128);
 	}
-	void GraphicsDevice_Vulkan::CommandListResources::DescriptorBinder::reset()
+	void GraphicsDevice_Vulkan::DescriptorBinder::reset()
 	{
 		table = {};
 		dirty = true;
 	}
-	void GraphicsDevice_Vulkan::CommandListResources::DescriptorBinder::flush(bool graphics, CommandList cmd)
+	void GraphicsDevice_Vulkan::DescriptorBinder::flush(bool graphics, CommandList cmd)
 	{
 		if (dirty == DIRTY_NONE)
 			return;
 
-		CommandListResources& commandlist = device->GetCommandListResources(cmd);
+		CommandList_Vulkan& commandlist = device->GetCommandList(cmd);
 		auto pso_internal = graphics ? to_internal(commandlist.active_pso) : nullptr;
 		auto cs_internal = graphics ? nullptr : to_internal(commandlist.active_cs);
-		VkCommandBuffer commandBuffer = device->GetCommandList(cmd);
+		VkCommandBuffer commandBuffer = commandlist.GetCommandBuffer();
 
 		VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
 		VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
@@ -2045,7 +2045,7 @@ using namespace vulkan_internal;
 
 	void GraphicsDevice_Vulkan::pso_validate(CommandList cmd)
 	{
-		CommandListResources& commandlist = GetCommandListResources(cmd);
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 		if (!commandlist.dirty_pso)
 			return;
 
@@ -2232,7 +2232,7 @@ using namespace vulkan_internal;
 		}
 		assert(pipeline != VK_NULL_HANDLE);
 
-		vkCmdBindPipeline(GetCommandList(cmd), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+		vkCmdBindPipeline(commandlist.GetCommandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 		commandlist.dirty_pso = false;
 	}
 
@@ -2240,12 +2240,12 @@ using namespace vulkan_internal;
 	{
 		pso_validate(cmd);
 
-		CommandListResources& commandlist = GetCommandListResources(cmd);
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 		commandlist.binder.flush(true, cmd);
 	}
 	void GraphicsDevice_Vulkan::predispatch(CommandList cmd)
 	{
-		CommandListResources& commandlist = GetCommandListResources(cmd);
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 		commandlist.binder.flush(false, cmd);
 	}
 
@@ -3264,8 +3264,6 @@ using namespace vulkan_internal;
 			assert(res == VK_SUCCESS);
 		}
 
-		commandlists.reserve(256);
-
 		wi::backlog::post("Created GraphicsDevice_Vulkan (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
 	GraphicsDevice_Vulkan::~GraphicsDevice_Vulkan()
@@ -3301,14 +3299,14 @@ using namespace vulkan_internal;
 			{
 				for (int queue = 0; queue < QUEUE_COUNT; ++queue)
 				{
-					vkDestroyCommandPool(device, commandlist.commandPools[buffer][queue], nullptr);
+					vkDestroyCommandPool(device, commandlist->commandPools[buffer][queue], nullptr);
 				}
 			}
-			for (auto& x : commandlist.pipelines_worker)
+			for (auto& x : commandlist->pipelines_worker)
 			{
 				vkDestroyPipeline(device, x.second, nullptr);
 			}
-			for (auto& x : commandlist.binder_pools)
+			for (auto& x : commandlist->binder_pools)
 			{
 				x.destroy();
 			}
@@ -6125,17 +6123,20 @@ using namespace vulkan_internal;
 	{
 		VkResult res;
 
-		CommandList cmd{ cmd_count++ };
-		if (cmd >= commandlists.size())
+		uint32_t cmd_current = cmd_count++;
+		if (cmd_current >= commandlists.size())
 		{
-			commandlists.resize(cmd + 1);
+			commandlists.push_back(std::make_unique<CommandList_Vulkan>());
 		}
+		CommandList cmd;
+		cmd.internal_state = commandlists[cmd_current].get();
 
-		CommandListResources& commandlist = GetCommandListResources(cmd);
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
+		commandlist.reset(GetBufferIndex());
 		commandlist.queue = queue;
-		commandlist.waits.clear();
+		commandlist.id = cmd_current;
 
-		if (GetCommandList(cmd) == VK_NULL_HANDLE)
+		if (commandlist.GetCommandBuffer() == VK_NULL_HANDLE)
 		{
 			// need to create one more command list:
 
@@ -6175,7 +6176,7 @@ using namespace vulkan_internal;
 			commandlist.binder.init(this);
 		}
 
-		res = vkResetCommandPool(device, commandlist.commandPools[GetBufferIndex()][queue], 0);
+		res = vkResetCommandPool(device, commandlist.GetCommandPool(), 0);
 		assert(res == VK_SUCCESS);
 
 		VkCommandBufferBeginInfo beginInfo = {};
@@ -6183,10 +6184,8 @@ using namespace vulkan_internal;
 		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 		beginInfo.pInheritanceInfo = nullptr; // Optional
 
-		res = vkBeginCommandBuffer(GetCommandList(cmd), &beginInfo);
+		res = vkBeginCommandBuffer(commandlist.GetCommandBuffer(), &beginInfo);
 		assert(res == VK_SUCCESS);
-
-		commandlist.reset(GetBufferIndex());
 
 		if (queue == QUEUE_GRAPHICS)
 		{
@@ -6198,11 +6197,11 @@ using namespace vulkan_internal;
 				scissors[i].extent.width = 65535;
 				scissors[i].extent.height = 65535;
 			}
-			vkCmdSetScissor(GetCommandList(cmd), 0, arraysize(scissors), scissors);
+			vkCmdSetScissor(commandlist.GetCommandBuffer(), 0, arraysize(scissors), scissors);
 
 			float blendConstants[] = { 1,1,1,1 };
-			vkCmdSetBlendConstants(GetCommandList(cmd), blendConstants);
-			vkCmdSetDepthBounds(GetCommandList(cmd), 0.0f, 1.0f);
+			vkCmdSetBlendConstants(commandlist.GetCommandBuffer(), blendConstants);
+			vkCmdSetDepthBounds(commandlist.GetCommandBuffer(), 0.0f, 1.0f);
 		}
 
 		return cmd;
@@ -6227,12 +6226,12 @@ using namespace vulkan_internal;
 
 			uint64_t copy_sync = copyAllocator.flush();
 
-			CommandList::index_type cmd_last = cmd_count;
+			uint32_t cmd_last = cmd_count;
 			cmd_count = 0;
-			for (CommandList::index_type cmd = 0; cmd < cmd_last; ++cmd)
+			for (uint32_t cmd = 0; cmd < cmd_last; ++cmd)
 			{
-				CommandListResources& commandlist = GetCommandListResources(cmd);
-				res = vkEndCommandBuffer(GetCommandList(cmd));
+				CommandList_Vulkan& commandlist = *commandlists[cmd].get();
+				res = vkEndCommandBuffer(commandlist.GetCommandBuffer());
 				assert(res == VK_SUCCESS);
 
 				if (submit_queue == QUEUE_COUNT) // start first batch
@@ -6259,10 +6258,10 @@ using namespace vulkan_internal;
 					for (auto& wait : commandlist.waits)
 					{
 						// record wait for signal on a previous submit:
-						CommandListResources& waitcommandlist = GetCommandListResources(wait);
+						CommandList_Vulkan& waitcommandlist = GetCommandList(wait);
 						queues[submit_queue].submit_waitStages.push_back(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 						queues[submit_queue].submit_waitSemaphores.push_back(queues[waitcommandlist.queue].semaphore);
-						queues[submit_queue].submit_waitValues.push_back(FRAMECOUNT * commandlists.size() + (uint64_t)wait);
+						queues[submit_queue].submit_waitValues.push_back(FRAMECOUNT * commandlists.size() + (uint64_t)waitcommandlist.id);
 					}
 				}
 
@@ -6286,7 +6285,7 @@ using namespace vulkan_internal;
 					queues[submit_queue].submit_signalValues.push_back(0); // not a timeline semaphore
 				}
 
-				queues[submit_queue].submit_cmds.push_back(GetCommandList(cmd));
+				queues[submit_queue].submit_cmds.push_back(commandlist.GetCommandBuffer());
 
 				for (auto& x : commandlist.pipelines_worker)
 				{
@@ -6378,11 +6377,11 @@ using namespace vulkan_internal;
 
 		for (auto& x : commandlists)
 		{
-			for (auto& y : x.pipelines_worker)
+			for (auto& y : x->pipelines_worker)
 			{
 				allocationhandler->destroyer_pipelines.push_back(std::make_pair(y.second, FRAMECOUNT));
 			}
-			x.pipelines_worker.clear();
+			x->pipelines_worker.clear();
 		}
 		allocationhandler->destroylocker.unlock();
 
@@ -6447,13 +6446,13 @@ using namespace vulkan_internal;
 
 	void GraphicsDevice_Vulkan::WaitCommandList(CommandList cmd, CommandList wait_for)
 	{
-		assert(wait_for < cmd); // command list cannot wait for future command list!
-		CommandListResources& commandlist = GetCommandListResources(cmd);
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
+		assert(GetCommandList(wait_for).id < commandlist.id); // can't wait for future command list!
 		commandlist.waits.push_back(wait_for);
 	}
 	void GraphicsDevice_Vulkan::RenderPassBegin(const SwapChain* swapchain, CommandList cmd)
 	{
-		CommandListResources& commandlist = GetCommandListResources(cmd);
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 
 		auto internal_state = to_internal(swapchain);
 		commandlist.active_renderpass = &internal_state->renderpass;
@@ -6498,21 +6497,21 @@ using namespace vulkan_internal;
 		renderPassInfo.renderArea.extent = internal_state->swapChainExtent;
 		renderPassInfo.clearValueCount = 1;
 		renderPassInfo.pClearValues = &clearColor;
-		vkCmdBeginRenderPass(GetCommandList(cmd), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+		vkCmdBeginRenderPass(commandlist.GetCommandBuffer(), &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 		
 	}
 	void GraphicsDevice_Vulkan::RenderPassBegin(const RenderPass* renderpass, CommandList cmd)
 	{
-		CommandListResources& commandlist = GetCommandListResources(cmd);
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 		commandlist.active_renderpass = renderpass;
 
 		auto internal_state = to_internal(renderpass);
-		vkCmdBeginRenderPass(GetCommandList(cmd), &internal_state->beginInfo, VK_SUBPASS_CONTENTS_INLINE);
+		vkCmdBeginRenderPass(commandlist.GetCommandBuffer(), &internal_state->beginInfo, VK_SUBPASS_CONTENTS_INLINE);
 	}
 	void GraphicsDevice_Vulkan::RenderPassEnd(CommandList cmd)
 	{
-		CommandListResources& commandlist = GetCommandListResources(cmd);
-		vkCmdEndRenderPass(GetCommandList(cmd));
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
+		vkCmdEndRenderPass(commandlist.GetCommandBuffer());
 
 		commandlist.active_renderpass = nullptr;
 	}
@@ -6529,7 +6528,8 @@ using namespace vulkan_internal;
 			scissors[i].offset.x = std::max(0, rects[i].left);
 			scissors[i].offset.y = std::max(0, rects[i].top);
 		}
-		vkCmdSetScissor(GetCommandList(cmd), 0, numRects, scissors);
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
+		vkCmdSetScissor(commandlist.GetCommandBuffer(), 0, numRects, scissors);
 	}
 	void GraphicsDevice_Vulkan::BindViewports(uint32_t NumViewports, const Viewport* pViewports, CommandList cmd)
 	{
@@ -6546,18 +6546,19 @@ using namespace vulkan_internal;
 			vp[i].minDepth = pViewports[i].min_depth;
 			vp[i].maxDepth = pViewports[i].max_depth;
 		}
-		vkCmdSetViewport(GetCommandList(cmd), 0, NumViewports, vp);
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
+		vkCmdSetViewport(commandlist.GetCommandBuffer(), 0, NumViewports, vp);
 	}
 	void GraphicsDevice_Vulkan::BindResource(const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
 	{
-		CommandListResources& commandlist = GetCommandListResources(cmd);
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 		assert(slot < DESCRIPTORBINDER_SRV_COUNT);
 		auto& binder = commandlist.binder;
 		if (binder.table.SRV[slot].internal_state != resource->internal_state || binder.table.SRV_index[slot] != subresource)
 		{
 			binder.table.SRV[slot] = *resource;
 			binder.table.SRV_index[slot] = subresource;
-			binder.dirty |= CommandListResources::DescriptorBinder::DIRTY_DESCRIPTOR;
+			binder.dirty |= DescriptorBinder::DIRTY_DESCRIPTOR;
 		}
 	}
 	void GraphicsDevice_Vulkan::BindResources(const GPUResource *const* resources, uint32_t slot, uint32_t count, CommandList cmd)
@@ -6572,14 +6573,14 @@ using namespace vulkan_internal;
 	}
 	void GraphicsDevice_Vulkan::BindUAV(const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
 	{
-		CommandListResources& commandlist = GetCommandListResources(cmd);
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 		assert(slot < DESCRIPTORBINDER_UAV_COUNT);
 		auto& binder = commandlist.binder;
 		if (binder.table.UAV[slot].internal_state != resource->internal_state || binder.table.UAV_index[slot] != subresource)
 		{
 			binder.table.UAV[slot] = *resource;
 			binder.table.UAV_index[slot] = subresource;
-			binder.dirty |= CommandListResources::DescriptorBinder::DIRTY_DESCRIPTOR;
+			binder.dirty |= DescriptorBinder::DIRTY_DESCRIPTOR;
 		}
 	}
 	void GraphicsDevice_Vulkan::BindUAVs(const GPUResource *const* resources, uint32_t slot, uint32_t count, CommandList cmd)
@@ -6594,36 +6595,36 @@ using namespace vulkan_internal;
 	}
 	void GraphicsDevice_Vulkan::BindSampler(const Sampler* sampler, uint32_t slot, CommandList cmd)
 	{
-		CommandListResources& commandlist = GetCommandListResources(cmd);
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 		assert(slot < DESCRIPTORBINDER_SAMPLER_COUNT);
 		auto& binder = commandlist.binder;
 		if (binder.table.SAM[slot].internal_state != sampler->internal_state)
 		{
 			binder.table.SAM[slot] = *sampler;
-			binder.dirty |= CommandListResources::DescriptorBinder::DIRTY_DESCRIPTOR;
+			binder.dirty |= DescriptorBinder::DIRTY_DESCRIPTOR;
 		}
 	}
 	void GraphicsDevice_Vulkan::BindConstantBuffer(const GPUBuffer* buffer, uint32_t slot, CommandList cmd, uint64_t offset)
 	{
-		CommandListResources& commandlist = GetCommandListResources(cmd);
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 		assert(slot < DESCRIPTORBINDER_CBV_COUNT);
 		auto& binder = commandlist.binder;
 
 		if (binder.table.CBV[slot].internal_state != buffer->internal_state)
 		{
 			binder.table.CBV[slot] = *buffer;
-			binder.dirty |= CommandListResources::DescriptorBinder::DIRTY_DESCRIPTOR;
+			binder.dirty |= DescriptorBinder::DIRTY_DESCRIPTOR;
 		}
 
 		if (binder.table.CBV_offset[slot] != offset)
 		{
 			binder.table.CBV_offset[slot] = offset;
-			binder.dirty |= CommandListResources::DescriptorBinder::DIRTY_OFFSET;
+			binder.dirty |= DescriptorBinder::DIRTY_OFFSET;
 		}
 	}
 	void GraphicsDevice_Vulkan::BindVertexBuffers(const GPUBuffer *const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint64_t* offsets, CommandList cmd)
 	{
-		CommandListResources& commandlist = GetCommandListResources(cmd);
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 		size_t hash = 0;
 
 		VkDeviceSize voffsets[8] = {};
@@ -6653,7 +6654,7 @@ using namespace vulkan_internal;
 			commandlist.vb_strides[i] = 0;
 		}
 
-		vkCmdBindVertexBuffers(GetCommandList(cmd), static_cast<uint32_t>(slot), static_cast<uint32_t>(count), vbuffers, voffsets);
+		vkCmdBindVertexBuffers(commandlist.GetCommandBuffer(), static_cast<uint32_t>(slot), static_cast<uint32_t>(count), vbuffers, voffsets);
 
 		if (hash != commandlist.vb_hash)
 		{
@@ -6666,21 +6667,24 @@ using namespace vulkan_internal;
 		if (indexBuffer != nullptr)
 		{
 			auto internal_state = to_internal(indexBuffer);
-			vkCmdBindIndexBuffer(GetCommandList(cmd), internal_state->resource, offset, format == IndexBufferFormat::UINT16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
+			CommandList_Vulkan& commandlist = GetCommandList(cmd);
+			vkCmdBindIndexBuffer(commandlist.GetCommandBuffer(), internal_state->resource, offset, format == IndexBufferFormat::UINT16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
 		}
 	}
 	void GraphicsDevice_Vulkan::BindStencilRef(uint32_t value, CommandList cmd)
 	{
-		vkCmdSetStencilReference(GetCommandList(cmd), VK_STENCIL_FRONT_AND_BACK, value);
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
+		vkCmdSetStencilReference(commandlist.GetCommandBuffer(), VK_STENCIL_FRONT_AND_BACK, value);
 	}
 	void GraphicsDevice_Vulkan::BindBlendFactor(float r, float g, float b, float a, CommandList cmd)
 	{
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 		float blendConstants[] = { r, g, b, a };
-		vkCmdSetBlendConstants(GetCommandList(cmd), blendConstants);
+		vkCmdSetBlendConstants(commandlist.GetCommandBuffer(), blendConstants);
 	}
 	void GraphicsDevice_Vulkan::BindShadingRate(ShadingRate rate, CommandList cmd)
 	{
-		CommandListResources& commandlist = GetCommandListResources(cmd);
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 		if (CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING) && commandlist.prev_shadingrate != rate)
 		{
 			commandlist.prev_shadingrate = rate;
@@ -6749,7 +6753,7 @@ using namespace vulkan_internal;
 			}
 
 			vkCmdSetFragmentShadingRateKHR(
-				GetCommandList(cmd),
+				commandlist.GetCommandBuffer(),
 				&fragmentSize,
 				combiner
 			);
@@ -6757,7 +6761,7 @@ using namespace vulkan_internal;
 	}
 	void GraphicsDevice_Vulkan::BindPipelineState(const PipelineState* pso, CommandList cmd)
 	{
-		CommandListResources& commandlist = GetCommandListResources(cmd);
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 		commandlist.active_cs = nullptr;
 		commandlist.active_rt = nullptr;
 
@@ -6777,21 +6781,21 @@ using namespace vulkan_internal;
 
 		if (commandlist.active_pso == nullptr)
 		{
-			commandlist.binder.dirty |= CommandListResources::DescriptorBinder::DIRTY_ALL;
+			commandlist.binder.dirty |= DescriptorBinder::DIRTY_ALL;
 		}
 		else
 		{
 			auto active_internal = to_internal(commandlist.active_pso);
 			if (internal_state->binding_hash != active_internal->binding_hash)
 			{
-				commandlist.binder.dirty |= CommandListResources::DescriptorBinder::DIRTY_ALL;
+				commandlist.binder.dirty |= DescriptorBinder::DIRTY_ALL;
 			}
 		}
 
 		if (!internal_state->bindlessSets.empty())
 		{
 			vkCmdBindDescriptorSets(
-				GetCommandList(cmd),
+				commandlist.GetCommandBuffer(),
 				VK_PIPELINE_BIND_POINT_GRAPHICS,
 				internal_state->pipelineLayout,
 				internal_state->bindlessFirstSet,
@@ -6807,7 +6811,7 @@ using namespace vulkan_internal;
 	}
 	void GraphicsDevice_Vulkan::BindComputeShader(const Shader* cs, CommandList cmd)
 	{
-		CommandListResources& commandlist = GetCommandListResources(cmd);
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 		commandlist.active_pso = nullptr;
 		commandlist.active_rt = nullptr;
 
@@ -6816,7 +6820,7 @@ using namespace vulkan_internal;
 		{
 			if (commandlist.active_cs == nullptr)
 			{
-				commandlist.binder.dirty |= CommandListResources::DescriptorBinder::DIRTY_ALL;
+				commandlist.binder.dirty |= DescriptorBinder::DIRTY_ALL;
 			}
 			else
 			{
@@ -6824,7 +6828,7 @@ using namespace vulkan_internal;
 				auto active_internal = to_internal(commandlist.active_cs);
 				if (internal_state->binding_hash != active_internal->binding_hash)
 				{
-					commandlist.binder.dirty |= CommandListResources::DescriptorBinder::DIRTY_ALL;
+					commandlist.binder.dirty |= DescriptorBinder::DIRTY_ALL;
 				}
 			}
 
@@ -6833,12 +6837,12 @@ using namespace vulkan_internal;
 
 			if (cs->stage == ShaderStage::CS)
 			{
-				vkCmdBindPipeline(GetCommandList(cmd), VK_PIPELINE_BIND_POINT_COMPUTE, internal_state->pipeline_cs);
+				vkCmdBindPipeline(commandlist.GetCommandBuffer(), VK_PIPELINE_BIND_POINT_COMPUTE, internal_state->pipeline_cs);
 
 				if (!internal_state->bindlessSets.empty())
 				{
 					vkCmdBindDescriptorSets(
-						GetCommandList(cmd),
+						commandlist.GetCommandBuffer(),
 						VK_PIPELINE_BIND_POINT_COMPUTE,
 						internal_state->pipelineLayout_cs,
 						internal_state->bindlessFirstSet,
@@ -6854,7 +6858,7 @@ using namespace vulkan_internal;
 				if (!internal_state->bindlessSets.empty())
 				{
 					vkCmdBindDescriptorSets(
-						GetCommandList(cmd),
+						commandlist.GetCommandBuffer(),
 						VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
 						internal_state->pipelineLayout_cs,
 						internal_state->bindlessFirstSet,
@@ -6871,65 +6875,77 @@ using namespace vulkan_internal;
 	{
 		if (features2.features.depthBounds == VK_TRUE)
 		{
-			vkCmdSetDepthBounds(GetCommandList(cmd), min_bounds, max_bounds);
+			CommandList_Vulkan& commandlist = GetCommandList(cmd);
+			vkCmdSetDepthBounds(commandlist.GetCommandBuffer(), min_bounds, max_bounds);
 		}
 	}
 	void GraphicsDevice_Vulkan::Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd)
 	{
 		predraw(cmd);
-		vkCmdDraw(GetCommandList(cmd), vertexCount, 1, startVertexLocation, 0);
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
+		vkCmdDraw(commandlist.GetCommandBuffer(), vertexCount, 1, startVertexLocation, 0);
 	}
 	void GraphicsDevice_Vulkan::DrawIndexed(uint32_t indexCount, uint32_t startIndexLocation, int32_t baseVertexLocation, CommandList cmd)
 	{
 		predraw(cmd);
-		vkCmdDrawIndexed(GetCommandList(cmd), indexCount, 1, startIndexLocation, baseVertexLocation, 0);
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
+		vkCmdDrawIndexed(commandlist.GetCommandBuffer(), indexCount, 1, startIndexLocation, baseVertexLocation, 0);
 	}
 	void GraphicsDevice_Vulkan::DrawInstanced(uint32_t vertexCount, uint32_t instanceCount, uint32_t startVertexLocation, uint32_t startInstanceLocation, CommandList cmd)
 	{
 		predraw(cmd);
-		vkCmdDraw(GetCommandList(cmd), vertexCount, instanceCount, startVertexLocation, startInstanceLocation);
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
+		vkCmdDraw(commandlist.GetCommandBuffer(), vertexCount, instanceCount, startVertexLocation, startInstanceLocation);
 	}
 	void GraphicsDevice_Vulkan::DrawIndexedInstanced(uint32_t indexCount, uint32_t instanceCount, uint32_t startIndexLocation, int32_t baseVertexLocation, uint32_t startInstanceLocation, CommandList cmd)
 	{
 		predraw(cmd);
-		vkCmdDrawIndexed(GetCommandList(cmd), indexCount, instanceCount, startIndexLocation, baseVertexLocation, startInstanceLocation);
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
+		vkCmdDrawIndexed(commandlist.GetCommandBuffer(), indexCount, instanceCount, startIndexLocation, baseVertexLocation, startInstanceLocation);
 	}
 	void GraphicsDevice_Vulkan::DrawInstancedIndirect(const GPUBuffer* args, uint64_t args_offset, CommandList cmd)
 	{
 		predraw(cmd);
 		auto internal_state = to_internal(args);
-		vkCmdDrawIndirect(GetCommandList(cmd), internal_state->resource, args_offset, 1, (uint32_t)sizeof(IndirectDrawArgsInstanced));
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
+		vkCmdDrawIndirect(commandlist.GetCommandBuffer(), internal_state->resource, args_offset, 1, (uint32_t)sizeof(IndirectDrawArgsInstanced));
 	}
 	void GraphicsDevice_Vulkan::DrawIndexedInstancedIndirect(const GPUBuffer* args, uint64_t args_offset, CommandList cmd)
 	{
 		predraw(cmd);
 		auto internal_state = to_internal(args);
-		vkCmdDrawIndexedIndirect(GetCommandList(cmd), internal_state->resource, args_offset, 1, sizeof(IndirectDrawArgsIndexedInstanced));
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
+		vkCmdDrawIndexedIndirect(commandlist.GetCommandBuffer(), internal_state->resource, args_offset, 1, sizeof(IndirectDrawArgsIndexedInstanced));
 	}
 	void GraphicsDevice_Vulkan::Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd)
 	{
 		predispatch(cmd);
-		vkCmdDispatch(GetCommandList(cmd), threadGroupCountX, threadGroupCountY, threadGroupCountZ);
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
+		vkCmdDispatch(commandlist.GetCommandBuffer(), threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 	}
 	void GraphicsDevice_Vulkan::DispatchIndirect(const GPUBuffer* args, uint64_t args_offset, CommandList cmd)
 	{
 		predispatch(cmd);
 		auto internal_state = to_internal(args);
-		vkCmdDispatchIndirect(GetCommandList(cmd), internal_state->resource, args_offset);
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
+		vkCmdDispatchIndirect(commandlist.GetCommandBuffer(), internal_state->resource, args_offset);
 	}
 	void GraphicsDevice_Vulkan::DispatchMesh(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd)
 	{
 		predraw(cmd);
-		vkCmdDrawMeshTasksNV(GetCommandList(cmd), threadGroupCountX * threadGroupCountY * threadGroupCountZ, 0);
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
+		vkCmdDrawMeshTasksNV(commandlist.GetCommandBuffer(), threadGroupCountX * threadGroupCountY * threadGroupCountZ, 0);
 	}
 	void GraphicsDevice_Vulkan::DispatchMeshIndirect(const GPUBuffer* args, uint64_t args_offset, CommandList cmd)
 	{
 		predraw(cmd);
 		auto internal_state = to_internal(args);
-		vkCmdDrawMeshTasksIndirectNV(GetCommandList(cmd), internal_state->resource, args_offset, 1, sizeof(IndirectDispatchArgs));
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
+		vkCmdDrawMeshTasksIndirectNV(commandlist.GetCommandBuffer(), internal_state->resource, args_offset, 1, sizeof(IndirectDispatchArgs));
 	}
 	void GraphicsDevice_Vulkan::CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd)
 	{
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 		if (pDst->type == GPUResource::Type::TEXTURE && pSrc->type == GPUResource::Type::TEXTURE)
 		{
 			auto internal_state_src = to_internal((const Texture*)pSrc);
@@ -6948,7 +6964,7 @@ using namespace vulkan_internal;
 				copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				copy.imageSubresource.layerCount = 1;
 				vkCmdCopyBufferToImage(
-					GetCommandList(cmd),
+					commandlist.GetCommandBuffer(),
 					internal_state_src->staging_resource,
 					internal_state_dst->resource,
 					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -6966,7 +6982,7 @@ using namespace vulkan_internal;
 				copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				copy.imageSubresource.layerCount = 1;
 				vkCmdCopyImageToBuffer(
-					GetCommandList(cmd),
+					commandlist.GetCommandBuffer(),
 					internal_state_src->resource,
 					VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 					internal_state_dst->staging_resource,
@@ -7021,7 +7037,7 @@ using namespace vulkan_internal;
 				copy.dstSubresource.layerCount = dst_desc.array_size;
 				copy.dstSubresource.mipLevel = 0;
 
-				vkCmdCopyImage(GetCommandList(cmd),
+				vkCmdCopyImage(commandlist.GetCommandBuffer(),
 					internal_state_src->resource, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 					internal_state_dst->resource, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 					1, &copy
@@ -7041,7 +7057,7 @@ using namespace vulkan_internal;
 			copy.dstOffset = 0;
 			copy.size = std::min(src_desc.size, dst_desc.size);
 
-			vkCmdCopyBuffer(GetCommandList(cmd),
+			vkCmdCopyBuffer(commandlist.GetCommandBuffer(),
 				internal_state_src->resource,
 				internal_state_dst->resource,
 				1, &copy
@@ -7050,6 +7066,7 @@ using namespace vulkan_internal;
 	}
 	void GraphicsDevice_Vulkan::CopyBuffer(const GPUBuffer* pDst, uint64_t dst_offset, const GPUBuffer* pSrc, uint64_t src_offset, uint64_t size, CommandList cmd)
 	{
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 		auto internal_state_src = to_internal((const GPUBuffer*)pSrc);
 		auto internal_state_dst = to_internal((const GPUBuffer*)pDst);
 
@@ -7058,7 +7075,7 @@ using namespace vulkan_internal;
 		copy.dstOffset = dst_offset;
 		copy.size = size;
 
-		vkCmdCopyBuffer(GetCommandList(cmd),
+		vkCmdCopyBuffer(commandlist.GetCommandBuffer(),
 			internal_state_src->resource,
 			internal_state_dst->resource,
 			1, &copy
@@ -7066,36 +7083,39 @@ using namespace vulkan_internal;
 	}
 	void GraphicsDevice_Vulkan::QueryBegin(const GPUQueryHeap* heap, uint32_t index, CommandList cmd)
 	{
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 		auto internal_state = to_internal(heap);
 
 		switch (heap->desc.type)
 		{
 		case GpuQueryType::OCCLUSION_BINARY:
-			vkCmdBeginQuery(GetCommandList(cmd), internal_state->pool, index, 0);
+			vkCmdBeginQuery(commandlist.GetCommandBuffer(), internal_state->pool, index, 0);
 			break;
 		case GpuQueryType::OCCLUSION:
-			vkCmdBeginQuery(GetCommandList(cmd), internal_state->pool, index, VK_QUERY_CONTROL_PRECISE_BIT);
+			vkCmdBeginQuery(commandlist.GetCommandBuffer(), internal_state->pool, index, VK_QUERY_CONTROL_PRECISE_BIT);
 			break;
 		}
 	}
 	void GraphicsDevice_Vulkan::QueryEnd(const GPUQueryHeap* heap, uint32_t index, CommandList cmd)
 	{
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 		auto internal_state = to_internal(heap);
 
 		switch (heap->desc.type)
 		{
 		case GpuQueryType::TIMESTAMP:
-			vkCmdWriteTimestamp(GetCommandList(cmd), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, internal_state->pool, index);
+			vkCmdWriteTimestamp(commandlist.GetCommandBuffer(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, internal_state->pool, index);
 			break;
 		case GpuQueryType::OCCLUSION_BINARY:
 		case GpuQueryType::OCCLUSION:
-			vkCmdEndQuery(GetCommandList(cmd), internal_state->pool, index);
+			vkCmdEndQuery(commandlist.GetCommandBuffer(), internal_state->pool, index);
 			break;
 		}
 	}
 	void GraphicsDevice_Vulkan::QueryResolve(const GPUQueryHeap* heap, uint32_t index, uint32_t count, const GPUBuffer* dest, uint64_t dest_offset, CommandList cmd)
 	{
-		assert(GetCommandListResources(cmd).active_renderpass == nullptr); // Can't resolve inside renderpass!
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
+		assert(commandlist.active_renderpass == nullptr); // Can't resolve inside renderpass!
 
 		auto internal_state = to_internal(heap);
 		auto dst_internal = to_internal(dest);
@@ -7113,7 +7133,7 @@ using namespace vulkan_internal;
 		}
 
 		vkCmdCopyQueryPoolResults(
-			GetCommandList(cmd),
+			commandlist.GetCommandBuffer(),
 			internal_state->pool,
 			index,
 			count,
@@ -7126,12 +7146,13 @@ using namespace vulkan_internal;
 	}
 	void GraphicsDevice_Vulkan::QueryReset(const GPUQueryHeap* heap, uint32_t index, uint32_t count, CommandList cmd)
 	{
-		assert(GetCommandListResources(cmd).active_renderpass == nullptr); // Can't resolve inside renderpass!
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
+		assert(commandlist.active_renderpass == nullptr); // Can't resolve inside renderpass!
 
 		auto internal_state = to_internal(heap);
 
 		vkCmdResetQueryPool(
-			GetCommandList(cmd),
+			commandlist.GetCommandBuffer(),
 			internal_state->pool,
 			index,
 			count
@@ -7140,7 +7161,7 @@ using namespace vulkan_internal;
 	}
 	void GraphicsDevice_Vulkan::Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd)
 	{
-		CommandListResources& commandlist = GetCommandListResources(cmd);
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 		assert(commandlist.active_renderpass == nullptr);
 
 		VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
@@ -7276,7 +7297,7 @@ using namespace vulkan_internal;
 			)
 		{
 			vkCmdPipelineBarrier(
-				GetCommandList(cmd),
+				commandlist.GetCommandBuffer(),
 				srcStage,
 				dstStage,
 				0,
@@ -7292,6 +7313,7 @@ using namespace vulkan_internal;
 	}
 	void GraphicsDevice_Vulkan::BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src)
 	{
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 		auto dst_internal = to_internal(dst);
 
 		VkAccelerationStructureBuildGeometryInfoKHR info = dst_internal->buildInfo;
@@ -7386,7 +7408,7 @@ using namespace vulkan_internal;
 		VkAccelerationStructureBuildRangeInfoKHR* pRangeInfo = ranges.data();
 
 		vkCmdBuildAccelerationStructuresKHR(
-			GetCommandList(cmd),
+			commandlist.GetCommandBuffer(),
 			1,
 			&info,
 			&pRangeInfo
@@ -7394,16 +7416,17 @@ using namespace vulkan_internal;
 	}
 	void GraphicsDevice_Vulkan::BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd)
 	{
-		CommandListResources& commandlist = GetCommandListResources(cmd);
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 		commandlist.prev_pipeline_hash = 0;
 		commandlist.active_rt = rtpso;
 
 		BindComputeShader(rtpso->desc.shader_libraries.front().shader, cmd);
 
-		vkCmdBindPipeline(GetCommandList(cmd), VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, to_internal(rtpso)->pipeline);
+		vkCmdBindPipeline(commandlist.GetCommandBuffer(), VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, to_internal(rtpso)->pipeline);
 	}
 	void GraphicsDevice_Vulkan::DispatchRays(const DispatchRaysDesc* desc, CommandList cmd)
 	{
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 		predispatch(cmd);
 
 		VkStridedDeviceAddressRegionKHR raygen = {};
@@ -7431,7 +7454,7 @@ using namespace vulkan_internal;
 		callable.stride = desc->callable.stride;
 
 		vkCmdTraceRaysKHR(
-			GetCommandList(cmd),
+			commandlist.GetCommandBuffer(),
 			&raygen,
 			&miss,
 			&hitgroup,
@@ -7443,7 +7466,7 @@ using namespace vulkan_internal;
 	}
 	void GraphicsDevice_Vulkan::PushConstants(const void* data, uint32_t size, CommandList cmd, uint32_t offset)
 	{
-		CommandListResources& commandlist = GetCommandListResources(cmd);
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 		auto& binder = commandlist.binder;
 
 		if (commandlist.active_pso != nullptr)
@@ -7452,7 +7475,7 @@ using namespace vulkan_internal;
 			if (pso_internal->pushconstants.size > 0)
 			{
 				vkCmdPushConstants(
-					GetCommandList(cmd),
+					commandlist.GetCommandBuffer(),
 					pso_internal->pipelineLayout,
 					pso_internal->pushconstants.stageFlags,
 					offset,
@@ -7468,7 +7491,7 @@ using namespace vulkan_internal;
 			if (cs_internal->pushconstants.size > 0)
 			{
 				vkCmdPushConstants(
-					GetCommandList(cmd),
+					commandlist.GetCommandBuffer(),
 					cs_internal->pipelineLayout_cs,
 					cs_internal->pushconstants.stageFlags,
 					offset,
@@ -7484,6 +7507,7 @@ using namespace vulkan_internal;
 	{
 		if (CheckCapability(GraphicsDeviceCapability::PREDICATION))
 		{
+			CommandList_Vulkan& commandlist = GetCommandList(cmd);
 			auto internal_state = to_internal(buffer);
 
 			VkConditionalRenderingBeginInfoEXT info = {};
@@ -7494,14 +7518,15 @@ using namespace vulkan_internal;
 			}
 			info.offset = offset;
 			info.buffer = internal_state->resource;
-			vkCmdBeginConditionalRenderingEXT(GetCommandList(cmd), &info);
+			vkCmdBeginConditionalRenderingEXT(commandlist.GetCommandBuffer(), &info);
 		}
 	}
 	void GraphicsDevice_Vulkan::PredicationEnd(CommandList cmd)
 	{
 		if (CheckCapability(GraphicsDeviceCapability::PREDICATION))
 		{
-			vkCmdEndConditionalRenderingEXT(GetCommandList(cmd));
+			CommandList_Vulkan& commandlist = GetCommandList(cmd);
+			vkCmdEndConditionalRenderingEXT(commandlist.GetCommandBuffer());
 		}
 	}
 
@@ -7509,6 +7534,7 @@ using namespace vulkan_internal;
 	{
 		if (!debugUtils)
 			return;
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 
 		VkDebugUtilsLabelEXT label = { VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
 		label.pLabelName = name;
@@ -7516,19 +7542,21 @@ using namespace vulkan_internal;
 		label.color[1] = 0.0f;
 		label.color[2] = 0.0f;
 		label.color[3] = 1.0f;
-		vkCmdBeginDebugUtilsLabelEXT(GetCommandList(cmd), &label);
+		vkCmdBeginDebugUtilsLabelEXT(commandlist.GetCommandBuffer(), &label);
 	}
 	void GraphicsDevice_Vulkan::EventEnd(CommandList cmd)
 	{
 		if (!debugUtils)
 			return;
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 
-		vkCmdEndDebugUtilsLabelEXT(GetCommandList(cmd));
+		vkCmdEndDebugUtilsLabelEXT(commandlist.GetCommandBuffer());
 	}
 	void GraphicsDevice_Vulkan::SetMarker(const char* name, CommandList cmd)
 	{
 		if (!debugUtils)
 			return;
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 
 		VkDebugUtilsLabelEXT label { VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
 		label.pLabelName = name;
@@ -7536,13 +7564,7 @@ using namespace vulkan_internal;
 		label.color[1] = 0.0f;
 		label.color[2] = 0.0f;
 		label.color[3] = 1.0f;
-		vkCmdInsertDebugUtilsLabelEXT(GetCommandList(cmd), &label);
-	}
-
-	const RenderPass* GraphicsDevice_Vulkan::GetCurrentRenderPass(CommandList cmd) const
-	{
-		const CommandListResources& commandlist = GetCommandListResources(cmd);
-		return commandlist.active_renderpass;
+		vkCmdInsertDebugUtilsLabelEXT(commandlist.GetCommandBuffer(), &label);
 	}
 }
 

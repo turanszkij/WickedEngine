@@ -145,12 +145,56 @@ namespace wi::graphics
 		const FrameResources& GetFrameResources() const { return frames[GetBufferIndex()]; }
 		FrameResources& GetFrameResources() { return frames[GetBufferIndex()]; }
 
-		struct CommandListResources
+		struct DescriptorBinder
+		{
+			DescriptorBindingTable table;
+			GraphicsDevice_Vulkan* device;
+
+			wi::vector<VkWriteDescriptorSet> descriptorWrites;
+			wi::vector<VkDescriptorBufferInfo> bufferInfos;
+			wi::vector<VkDescriptorImageInfo> imageInfos;
+			wi::vector<VkBufferView> texelBufferViews;
+			wi::vector<VkWriteDescriptorSetAccelerationStructureKHR> accelerationStructureViews;
+
+			uint32_t uniform_buffer_dynamic_offsets[DESCRIPTORBINDER_CBV_COUNT] = {};
+
+			VkDescriptorSet descriptorSet_graphics = VK_NULL_HANDLE;
+			VkDescriptorSet descriptorSet_compute = VK_NULL_HANDLE;
+
+			enum DIRTY_FLAGS
+			{
+				DIRTY_NONE = 0,
+				DIRTY_DESCRIPTOR = 1 << 1,
+				DIRTY_OFFSET = 1 << 2,
+
+				DIRTY_ALL = ~0,
+			};
+			uint32_t dirty = DIRTY_NONE;
+
+			void init(GraphicsDevice_Vulkan* device);
+			void reset();
+			void flush(bool graphics, CommandList cmd);
+		};
+
+		struct DescriptorBinderPool
+		{
+			GraphicsDevice_Vulkan* device;
+			VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
+			uint32_t poolSize = 256;
+
+			void init(GraphicsDevice_Vulkan* device);
+			void destroy();
+			void reset();
+		};
+
+		struct CommandList_Vulkan
 		{
 			VkCommandPool commandPools[BUFFERCOUNT][QUEUE_COUNT] = {};
 			VkCommandBuffer commandBuffers[BUFFERCOUNT][QUEUE_COUNT] = {};
+			uint32_t buffer_index = 0;
 
 			QUEUE_TYPE queue = {};
+			uint32_t id = 0;
 			wi::vector<CommandList> waits;
 
 			wi::vector<std::pair<size_t, VkPipeline>> pipelines_worker;
@@ -171,53 +215,14 @@ namespace wi::graphics
 			wi::vector<VkImageMemoryBarrier> frame_imageBarriers;
 			wi::vector<VkBufferMemoryBarrier> frame_bufferBarriers;
 
-			struct DescriptorBinder
-			{
-				DescriptorBindingTable table;
-				GraphicsDevice_Vulkan* device;
-
-				wi::vector<VkWriteDescriptorSet> descriptorWrites;
-				wi::vector<VkDescriptorBufferInfo> bufferInfos;
-				wi::vector<VkDescriptorImageInfo> imageInfos;
-				wi::vector<VkBufferView> texelBufferViews;
-				wi::vector<VkWriteDescriptorSetAccelerationStructureKHR> accelerationStructureViews;
-
-				uint32_t uniform_buffer_dynamic_offsets[DESCRIPTORBINDER_CBV_COUNT] = {};
-
-				VkDescriptorSet descriptorSet_graphics = VK_NULL_HANDLE;
-				VkDescriptorSet descriptorSet_compute = VK_NULL_HANDLE;
-
-				enum DIRTY_FLAGS
-				{
-					DIRTY_NONE = 0,
-					DIRTY_DESCRIPTOR = 1 << 1,
-					DIRTY_OFFSET = 1 << 2,
-
-					DIRTY_ALL = ~0,
-				};
-				uint32_t dirty = DIRTY_NONE;
-
-				void init(GraphicsDevice_Vulkan* device);
-				void reset();
-				void flush(bool graphics, CommandList cmd);
-			};
 			DescriptorBinder binder;
-
-			struct DescriptorBinderPool
-			{
-				GraphicsDevice_Vulkan* device;
-				VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
-				uint32_t poolSize = 256;
-
-				void init(GraphicsDevice_Vulkan* device);
-				void destroy();
-				void reset();
-			} binder_pools[BUFFERCOUNT];
-
+			DescriptorBinderPool binder_pools[BUFFERCOUNT];
 			GPULinearAllocator frame_allocators[BUFFERCOUNT];
 
 			void reset(uint32_t bufferindex)
 			{
+				buffer_index = bufferindex;
+				waits.clear();
 				prev_pipeline_hash = 0;
 				active_pso = nullptr;
 				active_cs = nullptr;
@@ -235,22 +240,28 @@ namespace wi::graphics
 				binder.reset();
 				frame_allocators[bufferindex].offset = 0;
 			}
-		};
-		wi::vector<CommandListResources> commandlists;
-		CommandList::index_type cmd_count{ 0 };
 
-		inline const CommandListResources& GetCommandListResources(CommandList::index_type cmd) const
+			inline VkCommandPool GetCommandPool() const
+			{
+				return commandPools[buffer_index][queue];
+			}
+			inline VkCommandBuffer GetCommandBuffer() const
+			{
+				return commandBuffers[buffer_index][queue];
+			}
+		};
+		wi::vector<std::unique_ptr<CommandList_Vulkan>> commandlists;
+		uint32_t cmd_count = 0;
+
+		constexpr CommandList_Vulkan& GetCommandList(CommandList cmd)
 		{
-			return commandlists[cmd];
+			assert(cmd.IsValid());
+			return *(CommandList_Vulkan*)cmd.internal_state;
 		}
-		inline CommandListResources& GetCommandListResources(CommandList::index_type cmd)
+		constexpr const CommandList_Vulkan& GetCommandList(CommandList cmd) const
 		{
-			return commandlists[cmd];
-		}
-		inline VkCommandBuffer GetCommandList(CommandList::index_type cmd)
-		{
-			const CommandListResources& commandlist = commandlists[cmd];
-			return commandlist.commandBuffers[GetBufferIndex()][commandlist.queue];
+			assert(cmd.IsValid());
+			return *(const CommandList_Vulkan*)cmd.internal_state;
 		}
 
 		struct PSOLayout
@@ -365,11 +376,14 @@ namespace wi::graphics
 		void EventEnd(CommandList cmd) override;
 		void SetMarker(const char* name, CommandList cmd) override;
 
-		const RenderPass* GetCurrentRenderPass(CommandList cmd) const override;
-
+		const RenderPass* GetCurrentRenderPass(CommandList cmd) const override
+		{
+			const CommandList_Vulkan& commandlist = GetCommandList(cmd);
+			return commandlist.active_renderpass;
+		}
 		GPULinearAllocator& GetFrameAllocator(CommandList cmd) override
 		{
-			return GetCommandListResources(cmd).frame_allocators[GetBufferIndex()];
+			return GetCommandList(cmd).frame_allocators[GetBufferIndex()];
 		}
 
 		struct AllocationHandler

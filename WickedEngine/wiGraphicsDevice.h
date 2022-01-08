@@ -15,11 +15,8 @@ namespace wi::graphics
 	//	CommandList recording is not thread safe
 	struct CommandList
 	{
-		using index_type = uint32_t;
-		index_type index = ~0u;
-		constexpr operator index_type() const { return index; }
-
-		inline bool IsValid() const { return index != ~0; }
+		void* internal_state = nullptr;
+		constexpr bool IsValid() const { return internal_state != nullptr; }
 	};
 
 	// Descriptor binding counts:

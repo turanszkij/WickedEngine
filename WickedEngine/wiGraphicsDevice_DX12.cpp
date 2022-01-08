@@ -1656,14 +1656,14 @@ using namespace dx12_internal;
 		locker.unlock();
 	}
 
-	void GraphicsDevice_DX12::CommandListResources::DescriptorBinder::init(GraphicsDevice_DX12* device)
+	void GraphicsDevice_DX12::DescriptorBinder::init(GraphicsDevice_DX12* device)
 	{
 		this->device = device;
 
 		// Reset state to empty:
 		reset();
 	}
-	void GraphicsDevice_DX12::CommandListResources::DescriptorBinder::reset()
+	void GraphicsDevice_DX12::DescriptorBinder::reset()
 	{
 		table = {};
 		optimizer_graphics = nullptr;
@@ -1671,14 +1671,14 @@ using namespace dx12_internal;
 		optimizer_compute = nullptr;
 		dirty_compute = 0ull;
 	}
-	void GraphicsDevice_DX12::CommandListResources::DescriptorBinder::flush(bool graphics, CommandList cmd)
+	void GraphicsDevice_DX12::DescriptorBinder::flush(bool graphics, CommandList cmd)
 	{
 		uint64_t& dirty = graphics ? dirty_graphics : dirty_compute;
 		if (dirty == 0ull)
 			return;
 
-		CommandListResources& commandlist = device->GetCommandListResources(cmd);
-		ID3D12GraphicsCommandList6* graphicscommandlist = device->GetCommandList(cmd);
+		CommandList_DX12& commandlist = device->GetCommandList(cmd);
+		ID3D12GraphicsCommandList6* graphicscommandlist = commandlist.GetGraphicsCommandList();
 		auto pso_internal = graphics ? to_internal(commandlist.active_pso) : to_internal(commandlist.active_cs);
 		const RootSignatureOptimizer& optimizer = pso_internal->rootsig_optimizer;
 
@@ -1955,7 +1955,7 @@ using namespace dx12_internal;
 
 	void GraphicsDevice_DX12::pso_validate(CommandList cmd)
 	{
-		CommandListResources& commandlist = GetCommandListResources(cmd);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
 		if (!commandlist.dirty_pso)
 			return;
 
@@ -2072,14 +2072,14 @@ using namespace dx12_internal;
 		}
 		assert(pipeline != nullptr);
 
-		GetCommandList(cmd)->SetPipelineState(pipeline);
+		commandlist.GetGraphicsCommandList()->SetPipelineState(pipeline);
 		commandlist.dirty_pso = false;
 
 		if (commandlist.prev_pt != internal_state->primitiveTopology)
 		{
 			commandlist.prev_pt = internal_state->primitiveTopology;
 
-			GetCommandList(cmd)->IASetPrimitiveTopology(internal_state->primitiveTopology);
+			commandlist.GetGraphicsCommandList()->IASetPrimitiveTopology(internal_state->primitiveTopology);
 		}
 	}
 
@@ -2087,12 +2087,12 @@ using namespace dx12_internal;
 	{
 		pso_validate(cmd);
 
-		CommandListResources& commandlist = GetCommandListResources(cmd);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
 		commandlist.binder.flush(true, cmd);
 	}
 	void GraphicsDevice_DX12::predispatch(CommandList cmd)
 	{
-		CommandListResources& commandlist = GetCommandListResources(cmd);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
 		commandlist.binder.flush(false, cmd);
 	}
 
@@ -2721,8 +2721,6 @@ using namespace dx12_internal;
 			ss << "ID3D12CommandQueue::GetTimestampFrequency[QUEUE_GRAPHICS] failed! ERROR: 0x" << std::hex << hr;
 			wi::helper::messageBox(ss.str(), "Warning!");
 		}
-
-		commandlists.reserve(256);
 
 		wi::backlog::post("Created GraphicsDevice_DX12 (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
@@ -4623,17 +4621,20 @@ using namespace dx12_internal;
 	{
 		HRESULT hr;
 
-		CommandList cmd{ cmd_count++ };
-		if (cmd >= commandlists.size())
+		uint32_t cmd_current = cmd_count++;
+		if (cmd_current >= commandlists.size())
 		{
-			commandlists.resize(cmd + 1);
+			commandlists.push_back(std::make_unique<CommandList_DX12>());
 		}
+		CommandList cmd;
+		cmd.internal_state = commandlists[cmd_current].get();
 
-		CommandListResources& commandlist = GetCommandListResources(cmd);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
+		commandlist.reset(GetBufferIndex());
 		commandlist.queue = queue;
-		commandlist.waits.clear();
+		commandlist.id = cmd_current;
 
-		if (GetCommandList(cmd) == nullptr)
+		if (commandlist.GetGraphicsCommandList() == nullptr)
 		{
 			// need to create one more command list:
 
@@ -4646,25 +4647,23 @@ using namespace dx12_internal;
 			hr = device->CreateCommandList1(0, queues[queue].desc.Type, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(&commandlist.commandLists[queue]));
 			assert(SUCCEEDED(hr));
 
-			std::wstring ws = L"cmd" + std::to_wstring(cmd);
+			std::wstring ws = L"cmd" + std::to_wstring(commandlist.id);
 			commandlist.commandLists[queue]->SetName(ws.c_str());
 
 			commandlist.binder.init(this);
 		}
 
 		// Start the command list in a default state:
-		hr = commandlist.commandAllocators[GetBufferIndex()][queue]->Reset();
+		hr = commandlist.GetCommandAllocator()->Reset();
 		assert(SUCCEEDED(hr));
-		hr = GetCommandList(cmd)->Reset(commandlist.commandAllocators[GetBufferIndex()][queue].Get(), nullptr);
+		hr = commandlist.GetGraphicsCommandList()->Reset(commandlist.GetCommandAllocator(), nullptr);
 		assert(SUCCEEDED(hr));
-
-		commandlist.reset(GetBufferIndex());
 
 		ID3D12DescriptorHeap* heaps[2] = {
 			descriptorheap_res.heap_GPU.Get(),
 			descriptorheap_sam.heap_GPU.Get()
 		};
-		GetCommandList(cmd)->SetDescriptorHeaps(arraysize(heaps), heaps);
+		commandlist.GetGraphicsCommandList()->SetDescriptorHeaps(arraysize(heaps), heaps);
 
 		if (queue == QUEUE_GRAPHICS)
 		{
@@ -4676,7 +4675,7 @@ using namespace dx12_internal;
 				pRects[i].right = D3D12_VIEWPORT_BOUNDS_MAX;
 				pRects[i].top = D3D12_VIEWPORT_BOUNDS_MIN;
 			}
-			GetCommandList(cmd)->RSSetScissorRects(arraysize(pRects), pRects);
+			commandlist.GetGraphicsCommandList()->RSSetScissorRects(arraysize(pRects), pRects);
 		}
 
 		return cmd;
@@ -4689,12 +4688,12 @@ using namespace dx12_internal;
 		{
 			QUEUE_TYPE submit_queue = QUEUE_COUNT;
 
-			CommandList::index_type cmd_last = cmd_count;
+			uint32_t cmd_last = cmd_count;
 			cmd_count = 0;
-			for (CommandList::index_type cmd = 0; cmd < cmd_last; ++cmd)
+			for (uint32_t cmd = 0; cmd < cmd_last; ++cmd)
 			{
-				CommandListResources& commandlist = GetCommandListResources(cmd);
-				hr = GetCommandList(cmd)->Close();
+				CommandList_DX12& commandlist = *commandlists[cmd].get();
+				hr = commandlist.GetGraphicsCommandList()->Close();
 				assert(SUCCEEDED(hr));
 
 				if (submit_queue == QUEUE_COUNT)
@@ -4725,17 +4724,17 @@ using namespace dx12_internal;
 					for (auto& wait : commandlist.waits)
 					{
 						// record wait for signal on a previous submit:
-						const CommandListResources& waitcommandlist = GetCommandListResources(wait);
+						const CommandList_DX12& waitcommandlist = GetCommandList(wait);
 						hr = queues[submit_queue].queue->Wait(
 							queues[waitcommandlist.queue].fence.Get(),
-							FRAMECOUNT * commandlists.size() + (uint64_t)wait
+							FRAMECOUNT * commandlists.size() + (uint64_t)waitcommandlist.id
 						);
 						assert(SUCCEEDED(hr));
 					}
 				}
 
 				assert(submit_queue < QUEUE_COUNT);
-				queues[submit_queue].submit_cmds.push_back(GetCommandList(cmd));
+				queues[submit_queue].submit_cmds.push_back(commandlist.GetGraphicsCommandList());
 
 				for (auto& x : commandlist.pipelines_worker)
 				{
@@ -4769,9 +4768,9 @@ using namespace dx12_internal;
 				assert(SUCCEEDED(hr));
 			}
 
-			for (CommandList::index_type cmd = 0; cmd < cmd_last; ++cmd)
+			for (uint32_t cmd = 0; cmd < cmd_last; ++cmd)
 			{
-				CommandListResources& commandlist = GetCommandListResources(cmd);
+				CommandList_DX12& commandlist = *commandlists[cmd].get();
 				for (auto& swapchain : commandlist.swapchains)
 				{
 					UINT presentFlags = 0;
@@ -4863,11 +4862,11 @@ using namespace dx12_internal;
 
 		for (auto& x : commandlists)
 		{
-			for (auto& y : x.pipelines_worker)
+			for (auto& y : x->pipelines_worker)
 			{
 				allocationhandler->destroyer_pipelines.push_back(std::make_pair(y.second, FRAMECOUNT));
 			}
-			x.pipelines_worker.clear();
+			x->pipelines_worker.clear();
 		}
 		allocationhandler->destroylocker.unlock();
 	}
@@ -4921,13 +4920,13 @@ using namespace dx12_internal;
 
 	void GraphicsDevice_DX12::WaitCommandList(CommandList cmd, CommandList wait_for)
 	{
-		assert(wait_for < cmd); // command list cannot wait for future command list!
-		CommandListResources& commandlist = GetCommandListResources(cmd);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
+		assert(GetCommandList(wait_for).id < commandlist.id); // can't wait for future command list!
 		commandlist.waits.push_back(wait_for);
 	}
 	void GraphicsDevice_DX12::RenderPassBegin(const SwapChain* swapchain, CommandList cmd)
 	{
-		CommandListResources& commandlist = GetCommandListResources(cmd);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
 		commandlist.swapchains.push_back(swapchain);
 		auto internal_state = to_internal(swapchain);
 		commandlist.active_renderpass = &internal_state->renderpass;
@@ -4940,7 +4939,7 @@ using namespace dx12_internal;
 		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		GetCommandList(cmd)->ResourceBarrier(1, &barrier);
+		commandlist.GetGraphicsCommandList()->ResourceBarrier(1, &barrier);
 		
 		D3D12_RENDER_PASS_RENDER_TARGET_DESC RTV = {};
 		RTV.cpuDescriptor = internal_state->backbufferRTV[internal_state->swapChain->GetCurrentBackBufferIndex()];
@@ -4950,27 +4949,27 @@ using namespace dx12_internal;
 		RTV.BeginningAccess.Clear.ClearValue.Color[2] = swapchain->desc.clear_color[2];
 		RTV.BeginningAccess.Clear.ClearValue.Color[3] = swapchain->desc.clear_color[3];
 		RTV.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
-		GetCommandList(cmd)->BeginRenderPass(1, &RTV, nullptr, D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES);
+		commandlist.GetGraphicsCommandList()->BeginRenderPass(1, &RTV, nullptr, D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES);
 
 	}
 	void GraphicsDevice_DX12::RenderPassBegin(const RenderPass* renderpass, CommandList cmd)
 	{
-		CommandListResources& commandlist = GetCommandListResources(cmd);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
 		commandlist.active_renderpass = renderpass;
 
 		auto internal_state = to_internal(commandlist.active_renderpass);
 
 		if (internal_state->num_barriers_begin > 0)
 		{
-			GetCommandList(cmd)->ResourceBarrier(internal_state->num_barriers_begin, internal_state->barrierdescs_begin);
+			commandlist.GetGraphicsCommandList()->ResourceBarrier(internal_state->num_barriers_begin, internal_state->barrierdescs_begin);
 		}
 
 		if (internal_state->shading_rate_image != nullptr)
 		{
-			GetCommandList(cmd)->RSSetShadingRateImage(to_internal(internal_state->shading_rate_image)->resource.Get());
+			commandlist.GetGraphicsCommandList()->RSSetShadingRateImage(to_internal(internal_state->shading_rate_image)->resource.Get());
 		}
 
-		GetCommandList(cmd)->BeginRenderPass(
+		commandlist.GetGraphicsCommandList()->BeginRenderPass(
 			internal_state->rt_count,
 			internal_state->RTVs,
 			internal_state->DSV.cpuDescriptor.ptr == 0 ? nullptr : &internal_state->DSV,
@@ -4980,8 +4979,8 @@ using namespace dx12_internal;
 	}
 	void GraphicsDevice_DX12::RenderPassEnd(CommandList cmd)
 	{
-		CommandListResources& commandlist = GetCommandListResources(cmd);
-		GetCommandList(cmd)->EndRenderPass();
+		CommandList_DX12& commandlist = GetCommandList(cmd);
+		commandlist.GetGraphicsCommandList()->EndRenderPass();
 
 		auto internal_state = to_internal(commandlist.active_renderpass);
 
@@ -4989,12 +4988,12 @@ using namespace dx12_internal;
 		{
 			if (internal_state->shading_rate_image != nullptr)
 			{
-				GetCommandList(cmd)->RSSetShadingRateImage(nullptr);
+				commandlist.GetGraphicsCommandList()->RSSetShadingRateImage(nullptr);
 			}
 
 			if (internal_state->num_barriers_end > 0)
 			{
-				GetCommandList(cmd)->ResourceBarrier(internal_state->num_barriers_end, internal_state->barrierdescs_end);
+				commandlist.GetGraphicsCommandList()->ResourceBarrier(internal_state->num_barriers_end, internal_state->barrierdescs_end);
 			}
 		}
 
@@ -5009,7 +5008,7 @@ using namespace dx12_internal;
 			barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 			barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-			GetCommandList(cmd)->ResourceBarrier(1, &barrier);
+			commandlist.GetGraphicsCommandList()->ResourceBarrier(1, &barrier);
 
 			commandlist.active_backbuffer = nullptr;
 		}
@@ -5026,7 +5025,8 @@ using namespace dx12_internal;
 			pRects[i].right = (LONG)rects[i].right;
 			pRects[i].top = (LONG)rects[i].top;
 		}
-		GetCommandList(cmd)->RSSetScissorRects(numRects, pRects);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
+		commandlist.GetGraphicsCommandList()->RSSetScissorRects(numRects, pRects);
 	}
 	void GraphicsDevice_DX12::BindViewports(uint32_t NumViewports, const Viewport* pViewports, CommandList cmd)
 	{
@@ -5042,12 +5042,13 @@ using namespace dx12_internal;
 			d3dViewPorts[i].MinDepth = pViewports[i].min_depth;
 			d3dViewPorts[i].MaxDepth = pViewports[i].max_depth;
 		}
-		GetCommandList(cmd)->RSSetViewports(NumViewports, d3dViewPorts);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
+		commandlist.GetGraphicsCommandList()->RSSetViewports(NumViewports, d3dViewPorts);
 	}
 	void GraphicsDevice_DX12::BindResource(const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
 	{
 		assert(slot < DESCRIPTORBINDER_SRV_COUNT);
-		CommandListResources& commandlist = GetCommandListResources(cmd);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
 		auto& binder = commandlist.binder;
 		if (binder.table.SRV[slot].internal_state != resource->internal_state || binder.table.SRV_index[slot] != subresource)
 		{
@@ -5085,7 +5086,7 @@ using namespace dx12_internal;
 	void GraphicsDevice_DX12::BindUAV(const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
 	{
 		assert(slot < DESCRIPTORBINDER_UAV_COUNT);
-		CommandListResources& commandlist = GetCommandListResources(cmd);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
 		auto& binder = commandlist.binder;
 		if (binder.table.UAV[slot].internal_state != resource->internal_state || binder.table.UAV_index[slot] != subresource)
 		{
@@ -5123,7 +5124,7 @@ using namespace dx12_internal;
 	void GraphicsDevice_DX12::BindSampler(const Sampler* sampler, uint32_t slot, CommandList cmd)
 	{
 		assert(slot < DESCRIPTORBINDER_SAMPLER_COUNT);
-		CommandListResources& commandlist = GetCommandListResources(cmd);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
 		auto& binder = commandlist.binder;
 		if (binder.table.SAM[slot].internal_state != sampler->internal_state)
 		{
@@ -5150,7 +5151,7 @@ using namespace dx12_internal;
 	void GraphicsDevice_DX12::BindConstantBuffer(const GPUBuffer* buffer, uint32_t slot, CommandList cmd, uint64_t offset)
 	{
 		assert(slot < DESCRIPTORBINDER_CBV_COUNT);
-		CommandListResources& commandlist = GetCommandListResources(cmd);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
 		auto& binder = commandlist.binder;
 		if (binder.table.CBV[slot].internal_state != buffer->internal_state || binder.table.CBV_offset[slot] != offset)
 		{
@@ -5193,7 +5194,8 @@ using namespace dx12_internal;
 				res[i].StrideInBytes = strides[i];
 			}
 		}
-		GetCommandList(cmd)->IASetVertexBuffers(slot, count, res);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
+		commandlist.GetGraphicsCommandList()->IASetVertexBuffers(slot, count, res);
 	}
 	void GraphicsDevice_DX12::BindIndexBuffer(const GPUBuffer* indexBuffer, const IndexBufferFormat format, uint64_t offset, CommandList cmd)
 	{
@@ -5206,20 +5208,23 @@ using namespace dx12_internal;
 			res.Format = (format == IndexBufferFormat::UINT16 ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT);
 			res.SizeInBytes = (UINT)(indexBuffer->desc.size - offset);
 		}
-		GetCommandList(cmd)->IASetIndexBuffer(&res);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
+		commandlist.GetGraphicsCommandList()->IASetIndexBuffer(&res);
 	}
 	void GraphicsDevice_DX12::BindStencilRef(uint32_t value, CommandList cmd)
 	{
-		GetCommandList(cmd)->OMSetStencilRef(value);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
+		commandlist.GetGraphicsCommandList()->OMSetStencilRef(value);
 	}
 	void GraphicsDevice_DX12::BindBlendFactor(float r, float g, float b, float a, CommandList cmd)
 	{
+		CommandList_DX12& commandlist = GetCommandList(cmd);
 		const float blendFactor[4] = { r, g, b, a };
-		GetCommandList(cmd)->OMSetBlendFactor(blendFactor);
+		commandlist.GetGraphicsCommandList()->OMSetBlendFactor(blendFactor);
 	}
 	void GraphicsDevice_DX12::BindShadingRate(ShadingRate rate, CommandList cmd)
 	{
-		CommandListResources& commandlist = GetCommandListResources(cmd);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
 		if (CheckCapability(GraphicsDeviceCapability::VARIABLE_RATE_SHADING) && commandlist.prev_shadingrate != rate)
 		{
 			commandlist.prev_shadingrate = rate;
@@ -5232,12 +5237,12 @@ using namespace dx12_internal;
 				D3D12_SHADING_RATE_COMBINER_MAX,
 				D3D12_SHADING_RATE_COMBINER_MAX,
 			};
-			GetCommandList(cmd)->RSSetShadingRate(_rate, combiners);
+			commandlist.GetGraphicsCommandList()->RSSetShadingRate(_rate, combiners);
 		}
 	}
 	void GraphicsDevice_DX12::BindPipelineState(const PipelineState* pso, CommandList cmd)
 	{
-		CommandListResources& commandlist = GetCommandListResources(cmd);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
 		commandlist.active_cs = nullptr;
 		commandlist.active_rt = nullptr;
 
@@ -5258,7 +5263,7 @@ using namespace dx12_internal;
 		if (commandlist.active_rootsig_graphics != internal_state->rootSignature.Get())
 		{
 			commandlist.active_rootsig_graphics = internal_state->rootSignature.Get();
-			GetCommandList(cmd)->SetGraphicsRootSignature(internal_state->rootSignature.Get());
+			commandlist.GetGraphicsCommandList()->SetGraphicsRootSignature(internal_state->rootSignature.Get());
 
 			auto& binder = commandlist.binder;
 			binder.optimizer_graphics = &internal_state->rootsig_optimizer;
@@ -5270,7 +5275,7 @@ using namespace dx12_internal;
 	}
 	void GraphicsDevice_DX12::BindComputeShader(const Shader* cs, CommandList cmd)
 	{
-		CommandListResources& commandlist = GetCommandListResources(cmd);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
 		commandlist.active_pso = nullptr;
 		commandlist.active_rt = nullptr;
 
@@ -5285,13 +5290,13 @@ using namespace dx12_internal;
 
 			if (cs->stage == ShaderStage::CS)
 			{
-				GetCommandList(cmd)->SetPipelineState(internal_state->resource.Get());
+				commandlist.GetGraphicsCommandList()->SetPipelineState(internal_state->resource.Get());
 			}
 
 			if (commandlist.active_rootsig_compute != internal_state->rootSignature.Get())
 			{
 				commandlist.active_rootsig_compute = internal_state->rootSignature.Get();
-				GetCommandList(cmd)->SetComputeRootSignature(internal_state->rootSignature.Get());
+				commandlist.GetGraphicsCommandList()->SetComputeRootSignature(internal_state->rootSignature.Get());
 
 				auto& binder = commandlist.binder;
 				binder.optimizer_compute = &internal_state->rootsig_optimizer;
@@ -5304,65 +5309,77 @@ using namespace dx12_internal;
 	{
 		if (CheckCapability(GraphicsDeviceCapability::DEPTH_BOUNDS_TEST))
 		{
-			GetCommandList(cmd)->OMSetDepthBounds(min_bounds, max_bounds);
+			CommandList_DX12& commandlist = GetCommandList(cmd);
+			commandlist.GetGraphicsCommandList()->OMSetDepthBounds(min_bounds, max_bounds);
 		}
 	}
 	void GraphicsDevice_DX12::Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd)
 	{
 		predraw(cmd);
-		GetCommandList(cmd)->DrawInstanced(vertexCount, 1, startVertexLocation, 0);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
+		commandlist.GetGraphicsCommandList()->DrawInstanced(vertexCount, 1, startVertexLocation, 0);
 	}
 	void GraphicsDevice_DX12::DrawIndexed(uint32_t indexCount, uint32_t startIndexLocation, int32_t baseVertexLocation, CommandList cmd)
 	{
 		predraw(cmd);
-		GetCommandList(cmd)->DrawIndexedInstanced(indexCount, 1, startIndexLocation, baseVertexLocation, 0);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
+		commandlist.GetGraphicsCommandList()->DrawIndexedInstanced(indexCount, 1, startIndexLocation, baseVertexLocation, 0);
 	}
 	void GraphicsDevice_DX12::DrawInstanced(uint32_t vertexCount, uint32_t instanceCount, uint32_t startVertexLocation, uint32_t startInstanceLocation, CommandList cmd)
 	{
 		predraw(cmd);
-		GetCommandList(cmd)->DrawInstanced(vertexCount, instanceCount, startVertexLocation, startInstanceLocation);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
+		commandlist.GetGraphicsCommandList()->DrawInstanced(vertexCount, instanceCount, startVertexLocation, startInstanceLocation);
 	}
 	void GraphicsDevice_DX12::DrawIndexedInstanced(uint32_t indexCount, uint32_t instanceCount, uint32_t startIndexLocation, int32_t baseVertexLocation, uint32_t startInstanceLocation, CommandList cmd)
 	{
 		predraw(cmd);
-		GetCommandList(cmd)->DrawIndexedInstanced(indexCount, instanceCount, startIndexLocation, baseVertexLocation, startInstanceLocation);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
+		commandlist.GetGraphicsCommandList()->DrawIndexedInstanced(indexCount, instanceCount, startIndexLocation, baseVertexLocation, startInstanceLocation);
 	}
 	void GraphicsDevice_DX12::DrawInstancedIndirect(const GPUBuffer* args, uint64_t args_offset, CommandList cmd)
 	{
 		predraw(cmd);
 		auto internal_state = to_internal(args);
-		GetCommandList(cmd)->ExecuteIndirect(drawInstancedIndirectCommandSignature.Get(), 1, internal_state->resource.Get(), args_offset, nullptr, 0);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
+		commandlist.GetGraphicsCommandList()->ExecuteIndirect(drawInstancedIndirectCommandSignature.Get(), 1, internal_state->resource.Get(), args_offset, nullptr, 0);
 	}
 	void GraphicsDevice_DX12::DrawIndexedInstancedIndirect(const GPUBuffer* args, uint64_t args_offset, CommandList cmd)
 	{
 		predraw(cmd);
 		auto internal_state = to_internal(args);
-		GetCommandList(cmd)->ExecuteIndirect(drawIndexedInstancedIndirectCommandSignature.Get(), 1, internal_state->resource.Get(), args_offset, nullptr, 0);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
+		commandlist.GetGraphicsCommandList()->ExecuteIndirect(drawIndexedInstancedIndirectCommandSignature.Get(), 1, internal_state->resource.Get(), args_offset, nullptr, 0);
 	}
 	void GraphicsDevice_DX12::Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd)
 	{
 		predispatch(cmd);
-		GetCommandList(cmd)->Dispatch(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
+		commandlist.GetGraphicsCommandList()->Dispatch(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 	}
 	void GraphicsDevice_DX12::DispatchIndirect(const GPUBuffer* args, uint64_t args_offset, CommandList cmd)
 	{
 		predispatch(cmd);
 		auto internal_state = to_internal(args);
-		GetCommandList(cmd)->ExecuteIndirect(dispatchIndirectCommandSignature.Get(), 1, internal_state->resource.Get(), args_offset, nullptr, 0);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
+		commandlist.GetGraphicsCommandList()->ExecuteIndirect(dispatchIndirectCommandSignature.Get(), 1, internal_state->resource.Get(), args_offset, nullptr, 0);
 	}
 	void GraphicsDevice_DX12::DispatchMesh(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd)
 	{
 		predraw(cmd);
-		GetCommandList(cmd)->DispatchMesh(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
+		commandlist.GetGraphicsCommandList()->DispatchMesh(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 	}
 	void GraphicsDevice_DX12::DispatchMeshIndirect(const GPUBuffer* args, uint64_t args_offset, CommandList cmd)
 	{
 		predraw(cmd);
 		auto internal_state = to_internal(args);
-		GetCommandList(cmd)->ExecuteIndirect(dispatchMeshIndirectCommandSignature.Get(), 1, internal_state->resource.Get(), args_offset, nullptr, 0);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
+		commandlist.GetGraphicsCommandList()->ExecuteIndirect(dispatchMeshIndirectCommandSignature.Get(), 1, internal_state->resource.Get(), args_offset, nullptr, 0);
 	}
 	void GraphicsDevice_DX12::CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd)
 	{
+		CommandList_DX12& commandlist = GetCommandList(cmd);
 		auto internal_state_src = to_internal(pSrc);
 		auto internal_state_dst = to_internal(pDst);
 		D3D12_RESOURCE_DESC desc_src = internal_state_src->resource->GetDesc();
@@ -5371,48 +5388,50 @@ using namespace dx12_internal;
 		{
 			CD3DX12_TEXTURE_COPY_LOCATION Src(internal_state_src->resource.Get(), 0);
 			CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state_dst->resource.Get(), internal_state_dst->footprint);
-			GetCommandList(cmd)->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
+			commandlist.GetGraphicsCommandList()->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
 		}
 		else if (desc_src.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER && desc_dst.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER)
 		{
 			CD3DX12_TEXTURE_COPY_LOCATION Src(internal_state_src->resource.Get(), internal_state_src->footprint);
 			CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state_dst->resource.Get(), 0);
-			GetCommandList(cmd)->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
+			commandlist.GetGraphicsCommandList()->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
 		}
 		else
 		{
-			GetCommandList(cmd)->CopyResource(internal_state_dst->resource.Get(), internal_state_src->resource.Get());
+			commandlist.GetGraphicsCommandList()->CopyResource(internal_state_dst->resource.Get(), internal_state_src->resource.Get());
 		}
 	}
 	void GraphicsDevice_DX12::CopyBuffer(const GPUBuffer* pDst, uint64_t dst_offset, const GPUBuffer* pSrc, uint64_t src_offset, uint64_t size, CommandList cmd)
 	{
+		CommandList_DX12& commandlist = GetCommandList(cmd);
 		auto src_internal = to_internal((const GPUBuffer*)pSrc);
 		auto dst_internal = to_internal((const GPUBuffer*)pDst);
 
-		GetCommandList(cmd)->CopyBufferRegion(dst_internal->resource.Get(), dst_offset, src_internal->resource.Get(), src_offset, size);
+		commandlist.GetGraphicsCommandList()->CopyBufferRegion(dst_internal->resource.Get(), dst_offset, src_internal->resource.Get(), src_offset, size);
 	}
 	void GraphicsDevice_DX12::QueryBegin(const GPUQueryHeap* heap, uint32_t index, CommandList cmd)
 	{
+		CommandList_DX12& commandlist = GetCommandList(cmd);
 		auto internal_state = to_internal(heap);
 
 		switch (heap->desc.type)
 		{
 		case GpuQueryType::TIMESTAMP:
-			GetCommandList(cmd)->BeginQuery(
+			commandlist.GetGraphicsCommandList()->BeginQuery(
 				internal_state->heap.Get(),
 				D3D12_QUERY_TYPE_TIMESTAMP,
 				index
 			);
 			break;
 		case GpuQueryType::OCCLUSION_BINARY:
-			GetCommandList(cmd)->BeginQuery(
+			commandlist.GetGraphicsCommandList()->BeginQuery(
 				internal_state->heap.Get(),
 				D3D12_QUERY_TYPE_BINARY_OCCLUSION,
 				index
 			);
 			break;
 		case GpuQueryType::OCCLUSION:
-			GetCommandList(cmd)->BeginQuery(
+			commandlist.GetGraphicsCommandList()->BeginQuery(
 				internal_state->heap.Get(),
 				D3D12_QUERY_TYPE_OCCLUSION,
 				index
@@ -5422,26 +5441,27 @@ using namespace dx12_internal;
 	}
 	void GraphicsDevice_DX12::QueryEnd(const GPUQueryHeap* heap, uint32_t index, CommandList cmd)
 	{
+		CommandList_DX12& commandlist = GetCommandList(cmd);
 		auto internal_state = to_internal(heap);
 
 		switch (heap->desc.type)
 		{
 		case GpuQueryType::TIMESTAMP:
-			GetCommandList(cmd)->EndQuery(
+			commandlist.GetGraphicsCommandList()->EndQuery(
 				internal_state->heap.Get(),
 				D3D12_QUERY_TYPE_TIMESTAMP,
 				index
 			);
 			break;
 		case GpuQueryType::OCCLUSION_BINARY:
-			GetCommandList(cmd)->EndQuery(
+			commandlist.GetGraphicsCommandList()->EndQuery(
 				internal_state->heap.Get(),
 				D3D12_QUERY_TYPE_BINARY_OCCLUSION,
 				index
 			);
 			break;
 		case GpuQueryType::OCCLUSION:
-			GetCommandList(cmd)->EndQuery(
+			commandlist.GetGraphicsCommandList()->EndQuery(
 				internal_state->heap.Get(),
 				D3D12_QUERY_TYPE_OCCLUSION,
 				index
@@ -5451,7 +5471,8 @@ using namespace dx12_internal;
 	}
 	void GraphicsDevice_DX12::QueryResolve(const GPUQueryHeap* heap, uint32_t index, uint32_t count, const GPUBuffer* dest, uint64_t dest_offset, CommandList cmd)
 	{
-		assert(GetCommandListResources(cmd).active_renderpass == nullptr); // Can't resolve inside renderpass!
+		CommandList_DX12& commandlist = GetCommandList(cmd);
+		assert(commandlist.active_renderpass == nullptr); // Can't resolve inside renderpass!
 
 		auto internal_state = to_internal(heap);
 		auto dst_internal = to_internal(dest);
@@ -5459,7 +5480,7 @@ using namespace dx12_internal;
 		switch (heap->desc.type)
 		{
 		case GpuQueryType::TIMESTAMP:
-			GetCommandList(cmd)->ResolveQueryData(
+			commandlist.GetGraphicsCommandList()->ResolveQueryData(
 				internal_state->heap.Get(),
 				D3D12_QUERY_TYPE_TIMESTAMP,
 				index,
@@ -5469,7 +5490,7 @@ using namespace dx12_internal;
 			);
 			break;
 		case GpuQueryType::OCCLUSION_BINARY:
-			GetCommandList(cmd)->ResolveQueryData(
+			commandlist.GetGraphicsCommandList()->ResolveQueryData(
 				internal_state->heap.Get(),
 				D3D12_QUERY_TYPE_BINARY_OCCLUSION,
 				index,
@@ -5479,7 +5500,7 @@ using namespace dx12_internal;
 			);
 			break;
 		case GpuQueryType::OCCLUSION:
-			GetCommandList(cmd)->ResolveQueryData(
+			commandlist.GetGraphicsCommandList()->ResolveQueryData(
 				internal_state->heap.Get(),
 				D3D12_QUERY_TYPE_OCCLUSION,
 				index,
@@ -5492,7 +5513,7 @@ using namespace dx12_internal;
 	}
 	void GraphicsDevice_DX12::Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd)
 	{
-		CommandListResources& commandlist = GetCommandListResources(cmd);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
 		assert(commandlist.active_renderpass == nullptr);
 
 		auto& barrierdescs = commandlist.frame_barriers;
@@ -5565,7 +5586,7 @@ using namespace dx12_internal;
 
 		if (!barrierdescs.empty())
 		{
-			GetCommandList(cmd)->ResourceBarrier(
+			commandlist.GetGraphicsCommandList()->ResourceBarrier(
 				(UINT)barrierdescs.size(),
 				barrierdescs.data()
 			);
@@ -5574,6 +5595,7 @@ using namespace dx12_internal;
 	}
 	void GraphicsDevice_DX12::BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src)
 	{
+		CommandList_DX12& commandlist = GetCommandList(cmd);
 		auto dst_internal = to_internal(dst);
 
 		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC desc = {};
@@ -5640,11 +5662,11 @@ using namespace dx12_internal;
 		}
 		desc.DestAccelerationStructureData = dst_internal->gpu_address;
 		desc.ScratchAccelerationStructureData = to_internal(&dst_internal->scratch)->gpu_address;
-		GetCommandList(cmd)->BuildRaytracingAccelerationStructure(&desc, 0, nullptr);
+		commandlist.GetGraphicsCommandList()->BuildRaytracingAccelerationStructure(&desc, 0, nullptr);
 	}
 	void GraphicsDevice_DX12::BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd)
 	{
-		CommandListResources& commandlist = GetCommandListResources(cmd);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
 		commandlist.active_cs = nullptr;
 		commandlist.active_pso = nullptr;
 		commandlist.prev_pipeline_hash = 0;
@@ -5653,10 +5675,11 @@ using namespace dx12_internal;
 		BindComputeShader(rtpso->desc.shader_libraries.front().shader, cmd);
 
 		auto internal_state = to_internal(rtpso);
-		GetCommandList(cmd)->SetPipelineState1(internal_state->resource.Get());
+		commandlist.GetGraphicsCommandList()->SetPipelineState1(internal_state->resource.Get());
 	}
 	void GraphicsDevice_DX12::DispatchRays(const DispatchRaysDesc* desc, CommandList cmd)
 	{
+		CommandList_DX12& commandlist = GetCommandList(cmd);
 		predispatch(cmd);
 
 		D3D12_DISPATCH_RAYS_DESC dispatchrays_desc = {};
@@ -5707,14 +5730,14 @@ using namespace dx12_internal;
 				desc->callable.stride;
 		}
 
-		GetCommandList(cmd)->DispatchRays(&dispatchrays_desc);
+		commandlist.GetGraphicsCommandList()->DispatchRays(&dispatchrays_desc);
 	}
 	void GraphicsDevice_DX12::PushConstants(const void* data, uint32_t size, CommandList cmd, uint32_t offset)
 	{
 		assert(size % sizeof(uint32_t) == 0);
 		assert(offset % sizeof(uint32_t) == 0);
 
-		CommandListResources& commandlist = GetCommandListResources(cmd);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
 		auto& binder = commandlist.binder;
 		if (commandlist.active_pso != nullptr)
 		{
@@ -5722,7 +5745,7 @@ using namespace dx12_internal;
 			const D3D12_ROOT_PARAMETER1& param = optimizer->rootsig_desc->Desc_1_1.pParameters[optimizer->PUSH];
 			assert(param.ParameterType == D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS);
 			assert(size <= param.Constants.Num32BitValues * sizeof(uint32_t)); // if this fires, not enough root constants were declared in root signature!
-			GetCommandList(cmd)->SetGraphicsRoot32BitConstants(
+			commandlist.GetGraphicsCommandList()->SetGraphicsRoot32BitConstants(
 				optimizer->PUSH,
 				size / sizeof(uint32_t),
 				data,
@@ -5736,7 +5759,7 @@ using namespace dx12_internal;
 			const D3D12_ROOT_PARAMETER1& param = optimizer->rootsig_desc->Desc_1_1.pParameters[optimizer->PUSH];
 			assert(param.ParameterType == D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS);
 			assert(size <= param.Constants.Num32BitValues * sizeof(uint32_t)); // if this fires, not enough root constants were declared in root signature!
-			GetCommandList(cmd)->SetComputeRoot32BitConstants(
+			commandlist.GetGraphicsCommandList()->SetComputeRoot32BitConstants(
 				optimizer->PUSH,
 				size / sizeof(uint32_t),
 				data,
@@ -5748,6 +5771,7 @@ using namespace dx12_internal;
 	}
 	void GraphicsDevice_DX12::PredicationBegin(const GPUBuffer* buffer, uint64_t offset, PredicationOp op, CommandList cmd)
 	{
+		CommandList_DX12& commandlist = GetCommandList(cmd);
 		auto internal_state = to_internal(buffer);
 		D3D12_PREDICATION_OP operation;
 		switch (op)
@@ -5760,11 +5784,12 @@ using namespace dx12_internal;
 			operation = D3D12_PREDICATION_OP_NOT_EQUAL_ZERO;
 			break;
 		}
-		GetCommandList(cmd)->SetPredication(internal_state->resource.Get(), offset, operation);
+		commandlist.GetGraphicsCommandList()->SetPredication(internal_state->resource.Get(), offset, operation);
 	}
 	void GraphicsDevice_DX12::PredicationEnd(CommandList cmd)
 	{
-		GetCommandList(cmd)->SetPredication(nullptr, 0, D3D12_PREDICATION_OP_EQUAL_ZERO);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
+		commandlist.GetGraphicsCommandList()->SetPredication(nullptr, 0, D3D12_PREDICATION_OP_EQUAL_ZERO);
 	}
 
 	void GraphicsDevice_DX12::EventBegin(const char* name, CommandList cmd)
@@ -5772,26 +5797,23 @@ using namespace dx12_internal;
 		wchar_t text[128];
 		if (wi::helper::StringConvert(name, text) > 0)
 		{
-			PIXBeginEvent(GetCommandList(cmd), 0xFF000000, text);
+			CommandList_DX12& commandlist = GetCommandList(cmd);
+			PIXBeginEvent(commandlist.GetGraphicsCommandList(), 0xFF000000, text);
 		}
 	}
 	void GraphicsDevice_DX12::EventEnd(CommandList cmd)
 	{
-		PIXEndEvent(GetCommandList(cmd));
+		CommandList_DX12& commandlist = GetCommandList(cmd);
+		PIXEndEvent(commandlist.GetGraphicsCommandList());
 	}
 	void GraphicsDevice_DX12::SetMarker(const char* name, CommandList cmd)
 	{
 		wchar_t text[128];
 		if (wi::helper::StringConvert(name, text) > 0)
 		{
-			PIXSetMarker(GetCommandList(cmd), 0xFFFF0000, text);
+			CommandList_DX12& commandlist = GetCommandList(cmd);
+			PIXSetMarker(commandlist.GetGraphicsCommandList(), 0xFFFF0000, text);
 		}
-	}
-
-	const RenderPass* GraphicsDevice_DX12::GetCurrentRenderPass(CommandList cmd) const
-	{
-		const CommandListResources& commandlist = GetCommandListResources(cmd);
-		return commandlist.active_renderpass;
 	}
 
 }
