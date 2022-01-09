@@ -72,8 +72,8 @@ namespace wi::font
 	//	not deleted while the font is in use
 	int AddFontStyle(const std::string& fontName, const uint8_t* data, size_t size);
 
-	// Set canvas for the CommandList to handle DPI-aware font rendering
-	void SetCanvas(const wi::Canvas& canvas, wi::graphics::CommandList cmd);
+	// Set canvas for the CommandList to handle DPI-aware font rendering on the current thread
+	void SetCanvas(const wi::Canvas& current_canvas);
 
 	void Draw(const char* text, const Params& params, wi::graphics::CommandList cmd);
 	void Draw(const wchar_t* text, const Params& params, wi::graphics::CommandList cmd);

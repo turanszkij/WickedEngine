@@ -10,6 +10,7 @@
 #include "wiGraphicsDevice.h"
 #include "wiUnorderedMap.h"
 #include "wiVector.h"
+#include "wiSpinLock.h"
 
 #ifdef _WIN32
 #define VK_USE_PLATFORM_WIN32_KHR
@@ -137,37 +138,13 @@ namespace wi::graphics
 		struct FrameResources
 		{
 			VkFence fence[QUEUE_COUNT] = {};
-			VkCommandPool commandPools[COMMANDLIST_COUNT][QUEUE_COUNT] = {};
-			VkCommandBuffer commandBuffers[COMMANDLIST_COUNT][QUEUE_COUNT] = {};
 
 			VkCommandPool initCommandPool = VK_NULL_HANDLE;
 			VkCommandBuffer initCommandBuffer = VK_NULL_HANDLE;
-
-			struct DescriptorBinderPool
-			{
-				GraphicsDevice_Vulkan* device;
-				VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
-				uint32_t poolSize = 256;
-
-				void init(GraphicsDevice_Vulkan* device);
-				void destroy();
-				void reset();
-			} binder_pools[COMMANDLIST_COUNT];
 		};
 		FrameResources frames[BUFFERCOUNT];
 		const FrameResources& GetFrameResources() const { return frames[GetBufferIndex()]; }
 		FrameResources& GetFrameResources() { return frames[GetBufferIndex()]; }
-
-		struct CommandListMetadata
-		{
-			QUEUE_TYPE queue = {};
-			wi::vector<CommandList> waits;
-		} cmd_meta[COMMANDLIST_COUNT];
-
-		inline VkCommandBuffer GetCommandList(CommandList::index_type cmd)
-		{
-			return GetFrameResources().commandBuffers[cmd][cmd_meta[cmd].queue];
-		}
 
 		struct DescriptorBinder
 		{
@@ -199,11 +176,89 @@ namespace wi::graphics
 			void reset();
 			void flush(bool graphics, CommandList cmd);
 		};
-		DescriptorBinder binders[COMMANDLIST_COUNT];
 
-		wi::vector<VkMemoryBarrier> frame_memoryBarriers[COMMANDLIST_COUNT];
-		wi::vector<VkImageMemoryBarrier> frame_imageBarriers[COMMANDLIST_COUNT];
-		wi::vector<VkBufferMemoryBarrier> frame_bufferBarriers[COMMANDLIST_COUNT];
+		struct DescriptorBinderPool
+		{
+			GraphicsDevice_Vulkan* device;
+			VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
+			uint32_t poolSize = 256;
+
+			void init(GraphicsDevice_Vulkan* device);
+			void destroy();
+			void reset();
+		};
+
+		struct CommandList_Vulkan
+		{
+			VkCommandPool commandPools[BUFFERCOUNT][QUEUE_COUNT] = {};
+			VkCommandBuffer commandBuffers[BUFFERCOUNT][QUEUE_COUNT] = {};
+			uint32_t buffer_index = 0;
+
+			QUEUE_TYPE queue = {};
+			uint32_t id = 0;
+			wi::vector<CommandList> waits;
+
+			DescriptorBinder binder;
+			DescriptorBinderPool binder_pools[BUFFERCOUNT];
+			GPULinearAllocator frame_allocators[BUFFERCOUNT];
+
+			wi::vector<std::pair<size_t, VkPipeline>> pipelines_worker;
+			size_t prev_pipeline_hash = {};
+			const PipelineState* active_pso = {};
+			const Shader* active_cs = {};
+			const RaytracingPipelineState* active_rt = {};
+			const RenderPass* active_renderpass = {};
+			ShadingRate prev_shadingrate = {};
+			wi::vector<SwapChain> prev_swapchains;
+			uint32_t vb_strides[8] = {};
+			size_t vb_hash = {};
+			bool dirty_pso = {};
+			wi::vector<VkMemoryBarrier> frame_memoryBarriers;
+			wi::vector<VkImageMemoryBarrier> frame_imageBarriers;
+			wi::vector<VkBufferMemoryBarrier> frame_bufferBarriers;
+			wi::vector<VkAccelerationStructureGeometryKHR> accelerationstructure_build_geometries;
+			wi::vector<VkAccelerationStructureBuildRangeInfoKHR> accelerationstructure_build_ranges;
+
+			void reset(uint32_t bufferindex)
+			{
+				buffer_index = bufferindex;
+				waits.clear();
+				binder_pools[buffer_index].reset();
+				binder.reset();
+				frame_allocators[buffer_index].reset();
+				prev_pipeline_hash = 0;
+				active_pso = nullptr;
+				active_cs = nullptr;
+				active_rt = nullptr;
+				active_renderpass = nullptr;
+				dirty_pso = false;
+				prev_shadingrate = ShadingRate::RATE_INVALID;
+				vb_hash = 0;
+				for (int i = 0; i < arraysize(vb_strides); ++i)
+				{
+					vb_strides[i] = 0;
+				}
+				prev_swapchains.clear();
+			}
+
+			inline VkCommandPool GetCommandPool() const
+			{
+				return commandPools[buffer_index][queue];
+			}
+			inline VkCommandBuffer GetCommandBuffer() const
+			{
+				return commandBuffers[buffer_index][queue];
+			}
+		};
+		wi::vector<std::unique_ptr<CommandList_Vulkan>> commandlists;
+		uint32_t cmd_count = 0;
+		wi::SpinLock cmd_locker;
+
+		constexpr CommandList_Vulkan& GetCommandList(CommandList cmd) const
+		{
+			assert(cmd.IsValid());
+			return *(CommandList_Vulkan*)cmd.internal_state;
+		}
 
 		struct PSOLayout
 		{
@@ -217,26 +272,11 @@ namespace wi::graphics
 
 		VkPipelineCache pipelineCache = VK_NULL_HANDLE;
 		wi::unordered_map<size_t, VkPipeline> pipelines_global;
-		wi::vector<std::pair<size_t, VkPipeline>> pipelines_worker[COMMANDLIST_COUNT];
-		size_t prev_pipeline_hash[COMMANDLIST_COUNT] = {};
-		const PipelineState* active_pso[COMMANDLIST_COUNT] = {};
-		const Shader* active_cs[COMMANDLIST_COUNT] = {};
-		const RaytracingPipelineState* active_rt[COMMANDLIST_COUNT] = {};
-		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
-		ShadingRate prev_shadingrate[COMMANDLIST_COUNT] = {};
-		wi::vector<SwapChain> prev_swapchains[COMMANDLIST_COUNT];
 
-		uint32_t vb_strides[COMMANDLIST_COUNT][8] = {};
-		size_t vb_hash[COMMANDLIST_COUNT] = {};
-
-		bool dirty_pso[COMMANDLIST_COUNT] = {};
 		void pso_validate(CommandList cmd);
 
 		void predraw(CommandList cmd);
 		void predispatch(CommandList cmd);
-
-
-		std::atomic<CommandList::index_type> cmd_count{ 0 };
 
 		static constexpr uint32_t immutable_sampler_slot_begin = 100;
 		wi::vector<VkSampler> immutable_samplers;
@@ -245,16 +285,16 @@ namespace wi::graphics
 		GraphicsDevice_Vulkan(wi::platform::window_type window, bool debuglayer = false);
 		virtual ~GraphicsDevice_Vulkan();
 
-		bool CreateSwapChain(const SwapChainDesc* pDesc, wi::platform::window_type window, SwapChain* swapChain) const override;
-		bool CreateBuffer(const GPUBufferDesc *pDesc, const void* pInitialData, GPUBuffer *pBuffer) const override;
-		bool CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) const override;
-		bool CreateShader(ShaderStage stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) const override;
-		bool CreateSampler(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) const override;
-		bool CreateQueryHeap(const GPUQueryHeapDesc* pDesc, GPUQueryHeap* pQueryHeap) const override;
-		bool CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) const override;
-		bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) const override;
-		bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh) const override;
-		bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso) const override;
+		bool CreateSwapChain(const SwapChainDesc* desc, wi::platform::window_type window, SwapChain* swapchain) const override;
+		bool CreateBuffer(const GPUBufferDesc* desc, const void* initial_data, GPUBuffer* buffer) const override;
+		bool CreateTexture(const TextureDesc* desc, const SubresourceData* initial_data, Texture* texture) const override;
+		bool CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader) const override;
+		bool CreateSampler(const SamplerDesc* desc, Sampler* sampler) const override;
+		bool CreateQueryHeap(const GPUQueryHeapDesc* desc, GPUQueryHeap* queryheap) const override;
+		bool CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso) const override;
+		bool CreateRenderPass(const RenderPassDesc* desc, RenderPass* renderpass) const override;
+		bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* desc, RaytracingAccelerationStructure* bvh) const override;
+		bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* desc, RaytracingPipelineState* rtpso) const override;
 		
 		int CreateSubresource(Texture* texture, SubresourceType type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) const override;
 		int CreateSubresource(GPUBuffer* buffer, SubresourceType type, uint64_t offset, uint64_t size = ~0) const override;
@@ -332,7 +372,15 @@ namespace wi::graphics
 		void EventEnd(CommandList cmd) override;
 		void SetMarker(const char* name, CommandList cmd) override;
 
-		const RenderPass* GetCurrentRenderPass(CommandList cmd) const override;
+		const RenderPass* GetCurrentRenderPass(CommandList cmd) const override
+		{
+			const CommandList_Vulkan& commandlist = GetCommandList(cmd);
+			return commandlist.active_renderpass;
+		}
+		GPULinearAllocator& GetFrameAllocator(CommandList cmd) override
+		{
+			return GetCommandList(cmd).frame_allocators[GetBufferIndex()];
+		}
 
 		struct AllocationHandler
 		{
