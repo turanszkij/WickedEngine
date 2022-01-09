@@ -10176,7 +10176,6 @@ void Postprocess_DepthOfField(
 	{
 		device->EventBegin("TileMax - Vertical", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_TILEMAXCOC_VERTICAL], cmd);
-		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 		const GPUResource* resarray[] = {
 			&res.texture_tilemax_horizontal,
@@ -10221,7 +10220,6 @@ void Postprocess_DepthOfField(
 	{
 		device->EventBegin("NeighborhoodMax", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_NEIGHBORHOODMAXCOC], cmd);
-		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 		const GPUResource* resarray[] = {
 			&res.texture_tilemax,
@@ -10267,7 +10265,6 @@ void Postprocess_DepthOfField(
 	{
 		device->EventBegin("Kickjobs", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_KICKJOBS], cmd);
-		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 		device->BindResource(&res.texture_tilemax, 0, cmd);
 
@@ -10379,7 +10376,6 @@ void Postprocess_DepthOfField(
 		}
 
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_MAIN_EARLYEXIT], cmd);
-		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 		device->DispatchIndirect(&res.buffer_tile_statistics, INDIRECT_OFFSET_EARLYEXIT, cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_DEPTHOFFIELD_MAIN_CHEAP], cmd);
@@ -10587,7 +10583,6 @@ void Postprocess_MotionBlur(
 	{
 		device->EventBegin("TileMax - Horizontal", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_MOTIONBLUR_TILEMAXVELOCITY_HORIZONTAL], cmd);
-		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 		const GPUResource* uavs[] = {
 			&res.texture_tilemax_horizontal,
@@ -10626,7 +10621,6 @@ void Postprocess_MotionBlur(
 	{
 		device->EventBegin("TileMax - Vertical", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_MOTIONBLUR_TILEMAXVELOCITY_VERTICAL], cmd);
-		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 		device->BindResource(&res.texture_tilemax_horizontal, 0, cmd);
 
@@ -10667,7 +10661,6 @@ void Postprocess_MotionBlur(
 	{
 		device->EventBegin("NeighborhoodMax", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_MOTIONBLUR_NEIGHBORHOODMAXVELOCITY], cmd);
-		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 		const GPUResource* resarray[] = {
 			&res.texture_tilemax,
@@ -10713,7 +10706,6 @@ void Postprocess_MotionBlur(
 	{
 		device->EventBegin("Kickjobs", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_MOTIONBLUR_KICKJOBS], cmd);
-		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 		device->BindResource(&res.texture_tilemax, 0, cmd);
 
@@ -10765,7 +10757,6 @@ void Postprocess_MotionBlur(
 		}
 
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_MOTIONBLUR_EARLYEXIT], cmd);
-		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 		device->DispatchIndirect(&res.buffer_tile_statistics, INDIRECT_OFFSET_EARLYEXIT, cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_MOTIONBLUR_CHEAP], cmd);

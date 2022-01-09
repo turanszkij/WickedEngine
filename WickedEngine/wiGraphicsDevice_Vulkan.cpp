@@ -3357,17 +3357,17 @@ using namespace vulkan_internal;
 		}
 	}
 
-	bool GraphicsDevice_Vulkan::CreateSwapChain(const SwapChainDesc* pDesc, wi::platform::window_type window, SwapChain* swapChain) const
+	bool GraphicsDevice_Vulkan::CreateSwapChain(const SwapChainDesc* desc, wi::platform::window_type window, SwapChain* swapchain) const
 	{
-		auto internal_state = std::static_pointer_cast<SwapChain_Vulkan>(swapChain->internal_state);
-		if (swapChain->internal_state == nullptr)
+		auto internal_state = std::static_pointer_cast<SwapChain_Vulkan>(swapchain->internal_state);
+		if (swapchain->internal_state == nullptr)
 		{
 			internal_state = std::make_shared<SwapChain_Vulkan>();
 		}
 		internal_state->allocationhandler = allocationhandler;
-		internal_state->desc = *pDesc;
-		swapChain->internal_state = internal_state;
-		swapChain->desc = *pDesc;
+		internal_state->desc = *desc;
+		swapchain->internal_state = internal_state;
+		swapchain->desc = *desc;
 
 		VkResult res;
 
@@ -3417,36 +3417,35 @@ using namespace vulkan_internal;
 
 		return CreateSwapChainInternal(internal_state.get(), physicalDevice, device, allocationhandler);
 	}
-	bool GraphicsDevice_Vulkan::CreateBuffer(const GPUBufferDesc *pDesc, const void* pInitialData, GPUBuffer *pBuffer) const
+	bool GraphicsDevice_Vulkan::CreateBuffer(const GPUBufferDesc * desc, const void* initial_data, GPUBuffer* buffer) const
 	{
 		auto internal_state = std::make_shared<Buffer_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
-		pBuffer->internal_state = internal_state;
-		pBuffer->type = GPUResource::Type::BUFFER;
-		pBuffer->mapped_data = nullptr;
-		pBuffer->mapped_rowpitch = 0;
-
-		pBuffer->desc = *pDesc;
+		buffer->internal_state = internal_state;
+		buffer->type = GPUResource::Type::BUFFER;
+		buffer->mapped_data = nullptr;
+		buffer->mapped_rowpitch = 0;
+		buffer->desc = *desc;
 
 		VkBufferCreateInfo bufferInfo = {};
 		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		bufferInfo.size = pBuffer->desc.size;
+		bufferInfo.size = buffer->desc.size;
 		bufferInfo.usage = 0;
-		if (has_flag(pBuffer->desc.bind_flags, BindFlag::VERTEX_BUFFER))
+		if (has_flag(buffer->desc.bind_flags, BindFlag::VERTEX_BUFFER))
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 		}
-		if (has_flag(pBuffer->desc.bind_flags, BindFlag::INDEX_BUFFER))
+		if (has_flag(buffer->desc.bind_flags, BindFlag::INDEX_BUFFER))
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
 		}
-		if (has_flag(pBuffer->desc.bind_flags, BindFlag::CONSTANT_BUFFER))
+		if (has_flag(buffer->desc.bind_flags, BindFlag::CONSTANT_BUFFER))
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 		}
-		if (has_flag(pBuffer->desc.bind_flags, BindFlag::SHADER_RESOURCE))
+		if (has_flag(buffer->desc.bind_flags, BindFlag::SHADER_RESOURCE))
 		{
-			if (pBuffer->desc.format == Format::UNKNOWN)
+			if (buffer->desc.format == Format::UNKNOWN)
 			{
 				bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 			}
@@ -3455,9 +3454,9 @@ using namespace vulkan_internal;
 				bufferInfo.usage |= VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT;
 			}
 		}
-		if (has_flag(pBuffer->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
+		if (has_flag(buffer->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
 		{
-			if (pBuffer->desc.format == Format::UNKNOWN)
+			if (buffer->desc.format == Format::UNKNOWN)
 			{
 				bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 			}
@@ -3466,24 +3465,24 @@ using namespace vulkan_internal;
 				bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
 			}
 		}
-		if (has_flag(pBuffer->desc.misc_flags, ResourceMiscFlag::BUFFER_RAW))
+		if (has_flag(buffer->desc.misc_flags, ResourceMiscFlag::BUFFER_RAW))
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 		}
-		if (has_flag(pBuffer->desc.misc_flags, ResourceMiscFlag::BUFFER_STRUCTURED))
+		if (has_flag(buffer->desc.misc_flags, ResourceMiscFlag::BUFFER_STRUCTURED))
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 		}
-		if (has_flag(pBuffer->desc.misc_flags, ResourceMiscFlag::INDIRECT_ARGS))
+		if (has_flag(buffer->desc.misc_flags, ResourceMiscFlag::INDIRECT_ARGS))
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
 		}
-		if (has_flag(pBuffer->desc.misc_flags, ResourceMiscFlag::RAY_TRACING))
+		if (has_flag(buffer->desc.misc_flags, ResourceMiscFlag::RAY_TRACING))
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
 			bufferInfo.usage |= VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR;
 		}
-		if (has_flag(pBuffer->desc.misc_flags, ResourceMiscFlag::PREDICATION))
+		if (has_flag(buffer->desc.misc_flags, ResourceMiscFlag::PREDICATION))
 		{
 			bufferInfo.usage |= VK_BUFFER_USAGE_CONDITIONAL_RENDERING_BIT_EXT;
 		}
@@ -3511,13 +3510,13 @@ using namespace vulkan_internal;
 		//allocInfo.flags = VMA_ALLOCATION_CREATE_STRATEGY_MIN_MEMORY_BIT;
 		//allocInfo.flags = VMA_ALLOCATION_CREATE_STRATEGY_MIN_FRAGMENTATION_BIT;
 		allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-		if (pDesc->usage == Usage::READBACK)
+		if (desc->usage == Usage::READBACK)
 		{
 			allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
 			allocInfo.usage = VMA_MEMORY_USAGE_GPU_TO_CPU;
 			bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 		}
-		else if(pDesc->usage == Usage::UPLOAD)
+		else if(desc->usage == Usage::UPLOAD)
 		{
 			allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
 			allocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY; // yes, not using VMA_MEMORY_USAGE_CPU_TO_GPU, as it had worse performance for CPU write
@@ -3527,10 +3526,10 @@ using namespace vulkan_internal;
 		VkResult res = vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &internal_state->resource, &internal_state->allocation, nullptr);
 		assert(res == VK_SUCCESS);
 
-		if (pDesc->usage == Usage::READBACK || pDesc->usage == Usage::UPLOAD)
+		if (desc->usage == Usage::READBACK || desc->usage == Usage::UPLOAD)
 		{
-			pBuffer->mapped_data = internal_state->allocation->GetMappedData();
-			pBuffer->mapped_rowpitch = static_cast<uint32_t>(pDesc->size);
+			buffer->mapped_data = internal_state->allocation->GetMappedData();
+			buffer->mapped_rowpitch = static_cast<uint32_t>(desc->size);
 		}
 
 		if (bufferInfo.usage & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT)
@@ -3542,11 +3541,11 @@ using namespace vulkan_internal;
 		}
 
 		// Issue data copy on request:
-		if (pInitialData != nullptr)
+		if (initial_data != nullptr)
 		{
-			auto cmd = copyAllocator.allocate(pDesc->size);
+			auto cmd = copyAllocator.allocate(desc->size);
 
-			std::memcpy(cmd.uploadbuffer.mapped_data, pInitialData, pBuffer->desc.size);
+			std::memcpy(cmd.uploadbuffer.mapped_data, initial_data, buffer->desc.size);
 
 			VkBufferMemoryBarrier barrier = {};
 			barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
@@ -3569,7 +3568,7 @@ using namespace vulkan_internal;
 			);
 
 			VkBufferCopy copyRegion = {};
-			copyRegion.size = pBuffer->desc.size;
+			copyRegion.size = buffer->desc.size;
 			copyRegion.srcOffset = 0;
 			copyRegion.dstOffset = 0;
 
@@ -3583,31 +3582,31 @@ using namespace vulkan_internal;
 
 			std::swap(barrier.srcAccessMask, barrier.dstAccessMask);
 
-			if (has_flag(pBuffer->desc.bind_flags, BindFlag::CONSTANT_BUFFER))
+			if (has_flag(buffer->desc.bind_flags, BindFlag::CONSTANT_BUFFER))
 			{
 				barrier.dstAccessMask |= VK_ACCESS_UNIFORM_READ_BIT;
 			}
-			if (has_flag(pBuffer->desc.bind_flags, BindFlag::VERTEX_BUFFER))
+			if (has_flag(buffer->desc.bind_flags, BindFlag::VERTEX_BUFFER))
 			{
 				barrier.dstAccessMask |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
 			}
-			if (has_flag(pBuffer->desc.bind_flags, BindFlag::INDEX_BUFFER))
+			if (has_flag(buffer->desc.bind_flags, BindFlag::INDEX_BUFFER))
 			{
 				barrier.dstAccessMask |= VK_ACCESS_INDEX_READ_BIT;
 			}
-			if (has_flag(pBuffer->desc.bind_flags, BindFlag::SHADER_RESOURCE))
+			if (has_flag(buffer->desc.bind_flags, BindFlag::SHADER_RESOURCE))
 			{
 				barrier.dstAccessMask |= VK_ACCESS_SHADER_READ_BIT;
 			}
-			if (has_flag(pBuffer->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
+			if (has_flag(buffer->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
 			{
 				barrier.dstAccessMask |= VK_ACCESS_SHADER_WRITE_BIT;
 			}
-			if (has_flag(pBuffer->desc.misc_flags, ResourceMiscFlag::INDIRECT_ARGS))
+			if (has_flag(buffer->desc.misc_flags, ResourceMiscFlag::INDIRECT_ARGS))
 			{
 				barrier.dstAccessMask |= VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
 			}
-			if (has_flag(pBuffer->desc.misc_flags, ResourceMiscFlag::RAY_TRACING))
+			if (has_flag(buffer->desc.misc_flags, ResourceMiscFlag::RAY_TRACING))
 			{
 				barrier.dstAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
 			}
@@ -3625,7 +3624,7 @@ using namespace vulkan_internal;
 			copyAllocator.submit(cmd);
 		}
 
-		if (pDesc->format == Format::UNKNOWN)
+		if (desc->format == Format::UNKNOWN)
 		{
 			internal_state->is_typedbuffer = false;
 		}
@@ -3636,31 +3635,30 @@ using namespace vulkan_internal;
 
 
 		// Create resource views if needed
-		if (has_flag(pDesc->bind_flags, BindFlag::SHADER_RESOURCE))
+		if (has_flag(desc->bind_flags, BindFlag::SHADER_RESOURCE))
 		{
-			CreateSubresource(pBuffer, SubresourceType::SRV, 0);
+			CreateSubresource(buffer, SubresourceType::SRV, 0);
 		}
-		if (has_flag(pDesc->bind_flags, BindFlag::UNORDERED_ACCESS))
+		if (has_flag(desc->bind_flags, BindFlag::UNORDERED_ACCESS))
 		{
-			CreateSubresource(pBuffer, SubresourceType::UAV, 0);
+			CreateSubresource(buffer, SubresourceType::UAV, 0);
 		}
 
 		return res == VK_SUCCESS;
 	}
-	bool GraphicsDevice_Vulkan::CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) const
+	bool GraphicsDevice_Vulkan::CreateTexture(const TextureDesc* desc, const SubresourceData* initial_data, Texture* texture) const
 	{
 		auto internal_state = std::make_shared<Texture_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
-		pTexture->internal_state = internal_state;
-		pTexture->type = GPUResource::Type::TEXTURE;
-		pTexture->mapped_data = nullptr;
-		pTexture->mapped_rowpitch = 0;
+		texture->internal_state = internal_state;
+		texture->type = GPUResource::Type::TEXTURE;
+		texture->mapped_data = nullptr;
+		texture->mapped_rowpitch = 0;
+		texture->desc = *desc;
 
-		pTexture->desc = *pDesc;
-
-		if (pTexture->desc.mip_levels == 0)
+		if (texture->desc.mip_levels == 0)
 		{
-			pTexture->desc.mip_levels = (uint32_t)log2(std::max(pTexture->desc.width, pTexture->desc.height)) + 1;
+			texture->desc.mip_levels = (uint32_t)log2(std::max(texture->desc.width, texture->desc.height)) + 1;
 		}
 
 		VmaAllocationCreateInfo allocInfo = {};
@@ -3670,35 +3668,35 @@ using namespace vulkan_internal;
 
 		VkImageCreateInfo imageInfo = {};
 		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-		imageInfo.extent.width = pTexture->desc.width;
-		imageInfo.extent.height = pTexture->desc.height;
+		imageInfo.extent.width = texture->desc.width;
+		imageInfo.extent.height = texture->desc.height;
 		imageInfo.extent.depth = 1;
-		imageInfo.format = _ConvertFormat(pTexture->desc.format);
-		imageInfo.arrayLayers = pTexture->desc.array_size;
-		imageInfo.mipLevels = pTexture->desc.mip_levels;
-		imageInfo.samples = (VkSampleCountFlagBits)pTexture->desc.sample_count;
+		imageInfo.format = _ConvertFormat(texture->desc.format);
+		imageInfo.arrayLayers = texture->desc.array_size;
+		imageInfo.mipLevels = texture->desc.mip_levels;
+		imageInfo.samples = (VkSampleCountFlagBits)texture->desc.sample_count;
 		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
 		imageInfo.usage = 0;
-		if (has_flag(pTexture->desc.bind_flags, BindFlag::SHADER_RESOURCE))
+		if (has_flag(texture->desc.bind_flags, BindFlag::SHADER_RESOURCE))
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
 		}
-		if (has_flag(pTexture->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
+		if (has_flag(texture->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
 		}
-		if (has_flag(pTexture->desc.bind_flags, BindFlag::RENDER_TARGET))
+		if (has_flag(texture->desc.bind_flags, BindFlag::RENDER_TARGET))
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 			//allocInfo.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 		}
-		if (has_flag(pTexture->desc.bind_flags, BindFlag::DEPTH_STENCIL))
+		if (has_flag(texture->desc.bind_flags, BindFlag::DEPTH_STENCIL))
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 			//allocInfo.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 		}
-		if (has_flag(pTexture->desc.bind_flags, BindFlag::SHADING_RATE))
+		if (has_flag(texture->desc.bind_flags, BindFlag::SHADING_RATE))
 		{
 			imageInfo.usage |= VK_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR;
 		}
@@ -3706,7 +3704,7 @@ using namespace vulkan_internal;
 		imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
 		imageInfo.flags = 0;
-		if (has_flag(pTexture->desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
+		if (has_flag(texture->desc.misc_flags, ResourceMiscFlag::TEXTURECUBE))
 		{
 			imageInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 		}
@@ -3722,7 +3720,7 @@ using namespace vulkan_internal;
 			imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		}
 
-		switch (pTexture->desc.type)
+		switch (texture->desc.type)
 		{
 		case TextureDesc::Type::TEXTURE_1D:
 			imageInfo.imageType = VK_IMAGE_TYPE_1D;
@@ -3732,7 +3730,7 @@ using namespace vulkan_internal;
 			break;
 		case TextureDesc::Type::TEXTURE_3D:
 			imageInfo.imageType = VK_IMAGE_TYPE_3D;
-			imageInfo.extent.depth = pTexture->desc.depth;
+			imageInfo.extent.depth = texture->desc.depth;
 			break;
 		default:
 			assert(0);
@@ -3741,20 +3739,20 @@ using namespace vulkan_internal;
 
 		VkResult res;
 
-		if (pTexture->desc.usage == Usage::READBACK || pTexture->desc.usage == Usage::UPLOAD)
+		if (texture->desc.usage == Usage::READBACK || texture->desc.usage == Usage::UPLOAD)
 		{
 			VkBufferCreateInfo bufferInfo = {};
 			bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 			bufferInfo.size = imageInfo.extent.width * imageInfo.extent.height * imageInfo.extent.depth * imageInfo.arrayLayers *
-				GetFormatStride(pTexture->desc.format);
+				GetFormatStride(texture->desc.format);
 
 			allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
-			if (pTexture->desc.usage == Usage::READBACK)
+			if (texture->desc.usage == Usage::READBACK)
 			{
 				allocInfo.usage = VMA_MEMORY_USAGE_GPU_TO_CPU;
 				bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 			}
-			else if(pTexture->desc.usage == Usage::UPLOAD)
+			else if(texture->desc.usage == Usage::UPLOAD)
 			{
 				allocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY; // yes, not using VMA_MEMORY_USAGE_CPU_TO_GPU, as it had worse performance for CPU write
 				bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
@@ -3772,10 +3770,10 @@ using namespace vulkan_internal;
 			subresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 			vkGetImageSubresourceLayout(device, image, &subresource, &internal_state->subresourcelayout);
 
-			if (pDesc->usage == Usage::READBACK || pTexture->desc.usage == Usage::UPLOAD)
+			if (texture->desc.usage == Usage::READBACK || texture->desc.usage == Usage::UPLOAD)
 			{
-				pTexture->mapped_data = internal_state->allocation->GetMappedData();
-				pTexture->mapped_rowpitch = (uint32_t)internal_state->subresourcelayout.rowPitch;
+				texture->mapped_data = internal_state->allocation->GetMappedData();
+				texture->mapped_rowpitch = (uint32_t)internal_state->subresourcelayout.rowPitch;
 			}
 
 			vkDestroyImage(device, image, nullptr);
@@ -3788,7 +3786,7 @@ using namespace vulkan_internal;
 		}
 
 		// Issue data copy on request:
-		if (pInitialData != nullptr)
+		if (initial_data != nullptr)
 		{
 			auto cmd = copyAllocator.allocate(internal_state->allocation->GetSize());
 
@@ -3796,15 +3794,15 @@ using namespace vulkan_internal;
 
 			VkDeviceSize copyOffset = 0;
 			uint32_t initDataIdx = 0;
-			for (uint32_t layer = 0; layer < pDesc->array_size; ++layer)
+			for (uint32_t layer = 0; layer < desc->array_size; ++layer)
 			{
 				uint32_t width = imageInfo.extent.width;
 				uint32_t height = imageInfo.extent.height;
 				uint32_t depth = imageInfo.extent.depth;
-				for (uint32_t mip = 0; mip < pDesc->mip_levels; ++mip)
+				for (uint32_t mip = 0; mip < desc->mip_levels; ++mip)
 				{
-					const SubresourceData& subresourceData = pInitialData[initDataIdx++];
-					VkDeviceSize copySize = subresourceData.row_pitch * height * depth / GetFormatBlockSize(pDesc->format);
+					const SubresourceData& subresourceData = initial_data[initDataIdx++];
+					VkDeviceSize copySize = subresourceData.row_pitch * height * depth / GetFormatBlockSize(desc->format);
 					uint8_t* cpyaddr = (uint8_t*)cmd.uploadbuffer.mapped_data + copyOffset;
 					std::memcpy(cpyaddr, subresourceData.data_ptr, copySize);
 
@@ -3831,7 +3829,7 @@ using namespace vulkan_internal;
 
 					copyRegions.push_back(copyRegion);
 
-					copyOffset += AlignTo(copySize, (VkDeviceSize)GetFormatStride(pDesc->format));
+					copyOffset += AlignTo(copySize, (VkDeviceSize)GetFormatStride(desc->format));
 				}
 			}
 
@@ -3866,9 +3864,9 @@ using namespace vulkan_internal;
 				copyAllocator.submit(cmd);
 
 				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-				barrier.newLayout = _ConvertImageLayout(pTexture->desc.layout);
+				barrier.newLayout = _ConvertImageLayout(texture->desc.layout);
 				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-				barrier.dstAccessMask = _ParseResourceState(pTexture->desc.layout);
+				barrier.dstAccessMask = _ParseResourceState(texture->desc.layout);
 
 				initLocker.lock();
 				vkCmdPipelineBarrier(
@@ -3890,13 +3888,13 @@ using namespace vulkan_internal;
 			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 			barrier.image = internal_state->resource;
 			barrier.oldLayout = imageInfo.initialLayout;
-			barrier.newLayout = _ConvertImageLayout(pTexture->desc.layout);
+			barrier.newLayout = _ConvertImageLayout(texture->desc.layout);
 			barrier.srcAccessMask = 0;
-			barrier.dstAccessMask = _ParseResourceState(pTexture->desc.layout);
-			if (has_flag(pTexture->desc.bind_flags, BindFlag::DEPTH_STENCIL))
+			barrier.dstAccessMask = _ParseResourceState(texture->desc.layout);
+			if (has_flag(texture->desc.bind_flags, BindFlag::DEPTH_STENCIL))
 			{
 				barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-				if (IsFormatStencilSupport(pTexture->desc.format))
+				if (IsFormatStencilSupport(texture->desc.format))
 				{
 					barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
 				}
@@ -3926,39 +3924,38 @@ using namespace vulkan_internal;
 			initLocker.unlock();
 		}
 
-		if (has_flag(pTexture->desc.bind_flags, BindFlag::RENDER_TARGET))
+		if (has_flag(texture->desc.bind_flags, BindFlag::RENDER_TARGET))
 		{
-			CreateSubresource(pTexture, SubresourceType::RTV, 0, -1, 0, -1);
+			CreateSubresource(texture, SubresourceType::RTV, 0, -1, 0, -1);
 		}
-		if (has_flag(pTexture->desc.bind_flags, BindFlag::DEPTH_STENCIL))
+		if (has_flag(texture->desc.bind_flags, BindFlag::DEPTH_STENCIL))
 		{
-			CreateSubresource(pTexture, SubresourceType::DSV, 0, -1, 0, -1);
+			CreateSubresource(texture, SubresourceType::DSV, 0, -1, 0, -1);
 		}
-		if (has_flag(pTexture->desc.bind_flags, BindFlag::SHADER_RESOURCE))
+		if (has_flag(texture->desc.bind_flags, BindFlag::SHADER_RESOURCE))
 		{
-			CreateSubresource(pTexture, SubresourceType::SRV, 0, -1, 0, -1);
+			CreateSubresource(texture, SubresourceType::SRV, 0, -1, 0, -1);
 		}
-		if (has_flag(pTexture->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
+		if (has_flag(texture->desc.bind_flags, BindFlag::UNORDERED_ACCESS))
 		{
-			CreateSubresource(pTexture, SubresourceType::UAV, 0, -1, 0, -1);
+			CreateSubresource(texture, SubresourceType::UAV, 0, -1, 0, -1);
 		}
 
 		return res == VK_SUCCESS;
 	}
-	bool GraphicsDevice_Vulkan::CreateShader(ShaderStage stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) const
+	bool GraphicsDevice_Vulkan::CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader) const
 	{
 		auto internal_state = std::make_shared<Shader_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
-		pShader->internal_state = internal_state;
-
-		pShader->stage = stage;
+		shader->internal_state = internal_state;
+		shader->stage = stage;
 
 		VkResult res = VK_SUCCESS;
 
 		VkShaderModuleCreateInfo moduleInfo = {};
 		moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-		moduleInfo.codeSize = BytecodeLength;
-		moduleInfo.pCode = (const uint32_t*)pShaderBytecode;
+		moduleInfo.codeSize = shadercode_size;
+		moduleInfo.pCode = (const uint32_t*)shadercode;
 		res = vkCreateShaderModule(device, &moduleInfo, nullptr, &internal_state->shaderModule);
 		assert(res == VK_SUCCESS);
 
@@ -4257,21 +4254,19 @@ using namespace vulkan_internal;
 
 		return res == VK_SUCCESS;
 	}
-	bool GraphicsDevice_Vulkan::CreateSampler(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) const
+	bool GraphicsDevice_Vulkan::CreateSampler(const SamplerDesc* desc, Sampler* sampler) const
 	{
 		auto internal_state = std::make_shared<Sampler_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
-		pSamplerState->internal_state = internal_state;
-
-		pSamplerState->desc = *pSamplerDesc;
+		sampler->internal_state = internal_state;
+		sampler->desc = *desc;
 
 		VkSamplerCreateInfo createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
 		createInfo.flags = 0;
 		createInfo.pNext = nullptr;
 
-
-		switch (pSamplerDesc->filter)
+		switch (desc->filter)
 		{
 		case Filter::MIN_MAG_MIP_POINT:
 		case Filter::MINIMUM_MIN_MAG_MIP_POINT:
@@ -4430,7 +4425,7 @@ using namespace vulkan_internal;
 		reductionmode.sType = VK_STRUCTURE_TYPE_SAMPLER_REDUCTION_MODE_CREATE_INFO;
 		if (CheckCapability(GraphicsDeviceCapability::SAMPLER_MINMAX))
 		{
-			switch (pSamplerDesc->filter)
+			switch (desc->filter)
 			{
 			case Filter::MINIMUM_MIN_MAG_MIP_POINT:
 			case Filter::MINIMUM_MIN_MAG_POINT_MIP_LINEAR:
@@ -4461,15 +4456,15 @@ using namespace vulkan_internal;
 			}
 		}
 
-		createInfo.addressModeU = _ConvertTextureAddressMode(pSamplerDesc->address_u, features_1_2);
-		createInfo.addressModeV = _ConvertTextureAddressMode(pSamplerDesc->address_v, features_1_2);
-		createInfo.addressModeW = _ConvertTextureAddressMode(pSamplerDesc->address_w, features_1_2);
-		createInfo.maxAnisotropy = static_cast<float>(pSamplerDesc->max_anisotropy);
-		createInfo.compareOp = _ConvertComparisonFunc(pSamplerDesc->comparison_func);
-		createInfo.minLod = pSamplerDesc->min_lod;
-		createInfo.maxLod = pSamplerDesc->max_lod;
-		createInfo.mipLodBias = pSamplerDesc->mip_lod_bias;
-		createInfo.borderColor = _ConvertSamplerBorderColor(pSamplerDesc->border_color);
+		createInfo.addressModeU = _ConvertTextureAddressMode(desc->address_u, features_1_2);
+		createInfo.addressModeV = _ConvertTextureAddressMode(desc->address_v, features_1_2);
+		createInfo.addressModeW = _ConvertTextureAddressMode(desc->address_w, features_1_2);
+		createInfo.maxAnisotropy = static_cast<float>(desc->max_anisotropy);
+		createInfo.compareOp = _ConvertComparisonFunc(desc->comparison_func);
+		createInfo.minLod = desc->min_lod;
+		createInfo.maxLod = desc->max_lod;
+		createInfo.mipLodBias = desc->mip_lod_bias;
+		createInfo.borderColor = _ConvertSamplerBorderColor(desc->border_color);
 		createInfo.unnormalizedCoordinates = VK_FALSE;
 
 		VkResult res = vkCreateSampler(device, &createInfo, nullptr, &internal_state->resource);
@@ -4497,19 +4492,18 @@ using namespace vulkan_internal;
 
 		return res == VK_SUCCESS;
 	}
-	bool GraphicsDevice_Vulkan::CreateQueryHeap(const GPUQueryHeapDesc* pDesc, GPUQueryHeap* pQueryHeap) const
+	bool GraphicsDevice_Vulkan::CreateQueryHeap(const GPUQueryHeapDesc* desc, GPUQueryHeap* queryheap) const
 	{
 		auto internal_state = std::make_shared<QueryHeap_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
-		pQueryHeap->internal_state = internal_state;
-
-		pQueryHeap->desc = *pDesc;
+		queryheap->internal_state = internal_state;
+		queryheap->desc = *desc;
 
 		VkQueryPoolCreateInfo poolInfo = {};
 		poolInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
-		poolInfo.queryCount = pDesc->query_count;
+		poolInfo.queryCount = desc->query_count;
 
-		switch (pDesc->type)
+		switch (desc->type)
 		{
 		case GpuQueryType::TIMESTAMP:
 			poolInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
@@ -4525,28 +4519,27 @@ using namespace vulkan_internal;
 
 		return res == VK_SUCCESS;
 	}
-	bool GraphicsDevice_Vulkan::CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) const
+	bool GraphicsDevice_Vulkan::CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso) const
 	{
 		auto internal_state = std::make_shared<PipelineState_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
 		pso->internal_state = internal_state;
-
-		pso->desc = *pDesc;
+		pso->desc = *desc;
 
 		pso->hash = 0;
-		wi::helper::hash_combine(pso->hash, pDesc->ms);
-		wi::helper::hash_combine(pso->hash, pDesc->as);
-		wi::helper::hash_combine(pso->hash, pDesc->vs);
-		wi::helper::hash_combine(pso->hash, pDesc->ps);
-		wi::helper::hash_combine(pso->hash, pDesc->hs);
-		wi::helper::hash_combine(pso->hash, pDesc->ds);
-		wi::helper::hash_combine(pso->hash, pDesc->gs);
-		wi::helper::hash_combine(pso->hash, pDesc->il);
-		wi::helper::hash_combine(pso->hash, pDesc->rs);
-		wi::helper::hash_combine(pso->hash, pDesc->bs);
-		wi::helper::hash_combine(pso->hash, pDesc->dss);
-		wi::helper::hash_combine(pso->hash, pDesc->pt);
-		wi::helper::hash_combine(pso->hash, pDesc->sample_mask);
+		wi::helper::hash_combine(pso->hash, desc->ms);
+		wi::helper::hash_combine(pso->hash, desc->as);
+		wi::helper::hash_combine(pso->hash, desc->vs);
+		wi::helper::hash_combine(pso->hash, desc->ps);
+		wi::helper::hash_combine(pso->hash, desc->hs);
+		wi::helper::hash_combine(pso->hash, desc->ds);
+		wi::helper::hash_combine(pso->hash, desc->gs);
+		wi::helper::hash_combine(pso->hash, desc->il);
+		wi::helper::hash_combine(pso->hash, desc->rs);
+		wi::helper::hash_combine(pso->hash, desc->bs);
+		wi::helper::hash_combine(pso->hash, desc->dss);
+		wi::helper::hash_combine(pso->hash, desc->pt);
+		wi::helper::hash_combine(pso->hash, desc->sample_mask);
 
 		VkResult res = VK_SUCCESS;
 
@@ -4609,13 +4602,13 @@ using namespace vulkan_internal;
 				}
 			};
 
-			insert_shader(pDesc->ms);
-			insert_shader(pDesc->as);
-			insert_shader(pDesc->vs);
-			insert_shader(pDesc->hs);
-			insert_shader(pDesc->ds);
-			insert_shader(pDesc->gs);
-			insert_shader(pDesc->ps);
+			insert_shader(desc->ms);
+			insert_shader(desc->as);
+			insert_shader(desc->vs);
+			insert_shader(desc->hs);
+			insert_shader(desc->ds);
+			insert_shader(desc->gs);
+			insert_shader(desc->ps);
 
 			// sort because dynamic offsets array is tightly packed to match slot numbers:
 			std::sort(internal_state->uniform_buffer_dynamic_slots.begin(), internal_state->uniform_buffer_dynamic_slots.end());
@@ -4642,13 +4635,13 @@ using namespace vulkan_internal;
 				}
 			};
 
-			insert_shader_bindless(pDesc->ms);
-			insert_shader_bindless(pDesc->as);
-			insert_shader_bindless(pDesc->vs);
-			insert_shader_bindless(pDesc->hs);
-			insert_shader_bindless(pDesc->ds);
-			insert_shader_bindless(pDesc->gs);
-			insert_shader_bindless(pDesc->ps);
+			insert_shader_bindless(desc->ms);
+			insert_shader_bindless(desc->as);
+			insert_shader_bindless(desc->vs);
+			insert_shader_bindless(desc->hs);
+			insert_shader_bindless(desc->ds);
+			insert_shader_bindless(desc->gs);
+			insert_shader_bindless(desc->ps);
 
 			internal_state->binding_hash = 0;
 			size_t i = 0;
@@ -4970,7 +4963,7 @@ using namespace vulkan_internal;
 		// Tessellation:
 		VkPipelineTessellationStateCreateInfo& tessellationInfo = internal_state->tessellationInfo;
 		tessellationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
-		tessellationInfo.patchControlPoints = pDesc->patch_control_points;
+		tessellationInfo.patchControlPoints = desc->patch_control_points;
 
 		pipelineInfo.pTessellationState = &tessellationInfo;
 
@@ -4979,17 +4972,16 @@ using namespace vulkan_internal;
 
 		return res == VK_SUCCESS;
 	}
-	bool GraphicsDevice_Vulkan::CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) const
+	bool GraphicsDevice_Vulkan::CreateRenderPass(const RenderPassDesc* desc, RenderPass* renderpass) const
 	{
 		auto internal_state = std::make_shared<RenderPass_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
 		renderpass->internal_state = internal_state;
-
-		renderpass->desc = *pDesc;
+		renderpass->desc = *desc;
 
 		renderpass->hash = 0;
-		wi::helper::hash_combine(renderpass->hash, pDesc->attachments.size());
-		for (auto& attachment : pDesc->attachments)
+		wi::helper::hash_combine(renderpass->hash, desc->attachments.size());
+		for (auto& attachment : desc->attachments)
 		{
 			if (attachment.type == RenderPassAttachment::Type::RENDERTARGET || attachment.type == RenderPassAttachment::Type::DEPTH_STENCIL)
 			{
@@ -5018,8 +5010,6 @@ using namespace vulkan_internal;
 		VkSubpassDescription2 subpass = {};
 		subpass.sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_2;
 		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-
-		const RenderPassDesc& desc = renderpass->desc;
 
 		uint32_t validAttachmentCount = 0;
 		for (auto& attachment : renderpass->desc.attachments)
@@ -5221,12 +5211,12 @@ using namespace vulkan_internal;
 
 		if (validAttachmentCount > 0)
 		{
-			const TextureDesc& texdesc = desc.attachments[0].texture->desc;
-			auto texture_internal = to_internal(desc.attachments[0].texture);
+			const TextureDesc& texdesc = renderpass->desc.attachments[0].texture->desc;
+			auto texture_internal = to_internal(renderpass->desc.attachments[0].texture);
 			framebufferInfo.pAttachments = attachments;
 			framebufferInfo.width = texdesc.width;
 			framebufferInfo.height = texdesc.height;
-			if (desc.attachments[0].subresource >= 0)
+			if (renderpass->desc.attachments[0].subresource >= 0)
 			{
 				framebufferInfo.layers = texture_internal->subresources_framebuffer_layercount[0];
 			}
@@ -5257,28 +5247,28 @@ using namespace vulkan_internal;
 
 		if (validAttachmentCount > 0)
 		{
-			const TextureDesc& texdesc = desc.attachments[0].texture->desc;
+			const TextureDesc& texdesc = renderpass->desc.attachments[0].texture->desc;
 
 			internal_state->beginInfo.clearValueCount = validAttachmentCount;
 			internal_state->beginInfo.pClearValues = internal_state->clearColors;
 
 			int i = 0;
-			for (auto& attachment : desc.attachments)
+			for (auto& attachment : renderpass->desc.attachments)
 			{
-				if (desc.attachments[i].type == RenderPassAttachment::Type::RESOLVE ||
-					desc.attachments[i].type == RenderPassAttachment::Type::SHADING_RATE_SOURCE ||
+				if (renderpass->desc.attachments[i].type == RenderPassAttachment::Type::RESOLVE ||
+					renderpass->desc.attachments[i].type == RenderPassAttachment::Type::SHADING_RATE_SOURCE ||
 					attachment.texture == nullptr)
 					continue;
 
-				const ClearValue& clear = desc.attachments[i].texture->desc.clear;
-				if (desc.attachments[i].type == RenderPassAttachment::Type::RENDERTARGET)
+				const ClearValue& clear = renderpass->desc.attachments[i].texture->desc.clear;
+				if (renderpass->desc.attachments[i].type == RenderPassAttachment::Type::RENDERTARGET)
 				{
 					internal_state->clearColors[i].color.float32[0] = clear.color[0];
 					internal_state->clearColors[i].color.float32[1] = clear.color[1];
 					internal_state->clearColors[i].color.float32[2] = clear.color[2];
 					internal_state->clearColors[i].color.float32[3] = clear.color[3];
 				}
-				else if (desc.attachments[i].type == RenderPassAttachment::Type::DEPTH_STENCIL)
+				else if (renderpass->desc.attachments[i].type == RenderPassAttachment::Type::DEPTH_STENCIL)
 				{
 					internal_state->clearColors[i].depthStencil.depth = clear.depth_stencil.depth;
 					internal_state->clearColors[i].depthStencil.stencil = clear.depth_stencil.stencil;
@@ -5293,14 +5283,13 @@ using namespace vulkan_internal;
 
 		return res == VK_SUCCESS;
 	}
-	bool GraphicsDevice_Vulkan::CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh) const
+	bool GraphicsDevice_Vulkan::CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* desc, RaytracingAccelerationStructure* bvh) const
 	{
 		auto internal_state = std::make_shared<BVH_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
 		bvh->internal_state = internal_state;
 		bvh->type = GPUResource::Type::RAYTRACING_ACCELERATION_STRUCTURE;
-
-		bvh->desc = *pDesc;
+		bvh->desc = *desc;
 
 		internal_state->buildInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
 		internal_state->buildInfo.flags = 0;
@@ -5325,13 +5314,13 @@ using namespace vulkan_internal;
 			internal_state->buildInfo.flags |= VK_BUILD_ACCELERATION_STRUCTURE_LOW_MEMORY_BIT_KHR;
 		}
 
-		switch (pDesc->type)
+		switch (desc->type)
 		{
 		case RaytracingAccelerationStructureDesc::Type::BOTTOMLEVEL:
 		{
 			internal_state->buildInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
 
-			for (auto& x : pDesc->bottom_level.geometries)
+			for (auto& x : desc->bottom_level.geometries)
 			{
 				internal_state->geometries.emplace_back();
 				auto& geometry = internal_state->geometries.back();
@@ -5379,7 +5368,7 @@ using namespace vulkan_internal;
 
 			internal_state->primitiveCounts.emplace_back();
 			uint32_t& primitiveCount = internal_state->primitiveCounts.back();
-			primitiveCount = pDesc->top_level.count;
+			primitiveCount = desc->top_level.count;
 		}
 		break;
 		}
@@ -5450,7 +5439,7 @@ using namespace vulkan_internal;
 			+ internal_state->sizeInfo.accelerationStructureSize;
 
 
-		if (pDesc->type == RaytracingAccelerationStructureDesc::Type::TOPLEVEL)
+		if (desc->type == RaytracingAccelerationStructureDesc::Type::TOPLEVEL)
 		{
 			internal_state->index = allocationhandler->bindlessAccelerationStructures.allocate();
 			if (internal_state->index >= 0)
@@ -5484,20 +5473,19 @@ using namespace vulkan_internal;
 
 		return res == VK_SUCCESS;
 	}
-	bool GraphicsDevice_Vulkan::CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso) const
+	bool GraphicsDevice_Vulkan::CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* desc, RaytracingPipelineState* rtpso) const
 	{
 		auto internal_state = std::make_shared<RTPipelineState_Vulkan>();
 		internal_state->allocationhandler = allocationhandler;
 		rtpso->internal_state = internal_state;
-
-		rtpso->desc = *pDesc;
+		rtpso->desc = *desc;
 
 		VkRayTracingPipelineCreateInfoKHR info = {};
 		info.sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR;
 		info.flags = 0;
 
 		wi::vector<VkPipelineShaderStageCreateInfo> stages;
-		for (auto& x : pDesc->shader_libraries)
+		for (auto& x : desc->shader_libraries)
 		{
 			stages.emplace_back();
 			auto& stage = stages.back();
@@ -5529,8 +5517,8 @@ using namespace vulkan_internal;
 		info.pStages = stages.data();
 
 		wi::vector<VkRayTracingShaderGroupCreateInfoKHR> groups;
-		groups.reserve(pDesc->hit_groups.size());
-		for (auto& x : pDesc->hit_groups)
+		groups.reserve(desc->hit_groups.size());
+		for (auto& x : desc->hit_groups)
 		{
 			groups.emplace_back();
 			auto& group = groups.back();
@@ -5557,9 +5545,9 @@ using namespace vulkan_internal;
 		info.groupCount = (uint32_t)groups.size();
 		info.pGroups = groups.data();
 
-		info.maxPipelineRayRecursionDepth = pDesc->max_trace_recursion_depth;
+		info.maxPipelineRayRecursionDepth = desc->max_trace_recursion_depth;
 
-		info.layout = to_internal(pDesc->shader_libraries.front().shader)->pipelineLayout_cs;
+		info.layout = to_internal(desc->shader_libraries.front().shader)->pipelineLayout_cs;
 
 		//VkRayTracingPipelineInterfaceCreateInfoKHR library_interface = {};
 		//library_interface.sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_INTERFACE_CREATE_INFO_KHR;
@@ -7484,6 +7472,7 @@ using namespace vulkan_internal;
 				);
 				return;
 			}
+			assert(0); // there was no push constant block!
 		}
 		if(commandlist.active_cs != nullptr)
 		{
@@ -7500,6 +7489,7 @@ using namespace vulkan_internal;
 				);
 				return;
 			}
+			assert(0); // there was no push constant block!
 		}
 		assert(0); // there was no active pipeline!
 	}

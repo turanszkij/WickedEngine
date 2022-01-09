@@ -182,16 +182,16 @@ namespace wi::graphics
 		GraphicsDevice_DX12(bool debuglayer = false, bool gpuvalidation = false);
 		virtual ~GraphicsDevice_DX12();
 
-		bool CreateSwapChain(const SwapChainDesc* pDesc, wi::platform::window_type window, SwapChain* swapChain) const override;
-		bool CreateBuffer(const GPUBufferDesc *pDesc, const void* pInitialData, GPUBuffer *pBuffer) const override;
-		bool CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) const override;
-		bool CreateShader(ShaderStage stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) const override;
-		bool CreateSampler(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) const override;
-		bool CreateQueryHeap(const GPUQueryHeapDesc* pDesc, GPUQueryHeap* pQueryHeap) const override;
-		bool CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) const override;
-		bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) const override;
-		bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh) const override;
-		bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso) const override;
+		bool CreateSwapChain(const SwapChainDesc* desc, wi::platform::window_type window, SwapChain* swapchain) const override;
+		bool CreateBuffer(const GPUBufferDesc * desc, const void* initial_data, GPUBuffer* buffer) const override;
+		bool CreateTexture(const TextureDesc* desc, const SubresourceData* initial_data, Texture* texture) const override;
+		bool CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader) const override;
+		bool CreateSampler(const SamplerDesc* desc, Sampler* sampler) const override;
+		bool CreateQueryHeap(const GPUQueryHeapDesc* desc, GPUQueryHeap* queryheap) const override;
+		bool CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso) const override;
+		bool CreateRenderPass(const RenderPassDesc* desc, RenderPass* renderpass) const override;
+		bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* desc, RaytracingAccelerationStructure* bvh) const override;
+		bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* desc, RaytracingPipelineState* rtpso) const override;
 		
 		int CreateSubresource(Texture* texture, SubresourceType type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) const override;
 		int CreateSubresource(GPUBuffer* buffer, SubresourceType type, uint64_t offset, uint64_t size = ~0) const override;

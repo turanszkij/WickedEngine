@@ -37,15 +37,6 @@ namespace wi::graphics
 		Sampler SAM[DESCRIPTORBINDER_SAMPLER_COUNT];
 	};
 
-	constexpr uint32_t AlignTo(uint32_t value, uint32_t alignment)
-	{
-		return ((value + alignment - 1) / alignment) * alignment;
-	}
-	constexpr uint64_t AlignTo(uint64_t value, uint64_t alignment)
-	{
-		return ((value + alignment - 1) / alignment) * alignment;
-	}
-
 	enum QUEUE_TYPE
 	{
 		QUEUE_GRAPHICS,
@@ -71,16 +62,16 @@ namespace wi::graphics
 		virtual ~GraphicsDevice() = default;
 
 		// Create a SwapChain. If the SwapChain is to be recreated, the window handle can be nullptr.
-		virtual bool CreateSwapChain(const SwapChainDesc* pDesc, wi::platform::window_type window, SwapChain* swapChain) const = 0;
-		virtual bool CreateBuffer(const GPUBufferDesc *pDesc, const void* pInitialData, GPUBuffer *pBuffer) const = 0;
-		virtual bool CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) const = 0;
-		virtual bool CreateShader(ShaderStage stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) const = 0;
-		virtual bool CreateSampler(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) const = 0;
-		virtual bool CreateQueryHeap(const GPUQueryHeapDesc *pDesc, GPUQueryHeap *pQueryHeap) const = 0;
-		virtual bool CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) const = 0;
-		virtual bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) const = 0;
-		virtual bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh) const { return false; }
-		virtual bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso) const { return false; }
+		virtual bool CreateSwapChain(const SwapChainDesc* desc, wi::platform::window_type window, SwapChain* swapchain) const = 0;
+		virtual bool CreateBuffer(const GPUBufferDesc* desc, const void* initial_data, GPUBuffer* buffer) const = 0;
+		virtual bool CreateTexture(const TextureDesc* desc, const SubresourceData* initial_data, Texture* texture) const = 0;
+		virtual bool CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader) const = 0;
+		virtual bool CreateSampler(const SamplerDesc* desc, Sampler* sampler) const = 0;
+		virtual bool CreateQueryHeap(const GPUQueryHeapDesc* desc, GPUQueryHeap* queryheap) const = 0;
+		virtual bool CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso) const = 0;
+		virtual bool CreateRenderPass(const RenderPassDesc* desc, RenderPass* renderpass) const = 0;
+		virtual bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* desc, RaytracingAccelerationStructure* bvh) const { return false; }
+		virtual bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* desc, RaytracingPipelineState* rtpso) const { return false; }
 		
 		virtual int CreateSubresource(Texture* texture, SubresourceType type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) const = 0;
 		virtual int CreateSubresource(GPUBuffer* buffer, SubresourceType type, uint64_t offset, uint64_t size = ~0) const = 0;
