@@ -6460,6 +6460,7 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 
 
 	static thread_local RenderQueue renderQueue;
+	renderQueue.init();
 	for (size_t i = 0; i < vis.scene->aabb_objects.GetCount(); ++i)
 	{
 		const AABB& aabb = vis.scene->aabb_objects[i];
