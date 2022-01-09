@@ -207,6 +207,10 @@ namespace wi::graphics
 		{
 			GPUBuffer buffer;
 			uint64_t offset = 0;
+			void reset()
+			{
+				offset = 0;
+			}
 		};
 		virtual GPULinearAllocator& GetFrameAllocator(CommandList cmd) = 0;
 

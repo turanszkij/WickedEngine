@@ -109,9 +109,11 @@ namespace wi::graphics
 			uint32_t id = 0;
 			wi::vector<CommandList> waits;
 
+			DescriptorBinder binder;
+			GPULinearAllocator frame_allocators[BUFFERCOUNT];
+
 			wi::vector<D3D12_RESOURCE_BARRIER> frame_barriers;
 			D3D_PRIMITIVE_TOPOLOGY prev_pt = {};
-
 			wi::vector<std::pair<size_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>>> pipelines_worker;
 			size_t prev_pipeline_hash = {};
 			const PipelineState* active_pso = {};
@@ -125,14 +127,12 @@ namespace wi::graphics
 			Microsoft::WRL::ComPtr<ID3D12Resource> active_backbuffer;
 			bool dirty_pso = {};
 
-			DescriptorBinder binder;
-			GPULinearAllocator frame_allocators[BUFFERCOUNT];
-
 			void reset(uint32_t bufferindex)
 			{
 				buffer_index = bufferindex;
 				waits.clear();
 				binder.reset();
+				frame_allocators[buffer_index].reset();
 				prev_pt = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
 				prev_pipeline_hash = 0;
 				active_pso = nullptr;
@@ -145,7 +145,6 @@ namespace wi::graphics
 				dirty_pso = false;
 				swapchains.clear();
 				active_backbuffer = nullptr;
-				frame_allocators[bufferindex].offset = 0;
 			}
 
 			inline ID3D12CommandAllocator* GetCommandAllocator()
@@ -161,15 +160,10 @@ namespace wi::graphics
 		uint32_t cmd_count = 0;
 		wi::SpinLock cmd_locker;
 
-		constexpr CommandList_DX12& GetCommandList(CommandList cmd)
+		constexpr CommandList_DX12& GetCommandList(CommandList cmd) const
 		{
 			assert(cmd.IsValid());
 			return *(CommandList_DX12*)cmd.internal_state;
-		}
-		constexpr const CommandList_DX12& GetCommandList(CommandList cmd) const
-		{
-			assert(cmd.IsValid());
-			return *(const CommandList_DX12*)cmd.internal_state;
 		}
 
 

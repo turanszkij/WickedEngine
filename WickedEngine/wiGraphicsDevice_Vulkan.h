@@ -198,6 +198,10 @@ namespace wi::graphics
 			uint32_t id = 0;
 			wi::vector<CommandList> waits;
 
+			DescriptorBinder binder;
+			DescriptorBinderPool binder_pools[BUFFERCOUNT];
+			GPULinearAllocator frame_allocators[BUFFERCOUNT];
+
 			wi::vector<std::pair<size_t, VkPipeline>> pipelines_worker;
 			size_t prev_pipeline_hash = {};
 			const PipelineState* active_pso = {};
@@ -206,24 +210,20 @@ namespace wi::graphics
 			const RenderPass* active_renderpass = {};
 			ShadingRate prev_shadingrate = {};
 			wi::vector<SwapChain> prev_swapchains;
-
 			uint32_t vb_strides[8] = {};
 			size_t vb_hash = {};
-
 			bool dirty_pso = {};
-
 			wi::vector<VkMemoryBarrier> frame_memoryBarriers;
 			wi::vector<VkImageMemoryBarrier> frame_imageBarriers;
 			wi::vector<VkBufferMemoryBarrier> frame_bufferBarriers;
-
-			DescriptorBinder binder;
-			DescriptorBinderPool binder_pools[BUFFERCOUNT];
-			GPULinearAllocator frame_allocators[BUFFERCOUNT];
 
 			void reset(uint32_t bufferindex)
 			{
 				buffer_index = bufferindex;
 				waits.clear();
+				binder_pools[buffer_index].reset();
+				binder.reset();
+				frame_allocators[buffer_index].reset();
 				prev_pipeline_hash = 0;
 				active_pso = nullptr;
 				active_cs = nullptr;
@@ -237,9 +237,6 @@ namespace wi::graphics
 					vb_strides[i] = 0;
 				}
 				prev_swapchains.clear();
-				binder_pools[bufferindex].reset();
-				binder.reset();
-				frame_allocators[bufferindex].offset = 0;
 			}
 
 			inline VkCommandPool GetCommandPool() const
@@ -255,15 +252,10 @@ namespace wi::graphics
 		uint32_t cmd_count = 0;
 		wi::SpinLock cmd_locker;
 
-		constexpr CommandList_Vulkan& GetCommandList(CommandList cmd)
+		constexpr CommandList_Vulkan& GetCommandList(CommandList cmd) const
 		{
 			assert(cmd.IsValid());
 			return *(CommandList_Vulkan*)cmd.internal_state;
-		}
-		constexpr const CommandList_Vulkan& GetCommandList(CommandList cmd) const
-		{
-			assert(cmd.IsValid());
-			return *(const CommandList_Vulkan*)cmd.internal_state;
 		}
 
 		struct PSOLayout
