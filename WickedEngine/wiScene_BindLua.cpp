@@ -1487,6 +1487,9 @@ Luna<CameraComponent_BindLua>::FunctionType CameraComponent_BindLua::methods[] =
 	lunamethod(CameraComponent_BindLua, GetInvView),
 	lunamethod(CameraComponent_BindLua, GetInvProjection),
 	lunamethod(CameraComponent_BindLua, GetInvViewProjection),
+	lunamethod(CameraComponent_BindLua, GetPosition),
+	lunamethod(CameraComponent_BindLua, GetLookDirection),
+	lunamethod(CameraComponent_BindLua, GetUpDirection),
 	{ NULL, NULL }
 };
 Luna<CameraComponent_BindLua>::PropertyType CameraComponent_BindLua::properties[] = {
@@ -1673,6 +1676,21 @@ int CameraComponent_BindLua::GetInvProjection(lua_State* L)
 int CameraComponent_BindLua::GetInvViewProjection(lua_State* L)
 {
 	Luna<Matrix_BindLua>::push(L, new Matrix_BindLua(component->GetInvViewProjection()));
+	return 1;
+}
+int CameraComponent_BindLua::GetPosition(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(component->GetEye()));
+	return 1;
+}
+int CameraComponent_BindLua::GetLookDirection(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(component->GetAt()));
+	return 1;
+}
+int CameraComponent_BindLua::GetUpDirection(lua_State* L)
+{
+	Luna<Vector_BindLua>::push(L, new Vector_BindLua(component->GetUp()));
 	return 1;
 }
 
@@ -2135,6 +2153,7 @@ Luna<LightComponent_BindLua>::FunctionType LightComponent_BindLua::methods[] = {
 	lunamethod(LightComponent_BindLua, SetColor),
 	lunamethod(LightComponent_BindLua, SetCastShadow),
 	lunamethod(LightComponent_BindLua, GetType),
+	lunamethod(LightComponent_BindLua, SetFOV),
 	{ NULL, NULL }
 };
 Luna<LightComponent_BindLua>::PropertyType LightComponent_BindLua::properties[] = {
@@ -2231,6 +2250,21 @@ int LightComponent_BindLua::SetCastShadow(lua_State* L)
 	else
 	{
 		wi::lua::SError(L, "SetCastShadow(bool value) not enough arguments!");
+	}
+
+	return 0;
+}
+int LightComponent_BindLua::SetFOV(lua_State* L)
+{
+	int argc = wi::lua::SGetArgCount(L);
+	if (argc > 0)
+	{
+		float value = wi::lua::SGetFloat(L, 1);
+		component->fov = value;
+	}
+	else
+	{
+		wi::lua::SError(L, "SetFOV(float value) not enough arguments!");
 	}
 
 	return 0;
