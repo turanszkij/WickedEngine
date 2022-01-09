@@ -6191,7 +6191,11 @@ using namespace vulkan_internal;
 
 			float blendConstants[] = { 1,1,1,1 };
 			vkCmdSetBlendConstants(commandlist.GetCommandBuffer(), blendConstants);
-			vkCmdSetDepthBounds(commandlist.GetCommandBuffer(), 0.0f, 1.0f);
+
+			if (features2.features.depthBounds == VK_TRUE)
+			{
+				vkCmdSetDepthBounds(commandlist.GetCommandBuffer(), 0.0f, 1.0f);
+			}
 		}
 
 		return cmd;
