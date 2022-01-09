@@ -126,6 +126,7 @@ namespace wi::graphics
 			wi::vector<const SwapChain*> swapchains;
 			Microsoft::WRL::ComPtr<ID3D12Resource> active_backbuffer;
 			bool dirty_pso = {};
+			wi::vector<D3D12_RAYTRACING_GEOMETRY_DESC> accelerationstructure_build_geometries;
 
 			void reset(uint32_t bufferindex)
 			{

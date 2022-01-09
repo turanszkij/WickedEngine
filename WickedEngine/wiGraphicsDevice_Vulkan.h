@@ -216,6 +216,8 @@ namespace wi::graphics
 			wi::vector<VkMemoryBarrier> frame_memoryBarriers;
 			wi::vector<VkImageMemoryBarrier> frame_imageBarriers;
 			wi::vector<VkBufferMemoryBarrier> frame_bufferBarriers;
+			wi::vector<VkAccelerationStructureGeometryKHR> accelerationstructure_build_geometries;
+			wi::vector<VkAccelerationStructureBuildRangeInfoKHR> accelerationstructure_build_ranges;
 
 			void reset(uint32_t bufferindex)
 			{

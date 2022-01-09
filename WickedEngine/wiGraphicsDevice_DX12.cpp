@@ -5604,9 +5604,8 @@ using namespace dx12_internal;
 		desc.Inputs = dst_internal->desc;
 
 		// Make a copy of geometries, don't overwrite internal_state (thread safety)
-		wi::vector<D3D12_RAYTRACING_GEOMETRY_DESC> geometries;
-		geometries = dst_internal->geometries;
-		desc.Inputs.pGeometryDescs = geometries.data();
+		commandlist.accelerationstructure_build_geometries = dst_internal->geometries;
+		desc.Inputs.pGeometryDescs = commandlist.accelerationstructure_build_geometries.data();
 
 		// The real GPU addresses get filled here:
 		switch (dst->desc.type)
@@ -5616,7 +5615,7 @@ using namespace dx12_internal;
 			size_t i = 0;
 			for (auto& x : dst->desc.bottom_level.geometries)
 			{
-				auto& geometry = geometries[i++];
+				auto& geometry = commandlist.accelerationstructure_build_geometries[i++];
 				if (x.flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE)
 				{
 					geometry.Flags |= D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;

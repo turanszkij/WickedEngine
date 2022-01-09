@@ -7333,12 +7333,12 @@ using namespace vulkan_internal;
 			info.srcAccelerationStructure = src_internal->resource;
 		}
 
-		wi::vector<VkAccelerationStructureGeometryKHR> geometries = dst_internal->geometries; // copy!
-		wi::vector<VkAccelerationStructureBuildRangeInfoKHR> ranges;
+		commandlist.accelerationstructure_build_geometries = dst_internal->geometries; // copy!
+		commandlist.accelerationstructure_build_ranges.clear();
 
 		info.type = dst_internal->createInfo.type;
-		info.geometryCount = (uint32_t)geometries.size();
-		ranges.reserve(info.geometryCount);
+		info.geometryCount = (uint32_t)commandlist.accelerationstructure_build_geometries.size();
+		commandlist.accelerationstructure_build_ranges.reserve(info.geometryCount);
 
 		switch (dst->desc.type)
 		{
@@ -7347,10 +7347,9 @@ using namespace vulkan_internal;
 			size_t i = 0;
 			for (auto& x : dst->desc.bottom_level.geometries)
 			{
-				auto& geometry = geometries[i];
+				auto& geometry = commandlist.accelerationstructure_build_geometries[i];
 
-				ranges.emplace_back();
-				auto& range = ranges.back();
+				auto& range = commandlist.accelerationstructure_build_ranges.emplace_back();
 				range = {};
 
 				if (x.flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE)
@@ -7393,11 +7392,10 @@ using namespace vulkan_internal;
 		break;
 		case RaytracingAccelerationStructureDesc::Type::TOPLEVEL:
 		{
-			auto& geometry = geometries.back();
+			auto& geometry = commandlist.accelerationstructure_build_geometries.back();
 			geometry.geometry.instances.data.deviceAddress = to_internal(&dst->desc.top_level.instance_buffer)->address;
 
-			ranges.emplace_back();
-			auto& range = ranges.back();
+			auto& range = commandlist.accelerationstructure_build_ranges.emplace_back();
 			range = {};
 			range.primitiveCount = dst->desc.top_level.count;
 			range.primitiveOffset = dst->desc.top_level.offset;
@@ -7405,9 +7403,9 @@ using namespace vulkan_internal;
 		break;
 		}
 
-		info.pGeometries = geometries.data();
+		info.pGeometries = commandlist.accelerationstructure_build_geometries.data();
 
-		VkAccelerationStructureBuildRangeInfoKHR* pRangeInfo = ranges.data();
+		VkAccelerationStructureBuildRangeInfoKHR* pRangeInfo = commandlist.accelerationstructure_build_ranges.data();
 
 		vkCmdBuildAccelerationStructuresKHR(
 			commandlist.GetCommandBuffer(),
