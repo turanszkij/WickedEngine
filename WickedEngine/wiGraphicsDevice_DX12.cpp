@@ -2696,7 +2696,7 @@ using namespace dx12_internal;
 			uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
 			D3D12_CPU_DESCRIPTOR_HANDLE handle = nullUAV;
 			handle.ptr += i * resource_descriptor_size;
-			device->CreateUnorderedAccessView(nullptr, nullptr, &uav_desc, nullUAV);
+			device->CreateUnorderedAccessView(nullptr, nullptr, &uav_desc, handle);
 		}
 
 		nullSAM = nulldescriptorheap_sampler->GetCPUDescriptorHandleForHeapStart();
@@ -2710,7 +2710,7 @@ using namespace dx12_internal;
 			sampler_desc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
 			D3D12_CPU_DESCRIPTOR_HANDLE handle = nullSAM;
 			handle.ptr += i * sampler_descriptor_size;
-			device->CreateSampler(&sampler_desc, nullSAM);
+			device->CreateSampler(&sampler_desc, handle);
 		}
 
 		hr = queues[QUEUE_GRAPHICS].queue->GetTimestampFrequency(&TIMESTAMP_FREQUENCY);
