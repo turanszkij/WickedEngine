@@ -952,12 +952,85 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 						material->SetUseVertexColors(true);
 					}
 					mesh.vertex_colors.resize(vertexOffset + vertexCount);
-					for (size_t i = 0; i < vertexCount; ++i)
+					if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT)
 					{
-						const XMFLOAT4& color = *(XMFLOAT4*)((size_t)data + i * stride);
-						uint32_t rgba = wi::math::CompressColor(color);
+						if (accessor.type == TINYGLTF_TYPE_VEC3)
+						{
+							for (size_t i = 0; i < vertexCount; ++i)
+							{
+								const XMFLOAT3& color = *(XMFLOAT3*)((size_t)data + i * stride);
+								uint32_t rgba = wi::math::CompressColor(color);
 
-						mesh.vertex_colors[vertexOffset + i] = rgba;
+								mesh.vertex_colors[vertexOffset + i] = rgba;
+							}
+						}
+						else if (accessor.type == TINYGLTF_TYPE_VEC4)
+						{
+							for (size_t i = 0; i < vertexCount; ++i)
+							{
+								const XMFLOAT4& color = *(XMFLOAT4*)((size_t)data + i * stride);
+								uint32_t rgba = wi::math::CompressColor(color);
+
+								mesh.vertex_colors[vertexOffset + i] = rgba;
+							}
+						}
+					}
+					else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE)
+					{
+						if (accessor.type == TINYGLTF_TYPE_VEC3)
+						{
+							for (size_t i = 0; i < vertexCount; ++i)
+							{
+								const uint8_t& r = *(uint8_t*)((size_t)data + i * stride + 0);
+								const uint8_t& g = *(uint8_t*)((size_t)data + i * stride + 1);
+								const uint8_t& b = *(uint8_t*)((size_t)data + i * stride + 2);
+								const uint8_t a = 0xFF;
+								wi::Color color = wi::Color(r, g, b, a);
+
+								mesh.vertex_colors[vertexOffset + i] = color;
+							}
+						}
+						else if (accessor.type == TINYGLTF_TYPE_VEC4)
+						{
+							for (size_t i = 0; i < vertexCount; ++i)
+							{
+								const uint8_t& r = *(uint8_t*)((size_t)data + i * stride + 0);
+								const uint8_t& g = *(uint8_t*)((size_t)data + i * stride + 1);
+								const uint8_t& b = *(uint8_t*)((size_t)data + i * stride + 2);
+								const uint8_t& a = *(uint8_t*)((size_t)data + i * stride + 3);
+								wi::Color color = wi::Color(r, g, b, a);
+
+								mesh.vertex_colors[vertexOffset + i] = color;
+							}
+						}
+					}
+					else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
+					{
+						if (accessor.type == TINYGLTF_TYPE_VEC3)
+						{
+							for (size_t i = 0; i < vertexCount; ++i)
+							{
+								const uint16_t& r = *(uint16_t*)((size_t)data + i * stride + 0);
+								const uint16_t& g = *(uint16_t*)((size_t)data + i * stride + 1);
+								const uint16_t& b = *(uint16_t*)((size_t)data + i * stride + 2);
+								uint32_t rgba = wi::math::CompressColor(XMFLOAT3(r / 65535.0f, g / 65535.0f, b / 65535.0f));
+
+								mesh.vertex_colors[vertexOffset + i] = rgba;
+							}
+						}
+						else if (accessor.type == TINYGLTF_TYPE_VEC4)
+						{
+							for (size_t i = 0; i < vertexCount; ++i)
+							{
+								const uint16_t& r = *(uint16_t*)((size_t)data + i * stride + 0);
+								const uint16_t& g = *(uint16_t*)((size_t)data + i * stride + 1);
+								const uint16_t& b = *(uint16_t*)((size_t)data + i * stride + 2);
+								const uint16_t& a = *(uint16_t*)((size_t)data + i * stride + 3);
+								uint32_t rgba = wi::math::CompressColor(XMFLOAT4(r / 65535.0f, g / 65535.0f, b / 65535.0f, a / 65535.0f));
+
+								mesh.vertex_colors[vertexOffset + i] = rgba;
+							}
+						}
 					}
 				}
 
