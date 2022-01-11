@@ -805,9 +805,9 @@ namespace wi::graphics
 			RAYTRACING_ACCELERATION_STRUCTURE,
 			UNKNOWN_TYPE,
 		} type = Type::UNKNOWN_TYPE;
-		inline bool IsTexture() const { return type == Type::TEXTURE; }
-		inline bool IsBuffer() const { return type == Type::BUFFER; }
-		inline bool IsAccelerationStructure() const { return type == Type::RAYTRACING_ACCELERATION_STRUCTURE; }
+		constexpr bool IsTexture() const { return type == Type::TEXTURE; }
+		constexpr bool IsBuffer() const { return type == Type::BUFFER; }
+		constexpr bool IsAccelerationStructure() const { return type == Type::RAYTRACING_ACCELERATION_STRUCTURE; }
 
 		void* mapped_data = nullptr;
 		uint32_t mapped_rowpitch = 0;
@@ -817,21 +817,21 @@ namespace wi::graphics
 	{
 		GPUBufferDesc desc;
 
-		const GPUBufferDesc& GetDesc() const { return desc; }
+		constexpr const GPUBufferDesc& GetDesc() const { return desc; }
 	};
 
 	struct Texture : public GPUResource
 	{
 		TextureDesc	desc;
 
-		const TextureDesc& GetDesc() const { return desc; }
+		constexpr const TextureDesc& GetDesc() const { return desc; }
 	};
 
 	struct GPUQueryHeap : public GraphicsDeviceChild
 	{
 		GPUQueryHeapDesc desc;
 
-		const GPUQueryHeapDesc& GetDesc() const { return desc; }
+		constexpr const GPUQueryHeapDesc& GetDesc() const { return desc; }
 	};
 
 	struct PipelineState : public GraphicsDeviceChild
@@ -839,7 +839,7 @@ namespace wi::graphics
 		size_t hash = 0;
 		PipelineStateDesc desc;
 
-		const PipelineStateDesc& GetDesc() const { return desc; }
+		constexpr const PipelineStateDesc& GetDesc() const { return desc; }
 	};
 
 	struct RenderPass : public GraphicsDeviceChild
@@ -847,14 +847,14 @@ namespace wi::graphics
 		size_t hash = 0;
 		RenderPassDesc desc;
 
-		const RenderPassDesc& GetDesc() const { return desc; }
+		constexpr const RenderPassDesc& GetDesc() const { return desc; }
 	};
 
 	struct SwapChain : public GraphicsDeviceChild
 	{
 		SwapChainDesc desc;
 
-		const SwapChainDesc& GetDesc() const { return desc; }
+		constexpr const SwapChainDesc& GetDesc() const { return desc; }
 	};
 
 
@@ -950,7 +950,7 @@ namespace wi::graphics
 	{
 		RaytracingAccelerationStructureDesc desc;
 
-		const RaytracingAccelerationStructureDesc& GetDesc() const { return desc; }
+		constexpr const RaytracingAccelerationStructureDesc& GetDesc() const { return desc; }
 	};
 
 	struct ShaderLibrary
@@ -992,7 +992,7 @@ namespace wi::graphics
 	{
 		RaytracingPipelineStateDesc desc;
 
-		const RaytracingPipelineStateDesc& GetDesc() const { return desc; }
+		constexpr const RaytracingPipelineStateDesc& GetDesc() const { return desc; }
 	};
 
 	struct ShaderTable
@@ -1173,6 +1173,15 @@ namespace wi::graphics
 		}
 
 		return 16u;
+	}
+
+	constexpr uint32_t AlignTo(uint32_t value, uint32_t alignment)
+	{
+		return ((value + alignment - 1) / alignment) * alignment;
+	}
+	constexpr uint64_t AlignTo(uint64_t value, uint64_t alignment)
+	{
+		return ((value + alignment - 1) / alignment) * alignment;
 	}
 
 }

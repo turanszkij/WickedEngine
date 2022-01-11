@@ -15,12 +15,9 @@ namespace wi::graphics
 	//	CommandList recording is not thread safe
 	struct CommandList
 	{
-		using index_type = uint8_t;
-		index_type index = 0xFF;
-		constexpr operator index_type() const { return index; }
+		void* internal_state = nullptr;
+		constexpr bool IsValid() const { return internal_state != nullptr; }
 	};
-	static constexpr CommandList::index_type COMMANDLIST_COUNT = 32;	// If you increase command list count, more memory will be statically allocated for per-command list resources
-	static constexpr CommandList INVALID_COMMANDLIST;					// CommandList is invalid if it's just declared, but not started
 
 	// Descriptor binding counts:
 	//	It's OK increase these limits if not enough
@@ -39,15 +36,6 @@ namespace wi::graphics
 		int UAV_index[DESCRIPTORBINDER_UAV_COUNT] = {};
 		Sampler SAM[DESCRIPTORBINDER_SAMPLER_COUNT];
 	};
-
-	constexpr uint32_t AlignTo(uint32_t value, uint32_t alignment)
-	{
-		return ((value + alignment - 1) / alignment) * alignment;
-	}
-	constexpr uint64_t AlignTo(uint64_t value, uint64_t alignment)
-	{
-		return ((value + alignment - 1) / alignment) * alignment;
-	}
 
 	enum QUEUE_TYPE
 	{
@@ -74,16 +62,16 @@ namespace wi::graphics
 		virtual ~GraphicsDevice() = default;
 
 		// Create a SwapChain. If the SwapChain is to be recreated, the window handle can be nullptr.
-		virtual bool CreateSwapChain(const SwapChainDesc* pDesc, wi::platform::window_type window, SwapChain* swapChain) const = 0;
-		virtual bool CreateBuffer(const GPUBufferDesc *pDesc, const void* pInitialData, GPUBuffer *pBuffer) const = 0;
-		virtual bool CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) const = 0;
-		virtual bool CreateShader(ShaderStage stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) const = 0;
-		virtual bool CreateSampler(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) const = 0;
-		virtual bool CreateQueryHeap(const GPUQueryHeapDesc *pDesc, GPUQueryHeap *pQueryHeap) const = 0;
-		virtual bool CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) const = 0;
-		virtual bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) const = 0;
-		virtual bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh) const { return false; }
-		virtual bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso) const { return false; }
+		virtual bool CreateSwapChain(const SwapChainDesc* desc, wi::platform::window_type window, SwapChain* swapchain) const = 0;
+		virtual bool CreateBuffer(const GPUBufferDesc* desc, const void* initial_data, GPUBuffer* buffer) const = 0;
+		virtual bool CreateTexture(const TextureDesc* desc, const SubresourceData* initial_data, Texture* texture) const = 0;
+		virtual bool CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader) const = 0;
+		virtual bool CreateSampler(const SamplerDesc* desc, Sampler* sampler) const = 0;
+		virtual bool CreateQueryHeap(const GPUQueryHeapDesc* desc, GPUQueryHeap* queryheap) const = 0;
+		virtual bool CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso) const = 0;
+		virtual bool CreateRenderPass(const RenderPassDesc* desc, RenderPass* renderpass) const = 0;
+		virtual bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* desc, RaytracingAccelerationStructure* bvh) const { return false; }
+		virtual bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* desc, RaytracingPipelineState* rtpso) const { return false; }
 		
 		virtual int CreateSubresource(Texture* texture, SubresourceType type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) const = 0;
 		virtual int CreateSubresource(GPUBuffer* buffer, SubresourceType type, uint64_t offset, uint64_t size = ~0) const = 0;
@@ -210,8 +198,12 @@ namespace wi::graphics
 		{
 			GPUBuffer buffer;
 			uint64_t offset = 0;
-			uint64_t frame_index = 0;
-		} frame_allocators[BUFFERCOUNT][COMMANDLIST_COUNT];
+			void reset()
+			{
+				offset = 0;
+			}
+		};
+		virtual GPULinearAllocator& GetFrameAllocator(CommandList cmd) = 0;
 
 		struct GPUAllocation
 		{
@@ -231,12 +223,7 @@ namespace wi::graphics
 			if (dataSize == 0)
 				return allocation;
 
-			GPULinearAllocator& allocator = frame_allocators[GetBufferIndex()][cmd];
-			if (FRAMECOUNT != allocator.frame_index)
-			{
-				allocator.frame_index = FRAMECOUNT;
-				allocator.offset = 0;
-			}
+			GPULinearAllocator& allocator = GetFrameAllocator(cmd);
 
 			const uint64_t free_space = allocator.buffer.desc.size - allocator.offset;
 			if (dataSize > free_space)

@@ -429,6 +429,7 @@ The scene holds components. Entity handles can be used to retrieve associated co
 - Clear()  -- deletes every entity and component inside the scene
 - Merge(Scene other)  -- moves contents from an other scene into this one. The other scene will be empty after this operation (contents are moved, not copied)
 
+- CreateEntity() : int entity  -- creates an empty entity and returns it
 - Entity_FindByName(string value) : int entity  -- returns an entity ID if it exists, and 0 otherwise
 - Entity_Remove(Entity entity)  -- removes an entity and deletes all its components if it exists
 - Entity_Duplicate(Entity entity) : int entity  -- duplicates all of an entity's components and creates a new entity with them. Returns the clone entity handle
@@ -527,6 +528,9 @@ Describes an orientation in 3D space.
 - GetInvView() : Matrix result
 - GetInvProjection() : Matrix result
 - GetInvViewProjection() : Matrix result
+- GetPosition() : Vector result
+- GetLookDirection() : Vector result
+- GetUpDirection() : Vector result
 
 #### AnimationComponent
 - Play()
@@ -565,9 +569,11 @@ Describes an orientation in 3D space.
 - [outer]DIRECTIONAL : int
 - [outer]POINT : int
 - [outer]SPOT : int
+- SetRange(float value)
 - SetEnergy(float value)
 - SetColor(Vector value)
 - SetCastShadow(bool value)
+- SetFOV(float value)
 - GetType() : int result
 
 #### ObjectComponent

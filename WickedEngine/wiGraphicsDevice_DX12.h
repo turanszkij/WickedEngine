@@ -10,6 +10,7 @@
 #include "wiGraphicsDevice.h"
 #include "wiUnorderedMap.h"
 #include "wiVector.h"
+#include "wiSpinLock.h"
 
 #include <dxgi1_6.h>
 #include <wrl/client.h> // ComPtr
@@ -56,8 +57,7 @@ namespace wi::graphics
 			D3D12_COMMAND_QUEUE_DESC desc = {};
 			Microsoft::WRL::ComPtr<ID3D12CommandQueue> queue;
 			Microsoft::WRL::ComPtr<ID3D12Fence> fence;
-			ID3D12CommandList* submit_cmds[COMMANDLIST_COUNT] = {};
-			uint32_t submit_count = 0;
+			wi::vector<ID3D12CommandList*> submit_cmds;
 		} queues[QUEUE_COUNT];
 
 		struct CopyAllocator
@@ -82,25 +82,7 @@ namespace wi::graphics
 		};
 		mutable CopyAllocator copyAllocator;
 
-		struct FrameResources
-		{
-			Microsoft::WRL::ComPtr<ID3D12Fence> fence[QUEUE_COUNT];
-			Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocators[COMMANDLIST_COUNT][QUEUE_COUNT];
-		};
-		FrameResources frames[BUFFERCOUNT];
-		FrameResources& GetFrameResources() { return frames[GetBufferIndex()]; }
-
-		struct CommandListMetadata
-		{
-			QUEUE_TYPE queue = {};
-			wi::vector<CommandList> waits;
-		} cmd_meta[COMMANDLIST_COUNT];
-
-		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList4> commandLists[COMMANDLIST_COUNT][QUEUE_COUNT];
-		inline ID3D12GraphicsCommandList6* GetCommandList(CommandList::index_type cmd)
-		{
-			return (ID3D12GraphicsCommandList6*)commandLists[cmd][cmd_meta[cmd].queue].Get();
-		}
+		Microsoft::WRL::ComPtr<ID3D12Fence> frame_fence[BUFFERCOUNT][QUEUE_COUNT];
 
 		struct DescriptorBinder
 		{
@@ -116,50 +98,100 @@ namespace wi::graphics
 			void reset();
 			void flush(bool graphics, CommandList cmd);
 		};
-		DescriptorBinder binders[COMMANDLIST_COUNT];
 
-		wi::vector<D3D12_RESOURCE_BARRIER> frame_barriers[COMMANDLIST_COUNT];
+		struct CommandList_DX12
+		{
+			Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocators[BUFFERCOUNT][QUEUE_COUNT];
+			Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList6> commandLists[QUEUE_COUNT];
+			uint32_t buffer_index = 0;
 
-		D3D_PRIMITIVE_TOPOLOGY prev_pt[COMMANDLIST_COUNT] = {};
+			QUEUE_TYPE queue = {};
+			uint32_t id = 0;
+			wi::vector<CommandList> waits;
+
+			DescriptorBinder binder;
+			GPULinearAllocator frame_allocators[BUFFERCOUNT];
+
+			wi::vector<D3D12_RESOURCE_BARRIER> frame_barriers;
+			D3D_PRIMITIVE_TOPOLOGY prev_pt = {};
+			wi::vector<std::pair<size_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>>> pipelines_worker;
+			size_t prev_pipeline_hash = {};
+			const PipelineState* active_pso = {};
+			const Shader* active_cs = {};
+			const RaytracingPipelineState* active_rt = {};
+			const ID3D12RootSignature* active_rootsig_graphics = {};
+			const ID3D12RootSignature* active_rootsig_compute = {};
+			const RenderPass* active_renderpass = {};
+			ShadingRate prev_shadingrate = {};
+			wi::vector<const SwapChain*> swapchains;
+			Microsoft::WRL::ComPtr<ID3D12Resource> active_backbuffer;
+			bool dirty_pso = {};
+			wi::vector<D3D12_RAYTRACING_GEOMETRY_DESC> accelerationstructure_build_geometries;
+
+			void reset(uint32_t bufferindex)
+			{
+				buffer_index = bufferindex;
+				waits.clear();
+				binder.reset();
+				frame_allocators[buffer_index].reset();
+				prev_pt = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
+				prev_pipeline_hash = 0;
+				active_pso = nullptr;
+				active_cs = nullptr;
+				active_rt = nullptr;
+				active_rootsig_graphics = nullptr;
+				active_rootsig_compute = nullptr;
+				active_renderpass = nullptr;
+				prev_shadingrate = ShadingRate::RATE_INVALID;
+				dirty_pso = false;
+				swapchains.clear();
+				active_backbuffer = nullptr;
+			}
+
+			inline ID3D12CommandAllocator* GetCommandAllocator()
+			{
+				return commandAllocators[buffer_index][queue].Get();
+			}
+			inline ID3D12GraphicsCommandList6* GetGraphicsCommandList()
+			{
+				return (ID3D12GraphicsCommandList6*)commandLists[queue].Get();
+			}
+		};
+		wi::vector<std::unique_ptr<CommandList_DX12>> commandlists;
+		uint32_t cmd_count = 0;
+		wi::SpinLock cmd_locker;
+
+		constexpr CommandList_DX12& GetCommandList(CommandList cmd) const
+		{
+			assert(cmd.IsValid());
+			return *(CommandList_DX12*)cmd.internal_state;
+		}
+
 
 		mutable wi::unordered_map<size_t, Microsoft::WRL::ComPtr<ID3D12RootSignature>> rootsignature_cache;
 		mutable std::mutex rootsignature_cache_mutex;
 
 		wi::unordered_map<size_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>> pipelines_global;
-		wi::vector<std::pair<size_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>>> pipelines_worker[COMMANDLIST_COUNT];
-		size_t prev_pipeline_hash[COMMANDLIST_COUNT] = {};
-		const PipelineState* active_pso[COMMANDLIST_COUNT] = {};
-		const Shader* active_cs[COMMANDLIST_COUNT] = {};
-		const RaytracingPipelineState* active_rt[COMMANDLIST_COUNT] = {};
-		const ID3D12RootSignature* active_rootsig_graphics[COMMANDLIST_COUNT] = {};
-		const ID3D12RootSignature* active_rootsig_compute[COMMANDLIST_COUNT] = {};
-		const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
-		ShadingRate prev_shadingrate[COMMANDLIST_COUNT] = {};
-		wi::vector<const SwapChain*> swapchains[COMMANDLIST_COUNT];
-		Microsoft::WRL::ComPtr<ID3D12Resource> active_backbuffer[COMMANDLIST_COUNT];
 
-		bool dirty_pso[COMMANDLIST_COUNT] = {};
 		void pso_validate(CommandList cmd);
 
 		void predraw(CommandList cmd);
 		void predispatch(CommandList cmd);
 
-		std::atomic<CommandList::index_type> cmd_count{ 0 };
-
 	public:
 		GraphicsDevice_DX12(bool debuglayer = false, bool gpuvalidation = false);
 		virtual ~GraphicsDevice_DX12();
 
-		bool CreateSwapChain(const SwapChainDesc* pDesc, wi::platform::window_type window, SwapChain* swapChain) const override;
-		bool CreateBuffer(const GPUBufferDesc *pDesc, const void* pInitialData, GPUBuffer *pBuffer) const override;
-		bool CreateTexture(const TextureDesc* pDesc, const SubresourceData *pInitialData, Texture *pTexture) const override;
-		bool CreateShader(ShaderStage stage, const void *pShaderBytecode, size_t BytecodeLength, Shader *pShader) const override;
-		bool CreateSampler(const SamplerDesc *pSamplerDesc, Sampler *pSamplerState) const override;
-		bool CreateQueryHeap(const GPUQueryHeapDesc* pDesc, GPUQueryHeap* pQueryHeap) const override;
-		bool CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) const override;
-		bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) const override;
-		bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh) const override;
-		bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso) const override;
+		bool CreateSwapChain(const SwapChainDesc* desc, wi::platform::window_type window, SwapChain* swapchain) const override;
+		bool CreateBuffer(const GPUBufferDesc * desc, const void* initial_data, GPUBuffer* buffer) const override;
+		bool CreateTexture(const TextureDesc* desc, const SubresourceData* initial_data, Texture* texture) const override;
+		bool CreateShader(ShaderStage stage, const void* shadercode, size_t shadercode_size, Shader* shader) const override;
+		bool CreateSampler(const SamplerDesc* desc, Sampler* sampler) const override;
+		bool CreateQueryHeap(const GPUQueryHeapDesc* desc, GPUQueryHeap* queryheap) const override;
+		bool CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso) const override;
+		bool CreateRenderPass(const RenderPassDesc* desc, RenderPass* renderpass) const override;
+		bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* desc, RaytracingAccelerationStructure* bvh) const override;
+		bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* desc, RaytracingPipelineState* rtpso) const override;
 		
 		int CreateSubresource(Texture* texture, SubresourceType type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) const override;
 		int CreateSubresource(GPUBuffer* buffer, SubresourceType type, uint64_t offset, uint64_t size = ~0) const override;
@@ -237,8 +269,15 @@ namespace wi::graphics
 		void EventEnd(CommandList cmd) override;
 		void SetMarker(const char* name, CommandList cmd) override;
 
-		const RenderPass* GetCurrentRenderPass(CommandList cmd) const override;
-
+		const RenderPass* GetCurrentRenderPass(CommandList cmd) const override
+		{
+			const CommandList_DX12& commandlist = GetCommandList(cmd);
+			return commandlist.active_renderpass;
+		}
+		GPULinearAllocator& GetFrameAllocator(CommandList cmd) override
+		{
+			return GetCommandList(cmd).frame_allocators[GetBufferIndex()];
+		}
 
 		struct DescriptorHeapGPU
 		{

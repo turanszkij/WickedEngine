@@ -179,6 +179,9 @@ namespace wi::lua::scene
 		int GetInvView(lua_State* L);
 		int GetInvProjection(lua_State* L);
 		int GetInvViewProjection(lua_State* L);
+		int GetPosition(lua_State* L);
+		int GetLookDirection(lua_State* L);
+		int GetUpDirection(lua_State* L);
 	};
 
 	class AnimationComponent_BindLua
@@ -275,6 +278,7 @@ namespace wi::lua::scene
 		int SetEnergy(lua_State* L);
 		int SetColor(lua_State* L);
 		int SetCastShadow(lua_State* L);
+		int SetFOV(lua_State* L);
 
 		int GetType(lua_State* L);
 	};

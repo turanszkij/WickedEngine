@@ -876,23 +876,73 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				else if (!attr_name.compare("TEXCOORD_0"))
 				{
 					mesh.vertex_uvset_0.resize(vertexOffset + vertexCount);
-					for (size_t i = 0; i < vertexCount; ++i)
+					if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT)
 					{
-						const XMFLOAT2& tex = *(XMFLOAT2*)((size_t)data + i * stride);
+						for (size_t i = 0; i < vertexCount; ++i)
+						{
+							const XMFLOAT2& tex = *(XMFLOAT2*)((size_t)data + i * stride);
 
-						mesh.vertex_uvset_0[vertexOffset + i].x = tex.x;
-						mesh.vertex_uvset_0[vertexOffset + i].y = tex.y;
+							mesh.vertex_uvset_0[vertexOffset + i].x = tex.x;
+							mesh.vertex_uvset_0[vertexOffset + i].y = tex.y;
+						}
+					}
+					else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE)
+					{
+						for (size_t i = 0; i < vertexCount; ++i)
+						{
+							const uint8_t& s = *(uint8_t*)((size_t)data + i * stride + 0);
+							const uint8_t& t = *(uint8_t*)((size_t)data + i * stride + 1);
+
+							mesh.vertex_uvset_0[vertexOffset + i].x = s / 255.0f;
+							mesh.vertex_uvset_0[vertexOffset + i].y = t / 255.0f;
+						}
+					}
+					else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
+					{
+						for (size_t i = 0; i < vertexCount; ++i)
+						{
+							const uint16_t& s = *(uint16_t*)((size_t)data + i * stride + 0 * sizeof(uint16_t));
+							const uint16_t& t = *(uint16_t*)((size_t)data + i * stride + 1 * sizeof(uint16_t));
+
+							mesh.vertex_uvset_0[vertexOffset + i].x = s / 65535.0f;
+							mesh.vertex_uvset_0[vertexOffset + i].y = t / 65535.0f;
+						}
 					}
 				}
 				else if (!attr_name.compare("TEXCOORD_1"))
 				{
 					mesh.vertex_uvset_1.resize(vertexOffset + vertexCount);
-					for (size_t i = 0; i < vertexCount; ++i)
+					if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT)
 					{
-						const XMFLOAT2& tex = *(XMFLOAT2*)((size_t)data + i * stride);
+						for (size_t i = 0; i < vertexCount; ++i)
+						{
+							const XMFLOAT2& tex = *(XMFLOAT2*)((size_t)data + i * stride);
 
-						mesh.vertex_uvset_1[vertexOffset + i].x = tex.x;
-						mesh.vertex_uvset_1[vertexOffset + i].y = tex.y;
+							mesh.vertex_uvset_1[vertexOffset + i].x = tex.x;
+							mesh.vertex_uvset_1[vertexOffset + i].y = tex.y;
+						}
+					}
+					else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE)
+					{
+						for (size_t i = 0; i < vertexCount; ++i)
+						{
+							const uint8_t& s = *(uint8_t*)((size_t)data + i * stride + 0);
+							const uint8_t& t = *(uint8_t*)((size_t)data + i * stride + 1);
+
+							mesh.vertex_uvset_1[vertexOffset + i].x = s / 255.0f;
+							mesh.vertex_uvset_1[vertexOffset + i].y = t / 255.0f;
+						}
+					}
+					else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
+					{
+						for (size_t i = 0; i < vertexCount; ++i)
+						{
+							const uint16_t& s = *(uint16_t*)((size_t)data + i * stride + 0 * sizeof(uint16_t));
+							const uint16_t& t = *(uint16_t*)((size_t)data + i * stride + 1 * sizeof(uint16_t));
+
+							mesh.vertex_uvset_1[vertexOffset + i].x = s / 65535.0f;
+							mesh.vertex_uvset_1[vertexOffset + i].y = t / 65535.0f;
+						}
 					}
 				}
 				else if (!attr_name.compare("JOINTS_0"))
@@ -940,9 +990,42 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 				else if (!attr_name.compare("WEIGHTS_0"))
 				{
 					mesh.vertex_boneweights.resize(vertexOffset + vertexCount);
-					for (size_t i = 0; i < vertexCount; ++i)
+					if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT)
 					{
-						mesh.vertex_boneweights[vertexOffset + i] = *(XMFLOAT4*)((size_t)data + i * stride);
+						for (size_t i = 0; i < vertexCount; ++i)
+						{
+							mesh.vertex_boneweights[vertexOffset + i] = *(XMFLOAT4*)((size_t)data + i * stride);
+						}
+					}
+					else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE)
+					{
+						for (size_t i = 0; i < vertexCount; ++i)
+						{
+							const uint8_t& x = *(uint8_t*)((size_t)data + i * stride + 0);
+							const uint8_t& y = *(uint8_t*)((size_t)data + i * stride + 1);
+							const uint8_t& z = *(uint8_t*)((size_t)data + i * stride + 2);
+							const uint8_t& w = *(uint8_t*)((size_t)data + i * stride + 3);
+
+							mesh.vertex_boneweights[vertexOffset + i].x = x / 255.0f;
+							mesh.vertex_boneweights[vertexOffset + i].x = y / 255.0f;
+							mesh.vertex_boneweights[vertexOffset + i].x = z / 255.0f;
+							mesh.vertex_boneweights[vertexOffset + i].x = w / 255.0f;
+						}
+					}
+					else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
+					{
+						for (size_t i = 0; i < vertexCount; ++i)
+						{
+							const uint16_t& x = *(uint8_t*)((size_t)data + i * stride + 0 * sizeof(uint16_t));
+							const uint16_t& y = *(uint8_t*)((size_t)data + i * stride + 1 * sizeof(uint16_t));
+							const uint16_t& z = *(uint8_t*)((size_t)data + i * stride + 2 * sizeof(uint16_t));
+							const uint16_t& w = *(uint8_t*)((size_t)data + i * stride + 3 * sizeof(uint16_t));
+
+							mesh.vertex_boneweights[vertexOffset + i].x = x / 65535.0f;
+							mesh.vertex_boneweights[vertexOffset + i].x = y / 65535.0f;
+							mesh.vertex_boneweights[vertexOffset + i].x = z / 65535.0f;
+							mesh.vertex_boneweights[vertexOffset + i].x = w / 65535.0f;
+						}
 					}
 				}
 				else if (!attr_name.compare("COLOR_0"))
@@ -952,12 +1035,85 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 						material->SetUseVertexColors(true);
 					}
 					mesh.vertex_colors.resize(vertexOffset + vertexCount);
-					for (size_t i = 0; i < vertexCount; ++i)
+					if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT)
 					{
-						const XMFLOAT4& color = *(XMFLOAT4*)((size_t)data + i * stride);
-						uint32_t rgba = wi::math::CompressColor(color);
+						if (accessor.type == TINYGLTF_TYPE_VEC3)
+						{
+							for (size_t i = 0; i < vertexCount; ++i)
+							{
+								const XMFLOAT3& color = *(XMFLOAT3*)((size_t)data + i * stride);
+								uint32_t rgba = wi::math::CompressColor(color);
 
-						mesh.vertex_colors[vertexOffset + i] = rgba;
+								mesh.vertex_colors[vertexOffset + i] = rgba;
+							}
+						}
+						else if (accessor.type == TINYGLTF_TYPE_VEC4)
+						{
+							for (size_t i = 0; i < vertexCount; ++i)
+							{
+								const XMFLOAT4& color = *(XMFLOAT4*)((size_t)data + i * stride);
+								uint32_t rgba = wi::math::CompressColor(color);
+
+								mesh.vertex_colors[vertexOffset + i] = rgba;
+							}
+						}
+					}
+					else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE)
+					{
+						if (accessor.type == TINYGLTF_TYPE_VEC3)
+						{
+							for (size_t i = 0; i < vertexCount; ++i)
+							{
+								const uint8_t& r = *(uint8_t*)((size_t)data + i * stride + 0);
+								const uint8_t& g = *(uint8_t*)((size_t)data + i * stride + 1);
+								const uint8_t& b = *(uint8_t*)((size_t)data + i * stride + 2);
+								const uint8_t a = 0xFF;
+								wi::Color color = wi::Color(r, g, b, a);
+
+								mesh.vertex_colors[vertexOffset + i] = color;
+							}
+						}
+						else if (accessor.type == TINYGLTF_TYPE_VEC4)
+						{
+							for (size_t i = 0; i < vertexCount; ++i)
+							{
+								const uint8_t& r = *(uint8_t*)((size_t)data + i * stride + 0);
+								const uint8_t& g = *(uint8_t*)((size_t)data + i * stride + 1);
+								const uint8_t& b = *(uint8_t*)((size_t)data + i * stride + 2);
+								const uint8_t& a = *(uint8_t*)((size_t)data + i * stride + 3);
+								wi::Color color = wi::Color(r, g, b, a);
+
+								mesh.vertex_colors[vertexOffset + i] = color;
+							}
+						}
+					}
+					else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
+					{
+						if (accessor.type == TINYGLTF_TYPE_VEC3)
+						{
+							for (size_t i = 0; i < vertexCount; ++i)
+							{
+								const uint16_t& r = *(uint16_t*)((size_t)data + i * stride + 0 * sizeof(uint16_t));
+								const uint16_t& g = *(uint16_t*)((size_t)data + i * stride + 1 * sizeof(uint16_t));
+								const uint16_t& b = *(uint16_t*)((size_t)data + i * stride + 2 * sizeof(uint16_t));
+								uint32_t rgba = wi::math::CompressColor(XMFLOAT3(r / 65535.0f, g / 65535.0f, b / 65535.0f));
+
+								mesh.vertex_colors[vertexOffset + i] = rgba;
+							}
+						}
+						else if (accessor.type == TINYGLTF_TYPE_VEC4)
+						{
+							for (size_t i = 0; i < vertexCount; ++i)
+							{
+								const uint16_t& r = *(uint16_t*)((size_t)data + i * stride + 0 * sizeof(uint16_t));
+								const uint16_t& g = *(uint16_t*)((size_t)data + i * stride + 1 * sizeof(uint16_t));
+								const uint16_t& b = *(uint16_t*)((size_t)data + i * stride + 2 * sizeof(uint16_t));
+								const uint16_t& a = *(uint16_t*)((size_t)data + i * stride + 3 * sizeof(uint16_t));
+								uint32_t rgba = wi::math::CompressColor(XMFLOAT4(r / 65535.0f, g / 65535.0f, b / 65535.0f, a / 65535.0f));
+
+								mesh.vertex_colors[vertexOffset + i] = rgba;
+							}
+						}
 					}
 				}
 
