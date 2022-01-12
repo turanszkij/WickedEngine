@@ -640,7 +640,7 @@ void EmitterWindow::Create(EditorComponent* editor)
 	sph_p0_Slider.SetTooltip("Set the SPH parameter: reference density");
 	AddWidget(&sph_p0_Slider);
 
-	sph_e_Slider.Create(0.1f, 100.0f, 1.0f, 100000, "SPH Viscosity (e): ");
+	sph_e_Slider.Create(0, 10, 1.0f, 100000, "SPH Viscosity (e): ");
 	sph_e_Slider.SetSize(XMFLOAT2(360, itemheight));
 	sph_e_Slider.SetPos(XMFLOAT2(x, y += step));
 	sph_e_Slider.OnSlide([&](wi::gui::EventArgs args) {
