@@ -73,20 +73,24 @@ CBUFFER(EmittedParticleCB, CBSLOT_OTHER_EMITTEDPARTICLE)
 
 	float		xSPH_poly6_constant;	// precomputed Poly6 kernel constant term
 	float		xSPH_spiky_constant;	// precomputed Spiky kernel function constant term
+	float		xSPH_visc_constant;	    // precomputed viscosity kernel function constant term
 	float		xSPH_K;					// pressure constant
-	float		xSPH_p0;				// reference density
 
 	float		xSPH_e;					// viscosity constant
+	float		xSPH_p0;				// reference density
 	uint		xEmitterOptions;
 	float		xEmitterFixedTimestep;	// we can force a fixed timestep (>0) onto the simulation to avoid blowing up
-	float		xEmitterRestitution;
 
 	float3		xParticleGravity;
-	float		xParticleDrag;
+	float		xEmitterRestitution;
 
 	float3		xParticleVelocity;
-	float		xParticleRandomColorFactor;
+	float		xParticleDrag;
 
+	float		xParticleRandomColorFactor;
+	int padding0;
+	int padding1;
+	int padding2;
 };
 
 static const uint THREADCOUNT_EMIT = 256;

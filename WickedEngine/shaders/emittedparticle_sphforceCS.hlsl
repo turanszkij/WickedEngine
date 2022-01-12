@@ -115,8 +115,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 
 								f_a += mass * ((pressureA + pressureB) / (2 * densityA * densityB)) * W * rNorm;
 
-								float r3 = r2 * r;
-								W = -(r3 / (2 * h3)) + (r2 / h2) + (h / (2 * r)) - 1; // laplacian smoothing function
+								W = xSPH_visc_constant * (h - r);
 								f_av += mass * (1.0f / densityB) * (velocityB - particleA.velocity) * W * rNorm;
 							}
 						}
@@ -183,8 +182,7 @@ void main( uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, ui
 
 					f_a += mass * ((pressureA + pressureB) / (2 * densityA * densityB)) * W * rNorm;
 
-					float r3 = r2 * r;
-					W = -(r3 / (2 * h3)) + (r2 / h2) + (h / (2 * r)) - 1; // laplacian smoothing function
+					W = xSPH_visc_constant * (h - r);
 					f_av += mass * (1.0f / densityB) * (velocityB - particleA.velocity) * W * rNorm;
 				}
 
