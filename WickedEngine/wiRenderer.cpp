@@ -24,7 +24,6 @@
 #include "shaders/ShaderInterop_Postprocess.h"
 #include "shaders/ShaderInterop_Raytracing.h"
 #include "shaders/ShaderInterop_BVH.h"
-#include "shaders/ShaderInterop_SurfelGI.h"
 
 #include <algorithm>
 #include <array>
@@ -97,7 +96,7 @@ bool disableAlbedoMaps = false;
 bool forceDiffuseLighting = false;
 bool SCREENSPACESHADOWS = false;
 bool SURFELGI = false;
-bool SURFELGI_DEBUG = false;
+SURFEL_DEBUG SURFELGI_DEBUG = SURFEL_DEBUG_NONE;
 
 
 struct VoxelizedSceneData
@@ -7676,6 +7675,10 @@ void SurfelGI_Coverage(
 		device->EventBegin("Coverage", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_SURFEL_COVERAGE], cmd);
 
+		SurfelDebugPushConstants push;
+		push.debug = GetSurfelGIDebugEnabled();
+		device->PushConstants(&push, sizeof(push), cmd);
+
 		device->BindResource(&scene.surfelBuffer, 0, cmd);
 		device->BindResource(&scene.surfelGridBuffer, 1, cmd);
 		device->BindResource(&scene.surfelCellBuffer, 2, cmd);
@@ -11823,11 +11826,11 @@ bool GetSurfelGIEnabled()
 {
 	return SURFELGI;
 }
-void SetSurfelGIDebugEnabled(bool value)
+void SetSurfelGIDebugEnabled(SURFEL_DEBUG value)
 {
 	SURFELGI_DEBUG = value;
 }
-bool GetSurfelGIDebugEnabled()
+SURFEL_DEBUG GetSurfelGIDebugEnabled()
 {
 	return SURFELGI_DEBUG;
 }

@@ -2,13 +2,7 @@
 #include "ShaderInterop_SurfelGI.h"
 #include "brdf.hlsli"
 
-//#define SURFEL_DEBUG_NORMAL
-//#define SURFEL_DEBUG_COLOR
-#define SURFEL_DEBUG_POINT
-//#define SURFEL_DEBUG_RANDOM
-//#define SURFEL_DEBUG_HEATMAP
-//#define SURFEL_DEBUG_INCONSISTENCY
-
+PUSHCONSTANT(push, SurfelDebugPushConstants);
 
 static const uint random_colors_size = 11;
 static const float3 random_colors[random_colors_size] = {
@@ -149,25 +143,29 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 
 				color += float4(surfel.color, 1) * contribution;
 
-#ifdef SURFEL_DEBUG_NORMAL
-				debug.rgb += normal * contribution;
-				debug.a = 1;
-#endif // SURFEL_DEBUG_NORMAL
+				if (push.debug == SURFEL_DEBUG_NORMAL)
+				{
+					debug.rgb += normal * contribution;
+					debug.a = 1;
+				}
 
-#ifdef SURFEL_DEBUG_RANDOM
-				debug += float4(random_color(surfel_index), 1) * contribution;
-#endif // SURFEL_DEBUG_RANDOM
+				if (push.debug == SURFEL_DEBUG_RANDOM)
+				{
+					debug += float4(random_color(surfel_index), 1) * contribution;
+				}
 
-#ifdef SURFEL_DEBUG_INCONSISTENCY
-				debug += float4(surfelDataBuffer[surfel_index].inconsistency.xxx, 1) * contribution;
-#endif // SURFEL_DEBUG_INCONSISTENCY
+				if (push.debug == SURFEL_DEBUG_INCONSISTENCY)
+				{
+					debug += float4(surfelDataBuffer[surfel_index].inconsistency.xxx, 1) * contribution;
+				}
 
 			}
 
-#ifdef SURFEL_DEBUG_POINT
-			if (dist2 <= sqr(0.05))
-				debug = float4(1, 0, 1, 1);
-#endif // SURFEL_DEBUG_POINT
+			if (push.debug == SURFEL_DEBUG_POINT)
+			{
+				if (dist2 <= sqr(0.05))
+					debug = float4(1, 0, 1, 1);
+			}
 		}
 
 	}
@@ -188,54 +186,59 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		color.a = saturate(color.a);
 	}
 
-#ifdef SURFEL_DEBUG_NORMAL
-	debug.rgb = normalize(debug.rgb) * 0.5 + 0.5;
-#endif // SURFEL_DEBUG_NORMAL
-
-#ifdef SURFEL_DEBUG_COLOR
-	debug = color;
-	debug.rgb = tonemap(debug.rgb);
-#endif // SURFEL_DEBUG_COLOR
-
-#if defined(SURFEL_DEBUG_RANDOM)
-	if (debug.a > 0)
+	if (push.debug == SURFEL_DEBUG_NORMAL)
 	{
-		debug /= debug.a;
+		debug.rgb = normalize(debug.rgb) * 0.5 + 0.5;
 	}
-	else
-	{
-		debug = 0;
-	}
-#endif // SURFEL_DEBUG_RANDOM
 
-#ifdef SURFEL_DEBUG_HEATMAP
-	const float3 mapTex[] = {
-		float3(0,0,0),
-		float3(0,0,1),
-		float3(0,1,1),
-		float3(0,1,0),
-		float3(1,1,0),
-		float3(1,0,0),
-	};
-	const uint mapTexLen = 5;
-	const uint maxHeat = 50;
-	float l = saturate((float)cell.count / maxHeat) * mapTexLen;
-	float3 a = mapTex[floor(l)];
-	float3 b = mapTex[ceil(l)];
-	float4 heatmap = float4(lerp(a, b, l - floor(l)), 0.8);
-	debug = heatmap;
-#endif // SURFEL_DEBUG_HEATMAP
+	if (push.debug == SURFEL_DEBUG_COLOR)
+	{
+		debug = color;
+		debug.rgb = tonemap(debug.rgb);
+	}
 
-#if defined(SURFEL_DEBUG_INCONSISTENCY)
-	if (debug.a > 0)
+	if (push.debug == SURFEL_DEBUG_RANDOM)
 	{
-		debug /= debug.a;
+		if (debug.a > 0)
+		{
+			debug /= debug.a;
+		}
+		else
+		{
+			debug = 0;
+		}
 	}
-	else
+
+	if (push.debug == SURFEL_DEBUG_HEATMAP)
 	{
-		debug = 0;
+		const float3 mapTex[] = {
+			float3(0,0,0),
+			float3(0,0,1),
+			float3(0,1,1),
+			float3(0,1,0),
+			float3(1,1,0),
+			float3(1,0,0),
+		};
+		const uint mapTexLen = 5;
+		const uint maxHeat = 50;
+		float l = saturate((float)cell.count / maxHeat) * mapTexLen;
+		float3 a = mapTex[floor(l)];
+		float3 b = mapTex[ceil(l)];
+		float4 heatmap = float4(lerp(a, b, l - floor(l)), 0.8);
+		debug = heatmap;
 	}
-#endif // SURFEL_DEBUG_INCONSISTENCY
+
+	if (push.debug == SURFEL_DEBUG_INCONSISTENCY)
+	{
+		if (debug.a > 0)
+		{
+			debug /= debug.a;
+		}
+		else
+		{
+			debug = 0;
+		}
+	}
 
 
 	GroupMemoryBarrierWithGroupSync();

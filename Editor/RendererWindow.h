@@ -28,7 +28,7 @@ public:
 	wi::gui::CheckBox occlusionCullingCheckBox;
 	wi::gui::Slider resolutionScaleSlider;
 	wi::gui::CheckBox surfelGICheckBox;
-	wi::gui::CheckBox surfelGIDebugCheckBox;
+	wi::gui::ComboBox surfelGIDebugComboBox;
 	wi::gui::CheckBox voxelRadianceCheckBox;
 	wi::gui::CheckBox voxelRadianceDebugCheckBox;
 	wi::gui::CheckBox voxelRadianceSecondaryBounceCheckBox;

@@ -8,6 +8,7 @@
 #include "wiCanvas.h"
 #include "wiMath.h"
 #include "shaders/ShaderInterop_Renderer.h"
+#include "shaders/ShaderInterop_SurfelGI.h"
 #include "wiVector.h"
 
 #include <memory>
@@ -769,8 +770,8 @@ namespace wi::renderer
 	bool GetScreenSpaceShadowsEnabled();
 	void SetSurfelGIEnabled(bool value);
 	bool GetSurfelGIEnabled();
-	void SetSurfelGIDebugEnabled(bool value);
-	bool GetSurfelGIDebugEnabled();
+	void SetSurfelGIDebugEnabled(SURFEL_DEBUG value);
+	SURFEL_DEBUG GetSurfelGIDebugEnabled();
 
 	// Gets pick ray according to the current screen resolution and pointer coordinates. Can be used as input into RayIntersectWorld()
 	wi::primitive::Ray GetPickRay(long cursorX, long cursorY, const wi::Canvas& canvas, const wi::scene::CameraComponent& camera = wi::scene::GetCamera());

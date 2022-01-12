@@ -69,6 +69,23 @@ static const uint SURFEL_RAY_BOOST_MAX = 32; // max amount of rays per surfel
 #define SURFEL_ENABLE_INFINITE_BOUNCES // if defined, previous frame's surfel data will be sampled at ray tracing hit points
 #define SURFEL_ENABLE_IRRADIANCE_SHARING // if defined, surfels will pull color from nearby surfels, this can smooth out the GI a bit
 
+enum SURFEL_DEBUG
+{
+	SURFEL_DEBUG_NONE,
+	SURFEL_DEBUG_NORMAL,
+	SURFEL_DEBUG_COLOR,
+	SURFEL_DEBUG_POINT,
+	SURFEL_DEBUG_RANDOM,
+	SURFEL_DEBUG_HEATMAP,
+	SURFEL_DEBUG_INCONSISTENCY,
+
+	SURFEL_DEBUG_FORCE_UINT = 0xFFFFFFFF,
+};
+struct SurfelDebugPushConstants
+{
+	SURFEL_DEBUG debug;
+};
+
 #ifndef __cplusplus
 inline int3 surfel_cell(float3 position)
 {

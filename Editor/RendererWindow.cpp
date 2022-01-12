@@ -68,15 +68,21 @@ void RendererWindow::Create(EditorComponent* editor)
 	surfelGICheckBox.SetCheck(wi::renderer::GetSurfelGIEnabled());
 	AddWidget(&surfelGICheckBox);
 
-	surfelGIDebugCheckBox.Create("DEBUG: ");
-	surfelGIDebugCheckBox.SetTooltip("Toggle Surfel GI visualization.");
-	surfelGIDebugCheckBox.SetPos(XMFLOAT2(x + 122, y));
-	surfelGIDebugCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
-	surfelGIDebugCheckBox.OnClick([](wi::gui::EventArgs args) {
-		wi::renderer::SetSurfelGIDebugEnabled(args.bValue);
-		});
-	surfelGIDebugCheckBox.SetCheck(wi::renderer::GetSurfelGIDebugEnabled());
-	AddWidget(&surfelGIDebugCheckBox);
+	surfelGIDebugComboBox.Create("");
+	surfelGIDebugComboBox.SetTooltip("Choose Surfel GI debug visualization.");
+	surfelGIDebugComboBox.SetPos(XMFLOAT2(x + 40, y));
+	surfelGIDebugComboBox.SetSize(XMFLOAT2(80, itemheight));
+	surfelGIDebugComboBox.AddItem("No Debug", SURFEL_DEBUG_NONE);
+	surfelGIDebugComboBox.AddItem("Normal", SURFEL_DEBUG_NORMAL);
+	surfelGIDebugComboBox.AddItem("Color", SURFEL_DEBUG_COLOR);
+	surfelGIDebugComboBox.AddItem("Point", SURFEL_DEBUG_POINT);
+	surfelGIDebugComboBox.AddItem("Random", SURFEL_DEBUG_RANDOM);
+	surfelGIDebugComboBox.AddItem("Heatmap", SURFEL_DEBUG_HEATMAP);
+	surfelGIDebugComboBox.AddItem("Inconsist.", SURFEL_DEBUG_INCONSISTENCY);
+	surfelGIDebugComboBox.OnSelect([](wi::gui::EventArgs args) {
+		wi::renderer::SetSurfelGIDebugEnabled((SURFEL_DEBUG)args.userdata);
+	});
+	AddWidget(&surfelGIDebugComboBox);
 
 	voxelRadianceCheckBox.Create("Voxel GI: ");
 	voxelRadianceCheckBox.SetTooltip("Toggle voxel Global Illumination computation.");
