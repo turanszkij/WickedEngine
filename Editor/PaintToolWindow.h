@@ -13,6 +13,15 @@ class PaintToolWindow : public wi::gui::Window
 	wi::vector<wi::graphics::Texture> history_textures; // we'd like to keep history textures in GPU memory to avoid GPU readback
 	wi::graphics::Texture GetEditTextureSlot(const wi::scene::MaterialComponent& material, int* uvset = nullptr);
 	void ReplaceEditTextureSlot(wi::scene::MaterialComponent& material, const wi::graphics::Texture& texture);
+
+	struct SculptingIndex
+	{
+		size_t ind;
+		float affection;
+	};
+	wi::vector<SculptingIndex> sculpting_indices;
+	XMFLOAT3 sculpting_average_normal = XMFLOAT3(0, 0, 0);
+
 public:
 	void Create(EditorComponent* editor);
 

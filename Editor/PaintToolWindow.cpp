@@ -219,6 +219,7 @@ void PaintToolWindow::Update(float dt)
 	if (!pointer_down)
 	{
 		stroke_dist = FLT_MAX;
+		sculpting_average_normal = XMFLOAT3(0, 0, 0);
 	}
 
 	auto pointer = wi::input::GetPointer();
@@ -541,15 +542,11 @@ void PaintToolWindow::Update(float dt)
 		bool rebuild = false;
 		if (painting)
 		{
-			XMVECTOR averageNormal = XMVectorZero();
-			struct PaintVert
-			{
-				size_t ind;
-				float affection;
-			};
-			static wi::vector<PaintVert> paintindices;
-			paintindices.clear();
-			paintindices.reserve(mesh->vertex_positions.size());
+			XMVECTOR averageNormal = XMLoadFloat3(&sculpting_average_normal);
+			const bool compute_average_normal = XMVectorGetX(XMVector3Length(averageNormal)) < FLT_EPSILON;
+
+			sculpting_indices.clear();
+			sculpting_indices.reserve(mesh->vertex_positions.size());
 
 			for (size_t j = 0; j < mesh->vertex_positions.size(); ++j)
 			{
@@ -577,19 +574,25 @@ void PaintToolWindow::Update(float dt)
 				const float dist = XMVectorGetX(XMVector2Length(C - P));
 				if (z >= 0 && z <= 1 && dist <= pressure_radius)
 				{
-					averageNormal += N;
+					if (compute_average_normal)
+					{
+						averageNormal += N;
+					}
 					const float affection = amount * std::pow(1.0f - (dist / pressure_radius), falloff);
-					paintindices.push_back({ j, affection });
+					sculpting_indices.push_back({ j, affection });
 				}
 			}
 
-			if (!paintindices.empty())
+			if (!sculpting_indices.empty())
 			{
 				RecordHistory(true);
 				rebuild = true;
-				averageNormal = XMVector3Normalize(averageNormal);
+				if (compute_average_normal)
+				{
+					averageNormal = XMVector3TransformNormal(XMVector3Normalize(averageNormal), XMMatrixInverse(nullptr, W));
+				}
 
-				for (auto& x : paintindices)
+				for (auto& x : sculpting_indices)
 				{
 					XMVECTOR PL = XMLoadFloat3(&mesh->vertex_positions[x.ind]);
 					switch (mode)
@@ -603,6 +606,11 @@ void PaintToolWindow::Update(float dt)
 					}
 					XMStoreFloat3(&mesh->vertex_positions[x.ind], PL);
 				}
+			}
+
+			if (compute_average_normal)
+			{
+				XMStoreFloat3(&sculpting_average_normal, averageNormal);
 			}
 		}
 
