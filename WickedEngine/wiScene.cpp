@@ -4054,7 +4054,7 @@ namespace wi::scene
 
 							if (distance < result.distance)
 							{
-								const XMVECTOR nor = XMVector3Normalize(XMVector3TransformNormal(XMVector3Cross(XMVectorSubtract(p2, p1), XMVectorSubtract(p1, p0)), objectMat));
+								const XMVECTOR nor = XMVector3Normalize(XMVector3Cross(XMVectorSubtract(p2, p1), XMVectorSubtract(p1, p0)));
 
 								result.entity = entity;
 								XMStoreFloat3(&result.position, pos);
