@@ -219,7 +219,7 @@ void PaintToolWindow::Update(float dt)
 	if (!pointer_down)
 	{
 		stroke_dist = FLT_MAX;
-		sculpting_average_normal = XMFLOAT3(0, 0, 0);
+		sculpting_normal = XMFLOAT3(0, 0, 0);
 	}
 
 	auto pointer = wi::input::GetPointer();
@@ -539,12 +539,15 @@ void PaintToolWindow::Update(float dt)
 
 		const XMMATRIX W = XMLoadFloat4x4(&transform->world);
 
+		if (sculpting_normal.x < FLT_EPSILON && sculpting_normal.y < FLT_EPSILON && sculpting_normal.z < FLT_EPSILON)
+		{
+			sculpting_normal = editor->hovered.normal;
+		}
+		XMVECTOR sculptDir = XMVector3TransformNormal(XMVector3Normalize(XMLoadFloat3(&sculpting_normal)), XMMatrixInverse(nullptr, W));
+
 		bool rebuild = false;
 		if (painting)
 		{
-			XMVECTOR averageNormal = XMLoadFloat3(&sculpting_average_normal);
-			const bool compute_average_normal = XMVectorGetX(XMVector3Length(averageNormal)) < FLT_EPSILON;
-
 			sculpting_indices.clear();
 			sculpting_indices.reserve(mesh->vertex_positions.size());
 
@@ -563,7 +566,8 @@ void PaintToolWindow::Update(float dt)
 				P = XMVector3Transform(P, W);
 				N = XMVector3Normalize(XMVector3TransformNormal(N, W));
 
-				if (!backfaces && XMVectorGetX(XMVector3Dot(F, N)) > 0)
+				const float dotN = XMVectorGetX(XMVector3Dot(F, N));
+				if (!backfaces && dotN > 0)
 					continue;
 
 				P = XMVector3TransformCoord(P, VP);
@@ -574,10 +578,6 @@ void PaintToolWindow::Update(float dt)
 				const float dist = XMVectorGetX(XMVector2Length(C - P));
 				if (z >= 0 && z <= 1 && dist <= pressure_radius)
 				{
-					if (compute_average_normal)
-					{
-						averageNormal += N;
-					}
 					const float affection = amount * std::pow(1.0f - (dist / pressure_radius), falloff);
 					sculpting_indices.push_back({ j, affection });
 				}
@@ -587,10 +587,6 @@ void PaintToolWindow::Update(float dt)
 			{
 				RecordHistory(true);
 				rebuild = true;
-				if (compute_average_normal)
-				{
-					averageNormal = XMVector3TransformNormal(XMVector3Normalize(averageNormal), XMMatrixInverse(nullptr, W));
-				}
 
 				for (auto& x : sculpting_indices)
 				{
@@ -598,19 +594,14 @@ void PaintToolWindow::Update(float dt)
 					switch (mode)
 					{
 					case MODE_SCULPTING_ADD:
-						PL += averageNormal * x.affection;
+						PL += sculptDir * x.affection;
 						break;
 					case MODE_SCULPTING_SUBTRACT:
-						PL -= averageNormal * x.affection;
+						PL -= sculptDir * x.affection;
 						break;
 					}
 					XMStoreFloat3(&mesh->vertex_positions[x.ind], PL);
 				}
-			}
-
-			if (compute_average_normal)
-			{
-				XMStoreFloat3(&sculpting_average_normal, averageNormal);
 			}
 		}
 
@@ -638,6 +629,17 @@ void PaintToolWindow::Update(float dt)
 				tri.colorC.w = 0.8f;
 				wi::renderer::DrawTriangle(tri, true);
 			}
+
+			wi::renderer::RenderableLine sculpt_dir_line;
+			sculpt_dir_line.color_start = XMFLOAT4(0, 1, 0, 1);
+			sculpt_dir_line.color_end = XMFLOAT4(0, 1, 0, 1);
+			sculpt_dir_line.start = editor->hovered.position;
+			XMStoreFloat3(
+				&sculpt_dir_line.end,
+				XMLoadFloat3(&sculpt_dir_line.start) +
+				XMVector3Normalize(XMLoadFloat3(&sculpting_normal))
+			);
+			wi::renderer::DrawLine(sculpt_dir_line);
 		}
 
 		if (rebuild)

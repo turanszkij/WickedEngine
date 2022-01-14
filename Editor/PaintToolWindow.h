@@ -20,7 +20,7 @@ class PaintToolWindow : public wi::gui::Window
 		float affection;
 	};
 	wi::vector<SculptingIndex> sculpting_indices;
-	XMFLOAT3 sculpting_average_normal = XMFLOAT3(0, 0, 0);
+	XMFLOAT3 sculpting_normal = XMFLOAT3(0, 0, 0);
 
 public:
 	void Create(EditorComponent* editor);
