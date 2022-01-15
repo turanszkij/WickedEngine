@@ -590,7 +590,7 @@ struct FrameCB
 	int			texture_voxelgi_index;
 	int			buffer_entityarray_index;
 	int			buffer_entitymatrixarray_index;
-	int	padding0;
+	float		surfelgi_boost;
 
 	ShaderScene scene;
 };

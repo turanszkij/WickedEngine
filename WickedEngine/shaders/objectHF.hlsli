@@ -905,7 +905,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 	[branch]
 	if (GetFrame().options & OPTION_BIT_SURFELGI_ENABLED && GetCamera().texture_surfelgi_index >= 0 && surfel_cellvalid(surfel_cell(surface.P)))
 	{
-		lighting.indirect.diffuse = bindless_textures[GetCamera().texture_surfelgi_index][surface.pixel].rgb;
+		lighting.indirect.diffuse = bindless_textures[GetCamera().texture_surfelgi_index][surface.pixel].rgb * GetFrame().surfelgi_boost;
 	}
 #endif // TRANSPARENT
 

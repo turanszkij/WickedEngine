@@ -96,6 +96,7 @@ bool disableAlbedoMaps = false;
 bool forceDiffuseLighting = false;
 bool SCREENSPACESHADOWS = false;
 bool SURFELGI = false;
+float SURFELGI_BOOST = 8.0f;
 SURFEL_DEBUG SURFELGI_DEBUG = SURFEL_DEBUG_NONE;
 
 
@@ -2990,6 +2991,8 @@ void UpdatePerFrameData(
 		frameCB.envprobe_mipcount = vis.scene->envmapArray.GetDesc().mip_levels;
 		frameCB.envprobe_mipcount_rcp = 1.0f / (float)frameCB.envprobe_mipcount;
 	}
+
+	frameCB.surfelgi_boost = GetSurfelGIBoost();
 
 	frameCB.temporalaa_samplerotation = 0;
 	if (GetTemporalAAEnabled())
@@ -11825,6 +11828,14 @@ void SetSurfelGIEnabled(bool value)
 bool GetSurfelGIEnabled()
 {
 	return SURFELGI;
+}
+void SetSurfelGIBoost(float value)
+{
+	SURFELGI_BOOST = value;
+}
+float GetSurfelGIBoost()
+{
+	return SURFELGI_BOOST;
 }
 void SetSurfelGIDebugEnabled(SURFEL_DEBUG value)
 {

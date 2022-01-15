@@ -332,6 +332,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		Surface surface;
 		surface.P = surfel.position;
 		surface.N = normalize(unpack_unitvector(surfel.normal));
+		const float surface_radius = surfel.GetRadius();
 
 		uint cellindex = surfel_cellindex(surfel_cell(surface.P));
 		SurfelGridCell cell = surfelGridBuffer[cellindex];
@@ -339,10 +340,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		{
 			uint surfel_index = surfelCellBuffer[cell.offset + i];
 			Surfel surfel = surfelBuffer[surfel_index];
+			const float combined_radius = surfel.GetRadius() + surface_radius;
 
 			float3 L = surfel.position - surface.P;
 			float dist2 = dot(L, L);
-			if (dist2 < sqr(surfel.GetRadius()))
+			if (dist2 < sqr(combined_radius))
 			{
 				float3 normal = normalize(unpack_unitvector(surfel.normal));
 				float dotN = dot(surface.N, normal);
@@ -351,9 +353,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 					float dist = sqrt(dist2);
 					float contribution = 1;
 					
-					//contribution *= saturate(dotN);
-					//contribution *= saturate(1 - dist / surfel.GetRadius());
-					//contribution = smoothstep(0, 1, contribution);
+					contribution *= saturate(dotN);
+					contribution *= saturate(1 - dist / combined_radius);
+					contribution = smoothstep(0, 1, contribution);
 
 					float2 moments = surfelMomentsTexturePrev.SampleLevel(sampler_linear_clamp, surfel_moment_uv(surfel_index, normal, -L / dist), 0);
 					contribution *= surfel_moment_weight(moments, dist);

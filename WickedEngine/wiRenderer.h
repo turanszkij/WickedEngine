@@ -770,6 +770,8 @@ namespace wi::renderer
 	bool GetScreenSpaceShadowsEnabled();
 	void SetSurfelGIEnabled(bool value);
 	bool GetSurfelGIEnabled();
+	void SetSurfelGIBoost(float value);
+	float GetSurfelGIBoost();
 	void SetSurfelGIDebugEnabled(SURFEL_DEBUG value);
 	SURFEL_DEBUG GetSurfelGIDebugEnabled();
 

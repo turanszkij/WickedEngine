@@ -1,6 +1,7 @@
 #define DISABLE_DECALS
 #define DISABLE_ENVMAPS
 #define DISABLE_TRANSPARENT_SHADOWMAP
+#define TRANSPARENT
 #include "globals.hlsli"
 #include "oceanSurfaceHF.hlsli"
 #include "objectHF.hlsli"
