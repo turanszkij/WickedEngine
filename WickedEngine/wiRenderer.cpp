@@ -96,7 +96,7 @@ bool disableAlbedoMaps = false;
 bool forceDiffuseLighting = false;
 bool SCREENSPACESHADOWS = false;
 bool SURFELGI = false;
-float SURFELGI_BOOST = 8.0f;
+float SURFELGI_BOOST = 1.0f;
 SURFEL_DEBUG SURFELGI_DEBUG = SURFEL_DEBUG_NONE;
 
 

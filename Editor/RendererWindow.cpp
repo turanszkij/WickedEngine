@@ -84,7 +84,7 @@ void RendererWindow::Create(EditorComponent* editor)
 	});
 	AddWidget(&surfelGIDebugComboBox);
 
-	surfelGIBoostSlider.Create(1, 10, 1.0f, 1.0f, "Surfel GI Boost: ");
+	surfelGIBoostSlider.Create(1, 10, 1.0f, 1000.0f, "Surfel GI Boost: ");
 	surfelGIBoostSlider.SetTooltip("Adjust the strength of surfel GI.\nNote that values other than 1.0 will cause mismatch with path tracing reference");
 	surfelGIBoostSlider.SetSize(XMFLOAT2(100, itemheight));
 	surfelGIBoostSlider.SetPos(XMFLOAT2(x, y += step));
