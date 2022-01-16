@@ -24,6 +24,7 @@
 #include "shaders/ShaderInterop_Postprocess.h"
 #include "shaders/ShaderInterop_Raytracing.h"
 #include "shaders/ShaderInterop_BVH.h"
+#include "shaders/ShaderInterop_DDGI.h"
 
 #include <algorithm>
 #include <array>
@@ -98,6 +99,9 @@ bool SCREENSPACESHADOWS = false;
 bool SURFELGI = false;
 float SURFELGI_BOOST = 1.0f;
 SURFEL_DEBUG SURFELGI_DEBUG = SURFEL_DEBUG_NONE;
+bool DDGI_ENABLED = true;
+bool DDGI_DEBUG_ENABLED = true;
+uint32_t DDGI_RAYCOUNT = 64u;
 
 
 struct VoxelizedSceneData
@@ -581,6 +585,7 @@ PipelineState PSO_sky[SKYRENDERING_COUNT];
 enum DEBUGRENDERING
 {
 	DEBUGRENDERING_ENVPROBE,
+	DEBUGRENDERING_DDGI,
 	DEBUGRENDERING_GRID,
 	DEBUGRENDERING_CUBE,
 	DEBUGRENDERING_LINES,
@@ -748,6 +753,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_RAYTRACE_SCREEN], "raytrace_screenVS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_POSTPROCESS], "postprocessVS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_LENSFLARE], "lensFlareVS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::VS, shaders[VSTYPE_DDGI_DEBUG], "ddgi_debugVS.cso"); });
 
 	if (device->CheckCapability(GraphicsDeviceCapability::RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS))
 	{
@@ -840,6 +846,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_POSTPROCESS_UPSAMPLE_BILATERAL], "upsample_bilateralPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_POSTPROCESS_OUTLINE], "outlinePS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_LENSFLARE], "lensFlarePS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_DDGI_DEBUG], "ddgi_debugPS.cso"); });
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_VOXELIZER], "objectGS_voxelizer.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::GS, shaders[GSTYPE_VOXEL], "voxelGS.cso"); });
@@ -997,6 +1004,15 @@ void LoadShaders()
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_RESOLVE], "visibility_resolveCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_RESOLVE_MSAA], "visibility_resolveCS_MSAA.cso"); });
+
+	if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
+	{
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_DDGI_RAYTRACE], "ddgi_raytraceCS_rtapi.cso", ShaderModel::SM_6_5); });
+	}
+	else
+	{
+		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_DDGI_RAYTRACE], "ddgi_raytraceCS.cso"); });
+	}
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::HS, shaders[HSTYPE_OBJECT], "objectHS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::HS, shaders[HSTYPE_OBJECT_PREPASS], "objectHS_prepass.cso"); });
@@ -1476,6 +1492,14 @@ void LoadShaders()
 		case DEBUGRENDERING_ENVPROBE:
 			desc.vs = &shaders[VSTYPE_SPHERE];
 			desc.ps = &shaders[PSTYPE_CUBEMAP];
+			desc.dss = &depthStencils[DSSTYPE_DEFAULT];
+			desc.rs = &rasterizers[RSTYPE_FRONT];
+			desc.bs = &blendStates[BSTYPE_OPAQUE];
+			desc.pt = PrimitiveTopology::TRIANGLELIST;
+			break;
+		case DEBUGRENDERING_DDGI:
+			desc.vs = &shaders[VSTYPE_DDGI_DEBUG];
+			desc.ps = &shaders[PSTYPE_DDGI_DEBUG];
 			desc.dss = &depthStencils[DSSTYPE_DEFAULT];
 			desc.rs = &rasterizers[RSTYPE_FRONT];
 			desc.bs = &blendStates[BSTYPE_OPAQUE];
@@ -5654,6 +5678,17 @@ void DrawDebugWorld(
 	}
 
 
+	if (GetDDGIDebugEnabled())
+	{
+		device->EventBegin("Debug DDGI", cmd);
+
+		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_DDGI], cmd);
+		device->DrawInstanced(2880, DDGI_GRID_DIMENSIONS.x* DDGI_GRID_DIMENSIONS.y* DDGI_GRID_DIMENSIONS.z, 0, 0, cmd); // uv-sphere
+
+		device->EventEnd(cmd);
+	}
+
+
 	if (gridHelper)
 	{
 		device->EventBegin("GridHelper", cmd);
@@ -7940,6 +7975,72 @@ void SurfelGI(
 			GPUBarrier barriers[] = {
 				GPUBarrier::Memory(),
 				GPUBarrier::Image(&scene.surfelMomentsTexture[1], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->EventEnd(cmd);
+	}
+
+	wi::profiler::EndRange(prof_range);
+	device->EventEnd(cmd);
+}
+
+void DDGI(
+	const wi::scene::Scene& scene,
+	wi::graphics::CommandList cmd,
+	uint8_t instanceInclusionMask
+)
+{
+	if (!scene.TLAS.IsValid() && !scene.BVH.IsValid())
+		return;
+
+	auto prof_range = wi::profiler::BeginRangeGPU("DDGI", cmd);
+	device->EventBegin("DDGI", cmd);
+
+	BindCommonResources(cmd);
+
+	// Raytracing:
+	{
+		device->EventBegin("Raytrace", cmd);
+
+		device->BindComputeShader(&shaders[CSTYPE_DDGI_RAYTRACE], cmd);
+
+		PushConstantsDDGIRaytrace push;
+		push.frameIndex = scene.ddgi_frameIndex;
+		push.instanceInclusionMask = instanceInclusionMask;
+		push.rayCount = GetDDGIRayCount();
+		device->PushConstants(&push, sizeof(push), cmd);
+
+		device->BindResource(&scene.ddgiColorTexture[0], 0, cmd);
+		device->BindResource(&scene.ddgiDepthTexture[0], 1, cmd);
+
+		const GPUResource* uavs[] = {
+			&scene.ddgiColorTexture[1],
+			&scene.ddgiDepthTexture[1],
+		};
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Image(&scene.ddgiColorTexture[1], ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS),
+				GPUBarrier::Image(&scene.ddgiDepthTexture[1], ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->Dispatch(
+			(DDGI_GRID_DIMENSIONS.x + 3u) / 4u,
+			(DDGI_GRID_DIMENSIONS.y + 3u) / 4u,
+			(DDGI_GRID_DIMENSIONS.z + 3u) / 4u,
+			cmd
+		);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(),
+				GPUBarrier::Image(&scene.ddgiColorTexture[1], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
+				GPUBarrier::Image(&scene.ddgiDepthTexture[1], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -11844,6 +11945,30 @@ void SetSurfelGIDebugEnabled(SURFEL_DEBUG value)
 SURFEL_DEBUG GetSurfelGIDebugEnabled()
 {
 	return SURFELGI_DEBUG;
+}
+void SetDDGIEnabled(bool value)
+{
+	DDGI_ENABLED = value;
+}
+bool GetDDGIEnabled()
+{
+	return DDGI_ENABLED;
+}
+void SetDDGIDebugEnabled(bool value)
+{
+	DDGI_DEBUG_ENABLED = value;
+}
+bool GetDDGIDebugEnabled()
+{
+	return DDGI_DEBUG_ENABLED;
+}
+void SetDDGIRayCount(uint32_t value)
+{
+	DDGI_RAYCOUNT = value;
+}
+uint32_t GetDDGIRayCount()
+{
+	return DDGI_RAYCOUNT;
 }
 
 }

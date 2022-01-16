@@ -10,7 +10,7 @@ void RendererWindow::Create(EditorComponent* editor)
 	wi::renderer::SetToDrawGridHelper(true);
 	wi::renderer::SetToDrawDebugCameras(true);
 
-	SetSize(XMFLOAT2(580, 550));
+	SetSize(XMFLOAT2(580, 600));
 
 	float x = 220, y = 5, step = 20, itemheight = 18;
 
@@ -93,6 +93,36 @@ void RendererWindow::Create(EditorComponent* editor)
 		wi::renderer::SetSurfelGIBoost(args.fValue);
 		});
 	AddWidget(&surfelGIBoostSlider);
+
+	ddgiCheckBox.Create("DDGI: ");
+	ddgiCheckBox.SetTooltip("Toggle Dynamic Diffuse Global Illumination (DDGI).");
+	ddgiCheckBox.SetPos(XMFLOAT2(x, y += step));
+	ddgiCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
+	ddgiCheckBox.OnClick([](wi::gui::EventArgs args) {
+		wi::renderer::SetDDGIEnabled(args.bValue);
+		});
+	ddgiCheckBox.SetCheck(wi::renderer::GetDDGIEnabled());
+	AddWidget(&ddgiCheckBox);
+
+	ddgiDebugCheckBox.Create("DEBUG: ");
+	ddgiDebugCheckBox.SetTooltip("Toggle DDGI probe visualization.");
+	ddgiDebugCheckBox.SetPos(XMFLOAT2(x + 122, y));
+	ddgiDebugCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
+	ddgiDebugCheckBox.OnClick([](wi::gui::EventArgs args) {
+		wi::renderer::SetDDGIDebugEnabled(args.bValue);
+		});
+	ddgiDebugCheckBox.SetCheck(wi::renderer::GetDDGIDebugEnabled());
+	AddWidget(&ddgiDebugCheckBox);
+
+	ddgiRayCountSlider.Create(16, 256, 64, 256-16, "DDGI RayCount: ");
+	ddgiRayCountSlider.SetTooltip("Adjust the ray count per DDGI probe.");
+	ddgiRayCountSlider.SetSize(XMFLOAT2(100, itemheight));
+	ddgiRayCountSlider.SetPos(XMFLOAT2(x, y += step));
+	ddgiRayCountSlider.SetValue((float)wi::renderer::GetDDGIRayCount());
+	ddgiRayCountSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::renderer::SetDDGIRayCount((uint32_t)args.iValue);
+		});
+	AddWidget(&ddgiRayCountSlider);
 
 	voxelRadianceCheckBox.Create("Voxel GI: ");
 	voxelRadianceCheckBox.SetTooltip("Toggle voxel Global Illumination computation.");

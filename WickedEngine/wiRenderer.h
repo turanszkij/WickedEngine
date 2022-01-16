@@ -342,6 +342,12 @@ namespace wi::renderer
 		uint8_t instanceInclusionMask = 0xFF
 	);
 
+	void DDGI(
+		const wi::scene::Scene& scene,
+		wi::graphics::CommandList cmd,
+		uint8_t instanceInclusionMask = 0xFF
+	);
+
 	void Postprocess_Blur_Gaussian(
 		const wi::graphics::Texture& input,
 		const wi::graphics::Texture& temp,
@@ -774,6 +780,12 @@ namespace wi::renderer
 	float GetSurfelGIBoost();
 	void SetSurfelGIDebugEnabled(SURFEL_DEBUG value);
 	SURFEL_DEBUG GetSurfelGIDebugEnabled();
+	void SetDDGIEnabled(bool value);
+	bool GetDDGIEnabled();
+	void SetDDGIDebugEnabled(bool value);
+	bool GetDDGIDebugEnabled();
+	void SetDDGIRayCount(uint32_t value);
+	uint32_t GetDDGIRayCount();
 
 	// Gets pick ray according to the current screen resolution and pointer coordinates. Can be used as input into RayIntersectWorld()
 	wi::primitive::Ray GetPickRay(long cursorX, long cursorY, const wi::Canvas& canvas, const wi::scene::CameraComponent& camera = wi::scene::GetCamera());

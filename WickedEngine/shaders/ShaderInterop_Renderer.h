@@ -11,9 +11,9 @@ struct ShaderScene
 	int envmaparray;
 
 	int globalenvmap;
+	int ddgi_color_texture;
+	int ddgi_depth_texture;
 	int padding0;
-	int padding1;
-	int padding2;
 
 	int TLAS;
 	int BVH_counter;

@@ -21,6 +21,7 @@
 #include "brdf.hlsli"
 #include "lightingHF.hlsli"
 #include "ShaderInterop_SurfelGI.h"
+#include "ShaderInterop_DDGI.h"
 
 // DEFINITIONS
 //////////////////
@@ -908,6 +909,12 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 		lighting.indirect.diffuse = bindless_textures[GetCamera().texture_surfelgi_index][surface.pixel].rgb * GetFrame().surfelgi_boost;
 	}
 #endif // TRANSPARENT
+
+	[branch]
+	if (GetScene().ddgi_color_texture >= 0)
+	{
+		lighting.indirect.diffuse = ddgi_sample_irradiance(surface.P, surface.N);
+	}
 
 }
 

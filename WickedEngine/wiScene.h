@@ -1333,6 +1333,10 @@ namespace wi::scene
 		wi::graphics::GPUBuffer surfelCellBuffer;
 		wi::graphics::Texture surfelMomentsTexture[2];
 
+		// DDGI resources:
+		uint ddgi_frameIndex = 0;
+		wi::graphics::Texture ddgiColorTexture[2];
+		wi::graphics::Texture ddgiDepthTexture[2];
 
 		// Environment probe cubemap array state:
 		static constexpr uint32_t envmapCount = 16;

@@ -523,6 +523,7 @@ void RenderPath3D::Update(float dt)
 	if (getSceneUpdateEnabled())
 	{
 		if (wi::renderer::GetSurfelGIEnabled() ||
+			wi::renderer::GetDDGIEnabled() ||
 			wi::renderer::GetRaytracedShadowsEnabled() ||
 			getAO() == AO_RTAO ||
 			getRaytracedReflectionEnabled())
@@ -694,6 +695,15 @@ void RenderPath3D::Render() const
 				*scene,
 				cmd,
 				instanceInclusionMask_SurfelGI
+			);
+		}
+
+		if (wi::renderer::GetDDGIEnabled())
+		{
+			wi::renderer::DDGI(
+				*scene,
+				cmd,
+				instanceInclusionMask_DDGI
 			);
 		}
 

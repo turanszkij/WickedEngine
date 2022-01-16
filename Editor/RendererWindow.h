@@ -30,6 +30,9 @@ public:
 	wi::gui::CheckBox surfelGICheckBox;
 	wi::gui::ComboBox surfelGIDebugComboBox;
 	wi::gui::Slider surfelGIBoostSlider;
+	wi::gui::CheckBox ddgiCheckBox;
+	wi::gui::CheckBox ddgiDebugCheckBox;
+	wi::gui::Slider ddgiRayCountSlider;
 	wi::gui::CheckBox voxelRadianceCheckBox;
 	wi::gui::CheckBox voxelRadianceDebugCheckBox;
 	wi::gui::CheckBox voxelRadianceSecondaryBounceCheckBox;

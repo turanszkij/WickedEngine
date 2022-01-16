@@ -13,6 +13,7 @@
 #include "wiUnorderedMap.h"
 
 #include "shaders/ShaderInterop_SurfelGI.h"
+#include "shaders/ShaderInterop_DDGI.h"
 
 using namespace wi::ecs;
 using namespace wi::enums;
@@ -1761,6 +1762,42 @@ namespace wi::scene
 			std::swap(surfelMomentsTexture[0], surfelMomentsTexture[1]);
 		}
 
+		if (wi::renderer::GetDDGIEnabled())
+		{
+			ddgi_frameIndex++;
+			if (!ddgiColorTexture[0].IsValid())
+			{
+				ddgi_frameIndex = 0;
+
+				TextureDesc tex;
+				tex.width = DDGI_COLOR_TEXTURE_WIDTH;
+				tex.height = DDGI_COLOR_TEXTURE_HEIGHT;
+				tex.format = Format::R11G11B10_FLOAT;
+				tex.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+				device->CreateTexture(&tex, nullptr, &ddgiColorTexture[0]);
+				device->SetName(&ddgiColorTexture[0], "ddgiColorTexture[0]");
+				device->CreateTexture(&tex, nullptr, &ddgiColorTexture[1]);
+				device->SetName(&ddgiColorTexture[1], "ddgiColorTexture[1]");
+
+				tex.width = DDGI_DEPTH_TEXTURE_WIDTH;
+				tex.height = DDGI_DEPTH_TEXTURE_HEIGHT;
+				tex.format = Format::R16G16_FLOAT;
+				tex.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+				device->CreateTexture(&tex, nullptr, &ddgiDepthTexture[0]);
+				device->SetName(&ddgiDepthTexture[0], "ddgiDepthTexture[0]");
+				device->CreateTexture(&tex, nullptr, &ddgiDepthTexture[1]);
+				device->SetName(&ddgiDepthTexture[1], "ddgiDepthTexture[1]");
+			}
+			std::swap(ddgiColorTexture[0], ddgiColorTexture[1]);
+			std::swap(ddgiDepthTexture[0], ddgiDepthTexture[1]);
+		}
+		else if (ddgiColorTexture[0].IsValid())
+		{
+			ddgiColorTexture[0] = {};
+			ddgiColorTexture[1] = {};
+			ddgiDepthTexture[0] = {};
+			ddgiDepthTexture[1] = {};
+		}
 
 		// Shader scene resources:
 		shaderscene.instancebuffer = device->GetDescriptorIndex(&instanceBuffer, SubresourceType::SRV);
@@ -1775,6 +1812,8 @@ namespace wi::scene
 		{
 			shaderscene.globalenvmap = -1;
 		}
+		shaderscene.ddgi_color_texture = device->GetDescriptorIndex(&ddgiColorTexture[0], SubresourceType::SRV);
+		shaderscene.ddgi_depth_texture = device->GetDescriptorIndex(&ddgiDepthTexture[0], SubresourceType::SRV);
 		shaderscene.TLAS = device->GetDescriptorIndex(&TLAS, SubresourceType::SRV);
 		shaderscene.BVH_counter = device->GetDescriptorIndex(&BVH.primitiveCounterBuffer, SubresourceType::SRV);
 		shaderscene.BVH_nodes = device->GetDescriptorIndex(&BVH.bvhNodeBuffer, SubresourceType::SRV);
