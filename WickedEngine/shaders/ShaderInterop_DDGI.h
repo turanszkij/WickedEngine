@@ -100,7 +100,7 @@ float3 ddgi_sample_irradiance(float3 P, float3 N)
 		// then samples can pass through thin occluders to the other
 		// side (this can only happen if there are MULTIPLE occluders
 		// near each other, a wall surface won't pass through itself.)
-		float3 probe_to_point = P - probe_pos + N * 0.0001;
+		float3 probe_to_point = P - probe_pos;
 		float3 dir = normalize(-probe_to_point);
 
 		// Compute the trilinear weights based on the grid cell vertex to smoothly
@@ -135,7 +135,9 @@ float3 ddgi_sample_irradiance(float3 P, float3 N)
 		}
 
 		// Moment visibility test
-#if 0
+#if 1
+		[branch]
+		if(GetScene().ddgi_depth_texture >= 0)
 		{
 			//float2 tex_coord = texture_coord_from_direction(-dir, p, ddgi.depth_texture_width, ddgi.depth_texture_height, ddgi.depth_probe_side_length);
 			float2 tex_coord = ddgi_probe_depth_uv(probe_grid_coord, -dir);
@@ -191,21 +193,22 @@ float3 ddgi_sample_irradiance(float3 P, float3 N)
 		sum_weight += weight;
 	}
 
-	float3 net_irradiance = sum_irradiance / sum_weight;
+	if (sum_weight > 0)
+	{
+		float3 net_irradiance = sum_irradiance / sum_weight;
 
-	net_irradiance.x = isnan(net_irradiance.x) ? 0.5f : net_irradiance.x;
-	net_irradiance.y = isnan(net_irradiance.y) ? 0.5f : net_irradiance.y;
-	net_irradiance.z = isnan(net_irradiance.z) ? 0.5f : net_irradiance.z;
-
-	// Go back to linear irradiance
+		// Go back to linear irradiance
 #ifndef DDGI_LINEAR_BLENDING
-	net_irradiance = sqr(net_irradiance);
+		net_irradiance = sqr(net_irradiance);
 #endif
 
-	net_irradiance *= 0.95; // energy preservation
+		net_irradiance *= 0.95; // energy preservation
 
-	//return net_irradiance;
-	return 0.5f * PI * net_irradiance;
+		//return net_irradiance;
+		return 0.5f * PI * net_irradiance;
+	}
+
+	return 0;
 }
 
 // Border offsets from: https://github.com/diharaw/hybrid-rendering/blob/master/src/shaders/gi/gi_border_update.glsl

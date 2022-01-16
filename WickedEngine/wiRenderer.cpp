@@ -8012,22 +8012,11 @@ void DDGI(
 		push.rayCount = GetDDGIRayCount();
 		device->PushConstants(&push, sizeof(push), cmd);
 
-		device->BindResource(&scene.ddgiColorTexture[0], 0, cmd);
-		device->BindResource(&scene.ddgiDepthTexture[0], 1, cmd);
-
 		const GPUResource* uavs[] = {
 			&scene.ddgiColorTexture[1],
 			&scene.ddgiDepthTexture[1],
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&scene.ddgiColorTexture[1], ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS),
-				GPUBarrier::Image(&scene.ddgiDepthTexture[1], ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
 
 		device->Dispatch(
 			(DDGI_GRID_DIMENSIONS.x + 3u) / 4u,
@@ -8035,15 +8024,6 @@ void DDGI(
 			(DDGI_GRID_DIMENSIONS.z + 3u) / 4u,
 			cmd
 		);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-				GPUBarrier::Image(&scene.ddgiColorTexture[1], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
-				GPUBarrier::Image(&scene.ddgiDepthTexture[1], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
 
 		device->EventEnd(cmd);
 	}

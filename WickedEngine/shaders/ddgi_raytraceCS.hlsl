@@ -12,13 +12,14 @@ RWTexture2D<float2> ddgiDepthTextureRW : register(u1);
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	Texture2D ddgiColorTextureRO = bindless_textures[GetScene().ddgi_color_texture];
-	Texture2D ddgiDepthTextureRO = bindless_textures[GetScene().ddgi_color_texture];
+	Texture2D ddgiDepthTextureRO = bindless_textures[GetScene().ddgi_depth_texture];
 
 	const uint3 probeCoord = DTid.xyz;
+	const uint probeIndex = ddgi_probe_index(probeCoord);
 	const float3 probePos = ddgi_probe_position(probeCoord);
 	const float3 cellSize = ddgi_cellsize();
-	const float maxDepth = 1;
-	const float blend_speed = 0.005;
+	const float maxDepth = length(cellSize);
+	const float blend_speed = 0.05;
 
 	// Initialize current color texture:
 	const uint2 pixel_topleft_color = ddgi_probe_color_pixel(probeCoord);
@@ -50,7 +51,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				uint2 coord = pixel_topleft_depth + uint2(x, y);
 				if (push.frameIndex == 0)
 				{
-					ddgiDepthTextureRW[coord] = FLT_MAX;
+					ddgiDepthTextureRW[coord] = float2(maxDepth, sqr(maxDepth));
 				}
 				else
 				{
@@ -61,7 +62,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	}
 
 	float seed = 0.123456;
-	float2 uv = float2(frac(GetFrame().frame_count.x / 4096.0), flatten3D(probeCoord, DDGI_GRID_DIMENSIONS));
+	float2 uv = float2(frac(GetFrame().frame_count.x / 4096.0), probeIndex);
 
 	for (uint i = 0; i < push.rayCount; ++i)
 	{
@@ -69,8 +70,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		ray.Origin = probePos;
 		ray.TMin = 0.0001;
 		ray.TMax = FLT_MAX;
-		//ray.Direction = normalize(decode_oct(float2(rand(seed, uv), rand(seed, uv)) * 2 - 1));
-		ray.Direction = normalize(float3(rand(seed, uv), rand(seed, uv), rand(seed, uv)) * 2 - 1);
+		ray.Direction = normalize(decode_oct(float2(rand(seed, uv), rand(seed, uv)) * 2 - 1));
+		//ray.Direction = normalize(float3(rand(seed, uv), rand(seed, uv), rand(seed, uv)) * 2 - 1);
 
 		const float2 oct_uv = encode_oct(ray.Direction) * 0.5 + 0.5;
 		const uint2 coord_color = pixel_topleft_color + oct_uv * DDGI_COLOR_RESOLUTION;
@@ -288,14 +289,17 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 #endif
 
-			hit_result += ddgi_sample_irradiance(surface.P, surface.facenormal);
+			if (push.frameIndex > 0)
+			{
+				//hit_result += ddgi_sample_irradiance(surface.P, surface.facenormal);
+			}
 			
 			hit_result *= surface.albedo;
 			hit_result += max(0, surface.emissiveColor);
 
 			ddgiColorTextureRW[coord_color] = lerp(ddgiColorTextureRW[coord_color], hit_result, blend_speed);
 
-			hit_depth = clamp(hit_depth, 0, maxDepth);
+			hit_depth = clamp(hit_depth, 0.0001, maxDepth);
 			ddgiDepthTextureRW[coord_depth] = lerp(ddgiDepthTextureRW[coord_depth].xy, float2(hit_depth, sqr(hit_depth)), blend_speed);
 
 		}
