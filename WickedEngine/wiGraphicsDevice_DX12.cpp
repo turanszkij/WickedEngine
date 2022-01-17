@@ -1415,6 +1415,7 @@ namespace dx12_internal
 				CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS Formats;
 				CD3DX12_PIPELINE_STATE_STREAM_SAMPLE_DESC SampleDesc;
 				CD3DX12_PIPELINE_STATE_STREAM_SAMPLE_MASK SampleMask;
+				CD3DX12_PIPELINE_STATE_STREAM_CACHED_PSO  CachedPSO;
 			} stream1 = {};
 
 			struct PSO_STREAM2
@@ -1548,6 +1549,29 @@ namespace dx12_internal
 	SwapChain_DX12* to_internal(const SwapChain* param)
 	{
 		return static_cast<SwapChain_DX12*>(param->internal_state.get());
+	}
+
+	inline const std::string GetCachePath()
+	{
+		return wi::helper::GetTempDirectoryPath() + "WickedD3D12PipelineCache.data";
+	}
+
+	inline void HashToName(uint64_t hash, std::wstring& name)
+	{
+		static const wchar_t s_hexValues[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
+
+		const size_t nibbleCount = sizeof(hash) * 2;
+		const size_t nibbleSize = 4;
+
+		name.resize(nibbleCount);
+
+		for (size_t nibbleIndex = 0; nibbleIndex < nibbleCount; ++nibbleIndex)
+		{
+			uint64_t nibble = hash;
+			nibble >>= (nibbleIndex * nibbleSize);
+			nibble &= 0xF;
+			name[nibbleCount - nibbleIndex - 1] = s_hexValues[nibble];
+		}
 	}
 }
 using namespace dx12_internal;
@@ -2059,7 +2083,23 @@ using namespace dx12_internal;
 				}
 
 				ComPtr<ID3D12PipelineState> newpso;
+#if defined(WICKED_DX12_USE_PIPELINE_LIBRARY)
+				std::wstring name;
+				HashToName(pipeline_hash, name);
+
+				HRESULT hr = pipelineLibrary->LoadPipeline(name.c_str(), &streamDesc, IID_PPV_ARGS(&newpso));
+				if (hr == E_INVALIDARG)
+				{
+					hr = device->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&newpso));
+
+					if (SUCCEEDED(hr))
+					{
+						hr = pipelineLibrary->StorePipeline(name.c_str(), newpso.Get());
+					}
+				}
+#else
 				HRESULT hr = device->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&newpso));
+#endif
 				assert(SUCCEEDED(hr));
 
 				commandlist.pipelines_worker.push_back(std::make_pair(pipeline_hash, newpso));
@@ -2319,6 +2359,12 @@ using namespace dx12_internal;
 					//D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,
 					//D3D12_MESSAGE_ID_EXECUTECOMMANDLISTS_WRONGSWAPCHAINBUFFERREFERENCE,
 					D3D12_MESSAGE_ID_SETPRIVATEDATA_CHANGINGPARAMS,
+					D3D12_MESSAGE_ID_RESOURCE_BARRIER_MISMATCHING_COMMAND_LIST_TYPE,
+#if defined(WICKED_DX12_USE_PIPELINE_LIBRARY)
+					D3D12_MESSAGE_ID_CREATEPIPELINELIBRARY_DRIVERVERSIONMISMATCH,
+					D3D12_MESSAGE_ID_CREATEPIPELINELIBRARY_ADAPTERVERSIONMISMATCH,
+					D3D12_MESSAGE_ID_LOADPIPELINE_NAMENOTFOUND,
+#endif
 					// Add more message IDs here as needed
 				};
 
@@ -2566,6 +2612,36 @@ using namespace dx12_internal;
 			wi::platform::Exit();
 		}
 
+		// Create pipeline library:
+#if defined(WICKED_DX12_USE_PIPELINE_LIBRARY)
+		// Try to read pipeline cache file if exists.
+		wi::vector<uint8_t> pipelineData;
+
+		std::string cachePath = GetCachePath();
+		if (!wi::helper::FileRead(cachePath, pipelineData))
+		{
+			pipelineData.clear();
+		}
+
+		hr = device->CreatePipelineLibrary(pipelineData.data(), pipelineData.size(), IID_PPV_ARGS(&pipelineLibrary));
+		switch (hr)
+		{
+			case DXGI_ERROR_UNSUPPORTED: // The driver doesn't support Pipeline libraries. WDDM2.1 drivers must support it.
+				break;
+
+			case E_INVALIDARG: // The provided Library is corrupted or unrecognized.
+			case D3D12_ERROR_ADAPTER_NOT_FOUND: // The provided Library contains data for different hardware (Don't really need to clear the cache, could have a cache per adapter).
+			case D3D12_ERROR_DRIVER_VERSION_MISMATCH: // The provided Library contains data from an old driver or runtime. We need to re-create it.
+				hr = device->CreatePipelineLibrary(nullptr, 0, IID_PPV_ARGS(&pipelineLibrary));
+				assert(SUCCEEDED(hr));
+				break;
+
+			default:
+				assert(SUCCEEDED(hr));
+				break;
+		}
+#endif
+
 		// Create common indirect command signatures:
 
 		D3D12_COMMAND_SIGNATURE_DESC cmd_desc = {};
@@ -2727,6 +2803,18 @@ using namespace dx12_internal;
 	GraphicsDevice_DX12::~GraphicsDevice_DX12()
 	{
 		WaitForGPU();
+
+#if defined(WICKED_DX12_USE_PIPELINE_LIBRARY)
+		std::vector<uint8_t> serializedData(pipelineLibrary->GetSerializedSize());
+		HRESULT hr = pipelineLibrary->Serialize(serializedData.data(), serializedData.size());
+		if (SUCCEEDED(hr))
+		{
+			// Write pipeline cache data to a file in binary format
+			std::string cachePath = GetCachePath();
+			wi::helper::FileWrite(cachePath, serializedData.data(), serializedData.size());
+		}
+#endif
+
 		copyAllocator.destroy();
 	}
 
