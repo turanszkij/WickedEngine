@@ -407,8 +407,15 @@ namespace wi
 		// User can also create a graphics device if custom logic is desired, but they must do before this function!
 		if (graphicsDevice == nullptr)
 		{
-			bool debugdevice = wi::arguments::HasArgument("debugdevice");
-			bool gpuvalidation = wi::arguments::HasArgument("gpuvalidation");
+			ValidationMode validationMode = ValidationMode::Disabled;
+			if (wi::arguments::HasArgument("debugdevice"))
+			{
+				validationMode = ValidationMode::Enabled;
+			}
+			if (wi::arguments::HasArgument("gpuvalidation"))
+			{
+				validationMode = ValidationMode::GPU;
+			}
 
 			bool use_dx12 = wi::arguments::HasArgument("dx12");
 			bool use_vulkan = wi::arguments::HasArgument("vulkan");
@@ -443,14 +450,14 @@ namespace wi
 			{
 #ifdef WICKEDENGINE_BUILD_VULKAN
 				wi::renderer::SetShaderPath(wi::renderer::GetShaderPath() + "spirv/");
-				graphicsDevice = std::make_unique<GraphicsDevice_Vulkan>(window, debugdevice);
+				graphicsDevice = std::make_unique<GraphicsDevice_Vulkan>(window, validationMode);
 #endif
 			}
 			else if (use_dx12)
 			{
 #ifdef WICKEDENGINE_BUILD_DX12
 				wi::renderer::SetShaderPath(wi::renderer::GetShaderPath() + "hlsl6/");
-				graphicsDevice = std::make_unique<GraphicsDevice_DX12>(debugdevice, gpuvalidation);
+				graphicsDevice = std::make_unique<GraphicsDevice_DX12>(validationMode);
 #endif
 			}
 		}

@@ -1415,7 +1415,6 @@ namespace dx12_internal
 				CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS Formats;
 				CD3DX12_PIPELINE_STATE_STREAM_SAMPLE_DESC SampleDesc;
 				CD3DX12_PIPELINE_STATE_STREAM_SAMPLE_MASK SampleMask;
-				CD3DX12_PIPELINE_STATE_STREAM_CACHED_PSO  CachedPSO;
 			} stream1 = {};
 
 			struct PSO_STREAM2
@@ -2138,7 +2137,7 @@ using namespace dx12_internal;
 
 
 	// Engine functions
-	GraphicsDevice_DX12::GraphicsDevice_DX12(bool debuglayer, bool gpuvalidation)
+	GraphicsDevice_DX12::GraphicsDevice_DX12(ValidationMode validationMode_)
 	{
 		wi::Timer timer;
 
@@ -2146,7 +2145,7 @@ using namespace dx12_internal;
 		SHADER_IDENTIFIER_SIZE = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
 		TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
 
-		DEBUGDEVICE = debuglayer;
+		validationMode = validationMode_;
 
 #ifndef PLATFORM_UWP
 		HMODULE dxgi = LoadLibraryEx(L"dxgi.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
@@ -2178,7 +2177,7 @@ using namespace dx12_internal;
 		}
 
 #ifdef _DEBUG
-		if (debuglayer)
+		if (validationMode != ValidationMode::Disabled)
 		{
 			DXGIGetDebugInterface1 = (PFN_DXGI_GET_DEBUG_INTERFACE1)wiGetProcAddress(dxgi, "DXGIGetDebugInterface1");
 			assert(DXGIGetDebugInterface1 != nullptr);
@@ -2207,7 +2206,7 @@ using namespace dx12_internal;
 #endif // PLATFORM_UWP
 
 #if !defined(PLATFORM_UWP)
-		if (debuglayer)
+		if (validationMode != ValidationMode::Disabled)
 		{
 			// Enable the debug layer.
 			auto D3D12GetDebugInterface = (PFN_D3D12_GET_DEBUG_INTERFACE)wiGetProcAddress(dx12, "D3D12GetDebugInterface");
@@ -2217,7 +2216,7 @@ using namespace dx12_internal;
 				if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&d3dDebug))))
 				{
 					d3dDebug->EnableDebugLayer();
-					if (gpuvalidation)
+					if (validationMode == ValidationMode::GPU)
 					{
 						ComPtr<ID3D12Debug1> d3dDebug1;
 						if (SUCCEEDED(d3dDebug.As(&d3dDebug1)))
@@ -2251,7 +2250,7 @@ using namespace dx12_internal;
 
 		HRESULT hr;
 
-		hr = CreateDXGIFactory2(debuglayer ? DXGI_CREATE_FACTORY_DEBUG : 0u, IID_PPV_ARGS(&dxgiFactory));
+		hr = CreateDXGIFactory2((validationMode != ValidationMode::Disabled) ? DXGI_CREATE_FACTORY_DEBUG : 0u, IID_PPV_ARGS(&dxgiFactory));
 		if (FAILED(hr))
 		{
 			std::stringstream ss("");
@@ -2341,7 +2340,7 @@ using namespace dx12_internal;
 			wi::platform::Exit();
 		}
 
-		if (debuglayer)
+		if (validationMode != ValidationMode::Disabled)
 		{
 			// Configure debug device (if active).
 			ComPtr<ID3D12InfoQueue> d3dInfoQueue;

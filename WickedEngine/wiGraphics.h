@@ -14,6 +14,16 @@ namespace wi::graphics
 	struct GPUBuffer;
 	struct Texture;
 
+	enum class ValidationMode
+	{
+		/// No validation is enabled.
+		Disabled,
+		/// Print warnings and errors
+		Enabled,
+		/// Enable GPU-based validation
+		GPU
+	};
+
 	enum class ShaderStage
 	{
 		MS,		// Mesh Shader

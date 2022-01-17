@@ -50,7 +50,7 @@ namespace wi::graphics
 	protected:
 		static const uint32_t BUFFERCOUNT = 2;
 		uint64_t FRAMECOUNT = 0;
-		bool DEBUGDEVICE = false;
+		ValidationMode validationMode = ValidationMode::Disabled;
 		GraphicsDeviceCapability capabilities = GraphicsDeviceCapability::NONE;
 		size_t SHADER_IDENTIFIER_SIZE = 0;
 		size_t TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = 0;
@@ -116,7 +116,7 @@ namespace wi::graphics
 		constexpr uint32_t GetBufferIndex() const { return GetFrameCount() % BUFFERCOUNT; }
 
 		// Returns whether the graphics debug layer is enabled. It can be enabled when creating the device.
-		constexpr bool IsDebugDevice() const { return DEBUGDEVICE; }
+		constexpr bool IsDebugDevice() const { return validationMode != ValidationMode::Disabled; }
 
 		constexpr size_t GetShaderIdentifierSize() const { return SHADER_IDENTIFIER_SIZE; }
 		constexpr size_t GetTopLevelAccelerationStructureInstanceSize() const { return TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE; }

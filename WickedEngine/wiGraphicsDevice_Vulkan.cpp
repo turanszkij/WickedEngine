@@ -2250,13 +2250,13 @@ using namespace vulkan_internal;
 	}
 
 	// Engine functions
-	GraphicsDevice_Vulkan::GraphicsDevice_Vulkan(wi::platform::window_type window, bool debuglayer)
+	GraphicsDevice_Vulkan::GraphicsDevice_Vulkan(wi::platform::window_type window, ValidationMode validationMode_)
 	{
 		wi::Timer timer;
 
 		TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = sizeof(VkAccelerationStructureInstanceKHR);
 
-		DEBUGDEVICE = debuglayer;
+		validationMode = validationMode_;
 
 		VkResult res;
 
@@ -2330,7 +2330,7 @@ using namespace vulkan_internal;
 		}
 #endif // _WIN32
 		
-		if (debuglayer)
+		if (validationMode != ValidationMode::Disabled)
 		{
 			// Determine the optimal validation layers to enable that are necessary for useful debugging
 			static const wi::vector<const char*> validationLayerPriorityList[] =
@@ -2379,7 +2379,7 @@ using namespace vulkan_internal;
 
 			VkDebugUtilsMessengerCreateInfoEXT debugUtilsCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
 
-			if (debuglayer && debugUtils)
+			if (validationMode != ValidationMode::Disabled && debugUtils)
 			{
 				debugUtilsCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
 				debugUtilsCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
@@ -2397,7 +2397,7 @@ using namespace vulkan_internal;
 
 			volkLoadInstanceOnly(instance);
 
-			if (debuglayer && debugUtils)
+			if (validationMode != ValidationMode::Disabled && debugUtils)
 			{
 				res = vkCreateDebugUtilsMessengerEXT(instance, &debugUtilsCreateInfo, nullptr, &debugUtilsMessenger);
 				assert(res == VK_SUCCESS);
