@@ -15,7 +15,7 @@
 #endif
 
 /* VOLK_GENERATE_VERSION_DEFINE */
-#define VOLK_HEADER_VERSION 184
+#define VOLK_HEADER_VERSION 198
 /* VOLK_GENERATE_VERSION_DEFINE */
 
 #ifndef VK_NO_PROTOTYPES
@@ -51,9 +51,12 @@
 #	endif
 #endif
 
-/* Disable VK_NVX_image_view_handle because SDK 140 introduced a change that can't be used with prior versions */
+/* Disable several extensions on earlier SDKs because later SDKs introduce a backwards incompatible change to function signatures */
 #if VK_HEADER_VERSION < 140
 #	undef VK_NVX_image_view_handle
+#endif
+#if VK_HEADER_VERSION < 184
+#	undef VK_HUAWEI_subpass_shading
 #endif
 
 #ifdef __cplusplus
@@ -372,6 +375,9 @@ struct VolkDeviceTable
 	PFN_vkCmdDrawMultiEXT vkCmdDrawMultiEXT;
 	PFN_vkCmdDrawMultiIndexedEXT vkCmdDrawMultiIndexedEXT;
 #endif /* defined(VK_EXT_multi_draw) */
+#if defined(VK_EXT_pageable_device_local_memory)
+	PFN_vkSetDeviceMemoryPriorityEXT vkSetDeviceMemoryPriorityEXT;
+#endif /* defined(VK_EXT_pageable_device_local_memory) */
 #if defined(VK_EXT_private_data)
 	PFN_vkCreatePrivateDataSlotEXT vkCreatePrivateDataSlotEXT;
 	PFN_vkDestroyPrivateDataSlotEXT vkDestroyPrivateDataSlotEXT;
@@ -398,6 +404,13 @@ struct VolkDeviceTable
 #if defined(VK_EXT_vertex_input_dynamic_state)
 	PFN_vkCmdSetVertexInputEXT vkCmdSetVertexInputEXT;
 #endif /* defined(VK_EXT_vertex_input_dynamic_state) */
+#if defined(VK_FUCHSIA_buffer_collection)
+	PFN_vkCreateBufferCollectionFUCHSIA vkCreateBufferCollectionFUCHSIA;
+	PFN_vkDestroyBufferCollectionFUCHSIA vkDestroyBufferCollectionFUCHSIA;
+	PFN_vkGetBufferCollectionPropertiesFUCHSIA vkGetBufferCollectionPropertiesFUCHSIA;
+	PFN_vkSetBufferCollectionBufferConstraintsFUCHSIA vkSetBufferCollectionBufferConstraintsFUCHSIA;
+	PFN_vkSetBufferCollectionImageConstraintsFUCHSIA vkSetBufferCollectionImageConstraintsFUCHSIA;
+#endif /* defined(VK_FUCHSIA_buffer_collection) */
 #if defined(VK_FUCHSIA_external_memory)
 	PFN_vkGetMemoryZirconHandleFUCHSIA vkGetMemoryZirconHandleFUCHSIA;
 	PFN_vkGetMemoryZirconHandlePropertiesFUCHSIA vkGetMemoryZirconHandlePropertiesFUCHSIA;
@@ -410,6 +423,9 @@ struct VolkDeviceTable
 	PFN_vkGetPastPresentationTimingGOOGLE vkGetPastPresentationTimingGOOGLE;
 	PFN_vkGetRefreshCycleDurationGOOGLE vkGetRefreshCycleDurationGOOGLE;
 #endif /* defined(VK_GOOGLE_display_timing) */
+#if defined(VK_HUAWEI_invocation_mask)
+	PFN_vkCmdBindInvocationMaskHUAWEI vkCmdBindInvocationMaskHUAWEI;
+#endif /* defined(VK_HUAWEI_invocation_mask) */
 #if defined(VK_HUAWEI_subpass_shading)
 	PFN_vkCmdSubpassShadingHUAWEI vkCmdSubpassShadingHUAWEI;
 	PFN_vkGetDeviceSubpassShadingMaxWorkgroupSizeHUAWEI vkGetDeviceSubpassShadingMaxWorkgroupSizeHUAWEI;
@@ -490,6 +506,10 @@ struct VolkDeviceTable
 	PFN_vkCmdDrawIndexedIndirectCountKHR vkCmdDrawIndexedIndirectCountKHR;
 	PFN_vkCmdDrawIndirectCountKHR vkCmdDrawIndirectCountKHR;
 #endif /* defined(VK_KHR_draw_indirect_count) */
+#if defined(VK_KHR_dynamic_rendering)
+	PFN_vkCmdBeginRenderingKHR vkCmdBeginRenderingKHR;
+	PFN_vkCmdEndRenderingKHR vkCmdEndRenderingKHR;
+#endif /* defined(VK_KHR_dynamic_rendering) */
 #if defined(VK_KHR_external_fence_fd)
 	PFN_vkGetFenceFdKHR vkGetFenceFdKHR;
 	PFN_vkImportFenceFdKHR vkImportFenceFdKHR;
@@ -528,6 +548,11 @@ struct VolkDeviceTable
 #if defined(VK_KHR_maintenance3)
 	PFN_vkGetDescriptorSetLayoutSupportKHR vkGetDescriptorSetLayoutSupportKHR;
 #endif /* defined(VK_KHR_maintenance3) */
+#if defined(VK_KHR_maintenance4)
+	PFN_vkGetDeviceBufferMemoryRequirementsKHR vkGetDeviceBufferMemoryRequirementsKHR;
+	PFN_vkGetDeviceImageMemoryRequirementsKHR vkGetDeviceImageMemoryRequirementsKHR;
+	PFN_vkGetDeviceImageSparseMemoryRequirementsKHR vkGetDeviceImageSparseMemoryRequirementsKHR;
+#endif /* defined(VK_KHR_maintenance4) */
 #if defined(VK_KHR_performance_query)
 	PFN_vkAcquireProfilingLockKHR vkAcquireProfilingLockKHR;
 	PFN_vkReleaseProfilingLockKHR vkReleaseProfilingLockKHR;
@@ -537,6 +562,9 @@ struct VolkDeviceTable
 	PFN_vkGetPipelineExecutablePropertiesKHR vkGetPipelineExecutablePropertiesKHR;
 	PFN_vkGetPipelineExecutableStatisticsKHR vkGetPipelineExecutableStatisticsKHR;
 #endif /* defined(VK_KHR_pipeline_executable_properties) */
+#if defined(VK_KHR_present_wait)
+	PFN_vkWaitForPresentKHR vkWaitForPresentKHR;
+#endif /* defined(VK_KHR_present_wait) */
 #if defined(VK_KHR_push_descriptor)
 	PFN_vkCmdPushDescriptorSetKHR vkCmdPushDescriptorSetKHR;
 #endif /* defined(VK_KHR_push_descriptor) */
@@ -997,6 +1025,9 @@ extern PFN_vkCreateMetalSurfaceEXT vkCreateMetalSurfaceEXT;
 extern PFN_vkCmdDrawMultiEXT vkCmdDrawMultiEXT;
 extern PFN_vkCmdDrawMultiIndexedEXT vkCmdDrawMultiIndexedEXT;
 #endif /* defined(VK_EXT_multi_draw) */
+#if defined(VK_EXT_pageable_device_local_memory)
+extern PFN_vkSetDeviceMemoryPriorityEXT vkSetDeviceMemoryPriorityEXT;
+#endif /* defined(VK_EXT_pageable_device_local_memory) */
 #if defined(VK_EXT_private_data)
 extern PFN_vkCreatePrivateDataSlotEXT vkCreatePrivateDataSlotEXT;
 extern PFN_vkDestroyPrivateDataSlotEXT vkDestroyPrivateDataSlotEXT;
@@ -1027,6 +1058,13 @@ extern PFN_vkMergeValidationCachesEXT vkMergeValidationCachesEXT;
 #if defined(VK_EXT_vertex_input_dynamic_state)
 extern PFN_vkCmdSetVertexInputEXT vkCmdSetVertexInputEXT;
 #endif /* defined(VK_EXT_vertex_input_dynamic_state) */
+#if defined(VK_FUCHSIA_buffer_collection)
+extern PFN_vkCreateBufferCollectionFUCHSIA vkCreateBufferCollectionFUCHSIA;
+extern PFN_vkDestroyBufferCollectionFUCHSIA vkDestroyBufferCollectionFUCHSIA;
+extern PFN_vkGetBufferCollectionPropertiesFUCHSIA vkGetBufferCollectionPropertiesFUCHSIA;
+extern PFN_vkSetBufferCollectionBufferConstraintsFUCHSIA vkSetBufferCollectionBufferConstraintsFUCHSIA;
+extern PFN_vkSetBufferCollectionImageConstraintsFUCHSIA vkSetBufferCollectionImageConstraintsFUCHSIA;
+#endif /* defined(VK_FUCHSIA_buffer_collection) */
 #if defined(VK_FUCHSIA_external_memory)
 extern PFN_vkGetMemoryZirconHandleFUCHSIA vkGetMemoryZirconHandleFUCHSIA;
 extern PFN_vkGetMemoryZirconHandlePropertiesFUCHSIA vkGetMemoryZirconHandlePropertiesFUCHSIA;
@@ -1045,6 +1083,9 @@ extern PFN_vkCreateStreamDescriptorSurfaceGGP vkCreateStreamDescriptorSurfaceGGP
 extern PFN_vkGetPastPresentationTimingGOOGLE vkGetPastPresentationTimingGOOGLE;
 extern PFN_vkGetRefreshCycleDurationGOOGLE vkGetRefreshCycleDurationGOOGLE;
 #endif /* defined(VK_GOOGLE_display_timing) */
+#if defined(VK_HUAWEI_invocation_mask)
+extern PFN_vkCmdBindInvocationMaskHUAWEI vkCmdBindInvocationMaskHUAWEI;
+#endif /* defined(VK_HUAWEI_invocation_mask) */
 #if defined(VK_HUAWEI_subpass_shading)
 extern PFN_vkCmdSubpassShadingHUAWEI vkCmdSubpassShadingHUAWEI;
 extern PFN_vkGetDeviceSubpassShadingMaxWorkgroupSizeHUAWEI vkGetDeviceSubpassShadingMaxWorkgroupSizeHUAWEI;
@@ -1140,6 +1181,10 @@ extern PFN_vkCreateSharedSwapchainsKHR vkCreateSharedSwapchainsKHR;
 extern PFN_vkCmdDrawIndexedIndirectCountKHR vkCmdDrawIndexedIndirectCountKHR;
 extern PFN_vkCmdDrawIndirectCountKHR vkCmdDrawIndirectCountKHR;
 #endif /* defined(VK_KHR_draw_indirect_count) */
+#if defined(VK_KHR_dynamic_rendering)
+extern PFN_vkCmdBeginRenderingKHR vkCmdBeginRenderingKHR;
+extern PFN_vkCmdEndRenderingKHR vkCmdEndRenderingKHR;
+#endif /* defined(VK_KHR_dynamic_rendering) */
 #if defined(VK_KHR_external_fence_capabilities)
 extern PFN_vkGetPhysicalDeviceExternalFencePropertiesKHR vkGetPhysicalDeviceExternalFencePropertiesKHR;
 #endif /* defined(VK_KHR_external_fence_capabilities) */
@@ -1207,6 +1252,11 @@ extern PFN_vkTrimCommandPoolKHR vkTrimCommandPoolKHR;
 #if defined(VK_KHR_maintenance3)
 extern PFN_vkGetDescriptorSetLayoutSupportKHR vkGetDescriptorSetLayoutSupportKHR;
 #endif /* defined(VK_KHR_maintenance3) */
+#if defined(VK_KHR_maintenance4)
+extern PFN_vkGetDeviceBufferMemoryRequirementsKHR vkGetDeviceBufferMemoryRequirementsKHR;
+extern PFN_vkGetDeviceImageMemoryRequirementsKHR vkGetDeviceImageMemoryRequirementsKHR;
+extern PFN_vkGetDeviceImageSparseMemoryRequirementsKHR vkGetDeviceImageSparseMemoryRequirementsKHR;
+#endif /* defined(VK_KHR_maintenance4) */
 #if defined(VK_KHR_performance_query)
 extern PFN_vkAcquireProfilingLockKHR vkAcquireProfilingLockKHR;
 extern PFN_vkEnumeratePhysicalDeviceQueueFamilyPerformanceQueryCountersKHR vkEnumeratePhysicalDeviceQueueFamilyPerformanceQueryCountersKHR;
@@ -1218,6 +1268,9 @@ extern PFN_vkGetPipelineExecutableInternalRepresentationsKHR vkGetPipelineExecut
 extern PFN_vkGetPipelineExecutablePropertiesKHR vkGetPipelineExecutablePropertiesKHR;
 extern PFN_vkGetPipelineExecutableStatisticsKHR vkGetPipelineExecutableStatisticsKHR;
 #endif /* defined(VK_KHR_pipeline_executable_properties) */
+#if defined(VK_KHR_present_wait)
+extern PFN_vkWaitForPresentKHR vkWaitForPresentKHR;
+#endif /* defined(VK_KHR_present_wait) */
 #if defined(VK_KHR_push_descriptor)
 extern PFN_vkCmdPushDescriptorSetKHR vkCmdPushDescriptorSetKHR;
 #endif /* defined(VK_KHR_push_descriptor) */
