@@ -118,11 +118,23 @@ If providing your own implementation, you need to implement a subset of std::ato
     #define D3D12MA_ATOMIC_UINT64 std::atomic<UINT64>
 #endif
 
+#ifdef D3D12MA_EXPORTS
+    #define D3D12MA_API __declspec(dllexport)
+#elif defined(D3D12MA_IMPORTS)
+    #define D3D12MA_API __declspec(dllimport)
+#else
+    #define D3D12MA_API
+#endif
+
+// Forward declaration if ID3D12ProtectedResourceSession is not defined inside the headers (older SDK, pre ID3D12Device4)
+struct ID3D12ProtectedResourceSession;
+
 namespace D3D12MA
 {
-class IUnknownImpl : public IUnknown
+class D3D12MA_API IUnknownImpl : public IUnknown
 {
 public:
+    virtual ~IUnknownImpl() = default;
     virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject);
     virtual ULONG STDMETHODCALLTYPE AddRef();
     virtual ULONG STDMETHODCALLTYPE Release();
@@ -252,7 +264,7 @@ To retrieve this information, use methods of this class.
 The object also remembers `ID3D12Resource` and "owns" a reference to it,
 so it calls `%Release()` on the resource when destroyed.
 */
-class Allocation : public IUnknownImpl
+class D3D12MA_API Allocation : public IUnknownImpl
 {
 public:
     /** \brief Returns offset in bytes from the start of memory heap.
@@ -459,6 +471,12 @@ struct POOL_DESC
     Leave 0 (default) not to impose any additional alignment. If not 0, it must be a power of two.
     */
     UINT64 MinAllocationAlignment;
+    /** \brief Additional parameter allowing pool to create resources with passed protected session.
+    
+    If not null then all the heaps and committed resources will be created with this parameter.
+    Valid only if ID3D12Device4 interface is present in current Windows SDK!
+    */
+    ID3D12ProtectedResourceSession* pProtectedSession;
 };
 
 /** \brief Custom memory pool
@@ -469,7 +487,7 @@ pools - creating resources in default pool is sufficient.
 
 To create custom pool, fill D3D12MA::POOL_DESC and call D3D12MA::Allocator::CreatePool.
 */
-class Pool : public IUnknownImpl
+class D3D12MA_API Pool : public IUnknownImpl
 {
 public:
     /** \brief Returns copy of parameters of the pool.
@@ -657,7 +675,7 @@ Call method `Release()` to destroy it.
 It is recommended to create just one object of this type per `ID3D12Device` object,
 right after Direct3D 12 is initialized and keep it alive until before Direct3D device is destroyed.
 */
-class Allocator : public IUnknownImpl
+class D3D12MA_API Allocator : public IUnknownImpl
 {
 public:
     /// Returns cached options retrieved from D3D12 device.
@@ -716,27 +734,8 @@ public:
         REFIID riidResource,
         void** ppvResource);
 
-#ifdef __ID3D12Device4_INTERFACE_DEFINED__
-    /** \brief Similar to Allocator::CreateResource, but supports additional parameter `pProtectedSession`.
-    
-    If `pProtectedSession` is not null, current implementation always creates the resource as committed
-    using `ID3D12Device4::CreateCommittedResource1`.
-
-    To work correctly, `ID3D12Device4` interface must be available in the current system. Otherwise, `E_NOINTERFACE` is returned.
-    */
-    HRESULT CreateResource1(
-        const ALLOCATION_DESC* pAllocDesc,
-        const D3D12_RESOURCE_DESC* pResourceDesc,
-        D3D12_RESOURCE_STATES InitialResourceState,
-        const D3D12_CLEAR_VALUE *pOptimizedClearValue,
-        ID3D12ProtectedResourceSession *pProtectedSession,
-        Allocation** ppAllocation,
-        REFIID riidResource,
-        void** ppvResource);
-#endif // #ifdef __ID3D12Device4_INTERFACE_DEFINED__
-
 #ifdef __ID3D12Device8_INTERFACE_DEFINED__
-    /** \brief Similar to Allocator::CreateResource1, but supports new structure `D3D12_RESOURCE_DESC1`.
+    /** \brief Similar to Allocator::CreateResource, but supports new structure `D3D12_RESOURCE_DESC1`.
     
     It internally uses `ID3D12Device8::CreateCommittedResource2` or `ID3D12Device8::CreatePlacedResource1`.
 
@@ -747,7 +746,6 @@ public:
         const D3D12_RESOURCE_DESC1* pResourceDesc,
         D3D12_RESOURCE_STATES InitialResourceState,
         const D3D12_CLEAR_VALUE *pOptimizedClearValue,
-        ID3D12ProtectedResourceSession *pProtectedSession,
         Allocation** ppAllocation,
         REFIID riidResource,
         void** ppvResource);
@@ -776,21 +774,6 @@ public:
         const ALLOCATION_DESC* pAllocDesc,
         const D3D12_RESOURCE_ALLOCATION_INFO* pAllocInfo,
         Allocation** ppAllocation);
-
-#ifdef __ID3D12Device4_INTERFACE_DEFINED__
-    /** \brief Similar to Allocator::AllocateMemory, but supports additional parameter `pProtectedSession`.
-    
-    If `pProtectedSession` is not null, current implementation always creates separate heap
-    using `ID3D12Device4::CreateHeap1`.
-
-    To work correctly, `ID3D12Device4` interface must be available in the current system. Otherwise, `E_NOINTERFACE` is returned.
-    */
-    HRESULT AllocateMemory1(
-        const ALLOCATION_DESC* pAllocDesc,
-        const D3D12_RESOURCE_ALLOCATION_INFO* pAllocInfo,
-        ID3D12ProtectedResourceSession *pProtectedSession,
-        Allocation** ppAllocation);
-#endif // #ifdef __ID3D12Device4_INTERFACE_DEFINED__
 
     /** \brief Creates a new resource in place of an existing allocation. This is useful for memory aliasing.
 
@@ -865,7 +848,7 @@ protected:
     virtual void ReleaseThis();
 
 private:
-    friend HRESULT CreateAllocator(const ALLOCATOR_DESC*, Allocator**);
+    friend D3D12MA_API HRESULT CreateAllocator(const ALLOCATOR_DESC*, Allocator**);
     template<typename T> friend void D3D12MA_DELETE(const ALLOCATION_CALLBACKS&, T*);
     friend class Pool;
 
@@ -936,8 +919,10 @@ sub-allocation regions inside a single GPU buffer.
 To create this object, fill in D3D12MA::VIRTUAL_BLOCK_DESC and call CreateVirtualBlock().
 To destroy it, call its method `VirtualBlock::Release()`.
 You need to free all the allocations within this block or call Clear() before destroying it.
+
+This object is not thread-safe - should not be used from multiple threads simultaneously, must be synchronized externally.
 */
-class VirtualBlock : public IUnknownImpl
+class D3D12MA_API VirtualBlock : public IUnknownImpl
 {
 public:
     /** \brief Returns true if the block is empty - contains 0 allocations.
@@ -980,7 +965,7 @@ protected:
     virtual void ReleaseThis();
 
 private:
-    friend HRESULT CreateVirtualBlock(const VIRTUAL_BLOCK_DESC*, VirtualBlock**);
+    friend D3D12MA_API HRESULT CreateVirtualBlock(const VIRTUAL_BLOCK_DESC*, VirtualBlock**);
     template<typename T> friend void D3D12MA_DELETE(const ALLOCATION_CALLBACKS&, T*);
 
     VirtualBlockPimpl* m_Pimpl;
@@ -995,13 +980,13 @@ private:
 
 You normally only need to call it once and keep a single Allocator object for your `ID3D12Device`.
 */
-HRESULT CreateAllocator(const ALLOCATOR_DESC* pDesc, Allocator** ppAllocator);
+D3D12MA_API HRESULT CreateAllocator(const ALLOCATOR_DESC* pDesc, Allocator** ppAllocator);
 
 /** \brief Creates new D3D12MA::VirtualBlock object and returns it through `ppVirtualBlock`.
 
 Note you don't need to create D3D12MA::Allocator to use virtual blocks.
 */
-HRESULT CreateVirtualBlock(const VIRTUAL_BLOCK_DESC* pDesc, VirtualBlock** ppVirtualBlock);
+D3D12MA_API HRESULT CreateVirtualBlock(const VIRTUAL_BLOCK_DESC* pDesc, VirtualBlock** ppVirtualBlock);
 
 } // namespace D3D12MA
 
@@ -1604,6 +1589,7 @@ HRESULT hr = D3D12MA::CreateAllocator(&allocatorDesc, &allocator);
 - When the allocator is created with D3D12MA::ALLOCATOR_FLAG_SINGLETHREADED,
   calls to methods of D3D12MA::Allocator class must be made from a single thread or synchronized by the user.
   Using this flag may improve performance.
+- D3D12MA::VirtualBlock is not safe to be used from multiple threads simultaneously.
 
 \section general_considerations_future_plans Future plans
 
