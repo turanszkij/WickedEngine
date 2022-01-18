@@ -32,6 +32,10 @@ namespace wi::graphics
 		Microsoft::WRL::ComPtr<IDXGIAdapter1> dxgiAdapter;
 		Microsoft::WRL::ComPtr<ID3D12Device5> device;
 
+#if defined(WICKED_DX12_USE_PIPELINE_LIBRARY)
+		Microsoft::WRL::ComPtr<ID3D12PipelineLibrary1> pipelineLibrary;
+#endif
+
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> dispatchIndirectCommandSignature;
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> drawInstancedIndirectCommandSignature;
 		Microsoft::WRL::ComPtr<ID3D12CommandSignature> drawIndexedInstancedIndirectCommandSignature;
@@ -179,8 +183,8 @@ namespace wi::graphics
 		void predispatch(CommandList cmd);
 
 	public:
-		GraphicsDevice_DX12(bool debuglayer = false, bool gpuvalidation = false);
-		virtual ~GraphicsDevice_DX12();
+		GraphicsDevice_DX12(ValidationMode validationMode = ValidationMode::Disabled);
+		~GraphicsDevice_DX12() override;
 
 		bool CreateSwapChain(const SwapChainDesc* desc, wi::platform::window_type window, SwapChain* swapchain) const override;
 		bool CreateBuffer(const GPUBufferDesc * desc, const void* initial_data, GPUBuffer* buffer) const override;

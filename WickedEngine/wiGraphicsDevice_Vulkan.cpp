@@ -2250,13 +2250,13 @@ using namespace vulkan_internal;
 	}
 
 	// Engine functions
-	GraphicsDevice_Vulkan::GraphicsDevice_Vulkan(wi::platform::window_type window, bool debuglayer)
+	GraphicsDevice_Vulkan::GraphicsDevice_Vulkan(wi::platform::window_type window, ValidationMode validationMode_)
 	{
 		wi::Timer timer;
 
 		TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = sizeof(VkAccelerationStructureInstanceKHR);
 
-		DEBUGDEVICE = debuglayer;
+		validationMode = validationMode_;
 
 		VkResult res;
 
@@ -2330,7 +2330,7 @@ using namespace vulkan_internal;
 		}
 #endif // _WIN32
 		
-		if (debuglayer)
+		if (validationMode != ValidationMode::Disabled)
 		{
 			// Determine the optimal validation layers to enable that are necessary for useful debugging
 			static const wi::vector<const char*> validationLayerPriorityList[] =
@@ -2379,7 +2379,7 @@ using namespace vulkan_internal;
 
 			VkDebugUtilsMessengerCreateInfoEXT debugUtilsCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
 
-			if (debuglayer && debugUtils)
+			if (validationMode != ValidationMode::Disabled && debugUtils)
 			{
 				debugUtilsCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
 				debugUtilsCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
@@ -2397,7 +2397,7 @@ using namespace vulkan_internal;
 
 			volkLoadInstanceOnly(instance);
 
-			if (debuglayer && debugUtils)
+			if (validationMode != ValidationMode::Disabled && debugUtils)
 			{
 				res = vkCreateDebugUtilsMessengerEXT(instance, &debugUtilsCreateInfo, nullptr, &debugUtilsMessenger);
 				assert(res == VK_SUCCESS);
@@ -2767,14 +2767,45 @@ using namespace vulkan_internal;
 		allocationhandler->instance = instance;
 
 		// Initialize Vulkan Memory Allocator helper:
+		VmaVulkanFunctions vma_vulkan_func{};
+		vma_vulkan_func.vkGetInstanceProcAddr = vkGetInstanceProcAddr;
+		vma_vulkan_func.vkGetDeviceProcAddr = vkGetDeviceProcAddr;
+		vma_vulkan_func.vkGetPhysicalDeviceProperties = vkGetPhysicalDeviceProperties;
+		vma_vulkan_func.vkGetPhysicalDeviceMemoryProperties = vkGetPhysicalDeviceMemoryProperties;
+		vma_vulkan_func.vkAllocateMemory = vkAllocateMemory;
+		vma_vulkan_func.vkFreeMemory = vkFreeMemory;
+		vma_vulkan_func.vkMapMemory = vkMapMemory;
+		vma_vulkan_func.vkUnmapMemory = vkUnmapMemory;
+		vma_vulkan_func.vkFlushMappedMemoryRanges = vkFlushMappedMemoryRanges;
+		vma_vulkan_func.vkInvalidateMappedMemoryRanges = vkInvalidateMappedMemoryRanges;
+		vma_vulkan_func.vkBindBufferMemory = vkBindBufferMemory;
+		vma_vulkan_func.vkBindImageMemory = vkBindImageMemory;
+		vma_vulkan_func.vkGetBufferMemoryRequirements = vkGetBufferMemoryRequirements;
+		vma_vulkan_func.vkGetImageMemoryRequirements = vkGetImageMemoryRequirements;
+		vma_vulkan_func.vkCreateBuffer = vkCreateBuffer;
+		vma_vulkan_func.vkDestroyBuffer = vkDestroyBuffer;
+		vma_vulkan_func.vkCreateImage = vkCreateImage;
+		vma_vulkan_func.vkDestroyImage = vkDestroyImage;
+		vma_vulkan_func.vkCmdCopyBuffer = vkCmdCopyBuffer;
+
 		VmaAllocatorCreateInfo allocatorInfo = {};
 		allocatorInfo.physicalDevice = physicalDevice;
 		allocatorInfo.device = device;
 		allocatorInfo.instance = instance;
+
+		// Core in 1.1
+		allocatorInfo.flags = VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT | VMA_ALLOCATOR_CREATE_KHR_BIND_MEMORY2_BIT;
+		vma_vulkan_func.vkGetBufferMemoryRequirements2KHR = vkGetBufferMemoryRequirements2;
+		vma_vulkan_func.vkGetImageMemoryRequirements2KHR = vkGetImageMemoryRequirements2;
+
 		if (features_1_2.bufferDeviceAddress)
 		{
 			allocatorInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+			vma_vulkan_func.vkBindBufferMemory2KHR = vkBindBufferMemory2;
+			vma_vulkan_func.vkBindImageMemory2KHR = vkBindImageMemory2;
 		}
+		allocatorInfo.pVulkanFunctions = &vma_vulkan_func;
+
 		res = vmaCreateAllocator(&allocatorInfo, &allocationhandler->allocator);
 		assert(res == VK_SUCCESS);
 		if (res != VK_SUCCESS)
