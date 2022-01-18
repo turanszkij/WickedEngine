@@ -98,8 +98,8 @@ bool forceDiffuseLighting = false;
 bool SCREENSPACESHADOWS = false;
 bool SURFELGI = false;
 SURFEL_DEBUG SURFELGI_DEBUG = SURFEL_DEBUG_NONE;
-bool DDGI_ENABLED = true;
-bool DDGI_DEBUG_ENABLED = true;
+bool DDGI_ENABLED = false;
+bool DDGI_DEBUG_ENABLED = false;
 uint32_t DDGI_RAYCOUNT = 128u;
 float GI_BOOST = 1.0f;
 
