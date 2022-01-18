@@ -124,7 +124,6 @@ void main(uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex
 		output[dst_coord] = output[src_coord];
 	}
 #else
-	//output[pixel_current] = bindless_textures[GetScene().ddgi_depth_texture].SampleLevel(sampler_linear_clamp, ddgi_probe_depth_uv(probeCoord, texel_direction), 0).xxx * 0.01;
 	// Copy color borders:
 	for (uint index = groupIndex; index < 36; index += THREADCOUNT * THREADCOUNT)
 	{
