@@ -3,12 +3,12 @@
 #include "ShaderInterop.h"
 #include "ShaderInterop_Renderer.h"
 
-static const uint3 DDGI_GRID_DIMENSIONS = uint3(16, 8, 16);
+static const uint3 DDGI_GRID_DIMENSIONS = uint3(16, 8, 16); // The scene extents will be subdivided into a grid of this resolution, each grid cell will have one probe
 static const uint DDGI_PROBE_COUNT = DDGI_GRID_DIMENSIONS.x * DDGI_GRID_DIMENSIONS.y * DDGI_GRID_DIMENSIONS.z;
 static const uint DDGI_MAX_RAYCOUNT = 512; // affects global ray buffer size
-static const uint DDGI_COLOR_RESOLUTION = 8;
+static const uint DDGI_COLOR_RESOLUTION = 8; // this should not be modified, border update code is fixed
 static const uint DDGI_COLOR_TEXELS = 1 + DDGI_COLOR_RESOLUTION + 1; // with border
-static const uint DDGI_DEPTH_RESOLUTION = 16;
+static const uint DDGI_DEPTH_RESOLUTION = 16; // this should not be modified, border update code is fixed
 static const uint DDGI_DEPTH_TEXELS = 1 + DDGI_DEPTH_RESOLUTION + 1; // with border
 static const uint DDGI_COLOR_TEXTURE_WIDTH = DDGI_COLOR_TEXELS * DDGI_GRID_DIMENSIONS.x * DDGI_GRID_DIMENSIONS.y;
 static const uint DDGI_COLOR_TEXTURE_HEIGHT = DDGI_COLOR_TEXELS * DDGI_GRID_DIMENSIONS.z;

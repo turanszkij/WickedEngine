@@ -1,7 +1,12 @@
 #include "globals.hlsli"
 #include "ShaderInterop_DDGI.h"
 
-// Based on: https://github.com/diharaw/hybrid-rendering/blob/master/src/shaders/gi/gi_probe_update.glsl
+// This shader collects all traced rays (one probe per thread group) and integrates them
+//	Rays are first gathered to shared memory
+//	Then for each pixel, all traced rays will be evaluated and contributed, weighted based on pixel's own direction and ray's direction
+//	This shader will run twice in DDGI, once it integrates the radiances
+//	After that it will also integrate the ray depths, when DDGI_UPDATE_DEPTH is defined
+//	Based on: https://github.com/diharaw/hybrid-rendering/blob/master/src/shaders/gi/gi_probe_update.glsl
 
 PUSHCONSTANT(push, DDGIPushConstants);
 

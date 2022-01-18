@@ -3,12 +3,16 @@
 #include "lightingHF.hlsli"
 #include "ShaderInterop_DDGI.h"
 
+// This shader runs one probe per thread group and each thread will trace one ray and write the trace result to a ray data buffer
+//	ray data buffer will be later integrated by ddgi_updateCS shader which updates the DDGI irradiance and depth textures
+
 PUSHCONSTANT(push, DDGIPushConstants);
 
 RWStructuredBuffer<DDGIRayDataPacked> rayBuffer : register(u0);
 
 static const uint THREADCOUNT = 32;
 
+// spherical fibonacci: https://github.com/diharaw/hybrid-rendering/blob/master/src/shaders/gi/gi_ray_trace.rgen
 #define madfrac(A, B) ((A) * (B)-floor((A) * (B)))
 static const float PHI = sqrt(5) * 0.5 + 0.5;
 float3 spherical_fibonacci(float i, float n)
@@ -255,6 +259,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 #endif
 
+			// Infinite bounces based on previous frame probe sampling:
 			if (push.frameIndex > 0)
 			{
 				hit_result += ddgi_sample_irradiance(surface.P, surface.facenormal);
