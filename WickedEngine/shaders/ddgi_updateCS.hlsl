@@ -3,10 +3,10 @@
 
 PUSHCONSTANT(push, DDGIPushConstants);
 
-StructuredBuffer<DDGIRayData> ddgiRayBuffer : register(t0);
+StructuredBuffer<DDGIRayDataPacked> ddgiRayBuffer : register(t0);
 
 static const uint CACHE_SIZE = 64;
-groupshared DDGIRayData ray_cache[CACHE_SIZE];
+groupshared DDGIRayDataPacked ray_cache[CACHE_SIZE];
 
 static const float WEIGHT_EPSILON = 0.0001;
 
@@ -56,7 +56,7 @@ void main(uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex
 		const float energy_conservation = 0.95;
 		for (uint r = 0; r < num_rays; ++r)
 		{
-			DDGIRayData ray = ray_cache[r];
+			DDGIRayData ray = ray_cache[r].load();
 
 #ifdef DDGI_UPDATE_DEPTH
 			float ray_probe_distance;
@@ -72,7 +72,7 @@ void main(uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex
 			const float3 radiance = ray.radiance.rgb * energy_conservation;
 #endif // DDGI_UPDATE_DEPTH
 
-			float weight = max(0, dot(texel_direction, ray.direction));
+			float weight = saturate(dot(texel_direction, ray.direction));
 #ifdef DDGI_UPDATE_DEPTH
 			weight = pow(weight, 4);
 #endif // DDGI_UPDATE_DEPTH

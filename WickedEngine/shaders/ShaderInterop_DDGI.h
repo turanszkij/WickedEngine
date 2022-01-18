@@ -24,12 +24,32 @@ struct DDGIPushConstants
 	uint rayCount;
 };
 
-// TODO: packing
 struct DDGIRayData
 {
 	float3 direction;
 	float depth;
 	float4 radiance;
+};
+struct DDGIRayDataPacked
+{
+	uint4 data;
+
+#ifndef __cplusplus
+	inline void store(DDGIRayData rayData)
+	{
+		data.xy = pack_half4(float4(rayData.direction, rayData.depth));
+		data.zw = pack_half4(rayData.radiance);
+	}
+	inline DDGIRayData load()
+	{
+		DDGIRayData rayData;
+		float4 unpk = unpack_half4(data.xy);
+		rayData.direction = unpk.xyz;
+		rayData.depth = unpk.w;
+		rayData.radiance = unpack_half4(data.zw);
+		return rayData;
+	}
+#endif // __cplusplus
 };
 
 #ifndef __cplusplus

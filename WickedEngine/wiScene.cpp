@@ -1770,7 +1770,7 @@ namespace wi::scene
 				ddgi_frameIndex = 0;
 
 				GPUBufferDesc buf;
-				buf.stride = sizeof(DDGIRayData);
+				buf.stride = sizeof(DDGIRayDataPacked);
 				buf.size = buf.stride * DDGI_PROBE_COUNT * DDGI_MAX_RAYCOUNT;
 				buf.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
 				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;

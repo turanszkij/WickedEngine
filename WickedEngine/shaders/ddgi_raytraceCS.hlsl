@@ -5,7 +5,7 @@
 
 PUSHCONSTANT(push, DDGIPushConstants);
 
-RWStructuredBuffer<DDGIRayData> rayBuffer : register(u0);
+RWStructuredBuffer<DDGIRayDataPacked> rayBuffer : register(u0);
 
 static const uint THREADCOUNT = 32;
 
@@ -78,7 +78,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			rayData.direction = ray.Direction;
 			rayData.depth = -1;
 			rayData.radiance = float4(envColor, 1);
-			rayBuffer[probeIndex * DDGI_MAX_RAYCOUNT + rayIndex] = rayData;
+			rayBuffer[probeIndex * DDGI_MAX_RAYCOUNT + rayIndex].store(rayData);
 		}
 		else
 		{
@@ -270,7 +270,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			rayData.direction = ray.Direction;
 			rayData.depth = hit_depth;
 			rayData.radiance = float4(hit_result, 1);
-			rayBuffer[probeIndex * DDGI_MAX_RAYCOUNT + rayIndex] = rayData;
+			rayBuffer[probeIndex * DDGI_MAX_RAYCOUNT + rayIndex].store(rayData);
 		}
 
 	}
