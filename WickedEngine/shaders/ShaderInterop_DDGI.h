@@ -4,6 +4,8 @@
 #include "ShaderInterop_Renderer.h"
 
 static const uint3 DDGI_GRID_DIMENSIONS = uint3(16, 8, 16);
+static const uint DDGI_PROBE_COUNT = DDGI_GRID_DIMENSIONS.x * DDGI_GRID_DIMENSIONS.y * DDGI_GRID_DIMENSIONS.z;
+static const uint DDGI_MAX_RAYCOUNT = 512; // affects global ray buffer size
 static const uint DDGI_COLOR_RESOLUTION = 8;
 static const uint DDGI_COLOR_TEXELS = 1 + DDGI_COLOR_RESOLUTION + 1; // with border
 static const uint DDGI_DEPTH_RESOLUTION = 16;
@@ -15,11 +17,19 @@ static const uint DDGI_DEPTH_TEXTURE_HEIGHT = DDGI_DEPTH_TEXELS * DDGI_GRID_DIME
 
 #define DDGI_LINEAR_BLENDING
 
-struct PushConstantsDDGIRaytrace
+struct DDGIPushConstants
 {
-	uint frameIndex;
 	uint instanceInclusionMask;
+	uint frameIndex;
 	uint rayCount;
+};
+
+// TODO: packing
+struct DDGIRayData
+{
+	float3 direction;
+	float depth;
+	float4 radiance;
 };
 
 #ifndef __cplusplus
@@ -100,7 +110,7 @@ float3 ddgi_sample_irradiance(float3 P, float3 N)
 		// then samples can pass through thin occluders to the other
 		// side (this can only happen if there are MULTIPLE occluders
 		// near each other, a wall surface won't pass through itself.)
-		float3 probe_to_point = P - probe_pos;
+		float3 probe_to_point = P - probe_pos + N * 0.1;
 		float3 dir = normalize(-probe_to_point);
 
 		// Compute the trilinear weights based on the grid cell vertex to smoothly
@@ -202,7 +212,7 @@ float3 ddgi_sample_irradiance(float3 P, float3 N)
 		net_irradiance = sqr(net_irradiance);
 #endif
 
-		net_irradiance *= 0.95; // energy preservation
+		net_irradiance *= 0.85; // energy preservation
 
 		//return net_irradiance;
 		return 0.5f * PI * net_irradiance;

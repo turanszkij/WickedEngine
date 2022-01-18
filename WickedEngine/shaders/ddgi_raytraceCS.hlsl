@@ -3,79 +3,30 @@
 #include "lightingHF.hlsli"
 #include "ShaderInterop_DDGI.h"
 
-PUSHCONSTANT(push, PushConstantsDDGIRaytrace);
+PUSHCONSTANT(push, DDGIPushConstants);
 
-RWTexture2D<float3> ddgiColorTextureRW : register(u0);
-RWTexture2D<float2> ddgiDepthTextureRW : register(u1);
+RWStructuredBuffer<DDGIRayData> rayBuffer : register(u0);
 
-[numthreads(4, 4, 4)]
-void main(uint3 DTid : SV_DispatchThreadID)
+static const uint THREADCOUNT = 32;
+
+[numthreads(THREADCOUNT, 1, 1)]
+void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
-	Texture2D ddgiColorTextureRO = bindless_textures[GetScene().ddgi_color_texture];
-	Texture2D ddgiDepthTextureRO = bindless_textures[GetScene().ddgi_depth_texture];
-
-	const uint3 probeCoord = DTid.xyz;
-	const uint probeIndex = ddgi_probe_index(probeCoord);
+	const uint probeIndex = Gid.x;
+	const uint3 probeCoord = ddgi_probe_coord(probeIndex);
 	const float3 probePos = ddgi_probe_position(probeCoord);
-	const float3 cellSize = ddgi_cellsize();
-	const float maxDepth = length(cellSize);
-	const float blend_speed = 0.05;
-
-	// Initialize current color texture:
-	const uint2 pixel_topleft_color = ddgi_probe_color_pixel(probeCoord);
-	{
-		for (uint x = 0; x < DDGI_COLOR_RESOLUTION; ++x)
-		{
-			for (uint y = 0; y < DDGI_COLOR_RESOLUTION; ++y)
-			{
-				uint2 coord = pixel_topleft_color + uint2(x, y);
-				if (push.frameIndex == 0)
-				{
-					ddgiColorTextureRW[coord] = 0;
-				}
-				else
-				{
-					ddgiColorTextureRW[coord] = ddgiColorTextureRO[coord].rgb;
-				}
-			}
-		}
-	}
-
-	// Initialize current depth texture:
-	const uint2 pixel_topleft_depth = ddgi_probe_depth_pixel(probeCoord);
-	{
-		for (uint x = 0; x < DDGI_DEPTH_RESOLUTION; ++x)
-		{
-			for (uint y = 0; y < DDGI_DEPTH_RESOLUTION; ++y)
-			{
-				uint2 coord = pixel_topleft_depth + uint2(x, y);
-				if (push.frameIndex == 0)
-				{
-					ddgiDepthTextureRW[coord] = float2(maxDepth, sqr(maxDepth));
-				}
-				else
-				{
-					ddgiDepthTextureRW[coord] = ddgiDepthTextureRO[coord].rg;
-				}
-			}
-		}
-	}
 
 	float seed = 0.123456;
-	float2 uv = float2(frac(GetFrame().frame_count.x / 4096.0), probeIndex);
+	float2 uv = float2(frac(GetFrame().frame_count.x / 4096.0), DTid.x);
 
-	for (uint i = 0; i < push.rayCount; ++i)
+	for (uint rayIndex = groupIndex; rayIndex < push.rayCount; rayIndex += THREADCOUNT)
 	{
 		RayDesc ray;
 		ray.Origin = probePos;
 		ray.TMin = 0.0001;
 		ray.TMax = FLT_MAX;
-		ray.Direction = normalize(decode_oct(float2(rand(seed, uv), rand(seed, uv)) * 2 - 1));
+		ray.Direction = decode_oct(float2(rand(seed, uv), rand(seed, uv)) * 2 - 1);
 		//ray.Direction = normalize(float3(rand(seed, uv), rand(seed, uv), rand(seed, uv)) * 2 - 1);
-
-		const float2 oct_uv = encode_oct(ray.Direction) * 0.5 + 0.5;
-		const uint2 coord_color = pixel_topleft_color + oct_uv * DDGI_COLOR_RESOLUTION;
-		const uint2 coord_depth = pixel_topleft_depth + oct_uv * DDGI_DEPTH_RESOLUTION;
 
 #ifdef RTAPI
 		RayQuery<
@@ -109,8 +60,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				envColor = GetDynamicSkyColor(ray.Direction, true, true, false, true);
 			}
 
-			ddgiColorTextureRW[coord_color] = lerp(ddgiColorTextureRW[coord_color], envColor, blend_speed);
-			ddgiDepthTextureRW[coord_depth] = lerp(ddgiDepthTextureRW[coord_depth].xy, float2(maxDepth, sqr(maxDepth)), blend_speed);
+			DDGIRayData rayData;
+			rayData.direction = ray.Direction;
+			rayData.depth = -1;
+			rayData.radiance = float4(envColor, 1);
+			rayBuffer[probeIndex * DDGI_MAX_RAYCOUNT + rayIndex] = rayData;
 		}
 		else
 		{
@@ -291,36 +245,18 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 			if (push.frameIndex > 0)
 			{
-				//hit_result += ddgi_sample_irradiance(surface.P, surface.facenormal);
+				hit_result += ddgi_sample_irradiance(surface.P, surface.facenormal);
 			}
 			
 			hit_result *= surface.albedo;
 			hit_result += max(0, surface.emissiveColor);
 
-			ddgiColorTextureRW[coord_color] = lerp(ddgiColorTextureRW[coord_color], hit_result, blend_speed);
-
-			hit_depth = clamp(hit_depth, 0.0001, maxDepth);
-			ddgiDepthTextureRW[coord_depth] = lerp(ddgiDepthTextureRW[coord_depth].xy, float2(hit_depth, sqr(hit_depth)), blend_speed);
-
+			DDGIRayData rayData;
+			rayData.direction = ray.Direction;
+			rayData.depth = hit_depth;
+			rayData.radiance = float4(hit_result, 1);
+			rayBuffer[probeIndex * DDGI_MAX_RAYCOUNT + rayIndex] = rayData;
 		}
 
-	}
-
-	// Copy color borders:
-	const uint2 copy_coord_color = pixel_topleft_color - 1;
-	for (uint index = 0; index < 36; ++index)
-	{
-		uint2 src_coord = copy_coord_color + DDGI_COLOR_BORDER_OFFSETS[index].xy;
-		uint2 dst_coord = copy_coord_color + DDGI_COLOR_BORDER_OFFSETS[index].zw;
-		ddgiColorTextureRW[dst_coord] = ddgiColorTextureRW[src_coord];
-	}
-
-	// Copy depth borders:
-	const uint2 copy_coord_depth = pixel_topleft_depth - 1;
-	for (index = 0; index < 68; ++index)
-	{
-		uint2 src_coord = copy_coord_depth + DDGI_DEPTH_BORDER_OFFSETS[index].xy;
-		uint2 dst_coord = copy_coord_depth + DDGI_DEPTH_BORDER_OFFSETS[index].zw;
-		ddgiDepthTextureRW[dst_coord] = ddgiDepthTextureRW[src_coord];
 	}
 }

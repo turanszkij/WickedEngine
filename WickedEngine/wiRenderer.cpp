@@ -1013,6 +1013,8 @@ void LoadShaders()
 	{
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_DDGI_RAYTRACE], "ddgi_raytraceCS.cso"); });
 	}
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_DDGI_UPDATE], "ddgi_updateCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_DDGI_UPDATE_DEPTH], "ddgi_updateCS_depth.cso"); });
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::HS, shaders[HSTYPE_OBJECT], "objectHS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::HS, shaders[HSTYPE_OBJECT_PREPASS], "objectHS_prepass.cso"); });
@@ -8000,30 +8002,76 @@ void DDGI(
 
 	BindCommonResources(cmd);
 
+	DDGIPushConstants push;
+	push.instanceInclusionMask = instanceInclusionMask;
+	push.frameIndex = scene.ddgi_frameIndex;
+	push.rayCount = std::min(GetDDGIRayCount(), DDGI_MAX_RAYCOUNT);
+
 	// Raytracing:
 	{
 		device->EventBegin("Raytrace", cmd);
 
 		device->BindComputeShader(&shaders[CSTYPE_DDGI_RAYTRACE], cmd);
-
-		PushConstantsDDGIRaytrace push;
-		push.frameIndex = scene.ddgi_frameIndex;
-		push.instanceInclusionMask = instanceInclusionMask;
-		push.rayCount = GetDDGIRayCount();
 		device->PushConstants(&push, sizeof(push), cmd);
 
 		const GPUResource* uavs[] = {
+			&scene.ddgiRayBuffer
+		};
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+
+		device->Dispatch(DDGI_PROBE_COUNT, 1, 1, cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(),
+				GPUBarrier::Buffer(&scene.ddgiRayBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->EventEnd(cmd);
+	}
+
+	// Update:
+	{
+		device->EventBegin("Update", cmd);
+
+		device->BindComputeShader(&shaders[CSTYPE_DDGI_UPDATE], cmd);
+		device->PushConstants(&push, sizeof(push), cmd);
+
+		const GPUResource* res[] = {
+			&scene.ddgiRayBuffer,
+		};
+		device->BindResources(res, 0, arraysize(res), cmd);
+
+		const GPUResource* uavs[] = {
 			&scene.ddgiColorTexture[1],
+		};
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+
+		device->Dispatch(DDGI_PROBE_COUNT, 1, 1, cmd);
+
+		device->EventEnd(cmd);
+	}
+
+	// Update Depth:
+	{
+		device->EventBegin("Update Depth", cmd);
+
+		device->BindComputeShader(&shaders[CSTYPE_DDGI_UPDATE_DEPTH], cmd);
+		device->PushConstants(&push, sizeof(push), cmd);
+
+		const GPUResource* res[] = {
+			&scene.ddgiRayBuffer,
+		};
+		device->BindResources(res, 0, arraysize(res), cmd);
+
+		const GPUResource* uavs[] = {
 			&scene.ddgiDepthTexture[1],
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-		device->Dispatch(
-			(DDGI_GRID_DIMENSIONS.x + 3u) / 4u,
-			(DDGI_GRID_DIMENSIONS.y + 3u) / 4u,
-			(DDGI_GRID_DIMENSIONS.z + 3u) / 4u,
-			cmd
-		);
+		device->Dispatch(DDGI_PROBE_COUNT, 1, 1, cmd);
 
 		device->EventEnd(cmd);
 	}

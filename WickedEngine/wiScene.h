@@ -1335,6 +1335,7 @@ namespace wi::scene
 
 		// DDGI resources:
 		uint ddgi_frameIndex = 0;
+		wi::graphics::GPUBuffer ddgiRayBuffer;
 		wi::graphics::Texture ddgiColorTexture[2];
 		wi::graphics::Texture ddgiDepthTexture[2];
 

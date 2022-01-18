@@ -14,7 +14,7 @@ VSOut main(uint vertexID : SV_VertexID, uint instanceID : SV_InstanceID)
 	VSOut o;
 	o.pos = UVSPHERE[vertexID];
 	o.normal = o.pos.xyz;
-	o.pos.xyz *= 0.1;
+	o.pos.xyz *= 0.2;
 	o.probeIndex = instanceID;
 
 	const float3 probeCoord = ddgi_probe_coord(o.probeIndex);
