@@ -101,6 +101,7 @@ inline float2 ddgi_probe_depth_uv(uint3 probeCoord, float3 direction)
 }
 
 
+// Based on: https://github.com/diharaw/hybrid-rendering/blob/master/src/shaders/gi/gi_common.glsl
 float3 ddgi_sample_irradiance(float3 P, float3 N)
 {
 	uint3 base_grid_coord = ddgi_base_probe_coord(P);
@@ -134,7 +135,7 @@ float3 ddgi_sample_irradiance(float3 P, float3 N)
 		// then samples can pass through thin occluders to the other
 		// side (this can only happen if there are MULTIPLE occluders
 		// near each other, a wall surface won't pass through itself.)
-		float3 probe_to_point = P - probe_pos + N * 0.01;
+		float3 probe_to_point = P - probe_pos + N * 0.001;
 		float3 dir = normalize(-probe_to_point);
 
 		// Compute the trilinear weights based on the grid cell vertex to smoothly
@@ -165,7 +166,8 @@ float3 ddgi_sample_irradiance(float3 P, float3 N)
 
 			// The small offset at the end reduces the "going to zero" impact
 			// where this is really close to exactly opposite
-			weight *= sqr(max(0.0001, (dot(true_direction_to_probe, N) + 1.0) * 0.5)) + 0.2;
+			//weight *= sqr(max(0.0001, (dot(true_direction_to_probe, N) + 1.0) * 0.5)) + 0.2;
+			weight *= saturate(dot(true_direction_to_probe, N));
 		}
 
 		// Moment visibility test
@@ -236,10 +238,10 @@ float3 ddgi_sample_irradiance(float3 P, float3 N)
 		net_irradiance = sqr(net_irradiance);
 #endif
 
-		net_irradiance *= 0.85; // energy preservation
+		//net_irradiance *= 0.85; // energy preservation
 
-		//return net_irradiance;
-		return 0.5f * PI * net_irradiance;
+		return net_irradiance;
+		//return 0.5f * PI * net_irradiance;
 	}
 
 	return 0;

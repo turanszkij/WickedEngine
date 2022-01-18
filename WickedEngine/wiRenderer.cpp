@@ -97,11 +97,11 @@ bool disableAlbedoMaps = false;
 bool forceDiffuseLighting = false;
 bool SCREENSPACESHADOWS = false;
 bool SURFELGI = false;
-float SURFELGI_BOOST = 1.0f;
 SURFEL_DEBUG SURFELGI_DEBUG = SURFEL_DEBUG_NONE;
 bool DDGI_ENABLED = true;
 bool DDGI_DEBUG_ENABLED = true;
-uint32_t DDGI_RAYCOUNT = 64u;
+uint32_t DDGI_RAYCOUNT = 128u;
+float GI_BOOST = 1.0f;
 
 
 struct VoxelizedSceneData
@@ -3018,7 +3018,7 @@ void UpdatePerFrameData(
 		frameCB.envprobe_mipcount_rcp = 1.0f / (float)frameCB.envprobe_mipcount;
 	}
 
-	frameCB.surfelgi_boost = GetSurfelGIBoost();
+	frameCB.gi_boost = GetGIBoost();
 
 	frameCB.temporalaa_samplerotation = 0;
 	if (GetTemporalAAEnabled())
@@ -8014,6 +8014,18 @@ void DDGI(
 		device->BindComputeShader(&shaders[CSTYPE_DDGI_RAYTRACE], cmd);
 		device->PushConstants(&push, sizeof(push), cmd);
 
+		MiscCB cb = {};
+		float angle = wi::random::GetRandom(0.0f, 1.0f) * XM_2PI;
+		XMVECTOR axis = XMVectorSet(
+			wi::random::GetRandom(-1.0f, 1.0f),
+			wi::random::GetRandom(-1.0f, 1.0f),
+			wi::random::GetRandom(-1.0f, 1.0f),
+			0
+		);
+		axis = XMVector3Normalize(axis);
+		XMStoreFloat4x4(&cb.g_xTransform, XMMatrixRotationAxis(axis, angle));
+		device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(MiscCB), cmd);
+
 		const GPUResource* uavs[] = {
 			&scene.ddgiRayBuffer
 		};
@@ -8021,15 +8033,17 @@ void DDGI(
 
 		device->Dispatch(DDGI_PROBE_COUNT, 1, 1, cmd);
 
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-				GPUBarrier::Buffer(&scene.ddgiRayBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
 		device->EventEnd(cmd);
+	}
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Memory(),
+			GPUBarrier::Buffer(&scene.ddgiRayBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
+			GPUBarrier::Image(&scene.ddgiColorTexture[1], ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&scene.ddgiDepthTexture[1], ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
 	// Update:
@@ -8074,6 +8088,14 @@ void DDGI(
 		device->Dispatch(DDGI_PROBE_COUNT, 1, 1, cmd);
 
 		device->EventEnd(cmd);
+	}
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&scene.ddgiColorTexture[1], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
+			GPUBarrier::Image(&scene.ddgiDepthTexture[1], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
 	wi::profiler::EndRange(prof_range);
@@ -11958,14 +11980,6 @@ bool GetSurfelGIEnabled()
 {
 	return SURFELGI;
 }
-void SetSurfelGIBoost(float value)
-{
-	SURFELGI_BOOST = value;
-}
-float GetSurfelGIBoost()
-{
-	return SURFELGI_BOOST;
-}
 void SetSurfelGIDebugEnabled(SURFEL_DEBUG value)
 {
 	SURFELGI_DEBUG = value;
@@ -11997,6 +12011,14 @@ void SetDDGIRayCount(uint32_t value)
 uint32_t GetDDGIRayCount()
 {
 	return DDGI_RAYCOUNT;
+}
+void SetGIBoost(float value)
+{
+	GI_BOOST = value;
+}
+float GetGIBoost()
+{
+	return GI_BOOST;
 }
 
 }

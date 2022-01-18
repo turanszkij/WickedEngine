@@ -7,6 +7,7 @@
 #include "raytracingHF.hlsli"
 #include "stochasticSSRHF.hlsli"
 #include "lightingHF.hlsli"
+#include "ShaderInterop_DDGI.h"
 
 PUSHCONSTANT(postprocess, PostProcess);
 
@@ -197,6 +198,12 @@ void main(uint2 DTid : SV_DispatchThreadID)
 			}
 
 			lighting.indirect.specular += max(0, EnvironmentReflection_Global(surface));
+
+			[branch]
+			if (GetScene().ddgi_color_texture >= 0)
+			{
+				lighting.indirect.diffuse = ddgi_sample_irradiance(surface.P, surface.N);
+			}
 
 			LightingPart combined_lighting = CombineLighting(surface, lighting);
 			payload.data.xyz += surface.albedo * combined_lighting.diffuse + combined_lighting.specular + surface.emissiveColor;

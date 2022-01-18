@@ -1,6 +1,8 @@
 #include "globals.hlsli"
 #include "ShaderInterop_DDGI.h"
 
+// Based on: https://github.com/diharaw/hybrid-rendering/blob/master/src/shaders/gi/gi_probe_update.glsl
+
 PUSHCONSTANT(push, DDGIPushConstants);
 
 StructuredBuffer<DDGIRayDataPacked> ddgiRayBuffer : register(t0);
@@ -53,7 +55,6 @@ void main(uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex
 
 		GroupMemoryBarrierWithGroupSync();
 
-		const float energy_conservation = 0.95;
 		for (uint r = 0; r < num_rays; ++r)
 		{
 			DDGIRayData ray = ray_cache[r].load();
@@ -69,12 +70,12 @@ void main(uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex
 				ray_probe_distance = maxDistance;
 			}
 #else
-			const float3 radiance = ray.radiance.rgb * energy_conservation;
+			const float3 radiance = ray.radiance.rgb;
 #endif // DDGI_UPDATE_DEPTH
 
 			float weight = saturate(dot(texel_direction, ray.direction));
 #ifdef DDGI_UPDATE_DEPTH
-			weight = pow(weight, 4);
+			weight = pow(weight, 64);
 #endif // DDGI_UPDATE_DEPTH
 
 			if (weight > WEIGHT_EPSILON)

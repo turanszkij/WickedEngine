@@ -27,9 +27,9 @@ public:
 	wi::gui::ComboBox swapchainComboBox;
 	wi::gui::CheckBox occlusionCullingCheckBox;
 	wi::gui::Slider resolutionScaleSlider;
+	wi::gui::Slider GIBoostSlider;
 	wi::gui::CheckBox surfelGICheckBox;
 	wi::gui::ComboBox surfelGIDebugComboBox;
-	wi::gui::Slider surfelGIBoostSlider;
 	wi::gui::CheckBox ddgiCheckBox;
 	wi::gui::CheckBox ddgiDebugCheckBox;
 	wi::gui::Slider ddgiRayCountSlider;

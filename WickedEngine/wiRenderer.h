@@ -776,8 +776,6 @@ namespace wi::renderer
 	bool GetScreenSpaceShadowsEnabled();
 	void SetSurfelGIEnabled(bool value);
 	bool GetSurfelGIEnabled();
-	void SetSurfelGIBoost(float value);
-	float GetSurfelGIBoost();
 	void SetSurfelGIDebugEnabled(SURFEL_DEBUG value);
 	SURFEL_DEBUG GetSurfelGIDebugEnabled();
 	void SetDDGIEnabled(bool value);
@@ -786,6 +784,8 @@ namespace wi::renderer
 	bool GetDDGIDebugEnabled();
 	void SetDDGIRayCount(uint32_t value);
 	uint32_t GetDDGIRayCount();
+	void SetGIBoost(float value);
+	float GetGIBoost();
 
 	// Gets pick ray according to the current screen resolution and pointer coordinates. Can be used as input into RayIntersectWorld()
 	wi::primitive::Ray GetPickRay(long cursorX, long cursorY, const wi::Canvas& canvas, const wi::scene::CameraComponent& camera = wi::scene::GetCamera());
