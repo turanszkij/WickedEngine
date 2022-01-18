@@ -23,7 +23,7 @@ void main(uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex
 {
 	const uint probeIndex = Gid.x;
 	const uint3 probeCoord = ddgi_probe_coord(probeIndex);
-	const float maxDistance = length(ddgi_cellsize()) * 1.5;
+	const float maxDistance = ddgi_max_distance();
 
 #ifdef DDGI_UPDATE_DEPTH
 	float2 result = 0;
@@ -60,9 +60,9 @@ void main(uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex
 
 #ifdef DDGI_UPDATE_DEPTH
 			float ray_probe_distance;
-			if (ray.depth >= 0)
+			if (ray.depth > 0)
 			{
-				ray_probe_distance = min(maxDistance, ray.depth - 0.01);
+				ray_probe_distance = clamp(ray.depth - 0.01, 0, maxDistance);
 			}
 			else
 			{
@@ -74,13 +74,13 @@ void main(uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex
 
 			float weight = max(0, dot(texel_direction, ray.direction));
 #ifdef DDGI_UPDATE_DEPTH
-			weight = pow(weight, 2);
+			weight = pow(weight, 4);
 #endif // DDGI_UPDATE_DEPTH
 
 			if (weight > WEIGHT_EPSILON)
 			{
 #ifdef DDGI_UPDATE_DEPTH
-				result += float2(ray.depth * weight, sqr(ray.depth) * weight);
+				result += float2(ray_probe_distance * weight, sqr(ray_probe_distance) * weight);
 #else
 				result += ray.radiance.rgb * weight;
 #endif // DDGI_UPDATE_DEPTH
@@ -113,6 +113,8 @@ void main(uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex
 
 	output[pixel_current] = result;
 
+	DeviceMemoryBarrierWithGroupSync();
+
 #ifdef DDGI_UPDATE_DEPTH
 	// Copy depth borders:
 	for (uint index = groupIndex; index < 68; index += THREADCOUNT * THREADCOUNT)
@@ -122,6 +124,7 @@ void main(uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex
 		output[dst_coord] = output[src_coord];
 	}
 #else
+	//output[pixel_current] = bindless_textures[GetScene().ddgi_depth_texture].SampleLevel(sampler_linear_clamp, ddgi_probe_depth_uv(probeCoord, texel_direction), 0).xxx * 0.01;
 	// Copy color borders:
 	for (uint index = groupIndex; index < 36; index += THREADCOUNT * THREADCOUNT)
 	{

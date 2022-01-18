@@ -9,6 +9,16 @@ RWStructuredBuffer<DDGIRayData> rayBuffer : register(u0);
 
 static const uint THREADCOUNT = 32;
 
+#define madfrac(A, B) ((A) * (B)-floor((A) * (B)))
+static const float PHI = sqrt(5) * 0.5 + 0.5;
+float3 spherical_fibonacci(float i, float n)
+{
+	float phi = 2.0 * PI * madfrac(i, PHI - 1);
+	float cos_theta = 1.0 - (2.0 * i + 1.0) * (1.0 / n);
+	float sin_theta = sqrt(clamp(1.0 - cos_theta * cos_theta, 0.0f, 1.0f));
+	return float3(cos(phi) * sin_theta, sin(phi) * sin_theta, cos_theta);
+}
+
 [numthreads(THREADCOUNT, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
@@ -19,14 +29,18 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	float seed = 0.123456;
 	float2 uv = float2(frac(GetFrame().frame_count.x / 4096.0), DTid.x);
 
+	float3 random_vector = normalize(float3(rand(seed, uv), rand(seed, uv), rand(seed, uv)) * 2 - 1);
+	float3x3 random_orientation = get_tangentspace(random_vector);
+
 	for (uint rayIndex = groupIndex; rayIndex < push.rayCount; rayIndex += THREADCOUNT)
 	{
 		RayDesc ray;
 		ray.Origin = probePos;
 		ray.TMin = 0.0001;
 		ray.TMax = FLT_MAX;
-		ray.Direction = decode_oct(float2(rand(seed, uv), rand(seed, uv)) * 2 - 1);
+		//ray.Direction = decode_oct(float2(rand(seed, uv), rand(seed, uv)) * 2 - 1);
 		//ray.Direction = normalize(float3(rand(seed, uv), rand(seed, uv), rand(seed, uv)) * 2 - 1);
+		ray.Direction = normalize(mul(spherical_fibonacci(rayIndex, push.rayCount), random_orientation));
 
 #ifdef RTAPI
 		RayQuery<
@@ -85,6 +99,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			prim.instanceIndex = q.CommittedInstanceID();
 			prim.subsetIndex = q.CommittedGeometryIndex();
 
+			surface.is_frontface = q.CommittedTriangleFrontFace();
 			if (!surface.load(prim, q.CommittedTriangleBarycentrics()))
 				break;
 
@@ -245,7 +260,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 			if (push.frameIndex > 0)
 			{
-				hit_result += ddgi_sample_irradiance(surface.P, surface.facenormal);
+				hit_result += ddgi_sample_irradiance(surface.P, surface.facenormal) * 0.9;
 			}
 			
 			hit_result *= surface.albedo;

@@ -1780,7 +1780,7 @@ namespace wi::scene
 				TextureDesc tex;
 				tex.width = DDGI_COLOR_TEXTURE_WIDTH;
 				tex.height = DDGI_COLOR_TEXTURE_HEIGHT;
-				tex.format = Format::R11G11B10_FLOAT;
+				tex.format = Format::R16G16B16A16_FLOAT;
 				tex.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
 				device->CreateTexture(&tex, nullptr, &ddgiColorTexture[0]);
 				device->SetName(&ddgiColorTexture[0], "ddgiColorTexture[0]");

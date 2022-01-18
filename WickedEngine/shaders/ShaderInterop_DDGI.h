@@ -38,6 +38,10 @@ inline float3 ddgi_cellsize()
 {
 	return GetScene().aabb_extents / (DDGI_GRID_DIMENSIONS - 1);
 }
+inline float ddgi_max_distance()
+{
+	return length(ddgi_cellsize()) * 1.5;
+}
 inline uint3 ddgi_base_probe_coord(float3 P)
 {
 	float3 normalized_pos = (P - GetScene().aabb_min) * GetScene().aabb_extents_rcp;
@@ -110,7 +114,7 @@ float3 ddgi_sample_irradiance(float3 P, float3 N)
 		// then samples can pass through thin occluders to the other
 		// side (this can only happen if there are MULTIPLE occluders
 		// near each other, a wall surface won't pass through itself.)
-		float3 probe_to_point = P - probe_pos + N * 0.1;
+		float3 probe_to_point = P - probe_pos + N * 0.01;
 		float3 dir = normalize(-probe_to_point);
 
 		// Compute the trilinear weights based on the grid cell vertex to smoothly
