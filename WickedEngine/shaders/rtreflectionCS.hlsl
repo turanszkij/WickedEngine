@@ -144,7 +144,10 @@ void main(uint2 DTid : SV_DispatchThreadID)
 		prim.subsetIndex = q.CommittedGeometryIndex();
 
 		Surface surface;
-		surface.is_frontface = q.CommittedTriangleFrontFace();
+		if (!q.CommittedTriangleFrontFace())
+		{
+			surface.flags |= SURFACE_FLAG_BACKFACE;
+		}
 		if (!surface.load(prim, q.CommittedTriangleBarycentrics()))
 			return;
 
@@ -200,7 +203,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
 			lighting.indirect.specular += max(0, EnvironmentReflection_Global(surface));
 
 			[branch]
-			if (GetScene().ddgi_color_texture >= 0)
+			if (GetScene().ddgi.color_texture >= 0)
 			{
 				lighting.indirect.diffuse = ddgi_sample_irradiance(surface.P, surface.N);
 			}

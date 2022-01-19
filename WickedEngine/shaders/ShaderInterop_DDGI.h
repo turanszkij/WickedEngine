@@ -3,7 +3,7 @@
 #include "ShaderInterop.h"
 #include "ShaderInterop_Renderer.h"
 
-static const uint3 DDGI_GRID_DIMENSIONS = uint3(16, 8, 16); // The scene extents will be subdivided into a grid of this resolution, each grid cell will have one probe
+static const uint3 DDGI_GRID_DIMENSIONS = uint3(32, 8, 32); // The scene extents will be subdivided into a grid of this resolution, each grid cell will have one probe
 static const uint DDGI_PROBE_COUNT = DDGI_GRID_DIMENSIONS.x * DDGI_GRID_DIMENSIONS.y * DDGI_GRID_DIMENSIONS.z;
 static const uint DDGI_MAX_RAYCOUNT = 512; // affects global ray buffer size
 static const uint DDGI_COLOR_RESOLUTION = 8; // this should not be modified, border update code is fixed
@@ -56,15 +56,15 @@ struct DDGIRayDataPacked
 
 inline float3 ddgi_cellsize()
 {
-	return GetScene().aabb_extents / (DDGI_GRID_DIMENSIONS - 1);
+	return GetScene().ddgi.cell_size;
 }
 inline float ddgi_max_distance()
 {
-	return length(ddgi_cellsize()) * 1.5;
+	return GetScene().ddgi.max_distance;
 }
 inline uint3 ddgi_base_probe_coord(float3 P)
 {
-	float3 normalized_pos = (P - GetScene().aabb_min) * GetScene().aabb_extents_rcp;
+	float3 normalized_pos = (P - GetScene().ddgi.grid_min) * GetScene().ddgi.grid_extents_rcp;
 	return floor(normalized_pos * (DDGI_GRID_DIMENSIONS - 1));
 }
 inline uint3 ddgi_probe_coord(uint probeIndex)
@@ -77,7 +77,7 @@ inline uint ddgi_probe_index(uint3 probeCoord)
 }
 inline float3 ddgi_probe_position(uint3 probeCoord)
 {
-	return GetScene().aabb_min + probeCoord * ddgi_cellsize();
+	return GetScene().ddgi.grid_min + probeCoord * ddgi_cellsize();
 }
 inline uint2 ddgi_probe_color_pixel(uint3 probeCoord)
 {
@@ -114,7 +114,7 @@ float3 ddgi_sample_irradiance(float3 P, float3 N)
 	float3 alpha = clamp((P - base_probe_pos) / ddgi_cellsize(), 0, 1);
 
 	// Iterate over adjacent probe cage
-	for (int i = 0; i < 8; ++i)
+	for (uint i = 0; i < 8; ++i)
 	{
 		// Compute the offset grid coord and clamp to the probe grid boundary
 		// Offset = 0 or 1 along each axis
@@ -176,7 +176,7 @@ float3 ddgi_sample_irradiance(float3 P, float3 N)
 		// Moment visibility test
 #if 1
 		[branch]
-		if(GetScene().ddgi_depth_texture >= 0)
+		if(GetScene().ddgi.depth_texture >= 0)
 		{
 			//float2 tex_coord = texture_coord_from_direction(-dir, p, ddgi.depth_texture_width, ddgi.depth_texture_height, ddgi.depth_probe_side_length);
 			float2 tex_coord = ddgi_probe_depth_uv(probe_grid_coord, -dir);
@@ -184,7 +184,7 @@ float3 ddgi_sample_irradiance(float3 P, float3 N)
 			float dist_to_probe = length(probe_to_point);
 
 			//float2 temp = textureLod(depth_texture, tex_coord, 0.0f).rg;
-			float2 temp = bindless_textures[GetScene().ddgi_depth_texture].SampleLevel(sampler_linear_clamp, tex_coord, 0).xy;
+			float2 temp = bindless_textures[GetScene().ddgi.depth_texture].SampleLevel(sampler_linear_clamp, tex_coord, 0).xy;
 			float mean = temp.x;
 			float variance = abs(sqr(temp.x) - temp.y);
 
@@ -208,7 +208,7 @@ float3 ddgi_sample_irradiance(float3 P, float3 N)
 		float2 tex_coord = ddgi_probe_color_uv(probe_grid_coord, irradiance_dir);
 
 		//float3 probe_irradiance = textureLod(irradiance_texture, tex_coord, 0.0f).rgb;
-		float3 probe_irradiance = bindless_textures[GetScene().ddgi_color_texture].SampleLevel(sampler_linear_clamp, tex_coord, 0).rgb;
+		float3 probe_irradiance = bindless_textures[GetScene().ddgi.color_texture].SampleLevel(sampler_linear_clamp, tex_coord, 0).rgb;
 
 		// A tiny bit of light is really visible due to log perception, so
 		// crush tiny weights but keep the curve continuous. This must be done

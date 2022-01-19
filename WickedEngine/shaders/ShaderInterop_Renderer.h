@@ -11,9 +11,9 @@ struct ShaderScene
 	int envmaparray;
 
 	int globalenvmap;
-	int ddgi_color_texture;
-	int ddgi_depth_texture;
 	int padding0;
+	int padding1;
+	int padding2;
 
 	int TLAS;
 	int BVH_counter;
@@ -30,6 +30,22 @@ struct ShaderScene
 	float padding6;
 
 	ShaderWeather weather;
+
+	struct DDGI
+	{
+		float3 grid_min;
+		int color_texture;
+
+		float3 grid_extents;
+		int depth_texture;
+
+		float3 cell_size;
+		float max_distance;
+
+		float3 grid_extents_rcp;
+		float padding0;
+	};
+	DDGI ddgi;
 };
 
 static const uint SHADERMATERIAL_OPTION_BIT_USE_VERTEXCOLORS = 1 << 0;

@@ -107,9 +107,9 @@ void main(uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex
 	}
 
 #ifdef DDGI_UPDATE_DEPTH
-	const float2 prev_result = bindless_textures[GetScene().ddgi_depth_texture][pixel_current].xy;
+	const float2 prev_result = bindless_textures[GetScene().ddgi.depth_texture][pixel_current].xy;
 #else
-	const float3 prev_result = bindless_textures[GetScene().ddgi_color_texture][pixel_current].rgb;
+	const float3 prev_result = bindless_textures[GetScene().ddgi.color_texture][pixel_current].rgb;
 #endif // DDGI_UPDATE_DEPTH
 
 	if (push.frameIndex > 0)

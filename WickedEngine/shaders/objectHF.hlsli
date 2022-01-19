@@ -351,7 +351,7 @@ inline void ApplyEmissive(in Surface surface, inout Lighting lighting)
 	lighting.direct.specular += surface.emissiveColor;
 }
 
-inline void LightMapping(in int lightmap, in float2 ATLAS, inout Lighting lighting)
+inline void LightMapping(in int lightmap, in float2 ATLAS, inout Lighting lighting, inout Surface surface)
 {
 	[branch]
 	if (lightmap >= 0 && any(ATLAS))
@@ -362,6 +362,8 @@ inline void LightMapping(in int lightmap, in float2 ATLAS, inout Lighting lighti
 #else
 		lighting.indirect.diffuse = texture_lightmap.SampleLevel(sampler_linear_clamp, ATLAS, 0).rgb;
 #endif // LIGHTMAP_QUALITY_BICUBIC
+
+		surface.flags |= SURFACE_FLAG_GI_APPLIED;
 	}
 }
 
@@ -628,9 +630,10 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 	}
 
 	[branch]
-	if (GetScene().ddgi_color_texture >= 0)
+	if ((surface.flags & SURFACE_FLAG_GI_APPLIED) == 0 && GetScene().ddgi.color_texture >= 0)
 	{
 		lighting.indirect.diffuse = ddgi_sample_irradiance(surface.P, surface.N);
+		surface.flags |= SURFACE_FLAG_GI_APPLIED;
 	}
 
 }
@@ -907,19 +910,20 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 		}
 	}
 
-
 #ifndef TRANSPARENT
 	[branch]
-	if (GetFrame().options & OPTION_BIT_SURFELGI_ENABLED && GetCamera().texture_surfelgi_index >= 0 && surfel_cellvalid(surfel_cell(surface.P)))
+	if ((surface.flags & SURFACE_FLAG_GI_APPLIED) == 0 && GetFrame().options & OPTION_BIT_SURFELGI_ENABLED && GetCamera().texture_surfelgi_index >= 0 && surfel_cellvalid(surfel_cell(surface.P)))
 	{
 		lighting.indirect.diffuse = bindless_textures[GetCamera().texture_surfelgi_index][surface.pixel].rgb * GetFrame().gi_boost;
+		surface.flags |= SURFACE_FLAG_GI_APPLIED;
 	}
 #endif // TRANSPARENT
 
 	[branch]
-	if (GetScene().ddgi_color_texture >= 0)
+	if ((surface.flags & SURFACE_FLAG_GI_APPLIED) == 0 && GetScene().ddgi.color_texture >= 0)
 	{
 		lighting.indirect.diffuse = ddgi_sample_irradiance(surface.P, surface.N) * GetFrame().gi_boost;
+		surface.flags |= SURFACE_FLAG_GI_APPLIED;
 	}
 
 }
@@ -1664,6 +1668,11 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // TRANSPARENT
 
 
+#ifdef OBJECTSHADER_USE_ATLAS
+	LightMapping(load_instance(input.instanceID).lightmap, input.atl, lighting, surface);
+#endif // OBJECTSHADER_USE_ATLAS
+
+
 #ifdef OBJECTSHADER_USE_EMISSIVE
 	ApplyEmissive(surface, lighting);
 #endif // OBJECTSHADER_USE_EMISSIVE
@@ -1682,11 +1691,6 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #ifdef TILEDFORWARD
 	TiledLighting(surface, lighting);
 #endif // TILEDFORWARD
-
-
-#ifdef OBJECTSHADER_USE_ATLAS
-	LightMapping(load_instance(input.instanceID).lightmap, input.atl, lighting);
-#endif // OBJECTSHADER_USE_ATLAS
 
 
 #ifndef WATER

@@ -124,7 +124,10 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 	prim.subsetIndex = GeometryIndex();
 
 	Surface surface;
-	surface.is_frontface = (HitKind() == HIT_KIND_TRIANGLE_FRONT_FACE);
+	if (HitKind() != HIT_KIND_TRIANGLE_FRONT_FACE)
+	{
+		surface.flags |= SURFACE_FLAG_BACKFACE;
+	}
 	if (!surface.load(prim, attr.barycentrics))
 		return;
 

@@ -3,7 +3,7 @@
 #include "lightingHF.hlsli"
 #include "ShaderInterop_DDGI.h"
 
-// This shader runs one probe per thread group and each thread will trace one ray and write the trace result to a ray data buffer
+// This shader runs one probe per thread group and each thread will trace rays and write the trace result to a ray data buffer
 //	ray data buffer will be later integrated by ddgi_updateCS shader which updates the DDGI irradiance and depth textures
 
 PUSHCONSTANT(push, DDGIPushConstants);
@@ -100,7 +100,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			prim.instanceIndex = q.CommittedInstanceID();
 			prim.subsetIndex = q.CommittedGeometryIndex();
 
-			surface.is_frontface = q.CommittedTriangleFrontFace();
+			if (!q.CommittedTriangleFrontFace())
+			{
+				surface.flags |= SURFACE_FLAG_BACKFACE;
+			}
+
 			if (!surface.load(prim, q.CommittedTriangleBarycentrics()))
 				break;
 
