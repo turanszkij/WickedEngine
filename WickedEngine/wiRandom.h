@@ -11,5 +11,8 @@ namespace wi::random
 
 	uint64_t GetRandom(uint64_t minValue, uint64_t maxValue);
 	uint64_t GetRandom(uint64_t maxValue);
+
+	float GetRandom(float minValue, float maxValue);
+	float GetRandom(float maxValue);
 };
 

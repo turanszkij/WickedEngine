@@ -234,6 +234,10 @@ int main(int argc, char* argv[])
 		"surfel_binningCS.hlsl",
 		"surfel_raytraceCS_rtapi.hlsl",
 		"surfel_raytraceCS.hlsl",
+		"ddgi_raytraceCS.hlsl",
+		"ddgi_raytraceCS_rtapi.hlsl",
+		"ddgi_updateCS.hlsl",
+		"ddgi_updateCS_depth.hlsl",
 	};
 
 	shaders[static_cast<size_t>(ShaderStage::PS)] = {
@@ -309,6 +313,7 @@ int main(int argc, char* argv[])
 		"captureImpostorPS_normal.hlsl"					,
 		"captureImpostorPS_surface.hlsl"				,
 		"captureImpostorPS_albedo.hlsl"					,
+		"ddgi_debugPS.hlsl"					,
 	};
 
 	shaders[static_cast<size_t>(ShaderStage::VS)] = {
@@ -357,6 +362,7 @@ int main(int argc, char* argv[])
 		"cubeShadowVS_transparent.hlsl"					,
 		"cubeShadowVS_transparent_emulation.hlsl"		,
 		"occludeeVS.hlsl",
+		"ddgi_debugVS.hlsl",
 	};
 
 	shaders[static_cast<size_t>(ShaderStage::GS)] = {
@@ -400,6 +406,7 @@ int main(int argc, char* argv[])
 	minshadermodels["rtshadowCS.hlsl"] = ShaderModel::SM_6_5;
 	minshadermodels["rtaoCS.hlsl"] = ShaderModel::SM_6_5;
 	minshadermodels["surfel_raytraceCS_rtapi.hlsl"] = ShaderModel::SM_6_5;
+	minshadermodels["ddgi_raytraceCS_rtapi.hlsl"] = ShaderModel::SM_6_5;
 	minshadermodels["rtreflectionCS.hlsl"] = ShaderModel::SM_6_5;
 
 	wi::jobsystem::context ctx;

@@ -124,6 +124,13 @@ struct ClearcoatSurface
 	float3 F;
 };
 
+enum
+{
+	SURFACE_FLAG_BACKFACE = 1u << 0u,
+	SURFACE_FLAG_RECEIVE_SHADOW = 1u << 1u,
+	SURFACE_FLAG_GI_APPLIED = 1u << 2u,
+};
+
 struct Surface
 {
 	// Fill these yourself:
@@ -147,9 +154,8 @@ struct Surface
 	float4 sss;				// subsurface scattering color * amount
 	float4 sss_inv;			// 1 / (1 + sss)
 	uint layerMask;			// the engine-side layer mask
-	bool receiveshadow;
 	float3 facenormal;		// surface normal without normal map
-	bool is_frontface;
+	uint flags;
 
 	// These will be computed when calling Update():
 	float roughnessBRDF;	// roughness input for BRDF functions
@@ -183,8 +189,8 @@ struct Surface
 		sss = 0;
 		sss_inv = 1;
 		layerMask = ~0;
-		receiveshadow = true;
 		facenormal = 0;
+		flags = 0;
 
 		sheen.color = 0;
 		sheen.roughness = 0;
@@ -241,7 +247,10 @@ struct Surface
 			f0 *= lerp(lerp(float3(0, 0, 0), float3(1, 1, 1), reflectance), baseColor.rgb, metalness);
 		}
 
-		receiveshadow = material.IsReceiveShadow();
+		if (material.IsReceiveShadow())
+		{
+			flags |= SURFACE_FLAG_RECEIVE_SHADOW;
+		}
 	}
 
 	inline void update()
@@ -279,7 +288,7 @@ struct Surface
 #endif // BRDF_CARTOON
 	}
 
-	inline bool IsReceiveShadow() { return receiveshadow; }
+	inline bool IsReceiveShadow() { return flags & SURFACE_FLAG_RECEIVE_SHADOW; }
 
 
 	ShaderMeshInstance inst;
@@ -440,7 +449,7 @@ struct Surface
 		N = mad(n0, w, mad(n1, u, n2 * v)); // n0 * w + n1 * u + n2 * v
 		N = mul((float3x3)inst.transformInverseTranspose.GetMatrix(), N);
 		N = normalize(N);
-		if (is_frontface == false && !is_hairparticle && !is_emittedparticle)
+		if ((flags & SURFACE_FLAG_BACKFACE) && !is_hairparticle && !is_emittedparticle)
 		{
 			N = -N;
 		}

@@ -30,6 +30,22 @@ struct ShaderScene
 	float padding6;
 
 	ShaderWeather weather;
+
+	struct DDGI
+	{
+		float3 grid_min;
+		int color_texture;
+
+		float3 grid_extents;
+		int depth_texture;
+
+		float3 cell_size;
+		float max_distance;
+
+		float3 grid_extents_rcp;
+		float padding0;
+	};
+	DDGI ddgi;
 };
 
 static const uint SHADERMATERIAL_OPTION_BIT_USE_VERTEXCOLORS = 1 << 0;
@@ -590,7 +606,7 @@ struct FrameCB
 	int			texture_voxelgi_index;
 	int			buffer_entityarray_index;
 	int			buffer_entitymatrixarray_index;
-	float		surfelgi_boost;
+	float		gi_boost;
 
 	ShaderScene scene;
 };

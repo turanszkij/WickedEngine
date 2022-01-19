@@ -1004,6 +1004,24 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)rtreflectionCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)ddgi_debugVS.hlsl">
+      <Filter>VS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)ddgi_debugPS.hlsl">
+      <Filter>PS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)ddgi_raytraceCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)ddgi_raytraceCS_rtapi.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)ddgi_updateCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)ddgi_updateCS_depth.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop.h">
@@ -1046,6 +1064,9 @@
       <Filter>interop</Filter>
     </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_Weather.h">
+      <Filter>interop</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop_DDGI.h">
       <Filter>interop</Filter>
     </ClInclude>
   </ItemGroup>

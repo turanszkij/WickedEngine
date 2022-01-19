@@ -13,6 +13,7 @@
 #include "wiUnorderedMap.h"
 
 #include "shaders/ShaderInterop_SurfelGI.h"
+#include "shaders/ShaderInterop_DDGI.h"
 
 using namespace wi::ecs;
 using namespace wi::enums;
@@ -1761,6 +1762,51 @@ namespace wi::scene
 			std::swap(surfelMomentsTexture[0], surfelMomentsTexture[1]);
 		}
 
+		if (wi::renderer::GetDDGIEnabled())
+		{
+			ddgi_frameIndex++;
+			if (!ddgiColorTexture[0].IsValid())
+			{
+				ddgi_frameIndex = 0;
+
+				GPUBufferDesc buf;
+				buf.stride = sizeof(DDGIRayDataPacked);
+				buf.size = buf.stride * DDGI_PROBE_COUNT * DDGI_MAX_RAYCOUNT;
+				buf.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+				buf.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
+				device->CreateBuffer(&buf, nullptr, &ddgiRayBuffer);
+				device->SetName(&ddgiRayBuffer, "ddgiRayBuffer");
+
+				TextureDesc tex;
+				tex.width = DDGI_COLOR_TEXTURE_WIDTH;
+				tex.height = DDGI_COLOR_TEXTURE_HEIGHT;
+				//tex.format = Format::R11G11B10_FLOAT; // not enough precision with this format, causes green hue in GI
+				tex.format = Format::R16G16B16A16_FLOAT;
+				tex.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+				device->CreateTexture(&tex, nullptr, &ddgiColorTexture[0]);
+				device->SetName(&ddgiColorTexture[0], "ddgiColorTexture[0]");
+				device->CreateTexture(&tex, nullptr, &ddgiColorTexture[1]);
+				device->SetName(&ddgiColorTexture[1], "ddgiColorTexture[1]");
+
+				tex.width = DDGI_DEPTH_TEXTURE_WIDTH;
+				tex.height = DDGI_DEPTH_TEXTURE_HEIGHT;
+				tex.format = Format::R16G16_FLOAT;
+				tex.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+				device->CreateTexture(&tex, nullptr, &ddgiDepthTexture[0]);
+				device->SetName(&ddgiDepthTexture[0], "ddgiDepthTexture[0]");
+				device->CreateTexture(&tex, nullptr, &ddgiDepthTexture[1]);
+				device->SetName(&ddgiDepthTexture[1], "ddgiDepthTexture[1]");
+			}
+			std::swap(ddgiColorTexture[0], ddgiColorTexture[1]);
+			std::swap(ddgiDepthTexture[0], ddgiDepthTexture[1]);
+		}
+		else if (ddgiColorTexture[0].IsValid())
+		{
+			ddgiColorTexture[0] = {};
+			ddgiColorTexture[1] = {};
+			ddgiDepthTexture[0] = {};
+			ddgiDepthTexture[1] = {};
+		}
 
 		// Shader scene resources:
 		shaderscene.instancebuffer = device->GetDescriptorIndex(&instanceBuffer, SubresourceType::SRV);
@@ -1810,6 +1856,26 @@ namespace wi::scene
 		shaderscene.weather.wind.direction = weather.windDirection;
 		shaderscene.weather.atmosphere = weather.atmosphereParameters;
 		shaderscene.weather.volumetric_clouds = weather.volumetricCloudParameters;
+
+		shaderscene.ddgi.color_texture = device->GetDescriptorIndex(&ddgiColorTexture[0], SubresourceType::SRV);
+		shaderscene.ddgi.depth_texture = device->GetDescriptorIndex(&ddgiDepthTexture[0], SubresourceType::SRV);
+		shaderscene.ddgi.grid_min.x = shaderscene.aabb_min.x - 1;
+		shaderscene.ddgi.grid_min.y = shaderscene.aabb_min.y - 1;
+		shaderscene.ddgi.grid_min.z = shaderscene.aabb_min.z - 1;
+		float3 grid_max = shaderscene.aabb_max;
+		grid_max.x += 1;
+		grid_max.y += 1;
+		grid_max.z += 1;
+		shaderscene.ddgi.grid_extents.x = abs(grid_max.x - shaderscene.ddgi.grid_min.x);
+		shaderscene.ddgi.grid_extents.y = abs(grid_max.y - shaderscene.ddgi.grid_min.y);
+		shaderscene.ddgi.grid_extents.z = abs(grid_max.z - shaderscene.ddgi.grid_min.z);
+		shaderscene.ddgi.grid_extents_rcp.x = 1.0f / shaderscene.ddgi.grid_extents.x;
+		shaderscene.ddgi.grid_extents_rcp.y = 1.0f / shaderscene.ddgi.grid_extents.y;
+		shaderscene.ddgi.grid_extents_rcp.z = 1.0f / shaderscene.ddgi.grid_extents.z;
+		shaderscene.ddgi.cell_size.x = shaderscene.ddgi.grid_extents.x / (DDGI_GRID_DIMENSIONS.x - 1);
+		shaderscene.ddgi.cell_size.y = shaderscene.ddgi.grid_extents.y / (DDGI_GRID_DIMENSIONS.y - 1);
+		shaderscene.ddgi.cell_size.z = shaderscene.ddgi.grid_extents.z / (DDGI_GRID_DIMENSIONS.z - 1);
+		shaderscene.ddgi.max_distance = std::max(shaderscene.ddgi.cell_size.x, std::max(shaderscene.ddgi.cell_size.y, shaderscene.ddgi.cell_size.z)) * 1.5f;
 	}
 	void Scene::Clear()
 	{

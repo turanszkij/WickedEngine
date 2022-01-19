@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "RendererWindow.h"
 #include "Editor.h"
+#include "shaders/ShaderInterop_DDGI.h"
 
 void RendererWindow::Create(EditorComponent* editor)
 {
@@ -10,7 +11,7 @@ void RendererWindow::Create(EditorComponent* editor)
 	wi::renderer::SetToDrawGridHelper(true);
 	wi::renderer::SetToDrawDebugCameras(true);
 
-	SetSize(XMFLOAT2(580, 550));
+	SetSize(XMFLOAT2(580, 600));
 
 	float x = 220, y = 5, step = 20, itemheight = 18;
 
@@ -58,6 +59,16 @@ void RendererWindow::Create(EditorComponent* editor)
 	});
 	AddWidget(&resolutionScaleSlider);
 
+	GIBoostSlider.Create(1, 10, 1.0f, 1000.0f, "GI Boost: ");
+	GIBoostSlider.SetTooltip("Adjust the strength of GI.\nNote that values other than 1.0 will cause mismatch with path tracing reference!");
+	GIBoostSlider.SetSize(XMFLOAT2(100, itemheight));
+	GIBoostSlider.SetPos(XMFLOAT2(x, y += step));
+	GIBoostSlider.SetValue(wi::renderer::GetGIBoost());
+	GIBoostSlider.OnSlide([editor](wi::gui::EventArgs args) {
+		wi::renderer::SetGIBoost(args.fValue);
+		});
+	AddWidget(&GIBoostSlider);
+
 	surfelGICheckBox.Create("Surfel GI: ");
 	surfelGICheckBox.SetTooltip("Surfel GI is a raytraced diffuse GI using raytracing and surface cache.");
 	surfelGICheckBox.SetPos(XMFLOAT2(x, y += step));
@@ -84,15 +95,35 @@ void RendererWindow::Create(EditorComponent* editor)
 	});
 	AddWidget(&surfelGIDebugComboBox);
 
-	surfelGIBoostSlider.Create(1, 10, 1.0f, 1000.0f, "Surfel GI Boost: ");
-	surfelGIBoostSlider.SetTooltip("Adjust the strength of surfel GI.\nNote that values other than 1.0 will cause mismatch with path tracing reference");
-	surfelGIBoostSlider.SetSize(XMFLOAT2(100, itemheight));
-	surfelGIBoostSlider.SetPos(XMFLOAT2(x, y += step));
-	surfelGIBoostSlider.SetValue(wi::renderer::GetSurfelGIBoost());
-	surfelGIBoostSlider.OnSlide([editor](wi::gui::EventArgs args) {
-		wi::renderer::SetSurfelGIBoost(args.fValue);
+	ddgiCheckBox.Create("DDGI: ");
+	ddgiCheckBox.SetTooltip("Toggle Dynamic Diffuse Global Illumination (DDGI).");
+	ddgiCheckBox.SetPos(XMFLOAT2(x, y += step));
+	ddgiCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
+	ddgiCheckBox.OnClick([](wi::gui::EventArgs args) {
+		wi::renderer::SetDDGIEnabled(args.bValue);
 		});
-	AddWidget(&surfelGIBoostSlider);
+	ddgiCheckBox.SetCheck(wi::renderer::GetDDGIEnabled());
+	AddWidget(&ddgiCheckBox);
+
+	ddgiDebugCheckBox.Create("DEBUG: ");
+	ddgiDebugCheckBox.SetTooltip("Toggle DDGI probe visualization.");
+	ddgiDebugCheckBox.SetPos(XMFLOAT2(x + 122, y));
+	ddgiDebugCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
+	ddgiDebugCheckBox.OnClick([](wi::gui::EventArgs args) {
+		wi::renderer::SetDDGIDebugEnabled(args.bValue);
+		});
+	ddgiDebugCheckBox.SetCheck(wi::renderer::GetDDGIDebugEnabled());
+	AddWidget(&ddgiDebugCheckBox);
+
+	ddgiRayCountSlider.Create(32, DDGI_MAX_RAYCOUNT, 64, DDGI_MAX_RAYCOUNT - 32, "DDGI RayCount: ");
+	ddgiRayCountSlider.SetTooltip("Adjust the ray count per DDGI probe.");
+	ddgiRayCountSlider.SetSize(XMFLOAT2(100, itemheight));
+	ddgiRayCountSlider.SetPos(XMFLOAT2(x, y += step));
+	ddgiRayCountSlider.SetValue((float)wi::renderer::GetDDGIRayCount());
+	ddgiRayCountSlider.OnSlide([&](wi::gui::EventArgs args) {
+		wi::renderer::SetDDGIRayCount((uint32_t)args.iValue);
+		});
+	AddWidget(&ddgiRayCountSlider);
 
 	voxelRadianceCheckBox.Create("Voxel GI: ");
 	voxelRadianceCheckBox.SetTooltip("Toggle voxel Global Illumination computation.");

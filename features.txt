@@ -83,6 +83,7 @@ Screen Space Contact Shadows
 Stochastic alphatest transparency
 Surfel GI
 HDR display output
+Dynamic Diffuse Global Illumination (DDGI)
 
 GLTF 2.0 extensions supported:
 KHR_materials_unlit

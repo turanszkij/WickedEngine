@@ -40,4 +40,14 @@ namespace wi::random
 	{
 		return GetRandom(0ull, maxValue);
 	}
+
+	float GetRandom(float minValue, float maxValue)
+	{
+		std::uniform_real_distribution<float>  distr(minValue, maxValue);
+		return distr(generator());
+	}
+	float GetRandom(float maxValue)
+	{
+		return GetRandom(0.0f, maxValue);
+	}
 }

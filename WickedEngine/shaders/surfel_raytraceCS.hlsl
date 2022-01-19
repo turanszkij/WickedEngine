@@ -108,6 +108,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			prim.instanceIndex = q.CommittedInstanceID();
 			prim.subsetIndex = q.CommittedGeometryIndex();
 
+			if (!q.CommittedTriangleFrontFace())
+			{
+				surface.flags |= SURFACE_FLAG_BACKFACE;
+			}
 			if(!surface.load(prim, q.CommittedTriangleBarycentrics()))
 				break;
 
