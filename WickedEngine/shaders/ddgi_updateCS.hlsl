@@ -12,9 +12,6 @@ PUSHCONSTANT(push, DDGIPushConstants);
 
 StructuredBuffer<DDGIRayDataPacked> ddgiRayBuffer : register(t0);
 
-static const uint CACHE_SIZE = 64;
-groupshared DDGIRayDataPacked ray_cache[CACHE_SIZE];
-
 static const float WEIGHT_EPSILON = 0.0001;
 
 #ifdef DDGI_UPDATE_DEPTH
@@ -24,6 +21,9 @@ RWTexture2D<float2> output : register(u0);
 static const uint THREADCOUNT = DDGI_COLOR_RESOLUTION;
 RWTexture2D<float3> output : register(u0);
 #endif // DDGI_UPDATE_DEPTH
+
+static const uint CACHE_SIZE = THREADCOUNT * THREADCOUNT;
+groupshared DDGIRayData ray_cache[CACHE_SIZE];
 
 [numthreads(THREADCOUNT, THREADCOUNT, 1)]
 void main(uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
@@ -55,14 +55,14 @@ void main(uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex
 
 		if (groupIndex < num_rays)
 		{
-			ray_cache[groupIndex] = ddgiRayBuffer[probeIndex * DDGI_MAX_RAYCOUNT + groupIndex + offset];
+			ray_cache[groupIndex] = ddgiRayBuffer[probeIndex * DDGI_MAX_RAYCOUNT + groupIndex + offset].load();
 		}
 
 		GroupMemoryBarrierWithGroupSync();
 
 		for (uint r = 0; r < num_rays; ++r)
 		{
-			DDGIRayData ray = ray_cache[r].load();
+			DDGIRayData ray = ray_cache[r];
 
 #ifdef DDGI_UPDATE_DEPTH
 			float ray_probe_distance;
