@@ -54,6 +54,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	prim.unpack(texture_gbuffer0[DTid.xy * 2]);
 
 	Surface surface;
+	surface.init();
 	if (!surface.load(prim, P))
 	{
 		return;
@@ -234,6 +235,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 							prim.subsetIndex = q.CandidateGeometryIndex();
 
 							Surface surface;
+							surface.init();
 							if (!surface.load(prim, q.CandidateTriangleBarycentrics()))
 								break;
 

@@ -1,7 +1,6 @@
 Feature list
 ------------
 
-DirectX 11 renderer
 DirectX 12 renderer
 Vulkan renderer
 Image rendering

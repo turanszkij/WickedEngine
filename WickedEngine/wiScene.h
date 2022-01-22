@@ -1329,8 +1329,10 @@ namespace wi::scene
 		wi::graphics::GPUBuffer surfelAliveBuffer[2];
 		wi::graphics::GPUBuffer surfelDeadBuffer;
 		wi::graphics::GPUBuffer surfelStatsBuffer;
+		wi::graphics::GPUBuffer surfelIndirectBuffer;
 		wi::graphics::GPUBuffer surfelGridBuffer;
 		wi::graphics::GPUBuffer surfelCellBuffer;
+		wi::graphics::GPUBuffer surfelRayBuffer;
 		wi::graphics::Texture surfelMomentsTexture[2];
 
 		// DDGI resources:

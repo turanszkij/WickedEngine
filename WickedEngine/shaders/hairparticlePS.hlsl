@@ -29,6 +29,7 @@ float4 main(VertexToPixel input) : SV_Target
 	const float2 ScreenCoord = pixel * GetCamera().internal_resolution_rcp;
 
 	Surface surface;
+	surface.init();
 	surface.create(material, color, 0);
 	surface.P = input.pos3D;
 	surface.N = input.nor;

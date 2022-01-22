@@ -95,6 +95,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	prim.unpack(primitiveID);
 
 	Surface surface;
+	surface.init();
 	if (!surface.load(prim, P))
 	{
 		return;
@@ -118,7 +119,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		uint surfel_index = surfelCellBuffer[cell.offset + i];
 		Surfel surfel = surfelBuffer[surfel_index];
 
-		float3 L = surfel.position - P;
+		float3 L = P - surfel.position;
 		float dist2 = dot(L, L);
 		if (dist2 < sqr(surfel.GetRadius()))
 		{
@@ -134,7 +135,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 				contribution = smoothstep(0, 1, contribution);
 				coverage += contribution;
 
-				float2 moments = surfelMomentsTexture.SampleLevel(sampler_linear_clamp, surfel_moment_uv(surfel_index, normal, -L / dist), 0);
+				float2 moments = surfelMomentsTexture.SampleLevel(sampler_linear_clamp, surfel_moment_uv(surfel_index, normal, L / dist), 0);
 				contribution *= surfel_moment_weight(moments, dist);
 
 				// contribution based on life can eliminate black popping surfels, but the surfel_data must be accessed...

@@ -68,6 +68,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			prim.subsetIndex = q.CandidateGeometryIndex();
 
 			Surface surface;
+			surface.init();
 			if (!surface.load(prim, q.CandidateTriangleBarycentrics()))
 				break;
 
@@ -104,6 +105,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		}
 
 		Surface surface;
+		surface.init();
 
 #ifdef RTAPI
 		// ray origin updated for next bounce:
@@ -264,6 +266,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 						prim.subsetIndex = q.CandidateGeometryIndex();
 
 						Surface surface;
+						surface.init();
 						if (!surface.load(prim, q.CandidateTriangleBarycentrics()))
 							break;
 

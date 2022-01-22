@@ -48,6 +48,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		prim.unpack(primitiveID);
 
 		Surface surface;
+		surface.init();
 		if (surface.load(prim, P))
 		{
 			pre = surface.pre;

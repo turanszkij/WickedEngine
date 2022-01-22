@@ -207,8 +207,6 @@ struct Surface
 		in float4 specularMap = 1
 	)
 	{
-		init();
-
 		if (material.options & SHADERMATERIAL_OPTION_BIT_TRANSPARENT || material.alphaTest > 0)
 		{
 			opacity = baseColor.a;

@@ -74,6 +74,7 @@ void GetSampleInfo(float2 velocity, float2 neighborUV, float2 uv, float3 P, floa
 	float NdotL = saturate(dot(N, L));
     
 	Surface surface;
+	surface.init();
 	surface.roughnessBRDF = roughness * roughness;
 	surface.NdotV = NdotV;
     
@@ -105,6 +106,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	prim.unpack(texture_gbuffer0[DTid.xy * 2]);
 
 	Surface surface;
+	surface.init();
 	if (!surface.load(prim, P))
 	{
 		return;

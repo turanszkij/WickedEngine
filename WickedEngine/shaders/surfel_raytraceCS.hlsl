@@ -12,38 +12,25 @@ StructuredBuffer<uint> surfelCellBuffer : register(t3);
 StructuredBuffer<uint> surfelAliveBuffer : register(t4);
 Texture2D<float2> surfelMomentsTexturePrev : register(t5);
 
-RWStructuredBuffer<SurfelData> surfelDataBuffer : register(u0);
-RWTexture2D<float2> surfelMomentsTexture : register(u1);
-
-void surfel_moments_write(uint2 moments_pixel, float dist)
-{
-	float2 prev = surfelMomentsTexture[moments_pixel];
-	float2 blend = prev.x < dist ? 0.005 : 0.5;
-	surfelMomentsTexture[moments_pixel] = lerp(prev, float2(dist, sqr(dist)), blend);
-}
+RWStructuredBuffer<SurfelRayDataPacked> surfelRayBuffer : register(u0);
 
 [numthreads(SURFEL_INDIRECT_NUMTHREADS, 1, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	uint surfel_count = surfelStatsBuffer.Load(SURFEL_STATS_OFFSET_COUNT);
-	if (DTid.x >= surfel_count)
+	uint global_ray_count = surfelStatsBuffer.Load(SURFEL_STATS_OFFSET_RAYCOUNT);
+	if (DTid.x >= global_ray_count)
 		return;
 
-	float4 result = 0;
+	SurfelRayData rayData = surfelRayBuffer[DTid.x].load();
 
-	uint surfel_index = surfelAliveBuffer[DTid.x];
+	uint surfel_index = rayData.surfelIndex;
 	Surfel surfel = surfelBuffer[surfel_index];
-	SurfelData surfel_data = surfelDataBuffer[surfel_index];
-	uint life = surfel_data.GetLife();
-	uint recycle = surfel_data.GetRecycle();
 
 	const float3 N = normalize(unpack_unitvector(surfel.normal));
 
 	float seed = 0.123456;
-	float2 uv = float2(frac(GetFrame().frame_count.x / 4096.0), (float)surfel_index / SURFEL_CAPACITY);
+	float2 uv = float2(frac(GetFrame().frame_count.x / 4096.0), (float)DTid.x / (float)global_ray_count);
 
-	uint rayCount = surfel.GetRayCount();
-	for (uint rayIndex = 0; rayIndex < rayCount; ++rayIndex)
 	{
 		RayDesc ray;
 		ray.Origin = surfel.position;
@@ -51,8 +38,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		ray.TMax = FLT_MAX;
 		ray.Direction = normalize(sample_hemisphere_cos(N, seed, uv));
 
-		uint2 moments_pixel = surfel_moment_pixel(surfel_index, N, ray.Direction);
-
+		rayData.direction = ray.Direction;
 
 #ifdef RTAPI
 		RayQuery<
@@ -74,8 +60,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #endif // RTAPI
 
 		{
-			surfel_moments_write(moments_pixel, surfel.GetRadius());
-
 			float3 envColor;
 			[branch]
 			if (IsStaticSky())
@@ -87,12 +71,14 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			{
 				envColor = GetDynamicSkyColor(ray.Direction, true, true, false, true);
 			}
-			result += float4(max(0, envColor), 1);
+			rayData.radiance = max(0, envColor);
+			rayData.depth = -1;
 		}
 		else
 		{
 
 			Surface surface;
+			surface.init();
 
 			float hit_depth = 0;
 			float3 hit_result = 0;
@@ -113,7 +99,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				surface.flags |= SURFACE_FLAG_BACKFACE;
 			}
 			if(!surface.load(prim, q.CommittedTriangleBarycentrics()))
-				break;
+				return;
 
 #else
 
@@ -122,16 +108,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			hit_depth = hit.distance;
 
 			if (!surface.load(hit.primitiveID, hit.bary))
-				break;
+				return;
 
 #endif // RTAPI
-
-			if (hit_depth < surfel.GetRadius())
-			{
-				hit_depth *= 0.8; // bias
-			}
-			hit_depth = clamp(hit_depth, 0, surfel.GetRadius());
-			surfel_moments_write(moments_pixel, hit_depth);
 
 			surface.P = ray.Origin;
 			surface.V = -ray.Direction;
@@ -289,7 +268,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 					uint surfel_index = surfelCellBuffer[cell.offset + i];
 					Surfel surfel = surfelBuffer[surfel_index];
 
-					float3 L = surfel.position - surface.P;
+					float3 L = surface.P - surfel.position;
 					float dist2 = dot(L, L);
 					if (dist2 < sqr(surfel.GetRadius()))
 					{
@@ -304,7 +283,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 							contribution *= saturate(1 - dist / surfel.GetRadius());
 							contribution = smoothstep(0, 1, contribution);
 
-							float2 moments = surfelMomentsTexturePrev.SampleLevel(sampler_linear_clamp, surfel_moment_uv(surfel_index, normal, -L / dist), 0);
+							float2 moments = surfelMomentsTexturePrev.SampleLevel(sampler_linear_clamp, surfel_moment_uv(surfel_index, normal, L / dist), 0);
 							contribution *= surfel_moment_weight(moments, dist);
 
 							surfel_gi += float4(surfel.color, 1) * contribution;
@@ -323,99 +302,13 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 			hit_result *= surface.albedo;
 			hit_result += max(0, surface.emissiveColor);
-			result += float4(hit_result, 1);
+
+			rayData.radiance = hit_result;
+			rayData.depth = hit_depth;
 
 		}
 
 	}
 
-
-#ifdef SURFEL_ENABLE_IRRADIANCE_SHARING
-	// Surfel irradiance sharing:
-	{
-		Surface surface;
-		surface.P = surfel.position;
-		surface.N = normalize(unpack_unitvector(surfel.normal));
-		const float surface_radius = surfel.GetRadius();
-
-		uint cellindex = surfel_cellindex(surfel_cell(surface.P));
-		SurfelGridCell cell = surfelGridBuffer[cellindex];
-		for (uint i = 0; i < cell.count; ++i)
-		{
-			uint surfel_index = surfelCellBuffer[cell.offset + i];
-			Surfel surfel = surfelBuffer[surfel_index];
-			const float combined_radius = surfel.GetRadius() + surface_radius;
-
-			float3 L = surfel.position - surface.P;
-			float dist2 = dot(L, L);
-			if (dist2 < sqr(combined_radius))
-			{
-				float3 normal = normalize(unpack_unitvector(surfel.normal));
-				float dotN = dot(surface.N, normal);
-				if (dotN > 0)
-				{
-					float dist = sqrt(dist2);
-					float contribution = 1;
-					
-					contribution *= saturate(dotN);
-					contribution *= saturate(1 - dist / combined_radius);
-					contribution = smoothstep(0, 1, contribution);
-
-					float2 moments = surfelMomentsTexturePrev.SampleLevel(sampler_linear_clamp, surfel_moment_uv(surfel_index, normal, -L / dist), 0);
-					contribution *= surfel_moment_weight(moments, dist);
-
-					result += float4(surfel.color, 1) * contribution;
-
-				}
-			}
-		}
-	}
-#endif // SURFEL_ENABLE_IRRADIANCE_SHARING
-
-	if (result.a > 0)
-	{
-		result /= result.a;
-		MultiscaleMeanEstimator(result.rgb, surfel_data, 0.08);
-	}
-
-	// Copy moment borders:
-	uint2 moments_topleft = unflatten2D(surfel_index, SQRT_SURFEL_CAPACITY) * SURFEL_MOMENT_TEXELS;
-	for (uint i = 0; i < SURFEL_MOMENT_TEXELS; ++i)
-	{
-		for (uint j = 0; j < SURFEL_MOMENT_TEXELS; ++j)
-		{
-			uint2 pixel_write = moments_topleft + uint2(i, j);
-			uint2 pixel_read = clamp(pixel_write, moments_topleft + 1, moments_topleft + SURFEL_MOMENT_TEXELS - 2);
-			surfelMomentsTexture[pixel_write] = surfelMomentsTexture[pixel_read];
-		}
-	}
-
-	life++;
-
-	float3 cam_to_surfel = surfel.position - GetCamera().position;
-	if (length(cam_to_surfel) > SURFEL_RECYCLE_DISTANCE)
-	{
-		ShaderSphere sphere;
-		sphere.center = surfel.position;
-		sphere.radius = surfel.GetRadius();
-
-		if (GetCamera().frustum.intersects(sphere))
-		{
-			recycle = 0;
-		}
-		else
-		{
-			recycle++;
-		}
-	}
-	else
-	{
-		recycle = 0;
-	}
-
-	surfel_data.life_recycle = 0;
-	surfel_data.life_recycle |= life & 0xFFFF;
-	surfel_data.life_recycle |= (recycle & 0xFFFF) << 16u;
-
-	surfelDataBuffer[surfel_index] = surfel_data;
+	surfelRayBuffer[DTid.x].store(rayData);
 }

@@ -37,6 +37,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
 	//return;
 
 	Surface surface;
+	surface.init();
 	if (!surface.load(prim, P))
 	{
 		return;
@@ -112,6 +113,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
 		prim.subsetIndex = q.CandidateGeometryIndex();
 
 		Surface surface;
+		surface.init();
 		if (!surface.load(prim, q.CandidateTriangleBarycentrics()))
 			break;
 
@@ -144,6 +146,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
 		prim.subsetIndex = q.CommittedGeometryIndex();
 
 		Surface surface;
+		surface.init();
 		if (!q.CommittedTriangleFrontFace())
 		{
 			surface.flags |= SURFACE_FLAG_BACKFACE;

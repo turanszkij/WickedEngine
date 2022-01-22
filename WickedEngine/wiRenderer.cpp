@@ -993,6 +993,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SURFEL_GRIDRESET], "surfel_gridresetCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SURFEL_GRIDOFFSETS], "surfel_gridoffsetsCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SURFEL_BINNING], "surfel_binningCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SURFEL_INTEGRATE], "surfel_integrateCS.cso"); });
 	if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 	{
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SURFEL_RAYTRACE], "surfel_raytraceCS_rtapi.cso", ShaderModel::SM_6_5); });
@@ -2278,7 +2279,7 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 
 		// Extrude bounds to avoid early shadow clipping:
 		float ext = abs(_center.z - _min.z);
-		ext = std::max(ext, farPlane * 0.5f);
+		ext = std::max(ext, std::min(1500.0f, farPlane) * 0.5f);
 		_min.z = _center.z - ext;
 		_max.z = _center.z + ext;
 
@@ -4871,25 +4872,8 @@ void DrawScene(
 		vis.scene->ocean.Render(*vis.camera, vis.scene->weather.oceanParameters, cmd);
 	}
 
-	if (hairparticle)
-	{
-		if (!transparent)
-		{
-			for (uint32_t hairIndex : vis.visibleHairs)
-			{
-				const wi::HairParticleSystem& hair = vis.scene->hairs[hairIndex];
-				Entity entity = vis.scene->hairs.GetEntity(hairIndex);
-				const MaterialComponent& material = *vis.scene->materials.GetComponent(entity);
-
-				hair.Draw(material, renderPass, cmd);
-			}
-		}
-	}
-
 	if (IsWireRender() && !transparent)
 		return;
-
-	RenderImpostors(vis, renderPass, cmd);
 
 	uint32_t renderTypeFlags = 0;
 	if (opaque)
@@ -4932,6 +4916,23 @@ void DrawScene(
 		renderQueue.sort(transparent ? RenderQueue::SORT_BACK_TO_FRONT : RenderQueue::SORT_FRONT_TO_BACK);
 		RenderMeshes(vis, renderQueue, renderPass, renderTypeFlags, cmd, tessellation);
 	}
+
+	if (hairparticle)
+	{
+		if (!transparent)
+		{
+			for (uint32_t hairIndex : vis.visibleHairs)
+			{
+				const wi::HairParticleSystem& hair = vis.scene->hairs[hairIndex];
+				Entity entity = vis.scene->hairs.GetEntity(hairIndex);
+				const MaterialComponent& material = *vis.scene->materials.GetComponent(entity);
+
+				hair.Draw(material, renderPass, cmd);
+			}
+		}
+	}
+
+	RenderImpostors(vis, renderPass, cmd);
 
 	device->BindShadingRate(ShadingRate::RATE_1X1, cmd);
 	device->EventEnd(cmd);
@@ -7776,6 +7777,7 @@ void SurfelGI_Coverage(
 		device->EventBegin("Indirect args", cmd);
 		const GPUResource* uavs[] = {
 			&scene.surfelStatsBuffer,
+			&scene.surfelIndirectBuffer,
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
@@ -7839,7 +7841,6 @@ void SurfelGI(
 
 		device->BindResource(&scene.surfelDataBuffer, 0, cmd);
 		device->BindResource(&scene.surfelAliveBuffer[0], 1, cmd);
-		device->BindResource(&scene.surfelMomentsTexture[0], 2, cmd);
 
 		const GPUResource* uavs[] = {
 			&scene.surfelBuffer,
@@ -7847,7 +7848,7 @@ void SurfelGI(
 			&scene.surfelAliveBuffer[1],
 			&scene.surfelDeadBuffer,
 			&scene.surfelStatsBuffer,
-			&scene.surfelMomentsTexture[1],
+			&scene.surfelRayBuffer,
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
@@ -7858,7 +7859,7 @@ void SurfelGI(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->DispatchIndirect(&scene.surfelStatsBuffer, SURFEL_STATS_OFFSET_INDIRECT, cmd);
+		device->DispatchIndirect(&scene.surfelIndirectBuffer, SURFEL_INDIRECT_OFFSET_ITERATE, cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -7924,7 +7925,7 @@ void SurfelGI(
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-		device->DispatchIndirect(&scene.surfelStatsBuffer, SURFEL_STATS_OFFSET_INDIRECT, cmd);
+		device->DispatchIndirect(&scene.surfelIndirectBuffer, SURFEL_INDIRECT_OFFSET_ITERATE, cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -7958,6 +7959,40 @@ void SurfelGI(
 		device->BindResource(&scene.surfelMomentsTexture[0], 5, cmd);
 
 		const GPUResource* uavs[] = {
+			&scene.surfelRayBuffer,
+		};
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+
+		device->DispatchIndirect(&scene.surfelIndirectBuffer, SURFEL_INDIRECT_OFFSET_RAYTRACE, cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(),
+				GPUBarrier::Buffer(&scene.surfelRayBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->EventEnd(cmd);
+	}
+
+
+
+	// Integrate rays:
+	{
+		device->EventBegin("Integrate", cmd);
+
+		device->BindComputeShader(&shaders[CSTYPE_SURFEL_INTEGRATE], cmd);
+
+		device->BindResource(&scene.surfelBuffer, 0, cmd);
+		device->BindResource(&scene.surfelStatsBuffer, 1, cmd);
+		device->BindResource(&scene.surfelGridBuffer, 2, cmd);
+		device->BindResource(&scene.surfelCellBuffer, 3, cmd);
+		device->BindResource(&scene.surfelAliveBuffer[0], 4, cmd);
+		device->BindResource(&scene.surfelMomentsTexture[0], 5, cmd);
+		device->BindResource(&scene.surfelRayBuffer, 6, cmd);
+
+		const GPUResource* uavs[] = {
 			&scene.surfelDataBuffer,
 			&scene.surfelMomentsTexture[1],
 		};
@@ -7971,7 +8006,7 @@ void SurfelGI(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->DispatchIndirect(&scene.surfelStatsBuffer, SURFEL_STATS_OFFSET_INDIRECT, cmd);
+		device->DispatchIndirect(&scene.surfelIndirectBuffer, SURFEL_INDIRECT_OFFSET_INTEGRATE, cmd);
 
 		{
 			GPUBarrier barriers[] = {

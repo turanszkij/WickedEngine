@@ -232,6 +232,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	prim.unpack(texture_gbuffer0[DTid.xy * 2]);
 
 	Surface surface;
+	surface.init();
 	if (!surface.load(prim, reconstruct_position(uv, depth)))
 	{
 		return;
