@@ -27,7 +27,7 @@ static const uint SURFEL_INDIRECT_SIZE = SURFEL_INDIRECT_OFFSET_INTEGRATE + 4 * 
 static const uint SURFEL_INDIRECT_NUMTHREADS = 32;
 static const float SURFEL_TARGET_COVERAGE = 0.5f; // how many surfels should affect a pixel fully, higher values will increase quality and cost
 static const uint SURFEL_CELL_LIMIT = ~0; // limit the amount of allocated surfels in a cell
-static const uint SURFEL_RAY_BUDGET = 200000; // max number of rays per frame
+static const uint SURFEL_RAY_BUDGET = 500000; // max number of rays per frame
 static const uint SURFEL_RAY_BOOST_MAX = 32; // max amount of rays per surfel
 #define SURFEL_COVERAGE_HALFRES // runs the coverage shader in half resolution for improved performance
 #define SURFEL_GRID_CULLING // if defined, surfels will not be added to grid cells that they do not intersect
@@ -228,7 +228,7 @@ float2 surfel_moment_pixel(uint surfel_index, float3 normal, float3 direction)
 	uint2 moments_pixel = unflatten2D(surfel_index, SQRT_SURFEL_CAPACITY) * SURFEL_MOMENT_TEXELS;
 	float3 hemi = mul(get_tangentspace(normal), direction);
 	hemi = normalize(hemi);
-	hemi.z = abs(hemi.z);
+	hemi.z = saturate(hemi.z);
 	float2 moments_uv = encode_hemioct(hemi) * 0.5 + 0.5;
 	return moments_pixel + 1 + moments_uv * SURFEL_MOMENT_RESOLUTION;
 }
