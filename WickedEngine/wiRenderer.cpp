@@ -2279,7 +2279,7 @@ inline void CreateDirLightShadowCams(const LightComponent& light, CameraComponen
 
 		// Extrude bounds to avoid early shadow clipping:
 		float ext = abs(_center.z - _min.z);
-		ext = std::max(ext, farPlane * 0.5f);
+		ext = std::max(ext, std::min(1500.0f, farPlane) * 0.5f);
 		_min.z = _center.z - ext;
 		_max.z = _center.z + ext;
 
@@ -4872,25 +4872,8 @@ void DrawScene(
 		vis.scene->ocean.Render(*vis.camera, vis.scene->weather.oceanParameters, cmd);
 	}
 
-	if (hairparticle)
-	{
-		if (!transparent)
-		{
-			for (uint32_t hairIndex : vis.visibleHairs)
-			{
-				const wi::HairParticleSystem& hair = vis.scene->hairs[hairIndex];
-				Entity entity = vis.scene->hairs.GetEntity(hairIndex);
-				const MaterialComponent& material = *vis.scene->materials.GetComponent(entity);
-
-				hair.Draw(material, renderPass, cmd);
-			}
-		}
-	}
-
 	if (IsWireRender() && !transparent)
 		return;
-
-	RenderImpostors(vis, renderPass, cmd);
 
 	uint32_t renderTypeFlags = 0;
 	if (opaque)
@@ -4933,6 +4916,23 @@ void DrawScene(
 		renderQueue.sort(transparent ? RenderQueue::SORT_BACK_TO_FRONT : RenderQueue::SORT_FRONT_TO_BACK);
 		RenderMeshes(vis, renderQueue, renderPass, renderTypeFlags, cmd, tessellation);
 	}
+
+	if (hairparticle)
+	{
+		if (!transparent)
+		{
+			for (uint32_t hairIndex : vis.visibleHairs)
+			{
+				const wi::HairParticleSystem& hair = vis.scene->hairs[hairIndex];
+				Entity entity = vis.scene->hairs.GetEntity(hairIndex);
+				const MaterialComponent& material = *vis.scene->materials.GetComponent(entity);
+
+				hair.Draw(material, renderPass, cmd);
+			}
+		}
+	}
+
+	RenderImpostors(vis, renderPass, cmd);
 
 	device->BindShadingRate(ShadingRate::RATE_1X1, cmd);
 	device->EventEnd(cmd);
