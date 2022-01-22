@@ -107,6 +107,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			ray.Origin = ray.Origin + ray.Direction * hit.distance;
 			hit_depth = hit.distance;
 
+			if (hit.is_backface)
+			{
+				surface.flags |= SURFACE_FLAG_BACKFACE;
+			}
+
 			if (!surface.load(hit.primitiveID, hit.bary))
 				return;
 

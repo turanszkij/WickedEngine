@@ -128,6 +128,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		// ray origin updated for next bounce:
 		ray.Origin = ray.Origin + ray.Direction * hit.distance;
 
+		if (hit.is_backface)
+		{
+			surface.flags |= SURFACE_FLAG_BACKFACE;
+		}
+
 		if (!surface.load(hit.primitiveID, hit.bary))
 			return;
 

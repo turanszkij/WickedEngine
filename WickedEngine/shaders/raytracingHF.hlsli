@@ -50,6 +50,7 @@ struct RayHit
 	float2 bary;
 	float distance;
 	PrimitiveID primitiveID;
+	bool is_backface;
 };
 
 inline RayHit CreateRayHit()
@@ -57,6 +58,7 @@ inline RayHit CreateRayHit()
 	RayHit hit;
 	hit.bary = 0;
 	hit.distance = FLT_MAX;
+	hit.is_backface = false;
 	return hit;
 }
 
@@ -102,6 +104,7 @@ inline void IntersectTriangle(
 		hit.distance = t;
 		hit.primitiveID = prim.primitiveID();
 		hit.bary = float2(u, v);
+		hit.is_backface = det > 0;
 
 		if (prim.flags & BVH_PRIMITIVE_FLAG_TRANSPARENT)
 		{
@@ -159,6 +162,7 @@ inline bool IntersectTriangleANY(
 			hit.distance = t;
 			hit.primitiveID = prim.primitiveID();
 			hit.bary = float2(u, v);
+			hit.is_backface = det > 0;
 
 			Surface surface;
 			surface.init();
