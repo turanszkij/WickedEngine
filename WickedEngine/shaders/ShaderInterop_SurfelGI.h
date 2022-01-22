@@ -3,18 +3,54 @@
 #include "ShaderInterop.h"
 #include "ShaderInterop_Renderer.h"
 
+static const uint SURFEL_CAPACITY = 100000;
+static const uint SQRT_SURFEL_CAPACITY = (uint)ceil(sqrt((float)SURFEL_CAPACITY));
+static const uint SURFEL_MOMENT_RESOLUTION = 4;
+static const uint SURFEL_MOMENT_TEXELS = 1 + SURFEL_MOMENT_RESOLUTION + 1; // with border padding
+static const uint SURFEL_MOMENT_ATLAS_TEXELS = SQRT_SURFEL_CAPACITY * SURFEL_MOMENT_TEXELS;
+static const uint3 SURFEL_GRID_DIMENSIONS = uint3(128, 64, 128);
+static const uint SURFEL_TABLE_SIZE = SURFEL_GRID_DIMENSIONS.x * SURFEL_GRID_DIMENSIONS.y * SURFEL_GRID_DIMENSIONS.z;
+static const float SURFEL_MAX_RADIUS = 2;
+static const float SURFEL_RECYCLE_DISTANCE = 0; // if surfel is behind camera and farther than this distance, it starts preparing for recycling
+static const uint SURFEL_RECYCLE_TIME = 60; // if surfel is preparing for recycling, this is how many frames it takes to recycle it
+static const uint SURFEL_STATS_OFFSET_COUNT = 0;
+static const uint SURFEL_STATS_OFFSET_NEXTCOUNT = SURFEL_STATS_OFFSET_COUNT + 4;
+static const uint SURFEL_STATS_OFFSET_DEADCOUNT = SURFEL_STATS_OFFSET_NEXTCOUNT + 4;
+static const uint SURFEL_STATS_OFFSET_CELLALLOCATOR = SURFEL_STATS_OFFSET_DEADCOUNT + 4;
+static const uint SURFEL_STATS_OFFSET_RAYCOUNT = SURFEL_STATS_OFFSET_CELLALLOCATOR + 4;
+static const uint SURFEL_STATS_OFFSET_SHORTAGE = SURFEL_STATS_OFFSET_RAYCOUNT + 4;
+static const uint SURFEL_STATS_SIZE = SURFEL_STATS_OFFSET_SHORTAGE + 4;
+static const uint SURFEL_INDIRECT_OFFSET_ITERATE = 0;
+static const uint SURFEL_INDIRECT_OFFSET_RAYTRACE = SURFEL_INDIRECT_OFFSET_ITERATE + 4 * 3;
+static const uint SURFEL_INDIRECT_OFFSET_INTEGRATE = SURFEL_INDIRECT_OFFSET_RAYTRACE + 4 * 3;
+static const uint SURFEL_INDIRECT_SIZE = SURFEL_INDIRECT_OFFSET_INTEGRATE + 4 * 3;
+static const uint SURFEL_INDIRECT_NUMTHREADS = 32;
+static const float SURFEL_TARGET_COVERAGE = 0.5f; // how many surfels should affect a pixel fully, higher values will increase quality and cost
+static const uint SURFEL_CELL_LIMIT = ~0; // limit the amount of allocated surfels in a cell
+static const uint SURFEL_RAY_BUDGET = 200000; // max number of rays per frame
+static const uint SURFEL_RAY_BOOST_MAX = 32; // max amount of rays per surfel
+#define SURFEL_COVERAGE_HALFRES // runs the coverage shader in half resolution for improved performance
+#define SURFEL_GRID_CULLING // if defined, surfels will not be added to grid cells that they do not intersect
+#define SURFEL_USE_HASHING // if defined, hashing will be used to retrieve surfels, hashing is good because it supports infinite world trivially, but slower due to hash collisions
+#define SURFEL_ENABLE_INFINITE_BOUNCES // if defined, previous frame's surfel data will be sampled at ray tracing hit points
+//#define SURFEL_ENABLE_IRRADIANCE_SHARING // if defined, surfels will pull color from nearby surfels, this can smooth out the GI a bit
+
+// This per-surfel surfel structure will be accessed rapidly on GI lookup, so keep it as small as possible
+//	But also ensure that it is 16-byte aligned for structured buffer access performance
 struct Surfel
 {
 	float3 position;
 	uint normal;
 	float3 color;
-	uint data; // 16bit radius (half float), 16bit rayCount
+	uint data; // 24bit rayOffset, 8bit rayCount
 
 #ifndef __cplusplus
-	float GetRadius() { return f16tof32(data & 0xFFFF); }
-	uint GetRayCount() { return (data >> 16u) & 0xFFFF; }
+	inline float GetRadius() { return SURFEL_MAX_RADIUS; }
+	inline uint GetRayOffset() { return data & 0xFFFFFF; }
+	inline uint GetRayCount() { return (data >> 24u) & 0xFF; }
 #endif // __cplusplus
 };
+// This per-surfel structure will store all additional persistent data per surfel that isn't needed at GI lookup
 struct SurfelData
 {
 	uint2 primitiveID;
@@ -33,42 +69,45 @@ struct SurfelData
 	uint GetLife() { return life_recycle & 0xFFFF; }
 	uint GetRecycle() { return (life_recycle >> 16u) & 0xFFFF; }
 };
-struct PushConstantsSurfelRaytrace
+struct SurfelRayData
 {
-	uint instanceInclusionMask;
+	float3 direction;
+	float depth;
+	float3 radiance;
+	uint surfelIndex;
 };
-static const uint SURFEL_CAPACITY = 100000;
-static const uint SQRT_SURFEL_CAPACITY = (uint)ceil(sqrt((float)SURFEL_CAPACITY));
-static const uint SURFEL_MOMENT_TEXELS = 4 + 2;
-static const uint SURFEL_MOMENT_ATLAS_TEXELS = SQRT_SURFEL_CAPACITY * SURFEL_MOMENT_TEXELS;
-static const uint3 SURFEL_GRID_DIMENSIONS = uint3(128, 64, 128);
-static const uint SURFEL_TABLE_SIZE = SURFEL_GRID_DIMENSIONS.x * SURFEL_GRID_DIMENSIONS.y * SURFEL_GRID_DIMENSIONS.z;
-static const float SURFEL_MAX_RADIUS = 2;
-static const float SURFEL_RECYCLE_DISTANCE = 0; // if surfel is behind camera and farther than this distance, it starts preparing for recycling
-static const uint SURFEL_RECYCLE_TIME = 60; // if surfel is preparing for recycling, this is how many frames it takes to recycle it
+struct SurfelRayDataPacked
+{
+	uint4 data;
+
+#ifndef __cplusplus
+	inline void store(SurfelRayData rayData)
+	{
+		data.xy = pack_half4(float4(rayData.direction, rayData.depth));
+		data.z = Pack_R11G11B10_FLOAT(rayData.radiance);
+		data.w = rayData.surfelIndex;
+	}
+	inline SurfelRayData load()
+	{
+		SurfelRayData rayData;
+		float4 unpk = unpack_half4(data.xy);
+		rayData.direction = unpk.xyz;
+		rayData.depth = unpk.w;
+		rayData.radiance = Unpack_R11G11B10_FLOAT(data.z);
+		rayData.surfelIndex = data.w;
+		return rayData;
+	}
+#endif // __cplusplus
+};
 struct SurfelGridCell
 {
 	uint count;
 	uint offset;
 };
-static const uint SURFEL_STATS_OFFSET_COUNT = 0;
-static const uint SURFEL_STATS_OFFSET_NEXTCOUNT = SURFEL_STATS_OFFSET_COUNT + 4;
-static const uint SURFEL_STATS_OFFSET_DEADCOUNT = SURFEL_STATS_OFFSET_NEXTCOUNT + 4;
-static const uint SURFEL_STATS_OFFSET_CELLALLOCATOR = SURFEL_STATS_OFFSET_DEADCOUNT + 4;
-static const uint SURFEL_STATS_OFFSET_INDIRECT = SURFEL_STATS_OFFSET_CELLALLOCATOR + 4;
-static const uint SURFEL_STATS_OFFSET_RAYCOUNT = SURFEL_STATS_OFFSET_INDIRECT + 4 * 3;
-static const uint SURFEL_STATS_OFFSET_SHORTAGE = SURFEL_STATS_OFFSET_RAYCOUNT + 4;
-static const uint SURFEL_INDIRECT_NUMTHREADS = 32;
-static const float SURFEL_TARGET_COVERAGE = 0.5f; // how many surfels should affect a pixel fully, higher values will increase quality and cost
-static const uint SURFEL_CELL_LIMIT = ~0; // limit the amount of allocated surfels in a cell
-static const uint SURFEL_RAY_BUDGET = 200000; // max number of rays per frame
-static const uint SURFEL_RAY_BOOST_MAX = 32; // max amount of rays per surfel
-#define SURFEL_COVERAGE_HALFRES // runs the coverage shader in half resolution for improved performance
-#define SURFEL_GRID_CULLING // if defined, surfels will not be added to grid cells that they do not intersect
-#define SURFEL_USE_HASHING // if defined, hashing will be used to retrieve surfels, hashing is good because it supports infinite world trivially, but slower due to hash collisions
-#define SURFEL_ENABLE_INFINITE_BOUNCES // if defined, previous frame's surfel data will be sampled at ray tracing hit points
-#define SURFEL_ENABLE_IRRADIANCE_SHARING // if defined, surfels will pull color from nearby surfels, this can smooth out the GI a bit
-
+struct PushConstantsSurfelRaytrace
+{
+	uint instanceInclusionMask;
+};
 enum SURFEL_DEBUG
 {
 	SURFEL_DEBUG_NONE,
@@ -187,16 +226,15 @@ static const int3 surfel_neighbor_offsets[27] = {
 float2 surfel_moment_pixel(uint surfel_index, float3 normal, float3 direction)
 {
 	uint2 moments_pixel = unflatten2D(surfel_index, SQRT_SURFEL_CAPACITY) * SURFEL_MOMENT_TEXELS;
-	float3 hemi = mul(direction, transpose(get_tangentspace(normal)));
-	hemi.z = abs(hemi.z);
+	float3 hemi = mul(get_tangentspace(normal), direction);
 	hemi = normalize(hemi);
+	hemi.z = abs(hemi.z);
 	float2 moments_uv = encode_hemioct(hemi) * 0.5 + 0.5;
-	//float2 moments_uv = hemi.xy * 0.5 + 0.5;
-	return moments_pixel + 1 + moments_uv * (SURFEL_MOMENT_TEXELS - 2);
+	return moments_pixel + 1 + moments_uv * SURFEL_MOMENT_RESOLUTION;
 }
 float2 surfel_moment_uv(uint surfel_index, float3 normal, float3 direction)
 {
-	return surfel_moment_pixel(surfel_index, normal, direction) / SURFEL_MOMENT_ATLAS_TEXELS;
+	return (surfel_moment_pixel(surfel_index, normal, direction) + 0.5) / SURFEL_MOMENT_ATLAS_TEXELS;
 }
 float surfel_moment_weight(float2 moments, float dist)
 {
@@ -265,6 +303,47 @@ void MultiscaleMeanEstimator(
 	data.variance = variance;
 	data.inconsistency = inconsistency;
 }
+
+// Border offsets from: https://github.com/diharaw/hybrid-rendering/blob/master/src/shaders/gi/gi_border_update.glsl
+static const uint4 SURFEL_MOMENT_BORDER_OFFSETS[36] = {
+	uint4(8, 1, 1, 0),
+	uint4(7, 1, 2, 0),
+	uint4(6, 1, 3, 0),
+	uint4(5, 1, 4, 0),
+	uint4(4, 1, 5, 0),
+	uint4(3, 1, 6, 0),
+	uint4(2, 1, 7, 0),
+	uint4(1, 1, 8, 0),
+	uint4(8, 8, 1, 9),
+	uint4(7, 8, 2, 9),
+	uint4(6, 8, 3, 9),
+	uint4(5, 8, 4, 9),
+	uint4(4, 8, 5, 9),
+	uint4(3, 8, 6, 9),
+	uint4(2, 8, 7, 9),
+	uint4(1, 8, 8, 9),
+	uint4(1, 8, 0, 1),
+	uint4(1, 7, 0, 2),
+	uint4(1, 6, 0, 3),
+	uint4(1, 5, 0, 4),
+	uint4(1, 4, 0, 5),
+	uint4(1, 3, 0, 6),
+	uint4(1, 2, 0, 7),
+	uint4(1, 1, 0, 8),
+	uint4(8, 8, 9, 1),
+	uint4(8, 7, 9, 2),
+	uint4(8, 6, 9, 3),
+	uint4(8, 5, 9, 4),
+	uint4(8, 4, 9, 5),
+	uint4(8, 3, 9, 6),
+	uint4(8, 2, 9, 7),
+	uint4(8, 1, 9, 8),
+	uint4(8, 8, 0, 0),
+	uint4(1, 8, 9, 0),
+	uint4(8, 1, 0, 9),
+	uint4(1, 1, 9, 9)
+};
+
 #endif // __cplusplus
 
 #endif // WI_SHADERINTEROP_SURFEL_GI_H

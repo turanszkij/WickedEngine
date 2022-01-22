@@ -1022,6 +1022,9 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)ddgi_updateCS_depth.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)surfel_integrateCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)ShaderInterop.h">

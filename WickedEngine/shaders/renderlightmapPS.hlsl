@@ -169,6 +169,7 @@ float4 main(Input input) : SV_TARGET
 					prim.subsetIndex = q.CandidateGeometryIndex();
 
 					Surface surface;
+					surface.init();
 					if (!surface.load(prim, q.CandidateTriangleBarycentrics()))
 						break;
 

@@ -31,7 +31,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	const float3 probePos = ddgi_probe_position(probeCoord);
 
 	float seed = 0.123456;
-	float2 uv = float2(frac(GetFrame().frame_count.x / 4096.0), DTid.x);
+	float2 uv = float2(frac(GetFrame().frame_count.x / 4096.0), DTid.x / float(DDGI_PROBE_COUNT * push.rayCount));
 
 	const float3x3 random_orientation = (float3x3)g_xTransform;
 
@@ -85,6 +85,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		{
 
 			Surface surface;
+			surface.init();
 
 			float hit_depth = 0;
 			float3 hit_result = 0;

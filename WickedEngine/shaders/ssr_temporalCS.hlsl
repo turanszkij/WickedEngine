@@ -121,6 +121,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 	prim.unpack(texture_gbuffer0[DTid.xy * 2]);
 
 	Surface surface;
+	surface.init();
 	if (!surface.load(prim, P))
 		return;
 

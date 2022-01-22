@@ -993,6 +993,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SURFEL_GRIDRESET], "surfel_gridresetCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SURFEL_GRIDOFFSETS], "surfel_gridoffsetsCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SURFEL_BINNING], "surfel_binningCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SURFEL_INTEGRATE], "surfel_integrateCS.cso"); });
 	if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 	{
 		wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_SURFEL_RAYTRACE], "surfel_raytraceCS_rtapi.cso", ShaderModel::SM_6_5); });
@@ -7776,6 +7777,7 @@ void SurfelGI_Coverage(
 		device->EventBegin("Indirect args", cmd);
 		const GPUResource* uavs[] = {
 			&scene.surfelStatsBuffer,
+			&scene.surfelIndirectBuffer,
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
@@ -7839,7 +7841,6 @@ void SurfelGI(
 
 		device->BindResource(&scene.surfelDataBuffer, 0, cmd);
 		device->BindResource(&scene.surfelAliveBuffer[0], 1, cmd);
-		device->BindResource(&scene.surfelMomentsTexture[0], 2, cmd);
 
 		const GPUResource* uavs[] = {
 			&scene.surfelBuffer,
@@ -7847,7 +7848,7 @@ void SurfelGI(
 			&scene.surfelAliveBuffer[1],
 			&scene.surfelDeadBuffer,
 			&scene.surfelStatsBuffer,
-			&scene.surfelMomentsTexture[1],
+			&scene.surfelRayBuffer,
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
@@ -7858,7 +7859,7 @@ void SurfelGI(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->DispatchIndirect(&scene.surfelStatsBuffer, SURFEL_STATS_OFFSET_INDIRECT, cmd);
+		device->DispatchIndirect(&scene.surfelIndirectBuffer, SURFEL_INDIRECT_OFFSET_ITERATE, cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -7924,7 +7925,7 @@ void SurfelGI(
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-		device->DispatchIndirect(&scene.surfelStatsBuffer, SURFEL_STATS_OFFSET_INDIRECT, cmd);
+		device->DispatchIndirect(&scene.surfelIndirectBuffer, SURFEL_INDIRECT_OFFSET_ITERATE, cmd);
 
 		{
 			GPUBarrier barriers[] = {
@@ -7958,6 +7959,40 @@ void SurfelGI(
 		device->BindResource(&scene.surfelMomentsTexture[0], 5, cmd);
 
 		const GPUResource* uavs[] = {
+			&scene.surfelRayBuffer,
+		};
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+
+		device->DispatchIndirect(&scene.surfelIndirectBuffer, SURFEL_INDIRECT_OFFSET_RAYTRACE, cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Memory(),
+				GPUBarrier::Buffer(&scene.surfelRayBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+
+		device->EventEnd(cmd);
+	}
+
+
+
+	// Integrate rays:
+	{
+		device->EventBegin("Integrate", cmd);
+
+		device->BindComputeShader(&shaders[CSTYPE_SURFEL_INTEGRATE], cmd);
+
+		device->BindResource(&scene.surfelBuffer, 0, cmd);
+		device->BindResource(&scene.surfelStatsBuffer, 1, cmd);
+		device->BindResource(&scene.surfelGridBuffer, 2, cmd);
+		device->BindResource(&scene.surfelCellBuffer, 3, cmd);
+		device->BindResource(&scene.surfelAliveBuffer[0], 4, cmd);
+		device->BindResource(&scene.surfelMomentsTexture[0], 5, cmd);
+		device->BindResource(&scene.surfelRayBuffer, 6, cmd);
+
+		const GPUResource* uavs[] = {
 			&scene.surfelDataBuffer,
 			&scene.surfelMomentsTexture[1],
 		};
@@ -7971,7 +8006,7 @@ void SurfelGI(
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		device->DispatchIndirect(&scene.surfelStatsBuffer, SURFEL_STATS_OFFSET_INDIRECT, cmd);
+		device->DispatchIndirect(&scene.surfelIndirectBuffer, SURFEL_INDIRECT_OFFSET_INTEGRATE, cmd);
 
 		{
 			GPUBarrier barriers[] = {

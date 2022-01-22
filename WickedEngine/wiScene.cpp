@@ -1730,11 +1730,18 @@ namespace wi::scene
 				device->SetName(&surfelDeadBuffer, "surfelDeadBuffer");
 
 				desc.stride = sizeof(uint);
-				desc.size = desc.stride * 9; // count (1 uint), nextCount (1 uint), deadCount (1 uint), cellAllocator (1 uint), IndirectDispatchArgs (3 uints), raycount (1 uint), shortage (1 uint)
-				desc.misc_flags = ResourceMiscFlag::BUFFER_RAW | ResourceMiscFlag::INDIRECT_ARGS;
-				uint stats_data[] = { 0,0,SURFEL_CAPACITY,0,0,0,0,0,0 };
+				desc.size = SURFEL_STATS_SIZE;
+				desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+				uint stats_data[] = { 0,0,SURFEL_CAPACITY,0,0,0 };
 				device->CreateBuffer(&desc, &stats_data, &surfelStatsBuffer);
 				device->SetName(&surfelStatsBuffer, "surfelStatsBuffer");
+
+				desc.stride = sizeof(uint);
+				desc.size = SURFEL_INDIRECT_SIZE;
+				desc.misc_flags = ResourceMiscFlag::BUFFER_RAW | ResourceMiscFlag::INDIRECT_ARGS;
+				uint indirect_data[] = { 0,0,0, 0,0,0, 0,0,0 };
+				device->CreateBuffer(&desc, &indirect_data, &surfelIndirectBuffer);
+				device->SetName(&surfelIndirectBuffer, "surfelIndirectBuffer");
 
 				desc.stride = sizeof(SurfelGridCell);
 				desc.size = desc.stride * SURFEL_TABLE_SIZE;
@@ -1747,6 +1754,12 @@ namespace wi::scene
 				desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 				device->CreateBuffer(&desc, nullptr, &surfelCellBuffer);
 				device->SetName(&surfelCellBuffer, "surfelCellBuffer");
+
+				desc.stride = sizeof(SurfelRayDataPacked);
+				desc.size = desc.stride * SURFEL_RAY_BUDGET;
+				desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
+				device->CreateBuffer(&desc, nullptr, &surfelRayBuffer);
+				device->SetName(&surfelRayBuffer, "surfelRayBuffer");
 
 				TextureDesc tex;
 				tex.width = SURFEL_MOMENT_ATLAS_TEXELS;
@@ -2966,6 +2979,8 @@ namespace wi::scene
 			{
 				std::swap(mesh.streamoutBuffer_POS, mesh.vertexBuffer_PRE);
 			}
+
+			mesh._flags &= ~MeshComponent::TLAS_FORCE_DOUBLE_SIDED;
 
 			uint32_t subsetIndex = 0;
 			for (auto& subset : mesh.subsets)

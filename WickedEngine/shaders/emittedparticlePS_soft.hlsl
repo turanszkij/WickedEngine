@@ -63,6 +63,7 @@ float4 main(VertextoPixel input) : SV_TARGET
 		lighting.create(0, 0, GetAmbient(N), 0);
 
 		Surface surface;
+		surface.init();
 		surface.create(material, color, 0);
 		surface.P = input.P;
 		surface.N = N;

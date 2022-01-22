@@ -44,6 +44,7 @@ void RTReflection_Raygen()
 	//return;
 
 	Surface surface;
+	surface.init();
 	if (!surface.load(prim, P))
 	{
 		return;
@@ -124,6 +125,7 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 	prim.subsetIndex = GeometryIndex();
 
 	Surface surface;
+	surface.init();
 	if (HitKind() != HIT_KIND_TRIANGLE_FRONT_FACE)
 	{
 		surface.flags |= SURFACE_FLAG_BACKFACE;
@@ -197,6 +199,7 @@ void RTReflection_AnyHit(inout RayPayload payload, in BuiltInTriangleIntersectio
 	prim.subsetIndex = GeometryIndex();
 
 	Surface surface;
+	surface.init();
 	if (!surface.load(prim, attr.barycentrics))
 		return;
 

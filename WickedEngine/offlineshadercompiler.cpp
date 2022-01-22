@@ -234,6 +234,7 @@ int main(int argc, char* argv[])
 		"surfel_binningCS.hlsl",
 		"surfel_raytraceCS_rtapi.hlsl",
 		"surfel_raytraceCS.hlsl",
+		"surfel_integrateCS.hlsl",
 		"ddgi_raytraceCS.hlsl",
 		"ddgi_raytraceCS_rtapi.hlsl",
 		"ddgi_updateCS.hlsl",

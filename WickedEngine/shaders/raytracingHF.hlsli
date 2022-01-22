@@ -106,6 +106,7 @@ inline void IntersectTriangle(
 		if (prim.flags & BVH_PRIMITIVE_FLAG_TRANSPARENT)
 		{
 			Surface surface;
+			surface.init();
 			if (surface.load(hit.primitiveID, hit.bary))
 			{
 				if (surface.opacity - rand(seed, uv) >= 0)
@@ -160,6 +161,7 @@ inline bool IntersectTriangleANY(
 			hit.bary = float2(u, v);
 
 			Surface surface;
+			surface.init();
 			if (surface.load(prim.primitiveID(), float2(u, v)))
 			{
 				return surface.opacity - rand(seed, uv) >= 0;
