@@ -1790,6 +1790,13 @@ namespace wi::scene
 				device->CreateBuffer(&buf, nullptr, &ddgiRayBuffer);
 				device->SetName(&ddgiRayBuffer, "ddgiRayBuffer");
 
+				buf.stride = sizeof(DDGIProbeOffset);
+				buf.size = buf.stride * DDGI_PROBE_COUNT;
+				buf.bind_flags = BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
+				buf.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+				device->CreateBuffer(&buf, nullptr, &ddgiOffsetBuffer);
+				device->SetName(&ddgiOffsetBuffer, "ddgiOffsetBuffer");
+
 				TextureDesc tex;
 				tex.width = DDGI_COLOR_TEXTURE_WIDTH;
 				tex.height = DDGI_COLOR_TEXTURE_HEIGHT;
@@ -1815,6 +1822,8 @@ namespace wi::scene
 		}
 		else if (ddgiColorTexture[0].IsValid())
 		{
+			ddgiRayBuffer = {};
+			ddgiOffsetBuffer = {};
 			ddgiColorTexture[0] = {};
 			ddgiColorTexture[1] = {};
 			ddgiDepthTexture[0] = {};
@@ -1872,6 +1881,7 @@ namespace wi::scene
 
 		shaderscene.ddgi.color_texture = device->GetDescriptorIndex(&ddgiColorTexture[0], SubresourceType::SRV);
 		shaderscene.ddgi.depth_texture = device->GetDescriptorIndex(&ddgiDepthTexture[0], SubresourceType::SRV);
+		shaderscene.ddgi.offset_buffer = device->GetDescriptorIndex(&ddgiOffsetBuffer, SubresourceType::SRV);
 		shaderscene.ddgi.grid_min.x = shaderscene.aabb_min.x - 1;
 		shaderscene.ddgi.grid_min.y = shaderscene.aabb_min.y - 1;
 		shaderscene.ddgi.grid_min.z = shaderscene.aabb_min.z - 1;
@@ -1888,6 +1898,9 @@ namespace wi::scene
 		shaderscene.ddgi.cell_size.x = shaderscene.ddgi.grid_extents.x / (DDGI_GRID_DIMENSIONS.x - 1);
 		shaderscene.ddgi.cell_size.y = shaderscene.ddgi.grid_extents.y / (DDGI_GRID_DIMENSIONS.y - 1);
 		shaderscene.ddgi.cell_size.z = shaderscene.ddgi.grid_extents.z / (DDGI_GRID_DIMENSIONS.z - 1);
+		shaderscene.ddgi.cell_size_rcp.x = 1.0f / shaderscene.ddgi.cell_size.x;
+		shaderscene.ddgi.cell_size_rcp.y = 1.0f / shaderscene.ddgi.cell_size.y;
+		shaderscene.ddgi.cell_size_rcp.z = 1.0f / shaderscene.ddgi.cell_size.z;
 		shaderscene.ddgi.max_distance = std::max(shaderscene.ddgi.cell_size.x, std::max(shaderscene.ddgi.cell_size.y, shaderscene.ddgi.cell_size.z)) * 1.5f;
 	}
 	void Scene::Clear()

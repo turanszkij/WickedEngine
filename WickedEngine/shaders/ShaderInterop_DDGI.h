@@ -14,6 +14,7 @@ static const uint DDGI_COLOR_TEXTURE_WIDTH = DDGI_COLOR_TEXELS * DDGI_GRID_DIMEN
 static const uint DDGI_COLOR_TEXTURE_HEIGHT = DDGI_COLOR_TEXELS * DDGI_GRID_DIMENSIONS.z;
 static const uint DDGI_DEPTH_TEXTURE_WIDTH = DDGI_DEPTH_TEXELS * DDGI_GRID_DIMENSIONS.x * DDGI_GRID_DIMENSIONS.y;
 static const uint DDGI_DEPTH_TEXTURE_HEIGHT = DDGI_DEPTH_TEXELS * DDGI_GRID_DIMENSIONS.z;
+static const float DDGI_KEEP_DISTANCE = 0.1f; // how much distance should probes keep from surfaces
 
 #define DDGI_LINEAR_BLENDING
 
@@ -52,11 +53,31 @@ struct DDGIRayDataPacked
 #endif // __cplusplus
 };
 
+struct DDGIProbeOffset
+{
+	uint2 data;
+
+#ifndef __cplusplus
+	inline void store(float3 offset)
+	{
+		data = pack_half3(offset);
+	}
+	inline float3 load()
+	{
+		return unpack_half3(data);
+	}
+#endif // __cplusplus
+};
+
 #ifndef __cplusplus
 
 inline float3 ddgi_cellsize()
 {
 	return GetScene().ddgi.cell_size;
+}
+inline float3 ddgi_cellsize_rcp()
+{
+	return GetScene().ddgi.cell_size_rcp;
 }
 inline float ddgi_max_distance()
 {
@@ -77,7 +98,13 @@ inline uint ddgi_probe_index(uint3 probeCoord)
 }
 inline float3 ddgi_probe_position(uint3 probeCoord)
 {
-	return GetScene().ddgi.grid_min + probeCoord * ddgi_cellsize();
+	float3 pos = GetScene().ddgi.grid_min + probeCoord * ddgi_cellsize();
+	[branch]
+	if (GetScene().ddgi.offset_buffer >= 0)
+	{
+		pos += bindless_buffers[GetScene().ddgi.offset_buffer].Load<DDGIProbeOffset>(ddgi_probe_index(probeCoord) * sizeof(DDGIProbeOffset)).load();
+	}
+	return pos;
 }
 inline uint2 ddgi_probe_color_pixel(uint3 probeCoord)
 {
@@ -111,7 +138,7 @@ float3 ddgi_sample_irradiance(float3 P, float3 N)
 	float sum_weight = 0;
 
 	// alpha is how far from the floor(currentVertex) position. on [0, 1] for each axis.
-	float3 alpha = clamp((P - base_probe_pos) / ddgi_cellsize(), 0, 1);
+	float3 alpha = saturate((P - base_probe_pos) * ddgi_cellsize_rcp());
 
 	// Iterate over adjacent probe cage
 	for (uint i = 0; i < 8; ++i)

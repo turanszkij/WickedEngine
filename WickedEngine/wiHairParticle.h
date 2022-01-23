@@ -8,8 +8,6 @@
 #include "wiVector.h"
 #include "wiScene_Decl.h"
 
-#include <memory>
-
 namespace wi
 {
 	class Archive;

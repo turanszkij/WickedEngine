@@ -17,6 +17,7 @@ static const float WEIGHT_EPSILON = 0.0001;
 #ifdef DDGI_UPDATE_DEPTH
 static const uint THREADCOUNT = DDGI_DEPTH_RESOLUTION;
 RWTexture2D<float2> output : register(u0);
+RWByteAddressBuffer ddgiOffsetBuffer:register(u1);
 #else
 static const uint THREADCOUNT = DDGI_COLOR_RESOLUTION;
 RWTexture2D<float3> output : register(u0);
@@ -31,6 +32,19 @@ void main(uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex
 	const uint probeIndex = Gid.x;
 	const uint3 probeCoord = ddgi_probe_coord(probeIndex);
 	const float maxDistance = ddgi_max_distance();
+
+#ifdef DDGI_UPDATE_DEPTH
+	[branch]
+	if (groupIndex == 0 && push.frameIndex == 0)
+	{
+		DDGIProbeOffset ofs;
+		ofs.store(float3(0, 0, 0));
+		ddgiOffsetBuffer.Store<DDGIProbeOffset>(probeIndex * sizeof(DDGIProbeOffset), ofs);
+	}
+	float3 probeOffset = ddgiOffsetBuffer.Load<DDGIProbeOffset>(probeIndex * sizeof(DDGIProbeOffset)).load();
+	float3 probeOffsetNew = 0;
+	const float probeOffsetDistance = maxDistance * DDGI_KEEP_DISTANCE;
+#endif // DDGI_UPDATE_DEPTH
 
 #ifdef DDGI_UPDATE_DEPTH
 	float2 result = 0;
@@ -65,14 +79,19 @@ void main(uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex
 			DDGIRayData ray = ray_cache[r];
 
 #ifdef DDGI_UPDATE_DEPTH
-			float ray_probe_distance;
+			float depth;
 			if (ray.depth > 0)
 			{
-				ray_probe_distance = clamp(ray.depth - 0.01, 0, maxDistance);
+				depth = clamp(ray.depth - 0.01, 0, maxDistance);
 			}
 			else
 			{
-				ray_probe_distance = maxDistance;
+				depth = maxDistance;
+			}
+
+			if (depth < probeOffsetDistance)
+			{
+				probeOffsetNew -= ray.direction * (probeOffsetDistance - depth);
 			}
 #else
 			const float3 radiance = ray.radiance.rgb;
@@ -86,7 +105,7 @@ void main(uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex
 			if (weight > WEIGHT_EPSILON)
 			{
 #ifdef DDGI_UPDATE_DEPTH
-				result += float2(ray_probe_distance * weight, sqr(ray_probe_distance) * weight);
+				result += float2(depth, sqr(depth)) * weight;
 #else
 				result += ray.radiance.rgb * weight;
 #endif // DDGI_UPDATE_DEPTH
@@ -128,6 +147,17 @@ void main(uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex
 		uint2 src_coord = copy_coord + DDGI_DEPTH_BORDER_OFFSETS[index].xy;
 		uint2 dst_coord = copy_coord + DDGI_DEPTH_BORDER_OFFSETS[index].zw;
 		output[dst_coord] = output[src_coord];
+	}
+
+	[branch]
+	if (groupIndex == 0)
+	{
+		probeOffset = lerp(probeOffset, probeOffsetNew, 0.01);
+		const float3 limit = ddgi_cellsize() * 0.5;
+		probeOffset = clamp(probeOffset, -limit, limit);
+		DDGIProbeOffset ofs;
+		ofs.store(probeOffset);
+		ddgiOffsetBuffer.Store<DDGIProbeOffset>(probeIndex * sizeof(DDGIProbeOffset), ofs);
 	}
 #else
 	// Copy color borders:

@@ -39,7 +39,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	{
 		RayDesc ray;
 		ray.Origin = probePos;
-		ray.TMin = 0.0001;
+		ray.TMin = 0; // don't need TMin because we are not tracing from a surface
 		ray.TMax = FLT_MAX;
 		ray.Direction = normalize(mul(random_orientation, spherical_fibonacci(rayIndex, push.rayCount)));
 

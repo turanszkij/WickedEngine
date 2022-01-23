@@ -43,6 +43,9 @@ struct ShaderScene
 		float max_distance;
 
 		float3 grid_extents_rcp;
+		int offset_buffer;
+
+		float3 cell_size_rcp;
 		float padding0;
 	};
 	DDGI ddgi;

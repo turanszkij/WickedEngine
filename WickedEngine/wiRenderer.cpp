@@ -5681,12 +5681,12 @@ void DrawDebugWorld(
 	}
 
 
-	if (GetDDGIDebugEnabled())
+	if (GetDDGIDebugEnabled() && GetDDGIEnabled())
 	{
 		device->EventBegin("Debug DDGI", cmd);
 
 		device->BindPipelineState(&PSO_debug[DEBUGRENDERING_DDGI], cmd);
-		device->DrawInstanced(2880, DDGI_GRID_DIMENSIONS.x* DDGI_GRID_DIMENSIONS.y* DDGI_GRID_DIMENSIONS.z, 0, 0, cmd); // uv-sphere
+		device->DrawInstanced(2880, DDGI_GRID_DIMENSIONS.x * DDGI_GRID_DIMENSIONS.y * DDGI_GRID_DIMENSIONS.z, 0, 0, cmd); // uv-sphere
 
 		device->EventEnd(cmd);
 	}
@@ -8077,6 +8077,7 @@ void DDGI(
 			GPUBarrier::Buffer(&scene.ddgiRayBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
 			GPUBarrier::Image(&scene.ddgiColorTexture[1], ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS),
 			GPUBarrier::Image(&scene.ddgiDepthTexture[1], ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Buffer(&scene.ddgiOffsetBuffer, ResourceState::SHADER_RESOURCE_COMPUTE, ResourceState::UNORDERED_ACCESS),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
@@ -8117,6 +8118,7 @@ void DDGI(
 
 		const GPUResource* uavs[] = {
 			&scene.ddgiDepthTexture[1],
+			&scene.ddgiOffsetBuffer,
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
@@ -8129,6 +8131,7 @@ void DDGI(
 		GPUBarrier barriers[] = {
 			GPUBarrier::Image(&scene.ddgiColorTexture[1], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
 			GPUBarrier::Image(&scene.ddgiDepthTexture[1], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
+			GPUBarrier::Buffer(&scene.ddgiOffsetBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
