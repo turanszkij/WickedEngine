@@ -259,7 +259,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 #ifdef RTAPI
 					q.TraceRayInline(
 						scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
-						0,								// uint RayFlags
+						RAY_FLAG_CULL_FRONT_FACING_TRIANGLES,								// uint RayFlags
 						0xFF,							// uint InstanceInclusionMask
 						newRay							// RayDesc Ray
 					);

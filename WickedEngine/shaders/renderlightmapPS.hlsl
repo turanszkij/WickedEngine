@@ -157,7 +157,7 @@ float4 main(Input input) : SV_TARGET
 				> q;
 				q.TraceRayInline(
 					scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
-					0,								// uint RayFlags
+					RAY_FLAG_CULL_FRONT_FACING_TRIANGLES,								// uint RayFlags
 					xTraceUserData.y,				// uint InstanceInclusionMask
 					newRay							// RayDesc Ray
 				);
