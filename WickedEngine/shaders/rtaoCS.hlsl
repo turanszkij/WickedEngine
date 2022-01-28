@@ -59,7 +59,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 
 #ifdef RTAPI
 	RayQuery<
-		RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES
+		RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES |
+		RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH
 	> q;
 	q.TraceRayInline(
 		scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
