@@ -9070,6 +9070,8 @@ void Postprocess_MSAO(
 }
 void CreateRTAOResources(RTAOResources& res, XMUINT2 resolution)
 {
+	res.frame = 0;
+
 	TextureDesc desc;
 	desc.width = resolution.x / 2;
 	desc.height = resolution.y / 2;
@@ -9122,6 +9124,29 @@ void Postprocess_RTAO(
 
 	device->EventBegin("Postprocess_RTAO", cmd);
 	auto prof_range = wi::profiler::BeginRangeGPU("RTAO", cmd);
+
+	if (res.frame == 0)
+	{
+		// Maybe we don't need to clear them all, but it's safer this way:
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&res.normals, res.normals.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.scratch[0], res.scratch[0].desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.scratch[1], res.scratch[1].desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.moments[0], res.moments[0].desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.moments[1], res.moments[1].desc.layout, ResourceState::UNORDERED_ACCESS),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+		device->ClearUAV(&res.normals, 0, cmd);
+		device->ClearUAV(&res.scratch[0], 0, cmd);
+		device->ClearUAV(&res.scratch[1], 0, cmd);
+		device->ClearUAV(&res.moments[0], 0, cmd);
+		device->ClearUAV(&res.moments[1], 0, cmd);
+		for (auto& x : barriers)
+		{
+			std::swap(x.image.layout_before, x.image.layout_after);
+		}
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
 
 	BindCommonResources(cmd);
 
@@ -9758,6 +9783,8 @@ void Postprocess_SSR(
 }
 void CreateRTShadowResources(RTShadowResources& res, XMUINT2 resolution)
 {
+	res.frame = 0;
+
 	TextureDesc desc;
 	desc.width = resolution.x / 2;
 	desc.height = resolution.y / 2;
@@ -9824,6 +9851,59 @@ void Postprocess_RTShadow(
 
 	device->EventBegin("Postprocess_RTShadow", cmd);
 	auto prof_range = wi::profiler::BeginRangeGPU("RTShadow", cmd);
+
+	if (res.frame == 0)
+	{
+		// Maybe we don't need to clear them all, but it's safer this way:
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&res.temporal[0], res.temporal[0].desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.temporal[1], res.temporal[1].desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.denoised, res.denoised.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.normals, res.normals.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.scratch[0][0], res.scratch[0][0].desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.scratch[0][1], res.scratch[0][1].desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.scratch[1][0], res.scratch[1][0].desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.scratch[1][1], res.scratch[1][1].desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.scratch[2][0], res.scratch[2][0].desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.scratch[2][1], res.scratch[2][1].desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.scratch[3][0], res.scratch[3][0].desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.scratch[3][1], res.scratch[3][1].desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.moments[0][0], res.moments[0][0].desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.moments[0][1], res.moments[0][1].desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.moments[1][0], res.moments[1][0].desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.moments[1][1], res.moments[1][1].desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.moments[2][0], res.moments[2][0].desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.moments[2][1], res.moments[2][1].desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.moments[3][0], res.moments[3][0].desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.moments[3][1], res.moments[3][1].desc.layout, ResourceState::UNORDERED_ACCESS),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+		device->ClearUAV(&res.temporal[0], 0, cmd);
+		device->ClearUAV(&res.temporal[1], 0, cmd);
+		device->ClearUAV(&res.denoised, 0, cmd);
+		device->ClearUAV(&res.normals, 0, cmd);
+		device->ClearUAV(&res.scratch[0][0], 0, cmd);
+		device->ClearUAV(&res.scratch[0][1], 0, cmd);
+		device->ClearUAV(&res.scratch[1][0], 0, cmd);
+		device->ClearUAV(&res.scratch[1][1], 0, cmd);
+		device->ClearUAV(&res.scratch[2][0], 0, cmd);
+		device->ClearUAV(&res.scratch[2][1], 0, cmd);
+		device->ClearUAV(&res.scratch[3][0], 0, cmd);
+		device->ClearUAV(&res.scratch[3][1], 0, cmd);
+		device->ClearUAV(&res.moments[0][0], 0, cmd);
+		device->ClearUAV(&res.moments[0][1], 0, cmd);
+		device->ClearUAV(&res.moments[1][0], 0, cmd);
+		device->ClearUAV(&res.moments[1][1], 0, cmd);
+		device->ClearUAV(&res.moments[2][0], 0, cmd);
+		device->ClearUAV(&res.moments[2][1], 0, cmd);
+		device->ClearUAV(&res.moments[3][0], 0, cmd);
+		device->ClearUAV(&res.moments[3][1], 0, cmd);
+		for (auto& x : barriers)
+		{
+			std::swap(x.image.layout_before, x.image.layout_after);
+		}
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
 
 	const TextureDesc& desc = res.temp.GetDesc();
 

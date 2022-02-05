@@ -78,8 +78,9 @@ namespace dx12_internal
 	{
 		D3D12_RESOURCE_STATES ret = {};
 
-		if (has_flag(value, ResourceState::UNDEFINED))
-			ret |= D3D12_RESOURCE_STATE_COMMON;
+		// MISSING STATE: UNDEFINED
+		//	UNDEFINED state will be handled by DiscardResource() operation
+
 		if (has_flag(value, ResourceState::SHADER_RESOURCE))
 			ret |= D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 		if (has_flag(value, ResourceState::SHADER_RESOURCE_COMPUTE))
@@ -998,7 +999,7 @@ namespace dx12_internal
 		uint8_t UAV[DESCRIPTORBINDER_UAV_COUNT];
 		uint8_t SAM[DESCRIPTORBINDER_SAMPLER_COUNT];
 		uint8_t PUSH;
-		// This is the bitflag of root all parameters:
+		// This is the bitflag of all root parameters:
 		uint64_t root_mask = 0ull;
 		// For each root parameter, store some statistics:
 		struct RootParameterStatistics
@@ -1305,6 +1306,7 @@ namespace dx12_internal
 		SingleDescriptor uav;
 		wi::vector<SingleDescriptor> subresources_srv;
 		wi::vector<SingleDescriptor> subresources_uav;
+		SingleDescriptor uav_raw;
 
 		D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint;
 
@@ -3101,6 +3103,16 @@ using namespace dx12_internal;
 		if (has_flag(desc->bind_flags, BindFlag::UNORDERED_ACCESS))
 		{
 			CreateSubresource(buffer, SubresourceType::UAV, 0);
+
+			if (!has_flag(desc->misc_flags, ResourceMiscFlag::BUFFER_RAW))
+			{
+				D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
+				uav_desc.Format = DXGI_FORMAT_R32_TYPELESS;
+				uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+				uav_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
+				uav_desc.Buffer.NumElements = uint32_t(desc->size / sizeof(uint32_t));
+				internal_state->uav_raw.init(this, uav_desc, internal_state->resource.Get());
+			}
 		}
 
 		return SUCCEEDED(hr);
@@ -5098,35 +5110,31 @@ using namespace dx12_internal;
 	}
 	void GraphicsDevice_DX12::BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd)
 	{
+		// Ensure that engine side Rect structure matches the D3D12_RECT structure
+		static_assert(sizeof(Rect) == sizeof(D3D12_RECT));
+		static_assert(offsetof(Rect, left) == offsetof(D3D12_RECT, left));
+		static_assert(offsetof(Rect, right) == offsetof(D3D12_RECT, right));
+		static_assert(offsetof(Rect, top) == offsetof(D3D12_RECT, top));
+		static_assert(offsetof(Rect, bottom) == offsetof(D3D12_RECT, bottom));
+
 		assert(rects != nullptr);
-		D3D12_RECT pRects[D3D12_VIEWPORT_AND_SCISSORRECT_MAX_INDEX + 1];
-		assert(numRects < arraysize(pRects));
-		for (uint32_t i = 0; i < numRects; ++i)
-		{
-			pRects[i].bottom = (LONG)rects[i].bottom;
-			pRects[i].left = (LONG)rects[i].left;
-			pRects[i].right = (LONG)rects[i].right;
-			pRects[i].top = (LONG)rects[i].top;
-		}
 		CommandList_DX12& commandlist = GetCommandList(cmd);
-		commandlist.GetGraphicsCommandList()->RSSetScissorRects(numRects, pRects);
+		commandlist.GetGraphicsCommandList()->RSSetScissorRects(numRects, (const D3D12_RECT*)rects);
 	}
 	void GraphicsDevice_DX12::BindViewports(uint32_t NumViewports, const Viewport* pViewports, CommandList cmd)
 	{
+		// Ensure that engine side Viewport structure matches the D3D12_VIEWPORT structure
+		static_assert(sizeof(Viewport) == sizeof(D3D12_VIEWPORT));
+		static_assert(offsetof(Viewport, top_left_x) == offsetof(D3D12_VIEWPORT, TopLeftX));
+		static_assert(offsetof(Viewport, top_left_y) == offsetof(D3D12_VIEWPORT, TopLeftY));
+		static_assert(offsetof(Viewport, width) == offsetof(D3D12_VIEWPORT, Width));
+		static_assert(offsetof(Viewport, height) == offsetof(D3D12_VIEWPORT, Height));
+		static_assert(offsetof(Viewport, min_depth) == offsetof(D3D12_VIEWPORT, MinDepth));
+		static_assert(offsetof(Viewport, max_depth) == offsetof(D3D12_VIEWPORT, MaxDepth));
+
 		assert(pViewports != nullptr);
-		D3D12_VIEWPORT d3dViewPorts[D3D12_VIEWPORT_AND_SCISSORRECT_MAX_INDEX + 1];
-		assert(NumViewports < arraysize(d3dViewPorts));
-		for (uint32_t i = 0; i < NumViewports; ++i)
-		{
-			d3dViewPorts[i].TopLeftX = pViewports[i].top_left_x;
-			d3dViewPorts[i].TopLeftY = pViewports[i].top_left_y;
-			d3dViewPorts[i].Width = pViewports[i].width;
-			d3dViewPorts[i].Height = pViewports[i].height;
-			d3dViewPorts[i].MinDepth = pViewports[i].min_depth;
-			d3dViewPorts[i].MaxDepth = pViewports[i].max_depth;
-		}
 		CommandList_DX12& commandlist = GetCommandList(cmd);
-		commandlist.GetGraphicsCommandList()->RSSetViewports(NumViewports, d3dViewPorts);
+		commandlist.GetGraphicsCommandList()->RSSetViewports(NumViewports, (const D3D12_VIEWPORT*)pViewports);
 	}
 	void GraphicsDevice_DX12::BindResource(const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
 	{
@@ -5611,6 +5619,7 @@ using namespace dx12_internal;
 				continue;
 
 			D3D12_RESOURCE_BARRIER barrierdesc = {};
+			bool skip_barrier = false;
 
 			switch (barrier.type)
 			{
@@ -5624,38 +5633,79 @@ using namespace dx12_internal;
 			break;
 			case GPUBarrier::Type::IMAGE:
 			{
-				barrierdesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-				barrierdesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-				barrierdesc.Transition.pResource = to_internal(barrier.image.texture)->resource.Get();
-				barrierdesc.Transition.StateBefore = _ParseResourceState(barrier.image.layout_before);
-				barrierdesc.Transition.StateAfter = _ParseResourceState(barrier.image.layout_after);
-				if (barrier.image.mip >= 0 || barrier.image.slice >= 0)
+				auto internal_state = to_internal(barrier.image.texture);
+
+				if (barrier.image.layout_before == ResourceState::UNDEFINED)
 				{
-					barrierdesc.Transition.Subresource = D3D12CalcSubresource(
-						(UINT)std::max(0, barrier.image.mip),
-						(UINT)std::max(0, barrier.image.slice),
-						0,
-						barrier.image.texture->desc.mip_levels,
-						barrier.image.texture->desc.array_size
-					);
+					skip_barrier = true;
+					if (barrier.image.mip >= 0 || barrier.image.slice >= 0)
+					{
+						D3D12_DISCARD_REGION region = {};
+						region.FirstSubresource = D3D12CalcSubresource(
+							(UINT)std::max(0, barrier.image.mip),
+							(UINT)std::max(0, barrier.image.slice),
+							0,
+							barrier.image.texture->desc.mip_levels,
+							barrier.image.texture->desc.array_size
+						);
+						region.NumSubresources = 1;
+						region.NumRects = 0;
+						region.pRects = nullptr;
+						commandlist.GetGraphicsCommandList()->DiscardResource(internal_state->resource.Get(), &region);
+					}
+					else
+					{
+						commandlist.GetGraphicsCommandList()->DiscardResource(internal_state->resource.Get(), nullptr);
+					}
 				}
 				else
 				{
-					barrierdesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+					barrierdesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+					barrierdesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+					barrierdesc.Transition.pResource = internal_state->resource.Get();
+					barrierdesc.Transition.StateBefore = _ParseResourceState(barrier.image.layout_before);
+					barrierdesc.Transition.StateAfter = _ParseResourceState(barrier.image.layout_after);
+					if (barrier.image.mip >= 0 || barrier.image.slice >= 0)
+					{
+						barrierdesc.Transition.Subresource = D3D12CalcSubresource(
+							(UINT)std::max(0, barrier.image.mip),
+							(UINT)std::max(0, barrier.image.slice),
+							0,
+							barrier.image.texture->desc.mip_levels,
+							barrier.image.texture->desc.array_size
+						);
+					}
+					else
+					{
+						barrierdesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+					}
 				}
 			}
 			break;
 			case GPUBarrier::Type::BUFFER:
 			{
-				barrierdesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-				barrierdesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-				barrierdesc.Transition.pResource = to_internal(barrier.buffer.buffer)->resource.Get();
-				barrierdesc.Transition.StateBefore = _ParseResourceState(barrier.buffer.state_before);
-				barrierdesc.Transition.StateAfter = _ParseResourceState(barrier.buffer.state_after);
-				barrierdesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+				auto internal_state = to_internal(barrier.buffer.buffer);
+
+				if (barrier.buffer.state_before == ResourceState::UNDEFINED)
+				{
+					skip_barrier = true;
+					commandlist.GetGraphicsCommandList()->DiscardResource(internal_state->resource.Get(), nullptr);
+				}
+				else
+				{
+					barrierdesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+					barrierdesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+					barrierdesc.Transition.pResource = internal_state->resource.Get();
+					barrierdesc.Transition.StateBefore = _ParseResourceState(barrier.buffer.state_before);
+					barrierdesc.Transition.StateAfter = _ParseResourceState(barrier.buffer.state_after);
+					barrierdesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+				}
 			}
 			break;
 			}
+
+			if (skip_barrier)
+				continue;
 
 			if (barrierdesc.Type == D3D12_RESOURCE_BARRIER_TYPE_TRANSITION && commandlist.queue > QUEUE_GRAPHICS)
 			{
@@ -5872,6 +5922,27 @@ using namespace dx12_internal;
 	{
 		CommandList_DX12& commandlist = GetCommandList(cmd);
 		commandlist.GetGraphicsCommandList()->SetPredication(nullptr, 0, D3D12_PREDICATION_OP_EQUAL_ZERO);
+	}
+	void GraphicsDevice_DX12::ClearUAV(const GPUResource* resource, uint32_t value, CommandList cmd)
+	{
+		auto internal_state = to_internal(resource);
+		// We cannot clear eg. a StructuredBuffer, so in those cases we must clear the RAW view with uav_raw
+		const SingleDescriptor& descriptor = internal_state->uav_raw.IsValid() ? internal_state->uav_raw : internal_state->uav;
+		D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle = descriptorheap_res.start_gpu;
+		gpu_handle.ptr += descriptor.index * resource_descriptor_size;
+		D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle = descriptor.handle;
+
+		const UINT values[4] = { value,value,value,value };
+
+		CommandList_DX12& commandlist = GetCommandList(cmd);
+		commandlist.GetGraphicsCommandList()->ClearUnorderedAccessViewUint(
+			gpu_handle,
+			cpu_handle,
+			internal_state->resource.Get(),
+			values,
+			0,
+			nullptr
+		);
 	}
 
 	void GraphicsDevice_DX12::EventBegin(const char* name, CommandList cmd)

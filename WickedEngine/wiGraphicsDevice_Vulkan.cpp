@@ -7554,6 +7554,48 @@ using namespace vulkan_internal;
 			vkCmdEndConditionalRenderingEXT(commandlist.GetCommandBuffer());
 		}
 	}
+	void GraphicsDevice_Vulkan::ClearUAV(const GPUResource* resource, uint32_t value, CommandList cmd)
+	{
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
+
+		if (resource->IsBuffer())
+		{
+			auto internal_state = to_internal((const GPUBuffer*)resource);
+			vkCmdFillBuffer(
+				commandlist.GetCommandBuffer(),
+				internal_state->resource,
+				0,
+				VK_WHOLE_SIZE,
+				value
+			);
+		}
+		else if (resource->IsTexture())
+		{
+			VkClearColorValue color = {};
+			color.uint32[0] = value;
+			color.uint32[1] = value;
+			color.uint32[2] = value;
+			color.uint32[3] = value;
+
+			VkImageSubresourceRange range = {};
+			range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			range.baseArrayLayer = 0;
+			range.baseMipLevel = 0;
+			range.layerCount = VK_REMAINING_ARRAY_LAYERS;
+			range.levelCount = VK_REMAINING_MIP_LEVELS;
+
+			auto internal_state = to_internal((const Texture*)resource);
+			vkCmdClearColorImage(
+				commandlist.GetCommandBuffer(),
+				internal_state->resource,
+				VK_IMAGE_LAYOUT_GENERAL, // "ClearUAV" so must be in UNORDERED_ACCESS state, that's a given
+				&color,
+				1,
+				&range
+			);
+		}
+
+	}
 
 	void GraphicsDevice_Vulkan::EventBegin(const char* name, CommandList cmd)
 	{

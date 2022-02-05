@@ -370,7 +370,7 @@ namespace wi::graphics
 	enum class ResourceState
 	{
 		// Common resource states:
-		UNDEFINED = 0,						// invalid state
+		UNDEFINED = 0,						// invalid state (don't preserve contents)
 		SHADER_RESOURCE = 1 << 0,			// shader resource, read only
 		SHADER_RESOURCE_COMPUTE = 1 << 1,	// shader resource, read only, non-pixel shader
 		UNORDERED_ACCESS = 1 << 2,			// shader resource, write enabled
