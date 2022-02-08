@@ -379,12 +379,12 @@ namespace wi
 	}
 
 
-	void HairParticleSystem::Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri)
+	void HairParticleSystem::Serialize(wi::ecs::Archive& archive)
 	{
 		if (archive.IsReadMode())
 		{
 			archive >> _flags;
-			wi::ecs::SerializeEntity(archive, meshID, seri);
+			archive.SerializeEntity(meshID);
 			archive >> strandCount;
 			archive >> segmentCount;
 			archive >> randomSeed;
@@ -413,7 +413,7 @@ namespace wi
 		else
 		{
 			archive << _flags;
-			wi::ecs::SerializeEntity(archive, meshID, seri);
+			archive.SerializeEntity(meshID);
 			archive << strandCount;
 			archive << segmentCount;
 			archive << randomSeed;

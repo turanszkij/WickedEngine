@@ -66,7 +66,7 @@ namespace wi::primitive
 			return XMFLOAT3(0, 0, 0);
 		}
 
-		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+		void Serialize(wi::Archive& archive);
 	};
 	struct Sphere
 	{

@@ -696,7 +696,7 @@ void EditorComponent::Load()
 		wi::helper::FileDialog(params, [=](std::string fileName) {
 			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 				std::string filename = wi::helper::ReplaceExtension(fileName, params.extensions.front());
-				wi::Archive archive = dump_to_header ? wi::Archive() : wi::Archive(filename, false);
+				wi::ecs::Archive archive = dump_to_header ? wi::ecs::Archive() : wi::ecs::Archive(filename, false);
 				if (archive.IsOpen())
 				{
 					Scene& scene = wi::scene::GetScene();
@@ -1615,7 +1615,7 @@ void EditorComponent::Update(float dt)
 	// Delete
 	if (wi::input::Press(wi::input::KEYBOARD_BUTTON_DELETE))
 	{
-		wi::Archive& archive = AdvanceHistory();
+		wi::ecs::Archive& archive = AdvanceHistory();
 		archive << HISTORYOP_DELETE;
 
 		archive << translator.selected.size();
@@ -2455,7 +2455,7 @@ void EditorComponent::ResetHistory()
 	historyPos = -1;
 	history.clear();
 }
-wi::Archive& EditorComponent::AdvanceHistory()
+wi::ecs::Archive& EditorComponent::AdvanceHistory()
 {
 	historyPos++;
 
@@ -2480,7 +2480,7 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 
 		Scene& scene = wi::scene::GetScene();
 
-		wi::Archive& archive = history[historyPos];
+		wi::ecs::Archive& archive = history[historyPos];
 		archive.SetReadModeAndResetPos(true);
 
 		int temp;

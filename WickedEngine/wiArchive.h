@@ -36,7 +36,7 @@ namespace wi
 		Archive(const std::string& fileName, bool readMode = true);
 		// Creates a memory mapped archive in read mode
 		Archive(const uint8_t* data);
-		~Archive() { Close(); }
+		virtual ~Archive() { Close(); }
 
 		Archive& operator=(const Archive&) = default;
 		Archive& operator=(Archive&&) = default;
@@ -45,19 +45,19 @@ namespace wi
 		constexpr uint64_t GetVersion() const { return version; }
 		constexpr bool IsReadMode() const { return readMode; }
 		// This can set the archive into either read or write mode, and it will reset it's position
-		void SetReadModeAndResetPos(bool isReadMode);
+		virtual void SetReadModeAndResetPos(bool isReadMode);
 		// Check if the archive has any data
 		bool IsOpen() const { return data_ptr != nullptr; };
 		// Close the archive.
 		//	If it was opened from a file in write mode, the file will be written at this point
 		//	The data will be deleted, the archive will be empty after this
-		void Close();
+		virtual void Close();
 		// Write the archive contents to a specific file
 		//	The archive data will be written starting from the beginning, to the current position
-		bool SaveFile(const std::string& fileName);
+		virtual bool SaveFile(const std::string& fileName);
 		// Write the archive contents into a C++ header file
 		//	dataName : it will be the name of the byte data array in the header, that can be memory mapped
-		bool SaveHeaderFile(const std::string& fileName, const std::string& dataName);
+		virtual bool SaveHeaderFile(const std::string& fileName, const std::string& dataName);
 		// If the archive was opened from a file, this will return the file's directory
 		const std::string& GetSourceDirectory() const;
 		// If the archive was opened from a file, this will return the file's name

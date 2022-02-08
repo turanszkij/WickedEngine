@@ -83,7 +83,7 @@ namespace wi
 		uint32_t layerMask = ~0u;
 		mutable bool regenerate_frame = true;
 
-		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+		void Serialize(wi::ecs::Archive& archive);
 
 		static void Initialize();
 	};

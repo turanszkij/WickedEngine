@@ -2029,7 +2029,7 @@ namespace wi::scene
 	}
 	Entity Scene::Entity_Duplicate(Entity entity)
 	{
-		wi::Archive archive;
+		wi::ecs::Archive archive;
 
 		// First write the root entity to staging area:
 		archive.SetReadModeAndResetPos(false);
@@ -4004,7 +4004,7 @@ namespace wi::scene
 
 	Entity LoadModel(Scene& scene, const std::string& fileName, const XMMATRIX& transformMatrix, bool attached)
 	{
-		wi::Archive archive(fileName, true);
+		wi::ecs::Archive archive(fileName, true);
 		if (archive.IsOpen())
 		{
 			// Serialize it from file:

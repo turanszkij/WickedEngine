@@ -147,7 +147,7 @@ namespace wi
 		inline void SetVolumeEnabled(bool value) { if (value) { _flags |= FLAG_HAS_VOLUME; } else { _flags &= ~FLAG_HAS_VOLUME; } }
 		inline void SetFrameBlendingEnabled(bool value) { if (value) { _flags |= FLAG_FRAME_BLENDING; } else { _flags &= ~FLAG_FRAME_BLENDING; } }
 
-		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+		void Serialize(wi::ecs::Archive& archive);
 
 		static void Initialize();
 	};

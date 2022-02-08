@@ -20,11 +20,6 @@
 #include <memory>
 #include <limits>
 
-namespace wi
-{
-	class Archive;
-}
-
 namespace wi::scene
 {
 	struct NameComponent
@@ -35,7 +30,7 @@ namespace wi::scene
 		inline void operator=(std::string&& str) { name = std::move(str); }
 		inline bool operator==(const std::string& str) const { return name.compare(str) == 0; }
 
-		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+		void Serialize(wi::ecs::Archive& archive);
 	};
 
 	struct LayerComponent
@@ -47,7 +42,7 @@ namespace wi::scene
 
 		inline uint32_t GetLayerMask() const { return layerMask & propagationMask; }
 
-		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+		void Serialize(wi::ecs::Archive& archive);
 	};
 	
 	struct TransformComponent
@@ -101,7 +96,7 @@ namespace wi::scene
 		void Lerp(const TransformComponent& a, const TransformComponent& b, float t);
 		void CatmullRom(const TransformComponent& a, const TransformComponent& b, const TransformComponent& c, const TransformComponent& d, float t);
 
-		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+		void Serialize(wi::ecs::Archive& archive);
 	};
 
 	struct PreviousFrameTransformComponent
@@ -109,7 +104,7 @@ namespace wi::scene
 		// Non-serialized attributes:
 		XMFLOAT4X4 world_prev;
 
-		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+		void Serialize(wi::ecs::Archive& archive);
 	};
 
 	struct HierarchyComponent
@@ -117,7 +112,7 @@ namespace wi::scene
 		wi::ecs::Entity parentID = wi::ecs::INVALID_ENTITY;
 		uint32_t layerMask_bind; // saved child layermask at the time of binding
 
-		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+		void Serialize(wi::ecs::Archive& archive);
 	};
 
 	struct MaterialComponent
@@ -311,7 +306,7 @@ namespace wi::scene
 		// Create constant buffer and texture resources for GPU
 		void CreateRenderData();
 
-		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+		void Serialize(wi::ecs::Archive& archive);
 	};
 
 	struct MeshComponent
@@ -438,7 +433,7 @@ namespace wi::scene
 		void RecenterToBottom();
 		wi::primitive::Sphere GetBoundingSphere() const;
 
-		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+		void Serialize(wi::ecs::Archive& archive);
 
 
 		struct Vertex_POS
@@ -602,7 +597,7 @@ namespace wi::scene
 		inline void SetDirty(bool value = true) { if (value) { _flags |= DIRTY; } else { _flags &= ~DIRTY; } }
 		inline bool IsDirty() const { return _flags & DIRTY; }
 
-		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+		void Serialize(wi::ecs::Archive& archive);
 	};
 
 	struct ObjectComponent
@@ -688,7 +683,7 @@ namespace wi::scene
 		void SaveLightmap();
 		void CompressLightmap();
 
-		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+		void Serialize(wi::ecs::Archive& archive);
 	};
 
 	struct RigidBodyPhysicsComponent
@@ -740,7 +735,7 @@ namespace wi::scene
 		inline bool IsDisableDeactivation() const { return _flags & DISABLE_DEACTIVATION; }
 		inline bool IsKinematic() const { return _flags & KINEMATIC; }
 
-		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+		void Serialize(wi::ecs::Archive& archive);
 	};
 
 	struct SoftBodyPhysicsComponent
@@ -776,7 +771,7 @@ namespace wi::scene
 		// Create physics represenation of graphics mesh
 		void CreateFromMesh(const MeshComponent& mesh);
 
-		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+		void Serialize(wi::ecs::Archive& archive);
 	};
 
 	struct ArmatureComponent
@@ -798,7 +793,7 @@ namespace wi::scene
 
 		void CreateRenderData();
 
-		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+		void Serialize(wi::ecs::Archive& archive);
 	};
 
 	struct LightComponent
@@ -860,7 +855,7 @@ namespace wi::scene
 		inline void SetType(LightType val) { type = val; }
 		inline LightType GetType() const { return type; }
 
-		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+		void Serialize(wi::ecs::Archive& archive);
 	};
 
 	struct CameraComponent
@@ -929,7 +924,7 @@ namespace wi::scene
 		inline bool IsDirty() const { return _flags & DIRTY; }
 		inline bool IsCustomProjectionEnabled() const { return _flags & CUSTOM_PROJECTION; }
 
-		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+		void Serialize(wi::ecs::Archive& archive);
 	};
 
 	struct EnvironmentProbeComponent
@@ -955,7 +950,7 @@ namespace wi::scene
 		inline bool IsDirty() const { return _flags & DIRTY; }
 		inline bool IsRealTime() const { return _flags & REALTIME; }
 
-		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+		void Serialize(wi::ecs::Archive& archive);
 	};
 
 	struct ForceFieldComponent
@@ -977,7 +972,7 @@ namespace wi::scene
 
 		inline float GetRange() const { return range_global; }
 
-		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+		void Serialize(wi::ecs::Archive& archive);
 	};
 
 	struct DecalComponent
@@ -1001,7 +996,7 @@ namespace wi::scene
 
 		inline float GetOpacity() const { return color.w; }
 
-		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+		void Serialize(wi::ecs::Archive& archive);
 	};
 
 	struct AnimationDataComponent
@@ -1015,7 +1010,7 @@ namespace wi::scene
 		wi::vector<float> keyframe_times;
 		wi::vector<float> keyframe_data;
 
-		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+		void Serialize(wi::ecs::Archive& archive);
 	};
 
 	struct AnimationComponent
@@ -1091,7 +1086,7 @@ namespace wi::scene
 		inline void Stop() { Pause(); timer = 0.0f; }
 		inline void SetLooped(bool value = true) { if (value) { _flags |= LOOPED; } else { _flags &= ~LOOPED; } }
 
-		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+		void Serialize(wi::ecs::Archive& archive);
 	};
 
 	struct WeatherComponent
@@ -1151,7 +1146,7 @@ namespace wi::scene
 		wi::Resource skyMap;
 		wi::Resource colorGradingMap;
 
-		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+		void Serialize(wi::ecs::Archive& archive);
 	};
 
 	struct SoundComponent
@@ -1179,7 +1174,7 @@ namespace wi::scene
 		inline void SetLooped(bool value = true) { if (value) { _flags |= LOOPED; } else { _flags &= ~LOOPED; } }
 		inline void SetDisable3D(bool value = true) { if (value) { _flags |= DISABLE_3D; } else { _flags &= ~DISABLE_3D; } }
 
-		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+		void Serialize(wi::ecs::Archive& archive);
 	};
 
 	struct InverseKinematicsComponent
@@ -1198,7 +1193,7 @@ namespace wi::scene
 		inline void SetDisabled(bool value = true) { if (value) { _flags |= DISABLED; } else { _flags &= ~DISABLED; } }
 		inline bool IsDisabled() const { return _flags & DISABLED; }
 
-		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+		void Serialize(wi::ecs::Archive& archive);
 	};
 
 	struct SpringComponent
@@ -1231,7 +1226,7 @@ namespace wi::scene
 		inline bool IsStretchEnabled() const { return _flags & STRETCH_ENABLED; }
 		inline bool IsGravityEnabled() const { return _flags & GRAVITY_ENABLED; }
 
-		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
+		void Serialize(wi::ecs::Archive& archive);
 	};
 
 	struct Scene
@@ -1376,16 +1371,26 @@ namespace wi::scene
 		//	The contents of the other scene will be lost (and moved to this)!
 		void Merge(Scene& other);
 
-		// Removes a specific entity from the scene (if it exists):
+		// Removes (deletes) a specific entity from the scene (if it exists):
 		void Entity_Remove(wi::ecs::Entity entity);
 		// Finds the first entity by the name (if it exists, otherwise returns INVALID_ENTITY):
 		wi::ecs::Entity Entity_FindByName(const std::string& name);
 		// Duplicates all of an entity's components and creates a new entity with them (recursively keeps hierarchy):
 		wi::ecs::Entity Entity_Duplicate(wi::ecs::Entity entity);
+
 		// Serializes entity and all of its components to archive:
-		//	Returns either the new entity that was read, or the original entity that was written
 		//	This serialization is recursive and serializes entity hierarchy as well
-		wi::ecs::Entity Entity_Serialize(wi::Archive& archive, wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY);
+		//
+		//	archive	: the archive that holds the data
+		//	entity	: entity to write (optional, needed when archive is in write mode)
+		//	keep_internal_references_unchanged : if true, entities referenced by components will remain unchanged. In this case those will be only usable in the current application session.
+		//
+		//	Returns	: either the new entity that was read, or the original entity that was written
+		wi::ecs::Entity Entity_Serialize(
+			wi::ecs::Archive& archive,
+			wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY,
+			bool keep_internal_references_unchanged = true
+		);
 
 		wi::ecs::Entity Entity_CreateMaterial(
 			const std::string& name
@@ -1443,7 +1448,7 @@ namespace wi::scene
 		// Detaches all children from an entity (if there are any):
 		void Component_DetachChildren(wi::ecs::Entity parent);
 
-		void Serialize(wi::Archive& archive);
+		void Serialize(wi::ecs::Archive& archive);
 
 		void RunPreviousFrameTransformUpdateSystem(wi::jobsystem::context& ctx);
 		void RunAnimationUpdateSystem(wi::jobsystem::context& ctx);

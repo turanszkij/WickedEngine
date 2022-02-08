@@ -26,49 +26,70 @@ namespace wi::ecs
 		return next.fetch_add(1);
 	}
 
-	struct EntitySerializer
+	// This extension of wi::Archive supports serializing the entity-component system entities and components
+	class Archive : public wi::Archive
 	{
+	public:
+		Archive() : wi::Archive() {}
+		Archive(const Archive& other) : wi::Archive(other) {}
+		Archive(Archive&& other) : wi::Archive(other) {}
+		Archive(const std::string & fileName, bool readMode = true) : wi::Archive(fileName, readMode) {}
+		Archive(const uint8_t * data) : wi::Archive(data) {}
+
 		wi::jobsystem::context ctx; // allow components to spawn serialization subtasks
 		wi::unordered_map<uint64_t, Entity> remap;
 		bool allow_remap = true;
 
-		~EntitySerializer()
+		// Waits for serialization subtasks
+		void Wait()
 		{
-			wi::jobsystem::Wait(ctx); // automatically wait for all subtasks after serialization
+			wi::jobsystem::Wait(ctx);
 		}
-	};
-	// This is the safe way to serialize an entity
-	inline void SerializeEntity(wi::Archive& archive, Entity& entity, EntitySerializer& seri)
-	{
-		if (archive.IsReadMode())
-		{
-			// Entities are always serialized as uint64_t for back-compat
-			uint64_t mem;
-			archive >> mem;
 
-			if (seri.allow_remap)
+		virtual ~Archive()
+		{
+			Wait(); // automatically wait for all subtasks after serialization
+		}
+
+		void SetReadModeAndResetPos(bool isReadMode) override
+		{
+			wi::Archive::SetReadModeAndResetPos(isReadMode);
+			remap.clear();
+		}
+
+		// This is the safe way to serialize an entity
+		inline void SerializeEntity(Entity& entity)
+		{
+			if (IsReadMode())
 			{
-				auto it = seri.remap.find(mem);
-				if (it == seri.remap.end())
+				// Entities are always serialized as uint64_t for back-compat
+				uint64_t mem;
+				*this >> mem;
+
+				if (allow_remap)
 				{
-					entity = CreateEntity();
-					seri.remap[mem] = entity;
+					auto it = remap.find(mem);
+					if (it == remap.end())
+					{
+						entity = CreateEntity();
+						remap[mem] = entity;
+					}
+					else
+					{
+						entity = it->second;
+					}
 				}
 				else
 				{
-					entity = it->second;
+					entity = (Entity)mem;
 				}
 			}
 			else
 			{
-				entity = (Entity)mem;
+				*this << entity;
 			}
 		}
-		else
-		{
-			archive << entity;
-		}
-	}
+	};
 
 	// The ComponentManager is a container that stores components and matches them with entities
 	template<typename Component>
@@ -123,7 +144,7 @@ namespace wi::ecs
 		}
 
 		// Read/Write everything to an archive depending on the archive state
-		inline void Serialize(wi::Archive& archive, EntitySerializer& seri)
+		inline void Serialize(wi::ecs::Archive& archive)
 		{
 			if (archive.IsReadMode())
 			{
@@ -135,14 +156,14 @@ namespace wi::ecs
 				components.resize(count);
 				for (size_t i = 0; i < count; ++i)
 				{
-					components[i].Serialize(archive, seri);
+					components[i].Serialize(archive);
 				}
 
 				entities.resize(count);
 				for (size_t i = 0; i < count; ++i)
 				{
 					Entity entity;
-					SerializeEntity(archive, entity, seri);
+					archive.SerializeEntity(entity);
 					entities[i] = entity;
 					lookup[entity] = i;
 				}
@@ -152,11 +173,11 @@ namespace wi::ecs
 				archive << components.size();
 				for (Component& component : components)
 				{
-					component.Serialize(archive, seri);
+					component.Serialize(archive);
 				}
 				for (Entity entity : entities)
 				{
-					SerializeEntity(archive, entity, seri);
+					archive.SerializeEntity(entity);
 				}
 			}
 		}

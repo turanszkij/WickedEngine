@@ -156,9 +156,9 @@ public:
 
 
 
-	wi::Archive clipboard;
+	wi::ecs::Archive clipboard;
 
-	wi::vector<wi::Archive> history;
+	wi::vector<wi::ecs::Archive> history;
 	int historyPos = -1;
 	enum HistoryOperationType
 	{
@@ -170,7 +170,7 @@ public:
 	};
 
 	void ResetHistory();
-	wi::Archive& AdvanceHistory();
+	wi::ecs::Archive& AdvanceHistory();
 	void ConsumeHistoryOperation(bool undo);
 };
 

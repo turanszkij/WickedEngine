@@ -169,7 +169,7 @@ namespace wi::primitive
 	{
 		return AABB(wi::math::Min(a.getMin(), b.getMin()), wi::math::Max(a.getMax(), b.getMax()));
 	}
-	void AABB::Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri)
+	void AABB::Serialize(wi::Archive& archive)
 	{
 		if (archive.IsReadMode())
 		{

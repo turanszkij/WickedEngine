@@ -909,13 +909,13 @@ namespace wi
 	}
 
 
-	void EmittedParticleSystem::Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri)
+	void EmittedParticleSystem::Serialize(wi::ecs::Archive& archive)
 	{
 		if (archive.IsReadMode())
 		{
 			archive >> _flags;
 			archive >> (uint32_t&)shaderType;
-			wi::ecs::SerializeEntity(archive, meshID, seri);
+			archive.SerializeEntity(meshID);
 			archive >> MAX_PARTICLES;
 			archive >> FIXED_TIMESTEP;
 			archive >> size;
@@ -975,7 +975,7 @@ namespace wi
 		{
 			archive << _flags;
 			archive << (uint32_t)shaderType;
-			wi::ecs::SerializeEntity(archive, meshID, seri);
+			archive.SerializeEntity(meshID);
 			archive << MAX_PARTICLES;
 			archive << FIXED_TIMESTEP;
 			archive << size;

@@ -273,10 +273,13 @@ namespace wi::jobsystem
 
 	void Wait(const context& ctx)
 	{
-		// Wake any threads that might be sleeping:
-		internal_state.worker_state->wakeCondition.notify_all();
+		if (IsBusy(ctx))
+		{
+			// Wake any threads that might be sleeping:
+			internal_state.worker_state->wakeCondition.notify_all();
 
-		// Waiting will also put the current thread to good use by working on an other job if it can:
-		while (IsBusy(ctx)) { work(); }
+			// Waiting will also put the current thread to good use by working on an other job if it can:
+			while (IsBusy(ctx)) { work(); }
+		}
 	}
 }
