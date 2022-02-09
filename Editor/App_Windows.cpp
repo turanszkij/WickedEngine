@@ -12,6 +12,7 @@
 #include <iterator>
 #include <memory>
 #include <stdexcept>
+#include <filesystem>
 
 #include "winrt/Windows.ApplicationModel.h"
 #include "winrt/Windows.ApplicationModel.Core.h"
@@ -22,6 +23,9 @@
 #include "winrt/Windows.UI.Core.h"
 #include "winrt/Windows.UI.Input.h"
 #include "winrt/Windows.UI.ViewManagement.h"
+#include <winrt/Windows.Storage.h>
+#include <winrt/Windows.Foundation.Collections.h>
+
 
 using namespace winrt::Windows::ApplicationModel;
 using namespace winrt::Windows::ApplicationModel::Core;
@@ -32,6 +36,88 @@ using namespace winrt::Windows::UI::ViewManagement;
 using namespace winrt::Windows::System;
 using namespace winrt::Windows::Foundation;
 using namespace winrt::Windows::Graphics::Display;
+using namespace winrt::Windows::Storage;
+
+winrt::fire_and_forget copy_folder(StorageFolder src, StorageFolder dst)
+{
+	auto items = co_await src.GetItemsAsync();
+	for (auto item : items)
+	{
+		if (item.IsOfType(StorageItemTypes::File))
+		{
+			StorageFile file = item.as<StorageFile>();
+			try {
+				file.CopyAsync(dst);
+			}
+			catch (...) {
+				// file already exists, we don't want to overwrite
+			}
+		}
+		else if (item.IsOfType(StorageItemTypes::Folder))
+		{
+			StorageFolder src_child = item.as<StorageFolder>();
+			auto dst_child = co_await dst.CreateFolderAsync(item.Name(), CreationCollisionOption::OpenIfExists);
+			if (dst_child)
+			{
+				copy_folder(src_child, dst_child);
+			}
+		}
+	}
+};
+winrt::fire_and_forget uwp_copy_assets()
+{
+	// On UWP we will copy the base content from application folder to 3D Objects directory
+	//	for easy access to the user:
+	StorageFolder location = KnownFolders::Objects3D();
+
+	// Objects3D/WickedEngine
+	auto destfolder = co_await location.CreateFolderAsync(L"WickedEngine", CreationCollisionOption::OpenIfExists);
+
+	std::string rootdir = std::filesystem::current_path().string() + "\\";
+	std::wstring wstr;
+
+	// scripts:
+	{
+		wi::helper::StringConvert(rootdir + "scripts\\", wstr);
+		auto src = co_await StorageFolder::GetFolderFromPathAsync(wstr.c_str());
+		if (src)
+		{
+			auto dst = co_await destfolder.CreateFolderAsync(L"scripts", CreationCollisionOption::OpenIfExists);
+			if (dst)
+			{
+				copy_folder(src, dst);
+			}
+		}
+	}
+
+	// models:
+	{
+		wi::helper::StringConvert(rootdir + "models\\", wstr);
+		auto src = co_await StorageFolder::GetFolderFromPathAsync(wstr.c_str());
+		if (src)
+		{
+			auto dst = co_await destfolder.CreateFolderAsync(L"models", CreationCollisionOption::OpenIfExists);
+			if (dst)
+			{
+				copy_folder(src, dst);
+			}
+		}
+	}
+
+	// Documentation:
+	{
+		wi::helper::StringConvert(rootdir + "Documentation\\", wstr);
+		auto src = co_await StorageFolder::GetFolderFromPathAsync(wstr.c_str());
+		if (src)
+		{
+			auto dst = destfolder.CreateFolderAsync(L"Documentation", CreationCollisionOption::OpenIfExists).get();
+			if (dst)
+			{
+				copy_folder(src, dst);
+			}
+		}
+	}
+}
 
 class ViewProvider : public winrt::implements<ViewProvider, IFrameworkView>
 {
@@ -50,6 +136,8 @@ public:
 		main.infoDisplay.watermark = true;
 		main.infoDisplay.resolution = true;
 		main.infoDisplay.fpsinfo = true;
+
+		uwp_copy_assets();
 	}
 
 	void Uninitialize() noexcept
