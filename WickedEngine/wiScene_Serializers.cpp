@@ -2041,6 +2041,7 @@ namespace wi::scene
 			}
 		}
 
+		archive.allow_remap = true;
 		archive.Wait();
 		return entity;
 	}

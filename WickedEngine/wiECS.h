@@ -55,6 +55,7 @@ namespace wi::ecs
 		{
 			wi::Archive::SetReadModeAndResetPos(isReadMode);
 			remap.clear();
+			allow_remap = true;
 		}
 
 		// This is the safe way to serialize an entity
