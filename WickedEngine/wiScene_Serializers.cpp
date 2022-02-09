@@ -1361,6 +1361,7 @@ namespace wi::scene
 	wi::ecs::Entity Scene::Entity_Serialize(
 		wi::ecs::Archive& archive,
 		wi::ecs::Entity entity,
+		bool recursive,
 		bool keep_internal_references_unchanged
 	)
 	{
@@ -1646,17 +1647,20 @@ namespace wi::scene
 			if (archive.GetVersion() >= 72)
 			{
 				// serialize children:
-				size_t childCount = 0;
-				archive >> childCount;
-				for (size_t i = 0; i < childCount; ++i)
+				if (recursive)
 				{
-					wi::ecs::Entity child = Entity_Serialize(archive, entity, keep_internal_references_unchanged);
-					if (child != wi::ecs::INVALID_ENTITY)
+					size_t childCount = 0;
+					archive >> childCount;
+					for (size_t i = 0; i < childCount; ++i)
 					{
-						HierarchyComponent* hier = hierarchy.GetComponent(child);
-						if (hier != nullptr)
+						wi::ecs::Entity child = Entity_Serialize(archive, entity, keep_internal_references_unchanged);
+						if (child != wi::ecs::INVALID_ENTITY)
 						{
-							hier->parentID = entity;
+							HierarchyComponent* hier = hierarchy.GetComponent(child);
+							if (hier != nullptr)
+							{
+								hier->parentID = entity;
+							}
 						}
 					}
 				}
@@ -2020,21 +2024,24 @@ namespace wi::scene
 
 			if (archive.GetVersion() >= 72)
 			{
-				// Recursive serialization for all children:
-				wi::vector<wi::ecs::Entity> children;
-				for (size_t i = 0; i < hierarchy.GetCount(); ++i)
+				if (recursive)
 				{
-					const HierarchyComponent& hier = hierarchy[i];
-					if (hier.parentID == entity)
+					// Recursive serialization for all children:
+					wi::vector<wi::ecs::Entity> children;
+					for (size_t i = 0; i < hierarchy.GetCount(); ++i)
 					{
-						wi::ecs::Entity child = hierarchy.GetEntity(i);
-						children.push_back(child);
+						const HierarchyComponent& hier = hierarchy[i];
+						if (hier.parentID == entity)
+						{
+							wi::ecs::Entity child = hierarchy.GetEntity(i);
+							children.push_back(child);
+						}
 					}
-				}
-				archive << children.size();
-				for (wi::ecs::Entity child : children)
-				{
-					Entity_Serialize(archive, child, keep_internal_references_unchanged);
+					archive << children.size();
+					for (wi::ecs::Entity child : children)
+					{
+						Entity_Serialize(archive, child, keep_internal_references_unchanged);
+					}
 				}
 			}
 		}

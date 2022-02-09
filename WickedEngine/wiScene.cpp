@@ -1983,14 +1983,26 @@ namespace wi::scene
 		bounds = AABB::Merge(bounds, other.bounds);
 	}
 
-	void Scene::Entity_Remove(Entity entity)
+	void Scene::Entity_Remove(Entity entity, bool recursive)
 	{
-		Component_Detach(entity); // special case, this will also remove entity from hierarchy but also do more!
+		if (recursive)
+		{
+			for (size_t i = 0; i < hierarchy.GetCount(); ++i)
+			{
+				const HierarchyComponent& hier = hierarchy[i];
+				if (hier.parentID == entity)
+				{
+					wi::ecs::Entity child = hierarchy.GetEntity(i);
+					Entity_Remove(child);
+				}
+			}
+		}
 
 		names.Remove(entity);
 		layers.Remove(entity);
 		transforms.Remove(entity);
 		prev_transforms.Remove(entity);
+		hierarchy.Remove(entity);
 		materials.Remove(entity);
 		meshes.Remove(entity);
 		impostors.Remove(entity);
@@ -2410,11 +2422,9 @@ namespace wi::scene
 				if (channel.path == AnimationComponent::AnimationChannel::Path::WEIGHTS)
 				{
 					ObjectComponent* object = objects.GetComponent(channel.target);
-					assert(object != nullptr);
 					if (object == nullptr)
 						continue;
 					target_mesh = meshes.GetComponent(object->meshID);
-					assert(target_mesh != nullptr);
 					if (target_mesh == nullptr)
 						continue;
 					animation.morph_weights_temp.resize(target_mesh->targets.size());
@@ -2422,7 +2432,6 @@ namespace wi::scene
 				else
 				{
 					target_transform = transforms.GetComponent(channel.target);
-					assert(target_transform != nullptr);
 					if (target_transform == nullptr)
 						continue;
 					transform = *target_transform;
@@ -2936,10 +2945,12 @@ namespace wi::scene
 			int boneIndex = 0;
 			for (Entity boneEntity : armature.boneCollection)
 			{
-				const TransformComponent& bone = *transforms.GetComponent(boneEntity);
+				const TransformComponent* bone = transforms.GetComponent(boneEntity);
+				if (bone == nullptr)
+					continue;
 
 				XMMATRIX B = XMLoadFloat4x4(&armature.inverseBindMatrices[boneIndex]);
-				XMMATRIX W = XMLoadFloat4x4(&bone.world);
+				XMMATRIX W = XMLoadFloat4x4(&bone->world);
 				XMMATRIX M = B * W * R;
 
 				XMFLOAT4X4 mat;
@@ -2947,7 +2958,7 @@ namespace wi::scene
 				armature.boneData[boneIndex++].Create(mat);
 
 				const float bone_radius = 1;
-				XMFLOAT3 bonepos = bone.GetPosition();
+				XMFLOAT3 bonepos = bone->GetPosition();
 				AABB boneAABB;
 				boneAABB.createFromHalfWidth(bonepos, XMFLOAT3(bone_radius, bone_radius, bone_radius));
 				_min = wi::math::Min(_min, boneAABB._min);

@@ -1372,7 +1372,8 @@ namespace wi::scene
 		void Merge(Scene& other);
 
 		// Removes (deletes) a specific entity from the scene (if it exists):
-		void Entity_Remove(wi::ecs::Entity entity);
+		//	recursive : deletes children as well
+		void Entity_Remove(wi::ecs::Entity entity, bool recursive = true);
 		// Finds the first entity by the name (if it exists, otherwise returns INVALID_ENTITY):
 		wi::ecs::Entity Entity_FindByName(const std::string& name);
 		// Duplicates all of an entity's components and creates a new entity with them (recursively keeps hierarchy):
@@ -1389,6 +1390,7 @@ namespace wi::scene
 		wi::ecs::Entity Entity_Serialize(
 			wi::ecs::Archive& archive,
 			wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY,
+			bool recursive = true,
 			bool keep_internal_references_unchanged = true
 		);
 
