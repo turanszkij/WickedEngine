@@ -1935,7 +1935,7 @@ namespace wi::scene
 		inverse_kinematics.Clear();
 		springs.Clear();
 
-		TLAS = RaytracingAccelerationStructure();
+		TLAS = {};
 		BVH.Clear();
 		waterRipples.clear();
 
