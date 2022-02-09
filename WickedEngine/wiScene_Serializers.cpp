@@ -7,8 +7,6 @@
 #include "wiTimer.h"
 #include "wiVector.h"
 
-using namespace wi::ecs;
-
 namespace wi::scene
 {
 
@@ -651,7 +649,7 @@ namespace wi::scene
 			boneCollection.resize(boneCount);
 			for (size_t i = 0; i < boneCount; ++i)
 			{
-				Entity boneID;
+				wi::ecs::Entity boneID;
 				archive.SerializeEntity(boneID);
 				boneCollection[i] = boneID;
 			}
@@ -665,7 +663,7 @@ namespace wi::scene
 			}
 			if (archive.GetVersion() == 26)
 			{
-				Entity rootBoneID;
+				wi::ecs::Entity rootBoneID;
 				archive.SerializeEntity(rootBoneID);
 			}
 		}
@@ -676,14 +674,14 @@ namespace wi::scene
 			archive << boneCollection.size();
 			for (size_t i = 0; i < boneCollection.size(); ++i)
 			{
-				Entity boneID = boneCollection[i];
+				wi::ecs::Entity boneID = boneCollection[i];
 				archive.SerializeEntity(boneID);
 			}
 
 			archive << inverseBindMatrices;
 			if (archive.GetVersion() == 26)
 			{
-				Entity rootBoneID;
+				wi::ecs::Entity rootBoneID;
 				archive.SerializeEntity(rootBoneID);
 			}
 		}
@@ -1360,9 +1358,9 @@ namespace wi::scene
 		wi::backlog::post("Scene serialize took " + std::to_string(timer.elapsed_seconds()) + " sec");
 	}
 
-	Entity Scene::Entity_Serialize(
+	wi::ecs::Entity Scene::Entity_Serialize(
 		wi::ecs::Archive& archive,
-		Entity entity,
+		wi::ecs::Entity entity,
 		bool keep_internal_references_unchanged
 	)
 	{
@@ -1652,8 +1650,8 @@ namespace wi::scene
 				archive >> childCount;
 				for (size_t i = 0; i < childCount; ++i)
 				{
-					Entity child = Entity_Serialize(archive, entity, keep_internal_references_unchanged);
-					if (child != INVALID_ENTITY)
+					wi::ecs::Entity child = Entity_Serialize(archive, entity, keep_internal_references_unchanged);
+					if (child != wi::ecs::INVALID_ENTITY)
 					{
 						HierarchyComponent* hier = hierarchy.GetComponent(child);
 						if (hier != nullptr)
@@ -2023,18 +2021,18 @@ namespace wi::scene
 			if (archive.GetVersion() >= 72)
 			{
 				// Recursive serialization for all children:
-				wi::vector<Entity> children;
+				wi::vector<wi::ecs::Entity> children;
 				for (size_t i = 0; i < hierarchy.GetCount(); ++i)
 				{
 					const HierarchyComponent& hier = hierarchy[i];
 					if (hier.parentID == entity)
 					{
-						Entity child = hierarchy.GetEntity(i);
+						wi::ecs::Entity child = hierarchy.GetEntity(i);
 						children.push_back(child);
 					}
 				}
 				archive << children.size();
-				for (Entity child : children)
+				for (wi::ecs::Entity child : children)
 				{
 					Entity_Serialize(archive, child, keep_internal_references_unchanged);
 				}
