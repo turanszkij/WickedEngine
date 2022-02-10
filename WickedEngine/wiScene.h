@@ -1376,16 +1376,33 @@ namespace wi::scene
 		//	The contents of the other scene will be lost (and moved to this)!
 		void Merge(Scene& other);
 
-		// Removes a specific entity from the scene (if it exists):
-		void Entity_Remove(wi::ecs::Entity entity);
+		// Removes (deletes) a specific entity from the scene (if it exists):
+		//	recursive	: also removes children if true
+		void Entity_Remove(wi::ecs::Entity entity, bool recursive = true);
 		// Finds the first entity by the name (if it exists, otherwise returns INVALID_ENTITY):
 		wi::ecs::Entity Entity_FindByName(const std::string& name);
 		// Duplicates all of an entity's components and creates a new entity with them (recursively keeps hierarchy):
 		wi::ecs::Entity Entity_Duplicate(wi::ecs::Entity entity);
+
+		enum class EntitySerializeFlags
+		{
+			NONE = 0,
+			RECURSIVE = 1 << 0, // children entities will be also serialized
+			KEEP_INTERNAL_ENTITY_REFERENCES = 1 << 1, // entity handles inside components will be kept intact, they won't use remapping of wi::ecs::EntitySerializer
+		};
 		// Serializes entity and all of its components to archive:
+		//	archive		: archive used for serializing data
+		//	seri		: serializer state for entity component system
+		//	entity		: if archive is in write mode, this is the entity to serialize. If archive is in read mode, it should be INVALID_ENTITY
+		//	flags		: specify options as EntitySerializeFlags bits to control internal behaviour
+		// 
 		//	Returns either the new entity that was read, or the original entity that was written
-		//	This serialization is recursive and serializes entity hierarchy as well
-		wi::ecs::Entity Entity_Serialize(wi::Archive& archive, wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY);
+		wi::ecs::Entity Entity_Serialize(
+			wi::Archive& archive,
+			wi::ecs::EntitySerializer& seri,
+			wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY,
+			EntitySerializeFlags flags = EntitySerializeFlags::RECURSIVE
+		);
 
 		wi::ecs::Entity Entity_CreateMaterial(
 			const std::string& name
@@ -1538,3 +1555,8 @@ namespace wi::scene
 	SceneIntersectSphereResult SceneIntersectCapsule(const wi::primitive::Capsule& capsule, uint32_t renderTypeMask = wi::enums::RENDERTYPE_OPAQUE, uint32_t layerMask = ~0, const Scene& scene = GetScene());
 
 }
+
+template<>
+struct enable_bitmask_operators<wi::scene::Scene::EntitySerializeFlags> {
+	static const bool enable = true;
+};

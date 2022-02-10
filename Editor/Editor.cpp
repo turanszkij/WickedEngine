@@ -732,7 +732,7 @@ void EditorComponent::Load()
 
 
 	clearButton.Create("Clear World");
-	clearButton.SetTooltip("Delete every model from the scene");
+	clearButton.SetTooltip("Delete everything from the scene. This operation is not undoable!");
 	clearButton.SetColor(wi::Color(255, 173, 43, 180), wi::gui::WIDGETSTATE::IDLE);
 	clearButton.SetColor(wi::Color(255, 235, 173, 255), wi::gui::WIDGETSTATE::FOCUS);
 	clearButton.OnClick([&](wi::gui::EventArgs args) {
@@ -757,6 +757,9 @@ void EditorComponent::Load()
 		nameWnd.SetEntity(INVALID_ENTITY);
 
 		RefreshSceneGraphView();
+
+		history.clear();
+		historyPos = -1;
 	});
 	GetGUI().AddWidget(&clearButton);
 
@@ -848,6 +851,19 @@ void EditorComponent::Load()
 	sceneGraphView.Create("Scene graph view");
 	sceneGraphView.OnSelect([this](wi::gui::EventArgs args) {
 
+		wi::Archive& archive = AdvanceHistory();
+		archive << HISTORYOP_SELECTION;
+		// record PREVIOUS selection state...
+		archive << translator.selected.size();
+		for (auto& x : translator.selected)
+		{
+			archive << x.entity;
+			archive << x.position;
+			archive << x.normal;
+			archive << x.subsetIndex;
+			archive << x.distance;
+		}
+
 		translator.selected.clear();
 
 		for (int i = 0; i < sceneGraphView.GetItemCount(); ++i)
@@ -859,6 +875,17 @@ void EditorComponent::Load()
 				pick.entity = (Entity)item.userdata;
 				AddSelected(pick);
 			}
+		}
+
+		// record NEW selection state...
+		archive << translator.selected.size();
+		for (auto& x : translator.selected)
+		{
+			archive << x.entity;
+			archive << x.position;
+			archive << x.normal;
+			archive << x.subsetIndex;
+			archive << x.distance;
 		}
 
 		});
@@ -1443,11 +1470,12 @@ void EditorComponent::Update(float dt)
 			{
 				auto prevSel = translator.selected;
 
+				EntitySerializer seri;
 				clipboard.SetReadModeAndResetPos(false);
 				clipboard << prevSel.size();
 				for (auto& x : prevSel)
 				{
-					scene.Entity_Serialize(clipboard, x.entity);
+					scene.Entity_Serialize(clipboard, seri, x.entity, Scene::EntitySerializeFlags::RECURSIVE);
 				}
 			}
 			// Paste
@@ -1456,13 +1484,14 @@ void EditorComponent::Update(float dt)
 				auto prevSel = translator.selected;
 				translator.selected.clear();
 
+				EntitySerializer seri;
 				clipboard.SetReadModeAndResetPos(true);
 				size_t count;
 				clipboard >> count;
 				for (size_t i = 0; i < count; ++i)
 				{
 					wi::scene::PickResult picked;
-					picked.entity = scene.Entity_Serialize(clipboard);
+					picked.entity = scene.Entity_Serialize(clipboard, seri, INVALID_ENTITY, Scene::EntitySerializeFlags::RECURSIVE | Scene::EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES);
 					AddSelected(picked);
 				}
 
@@ -1485,12 +1514,13 @@ void EditorComponent::Update(float dt)
 			// Put Instances
 			if (clipboard.IsOpen() && hovered.subsetIndex >= 0 && wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT) && wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
 			{
+				EntitySerializer seri;
 				clipboard.SetReadModeAndResetPos(true);
 				size_t count;
 				clipboard >> count;
 				for (size_t i = 0; i < count; ++i)
 				{
-					Entity entity = scene.Entity_Serialize(clipboard);
+					Entity entity = scene.Entity_Serialize(clipboard, seri, INVALID_ENTITY, Scene::EntitySerializeFlags::RECURSIVE | Scene::EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES);
 					TransformComponent* transform = scene.transforms.GetComponent(entity);
 					if (transform != nullptr)
 					{
@@ -1532,9 +1562,10 @@ void EditorComponent::Update(float dt)
 		{
 			archive << x.entity;
 		}
+		EntitySerializer seri;
 		for (auto& x : translator.selected)
 		{
-			scene.Entity_Serialize(archive, x.entity);
+			scene.Entity_Serialize(archive, seri, x.entity);
 		}
 		for (auto& x : translator.selected)
 		{
@@ -2233,7 +2264,18 @@ void EditorComponent::PushToSceneGraphView(wi::ecs::Entity entity, int level)
 	item.selected = IsSelected(entity);
 	item.open = scenegraphview_opened_items.count(entity) != 0;
 	const NameComponent* name = scene.names.GetComponent(entity);
-	item.name = name == nullptr ? std::to_string(entity) : name->name;
+	if (name == nullptr)
+	{
+		item.name = "[no_name] " + std::to_string(entity);
+	}
+	else if(name->name.empty())
+	{
+		item.name = "[name_empty] " + std::to_string(entity);
+	}
+	else
+	{
+		item.name = name->name;
+	}
 	sceneGraphView.AddItem(item);
 
 	scenegraphview_added_items.insert(entity);
@@ -2427,9 +2469,11 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 
 				if (undo)
 				{
+					EntitySerializer seri;
+					seri.allow_remap = false;
 					for (size_t i = 0; i < count; ++i)
 					{
-						scene.Entity_Serialize(archive);
+						scene.Entity_Serialize(archive, seri);
 					}
 				}
 				else

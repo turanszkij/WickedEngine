@@ -1362,15 +1362,20 @@ namespace wi::scene
 		wi::backlog::post("Scene serialize took " + std::to_string(timer.elapsed_seconds()) + " sec");
 	}
 
-	Entity Scene::Entity_Serialize(wi::Archive& archive, Entity entity)
+	Entity Scene::Entity_Serialize(
+		wi::Archive& archive,
+		EntitySerializer& seri,
+		Entity entity,
+		EntitySerializeFlags flags
+	)
 	{
-		EntitySerializer seri;
-
 		SerializeEntity(archive, entity, seri);
 
-		// From this point, we will not remap the entities, 
-		//	to retain internal entity references inside components:
-		seri.allow_remap = false;
+		bool restore_remap = seri.allow_remap;
+		if (has_flag(flags, EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES))
+		{
+			seri.allow_remap = false;
+		}
 
 		if (archive.IsReadMode())
 		{
@@ -1641,14 +1646,15 @@ namespace wi::scene
 				}
 			}
 
-			if (archive.GetVersion() >= 72)
+			if (archive.GetVersion() >= 72 && has_flag(flags, EntitySerializeFlags::RECURSIVE))
 			{
 				// serialize children:
+				seri.allow_remap = restore_remap;
 				size_t childCount = 0;
 				archive >> childCount;
 				for (size_t i = 0; i < childCount; ++i)
 				{
-					Entity child = Entity_Serialize(archive);
+					Entity child = Entity_Serialize(archive, seri, INVALID_ENTITY, flags);
 					if (child != INVALID_ENTITY)
 					{
 						HierarchyComponent* hier = hierarchy.GetComponent(child);
@@ -2016,9 +2022,10 @@ namespace wi::scene
 				}
 			}
 
-			if (archive.GetVersion() >= 72)
+			if (archive.GetVersion() >= 72 && has_flag(flags, EntitySerializeFlags::RECURSIVE))
 			{
 				// Recursive serialization for all children:
+				seri.allow_remap = restore_remap;
 				wi::vector<Entity> children;
 				for (size_t i = 0; i < hierarchy.GetCount(); ++i)
 				{
@@ -2032,11 +2039,12 @@ namespace wi::scene
 				archive << children.size();
 				for (Entity child : children)
 				{
-					Entity_Serialize(archive, child);
+					Entity_Serialize(archive, seri, child, flags);
 				}
 			}
 		}
 
+		seri.allow_remap = restore_remap;
 		return entity;
 	}
 
