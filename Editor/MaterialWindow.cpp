@@ -452,9 +452,18 @@ void MaterialWindow::Create(EditorComponent* editor)
 	newMaterialButton.OnClick([=](wi::gui::EventArgs args) {
 		Scene& scene = wi::scene::GetScene();
 		Entity entity = scene.Entity_CreateMaterial("editorMaterial");
+
+		wi::Archive& archive = editor->AdvanceHistory();
+		archive << EditorComponent::HISTORYOP_ADD;
+		editor->RecordSelection(archive);
+
 		editor->ClearSelected();
 		editor->AddSelected(entity);
 		editor->RefreshSceneGraphView();
+
+		editor->RecordSelection(archive);
+		editor->RecordAddedEntity(archive, entity);
+
 		SetEntity(entity);
 		});
 	AddWidget(&newMaterialButton);

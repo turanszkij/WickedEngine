@@ -70,8 +70,17 @@ void SoundWindow::Create(EditorComponent* editor)
 		wi::helper::FileDialog(params, [=](std::string fileName) {
 			wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 				Entity entity = GetScene().Entity_CreateSound("editorSound", fileName);
+
+				wi::Archive& archive = editor->AdvanceHistory();
+				archive << EditorComponent::HISTORYOP_ADD;
+				editor->RecordSelection(archive);
+
 				editor->ClearSelected();
 				editor->AddSelected(entity);
+
+				editor->RecordSelection(archive);
+				editor->RecordAddedEntity(archive, entity);
+
 				editor->RefreshSceneGraphView();
 				SetEntity(entity);
 			});

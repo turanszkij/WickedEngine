@@ -757,9 +757,7 @@ void EditorComponent::Load()
 		nameWnd.SetEntity(INVALID_ENTITY);
 
 		RefreshSceneGraphView();
-
-		history.clear();
-		historyPos = -1;
+		ResetHistory();
 	});
 	GetGUI().AddWidget(&clearButton);
 
@@ -787,6 +785,7 @@ void EditorComponent::Load()
 		ss += "Undo: Ctrl + Z\n";
 		ss += "Redo: Ctrl + Y\n";
 		ss += "Copy: Ctrl + C\n";
+		ss += "Cut: Ctrl + X\n";
 		ss += "Paste: Ctrl + V\n";
 		ss += "Delete: DELETE button\n";
 		ss += "Place Instances: Ctrl + Shift + Left mouse click (place clipboard onto clicked surface)\n";
@@ -805,6 +804,7 @@ void EditorComponent::Load()
 		helpLabel.Create("HelpLabel");
 		helpLabel.SetText(ss);
 		helpLabel.SetVisible(false);
+		helpLabel.SetColor(wi::Color(113, 183, 214, 100), wi::gui::WIDGETSTATE::IDLE);
 		GetGUI().AddWidget(&helpLabel);
 	}
 
@@ -850,6 +850,9 @@ void EditorComponent::Load()
 
 	sceneGraphView.Create("Scene graph view");
 	sceneGraphView.OnSelect([this](wi::gui::EventArgs args) {
+
+		if (args.iValue < 0)
+			return;
 
 		wi::Archive& archive = AdvanceHistory();
 		archive << HISTORYOP_SELECTION;
@@ -1006,6 +1009,8 @@ void EditorComponent::Update(float dt)
 			clear_selected = true;
 		}
 	}
+
+	bool deleting = wi::input::Press(wi::input::KEYBOARD_BUTTON_DELETE);
 
 	// Camera control:
 	XMFLOAT4 currentMouse = wi::input::GetPointer();
@@ -1428,8 +1433,8 @@ void EditorComponent::Update(float dt)
 			{
 				selectAll = true;
 			}
-			// Copy
-			if (wi::input::Press((wi::input::BUTTON)'C'))
+			// Copy/Cut
+			if (wi::input::Press((wi::input::BUTTON)'C') || wi::input::Press((wi::input::BUTTON)'X'))
 			{
 				auto& prevSel = translator.selectedEntitiesNonRecursive;
 
@@ -1439,6 +1444,11 @@ void EditorComponent::Update(float dt)
 				for (auto& x : prevSel)
 				{
 					scene.Entity_Serialize(clipboard, seri, x);
+				}
+
+				if (wi::input::Press((wi::input::BUTTON)'X'))
+				{
+					deleting = true;
 				}
 			}
 			// Paste
@@ -1464,12 +1474,7 @@ void EditorComponent::Update(float dt)
 				}
 
 				RecordSelection(archive);
-
-				archive << addedEntities;
-				for (auto& x : addedEntities)
-				{
-					scene.Entity_Serialize(archive, seri, x);
-				}
+				RecordAddedEntity(archive, addedEntities);
 
 				RefreshSceneGraphView();
 			}
@@ -1489,17 +1494,11 @@ void EditorComponent::Update(float dt)
 					wi::scene::PickResult picked;
 					picked.entity = scene.Entity_Duplicate(x);
 					AddSelected(picked);
-					addedEntities.push_back(x);
+					addedEntities.push_back(picked.entity);
 				}
 
 				RecordSelection(archive);
-
-				EntitySerializer seri;
-				archive << addedEntities;
-				for (auto& x : prevSel)
-				{
-					scene.Entity_Serialize(archive, seri, x);
-				}
+				RecordAddedEntity(archive, addedEntities);
 
 				RefreshSceneGraphView();
 			}
@@ -1526,13 +1525,10 @@ void EditorComponent::Update(float dt)
 
 				wi::Archive& archive = AdvanceHistory();
 				archive << HISTORYOP_ADD;
+				// because selection didn't change here, we record same selection state twice, it's not a bug:
 				RecordSelection(archive);
 				RecordSelection(archive);
-				archive << addedEntities;
-				for (auto& x : addedEntities)
-				{
-					scene.Entity_Serialize(archive, seri, x);
-				}
+				RecordAddedEntity(archive, addedEntities);
 
 				RefreshSceneGraphView();
 			}
@@ -1554,9 +1550,8 @@ void EditorComponent::Update(float dt)
 
 	}
 
-
 	// Delete
-	if (wi::input::Press(wi::input::KEYBOARD_BUTTON_DELETE))
+	if (deleting)
 	{
 		wi::Archive& archive = AdvanceHistory();
 		archive << HISTORYOP_DELETE;
@@ -2401,6 +2396,7 @@ bool EditorComponent::IsSelected(Entity entity) const
 	}
 	return false;
 }
+
 void EditorComponent::RecordSelection(wi::Archive& archive) const
 {
 	archive << translator.selected.size();
@@ -2411,6 +2407,22 @@ void EditorComponent::RecordSelection(wi::Archive& archive) const
 		archive << x.normal;
 		archive << x.subsetIndex;
 		archive << x.distance;
+	}
+}
+void EditorComponent::RecordAddedEntity(wi::Archive& archive, wi::ecs::Entity entity) const
+{
+	const wi::vector<Entity> entities = { entity };
+	RecordAddedEntity(archive, entities);
+}
+void EditorComponent::RecordAddedEntity(wi::Archive& archive, const wi::vector<wi::ecs::Entity>& entities) const
+{
+	Scene& scene = GetScene();
+	EntitySerializer seri;
+
+	archive << entities;
+	for (auto& x : entities)
+	{
+		scene.Entity_Serialize(archive, seri, x);
 	}
 }
 
@@ -2470,6 +2482,51 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 				translator.PostTranslate();
 			}
 			break;
+		case HISTORYOP_SELECTION:
+		{
+			// Read selections states from archive:
+
+			wi::vector<wi::scene::PickResult> selectedBEFORE;
+			size_t selectionCountBEFORE;
+			archive >> selectionCountBEFORE;
+			for (size_t i = 0; i < selectionCountBEFORE; ++i)
+			{
+				wi::scene::PickResult sel;
+				archive >> sel.entity;
+				archive >> sel.position;
+				archive >> sel.normal;
+				archive >> sel.subsetIndex;
+				archive >> sel.distance;
+
+				selectedBEFORE.push_back(sel);
+			}
+
+			wi::vector<wi::scene::PickResult> selectedAFTER;
+			size_t selectionCountAFTER;
+			archive >> selectionCountAFTER;
+			for (size_t i = 0; i < selectionCountAFTER; ++i)
+			{
+				wi::scene::PickResult sel;
+				archive >> sel.entity;
+				archive >> sel.position;
+				archive >> sel.normal;
+				archive >> sel.subsetIndex;
+				archive >> sel.distance;
+
+				selectedAFTER.push_back(sel);
+			}
+
+			// Restore proper selection state:
+			if (undo)
+			{
+				translator.selected = selectedBEFORE;
+			}
+			else
+			{
+				translator.selected = selectedAFTER;
+			}
+		}
+		break;
 		case HISTORYOP_ADD:
 		{
 			// Read selections states from archive:
@@ -2572,59 +2629,12 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 
 			}
 			break;
-		case HISTORYOP_SELECTION:
-			{
-				// Read selections states from archive:
-
-				wi::vector<wi::scene::PickResult> selectedBEFORE;
-				size_t selectionCountBEFORE;
-				archive >> selectionCountBEFORE;
-				for (size_t i = 0; i < selectionCountBEFORE; ++i)
-				{
-					wi::scene::PickResult sel;
-					archive >> sel.entity;
-					archive >> sel.position;
-					archive >> sel.normal;
-					archive >> sel.subsetIndex;
-					archive >> sel.distance;
-
-					selectedBEFORE.push_back(sel);
-				}
-
-				wi::vector<wi::scene::PickResult> selectedAFTER;
-				size_t selectionCountAFTER;
-				archive >> selectionCountAFTER;
-				for (size_t i = 0; i < selectionCountAFTER; ++i)
-				{
-					wi::scene::PickResult sel;
-					archive >> sel.entity;
-					archive >> sel.position;
-					archive >> sel.normal;
-					archive >> sel.subsetIndex;
-					archive >> sel.distance;
-
-					selectedAFTER.push_back(sel);
-				}
-
-
-				// Restore proper selection state:
-				if (undo)
-				{
-					translator.selected = selectedBEFORE;
-				}
-				else
-				{
-					translator.selected = selectedAFTER;
-				}
-			}
-			break;
 		case HISTORYOP_PAINTTOOL:
 			paintToolWnd.ConsumeHistoryOperation(archive, undo);
 			break;
 		case HISTORYOP_NONE:
-			assert(0);
-			break;
 		default:
+			assert(0);
 			break;
 		}
 

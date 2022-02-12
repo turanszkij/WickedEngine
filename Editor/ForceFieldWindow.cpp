@@ -36,8 +36,17 @@ void ForceFieldWindow::Create(EditorComponent* editor)
 				assert(0);
 				break;
 			}
+
+			wi::Archive& archive = editor->AdvanceHistory();
+			archive << EditorComponent::HISTORYOP_ADD;
+			editor->RecordSelection(archive);
+
 			editor->ClearSelected();
 			editor->AddSelected(entity);
+
+			editor->RecordSelection(archive);
+			editor->RecordAddedEntity(archive, entity);
+
 			editor->RefreshSceneGraphView();
 			SetEntity(entity);
 		}

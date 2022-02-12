@@ -153,7 +153,6 @@ public:
 	void AddSelected(wi::ecs::Entity entity);
 	void AddSelected(const wi::scene::PickResult& picked);
 	bool IsSelected(wi::ecs::Entity entity) const;
-	void RecordSelection(wi::Archive& archive) const;
 
 
 	wi::Archive clipboard;
@@ -163,12 +162,16 @@ public:
 	enum HistoryOperationType
 	{
 		HISTORYOP_TRANSLATOR,
+		HISTORYOP_SELECTION,
 		HISTORYOP_ADD,
 		HISTORYOP_DELETE,
-		HISTORYOP_SELECTION,
 		HISTORYOP_PAINTTOOL,
 		HISTORYOP_NONE
 	};
+
+	void RecordSelection(wi::Archive& archive) const;
+	void RecordAddedEntity(wi::Archive& archive, wi::ecs::Entity entity) const;
+	void RecordAddedEntity(wi::Archive& archive, const wi::vector<wi::ecs::Entity>& entities) const;
 
 	void ResetHistory();
 	wi::Archive& AdvanceHistory();

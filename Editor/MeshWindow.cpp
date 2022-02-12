@@ -551,12 +551,20 @@ void MeshWindow::Create(EditorComponent* editor)
 			mesh->ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH_FAST);
 		};
 		generate_mesh(128, 128);
+
+		wi::Archive& archive = editor->AdvanceHistory();
+		archive << EditorComponent::HISTORYOP_ADD;
+		editor->RecordSelection(archive);
 		
 		editor->ClearSelected();
 		wi::scene::PickResult pick;
 		pick.entity = entity;
 		pick.subsetIndex = 0;
 		editor->AddSelected(pick);
+
+		editor->RecordSelection(archive);
+		editor->RecordAddedEntity(archive, entity);
+
 		SetEntity(object.meshID, pick.subsetIndex);
 
 

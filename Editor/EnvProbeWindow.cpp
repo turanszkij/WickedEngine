@@ -31,8 +31,17 @@ void EnvProbeWindow::Create(EditorComponent* editor)
 		XMFLOAT3 pos;
 		XMStoreFloat3(&pos, XMVectorAdd(wi::scene::GetCamera().GetEye(), wi::scene::GetCamera().GetAt() * 4));
 		Entity entity = wi::scene::GetScene().Entity_CreateEnvironmentProbe("editorProbe", pos);
+
+		wi::Archive& archive = editor->AdvanceHistory();
+		archive << EditorComponent::HISTORYOP_ADD;
+		editor->RecordSelection(archive);
+
 		editor->ClearSelected();
 		editor->AddSelected(entity);
+
+		editor->RecordSelection(archive);
+		editor->RecordAddedEntity(archive, entity);
+
 		editor->RefreshSceneGraphView();
 		SetEntity(entity);
 	});

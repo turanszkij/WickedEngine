@@ -168,8 +168,17 @@ void LightWindow::Create(EditorComponent* editor)
 		if (light != nullptr)
 		{
 			light->type = (LightComponent::LightType)typeSelectorComboBox.GetSelected();
+
+			wi::Archive& archive = editor->AdvanceHistory();
+			archive << EditorComponent::HISTORYOP_ADD;
+			editor->RecordSelection(archive);
+
 			editor->ClearSelected();
 			editor->AddSelected(entity);
+
+			editor->RecordSelection(archive);
+			editor->RecordAddedEntity(archive, entity);
+
 			editor->RefreshSceneGraphView();
 			SetEntity(entity);
 		}

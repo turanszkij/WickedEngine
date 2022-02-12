@@ -185,8 +185,16 @@ void CameraWindow::Create(EditorComponent* editor)
 		TransformComponent& transform = *scene.transforms.GetComponent(entity);
 		transform.MatrixTransform(camera.InvView);
 
+		wi::Archive& archive = editor->AdvanceHistory();
+		archive << EditorComponent::HISTORYOP_ADD;
+		editor->RecordSelection(archive);
+
 		editor->ClearSelected();
 		editor->AddSelected(entity);
+
+		editor->RecordSelection(archive);
+		editor->RecordAddedEntity(archive, entity);
+
 		editor->RefreshSceneGraphView();
 		SetEntity(entity);
 	});

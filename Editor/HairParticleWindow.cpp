@@ -22,8 +22,17 @@ void HairParticleWindow::Create(EditorComponent* editor)
 	addButton.OnClick([=](wi::gui::EventArgs args) {
 		Scene& scene = wi::scene::GetScene();
 		Entity entity = scene.Entity_CreateHair("editorHair");
+
+		wi::Archive& archive = editor->AdvanceHistory();
+		archive << EditorComponent::HISTORYOP_ADD;
+		editor->RecordSelection(archive);
+
 		editor->ClearSelected();
 		editor->AddSelected(entity);
+
+		editor->RecordSelection(archive);
+		editor->RecordAddedEntity(archive, entity);
+
 		editor->RefreshSceneGraphView();
 		SetEntity(entity);
 	});
