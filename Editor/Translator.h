@@ -2,6 +2,7 @@
 #include "CommonInclude.h"
 #include "wiCanvas.h"
 #include "wiVector.h"
+#include "wiUnorderedSet.h"
 
 class Translator
 {
@@ -23,7 +24,9 @@ public:
 	void PostTranslate();
 
 	wi::scene::TransformComponent transform;
-	wi::vector<wi::scene::PickResult> selected;
+	wi::vector<wi::scene::PickResult> selected; // all the selected picks
+	wi::unordered_set<wi::ecs::Entity> selectedEntitiesLookup; // fast lookup for selected entities
+	wi::vector<wi::ecs::Entity> selectedEntitiesNonRecursive; // selected entities that don't contain entities that would be included in recursive iterations
 
 	bool enabled = false;
 

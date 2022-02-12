@@ -854,15 +854,7 @@ void EditorComponent::Load()
 		wi::Archive& archive = AdvanceHistory();
 		archive << HISTORYOP_SELECTION;
 		// record PREVIOUS selection state...
-		archive << translator.selected.size();
-		for (auto& x : translator.selected)
-		{
-			archive << x.entity;
-			archive << x.position;
-			archive << x.normal;
-			archive << x.subsetIndex;
-			archive << x.distance;
-		}
+		RecordSelection(archive);
 
 		translator.selected.clear();
 
@@ -878,15 +870,7 @@ void EditorComponent::Load()
 		}
 
 		// record NEW selection state...
-		archive << translator.selected.size();
-		for (auto& x : translator.selected)
-		{
-			archive << x.entity;
-			archive << x.position;
-			archive << x.normal;
-			archive << x.subsetIndex;
-			archive << x.distance;
-		}
+		RecordSelection(archive);
 
 		});
 	sceneGraphView.SetColor(wi::Color(100, 100, 100, 100), wi::gui::IDLE);
@@ -1381,15 +1365,7 @@ void EditorComponent::Update(float dt)
 			wi::Archive& archive = AdvanceHistory();
 			archive << HISTORYOP_SELECTION;
 			// record PREVIOUS selection state...
-			archive << translator.selected.size();
-			for (auto& x : translator.selected)
-			{
-				archive << x.entity;
-				archive << x.position;
-				archive << x.normal;
-				archive << x.subsetIndex;
-				archive << x.distance;
-			}
+			RecordSelection(archive);
 
 			if (selectAll)
 			{
@@ -1400,11 +1376,6 @@ void EditorComponent::Update(float dt)
 				for (size_t i = 0; i < scene.transforms.GetCount(); ++i)
 				{
 					Entity entity = scene.transforms.GetEntity(i);
-					if (scene.hierarchy.Contains(entity))
-					{
-						// Parented objects won't be attached, but only the parents instead. Otherwise it would cause "double translation"
-						continue;
-					}
 					wi::scene::PickResult picked;
 					picked.entity = entity;
 					AddSelected(picked);
@@ -1444,15 +1415,7 @@ void EditorComponent::Update(float dt)
 
 
 			// record NEW selection state...
-			archive << translator.selected.size();
-			for (auto& x : translator.selected)
-			{
-				archive << x.entity;
-				archive << x.position;
-				archive << x.normal;
-				archive << x.subsetIndex;
-				archive << x.distance;
-			}
+			RecordSelection(archive);
 
 			RefreshSceneGraphView();
 		}
@@ -1468,31 +1431,44 @@ void EditorComponent::Update(float dt)
 			// Copy
 			if (wi::input::Press((wi::input::BUTTON)'C'))
 			{
-				auto prevSel = translator.selected;
+				auto& prevSel = translator.selectedEntitiesNonRecursive;
 
 				EntitySerializer seri;
 				clipboard.SetReadModeAndResetPos(false);
 				clipboard << prevSel.size();
 				for (auto& x : prevSel)
 				{
-					scene.Entity_Serialize(clipboard, seri, x.entity, Scene::EntitySerializeFlags::RECURSIVE);
+					scene.Entity_Serialize(clipboard, seri, x);
 				}
 			}
 			// Paste
 			if (wi::input::Press((wi::input::BUTTON)'V'))
 			{
-				auto prevSel = translator.selected;
-				translator.selected.clear();
+				wi::Archive& archive = AdvanceHistory();
+				archive << HISTORYOP_ADD;
+				RecordSelection(archive);
+
+				ClearSelected();
 
 				EntitySerializer seri;
 				clipboard.SetReadModeAndResetPos(true);
 				size_t count;
 				clipboard >> count;
+				wi::vector<Entity> addedEntities;
 				for (size_t i = 0; i < count; ++i)
 				{
 					wi::scene::PickResult picked;
 					picked.entity = scene.Entity_Serialize(clipboard, seri, INVALID_ENTITY, Scene::EntitySerializeFlags::RECURSIVE | Scene::EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES);
 					AddSelected(picked);
+					addedEntities.push_back(picked.entity);
+				}
+
+				RecordSelection(archive);
+
+				archive << addedEntities;
+				for (auto& x : addedEntities)
+				{
+					scene.Entity_Serialize(archive, seri, x);
 				}
 
 				RefreshSceneGraphView();
@@ -1500,13 +1476,29 @@ void EditorComponent::Update(float dt)
 			// Duplicate Instances
 			if (wi::input::Press((wi::input::BUTTON)'D'))
 			{
-				auto prevSel = translator.selected;
-				translator.selected.clear();
+				wi::Archive& archive = AdvanceHistory();
+				archive << HISTORYOP_ADD;
+				RecordSelection(archive);
+
+				auto& prevSel = translator.selectedEntitiesNonRecursive;
+				ClearSelected();
+
+				wi::vector<Entity> addedEntities;
 				for (auto& x : prevSel)
 				{
 					wi::scene::PickResult picked;
-					picked.entity = scene.Entity_Duplicate(x.entity);
+					picked.entity = scene.Entity_Duplicate(x);
 					AddSelected(picked);
+					addedEntities.push_back(x);
+				}
+
+				RecordSelection(archive);
+
+				EntitySerializer seri;
+				archive << addedEntities;
+				for (auto& x : prevSel)
+				{
+					scene.Entity_Serialize(archive, seri, x);
 				}
 
 				RefreshSceneGraphView();
@@ -1514,6 +1506,7 @@ void EditorComponent::Update(float dt)
 			// Put Instances
 			if (clipboard.IsOpen() && hovered.subsetIndex >= 0 && wi::input::Down(wi::input::KEYBOARD_BUTTON_LSHIFT) && wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
 			{
+				wi::vector<Entity> addedEntities;
 				EntitySerializer seri;
 				clipboard.SetReadModeAndResetPos(true);
 				size_t count;
@@ -1528,6 +1521,17 @@ void EditorComponent::Update(float dt)
 						//transform->MatrixTransform(hovered.orientation);
 						transform->Translate(hovered.position);
 					}
+					addedEntities.push_back(entity);
+				}
+
+				wi::Archive& archive = AdvanceHistory();
+				archive << HISTORYOP_ADD;
+				RecordSelection(archive);
+				RecordSelection(archive);
+				archive << addedEntities;
+				for (auto& x : addedEntities)
+				{
+					scene.Entity_Serialize(archive, seri, x);
 				}
 
 				RefreshSceneGraphView();
@@ -1556,23 +1560,20 @@ void EditorComponent::Update(float dt)
 	{
 		wi::Archive& archive = AdvanceHistory();
 		archive << HISTORYOP_DELETE;
+		RecordSelection(archive);
 
-		archive << translator.selected.size();
-		for (auto& x : translator.selected)
-		{
-			archive << x.entity;
-		}
+		archive << translator.selectedEntitiesNonRecursive;
 		EntitySerializer seri;
-		for (auto& x : translator.selected)
+		for (auto& x : translator.selectedEntitiesNonRecursive)
 		{
-			scene.Entity_Serialize(archive, seri, x.entity);
+			scene.Entity_Serialize(archive, seri, x);
 		}
-		for (auto& x : translator.selected)
+		for (auto& x : translator.selectedEntitiesNonRecursive)
 		{
-			scene.Entity_Remove(x.entity);
+			scene.Entity_Remove(x);
 		}
 
-		translator.selected.clear();
+		ClearSelected();
 
 		RefreshSceneGraphView();
 	}
@@ -2400,6 +2401,18 @@ bool EditorComponent::IsSelected(Entity entity) const
 	}
 	return false;
 }
+void EditorComponent::RecordSelection(wi::Archive& archive) const
+{
+	archive << translator.selected.size();
+	for (auto& x : translator.selected)
+	{
+		archive << x.entity;
+		archive << x.position;
+		archive << x.normal;
+		archive << x.subsetIndex;
+		archive << x.distance;
+	}
+}
 
 void EditorComponent::ResetHistory()
 {
@@ -2457,28 +2470,101 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 				translator.PostTranslate();
 			}
 			break;
+		case HISTORYOP_ADD:
+		{
+			// Read selections states from archive:
+
+			wi::vector<wi::scene::PickResult> selectedBEFORE;
+			size_t selectionCountBEFORE;
+			archive >> selectionCountBEFORE;
+			for (size_t i = 0; i < selectionCountBEFORE; ++i)
+			{
+				wi::scene::PickResult sel;
+				archive >> sel.entity;
+				archive >> sel.position;
+				archive >> sel.normal;
+				archive >> sel.subsetIndex;
+				archive >> sel.distance;
+
+				selectedBEFORE.push_back(sel);
+			}
+
+			wi::vector<wi::scene::PickResult> selectedAFTER;
+			size_t selectionCountAFTER;
+			archive >> selectionCountAFTER;
+			for (size_t i = 0; i < selectionCountAFTER; ++i)
+			{
+				wi::scene::PickResult sel;
+				archive >> sel.entity;
+				archive >> sel.position;
+				archive >> sel.normal;
+				archive >> sel.subsetIndex;
+				archive >> sel.distance;
+
+				selectedAFTER.push_back(sel);
+			}
+
+			wi::vector<Entity> addedEntities;
+			archive >> addedEntities;
+
+			ClearSelected();
+			if (undo)
+			{
+				translator.selected = selectedBEFORE;
+				for (size_t i = 0; i < addedEntities.size(); ++i)
+				{
+					scene.Entity_Remove(addedEntities[i]);
+				}
+			}
+			else
+			{
+				translator.selected = selectedAFTER;
+				EntitySerializer seri;
+				seri.allow_remap = false;
+				for (size_t i = 0; i < addedEntities.size(); ++i)
+				{
+					scene.Entity_Serialize(archive, seri);
+				}
+			}
+
+		}
+		break;
 		case HISTORYOP_DELETE:
 			{
-				size_t count;
-				archive >> count;
-				wi::vector<Entity> deletedEntities(count);
-				for (size_t i = 0; i < count; ++i)
+				// Read selections states from archive:
+
+				wi::vector<wi::scene::PickResult> selectedBEFORE;
+				size_t selectionCountBEFORE;
+				archive >> selectionCountBEFORE;
+				for (size_t i = 0; i < selectionCountBEFORE; ++i)
 				{
-					archive >> deletedEntities[i];
+					wi::scene::PickResult sel;
+					archive >> sel.entity;
+					archive >> sel.position;
+					archive >> sel.normal;
+					archive >> sel.subsetIndex;
+					archive >> sel.distance;
+
+					selectedBEFORE.push_back(sel);
 				}
 
+				wi::vector<Entity> deletedEntities;
+				archive >> deletedEntities;
+
+				ClearSelected();
 				if (undo)
 				{
+					translator.selected = selectedBEFORE;
 					EntitySerializer seri;
 					seri.allow_remap = false;
-					for (size_t i = 0; i < count; ++i)
+					for (size_t i = 0; i < deletedEntities.size(); ++i)
 					{
 						scene.Entity_Serialize(archive, seri);
 					}
 				}
 				else
 				{
-					for (size_t i = 0; i < count; ++i)
+					for (size_t i = 0; i < deletedEntities.size(); ++i)
 					{
 						scene.Entity_Remove(deletedEntities[i]);
 					}

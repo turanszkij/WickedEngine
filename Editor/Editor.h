@@ -153,7 +153,7 @@ public:
 	void AddSelected(wi::ecs::Entity entity);
 	void AddSelected(const wi::scene::PickResult& picked);
 	bool IsSelected(wi::ecs::Entity entity) const;
-
+	void RecordSelection(wi::Archive& archive) const;
 
 
 	wi::Archive clipboard;
@@ -163,6 +163,7 @@ public:
 	enum HistoryOperationType
 	{
 		HISTORYOP_TRANSLATOR,
+		HISTORYOP_ADD,
 		HISTORYOP_DELETE,
 		HISTORYOP_SELECTION,
 		HISTORYOP_PAINTTOOL,

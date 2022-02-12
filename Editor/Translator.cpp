@@ -170,6 +170,25 @@ void Translator::Update(const wi::Canvas& canvas)
 	const CameraComponent& cam = wi::scene::GetCamera();
 	XMVECTOR pos = transform.GetPositionV();
 
+	// Non recursive selection will be computed to not apply recursive operations two times
+	//	A recursive operation is for example translating a parent transform
+	//	An other recursive operation is serializing selected parent entities
+	Scene& scene = wi::scene::GetScene();
+	selectedEntitiesLookup.clear();
+	for (auto& x : selected)
+	{
+		selectedEntitiesLookup.insert(x.entity);
+	}
+	selectedEntitiesNonRecursive.clear();
+	for (auto& x : selected)
+	{
+		const HierarchyComponent* hier = scene.hierarchy.GetComponent(x.entity);
+		if (hier == nullptr || selectedEntitiesLookup.count(hier->parentID) == 0)
+		{
+			selectedEntitiesNonRecursive.push_back(x.entity);
+		}
+	}
+
 	if (enabled)
 	{
 		PreTranslate();
@@ -553,9 +572,9 @@ void Translator::PreTranslate()
 	// translator "bind matrix"
 	XMMATRIX B = XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform.world));
 
-	for (auto& x : selected)
+	for (auto& x : selectedEntitiesNonRecursive)
 	{
-		TransformComponent* transform_selected = scene.transforms.GetComponent(x.entity);
+		TransformComponent* transform_selected = scene.transforms.GetComponent(x);
 		if (transform_selected != nullptr)
 		{
 			// selected to world space:
@@ -570,9 +589,9 @@ void Translator::PostTranslate()
 {
 	Scene& scene = wi::scene::GetScene();
 
-	for (auto& x : selected)
+	for (auto& x : selectedEntitiesNonRecursive)
 	{
-		TransformComponent* transform_selected = scene.transforms.GetComponent(x.entity);
+		TransformComponent* transform_selected = scene.transforms.GetComponent(x);
 		if (transform_selected != nullptr)
 		{
 			XMFLOAT4X4 worldPrev = transform_selected->world;
@@ -583,7 +602,7 @@ void Translator::PostTranslate()
 			transform_selected->ApplyTransform();
 
 			// selected to parent local space (if has parent):
-			const HierarchyComponent* hier = scene.hierarchy.GetComponent(x.entity);
+			const HierarchyComponent* hier = scene.hierarchy.GetComponent(x);
 			if (hier != nullptr)
 			{
 				const TransformComponent* transform_parent = scene.transforms.GetComponent(hier->parentID);
