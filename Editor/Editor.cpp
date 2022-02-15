@@ -2642,6 +2642,8 @@ void EditorComponent::ConsumeHistoryOperation(bool undo)
 		{
 			historyPos--;
 		}
+
+		scene.Update(0);
 	}
 
 	RefreshSceneGraphView();
