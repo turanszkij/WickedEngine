@@ -1,4 +1,5 @@
 #define OBJECTSHADER_LAYOUT_SHADOW_TEX
+#define OBJECTSHADER_USE_COLOR
 #include "objectHF.hlsli"
 #include "ShaderInterop_Renderer.h"
 
