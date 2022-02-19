@@ -6083,16 +6083,18 @@ using namespace vulkan_internal;
 	}
 	void GraphicsDevice_Vulkan::WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) const
 	{
-		VkAccelerationStructureInstanceKHR* desc = (VkAccelerationStructureInstanceKHR*)dest;
-		std::memcpy(&desc->transform, &instance->transform, sizeof(desc->transform));
-		desc->instanceCustomIndex = instance->instance_id;
-		desc->mask = instance->instance_mask;
-		desc->instanceShaderBindingTableRecordOffset = instance->instance_contribution_to_hit_group_index;
-		desc->flags = instance->flags;
+		VkAccelerationStructureInstanceKHR tmp;
+		tmp.transform = *(VkTransformMatrixKHR*)&instance->transform;
+		tmp.instanceCustomIndex = instance->instance_id;
+		tmp.mask = instance->instance_mask;
+		tmp.instanceShaderBindingTableRecordOffset = instance->instance_contribution_to_hit_group_index;
+		tmp.flags = instance->flags;
 
 		assert(instance->bottom_level.IsAccelerationStructure());
 		auto internal_state = to_internal((RaytracingAccelerationStructure*)&instance->bottom_level);
-		desc->accelerationStructureReference = internal_state->as_address;
+		tmp.accelerationStructureReference = internal_state->as_address;
+
+		std::memcpy(dest, &tmp, sizeof(VkAccelerationStructureInstanceKHR)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
 	}
 	void GraphicsDevice_Vulkan::WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) const
 	{
