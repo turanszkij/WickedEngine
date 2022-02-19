@@ -774,10 +774,7 @@ namespace wi::helper
 			async_helper().get();
 		}
 
-		if (success)
-		{
-			return true;
-		}
+		return success;
 #endif // PLATFORM_UWP
 	}
 
