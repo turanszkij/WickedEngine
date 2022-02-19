@@ -2887,7 +2887,7 @@ using namespace vulkan_internal;
 
 
 			VmaAllocationCreateInfo allocInfo = {};
-			allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+			allocInfo.preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
 			res = vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &nullBuffer, &nullBufferAllocation, nullptr);
 			assert(res == VK_SUCCESS);
@@ -3538,20 +3538,16 @@ using namespace vulkan_internal;
 		}
 
 		VmaAllocationCreateInfo allocInfo = {};
-		//allocInfo.flags = VMA_ALLOCATION_CREATE_STRATEGY_MIN_MEMORY_BIT;
-		//allocInfo.flags = VMA_ALLOCATION_CREATE_STRATEGY_MIN_FRAGMENTATION_BIT;
-		allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+		allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
 		if (desc->usage == Usage::READBACK)
 		{
-			allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
-			allocInfo.usage = VMA_MEMORY_USAGE_GPU_TO_CPU;
 			bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+			allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
 		}
 		else if(desc->usage == Usage::UPLOAD)
 		{
-			allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
-			allocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY; // yes, not using VMA_MEMORY_USAGE_CPU_TO_GPU, as it had worse performance for CPU write
 			bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+			allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
 		}
 
 		VkResult res = vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &internal_state->resource, &internal_state->allocation, nullptr);
@@ -3693,9 +3689,7 @@ using namespace vulkan_internal;
 		}
 
 		VmaAllocationCreateInfo allocInfo = {};
-		//allocInfo.flags = VMA_ALLOCATION_CREATE_STRATEGY_MIN_MEMORY_BIT;
-		//allocInfo.flags = VMA_ALLOCATION_CREATE_STRATEGY_MIN_FRAGMENTATION_BIT;
-		allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+		allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
 
 		VkImageCreateInfo imageInfo = {};
 		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -3780,12 +3774,12 @@ using namespace vulkan_internal;
 			allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
 			if (texture->desc.usage == Usage::READBACK)
 			{
-				allocInfo.usage = VMA_MEMORY_USAGE_GPU_TO_CPU;
+				allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
 				bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 			}
 			else if(texture->desc.usage == Usage::UPLOAD)
 			{
-				allocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY; // yes, not using VMA_MEMORY_USAGE_CPU_TO_GPU, as it had worse performance for CPU write
+				allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
 				bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 			}
 
@@ -6089,16 +6083,18 @@ using namespace vulkan_internal;
 	}
 	void GraphicsDevice_Vulkan::WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) const
 	{
-		VkAccelerationStructureInstanceKHR* desc = (VkAccelerationStructureInstanceKHR*)dest;
-		std::memcpy(&desc->transform, &instance->transform, sizeof(desc->transform));
-		desc->instanceCustomIndex = instance->instance_id;
-		desc->mask = instance->instance_mask;
-		desc->instanceShaderBindingTableRecordOffset = instance->instance_contribution_to_hit_group_index;
-		desc->flags = instance->flags;
+		VkAccelerationStructureInstanceKHR tmp;
+		tmp.transform = *(VkTransformMatrixKHR*)&instance->transform;
+		tmp.instanceCustomIndex = instance->instance_id;
+		tmp.mask = instance->instance_mask;
+		tmp.instanceShaderBindingTableRecordOffset = instance->instance_contribution_to_hit_group_index;
+		tmp.flags = instance->flags;
 
 		assert(instance->bottom_level.IsAccelerationStructure());
 		auto internal_state = to_internal((RaytracingAccelerationStructure*)&instance->bottom_level);
-		desc->accelerationStructureReference = internal_state->as_address;
+		tmp.accelerationStructureReference = internal_state->as_address;
+
+		std::memcpy(dest, &tmp, sizeof(VkAccelerationStructureInstanceKHR)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
 	}
 	void GraphicsDevice_Vulkan::WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) const
 	{
