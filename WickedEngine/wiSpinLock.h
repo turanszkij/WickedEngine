@@ -1,6 +1,6 @@
 #pragma once
 #include <atomic>
-#include <intrin.h> // _mm_pause()
+#include <emmintrin.h> // _mm_pause()
 
 namespace wi
 {

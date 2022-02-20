@@ -8,7 +8,7 @@
 #include <condition_variable>
 #include <string>
 #include <algorithm>
-#include <intrin.h> // _mm_pause()
+#include <emmintrin.h> // _mm_pause()
 
 #ifdef PLATFORM_LINUX
 #include <pthread.h>
