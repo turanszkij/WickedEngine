@@ -3610,9 +3610,11 @@ void UpdateRenderData(
 				int j = 0;
 				for (auto& x : mesh.subsets)
 				{
-					ShaderMeshSubset& shadersubset = subsetarray[j++];
+					ShaderMeshSubset shadersubset;
 					shadersubset.indexOffset = x.indexOffset;
-					shadersubset.materialIndex = (uint)vis.scene->materials.GetIndex(x.materialID);
+					shadersubset.materialIndex = x.materialIndex;
+					std::memcpy(subsetarray + j, &shadersubset, sizeof(ShaderMeshSubset)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
+					j++;
 				}
 
 				device->CopyBuffer(
