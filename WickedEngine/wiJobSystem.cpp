@@ -8,6 +8,7 @@
 #include <condition_variable>
 #include <string>
 #include <algorithm>
+#include <mutex>
 #include <emmintrin.h> // _mm_pause()
 
 #ifdef PLATFORM_LINUX
