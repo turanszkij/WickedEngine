@@ -4,6 +4,7 @@
 #include "wiPlatform.h"
 #include "wiTimer.h"
 
+#include <deque>
 #include <thread>
 #include <condition_variable>
 #include <string>
@@ -33,47 +34,29 @@ namespace wi::jobsystem
 		std::mutex wakeMutex;
 	};
 
-	// Fixed size very simple thread safe ring buffer
-	template <typename T, size_t capacity>
-	class ThreadSafeRingBuffer
+	struct JobQueue
 	{
-	public:
-		// Push an item to the end if there is free space
-		//	Returns true if succesful
-		//	Returns false if there is not enough space
-		inline bool push_back(const T& item)
-		{
-			std::scoped_lock lock(locker);
-			size_t next = (head + 1) % capacity;
-			if (next != tail)
-			{
-				data[head] = item;
-				head = next;
-				return true;
-			}
-			return false;
-		}
-
-		// Get an item if there are any
-		//	Returns true if succesful
-		//	Returns false if there are no items
-		inline bool pop_front(T& item)
-		{
-			std::scoped_lock lock(locker);
-			if (tail != head)
-			{
-				item = std::move(data[tail]);
-				tail = (tail + 1) % capacity;
-				return true;
-			}
-			return false;
-		}
-
-	private:
-		T data[capacity];
-		size_t head = 0;
-		size_t tail = 0;
+		std::deque<Job> queue;
 		wi::SpinLock locker;
+
+		inline void push_back(const Job& item)
+		{
+			std::scoped_lock lock(locker);
+			queue.push_back(item);
+		}
+
+		inline bool pop_front(Job& item)
+		{
+			std::scoped_lock lock(locker);
+			if (queue.empty())
+			{
+				return false;
+			}
+			item = std::move(queue.front());
+			queue.pop_front();
+			return true;
+		}
+
 	};
 
 	// This structure is responsible to stop worker thread loops.
@@ -84,7 +67,7 @@ namespace wi::jobsystem
 		uint32_t numCores = 0;
 		uint32_t numThreads = 0;
 		std::shared_ptr<WorkerState> worker_state = std::make_shared<WorkerState>(); // kept alive by both threads and internal_state
-		ThreadSafeRingBuffer<Job, 256> jobQueue;
+		JobQueue jobQueue;
 		~InternalState()
 		{
 			worker_state->alive.store(false);
@@ -156,7 +139,7 @@ namespace wi::jobsystem
 						{
 							_mm_pause(); // SMT thread swap can occur here
 						}
-						else if (sleepiness < 16)
+						else if (sleepiness < 10)
 						{
 							std::this_thread::yield(); // OS thread swap can occur here
 						}
@@ -235,14 +218,7 @@ namespace wi::jobsystem
 		job.groupJobEnd = 1;
 		job.sharedmemory_size = 0;
 
-		// Try to push a new job until it is pushed successfully:
-		while (!internal_state.jobQueue.push_back(job))
-		{
-			work();
-			internal_state.worker_state->wakeCondition.notify_all();
-		}
-
-		// Wake any one thread that might be sleeping:
+		internal_state.jobQueue.push_back(job);
 		internal_state.worker_state->wakeCondition.notify_one();
 	}
 
@@ -270,15 +246,9 @@ namespace wi::jobsystem
 			job.groupJobOffset = groupID * groupSize;
 			job.groupJobEnd = std::min(job.groupJobOffset + groupSize, jobCount);
 
-			// Try to push a new job until it is pushed successfully:
-			while (!internal_state.jobQueue.push_back(job))
-			{
-				work();
-				internal_state.worker_state->wakeCondition.notify_all();
-			}
+			internal_state.jobQueue.push_back(job);
 		}
 
-		// Wake any threads that might be sleeping:
 		internal_state.worker_state->wakeCondition.notify_all();
 	}
 
@@ -296,10 +266,16 @@ namespace wi::jobsystem
 
 	void Wait(const context& ctx)
 	{
-		// Wake any threads that might be sleeping:
-		internal_state.worker_state->wakeCondition.notify_all();
+		if (IsBusy(ctx))
+		{
+			// Wake any threads that might be sleeping:
+			internal_state.worker_state->wakeCondition.notify_all();
 
-		// Waiting will also put the current thread to good use by working on an other job if it can:
-		while (IsBusy(ctx)) { work(); }
+			// Waiting will also put the current thread to good use by working on an other job if it can:
+			while (IsBusy(ctx))
+			{
+				work();
+			}
+		}
 	}
 }
