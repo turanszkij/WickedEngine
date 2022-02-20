@@ -2379,9 +2379,9 @@ void RenderMeshes(
 		renderPass == RENDERPASS_VOXELIZE;
 
 	// Pre-allocate space for all the instances in GPU-buffer:
-	uint32_t instanceDataSize = sizeof(ShaderMeshInstancePointer);
-	size_t alloc_size = renderQueue.size() * frustum_count * instanceDataSize;
-	GraphicsDevice::GPUAllocation instances = device->AllocateGPU(alloc_size, cmd);
+	const size_t alloc_size = renderQueue.size() * frustum_count * sizeof(ShaderMeshInstancePointer);
+	const GraphicsDevice::GPUAllocation instances = device->AllocateGPU(alloc_size, cmd);
+	const int instanceBufferDescriptorIndex = device->GetDescriptorIndex(&instances.buffer, SubresourceType::SRV);
 
 	// This will correspond to a single draw call
 	//	It's used to render multiple instances of a single mesh
@@ -2500,7 +2500,7 @@ void RenderMeshes(
 				instancedBatch.meshIndex,
 				(uint)subsetIndex,
 				subset.materialIndex,
-				device->GetDescriptorIndex(&instances.buffer, SubresourceType::SRV),
+				instanceBufferDescriptorIndex,
 				instancedBatch.dataOffset
 			);
 
@@ -2537,7 +2537,7 @@ void RenderMeshes(
 			instancedBatch = {};
 			instancedBatch.meshIndex = meshIndex;
 			instancedBatch.instanceCount = 0;
-			instancedBatch.dataOffset = (uint32_t)(instances.offset + instanceCount * instanceDataSize);
+			instancedBatch.dataOffset = (uint32_t)(instances.offset + instanceCount * sizeof(ShaderMeshInstancePointer));
 			instancedBatch.userStencilRefOverride = userStencilRefOverride;
 			instancedBatch.forceAlphatestForDithering = 0;
 			instancedBatch.aabb = AABB();
