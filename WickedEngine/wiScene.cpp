@@ -1594,8 +1594,6 @@ namespace wi::scene
 			std::memset(TLAS_instancesMapped, 0, TLAS_instancesUpload->desc.size);
 		});
 
-		RunPreviousFrameTransformUpdateSystem(ctx);
-
 		RunAnimationUpdateSystem(ctx);
 
 		RunTransformUpdateSystem(ctx);
@@ -1909,7 +1907,6 @@ namespace wi::scene
 		names.Clear();
 		layers.Clear();
 		transforms.Clear();
-		prev_transforms.Clear();
 		hierarchy.Clear();
 		materials.Clear();
 		meshes.Clear();
@@ -1954,7 +1951,6 @@ namespace wi::scene
 		names.Merge(other.names);
 		layers.Merge(other.layers);
 		transforms.Merge(other.transforms);
-		prev_transforms.Merge(other.prev_transforms);
 		hierarchy.Merge(other.hierarchy);
 		materials.Merge(other.materials);
 		meshes.Merge(other.meshes);
@@ -2007,7 +2003,6 @@ namespace wi::scene
 		names.Remove(entity);
 		layers.Remove(entity);
 		transforms.Remove(entity);
-		prev_transforms.Remove(entity);
 		hierarchy.Remove(entity);
 		materials.Remove(entity);
 		meshes.Remove(entity);
@@ -2083,8 +2078,6 @@ namespace wi::scene
 		layers.Create(entity);
 
 		transforms.Create(entity);
-
-		prev_transforms.Create(entity);
 
 		aabb_objects.Create(entity);
 
@@ -2362,17 +2355,6 @@ namespace wi::scene
 
 	const uint32_t small_subtask_groupsize = 64;
 
-	void Scene::RunPreviousFrameTransformUpdateSystem(wi::jobsystem::context& ctx)
-	{
-		wi::jobsystem::Dispatch(ctx, (uint32_t)prev_transforms.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
-
-			PreviousFrameTransformComponent& prev_transform = prev_transforms[args.jobIndex];
-			Entity entity = prev_transforms.GetEntity(args.jobIndex);
-			const TransformComponent& transform = *transforms.GetComponent(entity);
-
-			prev_transform.world_prev = transform.world;
-		});
-	}
 	void Scene::RunAnimationUpdateSystem(wi::jobsystem::context& ctx)
 	{
 		for (size_t i = 0; i < animations.GetCount(); ++i)
@@ -3266,7 +3248,6 @@ namespace wi::scene
 				object.mesh_index = (uint32_t)meshes.GetIndex(object.meshID);
 
 				uint32_t transform_index = (uint32_t)transforms.GetIndex(entity);
-				uint32_t prev_transform_index = (uint32_t)prev_transforms.GetIndex(entity);
 				const TransformComponent& transform = transforms[transform_index];
 
 				if (object.mesh_index >= 0)
@@ -3345,12 +3326,15 @@ namespace wi::scene
 
 						// soft bodies have no transform, their vertices are simulated in world space
 						transform_index = ~0u;
-						prev_transform_index = ~0u;
 					}
 
 					// Create GPU instance data:
-					const XMFLOAT4X4& worldMatrixPrev = object.worldMatrix;
+					GraphicsDevice* device = wi::graphics::GetDevice();
+					ShaderMeshInstance inst;
+					inst.init();
+					inst.transformPrev.Create(object.worldMatrix);
 					object.worldMatrix = transform_index == ~0u ? wi::math::IDENTITY_MATRIX : transforms[transform_index].world;
+					inst.transform.Create(object.worldMatrix);
 
 					XMMATRIX worldMatrixInverseTranspose = XMLoadFloat4x4(&object.worldMatrix);
 					worldMatrixInverseTranspose = XMMatrixInverse(nullptr, worldMatrixInverseTranspose);
@@ -3358,12 +3342,7 @@ namespace wi::scene
 					XMFLOAT4X4 transformIT;
 					XMStoreFloat4x4(&transformIT, worldMatrixInverseTranspose);
 
-					GraphicsDevice* device = wi::graphics::GetDevice();
-					ShaderMeshInstance inst;
-					inst.init();
-					inst.transform.Create(object.worldMatrix);
 					inst.transformInverseTranspose.Create(transformIT);
-					inst.transformPrev.Create(worldMatrixPrev);
 					if (object.lightmap.IsValid())
 					{
 						inst.lightmap = device->GetDescriptorIndex(&object.lightmap, SubresourceType::SRV);

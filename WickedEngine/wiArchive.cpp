@@ -1,13 +1,11 @@
 #include "wiArchive.h"
 #include "wiHelper.h"
 
-#include <fstream>
-
 namespace wi
 {
 
 	// this should always be only INCREMENTED and only if a new serialization is implemeted somewhere!
-	static constexpr uint64_t __archiveVersion = 74;
+	static constexpr uint64_t __archiveVersion = 75;
 	// this is the version number of which below the archive is not compatible with the current version
 	static constexpr uint64_t __archiveVersionBarrier = 22;
 

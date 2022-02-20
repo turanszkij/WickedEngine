@@ -11,6 +11,10 @@ using namespace wi::ecs;
 
 namespace wi::scene
 {
+	struct DEPRECATED_PreviousFrameTransformComponent
+	{
+		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri) { /*this never serialized any data*/ }
+	};
 
 	void NameComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
 	{
@@ -53,11 +57,6 @@ namespace wi::scene
 			archive << rotation_local;
 			archive << translation_local;
 		}
-	}
-	void PreviousFrameTransformComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
-	{
-		// NOTHING! We just need a serialize function for this to be able serialize with ComponentManager!
-		//	This structure has no persistent state!
 	}
 	void HierarchyComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
 	{
@@ -1320,7 +1319,11 @@ namespace wi::scene
 		names.Serialize(archive, seri);
 		layers.Serialize(archive, seri);
 		transforms.Serialize(archive, seri);
-		prev_transforms.Serialize(archive, seri);
+		if (archive.GetVersion() < 75)
+		{
+			ComponentManager<DEPRECATED_PreviousFrameTransformComponent> prev_transforms;
+			prev_transforms.Serialize(archive, seri);
+		}
 		hierarchy.Serialize(archive, seri);
 		materials.Serialize(archive, seri);
 		meshes.Serialize(archive, seri);
@@ -1407,11 +1410,13 @@ namespace wi::scene
 					component.Serialize(archive, seri);
 				}
 			}
+			if(archive.GetVersion() < 75)
 			{
 				bool component_exists;
 				archive >> component_exists;
 				if (component_exists)
 				{
+					ComponentManager<DEPRECATED_PreviousFrameTransformComponent> prev_transforms;
 					auto& component = prev_transforms.Create(entity);
 					component.Serialize(archive, seri);
 				}
@@ -1695,18 +1700,6 @@ namespace wi::scene
 			}
 			{
 				auto component = transforms.GetComponent(entity);
-				if (component != nullptr)
-				{
-					archive << true;
-					component->Serialize(archive, seri);
-				}
-				else
-				{
-					archive << false;
-				}
-			}
-			{
-				auto component = prev_transforms.GetComponent(entity);
 				if (component != nullptr)
 				{
 					archive << true;
