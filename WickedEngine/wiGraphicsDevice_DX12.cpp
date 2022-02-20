@@ -4681,13 +4681,15 @@ using namespace dx12_internal;
 	}
 	void GraphicsDevice_DX12::WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) const
 	{
-		D3D12_RAYTRACING_INSTANCE_DESC* desc = (D3D12_RAYTRACING_INSTANCE_DESC*)dest;
-		desc->AccelerationStructure = to_internal(&instance->bottom_level)->gpu_address;
-		std::memcpy(desc->Transform, &instance->transform, sizeof(desc->Transform));
-		desc->InstanceID = instance->instance_id;
-		desc->InstanceMask = instance->instance_mask;
-		desc->InstanceContributionToHitGroupIndex = instance->instance_contribution_to_hit_group_index;
-		desc->Flags = instance->flags;
+		D3D12_RAYTRACING_INSTANCE_DESC tmp;
+		tmp.AccelerationStructure = to_internal(instance->bottom_level)->gpu_address;
+		std::memcpy(tmp.Transform, &instance->transform, sizeof(tmp.Transform));
+		tmp.InstanceID = instance->instance_id;
+		tmp.InstanceMask = instance->instance_mask;
+		tmp.InstanceContributionToHitGroupIndex = instance->instance_contribution_to_hit_group_index;
+		tmp.Flags = instance->flags;
+
+		std::memcpy(dest, &tmp, sizeof(D3D12_RAYTRACING_INSTANCE_DESC)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
 	}
 	void GraphicsDevice_DX12::WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) const
 	{
@@ -5334,6 +5336,10 @@ using namespace dx12_internal;
 	void GraphicsDevice_DX12::BindPipelineState(const PipelineState* pso, CommandList cmd)
 	{
 		CommandList_DX12& commandlist = GetCommandList(cmd);
+		if (commandlist.active_pso == pso)
+		{
+			return;
+		}
 		commandlist.active_cs = nullptr;
 		commandlist.active_rt = nullptr;
 
@@ -5367,33 +5373,34 @@ using namespace dx12_internal;
 	void GraphicsDevice_DX12::BindComputeShader(const Shader* cs, CommandList cmd)
 	{
 		CommandList_DX12& commandlist = GetCommandList(cmd);
+		if (commandlist.active_cs == cs)
+		{
+			return;
+		}
 		commandlist.active_pso = nullptr;
 		commandlist.active_rt = nullptr;
 
 		assert(cs->stage == ShaderStage::CS || cs->stage == ShaderStage::LIB);
-		if (commandlist.active_cs != cs)
+
+		commandlist.prev_pipeline_hash = 0;
+
+		commandlist.active_cs = cs;
+
+		auto internal_state = to_internal(cs);
+
+		if (cs->stage == ShaderStage::CS)
 		{
-			commandlist.prev_pipeline_hash = 0;
+			commandlist.GetGraphicsCommandList()->SetPipelineState(internal_state->resource.Get());
+		}
 
-			commandlist.active_cs = cs;
+		if (commandlist.active_rootsig_compute != internal_state->rootSignature.Get())
+		{
+			commandlist.active_rootsig_compute = internal_state->rootSignature.Get();
+			commandlist.GetGraphicsCommandList()->SetComputeRootSignature(internal_state->rootSignature.Get());
 
-			auto internal_state = to_internal(cs);
-
-			if (cs->stage == ShaderStage::CS)
-			{
-				commandlist.GetGraphicsCommandList()->SetPipelineState(internal_state->resource.Get());
-			}
-
-			if (commandlist.active_rootsig_compute != internal_state->rootSignature.Get())
-			{
-				commandlist.active_rootsig_compute = internal_state->rootSignature.Get();
-				commandlist.GetGraphicsCommandList()->SetComputeRootSignature(internal_state->rootSignature.Get());
-
-				auto& binder = commandlist.binder;
-				binder.optimizer_compute = &internal_state->rootsig_optimizer;
-				binder.dirty_compute = internal_state->rootsig_optimizer.root_mask; // invalidates all root bindings
-			}
-
+			auto& binder = commandlist.binder;
+			binder.optimizer_compute = &internal_state->rootsig_optimizer;
+			binder.dirty_compute = internal_state->rootsig_optimizer.root_mask; // invalidates all root bindings
 		}
 	}
 	void GraphicsDevice_DX12::BindDepthBounds(float min_bounds, float max_bounds, CommandList cmd)

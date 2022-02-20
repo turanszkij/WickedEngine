@@ -8,6 +8,7 @@
 #include <condition_variable>
 #include <string>
 #include <algorithm>
+#include <intrin.h> // _mm_pause()
 
 #ifdef PLATFORM_LINUX
 #include <pthread.h>
@@ -41,17 +42,15 @@ namespace wi::jobsystem
 		//	Returns false if there is not enough space
 		inline bool push_back(const T& item)
 		{
-			bool result = false;
-			lock.lock();
+			std::scoped_lock lock(locker);
 			size_t next = (head + 1) % capacity;
 			if (next != tail)
 			{
 				data[head] = item;
 				head = next;
-				result = true;
+				return true;
 			}
-			lock.unlock();
-			return result;
+			return false;
 		}
 
 		// Get an item if there are any
@@ -59,23 +58,21 @@ namespace wi::jobsystem
 		//	Returns false if there are no items
 		inline bool pop_front(T& item)
 		{
-			bool result = false;
-			lock.lock();
+			std::scoped_lock lock(locker);
 			if (tail != head)
 			{
-				item = data[tail];
+				item = std::move(data[tail]);
 				tail = (tail + 1) % capacity;
-				result = true;
+				return true;
 			}
-			lock.unlock();
-			return result;
+			return false;
 		}
 
 	private:
 		T data[capacity];
 		size_t head = 0;
 		size_t tail = 0;
-		wi::SpinLock lock;
+		wi::SpinLock locker;
 	};
 
 	// This structure is responsible to stop worker thread loops.
@@ -145,13 +142,30 @@ namespace wi::jobsystem
 			std::thread worker([] {
 
 				std::shared_ptr<WorkerState> worker_state = internal_state.worker_state; // this is a copy of shared_ptr<WorkerState>, so it will remain alive for the thread's lifetime
+				int sleepiness = 0;
+
 				while (worker_state->alive.load())
 				{
 					if (!work())
 					{
-						// no job, put thread to sleep
-						std::unique_lock<std::mutex> lock(worker_state->wakeMutex);
-						worker_state->wakeCondition.wait(lock);
+						// If there was no work, we can issue multiple levels of resting behaviour
+						//	based on how long there was no work for
+						sleepiness++;
+						if (sleepiness < 8)
+						{
+							_mm_pause(); // SMT thread swap can occur here
+						}
+						else if (sleepiness < 16)
+						{
+							std::this_thread::yield(); // OS thread swap can occur here
+						}
+						else
+						{
+							// no job for a while, put thread to sleep
+							sleepiness = 0;
+							std::unique_lock<std::mutex> lock(worker_state->wakeMutex);
+							worker_state->wakeCondition.wait(lock);
+						}
 					}
 				}
 
@@ -221,7 +235,11 @@ namespace wi::jobsystem
 		job.sharedmemory_size = 0;
 
 		// Try to push a new job until it is pushed successfully:
-		while (!internal_state.jobQueue.push_back(job)) { internal_state.worker_state->wakeCondition.notify_all(); work(); }
+		while (!internal_state.jobQueue.push_back(job))
+		{
+			work();
+			internal_state.worker_state->wakeCondition.notify_all();
+		}
 
 		// Wake any one thread that might be sleeping:
 		internal_state.worker_state->wakeCondition.notify_one();
@@ -252,7 +270,11 @@ namespace wi::jobsystem
 			job.groupJobEnd = std::min(job.groupJobOffset + groupSize, jobCount);
 
 			// Try to push a new job until it is pushed successfully:
-			while (!internal_state.jobQueue.push_back(job)) { internal_state.worker_state->wakeCondition.notify_all(); work(); }
+			while (!internal_state.jobQueue.push_back(job))
+			{
+				work();
+				internal_state.worker_state->wakeCondition.notify_all();
+			}
 		}
 
 		// Wake any threads that might be sleeping:

@@ -643,8 +643,8 @@ namespace wi::scene
 		float impostorSwapDistance;
 
 		// these will only be valid for a single frame:
-		int transform_index = -1;
-		int prev_transform_index = -1;
+		uint32_t mesh_index = ~0u;
+		XMFLOAT4X4 worldMatrix = wi::math::IDENTITY_MATRIX;
 
 		// occlusion result history bitfield (32 bit->32 frame history)
 		mutable uint32_t occlusionHistory = ~0u;

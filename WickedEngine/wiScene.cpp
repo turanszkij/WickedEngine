@@ -230,17 +230,18 @@ namespace wi::scene
 
 	void MaterialComponent::WriteShaderMaterial(ShaderMaterial* dest) const
 	{
-		dest->baseColor = baseColor;
-		dest->emissive_r11g11b10 = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(emissiveColor.x * emissiveColor.w, emissiveColor.y * emissiveColor.w, emissiveColor.z * emissiveColor.w));
-		dest->specular_r11g11b10 = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(specularColor.x * specularColor.w, specularColor.y * specularColor.w, specularColor.z * specularColor.w));
-		dest->texMulAdd = texMulAdd;
-		dest->roughness = roughness;
-		dest->reflectance = reflectance;
-		dest->metalness = metalness;
-		dest->refraction = refraction;
-		dest->normalMapStrength = (textures[NORMALMAP].resource.IsValid() ? normalMapStrength : 0);
-		dest->parallaxOcclusionMapping = parallaxOcclusionMapping;
-		dest->displacementMapping = displacementMapping;
+		ShaderMaterial material;
+		material.baseColor = baseColor;
+		material.emissive_r11g11b10 = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(emissiveColor.x * emissiveColor.w, emissiveColor.y * emissiveColor.w, emissiveColor.z * emissiveColor.w));
+		material.specular_r11g11b10 = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(specularColor.x * specularColor.w, specularColor.y * specularColor.w, specularColor.z * specularColor.w));
+		material.texMulAdd = texMulAdd;
+		material.roughness = roughness;
+		material.reflectance = reflectance;
+		material.metalness = metalness;
+		material.refraction = refraction;
+		material.normalMapStrength = (textures[NORMALMAP].resource.IsValid() ? normalMapStrength : 0);
+		material.parallaxOcclusionMapping = parallaxOcclusionMapping;
+		material.displacementMapping = displacementMapping;
 		XMFLOAT4 sss = subsurfaceScattering;
 		sss.x *= sss.w;
 		sss.y *= sss.w;
@@ -251,91 +252,91 @@ namespace wi::scene
 			sss_inv.z = 1.0f / ((1 + sss.z) * (1 + sss.z)),
 			sss_inv.w = 1.0f / ((1 + sss.w) * (1 + sss.w))
 		);
-		dest->subsurfaceScattering = sss;
-		dest->subsurfaceScattering_inv = sss_inv;
-		dest->uvset_baseColorMap = textures[BASECOLORMAP].GetUVSet();
-		dest->uvset_surfaceMap = textures[SURFACEMAP].GetUVSet();
-		dest->uvset_normalMap = textures[NORMALMAP].GetUVSet();
-		dest->uvset_displacementMap = textures[DISPLACEMENTMAP].GetUVSet();
-		dest->uvset_emissiveMap = textures[EMISSIVEMAP].GetUVSet();
-		dest->uvset_occlusionMap = textures[OCCLUSIONMAP].GetUVSet();
-		dest->uvset_transmissionMap = textures[TRANSMISSIONMAP].GetUVSet();
-		dest->uvset_sheenColorMap = textures[SHEENCOLORMAP].GetUVSet();
-		dest->uvset_sheenRoughnessMap = textures[SHEENROUGHNESSMAP].GetUVSet();
-		dest->uvset_clearcoatMap = textures[CLEARCOATMAP].GetUVSet();
-		dest->uvset_clearcoatRoughnessMap = textures[CLEARCOATROUGHNESSMAP].GetUVSet();
-		dest->uvset_clearcoatNormalMap = textures[CLEARCOATNORMALMAP].GetUVSet();
-		dest->uvset_specularMap = textures[SPECULARMAP].GetUVSet();
-		dest->sheenColor_r11g11b10 = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(sheenColor.x, sheenColor.y, sheenColor.z));
-		dest->sheenRoughness = sheenRoughness;
-		dest->clearcoat = clearcoat;
-		dest->clearcoatRoughness = clearcoatRoughness;
-		dest->alphaTest = 1 - alphaRef;
-		dest->layerMask = layerMask;
-		dest->transmission = transmission;
+		material.subsurfaceScattering = sss;
+		material.subsurfaceScattering_inv = sss_inv;
+		material.uvset_baseColorMap = textures[BASECOLORMAP].GetUVSet();
+		material.uvset_surfaceMap = textures[SURFACEMAP].GetUVSet();
+		material.uvset_normalMap = textures[NORMALMAP].GetUVSet();
+		material.uvset_displacementMap = textures[DISPLACEMENTMAP].GetUVSet();
+		material.uvset_emissiveMap = textures[EMISSIVEMAP].GetUVSet();
+		material.uvset_occlusionMap = textures[OCCLUSIONMAP].GetUVSet();
+		material.uvset_transmissionMap = textures[TRANSMISSIONMAP].GetUVSet();
+		material.uvset_sheenColorMap = textures[SHEENCOLORMAP].GetUVSet();
+		material.uvset_sheenRoughnessMap = textures[SHEENROUGHNESSMAP].GetUVSet();
+		material.uvset_clearcoatMap = textures[CLEARCOATMAP].GetUVSet();
+		material.uvset_clearcoatRoughnessMap = textures[CLEARCOATROUGHNESSMAP].GetUVSet();
+		material.uvset_clearcoatNormalMap = textures[CLEARCOATNORMALMAP].GetUVSet();
+		material.uvset_specularMap = textures[SPECULARMAP].GetUVSet();
+		material.sheenColor_r11g11b10 = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(sheenColor.x, sheenColor.y, sheenColor.z));
+		material.sheenRoughness = sheenRoughness;
+		material.clearcoat = clearcoat;
+		material.clearcoatRoughness = clearcoatRoughness;
+		material.alphaTest = 1 - alphaRef;
+		material.layerMask = layerMask;
+		material.transmission = transmission;
 
-		uint32_t options = 0;
+		material.options = 0;
 		if (IsUsingVertexColors())
 		{
-			options |= SHADERMATERIAL_OPTION_BIT_USE_VERTEXCOLORS;
+			material.options |= SHADERMATERIAL_OPTION_BIT_USE_VERTEXCOLORS;
 		}
 		if (IsUsingSpecularGlossinessWorkflow())
 		{
-			options |= SHADERMATERIAL_OPTION_BIT_SPECULARGLOSSINESS_WORKFLOW;
+			material.options |= SHADERMATERIAL_OPTION_BIT_SPECULARGLOSSINESS_WORKFLOW;
 		}
 		if (IsOcclusionEnabled_Primary())
 		{
-			options |= SHADERMATERIAL_OPTION_BIT_OCCLUSION_PRIMARY;
+			material.options |= SHADERMATERIAL_OPTION_BIT_OCCLUSION_PRIMARY;
 		}
 		if (IsOcclusionEnabled_Secondary())
 		{
-			options |= SHADERMATERIAL_OPTION_BIT_OCCLUSION_SECONDARY;
+			material.options |= SHADERMATERIAL_OPTION_BIT_OCCLUSION_SECONDARY;
 		}
 		if (IsUsingWind())
 		{
-			options |= SHADERMATERIAL_OPTION_BIT_USE_WIND;
+			material.options |= SHADERMATERIAL_OPTION_BIT_USE_WIND;
 		}
 		if (IsReceiveShadow())
 		{
-			options |= SHADERMATERIAL_OPTION_BIT_RECEIVE_SHADOW;
+			material.options |= SHADERMATERIAL_OPTION_BIT_RECEIVE_SHADOW;
 		}
 		if (IsCastingShadow())
 		{
-			options |= SHADERMATERIAL_OPTION_BIT_CAST_SHADOW;
+			material.options |= SHADERMATERIAL_OPTION_BIT_CAST_SHADOW;
 		}
 		if (IsDoubleSided())
 		{
-			options |= SHADERMATERIAL_OPTION_BIT_DOUBLE_SIDED;
+			material.options |= SHADERMATERIAL_OPTION_BIT_DOUBLE_SIDED;
 		}
 		if (GetRenderTypes() & RENDERTYPE_TRANSPARENT)
 		{
-			options |= SHADERMATERIAL_OPTION_BIT_TRANSPARENT;
+			material.options |= SHADERMATERIAL_OPTION_BIT_TRANSPARENT;
 		}
 		if (userBlendMode == BLENDMODE_ADDITIVE)
 		{
-			options |= SHADERMATERIAL_OPTION_BIT_ADDITIVE;
+			material.options |= SHADERMATERIAL_OPTION_BIT_ADDITIVE;
 		}
 		if (shaderType == SHADERTYPE_UNLIT)
 		{
-			options |= SHADERMATERIAL_OPTION_BIT_UNLIT;
+			material.options |= SHADERMATERIAL_OPTION_BIT_UNLIT;
 		}
-		dest->options = options; // ensure that this memory is not read, so bitwise ORs also not performed with it!
 
 		GraphicsDevice* device = wi::graphics::GetDevice();
-		dest->texture_basecolormap_index = device->GetDescriptorIndex(textures[BASECOLORMAP].GetGPUResource(), SubresourceType::SRV);
-		dest->texture_surfacemap_index = device->GetDescriptorIndex(textures[SURFACEMAP].GetGPUResource(), SubresourceType::SRV);
-		dest->texture_emissivemap_index = device->GetDescriptorIndex(textures[EMISSIVEMAP].GetGPUResource(), SubresourceType::SRV);
-		dest->texture_normalmap_index = device->GetDescriptorIndex(textures[NORMALMAP].GetGPUResource(), SubresourceType::SRV);
-		dest->texture_displacementmap_index = device->GetDescriptorIndex(textures[DISPLACEMENTMAP].GetGPUResource(), SubresourceType::SRV);
-		dest->texture_occlusionmap_index = device->GetDescriptorIndex(textures[OCCLUSIONMAP].GetGPUResource(), SubresourceType::SRV);
-		dest->texture_transmissionmap_index = device->GetDescriptorIndex(textures[TRANSMISSIONMAP].GetGPUResource(), SubresourceType::SRV);
-		dest->texture_sheencolormap_index = device->GetDescriptorIndex(textures[SHEENCOLORMAP].GetGPUResource(), SubresourceType::SRV);
-		dest->texture_sheenroughnessmap_index = device->GetDescriptorIndex(textures[SHEENROUGHNESSMAP].GetGPUResource(), SubresourceType::SRV);
-		dest->texture_clearcoatmap_index = device->GetDescriptorIndex(textures[CLEARCOATMAP].GetGPUResource(), SubresourceType::SRV);
-		dest->texture_clearcoatroughnessmap_index = device->GetDescriptorIndex(textures[CLEARCOATROUGHNESSMAP].GetGPUResource(), SubresourceType::SRV);
-		dest->texture_clearcoatnormalmap_index = device->GetDescriptorIndex(textures[CLEARCOATNORMALMAP].GetGPUResource(), SubresourceType::SRV);
-		dest->texture_specularmap_index = device->GetDescriptorIndex(textures[SPECULARMAP].GetGPUResource(), SubresourceType::SRV);
+		material.texture_basecolormap_index = device->GetDescriptorIndex(textures[BASECOLORMAP].GetGPUResource(), SubresourceType::SRV);
+		material.texture_surfacemap_index = device->GetDescriptorIndex(textures[SURFACEMAP].GetGPUResource(), SubresourceType::SRV);
+		material.texture_emissivemap_index = device->GetDescriptorIndex(textures[EMISSIVEMAP].GetGPUResource(), SubresourceType::SRV);
+		material.texture_normalmap_index = device->GetDescriptorIndex(textures[NORMALMAP].GetGPUResource(), SubresourceType::SRV);
+		material.texture_displacementmap_index = device->GetDescriptorIndex(textures[DISPLACEMENTMAP].GetGPUResource(), SubresourceType::SRV);
+		material.texture_occlusionmap_index = device->GetDescriptorIndex(textures[OCCLUSIONMAP].GetGPUResource(), SubresourceType::SRV);
+		material.texture_transmissionmap_index = device->GetDescriptorIndex(textures[TRANSMISSIONMAP].GetGPUResource(), SubresourceType::SRV);
+		material.texture_sheencolormap_index = device->GetDescriptorIndex(textures[SHEENCOLORMAP].GetGPUResource(), SubresourceType::SRV);
+		material.texture_sheenroughnessmap_index = device->GetDescriptorIndex(textures[SHEENROUGHNESSMAP].GetGPUResource(), SubresourceType::SRV);
+		material.texture_clearcoatmap_index = device->GetDescriptorIndex(textures[CLEARCOATMAP].GetGPUResource(), SubresourceType::SRV);
+		material.texture_clearcoatroughnessmap_index = device->GetDescriptorIndex(textures[CLEARCOATROUGHNESSMAP].GetGPUResource(), SubresourceType::SRV);
+		material.texture_clearcoatnormalmap_index = device->GetDescriptorIndex(textures[CLEARCOATNORMALMAP].GetGPUResource(), SubresourceType::SRV);
+		material.texture_specularmap_index = device->GetDescriptorIndex(textures[SPECULARMAP].GetGPUResource(), SubresourceType::SRV);
 
+		std::memcpy(dest, &material, sizeof(ShaderMaterial)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
 	}
 	void MaterialComponent::WriteTextures(const wi::graphics::GPUResource** dest, int count) const
 	{
@@ -733,45 +734,45 @@ namespace wi::scene
 	}
 	void MeshComponent::WriteShaderMesh(ShaderMesh* dest) const
 	{
-		dest->init();
+		ShaderMesh mesh;
+		mesh.init();
 		GraphicsDevice* device = wi::graphics::GetDevice();
-		dest->ib = device->GetDescriptorIndex(&indexBuffer, SubresourceType::SRV);
+		mesh.ib = device->GetDescriptorIndex(&indexBuffer, SubresourceType::SRV);
 		if (streamoutBuffer_POS.IsValid())
 		{
-			dest->vb_pos_nor_wind = device->GetDescriptorIndex(&streamoutBuffer_POS, SubresourceType::SRV);
+			mesh.vb_pos_nor_wind = device->GetDescriptorIndex(&streamoutBuffer_POS, SubresourceType::SRV);
 		}
 		else
 		{
-			dest->vb_pos_nor_wind = device->GetDescriptorIndex(&vertexBuffer_POS, SubresourceType::SRV);
+			mesh.vb_pos_nor_wind = device->GetDescriptorIndex(&vertexBuffer_POS, SubresourceType::SRV);
 		}
 		if (streamoutBuffer_TAN.IsValid())
 		{
-			dest->vb_tan = device->GetDescriptorIndex(&streamoutBuffer_TAN, SubresourceType::SRV);
+			mesh.vb_tan = device->GetDescriptorIndex(&streamoutBuffer_TAN, SubresourceType::SRV);
 		}
 		else
 		{
-			dest->vb_tan = device->GetDescriptorIndex(&vertexBuffer_TAN, SubresourceType::SRV);
+			mesh.vb_tan = device->GetDescriptorIndex(&vertexBuffer_TAN, SubresourceType::SRV);
 		}
-		dest->vb_col = device->GetDescriptorIndex(&vertexBuffer_COL, SubresourceType::SRV);
-		dest->vb_uv0 = device->GetDescriptorIndex(&vertexBuffer_UV0, SubresourceType::SRV);
-		dest->vb_uv1 = device->GetDescriptorIndex(&vertexBuffer_UV1, SubresourceType::SRV);
-		dest->vb_atl = device->GetDescriptorIndex(&vertexBuffer_ATL, SubresourceType::SRV);
-		dest->vb_pre = device->GetDescriptorIndex(&vertexBuffer_PRE, SubresourceType::SRV);
-		dest->blendmaterial1 = terrain_material1_index;
-		dest->blendmaterial2 = terrain_material2_index;
-		dest->blendmaterial3 = terrain_material3_index;
-		dest->subsetbuffer = device->GetDescriptorIndex(&subsetBuffer, SubresourceType::SRV);
-		dest->aabb_min = aabb._min;
-		dest->aabb_max = aabb._max;
-		dest->tessellation_factor = tessellationFactor;
+		mesh.vb_col = device->GetDescriptorIndex(&vertexBuffer_COL, SubresourceType::SRV);
+		mesh.vb_uv0 = device->GetDescriptorIndex(&vertexBuffer_UV0, SubresourceType::SRV);
+		mesh.vb_uv1 = device->GetDescriptorIndex(&vertexBuffer_UV1, SubresourceType::SRV);
+		mesh.vb_atl = device->GetDescriptorIndex(&vertexBuffer_ATL, SubresourceType::SRV);
+		mesh.vb_pre = device->GetDescriptorIndex(&vertexBuffer_PRE, SubresourceType::SRV);
+		mesh.blendmaterial1 = terrain_material1_index;
+		mesh.blendmaterial2 = terrain_material2_index;
+		mesh.blendmaterial3 = terrain_material3_index;
+		mesh.subsetbuffer = device->GetDescriptorIndex(&subsetBuffer, SubresourceType::SRV);
+		mesh.aabb_min = aabb._min;
+		mesh.aabb_max = aabb._max;
+		mesh.tessellation_factor = tessellationFactor;
 
-		uint flags = 0;
 		if (IsDoubleSided())
 		{
-			flags |= SHADERMESH_FLAG_DOUBLE_SIDED;
+			mesh.flags |= SHADERMESH_FLAG_DOUBLE_SIDED;
 		}
-		dest->flags = flags; // ensure that this memory is not read, so bitwise ORs also not performed with it!
 
+		std::memcpy(dest, &mesh, sizeof(ShaderMesh)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
 	}
 	void MeshComponent::ComputeNormals(COMPUTE_NORMALS compute)
 	{
@@ -3225,7 +3226,7 @@ namespace wi::scene
 			// Update occlusion culling status:
 			if (!wi::renderer::GetFreezeCullingCameraEnabled())
 			{
-				object.occlusionHistory <<= 1; // advance history by 1 frame
+				object.occlusionHistory <<= 1u; // advance history by 1 frame
 				int query_id = object.occlusionQueries[queryheap_idx];
 				if (queryResultBuffer[queryheap_idx].mapped_data != nullptr && query_id >= 0)
 				{
@@ -3261,38 +3262,38 @@ namespace wi::scene
 
 			if (object.meshID != INVALID_ENTITY)
 			{
-
-				const MeshComponent* mesh = meshes.GetComponent(object.meshID);
-
 				// These will only be valid for a single frame:
-				object.transform_index = (int)transforms.GetIndex(entity);
-				object.prev_transform_index = (int)prev_transforms.GetIndex(entity);
+				object.mesh_index = (uint32_t)meshes.GetIndex(object.meshID);
 
-				const TransformComponent& transform = transforms[object.transform_index];
+				uint32_t transform_index = (uint32_t)transforms.GetIndex(entity);
+				uint32_t prev_transform_index = (uint32_t)prev_transforms.GetIndex(entity);
+				const TransformComponent& transform = transforms[transform_index];
 
-				if (mesh != nullptr)
+				if (object.mesh_index >= 0)
 				{
+					const MeshComponent& mesh = meshes[object.mesh_index];
+
 					XMMATRIX W = XMLoadFloat4x4(&transform.world);
-					aabb = mesh->aabb.transform(W);
+					aabb = mesh.aabb.transform(W);
 
 					// This is instance bounding box matrix:
 					XMFLOAT4X4 meshMatrix;
-					XMStoreFloat4x4(&meshMatrix, mesh->aabb.getAsBoxMatrix() * W);
+					XMStoreFloat4x4(&meshMatrix, mesh.aabb.getAsBoxMatrix() * W);
 
 					// We need sometimes the center of the instance bounding box, not the transform position (which can be outside the bounding box)
 					object.center = *((XMFLOAT3*)&meshMatrix._41);
 
-					if (mesh->IsSkinned() || mesh->IsDynamic())
+					if (mesh.IsSkinned() || mesh.IsDynamic())
 					{
 						object.SetDynamic(true);
-						const ArmatureComponent* armature = armatures.GetComponent(mesh->armatureID);
+						const ArmatureComponent* armature = armatures.GetComponent(mesh.armatureID);
 						if (armature != nullptr)
 						{
 							aabb = AABB::Merge(aabb, armature->aabb);
 						}
 					}
 
-					for (auto& subset : mesh->subsets)
+					for (auto& subset : mesh.subsets)
 					{
 						const MaterialComponent* material = materials.GetComponent(subset.materialID);
 
@@ -3318,7 +3319,7 @@ namespace wi::scene
 						impostor->color = object.color;
 						impostor->fadeThresholdRadius = object.impostorFadeThresholdRadius;
 
-						const Sphere boundingsphere = mesh->GetBoundingSphere();
+						const Sphere boundingsphere = mesh.GetBoundingSphere();
 
 						locker.lock();
 						impostor->instances.push_back(args.jobIndex);
@@ -3336,31 +3337,31 @@ namespace wi::scene
 
 						if (softbody->graphicsToPhysicsVertexMapping.empty())
 						{
-							softbody->CreateFromMesh(*mesh);
+							softbody->CreateFromMesh(mesh);
 						}
 
 						// simulation aabb will be used for soft bodies
 						aabb = softbody->aabb;
 
 						// soft bodies have no transform, their vertices are simulated in world space
-						object.transform_index = -1;
-						object.prev_transform_index = -1;
+						transform_index = ~0u;
+						prev_transform_index = ~0u;
 					}
 
 					// Create GPU instance data:
-					const XMFLOAT4X4& worldMatrix = object.transform_index >= 0 ? transforms[object.transform_index].world : wi::math::IDENTITY_MATRIX;
-					const XMFLOAT4X4& worldMatrixPrev = object.prev_transform_index >= 0 ? prev_transforms[object.prev_transform_index].world_prev : wi::math::IDENTITY_MATRIX;
+					const XMFLOAT4X4& worldMatrixPrev = object.worldMatrix;
+					object.worldMatrix = transform_index == ~0u ? wi::math::IDENTITY_MATRIX : transforms[transform_index].world;
 
-					XMMATRIX worldMatrixInverseTranspose = XMLoadFloat4x4(&worldMatrix);
+					XMMATRIX worldMatrixInverseTranspose = XMLoadFloat4x4(&object.worldMatrix);
 					worldMatrixInverseTranspose = XMMatrixInverse(nullptr, worldMatrixInverseTranspose);
 					worldMatrixInverseTranspose = XMMatrixTranspose(worldMatrixInverseTranspose);
 					XMFLOAT4X4 transformIT;
 					XMStoreFloat4x4(&transformIT, worldMatrixInverseTranspose);
 
 					GraphicsDevice* device = wi::graphics::GetDevice();
-					ShaderMeshInstance& inst = instanceArrayMapped[args.jobIndex];
+					ShaderMeshInstance inst;
 					inst.init();
-					inst.transform.Create(worldMatrix);
+					inst.transform.Create(object.worldMatrix);
 					inst.transformInverseTranspose.Create(transformIT);
 					inst.transformPrev.Create(worldMatrixPrev);
 					if (object.lightmap.IsValid())
@@ -3373,33 +3374,37 @@ namespace wi::scene
 					inst.emissive = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(object.emissiveColor.x * object.emissiveColor.w, object.emissiveColor.y * object.emissiveColor.w, object.emissiveColor.z * object.emissiveColor.w));
 					inst.meshIndex = (uint)meshes.GetIndex(object.meshID);
 
+					std::memcpy(instanceArrayMapped + args.jobIndex, &inst, sizeof(inst)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
+
 					if (TLAS_instancesMapped != nullptr)
 					{
 						// TLAS instance data:
-						RaytracingAccelerationStructureDesc::TopLevel::Instance instance = {};
+						RaytracingAccelerationStructureDesc::TopLevel::Instance instance;
 						for (int i = 0; i < arraysize(instance.transform); ++i)
 						{
 							for (int j = 0; j < arraysize(instance.transform[i]); ++j)
 							{
-								instance.transform[i][j] = worldMatrix.m[j][i];
+								instance.transform[i][j] = object.worldMatrix.m[j][i];
 							}
 						}
 						instance.instance_id = args.jobIndex;
 						instance.instance_mask = layerMask & 0xFF;
-						instance.bottom_level = mesh->BLAS;
-
-						if (mesh->IsDoubleSided() || mesh->_flags & MeshComponent::TLAS_FORCE_DOUBLE_SIDED)
+						instance.bottom_level = &mesh.BLAS;
+						instance.instance_contribution_to_hit_group_index = 0;
+						instance.flags = 0;
+						
+						if (mesh.IsDoubleSided() || mesh._flags & MeshComponent::TLAS_FORCE_DOUBLE_SIDED)
 						{
 							instance.flags |= RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_CULL_DISABLE;
 						}
-
+						
 						if (XMVectorGetX(XMMatrixDeterminant(W)) > 0)
 						{
 							// There is a mismatch between object space winding and BLAS winding:
 							//	https://docs.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_raytracing_instance_flags
 							instance.flags |= RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE;
 						}
-
+						
 						void* dest = (void*)((size_t)TLAS_instancesMapped + (size_t)args.jobIndex * device->GetTopLevelAccelerationStructureInstanceSize());
 						device->WriteTopLevelAccelerationStructureInstance(&instance, dest);
 					}
@@ -3774,8 +3779,7 @@ namespace wi::scene
 
 					GraphicsDevice* device = wi::graphics::GetDevice();
 
-					size_t meshIndex = meshes.GetCount() + args.jobIndex;
-					ShaderMesh& mesh = meshArrayMapped[meshIndex];
+					ShaderMesh mesh;
 					mesh.init();
 					mesh.ib = device->GetDescriptorIndex(&hair.primitiveBuffer, SubresourceType::SRV);
 					mesh.vb_pos_nor_wind = device->GetDescriptorIndex(&hair.vertexBuffer_POS[0], SubresourceType::SRV);
@@ -3784,8 +3788,10 @@ namespace wi::scene
 					mesh.subsetbuffer = device->GetDescriptorIndex(&hair.subsetBuffer, SubresourceType::SRV);
 					mesh.flags = SHADERMESH_FLAG_DOUBLE_SIDED | SHADERMESH_FLAG_HAIRPARTICLE;
 
-					size_t instanceIndex = objects.GetCount() + args.jobIndex;
-					ShaderMeshInstance& inst = instanceArrayMapped[instanceIndex];
+					const size_t meshIndex = meshes.GetCount() + args.jobIndex;
+					std::memcpy(meshArrayMapped + meshIndex, &mesh, sizeof(mesh));
+
+					ShaderMeshInstance inst;
 					inst.init();
 					inst.uid = entity;
 					inst.layerMask = hair.layerMask;
@@ -3794,10 +3800,13 @@ namespace wi::scene
 					inst.transformPrev.Create(wi::math::IDENTITY_MATRIX);
 					inst.meshIndex = (uint)meshIndex;
 
+					const size_t instanceIndex = objects.GetCount() + args.jobIndex;
+					std::memcpy(instanceArrayMapped + instanceIndex, &inst, sizeof(inst));
+
 					if (TLAS_instancesMapped != nullptr && hair.BLAS.IsValid())
 					{
 						// TLAS instance data:
-						RaytracingAccelerationStructureDesc::TopLevel::Instance instance = {};
+						RaytracingAccelerationStructureDesc::TopLevel::Instance instance;
 						for (int i = 0; i < arraysize(instance.transform); ++i)
 						{
 							for (int j = 0; j < arraysize(instance.transform[i]); ++j)
@@ -3807,7 +3816,8 @@ namespace wi::scene
 						}
 						instance.instance_id = (uint32_t)instanceIndex;
 						instance.instance_mask = hair.layerMask & 0xFF;
-						instance.bottom_level = hair.BLAS;
+						instance.bottom_level = &hair.BLAS;
+						instance.instance_contribution_to_hit_group_index = 0;
 						instance.flags = RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_CULL_DISABLE;
 
 						void* dest = (void*)((size_t)TLAS_instancesMapped + instanceIndex * device->GetTopLevelAccelerationStructureInstanceSize());
@@ -3851,8 +3861,7 @@ namespace wi::scene
 
 			GraphicsDevice* device = wi::graphics::GetDevice();
 
-			size_t meshIndex = meshes.GetCount() + hairs.GetCount() + args.jobIndex;
-			ShaderMesh& mesh = meshArrayMapped[meshIndex];
+			ShaderMesh mesh;
 			mesh.init();
 			mesh.ib = device->GetDescriptorIndex(&emitter.primitiveBuffer, SubresourceType::SRV);
 			mesh.vb_pos_nor_wind = device->GetDescriptorIndex(&emitter.vertexBuffer_POS, SubresourceType::SRV);
@@ -3862,8 +3871,10 @@ namespace wi::scene
 			mesh.subsetbuffer = device->GetDescriptorIndex(&emitter.subsetBuffer, SubresourceType::SRV);
 			mesh.flags = SHADERMESH_FLAG_DOUBLE_SIDED | SHADERMESH_FLAG_EMITTEDPARTICLE;
 
-			size_t instanceIndex = objects.GetCount() + hairs.GetCount() + args.jobIndex;
-			ShaderMeshInstance& inst = instanceArrayMapped[instanceIndex];
+			const size_t meshIndex = meshes.GetCount() + hairs.GetCount() + args.jobIndex;
+			std::memcpy(meshArrayMapped + meshIndex, &mesh, sizeof(mesh));
+
+			ShaderMeshInstance inst;
 			inst.init();
 			inst.uid = entity;
 			inst.layerMask = emitter.layerMask;
@@ -3872,10 +3883,13 @@ namespace wi::scene
 			inst.transformPrev.Create(wi::math::IDENTITY_MATRIX);
 			inst.meshIndex = (uint)meshIndex;
 
+			const size_t instanceIndex = objects.GetCount() + hairs.GetCount() + args.jobIndex;
+			std::memcpy(instanceArrayMapped + instanceIndex, &inst, sizeof(inst));
+
 			if (TLAS_instancesMapped != nullptr && emitter.BLAS.IsValid())
 			{
 				// TLAS instance data:
-				RaytracingAccelerationStructureDesc::TopLevel::Instance instance = {};
+				RaytracingAccelerationStructureDesc::TopLevel::Instance instance;
 				for (int i = 0; i < arraysize(instance.transform); ++i)
 				{
 					for (int j = 0; j < arraysize(instance.transform[i]); ++j)
@@ -3885,7 +3899,8 @@ namespace wi::scene
 				}
 				instance.instance_id = (uint32_t)instanceIndex;
 				instance.instance_mask = emitter.layerMask & 0xFF;
-				instance.bottom_level = emitter.BLAS;
+				instance.bottom_level = &emitter.BLAS;
+				instance.instance_contribution_to_hit_group_index = 0;
 				instance.flags = RaytracingAccelerationStructureDesc::TopLevel::Instance::FLAG_TRIANGLE_CULL_DISABLE;
 
 				void* dest = (void*)((size_t)TLAS_instancesMapped + instanceIndex * device->GetTopLevelAccelerationStructureInstanceSize());
@@ -4104,7 +4119,7 @@ namespace wi::scene
 				const SoftBodyPhysicsComponent* softbody = scene.softbodies.GetComponent(object.meshID);
 				const bool softbody_active = softbody != nullptr && !softbody->vertex_positions_simulation.empty();
 
-				const XMMATRIX objectMat = object.transform_index >= 0 ? XMLoadFloat4x4(&scene.transforms[object.transform_index].world) : XMMatrixIdentity();
+				const XMMATRIX objectMat = XMLoadFloat4x4(&object.worldMatrix);
 				const XMMATRIX objectMat_Inverse = XMMatrixInverse(nullptr, objectMat);
 
 				const XMVECTOR rayOrigin_local = XMVector3Transform(rayOrigin, objectMat_Inverse);
@@ -4236,7 +4251,7 @@ namespace wi::scene
 				const SoftBodyPhysicsComponent* softbody = scene.softbodies.GetComponent(object.meshID);
 				const bool softbody_active = softbody != nullptr && !softbody->vertex_positions_simulation.empty();
 
-				const XMMATRIX objectMat = object.transform_index >= 0 ? XMLoadFloat4x4(&scene.transforms[object.transform_index].world) : XMMatrixIdentity();
+				const XMMATRIX objectMat = XMLoadFloat4x4(&object.worldMatrix);
 
 				const ArmatureComponent* armature = mesh.IsSkinned() ? scene.armatures.GetComponent(mesh.armatureID) : nullptr;
 
@@ -4442,7 +4457,7 @@ namespace wi::scene
 				const SoftBodyPhysicsComponent* softbody = scene.softbodies.GetComponent(object.meshID);
 				const bool softbody_active = softbody != nullptr && !softbody->vertex_positions_simulation.empty();
 
-				const XMMATRIX objectMat = object.transform_index >= 0 ? XMLoadFloat4x4(&scene.transforms[object.transform_index].world) : XMMatrixIdentity();
+				const XMMATRIX objectMat = XMLoadFloat4x4(&object.worldMatrix);
 
 				const ArmatureComponent* armature = mesh.IsSkinned() ? scene.armatures.GetComponent(mesh.armatureID) : nullptr;
 

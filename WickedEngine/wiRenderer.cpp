@@ -151,6 +151,7 @@ Texture texture_weatherMap;
 struct RenderBatch
 {
 	uint64_t data;
+	constexpr operator uint64_t() const { return data; }
 
 	inline void Create(size_t meshIndex, size_t instanceIndex, float distance)
 	{
@@ -177,7 +178,7 @@ struct RenderBatch
 	}
 };
 
-// This is just a utility that points to a linear array of render batches:
+// This is a utility that points to a linear array of render batches:
 struct RenderQueue
 {
 	wi::vector<RenderBatch> batches;
@@ -200,9 +201,17 @@ struct RenderQueue
 	{
 		if (!batches.empty())
 		{
-			std::sort(batches.begin(), batches.end(), [sortType](const RenderBatch& a, const RenderBatch& b) -> bool {
-				return ((sortType == SORT_FRONT_TO_BACK) ? (a.data < b.data) : (a.data > b.data));
-			});
+			switch (sortType)
+			{
+			case wi::renderer::RenderQueue::SORT_FRONT_TO_BACK:
+				std::sort(batches.begin(), batches.end(), std::less<uint64_t>());
+				break;
+			case wi::renderer::RenderQueue::SORT_BACK_TO_FRONT:
+				std::sort(batches.begin(), batches.end(), std::greater<uint64_t>());
+				break;
+			default:
+				break;
+			}
 		}
 	}
 	inline bool empty() const
@@ -2562,9 +2571,11 @@ void RenderMeshes(
 				continue;
 			}
 
+			ShaderMeshInstancePointer poi;
+			poi.Create(instanceIndex, frustum_index, dither);
+
 			// Write into actual GPU-buffer:
-			ShaderMeshInstancePointer* poi = (ShaderMeshInstancePointer*)instances.data + instanceCount;
-			poi->Create(instanceIndex, frustum_index, dither);
+			std::memcpy((ShaderMeshInstancePointer*)instances.data + instanceCount, &poi, sizeof(poi)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
 
 			instancedBatch.instanceCount++; // next instance in current InstancedBatch
 			instanceCount++;
@@ -2802,10 +2813,9 @@ void UpdateVisibility(Visibility& vis)
 						if (dist < vis.closestRefPlane)
 						{
 							vis.closestRefPlane = dist;
-							const TransformComponent& transform = vis.scene->transforms[object.transform_index];
-							XMVECTOR P = transform.GetPositionV();
+							XMVECTOR P = XMLoadFloat3(&object.center);
 							XMVECTOR N = XMVectorSet(0, 1, 0, 0);
-							N = XMVector3TransformNormal(N, XMLoadFloat4x4(&transform.world));
+							N = XMVector3TransformNormal(N, XMLoadFloat4x4(&object.worldMatrix));
 							XMVECTOR _refPlane = XMPlaneFromPointNormal(P, N);
 							XMStoreFloat4(&vis.reflectionPlane, _refPlane);
 
@@ -4642,8 +4652,7 @@ void DrawShadowmaps(
 							{
 								Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
 
-								size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
-								renderQueue.add(meshIndex, i, 0);
+								renderQueue.add(object.mesh_index, i, 0);
 
 								if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT || object.GetRenderTypes() & RENDERTYPE_WATER)
 								{
@@ -4704,8 +4713,7 @@ void DrawShadowmaps(
 						{
 							Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
 
-							size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
-							renderQueue.add(meshIndex, i, 0);
+							renderQueue.add(object.mesh_index, i, 0);
 
 							if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT || object.GetRenderTypes() & RENDERTYPE_WATER)
 							{
@@ -4772,8 +4780,7 @@ void DrawShadowmaps(
 						{
 							Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
 
-							size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
-							renderQueue.add(meshIndex, i, 0);
+							renderQueue.add(object.mesh_index, i, 0);
 
 							if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT || object.GetRenderTypes() & RENDERTYPE_WATER)
 							{
@@ -4860,7 +4867,7 @@ void DrawScene(
 	const bool transparent = flags & DRAWSCENE_TRANSPARENT;
 	const bool tessellation = (flags & DRAWSCENE_TESSELLATION) && GetTessellationEnabled();
 	const bool hairparticle = flags & DRAWSCENE_HAIRPARTICLE;
-	const bool occlusion = flags & DRAWSCENE_OCCLUSIONCULLING;
+	const bool occlusion = (flags & DRAWSCENE_OCCLUSIONCULLING) && GetOcclusionCullingEnabled();
 
 	device->EventBegin("DrawScene", cmd);
 	device->BindShadingRate(ShadingRate::RATE_1X1, cmd);
@@ -4897,7 +4904,7 @@ void DrawScene(
 	{
 		const ObjectComponent& object = vis.scene->objects[instanceIndex];
 
-		if (GetOcclusionCullingEnabled() && occlusion && object.IsOccluded())
+		if (occlusion && object.IsOccluded())
 			continue;
 
 		if (object.IsRenderable() && (object.GetRenderTypes() & renderTypeFlags))
@@ -4907,8 +4914,7 @@ void DrawScene(
 			{
 				continue;
 			}
-			size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
-			renderQueue.add(meshIndex, instanceIndex, distance);
+			renderQueue.add(object.mesh_index, instanceIndex, distance);
 		}
 	}
 	if (!renderQueue.empty())
@@ -5830,7 +5836,7 @@ void DrawDebugWorld(
 		{
 			const ObjectComponent& object = *scene.objects.GetComponent(x.objectEntity);
 			const TransformComponent& transform = *scene.transforms.GetComponent(x.objectEntity);
-			const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
+			const MeshComponent& mesh = scene.meshes[object.mesh_index];
 			const MeshComponent::MeshSubset& subset = mesh.subsets[x.subset];
 			const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
@@ -5850,7 +5856,7 @@ void DrawDebugWorld(
 
 			ObjectPushConstants push;
 			push.init(
-				(uint)scene.meshes.GetIndex(object.meshID),
+				(uint)object.mesh_index,
 				x.subset,
 				subset.materialIndex,
 				device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV),
@@ -6244,8 +6250,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 					const ObjectComponent& object = vis.scene->objects[i];
 					if (object.IsRenderable())
 					{
-						size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
-						renderQueue.add(meshIndex, i, 0);
+						renderQueue.add(object.mesh_index, i, 0);
 					}
 				}
 			}
@@ -6509,8 +6514,7 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 			const ObjectComponent& object = vis.scene->objects[i];
 			if (object.IsRenderable())
 			{
-				size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
-				renderQueue.add(meshIndex, i, 0);
+				renderQueue.add(object.mesh_index, i, 0);
 			}
 		}
 	}
@@ -7229,7 +7233,7 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd, uint8_t instanceInclu
 			{
 				device->EventBegin("RenderObjectLightMap", cmd);
 
-				const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
+				const MeshComponent& mesh = scene.meshes[object.mesh_index];
 				assert(!mesh.vertex_atlas.empty());
 				assert(mesh.vertexBuffer_ATL.IsValid());
 
@@ -7249,10 +7253,8 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd, uint8_t instanceInclu
 				vp.height = (float)desc.height;
 				device->BindViewports(1, &vp, cmd);
 
-				const TransformComponent& transform = scene.transforms[object.transform_index];
-
 				MiscCB misccb;
-				misccb.g_xTransform = transform.world;
+				misccb.g_xTransform = object.worldMatrix;
 
 				device->BindDynamicConstantBuffer(misccb, CB_GETBINDSLOT(MiscCB), cmd);
 
