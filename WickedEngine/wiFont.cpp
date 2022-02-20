@@ -116,11 +116,11 @@ namespace wi::font
 				if (last_word_begin > 0 && params.h_wrap >= 0 && pos >= params.h_wrap - 1)
 				{
 					// Word ended and wrap detected, push down last word by one line:
-					float word_offset = vertexList[last_word_begin].pos.x; // possibly uncached memory read?
+					float word_offset = vertexList[last_word_begin].pos.x;
 					for (size_t i = last_word_begin; i < quadCount * 4; ++i)
 					{
-						vertexList[i].pos.x -= word_offset; // possibly uncached memory read?
-						vertexList[i].pos.y += LINEBREAK_SIZE; // possibly uncached memory read?
+						vertexList[i].pos.x -= word_offset;
+						vertexList[i].pos.y += LINEBREAK_SIZE;
 					}
 					line += LINEBREAK_SIZE;
 					pos -= word_offset;
@@ -519,8 +519,10 @@ namespace wi::font
 		{
 			return;
 		}
-		FontVertex* textBuffer = (FontVertex*)mem.data;
-		const uint32_t quadCount = WriteVertices(textBuffer, text, newProps);
+		static thread_local wi::vector<FontVertex> textbuffer;
+		textbuffer.resize(text_length * 4);
+		const uint32_t quadCount = WriteVertices(textbuffer.data(), text, newProps);
+		std::memcpy(mem.data, textbuffer.data(), textbuffer.size() * sizeof(FontVertex)); // only allow writes into mapped GPU buffer memory to avoid uncached read by mistake
 
 		if (quadCount > 0)
 		{

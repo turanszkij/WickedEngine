@@ -3280,27 +3280,29 @@ void UpdateRenderData(
 				matrixCounter--;
 				break;
 			}
+			ShaderEntity shaderentity = {};
+			XMMATRIX shadermatrix;
+
 			const uint32_t decalIndex = vis.visibleDecals[vis.visibleDecals.size() - 1 - i]; // note: reverse order, for correct blending!
 			const DecalComponent& decal = vis.scene->decals[decalIndex];
 
-			entityArray[entityCounter] = {}; // zero out!
-			entityArray[entityCounter].layerMask = ~0u;
+			shaderentity.layerMask = ~0u;
 
 			Entity entity = vis.scene->decals.GetEntity(decalIndex);
 			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
 			if (layer != nullptr)
 			{
-				entityArray[entityCounter].layerMask = layer->layerMask;
+				shaderentity.layerMask = layer->layerMask;
 			}
 
-			entityArray[entityCounter].SetType(ENTITY_TYPE_DECAL);
-			entityArray[entityCounter].position = decal.position;
-			entityArray[entityCounter].SetRange(decal.range);
-			entityArray[entityCounter].color = wi::math::CompressColor(XMFLOAT4(decal.color.x, decal.color.y, decal.color.z, decal.GetOpacity()));
-			entityArray[entityCounter].SetEnergy(decal.emissive);
+			shaderentity.SetType(ENTITY_TYPE_DECAL);
+			shaderentity.position = decal.position;
+			shaderentity.SetRange(decal.range);
+			shaderentity.color = wi::math::CompressColor(XMFLOAT4(decal.color.x, decal.color.y, decal.color.z, decal.GetOpacity()));
+			shaderentity.SetEnergy(decal.emissive);
 
-			entityArray[entityCounter].SetIndices(matrixCounter, 0);
-			matrixArray[matrixCounter] = XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal.world));
+			shaderentity.SetIndices(matrixCounter, 0);
+			shadermatrix = XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal.world));
 
 			int texture = -1;
 			if (decal.texture.IsValid())
@@ -3312,11 +3314,13 @@ void UpdateRenderData(
 			{
 				normal = device->GetDescriptorIndex(&decal.normal.GetTexture(), SubresourceType::SRV);
 			}
-			matrixArray[matrixCounter].r[0] = XMVectorSetW(matrixArray[matrixCounter].r[0], *(float*)&texture);
-			matrixArray[matrixCounter].r[1] = XMVectorSetW(matrixArray[matrixCounter].r[1], *(float*)&normal);
+			shadermatrix.r[0] = XMVectorSetW(shadermatrix.r[0], *(float*)&texture);
+			shadermatrix.r[1] = XMVectorSetW(shadermatrix.r[1], *(float*)&normal);
 
+			std::memcpy(matrixArray + matrixCounter, &shadermatrix, sizeof(XMMATRIX));
 			matrixCounter++;
 
+			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
 			entityCounter++;
 		}
 
@@ -3335,28 +3339,33 @@ void UpdateRenderData(
 				matrixCounter--;
 				break;
 			}
+			ShaderEntity shaderentity = {};
+			XMMATRIX shadermatrix;
 
 			const uint32_t probeIndex = vis.visibleEnvProbes[vis.visibleEnvProbes.size() - 1 - i]; // note: reverse order, for correct blending!
 			const EnvironmentProbeComponent& probe = vis.scene->probes[probeIndex];
 
-			entityArray[entityCounter] = {}; // zero out!
-			entityArray[entityCounter].layerMask = ~0u;
+			shaderentity = {}; // zero out!
+			shaderentity.layerMask = ~0u;
 
 			Entity entity = vis.scene->probes.GetEntity(probeIndex);
 			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
 			if (layer != nullptr)
 			{
-				entityArray[entityCounter].layerMask = layer->layerMask;
+				shaderentity.layerMask = layer->layerMask;
 			}
 
-			entityArray[entityCounter].SetType(ENTITY_TYPE_ENVMAP);
-			entityArray[entityCounter].position = probe.position;
-			entityArray[entityCounter].SetRange(probe.range);
+			shaderentity.SetType(ENTITY_TYPE_ENVMAP);
+			shaderentity.position = probe.position;
+			shaderentity.SetRange(probe.range);
 
-			entityArray[entityCounter].SetIndices(matrixCounter, (uint32_t)probe.textureIndex);
-			matrixArray[matrixCounter] = XMLoadFloat4x4(&probe.inverseMatrix);
+			shaderentity.SetIndices(matrixCounter, (uint32_t)probe.textureIndex);
+			shadermatrix = XMLoadFloat4x4(&probe.inverseMatrix);
+
+			std::memcpy(matrixArray + matrixCounter, &shadermatrix, sizeof(XMMATRIX));
 			matrixCounter++;
 
+			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
 			entityCounter++;
 		}
 
@@ -3371,34 +3380,34 @@ void UpdateRenderData(
 				entityCounter--;
 				break;
 			}
+			ShaderEntity shaderentity = {};
 
 			uint16_t lightIndex = visibleLight.index;
 			const LightComponent& light = vis.scene->lights[lightIndex];
 
-			entityArray[entityCounter] = {}; // zero out!
-			entityArray[entityCounter].layerMask = ~0u;
+			shaderentity.layerMask = ~0u;
 
 			Entity entity = vis.scene->lights.GetEntity(lightIndex);
 			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
 			if (layer != nullptr)
 			{
-				entityArray[entityCounter].layerMask = layer->layerMask;
+				shaderentity.layerMask = layer->layerMask;
 			}
 
-			entityArray[entityCounter].SetType(light.GetType());
-			entityArray[entityCounter].position = light.position;
-			entityArray[entityCounter].SetRange(light.GetRange());
-			entityArray[entityCounter].color = wi::math::CompressColor(light.color);
-			entityArray[entityCounter].SetEnergy(light.energy);
+			shaderentity.SetType(light.GetType());
+			shaderentity.position = light.position;
+			shaderentity.SetRange(light.GetRange());
+			shaderentity.color = wi::math::CompressColor(light.color);
+			shaderentity.SetEnergy(light.energy);
 
 			// mark as no shadow by default:
-			entityArray[entityCounter].indices = ~0;
+			shaderentity.indices = ~0;
 
 			bool shadow = light.IsCastingShadow() && !light.IsStatic();
 
 			if (GetRaytracedShadowsEnabled() && shadow)
 			{
-				entityArray[entityCounter].SetIndices(matrixCounter, 0);
+				shaderentity.SetIndices(matrixCounter, 0);
 			}
 			else if(shadow)
 			{
@@ -3410,21 +3419,21 @@ void UpdateRenderData(
 					case LightComponent::DIRECTIONAL:
 						if (shadowCounter_2D < SHADOWCOUNT_2D - CASCADE_COUNT + 1)
 						{
-							entityArray[entityCounter].SetIndices(matrixCounter, shadowCounter_2D);
+							shaderentity.SetIndices(matrixCounter, shadowCounter_2D);
 							shadowCounter_2D += CASCADE_COUNT;
 						}
 						break;
 					case LightComponent::SPOT:
 						if (shadowCounter_2D < SHADOWCOUNT_2D)
 						{
-							entityArray[entityCounter].SetIndices(matrixCounter, shadowCounter_2D);
+							shaderentity.SetIndices(matrixCounter, shadowCounter_2D);
 							shadowCounter_2D += 1;
 						}
 						break;
 					default:
 						if (shadowCounter_Cube < SHADOWCOUNT_CUBE)
 						{
-							entityArray[entityCounter].SetIndices(matrixCounter, shadowCounter_Cube);
+							shaderentity.SetIndices(matrixCounter, shadowCounter_Cube);
 							shadowCounter_Cube += 1;
 						}
 						break;
@@ -3436,15 +3445,15 @@ void UpdateRenderData(
 			{
 			case LightComponent::DIRECTIONAL:
 			{
-				entityArray[entityCounter].SetDirection(light.direction);
+				shaderentity.SetDirection(light.direction);
 
 				if (shadow)
 				{
 					std::array<SHCAM, CASCADE_COUNT> shcams;
 					CreateDirLightShadowCams(light, *vis.camera, shcams);
-					matrixArray[matrixCounter++] = shcams[0].view_projection;
-					matrixArray[matrixCounter++] = shcams[1].view_projection;
-					matrixArray[matrixCounter++] = shcams[2].view_projection;
+					std::memcpy(&matrixArray[matrixCounter++], &shcams[0].view_projection, sizeof(XMMATRIX));
+					std::memcpy(&matrixArray[matrixCounter++], &shcams[1].view_projection, sizeof(XMMATRIX));
+					std::memcpy(&matrixArray[matrixCounter++], &shcams[2].view_projection, sizeof(XMMATRIX));
 				}
 			}
 			break;
@@ -3457,21 +3466,21 @@ void UpdateRenderData(
 					const float fRange = FarZ / (FarZ - NearZ);
 					const float cubemapDepthRemapNear = fRange;
 					const float cubemapDepthRemapFar = -fRange * NearZ;
-					entityArray[entityCounter].SetCubeRemapNear(cubemapDepthRemapNear);
-					entityArray[entityCounter].SetCubeRemapFar(cubemapDepthRemapFar);
+					shaderentity.SetCubeRemapNear(cubemapDepthRemapNear);
+					shaderentity.SetCubeRemapFar(cubemapDepthRemapFar);
 				}
 			}
 			break;
 			case LightComponent::SPOT:
 			{
-				entityArray[entityCounter].SetConeAngleCos(cosf(light.fov * 0.5f));
-				entityArray[entityCounter].SetDirection(light.direction);
+				shaderentity.SetConeAngleCos(cosf(light.fov * 0.5f));
+				shaderentity.SetDirection(light.direction);
 
 				if (shadow)
 				{
 					SHCAM shcam;
 					CreateSpotLightShadowCam(light, shcam);
-					matrixArray[matrixCounter++] = shcam.view_projection;
+					std::memcpy(&matrixArray[matrixCounter++], &shcam.view_projection, sizeof(XMMATRIX));
 				}
 			}
 			break;
@@ -3479,9 +3488,10 @@ void UpdateRenderData(
 
 			if (light.IsStatic())
 			{
-				entityArray[entityCounter].SetFlags(ENTITY_FLAG_LIGHT_STATIC);
+				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_STATIC);
 			}
 
+			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
 			entityCounter++;
 		}
 
@@ -3494,27 +3504,28 @@ void UpdateRenderData(
 				entityCounter--;
 				break;
 			}
+			ShaderEntity shaderentity = {};
 
 			const ForceFieldComponent& force = vis.scene->forces[i];
 
-			entityArray[entityCounter] = {}; // zero out!
-			entityArray[entityCounter].layerMask = ~0u;
+			shaderentity.layerMask = ~0u;
 
 			Entity entity = vis.scene->forces.GetEntity(i);
 			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
 			if (layer != nullptr)
 			{
-				entityArray[entityCounter].layerMask = layer->layerMask;
+				shaderentity.layerMask = layer->layerMask;
 			}
 
-			entityArray[entityCounter].SetType(force.type);
-			entityArray[entityCounter].position = force.position;
-			entityArray[entityCounter].SetEnergy(force.gravity);
-			entityArray[entityCounter].SetRange(1.0f / std::max(0.0001f, force.GetRange())); // avoid division in shader
-			entityArray[entityCounter].SetConeAngleCos(force.GetRange()); // this will be the real range in the less common shaders...
+			shaderentity.SetType(force.type);
+			shaderentity.position = force.position;
+			shaderentity.SetEnergy(force.gravity);
+			shaderentity.SetRange(1.0f / std::max(0.0001f, force.GetRange())); // avoid division in shader
+			shaderentity.SetConeAngleCos(force.GetRange()); // this will be the real range in the less common shaders...
 			// The default planar force field is facing upwards, and thus the pull direction is downwards:
-			entityArray[entityCounter].SetDirection(force.direction);
+			shaderentity.SetDirection(force.direction);
 
+			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
 			entityCounter++;
 		}
 
