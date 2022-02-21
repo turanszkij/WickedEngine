@@ -773,6 +773,8 @@ namespace wi::input
 		auto& bounds = window.Bounds();
 		window.PointerPosition(winrt::Windows::Foundation::Point(props.x + bounds.X, props.y + bounds.Y));
 #endif
+#elif SDL2
+	SDL_WarpMouseInWindow(window, props.x, props.y);
 #endif // _WIN32
 	}
 	void HidePointer(bool value)
