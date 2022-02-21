@@ -151,6 +151,7 @@ Texture texture_weatherMap;
 struct RenderBatch
 {
 	uint64_t data;
+	constexpr operator uint64_t() const { return data; }
 
 	inline void Create(size_t meshIndex, size_t instanceIndex, float distance)
 	{
@@ -177,7 +178,7 @@ struct RenderBatch
 	}
 };
 
-// This is just a utility that points to a linear array of render batches:
+// This is a utility that points to a linear array of render batches:
 struct RenderQueue
 {
 	wi::vector<RenderBatch> batches;
@@ -200,9 +201,17 @@ struct RenderQueue
 	{
 		if (!batches.empty())
 		{
-			std::sort(batches.begin(), batches.end(), [sortType](const RenderBatch& a, const RenderBatch& b) -> bool {
-				return ((sortType == SORT_FRONT_TO_BACK) ? (a.data < b.data) : (a.data > b.data));
-			});
+			switch (sortType)
+			{
+			case wi::renderer::RenderQueue::SORT_FRONT_TO_BACK:
+				std::sort(batches.begin(), batches.end(), std::less<uint64_t>());
+				break;
+			case wi::renderer::RenderQueue::SORT_BACK_TO_FRONT:
+				std::sort(batches.begin(), batches.end(), std::greater<uint64_t>());
+				break;
+			default:
+				break;
+			}
 		}
 	}
 	inline bool empty() const
@@ -2370,9 +2379,9 @@ void RenderMeshes(
 		renderPass == RENDERPASS_VOXELIZE;
 
 	// Pre-allocate space for all the instances in GPU-buffer:
-	uint32_t instanceDataSize = sizeof(ShaderMeshInstancePointer);
-	size_t alloc_size = renderQueue.size() * frustum_count * instanceDataSize;
-	GraphicsDevice::GPUAllocation instances = device->AllocateGPU(alloc_size, cmd);
+	const size_t alloc_size = renderQueue.size() * frustum_count * sizeof(ShaderMeshInstancePointer);
+	const GraphicsDevice::GPUAllocation instances = device->AllocateGPU(alloc_size, cmd);
+	const int instanceBufferDescriptorIndex = device->GetDescriptorIndex(&instances.buffer, SubresourceType::SRV);
 
 	// This will correspond to a single draw call
 	//	It's used to render multiple instances of a single mesh
@@ -2491,7 +2500,7 @@ void RenderMeshes(
 				instancedBatch.meshIndex,
 				(uint)subsetIndex,
 				subset.materialIndex,
-				device->GetDescriptorIndex(&instances.buffer, SubresourceType::SRV),
+				instanceBufferDescriptorIndex,
 				instancedBatch.dataOffset
 			);
 
@@ -2528,7 +2537,7 @@ void RenderMeshes(
 			instancedBatch = {};
 			instancedBatch.meshIndex = meshIndex;
 			instancedBatch.instanceCount = 0;
-			instancedBatch.dataOffset = (uint32_t)(instances.offset + instanceCount * instanceDataSize);
+			instancedBatch.dataOffset = (uint32_t)(instances.offset + instanceCount * sizeof(ShaderMeshInstancePointer));
 			instancedBatch.userStencilRefOverride = userStencilRefOverride;
 			instancedBatch.forceAlphatestForDithering = 0;
 			instancedBatch.aabb = AABB();
@@ -2562,9 +2571,11 @@ void RenderMeshes(
 				continue;
 			}
 
+			ShaderMeshInstancePointer poi;
+			poi.Create(instanceIndex, frustum_index, dither);
+
 			// Write into actual GPU-buffer:
-			ShaderMeshInstancePointer* poi = (ShaderMeshInstancePointer*)instances.data + instanceCount;
-			poi->Create(instanceIndex, frustum_index, dither);
+			std::memcpy((ShaderMeshInstancePointer*)instances.data + instanceCount, &poi, sizeof(poi)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
 
 			instancedBatch.instanceCount++; // next instance in current InstancedBatch
 			instanceCount++;
@@ -2802,10 +2813,9 @@ void UpdateVisibility(Visibility& vis)
 						if (dist < vis.closestRefPlane)
 						{
 							vis.closestRefPlane = dist;
-							const TransformComponent& transform = vis.scene->transforms[object.transform_index];
-							XMVECTOR P = transform.GetPositionV();
+							XMVECTOR P = XMLoadFloat3(&object.center);
 							XMVECTOR N = XMVectorSet(0, 1, 0, 0);
-							N = XMVector3TransformNormal(N, XMLoadFloat4x4(&transform.world));
+							N = XMVector3TransformNormal(N, XMLoadFloat4x4(&object.worldMatrix));
 							XMVECTOR _refPlane = XMPlaneFromPointNormal(P, N);
 							XMStoreFloat4(&vis.reflectionPlane, _refPlane);
 
@@ -3270,27 +3280,29 @@ void UpdateRenderData(
 				matrixCounter--;
 				break;
 			}
+			ShaderEntity shaderentity = {};
+			XMMATRIX shadermatrix;
+
 			const uint32_t decalIndex = vis.visibleDecals[vis.visibleDecals.size() - 1 - i]; // note: reverse order, for correct blending!
 			const DecalComponent& decal = vis.scene->decals[decalIndex];
 
-			entityArray[entityCounter] = {}; // zero out!
-			entityArray[entityCounter].layerMask = ~0u;
+			shaderentity.layerMask = ~0u;
 
 			Entity entity = vis.scene->decals.GetEntity(decalIndex);
 			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
 			if (layer != nullptr)
 			{
-				entityArray[entityCounter].layerMask = layer->layerMask;
+				shaderentity.layerMask = layer->layerMask;
 			}
 
-			entityArray[entityCounter].SetType(ENTITY_TYPE_DECAL);
-			entityArray[entityCounter].position = decal.position;
-			entityArray[entityCounter].SetRange(decal.range);
-			entityArray[entityCounter].color = wi::math::CompressColor(XMFLOAT4(decal.color.x, decal.color.y, decal.color.z, decal.GetOpacity()));
-			entityArray[entityCounter].SetEnergy(decal.emissive);
+			shaderentity.SetType(ENTITY_TYPE_DECAL);
+			shaderentity.position = decal.position;
+			shaderentity.SetRange(decal.range);
+			shaderentity.color = wi::math::CompressColor(XMFLOAT4(decal.color.x, decal.color.y, decal.color.z, decal.GetOpacity()));
+			shaderentity.SetEnergy(decal.emissive);
 
-			entityArray[entityCounter].SetIndices(matrixCounter, 0);
-			matrixArray[matrixCounter] = XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal.world));
+			shaderentity.SetIndices(matrixCounter, 0);
+			shadermatrix = XMMatrixInverse(nullptr, XMLoadFloat4x4(&decal.world));
 
 			int texture = -1;
 			if (decal.texture.IsValid())
@@ -3302,11 +3314,13 @@ void UpdateRenderData(
 			{
 				normal = device->GetDescriptorIndex(&decal.normal.GetTexture(), SubresourceType::SRV);
 			}
-			matrixArray[matrixCounter].r[0] = XMVectorSetW(matrixArray[matrixCounter].r[0], *(float*)&texture);
-			matrixArray[matrixCounter].r[1] = XMVectorSetW(matrixArray[matrixCounter].r[1], *(float*)&normal);
+			shadermatrix.r[0] = XMVectorSetW(shadermatrix.r[0], *(float*)&texture);
+			shadermatrix.r[1] = XMVectorSetW(shadermatrix.r[1], *(float*)&normal);
 
+			std::memcpy(matrixArray + matrixCounter, &shadermatrix, sizeof(XMMATRIX));
 			matrixCounter++;
 
+			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
 			entityCounter++;
 		}
 
@@ -3325,28 +3339,33 @@ void UpdateRenderData(
 				matrixCounter--;
 				break;
 			}
+			ShaderEntity shaderentity = {};
+			XMMATRIX shadermatrix;
 
 			const uint32_t probeIndex = vis.visibleEnvProbes[vis.visibleEnvProbes.size() - 1 - i]; // note: reverse order, for correct blending!
 			const EnvironmentProbeComponent& probe = vis.scene->probes[probeIndex];
 
-			entityArray[entityCounter] = {}; // zero out!
-			entityArray[entityCounter].layerMask = ~0u;
+			shaderentity = {}; // zero out!
+			shaderentity.layerMask = ~0u;
 
 			Entity entity = vis.scene->probes.GetEntity(probeIndex);
 			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
 			if (layer != nullptr)
 			{
-				entityArray[entityCounter].layerMask = layer->layerMask;
+				shaderentity.layerMask = layer->layerMask;
 			}
 
-			entityArray[entityCounter].SetType(ENTITY_TYPE_ENVMAP);
-			entityArray[entityCounter].position = probe.position;
-			entityArray[entityCounter].SetRange(probe.range);
+			shaderentity.SetType(ENTITY_TYPE_ENVMAP);
+			shaderentity.position = probe.position;
+			shaderentity.SetRange(probe.range);
 
-			entityArray[entityCounter].SetIndices(matrixCounter, (uint32_t)probe.textureIndex);
-			matrixArray[matrixCounter] = XMLoadFloat4x4(&probe.inverseMatrix);
+			shaderentity.SetIndices(matrixCounter, (uint32_t)probe.textureIndex);
+			shadermatrix = XMLoadFloat4x4(&probe.inverseMatrix);
+
+			std::memcpy(matrixArray + matrixCounter, &shadermatrix, sizeof(XMMATRIX));
 			matrixCounter++;
 
+			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
 			entityCounter++;
 		}
 
@@ -3361,34 +3380,34 @@ void UpdateRenderData(
 				entityCounter--;
 				break;
 			}
+			ShaderEntity shaderentity = {};
 
 			uint16_t lightIndex = visibleLight.index;
 			const LightComponent& light = vis.scene->lights[lightIndex];
 
-			entityArray[entityCounter] = {}; // zero out!
-			entityArray[entityCounter].layerMask = ~0u;
+			shaderentity.layerMask = ~0u;
 
 			Entity entity = vis.scene->lights.GetEntity(lightIndex);
 			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
 			if (layer != nullptr)
 			{
-				entityArray[entityCounter].layerMask = layer->layerMask;
+				shaderentity.layerMask = layer->layerMask;
 			}
 
-			entityArray[entityCounter].SetType(light.GetType());
-			entityArray[entityCounter].position = light.position;
-			entityArray[entityCounter].SetRange(light.GetRange());
-			entityArray[entityCounter].color = wi::math::CompressColor(light.color);
-			entityArray[entityCounter].SetEnergy(light.energy);
+			shaderentity.SetType(light.GetType());
+			shaderentity.position = light.position;
+			shaderentity.SetRange(light.GetRange());
+			shaderentity.color = wi::math::CompressColor(light.color);
+			shaderentity.SetEnergy(light.energy);
 
 			// mark as no shadow by default:
-			entityArray[entityCounter].indices = ~0;
+			shaderentity.indices = ~0;
 
 			bool shadow = light.IsCastingShadow() && !light.IsStatic();
 
 			if (GetRaytracedShadowsEnabled() && shadow)
 			{
-				entityArray[entityCounter].SetIndices(matrixCounter, 0);
+				shaderentity.SetIndices(matrixCounter, 0);
 			}
 			else if(shadow)
 			{
@@ -3400,21 +3419,21 @@ void UpdateRenderData(
 					case LightComponent::DIRECTIONAL:
 						if (shadowCounter_2D < SHADOWCOUNT_2D - CASCADE_COUNT + 1)
 						{
-							entityArray[entityCounter].SetIndices(matrixCounter, shadowCounter_2D);
+							shaderentity.SetIndices(matrixCounter, shadowCounter_2D);
 							shadowCounter_2D += CASCADE_COUNT;
 						}
 						break;
 					case LightComponent::SPOT:
 						if (shadowCounter_2D < SHADOWCOUNT_2D)
 						{
-							entityArray[entityCounter].SetIndices(matrixCounter, shadowCounter_2D);
+							shaderentity.SetIndices(matrixCounter, shadowCounter_2D);
 							shadowCounter_2D += 1;
 						}
 						break;
 					default:
 						if (shadowCounter_Cube < SHADOWCOUNT_CUBE)
 						{
-							entityArray[entityCounter].SetIndices(matrixCounter, shadowCounter_Cube);
+							shaderentity.SetIndices(matrixCounter, shadowCounter_Cube);
 							shadowCounter_Cube += 1;
 						}
 						break;
@@ -3426,15 +3445,15 @@ void UpdateRenderData(
 			{
 			case LightComponent::DIRECTIONAL:
 			{
-				entityArray[entityCounter].SetDirection(light.direction);
+				shaderentity.SetDirection(light.direction);
 
 				if (shadow)
 				{
 					std::array<SHCAM, CASCADE_COUNT> shcams;
 					CreateDirLightShadowCams(light, *vis.camera, shcams);
-					matrixArray[matrixCounter++] = shcams[0].view_projection;
-					matrixArray[matrixCounter++] = shcams[1].view_projection;
-					matrixArray[matrixCounter++] = shcams[2].view_projection;
+					std::memcpy(&matrixArray[matrixCounter++], &shcams[0].view_projection, sizeof(XMMATRIX));
+					std::memcpy(&matrixArray[matrixCounter++], &shcams[1].view_projection, sizeof(XMMATRIX));
+					std::memcpy(&matrixArray[matrixCounter++], &shcams[2].view_projection, sizeof(XMMATRIX));
 				}
 			}
 			break;
@@ -3447,21 +3466,21 @@ void UpdateRenderData(
 					const float fRange = FarZ / (FarZ - NearZ);
 					const float cubemapDepthRemapNear = fRange;
 					const float cubemapDepthRemapFar = -fRange * NearZ;
-					entityArray[entityCounter].SetCubeRemapNear(cubemapDepthRemapNear);
-					entityArray[entityCounter].SetCubeRemapFar(cubemapDepthRemapFar);
+					shaderentity.SetCubeRemapNear(cubemapDepthRemapNear);
+					shaderentity.SetCubeRemapFar(cubemapDepthRemapFar);
 				}
 			}
 			break;
 			case LightComponent::SPOT:
 			{
-				entityArray[entityCounter].SetConeAngleCos(cosf(light.fov * 0.5f));
-				entityArray[entityCounter].SetDirection(light.direction);
+				shaderentity.SetConeAngleCos(cosf(light.fov * 0.5f));
+				shaderentity.SetDirection(light.direction);
 
 				if (shadow)
 				{
 					SHCAM shcam;
 					CreateSpotLightShadowCam(light, shcam);
-					matrixArray[matrixCounter++] = shcam.view_projection;
+					std::memcpy(&matrixArray[matrixCounter++], &shcam.view_projection, sizeof(XMMATRIX));
 				}
 			}
 			break;
@@ -3469,9 +3488,10 @@ void UpdateRenderData(
 
 			if (light.IsStatic())
 			{
-				entityArray[entityCounter].SetFlags(ENTITY_FLAG_LIGHT_STATIC);
+				shaderentity.SetFlags(ENTITY_FLAG_LIGHT_STATIC);
 			}
 
+			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
 			entityCounter++;
 		}
 
@@ -3484,27 +3504,28 @@ void UpdateRenderData(
 				entityCounter--;
 				break;
 			}
+			ShaderEntity shaderentity = {};
 
 			const ForceFieldComponent& force = vis.scene->forces[i];
 
-			entityArray[entityCounter] = {}; // zero out!
-			entityArray[entityCounter].layerMask = ~0u;
+			shaderentity.layerMask = ~0u;
 
 			Entity entity = vis.scene->forces.GetEntity(i);
 			const LayerComponent* layer = vis.scene->layers.GetComponent(entity);
 			if (layer != nullptr)
 			{
-				entityArray[entityCounter].layerMask = layer->layerMask;
+				shaderentity.layerMask = layer->layerMask;
 			}
 
-			entityArray[entityCounter].SetType(force.type);
-			entityArray[entityCounter].position = force.position;
-			entityArray[entityCounter].SetEnergy(force.gravity);
-			entityArray[entityCounter].SetRange(1.0f / std::max(0.0001f, force.GetRange())); // avoid division in shader
-			entityArray[entityCounter].SetConeAngleCos(force.GetRange()); // this will be the real range in the less common shaders...
+			shaderentity.SetType(force.type);
+			shaderentity.position = force.position;
+			shaderentity.SetEnergy(force.gravity);
+			shaderentity.SetRange(1.0f / std::max(0.0001f, force.GetRange())); // avoid division in shader
+			shaderentity.SetConeAngleCos(force.GetRange()); // this will be the real range in the less common shaders...
 			// The default planar force field is facing upwards, and thus the pull direction is downwards:
-			entityArray[entityCounter].SetDirection(force.direction);
+			shaderentity.SetDirection(force.direction);
 
+			std::memcpy(entityArray + entityCounter, &shaderentity, sizeof(ShaderEntity));
 			entityCounter++;
 		}
 
@@ -3589,9 +3610,11 @@ void UpdateRenderData(
 				int j = 0;
 				for (auto& x : mesh.subsets)
 				{
-					ShaderMeshSubset& shadersubset = subsetarray[j++];
+					ShaderMeshSubset shadersubset;
 					shadersubset.indexOffset = x.indexOffset;
-					shadersubset.materialIndex = (uint)vis.scene->materials.GetIndex(x.materialID);
+					shadersubset.materialIndex = x.materialIndex;
+					std::memcpy(subsetarray + j, &shadersubset, sizeof(ShaderMeshSubset)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
+					j++;
 				}
 
 				device->CopyBuffer(
@@ -4642,8 +4665,7 @@ void DrawShadowmaps(
 							{
 								Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
 
-								size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
-								renderQueue.add(meshIndex, i, 0);
+								renderQueue.add(object.mesh_index, i, 0);
 
 								if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT || object.GetRenderTypes() & RENDERTYPE_WATER)
 								{
@@ -4704,8 +4726,7 @@ void DrawShadowmaps(
 						{
 							Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
 
-							size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
-							renderQueue.add(meshIndex, i, 0);
+							renderQueue.add(object.mesh_index, i, 0);
 
 							if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT || object.GetRenderTypes() & RENDERTYPE_WATER)
 							{
@@ -4772,8 +4793,7 @@ void DrawShadowmaps(
 						{
 							Entity cullable_entity = vis.scene->aabb_objects.GetEntity(i);
 
-							size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
-							renderQueue.add(meshIndex, i, 0);
+							renderQueue.add(object.mesh_index, i, 0);
 
 							if (object.GetRenderTypes() & RENDERTYPE_TRANSPARENT || object.GetRenderTypes() & RENDERTYPE_WATER)
 							{
@@ -4860,7 +4880,7 @@ void DrawScene(
 	const bool transparent = flags & DRAWSCENE_TRANSPARENT;
 	const bool tessellation = (flags & DRAWSCENE_TESSELLATION) && GetTessellationEnabled();
 	const bool hairparticle = flags & DRAWSCENE_HAIRPARTICLE;
-	const bool occlusion = flags & DRAWSCENE_OCCLUSIONCULLING;
+	const bool occlusion = (flags & DRAWSCENE_OCCLUSIONCULLING) && GetOcclusionCullingEnabled();
 
 	device->EventBegin("DrawScene", cmd);
 	device->BindShadingRate(ShadingRate::RATE_1X1, cmd);
@@ -4897,7 +4917,7 @@ void DrawScene(
 	{
 		const ObjectComponent& object = vis.scene->objects[instanceIndex];
 
-		if (GetOcclusionCullingEnabled() && occlusion && object.IsOccluded())
+		if (occlusion && object.IsOccluded())
 			continue;
 
 		if (object.IsRenderable() && (object.GetRenderTypes() & renderTypeFlags))
@@ -4907,8 +4927,7 @@ void DrawScene(
 			{
 				continue;
 			}
-			size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
-			renderQueue.add(meshIndex, instanceIndex, distance);
+			renderQueue.add(object.mesh_index, instanceIndex, distance);
 		}
 	}
 	if (!renderQueue.empty())
@@ -5830,7 +5849,7 @@ void DrawDebugWorld(
 		{
 			const ObjectComponent& object = *scene.objects.GetComponent(x.objectEntity);
 			const TransformComponent& transform = *scene.transforms.GetComponent(x.objectEntity);
-			const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
+			const MeshComponent& mesh = scene.meshes[object.mesh_index];
 			const MeshComponent::MeshSubset& subset = mesh.subsets[x.subset];
 			const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
@@ -5850,7 +5869,7 @@ void DrawDebugWorld(
 
 			ObjectPushConstants push;
 			push.init(
-				(uint)scene.meshes.GetIndex(object.meshID),
+				(uint)object.mesh_index,
 				x.subset,
 				subset.materialIndex,
 				device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV),
@@ -6244,8 +6263,7 @@ void RefreshEnvProbes(const Visibility& vis, CommandList cmd)
 					const ObjectComponent& object = vis.scene->objects[i];
 					if (object.IsRenderable())
 					{
-						size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
-						renderQueue.add(meshIndex, i, 0);
+						renderQueue.add(object.mesh_index, i, 0);
 					}
 				}
 			}
@@ -6509,8 +6527,7 @@ void VoxelRadiance(const Visibility& vis, CommandList cmd)
 			const ObjectComponent& object = vis.scene->objects[i];
 			if (object.IsRenderable())
 			{
-				size_t meshIndex = vis.scene->meshes.GetIndex(object.meshID);
-				renderQueue.add(meshIndex, i, 0);
+				renderQueue.add(object.mesh_index, i, 0);
 			}
 		}
 	}
@@ -7229,7 +7246,7 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd, uint8_t instanceInclu
 			{
 				device->EventBegin("RenderObjectLightMap", cmd);
 
-				const MeshComponent& mesh = *scene.meshes.GetComponent(object.meshID);
+				const MeshComponent& mesh = scene.meshes[object.mesh_index];
 				assert(!mesh.vertex_atlas.empty());
 				assert(mesh.vertexBuffer_ATL.IsValid());
 
@@ -7249,10 +7266,8 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd, uint8_t instanceInclu
 				vp.height = (float)desc.height;
 				device->BindViewports(1, &vp, cmd);
 
-				const TransformComponent& transform = scene.transforms[object.transform_index];
-
 				MiscCB misccb;
-				misccb.g_xTransform = transform.world;
+				misccb.g_xTransform = object.worldMatrix;
 
 				device->BindDynamicConstantBuffer(misccb, CB_GETBINDSLOT(MiscCB), cmd);
 

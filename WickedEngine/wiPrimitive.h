@@ -47,9 +47,9 @@ namespace wi::primitive
 		AABB operator* (float a);
 		static AABB Merge(const AABB& a, const AABB& b);
 
-		inline XMFLOAT3 getMin() const { return _min; }
-		inline XMFLOAT3 getMax() const { return _max; }
-		inline XMFLOAT3 corner(int index) const
+		constexpr XMFLOAT3 getMin() const { return _min; }
+		constexpr XMFLOAT3 getMax() const { return _max; }
+		constexpr XMFLOAT3 corner(int index) const
 		{
 			switch (index)
 			{

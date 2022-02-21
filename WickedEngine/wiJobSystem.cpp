@@ -4,10 +4,12 @@
 #include "wiPlatform.h"
 #include "wiTimer.h"
 
-#include <thread>
-#include <condition_variable>
-#include <string>
 #include <algorithm>
+#include <deque>
+#include <string>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
 
 #ifdef PLATFORM_LINUX
 #include <pthread.h>
@@ -17,12 +19,36 @@ namespace wi::jobsystem
 {
 	struct Job
 	{
-		context* ctx;
 		std::function<void(JobArgs)> task;
+		context* ctx;
 		uint32_t groupID;
 		uint32_t groupJobOffset;
 		uint32_t groupJobEnd;
 		uint32_t sharedmemory_size;
+	};
+	struct JobQueue
+	{
+		std::deque<Job> queue;
+		wi::SpinLock locker;
+
+		inline void push_back(const Job& item)
+		{
+			std::scoped_lock lock(locker);
+			queue.push_back(item);
+		}
+
+		inline bool pop_front(Job& item)
+		{
+			std::scoped_lock lock(locker);
+			if (queue.empty())
+			{
+				return false;
+			}
+			item = std::move(queue.front());
+			queue.pop_front();
+			return true;
+		}
+
 	};
 	struct WorkerState
 	{
@@ -31,99 +57,56 @@ namespace wi::jobsystem
 		std::mutex wakeMutex;
 	};
 
-	// Fixed size very simple thread safe ring buffer
-	template <typename T, size_t capacity>
-	class ThreadSafeRingBuffer
-	{
-	public:
-		// Push an item to the end if there is free space
-		//	Returns true if succesful
-		//	Returns false if there is not enough space
-		inline bool push_back(const T& item)
-		{
-			bool result = false;
-			lock.lock();
-			size_t next = (head + 1) % capacity;
-			if (next != tail)
-			{
-				data[head] = item;
-				head = next;
-				result = true;
-			}
-			lock.unlock();
-			return result;
-		}
-
-		// Get an item if there are any
-		//	Returns true if succesful
-		//	Returns false if there are no items
-		inline bool pop_front(T& item)
-		{
-			bool result = false;
-			lock.lock();
-			if (tail != head)
-			{
-				item = data[tail];
-				tail = (tail + 1) % capacity;
-				result = true;
-			}
-			lock.unlock();
-			return result;
-		}
-
-	private:
-		T data[capacity];
-		size_t head = 0;
-		size_t tail = 0;
-		wi::SpinLock lock;
-	};
-
 	// This structure is responsible to stop worker thread loops.
 	//	Once this is destroyed, worker threads will be woken up and end their loops.
-	//	This is to workaround a problem on Linux, where threads still running their loops don't let the main thread to exit
 	struct InternalState
 	{
 		uint32_t numCores = 0;
 		uint32_t numThreads = 0;
+		JobQueue* jobQueuePerThread = nullptr;
 		std::shared_ptr<WorkerState> worker_state = std::make_shared<WorkerState>(); // kept alive by both threads and internal_state
-		ThreadSafeRingBuffer<Job, 256> jobQueue;
+		std::atomic<uint32_t> nextQueue{ 0 };
 		~InternalState()
 		{
 			worker_state->alive.store(false);
 			worker_state->wakeCondition.notify_all(); // wakes up sleeping worker threads
+			delete[] jobQueuePerThread;
 		}
 	} static internal_state;
 
-	// This function executes the next item from the job queue. Returns true if successful, false if there was no job available
-	inline bool work()
+	// Start working on a job queue
+	//	After the job queue is finished, it can switch to an other queue and steal jobs from there
+	inline void work(uint32_t startingQueue)
 	{
 		Job job;
-		if (internal_state.jobQueue.pop_front(job))
+		for (uint32_t i = 0; i < internal_state.numThreads; ++i)
 		{
-			JobArgs args;
-			args.groupID = job.groupID;
-			if (job.sharedmemory_size > 0)
+			while (internal_state.jobQueuePerThread[startingQueue % internal_state.numThreads].pop_front(job))
 			{
-				args.sharedmemory = alloca(job.sharedmemory_size);
-			}
-			else
-			{
-				args.sharedmemory = nullptr;
-			}
+				JobArgs args;
+				args.groupID = job.groupID;
+				if (job.sharedmemory_size > 0)
+				{
+					args.sharedmemory = alloca(job.sharedmemory_size);
+				}
+				else
+				{
+					args.sharedmemory = nullptr;
+				}
 
-			for (uint32_t i = job.groupJobOffset; i < job.groupJobEnd; ++i)
-			{
-				args.jobIndex = i;
-				args.groupIndex = i - job.groupJobOffset;
-				args.isFirstJobInGroup = (i == job.groupJobOffset);
-				args.isLastJobInGroup = (i == job.groupJobEnd - 1);
-				job.task(args);
-			}
+				for (uint32_t i = job.groupJobOffset; i < job.groupJobEnd; ++i)
+				{
+					args.jobIndex = i;
+					args.groupIndex = i - job.groupJobOffset;
+					args.isFirstJobInGroup = (i == job.groupJobOffset);
+					args.isLastJobInGroup = (i == job.groupJobEnd - 1);
+					job.task(args);
+				}
 
-			job.ctx->counter.fetch_sub(1);
-			return true;
+				job.ctx->counter.fetch_sub(1);
+			}
+			startingQueue++; // go to next queue
 		}
-		return false;
 	}
 
 	void Initialize(uint32_t maxThreadCount)
@@ -139,20 +122,21 @@ namespace wi::jobsystem
 
 		// Calculate the actual number of worker threads we want (-1 main thread):
 		internal_state.numThreads = std::min(maxThreadCount, std::max(1u, internal_state.numCores - 1));
+		internal_state.jobQueuePerThread = new JobQueue[internal_state.numThreads];
 
 		for (uint32_t threadID = 0; threadID < internal_state.numThreads; ++threadID)
 		{
-			std::thread worker([] {
+			std::thread worker([threadID] {
 
 				std::shared_ptr<WorkerState> worker_state = internal_state.worker_state; // this is a copy of shared_ptr<WorkerState>, so it will remain alive for the thread's lifetime
+
 				while (worker_state->alive.load())
 				{
-					if (!work())
-					{
-						// no job, put thread to sleep
-						std::unique_lock<std::mutex> lock(worker_state->wakeMutex);
-						worker_state->wakeCondition.wait(lock);
-					}
+					work(threadID);
+
+					// finished with jobs, put to sleep
+					std::unique_lock<std::mutex> lock(worker_state->wakeMutex);
+					worker_state->wakeCondition.wait(lock);
 				}
 
 				});
@@ -220,10 +204,7 @@ namespace wi::jobsystem
 		job.groupJobEnd = 1;
 		job.sharedmemory_size = 0;
 
-		// Try to push a new job until it is pushed successfully:
-		while (!internal_state.jobQueue.push_back(job)) { internal_state.worker_state->wakeCondition.notify_all(); work(); }
-
-		// Wake any one thread that might be sleeping:
+		internal_state.jobQueuePerThread[internal_state.nextQueue.fetch_add(1) % internal_state.numThreads].push_back(job);
 		internal_state.worker_state->wakeCondition.notify_one();
 	}
 
@@ -251,11 +232,9 @@ namespace wi::jobsystem
 			job.groupJobOffset = groupID * groupSize;
 			job.groupJobEnd = std::min(job.groupJobOffset + groupSize, jobCount);
 
-			// Try to push a new job until it is pushed successfully:
-			while (!internal_state.jobQueue.push_back(job)) { internal_state.worker_state->wakeCondition.notify_all(); work(); }
+			internal_state.jobQueuePerThread[internal_state.nextQueue.fetch_add(1) % internal_state.numThreads].push_back(job);
 		}
 
-		// Wake any threads that might be sleeping:
 		internal_state.worker_state->wakeCondition.notify_all();
 	}
 
@@ -273,10 +252,22 @@ namespace wi::jobsystem
 
 	void Wait(const context& ctx)
 	{
-		// Wake any threads that might be sleeping:
-		internal_state.worker_state->wakeCondition.notify_all();
+		if (IsBusy(ctx))
+		{
+			// Wake any threads that might be sleeping:
+			internal_state.worker_state->wakeCondition.notify_all();
 
-		// Waiting will also put the current thread to good use by working on an other job if it can:
-		while (IsBusy(ctx)) { work(); }
+			// work() will pick up any jobs that are on stand by and execute them on this thread:
+			work(internal_state.nextQueue.fetch_add(1) % internal_state.numThreads);
+
+			while (IsBusy(ctx))
+			{
+				// If we are here, then there are still remaining jobs that work() couldn't pick up.
+				//	In this case those jobs are not standing by on a queue but currently executing
+				//	on other threads, so they cannot be picked up by this thread.
+				//	Allow to swap out this thread by OS to not spin endlessly for nothing
+				std::this_thread::yield();
+			}
+		}
 	}
 }

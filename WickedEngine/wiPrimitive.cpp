@@ -10,28 +10,36 @@ namespace wi::primitive
 	}
 	AABB AABB::transform(const XMMATRIX& mat) const
 	{
-		XMFLOAT3 corners[8];
-		for (int i = 0; i < 8; ++i)
-		{
-			XMFLOAT3 C = corner(i);
-			XMVECTOR point = XMVector3Transform(XMLoadFloat3(&C), mat);
-			XMStoreFloat3(&corners[i], point);
-		}
-		XMFLOAT3 min = corners[0];
-		XMFLOAT3 max = corners[6];
-		for (int i = 0; i < 8; ++i)
-		{
-			const XMFLOAT3& p = corners[i];
+		const XMVECTOR vcorners[8] = {
+			XMVector3Transform(XMLoadFloat3(&_min), mat),
+			XMVector3Transform(XMVectorSet(_min.x, _max.y, _min.z, 1), mat),
+			XMVector3Transform(XMVectorSet(_min.x, _max.y, _max.z, 1), mat),
+			XMVector3Transform(XMVectorSet(_min.x, _min.y, _max.z, 1), mat),
+			XMVector3Transform(XMVectorSet(_max.x, _min.y, _min.z, 1), mat),
+			XMVector3Transform(XMVectorSet(_max.x, _max.y, _min.z, 1), mat),
+			XMVector3Transform(XMLoadFloat3(&_max), mat),
+			XMVector3Transform(XMVectorSet(_max.x, _min.y, _max.z, 1), mat),
+		};
+		XMVECTOR vmin = vcorners[0];
+		XMVECTOR vmax = vcorners[0];
+		vmin = XMVectorMin(vmin, vcorners[1]);
+		vmax = XMVectorMax(vmax, vcorners[1]);
+		vmin = XMVectorMin(vmin, vcorners[2]);
+		vmax = XMVectorMax(vmax, vcorners[2]);
+		vmin = XMVectorMin(vmin, vcorners[3]);
+		vmax = XMVectorMax(vmax, vcorners[3]);
+		vmin = XMVectorMin(vmin, vcorners[4]);
+		vmax = XMVectorMax(vmax, vcorners[4]);
+		vmin = XMVectorMin(vmin, vcorners[5]);
+		vmax = XMVectorMax(vmax, vcorners[5]);
+		vmin = XMVectorMin(vmin, vcorners[6]);
+		vmax = XMVectorMax(vmax, vcorners[6]);
+		vmin = XMVectorMin(vmin, vcorners[7]);
+		vmax = XMVectorMax(vmax, vcorners[7]);
 
-			if (p.x < min.x) min.x = p.x;
-			if (p.y < min.y) min.y = p.y;
-			if (p.z < min.z) min.z = p.z;
-
-			if (p.x > max.x) max.x = p.x;
-			if (p.y > max.y) max.y = p.y;
-			if (p.z > max.z) max.z = p.z;
-		}
-
+		XMFLOAT3 min, max;
+		XMStoreFloat3(&min, vmin);
+		XMStoreFloat3(&max, vmax);
 		return AABB(min, max);
 	}
 	AABB AABB::transform(const XMFLOAT4X4& mat) const
@@ -378,9 +386,10 @@ namespace wi::primitive
 		XMVECTOR zero = XMVectorZero();
 		for (size_t p = 0; p < 6; ++p)
 		{
-			auto lt = XMVectorLess(XMLoadFloat4(&planes[p]), zero);
-			auto furthestFromPlane = XMVectorSelect(max, min, lt);
-			if (XMVectorGetX(XMPlaneDotCoord(XMLoadFloat4(&planes[p]), furthestFromPlane)) < 0.0f)
+			XMVECTOR plane = XMLoadFloat4(&planes[p]);
+			XMVECTOR lt = XMVectorLess(plane, zero);
+			XMVECTOR furthestFromPlane = XMVectorSelect(max, min, lt);
+			if (XMVectorGetX(XMPlaneDotCoord(plane, furthestFromPlane)) < 0.0f)
 			{
 				return false;
 			}

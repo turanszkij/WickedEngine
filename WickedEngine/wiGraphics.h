@@ -949,7 +949,7 @@ namespace wi::graphics
 				uint32_t instance_mask : 8;
 				uint32_t instance_contribution_to_hit_group_index : 24;
 				uint32_t flags : 8;
-				GPUResource bottom_level;
+				const GPUResource* bottom_level = nullptr;
 			};
 			GPUBuffer instance_buffer;
 			uint32_t offset = 0;

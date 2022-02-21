@@ -102,33 +102,28 @@ struct ShaderMaterial
 
 	int			uvset_clearcoatNormalMap;
 	int			uvset_specularMap;
-	int			padding2;
-	int			padding3;
-
 	uint		sheenColor_r11g11b10;
 	float		sheenRoughness;
+
 	float		clearcoat;
 	float		clearcoatRoughness;
-
 	int			texture_basecolormap_index;
 	int			texture_surfacemap_index;
+
 	int			texture_emissivemap_index;
 	int			texture_normalmap_index;
-
 	int			texture_displacementmap_index;
 	int			texture_occlusionmap_index;
+
 	int			texture_transmissionmap_index;
 	int			texture_sheencolormap_index;
-
 	int			texture_sheenroughnessmap_index;
 	int			texture_clearcoatmap_index;
+
 	int			texture_clearcoatroughnessmap_index;
 	int			texture_clearcoatnormalmap_index;
-
 	int			texture_specularmap_index;
-	int			padding5;
-	int			padding6;
-	int			padding7;
+	int			padding0;
 
 #ifndef __cplusplus
 	float3 GetEmissive() { return Unpack_R11G11B10_FLOAT(emissive_r11g11b10); }

@@ -6090,8 +6090,8 @@ using namespace vulkan_internal;
 		tmp.instanceShaderBindingTableRecordOffset = instance->instance_contribution_to_hit_group_index;
 		tmp.flags = instance->flags;
 
-		assert(instance->bottom_level.IsAccelerationStructure());
-		auto internal_state = to_internal((RaytracingAccelerationStructure*)&instance->bottom_level);
+		assert(instance->bottom_level->IsAccelerationStructure());
+		auto internal_state = to_internal((RaytracingAccelerationStructure*)instance->bottom_level);
 		tmp.accelerationStructureReference = internal_state->as_address;
 
 		std::memcpy(dest, &tmp, sizeof(VkAccelerationStructureInstanceKHR)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
@@ -6783,6 +6783,10 @@ using namespace vulkan_internal;
 	void GraphicsDevice_Vulkan::BindPipelineState(const PipelineState* pso, CommandList cmd)
 	{
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
+		if (commandlist.active_pso == pso)
+		{
+			return;
+		}
 		commandlist.active_cs = nullptr;
 		commandlist.active_rt = nullptr;
 
@@ -6833,62 +6837,64 @@ using namespace vulkan_internal;
 	void GraphicsDevice_Vulkan::BindComputeShader(const Shader* cs, CommandList cmd)
 	{
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
+		if (commandlist.active_cs == cs)
+		{
+			return;
+		}
 		commandlist.active_pso = nullptr;
 		commandlist.active_rt = nullptr;
 
 		assert(cs->stage == ShaderStage::CS || cs->stage == ShaderStage::LIB);
-		if (commandlist.active_cs != cs)
+
+		if (commandlist.active_cs == nullptr)
 		{
-			if (commandlist.active_cs == nullptr)
+			commandlist.binder.dirty |= DescriptorBinder::DIRTY_ALL;
+		}
+		else
+		{
+			auto internal_state = to_internal(cs);
+			auto active_internal = to_internal(commandlist.active_cs);
+			if (internal_state->binding_hash != active_internal->binding_hash)
 			{
 				commandlist.binder.dirty |= DescriptorBinder::DIRTY_ALL;
 			}
-			else
+		}
+
+		commandlist.active_cs = cs;
+		auto internal_state = to_internal(cs);
+
+		if (cs->stage == ShaderStage::CS)
+		{
+			vkCmdBindPipeline(commandlist.GetCommandBuffer(), VK_PIPELINE_BIND_POINT_COMPUTE, internal_state->pipeline_cs);
+
+			if (!internal_state->bindlessSets.empty())
 			{
-				auto internal_state = to_internal(cs);
-				auto active_internal = to_internal(commandlist.active_cs);
-				if (internal_state->binding_hash != active_internal->binding_hash)
-				{
-					commandlist.binder.dirty |= DescriptorBinder::DIRTY_ALL;
-				}
+				vkCmdBindDescriptorSets(
+					commandlist.GetCommandBuffer(),
+					VK_PIPELINE_BIND_POINT_COMPUTE,
+					internal_state->pipelineLayout_cs,
+					internal_state->bindlessFirstSet,
+					(uint32_t)internal_state->bindlessSets.size(),
+					internal_state->bindlessSets.data(),
+					0,
+					nullptr
+				);
 			}
-
-			commandlist.active_cs = cs;
-			auto internal_state = to_internal(cs);
-
-			if (cs->stage == ShaderStage::CS)
+		}
+		else if (cs->stage == ShaderStage::LIB)
+		{
+			if (!internal_state->bindlessSets.empty())
 			{
-				vkCmdBindPipeline(commandlist.GetCommandBuffer(), VK_PIPELINE_BIND_POINT_COMPUTE, internal_state->pipeline_cs);
-
-				if (!internal_state->bindlessSets.empty())
-				{
-					vkCmdBindDescriptorSets(
-						commandlist.GetCommandBuffer(),
-						VK_PIPELINE_BIND_POINT_COMPUTE,
-						internal_state->pipelineLayout_cs,
-						internal_state->bindlessFirstSet,
-						(uint32_t)internal_state->bindlessSets.size(),
-						internal_state->bindlessSets.data(),
-						0,
-						nullptr
-					);
-				}
-			}
-			else if (cs->stage == ShaderStage::LIB)
-			{
-				if (!internal_state->bindlessSets.empty())
-				{
-					vkCmdBindDescriptorSets(
-						commandlist.GetCommandBuffer(),
-						VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
-						internal_state->pipelineLayout_cs,
-						internal_state->bindlessFirstSet,
-						(uint32_t)internal_state->bindlessSets.size(),
-						internal_state->bindlessSets.data(),
-						0,
-						nullptr
-					);
-				}
+				vkCmdBindDescriptorSets(
+					commandlist.GetCommandBuffer(),
+					VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
+					internal_state->pipelineLayout_cs,
+					internal_state->bindlessFirstSet,
+					(uint32_t)internal_state->bindlessSets.size(),
+					internal_state->bindlessSets.data(),
+					0,
+					nullptr
+				);
 			}
 		}
 	}

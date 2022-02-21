@@ -104,14 +104,6 @@ namespace wi::scene
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 	};
 
-	struct PreviousFrameTransformComponent
-	{
-		// Non-serialized attributes:
-		XMFLOAT4X4 world_prev;
-
-		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
-	};
-
 	struct HierarchyComponent
 	{
 		wi::ecs::Entity parentID = wi::ecs::INVALID_ENTITY;
@@ -643,8 +635,8 @@ namespace wi::scene
 		float impostorSwapDistance;
 
 		// these will only be valid for a single frame:
-		int transform_index = -1;
-		int prev_transform_index = -1;
+		uint32_t mesh_index = ~0u;
+		XMFLOAT4X4 worldMatrix = wi::math::IDENTITY_MATRIX;
 
 		// occlusion result history bitfield (32 bit->32 frame history)
 		mutable uint32_t occlusionHistory = ~0u;
@@ -1239,7 +1231,6 @@ namespace wi::scene
 		wi::ecs::ComponentManager<NameComponent> names;
 		wi::ecs::ComponentManager<LayerComponent> layers;
 		wi::ecs::ComponentManager<TransformComponent> transforms;
-		wi::ecs::ComponentManager<PreviousFrameTransformComponent> prev_transforms;
 		wi::ecs::ComponentManager<HierarchyComponent> hierarchy;
 		wi::ecs::ComponentManager<MaterialComponent> materials;
 		wi::ecs::ComponentManager<MeshComponent> meshes;
@@ -1462,7 +1453,6 @@ namespace wi::scene
 
 		void Serialize(wi::Archive& archive);
 
-		void RunPreviousFrameTransformUpdateSystem(wi::jobsystem::context& ctx);
 		void RunAnimationUpdateSystem(wi::jobsystem::context& ctx);
 		void RunTransformUpdateSystem(wi::jobsystem::context& ctx);
 		void RunHierarchyUpdateSystem(wi::jobsystem::context& ctx);
