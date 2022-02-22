@@ -52,9 +52,6 @@ namespace wi::input::sdlinput
 
     void Update()
     {
-        auto saved_x = mouse.position.x;
-        auto saved_y = mouse.position.y;
-
         // update keyboard and mouse to the latest value (in case of other input systems I suppose)
 //        keyboard = wi::input::KeyboardState();
 //        mouse = wi::input::MouseState();
@@ -180,8 +177,10 @@ namespace wi::input::sdlinput
         uint32_t mouse_buttons_state = SDL_GetMouseState(&x, &y);
         mouse.position.x = x;
         mouse.position.y = y;
-        mouse.delta_position.x = x - saved_x;
-        mouse.delta_position.y = y - saved_y;
+        int xVel, yVel;
+        SDL_GetRelativeMouseState(&xVel, &yVel);
+        mouse.delta_position.x = xVel;
+        mouse.delta_position.y = yVel;
         mouse.left_button_press = mouse_buttons_state & SDL_BUTTON_LMASK;
         mouse.right_button_press = mouse_buttons_state & SDL_BUTTON_RMASK;
         mouse.middle_button_press = mouse_buttons_state & SDL_BUTTON_MMASK;
