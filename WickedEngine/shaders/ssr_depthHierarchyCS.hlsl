@@ -1,5 +1,5 @@
 #include "globals.hlsli"
-#include "ShaderInterop_PostProcess.h"
+#include "ShaderInterop_Postprocess.h"
 
 PUSHCONSTANT(postprocess, PostProcess);
 
