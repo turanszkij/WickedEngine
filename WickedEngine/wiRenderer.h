@@ -489,7 +489,6 @@ namespace wi::renderer
 	void CreateSSRResources(SSRResources& res, XMUINT2 resolution);
 	void Postprocess_SSR(
 		const SSRResources& res,
-		const wi::graphics::Texture& depthBuffer_Main,
 		const wi::graphics::Texture& input,
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd

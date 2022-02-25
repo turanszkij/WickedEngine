@@ -9873,7 +9873,6 @@ void CreateSSRResources(SSRResources& res, XMUINT2 resolution)
 }
 void Postprocess_SSR(
 	const SSRResources& res,
-	const Texture& depthBuffer_Main,
 	const Texture& input,
 	const Texture& output,
 	CommandList cmd
@@ -10041,7 +10040,6 @@ void Postprocess_SSR(
 		TextureDesc hierarchyDesc = res.texture_depth_hierarchy.GetDesc();
 
 		{
-			device->BindResource(&depthBuffer_Main, 0, cmd);
 			device->BindUAV(&res.texture_depth_hierarchy, 0, cmd, 0);
 
 			{
@@ -10054,8 +10052,6 @@ void Postprocess_SSR(
 			postprocess.params0.x = (float)hierarchyDesc.width;
 			postprocess.params0.y = (float)hierarchyDesc.height;
 			postprocess.params0.z = 1.0f;
-			postprocess.params1.x = (float)depthBuffer_Main.GetDesc().width;
-			postprocess.params1.y = (float)depthBuffer_Main.GetDesc().height;
 			device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 			device->Dispatch(

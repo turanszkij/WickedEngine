@@ -14,9 +14,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	{
 		if (postprocess.params0.z == 1)
 		{
-			float2 uv = (DTid.xy + 0.5) / postprocess.params1.xy * 2; // params1 : native depth buffer size times two
+			uint2 dim;
+			texture_depth.GetDimensions(dim.x, dim.y);
 
-			float4 depths = input.GatherRed(sampler_point_clamp, uv);
+			float2 uv = (DTid.xy + 0.5) / dim * 2; // Account for half-res
+
+			float4 depths = texture_depth.GatherRed(sampler_point_clamp, uv);
 
 			float depthMax = max(max(depths.x, depths.y), max(depths.z, depths.w));
 			float depthMin = min(min(depths.x, depths.y), min(depths.z, depths.w));

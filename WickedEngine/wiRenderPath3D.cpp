@@ -1188,7 +1188,6 @@ void RenderPath3D::RenderSSR(CommandList cmd) const
 	{
 		wi::renderer::Postprocess_SSR(
 			ssrResources,
-			depthBuffer_Main,
 			rtSceneCopy,
 			rtSSR, 
 			cmd
