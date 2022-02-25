@@ -117,7 +117,7 @@ int main(int argc, char* argv[])
 		"ssr_depthHierarchyCS.hlsl"									,
 		"ssr_resolveCS.hlsl"										,
 		"ssr_temporalCS.hlsl"										,
-		"ssr_bilateralS.hlsl"										,
+		"ssr_bilateralCS.hlsl"										,
 		"ssr_raytraceCS.hlsl"										,
 		"ssr_raytraceCS_cheap.hlsl"									,
 		"ssr_raytraceCS_earlyexit.hlsl"								,
