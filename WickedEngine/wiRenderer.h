@@ -444,8 +444,17 @@ namespace wi::renderer
 	struct RTReflectionResources
 	{
 		mutable int frame = 0;
-		wi::graphics::Texture temporal[2];
-		wi::graphics::Texture rayLengths;
+		wi::graphics::Texture texture_surface_normal;
+		wi::graphics::Texture texture_surface_roughness;
+		wi::graphics::Texture texture_surface_environment;
+		wi::graphics::Texture texture_rayIndirectSpecular;
+		wi::graphics::Texture texture_rayDirectionPDF;
+		wi::graphics::Texture texture_rayLengths;
+		wi::graphics::Texture texture_resolve;
+		wi::graphics::Texture texture_resolve_variance;
+		wi::graphics::Texture texture_resolve_reprojectionDepth;
+		wi::graphics::Texture texture_temporal[2];
+		wi::graphics::Texture texture_temporal_variance[2];
 	};
 	void CreateRTReflectionResources(RTReflectionResources& res, XMUINT2 resolution);
 	void Postprocess_RTReflection(
@@ -459,13 +468,28 @@ namespace wi::renderer
 	struct SSRResources
 	{
 		mutable int frame = 0;
-		wi::graphics::Texture texture_raytrace;
-		wi::graphics::Texture rayLengths;
+		wi::graphics::Texture texture_surface_normal;
+		wi::graphics::Texture texture_surface_roughness;
+		wi::graphics::Texture texture_tile_minmax_roughness_horizontal;
+		wi::graphics::Texture texture_tile_minmax_roughness;
+		wi::graphics::Texture texture_depth_hierarchy;
+		wi::graphics::Texture texture_rayIndirectSpecular;
+		wi::graphics::Texture texture_rayDirectionPDF;
+		wi::graphics::Texture texture_rayLengths;
+		wi::graphics::Texture texture_resolve;
+		wi::graphics::Texture texture_resolve_variance;
+		wi::graphics::Texture texture_resolve_reprojectionDepth;
 		wi::graphics::Texture texture_temporal[2];
+		wi::graphics::Texture texture_temporal_variance[2];
+		wi::graphics::GPUBuffer buffer_tile_tracing_statistics;
+		wi::graphics::GPUBuffer buffer_tiles_tracing_earlyexit;
+		wi::graphics::GPUBuffer buffer_tiles_tracing_cheap;
+		wi::graphics::GPUBuffer buffer_tiles_tracing_expensive;
 	};
 	void CreateSSRResources(SSRResources& res, XMUINT2 resolution);
 	void Postprocess_SSR(
 		const SSRResources& res,
+		const wi::graphics::Texture& depthBuffer_Main,
 		const wi::graphics::Texture& input,
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd

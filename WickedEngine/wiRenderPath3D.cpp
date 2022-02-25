@@ -1188,6 +1188,7 @@ void RenderPath3D::RenderSSR(CommandList cmd) const
 	{
 		wi::renderer::Postprocess_SSR(
 			ssrResources,
+			depthBuffer_Main,
 			rtSceneCopy,
 			rtSSR, 
 			cmd
@@ -1599,8 +1600,8 @@ void RenderPath3D::setSSREnabled(bool value)
 		TextureDesc desc;
 		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 		desc.format = Format::R16G16B16A16_FLOAT;
-		desc.width = internalResolution.x / 2;
-		desc.height = internalResolution.y / 2;
+		desc.width = internalResolution.x;
+		desc.height = internalResolution.y;
 		desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 		device->CreateTexture(&desc, nullptr, &rtSSR);
 		device->SetName(&rtSSR, "rtSSR");
@@ -1625,8 +1626,8 @@ void RenderPath3D::setRaytracedReflectionsEnabled(bool value)
 		TextureDesc desc;
 		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 		desc.format = Format::R11G11B10_FLOAT;
-		desc.width = internalResolution.x / 2;
-		desc.height = internalResolution.y / 2;
+		desc.width = internalResolution.x;
+		desc.height = internalResolution.y;
 		device->CreateTexture(&desc, nullptr, &rtSSR);
 		device->SetName(&rtSSR, "rtSSR");
 

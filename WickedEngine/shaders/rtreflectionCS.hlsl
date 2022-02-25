@@ -11,8 +11,13 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-RWTexture2D<float4> output : register(u0);
-RWTexture2D<float> output_rayLengths : register(u1);
+Texture2D<float3> texture_surface_normal : register(t0);
+Texture2D<float> texture_surface_roughness : register(t1);
+Texture2D<float3> texture_surface_environment : register(t2);
+
+RWTexture2D<float4> output_rayIndirectSpecular : register(u0);
+RWTexture2D<float4> output_rayDirectionPDF : register(u1);
+RWTexture2D<float> output_rayLengths : register(u2);
 
 struct RayPayload
 {
@@ -23,34 +28,30 @@ struct RayPayload
 void main(uint2 DTid : SV_DispatchThreadID)
 {
 	const float2 uv = ((float2)DTid.xy + 0.5) * postprocess.resolution_rcp;
-	const float depth = texture_depth.SampleLevel(sampler_linear_clamp, uv, 0);
-	if (depth == 0)
-		return;
 
-	const float3 P = reconstruct_position(uv, depth);
-	const float3 V = normalize(GetCamera().position - P);
+	const uint downsampleFactor = 2;
 
-	PrimitiveID prim;
-	prim.unpack(texture_gbuffer0[DTid.xy * 2]);
+	// This is necessary for accurate upscaling. This is so we don't reuse the same half-res pixels
+	uint2 screenJitter = floor(blue_noise(uint2(0, 0)).xy * downsampleFactor);
+	uint2 jitterPixel = screenJitter + DTid.xy * downsampleFactor;
+	float2 jitterUV = (screenJitter + DTid.xy + 0.5f) * postprocess.resolution_rcp;
 
-	//output[DTid] = float4(saturate(P * 0.1), 1);
-	//return;
+	const float depth = texture_depth.SampleLevel(sampler_linear_clamp, jitterUV, 0);
+	const float roughness = texture_surface_roughness[jitterPixel];
 
-	Surface surface;
-	surface.init();
-	if (!surface.load(prim, P))
+	if (!NeedReflection(roughness, depth))
 	{
-		return;
-	}
-	if (surface.roughness > 0.6)
-	{
-		output[DTid.xy] = float4(max(0, EnvironmentReflection_Global(surface)), 1);
+		float3 environmentReflection = texture_surface_environment[DTid.xy * downsampleFactor];
+
+		output_rayIndirectSpecular[DTid.xy] = float4(environmentReflection, 1);
+		output_rayDirectionPDF[DTid.xy] = 0.0;
 		output_rayLengths[DTid.xy] = FLT_MAX;
 		return;
 	}
 
-	float3 N = surface.N;
-	float roughness = surface.roughness;
+	const float3 N = texture_surface_normal[jitterPixel];
+	const float3 P = reconstruct_position(jitterUV, depth);
+	const float3 V = normalize(GetCamera().position - P);
 
 	// The ray direction selection part is the same as in from ssr_raytraceCS.hlsl:
 	float4 H;
@@ -217,6 +218,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
 		payload.data.w = q.CommittedRayT();
 	}
 
-	output[DTid.xy] = float4(payload.data.xyz, 1);
+	output_rayIndirectSpecular[DTid.xy] = float4(payload.data.xyz, 1);
+	output_rayDirectionPDF[DTid.xy] = float4(L, H.w);
 	output_rayLengths[DTid.xy] = payload.data.w;
 }
