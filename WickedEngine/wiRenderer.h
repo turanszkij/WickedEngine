@@ -455,6 +455,7 @@ namespace wi::renderer
 		wi::graphics::Texture texture_resolve_reprojectionDepth;
 		wi::graphics::Texture texture_temporal[2];
 		wi::graphics::Texture texture_temporal_variance[2];
+		wi::graphics::Texture texture_bilateral_temp;
 	};
 	void CreateRTReflectionResources(RTReflectionResources& res, XMUINT2 resolution);
 	void Postprocess_RTReflection(
@@ -481,6 +482,7 @@ namespace wi::renderer
 		wi::graphics::Texture texture_resolve_reprojectionDepth;
 		wi::graphics::Texture texture_temporal[2];
 		wi::graphics::Texture texture_temporal_variance[2];
+		wi::graphics::Texture texture_bilateral_temp;
 		wi::graphics::GPUBuffer buffer_tile_tracing_statistics;
 		wi::graphics::GPUBuffer buffer_tiles_tracing_earlyexit;
 		wi::graphics::GPUBuffer buffer_tiles_tracing_cheap;
