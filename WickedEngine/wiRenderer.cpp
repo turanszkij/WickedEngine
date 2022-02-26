@@ -9393,7 +9393,7 @@ void CreateRTReflectionResources(RTReflectionResources& res, XMUINT2 resolution)
 	surface_desc.type = TextureDesc::Type::TEXTURE_2D;
 	surface_desc.width = resolution.x;
 	surface_desc.height = resolution.y;
-	surface_desc.format = Format::R16G16B16A16_FLOAT;
+	surface_desc.format = Format::R8G8B8A8_SNORM;
 	surface_desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 	device->CreateTexture(&surface_desc, nullptr, &res.texture_surface_normal);
 	surface_desc.format = Format::R8_UNORM;
@@ -9802,7 +9802,7 @@ void CreateSSRResources(SSRResources& res, XMUINT2 resolution)
 	surface_desc.type = TextureDesc::Type::TEXTURE_2D;
 	surface_desc.width = resolution.x;
 	surface_desc.height = resolution.y;
-	surface_desc.format = Format::R10G10B10A2_UNORM;
+	surface_desc.format = Format::R8G8B8A8_SNORM;
 	surface_desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 	device->CreateTexture(&surface_desc, nullptr, &res.texture_surface_normal);
 	surface_desc.format = Format::R8_UNORM;
