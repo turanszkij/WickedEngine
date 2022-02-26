@@ -18,6 +18,13 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float2 uv = (DTid.xy + 0.5f) / dim;
 
 	float depth = texture_depth[DTid.xy];
+	if (depth == 0.0)
+	{
+		output_surface_normal[DTid.xy] = 0.0;
+		output_surface_roughness[DTid.xy] = 0.0;
+		output_surface_environment[DTid.xy] = 0.0;
+		return;
+	}
 
 	uint2 primitiveID = texture_gbuffer0[DTid.xy]; // Map to resolution
 
