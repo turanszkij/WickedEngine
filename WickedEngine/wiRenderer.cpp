@@ -9500,7 +9500,6 @@ void Postprocess_RTReflection(
 	rtreflection_range = range;
 	rtreflection_frame = (float)res.frame;
 	std::memcpy(&postprocess.params1.x, &instanceInclusionMask, sizeof(instanceInclusionMask));
-	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	{
 		//device->EventBegin("RTReflection Raytrace pass", cmd);
@@ -9510,6 +9509,8 @@ void Postprocess_RTReflection(
 #else
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTREFLECTION], cmd);
 #endif // RTREFLECTION_WITH_RAYTRACING_PIPELINE
+
+		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 		const GPUResource* resarray[] = {
 			&res.texture_surface_normal,
