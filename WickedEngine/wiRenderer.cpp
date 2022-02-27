@@ -9393,7 +9393,7 @@ void CreateRTReflectionResources(RTReflectionResources& res, XMUINT2 resolution)
 	surface_desc.type = TextureDesc::Type::TEXTURE_2D;
 	surface_desc.width = resolution.x;
 	surface_desc.height = resolution.y;
-	surface_desc.format = Format::R16G16B16A16_FLOAT;
+	surface_desc.format = Format::R8G8B8A8_SNORM;
 	surface_desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 	device->CreateTexture(&surface_desc, nullptr, &res.texture_surface_normal);
 	surface_desc.format = Format::R8_UNORM;
@@ -9500,7 +9500,6 @@ void Postprocess_RTReflection(
 	rtreflection_range = range;
 	rtreflection_frame = (float)res.frame;
 	std::memcpy(&postprocess.params1.x, &instanceInclusionMask, sizeof(instanceInclusionMask));
-	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 	{
 		//device->EventBegin("RTReflection Raytrace pass", cmd);
@@ -9510,6 +9509,8 @@ void Postprocess_RTReflection(
 #else
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_RTREFLECTION], cmd);
 #endif // RTREFLECTION_WITH_RAYTRACING_PIPELINE
+
+		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
 		const GPUResource* resarray[] = {
 			&res.texture_surface_normal,
@@ -9801,7 +9802,7 @@ void CreateSSRResources(SSRResources& res, XMUINT2 resolution)
 	surface_desc.type = TextureDesc::Type::TEXTURE_2D;
 	surface_desc.width = resolution.x;
 	surface_desc.height = resolution.y;
-	surface_desc.format = Format::R10G10B10A2_UNORM;
+	surface_desc.format = Format::R8G8B8A8_SNORM;
 	surface_desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 	device->CreateTexture(&surface_desc, nullptr, &res.texture_surface_normal);
 	surface_desc.format = Format::R8_UNORM;
