@@ -5,221 +5,170 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-Texture2D<float4> texture_raytrace : register(t0);
-Texture2D<float4> texture_main : register(t1);
+Texture2D<float3> texture_surface_normal : register(t0);
+Texture2D<float> texture_surface_roughness : register(t1);
+Texture2D<float4> texture_rayIndirectSpecular : register(t2);
+Texture2D<float4> texture_rayDirectionPDF : register(t3);
+Texture2D<float> texture_rayLength : register(t4);
 
 RWTexture2D<float4> texture_resolve : register(u0);
+RWTexture2D<float> texture_resolve_variance : register(u1);
+RWTexture2D<float> texture_reprojectionDepth : register(u2);
 
+static const float2 resolveSpatialSizeMinMax = float2(2.0, 8.0); // Good to have a min size as downsample scale (2x in this case)
+static const uint resolveSpatialReconstructionCount = 4.0f;
 
-static const float2 spatialReuseOffsets3x3[9] =
+float GetWeight(int2 neighborTracingCoord, float3 V, float3 N, float roughness, float NdotV)
 {
-	float2(0.0, 0.0),
-	float2(0.0, 1.0),
-	float2(1.0, -1.0),
-	float2(-1.0, -1.0),
-	float2(-1.0, 0.0),
-	float2(0.0, -1.0),
-	float2(1.0, 0.0),
-	float2(-1.0, 1.0),
-	float2(1.0, 1.0)
-};
+	// Sample local pixel information
+	float4 rayDirectionPDF = texture_rayDirectionPDF[neighborTracingCoord];
+	float3 rayDirection = rayDirectionPDF.rgb;
+	float PDF = rayDirectionPDF.a;
 
-// Not in use, but could perhaps be useful in the future.
-/*float2 CalculateTailDirection(float3 viewNormal)
-{
-	float3 upVector = abs(viewNormal.z) < 0.999 ? float3(0.0, 0.0, 1.0) : float3(1.0, 0.0, 0.0);
-	float3 T = normalize(cross(upVector, viewNormal));
+	float3 sampleL = normalize(rayDirection);
+	float3 sampleH = normalize(sampleL + V);
 
-	float tailDirection = T.x * -viewNormal.y;
-    
-	return lerp(float2(1.0, 0.1), float2(0.1, 1.0), tailDirection);
-}*/
+	float sampleNdotH = saturate(dot(N, sampleH));
+	float sampleNdotL = saturate(dot(N, sampleL));
 
-float CalculateEdgeFade(float2 hitPixel)
-{
-	float2 hitPixelNDC = hitPixel * 2.0 - 1.0;
-    
-    //float maxDimension = min(1.0, max(abs(hitPixelNDC.x), abs(hitPixelNDC.y)));
-    //float attenuation = 1.0 - max(0.0, maxDimension - blendScreenEdgeFade) / (1.0 - blendScreenEdgeFade);
+	float roughnessBRDF = roughness * roughness;
 
-	float2 vignette = saturate(abs(hitPixelNDC) * SSRBlendScreenEdgeFade - (SSRBlendScreenEdgeFade - 1.0f));
-	float attenuation = saturate(1.0 - dot(vignette, vignette));
-    
-	return attenuation;
+	float Vis = V_SmithGGXCorrelated(roughnessBRDF, NdotV, sampleNdotL);
+	float D = D_GGX(roughnessBRDF, sampleNdotH, sampleH);
+	float localBRDF = Vis * D * sampleNdotL;
+
+	float weight = localBRDF / max(PDF, 0.00001f);
+
+	return weight;
 }
 
-void GetSampleInfo(float2 velocity, float2 neighborUV, float2 uv, float3 P, float3 V, float3 N, float NdotV, float specularConeTangent, float roughness, out float4 sampleColor, out float weight)
+// Weighted incremental variance
+// https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
+void GetWeightedVariance(float4 sampleColor, float weight, float weightSum, inout float mean, inout float S)
 {
-    // Sample local pixel information
-	float4 raytraceSource = texture_raytrace.SampleLevel(sampler_point_clamp, neighborUV, 0);
-    
-	float2 hitPixel = raytraceSource.xy + velocity;
-	float hitDepth = raytraceSource.z;
-	float hitPDF = raytraceSource.w;
+	float luminance = Luminance(sampleColor.rgb);
+	float oldMean = mean;
+	mean += weight / weightSum * (luminance - oldMean);
+	S += weight * (luminance - oldMean) * (luminance - mean);
+}
 
-	float intersectionCircleRadius = specularConeTangent * length(hitPixel - uv);
-	float sourceMip = clamp(log2(intersectionCircleRadius * ssr_input_resolution_max), 0.0, ssr_input_maxmip) * SSRResolveConeMip;
-    
-	sampleColor.rgb = texture_main.SampleLevel(sampler_linear_clamp, hitPixel, sourceMip).rgb; // Scene color
-	sampleColor.a = CalculateEdgeFade(raytraceSource.xy); // Opacity - Since this is used for masking, we can ignore velocity 
-    
-    // BRDF Weight
-    
-	float3 hitViewPosition = reconstruct_position(hitPixel, hitDepth, GetCamera().inverse_projection);
-    
-	float3 L = normalize(hitViewPosition - P);
-	float3 H = normalize(L + V);
+// modified from 'globals.hlsli' with random shift
+//	idx	: iteration index
+//	num	: number of iterations in total
+//  random : 16 bit random sequence
+inline float2 hammersley2d_random(uint idx, uint num, uint2 random)
+{
+	uint bits = idx;
+	bits = (bits << 16u) | (bits >> 16u);
+	bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+	bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+	bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+	bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+	const float radicalInverse_VdC = float(bits ^ random.y) * 2.3283064365386963e-10; // / 0x100000000
 
-	float NdotH = saturate(dot(N, H));
-	float NdotL = saturate(dot(N, L));
-    
-	Surface surface;
-	surface.init();
-	surface.roughnessBRDF = roughness * roughness;
-	surface.NdotV = NdotV;
-    
-	SurfaceToLight surfaceToLight;
-	surfaceToLight.NdotH = NdotH;
-	surfaceToLight.NdotL = NdotL;
-    
-    // Calculate BRDF where Fresnel = 1
-	float Vis = V_SmithGGXCorrelated(surface.roughnessBRDF, surface.NdotV, surfaceToLight.NdotL);
-	float D = D_GGX(surface.roughnessBRDF, surfaceToLight.NdotH, surfaceToLight.H);
-	float specularLight = Vis * D * PI / 4.0;
+	// ... & 0xffff) / (1 << 16): limit to 65536 then range 0 - 1
+	return float2(frac(float(idx) / float(num) + float(random.x & 0xffff) / (1 << 16)), radicalInverse_VdC); // frac since we only want range [0; 1[
+}
 
-	weight = specularLight / max(hitPDF, 0.00001f);
+uint baseHash(uint3 p)
+{
+	p = 1103515245u * ((p.xyz >> 1u) ^ (p.yzx));
+	uint h32 = 1103515245u * ((p.x ^ p.z) ^ (p.y >> 3u));
+	return h32 ^ (h32 >> 16);
+}
+
+// Great quality hash with 3D input
+// based on: https://www.shadertoy.com/view/Xt3cDn
+uint3 hash33(uint3 x)
+{
+	uint n = baseHash(x);
+	return uint3(n, n * 16807u, n * 48271u); //see: http://random.mat.sbg.ac.at/results/karl/server/node4.html
+}
+
+// Computes post-projection depth from linear depth
+float getInverseLinearDepth(float lin, float near, float far)
+{
+	float z_n = ((lin - 2 * far) * near + far * lin) / (lin * near - far * lin);
+	float z = (z_n + 1) / 2;
+	return z;
 }
 
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	const float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
-	const float depth = texture_depth.SampleLevel(sampler_linear_clamp, uv, 0);
-	if (depth == 0.0f)
-		return;
+	const uint2 tracingCoord = DTid.xy / 2;
 
-    // Everthing in view space:
-	const float3 P = reconstruct_position(uv, depth, GetCamera().inverse_projection);
-	const float3 V = normalize(-P);
+	const float depth = texture_depth[DTid.xy];
+	const float roughness = texture_surface_roughness[DTid.xy];
 
-	PrimitiveID prim;
-	prim.unpack(texture_gbuffer0[DTid.xy * 2]);
-
-	Surface surface;
-	surface.init();
-	if (!surface.load(prim, P))
+	if (!NeedReflection(roughness, depth))
 	{
+		texture_resolve[DTid.xy] = texture_rayIndirectSpecular[tracingCoord];
+		texture_resolve_variance[DTid.xy] = 0.0;
+		texture_reprojectionDepth[DTid.xy] = 0.0;
 		return;
 	}
 
-	const float3 N = normalize(mul((float3x3)GetCamera().view, surface.N));
-	const float roughness = GetRoughness(surface.roughness);
-
+	// Everthing in world space:
+	const float3 P = reconstruct_position(uv, depth);
+	const float3 N = texture_surface_normal[DTid.xy];
+	const float3 V = normalize(GetCamera().position - P);
 	const float NdotV = saturate(dot(N, V));
 
-	const float2 velocity = texture_gbuffer1.SampleLevel(sampler_point_clamp, uv, 0).xy;
-	const float2 prevUV = uv + velocity;
+	const float resolveSpatialScale = saturate(roughness * 5.0); // roughness 0.2 is destination
+	const float2 resolveSpatialSize = lerp(resolveSpatialSizeMinMax.x, resolveSpatialSizeMinMax.y, resolveSpatialScale);
 
-    // Early out, useless if the roughness is out of range
-	float roughnessFade = GetRoughnessFade(roughness, SSRMaxRoughness);
-	if (roughnessFade <= 0.0f)
-	{
-		texture_resolve[DTid.xy] = 0;
-		return;
-	}
-	
-	// Since we aren't importance sampling in this range, no need to resolve
-	if (roughness < 0.05f)
-	{
-		float4 raytraceSource = texture_raytrace.SampleLevel(sampler_point_clamp, uv, 0);
-		float2 hitPixel = raytraceSource.xy + velocity;
-		
-		float4 sampleColor;
-		sampleColor.rgb = texture_main.SampleLevel(sampler_linear_clamp, hitPixel, 0).rgb; // Scene color
-		sampleColor.a = CalculateEdgeFade(raytraceSource.xy); // Opacity
-		
-		texture_resolve[DTid.xy] = sampleColor;
-		return;
-	}
-	
-    
-    // Cone mip sampling
-	float specularConeTangent = lerp(0.0, roughness * (1.0 - GGX_IMPORTANCE_SAMPLE_BIAS), NdotV * sqrt(roughness));
-	specularConeTangent *= lerp(saturate(NdotV * 2), 1.0f, sqrt(roughness));
-    
-    
-#if 1 // EAW spatial resolve
-    
-    
 	float4 result = 0.0f;
 	float weightSum = 0.0f;
-    
-#define BLOCK_SAMPLE_RADIUS 1
-    
-    [unroll]
-	for (int y = -BLOCK_SAMPLE_RADIUS; y <= BLOCK_SAMPLE_RADIUS; y++)
+
+	float mean = 0.0f;
+	float S = 0.0f;
+
+	float closestRayLength = 0.0f;
+
+	const uint sampleCount = resolveSpatialReconstructionCount;
+	const uint2 random = hash33(uint3(DTid.xy, GetFrame().frame_count)).xy;
+
+	for (int i = 0; i < sampleCount; i++)
 	{
-        [loop]
-		for (int x = -BLOCK_SAMPLE_RADIUS; x <= BLOCK_SAMPLE_RADIUS; x++)
+		float2 offset = (hammersley2d_random(i, sampleCount, random) - 0.5) * resolveSpatialSize;
+
+		int2 neighborTracingCoord = tracingCoord + offset;
+		int2 neighborCoord = DTid.xy + offset;
+
+		float neighborDepth = texture_depth[neighborCoord];
+		if (neighborDepth > 0.0)
 		{
-			if (uint(abs(x) + abs(y)) % 2 == 0)
-				continue;
-			
-			float2 offsetUV = float2(x, y) * postprocess.resolution_rcp * SSRResolveSpatialSize;
-			float2 neighborUV = uv + offsetUV;
-            
-			float4 sampleColor;
-			float weight;
-			GetSampleInfo(velocity, neighborUV, uv, P, V, N, NdotV, specularConeTangent, roughness, sampleColor, weight);
-            
+			float weight = GetWeight(neighborTracingCoord, V, N, roughness, NdotV);
+
+			float4 sampleColor = texture_rayIndirectSpecular[neighborTracingCoord];
 			sampleColor.rgb *= rcp(1 + Luminance(sampleColor.rgb));
-            
+
 			result += sampleColor * weight;
 			weightSum += weight;
+
+			GetWeightedVariance(sampleColor, weight, weightSum, mean, S);
+
+			if (weight > 0.001)
+			{
+				float neighborRayLength = texture_rayLength[neighborTracingCoord];
+				closestRayLength = max(closestRayLength, neighborRayLength);
+			}
 		}
 	}
-	result /= weightSum;
-    
-	result.rgb *= rcp(1 - Luminance(result.rgb));
-    
-#undef BLOCK_SAMPLE_RADIUS
-	
-    
-#else // Frostbite presentation, spatial resolve
-    
 
-	float4 result = 0.0f;
-	float weightSum = 0.0f;
-    
-#define NUM_RESOLVE 4 // Four samples to achieve effective ray reuse patterns
-	
-    [unroll]
-	for (uint i = 0; i < NUM_RESOLVE; i++)
-	{
-		float2 offsetUV = spatialReuseOffsets3x3[i] * postprocess.resolution_rcp * SSRResolveSpatialSize;
-		float2 neighborUV = uv + offsetUV;
-        
-		float4 sampleColor;
-		float weight;
-		GetSampleInfo(velocity, neighborUV, uv, P, V, N, NdotV, specularConeTangent, roughness, sampleColor, weight);
-        
-		sampleColor.rgb *= rcp( 1 + Luminance(sampleColor.rgb) );
-		
-		result += sampleColor * weight;
-		weightSum += weight;
-	}
 	result /= weightSum;
-    
-	result.rgb *= rcp( 1 - Luminance(result.rgb) );
-	
-#undef NUM_RESOLVE
-    
-    
-#endif
-    
-    
-	result *= roughnessFade;
-	result *= SSRIntensity;
-    
+	result.rgb *= rcp(1 - Luminance(result.rgb));
+
+	// Population variance
+	float resolveVariance = S / weightSum;
+
+	// Convert to post-projection depth so we can construct dual source reprojection buffers later
+	const float lineardepth = texture_lineardepth[DTid.xy] * GetCamera().z_far;
+	float reprojectionDepth = getInverseLinearDepth(lineardepth + closestRayLength, GetCamera().z_near, GetCamera().z_far);
+
 	texture_resolve[DTid.xy] = max(result, 0.00001f);
+	texture_resolve_variance[DTid.xy] = resolveVariance;
+	texture_reprojectionDepth[DTid.xy] = reprojectionDepth;
 }

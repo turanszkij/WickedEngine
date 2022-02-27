@@ -4,177 +4,236 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-Texture2D<float4> resolve_current : register(t0);
-Texture2D<float4> resolve_history : register(t1);
-Texture2D<float> rayLengths : register(t3);
+Texture2D<float> texture_surface_roughness : register(t0);
+Texture2D<float4> texture_color_current : register(t1);
+Texture2D<float4> texture_color_history : register(t2);
+Texture2D<float> texture_variance_current : register(t3);
+Texture2D<float> texture_variance_history : register(t4);
+Texture2D<float> texture_reprojectionDepth : register(t5);
 
-RWTexture2D<float4> output : register(u0);
+RWTexture2D<float4> output_color : register(u0);
+RWTexture2D<float> output_variance : register(u1);
 
-static const float temporalResponseMin = 0.75;
-static const float temporalResponseMax = 0.95f;
-static const float temporalScale = 3.0;
-static const float temporalExposure = 10.0f;
+static const float temporalResponse = 0.95;
+static const float temporalScale = 2.0;
+static const float disocclusionDepthWeight = 1.0f;
+static const float disocclusionThreshold = 0.9f;
+static const float varianceTemporalResponse = 0.9f;
 
-inline float Luma4(float3 color)
+float2 CalculateReprojectionBuffer(float2 uv, float depth)
 {
-    return (color.g * 2) + (color.r + color.b);
+	float x = uv.x * 2 - 1;
+	float y = (1 - uv.y) * 2 - 1;
+	float2 screenPosition = float2(x, y);
+
+	float4 thisClip = float4(screenPosition, depth, 1);
+
+	float4 prevClip = mul(GetCamera().inverse_view_projection, thisClip);
+	prevClip = mul(GetCamera().previous_view_projection, prevClip);
+
+	float2 prevScreen = prevClip.xy / prevClip.w;
+
+	float2 screenVelocity = screenPosition - prevScreen;
+	float2 prevScreenPosition = screenPosition - screenVelocity;
+
+	return prevScreenPosition * float2(0.5, -0.5) + 0.5;
 }
 
-inline float HdrWeight4(float3 color, float exposure)
+float GetDisocclusion(float depth, float depthHistory)
 {
-    return rcp(Luma4(color) * exposure + 4.0f);
+	float lineardepthCurrent = compute_lineardepth(depth);
+	float lineardepthHistory = compute_lineardepth(depthHistory);
+
+	float disocclusion = 1.0
+		//* exp(-abs(1.0 - max(0.0, dot(normal, normalHistory))) * disocclusionNormalWeight) // Potential normal check if necessary
+		* exp(-abs(lineardepthHistory - lineardepthCurrent) / lineardepthCurrent * disocclusionDepthWeight);
+
+	return disocclusion;
 }
 
-float4 clip_aabb(float3 aabb_min, float3 aabb_max, float4 p, float4 q)
+float4 SamplePreviousColor(float2 prevUV, float2 size, float depth, out float disocclusion, out float2 prevUVSample)
 {
-    float3 p_clip = 0.5 * (aabb_max + aabb_min);
-    float3 e_clip = 0.5 * (aabb_max - aabb_min) + 0.00000001f;
+	prevUVSample = prevUV;
 
-    float4 v_clip = q - float4(p_clip, p.w);
-    float3 v_unit = v_clip.xyz / e_clip;
-    float3 a_unit = abs(v_unit);
-    float ma_unit = max(a_unit.x, max(a_unit.y, a_unit.z));
+	float4 previousColor = texture_color_history.SampleLevel(sampler_linear_clamp, prevUVSample, 0);
+	float previousDepth = texture_depth_history.SampleLevel(sampler_point_clamp, prevUVSample, 0);
 
-    if (ma_unit > 1.0)
-        return float4(p_clip, p.w) + v_clip / ma_unit;
-    else
-        return q; // point inside aabb
-}
+	disocclusion = GetDisocclusion(depth, previousDepth);
+	if (disocclusion > disocclusionThreshold) // Good enough
+	{
+		return previousColor;
+	}
 
-inline void ResolverAABB(Texture2D<float4> currentColor, SamplerState currentSampler, float sharpness, float exposureScale, float AABBScale, float2 uv, float2 texelSize, inout float4 currentMin, inout float4 currentMax, inout float4 currentAverage, inout float4 currentOutput)
-{
-    const int2 SampleOffset[9] = { int2(-1.0, -1.0), int2(0.0, -1.0), int2(1.0, -1.0), int2(-1.0, 0.0), int2(0.0, 0.0), int2(1.0, 0.0), int2(-1.0, 1.0), int2(0.0, 1.0), int2(1.0, 1.0) };
-    
-    // Modulate Luma HDR
-    
-    float4 sampleColors[9];
-    [unroll]
-    for (uint i = 0; i < 9; i++)
-    {
-        sampleColors[i] = currentColor.SampleLevel(currentSampler, uv + (SampleOffset[i] / texelSize), 0.0f);
-    }
+	// Try to find the closest sample in the vicinity if we are not convinced of a disocclusion
+	if (disocclusion < disocclusionThreshold)
+	{
+		float2 closestUV = prevUVSample;
+		float2 dudv = rcp(size);
 
-    float sampleWeights[9];
-    [unroll]
-    for (uint j = 0; j < 9; j++)
-    {
-        sampleWeights[j] = HdrWeight4(sampleColors[j].rgb, exposureScale);
-    }
+		const int searchRadius = 1;
+		for (int y = -searchRadius; y <= searchRadius; y++)
+		{
+			for (int x = -searchRadius; x <= searchRadius; x++)
+			{
+				int2 offset = int2(x, y);
+				float2 sampleUV = prevUVSample + offset * dudv;
 
-    float totalWeight = 0;
-    [unroll]
-    for (uint k = 0; k < 9; k++)
-    {
-        totalWeight += sampleWeights[k];
-    }
-    sampleColors[4] = (sampleColors[0] * sampleWeights[0] + sampleColors[1] * sampleWeights[1] + sampleColors[2] * sampleWeights[2] + sampleColors[3] * sampleWeights[3] + sampleColors[4] * sampleWeights[4] +
-                       sampleColors[5] * sampleWeights[5] + sampleColors[6] * sampleWeights[6] + sampleColors[7] * sampleWeights[7] + sampleColors[8] * sampleWeights[8]) / totalWeight;
+				float samplePreviousDepth = texture_depth_history.SampleLevel(sampler_point_clamp, sampleUV, 0);
 
-    // Variance Clipping (AABB)
-    
-    float4 m1 = 0.0;
-    float4 m2 = 0.0;
-    [unroll]
-    for (uint x = 0; x < 9; x++)
-    {
-        m1 += sampleColors[x];
-        m2 += sampleColors[x] * sampleColors[x];
-    }
+				float weight = GetDisocclusion(depth, samplePreviousDepth);
+				if (weight > disocclusion)
+				{
+					disocclusion = weight;
+					closestUV = sampleUV;
+					prevUVSample = closestUV;
+				}
+			}
+		}
 
-    float4 mean = m1 / 9.0;
-    float4 stddev = sqrt((m2 / 9.0) - sqr(mean));
-        
-    currentMin = mean - AABBScale * stddev;
-    currentMax = mean + AABBScale * stddev;
+		previousColor = texture_color_history.SampleLevel(sampler_linear_clamp, prevUVSample, 0);
+	}
 
-    currentOutput = sampleColors[4];
-    currentMin = min(currentMin, currentOutput);
-    currentMax = max(currentMax, currentOutput);
-    currentAverage = mean;
+	// Bilinear interpolation on fallback - near edges
+	if (disocclusion < disocclusionThreshold)
+	{
+		float2 weight = frac(prevUVSample * size + 0.5);
+
+		// Bilinear weights
+		float weights[4] =
+		{
+			(1 - weight.x) * (1 - weight.y),
+			weight.x * (1 - weight.y),
+			(1 - weight.x) * weight.y,
+			weight.x * weight.y
+		};
+
+		float4 previousColorResult = 0;
+		float previousDepthResult = 0;
+		float weightSum = 0;
+
+		uint2 prevCoord = uint2(size * prevUVSample - 0.5);
+		uint2 offsets[4] = { uint2(0, 0), uint2(1, 0), uint2(0, 1), uint2(1, 1) };
+
+		for (uint i = 0; i < 4; i++)
+		{
+			uint2 sampleCoord = prevCoord + offsets[i];
+
+			previousColorResult += weights[i] * texture_color_history[sampleCoord];
+			previousDepthResult += weights[i] * texture_depth_history[sampleCoord];
+
+			weightSum += weights[i];
+		}
+
+		previousColorResult /= max(weightSum, 0.00001);
+		previousDepthResult /= max(weightSum, 0.00001);
+
+		previousColor = previousColorResult;
+		disocclusion = GetDisocclusion(depth, previousDepthResult);
+	}
+
+	disocclusion = disocclusion < disocclusionThreshold ? 0.0 : disocclusion;
+	return previousColor;
 }
 
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
-void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
+void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint3 DTid : SV_DispatchThreadID)
 {
-	if ((uint)ssr_frame == 0)
+	if ((uint) ssr_frame == 0)
 	{
-		output[DTid.xy] = resolve_current[DTid.xy];
+		output_color[DTid.xy] = texture_color_current[DTid.xy];
 		return;
 	}
 
-	const float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
-	const float depth = texture_depth.SampleLevel(sampler_linear_clamp, uv, 0);
-	if (depth == 0)
-		return;
+	const float depth = texture_depth[DTid.xy];
+	const float roughness = texture_surface_roughness[DTid.xy];
 
-	const float2 velocity = texture_gbuffer1.SampleLevel(sampler_point_clamp, uv, 0).xy;
-	float2 prevUV = uv + velocity;
-	if (!is_saturated(prevUV))
+	if (!NeedReflection(roughness, depth))
 	{
-		output[DTid.xy] = resolve_current[DTid.xy];
+		output_color[DTid.xy] = texture_color_current[DTid.xy];
+		output_variance[DTid.xy] = 0.0;
 		return;
 	}
 
-	const float3 P = reconstruct_position(uv, depth, GetCamera().inverse_projection);
+	// Welford's online algorithm:
+	//  https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
 
-	PrimitiveID prim;
-	prim.unpack(texture_gbuffer0[DTid.xy * 2]);
-
-	Surface surface;
-	surface.init();
-	if (!surface.load(prim, P))
-		return;
-
-	const float roughness = surface.roughness;
-
-	if (roughness < 0.01)
+	float4 m1 = 0.0;
+	float4 m2 = 0.0;
+	for (int x = -1; x <= 1; x++)
 	{
-		output[DTid.xy] = resolve_current[DTid.xy];
-		//return;
-	}
-
-	// Secondary reprojection based on ray lengths:
-	//	https://www.ea.com/seed/news/seed-dd18-presentation-slides-raytracing (Slide 45)
-	if (roughness < 0.5)
-	{
-		float rayLength = rayLengths[DTid.xy];
-		if (rayLength > 0)
+		for (int y = -1; y <= 1; y++)
 		{
-			const float3 P = reconstruct_position(uv, depth);
-			const float3 V = normalize(GetCamera().position - P);
-			const float3 rayEnd = P - V * rayLength;
-			float4 rayEndPrev = mul(GetCamera().previous_view_projection, float4(rayEnd, 1));
-			rayEndPrev.xy /= rayEndPrev.w;
-			prevUV = rayEndPrev.xy * float2(0.5, -0.5) + 0.5;
+			int2 offset = int2(x, y);
+			int2 coord = DTid.xy + offset;
+
+			float4 sampleColor = texture_color_current[coord];
+
+			m1 += sampleColor;
+			m2 += sampleColor * sampleColor;
 		}
 	}
 
-	// Disocclusion fallback:
-	float depth_current = compute_lineardepth(depth);
-	float depth_history = compute_lineardepth(texture_depth_history.SampleLevel(sampler_point_clamp, prevUV, 1));
-	if (abs(depth_current - depth_history) > 1)
+	float4 mean = m1 / 9.0;
+	float4 variance = (m2 / 9.0) - (mean * mean);
+	float4 stddev = sqrt(max(variance, 0.0f));
+
+	// Secondary reprojection based on ray lengths:
+	//	https://www.ea.com/seed/news/seed-dd18-presentation-slides-raytracing (Slide 45)
+
+	float2 velocity = texture_gbuffer1[DTid.xy];
+	float reprojectionDepth = texture_reprojectionDepth[DTid.xy];
+
+	float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
+
+	float2 prevUVVelocity = uv + velocity;
+	float2 prevUVReflectionHit = CalculateReprojectionBuffer(uv, reprojectionDepth);
+
+	float4 previousColorVelocity = texture_color_history.SampleLevel(sampler_linear_clamp, prevUVVelocity, 0);
+	float4 previousColorReflectionHit = texture_color_history.SampleLevel(sampler_linear_clamp, prevUVReflectionHit, 0);
+
+	float previousDistanceVelocity = abs(Luminance(previousColorVelocity.rgb) - Luminance(mean.rgb));
+	float previousDistanceReflectionHit = abs(Luminance(previousColorReflectionHit.rgb) - Luminance(mean.rgb));
+
+	float2 prevUV = previousDistanceVelocity < previousDistanceReflectionHit ? prevUVVelocity : prevUVReflectionHit;
+
+	float disocclusion = 0.0;
+	float2 prevUVSample = 0.0;
+	float4 previousColor = SamplePreviousColor(prevUV, postprocess.resolution, depth, disocclusion, prevUVSample);
+
+	float4 currentColor = texture_color_current[DTid.xy];
+	float4 resultColor = currentColor;
+
+	// Disocclusion fallback: color
+	if (disocclusion > disocclusionThreshold && is_saturated(prevUVSample))
 	{
-		output[DTid.xy] = resolve_current[DTid.xy];
-		//output[DTid.xy] = float4(1, 0, 0, 1);
-		return;
+		// Color box clamp
+		float4 colorMin = mean - temporalScale * stddev;
+		float4 colorMax = mean + temporalScale * stddev;
+		previousColor = clamp(previousColor, colorMin, colorMax);
+
+		resultColor = lerp(currentColor, previousColor, temporalResponse);
 	}
-    
-    float4 previous = resolve_history.SampleLevel(sampler_linear_clamp, prevUV, 0);
+#if 0 // Debug
+	else
+	{
+		resultColor = float4(1, 0, 0, 1);
+	}
+#endif
 
-    // Luma HDR and AABB minmax
-    
-    float4 current = 0;
-    float4 currentMin, currentMax, currentAverage;
-    ResolverAABB(resolve_current, sampler_linear_clamp, 0, temporalExposure, temporalScale, uv, postprocess.resolution, currentMin, currentMax, currentAverage, current);
+	float currentVariance = texture_variance_current[DTid.xy];
+	float varianceResponse = varianceTemporalResponse;
 
-    previous.xyz = clip_aabb(currentMin.xyz, currentMax.xyz, clamp(currentAverage, currentMin, currentMax), previous).xyz;
-    previous.a = clamp(previous.a, currentMin.a, currentMax.a);
-    
-    // Blend color & history
-    
-	float blendFinal = lerp(temporalResponseMin, temporalResponseMax, saturate(1.0 - length(velocity) * 100));
-    
-    float4 result = lerp(current, previous, blendFinal);
-    
-    output[DTid.xy] = max(0, result);
+	// Disocclusion fallback: variance
+	if (disocclusion < disocclusionThreshold || !is_saturated(prevUVSample))
+	{
+		// Apply white for variance on occlusion. This helps to hide artifacts from temporal
+		varianceResponse = 0.0f;
+		currentVariance = 1.0f;
+	}
+
+	float previousVariance = texture_variance_history.SampleLevel(sampler_linear_clamp, prevUVSample, 0);
+	float resultVariance = lerp(currentVariance, previousVariance, varianceResponse);
+
+	output_color[DTid.xy] = max(0, resultColor);
+	output_variance[DTid.xy] = max(0, resultVariance);
 }

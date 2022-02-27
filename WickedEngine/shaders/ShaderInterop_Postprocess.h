@@ -40,8 +40,7 @@ struct Bloom
 #define lineardepth_inputresolution postprocess.params0.xy
 #define lineardepth_inputresolution_rcp postprocess.params0.zw
 
-#define ssr_input_maxmip postprocess.params0.x
-#define ssr_input_resolution_max postprocess.params0.y
+static const uint SSR_TILESIZE = 32;
 #define ssr_frame postprocess.params0.w
 
 #define ssao_range postprocess.params0.x
