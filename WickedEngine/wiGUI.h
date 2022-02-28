@@ -280,7 +280,9 @@ namespace wi::gui
 		bool HasScrollbar() const;
 
 		void SetSelected(int index);
+		void SetSelectedWithoutCallback(int index); // SetSelected() but the OnSelect callback will not be executed
 		void SetSelectedByUserdata(uint64_t userdata);
+		void SetSelectedByUserdataWithoutCallback(uint64_t userdata); // SetSelectedByUserdata() but the OnSelect callback will not be executed
 		int GetSelected() const;
 		std::string GetItemText(int index) const;
 		uint64_t GetItemUserData(int index) const;

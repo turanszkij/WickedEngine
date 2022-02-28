@@ -47,9 +47,11 @@ void TransformWindow::Create(EditorComponent* editor)
 	parentCombo.OnSelect([&](wi::gui::EventArgs args) {
 		Scene& scene = wi::scene::GetScene();
 
-		scene.Component_Detach(entity);
-
-		if(args.iValue != 0)
+		if (args.iValue == 0)
+		{
+			scene.Component_Detach(entity);
+		}
+		else
 		{
 		    scene.Component_Attach(entity, (Entity)args.userdata);
 		}
@@ -253,7 +255,7 @@ void TransformWindow::SetEntity(Entity entity)
 
 			if (hier != nullptr && hier->parentID == entity)
 			{
-				parentCombo.SetSelected((int)parentCombo.GetItemCount() - 1);
+				parentCombo.SetSelectedWithoutCallback((int)parentCombo.GetItemCount() - 1);
 			}
 		}
 

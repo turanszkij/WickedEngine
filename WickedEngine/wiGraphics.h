@@ -16,12 +16,9 @@ namespace wi::graphics
 
 	enum class ValidationMode
 	{
-		/// No validation is enabled.
-		Disabled,
-		/// Print warnings and errors
-		Enabled,
-		/// Enable GPU-based validation
-		GPU
+		Disabled,	// No validation is enabled
+		Enabled,	// CPU command validation
+		GPU			// CPU and GPU-based validation
 	};
 
 	enum class ShaderStage

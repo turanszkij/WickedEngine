@@ -5,7 +5,6 @@ namespace wi::scene
 	struct NameComponent;
 	struct LayerComponent;
 	struct TransformComponent;
-	struct PreviousFrameTransformComponent;
 	struct HierarchyComponent;
 	struct MaterialComponent;
 	struct MeshComponent;

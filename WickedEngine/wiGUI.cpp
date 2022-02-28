@@ -1620,7 +1620,7 @@ namespace wi::gui
 	}
 	void ComboBox::SetSelected(int index)
 	{
-		selected = index;
+		SetSelectedWithoutCallback(index);
 
 		if (onSelect != nullptr)
 		{
@@ -1631,6 +1631,10 @@ namespace wi::gui
 			onSelect(args);
 		}
 	}
+	void ComboBox::SetSelectedWithoutCallback(int index)
+	{
+		selected = index;
+	}
 	void ComboBox::SetSelectedByUserdata(uint64_t userdata)
 	{
 		for (int i = 0; i < GetItemCount(); ++i)
@@ -1638,6 +1642,17 @@ namespace wi::gui
 			if (userdata == GetItemUserData(i))
 			{
 				SetSelected(i);
+				return;
+			}
+		}
+	}
+	void ComboBox::SetSelectedByUserdataWithoutCallback(uint64_t userdata)
+	{
+		for (int i = 0; i < GetItemCount(); ++i)
+		{
+			if (userdata == GetItemUserData(i))
+			{
+				SetSelectedWithoutCallback(i);
 				return;
 			}
 		}
