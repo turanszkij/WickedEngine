@@ -477,9 +477,9 @@ struct Surface
 		[branch]
 		if (mesh.vb_pre >= 0)
 		{
-			p0 = asfloat(bindless_buffers[mesh.vb_pre].Load3(i0 * 16));
-			p1 = asfloat(bindless_buffers[mesh.vb_pre].Load3(i1 * 16));
-			p2 = asfloat(bindless_buffers[mesh.vb_pre].Load3(i2 * 16));
+			p0 = asfloat(bindless_buffers[NonUniformResourceIndex(mesh.vb_pre)].Load3(i0 * 16));
+			p1 = asfloat(bindless_buffers[NonUniformResourceIndex(mesh.vb_pre)].Load3(i1 * 16));
+			p2 = asfloat(bindless_buffers[NonUniformResourceIndex(mesh.vb_pre)].Load3(i2 * 16));
 		}
 		pre = mad(p0, w, mad(p1, u, p2 * v)); // p0 * w + p1 * u + p2 * v
 		pre = mul(inst.transformPrev.GetMatrix(), float4(pre, 1)).xyz;
