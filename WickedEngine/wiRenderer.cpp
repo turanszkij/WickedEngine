@@ -3605,7 +3605,7 @@ void UpdateRenderData(
 		{
 			Entity entity = vis.scene->meshes.GetEntity(i);
 			const MeshComponent& mesh = vis.scene->meshes[i];
-			barrier_stack.push_back(GPUBarrier::Buffer(&mesh.indexBuffer, ResourceState::UNDEFINED, ResourceState::INDEX_BUFFER | ResourceState::SHADER_RESOURCE));
+			barrier_stack.push_back(GPUBarrier::Buffer(&mesh.indexBuffer, ResourceState::INDEX_BUFFER, ResourceState::INDEX_BUFFER | ResourceState::SHADER_RESOURCE));
 
 			if (mesh.dirty_subsets)
 			{
