@@ -66,11 +66,10 @@ namespace wi
 			desc.bind_flags = BindFlag::SHADER_RESOURCE;
 			desc.stride = sizeof(uint);
 			desc.size = desc.stride;
-			desc.format = Format::UNKNOWN;
 			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
 			desc.usage = Usage::DEFAULT;
 			device->CreateBuffer(&desc, nullptr, &primitiveCounterBuffer);
-			device->SetName(&primitiveCounterBuffer, "primitiveCounterBuffer");
+			device->SetName(&primitiveCounterBuffer, "GPUBVH::primitiveCounterBuffer");
 		}
 
 		if (totalTriangles == 0)
@@ -87,56 +86,50 @@ namespace wi
 			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 			desc.stride = sizeof(BVHNode);
 			desc.size = desc.stride * primitiveCapacity * 2;
-			desc.format = Format::UNKNOWN;
 			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
 			desc.usage = Usage::DEFAULT;
 			device->CreateBuffer(&desc, nullptr, &bvhNodeBuffer);
-			device->SetName(&bvhNodeBuffer, "BVHNodeBuffer");
+			device->SetName(&bvhNodeBuffer, "GPUBVH::BVHNodeBuffer");
 
 			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 			desc.stride = sizeof(uint);
 			desc.size = desc.stride * primitiveCapacity * 2;
-			desc.format = Format::UNKNOWN;
 			desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 			desc.usage = Usage::DEFAULT;
 			device->CreateBuffer(&desc, nullptr, &bvhParentBuffer);
-			device->SetName(&bvhParentBuffer, "BVHParentBuffer");
+			device->SetName(&bvhParentBuffer, "GPUBVH::BVHParentBuffer");
 
 			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 			desc.stride = sizeof(uint);
 			desc.size = desc.stride * (((primitiveCapacity - 1) + 31) / 32); // bitfield for internal nodes
-			desc.format = Format::UNKNOWN;
 			desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 			desc.usage = Usage::DEFAULT;
 			device->CreateBuffer(&desc, nullptr, &bvhFlagBuffer);
-			device->SetName(&bvhFlagBuffer, "BVHFlagBuffer");
+			device->SetName(&bvhFlagBuffer, "GPUBVH::BVHFlagBuffer");
 
 			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 			desc.stride = sizeof(uint);
 			desc.size = desc.stride * primitiveCapacity;
-			desc.format = Format::UNKNOWN;
 			desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 			desc.usage = Usage::DEFAULT;
 			device->CreateBuffer(&desc, nullptr, &primitiveIDBuffer);
-			device->SetName(&primitiveIDBuffer, "primitiveIDBuffer");
+			device->SetName(&primitiveIDBuffer, "GPUBVH::primitiveIDBuffer");
 
 			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 			desc.stride = sizeof(BVHPrimitive);
 			desc.size = desc.stride * primitiveCapacity;
-			desc.format = Format::UNKNOWN;
 			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
 			desc.usage = Usage::DEFAULT;
 			device->CreateBuffer(&desc, nullptr, &primitiveBuffer);
-			device->SetName(&primitiveBuffer, "primitiveBuffer");
+			device->SetName(&primitiveBuffer, "GPUBVH::primitiveBuffer");
 
 			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 			desc.size = desc.stride * primitiveCapacity;
-			desc.format = Format::UNKNOWN;
 			desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 			desc.usage = Usage::DEFAULT;
 			desc.stride = sizeof(float); // morton buffer is float because sorting must be done and gpu sort operates on floats for now!
 			device->CreateBuffer(&desc, nullptr, &primitiveMortonBuffer);
-			device->SetName(&primitiveMortonBuffer, "primitiveMortonBuffer");
+			device->SetName(&primitiveMortonBuffer, "GPUBVH::primitiveMortonBuffer");
 		}
 	}
 	void GPUBVH::Build(const Scene& scene, CommandList cmd) const

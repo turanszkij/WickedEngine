@@ -382,9 +382,98 @@ namespace wi::scene
 		return wi::renderer::CombineStencilrefs(engineStencilRef, userStencilRef);
 	}
 
+	static constexpr uint64_t raw_alignment = 16ull;
 	void MeshComponent::CreateRenderData()
 	{
 		GraphicsDevice* device = wi::graphics::GetDevice();
+
+		indexBuffer = {};
+		generalBuffer = {};
+		streamoutBuffer = {};
+		ib = {};
+		vb_pos_nor_wind = {};
+		vb_tan = {};
+		vb_uv0 = {};
+		vb_uv1 = {};
+		vb_atl = {};
+		vb_col = {};
+		vb_bon = {};
+		vb_pre = {};
+		so_pos_nor_wind = {};
+		so_tan = {};
+		vb_pre = {};
+		subset_view = {};
+
+		if (vertex_tangents.empty() && !vertex_uvset_0.empty())
+		{
+			// Generate tangents if not found:
+			vertex_tangents.resize(vertex_positions.size());
+
+			for (size_t i = 0; i < indices.size(); i += 3)
+			{
+				const uint32_t i0 = indices[i + 0];
+				const uint32_t i1 = indices[i + 1];
+				const uint32_t i2 = indices[i + 2];
+
+				const XMFLOAT3 v0 = vertex_positions[i0];
+				const XMFLOAT3 v1 = vertex_positions[i1];
+				const XMFLOAT3 v2 = vertex_positions[i2];
+
+				const XMFLOAT2 u0 = vertex_uvset_0[i0];
+				const XMFLOAT2 u1 = vertex_uvset_0[i1];
+				const XMFLOAT2 u2 = vertex_uvset_0[i2];
+
+				const XMFLOAT3 n0 = vertex_normals[i0];
+				const XMFLOAT3 n1 = vertex_normals[i1];
+				const XMFLOAT3 n2 = vertex_normals[i2];
+
+				const XMVECTOR nor0 = XMLoadFloat3(&n0);
+				const XMVECTOR nor1 = XMLoadFloat3(&n1);
+				const XMVECTOR nor2 = XMLoadFloat3(&n2);
+
+				const XMVECTOR facenormal = XMVector3Normalize(nor0 + nor1 + nor2);
+
+				const float x1 = v1.x - v0.x;
+				const float x2 = v2.x - v0.x;
+				const float y1 = v1.y - v0.y;
+				const float y2 = v2.y - v0.y;
+				const float z1 = v1.z - v0.z;
+				const float z2 = v2.z - v0.z;
+
+				const float s1 = u1.x - u0.x;
+				const float s2 = u2.x - u0.x;
+				const float t1 = u1.y - u0.y;
+				const float t2 = u2.y - u0.y;
+
+				const float r = 1.0f / (s1 * t2 - s2 * t1);
+				const XMVECTOR sdir = XMVectorSet((t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r,
+					(t2 * z1 - t1 * z2) * r, 0);
+				const XMVECTOR tdir = XMVectorSet((s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r,
+					(s1 * z2 - s2 * z1) * r, 0);
+
+				XMVECTOR tangent;
+				tangent = XMVector3Normalize(sdir - facenormal * XMVector3Dot(facenormal, sdir));
+				float sign = XMVectorGetX(XMVector3Dot(XMVector3Cross(tangent, facenormal), tdir)) < 0.0f ? -1.0f : 1.0f;
+
+				XMFLOAT3 t;
+				XMStoreFloat3(&t, tangent);
+
+				vertex_tangents[i0].x += t.x;
+				vertex_tangents[i0].y += t.y;
+				vertex_tangents[i0].z += t.z;
+				vertex_tangents[i0].w = sign;
+
+				vertex_tangents[i1].x += t.x;
+				vertex_tangents[i1].y += t.y;
+				vertex_tangents[i1].z += t.z;
+				vertex_tangents[i1].w = sign;
+
+				vertex_tangents[i2].x += t.x;
+				vertex_tangents[i2].y += t.y;
+				vertex_tangents[i2].z += t.z;
+				vertex_tangents[i2].w = sign;
+			}
+		}
 
 		vertex_subsets.resize(vertex_positions.size());
 		uint32_t subsetCounter = 0;
@@ -398,41 +487,62 @@ namespace wi::scene
 			subsetCounter++;
 		}
 
+		std::vector<uint8_t> buffer_data;
+
 		// Create index buffer GPU data:
 		{
-			GPUBufferDesc bd;
-			bd.bind_flags = BindFlag::INDEX_BUFFER | BindFlag::SHADER_RESOURCE;
+			GPUBufferDesc desc;
+			desc.bind_flags = BindFlag::INDEX_BUFFER | BindFlag::SHADER_RESOURCE;
 			if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 			{
-				bd.misc_flags |= ResourceMiscFlag::RAY_TRACING;
+				desc.misc_flags |= ResourceMiscFlag::RAY_TRACING;
 			}
 
 			if (GetIndexFormat() == IndexBufferFormat::UINT32)
 			{
-				bd.stride = sizeof(uint32_t);
-				bd.format = Format::R32_UINT;
-				bd.size = uint32_t(sizeof(uint32_t) * indices.size());
+				desc.stride = sizeof(uint32_t);
+				desc.format = Format::R32_UINT;
+				desc.size = indices.size() * sizeof(uint32_t);
 
-				// Use indices directly since vector is in correct format
+				// Use indices directly since vector is already in correct format:
 				static_assert(std::is_same<decltype(indices)::value_type, uint32_t>::value, "indices not in IndexBufferFormat::UINT32");
 
-				device->CreateBuffer(&bd, indices.data(), &indexBuffer);
-				device->SetName(&indexBuffer, "indexBuffer_32bit");
+				device->CreateBuffer(&desc, indices.data(), &indexBuffer);
+				device->SetName(&indexBuffer, "MeshComponent::indexBuffer[32bit]");
 			}
 			else
 			{
-				bd.stride = sizeof(uint16_t);
-				bd.format = Format::R16_UINT;
-				bd.size = uint32_t(sizeof(uint16_t) * indices.size());
+				desc.stride = sizeof(uint16_t);
+				desc.format = Format::R16_UINT;
+				desc.size = indices.size() * sizeof(uint16_t);
 
-				wi::vector<uint16_t> gpuIndexData(indices.size());
-				std::copy(indices.begin(), indices.end(), gpuIndexData.begin());
+				buffer_data.resize(desc.size);
+				uint16_t* indices16 = (uint16_t*)buffer_data.data();
+				for (size_t i = 0; i < indices.size(); ++i)
+				{
+					indices16[i] = (uint16_t)indices[i];
+				}
 
-				device->CreateBuffer(&bd, gpuIndexData.data(), &indexBuffer);
-				device->SetName(&indexBuffer, "indexBuffer_16bit");
+				device->CreateBuffer(&desc, indices16, &indexBuffer);
+				device->SetName(&indexBuffer, "MeshComponent::indexBuffer[16bit]");
 			}
+
+			ib.offset = 0ull;
+			ib.size = desc.size;
+			ib.descriptor_srv = device->GetDescriptorIndex(&indexBuffer, SubresourceType::SRV);
 		}
 
+		buffer_data.resize(
+			AlignTo(vertex_positions.size() * sizeof(Vertex_POS), raw_alignment) +
+			AlignTo(vertex_tangents.size() * sizeof(Vertex_TAN), raw_alignment) +
+			AlignTo(vertex_uvset_0.size() * sizeof(Vertex_TEX), raw_alignment) +
+			AlignTo(vertex_uvset_1.size() * sizeof(Vertex_TEX), raw_alignment) +
+			AlignTo(vertex_atlas.size() * sizeof(Vertex_TEX), raw_alignment) +
+			AlignTo(vertex_colors.size() * sizeof(Vertex_COL), raw_alignment) +
+			AlignTo(vertex_boneindices.size() * sizeof(Vertex_BON), raw_alignment) +
+			AlignTo(subsets.size() * sizeof(ShaderMeshSubset), raw_alignment)
+		);
+		uint64_t buffer_offset = 0ull;
 
 		XMFLOAT3 _min = XMFLOAT3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
 		XMFLOAT3 _max = XMFLOAT3(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
@@ -445,8 +555,11 @@ namespace wi::scene
 				dirty_morph = true;
 		    }
 
-			wi::vector<Vertex_POS> vertices(vertex_positions.size());
-			for (size_t i = 0; i < vertices.size(); ++i)
+			vb_pos_nor_wind.offset = buffer_offset;
+			vb_pos_nor_wind.size = vertex_positions.size() * sizeof(Vertex_POS);
+			Vertex_POS* vertices = (Vertex_POS*)(buffer_data.data() + buffer_offset);
+			buffer_offset += AlignTo(vb_pos_nor_wind.size, raw_alignment);
+			for (size_t i = 0; i < vertex_positions.size(); ++i)
 			{
 				const XMFLOAT3& pos = vertex_positions[i];
 			    XMFLOAT3 nor = vertex_normals.empty() ? XMFLOAT3(1, 1, 1) : vertex_normals[i];
@@ -457,120 +570,84 @@ namespace wi::scene
 				_min = wi::math::Min(_min, pos);
 				_max = wi::math::Max(_max, pos);
 			}
-
-			GPUBufferDesc bd;
-			bd.usage = Usage::DEFAULT;
-			bd.bind_flags = BindFlag::VERTEX_BUFFER | BindFlag::SHADER_RESOURCE;
-			bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-			if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
-			{
-				bd.misc_flags |= ResourceMiscFlag::RAY_TRACING;
-			}
-			bd.size = (uint32_t)(sizeof(Vertex_POS) * vertices.size());
-
-			device->CreateBuffer(&bd, vertices.data(), &vertexBuffer_POS);
-			device->SetName(&vertexBuffer_POS, "vertexBuffer_POS");
-		}
-
-		// vertexBuffer - TANGENTS
-		if(!vertex_uvset_0.empty())
-		{
-			if (vertex_tangents.empty())
-			{
-				// Generate tangents if not found:
-				vertex_tangents.resize(vertex_positions.size());
-
-				for (size_t i = 0; i < indices.size(); i += 3)
-				{
-					const uint32_t i0 = indices[i + 0];
-					const uint32_t i1 = indices[i + 1];
-					const uint32_t i2 = indices[i + 2];
-
-					const XMFLOAT3 v0 = vertex_positions[i0];
-					const XMFLOAT3 v1 = vertex_positions[i1];
-					const XMFLOAT3 v2 = vertex_positions[i2];
-
-					const XMFLOAT2 u0 = vertex_uvset_0[i0];
-					const XMFLOAT2 u1 = vertex_uvset_0[i1];
-					const XMFLOAT2 u2 = vertex_uvset_0[i2];
-
-					const XMFLOAT3 n0 = vertex_normals[i0];
-					const XMFLOAT3 n1 = vertex_normals[i1];
-					const XMFLOAT3 n2 = vertex_normals[i2];
-
-					const XMVECTOR nor0 = XMLoadFloat3(&n0);
-					const XMVECTOR nor1 = XMLoadFloat3(&n1);
-					const XMVECTOR nor2 = XMLoadFloat3(&n2);
-
-					const XMVECTOR facenormal = XMVector3Normalize(nor0 + nor1 + nor2);
-
-					const float x1 = v1.x - v0.x;
-					const float x2 = v2.x - v0.x;
-					const float y1 = v1.y - v0.y;
-					const float y2 = v2.y - v0.y;
-					const float z1 = v1.z - v0.z;
-					const float z2 = v2.z - v0.z;
-
-					const float s1 = u1.x - u0.x;
-					const float s2 = u2.x - u0.x;
-					const float t1 = u1.y - u0.y;
-					const float t2 = u2.y - u0.y;
-
-					const float r = 1.0f / (s1 * t2 - s2 * t1);
-					const XMVECTOR sdir = XMVectorSet((t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r,
-						(t2 * z1 - t1 * z2) * r, 0);
-					const XMVECTOR tdir = XMVectorSet((s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r,
-						(s1 * z2 - s2 * z1) * r, 0);
-
-					XMVECTOR tangent;
-					tangent = XMVector3Normalize(sdir - facenormal * XMVector3Dot(facenormal, sdir));
-					float sign = XMVectorGetX(XMVector3Dot(XMVector3Cross(tangent, facenormal), tdir)) < 0.0f ? -1.0f : 1.0f;
-
-					XMFLOAT3 t;
-					XMStoreFloat3(&t, tangent);
-
-					vertex_tangents[i0].x += t.x;
-					vertex_tangents[i0].y += t.y;
-					vertex_tangents[i0].z += t.z;
-					vertex_tangents[i0].w = sign;
-
-					vertex_tangents[i1].x += t.x;
-					vertex_tangents[i1].y += t.y;
-					vertex_tangents[i1].z += t.z;
-					vertex_tangents[i1].w = sign;
-
-					vertex_tangents[i2].x += t.x;
-					vertex_tangents[i2].y += t.y;
-					vertex_tangents[i2].z += t.z;
-					vertex_tangents[i2].w = sign;
-				}
-
-			}
-
-			wi::vector<Vertex_TAN> vertices(vertex_tangents.size());
-			for (size_t i = 0; i < vertex_tangents.size(); ++i)
-			{
-				vertices[i].FromFULL(vertex_tangents[i]);
-			}
-
-			GPUBufferDesc bd;
-			bd.usage = Usage::DEFAULT;
-			bd.bind_flags = BindFlag::VERTEX_BUFFER | BindFlag::SHADER_RESOURCE;
-			bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-			bd.stride = sizeof(Vertex_TAN);
-			bd.size = (uint32_t)(bd.stride * vertices.size());
-
-			device->CreateBuffer(&bd, vertices.data(), &vertexBuffer_TAN);
-			device->SetName(&vertexBuffer_TAN, "vertexBuffer_TAN");
 		}
 
 		aabb = AABB(_min, _max);
 
+		// vertexBuffer - TANGENTS
+		if(!vertex_tangents.empty())
+		{
+			vb_tan.offset = buffer_offset;
+			vb_tan.size = vertex_tangents.size() * sizeof(Vertex_TAN);
+			Vertex_TAN* vertices = (Vertex_TAN*)(buffer_data.data() + buffer_offset);
+			buffer_offset += AlignTo(vb_tan.size, raw_alignment);
+			for (size_t i = 0; i < vertex_tangents.size(); ++i)
+			{
+				vertices[i].FromFULL(vertex_tangents[i]);
+			}
+		}
+
+		// vertexBuffer - UV SET 0
+		if(!vertex_uvset_0.empty())
+		{
+			vb_uv0.offset = buffer_offset;
+			vb_uv0.size = vertex_uvset_0.size() * sizeof(Vertex_TEX);
+			Vertex_TEX* vertices = (Vertex_TEX*)(buffer_data.data() + buffer_offset);
+			buffer_offset += AlignTo(vb_uv0.size, raw_alignment);
+			for (size_t i = 0; i < vertex_uvset_0.size(); ++i)
+			{
+				vertices[i].FromFULL(vertex_uvset_0[i]);
+			}
+		}
+
+		// vertexBuffer - UV SET 1
+		if (!vertex_uvset_1.empty())
+		{
+			vb_uv1.offset = buffer_offset;
+			vb_uv1.size = vertex_uvset_1.size() * sizeof(Vertex_TEX);
+			Vertex_TEX* vertices = (Vertex_TEX*)(buffer_data.data() + buffer_offset);
+			buffer_offset += AlignTo(vb_uv1.size, raw_alignment);
+			for (size_t i = 0; i < vertex_uvset_1.size(); ++i)
+			{
+				vertices[i].FromFULL(vertex_uvset_1[i]);
+			}
+		}
+
+		// vertexBuffer - ATLAS
+		if (!vertex_atlas.empty())
+		{
+			vb_atl.offset = buffer_offset;
+			vb_atl.size = vertex_atlas.size() * sizeof(Vertex_TEX);
+			Vertex_TEX* vertices = (Vertex_TEX*)(buffer_data.data() + buffer_offset);
+			buffer_offset += AlignTo(vb_atl.size, raw_alignment);
+			for (size_t i = 0; i < vertex_atlas.size(); ++i)
+			{
+				vertices[i].FromFULL(vertex_atlas[i]);
+			}
+		}
+
+		// vertexBuffer - COLORS
+		if (!vertex_colors.empty())
+		{
+			vb_col.offset = buffer_offset;
+			vb_col.size = vertex_colors.size() * sizeof(Vertex_COL);
+			Vertex_COL* vertices = (Vertex_COL*)(buffer_data.data() + buffer_offset);
+			buffer_offset += AlignTo(vb_col.size, raw_alignment);
+			for (size_t i = 0; i < vertex_colors.size(); ++i)
+			{
+				vertices[i].color = vertex_colors[i];
+			}
+		}
+
 		// skinning buffers:
 		if (!vertex_boneindices.empty())
 		{
-			wi::vector<Vertex_BON> vertices(vertex_boneindices.size());
-			for (size_t i = 0; i < vertices.size(); ++i)
+			vb_bon.offset = buffer_offset;
+			vb_bon.size = vertex_boneindices.size() * sizeof(Vertex_BON);
+			Vertex_BON* vertices = (Vertex_BON*)(buffer_data.data() + buffer_offset);
+			buffer_offset += AlignTo(vb_bon.size, raw_alignment);
+			assert(vertex_boneindices.size() == vertex_boneweights.size());
+			for (size_t i = 0; i < vertex_boneindices.size(); ++i)
 			{
 				XMFLOAT4& wei = vertex_boneweights[i];
 				// normalize bone weights
@@ -584,116 +661,70 @@ namespace wi::scene
 				}
 				vertices[i].FromFULL(vertex_boneindices[i], wei);
 			}
+			CreateStreamoutRenderData();
+		}
 
-			GPUBufferDesc bd;
-			bd.bind_flags = BindFlag::SHADER_RESOURCE;
-			bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-			bd.size = (uint32_t)(sizeof(Vertex_BON) * vertices.size());
+		// subset buffer:
+		{
+			subset_view.offset = buffer_offset;
+			subset_view.size = subsets.size() * sizeof(ShaderMeshSubset);
+			buffer_offset += AlignTo(subset_view.size, raw_alignment);
+		}
 
-			device->CreateBuffer(&bd, vertices.data(), &vertexBuffer_BON);
-
-			bd.usage = Usage::DEFAULT;
-			bd.bind_flags = BindFlag::VERTEX_BUFFER | BindFlag::UNORDERED_ACCESS | BindFlag::SHADER_RESOURCE;
-			bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-
-			if (!vertex_tangents.empty())
-			{
-				bd.size = (uint32_t)(sizeof(Vertex_TAN) * vertex_tangents.size());
-				device->CreateBuffer(&bd, nullptr, &streamoutBuffer_TAN);
-				device->SetName(&streamoutBuffer_TAN, "streamoutBuffer_TAN");
-			}
-
-			bd.size = (uint32_t)(sizeof(Vertex_POS) * vertex_positions.size());
+		{
+			GPUBufferDesc desc;
+			desc.usage = Usage::DEFAULT;
+			desc.bind_flags = BindFlag::VERTEX_BUFFER | BindFlag::SHADER_RESOURCE;
+			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
 			if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 			{
-				bd.misc_flags |= ResourceMiscFlag::RAY_TRACING;
+				desc.misc_flags |= ResourceMiscFlag::RAY_TRACING;
 			}
-			device->CreateBuffer(&bd, nullptr, &streamoutBuffer_POS);
-			device->SetName(&streamoutBuffer_POS, "streamoutBuffer_POS");
-		}
+			desc.size = buffer_data.size();
 
-		// vertexBuffer - UV SET 0
-		if(!vertex_uvset_0.empty())
-		{
-			wi::vector<Vertex_TEX> vertices(vertex_uvset_0.size());
-			for (size_t i = 0; i < vertices.size(); ++i)
+			bool success = device->CreateBuffer(&desc, buffer_data.data(), &generalBuffer);
+			assert(success);
+			device->SetName(&generalBuffer, "MeshComponent::generalBuffer");
+
+			assert(vb_pos_nor_wind.IsValid());
+			vb_pos_nor_wind.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_pos_nor_wind.offset, vb_pos_nor_wind.size);
+			vb_pos_nor_wind.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_pos_nor_wind.subresource_srv);
+
+			if (vb_tan.IsValid())
 			{
-				vertices[i].FromFULL(vertex_uvset_0[i]);
+				vb_tan.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_tan.offset, vb_tan.size);
+				vb_tan.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_tan.subresource_srv);
 			}
-
-			GPUBufferDesc bd;
-			bd.bind_flags = BindFlag::VERTEX_BUFFER | BindFlag::SHADER_RESOURCE;
-			bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-			bd.stride = sizeof(Vertex_TEX);
-			bd.size = (uint32_t)(bd.stride * vertices.size());
-
-			device->CreateBuffer(&bd, vertices.data(), &vertexBuffer_UV0);
-			device->SetName(&vertexBuffer_UV0, "vertexBuffer_UV0");
-		}
-
-		// vertexBuffer - UV SET 1
-		if (!vertex_uvset_1.empty())
-		{
-			wi::vector<Vertex_TEX> vertices(vertex_uvset_1.size());
-			for (size_t i = 0; i < vertices.size(); ++i)
+			if (vb_uv0.IsValid())
 			{
-				vertices[i].FromFULL(vertex_uvset_1[i]);
+				vb_uv0.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_uv0.offset, vb_uv0.size);
+				vb_uv0.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_uv0.subresource_srv);
 			}
-
-			GPUBufferDesc bd;
-			bd.bind_flags = BindFlag::VERTEX_BUFFER | BindFlag::SHADER_RESOURCE;
-			bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-			bd.stride = sizeof(Vertex_TEX);
-			bd.size = (uint32_t)(bd.stride * vertices.size());
-
-			device->CreateBuffer(&bd, vertices.data(), &vertexBuffer_UV1);
-			device->SetName(&vertexBuffer_UV1, "vertexBuffer_UV1");
-		}
-
-		// vertexBuffer - COLORS
-		if (!vertex_colors.empty())
-		{
-			GPUBufferDesc bd;
-			bd.bind_flags = BindFlag::VERTEX_BUFFER | BindFlag::SHADER_RESOURCE;
-			bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-			bd.stride = sizeof(Vertex_COL);
-			bd.size = (uint32_t)(bd.stride * vertex_colors.size());
-
-			device->CreateBuffer(&bd, vertex_colors.data(), &vertexBuffer_COL);
-			device->SetName(&vertexBuffer_COL, "vertexBuffer_COL");
-		}
-
-		// vertexBuffer - ATLAS
-		if (!vertex_atlas.empty())
-		{
-			wi::vector<Vertex_TEX> vertices(vertex_atlas.size());
-			for (size_t i = 0; i < vertices.size(); ++i)
+			if (vb_uv1.IsValid())
 			{
-				vertices[i].FromFULL(vertex_atlas[i]);
+				vb_uv1.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_uv1.offset, vb_uv1.size);
+				vb_uv1.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_uv1.subresource_srv);
+			}
+			if (vb_atl.IsValid())
+			{
+				vb_atl.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_atl.offset, vb_atl.size);
+				vb_atl.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_atl.subresource_srv);
+			}
+			if (vb_col.IsValid())
+			{
+				vb_col.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_col.offset, vb_col.size);
+				vb_col.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_col.subresource_srv);
+			}
+			if (vb_bon.IsValid())
+			{
+				vb_bon.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_bon.offset, vb_bon.size);
+				vb_bon.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_bon.subresource_srv);
 			}
 
-			GPUBufferDesc bd;
-			bd.bind_flags = BindFlag::VERTEX_BUFFER | BindFlag::SHADER_RESOURCE;
-			bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-			bd.stride = sizeof(Vertex_TEX);
-			bd.size = (uint32_t)(bd.stride * vertices.size());
-
-			device->CreateBuffer(&bd, vertices.data(), &vertexBuffer_ATL);
-			device->SetName(&vertexBuffer_ATL, "vertexBuffer_ATL");
+			assert(subset_view.IsValid());
+			subset_view.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, subset_view.offset, subset_view.size);
+			subset_view.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, subset_view.subresource_srv);
 		}
-
-		// vertexBuffer_PRE will be created on demand later!
-		vertexBuffer_PRE = GPUBuffer();
-
-		GPUBufferDesc desc;
-		desc.bind_flags = BindFlag::SHADER_RESOURCE;
-		desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-		desc.stride = sizeof(ShaderMeshSubset);
-		desc.size = desc.stride * (uint32_t)subsets.size();
-		bool success = device->CreateBuffer(&desc, nullptr, &subsetBuffer);
-		assert(success);
-		dirty_subsets = true;
-
 
 		if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 		{
@@ -702,7 +733,7 @@ namespace wi::scene
 			RaytracingAccelerationStructureDesc desc;
 			desc.type = RaytracingAccelerationStructureDesc::Type::BOTTOMLEVEL;
 
-			if (streamoutBuffer_POS.IsValid())
+			if (streamoutBuffer.IsValid())
 			{
 				desc.flags |= RaytracingAccelerationStructureDesc::FLAG_ALLOW_UPDATE;
 				desc.flags |= RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_BUILD;
@@ -717,7 +748,8 @@ namespace wi::scene
 				desc.bottom_level.geometries.emplace_back();
 				auto& geometry = desc.bottom_level.geometries.back();
 				geometry.type = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::Type::TRIANGLES;
-				geometry.triangles.vertex_buffer = streamoutBuffer_POS.IsValid() ? streamoutBuffer_POS : vertexBuffer_POS;
+				geometry.triangles.vertex_buffer = generalBuffer;
+				geometry.triangles.vertex_byte_offset = vb_pos_nor_wind.offset;
 				geometry.triangles.index_buffer = indexBuffer;
 				geometry.triangles.index_format = GetIndexFormat();
 				geometry.triangles.index_count = subset.indexCount;
@@ -729,40 +761,81 @@ namespace wi::scene
 
 			bool success = device->CreateRaytracingAccelerationStructure(&desc, &BLAS);
 			assert(success);
-			device->SetName(&BLAS, "BLAS");
+			device->SetName(&BLAS, "MeshComponent::BLAS");
 		}
+	}
+	void MeshComponent::CreateStreamoutRenderData()
+	{
+		GraphicsDevice* device = wi::graphics::GetDevice();
+
+		GPUBufferDesc desc;
+		desc.usage = Usage::DEFAULT;
+		desc.bind_flags = BindFlag::VERTEX_BUFFER | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+		desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+		if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
+		{
+			desc.misc_flags |= ResourceMiscFlag::RAY_TRACING;
+		}
+		desc.size =
+			AlignTo(vertex_positions.size() * sizeof(Vertex_POS) * 2, raw_alignment) + // *2 because prevpos also goes into this!
+			AlignTo(vertex_tangents.size() * sizeof(Vertex_TAN), raw_alignment)
+			;
+
+		bool success = device->CreateBuffer(&desc, nullptr, &streamoutBuffer);
+		assert(success);
+		device->SetName(&streamoutBuffer, "MeshComponent::streamoutBuffer");
+
+		so_pos_nor_wind.offset = 0;
+		so_pos_nor_wind.size = vb_pos_nor_wind.size;
+		so_pos_nor_wind.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, so_pos_nor_wind.offset, so_pos_nor_wind.size);
+		so_pos_nor_wind.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, so_pos_nor_wind.offset, so_pos_nor_wind.size);
+		so_pos_nor_wind.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, so_pos_nor_wind.subresource_srv);
+		so_pos_nor_wind.descriptor_uav = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::UAV, so_pos_nor_wind.subresource_uav);
+
+		so_tan.offset = AlignTo(so_pos_nor_wind.offset + so_pos_nor_wind.size, raw_alignment);
+		so_tan.size = vb_tan.size;
+		so_tan.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, so_tan.offset, so_tan.size);
+		so_tan.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, so_tan.offset, so_tan.size);
+		so_tan.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, so_tan.subresource_srv);
+		so_tan.descriptor_uav = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::UAV, so_tan.subresource_uav);
+
+		vb_pre.offset = AlignTo(so_tan.offset + so_tan.size, raw_alignment);
+		vb_pre.size = vb_pos_nor_wind.size;
+		vb_pre.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, vb_pre.offset, vb_pre.size);
+		vb_pre.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, vb_pre.offset, vb_pre.size);
+		vb_pre.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, vb_pre.subresource_srv);
+		vb_pre.descriptor_uav = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::UAV, vb_pre.subresource_uav);
 	}
 	void MeshComponent::WriteShaderMesh(ShaderMesh* dest) const
 	{
 		ShaderMesh mesh;
 		mesh.init();
-		GraphicsDevice* device = wi::graphics::GetDevice();
-		mesh.ib = device->GetDescriptorIndex(&indexBuffer, SubresourceType::SRV);
-		if (streamoutBuffer_POS.IsValid())
+		mesh.ib = ib.descriptor_srv;
+		if (so_pos_nor_wind.IsValid())
 		{
-			mesh.vb_pos_nor_wind = device->GetDescriptorIndex(&streamoutBuffer_POS, SubresourceType::SRV);
+			mesh.vb_pos_nor_wind = so_pos_nor_wind.descriptor_srv;
 		}
 		else
 		{
-			mesh.vb_pos_nor_wind = device->GetDescriptorIndex(&vertexBuffer_POS, SubresourceType::SRV);
+			mesh.vb_pos_nor_wind = vb_pos_nor_wind.descriptor_srv;
 		}
-		if (streamoutBuffer_TAN.IsValid())
+		if (so_tan.IsValid())
 		{
-			mesh.vb_tan = device->GetDescriptorIndex(&streamoutBuffer_TAN, SubresourceType::SRV);
+			mesh.vb_tan = so_tan.descriptor_srv;
 		}
 		else
 		{
-			mesh.vb_tan = device->GetDescriptorIndex(&vertexBuffer_TAN, SubresourceType::SRV);
+			mesh.vb_tan = vb_tan.descriptor_srv;
 		}
-		mesh.vb_col = device->GetDescriptorIndex(&vertexBuffer_COL, SubresourceType::SRV);
-		mesh.vb_uv0 = device->GetDescriptorIndex(&vertexBuffer_UV0, SubresourceType::SRV);
-		mesh.vb_uv1 = device->GetDescriptorIndex(&vertexBuffer_UV1, SubresourceType::SRV);
-		mesh.vb_atl = device->GetDescriptorIndex(&vertexBuffer_ATL, SubresourceType::SRV);
-		mesh.vb_pre = device->GetDescriptorIndex(&vertexBuffer_PRE, SubresourceType::SRV);
+		mesh.vb_col = vb_col.descriptor_srv;
+		mesh.vb_uv0 = vb_uv0.descriptor_srv;
+		mesh.vb_uv1 = vb_uv1.descriptor_srv;
+		mesh.vb_atl = vb_atl.descriptor_srv;
+		mesh.vb_pre = vb_pre.descriptor_srv;
 		mesh.blendmaterial1 = terrain_material1_index;
 		mesh.blendmaterial2 = terrain_material2_index;
 		mesh.blendmaterial3 = terrain_material3_index;
-		mesh.subsetbuffer = device->GetDescriptorIndex(&subsetBuffer, SubresourceType::SRV);
+		mesh.subsetbuffer = subset_view.descriptor_srv;
 		mesh.aabb_min = aabb._min;
 		mesh.aabb_max = aabb._max;
 		mesh.tessellation_factor = tessellationFactor;
@@ -1308,7 +1381,10 @@ namespace wi::scene
 		bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
 		bd.stride = sizeof(ShaderTransform);
 
-		device->CreateBuffer(&bd, nullptr, &boneBuffer);
+		bool success = device->CreateBuffer(&bd, nullptr, &boneBuffer);
+		assert(success);
+		device->SetName(&boneBuffer, "ArmatureComponent::boneBuffer");
+		descriptor_srv = device->GetDescriptorIndex(&boneBuffer, SubresourceType::SRV);
 	}
 
 	void SoftBodyPhysicsComponent::CreateFromMesh(const MeshComponent& mesh)
@@ -1474,7 +1550,7 @@ namespace wi::scene
 			desc.bind_flags = BindFlag::SHADER_RESOURCE;
 			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
 			device->CreateBuffer(&desc, nullptr, &instanceBuffer);
-			device->SetName(&instanceBuffer, "instanceBuffer");
+			device->SetName(&instanceBuffer, "Scene::instanceBuffer");
 
 			desc.usage = Usage::UPLOAD;
 			desc.bind_flags = BindFlag::NONE;
@@ -1482,7 +1558,7 @@ namespace wi::scene
 			for (int i = 0; i < arraysize(instanceUploadBuffer); ++i)
 			{
 				device->CreateBuffer(&desc, nullptr, &instanceUploadBuffer[i]);
-				device->SetName(&instanceUploadBuffer[i], "instanceUploadBuffer");
+				device->SetName(&instanceUploadBuffer[i], "Scene::instanceUploadBuffer");
 			}
 		}
 		instanceArrayMapped = (ShaderMeshInstance*)instanceUploadBuffer[device->GetBufferIndex()].mapped_data;
@@ -1496,7 +1572,7 @@ namespace wi::scene
 			desc.bind_flags = BindFlag::SHADER_RESOURCE;
 			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
 			device->CreateBuffer(&desc, nullptr, &meshBuffer);
-			device->SetName(&meshBuffer, "meshBuffer");
+			device->SetName(&meshBuffer, "Scene::meshBuffer");
 
 			desc.usage = Usage::UPLOAD;
 			desc.bind_flags = BindFlag::NONE;
@@ -1504,7 +1580,7 @@ namespace wi::scene
 			for (int i = 0; i < arraysize(meshUploadBuffer); ++i)
 			{
 				device->CreateBuffer(&desc, nullptr, &meshUploadBuffer[i]);
-				device->SetName(&meshUploadBuffer[i], "meshUploadBuffer");
+				device->SetName(&meshUploadBuffer[i], "Scene::meshUploadBuffer");
 			}
 		}
 		meshArrayMapped = (ShaderMesh*)meshUploadBuffer[device->GetBufferIndex()].mapped_data;
@@ -1518,7 +1594,7 @@ namespace wi::scene
 			desc.bind_flags = BindFlag::SHADER_RESOURCE;
 			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
 			device->CreateBuffer(&desc, nullptr, &materialBuffer);
-			device->SetName(&materialBuffer, "materialBuffer");
+			device->SetName(&materialBuffer, "Scene::materialBuffer");
 
 			desc.usage = Usage::UPLOAD;
 			desc.bind_flags = BindFlag::NONE;
@@ -1526,7 +1602,7 @@ namespace wi::scene
 			for (int i = 0; i < arraysize(materialUploadBuffer); ++i)
 			{
 				device->CreateBuffer(&desc, nullptr, &materialUploadBuffer[i]);
-				device->SetName(&materialUploadBuffer[i], "materialUploadBuffer");
+				device->SetName(&materialUploadBuffer[i], "Scene::materialUploadBuffer");
 			}
 		}
 		materialArrayMapped = (ShaderMaterial*)materialUploadBuffer[device->GetBufferIndex()].mapped_data;
@@ -1543,7 +1619,7 @@ namespace wi::scene
 				for (int i = 0; i < arraysize(TLAS_instancesUpload); ++i)
 				{
 					device->CreateBuffer(&desc, nullptr, &TLAS_instancesUpload[i]);
-					device->SetName(&TLAS_instancesUpload[i], "TLAS_instancesUpload");
+					device->SetName(&TLAS_instancesUpload[i], "Scene::TLAS_instancesUpload");
 				}
 			}
 			TLAS_instancesMapped = TLAS_instancesUpload[device->GetBufferIndex()].mapped_data;
@@ -1667,10 +1743,10 @@ namespace wi::scene
 				bufdesc.size = bufdesc.stride * desc.top_level.count;
 				bool success = device->CreateBuffer(&bufdesc, nullptr, &desc.top_level.instance_buffer);
 				assert(success);
-				device->SetName(&desc.top_level.instance_buffer, "TLAS.instanceBuffer");
+				device->SetName(&desc.top_level.instance_buffer, "Scene::TLAS.instanceBuffer");
 				success = device->CreateRaytracingAccelerationStructure(&desc, &TLAS);
 				assert(success);
-				device->SetName(&TLAS, "TLAS");
+				device->SetName(&TLAS, "Scene::TLAS");
 			}
 		}
 
@@ -2970,27 +3046,18 @@ namespace wi::scene
 			MeshComponent& mesh = meshes[args.jobIndex];
 			GraphicsDevice* device = wi::graphics::GetDevice();
 
-			if (!mesh.vertexBuffer_PRE.IsValid())
+			if (!mesh.streamoutBuffer.IsValid())
 			{
 				const SoftBodyPhysicsComponent* softbody = softbodies.GetComponent(entity);
 				if (softbody != nullptr && wi::physics::IsSimulationEnabled())
 				{
-					device->CreateBuffer(&mesh.vertexBuffer_POS.desc, nullptr, &mesh.streamoutBuffer_POS);
-					device->CreateBuffer(&mesh.vertexBuffer_POS.desc, nullptr, &mesh.vertexBuffer_PRE);
-					device->CreateBuffer(&mesh.vertexBuffer_TAN.desc, nullptr, &mesh.streamoutBuffer_TAN);
-				}
-				else if (mesh.IsSkinned() && armatures.Contains(mesh.armatureID))
-				{
-					if (softbody == nullptr || softbody->vertex_positions_simulation.empty())
-					{
-						device->CreateBuffer(&mesh.streamoutBuffer_POS.GetDesc(), nullptr, &mesh.vertexBuffer_PRE);
-					}
+					mesh.CreateStreamoutRenderData();
 				}
 			}
 
-			if (mesh.streamoutBuffer_POS.IsValid() && mesh.vertexBuffer_PRE.IsValid())
+			if (mesh.so_pos_nor_wind.IsValid() && mesh.vb_pre.IsValid())
 			{
-				std::swap(mesh.streamoutBuffer_POS, mesh.vertexBuffer_PRE);
+				std::swap(mesh.so_pos_nor_wind, mesh.vb_pre);
 			}
 
 			mesh._flags &= ~MeshComponent::TLAS_FORCE_DOUBLE_SIDED;
@@ -3018,10 +3085,11 @@ namespace wi::scene
 						{
 							mesh.BLAS_state = MeshComponent::BLAS_STATE_NEEDS_REBUILD;
 						}
-						if (mesh.streamoutBuffer_POS.IsValid())
+						if (mesh.streamoutBuffer.IsValid())
 						{
 							mesh.BLAS_state = MeshComponent::BLAS_STATE_NEEDS_REBUILD;
-							geometry.triangles.vertex_buffer = mesh.streamoutBuffer_POS;
+							geometry.triangles.vertex_buffer = mesh.streamoutBuffer;
+							geometry.triangles.vertex_byte_offset = mesh.so_pos_nor_wind.offset;
 						}
 						if (material->IsDoubleSided())
 						{

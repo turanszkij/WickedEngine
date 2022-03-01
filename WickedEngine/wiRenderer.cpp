@@ -3582,11 +3582,13 @@ void UpdateRenderData(
 		const MeshComponent* mesh = vis.scene->meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
-			device->UpdateBuffer(&mesh->streamoutBuffer_POS, softbody.vertex_positions_simulation.data(), cmd);
-			device->UpdateBuffer(&mesh->streamoutBuffer_TAN, softbody.vertex_tangents_simulation.data(), cmd);
+			GraphicsDevice::GPUAllocation allocation = device->AllocateGPU(mesh->so_pos_nor_wind.size + mesh->so_tan.size, cmd);
+			std::memcpy(allocation.data, softbody.vertex_positions_simulation.data(), mesh->so_pos_nor_wind.size);
+			std::memcpy((uint8_t*)allocation.data + mesh->so_pos_nor_wind.size, softbody.vertex_tangents_simulation.data(), mesh->so_tan.size);
+			device->CopyBuffer(&mesh->streamoutBuffer, mesh->so_pos_nor_wind.offset, &allocation.buffer, allocation.offset, mesh->so_pos_nor_wind.size, cmd);
+			device->CopyBuffer(&mesh->streamoutBuffer, mesh->so_tan.offset, &allocation.buffer, allocation.offset + mesh->so_pos_nor_wind.size, mesh->so_tan.size, cmd);
 
-			barrier_stack.push_back(GPUBarrier::Buffer(&mesh->streamoutBuffer_POS, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
-			barrier_stack.push_back(GPUBarrier::Buffer(&mesh->streamoutBuffer_TAN, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
+			barrier_stack.push_back(GPUBarrier::Buffer(&mesh->streamoutBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
 		}
 	}
 
@@ -3625,21 +3627,23 @@ void UpdateRenderData(
 				}
 
 				device->CopyBuffer(
-					&mesh.subsetBuffer,
-					0,
+					&mesh.generalBuffer,
+					mesh.subset_view.offset,
 					&allocation.buffer,
 					allocation.offset,
 					tmp_alloc,
 					cmd
 				);
-				barrier_stack.push_back(GPUBarrier::Buffer(&mesh.subsetBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
+				barrier_stack.push_back(GPUBarrier::Buffer(&mesh.generalBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
 			}
 
 			if (mesh.dirty_morph)
 			{
 				mesh.dirty_morph = false;
-				device->UpdateBuffer(&mesh.vertexBuffer_POS, mesh.vertex_positions_morphed.data(), cmd);
-				barrier_stack.push_back(GPUBarrier::Buffer(&mesh.vertexBuffer_POS, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
+				GraphicsDevice::GPUAllocation allocation = device->AllocateGPU(mesh.vb_pos_nor_wind.size, cmd);
+				std::memcpy(allocation.data, mesh.vertex_positions_morphed.data(), mesh.vb_pos_nor_wind.size);
+				device->CopyBuffer(&mesh.generalBuffer, mesh.vb_pos_nor_wind.offset, &allocation.buffer, allocation.offset, mesh.vb_pos_nor_wind.size, cmd);
+				barrier_stack.push_back(GPUBarrier::Buffer(&mesh.generalBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
 			}
 
 			if (mesh.IsSkinned() && vis.scene->armatures.Contains(mesh.armatureID))
@@ -3657,18 +3661,17 @@ void UpdateRenderData(
 				device->BindComputeShader(&shaders[CSTYPE_SKINNING], cmd);
 
 				SkinningPushConstants push;
-				push.bonebuffer_index = device->GetDescriptorIndex(&armature.boneBuffer, SubresourceType::SRV);
-				push.vb_pos_nor_wind = device->GetDescriptorIndex(&mesh.vertexBuffer_POS, SubresourceType::SRV);
-				push.vb_tan = device->GetDescriptorIndex(&mesh.vertexBuffer_TAN, SubresourceType::SRV);
-				push.vb_bon = device->GetDescriptorIndex(&mesh.vertexBuffer_BON, SubresourceType::SRV);
-				push.so_pos_nor_wind = device->GetDescriptorIndex(&mesh.streamoutBuffer_POS, SubresourceType::UAV);
-				push.so_tan = device->GetDescriptorIndex(&mesh.streamoutBuffer_TAN, SubresourceType::UAV);
+				push.bonebuffer_index = armature.descriptor_srv;
+				push.vb_pos_nor_wind = mesh.vb_pos_nor_wind.descriptor_srv;
+				push.vb_tan = mesh.vb_tan.descriptor_srv;
+				push.vb_bon = mesh.vb_bon.descriptor_srv;
+				push.so_pos_nor_wind = mesh.so_pos_nor_wind.descriptor_uav;
+				push.so_tan = mesh.so_tan.descriptor_uav;
 				device->PushConstants(&push, sizeof(push), cmd);
 
 				device->Dispatch(((uint32_t)mesh.vertex_positions.size() + 63) / 64, 1, 1, cmd);
 
-				barrier_stack.push_back(GPUBarrier::Buffer(&mesh.streamoutBuffer_POS, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
-				barrier_stack.push_back(GPUBarrier::Buffer(&mesh.streamoutBuffer_TAN, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
+				barrier_stack.push_back(GPUBarrier::Buffer(&mesh.streamoutBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
 
 			}
 
@@ -5831,12 +5834,15 @@ void DrawDebugWorld(
 				// Draw mesh wireframe:
 				device->BindPipelineState(&PSO_debug[DEBUGRENDERING_EMITTER], cmd);
 				const GPUBuffer* vbs[] = {
-					mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS,
+					mesh->streamoutBuffer.IsValid() ? &mesh->streamoutBuffer : &mesh->generalBuffer,
 				};
 				const uint32_t strides[] = {
 					sizeof(MeshComponent::Vertex_POS),
 				};
-				device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, nullptr, cmd);
+				const uint64_t offsets[] = {
+					mesh->so_pos_nor_wind.IsValid() ? mesh->so_pos_nor_wind.offset : mesh->vb_pos_nor_wind.offset,
+				};
+				device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
 				device->BindIndexBuffer(&mesh->indexBuffer, mesh->GetIndexFormat(), 0, cmd);
 
 				device->DrawIndexed((uint32_t)mesh->indices.size(), 0, 0, cmd);
@@ -7255,7 +7261,7 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd, uint8_t instanceInclu
 
 				const MeshComponent& mesh = scene.meshes[object.mesh_index];
 				assert(!mesh.vertex_atlas.empty());
-				assert(mesh.vertexBuffer_ATL.IsValid());
+				assert(mesh.vb_atl.IsValid());
 
 				const TextureDesc& desc = object.lightmap.GetDesc();
 
@@ -7279,16 +7285,16 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd, uint8_t instanceInclu
 				device->BindDynamicConstantBuffer(misccb, CB_GETBINDSLOT(MiscCB), cmd);
 
 				const GPUBuffer* vbs[] = {
-					&mesh.vertexBuffer_POS,
-					&mesh.vertexBuffer_ATL,
+					&mesh.generalBuffer,
+					&mesh.generalBuffer,
 				};
 				uint32_t strides[] = {
 					sizeof(MeshComponent::Vertex_POS),
 					sizeof(MeshComponent::Vertex_TEX),
 				};
 				uint64_t offsets[] = {
-					0,
-					0,
+					mesh.vb_pos_nor_wind.offset,
+					mesh.vb_atl.offset,
 				};
 				device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
 				device->BindIndexBuffer(&mesh.indexBuffer, mesh.GetIndexFormat(), 0, cmd);

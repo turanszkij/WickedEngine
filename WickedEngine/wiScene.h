@@ -368,18 +368,35 @@ namespace wi::scene
 		// Non-serialized attributes:
 		wi::primitive::AABB aabb;
 		wi::graphics::GPUBuffer indexBuffer;
-		wi::graphics::GPUBuffer vertexBuffer_POS;
-		wi::graphics::GPUBuffer vertexBuffer_TAN;
-		wi::graphics::GPUBuffer vertexBuffer_UV0;
-		wi::graphics::GPUBuffer vertexBuffer_UV1;
-		wi::graphics::GPUBuffer vertexBuffer_BON;
-		wi::graphics::GPUBuffer vertexBuffer_COL;
-		wi::graphics::GPUBuffer vertexBuffer_ATL;
-		wi::graphics::GPUBuffer vertexBuffer_PRE;
-		wi::graphics::GPUBuffer streamoutBuffer_POS;
-		wi::graphics::GPUBuffer streamoutBuffer_TAN;
+		wi::graphics::GPUBuffer generalBuffer;
+		wi::graphics::GPUBuffer streamoutBuffer;
+		struct BufferView
+		{
+			uint64_t offset = ~0ull;
+			uint64_t size = 0ull;
+			int subresource_srv = -1;
+			int descriptor_srv = -1;
+			int subresource_uav = -1;
+			int descriptor_uav = -1;
+
+			constexpr bool IsValid() const
+			{
+				return offset != ~0ull;
+			}
+		};
+		BufferView ib;
+		BufferView vb_pos_nor_wind;
+		BufferView vb_tan;
+		BufferView vb_uv0;
+		BufferView vb_uv1;
+		BufferView vb_atl;
+		BufferView vb_col;
+		BufferView vb_bon;
+		BufferView vb_pre;
+		BufferView so_pos_nor_wind;
+		BufferView so_tan;
+		BufferView subset_view;
 		wi::vector<uint8_t> vertex_subsets;
-		wi::graphics::GPUBuffer subsetBuffer;
 
 		wi::graphics::RaytracingAccelerationStructure BLAS;
 		enum BLAS_STATE
@@ -415,6 +432,7 @@ namespace wi::scene
 
 		// Recreates GPU resources for index/vertex buffers
 		void CreateRenderData();
+		void CreateStreamoutRenderData();
 		void WriteShaderMesh(ShaderMesh* dest) const;
 
 		enum COMPUTE_NORMALS
@@ -787,6 +805,7 @@ namespace wi::scene
 
 		wi::vector<ShaderTransform> boneData;
 		wi::graphics::GPUBuffer boneBuffer;
+		int descriptor_srv = -1;
 
 		void CreateRenderData();
 

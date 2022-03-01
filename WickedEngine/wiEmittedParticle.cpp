@@ -70,19 +70,19 @@ namespace wi
 			bd.stride = sizeof(Particle);
 			bd.size = bd.stride * MAX_PARTICLES;
 			device->CreateBuffer(&bd, nullptr, &particleBuffer);
-			device->SetName(&particleBuffer, "particleBuffer");
+			device->SetName(&particleBuffer, "EmittedParticleSystem::particleBuffer");
 
 			// Alive index lists (double buffered):
 			bd.stride = sizeof(uint32_t);
 			bd.size = bd.stride * MAX_PARTICLES;
 			device->CreateBuffer(&bd, nullptr, &aliveList[0]);
-			device->SetName(&aliveList[0], "aliveList[0]");
+			device->SetName(&aliveList[0], "EmittedParticleSystem::aliveList[0]");
 			device->CreateBuffer(&bd, nullptr, &aliveList[1]);
-			device->SetName(&aliveList[1], "aliveList[1]");
+			device->SetName(&aliveList[1], "EmittedParticleSystem::aliveList[1]");
 			device->CreateBuffer(&bd, nullptr, &culledIndirectionBuffer);
-			device->SetName(&culledIndirectionBuffer, "culledIndirectionBuffer");
+			device->SetName(&culledIndirectionBuffer, "EmittedParticleSystem::culledIndirectionBuffer");
 			device->CreateBuffer(&bd, nullptr, &culledIndirectionBuffer2);
-			device->SetName(&culledIndirectionBuffer2, "culledIndirectionBuffer2");
+			device->SetName(&culledIndirectionBuffer2, "EmittedParticleSystem::culledIndirectionBuffer2");
 
 			// Dead index list:
 			wi::vector<uint32_t> indices(MAX_PARTICLES);
@@ -91,7 +91,7 @@ namespace wi
 				indices[i] = i;
 			}
 			device->CreateBuffer(&bd, indices.data(), &deadList);
-			device->SetName(&deadList, "deadList");
+			device->SetName(&deadList, "EmittedParticleSystem::deadList");
 
 
 			bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
@@ -104,25 +104,25 @@ namespace wi
 			wi::vector<MeshComponent::Vertex_POS> positionData(4 * MAX_PARTICLES);
 			std::fill(positionData.begin(), positionData.end(), MeshComponent::Vertex_POS());
 			device->CreateBuffer(&bd, positionData.data(), &vertexBuffer_POS);
-			device->SetName(&vertexBuffer_POS, "vertexBuffer_POS");
+			device->SetName(&vertexBuffer_POS, "EmittedParticleSystem::vertexBuffer_POS");
 
 			bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
 			bd.stride = sizeof(MeshComponent::Vertex_TEX);
 			bd.size = bd.stride * 4 * MAX_PARTICLES;
 			device->CreateBuffer(&bd, nullptr, &vertexBuffer_TEX);
-			device->SetName(&vertexBuffer_TEX, "vertexBuffer_TEX");
+			device->SetName(&vertexBuffer_TEX, "EmittedParticleSystem::vertexBuffer_TEX");
 
 			bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
 			bd.stride = sizeof(MeshComponent::Vertex_TEX);
 			bd.size = bd.stride * 4 * MAX_PARTICLES;
 			device->CreateBuffer(&bd, nullptr, &vertexBuffer_TEX2);
-			device->SetName(&vertexBuffer_TEX2, "vertexBuffer_TEX2");
+			device->SetName(&vertexBuffer_TEX2, "EmittedParticleSystem::vertexBuffer_TEX2");
 
 			bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
 			bd.stride = sizeof(MeshComponent::Vertex_COL);
 			bd.size = bd.stride * 4 * MAX_PARTICLES;
 			device->CreateBuffer(&bd, nullptr, &vertexBuffer_COL);
-			device->SetName(&vertexBuffer_COL, "vertexBuffer_COL");
+			device->SetName(&vertexBuffer_COL, "EmittedParticleSystem::vertexBuffer_COL");
 
 			bd.bind_flags = BindFlag::SHADER_RESOURCE;
 			bd.misc_flags = ResourceMiscFlag::NONE;
@@ -146,7 +146,7 @@ namespace wi
 				primitiveData[i0 + 5] = v0 + 3;
 			}
 			device->CreateBuffer(&bd, primitiveData.data(), &primitiveBuffer);
-			device->SetName(&primitiveBuffer, "primitiveBuffer");
+			device->SetName(&primitiveBuffer, "EmittedParticleSystem::primitiveBuffer");
 		}
 
 		if (IsSorted() && distanceBuffer.desc.size < MAX_PARTICLES * sizeof(float))
@@ -161,7 +161,7 @@ namespace wi
 			wi::vector<float> distances(MAX_PARTICLES);
 			std::fill(distances.begin(), distances.end(), 0.0f);
 			device->CreateBuffer(&bd, distances.data(), &distanceBuffer);
-			device->SetName(&distanceBuffer, "distanceBuffer");
+			device->SetName(&distanceBuffer, "EmittedParticleSystem::distanceBuffer");
 		}
 
 		if (IsSPHEnabled())
@@ -177,13 +177,13 @@ namespace wi
 				bd.stride = sizeof(float); // really, it is uint, but sorting is performing comparisons on floats, so whateva
 				bd.size = bd.stride * MAX_PARTICLES;
 				device->CreateBuffer(&bd, nullptr, &sphPartitionCellIndices);
-				device->SetName(&sphPartitionCellIndices, "sphPartitionCellIndices");
+				device->SetName(&sphPartitionCellIndices, "EmittedParticleSystem::sphPartitionCellIndices");
 
 				// Density buffer (for SPH simulation):
 				bd.stride = sizeof(float);
 				bd.size = bd.stride * MAX_PARTICLES;
 				device->CreateBuffer(&bd, nullptr, &densityBuffer);
-				device->SetName(&densityBuffer, "densityBuffer");
+				device->SetName(&densityBuffer, "EmittedParticleSystem::densityBuffer");
 			}
 
 			if (sphPartitionCellOffsets.desc.size < SPH_PARTITION_BUCKET_COUNT * sizeof(uint32_t))
@@ -192,7 +192,7 @@ namespace wi
 				bd.stride = sizeof(uint32_t);
 				bd.size = bd.stride * SPH_PARTITION_BUCKET_COUNT;
 				device->CreateBuffer(&bd, nullptr, &sphPartitionCellOffsets);
-				device->SetName(&sphPartitionCellOffsets, "sphPartitionCellOffsets");
+				device->SetName(&sphPartitionCellOffsets, "EmittedParticleSystem::sphPartitionCellOffsets");
 			}
 		}
 		else
@@ -219,7 +219,7 @@ namespace wi
 			bd.stride = sizeof(counters);
 			bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
 			device->CreateBuffer(&bd, &counters, &counterBuffer);
-			device->SetName(&counterBuffer, "counterBuffer");
+			device->SetName(&counterBuffer, "EmittedParticleSystem::counterBuffer");
 		}
 
 		if (!indirectBuffers.IsValid())
@@ -235,7 +235,7 @@ namespace wi
 				sizeof(wi::graphics::IndirectDispatchArgs) +
 				sizeof(wi::graphics::IndirectDrawArgsInstanced);
 			device->CreateBuffer(&bd, nullptr, &indirectBuffers);
-			device->SetName(&indirectBuffers, "indirectBuffers");
+			device->SetName(&indirectBuffers, "EmittedParticleSystem::indirectBuffers");
 
 			// Constant buffer:
 			bd.usage = Usage::DEFAULT;
@@ -243,7 +243,7 @@ namespace wi
 			bd.bind_flags = BindFlag::CONSTANT_BUFFER;
 			bd.misc_flags = ResourceMiscFlag::NONE;
 			device->CreateBuffer(&bd, nullptr, &constantBuffer);
-			device->SetName(&constantBuffer, "constantBuffer");
+			device->SetName(&constantBuffer, "EmittedParticleSystem::constantBuffer");
 
 			// Debug information CPU-readback buffer:
 			{
@@ -254,7 +254,7 @@ namespace wi
 				for (int i = 0; i < arraysize(statisticsReadbackBuffer); ++i)
 				{
 					device->CreateBuffer(&debugBufDesc, nullptr, &statisticsReadbackBuffer[i]);
-					device->SetName(&statisticsReadbackBuffer[i], "statisticsReadbackBuffer");
+					device->SetName(&statisticsReadbackBuffer[i], "EmittedParticleSystem::statisticsReadbackBuffer");
 				}
 			}
 		}
@@ -290,7 +290,7 @@ namespace wi
 
 			bool success = device->CreateRaytracingAccelerationStructure(&desc, &BLAS);
 			assert(success);
-			device->SetName(&BLAS, "BLAS_hair");
+			device->SetName(&BLAS, "EmittedParticleSystem::BLAS");
 		}
 
 	}
@@ -477,11 +477,15 @@ namespace wi
 
 			if (mesh != nullptr)
 			{
-				const GPUResource* resources[] = {
-					&mesh->indexBuffer,
-					(mesh->streamoutBuffer_POS.IsValid() ? &mesh->streamoutBuffer_POS : &mesh->vertexBuffer_POS),
-				};
-				device->BindResources(resources, 0, arraysize(resources), cmd);
+				device->BindResource(&mesh->indexBuffer, 0, cmd, mesh->ib.subresource_srv);
+				if (mesh->streamoutBuffer.IsValid())
+				{
+					device->BindResource(&mesh->streamoutBuffer, 1, cmd, mesh->so_pos_nor_wind.subresource_srv);
+				}
+				else
+				{
+					device->BindResource(&mesh->generalBuffer, 1, cmd, mesh->vb_pos_nor_wind.subresource_srv);
+				}
 			}
 
 			GPUBarrier barrier_indirect_uav = GPUBarrier::Buffer(&indirectBuffers, ResourceState::INDIRECT_ARGUMENT, ResourceState::UNORDERED_ACCESS);

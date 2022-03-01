@@ -67,7 +67,7 @@ namespace wi
 				bd.stride = sizeof(PatchSimulationData);
 				bd.size = bd.stride * particleCount;
 				device->CreateBuffer(&bd, nullptr, &simulationBuffer);
-				device->SetName(&simulationBuffer, "simulationBuffer");
+				device->SetName(&simulationBuffer, "HairParticleSystem::simulationBuffer");
 
 				bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
 				if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
@@ -77,15 +77,15 @@ namespace wi
 				bd.stride = sizeof(MeshComponent::Vertex_POS);
 				bd.size = bd.stride * 4 * particleCount;
 				device->CreateBuffer(&bd, nullptr, &vertexBuffer_POS[0]);
-				device->SetName(&vertexBuffer_POS[0], "vertexBuffer_POS[0]");
+				device->SetName(&vertexBuffer_POS[0], "HairParticleSystem::vertexBuffer_POS[0]");
 				device->CreateBuffer(&bd, nullptr, &vertexBuffer_POS[1]);
-				device->SetName(&vertexBuffer_POS[1], "vertexBuffer_POS[1]");
+				device->SetName(&vertexBuffer_POS[1], "HairParticleSystem::vertexBuffer_POS[1]");
 
 				bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
 				bd.stride = sizeof(MeshComponent::Vertex_TEX);
 				bd.size = bd.stride * 4 * particleCount;
 				device->CreateBuffer(&bd, nullptr, &vertexBuffer_TEX);
-				device->SetName(&vertexBuffer_TEX, "vertexBuffer_TEX");
+				device->SetName(&vertexBuffer_TEX, "HairParticleSystem::vertexBuffer_TEX");
 
 				bd.bind_flags = BindFlag::SHADER_RESOURCE;
 				bd.misc_flags = ResourceMiscFlag::NONE;
@@ -109,7 +109,7 @@ namespace wi
 					primitiveData[i0 + 5] = v0 + 3;
 				}
 				device->CreateBuffer(&bd, primitiveData.data(), &primitiveBuffer);
-				device->SetName(&primitiveBuffer, "primitiveBuffer");
+				device->SetName(&primitiveBuffer, "HairParticleSystem::primitiveBuffer");
 
 				bd.bind_flags = BindFlag::INDEX_BUFFER | BindFlag::UNORDERED_ACCESS;
 				bd.misc_flags = ResourceMiscFlag::NONE;
@@ -117,7 +117,7 @@ namespace wi
 				bd.stride = sizeof(uint);
 				bd.size = bd.stride * 6 * particleCount;
 				device->CreateBuffer(&bd, nullptr, &culledIndexBuffer);
-				device->SetName(&culledIndexBuffer, "culledIndexBuffer");
+				device->SetName(&culledIndexBuffer, "HairParticleSystem::culledIndexBuffer");
 			}
 
 			bd.usage = Usage::DEFAULT;
@@ -125,7 +125,7 @@ namespace wi
 			bd.bind_flags = BindFlag::CONSTANT_BUFFER;
 			bd.misc_flags = ResourceMiscFlag::NONE;
 			device->CreateBuffer(&bd, nullptr, &constantBuffer);
-			device->SetName(&constantBuffer, "constantBuffer");
+			device->SetName(&constantBuffer, "HairParticleSystem::constantBuffer");
 
 			if (vertex_lengths.size() != mesh.vertex_positions.size())
 			{
@@ -164,6 +164,7 @@ namespace wi
 				bd.stride = sizeof(uint8_t);
 				bd.size = bd.stride * (uint32_t)ulengths.size();
 				device->CreateBuffer(&bd, ulengths.data(), &vertexBuffer_length);
+				device->SetName(&vertexBuffer_length, "HairParticleSystem::vertexBuffer_length");
 			}
 			if (!indices.empty())
 			{
@@ -173,6 +174,7 @@ namespace wi
 				bd.stride = sizeof(uint32_t);
 				bd.size = bd.stride * (uint32_t)indices.size();
 				device->CreateBuffer(&bd, indices.data(), &indexBuffer);
+				device->SetName(&indexBuffer, "HairParticleSystem::indexBuffer");
 			}
 
 			if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING) && primitiveBuffer.IsValid())
@@ -196,7 +198,7 @@ namespace wi
 
 				bool success = device->CreateRaytracingAccelerationStructure(&desc, &BLAS);
 				assert(success);
-				device->SetName(&BLAS, "BLAS_hair");
+				device->SetName(&BLAS, "HairParticleSystem::BLAS");
 			}
 		}
 
@@ -294,12 +296,16 @@ namespace wi
 			};
 			device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-			const GPUResource* res[] = {
-				indexBuffer.IsValid() ? &indexBuffer : &mesh.indexBuffer,
-				mesh.streamoutBuffer_POS.IsValid() ? &mesh.streamoutBuffer_POS : &mesh.vertexBuffer_POS,
-				&vertexBuffer_length
-			};
-			device->BindResources(res, 0, arraysize(res), cmd);
+			device->BindResource(&mesh.indexBuffer, 0, cmd, mesh.ib.subresource_srv);
+			if (mesh.streamoutBuffer.IsValid())
+			{
+				device->BindResource(&mesh.streamoutBuffer, 1, cmd, mesh.so_pos_nor_wind.subresource_srv);
+			}
+			else
+			{
+				device->BindResource(&mesh.generalBuffer, 1, cmd, mesh.vb_pos_nor_wind.subresource_srv);
+			}
+			device->BindResource(&vertexBuffer_length, 2, cmd);
 
 			device->Dispatch(hcb.xHairNumDispatchGroups, 1, 1, cmd);
 

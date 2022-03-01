@@ -908,9 +908,9 @@ namespace wi::graphics
 					GPUBuffer vertex_buffer;
 					GPUBuffer index_buffer;
 					uint32_t index_count = 0;
-					uint32_t index_offset = 0;
+					uint64_t index_offset = 0;
 					uint32_t vertex_count = 0;
-					uint32_t vertex_byte_offset = 0;
+					uint64_t vertex_byte_offset = 0;
 					uint32_t vertex_stride = 0;
 					IndexBufferFormat index_format = IndexBufferFormat::UINT32;
 					Format vertex_format = Format::R32G32B32_FLOAT;
