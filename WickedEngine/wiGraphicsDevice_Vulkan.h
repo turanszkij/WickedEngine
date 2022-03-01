@@ -505,9 +505,12 @@ namespace wi::graphics
 				}
 				void free(int index)
 				{
-					locker.lock();
-					freelist.push_back(index);
-					locker.unlock();
+					if (index >= 0)
+					{
+						locker.lock();
+						freelist.push_back(index);
+						locker.unlock();
+					}
 				}
 			};
 			BindlessDescriptorHeap bindlessSampledImages;
