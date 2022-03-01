@@ -367,7 +367,6 @@ namespace wi::scene
 
 		// Non-serialized attributes:
 		wi::primitive::AABB aabb;
-		wi::graphics::GPUBuffer indexBuffer;
 		wi::graphics::GPUBuffer generalBuffer;
 		wi::graphics::GPUBuffer streamoutBuffer;
 		struct BufferView

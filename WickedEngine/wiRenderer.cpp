@@ -2422,7 +2422,7 @@ void RenderMeshes(
 			device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(ForwardEntityMaskCB), cmd);
 		}
 
-		device->BindIndexBuffer(&mesh.indexBuffer, mesh.GetIndexFormat(), 0, cmd);
+		device->BindIndexBuffer(&mesh.generalBuffer, mesh.GetIndexFormat(), mesh.ib.offset, cmd);
 
 		for (size_t subsetIndex = 0; subsetIndex < mesh.subsets.size(); ++subsetIndex)
 		{
@@ -3607,7 +3607,6 @@ void UpdateRenderData(
 		{
 			Entity entity = vis.scene->meshes.GetEntity(i);
 			const MeshComponent& mesh = vis.scene->meshes[i];
-			barrier_stack.push_back(GPUBarrier::Buffer(&mesh.indexBuffer, ResourceState::INDEX_BUFFER, ResourceState::INDEX_BUFFER | ResourceState::SHADER_RESOURCE));
 
 			if (mesh.dirty_subsets)
 			{
@@ -5843,7 +5842,7 @@ void DrawDebugWorld(
 					mesh->so_pos_nor_wind.IsValid() ? mesh->so_pos_nor_wind.offset : mesh->vb_pos_nor_wind.offset,
 				};
 				device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
-				device->BindIndexBuffer(&mesh->indexBuffer, mesh->GetIndexFormat(), 0, cmd);
+				device->BindIndexBuffer(&mesh->generalBuffer, mesh->GetIndexFormat(), mesh->ib.offset, cmd);
 
 				device->DrawIndexed((uint32_t)mesh->indices.size(), 0, 0, cmd);
 			}
@@ -5871,7 +5870,7 @@ void DrawDebugWorld(
 			buff->instanceID = (uint)scene.objects.GetIndex(x.objectEntity);
 			buff->userdata = 0;
 
-			device->BindIndexBuffer(&mesh.indexBuffer, mesh.GetIndexFormat(), 0, cmd);
+			device->BindIndexBuffer(&mesh.generalBuffer, mesh.GetIndexFormat(), mesh.ib.offset, cmd);
 
 			PaintRadiusCB cb;
 			cb.xPaintRadResolution = x.dimensions;
@@ -6427,7 +6426,7 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 		// impostor camera will fit around mesh bounding sphere:
 		const Sphere boundingsphere = mesh.GetBoundingSphere();
 
-		device->BindIndexBuffer(&mesh.indexBuffer, mesh.GetIndexFormat(), 0, cmd);
+		device->BindIndexBuffer(&mesh.generalBuffer, mesh.GetIndexFormat(), mesh.ib.offset, cmd);
 
 		for (int prop = 0; prop < 3; ++prop)
 		{
@@ -7297,7 +7296,7 @@ void RefreshLightmaps(const Scene& scene, CommandList cmd, uint8_t instanceInclu
 					mesh.vb_atl.offset,
 				};
 				device->BindVertexBuffers(vbs, 0, arraysize(vbs), strides, offsets, cmd);
-				device->BindIndexBuffer(&mesh.indexBuffer, mesh.GetIndexFormat(), 0, cmd);
+				device->BindIndexBuffer(&mesh.generalBuffer, mesh.GetIndexFormat(), mesh.ib.offset, cmd);
 
 				RaytracingCB cb;
 				cb.xTraceResolution.x = desc.width;

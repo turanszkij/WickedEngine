@@ -670,7 +670,7 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 		ss += "Vertex count: " + std::to_string(mesh->vertex_positions.size()) + "\n";
 		ss += "Index count: " + std::to_string(mesh->indices.size()) + "\n";
 		ss += "Subset count: " + std::to_string(mesh->subsets.size()) + "\n";
-		ss += "GPU memory: " + std::to_string((mesh->indexBuffer.GetDesc().size + mesh->generalBuffer.GetDesc().size + mesh->streamoutBuffer.GetDesc().size) / 1024.0f / 1024.0f) + " MB\n";
+		ss += "GPU memory: " + std::to_string((mesh->generalBuffer.GetDesc().size + mesh->streamoutBuffer.GetDesc().size) / 1024.0f / 1024.0f) + " MB\n";
 		ss += "\nVertex buffers: ";
 		if (mesh->vb_pos_nor_wind.IsValid()) ss += "position; ";
 		if (mesh->vb_uv0.IsValid()) ss += "uvset_0; ";

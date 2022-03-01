@@ -296,8 +296,8 @@ namespace wi::graphics
 		bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* desc, RaytracingAccelerationStructure* bvh) const override;
 		bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* desc, RaytracingPipelineState* rtpso) const override;
 		
-		int CreateSubresource(Texture* texture, SubresourceType type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) const override;
-		int CreateSubresource(GPUBuffer* buffer, SubresourceType type, uint64_t offset, uint64_t size = ~0) const override;
+		int CreateSubresource(Texture* texture, SubresourceType type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount, const Format* format_change = nullptr) const override;
+		int CreateSubresource(GPUBuffer* buffer, SubresourceType type, uint64_t offset, uint64_t size = ~0, const Format* format_change = nullptr) const override;
 
 		int GetDescriptorIndex(const GPUResource* resource, SubresourceType type, int subresource = -1) const override;
 		int GetDescriptorIndex(const Sampler* sampler) const override;
@@ -321,6 +321,24 @@ namespace wi::graphics
 
 		ColorSpace GetSwapChainColorSpace(const SwapChain* swapchain) const override;
 		bool IsSwapChainSupportsHDR(const SwapChain* swapchain) const override;
+
+		uint64_t GetMinOffsetAlignment(const GPUBufferDesc* desc) const override
+		{
+			uint64_t alignment = 1u;
+			if (has_flag(desc->bind_flags, BindFlag::CONSTANT_BUFFER))
+			{
+				alignment = std::max(alignment, properties2.properties.limits.minUniformBufferOffsetAlignment);
+			}
+			if (desc->format == Format::UNKNOWN)
+			{
+				alignment = std::max(alignment, properties2.properties.limits.minStorageBufferOffsetAlignment);
+			}
+			else
+			{
+				alignment = std::max(alignment, properties2.properties.limits.minTexelBufferOffsetAlignment);
+			}
+			return alignment;
+		}
 
 		///////////////Thread-sensitive////////////////////////
 

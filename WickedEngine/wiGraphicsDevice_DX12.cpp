@@ -2143,7 +2143,6 @@ using namespace dx12_internal;
 	{
 		wi::Timer timer;
 
-		ALLOCATION_MIN_ALIGNMENT = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
 		SHADER_IDENTIFIER_SIZE = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
 		TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
 
@@ -4150,9 +4149,15 @@ using namespace dx12_internal;
 		return SUCCEEDED(hr);
 	}
 
-	int GraphicsDevice_DX12::CreateSubresource(Texture* texture, SubresourceType type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) const
+	int GraphicsDevice_DX12::CreateSubresource(Texture* texture, SubresourceType type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount, const Format* format_change) const
 	{
 		auto internal_state = to_internal(texture);
+
+		Format format = texture->GetDesc().format;
+		if (format_change != nullptr)
+		{
+			format = *format_change;
+		}
 
 		switch (type)
 		{
@@ -4162,7 +4167,7 @@ using namespace dx12_internal;
 			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 
 			// Try to resolve resource format:
-			switch (texture->desc.format)
+			switch (format)
 			{
 			case Format::R16_TYPELESS:
 				srv_desc.Format = DXGI_FORMAT_R16_UNORM;
@@ -4177,7 +4182,7 @@ using namespace dx12_internal;
 				srv_desc.Format = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
 				break;
 			default:
-				srv_desc.Format = _ConvertFormat(texture->desc.format);
+				srv_desc.Format = _ConvertFormat(format);
 				break;
 			}
 
@@ -4275,7 +4280,7 @@ using namespace dx12_internal;
 			D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
 
 			// Try to resolve resource format:
-			switch (texture->desc.format)
+			switch (format)
 			{
 			case Format::R16_TYPELESS:
 				uav_desc.Format = DXGI_FORMAT_R16_UNORM;
@@ -4290,7 +4295,7 @@ using namespace dx12_internal;
 				uav_desc.Format = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
 				break;
 			default:
-				uav_desc.Format = _ConvertFormat(texture->desc.format);
+				uav_desc.Format = _ConvertFormat(format);
 				break;
 			}
 
@@ -4349,7 +4354,7 @@ using namespace dx12_internal;
 			D3D12_RENDER_TARGET_VIEW_DESC rtv_desc = {};
 
 			// Try to resolve resource format:
-			switch (texture->desc.format)
+			switch (format)
 			{
 			case Format::R16_TYPELESS:
 				rtv_desc.Format = DXGI_FORMAT_R16_UNORM;
@@ -4364,7 +4369,7 @@ using namespace dx12_internal;
 				rtv_desc.Format = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
 				break;
 			default:
-				rtv_desc.Format = _ConvertFormat(texture->desc.format);
+				rtv_desc.Format = _ConvertFormat(format);
 				break;
 			}
 
@@ -4439,7 +4444,7 @@ using namespace dx12_internal;
 			D3D12_DEPTH_STENCIL_VIEW_DESC dsv_desc = {};
 
 			// Try to resolve resource format:
-			switch (texture->desc.format)
+			switch (format)
 			{
 			case Format::R16_TYPELESS:
 				dsv_desc.Format = DXGI_FORMAT_D16_UNORM;
@@ -4454,7 +4459,7 @@ using namespace dx12_internal;
 				dsv_desc.Format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
 				break;
 			default:
-				dsv_desc.Format = _ConvertFormat(texture->desc.format);
+				dsv_desc.Format = _ConvertFormat(format);
 				break;
 			}
 
@@ -4522,10 +4527,16 @@ using namespace dx12_internal;
 		}
 		return -1;
 	}
-	int GraphicsDevice_DX12::CreateSubresource(GPUBuffer* buffer, SubresourceType type, uint64_t offset, uint64_t size) const
+	int GraphicsDevice_DX12::CreateSubresource(GPUBuffer* buffer, SubresourceType type, uint64_t offset, uint64_t size, const Format* format_change) const
 	{
 		auto internal_state = to_internal(buffer);
 		const GPUBufferDesc& desc = buffer->GetDesc();
+
+		Format format = desc.format;
+		if (format_change != nullptr)
+		{
+			format = *format_change;
+		}
 
 		switch (type)
 		{
@@ -4535,29 +4546,32 @@ using namespace dx12_internal;
 			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
 			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 
-			if (has_flag(desc.misc_flags, ResourceMiscFlag::BUFFER_RAW))
+			if (format == Format::UNKNOWN)
 			{
-				// This is a Raw Buffer
-				srv_desc.Format = DXGI_FORMAT_R32_TYPELESS;
-				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-				srv_desc.Buffer.FirstElement = (UINT)offset / sizeof(uint32_t);
-				srv_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
-				srv_desc.Buffer.NumElements = (UINT)std::min(size, desc.size - offset) / sizeof(uint32_t);
-			}
-			else if (has_flag(desc.misc_flags, ResourceMiscFlag::BUFFER_STRUCTURED))
-			{
-				// This is a Structured Buffer
-				srv_desc.Format = DXGI_FORMAT_UNKNOWN;
-				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-				srv_desc.Buffer.FirstElement = (UINT)offset / desc.stride;
-				srv_desc.Buffer.NumElements = (UINT)std::min(size, desc.size - offset) / desc.stride;
-				srv_desc.Buffer.StructureByteStride = desc.stride;
+				if (has_flag(desc.misc_flags, ResourceMiscFlag::BUFFER_RAW))
+				{
+					// This is a Raw Buffer
+					srv_desc.Format = DXGI_FORMAT_R32_TYPELESS;
+					srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+					srv_desc.Buffer.FirstElement = (UINT)offset / sizeof(uint32_t);
+					srv_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
+					srv_desc.Buffer.NumElements = (UINT)std::min(size, desc.size - offset) / sizeof(uint32_t);
+				}
+				else if (has_flag(desc.misc_flags, ResourceMiscFlag::BUFFER_STRUCTURED))
+				{
+					// This is a Structured Buffer
+					srv_desc.Format = DXGI_FORMAT_UNKNOWN;
+					srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+					srv_desc.Buffer.FirstElement = (UINT)offset / desc.stride;
+					srv_desc.Buffer.NumElements = (UINT)std::min(size, desc.size - offset) / desc.stride;
+					srv_desc.Buffer.StructureByteStride = desc.stride;
+				}
 			}
 			else
 			{
 				// This is a Typed Buffer
-				uint32_t stride = GetFormatStride(desc.format);
-				srv_desc.Format = _ConvertFormat(desc.format);
+				uint32_t stride = GetFormatStride(format);
+				srv_desc.Format = _ConvertFormat(format);
 				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 				srv_desc.Buffer.FirstElement = offset / stride;
 				srv_desc.Buffer.NumElements = (UINT)std::min(size, desc.size - offset) / stride;
@@ -4577,32 +4591,34 @@ using namespace dx12_internal;
 		break;
 		case SubresourceType::UAV:
 		{
-
 			D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
 			uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
 			uav_desc.Buffer.FirstElement = 0;
 
-			if (has_flag(desc.misc_flags, ResourceMiscFlag::BUFFER_RAW))
+			if (format == Format::UNKNOWN)
 			{
-				// This is a Raw Buffer
-				uav_desc.Format = DXGI_FORMAT_R32_TYPELESS;
-				uav_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
-				uav_desc.Buffer.FirstElement = (UINT)offset / sizeof(uint32_t);
-				uav_desc.Buffer.NumElements = (UINT)std::min(size, desc.size - offset) / sizeof(uint32_t);
-			}
-			else if (has_flag(desc.misc_flags, ResourceMiscFlag::BUFFER_STRUCTURED))
-			{
-				// This is a Structured Buffer
-				uav_desc.Format = DXGI_FORMAT_UNKNOWN;
-				uav_desc.Buffer.FirstElement = (UINT)offset / desc.stride;
-				uav_desc.Buffer.NumElements = (UINT)std::min(size, desc.size - offset) / desc.stride;
-				uav_desc.Buffer.StructureByteStride = desc.stride;
+				if (has_flag(desc.misc_flags, ResourceMiscFlag::BUFFER_RAW))
+				{
+					// This is a Raw Buffer
+					uav_desc.Format = DXGI_FORMAT_R32_TYPELESS;
+					uav_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
+					uav_desc.Buffer.FirstElement = (UINT)offset / sizeof(uint32_t);
+					uav_desc.Buffer.NumElements = (UINT)std::min(size, desc.size - offset) / sizeof(uint32_t);
+				}
+				else if (has_flag(desc.misc_flags, ResourceMiscFlag::BUFFER_STRUCTURED))
+				{
+					// This is a Structured Buffer
+					uav_desc.Format = DXGI_FORMAT_UNKNOWN;
+					uav_desc.Buffer.FirstElement = (UINT)offset / desc.stride;
+					uav_desc.Buffer.NumElements = (UINT)std::min(size, desc.size - offset) / desc.stride;
+					uav_desc.Buffer.StructureByteStride = desc.stride;
+				}
 			}
 			else
 			{
 				// This is a Typed Buffer
-				uint32_t stride = GetFormatStride(desc.format);
-				uav_desc.Format = _ConvertFormat(desc.format);
+				uint32_t stride = GetFormatStride(format);
+				uav_desc.Format = _ConvertFormat(format);
 				uav_desc.Buffer.FirstElement = (UINT)offset / stride;
 				uav_desc.Buffer.NumElements = (UINT)std::min(size, desc.size - offset) / stride;
 			}

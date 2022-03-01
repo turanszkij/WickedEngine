@@ -56,7 +56,6 @@ namespace wi::graphics
 		size_t TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE = 0;
 		uint32_t VARIABLE_RATE_SHADING_TILE_SIZE = 0;
 		uint64_t TIMESTAMP_FREQUENCY = 0;
-		uint64_t ALLOCATION_MIN_ALIGNMENT = 0;
 
 	public:
 		virtual ~GraphicsDevice() = default;
@@ -73,8 +72,8 @@ namespace wi::graphics
 		virtual bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* desc, RaytracingAccelerationStructure* bvh) const { return false; }
 		virtual bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* desc, RaytracingPipelineState* rtpso) const { return false; }
 		
-		virtual int CreateSubresource(Texture* texture, SubresourceType type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) const = 0;
-		virtual int CreateSubresource(GPUBuffer* buffer, SubresourceType type, uint64_t offset, uint64_t size = ~0) const = 0;
+		virtual int CreateSubresource(Texture* texture, SubresourceType type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount, const Format* format_change = nullptr) const = 0;
+		virtual int CreateSubresource(GPUBuffer* buffer, SubresourceType type, uint64_t offset, uint64_t size = ~0, const Format* format_change = nullptr) const = 0;
 
 		virtual int GetDescriptorIndex(const GPUResource* resource, SubresourceType type, int subresource = -1) const = 0;
 		virtual int GetDescriptorIndex(const Sampler* sampler) const = 0;
@@ -133,6 +132,9 @@ namespace wi::graphics
 		// Returns true if the swapchain could support HDR output regardless of current format
 		//	Returns false if the swapchain couldn't support HDR output
 		virtual bool IsSwapChainSupportsHDR(const SwapChain* swapchain) const = 0;
+
+		// Returns the minimum required alignment for buffer offsets when creating subresources
+		virtual uint64_t GetMinOffsetAlignment(const GPUBufferDesc* desc) const = 0;
 
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		// Command List functions are below:
@@ -198,10 +200,11 @@ namespace wi::graphics
 		struct GPULinearAllocator
 		{
 			GPUBuffer buffer;
-			uint64_t offset = 0;
+			uint64_t offset = 0ull;
+			uint64_t alignment = 0ull;
 			void reset()
 			{
-				offset = 0;
+				offset = 0ull;
 			}
 		};
 		virtual GPULinearAllocator& GetFrameAllocator(CommandList cmd) = 0;
@@ -231,9 +234,10 @@ namespace wi::graphics
 			{
 				GPUBufferDesc desc;
 				desc.usage = Usage::UPLOAD;
-				desc.size = AlignTo((allocator.buffer.desc.size + dataSize) * 2, ALLOCATION_MIN_ALIGNMENT);
 				desc.bind_flags = BindFlag::CONSTANT_BUFFER | BindFlag::VERTEX_BUFFER | BindFlag::INDEX_BUFFER | BindFlag::SHADER_RESOURCE;
 				desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+				allocator.alignment = GetMinOffsetAlignment(&desc);
+				desc.size = AlignTo((allocator.buffer.desc.size + dataSize) * 2, allocator.alignment);
 				CreateBuffer(&desc, nullptr, &allocator.buffer);
 				SetName(&allocator.buffer, "frame_allocator");
 				allocator.offset = 0;
@@ -243,7 +247,7 @@ namespace wi::graphics
 			allocation.offset = allocator.offset;
 			allocation.data = (void*)((size_t)allocator.buffer.mapped_data + allocator.offset);
 
-			allocator.offset += AlignTo(dataSize, ALLOCATION_MIN_ALIGNMENT);
+			allocator.offset += AlignTo(dataSize, allocator.alignment);
 
 			assert(allocation.IsValid());
 			return allocation;

@@ -382,12 +382,10 @@ namespace wi::scene
 		return wi::renderer::CombineStencilrefs(engineStencilRef, userStencilRef);
 	}
 
-	static constexpr uint64_t raw_alignment = 16ull;
 	void MeshComponent::CreateRenderData()
 	{
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
-		indexBuffer = {};
 		generalBuffer = {};
 		streamoutBuffer = {};
 		ib = {};
@@ -487,83 +485,75 @@ namespace wi::scene
 			subsetCounter++;
 		}
 
-		std::vector<uint8_t> buffer_data;
+		GPUBufferDesc bd;
+		bd.usage = Usage::DEFAULT;
+		bd.bind_flags = BindFlag::VERTEX_BUFFER | BindFlag::INDEX_BUFFER | BindFlag::SHADER_RESOURCE;
+		bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+		if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
+		{
+			bd.misc_flags |= ResourceMiscFlag::RAY_TRACING;
+		}
+		const uint64_t alignment = device->GetMinOffsetAlignment(&bd);
+		bd.size =
+			AlignTo(indices.size() * GetIndexStride(), alignment) +
+			AlignTo(vertex_positions.size() * sizeof(Vertex_POS), alignment) +
+			AlignTo(vertex_tangents.size() * sizeof(Vertex_TAN), alignment) +
+			AlignTo(vertex_uvset_0.size() * sizeof(Vertex_TEX), alignment) +
+			AlignTo(vertex_uvset_1.size() * sizeof(Vertex_TEX), alignment) +
+			AlignTo(vertex_atlas.size() * sizeof(Vertex_TEX), alignment) +
+			AlignTo(vertex_colors.size() * sizeof(Vertex_COL), alignment) +
+			AlignTo(vertex_boneindices.size() * sizeof(Vertex_BON), alignment) +
+			AlignTo(subsets.size() * sizeof(ShaderMeshSubset), alignment)
+			;
+
+		// single allocation storage for GPU buffer data:
+		wi::vector<uint8_t> buffer_data(bd.size);
+		uint64_t buffer_offset = 0ull;
 
 		// Create index buffer GPU data:
+		if (GetIndexFormat() == IndexBufferFormat::UINT32)
 		{
-			GPUBufferDesc desc;
-			desc.bind_flags = BindFlag::INDEX_BUFFER | BindFlag::SHADER_RESOURCE;
-			if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
+			ib.offset = buffer_offset;
+			ib.size = indices.size() * sizeof(uint32_t);
+			uint32_t* indexdata = (uint32_t*)(buffer_data.data() + buffer_offset);
+			buffer_offset += AlignTo(ib.size, alignment);
+			for (size_t i = 0; i < indices.size(); ++i)
 			{
-				desc.misc_flags |= ResourceMiscFlag::RAY_TRACING;
+				indexdata[i] = indices[i];
 			}
-
-			if (GetIndexFormat() == IndexBufferFormat::UINT32)
-			{
-				desc.stride = sizeof(uint32_t);
-				desc.format = Format::R32_UINT;
-				desc.size = indices.size() * sizeof(uint32_t);
-
-				// Use indices directly since vector is already in correct format:
-				static_assert(std::is_same<decltype(indices)::value_type, uint32_t>::value, "indices not in IndexBufferFormat::UINT32");
-
-				device->CreateBuffer(&desc, indices.data(), &indexBuffer);
-				device->SetName(&indexBuffer, "MeshComponent::indexBuffer[32bit]");
-			}
-			else
-			{
-				desc.stride = sizeof(uint16_t);
-				desc.format = Format::R16_UINT;
-				desc.size = indices.size() * sizeof(uint16_t);
-
-				buffer_data.resize(desc.size);
-				uint16_t* indices16 = (uint16_t*)buffer_data.data();
-				for (size_t i = 0; i < indices.size(); ++i)
-				{
-					indices16[i] = (uint16_t)indices[i];
-				}
-
-				device->CreateBuffer(&desc, indices16, &indexBuffer);
-				device->SetName(&indexBuffer, "MeshComponent::indexBuffer[16bit]");
-			}
-
-			ib.offset = 0ull;
-			ib.size = desc.size;
-			ib.descriptor_srv = device->GetDescriptorIndex(&indexBuffer, SubresourceType::SRV);
 		}
-
-		buffer_data.resize(
-			AlignTo(vertex_positions.size() * sizeof(Vertex_POS), raw_alignment) +
-			AlignTo(vertex_tangents.size() * sizeof(Vertex_TAN), raw_alignment) +
-			AlignTo(vertex_uvset_0.size() * sizeof(Vertex_TEX), raw_alignment) +
-			AlignTo(vertex_uvset_1.size() * sizeof(Vertex_TEX), raw_alignment) +
-			AlignTo(vertex_atlas.size() * sizeof(Vertex_TEX), raw_alignment) +
-			AlignTo(vertex_colors.size() * sizeof(Vertex_COL), raw_alignment) +
-			AlignTo(vertex_boneindices.size() * sizeof(Vertex_BON), raw_alignment) +
-			AlignTo(subsets.size() * sizeof(ShaderMeshSubset), raw_alignment)
-		);
-		uint64_t buffer_offset = 0ull;
+		else
+		{
+			ib.offset = buffer_offset;
+			ib.size = indices.size() * sizeof(uint16_t);
+			uint16_t* indexdata = (uint16_t*)(buffer_data.data() + buffer_offset);
+			buffer_offset += AlignTo(ib.size, alignment);
+			for (size_t i = 0; i < indices.size(); ++i)
+			{
+				indexdata[i] = (uint16_t)indices[i];
+			}
+		}
 
 		XMFLOAT3 _min = XMFLOAT3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
 		XMFLOAT3 _max = XMFLOAT3(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
 
 		// vertexBuffer - POSITION + NORMAL + WIND:
 		{
-		    if (!targets.empty())
-		    {
+			if (!targets.empty())
+			{
 				vertex_positions_morphed.resize(vertex_positions.size());
 				dirty_morph = true;
-		    }
+			}
 
 			vb_pos_nor_wind.offset = buffer_offset;
 			vb_pos_nor_wind.size = vertex_positions.size() * sizeof(Vertex_POS);
 			Vertex_POS* vertices = (Vertex_POS*)(buffer_data.data() + buffer_offset);
-			buffer_offset += AlignTo(vb_pos_nor_wind.size, raw_alignment);
+			buffer_offset += AlignTo(vb_pos_nor_wind.size, alignment);
 			for (size_t i = 0; i < vertex_positions.size(); ++i)
 			{
 				const XMFLOAT3& pos = vertex_positions[i];
-			    XMFLOAT3 nor = vertex_normals.empty() ? XMFLOAT3(1, 1, 1) : vertex_normals[i];
-			    XMStoreFloat3(&nor, XMVector3Normalize(XMLoadFloat3(&nor)));
+				XMFLOAT3 nor = vertex_normals.empty() ? XMFLOAT3(1, 1, 1) : vertex_normals[i];
+				XMStoreFloat3(&nor, XMVector3Normalize(XMLoadFloat3(&nor)));
 				const uint8_t wind = vertex_windweights.empty() ? 0xFF : vertex_windweights[i];
 				vertices[i].FromFULL(pos, nor, wind);
 
@@ -575,12 +565,12 @@ namespace wi::scene
 		aabb = AABB(_min, _max);
 
 		// vertexBuffer - TANGENTS
-		if(!vertex_tangents.empty())
+		if (!vertex_tangents.empty())
 		{
 			vb_tan.offset = buffer_offset;
 			vb_tan.size = vertex_tangents.size() * sizeof(Vertex_TAN);
 			Vertex_TAN* vertices = (Vertex_TAN*)(buffer_data.data() + buffer_offset);
-			buffer_offset += AlignTo(vb_tan.size, raw_alignment);
+			buffer_offset += AlignTo(vb_tan.size, alignment);
 			for (size_t i = 0; i < vertex_tangents.size(); ++i)
 			{
 				vertices[i].FromFULL(vertex_tangents[i]);
@@ -588,12 +578,12 @@ namespace wi::scene
 		}
 
 		// vertexBuffer - UV SET 0
-		if(!vertex_uvset_0.empty())
+		if (!vertex_uvset_0.empty())
 		{
 			vb_uv0.offset = buffer_offset;
 			vb_uv0.size = vertex_uvset_0.size() * sizeof(Vertex_TEX);
 			Vertex_TEX* vertices = (Vertex_TEX*)(buffer_data.data() + buffer_offset);
-			buffer_offset += AlignTo(vb_uv0.size, raw_alignment);
+			buffer_offset += AlignTo(vb_uv0.size, alignment);
 			for (size_t i = 0; i < vertex_uvset_0.size(); ++i)
 			{
 				vertices[i].FromFULL(vertex_uvset_0[i]);
@@ -606,7 +596,7 @@ namespace wi::scene
 			vb_uv1.offset = buffer_offset;
 			vb_uv1.size = vertex_uvset_1.size() * sizeof(Vertex_TEX);
 			Vertex_TEX* vertices = (Vertex_TEX*)(buffer_data.data() + buffer_offset);
-			buffer_offset += AlignTo(vb_uv1.size, raw_alignment);
+			buffer_offset += AlignTo(vb_uv1.size, alignment);
 			for (size_t i = 0; i < vertex_uvset_1.size(); ++i)
 			{
 				vertices[i].FromFULL(vertex_uvset_1[i]);
@@ -619,7 +609,7 @@ namespace wi::scene
 			vb_atl.offset = buffer_offset;
 			vb_atl.size = vertex_atlas.size() * sizeof(Vertex_TEX);
 			Vertex_TEX* vertices = (Vertex_TEX*)(buffer_data.data() + buffer_offset);
-			buffer_offset += AlignTo(vb_atl.size, raw_alignment);
+			buffer_offset += AlignTo(vb_atl.size, alignment);
 			for (size_t i = 0; i < vertex_atlas.size(); ++i)
 			{
 				vertices[i].FromFULL(vertex_atlas[i]);
@@ -632,7 +622,7 @@ namespace wi::scene
 			vb_col.offset = buffer_offset;
 			vb_col.size = vertex_colors.size() * sizeof(Vertex_COL);
 			Vertex_COL* vertices = (Vertex_COL*)(buffer_data.data() + buffer_offset);
-			buffer_offset += AlignTo(vb_col.size, raw_alignment);
+			buffer_offset += AlignTo(vb_col.size, alignment);
 			for (size_t i = 0; i < vertex_colors.size(); ++i)
 			{
 				vertices[i].color = vertex_colors[i];
@@ -645,7 +635,7 @@ namespace wi::scene
 			vb_bon.offset = buffer_offset;
 			vb_bon.size = vertex_boneindices.size() * sizeof(Vertex_BON);
 			Vertex_BON* vertices = (Vertex_BON*)(buffer_data.data() + buffer_offset);
-			buffer_offset += AlignTo(vb_bon.size, raw_alignment);
+			buffer_offset += AlignTo(vb_bon.size, alignment);
 			assert(vertex_boneindices.size() == vertex_boneweights.size());
 			for (size_t i = 0; i < vertex_boneindices.size(); ++i)
 			{
@@ -668,63 +658,56 @@ namespace wi::scene
 		{
 			subset_view.offset = buffer_offset;
 			subset_view.size = subsets.size() * sizeof(ShaderMeshSubset);
-			buffer_offset += AlignTo(subset_view.size, raw_alignment);
+			buffer_offset += AlignTo(subset_view.size, alignment);
 		}
 
+		bool success = device->CreateBuffer(&bd, buffer_data.data(), &generalBuffer);
+		assert(success);
+		device->SetName(&generalBuffer, "MeshComponent::generalBuffer");
+
+		assert(ib.IsValid());
+		const Format ib_format = GetIndexFormat() == IndexBufferFormat::UINT32 ? Format::R32_UINT : Format::R16_UINT;
+		ib.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, ib.offset, ib.size, &ib_format);
+		ib.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, ib.subresource_srv);
+
+		assert(vb_pos_nor_wind.IsValid());
+		vb_pos_nor_wind.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_pos_nor_wind.offset, vb_pos_nor_wind.size);
+		vb_pos_nor_wind.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_pos_nor_wind.subresource_srv);
+
+		if (vb_tan.IsValid())
 		{
-			GPUBufferDesc desc;
-			desc.usage = Usage::DEFAULT;
-			desc.bind_flags = BindFlag::VERTEX_BUFFER | BindFlag::SHADER_RESOURCE;
-			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-			if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
-			{
-				desc.misc_flags |= ResourceMiscFlag::RAY_TRACING;
-			}
-			desc.size = buffer_data.size();
-
-			bool success = device->CreateBuffer(&desc, buffer_data.data(), &generalBuffer);
-			assert(success);
-			device->SetName(&generalBuffer, "MeshComponent::generalBuffer");
-
-			assert(vb_pos_nor_wind.IsValid());
-			vb_pos_nor_wind.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_pos_nor_wind.offset, vb_pos_nor_wind.size);
-			vb_pos_nor_wind.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_pos_nor_wind.subresource_srv);
-
-			if (vb_tan.IsValid())
-			{
-				vb_tan.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_tan.offset, vb_tan.size);
-				vb_tan.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_tan.subresource_srv);
-			}
-			if (vb_uv0.IsValid())
-			{
-				vb_uv0.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_uv0.offset, vb_uv0.size);
-				vb_uv0.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_uv0.subresource_srv);
-			}
-			if (vb_uv1.IsValid())
-			{
-				vb_uv1.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_uv1.offset, vb_uv1.size);
-				vb_uv1.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_uv1.subresource_srv);
-			}
-			if (vb_atl.IsValid())
-			{
-				vb_atl.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_atl.offset, vb_atl.size);
-				vb_atl.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_atl.subresource_srv);
-			}
-			if (vb_col.IsValid())
-			{
-				vb_col.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_col.offset, vb_col.size);
-				vb_col.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_col.subresource_srv);
-			}
-			if (vb_bon.IsValid())
-			{
-				vb_bon.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_bon.offset, vb_bon.size);
-				vb_bon.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_bon.subresource_srv);
-			}
-
-			assert(subset_view.IsValid());
-			subset_view.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, subset_view.offset, subset_view.size);
-			subset_view.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, subset_view.subresource_srv);
+			vb_tan.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_tan.offset, vb_tan.size);
+			vb_tan.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_tan.subresource_srv);
 		}
+		if (vb_uv0.IsValid())
+		{
+			vb_uv0.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_uv0.offset, vb_uv0.size);
+			vb_uv0.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_uv0.subresource_srv);
+		}
+		if (vb_uv1.IsValid())
+		{
+			vb_uv1.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_uv1.offset, vb_uv1.size);
+			vb_uv1.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_uv1.subresource_srv);
+		}
+		if (vb_atl.IsValid())
+		{
+			vb_atl.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_atl.offset, vb_atl.size);
+			vb_atl.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_atl.subresource_srv);
+		}
+		if (vb_col.IsValid())
+		{
+			vb_col.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_col.offset, vb_col.size);
+			vb_col.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_col.subresource_srv);
+		}
+		if (vb_bon.IsValid())
+		{
+			vb_bon.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_bon.offset, vb_bon.size);
+			vb_bon.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_bon.subresource_srv);
+		}
+
+		assert(subset_view.IsValid());
+		subset_view.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, subset_view.offset, subset_view.size);
+		subset_view.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, subset_view.subresource_srv);
 
 		if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 		{
@@ -750,10 +733,10 @@ namespace wi::scene
 				geometry.type = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::Type::TRIANGLES;
 				geometry.triangles.vertex_buffer = generalBuffer;
 				geometry.triangles.vertex_byte_offset = vb_pos_nor_wind.offset;
-				geometry.triangles.index_buffer = indexBuffer;
+				geometry.triangles.index_buffer = generalBuffer;
 				geometry.triangles.index_format = GetIndexFormat();
 				geometry.triangles.index_count = subset.indexCount;
-				geometry.triangles.index_offset = subset.indexOffset;
+				geometry.triangles.index_offset = ib.offset / GetIndexStride() + subset.indexOffset;
 				geometry.triangles.vertex_count = (uint32_t)vertex_positions.size();
 				geometry.triangles.vertex_format = Format::R32G32B32_FLOAT;
 				geometry.triangles.vertex_stride = sizeof(MeshComponent::Vertex_POS);
@@ -776,9 +759,10 @@ namespace wi::scene
 		{
 			desc.misc_flags |= ResourceMiscFlag::RAY_TRACING;
 		}
+		const uint64_t alignment = device->GetMinOffsetAlignment(&desc);
 		desc.size =
-			AlignTo(vertex_positions.size() * sizeof(Vertex_POS) * 2, raw_alignment) + // *2 because prevpos also goes into this!
-			AlignTo(vertex_tangents.size() * sizeof(Vertex_TAN), raw_alignment)
+			AlignTo(vertex_positions.size() * sizeof(Vertex_POS) * 2, alignment) + // *2 because prevpos also goes into this!
+			AlignTo(vertex_tangents.size() * sizeof(Vertex_TAN), alignment)
 			;
 
 		bool success = device->CreateBuffer(&desc, nullptr, &streamoutBuffer);
@@ -792,14 +776,14 @@ namespace wi::scene
 		so_pos_nor_wind.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, so_pos_nor_wind.subresource_srv);
 		so_pos_nor_wind.descriptor_uav = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::UAV, so_pos_nor_wind.subresource_uav);
 
-		so_tan.offset = AlignTo(so_pos_nor_wind.offset + so_pos_nor_wind.size, raw_alignment);
+		so_tan.offset = AlignTo(so_pos_nor_wind.offset + so_pos_nor_wind.size, alignment);
 		so_tan.size = vb_tan.size;
 		so_tan.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, so_tan.offset, so_tan.size);
 		so_tan.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, so_tan.offset, so_tan.size);
 		so_tan.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, so_tan.subresource_srv);
 		so_tan.descriptor_uav = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::UAV, so_tan.subresource_uav);
 
-		vb_pre.offset = AlignTo(so_tan.offset + so_tan.size, raw_alignment);
+		vb_pre.offset = AlignTo(so_tan.offset + so_tan.size, alignment);
 		vb_pre.size = vb_pos_nor_wind.size;
 		vb_pre.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, vb_pre.offset, vb_pre.size);
 		vb_pre.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, vb_pre.offset, vb_pre.size);

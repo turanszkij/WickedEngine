@@ -477,7 +477,7 @@ namespace wi
 
 			if (mesh != nullptr)
 			{
-				device->BindResource(&mesh->indexBuffer, 0, cmd, mesh->ib.subresource_srv);
+				device->BindResource(&mesh->generalBuffer, 0, cmd, mesh->ib.subresource_srv);
 				if (mesh->streamoutBuffer.IsValid())
 				{
 					device->BindResource(&mesh->streamoutBuffer, 1, cmd, mesh->so_pos_nor_wind.subresource_srv);

@@ -532,7 +532,7 @@ namespace wi::graphics
 		Usage usage = Usage::DEFAULT;
 		BindFlag bind_flags = BindFlag::NONE;
 		ResourceMiscFlag misc_flags = ResourceMiscFlag::NONE;
-		uint32_t stride = 0; // needed for typed and structured buffer types!
+		uint32_t stride = 0; // only needed for structured buffer types!
 		Format format = Format::UNKNOWN; // only needed for typed buffer!
 	};
 
