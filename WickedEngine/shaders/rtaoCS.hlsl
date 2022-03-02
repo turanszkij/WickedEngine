@@ -17,9 +17,8 @@ groupshared float tile_Z[TILE_SIZE * TILE_SIZE];
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint groupIndex : SV_GroupIndex)
 {
-	const float2 uv = ((float2)DTid.xy + 0.5) * postprocess.resolution_rcp;
-	const float depth = texture_depth.SampleLevel(sampler_linear_clamp, uv, 0);
-	if (depth == 0)
+	uint2 primitiveID = texture_gbuffer0[DTid.xy * 2];
+	if (!any(primitiveID))
 		return;
 
 	uint flatTileIdx = 0;
@@ -33,20 +32,22 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	}
 	output_tiles[flatTileIdx] = 0;
 
-	const float3 P = reconstruct_position(uv, depth);
+	const float2 uv = ((float2)DTid.xy + 0.5) * postprocess.resolution_rcp;
+	float2 clipspace = uv * 2 - 1;
+	clipspace.y *= -1;
+	RayDesc ray = CreateCameraRay(clipspace);
 
 	PrimitiveID prim;
-	prim.unpack(texture_gbuffer0[DTid.xy * 2]);
+	prim.unpack(primitiveID);
 
 	Surface surface;
 	surface.init();
-	if (!surface.load(prim, P))
-	{
+	if (!surface.load(prim, ray.Origin, ray.Direction))
 		return;
-	}
+
+	float3 P = surface.P;
 	float3 N = surface.facenormal;
 
-	RayDesc ray;
 	ray.TMin = 0.01;
 	ray.TMax = rtao_range;
 	ray.Origin = P;
