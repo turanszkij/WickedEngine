@@ -238,7 +238,7 @@ void RenderPath3D::ResizeBuffers()
 		desc.sample_count = getMSAASampleCount();
 		desc.layout = ResourceState::DEPTHSTENCIL_READONLY;
 		desc.format = Format::R32G8X24_TYPELESS;
-		desc.bind_flags = BindFlag::DEPTH_STENCIL | BindFlag::SHADER_RESOURCE;
+		desc.bind_flags = BindFlag::DEPTH_STENCIL;
 		device->CreateTexture(&desc, nullptr, &depthBuffer_Main);
 		device->SetName(&depthBuffer_Main, "depthBuffer_Main");
 
@@ -306,13 +306,13 @@ void RenderPath3D::ResizeBuffers()
 				RenderPassAttachment::StoreOp::STORE,
 				ResourceState::DEPTHSTENCIL_READONLY,
 				ResourceState::DEPTHSTENCIL,
-				ResourceState::SHADER_RESOURCE
+				ResourceState::DEPTHSTENCIL_READONLY
 			)
 		);
 		desc.attachments.push_back(
 			RenderPassAttachment::RenderTarget(
 				&rtPrimitiveID_render,
-				RenderPassAttachment::LoadOp::DONTCARE,
+				RenderPassAttachment::LoadOp::CLEAR,
 				RenderPassAttachment::StoreOp::STORE,
 				ResourceState::SHADER_RESOURCE_COMPUTE,
 				ResourceState::RENDERTARGET,
@@ -328,7 +328,7 @@ void RenderPath3D::ResizeBuffers()
 				&depthBuffer_Main,
 				RenderPassAttachment::LoadOp::LOAD,
 				RenderPassAttachment::StoreOp::STORE,
-				ResourceState::SHADER_RESOURCE,
+				ResourceState::DEPTHSTENCIL_READONLY,
 				ResourceState::DEPTHSTENCIL_READONLY,
 				ResourceState::DEPTHSTENCIL_READONLY
 			)
@@ -778,7 +778,6 @@ void RenderPath3D::Render() const
 		);
 
 		wi::renderer::VisibilityResolve(
-			depthBuffer_Main,
 			rtPrimitiveID_render,
 			rtGbuffer,
 			depthBuffer_Copy,

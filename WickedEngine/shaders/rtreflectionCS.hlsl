@@ -95,6 +95,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
 	RayPayload payload;
 	payload.data = 0;
 
+	RayCone raycone = RayCone::from_spread_angle(roughness * 0.15);
 
 #ifdef RTAPI
 	RayQuery<
@@ -115,6 +116,8 @@ void main(uint2 DTid : SV_DispatchThreadID)
 
 		Surface surface;
 		surface.init();
+		surface.raycone = raycone;
+		surface.hit_depth = q.CandidateTriangleRayT();
 		if (!surface.load(prim, q.CandidateTriangleBarycentrics()))
 			break;
 
@@ -152,6 +155,8 @@ void main(uint2 DTid : SV_DispatchThreadID)
 		{
 			surface.flags |= SURFACE_FLAG_BACKFACE;
 		}
+		surface.raycone = raycone;
+		surface.hit_depth = q.CommittedRayT();
 		if (!surface.load(prim, q.CommittedTriangleBarycentrics()))
 			return;
 

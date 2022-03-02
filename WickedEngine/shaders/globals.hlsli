@@ -115,7 +115,7 @@ inline ShaderMesh load_mesh(uint meshIndex)
 }
 inline ShaderMeshSubset load_subset(ShaderMesh mesh, uint subsetIndex)
 {
-	return bindless_buffers[NonUniformResourceIndex(mesh.subsetbuffer)].Load<ShaderMeshSubset>(subsetIndex * sizeof(ShaderMeshSubset));
+	return bindless_buffers[GetScene().subsetbuffer].Load<ShaderMeshSubset>((mesh.subsetOffset + subsetIndex) * sizeof(ShaderMeshSubset));
 }
 inline ShaderMaterial load_material(uint materialIndex)
 {
@@ -850,6 +850,105 @@ float2 compute_barycentrics(float3 p, float3 a, float3 b, float3 c)
 	float u = (d11 * d20 - d01 * d21) * denom_rcp;
 	float v = (d00 * d21 - d01 * d20) * denom_rcp;
 	return float2(u, v);
+}
+// Compute barycentric coordinates on triangle from a ray
+float2 compute_barycentrics(float3 rayOrigin, float3 rayDirection, float3 a, float3 b, float3 c)
+{
+	float3 v0v1 = b - a;
+	float3 v0v2 = c - a;
+	float3 pvec = cross(rayDirection, v0v2);
+	float det = dot(v0v1, pvec);
+	float det_rcp = rcp(det);
+	float3 tvec = rayOrigin - a;
+	float u = dot(tvec, pvec) * det_rcp;
+	float3 qvec = cross(tvec, v0v1);
+	float v = dot(rayDirection, qvec) * det_rcp;
+	return float2(u, v);
+}
+// Compute barycentric coordinates on triangle from a ray
+//	also outputs hit distance "t"
+float2 compute_barycentrics(float3 rayOrigin, float3 rayDirection, float3 a, float3 b, float3 c, out float t)
+{
+	float3 v0v1 = b - a;
+	float3 v0v2 = c - a;
+	float3 pvec = cross(rayDirection, v0v2);
+	float det = dot(v0v1, pvec);
+	float det_rcp = rcp(det);
+	float3 tvec = rayOrigin - a;
+	float u = dot(tvec, pvec) * det_rcp;
+	float3 qvec = cross(tvec, v0v1);
+	float v = dot(rayDirection, qvec) * det_rcp;
+	t = dot(v0v2, qvec) * det_rcp;
+	return float2(u, v);
+}
+
+// Texture LOD computation things from https://github.com/EmbarkStudios/kajiya
+float twice_triangle_area(float3 p0, float3 p1, float3 p2)
+{
+	return length(cross(p1 - p0, p2 - p0));
+}
+float twice_uv_area(float2 t0, float2 t1, float2 t2)
+{
+	return abs((t1.x - t0.x) * (t2.y - t0.y) - (t2.x - t0.x) * (t1.y - t0.y));
+}
+// https://media.contentapi.ea.com/content/dam/ea/seed/presentations/2019-ray-tracing-gems-chapter-20-akenine-moller-et-al.pdf
+float compute_texture_lod(Texture2D tex, float triangle_constant, float3 ray_direction, float3 surf_normal, float cone_width)
+{
+	uint w, h;
+	tex.GetDimensions(w, h);
+
+	float lambda = triangle_constant;
+	lambda += log2(abs(cone_width));
+	lambda += 0.5 * log2(float(w) * float(h));
+	lambda -= log2(abs(dot(normalize(ray_direction), surf_normal)));
+	return lambda;
+}
+float pixel_cone_spread_angle_from_image_height(float image_height)
+{
+	//return atan(2.0 * frame_constants.view_constants.clip_to_view._11 / image_height);
+	return atan(2.0 * GetCamera().inverse_projection._11 / image_height);
+}
+// https://media.contentapi.ea.com/content/dam/ea/seed/presentations/2019-ray-tracing-gems-chapter-20-akenine-moller-et-al.pdf
+struct RayCone
+{
+	float width;
+	float spread_angle;
+
+	static RayCone from_spread_angle(float spread_angle)
+	{
+		RayCone res;
+		res.width = 0.0;
+		res.spread_angle = spread_angle;
+		return res;
+	}
+
+	static RayCone from_width_spread_angle(float width, float spread_angle)
+	{
+		RayCone res;
+		res.width = width;
+		res.spread_angle = spread_angle;
+		return res;
+	}
+
+	RayCone propagate(float surface_spread_angle, float hit_t)
+	{
+		RayCone res;
+		res.width = this.spread_angle * hit_t + this.width;
+		res.spread_angle = this.spread_angle + surface_spread_angle;
+		return res;
+	}
+
+	float width_at_t(float hit_t)
+	{
+		return this.width + this.spread_angle * hit_t;
+	}
+};
+RayCone pixel_ray_cone_from_image_height(float image_height)
+{
+	RayCone res;
+	res.width = 0.0;
+	res.spread_angle = pixel_cone_spread_angle_from_image_height(image_height);
+	return res;
 }
 
 static const float4 halton64[] = {

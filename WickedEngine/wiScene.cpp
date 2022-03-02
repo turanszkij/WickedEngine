@@ -396,11 +396,9 @@ namespace wi::scene
 		vb_atl = {};
 		vb_col = {};
 		vb_bon = {};
-		vb_pre = {};
 		so_pos_nor_wind = {};
 		so_tan = {};
-		vb_pre = {};
-		subset_view = {};
+		so_pre = {};
 
 		if (vertex_tangents.empty() && !vertex_uvset_0.empty())
 		{
@@ -502,8 +500,7 @@ namespace wi::scene
 			AlignTo(vertex_uvset_1.size() * sizeof(Vertex_TEX), alignment) +
 			AlignTo(vertex_atlas.size() * sizeof(Vertex_TEX), alignment) +
 			AlignTo(vertex_colors.size() * sizeof(Vertex_COL), alignment) +
-			AlignTo(vertex_boneindices.size() * sizeof(Vertex_BON), alignment) +
-			AlignTo(subsets.size() * sizeof(ShaderMeshSubset), alignment)
+			AlignTo(vertex_boneindices.size() * sizeof(Vertex_BON), alignment)
 			;
 
 		// single allocation storage for GPU buffer data:
@@ -654,13 +651,6 @@ namespace wi::scene
 			CreateStreamoutRenderData();
 		}
 
-		// subset buffer:
-		{
-			subset_view.offset = buffer_offset;
-			subset_view.size = subsets.size() * sizeof(ShaderMeshSubset);
-			buffer_offset += AlignTo(subset_view.size, alignment);
-		}
-
 		bool success = device->CreateBuffer(&bd, buffer_data.data(), &generalBuffer);
 		assert(success);
 		device->SetName(&generalBuffer, "MeshComponent::generalBuffer");
@@ -704,10 +694,6 @@ namespace wi::scene
 			vb_bon.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_bon.offset, vb_bon.size);
 			vb_bon.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_bon.subresource_srv);
 		}
-
-		assert(subset_view.IsValid());
-		subset_view.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, subset_view.offset, subset_view.size);
-		subset_view.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, subset_view.subresource_srv);
 
 		if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 		{
@@ -783,12 +769,12 @@ namespace wi::scene
 		so_tan.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, so_tan.subresource_srv);
 		so_tan.descriptor_uav = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::UAV, so_tan.subresource_uav);
 
-		vb_pre.offset = AlignTo(so_tan.offset + so_tan.size, alignment);
-		vb_pre.size = vb_pos_nor_wind.size;
-		vb_pre.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, vb_pre.offset, vb_pre.size);
-		vb_pre.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, vb_pre.offset, vb_pre.size);
-		vb_pre.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, vb_pre.subresource_srv);
-		vb_pre.descriptor_uav = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::UAV, vb_pre.subresource_uav);
+		so_pre.offset = AlignTo(so_tan.offset + so_tan.size, alignment);
+		so_pre.size = vb_pos_nor_wind.size;
+		so_pre.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, so_pre.offset, so_pre.size);
+		so_pre.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, so_pre.offset, so_pre.size);
+		so_pre.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, so_pre.subresource_srv);
+		so_pre.descriptor_uav = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::UAV, so_pre.subresource_uav);
 	}
 	void MeshComponent::WriteShaderMesh(ShaderMesh* dest) const
 	{
@@ -815,11 +801,11 @@ namespace wi::scene
 		mesh.vb_uv0 = vb_uv0.descriptor_srv;
 		mesh.vb_uv1 = vb_uv1.descriptor_srv;
 		mesh.vb_atl = vb_atl.descriptor_srv;
-		mesh.vb_pre = vb_pre.descriptor_srv;
+		mesh.vb_pre = so_pre.descriptor_srv;
 		mesh.blendmaterial1 = terrain_material1_index;
 		mesh.blendmaterial2 = terrain_material2_index;
 		mesh.blendmaterial3 = terrain_material3_index;
-		mesh.subsetbuffer = subset_view.descriptor_srv;
+		mesh.subsetOffset = (uint)subsetAllocation;
 		mesh.aabb_min = aabb._min;
 		mesh.aabb_max = aabb._max;
 		mesh.tessellation_factor = tessellationFactor;
@@ -1519,6 +1505,8 @@ namespace wi::scene
 
 
 
+	const uint32_t small_subtask_groupsize = 64u;
+
 	void Scene::Update(float dt)
 	{
 		this->dt = dt;
@@ -1649,6 +1637,21 @@ namespace wi::scene
 
 		wi::jobsystem::context ctx;
 
+		// Scan and allocate GPU subset counts:
+		subsetAllocator.store(0ull);
+		wi::jobsystem::Dispatch(ctx, (uint32_t)meshes.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
+			MeshComponent& mesh = meshes[args.jobIndex];
+			mesh.subsetAllocation = subsetAllocator.fetch_add(mesh.subsets.size());
+		});
+		wi::jobsystem::Dispatch(ctx, (uint32_t)hairs.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
+			HairParticleSystem& hair = hairs[args.jobIndex];
+			hair.subsetAllocation = subsetAllocator.fetch_add(1ull);
+		});
+		wi::jobsystem::Dispatch(ctx, (uint32_t)emitters.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
+			EmittedParticleSystem& emitter = emitters[args.jobIndex];
+			emitter.subsetAllocation = subsetAllocator.fetch_add(1ull);
+		});
+
 		wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
 			// Must not keep inactive TLAS instances, so zero them out for safety:
 			std::memset(TLAS_instancesMapped, 0, TLAS_instancesUpload->desc.size);
@@ -1661,6 +1664,29 @@ namespace wi::scene
 		wi::jobsystem::Wait(ctx); // dependencies
 
 		RunHierarchyUpdateSystem(ctx);
+
+		// GPU subset count allocation is ready at this point:
+		subsetArraySize = subsetAllocator.load();
+		if (subsetBuffer.desc.size < (subsetArraySize * sizeof(ShaderMeshSubset)))
+		{
+			GPUBufferDesc desc;
+			desc.stride = sizeof(ShaderMeshSubset);
+			desc.size = desc.stride * subsetArraySize * 2; // *2 to grow fast
+			desc.bind_flags = BindFlag::SHADER_RESOURCE;
+			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+			device->CreateBuffer(&desc, nullptr, &subsetBuffer);
+			device->SetName(&subsetBuffer, "Scene::subsetBuffer");
+
+			desc.usage = Usage::UPLOAD;
+			desc.bind_flags = BindFlag::NONE;
+			desc.misc_flags = ResourceMiscFlag::NONE;
+			for (int i = 0; i < arraysize(subsetUploadBuffer); ++i)
+			{
+				device->CreateBuffer(&desc, nullptr, &subsetUploadBuffer[i]);
+				device->SetName(&subsetUploadBuffer[i], "Scene::subsetUploadBuffer");
+			}
+		}
+		subsetArrayMapped = (ShaderMeshSubset*)subsetUploadBuffer[device->GetBufferIndex()].mapped_data;
 
 		RunMeshUpdateSystem(ctx);
 
@@ -1892,6 +1918,7 @@ namespace wi::scene
 		// Shader scene resources:
 		shaderscene.instancebuffer = device->GetDescriptorIndex(&instanceBuffer, SubresourceType::SRV);
 		shaderscene.meshbuffer = device->GetDescriptorIndex(&meshBuffer, SubresourceType::SRV);
+		shaderscene.subsetbuffer = device->GetDescriptorIndex(&subsetBuffer, SubresourceType::SRV);
 		shaderscene.materialbuffer = device->GetDescriptorIndex(&materialBuffer, SubresourceType::SRV);
 		shaderscene.envmaparray = device->GetDescriptorIndex(&envmapArray, SubresourceType::SRV);
 		if (weather.skyMap.IsValid())
@@ -2412,8 +2439,6 @@ namespace wi::scene
 		}
 	}
 
-
-	const uint32_t small_subtask_groupsize = 64;
 
 	void Scene::RunAnimationUpdateSystem(wi::jobsystem::context& ctx)
 	{
@@ -3039,14 +3064,14 @@ namespace wi::scene
 				}
 			}
 
-			if (mesh.so_pos_nor_wind.IsValid() && mesh.vb_pre.IsValid())
+			if (mesh.so_pos_nor_wind.IsValid() && mesh.so_pre.IsValid())
 			{
-				std::swap(mesh.so_pos_nor_wind, mesh.vb_pre);
+				std::swap(mesh.so_pos_nor_wind, mesh.so_pre);
 			}
 
 			mesh._flags &= ~MeshComponent::TLAS_FORCE_DOUBLE_SIDED;
 
-			uint32_t subsetIndex = 0;
+			size_t subsetIndex = 0;
 			for (auto& subset : mesh.subsets)
 			{
 				const MaterialComponent* material = materials.GetComponent(subset.materialID);
@@ -3085,6 +3110,12 @@ namespace wi::scene
 				{
 					subset.materialIndex = 0;
 				}
+
+				ShaderMeshSubset shadersubset;
+				shadersubset.init();
+				shadersubset.indexOffset = subset.indexOffset;
+				shadersubset.materialIndex = subset.materialIndex;
+				std::memcpy(subsetArrayMapped + mesh.subsetAllocation + subsetIndex, &shadersubset, sizeof(shadersubset));
 				subsetIndex++;
 			}
 
@@ -3810,13 +3841,19 @@ namespace wi::scene
 
 					GraphicsDevice* device = wi::graphics::GetDevice();
 
+					ShaderMeshSubset subset;
+					subset.init();
+					subset.indexOffset = 0;
+					subset.materialIndex = (uint)materials.GetIndex(entity);
+					std::memcpy(subsetArrayMapped + hair.subsetAllocation, &subset, sizeof(subset));
+
 					ShaderMesh mesh;
 					mesh.init();
 					mesh.ib = device->GetDescriptorIndex(&hair.primitiveBuffer, SubresourceType::SRV);
 					mesh.vb_pos_nor_wind = device->GetDescriptorIndex(&hair.vertexBuffer_POS[0], SubresourceType::SRV);
 					mesh.vb_pre = device->GetDescriptorIndex(&hair.vertexBuffer_POS[1], SubresourceType::SRV);
 					mesh.vb_uv0 = device->GetDescriptorIndex(&hair.vertexBuffer_TEX, SubresourceType::SRV);
-					mesh.subsetbuffer = device->GetDescriptorIndex(&hair.subsetBuffer, SubresourceType::SRV);
+					mesh.subsetOffset = (uint)hair.subsetAllocation;
 					mesh.flags = SHADERMESH_FLAG_DOUBLE_SIDED | SHADERMESH_FLAG_HAIRPARTICLE;
 
 					const size_t meshIndex = meshes.GetCount() + args.jobIndex;
@@ -3892,6 +3929,12 @@ namespace wi::scene
 
 			GraphicsDevice* device = wi::graphics::GetDevice();
 
+			ShaderMeshSubset subset;
+			subset.init();
+			subset.indexOffset = 0;
+			subset.materialIndex = (uint)materials.GetIndex(entity);
+			std::memcpy(subsetArrayMapped + emitter.subsetAllocation, &subset, sizeof(subset));
+
 			ShaderMesh mesh;
 			mesh.init();
 			mesh.ib = device->GetDescriptorIndex(&emitter.primitiveBuffer, SubresourceType::SRV);
@@ -3899,7 +3942,7 @@ namespace wi::scene
 			mesh.vb_uv0 = device->GetDescriptorIndex(&emitter.vertexBuffer_TEX, SubresourceType::SRV);
 			mesh.vb_uv1 = device->GetDescriptorIndex(&emitter.vertexBuffer_TEX2, SubresourceType::SRV);
 			mesh.vb_col = device->GetDescriptorIndex(&emitter.vertexBuffer_COL, SubresourceType::SRV);
-			mesh.subsetbuffer = device->GetDescriptorIndex(&emitter.subsetBuffer, SubresourceType::SRV);
+			mesh.subsetOffset = (uint)emitter.subsetAllocation;
 			mesh.flags = SHADERMESH_FLAG_DOUBLE_SIDED | SHADERMESH_FLAG_EMITTEDPARTICLE;
 
 			const size_t meshIndex = meshes.GetCount() + hairs.GetCount() + args.jobIndex;

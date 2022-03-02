@@ -2,6 +2,7 @@
 #include "brdf.hlsli"
 #include "lightingHF.hlsli"
 #include "ShaderInterop_Postprocess.h"
+#include "raytracingHF.hlsli"
 
 PUSHCONSTANT(postprocess, PostProcess);
 
@@ -12,13 +13,8 @@ RWTexture2D<float3> output_surface_environment : register(u2);
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	uint2 dim;
-	texture_depth.GetDimensions(dim.x, dim.y);
-
-	float2 uv = (DTid.xy + 0.5f) / dim;
-
-	float depth = texture_depth[DTid.xy];
-	if (depth == 0.0)
+	uint2 primitiveID = texture_gbuffer0[DTid.xy]; // Map to resolution
+	if (!any(primitiveID))
 	{
 		output_surface_normal[DTid.xy] = 0.0;
 		output_surface_roughness[DTid.xy] = 0.0;
@@ -26,14 +22,20 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		return;
 	}
 
-	uint2 primitiveID = texture_gbuffer0[DTid.xy]; // Map to resolution
+	uint2 dim;
+	texture_depth.GetDimensions(dim.x, dim.y);
+	float2 uv = (DTid.xy + 0.5f) / dim;
+	float2 pos2D = uv * 2 - 1;
+	pos2D.y *= -1;
+	RayDesc ray = CreateCameraRay(pos2D);
 
 	PrimitiveID prim;
 	prim.unpack(primitiveID);
 
 	Surface surface;
 	surface.init();
-	if (!surface.load(prim, reconstruct_position(uv, depth)))
+	surface.raycone = pixel_ray_cone_from_image_height(dim.y);
+	if (!surface.load(prim, ray.Origin, ray.Direction))
 	{
 		output_surface_normal[DTid.xy] = 0.0;
 		output_surface_roughness[DTid.xy] = 0.0;

@@ -1,6 +1,7 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Renderer.h"
 #include "brdf.hlsli"
+#include "raytracingHF.hlsli"
 
 RWTexture2D<float2> output_velocity : register(u0);
 
@@ -18,11 +19,9 @@ RWTexture2D<float> output_lineardepth_mip4 : register(u10);
 
 #ifdef VISIBILITY_MSAA
 Texture2DMS<uint2> texture_primitiveID : register(t0);
-Texture2DMS<float> texture_depthbuffer : register(t1);
 RWTexture2D<uint2> output_primitiveID : register(u11);
 #else
 Texture2D<uint2> texture_primitiveID : register(t0);
-Texture2D<float> texture_depthbuffer : register(t1);
 #endif // VISIBILITY_MSAA
 
 [numthreads(16, 16, 1)]
@@ -31,39 +30,44 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	uint2 pixel = DTid.xy;
 
 	const float2 uv = ((float2)pixel + 0.5) * GetCamera().internal_resolution_rcp;
-	const float depth = texture_depthbuffer[pixel];
-	const float3 P = reconstruct_position(uv, depth);
+	float2 pos2D = uv * 2 - 1;
+	pos2D.y *= -1;
+	RayDesc ray = CreateCameraRay(pos2D);
 
-	float3 pre = P;
-
-	if (depth > 0)
-	{
-		uint2 primitiveID = texture_primitiveID[pixel];
+	uint2 primitiveID = texture_primitiveID[pixel];
 
 #ifdef VISIBILITY_MSAA
-		output_primitiveID[pixel] = primitiveID;
+	output_primitiveID[pixel] = primitiveID;
 #endif // VISIBILITY_MSAA
 
+	float3 pre;
+	float depth;
+	if (any(primitiveID))
+	{
 		PrimitiveID prim;
 		prim.unpack(primitiveID);
 
 		Surface surface;
 		surface.init();
-		if (surface.load(prim, P))
+		surface.raycone = pixel_ray_cone_from_image_height(GetCamera().internal_resolution.y);
+		if (surface.load(prim, ray.Origin, ray.Direction))
 		{
 			pre = surface.pre;
+			float4 tmp = mul(GetCamera().view_projection, float4(surface.P, 1));
+			tmp.xyz /= tmp.w;
+			depth = tmp.z;
 		}
-
+	}
+	else
+	{
+		pre = ray.Origin + ray.Direction * GetCamera().z_far;
+		depth = 0;
 	}
 
 	float4 pos2DPrev = mul(GetCamera().previous_view_projection, float4(pre, 1));
 	pos2DPrev.xy /= pos2DPrev.w;
-	float2 pos2D = uv * 2 - 1;
-	pos2D.y *= -1;
 	float2 velocity = ((pos2DPrev.xy - GetCamera().temporalaa_jitter_prev) - (pos2D.xy - GetCamera().temporalaa_jitter)) * float2(0.5, -0.5);
-
 	output_velocity[pixel] = velocity;
-
 
 
 	// Downsample depths:

@@ -316,7 +316,6 @@ namespace wi::renderer
 	);
 
 	void VisibilityResolve(
-		const wi::graphics::Texture& depthbuffer,
 		const wi::graphics::Texture& texture_primitiveID, // can be MSAA
 		const wi::graphics::Texture gbuffer[GBUFFER_COUNT],
 		const wi::graphics::Texture& depthbuffer_resolved,

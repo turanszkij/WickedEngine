@@ -7,13 +7,13 @@ struct ShaderScene
 {
 	int instancebuffer;
 	int meshbuffer;
+	int subsetbuffer;
 	int materialbuffer;
-	int envmaparray;
 
+	int envmaparray;
 	int globalenvmap;
 	int padding0;
 	int padding1;
-	int padding2;
 
 	int TLAS;
 	int BVH_counter;
@@ -157,7 +157,7 @@ struct ShaderMesh
 	int vb_atl;
 	int vb_pre;
 
-	int subsetbuffer;
+	uint subsetOffset;
 	uint blendmaterial1;
 	uint blendmaterial2;
 	uint blendmaterial3;
@@ -179,7 +179,7 @@ struct ShaderMesh
 		vb_atl = -1;
 		vb_pre = -1;
 
-		subsetbuffer = -1;
+		subsetOffset = 0;
 		blendmaterial1 = 0;
 		blendmaterial2 = 0;
 		blendmaterial3 = 0;
@@ -335,14 +335,15 @@ struct PrimitiveID
 
 	uint2 pack()
 	{
-		// 32 bit primitiveID
-		// 24 bit instanceID
-		// 8  bit subsetID
-		return uint2(primitiveIndex, (instanceIndex & 0xFFFFFF) | ((subsetIndex & 0xFF) << 24u));
+		// 1 bit valid flag
+		// 31 bit primitiveIndex
+		// 24 bit instanceIndex
+		// 8  bit subsetIndex
+		return uint2((1u << 31u) | primitiveIndex, (instanceIndex & 0xFFFFFF) | ((subsetIndex & 0xFF) << 24u));
 	}
 	void unpack(uint2 value)
 	{
-		primitiveIndex = value.x;
+		primitiveIndex = value.x & (~0u >> 1u);
 		instanceIndex = value.y & 0xFFFFFF;
 		subsetIndex = (value.y >> 24u) & 0xFF;
 	}

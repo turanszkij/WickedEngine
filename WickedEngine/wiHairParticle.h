@@ -25,7 +25,6 @@ namespace wi
 		wi::graphics::GPUBuffer primitiveBuffer;
 		wi::graphics::GPUBuffer culledIndexBuffer;
 		wi::graphics::GPUBuffer indirectBuffer;
-		wi::graphics::GPUBuffer subsetBuffer;
 
 		wi::graphics::GPUBuffer indexBuffer;
 		wi::graphics::GPUBuffer vertexBuffer_length;
@@ -39,7 +38,6 @@ namespace wi
 		);
 		void UpdateGPU(
 			uint32_t instanceIndex,
-			uint32_t materialIndex,
 			const wi::scene::MeshComponent& mesh,
 			const wi::scene::MaterialComponent& material,
 			wi::graphics::CommandList cmd
@@ -82,6 +80,7 @@ namespace wi
 		wi::vector<uint32_t> indices; // it is dependent on vertex_lengths and contains triangles with non-zero lengths
 		uint32_t layerMask = ~0u;
 		mutable bool regenerate_frame = true;
+		size_t subsetAllocation = 0ull;
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 

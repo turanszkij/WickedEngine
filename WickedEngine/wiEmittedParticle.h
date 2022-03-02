@@ -50,7 +50,6 @@ namespace wi
 		wi::graphics::GPUBuffer primitiveBuffer; // raytracing
 		wi::graphics::GPUBuffer culledIndirectionBuffer; // rasterization
 		wi::graphics::GPUBuffer culledIndirectionBuffer2; // rasterization
-		wi::graphics::GPUBuffer subsetBuffer;
 
 		wi::graphics::RaytracingAccelerationStructure BLAS;
 
@@ -68,7 +67,7 @@ namespace wi
 		void Restart();
 
 		// Must have a transform and material component, but mesh is optional
-		void UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex, const wi::scene::TransformComponent& transform, const wi::scene::MeshComponent* mesh, wi::graphics::CommandList cmd) const;
+		void UpdateGPU(uint32_t instanceIndex, const wi::scene::TransformComponent& transform, const wi::scene::MeshComponent* mesh, wi::graphics::CommandList cmd) const;
 		void Draw(const wi::scene::MaterialComponent& material, wi::graphics::CommandList cmd) const;
 
 		ParticleCounters GetStatistics() { return statistics; }
@@ -130,6 +129,7 @@ namespace wi
 		XMFLOAT3 center;
 		uint32_t statisticsReadBackIndex = 0;
 		uint32_t layerMask = ~0u;
+		size_t subsetAllocation = 0ull;
 
 		inline bool IsDebug() const { return _flags & FLAG_DEBUG; }
 		inline bool IsPaused() const { return _flags & FLAG_PAUSED; }

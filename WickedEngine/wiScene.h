@@ -367,8 +367,8 @@ namespace wi::scene
 
 		// Non-serialized attributes:
 		wi::primitive::AABB aabb;
-		wi::graphics::GPUBuffer generalBuffer;
-		wi::graphics::GPUBuffer streamoutBuffer;
+		wi::graphics::GPUBuffer generalBuffer; // index buffer + all static vertex buffers
+		wi::graphics::GPUBuffer streamoutBuffer; // all dynamic vertex buffers
 		struct BufferView
 		{
 			uint64_t offset = ~0ull;
@@ -391,11 +391,11 @@ namespace wi::scene
 		BufferView vb_atl;
 		BufferView vb_col;
 		BufferView vb_bon;
-		BufferView vb_pre;
 		BufferView so_pos_nor_wind;
 		BufferView so_tan;
-		BufferView subset_view;
+		BufferView so_pre;
 		wi::vector<uint8_t> vertex_subsets;
+		size_t subsetAllocation = 0ull;
 
 		wi::graphics::RaytracingAccelerationStructure BLAS;
 		enum BLAS_STATE
@@ -412,7 +412,6 @@ namespace wi::scene
 		uint32_t terrain_material3_index = ~0u;
 
 		mutable bool dirty_morph = false;
-		mutable bool dirty_subsets = true;
 
 		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
 		inline void SetDoubleSided(bool value) { if (value) { _flags |= DOUBLE_SIDED; } else { _flags &= ~DOUBLE_SIDED; } }
@@ -1318,6 +1317,17 @@ namespace wi::scene
 		ShaderMesh* meshArrayMapped = nullptr;
 		size_t meshArraySize = 0;
 		wi::graphics::GPUBuffer meshBuffer;
+
+		// Subsets for bindless visiblity indexing:
+		//	contains in order:
+		//		1) meshes * mesh.subsetCount
+		//		2) hair particles * 1
+		//		3) emitted particles * 1
+		wi::graphics::GPUBuffer subsetUploadBuffer[wi::graphics::GraphicsDevice::GetBufferCount()];
+		ShaderMeshSubset* subsetArrayMapped = nullptr;
+		size_t subsetArraySize = 0;
+		wi::graphics::GPUBuffer subsetBuffer;
+		std::atomic<size_t> subsetAllocator{ 0 };
 
 		// Materials for bindless visibility indexing:
 		wi::graphics::GPUBuffer materialUploadBuffer[wi::graphics::GraphicsDevice::GetBufferCount()];

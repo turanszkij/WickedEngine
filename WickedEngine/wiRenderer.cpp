@@ -3246,6 +3246,19 @@ void UpdateRenderData(
 		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->meshBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
 	}
 
+	if (vis.scene->subsetBuffer.IsValid() && vis.scene->meshArraySize > 0)
+	{
+		device->CopyBuffer(
+			&vis.scene->subsetBuffer,
+			0,
+			&vis.scene->subsetUploadBuffer[device->GetBufferIndex()],
+			0,
+			vis.scene->subsetArraySize * sizeof(ShaderMeshSubset),
+			cmd
+		);
+		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->subsetBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
+	}
+
 	if (vis.scene->materialBuffer.IsValid() && vis.scene->materialArraySize > 0)
 	{
 		device->CopyBuffer(
@@ -3608,34 +3621,6 @@ void UpdateRenderData(
 			Entity entity = vis.scene->meshes.GetEntity(i);
 			const MeshComponent& mesh = vis.scene->meshes[i];
 
-			if (mesh.dirty_subsets)
-			{
-				mesh.dirty_subsets = false;
-
-				size_t tmp_alloc = sizeof(ShaderMeshSubset) * mesh.subsets.size();
-				auto allocation = device->AllocateGPU(tmp_alloc, cmd);
-				ShaderMeshSubset* subsetarray = (ShaderMeshSubset*)allocation.data;
-				int j = 0;
-				for (auto& x : mesh.subsets)
-				{
-					ShaderMeshSubset shadersubset;
-					shadersubset.indexOffset = x.indexOffset;
-					shadersubset.materialIndex = x.materialIndex;
-					std::memcpy(subsetarray + j, &shadersubset, sizeof(ShaderMeshSubset)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
-					j++;
-				}
-
-				device->CopyBuffer(
-					&mesh.generalBuffer,
-					mesh.subset_view.offset,
-					&allocation.buffer,
-					allocation.offset,
-					tmp_alloc,
-					cmd
-				);
-				barrier_stack.push_back(GPUBarrier::Buffer(&mesh.generalBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
-			}
-
 			if (mesh.dirty_morph)
 			{
 				mesh.dirty_morph = false;
@@ -3698,7 +3683,7 @@ void UpdateRenderData(
 				size_t materialIndex = vis.scene->materials.GetIndex(entity);
 				const MaterialComponent& material = vis.scene->materials[materialIndex];
 
-				hair.UpdateGPU((uint32_t)vis.scene->objects.GetCount() + hairIndex, (uint32_t)materialIndex, *mesh, material, cmd);
+				hair.UpdateGPU((uint32_t)vis.scene->objects.GetCount() + hairIndex, *mesh, material, cmd);
 			}
 		}
 		wi::profiler::EndRange(range);
@@ -3870,9 +3855,8 @@ void UpdateRenderDataAsync(
 			const MaterialComponent& material = *vis.scene->materials.GetComponent(entity);
 			const MeshComponent* mesh = vis.scene->meshes.GetComponent(emitter.meshID);
 			const uint32_t instanceIndex = uint32_t(vis.scene->objects.GetCount() + vis.scene->hairs.GetCount()) + emitterIndex;
-			const uint32_t materialIndex = (uint32_t)vis.scene->materials.GetIndex(entity);
 
-			emitter.UpdateGPU(instanceIndex, materialIndex, transform, mesh, cmd);
+			emitter.UpdateGPU(instanceIndex, transform, mesh, cmd);
 		}
 		wi::profiler::EndRange(range);
 	}
@@ -7648,7 +7632,6 @@ void ComputeShadingRateClassification(
 }
 
 void VisibilityResolve(
-	const Texture& depthbuffer,
 	const Texture& texture_primitiveID, // can be MSAA
 	const Texture gbuffer[GBUFFER_COUNT],
 	const Texture& depthbuffer_resolved,
@@ -7665,9 +7648,7 @@ void VisibilityResolve(
 
 	device->BindComputeShader(&shaders[msaa ? CSTYPE_VISIBILITY_RESOLVE_MSAA : CSTYPE_VISIBILITY_RESOLVE], cmd);
 
-
 	device->BindResource(&texture_primitiveID, 0, cmd);
-	device->BindResource(&depthbuffer, 1, cmd);
 
 	device->BindUAV(&gbuffer[GBUFFER_VELOCITY], 0, cmd);
 	device->BindUAV(&depthbuffer_resolved, 1, cmd, 0);
@@ -7694,8 +7675,8 @@ void VisibilityResolve(
 	barrier_stack_flush(cmd);
 
 	device->Dispatch(
-		(depthbuffer.desc.width + 15) / 16,
-		(depthbuffer.desc.height + 15) / 16,
+		(texture_primitiveID.desc.width + 15) / 16,
+		(texture_primitiveID.desc.height + 15) / 16,
 		1,
 		cmd
 	);

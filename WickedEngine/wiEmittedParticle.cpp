@@ -259,16 +259,6 @@ namespace wi
 			}
 		}
 
-		if (!subsetBuffer.IsValid())
-		{
-			GPUBufferDesc desc;
-			desc.stride = sizeof(ShaderMeshSubset);
-			desc.size = desc.stride;
-			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-			desc.bind_flags = BindFlag::SHADER_RESOURCE;
-			device->CreateBuffer(&desc, nullptr, &subsetBuffer);
-		}
-
 		if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING) && primitiveBuffer.IsValid())
 		{
 			RaytracingAccelerationStructureDesc desc;
@@ -320,7 +310,6 @@ namespace wi
 		retVal += primitiveBuffer.GetDesc().size;
 		retVal += culledIndirectionBuffer.GetDesc().size;
 		retVal += culledIndirectionBuffer2.GetDesc().size;
-		retVal += subsetBuffer.GetDesc().size;
 
 		return retVal;
 	}
@@ -365,7 +354,7 @@ namespace wi
 		counterBuffer = {}; // will be recreated
 	}
 
-	void EmittedParticleSystem::UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex, const TransformComponent& transform, const MeshComponent* mesh, CommandList cmd) const
+	void EmittedParticleSystem::UpdateGPU(uint32_t instanceIndex, const TransformComponent& transform, const MeshComponent* mesh, CommandList cmd) const
 	{
 		if (!particleBuffer.IsValid())
 		{
@@ -407,12 +396,6 @@ namespace wi
 			cb.xEmitterLayerMask = layerMask;
 			cb.xEmitterInstanceIndex = instanceIndex;
 
-			ShaderMeshSubset subset;
-			subset.init();
-			subset.indexOffset = 0;
-			subset.materialIndex = materialIndex;
-			device->UpdateBuffer(&subsetBuffer, &subset, cmd);
-
 			cb.xEmitterOptions = 0;
 			if (IsSPHEnabled())
 			{
@@ -451,7 +434,6 @@ namespace wi
 			{
 				GPUBarrier barriers[] = {
 					GPUBarrier::Buffer(&constantBuffer, ResourceState::COPY_DST, ResourceState::CONSTANT_BUFFER),
-					GPUBarrier::Buffer(&subsetBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE),
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}

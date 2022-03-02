@@ -211,16 +211,6 @@ namespace wi
 			device->CreateBuffer(&desc, nullptr, &indirectBuffer);
 		}
 
-		if (!subsetBuffer.IsValid())
-		{
-			GPUBufferDesc desc;
-			desc.stride = sizeof(ShaderMeshSubset);
-			desc.size = desc.stride;
-			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-			desc.bind_flags = BindFlag::SHADER_RESOURCE;
-			device->CreateBuffer(&desc, nullptr, &subsetBuffer);
-		}
-
 		std::swap(vertexBuffer_POS[0], vertexBuffer_POS[1]);
 
 		if (BLAS.IsValid() && !BLAS.desc.bottom_level.geometries.empty())
@@ -229,7 +219,7 @@ namespace wi
 		}
 
 	}
-	void HairParticleSystem::UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex, const MeshComponent& mesh, const MaterialComponent& material, CommandList cmd) const
+	void HairParticleSystem::UpdateGPU(uint32_t instanceIndex, const MeshComponent& mesh, const MaterialComponent& material, CommandList cmd) const
 	{
 		if (strandCount == 0 || !simulationBuffer.IsValid())
 		{
@@ -268,16 +258,9 @@ namespace wi
 		hcb.xHairInstanceIndex = instanceIndex;
 		device->UpdateBuffer(&constantBuffer, &hcb, cmd);
 
-		ShaderMeshSubset subset;
-		subset.init();
-		subset.indexOffset = 0;
-		subset.materialIndex = materialIndex;
-		device->UpdateBuffer(&subsetBuffer, &subset, cmd);
-
 		{
 			GPUBarrier barriers[] = {
 				GPUBarrier::Buffer(&constantBuffer, ResourceState::COPY_DST, ResourceState::CONSTANT_BUFFER),
-				GPUBarrier::Buffer(&subsetBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
