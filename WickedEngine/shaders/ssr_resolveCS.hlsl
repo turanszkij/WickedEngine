@@ -5,7 +5,7 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-Texture2D<float3> texture_surface_normal : register(t0);
+Texture2D<float2> texture_surface_normal : register(t0);
 Texture2D<float> texture_surface_roughness : register(t1);
 Texture2D<float4> texture_rayIndirectSpecular : register(t2);
 Texture2D<float4> texture_rayDirectionPDF : register(t3);
@@ -112,7 +112,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	// Everthing in world space:
 	const float3 P = reconstruct_position(uv, depth);
-	const float3 N = texture_surface_normal[DTid.xy];
+	const float3 N = decode_oct(texture_surface_normal[DTid.xy]);
 	const float3 V = normalize(GetCamera().position - P);
 	const float NdotV = saturate(dot(N, V));
 

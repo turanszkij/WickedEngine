@@ -9379,13 +9379,11 @@ void CreateRTReflectionResources(RTReflectionResources& res, XMUINT2 resolution)
 	surface_desc.type = TextureDesc::Type::TEXTURE_2D;
 	surface_desc.width = resolution.x;
 	surface_desc.height = resolution.y;
-	surface_desc.format = Format::R8G8B8A8_SNORM;
+	surface_desc.format = Format::R16G16_FLOAT;
 	surface_desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 	device->CreateTexture(&surface_desc, nullptr, &res.texture_surface_normal);
 	surface_desc.format = Format::R8_UNORM;
 	device->CreateTexture(&surface_desc, nullptr, &res.texture_surface_roughness);
-	surface_desc.format = Format::R11G11B10_FLOAT;
-	device->CreateTexture(&surface_desc, nullptr, &res.texture_surface_environment);
 
 	TextureDesc desc;
 	desc.type = TextureDesc::Type::TEXTURE_2D;
@@ -9442,7 +9440,6 @@ void Postprocess_RTReflection(
 		const GPUResource* uavs[] = {
 			&res.texture_surface_normal,
 			&res.texture_surface_roughness,
-			&res.texture_surface_environment,
 		};
 		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
@@ -9450,7 +9447,6 @@ void Postprocess_RTReflection(
 			GPUBarrier barriers[] = {
 				GPUBarrier::Image(&res.texture_surface_normal, res.texture_surface_normal.desc.layout, ResourceState::UNORDERED_ACCESS),
 				GPUBarrier::Image(&res.texture_surface_roughness, res.texture_surface_roughness.desc.layout, ResourceState::UNORDERED_ACCESS),
-				GPUBarrier::Image(&res.texture_surface_environment, res.texture_surface_environment.desc.layout, ResourceState::UNORDERED_ACCESS),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -9467,7 +9463,6 @@ void Postprocess_RTReflection(
 				GPUBarrier::Memory(),
 				GPUBarrier::Image(&res.texture_surface_normal, ResourceState::UNORDERED_ACCESS, res.texture_surface_normal.desc.layout),
 				GPUBarrier::Image(&res.texture_surface_roughness, ResourceState::UNORDERED_ACCESS, res.texture_surface_roughness.desc.layout),
-				GPUBarrier::Image(&res.texture_surface_environment, ResourceState::UNORDERED_ACCESS, res.texture_surface_environment.desc.layout),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
@@ -9501,7 +9496,6 @@ void Postprocess_RTReflection(
 		const GPUResource* resarray[] = {
 			&res.texture_surface_normal,
 			&res.texture_surface_roughness,
-			&res.texture_surface_environment,
 		};
 		device->BindResources(resarray, 0, arraysize(resarray), cmd);
 
@@ -9788,7 +9782,7 @@ void CreateSSRResources(SSRResources& res, XMUINT2 resolution)
 	surface_desc.type = TextureDesc::Type::TEXTURE_2D;
 	surface_desc.width = resolution.x;
 	surface_desc.height = resolution.y;
-	surface_desc.format = Format::R8G8B8A8_SNORM;
+	surface_desc.format = Format::R16G16_FLOAT;
 	surface_desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 	device->CreateTexture(&surface_desc, nullptr, &res.texture_surface_normal);
 	surface_desc.format = Format::R8_UNORM;

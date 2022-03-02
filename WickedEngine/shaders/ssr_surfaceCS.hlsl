@@ -6,9 +6,8 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-RWTexture2D<float3> output_surface_normal : register(u0);
+RWTexture2D<float2> output_surface_normal : register(u0);
 RWTexture2D<float> output_surface_roughness : register(u1);
-RWTexture2D<float3> output_surface_environment : register(u2);
 
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
@@ -18,7 +17,6 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	{
 		output_surface_normal[DTid.xy] = 0.0;
 		output_surface_roughness[DTid.xy] = 0.0;
-		output_surface_environment[DTid.xy] = 0.0;
 		return;
 	}
 
@@ -39,15 +37,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	{
 		output_surface_normal[DTid.xy] = 0.0;
 		output_surface_roughness[DTid.xy] = 0.0;
-		output_surface_environment[DTid.xy] = 0.0;
 		return;
 	}
 
 	float3 N = surface.N;
 	float roughness = surface.roughness;
-	float3 environmentReflection = EnvironmentReflection_Global(surface);
 
-	output_surface_normal[DTid.xy] = N;
+	output_surface_normal[DTid.xy] = encode_oct(N);
 	output_surface_roughness[DTid.xy] = roughness;
-	output_surface_environment[DTid.xy] = environmentReflection;
 }

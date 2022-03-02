@@ -445,7 +445,6 @@ namespace wi::renderer
 		mutable int frame = 0;
 		wi::graphics::Texture texture_surface_normal;
 		wi::graphics::Texture texture_surface_roughness;
-		wi::graphics::Texture texture_surface_environment;
 		wi::graphics::Texture texture_rayIndirectSpecular;
 		wi::graphics::Texture texture_rayDirectionPDF;
 		wi::graphics::Texture texture_rayLengths;

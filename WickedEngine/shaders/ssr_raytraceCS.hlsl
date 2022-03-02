@@ -6,7 +6,7 @@ PUSHCONSTANT(postprocess, PostProcess);
 
 //#define DEBUG_TILING
 
-Texture2D<float3> texture_surface_normal : register(t0);
+Texture2D<float2> texture_surface_normal : register(t0);
 Texture2D<float> texture_surface_roughness : register(t1);
 Texture2D<float2> texture_depth_hierarchy : register(t2);
 Texture2D<float4> input : register(t3);
@@ -260,7 +260,7 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 		return;
 	}
 
-	float3 N = texture_surface_normal[jitterPixel];
+	float3 N = decode_oct(texture_surface_normal[jitterPixel]);
 	float3 P = reconstruct_position(jitterUV, depth);
 	float3 V = normalize(GetCamera().position - P);
 

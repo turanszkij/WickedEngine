@@ -6,7 +6,7 @@ PUSHCONSTANT(postprocess, PostProcess);
 
 Texture2D<float4> texture_temporal : register(t0);
 Texture2D<float> texture_resolve_variance : register(t1);
-Texture2D<float3> texture_surface_normal : register(t2);
+Texture2D<float2> texture_surface_normal : register(t2);
 Texture2D<float> texture_surface_roughness : register(t3);
 
 RWTexture2D<float4> output : register(u0);
@@ -39,7 +39,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float2 direction = postprocess.params0.xy;
 
 	const float linearDepth = texture_lineardepth[DTid.xy];
-	const float3 N = texture_surface_normal[DTid.xy];
+	const float3 N = decode_oct(texture_surface_normal[DTid.xy]);
 
 	float4 outputColor = texture_temporal[DTid.xy];
 
@@ -70,7 +70,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 				const float sampleDepth = texture_depth[sampleCoord];
 				const float4 sampleColor = texture_temporal[sampleCoord];
 
-				const float3 sampleN = texture_surface_normal[sampleCoord];
+				const float3 sampleN = decode_oct(texture_surface_normal[sampleCoord]);
 				const float sampleRoughness = texture_surface_roughness[sampleCoord];
 
 				float2 sampleUV = (sampleCoord + 0.5) * postprocess.resolution_rcp;

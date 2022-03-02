@@ -1623,7 +1623,7 @@ void RenderPath3D::setRaytracedReflectionsEnabled(bool value)
 
 		TextureDesc desc;
 		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-		desc.format = Format::R11G11B10_FLOAT;
+		desc.format = Format::R16G16B16A16_FLOAT;
 		desc.width = internalResolution.x;
 		desc.height = internalResolution.y;
 		device->CreateTexture(&desc, nullptr, &rtSSR);

@@ -10,9 +10,8 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-Texture2D<float3> texture_surface_normal : register(t0);
+Texture2D<float2> texture_surface_normal : register(t0);
 Texture2D<float> texture_surface_roughness : register(t1);
-Texture2D<float3> texture_surface_environment : register(t2);
 
 RWTexture2D<float4> output_rayIndirectSpecular : register(u0);
 RWTexture2D<float4> output_rayDirectionPDF : register(u1);
@@ -48,15 +47,13 @@ void RTReflection_Raygen()
 
 	if (!NeedReflection(roughness, depth))
 	{
-		float3 environmentReflection = texture_surface_environment[DTid.xy * downsampleFactor];
-
-		output_rayIndirectSpecular[DTid.xy] = float4(environmentReflection, 1);
-		output_rayDirectionPDF[DTid.xy] = 0.0;
+		output_rayIndirectSpecular[DTid.xy] = 0;
+		output_rayDirectionPDF[DTid.xy] = 0;
 		output_rayLengths[DTid.xy] = FLT_MAX;
 		return;
 	}
 
-	const float3 N = texture_surface_normal[jitterPixel];
+	const float3 N = decode_oct(texture_surface_normal[jitterPixel]);
 	const float3 P = reconstruct_position(jitterUV, depth);
 	const float3 V = normalize(GetCamera().position - P);
 
