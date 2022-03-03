@@ -1020,6 +1020,8 @@ void LoadShaders()
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_RESOLVE], "visibility_resolveCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_RESOLVE_MSAA], "visibility_resolveCS_MSAA.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_RESOLVE_FAST], "visibility_resolveCS_fast.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_RESOLVE_FAST_MSAA], "visibility_resolveCS_fast_MSAA.cso"); });
 
 	if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 	{
@@ -7644,8 +7646,7 @@ void VisibilityResolve(
 	BindCommonResources(cmd);
 
 	const bool msaa = input_primitiveID.GetDesc().sample_count > 1;
-
-	device->BindComputeShader(&shaders[msaa ? CSTYPE_VISIBILITY_RESOLVE_MSAA : CSTYPE_VISIBILITY_RESOLVE], cmd);
+	bool fast = true;
 
 	device->BindResource(&input_primitiveID, 0, cmd);
 	GPUResource unbind;
@@ -7689,6 +7690,7 @@ void VisibilityResolve(
 	}
 	if (outputs.velocity)
 	{
+		fast = false;
 		push.options |= VISIBILITY_RESOLVE_VELOCITY;
 		device->BindUAV(outputs.velocity, 10, cmd);
 		barrier_stack.push_back(GPUBarrier::Image(outputs.velocity, outputs.velocity->desc.layout, ResourceState::UNORDERED_ACCESS));
@@ -7699,6 +7701,7 @@ void VisibilityResolve(
 	}
 	if (outputs.normal)
 	{
+		fast = false;
 		push.options |= VISIBILITY_RESOLVE_NORMAL;
 		device->BindUAV(outputs.normal, 11, cmd);
 		barrier_stack.push_back(GPUBarrier::Image(outputs.normal, outputs.normal->desc.layout, ResourceState::UNORDERED_ACCESS));
@@ -7709,6 +7712,7 @@ void VisibilityResolve(
 	}
 	if (outputs.roughness)
 	{
+		fast = false;
 		push.options |= VISIBILITY_RESOLVE_ROUGHNESS;
 		device->BindUAV(outputs.roughness, 12, cmd);
 		barrier_stack.push_back(GPUBarrier::Image(outputs.roughness, outputs.roughness->desc.layout, ResourceState::UNORDERED_ACCESS));
@@ -7729,6 +7733,14 @@ void VisibilityResolve(
 	}
 	barrier_stack_flush(cmd);
 
+	if (fast)
+	{
+		device->BindComputeShader(&shaders[msaa ? CSTYPE_VISIBILITY_RESOLVE_FAST_MSAA : CSTYPE_VISIBILITY_RESOLVE_FAST], cmd);
+	}
+	else
+	{
+		device->BindComputeShader(&shaders[msaa ? CSTYPE_VISIBILITY_RESOLVE_MSAA : CSTYPE_VISIBILITY_RESOLVE], cmd);
+	}
 	device->PushConstants(&push, sizeof(push), cmd);
 
 	device->Dispatch(

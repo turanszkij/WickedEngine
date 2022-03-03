@@ -52,6 +52,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 
 	float3 pre;
 	float depth;
+	[branch]
 	if (any(primitiveID))
 	{
 		PrimitiveID prim;
@@ -60,12 +61,15 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		Surface surface;
 		surface.init();
 		surface.raycone = pixel_ray_cone_from_image_height(GetCamera().internal_resolution.y);
+		[branch]
 		if (surface.load(prim, ray.Origin, ray.Direction))
 		{
 			pre = surface.pre;
 			float4 tmp = mul(GetCamera().view_projection, float4(surface.P, 1));
 			tmp.xyz /= tmp.w;
 			depth = tmp.z;
+
+#ifndef VISIBILITY_FAST
 			[branch]
 			if (push.options & VISIBILITY_RESOLVE_NORMAL)
 			{
@@ -76,6 +80,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 			{
 				output_roughness[pixel] = surface.roughness;
 			}
+#endif // VISIBILITY_FAST
 		}
 	}
 	else
@@ -84,6 +89,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		depth = 0;
 	}
 
+#ifndef VISIBILITY_FAST
 	[branch]
 	if (push.options & VISIBILITY_RESOLVE_VELOCITY)
 	{
@@ -93,6 +99,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		float2 velocity = ((pos2DPrev.xy - GetCamera().temporalaa_jitter_prev) - (pos2D.xy - GetCamera().temporalaa_jitter)) * float2(0.5, -0.5);
 		output_velocity[pixel] = velocity;
 	}
+#endif // VISIBILITY_FAST
 
 	// Downsample depths:
 	[branch]

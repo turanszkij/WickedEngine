@@ -232,6 +232,8 @@ int main(int argc, char* argv[])
 		"rtao_denoise_filterCS.hlsl",
 		"visibility_resolveCS.hlsl",
 		"visibility_resolveCS_MSAA.hlsl",
+		"visibility_resolveCS_fast.hlsl",
+		"visibility_resolveCS_fast_MSAA.hlsl",
 		"surfel_coverageCS.hlsl",
 		"surfel_indirectprepareCS.hlsl",
 		"surfel_updateCS.hlsl",
