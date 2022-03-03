@@ -176,6 +176,9 @@ struct Surface
 
 	inline void init()
 	{
+		P = 0;
+		V = 0;
+		N = 0;
 		albedo = 1;
 		f0 = 0;
 		roughness = 1;
@@ -346,10 +349,6 @@ struct Surface
 		float v = bary.y;
 		float w = 1 - u - v;
 
-		V = GetCamera().position - P;
-		const float dist = length(V);
-		V /= dist;
-
 		float3 n0 = unpack_unitvector(data0.w);
 		float3 n1 = unpack_unitvector(data1.w);
 		float3 n2 = unpack_unitvector(data2.w);
@@ -382,7 +381,6 @@ struct Surface
 		float4 uvsets = mad(uv0, w, mad(uv1, u, uv2 * v)); // uv0 * w + uv1 * u + uv2 * v
 		uvsets.xy = mad(uvsets.xy, material.texMulAdd.xy, material.texMulAdd.zw);
 
-#define SURFACE_LOAD_MIPCONE
 #ifdef SURFACE_LOAD_MIPCONE
 		float3 p0 = asfloat(data0.xyz);
 		float3 p1 = asfloat(data1.xyz);
@@ -621,6 +619,7 @@ struct Surface
 
 		bary = compute_barycentrics(rayOrigin, rayDirection, P0, P1, P2, hit_depth);
 		P = rayOrigin + rayDirection * hit_depth;
+		V = rayDirection;
 
 		load_internal();
 		return true;

@@ -1,6 +1,7 @@
 #define RTAPI
 #define DISABLE_SOFT_SHADOWMAP
 #define DISABLE_TRANSPARENT_SHADOWMAP
+#define SURFACE_LOAD_MIPCONE
 
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
@@ -89,7 +90,8 @@ void main(uint2 DTid : SV_DispatchThreadID)
 	RayPayload payload;
 	payload.data = 0;
 
-	RayCone raycone = RayCone::from_spread_angle(roughness * 0.15);
+	const float minraycone = 0.05;
+	RayCone raycone = RayCone::from_spread_angle(sqr(max(minraycone, roughness)));
 
 #ifdef RTAPI
 	RayQuery<
@@ -110,6 +112,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
 
 		Surface surface;
 		surface.init();
+		surface.V = -ray.Direction;
 		surface.raycone = raycone;
 		surface.hit_depth = q.CandidateTriangleRayT();
 		if (!surface.load(prim, q.CandidateTriangleBarycentrics()))
@@ -148,6 +151,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
 		{
 			surface.flags |= SURFACE_FLAG_BACKFACE;
 		}
+		surface.V = -ray.Direction;
 		surface.raycone = raycone;
 		surface.hit_depth = q.CommittedRayT();
 		if (!surface.load(prim, q.CommittedTriangleBarycentrics()))

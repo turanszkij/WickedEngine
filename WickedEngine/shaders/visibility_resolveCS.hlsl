@@ -1,3 +1,4 @@
+#define SURFACE_LOAD_MIPCONE
 #include "globals.hlsli"
 #include "ShaderInterop_Renderer.h"
 #include "brdf.hlsli"

@@ -1,5 +1,6 @@
 #define RAY_BACKFACE_CULLING
 #define RAYTRACE_STACK_SHARED
+#define SURFACE_LOAD_MIPCONE
 #include "globals.hlsli"
 #include "raytracingHF.hlsli"
 #include "lightingHF.hlsli"
@@ -71,6 +72,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 			Surface surface;
 			surface.init();
+			surface.V = ray.Direction;
 			surface.raycone = raycone;
 			surface.hit_depth = q.CandidateTriangleRayT();
 			if (!surface.load(prim, q.CandidateTriangleBarycentrics()))
@@ -110,6 +112,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 		Surface surface;
 		surface.init();
+		surface.V = -ray.Direction;
 		surface.raycone = raycone;
 
 #ifdef RTAPI
@@ -149,7 +152,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		surface.V = -ray.Direction;
 		surface.update();
 
-		raycone = raycone.propagate(surface.roughness * 0.1, surface.hit_depth);
+		raycone = raycone.propagate(surface.roughnessBRDF, surface.hit_depth);
 
 		result += max(0, energy * surface.emissiveColor);
 
@@ -281,6 +284,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 						Surface surface;
 						surface.init();
+						surface.V = -newRay.Direction;
+						surface.raycone = raycone;
+						surface.hit_depth = q.CandidateTriangleRayT();
 						if (!surface.load(prim, q.CandidateTriangleBarycentrics()))
 							break;
 
