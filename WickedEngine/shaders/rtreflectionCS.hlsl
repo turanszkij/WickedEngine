@@ -124,7 +124,6 @@ void main(uint2 DTid : SV_DispatchThreadID)
 		if (surface.opacity - alphatest >= 0)
 		{
 			q.CommitNonOpaqueTriangleHit();
-			break;
 		}
 	}
 	if (q.CommittedStatus() != COMMITTED_TRIANGLE_HIT)

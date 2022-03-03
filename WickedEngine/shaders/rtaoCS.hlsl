@@ -87,7 +87,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 		if (surface.opacity - alphatest >= 0)
 		{
 			q.CommitNonOpaqueTriangleHit();
-			break;
 		}
 	}
 	shadow = q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ? 0 : 1;
