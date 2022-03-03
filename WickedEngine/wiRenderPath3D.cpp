@@ -671,7 +671,7 @@ void RenderPath3D::Update(float dt)
 	// Keep a copy of last frame's depth buffer for temporal disocclusion checks, so swap with current one every frame:
 	std::swap(depthBuffer_Copy, depthBuffer_Copy1);
 
-	camera->canvas = *(wi::Canvas*)this;
+	camera->canvas.init(*this);
 	camera->width = (float)internalResolution.x;
 	camera->height = (float)internalResolution.y;
 	camera->sample_count = depthBuffer_Main.desc.sample_count;
@@ -691,7 +691,7 @@ void RenderPath3D::Update(float dt)
 	camera->texture_rtshadow_index = device->GetDescriptorIndex(&rtShadow, SubresourceType::SRV);
 	camera->texture_surfelgi_index = device->GetDescriptorIndex(&surfelGIResources.result, SubresourceType::SRV);
 
-	camera_reflection.canvas = *(wi::Canvas*)this;
+	camera_reflection.canvas.init(*this);
 	camera_reflection.width = (float)depthBuffer_Reflection.desc.width;
 	camera_reflection.height = (float)depthBuffer_Reflection.desc.height;
 	camera_reflection.sample_count = depthBuffer_Reflection.desc.sample_count;
