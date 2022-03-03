@@ -156,6 +156,7 @@ struct Surface
 	uint layerMask;			// the engine-side layer mask
 	float3 facenormal;		// surface normal without normal map
 	uint flags;
+	uint uid_validate;
 	RayCone raycone;
 	float hit_depth;
 
@@ -201,6 +202,7 @@ struct Surface
 		clearcoat.roughness = 0;
 		clearcoat.N = 0;
 
+		uid_validate = 0;
 		raycone = (RayCone)0;
 		hit_depth = 0;
 	}
@@ -307,10 +309,10 @@ struct Surface
 	uint4 data2;
 	float3 pre;
 
-	bool preload_internal(PrimitiveID prim, in uint uid = 0)
+	bool preload_internal(PrimitiveID prim)
 	{
 		inst = load_instance(prim.instanceIndex);
-		if (uid != 0 && inst.uid != uid)
+		if (uid_validate != 0 && inst.uid != uid_validate)
 			return false;
 
 		mesh = load_mesh(inst.meshIndex);
@@ -568,9 +570,9 @@ struct Surface
 		update();
 	}
 
-	bool load(in PrimitiveID prim, in float2 barycentrics, in uint uid = 0)
+	bool load(in PrimitiveID prim, in float2 barycentrics)
 	{
-		if (!preload_internal(prim, uid))
+		if (!preload_internal(prim))
 			return false;
 
 		bary = barycentrics;
@@ -587,9 +589,9 @@ struct Surface
 		load_internal();
 		return true;
 	}
-	bool load(in PrimitiveID prim, in float3 worldPosition, in uint uid = 0)
+	bool load(in PrimitiveID prim, in float3 worldPosition)
 	{
-		if (!preload_internal(prim, uid))
+		if (!preload_internal(prim))
 			return false;
 
 		float3 p0 = asfloat(data0.xyz);
@@ -605,9 +607,9 @@ struct Surface
 		load_internal();
 		return true;
 	}
-	bool load(in PrimitiveID prim, in float3 rayOrigin, in float3 rayDirection, in uint uid = 0)
+	bool load(in PrimitiveID prim, in float3 rayOrigin, in float3 rayDirection)
 	{
-		if (!preload_internal(prim, uid))
+		if (!preload_internal(prim))
 			return false;
 
 		float3 p0 = asfloat(data0.xyz);

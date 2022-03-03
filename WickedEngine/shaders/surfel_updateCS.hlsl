@@ -30,7 +30,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	Surface surface;
 	surface.init();
-	if (surface.load(prim, unpack_half2(surfel_data.bary), surfel_data.uid))
+	surface.uid_validate = surfel_data.uid;
+	if (surface.load(prim, unpack_half2(surfel_data.bary)))
 	{
 		surfel.normal = pack_unitvector(surface.facenormal);
 		surfel.position = surface.P;
