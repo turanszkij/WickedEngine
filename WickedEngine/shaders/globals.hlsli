@@ -150,8 +150,10 @@ inline float4x4 load_entitymatrix(uint matrixIndex)
 #define texture_depth bindless_textures_float[GetCamera().texture_depth_index]
 #define texture_depth_history bindless_textures_float[GetCamera().texture_depth_index_prev]
 #define texture_lineardepth bindless_textures_float[GetCamera().texture_lineardepth_index]
-#define texture_gbuffer0 bindless_textures_uint2[GetCamera().texture_gbuffer0_index]
-#define texture_gbuffer1 bindless_textures_float2[GetCamera().texture_gbuffer1_index]
+#define texture_primitiveID bindless_textures_uint2[GetCamera().texture_primitiveID_index]
+#define texture_velocity bindless_textures_float2[GetCamera().texture_velocity_index]
+#define texture_normal bindless_textures_float2[GetCamera().texture_normal_index]
+#define texture_roughness bindless_textures_float[GetCamera().texture_roughness_index]
 
 #define PI 3.14159265358979323846
 #define SQRT2 1.41421356237309504880
@@ -165,6 +167,13 @@ inline bool is_saturated(float a) { return a == saturate(a); }
 inline bool is_saturated(float2 a) { return is_saturated(a.x) && is_saturated(a.y); }
 inline bool is_saturated(float3 a) { return is_saturated(a.x) && is_saturated(a.y) && is_saturated(a.z); }
 inline bool is_saturated(float4 a) { return is_saturated(a.x) && is_saturated(a.y) && is_saturated(a.z) && is_saturated(a.w); }
+
+inline float2 uv_to_clipspace(in float2 uv)
+{
+	float2 clipspace = uv * 2 - 1;
+	clipspace.y *= -1;
+	return clipspace;
+}
 
 #define DEGAMMA_SKY(x)	((GetFrame().options & OPTION_BIT_STATIC_SKY_HDR) ? (x) : RemoveSRGBCurve_Fast(x))
 #define DEGAMMA(x)		(RemoveSRGBCurve_Fast(x))

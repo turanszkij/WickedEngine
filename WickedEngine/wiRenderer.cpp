@@ -934,7 +934,6 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_MSAO_BLURUPSAMPLE_BLENDOUT], "msao_blurupsampleCS_blendout.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_MSAO_BLURUPSAMPLE_PREMIN], "msao_blurupsampleCS_premin.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_MSAO_BLURUPSAMPLE_PREMIN_BLENDOUT], "msao_blurupsampleCS_premin_blendout.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SSR_SURFACE], "ssr_surfaceCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SSR_TILEMAXROUGHNESS_HORIZONTAL], "ssr_tileMaxRoughness_horizontalCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SSR_TILEMAXROUGHNESS_VERTICAL], "ssr_tileMaxRoughness_verticalCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_POSTPROCESS_SSR_KICKJOBS], "ssr_kickjobsCS.cso"); });
@@ -7374,10 +7373,12 @@ void BindCameraCB(
 	cb.entity_culling_tilecount = GetEntityCullingTileCount(cb.internal_resolution);
 	cb.sample_count = camera.sample_count;
 
+	cb.texture_primitiveID_index = camera.texture_primitiveID_index;
 	cb.texture_depth_index = camera.texture_depth_index;
 	cb.texture_lineardepth_index = camera.texture_lineardepth_index;
-	cb.texture_gbuffer0_index = camera.texture_gbuffer0_index;
-	cb.texture_gbuffer1_index = camera.texture_gbuffer1_index;
+	cb.texture_velocity_index = camera.texture_velocity_index;
+	cb.texture_normal_index = camera.texture_normal_index;
+	cb.texture_roughness_index = camera.texture_roughness_index;
 	cb.buffer_entitytiles_opaque_index = camera.buffer_entitytiles_opaque_index;
 	cb.buffer_entitytiles_transparent_index = camera.buffer_entitytiles_transparent_index;
 	cb.texture_reflection_index = camera.texture_reflection_index;
@@ -7632,10 +7633,8 @@ void ComputeShadingRateClassification(
 }
 
 void VisibilityResolve(
-	const Texture& texture_primitiveID, // can be MSAA
-	const Texture gbuffer[GBUFFER_COUNT],
-	const Texture& depthbuffer_resolved,
-	const Texture& lineardepth,
+	const Texture& input_primitiveID, // can be MSAA
+	const VisibilityResolveOutputs& outputs,
 	CommandList cmd
 )
 {
@@ -7644,53 +7643,125 @@ void VisibilityResolve(
 
 	BindCommonResources(cmd);
 
-	const bool msaa = texture_primitiveID.desc.sample_count > 1;
+	const bool msaa = input_primitiveID.GetDesc().sample_count > 1;
 
 	device->BindComputeShader(&shaders[msaa ? CSTYPE_VISIBILITY_RESOLVE_MSAA : CSTYPE_VISIBILITY_RESOLVE], cmd);
 
-	device->BindResource(&texture_primitiveID, 0, cmd);
+	device->BindResource(&input_primitiveID, 0, cmd);
+	GPUResource unbind;
 
-	device->BindUAV(&gbuffer[GBUFFER_VELOCITY], 0, cmd);
-	device->BindUAV(&depthbuffer_resolved, 1, cmd, 0);
-	device->BindUAV(&depthbuffer_resolved, 2, cmd, 1);
-	device->BindUAV(&depthbuffer_resolved, 3, cmd, 2);
-	device->BindUAV(&depthbuffer_resolved, 4, cmd, 3);
-	device->BindUAV(&depthbuffer_resolved, 5, cmd, 4);
-	device->BindUAV(&lineardepth, 6, cmd, 0);
-	device->BindUAV(&lineardepth, 7, cmd, 1);
-	device->BindUAV(&lineardepth, 8, cmd, 2);
-	device->BindUAV(&lineardepth, 9, cmd, 3);
-	device->BindUAV(&lineardepth, 10, cmd, 4);
-
-	barrier_stack.push_back(GPUBarrier::Image(&gbuffer[GBUFFER_VELOCITY], gbuffer[GBUFFER_VELOCITY].desc.layout, ResourceState::UNORDERED_ACCESS));
-	barrier_stack.push_back(GPUBarrier::Image(&depthbuffer_resolved, depthbuffer_resolved.desc.layout, ResourceState::UNORDERED_ACCESS));
-	barrier_stack.push_back(GPUBarrier::Image(&lineardepth, lineardepth.desc.layout, ResourceState::UNORDERED_ACCESS));
-
-	if (msaa)
+	VisibilityResolvePushConstants push = {};
+	if (outputs.depthbuffer)
 	{
-		device->BindUAV(&gbuffer[GBUFFER_PRIMITIVEID], 11, cmd);
-		barrier_stack.push_back(GPUBarrier::Image(&gbuffer[GBUFFER_PRIMITIVEID], gbuffer[GBUFFER_PRIMITIVEID].desc.layout, ResourceState::UNORDERED_ACCESS));
+		push.options |= VISIBILITY_RESOLVE_DEPTH;
+		device->BindUAV(outputs.depthbuffer, 0, cmd, 0);
+		device->BindUAV(outputs.depthbuffer, 1, cmd, 1);
+		device->BindUAV(outputs.depthbuffer, 2, cmd, 2);
+		device->BindUAV(outputs.depthbuffer, 3, cmd, 3);
+		device->BindUAV(outputs.depthbuffer, 4, cmd, 4);
+		barrier_stack.push_back(GPUBarrier::Image(outputs.depthbuffer, outputs.depthbuffer->desc.layout, ResourceState::UNORDERED_ACCESS));
 	}
-
+	else
+	{
+		device->BindUAV(&unbind, 0, cmd);
+		device->BindUAV(&unbind, 1, cmd);
+		device->BindUAV(&unbind, 2, cmd);
+		device->BindUAV(&unbind, 3, cmd);
+		device->BindUAV(&unbind, 4, cmd);
+	}
+	if (outputs.lineardepth)
+	{
+		push.options |= VISIBILITY_RESOLVE_LINEARDEPTH;
+		device->BindUAV(outputs.lineardepth, 5, cmd, 0);
+		device->BindUAV(outputs.lineardepth, 6, cmd, 1);
+		device->BindUAV(outputs.lineardepth, 7, cmd, 2);
+		device->BindUAV(outputs.lineardepth, 8, cmd, 3);
+		device->BindUAV(outputs.lineardepth, 9, cmd, 4);
+		barrier_stack.push_back(GPUBarrier::Image(outputs.lineardepth, outputs.lineardepth->desc.layout, ResourceState::UNORDERED_ACCESS));
+	}
+	else
+	{
+		device->BindUAV(&unbind, 5, cmd);
+		device->BindUAV(&unbind, 6, cmd);
+		device->BindUAV(&unbind, 7, cmd);
+		device->BindUAV(&unbind, 8, cmd);
+		device->BindUAV(&unbind, 9, cmd);
+	}
+	if (outputs.velocity)
+	{
+		push.options |= VISIBILITY_RESOLVE_VELOCITY;
+		device->BindUAV(outputs.velocity, 10, cmd);
+		barrier_stack.push_back(GPUBarrier::Image(outputs.velocity, outputs.velocity->desc.layout, ResourceState::UNORDERED_ACCESS));
+	}
+	else
+	{
+		device->BindUAV(&unbind, 10, cmd);
+	}
+	if (outputs.normal)
+	{
+		push.options |= VISIBILITY_RESOLVE_NORMAL;
+		device->BindUAV(outputs.normal, 11, cmd);
+		barrier_stack.push_back(GPUBarrier::Image(outputs.normal, outputs.normal->desc.layout, ResourceState::UNORDERED_ACCESS));
+	}
+	else
+	{
+		device->BindUAV(&unbind, 11, cmd);
+	}
+	if (outputs.roughness)
+	{
+		push.options |= VISIBILITY_RESOLVE_ROUGHNESS;
+		device->BindUAV(outputs.roughness, 12, cmd);
+		barrier_stack.push_back(GPUBarrier::Image(outputs.roughness, outputs.roughness->desc.layout, ResourceState::UNORDERED_ACCESS));
+	}
+	else
+	{
+		device->BindUAV(&unbind, 12, cmd);
+	}
+	if (outputs.primitiveID_resolved)
+	{
+		push.options |= VISIBILITY_RESOLVE_PRIMITIVEID;
+		device->BindUAV(outputs.primitiveID_resolved, 13, cmd);
+		barrier_stack.push_back(GPUBarrier::Image(outputs.primitiveID_resolved, outputs.primitiveID_resolved->desc.layout, ResourceState::UNORDERED_ACCESS));
+	}
+	else
+	{
+		device->BindUAV(&unbind, 13, cmd);
+	}
 	barrier_stack_flush(cmd);
 
+	device->PushConstants(&push, sizeof(push), cmd);
+
 	device->Dispatch(
-		(texture_primitiveID.desc.width + 15) / 16,
-		(texture_primitiveID.desc.height + 15) / 16,
+		(input_primitiveID.desc.width + 15) / 16,
+		(input_primitiveID.desc.height + 15) / 16,
 		1,
 		cmd
 	);
 
-	barrier_stack.push_back(GPUBarrier::Memory());
-	barrier_stack.push_back(GPUBarrier::Image(&gbuffer[GBUFFER_VELOCITY], ResourceState::UNORDERED_ACCESS, gbuffer[GBUFFER_VELOCITY].desc.layout));
-	barrier_stack.push_back(GPUBarrier::Image(&depthbuffer_resolved, ResourceState::UNORDERED_ACCESS, depthbuffer_resolved.desc.layout));
-	barrier_stack.push_back(GPUBarrier::Image(&lineardepth, ResourceState::UNORDERED_ACCESS, lineardepth.desc.layout));
-
-	if (msaa)
+	if (outputs.depthbuffer)
 	{
-		barrier_stack.push_back(GPUBarrier::Image(&gbuffer[GBUFFER_PRIMITIVEID], ResourceState::UNORDERED_ACCESS, gbuffer[GBUFFER_PRIMITIVEID].desc.layout));
+		barrier_stack.push_back(GPUBarrier::Image(outputs.depthbuffer, ResourceState::UNORDERED_ACCESS, outputs.depthbuffer->desc.layout));
 	}
-
+	if (outputs.lineardepth)
+	{
+		barrier_stack.push_back(GPUBarrier::Image(outputs.lineardepth, ResourceState::UNORDERED_ACCESS, outputs.lineardepth->desc.layout));
+	}
+	if (outputs.velocity)
+	{
+		barrier_stack.push_back(GPUBarrier::Image(outputs.velocity, ResourceState::UNORDERED_ACCESS, outputs.velocity->desc.layout));
+	}
+	if (outputs.normal)
+	{
+		barrier_stack.push_back(GPUBarrier::Image(outputs.normal, ResourceState::UNORDERED_ACCESS, outputs.normal->desc.layout));
+	}
+	if (outputs.roughness)
+	{
+		barrier_stack.push_back(GPUBarrier::Image(outputs.roughness, ResourceState::UNORDERED_ACCESS, outputs.roughness->desc.layout));
+	}
+	if (outputs.primitiveID_resolved)
+	{
+		barrier_stack.push_back(GPUBarrier::Image(outputs.primitiveID_resolved, ResourceState::UNORDERED_ACCESS, outputs.primitiveID_resolved->desc.layout));
+	}
 	barrier_stack_flush(cmd);
 
 	wi::profiler::EndRange(range);
@@ -9375,16 +9446,6 @@ void CreateRTReflectionResources(RTReflectionResources& res, XMUINT2 resolution)
 {
 	res.frame = 0;
 
-	TextureDesc surface_desc;
-	surface_desc.type = TextureDesc::Type::TEXTURE_2D;
-	surface_desc.width = resolution.x;
-	surface_desc.height = resolution.y;
-	surface_desc.format = Format::R16G16_FLOAT;
-	surface_desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-	device->CreateTexture(&surface_desc, nullptr, &res.texture_surface_normal);
-	surface_desc.format = Format::R8_UNORM;
-	device->CreateTexture(&surface_desc, nullptr, &res.texture_surface_roughness);
-
 	TextureDesc desc;
 	desc.type = TextureDesc::Type::TEXTURE_2D;
 	desc.width = resolution.x / 2;
@@ -9432,44 +9493,6 @@ void Postprocess_RTReflection(
 
 	BindCommonResources(cmd);
 
-	// Compute common Raytraced surface properties:
-	{
-		device->EventBegin("RTReflection Surface", cmd);
-		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_SURFACE], cmd);
-
-		const GPUResource* uavs[] = {
-			&res.texture_surface_normal,
-			&res.texture_surface_roughness,
-		};
-		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&res.texture_surface_normal, res.texture_surface_normal.desc.layout, ResourceState::UNORDERED_ACCESS),
-				GPUBarrier::Image(&res.texture_surface_roughness, res.texture_surface_roughness.desc.layout, ResourceState::UNORDERED_ACCESS),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
-		device->Dispatch(
-			(res.texture_surface_normal.GetDesc().width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			(res.texture_surface_normal.GetDesc().height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			1,
-			cmd
-		);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-				GPUBarrier::Image(&res.texture_surface_normal, ResourceState::UNORDERED_ACCESS, res.texture_surface_normal.desc.layout),
-				GPUBarrier::Image(&res.texture_surface_roughness, ResourceState::UNORDERED_ACCESS, res.texture_surface_roughness.desc.layout),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
-		device->EventEnd(cmd);
-	}
-
 	const TextureDesc& desc = output.desc;
 
 	// Render half-res:
@@ -9492,12 +9515,6 @@ void Postprocess_RTReflection(
 #endif // RTREFLECTION_WITH_RAYTRACING_PIPELINE
 
 		device->PushConstants(&postprocess, sizeof(postprocess), cmd);
-
-		const GPUResource* resarray[] = {
-			&res.texture_surface_normal,
-			&res.texture_surface_roughness,
-		};
-		device->BindResources(resarray, 0, arraysize(resarray), cmd);
 
 		const GPUResource* uavs[] = {
 			&res.texture_rayIndirectSpecular,
@@ -9582,8 +9599,6 @@ void Postprocess_RTReflection(
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_RESOLVE], cmd);
 
 		const GPUResource* resarray[] = {
-			&res.texture_surface_normal,
-			&res.texture_surface_roughness,
 			&res.texture_rayIndirectSpecular,
 			&res.texture_rayDirectionPDF,
 			&res.texture_rayLengths,
@@ -9635,7 +9650,6 @@ void Postprocess_RTReflection(
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_TEMPORAL], cmd);
 
 		const GPUResource* resarray[] = {
-			&res.texture_surface_roughness,
 			&res.texture_resolve,
 			&res.texture_temporal[temporal_history],
 			&res.texture_resolve_variance,
@@ -9691,8 +9705,6 @@ void Postprocess_RTReflection(
 			const GPUResource* resarray[] = {
 				&res.texture_temporal[temporal_output],
 				&res.texture_temporal_variance[temporal_output],
-				&res.texture_surface_normal,
-				&res.texture_surface_roughness,
 			};
 			device->BindResources(resarray, 0, arraysize(resarray), cmd);
 
@@ -9733,8 +9745,6 @@ void Postprocess_RTReflection(
 			const GPUResource* resarray[] = {
 				&res.texture_bilateral_temp,
 				&res.texture_temporal_variance[temporal_output],
-				&res.texture_surface_normal,
-				&res.texture_surface_roughness,
 			};
 			device->BindResources(resarray, 0, arraysize(resarray), cmd);
 
@@ -9778,22 +9788,13 @@ void CreateSSRResources(SSRResources& res, XMUINT2 resolution)
 {
 	res.frame = 0;
 
-	TextureDesc surface_desc;
-	surface_desc.type = TextureDesc::Type::TEXTURE_2D;
-	surface_desc.width = resolution.x;
-	surface_desc.height = resolution.y;
-	surface_desc.format = Format::R16G16_FLOAT;
-	surface_desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-	device->CreateTexture(&surface_desc, nullptr, &res.texture_surface_normal);
-	surface_desc.format = Format::R8_UNORM;
-	device->CreateTexture(&surface_desc, nullptr, &res.texture_surface_roughness);
-
 	TextureDesc tile_desc;
 	tile_desc.type = TextureDesc::Type::TEXTURE_2D;
 	tile_desc.width = (resolution.x + SSR_TILESIZE - 1) / SSR_TILESIZE;
 	tile_desc.height = (resolution.y + SSR_TILESIZE - 1) / SSR_TILESIZE;
 	tile_desc.format = Format::R16G16_FLOAT;
 	tile_desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+	tile_desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
 	device->CreateTexture(&tile_desc, nullptr, &res.texture_tile_minmax_roughness);
 
 	tile_desc.height = resolution.y;
@@ -9863,57 +9864,14 @@ void Postprocess_SSR(
 {
 	device->EventBegin("Postprocess_SSR", cmd);
 
-	auto range = wi::profiler::BeginRangeGPU("Screen Space Reflections", cmd);
+	auto range = wi::profiler::BeginRangeGPU("SSR", cmd);
 
 	BindCommonResources(cmd);
-
-	// Compute common SSR surface properties:
-	{
-		device->EventBegin("SSR Surface", cmd);
-		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_SURFACE], cmd);
-
-		const GPUResource* uavs[] = {
-			&res.texture_surface_normal,
-			&res.texture_surface_roughness,
-		};
-		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Image(&res.texture_surface_normal, res.texture_surface_normal.desc.layout, ResourceState::UNORDERED_ACCESS),
-				GPUBarrier::Image(&res.texture_surface_roughness, res.texture_surface_roughness.desc.layout, ResourceState::UNORDERED_ACCESS),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
-		device->Dispatch(
-			(res.texture_surface_normal.GetDesc().width + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			(res.texture_surface_normal.GetDesc().height + POSTPROCESS_BLOCKSIZE - 1) / POSTPROCESS_BLOCKSIZE,
-			1,
-			cmd
-		);
-
-		{
-			GPUBarrier barriers[] = {
-				GPUBarrier::Memory(),
-				GPUBarrier::Image(&res.texture_surface_normal, ResourceState::UNORDERED_ACCESS, res.texture_surface_normal.desc.layout),
-				GPUBarrier::Image(&res.texture_surface_roughness, ResourceState::UNORDERED_ACCESS, res.texture_surface_roughness.desc.layout),
-			};
-			device->Barrier(barriers, arraysize(barriers), cmd);
-		}
-
-		device->EventEnd(cmd);
-	}
 
 	// Compute tile classification (horizontal):
 	{
 		device->EventBegin("SSR Tile Classification - Horizontal", cmd);
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_TILEMAXROUGHNESS_HORIZONTAL], cmd);
-
-		const GPUResource* resarray[] = {
-			&res.texture_surface_roughness,
-		};
-		device->BindResources(resarray, 0, arraysize(resarray), cmd);
 
 		const GPUResource* uavs[] = {
 			&res.texture_tile_minmax_roughness_horizontal,
@@ -10116,8 +10074,6 @@ void Postprocess_SSR(
 		device->EventBegin("SSR Raytrace pass", cmd);
 
 		const GPUResource* resarray[] = {
-			&res.texture_surface_normal,
-			&res.texture_surface_roughness,
 			&res.texture_depth_hierarchy,
 			&input,
 			&res.buffer_tiles_tracing_earlyexit,
@@ -10180,8 +10136,6 @@ void Postprocess_SSR(
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_RESOLVE], cmd);
 
 		const GPUResource* resarray[] = {
-			&res.texture_surface_normal,
-			&res.texture_surface_roughness,
 			&res.texture_rayIndirectSpecular,
 			&res.texture_rayDirectionPDF,
 			&res.texture_rayLengths,
@@ -10233,7 +10187,6 @@ void Postprocess_SSR(
 		device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_SSR_TEMPORAL], cmd);
 
 		const GPUResource* resarray[] = {
-			&res.texture_surface_roughness,
 			&res.texture_resolve,
 			&res.texture_temporal[temporal_history],
 			&res.texture_resolve_variance,
@@ -10289,8 +10242,6 @@ void Postprocess_SSR(
 			const GPUResource* resarray[] = {
 				&res.texture_temporal[temporal_output],
 				&res.texture_temporal_variance[temporal_output],
-				&res.texture_surface_normal,
-				&res.texture_surface_roughness,
 			};
 			device->BindResources(resarray, 0, arraysize(resarray), cmd);
 
@@ -10331,8 +10282,6 @@ void Postprocess_SSR(
 			const GPUResource* resarray[] = {
 				&res.texture_bilateral_temp,
 				&res.texture_temporal_variance[temporal_output],
-				&res.texture_surface_normal,
-				&res.texture_surface_roughness,
 			};
 			device->BindResources(resarray, 0, arraysize(resarray), cmd);
 

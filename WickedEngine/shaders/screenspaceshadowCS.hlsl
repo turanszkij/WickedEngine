@@ -46,7 +46,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	float3 P = reconstruct_position(uv, depth);
 
 	PrimitiveID prim;
-	prim.unpack(texture_gbuffer0[DTid.xy * 2]);
+	prim.unpack(texture_primitiveID[DTid.xy * 2]);
 
 	Surface surface;
 	surface.init();

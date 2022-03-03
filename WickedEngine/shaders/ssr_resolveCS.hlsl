@@ -5,11 +5,9 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-Texture2D<float2> texture_surface_normal : register(t0);
-Texture2D<float> texture_surface_roughness : register(t1);
-Texture2D<float4> texture_rayIndirectSpecular : register(t2);
-Texture2D<float4> texture_rayDirectionPDF : register(t3);
-Texture2D<float> texture_rayLength : register(t4);
+Texture2D<float4> texture_rayIndirectSpecular : register(t0);
+Texture2D<float4> texture_rayDirectionPDF : register(t1);
+Texture2D<float> texture_rayLength : register(t2);
 
 RWTexture2D<float4> texture_resolve : register(u0);
 RWTexture2D<float> texture_resolve_variance : register(u1);
@@ -100,7 +98,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	const uint2 tracingCoord = DTid.xy / 2;
 
 	const float depth = texture_depth[DTid.xy];
-	const float roughness = texture_surface_roughness[DTid.xy];
+	const float roughness = texture_roughness[DTid.xy];
 
 	if (!NeedReflection(roughness, depth))
 	{
@@ -112,7 +110,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	// Everthing in world space:
 	const float3 P = reconstruct_position(uv, depth);
-	const float3 N = decode_oct(texture_surface_normal[DTid.xy]);
+	const float3 N = decode_oct(texture_normal[DTid.xy]);
 	const float3 V = normalize(GetCamera().position - P);
 	const float NdotV = saturate(dot(N, V));
 

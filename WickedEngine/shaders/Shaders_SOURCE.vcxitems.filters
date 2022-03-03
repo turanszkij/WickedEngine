@@ -1037,9 +1037,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)ssr_raytraceCS_earlyexit.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)ssr_surfaceCS.hlsl">
-      <Filter>CS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)ssr_tileMaxRoughness_horizontalCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>

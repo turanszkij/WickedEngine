@@ -903,10 +903,12 @@ namespace wi::scene
 		XMFLOAT4 clipPlane = XMFLOAT4(0, 0, 0, 0); // default: no clip plane
 		wi::Canvas canvas;
 		uint32_t sample_count = 1;
+		int texture_primitiveID_index = -1;
 		int texture_depth_index = -1;
 		int texture_lineardepth_index = -1;
-		int texture_gbuffer0_index = -1;
-		int texture_gbuffer1_index = -1;
+		int texture_velocity_index = -1;
+		int texture_normal_index = -1;
+		int texture_roughness_index = -1;
 		int texture_reflection_index = -1;
 		int texture_refraction_index = -1;
 		int texture_waterriples_index = -1;

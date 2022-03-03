@@ -661,25 +661,25 @@ struct CameraCB
 	uint3 entity_culling_tilecount;
 	uint sample_count;
 
+	int texture_primitiveID_index;
 	int texture_depth_index;
 	int texture_lineardepth_index;
-	int texture_gbuffer0_index;
-	int texture_gbuffer1_index;
+	int texture_velocity_index;
 
+	int texture_normal_index;
+	int texture_roughness_index;
 	int buffer_entitytiles_opaque_index;
 	int buffer_entitytiles_transparent_index;
+
 	int texture_reflection_index;
 	int texture_refraction_index;
-
 	int texture_waterriples_index;
 	int texture_ao_index;
+
 	int texture_ssr_index;
 	int texture_rtshadow_index;
-
 	int texture_surfelgi_index;
 	int texture_depth_index_prev;
-	int padding1;
-	int padding2;
 };
 
 
@@ -798,6 +798,20 @@ struct SkinningPushConstants
 
 	int so_pos_nor_wind;
 	int so_tan;
+};
+
+enum VisibilityResolveOptions
+{
+	VISIBILITY_RESOLVE_DEPTH = 1 << 0,
+	VISIBILITY_RESOLVE_LINEARDEPTH = 1 << 1,
+	VISIBILITY_RESOLVE_VELOCITY = 1 << 2,
+	VISIBILITY_RESOLVE_NORMAL = 1 << 3,
+	VISIBILITY_RESOLVE_ROUGHNESS = 1 << 4,
+	VISIBILITY_RESOLVE_PRIMITIVEID = 1 << 5,
+};
+struct VisibilityResolvePushConstants
+{
+	uint options;
 };
 
 

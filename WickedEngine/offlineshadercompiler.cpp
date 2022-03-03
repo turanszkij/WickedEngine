@@ -110,7 +110,6 @@ int main(int argc, char* argv[])
 		"fsr_sharpenCS.hlsl"										,
 		"ssaoCS.hlsl"												,
 		"rtreflectionCS.hlsl"										,
-		"ssr_surfaceCS.hlsl"										,
 		"ssr_tileMaxRoughness_horizontalCS.hlsl"					,
 		"ssr_tileMaxRoughness_verticalCS.hlsl"						,
 		"ssr_kickjobsCS.hlsl"										,
