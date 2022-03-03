@@ -48,7 +48,7 @@ void RenderPath3D::ResizeBuffers()
 	{
 		TextureDesc desc;
 		desc.format = Format::R32G32_UINT;
-		desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
+		desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 		desc.width = internalResolution.x;
 		desc.height = internalResolution.y;
 		desc.sample_count = 1;
@@ -59,6 +59,7 @@ void RenderPath3D::ResizeBuffers()
 		if (getMSAASampleCount() > 1)
 		{
 			desc.sample_count = getMSAASampleCount();
+			desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE;
 			device->CreateTexture(&desc, nullptr, &rtPrimitiveID_render);
 			device->SetName(&rtPrimitiveID_render, "rtPrimitiveID_render");
 		}
