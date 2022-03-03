@@ -34,6 +34,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
 	float2 jitterUV = (screenJitter + DTid.xy + 0.5f) * postprocess.resolution_rcp;
 
 	const float depth = texture_depth.SampleLevel(sampler_linear_clamp, jitterUV, 0);
+	const float lineardepth = texture_lineardepth.SampleLevel(sampler_linear_clamp, jitterUV, 0);
 	const float roughness = texture_roughness[jitterPixel];
 
 	if (!NeedReflection(roughness, depth))
@@ -91,7 +92,8 @@ void main(uint2 DTid : SV_DispatchThreadID)
 	payload.data = 0;
 
 	const float minraycone = 0.05;
-	RayCone raycone = RayCone::from_spread_angle(sqr(max(minraycone, roughness)));
+	RayCone raycone = RayCone::from_spread_angle(pixel_cone_spread_angle_from_image_height(postprocess.resolution.y));
+	raycone = raycone.propagate(sqr(max(minraycone, roughness)), lineardepth * GetCamera().z_far);
 
 #ifdef RTAPI
 	RayQuery<
