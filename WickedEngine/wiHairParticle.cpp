@@ -82,10 +82,10 @@ namespace wi
 				device->SetName(&vertexBuffer_POS[1], "HairParticleSystem::vertexBuffer_POS[1]");
 
 				bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-				bd.stride = sizeof(MeshComponent::Vertex_TEX);
+				bd.stride = sizeof(MeshComponent::Vertex_UVS);
 				bd.size = bd.stride * 4 * particleCount;
-				device->CreateBuffer(&bd, nullptr, &vertexBuffer_TEX);
-				device->SetName(&vertexBuffer_TEX, "HairParticleSystem::vertexBuffer_TEX");
+				device->CreateBuffer(&bd, nullptr, &vertexBuffer_UVS);
+				device->SetName(&vertexBuffer_UVS, "HairParticleSystem::vertexBuffer_UVS");
 
 				bd.bind_flags = BindFlag::SHADER_RESOURCE;
 				bd.misc_flags = ResourceMiscFlag::NONE;
@@ -273,7 +273,7 @@ namespace wi
 			const GPUResource* uavs[] = {
 				&simulationBuffer,
 				&vertexBuffer_POS[0],
-				&vertexBuffer_TEX,
+				&vertexBuffer_UVS,
 				&culledIndexBuffer,
 				&indirectBuffer
 			};
@@ -321,7 +321,7 @@ namespace wi
 				GPUBarrier::Memory(&indirectBuffer),
 				GPUBarrier::Buffer(&indirectBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::INDIRECT_ARGUMENT),
 				GPUBarrier::Buffer(&vertexBuffer_POS[0], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-				GPUBarrier::Buffer(&vertexBuffer_TEX, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+				GPUBarrier::Buffer(&vertexBuffer_UVS, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 				GPUBarrier::Buffer(&culledIndexBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::INDEX_BUFFER),
 			};
 			device->Barrier(barriers, arraysize(barriers), cmd);

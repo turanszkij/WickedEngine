@@ -358,26 +358,6 @@ struct Surface
 		}
 		facenormal = N;
 
-		float4 uv0 = 0, uv1 = 0, uv2 = 0;
-		[branch]
-		if (geometry.vb_uv0 >= 0)
-		{
-			ByteAddressBuffer buf = bindless_buffers[NonUniformResourceIndex(geometry.vb_uv0)];
-			uv0.xy = unpack_half2(buf.Load(i0 * 4));
-			uv1.xy = unpack_half2(buf.Load(i1 * 4));
-			uv2.xy = unpack_half2(buf.Load(i2 * 4));
-		}
-		[branch]
-		if (geometry.vb_uv1 >= 0)
-		{
-			ByteAddressBuffer buf = bindless_buffers[NonUniformResourceIndex(geometry.vb_uv1)];
-			uv0.zw = unpack_half2(buf.Load(i0 * 4));
-			uv1.zw = unpack_half2(buf.Load(i1 * 4));
-			uv2.zw = unpack_half2(buf.Load(i2 * 4));
-		}
-		float4 uvsets = mad(uv0, w, mad(uv1, u, uv2 * v)); // uv0 * w + uv1 * u + uv2 * v
-		uvsets.xy = mad(uvsets.xy, material.texMulAdd.xy, material.texMulAdd.zw);
-
 #ifdef SURFACE_LOAD_MIPCONE
 		float3 p0 = asfloat(data0.xyz);
 		float3 p1 = asfloat(data1.xyz);
@@ -386,13 +366,30 @@ struct Surface
 		float3 P1 = mul(inst.transform.GetMatrix(), float4(p1, 1)).xyz;
 		float3 P2 = mul(inst.transform.GetMatrix(), float4(p2, 1)).xyz;
 		const float triangle_constant = rcp(twice_triangle_area(P0, P1, P2));
-		const float lod_constant0 = 0.5 * log2(twice_uv_area(uv0.xy, uv1.xy, uv2.xy) * triangle_constant);
-		const float lod_constant1 = 0.5 * log2(twice_uv_area(uv0.zw, uv1.zw, uv2.zw) * triangle_constant);
+		float lod_constant0 = 0;
+		float lod_constant1 = 0;
 		const float3 ray_direction = V;
 		const float cone_width = raycone.width_at_t(hit_depth);
 		//const float3 surf_normal = facenormal;
 		const float3 surf_normal = normalize(cross(P2 - P1, P1 - P0)); // compute the facenormal, because particles could have fake facenormal which doesn't work well with mipcones!
 #endif // SURFACE_LOAD_MIPCONE
+
+		float4 uvsets = 0;
+		[branch]
+		if (geometry.vb_uvs >= 0)
+		{
+			ByteAddressBuffer buf = bindless_buffers[NonUniformResourceIndex(geometry.vb_uvs)];
+			const float4 uv0 = unpack_half4(buf.Load2(i0 * 8));
+			const float4 uv1 = unpack_half4(buf.Load2(i1 * 8));
+			const float4 uv2 = unpack_half4(buf.Load2(i2 * 8));
+			uvsets = mad(uv0, w, mad(uv1, u, uv2 * v)); // uv0 * w + uv1 * u + uv2 * v
+			uvsets.xy = mad(uvsets.xy, material.texMulAdd.xy, material.texMulAdd.zw);
+
+#ifdef SURFACE_LOAD_MIPCONE
+			lod_constant0 = 0.5 * log2(twice_uv_area(uv0.xy, uv1.xy, uv2.xy) * triangle_constant);
+			lod_constant1 = 0.5 * log2(twice_uv_area(uv0.zw, uv1.zw, uv2.zw) * triangle_constant);
+#endif // SURFACE_LOAD_MIPCONE
+		}
 
 		float4 baseColor = is_emittedparticle ? 1 : material.baseColor;
 		[branch]

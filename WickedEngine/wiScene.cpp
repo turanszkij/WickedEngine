@@ -391,8 +391,7 @@ namespace wi::scene
 		ib = {};
 		vb_pos_nor_wind = {};
 		vb_tan = {};
-		vb_uv0 = {};
-		vb_uv1 = {};
+		vb_uvs = {};
 		vb_atl = {};
 		vb_col = {};
 		vb_bon = {};
@@ -400,7 +399,7 @@ namespace wi::scene
 		so_tan = {};
 		so_pre = {};
 
-		if (vertex_tangents.empty() && !vertex_uvset_0.empty())
+		if (vertex_tangents.empty() && !vertex_uvset_0.empty() && !vertex_normals.empty())
 		{
 			// Generate tangents if not found:
 			vertex_tangents.resize(vertex_positions.size());
@@ -483,6 +482,8 @@ namespace wi::scene
 			subsetCounter++;
 		}
 
+		const size_t uv_count = std::max(vertex_uvset_0.size(), vertex_uvset_1.size());
+
 		GPUBufferDesc bd;
 		bd.usage = Usage::DEFAULT;
 		bd.bind_flags = BindFlag::VERTEX_BUFFER | BindFlag::INDEX_BUFFER | BindFlag::SHADER_RESOURCE;
@@ -496,8 +497,7 @@ namespace wi::scene
 			AlignTo(indices.size() * GetIndexStride(), alignment) +
 			AlignTo(vertex_positions.size() * sizeof(Vertex_POS), alignment) +
 			AlignTo(vertex_tangents.size() * sizeof(Vertex_TAN), alignment) +
-			AlignTo(vertex_uvset_0.size() * sizeof(Vertex_TEX), alignment) +
-			AlignTo(vertex_uvset_1.size() * sizeof(Vertex_TEX), alignment) +
+			AlignTo(uv_count * sizeof(Vertex_UVS), alignment) +
 			AlignTo(vertex_atlas.size() * sizeof(Vertex_TEX), alignment) +
 			AlignTo(vertex_colors.size() * sizeof(Vertex_COL), alignment) +
 			AlignTo(vertex_boneindices.size() * sizeof(Vertex_BON), alignment)
@@ -574,29 +574,20 @@ namespace wi::scene
 			}
 		}
 
-		// vertexBuffer - UV SET 0
-		if (!vertex_uvset_0.empty())
+		// vertexBuffer - UV SETS
+		if (!vertex_uvset_0.empty() || !vertex_uvset_1.empty())
 		{
-			vb_uv0.offset = buffer_offset;
-			vb_uv0.size = vertex_uvset_0.size() * sizeof(Vertex_TEX);
-			Vertex_TEX* vertices = (Vertex_TEX*)(buffer_data.data() + buffer_offset);
-			buffer_offset += AlignTo(vb_uv0.size, alignment);
-			for (size_t i = 0; i < vertex_uvset_0.size(); ++i)
-			{
-				vertices[i].FromFULL(vertex_uvset_0[i]);
-			}
-		}
+			const XMFLOAT2* uv0_stream = vertex_uvset_0.empty() ? vertex_uvset_1.data() : vertex_uvset_0.data();
+			const XMFLOAT2* uv1_stream = vertex_uvset_1.empty() ? vertex_uvset_0.data() : vertex_uvset_1.data();
 
-		// vertexBuffer - UV SET 1
-		if (!vertex_uvset_1.empty())
-		{
-			vb_uv1.offset = buffer_offset;
-			vb_uv1.size = vertex_uvset_1.size() * sizeof(Vertex_TEX);
-			Vertex_TEX* vertices = (Vertex_TEX*)(buffer_data.data() + buffer_offset);
-			buffer_offset += AlignTo(vb_uv1.size, alignment);
-			for (size_t i = 0; i < vertex_uvset_1.size(); ++i)
+			vb_uvs.offset = buffer_offset;
+			vb_uvs.size = uv_count * sizeof(Vertex_UVS);
+			Vertex_UVS* vertices = (Vertex_UVS*)(buffer_data.data() + buffer_offset);
+			buffer_offset += AlignTo(vb_uvs.size, alignment);
+			for (size_t i = 0; i < uv_count; ++i)
 			{
-				vertices[i].FromFULL(vertex_uvset_1[i]);
+				vertices[i].uv0.FromFULL(uv0_stream[i]);
+				vertices[i].uv1.FromFULL(uv1_stream[i]);
 			}
 		}
 
@@ -669,15 +660,10 @@ namespace wi::scene
 			vb_tan.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_tan.offset, vb_tan.size);
 			vb_tan.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_tan.subresource_srv);
 		}
-		if (vb_uv0.IsValid())
+		if (vb_uvs.IsValid())
 		{
-			vb_uv0.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_uv0.offset, vb_uv0.size);
-			vb_uv0.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_uv0.subresource_srv);
-		}
-		if (vb_uv1.IsValid())
-		{
-			vb_uv1.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_uv1.offset, vb_uv1.size);
-			vb_uv1.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_uv1.subresource_srv);
+			vb_uvs.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_uvs.offset, vb_uvs.size);
+			vb_uvs.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_uvs.subresource_srv);
 		}
 		if (vb_atl.IsValid())
 		{
@@ -3061,8 +3047,7 @@ namespace wi::scene
 				geometry.vb_tan = mesh.vb_tan.descriptor_srv;
 			}
 			geometry.vb_col = mesh.vb_col.descriptor_srv;
-			geometry.vb_uv0 = mesh.vb_uv0.descriptor_srv;
-			geometry.vb_uv1 = mesh.vb_uv1.descriptor_srv;
+			geometry.vb_uvs = mesh.vb_uvs.descriptor_srv;
 			geometry.vb_atl = mesh.vb_atl.descriptor_srv;
 			geometry.vb_pre = mesh.so_pre.descriptor_srv;
 			geometry.blendmaterial1 = mesh.terrain_material1_index;
@@ -3802,7 +3787,7 @@ namespace wi::scene
 					geometry.ib = device->GetDescriptorIndex(&hair.primitiveBuffer, SubresourceType::SRV);
 					geometry.vb_pos_nor_wind = device->GetDescriptorIndex(&hair.vertexBuffer_POS[0], SubresourceType::SRV);
 					geometry.vb_pre = device->GetDescriptorIndex(&hair.vertexBuffer_POS[1], SubresourceType::SRV);
-					geometry.vb_uv0 = device->GetDescriptorIndex(&hair.vertexBuffer_TEX, SubresourceType::SRV);
+					geometry.vb_uvs = device->GetDescriptorIndex(&hair.vertexBuffer_UVS, SubresourceType::SRV);
 					geometry.flags = SHADERMESH_FLAG_DOUBLE_SIDED | SHADERMESH_FLAG_HAIRPARTICLE;
 
 					size_t geometryAllocation = geometryAllocator.fetch_add(1);
@@ -3881,8 +3866,7 @@ namespace wi::scene
 			geometry.materialIndex = (uint)materials.GetIndex(entity);
 			geometry.ib = device->GetDescriptorIndex(&emitter.primitiveBuffer, SubresourceType::SRV);
 			geometry.vb_pos_nor_wind = device->GetDescriptorIndex(&emitter.vertexBuffer_POS, SubresourceType::SRV);
-			geometry.vb_uv0 = device->GetDescriptorIndex(&emitter.vertexBuffer_TEX, SubresourceType::SRV);
-			geometry.vb_uv1 = device->GetDescriptorIndex(&emitter.vertexBuffer_TEX2, SubresourceType::SRV);
+			geometry.vb_uvs = device->GetDescriptorIndex(&emitter.vertexBuffer_UVS, SubresourceType::SRV);
 			geometry.vb_col = device->GetDescriptorIndex(&emitter.vertexBuffer_COL, SubresourceType::SRV);
 			geometry.flags = SHADERMESH_FLAG_DOUBLE_SIDED | SHADERMESH_FLAG_EMITTEDPARTICLE;
 

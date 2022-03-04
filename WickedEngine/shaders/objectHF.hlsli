@@ -181,19 +181,12 @@ struct VertexInput
 		return ((normal_wind >> 24u) & 0xFF) / 255.0;
 	}
 
-	float2 GetUV0()
+	float4 GetUVSets()
 	{
 		[branch]
-		if (GetMesh().vb_uv0 < 0)
+		if (GetMesh().vb_uvs < 0)
 			return 0;
-		return unpack_half2(bindless_buffers[GetMesh().vb_uv0].Load<uint>(vertexID * 4));
-	}
-	float2 GetUV1()
-	{
-		[branch]
-		if (GetMesh().vb_uv1 < 0)
-			return 0;
-		return unpack_half2(bindless_buffers[GetMesh().vb_uv1].Load<uint>(vertexID * 4));
+		return unpack_half4(bindless_buffers[GetMesh().vb_uvs].Load2(vertexID * 8));
 	}
 
 	ShaderMeshInstancePointer GetInstancePointer()
@@ -269,7 +262,8 @@ struct VertexSurface
 		tangent = input.GetTangent();
 		tangent.xyz = normalize(mul((float3x3)input.GetInstance().transformInverseTranspose.GetMatrix(), tangent.xyz));
 
-		uvsets = float4(mad(input.GetUV0(), material.texMulAdd.xy, material.texMulAdd.zw), input.GetUV1());
+		uvsets = input.GetUVSets();
+		uvsets.xy = mad(uvsets.xy, material.texMulAdd.xy, material.texMulAdd.zw);
 
 		atlas = input.GetAtlasUV();
 

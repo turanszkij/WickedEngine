@@ -21,7 +21,7 @@ namespace wi
 		wi::graphics::GPUBuffer constantBuffer;
 		wi::graphics::GPUBuffer simulationBuffer;
 		wi::graphics::GPUBuffer vertexBuffer_POS[2];
-		wi::graphics::GPUBuffer vertexBuffer_TEX;
+		wi::graphics::GPUBuffer vertexBuffer_UVS;
 		wi::graphics::GPUBuffer primitiveBuffer;
 		wi::graphics::GPUBuffer culledIndexBuffer;
 		wi::graphics::GPUBuffer indirectBuffer;

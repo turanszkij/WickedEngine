@@ -284,8 +284,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 						Surface surface;
 						surface.init();
-						surface.V = -newRay.Direction;
-						surface.raycone = raycone;
 						surface.hit_depth = q.CandidateTriangleRayT();
 						if (!surface.load(prim, q.CandidateTriangleBarycentrics()))
 							break;

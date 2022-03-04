@@ -149,20 +149,15 @@ static const uint SHADERMESH_FLAG_EMITTEDPARTICLE = 1 << 2;
 //	But because these are always loaded toghether by shaders, they are unrolled into one to reduce individual buffer loads
 struct ShaderGeometry
 {
+	int vb_pos_nor_wind;
+	int vb_uvs;
 	int ib;
 	uint indexOffset;
-	int vb_pos_nor_wind;
+
 	int vb_tan;
-
 	int vb_col;
-	int vb_uv0;
-	int vb_uv1;
 	int vb_atl;
-
 	int vb_pre;
-	int padding0;
-	int padding1;
-	int padding2;
 
 	uint materialIndex;
 	uint blendmaterial1;
@@ -179,11 +174,10 @@ struct ShaderGeometry
 		ib = -1;
 		indexOffset = 0;
 		vb_pos_nor_wind = -1;
+		vb_uvs = -1;
+
 		vb_tan = -1;
 		vb_col = -1;
-
-		vb_uv0 = -1;
-		vb_uv1 = -1;
 		vb_atl = -1;
 		vb_pre = -1;
 

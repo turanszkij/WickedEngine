@@ -386,8 +386,7 @@ namespace wi::scene
 		BufferView ib;
 		BufferView vb_pos_nor_wind;
 		BufferView vb_tan;
-		BufferView vb_uv0;
-		BufferView vb_uv1;
+		BufferView vb_uvs;
 		BufferView vb_atl;
 		BufferView vb_col;
 		BufferView vb_bon;
@@ -513,6 +512,11 @@ namespace wi::scene
 			}
 
 			static const wi::graphics::Format FORMAT = wi::graphics::Format::R16G16_FLOAT;
+		};
+		struct Vertex_UVS
+		{
+			Vertex_TEX uv0;
+			Vertex_TEX uv1;
 		};
 		struct Vertex_BON
 		{

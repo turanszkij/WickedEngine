@@ -44,8 +44,7 @@ namespace wi
 		wi::graphics::GPUBuffer indirectBuffers; // kickoffUpdate, simulation, draw
 		wi::graphics::GPUBuffer constantBuffer;
 		wi::graphics::GPUBuffer vertexBuffer_POS;
-		wi::graphics::GPUBuffer vertexBuffer_TEX;
-		wi::graphics::GPUBuffer vertexBuffer_TEX2;
+		wi::graphics::GPUBuffer vertexBuffer_UVS;
 		wi::graphics::GPUBuffer vertexBuffer_COL;
 		wi::graphics::GPUBuffer primitiveBuffer; // raytracing
 		wi::graphics::GPUBuffer culledIndirectionBuffer; // rasterization
