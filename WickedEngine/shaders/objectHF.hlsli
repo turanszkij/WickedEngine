@@ -1164,7 +1164,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #ifndef DISABLE_ALPHATEST
 	// Alpha test is only done for transparents
 	//	- Prepass will write alpha coverage mask
-	//	- Opaque will 
+	//	- Opaque will use [earlydepthstencil] and COMPARISON_EQUAL depth test on top of depth prepass
 	clip(color.a - GetMaterial().alphaTest);
 #endif // DISABLE_ALPHATEST
 #endif // TRANSPARENT
