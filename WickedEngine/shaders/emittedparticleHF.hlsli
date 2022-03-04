@@ -7,13 +7,13 @@ ShaderMeshInstance EmitterGetInstance()
 {
 	return load_instance(xEmitterInstanceIndex);
 }
-ShaderMesh EmitterGetMesh()
+ShaderGeometry EmitterGetGeometry()
 {
-	return load_geometry(EmitterGetInstance().geometryOffset, 0).mesh;
+	return load_geometry(EmitterGetInstance().geometryOffset, 0);
 }
 ShaderMaterial EmitterGetMaterial()
 {
-	return load_material(load_geometry(EmitterGetInstance().geometryOffset, 0).subset.materialIndex);
+	return load_material(EmitterGetGeometry().materialIndex);
 }
 
 struct VertextoPixel

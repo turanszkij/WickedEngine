@@ -318,16 +318,16 @@ struct Surface
 			return false;
 
 		geometry = load_geometry(inst.geometryOffset, prim.subsetIndex);
-		if (geometry.mesh.vb_pos_nor_wind < 0)
+		if (geometry.vb_pos_nor_wind < 0)
 			return false;
 
-		const uint startIndex = prim.primitiveIndex * 3 + geometry.subset.indexOffset;
-		Buffer<uint> indexBuffer = bindless_ib[NonUniformResourceIndex(geometry.mesh.ib)];
+		const uint startIndex = prim.primitiveIndex * 3 + geometry.indexOffset;
+		Buffer<uint> indexBuffer = bindless_ib[NonUniformResourceIndex(geometry.ib)];
 		i0 = indexBuffer[startIndex + 0];
 		i1 = indexBuffer[startIndex + 1];
 		i2 = indexBuffer[startIndex + 2];
 
-		ByteAddressBuffer buf = bindless_buffers[NonUniformResourceIndex(geometry.mesh.vb_pos_nor_wind)];
+		ByteAddressBuffer buf = bindless_buffers[NonUniformResourceIndex(geometry.vb_pos_nor_wind)];
 		data0 = buf.Load4(i0 * 16);
 		data1 = buf.Load4(i1 * 16);
 		data2 = buf.Load4(i2 * 16);
@@ -336,10 +336,10 @@ struct Surface
 	}
 	void load_internal()
 	{
-		material = load_material(geometry.subset.materialIndex);
+		material = load_material(geometry.materialIndex);
 
-		const bool is_hairparticle = geometry.mesh.flags & SHADERMESH_FLAG_HAIRPARTICLE;
-		const bool is_emittedparticle = geometry.mesh.flags & SHADERMESH_FLAG_EMITTEDPARTICLE;
+		const bool is_hairparticle = geometry.flags & SHADERMESH_FLAG_HAIRPARTICLE;
+		const bool is_emittedparticle = geometry.flags & SHADERMESH_FLAG_EMITTEDPARTICLE;
 		const bool simple_lighting = is_hairparticle || is_emittedparticle;
 
 		float u = bary.x;
@@ -360,17 +360,17 @@ struct Surface
 
 		float4 uv0 = 0, uv1 = 0, uv2 = 0;
 		[branch]
-		if (geometry.mesh.vb_uv0 >= 0)
+		if (geometry.vb_uv0 >= 0)
 		{
-			ByteAddressBuffer buf = bindless_buffers[NonUniformResourceIndex(geometry.mesh.vb_uv0)];
+			ByteAddressBuffer buf = bindless_buffers[NonUniformResourceIndex(geometry.vb_uv0)];
 			uv0.xy = unpack_half2(buf.Load(i0 * 4));
 			uv1.xy = unpack_half2(buf.Load(i1 * 4));
 			uv2.xy = unpack_half2(buf.Load(i2 * 4));
 		}
 		[branch]
-		if (geometry.mesh.vb_uv1 >= 0)
+		if (geometry.vb_uv1 >= 0)
 		{
-			ByteAddressBuffer buf = bindless_buffers[NonUniformResourceIndex(geometry.mesh.vb_uv1)];
+			ByteAddressBuffer buf = bindless_buffers[NonUniformResourceIndex(geometry.vb_uv1)];
 			uv0.zw = unpack_half2(buf.Load(i0 * 4));
 			uv1.zw = unpack_half2(buf.Load(i1 * 4));
 			uv2.zw = unpack_half2(buf.Load(i2 * 4));
@@ -417,11 +417,11 @@ struct Surface
 		}
 
 		[branch]
-		if (geometry.mesh.vb_col >= 0 && material.IsUsingVertexColors())
+		if (geometry.vb_col >= 0 && material.IsUsingVertexColors())
 		{
 			float4 c0, c1, c2;
 			const uint stride_COL = 4;
-			ByteAddressBuffer buf = bindless_buffers[NonUniformResourceIndex(geometry.mesh.vb_col)];
+			ByteAddressBuffer buf = bindless_buffers[NonUniformResourceIndex(geometry.vb_col)];
 			c0 = unpack_rgba(buf.Load(i0 * stride_COL));
 			c1 = unpack_rgba(buf.Load(i1 * stride_COL));
 			c2 = unpack_rgba(buf.Load(i2 * stride_COL));
@@ -514,11 +514,11 @@ struct Surface
 		}
 
 		[branch]
-		if (geometry.mesh.vb_tan >= 0 && material.texture_normalmap_index >= 0 && material.normalMapStrength > 0)
+		if (geometry.vb_tan >= 0 && material.texture_normalmap_index >= 0 && material.normalMapStrength > 0)
 		{
 			float4 t0, t1, t2;
 			const uint stride_TAN = 4;
-			ByteAddressBuffer buf = bindless_buffers[NonUniformResourceIndex(geometry.mesh.vb_tan)];
+			ByteAddressBuffer buf = bindless_buffers[NonUniformResourceIndex(geometry.vb_tan)];
 			t0 = unpack_utangent(buf.Load(i0 * stride_TAN));
 			t1 = unpack_utangent(buf.Load(i1 * stride_TAN));
 			t2 = unpack_utangent(buf.Load(i2 * stride_TAN));
@@ -544,9 +544,9 @@ struct Surface
 		float3 pre1;
 		float3 pre2;
 		[branch]
-		if (geometry.mesh.vb_pre >= 0)
+		if (geometry.vb_pre >= 0)
 		{
-			ByteAddressBuffer buf = bindless_buffers[NonUniformResourceIndex(geometry.mesh.vb_pre)];
+			ByteAddressBuffer buf = bindless_buffers[NonUniformResourceIndex(geometry.vb_pre)];
 			pre0 = asfloat(buf.Load3(i0 * 16));
 			pre1 = asfloat(buf.Load3(i1 * 16));
 			pre2 = asfloat(buf.Load3(i2 * 16));

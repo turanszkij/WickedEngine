@@ -776,44 +776,6 @@ namespace wi::scene
 		so_pre.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, so_pre.subresource_srv);
 		so_pre.descriptor_uav = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::UAV, so_pre.subresource_uav);
 	}
-	void MeshComponent::WriteShaderMesh(ShaderMesh* dest) const
-	{
-		ShaderMesh& mesh = *dest;
-		mesh.init();
-		mesh.ib = ib.descriptor_srv;
-		if (so_pos_nor_wind.IsValid())
-		{
-			mesh.vb_pos_nor_wind = so_pos_nor_wind.descriptor_srv;
-		}
-		else
-		{
-			mesh.vb_pos_nor_wind = vb_pos_nor_wind.descriptor_srv;
-		}
-		if (so_tan.IsValid())
-		{
-			mesh.vb_tan = so_tan.descriptor_srv;
-		}
-		else
-		{
-			mesh.vb_tan = vb_tan.descriptor_srv;
-		}
-		mesh.vb_col = vb_col.descriptor_srv;
-		mesh.vb_uv0 = vb_uv0.descriptor_srv;
-		mesh.vb_uv1 = vb_uv1.descriptor_srv;
-		mesh.vb_atl = vb_atl.descriptor_srv;
-		mesh.vb_pre = so_pre.descriptor_srv;
-		mesh.blendmaterial1 = terrain_material1_index;
-		mesh.blendmaterial2 = terrain_material2_index;
-		mesh.blendmaterial3 = terrain_material3_index;
-		mesh.aabb_min = aabb._min;
-		mesh.aabb_max = aabb._max;
-		mesh.tessellation_factor = tessellationFactor;
-
-		if (IsDoubleSided())
-		{
-			mesh.flags |= SHADERMESH_FLAG_DOUBLE_SIDED;
-		}
-	}
 	void MeshComponent::ComputeNormals(COMPUTE_NORMALS compute)
 	{
 		// Start recalculating normals:
@@ -1636,7 +1598,7 @@ namespace wi::scene
 		geometryArraySize = geometryAllocator.load();
 		geometryArraySize += hairs.GetCount();
 		geometryArraySize += emitters.GetCount();
-		if (geometryBuffer.desc.size < (geometryArraySize * sizeof(ShaderMeshSubset)))
+		if (geometryBuffer.desc.size < (geometryArraySize * sizeof(ShaderGeometry)))
 		{
 			GPUBufferDesc desc;
 			desc.stride = sizeof(ShaderGeometry);
@@ -3039,15 +3001,6 @@ namespace wi::scene
 
 			mesh._flags &= ~MeshComponent::TLAS_FORCE_DOUBLE_SIDED;
 
-
-			if (mesh.BLAS.IsValid())
-			{
-				if (mesh.dirty_morph)
-				{
-					mesh.BLAS_state = MeshComponent::BLAS_STATE_NEEDS_REBUILD;
-				}
-			}
-
 			mesh.terrain_material1_index = (uint32_t)materials.GetIndex(mesh.terrain_material1);
 			mesh.terrain_material2_index = (uint32_t)materials.GetIndex(mesh.terrain_material2);
 			mesh.terrain_material3_index = (uint32_t)materials.GetIndex(mesh.terrain_material3);
@@ -3088,8 +3041,41 @@ namespace wi::scene
 			    mesh.aabb = AABB(_min, _max);
 			}
 
-			ShaderGeometry shadergeometry;
-			mesh.WriteShaderMesh(&shadergeometry.mesh);
+			ShaderGeometry geometry;
+			geometry.init();
+			geometry.ib = mesh.ib.descriptor_srv;
+			if (mesh.so_pos_nor_wind.IsValid())
+			{
+				geometry.vb_pos_nor_wind = mesh.so_pos_nor_wind.descriptor_srv;
+			}
+			else
+			{
+				geometry.vb_pos_nor_wind = mesh.vb_pos_nor_wind.descriptor_srv;
+			}
+			if (mesh.so_tan.IsValid())
+			{
+				geometry.vb_tan = mesh.so_tan.descriptor_srv;
+			}
+			else
+			{
+				geometry.vb_tan = mesh.vb_tan.descriptor_srv;
+			}
+			geometry.vb_col = mesh.vb_col.descriptor_srv;
+			geometry.vb_uv0 = mesh.vb_uv0.descriptor_srv;
+			geometry.vb_uv1 = mesh.vb_uv1.descriptor_srv;
+			geometry.vb_atl = mesh.vb_atl.descriptor_srv;
+			geometry.vb_pre = mesh.so_pre.descriptor_srv;
+			geometry.blendmaterial1 = mesh.terrain_material1_index;
+			geometry.blendmaterial2 = mesh.terrain_material2_index;
+			geometry.blendmaterial3 = mesh.terrain_material3_index;
+			geometry.aabb_min = mesh.aabb._min;
+			geometry.aabb_max = mesh.aabb._max;
+			geometry.tessellation_factor = mesh.tessellationFactor;
+
+			if (mesh.IsDoubleSided())
+			{
+				geometry.flags |= SHADERMESH_FLAG_DOUBLE_SIDED;
+			}
 
 			size_t subsetIndex = 0;
 			for (auto& subset : mesh.subsets)
@@ -3110,7 +3096,7 @@ namespace wi::scene
 						{
 							geometry.flags = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
 						}
-						if (flags != geometry.flags)
+						if (flags != geometry.flags || mesh.dirty_morph)
 						{
 							mesh.BLAS_state = MeshComponent::BLAS_STATE_NEEDS_REBUILD;
 						}
@@ -3131,10 +3117,9 @@ namespace wi::scene
 					subset.materialIndex = 0;
 				}
 
-				shadergeometry.subset.init();
-				shadergeometry.subset.indexOffset = subset.indexOffset;
-				shadergeometry.subset.materialIndex = subset.materialIndex;
-				std::memcpy(geometryArrayMapped + mesh.geometryAllocation + subsetIndex, &shadergeometry, sizeof(shadergeometry));
+				geometry.indexOffset = subset.indexOffset;
+				geometry.materialIndex = subset.materialIndex;
+				std::memcpy(geometryArrayMapped + mesh.geometryAllocation + subsetIndex, &geometry, sizeof(geometry));
 				subsetIndex++;
 			}
 
@@ -3810,20 +3795,18 @@ namespace wi::scene
 
 					GraphicsDevice* device = wi::graphics::GetDevice();
 
-					ShaderGeometry shadergeometry;
-					shadergeometry.subset.init();
-					shadergeometry.subset.indexOffset = 0;
-					shadergeometry.subset.materialIndex = (uint)materials.GetIndex(entity);
-
-					shadergeometry.mesh.init();
-					shadergeometry.mesh.ib = device->GetDescriptorIndex(&hair.primitiveBuffer, SubresourceType::SRV);
-					shadergeometry.mesh.vb_pos_nor_wind = device->GetDescriptorIndex(&hair.vertexBuffer_POS[0], SubresourceType::SRV);
-					shadergeometry.mesh.vb_pre = device->GetDescriptorIndex(&hair.vertexBuffer_POS[1], SubresourceType::SRV);
-					shadergeometry.mesh.vb_uv0 = device->GetDescriptorIndex(&hair.vertexBuffer_TEX, SubresourceType::SRV);
-					shadergeometry.mesh.flags = SHADERMESH_FLAG_DOUBLE_SIDED | SHADERMESH_FLAG_HAIRPARTICLE;
+					ShaderGeometry geometry;
+					geometry.init();
+					geometry.indexOffset = 0;
+					geometry.materialIndex = (uint)materials.GetIndex(entity);
+					geometry.ib = device->GetDescriptorIndex(&hair.primitiveBuffer, SubresourceType::SRV);
+					geometry.vb_pos_nor_wind = device->GetDescriptorIndex(&hair.vertexBuffer_POS[0], SubresourceType::SRV);
+					geometry.vb_pre = device->GetDescriptorIndex(&hair.vertexBuffer_POS[1], SubresourceType::SRV);
+					geometry.vb_uv0 = device->GetDescriptorIndex(&hair.vertexBuffer_TEX, SubresourceType::SRV);
+					geometry.flags = SHADERMESH_FLAG_DOUBLE_SIDED | SHADERMESH_FLAG_HAIRPARTICLE;
 
 					size_t geometryAllocation = geometryAllocator.fetch_add(1);
-					std::memcpy(geometryArrayMapped + geometryAllocation, &shadergeometry, sizeof(shadergeometry));
+					std::memcpy(geometryArrayMapped + geometryAllocation, &geometry, sizeof(geometry));
 
 					ShaderMeshInstance inst;
 					inst.init();
@@ -3892,21 +3875,19 @@ namespace wi::scene
 
 			GraphicsDevice* device = wi::graphics::GetDevice();
 
-			ShaderGeometry shadergeometry;
-			shadergeometry.subset.init();
-			shadergeometry.subset.indexOffset = 0;
-			shadergeometry.subset.materialIndex = (uint)materials.GetIndex(entity);
-
-			shadergeometry.mesh.init();
-			shadergeometry.mesh.ib = device->GetDescriptorIndex(&emitter.primitiveBuffer, SubresourceType::SRV);
-			shadergeometry.mesh.vb_pos_nor_wind = device->GetDescriptorIndex(&emitter.vertexBuffer_POS, SubresourceType::SRV);
-			shadergeometry.mesh.vb_uv0 = device->GetDescriptorIndex(&emitter.vertexBuffer_TEX, SubresourceType::SRV);
-			shadergeometry.mesh.vb_uv1 = device->GetDescriptorIndex(&emitter.vertexBuffer_TEX2, SubresourceType::SRV);
-			shadergeometry.mesh.vb_col = device->GetDescriptorIndex(&emitter.vertexBuffer_COL, SubresourceType::SRV);
-			shadergeometry.mesh.flags = SHADERMESH_FLAG_DOUBLE_SIDED | SHADERMESH_FLAG_EMITTEDPARTICLE;
+			ShaderGeometry geometry;
+			geometry.init();
+			geometry.indexOffset = 0;
+			geometry.materialIndex = (uint)materials.GetIndex(entity);
+			geometry.ib = device->GetDescriptorIndex(&emitter.primitiveBuffer, SubresourceType::SRV);
+			geometry.vb_pos_nor_wind = device->GetDescriptorIndex(&emitter.vertexBuffer_POS, SubresourceType::SRV);
+			geometry.vb_uv0 = device->GetDescriptorIndex(&emitter.vertexBuffer_TEX, SubresourceType::SRV);
+			geometry.vb_uv1 = device->GetDescriptorIndex(&emitter.vertexBuffer_TEX2, SubresourceType::SRV);
+			geometry.vb_col = device->GetDescriptorIndex(&emitter.vertexBuffer_COL, SubresourceType::SRV);
+			geometry.flags = SHADERMESH_FLAG_DOUBLE_SIDED | SHADERMESH_FLAG_EMITTEDPARTICLE;
 
 			size_t geometryAllocation = geometryAllocator.fetch_add(1);
-			std::memcpy(geometryArrayMapped + geometryAllocation, &shadergeometry, sizeof(shadergeometry));
+			std::memcpy(geometryArrayMapped + geometryAllocation, &geometry, sizeof(geometry));
 
 			ShaderMeshInstance inst;
 			inst.init();

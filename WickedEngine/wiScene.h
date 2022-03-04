@@ -431,7 +431,6 @@ namespace wi::scene
 		// Recreates GPU resources for index/vertex buffers
 		void CreateRenderData();
 		void CreateStreamoutRenderData();
-		void WriteShaderMesh(ShaderMesh* dest) const;
 
 		enum COMPUTE_NORMALS
 		{

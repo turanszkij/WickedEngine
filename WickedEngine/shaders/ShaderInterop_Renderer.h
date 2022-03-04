@@ -145,31 +145,39 @@ static const uint SHADERMESH_FLAG_DOUBLE_SIDED = 1 << 0;
 static const uint SHADERMESH_FLAG_HAIRPARTICLE = 1 << 1;
 static const uint SHADERMESH_FLAG_EMITTEDPARTICLE = 1 << 2;
 
-struct ShaderMesh
+// This is equivalent to a Mesh + MeshSubset
+//	But because these are always loaded toghether by shaders, they are unrolled into one to reduce individual buffer loads
+struct ShaderGeometry
 {
 	int ib;
+	uint indexOffset;
 	int vb_pos_nor_wind;
 	int vb_tan;
-	int vb_col;
 
+	int vb_col;
 	int vb_uv0;
 	int vb_uv1;
 	int vb_atl;
-	int vb_pre;
 
-	uint flags;
+	int vb_pre;
+	int padding0;
+	int padding1;
+	int padding2;
+
+	uint materialIndex;
 	uint blendmaterial1;
 	uint blendmaterial2;
 	uint blendmaterial3;
 
 	float3 aabb_min;
-	float padding;
+	uint flags;
 	float3 aabb_max;
 	float tessellation_factor;
 
 	void init()
 	{
 		ib = -1;
+		indexOffset = 0;
 		vb_pos_nor_wind = -1;
 		vb_tan = -1;
 		vb_col = -1;
@@ -179,34 +187,16 @@ struct ShaderMesh
 		vb_atl = -1;
 		vb_pre = -1;
 
-		flags = 0;
+		materialIndex = 0;
 		blendmaterial1 = 0;
 		blendmaterial2 = 0;
 		blendmaterial3 = 0;
 
 		aabb_min = float3(0, 0, 0);
+		flags = 0;
 		aabb_max = float3(0, 0, 0);
 		tessellation_factor = 0;
 	}
-};
-
-struct ShaderMeshSubset
-{
-	uint indexOffset;
-	uint materialIndex;
-
-	void init()
-	{
-		indexOffset = 0;
-		materialIndex = 0;
-	}
-};
-
-// Because mesh and subset are always loaded together, they are "unrolled" into a "geometry" to reduce memory loads by shaders
-struct ShaderGeometry
-{
-	ShaderMesh mesh;
-	ShaderMeshSubset subset;
 };
 
 struct ShaderTransform
