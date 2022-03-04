@@ -9,11 +9,11 @@ ShaderMeshInstance HairGetInstance()
 }
 ShaderMesh HairGetMesh()
 {
-	return load_mesh(HairGetInstance().meshIndex);
+	return load_geometry(HairGetInstance().geometryOffset, 0).mesh;
 }
 ShaderMaterial HairGetMaterial()
 {
-	return load_material(load_subset(HairGetMesh(), 0).materialIndex);
+	return load_material(load_geometry(HairGetInstance().geometryOffset, 0).subset.materialIndex);
 }
 
 struct VertexToPixel

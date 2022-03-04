@@ -778,7 +778,7 @@ namespace wi::scene
 	}
 	void MeshComponent::WriteShaderMesh(ShaderMesh* dest) const
 	{
-		ShaderMesh mesh;
+		ShaderMesh& mesh = *dest;
 		mesh.init();
 		mesh.ib = ib.descriptor_srv;
 		if (so_pos_nor_wind.IsValid())
@@ -805,7 +805,6 @@ namespace wi::scene
 		mesh.blendmaterial1 = terrain_material1_index;
 		mesh.blendmaterial2 = terrain_material2_index;
 		mesh.blendmaterial3 = terrain_material3_index;
-		mesh.subsetOffset = (uint)subsetAllocation;
 		mesh.aabb_min = aabb._min;
 		mesh.aabb_max = aabb._max;
 		mesh.tessellation_factor = tessellationFactor;
@@ -814,8 +813,6 @@ namespace wi::scene
 		{
 			mesh.flags |= SHADERMESH_FLAG_DOUBLE_SIDED;
 		}
-
-		std::memcpy(dest, &mesh, sizeof(ShaderMesh)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
 	}
 	void MeshComponent::ComputeNormals(COMPUTE_NORMALS compute)
 	{
@@ -1535,28 +1532,6 @@ namespace wi::scene
 		}
 		instanceArrayMapped = (ShaderMeshInstance*)instanceUploadBuffer[device->GetBufferIndex()].mapped_data;
 
-		meshArraySize = meshes.GetCount() + hairs.GetCount() + emitters.GetCount();
-		if (meshBuffer.desc.size < (meshArraySize * sizeof(ShaderMesh)))
-		{
-			GPUBufferDesc desc;
-			desc.stride = sizeof(ShaderMesh);
-			desc.size = desc.stride * meshArraySize * 2; // *2 to grow fast
-			desc.bind_flags = BindFlag::SHADER_RESOURCE;
-			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-			device->CreateBuffer(&desc, nullptr, &meshBuffer);
-			device->SetName(&meshBuffer, "Scene::meshBuffer");
-
-			desc.usage = Usage::UPLOAD;
-			desc.bind_flags = BindFlag::NONE;
-			desc.misc_flags = ResourceMiscFlag::NONE;
-			for (int i = 0; i < arraysize(meshUploadBuffer); ++i)
-			{
-				device->CreateBuffer(&desc, nullptr, &meshUploadBuffer[i]);
-				device->SetName(&meshUploadBuffer[i], "Scene::meshUploadBuffer");
-			}
-		}
-		meshArrayMapped = (ShaderMesh*)meshUploadBuffer[device->GetBufferIndex()].mapped_data;
-
 		materialArraySize = materials.GetCount();
 		if (materialBuffer.desc.size < (materialArraySize * sizeof(ShaderMaterial)))
 		{
@@ -1637,19 +1612,11 @@ namespace wi::scene
 
 		wi::jobsystem::context ctx;
 
-		// Scan and allocate GPU subset counts:
-		subsetAllocator.store(0ull);
+		// Scan mesh subset counts to allocate GPU geometry data:
+		geometryAllocator.store(0ull);
 		wi::jobsystem::Dispatch(ctx, (uint32_t)meshes.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
 			MeshComponent& mesh = meshes[args.jobIndex];
-			mesh.subsetAllocation = subsetAllocator.fetch_add(mesh.subsets.size());
-		});
-		wi::jobsystem::Dispatch(ctx, (uint32_t)hairs.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
-			HairParticleSystem& hair = hairs[args.jobIndex];
-			hair.subsetAllocation = subsetAllocator.fetch_add(1ull);
-		});
-		wi::jobsystem::Dispatch(ctx, (uint32_t)emitters.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
-			EmittedParticleSystem& emitter = emitters[args.jobIndex];
-			emitter.subsetAllocation = subsetAllocator.fetch_add(1ull);
+			mesh.geometryAllocation = geometryAllocator.fetch_add(mesh.subsets.size());
 		});
 
 		wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
@@ -1666,27 +1633,29 @@ namespace wi::scene
 		RunHierarchyUpdateSystem(ctx);
 
 		// GPU subset count allocation is ready at this point:
-		subsetArraySize = subsetAllocator.load();
-		if (subsetBuffer.desc.size < (subsetArraySize * sizeof(ShaderMeshSubset)))
+		geometryArraySize = geometryAllocator.load();
+		geometryArraySize += hairs.GetCount();
+		geometryArraySize += emitters.GetCount();
+		if (geometryBuffer.desc.size < (geometryArraySize * sizeof(ShaderMeshSubset)))
 		{
 			GPUBufferDesc desc;
-			desc.stride = sizeof(ShaderMeshSubset);
-			desc.size = desc.stride * subsetArraySize * 2; // *2 to grow fast
+			desc.stride = sizeof(ShaderGeometry);
+			desc.size = desc.stride * geometryArraySize * 2; // *2 to grow fast
 			desc.bind_flags = BindFlag::SHADER_RESOURCE;
 			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-			device->CreateBuffer(&desc, nullptr, &subsetBuffer);
-			device->SetName(&subsetBuffer, "Scene::subsetBuffer");
+			device->CreateBuffer(&desc, nullptr, &geometryBuffer);
+			device->SetName(&geometryBuffer, "Scene::geometryBuffer");
 
 			desc.usage = Usage::UPLOAD;
 			desc.bind_flags = BindFlag::NONE;
 			desc.misc_flags = ResourceMiscFlag::NONE;
-			for (int i = 0; i < arraysize(subsetUploadBuffer); ++i)
+			for (int i = 0; i < arraysize(geometryUploadBuffer); ++i)
 			{
-				device->CreateBuffer(&desc, nullptr, &subsetUploadBuffer[i]);
-				device->SetName(&subsetUploadBuffer[i], "Scene::subsetUploadBuffer");
+				device->CreateBuffer(&desc, nullptr, &geometryUploadBuffer[i]);
+				device->SetName(&geometryUploadBuffer[i], "Scene::geometryUploadBuffer");
 			}
 		}
-		subsetArrayMapped = (ShaderMeshSubset*)subsetUploadBuffer[device->GetBufferIndex()].mapped_data;
+		geometryArrayMapped = (ShaderGeometry*)geometryUploadBuffer[device->GetBufferIndex()].mapped_data;
 
 		RunMeshUpdateSystem(ctx);
 
@@ -1917,8 +1886,7 @@ namespace wi::scene
 
 		// Shader scene resources:
 		shaderscene.instancebuffer = device->GetDescriptorIndex(&instanceBuffer, SubresourceType::SRV);
-		shaderscene.meshbuffer = device->GetDescriptorIndex(&meshBuffer, SubresourceType::SRV);
-		shaderscene.subsetbuffer = device->GetDescriptorIndex(&subsetBuffer, SubresourceType::SRV);
+		shaderscene.geometrybuffer = device->GetDescriptorIndex(&geometryBuffer, SubresourceType::SRV);
 		shaderscene.materialbuffer = device->GetDescriptorIndex(&materialBuffer, SubresourceType::SRV);
 		shaderscene.envmaparray = device->GetDescriptorIndex(&envmapArray, SubresourceType::SRV);
 		if (weather.skyMap.IsValid())
@@ -3071,53 +3039,6 @@ namespace wi::scene
 
 			mesh._flags &= ~MeshComponent::TLAS_FORCE_DOUBLE_SIDED;
 
-			size_t subsetIndex = 0;
-			for (auto& subset : mesh.subsets)
-			{
-				const MaterialComponent* material = materials.GetComponent(subset.materialID);
-				if (material != nullptr)
-				{
-					subset.materialIndex = (uint32_t)materials.GetIndex(subset.materialID);
-					if (mesh.BLAS.IsValid())
-					{
-						auto& geometry = mesh.BLAS.desc.bottom_level.geometries[subsetIndex];
-						uint32_t flags = geometry.flags;
-						if (material->IsAlphaTestEnabled() || (material->GetRenderTypes() & RENDERTYPE_TRANSPARENT) || !material->IsCastingShadow())
-						{
-							geometry.flags &= ~RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
-						}
-						else
-						{
-							geometry.flags = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
-						}
-						if (flags != geometry.flags)
-						{
-							mesh.BLAS_state = MeshComponent::BLAS_STATE_NEEDS_REBUILD;
-						}
-						if (mesh.streamoutBuffer.IsValid())
-						{
-							mesh.BLAS_state = MeshComponent::BLAS_STATE_NEEDS_REBUILD;
-							geometry.triangles.vertex_buffer = mesh.streamoutBuffer;
-							geometry.triangles.vertex_byte_offset = mesh.so_pos_nor_wind.offset;
-						}
-						if (material->IsDoubleSided())
-						{
-							mesh._flags |= MeshComponent::TLAS_FORCE_DOUBLE_SIDED;
-						}
-					}
-				}
-				else
-				{
-					subset.materialIndex = 0;
-				}
-
-				ShaderMeshSubset shadersubset;
-				shadersubset.init();
-				shadersubset.indexOffset = subset.indexOffset;
-				shadersubset.materialIndex = subset.materialIndex;
-				std::memcpy(subsetArrayMapped + mesh.subsetAllocation + subsetIndex, &shadersubset, sizeof(shadersubset));
-				subsetIndex++;
-			}
 
 			if (mesh.BLAS.IsValid())
 			{
@@ -3167,7 +3088,55 @@ namespace wi::scene
 			    mesh.aabb = AABB(_min, _max);
 			}
 
-			mesh.WriteShaderMesh(meshArrayMapped + args.jobIndex);
+			ShaderGeometry shadergeometry;
+			mesh.WriteShaderMesh(&shadergeometry.mesh);
+
+			size_t subsetIndex = 0;
+			for (auto& subset : mesh.subsets)
+			{
+				const MaterialComponent* material = materials.GetComponent(subset.materialID);
+				if (material != nullptr)
+				{
+					subset.materialIndex = (uint32_t)materials.GetIndex(subset.materialID);
+					if (mesh.BLAS.IsValid())
+					{
+						auto& geometry = mesh.BLAS.desc.bottom_level.geometries[subsetIndex];
+						uint32_t flags = geometry.flags;
+						if (material->IsAlphaTestEnabled() || (material->GetRenderTypes() & RENDERTYPE_TRANSPARENT) || !material->IsCastingShadow())
+						{
+							geometry.flags &= ~RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
+						}
+						else
+						{
+							geometry.flags = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
+						}
+						if (flags != geometry.flags)
+						{
+							mesh.BLAS_state = MeshComponent::BLAS_STATE_NEEDS_REBUILD;
+						}
+						if (mesh.streamoutBuffer.IsValid())
+						{
+							mesh.BLAS_state = MeshComponent::BLAS_STATE_NEEDS_REBUILD;
+							geometry.triangles.vertex_buffer = mesh.streamoutBuffer;
+							geometry.triangles.vertex_byte_offset = mesh.so_pos_nor_wind.offset;
+						}
+						if (material->IsDoubleSided())
+						{
+							mesh._flags |= MeshComponent::TLAS_FORCE_DOUBLE_SIDED;
+						}
+					}
+				}
+				else
+				{
+					subset.materialIndex = 0;
+				}
+
+				shadergeometry.subset.init();
+				shadergeometry.subset.indexOffset = subset.indexOffset;
+				shadergeometry.subset.materialIndex = subset.materialIndex;
+				std::memcpy(geometryArrayMapped + mesh.geometryAllocation + subsetIndex, &shadergeometry, sizeof(shadergeometry));
+				subsetIndex++;
+			}
 
 		});
 	}
@@ -3434,7 +3403,7 @@ namespace wi::scene
 					inst.layerMask = layerMask;
 					inst.color = wi::math::CompressColor(object.color);
 					inst.emissive = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(object.emissiveColor.x * object.emissiveColor.w, object.emissiveColor.y * object.emissiveColor.w, object.emissiveColor.z * object.emissiveColor.w));
-					inst.meshIndex = (uint)meshes.GetIndex(object.meshID);
+					inst.geometryOffset = (uint)mesh.geometryAllocation;
 
 					std::memcpy(instanceArrayMapped + args.jobIndex, &inst, sizeof(inst)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
 
@@ -3841,32 +3810,26 @@ namespace wi::scene
 
 					GraphicsDevice* device = wi::graphics::GetDevice();
 
-					ShaderMeshSubset subset;
-					subset.init();
-					subset.indexOffset = 0;
-					subset.materialIndex = (uint)materials.GetIndex(entity);
-					std::memcpy(subsetArrayMapped + hair.subsetAllocation, &subset, sizeof(subset));
+					ShaderGeometry shadergeometry;
+					shadergeometry.subset.init();
+					shadergeometry.subset.indexOffset = 0;
+					shadergeometry.subset.materialIndex = (uint)materials.GetIndex(entity);
 
-					ShaderMesh mesh;
-					mesh.init();
-					mesh.ib = device->GetDescriptorIndex(&hair.primitiveBuffer, SubresourceType::SRV);
-					mesh.vb_pos_nor_wind = device->GetDescriptorIndex(&hair.vertexBuffer_POS[0], SubresourceType::SRV);
-					mesh.vb_pre = device->GetDescriptorIndex(&hair.vertexBuffer_POS[1], SubresourceType::SRV);
-					mesh.vb_uv0 = device->GetDescriptorIndex(&hair.vertexBuffer_TEX, SubresourceType::SRV);
-					mesh.subsetOffset = (uint)hair.subsetAllocation;
-					mesh.flags = SHADERMESH_FLAG_DOUBLE_SIDED | SHADERMESH_FLAG_HAIRPARTICLE;
+					shadergeometry.mesh.init();
+					shadergeometry.mesh.ib = device->GetDescriptorIndex(&hair.primitiveBuffer, SubresourceType::SRV);
+					shadergeometry.mesh.vb_pos_nor_wind = device->GetDescriptorIndex(&hair.vertexBuffer_POS[0], SubresourceType::SRV);
+					shadergeometry.mesh.vb_pre = device->GetDescriptorIndex(&hair.vertexBuffer_POS[1], SubresourceType::SRV);
+					shadergeometry.mesh.vb_uv0 = device->GetDescriptorIndex(&hair.vertexBuffer_TEX, SubresourceType::SRV);
+					shadergeometry.mesh.flags = SHADERMESH_FLAG_DOUBLE_SIDED | SHADERMESH_FLAG_HAIRPARTICLE;
 
-					const size_t meshIndex = meshes.GetCount() + args.jobIndex;
-					std::memcpy(meshArrayMapped + meshIndex, &mesh, sizeof(mesh));
+					size_t geometryAllocation = geometryAllocator.fetch_add(1);
+					std::memcpy(geometryArrayMapped + geometryAllocation, &shadergeometry, sizeof(shadergeometry));
 
 					ShaderMeshInstance inst;
 					inst.init();
 					inst.uid = entity;
 					inst.layerMask = hair.layerMask;
-					// every vertex is pretransformed and simulated in worldspace for hair particle:
-					inst.transform.Create(wi::math::IDENTITY_MATRIX);
-					inst.transformPrev.Create(wi::math::IDENTITY_MATRIX);
-					inst.meshIndex = (uint)meshIndex;
+					inst.geometryOffset = (uint)geometryAllocation;
 
 					const size_t instanceIndex = objects.GetCount() + args.jobIndex;
 					std::memcpy(instanceArrayMapped + instanceIndex, &inst, sizeof(inst));
@@ -3929,33 +3892,27 @@ namespace wi::scene
 
 			GraphicsDevice* device = wi::graphics::GetDevice();
 
-			ShaderMeshSubset subset;
-			subset.init();
-			subset.indexOffset = 0;
-			subset.materialIndex = (uint)materials.GetIndex(entity);
-			std::memcpy(subsetArrayMapped + emitter.subsetAllocation, &subset, sizeof(subset));
+			ShaderGeometry shadergeometry;
+			shadergeometry.subset.init();
+			shadergeometry.subset.indexOffset = 0;
+			shadergeometry.subset.materialIndex = (uint)materials.GetIndex(entity);
 
-			ShaderMesh mesh;
-			mesh.init();
-			mesh.ib = device->GetDescriptorIndex(&emitter.primitiveBuffer, SubresourceType::SRV);
-			mesh.vb_pos_nor_wind = device->GetDescriptorIndex(&emitter.vertexBuffer_POS, SubresourceType::SRV);
-			mesh.vb_uv0 = device->GetDescriptorIndex(&emitter.vertexBuffer_TEX, SubresourceType::SRV);
-			mesh.vb_uv1 = device->GetDescriptorIndex(&emitter.vertexBuffer_TEX2, SubresourceType::SRV);
-			mesh.vb_col = device->GetDescriptorIndex(&emitter.vertexBuffer_COL, SubresourceType::SRV);
-			mesh.subsetOffset = (uint)emitter.subsetAllocation;
-			mesh.flags = SHADERMESH_FLAG_DOUBLE_SIDED | SHADERMESH_FLAG_EMITTEDPARTICLE;
+			shadergeometry.mesh.init();
+			shadergeometry.mesh.ib = device->GetDescriptorIndex(&emitter.primitiveBuffer, SubresourceType::SRV);
+			shadergeometry.mesh.vb_pos_nor_wind = device->GetDescriptorIndex(&emitter.vertexBuffer_POS, SubresourceType::SRV);
+			shadergeometry.mesh.vb_uv0 = device->GetDescriptorIndex(&emitter.vertexBuffer_TEX, SubresourceType::SRV);
+			shadergeometry.mesh.vb_uv1 = device->GetDescriptorIndex(&emitter.vertexBuffer_TEX2, SubresourceType::SRV);
+			shadergeometry.mesh.vb_col = device->GetDescriptorIndex(&emitter.vertexBuffer_COL, SubresourceType::SRV);
+			shadergeometry.mesh.flags = SHADERMESH_FLAG_DOUBLE_SIDED | SHADERMESH_FLAG_EMITTEDPARTICLE;
 
-			const size_t meshIndex = meshes.GetCount() + hairs.GetCount() + args.jobIndex;
-			std::memcpy(meshArrayMapped + meshIndex, &mesh, sizeof(mesh));
+			size_t geometryAllocation = geometryAllocator.fetch_add(1);
+			std::memcpy(geometryArrayMapped + geometryAllocation, &shadergeometry, sizeof(shadergeometry));
 
 			ShaderMeshInstance inst;
 			inst.init();
 			inst.uid = entity;
 			inst.layerMask = emitter.layerMask;
-			// every vertex is pretransformed and simulated in worldspace for emitted particle:
-			inst.transform.Create(wi::math::IDENTITY_MATRIX);
-			inst.transformPrev.Create(wi::math::IDENTITY_MATRIX);
-			inst.meshIndex = (uint)meshIndex;
+			inst.geometryOffset = (uint)geometryAllocation;
 
 			const size_t instanceIndex = objects.GetCount() + hairs.GetCount() + args.jobIndex;
 			std::memcpy(instanceArrayMapped + instanceIndex, &inst, sizeof(inst));

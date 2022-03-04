@@ -34,7 +34,7 @@ inline uint GetSubsetIndex()
 }
 inline ShaderMesh GetMesh()
 {
-	return load_mesh(push.GetMeshIndex());
+	return load_geometry(push.GetMeshIndex(), 0).mesh;
 }
 inline ShaderMaterial GetMaterial()
 {

@@ -395,7 +395,7 @@ namespace wi::scene
 		BufferView so_tan;
 		BufferView so_pre;
 		wi::vector<uint8_t> vertex_subsets;
-		size_t subsetAllocation = 0ull;
+		size_t geometryAllocation = 0ull;
 
 		wi::graphics::RaytracingAccelerationStructure BLAS;
 		enum BLAS_STATE
@@ -1310,26 +1310,16 @@ namespace wi::scene
 		size_t instanceArraySize = 0;
 		wi::graphics::GPUBuffer instanceBuffer;
 
-		// Meshes for bindless visiblity indexing:
-		//	contains in order:
-		//		1) meshes
-		//		2) hair particles
-		//		3) emitted particles
-		wi::graphics::GPUBuffer meshUploadBuffer[wi::graphics::GraphicsDevice::GetBufferCount()];
-		ShaderMesh* meshArrayMapped = nullptr;
-		size_t meshArraySize = 0;
-		wi::graphics::GPUBuffer meshBuffer;
-
-		// Subsets for bindless visiblity indexing:
+		// Geometries for bindless visiblity indexing:
 		//	contains in order:
 		//		1) meshes * mesh.subsetCount
 		//		2) hair particles * 1
 		//		3) emitted particles * 1
-		wi::graphics::GPUBuffer subsetUploadBuffer[wi::graphics::GraphicsDevice::GetBufferCount()];
-		ShaderMeshSubset* subsetArrayMapped = nullptr;
-		size_t subsetArraySize = 0;
-		wi::graphics::GPUBuffer subsetBuffer;
-		std::atomic<size_t> subsetAllocator{ 0 };
+		wi::graphics::GPUBuffer geometryUploadBuffer[wi::graphics::GraphicsDevice::GetBufferCount()];
+		ShaderGeometry* geometryArrayMapped = nullptr;
+		size_t geometryArraySize = 0;
+		wi::graphics::GPUBuffer geometryBuffer;
+		std::atomic<size_t> geometryAllocator{ 0 };
 
 		// Materials for bindless visibility indexing:
 		wi::graphics::GPUBuffer materialUploadBuffer[wi::graphics::GraphicsDevice::GetBufferCount()];

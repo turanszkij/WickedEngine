@@ -109,13 +109,9 @@ inline ShaderMeshInstance load_instance(uint instanceIndex)
 {
 	return bindless_buffers[GetScene().instancebuffer].Load<ShaderMeshInstance>(instanceIndex * sizeof(ShaderMeshInstance));
 }
-inline ShaderMesh load_mesh(uint meshIndex)
+inline ShaderGeometry load_geometry(uint geometryOffset, uint subsetIndex)
 {
-	return bindless_buffers[GetScene().meshbuffer].Load<ShaderMesh>(meshIndex * sizeof(ShaderMesh));
-}
-inline ShaderMeshSubset load_subset(ShaderMesh mesh, uint subsetIndex)
-{
-	return bindless_buffers[GetScene().subsetbuffer].Load<ShaderMeshSubset>((mesh.subsetOffset + subsetIndex) * sizeof(ShaderMeshSubset));
+	return bindless_buffers[GetScene().geometrybuffer].Load<ShaderGeometry>((geometryOffset + subsetIndex) * sizeof(ShaderGeometry));
 }
 inline ShaderMaterial load_material(uint materialIndex)
 {

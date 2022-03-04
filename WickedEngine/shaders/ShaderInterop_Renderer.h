@@ -6,14 +6,14 @@
 struct ShaderScene
 {
 	int instancebuffer;
-	int meshbuffer;
-	int subsetbuffer;
+	int geometrybuffer;
 	int materialbuffer;
-
 	int envmaparray;
+
 	int globalenvmap;
 	int padding0;
 	int padding1;
+	int padding2;
 
 	int TLAS;
 	int BVH_counter;
@@ -157,13 +157,13 @@ struct ShaderMesh
 	int vb_atl;
 	int vb_pre;
 
-	uint subsetOffset;
+	uint flags;
 	uint blendmaterial1;
 	uint blendmaterial2;
 	uint blendmaterial3;
 
 	float3 aabb_min;
-	uint flags;
+	float padding;
 	float3 aabb_max;
 	float tessellation_factor;
 
@@ -179,15 +179,14 @@ struct ShaderMesh
 		vb_atl = -1;
 		vb_pre = -1;
 
-		subsetOffset = 0;
+		flags = 0;
 		blendmaterial1 = 0;
 		blendmaterial2 = 0;
 		blendmaterial3 = 0;
 
 		aabb_min = float3(0, 0, 0);
 		aabb_max = float3(0, 0, 0);
-
-		flags = 0;
+		tessellation_factor = 0;
 	}
 };
 
@@ -201,6 +200,13 @@ struct ShaderMeshSubset
 		indexOffset = 0;
 		materialIndex = 0;
 	}
+};
+
+// Because mesh and subset are always loaded together, they are "unrolled" into a "geometry" to reduce memory loads by shaders
+struct ShaderGeometry
+{
+	ShaderMesh mesh;
+	ShaderMeshSubset subset;
 };
 
 struct ShaderTransform
@@ -240,11 +246,11 @@ struct ShaderMeshInstance
 	uint uid;
 	uint flags;
 	uint layerMask;
-	uint meshIndex;
+	uint geometryOffset;
 	uint color;
 	uint emissive;
 	int lightmap;
-	int padding0;
+	int padding;
 	ShaderTransform transform;
 	ShaderTransform transformInverseTranspose; // This correctly handles non uniform scaling for normals
 	ShaderTransform transformPrev;
@@ -254,10 +260,10 @@ struct ShaderMeshInstance
 		uid = 0;
 		flags = 0;
 		layerMask = 0;
-		meshIndex = ~0;
 		color = ~0u;
 		emissive = ~0u;
 		lightmap = -1;
+		geometryOffset = 0;
 		transform.init();
 		transformInverseTranspose.init();
 		transformPrev.init();

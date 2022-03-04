@@ -2505,7 +2505,7 @@ void RenderMeshes(
 
 			ObjectPushConstants push;
 			push.init(
-				instancedBatch.meshIndex,
+				(uint)mesh.geometryAllocation,
 				(uint)subsetIndex,
 				subset.materialIndex,
 				instanceBufferDescriptorIndex,
@@ -3234,30 +3234,17 @@ void UpdateRenderData(
 		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->instanceBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
 	}
 
-	if (vis.scene->meshBuffer.IsValid() && vis.scene->meshArraySize > 0)
+	if (vis.scene->geometryBuffer.IsValid() && vis.scene->geometryArraySize > 0)
 	{
 		device->CopyBuffer(
-			&vis.scene->meshBuffer,
+			&vis.scene->geometryBuffer,
 			0,
-			&vis.scene->meshUploadBuffer[device->GetBufferIndex()],
+			&vis.scene->geometryUploadBuffer[device->GetBufferIndex()],
 			0,
-			vis.scene->meshArraySize * sizeof(ShaderMesh),
+			vis.scene->geometryArraySize * sizeof(ShaderGeometry),
 			cmd
 		);
-		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->meshBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
-	}
-
-	if (vis.scene->subsetBuffer.IsValid() && vis.scene->meshArraySize > 0)
-	{
-		device->CopyBuffer(
-			&vis.scene->subsetBuffer,
-			0,
-			&vis.scene->subsetUploadBuffer[device->GetBufferIndex()],
-			0,
-			vis.scene->subsetArraySize * sizeof(ShaderMeshSubset),
-			cmd
-		);
-		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->subsetBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
+		barrier_stack.push_back(GPUBarrier::Buffer(&vis.scene->geometryBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE));
 	}
 
 	if (vis.scene->materialBuffer.IsValid() && vis.scene->materialArraySize > 0)
@@ -5866,7 +5853,7 @@ void DrawDebugWorld(
 
 			ObjectPushConstants push;
 			push.init(
-				(uint)object.mesh_index,
+				(uint)mesh.geometryAllocation,
 				x.subset,
 				subset.materialIndex,
 				device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV),
@@ -6468,7 +6455,7 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 
 					ObjectPushConstants push;
 					push.init(
-						(uint)scene.meshes.GetIndex(entity),
+						(uint)mesh.geometryAllocation,
 						(uint)subsetIndex,
 						subset.materialIndex,
 						-1, 0
