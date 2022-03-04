@@ -818,9 +818,10 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 	if (GetFrame().lightarray_count > 0)
 	{
 		uint4 shadow_mask_packed = 0;
+		const bool shadow_mask_enabled = GetFrame().options & OPTION_BIT_SHADOW_MASK && GetCamera().texture_rtshadow_index >= 0;
 #ifdef SHADOW_MASK_ENABLED
 		[branch]
-		if (GetFrame().options & OPTION_BIT_SHADOW_MASK && GetCamera().texture_rtshadow_index >= 0)
+		if (shadow_mask_enabled)
 		{
 			shadow_mask_packed = bindless_textures_uint4[GetCamera().texture_rtshadow_index][surface.pixel / 2];
 		}
@@ -863,7 +864,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 					float shadow_mask = 1;
 #ifdef SHADOW_MASK_ENABLED
 					[branch]
-					if (GetFrame().options & OPTION_BIT_SHADOW_MASK && light.IsCastingShadow())
+					if (shadow_mask_enabled && light.IsCastingShadow())
 					{
 						uint shadow_index = entity_index - GetFrame().lightarray_offset;
 						if (shadow_index < 16)

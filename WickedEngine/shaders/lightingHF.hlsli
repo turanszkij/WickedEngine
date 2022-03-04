@@ -136,7 +136,7 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 		{
 #ifdef SHADOW_MASK_ENABLED
 			[branch]
-			if ((GetFrame().options & OPTION_BIT_RAYTRACED_SHADOWS) == 0)
+			if ((GetFrame().options & OPTION_BIT_RAYTRACED_SHADOWS) == 0 || GetCamera().texture_rtshadow_index < 0)
 #endif // SHADOW_MASK_ENABLED
 			{
 				// Loop through cascades from closest (smallest) to furthest (largest)
@@ -219,7 +219,7 @@ inline void light_point(in ShaderEntity light, in Surface surface, inout Lightin
 			{
 #ifdef SHADOW_MASK_ENABLED
 				[branch]
-				if ((GetFrame().options & OPTION_BIT_RAYTRACED_SHADOWS) == 0)
+				if ((GetFrame().options & OPTION_BIT_RAYTRACED_SHADOWS) == 0 || GetCamera().texture_rtshadow_index < 0)
 #endif // SHADOW_MASK_ENABLED
 				{
 					shadow *= shadow_cube(light, L, Lunnormalized);
@@ -272,7 +272,7 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 				{
 #ifdef SHADOW_MASK_ENABLED
 					[branch]
-					if ((GetFrame().options & OPTION_BIT_RAYTRACED_SHADOWS) == 0)
+					if ((GetFrame().options & OPTION_BIT_RAYTRACED_SHADOWS) == 0 || GetCamera().texture_rtshadow_index < 0)
 #endif // SHADOW_MASK_ENABLED
 					{
 						float4 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + 0), float4(surface.P, 1));
