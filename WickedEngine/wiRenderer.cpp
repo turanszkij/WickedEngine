@@ -4913,7 +4913,14 @@ void DrawScene(
 	}
 	if (!renderQueue.empty())
 	{
-		renderQueue.sort(transparent ? RenderQueue::SORT_BACK_TO_FRONT : RenderQueue::SORT_FRONT_TO_BACK);
+		if (transparent)
+		{
+			renderQueue.sort(RenderQueue::SORT_BACK_TO_FRONT);
+		}
+		else if (renderPass == RENDERPASS_PREPASS)
+		{
+			renderQueue.sort(RenderQueue::SORT_FRONT_TO_BACK);
+		}
 		RenderMeshes(vis, renderQueue, renderPass, renderTypeFlags, cmd, tessellation);
 	}
 
