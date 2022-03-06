@@ -164,11 +164,11 @@ struct VertexInput
 
 	float4 GetPosition()
 	{
-		return float4(bindless_buffers[GetMesh().vb_pos_nor_wind].Load<float3>(vertexID * 16), 1);
+		return float4(bindless_buffers[GetMesh().vb_pos_nor_wind].Load<float3>(vertexID * sizeof(uint4)), 1);
 	}
 	float3 GetNormal()
 	{
-		const uint normal_wind = bindless_buffers[GetMesh().vb_pos_nor_wind].Load<uint4>(vertexID * 16).w;
+		const uint normal_wind = bindless_buffers[GetMesh().vb_pos_nor_wind].Load<uint4>(vertexID * sizeof(uint4)).w;
 		float3 normal;
 		normal.x = (float)((normal_wind >> 0u) & 0xFF) / 255.0 * 2 - 1;
 		normal.y = (float)((normal_wind >> 8u) & 0xFF) / 255.0 * 2 - 1;
@@ -177,7 +177,7 @@ struct VertexInput
 	}
 	float GetWindWeight()
 	{
-		const uint normal_wind = bindless_buffers[GetMesh().vb_pos_nor_wind].Load<uint4>(vertexID * 16).w;
+		const uint normal_wind = bindless_buffers[GetMesh().vb_pos_nor_wind].Load<uint4>(vertexID * sizeof(uint4)).w;
 		return ((normal_wind >> 24u) & 0xFF) / 255.0;
 	}
 
@@ -186,7 +186,7 @@ struct VertexInput
 		[branch]
 		if (GetMesh().vb_uvs < 0)
 			return 0;
-		return unpack_half4(bindless_buffers[GetMesh().vb_uvs].Load2(vertexID * 8));
+		return unpack_half4(bindless_buffers[GetMesh().vb_uvs].Load2(vertexID * sizeof(uint2)));
 	}
 
 	ShaderMeshInstancePointer GetInstancePointer()
@@ -204,7 +204,7 @@ struct VertexInput
 		[branch]
 		if (GetMesh().vb_atl < 0)
 			return 0;
-		return unpack_half2(bindless_buffers[GetMesh().vb_atl].Load<uint>(vertexID * 4));
+		return unpack_half2(bindless_buffers[GetMesh().vb_atl].Load(vertexID * sizeof(uint)));
 	}
 
 	float4 GetVertexColor()
@@ -212,7 +212,7 @@ struct VertexInput
 		[branch]
 		if (GetMesh().vb_col < 0)
 			return 1;
-		return unpack_rgba(bindless_buffers[GetMesh().vb_col].Load<uint>(vertexID * 4));
+		return unpack_rgba(bindless_buffers[GetMesh().vb_col].Load(vertexID * sizeof(uint)));
 	}
 
 	float4 GetTangent()
@@ -220,7 +220,7 @@ struct VertexInput
 		[branch]
 		if (GetMesh().vb_tan < 0)
 			return 0;
-		return unpack_utangent(bindless_buffers[GetMesh().vb_tan].Load<uint>(vertexID * 4)) * 2 - 1;
+		return unpack_utangent(bindless_buffers[GetMesh().vb_tan].Load(vertexID * sizeof(uint))) * 2 - 1;
 	}
 
 	ShaderMeshInstance GetInstance()

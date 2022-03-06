@@ -328,9 +328,9 @@ struct Surface
 		i2 = indexBuffer[startIndex + 2];
 
 		ByteAddressBuffer buf = bindless_buffers[NonUniformResourceIndex(geometry.vb_pos_nor_wind)];
-		data0 = buf.Load4(i0 * 16);
-		data1 = buf.Load4(i1 * 16);
-		data2 = buf.Load4(i2 * 16);
+		data0 = buf.Load4(i0 * sizeof(uint4));
+		data1 = buf.Load4(i1 * sizeof(uint4));
+		data2 = buf.Load4(i2 * sizeof(uint4));
 
 		return true;
 	}
@@ -379,9 +379,9 @@ struct Surface
 		if (geometry.vb_uvs >= 0)
 		{
 			ByteAddressBuffer buf = bindless_buffers[NonUniformResourceIndex(geometry.vb_uvs)];
-			const float4 uv0 = unpack_half4(buf.Load2(i0 * 8));
-			const float4 uv1 = unpack_half4(buf.Load2(i1 * 8));
-			const float4 uv2 = unpack_half4(buf.Load2(i2 * 8));
+			const float4 uv0 = unpack_half4(buf.Load2(i0 * sizeof(uint2)));
+			const float4 uv1 = unpack_half4(buf.Load2(i1 * sizeof(uint2)));
+			const float4 uv2 = unpack_half4(buf.Load2(i2 * sizeof(uint2)));
 			uvsets = mad(uv0, w, mad(uv1, u, uv2 * v)); // uv0 * w + uv1 * u + uv2 * v
 			uvsets.xy = mad(uvsets.xy, material.texMulAdd.xy, material.texMulAdd.zw);
 
@@ -416,12 +416,10 @@ struct Surface
 		[branch]
 		if (geometry.vb_col >= 0 && material.IsUsingVertexColors())
 		{
-			float4 c0, c1, c2;
-			const uint stride_COL = 4;
 			ByteAddressBuffer buf = bindless_buffers[NonUniformResourceIndex(geometry.vb_col)];
-			c0 = unpack_rgba(buf.Load(i0 * stride_COL));
-			c1 = unpack_rgba(buf.Load(i1 * stride_COL));
-			c2 = unpack_rgba(buf.Load(i2 * stride_COL));
+			const float4 c0 = unpack_rgba(buf.Load(i0 * sizeof(uint)));
+			const float4 c1 = unpack_rgba(buf.Load(i1 * sizeof(uint)));
+			const float4 c2 = unpack_rgba(buf.Load(i2 * sizeof(uint)));
 			float4 vertexColor = mad(c0, w, mad(c1, u, c2 * v)); // c0 * w + c1 * u + c2 * v
 			baseColor *= vertexColor;
 		}
@@ -513,18 +511,16 @@ struct Surface
 		[branch]
 		if (geometry.vb_tan >= 0 && material.texture_normalmap_index >= 0 && material.normalMapStrength > 0)
 		{
-			float4 t0, t1, t2;
-			const uint stride_TAN = 4;
 			ByteAddressBuffer buf = bindless_buffers[NonUniformResourceIndex(geometry.vb_tan)];
-			t0 = unpack_utangent(buf.Load(i0 * stride_TAN));
-			t1 = unpack_utangent(buf.Load(i1 * stride_TAN));
-			t2 = unpack_utangent(buf.Load(i2 * stride_TAN));
+			const float4 t0 = unpack_utangent(buf.Load(i0 * sizeof(uint)));
+			const float4 t1 = unpack_utangent(buf.Load(i1 * sizeof(uint)));
+			const float4 t2 = unpack_utangent(buf.Load(i2 * sizeof(uint)));
 			float4 T = mad(t0, w, mad(t1, u, t2 * v)); // t0 * w + t1 * u + t2 * v
 			T = T * 2 - 1;
 			T.xyz = mul((float3x3)inst.transformInverseTranspose.GetMatrix(), T.xyz);
 			T.xyz = normalize(T.xyz);
-			float3 B = normalize(cross(T.xyz, N) * T.w);
-			float3x3 TBN = float3x3(T.xyz, B, N);
+			const float3 B = normalize(cross(T.xyz, N) * T.w);
+			const float3x3 TBN = float3x3(T.xyz, B, N);
 
 			const float2 UV_normalMap = material.uvset_normalMap == 0 ? uvsets.xy : uvsets.zw;
 			Texture2D tex = bindless_textures[NonUniformResourceIndex(material.texture_normalmap_index)];
@@ -532,8 +528,7 @@ struct Surface
 #ifdef SURFACE_LOAD_MIPCONE
 			lod = compute_texture_lod(tex, material.uvset_normalMap == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
 #endif // SURFACE_LOAD_MIPCONE
-			float3 normalMap = float3(tex.SampleLevel(sampler_linear_wrap, UV_normalMap, lod).rg, 1);
-			normalMap = normalMap * 2 - 1;
+			const float3 normalMap = float3(tex.SampleLevel(sampler_linear_wrap, UV_normalMap, lod).rg, 1) * 2 - 1;
 			N = normalize(lerp(N, mul(normalMap, TBN), material.normalMapStrength));
 		}
 
@@ -544,9 +539,9 @@ struct Surface
 		if (geometry.vb_pre >= 0)
 		{
 			ByteAddressBuffer buf = bindless_buffers[NonUniformResourceIndex(geometry.vb_pre)];
-			pre0 = asfloat(buf.Load3(i0 * 16));
-			pre1 = asfloat(buf.Load3(i1 * 16));
-			pre2 = asfloat(buf.Load3(i2 * 16));
+			pre0 = asfloat(buf.Load3(i0 * sizeof(uint4)));
+			pre1 = asfloat(buf.Load3(i1 * sizeof(uint4)));
+			pre2 = asfloat(buf.Load3(i2 * sizeof(uint4)));
 		}
 		else
 		{
