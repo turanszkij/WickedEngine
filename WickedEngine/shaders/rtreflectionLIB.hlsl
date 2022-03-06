@@ -7,6 +7,7 @@
 #include "raytracingHF.hlsli"
 #include "stochasticSSRHF.hlsli"
 #include "lightingHF.hlsli"
+#include "ShaderInterop_DDGI.h"
 
 PUSHCONSTANT(postprocess, PostProcess);
 
@@ -132,7 +133,7 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 
 	if (surface.material.IsUnlit())
 	{
-		payload.data.xyz += surface.albedo + surface.emissiveColor;
+		payload.data.xyz = surface.albedo + surface.emissiveColor;
 	}
 	else
 	{
@@ -177,9 +178,15 @@ void RTReflection_ClosestHit(inout RayPayload payload, in BuiltInTriangleInterse
 		}
 
 		lighting.indirect.specular += max(0, EnvironmentReflection_Global(surface));
+		lighting.indirect.specular += surface.emissiveColor;
 
-		LightingPart combined_lighting = CombineLighting(surface, lighting);
-		payload.data.xyz += surface.albedo * combined_lighting.diffuse + combined_lighting.specular + surface.emissiveColor;
+		[branch]
+		if (GetScene().ddgi.color_texture >= 0)
+		{
+			lighting.indirect.diffuse = ddgi_sample_irradiance(surface.P, surface.N);
+		}
+
+		ApplyLighting(surface, lighting, payload.data);
 	}
 	payload.data.w = RayTCurrent();
 }

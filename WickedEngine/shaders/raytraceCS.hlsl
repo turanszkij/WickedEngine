@@ -353,7 +353,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			{
 				// Diffuse reflection
 				ray.Direction = sample_hemisphere_cos(surface.N, seed, uv);
-				energy *= surface.albedo / max(0.00001, 1 - specChance);
+				energy *= surface.albedo * (1 - surface.F) / max(0.00001, 1 - specChance);
 			}
 
 			if (dot(ray.Direction, surface.facenormal) <= 0)

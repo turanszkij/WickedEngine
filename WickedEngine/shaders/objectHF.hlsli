@@ -923,12 +923,6 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 
 }
 
-inline void ApplyLighting(in Surface surface, in Lighting lighting, inout float4 color)
-{
-	LightingPart combined_lighting = CombineLighting(surface, lighting);
-	color.rgb = lerp(surface.albedo * combined_lighting.diffuse, surface.refraction.rgb, surface.refraction.a) + combined_lighting.specular;
-}
-
 inline void ApplyFog(in float distance, float3 P, float3 V, inout float4 color)
 {
 	const float fogAmount = GetFogAmount(distance, P, V);

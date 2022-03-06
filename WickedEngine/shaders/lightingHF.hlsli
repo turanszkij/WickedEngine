@@ -33,14 +33,11 @@ struct Lighting
 	}
 };
 
-// Combine the direct and indirect lighting into final contribution
-inline LightingPart CombineLighting(in Surface surface, in Lighting lighting)
+inline void ApplyLighting(in Surface surface, in Lighting lighting, inout float4 color)
 {
-	LightingPart result;
-	result.diffuse = lighting.direct.diffuse + lighting.indirect.diffuse * surface.occlusion;
-	result.specular = lighting.direct.specular + lighting.indirect.specular * surface.occlusion;
-
-	return result;
+	float3 diffuse = lighting.direct.diffuse + lighting.indirect.diffuse * (1 - surface.F) * surface.occlusion;
+	float3 specular = lighting.direct.specular + lighting.indirect.specular * surface.occlusion; // reminder: cannot apply surface.F for whole indirect specular, because multiple layers have separate fresnels (sheen, clearcoat)
+	color.rgb = lerp(surface.albedo * diffuse, surface.refraction.rgb, surface.refraction.a) + specular;
 }
 
 inline float3 shadow_2D(in ShaderEntity light, in float3 shadow_pos, in float2 shadow_uv, in uint cascade)

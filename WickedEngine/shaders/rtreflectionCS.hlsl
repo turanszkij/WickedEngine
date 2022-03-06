@@ -164,7 +164,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
 
 		if (surface.material.IsUnlit())
 		{
-			payload.data.xyz += surface.albedo + surface.emissiveColor;
+			payload.data.xyz = surface.albedo + surface.emissiveColor;
 		}
 		else
 		{
@@ -209,6 +209,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
 			}
 
 			lighting.indirect.specular += max(0, EnvironmentReflection_Global(surface));
+			lighting.indirect.specular += surface.emissiveColor;
 
 			[branch]
 			if (GetScene().ddgi.color_texture >= 0)
@@ -216,8 +217,7 @@ void main(uint2 DTid : SV_DispatchThreadID)
 				lighting.indirect.diffuse = ddgi_sample_irradiance(surface.P, surface.N);
 			}
 
-			LightingPart combined_lighting = CombineLighting(surface, lighting);
-			payload.data.xyz += surface.albedo * combined_lighting.diffuse + combined_lighting.specular + surface.emissiveColor;
+			ApplyLighting(surface, lighting, payload.data);
 		}
 		payload.data.w = q.CommittedRayT();
 	}
