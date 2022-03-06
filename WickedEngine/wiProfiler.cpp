@@ -349,7 +349,6 @@ namespace wi::profiler
 	{
 		if (value != ENABLED)
 		{
-			initialized = false;
 			ranges.clear();
 			ENABLED = value;
 		}
