@@ -392,6 +392,7 @@ struct Surface
 		}
 
 		float4 baseColor = is_emittedparticle ? 1 : material.baseColor;
+		baseColor *= unpack_rgba(inst.color);
 		[branch]
 		if (material.texture_basecolormap_index >= 0)
 		{
