@@ -5465,6 +5465,22 @@ using namespace dx12_internal;
 		CommandList_DX12& commandlist = GetCommandList(cmd);
 		commandlist.GetGraphicsCommandList()->ExecuteIndirect(drawIndexedInstancedIndirectCommandSignature.Get(), 1, internal_state->resource.Get(), args_offset, nullptr, 0);
 	}
+	void GraphicsDevice_DX12::DrawInstancedIndirectCount(const GPUBuffer* args, uint64_t args_offset, const GPUBuffer* count, uint64_t count_offset, uint32_t max_count, CommandList cmd)
+	{
+		predraw(cmd);
+		auto args_internal = to_internal(args);
+		auto count_internal = to_internal(count);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
+		commandlist.GetGraphicsCommandList()->ExecuteIndirect(drawInstancedIndirectCommandSignature.Get(), max_count, args_internal->resource.Get(), args_offset, count_internal->resource.Get(), count_offset);
+	}
+	void GraphicsDevice_DX12::DrawIndexedInstancedIndirectCount(const GPUBuffer* args, uint64_t args_offset, const GPUBuffer* count, uint64_t count_offset, uint32_t max_count, CommandList cmd)
+	{
+		predraw(cmd);
+		auto args_internal = to_internal(args);
+		auto count_internal = to_internal(count);
+		CommandList_DX12& commandlist = GetCommandList(cmd);
+		commandlist.GetGraphicsCommandList()->ExecuteIndirect(drawIndexedInstancedIndirectCommandSignature.Get(), max_count, args_internal->resource.Get(), args_offset, count_internal->resource.Get(), count_offset);
+	}
 	void GraphicsDevice_DX12::Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd)
 	{
 		predispatch(cmd);

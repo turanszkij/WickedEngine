@@ -6930,6 +6930,22 @@ using namespace vulkan_internal;
 		CommandList_Vulkan& commandlist = GetCommandList(cmd);
 		vkCmdDrawIndexedIndirect(commandlist.GetCommandBuffer(), internal_state->resource, args_offset, 1, sizeof(IndirectDrawArgsIndexedInstanced));
 	}
+	void GraphicsDevice_Vulkan::DrawInstancedIndirectCount(const GPUBuffer* args, uint64_t args_offset, const GPUBuffer* count, uint64_t count_offset, uint32_t max_count, CommandList cmd)
+	{
+		predraw(cmd);
+		auto args_internal = to_internal(args);
+		auto count_internal = to_internal(count);
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
+		vkCmdDrawIndirectCount(commandlist.GetCommandBuffer(), args_internal->resource, args_offset, count_internal->resource, count_offset, max_count, sizeof(IndirectDrawArgsInstanced));
+	}
+	void GraphicsDevice_Vulkan::DrawIndexedInstancedIndirectCount(const GPUBuffer* args, uint64_t args_offset, const GPUBuffer* count, uint64_t count_offset, uint32_t max_count, CommandList cmd)
+	{
+		predraw(cmd);
+		auto args_internal = to_internal(args);
+		auto count_internal = to_internal(count);
+		CommandList_Vulkan& commandlist = GetCommandList(cmd);
+		vkCmdDrawIndexedIndirectCount(commandlist.GetCommandBuffer(), args_internal->resource, args_offset, count_internal->resource, count_offset, max_count, sizeof(IndirectDrawArgsIndexedInstanced));
+	}
 	void GraphicsDevice_Vulkan::Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd)
 	{
 		predispatch(cmd);
