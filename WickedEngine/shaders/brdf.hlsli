@@ -458,7 +458,7 @@ struct Surface
 
 		create(material, baseColor, surfaceMap, specularMap);
 
-		emissiveColor = material.GetEmissive();
+		emissiveColor = material.GetEmissive() * Unpack_R11G11B10_FLOAT(inst.emissive);
 		if (is_emittedparticle)
 		{
 			emissiveColor *= baseColor.rgb * baseColor.a;
