@@ -22,11 +22,6 @@ RWTexture2D<float3> output_normals : register(u1);
 RWStructuredBuffer<uint4> output_tiles : register(u2);
 #endif // RTSHADOW
 
-static const uint TILE_BORDER = 1;
-static const uint TILE_SIZE = POSTPROCESS_BLOCKSIZE + TILE_BORDER * 2;
-groupshared float2 tile_XY[TILE_SIZE * TILE_SIZE];
-groupshared float tile_Z[TILE_SIZE * TILE_SIZE];
-
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint groupIndex : SV_GroupIndex)
 {
@@ -51,7 +46,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	float3 P = reconstruct_position(uv, depth);
 
 	PrimitiveID prim;
-	prim.unpack(texture_gbuffer0[DTid.xy * 2]);
+	prim.unpack(texture_primitiveID[DTid.xy * 2]);
 
 	Surface surface;
 	surface.init();
@@ -59,7 +54,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 	{
 		return;
 	}
-	float3 N = surface.N;
+	float3 N = surface.facenormal;
 
 	const float2 bluenoise = blue_noise(DTid.xy).xy;
 
@@ -247,7 +242,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 							if (surface.opacity - alphatest >= 0)
 							{
 								q.CommitNonOpaqueTriangleHit();
-								break;
 							}
 						}
 						shadow = q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ? 0 : 1;

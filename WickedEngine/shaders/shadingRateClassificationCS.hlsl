@@ -23,7 +23,7 @@ void main( uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint groupInde
 	GroupMemoryBarrierWithGroupSync();
 
 	uint2 dim;
-	texture_gbuffer1.GetDimensions(dim.x, dim.y);
+	texture_velocity.GetDimensions(dim.x, dim.y);
 
 	const uint2 tile = Gid.xy;
 
@@ -35,7 +35,7 @@ void main( uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint groupInde
 		const uint2 tile_pixel = unflatten2D(i, shadingrate.TileSize);
 		const uint2 pixel = min(tile * shadingrate.TileSize + tile_pixel, dim - 1);
 
-		const float2 velocity = abs(texture_gbuffer1[pixel].xy);
+		const float2 velocity = abs(texture_velocity[pixel].xy);
 		const float magnitude = max(velocity.x, velocity.y);
 
 		uint rate = 0;

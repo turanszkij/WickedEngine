@@ -391,18 +391,15 @@ namespace wi::scene
 		ib = {};
 		vb_pos_nor_wind = {};
 		vb_tan = {};
-		vb_uv0 = {};
-		vb_uv1 = {};
+		vb_uvs = {};
 		vb_atl = {};
 		vb_col = {};
 		vb_bon = {};
-		vb_pre = {};
 		so_pos_nor_wind = {};
 		so_tan = {};
-		vb_pre = {};
-		subset_view = {};
+		so_pre = {};
 
-		if (vertex_tangents.empty() && !vertex_uvset_0.empty())
+		if (vertex_tangents.empty() && !vertex_uvset_0.empty() && !vertex_normals.empty())
 		{
 			// Generate tangents if not found:
 			vertex_tangents.resize(vertex_positions.size());
@@ -485,6 +482,8 @@ namespace wi::scene
 			subsetCounter++;
 		}
 
+		const size_t uv_count = std::max(vertex_uvset_0.size(), vertex_uvset_1.size());
+
 		GPUBufferDesc bd;
 		bd.usage = Usage::DEFAULT;
 		bd.bind_flags = BindFlag::VERTEX_BUFFER | BindFlag::INDEX_BUFFER | BindFlag::SHADER_RESOURCE;
@@ -498,12 +497,10 @@ namespace wi::scene
 			AlignTo(indices.size() * GetIndexStride(), alignment) +
 			AlignTo(vertex_positions.size() * sizeof(Vertex_POS), alignment) +
 			AlignTo(vertex_tangents.size() * sizeof(Vertex_TAN), alignment) +
-			AlignTo(vertex_uvset_0.size() * sizeof(Vertex_TEX), alignment) +
-			AlignTo(vertex_uvset_1.size() * sizeof(Vertex_TEX), alignment) +
+			AlignTo(uv_count * sizeof(Vertex_UVS), alignment) +
 			AlignTo(vertex_atlas.size() * sizeof(Vertex_TEX), alignment) +
 			AlignTo(vertex_colors.size() * sizeof(Vertex_COL), alignment) +
-			AlignTo(vertex_boneindices.size() * sizeof(Vertex_BON), alignment) +
-			AlignTo(subsets.size() * sizeof(ShaderMeshSubset), alignment)
+			AlignTo(vertex_boneindices.size() * sizeof(Vertex_BON), alignment)
 			;
 
 		// single allocation storage for GPU buffer data:
@@ -577,29 +574,20 @@ namespace wi::scene
 			}
 		}
 
-		// vertexBuffer - UV SET 0
-		if (!vertex_uvset_0.empty())
+		// vertexBuffer - UV SETS
+		if (!vertex_uvset_0.empty() || !vertex_uvset_1.empty())
 		{
-			vb_uv0.offset = buffer_offset;
-			vb_uv0.size = vertex_uvset_0.size() * sizeof(Vertex_TEX);
-			Vertex_TEX* vertices = (Vertex_TEX*)(buffer_data.data() + buffer_offset);
-			buffer_offset += AlignTo(vb_uv0.size, alignment);
-			for (size_t i = 0; i < vertex_uvset_0.size(); ++i)
-			{
-				vertices[i].FromFULL(vertex_uvset_0[i]);
-			}
-		}
+			const XMFLOAT2* uv0_stream = vertex_uvset_0.empty() ? vertex_uvset_1.data() : vertex_uvset_0.data();
+			const XMFLOAT2* uv1_stream = vertex_uvset_1.empty() ? vertex_uvset_0.data() : vertex_uvset_1.data();
 
-		// vertexBuffer - UV SET 1
-		if (!vertex_uvset_1.empty())
-		{
-			vb_uv1.offset = buffer_offset;
-			vb_uv1.size = vertex_uvset_1.size() * sizeof(Vertex_TEX);
-			Vertex_TEX* vertices = (Vertex_TEX*)(buffer_data.data() + buffer_offset);
-			buffer_offset += AlignTo(vb_uv1.size, alignment);
-			for (size_t i = 0; i < vertex_uvset_1.size(); ++i)
+			vb_uvs.offset = buffer_offset;
+			vb_uvs.size = uv_count * sizeof(Vertex_UVS);
+			Vertex_UVS* vertices = (Vertex_UVS*)(buffer_data.data() + buffer_offset);
+			buffer_offset += AlignTo(vb_uvs.size, alignment);
+			for (size_t i = 0; i < uv_count; ++i)
 			{
-				vertices[i].FromFULL(vertex_uvset_1[i]);
+				vertices[i].uv0.FromFULL(uv0_stream[i]);
+				vertices[i].uv1.FromFULL(uv1_stream[i]);
 			}
 		}
 
@@ -654,13 +642,6 @@ namespace wi::scene
 			CreateStreamoutRenderData();
 		}
 
-		// subset buffer:
-		{
-			subset_view.offset = buffer_offset;
-			subset_view.size = subsets.size() * sizeof(ShaderMeshSubset);
-			buffer_offset += AlignTo(subset_view.size, alignment);
-		}
-
 		bool success = device->CreateBuffer(&bd, buffer_data.data(), &generalBuffer);
 		assert(success);
 		device->SetName(&generalBuffer, "MeshComponent::generalBuffer");
@@ -679,15 +660,10 @@ namespace wi::scene
 			vb_tan.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_tan.offset, vb_tan.size);
 			vb_tan.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_tan.subresource_srv);
 		}
-		if (vb_uv0.IsValid())
+		if (vb_uvs.IsValid())
 		{
-			vb_uv0.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_uv0.offset, vb_uv0.size);
-			vb_uv0.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_uv0.subresource_srv);
-		}
-		if (vb_uv1.IsValid())
-		{
-			vb_uv1.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_uv1.offset, vb_uv1.size);
-			vb_uv1.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_uv1.subresource_srv);
+			vb_uvs.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_uvs.offset, vb_uvs.size);
+			vb_uvs.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_uvs.subresource_srv);
 		}
 		if (vb_atl.IsValid())
 		{
@@ -704,10 +680,6 @@ namespace wi::scene
 			vb_bon.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, vb_bon.offset, vb_bon.size);
 			vb_bon.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, vb_bon.subresource_srv);
 		}
-
-		assert(subset_view.IsValid());
-		subset_view.subresource_srv = device->CreateSubresource(&generalBuffer, SubresourceType::SRV, subset_view.offset, subset_view.size);
-		subset_view.descriptor_srv = device->GetDescriptorIndex(&generalBuffer, SubresourceType::SRV, subset_view.subresource_srv);
 
 		if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 		{
@@ -783,53 +755,12 @@ namespace wi::scene
 		so_tan.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, so_tan.subresource_srv);
 		so_tan.descriptor_uav = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::UAV, so_tan.subresource_uav);
 
-		vb_pre.offset = AlignTo(so_tan.offset + so_tan.size, alignment);
-		vb_pre.size = vb_pos_nor_wind.size;
-		vb_pre.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, vb_pre.offset, vb_pre.size);
-		vb_pre.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, vb_pre.offset, vb_pre.size);
-		vb_pre.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, vb_pre.subresource_srv);
-		vb_pre.descriptor_uav = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::UAV, vb_pre.subresource_uav);
-	}
-	void MeshComponent::WriteShaderMesh(ShaderMesh* dest) const
-	{
-		ShaderMesh mesh;
-		mesh.init();
-		mesh.ib = ib.descriptor_srv;
-		if (so_pos_nor_wind.IsValid())
-		{
-			mesh.vb_pos_nor_wind = so_pos_nor_wind.descriptor_srv;
-		}
-		else
-		{
-			mesh.vb_pos_nor_wind = vb_pos_nor_wind.descriptor_srv;
-		}
-		if (so_tan.IsValid())
-		{
-			mesh.vb_tan = so_tan.descriptor_srv;
-		}
-		else
-		{
-			mesh.vb_tan = vb_tan.descriptor_srv;
-		}
-		mesh.vb_col = vb_col.descriptor_srv;
-		mesh.vb_uv0 = vb_uv0.descriptor_srv;
-		mesh.vb_uv1 = vb_uv1.descriptor_srv;
-		mesh.vb_atl = vb_atl.descriptor_srv;
-		mesh.vb_pre = vb_pre.descriptor_srv;
-		mesh.blendmaterial1 = terrain_material1_index;
-		mesh.blendmaterial2 = terrain_material2_index;
-		mesh.blendmaterial3 = terrain_material3_index;
-		mesh.subsetbuffer = subset_view.descriptor_srv;
-		mesh.aabb_min = aabb._min;
-		mesh.aabb_max = aabb._max;
-		mesh.tessellation_factor = tessellationFactor;
-
-		if (IsDoubleSided())
-		{
-			mesh.flags |= SHADERMESH_FLAG_DOUBLE_SIDED;
-		}
-
-		std::memcpy(dest, &mesh, sizeof(ShaderMesh)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
+		so_pre.offset = AlignTo(so_tan.offset + so_tan.size, alignment);
+		so_pre.size = vb_pos_nor_wind.size;
+		so_pre.subresource_srv = device->CreateSubresource(&streamoutBuffer, SubresourceType::SRV, so_pre.offset, so_pre.size);
+		so_pre.subresource_uav = device->CreateSubresource(&streamoutBuffer, SubresourceType::UAV, so_pre.offset, so_pre.size);
+		so_pre.descriptor_srv = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::SRV, so_pre.subresource_srv);
+		so_pre.descriptor_uav = device->GetDescriptorIndex(&streamoutBuffer, SubresourceType::UAV, so_pre.subresource_uav);
 	}
 	void MeshComponent::ComputeNormals(COMPUTE_NORMALS compute)
 	{
@@ -1519,6 +1450,8 @@ namespace wi::scene
 
 
 
+	const uint32_t small_subtask_groupsize = 64u;
+
 	void Scene::Update(float dt)
 	{
 		this->dt = dt;
@@ -1546,28 +1479,6 @@ namespace wi::scene
 			}
 		}
 		instanceArrayMapped = (ShaderMeshInstance*)instanceUploadBuffer[device->GetBufferIndex()].mapped_data;
-
-		meshArraySize = meshes.GetCount() + hairs.GetCount() + emitters.GetCount();
-		if (meshBuffer.desc.size < (meshArraySize * sizeof(ShaderMesh)))
-		{
-			GPUBufferDesc desc;
-			desc.stride = sizeof(ShaderMesh);
-			desc.size = desc.stride * meshArraySize * 2; // *2 to grow fast
-			desc.bind_flags = BindFlag::SHADER_RESOURCE;
-			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-			device->CreateBuffer(&desc, nullptr, &meshBuffer);
-			device->SetName(&meshBuffer, "Scene::meshBuffer");
-
-			desc.usage = Usage::UPLOAD;
-			desc.bind_flags = BindFlag::NONE;
-			desc.misc_flags = ResourceMiscFlag::NONE;
-			for (int i = 0; i < arraysize(meshUploadBuffer); ++i)
-			{
-				device->CreateBuffer(&desc, nullptr, &meshUploadBuffer[i]);
-				device->SetName(&meshUploadBuffer[i], "Scene::meshUploadBuffer");
-			}
-		}
-		meshArrayMapped = (ShaderMesh*)meshUploadBuffer[device->GetBufferIndex()].mapped_data;
 
 		materialArraySize = materials.GetCount();
 		if (materialBuffer.desc.size < (materialArraySize * sizeof(ShaderMaterial)))
@@ -1649,6 +1560,13 @@ namespace wi::scene
 
 		wi::jobsystem::context ctx;
 
+		// Scan mesh subset counts to allocate GPU geometry data:
+		geometryAllocator.store(0u);
+		wi::jobsystem::Dispatch(ctx, (uint32_t)meshes.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
+			MeshComponent& mesh = meshes[args.jobIndex];
+			mesh.geometryOffset = geometryAllocator.fetch_add((uint32_t)mesh.subsets.size());
+		});
+
 		wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
 			// Must not keep inactive TLAS instances, so zero them out for safety:
 			std::memset(TLAS_instancesMapped, 0, TLAS_instancesUpload->desc.size);
@@ -1661,6 +1579,31 @@ namespace wi::scene
 		wi::jobsystem::Wait(ctx); // dependencies
 
 		RunHierarchyUpdateSystem(ctx);
+
+		// GPU subset count allocation is ready at this point:
+		geometryArraySize = geometryAllocator.load();
+		geometryArraySize += hairs.GetCount();
+		geometryArraySize += emitters.GetCount();
+		if (geometryBuffer.desc.size < (geometryArraySize * sizeof(ShaderGeometry)))
+		{
+			GPUBufferDesc desc;
+			desc.stride = sizeof(ShaderGeometry);
+			desc.size = desc.stride * geometryArraySize * 2; // *2 to grow fast
+			desc.bind_flags = BindFlag::SHADER_RESOURCE;
+			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+			device->CreateBuffer(&desc, nullptr, &geometryBuffer);
+			device->SetName(&geometryBuffer, "Scene::geometryBuffer");
+
+			desc.usage = Usage::UPLOAD;
+			desc.bind_flags = BindFlag::NONE;
+			desc.misc_flags = ResourceMiscFlag::NONE;
+			for (int i = 0; i < arraysize(geometryUploadBuffer); ++i)
+			{
+				device->CreateBuffer(&desc, nullptr, &geometryUploadBuffer[i]);
+				device->SetName(&geometryUploadBuffer[i], "Scene::geometryUploadBuffer");
+			}
+		}
+		geometryArrayMapped = (ShaderGeometry*)geometryUploadBuffer[device->GetBufferIndex()].mapped_data;
 
 		RunMeshUpdateSystem(ctx);
 
@@ -1891,7 +1834,7 @@ namespace wi::scene
 
 		// Shader scene resources:
 		shaderscene.instancebuffer = device->GetDescriptorIndex(&instanceBuffer, SubresourceType::SRV);
-		shaderscene.meshbuffer = device->GetDescriptorIndex(&meshBuffer, SubresourceType::SRV);
+		shaderscene.geometrybuffer = device->GetDescriptorIndex(&geometryBuffer, SubresourceType::SRV);
 		shaderscene.materialbuffer = device->GetDescriptorIndex(&materialBuffer, SubresourceType::SRV);
 		shaderscene.envmaparray = device->GetDescriptorIndex(&envmapArray, SubresourceType::SRV);
 		if (weather.skyMap.IsValid())
@@ -2412,8 +2355,6 @@ namespace wi::scene
 		}
 	}
 
-
-	const uint32_t small_subtask_groupsize = 64;
 
 	void Scene::RunAnimationUpdateSystem(wi::jobsystem::context& ctx)
 	{
@@ -3039,62 +2980,12 @@ namespace wi::scene
 				}
 			}
 
-			if (mesh.so_pos_nor_wind.IsValid() && mesh.vb_pre.IsValid())
+			if (mesh.so_pos_nor_wind.IsValid() && mesh.so_pre.IsValid())
 			{
-				std::swap(mesh.so_pos_nor_wind, mesh.vb_pre);
+				std::swap(mesh.so_pos_nor_wind, mesh.so_pre);
 			}
 
 			mesh._flags &= ~MeshComponent::TLAS_FORCE_DOUBLE_SIDED;
-
-			uint32_t subsetIndex = 0;
-			for (auto& subset : mesh.subsets)
-			{
-				const MaterialComponent* material = materials.GetComponent(subset.materialID);
-				if (material != nullptr)
-				{
-					subset.materialIndex = (uint32_t)materials.GetIndex(subset.materialID);
-					if (mesh.BLAS.IsValid())
-					{
-						auto& geometry = mesh.BLAS.desc.bottom_level.geometries[subsetIndex];
-						uint32_t flags = geometry.flags;
-						if (material->IsAlphaTestEnabled() || (material->GetRenderTypes() & RENDERTYPE_TRANSPARENT) || !material->IsCastingShadow())
-						{
-							geometry.flags &= ~RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
-						}
-						else
-						{
-							geometry.flags = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
-						}
-						if (flags != geometry.flags)
-						{
-							mesh.BLAS_state = MeshComponent::BLAS_STATE_NEEDS_REBUILD;
-						}
-						if (mesh.streamoutBuffer.IsValid())
-						{
-							mesh.BLAS_state = MeshComponent::BLAS_STATE_NEEDS_REBUILD;
-							geometry.triangles.vertex_buffer = mesh.streamoutBuffer;
-							geometry.triangles.vertex_byte_offset = mesh.so_pos_nor_wind.offset;
-						}
-						if (material->IsDoubleSided())
-						{
-							mesh._flags |= MeshComponent::TLAS_FORCE_DOUBLE_SIDED;
-						}
-					}
-				}
-				else
-				{
-					subset.materialIndex = 0;
-				}
-				subsetIndex++;
-			}
-
-			if (mesh.BLAS.IsValid())
-			{
-				if (mesh.dirty_morph)
-				{
-					mesh.BLAS_state = MeshComponent::BLAS_STATE_NEEDS_REBUILD;
-				}
-			}
 
 			mesh.terrain_material1_index = (uint32_t)materials.GetIndex(mesh.terrain_material1);
 			mesh.terrain_material2_index = (uint32_t)materials.GetIndex(mesh.terrain_material2);
@@ -3136,7 +3027,86 @@ namespace wi::scene
 			    mesh.aabb = AABB(_min, _max);
 			}
 
-			mesh.WriteShaderMesh(meshArrayMapped + args.jobIndex);
+			ShaderGeometry geometry;
+			geometry.init();
+			geometry.ib = mesh.ib.descriptor_srv;
+			if (mesh.so_pos_nor_wind.IsValid())
+			{
+				geometry.vb_pos_nor_wind = mesh.so_pos_nor_wind.descriptor_srv;
+			}
+			else
+			{
+				geometry.vb_pos_nor_wind = mesh.vb_pos_nor_wind.descriptor_srv;
+			}
+			if (mesh.so_tan.IsValid())
+			{
+				geometry.vb_tan = mesh.so_tan.descriptor_srv;
+			}
+			else
+			{
+				geometry.vb_tan = mesh.vb_tan.descriptor_srv;
+			}
+			geometry.vb_col = mesh.vb_col.descriptor_srv;
+			geometry.vb_uvs = mesh.vb_uvs.descriptor_srv;
+			geometry.vb_atl = mesh.vb_atl.descriptor_srv;
+			geometry.vb_pre = mesh.so_pre.descriptor_srv;
+			geometry.blendmaterial1 = mesh.terrain_material1_index;
+			geometry.blendmaterial2 = mesh.terrain_material2_index;
+			geometry.blendmaterial3 = mesh.terrain_material3_index;
+			geometry.aabb_min = mesh.aabb._min;
+			geometry.aabb_max = mesh.aabb._max;
+			geometry.tessellation_factor = mesh.tessellationFactor;
+
+			if (mesh.IsDoubleSided())
+			{
+				geometry.flags |= SHADERMESH_FLAG_DOUBLE_SIDED;
+			}
+
+			uint32_t subsetIndex = 0;
+			for (auto& subset : mesh.subsets)
+			{
+				const MaterialComponent* material = materials.GetComponent(subset.materialID);
+				if (material != nullptr)
+				{
+					subset.materialIndex = (uint32_t)materials.GetIndex(subset.materialID);
+					if (mesh.BLAS.IsValid())
+					{
+						auto& geometry = mesh.BLAS.desc.bottom_level.geometries[subsetIndex];
+						uint32_t flags = geometry.flags;
+						if (material->IsAlphaTestEnabled() || (material->GetRenderTypes() & RENDERTYPE_TRANSPARENT) || !material->IsCastingShadow())
+						{
+							geometry.flags &= ~RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
+						}
+						else
+						{
+							geometry.flags = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_OPAQUE;
+						}
+						if (flags != geometry.flags || mesh.dirty_morph)
+						{
+							mesh.BLAS_state = MeshComponent::BLAS_STATE_NEEDS_REBUILD;
+						}
+						if (mesh.streamoutBuffer.IsValid())
+						{
+							mesh.BLAS_state = MeshComponent::BLAS_STATE_NEEDS_REBUILD;
+							geometry.triangles.vertex_buffer = mesh.streamoutBuffer;
+							geometry.triangles.vertex_byte_offset = mesh.so_pos_nor_wind.offset;
+						}
+						if (material->IsDoubleSided())
+						{
+							mesh._flags |= MeshComponent::TLAS_FORCE_DOUBLE_SIDED;
+						}
+					}
+				}
+				else
+				{
+					subset.materialIndex = 0;
+				}
+
+				geometry.indexOffset = subset.indexOffset;
+				geometry.materialIndex = subset.materialIndex;
+				std::memcpy(geometryArrayMapped + mesh.geometryOffset + subsetIndex, &geometry, sizeof(geometry));
+				subsetIndex++;
+			}
 
 		});
 	}
@@ -3403,7 +3373,7 @@ namespace wi::scene
 					inst.layerMask = layerMask;
 					inst.color = wi::math::CompressColor(object.color);
 					inst.emissive = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(object.emissiveColor.x * object.emissiveColor.w, object.emissiveColor.y * object.emissiveColor.w, object.emissiveColor.z * object.emissiveColor.w));
-					inst.meshIndex = (uint)meshes.GetIndex(object.meshID);
+					inst.geometryOffset = mesh.geometryOffset;
 
 					std::memcpy(instanceArrayMapped + args.jobIndex, &inst, sizeof(inst)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
 
@@ -3810,26 +3780,24 @@ namespace wi::scene
 
 					GraphicsDevice* device = wi::graphics::GetDevice();
 
-					ShaderMesh mesh;
-					mesh.init();
-					mesh.ib = device->GetDescriptorIndex(&hair.primitiveBuffer, SubresourceType::SRV);
-					mesh.vb_pos_nor_wind = device->GetDescriptorIndex(&hair.vertexBuffer_POS[0], SubresourceType::SRV);
-					mesh.vb_pre = device->GetDescriptorIndex(&hair.vertexBuffer_POS[1], SubresourceType::SRV);
-					mesh.vb_uv0 = device->GetDescriptorIndex(&hair.vertexBuffer_TEX, SubresourceType::SRV);
-					mesh.subsetbuffer = device->GetDescriptorIndex(&hair.subsetBuffer, SubresourceType::SRV);
-					mesh.flags = SHADERMESH_FLAG_DOUBLE_SIDED | SHADERMESH_FLAG_HAIRPARTICLE;
+					ShaderGeometry geometry;
+					geometry.init();
+					geometry.indexOffset = 0;
+					geometry.materialIndex = (uint)materials.GetIndex(entity);
+					geometry.ib = device->GetDescriptorIndex(&hair.primitiveBuffer, SubresourceType::SRV);
+					geometry.vb_pos_nor_wind = device->GetDescriptorIndex(&hair.vertexBuffer_POS[0], SubresourceType::SRV);
+					geometry.vb_pre = device->GetDescriptorIndex(&hair.vertexBuffer_POS[1], SubresourceType::SRV);
+					geometry.vb_uvs = device->GetDescriptorIndex(&hair.vertexBuffer_UVS, SubresourceType::SRV);
+					geometry.flags = SHADERMESH_FLAG_DOUBLE_SIDED | SHADERMESH_FLAG_HAIRPARTICLE;
 
-					const size_t meshIndex = meshes.GetCount() + args.jobIndex;
-					std::memcpy(meshArrayMapped + meshIndex, &mesh, sizeof(mesh));
+					size_t geometryAllocation = geometryAllocator.fetch_add(1);
+					std::memcpy(geometryArrayMapped + geometryAllocation, &geometry, sizeof(geometry));
 
 					ShaderMeshInstance inst;
 					inst.init();
 					inst.uid = entity;
 					inst.layerMask = hair.layerMask;
-					// every vertex is pretransformed and simulated in worldspace for hair particle:
-					inst.transform.Create(wi::math::IDENTITY_MATRIX);
-					inst.transformPrev.Create(wi::math::IDENTITY_MATRIX);
-					inst.meshIndex = (uint)meshIndex;
+					inst.geometryOffset = (uint)geometryAllocation;
 
 					const size_t instanceIndex = objects.GetCount() + args.jobIndex;
 					std::memcpy(instanceArrayMapped + instanceIndex, &inst, sizeof(inst));
@@ -3892,27 +3860,24 @@ namespace wi::scene
 
 			GraphicsDevice* device = wi::graphics::GetDevice();
 
-			ShaderMesh mesh;
-			mesh.init();
-			mesh.ib = device->GetDescriptorIndex(&emitter.primitiveBuffer, SubresourceType::SRV);
-			mesh.vb_pos_nor_wind = device->GetDescriptorIndex(&emitter.vertexBuffer_POS, SubresourceType::SRV);
-			mesh.vb_uv0 = device->GetDescriptorIndex(&emitter.vertexBuffer_TEX, SubresourceType::SRV);
-			mesh.vb_uv1 = device->GetDescriptorIndex(&emitter.vertexBuffer_TEX2, SubresourceType::SRV);
-			mesh.vb_col = device->GetDescriptorIndex(&emitter.vertexBuffer_COL, SubresourceType::SRV);
-			mesh.subsetbuffer = device->GetDescriptorIndex(&emitter.subsetBuffer, SubresourceType::SRV);
-			mesh.flags = SHADERMESH_FLAG_DOUBLE_SIDED | SHADERMESH_FLAG_EMITTEDPARTICLE;
+			ShaderGeometry geometry;
+			geometry.init();
+			geometry.indexOffset = 0;
+			geometry.materialIndex = (uint)materials.GetIndex(entity);
+			geometry.ib = device->GetDescriptorIndex(&emitter.primitiveBuffer, SubresourceType::SRV);
+			geometry.vb_pos_nor_wind = device->GetDescriptorIndex(&emitter.vertexBuffer_POS, SubresourceType::SRV);
+			geometry.vb_uvs = device->GetDescriptorIndex(&emitter.vertexBuffer_UVS, SubresourceType::SRV);
+			geometry.vb_col = device->GetDescriptorIndex(&emitter.vertexBuffer_COL, SubresourceType::SRV);
+			geometry.flags = SHADERMESH_FLAG_DOUBLE_SIDED | SHADERMESH_FLAG_EMITTEDPARTICLE;
 
-			const size_t meshIndex = meshes.GetCount() + hairs.GetCount() + args.jobIndex;
-			std::memcpy(meshArrayMapped + meshIndex, &mesh, sizeof(mesh));
+			size_t geometryAllocation = geometryAllocator.fetch_add(1);
+			std::memcpy(geometryArrayMapped + geometryAllocation, &geometry, sizeof(geometry));
 
 			ShaderMeshInstance inst;
 			inst.init();
 			inst.uid = entity;
 			inst.layerMask = emitter.layerMask;
-			// every vertex is pretransformed and simulated in worldspace for emitted particle:
-			inst.transform.Create(wi::math::IDENTITY_MATRIX);
-			inst.transformPrev.Create(wi::math::IDENTITY_MATRIX);
-			inst.meshIndex = (uint)meshIndex;
+			inst.geometryOffset = (uint)geometryAllocation;
 
 			const size_t instanceIndex = objects.GetCount() + hairs.GetCount() + args.jobIndex;
 			std::memcpy(instanceArrayMapped + instanceIndex, &inst, sizeof(inst));
@@ -4211,7 +4176,7 @@ namespace wi::scene
 
 							if (distance < result.distance)
 							{
-								const XMVECTOR nor = XMVector3Normalize(XMVector3Cross(XMVectorSubtract(p2, p1), XMVectorSubtract(p1, p0)));
+								const XMVECTOR nor = XMVector3Normalize(XMVector3TransformNormal(XMVector3Cross(XMVectorSubtract(p2, p1), XMVectorSubtract(p1, p0)), objectMat));
 
 								result.entity = entity;
 								XMStoreFloat3(&result.position, pos);

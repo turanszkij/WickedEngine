@@ -156,6 +156,9 @@ struct Surface
 	uint layerMask;			// the engine-side layer mask
 	float3 facenormal;		// surface normal without normal map
 	uint flags;
+	uint uid_validate;
+	RayCone raycone;
+	float hit_depth;
 
 	// These will be computed when calling Update():
 	float roughnessBRDF;	// roughness input for BRDF functions
@@ -173,6 +176,9 @@ struct Surface
 
 	inline void init()
 	{
+		P = 0;
+		V = 0;
+		N = 0;
 		albedo = 1;
 		f0 = 0;
 		roughness = 1;
@@ -198,6 +204,10 @@ struct Surface
 		clearcoat.factor = 0;
 		clearcoat.roughness = 0;
 		clearcoat.N = 0;
+
+		uid_validate = 0;
+		raycone = (RayCone)0;
+		hit_depth = 0;
 	}
 
 	inline void create(
@@ -290,77 +300,109 @@ struct Surface
 
 
 	ShaderMeshInstance inst;
-	ShaderMesh mesh;
-	ShaderMeshSubset subset; 
+	ShaderGeometry geometry;
 	ShaderMaterial material;
 	float2 bary;
+	uint i0;
+	uint i1;
+	uint i2;
+	uint4 data0;
+	uint4 data1;
+	uint4 data2;
 	float3 pre;
 
-	bool load(in PrimitiveID prim, in float2 barycentrics, in uint uid = 0)
+	bool preload_internal(PrimitiveID prim)
 	{
 		inst = load_instance(prim.instanceIndex);
-		if (uid != 0 && inst.uid != uid)
+		if (uid_validate != 0 && inst.uid != uid_validate)
 			return false;
 
-		mesh = load_mesh(inst.meshIndex);
-		if (mesh.vb_pos_nor_wind < 0)
+		geometry = load_geometry(inst.geometryOffset + prim.subsetIndex);
+		if (geometry.vb_pos_nor_wind < 0)
 			return false;
 
-		const bool is_hairparticle = mesh.flags & SHADERMESH_FLAG_HAIRPARTICLE;
-		const bool is_emittedparticle = mesh.flags & SHADERMESH_FLAG_EMITTEDPARTICLE;
+		const uint startIndex = prim.primitiveIndex * 3 + geometry.indexOffset;
+		Buffer<uint> indexBuffer = bindless_ib[NonUniformResourceIndex(geometry.ib)];
+		i0 = indexBuffer[startIndex + 0];
+		i1 = indexBuffer[startIndex + 1];
+		i2 = indexBuffer[startIndex + 2];
+
+		ByteAddressBuffer buf = bindless_buffers[NonUniformResourceIndex(geometry.vb_pos_nor_wind)];
+		data0 = buf.Load4(i0 * sizeof(uint4));
+		data1 = buf.Load4(i1 * sizeof(uint4));
+		data2 = buf.Load4(i2 * sizeof(uint4));
+
+		return true;
+	}
+	void load_internal()
+	{
+		material = load_material(geometry.materialIndex);
+
+		const bool is_hairparticle = geometry.flags & SHADERMESH_FLAG_HAIRPARTICLE;
+		const bool is_emittedparticle = geometry.flags & SHADERMESH_FLAG_EMITTEDPARTICLE;
 		const bool simple_lighting = is_hairparticle || is_emittedparticle;
 
-		subset = load_subset(mesh, prim.subsetIndex);
-		material = load_material(subset.materialIndex);
-		bary = barycentrics;
+		float u = bary.x;
+		float v = bary.y;
+		float w = 1 - u - v;
 
-		uint startIndex = prim.primitiveIndex * 3 + subset.indexOffset;
-		uint i0 = bindless_ib[NonUniformResourceIndex(mesh.ib)][startIndex + 0];
-		uint i1 = bindless_ib[NonUniformResourceIndex(mesh.ib)][startIndex + 1];
-		uint i2 = bindless_ib[NonUniformResourceIndex(mesh.ib)][startIndex + 2];
-
-		uint4 data0 = bindless_buffers[NonUniformResourceIndex(mesh.vb_pos_nor_wind)].Load4(i0 * 16);
-		uint4 data1 = bindless_buffers[NonUniformResourceIndex(mesh.vb_pos_nor_wind)].Load4(i1 * 16);
-		uint4 data2 = bindless_buffers[NonUniformResourceIndex(mesh.vb_pos_nor_wind)].Load4(i2 * 16);
-		float3 p0 = asfloat(data0.xyz);
-		float3 p1 = asfloat(data1.xyz);
-		float3 p2 = asfloat(data2.xyz);
 		float3 n0 = unpack_unitvector(data0.w);
 		float3 n1 = unpack_unitvector(data1.w);
 		float3 n2 = unpack_unitvector(data2.w);
-
-		float u = barycentrics.x;
-		float v = barycentrics.y;
-		float w = 1 - u - v;
-
-		P = mad(p0, w, mad(p1, u, p2 * v)); // p0 * w + p1 * u + p2 * v
-		P = mul(inst.transform.GetMatrix(), float4(P, 1)).xyz;
-		V = normalize(GetCamera().position - P);
-
-		float4 uv0 = 0, uv1 = 0, uv2 = 0;
-		[branch]
-		if (mesh.vb_uv0 >= 0)
+		N = mad(n0, w, mad(n1, u, n2 * v)); // n0 * w + n1 * u + n2 * v
+		N = mul((float3x3)inst.transformInverseTranspose.GetMatrix(), N);
+		N = normalize(N);
+		if ((flags & SURFACE_FLAG_BACKFACE) && !is_hairparticle && !is_emittedparticle)
 		{
-			uv0.xy = unpack_half2(bindless_buffers[NonUniformResourceIndex(mesh.vb_uv0)].Load(i0 * 4));
-			uv1.xy = unpack_half2(bindless_buffers[NonUniformResourceIndex(mesh.vb_uv0)].Load(i1 * 4));
-			uv2.xy = unpack_half2(bindless_buffers[NonUniformResourceIndex(mesh.vb_uv0)].Load(i2 * 4));
+			N = -N;
 		}
+		facenormal = N;
+
+#ifdef SURFACE_LOAD_MIPCONE
+		float3 p0 = asfloat(data0.xyz);
+		float3 p1 = asfloat(data1.xyz);
+		float3 p2 = asfloat(data2.xyz);
+		float3 P0 = mul(inst.transform.GetMatrix(), float4(p0, 1)).xyz;
+		float3 P1 = mul(inst.transform.GetMatrix(), float4(p1, 1)).xyz;
+		float3 P2 = mul(inst.transform.GetMatrix(), float4(p2, 1)).xyz;
+		const float triangle_constant = rcp(twice_triangle_area(P0, P1, P2));
+		float lod_constant0 = 0;
+		float lod_constant1 = 0;
+		const float3 ray_direction = V;
+		const float cone_width = raycone.width_at_t(hit_depth);
+		//const float3 surf_normal = facenormal;
+		const float3 surf_normal = normalize(cross(P2 - P1, P1 - P0)); // compute the facenormal, because particles could have fake facenormal which doesn't work well with mipcones!
+#endif // SURFACE_LOAD_MIPCONE
+
+		float4 uvsets = 0;
 		[branch]
-		if (mesh.vb_uv1 >= 0)
+		if (geometry.vb_uvs >= 0)
 		{
-			uv0.zw = unpack_half2(bindless_buffers[NonUniformResourceIndex(mesh.vb_uv1)].Load(i0 * 4));
-			uv1.zw = unpack_half2(bindless_buffers[NonUniformResourceIndex(mesh.vb_uv1)].Load(i1 * 4));
-			uv2.zw = unpack_half2(bindless_buffers[NonUniformResourceIndex(mesh.vb_uv1)].Load(i2 * 4));
+			ByteAddressBuffer buf = bindless_buffers[NonUniformResourceIndex(geometry.vb_uvs)];
+			const float4 uv0 = unpack_half4(buf.Load2(i0 * sizeof(uint2)));
+			const float4 uv1 = unpack_half4(buf.Load2(i1 * sizeof(uint2)));
+			const float4 uv2 = unpack_half4(buf.Load2(i2 * sizeof(uint2)));
+			uvsets = mad(uv0, w, mad(uv1, u, uv2 * v)); // uv0 * w + uv1 * u + uv2 * v
+			uvsets.xy = mad(uvsets.xy, material.texMulAdd.xy, material.texMulAdd.zw);
+
+#ifdef SURFACE_LOAD_MIPCONE
+			lod_constant0 = 0.5 * log2(twice_uv_area(uv0.xy, uv1.xy, uv2.xy) * triangle_constant);
+			lod_constant1 = 0.5 * log2(twice_uv_area(uv0.zw, uv1.zw, uv2.zw) * triangle_constant);
+#endif // SURFACE_LOAD_MIPCONE
 		}
-		float4 uvsets = mad(uv0, w, mad(uv1, u, uv2 * v)); // uv0 * w + uv1 * u + uv2 * v
-		uvsets.xy = mad(uvsets.xy, material.texMulAdd.xy, material.texMulAdd.zw);
 
 		float4 baseColor = is_emittedparticle ? 1 : material.baseColor;
+		baseColor *= unpack_rgba(inst.color);
 		[branch]
 		if (material.texture_basecolormap_index >= 0)
 		{
 			const float2 UV_baseColorMap = material.uvset_baseColorMap == 0 ? uvsets.xy : uvsets.zw;
-			float4 baseColorMap = bindless_textures[NonUniformResourceIndex(material.texture_basecolormap_index)].SampleLevel(sampler_linear_wrap, UV_baseColorMap, 0);
+			Texture2D tex = bindless_textures[NonUniformResourceIndex(material.texture_basecolormap_index)];
+			float lod = 0;
+#ifdef SURFACE_LOAD_MIPCONE
+			lod = compute_texture_lod(tex, material.uvset_baseColorMap == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
+#endif // SURFACE_LOAD_MIPCONE
+			float4 baseColorMap = tex.SampleLevel(sampler_linear_wrap, UV_baseColorMap, lod);
 			if ((GetFrame().options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 			{
 				baseColorMap.rgb *= DEGAMMA(baseColorMap.rgb);
@@ -373,13 +415,12 @@ struct Surface
 		}
 
 		[branch]
-		if (mesh.vb_col >= 0 && material.IsUsingVertexColors())
+		if (geometry.vb_col >= 0 && material.IsUsingVertexColors())
 		{
-			float4 c0, c1, c2;
-			const uint stride_COL = 4;
-			c0 = unpack_rgba(bindless_buffers[NonUniformResourceIndex(mesh.vb_col)].Load(i0 * stride_COL));
-			c1 = unpack_rgba(bindless_buffers[NonUniformResourceIndex(mesh.vb_col)].Load(i1 * stride_COL));
-			c2 = unpack_rgba(bindless_buffers[NonUniformResourceIndex(mesh.vb_col)].Load(i2 * stride_COL));
+			ByteAddressBuffer buf = bindless_buffers[NonUniformResourceIndex(geometry.vb_col)];
+			const float4 c0 = unpack_rgba(buf.Load(i0 * sizeof(uint)));
+			const float4 c1 = unpack_rgba(buf.Load(i1 * sizeof(uint)));
+			const float4 c2 = unpack_rgba(buf.Load(i2 * sizeof(uint)));
 			float4 vertexColor = mad(c0, w, mad(c1, u, c2 * v)); // c0 * w + c1 * u + c2 * v
 			baseColor *= vertexColor;
 		}
@@ -389,7 +430,12 @@ struct Surface
 		if (material.texture_surfacemap_index >= 0 && !simple_lighting)
 		{
 			const float2 UV_surfaceMap = material.uvset_surfaceMap == 0 ? uvsets.xy : uvsets.zw;
-			surfaceMap = bindless_textures[NonUniformResourceIndex(material.texture_surfacemap_index)].SampleLevel(sampler_linear_wrap, UV_surfaceMap, 0);
+			Texture2D tex = bindless_textures[NonUniformResourceIndex(material.texture_surfacemap_index)];
+			float lod = 0;
+#ifdef SURFACE_LOAD_MIPCONE
+			lod = compute_texture_lod(tex, material.uvset_surfaceMap == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
+#endif // SURFACE_LOAD_MIPCONE
+			surfaceMap = tex.SampleLevel(sampler_linear_wrap, UV_surfaceMap, lod);
 		}
 		if (simple_lighting)
 		{
@@ -401,13 +447,18 @@ struct Surface
 		if (material.texture_specularmap_index >= 0 && !simple_lighting)
 		{
 			const float2 UV_specularMap = material.uvset_specularMap == 0 ? uvsets.xy : uvsets.zw;
-			specularMap = bindless_textures[NonUniformResourceIndex(material.texture_specularmap_index)].SampleLevel(sampler_linear_wrap, UV_specularMap, 0);
+			Texture2D tex = bindless_textures[NonUniformResourceIndex(material.texture_specularmap_index)];
+			float lod = 0;
+#ifdef SURFACE_LOAD_MIPCONE
+			lod = compute_texture_lod(tex, material.uvset_specularMap == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
+#endif // SURFACE_LOAD_MIPCONE
+			specularMap = tex.SampleLevel(sampler_linear_wrap, UV_specularMap, lod);
 			specularMap.rgb = DEGAMMA(specularMap.rgb);
 		}
 
 		create(material, baseColor, surfaceMap, specularMap);
 
-		emissiveColor = material.GetEmissive();
+		emissiveColor = material.GetEmissive() * Unpack_R11G11B10_FLOAT(inst.emissive);
 		if (is_emittedparticle)
 		{
 			emissiveColor *= baseColor.rgb * baseColor.a;
@@ -418,7 +469,12 @@ struct Surface
 			if (material.texture_emissivemap_index >= 0)
 			{
 				const float2 UV_emissiveMap = material.uvset_emissiveMap == 0 ? uvsets.xy : uvsets.zw;
-				float4 emissiveMap = bindless_textures[NonUniformResourceIndex(material.texture_emissivemap_index)].SampleLevel(sampler_linear_wrap, UV_emissiveMap, 0);
+				Texture2D tex = bindless_textures[NonUniformResourceIndex(material.texture_emissivemap_index)];
+				float lod = 0;
+#ifdef SURFACE_LOAD_MIPCONE
+				lod = compute_texture_lod(tex, material.uvset_emissiveMap == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
+#endif // SURFACE_LOAD_MIPCONE
+				float4 emissiveMap = tex.SampleLevel(sampler_linear_wrap, UV_emissiveMap, lod);
 				emissiveMap.rgb = DEGAMMA(emissiveMap.rgb);
 				emissiveColor *= emissiveMap.rgb * emissiveMap.a;
 			}
@@ -433,86 +489,118 @@ struct Surface
 		if (material.texture_transmissionmap_index >= 0)
 		{
 			const float2 UV_transmissionMap = material.uvset_transmissionMap == 0 ? uvsets.xy : uvsets.zw;
-			float transmissionMap = bindless_textures[NonUniformResourceIndex(material.texture_transmissionmap_index)].SampleLevel(sampler_linear_wrap, UV_transmissionMap, 0).r;
-			transmission *= transmissionMap;
+			Texture2D tex = bindless_textures[NonUniformResourceIndex(material.texture_transmissionmap_index)];
+			float lod = 0;
+#ifdef SURFACE_LOAD_MIPCONE
+			lod = compute_texture_lod(tex, material.uvset_transmissionMap == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
+#endif // SURFACE_LOAD_MIPCONE
+			transmission *= tex.SampleLevel(sampler_linear_wrap, UV_transmissionMap, lod).r;
 		}
 
 		[branch]
 		if (material.IsOcclusionEnabled_Secondary() && material.texture_occlusionmap_index >= 0)
 		{
 			const float2 UV_occlusionMap = material.uvset_occlusionMap == 0 ? uvsets.xy : uvsets.zw;
-			occlusion *= bindless_textures[NonUniformResourceIndex(material.texture_occlusionmap_index)].SampleLevel(sampler_linear_wrap, UV_occlusionMap, 0).r;
+			Texture2D tex = bindless_textures[NonUniformResourceIndex(material.texture_occlusionmap_index)];
+			float lod = 0;
+#ifdef SURFACE_LOAD_MIPCONE
+			lod = compute_texture_lod(tex, material.uvset_occlusionMap == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
+#endif // SURFACE_LOAD_MIPCONE
+			occlusion *= tex.SampleLevel(sampler_linear_wrap, UV_occlusionMap, lod).r;
 		}
-
-		N = mad(n0, w, mad(n1, u, n2 * v)); // n0 * w + n1 * u + n2 * v
-		N = mul((float3x3)inst.transformInverseTranspose.GetMatrix(), N);
-		N = normalize(N);
-		if ((flags & SURFACE_FLAG_BACKFACE) && !is_hairparticle && !is_emittedparticle)
-		{
-			N = -N;
-		}
-		facenormal = N;
 
 		[branch]
-		if (mesh.vb_tan >= 0 && material.texture_normalmap_index >= 0 && material.normalMapStrength > 0)
+		if (geometry.vb_tan >= 0 && material.texture_normalmap_index >= 0 && material.normalMapStrength > 0)
 		{
-			float4 t0, t1, t2;
-			const uint stride_TAN = 4;
-			t0 = unpack_utangent(bindless_buffers[NonUniformResourceIndex(mesh.vb_tan)].Load(i0 * stride_TAN));
-			t1 = unpack_utangent(bindless_buffers[NonUniformResourceIndex(mesh.vb_tan)].Load(i1 * stride_TAN));
-			t2 = unpack_utangent(bindless_buffers[NonUniformResourceIndex(mesh.vb_tan)].Load(i2 * stride_TAN));
+			ByteAddressBuffer buf = bindless_buffers[NonUniformResourceIndex(geometry.vb_tan)];
+			const float4 t0 = unpack_utangent(buf.Load(i0 * sizeof(uint)));
+			const float4 t1 = unpack_utangent(buf.Load(i1 * sizeof(uint)));
+			const float4 t2 = unpack_utangent(buf.Load(i2 * sizeof(uint)));
 			float4 T = mad(t0, w, mad(t1, u, t2 * v)); // t0 * w + t1 * u + t2 * v
 			T = T * 2 - 1;
 			T.xyz = mul((float3x3)inst.transformInverseTranspose.GetMatrix(), T.xyz);
 			T.xyz = normalize(T.xyz);
-			float3 B = normalize(cross(T.xyz, N) * T.w);
-			float3x3 TBN = float3x3(T.xyz, B, N);
+			const float3 B = normalize(cross(T.xyz, N) * T.w);
+			const float3x3 TBN = float3x3(T.xyz, B, N);
 
 			const float2 UV_normalMap = material.uvset_normalMap == 0 ? uvsets.xy : uvsets.zw;
-			float3 normalMap = float3(bindless_textures[NonUniformResourceIndex(material.texture_normalmap_index)].SampleLevel(sampler_linear_wrap, UV_normalMap, 0).rg, 1);
-			normalMap = normalMap * 2 - 1;
+			Texture2D tex = bindless_textures[NonUniformResourceIndex(material.texture_normalmap_index)];
+			float lod = 0;
+#ifdef SURFACE_LOAD_MIPCONE
+			lod = compute_texture_lod(tex, material.uvset_normalMap == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
+#endif // SURFACE_LOAD_MIPCONE
+			const float3 normalMap = float3(tex.SampleLevel(sampler_linear_wrap, UV_normalMap, lod).rg, 1) * 2 - 1;
 			N = normalize(lerp(N, mul(normalMap, TBN), material.normalMapStrength));
 		}
 
+		float3 pre0;
+		float3 pre1;
+		float3 pre2;
 		[branch]
-		if (mesh.vb_pre >= 0)
+		if (geometry.vb_pre >= 0)
 		{
-			p0 = asfloat(bindless_buffers[NonUniformResourceIndex(mesh.vb_pre)].Load3(i0 * 16));
-			p1 = asfloat(bindless_buffers[NonUniformResourceIndex(mesh.vb_pre)].Load3(i1 * 16));
-			p2 = asfloat(bindless_buffers[NonUniformResourceIndex(mesh.vb_pre)].Load3(i2 * 16));
+			ByteAddressBuffer buf = bindless_buffers[NonUniformResourceIndex(geometry.vb_pre)];
+			pre0 = asfloat(buf.Load3(i0 * sizeof(uint4)));
+			pre1 = asfloat(buf.Load3(i1 * sizeof(uint4)));
+			pre2 = asfloat(buf.Load3(i2 * sizeof(uint4)));
 		}
-		pre = mad(p0, w, mad(p1, u, p2 * v)); // p0 * w + p1 * u + p2 * v
+		else
+		{
+			pre0 = asfloat(data0.xyz);
+			pre1 = asfloat(data1.xyz);
+			pre2 = asfloat(data2.xyz);
+		}
+		pre = mad(pre0, w, mad(pre1, u, pre2 * v)); // pre0 * w + pre1 * u + pre2 * v
 		pre = mul(inst.transformPrev.GetMatrix(), float4(pre, 1)).xyz;
 
 		sss = material.subsurfaceScattering;
 		sss_inv = material.subsurfaceScattering_inv;
 
 		update();
-
-		return true;
 	}
 
-	bool load(in PrimitiveID prim, in float3 P, in uint uid = 0)
+	bool load(in PrimitiveID prim, in float2 barycentrics)
 	{
-		inst = load_instance(prim.instanceIndex);
-		if (uid != 0 && inst.uid != uid)
+		if (!preload_internal(prim))
 			return false;
 
-		mesh = load_mesh(inst.meshIndex);
-		if (mesh.vb_pos_nor_wind < 0)
+		bary = barycentrics;
+		float u = bary.x;
+		float v = bary.y;
+		float w = 1 - u - v;
+
+		float3 p0 = asfloat(data0.xyz);
+		float3 p1 = asfloat(data1.xyz);
+		float3 p2 = asfloat(data2.xyz);
+		P = mad(p0, w, mad(p1, u, p2 * v)); // p0 * w + p1 * u + p2 * v
+		P = mul(inst.transform.GetMatrix(), float4(P, 1)).xyz;
+
+		load_internal();
+		return true;
+	}
+	bool load(in PrimitiveID prim, in float3 worldPosition)
+	{
+		if (!preload_internal(prim))
 			return false;
 
-		subset = load_subset(mesh, prim.subsetIndex);
-		material = load_material(subset.materialIndex);
+		float3 p0 = asfloat(data0.xyz);
+		float3 p1 = asfloat(data1.xyz);
+		float3 p2 = asfloat(data2.xyz);
+		float3 P0 = mul(inst.transform.GetMatrix(), float4(p0, 1)).xyz;
+		float3 P1 = mul(inst.transform.GetMatrix(), float4(p1, 1)).xyz;
+		float3 P2 = mul(inst.transform.GetMatrix(), float4(p2, 1)).xyz;
+		P = worldPosition;
 
-		uint startIndex = prim.primitiveIndex * 3 + subset.indexOffset;
-		uint i0 = bindless_ib[NonUniformResourceIndex(mesh.ib)][startIndex + 0];
-		uint i1 = bindless_ib[NonUniformResourceIndex(mesh.ib)][startIndex + 1];
-		uint i2 = bindless_ib[NonUniformResourceIndex(mesh.ib)][startIndex + 2];
+		bary = compute_barycentrics(P, P0, P1, P2);
 
-		uint4 data0 = bindless_buffers[NonUniformResourceIndex(mesh.vb_pos_nor_wind)].Load4(i0 * 16);
-		uint4 data1 = bindless_buffers[NonUniformResourceIndex(mesh.vb_pos_nor_wind)].Load4(i1 * 16);
-		uint4 data2 = bindless_buffers[NonUniformResourceIndex(mesh.vb_pos_nor_wind)].Load4(i2 * 16);
+		load_internal();
+		return true;
+	}
+	bool load(in PrimitiveID prim, in float3 rayOrigin, in float3 rayDirection)
+	{
+		if (!preload_internal(prim))
+			return false;
+
 		float3 p0 = asfloat(data0.xyz);
 		float3 p1 = asfloat(data1.xyz);
 		float3 p2 = asfloat(data2.xyz);
@@ -520,9 +608,12 @@ struct Surface
 		float3 P1 = mul(inst.transform.GetMatrix(), float4(p1, 1)).xyz;
 		float3 P2 = mul(inst.transform.GetMatrix(), float4(p2, 1)).xyz;
 
-		float2 barycentrics = compute_barycentrics(P, P0, P1, P2);
+		bary = compute_barycentrics(rayOrigin, rayDirection, P0, P1, P2, hit_depth);
+		P = rayOrigin + rayDirection * hit_depth;
+		V = rayDirection;
 
-		return load(prim, barycentrics, uid);
+		load_internal();
+		return true;
 	}
 };
 

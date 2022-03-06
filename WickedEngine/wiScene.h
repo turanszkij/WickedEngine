@@ -367,8 +367,8 @@ namespace wi::scene
 
 		// Non-serialized attributes:
 		wi::primitive::AABB aabb;
-		wi::graphics::GPUBuffer generalBuffer;
-		wi::graphics::GPUBuffer streamoutBuffer;
+		wi::graphics::GPUBuffer generalBuffer; // index buffer + all static vertex buffers
+		wi::graphics::GPUBuffer streamoutBuffer; // all dynamic vertex buffers
 		struct BufferView
 		{
 			uint64_t offset = ~0ull;
@@ -386,16 +386,15 @@ namespace wi::scene
 		BufferView ib;
 		BufferView vb_pos_nor_wind;
 		BufferView vb_tan;
-		BufferView vb_uv0;
-		BufferView vb_uv1;
+		BufferView vb_uvs;
 		BufferView vb_atl;
 		BufferView vb_col;
 		BufferView vb_bon;
-		BufferView vb_pre;
 		BufferView so_pos_nor_wind;
 		BufferView so_tan;
-		BufferView subset_view;
+		BufferView so_pre;
 		wi::vector<uint8_t> vertex_subsets;
+		uint32_t geometryOffset = 0;
 
 		wi::graphics::RaytracingAccelerationStructure BLAS;
 		enum BLAS_STATE
@@ -412,7 +411,6 @@ namespace wi::scene
 		uint32_t terrain_material3_index = ~0u;
 
 		mutable bool dirty_morph = false;
-		mutable bool dirty_subsets = true;
 
 		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
 		inline void SetDoubleSided(bool value) { if (value) { _flags |= DOUBLE_SIDED; } else { _flags &= ~DOUBLE_SIDED; } }
@@ -432,7 +430,6 @@ namespace wi::scene
 		// Recreates GPU resources for index/vertex buffers
 		void CreateRenderData();
 		void CreateStreamoutRenderData();
-		void WriteShaderMesh(ShaderMesh* dest) const;
 
 		enum COMPUTE_NORMALS
 		{
@@ -515,6 +512,11 @@ namespace wi::scene
 			}
 
 			static const wi::graphics::Format FORMAT = wi::graphics::Format::R16G16_FLOAT;
+		};
+		struct Vertex_UVS
+		{
+			Vertex_TEX uv0;
+			Vertex_TEX uv1;
 		};
 		struct Vertex_BON
 		{
@@ -904,10 +906,12 @@ namespace wi::scene
 		XMFLOAT4 clipPlane = XMFLOAT4(0, 0, 0, 0); // default: no clip plane
 		wi::Canvas canvas;
 		uint32_t sample_count = 1;
+		int texture_primitiveID_index = -1;
 		int texture_depth_index = -1;
 		int texture_lineardepth_index = -1;
-		int texture_gbuffer0_index = -1;
-		int texture_gbuffer1_index = -1;
+		int texture_velocity_index = -1;
+		int texture_normal_index = -1;
+		int texture_roughness_index = -1;
 		int texture_reflection_index = -1;
 		int texture_refraction_index = -1;
 		int texture_waterriples_index = -1;
@@ -1309,15 +1313,16 @@ namespace wi::scene
 		size_t instanceArraySize = 0;
 		wi::graphics::GPUBuffer instanceBuffer;
 
-		// Meshes for bindless visiblity indexing:
+		// Geometries for bindless visiblity indexing:
 		//	contains in order:
-		//		1) meshes
-		//		2) hair particles
-		//		3) emitted particles
-		wi::graphics::GPUBuffer meshUploadBuffer[wi::graphics::GraphicsDevice::GetBufferCount()];
-		ShaderMesh* meshArrayMapped = nullptr;
-		size_t meshArraySize = 0;
-		wi::graphics::GPUBuffer meshBuffer;
+		//		1) meshes * mesh.subsetCount
+		//		2) hair particles * 1
+		//		3) emitted particles * 1
+		wi::graphics::GPUBuffer geometryUploadBuffer[wi::graphics::GraphicsDevice::GetBufferCount()];
+		ShaderGeometry* geometryArrayMapped = nullptr;
+		size_t geometryArraySize = 0;
+		wi::graphics::GPUBuffer geometryBuffer;
+		std::atomic<uint32_t> geometryAllocator{ 0 };
 
 		// Materials for bindless visibility indexing:
 		wi::graphics::GPUBuffer materialUploadBuffer[wi::graphics::GraphicsDevice::GetBufferCount()];

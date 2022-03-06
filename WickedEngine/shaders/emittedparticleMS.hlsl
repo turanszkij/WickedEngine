@@ -36,7 +36,7 @@ void main(
 	if (tig >= realGroupCount)
 		return;
 
-	ShaderMesh mesh = EmitterGetMesh();
+	ShaderGeometry geometry = EmitterGetGeometry();
 
 	uint instanceID = tid;
 	uint particleIndex = culledIndirectionBuffer2[culledIndirectionBuffer[instanceID]];
@@ -59,17 +59,16 @@ void main(
 	{
 		uint vertexID = particleIndex * 4 + i;
 
-		uint4 data = bindless_buffers[mesh.vb_pos_nor_wind].Load4(vertexID * 16);
+		uint4 data = bindless_buffers[geometry.vb_pos_nor_wind].Load4(vertexID * 16);
 		float3 position = asfloat(data.xyz);
 		float3 normal = normalize(unpack_unitvector(data.w));
-		float2 uv = unpack_half2(bindless_buffers[mesh.vb_uv0].Load(vertexID * 4));
-		float2 uv2 = unpack_half2(bindless_buffers[mesh.vb_uv1].Load(vertexID * 4));
-		uint color = bindless_buffers[mesh.vb_col].Load(vertexID * 4);
+		float4 uvsets = unpack_half4(bindless_buffers[geometry.vb_uvs].Load2(vertexID * 8));
+		uint color = bindless_buffers[geometry.vb_col].Load(vertexID * 4);
 
 		VertextoPixel Out;
 		Out.P = position;
 		Out.pos = mul(GetCamera().view_projection, float4(position, 1));
-		Out.tex = float4(uv, uv2);
+		Out.tex = uvsets;
 		Out.size = size;
 		Out.color = color;
 		Out.unrotated_uv = BILLBOARD[i].xy * float2(1, -1) * 0.5f + 0.5f;

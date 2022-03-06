@@ -673,16 +673,14 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 		ss += "GPU memory: " + std::to_string((mesh->generalBuffer.GetDesc().size + mesh->streamoutBuffer.GetDesc().size) / 1024.0f / 1024.0f) + " MB\n";
 		ss += "\nVertex buffers: ";
 		if (mesh->vb_pos_nor_wind.IsValid()) ss += "position; ";
-		if (mesh->vb_uv0.IsValid()) ss += "uvset_0; ";
-		if (mesh->vb_uv1.IsValid()) ss += "uvset_1; ";
+		if (mesh->vb_uvs.IsValid()) ss += "uvsets; ";
 		if (mesh->vb_atl.IsValid()) ss += "atlas; ";
 		if (mesh->vb_col.IsValid()) ss += "color; ";
-		if (mesh->vb_pre.IsValid()) ss += "previous_position; ";
+		if (mesh->so_pre.IsValid()) ss += "previous_position; ";
 		if (mesh->vb_bon.IsValid()) ss += "bone; ";
 		if (mesh->vb_tan.IsValid()) ss += "tangent; ";
 		if (mesh->so_pos_nor_wind.IsValid()) ss += "streamout_position; ";
 		if (mesh->so_tan.IsValid()) ss += "streamout_tangents; ";
-		if (mesh->subset_view.IsValid()) ss += "subset; ";
 		if (mesh->IsTerrain()) ss += "\n\nTerrain will use 4 blend materials and blend by vertex colors, the default one is always the subset material and uses RED vertex color channel mask, the other 3 are selectable below.";
 		meshInfoLabel.SetText(ss);
 

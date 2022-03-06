@@ -81,7 +81,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 
 	const float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
 
-	const float2 velocity = texture_gbuffer1.SampleLevel(sampler_point_clamp, uv, 0).xy;
+	const float2 velocity = texture_velocity.SampleLevel(sampler_point_clamp, uv, 0).xy;
 	const float2 prevUV = uv + velocity;
 	if (!is_saturated(prevUV))
 	{

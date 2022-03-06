@@ -32,9 +32,9 @@ inline uint GetSubsetIndex()
 {
 	return push.GetSubsetIndex();
 }
-inline ShaderMesh GetMesh()
+inline ShaderGeometry GetMesh()
 {
-	return load_mesh(push.GetMeshIndex());
+	return load_geometry(push.GetMeshIndex() + push.GetSubsetIndex());
 }
 inline ShaderMaterial GetMaterial()
 {
@@ -118,7 +118,7 @@ uint load_entitytile(uint tileIndex)
 //#define OBJECTSHADER_USE_EMISSIVE					- shader will use emissive
 //#define OBJECTSHADER_USE_RENDERTARGETARRAYINDEX	- shader will use dynamic render target slice selection
 //#define OBJECTSHADER_USE_NOCAMERA					- shader will not use camera space transform
-//#define OBJECTSHADER_USE_INSTANCEID				- shader will use instance ID
+//#define OBJECTSHADER_USE_INSTANCEINDEX				- shader will use instance ID
 
 
 #ifdef OBJECTSHADER_LAYOUT_SHADOW
@@ -133,7 +133,7 @@ uint load_entitytile(uint tileIndex)
 #ifdef OBJECTSHADER_LAYOUT_PREPASS
 #define OBJECTSHADER_USE_CLIPPLANE
 #define OBJECTSHADER_USE_WIND
-#define OBJECTSHADER_USE_INSTANCEID
+#define OBJECTSHADER_USE_INSTANCEINDEX
 #endif // OBJECTSHADER_LAYOUT_SHADOW
 
 #ifdef OBJECTSHADER_LAYOUT_PREPASS_TEX
@@ -141,7 +141,7 @@ uint load_entitytile(uint tileIndex)
 #define OBJECTSHADER_USE_WIND
 #define OBJECTSHADER_USE_UVSETS
 #define OBJECTSHADER_USE_DITHERING
-#define OBJECTSHADER_USE_INSTANCEID
+#define OBJECTSHADER_USE_INSTANCEINDEX
 #endif // OBJECTSHADER_LAYOUT_SHADOW_TEX
 
 #ifdef OBJECTSHADER_LAYOUT_COMMON
@@ -154,7 +154,7 @@ uint load_entitytile(uint tileIndex)
 #define OBJECTSHADER_USE_TANGENT
 #define OBJECTSHADER_USE_POSITION3D
 #define OBJECTSHADER_USE_EMISSIVE
-#define OBJECTSHADER_USE_INSTANCEID
+#define OBJECTSHADER_USE_INSTANCEINDEX
 #endif // OBJECTSHADER_LAYOUT_COMMON
 
 struct VertexInput
@@ -164,11 +164,11 @@ struct VertexInput
 
 	float4 GetPosition()
 	{
-		return float4(bindless_buffers[GetMesh().vb_pos_nor_wind].Load<float3>(vertexID * 16), 1);
+		return float4(bindless_buffers[GetMesh().vb_pos_nor_wind].Load<float3>(vertexID * sizeof(uint4)), 1);
 	}
 	float3 GetNormal()
 	{
-		const uint normal_wind = bindless_buffers[GetMesh().vb_pos_nor_wind].Load<uint4>(vertexID * 16).w;
+		const uint normal_wind = bindless_buffers[GetMesh().vb_pos_nor_wind].Load<uint4>(vertexID * sizeof(uint4)).w;
 		float3 normal;
 		normal.x = (float)((normal_wind >> 0u) & 0xFF) / 255.0 * 2 - 1;
 		normal.y = (float)((normal_wind >> 8u) & 0xFF) / 255.0 * 2 - 1;
@@ -177,29 +177,22 @@ struct VertexInput
 	}
 	float GetWindWeight()
 	{
-		const uint normal_wind = bindless_buffers[GetMesh().vb_pos_nor_wind].Load<uint4>(vertexID * 16).w;
+		const uint normal_wind = bindless_buffers[GetMesh().vb_pos_nor_wind].Load<uint4>(vertexID * sizeof(uint4)).w;
 		return ((normal_wind >> 24u) & 0xFF) / 255.0;
 	}
 
-	float2 GetUV0()
+	float4 GetUVSets()
 	{
 		[branch]
-		if (GetMesh().vb_uv0 < 0)
+		if (GetMesh().vb_uvs < 0)
 			return 0;
-		return unpack_half2(bindless_buffers[GetMesh().vb_uv0].Load<uint>(vertexID * 4));
-	}
-	float2 GetUV1()
-	{
-		[branch]
-		if (GetMesh().vb_uv1 < 0)
-			return 0;
-		return unpack_half2(bindless_buffers[GetMesh().vb_uv1].Load<uint>(vertexID * 4));
+		return unpack_half4(bindless_buffers[GetMesh().vb_uvs].Load2(vertexID * sizeof(uint2)));
 	}
 
 	ShaderMeshInstancePointer GetInstancePointer()
 	{
 		if (push.instances >= 0)
-			return bindless_buffers[push.instances].Load<ShaderMeshInstancePointer>(push.instance_offset + instanceID * 8);
+			return bindless_buffers[push.instances].Load<ShaderMeshInstancePointer>(push.instance_offset + instanceID * sizeof(ShaderMeshInstancePointer));
 
 		ShaderMeshInstancePointer poi;
 		poi.init();
@@ -211,7 +204,7 @@ struct VertexInput
 		[branch]
 		if (GetMesh().vb_atl < 0)
 			return 0;
-		return unpack_half2(bindless_buffers[GetMesh().vb_atl].Load<uint>(vertexID * 4));
+		return unpack_half2(bindless_buffers[GetMesh().vb_atl].Load(vertexID * sizeof(uint)));
 	}
 
 	float4 GetVertexColor()
@@ -219,7 +212,7 @@ struct VertexInput
 		[branch]
 		if (GetMesh().vb_col < 0)
 			return 1;
-		return unpack_rgba(bindless_buffers[GetMesh().vb_col].Load<uint>(vertexID * 4));
+		return unpack_rgba(bindless_buffers[GetMesh().vb_col].Load(vertexID * sizeof(uint)));
 	}
 
 	float4 GetTangent()
@@ -227,13 +220,13 @@ struct VertexInput
 		[branch]
 		if (GetMesh().vb_tan < 0)
 			return 0;
-		return unpack_utangent(bindless_buffers[GetMesh().vb_tan].Load<uint>(vertexID * 4)) * 2 - 1;
+		return unpack_utangent(bindless_buffers[GetMesh().vb_tan].Load(vertexID * sizeof(uint))) * 2 - 1;
 	}
 
 	ShaderMeshInstance GetInstance()
 	{
 		if (push.instances >= 0)
-			return load_instance(GetInstancePointer().instanceID);
+			return load_instance(GetInstancePointer().instanceIndex);
 
 		ShaderMeshInstance inst;
 		inst.init();
@@ -269,7 +262,8 @@ struct VertexSurface
 		tangent = input.GetTangent();
 		tangent.xyz = normalize(mul((float3x3)input.GetInstance().transformInverseTranspose.GetMatrix(), tangent.xyz));
 
-		uvsets = float4(mad(input.GetUV0(), material.texMulAdd.xy, material.texMulAdd.zw), input.GetUV1());
+		uvsets = input.GetUVSets();
+		uvsets.xy = mad(uvsets.xy, material.texMulAdd.xy, material.texMulAdd.zw);
 
 		atlas = input.GetAtlasUV();
 
@@ -293,9 +287,9 @@ struct PixelInput
 {
 	precise float4 pos : SV_POSITION;
 
-#ifdef OBJECTSHADER_USE_INSTANCEID
-	uint instanceID : INSTANCEID;
-#endif // OBJECTSHADER_USE_INSTANCEID
+#ifdef OBJECTSHADER_USE_INSTANCEINDEX
+	uint instanceIndex : INSTANCEINDEX;
+#endif // OBJECTSHADER_USE_INSTANCEINDEX
 
 #ifdef OBJECTSHADER_USE_CLIPPLANE
 	float  clip : SV_ClipDistance0;
@@ -818,9 +812,10 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 	if (GetFrame().lightarray_count > 0)
 	{
 		uint4 shadow_mask_packed = 0;
+		const bool shadow_mask_enabled = GetFrame().options & OPTION_BIT_SHADOW_MASK && GetCamera().texture_rtshadow_index >= 0;
 #ifdef SHADOW_MASK_ENABLED
 		[branch]
-		if (GetFrame().options & OPTION_BIT_SHADOW_MASK && GetCamera().texture_rtshadow_index >= 0)
+		if (shadow_mask_enabled)
 		{
 			shadow_mask_packed = bindless_textures_uint4[GetCamera().texture_rtshadow_index][surface.pixel / 2];
 		}
@@ -863,7 +858,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 					float shadow_mask = 1;
 #ifdef SHADOW_MASK_ENABLED
 					[branch]
-					if (GetFrame().options & OPTION_BIT_SHADOW_MASK && light.IsCastingShadow())
+					if (shadow_mask_enabled && light.IsCastingShadow())
 					{
 						uint shadow_index = entity_index - GetFrame().lightarray_offset;
 						if (shadow_index < 16)
@@ -992,9 +987,9 @@ PixelInput main(VertexInput input)
 {
 	PixelInput Out;
 
-#ifdef OBJECTSHADER_USE_INSTANCEID
-	Out.instanceID = input.GetInstancePointer().instanceID;
-#endif // OBJECTSHADER_USE_INSTANCEID
+#ifdef OBJECTSHADER_USE_INSTANCEINDEX
+	Out.instanceIndex = input.GetInstancePointer().instanceIndex;
+#endif // OBJECTSHADER_USE_INSTANCEINDEX
 
 	VertexSurface surface;
 	surface.create(GetMaterial(), input);
@@ -1164,7 +1159,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #ifndef DISABLE_ALPHATEST
 	// Alpha test is only done for transparents
 	//	- Prepass will write alpha coverage mask
-	//	- Opaque will 
+	//	- Opaque will use [earlydepthstencil] and COMPARISON_EQUAL depth test on top of depth prepass
 	clip(color.a - GetMaterial().alphaTest);
 #endif // DISABLE_ALPHATEST
 #endif // TRANSPARENT
@@ -1669,7 +1664,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 
 
 #ifdef OBJECTSHADER_USE_ATLAS
-	LightMapping(load_instance(input.instanceID).lightmap, input.atl, lighting, surface);
+	LightMapping(load_instance(input.instanceIndex).lightmap, input.atl, lighting, surface);
 #endif // OBJECTSHADER_USE_ATLAS
 
 
@@ -1754,7 +1749,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 
 	PrimitiveID prim;
 	prim.primitiveIndex = primitiveID;
-	prim.instanceIndex = input.instanceID;
+	prim.instanceIndex = input.instanceIndex;
 	prim.subsetIndex = GetSubsetIndex();
 	return prim.pack();
 #else

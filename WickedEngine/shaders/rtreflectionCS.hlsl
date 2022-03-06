@@ -1,6 +1,7 @@
 #define RTAPI
 #define DISABLE_SOFT_SHADOWMAP
 #define DISABLE_TRANSPARENT_SHADOWMAP
+#define SURFACE_LOAD_MIPCONE
 
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
@@ -10,10 +11,6 @@
 #include "ShaderInterop_DDGI.h"
 
 PUSHCONSTANT(postprocess, PostProcess);
-
-Texture2D<float3> texture_surface_normal : register(t0);
-Texture2D<float> texture_surface_roughness : register(t1);
-Texture2D<float3> texture_surface_environment : register(t2);
 
 RWTexture2D<float4> output_rayIndirectSpecular : register(u0);
 RWTexture2D<float4> output_rayDirectionPDF : register(u1);
@@ -37,19 +34,18 @@ void main(uint2 DTid : SV_DispatchThreadID)
 	float2 jitterUV = (screenJitter + DTid.xy + 0.5f) * postprocess.resolution_rcp;
 
 	const float depth = texture_depth.SampleLevel(sampler_linear_clamp, jitterUV, 0);
-	const float roughness = texture_surface_roughness[jitterPixel];
+	const float lineardepth = texture_lineardepth.SampleLevel(sampler_linear_clamp, jitterUV, 0);
+	const float roughness = texture_roughness[jitterPixel];
 
 	if (!NeedReflection(roughness, depth))
 	{
-		float3 environmentReflection = texture_surface_environment[DTid.xy * downsampleFactor];
-
-		output_rayIndirectSpecular[DTid.xy] = float4(environmentReflection, 1);
-		output_rayDirectionPDF[DTid.xy] = 0.0;
+		output_rayIndirectSpecular[DTid.xy] = 0;
+		output_rayDirectionPDF[DTid.xy] = 0;
 		output_rayLengths[DTid.xy] = FLT_MAX;
 		return;
 	}
 
-	const float3 N = texture_surface_normal[jitterPixel];
+	const float3 N = decode_oct(texture_normal[jitterPixel]);
 	const float3 P = reconstruct_position(jitterUV, depth);
 	const float3 V = normalize(GetCamera().position - P);
 
@@ -95,6 +91,9 @@ void main(uint2 DTid : SV_DispatchThreadID)
 	RayPayload payload;
 	payload.data = 0;
 
+	const float minraycone = 0.05;
+	RayCone raycone = RayCone::from_spread_angle(pixel_cone_spread_angle_from_image_height(postprocess.resolution.y));
+	raycone = raycone.propagate(sqr(max(minraycone, roughness)), lineardepth * GetCamera().z_far);
 
 #ifdef RTAPI
 	RayQuery<
@@ -115,6 +114,9 @@ void main(uint2 DTid : SV_DispatchThreadID)
 
 		Surface surface;
 		surface.init();
+		surface.V = -ray.Direction;
+		surface.raycone = raycone;
+		surface.hit_depth = q.CandidateTriangleRayT();
 		if (!surface.load(prim, q.CandidateTriangleBarycentrics()))
 			break;
 
@@ -124,7 +126,6 @@ void main(uint2 DTid : SV_DispatchThreadID)
 		if (surface.opacity - alphatest >= 0)
 		{
 			q.CommitNonOpaqueTriangleHit();
-			break;
 		}
 	}
 	if (q.CommittedStatus() != COMMITTED_TRIANGLE_HIT)
@@ -152,6 +153,9 @@ void main(uint2 DTid : SV_DispatchThreadID)
 		{
 			surface.flags |= SURFACE_FLAG_BACKFACE;
 		}
+		surface.V = -ray.Direction;
+		surface.raycone = raycone;
+		surface.hit_depth = q.CommittedRayT();
 		if (!surface.load(prim, q.CommittedTriangleBarycentrics()))
 			return;
 

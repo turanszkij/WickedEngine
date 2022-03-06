@@ -16,11 +16,10 @@ RWStructuredBuffer<uint> deadBuffer : register(u3);
 RWByteAddressBuffer counterBuffer : register(u4);
 RWStructuredBuffer<float> distanceBuffer : register(u6);
 RWByteAddressBuffer vertexBuffer_POS : register(u7);
-RWByteAddressBuffer vertexBuffer_TEX : register(u8);
-RWByteAddressBuffer vertexBuffer_TEX2 : register(u9);
-RWByteAddressBuffer vertexBuffer_COL : register(u10);
-RWStructuredBuffer<uint> culledIndirectionBuffer : register(u11);
-RWStructuredBuffer<uint> culledIndirectionBuffer2 : register(u12);
+RWByteAddressBuffer vertexBuffer_UVS : register(u8);
+RWByteAddressBuffer vertexBuffer_COL : register(u9);
+RWStructuredBuffer<uint> culledIndirectionBuffer : register(u10);
+RWStructuredBuffer<uint> culledIndirectionBuffer2 : register(u11);
 
 #define SPH_FLOOR_COLLISION
 #define SPH_BOX_COLLISION
@@ -230,8 +229,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint Gid : SV_GroupIndex)
 				data.xyz = asuint(particle.position + quadPos);
 				data.w = pack_unitvector(normalize(-GetCamera().forward));
 				vertexBuffer_POS.Store4((v0 + vertexID) * 16, data);
-				vertexBuffer_TEX.Store((v0 + vertexID) * 4, pack_half2(uv));
-				vertexBuffer_TEX2.Store((v0 + vertexID) * 4, pack_half2(uv2));
+				vertexBuffer_UVS.Store2((v0 + vertexID) * 8, pack_half4(float4(uv, uv2)));
 				vertexBuffer_COL.Store((v0 + vertexID) * 4, particleColorPacked);
 			}
 

@@ -4,8 +4,6 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-Texture2D<float> texture_surface_roughness : register(t0);
-
 RWTexture2D<float2> tile_minmax_roughness_horizontal : register(u0);
 
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
@@ -32,7 +30,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 			}
 			else
 			{
-				float roughness = texture_surface_roughness[pixel];
+				float roughness = texture_roughness[pixel];
 				maxRoughness = max(maxRoughness, roughness);
 				minRoughness = min(minRoughness, roughness);
 			}

@@ -1,5 +1,6 @@
 #define RAY_BACKFACE_CULLING
 #define RAYTRACE_STACK_SHARED
+#define SURFACE_LOAD_MIPCONE
 #include "globals.hlsli"
 #include "raytracingHF.hlsli"
 #include "lightingHF.hlsli"
@@ -41,6 +42,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	ray.Origin = ray.Origin + coc;
 	ray.Direction = focal_point - ray.Origin; // will be normalized before tracing!
 
+	RayCone raycone = pixel_ray_cone_from_image_height(xTraceResolution.y);
+
 	uint bounces = xTraceUserData.x;
 	const uint bouncelimit = 16;
 	for (uint bounce = 0; ((bounce < min(bounces, bouncelimit)) && any(energy)); ++bounce)
@@ -69,6 +72,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 			Surface surface;
 			surface.init();
+			surface.V = ray.Direction;
+			surface.raycone = raycone;
+			surface.hit_depth = q.CandidateTriangleRayT();
 			if (!surface.load(prim, q.CandidateTriangleBarycentrics()))
 				break;
 
@@ -106,6 +112,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 		Surface surface;
 		surface.init();
+		surface.V = -ray.Direction;
+		surface.raycone = raycone;
 
 #ifdef RTAPI
 		// ray origin updated for next bounce:
@@ -121,6 +129,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			surface.flags |= SURFACE_FLAG_BACKFACE;
 		}
 
+		surface.hit_depth = q.CommittedRayT();
 		if (!surface.load(prim, q.CommittedTriangleBarycentrics()))
 			return;
 
@@ -133,6 +142,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			surface.flags |= SURFACE_FLAG_BACKFACE;
 		}
 
+		surface.hit_depth = hit.distance;
 		if (!surface.load(hit.primitiveID, hit.bary))
 			return;
 
@@ -141,6 +151,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		surface.P = ray.Origin;
 		surface.V = -ray.Direction;
 		surface.update();
+
+		raycone = raycone.propagate(surface.roughnessBRDF, surface.hit_depth);
 
 		result += max(0, energy * surface.emissiveColor);
 
@@ -272,6 +284,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 						Surface surface;
 						surface.init();
+						surface.hit_depth = q.CandidateTriangleRayT();
 						if (!surface.load(prim, q.CandidateTriangleBarycentrics()))
 							break;
 

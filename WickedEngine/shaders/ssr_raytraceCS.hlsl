@@ -6,17 +6,15 @@ PUSHCONSTANT(postprocess, PostProcess);
 
 //#define DEBUG_TILING
 
-Texture2D<float3> texture_surface_normal : register(t0);
-Texture2D<float> texture_surface_roughness : register(t1);
-Texture2D<float2> texture_depth_hierarchy : register(t2);
-Texture2D<float4> input : register(t3);
+Texture2D<float2> texture_depth_hierarchy : register(t0);
+Texture2D<float4> input : register(t1);
 
 #if defined(SSR_EARLYEXIT)
-StructuredBuffer<uint> tiles : register(t4);
+StructuredBuffer<uint> tiles : register(t2);
 #elif defined(SSR_CHEAP)
-StructuredBuffer<uint> tiles : register(t5);
+StructuredBuffer<uint> tiles : register(t3);
 #else
-StructuredBuffer<uint> tiles : register(t6);
+StructuredBuffer<uint> tiles : register(t4);
 #endif // SSR_EARLYEXIT
 
 RWTexture2D<float4> output_rayIndirectSpecular : register(u0);
@@ -250,7 +248,7 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 
 	// Due to HiZ tracing, the tracing and the pass components must match depth.
 	float depth = texture_depth_hierarchy[screenJitter + pixel].r;
-	float roughness = texture_surface_roughness[jitterPixel];
+	float roughness = texture_roughness[jitterPixel];
 
 	if (!NeedReflection(roughness, depth))
 	{
@@ -260,7 +258,7 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 		return;
 	}
 
-	float3 N = texture_surface_normal[jitterPixel];
+	float3 N = decode_oct(texture_normal[jitterPixel]);
 	float3 P = reconstruct_position(jitterUV, depth);
 	float3 V = normalize(GetCamera().position - P);
 
@@ -355,7 +353,7 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 
 #endif // SSR_CHEAP
 
-	float2 prevHitUV = texture_gbuffer1.SampleLevel(sampler_point_clamp, hit.xy, 0).xy + hit.xy;
+	float2 prevHitUV = texture_velocity.SampleLevel(sampler_point_clamp, hit.xy, 0).xy + hit.xy;
 
 	float hitDepth = texture_depth.SampleLevel(sampler_point_clamp, hit.xy, 0);
 	float confidence = validHit ? ValidateHit(hit, hitDepth, prevHitUV) : 0;

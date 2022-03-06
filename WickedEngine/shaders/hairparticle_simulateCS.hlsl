@@ -15,7 +15,7 @@ Buffer<float> meshVertexBuffer_length : register(t2);
 
 RWStructuredBuffer<PatchSimulationData> simulationBuffer : register(u0);
 RWByteAddressBuffer vertexBuffer_POS : register(u1);
-RWByteAddressBuffer vertexBuffer_TEX : register(u2);
+RWByteAddressBuffer vertexBuffer_UVS : register(u2);
 RWBuffer<uint> culledIndexBuffer : register(u3);
 RWByteAddressBuffer counterBuffer : register(u4);
 
@@ -211,7 +211,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			data.xyz = asuint(position);
 			data.w = pack_unitvector(normalize(normal + wind));
 			vertexBuffer_POS.Store4((v0 + vertexID) * 16, data);
-			vertexBuffer_TEX.Store((v0 + vertexID) * 4, pack_half2(uv));
+			vertexBuffer_UVS.Store2((v0 + vertexID) * 8, pack_half4(float4(uv, uv))); // a second uv set could be used here
 		}
 
 		// Frustum culling:

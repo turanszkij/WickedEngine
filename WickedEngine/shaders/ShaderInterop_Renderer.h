@@ -6,7 +6,7 @@
 struct ShaderScene
 {
 	int instancebuffer;
-	int meshbuffer;
+	int geometrybuffer;
 	int materialbuffer;
 	int envmaparray;
 
@@ -145,19 +145,21 @@ static const uint SHADERMESH_FLAG_DOUBLE_SIDED = 1 << 0;
 static const uint SHADERMESH_FLAG_HAIRPARTICLE = 1 << 1;
 static const uint SHADERMESH_FLAG_EMITTEDPARTICLE = 1 << 2;
 
-struct ShaderMesh
+// This is equivalent to a Mesh + MeshSubset
+//	But because these are always loaded toghether by shaders, they are unrolled into one to reduce individual buffer loads
+struct ShaderGeometry
 {
-	int ib;
 	int vb_pos_nor_wind;
+	int vb_uvs;
+	int ib;
+	uint indexOffset;
+
 	int vb_tan;
 	int vb_col;
-
-	int vb_uv0;
-	int vb_uv1;
 	int vb_atl;
 	int vb_pre;
 
-	int subsetbuffer;
+	uint materialIndex;
 	uint blendmaterial1;
 	uint blendmaterial2;
 	uint blendmaterial3;
@@ -170,36 +172,24 @@ struct ShaderMesh
 	void init()
 	{
 		ib = -1;
+		indexOffset = 0;
 		vb_pos_nor_wind = -1;
+		vb_uvs = -1;
+
 		vb_tan = -1;
 		vb_col = -1;
-
-		vb_uv0 = -1;
-		vb_uv1 = -1;
 		vb_atl = -1;
 		vb_pre = -1;
 
-		subsetbuffer = -1;
+		materialIndex = 0;
 		blendmaterial1 = 0;
 		blendmaterial2 = 0;
 		blendmaterial3 = 0;
 
 		aabb_min = float3(0, 0, 0);
-		aabb_max = float3(0, 0, 0);
-
 		flags = 0;
-	}
-};
-
-struct ShaderMeshSubset
-{
-	uint indexOffset;
-	uint materialIndex;
-
-	void init()
-	{
-		indexOffset = 0;
-		materialIndex = 0;
+		aabb_max = float3(0, 0, 0);
+		tessellation_factor = 0;
 	}
 };
 
@@ -240,11 +230,11 @@ struct ShaderMeshInstance
 	uint uid;
 	uint flags;
 	uint layerMask;
-	uint meshIndex;
+	uint geometryOffset;
 	uint color;
 	uint emissive;
 	int lightmap;
-	int padding0;
+	int padding;
 	ShaderTransform transform;
 	ShaderTransform transformInverseTranspose; // This correctly handles non uniform scaling for normals
 	ShaderTransform transformPrev;
@@ -254,10 +244,10 @@ struct ShaderMeshInstance
 		uid = 0;
 		flags = 0;
 		layerMask = 0;
-		meshIndex = ~0;
 		color = ~0u;
 		emissive = ~0u;
 		lightmap = -1;
+		geometryOffset = 0;
 		transform.init();
 		transformInverseTranspose.init();
 		transformPrev.init();
@@ -266,17 +256,17 @@ struct ShaderMeshInstance
 };
 struct ShaderMeshInstancePointer
 {
-	uint instanceID;
+	uint instanceIndex;
 	uint userdata;
 
 	void init()
 	{
-		instanceID = ~0;
+		instanceIndex = ~0;
 		userdata = 0;
 	}
-	void Create(uint _instanceID, uint frustum_index, float dither)
+	void Create(uint _instanceIndex, uint frustum_index, float dither)
 	{
-		instanceID = _instanceID;
+		instanceIndex = _instanceIndex;
 		userdata = 0;
 		userdata |= frustum_index & 0xF;
 		userdata |= (uint(dither * 255.0f) & 0xFF) << 4u;
@@ -335,14 +325,15 @@ struct PrimitiveID
 
 	uint2 pack()
 	{
-		// 32 bit primitiveID
-		// 24 bit instanceID
-		// 8  bit subsetID
-		return uint2(primitiveIndex, (instanceIndex & 0xFFFFFF) | ((subsetIndex & 0xFF) << 24u));
+		// 1 bit valid flag
+		// 31 bit primitiveIndex
+		// 24 bit instanceIndex
+		// 8  bit subsetIndex
+		return uint2((1u << 31u) | primitiveIndex, (instanceIndex & 0xFFFFFF) | ((subsetIndex & 0xFF) << 24u));
 	}
 	void unpack(uint2 value)
 	{
-		primitiveIndex = value.x;
+		primitiveIndex = value.x & (~0u >> 1u);
 		instanceIndex = value.y & 0xFFFFFF;
 		subsetIndex = (value.y >> 24u) & 0xFF;
 	}
@@ -660,25 +651,25 @@ struct CameraCB
 	uint3 entity_culling_tilecount;
 	uint sample_count;
 
+	int texture_primitiveID_index;
 	int texture_depth_index;
 	int texture_lineardepth_index;
-	int texture_gbuffer0_index;
-	int texture_gbuffer1_index;
+	int texture_velocity_index;
 
+	int texture_normal_index;
+	int texture_roughness_index;
 	int buffer_entitytiles_opaque_index;
 	int buffer_entitytiles_transparent_index;
+
 	int texture_reflection_index;
 	int texture_refraction_index;
-
 	int texture_waterriples_index;
 	int texture_ao_index;
+
 	int texture_ssr_index;
 	int texture_rtshadow_index;
-
 	int texture_surfelgi_index;
 	int texture_depth_index_prev;
-	int padding1;
-	int padding2;
 };
 
 
@@ -797,6 +788,20 @@ struct SkinningPushConstants
 
 	int so_pos_nor_wind;
 	int so_tan;
+};
+
+enum VisibilityResolveOptions
+{
+	VISIBILITY_RESOLVE_DEPTH = 1 << 0,
+	VISIBILITY_RESOLVE_LINEARDEPTH = 1 << 1,
+	VISIBILITY_RESOLVE_VELOCITY = 1 << 2,
+	VISIBILITY_RESOLVE_NORMAL = 1 << 3,
+	VISIBILITY_RESOLVE_ROUGHNESS = 1 << 4,
+	VISIBILITY_RESOLVE_PRIMITIVEID = 1 << 5,
+};
+struct VisibilityResolvePushConstants
+{
+	uint options;
 };
 
 

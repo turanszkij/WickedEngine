@@ -107,16 +107,10 @@ namespace wi
 			device->SetName(&vertexBuffer_POS, "EmittedParticleSystem::vertexBuffer_POS");
 
 			bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-			bd.stride = sizeof(MeshComponent::Vertex_TEX);
+			bd.stride = sizeof(MeshComponent::Vertex_UVS);
 			bd.size = bd.stride * 4 * MAX_PARTICLES;
-			device->CreateBuffer(&bd, nullptr, &vertexBuffer_TEX);
-			device->SetName(&vertexBuffer_TEX, "EmittedParticleSystem::vertexBuffer_TEX");
-
-			bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-			bd.stride = sizeof(MeshComponent::Vertex_TEX);
-			bd.size = bd.stride * 4 * MAX_PARTICLES;
-			device->CreateBuffer(&bd, nullptr, &vertexBuffer_TEX2);
-			device->SetName(&vertexBuffer_TEX2, "EmittedParticleSystem::vertexBuffer_TEX2");
+			device->CreateBuffer(&bd, nullptr, &vertexBuffer_UVS);
+			device->SetName(&vertexBuffer_UVS, "EmittedParticleSystem::vertexBuffer_UVS");
 
 			bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
 			bd.stride = sizeof(MeshComponent::Vertex_COL);
@@ -259,16 +253,6 @@ namespace wi
 			}
 		}
 
-		if (!subsetBuffer.IsValid())
-		{
-			GPUBufferDesc desc;
-			desc.stride = sizeof(ShaderMeshSubset);
-			desc.size = desc.stride;
-			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
-			desc.bind_flags = BindFlag::SHADER_RESOURCE;
-			device->CreateBuffer(&desc, nullptr, &subsetBuffer);
-		}
-
 		if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING) && primitiveBuffer.IsValid())
 		{
 			RaytracingAccelerationStructureDesc desc;
@@ -314,13 +298,11 @@ namespace wi
 		retVal += indirectBuffers.GetDesc().size;
 		retVal += constantBuffer.GetDesc().size;
 		retVal += vertexBuffer_POS.GetDesc().size;
-		retVal += vertexBuffer_TEX.GetDesc().size;
-		retVal += vertexBuffer_TEX2.GetDesc().size;
+		retVal += vertexBuffer_UVS.GetDesc().size;
 		retVal += vertexBuffer_COL.GetDesc().size;
 		retVal += primitiveBuffer.GetDesc().size;
 		retVal += culledIndirectionBuffer.GetDesc().size;
 		retVal += culledIndirectionBuffer2.GetDesc().size;
-		retVal += subsetBuffer.GetDesc().size;
 
 		return retVal;
 	}
@@ -365,7 +347,7 @@ namespace wi
 		counterBuffer = {}; // will be recreated
 	}
 
-	void EmittedParticleSystem::UpdateGPU(uint32_t instanceIndex, uint32_t materialIndex, const TransformComponent& transform, const MeshComponent* mesh, CommandList cmd) const
+	void EmittedParticleSystem::UpdateGPU(uint32_t instanceIndex, const TransformComponent& transform, const MeshComponent* mesh, CommandList cmd) const
 	{
 		if (!particleBuffer.IsValid())
 		{
@@ -407,12 +389,6 @@ namespace wi
 			cb.xEmitterLayerMask = layerMask;
 			cb.xEmitterInstanceIndex = instanceIndex;
 
-			ShaderMeshSubset subset;
-			subset.init();
-			subset.indexOffset = 0;
-			subset.materialIndex = materialIndex;
-			device->UpdateBuffer(&subsetBuffer, &subset, cmd);
-
 			cb.xEmitterOptions = 0;
 			if (IsSPHEnabled())
 			{
@@ -451,7 +427,6 @@ namespace wi
 			{
 				GPUBarrier barriers[] = {
 					GPUBarrier::Buffer(&constantBuffer, ResourceState::COPY_DST, ResourceState::CONSTANT_BUFFER),
-					GPUBarrier::Buffer(&subsetBuffer, ResourceState::COPY_DST, ResourceState::SHADER_RESOURCE),
 				};
 				device->Barrier(barriers, arraysize(barriers), cmd);
 			}
@@ -467,8 +442,7 @@ namespace wi
 				&indirectBuffers,
 				&distanceBuffer,
 				&vertexBuffer_POS,
-				&vertexBuffer_TEX,
-				&vertexBuffer_TEX2,
+				&vertexBuffer_UVS,
 				&vertexBuffer_COL,
 				&culledIndirectionBuffer,
 				&culledIndirectionBuffer2,
@@ -700,8 +674,7 @@ namespace wi
 				GPUBarrier::Buffer(&particleBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 				GPUBarrier::Buffer(&aliveList[1], ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 				GPUBarrier::Buffer(&vertexBuffer_POS, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-				GPUBarrier::Buffer(&vertexBuffer_TEX, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
-				GPUBarrier::Buffer(&vertexBuffer_TEX2, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+				GPUBarrier::Buffer(&vertexBuffer_UVS, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 				GPUBarrier::Buffer(&vertexBuffer_COL, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 				GPUBarrier::Buffer(&culledIndirectionBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
 				GPUBarrier::Buffer(&culledIndirectionBuffer2, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),

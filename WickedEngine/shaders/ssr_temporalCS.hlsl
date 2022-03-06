@@ -4,12 +4,11 @@
 
 PUSHCONSTANT(postprocess, PostProcess);
 
-Texture2D<float> texture_surface_roughness : register(t0);
-Texture2D<float4> texture_color_current : register(t1);
-Texture2D<float4> texture_color_history : register(t2);
-Texture2D<float> texture_variance_current : register(t3);
-Texture2D<float> texture_variance_history : register(t4);
-Texture2D<float> texture_reprojectionDepth : register(t5);
+Texture2D<float4> texture_color_current : register(t0);
+Texture2D<float4> texture_color_history : register(t1);
+Texture2D<float> texture_variance_current : register(t2);
+Texture2D<float> texture_variance_history : register(t3);
+Texture2D<float> texture_reprojectionDepth : register(t4);
 
 RWTexture2D<float4> output_color : register(u0);
 RWTexture2D<float> output_variance : register(u1);
@@ -145,7 +144,7 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint3 DTid : SV
 	}
 
 	const float depth = texture_depth[DTid.xy];
-	const float roughness = texture_surface_roughness[DTid.xy];
+	const float roughness = texture_roughness[DTid.xy];
 
 	if (!NeedReflection(roughness, depth))
 	{
@@ -180,7 +179,7 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint3 DTid : SV
 	// Secondary reprojection based on ray lengths:
 	//	https://www.ea.com/seed/news/seed-dd18-presentation-slides-raytracing (Slide 45)
 
-	float2 velocity = texture_gbuffer1[DTid.xy];
+	float2 velocity = texture_velocity[DTid.xy];
 	float reprojectionDepth = texture_reprojectionDepth[DTid.xy];
 
 	float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;

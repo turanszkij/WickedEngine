@@ -23,10 +23,10 @@ VSOut main(uint fakeIndex : SV_VERTEXID)
 	const uint vertexID = fakeIndex % 6;
 	const uint instanceID = fakeIndex / 6;
 
-	ShaderMeshInstancePointer poi = impostorBuffer.Load<ShaderMeshInstancePointer>(push.instanceOffset + instanceID * 8);
-	ShaderMeshInstance instance = load_instance(poi.instanceID);
-	ShaderMesh mesh = load_mesh(instance.meshIndex);
-	float3 extents = mesh.aabb_max - mesh.aabb_min;
+	ShaderMeshInstancePointer poi = impostorBuffer.Load<ShaderMeshInstancePointer>(push.instanceOffset + instanceID * sizeof(ShaderMeshInstancePointer));
+	ShaderMeshInstance instance = load_instance(poi.instanceIndex);
+	ShaderGeometry geometry = load_geometry(instance.geometryOffset);
+	float3 extents = geometry.aabb_max - geometry.aabb_min;
 	float radius = max(extents.x, max(extents.y, extents.z)) * 0.5;
 
 	float3 pos = BILLBOARD[vertexID];
@@ -61,7 +61,7 @@ VSOut main(uint fakeIndex : SV_VERTEXID)
 	Out.uv = uv;
 	Out.slice = slice;
 	Out.dither = poi.GetDither();
-	Out.instanceID = poi.instanceID;
+	Out.instanceID = poi.instanceIndex;
 
 	return Out;
 }

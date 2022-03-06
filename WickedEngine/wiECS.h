@@ -303,7 +303,7 @@ namespace wi::ecs
 			return nullptr;
 		}
 
-		// Retrieve component index by entity handle (if not exists, returns ~0 value)
+		// Retrieve component index by entity handle (if not exists, returns ~0ull value)
 		inline size_t GetIndex(Entity entity) const 
 		{
 			const auto it = lookup.find(entity);
@@ -311,7 +311,7 @@ namespace wi::ecs
 			{
 				return it->second;
 			}
-			return ~0;
+			return ~0ull;
 		}
 
 		// Retrieve the number of existing entries

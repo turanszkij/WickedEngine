@@ -67,7 +67,7 @@ float FFX_DNSR_Shadows_ReadHistory(float2 history_uv)
 }
 float2 FFX_DNSR_Shadows_ReadVelocity(uint2 did)
 {
-	return -texture_gbuffer1[did * 2].xy;
+	return -texture_velocity[did * 2].xy;
 }
 
 void FFX_DNSR_Shadows_WriteReprojectionResults(uint2 did, float2 value)

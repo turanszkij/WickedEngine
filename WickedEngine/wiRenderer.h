@@ -16,13 +16,6 @@
 
 namespace wi::renderer
 {
-	enum GBUFFER
-	{
-		GBUFFER_PRIMITIVEID,
-		GBUFFER_VELOCITY,
-		GBUFFER_COUNT
-	};
-
 	inline uint32_t CombineStencilrefs(wi::enums::STENCILREF engineStencilRef, uint8_t userStencilRef)
 	{
 		return (userStencilRef << 4) | static_cast<uint8_t>(engineStencilRef);
@@ -315,12 +308,19 @@ namespace wi::renderer
 		wi::graphics::CommandList cmd
 	);
 
+	struct VisibilityResolveOutputs
+	{
+		// You can request any of these extra outputs to be written by VisibilityResolve:
+		const wi::graphics::Texture* depthbuffer = nullptr; // depth buffer that matches with post projection
+		const wi::graphics::Texture* lineardepth = nullptr; // depth buffer in linear space in [0,1] range
+		const wi::graphics::Texture* velocity = nullptr; // recommended format: R16G16_FLOAT
+		const wi::graphics::Texture* normal = nullptr; // recommended format: R16G16_FLOAT
+		const wi::graphics::Texture* roughness = nullptr; // recommended format: R8_UNORM
+		const wi::graphics::Texture* primitiveID_resolved = nullptr; // resolved from MSAA texture_visibility input
+	};
 	void VisibilityResolve(
-		const wi::graphics::Texture& depthbuffer,
-		const wi::graphics::Texture& texture_primitiveID, // can be MSAA
-		const wi::graphics::Texture gbuffer[GBUFFER_COUNT],
-		const wi::graphics::Texture& depthbuffer_resolved,
-		const wi::graphics::Texture& lineardepth,
+		const wi::graphics::Texture& input_primitiveID, // can be MSAA
+		const VisibilityResolveOutputs& outputs,
 		wi::graphics::CommandList cmd
 	);
 
@@ -444,9 +444,6 @@ namespace wi::renderer
 	struct RTReflectionResources
 	{
 		mutable int frame = 0;
-		wi::graphics::Texture texture_surface_normal;
-		wi::graphics::Texture texture_surface_roughness;
-		wi::graphics::Texture texture_surface_environment;
 		wi::graphics::Texture texture_rayIndirectSpecular;
 		wi::graphics::Texture texture_rayDirectionPDF;
 		wi::graphics::Texture texture_rayLengths;
@@ -469,8 +466,6 @@ namespace wi::renderer
 	struct SSRResources
 	{
 		mutable int frame = 0;
-		wi::graphics::Texture texture_surface_normal;
-		wi::graphics::Texture texture_surface_roughness;
 		wi::graphics::Texture texture_tile_minmax_roughness_horizontal;
 		wi::graphics::Texture texture_tile_minmax_roughness;
 		wi::graphics::Texture texture_depth_hierarchy;

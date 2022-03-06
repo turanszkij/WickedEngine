@@ -65,7 +65,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 			}
 		}
 	}
-	const float2 velocity = texture_gbuffer1[DTid.xy + bestOffset].xy;
+	const float2 velocity = texture_velocity[DTid.xy + bestOffset].xy;
 
 #else
 
@@ -93,7 +93,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3
 			}
 		}
 	}
-	const float2 velocity = texture_gbuffer1[bestPixel].xy;
+	const float2 velocity = texture_velocity[bestPixel].xy;
 
 #endif // USE_LDS
 
