@@ -34,7 +34,7 @@ inline uint GetSubsetIndex()
 }
 inline ShaderGeometry GetMesh()
 {
-	return load_geometry(push.GetMeshIndex(), 0);
+	return load_geometry(push.GetMeshIndex() + push.GetSubsetIndex());
 }
 inline ShaderMaterial GetMaterial()
 {
@@ -118,7 +118,7 @@ uint load_entitytile(uint tileIndex)
 //#define OBJECTSHADER_USE_EMISSIVE					- shader will use emissive
 //#define OBJECTSHADER_USE_RENDERTARGETARRAYINDEX	- shader will use dynamic render target slice selection
 //#define OBJECTSHADER_USE_NOCAMERA					- shader will not use camera space transform
-//#define OBJECTSHADER_USE_INSTANCEID				- shader will use instance ID
+//#define OBJECTSHADER_USE_INSTANCEINDEX				- shader will use instance ID
 
 
 #ifdef OBJECTSHADER_LAYOUT_SHADOW
@@ -133,7 +133,7 @@ uint load_entitytile(uint tileIndex)
 #ifdef OBJECTSHADER_LAYOUT_PREPASS
 #define OBJECTSHADER_USE_CLIPPLANE
 #define OBJECTSHADER_USE_WIND
-#define OBJECTSHADER_USE_INSTANCEID
+#define OBJECTSHADER_USE_INSTANCEINDEX
 #endif // OBJECTSHADER_LAYOUT_SHADOW
 
 #ifdef OBJECTSHADER_LAYOUT_PREPASS_TEX
@@ -141,7 +141,7 @@ uint load_entitytile(uint tileIndex)
 #define OBJECTSHADER_USE_WIND
 #define OBJECTSHADER_USE_UVSETS
 #define OBJECTSHADER_USE_DITHERING
-#define OBJECTSHADER_USE_INSTANCEID
+#define OBJECTSHADER_USE_INSTANCEINDEX
 #endif // OBJECTSHADER_LAYOUT_SHADOW_TEX
 
 #ifdef OBJECTSHADER_LAYOUT_COMMON
@@ -154,7 +154,7 @@ uint load_entitytile(uint tileIndex)
 #define OBJECTSHADER_USE_TANGENT
 #define OBJECTSHADER_USE_POSITION3D
 #define OBJECTSHADER_USE_EMISSIVE
-#define OBJECTSHADER_USE_INSTANCEID
+#define OBJECTSHADER_USE_INSTANCEINDEX
 #endif // OBJECTSHADER_LAYOUT_COMMON
 
 struct VertexInput
@@ -192,7 +192,7 @@ struct VertexInput
 	ShaderMeshInstancePointer GetInstancePointer()
 	{
 		if (push.instances >= 0)
-			return bindless_buffers[push.instances].Load<ShaderMeshInstancePointer>(push.instance_offset + instanceID * 8);
+			return bindless_buffers[push.instances].Load<ShaderMeshInstancePointer>(push.instance_offset + instanceID * sizeof(ShaderMeshInstancePointer));
 
 		ShaderMeshInstancePointer poi;
 		poi.init();
@@ -226,7 +226,7 @@ struct VertexInput
 	ShaderMeshInstance GetInstance()
 	{
 		if (push.instances >= 0)
-			return load_instance(GetInstancePointer().instanceID);
+			return load_instance(GetInstancePointer().instanceIndex);
 
 		ShaderMeshInstance inst;
 		inst.init();
@@ -287,9 +287,9 @@ struct PixelInput
 {
 	precise float4 pos : SV_POSITION;
 
-#ifdef OBJECTSHADER_USE_INSTANCEID
-	uint instanceID : INSTANCEID;
-#endif // OBJECTSHADER_USE_INSTANCEID
+#ifdef OBJECTSHADER_USE_INSTANCEINDEX
+	uint instanceIndex : INSTANCEINDEX;
+#endif // OBJECTSHADER_USE_INSTANCEINDEX
 
 #ifdef OBJECTSHADER_USE_CLIPPLANE
 	float  clip : SV_ClipDistance0;
@@ -987,9 +987,9 @@ PixelInput main(VertexInput input)
 {
 	PixelInput Out;
 
-#ifdef OBJECTSHADER_USE_INSTANCEID
-	Out.instanceID = input.GetInstancePointer().instanceID;
-#endif // OBJECTSHADER_USE_INSTANCEID
+#ifdef OBJECTSHADER_USE_INSTANCEINDEX
+	Out.instanceIndex = input.GetInstancePointer().instanceIndex;
+#endif // OBJECTSHADER_USE_INSTANCEINDEX
 
 	VertexSurface surface;
 	surface.create(GetMaterial(), input);
@@ -1664,7 +1664,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 
 
 #ifdef OBJECTSHADER_USE_ATLAS
-	LightMapping(load_instance(input.instanceID).lightmap, input.atl, lighting, surface);
+	LightMapping(load_instance(input.instanceIndex).lightmap, input.atl, lighting, surface);
 #endif // OBJECTSHADER_USE_ATLAS
 
 
@@ -1749,7 +1749,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 
 	PrimitiveID prim;
 	prim.primitiveIndex = primitiveID;
-	prim.instanceIndex = input.instanceID;
+	prim.instanceIndex = input.instanceIndex;
 	prim.subsetIndex = GetSubsetIndex();
 	return prim.pack();
 #else

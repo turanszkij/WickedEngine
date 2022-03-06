@@ -9,7 +9,7 @@ ShaderMeshInstance EmitterGetInstance()
 }
 ShaderGeometry EmitterGetGeometry()
 {
-	return load_geometry(EmitterGetInstance().geometryOffset, 0);
+	return load_geometry(EmitterGetInstance().geometryOffset);
 }
 ShaderMaterial EmitterGetMaterial()
 {

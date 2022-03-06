@@ -1561,10 +1561,10 @@ namespace wi::scene
 		wi::jobsystem::context ctx;
 
 		// Scan mesh subset counts to allocate GPU geometry data:
-		geometryAllocator.store(0ull);
+		geometryAllocator.store(0u);
 		wi::jobsystem::Dispatch(ctx, (uint32_t)meshes.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
 			MeshComponent& mesh = meshes[args.jobIndex];
-			mesh.geometryAllocation = geometryAllocator.fetch_add(mesh.subsets.size());
+			mesh.geometryOffset = geometryAllocator.fetch_add((uint32_t)mesh.subsets.size());
 		});
 
 		wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
@@ -3062,7 +3062,7 @@ namespace wi::scene
 				geometry.flags |= SHADERMESH_FLAG_DOUBLE_SIDED;
 			}
 
-			size_t subsetIndex = 0;
+			uint32_t subsetIndex = 0;
 			for (auto& subset : mesh.subsets)
 			{
 				const MaterialComponent* material = materials.GetComponent(subset.materialID);
@@ -3104,7 +3104,7 @@ namespace wi::scene
 
 				geometry.indexOffset = subset.indexOffset;
 				geometry.materialIndex = subset.materialIndex;
-				std::memcpy(geometryArrayMapped + mesh.geometryAllocation + subsetIndex, &geometry, sizeof(geometry));
+				std::memcpy(geometryArrayMapped + mesh.geometryOffset + subsetIndex, &geometry, sizeof(geometry));
 				subsetIndex++;
 			}
 
@@ -3373,7 +3373,7 @@ namespace wi::scene
 					inst.layerMask = layerMask;
 					inst.color = wi::math::CompressColor(object.color);
 					inst.emissive = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(object.emissiveColor.x * object.emissiveColor.w, object.emissiveColor.y * object.emissiveColor.w, object.emissiveColor.z * object.emissiveColor.w));
-					inst.geometryOffset = (uint)mesh.geometryAllocation;
+					inst.geometryOffset = mesh.geometryOffset;
 
 					std::memcpy(instanceArrayMapped + args.jobIndex, &inst, sizeof(inst)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
 

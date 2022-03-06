@@ -24,7 +24,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	prim.subsetIndex = push.subsetIndex;
 
 	ShaderMeshInstance inst = load_instance(prim.instanceIndex);
-	ShaderGeometry geometry = load_geometry(inst.geometryOffset, prim.subsetIndex);
+	ShaderGeometry geometry = load_geometry(inst.geometryOffset + prim.subsetIndex);
 	ShaderMaterial material = load_material(geometry.materialIndex);
 
 	uint startIndex = prim.primitiveIndex * 3 + geometry.indexOffset;

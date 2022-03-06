@@ -394,7 +394,7 @@ namespace wi::scene
 		BufferView so_tan;
 		BufferView so_pre;
 		wi::vector<uint8_t> vertex_subsets;
-		size_t geometryAllocation = 0ull;
+		uint32_t geometryOffset = 0;
 
 		wi::graphics::RaytracingAccelerationStructure BLAS;
 		enum BLAS_STATE
@@ -1322,7 +1322,7 @@ namespace wi::scene
 		ShaderGeometry* geometryArrayMapped = nullptr;
 		size_t geometryArraySize = 0;
 		wi::graphics::GPUBuffer geometryBuffer;
-		std::atomic<size_t> geometryAllocator{ 0 };
+		std::atomic<uint32_t> geometryAllocator{ 0 };
 
 		// Materials for bindless visibility indexing:
 		wi::graphics::GPUBuffer materialUploadBuffer[wi::graphics::GraphicsDevice::GetBufferCount()];

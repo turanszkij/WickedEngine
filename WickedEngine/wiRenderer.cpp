@@ -2505,7 +2505,7 @@ void RenderMeshes(
 
 			ObjectPushConstants push;
 			push.init(
-				(uint)mesh.geometryAllocation,
+				mesh.geometryOffset,
 				(uint)subsetIndex,
 				subset.materialIndex,
 				instanceBufferDescriptorIndex,
@@ -5845,9 +5845,9 @@ void DrawDebugWorld(
 			const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
 			GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(ShaderMeshInstancePointer), cmd);
-			volatile ShaderMeshInstancePointer* buff = (volatile ShaderMeshInstancePointer*)mem.data;
-			buff->instanceID = (uint)scene.objects.GetIndex(x.objectEntity);
-			buff->userdata = 0;
+			ShaderMeshInstancePointer poi;
+			poi.init();
+			poi.instanceIndex = (uint)scene.objects.GetIndex(x.objectEntity);
 
 			device->BindIndexBuffer(&mesh.generalBuffer, mesh.GetIndexFormat(), mesh.ib.offset, cmd);
 
@@ -5860,7 +5860,7 @@ void DrawDebugWorld(
 
 			ObjectPushConstants push;
 			push.init(
-				(uint)mesh.geometryAllocation,
+				mesh.geometryOffset,
 				x.subset,
 				subset.materialIndex,
 				device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV),
@@ -6462,7 +6462,7 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 
 					ObjectPushConstants push;
 					push.init(
-						(uint)mesh.geometryAllocation,
+						mesh.geometryOffset,
 						(uint)subsetIndex,
 						subset.materialIndex,
 						-1, 0

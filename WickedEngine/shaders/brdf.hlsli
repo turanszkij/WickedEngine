@@ -317,7 +317,7 @@ struct Surface
 		if (uid_validate != 0 && inst.uid != uid_validate)
 			return false;
 
-		geometry = load_geometry(inst.geometryOffset, prim.subsetIndex);
+		geometry = load_geometry(inst.geometryOffset + prim.subsetIndex);
 		if (geometry.vb_pos_nor_wind < 0)
 			return false;
 

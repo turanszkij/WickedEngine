@@ -256,17 +256,17 @@ struct ShaderMeshInstance
 };
 struct ShaderMeshInstancePointer
 {
-	uint instanceID;
+	uint instanceIndex;
 	uint userdata;
 
 	void init()
 	{
-		instanceID = ~0;
+		instanceIndex = ~0;
 		userdata = 0;
 	}
-	void Create(uint _instanceID, uint frustum_index, float dither)
+	void Create(uint _instanceIndex, uint frustum_index, float dither)
 	{
-		instanceID = _instanceID;
+		instanceIndex = _instanceIndex;
 		userdata = 0;
 		userdata |= frustum_index & 0xF;
 		userdata |= (uint(dither * 255.0f) & 0xFF) << 4u;
