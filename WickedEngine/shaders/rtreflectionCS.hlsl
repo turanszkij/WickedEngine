@@ -80,8 +80,6 @@ void main(uint2 DTid : SV_DispatchThreadID)
 
 	const float3 R = L;
 
-	float seed = GetFrame().time;
-
 	RayDesc ray;
 	ray.TMin = 0.01;
 	ray.TMax = rtreflection_range;
@@ -95,7 +93,6 @@ void main(uint2 DTid : SV_DispatchThreadID)
 	RayCone raycone = RayCone::from_spread_angle(pixel_cone_spread_angle_from_image_height(postprocess.resolution.y));
 	raycone = raycone.propagate(sqr(max(minraycone, roughness)), lineardepth * GetCamera().z_far);
 
-#ifdef RTAPI
 	RayQuery<
 		RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES
 	> q;
@@ -129,11 +126,6 @@ void main(uint2 DTid : SV_DispatchThreadID)
 		}
 	}
 	if (q.CommittedStatus() != COMMITTED_TRIANGLE_HIT)
-#else
-	RayHit hit = TraceRay_Closest(ray, asuint(postprocess.params1.x), seed, uv, groupIndex);
-
-	if (hit.distance >= FLT_MAX - 1)
-#endif // RTAPI
 	{
 		// miss:
 		payload.data.xyz += GetDynamicSkyColor(q.WorldRayDirection());

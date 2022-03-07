@@ -28,7 +28,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	// Generate patch:
 
 	// random triangle on emitter surface:
-	//	(Note that the usual rand() function is not used because that introduces unnatural clustering with high triangle count)
 	uint tri = (uint)((xHairBaseMeshIndexCount / 3) * hash1(DTid.x));
 
 	// load indices of triangle from index buffer
@@ -48,10 +47,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	float length2 = meshVertexBuffer_length[i2];
 
 	// random barycentric coords:
-	float2 uv = hammersley2d(DTid.x, xHairNumDispatchGroups * THREADCOUNT_SIMULATEHAIR);
-	float seed = xHairRandomSeed;
-	float f = rand(seed, uv);
-	float g = rand(seed, uv);
+	RNG rng;
+	rng.init(uint2(xHairRandomSeed, DTid.x), 0);
+	float f = rng.next_float();
+	float g = rng.next_float();
 	[flatten]
 	if (f + g > 1)
 	{
@@ -62,7 +61,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	// compute final surface position on triangle from barycentric coords:
 	float3 position = pos_nor0.xyz + f * (pos_nor1.xyz - pos_nor0.xyz) + g * (pos_nor2.xyz - pos_nor0.xyz);
 	float3 target = normalize(nor0 + f * (nor1 - nor0) + g * (nor2 - nor0));
-	float3 tangent = normalize(mul(float3(hemispherepoint_cos(rand(seed, uv), rand(seed, uv)).xy, 0), get_tangentspace(target)));
+	float3 tangent = normalize(mul(float3(hemispherepoint_cos(rng.next_float(), rng.next_float()).xy, 0), get_tangentspace(target)));
 	float3 binormal = cross(target, tangent);
 	float strand_length = length0 + f * (length1 - length0) + g * (length2 - length0);
 
@@ -70,13 +69,13 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	tangent_random |= (uint)((uint)(tangent.x * 127.5f + 127.5f) << 0);
 	tangent_random |= (uint)((uint)(tangent.y * 127.5f + 127.5f) << 8);
 	tangent_random |= (uint)((uint)(tangent.z * 127.5f + 127.5f) << 16);
-	tangent_random |= (uint)(rand(seed, uv) * 255) << 24;
+	tangent_random |= (uint)(rng.next_float() * 255) << 24;
 
 	uint binormal_length = 0;
 	binormal_length |= (uint)((uint)(binormal.x * 127.5f + 127.5f) << 0);
 	binormal_length |= (uint)((uint)(binormal.y * 127.5f + 127.5f) << 8);
 	binormal_length |= (uint)((uint)(binormal.z * 127.5f + 127.5f) << 16);
-	binormal_length |= (uint)(lerp(1, rand(seed, uv), saturate(xHairRandomness)) * strand_length * 255) << 24;
+	binormal_length |= (uint)(lerp(1, rng.next_float(), saturate(xHairRandomness)) * strand_length * 255) << 24;
 
 	// Identifies the hair strand root particle:
     const uint strandID = DTid.x * xHairSegmentCount;

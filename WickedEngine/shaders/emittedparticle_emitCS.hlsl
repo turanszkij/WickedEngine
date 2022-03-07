@@ -21,14 +21,11 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	if(DTid.x < emitCount)
 	{
-		// we can emit:
-
-		float2 uv = float2(GetFrame().time + xEmitterRandomness, (float)DTid.x / (float)THREADCOUNT_EMIT);
-		float seed = 0.12345;
+		RNG rng;
+		rng.init(uint2(xEmitterRandomness, DTid.x), GetFrame().frame_count);
 		
 #ifdef EMIT_FROM_MESH
 		// random triangle on emitter surface:
-		//	(Note that the usual rand() function is not used because that introduces unnatural clustering with high triangle count)
 		uint tri = (uint)((xEmitterMeshIndexCount / 3) * hash1(DTid.x + GetFrame().frame_count));
 
 		// load indices of triangle from index buffer
@@ -64,8 +61,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		}
 
 		// random barycentric coords:
-		float f = rand(seed, uv);
-		float g = rand(seed, uv);
+		float f = rng.next_float();
+		float g = rng.next_float();
 		[flatten]
 		if (f + g > 1)
 		{
@@ -83,7 +80,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 #ifdef EMITTER_VOLUME
 		// Emit inside volume:
-		float3 pos = mul(xEmitterWorld, float4(rand(seed, uv) * 2 - 1, rand(seed, uv) * 2 - 1, rand(seed, uv) * 2 - 1, 1)).xyz;
+		float3 pos = mul(xEmitterWorld, float4(rng.next_float() * 2 - 1, rng.next_float() * 2 - 1, rng.next_float() * 2 - 1, 1)).xyz;
 #else
 		// Just emit from center point:
 		float3 pos = mul(xEmitterWorld, float4(0, 0, 0, 1)).xyz;
@@ -93,26 +90,26 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 #endif // EMIT_FROM_MESH
 
-		float particleStartingSize = xParticleSize + xParticleSize * (rand(seed, uv) - 0.5f) * xParticleRandomFactor;
+		float particleStartingSize = xParticleSize + xParticleSize * (rng.next_float() - 0.5f) * xParticleRandomFactor;
 
 		// create new particle:
 		Particle particle;
 		particle.position = pos;
 		particle.force = 0;
 		particle.mass = xParticleMass;
-		particle.velocity = xParticleVelocity + (nor + (float3(rand(seed, uv), rand(seed, uv), rand(seed, uv)) - 0.5f) * xParticleRandomFactor) * xParticleNormalFactor;
-		particle.rotationalVelocity = xParticleRotation + (rand(seed, uv) - 0.5f) * xParticleRandomFactor;
-		particle.maxLife = xParticleLifeSpan + xParticleLifeSpan * (rand(seed, uv) - 0.5f) * xParticleLifeSpanRandomness;
+		particle.velocity = xParticleVelocity + (nor + (float3(rng.next_float(), rng.next_float(), rng.next_float()) - 0.5f) * xParticleRandomFactor) * xParticleNormalFactor;
+		particle.rotationalVelocity = xParticleRotation + (rng.next_float() - 0.5f) * xParticleRandomFactor;
+		particle.maxLife = xParticleLifeSpan + xParticleLifeSpan * (rng.next_float() - 0.5f) * xParticleLifeSpanRandomness;
 		particle.life = particle.maxLife;
 		particle.sizeBeginEnd = float2(particleStartingSize, particleStartingSize * xParticleScaling);
 		particle.color_mirror = 0;
-		particle.color_mirror |= ((rand(seed, uv) > 0.5f) << 31) & 0x10000000;
-		particle.color_mirror |= ((rand(seed, uv) < 0.5f) << 30) & 0x20000000;
+		particle.color_mirror |= ((rng.next_float() > 0.5f) << 31) & 0x10000000;
+		particle.color_mirror |= ((rng.next_float() < 0.5f) << 30) & 0x20000000;
 
 		uint color_modifier = 0;
-		color_modifier |= (uint)(255.0 * lerp(1, rand(seed, uv), xParticleRandomColorFactor)) << 0;
-		color_modifier |= (uint)(255.0 * lerp(1, rand(seed, uv), xParticleRandomColorFactor)) << 8;
-		color_modifier |= (uint)(255.0 * lerp(1, rand(seed, uv), xParticleRandomColorFactor)) << 16;
+		color_modifier |= (uint)(255.0 * lerp(1, rng.next_float(), xParticleRandomColorFactor)) << 0;
+		color_modifier |= (uint)(255.0 * lerp(1, rng.next_float(), xParticleRandomColorFactor)) << 8;
+		color_modifier |= (uint)(255.0 * lerp(1, rng.next_float(), xParticleRandomColorFactor)) << 16;
 		particle.color_mirror |= pack_rgba(float4(EmitterGetMaterial().baseColor.rgb, 1)) & color_modifier;
 
 

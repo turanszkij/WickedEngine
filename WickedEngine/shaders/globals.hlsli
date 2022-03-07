@@ -248,13 +248,67 @@ inline float4 blue_noise(uint2 pixel, float depth)
 
 // Helpers:
 
-// returns a random float in range (0, 1). seed must be >0!
-inline float rand(inout float seed, in float2 uv)
+// Random number generator based on: https://github.com/diharaw/helios/blob/master/src/engine/shader/random.glsl
+struct RNG
 {
-	float result = frac(sin(seed * dot(uv, float2(12.9898, 78.233))) * 43758.5453);
-	seed += 1;
-	return result;
-}
+	uint2 s; // state
+
+	// xoroshiro64* random number generator.
+	// http://prng.di.unimi.it/xoroshiro64star.c
+	uint rotl(uint x, uint k)
+	{
+		return (x << k) | (x >> (32 - k));
+	}
+	// Xoroshiro64* RNG
+	uint next()
+	{
+		uint result = s.x * 0x9e3779bb;
+
+		s.y ^= s.x;
+		s.x = rotl(s.x, 26) ^ s.y ^ (s.y << 9);
+		s.y = rotl(s.y, 13);
+
+		return result;
+	}
+	// Thomas Wang 32-bit hash.
+	// http://www.reedbeta.com/blog/quick-and-easy-gpu-random-numbers-in-d3d11/
+	uint hash(uint seed)
+	{
+		seed = (seed ^ 61) ^ (seed >> 16);
+		seed *= 9;
+		seed = seed ^ (seed >> 4);
+		seed *= 0x27d4eb2d;
+		seed = seed ^ (seed >> 15);
+		return seed;
+	}
+
+	void init(uint2 id, uint frameIndex)
+	{
+		uint s0 = (id.x << 16) | id.y;
+		uint s1 = frameIndex;
+		s.x = hash(s0);
+		s.y = hash(s1);
+		next();
+	}
+	float next_float()
+	{
+		uint u = 0x3f800000 | (next() >> 9);
+		return asfloat(u) - 1.0;
+	}
+	uint next_uint(uint nmax)
+	{
+		float f = next_float();
+		return uint(floor(f * nmax));
+	}
+	float2 next_float2()
+	{
+		return float2(next_float(), next_float());
+	}
+	float3 next_float3()
+	{
+		return float3(next_float(), next_float(), next_float());
+	}
+};
 
 // A uniform 2D random generator for hemisphere sampling: http://holger.dammertz.org/stuff/notes_HammersleyOnHemisphere.html
 //	idx	: iteration index
@@ -416,14 +470,14 @@ float3 hemispherepoint_cos(float u, float v) {
 	return float3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
 }
 // Get random hemisphere sample in world-space along the normal (uniform distribution)
-inline float3 sample_hemisphere_uniform(in float3 normal, inout float seed, in float2 pixel)
+inline float3 sample_hemisphere_uniform(in float3 normal, inout RNG rng)
 {
-	return mul(hemispherepoint_uniform(rand(seed, pixel), rand(seed, pixel)), get_tangentspace(normal));
+	return mul(hemispherepoint_uniform(rng.next_float(), rng.next_float()), get_tangentspace(normal));
 }
 // Get random hemisphere sample in world-space along the normal (cosine-weighted distribution)
-inline float3 sample_hemisphere_cos(in float3 normal, inout float seed, in float2 pixel)
+inline float3 sample_hemisphere_cos(in float3 normal, inout RNG rng)
 {
-	return mul(hemispherepoint_cos(rand(seed, pixel), rand(seed, pixel)), get_tangentspace(normal));
+	return mul(hemispherepoint_cos(rng.next_float(), rng.next_float()), get_tangentspace(normal));
 }
 
 // Reconstructs world-space position from depth buffer

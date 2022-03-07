@@ -73,7 +73,7 @@ void main(uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 	const float2 uv = (pixel + 0.5f) * postprocess.resolution_rcp;
 
 	float seed = 12345;
-	const float random_direction = rand(seed, uv) * 0.5f + 0.5f;
+	const float random_direction = blue_noise(pixel).x;
 
 #ifdef MOTIONBLUR_CHEAP
 	const float2 sampling_direction = center_velocity * random_direction * postprocess.resolution_rcp;

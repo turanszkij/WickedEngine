@@ -86,6 +86,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	float4 color = 0;
 
 	float seed = GetFrame().time;
+	RNG rng;
+	rng.init(pixel, GetFrame().frame_count);
+
 	const float2 uv = ((float2)pixel + 0.5) * GetCamera().internal_resolution_rcp;
 	const float3 P = reconstruct_position(uv, depth);
 
@@ -174,7 +177,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	{
 		uint surfel_count_at_pixel = 0;
 		surfel_count_at_pixel |= (uint(coverage) & 0xFF) << 24; // the upper bits matter most for min selection
-		surfel_count_at_pixel |= (uint(rand(seed, uv) * 65535) & 0xFFFF) << 8; // shuffle pixels randomly
+		surfel_count_at_pixel |= (uint(rng.next_float() * 65535) & 0xFFFF) << 8; // shuffle pixels randomly
 		surfel_count_at_pixel |= (GTid.x & 0xF) << 4;
 		surfel_count_at_pixel |= (GTid.y & 0xF) << 0;
 		InterlockedMin(GroupMinSurfelCount, surfel_count_at_pixel);
@@ -261,7 +264,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 			//if (blue_noise(Gid.xy).x < chance)
 			//	return;
 
-			if (rand(seed, uv) < chance)
+			if (rng.next_float() < chance)
 				return;
 
 

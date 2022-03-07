@@ -20,20 +20,22 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	float3 result = 0;
 	float3 energy = 1;
 
+	RNG rng;
+	rng.init(pixel.xy, xTraceSampleIndex);
+
 	// for denoiser:
 	float3 primary_albedo = 0;
 	float3 primary_normal = 0;
 
 	// Compute screen coordinates:
-	float2 uv = float2((pixel + xTracePixelOffset) * xTraceResolution_rcp.xy * 2 - 1) * float2(1, -1);
-	float seed = xTraceAccumulationFactor;
+	float2 uv = (pixel + xTracePixelOffset) * xTraceResolution_rcp.xy;
 
 	// Create starting ray:
-	RayDesc ray = CreateCameraRay(uv);
+	RayDesc ray = CreateCameraRay(uv_to_clipspace(uv));
 
 	// Depth of field setup:
 	float3 focal_point = ray.Origin + ray.Direction * GetCamera().focal_length;
-	float3 coc = float3(hemispherepoint_cos(rand(seed, uv), rand(seed, uv)).xy, 0);
+	float3 coc = float3(hemispherepoint_cos(rng.next_float(), rng.next_float()).xy, 0);
 	coc.xy *= GetCamera().aperture_shape.xy;
 	coc = mul(coc, float3x3(cross(GetCamera().up, GetCamera().forward), GetCamera().up, GetCamera().forward));
 	coc *= GetCamera().focal_length;
@@ -44,9 +46,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 	RayCone raycone = pixel_ray_cone_from_image_height(xTraceResolution.y);
 
-	uint bounces = xTraceUserData.x;
-	const uint bouncelimit = 16;
-	for (uint bounce = 0; ((bounce < min(bounces, bouncelimit)) && any(energy)); ++bounce)
+	const uint bounces = xTraceUserData.x;
+	for (uint bounce = 0; bounce < bounces; ++bounce)
 	{
 		ray.Direction = normalize(ray.Direction);
 
@@ -79,14 +80,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 				break;
 
 			[branch]
-			if (surface.opacity - rand(seed, uv) >= 0)
+			if (surface.opacity - rng.next_float() >= 0)
 			{
 				q.CommitNonOpaqueTriangleHit();
 			}
 		}
 		if (q.CommittedStatus() != COMMITTED_TRIANGLE_HIT)
 #else
-		RayHit hit = TraceRay_Closest(ray, xTraceUserData.y, seed, uv, groupIndex);
+		RayHit hit = TraceRay_Closest(ray, xTraceUserData.y, rng, groupIndex);
 
 		if (hit.distance >= FLT_MAX - 1)
 #endif // RTAPI
@@ -104,9 +105,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 				envColor = GetDynamicSkyColor(ray.Direction);
 			}
 			result += max(0, energy * envColor);
-
-			// Erase the ray's energy
-			energy = 0.0f;
 			break;
 		}
 
@@ -153,6 +151,18 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		surface.update();
 
 		raycone = raycone.propagate(surface.roughnessBRDF, surface.hit_depth);
+
+		if (bounce == 0)
+		{
+			primary_albedo = surface.albedo;
+			primary_normal = surface.N;
+		}
+
+		if (surface.material.IsUnlit())
+		{
+			result += surface.albedo * energy;
+			break;
+		}
 
 		result += max(0, energy * surface.emissiveColor);
 
@@ -261,11 +271,11 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 				if (any(surfaceToLight.NdotL_sss) && dist > 0)
 				{
-					float3 shadow = energy;
+					float3 shadow = surfaceToLight.NdotL_sss * energy;
 
 					RayDesc newRay;
 					newRay.Origin = surface.P;
-					newRay.Direction = normalize(lerp(L, sample_hemisphere_cos(L, seed, uv), 0.025 + max3(surface.sss)));
+					newRay.Direction = normalize(lerp(L, sample_hemisphere_cos(L, rng), 0.025 + max3(surface.sss)));
 					newRay.TMin = 0.001;
 					newRay.TMax = dist;
 #ifdef RTAPI
@@ -298,62 +308,47 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 					}
 					shadow = q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ? 0 : shadow;
 #else
-					shadow = TraceRay_Any(newRay, xTraceUserData.y, seed, uv, groupIndex) ? 0 : shadow;
+					shadow = TraceRay_Any(newRay, xTraceUserData.y, rng, groupIndex) ? 0 : shadow;
 #endif // RTAPI
 					if (any(shadow))
 					{
 						lightColor *= shadow;
 						lighting.direct.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
 						lighting.direct.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
-						result = mad(mad(surface.albedo * (1 - surface.transmission), lighting.direct.diffuse, lighting.direct.specular), surface.opacity, result);
+						result += mad(surface.albedo * (1 - surface.transmission), lighting.direct.diffuse, lighting.direct.specular) * surface.opacity;
 					}
 				}
 			}
 		}
 
-
-
-		if (bounce == 0)
-		{
-			primary_albedo = surface.albedo;
-			primary_normal = surface.N;
-		}
-
-		if (surface.material.IsUnlit())
-		{
-			result += surface.albedo * energy;
-			break;
-		}
-
-		const float refractChance = surface.transmission;
-		float roulette = rand(seed, uv);
-		if (roulette <= refractChance)
+		if (rng.next_float() < surface.transmission)
 		{
 			// Refraction
 			const float3 R = refract(ray.Direction, surface.N, 1 - surface.material.refraction);
-			ray.Direction = lerp(R, sample_hemisphere_cos(R, seed, uv), surface.roughnessBRDF);
+			ray.Direction = lerp(R, sample_hemisphere_cos(R, rng), surface.roughnessBRDF);
 			energy *= surface.albedo;
 
 			// Add a new bounce iteration, otherwise the transparent effect can disappear:
-			bounces++;
+			bounce--;
 		}
 		else
 		{
 			const float specChance = dot(surface.F, 0.333);
 
-			roulette = rand(seed, uv);
-			if (roulette <= specChance)
+			if (rng.next_float() < specChance)
 			{
 				// Specular reflection
+				const float pdf = specChance;
 				const float3 R = reflect(ray.Direction, surface.N);
-				ray.Direction = lerp(R, sample_hemisphere_cos(R, seed, uv), surface.roughnessBRDF);
-				energy *= surface.F / max(0.00001, specChance);
+				ray.Direction = lerp(R, sample_hemisphere_cos(R, rng), surface.roughnessBRDF);
+				energy *= surface.F / pdf;
 			}
 			else
 			{
 				// Diffuse reflection
-				ray.Direction = sample_hemisphere_cos(surface.N, seed, uv);
-				energy *= surface.albedo * (1 - surface.F) / max(0.00001, 1 - specChance);
+				const float pdf = 1 - specChance;
+				ray.Direction = sample_hemisphere_cos(surface.N, rng);
+				energy *= surface.albedo * (1 - surface.F) / pdf;
 			}
 
 			if (dot(ray.Direction, surface.facenormal) <= 0)
@@ -364,9 +359,17 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			}
 		}
 
+		// Terminate ray's path or apply inverse termination bias:
+		const float termination_chance = max3(energy);
+		if (rng.next_float() >= termination_chance)
+		{
+			break;
+		}
+		energy /= termination_chance;
+
 	}
 
-	// Pre-clear result texture for first bounce and first accumulation sample:
+	// Pre-clear result texture for first accumulation sample:
 	if (xTraceSampleIndex == 0)
 	{
 		output[pixel] = 0;

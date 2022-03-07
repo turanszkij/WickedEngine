@@ -17,19 +17,20 @@ float4 main(Input input) : SV_TARGET
 	surface.init();
 	surface.N = normalize(input.normal);
 
+	RNG rng;
+	rng.init((uint2)input.pos.xy, xTraceSampleIndex);
+
 	float2 uv = input.uv;
-	float seed = xTraceAccumulationFactor;
 	RayDesc ray;
 	ray.Origin = input.pos3D;
-	ray.Direction = sample_hemisphere_cos(surface.N, seed, uv);
+	ray.Direction = sample_hemisphere_cos(surface.N, rng);
 	ray.TMin = 0.001;
 	ray.TMax = FLT_MAX;
 	float3 result = 0;
 	float3 energy = 1;
 
-	uint bounces = xTraceUserData.x;
-	const uint bouncelimit = 16;
-	for (uint bounce = 0; ((bounce < min(bounces, bouncelimit)) && any(energy)); ++bounce)
+	const uint bounces = xTraceUserData.x;
+	for (uint bounce = 0; bounce < bounces; ++bounce)
 	{
 		surface.P = ray.Origin;
 
@@ -148,7 +149,7 @@ float4 main(Input input) : SV_TARGET
 
 				RayDesc newRay;
 				newRay.Origin = surface.P;
-				newRay.Direction = normalize(lerp(L, sample_hemisphere_cos(L, seed, uv), 0.025f));
+				newRay.Direction = normalize(lerp(L, sample_hemisphere_cos(L, rng), 0.025f));
 				newRay.TMin = 0.001;
 				newRay.TMax = dist;
 #ifdef RTAPI
@@ -183,7 +184,7 @@ float4 main(Input input) : SV_TARGET
 				}
 				shadow = q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ? 0 : shadow;
 #else
-				shadow = TraceRay_Any(newRay, xTraceUserData.y, seed, uv) ? 0 : shadow;
+				shadow = TraceRay_Any(newRay, xTraceUserData.y, rng) ? 0 : shadow;
 #endif // RTAPI
 				if (any(shadow))
 				{
@@ -212,7 +213,7 @@ float4 main(Input input) : SV_TARGET
 		q.Proceed();
 		if (q.CommittedStatus() != COMMITTED_TRIANGLE_HIT)
 #else
-		RayHit hit = TraceRay_Closest(ray, xTraceUserData.y, seed, uv);
+		RayHit hit = TraceRay_Closest(ray, xTraceUserData.y, rng);
 
 		if (hit.distance >= FLT_MAX - 1)
 #endif // RTAPI
@@ -230,9 +231,6 @@ float4 main(Input input) : SV_TARGET
 				envColor = GetDynamicSkyColor(ray.Direction, true, true, false, true);
 			}
 			result += max(0, energy * envColor);
-
-			// Erase the ray's energy
-			energy = 0;
 			break;
 		}
 
@@ -261,41 +259,45 @@ float4 main(Input input) : SV_TARGET
 
 		result += max(0, energy * surface.emissiveColor);
 
-		// Calculate chances of reflection types:
-		const float refractChance = surface.transmission;
-
-		// Roulette-select the ray's path
-		float roulette = rand(seed, uv);
-		if (roulette < refractChance)
+		if (rng.next_float() < surface.transmission)
 		{
 			// Refraction
 			const float3 R = refract(ray.Direction, surface.N, 1 - surface.material.refraction);
-			ray.Direction = lerp(R, sample_hemisphere_cos(R, seed, uv), surface.roughnessBRDF);
+			ray.Direction = lerp(R, sample_hemisphere_cos(R, rng), surface.roughnessBRDF);
 			energy *= surface.albedo;
 
 			// Add a new bounce iteration, otherwise the transparent effect can disappear:
-			bounces++;
+			bounce--;
 		}
 		else
 		{
 			// Calculate chances of reflection types:
 			const float specChance = dot(surface.F, 0.333f);
 
-			roulette = rand(seed, uv);
-			if (roulette < specChance)
+			if (rng.next_float() < specChance)
 			{
 				// Specular reflection
+				const float pdf = specChance;
 				const float3 R = reflect(ray.Direction, surface.N);
-				ray.Direction = lerp(R, sample_hemisphere_cos(R, seed, uv), surface.roughnessBRDF);
-				energy *= surface.F / specChance;
+				ray.Direction = lerp(R, sample_hemisphere_cos(R, rng), surface.roughnessBRDF);
+				energy *= surface.F / pdf;
 			}
 			else
 			{
 				// Diffuse reflection
-				ray.Direction = sample_hemisphere_cos(surface.N, seed, uv);
-				energy *= surface.albedo / (1 - specChance);
+				const float pdf = 1 - specChance;
+				ray.Direction = sample_hemisphere_cos(surface.N, rng);
+				energy *= surface.albedo * (1 - surface.F) / pdf;
 			}
 		}
+
+		// Terminate ray's path or apply inverse termination bias:
+		const float termination_chance = max3(energy);
+		if (rng.next_float() >= termination_chance)
+		{
+			break;
+		}
+		energy /= termination_chance;
 
 	}
 

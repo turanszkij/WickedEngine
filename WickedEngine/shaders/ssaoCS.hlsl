@@ -79,8 +79,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 
 	const float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
 
-	float seed = 1;
-	const float3 noise = float3(rand(seed, uv), rand(seed, uv), rand(seed, uv)) * 2 - 1;
+	RNG rng;
+	rng.init(DTid.xy, 0);
+	const float3 noise = rng.next_float3() * 2 - 1;
 
 	const float3 tangent = normalize(noise - normal * dot(noise, normal));
 	const float3 bitangent = cross(normal, tangent);
@@ -92,7 +93,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 		const float2 hamm = hammersley2d(i, ssao_samplecount);
 		const float3 hemisphere = hemispherepoint_uniform(hamm.x, hamm.y);
 		const float3 cone = mul(hemisphere, tangentSpace);
-		const float ray_range = ssao_range * lerp(0.2f, 1.0f, rand(seed, uv)); // modulate ray-length a bit to avoid uniform look
+		const float ray_range = ssao_range * lerp(0.2f, 1.0f, rng.next_float()); // modulate ray-length a bit to avoid uniform look
 		const float3 sam = P + cone * ray_range;
 
 		float4 vProjectedCoord = mul(GetCamera().projection, float4(sam, 1.0f));

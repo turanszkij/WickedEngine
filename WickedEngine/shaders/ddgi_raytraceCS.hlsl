@@ -30,8 +30,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	const uint3 probeCoord = ddgi_probe_coord(probeIndex);
 	const float3 probePos = ddgi_probe_position(probeCoord);
 
-	float seed = 0.123456;
-	float2 uv = float2(frac(GetFrame().frame_count.x / 4096.0), DTid.x / float(DDGI_PROBE_COUNT * push.rayCount));
+	RNG rng;
+	rng.init(DTid.xx, GetFrame().frame_count);
 
 	const float3x3 random_orientation = (float3x3)g_xTransform;
 
@@ -57,7 +57,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		q.Proceed();
 		if (q.CommittedStatus() != COMMITTED_TRIANGLE_HIT)
 #else
-		RayHit hit = TraceRay_Closest(ray, push.instanceInclusionMask, seed, uv);
+		RayHit hit = TraceRay_Closest(ray, push.instanceInclusionMask, rng);
 
 		if (hit.distance >= FLT_MAX - 1)
 #endif // RTAPI
@@ -242,7 +242,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 					RayDesc newRay;
 					newRay.Origin = surface.P;
 #if 1
-					newRay.Direction = normalize(lerp(L, sample_hemisphere_cos(L, seed, uv), 0.025f));
+					newRay.Direction = normalize(lerp(L, sample_hemisphere_cos(L, rng), 0.025f));
 #else
 					newRay.Direction = L;
 #endif
@@ -258,7 +258,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 					q.Proceed();
 					shadow = q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ? 0 : shadow;
 #else
-					shadow = TraceRay_Any(newRay, push.instanceInclusionMask, seed, uv) ? 0 : shadow;
+					shadow = TraceRay_Any(newRay, push.instanceInclusionMask, rng) ? 0 : shadow;
 #endif // RTAPI
 					if (any(shadow))
 					{

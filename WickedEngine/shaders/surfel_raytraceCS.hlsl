@@ -28,15 +28,15 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 	const float3 N = normalize(unpack_unitvector(surfel.normal));
 
-	float seed = 0.123456;
-	float2 uv = float2(frac(GetFrame().frame_count.x / 4096.0), (float)DTid.x / (float)global_ray_count);
+	RNG rng;
+	rng.init(DTid.xx, GetFrame().frame_count);
 
 	{
 		RayDesc ray;
 		ray.Origin = surfel.position;
 		ray.TMin = 0.0001;
 		ray.TMax = FLT_MAX;
-		ray.Direction = normalize(sample_hemisphere_cos(N, seed, uv));
+		ray.Direction = normalize(sample_hemisphere_cos(N, rng));
 
 		rayData.direction = ray.Direction;
 
@@ -54,7 +54,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		q.Proceed();
 		if (q.CommittedStatus() != COMMITTED_TRIANGLE_HIT)
 #else
-		RayHit hit = TraceRay_Closest(ray, push.instanceInclusionMask, seed, uv);
+		RayHit hit = TraceRay_Closest(ray, push.instanceInclusionMask, rng);
 
 		if (hit.distance >= FLT_MAX - 1)
 #endif // RTAPI
@@ -234,7 +234,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 					RayDesc newRay;
 					newRay.Origin = surface.P;
 #if 1
-					newRay.Direction = normalize(lerp(L, sample_hemisphere_cos(L, seed, uv), 0.025f));
+					newRay.Direction = normalize(lerp(L, sample_hemisphere_cos(L, rng), 0.025f));
 #else
 					newRay.Direction = L;
 #endif
@@ -250,7 +250,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 					q.Proceed();
 					shadow = q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ? 0 : shadow;
 #else
-					shadow = TraceRay_Any(newRay, push.instanceInclusionMask, seed, uv) ? 0 : shadow;
+					shadow = TraceRay_Any(newRay, push.instanceInclusionMask, rng) ? 0 : shadow;
 #endif // RTAPI
 					if (any(shadow))
 					{

@@ -67,8 +67,7 @@ inline void IntersectTriangle(
 	in RayDesc ray,
 	inout RayHit bestHit,
 	in BVHPrimitive prim,
-	inout float seed,
-	in float2 uv
+	inout RNG rng
 )
 {
 	float3 v0v1 = prim.v1() - prim.v0();
@@ -112,7 +111,7 @@ inline void IntersectTriangle(
 			surface.init();
 			if (surface.load(hit.primitiveID, hit.bary))
 			{
-				if (surface.opacity - rand(seed, uv) >= 0)
+				if (surface.opacity - rng.next_float() >= 0)
 				{
 					bestHit = hit;
 				}
@@ -128,8 +127,7 @@ inline void IntersectTriangle(
 inline bool IntersectTriangleANY(
 	in RayDesc ray,
 	in BVHPrimitive prim,
-	inout float seed,
-	in float2 uv
+	inout RNG rng
 )
 {
 	float3 v0v1 = prim.v1() - prim.v0();
@@ -168,7 +166,7 @@ inline bool IntersectTriangleANY(
 			surface.init();
 			if (surface.load(prim.primitiveID(), float2(u, v)))
 			{
-				return surface.opacity - rand(seed, uv) >= 0;
+				return surface.opacity - rng.next_float() >= 0;
 			}
 		}
 		return true;
@@ -223,7 +221,7 @@ inline bool IntersectNode(
 
 
 // Returns the closest hit primitive if any (useful for generic trace). If nothing was hit, then rayHit.distance will be equal to FLT_MAX
-inline RayHit TraceRay_Closest(RayDesc ray, uint mask, inout float seed, in float2 uv, uint groupIndex = 0)
+inline RayHit TraceRay_Closest(RayDesc ray, uint mask, inout RNG rng, uint groupIndex = 0)
 {
 	const float3 rcpDirection = rcp(ray.Direction);
 
@@ -256,7 +254,7 @@ inline RayHit TraceRay_Closest(RayDesc ray, uint mask, inout float seed, in floa
 				const BVHPrimitive prim = primitiveBuffer.Load<BVHPrimitive>(primitiveID * sizeof(BVHPrimitive));
 				if (prim.flags & mask)
 				{
-					IntersectTriangle(ray, bestHit, prim, seed, uv);
+					IntersectTriangle(ray, bestHit, prim, rng);
 				}
 			}
 			else
@@ -285,7 +283,7 @@ inline RayHit TraceRay_Closest(RayDesc ray, uint mask, inout float seed, in floa
 }
 
 // Returns true immediately if any primitives were hit, flase if nothing was hit (useful for opaque shadows):
-inline bool TraceRay_Any(RayDesc ray, uint mask, inout float seed, in float2 uv, uint groupIndex = 0)
+inline bool TraceRay_Any(RayDesc ray, uint mask, inout RNG rng, uint groupIndex = 0)
 {
 	const float3 rcpDirection = rcp(ray.Direction);
 
@@ -319,7 +317,7 @@ inline bool TraceRay_Any(RayDesc ray, uint mask, inout float seed, in float2 uv,
 
 				if (prim.flags & mask)
 				{
-					if (IntersectTriangleANY(ray, prim, seed, uv))
+					if (IntersectTriangleANY(ray, prim, rng))
 					{
 						shadow = true;
 						break;
