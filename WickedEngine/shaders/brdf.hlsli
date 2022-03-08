@@ -249,10 +249,10 @@ struct Surface
 				occlusion = surfaceMap.r;
 			}
 			roughness *= surfaceMap.g;
-			float metalness = material.metalness * surfaceMap.b;
-			float reflectance = material.reflectance * surfaceMap.a;
-			albedo = lerp(lerp(baseColor.rgb, float3(0, 0, 0), reflectance), float3(0, 0, 0), metalness);
-			f0 *= lerp(lerp(float3(0, 0, 0), float3(1, 1, 1), reflectance), baseColor.rgb, metalness);
+			const float metalness = material.metalness * surfaceMap.b;
+			const float reflectance = material.reflectance * surfaceMap.a;
+			albedo = baseColor.rgb * (1 - metalness);
+			f0 *= lerp(reflectance.xxx, baseColor.rgb, metalness);
 		}
 
 		if (material.IsReceiveShadow())
