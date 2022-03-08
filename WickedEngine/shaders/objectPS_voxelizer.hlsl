@@ -312,7 +312,7 @@ void main(PSInput input)
 			}
 		}
 
-		color.rgb *= lighting.direct.diffuse;
+		color.rgb *= lighting.direct.diffuse / PI;
 		
 		color.rgb += emissiveColor;
 

@@ -287,7 +287,7 @@ float4 main(Input input) : SV_TARGET
 				// Diffuse reflection
 				const float pdf = 1 - specChance;
 				ray.Direction = sample_hemisphere_cos(surface.N, rng);
-				energy *= surface.albedo * (1 - surface.F) / pdf;
+				energy *= surface.albedo * 2 * PI * (1 - surface.F) / pdf;
 			}
 		}
 

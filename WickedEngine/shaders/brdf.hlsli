@@ -714,7 +714,7 @@ float3 BRDF_GetDiffuse(in Surface surface, in SurfaceToLight surfaceToLight)
 {
 	// Note: subsurface scattering will remove Fresnel (F), because otherwise
 	//	there would be artifact on backside where diffuse wraps
-	float3 diffuse = (1 - lerp(surfaceToLight.F, 0, saturate(surface.sss.a))) / PI;
+	float3 diffuse = (1 - lerp(surfaceToLight.F, 0, saturate(surface.sss.a)));
 
 #ifdef BRDF_SHEEN
 	diffuse *= surface.sheen.albedoScaling;

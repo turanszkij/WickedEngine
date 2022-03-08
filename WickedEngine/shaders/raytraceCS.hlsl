@@ -271,7 +271,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 				if (any(surfaceToLight.NdotL_sss) && dist > 0)
 				{
-					float3 shadow = surfaceToLight.NdotL_sss * energy;
+					float3 shadow = energy;
 
 					RayDesc newRay;
 					newRay.Origin = surface.P;
@@ -315,7 +315,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 						lightColor *= shadow;
 						lighting.direct.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
 						lighting.direct.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
-						result += mad(surface.albedo * (1 - surface.transmission), lighting.direct.diffuse, lighting.direct.specular) * surface.opacity;
+						result += mad(surface.albedo / PI * (1 - surface.transmission), lighting.direct.diffuse, lighting.direct.specular) * surface.opacity;
 					}
 				}
 			}
@@ -348,7 +348,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 				// Diffuse reflection
 				const float pdf = 1 - specChance;
 				ray.Direction = sample_hemisphere_cos(surface.N, rng);
-				energy *= surface.albedo * (1 - surface.F) / pdf;
+				energy *= surface.albedo * 2 * PI * (1 - surface.F) / pdf;
 			}
 
 			if (dot(ray.Direction, surface.facenormal) <= 0)
