@@ -167,17 +167,6 @@ void RenderPath3D::ResizeBuffers()
 	}
 	{
 		TextureDesc desc;
-		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-		desc.format = Format::R11G11B10_FLOAT;
-		desc.width = internalResolution.x;
-		desc.height = internalResolution.y;
-		device->CreateTexture(&desc, nullptr, &rtTemporalAA[0]);
-		device->SetName(&rtTemporalAA[0], "rtTemporalAA[0]");
-		device->CreateTexture(&desc, nullptr, &rtTemporalAA[1]);
-		device->SetName(&rtTemporalAA[1], "rtTemporalAA[1]");
-	}
-	{
-		TextureDesc desc;
 		desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 		desc.format = Format::R11G11B10_FLOAT;
 		desc.width = internalResolution.x;
@@ -486,6 +475,7 @@ void RenderPath3D::ResizeBuffers()
 	wi::renderer::CreateVolumetricCloudResources(volumetriccloudResources_reflection, XMUINT2(depthBuffer_Reflection.desc.width, depthBuffer_Reflection.desc.height));
 	wi::renderer::CreateBloomResources(bloomResources, internalResolution);
 	wi::renderer::CreateSurfelGIResources(surfelGIResources, internalResolution);
+	temporalAAResources = {};
 
 	if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 	{
@@ -565,10 +555,15 @@ void RenderPath3D::Update(float dt)
 		const XMFLOAT4& halton = wi::math::GetHaltonSequence(wi::graphics::GetDevice()->GetFrameCount() % 256);
 		camera->jitter.x = (halton.x * 2 - 1) / (float)internalResolution.x;
 		camera->jitter.y = (halton.y * 2 - 1) / (float)internalResolution.y;
+		if (!temporalAAResources.IsValid())
+		{
+			wi::renderer::CreateTemporalAAResources(temporalAAResources, internalResolution);
+		}
 	}
 	else
 	{
 		camera->jitter = XMFLOAT2(0, 0);
+		temporalAAResources = {};
 	}
 	camera->UpdateCamera();
 
@@ -1491,15 +1486,12 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 		{
 			GraphicsDevice* device = wi::graphics::GetDevice();
 
-			int output = device->GetFrameCount() % 2;
-			int history = 1 - output;
 			wi::renderer::Postprocess_TemporalAA(
+				temporalAAResources,
 				*rt_read,
-				rtTemporalAA[history],
-				rtTemporalAA[output], 
 				cmd
 			);
-			rt_first = &rtTemporalAA[output];
+			rt_first = temporalAAResources.GetCurrent();
 		}
 
 		if (getDepthOfFieldEnabled() && camera->aperture_size > 0 && getDepthOfFieldStrength() > 0)

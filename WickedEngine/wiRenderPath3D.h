@@ -82,7 +82,6 @@ namespace wi
 		wi::graphics::Texture rtParticleDistortion; // contains distortive particles
 		wi::graphics::Texture rtParticleDistortion_Resolved; // contains distortive particles
 		wi::graphics::Texture rtVolumetricLights[2]; // contains the volumetric light results
-		wi::graphics::Texture rtTemporalAA[2]; // temporal AA history buffer
 		wi::graphics::Texture rtBloom; // contains the bright parts of the image + mipchain
 		wi::graphics::Texture rtBloom_tmp; // temporary for bloom downsampling
 		wi::graphics::Texture rtAO; // full res AO
@@ -129,6 +128,7 @@ namespace wi
 		wi::renderer::VolumetricCloudResources volumetriccloudResources_reflection;
 		wi::renderer::BloomResources bloomResources;
 		wi::renderer::SurfelGIResources surfelGIResources;
+		wi::renderer::TemporalAAResources temporalAAResources;
 
 		mutable const wi::graphics::Texture* lastPostprocessRT = &rtPostprocess;
 		// Post-processes are ping-ponged, this function helps to obtain the last postprocess render target that was written

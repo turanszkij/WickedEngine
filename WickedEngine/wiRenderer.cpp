@@ -11868,22 +11868,60 @@ void Postprocess_FXAA(
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);
 }
+void CreateTemporalAAResources(TemporalAAResources& res, XMUINT2 resolution)
+{
+	res.frame = 0;
+
+	TextureDesc desc;
+	desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+	desc.format = Format::R11G11B10_FLOAT;
+	desc.width = resolution.x;
+	desc.height = resolution.y;
+	device->CreateTexture(&desc, nullptr, &res.texture_temporal[0]);
+	device->SetName(&res.texture_temporal[0], "TemporalAAResources::texture_temporal[0]");
+	device->CreateTexture(&desc, nullptr, &res.texture_temporal[1]);
+	device->SetName(&res.texture_temporal[1], "TemporalAAResources::texture_temporal[1]");
+}
 void Postprocess_TemporalAA(
-	const Texture& input_current,
-	const Texture& input_history,
-	const Texture& output,
+	const TemporalAAResources& res,
+	const Texture& input,
 	CommandList cmd
 )
 {
 	device->EventBegin("Postprocess_TemporalAA", cmd);
 	auto range = wi::profiler::BeginRangeGPU("Temporal AA Resolve", cmd);
+	const bool first_frame = res.frame == 0;
+	res.frame++;
+
+	if (first_frame)
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&res.texture_temporal[0], res.texture_temporal[0].desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(&res.texture_temporal[1], res.texture_temporal[1].desc.layout, ResourceState::UNORDERED_ACCESS),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+
+		device->ClearUAV(&res.texture_temporal[0], 0, cmd);
+		device->ClearUAV(&res.texture_temporal[1], 0, cmd);
+
+		std::swap(barriers[0].image.layout_before, barriers[0].image.layout_after);
+		std::swap(barriers[1].image.layout_before, barriers[1].image.layout_after);
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
 
 	device->BindComputeShader(&shaders[CSTYPE_POSTPROCESS_TEMPORALAA], cmd);
 
-	device->BindResource(&input_current, 0, cmd);
-	device->BindResource(&input_history, 1, cmd);
+	device->BindResource(&input, 0, cmd);
+	if (first_frame)
+	{
+		device->BindResource(&input, 0, cmd);
+	}
+	else
+	{
+		device->BindResource(res.GetHistory(), 1, cmd);
+	}
 
-	const TextureDesc& desc = output.GetDesc();
+	const TextureDesc& desc = res.texture_temporal[0].GetDesc();
 
 	PostProcess postprocess;
 	postprocess.resolution.x = desc.width;
@@ -11892,14 +11930,16 @@ void Postprocess_TemporalAA(
 	postprocess.resolution_rcp.y = 1.0f / postprocess.resolution.y;
 	device->PushConstants(&postprocess, sizeof(postprocess), cmd);
 
+	const Texture* output = res.GetCurrent();
+
 	const GPUResource* uavs[] = {
-		&output,
+		output,
 	};
 	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
 	{
 		GPUBarrier barriers[] = {
-			GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Image(output, output->GetDesc().layout, ResourceState::UNORDERED_ACCESS),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
@@ -11914,11 +11954,10 @@ void Postprocess_TemporalAA(
 	{
 		GPUBarrier barriers[] = {
 			GPUBarrier::Memory(),
-			GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout),
+			GPUBarrier::Image(output, ResourceState::UNORDERED_ACCESS, output->GetDesc().layout),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
-
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);

@@ -605,10 +605,19 @@ namespace wi::renderer
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd
 	);
+	struct TemporalAAResources
+	{
+		mutable int frame = 0;
+		wi::graphics::Texture texture_temporal[2];
+
+		bool IsValid() const { return texture_temporal[0].IsValid(); }
+		const wi::graphics::Texture* GetCurrent() const { return &texture_temporal[frame % arraysize(texture_temporal)]; }
+		const wi::graphics::Texture* GetHistory() const { return &texture_temporal[(frame + 1) % arraysize(texture_temporal)]; }
+	};
+	void CreateTemporalAAResources(TemporalAAResources& res, XMUINT2 resolution);
 	void Postprocess_TemporalAA(
-		const wi::graphics::Texture& input_current,
-		const wi::graphics::Texture& input_history,
-		const wi::graphics::Texture& output,
+		const TemporalAAResources& res,
+		const wi::graphics::Texture& input,
 		wi::graphics::CommandList cmd
 	);
 	void Postprocess_Sharpen(
