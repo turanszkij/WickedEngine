@@ -191,6 +191,11 @@ namespace wi::physics
 
 			bool isDynamic = (mass != 0.f && !physicscomponent.IsKinematic());
 
+			if (physicscomponent.shape == RigidBodyPhysicsComponent::CollisionShape::TRIANGLE_MESH)
+			{
+				isDynamic = false;
+			}
+
 			btVector3 localInertia(0, 0, 0);
 			if (isDynamic)
 			{
@@ -222,6 +227,10 @@ namespace wi::physics
 				rigidbody->setCollisionFlags(rigidbody->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
 			}
 			if (physicscomponent.IsDisableDeactivation())
+			{
+				rigidbody->setActivationState(DISABLE_DEACTIVATION);
+			}
+			if (physicscomponent.shape == RigidBodyPhysicsComponent::CollisionShape::TRIANGLE_MESH)
 			{
 				rigidbody->setActivationState(DISABLE_DEACTIVATION);
 			}

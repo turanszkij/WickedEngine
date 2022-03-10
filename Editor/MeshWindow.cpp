@@ -567,6 +567,8 @@ void MeshWindow::Create(EditorComponent* editor)
 
 		SetEntity(object.meshID, pick.subsetIndex);
 
+		editor->RefreshSceneGraphView();
+
 
 
 
@@ -582,6 +584,8 @@ void MeshWindow::Create(EditorComponent* editor)
 			generate_mesh(terragen.width, terragen.height);
 		});
 		terragen.dimYSlider.OnSlide([=](wi::gui::EventArgs args) {
+			terragen.width = (int)terragen.dimXSlider.GetValue();
+			terragen.height = (int)terragen.dimZSlider.GetValue();
 			generate_mesh(terragen.width, terragen.height, terragen.rgb, terragen.channelCount, args.fValue);
 		});
 
