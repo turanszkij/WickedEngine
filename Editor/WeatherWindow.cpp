@@ -533,6 +533,27 @@ void WeatherWindow::Create(EditorComponent* editor)
 		});
 	AddWidget(&preset4Button);
 
+	preset5Button.Create("WeatherPreset - White Furnace");
+	preset5Button.SetTooltip("The white furnace mode sets the environment to fully white, it is useful to test energy conservation of light and materials. \nIf you don't see it as fully white, it is because the tone mapping.");
+	preset5Button.SetSize(XMFLOAT2(colorPicker.GetScale().x, hei));
+	preset5Button.SetPos(XMFLOAT2(x, y += step));
+	preset5Button.OnClick([=](wi::gui::EventArgs args) {
+
+		auto& weather = GetWeather();
+		weather.ambient = XMFLOAT3(0, 0, 0);
+		weather.horizon = XMFLOAT3(1, 1, 1);
+		weather.zenith = XMFLOAT3(1, 1, 1);
+		weather.SetSimpleSky(true);
+		weather.cloudiness = 0;
+		weather.fogStart = 1000000;
+		weather.fogEnd = 1000000;
+		weather.fogHeightSky = 0;
+
+		InvalidateProbes();
+
+		});
+	AddWidget(&preset5Button);
+
 
 	eliminateCoarseCascadesButton.Create("EliminateCoarseCascades");
 	eliminateCoarseCascadesButton.SetTooltip("Eliminate the coarse cascade mask for every object in the scene.");

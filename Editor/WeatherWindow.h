@@ -59,6 +59,7 @@ public:
 	wi::gui::Button preset2Button;
 	wi::gui::Button preset3Button;
 	wi::gui::Button preset4Button;
+	wi::gui::Button preset5Button;
 	wi::gui::Button eliminateCoarseCascadesButton;
 	wi::gui::Button ktxConvButton;
 };
