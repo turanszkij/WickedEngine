@@ -5,6 +5,9 @@
 #include "raytracingHF.hlsli"
 #include "lightingHF.hlsli"
 
+// This value specifies after which bounce the anyhit will be disabled:
+static const uint ANYTHIT_CUTOFF_AFTER_BOUNCE_COUNT = 1;
+
 RWTexture2D<float4> output : register(u0);
 RWTexture2D<float4> output_albedo : register(u1);
 RWTexture2D<float4> output_normal : register(u2);
@@ -51,16 +54,22 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	{
 		ray.Direction = normalize(ray.Direction);
 
+		uint flags = 0;
+#ifdef RAY_BACKFACE_CULLING
+		flags |= RAY_FLAG_CULL_BACK_FACING_TRIANGLES;
+#endif // RAY_BACKFACE_CULLING
+		if (bounce > ANYTHIT_CUTOFF_AFTER_BOUNCE_COUNT)
+		{
+			flags |= RAY_FLAG_FORCE_OPAQUE;
+		}
+
 #ifdef RTAPI
 		RayQuery<
 			RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES
 		> q;
 		q.TraceRayInline(
 			scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
-#ifdef RAY_BACKFACE_CULLING
-			RAY_FLAG_CULL_BACK_FACING_TRIANGLES |
-#endif // RAY_BACKFACE_CULLING
-			0,								// uint RayFlags
+			flags,								// uint RayFlags
 			xTraceUserData.y,				// uint InstanceInclusionMask
 			ray								// RayDesc Ray
 		);
@@ -278,10 +287,17 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 					newRay.Direction = normalize(lerp(L, sample_hemisphere_cos(L, rng), 0.025 + max3(surface.sss)));
 					newRay.TMin = 0.001;
 					newRay.TMax = dist;
+
+					uint flags = RAY_FLAG_CULL_FRONT_FACING_TRIANGLES;
+					if (bounce > ANYTHIT_CUTOFF_AFTER_BOUNCE_COUNT)
+					{
+						flags |= RAY_FLAG_FORCE_OPAQUE;
+					}
+
 #ifdef RTAPI
 					q.TraceRayInline(
 						scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
-						RAY_FLAG_CULL_FRONT_FACING_TRIANGLES,								// uint RayFlags
+						flags,							// uint RayFlags
 						0xFF,							// uint InstanceInclusionMask
 						newRay							// RayDesc Ray
 					);

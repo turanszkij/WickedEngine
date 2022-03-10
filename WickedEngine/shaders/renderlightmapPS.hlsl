@@ -3,6 +3,9 @@
 #include "raytracingHF.hlsli"
 #include "lightingHF.hlsli"
 
+// This value specifies after which bounce the anyhit will be disabled:
+static const uint ANYTHIT_CUTOFF_AFTER_BOUNCE_COUNT = 1;
+
 struct Input
 {
 	float4 pos : SV_POSITION;
@@ -32,6 +35,12 @@ float4 main(Input input) : SV_TARGET
 	const uint bounces = xTraceUserData.x;
 	for (uint bounce = 0; bounce < bounces; ++bounce)
 	{
+#ifdef RTAPI
+		RayQuery<
+			RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES
+		> q;
+#endif // RTAPI
+
 		surface.P = ray.Origin;
 
 		[loop]
@@ -152,13 +161,17 @@ float4 main(Input input) : SV_TARGET
 				newRay.Direction = normalize(lerp(L, sample_hemisphere_cos(L, rng), 0.025f));
 				newRay.TMin = 0.001;
 				newRay.TMax = dist;
+
+				uint flags = RAY_FLAG_CULL_FRONT_FACING_TRIANGLES;
+				if (bounce > ANYTHIT_CUTOFF_AFTER_BOUNCE_COUNT)
+				{
+					flags |= RAY_FLAG_FORCE_OPAQUE;
+				}
+
 #ifdef RTAPI
-				RayQuery<
-					RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES
-				> q;
 				q.TraceRayInline(
 					scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
-					RAY_FLAG_CULL_FRONT_FACING_TRIANGLES,								// uint RayFlags
+					flags,							// uint RayFlags
 					xTraceUserData.y,				// uint InstanceInclusionMask
 					newRay							// RayDesc Ray
 				);
@@ -197,17 +210,20 @@ float4 main(Input input) : SV_TARGET
 		ray.Direction = normalize(ray.Direction);
 
 #ifdef RTAPI
-		RayQuery<
-			RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES
-		> q;
+
+		uint flags = 0;
+#ifdef RAY_BACKFACE_CULLING
+		flags |= RAY_FLAG_CULL_BACK_FACING_TRIANGLES;
+#endif // RAY_BACKFACE_CULLING
+		if (bounce > ANYTHIT_CUTOFF_AFTER_BOUNCE_COUNT)
+		{
+			flags |= RAY_FLAG_FORCE_OPAQUE;
+		}
+
 		q.TraceRayInline(
 			scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
-#ifdef RAY_BACKFACE_CULLING
-			RAY_FLAG_CULL_BACK_FACING_TRIANGLES |
-#endif // RAY_BACKFACE_CULLING
-			RAY_FLAG_FORCE_OPAQUE |
-			0,								// uint RayFlags
-			xTraceUserData.y,							// uint InstanceInclusionMask
+			flags,							// uint RayFlags
+			xTraceUserData.y,				// uint InstanceInclusionMask
 			ray								// RayDesc Ray
 		);
 		q.Proceed();
