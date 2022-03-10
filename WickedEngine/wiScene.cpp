@@ -3798,6 +3798,8 @@ namespace wi::scene
 					inst.uid = entity;
 					inst.layerMask = hair.layerMask;
 					inst.geometryOffset = (uint)geometryAllocation;
+					inst.emissive = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(1, 1, 1));
+					inst.color = wi::math::CompressColor(XMFLOAT4(1, 1, 1, 1));
 
 					const size_t instanceIndex = objects.GetCount() + args.jobIndex;
 					std::memcpy(instanceArrayMapped + instanceIndex, &inst, sizeof(inst));
@@ -3878,6 +3880,8 @@ namespace wi::scene
 			inst.uid = entity;
 			inst.layerMask = emitter.layerMask;
 			inst.geometryOffset = (uint)geometryAllocation;
+			inst.emissive = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(1, 1, 1));
+			inst.color = wi::math::CompressColor(XMFLOAT4(1, 1, 1, 1));
 
 			const size_t instanceIndex = objects.GetCount() + hairs.GetCount() + args.jobIndex;
 			std::memcpy(instanceArrayMapped + instanceIndex, &inst, sizeof(inst));

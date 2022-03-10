@@ -54,6 +54,13 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	{
 		ray.Direction = normalize(ray.Direction);
 
+		float4 additive_dist = float4(0, 0, 0, FLT_MAX);
+
+#ifdef RTAPI
+		RayQuery<
+			RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES
+		> q;
+
 		uint flags = 0;
 #ifdef RAY_BACKFACE_CULLING
 		flags |= RAY_FLAG_CULL_BACK_FACING_TRIANGLES;
@@ -63,13 +70,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			flags |= RAY_FLAG_FORCE_OPAQUE;
 		}
 
-#ifdef RTAPI
-		RayQuery<
-			RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES
-		> q;
 		q.TraceRayInline(
 			scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
-			flags,								// uint RayFlags
+			flags,							// uint RayFlags
 			xTraceUserData.y,				// uint InstanceInclusionMask
 			ray								// RayDesc Ray
 		);
@@ -88,12 +91,22 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			if (!surface.load(prim, q.CandidateTriangleBarycentrics()))
 				break;
 
-			[branch]
-			if (surface.opacity - rng.next_float() >= 0)
+			if (surface.material.options & SHADERMATERIAL_OPTION_BIT_ADDITIVE)
+			{
+				additive_dist.xyz += max(0, energy * surface.emissiveColor);
+				additive_dist.w = min(additive_dist.w, q.CandidateTriangleRayT());
+			}
+			else if (surface.opacity - rng.next_float() >= 0)
 			{
 				q.CommitNonOpaqueTriangleHit();
 			}
 		}
+
+		if (additive_dist.w <= q.CommittedRayT())
+		{
+			result += max(0, energy * additive_dist.xyz);
+		}
+
 		if (q.CommittedStatus() != COMMITTED_TRIANGLE_HIT)
 #else
 		RayHit hit = TraceRay_Closest(ray, xTraceUserData.y, rng, groupIndex);
@@ -159,6 +172,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		surface.V = -ray.Direction;
 		surface.update();
 
+		result += max(0, energy * surface.emissiveColor);
+
 		raycone = raycone.propagate(surface.roughnessBRDF, surface.hit_depth);
 
 		if (bounce == 0)
@@ -172,8 +187,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			result += surface.albedo * energy;
 			break;
 		}
-
-		result += max(0, energy * surface.emissiveColor);
 
 		if (!surface.material.IsUnlit())
 		{

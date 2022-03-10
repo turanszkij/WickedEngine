@@ -93,6 +93,8 @@ void main(uint2 DTid : SV_DispatchThreadID)
 	RayCone raycone = RayCone::from_spread_angle(pixel_cone_spread_angle_from_image_height(postprocess.resolution.y));
 	raycone = raycone.propagate(sqr(max(minraycone, roughness)), lineardepth * GetCamera().z_far);
 
+	float4 additive_dist = float4(0, 0, 0, FLT_MAX);
+
 	RayQuery<
 		RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES
 	> q;
@@ -119,12 +121,22 @@ void main(uint2 DTid : SV_DispatchThreadID)
 
 		float alphatest = clamp(blue_noise(DTid.xy, q.CandidateTriangleRayT()).r, 0, 0.99);
 
-		[branch]
-		if (surface.opacity - alphatest >= 0)
+		if (surface.material.options & SHADERMATERIAL_OPTION_BIT_ADDITIVE)
+		{
+			additive_dist.xyz += max(0, surface.emissiveColor);
+			additive_dist.w = min(additive_dist.w, q.CandidateTriangleRayT());
+		}
+		else if (surface.opacity - alphatest >= 0)
 		{
 			q.CommitNonOpaqueTriangleHit();
 		}
 	}
+
+	if (additive_dist.w <= q.CommittedRayT())
+	{
+		payload.data.xyz += max(0, additive_dist.xyz);
+	}
+
 	if (q.CommittedStatus() != COMMITTED_TRIANGLE_HIT)
 	{
 		// miss:
@@ -209,7 +221,9 @@ void main(uint2 DTid : SV_DispatchThreadID)
 				lighting.indirect.diffuse = ddgi_sample_irradiance(surface.P, surface.N);
 			}
 
-			ApplyLighting(surface, lighting, payload.data);
+			float4 color = 0;
+			ApplyLighting(surface, lighting, color);
+			payload.data.xyz += color.rgb;
 		}
 		payload.data.w = q.CommittedRayT();
 	}
