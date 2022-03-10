@@ -43,6 +43,7 @@ float4 main(Input input) : SV_TARGET
 
 		surface.P = ray.Origin;
 
+		const float3 albedo = bounce == 0 ? rcp(PI) : surface.albedo * 2; // bounce 0 is the direct light, after that indirect
 		[loop]
 		for (uint iterator = 0; iterator < GetFrame().lightarray_count; iterator++)
 		{
@@ -201,7 +202,7 @@ float4 main(Input input) : SV_TARGET
 #endif // RTAPI
 				if (any(shadow))
 				{
-					result += max(0, shadow * lighting.direct.diffuse / PI);
+					result += albedo * shadow * lighting.direct.diffuse;
 				}
 			}
 		}
@@ -303,7 +304,7 @@ float4 main(Input input) : SV_TARGET
 				// Diffuse reflection
 				const float pdf = 1 - specChance;
 				ray.Direction = sample_hemisphere_cos(surface.N, rng);
-				energy *= surface.albedo * 2 * PI * (1 - surface.F) / pdf;
+				energy *= surface.albedo * (1 - surface.F) / pdf;
 			}
 		}
 
