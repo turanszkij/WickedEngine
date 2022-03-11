@@ -251,7 +251,7 @@ struct Surface
 			roughness *= surfaceMap.g;
 			const float metalness = material.metalness * surfaceMap.b;
 			const float reflectance = material.reflectance * surfaceMap.a;
-			albedo = baseColor.rgb * (1 - metalness);
+			albedo = baseColor.rgb * (1 - max(reflectance, metalness));
 			f0 *= lerp(reflectance.xxx, baseColor.rgb, metalness);
 		}
 
@@ -482,7 +482,7 @@ struct Surface
 
 		if (material.options & SHADERMATERIAL_OPTION_BIT_ADDITIVE)
 		{
-			emissiveColor += baseColor.rgb;
+			emissiveColor += baseColor.rgb * baseColor.a;
 		}
 
 		transmission = material.transmission;

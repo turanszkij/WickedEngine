@@ -262,21 +262,20 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 #endif // RTAPI
 					if (any(shadow))
 					{
-						hit_result += max(0, shadow * lighting.direct.diffuse);
+						hit_result += max(0, shadow * lighting.direct.diffuse / PI);
 					}
 				}
 			}
-
 #endif
-			hit_result *= surface.albedo;
-			hit_result += max(0, surface.emissiveColor);
 
 			// Infinite bounces based on previous frame probe sampling:
 			if (push.frameIndex > 0)
 			{
-				const float energy_conservation = 0.85;
+				const float energy_conservation = 0.95;
 				hit_result += ddgi_sample_irradiance(surface.P, surface.facenormal) * energy_conservation;
 			}
+			hit_result *= surface.albedo;
+			hit_result += surface.emissiveColor;
 
 			DDGIRayData rayData;
 			rayData.direction = ray.Direction;

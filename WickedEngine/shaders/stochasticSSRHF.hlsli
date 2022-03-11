@@ -117,6 +117,29 @@ float4 ImportanceSampleVisibleGGX(float2 diskXi, float roughness, float3 V)
 	return float4(H, PDF);
 }
 
+float4 ReflectionDir_GGX(float3 V, float3 N, float roughness, float2 random2)
+{
+	float4 H;
+	float3 L;
+	if (roughness > 0.05f)
+	{
+		float3x3 tangentBasis = GetTangentBasis(N);
+		float3 tangentV = mul(tangentBasis, V);
+		float2 Xi = random2;
+		Xi.y = lerp(Xi.y, 0.0f, GGX_IMPORTANCE_SAMPLE_BIAS);
+		H = ImportanceSampleVisibleGGX(SampleDisk(Xi), roughness, tangentV);
+		H.xyz = mul(H.xyz, tangentBasis);
+		L = reflect(-V, H.xyz);
+	}
+	else
+	{
+		H = float4(N.xyz, 1.0f);
+		L = reflect(-V, H.xyz);
+	}
+	float PDF = H.w;
+	return float4(L, PDF);
+}
+
 float Luminance(float3 color)
 {
 	return dot(color, float3(0.2126, 0.7152, 0.0722));

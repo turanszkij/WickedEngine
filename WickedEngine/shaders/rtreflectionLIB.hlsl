@@ -55,34 +55,9 @@ void RTReflection_Raygen()
 	const float3 P = reconstruct_position(jitterUV, depth);
 	const float3 V = normalize(GetCamera().position - P);
 
-	// The ray direction selection part is the same as in from ssr_raytraceCS.hlsl:
-	float4 H;
-	float3 L;
-	if (roughness > 0.05f)
-	{
-		float3x3 tangentBasis = GetTangentBasis(N);
-		float3 tangentV = mul(tangentBasis, V);
-
-		const float2 bluenoise = blue_noise(DTid.xy).xy;
-
-		float2 Xi = bluenoise.xy;
-
-		Xi.y = lerp(Xi.y, 0.0f, GGX_IMPORTANCE_SAMPLE_BIAS);
-
-		H = ImportanceSampleVisibleGGX(SampleDisk(Xi), roughness, tangentV);
-
-		// Tangent to world
-		H.xyz = mul(H.xyz, tangentBasis);
-
-		L = reflect(-V, H.xyz);
-	}
-	else
-	{
-		H = float4(N.xyz, 1.0f);
-		L = reflect(-V, H.xyz);
-	}
-
-	const float3 R = L;
+	const float4 GGX = ReflectionDir_GGX(V, N, roughness, blue_noise(DTid.xy).xy);
+	const float3 R = GGX.xyz;
+	const float PDF = GGX.w;
 
 	float seed = GetFrame().time;
 
@@ -106,8 +81,8 @@ void RTReflection_Raygen()
 		payload                         // Payload
 	);
 
-	output_rayIndirectSpecular[DTid.xy] = float4(L, 1);
-	output_rayDirectionPDF[DTid.xy] = float4(L, H.w);
+	output_rayIndirectSpecular[DTid.xy] = float4(payload.data.xyz, 1);
+	output_rayDirectionPDF[DTid.xy] = float4(R, PDF);
 	output_rayLengths[DTid.xy] = payload.data.w;
 }
 

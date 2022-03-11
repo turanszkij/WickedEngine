@@ -670,7 +670,7 @@ namespace wi::renderer
 		wi::graphics::CommandList cmd
 	);
 
-	// Render the scene with ray tracing. You provide the ray buffer, where each ray maps to one pixel of the result testure
+	// Render the scene with ray tracing
 	void RayTraceScene(
 		const wi::scene::Scene& scene,
 		const wi::graphics::Texture& output,

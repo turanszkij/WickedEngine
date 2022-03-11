@@ -135,6 +135,11 @@ inline bool IntersectTriangleANY(
 	float3 pvec = cross(ray.Direction, v0v2);
 	float det = dot(v0v1, pvec);
 
+#ifdef RAY_BACKFACE_CULLING 
+	if (det < 0.000001 && (prim.flags & BVH_PRIMITIVE_FLAG_DOUBLE_SIDED) == 0)
+		return false;
+#endif // RAY_BACKFACE_CULLING
+
 	// ray and triangle are parallel if det is close to 0
 	if (abs(det) < 0.000001)
 		return false;

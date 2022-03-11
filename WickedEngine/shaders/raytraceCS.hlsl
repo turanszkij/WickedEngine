@@ -4,6 +4,7 @@
 #include "globals.hlsli"
 #include "raytracingHF.hlsli"
 #include "lightingHF.hlsli"
+#include "stochasticSSRHF.hlsli"
 
 // This value specifies after which bounce the anyhit will be disabled:
 static const uint ANYTHIT_CUTOFF_AFTER_BOUNCE_COUNT = 1;
@@ -93,7 +94,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 			if (surface.material.options & SHADERMATERIAL_OPTION_BIT_ADDITIVE)
 			{
-				additive_dist.xyz += max(0, energy * surface.emissiveColor);
+				additive_dist.xyz += energy * surface.emissiveColor;
 				additive_dist.w = min(additive_dist.w, q.CandidateTriangleRayT());
 			}
 			else if (surface.opacity - rng.next_float() >= 0)
@@ -172,7 +173,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 		surface.V = -ray.Direction;
 		surface.update();
 
-		result += max(0, energy * surface.emissiveColor);
+		result += energy * surface.emissiveColor;
 
 		raycone = raycone.propagate(surface.roughnessBRDF, surface.hit_depth);
 
@@ -190,7 +191,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 		if (!surface.material.IsUnlit())
 		{
-			const float3 albedo = surface.albedo * (bounce == 0 ? rcp(PI) : 2); // bounce 0 is the direct light, after that indirect
+			const float3 albedo = surface.albedo / PI;
 			// Light sampling:
 			[loop]
 			for (uint iterator = 0; iterator < GetFrame().lightarray_count; iterator++)
@@ -294,7 +295,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 				if (any(surfaceToLight.NdotL_sss) && dist > 0)
 				{
-					float3 shadow = energy;
+					float3 shadow = 1;
 
 					RayDesc newRay;
 					newRay.Origin = surface.P;
@@ -302,13 +303,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 					newRay.TMin = 0.001;
 					newRay.TMax = dist;
 
+#ifdef RTAPI
+
 					uint flags = RAY_FLAG_CULL_FRONT_FACING_TRIANGLES;
 					if (bounce > ANYTHIT_CUTOFF_AFTER_BOUNCE_COUNT)
 					{
 						flags |= RAY_FLAG_FORCE_OPAQUE;
 					}
 
-#ifdef RTAPI
 					q.TraceRayInline(
 						scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
 						flags,							// uint RayFlags
@@ -356,29 +358,25 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			// Refraction
 			const float3 R = refract(ray.Direction, surface.N, 1 - surface.material.refraction);
 			ray.Direction = lerp(R, sample_hemisphere_cos(R, rng), surface.roughnessBRDF);
-			energy *= surface.albedo;
+			energy *= surface.albedo / max(0.001, surface.transmission);
 
 			// Add a new bounce iteration, otherwise the transparent effect can disappear:
 			bounce--;
 		}
 		else
 		{
-			const float specChance = dot(surface.F, 0.333);
-
-			if (rng.next_float() < specChance)
+			const float specular_chance = dot(surface.F, 0.333);
+			if (rng.next_float() < specular_chance)
 			{
 				// Specular reflection
-				const float pdf = specChance;
-				const float3 R = reflect(ray.Direction, surface.N);
-				ray.Direction = lerp(R, sample_hemisphere_cos(R, rng), surface.roughnessBRDF);
-				energy *= surface.F / pdf;
+				ray.Direction = ReflectionDir_GGX(-ray.Direction, surface.N, surface.roughness, rng.next_float2()).xyz;
+				energy *= surface.F / max(0.001, specular_chance) / max(0.001, 1 - surface.transmission);
 			}
 			else
 			{
 				// Diffuse reflection
-				const float pdf = 1 - specChance;
 				ray.Direction = sample_hemisphere_cos(surface.N, rng);
-				energy *= surface.albedo * (1 - surface.F) / pdf;
+				energy *= surface.albedo * (1 - surface.F) / max(0.001, 1 - specular_chance) / max(0.001, 1 - surface.transmission);
 			}
 
 			if (dot(ray.Direction, surface.facenormal) <= 0)
@@ -391,7 +389,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 		// Terminate ray's path or apply inverse termination bias:
 		const float termination_chance = max3(energy);
-		if (rng.next_float() >= termination_chance)
+		if (rng.next_float() > termination_chance)
 		{
 			break;
 		}
