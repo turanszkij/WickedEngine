@@ -295,7 +295,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 
 				if (any(surfaceToLight.NdotL_sss) && dist > 0)
 				{
-					float3 shadow = 1;
+					float3 shadow = energy;
 
 					RayDesc newRay;
 					newRay.Origin = surface.P;

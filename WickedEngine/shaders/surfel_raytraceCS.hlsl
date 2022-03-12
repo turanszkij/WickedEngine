@@ -229,7 +229,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 
 				if (NdotL > 0 && dist > 0)
 				{
-					float3 shadow = NdotL;
+					float3 shadow = 1;
 
 					RayDesc newRay;
 					newRay.Origin = surface.P;
@@ -254,7 +254,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 #endif // RTAPI
 					if (any(shadow))
 					{
-						hit_result += max(0, shadow * lighting.direct.diffuse / PI);
+						hit_result += max(0, shadow * lighting.direct.diffuse * NdotL / PI);
 					}
 				}
 			}

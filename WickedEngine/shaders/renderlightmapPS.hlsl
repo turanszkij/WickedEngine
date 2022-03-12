@@ -156,7 +156,7 @@ float4 main(Input input) : SV_TARGET
 
 			if (NdotL > 0 && dist > 0)
 			{
-				float3 shadow = NdotL;
+				float3 shadow = energy;
 
 				RayDesc newRay;
 				newRay.Origin = surface.P;
@@ -203,7 +203,7 @@ float4 main(Input input) : SV_TARGET
 #endif // RTAPI
 				if (any(shadow))
 				{
-					result += albedo * shadow * lighting.direct.diffuse;
+					result += albedo * shadow * lighting.direct.diffuse * NdotL;
 				}
 			}
 		}
