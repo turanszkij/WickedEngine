@@ -131,10 +131,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 #if 1
 			// Light sampling:
-			[loop]
-			for (uint iterator = 0; iterator < GetFrame().lightarray_count; iterator++)
 			{
-				ShaderEntity light = load_entity(GetFrame().lightarray_offset + iterator);
+				const uint light_count = GetFrame().lightarray_count;
+				const uint light_index = GetFrame().lightarray_offset + rng.next_uint(light_count);
+				ShaderEntity light = load_entity(light_index);
 
 				Lighting lighting;
 				lighting.create(0, 0, 0, 0);
@@ -262,7 +262,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 #endif // RTAPI
 					if (any(shadow))
 					{
-						hit_result += max(0, shadow * lighting.direct.diffuse * NdotL / PI);
+						hit_result += light_count * max(0, shadow * lighting.direct.diffuse * NdotL / PI);
 					}
 				}
 			}

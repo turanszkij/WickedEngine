@@ -189,30 +189,55 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 			break;
 		}
 
+		// Light sampling:
 		if (!surface.material.IsUnlit())
 		{
-			const float3 albedo = surface.albedo / PI;
-			// Light sampling:
-			[loop]
-			for (uint iterator = 0; iterator < GetFrame().lightarray_count; iterator++)
+			const uint light_count = GetFrame().lightarray_count;
+			const uint light_index = GetFrame().lightarray_offset + rng.next_uint(light_count);
+			ShaderEntity light = load_entity(light_index);
+
+			Lighting lighting;
+			lighting.create(0, 0, 0, 0);
+
+			float3 L = 0;
+			float dist = 0;
+			float3 lightColor = 0;
+			SurfaceToLight surfaceToLight = (SurfaceToLight)0;
+
+			switch (light.GetType())
 			{
-				ShaderEntity light = load_entity(GetFrame().lightarray_offset + iterator);
+			case ENTITY_TYPE_DIRECTIONALLIGHT:
+			{
+				dist = FLT_MAX;
 
-				Lighting lighting;
-				lighting.create(0, 0, 0, 0);
+				L = light.GetDirection().xyz;
 
-				float3 L = 0;
-				float dist = 0;
-				float3 lightColor = 0;
-				SurfaceToLight surfaceToLight = (SurfaceToLight)0;
+				surfaceToLight.create(surface, L);
 
-				switch (light.GetType())
+				[branch]
+				if (any(surfaceToLight.NdotL_sss))
 				{
-				case ENTITY_TYPE_DIRECTIONALLIGHT:
-				{
-					dist = FLT_MAX;
+					lightColor = light.GetColor().rgb * light.GetEnergy();
 
-					L = light.GetDirection().xyz;
+					[branch]
+					if (GetFrame().options & OPTION_BIT_REALISTIC_SKY)
+					{
+						lightColor *= GetAtmosphericLightTransmittance(GetWeather().atmosphere, surface.P, L, texture_transmittancelut);
+					}
+				}
+			}
+			break;
+			case ENTITY_TYPE_POINTLIGHT:
+			{
+				L = light.position - surface.P;
+				const float dist2 = dot(L, L);
+				const float range2 = light.GetRange() * light.GetRange();
+
+				[branch]
+				if (dist2 < range2)
+				{
+					dist = sqrt(dist2);
+					L /= dist;
 
 					surfaceToLight.create(surface, L);
 
@@ -221,134 +246,106 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 					{
 						lightColor = light.GetColor().rgb * light.GetEnergy();
 
-						[branch]
-						if (GetFrame().options & OPTION_BIT_REALISTIC_SKY)
-						{
-							lightColor *= GetAtmosphericLightTransmittance(GetWeather().atmosphere, surface.P, L, texture_transmittancelut);
-						}
+						const float range2 = light.GetRange() * light.GetRange();
+						const float att = saturate(1 - (dist2 / range2));
+						const float attenuation = att * att;
+						lightColor *= attenuation;
 					}
 				}
-				break;
-				case ENTITY_TYPE_POINTLIGHT:
+			}
+			break;
+			case ENTITY_TYPE_SPOTLIGHT:
+			{
+				L = light.position - surface.P;
+				const float dist2 = dot(L, L);
+				const float range2 = light.GetRange() * light.GetRange();
+
+				[branch]
+				if (dist2 < range2)
 				{
-					L = light.position - surface.P;
-					const float dist2 = dot(L, L);
-					const float range2 = light.GetRange() * light.GetRange();
+					dist = sqrt(dist2);
+					L /= dist;
+
+					surfaceToLight.create(surface, L);
 
 					[branch]
-					if (dist2 < range2)
+					if (any(surfaceToLight.NdotL_sss))
 					{
-						dist = sqrt(dist2);
-						L /= dist;
-
-						surfaceToLight.create(surface, L);
+						const float SpotFactor = dot(L, light.GetDirection());
+						const float spotCutOff = light.GetConeAngleCos();
 
 						[branch]
-						if (any(surfaceToLight.NdotL_sss))
+						if (SpotFactor > spotCutOff)
 						{
 							lightColor = light.GetColor().rgb * light.GetEnergy();
 
 							const float range2 = light.GetRange() * light.GetRange();
 							const float att = saturate(1 - (dist2 / range2));
-							const float attenuation = att * att;
+							float attenuation = att * att;
+							attenuation *= saturate((1 - (1 - SpotFactor) * 1 / (1 - spotCutOff)));
 							lightColor *= attenuation;
 						}
 					}
 				}
-				break;
-				case ENTITY_TYPE_SPOTLIGHT:
-				{
-					L = light.position - surface.P;
-					const float dist2 = dot(L, L);
-					const float range2 = light.GetRange() * light.GetRange();
+			}
+			break;
+			}
 
-					[branch]
-					if (dist2 < range2)
-					{
-						dist = sqrt(dist2);
-						L /= dist;
+			if (any(surfaceToLight.NdotL_sss) && dist > 0)
+			{
+				float3 shadow = energy;
 
-						surfaceToLight.create(surface, L);
-
-						[branch]
-						if (any(surfaceToLight.NdotL_sss))
-						{
-							const float SpotFactor = dot(L, light.GetDirection());
-							const float spotCutOff = light.GetConeAngleCos();
-
-							[branch]
-							if (SpotFactor > spotCutOff)
-							{
-								lightColor = light.GetColor().rgb * light.GetEnergy();
-
-								const float range2 = light.GetRange() * light.GetRange();
-								const float att = saturate(1 - (dist2 / range2));
-								float attenuation = att * att;
-								attenuation *= saturate((1 - (1 - SpotFactor) * 1 / (1 - spotCutOff)));
-								lightColor *= attenuation;
-							}
-						}
-					}
-				}
-				break;
-				}
-
-				if (any(surfaceToLight.NdotL_sss) && dist > 0)
-				{
-					float3 shadow = energy;
-
-					RayDesc newRay;
-					newRay.Origin = surface.P;
-					newRay.Direction = normalize(lerp(L, sample_hemisphere_cos(L, rng), 0.025 + max3(surface.sss)));
-					newRay.TMin = 0.001;
-					newRay.TMax = dist;
+				RayDesc newRay;
+				newRay.Origin = surface.P;
+				newRay.Direction = normalize(lerp(L, sample_hemisphere_cos(L, rng), 0.025 + max3(surface.sss)));
+				newRay.TMin = 0.001;
+				newRay.TMax = dist;
 
 #ifdef RTAPI
 
-					uint flags = RAY_FLAG_CULL_FRONT_FACING_TRIANGLES;
-					if (bounce > ANYTHIT_CUTOFF_AFTER_BOUNCE_COUNT)
+				uint flags = RAY_FLAG_CULL_FRONT_FACING_TRIANGLES;
+				if (bounce > ANYTHIT_CUTOFF_AFTER_BOUNCE_COUNT)
+				{
+					flags |= RAY_FLAG_FORCE_OPAQUE;
+				}
+
+				q.TraceRayInline(
+					scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
+					flags,							// uint RayFlags
+					0xFF,							// uint InstanceInclusionMask
+					newRay							// RayDesc Ray
+				);
+				while (q.Proceed())
+				{
+					PrimitiveID prim;
+					prim.primitiveIndex = q.CandidatePrimitiveIndex();
+					prim.instanceIndex = q.CandidateInstanceID();
+					prim.subsetIndex = q.CandidateGeometryIndex();
+
+					Surface surface;
+					surface.init();
+					surface.hit_depth = q.CandidateTriangleRayT();
+					if (!surface.load(prim, q.CandidateTriangleBarycentrics()))
+						break;
+
+					shadow *= lerp(1, surface.albedo * surface.transmission, surface.opacity);
+
+					[branch]
+					if (!any(shadow))
 					{
-						flags |= RAY_FLAG_FORCE_OPAQUE;
+						q.CommitNonOpaqueTriangleHit();
 					}
-
-					q.TraceRayInline(
-						scene_acceleration_structure,	// RaytracingAccelerationStructure AccelerationStructure
-						flags,							// uint RayFlags
-						0xFF,							// uint InstanceInclusionMask
-						newRay							// RayDesc Ray
-					);
-					while (q.Proceed())
-					{
-						PrimitiveID prim;
-						prim.primitiveIndex = q.CandidatePrimitiveIndex();
-						prim.instanceIndex = q.CandidateInstanceID();
-						prim.subsetIndex = q.CandidateGeometryIndex();
-
-						Surface surface;
-						surface.init();
-						surface.hit_depth = q.CandidateTriangleRayT();
-						if (!surface.load(prim, q.CandidateTriangleBarycentrics()))
-							break;
-
-						shadow *= lerp(1, surface.albedo * surface.transmission, surface.opacity);
-
-						[branch]
-						if (!any(shadow))
-						{
-							q.CommitNonOpaqueTriangleHit();
-						}
-					}
-					shadow = q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ? 0 : shadow;
+				}
+				shadow = q.CommittedStatus() == COMMITTED_TRIANGLE_HIT ? 0 : shadow;
 #else
-					shadow = TraceRay_Any(newRay, xTraceUserData.y, rng, groupIndex) ? 0 : shadow;
+				shadow = TraceRay_Any(newRay, xTraceUserData.y, rng, groupIndex) ? 0 : shadow;
 #endif // RTAPI
-					if (any(shadow))
-					{
-						lightColor *= shadow;
-						lighting.direct.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
-						lighting.direct.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
-						result += mad(albedo * (1 - surface.transmission), lighting.direct.diffuse, lighting.direct.specular) * surface.opacity;
-					}
+				if (any(shadow))
+				{
+					lightColor *= shadow;
+					lighting.direct.specular = lightColor * BRDF_GetSpecular(surface, surfaceToLight);
+					lighting.direct.diffuse = lightColor * BRDF_GetDiffuse(surface, surfaceToLight);
+					result += light_count * mad(surface.albedo / PI * (1 - surface.transmission), lighting.direct.diffuse, lighting.direct.specular) * surface.opacity;
 				}
 			}
 		}
