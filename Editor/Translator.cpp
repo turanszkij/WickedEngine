@@ -594,8 +594,6 @@ void Translator::PostTranslate()
 		TransformComponent* transform_selected = scene.transforms.GetComponent(x);
 		if (transform_selected != nullptr)
 		{
-			XMFLOAT4X4 worldPrev = transform_selected->world;
-
 			transform_selected->UpdateTransform_Parented(transform);
 
 			// selected to world space:
@@ -610,13 +608,6 @@ void Translator::PostTranslate()
 				{
 					transform_selected->MatrixTransform(XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform_parent->world)));
 				}
-			}
-
-			// Restore worldPrev, so velocity buffer is correctly updated:
-			//	(Only when dragging, otherwise if it's released, we want to record the matrix properly for undo)
-			if (dragging)
-			{
-				transform_selected->world = worldPrev;
 			}
 		}
 	}

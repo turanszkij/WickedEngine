@@ -979,6 +979,8 @@ void EditorComponent::Update(float dt)
 {
 	wi::profiler::range_id profrange = wi::profiler::BeginRangeCPU("Editor Update");
 
+	translator.Update(*this);
+
 	Scene& scene = wi::scene::GetScene();
 	CameraComponent& camera = wi::scene::GetCamera();
 
@@ -1441,12 +1443,10 @@ void EditorComponent::Update(float dt)
 				EntitySerializer seri;
 				clipboard.SetReadModeAndResetPos(false);
 				clipboard << prevSel.size();
-				translator.PreTranslate();
 				for (auto& x : prevSel)
 				{
 					scene.Entity_Serialize(clipboard, seri, x);
 				}
-				translator.PostTranslate();
 
 				if (wi::input::Press((wi::input::BUTTON)'X'))
 				{
@@ -1488,7 +1488,6 @@ void EditorComponent::Update(float dt)
 				RecordSelection(archive);
 
 				auto& prevSel = translator.selectedEntitiesNonRecursive;
-				translator.PreTranslate();
 				wi::vector<Entity> addedEntities;
 				for (auto& x : prevSel)
 				{
@@ -1496,7 +1495,6 @@ void EditorComponent::Update(float dt)
 					picked.entity = scene.Entity_Duplicate(x);
 					addedEntities.push_back(picked.entity);
 				}
-				translator.PostTranslate();
 
 				ClearSelected();
 
@@ -1684,8 +1682,6 @@ void EditorComponent::Update(float dt)
 			}
 		}
 	}
-
-	translator.Update(*this);
 
 	if (translator.IsDragEnded())
 	{
