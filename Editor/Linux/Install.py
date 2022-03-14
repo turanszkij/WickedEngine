@@ -26,6 +26,8 @@ if __name__ == "__main__":
     window = TkBootstrap.Window()
     window.title("Wicked Engine Installer")
     
+    style = TkBootstrap.Style("darkly")
+    
     # Window information is a float, we need an int, things break.
     screenWidth = int(window.winfo_screenwidth()/3) 
     screenHeight = int(window.winfo_screenheight()/3)
