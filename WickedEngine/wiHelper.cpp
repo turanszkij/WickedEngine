@@ -953,9 +953,14 @@ namespace wi::helper
 		}
 
 		std::vector<std::string> extensions = {params.description, ""};
+		int extcount = 0;
 		for (auto& x : params.extensions)
 		{
-			extensions[1] += "*." + x + " ";
+			extensions[1] += "*." + x;
+			if(extcount < params.extensions.size()-1){
+				extensions[1] += " ";
+			}
+			extcount++;
 		}
 
 		switch (params.type) {
