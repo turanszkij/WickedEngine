@@ -3,14 +3,15 @@
 import os
 import distro
 import tkinter
-from tkinter import *
-from tkinter import ttk
+from PIL import Image, ImageTk
+import ttkbootstrap as TkBootstrap 
+from ttkbootstrap.constants import *
 
 def SelectDirectory():
     print("Please select your Wicked Engine root directory.")
 
 if __name__ == "__main__":
-    answer_installDependencies = input("Install dependencies?")
+    answer_installDependencies = input("Install dependencies?" + '\n')
         
     if answer_installDependencies == "Yes":
         if distro.name() == "Fedora Linux":
@@ -22,7 +23,7 @@ if __name__ == "__main__":
     
     #region Tk Interface variables.
     
-    window = tkinter.Tk()
+    window = TkBootstrap.Window()
     window.title("Wicked Engine Installer")
     
     # Window information is a float, we need an int, things break.
