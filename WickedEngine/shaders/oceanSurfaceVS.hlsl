@@ -3,15 +3,6 @@
 
 Texture2D<float4> texture_displacementmap : register(t0);
 
-static const float3 QUAD[] = {
-	float3(0, 0, 0),
-	float3(0, 1, 0),
-	float3(1, 0, 0),
-	float3(1, 0, 0),
-	float3(1, 1, 0),
-	float3(0, 1, 0),
-};
-
 #define infinite GetCamera().z_far
 float3 intersectPlaneClampInfinite(in float3 rayOrigin, in float3 rayDirection, in float3 planeNormal, float planeHeight)
 {
@@ -22,22 +13,16 @@ float3 intersectPlaneClampInfinite(in float3 rayOrigin, in float3 rayDirection, 
 		return float3(rayOrigin.x, planeHeight, rayOrigin.z) - normalize(float3(rayDirection.x, 0, rayDirection.z)) * infinite;
 }
 
-PSIn main(uint fakeIndex : SV_VERTEXID)
+PSIn main(uint vertexID : SV_VertexID)
 {
 	PSIn Out;
-
-	// fake instancing of quads:
-	uint vertexID = fakeIndex % 6;
-	uint instanceID = fakeIndex / 6;
 
 	// Retrieve grid dimensions and 1/gridDimensions:
 	float2 dim = xOceanScreenSpaceParams.xy;
 	float2 invdim = xOceanScreenSpaceParams.zw;
 
 	// Assemble screen space grid:
-	Out.pos = float4(QUAD[vertexID], 1);
-	Out.pos.xy *= invdim;
-	Out.pos.xy += (float2)unflatten2D(instanceID, dim.xy) * invdim;
+	Out.pos = float4(unflatten2D(vertexID, dim.xy) * invdim, 0, 1);
 	Out.pos.xy = Out.pos.xy * 2 - 1;
 	Out.pos.xy *= max(1, xOceanSurfaceDisplacementTolerance); // extrude screen space grid to tolerate displacement
 

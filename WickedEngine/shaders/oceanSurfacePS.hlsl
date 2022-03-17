@@ -17,10 +17,11 @@ float4 main(PSIn input) : SV_TARGET
 	V /= dist;
 	float emissive = 0;
 
-	float gradient_fade = saturate(dist * 0.001);
-	float2 gradientNear = texture_gradientmap.Sample(sampler_aniso_wrap, input.uv).xy;
-	float2 gradientFar = texture_gradientmap.Sample(sampler_aniso_wrap, input.uv * 0.125).xy;
-	float2 gradient = lerp(gradientNear, gradientFar, gradient_fade);
+	const float gradient_fade = saturate(dist * 0.001);
+	const float4 gradientNear = texture_gradientmap.Sample(sampler_aniso_wrap, input.uv);
+	const float4 gradientFar = texture_gradientmap.Sample(sampler_aniso_wrap, input.uv * 0.125);
+	const float2 gradient = lerp(gradientNear.rg, gradientFar.rg, gradient_fade);
+	const float sss_amount = lerp(gradientNear.a, gradientFar.a, gradient_fade);
 
 	Surface surface;
 	surface.init();
@@ -30,6 +31,8 @@ float4 main(PSIn input) : SV_TARGET
 	surface.P = input.pos3D;
 	surface.N = normalize(float3(gradient.x, xOceanTexelLength * 2, gradient.y));
 	surface.V = V;
+	surface.sss = color * sss_amount;
+	surface.sss_inv = 1.0f / ((1 + surface.sss) * (1 + surface.sss));
 	surface.update();
 
 	Lighting lighting;
