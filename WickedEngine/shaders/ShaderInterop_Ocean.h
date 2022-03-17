@@ -2,7 +2,7 @@
 #define WI_SHADERINTEROP_OCEAN_H
 #include "ShaderInterop.h"
 
-#define OCEAN_COMPUTE_TILESIZE 16
+#define OCEAN_COMPUTE_TILESIZE 8
 
 // Simulation constants:
 

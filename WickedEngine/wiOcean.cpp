@@ -386,6 +386,38 @@ namespace wi
 
 		const uint2 dim = uint2(160 * params.surfaceDetail, 90 * params.surfaceDetail);
 
+		const uint index_count = (dim.x - 1) * (dim.y - 1) * 6;
+		const uint64_t indexbuffer_required_size = index_count * sizeof(uint32_t);
+		if (indexBuffer.GetDesc().size != indexbuffer_required_size)
+		{
+			wi::vector<uint32_t> index_data(index_count);
+			size_t counter = 0;
+			for (uint32_t x = 0; x < dim.x - 1; x++)
+			{
+				for (uint32_t y = 0; y < dim.y - 1; y++)
+				{
+					uint32_t lowerLeft = x + y * dim.x;
+					uint32_t lowerRight = (x + 1) + y * dim.x;
+					uint32_t topLeft = x + (y + 1) * dim.x;
+					uint32_t topRight = (x + 1) + (y + 1) * dim.x;
+
+					index_data[counter++] = topLeft;
+					index_data[counter++] = lowerLeft;
+					index_data[counter++] = lowerRight;
+
+					index_data[counter++] = topLeft;
+					index_data[counter++] = lowerRight;
+					index_data[counter++] = topRight;
+				}
+			}
+
+			GPUBufferDesc desc;
+			desc.bind_flags = BindFlag::INDEX_BUFFER;
+			desc.size = indexbuffer_required_size;
+			device->CreateBuffer(&desc, index_data.data(), &indexBuffer);
+			device->SetName(&indexBuffer, "Ocean::indexBuffer");
+		}
+
 		Ocean_RenderCB cb;
 		cb.xOceanWaterColor = params.waterColor;
 		cb.xOceanTexelLength = params.patch_length / params.dmap_dim;
@@ -400,7 +432,9 @@ namespace wi
 		device->BindResource(&displacementMap, 0, cmd);
 		device->BindResource(&gradientMap, 1, cmd);
 
-		device->Draw(dim.x * dim.y * 6, 0, cmd);
+		device->BindIndexBuffer(&indexBuffer, IndexBufferFormat::UINT32, 0, cmd);
+
+		device->DrawIndexed(index_count, 0, 0, cmd);
 
 		device->EventEnd(cmd);
 	}
