@@ -44,7 +44,6 @@ PSIn main(uint vertexID : SV_VertexID)
 	Out.pos = mul(GetCamera().view_projection, float4(worldPos, 1));
 	Out.pos3D = worldPos;
 	Out.uv = uv;
-	Out.ReflectionMapSamplingPos = mul(GetCamera().reflection_view_projection, float4(worldPos, 1));
 
 	return Out;
 }

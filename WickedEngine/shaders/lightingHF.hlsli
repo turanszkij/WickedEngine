@@ -142,7 +142,7 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 				{
 					// Project into shadow map space (no need to divide by .w because ortho projection!):
 					float3 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + cascade), float4(surface.P, 1)).xyz;
-					float3 shadow_uv = shadow_pos * float3(0.5, -0.5, 0.5) + 0.5;
+					float3 shadow_uv = clipspace_to_uv(shadow_pos);
 
 					// Determine if pixel is inside current cascade bounds and compute shadow if it is:
 					[branch]
@@ -159,7 +159,7 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 							// Project into next shadow cascade (no need to divide by .w because ortho projection!):
 							cascade += 1;
 							shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + cascade), float4(surface.P, 1)).xyz;
-							shadow_uv = shadow_pos * float3(0.5, -0.5, 0.5) + 0.5;
+							shadow_uv = clipspace_to_uv(shadow_pos);
 							const float3 shadow_fallback = shadow_2D(light, shadow_pos, shadow_uv.xy, cascade);
 
 							shadow *= lerp(shadow_main, shadow_fallback, cascade_fade);
@@ -274,7 +274,7 @@ inline void light_spot(in ShaderEntity light, in Surface surface, inout Lighting
 					{
 						float4 shadow_pos = mul(load_entitymatrix(light.GetMatrixIndex() + 0), float4(surface.P, 1));
 						shadow_pos.xyz /= shadow_pos.w;
-						float2 shadow_uv = shadow_pos.xy * float2(0.5, -0.5) + 0.5;
+						float2 shadow_uv = clipspace_to_uv(shadow_pos.xy);
 						[branch]
 						if (is_saturated(shadow_uv))
 						{
