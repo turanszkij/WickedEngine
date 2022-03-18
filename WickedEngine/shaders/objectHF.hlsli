@@ -385,7 +385,7 @@ inline float3 PlanarReflection(in Surface surface, in float2 bumpColor)
 	{
 		float4 reflectionUV = mul(GetCamera().reflection_view_projection, float4(surface.P, 1));
 		reflectionUV.xy /= reflectionUV.w;
-		reflectionUV.xy = reflectionUV.xy * float2(0.5, -0.5) + 0.5;
+		reflectionUV.xy = clipspace_to_uv(reflectionUV.xy);
 		return bindless_textures[GetCamera().texture_reflection_index].SampleLevel(sampler_linear_clamp, reflectionUV.xy + bumpColor * GetMaterial().normalMapStrength, 0).rgb;
 	}
 	return 0;
@@ -458,7 +458,7 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 				int decalNormal = asint(decalProjection[3][1]);
 				decalProjection[3] = float4(0, 0, 0, 1);
 				const float3 clipSpacePos = mul(decalProjection, float4(surface.P, 1)).xyz;
-				const float3 uvw = clipSpacePos.xyz * float3(0.5, -0.5, 0.5) + 0.5;
+				const float3 uvw = clipspace_to_uv(clipSpacePos.xyz);
 				[branch]
 				if (is_saturated(uvw))
 				{
@@ -530,7 +530,7 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 
 				const float4x4 probeProjection = load_entitymatrix(probe.GetMatrixIndex());
 				const float3 clipSpacePos = mul(probeProjection, float4(surface.P, 1)).xyz;
-				const float3 uvw = clipSpacePos.xyz * float3(0.5, -0.5, 0.5) + 0.5;
+				const float3 uvw = clipspace_to_uv(clipSpacePos.xyz);
 				[branch]
 				if (is_saturated(uvw))
 				{
@@ -680,7 +680,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 					int decalNormal = asint(decalProjection[3][1]);
 					decalProjection[3] = float4(0, 0, 0, 1);
 					const float3 clipSpacePos = mul(decalProjection, float4(surface.P, 1)).xyz;
-					const float3 uvw = clipSpacePos.xyz * float3(0.5, -0.5, 0.5) + 0.5;
+					const float3 uvw = clipspace_to_uv(clipSpacePos.xyz);
 					[branch]
 					if (is_saturated(uvw))
 					{
@@ -765,7 +765,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 
 					const float4x4 probeProjection = load_entitymatrix(probe.GetMatrixIndex());
 					const float3 clipSpacePos = mul(probeProjection, float4(surface.P, 1)).xyz;
-					const float3 uvw = clipSpacePos.xyz * float3(0.5, -0.5, 0.5) + 0.5;
+					const float3 uvw = clipspace_to_uv(clipSpacePos.xyz);
 					[branch]
 					if (is_saturated(uvw))
 					{
@@ -1617,7 +1617,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 		//REFLECTION
 		float4 reflectionUV = mul(GetCamera().reflection_view_projection, float4(surface.P, 1));
 		reflectionUV.xy /= reflectionUV.w;
-		reflectionUV.xy = reflectionUV.xy * float2(0.5, -0.5) + 0.5;
+		reflectionUV.xy = clipspace_to_uv(reflectionUV.xy);
 		lighting.indirect.specular += bindless_textures[GetCamera().texture_reflection_index].SampleLevel(sampler_linear_mirror, reflectionUV.xy + bumpColor.rg, 0).rgb * surface.F;
 	}
 #endif // WATER

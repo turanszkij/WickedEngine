@@ -170,6 +170,14 @@ inline float2 uv_to_clipspace(in float2 uv)
 	clipspace.y *= -1;
 	return clipspace;
 }
+inline float2 clipspace_to_uv(in float2 clipspace)
+{
+	return clipspace * float2(0.5, -0.5) + 0.5;
+}
+inline float3 clipspace_to_uv(in float3 clipspace)
+{
+	return clipspace * float3(0.5, -0.5, 0.5) + 0.5;
+}
 
 #define DEGAMMA_SKY(x)	((GetFrame().options & OPTION_BIT_STATIC_SKY_HDR) ? (x) : RemoveSRGBCurve_Fast(x))
 #define DEGAMMA(x)		(RemoveSRGBCurve_Fast(x))

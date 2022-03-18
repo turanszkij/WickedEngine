@@ -337,14 +337,15 @@ struct Surface
 	void load_internal()
 	{
 		material = load_material(geometry.materialIndex);
+		SamplerState sam = bindless_samplers[GetFrame().sampler_objectshader_index];
 
 		const bool is_hairparticle = geometry.flags & SHADERMESH_FLAG_HAIRPARTICLE;
 		const bool is_emittedparticle = geometry.flags & SHADERMESH_FLAG_EMITTEDPARTICLE;
 		const bool simple_lighting = is_hairparticle || is_emittedparticle;
 
-		float u = bary.x;
-		float v = bary.y;
-		float w = 1 - u - v;
+		const float u = bary.x;
+		const float v = bary.y;
+		const float w = 1 - u - v;
 
 		float3 n0 = unpack_unitvector(data0.w);
 		float3 n1 = unpack_unitvector(data1.w);
@@ -402,7 +403,7 @@ struct Surface
 #ifdef SURFACE_LOAD_MIPCONE
 			lod = compute_texture_lod(tex, material.uvset_baseColorMap == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
 #endif // SURFACE_LOAD_MIPCONE
-			float4 baseColorMap = tex.SampleLevel(sampler_linear_wrap, UV_baseColorMap, lod);
+			float4 baseColorMap = tex.SampleLevel(sam, UV_baseColorMap, lod);
 			if ((GetFrame().options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 			{
 				baseColorMap.rgb *= DEGAMMA(baseColorMap.rgb);
@@ -435,7 +436,7 @@ struct Surface
 #ifdef SURFACE_LOAD_MIPCONE
 			lod = compute_texture_lod(tex, material.uvset_surfaceMap == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
 #endif // SURFACE_LOAD_MIPCONE
-			surfaceMap = tex.SampleLevel(sampler_linear_wrap, UV_surfaceMap, lod);
+			surfaceMap = tex.SampleLevel(sam, UV_surfaceMap, lod);
 		}
 		if (simple_lighting)
 		{
@@ -452,7 +453,7 @@ struct Surface
 #ifdef SURFACE_LOAD_MIPCONE
 			lod = compute_texture_lod(tex, material.uvset_specularMap == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
 #endif // SURFACE_LOAD_MIPCONE
-			specularMap = tex.SampleLevel(sampler_linear_wrap, UV_specularMap, lod);
+			specularMap = tex.SampleLevel(sam, UV_specularMap, lod);
 			specularMap.rgb = DEGAMMA(specularMap.rgb);
 		}
 
@@ -474,7 +475,7 @@ struct Surface
 #ifdef SURFACE_LOAD_MIPCONE
 				lod = compute_texture_lod(tex, material.uvset_emissiveMap == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
 #endif // SURFACE_LOAD_MIPCONE
-				float4 emissiveMap = tex.SampleLevel(sampler_linear_wrap, UV_emissiveMap, lod);
+				float4 emissiveMap = tex.SampleLevel(sam, UV_emissiveMap, lod);
 				emissiveMap.rgb = DEGAMMA(emissiveMap.rgb);
 				emissiveColor *= emissiveMap.rgb * emissiveMap.a;
 			}
@@ -494,7 +495,7 @@ struct Surface
 #ifdef SURFACE_LOAD_MIPCONE
 			lod = compute_texture_lod(tex, material.uvset_transmissionMap == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
 #endif // SURFACE_LOAD_MIPCONE
-			transmission *= tex.SampleLevel(sampler_linear_wrap, UV_transmissionMap, lod).r;
+			transmission *= tex.SampleLevel(sam, UV_transmissionMap, lod).r;
 		}
 
 		[branch]
@@ -506,7 +507,7 @@ struct Surface
 #ifdef SURFACE_LOAD_MIPCONE
 			lod = compute_texture_lod(tex, material.uvset_occlusionMap == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
 #endif // SURFACE_LOAD_MIPCONE
-			occlusion *= tex.SampleLevel(sampler_linear_wrap, UV_occlusionMap, lod).r;
+			occlusion *= tex.SampleLevel(sam, UV_occlusionMap, lod).r;
 		}
 
 		[branch]
@@ -529,7 +530,7 @@ struct Surface
 #ifdef SURFACE_LOAD_MIPCONE
 			lod = compute_texture_lod(tex, material.uvset_normalMap == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
 #endif // SURFACE_LOAD_MIPCONE
-			const float3 normalMap = float3(tex.SampleLevel(sampler_linear_wrap, UV_normalMap, lod).rg, 1) * 2 - 1;
+			const float3 normalMap = float3(tex.SampleLevel(sam, UV_normalMap, lod).rg, 1) * 2 - 1;
 			N = normalize(lerp(N, mul(normalMap, TBN), material.normalMapStrength));
 		}
 
