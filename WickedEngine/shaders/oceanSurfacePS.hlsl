@@ -6,6 +6,7 @@
 #include "oceanSurfaceHF.hlsli"
 #include "objectHF.hlsli"
 
+Texture2D<float4> texture_ocean_displacementmap : register(t0);
 Texture2D<float4> texture_gradientmap : register(t1);
 
 [earlydepthstencil]
@@ -63,7 +64,9 @@ float4 main(PSIn input) : SV_TARGET
 		float sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy + surface.N.xz * 0.04f, 0) * GetCamera().z_far;
 		float depth_difference = sampled_lineardepth - lineardepth;
 		surface.refraction.rgb = texture_refraction.SampleLevel(sampler_linear_mirror, ScreenCoord.xy + surface.N.xz * 0.04f * saturate(0.5 * depth_difference), 0).rgb;
-		if (GetCamera().position.y > xOceanWaterHeight)
+		float ocean_level_at_camera_pos = xOceanWaterHeight;
+		ocean_level_at_camera_pos += texture_ocean_displacementmap.SampleLevel(sampler_linear_wrap, GetCamera().position.xz * xOceanPatchSizeRecip, 0).z; // texture contains xzy!
+		if (GetCamera().position.y > ocean_level_at_camera_pos)
 		{
 			if (depth_difference < 0)
 			{

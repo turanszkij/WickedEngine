@@ -12,6 +12,8 @@ RWTexture2D<float4> output : register(u0);
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
+
+	// Unproject near plane and determine for every pixel if it's below water surface:
 	float4 clipspace = float4(uv_to_clipspace(uv), 1, 1); // near plane (reversed z)
 	float4 unproj = mul(GetCamera().inverse_view_projection, clipspace);
 	unproj.xyz /= unproj.w;
@@ -26,9 +28,10 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		const float3 displacement = texture_displacementmap.SampleLevel(sampler_linear_wrap, ocean_uv, 0).xzy;
 		ocean_pos += displacement;
 	}
+
 	const float4 original_color = input.SampleLevel(sampler_linear_mirror, uv, 0);
 	float4 color = original_color;
-	if (world_pos.y < ocean_pos.y)
+	if (world_pos.y < ocean_pos.y) // if below water surface, apply effects
 	{
 		// It's not realistic to apply much refraction underwater to camera, but looks cool:
 		uv += sin(uv * 10 + GetFrame().time * 5) * 0.005;
