@@ -6,11 +6,13 @@
 #include "oceanSurfaceHF.hlsli"
 #include "objectHF.hlsli"
 
+Texture2D<float4> texture_ocean_displacementmap : register(t0);
 Texture2D<float4> texture_gradientmap : register(t1);
 
 [earlydepthstencil]
 float4 main(PSIn input) : SV_TARGET
 {
+	float lineardepth = input.pos.w;
 	float4 color = xOceanWaterColor;
 	float3 V = GetCamera().position - input.pos3D;
 	float dist = length(V);
@@ -25,21 +27,20 @@ float4 main(PSIn input) : SV_TARGET
 
 	Surface surface;
 	surface.init();
+	surface.pixel = input.pos.xy;
+	float depth = input.pos.z;
 	surface.albedo = color.rgb;
 	surface.f0 = 0.02;
 	surface.roughness = 0.1;
 	surface.P = input.pos3D;
 	surface.N = normalize(float3(gradient.x, xOceanTexelLength * 2, gradient.y));
 	surface.V = V;
-	surface.sss = color * sss_amount;
-	surface.sss_inv = 1.0f / ((1 + surface.sss) * (1 + surface.sss));
+	//surface.sss = color * sss_amount;
+	//surface.sss_inv = 1.0f / ((1 + surface.sss) * (1 + surface.sss));
 	surface.update();
 
 	Lighting lighting;
 	lighting.create(0, 0, GetAmbient(surface.N), 0);
-
-	surface.pixel = input.pos.xy;
-	float depth = input.pos.z;
 
 	TiledLighting(surface, lighting);
 
@@ -60,22 +61,31 @@ float4 main(PSIn input) : SV_TARGET
 	{
 		// WATER REFRACTION 
 		Texture2D texture_refraction = bindless_textures[GetCamera().texture_refraction_index];
-		float lineardepth = input.pos.w;
 		float sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy + surface.N.xz * 0.04f, 0) * GetCamera().z_far;
 		float depth_difference = sampled_lineardepth - lineardepth;
 		surface.refraction.rgb = texture_refraction.SampleLevel(sampler_linear_mirror, ScreenCoord.xy + surface.N.xz * 0.04f * saturate(0.5 * depth_difference), 0).rgb;
-		if (depth_difference < 0)
+		float ocean_level_at_camera_pos = xOceanWaterHeight;
+		ocean_level_at_camera_pos += texture_ocean_displacementmap.SampleLevel(sampler_linear_wrap, GetCamera().position.xz * xOceanPatchSizeRecip, 0).z; // texture contains xzy!
+		if (GetCamera().position.y > ocean_level_at_camera_pos)
 		{
-			// Fix cutoff by taking unperturbed depth diff to fill the holes with fog:
-			sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy, 0) * GetCamera().z_far;
-			depth_difference = sampled_lineardepth - lineardepth;
+			if (depth_difference < 0)
+			{
+				// Fix cutoff by taking unperturbed depth diff to fill the holes with fog:
+				sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy, 0) * GetCamera().z_far;
+				depth_difference = sampled_lineardepth - lineardepth;
+			}
+			// WATER FOG:
+			surface.refraction.a = 1 - saturate(color.a * 0.1f * depth_difference);
 		}
-		// WATER FOG:
-		surface.refraction.a = 1 - saturate(color.a * 0.1f * depth_difference);
+		else
+		{
+			surface.refraction.a = 1; // no refraction fog when looking from under water to above water
+		}
 	}
 
 	// Blend out at distance:
 	color.a = pow(saturate(1 - saturate(dist / GetCamera().z_far)), 2);
+	color.a = lerp(0, color.a, saturate(pow(lineardepth, 2))); // fade when very close to camera
 
 	ApplyLighting(surface, lighting, color);
 

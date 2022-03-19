@@ -272,6 +272,15 @@ struct ShaderWind
 	float padding1;
 };
 
+struct ShaderOcean
+{
+	float4 water_color;
+	float water_height;
+	float patch_size;
+	float patch_size_rcp;
+	int texture_displacementmap;
+};
+
 struct ShaderWeather
 {
 	float3 sun_color;
@@ -287,6 +296,7 @@ struct ShaderWeather
 
 	ShaderFog fog;
 	ShaderWind wind;
+	ShaderOcean ocean;
 	AtmosphereParameters atmosphere;
 	VolumetricCloudParameters volumetric_clouds;
 };

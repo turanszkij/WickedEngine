@@ -454,7 +454,7 @@ namespace wi
 		ras_desc.slope_scaled_depth_bias = 0.0f;
 		ras_desc.depth_bias_clamp = 0.0f;
 		ras_desc.depth_clip_enable = true;
-		ras_desc.multisample_enable = true;
+		ras_desc.multisample_enable = false;
 		ras_desc.antialiased_line_enable = false;
 
 		rasterizerState = ras_desc;
