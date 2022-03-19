@@ -1042,6 +1042,7 @@ void RenderPath3D::Render() const
 				device->EventBegin("Volumetric Clouds Reflection Blend", cmd);
 				wi::image::Params fx;
 				fx.enableFullScreen();
+				fx.blendFlag = BLENDMODE_PREMULTIPLIED;
 				wi::image::Draw(&volumetriccloudResources_reflection.texture_temporal[device->GetFrameCount() % 2], fx, cmd);
 				device->EventEnd(cmd);
 			}
