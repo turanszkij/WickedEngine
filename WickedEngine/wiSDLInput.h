@@ -1,6 +1,9 @@
 #pragma once
 #include "CommonInclude.h"
 #include "wiInput.h"
+#include "wiVector.h"
+#include <SDL_events.h>
+#include <SDL_stdinc.h>
 
 #ifdef SDL2
 #include <SDL2/SDL.h>
@@ -29,4 +32,11 @@ namespace wi::input::sdlinput
 
 	// Sends feedback data for the controller identified by index parameter to output
 	void SetControllerFeedback(const wi::input::ControllerFeedback& data, int index);
+
+	// External events can be used for events that is needed outside the engine library, like main_SDL2.cpp for example
+	wi::vector<SDL_Event>* GetExternalEvents();
+	void FlushExternalEvents();
+
+	wi::vector<Sint32>* GetCharacterInputs();
+	void FlushCharacterInputs();
 }

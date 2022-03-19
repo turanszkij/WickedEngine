@@ -8,38 +8,34 @@
 
 int sdl_loop(Example_ImGui &tests)
 {
-    SDL_Event event;
-
     bool quit = false;
     while (!quit)
     {
-        SDL_PumpEvents();
         tests.Run();
-
-        while (SDL_PollEvent(&event)) {
-            switch (event.type) {
-            case SDL_QUIT:
-                quit = true;
-                break;
-            case SDL_WINDOWEVENT:
-                switch (event.window.event) {
-                case SDL_WINDOWEVENT_CLOSE:   // exit game
+        for(auto& event : *wi::input::sdlinput::GetExternalEvents()){
+            switch(event.type){
+                case SDL_QUIT:
                     quit = true;
                     break;
-                case SDL_WINDOWEVENT_RESIZED:
-                    // Tells the engine to reload window configuration (size and dpi)
-                    tests.SetWindow(tests.window);
-                    break;
+                case SDL_WINDOWEVENT:
+                    switch (event.window.event) {
+                        case SDL_WINDOWEVENT_CLOSE: // exit tests
+                            quit = true;
+                            break;
+                        case SDL_WINDOWEVENT_RESIZED:
+                            // Tells the engine to reload window configuration (size and dpi)
+                            tests.SetWindow(tests.window);
+                            break;
+                        case SDL_WINDOWEVENT_FOCUS_LOST:
+                            //tests.is_window_active = false;
+                            break;
+                        default:
+                            break;
+                    }
                 default:
                     break;
-                }
-            default:
-                break;
             }
-
-            ImGui_ImplSDL2_ProcessEvent(&event);
         }
-
     }
 
     return 0;
