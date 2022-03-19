@@ -1589,6 +1589,13 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 			std::swap(rt_read, rt_write);
 		}
 
+		if (scene->weather.IsOceanEnabled())
+		{
+			wi::renderer::Postprocess_Underwater(*rt_read, *rt_write, cmd);
+
+			std::swap(rt_read, rt_write);
+		}
+
 		lastPostprocessRT = rt_read;
 
 		// GUI Background blurring:

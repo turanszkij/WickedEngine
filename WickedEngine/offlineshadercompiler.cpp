@@ -106,6 +106,7 @@ int main(int argc, char* argv[])
 		"temporalaaCS.hlsl"											,
 		"tileFrustumsCS.hlsl"										,
 		"tonemapCS.hlsl"											,
+		"underwaterCS.hlsl"											,
 		"fsr_upscalingCS.hlsl"										,
 		"fsr_sharpenCS.hlsl"										,
 		"ssaoCS.hlsl"												,
