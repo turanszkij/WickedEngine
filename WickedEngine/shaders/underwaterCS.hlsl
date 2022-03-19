@@ -14,7 +14,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float2 uv = (DTid.xy + 0.5f) * postprocess.resolution_rcp;
 
 	// Unproject near plane and determine for every pixel if it's below water surface:
-	float4 clipspace = float4(uv_to_clipspace(uv), 1, 1); // near plane (reversed z)
+	float4 clipspace = float4(uv_to_clipspace(uv), 0.1, 1); // pushed away from near plane to better match up with ocean mesh (and reversed z)
 	float4 unproj = mul(GetCamera().inverse_view_projection, clipspace);
 	unproj.xyz /= unproj.w;
 	float3 world_pos = unproj.xyz;
@@ -52,7 +52,8 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		const float ocean_dist = length(ocean_surface_pos - o);
 
 		const float min_dist = min(lineardepth, ocean_dist);
-		color.rgb = lerp(color.rgb, ocean.water_color.rgb, saturate(0.5 + min_dist * 0.025));
+		float3 modified_color = lerp(color.rgb, ocean.water_color.rgb, saturate(0.5 + min_dist * 0.025));
+		color.rgb = lerp(color.rgb, modified_color, pow(saturate(ocean_pos.y - world_pos.y), 0.25));
 	}
 	output[DTid.xy] = color;
 }
