@@ -25,21 +25,20 @@ float4 main(PSIn input) : SV_TARGET
 
 	Surface surface;
 	surface.init();
+	surface.pixel = input.pos.xy;
+	float depth = input.pos.z;
 	surface.albedo = color.rgb;
 	surface.f0 = 0.02;
 	surface.roughness = 0.1;
 	surface.P = input.pos3D;
 	surface.N = normalize(float3(gradient.x, xOceanTexelLength * 2, gradient.y));
 	surface.V = V;
-	surface.sss = color * sss_amount;
-	surface.sss_inv = 1.0f / ((1 + surface.sss) * (1 + surface.sss));
+	//surface.sss = color * sss_amount;
+	//surface.sss_inv = 1.0f / ((1 + surface.sss) * (1 + surface.sss));
 	surface.update();
 
 	Lighting lighting;
 	lighting.create(0, 0, GetAmbient(surface.N), 0);
-
-	surface.pixel = input.pos.xy;
-	float depth = input.pos.z;
 
 	TiledLighting(surface, lighting);
 
@@ -64,14 +63,21 @@ float4 main(PSIn input) : SV_TARGET
 		float sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy + surface.N.xz * 0.04f, 0) * GetCamera().z_far;
 		float depth_difference = sampled_lineardepth - lineardepth;
 		surface.refraction.rgb = texture_refraction.SampleLevel(sampler_linear_mirror, ScreenCoord.xy + surface.N.xz * 0.04f * saturate(0.5 * depth_difference), 0).rgb;
-		if (depth_difference < 0)
+		if (GetCamera().position.y > xOceanWaterHeight)
 		{
-			// Fix cutoff by taking unperturbed depth diff to fill the holes with fog:
-			sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy, 0) * GetCamera().z_far;
-			depth_difference = sampled_lineardepth - lineardepth;
+			if (depth_difference < 0)
+			{
+				// Fix cutoff by taking unperturbed depth diff to fill the holes with fog:
+				sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy, 0) * GetCamera().z_far;
+				depth_difference = sampled_lineardepth - lineardepth;
+			}
+			// WATER FOG:
+			surface.refraction.a = 1 - saturate(color.a * 0.1f * depth_difference);
 		}
-		// WATER FOG:
-		surface.refraction.a = 1 - saturate(color.a * 0.1f * depth_difference);
+		else
+		{
+			surface.refraction.a = 1; // no refraction fog when looking from under water to above water
+		}
 	}
 
 	// Blend out at distance:
