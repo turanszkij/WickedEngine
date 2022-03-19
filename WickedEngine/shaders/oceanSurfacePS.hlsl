@@ -12,6 +12,7 @@ Texture2D<float4> texture_gradientmap : register(t1);
 [earlydepthstencil]
 float4 main(PSIn input) : SV_TARGET
 {
+	float lineardepth = input.pos.w;
 	float4 color = xOceanWaterColor;
 	float3 V = GetCamera().position - input.pos3D;
 	float dist = length(V);
@@ -60,7 +61,6 @@ float4 main(PSIn input) : SV_TARGET
 	{
 		// WATER REFRACTION 
 		Texture2D texture_refraction = bindless_textures[GetCamera().texture_refraction_index];
-		float lineardepth = input.pos.w;
 		float sampled_lineardepth = texture_lineardepth.SampleLevel(sampler_point_clamp, ScreenCoord.xy + surface.N.xz * 0.04f, 0) * GetCamera().z_far;
 		float depth_difference = sampled_lineardepth - lineardepth;
 		surface.refraction.rgb = texture_refraction.SampleLevel(sampler_linear_mirror, ScreenCoord.xy + surface.N.xz * 0.04f * saturate(0.5 * depth_difference), 0).rgb;
@@ -85,6 +85,7 @@ float4 main(PSIn input) : SV_TARGET
 
 	// Blend out at distance:
 	color.a = pow(saturate(1 - saturate(dist / GetCamera().z_far)), 2);
+	color.a = lerp(0, color.a, saturate(pow(lineardepth, 2))); // fade when very close to camera
 
 	ApplyLighting(surface, lighting, color);
 

@@ -37,6 +37,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		uv += sin(uv * 10 + GetFrame().time * 5) * 0.005;
 		uv += sin(-uv.y * 5 + GetFrame().time * 2) * 0.005;
 		color = input.SampleLevel(sampler_linear_mirror, uv, 0);
+
 		const float lineardepth = texture_lineardepth.SampleLevel(sampler_linear_clamp, uv, 0).r * GetCamera().z_far;
 
 		// The ocean is not rendered into the lineardepth unfortunately, so we also trace it:
