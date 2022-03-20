@@ -1,6 +1,7 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Postprocess.h"
 #include "oceanSurfaceHF.hlsli"
+#include "lightingHF.hlsli"
 
 PUSHCONSTANT(postprocess, PostProcess);
 
@@ -52,7 +53,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		const float ocean_dist = length(ocean_surface_pos - o);
 
 		const float min_dist = min(lineardepth, ocean_dist);
-		float3 modified_color = lerp(color.rgb, ocean.water_color.rgb, saturate(0.5 + min_dist * 0.025));
+		float3 modified_color = lerp(color.rgb, ocean.water_color.rgb, saturate(0.5 + min_dist * 0.025 * ocean.water_color.a));
 		color.rgb = lerp(color.rgb, modified_color, pow(saturate(ocean_pos.y - world_pos.y), 0.25));
 	}
 	output[DTid.xy] = color;

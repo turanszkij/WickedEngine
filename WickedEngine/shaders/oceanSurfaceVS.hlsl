@@ -30,6 +30,8 @@ PSIn main(uint vertexID : SV_VertexID)
 	{
 		// Displace surface:
 		float3 displacement = texture_displacementmap.SampleLevel(sampler_linear_wrap, uv, 0).xzy;
+		float dist = length(worldPos - GetCamera().position);
+		displacement *= saturate(1 - saturate(dist / GetCamera().z_far - 0.8) * 5.0); // fade will be on edge and inwards 20%
 		worldPos += displacement;
 	}
 

@@ -1862,6 +1862,7 @@ namespace wi::scene
 		shaderscene.weather.sun_color = weather.sunColor;
 		shaderscene.weather.sun_direction = weather.sunDirection;
 		shaderscene.weather.sun_energy = weather.sunEnergy;
+		shaderscene.weather.most_important_light_index = weather.most_important_light_index;
 		shaderscene.weather.ambient = weather.ambient;
 		shaderscene.weather.cloudiness = weather.cloudiness;
 		shaderscene.weather.cloud_scale = weather.cloudScale;
@@ -1882,9 +1883,9 @@ namespace wi::scene
 		shaderscene.weather.volumetric_clouds = weather.volumetricCloudParameters;
 		shaderscene.weather.ocean.water_color = weather.oceanParameters.waterColor;
 		shaderscene.weather.ocean.water_height = weather.oceanParameters.waterHeight;
-		shaderscene.weather.ocean.patch_size = weather.oceanParameters.patch_length;
 		shaderscene.weather.ocean.patch_size_rcp = 1.0f / weather.oceanParameters.patch_length;
 		shaderscene.weather.ocean.texture_displacementmap = device->GetDescriptorIndex(ocean.getDisplacementMap(), SubresourceType::SRV);
+		shaderscene.weather.ocean.texture_gradientmap = device->GetDescriptorIndex(ocean.getGradientMap(), SubresourceType::SRV);
 
 		shaderscene.ddgi.color_texture = device->GetDescriptorIndex(&ddgiColorTexture[0], SubresourceType::SRV);
 		shaderscene.ddgi.depth_texture = device->GetDescriptorIndex(&ddgiDepthTexture[0], SubresourceType::SRV);

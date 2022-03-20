@@ -115,7 +115,6 @@ inline float3 shadow_cube(in ShaderEntity light, in float3 L, in float3 Lunnorma
 	return shadow;
 }
 
-
 inline void light_directional(in ShaderEntity light, in Surface surface, inout Lighting lighting, in float shadow_mask = 1)
 {
 	float3 L = light.GetDirection();
@@ -187,6 +186,25 @@ inline void light_directional(in ShaderEntity light, in Surface surface, inout L
 
 			lighting.direct.diffuse = mad(light_color, BRDF_GetDiffuse(surface, surface_to_light), lighting.direct.diffuse);
 			lighting.direct.specular = mad(light_color, BRDF_GetSpecular(surface, surface_to_light), lighting.direct.specular);
+
+#ifndef WATER
+			const ShaderOcean ocean = GetWeather().ocean;
+			if (ocean.texture_displacementmap >= 0)
+			{
+				Texture2D displacementmap = bindless_textures[ocean.texture_displacementmap];
+				float2 ocean_uv = surface.P.xz * ocean.patch_size_rcp;
+				float3 displacement = displacementmap.SampleLevel(sampler_linear_wrap, ocean_uv, 0).xzy;
+				float water_height = ocean.water_height + displacement.y;
+				if (surface.P.y < water_height)
+				{
+					float3 caustic = caustic_pattern(ocean_uv * 20, GetFrame().time);
+					caustic *= sqr(saturate((water_height - surface.P.y) * 0.5)); // fade out at shoreline
+					caustic *= light_color;
+					lighting.indirect.diffuse += caustic;
+				}
+			}
+#endif // WATER
+
 		}
 	}
 }
