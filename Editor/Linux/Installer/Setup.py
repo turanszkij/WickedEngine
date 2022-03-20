@@ -4,5 +4,5 @@ from setuptools import setup
 from Cython.Build import cythonize
 
 setup(
-    ext_modules = cythonize("Dependencies.py")
+    ext_modules = cythonize("Install.py")
 )
