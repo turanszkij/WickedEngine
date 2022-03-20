@@ -16,18 +16,19 @@ from ttkbootstrap.dialogs import *
 
 #region Variables
 
-wickedRootDirectory = "$WICKED"
-wickedRootDirectorySelected = False
+class WickedDirectories:
+    wickedRootDirectory = "$WICKED"
+    wickedRootDirectorySelected = bool()
 
 #endregion
 
 #region Functions
 
 def Install():
-    if(wickedRootDirectorySelected):    
-        os.system("sudo cp {wickedRootDirectory}/Editor/Linux/Installer/Distribution/usr/share/applications/wicked-engine.desktop /usr/share/applications/wicked-engine.desktop")
-        os.system("sudo cp {wickedRootDirectory}/Distribution/usr/bin/wicked-engine /usr/bin/wicked-engine")
-        
+    if(WickedDirectories.wickedRootDirectorySelected):    
+        os.system('sudo cp ' + WickedDirectories.wickedRootDirectory + '/Editor/Linux/Installer/Distribution/usr/share/applications/wicked-engine.desktop /usr/share/applications/wicked-engine.desktop')
+        os.system('sudo cp ' + WickedDirectories.wickedRootDirectory + '/Editor/Linux/Installer/Distribution/usr/bin/wicked-engine /usr/bin/wicked-engine')
+
         # The two following `if` statements are for package maintainers or distributors to edit and use!
         # Please @MolassesLover on the Discord or create a GitHub issue if these statements break.
 
@@ -45,10 +46,10 @@ def Install():
         directoryWarning = Messagebox.ok("No Wicked Engine directory selected!", title = "Install Error")
 
 def SelectDirectory():
-    wickedRootDirectory = filedialog.askdirectory(initialdir = "../../../", title = "Select Wicked Folder")
-    wickedRootDirectorySelected = True 
+    WickedDirectories.wickedRootDirectory = filedialog.askdirectory(initialdir = "../../../", title = "Select Wicked Folder")
+    WickedDirectories.wickedRootDirectorySelected = True 
 
-#endregion
+#endregio
 
 if __name__ == "__main__":
     #region Tk Interface variables
