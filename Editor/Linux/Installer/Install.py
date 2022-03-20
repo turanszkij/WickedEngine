@@ -28,6 +28,7 @@ def Install():
     if(WickedDirectories.wickedRootDirectorySelected):    
         os.system('sudo cp ' + WickedDirectories.wickedRootDirectory + '/Editor/Linux/Installer/Distribution/usr/share/applications/wicked-engine.desktop /usr/share/applications/wicked-engine.desktop')
         os.system('sudo cp ' + WickedDirectories.wickedRootDirectory + '/Editor/Linux/Installer/Distribution/usr/bin/wicked-engine /usr/bin/wicked-engine')
+        os.system('sudo chmod +x /usr/bin/wicked-engine')
 
         # The two following `if` statements are for package maintainers or distributors to edit and use!
         # Please @MolassesLover on the Discord or create a GitHub issue if these statements break.
