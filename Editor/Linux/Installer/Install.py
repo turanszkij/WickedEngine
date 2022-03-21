@@ -3,12 +3,11 @@
 #region Modules
 
 import os
-
 import tkinter as Tk
 from tkinter import filedialog
-from PIL import Image, ImageTk
 
-import ttkbootstrap as TkBootstrap 
+import ttkbootstrap as TkBootstrap
+from PIL import Image, ImageTk
 from ttkbootstrap.constants import *
 from ttkbootstrap.dialogs import *
 
@@ -26,8 +25,9 @@ class WickedDirectories:
 
 def Install():
     if(WickedDirectories.wickedRootDirectorySelected):    
-        os.system('sudo cp ' + WickedDirectories.wickedRootDirectory + '/Editor/Linux/Installer/Distribution/usr/share/applications/wicked-engine.desktop /usr/share/applications/wicked-engine.desktop')
-        os.system('sudo cp ' + WickedDirectories.wickedRootDirectory + '/Editor/Linux/Installer/Distribution/usr/bin/wicked-engine /usr/bin/wicked-engine')
+        os.system('sudo cp ' + WickedDirectories.wickedRootDirectory + '/Editor/Linux/Installer/Distribution/wicked-engine.desktop /usr/share/applications/wicked-engine.desktop')
+        os.system('sudo cp ' + WickedDirectories.wickedRootDirectory + '/Editor/Linux/Installer/Distribution/wicked-engine.sh /usr/bin/wicked-engine')
+        os.system('sudo chmod +x ' + WickedDirectories.wickedRootDirectory + '/Editor/Linux/Installer/Distribution/wicked-engine.sh')       
         os.system('sudo chmod +x /usr/bin/wicked-engine')
 
         # The two following `if` statements are for package maintainers or distributors to edit and use!
