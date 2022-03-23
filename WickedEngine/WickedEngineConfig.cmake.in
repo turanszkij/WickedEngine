@@ -40,12 +40,12 @@ if (NOT TARGET WickedEngine::WickedEngine)
     include("${WICKED_CMAKE_DIR}/WickedEngineTargets.cmake")
     add_library(WickedEngine::WickedEngine ALIAS ${TARGET_NAME})
 
-    set(WickedEngine_SHADER_DIR "@CMAKE_SOURCE_DIR@/WickedEngine/shaders/")
+    set(WickedEngine_SHADER_DIR "@_CONFIG_INSTALL_DIR_INCLUDE@/WickedEngine/shaders/")
     target_compile_definitions(${TARGET_NAME} INTERFACE "WickedEngine_SHADER_DIR=\"${WickedEngine_SHADER_DIR}\"")
 
     add_library(WickedEngine::dxcompiler SHARED IMPORTED)
     set_property(TARGET WickedEngine::dxcompiler PROPERTY
-            IMPORTED_LOCATION @CMAKE_SOURCE_DIR@/WickedEngine/${LIBDXCOMPILER} )
+            IMPORTED_LOCATION "@_CONFIG_INSTALL_DIR_LIB@/WickedEngine/${LIBDXCOMPILER}" )
 endif()
 
 set(WickedEngine_LIBRARIES WickedEngine::WickedEngine ${TARGET_NAME})
