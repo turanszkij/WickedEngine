@@ -257,12 +257,10 @@ namespace wi::input::sdlinput
                     wi::backlog::post("gesture!");
                     break;
                 default:
-                    // If we have finished catching all the events needed for the engine 
-                    // we can push the rest for the event for use outside the engine code, 
-                    // e.g. main_SDL2.cpp can benefit from this
-                    external_events.push_back(event);
                     break;
             }
+            // Clone all events for use outside the internal code, e.g. main_SDL2.cpp can benefit from this
+            external_events.push_back(event);
         }
 
         //Update rumble every call

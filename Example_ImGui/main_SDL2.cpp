@@ -35,7 +35,9 @@ int sdl_loop(Example_ImGui &tests)
                 default:
                     break;
             }
+            ImGui_ImplSDL2_ProcessEvent(&event);
         }
+        wi::input::sdlinput::FlushExternalEvents();
     }
 
     return 0;
