@@ -12,6 +12,7 @@
 #include "sdl2.h"
 
 #include "Assets/Icon.c"
+#include "wiBacklog.h"
 #include "wiSDLInput.h"
 
 using namespace std;
@@ -23,6 +24,7 @@ int sdl_loop(Editor &editor)
     {
         editor.Run();
         for(auto& event : *wi::input::sdlinput::GetExternalEvents()){
+            bool textinput_action_delete = false;
             switch(event.type){
                 case SDL_QUIT:
                     quit = true;
@@ -42,24 +44,30 @@ int sdl_loop(Editor &editor)
                         default:
                             break;
                     }
+                case SDL_KEYDOWN:
+                    if(event.key.keysym.scancode == SDL_SCANCODE_BACKSPACE 
+                        || event.key.keysym.scancode == SDL_SCANCODE_DELETE
+                        || event.key.keysym.scancode == SDL_SCANCODE_KP_BACKSPACE){
+                            if (wi::backlog::isActive())
+                                wi::backlog::deletefromInput();
+                            wi::gui::TextInputField::DeleteFromInput();
+                            textinput_action_delete = true;
+                        }
+                    break;
+                case SDL_TEXTINPUT:
+                    if(!textinput_action_delete){
+                        if(event.text.text[0] >= 21){
+                            if (wi::backlog::isActive())
+                                wi::backlog::input(event.text.text[0]);
+                            wi::gui::TextInputField::AddInput(event.text.text[0]);
+                        }
+                    }
+                    break;
                 default:
                     break;
             }
         }
         wi::input::sdlinput::FlushExternalEvents();
-
-        for(auto& ichar : *wi::input::sdlinput::GetCharacterInputs()){
-            if(ichar == SDLK_BACKSPACE || ichar == SDLK_DELETE || ichar == SDLK_SPACE){
-                if (wi::backlog::isActive())
-	        		wi::backlog::deletefromInput();
-	        	wi::gui::TextInputField::DeleteFromInput();
-            }else{
-                if (wi::backlog::isActive())
-                    wi::backlog::input(ichar);
-                wi::gui::TextInputField::AddInput(ichar);
-            }
-        }
-        wi::input::sdlinput::FlushCharacterInputs();
 
         /*
         //Poll here when window focus is lost

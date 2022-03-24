@@ -37,6 +37,8 @@ namespace wi::input::sdlinput
 	wi::vector<SDL_Event>* GetExternalEvents();
 	void FlushExternalEvents();
 
+	/*
 	wi::vector<Sint32>* GetCharacterInputs();
 	void FlushCharacterInputs();
+	*/
 }

@@ -40,16 +40,12 @@ namespace wi::input::sdlinput
 
     // For use outside engine (like main_SDL2.cpp)
     wi::vector<SDL_Event> external_events;
-    std::vector<Sint32> external_characterinputs;
-    bool character_modifier = false;
-    #define TIME_TO_BULK_ERASURE 6
-    int bulk_erasure_counter = TIME_TO_BULK_ERASURE;
 
     int to_wicked(const SDL_Scancode &key, const SDL_Keycode &keyk);
     void controller_to_wicked(uint32_t *current, Uint8 button, bool pressed);
     void controller_map_rebuild();
 
-    Sint32 filter_character(SDL_Keycode key);
+    //Sint32 filter_character(SDL_Keycode key);
 
     void AddController(Sint32 id);
     void RemoveController(Sint32 id);
@@ -72,22 +68,6 @@ namespace wi::input::sdlinput
                 case SDL_KEYDOWN:             // Key pressed
                 {
                     int converted = to_wicked(event.key.keysym.scancode, event.key.keysym.sym);
-
-                    // For input outside of engine
-                    if (event.key.keysym.mod == KMOD_LSHIFT 
-                        || event.key.keysym.mod == KMOD_RSHIFT
-                        || event.key.keysym.mod == KMOD_CAPS) character_modifier = true;
-                    if (!keyboard.buttons[converted]){
-                        if(filter_character(event.key.keysym.sym))
-                            external_characterinputs.push_back(filter_character(event.key.keysym.sym));
-                    }
-                    if(event.key.keysym.sym == SDLK_BACKSPACE || event.key.keysym.sym == SDLK_DELETE){
-                        bulk_erasure_counter = std::max(0, bulk_erasure_counter-1);
-                    }
-                    if (bulk_erasure_counter == 0){
-                        external_characterinputs.push_back(filter_character(SDLK_BACKSPACE));
-                    }
-
                     if (converted >= 0) {
                         keyboard.buttons[converted] = true;
                     }
@@ -99,15 +79,6 @@ namespace wi::input::sdlinput
                     if (converted >= 0) {
                         keyboard.buttons[converted] = false;
                     }
-
-                    // For input outside of engine
-                    if (event.key.keysym.scancode == SDL_SCANCODE_LSHIFT 
-                        || event.key.keysym.scancode == SDL_SCANCODE_RSHIFT
-                        || event.key.keysym.scancode == SDL_SCANCODE_CAPSLOCK) character_modifier = false;
-                    if (bulk_erasure_counter == 0 && 
-                        (event.key.keysym.sym == SDLK_BACKSPACE || event.key.keysym.sym == SDLK_DELETE))
-                        bulk_erasure_counter = TIME_TO_BULK_ERASURE;
-                    break;
                 }
                 case SDL_TEXTEDITING:         // Keyboard text editing (composition)
                 case SDL_TEXTINPUT:           // Keyboard text input
@@ -361,15 +332,6 @@ namespace wi::input::sdlinput
         }
     }
 
-    Sint32 filter_character(SDL_Keycode key){
-        Sint32 conv = 0;
-        if(key == SDLK_BACKSPACE || key == SDLK_DELETE) conv = key;
-        if(key >= 33 && key <= 126) conv = key;
-        //Modifier input
-        if(character_modifier && key >= 97 && key <= 126) conv = key-32;
-        return conv;
-    }
-
     void GetKeyboardState(wi::input::KeyboardState* state) {
         *state = keyboard;
     }
@@ -405,13 +367,6 @@ namespace wi::input::sdlinput
     }
     void FlushExternalEvents(){
         external_events.clear();
-    }
-
-    wi::vector<Sint32>* GetCharacterInputs(){
-        return &external_characterinputs;
-    }
-    void FlushCharacterInputs(){
-        external_characterinputs.clear();
     }
 }
 #else
