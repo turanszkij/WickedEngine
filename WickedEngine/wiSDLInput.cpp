@@ -363,6 +363,5 @@ namespace wi::input::sdlinput
     int GetMaxControllerCount() { return 0; }
     bool GetControllerState(wi::input::ControllerState* state, int index) { return false; }
     void SetControllerFeedback(const wi::input::ControllerFeedback& data, int index) {}
-    std::vector<SDL_Event>* GetExternalEvents(){ return nullptr; }
 }
 #endif // _WIN32
