@@ -2,7 +2,6 @@
 #include "wiPlatform.h"
 #include "wiXInput.h"
 #include "wiRawInput.h"
-#include "wiSDLInput.h"
 #include "wiHelper.h"
 #include "wiBacklog.h"
 #include "wiProfiler.h"
@@ -16,6 +15,7 @@
 
 #ifdef SDL2
 #include <SDL2/SDL.h>
+#include "wiSDLInput.h"
 #endif // SDL2
 
 #ifdef PLATFORM_UWP

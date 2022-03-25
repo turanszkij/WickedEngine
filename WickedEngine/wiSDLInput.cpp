@@ -1,26 +1,10 @@
 #include "wiSDLInput.h"
-#include "Utility/DirectXMath.h"
-#include "wiUnorderedMap.h"
-#include <SDL_keycode.h>
-#include <SDL_mouse.h>
-#include <SDL_scancode.h>
-#include <string>
-#include <utility>
-#include <vector>
 
 #ifdef SDL2
-
-#include "CommonInclude.h"
-#include "wiBacklog.h"
-#include "wiInput.h"
-#include "wiVector.h"
-
 #include <SDL2/SDL.h>
-#include <SDL_events.h>
-#include <SDL_gamecontroller.h>
-#include <SDL_joystick.h>
-#include <SDL_stdinc.h>
-#include <iostream>
+
+#include "wiUnorderedMap.h"
+#include "wiBacklog.h"
 
 namespace wi::input::sdlinput
 {
