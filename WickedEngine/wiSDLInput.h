@@ -32,11 +32,8 @@ namespace wi::input::sdlinput
 	void SetControllerFeedback(const wi::input::ControllerFeedback& data, int index);
 
 	// External events can be used for events that is needed outside the engine library, like main_SDL2.cpp for example
+#ifdef SDL2
 	wi::vector<SDL_Event>* GetExternalEvents();
 	void FlushExternalEvents();
-
-	/*
-	wi::vector<Sint32>* GetCharacterInputs();
-	void FlushCharacterInputs();
-	*/
+#endif
 }
