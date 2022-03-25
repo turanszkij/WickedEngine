@@ -2,8 +2,6 @@
 #include "CommonInclude.h"
 #include "wiInput.h"
 #include "wiVector.h"
-#include <SDL_events.h>
-#include <SDL_stdinc.h>
 
 #ifdef SDL2
 #include <SDL2/SDL.h>
