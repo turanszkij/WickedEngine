@@ -10,6 +10,30 @@
 using namespace wi::ecs;
 using namespace wi::scene;
 
+enum TEST_TYPE
+{
+	HELLOWORLD,
+	MODEL,
+	EMITTEDPARTICLE1,
+	EMITTEDPARTICLE2,
+	HAIRPARTICLE,
+	LUASCRIPT,
+	WATERTEST,
+	SHADOWSTEST,
+	PHYSICSTEST,
+	CLOTHPHYSICSTEST,
+	JOBSYSTEMTEST,
+	FONTTEST,
+	VOLUMETRICTEST,
+	SPRITETEST,
+	LIGHTMAPBAKETEST,
+	NETWORKTEST,
+	CONTROLLERTEST,
+	INVERSEKINEMATICSTEST,
+	INSTANCESTEST,
+	CONTAINERPERF,
+};
+
 void Tests::Initialize()
 {
     wi::Application::Initialize();
@@ -95,33 +119,32 @@ void TestsRenderer::Load()
 	});
 	GetGUI().AddWidget(&volume);
 
-
 	testSelector.Create("TestSelector");
 	testSelector.SetText("Demo: ");
 	testSelector.SetSize(XMFLOAT2(140, 20));
 	testSelector.SetPos(XMFLOAT2(50, 200));
 	testSelector.SetColor(wi::Color(255, 205, 43, 200), wi::gui::IDLE);
 	testSelector.SetColor(wi::Color(255, 235, 173, 255), wi::gui::FOCUS);
-	testSelector.AddItem("HelloWorld");
-	testSelector.AddItem("Model");
-	testSelector.AddItem("EmittedParticle 1");
-	testSelector.AddItem("EmittedParticle 2");
-	testSelector.AddItem("HairParticle");
-	testSelector.AddItem("Lua Script");
-	testSelector.AddItem("Water Test");
-	testSelector.AddItem("Shadows Test");
-	testSelector.AddItem("Physics Test");
-	testSelector.AddItem("Cloth Physics Test");
-	testSelector.AddItem("Job System Test");
-	testSelector.AddItem("Font Test");
-	testSelector.AddItem("Volumetric Test");
-	testSelector.AddItem("Sprite Test");
-	testSelector.AddItem("Lightmap Bake Test");
-	testSelector.AddItem("Network Test");
-	testSelector.AddItem("Controller Test");
-	testSelector.AddItem("Inverse Kinematics");
-	testSelector.AddItem("65k Instances");
-	testSelector.AddItem("Container perf");
+	testSelector.AddItem("HelloWorld", HELLOWORLD);
+	testSelector.AddItem("Model", MODEL);
+	testSelector.AddItem("EmittedParticle 1", EMITTEDPARTICLE1);
+	testSelector.AddItem("EmittedParticle 2", EMITTEDPARTICLE2);
+	testSelector.AddItem("HairParticle", HAIRPARTICLE);
+	testSelector.AddItem("Lua Script", LUASCRIPT);
+	testSelector.AddItem("Water Test", WATERTEST);
+	testSelector.AddItem("Shadows Test", SHADOWSTEST);
+	testSelector.AddItem("Physics Test", PHYSICSTEST);
+	testSelector.AddItem("Cloth Physics Test", CLOTHPHYSICSTEST);
+	testSelector.AddItem("Job System Test", JOBSYSTEMTEST);
+	testSelector.AddItem("Font Test", FONTTEST);
+	testSelector.AddItem("Volumetric Test", VOLUMETRICTEST);
+	testSelector.AddItem("Sprite Test", SPRITETEST);
+	testSelector.AddItem("Lightmap Bake Test", LIGHTMAPBAKETEST);
+	testSelector.AddItem("Network Test", NETWORKTEST);
+	testSelector.AddItem("Controller Test", CONTROLLERTEST);
+	testSelector.AddItem("Inverse Kinematics", INVERSEKINEMATICSTEST);
+	testSelector.AddItem("65k Instances", INSTANCESTEST);
+	testSelector.AddItem("Container perf", CONTAINERPERF);
 	testSelector.SetMaxVisibleItemCount(10);
 	testSelector.OnSelect([=](wi::gui::EventArgs args) {
 
@@ -147,9 +170,9 @@ void TestsRenderer::Load()
 		float screenH = GetLogicalHeight();
 
 		// Based on combobox selection, start the appropriate test:
-		switch (args.iValue)
+		switch (args.userdata)
 		{
-		case 0:
+		case HELLOWORLD:
 		{
 			// This will spawn a sprite with two textures. The first texture is a color texture and it will be animated.
 			//	The second texture is a static image of "hello world" written on it
@@ -164,63 +187,63 @@ void TestsRenderer::Load()
 			sprite.anim.wobbleAnim.amount = XMFLOAT2(0.16f, 0.16f);
 			sprite.anim.movingTexAnim.speedX = 0;
 			sprite.anim.movingTexAnim.speedY = 3;
-			this->AddSprite(&sprite);
+			AddSprite(&sprite);
 			break;
 		}
-		case 1:
+		case MODEL:
 			wi::renderer::SetTemporalAAEnabled(true);
 			wi::scene::LoadModel("../Content/models/teapot.wiscene");
 			break;
-		case 2:
+		case EMITTEDPARTICLE1:
 			wi::scene::LoadModel("../Content/models/emitter_smoke.wiscene");
 			break;
-		case 3:
+		case EMITTEDPARTICLE2:
 			wi::scene::LoadModel("../Content/models/emitter_skinned.wiscene");
 			break;
-		case 4:
+		case HAIRPARTICLE:
 			wi::scene::LoadModel("../Content/models/hairparticle_torus.wiscene", XMMatrixTranslation(0, 1, 0));
 			break;
-		case 5:
+		case LUASCRIPT:
 			wi::renderer::SetToDrawGridHelper(true);
 			wi::lua::RunFile("test_script.lua");
 			break;
-		case 6:
+		case WATERTEST:
 			wi::renderer::SetTemporalAAEnabled(true);
 			wi::scene::LoadModel("../Content/models/water_test.wiscene", XMMatrixTranslation(0, 1, 0));
 			break;
-		case 7:
+		case SHADOWSTEST:
 			wi::renderer::SetTemporalAAEnabled(true);
 			wi::scene::LoadModel("../Content/models/shadows_test.wiscene", XMMatrixTranslation(0, 1, 0));
 			break;
-		case 8:
+		case PHYSICSTEST:
 			wi::renderer::SetTemporalAAEnabled(true);
 			wi::scene::LoadModel("../Content/models/physics_test.wiscene");
 			break;
-		case 9:
+		case CLOTHPHYSICSTEST:
 			wi::scene::LoadModel("../Content/models/cloth_test.wiscene", XMMatrixTranslation(0, 3, 4));
 			break;
-		case 10:
+		case JOBSYSTEMTEST:
 			RunJobSystemTest();
 			break;
-		case 11:
+		case FONTTEST:
 			RunFontTest();
 			break;
-		case 12:
+		case VOLUMETRICTEST:
 			wi::renderer::SetTemporalAAEnabled(true);
 			wi::scene::LoadModel("../Content/models/volumetric_test.wiscene", XMMatrixTranslation(0, 0, 4));
 			break;
-		case 13:
+		case SPRITETEST:
 			RunSpriteTest();
 			break;
-		case 14:
+		case LIGHTMAPBAKETEST:
 			wi::eventhandler::SetVSync(false); // turn off vsync if we can to accelerate the baking
 			wi::renderer::SetTemporalAAEnabled(true);
 			wi::scene::LoadModel("../Content/models/lightmap_bake_test.wiscene", XMMatrixTranslation(0, 0, 4));
 			break;
-		case 15:
+		case NETWORKTEST:
 			RunNetworkTest();
 			break;
-		case 16:
+		case CONTROLLERTEST:
 		{
 			static wi::SpriteFont font("This test plays a vibration on the first controller's left motor (if device supports it) \n and changes the LED to a random color (if device supports it)");
 			font.params.h_align = wi::font::WIFALIGN_CENTER;
@@ -236,7 +259,7 @@ void TestsRenderer::Load()
 			wi::input::SetControllerFeedback(feedback, 0);
 		}
 		break;
-		case 17:
+		case INVERSEKINEMATICSTEST:
 		{
 			Scene scene;
 			LoadModel(scene, "../Content/models/girl.wiscene", XMMatrixScaling(0.7f, 0.7f, 0.7f));
@@ -270,7 +293,7 @@ void TestsRenderer::Load()
 		}
 		break;
 
-		case 18:
+		case INSTANCESTEST:
 		{
 			wi::scene::LoadModel("../Content/models/cube.wiscene");
 			wi::profiler::SetEnabled(true);
@@ -295,7 +318,7 @@ void TestsRenderer::Load()
 		}
 		break;
 
-		case 19:
+		case CONTAINERPERF:
 			ContainerTest();
 			break;
 
@@ -312,9 +335,12 @@ void TestsRenderer::Load()
 }
 void TestsRenderer::Update(float dt)
 {
-	switch (testSelector.GetSelected())
+	int selected = testSelector.GetSelected();
+	uint64_t userdata = testSelector.GetItemUserData(selected);
+
+	switch (userdata)
 	{
-    case 1:
+    case MODEL:
     {
         Scene& scene = wi::scene::GetScene();
         // teapot_material Base Base_mesh Top Top_mesh editorLight
@@ -339,7 +365,7 @@ void TestsRenderer::Update(float dt)
         }
     }
     break;
-	case 17:
+	case INVERSEKINEMATICSTEST:
 	{
 		if (ik_entity != INVALID_ENTITY)
 		{
@@ -373,7 +399,7 @@ void TestsRenderer::Update(float dt)
 	}
 	break;
 
-	case 18:
+	case INSTANCESTEST:
 	{
 		static wi::Timer timer;
 		float sec = (float)timer.elapsed_seconds();
