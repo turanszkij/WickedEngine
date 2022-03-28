@@ -2,7 +2,6 @@
 //
 
 #include "stdafx.h"
-#include <SDL2/SDL.h>
 #include "sdl2.h"
 
 int sdl_loop(Tests &tests)
@@ -11,7 +10,8 @@ int sdl_loop(Tests &tests)
     while (!quit)
     {
         tests.Run();
-        for(auto& event : *wi::input::sdlinput::GetExternalEvents()){
+        SDL_Event event;
+        while(SDL_PollEvent(&event)){
             switch(event.type){
                 case SDL_QUIT:
                     quit = true;
@@ -26,7 +26,27 @@ int sdl_loop(Tests &tests)
                             tests.SetWindow(tests.window);
                             break;
                         case SDL_WINDOWEVENT_FOCUS_LOST:
-                            //tests.is_window_active = false;
+                            tests.is_window_active = false;
+                            break;
+                        case SDL_WINDOWEVENT_FOCUS_GAINED:
+                            tests.is_window_active = true;
+                            if (wi::shadercompiler::GetRegisteredShaderCount() > 0)
+                            {
+                                std::thread([] {
+                                    wi::backlog::post("[Shader check] Started checking " + std::to_string(wi::shadercompiler::GetRegisteredShaderCount()) + " registered shaders for changes...");
+                                    if (wi::shadercompiler::CheckRegisteredShadersOutdated())
+                                    {
+                                        wi::backlog::post("[Shader check] Changes detected, initiating reload...");
+                                        wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [](uint64_t userdata) {
+                                            wi::renderer::ReloadShaders();
+                                            });
+                                    }
+                                    else
+                                    {
+                                        wi::backlog::post("[Shader check] All up to date");
+                                    }
+                                    }).detach();
+                            }
                             break;
                         default:
                             break;
@@ -35,7 +55,7 @@ int sdl_loop(Tests &tests)
                     break;
             }
         }
-        wi::input::sdlinput::FlushExternalEvents();
+        wi::input::sdlinput::ProcessEvent(event);
     }
 
     return 0;

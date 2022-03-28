@@ -22,14 +22,11 @@ namespace wi::input::sdlinput
     wi::vector<Internal_ControllerState> controllers;
     wi::unordered_map<SDL_JoystickID, size_t> controller_mapped;
 
-    // For use outside engine (like main_SDL2.cpp)
-    wi::vector<SDL_Event> external_events;
+    wi::vector<SDL_Event> events;
 
     int to_wicked(const SDL_Scancode &key, const SDL_Keycode &keyk);
     void controller_to_wicked(uint32_t *current, Uint8 button, bool pressed);
     void controller_map_rebuild();
-
-    //Sint32 filter_character(SDL_Keycode key);
 
     void AddController(Sint32 id);
     void RemoveController(Sint32 id);
@@ -41,12 +38,15 @@ namespace wi::input::sdlinput
         }
     }
 
+    void ProcessEvent(SDL_Event &event){
+        events.push_back(event);
+    }
+
     void Update()
     {
         mouse.delta_wheel = 0; // Do not accumulate mouse wheel motion delta
 
-        SDL_Event event;
-        while(SDL_PollEvent(&event)){
+        for(auto& event : events){
             switch(event.type){
                 // Keyboard events
                 case SDL_KEYDOWN:             // Key pressed
@@ -215,7 +215,7 @@ namespace wi::input::sdlinput
                     break;
             }
             // Clone all events for use outside the internal code, e.g. main_SDL2.cpp can benefit from this
-            external_events.push_back(event);
+            //external_events.push_back(event);
         }
 
         //Update rumble every call
@@ -226,6 +226,9 @@ namespace wi::input::sdlinput
                 controller.rumble_r,
                 60); //Buffer at 60ms
         }
+
+        //Flush away stored events
+        events.clear();
     }
 
     int to_wicked(const SDL_Scancode &key, const SDL_Keycode &keyk) {
@@ -335,7 +338,6 @@ namespace wi::input::sdlinput
         return false;
     }
     void SetControllerFeedback(const wi::input::ControllerFeedback& data, int index) {
-#ifdef SDL2_FEATURE_CONTROLLER_LED
         if(index < controllers.size()){
             SDL_GameControllerSetLED(
                 controllers[index].controller, 
@@ -345,14 +347,6 @@ namespace wi::input::sdlinput
             controllers[index].rumble_l = (Uint16)floor(data.vibration_left * 0xFFFF);
             controllers[index].rumble_r = (Uint16)floor(data.vibration_right * 0xFFFF);
         }
-#endif
-    }
-
-    wi::vector<SDL_Event>* GetExternalEvents(){
-        return &external_events;
-    }
-    void FlushExternalEvents(){
-        external_events.clear();
     }
 }
 #else
