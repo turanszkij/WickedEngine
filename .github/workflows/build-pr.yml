@@ -63,6 +63,75 @@ jobs:
           Tests/*.ttf
           Tests/*.exe
 
+  
+  linux:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install dependencies
+      run: |
+        wget -qO - https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
+        sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.2.170-focal.list https://packages.lunarg.com/vulkan/1.2.170/lunarg-vulkan-1.2.170-focal.list
+        sudo apt update
+        sudo apt install vulkan-sdk
+        sudo apt install libsdl2-dev
+
+    - name: Build
+      run: |
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release
+        make
+        echo "---Generating Shader Dump---"
+        cd WickedEngine
+        ./offlineshadercompiler spirv rebuild shaderdump
+        mv wiShaderDump.h ../../WickedEngine/
+        cd ..
+        echo "---Rebuilding with ShaderDump---"
+        make -B
+
+        
+    - name: Move binaries
+      run: |
+        mv build/Editor/WickedEngineEditor Editor/
+        mv build/Tests/Tests Tests/
+        
+    - name: Package Editor
+      uses: actions/upload-artifact@v2
+      with:
+        name: Editor (Ubuntu 20.04)
+        path: |
+          Content/
+          README.md
+          LICENSE.md
+          other_licenses.txt
+          features.txt
+          Editor/images/
+          Editor/sound/
+          Editor/*.ini
+          Editor/*.ico
+          Editor/*.lua
+          Editor/WickedEngineEditor
+          
+    - name: Package Tests
+      uses: actions/upload-artifact@v2
+      with:
+        name: Tests (Ubuntu 20.04)
+        path: |
+          Content/
+          README.md
+          LICENSE.md
+          other_licenses.txt
+          features.txt
+          Tests/images/
+          Tests/sound/
+          Tests/*.ini
+          Tests/*.ico
+          Tests/*.lua
+          Tests/*.ttf
+          Tests/Tests
+
     
   linux:
     runs-on: ubuntu-20.04
@@ -107,7 +176,7 @@ jobs:
     - name: Package Editor
       uses: actions/upload-artifact@v2
       with:
-        name: Editor (Sniper SDK)
+        name: Editor (Steam Deck)
         path: |
           Content/
           README.md
@@ -124,7 +193,7 @@ jobs:
     - name: Package Tests
       uses: actions/upload-artifact@v2
       with:
-        name: Tests (Sniper SDK)
+        name: Tests (Steam Deck)
         path: |
           Content/
           README.md

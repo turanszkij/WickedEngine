@@ -339,11 +339,13 @@ namespace wi::input::sdlinput
     }
     void SetControllerFeedback(const wi::input::ControllerFeedback& data, int index) {
         if(index < controllers.size()){
+#ifdef SDL2_FEATURE_CONTROLLER_LED
             SDL_GameControllerSetLED(
                 controllers[index].controller, 
                 data.led_color.getR(), 
                 data.led_color.getG(), 
                 data.led_color.getB());
+#endif
             controllers[index].rumble_l = (Uint16)floor(data.vibration_left * 0xFFFF);
             controllers[index].rumble_r = (Uint16)floor(data.vibration_right * 0xFFFF);
         }
