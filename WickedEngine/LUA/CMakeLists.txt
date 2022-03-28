@@ -1,3 +1,31 @@
+set(LUA_HEADERS
+    ${CMAKE_CURRENT_SOURCE_DIR}/lapi.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/lauxlib.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/lcode.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/lctype.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/ldebug.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/ldo.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/lfunc.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/lgc.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/llex.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/llimits.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/lmem.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/lobject.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/lopcodes.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/lparser.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/lprefix.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/lstate.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/lstring.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/ltable.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/ltm.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/lua.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/luaconf.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/lualib.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/lundump.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/lvm.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/lzio.h
+)
+
 add_library(LUA STATIC
     lapi.c
     lauxlib.c
@@ -33,6 +61,7 @@ add_library(LUA STATIC
     lutf8lib.c
     lvm.c
     lzio.c
+    ${LUA_HEADERS}
 )
 
 if (UNIX)
@@ -41,3 +70,6 @@ if (UNIX)
 endif()
 
 set_property(TARGET "LUA" PROPERTY FOLDER "ThirdParty")
+
+install(FILES ${LUA_HEADERS}
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine/LUA/")

@@ -1042,6 +1042,7 @@ void RenderPath3D::Render() const
 				device->EventBegin("Volumetric Clouds Reflection Blend", cmd);
 				wi::image::Params fx;
 				fx.enableFullScreen();
+				fx.blendFlag = BLENDMODE_PREMULTIPLIED;
 				wi::image::Draw(&volumetriccloudResources_reflection.texture_temporal[device->GetFrameCount() % 2], fx, cmd);
 				device->EventEnd(cmd);
 			}
@@ -1492,6 +1493,18 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 				cmd
 			);
 			rt_first = temporalAAResources.GetCurrent();
+		}
+
+		if (scene->weather.IsOceanEnabled())
+		{
+			wi::renderer::Postprocess_Underwater(
+				rt_first == nullptr ? *rt_read : *rt_first,
+				*rt_write,
+				cmd
+			);
+
+			rt_first = nullptr;
+			std::swap(rt_read, rt_write);
 		}
 
 		if (getDepthOfFieldEnabled() && camera->aperture_size > 0 && getDepthOfFieldStrength() > 0)

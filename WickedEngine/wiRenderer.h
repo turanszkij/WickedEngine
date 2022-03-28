@@ -669,6 +669,11 @@ namespace wi::renderer
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd
 	);
+	void Postprocess_Underwater(
+		const wi::graphics::Texture& input,
+		const wi::graphics::Texture& output,
+		wi::graphics::CommandList cmd
+	);
 
 	// Render the scene with ray tracing
 	void RayTraceScene(

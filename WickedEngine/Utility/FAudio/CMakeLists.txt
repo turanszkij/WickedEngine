@@ -34,9 +34,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 	)
 endif()
 
-# Source lists
-add_library(FAudio
-	# Public Headers
+set(PUBLIC_HEADERS
 	include/F3DAudio.h
 	include/FACT3D.h
 	include/FACT.h
@@ -45,11 +43,18 @@ add_library(FAudio
 	include/FAPO.h
 	include/FAudioFX.h
 	include/FAudio.h
+	)
+
+# Source lists
+add_library(FAudio
+	# Public Headers
+	${PUBLIC_HEADERS}
 	# Internal Headers
 	src/FACT_internal.h
 	src/FAudio_internal.h
 	src/stb.h
 	src/stb_vorbis.h
+	src/matrix_defaults.inl
 	# Source Files
 	src/F3DAudio.c
 	src/FACT3D.c
@@ -74,10 +79,14 @@ add_library(FAudio
 	src/FAudio_gstreamer.c
 )
 
+install(FILES ${PUBLIC_HEADERS}
+		DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine/FAudio/")
+
 # FAudio folders as includes, for other targets to consume
 target_include_directories(FAudio PUBLIC
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+	$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine/FAudio>
 )
 
 # Soname

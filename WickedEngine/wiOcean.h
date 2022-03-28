@@ -72,5 +72,6 @@ namespace wi
 
 		wi::graphics::GPUBuffer immutableCB;
 		wi::graphics::GPUBuffer perFrameCB;
+		mutable wi::graphics::GPUBuffer indexBuffer;
 	};
 }

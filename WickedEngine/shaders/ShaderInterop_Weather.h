@@ -272,21 +272,33 @@ struct ShaderWind
 	float padding1;
 };
 
+struct ShaderOcean
+{
+	float4 water_color;
+	float water_height;
+	float patch_size_rcp;
+	int texture_displacementmap;
+	int texture_gradientmap;
+};
+
 struct ShaderWeather
 {
 	float3 sun_color;
 	float sun_energy;
 	float3 sun_direction;
-	float sky_exposure;
+	uint most_important_light_index;
 	float3 horizon;
-	float cloudiness;
+	float sky_exposure;
 	float3 zenith;
-	float cloud_scale;
+	float cloudiness;
 	float3 ambient;
+	float cloud_scale;
+	float3 padding;
 	float cloud_speed;
 
 	ShaderFog fog;
 	ShaderWind wind;
+	ShaderOcean ocean;
 	AtmosphereParameters atmosphere;
 	VolumetricCloudParameters volumetric_clouds;
 };

@@ -170,6 +170,14 @@ inline float2 uv_to_clipspace(in float2 uv)
 	clipspace.y *= -1;
 	return clipspace;
 }
+inline float2 clipspace_to_uv(in float2 clipspace)
+{
+	return clipspace * float2(0.5, -0.5) + 0.5;
+}
+inline float3 clipspace_to_uv(in float3 clipspace)
+{
+	return clipspace * float3(0.5, -0.5, 0.5) + 0.5;
+}
 
 #define DEGAMMA_SKY(x)	((GetFrame().options & OPTION_BIT_STATIC_SKY_HDR) ? (x) : RemoveSRGBCurve_Fast(x))
 #define DEGAMMA(x)		(RemoveSRGBCurve_Fast(x))
@@ -497,6 +505,16 @@ inline float3 reconstruct_position(in float2 uv, in float z)
 	return reconstruct_position(uv, z, GetCamera().inverse_view_projection);
 }
 
+// Caustic pattern from: https://www.shadertoy.com/view/XtKfRG
+inline float caustic_pattern(float2 uv, float time)
+{
+	float3 k = float3(uv, time);
+	float3x3 m = float3x3(-2, -1, 2, 3, -2, 1, 1, 2, 2);
+	float3 a = mul(k, m) * 0.5;
+	float3 b = mul(a, m) * 0.4;
+	float3 c = mul(b, m) * 0.3;
+	return pow(min(min(length(0.5 - frac(a)), length(0.5 - frac(b))), length(0.5 - frac(c))), 7) * 25.;
+}
 
 // Convert texture coordinates on a cubemap face to cubemap sampling coordinates:
 // uv			: UV texture coordinates on cubemap face in range [0, 1]
