@@ -2,47 +2,60 @@
 //
 
 #include "stdafx.h"
-#include <SDL2/SDL.h>
 #include "sdl2.h"
 
 int sdl_loop(Tests &tests)
 {
-    SDL_Event event;
-
     bool quit = false;
     while (!quit)
     {
-        SDL_PumpEvents();
         tests.Run();
-
-//        int ret = SDL_PeepEvents(&event, 1, SDL_GETEVENT, SDL_FIRSTEVENT, SDL_LASTEVENT);
-        while( SDL_PollEvent(&event)) {
-            switch (event.type) {
-            case SDL_QUIT:
-                quit = true;
-                break;
-            case SDL_WINDOWEVENT:
-                switch (event.window.event) {
-                case SDL_WINDOWEVENT_CLOSE:   // exit game
+        SDL_Event event;
+        while(SDL_PollEvent(&event)){
+            switch(event.type){
+                case SDL_QUIT:
                     quit = true;
                     break;
-                case SDL_WINDOWEVENT_RESIZED:
-                    // Tells the engine to reload window configuration (size and dpi)
-                    tests.SetWindow(tests.window);
-                    break;
+                case SDL_WINDOWEVENT:
+                    switch (event.window.event) {
+                        case SDL_WINDOWEVENT_CLOSE: // exit tests
+                            quit = true;
+                            break;
+                        case SDL_WINDOWEVENT_RESIZED:
+                            // Tells the engine to reload window configuration (size and dpi)
+                            tests.SetWindow(tests.window);
+                            break;
+                        case SDL_WINDOWEVENT_FOCUS_LOST:
+                            tests.is_window_active = false;
+                            break;
+                        case SDL_WINDOWEVENT_FOCUS_GAINED:
+                            tests.is_window_active = true;
+                            if (wi::shadercompiler::GetRegisteredShaderCount() > 0)
+                            {
+                                std::thread([] {
+                                    wi::backlog::post("[Shader check] Started checking " + std::to_string(wi::shadercompiler::GetRegisteredShaderCount()) + " registered shaders for changes...");
+                                    if (wi::shadercompiler::CheckRegisteredShadersOutdated())
+                                    {
+                                        wi::backlog::post("[Shader check] Changes detected, initiating reload...");
+                                        wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [](uint64_t userdata) {
+                                            wi::renderer::ReloadShaders();
+                                            });
+                                    }
+                                    else
+                                    {
+                                        wi::backlog::post("[Shader check] All up to date");
+                                    }
+                                    }).detach();
+                            }
+                            break;
+                        default:
+                            break;
+                    }
                 default:
                     break;
-                }
-            default:
-                break;
-//            case SDL_KEYDOWN:
-//                switch (event.key.keysym.scancode) {
-//                    case SDL_SCANCODE_SPACE:
-//                        tests.SetSelected(tests.GetSelected()+1);
-//                }
             }
         }
-
+        wi::input::sdlinput::ProcessEvent(event);
     }
 
     return 0;

@@ -395,6 +395,9 @@ namespace wi::input
 		else if (playerindex == 0) // keyboard or mouse
 		{
 			uint8_t keycode = (uint8_t)button;
+#ifdef SDL2
+			bool keycode_converted = false;
+#endif
 
 			switch (button)
 			{
@@ -498,214 +501,13 @@ namespace wi::input
 			case wi::input::KEYBOARD_BUTTON_PAGEUP:
 				keycode = VK_PRIOR;
 				break;
-#elif SDL2
-                case wi::input::KEYBOARD_BUTTON_UP:
-                    keycode = SDL_SCANCODE_UP;
-                    break;
-                case wi::input::KEYBOARD_BUTTON_DOWN:
-                    keycode = SDL_SCANCODE_DOWN;
-                    break;
-                case wi::input::KEYBOARD_BUTTON_LEFT:
-                    keycode = SDL_SCANCODE_LEFT;
-                    break;
-                case wi::input::KEYBOARD_BUTTON_RIGHT:
-                    keycode = SDL_SCANCODE_RIGHT;
-                    break;
-                case wi::input::KEYBOARD_BUTTON_SPACE:
-                    keycode = SDL_SCANCODE_SPACE;
-                    break;
-                case wi::input::KEYBOARD_BUTTON_RSHIFT:
-                    keycode = SDL_SCANCODE_RSHIFT;
-                    break;
-                case wi::input::KEYBOARD_BUTTON_LSHIFT:
-                    keycode = SDL_SCANCODE_LSHIFT;
-                    break;
-                case wi::input::KEYBOARD_BUTTON_F1:
-                    keycode = SDL_SCANCODE_F1;
-                    break;
-                case wi::input::KEYBOARD_BUTTON_F2:
-                    keycode = SDL_SCANCODE_F2;
-                    break;
-                case wi::input::KEYBOARD_BUTTON_F3:
-                    keycode = SDL_SCANCODE_F3;
-                    break;
-                case wi::input::KEYBOARD_BUTTON_F4:
-                    keycode = SDL_SCANCODE_F4;
-                    break;
-                case wi::input::KEYBOARD_BUTTON_F5:
-                    keycode = SDL_SCANCODE_F5;
-                    break;
-                case wi::input::KEYBOARD_BUTTON_F6:
-                    keycode = SDL_SCANCODE_F6;
-                    break;
-                case wi::input::KEYBOARD_BUTTON_F7:
-                    keycode = SDL_SCANCODE_F7;
-                    break;
-                case wi::input::KEYBOARD_BUTTON_F8:
-                    keycode = SDL_SCANCODE_F8;
-                    break;
-                case wi::input::KEYBOARD_BUTTON_F9:
-                    keycode = SDL_SCANCODE_F9;
-                    break;
-                case wi::input::KEYBOARD_BUTTON_F10:
-                    keycode = SDL_SCANCODE_F10;
-                    break;
-                case wi::input::KEYBOARD_BUTTON_F11:
-                    keycode = SDL_SCANCODE_F11;
-                    break;
-                case wi::input::KEYBOARD_BUTTON_F12:
-                    keycode = SDL_SCANCODE_F12;
-                    break;
-                case wi::input::KEYBOARD_BUTTON_ENTER:
-                    keycode = SDL_SCANCODE_RETURN;
-                    break;
-                case wi::input::KEYBOARD_BUTTON_ESCAPE:
-                    keycode = SDL_SCANCODE_ESCAPE;
-                    break;
-                case wi::input::KEYBOARD_BUTTON_HOME:
-                    keycode = SDL_SCANCODE_HOME;
-                    break;
-                case wi::input::KEYBOARD_BUTTON_LCONTROL:
-                    keycode = SDL_SCANCODE_LCTRL;
-                    break;
-                case wi::input::KEYBOARD_BUTTON_RCONTROL:
-                    keycode = SDL_SCANCODE_RCTRL;
-                    break;
-                case wi::input::KEYBOARD_BUTTON_DELETE:
-                    keycode = SDL_SCANCODE_DELETE;
-                    break;
-                case wi::input::KEYBOARD_BUTTON_BACKSPACE:
-                    keycode = SDL_SCANCODE_BACKSPACE;
-                    break;
-                case wi::input::KEYBOARD_BUTTON_PAGEDOWN:
-                    keycode = SDL_SCANCODE_PAGEDOWN;
-                    break;
-                case wi::input::KEYBOARD_BUTTON_PAGEUP:
-                    keycode = SDL_SCANCODE_PAGEUP;
-                    break;
-				//Translating engine's keycode mapping (which comes from Win32 i presume) to the matching SDL2 keycode
-				//Win32 Link: https://docs.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
-				//SDL2 Link: https://wiki.libsdl.org/SDL_Keycode
-				//Numbers start from enum 48 to 57, 58 to 64 are undefined, 65 to 90 are alphabets.
-				//Usage: the same as win32 platform, which is (for example) wi::input::Down((wi::input::BUTTON)'A' (referenced from Editor.cpp for the engine's editor program)
-				case 48:
-					keycode = SDL_SCANCODE_0;
-					break;
-				case 49:
-					keycode = SDL_SCANCODE_1;
-					break;
-				case 50:
-					keycode = SDL_SCANCODE_2;
-					break;
-				case 51:
-					keycode = SDL_SCANCODE_3;
-					break;
-				case 52:
-					keycode = SDL_SCANCODE_4;
-					break;
-				case 53:
-					keycode = SDL_SCANCODE_5;
-					break;
-				case 54:
-					keycode = SDL_SCANCODE_6;
-					break;
-				case 55:
-					keycode = SDL_SCANCODE_7;
-					break;
-				case 56:
-					keycode = SDL_SCANCODE_8;
-					break;
-				case 57:
-					keycode = SDL_SCANCODE_9;
-					break;
-				case 65:
-					keycode = SDL_SCANCODE_A;
-					break;
-				case 66:
-					keycode = SDL_SCANCODE_B;
-					break;
-				case 67:
-					keycode = SDL_SCANCODE_C;
-					break;
-				case 68:
-					keycode = SDL_SCANCODE_D;
-					break;
-				case 69:
-					keycode = SDL_SCANCODE_E;
-					break;
-				case 70:
-					keycode = SDL_SCANCODE_F;
-					break;
-				case 71:
-					keycode = SDL_SCANCODE_G;
-					break;
-				case 72:
-					keycode = SDL_SCANCODE_H;
-					break;
-				case 73:
-					keycode = SDL_SCANCODE_I;
-					break;
-				case 74:
-					keycode = SDL_SCANCODE_J;
-					break;
-				case 75:
-					keycode = SDL_SCANCODE_K;
-					break;
-				case 76:
-					keycode = SDL_SCANCODE_L;
-					break;
-				case 77:
-					keycode = SDL_SCANCODE_M;
-					break;
-				case 78:
-					keycode = SDL_SCANCODE_N;
-					break;
-				case 79:
-					keycode = SDL_SCANCODE_O;
-					break;
-				case 80:
-					keycode = SDL_SCANCODE_P;
-					break;
-				case 81:
-					keycode = SDL_SCANCODE_Q;
-					break;
-				case 82:
-					keycode = SDL_SCANCODE_R;
-					break;
-				case 83:
-					keycode = SDL_SCANCODE_S;
-					break;
-				case 84:
-					keycode = SDL_SCANCODE_T;
-					break;
-				case 85:
-					keycode = SDL_SCANCODE_U;
-					break;
-				case 86:
-					keycode = SDL_SCANCODE_V;
-					break;
-				case 87:
-					keycode = SDL_SCANCODE_W;
-					break;
-				case 88:
-					keycode = SDL_SCANCODE_X;
-					break;
-				case 89:
-					keycode = SDL_SCANCODE_Y;
-					break;
-				case 90:
-					keycode = SDL_SCANCODE_Z;
-					break;
-				
 #endif // _WIN32
 			}
-
 #ifdef _WIN32
 			return KEY_DOWN(keycode) || KEY_TOGGLE(keycode);
 #elif SDL2
-			int numkeys;
-			const uint8_t *state = SDL_GetKeyboardState(&numkeys);
-			return state[keycode] == 1;
+			return keyboard.buttons[keycode] == 1;
+
 #else
 #error KEYBOARD INPUT NOT SUPPORTED
 #endif
@@ -837,6 +639,10 @@ namespace wi::input
 			else if (controller.deviceType == Controller::RAWINPUT)
 			{
 				wi::input::rawinput::SetControllerFeedback(data, controller.deviceIndex);
+			}
+			else if (controller.deviceType == Controller::SDLINPUT)
+			{
+				wi::input::sdlinput::SetControllerFeedback(data, controller.deviceIndex);
 			}
 		}
 	}

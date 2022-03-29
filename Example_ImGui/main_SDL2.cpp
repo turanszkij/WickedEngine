@@ -2,44 +2,62 @@
 //
 
 #include "stdafx.h"
-#include <SDL2/SDL.h>
 #include "sdl2.h"
 #include "ImGui/imgui_impl_sdl.h"
 
 int sdl_loop(Example_ImGui &tests)
 {
-    SDL_Event event;
-
     bool quit = false;
     while (!quit)
     {
-        SDL_PumpEvents();
         tests.Run();
-
-        while (SDL_PollEvent(&event)) {
-            switch (event.type) {
-            case SDL_QUIT:
-                quit = true;
-                break;
-            case SDL_WINDOWEVENT:
-                switch (event.window.event) {
-                case SDL_WINDOWEVENT_CLOSE:   // exit game
+        SDL_Event event;
+        while(SDL_PollEvent(&event)){
+            switch(event.type){
+                case SDL_QUIT:
                     quit = true;
                     break;
-                case SDL_WINDOWEVENT_RESIZED:
-                    // Tells the engine to reload window configuration (size and dpi)
-                    tests.SetWindow(tests.window);
-                    break;
+                case SDL_WINDOWEVENT:
+                    switch (event.window.event) {
+                        case SDL_WINDOWEVENT_CLOSE: // exit tests
+                            quit = true;
+                            break;
+                        case SDL_WINDOWEVENT_RESIZED:
+                            // Tells the engine to reload window configuration (size and dpi)
+                            tests.SetWindow(tests.window);
+                            break;
+                        case SDL_WINDOWEVENT_FOCUS_LOST: //TODO
+                            tests.is_window_active = false;
+                            break;
+                        case SDL_WINDOWEVENT_FOCUS_GAINED:
+                            tests.is_window_active = true;
+                            if (wi::shadercompiler::GetRegisteredShaderCount() > 0)
+                            {
+                                std::thread([] {
+                                    wi::backlog::post("[Shader check] Started checking " + std::to_string(wi::shadercompiler::GetRegisteredShaderCount()) + " registered shaders for changes...");
+                                    if (wi::shadercompiler::CheckRegisteredShadersOutdated())
+                                    {
+                                        wi::backlog::post("[Shader check] Changes detected, initiating reload...");
+                                        wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [](uint64_t userdata) {
+                                            wi::renderer::ReloadShaders();
+                                            });
+                                    }
+                                    else
+                                    {
+                                        wi::backlog::post("[Shader check] All up to date");
+                                    }
+                                    }).detach();
+                            }
+                            break;
+                        default:
+                            break;
+                    }
                 default:
                     break;
-                }
-            default:
-                break;
             }
-
+            wi::input::sdlinput::ProcessEvent(event);
             ImGui_ImplSDL2_ProcessEvent(&event);
         }
-
     }
 
     return 0;
