@@ -423,7 +423,7 @@ namespace wi::scene
 		inline bool IsTerrain() const { return _flags & TERRAIN; }
 
 		inline float GetTessellationFactor() const { return tessellationFactor; }
-		inline wi::graphics::IndexBufferFormat GetIndexFormat() const { return vertex_positions.size() > 65535 ? wi::graphics::IndexBufferFormat::UINT32 : wi::graphics::IndexBufferFormat::UINT16; }
+		inline wi::graphics::IndexBufferFormat GetIndexFormat() const { return vertex_positions.size() > 65536 ? wi::graphics::IndexBufferFormat::UINT32 : wi::graphics::IndexBufferFormat::UINT16; }
 		inline size_t GetIndexStride() const { return GetIndexFormat() == wi::graphics::IndexBufferFormat::UINT32 ? sizeof(uint32_t) : sizeof(uint16_t); }
 		inline bool IsSkinned() const { return armatureID != wi::ecs::INVALID_ENTITY; }
 
