@@ -99,7 +99,7 @@ struct TerraGen : public wi::gui::Window
 		voronoiFrequencySlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 		AddWidget(&voronoiFrequencySlider);
 
-		voronoiPerturbationSlider.Create(0, 1, 0.05f, 10000, "Voronoi Perturb: ");
+		voronoiPerturbationSlider.Create(0, 0.1f, 0.01f, 10000, "Voronoi Perturb: ");
 		voronoiPerturbationSlider.SetTooltip("Randomize voronoi region borders");
 		voronoiPerturbationSlider.SetSize(XMFLOAT2(200, heihei));
 		voronoiPerturbationSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
@@ -222,10 +222,10 @@ struct TerraGen : public wi::gui::Window
 			if (voronoiBlend > 0)
 			{
 				XMFLOAT2 p = uv;
-				p.x *= voronoiFrequency;
-				p.y *= voronoiFrequency;
 				p.x += voronoiPerturbationOffsets[index].x;
 				p.y += voronoiPerturbationOffsets[index].y;
+				p.x *= voronoiFrequency;
+				p.y *= voronoiFrequency;
 				wi::noise::voronoi::Result res = wi::noise::voronoi::compute(p.x, p.y, (float)voronoiSeed);
 				float weight = std::pow(1 - wi::math::saturate((res.distance - voronoiShape) * voronoiFade), std::max(0.0001f, voronoiFalloff));
 				float elevation = res.cell_id - 0.5f;

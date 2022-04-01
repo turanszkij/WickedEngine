@@ -20,22 +20,22 @@ namespace wi::noise
 				state[i] = perlin_distr(perlin_rand);
 			}
 		}
-		constexpr float fade(float t)
+		constexpr float fade(float t) const
 		{
 			return t * t * t * (t * (t * 6 - 15) + 10);
 		}
-		constexpr float lerp(float a, float b, float t)
+		constexpr float lerp(float a, float b, float t) const
 		{
 			return (a + (b - a) * t);
 		}
-		constexpr float grad(uint8_t hash, float x, float y, float z)
+		constexpr float grad(uint8_t hash, float x, float y, float z) const
 		{
 			const uint8_t h = hash & 15;
 			const float u = h < 8 ? x : y;
 			const float v = h < 4 ? y : h == 12 || h == 14 ? x : z;
 			return ((h & 1) == 0 ? u : -u) + ((h & 2) == 0 ? v : -v);
 		}
-		inline float compute(float x, float y, float z)
+		inline float compute(float x, float y, float z) const
 		{
 			const float _x = std::floor(x);
 			const float _y = std::floor(y);
@@ -81,7 +81,7 @@ namespace wi::noise
 
 			return lerp(r0, r1, w);
 		}
-		constexpr float compute(float x, float y, float z, int octaves, float persistence = 0.5f)
+		constexpr float compute(float x, float y, float z, int octaves, float persistence = 0.5f) const
 		{
 			float result = 0;
 			float amplitude = 1;
