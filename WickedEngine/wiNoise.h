@@ -1,12 +1,13 @@
 #pragma once
 #include "CommonInclude.h"
+#include "wiMath.h"
 
 #include <random>
 
-namespace wi
+namespace wi::noise
 {
 	// Based on: https://github.com/Reputeless/PerlinNoise
-	struct PerlinNoise
+	struct Perlin
 	{
 		uint8_t state[256];
 
@@ -34,7 +35,7 @@ namespace wi
 			const float v = h < 4 ? y : h == 12 || h == 14 ? x : z;
 			return ((h & 1) == 0 ? u : -u) + ((h & 2) == 0 ? v : -v);
 		}
-		inline float noise(float x, float y, float z)
+		inline float compute(float x, float y, float z)
 		{
 			const float _x = std::floor(x);
 			const float _y = std::floor(y);
@@ -80,18 +81,72 @@ namespace wi
 
 			return lerp(r0, r1, w);
 		}
-		constexpr float noise(float x, float y, float z, int octaves, float persistence = 0.5f)
+		constexpr float compute(float x, float y, float z, int octaves, float persistence = 0.5f)
 		{
 			float result = 0;
 			float amplitude = 1;
 			for (int i = 0; i < octaves; ++i)
 			{
-				result += (noise(x, y, z) * amplitude);
+				result += (compute(x, y, z) * amplitude);
 				x *= 2;
 				y *= 2;
 				z *= 2;
 				amplitude *= persistence;
 			}
+			return result;
+		}
+	};
+
+	// Based on: https://www.shadertoy.com/view/MslGD8
+	namespace voronoi
+	{
+		inline XMVECTOR fract(XMVECTOR p)
+		{
+			return p - XMVectorFloor(p);
+		}
+		inline XMVECTOR hash(XMVECTOR p)
+		{
+			p = XMVectorSet(
+				XMVectorGetX(XMVector2Dot(p, XMVectorSet(127.1f, 311.7f, 0, 0))),
+				XMVectorGetX(XMVector2Dot(p, XMVectorSet(269.5f, 183.3f, 0, 0))),
+				0,
+				0
+			);
+			return fract(XMVectorSin(p) * 18.5453f);
+		}
+		struct Result
+		{
+			float distance;
+			float cell_id;
+		};
+		inline Result compute(float x, float y, float seed)
+		{
+			Result result = {};
+
+			XMVECTOR p = XMVectorSet(x, y, 0, 0);
+			XMVECTOR n = XMVectorFloor(p);
+			XMVECTOR f = fract(p);
+
+			XMVECTOR m = XMVectorSet(8, 0, 0, 0);
+			for (int j = -1; j <= 1; j++)
+			{
+				for (int i = -1; i <= 1; i++)
+				{
+					XMVECTOR g = XMVectorSet(float(i), float(j), 0, 0);
+					XMVECTOR o = hash(n + g);
+					//XMVECTOR r = g - f + o;
+					XMVECTOR r = g - f + (XMVectorReplicate(0.5f) + 0.5f * XMVectorSin(seed * o));
+					float d = XMVectorGetX(XMVector2Dot(r, r));
+					if (d < XMVectorGetX(m))
+					{
+						m = XMVectorSet(d, XMVectorGetX(o), XMVectorGetY(o), 0);
+					}
+				}
+			}
+
+			result.distance = sqrt(XMVectorGetX(m));
+			result.cell_id = XMVectorGetY(m) + XMVectorGetZ(m);
+
 			return result;
 		}
 	};

@@ -1074,7 +1074,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGUI.h">
       <Filter>ENGINE\System</Filter>
     </ClInclude>
-    <ClInclude Include="$(MSBuildThisFileDirectory)wiPerlinNoise.h">
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiNoise.h">
       <Filter>ENGINE\Helpers</Filter>
     </ClInclude>
   </ItemGroup>

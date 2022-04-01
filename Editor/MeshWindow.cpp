@@ -22,8 +22,11 @@ struct TerraGen : public wi::gui::Window
 	wi::gui::Slider perlinSeedSlider;
 	wi::gui::Slider perlinOctavesSlider;
 	wi::gui::Slider voronoiBlendSlider;
-	wi::gui::Slider voronoiCellsSlider;
+	wi::gui::Slider voronoiFrequencySlider;
 	wi::gui::Slider voronoiPerturbationSlider;
+	wi::gui::Slider voronoiFadeSlider;
+	wi::gui::Slider voronoiShapeSlider;
+	wi::gui::Slider voronoiFalloffSlider;
 	wi::gui::Slider voronoiSeedSlider;
 	wi::gui::Button heightmapButton;
 	wi::gui::Slider heightmapBlendSlider;
@@ -35,9 +38,9 @@ struct TerraGen : public wi::gui::Window
 	TerraGen()
 	{
 		wi::gui::Window::Create("TerraGen");
-		SetSize(XMFLOAT2(400, 360));
+		SetSize(XMFLOAT2(410, 430));
 
-		float xx = 120;
+		float xx = 135;
 		float yy = 0;
 		float stepstep = 25;
 		float heihei = 20;
@@ -60,7 +63,7 @@ struct TerraGen : public wi::gui::Window
 		dimYSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 		AddWidget(&dimYSlider);
 
-		perlinBlendSlider.Create(0, 1, 1, 10000, "Perlin Blend: ");
+		perlinBlendSlider.Create(0, 1, 0.5f, 10000, "Perlin Blend: ");
 		perlinBlendSlider.SetTooltip("Amount of perlin noise to use");
 		perlinBlendSlider.SetSize(XMFLOAT2(200, heihei));
 		perlinBlendSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
@@ -90,17 +93,35 @@ struct TerraGen : public wi::gui::Window
 		voronoiBlendSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 		AddWidget(&voronoiBlendSlider);
 
-		voronoiCellsSlider.Create(0, 200, 100, 200, "Voronoi Cells: ");
-		voronoiCellsSlider.SetTooltip("Voronoi can create distinctly elevated areas, the more cells there are, smaller the consecutive areas");
-		voronoiCellsSlider.SetSize(XMFLOAT2(200, heihei));
-		voronoiCellsSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
-		AddWidget(&voronoiCellsSlider);
+		voronoiFrequencySlider.Create(0, 10, 4, 200, "Voronoi Frequency: ");
+		voronoiFrequencySlider.SetTooltip("Voronoi can create distinctly elevated areas, the more cells there are, smaller the consecutive areas");
+		voronoiFrequencySlider.SetSize(XMFLOAT2(200, heihei));
+		voronoiFrequencySlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+		AddWidget(&voronoiFrequencySlider);
 
-		voronoiPerturbationSlider.Create(0, 0.2f, 0.01f, 10000, "Voronoi Perturb: ");
+		voronoiPerturbationSlider.Create(0, 1, 0.05f, 10000, "Voronoi Perturb: ");
 		voronoiPerturbationSlider.SetTooltip("Randomize voronoi region borders");
 		voronoiPerturbationSlider.SetSize(XMFLOAT2(200, heihei));
 		voronoiPerturbationSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 		AddWidget(&voronoiPerturbationSlider);
+
+		voronoiFadeSlider.Create(0, 100, 10, 10000, "Voronoi Fade: ");
+		voronoiFadeSlider.SetTooltip("Fade out voronoi regions by distance from cell's center");
+		voronoiFadeSlider.SetSize(XMFLOAT2(200, heihei));
+		voronoiFadeSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+		AddWidget(&voronoiFadeSlider);
+
+		voronoiShapeSlider.Create(0, 1, 0.2f, 10000, "Voronoi Shape: ");
+		voronoiShapeSlider.SetTooltip("How much the voronoi shape will be kept");
+		voronoiShapeSlider.SetSize(XMFLOAT2(200, heihei));
+		voronoiShapeSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+		AddWidget(&voronoiShapeSlider);
+
+		voronoiFalloffSlider.Create(0, 8, 4, 10000, "Voronoi Falloff: ");
+		voronoiFalloffSlider.SetTooltip("Controls the falloff of the voronoi distance fade effect");
+		voronoiFalloffSlider.SetSize(XMFLOAT2(200, heihei));
+		voronoiFalloffSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+		AddWidget(&voronoiFalloffSlider);
 
 		voronoiSeedSlider.Create(1, 12345, 1234, 12344, "Voronoi Seed: ");
 		voronoiSeedSlider.SetTooltip("Voronoi can create distinctly elevated areas");
@@ -135,6 +156,109 @@ struct TerraGen : public wi::gui::Window
 			rgb = nullptr;
 		}
 	}
+
+	void Generate(MeshComponent& mesh)
+	{
+		const int width = (int)dimXSlider.GetValue();
+		const int length = (int)dimZSlider.GetValue();
+		const float half_width = width * 0.5f;
+		const float half_length = length * 0.5f;
+		const float width_rcp = 1.0f / width;
+		const float length_rcp = 1.0f / length;
+		const float verticalScale = dimYSlider.GetValue();
+		const float heightmapBlend = heightmapBlendSlider.GetValue();
+		const float perlinBlend = perlinBlendSlider.GetValue();
+		const uint32_t perlinSeed = (uint32_t)perlinSeedSlider.GetValue();
+		wi::noise::Perlin perlin;
+		if (perlinBlend > 0)
+		{
+			perlin.init(perlinSeed);
+		}
+		const int octaves = (int)perlinOctavesSlider.GetValue();
+		const float dx = perlinFrequencySlider.GetValue() * width_rcp;
+		const float dz = perlinFrequencySlider.GetValue() * length_rcp;
+		const float voronoiBlend = voronoiBlendSlider.GetValue();
+		const float voronoiFrequency = voronoiFrequencySlider.GetValue();
+		const float voronoiPerturbation = voronoiPerturbationSlider.GetValue();
+		const float voronoiFade = voronoiFadeSlider.GetValue();
+		const float voronoiShape = voronoiShapeSlider.GetValue();
+		const float voronoiFalloff = voronoiFalloffSlider.GetValue();
+		const uint32_t voronoiSeed = (uint32_t)voronoiSeedSlider.GetValue();
+		std::mt19937 voronoi_rand(voronoiSeed);
+		std::uniform_real_distribution<float> voronoi_distr(0.0f, 1.0f);
+		const uint32_t vertexCount = width * length;
+		mesh.vertex_positions.resize(vertexCount);
+		mesh.vertex_normals.resize(vertexCount);
+		mesh.vertex_colors.resize(vertexCount);
+		mesh.vertex_uvset_0.resize(vertexCount);
+		mesh.vertex_uvset_1.resize(vertexCount);
+		mesh.vertex_atlas.resize(vertexCount);
+		wi::vector<XMFLOAT2> voronoiPerturbationOffsets(vertexCount);
+		for (uint32_t i = 0; i < vertexCount; ++i)
+		{
+			voronoiPerturbationOffsets[i].x = (voronoi_distr(voronoi_rand) - 0.5f) * voronoiPerturbation;
+			voronoiPerturbationOffsets[i].y = (voronoi_distr(voronoi_rand) - 0.5f) * voronoiPerturbation;
+		}
+		wi::jobsystem::context ctx;
+		wi::jobsystem::Dispatch(ctx, vertexCount, width, [&](wi::jobsystem::JobArgs args) {
+			uint32_t index = args.jobIndex;
+			const float x = float(index % width);
+			const float z = float(index / width);
+			const XMFLOAT2 uv = XMFLOAT2(x * width_rcp, z * length_rcp);
+			mesh.vertex_positions[index] = XMFLOAT3(x - half_width, 0, z - half_length);
+			mesh.vertex_colors[index] = wi::Color::Red().rgba; // vertex color is used for material blending, red means fully use the first material
+			mesh.vertex_uvset_0[index] = uv;
+			mesh.vertex_uvset_1[index] = uv;
+			mesh.vertex_atlas[index] = uv;
+
+			if (rgb != nullptr)
+			{
+				mesh.vertex_positions[index].y += ((float)rgb[index * channelCount] / 255.0f * 2 - 1) * heightmapBlend;
+			}
+			if (perlinBlend > 0)
+			{
+				mesh.vertex_positions[index].y += perlin.compute(x * dx, z * dz, 0, octaves) * perlinBlend;
+			}
+			if (voronoiBlend > 0)
+			{
+				XMFLOAT2 p = uv;
+				p.x *= voronoiFrequency;
+				p.y *= voronoiFrequency;
+				p.x += voronoiPerturbationOffsets[index].x;
+				p.y += voronoiPerturbationOffsets[index].y;
+				wi::noise::voronoi::Result res = wi::noise::voronoi::compute(p.x, p.y, (float)voronoiSeed);
+				float weight = std::pow(1 - wi::math::saturate((res.distance - voronoiShape) * voronoiFade), std::max(0.0001f, voronoiFalloff));
+				float elevation = res.cell_id - 0.5f;
+				mesh.vertex_positions[index].y += elevation * weight * voronoiBlend;
+			}
+			mesh.vertex_positions[index].y *= verticalScale;
+			});
+		mesh.indices.resize((width - 1) * (length - 1) * 6);
+		mesh.subsets.back().indexCount = (uint32_t)mesh.indices.size();
+		size_t counter = 0;
+		for (int x = 0; x < width - 1; x++)
+		{
+			for (int z = 0; z < length - 1; z++)
+			{
+				int lowerLeft = x + z * width;
+				int lowerRight = (x + 1) + z * width;
+				int topLeft = x + (z + 1) * width;
+				int topRight = (x + 1) + (z + 1) * width;
+
+				mesh.indices[counter++] = topLeft;
+				mesh.indices[counter++] = lowerLeft;
+				mesh.indices[counter++] = lowerRight;
+
+				mesh.indices[counter++] = topLeft;
+				mesh.indices[counter++] = lowerRight;
+				mesh.indices[counter++] = topRight;
+			}
+		}
+
+		wi::jobsystem::Wait(ctx);
+		mesh.ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH_FAST);
+	};
+
 } terragen;
 
 void MeshWindow::Create(EditorComponent* editor)
@@ -565,131 +689,7 @@ void MeshWindow::Create(EditorComponent* editor)
 		MaterialComponent* material = scene.materials.GetComponent(mesh->subsets.back().materialID);
 		material->SetUseVertexColors(true);
 		material->SetRoughness(1);
-
-		static auto generate_mesh = [=] () 
-		{
-			const int width = (int)terragen.dimXSlider.GetValue();
-			const int length = (int)terragen.dimZSlider.GetValue();
-			const float half_width = width * 0.5f;
-			const float half_length = length * 0.5f;
-			const float width_rcp = 1.0f / width;
-			const float length_rcp = 1.0f / length;
-			const float verticalScale = terragen.dimYSlider.GetValue();
-			const float heightmapBlend = terragen.heightmapBlendSlider.GetValue();
-			const unsigned char* rgb = terragen.rgb;
-			const int channelCount = terragen.channelCount;
-			const float perlinBlend = terragen.perlinBlendSlider.GetValue();
-			const uint32_t perlinSeed = (uint32_t)terragen.perlinSeedSlider.GetValue();
-			wi::PerlinNoise perlin;
-			perlin.init(perlinSeed);
-			const int octaves = (int)terragen.perlinOctavesSlider.GetValue();
-			const float dx = terragen.perlinFrequencySlider.GetValue() * width_rcp;
-			const float dz = terragen.perlinFrequencySlider.GetValue() * length_rcp;
-			const float voronoiBlend = terragen.voronoiBlendSlider.GetValue();
-			const size_t voronoiCount = (size_t)terragen.voronoiCellsSlider.GetValue();
-			const float voronoiPerturbation = terragen.voronoiPerturbationSlider.GetValue();
-			const uint32_t voronoiSeed = (uint32_t)terragen.voronoiSeedSlider.GetValue();
-			struct VoronoiCell
-			{
-				XMFLOAT2 center;
-				float elevation;
-			};
-			wi::vector<VoronoiCell> voronoi;
-			voronoi.reserve(voronoiCount);
-			std::mt19937 voronoi_rand(voronoiSeed);
-			std::uniform_real_distribution<float> voronoi_distr(0.0f, 1.0f);
-			for (int i = 0; i < voronoiCount; ++i)
-			{
-				VoronoiCell cell;
-				cell.center.x = voronoi_distr(voronoi_rand);
-				cell.center.y = voronoi_distr(voronoi_rand);
-				cell.elevation = voronoi_distr(voronoi_rand) - 0.5f;
-				voronoi.push_back(cell);
-			}
-			const uint32_t vertexCount = width * length;
-			mesh->vertex_positions.resize(vertexCount);
-			mesh->vertex_normals.resize(vertexCount);
-			mesh->vertex_colors.resize(vertexCount);
-			mesh->vertex_uvset_0.resize(vertexCount);
-			mesh->vertex_uvset_1.resize(vertexCount);
-			mesh->vertex_atlas.resize(vertexCount);
-			wi::vector<XMFLOAT2> voronoiPerturbationOffsets(vertexCount);
-			for (uint32_t i = 0; i < vertexCount; ++i)
-			{
-				voronoiPerturbationOffsets[i].x = (voronoi_distr(voronoi_rand) - 0.5f) * voronoiPerturbation;
-				voronoiPerturbationOffsets[i].y = (voronoi_distr(voronoi_rand) - 0.5f) * voronoiPerturbation;
-			}
-			wi::jobsystem::context ctx;
-			wi::jobsystem::Dispatch(ctx, vertexCount, width, [&](wi::jobsystem::JobArgs args) {
-				uint32_t index = args.jobIndex;
-				const float x = float(index % width);
-				const float z = float(index / width);
-				const XMFLOAT2 uv = XMFLOAT2(x * width_rcp, z * length_rcp);
-				mesh->vertex_positions[index] = XMFLOAT3(x - half_width, 0, z - half_length);
-				mesh->vertex_colors[index] = wi::Color::Red().rgba; // vertex color is used for material blending, red means fully use the first material
-				mesh->vertex_uvset_0[index] = uv;
-				mesh->vertex_uvset_1[index] = uv;
-				mesh->vertex_atlas[index] = uv;
-
-				if (rgb != nullptr)
-				{
-					mesh->vertex_positions[index].y += ((float)rgb[index * channelCount] / 255.0f * 2 - 1) * heightmapBlend;
-				}
-				if (perlinBlend > 0)
-				{
-					mesh->vertex_positions[index].y += perlin.noise(x * dx, z * dz, 0, octaves) * perlinBlend;
-				}
-				if (voronoiBlend > 0)
-				{
-					XMFLOAT2 compare_pos = uv;
-					compare_pos.x += voronoiPerturbationOffsets[index].x;
-					compare_pos.y += voronoiPerturbationOffsets[index].y;
-					size_t best_cell = 0;
-					float best_cell_dist = std::numeric_limits<float>::max();
-					for (size_t v = 0; v < voronoi.size(); ++v)
-					{
-						const VoronoiCell& cell = voronoi[v];
-						const float distsq = wi::math::DistanceSquared(compare_pos, cell.center);
-						if (distsq < best_cell_dist)
-						{
-							best_cell = v;
-							best_cell_dist = distsq;
-						}
-					}
-					if (best_cell < voronoi.size())
-					{
-						const VoronoiCell& cell = voronoi[best_cell];
-						mesh->vertex_positions[index].y += cell.elevation * voronoiBlend;
-					}
-				}
-				mesh->vertex_positions[index].y *= verticalScale;
-			});
-			mesh->indices.resize((width - 1) * (length - 1) * 6);
-			mesh->subsets.back().indexCount = (uint32_t)mesh->indices.size();
-			size_t counter = 0;
-			for (int x = 0; x < width - 1; x++)
-			{
-				for (int z = 0; z < length - 1; z++)
-				{
-					int lowerLeft = x + z * width;
-					int lowerRight = (x + 1) + z * width;
-					int topLeft = x + (z + 1) * width;
-					int topRight = (x + 1) + (z + 1) * width;
-
-					mesh->indices[counter++] = topLeft;
-					mesh->indices[counter++] = lowerLeft;
-					mesh->indices[counter++] = lowerRight;
-
-					mesh->indices[counter++] = topLeft;
-					mesh->indices[counter++] = lowerRight;
-					mesh->indices[counter++] = topRight;
-				}
-			}
-
-			wi::jobsystem::Wait(ctx);
-			mesh->ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH_FAST);
-		};
-		generate_mesh();
+		terragen.Generate(*mesh);
 
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_ADD;
@@ -710,44 +710,24 @@ void MeshWindow::Create(EditorComponent* editor)
 
 
 
-
-
-		terragen.dimXSlider.OnSlide([](wi::gui::EventArgs args) {
-			generate_mesh();
-		});
-		terragen.dimZSlider.OnSlide([](wi::gui::EventArgs args) {
-			generate_mesh();
-		});
-		terragen.dimYSlider.OnSlide([](wi::gui::EventArgs args) {
-			generate_mesh();
-		});
-		terragen.perlinFrequencySlider.OnSlide([](wi::gui::EventArgs args) {
-			generate_mesh();
-		});
-		terragen.perlinBlendSlider.OnSlide([](wi::gui::EventArgs args) {
-			generate_mesh();
-		});
-		terragen.perlinSeedSlider.OnSlide([](wi::gui::EventArgs args) {
-			generate_mesh();
-		});
-		terragen.perlinOctavesSlider.OnSlide([](wi::gui::EventArgs args) {
-			generate_mesh();
-		});
-		terragen.voronoiBlendSlider.OnSlide([](wi::gui::EventArgs args) {
-			generate_mesh();
-		});
-		terragen.voronoiCellsSlider.OnSlide([](wi::gui::EventArgs args) {
-			generate_mesh();
-		});
-		terragen.voronoiPerturbationSlider.OnSlide([](wi::gui::EventArgs args) {
-			generate_mesh();
-		});
-		terragen.voronoiSeedSlider.OnSlide([](wi::gui::EventArgs args) {
-			generate_mesh();
-		});
-		terragen.heightmapBlendSlider.OnSlide([](wi::gui::EventArgs args) {
-			generate_mesh();
-		});
+		auto generate_callback = [=](wi::gui::EventArgs args) {
+			terragen.Generate(*mesh);
+		};
+		terragen.dimXSlider.OnSlide(generate_callback);
+		terragen.dimZSlider.OnSlide(generate_callback);
+		terragen.dimYSlider.OnSlide(generate_callback);
+		terragen.perlinFrequencySlider.OnSlide(generate_callback);
+		terragen.perlinBlendSlider.OnSlide(generate_callback);
+		terragen.perlinSeedSlider.OnSlide(generate_callback);
+		terragen.perlinOctavesSlider.OnSlide(generate_callback);
+		terragen.voronoiBlendSlider.OnSlide(generate_callback);
+		terragen.voronoiFrequencySlider.OnSlide(generate_callback);
+		terragen.voronoiPerturbationSlider.OnSlide(generate_callback);
+		terragen.voronoiFadeSlider.OnSlide(generate_callback);
+		terragen.voronoiShapeSlider.OnSlide(generate_callback);
+		terragen.voronoiFalloffSlider.OnSlide(generate_callback);
+		terragen.voronoiSeedSlider.OnSlide(generate_callback);
+		terragen.heightmapBlendSlider.OnSlide(generate_callback);
 
 		terragen.heightmapButton.OnClick([=](wi::gui::EventArgs args) {
 
@@ -773,7 +753,7 @@ void MeshWindow::Create(EditorComponent* editor)
 						terragen.dimZSlider.SetValue((float)height);
 						terragen.perlinBlendSlider.SetValue(0);
 						terragen.voronoiBlendSlider.SetValue(0);
-						generate_mesh();
+						terragen.Generate(*mesh);
 					}
 				});
 			});
