@@ -68,6 +68,7 @@
 #include "wiUnorderedMap.h"
 #include "wiUnorderedSet.h"
 #include "wiVector.h"
+#include "wiPerlinNoise.h"
 
 #ifdef _WIN32
 #ifdef PLATFORM_UWP

@@ -1074,6 +1074,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)wiGUI.h">
       <Filter>ENGINE\System</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiPerlinNoise.h">
+      <Filter>ENGINE\Helpers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)LUA\lapi.c">
