@@ -54,8 +54,8 @@ int sdl_loop(Tests &tests)
                 default:
                     break;
             }
+            wi::input::sdlinput::ProcessEvent(event);
         }
-        wi::input::sdlinput::ProcessEvent(event);
     }
 
     return 0;

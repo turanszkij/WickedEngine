@@ -34,6 +34,17 @@ enum TEST_TYPE
 	CONTAINERPERF,
 };
 
+// Controller Test UI Data, info down below will be using Xbox Controller as reference
+wi::SpriteFont 
+	b_a, b_b, b_x, b_y, // Action Buttons: A, B, X, Y 
+	b_du, b_dd, b_dl, b_dr, // Directional Buttons: Up, Down, Left, Right
+	b_sta, b_bck, // Menu Buttons: Start, Back 
+	b_lb, b_rb, // Shoulder Buttons: LB, RB
+	b_ls, b_rs, // Stick Press Buttons: Left Stick, Right Stick
+	t_l, t_r, // Trigger Inputs: LT, RT
+	s_l, s_r, // Stick Axes: Left Stick, Right Stick
+	i_led; // Controller LED status
+
 void Tests::Initialize()
 {
     wi::Application::Initialize();
@@ -245,18 +256,97 @@ void TestsRenderer::Load()
 			break;
 		case CONTROLLERTEST:
 		{
-			static wi::SpriteFont font("This test plays a vibration on the first controller's left motor (if device supports it) \n and changes the LED to a random color (if device supports it)");
-			font.params.h_align = wi::font::WIFALIGN_CENTER;
-			font.params.v_align = wi::font::WIFALIGN_CENTER;
-			font.params.size = 20;
-			font.params.posX = screenW / 2;
-			font.params.posY = screenH / 2;
-			AddFont(&font);
+			float pos_center_x = screenW / 2, pos_center_y = screenH / 2;
+			wi::font::Params baseparams(pos_center_x, pos_center_y, 20, wi::font::WIFALIGN_CENTER, wi::font::WIFALIGN_CENTER);
+			baseparams.style = wi::font::AddFontStyle("yumin.ttf");
 
-			wi::input::ControllerFeedback feedback;
-			feedback.led_color.rgba = wi::random::GetRandom(0xFFFFFF);
-			feedback.vibration_left = 0.9f;
-			wi::input::SetControllerFeedback(feedback, 0);
+			std::string head_textbuild = "This test will check for Controller-1's inputs and it will be displayed down below.";
+			head_textbuild += "\nPress Button 2 combined with one of the Trigger Buttons to set the controller's vibration.";
+			head_textbuild += "\nStrength of the vibration are controlled by how hard the Trigger Buttons get pressed.";
+			head_textbuild += "\nPress Button 3 to switch the controller's LED color, every press will bring different colors.";
+			static wi::SpriteFont head(head_textbuild, baseparams);
+			head.params.posY = pos_center_y-260.f;
+			b_a = wi::SpriteFont("Button 2 (Xbox: A, PS: X)", baseparams);
+			b_a.params.posY = pos_center_y-160.f;
+			b_a.params.posX = pos_center_x-140.f;
+			b_b = wi::SpriteFont("Button 3 (Xbox: B, PS: O)", baseparams);
+			b_b.params.posY = b_a.params.posY+30.f;
+			b_b.params.posX = b_a.params.posX;
+			b_x = wi::SpriteFont("Button 1 (Xbox: X, PS: [])", baseparams);
+			b_x.params.posY = b_b.params.posY+30.f;
+			b_x.params.posX = b_a.params.posX;
+			b_y = wi::SpriteFont("Button 4 (Xbox: Y, PS: △)", baseparams);
+			b_y.params.posY = b_x.params.posY+30.f;
+			b_y.params.posX = b_a.params.posX;
+			b_bck = wi::SpriteFont("Button 9 (Xbox: Back, PS: Share)", baseparams);
+			b_bck.params.posY = b_y.params.posY+30.f;
+			b_bck.params.posX = b_a.params.posX;
+			b_sta = wi::SpriteFont("Button 10 (Xbox: Start, PS: Option)", baseparams);
+			b_sta.params.posY = b_bck.params.posY+30.f;
+			b_sta.params.posX = b_a.params.posX;
+			b_ls = wi::SpriteFont("Button 7 (Left Stick)", baseparams);
+			b_ls.params.posY = b_sta.params.posY+30.f;
+			b_ls.params.posX = b_a.params.posX;
+			b_rs = wi::SpriteFont("Button 8 (Right Stick)", baseparams);
+			b_rs.params.posY = b_ls.params.posY+30.f;
+			b_rs.params.posX = b_a.params.posX;
+			s_l = wi::SpriteFont("", baseparams);
+			s_l.params.posY = b_rs.params.posY+30.f;
+			s_l.params.posX = b_a.params.posX;
+			s_r = wi::SpriteFont("", baseparams);
+			s_r.params.posY = s_l.params.posY+30.f;
+			s_r.params.posX = b_a.params.posX;
+
+			b_du = wi::SpriteFont("Button Up", baseparams);
+			b_du.params.posY = pos_center_y-160.f;
+			b_du.params.posX = pos_center_x+140.f;
+			b_dd = wi::SpriteFont("Button Down", baseparams);
+			b_dd.params.posY = b_du.params.posY+30.f;
+			b_dd.params.posX = b_du.params.posX;
+			b_dl = wi::SpriteFont("Button Left", baseparams);
+			b_dl.params.posY = b_dd.params.posY+30.f;
+			b_dl.params.posX = b_du.params.posX;
+			b_dr = wi::SpriteFont("Button Right", baseparams);
+			b_dr.params.posY = b_dl.params.posY+30.f;
+			b_dr.params.posX = b_du.params.posX;
+			b_lb = wi::SpriteFont("Button 5 (Xbox: LB, PS: L1)", baseparams);
+			b_lb.params.posY = b_dr.params.posY+30.f;
+			b_lb.params.posX = b_du.params.posX;
+			b_rb = wi::SpriteFont("Button 6 (Xbox: RB, PS: R1)", baseparams);
+			b_rb.params.posY = b_lb.params.posY+30.f;
+			b_rb.params.posX = b_du.params.posX;
+			t_l = wi::SpriteFont("", baseparams);
+			t_l.params.posY = b_rb.params.posY+30.f;
+			t_l.params.posX = b_du.params.posX;
+			t_r = wi::SpriteFont("", baseparams);
+			t_r.params.posY = t_l.params.posY+30.f;
+			t_r.params.posX = b_du.params.posX;
+
+			i_led = wi::SpriteFont("", baseparams);
+			i_led.params.posY = s_r.params.posY+30.f;
+
+			AddFont(&head);
+
+			AddFont(&b_a);
+			AddFont(&b_b);
+			AddFont(&b_x);
+			AddFont(&b_y);
+			AddFont(&b_sta);
+			AddFont(&b_bck);
+			AddFont(&b_ls);
+			AddFont(&b_rs);
+			AddFont(&s_l);
+			AddFont(&s_r);
+			AddFont(&b_du);
+			AddFont(&b_dd);
+			AddFont(&b_dl);
+			AddFont(&b_dr);
+			AddFont(&b_lb);
+			AddFont(&b_rb);
+			AddFont(&t_l);
+			AddFont(&t_r);
+
+			AddFont(&i_led);
 		}
 		break;
 		case INVERSEKINEMATICSTEST:
@@ -365,6 +455,58 @@ void TestsRenderer::Update(float dt)
         }
     }
     break;
+	case CONTROLLERTEST:
+	{
+		// Handle displays of all buttons here, the text will turn to white when the associated button are pressed
+		b_a.params.color = (wi::input::Down(wi::input::GAMEPAD_BUTTON_2)) ? wi::Color::White() : wi::Color::Green();
+		b_b.params.color = (wi::input::Down(wi::input::GAMEPAD_BUTTON_3)) ? wi::Color::White() : wi::Color::Red();
+		b_x.params.color = (wi::input::Down(wi::input::GAMEPAD_BUTTON_1)) ? wi::Color::White() : wi::Color::Cyan();
+		b_y.params.color = (wi::input::Down(wi::input::GAMEPAD_BUTTON_4)) ? wi::Color::White() : wi::Color::Yellow();
+		b_sta.params.color = (wi::input::Down(wi::input::GAMEPAD_BUTTON_10)) ? wi::Color::White() : wi::Color::Gray();
+		b_bck.params.color = (wi::input::Down(wi::input::GAMEPAD_BUTTON_9)) ? wi::Color::White() : wi::Color::Gray();
+		b_ls.params.color = (wi::input::Down(wi::input::GAMEPAD_BUTTON_7)) ? wi::Color::White() : wi::Color::Gray();
+		b_rs.params.color = (wi::input::Down(wi::input::GAMEPAD_BUTTON_8)) ? wi::Color::White() : wi::Color::Gray();
+		b_du.params.color = (wi::input::Down(wi::input::GAMEPAD_BUTTON_UP)) ? wi::Color::White() : wi::Color::Gray();
+		b_dd.params.color = (wi::input::Down(wi::input::GAMEPAD_BUTTON_DOWN)) ? wi::Color::White() : wi::Color::Gray();
+		b_dl.params.color = (wi::input::Down(wi::input::GAMEPAD_BUTTON_LEFT)) ? wi::Color::White() : wi::Color::Gray();
+		b_dr.params.color = (wi::input::Down(wi::input::GAMEPAD_BUTTON_RIGHT)) ? wi::Color::White() : wi::Color::Gray();
+		b_lb.params.color = (wi::input::Down(wi::input::GAMEPAD_BUTTON_5)) ? wi::Color::White() : wi::Color::Gray();
+		b_rb.params.color = (wi::input::Down(wi::input::GAMEPAD_BUTTON_6)) ? wi::Color::White() : wi::Color::Gray();
+
+		// Handle displays of triggers and axes, will update the text according to the provided data of the controller
+		static std::wstring text_head_axes[] = {L"L Trigger (PS: L2): ", L"R Trigger (PS: R2): ", L"L Stick: ", L"R Stick: "};
+		t_l.text = text_head_axes[0]+std::to_wstring(wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_TRIGGER_L).x);
+		t_r.text = text_head_axes[1]+std::to_wstring(wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_TRIGGER_R).x);
+		s_l.text = text_head_axes[2]+
+			std::to_wstring(wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_THUMBSTICK_L).x)+L", "+
+			std::to_wstring(wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_THUMBSTICK_L).y);
+		s_r.text = text_head_axes[3]+
+			std::to_wstring(wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_THUMBSTICK_R).x)+L", "+
+			std::to_wstring(wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_THUMBSTICK_R).y);
+
+		// Handling controller's vibrations and LED color
+		static float vibration_multipllier = 0.f;
+		static int color_index_set = 0;
+		static uint32_t color_sets[] = { wi::Color::Black(), wi::Color::Cyan(), wi::Color::Red(), wi::Color::Green(), wi::Color::Yellow()};
+		static std::wstring color_sets_desc[] = {L"Controller LED: None", L"Controller LED: Cyan", L"Controller LED: Red", L"Controller LED: Green", L"Controller LED: Yellow"};
+
+		if(wi::input::Down(wi::input::GAMEPAD_BUTTON_2)) vibration_multipllier = 1.f;
+		else vibration_multipllier = 0.f;
+		if(wi::input::Press(wi::input::GAMEPAD_BUTTON_3)){
+			color_index_set++;
+			if (color_index_set > 4) color_index_set = 0;
+		}
+
+		wi::input::ControllerFeedback feedback;
+		feedback.led_color.rgba = color_sets[color_index_set];
+		feedback.vibration_left = wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_TRIGGER_L).x*vibration_multipllier;
+		feedback.vibration_right = wi::input::GetAnalog(wi::input::GAMEPAD_ANALOG_TRIGGER_R).x*vibration_multipllier;
+		wi::input::SetControllerFeedback(feedback, 0);
+
+		i_led.text = color_sets_desc[color_index_set];
+		i_led.params.color = color_sets[color_index_set];
+	}
+	break;
 	case INVERSEKINEMATICSTEST:
 	{
 		if (ik_entity != INVALID_ENTITY)
