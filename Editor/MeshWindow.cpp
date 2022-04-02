@@ -14,9 +14,10 @@ using namespace wi::scene;
 
 struct TerraGen : public wi::gui::Window
 {
-	wi::gui::Slider dimXSlider;
-	wi::gui::Slider dimYSlider;
+	wi::gui::Slider chunkResolutionSlider;
 	wi::gui::Slider generationSlider;
+	wi::gui::Slider verticalScaleSlider;
+	wi::gui::Slider groundLevelSlider;
 	wi::gui::Slider perlinBlendSlider;
 	wi::gui::Slider perlinFrequencySlider;
 	wi::gui::Slider perlinSeedSlider;
@@ -39,30 +40,36 @@ struct TerraGen : public wi::gui::Window
 	TerraGen()
 	{
 		wi::gui::Window::Create("TerraGen");
-		SetSize(XMFLOAT2(410, 420));
+		SetSize(XMFLOAT2(410, 440));
 
-		float xx = 135;
+		float xx = 140;
 		float yy = 0;
 		float stepstep = 25;
 		float heihei = 20;
 
-		dimXSlider.Create(16, 1024, 64, 1024 - 16, "Chunk Width: ");
-		dimXSlider.SetTooltip("Resolution of one chunk on the horizontal (XZ) axis");
-		dimXSlider.SetSize(XMFLOAT2(200, heihei));
-		dimXSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
-		AddWidget(&dimXSlider);
+		chunkResolutionSlider.Create(16, 1024, 64, 1024 - 16, "Chunk Resolution: ");
+		chunkResolutionSlider.SetTooltip("Resolution of one chunk on the horizontal (XZ) axis");
+		chunkResolutionSlider.SetSize(XMFLOAT2(200, heihei));
+		chunkResolutionSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+		AddWidget(&chunkResolutionSlider);
 
-		dimYSlider.Create(0, 100, 10, 10000, "Scale Y: ");
-		dimYSlider.SetTooltip("Terrain mesh grid scale on the vertical (Y) axis");
-		dimYSlider.SetSize(XMFLOAT2(200, heihei));
-		dimYSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
-		AddWidget(&dimYSlider);
-
-		generationSlider.Create(0, 16, 4, 16, "Generation Distance: ");
+		generationSlider.Create(0, 16, 6, 16, "Generation Distance: ");
 		generationSlider.SetTooltip("How far chunks will be generated (value is in number of chunks)");
 		generationSlider.SetSize(XMFLOAT2(200, heihei));
 		generationSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 		AddWidget(&generationSlider);
+
+		verticalScaleSlider.Create(0, 1000, 400, 10000, "Vertical Scale: ");
+		verticalScaleSlider.SetTooltip("Terrain mesh grid scale on the vertical (Y) axis");
+		verticalScaleSlider.SetSize(XMFLOAT2(200, heihei));
+		verticalScaleSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+		AddWidget(&verticalScaleSlider);
+
+		groundLevelSlider.Create(-100, 100, -50, 10000, "Ground Level: ");
+		groundLevelSlider.SetTooltip("Terrain mesh grid lowest level");
+		groundLevelSlider.SetSize(XMFLOAT2(200, heihei));
+		groundLevelSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+		AddWidget(&groundLevelSlider);
 
 		perlinBlendSlider.Create(0, 1, 0.5f, 10000, "Perlin Blend: ");
 		perlinBlendSlider.SetTooltip("Amount of perlin noise to use");
@@ -70,7 +77,7 @@ struct TerraGen : public wi::gui::Window
 		perlinBlendSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 		AddWidget(&perlinBlendSlider);
 
-		perlinFrequencySlider.Create(0.001f, 0.1f, 0.01f, 10000, "Perlin Frequency: ");
+		perlinFrequencySlider.Create(0.001f, 0.1f, 0.008f, 10000, "Perlin Frequency: ");
 		perlinFrequencySlider.SetTooltip("Frequency for the perlin noise");
 		perlinFrequencySlider.SetSize(XMFLOAT2(200, heihei));
 		perlinFrequencySlider.SetPos(XMFLOAT2(xx, yy += stepstep));
@@ -94,25 +101,25 @@ struct TerraGen : public wi::gui::Window
 		voronoiBlendSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 		AddWidget(&voronoiBlendSlider);
 
-		voronoiFrequencySlider.Create(0.001f, 0.1f, 0.01f, 200, "Voronoi Frequency: ");
+		voronoiFrequencySlider.Create(0.001f, 0.1f, 0.005f, 10000, "Voronoi Frequency: ");
 		voronoiFrequencySlider.SetTooltip("Voronoi can create distinctly elevated areas, the more cells there are, smaller the consecutive areas");
 		voronoiFrequencySlider.SetSize(XMFLOAT2(200, heihei));
 		voronoiFrequencySlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 		AddWidget(&voronoiFrequencySlider);
 
-		voronoiFadeSlider.Create(0, 100, 10, 10000, "Voronoi Fade: ");
+		voronoiFadeSlider.Create(0, 100, 2.1f, 10000, "Voronoi Fade: ");
 		voronoiFadeSlider.SetTooltip("Fade out voronoi regions by distance from cell's center");
 		voronoiFadeSlider.SetSize(XMFLOAT2(200, heihei));
 		voronoiFadeSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 		AddWidget(&voronoiFadeSlider);
 
-		voronoiShapeSlider.Create(0, 1, 0.2f, 10000, "Voronoi Shape: ");
+		voronoiShapeSlider.Create(0, 1, 0.351f, 10000, "Voronoi Shape: ");
 		voronoiShapeSlider.SetTooltip("How much the voronoi shape will be kept");
 		voronoiShapeSlider.SetSize(XMFLOAT2(200, heihei));
 		voronoiShapeSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 		AddWidget(&voronoiShapeSlider);
 
-		voronoiFalloffSlider.Create(0, 8, 4, 10000, "Voronoi Falloff: ");
+		voronoiFalloffSlider.Create(0, 8, 3.3f, 10000, "Voronoi Falloff: ");
 		voronoiFalloffSlider.SetTooltip("Controls the falloff of the voronoi distance fade effect");
 		voronoiFalloffSlider.SetSize(XMFLOAT2(200, heihei));
 		voronoiFalloffSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
@@ -142,8 +149,9 @@ struct TerraGen : public wi::gui::Window
 		auto generate_callback = [=](wi::gui::EventArgs args) {
 			Generate();
 		};
-		dimXSlider.OnSlide(generate_callback);
-		dimYSlider.OnSlide(generate_callback);
+		chunkResolutionSlider.OnSlide(generate_callback);
+		verticalScaleSlider.OnSlide(generate_callback);
+		groundLevelSlider.OnSlide(generate_callback);
 		perlinFrequencySlider.OnSlide(generate_callback);
 		perlinBlendSlider.OnSlide(generate_callback);
 		perlinSeedSlider.OnSlide(generate_callback);
@@ -222,7 +230,7 @@ struct TerraGen : public wi::gui::Window
 		material->SetUseVertexColors(true);
 		material->SetRoughness(1);
 
-		const int width = (int)dimXSlider.GetValue();
+		const int width = (int)chunkResolutionSlider.GetValue();
 		chunkIndices.resize((width - 1) * (width - 1) * 6);
 		size_t counter = 0;
 		for (int x = 0; x < width - 1; x++)
@@ -261,10 +269,11 @@ struct TerraGen : public wi::gui::Window
 
 		wi::Timer timer;
 		Scene& scene = wi::scene::GetScene();
-		const int width = (int)dimXSlider.GetValue();
+		const int width = (int)chunkResolutionSlider.GetValue();
 		const float half_width = width * 0.5f;
 		const float width_rcp = 1.0f / width;
-		const float verticalScale = dimYSlider.GetValue();
+		const float verticalScale = verticalScaleSlider.GetValue();
+		const float groundLevel = groundLevelSlider.GetValue();
 		const float heightmapBlend = heightmapBlendSlider.GetValue();
 		const float perlinBlend = perlinBlendSlider.GetValue();
 		const uint32_t perlinSeed = (uint32_t)perlinSeedSlider.GetValue();
@@ -325,14 +334,14 @@ struct TerraGen : public wi::gui::Window
 				{
 					const float x = float(index % width);
 					const float z = float(index / width);
-					const XMFLOAT2 world_pos = XMFLOAT2(chunk_pos.x + x, chunk_pos.z + z);
 					float height = 0;
+					const XMFLOAT2 world_pos = XMFLOAT2(chunk_pos.x + x, chunk_pos.z + z);
 					if (perlinBlend > 0)
 					{
 						XMFLOAT2 p = world_pos;
 						p.x *= perlinFrequency;
 						p.y *= perlinFrequency;
-						height += perlin.compute(p.x, p.y, 0, perlinOctaves) * perlinBlend;
+						height += (perlin.compute(p.x, p.y, 0, perlinOctaves) * 0.5f + 0.5f) * perlinBlend;
 					}
 					if (voronoiBlend > 0)
 					{
@@ -341,8 +350,9 @@ struct TerraGen : public wi::gui::Window
 						p.y *= voronoiFrequency;
 						wi::noise::voronoi::Result res = wi::noise::voronoi::compute(p.x, p.y, (float)voronoiSeed);
 						float weight = std::pow(1 - wi::math::saturate((res.distance - voronoiShape) * voronoiFade), std::max(0.0001f, voronoiFalloff));
-						float elevation = res.cell_id - 0.5f;
-						height += elevation * weight * voronoiBlend;
+						//float elevation = res.cell_id - 0.5f;
+						//height += elevation * weight * voronoiBlend;
+						height *= weight * voronoiBlend;
 					}
 					if (rgb != nullptr)
 					{
@@ -350,10 +360,11 @@ struct TerraGen : public wi::gui::Window
 						if (pixel.x >= 0 && pixel.x < heightmap_width && pixel.y >= 0 && pixel.y < heightmap_height)
 						{
 							const int idx = int(pixel.x) + int(pixel.y) * heightmap_width;
-							height = ((float)rgb[idx * channelCount] / 255.0f * 2 - 1) * heightmapBlend;
+							height = ((float)rgb[idx * channelCount] / 255.0f) * heightmapBlend;
 						}
 					}
 					height *= verticalScale;
+					height += groundLevel;
 
 					const XMFLOAT2 uv = XMFLOAT2(x * width_rcp, z * width_rcp);
 					mesh.vertex_positions[index] = XMFLOAT3(x, height, z);
