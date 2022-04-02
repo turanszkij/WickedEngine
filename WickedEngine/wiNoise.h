@@ -35,6 +35,7 @@ namespace wi::noise
 			const float v = h < 4 ? y : h == 12 || h == 14 ? x : z;
 			return ((h & 1) == 0 ? u : -u) + ((h & 2) == 0 ? v : -v);
 		}
+		// returns noise in range [-1, 1]
 		inline float compute(float x, float y, float z) const
 		{
 			const float _x = std::floor(x);
@@ -81,6 +82,7 @@ namespace wi::noise
 
 			return lerp(r0, r1, w);
 		}
+		// returns noise in range [-1, 1]
 		constexpr float compute(float x, float y, float z, int octaves, float persistence = 0.5f) const
 		{
 			float result = 0;

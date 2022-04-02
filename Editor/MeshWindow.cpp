@@ -326,6 +326,7 @@ struct TerraGen : public wi::gui::Window
 				mesh.subsets.back().indexOffset = 0;
 				mesh.vertex_positions.resize(vertexCount);
 				mesh.vertex_normals.resize(vertexCount);
+				//mesh.vertex_tangents.resize(vertexCount);
 				mesh.vertex_colors.resize(vertexCount);
 				mesh.vertex_uvset_0.resize(vertexCount);
 				mesh.vertex_uvset_1.resize(vertexCount);
@@ -334,50 +335,65 @@ struct TerraGen : public wi::gui::Window
 				{
 					const float x = float(index % width);
 					const float z = float(index / width);
-					float height = 0;
-					const XMFLOAT2 world_pos = XMFLOAT2(chunk_pos.x + x, chunk_pos.z + z);
-					if (perlinBlend > 0)
+					XMVECTOR corners[3];
+					XMFLOAT2 corner_offsets[3] = {
+						XMFLOAT2(0, 0),
+						XMFLOAT2(1, 0),
+						XMFLOAT2(0, 1),
+					};
+					for (int i = 0; i < arraysize(corners); ++i)
 					{
-						XMFLOAT2 p = world_pos;
-						p.x *= perlinFrequency;
-						p.y *= perlinFrequency;
-						height += (perlin.compute(p.x, p.y, 0, perlinOctaves) * 0.5f + 0.5f) * perlinBlend;
-					}
-					if (voronoiBlend > 0)
-					{
-						XMFLOAT2 p = world_pos;
-						p.x *= voronoiFrequency;
-						p.y *= voronoiFrequency;
-						wi::noise::voronoi::Result res = wi::noise::voronoi::compute(p.x, p.y, (float)voronoiSeed);
-						float weight = std::pow(1 - wi::math::saturate((res.distance - voronoiShape) * voronoiFade), std::max(0.0001f, voronoiFalloff));
-						//float elevation = res.cell_id - 0.5f;
-						//height += elevation * weight * voronoiBlend;
-						height *= weight * voronoiBlend;
-					}
-					if (rgb != nullptr)
-					{
-						XMFLOAT2 pixel = XMFLOAT2(world_pos.x + heightmap_width * 0.5f, world_pos.y + heightmap_height * 0.5f);
-						if (pixel.x >= 0 && pixel.x < heightmap_width && pixel.y >= 0 && pixel.y < heightmap_height)
+						float height = 0;
+						const XMFLOAT2 world_pos = XMFLOAT2(chunk_pos.x + x + corner_offsets[i].x, chunk_pos.z + z + corner_offsets[i].y);
+						if (perlinBlend > 0)
 						{
-							const int idx = int(pixel.x) + int(pixel.y) * heightmap_width;
-							height = ((float)rgb[idx * channelCount] / 255.0f) * heightmapBlend;
+							XMFLOAT2 p = world_pos;
+							p.x *= perlinFrequency;
+							p.y *= perlinFrequency;
+							height += (perlin.compute(p.x, p.y, 0, perlinOctaves) * 0.5f + 0.5f) * perlinBlend;
 						}
+						if (voronoiBlend > 0)
+						{
+							XMFLOAT2 p = world_pos;
+							p.x *= voronoiFrequency;
+							p.y *= voronoiFrequency;
+							wi::noise::voronoi::Result res = wi::noise::voronoi::compute(p.x, p.y, (float)voronoiSeed);
+							float weight = std::pow(1 - wi::math::saturate((res.distance - voronoiShape) * voronoiFade), std::max(0.0001f, voronoiFalloff));
+							height *= weight * voronoiBlend;
+						}
+						if (rgb != nullptr)
+						{
+							XMFLOAT2 pixel = XMFLOAT2(world_pos.x + heightmap_width * 0.5f, world_pos.y + heightmap_height * 0.5f);
+							if (pixel.x >= 0 && pixel.x < heightmap_width && pixel.y >= 0 && pixel.y < heightmap_height)
+							{
+								const int idx = int(pixel.x) + int(pixel.y) * heightmap_width;
+								height = ((float)rgb[idx * channelCount] / 255.0f) * heightmapBlend;
+							}
+						}
+						height *= verticalScale;
+						height += groundLevel;
+						corners[i] = XMVectorSet(world_pos.x, height, world_pos.y, 0);
 					}
-					height *= verticalScale;
-					height += groundLevel;
+					const XMVECTOR T = XMVectorSubtract(corners[2], corners[1]);
+					const XMVECTOR B = XMVectorSubtract(corners[1], corners[0]);
+					const XMVECTOR N = XMVector3Normalize(XMVector3Cross(T, B));
+					XMStoreFloat3(&mesh.vertex_normals[index], N);
+					//XMStoreFloat4(&mesh.vertex_tangents[index], XMVector3Normalize(T));
+					//mesh.vertex_tangents[index].w = 1;
 
 					const XMFLOAT2 uv = XMFLOAT2(x * width_rcp, z * width_rcp);
-					mesh.vertex_positions[index] = XMFLOAT3(x, height, z);
+					mesh.vertex_positions[index] = XMFLOAT3(x, XMVectorGetY(corners[0]), z);
 					mesh.vertex_colors[index] = 0xFF; // vertex color is used for material blending, red means fully use the first material
 					mesh.vertex_uvset_0[index] = uv;
 					mesh.vertex_uvset_1[index] = uv;
 					mesh.vertex_atlas[index] = uv;
 				}
-				mesh.ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH_FAST);
+
+				mesh.CreateRenderData();
+				//mesh.ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH_FAST);
 
 				if (timer.elapsed_milliseconds() > 10)
 					should_exit = true;
-
 			}
 		};
 
