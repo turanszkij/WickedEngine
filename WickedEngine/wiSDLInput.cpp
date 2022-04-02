@@ -154,6 +154,7 @@ namespace wi::input::sdlinput
                                 break;
                         }
                     }
+                    break;
                 }
                 case SDL_CONTROLLERBUTTONDOWN:          // Game controller button pressed
                 {
