@@ -144,7 +144,7 @@ namespace wi::noise
 				}
 			}
 
-			result.distance = sqrt(XMVectorGetX(m));
+			result.distance = XMVectorGetX(XMVectorSqrt(m));
 			result.cell_id = XMVectorGetY(m) + XMVectorGetZ(m);
 
 			return result;

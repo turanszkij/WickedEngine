@@ -16,14 +16,12 @@ struct TerraGen : public wi::gui::Window
 {
 	wi::gui::Slider dimXSlider;
 	wi::gui::Slider dimYSlider;
-	wi::gui::Slider dimZSlider;
 	wi::gui::Slider perlinBlendSlider;
 	wi::gui::Slider perlinFrequencySlider;
 	wi::gui::Slider perlinSeedSlider;
 	wi::gui::Slider perlinOctavesSlider;
 	wi::gui::Slider voronoiBlendSlider;
 	wi::gui::Slider voronoiFrequencySlider;
-	wi::gui::Slider voronoiPerturbationSlider;
 	wi::gui::Slider voronoiFadeSlider;
 	wi::gui::Slider voronoiShapeSlider;
 	wi::gui::Slider voronoiFalloffSlider;
@@ -38,27 +36,21 @@ struct TerraGen : public wi::gui::Window
 	TerraGen()
 	{
 		wi::gui::Window::Create("TerraGen");
-		SetSize(XMFLOAT2(410, 430));
+		SetSize(XMFLOAT2(410, 400));
 
 		float xx = 135;
 		float yy = 0;
 		float stepstep = 25;
 		float heihei = 20;
 
-		dimXSlider.Create(16, 1024, 128, 1024 - 16, "Resolution X: ");
-		dimXSlider.SetTooltip("Terrain mesh grid resolution on X axis");
+		dimXSlider.Create(16, 1024, 64, 1024 - 16, "Chunk Width: ");
+		dimXSlider.SetTooltip("Terrain mesh grid resolution on horizontal (XZ) axis");
 		dimXSlider.SetSize(XMFLOAT2(200, heihei));
 		dimXSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 		AddWidget(&dimXSlider);
 
-		dimZSlider.Create(16, 1024, 128, 1024 - 16, "Resolution Z: ");
-		dimZSlider.SetTooltip("Terrain mesh grid resolution on Z axis");
-		dimZSlider.SetSize(XMFLOAT2(200, heihei));
-		dimZSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
-		AddWidget(&dimZSlider);
-
 		dimYSlider.Create(0, 100, 10, 10000, "Scale Y: ");
-		dimYSlider.SetTooltip("Terrain mesh grid heightmap scale on Y axis");
+		dimYSlider.SetTooltip("Terrain mesh grid scale on vertical (Y) axis");
 		dimYSlider.SetSize(XMFLOAT2(200, heihei));
 		dimYSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 		AddWidget(&dimYSlider);
@@ -69,7 +61,7 @@ struct TerraGen : public wi::gui::Window
 		perlinBlendSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 		AddWidget(&perlinBlendSlider);
 
-		perlinFrequencySlider.Create(0.5f, 10, 4, 10000, "Perlin Frequency: ");
+		perlinFrequencySlider.Create(0.001f, 0.1f, 0.01f, 10000, "Perlin Frequency: ");
 		perlinFrequencySlider.SetTooltip("Frequency for the perlin noise");
 		perlinFrequencySlider.SetSize(XMFLOAT2(200, heihei));
 		perlinFrequencySlider.SetPos(XMFLOAT2(xx, yy += stepstep));
@@ -93,17 +85,11 @@ struct TerraGen : public wi::gui::Window
 		voronoiBlendSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 		AddWidget(&voronoiBlendSlider);
 
-		voronoiFrequencySlider.Create(0, 10, 4, 200, "Voronoi Frequency: ");
+		voronoiFrequencySlider.Create(0.001f, 0.1f, 0.01f, 200, "Voronoi Frequency: ");
 		voronoiFrequencySlider.SetTooltip("Voronoi can create distinctly elevated areas, the more cells there are, smaller the consecutive areas");
 		voronoiFrequencySlider.SetSize(XMFLOAT2(200, heihei));
 		voronoiFrequencySlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 		AddWidget(&voronoiFrequencySlider);
-
-		voronoiPerturbationSlider.Create(0, 0.1f, 0.01f, 10000, "Voronoi Perturb: ");
-		voronoiPerturbationSlider.SetTooltip("Randomize voronoi region borders");
-		voronoiPerturbationSlider.SetSize(XMFLOAT2(200, heihei));
-		voronoiPerturbationSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
-		AddWidget(&voronoiPerturbationSlider);
 
 		voronoiFadeSlider.Create(0, 100, 10, 10000, "Voronoi Fade: ");
 		voronoiFadeSlider.SetTooltip("Fade out voronoi regions by distance from cell's center");
@@ -123,7 +109,7 @@ struct TerraGen : public wi::gui::Window
 		voronoiFalloffSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 		AddWidget(&voronoiFalloffSlider);
 
-		voronoiSeedSlider.Create(1, 12345, 1234, 12344, "Voronoi Seed: ");
+		voronoiSeedSlider.Create(1, 12345, 4852, 12344, "Voronoi Seed: ");
 		voronoiSeedSlider.SetTooltip("Voronoi can create distinctly elevated areas");
 		voronoiSeedSlider.SetSize(XMFLOAT2(200, heihei));
 		voronoiSeedSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
@@ -134,6 +120,7 @@ struct TerraGen : public wi::gui::Window
 		heightmapButton.SetTooltip("Load a heightmap texture, where the red channel corresponds to terrain height and the resolution to dimensions");
 		heightmapButton.SetSize(XMFLOAT2(200, heihei));
 		heightmapButton.SetPos(XMFLOAT2(xx, yy += stepstep));
+		AddWidget(&heightmapButton);
 
 		heightmapBlendSlider.Create(0, 1, 1, 10000, "Heightmap Blend: ");
 		heightmapBlendSlider.SetTooltip("Amount of displacement coming from the heightmap texture");
@@ -141,7 +128,53 @@ struct TerraGen : public wi::gui::Window
 		heightmapBlendSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 		AddWidget(&heightmapBlendSlider);
 
-		AddWidget(&heightmapButton);
+
+
+		auto generate_callback = [=](wi::gui::EventArgs args) {
+			Generate();
+		};
+		dimXSlider.OnSlide(generate_callback);
+		dimYSlider.OnSlide(generate_callback);
+		perlinFrequencySlider.OnSlide(generate_callback);
+		perlinBlendSlider.OnSlide(generate_callback);
+		perlinSeedSlider.OnSlide(generate_callback);
+		perlinOctavesSlider.OnSlide(generate_callback);
+		voronoiBlendSlider.OnSlide(generate_callback);
+		voronoiFrequencySlider.OnSlide(generate_callback);
+		voronoiFadeSlider.OnSlide(generate_callback);
+		voronoiShapeSlider.OnSlide(generate_callback);
+		voronoiFalloffSlider.OnSlide(generate_callback);
+		voronoiSeedSlider.OnSlide(generate_callback);
+		heightmapBlendSlider.OnSlide(generate_callback);
+
+		heightmapButton.OnClick([=](wi::gui::EventArgs args) {
+
+			wi::helper::FileDialogParams params;
+			params.type = wi::helper::FileDialogParams::OPEN;
+			params.description = "Texture";
+			params.extensions = wi::resourcemanager::GetSupportedImageExtensions();
+			wi::helper::FileDialog(params, [=](std::string fileName) {
+				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					if (rgb != nullptr)
+					{
+						stbi_image_free(rgb);
+						rgb = nullptr;
+					}
+
+					int bpp = 0;
+					int width = 0;
+					int height = 0;
+					rgb = stbi_load(fileName.c_str(), &width, &height, &bpp, channelCount);
+					if (rgb != nullptr)
+					{
+						dimXSlider.SetValue((float)width);
+						perlinBlendSlider.SetValue(0);
+						voronoiBlendSlider.SetValue(0);
+						Generate();
+					}
+					});
+				});
+			});
 	}
 	~TerraGen()
 	{
@@ -157,107 +190,184 @@ struct TerraGen : public wi::gui::Window
 		}
 	}
 
-	void Generate(MeshComponent& mesh)
+	Entity terrainEntity = INVALID_ENTITY;
+	Entity materialEntity = INVALID_ENTITY;
+	struct Chunk
 	{
-		const int width = (int)dimXSlider.GetValue();
-		const int length = (int)dimZSlider.GetValue();
-		const float half_width = width * 0.5f;
-		const float half_length = length * 0.5f;
-		const float width_rcp = 1.0f / width;
-		const float length_rcp = 1.0f / length;
-		const float verticalScale = dimYSlider.GetValue();
-		const float heightmapBlend = heightmapBlendSlider.GetValue();
-		const float perlinBlend = perlinBlendSlider.GetValue();
-		const uint32_t perlinSeed = (uint32_t)perlinSeedSlider.GetValue();
-		wi::noise::Perlin perlin;
-		if (perlinBlend > 0)
-		{
-			perlin.init(perlinSeed);
-		}
-		const int octaves = (int)perlinOctavesSlider.GetValue();
-		const float dx = perlinFrequencySlider.GetValue() * width_rcp;
-		const float dz = perlinFrequencySlider.GetValue() * length_rcp;
-		const float voronoiBlend = voronoiBlendSlider.GetValue();
-		const float voronoiFrequency = voronoiFrequencySlider.GetValue();
-		const float voronoiPerturbation = voronoiPerturbationSlider.GetValue();
-		const float voronoiFade = voronoiFadeSlider.GetValue();
-		const float voronoiShape = voronoiShapeSlider.GetValue();
-		const float voronoiFalloff = voronoiFalloffSlider.GetValue();
-		const uint32_t voronoiSeed = (uint32_t)voronoiSeedSlider.GetValue();
-		std::mt19937 voronoi_rand(voronoiSeed);
-		std::uniform_real_distribution<float> voronoi_distr(0.0f, 1.0f);
-		const uint32_t vertexCount = width * length;
-		mesh.vertex_positions.resize(vertexCount);
-		mesh.vertex_normals.resize(vertexCount);
-		mesh.vertex_colors.resize(vertexCount);
-		mesh.vertex_uvset_0.resize(vertexCount);
-		mesh.vertex_uvset_1.resize(vertexCount);
-		mesh.vertex_atlas.resize(vertexCount);
-		wi::vector<XMFLOAT2> voronoiPerturbationOffsets(vertexCount);
-		for (uint32_t i = 0; i < vertexCount; ++i)
-		{
-			voronoiPerturbationOffsets[i].x = (voronoi_distr(voronoi_rand) - 0.5f) * voronoiPerturbation;
-			voronoiPerturbationOffsets[i].y = (voronoi_distr(voronoi_rand) - 0.5f) * voronoiPerturbation;
-		}
-		wi::jobsystem::context ctx;
-		wi::jobsystem::Dispatch(ctx, vertexCount, width, [&](wi::jobsystem::JobArgs args) {
-			uint32_t index = args.jobIndex;
-			const float x = float(index % width);
-			const float z = float(index / width);
-			const XMFLOAT2 uv = XMFLOAT2(x * width_rcp, z * length_rcp);
-			mesh.vertex_positions[index] = XMFLOAT3(x - half_width, 0, z - half_length);
-			mesh.vertex_colors[index] = wi::Color::Red().rgba; // vertex color is used for material blending, red means fully use the first material
-			mesh.vertex_uvset_0[index] = uv;
-			mesh.vertex_uvset_1[index] = uv;
-			mesh.vertex_atlas[index] = uv;
+		int x, z;
+	};
+	wi::unordered_map<size_t, Entity> chunks; // chunk -> object
+	int chunk_dim = 8;
+	wi::vector<uint32_t> chunkIndices;
+	wi::noise::Perlin perlin;
 
-			if (rgb != nullptr)
-			{
-				mesh.vertex_positions[index].y += ((float)rgb[index * channelCount] / 255.0f * 2 - 1) * heightmapBlend;
-			}
-			if (perlinBlend > 0)
-			{
-				mesh.vertex_positions[index].y += perlin.compute(x * dx, z * dz, 0, octaves) * perlinBlend;
-			}
-			if (voronoiBlend > 0)
-			{
-				XMFLOAT2 p = uv;
-				p.x += voronoiPerturbationOffsets[index].x;
-				p.y += voronoiPerturbationOffsets[index].y;
-				p.x *= voronoiFrequency;
-				p.y *= voronoiFrequency;
-				wi::noise::voronoi::Result res = wi::noise::voronoi::compute(p.x, p.y, (float)voronoiSeed);
-				float weight = std::pow(1 - wi::math::saturate((res.distance - voronoiShape) * voronoiFade), std::max(0.0001f, voronoiFalloff));
-				float elevation = res.cell_id - 0.5f;
-				mesh.vertex_positions[index].y += elevation * weight * voronoiBlend;
-			}
-			mesh.vertex_positions[index].y *= verticalScale;
-			});
-		mesh.indices.resize((width - 1) * (length - 1) * 6);
-		mesh.subsets.back().indexCount = (uint32_t)mesh.indices.size();
+	void Generate()
+	{
+		Scene& scene = wi::scene::GetScene();
+
+		chunks.clear();
+
+		scene.Entity_Remove(terrainEntity);
+		terrainEntity = CreateEntity();
+		scene.transforms.Create(terrainEntity);
+		scene.names.Create(terrainEntity) = "terrain";
+
+		materialEntity = scene.Entity_CreateMaterial("terrainMaterial");
+		scene.Component_Attach(materialEntity, terrainEntity);
+		MaterialComponent* material = scene.materials.GetComponent(materialEntity);
+		material->SetUseVertexColors(true);
+		material->SetRoughness(1);
+
+		const int width = (int)dimXSlider.GetValue();
+		chunkIndices.resize((width - 1) * (width - 1) * 6);
 		size_t counter = 0;
 		for (int x = 0; x < width - 1; x++)
 		{
-			for (int z = 0; z < length - 1; z++)
+			for (int z = 0; z < width - 1; z++)
 			{
 				int lowerLeft = x + z * width;
 				int lowerRight = (x + 1) + z * width;
 				int topLeft = x + (z + 1) * width;
 				int topRight = (x + 1) + (z + 1) * width;
 
-				mesh.indices[counter++] = topLeft;
-				mesh.indices[counter++] = lowerLeft;
-				mesh.indices[counter++] = lowerRight;
+				chunkIndices[counter++] = topLeft;
+				chunkIndices[counter++] = lowerLeft;
+				chunkIndices[counter++] = lowerRight;
 
-				mesh.indices[counter++] = topLeft;
-				mesh.indices[counter++] = lowerRight;
-				mesh.indices[counter++] = topRight;
+				chunkIndices[counter++] = topLeft;
+				chunkIndices[counter++] = lowerRight;
+				chunkIndices[counter++] = topRight;
 			}
 		}
 
-		wi::jobsystem::Wait(ctx);
-		mesh.ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH_FAST);
-	};
+		const float perlinBlend = perlinBlendSlider.GetValue();
+		if (perlinBlend > 0)
+		{
+			const uint32_t perlinSeed = (uint32_t)perlinSeedSlider.GetValue();
+			perlin.init(perlinSeed);
+		}
+
+		Update();
+	}
+
+	void Update()
+	{
+		if (terrainEntity == INVALID_ENTITY)
+			return;
+
+		wi::Timer timer;
+		Scene& scene = wi::scene::GetScene();
+		const int width = (int)dimXSlider.GetValue();
+		const float half_width = width * 0.5f;
+		const float width_rcp = 1.0f / width;
+		const float verticalScale = dimYSlider.GetValue();
+		const float heightmapBlend = heightmapBlendSlider.GetValue();
+		const float perlinBlend = perlinBlendSlider.GetValue();
+		const uint32_t perlinSeed = (uint32_t)perlinSeedSlider.GetValue();
+		const int perlinOctaves = (int)perlinOctavesSlider.GetValue();
+		const float perlinFrequency = perlinFrequencySlider.GetValue();
+		const float voronoiBlend = voronoiBlendSlider.GetValue();
+		const float voronoiFrequency = voronoiFrequencySlider.GetValue();
+		const float voronoiFade = voronoiFadeSlider.GetValue();
+		const float voronoiShape = voronoiShapeSlider.GetValue();
+		const float voronoiFalloff = voronoiFalloffSlider.GetValue();
+		const uint32_t voronoiSeed = (uint32_t)voronoiSeedSlider.GetValue();
+		const uint32_t vertexCount = width * width;
+
+		const CameraComponent& camera = GetCamera();
+		Chunk center_chunk;
+		center_chunk.x = (int)std::floor((camera.Eye.x + half_width) * width_rcp);
+		center_chunk.z = (int)std::floor((camera.Eye.z + half_width) * width_rcp);
+		for(int growth = 0; growth < 4; ++growth)
+		{
+			const int probe_grid_area = 1 << growth;
+			for (int i = -probe_grid_area; i <= probe_grid_area; ++i)
+			{
+				for (int j = -probe_grid_area; j <= probe_grid_area; ++j)
+				{
+					Chunk chunk = center_chunk;
+					chunk.x += i;
+					chunk.z += j;
+					size_t key = 0;
+					wi::helper::hash_combine(key, chunk.x);
+					wi::helper::hash_combine(key, chunk.z);
+					if (chunks.count(key) == 0)
+					{
+						Entity chunkObjectEntity = scene.Entity_CreateObject("chunk_object" + std::to_string(chunk.x) + "_" + std::to_string(chunk.z));
+						ObjectComponent& object = *scene.objects.GetComponent(chunkObjectEntity);
+						scene.Component_Attach(chunkObjectEntity, terrainEntity);
+						chunks[key] = chunkObjectEntity;
+
+						TransformComponent& transform = *scene.transforms.GetComponent(chunkObjectEntity);
+						transform.ClearTransform();
+						XMFLOAT3 chunk_pos = XMFLOAT3(chunk.x * (width - 1) - half_width, 0, chunk.z * (width - 1) - half_width);
+						transform.Translate(chunk_pos);
+
+						Entity chunkMeshEntity = CreateEntity();
+						MeshComponent& mesh = scene.meshes.Create(chunkMeshEntity);
+						scene.names.Create(chunkMeshEntity) = "chunk_mesh" + std::to_string(chunk.x) + "_" + std::to_string(chunk.z);
+						scene.Component_Attach(chunkMeshEntity, chunkObjectEntity);
+						object.meshID = chunkMeshEntity;
+						mesh.indices = chunkIndices;
+						mesh.SetTerrain(true);
+						mesh.subsets.emplace_back();
+						mesh.subsets.back().materialID = materialEntity;
+						mesh.subsets.back().indexCount = (uint32_t)chunkIndices.size();
+						mesh.subsets.back().indexOffset = 0;
+						mesh.vertex_positions.resize(vertexCount);
+						mesh.vertex_normals.resize(vertexCount);
+						mesh.vertex_colors.resize(vertexCount);
+						mesh.vertex_uvset_0.resize(vertexCount);
+						mesh.vertex_uvset_1.resize(vertexCount);
+						mesh.vertex_atlas.resize(vertexCount);
+						for (uint32_t index = 0; index < vertexCount; ++index)
+						{
+							const float x = float(index % width);
+							const float z = float(index / width);
+							const XMFLOAT2 uv = XMFLOAT2(x * width_rcp, z * width_rcp);
+							mesh.vertex_positions[index] = XMFLOAT3(x, 0, z);
+							mesh.vertex_colors[index] = 0xFF; // vertex color is used for material blending, red means fully use the first material
+							mesh.vertex_uvset_0[index] = uv;
+							mesh.vertex_uvset_1[index] = uv;
+							mesh.vertex_atlas[index] = uv;
+
+							if (rgb != nullptr)
+							{
+								mesh.vertex_positions[index].y += ((float)rgb[index * channelCount] / 255.0f * 2 - 1) * heightmapBlend;
+							}
+							if (perlinBlend > 0)
+							{
+								XMFLOAT2 p = XMFLOAT2(x, z);
+								p.x += chunk_pos.x;
+								p.y += chunk_pos.z;
+								p.x *= perlinFrequency;
+								p.y *= perlinFrequency;
+								mesh.vertex_positions[index].y += perlin.compute(p.x, p.y, 0, perlinOctaves) * perlinBlend;
+							}
+							if (voronoiBlend > 0)
+							{
+								XMFLOAT2 p = XMFLOAT2(x, z);
+								p.x += chunk_pos.x;
+								p.y += chunk_pos.z;
+								p.x *= voronoiFrequency;
+								p.y *= voronoiFrequency;
+								wi::noise::voronoi::Result res = wi::noise::voronoi::compute(p.x, p.y, (float)voronoiSeed);
+								float weight = std::pow(1 - wi::math::saturate((res.distance - voronoiShape) * voronoiFade), std::max(0.0001f, voronoiFalloff));
+								float elevation = res.cell_id - 0.5f;
+								mesh.vertex_positions[index].y += elevation * weight * voronoiBlend;
+							}
+							mesh.vertex_positions[index].y *= verticalScale;
+						}
+						mesh.ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH_FAST);
+
+						if (timer.elapsed_milliseconds() > 10)
+							return;
+
+					}
+				}
+			}
+		}
+	}
 
 } terragen;
 
@@ -677,87 +787,26 @@ void MeshWindow::Create(EditorComponent* editor)
 			terrainGenButton.translation.y)
 		);
 
-		Scene& scene = wi::scene::GetScene();
-		Entity entity = scene.Entity_CreateObject("editorTerrain");
-		ObjectComponent& object = *scene.objects.GetComponent(entity);
-		object.meshID = scene.Entity_CreateMesh("terrainMesh");
-		MeshComponent* mesh = scene.meshes.GetComponent(object.meshID);
-		mesh->SetTerrain(true);
-		mesh->subsets.emplace_back();
-		mesh->subsets.back().materialID = scene.Entity_CreateMaterial("terrainMaterial");
-		mesh->subsets.back().indexOffset = 0;
-		MaterialComponent* material = scene.materials.GetComponent(mesh->subsets.back().materialID);
-		material->SetUseVertexColors(true);
-		material->SetRoughness(1);
-		terragen.Generate(*mesh);
+		terragen.Generate();
+
 
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_ADD;
 		editor->RecordSelection(archive);
 		
-		editor->ClearSelected();
-		wi::scene::PickResult pick;
-		pick.entity = entity;
-		pick.subsetIndex = 0;
-		editor->AddSelected(pick);
+		//editor->ClearSelected();
+		//wi::scene::PickResult pick;
+		//pick.entity = chunkObjectEntity;
+		//pick.subsetIndex = 0;
+		//editor->AddSelected(pick);
 
 		editor->RecordSelection(archive);
-		editor->RecordAddedEntity(archive, entity);
+		editor->RecordAddedEntity(archive, terragen.terrainEntity);
 
-		SetEntity(object.meshID, pick.subsetIndex);
+		//SetEntity(object.meshID, pick.subsetIndex);
 
 		editor->RefreshSceneGraphView();
 
-
-
-		auto generate_callback = [=](wi::gui::EventArgs args) {
-			terragen.Generate(*mesh);
-		};
-		terragen.dimXSlider.OnSlide(generate_callback);
-		terragen.dimZSlider.OnSlide(generate_callback);
-		terragen.dimYSlider.OnSlide(generate_callback);
-		terragen.perlinFrequencySlider.OnSlide(generate_callback);
-		terragen.perlinBlendSlider.OnSlide(generate_callback);
-		terragen.perlinSeedSlider.OnSlide(generate_callback);
-		terragen.perlinOctavesSlider.OnSlide(generate_callback);
-		terragen.voronoiBlendSlider.OnSlide(generate_callback);
-		terragen.voronoiFrequencySlider.OnSlide(generate_callback);
-		terragen.voronoiPerturbationSlider.OnSlide(generate_callback);
-		terragen.voronoiFadeSlider.OnSlide(generate_callback);
-		terragen.voronoiShapeSlider.OnSlide(generate_callback);
-		terragen.voronoiFalloffSlider.OnSlide(generate_callback);
-		terragen.voronoiSeedSlider.OnSlide(generate_callback);
-		terragen.heightmapBlendSlider.OnSlide(generate_callback);
-
-		terragen.heightmapButton.OnClick([=](wi::gui::EventArgs args) {
-
-			wi::helper::FileDialogParams params;
-			params.type = wi::helper::FileDialogParams::OPEN;
-			params.description = "Texture";
-			params.extensions = wi::resourcemanager::GetSupportedImageExtensions();
-			wi::helper::FileDialog(params, [=](std::string fileName) {
-				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-					if (terragen.rgb != nullptr)
-					{
-						stbi_image_free(terragen.rgb);
-						terragen.rgb = nullptr;
-					}
-
-					int bpp = 0;
-					int width = 0;
-					int height = 0;
-					terragen.rgb = stbi_load(fileName.c_str(), &width, &height, &bpp, terragen.channelCount);
-					if (terragen.rgb != nullptr)
-					{
-						terragen.dimXSlider.SetValue((float)width);
-						terragen.dimZSlider.SetValue((float)height);
-						terragen.perlinBlendSlider.SetValue(0);
-						terragen.voronoiBlendSlider.SetValue(0);
-						terragen.Generate(*mesh);
-					}
-				});
-			});
-		});
 
 	});
 	AddWidget(&terrainGenButton);
@@ -798,6 +847,7 @@ void MeshWindow::Create(EditorComponent* editor)
 
 void MeshWindow::SetEntity(Entity entity, int subset)
 {
+	terragen.Update();
 	subset = std::max(0, subset);
 
 	this->entity = entity;
@@ -806,12 +856,6 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 	Scene& scene = wi::scene::GetScene();
 
 	const MeshComponent* mesh = scene.meshes.GetComponent(entity);
-
-	if (mesh == nullptr || !mesh->IsTerrain())
-	{
-		terragen.Cleanup();
-		terragen.SetVisible(false);
-	}
 
 	if (mesh != nullptr)
 	{
