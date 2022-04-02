@@ -32,6 +32,8 @@ struct TerraGen : public wi::gui::Window
 	// heightmap texture:
 	unsigned char* rgb = nullptr;
 	const int channelCount = 4;
+	int heightmap_width = 0;
+	int heightmap_height = 0;
 
 	TerraGen()
 	{
@@ -162,14 +164,9 @@ struct TerraGen : public wi::gui::Window
 					}
 
 					int bpp = 0;
-					int width = 0;
-					int height = 0;
-					rgb = stbi_load(fileName.c_str(), &width, &height, &bpp, channelCount);
+					rgb = stbi_load(fileName.c_str(), &heightmap_width, &heightmap_height, &bpp, channelCount);
 					if (rgb != nullptr)
 					{
-						dimXSlider.SetValue((float)width);
-						perlinBlendSlider.SetValue(0);
-						voronoiBlendSlider.SetValue(0);
 						Generate();
 					}
 					});
@@ -324,39 +321,42 @@ struct TerraGen : public wi::gui::Window
 						{
 							const float x = float(index % width);
 							const float z = float(index / width);
-							const XMFLOAT2 uv = XMFLOAT2(x * width_rcp, z * width_rcp);
-							mesh.vertex_positions[index] = XMFLOAT3(x, 0, z);
-							mesh.vertex_colors[index] = 0xFF; // vertex color is used for material blending, red means fully use the first material
-							mesh.vertex_uvset_0[index] = uv;
-							mesh.vertex_uvset_1[index] = uv;
-							mesh.vertex_atlas[index] = uv;
-
-							if (rgb != nullptr)
-							{
-								mesh.vertex_positions[index].y += ((float)rgb[index * channelCount] / 255.0f * 2 - 1) * heightmapBlend;
-							}
+							const XMFLOAT2 world_pos = XMFLOAT2(chunk_pos.x + x, chunk_pos.z + z);
+							float height = 0;
 							if (perlinBlend > 0)
 							{
-								XMFLOAT2 p = XMFLOAT2(x, z);
-								p.x += chunk_pos.x;
-								p.y += chunk_pos.z;
+								XMFLOAT2 p = world_pos;
 								p.x *= perlinFrequency;
 								p.y *= perlinFrequency;
-								mesh.vertex_positions[index].y += perlin.compute(p.x, p.y, 0, perlinOctaves) * perlinBlend;
+								height += perlin.compute(p.x, p.y, 0, perlinOctaves) * perlinBlend;
 							}
 							if (voronoiBlend > 0)
 							{
-								XMFLOAT2 p = XMFLOAT2(x, z);
-								p.x += chunk_pos.x;
-								p.y += chunk_pos.z;
+								XMFLOAT2 p = world_pos;
 								p.x *= voronoiFrequency;
 								p.y *= voronoiFrequency;
 								wi::noise::voronoi::Result res = wi::noise::voronoi::compute(p.x, p.y, (float)voronoiSeed);
 								float weight = std::pow(1 - wi::math::saturate((res.distance - voronoiShape) * voronoiFade), std::max(0.0001f, voronoiFalloff));
 								float elevation = res.cell_id - 0.5f;
-								mesh.vertex_positions[index].y += elevation * weight * voronoiBlend;
+								height += elevation * weight * voronoiBlend;
 							}
-							mesh.vertex_positions[index].y *= verticalScale;
+							if (rgb != nullptr)
+							{
+								XMFLOAT2 pixel = XMFLOAT2(world_pos.x + heightmap_width * 0.5f, world_pos.y + heightmap_height * 0.5f);
+								if (pixel.x >= 0 && pixel.x < heightmap_width && pixel.y >= 0 && pixel.y < heightmap_height)
+								{
+									const int idx = int(pixel.x) + int(pixel.y) * heightmap_width;
+									height = ((float)rgb[idx * channelCount] / 255.0f * 2 - 1) * heightmapBlend;
+								}
+							}
+							height *= verticalScale;
+
+							const XMFLOAT2 uv = XMFLOAT2(x * width_rcp, z * width_rcp);
+							mesh.vertex_positions[index] = XMFLOAT3(x, height, z);
+							mesh.vertex_colors[index] = 0xFF; // vertex color is used for material blending, red means fully use the first material
+							mesh.vertex_uvset_0[index] = uv;
+							mesh.vertex_uvset_1[index] = uv;
+							mesh.vertex_atlas[index] = uv;
 						}
 						mesh.ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH_FAST);
 
