@@ -16,6 +16,7 @@ struct TerraGen : public wi::gui::Window
 {
 	wi::gui::Slider dimXSlider;
 	wi::gui::Slider dimYSlider;
+	wi::gui::Slider generationSlider;
 	wi::gui::Slider perlinBlendSlider;
 	wi::gui::Slider perlinFrequencySlider;
 	wi::gui::Slider perlinSeedSlider;
@@ -38,7 +39,7 @@ struct TerraGen : public wi::gui::Window
 	TerraGen()
 	{
 		wi::gui::Window::Create("TerraGen");
-		SetSize(XMFLOAT2(410, 400));
+		SetSize(XMFLOAT2(410, 420));
 
 		float xx = 135;
 		float yy = 0;
@@ -46,16 +47,22 @@ struct TerraGen : public wi::gui::Window
 		float heihei = 20;
 
 		dimXSlider.Create(16, 1024, 64, 1024 - 16, "Chunk Width: ");
-		dimXSlider.SetTooltip("Terrain mesh grid resolution on horizontal (XZ) axis");
+		dimXSlider.SetTooltip("Resolution of one chunk on the horizontal (XZ) axis");
 		dimXSlider.SetSize(XMFLOAT2(200, heihei));
 		dimXSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 		AddWidget(&dimXSlider);
 
 		dimYSlider.Create(0, 100, 10, 10000, "Scale Y: ");
-		dimYSlider.SetTooltip("Terrain mesh grid scale on vertical (Y) axis");
+		dimYSlider.SetTooltip("Terrain mesh grid scale on the vertical (Y) axis");
 		dimYSlider.SetSize(XMFLOAT2(200, heihei));
 		dimYSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 		AddWidget(&dimYSlider);
+
+		generationSlider.Create(0, 16, 4, 16, "Generation Distance: ");
+		generationSlider.SetTooltip("How far chunks will be generated (value is in number of chunks)");
+		generationSlider.SetSize(XMFLOAT2(200, heihei));
+		generationSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+		AddWidget(&generationSlider);
 
 		perlinBlendSlider.Create(0, 1, 0.5f, 10000, "Perlin Blend: ");
 		perlinBlendSlider.SetTooltip("Amount of perlin noise to use");
@@ -275,96 +282,128 @@ struct TerraGen : public wi::gui::Window
 		Chunk center_chunk;
 		center_chunk.x = (int)std::floor((camera.Eye.x + half_width) * width_rcp);
 		center_chunk.z = (int)std::floor((camera.Eye.z + half_width) * width_rcp);
-		for(int growth = 0; growth < 4; ++growth)
+
+		bool should_exit = false;
+		auto request_chunk = [&](int offset_x, int offset_z)
 		{
-			const int probe_grid_area = 1 << growth;
-			for (int i = -probe_grid_area; i <= probe_grid_area; ++i)
+			Chunk chunk = center_chunk;
+			chunk.x += offset_x;
+			chunk.z += offset_z;
+			size_t key = 0;
+			wi::helper::hash_combine(key, chunk.x);
+			wi::helper::hash_combine(key, chunk.z);
+			if (chunks.count(key) == 0)
 			{
-				for (int j = -probe_grid_area; j <= probe_grid_area; ++j)
+				Entity chunkObjectEntity = scene.Entity_CreateObject("chunk_object" + std::to_string(chunk.x) + "_" + std::to_string(chunk.z));
+				ObjectComponent& object = *scene.objects.GetComponent(chunkObjectEntity);
+				scene.Component_Attach(chunkObjectEntity, terrainEntity);
+				chunks[key] = chunkObjectEntity;
+
+				TransformComponent& transform = *scene.transforms.GetComponent(chunkObjectEntity);
+				transform.ClearTransform();
+				XMFLOAT3 chunk_pos = XMFLOAT3(chunk.x * (width - 1) - half_width, 0, chunk.z * (width - 1) - half_width);
+				transform.Translate(chunk_pos);
+
+				Entity chunkMeshEntity = CreateEntity();
+				MeshComponent& mesh = scene.meshes.Create(chunkMeshEntity);
+				scene.names.Create(chunkMeshEntity) = "chunk_mesh" + std::to_string(chunk.x) + "_" + std::to_string(chunk.z);
+				scene.Component_Attach(chunkMeshEntity, chunkObjectEntity);
+				object.meshID = chunkMeshEntity;
+				mesh.indices = chunkIndices;
+				mesh.SetTerrain(true);
+				mesh.subsets.emplace_back();
+				mesh.subsets.back().materialID = materialEntity;
+				mesh.subsets.back().indexCount = (uint32_t)chunkIndices.size();
+				mesh.subsets.back().indexOffset = 0;
+				mesh.vertex_positions.resize(vertexCount);
+				mesh.vertex_normals.resize(vertexCount);
+				mesh.vertex_colors.resize(vertexCount);
+				mesh.vertex_uvset_0.resize(vertexCount);
+				mesh.vertex_uvset_1.resize(vertexCount);
+				mesh.vertex_atlas.resize(vertexCount);
+				for (uint32_t index = 0; index < vertexCount; ++index)
 				{
-					Chunk chunk = center_chunk;
-					chunk.x += i;
-					chunk.z += j;
-					size_t key = 0;
-					wi::helper::hash_combine(key, chunk.x);
-					wi::helper::hash_combine(key, chunk.z);
-					if (chunks.count(key) == 0)
+					const float x = float(index % width);
+					const float z = float(index / width);
+					const XMFLOAT2 world_pos = XMFLOAT2(chunk_pos.x + x, chunk_pos.z + z);
+					float height = 0;
+					if (perlinBlend > 0)
 					{
-						Entity chunkObjectEntity = scene.Entity_CreateObject("chunk_object" + std::to_string(chunk.x) + "_" + std::to_string(chunk.z));
-						ObjectComponent& object = *scene.objects.GetComponent(chunkObjectEntity);
-						scene.Component_Attach(chunkObjectEntity, terrainEntity);
-						chunks[key] = chunkObjectEntity;
-
-						TransformComponent& transform = *scene.transforms.GetComponent(chunkObjectEntity);
-						transform.ClearTransform();
-						XMFLOAT3 chunk_pos = XMFLOAT3(chunk.x * (width - 1) - half_width, 0, chunk.z * (width - 1) - half_width);
-						transform.Translate(chunk_pos);
-
-						Entity chunkMeshEntity = CreateEntity();
-						MeshComponent& mesh = scene.meshes.Create(chunkMeshEntity);
-						scene.names.Create(chunkMeshEntity) = "chunk_mesh" + std::to_string(chunk.x) + "_" + std::to_string(chunk.z);
-						scene.Component_Attach(chunkMeshEntity, chunkObjectEntity);
-						object.meshID = chunkMeshEntity;
-						mesh.indices = chunkIndices;
-						mesh.SetTerrain(true);
-						mesh.subsets.emplace_back();
-						mesh.subsets.back().materialID = materialEntity;
-						mesh.subsets.back().indexCount = (uint32_t)chunkIndices.size();
-						mesh.subsets.back().indexOffset = 0;
-						mesh.vertex_positions.resize(vertexCount);
-						mesh.vertex_normals.resize(vertexCount);
-						mesh.vertex_colors.resize(vertexCount);
-						mesh.vertex_uvset_0.resize(vertexCount);
-						mesh.vertex_uvset_1.resize(vertexCount);
-						mesh.vertex_atlas.resize(vertexCount);
-						for (uint32_t index = 0; index < vertexCount; ++index)
-						{
-							const float x = float(index % width);
-							const float z = float(index / width);
-							const XMFLOAT2 world_pos = XMFLOAT2(chunk_pos.x + x, chunk_pos.z + z);
-							float height = 0;
-							if (perlinBlend > 0)
-							{
-								XMFLOAT2 p = world_pos;
-								p.x *= perlinFrequency;
-								p.y *= perlinFrequency;
-								height += perlin.compute(p.x, p.y, 0, perlinOctaves) * perlinBlend;
-							}
-							if (voronoiBlend > 0)
-							{
-								XMFLOAT2 p = world_pos;
-								p.x *= voronoiFrequency;
-								p.y *= voronoiFrequency;
-								wi::noise::voronoi::Result res = wi::noise::voronoi::compute(p.x, p.y, (float)voronoiSeed);
-								float weight = std::pow(1 - wi::math::saturate((res.distance - voronoiShape) * voronoiFade), std::max(0.0001f, voronoiFalloff));
-								float elevation = res.cell_id - 0.5f;
-								height += elevation * weight * voronoiBlend;
-							}
-							if (rgb != nullptr)
-							{
-								XMFLOAT2 pixel = XMFLOAT2(world_pos.x + heightmap_width * 0.5f, world_pos.y + heightmap_height * 0.5f);
-								if (pixel.x >= 0 && pixel.x < heightmap_width && pixel.y >= 0 && pixel.y < heightmap_height)
-								{
-									const int idx = int(pixel.x) + int(pixel.y) * heightmap_width;
-									height = ((float)rgb[idx * channelCount] / 255.0f * 2 - 1) * heightmapBlend;
-								}
-							}
-							height *= verticalScale;
-
-							const XMFLOAT2 uv = XMFLOAT2(x * width_rcp, z * width_rcp);
-							mesh.vertex_positions[index] = XMFLOAT3(x, height, z);
-							mesh.vertex_colors[index] = 0xFF; // vertex color is used for material blending, red means fully use the first material
-							mesh.vertex_uvset_0[index] = uv;
-							mesh.vertex_uvset_1[index] = uv;
-							mesh.vertex_atlas[index] = uv;
-						}
-						mesh.ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH_FAST);
-
-						if (timer.elapsed_milliseconds() > 10)
-							return;
-
+						XMFLOAT2 p = world_pos;
+						p.x *= perlinFrequency;
+						p.y *= perlinFrequency;
+						height += perlin.compute(p.x, p.y, 0, perlinOctaves) * perlinBlend;
 					}
+					if (voronoiBlend > 0)
+					{
+						XMFLOAT2 p = world_pos;
+						p.x *= voronoiFrequency;
+						p.y *= voronoiFrequency;
+						wi::noise::voronoi::Result res = wi::noise::voronoi::compute(p.x, p.y, (float)voronoiSeed);
+						float weight = std::pow(1 - wi::math::saturate((res.distance - voronoiShape) * voronoiFade), std::max(0.0001f, voronoiFalloff));
+						float elevation = res.cell_id - 0.5f;
+						height += elevation * weight * voronoiBlend;
+					}
+					if (rgb != nullptr)
+					{
+						XMFLOAT2 pixel = XMFLOAT2(world_pos.x + heightmap_width * 0.5f, world_pos.y + heightmap_height * 0.5f);
+						if (pixel.x >= 0 && pixel.x < heightmap_width && pixel.y >= 0 && pixel.y < heightmap_height)
+						{
+							const int idx = int(pixel.x) + int(pixel.y) * heightmap_width;
+							height = ((float)rgb[idx * channelCount] / 255.0f * 2 - 1) * heightmapBlend;
+						}
+					}
+					height *= verticalScale;
+
+					const XMFLOAT2 uv = XMFLOAT2(x * width_rcp, z * width_rcp);
+					mesh.vertex_positions[index] = XMFLOAT3(x, height, z);
+					mesh.vertex_colors[index] = 0xFF; // vertex color is used for material blending, red means fully use the first material
+					mesh.vertex_uvset_0[index] = uv;
+					mesh.vertex_uvset_1[index] = uv;
+					mesh.vertex_atlas[index] = uv;
 				}
+				mesh.ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH_FAST);
+
+				if (timer.elapsed_milliseconds() > 10)
+					should_exit = true;
+
+			}
+		};
+
+		// generate center chunk first:
+		request_chunk(0, 0);
+		if (should_exit) return;
+
+		// then generate neighbor chunks in outwards spiral:
+		const int max_growth = (int)generationSlider.GetValue();
+		for (int growth = 0; growth < max_growth; ++growth)
+		{
+			const int side = 2 * (growth + 1);
+			int x = -growth - 1;
+			int z = -growth - 1;
+			for (int i = 0; i < side; ++i)
+			{
+				request_chunk(x, z);
+				if (should_exit) return;
+				x++;
+			}
+			for (int i = 0; i < side; ++i)
+			{
+				request_chunk(x, z);
+				if (should_exit) return;
+				z++;
+			}
+			for (int i = 0; i < side; ++i)
+			{
+				request_chunk(x, z);
+				if (should_exit) return;
+				x--;
+			}
+			for (int i = 0; i < side; ++i)
+			{
+				request_chunk(x, z);
+				if (should_exit) return;
+				z--;
 			}
 		}
 	}
