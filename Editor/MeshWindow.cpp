@@ -33,10 +33,15 @@ namespace std
 	};
 }
 
+#define TERRAGEN_USE_JOBSYSTEM
+
 struct TerraGen : public wi::gui::Window
 {
 	Entity terrainEntity = INVALID_ENTITY;
-	Entity materialEntity = INVALID_ENTITY;
+	Entity materialEntity_Base = INVALID_ENTITY;
+	Entity materialEntity_Slope = INVALID_ENTITY;
+	Entity materialEntity_LowAltitude = INVALID_ENTITY;
+	Entity materialEntity_HighAltitude = INVALID_ENTITY;
 	wi::unordered_map<Chunk, Entity> chunks; // chunk -> object
 	int chunk_dim = 8;
 	wi::vector<uint32_t> chunkIndices;
@@ -265,11 +270,27 @@ struct TerraGen : public wi::gui::Window
 		scene.transforms.Create(terrainEntity);
 		scene.names.Create(terrainEntity) = "terrain";
 
-		materialEntity = scene.Entity_CreateMaterial("terrainMaterial");
-		scene.Component_Attach(materialEntity, terrainEntity);
-		MaterialComponent* material = scene.materials.GetComponent(materialEntity);
-		material->SetUseVertexColors(true);
-		material->SetRoughness(1);
+		materialEntity_Base = scene.Entity_CreateMaterial("terrainMaterial_Base");
+		materialEntity_Slope = scene.Entity_CreateMaterial("terrainMaterial_Slope");
+		materialEntity_LowAltitude = scene.Entity_CreateMaterial("terrainMaterial_LowAltitude");
+		materialEntity_HighAltitude = scene.Entity_CreateMaterial("terrainMaterial_HighAltitude");
+		scene.Component_Attach(materialEntity_Base, terrainEntity);
+		scene.Component_Attach(materialEntity_Slope, terrainEntity);
+		scene.Component_Attach(materialEntity_LowAltitude, terrainEntity);
+		scene.Component_Attach(materialEntity_HighAltitude, terrainEntity);
+		MaterialComponent* material_base = scene.materials.GetComponent(materialEntity_Base);
+		material_base->SetUseVertexColors(true);
+		material_base->SetRoughness(1);
+		material_base->SetBaseColor(XMFLOAT4(0, 1, 0, 1));
+		MaterialComponent* material_slope = scene.materials.GetComponent(materialEntity_Slope);
+		material_slope->SetRoughness(1);
+		material_slope->SetBaseColor(XMFLOAT4(1, 0, 0, 1));
+		MaterialComponent* material_low_altitude = scene.materials.GetComponent(materialEntity_LowAltitude);
+		material_low_altitude->SetRoughness(1);
+		material_low_altitude->SetBaseColor(XMFLOAT4(0, 0, 1, 1));
+		MaterialComponent* material_high_altitude = scene.materials.GetComponent(materialEntity_HighAltitude);
+		material_high_altitude->SetRoughness(1);
+		material_high_altitude->SetBaseColor(XMFLOAT4(1, 1, 1, 1));
 
 		const int width = (int)chunkResolutionSlider.GetValue();
 		chunkIndices.resize((width - 1) * (width - 1) * 6);
@@ -370,7 +391,7 @@ struct TerraGen : public wi::gui::Window
 
 				TransformComponent& transform = *scene.transforms.GetComponent(chunkObjectEntity);
 				transform.ClearTransform();
-				XMFLOAT3 chunk_pos = XMFLOAT3(chunk.x * (width - 1) - half_width, 0, chunk.z * (width - 1) - half_width);
+				const XMFLOAT3 chunk_pos = XMFLOAT3(float(chunk.x * (width - 1)), 0, float(chunk.z * (width - 1)));
 				transform.Translate(chunk_pos);
 
 				Entity chunkMeshEntity = CreateEntity();
@@ -380,8 +401,11 @@ struct TerraGen : public wi::gui::Window
 				object.meshID = chunkMeshEntity;
 				mesh.indices = chunkIndices;
 				mesh.SetTerrain(true);
+				mesh.terrain_material1 = materialEntity_Slope;
+				mesh.terrain_material2 = materialEntity_LowAltitude;
+				mesh.terrain_material3 = materialEntity_HighAltitude;
 				mesh.subsets.emplace_back();
-				mesh.subsets.back().materialID = materialEntity;
+				mesh.subsets.back().materialID = materialEntity_Base;
 				mesh.subsets.back().indexCount = (uint32_t)chunkIndices.size();
 				mesh.subsets.back().indexOffset = 0;
 				mesh.vertex_positions.resize(vertexCount);
@@ -391,10 +415,16 @@ struct TerraGen : public wi::gui::Window
 				mesh.vertex_uvset_0.resize(vertexCount);
 				mesh.vertex_uvset_1.resize(vertexCount);
 				mesh.vertex_atlas.resize(vertexCount);
+#ifdef TERRAGEN_USE_JOBSYSTEM
+				wi::jobsystem::context ctx;
+				wi::jobsystem::Dispatch(ctx, vertexCount, width, [&](wi::jobsystem::JobArgs args) {
+					uint32_t index = args.jobIndex;
+#else
 				for (uint32_t index = 0; index < vertexCount; ++index)
 				{
-					const float x = float(index % width);
-					const float z = float(index / width);
+#endif // TERRAGEN_USE_JOBSYSTEM
+					const float x = float(index % width) - half_width;
+					const float z = float(index / width) - half_width;
 					XMVECTOR corners[3];
 					XMFLOAT2 corner_offsets[3] = {
 						XMFLOAT2(0, 0),
@@ -440,20 +470,38 @@ struct TerraGen : public wi::gui::Window
 						height += groundLevel;
 						corners[i] = XMVectorSet(world_pos.x, height, world_pos.y, 0);
 					}
+					const float height = XMVectorGetY(corners[0]);
 					const XMVECTOR T = XMVectorSubtract(corners[2], corners[1]);
 					const XMVECTOR B = XMVectorSubtract(corners[1], corners[0]);
 					const XMVECTOR N = XMVector3Normalize(XMVector3Cross(T, B));
-					XMStoreFloat3(&mesh.vertex_normals[index], N);
+					XMFLOAT3 normal;
+					XMStoreFloat3(&normal, N);
 					//XMStoreFloat4(&mesh.vertex_tangents[index], XMVector3Normalize(T));
 					//mesh.vertex_tangents[index].w = 1;
 
+					XMFLOAT4 materialBlendWeights(1, 0, 0, 0);
+					materialBlendWeights = wi::math::Lerp(materialBlendWeights, XMFLOAT4(0, 1, 0, 0), 1 - std::pow(wi::math::saturate(normal.y), 2.0f)); // slope blend region
+					materialBlendWeights = wi::math::Lerp(materialBlendWeights, XMFLOAT4(0, 0, 1, 0), std::pow(1 - wi::math::saturate((height - groundLevel) / std::abs(groundLevel)), 2.0f)); // low-altitude blend region
+					materialBlendWeights = wi::math::Lerp(materialBlendWeights, XMFLOAT4(0, 0, 0, 1), std::pow(wi::math::saturate(height * 0.02f), 2.0f)); // high-altitude blend region
+					const float weight_norm = 1.0f / (materialBlendWeights.x + materialBlendWeights.y + materialBlendWeights.z + materialBlendWeights.w);
+					materialBlendWeights.x *= weight_norm;
+					materialBlendWeights.y *= weight_norm;
+					materialBlendWeights.z *= weight_norm;
+					materialBlendWeights.w *= weight_norm;
+
+					mesh.vertex_positions[index] = XMFLOAT3(x, height, z);
+					mesh.vertex_normals[index] = normal;
+					mesh.vertex_colors[index] = wi::Color::fromFloat4(materialBlendWeights);
 					const XMFLOAT2 uv = XMFLOAT2(x * width_rcp, z * width_rcp);
-					mesh.vertex_positions[index] = XMFLOAT3(x, XMVectorGetY(corners[0]), z);
-					mesh.vertex_colors[index] = 0xFF; // vertex color is used for material blending, red means fully use the first material
 					mesh.vertex_uvset_0[index] = uv;
 					mesh.vertex_uvset_1[index] = uv;
 					mesh.vertex_atlas[index] = uv;
+#ifdef TERRAGEN_USE_JOBSYSTEM
+					});
+				wi::jobsystem::Wait(ctx);
+#else
 				}
+#endif // TERRAGEN_USE_JOBSYSTEM
 
 				mesh.CreateRenderData();
 				//mesh.ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH_FAST);

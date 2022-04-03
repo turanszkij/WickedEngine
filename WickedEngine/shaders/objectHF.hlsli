@@ -248,7 +248,7 @@ struct VertexSurface
 	inline void create(in ShaderMaterial material, in VertexInput input)
 	{
 		position = input.GetPosition();
-		color = material.baseColor * unpack_rgba(input.GetInstance().color);
+		color = unpack_rgba(input.GetInstance().color);
 		color.a *= 1 - input.GetInstancePointer().GetDither();
 		emissiveColor = input.GetInstance().emissive;
 
@@ -1145,7 +1145,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 
 
 #ifdef OBJECTSHADER_USE_COLOR
-	color *= input.color;
+	color *= GetMaterial().baseColor * input.color;
 #endif // OBJECTSHADER_USE_COLOR
 
 
@@ -1213,12 +1213,14 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 
 
 #ifdef TERRAIN
+	color = 1;
 	surface.N = 0;
 	surface.albedo = 0;
 	surface.f0 = 0;
 	surface.roughness = 0;
 	surface.occlusion = 0;
 	surface.emissiveColor = 0;
+	surface.opacity = 1;
 
 	float4 sam;
 	float4 blend_weights = input.color;
@@ -1228,15 +1230,16 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (blend_weights.x > 0)
 	{
-		float4 color2 = 1;
+		float4 color2 = GetMaterial().baseColor;
 
 #ifdef OBJECTSHADER_USE_UVSETS
 		[branch]
 		if (GetMaterial().uvset_baseColorMap >= 0 && (GetFrame().options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 		{
 			float2 uv = GetMaterial().uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-			color2 = texture_basecolormap.Sample(sampler_objectshader, uv);
-			color2.rgb = DEGAMMA(color2.rgb);
+			float4 basecolorMap = texture_basecolormap.Sample(sampler_objectshader, uv);
+			basecolorMap.rgb = DEGAMMA(basecolorMap.rgb);
+			color2 *= basecolorMap;
 		}
 #endif // OBJECTSHADER_USE_UVSETS
 
@@ -1290,15 +1293,16 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (blend_weights.y > 0)
 	{
-		float4 color2 = 1;
+		float4 color2 = GetMaterial1().baseColor;
 
 #ifdef OBJECTSHADER_USE_UVSETS
 		[branch]
 		if (GetMaterial1().uvset_baseColorMap >= 0 && (GetFrame().options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 		{
 			float2 uv = GetMaterial1().uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-			color2 = texture_blend1_basecolormap.Sample(sampler_objectshader, uv);
-			color2.rgb = DEGAMMA(color2.rgb);
+			float4 basecolorMap = texture_blend1_basecolormap.Sample(sampler_objectshader, uv);
+			basecolorMap.rgb = DEGAMMA(basecolorMap.rgb);
+			color2 *= basecolorMap;
 		}
 #endif // OBJECTSHADER_USE_UVSETS
 
@@ -1352,15 +1356,16 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (blend_weights.z > 0)
 	{
-		float4 color2 = 1;
+		float4 color2 = GetMaterial2().baseColor;
 
 #ifdef OBJECTSHADER_USE_UVSETS
 		[branch]
 		if (GetMaterial2().uvset_baseColorMap >= 0 && (GetFrame().options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 		{
 			float2 uv = GetMaterial2().uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-			color2 = texture_blend2_basecolormap.Sample(sampler_objectshader, uv);
-			color2.rgb = DEGAMMA(color2.rgb);
+			float4 basecolorMap = texture_blend2_basecolormap.Sample(sampler_objectshader, uv);
+			basecolorMap.rgb = DEGAMMA(basecolorMap.rgb);
+			color2 *= basecolorMap;
 		}
 #endif // OBJECTSHADER_USE_UVSETS
 
@@ -1414,15 +1419,16 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	[branch]
 	if (blend_weights.w > 0)
 	{
-		float4 color2 = 1;
+		float4 color2 = GetMaterial3().baseColor;
 
 #ifdef OBJECTSHADER_USE_UVSETS
 		[branch]
 		if (GetMaterial3().uvset_baseColorMap >= 0 && (GetFrame().options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 		{
 			float2 uv = GetMaterial3().uvset_baseColorMap == 0 ? input.uvsets.xy : input.uvsets.zw;
-			color2 = texture_blend3_basecolormap.Sample(sampler_objectshader, uv);
-			color2.rgb = DEGAMMA(color2.rgb);
+			float4 basecolorMap = texture_blend3_basecolormap.Sample(sampler_objectshader, uv);
+			basecolorMap.rgb = DEGAMMA(basecolorMap.rgb);
+			color2 *= basecolorMap;
 		}
 #endif // OBJECTSHADER_USE_UVSETS
 
