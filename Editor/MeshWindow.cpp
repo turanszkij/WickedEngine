@@ -12,9 +12,38 @@
 using namespace wi::ecs;
 using namespace wi::scene;
 
+struct Chunk
+{
+	int x, z;
+
+	bool operator==(const Chunk& other) const
+	{
+		return (x == other.x) && (z == other.z);
+	}
+};
+namespace std
+{
+	template <>
+	struct hash<Chunk>
+	{
+		size_t operator()(const Chunk& k) const
+		{
+			return ((hash<int>()(k.x) ^ (hash<int>()(k.z) << 1)) >> 1);
+		}
+	};
+}
+
 struct TerraGen : public wi::gui::Window
 {
-	wi::gui::CheckBox automaticCheckBox;
+	Entity terrainEntity = INVALID_ENTITY;
+	Entity materialEntity = INVALID_ENTITY;
+	wi::unordered_map<Chunk, Entity> chunks; // chunk -> object
+	int chunk_dim = 8;
+	wi::vector<uint32_t> chunkIndices;
+	wi::noise::Perlin perlin;
+
+	wi::gui::CheckBox automaticGenerationCheckBox;
+	wi::gui::CheckBox automaticRemovalCheckBox;
 	wi::gui::Slider chunkResolutionSlider;
 	wi::gui::Slider generationSlider;
 	wi::gui::Slider verticalScaleSlider;
@@ -49,12 +78,19 @@ struct TerraGen : public wi::gui::Window
 		float stepstep = 25;
 		float heihei = 20;
 
-		automaticCheckBox.Create("Automatic Generation: ");
-		automaticCheckBox.SetTooltip("Automatically generate chunks around camera");
-		automaticCheckBox.SetSize(XMFLOAT2(heihei, heihei));
-		automaticCheckBox.SetPos(XMFLOAT2(xx + 200, yy += stepstep));
-		automaticCheckBox.SetCheck(true);
-		AddWidget(&automaticCheckBox);
+		automaticGenerationCheckBox.Create("Automatic Generation: ");
+		automaticGenerationCheckBox.SetTooltip("Automatically generate chunks around camera");
+		automaticGenerationCheckBox.SetSize(XMFLOAT2(heihei, heihei));
+		automaticGenerationCheckBox.SetPos(XMFLOAT2(xx + 30, yy += stepstep));
+		automaticGenerationCheckBox.SetCheck(true);
+		AddWidget(&automaticGenerationCheckBox);
+
+		automaticRemovalCheckBox.Create("Automatic Removal: ");
+		automaticRemovalCheckBox.SetTooltip("Automatically remove chunks that are farther than generation distance");
+		automaticRemovalCheckBox.SetSize(XMFLOAT2(heihei, heihei));
+		automaticRemovalCheckBox.SetPos(XMFLOAT2(xx + 200, yy));
+		automaticRemovalCheckBox.SetCheck(true);
+		AddWidget(&automaticRemovalCheckBox);
 
 		generationSlider.Create(0, 16, 6, 16, "Generation Distance: ");
 		generationSlider.SetTooltip("How far out chunks will be generated (value is in number of chunks)");
@@ -218,17 +254,6 @@ struct TerraGen : public wi::gui::Window
 		}
 	}
 
-	Entity terrainEntity = INVALID_ENTITY;
-	Entity materialEntity = INVALID_ENTITY;
-	struct Chunk
-	{
-		int x, z;
-	};
-	wi::unordered_map<size_t, Entity> chunks; // chunk -> object
-	int chunk_dim = 8;
-	wi::vector<uint32_t> chunkIndices;
-	wi::noise::Perlin perlin;
-
 	void Generate()
 	{
 		Scene& scene = wi::scene::GetScene();
@@ -281,6 +306,7 @@ struct TerraGen : public wi::gui::Window
 
 		wi::Timer timer;
 		Scene& scene = wi::scene::GetScene();
+		const int generation = (int)generationSlider.GetValue();
 		const int width = (int)chunkResolutionSlider.GetValue();
 		const float half_width = width * 0.5f;
 		const float width_rcp = 1.0f / width;
@@ -301,7 +327,7 @@ struct TerraGen : public wi::gui::Window
 		const uint32_t vertexCount = width * width;
 
 		Chunk center_chunk;
-		if (automaticCheckBox.GetCheck())
+		if (automaticGenerationCheckBox.GetCheck())
 		{
 			const CameraComponent& camera = GetCamera();
 			center_chunk.x = (int)std::floor((camera.Eye.x + half_width) * width_rcp);
@@ -313,22 +339,34 @@ struct TerraGen : public wi::gui::Window
 			center_chunk.z = 0;
 		}
 
+		if (automaticRemovalCheckBox.GetCheck())
+		{
+			const int removal_threshold = generation + 1;
+			for (auto& it : chunks)
+			{
+				const Chunk& chunk = it.first;
+				if (std::abs(center_chunk.x - chunk.x) > removal_threshold || std::abs(center_chunk.z - chunk.z) > removal_threshold)
+				{
+					scene.Entity_Remove(it.second);
+					it.second = INVALID_ENTITY;
+				}
+			}
+		}
+
 		bool should_exit = false;
 		auto request_chunk = [&](int offset_x, int offset_z)
 		{
 			Chunk chunk = center_chunk;
 			chunk.x += offset_x;
 			chunk.z += offset_z;
-			size_t key = 0;
-			wi::helper::hash_combine(key, chunk.x);
-			wi::helper::hash_combine(key, chunk.z);
-			if (chunks.count(key) == 0)
+			auto it = chunks.find(chunk);
+			if (it == chunks.end() || it->second == INVALID_ENTITY)
 			{
 				std::string chunk_id = std::to_string(chunk.x) + "_" + std::to_string(chunk.z);
 				Entity chunkObjectEntity = scene.Entity_CreateObject("chunkobject_" + chunk_id);
 				ObjectComponent& object = *scene.objects.GetComponent(chunkObjectEntity);
 				scene.Component_Attach(chunkObjectEntity, terrainEntity);
-				chunks[key] = chunkObjectEntity;
+				chunks[chunk] = chunkObjectEntity;
 
 				TransformComponent& transform = *scene.transforms.GetComponent(chunkObjectEntity);
 				transform.ClearTransform();
@@ -430,8 +468,7 @@ struct TerraGen : public wi::gui::Window
 		if (should_exit) return;
 
 		// then generate neighbor chunks in outwards spiral:
-		const int max_growth = (int)generationSlider.GetValue();
-		for (int growth = 0; growth < max_growth; ++growth)
+		for (int growth = 0; growth < generation; ++growth)
 		{
 			const int side = 2 * (growth + 1);
 			int x = -growth - 1;
