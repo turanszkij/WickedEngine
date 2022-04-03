@@ -28,6 +28,7 @@ struct TerraGen : public wi::gui::Window
 	wi::gui::Slider voronoiFadeSlider;
 	wi::gui::Slider voronoiShapeSlider;
 	wi::gui::Slider voronoiFalloffSlider;
+	wi::gui::Slider voronoiPerturbationSlider;
 	wi::gui::Slider voronoiSeedSlider;
 	wi::gui::Button heightmapButton;
 	wi::gui::Slider heightmapBlendSlider;
@@ -41,7 +42,7 @@ struct TerraGen : public wi::gui::Window
 	TerraGen()
 	{
 		wi::gui::Window::Create("TerraGen");
-		SetSize(XMFLOAT2(410, 460));
+		SetSize(XMFLOAT2(410, 480));
 
 		float xx = 140;
 		float yy = 0;
@@ -133,6 +134,12 @@ struct TerraGen : public wi::gui::Window
 		voronoiFalloffSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 		AddWidget(&voronoiFalloffSlider);
 
+		voronoiPerturbationSlider.Create(0, 1, 0.1f, 10000, "Voronoi Perturbation: ");
+		voronoiPerturbationSlider.SetTooltip("Controls the random look of voronoi region edges");
+		voronoiPerturbationSlider.SetSize(XMFLOAT2(200, heihei));
+		voronoiPerturbationSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+		AddWidget(&voronoiPerturbationSlider);
+
 		voronoiSeedSlider.Create(1, 12345, 3482, 12344, "Voronoi Seed: ");
 		voronoiSeedSlider.SetTooltip("Voronoi can create distinctly elevated areas");
 		voronoiSeedSlider.SetSize(XMFLOAT2(200, heihei));
@@ -169,6 +176,7 @@ struct TerraGen : public wi::gui::Window
 		voronoiFadeSlider.OnSlide(generate_callback);
 		voronoiShapeSlider.OnSlide(generate_callback);
 		voronoiFalloffSlider.OnSlide(generate_callback);
+		voronoiPerturbationSlider.OnSlide(generate_callback);
 		voronoiSeedSlider.OnSlide(generate_callback);
 		heightmapBlendSlider.OnSlide(generate_callback);
 
@@ -260,12 +268,8 @@ struct TerraGen : public wi::gui::Window
 			}
 		}
 
-		const float perlinBlend = perlinBlendSlider.GetValue();
-		if (perlinBlend > 0)
-		{
-			const uint32_t perlinSeed = (uint32_t)perlinSeedSlider.GetValue();
-			perlin.init(perlinSeed);
-		}
+		const uint32_t perlinSeed = (uint32_t)perlinSeedSlider.GetValue();
+		perlin.init(perlinSeed);
 
 		Update();
 	}
@@ -292,6 +296,7 @@ struct TerraGen : public wi::gui::Window
 		const float voronoiFade = voronoiFadeSlider.GetValue();
 		const float voronoiShape = voronoiShapeSlider.GetValue();
 		const float voronoiFalloff = voronoiFalloffSlider.GetValue();
+		const float voronoiPerturbation = voronoiPerturbationSlider.GetValue();
 		const uint32_t voronoiSeed = (uint32_t)voronoiSeedSlider.GetValue();
 		const uint32_t vertexCount = width * width;
 
@@ -374,6 +379,12 @@ struct TerraGen : public wi::gui::Window
 							XMFLOAT2 p = world_pos;
 							p.x *= voronoiFrequency;
 							p.y *= voronoiFrequency;
+							if (voronoiPerturbation > 0)
+							{
+								const float angle = perlin.compute(p.x, p.y, 0, 6) * XM_2PI;
+								p.x += std::sin(angle) * voronoiPerturbation;
+								p.y += std::cos(angle) * voronoiPerturbation;
+							}
 							wi::noise::voronoi::Result res = wi::noise::voronoi::compute(p.x, p.y, (float)voronoiSeed);
 							float weight = std::pow(1 - wi::math::saturate((res.distance - voronoiShape) * voronoiFade), std::max(0.0001f, voronoiFalloff));
 							height *= weight * voronoiBlend;
