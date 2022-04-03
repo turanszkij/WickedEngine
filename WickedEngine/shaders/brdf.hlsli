@@ -272,11 +272,11 @@ struct Surface
 		clearcoat.roughness = clamp(clearcoat.roughness, 0.045, 1);
 		clearcoat.roughnessBRDF = clearcoat.roughness * clearcoat.roughness;
 
-		NdotV = saturate(abs(dot(N, V)) + 1e-5);
+		NdotV = saturate(dot(N, V) + 1e-5);
 
 		f90 = saturate(50.0 * dot(f0, 0.33));
 		F = F_Schlick(f0, f90, NdotV);
-		clearcoat.F = F_Schlick(f0, f90, saturate(abs(dot(clearcoat.N, V)) + 1e-5));
+		clearcoat.F = F_Schlick(f0, f90, saturate(dot(clearcoat.N, V) + 1e-5));
 		clearcoat.F *= clearcoat.factor;
 
 		R = -reflect(V, N);
