@@ -14,6 +14,7 @@ using namespace wi::scene;
 
 struct TerraGen : public wi::gui::Window
 {
+	wi::gui::CheckBox automaticCheckBox;
 	wi::gui::Slider chunkResolutionSlider;
 	wi::gui::Slider generationSlider;
 	wi::gui::Slider verticalScaleSlider;
@@ -40,24 +41,31 @@ struct TerraGen : public wi::gui::Window
 	TerraGen()
 	{
 		wi::gui::Window::Create("TerraGen");
-		SetSize(XMFLOAT2(410, 440));
+		SetSize(XMFLOAT2(410, 460));
 
 		float xx = 140;
 		float yy = 0;
 		float stepstep = 25;
 		float heihei = 20;
 
-		chunkResolutionSlider.Create(16, 1024, 64, 1024 - 16, "Chunk Resolution: ");
+		automaticCheckBox.Create("Automatic Generation: ");
+		automaticCheckBox.SetTooltip("Automatically generate chunks around camera");
+		automaticCheckBox.SetSize(XMFLOAT2(heihei, heihei));
+		automaticCheckBox.SetPos(XMFLOAT2(xx + 200, yy += stepstep));
+		automaticCheckBox.SetCheck(true);
+		AddWidget(&automaticCheckBox);
+
+		generationSlider.Create(0, 16, 6, 16, "Generation Distance: ");
+		generationSlider.SetTooltip("How far out chunks will be generated (value is in number of chunks)");
+		generationSlider.SetSize(XMFLOAT2(200, heihei));
+		generationSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+		AddWidget(&generationSlider);
+
+		chunkResolutionSlider.Create(16, 256, 64, 256 - 16, "Chunk Resolution: ");
 		chunkResolutionSlider.SetTooltip("Resolution of one chunk on the horizontal (XZ) axis");
 		chunkResolutionSlider.SetSize(XMFLOAT2(200, heihei));
 		chunkResolutionSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 		AddWidget(&chunkResolutionSlider);
-
-		generationSlider.Create(0, 16, 6, 16, "Generation Distance: ");
-		generationSlider.SetTooltip("How far chunks will be generated (value is in number of chunks)");
-		generationSlider.SetSize(XMFLOAT2(200, heihei));
-		generationSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
-		AddWidget(&generationSlider);
 
 		verticalScaleSlider.Create(0, 1000, 400, 10000, "Vertical Scale: ");
 		verticalScaleSlider.SetTooltip("Terrain mesh grid scale on the vertical (Y) axis");
@@ -65,7 +73,7 @@ struct TerraGen : public wi::gui::Window
 		verticalScaleSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 		AddWidget(&verticalScaleSlider);
 
-		groundLevelSlider.Create(-100, 100, -50, 10000, "Ground Level: ");
+		groundLevelSlider.Create(-100, 100, -7, 10000, "Ground Level: ");
 		groundLevelSlider.SetTooltip("Terrain mesh grid lowest level");
 		groundLevelSlider.SetSize(XMFLOAT2(200, heihei));
 		groundLevelSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
@@ -77,7 +85,7 @@ struct TerraGen : public wi::gui::Window
 		perlinBlendSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 		AddWidget(&perlinBlendSlider);
 
-		perlinFrequencySlider.Create(0.001f, 0.1f, 0.008f, 10000, "Perlin Frequency: ");
+		perlinFrequencySlider.Create(0.0001f, 0.01f, 0.008f, 10000, "Perlin Frequency: ");
 		perlinFrequencySlider.SetTooltip("Frequency for the perlin noise");
 		perlinFrequencySlider.SetSize(XMFLOAT2(200, heihei));
 		perlinFrequencySlider.SetPos(XMFLOAT2(xx, yy += stepstep));
@@ -101,7 +109,7 @@ struct TerraGen : public wi::gui::Window
 		voronoiBlendSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 		AddWidget(&voronoiBlendSlider);
 
-		voronoiFrequencySlider.Create(0.001f, 0.1f, 0.005f, 10000, "Voronoi Frequency: ");
+		voronoiFrequencySlider.Create(0.0001f, 0.01f, 0.005f, 10000, "Voronoi Frequency: ");
 		voronoiFrequencySlider.SetTooltip("Voronoi can create distinctly elevated areas, the more cells there are, smaller the consecutive areas");
 		voronoiFrequencySlider.SetSize(XMFLOAT2(200, heihei));
 		voronoiFrequencySlider.SetPos(XMFLOAT2(xx, yy += stepstep));
@@ -125,7 +133,7 @@ struct TerraGen : public wi::gui::Window
 		voronoiFalloffSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 		AddWidget(&voronoiFalloffSlider);
 
-		voronoiSeedSlider.Create(1, 12345, 4852, 12344, "Voronoi Seed: ");
+		voronoiSeedSlider.Create(1, 12345, 3482, 12344, "Voronoi Seed: ");
 		voronoiSeedSlider.SetTooltip("Voronoi can create distinctly elevated areas");
 		voronoiSeedSlider.SetSize(XMFLOAT2(200, heihei));
 		voronoiSeedSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
@@ -287,10 +295,18 @@ struct TerraGen : public wi::gui::Window
 		const uint32_t voronoiSeed = (uint32_t)voronoiSeedSlider.GetValue();
 		const uint32_t vertexCount = width * width;
 
-		const CameraComponent& camera = GetCamera();
 		Chunk center_chunk;
-		center_chunk.x = (int)std::floor((camera.Eye.x + half_width) * width_rcp);
-		center_chunk.z = (int)std::floor((camera.Eye.z + half_width) * width_rcp);
+		if (automaticCheckBox.GetCheck())
+		{
+			const CameraComponent& camera = GetCamera();
+			center_chunk.x = (int)std::floor((camera.Eye.x + half_width) * width_rcp);
+			center_chunk.z = (int)std::floor((camera.Eye.z + half_width) * width_rcp);
+		}
+		else
+		{
+			center_chunk.x = 0;
+			center_chunk.z = 0;
+		}
 
 		bool should_exit = false;
 		auto request_chunk = [&](int offset_x, int offset_z)
@@ -303,7 +319,8 @@ struct TerraGen : public wi::gui::Window
 			wi::helper::hash_combine(key, chunk.z);
 			if (chunks.count(key) == 0)
 			{
-				Entity chunkObjectEntity = scene.Entity_CreateObject("chunk_object" + std::to_string(chunk.x) + "_" + std::to_string(chunk.z));
+				std::string chunk_id = std::to_string(chunk.x) + "_" + std::to_string(chunk.z);
+				Entity chunkObjectEntity = scene.Entity_CreateObject("chunkobject_" + chunk_id);
 				ObjectComponent& object = *scene.objects.GetComponent(chunkObjectEntity);
 				scene.Component_Attach(chunkObjectEntity, terrainEntity);
 				chunks[key] = chunkObjectEntity;
@@ -315,7 +332,7 @@ struct TerraGen : public wi::gui::Window
 
 				Entity chunkMeshEntity = CreateEntity();
 				MeshComponent& mesh = scene.meshes.Create(chunkMeshEntity);
-				scene.names.Create(chunkMeshEntity) = "chunk_mesh" + std::to_string(chunk.x) + "_" + std::to_string(chunk.z);
+				scene.names.Create(chunkMeshEntity) = "chunkmesh_" + chunk_id;
 				scene.Component_Attach(chunkMeshEntity, chunkObjectEntity);
 				object.meshID = chunkMeshEntity;
 				mesh.indices = chunkIndices;
