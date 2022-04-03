@@ -43,7 +43,6 @@ struct TerraGen : public wi::gui::Window
 	Entity materialEntity_LowAltitude = INVALID_ENTITY;
 	Entity materialEntity_HighAltitude = INVALID_ENTITY;
 	wi::unordered_map<Chunk, Entity> chunks; // chunk -> object
-	int chunk_dim = 8;
 	wi::vector<uint32_t> chunkIndices;
 	wi::noise::Perlin perlin;
 
