@@ -16,7 +16,7 @@ struct Chunk
 {
 	int x, z;
 
-	bool operator==(const Chunk& other) const
+	constexpr bool operator==(const Chunk& other) const
 	{
 		return (x == other.x) && (z == other.z);
 	}
@@ -26,7 +26,7 @@ namespace std
 	template <>
 	struct hash<Chunk>
 	{
-		size_t operator()(const Chunk& k) const
+		inline size_t operator()(const Chunk& k) const
 		{
 			return ((hash<int>()(k.x) ^ (hash<int>()(k.z) << 1)) >> 1);
 		}
