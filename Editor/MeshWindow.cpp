@@ -37,18 +37,29 @@ namespace std
 
 struct TerraGen : public wi::gui::Window
 {
+	const int width = 128 + 3; // + 3: filler vertices for lod apron and grid perimeter
+	const float half_width = (width - 1) * 0.5f;
+	const float width_rcp = 1.0f / (width - 1);
+	const uint32_t vertexCount = width * width;
+	const int max_lod = (int)std::log2(width - 3) + 1;
 	Entity terrainEntity = INVALID_ENTITY;
 	Entity materialEntity_Base = INVALID_ENTITY;
 	Entity materialEntity_Slope = INVALID_ENTITY;
 	Entity materialEntity_LowAltitude = INVALID_ENTITY;
 	Entity materialEntity_HighAltitude = INVALID_ENTITY;
 	wi::unordered_map<Chunk, Entity> chunks; // chunk -> object
-	wi::vector<uint32_t> chunkIndices;
+	struct LOD
+	{
+		wi::vector<uint32_t> indices;
+		//wi::graphics::GPUBuffer indexbuffer;
+		//wi::scene::MeshComponent::BufferView ib;
+	};
+	wi::vector<LOD> lods;
 	wi::noise::Perlin perlin;
+	Chunk center_chunk = {};
 
 	wi::gui::CheckBox automaticGenerationCheckBox;
 	wi::gui::CheckBox automaticRemovalCheckBox;
-	wi::gui::Slider chunkResolutionSlider;
 	wi::gui::Slider generationSlider;
 	wi::gui::Slider verticalScaleSlider;
 	wi::gui::Slider groundLevelSlider;
@@ -75,7 +86,7 @@ struct TerraGen : public wi::gui::Window
 	TerraGen()
 	{
 		wi::gui::Window::Create("TerraGen");
-		SetSize(XMFLOAT2(410, 480));
+		SetSize(XMFLOAT2(410, 460));
 
 		float xx = 140;
 		float yy = 0;
@@ -101,12 +112,6 @@ struct TerraGen : public wi::gui::Window
 		generationSlider.SetSize(XMFLOAT2(200, heihei));
 		generationSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 		AddWidget(&generationSlider);
-
-		chunkResolutionSlider.Create(16, 256, 64, 256 - 16, "Chunk Resolution: ");
-		chunkResolutionSlider.SetTooltip("Resolution of one chunk on the horizontal (XZ) axis");
-		chunkResolutionSlider.SetSize(XMFLOAT2(200, heihei));
-		chunkResolutionSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
-		AddWidget(&chunkResolutionSlider);
 
 		verticalScaleSlider.Create(0, 1000, 400, 10000, "Vertical Scale: ");
 		verticalScaleSlider.SetTooltip("Terrain mesh grid scale on the vertical (Y) axis");
@@ -204,7 +209,6 @@ struct TerraGen : public wi::gui::Window
 		auto generate_callback = [=](wi::gui::EventArgs args) {
 			Generate();
 		};
-		chunkResolutionSlider.OnSlide(generate_callback);
 		verticalScaleSlider.OnSlide(generate_callback);
 		groundLevelSlider.OnSlide(generate_callback);
 		perlinFrequencySlider.OnSlide(generate_callback);
@@ -291,26 +295,158 @@ struct TerraGen : public wi::gui::Window
 		material_high_altitude->SetRoughness(1);
 		material_high_altitude->SetBaseColor(XMFLOAT4(1, 1, 1, 1));
 
-		const int width = (int)chunkResolutionSlider.GetValue();
-		chunkIndices.resize((width - 1) * (width - 1) * 6);
-		size_t counter = 0;
-		for (int x = 0; x < width - 1; x++)
+		lods.resize(max_lod);
+		for (int lod = 0; lod < max_lod; ++lod)
 		{
-			for (int z = 0; z < width - 1; z++)
+			lods[lod].indices.clear();
+
+			if (lod == 0)
 			{
-				int lowerLeft = x + z * width;
-				int lowerRight = (x + 1) + z * width;
-				int topLeft = x + (z + 1) * width;
-				int topRight = (x + 1) + (z + 1) * width;
+				for (int x = 0; x < width - 1; x++)
+				{
+					for (int z = 0; z < width - 1; z++)
+					{
+						int lowerLeft = x + z * width;
+						int lowerRight = (x + 1) + z * width;
+						int topLeft = x + (z + 1) * width;
+						int topRight = (x + 1) + (z + 1) * width;
 
-				chunkIndices[counter++] = topLeft;
-				chunkIndices[counter++] = lowerLeft;
-				chunkIndices[counter++] = lowerRight;
+						lods[lod].indices.push_back(topLeft);
+						lods[lod].indices.push_back(lowerLeft);
+						lods[lod].indices.push_back(lowerRight);
 
-				chunkIndices[counter++] = topLeft;
-				chunkIndices[counter++] = lowerRight;
-				chunkIndices[counter++] = topRight;
+						lods[lod].indices.push_back(topLeft);
+						lods[lod].indices.push_back(lowerRight);
+						lods[lod].indices.push_back(topRight);
+					}
+				}
 			}
+			else
+			{
+				const int step = 1 << lod;
+				// inner grid:
+				for (int x = 1; x < width - 2; x += step)
+				{
+					for (int z = 1; z < width - 2; z += step)
+					{
+						int lowerLeft = x + z * width;
+						int lowerRight = (x + step) + z * width;
+						int topLeft = x + (z + step) * width;
+						int topRight = (x + step) + (z + step) * width;
+
+						lods[lod].indices.push_back(topLeft);
+						lods[lod].indices.push_back(lowerLeft);
+						lods[lod].indices.push_back(lowerRight);
+
+						lods[lod].indices.push_back(topLeft);
+						lods[lod].indices.push_back(lowerRight);
+						lods[lod].indices.push_back(topRight);
+					}
+				}
+				// bottom border:
+				for (int x = 0; x < width - 1; ++x)
+				{
+					const int z = 0;
+					int current = x + z * width;
+					int neighbor = x + 1 + z * width;
+					int connection = 1 + ((x + (step + 1) / 2 - 1) / step) * step + (z + 1) * width;
+
+					lods[lod].indices.push_back(current);
+					lods[lod].indices.push_back(neighbor);
+					lods[lod].indices.push_back(connection);
+
+					if (((x - 1) % (step)) == step / 2) // halfway fill triangle
+					{
+						int connection1 = 1 + (((x - 1) + (step + 1) / 2 - 1) / step) * step + (z + 1) * width;
+
+						lods[lod].indices.push_back(current);
+						lods[lod].indices.push_back(connection);
+						lods[lod].indices.push_back(connection1);
+					}
+				}
+				// top border:
+				for (int x = 0; x < width - 1; ++x)
+				{
+					const int z = width - 1;
+					int current = x + z * width;
+					int neighbor = x + 1 + z * width;
+					int connection = 1 + ((x + (step + 1) / 2 - 1) / step) * step + (z - 1) * width;
+
+					lods[lod].indices.push_back(current);
+					lods[lod].indices.push_back(connection);
+					lods[lod].indices.push_back(neighbor);
+
+					if (((x - 1) % (step)) == step / 2) // halfway fill triangle
+					{
+						int connection1 = 1 + (((x - 1) + (step + 1) / 2 - 1) / step) * step + (z - 1) * width;
+
+						lods[lod].indices.push_back(current);
+						lods[lod].indices.push_back(connection1);
+						lods[lod].indices.push_back(connection);
+					}
+				}
+				// left border:
+				for (int z = 0; z < width - 1; ++z)
+				{
+					const int x = 0;
+					int current = x + z * width;
+					int neighbor = x + (z + 1) * width;
+					int connection = x + 1 + (((z + (step + 1) / 2 - 1) / step) * step + 1) * width;
+
+					lods[lod].indices.push_back(current);
+					lods[lod].indices.push_back(connection);
+					lods[lod].indices.push_back(neighbor);
+
+					if (((z - 1) % (step)) == step / 2) // halfway fill triangle
+					{
+						int connection1 = x + 1 + ((((z - 1) + (step + 1) / 2 - 1) / step) * step + 1) * width;
+
+						lods[lod].indices.push_back(current);
+						lods[lod].indices.push_back(connection1);
+						lods[lod].indices.push_back(connection);
+					}
+				}
+				// right border:
+				for (int z = 0; z < width - 1; ++z)
+				{
+					const int x = width - 1;
+					int current = x + z * width;
+					int neighbor = x + (z + 1) * width;
+					int connection = x - 1 + (((z + (step + 1) / 2 - 1) / step) * step + 1) * width;
+
+					lods[lod].indices.push_back(current);
+					lods[lod].indices.push_back(neighbor);
+					lods[lod].indices.push_back(connection);
+
+					if (((z - 1) % (step)) == step / 2) // halfway fill triangle
+					{
+						int connection1 = x - 1 + ((((z - 1) + (step + 1) / 2 - 1) / step) * step + 1) * width;
+
+						lods[lod].indices.push_back(current);
+						lods[lod].indices.push_back(connection);
+						lods[lod].indices.push_back(connection1);
+					}
+				}
+			}
+
+			//wi::graphics::GPUBufferDesc desc;
+			//desc.bind_flags = wi::graphics::BindFlag::INDEX_BUFFER | wi::graphics::BindFlag::SHADER_RESOURCE;
+			//desc.size = sizeof(uint16_t) * lods[lod].indices.size();
+			//desc.format = wi::graphics::Format::R16_UINT;
+			//
+			//wi::vector<uint16_t> ind16(lods[lod].indices.size());
+			//uint16_t* indexdata = ind16.data();
+			//for (size_t i = 0; i < lods[lod].indices.size(); ++i)
+			//{
+			//	indexdata[i] = (uint16_t)lods[lod].indices[i];
+			//}
+			//
+			//bool success = wi::graphics::GetDevice()->CreateBuffer(&desc, indexdata, &lods[lod].indexbuffer);
+			//assert(success);
+			//
+			//lods[lod].ib.offset = desc.size;
+			//lods[lod].ib.size = desc.size;
+			//lods[lod].ib.descriptor_srv = wi::graphics::GetDevice()->GetDescriptorIndex(&lods[lod].indexbuffer, wi::graphics::SubresourceType::SRV);
 		}
 
 		const uint32_t perlinSeed = (uint32_t)perlinSeedSlider.GetValue();
@@ -327,9 +463,6 @@ struct TerraGen : public wi::gui::Window
 		wi::Timer timer;
 		Scene& scene = wi::scene::GetScene();
 		const int generation = (int)generationSlider.GetValue();
-		const int width = (int)chunkResolutionSlider.GetValue();
-		const float half_width = width * 0.5f;
-		const float width_rcp = 1.0f / width;
 		const float verticalScale = verticalScaleSlider.GetValue();
 		const float groundLevel = groundLevelSlider.GetValue();
 		const float heightmapBlend = heightmapBlendSlider.GetValue();
@@ -344,19 +477,12 @@ struct TerraGen : public wi::gui::Window
 		const float voronoiFalloff = voronoiFalloffSlider.GetValue();
 		const float voronoiPerturbation = voronoiPerturbationSlider.GetValue();
 		const uint32_t voronoiSeed = (uint32_t)voronoiSeedSlider.GetValue();
-		const uint32_t vertexCount = width * width;
 
-		Chunk center_chunk;
 		if (automaticGenerationCheckBox.GetCheck())
 		{
 			const CameraComponent& camera = GetCamera();
 			center_chunk.x = (int)std::floor((camera.Eye.x + half_width) * width_rcp);
 			center_chunk.z = (int)std::floor((camera.Eye.z + half_width) * width_rcp);
-		}
-		else
-		{
-			center_chunk.x = 0;
-			center_chunk.z = 0;
 		}
 
 		if (automaticRemovalCheckBox.GetCheck())
@@ -398,14 +524,14 @@ struct TerraGen : public wi::gui::Window
 				scene.names.Create(chunkMeshEntity) = "chunkmesh_" + chunk_id;
 				scene.Component_Attach(chunkMeshEntity, chunkObjectEntity);
 				object.meshID = chunkMeshEntity;
-				mesh.indices = chunkIndices;
+				mesh.indices = lods[0].indices;
 				mesh.SetTerrain(true);
 				mesh.terrain_material1 = materialEntity_Slope;
 				mesh.terrain_material2 = materialEntity_LowAltitude;
 				mesh.terrain_material3 = materialEntity_HighAltitude;
 				mesh.subsets.emplace_back();
 				mesh.subsets.back().materialID = materialEntity_Base;
-				mesh.subsets.back().indexCount = (uint32_t)chunkIndices.size();
+				mesh.subsets.back().indexCount = (uint32_t)lods[0].indices.size();
 				mesh.subsets.back().indexOffset = 0;
 				mesh.vertex_positions.resize(vertexCount);
 				mesh.vertex_normals.resize(vertexCount);
@@ -434,6 +560,7 @@ struct TerraGen : public wi::gui::Window
 					{
 						float height = 0;
 						const XMFLOAT2 world_pos = XMFLOAT2(chunk_pos.x + x + corner_offsets[i].x, chunk_pos.z + z + corner_offsets[i].y);
+#if 1
 						if (perlinBlend > 0)
 						{
 							XMFLOAT2 p = world_pos;
@@ -467,6 +594,7 @@ struct TerraGen : public wi::gui::Window
 						}
 						height *= verticalScale;
 						height += groundLevel;
+#endif
 						corners[i] = XMVectorSet(world_pos.x, height, world_pos.y, 0);
 					}
 					const float height = XMVectorGetY(corners[0]);
@@ -508,6 +636,30 @@ struct TerraGen : public wi::gui::Window
 				if (timer.elapsed_milliseconds() > 10)
 					should_exit = true;
 			}
+
+			// LOD assignment:
+			it = chunks.find(chunk);
+			if (it != chunks.end() && it->second != INVALID_ENTITY)
+			{
+				const ObjectComponent* object = scene.objects.GetComponent(it->second);
+				if (object != nullptr)
+				{
+					MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
+					if (mesh != nullptr)
+					{
+						const int d = std::max(std::abs(center_chunk.x - chunk.x), std::abs(center_chunk.z - chunk.z));
+						const int lod = std::max(0, std::min(d - 1, max_lod - 1));
+						if (mesh->indices.size() != lods[lod].indices.size())
+						{
+							//mesh->ib = lods[lod].ib;
+							mesh->subsets[0].indexCount = (uint32_t)lods[lod].indices.size();
+							mesh->indices = lods[lod].indices;
+							mesh->CreateRenderData(); // TODO
+						}
+					}
+				}
+			}
+
 		};
 
 		// generate center chunk first:
