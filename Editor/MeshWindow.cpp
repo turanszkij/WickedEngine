@@ -37,7 +37,7 @@ namespace std
 
 struct TerraGen : public wi::gui::Window
 {
-	const int width = 128 + 3; // + 3: filler vertices for lod apron and grid perimeter
+	const int width = 64 + 3; // + 3: filler vertices for lod apron and grid perimeter
 	const float half_width = (width - 1) * 0.5f;
 	const float width_rcp = 1.0f / (width - 1);
 	const uint32_t vertexCount = width * width;
@@ -266,6 +266,37 @@ struct TerraGen : public wi::gui::Window
 	{
 		Scene& scene = wi::scene::GetScene();
 
+		wi::scene::MaterialComponent material_Base;
+		wi::scene::MaterialComponent material_Slope;
+		wi::scene::MaterialComponent material_LowAltitude;
+		wi::scene::MaterialComponent material_HighAltitude;
+		material_Base.SetUseVertexColors(true);
+		material_Base.SetRoughness(1);
+		material_Slope.SetRoughness(1);
+		material_LowAltitude.SetRoughness(1);
+		material_HighAltitude.SetRoughness(1);
+		// If the materials already exist, save them before recreating:
+		if (materialEntity_Base != INVALID_ENTITY)
+		{
+			MaterialComponent* material = scene.materials.GetComponent(materialEntity_Base);
+			material_Base = *material;
+		}
+		if (materialEntity_Slope != INVALID_ENTITY)
+		{
+			MaterialComponent* material = scene.materials.GetComponent(materialEntity_Slope);
+			material_Slope = *material;
+		}
+		if (materialEntity_LowAltitude != INVALID_ENTITY)
+		{
+			MaterialComponent* material = scene.materials.GetComponent(materialEntity_LowAltitude);
+			material_LowAltitude = *material;
+		}
+		if (materialEntity_HighAltitude != INVALID_ENTITY)
+		{
+			MaterialComponent* material = scene.materials.GetComponent(materialEntity_HighAltitude);
+			material_HighAltitude = *material;
+		}
+
 		chunks.clear();
 
 		scene.Entity_Remove(terrainEntity);
@@ -281,19 +312,11 @@ struct TerraGen : public wi::gui::Window
 		scene.Component_Attach(materialEntity_Slope, terrainEntity);
 		scene.Component_Attach(materialEntity_LowAltitude, terrainEntity);
 		scene.Component_Attach(materialEntity_HighAltitude, terrainEntity);
-		MaterialComponent* material_base = scene.materials.GetComponent(materialEntity_Base);
-		material_base->SetUseVertexColors(true);
-		material_base->SetRoughness(1);
-		material_base->SetBaseColor(XMFLOAT4(0, 1, 0, 1));
-		MaterialComponent* material_slope = scene.materials.GetComponent(materialEntity_Slope);
-		material_slope->SetRoughness(1);
-		material_slope->SetBaseColor(XMFLOAT4(1, 0, 0, 1));
-		MaterialComponent* material_low_altitude = scene.materials.GetComponent(materialEntity_LowAltitude);
-		material_low_altitude->SetRoughness(1);
-		material_low_altitude->SetBaseColor(XMFLOAT4(0, 0, 1, 1));
-		MaterialComponent* material_high_altitude = scene.materials.GetComponent(materialEntity_HighAltitude);
-		material_high_altitude->SetRoughness(1);
-		material_high_altitude->SetBaseColor(XMFLOAT4(1, 1, 1, 1));
+		// init/restore materials:
+		*scene.materials.GetComponent(materialEntity_Base) = material_Base;
+		*scene.materials.GetComponent(materialEntity_Slope) = material_Slope;
+		*scene.materials.GetComponent(materialEntity_LowAltitude) = material_LowAltitude;
+		*scene.materials.GetComponent(materialEntity_HighAltitude) = material_HighAltitude;
 
 		lods.resize(max_lod);
 		for (int lod = 0; lod < max_lod; ++lod)
