@@ -32,6 +32,12 @@ namespace std
 		}
 	};
 }
+struct ChunkData
+{
+	wi::ecs::Entity entity = INVALID_ENTITY;
+	wi::vector<wi::scene::MeshComponent> mesh_lods;
+	int current_lod = 0;
+};
 
 #define TERRAGEN_USE_JOBSYSTEM
 
@@ -47,12 +53,14 @@ struct TerraGen : public wi::gui::Window
 	Entity materialEntity_Slope = INVALID_ENTITY;
 	Entity materialEntity_LowAltitude = INVALID_ENTITY;
 	Entity materialEntity_HighAltitude = INVALID_ENTITY;
-	wi::unordered_map<Chunk, Entity> chunks; // chunk -> object
+	wi::scene::MaterialComponent material_Base;
+	wi::scene::MaterialComponent material_Slope;
+	wi::scene::MaterialComponent material_LowAltitude;
+	wi::scene::MaterialComponent material_HighAltitude;
+	wi::unordered_map<Chunk, ChunkData> chunks;
 	struct LOD
 	{
 		wi::vector<uint32_t> indices;
-		//wi::graphics::GPUBuffer indexbuffer;
-		//wi::scene::MeshComponent::BufferView ib;
 	};
 	wi::vector<LOD> lods;
 	wi::noise::Perlin perlin;
@@ -83,10 +91,165 @@ struct TerraGen : public wi::gui::Window
 	int heightmap_width = 0;
 	int heightmap_height = 0;
 
-	TerraGen()
+	~TerraGen()
+	{
+		Cleanup();
+	}
+
+	void init()
 	{
 		wi::gui::Window::Create("TerraGen");
 		SetSize(XMFLOAT2(410, 460));
+
+		material_Base.SetUseVertexColors(true);
+		material_Base.SetRoughness(1);
+		material_Slope.SetRoughness(1);
+		material_LowAltitude.SetRoughness(1);
+		material_HighAltitude.SetRoughness(1);
+
+		material_Base.textures[MaterialComponent::BASECOLORMAP].name = "images/terrain/HITW-TS2-forest-decidious-grass-green.jpg";
+		material_Slope.textures[MaterialComponent::BASECOLORMAP].name = "images/terrain/HITW-TS2-Western-barren.jpg";
+		material_LowAltitude.textures[MaterialComponent::BASECOLORMAP].name = "images/terrain/HITW-TS2-sandy-ground.jpg";
+		material_HighAltitude.textures[MaterialComponent::BASECOLORMAP].name = "images/terrain/HITW-mntn-snow-greys.jpg";
+		material_Base.CreateRenderData();
+		material_Slope.CreateRenderData();
+		material_LowAltitude.CreateRenderData();
+		material_HighAltitude.CreateRenderData();
+
+		lods.resize(max_lod);
+		for (int lod = 0; lod < max_lod; ++lod)
+		{
+			lods[lod].indices.clear();
+
+			if (lod == 0)
+			{
+				for (int x = 0; x < width - 1; x++)
+				{
+					for (int z = 0; z < width - 1; z++)
+					{
+						int lowerLeft = x + z * width;
+						int lowerRight = (x + 1) + z * width;
+						int topLeft = x + (z + 1) * width;
+						int topRight = (x + 1) + (z + 1) * width;
+
+						lods[lod].indices.push_back(topLeft);
+						lods[lod].indices.push_back(lowerLeft);
+						lods[lod].indices.push_back(lowerRight);
+
+						lods[lod].indices.push_back(topLeft);
+						lods[lod].indices.push_back(lowerRight);
+						lods[lod].indices.push_back(topRight);
+					}
+				}
+			}
+			else
+			{
+				const int step = 1 << lod;
+				// inner grid:
+				for (int x = 1; x < width - 2; x += step)
+				{
+					for (int z = 1; z < width - 2; z += step)
+					{
+						int lowerLeft = x + z * width;
+						int lowerRight = (x + step) + z * width;
+						int topLeft = x + (z + step) * width;
+						int topRight = (x + step) + (z + step) * width;
+
+						lods[lod].indices.push_back(topLeft);
+						lods[lod].indices.push_back(lowerLeft);
+						lods[lod].indices.push_back(lowerRight);
+
+						lods[lod].indices.push_back(topLeft);
+						lods[lod].indices.push_back(lowerRight);
+						lods[lod].indices.push_back(topRight);
+					}
+				}
+				// bottom border:
+				for (int x = 0; x < width - 1; ++x)
+				{
+					const int z = 0;
+					int current = x + z * width;
+					int neighbor = x + 1 + z * width;
+					int connection = 1 + ((x + (step + 1) / 2 - 1) / step) * step + (z + 1) * width;
+
+					lods[lod].indices.push_back(current);
+					lods[lod].indices.push_back(neighbor);
+					lods[lod].indices.push_back(connection);
+
+					if (((x - 1) % (step)) == step / 2) // halfway fill triangle
+					{
+						int connection1 = 1 + (((x - 1) + (step + 1) / 2 - 1) / step) * step + (z + 1) * width;
+
+						lods[lod].indices.push_back(current);
+						lods[lod].indices.push_back(connection);
+						lods[lod].indices.push_back(connection1);
+					}
+				}
+				// top border:
+				for (int x = 0; x < width - 1; ++x)
+				{
+					const int z = width - 1;
+					int current = x + z * width;
+					int neighbor = x + 1 + z * width;
+					int connection = 1 + ((x + (step + 1) / 2 - 1) / step) * step + (z - 1) * width;
+
+					lods[lod].indices.push_back(current);
+					lods[lod].indices.push_back(connection);
+					lods[lod].indices.push_back(neighbor);
+
+					if (((x - 1) % (step)) == step / 2) // halfway fill triangle
+					{
+						int connection1 = 1 + (((x - 1) + (step + 1) / 2 - 1) / step) * step + (z - 1) * width;
+
+						lods[lod].indices.push_back(current);
+						lods[lod].indices.push_back(connection1);
+						lods[lod].indices.push_back(connection);
+					}
+				}
+				// left border:
+				for (int z = 0; z < width - 1; ++z)
+				{
+					const int x = 0;
+					int current = x + z * width;
+					int neighbor = x + (z + 1) * width;
+					int connection = x + 1 + (((z + (step + 1) / 2 - 1) / step) * step + 1) * width;
+
+					lods[lod].indices.push_back(current);
+					lods[lod].indices.push_back(connection);
+					lods[lod].indices.push_back(neighbor);
+
+					if (((z - 1) % (step)) == step / 2) // halfway fill triangle
+					{
+						int connection1 = x + 1 + ((((z - 1) + (step + 1) / 2 - 1) / step) * step + 1) * width;
+
+						lods[lod].indices.push_back(current);
+						lods[lod].indices.push_back(connection1);
+						lods[lod].indices.push_back(connection);
+					}
+				}
+				// right border:
+				for (int z = 0; z < width - 1; ++z)
+				{
+					const int x = width - 1;
+					int current = x + z * width;
+					int neighbor = x + (z + 1) * width;
+					int connection = x - 1 + (((z + (step + 1) / 2 - 1) / step) * step + 1) * width;
+
+					lods[lod].indices.push_back(current);
+					lods[lod].indices.push_back(neighbor);
+					lods[lod].indices.push_back(connection);
+
+					if (((z - 1) % (step)) == step / 2) // halfway fill triangle
+					{
+						int connection1 = x - 1 + ((((z - 1) + (step + 1) / 2 - 1) / step) * step + 1) * width;
+
+						lods[lod].indices.push_back(current);
+						lods[lod].indices.push_back(connection);
+						lods[lod].indices.push_back(connection1);
+					}
+				}
+			}
+		}
 
 		float xx = 140;
 		float yy = 0;
@@ -247,10 +410,7 @@ struct TerraGen : public wi::gui::Window
 					});
 				});
 			});
-	}
-	~TerraGen()
-	{
-		Cleanup();
+
 	}
 
 	void Cleanup()
@@ -266,15 +426,6 @@ struct TerraGen : public wi::gui::Window
 	{
 		Scene& scene = wi::scene::GetScene();
 
-		wi::scene::MaterialComponent material_Base;
-		wi::scene::MaterialComponent material_Slope;
-		wi::scene::MaterialComponent material_LowAltitude;
-		wi::scene::MaterialComponent material_HighAltitude;
-		material_Base.SetUseVertexColors(true);
-		material_Base.SetRoughness(1);
-		material_Slope.SetRoughness(1);
-		material_LowAltitude.SetRoughness(1);
-		material_HighAltitude.SetRoughness(1);
 		// If the materials already exist, save them before recreating:
 		if (materialEntity_Base != INVALID_ENTITY)
 		{
@@ -318,160 +469,6 @@ struct TerraGen : public wi::gui::Window
 		*scene.materials.GetComponent(materialEntity_LowAltitude) = material_LowAltitude;
 		*scene.materials.GetComponent(materialEntity_HighAltitude) = material_HighAltitude;
 
-		lods.resize(max_lod);
-		for (int lod = 0; lod < max_lod; ++lod)
-		{
-			lods[lod].indices.clear();
-
-			if (lod == 0)
-			{
-				for (int x = 0; x < width - 1; x++)
-				{
-					for (int z = 0; z < width - 1; z++)
-					{
-						int lowerLeft = x + z * width;
-						int lowerRight = (x + 1) + z * width;
-						int topLeft = x + (z + 1) * width;
-						int topRight = (x + 1) + (z + 1) * width;
-
-						lods[lod].indices.push_back(topLeft);
-						lods[lod].indices.push_back(lowerLeft);
-						lods[lod].indices.push_back(lowerRight);
-
-						lods[lod].indices.push_back(topLeft);
-						lods[lod].indices.push_back(lowerRight);
-						lods[lod].indices.push_back(topRight);
-					}
-				}
-			}
-			else
-			{
-				const int step = 1 << lod;
-				// inner grid:
-				for (int x = 1; x < width - 2; x += step)
-				{
-					for (int z = 1; z < width - 2; z += step)
-					{
-						int lowerLeft = x + z * width;
-						int lowerRight = (x + step) + z * width;
-						int topLeft = x + (z + step) * width;
-						int topRight = (x + step) + (z + step) * width;
-
-						lods[lod].indices.push_back(topLeft);
-						lods[lod].indices.push_back(lowerLeft);
-						lods[lod].indices.push_back(lowerRight);
-
-						lods[lod].indices.push_back(topLeft);
-						lods[lod].indices.push_back(lowerRight);
-						lods[lod].indices.push_back(topRight);
-					}
-				}
-				// bottom border:
-				for (int x = 0; x < width - 1; ++x)
-				{
-					const int z = 0;
-					int current = x + z * width;
-					int neighbor = x + 1 + z * width;
-					int connection = 1 + ((x + (step + 1) / 2 - 1) / step) * step + (z + 1) * width;
-
-					lods[lod].indices.push_back(current);
-					lods[lod].indices.push_back(neighbor);
-					lods[lod].indices.push_back(connection);
-
-					if (((x - 1) % (step)) == step / 2) // halfway fill triangle
-					{
-						int connection1 = 1 + (((x - 1) + (step + 1) / 2 - 1) / step) * step + (z + 1) * width;
-
-						lods[lod].indices.push_back(current);
-						lods[lod].indices.push_back(connection);
-						lods[lod].indices.push_back(connection1);
-					}
-				}
-				// top border:
-				for (int x = 0; x < width - 1; ++x)
-				{
-					const int z = width - 1;
-					int current = x + z * width;
-					int neighbor = x + 1 + z * width;
-					int connection = 1 + ((x + (step + 1) / 2 - 1) / step) * step + (z - 1) * width;
-
-					lods[lod].indices.push_back(current);
-					lods[lod].indices.push_back(connection);
-					lods[lod].indices.push_back(neighbor);
-
-					if (((x - 1) % (step)) == step / 2) // halfway fill triangle
-					{
-						int connection1 = 1 + (((x - 1) + (step + 1) / 2 - 1) / step) * step + (z - 1) * width;
-
-						lods[lod].indices.push_back(current);
-						lods[lod].indices.push_back(connection1);
-						lods[lod].indices.push_back(connection);
-					}
-				}
-				// left border:
-				for (int z = 0; z < width - 1; ++z)
-				{
-					const int x = 0;
-					int current = x + z * width;
-					int neighbor = x + (z + 1) * width;
-					int connection = x + 1 + (((z + (step + 1) / 2 - 1) / step) * step + 1) * width;
-
-					lods[lod].indices.push_back(current);
-					lods[lod].indices.push_back(connection);
-					lods[lod].indices.push_back(neighbor);
-
-					if (((z - 1) % (step)) == step / 2) // halfway fill triangle
-					{
-						int connection1 = x + 1 + ((((z - 1) + (step + 1) / 2 - 1) / step) * step + 1) * width;
-
-						lods[lod].indices.push_back(current);
-						lods[lod].indices.push_back(connection1);
-						lods[lod].indices.push_back(connection);
-					}
-				}
-				// right border:
-				for (int z = 0; z < width - 1; ++z)
-				{
-					const int x = width - 1;
-					int current = x + z * width;
-					int neighbor = x + (z + 1) * width;
-					int connection = x - 1 + (((z + (step + 1) / 2 - 1) / step) * step + 1) * width;
-
-					lods[lod].indices.push_back(current);
-					lods[lod].indices.push_back(neighbor);
-					lods[lod].indices.push_back(connection);
-
-					if (((z - 1) % (step)) == step / 2) // halfway fill triangle
-					{
-						int connection1 = x - 1 + ((((z - 1) + (step + 1) / 2 - 1) / step) * step + 1) * width;
-
-						lods[lod].indices.push_back(current);
-						lods[lod].indices.push_back(connection);
-						lods[lod].indices.push_back(connection1);
-					}
-				}
-			}
-
-			//wi::graphics::GPUBufferDesc desc;
-			//desc.bind_flags = wi::graphics::BindFlag::INDEX_BUFFER | wi::graphics::BindFlag::SHADER_RESOURCE;
-			//desc.size = sizeof(uint16_t) * lods[lod].indices.size();
-			//desc.format = wi::graphics::Format::R16_UINT;
-			//
-			//wi::vector<uint16_t> ind16(lods[lod].indices.size());
-			//uint16_t* indexdata = ind16.data();
-			//for (size_t i = 0; i < lods[lod].indices.size(); ++i)
-			//{
-			//	indexdata[i] = (uint16_t)lods[lod].indices[i];
-			//}
-			//
-			//bool success = wi::graphics::GetDevice()->CreateBuffer(&desc, indexdata, &lods[lod].indexbuffer);
-			//assert(success);
-			//
-			//lods[lod].ib.offset = desc.size;
-			//lods[lod].ib.size = desc.size;
-			//lods[lod].ib.descriptor_srv = wi::graphics::GetDevice()->GetDescriptorIndex(&lods[lod].indexbuffer, wi::graphics::SubresourceType::SRV);
-		}
-
 		const uint32_t perlinSeed = (uint32_t)perlinSeedSlider.GetValue();
 		perlin.init(perlinSeed);
 
@@ -510,14 +507,14 @@ struct TerraGen : public wi::gui::Window
 
 		if (automaticRemovalCheckBox.GetCheck())
 		{
-			const int removal_threshold = generation + 1;
+			const int removal_threshold = generation + 2;
 			for (auto& it : chunks)
 			{
 				const Chunk& chunk = it.first;
 				if (std::abs(center_chunk.x - chunk.x) > removal_threshold || std::abs(center_chunk.z - chunk.z) > removal_threshold)
 				{
-					scene.Entity_Remove(it.second);
-					it.second = INVALID_ENTITY;
+					scene.Entity_Remove(it.second.entity);
+					it.second = {};
 				}
 			}
 		}
@@ -529,24 +526,22 @@ struct TerraGen : public wi::gui::Window
 			chunk.x += offset_x;
 			chunk.z += offset_z;
 			auto it = chunks.find(chunk);
-			if (it == chunks.end() || it->second == INVALID_ENTITY)
+			if (it == chunks.end() || it->second.entity == INVALID_ENTITY)
 			{
+				ChunkData chunk_data;
+
 				std::string chunk_id = std::to_string(chunk.x) + "_" + std::to_string(chunk.z);
 				Entity chunkObjectEntity = scene.Entity_CreateObject("chunkobject_" + chunk_id);
 				ObjectComponent& object = *scene.objects.GetComponent(chunkObjectEntity);
 				scene.Component_Attach(chunkObjectEntity, terrainEntity);
-				chunks[chunk] = chunkObjectEntity;
+				chunk_data.entity = chunkObjectEntity;
 
 				TransformComponent& transform = *scene.transforms.GetComponent(chunkObjectEntity);
 				transform.ClearTransform();
 				const XMFLOAT3 chunk_pos = XMFLOAT3(float(chunk.x * (width - 1)), 0, float(chunk.z * (width - 1)));
 				transform.Translate(chunk_pos);
 
-				Entity chunkMeshEntity = CreateEntity();
-				MeshComponent& mesh = scene.meshes.Create(chunkMeshEntity);
-				scene.names.Create(chunkMeshEntity) = "chunkmesh_" + chunk_id;
-				scene.Component_Attach(chunkMeshEntity, chunkObjectEntity);
-				object.meshID = chunkMeshEntity;
+				MeshComponent mesh;
 				mesh.indices = lods[0].indices;
 				mesh.SetTerrain(true);
 				mesh.terrain_material1 = materialEntity_Slope;
@@ -583,7 +578,6 @@ struct TerraGen : public wi::gui::Window
 					{
 						float height = 0;
 						const XMFLOAT2 world_pos = XMFLOAT2(chunk_pos.x + x + corner_offsets[i].x, chunk_pos.z + z + corner_offsets[i].y);
-#if 1
 						if (perlinBlend > 0)
 						{
 							XMFLOAT2 p = world_pos;
@@ -617,7 +611,6 @@ struct TerraGen : public wi::gui::Window
 						}
 						height *= verticalScale;
 						height += groundLevel;
-#endif
 						corners[i] = XMVectorSet(world_pos.x, height, world_pos.y, 0);
 					}
 					const float height = XMVectorGetY(corners[0]);
@@ -629,10 +622,15 @@ struct TerraGen : public wi::gui::Window
 					//XMStoreFloat4(&mesh.vertex_tangents[index], XMVector3Normalize(T));
 					//mesh.vertex_tangents[index].w = 1;
 
+					const float region_base = 1;
+					const float region_slope = 1 - std::pow(wi::math::saturate(normal.y), 2.0f);
+					const float region_low_altitude = std::pow(1 - wi::math::saturate((height - groundLevel) / std::abs(groundLevel)), 2.0f);
+					const float region_high_altitude = std::pow(wi::math::saturate(height / verticalScale * 4), 2.0f);
+
 					XMFLOAT4 materialBlendWeights(1, 0, 0, 0);
-					materialBlendWeights = wi::math::Lerp(materialBlendWeights, XMFLOAT4(0, 1, 0, 0), 1 - std::pow(wi::math::saturate(normal.y), 2.0f)); // slope blend region
-					materialBlendWeights = wi::math::Lerp(materialBlendWeights, XMFLOAT4(0, 0, 1, 0), std::pow(1 - wi::math::saturate((height - groundLevel) / std::abs(groundLevel)), 2.0f)); // low-altitude blend region
-					materialBlendWeights = wi::math::Lerp(materialBlendWeights, XMFLOAT4(0, 0, 0, 1), std::pow(wi::math::saturate(height * 0.02f), 2.0f)); // high-altitude blend region
+					materialBlendWeights = wi::math::Lerp(materialBlendWeights, XMFLOAT4(0, 1, 0, 0), region_slope);
+					materialBlendWeights = wi::math::Lerp(materialBlendWeights, XMFLOAT4(0, 0, 1, 0), region_low_altitude);
+					materialBlendWeights = wi::math::Lerp(materialBlendWeights, XMFLOAT4(0, 0, 0, 1), region_high_altitude);
 					const float weight_norm = 1.0f / (materialBlendWeights.x + materialBlendWeights.y + materialBlendWeights.z + materialBlendWeights.w);
 					materialBlendWeights.x *= weight_norm;
 					materialBlendWeights.y *= weight_norm;
@@ -653,8 +651,22 @@ struct TerraGen : public wi::gui::Window
 				}
 #endif // TERRAGEN_USE_JOBSYSTEM
 
-				mesh.CreateRenderData();
-				//mesh.ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH_FAST);
+				chunk_data.mesh_lods.resize(max_lod);
+				for (int lod = 0; lod < max_lod; ++lod)
+				{
+					MeshComponent& mesh_lod = chunk_data.mesh_lods[lod];
+					mesh_lod = mesh;
+					mesh_lod.indices = lods[lod].indices;
+					mesh_lod.subsets[0].indexCount = (uint32_t)lods[lod].indices.size();
+					mesh_lod.CreateRenderData();
+				}
+
+				Entity chunkMeshEntity = CreateEntity();
+				object.meshID = chunkMeshEntity;
+				scene.meshes.Create(chunkMeshEntity) = std::move(chunk_data.mesh_lods[0]);
+				scene.names.Create(chunkMeshEntity) = "chunkmesh_" + chunk_id;
+				scene.Component_Attach(chunkMeshEntity, chunkObjectEntity);
+				chunks[chunk] = std::move(chunk_data);
 
 				if (timer.elapsed_milliseconds() > 10)
 					should_exit = true;
@@ -662,22 +674,23 @@ struct TerraGen : public wi::gui::Window
 
 			// LOD assignment:
 			it = chunks.find(chunk);
-			if (it != chunks.end() && it->second != INVALID_ENTITY)
+			if (it != chunks.end() && it->second.entity != INVALID_ENTITY)
 			{
-				const ObjectComponent* object = scene.objects.GetComponent(it->second);
+				ChunkData& chunk_data = it->second;
+				const ObjectComponent* object = scene.objects.GetComponent(chunk_data.entity);
 				if (object != nullptr)
 				{
 					MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
 					if (mesh != nullptr)
 					{
-						const int d = std::max(std::abs(center_chunk.x - chunk.x), std::abs(center_chunk.z - chunk.z));
-						const int lod = std::max(0, std::min(d - 1, max_lod - 1));
-						if (mesh->indices.size() != lods[lod].indices.size())
+						const int dist = std::max(std::abs(center_chunk.x - chunk.x), std::abs(center_chunk.z - chunk.z));
+						const int lod = std::max(0, std::min((int)std::log2(dist), max_lod - 1));
+						if (lod != chunk_data.current_lod)
 						{
-							//mesh->ib = lods[lod].ib;
-							mesh->subsets[0].indexCount = (uint32_t)lods[lod].indices.size();
-							mesh->indices = lods[lod].indices;
-							mesh->CreateRenderData(); // TODO
+							// Swap out LODs with move semantics:
+							chunk_data.mesh_lods[chunk_data.current_lod] = std::move(*mesh);
+							*mesh = std::move(chunk_data.mesh_lods[lod]);
+							chunk_data.current_lod = lod;
 						}
 					}
 				}
@@ -728,6 +741,8 @@ void MeshWindow::Create(EditorComponent* editor)
 {
 	wi::gui::Window::Create("Mesh Window");
 	SetSize(XMFLOAT2(580, 580));
+
+	terragen.init();
 
 	float x = 150;
 	float y = 0;
