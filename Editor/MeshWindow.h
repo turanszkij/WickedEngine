@@ -5,6 +5,7 @@ class EditorComponent;
 
 class MeshWindow : public wi::gui::Window
 {
+	bool terragen_initialized = false;
 public:
 	void Create(EditorComponent* editor);
 

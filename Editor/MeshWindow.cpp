@@ -73,19 +73,9 @@ namespace wi::terrain
 
 		struct HeightmapTexture
 		{
-			unsigned char* data = nullptr;
-			const int channelCount = 4;
+			wi::vector<uint8_t> data;
 			int width = 0;
 			int height = 0;
-
-			~HeightmapTexture()
-			{
-				if (data != nullptr)
-				{
-					stbi_image_free(data);
-					data = nullptr;
-				}
-			}
 		} heightmap;
 
 		wi::gui::CheckBox generationCheckBox;
@@ -110,10 +100,6 @@ namespace wi::terrain
 
 		void init()
 		{
-			RemoveWidgets();
-			wi::gui::Window::Create("TerraGen");
-			SetSize(XMFLOAT2(410, 460));
-
 			lods.resize(max_lod);
 			for (int lod = 0; lod < max_lod; ++lod)
 			{
@@ -249,7 +235,10 @@ namespace wi::terrain
 				}
 			}
 
-			float xx = 140;
+			wi::gui::Window::Create("TerraGen");
+			SetSize(XMFLOAT2(420, 460));
+
+			float xx = 150;
 			float yy = 0;
 			float stepstep = 25;
 			float heihei = 20;
@@ -361,7 +350,7 @@ namespace wi::terrain
 
 
 			heightmapButton.Create("Load Heightmap...");
-			heightmapButton.SetTooltip("Load a heightmap texture, where the red channel corresponds to terrain height and the resolution to dimensions");
+			heightmapButton.SetTooltip("Load a heightmap texture, where the red channel corresponds to terrain height and the resolution to dimensions.\nThe heightmap will be placed in the world center.");
 			heightmapButton.SetSize(XMFLOAT2(200, heihei));
 			heightmapButton.SetPos(XMFLOAT2(xx, yy += stepstep));
 			AddWidget(&heightmapButton);
@@ -401,24 +390,32 @@ namespace wi::terrain
 				wi::helper::FileDialog(params, [=](std::string fileName) {
 					wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
 
-						heightmap.~HeightmapTexture();
+						heightmap = {};
 						int bpp = 0;
-						heightmap.data = stbi_load(fileName.c_str(), &heightmap.width, &heightmap.height, &bpp, heightmap.channelCount);
-						if (heightmap.data != nullptr)
+						stbi_uc* rgba = stbi_load(fileName.c_str(), &heightmap.width, &heightmap.height, &bpp, 1);
+						if (rgba != nullptr)
 						{
+							heightmap.data.resize(heightmap.width * heightmap.height);
+							for (int i = 0; i < heightmap.width * heightmap.height; ++i)
+							{
+								heightmap.data[i] = rgba[i];
+							}
+							stbi_image_free(rgba);
 							Generation_Restart();
 						}
 						});
 					});
 				});
 
+			heightmap = {};
 		}
 
 		void Generation_Restart()
 		{
 			Scene& scene = wi::scene::GetScene();
 
-			// If the materials already exist, save them before recreating:
+			// If these already exist, save them before recreating:
+			//	(This is helpful if eg: someone edits them in the editor and then regenerates the terrain)
 			if (materialEntity_Base != INVALID_ENTITY)
 			{
 				MaterialComponent* material = scene.materials.GetComponent(materialEntity_Base);
@@ -463,6 +460,31 @@ namespace wi::terrain
 
 			const uint32_t perlinSeed = (uint32_t)perlinSeedSlider.GetValue();
 			perlin.init(perlinSeed);
+
+			// Add some nice weather and lighting if there is none yet:
+			if (scene.weathers.GetCount() == 0)
+			{
+				Entity weatherEntity = CreateEntity();
+				WeatherComponent& weather = scene.weathers.Create(weatherEntity);
+				scene.names.Create(weatherEntity) = "terrainWeather";
+				scene.Component_Attach(weatherEntity, terrainEntity);
+				weather.SetRealisticSky(true);
+				weather.fogStart = 10;
+				weather.fogEnd = 100000;
+				weather.SetHeightFog(true);
+				weather.fogHeightStart = 0;
+				weather.fogHeightEnd = 100;
+
+				Entity sunEntity = scene.Entity_CreateLight("terrainSun");
+				scene.Component_Attach(sunEntity, terrainEntity);
+				LightComponent& light = *scene.lights.GetComponent(sunEntity);
+				light.SetType(LightComponent::LightType::DIRECTIONAL);
+				light.energy = 6;
+				light.SetCastShadow(true);
+				//light.SetVolumetricsEnabled(true);
+				TransformComponent& transform = *scene.transforms.GetComponent(sunEntity);
+				transform.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV4, 0, XM_PIDIV4));
+			}
 		}
 
 		void Generation_Update(int allocated_timeframe_milliseconds = 2)
@@ -545,7 +567,6 @@ namespace wi::terrain
 					mesh.subsets.back().indexOffset = 0;
 					mesh.vertex_positions.resize(vertexCount);
 					mesh.vertex_normals.resize(vertexCount);
-					//mesh.vertex_tangents.resize(vertexCount);
 					mesh.vertex_colors.resize(vertexCount);
 					mesh.vertex_uvset_0.resize(vertexCount);
 					mesh.vertex_uvset_1.resize(vertexCount);
@@ -588,13 +609,13 @@ namespace wi::terrain
 								float weight = std::pow(1 - wi::math::saturate((res.distance - voronoiShape) * voronoiFade), std::max(0.0001f, voronoiFalloff));
 								height *= weight * voronoiBlend;
 							}
-							if (heightmap.data != nullptr)
+							if (!heightmap.data.empty())
 							{
 								XMFLOAT2 pixel = XMFLOAT2(world_pos.x + heightmap.width * 0.5f, world_pos.y + heightmap.height * 0.5f);
 								if (pixel.x >= 0 && pixel.x < heightmap.width && pixel.y >= 0 && pixel.y < heightmap.height)
 								{
 									const int idx = int(pixel.x) + int(pixel.y) * heightmap.width;
-									height = ((float)heightmap.data[idx * heightmap.channelCount] / 255.0f) * heightmapBlend;
+									height = ((float)heightmap.data[idx] / 255.0f) * heightmapBlend;
 								}
 							}
 							height = wi::math::Lerp(bottomLevel, topLevel, height);
@@ -610,7 +631,7 @@ namespace wi::terrain
 						const float region_base = 1;
 						const float region_slope = 1 - std::pow(wi::math::saturate(normal.y), 2.0f);
 						const float region_low_altitude = std::pow(wi::math::saturate(wi::math::InverseLerp(0, bottomLevel, height)), 2.0f);
-						const float region_high_altitude = std::pow(wi::math::saturate(wi::math::InverseLerp(0, topLevel * 0.25f, height)), 2.0f);
+						const float region_high_altitude = std::pow(wi::math::saturate(wi::math::InverseLerp(0, topLevel * 0.25f, height)), 4.0f);
 
 						XMFLOAT4 materialBlendWeights(1, 0, 0, 0);
 						materialBlendWeights = wi::math::Lerp(materialBlendWeights, XMFLOAT4(0, 1, 0, 0), region_slope);
@@ -1132,26 +1153,31 @@ void MeshWindow::Create(EditorComponent* editor)
 	terrainGenButton.SetPos(XMFLOAT2(x + 180, y += step));
 	terrainGenButton.OnClick([=](wi::gui::EventArgs args) {
 
-		editor->GetGUI().RemoveWidget(&terragen);
-		editor->GetGUI().AddWidget(&terragen);
+		if (!terragen_initialized)
+		{
+			terragen_initialized = true;
 
-		// Set up base materials for terrain regions:
-		terragen.material_Base.SetUseVertexColors(true);
-		terragen.material_Base.SetRoughness(1);
-		terragen.material_Slope.SetRoughness(1);
-		terragen.material_LowAltitude.SetRoughness(1);
-		terragen.material_HighAltitude.SetRoughness(1);
-		terragen.material_Base.textures[MaterialComponent::BASECOLORMAP].name = "images/terrain/HITW-TS2-forest-decidious-grass-green.jpg";
-		terragen.material_Slope.textures[MaterialComponent::BASECOLORMAP].name = "images/terrain/HITW-TS2-Western-barren.jpg";
-		terragen.material_LowAltitude.textures[MaterialComponent::BASECOLORMAP].name = "images/terrain/HITW-TS2-sandy-ground.jpg";
-		terragen.material_HighAltitude.textures[MaterialComponent::BASECOLORMAP].name = "images/terrain/HITW-mntn-snow-greys.jpg";
-		terragen.material_Base.CreateRenderData();
-		terragen.material_Slope.CreateRenderData();
-		terragen.material_LowAltitude.CreateRenderData();
-		terragen.material_HighAltitude.CreateRenderData();
-		terragen.init();
+			// Set up base materials for terrain regions:
+			terragen.material_Base.SetUseVertexColors(true);
+			terragen.material_Base.SetRoughness(1);
+			terragen.material_Slope.SetRoughness(0.5f);
+			terragen.material_LowAltitude.SetRoughness(1);
+			terragen.material_HighAltitude.SetRoughness(1);
+			terragen.material_Base.textures[MaterialComponent::BASECOLORMAP].name = "images/terrain/base.jpg";
+			terragen.material_Base.textures[MaterialComponent::NORMALMAP].name = "images/terrain/base_nor.jpg";
+			terragen.material_Slope.textures[MaterialComponent::BASECOLORMAP].name = "images/terrain/slope.jpg";
+			terragen.material_Slope.textures[MaterialComponent::NORMALMAP].name = "images/terrain/slope_nor.jpg";
+			terragen.material_LowAltitude.textures[MaterialComponent::BASECOLORMAP].name = "images/terrain/low_altitude.jpg";
+			terragen.material_HighAltitude.textures[MaterialComponent::BASECOLORMAP].name = "images/terrain/high_altitude.jpg";
+			terragen.material_Base.CreateRenderData();
+			terragen.material_Slope.CreateRenderData();
+			terragen.material_LowAltitude.CreateRenderData();
+			terragen.material_HighAltitude.CreateRenderData();
+			terragen.init();
+			editor->GetGUI().AddWidget(&terragen);
+		}
+
 		terragen.SetVisible(true);
-
 		terragen.SetPos(XMFLOAT2(
 			terrainGenButton.translation.x + terrainGenButton.scale.x + 10,
 			terrainGenButton.translation.y)
