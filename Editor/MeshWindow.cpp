@@ -46,8 +46,6 @@ namespace std
 
 namespace wi::terrain
 {
-#define TERRAGEN_USE_JOBSYSTEM
-
 	struct Generator : public wi::gui::Window
 	{
 		const int width = 64 + 3; // + 3: filler vertices for lod apron and grid perimeter
@@ -90,8 +88,9 @@ namespace wi::terrain
 			}
 		} heightmap;
 
-		wi::gui::CheckBox automaticGenerationCheckBox;
-		wi::gui::CheckBox automaticRemovalCheckBox;
+		wi::gui::CheckBox generationCheckBox;
+		wi::gui::CheckBox removalCheckBox;
+		wi::gui::CheckBox lodCheckBox;
 		wi::gui::Slider generationSlider;
 		wi::gui::Slider bottomLevelSlider;
 		wi::gui::Slider topLevelSlider;
@@ -255,19 +254,26 @@ namespace wi::terrain
 			float stepstep = 25;
 			float heihei = 20;
 
-			automaticGenerationCheckBox.Create("Automatic Generation: ");
-			automaticGenerationCheckBox.SetTooltip("Automatically generate chunks around camera");
-			automaticGenerationCheckBox.SetSize(XMFLOAT2(heihei, heihei));
-			automaticGenerationCheckBox.SetPos(XMFLOAT2(xx + 30, yy += stepstep));
-			automaticGenerationCheckBox.SetCheck(true);
-			AddWidget(&automaticGenerationCheckBox);
+			generationCheckBox.Create("Generation: ");
+			generationCheckBox.SetTooltip("Automatically generate chunks around camera. This sets the center chunk to camera position.");
+			generationCheckBox.SetSize(XMFLOAT2(heihei, heihei));
+			generationCheckBox.SetPos(XMFLOAT2(xx, yy += stepstep));
+			generationCheckBox.SetCheck(true);
+			AddWidget(&generationCheckBox);
 
-			automaticRemovalCheckBox.Create("Automatic Removal: ");
-			automaticRemovalCheckBox.SetTooltip("Automatically remove chunks that are farther than generation distance");
-			automaticRemovalCheckBox.SetSize(XMFLOAT2(heihei, heihei));
-			automaticRemovalCheckBox.SetPos(XMFLOAT2(xx + 200, yy));
-			automaticRemovalCheckBox.SetCheck(true);
-			AddWidget(&automaticRemovalCheckBox);
+			removalCheckBox.Create("Removal: ");
+			removalCheckBox.SetTooltip("Automatically remove chunks that are farther than generation distance around center chunk.");
+			removalCheckBox.SetSize(XMFLOAT2(heihei, heihei));
+			removalCheckBox.SetPos(XMFLOAT2(xx + 100, yy));
+			removalCheckBox.SetCheck(true);
+			AddWidget(&removalCheckBox);
+
+			lodCheckBox.Create("LOD: ");
+			lodCheckBox.SetTooltip("Automatically swap chunk lods depending on distance to center chunk.");
+			lodCheckBox.SetSize(XMFLOAT2(heihei, heihei));
+			lodCheckBox.SetPos(XMFLOAT2(xx + 200, yy));
+			lodCheckBox.SetCheck(true);
+			AddWidget(&lodCheckBox);
 
 			generationSlider.Create(0, 16, 8, 16, "Generation Distance: ");
 			generationSlider.SetTooltip("How far out chunks will be generated (value is in number of chunks)");
@@ -482,7 +488,7 @@ namespace wi::terrain
 			const float voronoiPerturbation = voronoiPerturbationSlider.GetValue();
 			const uint32_t voronoiSeed = (uint32_t)voronoiSeedSlider.GetValue();
 
-			if (automaticGenerationCheckBox.GetCheck())
+			if (generationCheckBox.GetCheck())
 			{
 				const CameraComponent& camera = GetCamera();
 				center_chunk.x = (int)std::floor((camera.Eye.x + half_width) * width_rcp);
@@ -490,7 +496,7 @@ namespace wi::terrain
 			}
 
 			// Chunk removal checks:
-			if (automaticRemovalCheckBox.GetCheck())
+			if (removalCheckBox.GetCheck())
 			{
 				const int removal_threshold = generation + 2;
 				for (auto& it : chunks)
@@ -544,14 +550,10 @@ namespace wi::terrain
 					mesh.vertex_uvset_0.resize(vertexCount);
 					mesh.vertex_uvset_1.resize(vertexCount);
 					mesh.vertex_atlas.resize(vertexCount);
-#ifdef TERRAGEN_USE_JOBSYSTEM
+
 					wi::jobsystem::context ctx;
 					wi::jobsystem::Dispatch(ctx, vertexCount, width, [&](wi::jobsystem::JobArgs args) {
 						uint32_t index = args.jobIndex;
-#else
-					for (uint32_t index = 0; index < vertexCount; ++index)
-					{
-#endif // TERRAGEN_USE_JOBSYSTEM
 						const float x = float(index % width) - half_width;
 						const float z = float(index / width) - half_width;
 						XMVECTOR corners[3];
@@ -627,22 +629,19 @@ namespace wi::terrain
 						mesh.vertex_uvset_0[index] = uv;
 						mesh.vertex_uvset_1[index] = uv;
 						mesh.vertex_atlas[index] = uv;
-#ifdef TERRAGEN_USE_JOBSYSTEM
-						});
-						wi::jobsystem::Wait(ctx);
-#else
-					}
-#endif // TERRAGEN_USE_JOBSYSTEM
+					});
+					wi::jobsystem::Wait(ctx);
 
 					chunk_data.mesh_lods.resize(max_lod);
-					for (int lod = 0; lod < max_lod; ++lod)
-					{
+					wi::jobsystem::Dispatch(ctx, (uint32_t)max_lod, 1u, [&](wi::jobsystem::JobArgs args) {
+						uint32_t lod = args.jobIndex;
 						MeshComponent& mesh_lod = chunk_data.mesh_lods[lod];
 						mesh_lod = mesh;
 						mesh_lod.indices = lods[lod].indices;
 						mesh_lod.subsets[0].indexCount = (uint32_t)lods[lod].indices.size();
 						mesh_lod.CreateRenderData();
-					}
+					});
+					wi::jobsystem::Wait(ctx);
 
 					Entity chunkMeshEntity = CreateEntity();
 					object.meshID = chunkMeshEntity;
@@ -667,7 +666,11 @@ namespace wi::terrain
 						if (mesh != nullptr)
 						{
 							const int dist = std::max(std::abs(center_chunk.x - chunk.x), std::abs(center_chunk.z - chunk.z));
-							const int lod = std::max(0, std::min((int)std::log2(dist), max_lod - 1));
+							int lod = std::max(0, std::min((int)std::log2(dist), max_lod - 1));
+							if (!lodCheckBox.GetCheck())
+							{
+								lod = 0;
+							}
 							if (lod != chunk_data.current_lod)
 							{
 								// Swap out LODs with move semantics:
