@@ -12,737 +12,722 @@
 using namespace wi::ecs;
 using namespace wi::scene;
 
-struct Chunk
+namespace wi::terrain
 {
-	int x, z;
-
-	constexpr bool operator==(const Chunk& other) const
+	struct Chunk
 	{
-		return (x == other.x) && (z == other.z);
-	}
-};
+		int x, z;
+
+		constexpr bool operator==(const Chunk& other) const
+		{
+			return (x == other.x) && (z == other.z);
+		}
+	};
+	struct ChunkData
+	{
+		wi::ecs::Entity entity = INVALID_ENTITY;
+		wi::vector<wi::scene::MeshComponent> mesh_lods;
+		int current_lod = 0;
+	};
+}
+
+// Allow hashing the Chunk:
 namespace std
 {
 	template <>
-	struct hash<Chunk>
+	struct std::hash<wi::terrain::Chunk>
 	{
-		inline size_t operator()(const Chunk& k) const
+		inline size_t operator()(const wi::terrain::Chunk& k) const
 		{
 			return ((hash<int>()(k.x) ^ (hash<int>()(k.z) << 1)) >> 1);
 		}
 	};
 }
-struct ChunkData
-{
-	wi::ecs::Entity entity = INVALID_ENTITY;
-	wi::vector<wi::scene::MeshComponent> mesh_lods;
-	int current_lod = 0;
-};
 
+namespace wi::terrain
+{
 #define TERRAGEN_USE_JOBSYSTEM
 
-struct TerraGen : public wi::gui::Window
-{
-	const int width = 64 + 3; // + 3: filler vertices for lod apron and grid perimeter
-	const float half_width = (width - 1) * 0.5f;
-	const float width_rcp = 1.0f / (width - 1);
-	const uint32_t vertexCount = width * width;
-	const int max_lod = (int)std::log2(width - 3) + 1;
-	Entity terrainEntity = INVALID_ENTITY;
-	Entity materialEntity_Base = INVALID_ENTITY;
-	Entity materialEntity_Slope = INVALID_ENTITY;
-	Entity materialEntity_LowAltitude = INVALID_ENTITY;
-	Entity materialEntity_HighAltitude = INVALID_ENTITY;
-	wi::scene::MaterialComponent material_Base;
-	wi::scene::MaterialComponent material_Slope;
-	wi::scene::MaterialComponent material_LowAltitude;
-	wi::scene::MaterialComponent material_HighAltitude;
-	wi::unordered_map<Chunk, ChunkData> chunks;
-	struct LOD
+	struct Generator : public wi::gui::Window
 	{
-		wi::vector<uint32_t> indices;
-	};
-	wi::vector<LOD> lods;
-	wi::noise::Perlin perlin;
-	Chunk center_chunk = {};
-
-	wi::gui::CheckBox automaticGenerationCheckBox;
-	wi::gui::CheckBox automaticRemovalCheckBox;
-	wi::gui::Slider generationSlider;
-	wi::gui::Slider verticalScaleSlider;
-	wi::gui::Slider groundLevelSlider;
-	wi::gui::Slider perlinBlendSlider;
-	wi::gui::Slider perlinFrequencySlider;
-	wi::gui::Slider perlinSeedSlider;
-	wi::gui::Slider perlinOctavesSlider;
-	wi::gui::Slider voronoiBlendSlider;
-	wi::gui::Slider voronoiFrequencySlider;
-	wi::gui::Slider voronoiFadeSlider;
-	wi::gui::Slider voronoiShapeSlider;
-	wi::gui::Slider voronoiFalloffSlider;
-	wi::gui::Slider voronoiPerturbationSlider;
-	wi::gui::Slider voronoiSeedSlider;
-	wi::gui::Button heightmapButton;
-	wi::gui::Slider heightmapBlendSlider;
-
-	// heightmap texture:
-	unsigned char* rgb = nullptr;
-	const int channelCount = 4;
-	int heightmap_width = 0;
-	int heightmap_height = 0;
-
-	~TerraGen()
-	{
-		Cleanup();
-	}
-
-	void init()
-	{
-		wi::gui::Window::Create("TerraGen");
-		SetSize(XMFLOAT2(410, 460));
-
-		material_Base.SetUseVertexColors(true);
-		material_Base.SetRoughness(1);
-		material_Slope.SetRoughness(1);
-		material_LowAltitude.SetRoughness(1);
-		material_HighAltitude.SetRoughness(1);
-
-		material_Base.textures[MaterialComponent::BASECOLORMAP].name = "images/terrain/HITW-TS2-forest-decidious-grass-green.jpg";
-		material_Slope.textures[MaterialComponent::BASECOLORMAP].name = "images/terrain/HITW-TS2-Western-barren.jpg";
-		material_LowAltitude.textures[MaterialComponent::BASECOLORMAP].name = "images/terrain/HITW-TS2-sandy-ground.jpg";
-		material_HighAltitude.textures[MaterialComponent::BASECOLORMAP].name = "images/terrain/HITW-mntn-snow-greys.jpg";
-		material_Base.CreateRenderData();
-		material_Slope.CreateRenderData();
-		material_LowAltitude.CreateRenderData();
-		material_HighAltitude.CreateRenderData();
-
-		lods.resize(max_lod);
-		for (int lod = 0; lod < max_lod; ++lod)
+		const int width = 64 + 3; // + 3: filler vertices for lod apron and grid perimeter
+		const float half_width = (width - 1) * 0.5f;
+		const float width_rcp = 1.0f / (width - 1);
+		const uint32_t vertexCount = width * width;
+		const int max_lod = (int)std::log2(width - 3) + 1;
+		Entity terrainEntity = INVALID_ENTITY;
+		Entity materialEntity_Base = INVALID_ENTITY;
+		Entity materialEntity_Slope = INVALID_ENTITY;
+		Entity materialEntity_LowAltitude = INVALID_ENTITY;
+		Entity materialEntity_HighAltitude = INVALID_ENTITY;
+		wi::scene::MaterialComponent material_Base;
+		wi::scene::MaterialComponent material_Slope;
+		wi::scene::MaterialComponent material_LowAltitude;
+		wi::scene::MaterialComponent material_HighAltitude;
+		wi::unordered_map<Chunk, ChunkData> chunks;
+		struct LOD
 		{
-			lods[lod].indices.clear();
-
-			if (lod == 0)
-			{
-				for (int x = 0; x < width - 1; x++)
-				{
-					for (int z = 0; z < width - 1; z++)
-					{
-						int lowerLeft = x + z * width;
-						int lowerRight = (x + 1) + z * width;
-						int topLeft = x + (z + 1) * width;
-						int topRight = (x + 1) + (z + 1) * width;
-
-						lods[lod].indices.push_back(topLeft);
-						lods[lod].indices.push_back(lowerLeft);
-						lods[lod].indices.push_back(lowerRight);
-
-						lods[lod].indices.push_back(topLeft);
-						lods[lod].indices.push_back(lowerRight);
-						lods[lod].indices.push_back(topRight);
-					}
-				}
-			}
-			else
-			{
-				const int step = 1 << lod;
-				// inner grid:
-				for (int x = 1; x < width - 2; x += step)
-				{
-					for (int z = 1; z < width - 2; z += step)
-					{
-						int lowerLeft = x + z * width;
-						int lowerRight = (x + step) + z * width;
-						int topLeft = x + (z + step) * width;
-						int topRight = (x + step) + (z + step) * width;
-
-						lods[lod].indices.push_back(topLeft);
-						lods[lod].indices.push_back(lowerLeft);
-						lods[lod].indices.push_back(lowerRight);
-
-						lods[lod].indices.push_back(topLeft);
-						lods[lod].indices.push_back(lowerRight);
-						lods[lod].indices.push_back(topRight);
-					}
-				}
-				// bottom border:
-				for (int x = 0; x < width - 1; ++x)
-				{
-					const int z = 0;
-					int current = x + z * width;
-					int neighbor = x + 1 + z * width;
-					int connection = 1 + ((x + (step + 1) / 2 - 1) / step) * step + (z + 1) * width;
-
-					lods[lod].indices.push_back(current);
-					lods[lod].indices.push_back(neighbor);
-					lods[lod].indices.push_back(connection);
-
-					if (((x - 1) % (step)) == step / 2) // halfway fill triangle
-					{
-						int connection1 = 1 + (((x - 1) + (step + 1) / 2 - 1) / step) * step + (z + 1) * width;
-
-						lods[lod].indices.push_back(current);
-						lods[lod].indices.push_back(connection);
-						lods[lod].indices.push_back(connection1);
-					}
-				}
-				// top border:
-				for (int x = 0; x < width - 1; ++x)
-				{
-					const int z = width - 1;
-					int current = x + z * width;
-					int neighbor = x + 1 + z * width;
-					int connection = 1 + ((x + (step + 1) / 2 - 1) / step) * step + (z - 1) * width;
-
-					lods[lod].indices.push_back(current);
-					lods[lod].indices.push_back(connection);
-					lods[lod].indices.push_back(neighbor);
-
-					if (((x - 1) % (step)) == step / 2) // halfway fill triangle
-					{
-						int connection1 = 1 + (((x - 1) + (step + 1) / 2 - 1) / step) * step + (z - 1) * width;
-
-						lods[lod].indices.push_back(current);
-						lods[lod].indices.push_back(connection1);
-						lods[lod].indices.push_back(connection);
-					}
-				}
-				// left border:
-				for (int z = 0; z < width - 1; ++z)
-				{
-					const int x = 0;
-					int current = x + z * width;
-					int neighbor = x + (z + 1) * width;
-					int connection = x + 1 + (((z + (step + 1) / 2 - 1) / step) * step + 1) * width;
-
-					lods[lod].indices.push_back(current);
-					lods[lod].indices.push_back(connection);
-					lods[lod].indices.push_back(neighbor);
-
-					if (((z - 1) % (step)) == step / 2) // halfway fill triangle
-					{
-						int connection1 = x + 1 + ((((z - 1) + (step + 1) / 2 - 1) / step) * step + 1) * width;
-
-						lods[lod].indices.push_back(current);
-						lods[lod].indices.push_back(connection1);
-						lods[lod].indices.push_back(connection);
-					}
-				}
-				// right border:
-				for (int z = 0; z < width - 1; ++z)
-				{
-					const int x = width - 1;
-					int current = x + z * width;
-					int neighbor = x + (z + 1) * width;
-					int connection = x - 1 + (((z + (step + 1) / 2 - 1) / step) * step + 1) * width;
-
-					lods[lod].indices.push_back(current);
-					lods[lod].indices.push_back(neighbor);
-					lods[lod].indices.push_back(connection);
-
-					if (((z - 1) % (step)) == step / 2) // halfway fill triangle
-					{
-						int connection1 = x - 1 + ((((z - 1) + (step + 1) / 2 - 1) / step) * step + 1) * width;
-
-						lods[lod].indices.push_back(current);
-						lods[lod].indices.push_back(connection);
-						lods[lod].indices.push_back(connection1);
-					}
-				}
-			}
-		}
-
-		float xx = 140;
-		float yy = 0;
-		float stepstep = 25;
-		float heihei = 20;
-
-		automaticGenerationCheckBox.Create("Automatic Generation: ");
-		automaticGenerationCheckBox.SetTooltip("Automatically generate chunks around camera");
-		automaticGenerationCheckBox.SetSize(XMFLOAT2(heihei, heihei));
-		automaticGenerationCheckBox.SetPos(XMFLOAT2(xx + 30, yy += stepstep));
-		automaticGenerationCheckBox.SetCheck(true);
-		AddWidget(&automaticGenerationCheckBox);
-
-		automaticRemovalCheckBox.Create("Automatic Removal: ");
-		automaticRemovalCheckBox.SetTooltip("Automatically remove chunks that are farther than generation distance");
-		automaticRemovalCheckBox.SetSize(XMFLOAT2(heihei, heihei));
-		automaticRemovalCheckBox.SetPos(XMFLOAT2(xx + 200, yy));
-		automaticRemovalCheckBox.SetCheck(true);
-		AddWidget(&automaticRemovalCheckBox);
-
-		generationSlider.Create(0, 16, 6, 16, "Generation Distance: ");
-		generationSlider.SetTooltip("How far out chunks will be generated (value is in number of chunks)");
-		generationSlider.SetSize(XMFLOAT2(200, heihei));
-		generationSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
-		AddWidget(&generationSlider);
-
-		verticalScaleSlider.Create(0, 1000, 400, 10000, "Vertical Scale: ");
-		verticalScaleSlider.SetTooltip("Terrain mesh grid scale on the vertical (Y) axis");
-		verticalScaleSlider.SetSize(XMFLOAT2(200, heihei));
-		verticalScaleSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
-		AddWidget(&verticalScaleSlider);
-
-		groundLevelSlider.Create(-100, 100, -7, 10000, "Ground Level: ");
-		groundLevelSlider.SetTooltip("Terrain mesh grid lowest level");
-		groundLevelSlider.SetSize(XMFLOAT2(200, heihei));
-		groundLevelSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
-		AddWidget(&groundLevelSlider);
-
-		perlinBlendSlider.Create(0, 1, 0.5f, 10000, "Perlin Blend: ");
-		perlinBlendSlider.SetTooltip("Amount of perlin noise to use");
-		perlinBlendSlider.SetSize(XMFLOAT2(200, heihei));
-		perlinBlendSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
-		AddWidget(&perlinBlendSlider);
-
-		perlinFrequencySlider.Create(0.0001f, 0.01f, 0.008f, 10000, "Perlin Frequency: ");
-		perlinFrequencySlider.SetTooltip("Frequency for the perlin noise");
-		perlinFrequencySlider.SetSize(XMFLOAT2(200, heihei));
-		perlinFrequencySlider.SetPos(XMFLOAT2(xx, yy += stepstep));
-		AddWidget(&perlinFrequencySlider);
-
-		perlinSeedSlider.Create(1, 12345, 1234, 12344, "Perlin Seed: ");
-		perlinSeedSlider.SetTooltip("Seed for the perlin noise");
-		perlinSeedSlider.SetSize(XMFLOAT2(200, heihei));
-		perlinSeedSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
-		AddWidget(&perlinSeedSlider);
-
-		perlinOctavesSlider.Create(1, 8, 6, 7, "Perlin Detail: ");
-		perlinOctavesSlider.SetTooltip("Octave count for the perlin noise");
-		perlinOctavesSlider.SetSize(XMFLOAT2(200, heihei));
-		perlinOctavesSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
-		AddWidget(&perlinOctavesSlider);
-
-		voronoiBlendSlider.Create(0, 1, 0.5f, 10000, "Voronoi Blend: ");
-		voronoiBlendSlider.SetTooltip("Amount of voronoi to use for elevation");
-		voronoiBlendSlider.SetSize(XMFLOAT2(200, heihei));
-		voronoiBlendSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
-		AddWidget(&voronoiBlendSlider);
-
-		voronoiFrequencySlider.Create(0.0001f, 0.01f, 0.005f, 10000, "Voronoi Frequency: ");
-		voronoiFrequencySlider.SetTooltip("Voronoi can create distinctly elevated areas, the more cells there are, smaller the consecutive areas");
-		voronoiFrequencySlider.SetSize(XMFLOAT2(200, heihei));
-		voronoiFrequencySlider.SetPos(XMFLOAT2(xx, yy += stepstep));
-		AddWidget(&voronoiFrequencySlider);
-
-		voronoiFadeSlider.Create(0, 100, 2.1f, 10000, "Voronoi Fade: ");
-		voronoiFadeSlider.SetTooltip("Fade out voronoi regions by distance from cell's center");
-		voronoiFadeSlider.SetSize(XMFLOAT2(200, heihei));
-		voronoiFadeSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
-		AddWidget(&voronoiFadeSlider);
-
-		voronoiShapeSlider.Create(0, 1, 0.351f, 10000, "Voronoi Shape: ");
-		voronoiShapeSlider.SetTooltip("How much the voronoi shape will be kept");
-		voronoiShapeSlider.SetSize(XMFLOAT2(200, heihei));
-		voronoiShapeSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
-		AddWidget(&voronoiShapeSlider);
-
-		voronoiFalloffSlider.Create(0, 8, 3.3f, 10000, "Voronoi Falloff: ");
-		voronoiFalloffSlider.SetTooltip("Controls the falloff of the voronoi distance fade effect");
-		voronoiFalloffSlider.SetSize(XMFLOAT2(200, heihei));
-		voronoiFalloffSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
-		AddWidget(&voronoiFalloffSlider);
-
-		voronoiPerturbationSlider.Create(0, 1, 0.1f, 10000, "Voronoi Perturbation: ");
-		voronoiPerturbationSlider.SetTooltip("Controls the random look of voronoi region edges");
-		voronoiPerturbationSlider.SetSize(XMFLOAT2(200, heihei));
-		voronoiPerturbationSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
-		AddWidget(&voronoiPerturbationSlider);
-
-		voronoiSeedSlider.Create(1, 12345, 3482, 12344, "Voronoi Seed: ");
-		voronoiSeedSlider.SetTooltip("Voronoi can create distinctly elevated areas");
-		voronoiSeedSlider.SetSize(XMFLOAT2(200, heihei));
-		voronoiSeedSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
-		AddWidget(&voronoiSeedSlider);
-
-
-		heightmapButton.Create("Load Heightmap...");
-		heightmapButton.SetTooltip("Load a heightmap texture, where the red channel corresponds to terrain height and the resolution to dimensions");
-		heightmapButton.SetSize(XMFLOAT2(200, heihei));
-		heightmapButton.SetPos(XMFLOAT2(xx, yy += stepstep));
-		AddWidget(&heightmapButton);
-
-		heightmapBlendSlider.Create(0, 1, 1, 10000, "Heightmap Blend: ");
-		heightmapBlendSlider.SetTooltip("Amount of displacement coming from the heightmap texture");
-		heightmapBlendSlider.SetSize(XMFLOAT2(200, heihei));
-		heightmapBlendSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
-		AddWidget(&heightmapBlendSlider);
-
-
-
-		auto generate_callback = [=](wi::gui::EventArgs args) {
-			Generate();
+			wi::vector<uint32_t> indices;
 		};
-		verticalScaleSlider.OnSlide(generate_callback);
-		groundLevelSlider.OnSlide(generate_callback);
-		perlinFrequencySlider.OnSlide(generate_callback);
-		perlinBlendSlider.OnSlide(generate_callback);
-		perlinSeedSlider.OnSlide(generate_callback);
-		perlinOctavesSlider.OnSlide(generate_callback);
-		voronoiBlendSlider.OnSlide(generate_callback);
-		voronoiFrequencySlider.OnSlide(generate_callback);
-		voronoiFadeSlider.OnSlide(generate_callback);
-		voronoiShapeSlider.OnSlide(generate_callback);
-		voronoiFalloffSlider.OnSlide(generate_callback);
-		voronoiPerturbationSlider.OnSlide(generate_callback);
-		voronoiSeedSlider.OnSlide(generate_callback);
-		heightmapBlendSlider.OnSlide(generate_callback);
+		wi::vector<LOD> lods;
+		wi::noise::Perlin perlin;
+		Chunk center_chunk = {};
 
-		heightmapButton.OnClick([=](wi::gui::EventArgs args) {
+		struct HeightmapTexture
+		{
+			unsigned char* data = nullptr;
+			const int channelCount = 4;
+			int width = 0;
+			int height = 0;
 
-			wi::helper::FileDialogParams params;
-			params.type = wi::helper::FileDialogParams::OPEN;
-			params.description = "Texture";
-			params.extensions = wi::resourcemanager::GetSupportedImageExtensions();
-			wi::helper::FileDialog(params, [=](std::string fileName) {
-				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-					if (rgb != nullptr)
+			~HeightmapTexture()
+			{
+				if (data != nullptr)
+				{
+					stbi_image_free(data);
+					data = nullptr;
+				}
+			}
+		} heightmap;
+
+		wi::gui::CheckBox automaticGenerationCheckBox;
+		wi::gui::CheckBox automaticRemovalCheckBox;
+		wi::gui::Slider generationSlider;
+		wi::gui::Slider bottomLevelSlider;
+		wi::gui::Slider topLevelSlider;
+		wi::gui::Slider perlinBlendSlider;
+		wi::gui::Slider perlinFrequencySlider;
+		wi::gui::Slider perlinSeedSlider;
+		wi::gui::Slider perlinOctavesSlider;
+		wi::gui::Slider voronoiBlendSlider;
+		wi::gui::Slider voronoiFrequencySlider;
+		wi::gui::Slider voronoiFadeSlider;
+		wi::gui::Slider voronoiShapeSlider;
+		wi::gui::Slider voronoiFalloffSlider;
+		wi::gui::Slider voronoiPerturbationSlider;
+		wi::gui::Slider voronoiSeedSlider;
+		wi::gui::Button heightmapButton;
+		wi::gui::Slider heightmapBlendSlider;
+
+		void init()
+		{
+			RemoveWidgets();
+			wi::gui::Window::Create("TerraGen");
+			SetSize(XMFLOAT2(410, 460));
+
+			lods.resize(max_lod);
+			for (int lod = 0; lod < max_lod; ++lod)
+			{
+				lods[lod].indices.clear();
+
+				if (lod == 0)
+				{
+					for (int x = 0; x < width - 1; x++)
 					{
-						stbi_image_free(rgb);
-						rgb = nullptr;
-					}
+						for (int z = 0; z < width - 1; z++)
+						{
+							int lowerLeft = x + z * width;
+							int lowerRight = (x + 1) + z * width;
+							int topLeft = x + (z + 1) * width;
+							int topRight = (x + 1) + (z + 1) * width;
 
-					int bpp = 0;
-					rgb = stbi_load(fileName.c_str(), &heightmap_width, &heightmap_height, &bpp, channelCount);
-					if (rgb != nullptr)
-					{
-						Generate();
+							lods[lod].indices.push_back(topLeft);
+							lods[lod].indices.push_back(lowerLeft);
+							lods[lod].indices.push_back(lowerRight);
+
+							lods[lod].indices.push_back(topLeft);
+							lods[lod].indices.push_back(lowerRight);
+							lods[lod].indices.push_back(topRight);
+						}
 					}
+				}
+				else
+				{
+					const int step = 1 << lod;
+					// inner grid:
+					for (int x = 1; x < width - 2; x += step)
+					{
+						for (int z = 1; z < width - 2; z += step)
+						{
+							int lowerLeft = x + z * width;
+							int lowerRight = (x + step) + z * width;
+							int topLeft = x + (z + step) * width;
+							int topRight = (x + step) + (z + step) * width;
+
+							lods[lod].indices.push_back(topLeft);
+							lods[lod].indices.push_back(lowerLeft);
+							lods[lod].indices.push_back(lowerRight);
+
+							lods[lod].indices.push_back(topLeft);
+							lods[lod].indices.push_back(lowerRight);
+							lods[lod].indices.push_back(topRight);
+						}
+					}
+					// bottom border:
+					for (int x = 0; x < width - 1; ++x)
+					{
+						const int z = 0;
+						int current = x + z * width;
+						int neighbor = x + 1 + z * width;
+						int connection = 1 + ((x + (step + 1) / 2 - 1) / step) * step + (z + 1) * width;
+
+						lods[lod].indices.push_back(current);
+						lods[lod].indices.push_back(neighbor);
+						lods[lod].indices.push_back(connection);
+
+						if (((x - 1) % (step)) == step / 2) // halfway fill triangle
+						{
+							int connection1 = 1 + (((x - 1) + (step + 1) / 2 - 1) / step) * step + (z + 1) * width;
+
+							lods[lod].indices.push_back(current);
+							lods[lod].indices.push_back(connection);
+							lods[lod].indices.push_back(connection1);
+						}
+					}
+					// top border:
+					for (int x = 0; x < width - 1; ++x)
+					{
+						const int z = width - 1;
+						int current = x + z * width;
+						int neighbor = x + 1 + z * width;
+						int connection = 1 + ((x + (step + 1) / 2 - 1) / step) * step + (z - 1) * width;
+
+						lods[lod].indices.push_back(current);
+						lods[lod].indices.push_back(connection);
+						lods[lod].indices.push_back(neighbor);
+
+						if (((x - 1) % (step)) == step / 2) // halfway fill triangle
+						{
+							int connection1 = 1 + (((x - 1) + (step + 1) / 2 - 1) / step) * step + (z - 1) * width;
+
+							lods[lod].indices.push_back(current);
+							lods[lod].indices.push_back(connection1);
+							lods[lod].indices.push_back(connection);
+						}
+					}
+					// left border:
+					for (int z = 0; z < width - 1; ++z)
+					{
+						const int x = 0;
+						int current = x + z * width;
+						int neighbor = x + (z + 1) * width;
+						int connection = x + 1 + (((z + (step + 1) / 2 - 1) / step) * step + 1) * width;
+
+						lods[lod].indices.push_back(current);
+						lods[lod].indices.push_back(connection);
+						lods[lod].indices.push_back(neighbor);
+
+						if (((z - 1) % (step)) == step / 2) // halfway fill triangle
+						{
+							int connection1 = x + 1 + ((((z - 1) + (step + 1) / 2 - 1) / step) * step + 1) * width;
+
+							lods[lod].indices.push_back(current);
+							lods[lod].indices.push_back(connection1);
+							lods[lod].indices.push_back(connection);
+						}
+					}
+					// right border:
+					for (int z = 0; z < width - 1; ++z)
+					{
+						const int x = width - 1;
+						int current = x + z * width;
+						int neighbor = x + (z + 1) * width;
+						int connection = x - 1 + (((z + (step + 1) / 2 - 1) / step) * step + 1) * width;
+
+						lods[lod].indices.push_back(current);
+						lods[lod].indices.push_back(neighbor);
+						lods[lod].indices.push_back(connection);
+
+						if (((z - 1) % (step)) == step / 2) // halfway fill triangle
+						{
+							int connection1 = x - 1 + ((((z - 1) + (step + 1) / 2 - 1) / step) * step + 1) * width;
+
+							lods[lod].indices.push_back(current);
+							lods[lod].indices.push_back(connection);
+							lods[lod].indices.push_back(connection1);
+						}
+					}
+				}
+			}
+
+			float xx = 140;
+			float yy = 0;
+			float stepstep = 25;
+			float heihei = 20;
+
+			automaticGenerationCheckBox.Create("Automatic Generation: ");
+			automaticGenerationCheckBox.SetTooltip("Automatically generate chunks around camera");
+			automaticGenerationCheckBox.SetSize(XMFLOAT2(heihei, heihei));
+			automaticGenerationCheckBox.SetPos(XMFLOAT2(xx + 30, yy += stepstep));
+			automaticGenerationCheckBox.SetCheck(true);
+			AddWidget(&automaticGenerationCheckBox);
+
+			automaticRemovalCheckBox.Create("Automatic Removal: ");
+			automaticRemovalCheckBox.SetTooltip("Automatically remove chunks that are farther than generation distance");
+			automaticRemovalCheckBox.SetSize(XMFLOAT2(heihei, heihei));
+			automaticRemovalCheckBox.SetPos(XMFLOAT2(xx + 200, yy));
+			automaticRemovalCheckBox.SetCheck(true);
+			AddWidget(&automaticRemovalCheckBox);
+
+			generationSlider.Create(0, 16, 8, 16, "Generation Distance: ");
+			generationSlider.SetTooltip("How far out chunks will be generated (value is in number of chunks)");
+			generationSlider.SetSize(XMFLOAT2(200, heihei));
+			generationSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+			AddWidget(&generationSlider);
+
+			bottomLevelSlider.Create(-100, 0, -7, 10000, "Bottom Level: ");
+			bottomLevelSlider.SetTooltip("Terrain mesh grid lowest level");
+			bottomLevelSlider.SetSize(XMFLOAT2(200, heihei));
+			bottomLevelSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+			AddWidget(&bottomLevelSlider);
+
+			topLevelSlider.Create(0, 10000, 1000, 10000, "Top Level: ");
+			topLevelSlider.SetTooltip("Terrain mesh grid topmost level");
+			topLevelSlider.SetSize(XMFLOAT2(200, heihei));
+			topLevelSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+			AddWidget(&topLevelSlider);
+
+			perlinBlendSlider.Create(0, 1, 0.5f, 10000, "Perlin Blend: ");
+			perlinBlendSlider.SetTooltip("Amount of perlin noise to use");
+			perlinBlendSlider.SetSize(XMFLOAT2(200, heihei));
+			perlinBlendSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+			AddWidget(&perlinBlendSlider);
+
+			perlinFrequencySlider.Create(0.0001f, 0.01f, 0.005f, 10000, "Perlin Frequency: ");
+			perlinFrequencySlider.SetTooltip("Frequency for the perlin noise");
+			perlinFrequencySlider.SetSize(XMFLOAT2(200, heihei));
+			perlinFrequencySlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+			AddWidget(&perlinFrequencySlider);
+
+			perlinSeedSlider.Create(1, 12345, 1234, 12344, "Perlin Seed: ");
+			perlinSeedSlider.SetTooltip("Seed for the perlin noise");
+			perlinSeedSlider.SetSize(XMFLOAT2(200, heihei));
+			perlinSeedSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+			AddWidget(&perlinSeedSlider);
+
+			perlinOctavesSlider.Create(1, 8, 6, 7, "Perlin Detail: ");
+			perlinOctavesSlider.SetTooltip("Octave count for the perlin noise");
+			perlinOctavesSlider.SetSize(XMFLOAT2(200, heihei));
+			perlinOctavesSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+			AddWidget(&perlinOctavesSlider);
+
+			voronoiBlendSlider.Create(0, 1, 0.5f, 10000, "Voronoi Blend: ");
+			voronoiBlendSlider.SetTooltip("Amount of voronoi to use for elevation");
+			voronoiBlendSlider.SetSize(XMFLOAT2(200, heihei));
+			voronoiBlendSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+			AddWidget(&voronoiBlendSlider);
+
+			voronoiFrequencySlider.Create(0.0001f, 0.01f, 0.001f, 10000, "Voronoi Frequency: ");
+			voronoiFrequencySlider.SetTooltip("Voronoi can create distinctly elevated areas, the more cells there are, smaller the consecutive areas");
+			voronoiFrequencySlider.SetSize(XMFLOAT2(200, heihei));
+			voronoiFrequencySlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+			AddWidget(&voronoiFrequencySlider);
+
+			voronoiFadeSlider.Create(0, 100, 2.1f, 10000, "Voronoi Fade: ");
+			voronoiFadeSlider.SetTooltip("Fade out voronoi regions by distance from cell's center");
+			voronoiFadeSlider.SetSize(XMFLOAT2(200, heihei));
+			voronoiFadeSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+			AddWidget(&voronoiFadeSlider);
+
+			voronoiShapeSlider.Create(0, 1, 0.351f, 10000, "Voronoi Shape: ");
+			voronoiShapeSlider.SetTooltip("How much the voronoi shape will be kept");
+			voronoiShapeSlider.SetSize(XMFLOAT2(200, heihei));
+			voronoiShapeSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+			AddWidget(&voronoiShapeSlider);
+
+			voronoiFalloffSlider.Create(0, 8, 3.3f, 10000, "Voronoi Falloff: ");
+			voronoiFalloffSlider.SetTooltip("Controls the falloff of the voronoi distance fade effect");
+			voronoiFalloffSlider.SetSize(XMFLOAT2(200, heihei));
+			voronoiFalloffSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+			AddWidget(&voronoiFalloffSlider);
+
+			voronoiPerturbationSlider.Create(0, 1, 0.1f, 10000, "Voronoi Perturbation: ");
+			voronoiPerturbationSlider.SetTooltip("Controls the random look of voronoi region edges");
+			voronoiPerturbationSlider.SetSize(XMFLOAT2(200, heihei));
+			voronoiPerturbationSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+			AddWidget(&voronoiPerturbationSlider);
+
+			voronoiSeedSlider.Create(1, 12345, 3482, 12344, "Voronoi Seed: ");
+			voronoiSeedSlider.SetTooltip("Voronoi can create distinctly elevated areas");
+			voronoiSeedSlider.SetSize(XMFLOAT2(200, heihei));
+			voronoiSeedSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+			AddWidget(&voronoiSeedSlider);
+
+
+			heightmapButton.Create("Load Heightmap...");
+			heightmapButton.SetTooltip("Load a heightmap texture, where the red channel corresponds to terrain height and the resolution to dimensions");
+			heightmapButton.SetSize(XMFLOAT2(200, heihei));
+			heightmapButton.SetPos(XMFLOAT2(xx, yy += stepstep));
+			AddWidget(&heightmapButton);
+
+			heightmapBlendSlider.Create(0, 1, 1, 10000, "Heightmap Blend: ");
+			heightmapBlendSlider.SetTooltip("Amount of displacement coming from the heightmap texture");
+			heightmapBlendSlider.SetSize(XMFLOAT2(200, heihei));
+			heightmapBlendSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+			AddWidget(&heightmapBlendSlider);
+
+
+
+			auto generate_callback = [=](wi::gui::EventArgs args) {
+				Generation_Restart();
+			};
+			bottomLevelSlider.OnSlide(generate_callback);
+			topLevelSlider.OnSlide(generate_callback);
+			perlinFrequencySlider.OnSlide(generate_callback);
+			perlinBlendSlider.OnSlide(generate_callback);
+			perlinSeedSlider.OnSlide(generate_callback);
+			perlinOctavesSlider.OnSlide(generate_callback);
+			voronoiBlendSlider.OnSlide(generate_callback);
+			voronoiFrequencySlider.OnSlide(generate_callback);
+			voronoiFadeSlider.OnSlide(generate_callback);
+			voronoiShapeSlider.OnSlide(generate_callback);
+			voronoiFalloffSlider.OnSlide(generate_callback);
+			voronoiPerturbationSlider.OnSlide(generate_callback);
+			voronoiSeedSlider.OnSlide(generate_callback);
+			heightmapBlendSlider.OnSlide(generate_callback);
+
+			heightmapButton.OnClick([=](wi::gui::EventArgs args) {
+
+				wi::helper::FileDialogParams params;
+				params.type = wi::helper::FileDialogParams::OPEN;
+				params.description = "Texture";
+				params.extensions = wi::resourcemanager::GetSupportedImageExtensions();
+				wi::helper::FileDialog(params, [=](std::string fileName) {
+					wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+
+						heightmap.~HeightmapTexture();
+						int bpp = 0;
+						heightmap.data = stbi_load(fileName.c_str(), &heightmap.width, &heightmap.height, &bpp, heightmap.channelCount);
+						if (heightmap.data != nullptr)
+						{
+							Generation_Restart();
+						}
+						});
 					});
 				});
-			});
 
-	}
-
-	void Cleanup()
-	{
-		if (rgb != nullptr)
-		{
-			stbi_image_free(rgb);
-			rgb = nullptr;
-		}
-	}
-
-	void Generate()
-	{
-		Scene& scene = wi::scene::GetScene();
-
-		// If the materials already exist, save them before recreating:
-		if (materialEntity_Base != INVALID_ENTITY)
-		{
-			MaterialComponent* material = scene.materials.GetComponent(materialEntity_Base);
-			material_Base = *material;
-		}
-		if (materialEntity_Slope != INVALID_ENTITY)
-		{
-			MaterialComponent* material = scene.materials.GetComponent(materialEntity_Slope);
-			material_Slope = *material;
-		}
-		if (materialEntity_LowAltitude != INVALID_ENTITY)
-		{
-			MaterialComponent* material = scene.materials.GetComponent(materialEntity_LowAltitude);
-			material_LowAltitude = *material;
-		}
-		if (materialEntity_HighAltitude != INVALID_ENTITY)
-		{
-			MaterialComponent* material = scene.materials.GetComponent(materialEntity_HighAltitude);
-			material_HighAltitude = *material;
 		}
 
-		chunks.clear();
-
-		scene.Entity_Remove(terrainEntity);
-		terrainEntity = CreateEntity();
-		scene.transforms.Create(terrainEntity);
-		scene.names.Create(terrainEntity) = "terrain";
-
-		materialEntity_Base = scene.Entity_CreateMaterial("terrainMaterial_Base");
-		materialEntity_Slope = scene.Entity_CreateMaterial("terrainMaterial_Slope");
-		materialEntity_LowAltitude = scene.Entity_CreateMaterial("terrainMaterial_LowAltitude");
-		materialEntity_HighAltitude = scene.Entity_CreateMaterial("terrainMaterial_HighAltitude");
-		scene.Component_Attach(materialEntity_Base, terrainEntity);
-		scene.Component_Attach(materialEntity_Slope, terrainEntity);
-		scene.Component_Attach(materialEntity_LowAltitude, terrainEntity);
-		scene.Component_Attach(materialEntity_HighAltitude, terrainEntity);
-		// init/restore materials:
-		*scene.materials.GetComponent(materialEntity_Base) = material_Base;
-		*scene.materials.GetComponent(materialEntity_Slope) = material_Slope;
-		*scene.materials.GetComponent(materialEntity_LowAltitude) = material_LowAltitude;
-		*scene.materials.GetComponent(materialEntity_HighAltitude) = material_HighAltitude;
-
-		const uint32_t perlinSeed = (uint32_t)perlinSeedSlider.GetValue();
-		perlin.init(perlinSeed);
-
-		Update();
-	}
-
-	void Update()
-	{
-		if (terrainEntity == INVALID_ENTITY)
-			return;
-
-		wi::Timer timer;
-		Scene& scene = wi::scene::GetScene();
-		const int generation = (int)generationSlider.GetValue();
-		const float verticalScale = verticalScaleSlider.GetValue();
-		const float groundLevel = groundLevelSlider.GetValue();
-		const float heightmapBlend = heightmapBlendSlider.GetValue();
-		const float perlinBlend = perlinBlendSlider.GetValue();
-		const uint32_t perlinSeed = (uint32_t)perlinSeedSlider.GetValue();
-		const int perlinOctaves = (int)perlinOctavesSlider.GetValue();
-		const float perlinFrequency = perlinFrequencySlider.GetValue();
-		const float voronoiBlend = voronoiBlendSlider.GetValue();
-		const float voronoiFrequency = voronoiFrequencySlider.GetValue();
-		const float voronoiFade = voronoiFadeSlider.GetValue();
-		const float voronoiShape = voronoiShapeSlider.GetValue();
-		const float voronoiFalloff = voronoiFalloffSlider.GetValue();
-		const float voronoiPerturbation = voronoiPerturbationSlider.GetValue();
-		const uint32_t voronoiSeed = (uint32_t)voronoiSeedSlider.GetValue();
-
-		if (automaticGenerationCheckBox.GetCheck())
+		void Generation_Restart()
 		{
-			const CameraComponent& camera = GetCamera();
-			center_chunk.x = (int)std::floor((camera.Eye.x + half_width) * width_rcp);
-			center_chunk.z = (int)std::floor((camera.Eye.z + half_width) * width_rcp);
-		}
+			Scene& scene = wi::scene::GetScene();
 
-		if (automaticRemovalCheckBox.GetCheck())
-		{
-			const int removal_threshold = generation + 2;
-			for (auto& it : chunks)
+			// If the materials already exist, save them before recreating:
+			if (materialEntity_Base != INVALID_ENTITY)
 			{
-				const Chunk& chunk = it.first;
-				if (std::abs(center_chunk.x - chunk.x) > removal_threshold || std::abs(center_chunk.z - chunk.z) > removal_threshold)
-				{
-					scene.Entity_Remove(it.second.entity);
-					it.second = {};
-				}
+				MaterialComponent* material = scene.materials.GetComponent(materialEntity_Base);
+				material_Base = *material;
 			}
-		}
-
-		bool should_exit = false;
-		auto request_chunk = [&](int offset_x, int offset_z)
-		{
-			Chunk chunk = center_chunk;
-			chunk.x += offset_x;
-			chunk.z += offset_z;
-			auto it = chunks.find(chunk);
-			if (it == chunks.end() || it->second.entity == INVALID_ENTITY)
+			if (materialEntity_Slope != INVALID_ENTITY)
 			{
-				ChunkData chunk_data;
-
-				std::string chunk_id = std::to_string(chunk.x) + "_" + std::to_string(chunk.z);
-				Entity chunkObjectEntity = scene.Entity_CreateObject("chunkobject_" + chunk_id);
-				ObjectComponent& object = *scene.objects.GetComponent(chunkObjectEntity);
-				scene.Component_Attach(chunkObjectEntity, terrainEntity);
-				chunk_data.entity = chunkObjectEntity;
-
-				TransformComponent& transform = *scene.transforms.GetComponent(chunkObjectEntity);
-				transform.ClearTransform();
-				const XMFLOAT3 chunk_pos = XMFLOAT3(float(chunk.x * (width - 1)), 0, float(chunk.z * (width - 1)));
-				transform.Translate(chunk_pos);
-
-				MeshComponent mesh;
-				mesh.indices = lods[0].indices;
-				mesh.SetTerrain(true);
-				mesh.terrain_material1 = materialEntity_Slope;
-				mesh.terrain_material2 = materialEntity_LowAltitude;
-				mesh.terrain_material3 = materialEntity_HighAltitude;
-				mesh.subsets.emplace_back();
-				mesh.subsets.back().materialID = materialEntity_Base;
-				mesh.subsets.back().indexCount = (uint32_t)lods[0].indices.size();
-				mesh.subsets.back().indexOffset = 0;
-				mesh.vertex_positions.resize(vertexCount);
-				mesh.vertex_normals.resize(vertexCount);
-				//mesh.vertex_tangents.resize(vertexCount);
-				mesh.vertex_colors.resize(vertexCount);
-				mesh.vertex_uvset_0.resize(vertexCount);
-				mesh.vertex_uvset_1.resize(vertexCount);
-				mesh.vertex_atlas.resize(vertexCount);
-#ifdef TERRAGEN_USE_JOBSYSTEM
-				wi::jobsystem::context ctx;
-				wi::jobsystem::Dispatch(ctx, vertexCount, width, [&](wi::jobsystem::JobArgs args) {
-					uint32_t index = args.jobIndex;
-#else
-				for (uint32_t index = 0; index < vertexCount; ++index)
-				{
-#endif // TERRAGEN_USE_JOBSYSTEM
-					const float x = float(index % width) - half_width;
-					const float z = float(index / width) - half_width;
-					XMVECTOR corners[3];
-					XMFLOAT2 corner_offsets[3] = {
-						XMFLOAT2(0, 0),
-						XMFLOAT2(1, 0),
-						XMFLOAT2(0, 1),
-					};
-					for (int i = 0; i < arraysize(corners); ++i)
-					{
-						float height = 0;
-						const XMFLOAT2 world_pos = XMFLOAT2(chunk_pos.x + x + corner_offsets[i].x, chunk_pos.z + z + corner_offsets[i].y);
-						if (perlinBlend > 0)
-						{
-							XMFLOAT2 p = world_pos;
-							p.x *= perlinFrequency;
-							p.y *= perlinFrequency;
-							height += (perlin.compute(p.x, p.y, 0, perlinOctaves) * 0.5f + 0.5f) * perlinBlend;
-						}
-						if (voronoiBlend > 0)
-						{
-							XMFLOAT2 p = world_pos;
-							p.x *= voronoiFrequency;
-							p.y *= voronoiFrequency;
-							if (voronoiPerturbation > 0)
-							{
-								const float angle = perlin.compute(p.x, p.y, 0, 6) * XM_2PI;
-								p.x += std::sin(angle) * voronoiPerturbation;
-								p.y += std::cos(angle) * voronoiPerturbation;
-							}
-							wi::noise::voronoi::Result res = wi::noise::voronoi::compute(p.x, p.y, (float)voronoiSeed);
-							float weight = std::pow(1 - wi::math::saturate((res.distance - voronoiShape) * voronoiFade), std::max(0.0001f, voronoiFalloff));
-							height *= weight * voronoiBlend;
-						}
-						if (rgb != nullptr)
-						{
-							XMFLOAT2 pixel = XMFLOAT2(world_pos.x + heightmap_width * 0.5f, world_pos.y + heightmap_height * 0.5f);
-							if (pixel.x >= 0 && pixel.x < heightmap_width && pixel.y >= 0 && pixel.y < heightmap_height)
-							{
-								const int idx = int(pixel.x) + int(pixel.y) * heightmap_width;
-								height = ((float)rgb[idx * channelCount] / 255.0f) * heightmapBlend;
-							}
-						}
-						height *= verticalScale;
-						height += groundLevel;
-						corners[i] = XMVectorSet(world_pos.x, height, world_pos.y, 0);
-					}
-					const float height = XMVectorGetY(corners[0]);
-					const XMVECTOR T = XMVectorSubtract(corners[2], corners[1]);
-					const XMVECTOR B = XMVectorSubtract(corners[1], corners[0]);
-					const XMVECTOR N = XMVector3Normalize(XMVector3Cross(T, B));
-					XMFLOAT3 normal;
-					XMStoreFloat3(&normal, N);
-					//XMStoreFloat4(&mesh.vertex_tangents[index], XMVector3Normalize(T));
-					//mesh.vertex_tangents[index].w = 1;
-
-					const float region_base = 1;
-					const float region_slope = 1 - std::pow(wi::math::saturate(normal.y), 2.0f);
-					const float region_low_altitude = std::pow(1 - wi::math::saturate((height - groundLevel) / std::abs(groundLevel)), 2.0f);
-					const float region_high_altitude = std::pow(wi::math::saturate(height / verticalScale * 4), 2.0f);
-
-					XMFLOAT4 materialBlendWeights(1, 0, 0, 0);
-					materialBlendWeights = wi::math::Lerp(materialBlendWeights, XMFLOAT4(0, 1, 0, 0), region_slope);
-					materialBlendWeights = wi::math::Lerp(materialBlendWeights, XMFLOAT4(0, 0, 1, 0), region_low_altitude);
-					materialBlendWeights = wi::math::Lerp(materialBlendWeights, XMFLOAT4(0, 0, 0, 1), region_high_altitude);
-					const float weight_norm = 1.0f / (materialBlendWeights.x + materialBlendWeights.y + materialBlendWeights.z + materialBlendWeights.w);
-					materialBlendWeights.x *= weight_norm;
-					materialBlendWeights.y *= weight_norm;
-					materialBlendWeights.z *= weight_norm;
-					materialBlendWeights.w *= weight_norm;
-
-					mesh.vertex_positions[index] = XMFLOAT3(x, height, z);
-					mesh.vertex_normals[index] = normal;
-					mesh.vertex_colors[index] = wi::Color::fromFloat4(materialBlendWeights);
-					const XMFLOAT2 uv = XMFLOAT2(x * width_rcp, z * width_rcp);
-					mesh.vertex_uvset_0[index] = uv;
-					mesh.vertex_uvset_1[index] = uv;
-					mesh.vertex_atlas[index] = uv;
-#ifdef TERRAGEN_USE_JOBSYSTEM
-					});
-				wi::jobsystem::Wait(ctx);
-#else
-				}
-#endif // TERRAGEN_USE_JOBSYSTEM
-
-				chunk_data.mesh_lods.resize(max_lod);
-				for (int lod = 0; lod < max_lod; ++lod)
-				{
-					MeshComponent& mesh_lod = chunk_data.mesh_lods[lod];
-					mesh_lod = mesh;
-					mesh_lod.indices = lods[lod].indices;
-					mesh_lod.subsets[0].indexCount = (uint32_t)lods[lod].indices.size();
-					mesh_lod.CreateRenderData();
-				}
-
-				Entity chunkMeshEntity = CreateEntity();
-				object.meshID = chunkMeshEntity;
-				scene.meshes.Create(chunkMeshEntity) = std::move(chunk_data.mesh_lods[0]);
-				scene.names.Create(chunkMeshEntity) = "chunkmesh_" + chunk_id;
-				scene.Component_Attach(chunkMeshEntity, chunkObjectEntity);
-				chunks[chunk] = std::move(chunk_data);
-
-				if (timer.elapsed_milliseconds() > 10)
-					should_exit = true;
+				MaterialComponent* material = scene.materials.GetComponent(materialEntity_Slope);
+				material_Slope = *material;
+			}
+			if (materialEntity_LowAltitude != INVALID_ENTITY)
+			{
+				MaterialComponent* material = scene.materials.GetComponent(materialEntity_LowAltitude);
+				material_LowAltitude = *material;
+			}
+			if (materialEntity_HighAltitude != INVALID_ENTITY)
+			{
+				MaterialComponent* material = scene.materials.GetComponent(materialEntity_HighAltitude);
+				material_HighAltitude = *material;
 			}
 
-			// LOD assignment:
-			it = chunks.find(chunk);
-			if (it != chunks.end() && it->second.entity != INVALID_ENTITY)
+			chunks.clear();
+
+			scene.Entity_Remove(terrainEntity);
+			terrainEntity = CreateEntity();
+			scene.transforms.Create(terrainEntity);
+			scene.names.Create(terrainEntity) = "terrain";
+
+			materialEntity_Base = scene.Entity_CreateMaterial("terrainMaterial_Base");
+			materialEntity_Slope = scene.Entity_CreateMaterial("terrainMaterial_Slope");
+			materialEntity_LowAltitude = scene.Entity_CreateMaterial("terrainMaterial_LowAltitude");
+			materialEntity_HighAltitude = scene.Entity_CreateMaterial("terrainMaterial_HighAltitude");
+			scene.Component_Attach(materialEntity_Base, terrainEntity);
+			scene.Component_Attach(materialEntity_Slope, terrainEntity);
+			scene.Component_Attach(materialEntity_LowAltitude, terrainEntity);
+			scene.Component_Attach(materialEntity_HighAltitude, terrainEntity);
+			// init/restore materials:
+			*scene.materials.GetComponent(materialEntity_Base) = material_Base;
+			*scene.materials.GetComponent(materialEntity_Slope) = material_Slope;
+			*scene.materials.GetComponent(materialEntity_LowAltitude) = material_LowAltitude;
+			*scene.materials.GetComponent(materialEntity_HighAltitude) = material_HighAltitude;
+
+			const uint32_t perlinSeed = (uint32_t)perlinSeedSlider.GetValue();
+			perlin.init(perlinSeed);
+		}
+
+		void Generation_Update(int allocated_timeframe_milliseconds = 2)
+		{
+			if (terrainEntity == INVALID_ENTITY)
+				return;
+
+			wi::Timer timer;
+			Scene& scene = wi::scene::GetScene();
+			const int generation = (int)generationSlider.GetValue();
+			const float bottomLevel = bottomLevelSlider.GetValue();
+			const float topLevel = topLevelSlider.GetValue();
+			const float heightmapBlend = heightmapBlendSlider.GetValue();
+			const float perlinBlend = perlinBlendSlider.GetValue();
+			const uint32_t perlinSeed = (uint32_t)perlinSeedSlider.GetValue();
+			const int perlinOctaves = (int)perlinOctavesSlider.GetValue();
+			const float perlinFrequency = perlinFrequencySlider.GetValue();
+			const float voronoiBlend = voronoiBlendSlider.GetValue();
+			const float voronoiFrequency = voronoiFrequencySlider.GetValue();
+			const float voronoiFade = voronoiFadeSlider.GetValue();
+			const float voronoiShape = voronoiShapeSlider.GetValue();
+			const float voronoiFalloff = voronoiFalloffSlider.GetValue();
+			const float voronoiPerturbation = voronoiPerturbationSlider.GetValue();
+			const uint32_t voronoiSeed = (uint32_t)voronoiSeedSlider.GetValue();
+
+			if (automaticGenerationCheckBox.GetCheck())
 			{
-				ChunkData& chunk_data = it->second;
-				const ObjectComponent* object = scene.objects.GetComponent(chunk_data.entity);
-				if (object != nullptr)
+				const CameraComponent& camera = GetCamera();
+				center_chunk.x = (int)std::floor((camera.Eye.x + half_width) * width_rcp);
+				center_chunk.z = (int)std::floor((camera.Eye.z + half_width) * width_rcp);
+			}
+
+			// Chunk removal checks:
+			if (automaticRemovalCheckBox.GetCheck())
+			{
+				const int removal_threshold = generation + 2;
+				for (auto& it : chunks)
 				{
-					MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
-					if (mesh != nullptr)
+					const Chunk& chunk = it.first;
+					if (std::abs(center_chunk.x - chunk.x) > removal_threshold || std::abs(center_chunk.z - chunk.z) > removal_threshold)
 					{
-						const int dist = std::max(std::abs(center_chunk.x - chunk.x), std::abs(center_chunk.z - chunk.z));
-						const int lod = std::max(0, std::min((int)std::log2(dist), max_lod - 1));
-						if (lod != chunk_data.current_lod)
-						{
-							// Swap out LODs with move semantics:
-							chunk_data.mesh_lods[chunk_data.current_lod] = std::move(*mesh);
-							*mesh = std::move(chunk_data.mesh_lods[lod]);
-							chunk_data.current_lod = lod;
-						}
+						scene.Entity_Remove(it.second.entity);
+						it.second = {};
 					}
 				}
 			}
 
-		};
+			bool should_exit = false;
+			auto request_chunk = [&](int offset_x, int offset_z)
+			{
+				Chunk chunk = center_chunk;
+				chunk.x += offset_x;
+				chunk.z += offset_z;
+				auto it = chunks.find(chunk);
+				if (it == chunks.end() || it->second.entity == INVALID_ENTITY)
+				{
+					// Generate a new chunk:
+					ChunkData chunk_data;
 
-		// generate center chunk first:
-		request_chunk(0, 0);
-		if (should_exit) return;
+					std::string chunk_id = std::to_string(chunk.x) + "_" + std::to_string(chunk.z);
+					Entity chunkObjectEntity = scene.Entity_CreateObject("chunkobject_" + chunk_id);
+					ObjectComponent& object = *scene.objects.GetComponent(chunkObjectEntity);
+					scene.Component_Attach(chunkObjectEntity, terrainEntity);
+					chunk_data.entity = chunkObjectEntity;
 
-		// then generate neighbor chunks in outwards spiral:
-		for (int growth = 0; growth < generation; ++growth)
-		{
-			const int side = 2 * (growth + 1);
-			int x = -growth - 1;
-			int z = -growth - 1;
-			for (int i = 0; i < side; ++i)
+					TransformComponent& transform = *scene.transforms.GetComponent(chunkObjectEntity);
+					transform.ClearTransform();
+					const XMFLOAT3 chunk_pos = XMFLOAT3(float(chunk.x * (width - 1)), 0, float(chunk.z * (width - 1)));
+					transform.Translate(chunk_pos);
+
+					MeshComponent mesh;
+					mesh.indices = lods[0].indices;
+					mesh.SetTerrain(true);
+					mesh.terrain_material1 = materialEntity_Slope;
+					mesh.terrain_material2 = materialEntity_LowAltitude;
+					mesh.terrain_material3 = materialEntity_HighAltitude;
+					mesh.subsets.emplace_back();
+					mesh.subsets.back().materialID = materialEntity_Base;
+					mesh.subsets.back().indexCount = (uint32_t)lods[0].indices.size();
+					mesh.subsets.back().indexOffset = 0;
+					mesh.vertex_positions.resize(vertexCount);
+					mesh.vertex_normals.resize(vertexCount);
+					//mesh.vertex_tangents.resize(vertexCount);
+					mesh.vertex_colors.resize(vertexCount);
+					mesh.vertex_uvset_0.resize(vertexCount);
+					mesh.vertex_uvset_1.resize(vertexCount);
+					mesh.vertex_atlas.resize(vertexCount);
+#ifdef TERRAGEN_USE_JOBSYSTEM
+					wi::jobsystem::context ctx;
+					wi::jobsystem::Dispatch(ctx, vertexCount, width, [&](wi::jobsystem::JobArgs args) {
+						uint32_t index = args.jobIndex;
+#else
+					for (uint32_t index = 0; index < vertexCount; ++index)
+					{
+#endif // TERRAGEN_USE_JOBSYSTEM
+						const float x = float(index % width) - half_width;
+						const float z = float(index / width) - half_width;
+						XMVECTOR corners[3];
+						XMFLOAT2 corner_offsets[3] = {
+							XMFLOAT2(0, 0),
+							XMFLOAT2(1, 0),
+							XMFLOAT2(0, 1),
+						};
+						for (int i = 0; i < arraysize(corners); ++i)
+						{
+							float height = 0;
+							const XMFLOAT2 world_pos = XMFLOAT2(chunk_pos.x + x + corner_offsets[i].x, chunk_pos.z + z + corner_offsets[i].y);
+							if (perlinBlend > 0)
+							{
+								XMFLOAT2 p = world_pos;
+								p.x *= perlinFrequency;
+								p.y *= perlinFrequency;
+								height += (perlin.compute(p.x, p.y, 0, perlinOctaves) * 0.5f + 0.5f) * perlinBlend;
+							}
+							if (voronoiBlend > 0)
+							{
+								XMFLOAT2 p = world_pos;
+								p.x *= voronoiFrequency;
+								p.y *= voronoiFrequency;
+								if (voronoiPerturbation > 0)
+								{
+									const float angle = perlin.compute(p.x, p.y, 0, 6) * XM_2PI;
+									p.x += std::sin(angle) * voronoiPerturbation;
+									p.y += std::cos(angle) * voronoiPerturbation;
+								}
+								wi::noise::voronoi::Result res = wi::noise::voronoi::compute(p.x, p.y, (float)voronoiSeed);
+								float weight = std::pow(1 - wi::math::saturate((res.distance - voronoiShape) * voronoiFade), std::max(0.0001f, voronoiFalloff));
+								height *= weight * voronoiBlend;
+							}
+							if (heightmap.data != nullptr)
+							{
+								XMFLOAT2 pixel = XMFLOAT2(world_pos.x + heightmap.width * 0.5f, world_pos.y + heightmap.height * 0.5f);
+								if (pixel.x >= 0 && pixel.x < heightmap.width && pixel.y >= 0 && pixel.y < heightmap.height)
+								{
+									const int idx = int(pixel.x) + int(pixel.y) * heightmap.width;
+									height = ((float)heightmap.data[idx * heightmap.channelCount] / 255.0f) * heightmapBlend;
+								}
+							}
+							height = wi::math::Lerp(bottomLevel, topLevel, height);
+							corners[i] = XMVectorSet(world_pos.x, height, world_pos.y, 0);
+						}
+						const float height = XMVectorGetY(corners[0]);
+						const XMVECTOR T = XMVectorSubtract(corners[2], corners[1]);
+						const XMVECTOR B = XMVectorSubtract(corners[1], corners[0]);
+						const XMVECTOR N = XMVector3Normalize(XMVector3Cross(T, B));
+						XMFLOAT3 normal;
+						XMStoreFloat3(&normal, N);
+
+						const float region_base = 1;
+						const float region_slope = 1 - std::pow(wi::math::saturate(normal.y), 2.0f);
+						const float region_low_altitude = std::pow(wi::math::saturate(wi::math::InverseLerp(0, bottomLevel, height)), 2.0f);
+						const float region_high_altitude = std::pow(wi::math::saturate(wi::math::InverseLerp(0, topLevel * 0.25f, height)), 2.0f);
+
+						XMFLOAT4 materialBlendWeights(1, 0, 0, 0);
+						materialBlendWeights = wi::math::Lerp(materialBlendWeights, XMFLOAT4(0, 1, 0, 0), region_slope);
+						materialBlendWeights = wi::math::Lerp(materialBlendWeights, XMFLOAT4(0, 0, 1, 0), region_low_altitude);
+						materialBlendWeights = wi::math::Lerp(materialBlendWeights, XMFLOAT4(0, 0, 0, 1), region_high_altitude);
+						const float weight_norm = 1.0f / (materialBlendWeights.x + materialBlendWeights.y + materialBlendWeights.z + materialBlendWeights.w);
+						materialBlendWeights.x *= weight_norm;
+						materialBlendWeights.y *= weight_norm;
+						materialBlendWeights.z *= weight_norm;
+						materialBlendWeights.w *= weight_norm;
+
+						mesh.vertex_positions[index] = XMFLOAT3(x, height, z);
+						mesh.vertex_normals[index] = normal;
+						mesh.vertex_colors[index] = wi::Color::fromFloat4(materialBlendWeights);
+						const XMFLOAT2 uv = XMFLOAT2(x * width_rcp, z * width_rcp);
+						mesh.vertex_uvset_0[index] = uv;
+						mesh.vertex_uvset_1[index] = uv;
+						mesh.vertex_atlas[index] = uv;
+#ifdef TERRAGEN_USE_JOBSYSTEM
+						});
+						wi::jobsystem::Wait(ctx);
+#else
+					}
+#endif // TERRAGEN_USE_JOBSYSTEM
+
+					chunk_data.mesh_lods.resize(max_lod);
+					for (int lod = 0; lod < max_lod; ++lod)
+					{
+						MeshComponent& mesh_lod = chunk_data.mesh_lods[lod];
+						mesh_lod = mesh;
+						mesh_lod.indices = lods[lod].indices;
+						mesh_lod.subsets[0].indexCount = (uint32_t)lods[lod].indices.size();
+						mesh_lod.CreateRenderData();
+					}
+
+					Entity chunkMeshEntity = CreateEntity();
+					object.meshID = chunkMeshEntity;
+					scene.meshes.Create(chunkMeshEntity) = std::move(chunk_data.mesh_lods[0]);
+					scene.names.Create(chunkMeshEntity) = "chunkmesh_" + chunk_id;
+					scene.Component_Attach(chunkMeshEntity, chunkObjectEntity);
+					chunks[chunk] = std::move(chunk_data);
+
+					if (timer.elapsed_milliseconds() > allocated_timeframe_milliseconds) // approximately this much time is allowed for generation
+						should_exit = true;
+				}
+
+				// LOD assignment:
+				it = chunks.find(chunk);
+				if (it != chunks.end() && it->second.entity != INVALID_ENTITY)
+				{
+					ChunkData& chunk_data = it->second;
+					const ObjectComponent* object = scene.objects.GetComponent(chunk_data.entity);
+					if (object != nullptr)
+					{
+						MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
+						if (mesh != nullptr)
+						{
+							const int dist = std::max(std::abs(center_chunk.x - chunk.x), std::abs(center_chunk.z - chunk.z));
+							const int lod = std::max(0, std::min((int)std::log2(dist), max_lod - 1));
+							if (lod != chunk_data.current_lod)
+							{
+								// Swap out LODs with move semantics:
+								chunk_data.mesh_lods[chunk_data.current_lod] = std::move(*mesh);
+								*mesh = std::move(chunk_data.mesh_lods[lod]);
+								chunk_data.current_lod = lod;
+							}
+						}
+					}
+				}
+
+			};
+
+			// generate center chunk first:
+			request_chunk(0, 0);
+			if (should_exit) return;
+
+			// then generate neighbor chunks in outward spiral:
+			for (int growth = 0; growth < generation; ++growth)
 			{
-				request_chunk(x, z);
-				if (should_exit) return;
-				x++;
-			}
-			for (int i = 0; i < side; ++i)
-			{
-				request_chunk(x, z);
-				if (should_exit) return;
-				z++;
-			}
-			for (int i = 0; i < side; ++i)
-			{
-				request_chunk(x, z);
-				if (should_exit) return;
-				x--;
-			}
-			for (int i = 0; i < side; ++i)
-			{
-				request_chunk(x, z);
-				if (should_exit) return;
-				z--;
+				const int side = 2 * (growth + 1);
+				int x = -growth - 1;
+				int z = -growth - 1;
+				for (int i = 0; i < side; ++i)
+				{
+					request_chunk(x, z);
+					if (should_exit) return;
+					x++;
+				}
+				for (int i = 0; i < side; ++i)
+				{
+					request_chunk(x, z);
+					if (should_exit) return;
+					z++;
+				}
+				for (int i = 0; i < side; ++i)
+				{
+					request_chunk(x, z);
+					if (should_exit) return;
+					x--;
+				}
+				for (int i = 0; i < side; ++i)
+				{
+					request_chunk(x, z);
+					if (should_exit) return;
+					z--;
+				}
 			}
 		}
-	}
 
-} terragen;
+	};
+
+}
+
+wi::terrain::Generator terragen;
 
 void MeshWindow::Create(EditorComponent* editor)
 {
 	wi::gui::Window::Create("Mesh Window");
 	SetSize(XMFLOAT2(580, 580));
-
-	terragen.init();
 
 	float x = 150;
 	float y = 0;
@@ -1144,18 +1129,32 @@ void MeshWindow::Create(EditorComponent* editor)
 	terrainGenButton.SetPos(XMFLOAT2(x + 180, y += step));
 	terrainGenButton.OnClick([=](wi::gui::EventArgs args) {
 
-		terragen.Cleanup();
-		terragen.SetVisible(true);
-
 		editor->GetGUI().RemoveWidget(&terragen);
 		editor->GetGUI().AddWidget(&terragen);
+
+		// Set up base materials for terrain regions:
+		terragen.material_Base.SetUseVertexColors(true);
+		terragen.material_Base.SetRoughness(1);
+		terragen.material_Slope.SetRoughness(1);
+		terragen.material_LowAltitude.SetRoughness(1);
+		terragen.material_HighAltitude.SetRoughness(1);
+		terragen.material_Base.textures[MaterialComponent::BASECOLORMAP].name = "images/terrain/HITW-TS2-forest-decidious-grass-green.jpg";
+		terragen.material_Slope.textures[MaterialComponent::BASECOLORMAP].name = "images/terrain/HITW-TS2-Western-barren.jpg";
+		terragen.material_LowAltitude.textures[MaterialComponent::BASECOLORMAP].name = "images/terrain/HITW-TS2-sandy-ground.jpg";
+		terragen.material_HighAltitude.textures[MaterialComponent::BASECOLORMAP].name = "images/terrain/HITW-mntn-snow-greys.jpg";
+		terragen.material_Base.CreateRenderData();
+		terragen.material_Slope.CreateRenderData();
+		terragen.material_LowAltitude.CreateRenderData();
+		terragen.material_HighAltitude.CreateRenderData();
+		terragen.init();
+		terragen.SetVisible(true);
 
 		terragen.SetPos(XMFLOAT2(
 			terrainGenButton.translation.x + terrainGenButton.scale.x + 10,
 			terrainGenButton.translation.y)
 		);
 
-		terragen.Generate();
+		terragen.Generation_Restart();
 
 
 		wi::Archive& archive = editor->AdvanceHistory();
@@ -1215,7 +1214,6 @@ void MeshWindow::Create(EditorComponent* editor)
 
 void MeshWindow::SetEntity(Entity entity, int subset)
 {
-	terragen.Update();
 	subset = std::max(0, subset);
 
 	this->entity = entity;
@@ -1345,4 +1343,5 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 	}
 
 	terrainGenButton.SetEnabled(true);
+	terragen.Generation_Update();
 }
