@@ -289,7 +289,7 @@ struct TerraGen : public wi::gui::Window
 		generationSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 		AddWidget(&generationSlider);
 
-		bottomLevelSlider.Create(-100, 0, -7, 10000, "Bottom Level: ");
+		bottomLevelSlider.Create(-100, 0, -10, 10000, "Bottom Level: ");
 		bottomLevelSlider.SetTooltip("Terrain mesh grid lowest level");
 		bottomLevelSlider.SetSize(XMFLOAT2(200, heihei));
 		bottomLevelSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
@@ -478,6 +478,9 @@ struct TerraGen : public wi::gui::Window
 			weather.SetVolumetricClouds(true);
 			weather.volumetricCloudParameters.CoverageAmount = 0.95f;
 			weather.volumetricCloudParameters.CoverageMinimum = 1.383f;
+			weather.SetOceanEnabled(true);
+			weather.oceanParameters.waterHeight = -5;
+			weather.oceanParameters.wave_amplitude = 120;
 			weather.fogStart = 10;
 			weather.fogEnd = 100000;
 			weather.SetHeightFog(true);
