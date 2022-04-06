@@ -283,7 +283,7 @@ struct TerraGen : public wi::gui::Window
 			});
 		AddWidget(&lodSlider);
 
-		generationSlider.Create(0, 16, 8, 16, "Generation Distance: ");
+		generationSlider.Create(0, 16, 12, 16, "Generation Distance: ");
 		generationSlider.SetTooltip("How far out chunks will be generated (value is in number of chunks)");
 		generationSlider.SetSize(XMFLOAT2(200, heihei));
 		generationSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
@@ -565,21 +565,20 @@ struct TerraGen : public wi::gui::Window
 			if (it == chunks.end() || it->second.entity == INVALID_ENTITY)
 			{
 				// Generate a new chunk:
-				ChunkData chunk_data;
+				ChunkData& chunk_data = chunks[chunk];
 
-				std::string chunk_id = std::to_string(chunk.x) + "_" + std::to_string(chunk.z);
-				Entity chunkObjectEntity = scene.Entity_CreateObject("chunkobject_" + chunk_id);
-				ObjectComponent& object = *scene.objects.GetComponent(chunkObjectEntity);
+				chunk_data.entity = scene.Entity_CreateObject("chunk_" + std::to_string(chunk.x) + "_" + std::to_string(chunk.z));
+				ObjectComponent& object = *scene.objects.GetComponent(chunk_data.entity);
 				object.lod_distance_multiplier = lodMultiplier;
-				scene.Component_Attach(chunkObjectEntity, terrainEntity);
-				chunk_data.entity = chunkObjectEntity;
+				scene.Component_Attach(chunk_data.entity, terrainEntity);
 
-				TransformComponent& transform = *scene.transforms.GetComponent(chunkObjectEntity);
+				TransformComponent& transform = *scene.transforms.GetComponent(chunk_data.entity);
 				transform.ClearTransform();
 				const XMFLOAT3 chunk_pos = XMFLOAT3(float(chunk.x * (width - 1)), 0, float(chunk.z * (width - 1)));
 				transform.Translate(chunk_pos);
 
-				MeshComponent mesh;
+				MeshComponent& mesh = scene.meshes.Create(chunk_data.entity);
+				object.meshID = chunk_data.entity;
 				mesh.indices = indices;
 				mesh.SetTerrain(true);
 				mesh.terrain_material1 = materialEntity_Slope;
@@ -704,15 +703,9 @@ struct TerraGen : public wi::gui::Window
 					}
 				}
 
-				Entity chunkMeshEntity = CreateEntity();
-				object.meshID = chunkMeshEntity;
-				grass.meshID = chunkMeshEntity;
-				scene.meshes.Create(chunkMeshEntity) = std::move(mesh);
-				scene.names.Create(chunkMeshEntity) = "chunkmesh_" + chunk_id;
-				scene.Component_Attach(chunkMeshEntity, chunkObjectEntity);
 				if (grass_valid_vertex_count > 0)
 				{
-					grass.meshID = chunkMeshEntity;
+					grass.meshID = chunk_data.entity;
 					grass.length = 4;
 					grass.strandCount = grass_valid_vertex_count * 3;
 					grass.viewDistance = 80;
@@ -720,11 +713,10 @@ struct TerraGen : public wi::gui::Window
 					grass.framesX = 1;
 					grass.framesY = 2;
 					grass.frameStart = 0;
-					scene.materials.Create(chunkObjectEntity) = material_GrassParticle;
+					scene.materials.Create(chunk_data.entity) = material_GrassParticle;
 					chunk_data.grass = std::move(grass);
 					chunk_data.has_grass = true;
 				}
-				chunks[chunk] = std::move(chunk_data);
 
 				if (timer.elapsed_milliseconds() > allocated_timeframe_milliseconds) // approximately this much time is allowed for generation
 					should_exit = true;
