@@ -34,6 +34,8 @@ Contributions:
 	- Linux controller implementation
 	- Linux network implementation
 	- Fixes
+- Molasses https://github.com/MolassesLover
+	- Linux package files
 
 	
 Support the project on Patreon: https://www.patreon.com/wickedengine
@@ -51,3 +53,5 @@ Patreon supporters:
 - LurkingNinja
 - Bernardo Del Castillo
 - Invictus
+- Scott Hunt
+
