@@ -401,7 +401,7 @@ local camera = ThirdPersonCamera
 -- Main loop:
 runProcess(function()
 
-	ClearWorld()
+	--ClearWorld()
 
 	-- We will override the render path so we can invoke the script from Editor and controls won't collide with editor scripts
 	--	Also save the active component that we can restore when ESCAPE is pressed
@@ -418,7 +418,7 @@ runProcess(function()
 	font.SetShadowColor(Vector(0,0,0,1))
 	path.AddFont(font)
 
-	LoadModel("../models/playground.wiscene")
+	--LoadModel("../models/playground.wiscene")
 	
 	player:Create(LoadModel("../models/girl.wiscene"))
 	camera:Create(player)
