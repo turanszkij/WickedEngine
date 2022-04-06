@@ -737,7 +737,8 @@ void EditorComponent::Load()
 	clearButton.SetColor(wi::Color(255, 235, 173, 255), wi::gui::WIDGETSTATE::FOCUS);
 	clearButton.OnClick([&](wi::gui::EventArgs args) {
 		translator.selected.clear();
-		wi::renderer::ClearWorld(wi::scene::GetScene());
+		wi::scene::Scene& scene = wi::scene::GetScene();
+		wi::renderer::ClearWorld(scene);
 		objectWnd.SetEntity(INVALID_ENTITY);
 		meshWnd.SetEntity(INVALID_ENTITY, -1);
 		lightWnd.SetEntity(INVALID_ENTITY);
