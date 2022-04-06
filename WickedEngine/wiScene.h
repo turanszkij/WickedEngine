@@ -435,6 +435,7 @@ namespace wi::scene
 			last_subset = (uint32_t)subsets.size();
 			if (subsets_per_lod > 0)
 			{
+				lod = std::min(lod, GetLODCount() - 1);
 				first_subset = subsets_per_lod * lod;
 				last_subset = first_subset + subsets_per_lod;
 			}
@@ -654,6 +655,7 @@ namespace wi::scene
 		wi::vector<uint8_t> lightmapTextureData;
 
 		uint8_t userStencilRef = 0;
+		float lod_distance_multiplier = 1;
 
 		// Non-serialized attributes:
 
@@ -667,7 +669,6 @@ namespace wi::scene
 		float impostorSwapDistance;
 
 		uint32_t lod = 0;
-		float lod_distance_multiplier = 1;
 
 		// these will only be valid for a single frame:
 		uint32_t mesh_index = ~0u;

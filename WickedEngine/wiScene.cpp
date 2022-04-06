@@ -3079,7 +3079,7 @@ namespace wi::scene
 				if (material != nullptr)
 				{
 					subset.materialIndex = (uint32_t)materials.GetIndex(subset.materialID);
-					const uint32_t lod_index = subsetIndex / mesh.subsets_per_lod;
+					const uint32_t lod_index = mesh.subsets_per_lod > 0 ? subsetIndex / mesh.subsets_per_lod : 0;
 					if (lod_index == 0 && mesh.BLAS.IsValid())
 					{
 						auto& geometry = mesh.BLAS.desc.bottom_level.geometries[subsetIndex];

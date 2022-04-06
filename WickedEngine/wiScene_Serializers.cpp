@@ -403,6 +403,11 @@ namespace wi::scene
 			    }
 			}
 
+			if (archive.GetVersion() >= 76)
+			{
+				archive >> subsets_per_lod;
+			}
+
 			wi::jobsystem::Execute(seri.ctx, [&](wi::jobsystem::JobArgs args) {
 				CreateRenderData();
 			});
@@ -463,6 +468,11 @@ namespace wi::scene
 			    }
 			}
 
+			if (archive.GetVersion() >= 76)
+			{
+				archive << subsets_per_lod;
+			}
+
 		}
 	}
 	void ImpostorComponent::Serialize(wi::Archive& archive, EntitySerializer& seri)
@@ -516,6 +526,10 @@ namespace wi::scene
 			{
 				archive >> emissiveColor;
 			}
+			if (archive.GetVersion() >= 76)
+			{
+				archive >> lod_distance_multiplier;
+			}
 		}
 		else
 		{
@@ -538,6 +552,10 @@ namespace wi::scene
 			if (archive.GetVersion() >= 60)
 			{
 				archive << emissiveColor;
+			}
+			if (archive.GetVersion() >= 76)
+			{
+				archive << lod_distance_multiplier;
 			}
 		}
 	}
