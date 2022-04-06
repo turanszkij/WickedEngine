@@ -730,12 +730,12 @@ struct TerraGen : public wi::gui::Window
 				if (chunk_data.has_grass)
 				{
 					const int dist = std::max(std::abs(center_chunk.x - chunk.x), std::abs(center_chunk.z - chunk.z));
-					if (dist <= 2)
+					if (dist <= 1)
 					{
 						if (!scene.hairs.Contains(chunk_data.entity))
 						{
 							// add patch for this chunk
-							scene.hairs.Create(chunk_data.entity) = std::move(chunk_data.grass);
+							scene.hairs.Create(chunk_data.entity) = chunk_data.grass;
 						}
 					}
 					else
@@ -743,9 +743,7 @@ struct TerraGen : public wi::gui::Window
 						wi::HairParticleSystem* grass = scene.hairs.GetComponent(chunk_data.entity);
 						if (grass != nullptr)
 						{
-							// remove this chunk's grass patch from the scene, but save it to the chunk for later
-							//	since we don't want to regenerate it if chunk gets near again
-							chunk_data.grass = std::move(*grass);
+							// remove this chunk's grass patch from the scene
 							scene.hairs.Remove(chunk_data.entity);
 						}
 					}
