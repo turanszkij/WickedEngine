@@ -681,7 +681,7 @@ struct TerraGen : public wi::gui::Window
 
 					const float grass_noise_frequency = 0.1f;
 					const float grass_noise = perlin.compute((chunk_pos.x + x) * grass_noise_frequency, height * grass_noise_frequency, (chunk_pos.z + z) * grass_noise_frequency, 6) * 0.5f + 0.5f;
-					const float region_grass = std::pow(materialBlendWeights.x, 2.0f) * grass_noise;
+					const float region_grass = std::pow(materialBlendWeights.x * (1 - materialBlendWeights.w), 2.0f) * grass_noise;
 					grass.vertex_lengths[index] = region_grass;
 				});
 				wi::jobsystem::Wait(ctx);
@@ -711,8 +711,8 @@ struct TerraGen : public wi::gui::Window
 				{
 					grass.meshID = chunkMeshEntity;
 					grass.length = 4;
-					grass.strandCount = grass_valid_vertex_count * 5;
-					grass.viewDistance = 100;
+					grass.strandCount = grass_valid_vertex_count * 3;
+					grass.viewDistance = 80;
 					grass.frameCount = 2;
 					grass.framesX = 1;
 					grass.framesY = 2;
