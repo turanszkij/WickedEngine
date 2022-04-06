@@ -1102,75 +1102,92 @@ void MeshWindow::Create(EditorComponent* editor)
 		MeshComponent* mesh = wi::scene::GetScene().meshes.GetComponent(entity);
 		if (mesh != nullptr)
 		{
+			if (mesh->subsets_per_lod == 0)
+			{
+				// if there were no lods before, record the subset count without lods:
+				mesh->subsets_per_lod = (uint32_t)mesh->subsets.size();
+			}
+
 			// https://github.com/zeux/meshoptimizer/blob/bedaaaf6e710d3b42d49260ca738c15d171b1a8f/demo/main.cpp
 			size_t index_count = mesh->indices.size();
 			size_t vertex_count = mesh->vertex_positions.size();
 
 			const size_t lod_count = (size_t)lodCountSlider.GetValue();
-
-			wi::vector<wi::vector<unsigned int> > lods(lod_count);
-
-			lods[0] = mesh->indices;
-
-			for (size_t i = 1; i < lod_count; ++i)
+			struct LOD
 			{
-				wi::vector<unsigned int>& lod = lods[i];
-
-				float threshold = powf(0.7f, float(i)); // each level is 70% reduction
-				size_t target_index_count = size_t(mesh->indices.size() * threshold) / 3 * 3;
-				float target_error = 1e-2f;
-
-				// we can simplify all the way from base level or from the last result
-				// simplifying from the base level sometimes produces better results, but simplifying from last level is faster
-				const wi::vector<unsigned int>& source = lods[i - 1];
-
-				if (source.size() < target_index_count)
-					target_index_count = source.size();
-
-				lod.resize(source.size());
-				lod.resize(meshopt_simplify(&lod[0], &source[0], source.size(), &mesh->vertex_positions[0].x, mesh->vertex_positions.size(), sizeof(XMFLOAT3), target_index_count, target_error));
-			}
-
-			// optimize each individual LOD for vertex cache & overdraw
-			for (size_t i = 0; i < lod_count; ++i)
-			{
-				wi::vector<unsigned int>& lod = lods[i];
-			
-				meshopt_optimizeVertexCache(&lod[0], &lod[0], lod.size(), mesh->vertex_positions.size());
-				meshopt_optimizeOverdraw(&lod[0], &lod[0], lod.size(), &mesh->vertex_positions[0].x, mesh->vertex_positions.size(), sizeof(XMFLOAT3), 1.0f);
-			}
-
-			wi::vector<size_t> lod_index_offsets(lod_count);
-			wi::vector<size_t> lod_index_counts(lod_count);
-			size_t total_index_count = 0;
-
-			//for (int i = lod_count - 1; i >= 0; --i)
-			for (int i = 0; i < lod_count; ++i)
-			{
-				lod_index_offsets[i] = total_index_count;
-				lod_index_counts[i] = lods[i].size();
-
-				total_index_count += lods[i].size();
-			}
-
-			wi::vector<unsigned int> indices(total_index_count);
+				struct Subset
+				{
+					wi::vector<uint32_t> indices;
+				};
+				wi::vector<Subset> subsets;
+			};
+			wi::vector<LOD> lods(lod_count);
 
 			for (size_t i = 0; i < lod_count; ++i)
 			{
-				memcpy(&indices[lod_index_offsets[i]], &lods[i][0], lods[i].size() * sizeof(lods[i][0]));
+				lods[i].subsets.resize(mesh->subsets_per_lod);
+				for (uint32_t subsetIndex = 0; subsetIndex < mesh->subsets_per_lod; ++subsetIndex)
+				{
+					const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
+					lods[i].subsets[subsetIndex].indices.resize(subset.indexCount);
+					for (uint32_t ind = 0; ind < subset.indexCount; ++ind)
+					{
+						lods[i].subsets[subsetIndex].indices[ind] = mesh->indices[subset.indexOffset + ind];
+					}
+				}
 			}
 
-			mesh->indices = indices;
-
-			MeshComponent::MeshSubset subset_tmp = mesh->subsets[0];
-			mesh->subsets.resize(lod_count);
-			mesh->subsets_per_lod = 1;
-			for (size_t i = 0; i < lod_count * mesh->subsets_per_lod; ++i)
+			for (uint32_t subsetIndex = 0; subsetIndex < mesh->subsets_per_lod; ++subsetIndex)
 			{
-				mesh->subsets[i] = subset_tmp;
-				mesh->subsets[i].indexOffset = (uint32_t)lod_index_offsets[i];
-				mesh->subsets[i].indexCount = (uint32_t)lod_index_counts[i];
+				const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
+
+				for (size_t i = 1; i < lod_count; ++i)
+				{
+					wi::vector<unsigned int>& lod = lods[i].subsets[subsetIndex].indices;
+
+					float threshold = powf(0.7f, float(i)); // each level is 70% reduction
+					size_t target_index_count = size_t(mesh->indices.size() * threshold) / 3 * 3;
+					float target_error = 1e-2f;
+
+					// we can simplify all the way from base level or from the last result
+					// simplifying from the base level sometimes produces better results, but simplifying from last level is faster
+					const wi::vector<unsigned int>& source = lods[i - 1].subsets[subsetIndex].indices;
+
+					if (source.size() < target_index_count)
+						target_index_count = source.size();
+
+					lod.resize(source.size());
+					lod.resize(meshopt_simplify(&lod[0], &source[0], source.size(), &mesh->vertex_positions[0].x, mesh->vertex_positions.size(), sizeof(XMFLOAT3), target_index_count, target_error));
+				}
+
+				// optimize each individual LOD for vertex cache & overdraw
+				for (size_t i = 0; i < lod_count; ++i)
+				{
+					wi::vector<unsigned int>& lod = lods[i].subsets[subsetIndex].indices;
+
+					meshopt_optimizeVertexCache(&lod[0], &lod[0], lod.size(), mesh->vertex_positions.size());
+					meshopt_optimizeOverdraw(&lod[0], &lod[0], lod.size(), &mesh->vertex_positions[0].x, mesh->vertex_positions.size(), sizeof(XMFLOAT3), 1.0f);
+				}
 			}
+
+			mesh->indices.clear();
+			wi::vector<MeshComponent::MeshSubset> subsets;
+			for (size_t i = 0; i < lod_count; ++i)
+			{
+				for (uint32_t subsetIndex = 0; subsetIndex < mesh->subsets_per_lod; ++subsetIndex)
+				{
+					const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
+					subsets.emplace_back();
+					subsets.back() = subset;
+					subsets.back().indexOffset = (uint32_t)mesh->indices.size();
+					subsets.back().indexCount = (uint32_t)lods[i].subsets[subsetIndex].indices.size();
+					for (auto& x : lods[i].subsets[subsetIndex].indices)
+					{
+						mesh->indices.push_back(x);
+					}
+				}
+			}
+			mesh->subsets = subsets;
 
 			mesh->CreateRenderData();
 			SetEntity(entity, subset);

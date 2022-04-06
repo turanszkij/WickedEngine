@@ -404,82 +404,93 @@ namespace wi::scene
 			// Generate tangents if not found:
 			vertex_tangents.resize(vertex_positions.size());
 
-			for (size_t i = 0; i < indices.size(); i += 3)
+			uint32_t first_subset = 0;
+			uint32_t last_subset = 0;
+			GetLODSubsetRange(0, first_subset, last_subset);
+			for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
 			{
-				const uint32_t i0 = indices[i + 0];
-				const uint32_t i1 = indices[i + 1];
-				const uint32_t i2 = indices[i + 2];
+				const MeshComponent::MeshSubset& subset = subsets[subsetIndex];
+				for (size_t i = 0; i < subset.indexCount; i += 3)
+				{
+					const uint32_t i0 = indices[subset.indexOffset + i + 0];
+					const uint32_t i1 = indices[subset.indexOffset + i + 1];
+					const uint32_t i2 = indices[subset.indexOffset + i + 2];
 
-				const XMFLOAT3 v0 = vertex_positions[i0];
-				const XMFLOAT3 v1 = vertex_positions[i1];
-				const XMFLOAT3 v2 = vertex_positions[i2];
+					const XMFLOAT3 v0 = vertex_positions[i0];
+					const XMFLOAT3 v1 = vertex_positions[i1];
+					const XMFLOAT3 v2 = vertex_positions[i2];
 
-				const XMFLOAT2 u0 = vertex_uvset_0[i0];
-				const XMFLOAT2 u1 = vertex_uvset_0[i1];
-				const XMFLOAT2 u2 = vertex_uvset_0[i2];
+					const XMFLOAT2 u0 = vertex_uvset_0[i0];
+					const XMFLOAT2 u1 = vertex_uvset_0[i1];
+					const XMFLOAT2 u2 = vertex_uvset_0[i2];
 
-				const XMFLOAT3 n0 = vertex_normals[i0];
-				const XMFLOAT3 n1 = vertex_normals[i1];
-				const XMFLOAT3 n2 = vertex_normals[i2];
+					const XMFLOAT3 n0 = vertex_normals[i0];
+					const XMFLOAT3 n1 = vertex_normals[i1];
+					const XMFLOAT3 n2 = vertex_normals[i2];
 
-				const XMVECTOR nor0 = XMLoadFloat3(&n0);
-				const XMVECTOR nor1 = XMLoadFloat3(&n1);
-				const XMVECTOR nor2 = XMLoadFloat3(&n2);
+					const XMVECTOR nor0 = XMLoadFloat3(&n0);
+					const XMVECTOR nor1 = XMLoadFloat3(&n1);
+					const XMVECTOR nor2 = XMLoadFloat3(&n2);
 
-				const XMVECTOR facenormal = XMVector3Normalize(nor0 + nor1 + nor2);
+					const XMVECTOR facenormal = XMVector3Normalize(nor0 + nor1 + nor2);
 
-				const float x1 = v1.x - v0.x;
-				const float x2 = v2.x - v0.x;
-				const float y1 = v1.y - v0.y;
-				const float y2 = v2.y - v0.y;
-				const float z1 = v1.z - v0.z;
-				const float z2 = v2.z - v0.z;
+					const float x1 = v1.x - v0.x;
+					const float x2 = v2.x - v0.x;
+					const float y1 = v1.y - v0.y;
+					const float y2 = v2.y - v0.y;
+					const float z1 = v1.z - v0.z;
+					const float z2 = v2.z - v0.z;
 
-				const float s1 = u1.x - u0.x;
-				const float s2 = u2.x - u0.x;
-				const float t1 = u1.y - u0.y;
-				const float t2 = u2.y - u0.y;
+					const float s1 = u1.x - u0.x;
+					const float s2 = u2.x - u0.x;
+					const float t1 = u1.y - u0.y;
+					const float t2 = u2.y - u0.y;
 
-				const float r = 1.0f / (s1 * t2 - s2 * t1);
-				const XMVECTOR sdir = XMVectorSet((t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r,
-					(t2 * z1 - t1 * z2) * r, 0);
-				const XMVECTOR tdir = XMVectorSet((s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r,
-					(s1 * z2 - s2 * z1) * r, 0);
+					const float r = 1.0f / (s1 * t2 - s2 * t1);
+					const XMVECTOR sdir = XMVectorSet((t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r,
+						(t2 * z1 - t1 * z2) * r, 0);
+					const XMVECTOR tdir = XMVectorSet((s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r,
+						(s1 * z2 - s2 * z1) * r, 0);
 
-				XMVECTOR tangent;
-				tangent = XMVector3Normalize(sdir - facenormal * XMVector3Dot(facenormal, sdir));
-				float sign = XMVectorGetX(XMVector3Dot(XMVector3Cross(tangent, facenormal), tdir)) < 0.0f ? -1.0f : 1.0f;
+					XMVECTOR tangent;
+					tangent = XMVector3Normalize(sdir - facenormal * XMVector3Dot(facenormal, sdir));
+					float sign = XMVectorGetX(XMVector3Dot(XMVector3Cross(tangent, facenormal), tdir)) < 0.0f ? -1.0f : 1.0f;
 
-				XMFLOAT3 t;
-				XMStoreFloat3(&t, tangent);
+					XMFLOAT3 t;
+					XMStoreFloat3(&t, tangent);
 
-				vertex_tangents[i0].x += t.x;
-				vertex_tangents[i0].y += t.y;
-				vertex_tangents[i0].z += t.z;
-				vertex_tangents[i0].w = sign;
+					vertex_tangents[i0].x += t.x;
+					vertex_tangents[i0].y += t.y;
+					vertex_tangents[i0].z += t.z;
+					vertex_tangents[i0].w = sign;
 
-				vertex_tangents[i1].x += t.x;
-				vertex_tangents[i1].y += t.y;
-				vertex_tangents[i1].z += t.z;
-				vertex_tangents[i1].w = sign;
+					vertex_tangents[i1].x += t.x;
+					vertex_tangents[i1].y += t.y;
+					vertex_tangents[i1].z += t.z;
+					vertex_tangents[i1].w = sign;
 
-				vertex_tangents[i2].x += t.x;
-				vertex_tangents[i2].y += t.y;
-				vertex_tangents[i2].z += t.z;
-				vertex_tangents[i2].w = sign;
+					vertex_tangents[i2].x += t.x;
+					vertex_tangents[i2].y += t.y;
+					vertex_tangents[i2].z += t.z;
+					vertex_tangents[i2].w = sign;
+				}
 			}
 		}
 
-		vertex_subsets.resize(vertex_positions.size());
-		uint32_t subsetCounter = 0;
-		for (auto& subset : subsets)
 		{
-			for (uint32_t i = 0; i < subset.indexCount; ++i)
+			vertex_subsets.resize(vertex_positions.size());
+			uint32_t first_subset = 0;
+			uint32_t last_subset = 0;
+			GetLODSubsetRange(0, first_subset, last_subset);
+			for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
 			{
-				uint32_t index = indices[subset.indexOffset + i];
-				vertex_subsets[index] = subsetCounter;
+				const MeshComponent::MeshSubset& subset = subsets[subsetIndex];
+				for (uint32_t i = 0; i < subset.indexCount; ++i)
+				{
+					uint32_t index = indices[subset.indexOffset + i];
+					vertex_subsets[index] = subsetIndex;
+				}
 			}
-			subsetCounter++;
 		}
 
 		const size_t uv_count = std::max(vertex_uvset_0.size(), vertex_uvset_1.size());
