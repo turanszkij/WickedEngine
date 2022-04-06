@@ -28,6 +28,8 @@ namespace wi::terrain
 		wi::ecs::Entity entity = INVALID_ENTITY;
 		wi::vector<wi::scene::MeshComponent> mesh_lods;
 		int current_lod = 0;
+		bool has_grass = false;
+		wi::HairParticleSystem grass;
 	};
 }
 
@@ -62,6 +64,7 @@ namespace wi::terrain
 		wi::scene::MaterialComponent material_Slope;
 		wi::scene::MaterialComponent material_LowAltitude;
 		wi::scene::MaterialComponent material_HighAltitude;
+		wi::scene::MaterialComponent material_GrassParticle;
 		wi::unordered_map<Chunk, ChunkData> chunks;
 		struct LOD
 		{
@@ -469,12 +472,19 @@ namespace wi::terrain
 				scene.names.Create(weatherEntity) = "terrainWeather";
 				scene.Component_Attach(weatherEntity, terrainEntity);
 				weather.SetRealisticSky(true);
+				weather.SetVolumetricClouds(true);
+				weather.volumetricCloudParameters.CoverageAmount = 0.95f;
+				weather.volumetricCloudParameters.CoverageMinimum = 1.383f;
 				weather.fogStart = 10;
 				weather.fogEnd = 100000;
 				weather.SetHeightFog(true);
 				weather.fogHeightStart = 0;
 				weather.fogHeightEnd = 100;
-
+				weather.windDirection = XMFLOAT3(0.05f, 0.05f, 0.05f);
+				weather.windSpeed = 4;
+			}
+			if (scene.lights.GetCount() == 0)
+			{
 				Entity sunEntity = scene.Entity_CreateLight("terrainSun");
 				scene.Component_Attach(sunEntity, terrainEntity);
 				LightComponent& light = *scene.lights.GetComponent(sunEntity);
@@ -483,7 +493,7 @@ namespace wi::terrain
 				light.SetCastShadow(true);
 				//light.SetVolumetricsEnabled(true);
 				TransformComponent& transform = *scene.transforms.GetComponent(sunEntity);
-				transform.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV4, 0, XM_PIDIV4));
+				transform.RotateRollPitchYaw(XMFLOAT3(XM_PI / 3.0f, 0, XM_PIDIV4));
 			}
 		}
 
@@ -572,6 +582,9 @@ namespace wi::terrain
 					mesh.vertex_uvset_1.resize(vertexCount);
 					mesh.vertex_atlas.resize(vertexCount);
 
+					HairParticleSystem grass;
+					grass.vertex_lengths.resize(vertexCount);
+
 					wi::jobsystem::context ctx;
 					wi::jobsystem::Dispatch(ctx, vertexCount, width, [&](wi::jobsystem::JobArgs args) {
 						uint32_t index = args.jobIndex;
@@ -650,6 +663,11 @@ namespace wi::terrain
 						mesh.vertex_uvset_0[index] = uv;
 						mesh.vertex_uvset_1[index] = uv;
 						mesh.vertex_atlas[index] = uv;
+
+						const float grass_noise_frequency = 0.1f;
+						const float grass_noise = perlin.compute((chunk_pos.x + x) * grass_noise_frequency, height * grass_noise_frequency, (chunk_pos.z + z) * grass_noise_frequency, 6) * 0.5f + 0.5f;
+						const float region_grass = std::pow(materialBlendWeights.x, 2.0f) * grass_noise;
+						grass.vertex_lengths[index] = region_grass;
 					});
 					wi::jobsystem::Wait(ctx);
 
@@ -662,13 +680,40 @@ namespace wi::terrain
 						mesh_lod.subsets[0].indexCount = (uint32_t)lods[lod].indices.size();
 						mesh_lod.CreateRenderData();
 					});
+					uint32_t grass_valid_vertex_count = 0;
+					for (auto& x : grass.vertex_lengths)
+					{
+						if (x > 0.01f)
+						{
+							grass_valid_vertex_count++;
+						}
+						else
+						{
+							x = 0;
+						}
+					}
 					wi::jobsystem::Wait(ctx);
 
 					Entity chunkMeshEntity = CreateEntity();
 					object.meshID = chunkMeshEntity;
+					grass.meshID = chunkMeshEntity;
 					scene.meshes.Create(chunkMeshEntity) = std::move(chunk_data.mesh_lods[0]);
 					scene.names.Create(chunkMeshEntity) = "chunkmesh_" + chunk_id;
 					scene.Component_Attach(chunkMeshEntity, chunkObjectEntity);
+					if (grass_valid_vertex_count > 0)
+					{
+						grass.meshID = chunkMeshEntity;
+						grass.length = 4;
+						grass.strandCount = grass_valid_vertex_count * 5;
+						grass.viewDistance = 100;
+						grass.frameCount = 2;
+						grass.framesX = 1;
+						grass.framesY = 2;
+						grass.frameStart = 0;
+						scene.materials.Create(chunkObjectEntity) = material_GrassParticle;
+						chunk_data.grass = std::move(grass);
+						chunk_data.has_grass = true;
+					}
 					chunks[chunk] = std::move(chunk_data);
 
 					if (timer.elapsed_milliseconds() > allocated_timeframe_milliseconds) // approximately this much time is allowed for generation
@@ -698,6 +743,26 @@ namespace wi::terrain
 								chunk_data.mesh_lods[chunk_data.current_lod] = std::move(*mesh);
 								*mesh = std::move(chunk_data.mesh_lods[lod]);
 								chunk_data.current_lod = lod;
+							}
+							// hair particle placement:
+							if (chunk_data.has_grass)
+							{
+								if (dist <= 2)
+								{
+									if (!scene.hairs.Contains(chunk_data.entity))
+									{
+										scene.hairs.Create(chunk_data.entity) = std::move(chunk_data.grass);
+									}
+								}
+								else
+								{
+									HairParticleSystem* grass = scene.hairs.GetComponent(chunk_data.entity);
+									if (grass != nullptr)
+									{
+										chunk_data.grass = std::move(*grass);
+										scene.hairs.Remove(chunk_data.entity);
+									}
+								}
 							}
 						}
 					}
@@ -1169,10 +1234,13 @@ void MeshWindow::Create(EditorComponent* editor)
 			terragen.material_Slope.textures[MaterialComponent::NORMALMAP].name = "images/terrain/slope_nor.jpg";
 			terragen.material_LowAltitude.textures[MaterialComponent::BASECOLORMAP].name = "images/terrain/low_altitude.jpg";
 			terragen.material_HighAltitude.textures[MaterialComponent::BASECOLORMAP].name = "images/terrain/high_altitude.jpg";
+			terragen.material_GrassParticle.textures[MaterialComponent::BASECOLORMAP].name = "images/terrain/grassparticle.png";
+			terragen.material_GrassParticle.alphaRef = 0.75f;
 			terragen.material_Base.CreateRenderData();
 			terragen.material_Slope.CreateRenderData();
 			terragen.material_LowAltitude.CreateRenderData();
 			terragen.material_HighAltitude.CreateRenderData();
+			terragen.material_GrassParticle.CreateRenderData();
 			terragen.init();
 			editor->GetGUI().AddWidget(&terragen);
 		}

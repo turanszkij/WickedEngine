@@ -85,6 +85,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
     target = normalize(mul((float3x3)xHairWorld, target));
 	const float3 root = base;
 
+	const float3 diff = root - GetCamera().position;
+	const float distsq = dot(diff, diff);
+	const bool distance_culled = dot(diff, diff) > sqr(xHairViewDistance);
+
 	float3 normal = 0;
     
 	for (uint segmentID = 0; segmentID < xHairSegmentCount; ++segmentID)
@@ -218,7 +222,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		sphere.center = (base + tip) * 0.5;
 		sphere.radius = len;
 
-		if (GetCamera().frustum.intersects(sphere))
+		if (!distance_culled && GetCamera().frustum.intersects(sphere))
 		{
 			uint prevCount;
 			counterBuffer.InterlockedAdd(0, 1, prevCount);

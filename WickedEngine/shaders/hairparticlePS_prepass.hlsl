@@ -16,10 +16,7 @@ uint2 main(VertexToPixel input, out uint coverage : SV_Coverage) : SV_Target
 	}
 
 	// Distance dithered fade:
-	if (dither(input.pos.xy + GetTemporalAASampleRotation()) - input.fade < 0)
-	{
-		alpha = 0;
-	}
+	clip(dither(input.pos.xy + GetTemporalAASampleRotation()) - input.fade);
 
 	coverage = AlphaToCoverage(alpha, material.alphaTest, input.pos);
 
