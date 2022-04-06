@@ -39,9 +39,9 @@ namespace std
 	template <>
 	struct std::hash<wi::terrain::Chunk>
 	{
-		inline size_t operator()(const wi::terrain::Chunk& k) const
+		inline std::size_t operator()(const wi::terrain::Chunk& k) const
 		{
-			return ((hash<int>()(k.x) ^ (hash<int>()(k.z) << 1)) >> 1);
+			return ((std::hash<int>()(k.x) ^ (std::hash<int>()(k.z) << 1)) >> 1);
 		}
 	};
 }
