@@ -682,7 +682,7 @@ struct TerraGen : public wi::gui::Window
 					mesh.vertex_atlas[index] = uv;
 
 					const float grass_noise_frequency = 0.1f;
-					const float grass_noise = perlin.compute((chunk_pos.x + x) * grass_noise_frequency, height * grass_noise_frequency, (chunk_pos.z + z) * grass_noise_frequency, 6) * 0.5f + 0.5f;
+					const float grass_noise = perlin.compute((chunk_pos.x + x) * grass_noise_frequency, height * grass_noise_frequency, (chunk_pos.z + z) * grass_noise_frequency) * 0.5f + 0.5f;
 					const float region_grass = std::pow(materialBlendWeights.x * (1 - materialBlendWeights.w), 2.0f) * grass_noise;
 					grass.vertex_lengths[index] = region_grass;
 				});
