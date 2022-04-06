@@ -209,6 +209,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			const float3 wind = sin(mad(GetFrame().time, GetWeather().wind.speed, waveoffset)) * wavedir;
 
 			float3 position = rootposition + patchPos + wind;
+			if (distance_culled)
+			{
+				position = 0;
+			}
 
 			uint4 data;
 			data.xyz = asuint(position);
