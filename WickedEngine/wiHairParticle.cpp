@@ -245,7 +245,15 @@ namespace wi
 		hcb.xHairParticleCount = hcb.xHairStrandCount * hcb.xHairSegmentCount;
 		hcb.xHairRandomSeed = randomSeed;
 		hcb.xHairViewDistance = viewDistance;
-		hcb.xHairBaseMeshIndexCount = (indices.empty() ? (uint)mesh.indices.size() : (uint)indices.size());
+		hcb.xHairBaseMeshIndexCount = 0;
+		uint32_t first_subset = 0;
+		uint32_t last_subset = 0;
+		mesh.GetLODSubsetRange(0, first_subset, last_subset);
+		for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
+		{
+			const MeshComponent::MeshSubset& subset = mesh.subsets[subsetIndex];
+			hcb.xHairBaseMeshIndexCount = std::max(hcb.xHairBaseMeshIndexCount, subset.indexOffset + subset.indexCount);
+		}
 		hcb.xHairBaseMeshVertexPositionStride = sizeof(MeshComponent::Vertex_POS);
 		// segmentCount will be loop in the shader, not a threadgroup so we don't need it here:
 		hcb.xHairNumDispatchGroups = (hcb.xHairParticleCount + THREADCOUNT_SIMULATEHAIR - 1) / THREADCOUNT_SIMULATEHAIR;

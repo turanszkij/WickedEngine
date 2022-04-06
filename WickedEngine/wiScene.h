@@ -365,6 +365,8 @@ namespace wi::scene
 		};
 		wi::vector<MeshMorphTarget> targets;
 
+		uint32_t subsets_per_lod = 0; // this needs to be specified if there are multiple LOD levels
+
 		// Non-serialized attributes:
 		wi::primitive::AABB aabb;
 		wi::graphics::GPUBuffer generalBuffer; // index buffer + all static vertex buffers
@@ -426,6 +428,17 @@ namespace wi::scene
 		inline wi::graphics::IndexBufferFormat GetIndexFormat() const { return vertex_positions.size() > 65536 ? wi::graphics::IndexBufferFormat::UINT32 : wi::graphics::IndexBufferFormat::UINT16; }
 		inline size_t GetIndexStride() const { return GetIndexFormat() == wi::graphics::IndexBufferFormat::UINT32 ? sizeof(uint32_t) : sizeof(uint16_t); }
 		inline bool IsSkinned() const { return armatureID != wi::ecs::INVALID_ENTITY; }
+		inline uint32_t GetLODCount() const { return subsets_per_lod == 0 ? 1 : ((uint32_t)subsets.size() / subsets_per_lod); }
+		inline void GetLODSubsetRange(uint32_t lod, uint32_t& first_subset, uint32_t& last_subset) const
+		{
+			first_subset = 0;
+			last_subset = (uint32_t)subsets.size();
+			if (subsets_per_lod > 0)
+			{
+				first_subset = subsets_per_lod * lod;
+				last_subset = first_subset + subsets_per_lod;
+			}
+		}
 
 		// Recreates GPU resources for index/vertex buffers
 		void CreateRenderData();
@@ -652,6 +665,9 @@ namespace wi::scene
 		XMFLOAT3 center = XMFLOAT3(0, 0, 0);
 		float impostorFadeThresholdRadius;
 		float impostorSwapDistance;
+
+		uint32_t lod = 0;
+		float lod_distance_multiplier = 1;
 
 		// these will only be valid for a single frame:
 		uint32_t mesh_index = ~0u;
@@ -1494,6 +1510,8 @@ namespace wi::scene
 		void RunParticleUpdateSystem(wi::jobsystem::context& ctx);
 		void RunWeatherUpdateSystem(wi::jobsystem::context& ctx);
 		void RunSoundUpdateSystem(wi::jobsystem::context& ctx);
+
+		void UpdateLODsForCamera(const CameraComponent& camera);
 	};
 
 	// Returns skinned vertex position in armature local space

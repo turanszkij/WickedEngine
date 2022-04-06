@@ -2402,6 +2402,7 @@ void RenderMeshes(
 		uint8_t userStencilRefOverride = 0;
 		bool forceAlphatestForDithering = false;
 		AABB aabb;
+		uint32_t lod = 0;
 	} instancedBatch = {};
 
 
@@ -2426,7 +2427,10 @@ void RenderMeshes(
 
 		device->BindIndexBuffer(&mesh.generalBuffer, mesh.GetIndexFormat(), mesh.ib.offset, cmd);
 
-		for (size_t subsetIndex = 0; subsetIndex < mesh.subsets.size(); ++subsetIndex)
+		uint32_t first_subset = 0;
+		uint32_t last_subset = 0;
+		mesh.GetLODSubsetRange(instancedBatch.lod, first_subset, last_subset);
+		for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
 		{
 			const MeshComponent::MeshSubset& subset = mesh.subsets[subsetIndex];
 			if (subset.indexCount == 0)
@@ -2539,7 +2543,10 @@ void RenderMeshes(
 		const uint8_t userStencilRefOverride = instance.userStencilRef;
 
 		// When we encounter a new mesh inside the global instance array, we begin a new RenderBatch:
-		if (meshIndex != instancedBatch.meshIndex || userStencilRefOverride != instancedBatch.userStencilRefOverride)
+		if (meshIndex != instancedBatch.meshIndex ||
+			userStencilRefOverride != instancedBatch.userStencilRefOverride ||
+			instance.lod != instancedBatch.lod
+			)
 		{
 			batch_flush();
 
@@ -2550,6 +2557,7 @@ void RenderMeshes(
 			instancedBatch.userStencilRefOverride = userStencilRefOverride;
 			instancedBatch.forceAlphatestForDithering = 0;
 			instancedBatch.aabb = AABB();
+			instancedBatch.lod = instance.lod;
 		}
 
 		float dither = instance.GetTransparency();
@@ -6456,7 +6464,10 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 				viewport.width = (float)scene.impostorTextureDim;
 				device->BindViewports(1, &viewport, cmd);
 
-				for (size_t subsetIndex = 0; subsetIndex < mesh.subsets.size(); ++subsetIndex)
+				uint32_t first_subset = 0;
+				uint32_t last_subset = 0;
+				mesh.GetLODSubsetRange(0, first_subset, last_subset);
+				for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
 				{
 					const MeshComponent::MeshSubset& subset = mesh.subsets[subsetIndex];
 					if (subset.indexCount == 0)

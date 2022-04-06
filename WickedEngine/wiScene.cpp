@@ -698,8 +698,12 @@ namespace wi::scene
 				desc.flags |= RaytracingAccelerationStructureDesc::FLAG_PREFER_FAST_TRACE;
 			}
 
-			for (auto& subset : subsets)
+			uint32_t first_subset = 0;
+			uint32_t last_subset = 0;
+			GetLODSubsetRange(0, first_subset, last_subset);
+			for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
 			{
+				const MeshComponent::MeshSubset& subset = subsets[subsetIndex];
 				desc.bottom_level.geometries.emplace_back();
 				auto& geometry = desc.bottom_level.geometries.back();
 				geometry.type = RaytracingAccelerationStructureDesc::BottomLevel::Geometry::Type::TRIANGLES;
@@ -3075,7 +3079,8 @@ namespace wi::scene
 				if (material != nullptr)
 				{
 					subset.materialIndex = (uint32_t)materials.GetIndex(subset.materialID);
-					if (mesh.BLAS.IsValid())
+					const uint32_t lod_index = subsetIndex / mesh.subsets_per_lod;
+					if (lod_index == 0 && mesh.BLAS.IsValid())
 					{
 						auto& geometry = mesh.BLAS.desc.bottom_level.geometries[subsetIndex];
 						uint32_t flags = geometry.flags;
@@ -3302,8 +3307,12 @@ namespace wi::scene
 						}
 					}
 
-					for (auto& subset : mesh.subsets)
+					uint32_t first_subset = 0;
+					uint32_t last_subset = 0;
+					mesh.GetLODSubsetRange(0, first_subset, last_subset);
+					for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
 					{
+						const MeshComponent::MeshSubset& subset = mesh.subsets[subsetIndex];
 						const MaterialComponent* material = materials.GetComponent(subset.materialID);
 
 						if (material != nullptr)
@@ -3966,6 +3975,37 @@ namespace wi::scene
 		}
 	}
 
+	void Scene::UpdateLODsForCamera(const CameraComponent& camera)
+	{
+		wi::jobsystem::context ctx;
+		wi::jobsystem::Dispatch(ctx, (uint32_t)objects.GetCount(), small_subtask_groupsize, [&](wi::jobsystem::JobArgs args) {
+			ObjectComponent& object = objects[args.jobIndex];
+			if (object.meshID == INVALID_ENTITY)
+				return;
+			const AABB& aabb = aabb_objects[args.jobIndex];
+			const float distsq = wi::math::DistanceSquared(camera.Eye, aabb.getCenter());
+			const float radius = aabb.getRadius();
+			const float radiussq = radius * radius;
+			if (distsq < radiussq)
+			{
+				object.lod = 0;
+			}
+			else
+			{
+				const MeshComponent* mesh = meshes.GetComponent(object.meshID);
+				if (mesh != nullptr && mesh->subsets_per_lod > 0)
+				{
+					const float dist = std::sqrt(distsq);
+					const float dist_to_sphere = dist - radius;
+					object.lod = uint32_t(dist_to_sphere * object.lod_distance_multiplier);
+					object.lod = std::min(object.lod, mesh->GetLODCount() - 1);
+				}
+			}
+
+		});
+		wi::jobsystem::Wait(ctx);
+	}
+
 	void Scene::PutWaterRipple(const std::string& image, const XMFLOAT3& pos)
 	{
 		wi::Sprite img(image);
@@ -4133,9 +4173,12 @@ namespace wi::scene
 
 				const ArmatureComponent* armature = mesh.IsSkinned() ? scene.armatures.GetComponent(mesh.armatureID) : nullptr;
 
-				int subsetCounter = 0;
-				for (auto& subset : mesh.subsets)
+				uint32_t first_subset = 0;
+				uint32_t last_subset = 0;
+				mesh.GetLODSubsetRange(0, first_subset, last_subset);
+				for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
 				{
+					const MeshComponent::MeshSubset& subset = mesh.subsets[subsetIndex];
 					for (size_t i = 0; i < subset.indexCount; i += 3)
 					{
 						const uint32_t i0 = mesh.indices[subset.indexOffset + i + 0];
@@ -4192,7 +4235,7 @@ namespace wi::scene
 								XMStoreFloat3(&result.position, pos);
 								XMStoreFloat3(&result.normal, nor);
 								result.distance = distance;
-								result.subsetIndex = subsetCounter;
+								result.subsetIndex = (int)subsetIndex;
 								result.vertexID0 = (int)i0;
 								result.vertexID1 = (int)i1;
 								result.vertexID2 = (int)i2;
@@ -4200,7 +4243,6 @@ namespace wi::scene
 							}
 						}
 					}
-					subsetCounter++;
 				}
 
 			}
@@ -4261,9 +4303,12 @@ namespace wi::scene
 
 				const ArmatureComponent* armature = mesh.IsSkinned() ? scene.armatures.GetComponent(mesh.armatureID) : nullptr;
 
-				int subsetCounter = 0;
-				for (auto& subset : mesh.subsets)
+				uint32_t first_subset = 0;
+				uint32_t last_subset = 0;
+				mesh.GetLODSubsetRange(0, first_subset, last_subset);
+				for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
 				{
+					const MeshComponent::MeshSubset& subset = mesh.subsets[subsetIndex];
 					for (size_t i = 0; i < subset.indexCount; i += 3)
 					{
 						const uint32_t i0 = mesh.indices[subset.indexOffset + i + 0];
@@ -4411,7 +4456,6 @@ namespace wi::scene
 							return result;
 						}
 					}
-					subsetCounter++;
 				}
 
 			}
@@ -4467,9 +4511,12 @@ namespace wi::scene
 
 				const ArmatureComponent* armature = mesh.IsSkinned() ? scene.armatures.GetComponent(mesh.armatureID) : nullptr;
 
-				int subsetCounter = 0;
-				for (auto& subset : mesh.subsets)
+				uint32_t first_subset = 0;
+				uint32_t last_subset = 0;
+				mesh.GetLODSubsetRange(0, first_subset, last_subset);
+				for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
 				{
+					const MeshComponent::MeshSubset& subset = mesh.subsets[subsetIndex];
 					for (size_t i = 0; i < subset.indexCount; i += 3)
 					{
 						const uint32_t i0 = mesh.indices[subset.indexOffset + i + 0];
@@ -4688,7 +4735,6 @@ namespace wi::scene
 							return result;
 						}
 					}
-					subsetCounter++;
 				}
 
 			}

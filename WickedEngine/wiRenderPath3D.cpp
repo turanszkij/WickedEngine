@@ -519,6 +519,7 @@ void RenderPath3D::Update(float dt)
 		}
 
 		scene->Update(dt * wi::renderer::GetGameSpeed());
+		scene->UpdateLODsForCamera(*camera);
 	}
 
 	// Frustum culling for main camera:
