@@ -261,7 +261,7 @@ void ObjectWindow::Create(EditorComponent* editor)
 	this->editor = editor;
 
 	wi::gui::Window::Create("Object Window");
-	SetSize(XMFLOAT2(660, 500));
+	SetSize(XMFLOAT2(660, 520));
 
 	float x = 200;
 	float y = 0;
@@ -327,6 +327,19 @@ void ObjectWindow::Create(EditorComponent* editor)
 		}
 	});
 	AddWidget(&cascadeMaskSlider);
+
+	lodSlider.Create(0.001f, 10, 1, 10000, "LOD Multiplier: ");
+	lodSlider.SetTooltip("How much the distance to camera will affect LOD selection. (If the mesh has lods)");
+	lodSlider.SetSize(XMFLOAT2(100, hei));
+	lodSlider.SetPos(XMFLOAT2(x, y += step));
+	lodSlider.OnSlide([&](wi::gui::EventArgs args) {
+		ObjectComponent* object = wi::scene::GetScene().objects.GetComponent(entity);
+		if (object != nullptr)
+		{
+			object->lod_distance_multiplier = args.fValue;
+		}
+		});
+	AddWidget(&lodSlider);
 
 	y += step;
 
@@ -819,6 +832,7 @@ void ObjectWindow::SetEntity(Entity entity)
 		shadowCheckBox.SetCheck(object->IsCastingShadow());
 		cascadeMaskSlider.SetValue((float)object->cascadeMask);
 		ditherSlider.SetValue(object->GetTransparency());
+		lodSlider.SetValue(object->lod_distance_multiplier);
 
 		switch (colorComboBox.GetSelected())
 		{

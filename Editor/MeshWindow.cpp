@@ -1096,6 +1096,95 @@ void MeshWindow::Create(EditorComponent* editor)
 		});
 	AddWidget(&optimizeButton);
 
+	lodgenButton.Create("LOD Gen");
+	lodgenButton.SetTooltip("Generate LODs (levels of detail).");
+	lodgenButton.SetSize(XMFLOAT2(240, hei));
+	lodgenButton.SetPos(XMFLOAT2(x - 50, y += step));
+	lodgenButton.OnClick([&](wi::gui::EventArgs args) {
+		MeshComponent* mesh = wi::scene::GetScene().meshes.GetComponent(entity);
+		if (mesh != nullptr)
+		{
+			// https://github.com/zeux/meshoptimizer/blob/bedaaaf6e710d3b42d49260ca738c15d171b1a8f/demo/main.cpp
+			size_t index_count = mesh->indices.size();
+			size_t vertex_count = mesh->vertex_positions.size();
+
+			const size_t lod_count = (size_t)lodCountSlider.GetValue();
+
+			wi::vector<wi::vector<unsigned int> > lods(lod_count);
+
+			lods[0] = mesh->indices;
+
+			for (size_t i = 1; i < lod_count; ++i)
+			{
+				wi::vector<unsigned int>& lod = lods[i];
+
+				float threshold = powf(0.7f, float(i)); // each level is 70% reduction
+				size_t target_index_count = size_t(mesh->indices.size() * threshold) / 3 * 3;
+				float target_error = 1e-2f;
+
+				// we can simplify all the way from base level or from the last result
+				// simplifying from the base level sometimes produces better results, but simplifying from last level is faster
+				const wi::vector<unsigned int>& source = lods[i - 1];
+
+				if (source.size() < target_index_count)
+					target_index_count = source.size();
+
+				lod.resize(source.size());
+				lod.resize(meshopt_simplify(&lod[0], &source[0], source.size(), &mesh->vertex_positions[0].x, mesh->vertex_positions.size(), sizeof(XMFLOAT3), target_index_count, target_error));
+			}
+
+			// optimize each individual LOD for vertex cache & overdraw
+			for (size_t i = 0; i < lod_count; ++i)
+			{
+				wi::vector<unsigned int>& lod = lods[i];
+			
+				meshopt_optimizeVertexCache(&lod[0], &lod[0], lod.size(), mesh->vertex_positions.size());
+				meshopt_optimizeOverdraw(&lod[0], &lod[0], lod.size(), &mesh->vertex_positions[0].x, mesh->vertex_positions.size(), sizeof(XMFLOAT3), 1.0f);
+			}
+
+			wi::vector<size_t> lod_index_offsets(lod_count);
+			wi::vector<size_t> lod_index_counts(lod_count);
+			size_t total_index_count = 0;
+
+			//for (int i = lod_count - 1; i >= 0; --i)
+			for (int i = 0; i < lod_count; ++i)
+			{
+				lod_index_offsets[i] = total_index_count;
+				lod_index_counts[i] = lods[i].size();
+
+				total_index_count += lods[i].size();
+			}
+
+			wi::vector<unsigned int> indices(total_index_count);
+
+			for (size_t i = 0; i < lod_count; ++i)
+			{
+				memcpy(&indices[lod_index_offsets[i]], &lods[i][0], lods[i].size() * sizeof(lods[i][0]));
+			}
+
+			mesh->indices = indices;
+
+			MeshComponent::MeshSubset subset_tmp = mesh->subsets[0];
+			mesh->subsets.resize(lod_count);
+			mesh->subsets_per_lod = 1;
+			for (size_t i = 0; i < lod_count * mesh->subsets_per_lod; ++i)
+			{
+				mesh->subsets[i] = subset_tmp;
+				mesh->subsets[i].indexOffset = (uint32_t)lod_index_offsets[i];
+				mesh->subsets[i].indexCount = (uint32_t)lod_index_counts[i];
+			}
+
+			mesh->CreateRenderData();
+			SetEntity(entity, subset);
+		}
+		});
+	AddWidget(&lodgenButton);
+
+	lodCountSlider.Create(2, 10, 6, 8, "LOD Count: ");
+	lodCountSlider.SetSize(XMFLOAT2(100, hei));
+	lodCountSlider.SetPos(XMFLOAT2(x + 280, y));
+	AddWidget(&lodCountSlider);
+
 
 	// Right side:
 
@@ -1237,17 +1326,9 @@ void MeshWindow::Create(EditorComponent* editor)
 		wi::Archive& archive = editor->AdvanceHistory();
 		archive << EditorComponent::HISTORYOP_ADD;
 		editor->RecordSelection(archive);
-		
-		//editor->ClearSelected();
-		//wi::scene::PickResult pick;
-		//pick.entity = chunkObjectEntity;
-		//pick.subsetIndex = 0;
-		//editor->AddSelected(pick);
 
 		editor->RecordSelection(archive);
 		editor->RecordAddedEntity(archive, terragen.terrainEntity);
-
-		//SetEntity(object.meshID, pick.subsetIndex);
 
 		editor->RefreshSceneGraphView();
 

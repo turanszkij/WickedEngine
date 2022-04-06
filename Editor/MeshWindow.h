@@ -31,6 +31,8 @@ public:
 	wi::gui::Button recenterButton;
 	wi::gui::Button recenterToBottomButton;
 	wi::gui::Button optimizeButton;
+	wi::gui::Button lodgenButton;
+	wi::gui::Slider lodCountSlider;
 
 	wi::gui::CheckBox terrainCheckBox;
 	wi::gui::ComboBox terrainMat1Combo;
