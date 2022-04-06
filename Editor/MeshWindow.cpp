@@ -15,21 +15,19 @@ using namespace wi::scene;
 struct Chunk
 {
 	int x, z;
-
 	constexpr bool operator==(const Chunk& other) const
 	{
 		return (x == other.x) && (z == other.z);
 	}
 };
-// Allow hashing the Chunk:
 namespace std
 {
 	template <>
-	struct std::hash<Chunk>
+	struct hash<Chunk>
 	{
-		inline std::size_t operator()(const Chunk& k) const
+		inline size_t operator()(const Chunk& k) const
 		{
-			return ((std::hash<int>()(k.x) ^ (std::hash<int>()(k.z) << 1)) >> 1);
+			return ((hash<int>()(k.x) ^ (hash<int>()(k.z) << 1)) >> 1);
 		}
 	};
 }
