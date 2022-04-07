@@ -75,6 +75,24 @@ struct TerraGen : public wi::gui::Window
 		int height = 0;
 	} heightmap;
 
+	struct Prop
+	{
+		std::string name = "prop";
+		Entity mesh_entity = INVALID_ENTITY;
+		ObjectComponent object;
+		int max_count_per_chunk = 10; // a chunk will try to generate this many props of this type
+		int region = 0; // region selection in range [0,3]
+		float region_power = 1; // region weight affection power factor
+		float noise_frequency = 1.0f; // perlin noise's frequency for placement factor
+		float threshold = 0.5f; // the chance of placement (higher is less chance)
+		float min_size = 1; // scaling randomization range min
+		float max_size = 1; // scaling randomization range max
+		float min_y_offset = 0; // min randomized offset on Y axis
+		float max_y_offset = 0; // max randomized offset on Y axis
+	};
+	wi::vector<Prop> props;
+	std::mt19937 prop_rand;
+
 	wi::gui::CheckBox generationCheckBox;
 	wi::gui::CheckBox removalCheckBox;
 	wi::gui::Slider seedSlider;
@@ -466,6 +484,7 @@ struct TerraGen : public wi::gui::Window
 
 		const uint32_t seed = (uint32_t)seedSlider.GetValue();
 		perlin.init(seed);
+		prop_rand.seed(seed);
 
 		// Add some nice weather and lighting if there is none yet:
 		if (scene.weathers.GetCount() == 0)
@@ -576,6 +595,7 @@ struct TerraGen : public wi::gui::Window
 				transform.ClearTransform();
 				const XMFLOAT3 chunk_pos = XMFLOAT3(float(chunk.x * (width - 1)), 0, float(chunk.z * (width - 1)));
 				transform.Translate(chunk_pos);
+				transform.UpdateTransform();
 
 				MeshComponent& mesh = scene.meshes.Create(chunk_data.entity);
 				object.meshID = chunk_data.entity;
@@ -681,8 +701,10 @@ struct TerraGen : public wi::gui::Window
 					mesh.vertex_uvset_1[index] = uv;
 					mesh.vertex_atlas[index] = uv;
 
+					XMFLOAT3 vertex_pos(chunk_pos.x + x, height, chunk_pos.z + z);
+
 					const float grass_noise_frequency = 0.1f;
-					const float grass_noise = perlin.compute((chunk_pos.x + x) * grass_noise_frequency, height * grass_noise_frequency, (chunk_pos.z + z) * grass_noise_frequency) * 0.5f + 0.5f;
+					const float grass_noise = perlin.compute(vertex_pos.x * grass_noise_frequency, vertex_pos.y * grass_noise_frequency, vertex_pos.z * grass_noise_frequency) * 0.5f + 0.5f;
 					const float region_grass = std::pow(materialBlendWeights.x * (1 - materialBlendWeights.w), 2.0f) * grass_noise;
 					grass.vertex_lengths[index] = region_grass;
 				});
@@ -700,6 +722,64 @@ struct TerraGen : public wi::gui::Window
 					else
 					{
 						x = 0;
+					}
+				}
+
+				for (auto& prop : props)
+				{
+					for (int i = 0; i < prop.max_count_per_chunk; ++i)
+					{
+						std::uniform_real_distribution<float> float_distr(0.0f, 1.0f);
+						std::uniform_int_distribution<uint32_t> int_distr(0, lods[0].indexCount / 3 - 1);
+						uint32_t tri = int_distr(prop_rand);
+						uint32_t ind0 = mesh.indices[tri * 3 + 0];
+						uint32_t ind1 = mesh.indices[tri * 3 + 1];
+						uint32_t ind2 = mesh.indices[tri * 3 + 2];
+						const XMFLOAT3& pos0 = mesh.vertex_positions[ind0];
+						const XMFLOAT3& pos1 = mesh.vertex_positions[ind1];
+						const XMFLOAT3& pos2 = mesh.vertex_positions[ind2];
+						const uint32_t& col0 = mesh.vertex_colors[ind0];
+						const uint32_t& col1 = mesh.vertex_colors[ind1];
+						const uint32_t& col2 = mesh.vertex_colors[ind2];
+						const XMFLOAT4 region0 = wi::Color(col0).toFloat4();
+						const XMFLOAT4 region1 = wi::Color(col1).toFloat4();
+						const XMFLOAT4 region2 = wi::Color(col2).toFloat4();
+						float f = float_distr(prop_rand);
+						float g = float_distr(prop_rand);
+						if (f + g > 1)
+						{
+							f = 1 - f;
+							g = 1 - g;
+						}
+						XMFLOAT3 vertex_pos;
+						vertex_pos.x = pos0.x + f * (pos1.x - pos0.x) + g * (pos2.x - pos0.x);
+						vertex_pos.y = pos0.y + f * (pos1.y - pos0.y) + g * (pos2.y - pos0.y);
+						vertex_pos.z = pos0.z + f * (pos1.z - pos0.z) + g * (pos2.z - pos0.z);
+						vertex_pos.x += chunk_pos.x;
+						vertex_pos.z += chunk_pos.z;
+						XMFLOAT4 region;
+						region.x = region0.x + f * (region1.x - region0.x) + g * (region2.x - region0.x);
+						region.y = region0.y + f * (region1.y - region0.y) + g * (region2.y - region0.y);
+						region.z = region0.z + f * (region1.z - region0.z) + g * (region2.z - region0.z);
+						region.w = region0.w + f * (region1.w - region0.w) + g * (region2.w - region0.w);
+
+						const float noise = perlin.compute(vertex_pos.x * prop.noise_frequency, vertex_pos.y * prop.noise_frequency, vertex_pos.z * prop.noise_frequency) * 0.5f + 0.5f;
+						const float chance = std::pow(((float*)&region)[prop.region], prop.region_power) * noise;
+						if (chance > prop.threshold)
+						{
+							Entity entity = scene.Entity_CreateObject(prop.name + std::to_string(i));
+							ObjectComponent* object = scene.objects.GetComponent(entity);
+							*object = props[0].object;
+							TransformComponent* transform = scene.transforms.GetComponent(entity);
+							XMFLOAT3 offset = vertex_pos;
+							offset.y += wi::math::Lerp(prop.min_y_offset, prop.max_y_offset, float_distr(prop_rand));
+							transform->Translate(offset);
+							const float scaling = wi::math::Lerp(prop.min_size, prop.max_size, float_distr(prop_rand));
+							transform->Scale(XMFLOAT3(scaling, scaling, scaling));
+							transform->RotateRollPitchYaw(XMFLOAT3(0, XM_2PI * float_distr(prop_rand), 0));
+							transform->UpdateTransform();
+							scene.Component_Attach(entity, chunk_data.entity);
+						}
 					}
 				}
 
@@ -1382,7 +1462,7 @@ void MeshWindow::Create(EditorComponent* editor)
 		{
 			terragen_initialized = true;
 
-			// Set up base materials for terrain regions:
+			// Customize terrain generator:
 			terragen.material_Base.SetUseVertexColors(true);
 			terragen.material_Base.SetRoughness(1);
 			terragen.material_Slope.SetRoughness(0.5f);
@@ -1401,6 +1481,33 @@ void MeshWindow::Create(EditorComponent* editor)
 			terragen.material_LowAltitude.CreateRenderData();
 			terragen.material_HighAltitude.CreateRenderData();
 			terragen.material_GrassParticle.CreateRenderData();
+			// Tree prop:
+			{
+				Scene props_scene;
+				wi::scene::LoadModel(props_scene, "terrain/tree.wiscene");
+				TerraGen::Prop& tree = terragen.props.emplace_back();
+				tree.name = "tree";
+				tree.max_count_per_chunk = 9;
+				tree.region = 0;
+				tree.region_power = 4;
+				tree.noise_frequency = 0.01f;
+				tree.threshold = 0.3f;
+				tree.min_size = 2.0f;
+				tree.max_size = 8.0f;
+				tree.min_y_offset = -0.5f;
+				tree.max_y_offset = -0.5f;
+				tree.mesh_entity = props_scene.Entity_FindByName("tree_mesh");
+				Entity object_entity = props_scene.Entity_FindByName("tree_object");
+				ObjectComponent* tree_object = props_scene.objects.GetComponent(object_entity);
+				if (tree_object != nullptr)
+				{
+					tree.object = *tree_object;
+					tree.object.lod_distance_multiplier = 0.05f;
+					//tree.object.cascadeMask = 1; // they won't be rendered into the largest shadow cascade
+				}
+				props_scene.Entity_Remove(object_entity); // The objects will be placed by terrain generator, we don't need the default object that the scene has anymore
+				wi::scene::GetScene().Merge(props_scene);
+			}
 			terragen.init();
 			editor->GetGUI().AddWidget(&terragen);
 		}
@@ -1484,6 +1591,8 @@ void MeshWindow::Create(EditorComponent* editor)
 			};
 			wi::vector<LOD> lods(lod_count);
 
+			const float target_error = lodErrorSlider.GetValue();
+
 			for (size_t i = 0; i < lod_count; ++i)
 			{
 				lods[i].subsets.resize(mesh->subsets_per_lod);
@@ -1508,17 +1617,24 @@ void MeshWindow::Create(EditorComponent* editor)
 					wi::vector<unsigned int>& lod = lods[i].subsets[subsetIndex].indices;
 
 					size_t target_index_count = size_t(mesh->indices.size() * threshold) / 3 * 3;
-					float target_error = 1e-2f;
 
 					// we can simplify all the way from base level or from the last result
 					// simplifying from the base level sometimes produces better results, but simplifying from last level is faster
+					//const wi::vector<unsigned int>& source = lods[0].subsets[subsetIndex].indices;
 					const wi::vector<unsigned int>& source = lods[i - 1].subsets[subsetIndex].indices;
 
 					if (source.size() < target_index_count)
 						target_index_count = source.size();
 
 					lod.resize(source.size());
-					lod.resize(meshopt_simplify(&lod[0], &source[0], source.size(), &mesh->vertex_positions[0].x, mesh->vertex_positions.size(), sizeof(XMFLOAT3), target_index_count, target_error));
+					if (lodSloppyCheckBox.GetCheck())
+					{
+						lod.resize(meshopt_simplifySloppy(&lod[0], &source[0], source.size(), &mesh->vertex_positions[0].x, mesh->vertex_positions.size(), sizeof(XMFLOAT3), target_index_count, target_error));
+					}
+					else
+					{
+						lod.resize(meshopt_simplify(&lod[0], &source[0], source.size(), &mesh->vertex_positions[0].x, mesh->vertex_positions.size(), sizeof(XMFLOAT3), target_index_count, target_error));
+					}
 
 					threshold *= threshold;
 				}
@@ -1558,15 +1674,29 @@ void MeshWindow::Create(EditorComponent* editor)
 		});
 	AddWidget(&lodgenButton);
 
-	lodCountSlider.Create(2, 10, 6, 8, "Count: ");
+	lodCountSlider.Create(2, 10, 6, 8, "LOD Count: ");
+	lodCountSlider.SetTooltip("This is how many levels of detail will be created.");
 	lodCountSlider.SetSize(XMFLOAT2(100, hei));
 	lodCountSlider.SetPos(XMFLOAT2(x + 280, y += step));
 	AddWidget(&lodCountSlider);
 
-	lodQualitySlider.Create(0.1f, 1.0f, 0.5f, 10000, "Quality: ");
+	lodQualitySlider.Create(0.1f, 1.0f, 0.5f, 10000, "LOD Quality: ");
+	lodQualitySlider.SetTooltip("Lower values will make LODs more agressively simplified.");
 	lodQualitySlider.SetSize(XMFLOAT2(100, hei));
 	lodQualitySlider.SetPos(XMFLOAT2(x + 280, y += step));
 	AddWidget(&lodQualitySlider);
+
+	lodErrorSlider.Create(0.01f, 0.1f, 0.03f, 10000, "LOD Error: ");
+	lodErrorSlider.SetTooltip("Lower values will make more precise levels of detail.");
+	lodErrorSlider.SetSize(XMFLOAT2(100, hei));
+	lodErrorSlider.SetPos(XMFLOAT2(x + 280, y += step));
+	AddWidget(&lodErrorSlider);
+
+	lodSloppyCheckBox.Create("Sloppy LOD: ");
+	lodSloppyCheckBox.SetTooltip("Use the sloppy simplification algorithm, which is faster but doesn't preserve shape well.");
+	lodSloppyCheckBox.SetSize(XMFLOAT2(hei, hei));
+	lodSloppyCheckBox.SetPos(XMFLOAT2(x + 280, y += step));
+	AddWidget(&lodSloppyCheckBox);
 
 	Translate(XMFLOAT3((float)editor->GetLogicalWidth() - 1000, 80, 0));
 	SetVisible(false);

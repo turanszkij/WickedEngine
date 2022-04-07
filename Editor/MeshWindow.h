@@ -45,5 +45,7 @@ public:
 	wi::gui::Button lodgenButton;
 	wi::gui::Slider lodCountSlider;
 	wi::gui::Slider lodQualitySlider;
+	wi::gui::Slider lodErrorSlider;
+	wi::gui::CheckBox lodSloppyCheckBox;
 };
 
