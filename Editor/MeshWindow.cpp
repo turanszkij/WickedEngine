@@ -35,8 +35,6 @@ namespace std
 struct ChunkData
 {
 	wi::ecs::Entity entity = INVALID_ENTITY;
-	int current_lod = 0;
-	bool has_grass = false;
 	wi::HairParticleSystem grass;
 };
 
@@ -498,7 +496,7 @@ struct TerraGen : public wi::gui::Window
 			weather.SetVolumetricClouds(true);
 			weather.volumetricCloudParameters.CoverageAmount = 0.95f;
 			weather.volumetricCloudParameters.CoverageMinimum = 1.383f;
-			weather.SetOceanEnabled(true);
+			//weather.SetOceanEnabled(true);
 			weather.oceanParameters.waterHeight = -5;
 			weather.oceanParameters.wave_amplitude = 120;
 			weather.fogStart = 10;
@@ -622,6 +620,7 @@ struct TerraGen : public wi::gui::Window
 
 				wi::HairParticleSystem grass;
 				grass.vertex_lengths.resize(vertexCount);
+				std::atomic<uint32_t> grass_valid_vertex_count{ 0 };
 
 				wi::jobsystem::context ctx;
 				wi::jobsystem::Dispatch(ctx, vertexCount, width, [&](wi::jobsystem::JobArgs args) {
@@ -706,24 +705,33 @@ struct TerraGen : public wi::gui::Window
 
 					const float grass_noise_frequency = 0.1f;
 					const float grass_noise = perlin.compute(vertex_pos.x * grass_noise_frequency, vertex_pos.y * grass_noise_frequency, vertex_pos.z * grass_noise_frequency) * 0.5f + 0.5f;
-					const float region_grass = std::pow(materialBlendWeights.x * (1 - materialBlendWeights.w), 2.0f) * grass_noise;
-					grass.vertex_lengths[index] = region_grass;
+					const float region_grass = std::pow(materialBlendWeights.x * (1 - materialBlendWeights.w), 4.0f) * grass_noise;
+					if (region_grass > 0.1f)
+					{
+						grass_valid_vertex_count.fetch_add(1);
+						grass.vertex_lengths[index] = region_grass;
+					}
+					else
+					{
+						grass.vertex_lengths[index] = 0;
+					}
 				});
 				wi::jobsystem::Wait(ctx);
 
 				mesh.CreateRenderData();
 
-				uint32_t grass_valid_vertex_count = 0;
-				for (auto& x : grass.vertex_lengths)
+				if (grass_valid_vertex_count.load() > 0)
 				{
-					if (x > 0.01f)
-					{
-						grass_valid_vertex_count++;
-					}
-					else
-					{
-						x = 0;
-					}
+					grass.meshID = chunk_data.entity;
+					grass.length = 5;
+					grass.strandCount = grass_valid_vertex_count.load() * 3;
+					grass.viewDistance = 80;
+					grass.frameCount = 2;
+					grass.framesX = 1;
+					grass.framesY = 2;
+					grass.frameStart = 0;
+					scene.materials.Create(chunk_data.entity) = material_GrassParticle;
+					chunk_data.grass = std::move(grass);
 				}
 
 				for (auto& prop : props)
@@ -786,21 +794,6 @@ struct TerraGen : public wi::gui::Window
 					}
 				}
 
-				if (grass_valid_vertex_count > 0)
-				{
-					grass.meshID = chunk_data.entity;
-					grass.length = 4;
-					grass.strandCount = grass_valid_vertex_count * 3;
-					grass.viewDistance = 80;
-					grass.frameCount = 2;
-					grass.framesX = 1;
-					grass.framesY = 2;
-					grass.frameStart = 0;
-					scene.materials.Create(chunk_data.entity) = material_GrassParticle;
-					chunk_data.grass = std::move(grass);
-					chunk_data.has_grass = true;
-				}
-
 				if (timer.elapsed_milliseconds() > allocated_timeframe_milliseconds) // approximately this much time is allowed for generation
 					should_exit = true;
 			}
@@ -810,7 +803,7 @@ struct TerraGen : public wi::gui::Window
 			if (it != chunks.end() && it->second.entity != INVALID_ENTITY)
 			{
 				ChunkData& chunk_data = it->second;
-				if (chunk_data.has_grass)
+				if (chunk_data.grass.meshID != INVALID_ENTITY)
 				{
 					const int dist = std::max(std::abs(center_chunk.x - chunk.x), std::abs(center_chunk.z - chunk.z));
 					if (dist <= 1)
@@ -818,7 +811,13 @@ struct TerraGen : public wi::gui::Window
 						if (!scene.hairs.Contains(chunk_data.entity))
 						{
 							// add patch for this chunk
-							scene.hairs.Create(chunk_data.entity) = chunk_data.grass;
+							wi::HairParticleSystem& grass = scene.hairs.Create(chunk_data.entity);
+							grass = chunk_data.grass;
+							const MeshComponent* mesh = scene.meshes.GetComponent(chunk_data.entity);
+							if (mesh != nullptr)
+							{
+								grass.CreateRenderData(*mesh);
+							}
 						}
 					}
 					else
@@ -1490,8 +1489,8 @@ void MeshWindow::Create(EditorComponent* editor)
 				wi::scene::LoadModel(props_scene, "terrain/tree.wiscene");
 				TerraGen::Prop& prop = terragen.props.emplace_back();
 				prop.name = "tree";
-				prop.min_count_per_chunk = 7;
-				prop.max_count_per_chunk = 9;
+				prop.min_count_per_chunk = 0;
+				prop.max_count_per_chunk = 10;
 				prop.region = 0;
 				prop.region_power = 4;
 				prop.noise_frequency = 0.01f;
@@ -1518,8 +1517,8 @@ void MeshWindow::Create(EditorComponent* editor)
 				wi::scene::LoadModel(props_scene, "terrain/rock.wiscene");
 				TerraGen::Prop& prop = terragen.props.emplace_back();
 				prop.name = "rock";
-				prop.min_count_per_chunk = 5;
-				prop.max_count_per_chunk = 20;
+				prop.min_count_per_chunk = 0;
+				prop.max_count_per_chunk = 8;
 				prop.region = 0;
 				prop.region_power = 1;
 				prop.noise_frequency = 10;

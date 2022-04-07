@@ -90,6 +90,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 	const bool distance_culled = dot(diff, diff) > sqr(xHairViewDistance);
 
 	float3 normal = 0;
+
+	const float delta_time = clamp(GetFrame().delta_time, 0, 0.1); // clamp delta time to avoid simulation blowing up
     
 	for (uint segmentID = 0; segmentID < xHairSegmentCount; ++segmentID)
 	{
@@ -144,7 +146,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		// Pull back to rest position:
         force += (target - normal) * xStiffness;
 
-        force *= GetFrame().delta_time;
+        force *= delta_time;
 
 		// Simulation buffer load:
         float3 velocity = simulationBuffer[particleID].velocity;
@@ -158,14 +160,15 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 		// Apply forces:
 		velocity += force;
-		normal += velocity * clamp(GetFrame().delta_time, 0, 0.1); // clamp delta time to avoid simulation blowing up
+		normal += velocity * delta_time;
+		normal = normalize(normal);
 
 		// Drag:
 		velocity *= 0.98f;
 
 		// Store particle:
 		simulationBuffer[particleID].position = base;
-		simulationBuffer[particleID].normal = normalize(normal);
+		simulationBuffer[particleID].normal = normal;
 
 		// Store simulation data:
 		simulationBuffer[particleID].velocity = velocity;

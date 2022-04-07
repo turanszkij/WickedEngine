@@ -31,6 +31,8 @@ namespace wi
 
 		wi::graphics::RaytracingAccelerationStructure BLAS;
 
+		void CreateRenderData(const wi::scene::MeshComponent& mesh);
+
 		void UpdateCPU(
 			const wi::scene::TransformComponent& transform,
 			const wi::scene::MeshComponent& mesh,

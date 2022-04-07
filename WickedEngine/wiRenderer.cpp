@@ -4939,7 +4939,7 @@ void DrawScene(
 
 	if (hairparticle)
 	{
-		if (!transparent)
+		if (IsWireRender() || !transparent)
 		{
 			for (uint32_t hairIndex : vis.visibleHairs)
 			{
