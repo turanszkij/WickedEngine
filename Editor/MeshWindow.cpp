@@ -306,13 +306,13 @@ struct TerraGen : public wi::gui::Window
 		generationSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 		AddWidget(&generationSlider);
 
-		bottomLevelSlider.Create(-100, 0, -10, 10000, "Bottom Level: ");
+		bottomLevelSlider.Create(-100, 0, -60, 10000, "Bottom Level: ");
 		bottomLevelSlider.SetTooltip("Terrain mesh grid lowest level");
 		bottomLevelSlider.SetSize(XMFLOAT2(200, heihei));
 		bottomLevelSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 		AddWidget(&bottomLevelSlider);
 
-		topLevelSlider.Create(0, 10000, 1000, 10000, "Top Level: ");
+		topLevelSlider.Create(0, 5000, 380, 10000, "Top Level: ");
 		topLevelSlider.SetTooltip("Terrain mesh grid topmost level");
 		topLevelSlider.SetSize(XMFLOAT2(200, heihei));
 		topLevelSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
@@ -324,7 +324,7 @@ struct TerraGen : public wi::gui::Window
 		perlinBlendSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 		AddWidget(&perlinBlendSlider);
 
-		perlinFrequencySlider.Create(0.0001f, 0.01f, 0.005f, 10000, "Perlin Frequency: ");
+		perlinFrequencySlider.Create(0.0001f, 0.01f, 0.0008f, 10000, "Perlin Frequency: ");
 		perlinFrequencySlider.SetTooltip("Frequency for the perlin noise");
 		perlinFrequencySlider.SetSize(XMFLOAT2(200, heihei));
 		perlinFrequencySlider.SetPos(XMFLOAT2(xx, yy += stepstep));
@@ -348,19 +348,19 @@ struct TerraGen : public wi::gui::Window
 		voronoiFrequencySlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 		AddWidget(&voronoiFrequencySlider);
 
-		voronoiFadeSlider.Create(0, 100, 2.1f, 10000, "Voronoi Fade: ");
+		voronoiFadeSlider.Create(0, 100, 2.59f, 10000, "Voronoi Fade: ");
 		voronoiFadeSlider.SetTooltip("Fade out voronoi regions by distance from cell's center");
 		voronoiFadeSlider.SetSize(XMFLOAT2(200, heihei));
 		voronoiFadeSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 		AddWidget(&voronoiFadeSlider);
 
-		voronoiShapeSlider.Create(0, 1, 0.351f, 10000, "Voronoi Shape: ");
+		voronoiShapeSlider.Create(0, 1, 0.68f, 10000, "Voronoi Shape: ");
 		voronoiShapeSlider.SetTooltip("How much the voronoi shape will be kept");
 		voronoiShapeSlider.SetSize(XMFLOAT2(200, heihei));
 		voronoiShapeSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 		AddWidget(&voronoiShapeSlider);
 
-		voronoiFalloffSlider.Create(0, 8, 3.3f, 10000, "Voronoi Falloff: ");
+		voronoiFalloffSlider.Create(0, 8, 6, 10000, "Voronoi Falloff: ");
 		voronoiFalloffSlider.SetTooltip("Controls the falloff of the voronoi distance fade effect");
 		voronoiFalloffSlider.SetSize(XMFLOAT2(200, heihei));
 		voronoiFalloffSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
@@ -1534,6 +1534,34 @@ void MeshWindow::Create(EditorComponent* editor)
 				{
 					prop.object = *object;
 					prop.object.lod_distance_multiplier = 0.02f;
+					prop.object.cascadeMask = 1; // they won't be rendered into the largest shadow cascade
+				}
+				props_scene.Entity_Remove(object_entity); // The objects will be placed by terrain generator, we don't need the default object that the scene has anymore
+				wi::scene::GetScene().Merge(props_scene);
+			}
+			// Bush prop:
+			{
+				Scene props_scene;
+				wi::scene::LoadModel(props_scene, "terrain/bush.wiscene");
+				TerraGen::Prop& prop = terragen.props.emplace_back();
+				prop.name = "bush";
+				prop.min_count_per_chunk = 0;
+				prop.max_count_per_chunk = 10;
+				prop.region = 0;
+				prop.region_power = 8;
+				prop.noise_frequency = 1;
+				prop.threshold = 0.5f;
+				prop.min_size = 0.025f;
+				prop.max_size = 1;
+				prop.min_y_offset = -1;
+				prop.max_y_offset = 0;
+				prop.mesh_entity = props_scene.Entity_FindByName("bush_mesh");
+				Entity object_entity = props_scene.Entity_FindByName("bush_object");
+				ObjectComponent* object = props_scene.objects.GetComponent(object_entity);
+				if (object != nullptr)
+				{
+					prop.object = *object;
+					prop.object.lod_distance_multiplier = 0.05f;
 					prop.object.cascadeMask = 1; // they won't be rendered into the largest shadow cascade
 				}
 				props_scene.Entity_Remove(object_entity); // The objects will be placed by terrain generator, we don't need the default object that the scene has anymore
