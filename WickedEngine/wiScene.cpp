@@ -3294,7 +3294,7 @@ namespace wi::scene
 				uint32_t transform_index = (uint32_t)transforms.GetIndex(entity);
 				const TransformComponent& transform = transforms[transform_index];
 
-				if (object.mesh_index >= 0)
+				if (object.mesh_index != ~0u)
 				{
 					const MeshComponent& mesh = meshes[object.mesh_index];
 

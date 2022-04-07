@@ -30,9 +30,8 @@ public:
 	wi::gui::Button computeNormalsHardButton;
 	wi::gui::Button recenterButton;
 	wi::gui::Button recenterToBottomButton;
+	wi::gui::Button mergeButton;
 	wi::gui::Button optimizeButton;
-	wi::gui::Button lodgenButton;
-	wi::gui::Slider lodCountSlider;
 
 	wi::gui::CheckBox terrainCheckBox;
 	wi::gui::ComboBox terrainMat1Combo;
@@ -42,5 +41,9 @@ public:
 
 	wi::gui::ComboBox morphTargetCombo;
 	wi::gui::Slider morphTargetSlider;
+
+	wi::gui::Button lodgenButton;
+	wi::gui::Slider lodCountSlider;
+	wi::gui::Slider lodQualitySlider;
 };
 
