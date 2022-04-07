@@ -80,7 +80,8 @@ struct TerraGen : public wi::gui::Window
 		std::string name = "prop";
 		Entity mesh_entity = INVALID_ENTITY;
 		ObjectComponent object;
-		int max_count_per_chunk = 10; // a chunk will try to generate this many props of this type
+		int min_count_per_chunk = 0; // a chunk will try to generate min this many props of this type
+		int max_count_per_chunk = 10; // a chunk will try to generate max this many props of this type
 		int region = 0; // region selection in range [0,3]
 		float region_power = 1; // region weight affection power factor
 		float noise_frequency = 1.0f; // perlin noise's frequency for placement factor
@@ -727,11 +728,13 @@ struct TerraGen : public wi::gui::Window
 
 				for (auto& prop : props)
 				{
-					for (int i = 0; i < prop.max_count_per_chunk; ++i)
+					std::uniform_int_distribution<uint32_t> gen_distr(prop.min_count_per_chunk, prop.max_count_per_chunk);
+					int gen_count = gen_distr(prop_rand);
+					for (int i = 0; i < gen_count; ++i)
 					{
 						std::uniform_real_distribution<float> float_distr(0.0f, 1.0f);
-						std::uniform_int_distribution<uint32_t> int_distr(0, lods[0].indexCount / 3 - 1);
-						uint32_t tri = int_distr(prop_rand);
+						std::uniform_int_distribution<uint32_t> ind_distr(0, lods[0].indexCount / 3 - 1);
+						uint32_t tri = ind_distr(prop_rand);
 						uint32_t ind0 = mesh.indices[tri * 3 + 0];
 						uint32_t ind1 = mesh.indices[tri * 3 + 1];
 						uint32_t ind2 = mesh.indices[tri * 3 + 2];
@@ -769,7 +772,7 @@ struct TerraGen : public wi::gui::Window
 						{
 							Entity entity = scene.Entity_CreateObject(prop.name + std::to_string(i));
 							ObjectComponent* object = scene.objects.GetComponent(entity);
-							*object = props[0].object;
+							*object = prop.object;
 							TransformComponent* transform = scene.transforms.GetComponent(entity);
 							XMFLOAT3 offset = vertex_pos;
 							offset.y += wi::math::Lerp(prop.min_y_offset, prop.max_y_offset, float_distr(prop_rand));
@@ -1485,25 +1488,54 @@ void MeshWindow::Create(EditorComponent* editor)
 			{
 				Scene props_scene;
 				wi::scene::LoadModel(props_scene, "terrain/tree.wiscene");
-				TerraGen::Prop& tree = terragen.props.emplace_back();
-				tree.name = "tree";
-				tree.max_count_per_chunk = 9;
-				tree.region = 0;
-				tree.region_power = 4;
-				tree.noise_frequency = 0.01f;
-				tree.threshold = 0.3f;
-				tree.min_size = 2.0f;
-				tree.max_size = 8.0f;
-				tree.min_y_offset = -0.5f;
-				tree.max_y_offset = -0.5f;
-				tree.mesh_entity = props_scene.Entity_FindByName("tree_mesh");
+				TerraGen::Prop& prop = terragen.props.emplace_back();
+				prop.name = "tree";
+				prop.min_count_per_chunk = 7;
+				prop.max_count_per_chunk = 9;
+				prop.region = 0;
+				prop.region_power = 4;
+				prop.noise_frequency = 0.01f;
+				prop.threshold = 0.3f;
+				prop.min_size = 2.0f;
+				prop.max_size = 8.0f;
+				prop.min_y_offset = -0.5f;
+				prop.max_y_offset = -0.5f;
+				prop.mesh_entity = props_scene.Entity_FindByName("tree_mesh");
 				Entity object_entity = props_scene.Entity_FindByName("tree_object");
-				ObjectComponent* tree_object = props_scene.objects.GetComponent(object_entity);
-				if (tree_object != nullptr)
+				ObjectComponent* object = props_scene.objects.GetComponent(object_entity);
+				if (object != nullptr)
 				{
-					tree.object = *tree_object;
-					tree.object.lod_distance_multiplier = 0.05f;
-					//tree.object.cascadeMask = 1; // they won't be rendered into the largest shadow cascade
+					prop.object = *object;
+					prop.object.lod_distance_multiplier = 0.05f;
+					//prop.object.cascadeMask = 1; // they won't be rendered into the largest shadow cascade
+				}
+				props_scene.Entity_Remove(object_entity); // The objects will be placed by terrain generator, we don't need the default object that the scene has anymore
+				wi::scene::GetScene().Merge(props_scene);
+			}
+			// Rock prop:
+			{
+				Scene props_scene;
+				wi::scene::LoadModel(props_scene, "terrain/rock.wiscene");
+				TerraGen::Prop& prop = terragen.props.emplace_back();
+				prop.name = "rock";
+				prop.min_count_per_chunk = 5;
+				prop.max_count_per_chunk = 20;
+				prop.region = 0;
+				prop.region_power = 1;
+				prop.noise_frequency = 10;
+				prop.threshold = 0.7f;
+				prop.min_size = 0.02f;
+				prop.max_size = 3.0f;
+				prop.min_y_offset = -2;
+				prop.max_y_offset = 0.5f;
+				prop.mesh_entity = props_scene.Entity_FindByName("rock_mesh");
+				Entity object_entity = props_scene.Entity_FindByName("rock_object");
+				ObjectComponent* object = props_scene.objects.GetComponent(object_entity);
+				if (object != nullptr)
+				{
+					prop.object = *object;
+					prop.object.lod_distance_multiplier = 0.02f;
+					prop.object.cascadeMask = 1; // they won't be rendered into the largest shadow cascade
 				}
 				props_scene.Entity_Remove(object_entity); // The objects will be placed by terrain generator, we don't need the default object that the scene has anymore
 				wi::scene::GetScene().Merge(props_scene);
