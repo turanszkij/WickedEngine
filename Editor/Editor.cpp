@@ -480,7 +480,6 @@ void EditorComponent::Load()
 				wi::scene::GetScene().Merge(props_scene);
 			}
 			terragen.init();
-			GetGUI().AddWidget(&terragen);
 			terragen.SetEnabled(true);
 			terragen.SetPos(XMFLOAT2(50, 150));
 		}
@@ -494,6 +493,7 @@ void EditorComponent::Load()
 
 		});
 	GetGUI().AddWidget(&terrainWnd_Toggle);
+	GetGUI().AddWidget(&terragen);
 
 
 	///////////////////////
@@ -868,6 +868,7 @@ void EditorComponent::Load()
 	clearButton.SetColor(wi::Color(255, 235, 173, 255), wi::gui::WIDGETSTATE::FOCUS);
 	clearButton.OnClick([&](wi::gui::EventArgs args) {
 		translator.selected.clear();
+		terragen = {};
 		wi::scene::Scene& scene = wi::scene::GetScene();
 		wi::renderer::ClearWorld(scene);
 		objectWnd.SetEntity(INVALID_ENTITY);

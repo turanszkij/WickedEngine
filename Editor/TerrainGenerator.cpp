@@ -149,7 +149,7 @@ void TerrainGenerator::init()
 		lods[lod].indexCount = (uint32_t)indices.size() - lods[lod].indexOffset;
 	}
 
-	wi::gui::Window::Create("TerraGen");
+	wi::gui::Window::Create("TerraGen (Preview version)");
 	SetSize(XMFLOAT2(420, 460));
 	SetVisible(false);
 

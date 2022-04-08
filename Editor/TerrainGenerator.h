@@ -32,11 +32,11 @@ struct ChunkData
 
 struct TerrainGenerator : public wi::gui::Window
 {
-	const int width = 64 + 3; // + 3: filler vertices for lod apron and grid perimeter
-	const float half_width = (width - 1) * 0.5f;
-	const float width_rcp = 1.0f / (width - 1);
-	const uint32_t vertexCount = width * width;
-	const int max_lod = (int)std::log2(width - 3) + 1;
+	inline static const int width = 64 + 3; // + 3: filler vertices for lod apron and grid perimeter
+	inline static const float half_width = (width - 1) * 0.5f;
+	inline static const float width_rcp = 1.0f / (width - 1);
+	inline static const uint32_t vertexCount = width * width;
+	inline static const int max_lod = (int)std::log2(width - 3) + 1;
 	wi::ecs::Entity terrainEntity = wi::ecs::INVALID_ENTITY;
 	wi::ecs::Entity materialEntity_Base = wi::ecs::INVALID_ENTITY;
 	wi::ecs::Entity materialEntity_Slope = wi::ecs::INVALID_ENTITY;
