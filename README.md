@@ -248,6 +248,18 @@ If you are having trouble getting the applications to run, make sure that you sa
 
 ### Screenshots:
 
+Procedural terrain generator:
+![ProceduralTerrain](https://turanszkij.files.wordpress.com/2022/04/procedural_terrain.png)
+
+Path tracing:
+![PathTracing](https://turanszkij.files.wordpress.com/2022/04/2021-09-06.png)
+
+Dynamic Diffuse Global Illumination (DDGI):
+![DDGI](https://turanszkij.files.wordpress.com/2022/04/ddgi.png)
+
+Snow storm with particle systems:
+![SnowStorm](https://turanszkij.files.wordpress.com/2022/04/2022-03-14-1.png)
+
 Sponza scene with voxel GI enabled:
 ![Sponza](https://turanszkij.files.wordpress.com/2020/08/vxgi_sponza_small.png)
 
