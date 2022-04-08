@@ -403,9 +403,9 @@ void TerrainGenerator::Generation_Restart()
 		weather.ambient = XMFLOAT3(0.2f, 0.2f, 0.2f);
 		weather.SetRealisticSky(true);
 		weather.SetVolumetricClouds(true);
-		weather.volumetricCloudParameters.CoverageAmount = 0.95f;
-		weather.volumetricCloudParameters.CoverageMinimum = 1.383f;
-		weather.SetOceanEnabled(true);
+		weather.volumetricCloudParameters.CoverageAmount = 0.4f;
+		weather.volumetricCloudParameters.CoverageMinimum = 1.35f;
+		//weather.SetOceanEnabled(true);
 		weather.oceanParameters.waterHeight = -40;
 		weather.oceanParameters.wave_amplitude = 120;
 		weather.fogStart = 10;
