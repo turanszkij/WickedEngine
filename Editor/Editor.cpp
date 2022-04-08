@@ -1447,7 +1447,7 @@ void EditorComponent::Update(float dt)
 				}
 			}
 
-			if (pickMask & PICK_OBJECT && hovered.entity == INVALID_ENTITY)
+			if ((pickMask & PICK_OBJECT) && hovered.entity == INVALID_ENTITY)
 			{
 				// Object picking only when mouse button down, because it can be slow with high polycount
 				if (
@@ -1652,12 +1652,22 @@ void EditorComponent::Update(float dt)
 				for (size_t i = 0; i < count; ++i)
 				{
 					Entity entity = scene.Entity_Serialize(clipboard, seri, INVALID_ENTITY, Scene::EntitySerializeFlags::RECURSIVE | Scene::EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES);
+					const HierarchyComponent* hier = scene.hierarchy.GetComponent(entity);
+					if (hier != nullptr)
+					{
+						scene.Component_Detach(entity);
+					}
 					TransformComponent* transform = scene.transforms.GetComponent(entity);
 					if (transform != nullptr)
 					{
 						transform->translation_local = {};
 						//transform->MatrixTransform(hovered.orientation);
 						transform->Translate(hovered.position);
+						transform->UpdateTransform();
+					}
+					if (hier != nullptr)
+					{
+						scene.Component_Attach(entity, hier->parentID);
 					}
 					addedEntities.push_back(entity);
 				}

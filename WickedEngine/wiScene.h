@@ -1564,7 +1564,7 @@ namespace wi::scene
 		XMFLOAT2 bary = XMFLOAT2(0, 0);
 		XMFLOAT4X4 orientation = wi::math::IDENTITY_MATRIX;
 
-		bool operator==(const PickResult& other)
+		constexpr bool operator==(const PickResult& other) const
 		{
 			return entity == other.entity;
 		}

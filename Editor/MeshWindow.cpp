@@ -805,7 +805,7 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 		}
 		if (subset >= 0)
 		{
-			subsetComboBox.SetSelected(subset);
+			subsetComboBox.SetSelectedWithoutCallback(subset);
 		}
 
 		subsetMaterialComboBox.ClearItems();
