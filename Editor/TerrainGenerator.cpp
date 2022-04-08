@@ -474,6 +474,10 @@ void TerrainGenerator::Generation_Restart()
 		{
 			weather.SetOceanEnabled(true);
 		}
+		else
+		{
+			scene.ocean = {};
+		}
 		weather.oceanParameters.waterHeight = -40;
 		weather.oceanParameters.wave_amplitude = 120;
 		weather.fogStart = 10;
