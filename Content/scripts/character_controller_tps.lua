@@ -418,7 +418,7 @@ runProcess(function()
 	font.SetShadowColor(Vector(0,0,0,1))
 	path.AddFont(font)
 
-	--LoadModel("../models/playground.wiscene")
+	LoadModel("../models/playground.wiscene")
 	
 	player:Create(LoadModel("../models/girl.wiscene"))
 	camera:Create(player)
