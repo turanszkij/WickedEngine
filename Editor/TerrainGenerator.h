@@ -74,7 +74,8 @@ struct TerrainGenerator : public wi::gui::Window
 		int max_count_per_chunk = 10; // a chunk will try to generate max this many props of this type
 		int region = 0; // region selection in range [0,3]
 		float region_power = 1; // region weight affection power factor
-		float noise_frequency = 1.0f; // perlin noise's frequency for placement factor
+		float noise_frequency = 1; // perlin noise's frequency for placement factor
+		float noise_power = 1; // perlin noise's power
 		float threshold = 0.5f; // the chance of placement (higher is less chance)
 		float min_size = 1; // scaling randomization range min
 		float max_size = 1; // scaling randomization range max

@@ -252,7 +252,7 @@ void TerrainGenerator::init()
 	voronoiFadeSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 	AddWidget(&voronoiFadeSlider);
 
-	voronoiShapeSlider.Create(0, 1, 0.68f, 10000, "Voronoi Shape: ");
+	voronoiShapeSlider.Create(0, 1, 0.7f, 10000, "Voronoi Shape: ");
 	voronoiShapeSlider.SetTooltip("How much the voronoi shape will be kept");
 	voronoiShapeSlider.SetSize(XMFLOAT2(200, heihei));
 	voronoiShapeSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
@@ -400,12 +400,13 @@ void TerrainGenerator::Generation_Restart()
 		WeatherComponent& weather = scene.weathers.Create(weatherEntity);
 		scene.names.Create(weatherEntity) = "terrainWeather";
 		scene.Component_Attach(weatherEntity, terrainEntity);
+		weather.ambient = XMFLOAT3(0.2f, 0.2f, 0.2f);
 		weather.SetRealisticSky(true);
 		weather.SetVolumetricClouds(true);
 		weather.volumetricCloudParameters.CoverageAmount = 0.95f;
 		weather.volumetricCloudParameters.CoverageMinimum = 1.383f;
-		//weather.SetOceanEnabled(true);
-		weather.oceanParameters.waterHeight = -5;
+		weather.SetOceanEnabled(true);
+		weather.oceanParameters.waterHeight = -40;
 		weather.oceanParameters.wave_amplitude = 120;
 		weather.fogStart = 10;
 		weather.fogEnd = 100000;
@@ -681,7 +682,7 @@ void TerrainGenerator::Generation_Update(int allocated_timeframe_milliseconds)
 					region.z = region0.z + f * (region1.z - region0.z) + g * (region2.z - region0.z);
 					region.w = region0.w + f * (region1.w - region0.w) + g * (region2.w - region0.w);
 
-					const float noise = perlin.compute(vertex_pos.x * prop.noise_frequency, vertex_pos.y * prop.noise_frequency, vertex_pos.z * prop.noise_frequency) * 0.5f + 0.5f;
+					const float noise = std::pow(perlin.compute(vertex_pos.x * prop.noise_frequency, vertex_pos.y * prop.noise_frequency, vertex_pos.z * prop.noise_frequency) * 0.5f + 0.5f, prop.noise_power);
 					const float chance = std::pow(((float*)&region)[prop.region], prop.region_power) * noise;
 					if (chance > prop.threshold)
 					{

@@ -373,7 +373,7 @@ void EditorComponent::Load()
 
 		if (terragen.terrainEntity == INVALID_ENTITY)
 		{
-			// Customize terrain generator:
+			// Customize terrain generator before it's initialized:
 			terragen.material_Base.SetUseVertexColors(true);
 			terragen.material_Base.SetRoughness(1);
 			terragen.material_Slope.SetRoughness(0.5f);
@@ -401,9 +401,10 @@ void EditorComponent::Load()
 				prop.min_count_per_chunk = 0;
 				prop.max_count_per_chunk = 10;
 				prop.region = 0;
-				prop.region_power = 4;
-				prop.noise_frequency = 0.01f;
-				prop.threshold = 0.3f;
+				prop.region_power = 2;
+				prop.noise_frequency = 0.1f;
+				prop.noise_power = 1;
+				prop.threshold = 0.4f;
 				prop.min_size = 2.0f;
 				prop.max_size = 8.0f;
 				prop.min_y_offset = -0.5f;
@@ -430,10 +431,11 @@ void EditorComponent::Load()
 				prop.max_count_per_chunk = 8;
 				prop.region = 0;
 				prop.region_power = 1;
-				prop.noise_frequency = 10;
-				prop.threshold = 0.7f;
+				prop.noise_frequency = 0.005f;
+				prop.noise_power = 2;
+				prop.threshold = 0.5f;
 				prop.min_size = 0.02f;
-				prop.max_size = 3.0f;
+				prop.max_size = 4.0f;
 				prop.min_y_offset = -2;
 				prop.max_y_offset = 0.5f;
 				prop.mesh_entity = props_scene.Entity_FindByName("rock_mesh");
@@ -457,10 +459,11 @@ void EditorComponent::Load()
 				prop.min_count_per_chunk = 0;
 				prop.max_count_per_chunk = 10;
 				prop.region = 0;
-				prop.region_power = 8;
-				prop.noise_frequency = 1;
-				prop.threshold = 0.5f;
-				prop.min_size = 0.025f;
+				prop.region_power = 4;
+				prop.noise_frequency = 0.01f;
+				prop.noise_power = 2;
+				prop.threshold = 0.3f;
+				prop.min_size = 0.1f;
 				prop.max_size = 1;
 				prop.min_y_offset = -1;
 				prop.max_y_offset = 0;
