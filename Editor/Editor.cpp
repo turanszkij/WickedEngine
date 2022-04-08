@@ -461,10 +461,10 @@ void EditorComponent::Load()
 				prop.region = 0;
 				prop.region_power = 4;
 				prop.noise_frequency = 0.01f;
-				prop.noise_power = 2;
-				prop.threshold = 0.3f;
+				prop.noise_power = 4;
+				prop.threshold = 0.1f;
 				prop.min_size = 0.1f;
-				prop.max_size = 1;
+				prop.max_size = 1.5f;
 				prop.min_y_offset = -1;
 				prop.max_y_offset = 0;
 				prop.mesh_entity = props_scene.Entity_FindByName("bush_mesh");
