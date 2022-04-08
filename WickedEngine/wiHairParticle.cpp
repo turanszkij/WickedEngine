@@ -275,6 +275,22 @@ namespace wi
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
+		if (regenerate_frame)
+		{
+			device->ClearUAV(&simulationBuffer, 0, cmd);
+			device->ClearUAV(&vertexBuffer_POS[0], 0, cmd);
+			device->ClearUAV(&vertexBuffer_POS[1], 0, cmd);
+			device->ClearUAV(&vertexBuffer_UVS, 0, cmd);
+			device->ClearUAV(&culledIndexBuffer, 0, cmd);
+			device->ClearUAV(&indirectBuffer, 0, cmd);
+			{
+				GPUBarrier barriers[] = {
+					GPUBarrier::Memory(),
+				};
+				device->Barrier(barriers, arraysize(barriers), cmd);
+			}
+		}
+
 		// Simulate:
 		{
 			device->BindComputeShader(&cs_simulate, cmd);

@@ -91,7 +91,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 	float3 normal = 0;
 
-	const float delta_time = clamp(GetFrame().delta_time, 0, 0.1); // clamp delta time to avoid simulation blowing up
+	const float delta_time = clamp(GetFrame().delta_time, 0, 1.0 / 30.0); // clamp delta time to avoid simulation blowing up
     
 	for (uint segmentID = 0; segmentID < xHairSegmentCount; ++segmentID)
 	{
