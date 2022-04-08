@@ -6,6 +6,13 @@
 using namespace wi::ecs;
 using namespace wi::scene;
 
+enum PRESET
+{
+	PRESET_HILLS,
+	PRESET_ISLANDS,
+	PRESET_MOUNTAINS,
+};
+
 void TerrainGenerator::init()
 {
 	terrainEntity = CreateEntity();
@@ -150,7 +157,7 @@ void TerrainGenerator::init()
 	}
 
 	wi::gui::Window::Create("TerraGen (Preview version)");
-	SetSize(XMFLOAT2(420, 460));
+	SetSize(XMFLOAT2(420, 480));
 	SetVisible(false);
 
 	float xx = 150;
@@ -171,6 +178,64 @@ void TerrainGenerator::init()
 	removalCheckBox.SetPos(XMFLOAT2(xx + 100, yy));
 	removalCheckBox.SetCheck(true);
 	AddWidget(&removalCheckBox);
+
+	presetCombo.Create("Preset: ");
+	presetCombo.SetTooltip("Select a terrain preset");
+	presetCombo.SetSize(XMFLOAT2(200, heihei));
+	presetCombo.SetPos(XMFLOAT2(xx, yy += stepstep));
+	presetCombo.AddItem("Hills", PRESET_HILLS);
+	presetCombo.AddItem("Islands", PRESET_ISLANDS);
+	presetCombo.AddItem("Mountains", PRESET_MOUNTAINS);
+	presetCombo.OnSelect([=](wi::gui::EventArgs args) {
+		switch (args.userdata)
+		{
+		default:
+		case PRESET_HILLS:
+			seedSlider.SetValue(3926);
+			bottomLevelSlider.SetValue(-60);
+			topLevelSlider.SetValue(380);
+			perlinBlendSlider.SetValue(0.5f);
+			perlinFrequencySlider.SetValue(0.0008f);
+			perlinOctavesSlider.SetValue(6);
+			voronoiBlendSlider.SetValue(0.5f);
+			voronoiFrequencySlider.SetValue(0.001f);
+			voronoiFadeSlider.SetValue(2.59f);
+			voronoiShapeSlider.SetValue(0.7f);
+			voronoiFalloffSlider.SetValue(6);
+			voronoiPerturbationSlider.SetValue(0.1f);
+			break;
+		case PRESET_ISLANDS:
+			seedSlider.SetValue(4691);
+			bottomLevelSlider.SetValue(-79);
+			topLevelSlider.SetValue(520);
+			perlinBlendSlider.SetValue(0.5f);
+			perlinFrequencySlider.SetValue(0.000991f);
+			perlinOctavesSlider.SetValue(6);
+			voronoiBlendSlider.SetValue(0.5f);
+			voronoiFrequencySlider.SetValue(0.000317f);
+			voronoiFadeSlider.SetValue(8.2f);
+			voronoiShapeSlider.SetValue(0.126f);
+			voronoiFalloffSlider.SetValue(1.392f);
+			voronoiPerturbationSlider.SetValue(0.126f);
+			break;
+		case PRESET_MOUNTAINS:
+			seedSlider.SetValue(2099);
+			bottomLevelSlider.SetValue(0);
+			topLevelSlider.SetValue(2960);
+			perlinBlendSlider.SetValue(0.5f);
+			perlinFrequencySlider.SetValue(0.00279f);
+			perlinOctavesSlider.SetValue(8);
+			voronoiBlendSlider.SetValue(0.5f);
+			voronoiFrequencySlider.SetValue(0.000496f);
+			voronoiFadeSlider.SetValue(5.2f);
+			voronoiShapeSlider.SetValue(0.412f);
+			voronoiFalloffSlider.SetValue(1.456f);
+			voronoiPerturbationSlider.SetValue(0.092f);
+			break;
+		}
+		Generation_Restart();
+		});
+	AddWidget(&presetCombo);
 
 	seedSlider.Create(1, 12345, 3926, 12344, "Seed: ");
 	seedSlider.SetTooltip("Seed for terrain randomness");
@@ -228,7 +293,7 @@ void TerrainGenerator::init()
 	perlinFrequencySlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 	AddWidget(&perlinFrequencySlider);
 
-	perlinOctavesSlider.Create(1, 8, 6, 7, "Perlin Detail: ");
+	perlinOctavesSlider.Create(1, 8, 6, 7, "Perlin Octaves: ");
 	perlinOctavesSlider.SetTooltip("Octave count for the perlin noise");
 	perlinOctavesSlider.SetSize(XMFLOAT2(200, heihei));
 	perlinOctavesSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
@@ -405,7 +470,10 @@ void TerrainGenerator::Generation_Restart()
 		weather.SetVolumetricClouds(true);
 		weather.volumetricCloudParameters.CoverageAmount = 0.4f;
 		weather.volumetricCloudParameters.CoverageMinimum = 1.35f;
-		weather.SetOceanEnabled(true);
+		if (presetCombo.GetItemUserData(presetCombo.GetSelected()) == PRESET_ISLANDS)
+		{
+			weather.SetOceanEnabled(true);
+		}
 		weather.oceanParameters.waterHeight = -40;
 		weather.oceanParameters.wave_amplitude = 120;
 		weather.fogStart = 10;
@@ -588,7 +656,7 @@ void TerrainGenerator::Generation_Update(int allocated_timeframe_milliseconds)
 
 				const float region_base = 1;
 				const float region_slope = 1 - std::pow(wi::math::saturate(normal.y), 2.0f);
-				const float region_low_altitude = std::pow(wi::math::saturate(wi::math::InverseLerp(0, bottomLevel, height)), 2.0f);
+				const float region_low_altitude = bottomLevel < 0 ? std::pow(wi::math::saturate(wi::math::InverseLerp(0, bottomLevel, height)), 2.0f) : 0;
 				const float region_high_altitude = std::pow(wi::math::saturate(wi::math::InverseLerp(0, topLevel * 0.25f, height)), 4.0f);
 
 				XMFLOAT4 materialBlendWeights(1, 0, 0, 0);
@@ -728,7 +796,7 @@ void TerrainGenerator::Generation_Update(int allocated_timeframe_milliseconds)
 						}
 					}
 				}
-				else
+				else if (removalCheckBox.GetCheck())
 				{
 					wi::HairParticleSystem* grass = scene.hairs.GetComponent(chunk_data.entity);
 					if (grass != nullptr)

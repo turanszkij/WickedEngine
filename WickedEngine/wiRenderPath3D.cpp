@@ -1498,17 +1498,14 @@ void RenderPath3D::RenderPostprocessChain(CommandList cmd) const
 
 		if (scene->weather.IsOceanEnabled())
 		{
-			if (!wi::renderer::GetOcclusionCullingEnabled() || !scene->ocean.IsOccluded())
-			{
-				wi::renderer::Postprocess_Underwater(
-					rt_first == nullptr ? *rt_read : *rt_first,
-					*rt_write,
-					cmd
-				);
+			wi::renderer::Postprocess_Underwater(
+				rt_first == nullptr ? *rt_read : *rt_first,
+				*rt_write,
+				cmd
+			);
 
-				rt_first = nullptr;
-				std::swap(rt_read, rt_write);
-			}
+			rt_first = nullptr;
+			std::swap(rt_read, rt_write);
 		}
 
 		if (getDepthOfFieldEnabled() && camera->aperture_size > 0 && getDepthOfFieldStrength() > 0)

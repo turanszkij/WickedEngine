@@ -72,7 +72,7 @@ struct TerrainGenerator : public wi::gui::Window
 		wi::scene::ObjectComponent object;
 		int min_count_per_chunk = 0; // a chunk will try to generate min this many props of this type
 		int max_count_per_chunk = 10; // a chunk will try to generate max this many props of this type
-		int region = 0; // region selection in range [0,3]
+		int region = 0; // region selection in range [0,3] (0: base/grass, 1: slopes, 2: low altitude (bottom level-0), 3: high altitude (0-top level))
 		float region_power = 1; // region weight affection power factor
 		float noise_frequency = 1; // perlin noise's frequency for placement factor
 		float noise_power = 1; // perlin noise's power
@@ -87,6 +87,7 @@ struct TerrainGenerator : public wi::gui::Window
 
 	wi::gui::CheckBox centerToCamCheckBox;
 	wi::gui::CheckBox removalCheckBox;
+	wi::gui::ComboBox presetCombo;
 	wi::gui::Slider seedSlider;
 	wi::gui::Slider lodSlider;
 	wi::gui::Slider generationSlider;
