@@ -178,7 +178,7 @@ void TerrainGenerator::init()
 	seedSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 	AddWidget(&seedSlider);
 
-	lodSlider.Create(0.0001f, 0.01f, 0.004f, 10000, "LOD Distance: ");
+	lodSlider.Create(0.0001f, 0.01f, 0.005f, 10000, "LOD Distance: ");
 	lodSlider.SetTooltip("Set the LOD (Level Of Detail) distance multiplier.\nLow values increase LOD detail in distance");
 	lodSlider.SetSize(XMFLOAT2(200, heihei));
 	lodSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
@@ -405,7 +405,7 @@ void TerrainGenerator::Generation_Restart()
 		weather.SetVolumetricClouds(true);
 		weather.volumetricCloudParameters.CoverageAmount = 0.4f;
 		weather.volumetricCloudParameters.CoverageMinimum = 1.35f;
-		//weather.SetOceanEnabled(true);
+		weather.SetOceanEnabled(true);
 		weather.oceanParameters.waterHeight = -40;
 		weather.oceanParameters.wave_amplitude = 120;
 		weather.fogStart = 10;

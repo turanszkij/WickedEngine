@@ -1854,9 +1854,9 @@ void SetUpStates()
 	rs.fill_mode = FillMode::SOLID;
 	rs.cull_mode = CullMode::NONE;
 	rs.front_counter_clockwise = true;
-	rs.depth_bias = 2;
+	rs.depth_bias = 0;
 	rs.depth_bias_clamp = 0;
-	rs.slope_scaled_depth_bias = 2;
+	rs.slope_scaled_depth_bias = 0;
 	rs.depth_clip_enable = false;
 	rs.multisample_enable = false;
 	rs.antialiased_line_enable = false;
@@ -2976,12 +2976,25 @@ void UpdateVisibility(Visibility& vis)
 	vis.visibleObjects.resize((size_t)vis.object_counter.load());
 	vis.visibleDecals.resize((size_t)vis.decal_counter.load());
 
-	if ((vis.flags & Visibility::ALLOW_REQUEST_REFLECTION) && vis.scene->weather.IsOceanEnabled())
+	if (vis.scene->weather.IsOceanEnabled())
 	{
-		// Ocean will override any current reflectors
-		vis.planar_reflection_visible = true;
-		XMVECTOR _refPlane = XMPlaneFromPointNormal(XMVectorSet(0, vis.scene->weather.oceanParameters.waterHeight, 0, 0), XMVectorSet(0, 1, 0, 0));
-		XMStoreFloat4(&vis.reflectionPlane, _refPlane);
+		bool occluded = false;
+		if (vis.flags & Visibility::ALLOW_OCCLUSION_CULLING)
+		{
+			vis.scene->ocean.occlusionQueries[vis.scene->queryheap_idx] = vis.scene->queryAllocator.fetch_add(1); // allocate new occlusion query from heap
+			if (vis.scene->ocean.IsOccluded())
+			{
+				occluded = true;
+			}
+		}
+
+		if ((vis.flags & Visibility::ALLOW_REQUEST_REFLECTION) && !occluded)
+		{
+			// Ocean will override any current reflectors
+			vis.planar_reflection_visible = true;
+			XMVECTOR _refPlane = XMPlaneFromPointNormal(XMVectorSet(0, vis.scene->weather.oceanParameters.waterHeight, 0, 0), XMVectorSet(0, 1, 0, 0));
+			XMStoreFloat4(&vis.reflectionPlane, _refPlane);
+		}
 	}
 
 	wi::profiler::EndRange(range); // Frustum Culling
@@ -3865,9 +3878,12 @@ void UpdateRenderDataAsync(
 	// Compute water simulation:
 	if (vis.scene->weather.IsOceanEnabled())
 	{
-		auto range = wi::profiler::BeginRangeGPU("Ocean - Simulate", cmd);
-		vis.scene->ocean.UpdateDisplacementMap(vis.scene->weather.oceanParameters, cmd);
-		wi::profiler::EndRange(range);
+		if (!GetOcclusionCullingEnabled() || !vis.scene->ocean.IsOccluded())
+		{
+			auto range = wi::profiler::BeginRangeGPU("Ocean - Simulate", cmd);
+			vis.scene->ocean.UpdateDisplacementMap(vis.scene->weather.oceanParameters, cmd);
+			wi::profiler::EndRange(range);
+		}
 	}
 
 	device->EventEnd(cmd);
@@ -4018,11 +4034,11 @@ void OcclusionCulling_Render(const CameraComponent& camera, const Visibility& vi
 	XMMATRIX VP = camera.GetViewProjection();
 
 	const GPUQueryHeap& queryHeap = vis.scene->queryHeap;
+	int query_write = vis.scene->queryheap_idx;
 
 	if (!vis.visibleObjects.empty())
 	{
 		device->EventBegin("Occlusion Culling Objects", cmd);
-		int query_write = vis.scene->queryheap_idx;
 
 		for (uint32_t instanceIndex : vis.visibleObjects)
 		{
@@ -4067,6 +4083,29 @@ void OcclusionCulling_Render(const CameraComponent& camera, const Visibility& vi
 		}
 
 		device->EventEnd(cmd);
+	}
+
+	if (vis.scene->weather.IsOceanEnabled())
+	{
+		int queryIndex = vis.scene->ocean.occlusionQueries[query_write];
+		if (queryIndex >= 0)
+		{
+			device->EventBegin("Occlusion Culling Ocean", cmd);
+
+			AABB aabb;
+			aabb.createFromHalfWidth(
+				XMFLOAT3(vis.camera->Eye.x, vis.scene->weather.oceanParameters.waterHeight, vis.camera->Eye.z),
+				XMFLOAT3(vis.camera->zFarP, 1, vis.camera->zFarP)
+			);
+			const XMMATRIX transform = aabb.getAsBoxMatrix() * VP;
+			device->PushConstants(&transform, sizeof(transform), cmd);
+
+			device->QueryBegin(&queryHeap, queryIndex, cmd);
+			device->Draw(14, 0, cmd);
+			device->QueryEnd(&queryHeap, queryIndex, cmd);
+
+			device->EventEnd(cmd);
+		}
 	}
 
 	wi::profiler::EndRange(range); // Occlusion Culling Render
@@ -4883,7 +4922,10 @@ void DrawScene(
 
 	if (transparent && vis.scene->weather.IsOceanEnabled())
 	{
-		vis.scene->ocean.Render(*vis.camera, vis.scene->weather.oceanParameters, cmd);
+		if (!occlusion || !vis.scene->ocean.IsOccluded())
+		{
+			vis.scene->ocean.Render(*vis.camera, vis.scene->weather.oceanParameters, cmd);
+		}
 	}
 
 	if (IsWireRender() && !transparent)

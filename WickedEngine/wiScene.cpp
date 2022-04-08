@@ -1538,7 +1538,7 @@ namespace wi::scene
 		// Occlusion culling read:
 		if(wi::renderer::GetOcclusionCullingEnabled() && !wi::renderer::GetFreezeCullingCameraEnabled())
 		{
-			uint32_t minQueryCount = uint32_t(objects.GetCount() + lights.GetCount());
+			uint32_t minQueryCount = uint32_t(objects.GetCount() + lights.GetCount() + 1); // +1 : ocean
 			if (queryHeap.desc.query_count < minQueryCount)
 			{
 				GPUQueryHeapDesc desc;
@@ -3946,6 +3946,26 @@ namespace wi::scene
 			{
 				OceanRegenerate();
 			}
+
+			// Ocean occlusion status:
+			if (!wi::renderer::GetFreezeCullingCameraEnabled() && weather.IsOceanEnabled())
+			{
+				ocean.occlusionHistory <<= 1u; // advance history by 1 frame
+				int query_id = ocean.occlusionQueries[queryheap_idx];
+				if (queryResultBuffer[queryheap_idx].mapped_data != nullptr && query_id >= 0)
+				{
+					uint64_t visible = ((uint64_t*)queryResultBuffer[queryheap_idx].mapped_data)[query_id];
+					if (visible)
+					{
+						ocean.occlusionHistory |= 1; // visible
+					}
+				}
+				else
+				{
+					ocean.occlusionHistory |= 1; // visible
+				}
+			}
+			ocean.occlusionQueries[queryheap_idx] = -1; // invalidate query
 		}
 	}
 	void Scene::RunSoundUpdateSystem(wi::jobsystem::context& ctx)

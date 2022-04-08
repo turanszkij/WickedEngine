@@ -49,6 +49,18 @@ namespace wi
 
 		bool IsValid() const { return displacementMap.IsValid(); }
 
+		// occlusion result history bitfield (32 bit->32 frame history)
+		mutable uint32_t occlusionHistory = ~0u;
+		mutable int occlusionQueries[wi::graphics::GraphicsDevice::GetBufferCount() + 1];
+		inline bool IsOccluded() const
+		{
+			// Perform a conservative occlusion test:
+			// If it is visible in any frames in the history, it is determined visible in this frame
+			// But if all queries failed in the history, it is occluded.
+			// If it pops up for a frame after occluded, it is visible again for some frames
+			return occlusionHistory == 0;
+		}
+
 	protected:
 		wi::graphics::Texture displacementMap;		// (RGBA32F)
 		wi::graphics::Texture gradientMap;			// (RGBA16F)

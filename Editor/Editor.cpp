@@ -368,7 +368,7 @@ void EditorComponent::Load()
 	GetGUI().AddWidget(&paintToolWnd_Toggle);
 
 	terrainWnd_Toggle.Create("Terrain");
-	terrainWnd_Toggle.SetTooltip("Terrain window");
+	terrainWnd_Toggle.SetTooltip("Terrain Generator");
 	terrainWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
 
 		if (terragen.terrainEntity == INVALID_ENTITY)
