@@ -1,6 +1,7 @@
 #pragma once
 #include "WickedEngine.h"
 #include "Translator.h"
+#include "TerrainGenerator.h"
 
 #include "MaterialWindow.h"
 #include "PostprocessWindow.h"
@@ -61,12 +62,14 @@ public:
 	TransformWindow transformWnd;
 	LayerWindow layerWnd;
 	NameWindow nameWnd;
+	TerrainGenerator terragen;
 
 	Editor* main = nullptr;
 
 	wi::gui::Button rendererWnd_Toggle;
 	wi::gui::Button postprocessWnd_Toggle;
 	wi::gui::Button paintToolWnd_Toggle;
+	wi::gui::Button terrainWnd_Toggle;
 	wi::gui::Button weatherWnd_Toggle;
 	wi::gui::Button objectWnd_Toggle;
 	wi::gui::Button meshWnd_Toggle;

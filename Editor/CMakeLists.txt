@@ -28,6 +28,7 @@ set (SOURCE_FILES
 	TransformWindow.cpp
 	Translator.cpp
 	WeatherWindow.cpp
+	TerrainGenerator.cpp
 	xatlas.cpp
 )
 
