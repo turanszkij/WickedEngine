@@ -87,10 +87,10 @@ struct TerrainGenerator : public wi::gui::Window
 
 	wi::gui::CheckBox centerToCamCheckBox;
 	wi::gui::CheckBox removalCheckBox;
-	wi::gui::ComboBox presetCombo;
-	wi::gui::Slider seedSlider;
 	wi::gui::Slider lodSlider;
 	wi::gui::Slider generationSlider;
+	wi::gui::ComboBox presetCombo;
+	wi::gui::Slider seedSlider;
 	wi::gui::Slider bottomLevelSlider;
 	wi::gui::Slider topLevelSlider;
 	wi::gui::Slider perlinBlendSlider;
@@ -105,8 +105,13 @@ struct TerrainGenerator : public wi::gui::Window
 	wi::gui::Button heightmapButton;
 	wi::gui::Slider heightmapBlendSlider;
 
+	// This needs to be called at least once before using the terrain generator
 	void init();
+	// Restarts the terrain generateion from scratch
+	//	This will remove previously existing terrain
 	void Generation_Restart();
-	void Generation_Update(int allocated_timeframe_milliseconds = 2);
+	// This will run the actual generation tasks, call it once per frame
+	//	budget_milliseconds : approximately this much time will be allowed for generating chunks. At minimum, one chunk will be always generated.
+	void Generation_Update(int budget_milliseconds = 2);
 
 };

@@ -179,6 +179,32 @@ void TerrainGenerator::init()
 	removalCheckBox.SetCheck(true);
 	AddWidget(&removalCheckBox);
 
+	lodSlider.Create(0.0001f, 0.01f, 0.005f, 10000, "LOD Distance: ");
+	lodSlider.SetTooltip("Set the LOD (Level Of Detail) distance multiplier.\nLow values increase LOD detail in distance");
+	lodSlider.SetSize(XMFLOAT2(200, heihei));
+	lodSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	lodSlider.OnSlide([this](wi::gui::EventArgs args) {
+		for (auto& it : chunks)
+		{
+			const ChunkData& chunk_data = it.second;
+			if (chunk_data.entity != INVALID_ENTITY)
+			{
+				ObjectComponent* object = GetScene().objects.GetComponent(chunk_data.entity);
+				if (object != nullptr)
+				{
+					object->lod_distance_multiplier = args.fValue;
+				}
+			}
+		}
+		});
+	AddWidget(&lodSlider);
+
+	generationSlider.Create(0, 16, 12, 16, "Generation Distance: ");
+	generationSlider.SetTooltip("How far out chunks will be generated (value is in number of chunks)");
+	generationSlider.SetSize(XMFLOAT2(200, heihei));
+	generationSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	AddWidget(&generationSlider);
+
 	presetCombo.Create("Preset: ");
 	presetCombo.SetTooltip("Select a terrain preset");
 	presetCombo.SetSize(XMFLOAT2(200, heihei));
@@ -242,32 +268,6 @@ void TerrainGenerator::init()
 	seedSlider.SetSize(XMFLOAT2(200, heihei));
 	seedSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 	AddWidget(&seedSlider);
-
-	lodSlider.Create(0.0001f, 0.01f, 0.005f, 10000, "LOD Distance: ");
-	lodSlider.SetTooltip("Set the LOD (Level Of Detail) distance multiplier.\nLow values increase LOD detail in distance");
-	lodSlider.SetSize(XMFLOAT2(200, heihei));
-	lodSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
-	lodSlider.OnSlide([this](wi::gui::EventArgs args) {
-		for (auto& it : chunks)
-		{
-			const ChunkData& chunk_data = it.second;
-			if (chunk_data.entity != INVALID_ENTITY)
-			{
-				ObjectComponent* object = GetScene().objects.GetComponent(chunk_data.entity);
-				if (object != nullptr)
-				{
-					object->lod_distance_multiplier = args.fValue;
-				}
-			}
-		}
-		});
-	AddWidget(&lodSlider);
-
-	generationSlider.Create(0, 16, 12, 16, "Generation Distance: ");
-	generationSlider.SetTooltip("How far out chunks will be generated (value is in number of chunks)");
-	generationSlider.SetSize(XMFLOAT2(200, heihei));
-	generationSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
-	AddWidget(&generationSlider);
 
 	bottomLevelSlider.Create(-100, 0, -60, 10000, "Bottom Level: ");
 	bottomLevelSlider.SetTooltip("Terrain mesh grid lowest level");
@@ -502,7 +502,7 @@ void TerrainGenerator::Generation_Restart()
 	}
 }
 
-void TerrainGenerator::Generation_Update(int allocated_timeframe_milliseconds)
+void TerrainGenerator::Generation_Update(int budget_milliseconds)
 {
 	if (terrainEntity == INVALID_ENTITY)
 		return;
@@ -774,8 +774,6 @@ void TerrainGenerator::Generation_Update(int allocated_timeframe_milliseconds)
 				}
 			}
 
-			if (timer.elapsed_milliseconds() > allocated_timeframe_milliseconds) // approximately this much time is allowed for generation
-				should_exit = true;
 		}
 
 		// Grass patch placement:
@@ -812,6 +810,8 @@ void TerrainGenerator::Generation_Update(int allocated_timeframe_milliseconds)
 			}
 		}
 
+		if (timer.elapsed_milliseconds() > budget_milliseconds)
+			should_exit = true;
 	};
 
 	// generate center chunk first:
