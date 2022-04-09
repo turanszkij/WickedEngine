@@ -425,7 +425,6 @@ runProcess(function()
 	
 	while true do
 		player:Update()
-		camera:Update()
 		fixedupdate()
 		
 		if(input.Press(KEYBOARD_BUTTON_ESCAPE)) then
@@ -451,6 +450,7 @@ end)
 runProcess(function()
 	
 	while true do
+		camera:Update()
 		player:Input()
 
 		update()
