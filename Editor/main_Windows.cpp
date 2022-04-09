@@ -69,6 +69,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		}
 	}
 
+	editor.renderComponent.terragen.Generation_Cancel();
+
     return (int) msg.wParam;
 }
 
