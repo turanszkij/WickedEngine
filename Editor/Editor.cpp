@@ -481,7 +481,6 @@ void EditorComponent::Load()
 			}
 			terragen.init();
 			terragen.SetEnabled(true);
-			terragen.SetPos(XMFLOAT2(50, 150));
 		}
 
 		terragen.SetVisible(!terragen.IsVisible());
@@ -867,8 +866,13 @@ void EditorComponent::Load()
 	clearButton.SetColor(wi::Color(255, 173, 43, 180), wi::gui::WIDGETSTATE::IDLE);
 	clearButton.SetColor(wi::Color(255, 235, 173, 255), wi::gui::WIDGETSTATE::FOCUS);
 	clearButton.OnClick([&](wi::gui::EventArgs args) {
+
+		terragen.Generation_Cancel();
+		// This is to recreate the terragen from scratch, but it has implicitly deleted copy ctor so it's weird:
+		terragen.~TerrainGenerator();
+		new (&terragen) TerrainGenerator;
+
 		translator.selected.clear();
-		terragen = {};
 		wi::scene::Scene& scene = wi::scene::GetScene();
 		wi::renderer::ClearWorld(scene);
 		objectWnd.SetEntity(INVALID_ENTITY);
@@ -946,6 +950,7 @@ void EditorComponent::Load()
 	exitButton.SetColor(wi::Color(190, 0, 0, 180), wi::gui::WIDGETSTATE::IDLE);
 	exitButton.SetColor(wi::Color(255, 0, 0, 255), wi::gui::WIDGETSTATE::FOCUS);
 	exitButton.OnClick([this](wi::gui::EventArgs args) {
+		terragen.Generation_Cancel();
 		wi::platform::Exit();
 	});
 	GetGUI().AddWidget(&exitButton);

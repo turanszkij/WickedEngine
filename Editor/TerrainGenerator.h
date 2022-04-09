@@ -3,6 +3,7 @@
 
 #include <random>
 #include <string>
+#include <atomic>
 
 struct Chunk
 {
@@ -28,6 +29,7 @@ struct ChunkData
 {
 	wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
 	wi::HairParticleSystem grass;
+	bool grass_exists = false;
 };
 
 struct TerrainGenerator : public wi::gui::Window
@@ -37,6 +39,7 @@ struct TerrainGenerator : public wi::gui::Window
 	inline static const float width_rcp = 1.0f / (width - 1);
 	inline static const uint32_t vertexCount = width * width;
 	inline static const int max_lod = (int)std::log2(width - 3) + 1;
+	wi::scene::Scene* scene = &wi::scene::GetScene(); // by default it uses the global scene, but this can be changed
 	wi::ecs::Entity terrainEntity = wi::ecs::INVALID_ENTITY;
 	wi::ecs::Entity materialEntity_Base = wi::ecs::INVALID_ENTITY;
 	wi::ecs::Entity materialEntity_Slope = wi::ecs::INVALID_ENTITY;
@@ -85,6 +88,12 @@ struct TerrainGenerator : public wi::gui::Window
 	wi::vector<Prop> props;
 	std::mt19937 prop_rand;
 
+	// For generating scene on a background thread:
+	wi::scene::Scene generation_scene; // The background generation thread can safely add things to this, it will be merged into the main scene when it is safe to do so
+	wi::jobsystem::context generation_workload;
+	std::atomic_bool generation_cancelled;
+	wi::vector<wi::ecs::Entity> generation_entities; // because cannot parent to main scene on the background thread, parentable entities are collected
+
 	wi::gui::CheckBox centerToCamCheckBox;
 	wi::gui::CheckBox removalCheckBox;
 	wi::gui::Slider lodSlider;
@@ -107,11 +116,13 @@ struct TerrainGenerator : public wi::gui::Window
 
 	// This needs to be called at least once before using the terrain generator
 	void init();
-	// Restarts the terrain generateion from scratch
+
+	// Restarts the terrain generation from scratch
 	//	This will remove previously existing terrain
 	void Generation_Restart();
 	// This will run the actual generation tasks, call it once per frame
-	//	budget_milliseconds : approximately this much time will be allowed for generating chunks. At minimum, one chunk will be always generated.
-	void Generation_Update(int budget_milliseconds = 2);
+	void Generation_Update();
+	// Tells the generation thread that it should be cancelled and blocks until that is confirmed
+	void Generation_Cancel();
 
 };
