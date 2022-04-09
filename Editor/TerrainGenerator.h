@@ -114,6 +114,10 @@ struct TerrainGenerator : public wi::gui::Window
 	wi::gui::Button heightmapButton;
 	wi::gui::Slider heightmapBlendSlider;
 
+	wi::gui::Slider region1Slider;
+	wi::gui::Slider region2Slider;
+	wi::gui::Slider region3Slider;
+
 	// This needs to be called at least once before using the terrain generator
 	void init();
 

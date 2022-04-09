@@ -11,6 +11,7 @@ enum PRESET
 	PRESET_HILLS,
 	PRESET_ISLANDS,
 	PRESET_MOUNTAINS,
+	PRESET_ARCTIC,
 };
 
 void TerrainGenerator::init()
@@ -160,7 +161,7 @@ void TerrainGenerator::init()
 	ClearTransform();
 
 	wi::gui::Window::Create("TerraGen (Preview version)");
-	SetSize(XMFLOAT2(420, 480));
+	SetSize(XMFLOAT2(800, 480));
 
 	float xx = 150;
 	float yy = 0;
@@ -214,6 +215,7 @@ void TerrainGenerator::init()
 	presetCombo.AddItem("Hills", PRESET_HILLS);
 	presetCombo.AddItem("Islands", PRESET_ISLANDS);
 	presetCombo.AddItem("Mountains", PRESET_MOUNTAINS);
+	presetCombo.AddItem("Arctic", PRESET_ARCTIC);
 	presetCombo.OnSelect([=](wi::gui::EventArgs args) {
 		switch (args.userdata)
 		{
@@ -231,6 +233,9 @@ void TerrainGenerator::init()
 			voronoiShapeSlider.SetValue(0.7f);
 			voronoiFalloffSlider.SetValue(6);
 			voronoiPerturbationSlider.SetValue(0.1f);
+			region1Slider.SetValue(1);
+			region2Slider.SetValue(2);
+			region3Slider.SetValue(8);
 			break;
 		case PRESET_ISLANDS:
 			seedSlider.SetValue(4691);
@@ -245,6 +250,9 @@ void TerrainGenerator::init()
 			voronoiShapeSlider.SetValue(0.126f);
 			voronoiFalloffSlider.SetValue(1.392f);
 			voronoiPerturbationSlider.SetValue(0.126f);
+			region1Slider.SetValue(8);
+			region2Slider.SetValue(0.7f);
+			region3Slider.SetValue(8);
 			break;
 		case PRESET_MOUNTAINS:
 			seedSlider.SetValue(2099);
@@ -259,6 +267,26 @@ void TerrainGenerator::init()
 			voronoiShapeSlider.SetValue(0.412f);
 			voronoiFalloffSlider.SetValue(1.456f);
 			voronoiPerturbationSlider.SetValue(0.092f);
+			region1Slider.SetValue(1);
+			region2Slider.SetValue(1);
+			region3Slider.SetValue(0.8f);
+			break;
+		case PRESET_ARCTIC:
+			seedSlider.SetValue(2124);
+			bottomLevelSlider.SetValue(-50);
+			topLevelSlider.SetValue(40);
+			perlinBlendSlider.SetValue(1);
+			perlinFrequencySlider.SetValue(0.002f);
+			perlinOctavesSlider.SetValue(4);
+			voronoiBlendSlider.SetValue(1);
+			voronoiFrequencySlider.SetValue(0.004f);
+			voronoiFadeSlider.SetValue(1.8f);
+			voronoiShapeSlider.SetValue(0.518f);
+			voronoiFalloffSlider.SetValue(0.2f);
+			voronoiPerturbationSlider.SetValue(0.298f);
+			region1Slider.SetValue(8);
+			region2Slider.SetValue(8);
+			region3Slider.SetValue(0);
 			break;
 		}
 		Generation_Restart();
@@ -351,6 +379,29 @@ void TerrainGenerator::init()
 	AddWidget(&heightmapBlendSlider);
 
 
+
+	xx += 400;
+	yy = 0;
+
+	region1Slider.Create(0, 8, 1, 10000, "Slope Region: ");
+	region1Slider.SetTooltip("The region's falloff power");
+	region1Slider.SetSize(XMFLOAT2(200, heihei));
+	region1Slider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	AddWidget(&region1Slider);
+
+	region2Slider.Create(0, 8, 2, 10000, "Low Altitude Region: ");
+	region2Slider.SetTooltip("The region's falloff power");
+	region2Slider.SetSize(XMFLOAT2(200, heihei));
+	region2Slider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	AddWidget(&region2Slider);
+
+	region3Slider.Create(0, 8, 8, 10000, "High Altitude Region: ");
+	region3Slider.SetTooltip("The region's falloff power");
+	region3Slider.SetSize(XMFLOAT2(200, heihei));
+	region3Slider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	AddWidget(&region3Slider);
+
+
 	auto generate_callback = [=](wi::gui::EventArgs args) {
 		Generation_Restart();
 	};
@@ -367,6 +418,9 @@ void TerrainGenerator::init()
 	voronoiFalloffSlider.OnSlide(generate_callback);
 	voronoiPerturbationSlider.OnSlide(generate_callback);
 	heightmapBlendSlider.OnSlide(generate_callback);
+	region1Slider.OnSlide(generate_callback);
+	region2Slider.OnSlide(generate_callback);
+	region3Slider.OnSlide(generate_callback);
 
 	heightmapButton.OnClick([=](wi::gui::EventArgs args) {
 
@@ -588,6 +642,9 @@ void TerrainGenerator::Generation_Update()
 		const float voronoiShape = voronoiShapeSlider.GetValue();
 		const float voronoiFalloff = voronoiFalloffSlider.GetValue();
 		const float voronoiPerturbation = voronoiPerturbationSlider.GetValue();
+		const float region1 = region1Slider.GetValue();
+		const float region2 = region2Slider.GetValue();
+		const float region3 = region3Slider.GetValue();
 
 		auto request_chunk = [&](int offset_x, int offset_z)
 		{
@@ -694,11 +751,11 @@ void TerrainGenerator::Generation_Update()
 					XMStoreFloat3(&normal, N);
 
 					const float region_base = 1;
-					const float region_slope = 1 - std::pow(wi::math::saturate(normal.y), 2.0f);
-					const float region_low_altitude = bottomLevel < 0 ? std::pow(wi::math::saturate(wi::math::InverseLerp(0, bottomLevel, height)), 2.0f) : 0;
-					const float region_high_altitude = std::pow(wi::math::saturate(wi::math::InverseLerp(0, topLevel * 0.25f, height)), 4.0f);
+					const float region_slope = std::pow(1.0f - wi::math::saturate(normal.y), region1);
+					const float region_low_altitude = bottomLevel == 0 ? 0 : std::pow(wi::math::saturate(wi::math::InverseLerp(0, bottomLevel, height)), region2);
+					const float region_high_altitude = topLevel == 0 ? 0 : std::pow(wi::math::saturate(wi::math::InverseLerp(0, topLevel, height)), region3);
 
-					XMFLOAT4 materialBlendWeights(1, 0, 0, 0);
+					XMFLOAT4 materialBlendWeights(region_base, 0, 0, 0);
 					materialBlendWeights = wi::math::Lerp(materialBlendWeights, XMFLOAT4(0, 1, 0, 0), region_slope);
 					materialBlendWeights = wi::math::Lerp(materialBlendWeights, XMFLOAT4(0, 0, 1, 0), region_low_altitude);
 					materialBlendWeights = wi::math::Lerp(materialBlendWeights, XMFLOAT4(0, 0, 0, 1), region_high_altitude);
