@@ -360,8 +360,10 @@ ThirdPersonCamera = {
 				local corner = vector.TransformCoord(coord, unproj)
 				local target_to_corner = vector.Subtract(corner, targetPos)
 				local corner_to_campos = vector.Subtract(camPos, corner)
+				local TMin = 0
+				local TMax = target_to_corner.Length() -- optimization: limit the ray tracing distance
 
-				local ray = Ray(targetPos, target_to_corner.Normalize())
+				local ray = Ray(targetPos, target_to_corner.Normalize(), TMin, TMax)
 
 				local collObj,collPos,collNor = Pick(ray, PICK_OPAQUE, ~self.character.layerMask)
 				if(collObj ~= INVALID_ENTITY) then
@@ -401,7 +403,7 @@ local camera = ThirdPersonCamera
 -- Main loop:
 runProcess(function()
 
-	--ClearWorld()
+	ClearWorld()
 
 	-- We will override the render path so we can invoke the script from Editor and controls won't collide with editor scripts
 	--	Also save the active component that we can restore when ESCAPE is pressed

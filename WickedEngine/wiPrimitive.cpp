@@ -136,18 +136,24 @@ namespace wi::primitive
 
 		float tmin = std::min(tx1, tx2);
 		float tmax = std::max(tx1, tx2);
+		if (ray.TMax < tmin || ray.TMin > tmax)
+			return false;
 
 		float ty1 = (MIN.y - ray.origin.y) * ray.direction_inverse.y;
 		float ty2 = (MAX.y - ray.origin.y) * ray.direction_inverse.y;
 
 		tmin = std::max(tmin, std::min(ty1, ty2));
 		tmax = std::min(tmax, std::max(ty1, ty2));
+		if (ray.TMax < tmin || ray.TMin > tmax)
+			return false;
 
 		float tz1 = (MIN.z - ray.origin.z) * ray.direction_inverse.z;
 		float tz2 = (MAX.z - ray.origin.z) * ray.direction_inverse.z;
 
 		tmin = std::max(tmin, std::min(tz1, tz2));
 		tmax = std::min(tmax, std::max(tz1, tz2));
+		if (ray.TMax < tmin || ray.TMin > tmax)
+			return false;
 
 		return tmax >= tmin;
 	}
