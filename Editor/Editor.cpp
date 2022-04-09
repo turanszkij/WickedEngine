@@ -482,7 +482,7 @@ void EditorComponent::Load()
 				wi::scene::GetScene().Merge(props_scene);
 			}
 			terragen.init();
-			terragen.SetEnabled(true);
+			RefreshSceneGraphView();
 		}
 
 		terragen.SetVisible(!terragen.IsVisible());

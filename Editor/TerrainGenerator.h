@@ -12,15 +12,19 @@ struct Chunk
 	{
 		return (x == other.x) && (z == other.z);
 	}
+	inline size_t compute_hash() const
+	{
+		return ((std::hash<int>()(x) ^ (std::hash<int>()(z) << 1)) >> 1);
+	}
 };
 namespace std
 {
 	template <>
 	struct hash<Chunk>
 	{
-		inline size_t operator()(const Chunk& k) const
+		inline size_t operator()(const Chunk& chunk) const
 		{
-			return ((hash<int>()(k.x) ^ (hash<int>()(k.z) << 1)) >> 1);
+			return chunk.compute_hash();
 		}
 	};
 }
@@ -30,6 +34,7 @@ struct ChunkData
 	wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
 	wi::HairParticleSystem grass;
 	bool grass_exists = false;
+	std::mt19937 prop_rand;
 };
 
 struct TerrainGenerator : public wi::gui::Window
@@ -86,7 +91,6 @@ struct TerrainGenerator : public wi::gui::Window
 		float max_y_offset = 0; // max randomized offset on Y axis
 	};
 	wi::vector<Prop> props;
-	std::mt19937 prop_rand;
 
 	// For generating scene on a background thread:
 	wi::scene::Scene generation_scene; // The background generation thread can safely add things to this, it will be merged into the main scene when it is safe to do so
