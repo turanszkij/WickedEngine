@@ -161,7 +161,7 @@ void TerrainGenerator::init()
 	ClearTransform();
 
 	wi::gui::Window::Create("TerraGen (Preview version)");
-	SetSize(XMFLOAT2(800, 480));
+	SetSize(XMFLOAT2(410, 560));
 
 	float xx = 150;
 	float yy = 0;
@@ -378,11 +378,6 @@ void TerrainGenerator::init()
 	heightmapBlendSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
 	AddWidget(&heightmapBlendSlider);
 
-
-
-	xx += 400;
-	yy = 0;
-
 	region1Slider.Create(0, 8, 1, 10000, "Slope Region: ");
 	region1Slider.SetTooltip("The region's falloff power");
 	region1Slider.SetSize(XMFLOAT2(200, heihei));
@@ -450,7 +445,7 @@ void TerrainGenerator::init()
 
 	heightmap = {};
 
-	SetPos(XMFLOAT2(50, 150));
+	SetPos(XMFLOAT2(50, 110));
 	SetVisible(false);
 	SetEnabled(true);
 }
