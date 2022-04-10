@@ -692,6 +692,7 @@ void TerrainGenerator::Generation_Update()
 				grass.vertex_lengths.resize(vertexCount);
 				std::atomic<uint32_t> grass_valid_vertex_count{ 0 };
 
+				// Do a parallel for loop over all the chunk's vertices and compute their properties:
 				wi::jobsystem::context ctx;
 				wi::jobsystem::Dispatch(ctx, vertexCount, width, [&](wi::jobsystem::JobArgs args) {
 					uint32_t index = args.jobIndex;
@@ -786,10 +787,11 @@ void TerrainGenerator::Generation_Update()
 						grass.vertex_lengths[index] = 0;
 					}
 					});
-				wi::jobsystem::Wait(ctx);
+				wi::jobsystem::Wait(ctx); // wait until chunk's vertex buffer is fully generated
 
 				mesh.CreateRenderData();
 
+				// If there were any vertices in this chunk that could be valid for grass, store the grass particle system:
 				if (grass_valid_vertex_count.load() > 0)
 				{
 					grass.meshID = chunk_data.entity;
@@ -801,9 +803,10 @@ void TerrainGenerator::Generation_Update()
 					grass.framesY = 2;
 					grass.frameStart = 0;
 					generation_scene.materials.Create(chunk_data.entity) = material_GrassParticle;
-					chunk_data.grass = std::move(grass);
+					chunk_data.grass = std::move(grass); // the grass will be added to the scene later, only when the chunk is close to the camera (center chunk's neighbors)
 				}
 
+				// Prop placement:
 				chunk_data.prop_rand.seed((uint32_t)chunk.compute_hash() ^ seed);
 				for (auto& prop : props)
 				{
@@ -813,7 +816,7 @@ void TerrainGenerator::Generation_Update()
 					{
 						std::uniform_real_distribution<float> float_distr(0.0f, 1.0f);
 						std::uniform_int_distribution<uint32_t> ind_distr(0, lods[0].indexCount / 3 - 1);
-						uint32_t tri = ind_distr(chunk_data.prop_rand);
+						uint32_t tri = ind_distr(chunk_data.prop_rand); // random triangle on the chunk mesh
 						uint32_t ind0 = mesh.indices[tri * 3 + 0];
 						uint32_t ind1 = mesh.indices[tri * 3 + 1];
 						uint32_t ind2 = mesh.indices[tri * 3 + 2];
@@ -826,6 +829,7 @@ void TerrainGenerator::Generation_Update()
 						const XMFLOAT4 region0 = wi::Color(col0).toFloat4();
 						const XMFLOAT4 region1 = wi::Color(col1).toFloat4();
 						const XMFLOAT4 region2 = wi::Color(col2).toFloat4();
+						// random barycentric coords on the triangle:
 						float f = float_distr(chunk_data.prop_rand);
 						float g = float_distr(chunk_data.prop_rand);
 						if (f + g > 1)
