@@ -104,6 +104,11 @@ namespace wi
 
 	void Ocean::Create(const OceanParameters& params)
 	{
+		for (int i = 0; i < arraysize(occlusionQueries); ++i)
+		{
+			occlusionQueries[i] = -1;
+		}
+
 		GraphicsDevice* device = wi::graphics::GetDevice();
 
 		// Height map H(0)

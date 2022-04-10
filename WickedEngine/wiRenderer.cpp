@@ -2949,10 +2949,13 @@ void UpdateVisibility(Visibility& vis)
 				{
 					continue;
 				}
-				const float dist = wi::math::Distance(vis.camera->Eye, hair.aabb.getCenter());
-				const float radius = hair.aabb.getRadius();
-				if (dist - radius > hair.viewDistance)
-					continue;
+				if (!hair.regenerate_frame)
+				{
+					const float dist = wi::math::Distance(vis.camera->Eye, hair.aabb.getCenter());
+					const float radius = hair.aabb.getRadius();
+					if (dist - radius > hair.viewDistance)
+						continue;
+				}
 				if (hair.meshID == INVALID_ENTITY || !vis.frustum.CheckBoxFast(hair.aabb))
 				{
 					continue;
@@ -3936,7 +3939,7 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 			{
 				const wi::HairParticleSystem& hair = scene.hairs[i];
 
-				if (hair.meshID != INVALID_ENTITY && hair.BLAS.IsValid() && hair.render_data_updated)
+				if (hair.meshID != INVALID_ENTITY && hair.BLAS.IsValid())
 				{
 					device->BuildRaytracingAccelerationStructure(&hair.BLAS, cmd, nullptr);
 				}

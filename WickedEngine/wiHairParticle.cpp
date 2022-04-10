@@ -37,7 +37,6 @@ namespace wi
 
 		_flags &= ~REBUILD_BUFFERS;
 		regenerate_frame = true;
-		render_data_updated = false;
 
 		GPUBufferDesc bd;
 		bd.usage = Usage::DEFAULT;
@@ -59,9 +58,11 @@ namespace wi
 			}
 			bd.stride = sizeof(MeshComponent::Vertex_POS);
 			bd.size = bd.stride * 4 * particleCount;
-			device->CreateBuffer(&bd, nullptr, &vertexBuffer_POS[0]);
+			wi::vector<uint8_t> initdata(bd.size);
+			std::fill(initdata.begin(), initdata.end(), 0);
+			device->CreateBuffer(&bd, initdata.data(), &vertexBuffer_POS[0]);
 			device->SetName(&vertexBuffer_POS[0], "HairParticleSystem::vertexBuffer_POS[0]");
-			device->CreateBuffer(&bd, nullptr, &vertexBuffer_POS[1]);
+			device->CreateBuffer(&bd, initdata.data(), &vertexBuffer_POS[1]);
 			device->SetName(&vertexBuffer_POS[1], "HairParticleSystem::vertexBuffer_POS[1]");
 
 			bd.misc_flags = ResourceMiscFlag::BUFFER_RAW;
@@ -228,7 +229,6 @@ namespace wi
 		{
 			BLAS.desc.bottom_level.geometries.back().triangles.vertex_buffer = vertexBuffer_POS[0];
 		}
-		render_data_updated = false;
 	}
 	void HairParticleSystem::UpdateGPU(uint32_t instanceIndex, const MeshComponent& mesh, const MaterialComponent& material, CommandList cmd) const
 	{
@@ -358,7 +358,6 @@ namespace wi
 		device->EventEnd(cmd);
 
 		regenerate_frame = false;
-		render_data_updated = true;
 	}
 
 	void HairParticleSystem::Draw(const MaterialComponent& material, wi::enums::RENDERPASS renderPass, CommandList cmd) const

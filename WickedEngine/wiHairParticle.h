@@ -82,7 +82,6 @@ namespace wi
 		wi::vector<uint32_t> indices; // it is dependent on vertex_lengths and contains triangles with non-zero lengths
 		uint32_t layerMask = ~0u;
 		mutable bool regenerate_frame = true;
-		mutable bool render_data_updated = false;
 
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 
