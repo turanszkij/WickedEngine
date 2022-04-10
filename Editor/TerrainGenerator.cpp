@@ -590,15 +590,16 @@ void TerrainGenerator::Generation_Update()
 	if (removalCheckBox.GetCheck())
 	{
 		const int removal_threshold = (int)generationSlider.GetValue() + 2;
-		for (auto& it : chunks)
+		for (auto it = chunks.begin(); it != chunks.end();)
 		{
-			const Chunk& chunk = it.first;
-			ChunkData& chunk_data = it.second;
+			const Chunk& chunk = it->first;
+			ChunkData& chunk_data = it->second;
 			const int dist = std::max(std::abs(center_chunk.x - chunk.x), std::abs(center_chunk.z - chunk.z));
 			if (dist > removal_threshold)
 			{
-				scene->Entity_Remove(it.second.entity);
-				it.second = {};
+				scene->Entity_Remove(it->second.entity);
+				it = chunks.erase(it);
+				continue; // don't increment iterator
 			}
 			else
 			{
@@ -617,6 +618,7 @@ void TerrainGenerator::Generation_Update()
 					}
 				}
 			}
+			it++;
 		}
 	}
 
