@@ -39,6 +39,7 @@ jobs:
           other_licenses.txt
           features.txt
           Editor/images/
+          Editor/terrain/
           Editor/sound/
           Editor/*.ini
           Editor/*.ico
@@ -58,6 +59,7 @@ jobs:
           Tests/images/
           Tests/sound/
           Tests/*.ini
+          Tests/*.txt
           Tests/*.ico
           Tests/*.lua
           Tests/*.ttf
@@ -108,6 +110,7 @@ jobs:
           other_licenses.txt
           features.txt
           Editor/images/
+          Editor/terrain/
           Editor/sound/
           Editor/*.ini
           Editor/*.ico
@@ -127,6 +130,7 @@ jobs:
           Tests/images/
           Tests/sound/
           Tests/*.ini
+          Tests/*.txt
           Tests/*.ico
           Tests/*.lua
           Tests/*.ttf
@@ -175,6 +179,7 @@ jobs:
           other_licenses.txt
           features.txt
           Editor/images/
+          Editor/terrain/
           Editor/sound/
           Editor/*.ini
           Editor/*.ico
@@ -194,6 +199,7 @@ jobs:
           Tests/images/
           Tests/sound/
           Tests/*.ini
+          Tests/*.txt
           Tests/*.ico
           Tests/*.lua
           Tests/*.ttf

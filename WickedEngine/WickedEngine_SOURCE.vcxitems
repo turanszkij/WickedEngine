@@ -229,6 +229,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btTransformUtil.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)BULLET\LinearMath\btVector3.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)CommonInclude.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)wiNoise.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)wiRenderPath3D_PathTracing.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\arial.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Utility\D3D12MemAlloc.h" />

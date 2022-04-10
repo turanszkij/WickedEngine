@@ -85,7 +85,13 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
     target = normalize(mul((float3x3)xHairWorld, target));
 	const float3 root = base;
 
+	const float3 diff = root - GetCamera().position;
+	const float distsq = dot(diff, diff);
+	const bool distance_culled = dot(diff, diff) > sqr(xHairViewDistance);
+
 	float3 normal = 0;
+
+	const float delta_time = clamp(GetFrame().delta_time, 0, 1.0 / 30.0); // clamp delta time to avoid simulation blowing up
     
 	for (uint segmentID = 0; segmentID < xHairSegmentCount; ++segmentID)
 	{
@@ -140,7 +146,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		// Pull back to rest position:
         force += (target - normal) * xStiffness;
 
-        force *= GetFrame().delta_time;
+        force *= delta_time;
 
 		// Simulation buffer load:
         float3 velocity = simulationBuffer[particleID].velocity;
@@ -154,14 +160,15 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 
 		// Apply forces:
 		velocity += force;
-		normal += velocity * clamp(GetFrame().delta_time, 0, 0.1); // clamp delta time to avoid simulation blowing up
+		normal += velocity * delta_time;
+		normal = normalize(normal);
 
 		// Drag:
 		velocity *= 0.98f;
 
 		// Store particle:
 		simulationBuffer[particleID].position = base;
-		simulationBuffer[particleID].normal = normalize(normal);
+		simulationBuffer[particleID].normal = normal;
 
 		// Store simulation data:
 		simulationBuffer[particleID].velocity = velocity;
@@ -205,6 +212,10 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 			const float3 wind = sin(mad(GetFrame().time, GetWeather().wind.speed, waveoffset)) * wavedir;
 
 			float3 position = rootposition + patchPos + wind;
+			if (distance_culled)
+			{
+				position = 0;
+			}
 
 			uint4 data;
 			data.xyz = asuint(position);
@@ -218,7 +229,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		sphere.center = (base + tip) * 0.5;
 		sphere.radius = len;
 
-		if (GetCamera().frustum.intersects(sphere))
+		if (!distance_culled && GetCamera().frustum.intersects(sphere))
 		{
 			uint prevCount;
 			counterBuffer.InterlockedAdd(0, 1, prevCount);

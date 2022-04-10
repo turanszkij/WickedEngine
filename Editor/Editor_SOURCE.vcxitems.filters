@@ -73,6 +73,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)meshoptimizer\vfetchoptimizer.cpp">
       <Filter>meshoptimizer</Filter>
     </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)TerrainGenerator.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)AnimationWindow.h" />
@@ -107,9 +108,19 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)meshoptimizer\meshoptimizer.h">
       <Filter>meshoptimizer</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)TerrainGenerator.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)startup.lua" />
+    <None Include="$(MSBuildThisFileDirectory)terrain\bush.wiscene">
+      <Filter>terrain</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)terrain\rock.wiscene">
+      <Filter>terrain</Filter>
+    </None>
+    <None Include="$(MSBuildThisFileDirectory)terrain\tree.wiscene">
+      <Filter>terrain</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="images">
@@ -117,6 +128,9 @@
     </Filter>
     <Filter Include="meshoptimizer">
       <UniqueIdentifier>{49c521c0-5dca-4fce-b8c5-a334d1746d98}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="terrain">
+      <UniqueIdentifier>{9a5b997d-f07e-45c5-849a-717f15cba0ab}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -165,5 +179,55 @@
     <Image Include="$(MSBuildThisFileDirectory)images\ripple.png">
       <Filter>images</Filter>
     </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\base.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\base_nor.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\grassparticle.png">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\high_altitude.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\low_altitude.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\slope.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\slope_nor.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\high_altitude_nor.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+    <Image Include="$(MSBuildThisFileDirectory)terrain\low_altitude_nor.jpg">
+      <Filter>terrain</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="$(MSBuildThisFileDirectory)terrain\base-LICENSE.txt">
+      <Filter>terrain</Filter>
+    </Text>
+    <Text Include="$(MSBuildThisFileDirectory)terrain\high_altitude-LICENSE.txt">
+      <Filter>terrain</Filter>
+    </Text>
+    <Text Include="$(MSBuildThisFileDirectory)terrain\low_altitude-LICENSE.txt">
+      <Filter>terrain</Filter>
+    </Text>
+    <Text Include="$(MSBuildThisFileDirectory)terrain\slope-LICENSE.txt">
+      <Filter>terrain</Filter>
+    </Text>
+    <Text Include="$(MSBuildThisFileDirectory)terrain\bush-LICENSE.txt">
+      <Filter>terrain</Filter>
+    </Text>
+    <Text Include="$(MSBuildThisFileDirectory)terrain\rock-LICENSE.txt">
+      <Filter>terrain</Filter>
+    </Text>
+    <Text Include="$(MSBuildThisFileDirectory)terrain\tree-LICENSE.txt">
+      <Filter>terrain</Filter>
+    </Text>
   </ItemGroup>
 </Project>

@@ -1,5 +1,6 @@
 This file contains changelog of wi::Archive versions
 
+76: serialized LOD parameters
 75: PreviousFrameTransformComponent is no longer serialized
 74: serialized emitter restitution
 73: wi::Archive no longer saves null terminator for strings

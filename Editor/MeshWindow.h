@@ -5,6 +5,7 @@ class EditorComponent;
 
 class MeshWindow : public wi::gui::Window
 {
+	bool terragen_initialized = false;
 public:
 	void Create(EditorComponent* editor);
 
@@ -29,15 +30,21 @@ public:
 	wi::gui::Button computeNormalsHardButton;
 	wi::gui::Button recenterButton;
 	wi::gui::Button recenterToBottomButton;
+	wi::gui::Button mergeButton;
 	wi::gui::Button optimizeButton;
 
 	wi::gui::CheckBox terrainCheckBox;
 	wi::gui::ComboBox terrainMat1Combo;
 	wi::gui::ComboBox terrainMat2Combo;
 	wi::gui::ComboBox terrainMat3Combo;
-	wi::gui::Button terrainGenButton;
 
 	wi::gui::ComboBox morphTargetCombo;
 	wi::gui::Slider morphTargetSlider;
+
+	wi::gui::Button lodgenButton;
+	wi::gui::Slider lodCountSlider;
+	wi::gui::Slider lodQualitySlider;
+	wi::gui::Slider lodErrorSlider;
+	wi::gui::CheckBox lodSloppyCheckBox;
 };
 

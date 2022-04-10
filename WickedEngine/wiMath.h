@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <algorithm>
+#include <limits>
 
 #if __has_include("DirectXMath.h")
 // In this case, DirectXMath is coming from Windows SDK.
@@ -76,11 +77,23 @@ namespace wi::math
 		XMVECTOR vector2 = XMLoadFloat3(&v2);
 		return Distance(vector1, vector2);
 	}
+	inline float DistanceSquared(const XMFLOAT2& v1, const XMFLOAT2& v2)
+	{
+		XMVECTOR vector1 = XMLoadFloat2(&v1);
+		XMVECTOR vector2 = XMLoadFloat2(&v2);
+		return XMVectorGetX(XMVector2LengthSq(vector2 - vector1));
+	}
 	inline float DistanceSquared(const XMFLOAT3& v1, const XMFLOAT3& v2)
 	{
 		XMVECTOR vector1 = XMLoadFloat3(&v1);
 		XMVECTOR vector2 = XMLoadFloat3(&v2);
 		return DistanceSquared(vector1, vector2);
+	}
+	inline float DistanceEstimated(const XMFLOAT2& v1, const XMFLOAT2& v2)
+	{
+		XMVECTOR vector1 = XMLoadFloat2(&v1);
+		XMVECTOR vector2 = XMLoadFloat2(&v2);
+		return XMVectorGetX(XMVector2LengthEst(vector2 - vector1));
 	}
 	inline float DistanceEstimated(const XMFLOAT3& v1, const XMFLOAT3& v2)
 	{
@@ -267,10 +280,20 @@ namespace wi::math
 	// Ray-Triangle Intersection", Journal of Graphics Tools, vol. 2, no. 1, 
 	// pp 21-28, 1997.
 	//
-	//	Modified for WickedEngine to return barycentrics
+	//	Modified for WickedEngine to return barycentrics and support TMin, TMax
 	//-----------------------------------------------------------------------------
 	_Use_decl_annotations_
-	inline bool XM_CALLCONV RayTriangleIntersects(FXMVECTOR Origin, FXMVECTOR Direction, FXMVECTOR V0, GXMVECTOR V1, HXMVECTOR V2, float& Dist, XMFLOAT2& bary)
+	inline bool XM_CALLCONV RayTriangleIntersects(
+		FXMVECTOR Origin,
+		FXMVECTOR Direction,
+		FXMVECTOR V0,
+		GXMVECTOR V1,
+		HXMVECTOR V2,
+		float& Dist,
+		XMFLOAT2& bary,
+		float TMin = 0,
+		float TMax = std::numeric_limits<float>::max()
+	)
 	{
 		const XMVECTOR g_RayEpsilon = XMVectorSet(1e-20f, 1e-20f, 1e-20f, 1e-20f);
 		const XMVECTOR g_RayNegEpsilon = XMVectorSet(-1e-20f, -1e-20f, -1e-20f, -1e-20f);
@@ -365,6 +388,9 @@ namespace wi::math
 
 		// Store the x-component to *pDist
 		XMStoreFloat(&Dist, t);
+
+		if (Dist > TMax || Dist < TMin)
+			return false;
 
 		return true;
 	}

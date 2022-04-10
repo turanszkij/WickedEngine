@@ -202,6 +202,9 @@ void EditorComponent::ResizeLayout()
 	paintToolWnd_Toggle.SetPos(XMFLOAT2(x += hstep, y));
 	paintToolWnd_Toggle.SetSize(option_size);
 
+	terrainWnd_Toggle.SetPos(XMFLOAT2(x += hstep, y));
+	terrainWnd_Toggle.SetSize(option_size);
+
 	/////////////////////////
 
 	option_size.y = 16;
@@ -363,6 +366,135 @@ void EditorComponent::Load()
 		paintToolWnd.SetVisible(!paintToolWnd.IsVisible());
 		});
 	GetGUI().AddWidget(&paintToolWnd_Toggle);
+
+	terrainWnd_Toggle.Create("Terrain");
+	terrainWnd_Toggle.SetTooltip("Terrain Generator");
+	terrainWnd_Toggle.OnClick([&](wi::gui::EventArgs args) {
+
+		if (terragen.terrainEntity == INVALID_ENTITY)
+		{
+			// Customize terrain generator before it's initialized:
+			terragen.material_Base.SetUseVertexColors(true);
+			terragen.material_Base.SetRoughness(1);
+			terragen.material_Slope.SetRoughness(0.5f);
+			terragen.material_LowAltitude.SetRoughness(1);
+			terragen.material_HighAltitude.SetRoughness(1);
+			terragen.material_Base.textures[MaterialComponent::BASECOLORMAP].name = "terrain/base.jpg";
+			terragen.material_Base.textures[MaterialComponent::NORMALMAP].name = "terrain/base_nor.jpg";
+			terragen.material_Slope.textures[MaterialComponent::BASECOLORMAP].name = "terrain/slope.jpg";
+			terragen.material_Slope.textures[MaterialComponent::NORMALMAP].name = "terrain/slope_nor.jpg";
+			terragen.material_LowAltitude.textures[MaterialComponent::BASECOLORMAP].name = "terrain/low_altitude.jpg";
+			terragen.material_LowAltitude.textures[MaterialComponent::NORMALMAP].name = "terrain/low_altitude_nor.jpg";
+			terragen.material_HighAltitude.textures[MaterialComponent::BASECOLORMAP].name = "terrain/high_altitude.jpg";
+			terragen.material_HighAltitude.textures[MaterialComponent::NORMALMAP].name = "terrain/high_altitude_nor.jpg";
+			terragen.material_GrassParticle.textures[MaterialComponent::BASECOLORMAP].name = "terrain/grassparticle.png";
+			terragen.material_GrassParticle.alphaRef = 0.75f;
+			terragen.material_Base.CreateRenderData();
+			terragen.material_Slope.CreateRenderData();
+			terragen.material_LowAltitude.CreateRenderData();
+			terragen.material_HighAltitude.CreateRenderData();
+			terragen.material_GrassParticle.CreateRenderData();
+			// Tree prop:
+			{
+				Scene props_scene;
+				wi::scene::LoadModel(props_scene, "terrain/tree.wiscene");
+				TerrainGenerator::Prop& prop = terragen.props.emplace_back();
+				prop.name = "tree";
+				prop.min_count_per_chunk = 0;
+				prop.max_count_per_chunk = 10;
+				prop.region = 0;
+				prop.region_power = 2;
+				prop.noise_frequency = 0.1f;
+				prop.noise_power = 1;
+				prop.threshold = 0.4f;
+				prop.min_size = 2.0f;
+				prop.max_size = 8.0f;
+				prop.min_y_offset = -0.5f;
+				prop.max_y_offset = -0.5f;
+				prop.mesh_entity = props_scene.Entity_FindByName("tree_mesh");
+				Entity object_entity = props_scene.Entity_FindByName("tree_object");
+				ObjectComponent* object = props_scene.objects.GetComponent(object_entity);
+				if (object != nullptr)
+				{
+					prop.object = *object;
+					prop.object.lod_distance_multiplier = 0.05f;
+					//prop.object.cascadeMask = 1; // they won't be rendered into the largest shadow cascade
+				}
+				props_scene.Entity_Remove(object_entity); // The objects will be placed by terrain generator, we don't need the default object that the scene has anymore
+				wi::scene::GetScene().Merge(props_scene);
+			}
+			// Rock prop:
+			{
+				Scene props_scene;
+				wi::scene::LoadModel(props_scene, "terrain/rock.wiscene");
+				TerrainGenerator::Prop& prop = terragen.props.emplace_back();
+				prop.name = "rock";
+				prop.min_count_per_chunk = 0;
+				prop.max_count_per_chunk = 8;
+				prop.region = 0;
+				prop.region_power = 1;
+				prop.noise_frequency = 0.005f;
+				prop.noise_power = 2;
+				prop.threshold = 0.5f;
+				prop.min_size = 0.02f;
+				prop.max_size = 4.0f;
+				prop.min_y_offset = -2;
+				prop.max_y_offset = 0.5f;
+				prop.mesh_entity = props_scene.Entity_FindByName("rock_mesh");
+				Entity object_entity = props_scene.Entity_FindByName("rock_object");
+				ObjectComponent* object = props_scene.objects.GetComponent(object_entity);
+				if (object != nullptr)
+				{
+					prop.object = *object;
+					prop.object.lod_distance_multiplier = 0.02f;
+					prop.object.cascadeMask = 1; // they won't be rendered into the largest shadow cascade
+				}
+				props_scene.Entity_Remove(object_entity); // The objects will be placed by terrain generator, we don't need the default object that the scene has anymore
+				wi::scene::GetScene().Merge(props_scene);
+			}
+			// Bush prop:
+			{
+				Scene props_scene;
+				wi::scene::LoadModel(props_scene, "terrain/bush.wiscene");
+				TerrainGenerator::Prop& prop = terragen.props.emplace_back();
+				prop.name = "bush";
+				prop.min_count_per_chunk = 0;
+				prop.max_count_per_chunk = 10;
+				prop.region = 0;
+				prop.region_power = 4;
+				prop.noise_frequency = 0.01f;
+				prop.noise_power = 4;
+				prop.threshold = 0.1f;
+				prop.min_size = 0.1f;
+				prop.max_size = 1.5f;
+				prop.min_y_offset = -1;
+				prop.max_y_offset = 0;
+				prop.mesh_entity = props_scene.Entity_FindByName("bush_mesh");
+				Entity object_entity = props_scene.Entity_FindByName("bush_object");
+				ObjectComponent* object = props_scene.objects.GetComponent(object_entity);
+				if (object != nullptr)
+				{
+					prop.object = *object;
+					prop.object.lod_distance_multiplier = 0.05f;
+					prop.object.cascadeMask = 1; // they won't be rendered into the largest shadow cascade
+				}
+				props_scene.Entity_Remove(object_entity); // The objects will be placed by terrain generator, we don't need the default object that the scene has anymore
+				wi::scene::GetScene().Merge(props_scene);
+			}
+			terragen.init();
+			RefreshSceneGraphView();
+		}
+
+		terragen.SetVisible(!terragen.IsVisible());
+		if (terragen.IsVisible() && !wi::scene::GetScene().transforms.Contains(terragen.terrainEntity))
+		{
+			terragen.Generation_Restart();
+			RefreshSceneGraphView();
+		}
+
+		});
+	GetGUI().AddWidget(&terrainWnd_Toggle);
+	GetGUI().AddWidget(&terragen);
 
 
 	///////////////////////
@@ -736,8 +868,15 @@ void EditorComponent::Load()
 	clearButton.SetColor(wi::Color(255, 173, 43, 180), wi::gui::WIDGETSTATE::IDLE);
 	clearButton.SetColor(wi::Color(255, 235, 173, 255), wi::gui::WIDGETSTATE::FOCUS);
 	clearButton.OnClick([&](wi::gui::EventArgs args) {
+
+		terragen.Generation_Cancel();
+		// This is to recreate the terragen from scratch, but it has implicitly deleted copy ctor so it's weird:
+		terragen.~TerrainGenerator();
+		new (&terragen) TerrainGenerator;
+
 		translator.selected.clear();
-		wi::renderer::ClearWorld(wi::scene::GetScene());
+		wi::scene::Scene& scene = wi::scene::GetScene();
+		wi::renderer::ClearWorld(scene);
 		objectWnd.SetEntity(INVALID_ENTITY);
 		meshWnd.SetEntity(INVALID_ENTITY, -1);
 		lightWnd.SetEntity(INVALID_ENTITY);
@@ -813,6 +952,7 @@ void EditorComponent::Load()
 	exitButton.SetColor(wi::Color(190, 0, 0, 180), wi::gui::WIDGETSTATE::IDLE);
 	exitButton.SetColor(wi::Color(255, 0, 0, 255), wi::gui::WIDGETSTATE::FOCUS);
 	exitButton.OnClick([this](wi::gui::EventArgs args) {
+		terragen.Generation_Cancel();
 		wi::platform::Exit();
 	});
 	GetGUI().AddWidget(&exitButton);
@@ -1314,7 +1454,7 @@ void EditorComponent::Update(float dt)
 				}
 			}
 
-			if (pickMask & PICK_OBJECT && hovered.entity == INVALID_ENTITY)
+			if ((pickMask & PICK_OBJECT) && hovered.entity == INVALID_ENTITY)
 			{
 				// Object picking only when mouse button down, because it can be slow with high polycount
 				if (
@@ -1519,12 +1659,22 @@ void EditorComponent::Update(float dt)
 				for (size_t i = 0; i < count; ++i)
 				{
 					Entity entity = scene.Entity_Serialize(clipboard, seri, INVALID_ENTITY, Scene::EntitySerializeFlags::RECURSIVE | Scene::EntitySerializeFlags::KEEP_INTERNAL_ENTITY_REFERENCES);
+					const HierarchyComponent* hier = scene.hierarchy.GetComponent(entity);
+					if (hier != nullptr)
+					{
+						scene.Component_Detach(entity);
+					}
 					TransformComponent* transform = scene.transforms.GetComponent(entity);
 					if (transform != nullptr)
 					{
 						transform->translation_local = {};
 						//transform->MatrixTransform(hovered.orientation);
 						transform->Translate(hovered.position);
+						transform->UpdateTransform();
+					}
+					if (hier != nullptr)
+					{
+						scene.Component_Attach(entity, hier->parentID);
 					}
 					addedEntities.push_back(entity);
 				}
@@ -1728,6 +1878,8 @@ void EditorComponent::Update(float dt)
 		}
 		pathTraceStatisticsLabel.SetText(ss);
 	}
+
+	terragen.Generation_Update();
 
 	wi::profiler::EndRange(profrange);
 

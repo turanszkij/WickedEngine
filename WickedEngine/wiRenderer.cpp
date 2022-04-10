@@ -1854,9 +1854,9 @@ void SetUpStates()
 	rs.fill_mode = FillMode::SOLID;
 	rs.cull_mode = CullMode::NONE;
 	rs.front_counter_clockwise = true;
-	rs.depth_bias = 2;
+	rs.depth_bias = 0;
 	rs.depth_bias_clamp = 0;
-	rs.slope_scaled_depth_bias = 2;
+	rs.slope_scaled_depth_bias = 0;
 	rs.depth_clip_enable = false;
 	rs.multisample_enable = false;
 	rs.antialiased_line_enable = false;
@@ -2402,6 +2402,7 @@ void RenderMeshes(
 		uint8_t userStencilRefOverride = 0;
 		bool forceAlphatestForDithering = false;
 		AABB aabb;
+		uint32_t lod = 0;
 	} instancedBatch = {};
 
 
@@ -2426,7 +2427,10 @@ void RenderMeshes(
 
 		device->BindIndexBuffer(&mesh.generalBuffer, mesh.GetIndexFormat(), mesh.ib.offset, cmd);
 
-		for (size_t subsetIndex = 0; subsetIndex < mesh.subsets.size(); ++subsetIndex)
+		uint32_t first_subset = 0;
+		uint32_t last_subset = 0;
+		mesh.GetLODSubsetRange(instancedBatch.lod, first_subset, last_subset);
+		for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
 		{
 			const MeshComponent::MeshSubset& subset = mesh.subsets[subsetIndex];
 			if (subset.indexCount == 0)
@@ -2539,7 +2543,10 @@ void RenderMeshes(
 		const uint8_t userStencilRefOverride = instance.userStencilRef;
 
 		// When we encounter a new mesh inside the global instance array, we begin a new RenderBatch:
-		if (meshIndex != instancedBatch.meshIndex || userStencilRefOverride != instancedBatch.userStencilRefOverride)
+		if (meshIndex != instancedBatch.meshIndex ||
+			userStencilRefOverride != instancedBatch.userStencilRefOverride ||
+			instance.lod != instancedBatch.lod
+			)
 		{
 			batch_flush();
 
@@ -2550,6 +2557,7 @@ void RenderMeshes(
 			instancedBatch.userStencilRefOverride = userStencilRefOverride;
 			instancedBatch.forceAlphatestForDithering = 0;
 			instancedBatch.aabb = AABB();
+			instancedBatch.lod = instance.lod;
 		}
 
 		float dither = instance.GetTransparency();
@@ -2941,6 +2949,10 @@ void UpdateVisibility(Visibility& vis)
 				{
 					continue;
 				}
+				const float dist = wi::math::Distance(vis.camera->Eye, hair.aabb.getCenter());
+				const float radius = hair.aabb.getRadius();
+				if (dist - radius > hair.viewDistance)
+					continue;
 				if (hair.meshID == INVALID_ENTITY || !vis.frustum.CheckBoxFast(hair.aabb))
 				{
 					continue;
@@ -2964,12 +2976,25 @@ void UpdateVisibility(Visibility& vis)
 	vis.visibleObjects.resize((size_t)vis.object_counter.load());
 	vis.visibleDecals.resize((size_t)vis.decal_counter.load());
 
-	if ((vis.flags & Visibility::ALLOW_REQUEST_REFLECTION) && vis.scene->weather.IsOceanEnabled())
+	if (vis.scene->weather.IsOceanEnabled())
 	{
-		// Ocean will override any current reflectors
-		vis.planar_reflection_visible = true;
-		XMVECTOR _refPlane = XMPlaneFromPointNormal(XMVectorSet(0, vis.scene->weather.oceanParameters.waterHeight, 0, 0), XMVectorSet(0, 1, 0, 0));
-		XMStoreFloat4(&vis.reflectionPlane, _refPlane);
+		bool occluded = false;
+		if (vis.flags & Visibility::ALLOW_OCCLUSION_CULLING)
+		{
+			vis.scene->ocean.occlusionQueries[vis.scene->queryheap_idx] = vis.scene->queryAllocator.fetch_add(1); // allocate new occlusion query from heap
+			if (vis.scene->ocean.IsOccluded())
+			{
+				occluded = true;
+			}
+		}
+
+		if ((vis.flags & Visibility::ALLOW_REQUEST_REFLECTION) && !occluded)
+		{
+			// Ocean will override any current reflectors
+			vis.planar_reflection_visible = true;
+			XMVECTOR _refPlane = XMPlaneFromPointNormal(XMVectorSet(0, vis.scene->weather.oceanParameters.waterHeight, 0, 0), XMVectorSet(0, 1, 0, 0));
+			XMStoreFloat4(&vis.reflectionPlane, _refPlane);
+		}
 	}
 
 	wi::profiler::EndRange(range); // Frustum Culling
@@ -3853,9 +3878,12 @@ void UpdateRenderDataAsync(
 	// Compute water simulation:
 	if (vis.scene->weather.IsOceanEnabled())
 	{
-		auto range = wi::profiler::BeginRangeGPU("Ocean - Simulate", cmd);
-		vis.scene->ocean.UpdateDisplacementMap(vis.scene->weather.oceanParameters, cmd);
-		wi::profiler::EndRange(range);
+		if (!GetOcclusionCullingEnabled() || !vis.scene->ocean.IsOccluded())
+		{
+			auto range = wi::profiler::BeginRangeGPU("Ocean - Simulate", cmd);
+			vis.scene->ocean.UpdateDisplacementMap(vis.scene->weather.oceanParameters, cmd);
+			wi::profiler::EndRange(range);
+		}
 	}
 
 	device->EventEnd(cmd);
@@ -3908,7 +3936,7 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 			{
 				const wi::HairParticleSystem& hair = scene.hairs[i];
 
-				if (hair.meshID != INVALID_ENTITY && hair.BLAS.IsValid())
+				if (hair.meshID != INVALID_ENTITY && hair.BLAS.IsValid() && hair.render_data_updated)
 				{
 					device->BuildRaytracingAccelerationStructure(&hair.BLAS, cmd, nullptr);
 				}
@@ -4006,11 +4034,11 @@ void OcclusionCulling_Render(const CameraComponent& camera, const Visibility& vi
 	XMMATRIX VP = camera.GetViewProjection();
 
 	const GPUQueryHeap& queryHeap = vis.scene->queryHeap;
+	int query_write = vis.scene->queryheap_idx;
 
 	if (!vis.visibleObjects.empty())
 	{
 		device->EventBegin("Occlusion Culling Objects", cmd);
-		int query_write = vis.scene->queryheap_idx;
 
 		for (uint32_t instanceIndex : vis.visibleObjects)
 		{
@@ -4055,6 +4083,29 @@ void OcclusionCulling_Render(const CameraComponent& camera, const Visibility& vi
 		}
 
 		device->EventEnd(cmd);
+	}
+
+	if (vis.scene->weather.IsOceanEnabled())
+	{
+		int queryIndex = vis.scene->ocean.occlusionQueries[query_write];
+		if (queryIndex >= 0)
+		{
+			device->EventBegin("Occlusion Culling Ocean", cmd);
+
+			AABB aabb;
+			aabb.createFromHalfWidth(
+				XMFLOAT3(vis.camera->Eye.x, vis.scene->weather.oceanParameters.waterHeight, vis.camera->Eye.z),
+				XMFLOAT3(vis.camera->zFarP, 1, vis.camera->zFarP)
+			);
+			const XMMATRIX transform = aabb.getAsBoxMatrix() * VP;
+			device->PushConstants(&transform, sizeof(transform), cmd);
+
+			device->QueryBegin(&queryHeap, queryIndex, cmd);
+			device->Draw(14, 0, cmd);
+			device->QueryEnd(&queryHeap, queryIndex, cmd);
+
+			device->EventEnd(cmd);
+		}
 	}
 
 	wi::profiler::EndRange(range); // Occlusion Culling Render
@@ -4871,7 +4922,10 @@ void DrawScene(
 
 	if (transparent && vis.scene->weather.IsOceanEnabled())
 	{
-		vis.scene->ocean.Render(*vis.camera, vis.scene->weather.oceanParameters, cmd);
+		if (!occlusion || !vis.scene->ocean.IsOccluded())
+		{
+			vis.scene->ocean.Render(*vis.camera, vis.scene->weather.oceanParameters, cmd);
+		}
 	}
 
 	if (IsWireRender() && !transparent)
@@ -4927,7 +4981,7 @@ void DrawScene(
 
 	if (hairparticle)
 	{
-		if (!transparent)
+		if (IsWireRender() || !transparent)
 		{
 			for (uint32_t hairIndex : vis.visibleHairs)
 			{
@@ -6452,7 +6506,10 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 				viewport.width = (float)scene.impostorTextureDim;
 				device->BindViewports(1, &viewport, cmd);
 
-				for (size_t subsetIndex = 0; subsetIndex < mesh.subsets.size(); ++subsetIndex)
+				uint32_t first_subset = 0;
+				uint32_t last_subset = 0;
+				mesh.GetLODSubsetRange(0, first_subset, last_subset);
+				for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
 				{
 					const MeshComponent::MeshSubset& subset = mesh.subsets[subsetIndex];
 					if (subset.indexCount == 0)

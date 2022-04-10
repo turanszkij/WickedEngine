@@ -46,7 +46,7 @@ namespace wi::ecs
 			uint64_t mem;
 			archive >> mem;
 
-			if (seri.allow_remap)
+			if (mem != INVALID_ENTITY && seri.allow_remap)
 			{
 				auto it = seri.remap.find(mem);
 				if (it == seri.remap.end())

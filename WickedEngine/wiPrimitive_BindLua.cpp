@@ -46,6 +46,14 @@ namespace wi::lua::primitive
 			if (o && d)
 			{
 				ray = Ray(XMLoadFloat4(o), XMLoadFloat4(d));
+				if (argc > 2)
+				{
+					ray.TMin = wi::lua::SGetFloat(L, 3);
+				}
+				if (argc > 3)
+				{
+					ray.TMax = wi::lua::SGetFloat(L, 4);
+				}
 			}
 			else
 			{

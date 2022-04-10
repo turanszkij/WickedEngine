@@ -11,73 +11,10 @@
 using namespace wi::ecs;
 using namespace wi::scene;
 
-struct TerraGen : public wi::gui::Window
-{
-	wi::gui::Slider dimXSlider;
-	wi::gui::Slider dimYSlider;
-	wi::gui::Slider dimZSlider;
-	wi::gui::Button heightmapButton;
-
-	// heightmap texture:
-	unsigned char* rgb = nullptr;
-	const int channelCount = 4;
-	int width = 0, height = 0;
-
-	TerraGen()
-	{
-		wi::gui::Window::Create("TerraGen");
-		SetSize(XMFLOAT2(260, 130));
-
-		float xx = 20;
-		float yy = 0;
-		float stepstep = 25;
-		float heihei = 20;
-
-		dimXSlider.Create(16, 1024, 128, 1024 - 16, "X: ");
-		dimXSlider.SetTooltip("Terrain mesh grid resolution on X axis");
-		dimXSlider.SetSize(XMFLOAT2(200, heihei));
-		dimXSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
-		AddWidget(&dimXSlider);
-
-		dimYSlider.Create(0, 1, 0.5f, 10000, "Y: ");
-		dimYSlider.SetTooltip("Terrain mesh grid heightmap scale on Y axis");
-		dimYSlider.SetSize(XMFLOAT2(200, heihei));
-		dimYSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
-		AddWidget(&dimYSlider);
-
-		dimZSlider.Create(16, 1024, 128, 1024 - 16, "Z: ");
-		dimZSlider.SetTooltip("Terrain mesh grid resolution on Z axis");
-		dimZSlider.SetSize(XMFLOAT2(200, heihei));
-		dimZSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
-		AddWidget(&dimZSlider);
-
-
-		heightmapButton.Create("Load Heightmap...");
-		heightmapButton.SetTooltip("Load a heightmap texture, where the red channel corresponds to terrain height and the resolution to dimensions");
-		heightmapButton.SetSize(XMFLOAT2(200, heihei));
-		heightmapButton.SetPos(XMFLOAT2(xx, yy += stepstep));
-
-		AddWidget(&heightmapButton);
-	}
-	~TerraGen()
-	{
-		Cleanup();
-	}
-
-	void Cleanup()
-	{
-		if (rgb != nullptr)
-		{
-			stbi_image_free(rgb);
-			rgb = nullptr;
-		}
-	}
-} terragen;
-
 void MeshWindow::Create(EditorComponent* editor)
 {
 	wi::gui::Window::Create("Mesh Window");
-	SetSize(XMFLOAT2(580, 580));
+	SetSize(XMFLOAT2(580, 600));
 
 	float x = 150;
 	float y = 0;
@@ -225,7 +162,7 @@ void MeshWindow::Create(EditorComponent* editor)
 
 	impostorCreateButton.Create("Create Impostor");
 	impostorCreateButton.SetTooltip("Create an impostor image of the mesh. The mesh will be replaced by this image when far away, to render faster.");
-	impostorCreateButton.SetSize(XMFLOAT2(240, hei));
+	impostorCreateButton.SetSize(XMFLOAT2(200, hei));
 	impostorCreateButton.SetPos(XMFLOAT2(x - 50, y += step));
 	impostorCreateButton.OnClick([&](wi::gui::EventArgs args) {
 	    Scene& scene = wi::scene::GetScene();
@@ -271,7 +208,7 @@ void MeshWindow::Create(EditorComponent* editor)
 
 	flipCullingButton.Create("Flip Culling");
 	flipCullingButton.SetTooltip("Flip faces to reverse triangle culling order.");
-	flipCullingButton.SetSize(XMFLOAT2(240, hei));
+	flipCullingButton.SetSize(XMFLOAT2(200, hei));
 	flipCullingButton.SetPos(XMFLOAT2(x - 50, y += step));
 	flipCullingButton.OnClick([&](wi::gui::EventArgs args) {
 		MeshComponent* mesh = wi::scene::GetScene().meshes.GetComponent(entity);
@@ -285,7 +222,7 @@ void MeshWindow::Create(EditorComponent* editor)
 
 	flipNormalsButton.Create("Flip Normals");
 	flipNormalsButton.SetTooltip("Flip surface normals.");
-	flipNormalsButton.SetSize(XMFLOAT2(240, hei));
+	flipNormalsButton.SetSize(XMFLOAT2(200, hei));
 	flipNormalsButton.SetPos(XMFLOAT2(x - 50, y += step));
 	flipNormalsButton.OnClick([&](wi::gui::EventArgs args) {
 		MeshComponent* mesh = wi::scene::GetScene().meshes.GetComponent(entity);
@@ -299,7 +236,7 @@ void MeshWindow::Create(EditorComponent* editor)
 
 	computeNormalsSmoothButton.Create("Compute Normals [SMOOTH]");
 	computeNormalsSmoothButton.SetTooltip("Compute surface normals of the mesh. Resulting normals will be unique per vertex. This can reduce vertex count, but is slow.");
-	computeNormalsSmoothButton.SetSize(XMFLOAT2(240, hei));
+	computeNormalsSmoothButton.SetSize(XMFLOAT2(200, hei));
 	computeNormalsSmoothButton.SetPos(XMFLOAT2(x - 50, y += step));
 	computeNormalsSmoothButton.OnClick([&](wi::gui::EventArgs args) {
 		MeshComponent* mesh = wi::scene::GetScene().meshes.GetComponent(entity);
@@ -313,7 +250,7 @@ void MeshWindow::Create(EditorComponent* editor)
 
 	computeNormalsHardButton.Create("Compute Normals [HARD]");
 	computeNormalsHardButton.SetTooltip("Compute surface normals of the mesh. Resulting normals will be unique per face. This can increase vertex count.");
-	computeNormalsHardButton.SetSize(XMFLOAT2(240, hei));
+	computeNormalsHardButton.SetSize(XMFLOAT2(200, hei));
 	computeNormalsHardButton.SetPos(XMFLOAT2(x - 50, y += step));
 	computeNormalsHardButton.OnClick([&](wi::gui::EventArgs args) {
 		MeshComponent* mesh = wi::scene::GetScene().meshes.GetComponent(entity);
@@ -327,7 +264,7 @@ void MeshWindow::Create(EditorComponent* editor)
 
 	recenterButton.Create("Recenter");
 	recenterButton.SetTooltip("Recenter mesh to AABB center.");
-	recenterButton.SetSize(XMFLOAT2(240, hei));
+	recenterButton.SetSize(XMFLOAT2(200, hei));
 	recenterButton.SetPos(XMFLOAT2(x - 50, y += step));
 	recenterButton.OnClick([&](wi::gui::EventArgs args) {
 		MeshComponent* mesh = wi::scene::GetScene().meshes.GetComponent(entity);
@@ -341,7 +278,7 @@ void MeshWindow::Create(EditorComponent* editor)
 
 	recenterToBottomButton.Create("RecenterToBottom");
 	recenterToBottomButton.SetTooltip("Recenter mesh to AABB bottom.");
-	recenterToBottomButton.SetSize(XMFLOAT2(240, hei));
+	recenterToBottomButton.SetSize(XMFLOAT2(200, hei));
 	recenterToBottomButton.SetPos(XMFLOAT2(x - 50, y += step));
 	recenterToBottomButton.OnClick([&](wi::gui::EventArgs args) {
 		MeshComponent* mesh = wi::scene::GetScene().meshes.GetComponent(entity);
@@ -353,9 +290,191 @@ void MeshWindow::Create(EditorComponent* editor)
 	});
 	AddWidget(&recenterToBottomButton);
 
+	mergeButton.Create("Merge Selected");
+	mergeButton.SetTooltip("Merges selected objects/meshes into one.");
+	mergeButton.SetSize(XMFLOAT2(200, hei));
+	mergeButton.SetPos(XMFLOAT2(x - 50, y += step));
+	mergeButton.OnClick([=](wi::gui::EventArgs args) {
+		Scene& scene = wi::scene::GetScene();
+		MeshComponent merged_mesh;
+		bool valid_normals = false;
+		bool valid_uvset_0 = false;
+		bool valid_uvset_1 = false;
+		bool valid_atlas = false;
+		bool valid_boneindices = false;
+		bool valid_boneweights = false;
+		bool valid_colors = false;
+		bool valid_windweights = false;
+		wi::unordered_set<Entity> entities_to_remove;
+		Entity prev_subset_material = INVALID_ENTITY;
+		for (auto& picked : editor->translator.selected)
+		{
+			ObjectComponent* object = scene.objects.GetComponent(picked.entity);
+			if (object == nullptr)
+				continue;
+			MeshComponent* mesh = scene.meshes.GetComponent(object->meshID);
+			if (mesh == nullptr)
+				continue;
+			const TransformComponent* transform = scene.transforms.GetComponent(picked.entity);
+			XMMATRIX W = XMLoadFloat4x4(&transform->world);
+			uint32_t vertexOffset = (uint32_t)merged_mesh.vertex_positions.size();
+			uint32_t indexOffset = (uint32_t)merged_mesh.indices.size();
+			for (auto& ind : mesh->indices)
+			{
+				merged_mesh.indices.push_back(vertexOffset + ind);
+			}
+			uint32_t first_subset = 0;
+			uint32_t last_subset = 0;
+			mesh->GetLODSubsetRange(0, first_subset, last_subset);
+			for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
+			{
+				const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
+				if (subset.materialID != prev_subset_material)
+				{
+					// new subset
+					prev_subset_material = subset.materialID;
+					merged_mesh.subsets.push_back(subset);
+					merged_mesh.subsets.back().indexOffset += indexOffset;
+				}
+				else
+				{
+					// append to previous subset
+					merged_mesh.subsets.back().indexCount += subset.indexCount;
+				}
+			}
+			for (size_t i = 0; i < mesh->vertex_positions.size(); ++i)
+			{
+				merged_mesh.vertex_positions.push_back(mesh->vertex_positions[i]);
+				XMStoreFloat3(&merged_mesh.vertex_positions.back(), XMVector3Transform(XMLoadFloat3(&merged_mesh.vertex_positions.back()), W));
+
+				if (mesh->vertex_normals.empty())
+				{
+					merged_mesh.vertex_normals.emplace_back();
+				}
+				else
+				{
+					valid_normals = true;
+					merged_mesh.vertex_normals.push_back(mesh->vertex_normals[i]);
+					XMStoreFloat3(&merged_mesh.vertex_normals.back(), XMVector3TransformNormal(XMLoadFloat3(&merged_mesh.vertex_normals.back()), W));
+				}
+
+				if (mesh->vertex_uvset_0.empty())
+				{
+					merged_mesh.vertex_uvset_0.emplace_back();
+				}
+				else
+				{
+					valid_uvset_0 = true;
+					merged_mesh.vertex_uvset_0.push_back(mesh->vertex_uvset_0[i]);
+				}
+
+				if (mesh->vertex_uvset_1.empty())
+				{
+					merged_mesh.vertex_uvset_1.emplace_back();
+				}
+				else
+				{
+					valid_uvset_1 = true;
+					merged_mesh.vertex_uvset_1.push_back(mesh->vertex_uvset_1[i]);
+				}
+
+				if (mesh->vertex_atlas.empty())
+				{
+					merged_mesh.vertex_atlas.emplace_back();
+				}
+				else
+				{
+					valid_atlas = true;
+					merged_mesh.vertex_atlas.push_back(mesh->vertex_atlas[i]);
+				}
+
+				if (mesh->vertex_boneindices.empty())
+				{
+					merged_mesh.vertex_boneindices.emplace_back();
+				}
+				else
+				{
+					valid_boneindices = true;
+					merged_mesh.vertex_boneindices.push_back(mesh->vertex_boneindices[i]);
+				}
+
+				if (mesh->vertex_boneweights.empty())
+				{
+					merged_mesh.vertex_boneweights.emplace_back();
+				}
+				else
+				{
+					valid_boneweights = true;
+					merged_mesh.vertex_boneweights.push_back(mesh->vertex_boneweights[i]);
+				}
+
+				if (mesh->vertex_colors.empty())
+				{
+					merged_mesh.vertex_colors.push_back(~0u);
+				}
+				else
+				{
+					valid_colors = true;
+					merged_mesh.vertex_colors.push_back(mesh->vertex_colors[i]);
+				}
+
+				if (mesh->vertex_windweights.empty())
+				{
+					merged_mesh.vertex_windweights.emplace_back();
+				}
+				else
+				{
+					valid_windweights = true;
+					merged_mesh.vertex_windweights.push_back(mesh->vertex_windweights[i]);
+				}
+			}
+			if (merged_mesh.armatureID == INVALID_ENTITY)
+			{
+				merged_mesh.armatureID = mesh->armatureID;
+			}
+			entities_to_remove.insert(object->meshID);
+			entities_to_remove.insert(picked.entity);
+		}
+
+		if (!merged_mesh.vertex_positions.empty())
+		{
+			if (!valid_normals)
+				merged_mesh.vertex_normals.clear();
+			if (!valid_uvset_0)
+				merged_mesh.vertex_uvset_0.clear();
+			if (!valid_uvset_1)
+				merged_mesh.vertex_uvset_1.clear();
+			if (!valid_atlas)
+				merged_mesh.vertex_atlas.clear();
+			if (!valid_boneindices)
+				merged_mesh.vertex_boneindices.clear();
+			if (!valid_boneweights)
+				merged_mesh.vertex_boneweights.clear();
+			if (!valid_colors)
+				merged_mesh.vertex_colors.clear();
+			if (!valid_windweights)
+				merged_mesh.vertex_windweights.clear();
+
+			Entity merged_object_entity = scene.Entity_CreateObject("mergedObject");
+			Entity merged_mesh_entity = scene.Entity_CreateMesh("mergedMesh");
+			ObjectComponent* object = scene.objects.GetComponent(merged_object_entity);
+			object->meshID = merged_mesh_entity;
+			MeshComponent* mesh = scene.meshes.GetComponent(merged_mesh_entity);
+			*mesh = std::move(merged_mesh);
+			mesh->CreateRenderData();
+		}
+
+		for (auto& x : entities_to_remove)
+		{
+			scene.Entity_Remove(x);
+		}
+		
+	});
+	AddWidget(&mergeButton);
+
 	optimizeButton.Create("Optimize");
 	optimizeButton.SetTooltip("Run the meshoptimizer library.");
-	optimizeButton.SetSize(XMFLOAT2(240, hei));
+	optimizeButton.SetSize(XMFLOAT2(200, hei));
 	optimizeButton.SetPos(XMFLOAT2(x - 50, y += step));
 	optimizeButton.OnClick([&](wi::gui::EventArgs args) {
 		MeshComponent* mesh = wi::scene::GetScene().meshes.GetComponent(entity);
@@ -473,147 +592,6 @@ void MeshWindow::Create(EditorComponent* editor)
 	terrainMat3Combo.SetTooltip("Choose a sub terrain blend material. (ALPHA vertex color mask)");
 	AddWidget(&terrainMat3Combo);
 
-	terrainGenButton.Create("Generate Terrain...");
-	terrainGenButton.SetTooltip("Generate terrain meshes.");
-	terrainGenButton.SetSize(XMFLOAT2(200, hei));
-	terrainGenButton.SetPos(XMFLOAT2(x + 180, y += step));
-	terrainGenButton.OnClick([=](wi::gui::EventArgs args) {
-
-		terragen.Cleanup();
-		terragen.SetVisible(true);
-
-		editor->GetGUI().RemoveWidget(&terragen);
-		editor->GetGUI().AddWidget(&terragen);
-
-		terragen.SetPos(XMFLOAT2(
-			terrainGenButton.translation.x + terrainGenButton.scale.x + 10,
-			terrainGenButton.translation.y)
-		);
-
-		Scene& scene = wi::scene::GetScene();
-		Entity entity = scene.Entity_CreateObject("editorTerrain");
-		ObjectComponent& object = *scene.objects.GetComponent(entity);
-		object.meshID = scene.Entity_CreateMesh("terrainMesh");
-		MeshComponent* mesh = scene.meshes.GetComponent(object.meshID);
-		mesh->SetTerrain(true);
-		mesh->subsets.emplace_back();
-		mesh->subsets.back().materialID = scene.Entity_CreateMaterial("terrainMaterial");
-		mesh->subsets.back().indexOffset = 0;
-		MaterialComponent* material = scene.materials.GetComponent(mesh->subsets.back().materialID);
-		material->SetUseVertexColors(true);
-
-		auto generate_mesh = [=] (int width, int height, unsigned char* rgb = nullptr, 
-			int channelCount = 4, float heightmap_scale = 1) 
-		{
-			mesh->vertex_positions.resize(width * height);
-			mesh->vertex_normals.resize(width * height);
-			mesh->vertex_colors.resize(width * height);
-			mesh->vertex_uvset_0.resize(width* height);
-			mesh->vertex_uvset_1.resize(width* height);
-			mesh->vertex_atlas.resize(width* height);
-			for (int i = 0; i < width; ++i)
-			{
-				for (int j = 0; j < height; ++j)
-				{
-					size_t index = size_t(i + j * width);
-					mesh->vertex_positions[index] = XMFLOAT3((float)i - (float)width * 0.5f, 0, (float)j - (float)height * 0.5f);
-					if (rgb != nullptr)
-						mesh->vertex_positions[index].y = ((float)rgb[index * channelCount] - 127.0f) * heightmap_scale;
-					mesh->vertex_colors[index] = wi::Color::Red().rgba;
-					XMFLOAT2 uv = XMFLOAT2((float)i / (float)width, (float)j / (float)height);
-					mesh->vertex_uvset_0[index] = uv;
-					mesh->vertex_uvset_1[index] = uv;
-					mesh->vertex_atlas[index] = uv;
-				}
-			}
-			mesh->indices.resize((width - 1) * (height - 1) * 6);
-			size_t counter = 0;
-			for (int x = 0; x < width - 1; x++)
-			{
-				for (int y = 0; y < height - 1; y++)
-				{
-					int lowerLeft = x + y * width;
-					int lowerRight = (x + 1) + y * width;
-					int topLeft = x + (y + 1) * width;
-					int topRight = (x + 1) + (y + 1) * width;
-
-					mesh->indices[counter++] = topLeft;
-					mesh->indices[counter++] = lowerLeft;
-					mesh->indices[counter++] = lowerRight;
-
-					mesh->indices[counter++] = topLeft;
-					mesh->indices[counter++] = lowerRight;
-					mesh->indices[counter++] = topRight;
-				}
-			}
-			mesh->subsets.back().indexCount = (uint32_t)mesh->indices.size();
-
-			mesh->ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH_FAST);
-		};
-		generate_mesh(128, 128);
-
-		wi::Archive& archive = editor->AdvanceHistory();
-		archive << EditorComponent::HISTORYOP_ADD;
-		editor->RecordSelection(archive);
-		
-		editor->ClearSelected();
-		wi::scene::PickResult pick;
-		pick.entity = entity;
-		pick.subsetIndex = 0;
-		editor->AddSelected(pick);
-
-		editor->RecordSelection(archive);
-		editor->RecordAddedEntity(archive, entity);
-
-		SetEntity(object.meshID, pick.subsetIndex);
-
-		editor->RefreshSceneGraphView();
-
-
-
-
-
-		terragen.dimXSlider.OnSlide([=](wi::gui::EventArgs args) {
-			terragen.width = (int)terragen.dimXSlider.GetValue();
-			terragen.height = (int)terragen.dimZSlider.GetValue();
-			generate_mesh(terragen.width, terragen.height);
-		});
-		terragen.dimZSlider.OnSlide([=](wi::gui::EventArgs args) {
-			terragen.width = (int)terragen.dimXSlider.GetValue();
-			terragen.height = (int)terragen.dimZSlider.GetValue();
-			generate_mesh(terragen.width, terragen.height);
-		});
-		terragen.dimYSlider.OnSlide([=](wi::gui::EventArgs args) {
-			terragen.width = (int)terragen.dimXSlider.GetValue();
-			terragen.height = (int)terragen.dimZSlider.GetValue();
-			generate_mesh(terragen.width, terragen.height, terragen.rgb, terragen.channelCount, args.fValue);
-		});
-
-		terragen.heightmapButton.OnClick([=](wi::gui::EventArgs args) {
-
-			wi::helper::FileDialogParams params;
-			params.type = wi::helper::FileDialogParams::OPEN;
-			params.description = "Texture";
-			params.extensions = wi::resourcemanager::GetSupportedImageExtensions();
-			wi::helper::FileDialog(params, [=](std::string fileName) {
-				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
-					if (terragen.rgb != nullptr)
-					{
-						stbi_image_free(terragen.rgb);
-						terragen.rgb = nullptr;
-					}
-
-					int bpp;
-					terragen.rgb = stbi_load(fileName.c_str(), &terragen.width, &terragen.height, &bpp, terragen.channelCount);
-
-					generate_mesh(terragen.width, terragen.height, terragen.rgb, terragen.channelCount, terragen.dimYSlider.GetValue());
-				});
-			});
-		});
-
-	});
-	AddWidget(&terrainGenButton);
-
 
 	morphTargetCombo.Create("Morph Target:");
 	morphTargetCombo.SetSize(XMFLOAT2(100, hei));
@@ -642,6 +620,142 @@ void MeshWindow::Create(EditorComponent* editor)
 	});
 	AddWidget(&morphTargetSlider);
 
+	lodgenButton.Create("LOD Gen");
+	lodgenButton.SetTooltip("Generate LODs (levels of detail).");
+	lodgenButton.SetSize(XMFLOAT2(200, hei));
+	lodgenButton.SetPos(XMFLOAT2(x + 180, y += step));
+	lodgenButton.OnClick([&](wi::gui::EventArgs args) {
+		MeshComponent* mesh = wi::scene::GetScene().meshes.GetComponent(entity);
+		if (mesh != nullptr)
+		{
+			if (mesh->subsets_per_lod == 0)
+			{
+				// if there were no lods before, record the subset count without lods:
+				mesh->subsets_per_lod = (uint32_t)mesh->subsets.size();
+			}
+
+			// https://github.com/zeux/meshoptimizer/blob/bedaaaf6e710d3b42d49260ca738c15d171b1a8f/demo/main.cpp
+			size_t index_count = mesh->indices.size();
+			size_t vertex_count = mesh->vertex_positions.size();
+
+			const size_t lod_count = (size_t)lodCountSlider.GetValue();
+			struct LOD
+			{
+				struct Subset
+				{
+					wi::vector<uint32_t> indices;
+				};
+				wi::vector<Subset> subsets;
+			};
+			wi::vector<LOD> lods(lod_count);
+
+			const float target_error = lodErrorSlider.GetValue();
+
+			for (size_t i = 0; i < lod_count; ++i)
+			{
+				lods[i].subsets.resize(mesh->subsets_per_lod);
+				for (uint32_t subsetIndex = 0; subsetIndex < mesh->subsets_per_lod; ++subsetIndex)
+				{
+					const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
+					lods[i].subsets[subsetIndex].indices.resize(subset.indexCount);
+					for (uint32_t ind = 0; ind < subset.indexCount; ++ind)
+					{
+						lods[i].subsets[subsetIndex].indices[ind] = mesh->indices[subset.indexOffset + ind];
+					}
+				}
+			}
+
+			for (uint32_t subsetIndex = 0; subsetIndex < mesh->subsets_per_lod; ++subsetIndex)
+			{
+				const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
+
+				float threshold = wi::math::Lerp(0, 0.9f, wi::math::saturate(lodQualitySlider.GetValue()));
+				for (size_t i = 1; i < lod_count; ++i)
+				{
+					wi::vector<unsigned int>& lod = lods[i].subsets[subsetIndex].indices;
+
+					size_t target_index_count = size_t(mesh->indices.size() * threshold) / 3 * 3;
+
+					// we can simplify all the way from base level or from the last result
+					// simplifying from the base level sometimes produces better results, but simplifying from last level is faster
+					//const wi::vector<unsigned int>& source = lods[0].subsets[subsetIndex].indices;
+					const wi::vector<unsigned int>& source = lods[i - 1].subsets[subsetIndex].indices;
+
+					if (source.size() < target_index_count)
+						target_index_count = source.size();
+
+					lod.resize(source.size());
+					if (lodSloppyCheckBox.GetCheck())
+					{
+						lod.resize(meshopt_simplifySloppy(&lod[0], &source[0], source.size(), &mesh->vertex_positions[0].x, mesh->vertex_positions.size(), sizeof(XMFLOAT3), target_index_count, target_error));
+					}
+					else
+					{
+						lod.resize(meshopt_simplify(&lod[0], &source[0], source.size(), &mesh->vertex_positions[0].x, mesh->vertex_positions.size(), sizeof(XMFLOAT3), target_index_count, target_error));
+					}
+
+					threshold *= threshold;
+				}
+
+				// optimize each individual LOD for vertex cache & overdraw
+				for (size_t i = 0; i < lod_count; ++i)
+				{
+					wi::vector<unsigned int>& lod = lods[i].subsets[subsetIndex].indices;
+
+					meshopt_optimizeVertexCache(&lod[0], &lod[0], lod.size(), mesh->vertex_positions.size());
+					meshopt_optimizeOverdraw(&lod[0], &lod[0], lod.size(), &mesh->vertex_positions[0].x, mesh->vertex_positions.size(), sizeof(XMFLOAT3), 1.0f);
+				}
+			}
+
+			mesh->indices.clear();
+			wi::vector<MeshComponent::MeshSubset> subsets;
+			for (size_t i = 0; i < lod_count; ++i)
+			{
+				for (uint32_t subsetIndex = 0; subsetIndex < mesh->subsets_per_lod; ++subsetIndex)
+				{
+					const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
+					subsets.emplace_back();
+					subsets.back() = subset;
+					subsets.back().indexOffset = (uint32_t)mesh->indices.size();
+					subsets.back().indexCount = (uint32_t)lods[i].subsets[subsetIndex].indices.size();
+					for (auto& x : lods[i].subsets[subsetIndex].indices)
+					{
+						mesh->indices.push_back(x);
+					}
+				}
+			}
+			mesh->subsets = subsets;
+
+			mesh->CreateRenderData();
+			SetEntity(entity, subset);
+		}
+		});
+	AddWidget(&lodgenButton);
+
+	lodCountSlider.Create(2, 10, 6, 8, "LOD Count: ");
+	lodCountSlider.SetTooltip("This is how many levels of detail will be created.");
+	lodCountSlider.SetSize(XMFLOAT2(100, hei));
+	lodCountSlider.SetPos(XMFLOAT2(x + 280, y += step));
+	AddWidget(&lodCountSlider);
+
+	lodQualitySlider.Create(0.1f, 1.0f, 0.5f, 10000, "LOD Quality: ");
+	lodQualitySlider.SetTooltip("Lower values will make LODs more agressively simplified.");
+	lodQualitySlider.SetSize(XMFLOAT2(100, hei));
+	lodQualitySlider.SetPos(XMFLOAT2(x + 280, y += step));
+	AddWidget(&lodQualitySlider);
+
+	lodErrorSlider.Create(0.01f, 0.1f, 0.03f, 10000, "LOD Error: ");
+	lodErrorSlider.SetTooltip("Lower values will make more precise levels of detail.");
+	lodErrorSlider.SetSize(XMFLOAT2(100, hei));
+	lodErrorSlider.SetPos(XMFLOAT2(x + 280, y += step));
+	AddWidget(&lodErrorSlider);
+
+	lodSloppyCheckBox.Create("Sloppy LOD: ");
+	lodSloppyCheckBox.SetTooltip("Use the sloppy simplification algorithm, which is faster but doesn't preserve shape well.");
+	lodSloppyCheckBox.SetSize(XMFLOAT2(hei, hei));
+	lodSloppyCheckBox.SetPos(XMFLOAT2(x + 280, y += step));
+	AddWidget(&lodSloppyCheckBox);
+
 	Translate(XMFLOAT3((float)editor->GetLogicalWidth() - 1000, 80, 0));
 	SetVisible(false);
 
@@ -659,12 +773,6 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 
 	const MeshComponent* mesh = scene.meshes.GetComponent(entity);
 
-	if (mesh == nullptr || !mesh->IsTerrain())
-	{
-		terragen.Cleanup();
-		terragen.SetVisible(false);
-	}
-
 	if (mesh != nullptr)
 	{
 		const NameComponent& name = *scene.names.GetComponent(entity);
@@ -673,7 +781,7 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 		ss += "Mesh name: " + name.name + "\n";
 		ss += "Vertex count: " + std::to_string(mesh->vertex_positions.size()) + "\n";
 		ss += "Index count: " + std::to_string(mesh->indices.size()) + "\n";
-		ss += "Subset count: " + std::to_string(mesh->subsets.size()) + "\n";
+		ss += "Subset count: " + std::to_string(mesh->subsets.size()) + " (" + std::to_string(mesh->GetLODCount()) + " LODs)\n";
 		ss += "GPU memory: " + std::to_string((mesh->generalBuffer.GetDesc().size + mesh->streamoutBuffer.GetDesc().size) / 1024.0f / 1024.0f) + " MB\n";
 		ss += "\nVertex buffers: ";
 		if (mesh->vb_pos_nor_wind.IsValid()) ss += "position; ";
@@ -697,7 +805,7 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 		}
 		if (subset >= 0)
 		{
-			subsetComboBox.SetSelected(subset);
+			subsetComboBox.SetSelectedWithoutCallback(subset);
 		}
 
 		subsetMaterialComboBox.ClearItems();
@@ -766,6 +874,17 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 		    morphTargetCombo.SetSelected(selected);
 		}
 		SetEnabled(true);
+
+		if (mesh->targets.empty())
+		{
+			morphTargetCombo.SetEnabled(false);
+			morphTargetSlider.SetEnabled(false);
+		}
+		else
+		{
+			morphTargetCombo.SetEnabled(true);
+			morphTargetSlider.SetEnabled(true);
+		}
 	}
 	else
 	{
@@ -773,5 +892,5 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 		SetEnabled(false);
 	}
 
-	terrainGenButton.SetEnabled(true);
+	mergeButton.SetEnabled(true);
 }

@@ -103,13 +103,19 @@ namespace wi::primitive
 	};
 	struct Ray
 	{
-		XMFLOAT3 origin, direction, direction_inverse;
+		XMFLOAT3 origin;
+		float TMin = 0;
+		XMFLOAT3 direction;
+		float TMax = std::numeric_limits<float>::max();
+		XMFLOAT3 direction_inverse;
 
-		Ray(const XMFLOAT3& newOrigin = XMFLOAT3(0, 0, 0), const XMFLOAT3& newDirection = XMFLOAT3(0, 0, 1)) : Ray(XMLoadFloat3(&newOrigin), XMLoadFloat3(&newDirection)) {}
-		Ray(const XMVECTOR& newOrigin, const XMVECTOR& newDirection) {
+		Ray(const XMFLOAT3& newOrigin = XMFLOAT3(0, 0, 0), const XMFLOAT3& newDirection = XMFLOAT3(0, 0, 1), float newTMin = 0, float newTMax = std::numeric_limits<float>::max()) : Ray(XMLoadFloat3(&newOrigin), XMLoadFloat3(&newDirection), TMin, TMax) {}
+		Ray(const XMVECTOR& newOrigin, const XMVECTOR& newDirection, float newTMin = 0, float newTMax = std::numeric_limits<float>::max()) {
 			XMStoreFloat3(&origin, newOrigin);
 			XMStoreFloat3(&direction, newDirection);
 			XMStoreFloat3(&direction_inverse, XMVectorDivide(XMVectorReplicate(1.0f), newDirection));
+			TMin = newTMin;
+			TMax = newTMax;
 		}
 		bool intersects(const AABB& b) const;
 		bool intersects(const Sphere& b) const;
