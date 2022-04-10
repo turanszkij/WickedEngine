@@ -37,6 +37,7 @@ namespace wi
 
 		_flags &= ~REBUILD_BUFFERS;
 		regenerate_frame = true;
+		render_data_updated = false;
 
 		GPUBufferDesc bd;
 		bd.usage = Usage::DEFAULT;
@@ -227,7 +228,7 @@ namespace wi
 		{
 			BLAS.desc.bottom_level.geometries.back().triangles.vertex_buffer = vertexBuffer_POS[0];
 		}
-
+		render_data_updated = false;
 	}
 	void HairParticleSystem::UpdateGPU(uint32_t instanceIndex, const MeshComponent& mesh, const MaterialComponent& material, CommandList cmd) const
 	{
@@ -357,6 +358,7 @@ namespace wi
 		device->EventEnd(cmd);
 
 		regenerate_frame = false;
+		render_data_updated = true;
 	}
 
 	void HairParticleSystem::Draw(const MaterialComponent& material, wi::enums::RENDERPASS renderPass, CommandList cmd) const

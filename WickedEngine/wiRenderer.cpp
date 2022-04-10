@@ -3936,7 +3936,7 @@ void UpdateRaytracingAccelerationStructures(const Scene& scene, CommandList cmd)
 			{
 				const wi::HairParticleSystem& hair = scene.hairs[i];
 
-				if (hair.meshID != INVALID_ENTITY && hair.BLAS.IsValid())
+				if (hair.meshID != INVALID_ENTITY && hair.BLAS.IsValid() && hair.render_data_updated)
 				{
 					device->BuildRaytracingAccelerationStructure(&hair.BLAS, cmd, nullptr);
 				}
