@@ -159,9 +159,14 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint groupIn
 		velocity += surface_velocity;
 
 		// Apply forces:
-		velocity += force;
-		normal += velocity * delta_time;
-		normal = normalize(normal);
+		float3 newVelocity = velocity + force;
+		float3 newNormal = normal + newVelocity * delta_time;
+		newNormal = normalize(newNormal);
+		if (dot(target, newNormal) > 0.5) // clamp the offset
+		{
+			normal = newNormal;
+			velocity = newVelocity;
+		}
 
 		// Drag:
 		velocity *= 0.98f;

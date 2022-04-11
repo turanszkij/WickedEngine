@@ -1124,6 +1124,11 @@ void EditorComponent::Update(float dt)
 	Scene& scene = wi::scene::GetScene();
 	CameraComponent& camera = wi::scene::GetCamera();
 
+	if (scene.forces.Contains(grass_interaction_entity))
+	{
+		scene.Entity_Remove(grass_interaction_entity);
+	}
+
 	cameraWnd.Update();
 	animWnd.Update();
 	weatherWnd.Update();
@@ -1499,6 +1504,22 @@ void EditorComponent::Update(float dt)
 
 						RefreshSceneGraphView();
 					}
+				}
+
+				if (scene.hairs.Contains(hovered.entity))
+				{
+					XMVECTOR P = XMLoadFloat3(&hovered.position);
+					P += XMLoadFloat3(&hovered.normal) * 2;
+					if (grass_interaction_entity == INVALID_ENTITY)
+					{
+						grass_interaction_entity = CreateEntity();
+					}
+					ForceFieldComponent& force = scene.forces.Create(grass_interaction_entity);
+					TransformComponent& transform = scene.transforms.Create(grass_interaction_entity);
+					force.type = ENTITY_TYPE_FORCEFIELD_POINT;
+					force.gravity = -80;
+					force.range_local = 3;
+					transform.Translate(P);
 				}
 
 			}
