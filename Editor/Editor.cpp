@@ -1124,6 +1124,11 @@ void EditorComponent::Update(float dt)
 	Scene& scene = wi::scene::GetScene();
 	CameraComponent& camera = wi::scene::GetCamera();
 
+	if (scene.forces.Contains(grass_interaction_entity))
+	{
+		scene.Entity_Remove(grass_interaction_entity);
+	}
+
 	cameraWnd.Update();
 	animWnd.Update();
 	weatherWnd.Update();
@@ -1466,11 +1471,6 @@ void EditorComponent::Update(float dt)
 					hovered = wi::scene::Pick(pickRay, pickMask);
 				}
 			}
-		}
-
-		if (scene.forces.Contains(grass_interaction_entity))
-		{
-			scene.Entity_Remove(grass_interaction_entity);
 		}
 
 		// Interactions only when paint tool is disabled:
