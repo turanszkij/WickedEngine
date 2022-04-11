@@ -151,6 +151,7 @@ public:
 
 	Translator translator;
 	wi::scene::PickResult hovered;
+	wi::ecs::Entity grass_interaction_entity = wi::ecs::INVALID_ENTITY;
 
 	void ClearSelected();
 	void AddSelected(wi::ecs::Entity entity);
