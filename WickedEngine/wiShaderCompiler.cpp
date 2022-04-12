@@ -53,7 +53,17 @@ namespace wi::shadercompiler
 				DxcCreateInstance = (DxcCreateInstanceProc)wiGetProcAddress(dxcompiler, "DxcCreateInstance");
 				if (DxcCreateInstance != nullptr)
 				{
-					wi::backlog::post("wi::shadercompiler: loaded " LIBDXCOMPILER);
+					CComPtr<IDxcCompiler3> dxcCompiler;
+					HRESULT hr = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&dxcCompiler));
+					assert(SUCCEEDED(hr));
+					CComPtr<IDxcVersionInfo> info;
+					hr = dxcCompiler->QueryInterface(&info);
+					assert(SUCCEEDED(hr));
+					uint32_t minor = 0;
+					uint32_t major = 0;
+					hr = info->GetVersion(&major, &minor);
+					assert(SUCCEEDED(hr));
+					wi::backlog::post("wi::shadercompiler: loaded " LIBDXCOMPILER " (version: " + std::to_string(major) + "." + std::to_string(minor) + ")");
 				}
 			}
 			else
