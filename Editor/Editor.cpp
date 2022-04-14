@@ -1477,18 +1477,15 @@ void EditorComponent::Update(float dt)
 		if (paintToolWnd.GetMode() == PaintToolWindow::MODE_DISABLED)
 		{
 			// Interact:
-			if (hovered.entity != INVALID_ENTITY)
+			if (hovered.entity != INVALID_ENTITY && wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
 			{
 				const ObjectComponent* object = scene.objects.GetComponent(hovered.entity);
 				if (object != nullptr)
 				{	
 					if (translator.selected.empty() && object->GetRenderTypes() & wi::enums::RENDERTYPE_WATER)
 					{
-						if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
-						{
-							// if water, then put a water ripple onto it:
-							scene.PutWaterRipple("images/ripple.png", hovered.position);
-						}
+						// if water, then put a water ripple onto it:
+						scene.PutWaterRipple("images/ripple.png", hovered.position);
 					}
 					else if (decalWnd.placementCheckBox.GetCheck() && wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
 					{
