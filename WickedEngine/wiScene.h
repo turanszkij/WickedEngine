@@ -1165,6 +1165,9 @@ namespace wi::scene
 		float cloudiness = 0.0f;
 		float cloudScale = 0.0003f;
 		float cloudSpeed = 0.1f;
+		float cloud_shadow_amount = 0;
+		float cloud_shadow_scale = 0.002f;
+		float cloud_shadow_speed = 0.2f;
 		XMFLOAT3 windDirection = XMFLOAT3(0, 0, 0);
 		float windRandomness = 5;
 		float windWaveSize = 1;

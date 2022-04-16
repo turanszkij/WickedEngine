@@ -1854,8 +1854,8 @@ void SetUpStates()
 	rs.fill_mode = FillMode::SOLID;
 	rs.cull_mode = CullMode::NONE;
 	rs.front_counter_clockwise = true;
-	rs.depth_bias = 0;
-	rs.depth_bias_clamp = 0;
+	rs.depth_bias = 1;
+	rs.depth_bias_clamp = 0.01f;
 	rs.slope_scaled_depth_bias = 0;
 	rs.depth_clip_enable = false;
 	rs.multisample_enable = false;

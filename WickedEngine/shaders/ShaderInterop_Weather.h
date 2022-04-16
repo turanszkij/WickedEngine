@@ -285,16 +285,23 @@ struct ShaderWeather
 {
 	float3 sun_color;
 	float sun_energy;
+
 	float3 sun_direction;
 	uint most_important_light_index;
+
 	float3 horizon;
 	float sky_exposure;
+
 	float3 zenith;
 	float cloudiness;
+
 	float3 ambient;
 	float cloud_scale;
-	float3 padding;
+
 	float cloud_speed;
+	float cloud_shadow_amount;
+	float cloud_shadow_scale;
+	float cloud_shadow_speed;
 
 	ShaderFog fog;
 	ShaderWind wind;

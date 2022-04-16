@@ -23,6 +23,9 @@ public:
 	wi::gui::Slider cloudinessSlider;
 	wi::gui::Slider cloudScaleSlider;
 	wi::gui::Slider cloudSpeedSlider;
+	wi::gui::Slider cloudShadowAmountSlider;
+	wi::gui::Slider cloudShadowScaleSlider;
+	wi::gui::Slider cloudShadowSpeedSlider;
 	wi::gui::Slider windSpeedSlider;
 	wi::gui::Slider windMagnitudeSlider;
 	wi::gui::Slider windDirectionSlider;

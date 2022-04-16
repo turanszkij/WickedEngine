@@ -9,7 +9,7 @@ using namespace wi::graphics;
 void WeatherWindow::Create(EditorComponent* editor)
 {
 	wi::gui::Window::Create("Weather Window");
-	SetSize(XMFLOAT2(660, 610));
+	SetSize(XMFLOAT2(660, 680));
 
 	float x = 180;
 	float y = 20;
@@ -89,6 +89,30 @@ void WeatherWindow::Create(EditorComponent* editor)
 		GetWeather().cloudSpeed = args.fValue;
 	});
 	AddWidget(&cloudSpeedSlider);
+
+	cloudShadowAmountSlider.Create(0, 1, 0, 10000, "Cloud Shadow Amount: ");
+	cloudShadowAmountSlider.SetSize(XMFLOAT2(100, hei));
+	cloudShadowAmountSlider.SetPos(XMFLOAT2(x, y += step));
+	cloudShadowAmountSlider.OnSlide([&](wi::gui::EventArgs args) {
+		GetWeather().cloud_shadow_amount = args.fValue;
+		});
+	AddWidget(&cloudShadowAmountSlider);
+
+	cloudShadowSpeedSlider.Create(0, 1, 0.2f, 10000, "Cloud Shadow Speed: ");
+	cloudShadowSpeedSlider.SetSize(XMFLOAT2(100, hei));
+	cloudShadowSpeedSlider.SetPos(XMFLOAT2(x, y += step));
+	cloudShadowSpeedSlider.OnSlide([&](wi::gui::EventArgs args) {
+		GetWeather().cloud_shadow_speed = args.fValue;
+		});
+	AddWidget(&cloudShadowSpeedSlider);
+
+	cloudShadowScaleSlider.Create(0.0001f, 0.02f, 0.005f, 10000, "Cloud Shadow Scale: ");
+	cloudShadowScaleSlider.SetSize(XMFLOAT2(100, hei));
+	cloudShadowScaleSlider.SetPos(XMFLOAT2(x, y += step));
+	cloudShadowScaleSlider.OnSlide([&](wi::gui::EventArgs args) {
+		GetWeather().cloud_shadow_scale = args.fValue;
+		});
+	AddWidget(&cloudShadowScaleSlider);
 
 	windSpeedSlider.Create(0.0f, 4.0f, 1.0f, 10000, "Wind Speed: ");
 	windSpeedSlider.SetSize(XMFLOAT2(100, hei));
@@ -655,6 +679,9 @@ void WeatherWindow::Update()
 		cloudinessSlider.SetValue(weather.cloudiness);
 		cloudScaleSlider.SetValue(weather.cloudScale);
 		cloudSpeedSlider.SetValue(weather.cloudSpeed);
+		cloudShadowAmountSlider.SetValue(weather.cloud_shadow_amount);
+		cloudShadowScaleSlider.SetValue(weather.cloud_shadow_scale);
+		cloudShadowSpeedSlider.SetValue(weather.cloud_shadow_speed);
 		windSpeedSlider.SetValue(weather.windSpeed);
 		windWaveSizeSlider.SetValue(weather.windWaveSize);
 		windRandomnessSlider.SetValue(weather.windRandomness);

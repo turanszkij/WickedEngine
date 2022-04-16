@@ -1107,6 +1107,13 @@ namespace wi::scene
 				archive >> fogHeightStart;
 				archive >> fogHeightEnd;
 			}
+
+			if (archive.GetVersion() >= 77)
+			{
+				archive >> cloud_shadow_amount;
+				archive >> cloud_shadow_scale;
+				archive >> cloud_shadow_speed;
+			}
 		}
 		else
 		{
@@ -1239,6 +1246,13 @@ namespace wi::scene
 			{
 				archive << fogHeightStart;
 				archive << fogHeightEnd;
+			}
+
+			if (archive.GetVersion() >= 77)
+			{
+				archive << cloud_shadow_amount;
+				archive << cloud_shadow_scale;
+				archive << cloud_shadow_speed;
 			}
 		}
 	}
