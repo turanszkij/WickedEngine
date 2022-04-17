@@ -1543,7 +1543,7 @@ namespace wi::scene
 			{
 				GPUQueryHeapDesc desc;
 				desc.type = GpuQueryType::OCCLUSION_BINARY;
-				desc.query_count = minQueryCount;
+				desc.query_count = minQueryCount * 2; // *2 to grow fast
 				bool success = device->CreateQueryHeap(&desc, &queryHeap);
 				assert(success);
 
@@ -1555,6 +1555,7 @@ namespace wi::scene
 				{
 					success = device->CreateBuffer(&bd, nullptr, &queryResultBuffer[i]);
 					assert(success);
+					device->SetName(&queryResultBuffer[i], "Scene::queryResultBuffer");
 				}
 
 				if (device->CheckCapability(GraphicsDeviceCapability::PREDICATION))
@@ -1563,6 +1564,7 @@ namespace wi::scene
 					bd.misc_flags |= ResourceMiscFlag::PREDICATION;
 					success = device->CreateBuffer(&bd, nullptr, &queryPredicationBuffer);
 					assert(success);
+					device->SetName(&queryPredicationBuffer, "Scene::queryPredicationBuffer");
 				}
 			}
 
