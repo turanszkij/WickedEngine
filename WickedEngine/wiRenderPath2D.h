@@ -10,27 +10,6 @@ namespace wi
 	class Sprite;
 	class SpriteFont;
 
-	struct RenderItem2D
-	{
-		enum TYPE
-		{
-			SPRITE,
-			FONT,
-		} type = SPRITE;
-		union
-		{
-			wi::Sprite* sprite = nullptr;
-			wi::SpriteFont* font;
-		};
-		int order = 0;
-	};
-	struct RenderLayer2D
-	{
-		wi::vector<RenderItem2D> items;
-		std::string name;
-		int order = 0;
-	};
-
 	class RenderPath2D :
 		public RenderPath
 	{
@@ -79,6 +58,26 @@ namespace wi
 		void ClearFonts();
 		int GetFontOrder(wi::SpriteFont* font);
 
+		struct RenderItem2D
+		{
+			enum class TYPE
+			{
+				SPRITE,
+				FONT,
+			} type = TYPE::SPRITE;
+			union
+			{
+				wi::Sprite* sprite = nullptr;
+				wi::SpriteFont* font;
+			};
+			int order = 0;
+		};
+		struct RenderLayer2D
+		{
+			wi::vector<RenderItem2D> items;
+			std::string name;
+			int order = 0;
+		};
 		wi::vector<RenderLayer2D> layers{ 1 };
 		void AddLayer(const std::string& name);
 		void SetLayerOrder(const std::string& name, int order);

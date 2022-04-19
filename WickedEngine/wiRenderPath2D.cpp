@@ -35,7 +35,7 @@ namespace wi
 		}
 		else
 		{
-			rtStenciled = Texture(); // this will be deleted here
+			rtStenciled = {}; // this will be deleted here
 		}
 
 		{
@@ -121,13 +121,13 @@ namespace wi
 				switch (y.type)
 				{
 				default:
-				case RenderItem2D::SPRITE:
+				case RenderItem2D::TYPE::SPRITE:
 					if (y.sprite != nullptr)
 					{
 						y.sprite->Update(dt);
 					}
 					break;
-				case RenderItem2D::FONT:
+				case RenderItem2D::TYPE::FONT:
 					if (y.font != nullptr)
 					{
 						y.font->Update(dt);
@@ -162,13 +162,13 @@ namespace wi
 				switch (y.type)
 				{
 				default:
-				case RenderItem2D::SPRITE:
+				case RenderItem2D::TYPE::SPRITE:
 					if (y.sprite != nullptr)
 					{
 						y.sprite->FixedUpdate();
 					}
 					break;
-				case RenderItem2D::FONT:
+				case RenderItem2D::TYPE::FONT:
 					if (y.font != nullptr)
 					{
 						y.font->FixedUpdate();
@@ -210,7 +210,7 @@ namespace wi
 			{
 				for (auto& y : x.items)
 				{
-					if (y.type == RenderItem2D::SPRITE &&
+					if (y.type == RenderItem2D::TYPE::SPRITE &&
 						y.sprite != nullptr &&
 						y.sprite->params.stencilComp != wi::image::STENCILMODE_DISABLED)
 					{
@@ -254,7 +254,7 @@ namespace wi
 				{
 					for (auto& y : x.items)
 					{
-						if (y.type == RenderItem2D::SPRITE &&
+						if (y.type == RenderItem2D::TYPE::SPRITE &&
 							y.sprite != nullptr &&
 							y.sprite->params.stencilComp != wi::image::STENCILMODE_DISABLED)
 						{
@@ -274,13 +274,13 @@ namespace wi
 				switch (y.type)
 				{
 				default:
-				case RenderItem2D::SPRITE:
+				case RenderItem2D::TYPE::SPRITE:
 					if (y.sprite != nullptr && y.sprite->params.stencilComp == wi::image::STENCILMODE_DISABLED)
 					{
 						y.sprite->Draw(cmd);
 					}
 					break;
-				case RenderItem2D::FONT:
+				case RenderItem2D::TYPE::FONT:
 					if (y.font != nullptr)
 					{
 						y.font->Draw(cmd);
@@ -331,7 +331,7 @@ namespace wi
 			if (!x.name.compare(layer))
 			{
 				x.items.push_back(RenderItem2D());
-				x.items.back().type = RenderItem2D::SPRITE;
+				x.items.back().type = RenderItem2D::TYPE::SPRITE;
 				x.items.back().sprite = sprite;
 			}
 		}
@@ -343,7 +343,7 @@ namespace wi
 		{
 			for (auto& y : x.items)
 			{
-				if (y.type == RenderItem2D::SPRITE && y.sprite == sprite)
+				if (y.type == RenderItem2D::TYPE::SPRITE && y.sprite == sprite)
 				{
 					y.sprite = nullptr;
 				}
@@ -357,7 +357,7 @@ namespace wi
 		{
 			for (auto& y : x.items)
 			{
-				if (y.type == RenderItem2D::SPRITE)
+				if (y.type == RenderItem2D::TYPE::SPRITE)
 				{
 					y.sprite = nullptr;
 				}
@@ -387,7 +387,7 @@ namespace wi
 			if (!x.name.compare(layer))
 			{
 				x.items.push_back(RenderItem2D());
-				x.items.back().type = RenderItem2D::FONT;
+				x.items.back().type = RenderItem2D::TYPE::FONT;
 				x.items.back().font = font;
 			}
 		}
@@ -399,7 +399,7 @@ namespace wi
 		{
 			for (auto& y : x.items)
 			{
-				if (y.type == RenderItem2D::FONT && y.font == font)
+				if (y.type == RenderItem2D::TYPE::FONT && y.font == font)
 				{
 					y.font = nullptr;
 				}
@@ -413,7 +413,7 @@ namespace wi
 		{
 			for (auto& y : x.items)
 			{
-				if (y.type == RenderItem2D::FONT)
+				if (y.type == RenderItem2D::TYPE::FONT)
 				{
 					y.font = nullptr;
 				}
@@ -468,7 +468,7 @@ namespace wi
 		{
 			for (auto& y : x.items)
 			{
-				if (y.type == RenderItem2D::SPRITE && y.sprite == sprite)
+				if (y.type == RenderItem2D::TYPE::SPRITE && y.sprite == sprite)
 				{
 					y.order = order;
 				}
@@ -482,7 +482,7 @@ namespace wi
 		{
 			for (auto& y : x.items)
 			{
-				if (y.type == RenderItem2D::FONT && y.font == font)
+				if (y.type == RenderItem2D::TYPE::FONT && y.font == font)
 				{
 					y.order = order;
 				}
