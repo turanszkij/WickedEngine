@@ -770,7 +770,7 @@ void TerrainGenerator::Generation_Update()
 					mesh.vertex_positions[index] = XMFLOAT3(x, height, z);
 					mesh.vertex_normals[index] = normal;
 					mesh.vertex_colors[index] = wi::Color::fromFloat4(materialBlendWeights);
-					const XMFLOAT2 uv = XMFLOAT2(x * width_rcp, z * width_rcp);
+					const XMFLOAT2 uv = XMFLOAT2(x * width_rcp + 0.5f, z * width_rcp + 0.5f);
 					mesh.vertex_uvset_0[index] = uv;
 					mesh.vertex_uvset_1[index] = uv;
 					mesh.vertex_atlas[index] = uv;
