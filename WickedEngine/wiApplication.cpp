@@ -176,7 +176,7 @@ namespace wi
 
 		Render();
 
-		wi::input::Update(window);
+		wi::input::Update(window, canvas);
 
 		// Begin final compositing:
 		CommandList cmd = graphicsDevice->BeginCommandList();

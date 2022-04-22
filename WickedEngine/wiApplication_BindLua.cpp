@@ -24,6 +24,7 @@ namespace wi::lua
 		lunamethod(Application_BindLua, SetPipelineCountDisplay),
 		lunamethod(Application_BindLua, SetHeapAllocationCountDisplay),
 		lunamethod(Application_BindLua, GetCanvas),
+		lunamethod(Application_BindLua, SetCanvas),
 		{ NULL, NULL }
 	};
 	Luna<Application_BindLua>::PropertyType Application_BindLua::properties[] = {
@@ -321,6 +322,32 @@ namespace wi::lua
 		Luna<Canvas_BindLua>::push(L, new Canvas_BindLua(component->canvas));
 		return 1;
 	}
+	int Application_BindLua::SetCanvas(lua_State* L)
+	{
+		if (component == nullptr)
+		{
+			wi::lua::SError(L, "SetCanvas() component is empty!");
+			return 0;
+		}
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			Canvas_BindLua* canvas = Luna<Canvas_BindLua>::lightcheck(L, 1);
+			if (canvas != nullptr)
+			{
+				component->canvas = canvas->canvas;
+			}
+			else
+			{
+				wi::lua::SError(L, "SetCanvas(canvas canvas) first parameter is not a Canvas!");
+			}
+		}
+		else
+		{
+			wi::lua::SError(L, "SetCanvas(canvas canvas) not enough arguments!");
+		}
+		return 1;
+	}
 
 
 	int SetProfilerEnabled(lua_State* L)
@@ -362,6 +389,8 @@ namespace wi::lua
 	Luna<Canvas_BindLua>::FunctionType Canvas_BindLua::methods[] = {
 		lunamethod(Canvas_BindLua, GetDPI),
 		lunamethod(Canvas_BindLua, GetDPIScaling),
+		lunamethod(Canvas_BindLua, GetCustomScaling),
+		lunamethod(Canvas_BindLua, SetCustomScaling),
 		lunamethod(Canvas_BindLua, GetPhysicalWidth),
 		lunamethod(Canvas_BindLua, GetPhysicalHeight),
 		lunamethod(Canvas_BindLua, GetLogicalWidth),
@@ -382,6 +411,24 @@ namespace wi::lua
 	{
 		wi::lua::SSetFloat(L, canvas.GetDPIScaling());
 		return 1;
+	}
+	int Canvas_BindLua::GetCustomScaling(lua_State* L)
+	{
+		wi::lua::SSetFloat(L, canvas.scaling);
+		return 1;
+	}
+	int Canvas_BindLua::SetCustomScaling(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			canvas.scaling = wi::lua::SGetFloat(L, 1);
+		}
+		else
+		{
+			wi::lua::SError(L, "SetCustomScaling(float scaling) not enough arguments!");
+		}
+		return 0;
 	}
 	int Canvas_BindLua::GetPhysicalWidth(lua_State* L)
 	{

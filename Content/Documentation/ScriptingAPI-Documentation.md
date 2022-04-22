@@ -603,12 +603,14 @@ Enables jiggle effect on transforms such as bones for example.
 
 ## Canvas
 This is used to describe a drawable area
-- GetDPI() -- pixels per inch
-- GetDPIScaling() -- scaling factor between physical and logical size
-- GetPhysicalWidth() -- width in pixels
-- GetPhysicalHeight() -- height in pixels
-- GetLogicalWidth() -- width in dpi scaled units
-- GetLogicalHeight() -- height in dpi scaled units
+- GetDPI() : float -- pixels per inch
+- GetDPIScaling() : float -- scaling factor between physical and logical size
+- GetCustomScaling() : float -- a custom scaling factor on top of the DPI scaling
+- SetCustomScaling(float value) -- sets a custom scaling factor that will be applied on top of DPI scaling
+- GetPhysicalWidth() : int -- width in pixels
+- GetPhysicalHeight() : int -- height in pixels
+- GetLogicalWidth() : float -- width in dpi scaled units
+- GetLogicalHeight() : float -- height in dpi scaled units
 
 ## High Level Interface
 ### MainComponent
@@ -628,7 +630,8 @@ This is the main entry point and manages the lifetime of the application. Even t
 - SetLogicalSizeDisplay(bool active)	-- toggle display of logical size of canvas if info display is enabled
 - SetPipelineCountDisplay(bool active)	-- toggle display of active graphics pipeline count if info display is enabled
 - SetHeapAllocationCountDisplay(bool active)	-- toggle display of heap allocation statistics if info display is enabled
-- GetCanvas() : Canvas canvas
+- GetCanvas() : Canvas canvas  -- returns a copy of the application's current canvas
+- SetCanvas(Canvas canvas)  -- applies the specified canvas to the application
 - [outer]SetProfilerEnabled(bool enabled)
 
 ### RenderPath

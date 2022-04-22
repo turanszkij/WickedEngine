@@ -11,6 +11,7 @@ namespace wi
 		uint32_t width = 0;
 		uint32_t height = 0;
 		float dpi = 96;
+		float scaling = 1; // custom DPI scaling factor (optional)
 
 		// Create a canvas from physical measurements
 		inline void init(uint32_t width, uint32_t height, float dpi = 96)
@@ -33,7 +34,7 @@ namespace wi
 		}
 
 		// How many pixels there are per inch
-		inline float GetDPI() const { return dpi; }
+		inline float GetDPI() const { return dpi * scaling; }
 		// The scaling factor between logical and physical coordinates
 		inline float GetDPIScaling() const { return GetDPI() / 96.f; }
 		// Returns native resolution width in pixels:
