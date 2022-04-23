@@ -19,6 +19,8 @@ namespace wi::lua
 
 		int GetDPI(lua_State* L);
 		int GetDPIScaling(lua_State* L);
+		int GetCustomScaling(lua_State* L);
+		int SetCustomScaling(lua_State* L);
 		int GetPhysicalWidth(lua_State* L);
 		int GetPhysicalHeight(lua_State* L);
 		int GetLogicalWidth(lua_State* L);
@@ -53,6 +55,7 @@ namespace wi::lua
 		int SetHeapAllocationCountDisplay(lua_State* L);
 
 		int GetCanvas(lua_State* L);
+		int SetCanvas(lua_State* L);
 
 		static void Bind();
 	};

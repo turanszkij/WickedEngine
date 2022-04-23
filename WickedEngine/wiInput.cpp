@@ -26,8 +26,6 @@
 
 namespace wi::input
 {
-	wi::platform::window_type window = nullptr;
-
 #ifdef _WIN32
 #ifndef PLATFORM_UWP
 #define KEY_DOWN(vk_code) (GetAsyncKeyState(vk_code) < 0)
@@ -42,6 +40,8 @@ namespace wi::input
 #endif // WIN32
 #define KEY_UP(vk_code) (!KEY_DOWN(vk_code))
 
+	wi::platform::window_type window = nullptr;
+	wi::Canvas canvas;
 	KeyboardState keyboard;
 	MouseState mouse;
 
@@ -92,9 +92,10 @@ namespace wi::input
 		initialized.store(true);
 	}
 
-	void Update(wi::platform::window_type _window)
+	void Update(wi::platform::window_type _window, wi::Canvas _canvas)
 	{
 		window = _window;
+		canvas = _canvas;
 		if (!initialized.load())
 		{
 			return;
@@ -120,17 +121,19 @@ namespace wi::input
 
 #ifndef PLATFORM_UWP
 		// Since raw input doesn't contain absolute mouse position, we get it with regular winapi:
-		HWND hWnd = window;
 		POINT p;
 		GetCursorPos(&p);
-		ScreenToClient(hWnd, &p);
-		const float dpiscaling = (float)GetDpiForWindow(hWnd) / 96.0f;
-		mouse.position.x = (float)p.x / dpiscaling;
-		mouse.position.y = (float)p.y / dpiscaling;
+		ScreenToClient(window, &p);
+		mouse.position.x = (float)p.x;
+		mouse.position.y = (float)p.y;
+		mouse.position.x /= canvas.GetDPIScaling();
+		mouse.position.y /= canvas.GetDPIScaling();
 #endif // PLATFORM_UWP
 
 #elif SDL2
 		wi::input::sdlinput::GetMouseState(&mouse);
+		mouse.position.x /= canvas.GetDPIScaling();
+		mouse.position.y /= canvas.GetDPIScaling();
 		wi::input::sdlinput::GetKeyboardState(&keyboard);
 		//TODO controllers
 		//TODO touch
@@ -151,6 +154,9 @@ namespace wi::input
 				if (p.Properties().IsPrimary())
 				{
 					mouse.position = XMFLOAT2(p.Position().X, p.Position().Y);
+					// UWP mouse position already has DPI applied, so only apply custom scale factor in here:
+					mouse.position.x /= canvas.scaling;
+					mouse.position.y /= canvas.scaling;
 					mouse.left_button_press = p.Properties().IsLeftButtonPressed();
 					mouse.middle_button_press = p.Properties().IsMiddleButtonPressed();
 					mouse.right_button_press = p.Properties().IsRightButtonPressed();
@@ -184,6 +190,9 @@ namespace wi::input
 				if (p.Properties().IsPrimary())
 				{
 					mouse.position = XMFLOAT2(p.Position().X, p.Position().Y);
+					// UWP mouse position already has DPI applied, so only apply custom scale factor in here:
+					mouse.position.x /= canvas.scaling;
+					mouse.position.y /= canvas.scaling;
 					mouse.pressure = p.Properties().Pressure();
 				}
 
@@ -210,6 +219,7 @@ namespace wi::input
 				mouse.delta_position.y += float(args.MouseDelta().Y);
 			});
 		}
+
 #endif
 
 		// Check if low-level XINPUT controller is not registered for playerindex slot and register:

@@ -3,6 +3,7 @@
 #include "wiPlatform.h"
 #include "wiColor.h"
 #include "wiVector.h"
+#include "wiCanvas.h"
 
 namespace wi::input
 {
@@ -110,7 +111,7 @@ namespace wi::input
 	void Initialize();
 
 	// call once per frame
-	void Update(wi::platform::window_type window);
+	void Update(wi::platform::window_type window, wi::Canvas canvas);
 
 	const KeyboardState& GetKeyboardState();
 	const MouseState& GetMouseState();
