@@ -31,8 +31,6 @@ int main(int argc, char* argv[])
 	std::cout << "\tshaderdump : \tShaders will be saved to wiShaderDump.h C++ header file (rebuild is assumed)" << std::endl;
 	std::cout << "Command arguments used: ";
 
-	wi::jobsystem::Initialize();
-
 	wi::arguments::Parse(argc, argv);
 
 	if (wi::arguments::HasArgument("hlsl5"))
@@ -419,6 +417,7 @@ int main(int argc, char* argv[])
 	minshadermodels["ddgi_raytraceCS_rtapi.hlsl"] = ShaderModel::SM_6_5;
 	minshadermodels["rtreflectionCS.hlsl"] = ShaderModel::SM_6_5;
 
+	wi::jobsystem::Initialize();
 	wi::jobsystem::context ctx;
 
 	std::string SHADERSOURCEPATH = wi::renderer::GetShaderSourcePath();
