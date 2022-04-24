@@ -2810,8 +2810,8 @@ namespace wi::gui
 
 
 
-	inline float item_height() { return 20.0f; }
-	inline float tree_scrollbar_width() { return 12.0f; }
+	constexpr float item_height() { return 20.0f; }
+	constexpr float tree_scrollbar_width() { return 12.0f; }
 	void TreeList::Create(const std::string& name)
 	{
 		SetName(name);
@@ -2902,7 +2902,6 @@ namespace wi::gui
 			// compute control-list height
 			list_height = 0;
 			{
-				int visible_count = 0;
 				int parent_level = 0;
 				bool parent_open = true;
 				for (const Item& item : items)
@@ -2911,7 +2910,6 @@ namespace wi::gui
 					{
 						continue;
 					}
-					visible_count++;
 					parent_open = item.open;
 					parent_level = item.level;
 					list_height += item_height();
@@ -2921,8 +2919,8 @@ namespace wi::gui
 			const float scrollbar_begin = translation.y + item_height();
 			const float scrollbar_end = scrollbar_begin + scale.y - item_height();
 			const float scrollbar_size = scrollbar_end - scrollbar_begin;
-			const float scrollbar_granularity = std::min(1.0f, scrollbar_size / list_height);
-			scrollbar_height = std::max(tree_scrollbar_width(), scrollbar_size * scrollbar_granularity);
+			const float scrollbar_granularity = std::min(1.0f, scrollbar_size / std::max(1.0f, list_height));
+			scrollbar_height = std::max(tree_scrollbar_width() * 2, scrollbar_size * scrollbar_granularity);
 
 			if (!click_down)
 			{
@@ -2956,9 +2954,16 @@ namespace wi::gui
 				scrollbar_delta -= wi::input::GetPointer().z * 10;
 			}
 			scrollbar_delta = wi::math::Clamp(scrollbar_delta, 0, scrollbar_size - scrollbar_height);
-			scrollbar_value = wi::math::InverseLerp(scrollbar_begin, scrollbar_end, scrollbar_begin + scrollbar_delta);
+			if (scrollbar_begin < scrollbar_end - scrollbar_height)
+			{
+				scrollbar_value = wi::math::InverseLerp(scrollbar_begin, scrollbar_end - scrollbar_height, scrollbar_begin + scrollbar_delta);
+			}
+			else
+			{
+				scrollbar_value = 0;
+			}
 
-			list_offset = -scrollbar_value * list_height;
+			list_offset = -scrollbar_value * (list_height - scrollbar_size * 0.75f);
 
 			Hitbox2D itemlist_box = GetHitbox_ListArea();
 

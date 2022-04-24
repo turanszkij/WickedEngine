@@ -315,6 +315,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 	for (auto& x : state.gltfModel.materials)
 	{
 		Entity materialEntity = scene.Entity_CreateMaterial(x.name);
+		scene.Component_Attach(materialEntity, rootEntity);
 
 		MaterialComponent& material = *scene.materials.GetComponent(materialEntity);
 
@@ -756,6 +757,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 	for (auto& x : state.gltfModel.meshes)
 	{
 		Entity meshEntity = scene.Entity_CreateMesh(x.name);
+		scene.Component_Attach(meshEntity, rootEntity);
 		MeshComponent& mesh = *scene.meshes.GetComponent(meshEntity);
 
 		mesh.targets.resize(x.weights.size());
@@ -1165,6 +1167,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 		scene.names.Create(armatureEntity) = skin.name;
 		scene.layers.Create(armatureEntity);
 		scene.transforms.Create(armatureEntity);
+		scene.Component_Attach(armatureEntity, rootEntity);
 		ArmatureComponent& armature = scene.armatures.Create(armatureEntity);
 
 		if (skin.inverseBindMatrices >= 0)
@@ -1213,6 +1216,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 	{
 		Entity entity = CreateEntity();
 		scene.names.Create(entity) = anim.name;
+		scene.Component_Attach(entity, rootEntity);
 		AnimationComponent& animationcomponent = scene.animations.Create(entity);
 		animationcomponent.samplers.resize(anim.samplers.size());
 		animationcomponent.channels.resize(anim.channels.size());
@@ -1235,6 +1239,7 @@ void ImportModel_GLTF(const std::string& fileName, Scene& scene)
 			}
 
 			animationcomponent.samplers[i].data = CreateEntity();
+			scene.Component_Attach(animationcomponent.samplers[i].data, rootEntity);
 			AnimationDataComponent& animationdata = scene.animation_datas.Create(animationcomponent.samplers[i].data);
 
 			// AnimationSampler input = keyframe times

@@ -2314,34 +2314,16 @@ namespace wi::scene
 		parentcomponent.parentID = parent;
 
 		TransformComponent* transform_parent = transforms.GetComponent(parent);
-		if (transform_parent == nullptr)
-		{
-			transform_parent = &transforms.Create(parent);
-		}
-
 		TransformComponent* transform_child = transforms.GetComponent(entity);
-		if (transform_child == nullptr)
+		if (transform_parent != nullptr && transform_child != nullptr)
 		{
-			transform_child = &transforms.Create(entity);
-			transform_parent = transforms.GetComponent(parent); // after transforms.Create(), transform_parent pointer could have become invalidated!
-		}
-		if (!child_already_in_local_space)
-		{
-			XMMATRIX B = XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform_parent->world));
-			transform_child->MatrixTransform(B);
-			transform_child->UpdateTransform();
-		}
-		transform_child->UpdateTransform_Parented(*transform_parent);
-
-		LayerComponent* layer_parent = layers.GetComponent(parent);
-		if (layer_parent == nullptr)
-		{
-			layer_parent = &layers.Create(parent);
-		}
-		LayerComponent* layer_child = layers.GetComponent(entity);
-		if (layer_child == nullptr)
-		{
-			layer_child = &layers.Create(entity);
+			if (!child_already_in_local_space)
+			{
+				XMMATRIX B = XMMatrixInverse(nullptr, XMLoadFloat4x4(&transform_parent->world));
+				transform_child->MatrixTransform(B);
+				transform_child->UpdateTransform();
+			}
+			transform_child->UpdateTransform_Parented(*transform_parent);
 		}
 	}
 	void Scene::Component_Detach(Entity entity)

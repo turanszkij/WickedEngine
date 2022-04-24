@@ -113,6 +113,7 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 		for (auto& obj_material : obj_materials)
 		{
 			Entity materialEntity = scene.Entity_CreateMaterial(obj_material.name);
+			scene.Component_Attach(materialEntity, rootEntity);
 			MaterialComponent& material = *scene.materials.GetComponent(materialEntity);
 
 			material.baseColor = XMFLOAT4(obj_material.diffuse[0], obj_material.diffuse[1], obj_material.diffuse[2], 1);
@@ -164,6 +165,7 @@ void ImportModel_OBJ(const std::string& fileName, Scene& scene)
 			Entity objectEntity = scene.Entity_CreateObject(shape.name);
 			scene.Component_Attach(objectEntity, rootEntity);
 			Entity meshEntity = scene.Entity_CreateMesh(shape.name + "_mesh");
+			scene.Component_Attach(meshEntity, rootEntity);
 			ObjectComponent& object = *scene.objects.GetComponent(objectEntity);
 			MeshComponent& mesh = *scene.meshes.GetComponent(meshEntity);
 

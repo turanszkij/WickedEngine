@@ -57,7 +57,7 @@ void TransformWindow::Create(EditorComponent* editor)
 		}
 
 	});
-	parentCombo.SetTooltip("Choose a parent entity for the transform");
+	parentCombo.SetTooltip("Choose a parent entity (also works if selected entity has no transform)");
 	AddWidget(&parentCombo);
 
 	txInput.Create("");
@@ -238,26 +238,6 @@ void TransformWindow::SetEntity(Entity entity)
 
 	if (transform != nullptr)
 	{
-		parentCombo.ClearItems();
-		parentCombo.AddItem("NO PARENT");
-
-		HierarchyComponent* hier = scene.hierarchy.GetComponent(entity);
-		for (size_t i = 0; i < scene.transforms.GetCount(); ++i)
-		{
-			Entity entity = scene.transforms.GetEntity(i);
-			if (entity == this->entity)
-			{
-			    continue; // Don't list selected (don't allow attach to self)
-			}
-
-			const NameComponent* name = scene.names.GetComponent(entity);
-			parentCombo.AddItem(name == nullptr ? std::to_string(entity) : name->name, entity);
-
-			if (hier != nullptr && hier->parentID == entity)
-			{
-				parentCombo.SetSelectedWithoutCallback((int)parentCombo.GetItemCount() - 1);
-			}
-		}
 
 		txInput.SetValue(transform->translation_local.x);
 		tyInput.SetValue(transform->translation_local.y);
@@ -280,4 +260,39 @@ void TransformWindow::SetEntity(Entity entity)
 	}
 
 	createButton.SetEnabled(true);
+
+	parentCombo.SetEnabled(true);
+	parentCombo.ClearItems();
+	parentCombo.AddItem("NO PARENT");
+	HierarchyComponent* hier = scene.hierarchy.GetComponent(entity);
+	for (size_t i = 0; i < scene.transforms.GetCount(); ++i)
+	{
+		Entity candidate_parent_entity = scene.transforms.GetEntity(i);
+		if (candidate_parent_entity == entity)
+		{
+			continue; // Don't list selected (don't allow attach to self)
+		}
+
+		bool loop = false;
+		for (size_t j = 0; j < scene.hierarchy.GetCount(); ++j)
+		{
+			if (scene.hierarchy[j].parentID == entity)
+			{
+				loop = true;
+				break;
+			}
+		}
+		if (loop)
+		{
+			continue;
+		}
+
+		const NameComponent* name = scene.names.GetComponent(candidate_parent_entity);
+		parentCombo.AddItem(name == nullptr ? std::to_string(candidate_parent_entity) : name->name, candidate_parent_entity);
+
+		if (hier != nullptr && hier->parentID == candidate_parent_entity)
+		{
+			parentCombo.SetSelectedWithoutCallback((int)parentCombo.GetItemCount() - 1);
+		}
+	}
 }
