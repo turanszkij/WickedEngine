@@ -389,6 +389,11 @@ void EditorComponent::Load()
 			terragen.material_HighAltitude.textures[MaterialComponent::NORMALMAP].name = "terrain/high_altitude_nor.jpg";
 			terragen.material_GrassParticle.textures[MaterialComponent::BASECOLORMAP].name = "terrain/grassparticle.png";
 			terragen.material_GrassParticle.alphaRef = 0.75f;
+			terragen.grass_properties.length = 5;
+			terragen.grass_properties.frameCount = 2;
+			terragen.grass_properties.framesX = 1;
+			terragen.grass_properties.framesY = 2;
+			terragen.grass_properties.frameStart = 0;
 			terragen.material_Base.CreateRenderData();
 			terragen.material_Slope.CreateRenderData();
 			terragen.material_LowAltitude.CreateRenderData();

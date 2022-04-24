@@ -55,6 +55,7 @@ struct TerrainGenerator : public wi::gui::Window
 	wi::scene::MaterialComponent material_LowAltitude;
 	wi::scene::MaterialComponent material_HighAltitude;
 	wi::scene::MaterialComponent material_GrassParticle;
+	wi::HairParticleSystem grass_properties;
 	wi::unordered_map<Chunk, ChunkData> chunks;
 	wi::vector<uint32_t> indices;
 	struct LOD
@@ -96,7 +97,7 @@ struct TerrainGenerator : public wi::gui::Window
 	wi::scene::Scene generation_scene; // The background generation thread can safely add things to this, it will be merged into the main scene when it is safe to do so
 	wi::jobsystem::context generation_workload;
 	std::atomic_bool generation_cancelled;
-	wi::vector<wi::ecs::Entity> generation_entities; // because cannot parent to main scene on the background thread, parentable entities are collected
+	float generation_time_budget_milliseconds = 12; // after this much time, the generation thread will exit. This can help avoid a very long running, resource consuming and slow cancellation generation
 
 	wi::gui::CheckBox centerToCamCheckBox;
 	wi::gui::CheckBox removalCheckBox;

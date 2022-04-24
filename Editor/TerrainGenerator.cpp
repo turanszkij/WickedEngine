@@ -456,7 +456,6 @@ void TerrainGenerator::Generation_Restart()
 {
 	Generation_Cancel();
 	generation_scene.Clear();
-	generation_entities.clear();
 
 	// If these already exist, save them before recreating:
 	//	(This is helpful if eg: someone edits them in the editor and then regenerates the terrain)
@@ -574,13 +573,8 @@ void TerrainGenerator::Generation_Update()
 		return;
 	}
 
-	// What was generated, will be merged in to the main scene and parented to the terrain entity
+	// What was generated, will be merged in to the main scene
 	scene->Merge(generation_scene);
-	for (Entity entity : generation_entities)
-	{
-		scene->Component_Attach(entity, terrainEntity);
-	}
-	generation_entities.clear();
 
 	if (centerToCamCheckBox.GetCheck())
 	{
@@ -628,6 +622,7 @@ void TerrainGenerator::Generation_Update()
 	// Start the generation on a background thread and keep it running until the next frame
 	wi::jobsystem::Execute(generation_workload, [=](wi::jobsystem::JobArgs args) {
 
+		wi::Timer timer;
 		const float lodMultiplier = lodSlider.GetValue();
 		const int generation = (int)generationSlider.GetValue();
 		const float bottomLevel = bottomLevelSlider.GetValue();
@@ -661,7 +656,7 @@ void TerrainGenerator::Generation_Update()
 				chunk_data.entity = generation_scene.Entity_CreateObject("chunk_" + std::to_string(chunk.x) + "_" + std::to_string(chunk.z));
 				ObjectComponent& object = *generation_scene.objects.GetComponent(chunk_data.entity);
 				object.lod_distance_multiplier = lodMultiplier;
-				generation_entities.push_back(chunk_data.entity);
+				generation_scene.Component_Attach(chunk_data.entity, terrainEntity);
 
 				TransformComponent& transform = *generation_scene.transforms.GetComponent(chunk_data.entity);
 				transform.ClearTransform();
@@ -689,7 +684,7 @@ void TerrainGenerator::Generation_Update()
 				mesh.vertex_colors.resize(vertexCount);
 				mesh.vertex_uvset_0.resize(vertexCount);
 
-				wi::HairParticleSystem grass;
+				wi::HairParticleSystem grass = grass_properties;
 				grass.vertex_lengths.resize(vertexCount);
 				std::atomic<uint32_t> grass_valid_vertex_count{ 0 };
 
@@ -775,7 +770,7 @@ void TerrainGenerator::Generation_Update()
 
 					const float grass_noise_frequency = 0.1f;
 					const float grass_noise = perlin.compute(vertex_pos.x * grass_noise_frequency, vertex_pos.y * grass_noise_frequency, vertex_pos.z * grass_noise_frequency) * 0.5f + 0.5f;
-					const float region_grass = std::pow(materialBlendWeights.x * (1 - materialBlendWeights.w), 4.0f) * grass_noise;
+					const float region_grass = std::pow(materialBlendWeights.x * (1 - materialBlendWeights.w), 8.0f) * grass_noise;
 					if (region_grass > 0.1f)
 					{
 						grass_valid_vertex_count.fetch_add(1);
@@ -788,21 +783,18 @@ void TerrainGenerator::Generation_Update()
 					});
 				wi::jobsystem::Wait(ctx); // wait until chunk's vertex buffer is fully generated
 
-				mesh.CreateRenderData();
+				wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
+					mesh.CreateRenderData();
+					});
 
 				// If there were any vertices in this chunk that could be valid for grass, store the grass particle system:
 				if (grass_valid_vertex_count.load() > 0)
 				{
-					grass.meshID = chunk_data.entity;
-					grass.length = 5;
-					grass.strandCount = grass_valid_vertex_count.load() * 3;
-					grass.viewDistance = 80;
-					grass.frameCount = 2;
-					grass.framesX = 1;
-					grass.framesY = 2;
-					grass.frameStart = 0;
-					generation_scene.materials.Create(chunk_data.entity) = material_GrassParticle;
 					chunk_data.grass = std::move(grass); // the grass will be added to the scene later, only when the chunk is close to the camera (center chunk's neighbors)
+					chunk_data.grass.meshID = chunk_data.entity;
+					chunk_data.grass.strandCount = grass_valid_vertex_count.load() * 3;
+					chunk_data.grass.viewDistance = width;
+					generation_scene.materials.Create(chunk_data.entity) = material_GrassParticle;
 				}
 
 				// Prop placement:
@@ -868,17 +860,18 @@ void TerrainGenerator::Generation_Update()
 					}
 				}
 
+				wi::jobsystem::Wait(ctx); // wait until mesh.CreateRenderData() async task finishes
 			}
 
 			// Grass patch placement:
-			it = chunks.find(chunk);
-			if (it != chunks.end() && it->second.entity != INVALID_ENTITY)
+			const int dist = std::max(std::abs(center_chunk.x - chunk.x), std::abs(center_chunk.z - chunk.z));
+			if (dist <= 1)
 			{
-				ChunkData& chunk_data = it->second;
-				if (chunk_data.grass.meshID != INVALID_ENTITY)
+				it = chunks.find(chunk);
+				if (it != chunks.end() && it->second.entity != INVALID_ENTITY)
 				{
-					const int dist = std::max(std::abs(center_chunk.x - chunk.x), std::abs(center_chunk.z - chunk.z));
-					if (dist <= 1)
+					ChunkData& chunk_data = it->second;
+					if (chunk_data.grass.meshID != INVALID_ENTITY)
 					{
 						if (!chunk_data.grass_exists)
 						{
@@ -894,6 +887,11 @@ void TerrainGenerator::Generation_Update()
 						}
 					}
 				}
+			}
+
+			if (timer.elapsed_milliseconds() > generation_time_budget_milliseconds)
+			{
+				generation_cancelled.store(true);
 			}
 
 		};
