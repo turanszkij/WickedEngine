@@ -688,8 +688,6 @@ void TerrainGenerator::Generation_Update()
 				mesh.vertex_normals.resize(vertexCount);
 				mesh.vertex_colors.resize(vertexCount);
 				mesh.vertex_uvset_0.resize(vertexCount);
-				mesh.vertex_uvset_1.resize(vertexCount);
-				mesh.vertex_atlas.resize(vertexCount);
 
 				wi::HairParticleSystem grass;
 				grass.vertex_lengths.resize(vertexCount);
@@ -772,8 +770,6 @@ void TerrainGenerator::Generation_Update()
 					mesh.vertex_colors[index] = wi::Color::fromFloat4(materialBlendWeights);
 					const XMFLOAT2 uv = XMFLOAT2(x * width_rcp + 0.5f, z * width_rcp + 0.5f);
 					mesh.vertex_uvset_0[index] = uv;
-					mesh.vertex_uvset_1[index] = uv;
-					mesh.vertex_atlas[index] = uv;
 
 					XMFLOAT3 vertex_pos(chunk_pos.x + x, height, chunk_pos.z + z);
 
