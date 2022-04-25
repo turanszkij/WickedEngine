@@ -51,6 +51,16 @@ namespace wi::helper
 		}
 		return result;
 	}
+	std::string toLower(const std::string& s)
+	{
+		std::string result;
+		std::locale loc;
+		for (unsigned int i = 0; i < s.length(); ++i)
+		{
+			result += std::tolower(s.at(i), loc);
+		}
+		return result;
+	}
 
 	void messageBox(const std::string& msg, const std::string& caption)
 	{
@@ -953,14 +963,10 @@ namespace wi::helper
 		}
 
 		std::vector<std::string> extensions = {params.description, ""};
-		int extcount = 0;
 		for (auto& x : params.extensions)
 		{
-			extensions[1] += "*." + x;
-			if(extcount < params.extensions.size()-1){
-				extensions[1] += " ";
-			}
-			extcount++;
+			extensions[0] += " *." + toUpper(x);
+			extensions[0] += " *." + toLower(x);
 		}
 
 		switch (params.type) {

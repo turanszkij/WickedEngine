@@ -40,6 +40,8 @@ namespace wi::helper
 
 	std::string toUpper(const std::string& s);
 
+	std::string toLower(const std::string& s);
+
 	void messageBox(const std::string& msg, const std::string& caption = "Warning!");
 
 	void screenshot(const wi::graphics::SwapChain& swapchain, const std::string& name = "");
