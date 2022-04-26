@@ -4,6 +4,7 @@
 #include "wiPlatform.h"
 #include "wiTimer.h"
 
+#include <memory>
 #include <algorithm>
 #include <deque>
 #include <string>
@@ -28,6 +29,7 @@ namespace wi::jobsystem
 	};
 	struct JobQueue
 	{
+		std::atomic_bool processing{ false };
 		std::deque<Job> queue;
 		wi::SpinLock locker;
 
@@ -42,10 +44,12 @@ namespace wi::jobsystem
 			std::scoped_lock lock(locker);
 			if (queue.empty())
 			{
+				processing.store(false);
 				return false;
 			}
 			item = std::move(queue.front());
 			queue.pop_front();
+			processing.store(true);
 			return true;
 		}
 
@@ -63,14 +67,21 @@ namespace wi::jobsystem
 	{
 		uint32_t numCores = 0;
 		uint32_t numThreads = 0;
-		JobQueue* jobQueuePerThread = nullptr;
+		std::unique_ptr<JobQueue[]> jobQueuePerThread;
 		std::shared_ptr<WorkerState> worker_state = std::make_shared<WorkerState>(); // kept alive by both threads and internal_state
 		std::atomic<uint32_t> nextQueue{ 0 };
 		~InternalState()
 		{
-			worker_state->alive.store(false);
+			worker_state->alive.store(false); // indicate that new jobs cannot be started from this point
 			worker_state->wakeCondition.notify_all(); // wakes up sleeping worker threads
-			delete[] jobQueuePerThread;
+			// wait until all currently running jobs finish:
+			for (uint32_t i = 0; i < numThreads; ++i)
+			{
+				while (jobQueuePerThread[i].processing.load())
+				{
+					std::this_thread::yield();
+				}
+			}
 		}
 	} static internal_state;
 
@@ -81,7 +92,8 @@ namespace wi::jobsystem
 		Job job;
 		for (uint32_t i = 0; i < internal_state.numThreads; ++i)
 		{
-			while (internal_state.jobQueuePerThread[startingQueue % internal_state.numThreads].pop_front(job))
+			JobQueue& job_queue = internal_state.jobQueuePerThread[startingQueue % internal_state.numThreads];
+			while (job_queue.pop_front(job))
 			{
 				JobArgs args;
 				args.groupID = job.groupID;
@@ -124,7 +136,7 @@ namespace wi::jobsystem
 
 		// Calculate the actual number of worker threads we want (-1 main thread):
 		internal_state.numThreads = std::min(maxThreadCount, std::max(1u, internal_state.numCores - 1));
-		internal_state.jobQueuePerThread = new JobQueue[internal_state.numThreads];
+		internal_state.jobQueuePerThread.reset(new JobQueue[internal_state.numThreads]);
 
 		for (uint32_t threadID = 0; threadID < internal_state.numThreads; ++threadID)
 		{

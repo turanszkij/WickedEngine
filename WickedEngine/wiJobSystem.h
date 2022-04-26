@@ -41,5 +41,6 @@ namespace wi::jobsystem
 	bool IsBusy(const context& ctx);
 
 	// Wait until all threads become idle
+	//	Current thread will become a worker thread, executing jobs
 	void Wait(const context& ctx);
 }
