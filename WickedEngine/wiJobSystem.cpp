@@ -87,7 +87,9 @@ namespace wi::jobsystem
 				args.groupID = job.groupID;
 				if (job.sharedmemory_size > 0)
 				{
-					args.sharedmemory = alloca(job.sharedmemory_size);
+					thread_local static wi::vector<uint8_t> shared_allocation_data;
+					shared_allocation_data.reserve(job.sharedmemory_size);
+					args.sharedmemory = shared_allocation_data.data();
 				}
 				else
 				{

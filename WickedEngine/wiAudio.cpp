@@ -348,7 +348,7 @@ namespace wi::audio
 			{ XAUDIO2_SEND_USEFILTER, instanceinternal->audio->reverbSubmix }, // this should be last to enable/disable reverb simply
 		};
 		XAUDIO2_VOICE_SENDS SFXSendList = { 
-			instance->IsEnableReverb() ? arraysize(SFXSend) : 1, 
+			instance->IsEnableReverb() ? (uint32_t)arraysize(SFXSend) : 1, 
 			SFXSend 
 		};
 
