@@ -272,11 +272,7 @@ struct VertexSurface
 #ifdef OBJECTSHADER_USE_WIND
 		if (material.IsUsingWind())
 		{
-			const float windweight = input.GetWindWeight();
-			const float waveoffset = mad(dot(position.xyz, GetWeather().wind.direction), GetWeather().wind.wavesize, (position.x + position.y + position.z) * GetWeather().wind.randomness);
-			const float3 wavedir = GetWeather().wind.direction * windweight;
-			const float3 wind = sin(mad(GetFrame().time, GetWeather().wind.speed, waveoffset)) * wavedir;
-			position.xyz += wind;
+			position.xyz += compute_wind(position.xyz, input.GetWindWeight());
 		}
 #endif // OBJECTSHADER_USE_WIND
 	}

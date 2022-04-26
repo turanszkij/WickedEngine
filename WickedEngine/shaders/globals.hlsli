@@ -366,6 +366,32 @@ float noise_simplex_2D(in float2 p)
 	return dot(n, 70.0.xxx);
 }
 
+// https://www.shadertoy.com/view/Xsl3Dl
+float3 hash_gradient_3D( float3 p ) // replace this by something better
+{
+	p = float3(dot(p, float3(127.1, 311.7, 74.7)),
+		dot(p, float3(269.5, 183.3, 246.1)),
+		dot(p, float3(113.5, 271.9, 124.6)));
+
+	return -1.0 + 2.0 * frac(sin(p) * 43758.5453123);
+}
+float noise_gradient_3D(in float3 p)
+{
+	float3 i = floor(p);
+	float3 f = frac(p);
+
+	float3 u = f * f * (3.0 - 2.0 * f);
+
+	return lerp(lerp(lerp(dot(hash_gradient_3D(i + float3(0.0, 0.0, 0.0)), f - float3(0.0, 0.0, 0.0)),
+		dot(hash_gradient_3D(i + float3(1.0, 0.0, 0.0)), f - float3(1.0, 0.0, 0.0)), u.x),
+		lerp(dot(hash_gradient_3D(i + float3(0.0, 1.0, 0.0)), f - float3(0.0, 1.0, 0.0)),
+			dot(hash_gradient_3D(i + float3(1.0, 1.0, 0.0)), f - float3(1.0, 1.0, 0.0)), u.x), u.y),
+		lerp(lerp(dot(hash_gradient_3D(i + float3(0.0, 0.0, 1.0)), f - float3(0.0, 0.0, 1.0)),
+			dot(hash_gradient_3D(i + float3(1.0, 0.0, 1.0)), f - float3(1.0, 0.0, 1.0)), u.x),
+			lerp(dot(hash_gradient_3D(i + float3(0.0, 1.0, 1.0)), f - float3(0.0, 1.0, 1.0)),
+				dot(hash_gradient_3D(i + float3(1.0, 1.0, 1.0)), f - float3(1.0, 1.0, 1.0)), u.x), u.y), u.z);
+}
+
 // https://www.shadertoy.com/view/llGSzw
 float hash1(uint n)
 {
@@ -1049,6 +1075,26 @@ RayCone pixel_ray_cone_from_image_height(float image_height)
 	res.spread_angle = pixel_cone_spread_angle_from_image_height(image_height);
 	return res;
 }
+
+
+float3 compute_wind(float3 position, float weight)
+{
+	const float time = GetTime();
+	position += time;
+	const ShaderWind wind = GetWeather().wind;
+
+	float randomness_amount = 0;
+	randomness_amount += noise_gradient_3D(position.xyz);
+	randomness_amount += noise_gradient_3D(position.xyz * 0.1);
+	randomness_amount *= wind.randomness;
+
+	float direction_amount = dot(position.xyz, wind.direction);
+	float waveoffset = mad(direction_amount, wind.wavesize, randomness_amount);
+	float3 wavedir = wind.direction * weight;
+
+	return sin(mad(time, wind.speed, waveoffset)) * wavedir;
+}
+
 
 static const float4 halton64[] = {
 	float4(0.5000000000f, 0.3333333333f, 0.2000000000f, 0.1428571429f),
