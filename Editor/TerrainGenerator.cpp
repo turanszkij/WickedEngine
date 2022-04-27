@@ -643,6 +643,7 @@ void TerrainGenerator::Generation_Update()
 		const float region1 = region1Slider.GetValue();
 		const float region2 = region2Slider.GetValue();
 		const float region3 = region3Slider.GetValue();
+		bool generated_something = false;
 
 		auto request_chunk = [&](int offset_x, int offset_z)
 		{
@@ -863,6 +864,7 @@ void TerrainGenerator::Generation_Update()
 				}
 
 				wi::jobsystem::Wait(ctx); // wait until mesh.CreateRenderData() async task finishes
+				generated_something = true;
 			}
 
 			// Grass patch placement:
@@ -886,12 +888,13 @@ void TerrainGenerator::Generation_Update()
 								grass.CreateRenderData(*mesh);
 							}
 							chunk_data.grass_exists = true; // don't generate more grass here
+							generated_something = true;
 						}
 					}
 				}
 			}
 
-			if (timer.elapsed_milliseconds() > generation_time_budget_milliseconds)
+			if (generated_something && timer.elapsed_milliseconds() > generation_time_budget_milliseconds)
 			{
 				generation_cancelled.store(true);
 			}
