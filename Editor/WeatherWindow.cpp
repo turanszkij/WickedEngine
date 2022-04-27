@@ -162,6 +162,15 @@ void WeatherWindow::Create(EditorComponent* editor)
 		});
 	AddWidget(&skyExposureSlider);
 
+	starsSlider.Create(0, 1, 0.5f, 10000, "Stars: ");
+	starsSlider.SetTooltip("Amount of stars in the night sky (0 to disable). \nIt will only work with the realistic sky enabled. \nThey will be more visible at night time.");
+	starsSlider.SetSize(XMFLOAT2(100, hei));
+	starsSlider.SetPos(XMFLOAT2(x, y += step));
+	starsSlider.OnSlide([&](wi::gui::EventArgs args) {
+		GetWeather().stars = args.fValue;
+		});
+	AddWidget(&starsSlider);
+
 	simpleskyCheckBox.Create("Simple sky: ");
 	simpleskyCheckBox.SetTooltip("Simple sky will simply blend horizon and zenith color from bottom to top.");
 	simpleskyCheckBox.SetSize(XMFLOAT2(hei, hei));
@@ -686,6 +695,7 @@ void WeatherWindow::Update()
 		windWaveSizeSlider.SetValue(weather.windWaveSize);
 		windRandomnessSlider.SetValue(weather.windRandomness);
 		skyExposureSlider.SetValue(weather.skyExposure);
+		starsSlider.SetValue(weather.stars);
 		windMagnitudeSlider.SetValue(XMVectorGetX(XMVector3Length(XMLoadFloat3(&weather.windDirection))));
 
 		switch (colorComboBox.GetSelected())

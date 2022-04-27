@@ -411,22 +411,35 @@ float3 GetSunLuminance(float3 worldPosition, float3 worldDirection, float3 sunDi
 	float sunHalfApexAngleRadian = 0.5 * sunApexAngleDegree * PI / 180.0;
 	float sunCosHalfApexAngle = cos(sunHalfApexAngleRadian);
 
-	float VdotL = dot(worldDirection, normalize(sunDirection)); // weird... the sun disc shrinks near the horizon if we don't normalize sun direction
-	
 	float3 retval = 0;
-	if (VdotL > sunCosHalfApexAngle)
-	{
-		float t = RaySphereIntersectNearest(worldPosition, worldDirection, float3(0.0f, 0.0f, 0.0f), atmosphere.bottomRadius);
-		if (t < 0.0f) // no intersection
-		{
-			const float3 atmosphereTransmittance = GetAtmosphereTransmittance(worldPosition, worldDirection, atmosphere, transmittanceLutTexture);
 
-            // Edge fade
+	float t = RaySphereIntersectNearest(worldPosition, worldDirection, float3(0.0f, 0.0f, 0.0f), atmosphere.bottomRadius);
+	if (t < 0.0f) // no intersection
+	{
+		float VdotL = dot(worldDirection, normalize(sunDirection)); // weird... the sun disc shrinks near the horizon if we don't normalize sun direction
+		if (VdotL > sunCosHalfApexAngle)
+		{
+			// Edge fade
 			const float halfCosHalfApex = sunCosHalfApexAngle + (1.0f - sunCosHalfApexAngle) * 0.25; // Start fading when at 75% distance from light disk center
 			const float weight = 1.0 - saturate((halfCosHalfApex - VdotL) / (halfCosHalfApex - sunCosHalfApexAngle));
-            
-			retval = atmosphereTransmittance * weight * sunIlluminance;
+
+			retval = weight * sunIlluminance;
 		}
+
+		if (GetWeather().stars > 0)
+		{
+			float3 stars_direction = mul(worldDirection, (float3x3)GetWeather().stars_rotation);
+			float stars_visibility = pow(saturate(1 - sunDirection.y), 2);
+			float stars_density_at_maximum = lerp(22, 8, GetWeather().stars);
+			float stars_threshold = lerp(32, stars_density_at_maximum, stars_visibility); // modifies the number of stars that are visible
+			float stars_exposure = lerp(0, 512, stars_visibility); // modifies the overall strength of the stars
+			float stars = saturate(pow(noise_gradient_3D(stars_direction * 300), stars_threshold)) * stars_exposure;
+			stars *= lerp(0.4, 1.4, noise_gradient_3D(stars_direction * 256 + GetTime())); // time based flickering
+			retval += stars;
+		}
+
+		const float3 atmosphereTransmittance = GetAtmosphereTransmittance(worldPosition, worldDirection, atmosphere, transmittanceLutTexture);
+		retval *= atmosphereTransmittance;
 	}
     
 	return retval;

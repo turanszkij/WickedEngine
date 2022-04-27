@@ -303,6 +303,11 @@ struct ShaderWeather
 	float cloud_shadow_scale;
 	float cloud_shadow_speed;
 
+	float3 padding;
+	float stars; // number of stars (0: disable stars, >0: increase number of stars)
+
+	float4x4 stars_rotation;
+
 	ShaderFog fog;
 	ShaderWind wind;
 	ShaderOcean ocean;
