@@ -27,14 +27,14 @@ void TerrainGenerator::init()
 
 		if (lod == 0)
 		{
-			for (int x = 0; x < width - 1; x++)
+			for (int x = 0; x < chunk_width - 1; x++)
 			{
-				for (int z = 0; z < width - 1; z++)
+				for (int z = 0; z < chunk_width - 1; z++)
 				{
-					int lowerLeft = x + z * width;
-					int lowerRight = (x + 1) + z * width;
-					int topLeft = x + (z + 1) * width;
-					int topRight = (x + 1) + (z + 1) * width;
+					int lowerLeft = x + z * chunk_width;
+					int lowerRight = (x + 1) + z * chunk_width;
+					int topLeft = x + (z + 1) * chunk_width;
+					int topRight = (x + 1) + (z + 1) * chunk_width;
 
 					indices.push_back(topLeft);
 					indices.push_back(lowerLeft);
@@ -50,14 +50,14 @@ void TerrainGenerator::init()
 		{
 			const int step = 1 << lod;
 			// inner grid:
-			for (int x = 1; x < width - 2; x += step)
+			for (int x = 1; x < chunk_width - 2; x += step)
 			{
-				for (int z = 1; z < width - 2; z += step)
+				for (int z = 1; z < chunk_width - 2; z += step)
 				{
-					int lowerLeft = x + z * width;
-					int lowerRight = (x + step) + z * width;
-					int topLeft = x + (z + step) * width;
-					int topRight = (x + step) + (z + step) * width;
+					int lowerLeft = x + z * chunk_width;
+					int lowerRight = (x + step) + z * chunk_width;
+					int topLeft = x + (z + step) * chunk_width;
+					int topRight = (x + step) + (z + step) * chunk_width;
 
 					indices.push_back(topLeft);
 					indices.push_back(lowerLeft);
@@ -69,12 +69,12 @@ void TerrainGenerator::init()
 				}
 			}
 			// bottom border:
-			for (int x = 0; x < width - 1; ++x)
+			for (int x = 0; x < chunk_width - 1; ++x)
 			{
 				const int z = 0;
-				int current = x + z * width;
-				int neighbor = x + 1 + z * width;
-				int connection = 1 + ((x + (step + 1) / 2 - 1) / step) * step + (z + 1) * width;
+				int current = x + z * chunk_width;
+				int neighbor = x + 1 + z * chunk_width;
+				int connection = 1 + ((x + (step + 1) / 2 - 1) / step) * step + (z + 1) * chunk_width;
 
 				indices.push_back(current);
 				indices.push_back(neighbor);
@@ -82,7 +82,7 @@ void TerrainGenerator::init()
 
 				if (((x - 1) % (step)) == step / 2) // halfway fill triangle
 				{
-					int connection1 = 1 + (((x - 1) + (step + 1) / 2 - 1) / step) * step + (z + 1) * width;
+					int connection1 = 1 + (((x - 1) + (step + 1) / 2 - 1) / step) * step + (z + 1) * chunk_width;
 
 					indices.push_back(current);
 					indices.push_back(connection);
@@ -90,12 +90,12 @@ void TerrainGenerator::init()
 				}
 			}
 			// top border:
-			for (int x = 0; x < width - 1; ++x)
+			for (int x = 0; x < chunk_width - 1; ++x)
 			{
-				const int z = width - 1;
-				int current = x + z * width;
-				int neighbor = x + 1 + z * width;
-				int connection = 1 + ((x + (step + 1) / 2 - 1) / step) * step + (z - 1) * width;
+				const int z = chunk_width - 1;
+				int current = x + z * chunk_width;
+				int neighbor = x + 1 + z * chunk_width;
+				int connection = 1 + ((x + (step + 1) / 2 - 1) / step) * step + (z - 1) * chunk_width;
 
 				indices.push_back(current);
 				indices.push_back(connection);
@@ -103,7 +103,7 @@ void TerrainGenerator::init()
 
 				if (((x - 1) % (step)) == step / 2) // halfway fill triangle
 				{
-					int connection1 = 1 + (((x - 1) + (step + 1) / 2 - 1) / step) * step + (z - 1) * width;
+					int connection1 = 1 + (((x - 1) + (step + 1) / 2 - 1) / step) * step + (z - 1) * chunk_width;
 
 					indices.push_back(current);
 					indices.push_back(connection1);
@@ -111,12 +111,12 @@ void TerrainGenerator::init()
 				}
 			}
 			// left border:
-			for (int z = 0; z < width - 1; ++z)
+			for (int z = 0; z < chunk_width - 1; ++z)
 			{
 				const int x = 0;
-				int current = x + z * width;
-				int neighbor = x + (z + 1) * width;
-				int connection = x + 1 + (((z + (step + 1) / 2 - 1) / step) * step + 1) * width;
+				int current = x + z * chunk_width;
+				int neighbor = x + (z + 1) * chunk_width;
+				int connection = x + 1 + (((z + (step + 1) / 2 - 1) / step) * step + 1) * chunk_width;
 
 				indices.push_back(current);
 				indices.push_back(connection);
@@ -124,7 +124,7 @@ void TerrainGenerator::init()
 
 				if (((z - 1) % (step)) == step / 2) // halfway fill triangle
 				{
-					int connection1 = x + 1 + ((((z - 1) + (step + 1) / 2 - 1) / step) * step + 1) * width;
+					int connection1 = x + 1 + ((((z - 1) + (step + 1) / 2 - 1) / step) * step + 1) * chunk_width;
 
 					indices.push_back(current);
 					indices.push_back(connection1);
@@ -132,12 +132,12 @@ void TerrainGenerator::init()
 				}
 			}
 			// right border:
-			for (int z = 0; z < width - 1; ++z)
+			for (int z = 0; z < chunk_width - 1; ++z)
 			{
-				const int x = width - 1;
-				int current = x + z * width;
-				int neighbor = x + (z + 1) * width;
-				int connection = x - 1 + (((z + (step + 1) / 2 - 1) / step) * step + 1) * width;
+				const int x = chunk_width - 1;
+				int current = x + z * chunk_width;
+				int neighbor = x + (z + 1) * chunk_width;
+				int connection = x - 1 + (((z + (step + 1) / 2 - 1) / step) * step + 1) * chunk_width;
 
 				indices.push_back(current);
 				indices.push_back(neighbor);
@@ -145,7 +145,7 @@ void TerrainGenerator::init()
 
 				if (((z - 1) % (step)) == step / 2) // halfway fill triangle
 				{
-					int connection1 = x - 1 + ((((z - 1) + (step + 1) / 2 - 1) / step) * step + 1) * width;
+					int connection1 = x - 1 + ((((z - 1) + (step + 1) / 2 - 1) / step) * step + 1) * chunk_width;
 
 					indices.push_back(current);
 					indices.push_back(connection);
@@ -547,6 +547,7 @@ void TerrainGenerator::Generation_Restart()
 		weather.cloud_shadow_amount = 0.5f;
 		weather.cloud_shadow_scale = 0.003f;
 		weather.cloud_shadow_speed = 0.25f;
+		weather.stars = 0.6f;
 	}
 	if (scene->lights.GetCount() == 0)
 	{
@@ -559,6 +560,7 @@ void TerrainGenerator::Generation_Restart()
 		//light.SetVolumetricsEnabled(true);
 		TransformComponent& transform = *scene->transforms.GetComponent(sunEntity);
 		transform.RotateRollPitchYaw(XMFLOAT3(XM_PIDIV4, 0, XM_PIDIV4));
+		transform.Translate(XMFLOAT3(0, 2, 0));
 	}
 }
 
@@ -579,8 +581,8 @@ void TerrainGenerator::Generation_Update()
 	if (centerToCamCheckBox.GetCheck())
 	{
 		const CameraComponent& camera = GetCamera();
-		center_chunk.x = (int)std::floor((camera.Eye.x + half_width) * width_rcp);
-		center_chunk.z = (int)std::floor((camera.Eye.z + half_width) * width_rcp);
+		center_chunk.x = (int)std::floor((camera.Eye.x + chunk_half_width) * chunk_width_rcp);
+		center_chunk.z = (int)std::floor((camera.Eye.z + chunk_half_width) * chunk_width_rcp);
 	}
 
 	// Chunk removal checks:
@@ -660,7 +662,7 @@ void TerrainGenerator::Generation_Update()
 
 				TransformComponent& transform = *generation_scene.transforms.GetComponent(chunk_data.entity);
 				transform.ClearTransform();
-				const XMFLOAT3 chunk_pos = XMFLOAT3(float(chunk.x * (width - 1)), 0, float(chunk.z * (width - 1)));
+				const XMFLOAT3 chunk_pos = XMFLOAT3(float(chunk.x * (chunk_width - 1)), 0, float(chunk.z * (chunk_width - 1)));
 				transform.Translate(chunk_pos);
 				transform.UpdateTransform();
 
@@ -690,10 +692,10 @@ void TerrainGenerator::Generation_Update()
 
 				// Do a parallel for loop over all the chunk's vertices and compute their properties:
 				wi::jobsystem::context ctx;
-				wi::jobsystem::Dispatch(ctx, vertexCount, width, [&](wi::jobsystem::JobArgs args) {
+				wi::jobsystem::Dispatch(ctx, vertexCount, chunk_width, [&](wi::jobsystem::JobArgs args) {
 					uint32_t index = args.jobIndex;
-					const float x = float(index % width) - half_width;
-					const float z = float(index / width) - half_width;
+					const float x = float(index % chunk_width) - chunk_half_width;
+					const float z = float(index / chunk_width) - chunk_half_width;
 					XMVECTOR corners[3];
 					XMFLOAT2 corner_offsets[3] = {
 						XMFLOAT2(0, 0),
@@ -763,7 +765,7 @@ void TerrainGenerator::Generation_Update()
 					mesh.vertex_positions[index] = XMFLOAT3(x, height, z);
 					mesh.vertex_normals[index] = normal;
 					mesh.vertex_colors[index] = wi::Color::fromFloat4(materialBlendWeights);
-					const XMFLOAT2 uv = XMFLOAT2(x * width_rcp + 0.5f, z * width_rcp + 0.5f);
+					const XMFLOAT2 uv = XMFLOAT2(x * chunk_width_rcp + 0.5f, z * chunk_width_rcp + 0.5f);
 					mesh.vertex_uvset_0[index] = uv;
 
 					XMFLOAT3 vertex_pos(chunk_pos.x + x, height, chunk_pos.z + z);
@@ -793,7 +795,7 @@ void TerrainGenerator::Generation_Update()
 					chunk_data.grass = std::move(grass); // the grass will be added to the scene later, only when the chunk is close to the camera (center chunk's neighbors)
 					chunk_data.grass.meshID = chunk_data.entity;
 					chunk_data.grass.strandCount = grass_valid_vertex_count.load() * 3;
-					chunk_data.grass.viewDistance = width;
+					chunk_data.grass.viewDistance = chunk_width;
 					generation_scene.materials.Create(chunk_data.entity) = material_GrassParticle;
 				}
 

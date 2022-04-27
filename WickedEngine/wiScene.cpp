@@ -1906,6 +1906,8 @@ namespace wi::scene
 		shaderscene.weather.ocean.patch_size_rcp = 1.0f / weather.oceanParameters.patch_length;
 		shaderscene.weather.ocean.texture_displacementmap = device->GetDescriptorIndex(ocean.getDisplacementMap(), SubresourceType::SRV);
 		shaderscene.weather.ocean.texture_gradientmap = device->GetDescriptorIndex(ocean.getGradientMap(), SubresourceType::SRV);
+		shaderscene.weather.stars = weather.stars;
+		XMStoreFloat4x4(&shaderscene.weather.stars_rotation, XMMatrixRotationQuaternion(XMLoadFloat4(&weather.stars_rotation_quaternion)));
 
 		shaderscene.ddgi.color_texture = device->GetDescriptorIndex(&ddgiColorTexture[0], SubresourceType::SRV);
 		shaderscene.ddgi.depth_texture = device->GetDescriptorIndex(&ddgiDepthTexture[0], SubresourceType::SRV);
@@ -3755,6 +3757,7 @@ namespace wi::scene
 					weather.sunColor = light.color;
 					weather.sunDirection = light.direction;
 					weather.sunEnergy = light.energy;
+					weather.stars_rotation_quaternion = light.rotation;
 				}
 				locker.unlock();
 				break;

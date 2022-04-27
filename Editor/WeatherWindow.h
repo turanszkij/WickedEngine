@@ -32,6 +32,7 @@ public:
 	wi::gui::Slider windWaveSizeSlider;
 	wi::gui::Slider windRandomnessSlider;
 	wi::gui::Slider skyExposureSlider;
+	wi::gui::Slider starsSlider;
 	wi::gui::CheckBox simpleskyCheckBox;
 	wi::gui::CheckBox realisticskyCheckBox;
 	wi::gui::Button skyButton;

@@ -1114,6 +1114,11 @@ namespace wi::scene
 				archive >> cloud_shadow_scale;
 				archive >> cloud_shadow_speed;
 			}
+
+			if (archive.GetVersion() >= 78)
+			{
+				archive >> stars;
+			}
 		}
 		else
 		{
@@ -1253,6 +1258,11 @@ namespace wi::scene
 				archive << cloud_shadow_amount;
 				archive << cloud_shadow_scale;
 				archive << cloud_shadow_speed;
+			}
+
+			if (archive.GetVersion() >= 78)
+			{
+				archive << stars;
 			}
 		}
 	}
