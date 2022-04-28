@@ -673,8 +673,8 @@ void EditorComponent::Load()
 	////////////////////////////////////////////////////////////////////////////////////
 
 
-	translatorCheckBox.Create("Translator: ");
-	translatorCheckBox.SetTooltip("Enable the translator tool");
+	translatorCheckBox.Create("Transform: ");
+	translatorCheckBox.SetTooltip("Enable the transform tool");
 	translatorCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		translator.enabled = args.bValue;
 	});
@@ -706,7 +706,7 @@ void EditorComponent::Load()
 		isRotatorCheckBox.SetCheck(translator.isRotator);
 		GetGUI().AddWidget(&isRotatorCheckBox);
 
-		isTranslatorCheckBox.SetTooltip("Translate");
+		isTranslatorCheckBox.SetTooltip("Translate (Move)");
 		isTranslatorCheckBox.OnClick([&](wi::gui::EventArgs args) {
 			translator.isTranslator = args.bValue;
 			translator.isScalator = false;

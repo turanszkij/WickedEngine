@@ -453,7 +453,10 @@ void Translator::Draw(const CameraComponent& camera, CommandList cmd) const
 
 	device->EventBegin("Editor - Translator", cmd);
 
-	XMMATRIX VP = camera.GetViewProjection();
+	CameraComponent cam_tmp = camera;
+	cam_tmp.jitter = XMFLOAT2(0, 0); // remove temporal jitter
+	cam_tmp.UpdateCamera();
+	XMMATRIX VP = cam_tmp.GetViewProjection();
 
 	MiscCB sb;
 

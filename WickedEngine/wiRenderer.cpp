@@ -5906,6 +5906,7 @@ void DrawDebugWorld(
 			ShaderMeshInstancePointer poi;
 			poi.init();
 			poi.instanceIndex = (uint)scene.objects.GetIndex(x.objectEntity);
+			std::memcpy(mem.data, &poi, sizeof(poi));
 
 			device->BindIndexBuffer(&mesh.generalBuffer, mesh.GetIndexFormat(), mesh.ib.offset, cmd);
 

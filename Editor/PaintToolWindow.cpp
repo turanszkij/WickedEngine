@@ -477,39 +477,46 @@ void PaintToolWindow::Update(float dt)
 
 		if (wireframe)
 		{
-			for (size_t j = 0; j < mesh->indices.size(); j += 3)
+			uint32_t first_subset = 0;
+			uint32_t last_subset = 0;
+			mesh->GetLODSubsetRange(0, first_subset, last_subset);
+			for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
 			{
-				const uint32_t triangle[] = {
-					mesh->indices[j + 0],
-					mesh->indices[j + 1],
-					mesh->indices[j + 2],
-				};
-				if (subset >= 0 && (mesh->vertex_subsets[triangle[0]] != subset|| mesh->vertex_subsets[triangle[1]] != subset|| mesh->vertex_subsets[triangle[2]] != subset))
-					continue;
-
-				const XMVECTOR P[arraysize(triangle)] = {
-					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[0]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[0]), W),
-					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[1]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[1]), W),
-					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[2]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[2]), W),
-				};
-
-				wi::renderer::RenderableTriangle tri;
-				XMStoreFloat3(&tri.positionA, P[0]);
-				XMStoreFloat3(&tri.positionB, P[1]);
-				XMStoreFloat3(&tri.positionC, P[2]);
-				if (mode == MODE_WIND)
+				const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
+				for (size_t j = 0; j < subset.indexCount; j += 3)
 				{
-					tri.colorA = wi::Color(mesh->vertex_windweights[triangle[0]], 0, 0, 255);
-					tri.colorB = wi::Color(mesh->vertex_windweights[triangle[1]], 0, 0, 255);
-					tri.colorC = wi::Color(mesh->vertex_windweights[triangle[2]], 0, 0, 255);
+					const uint32_t triangle[] = {
+						mesh->indices[j + 0],
+						mesh->indices[j + 1],
+						mesh->indices[j + 2],
+					};
+					if (this->subset >= 0 && (mesh->vertex_subsets[triangle[0]] != this->subset || mesh->vertex_subsets[triangle[1]] != this->subset || mesh->vertex_subsets[triangle[2]] != this->subset))
+						continue;
+
+					const XMVECTOR P[arraysize(triangle)] = {
+						XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[0]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[0]), W),
+						XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[1]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[1]), W),
+						XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[2]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[2]), W),
+					};
+
+					wi::renderer::RenderableTriangle tri;
+					XMStoreFloat3(&tri.positionA, P[0]);
+					XMStoreFloat3(&tri.positionB, P[1]);
+					XMStoreFloat3(&tri.positionC, P[2]);
+					if (mode == MODE_WIND)
+					{
+						tri.colorA = wi::Color(mesh->vertex_windweights[triangle[0]], 0, 0, 255);
+						tri.colorB = wi::Color(mesh->vertex_windweights[triangle[1]], 0, 0, 255);
+						tri.colorC = wi::Color(mesh->vertex_windweights[triangle[2]], 0, 0, 255);
+					}
+					else
+					{
+						tri.colorA.w = 0.8f;
+						tri.colorB.w = 0.8f;
+						tri.colorC.w = 0.8f;
+					}
+					wi::renderer::DrawTriangle(tri, true);
 				}
-				else
-				{
-					tri.colorA.w = 0.8f;
-					tri.colorB.w = 0.8f;
-					tri.colorC.w = 0.8f;
-				}
-				wi::renderer::DrawTriangle(tri, true);
 			}
 		}
 
@@ -607,39 +614,46 @@ void PaintToolWindow::Update(float dt)
 
 		if (wireframe)
 		{
-			for (size_t j = 0; j < mesh->indices.size(); j += 3)
+			uint32_t first_subset = 0;
+			uint32_t last_subset = 0;
+			mesh->GetLODSubsetRange(0, first_subset, last_subset);
+			for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
 			{
-				const uint32_t triangle[] = {
-					mesh->indices[j + 0],
-					mesh->indices[j + 1],
-					mesh->indices[j + 2],
-				};
-				const XMVECTOR P[arraysize(triangle)] = {
-					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[0]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[0]), W),
-					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[1]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[1]), W),
-					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[2]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[2]), W),
-				};
+				const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
+				for (size_t j = 0; j < subset.indexCount; j += 3)
+				{
+					const uint32_t triangle[] = {
+						mesh->indices[j + 0],
+						mesh->indices[j + 1],
+						mesh->indices[j + 2],
+					};
+					const XMVECTOR P[arraysize(triangle)] = {
+						XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[0]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[0]), W),
+						XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[1]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[1]), W),
+						XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[2]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[2]), W),
+					};
 
-				wi::renderer::RenderableTriangle tri;
-				XMStoreFloat3(&tri.positionA, P[0]);
-				XMStoreFloat3(&tri.positionB, P[1]);
-				XMStoreFloat3(&tri.positionC, P[2]);
-				tri.colorA.w = 0.8f;
-				tri.colorB.w = 0.8f;
-				tri.colorC.w = 0.8f;
-				wi::renderer::DrawTriangle(tri, true);
+					wi::renderer::RenderableTriangle tri;
+					XMStoreFloat3(&tri.positionA, P[0]);
+					XMStoreFloat3(&tri.positionB, P[1]);
+					XMStoreFloat3(&tri.positionC, P[2]);
+					tri.colorA.w = 0.8f;
+					tri.colorB.w = 0.8f;
+					tri.colorC.w = 0.8f;
+					wi::renderer::DrawTriangle(tri, true);
+				}
+
+				wi::renderer::RenderableLine sculpt_dir_line;
+				sculpt_dir_line.color_start = XMFLOAT4(0, 1, 0, 1);
+				sculpt_dir_line.color_end = XMFLOAT4(0, 1, 0, 1);
+				sculpt_dir_line.start = editor->hovered.position;
+				XMStoreFloat3(
+					&sculpt_dir_line.end,
+					XMLoadFloat3(&sculpt_dir_line.start) +
+					XMVector3Normalize(XMLoadFloat3(&sculpting_normal))
+				);
+				wi::renderer::DrawLine(sculpt_dir_line);
 			}
-
-			wi::renderer::RenderableLine sculpt_dir_line;
-			sculpt_dir_line.color_start = XMFLOAT4(0, 1, 0, 1);
-			sculpt_dir_line.color_end = XMFLOAT4(0, 1, 0, 1);
-			sculpt_dir_line.start = editor->hovered.position;
-			XMStoreFloat3(
-				&sculpt_dir_line.end,
-				XMLoadFloat3(&sculpt_dir_line.start) +
-				XMVector3Normalize(XMLoadFloat3(&sculpting_normal))
-			);
-			wi::renderer::DrawLine(sculpt_dir_line);
 		}
 
 		if (rebuild)
@@ -687,50 +701,57 @@ void PaintToolWindow::Update(float dt)
 
 		// Visualizing:
 		const XMMATRIX W = XMLoadFloat4x4(&softbody->worldMatrix);
-		for (size_t j = 0; j < mesh->indices.size(); j += 3)
+		uint32_t first_subset = 0;
+		uint32_t last_subset = 0;
+		mesh->GetLODSubsetRange(0, first_subset, last_subset);
+		for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
 		{
-			const uint32_t graphicsIndex0 = mesh->indices[j + 0];
-			const uint32_t graphicsIndex1 = mesh->indices[j + 1];
-			const uint32_t graphicsIndex2 = mesh->indices[j + 2];
-			const uint32_t physicsIndex0 = softbody->graphicsToPhysicsVertexMapping[graphicsIndex0];
-			const uint32_t physicsIndex1 = softbody->graphicsToPhysicsVertexMapping[graphicsIndex1];
-			const uint32_t physicsIndex2 = softbody->graphicsToPhysicsVertexMapping[graphicsIndex2];
-			const float weight0 = softbody->weights[physicsIndex0];
-			const float weight1 = softbody->weights[physicsIndex1];
-			const float weight2 = softbody->weights[physicsIndex2];
-			wi::renderer::RenderableTriangle tri;
-			if (softbody->vertex_positions_simulation.empty())
+			const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
+			for (size_t j = 0; j < subset.indexCount; j += 3)
 			{
-				XMStoreFloat3(&tri.positionA, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[graphicsIndex0]), W));
-				XMStoreFloat3(&tri.positionB, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[graphicsIndex1]), W));
-				XMStoreFloat3(&tri.positionC, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[graphicsIndex2]), W));
-			}
-			else
-			{
-				tri.positionA = softbody->vertex_positions_simulation[graphicsIndex0].pos;
-				tri.positionB = softbody->vertex_positions_simulation[graphicsIndex1].pos;
-				tri.positionC = softbody->vertex_positions_simulation[graphicsIndex2].pos;
-			}
-			if (weight0 == 0)
-				tri.colorA = XMFLOAT4(1, 1, 0, 1);
-			else
-				tri.colorA = XMFLOAT4(1, 1, 1, 1);
-			if (weight1 == 0)
-				tri.colorB = XMFLOAT4(1, 1, 0, 1);
-			else
-				tri.colorB = XMFLOAT4(1, 1, 1, 1);
-			if (weight2 == 0)
-				tri.colorC = XMFLOAT4(1, 1, 0, 1);
-			else
-				tri.colorC = XMFLOAT4(1, 1, 1, 1);
-			if (wireframe)
-			{
-				wi::renderer::DrawTriangle(tri, true);
-			}
-			if (weight0 == 0 && weight1 == 0 && weight2 == 0)
-			{
-				tri.colorA = tri.colorB = tri.colorC = XMFLOAT4(1, 0, 0, 0.8f);
-				wi::renderer::DrawTriangle(tri);
+				const uint32_t graphicsIndex0 = mesh->indices[j + 0];
+				const uint32_t graphicsIndex1 = mesh->indices[j + 1];
+				const uint32_t graphicsIndex2 = mesh->indices[j + 2];
+				const uint32_t physicsIndex0 = softbody->graphicsToPhysicsVertexMapping[graphicsIndex0];
+				const uint32_t physicsIndex1 = softbody->graphicsToPhysicsVertexMapping[graphicsIndex1];
+				const uint32_t physicsIndex2 = softbody->graphicsToPhysicsVertexMapping[graphicsIndex2];
+				const float weight0 = softbody->weights[physicsIndex0];
+				const float weight1 = softbody->weights[physicsIndex1];
+				const float weight2 = softbody->weights[physicsIndex2];
+				wi::renderer::RenderableTriangle tri;
+				if (softbody->vertex_positions_simulation.empty())
+				{
+					XMStoreFloat3(&tri.positionA, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[graphicsIndex0]), W));
+					XMStoreFloat3(&tri.positionB, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[graphicsIndex1]), W));
+					XMStoreFloat3(&tri.positionC, XMVector3Transform(XMLoadFloat3(&mesh->vertex_positions[graphicsIndex2]), W));
+				}
+				else
+				{
+					tri.positionA = softbody->vertex_positions_simulation[graphicsIndex0].pos;
+					tri.positionB = softbody->vertex_positions_simulation[graphicsIndex1].pos;
+					tri.positionC = softbody->vertex_positions_simulation[graphicsIndex2].pos;
+				}
+				if (weight0 == 0)
+					tri.colorA = XMFLOAT4(1, 1, 0, 1);
+				else
+					tri.colorA = XMFLOAT4(1, 1, 1, 1);
+				if (weight1 == 0)
+					tri.colorB = XMFLOAT4(1, 1, 0, 1);
+				else
+					tri.colorB = XMFLOAT4(1, 1, 1, 1);
+				if (weight2 == 0)
+					tri.colorC = XMFLOAT4(1, 1, 0, 1);
+				else
+					tri.colorC = XMFLOAT4(1, 1, 1, 1);
+				if (wireframe)
+				{
+					wi::renderer::DrawTriangle(tri, true);
+				}
+				if (weight0 == 0 && weight1 == 0 && weight2 == 0)
+				{
+					tri.colorA = tri.colorB = tri.colorC = XMFLOAT4(1, 0, 0, 0.8f);
+					wi::renderer::DrawTriangle(tri);
+				}
 			}
 		}
 	}
@@ -811,24 +832,31 @@ void PaintToolWindow::Update(float dt)
 
 		if (wireframe)
 		{
-			for (size_t j = 0; j < mesh->indices.size(); j += 3)
+			uint32_t first_subset = 0;
+			uint32_t last_subset = 0;
+			mesh->GetLODSubsetRange(0, first_subset, last_subset);
+			for (uint32_t subsetIndex = first_subset; subsetIndex < last_subset; ++subsetIndex)
 			{
-				const uint32_t triangle[] = {
-					mesh->indices[j + 0],
-					mesh->indices[j + 1],
-					mesh->indices[j + 2],
-				};
-				const XMVECTOR P[arraysize(triangle)] = {
-					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[0]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[0]), W),
-					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[1]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[1]), W),
-					XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[2]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[2]), W),
-				};
+				const MeshComponent::MeshSubset& subset = mesh->subsets[subsetIndex];
+				for (size_t j = 0; j < subset.indexCount; j += 3)
+				{
+					const uint32_t triangle[] = {
+						mesh->indices[j + 0],
+						mesh->indices[j + 1],
+						mesh->indices[j + 2],
+					};
+					const XMVECTOR P[arraysize(triangle)] = {
+						XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[0]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[0]), W),
+						XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[1]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[1]), W),
+						XMVector3Transform(armature == nullptr ? XMLoadFloat3(&mesh->vertex_positions[triangle[2]]) : wi::scene::SkinVertex(*mesh, *armature, triangle[2]), W),
+					};
 
-				wi::renderer::RenderableTriangle tri;
-				XMStoreFloat3(&tri.positionA, P[0]);
-				XMStoreFloat3(&tri.positionB, P[1]);
-				XMStoreFloat3(&tri.positionC, P[2]);
-				wi::renderer::DrawTriangle(tri, true);
+					wi::renderer::RenderableTriangle tri;
+					XMStoreFloat3(&tri.positionA, P[0]);
+					XMStoreFloat3(&tri.positionB, P[1]);
+					XMStoreFloat3(&tri.positionC, P[2]);
+					wi::renderer::DrawTriangle(tri, true);
+				}
 			}
 
 			for (size_t j = 0; j < hair->indices.size() && wireframe; j += 3)
