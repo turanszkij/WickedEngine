@@ -5,6 +5,7 @@
 
 using namespace wi::ecs;
 using namespace wi::scene;
+using namespace wi::graphics;
 
 enum PRESET
 {
@@ -457,60 +458,11 @@ void TerrainGenerator::Generation_Restart()
 	Generation_Cancel();
 	generation_scene.Clear();
 
-	// If these already exist, save them before recreating:
-	//	(This is helpful if eg: someone edits them in the editor and then regenerates the terrain)
-	if (materialEntity_Base != INVALID_ENTITY)
-	{
-		MaterialComponent* material = scene->materials.GetComponent(materialEntity_Base);
-		if (material != nullptr)
-		{
-			material_Base = *material;
-		}
-	}
-	if (materialEntity_Slope != INVALID_ENTITY)
-	{
-		MaterialComponent* material = scene->materials.GetComponent(materialEntity_Slope);
-		if (material != nullptr)
-		{
-			material_Slope = *material;
-		}
-	}
-	if (materialEntity_LowAltitude != INVALID_ENTITY)
-	{
-		MaterialComponent* material = scene->materials.GetComponent(materialEntity_LowAltitude);
-		if (material != nullptr)
-		{
-			material_LowAltitude = *material;
-		}
-	}
-	if (materialEntity_HighAltitude != INVALID_ENTITY)
-	{
-		MaterialComponent* material = scene->materials.GetComponent(materialEntity_HighAltitude);
-		if (material != nullptr)
-		{
-			material_HighAltitude = *material;
-		}
-	}
-
 	chunks.clear();
 
 	scene->Entity_Remove(terrainEntity);
 	scene->transforms.Create(terrainEntity);
 	scene->names.Create(terrainEntity) = "terrain";
-
-	materialEntity_Base = scene->Entity_CreateMaterial("terrainMaterial_Base");
-	materialEntity_Slope = scene->Entity_CreateMaterial("terrainMaterial_Slope");
-	materialEntity_LowAltitude = scene->Entity_CreateMaterial("terrainMaterial_LowAltitude");
-	materialEntity_HighAltitude = scene->Entity_CreateMaterial("terrainMaterial_HighAltitude");
-	scene->Component_Attach(materialEntity_Base, terrainEntity);
-	scene->Component_Attach(materialEntity_Slope, terrainEntity);
-	scene->Component_Attach(materialEntity_LowAltitude, terrainEntity);
-	scene->Component_Attach(materialEntity_HighAltitude, terrainEntity);
-	// init/restore materials:
-	*scene->materials.GetComponent(materialEntity_Base) = material_Base;
-	*scene->materials.GetComponent(materialEntity_Slope) = material_Slope;
-	*scene->materials.GetComponent(materialEntity_LowAltitude) = material_LowAltitude;
-	*scene->materials.GetComponent(materialEntity_HighAltitude) = material_HighAltitude;
 
 	const uint32_t seed = (uint32_t)seedSlider.GetValue();
 	perlin.init(seed);
@@ -585,15 +537,27 @@ void TerrainGenerator::Generation_Update()
 		center_chunk.z = (int)std::floor((camera.Eye.z + chunk_half_width) * chunk_width_rcp);
 	}
 
-	// Chunk removal checks:
-	if (removalCheckBox.GetCheck())
+	const int removal_threshold = (int)generationSlider.GetValue() + 2;
+	GraphicsDevice* device = GetDevice();
+	CommandList cmd;
+
+	uint32_t max_texture_resolution = 0;
+	Texture* base_texture = (Texture*)material_Base.textures[MaterialComponent::BASECOLORMAP].GetGPUResource();
+	if (base_texture != nullptr)
 	{
-		const int removal_threshold = (int)generationSlider.GetValue() + 2;
-		for (auto it = chunks.begin(); it != chunks.end();)
+		max_texture_resolution = std::max(max_texture_resolution, base_texture->GetDesc().width);
+		max_texture_resolution = std::max(max_texture_resolution, base_texture->GetDesc().height);
+	}
+
+	for (auto it = chunks.begin(); it != chunks.end();)
+	{
+		const Chunk& chunk = it->first;
+		ChunkData& chunk_data = it->second;
+		const int dist = std::max(std::abs(center_chunk.x - chunk.x), std::abs(center_chunk.z - chunk.z));
+
+		// chunk removal:
+		if (removalCheckBox.GetCheck())
 		{
-			const Chunk& chunk = it->first;
-			ChunkData& chunk_data = it->second;
-			const int dist = std::max(std::abs(center_chunk.x - chunk.x), std::abs(center_chunk.z - chunk.z));
 			if (dist > removal_threshold)
 			{
 				scene->Entity_Remove(it->second.entity);
@@ -607,18 +571,69 @@ void TerrainGenerator::Generation_Update()
 				{
 					if (dist > 1)
 					{
-						wi::HairParticleSystem* grass = scene->hairs.GetComponent(chunk_data.entity);
-						if (grass != nullptr)
-						{
-							// remove this chunk's grass patch from the scene
-							scene->hairs.Remove(chunk_data.entity);
-							chunk_data.grass_exists = false; // grass can be generated here by generation thread...
-						}
+						scene->Entity_Remove(chunk_data.grass_entity);
+						chunk_data.grass_exists = false; // grass can be generated here by generation thread...
 					}
 				}
 			}
-			it++;
 		}
+
+		// Virtual texture update:
+		uint32_t chunk_required_texture_resolution = std::max(16u, uint32_t(max_texture_resolution / std::pow(2.0f, (float)dist)));
+		if (chunk_data.texture.GetDesc().width != chunk_required_texture_resolution)
+		{
+			TextureDesc desc;
+			desc.width = chunk_required_texture_resolution;
+			desc.height = chunk_required_texture_resolution;
+			desc.format = Format::R8G8B8A8_UNORM;
+			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+			bool success = device->CreateTexture(&desc, nullptr, &chunk_data.texture);
+			assert(success);
+
+			if (!cmd.IsValid())
+			{
+				cmd = device->BeginCommandList();
+				device->EventBegin("TerrainVirtualTextureUpdate", cmd);
+				device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE), cmd);
+
+				ShaderMaterial materials[4];
+				material_Base.WriteShaderMaterial(&materials[0]);
+				material_Slope.WriteShaderMaterial(&materials[1]);
+				material_LowAltitude.WriteShaderMaterial(&materials[2]);
+				material_HighAltitude.WriteShaderMaterial(&materials[3]);
+				device->BindDynamicConstantBuffer(materials, 10, cmd);
+			}
+
+			const GPUResource* res[] = {
+				&chunk_data.region_weights_texture,
+			};
+			device->BindResources(res, 0, arraysize(res), cmd);
+
+			const GPUResource* uavs[] = {
+				&chunk_data.texture,
+			};
+			device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+
+			device->Dispatch(
+				chunk_data.texture.GetDesc().width / 8u,
+				chunk_data.texture.GetDesc().height / 8u,
+				1,
+				cmd
+			);
+
+			MaterialComponent* material = scene->materials.GetComponent(chunk_data.entity);
+			if (material != nullptr)
+			{
+				material->textures[MaterialComponent::BASECOLORMAP].resource.SetTexture(chunk_data.texture);
+			}
+		}
+
+		it++;
+	}
+
+	if (cmd.IsValid())
+	{
+		device->EventEnd(cmd);
 	}
 
 	// Start the generation on a background thread and keep it running until the next frame
@@ -667,24 +682,21 @@ void TerrainGenerator::Generation_Update()
 				transform.Translate(chunk_pos);
 				transform.UpdateTransform();
 
+				MaterialComponent& material = generation_scene.materials.Create(chunk_data.entity);
+
 				MeshComponent& mesh = generation_scene.meshes.Create(chunk_data.entity);
 				object.meshID = chunk_data.entity;
 				mesh.indices = indices;
-				mesh.SetTerrain(true);
-				mesh.terrain_material1 = materialEntity_Slope;
-				mesh.terrain_material2 = materialEntity_LowAltitude;
-				mesh.terrain_material3 = materialEntity_HighAltitude;
 				for (auto& lod : lods)
 				{
 					mesh.subsets.emplace_back();
-					mesh.subsets.back().materialID = materialEntity_Base;
+					mesh.subsets.back().materialID = chunk_data.entity;
 					mesh.subsets.back().indexCount = lod.indexCount;
 					mesh.subsets.back().indexOffset = lod.indexOffset;
 				}
 				mesh.subsets_per_lod = 1;
 				mesh.vertex_positions.resize(vertexCount);
 				mesh.vertex_normals.resize(vertexCount);
-				mesh.vertex_colors.resize(vertexCount);
 				mesh.vertex_uvset_0.resize(vertexCount);
 
 				wi::HairParticleSystem grass = grass_properties;
@@ -763,9 +775,10 @@ void TerrainGenerator::Generation_Update()
 					materialBlendWeights.z *= weight_norm;
 					materialBlendWeights.w *= weight_norm;
 
+					chunk_data.region_weights[index] = wi::Color::fromFloat4(materialBlendWeights);
+
 					mesh.vertex_positions[index] = XMFLOAT3(x, height, z);
 					mesh.vertex_normals[index] = normal;
-					mesh.vertex_colors[index] = wi::Color::fromFloat4(materialBlendWeights);
 					const XMFLOAT2 uv = XMFLOAT2(x * chunk_width_rcp + 0.5f, z * chunk_width_rcp + 0.5f);
 					mesh.vertex_uvset_0[index] = uv;
 
@@ -793,11 +806,11 @@ void TerrainGenerator::Generation_Update()
 				// If there were any vertices in this chunk that could be valid for grass, store the grass particle system:
 				if (grass_valid_vertex_count.load() > 0)
 				{
+					chunk_data.grass_entity = CreateEntity();
 					chunk_data.grass = std::move(grass); // the grass will be added to the scene later, only when the chunk is close to the camera (center chunk's neighbors)
 					chunk_data.grass.meshID = chunk_data.entity;
 					chunk_data.grass.strandCount = grass_valid_vertex_count.load() * 3;
 					chunk_data.grass.viewDistance = chunk_width;
-					generation_scene.materials.Create(chunk_data.entity) = material_GrassParticle;
 				}
 
 				// Prop placement:
@@ -817,12 +830,9 @@ void TerrainGenerator::Generation_Update()
 						const XMFLOAT3& pos0 = mesh.vertex_positions[ind0];
 						const XMFLOAT3& pos1 = mesh.vertex_positions[ind1];
 						const XMFLOAT3& pos2 = mesh.vertex_positions[ind2];
-						const uint32_t& col0 = mesh.vertex_colors[ind0];
-						const uint32_t& col1 = mesh.vertex_colors[ind1];
-						const uint32_t& col2 = mesh.vertex_colors[ind2];
-						const XMFLOAT4 region0 = wi::Color(col0).toFloat4();
-						const XMFLOAT4 region1 = wi::Color(col1).toFloat4();
-						const XMFLOAT4 region2 = wi::Color(col2).toFloat4();
+						const XMFLOAT4 region0 = chunk_data.region_weights[ind0];
+						const XMFLOAT4 region1 = chunk_data.region_weights[ind1];
+						const XMFLOAT4 region2 = chunk_data.region_weights[ind2];
 						// random barycentric coords on the triangle:
 						float f = float_distr(chunk_data.prop_rand);
 						float g = float_distr(chunk_data.prop_rand);
@@ -863,6 +873,20 @@ void TerrainGenerator::Generation_Update()
 					}
 				}
 
+				// Create the blend weights texture for virtual texture update:
+				{
+					TextureDesc desc;
+					desc.width = (uint32_t)chunk_width;
+					desc.height = (uint32_t)chunk_width;
+					desc.format = Format::R8G8B8A8_UNORM;
+					desc.bind_flags = BindFlag::SHADER_RESOURCE;
+					SubresourceData data;
+					data.data_ptr = chunk_data.region_weights;
+					data.row_pitch = chunk_width * sizeof(chunk_data.region_weights[0]);
+					bool success = device->CreateTexture(&desc, &data, &chunk_data.region_weights_texture);
+					assert(success);
+				}
+
 				wi::jobsystem::Wait(ctx); // wait until mesh.CreateRenderData() async task finishes
 				generated_something = true;
 			}
@@ -880,13 +904,12 @@ void TerrainGenerator::Generation_Update()
 						if (!chunk_data.grass_exists)
 						{
 							// add patch for this chunk
-							wi::HairParticleSystem& grass = generation_scene.hairs.Create(chunk_data.entity);
+							wi::HairParticleSystem& grass = generation_scene.hairs.Create(chunk_data.grass_entity);
 							grass = chunk_data.grass;
-							const MeshComponent* mesh = generation_scene.meshes.GetComponent(chunk_data.entity);
-							if (mesh != nullptr)
-							{
-								grass.CreateRenderData(*mesh);
-							}
+							generation_scene.materials.Create(chunk_data.grass_entity) = material_GrassParticle;
+							generation_scene.transforms.Create(chunk_data.grass_entity);
+							generation_scene.names.Create(chunk_data.grass_entity) = "grass";
+							generation_scene.Component_Attach(chunk_data.grass_entity, chunk_data.entity, true);
 							chunk_data.grass_exists = true; // don't generate more grass here
 							generated_something = true;
 						}

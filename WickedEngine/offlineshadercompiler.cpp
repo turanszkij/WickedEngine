@@ -246,6 +246,7 @@ int main(int argc, char* argv[])
 		"ddgi_raytraceCS_rtapi.hlsl",
 		"ddgi_updateCS.hlsl",
 		"ddgi_updateCS_depth.hlsl",
+		"terrainVirtualTextureUpdateCS.hlsl",
 	};
 
 	shaders[static_cast<size_t>(ShaderStage::PS)] = {

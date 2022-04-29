@@ -374,7 +374,6 @@ void EditorComponent::Load()
 		if (terragen.terrainEntity == INVALID_ENTITY)
 		{
 			// Customize terrain generator before it's initialized:
-			terragen.material_Base.SetUseVertexColors(true);
 			terragen.material_Base.SetRoughness(1);
 			terragen.material_Slope.SetRoughness(0.5f);
 			terragen.material_LowAltitude.SetRoughness(1);
