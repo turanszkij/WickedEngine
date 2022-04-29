@@ -749,6 +749,7 @@ void EditorComponent::Load()
 					wi::resourcemanager::Mode embed_mode = (wi::resourcemanager::Mode)saveModeComboBox.GetItemUserData(saveModeComboBox.GetSelected());
 					wi::resourcemanager::SetMode(embed_mode);
 
+					terragen.BakeVirtualTexturesToFiles();
 					scene.Serialize(archive);
 
 					if (dump_to_header)

@@ -12,7 +12,7 @@ ConstantBuffer<Terrain> terrain : register(b10);
 RWTexture2D<unorm float4> output_baseColor : register(u0);
 
 [numthreads(8, 8, 1)]
-void main( uint3 DTid : SV_DispatchThreadID )
+void main(uint3 DTid : SV_DispatchThreadID)
 {
 	float2 dim = 0;
 	output_baseColor.GetDimensions(dim.x, dim.y);

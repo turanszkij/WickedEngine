@@ -133,5 +133,7 @@ struct TerrainGenerator : public wi::gui::Window
 	void Generation_Update();
 	// Tells the generation thread that it should be cancelled and blocks until that is confirmed
 	void Generation_Cancel();
+	// The virtual textures will be compressed and saved into resources. They can be serialized from there
+	void BakeVirtualTexturesToFiles();
 
 };

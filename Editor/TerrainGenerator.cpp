@@ -970,3 +970,55 @@ void TerrainGenerator::Generation_Cancel()
 	wi::jobsystem::Wait(generation_workload); // waits until generation thread exits
 	generation_cancelled.store(false); // the next generation can run
 }
+
+void TerrainGenerator::BakeVirtualTexturesToFiles()
+{
+	if (terrainEntity == INVALID_ENTITY)
+	{
+		return;
+	}
+
+	wi::jobsystem::context ctx;
+
+	for (auto it = chunks.begin(); it != chunks.end(); it++)
+	{
+		const Chunk& chunk = it->first;
+		ChunkData& chunk_data = it->second;
+		MaterialComponent* material = scene->materials.GetComponent(chunk_data.entity);
+		if (material != nullptr)
+		{
+			for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
+			{
+				auto& tex = material->textures[i];
+				switch (i)
+				{
+				case MaterialComponent::BASECOLORMAP:
+					if (tex.name.empty() && tex.GetGPUResource() != nullptr)
+					{
+						wi::vector<uint8_t> filedata;
+						if (wi::helper::saveTextureToMemory(tex.resource.GetTexture(), filedata))
+						{
+							tex.resource.SetFileData(std::move(filedata));
+							wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
+								wi::vector<uint8_t> filedata_ktx2;
+								if (wi::helper::saveTextureToMemoryFile(tex.resource.GetFileData(), tex.resource.GetTexture().desc, "KTX2", filedata_ktx2))
+								{
+									tex.name = "chunk_" + std::to_string(chunk.x) + "_" + std::to_string(chunk.z) + "_basecolormap.KTX2";
+									tex.resource = wi::resourcemanager::Load(tex.name, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA, filedata_ktx2.data(), filedata_ktx2.size());
+									material->CreateRenderData();
+								}
+								});
+						}
+					}
+					break;
+				default:
+					break;
+				}
+			}
+		}
+	}
+
+	wi::helper::messageBox("Baking terrain virtual textures, this could take a while!", "Attention!");
+
+	wi::jobsystem::Wait(ctx);
+}
