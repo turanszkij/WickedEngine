@@ -258,6 +258,9 @@ add_executable(offlineshadercompiler
 target_link_libraries(offlineshadercompiler
 		PUBLIC ${TARGET_NAME})
 
+install(TARGETS offlineshadercompiler
+		RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}/WickedEngine)
+
 #### LOCAL FOLDER INSTALLATION
 # Create importable target here
 
@@ -268,6 +271,7 @@ set_target_properties("${TARGET_NAME}" PROPERTIES EXPORT_NAME "${TARGET_NAME}")
 install(TARGETS "${TARGET_NAME}" ${WICKEDENGINE_STATIC_LIBRARIES}
 		EXPORT Engine-Targets
 		LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+		ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}/WickedEngine"
 		PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine")
 
 install(FILES ${LIBDXCOMPILER}
