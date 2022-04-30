@@ -406,7 +406,7 @@ struct Surface
 			float4 baseColorMap = tex.SampleLevel(sam, UV_baseColorMap, lod);
 			if ((GetFrame().options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 			{
-				baseColorMap.rgb *= DEGAMMA(baseColorMap.rgb);
+				baseColorMap.rgb = DEGAMMA(baseColorMap.rgb);
 				baseColor *= baseColorMap;
 			}
 			else
