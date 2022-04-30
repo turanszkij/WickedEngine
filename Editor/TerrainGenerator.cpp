@@ -579,15 +579,21 @@ void TerrainGenerator::Generation_Update()
 		}
 
 		// Virtual texture update:
-		uint32_t chunk_required_texture_resolution = std::max(16u, uint32_t(max_texture_resolution / std::pow(2.0f, (float)dist)));
-		if (chunk_data.texture.GetDesc().width != chunk_required_texture_resolution)
+		uint32_t chunk_required_texture_resolution = uint32_t(max_texture_resolution / std::pow(2.0f, (float)std::max(0, dist - 1)));
+		chunk_required_texture_resolution = std::max(16u, chunk_required_texture_resolution);
+		if (chunk_data.texture_baseColorMap.GetDesc().width != chunk_required_texture_resolution)
 		{
 			TextureDesc desc;
 			desc.width = chunk_required_texture_resolution;
 			desc.height = chunk_required_texture_resolution;
 			desc.format = Format::R8G8B8A8_UNORM;
 			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-			bool success = device->CreateTexture(&desc, nullptr, &chunk_data.texture);
+			bool success = device->CreateTexture(&desc, nullptr, &chunk_data.texture_baseColorMap);
+			assert(success);
+			success = device->CreateTexture(&desc, nullptr, &chunk_data.texture_surfaceMap);
+			assert(success);
+			//desc.format = Format::R8G8_UNORM;
+			success = device->CreateTexture(&desc, nullptr, &chunk_data.texture_normalMap);
 			assert(success);
 
 			if (!cmd.IsValid())
@@ -610,21 +616,20 @@ void TerrainGenerator::Generation_Update()
 			device->BindResources(res, 0, arraysize(res), cmd);
 
 			const GPUResource* uavs[] = {
-				&chunk_data.texture,
+				&chunk_data.texture_baseColorMap,
+				&chunk_data.texture_surfaceMap,
+				&chunk_data.texture_normalMap,
 			};
 			device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
-			device->Dispatch(
-				chunk_data.texture.GetDesc().width / 8u,
-				chunk_data.texture.GetDesc().height / 8u,
-				1,
-				cmd
-			);
+			device->Dispatch(desc.width / 8u, desc.height / 8u, 1, cmd);
 
 			MaterialComponent* material = scene->materials.GetComponent(chunk_data.entity);
 			if (material != nullptr)
 			{
-				material->textures[MaterialComponent::BASECOLORMAP].resource.SetTexture(chunk_data.texture);
+				material->textures[MaterialComponent::BASECOLORMAP].resource.SetTexture(chunk_data.texture_baseColorMap);
+				material->textures[MaterialComponent::SURFACEMAP].resource.SetTexture(chunk_data.texture_surfaceMap);
+				material->textures[MaterialComponent::NORMALMAP].resource.SetTexture(chunk_data.texture_normalMap);
 			}
 		}
 
@@ -683,6 +688,11 @@ void TerrainGenerator::Generation_Update()
 				transform.UpdateTransform();
 
 				MaterialComponent& material = generation_scene.materials.Create(chunk_data.entity);
+				// material params will be 1 because they will be created from only texture maps
+				//	because region materials are blended together into one texture
+				material.SetRoughness(1);
+				material.SetMetalness(1);
+				material.SetReflectance(1);
 
 				MeshComponent& mesh = generation_scene.meshes.Create(chunk_data.entity);
 				object.meshID = chunk_data.entity;
@@ -993,19 +1003,35 @@ void TerrainGenerator::BakeVirtualTexturesToFiles()
 				switch (i)
 				{
 				case MaterialComponent::BASECOLORMAP:
+				case MaterialComponent::SURFACEMAP:
+				case MaterialComponent::NORMALMAP:
 					if (tex.name.empty() && tex.GetGPUResource() != nullptr)
 					{
 						wi::vector<uint8_t> filedata;
 						if (wi::helper::saveTextureToMemory(tex.resource.GetTexture(), filedata))
 						{
 							tex.resource.SetFileData(std::move(filedata));
-							wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
+							wi::jobsystem::Execute(ctx, [i, &tex, chunk](wi::jobsystem::JobArgs args) {
 								wi::vector<uint8_t> filedata_ktx2;
 								if (wi::helper::saveTextureToMemoryFile(tex.resource.GetFileData(), tex.resource.GetTexture().desc, "KTX2", filedata_ktx2))
 								{
-									tex.name = "chunk_" + std::to_string(chunk.x) + "_" + std::to_string(chunk.z) + "_basecolormap.KTX2";
+									tex.name = std::to_string(chunk.x) + "_" + std::to_string(chunk.z);
+									switch (i)
+									{
+									case MaterialComponent::BASECOLORMAP:
+										tex.name += "_basecolormap";
+										break;
+									case MaterialComponent::SURFACEMAP:
+										tex.name += "_surfacemap";
+										break;
+									case MaterialComponent::NORMALMAP:
+										tex.name += "_normalmap";
+										break;
+									default:
+										break;
+									}
+									tex.name += ".KTX2";
 									tex.resource = wi::resourcemanager::Load(tex.name, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA, filedata_ktx2.data(), filedata_ktx2.size());
-									material->CreateRenderData();
 								}
 								});
 						}
@@ -1021,4 +1047,15 @@ void TerrainGenerator::BakeVirtualTexturesToFiles()
 	wi::helper::messageBox("Baking terrain virtual textures, this could take a while!", "Attention!");
 
 	wi::jobsystem::Wait(ctx);
+
+	for (auto it = chunks.begin(); it != chunks.end(); it++)
+	{
+		const Chunk& chunk = it->first;
+		ChunkData& chunk_data = it->second;
+		MaterialComponent* material = scene->materials.GetComponent(chunk_data.entity);
+		if (material != nullptr)
+		{
+			material->CreateRenderData();
+		}
+	}
 }
