@@ -162,7 +162,7 @@ void TerrainGenerator::init()
 	ClearTransform();
 
 	wi::gui::Window::Create("TerraGen (Preview version)");
-	SetSize(XMFLOAT2(410, 560));
+	SetSize(XMFLOAT2(410, 590));
 
 	float xx = 150;
 	float yy = 0;
@@ -183,7 +183,7 @@ void TerrainGenerator::init()
 	removalCheckBox.SetCheck(true);
 	AddWidget(&removalCheckBox);
 
-	lodSlider.Create(0.0001f, 0.01f, 0.005f, 10000, "LOD Distance: ");
+	lodSlider.Create(0.0001f, 0.01f, 0.005f, 10000, "Mesh LOD Distance: ");
 	lodSlider.SetTooltip("Set the LOD (Level Of Detail) distance multiplier.\nLow values increase LOD detail in distance");
 	lodSlider.SetSize(XMFLOAT2(200, heihei));
 	lodSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
@@ -202,6 +202,12 @@ void TerrainGenerator::init()
 		}
 		});
 	AddWidget(&lodSlider);
+
+	texlodSlider.Create(0.01f, 0.05f, 0.01f, 10000, "Texture LOD Distance: ");
+	texlodSlider.SetTooltip("Set the LOD (Level Of Detail) distance multiplier.\nLow values increase LOD detail in distance");
+	texlodSlider.SetSize(XMFLOAT2(200, heihei));
+	texlodSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	AddWidget(&texlodSlider);
 
 	generationSlider.Create(0, 16, 12, 16, "Generation Distance: ");
 	generationSlider.SetTooltip("How far out chunks will be generated (value is in number of chunks)");
@@ -516,7 +522,7 @@ void TerrainGenerator::Generation_Restart()
 	}
 }
 
-void TerrainGenerator::Generation_Update()
+void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camera)
 {
 	// The generation task is always cancelled every frame so we are sure that generation is not running at this point
 	Generation_Cancel();
@@ -532,7 +538,6 @@ void TerrainGenerator::Generation_Update()
 
 	if (centerToCamCheckBox.GetCheck())
 	{
-		const CameraComponent& camera = GetCamera();
 		center_chunk.x = (int)std::floor((camera.Eye.x + chunk_half_width) * chunk_width_rcp);
 		center_chunk.z = (int)std::floor((camera.Eye.z + chunk_half_width) * chunk_width_rcp);
 	}
@@ -540,6 +545,7 @@ void TerrainGenerator::Generation_Update()
 	const int removal_threshold = (int)generationSlider.GetValue() + 2;
 	GraphicsDevice* device = GetDevice();
 	CommandList cmd;
+	const float texlodMultiplier = texlodSlider.GetValue();
 
 	uint32_t max_texture_resolution = 0;
 	Texture* base_texture = (Texture*)material_Base.textures[MaterialComponent::BASECOLORMAP].GetGPUResource();
@@ -579,7 +585,22 @@ void TerrainGenerator::Generation_Update()
 		}
 
 		// Virtual texture update:
-		uint32_t chunk_required_texture_resolution = uint32_t(max_texture_resolution / std::pow(2.0f, (float)std::max(0, dist - 1)));
+		uint32_t texture_lod = 0;
+		const float distsq = wi::math::DistanceSquared(camera.Eye, chunk_data.sphere.center);
+		const float radius = chunk_data.sphere.radius;
+		const float radiussq = radius * radius;
+		if (distsq < radiussq)
+		{
+			texture_lod = 0;
+		}
+		else
+		{
+			const float dist = std::sqrt(distsq);
+			const float dist_to_sphere = dist - radius;
+			texture_lod = uint32_t(dist_to_sphere * texlodMultiplier);
+		}
+
+		uint32_t chunk_required_texture_resolution = uint32_t(max_texture_resolution / std::pow(2.0f, (float)std::max(0u, texture_lod)));
 		chunk_required_texture_resolution = std::max(16u, chunk_required_texture_resolution);
 		if (chunk_data.texture_baseColorMap.GetDesc().width != chunk_required_texture_resolution)
 		{
@@ -811,6 +832,8 @@ void TerrainGenerator::Generation_Update()
 
 				wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
 					mesh.CreateRenderData();
+					chunk_data.sphere.center = chunk_pos;
+					chunk_data.sphere.radius = mesh.aabb.getRadius();
 					});
 
 				// If there were any vertices in this chunk that could be valid for grass, store the grass particle system:

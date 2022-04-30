@@ -46,6 +46,7 @@ struct ChunkData
 	wi::graphics::Texture texture_baseColorMap;
 	wi::graphics::Texture texture_surfaceMap;
 	wi::graphics::Texture texture_normalMap;
+	wi::primitive::Sphere sphere;
 };
 
 struct TerrainGenerator : public wi::gui::Window
@@ -104,6 +105,7 @@ struct TerrainGenerator : public wi::gui::Window
 	wi::gui::CheckBox centerToCamCheckBox;
 	wi::gui::CheckBox removalCheckBox;
 	wi::gui::Slider lodSlider;
+	wi::gui::Slider texlodSlider;
 	wi::gui::Slider generationSlider;
 	wi::gui::ComboBox presetCombo;
 	wi::gui::Slider seedSlider;
@@ -132,7 +134,7 @@ struct TerrainGenerator : public wi::gui::Window
 	//	This will remove previously existing terrain
 	void Generation_Restart();
 	// This will run the actual generation tasks, call it once per frame
-	void Generation_Update();
+	void Generation_Update(const wi::scene::CameraComponent& camera);
 	// Tells the generation thread that it should be cancelled and blocks until that is confirmed
 	void Generation_Cancel();
 	// The virtual textures will be compressed and saved into resources. They can be serialized from there

@@ -1902,7 +1902,7 @@ void EditorComponent::Update(float dt)
 		pathTraceStatisticsLabel.SetText(ss);
 	}
 
-	terragen.Generation_Update();
+	terragen.Generation_Update(camera);
 
 	wi::profiler::EndRange(profrange);
 
