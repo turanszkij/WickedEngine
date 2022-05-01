@@ -651,6 +651,7 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 	{
 		CommandList cmd = device->BeginCommandList();
 		device->EventBegin("TerrainVirtualTextureUpdate", cmd);
+		auto range = wi::profiler::BeginRangeGPU("TerrainVirtualTextureUpdate", cmd);
 		device->Barrier(virtual_texture_barriers_begin.data(), (uint32_t)virtual_texture_barriers_begin.size(), cmd);
 
 		device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE), cmd);
@@ -686,6 +687,7 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 		}
 
 		device->Barrier(virtual_texture_barriers_end.data(), (uint32_t)virtual_texture_barriers_end.size(), cmd);
+		wi::profiler::EndRange(range);
 		device->EventEnd(cmd);
 	}
 
