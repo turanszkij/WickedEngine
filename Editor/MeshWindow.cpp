@@ -1,6 +1,6 @@
 #include "stdafx.h"
-#include "Editor.h"
 #include "MeshWindow.h"
+#include "Editor.h"
 
 #include "Utility/stb_image.h"
 
@@ -14,7 +14,7 @@ using namespace wi::scene;
 void MeshWindow::Create(EditorComponent* editor)
 {
 	wi::gui::Window::Create("Mesh Window");
-	SetSize(XMFLOAT2(580, 580));
+	SetSize(XMFLOAT2(580, 600));
 
 	float x = 150;
 	float y = 0;
@@ -28,7 +28,7 @@ void MeshWindow::Create(EditorComponent* editor)
 	AddWidget(&meshInfoLabel);
 
 	// Left side:
-	y = meshInfoLabel.GetScale().y + 10;
+	y = meshInfoLabel.GetScale().y + 5;
 
 	subsetComboBox.Create("Selected subset: ");
 	subsetComboBox.SetSize(XMFLOAT2(40, hei));
@@ -45,9 +45,15 @@ void MeshWindow::Create(EditorComponent* editor)
 				editor->translator.selected.back().subsetIndex = subset;
 			}
 		}
-	});
+		});
 	subsetComboBox.SetTooltip("Select a subset. A subset can also be selected by picking it in the 3D scene.");
 	AddWidget(&subsetComboBox);
+
+	terrainCheckBox.Create("Terrain: ");
+	terrainCheckBox.SetTooltip("If enabled, the mesh will use multiple materials and blend between them based on vertex colors.");
+	terrainCheckBox.SetSize(XMFLOAT2(hei, hei));
+	terrainCheckBox.SetPos(XMFLOAT2(x, y += step));
+	AddWidget(&terrainCheckBox);
 
 	doubleSidedCheckBox.Create("Double Sided: ");
 	doubleSidedCheckBox.SetTooltip("If enabled, the inside of the mesh will be visible.");
@@ -59,7 +65,7 @@ void MeshWindow::Create(EditorComponent* editor)
 		{
 			mesh->SetDoubleSided(args.bValue);
 		}
-	});
+		});
 	AddWidget(&doubleSidedCheckBox);
 
 	softbodyCheckBox.Create("Soft body: ");
@@ -89,7 +95,7 @@ void MeshWindow::Create(EditorComponent* editor)
 			}
 		}
 
-	});
+		});
 	AddWidget(&softbodyCheckBox);
 
 	massSlider.Create(0, 10, 1, 100000, "Mass: ");
@@ -102,7 +108,7 @@ void MeshWindow::Create(EditorComponent* editor)
 		{
 			physicscomponent->mass = args.fValue;
 		}
-	});
+		});
 	AddWidget(&massSlider);
 
 	frictionSlider.Create(0, 1, 0.5f, 100000, "Friction: ");
@@ -115,7 +121,7 @@ void MeshWindow::Create(EditorComponent* editor)
 		{
 			physicscomponent->friction = args.fValue;
 		}
-	});
+		});
 	AddWidget(&frictionSlider);
 
 	restitutionSlider.Create(0, 1, 0, 100000, "Restitution: ");
@@ -148,7 +154,7 @@ void MeshWindow::Create(EditorComponent* editor)
 			impostorCreateButton.SetText("Create Impostor");
 			scene.impostors.Remove(entity);
 		}
-	});
+		});
 	AddWidget(&impostorCreateButton);
 
 	impostorDistanceSlider.Create(0, 1000, 100, 10000, "Impostor Distance: ");
@@ -161,7 +167,7 @@ void MeshWindow::Create(EditorComponent* editor)
 		{
 			impostor->swapInDistance = args.fValue;
 		}
-	});
+		});
 	AddWidget(&impostorDistanceSlider);
 
 	tessellationFactorSlider.Create(0, 100, 0, 10000, "Tessellation Factor: ");
@@ -174,7 +180,7 @@ void MeshWindow::Create(EditorComponent* editor)
 		{
 			mesh->tessellationFactor = args.fValue;
 		}
-	});
+		});
 	AddWidget(&tessellationFactorSlider);
 
 	flipCullingButton.Create("Flip Culling");
@@ -188,7 +194,7 @@ void MeshWindow::Create(EditorComponent* editor)
 			mesh->FlipCulling();
 			SetEntity(entity, subset);
 		}
-	});
+		});
 	AddWidget(&flipCullingButton);
 
 	flipNormalsButton.Create("Flip Normals");
@@ -202,7 +208,7 @@ void MeshWindow::Create(EditorComponent* editor)
 			mesh->FlipNormals();
 			SetEntity(entity, subset);
 		}
-	});
+		});
 	AddWidget(&flipNormalsButton);
 
 	computeNormalsSmoothButton.Create("Compute Normals [SMOOTH]");
@@ -216,7 +222,7 @@ void MeshWindow::Create(EditorComponent* editor)
 			mesh->ComputeNormals(MeshComponent::COMPUTE_NORMALS_SMOOTH);
 			SetEntity(entity, subset);
 		}
-	});
+		});
 	AddWidget(&computeNormalsSmoothButton);
 
 	computeNormalsHardButton.Create("Compute Normals [HARD]");
@@ -230,7 +236,7 @@ void MeshWindow::Create(EditorComponent* editor)
 			mesh->ComputeNormals(MeshComponent::COMPUTE_NORMALS_HARD);
 			SetEntity(entity, subset);
 		}
-	});
+		});
 	AddWidget(&computeNormalsHardButton);
 
 	recenterButton.Create("Recenter");
@@ -244,7 +250,7 @@ void MeshWindow::Create(EditorComponent* editor)
 			mesh->Recenter();
 			SetEntity(entity, subset);
 		}
-	});
+		});
 	AddWidget(&recenterButton);
 
 	recenterToBottomButton.Create("RecenterToBottom");
@@ -258,7 +264,7 @@ void MeshWindow::Create(EditorComponent* editor)
 			mesh->RecenterToBottom();
 			SetEntity(entity, subset);
 		}
-	});
+		});
 	AddWidget(&recenterToBottomButton);
 
 	mergeButton.Create("Merge Selected");
@@ -439,8 +445,8 @@ void MeshWindow::Create(EditorComponent* editor)
 		{
 			scene.Entity_Remove(x);
 		}
-		
-	});
+
+		});
 	AddWidget(&mergeButton);
 
 	optimizeButton.Create("Optimize");
@@ -468,12 +474,10 @@ void MeshWindow::Create(EditorComponent* editor)
 	AddWidget(&optimizeButton);
 
 
-
-
-
 	// Right side:
+
 	x = 150;
-	y = meshInfoLabel.GetScale().y + 10;
+	y = meshInfoLabel.GetScale().y + 5;
 
 	subsetMaterialComboBox.Create("Subset Material: ");
 	subsetMaterialComboBox.SetSize(XMFLOAT2(200, hei));
@@ -499,6 +503,27 @@ void MeshWindow::Create(EditorComponent* editor)
 	subsetMaterialComboBox.SetTooltip("Set the base material of the selected MeshSubset");
 	AddWidget(&subsetMaterialComboBox);
 
+	terrainMat1Combo.Create("Terrain Material 1: ");
+	terrainMat1Combo.SetSize(XMFLOAT2(200, hei));
+	terrainMat1Combo.SetPos(XMFLOAT2(x + 180, y += step));
+	terrainMat1Combo.SetEnabled(false);
+	terrainMat1Combo.SetTooltip("Choose a sub terrain blend material. (GREEN vertex color mask)");
+	AddWidget(&terrainMat1Combo);
+
+	terrainMat2Combo.Create("Terrain Material 2: ");
+	terrainMat2Combo.SetSize(XMFLOAT2(200, hei));
+	terrainMat2Combo.SetPos(XMFLOAT2(x + 180, y += step));
+	terrainMat2Combo.SetEnabled(false);
+	terrainMat2Combo.SetTooltip("Choose a sub terrain blend material. (BLUE vertex color mask)");
+	AddWidget(&terrainMat2Combo);
+
+	terrainMat3Combo.Create("Terrain Material 3: ");
+	terrainMat3Combo.SetSize(XMFLOAT2(200, hei));
+	terrainMat3Combo.SetPos(XMFLOAT2(x + 180, y += step));
+	terrainMat3Combo.SetEnabled(false);
+	terrainMat3Combo.SetTooltip("Choose a sub terrain blend material. (ALPHA vertex color mask)");
+	AddWidget(&terrainMat3Combo);
+
 
 	morphTargetCombo.Create("Morph Target:");
 	morphTargetCombo.SetSize(XMFLOAT2(100, hei));
@@ -509,7 +534,7 @@ void MeshWindow::Create(EditorComponent* editor)
 		{
 			morphTargetSlider.SetValue(mesh->targets[args.iValue].weight);
 		}
-	});
+		});
 	morphTargetCombo.SetTooltip("Choose a morph target to edit weight.");
 	AddWidget(&morphTargetCombo);
 
@@ -524,7 +549,7 @@ void MeshWindow::Create(EditorComponent* editor)
 			mesh->targets[morphTargetCombo.GetSelected()].weight = args.fValue;
 			mesh->dirty_morph = true;
 		}
-	});
+		});
 	AddWidget(&morphTargetSlider);
 
 	lodgenButton.Create("LOD Gen");
@@ -702,6 +727,7 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 		if (mesh->so_tan.IsValid()) ss += "streamout_tangents; ";
 		meshInfoLabel.SetText(ss);
 
+
 		subsetComboBox.ClearItems();
 		for (size_t i = 0; i < mesh->subsets.size(); ++i)
 		{
@@ -714,11 +740,20 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 
 		subsetMaterialComboBox.ClearItems();
 		subsetMaterialComboBox.AddItem("NO MATERIAL");
+		terrainMat1Combo.ClearItems();
+		terrainMat1Combo.AddItem("OFF (Use subset)");
+		terrainMat2Combo.ClearItems();
+		terrainMat2Combo.AddItem("OFF (Use subset)");
+		terrainMat3Combo.ClearItems();
+		terrainMat3Combo.AddItem("OFF (Use subset)");
 		for (size_t i = 0; i < scene.materials.GetCount(); ++i)
 		{
 			Entity entity = scene.materials.GetEntity(i);
 			const NameComponent& name = *scene.names.GetComponent(entity);
 			subsetMaterialComboBox.AddItem(name.name);
+			terrainMat1Combo.AddItem(name.name);
+			terrainMat2Combo.AddItem(name.name);
+			terrainMat3Combo.AddItem(name.name);
 
 			if (subset >= 0 && subset < mesh->subsets.size() && mesh->subsets[subset].materialID == entity)
 			{
