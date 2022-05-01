@@ -33,7 +33,7 @@ namespace wi::scene
 		XMStoreFloat4(&rotation, GetRotationV());
 		return rotation;
 	}
-	__declspec(noinline) XMFLOAT3 TransformComponent::GetScale() const
+	XMFLOAT3 TransformComponent::GetScale() const
 	{
 		XMFLOAT3 scale;
 		XMStoreFloat3(&scale, GetScaleV());

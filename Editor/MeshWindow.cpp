@@ -21,14 +21,15 @@ void MeshWindow::Create(EditorComponent* editor)
 	float hei = 18;
 	float step = hei + 2;
 
+	float infolabel_height = 190;
 	meshInfoLabel.Create("Mesh Info");
 	meshInfoLabel.SetPos(XMFLOAT2(x - 50, y += step));
-	meshInfoLabel.SetSize(XMFLOAT2(450, 190));
+	meshInfoLabel.SetSize(XMFLOAT2(450, infolabel_height));
 	meshInfoLabel.SetColor(wi::Color::Transparent());
 	AddWidget(&meshInfoLabel);
 
 	// Left side:
-	y = meshInfoLabel.GetScale().y + 10;
+	y = infolabel_height + 10;
 
 	subsetComboBox.Create("Selected subset: ");
 	subsetComboBox.SetSize(XMFLOAT2(40, hei));
@@ -473,7 +474,7 @@ void MeshWindow::Create(EditorComponent* editor)
 
 	// Right side:
 	x = 150;
-	y = meshInfoLabel.GetScale().y + 10;
+	y = infolabel_height + 10;
 
 	subsetMaterialComboBox.Create("Subset Material: ");
 	subsetMaterialComboBox.SetSize(XMFLOAT2(200, hei));
