@@ -14,7 +14,7 @@ using namespace wi::scene;
 void MeshWindow::Create(EditorComponent* editor)
 {
 	wi::gui::Window::Create("Mesh Window");
-	SetSize(XMFLOAT2(580, 600));
+	SetSize(XMFLOAT2(580, 580));
 
 	float x = 150;
 	float y = 0;
@@ -28,7 +28,7 @@ void MeshWindow::Create(EditorComponent* editor)
 	AddWidget(&meshInfoLabel);
 
 	// Left side:
-	y = meshInfoLabel.GetScale().y + 5;
+	y = meshInfoLabel.GetScale().y + 10;
 
 	subsetComboBox.Create("Selected subset: ");
 	subsetComboBox.SetSize(XMFLOAT2(40, hei));
@@ -136,14 +136,14 @@ void MeshWindow::Create(EditorComponent* editor)
 	impostorCreateButton.SetSize(XMFLOAT2(200, hei));
 	impostorCreateButton.SetPos(XMFLOAT2(x - 50, y += step));
 	impostorCreateButton.OnClick([&](wi::gui::EventArgs args) {
-	    Scene& scene = wi::scene::GetScene();
+		Scene& scene = wi::scene::GetScene();
 		ImpostorComponent* impostor = scene.impostors.GetComponent(entity);
-	    if (impostor == nullptr)
+		if (impostor == nullptr)
 		{
-		    impostorCreateButton.SetText("Delete Impostor");
+			impostorCreateButton.SetText("Delete Impostor");
 			scene.impostors.Create(entity).swapInDistance = impostorDistanceSlider.GetValue();
 		}
-	    else
+		else
 		{
 			impostorCreateButton.SetText("Create Impostor");
 			scene.impostors.Remove(entity);
@@ -473,7 +473,7 @@ void MeshWindow::Create(EditorComponent* editor)
 
 	// Right side:
 	x = 150;
-	y = meshInfoLabel.GetScale().y + 5;
+	y = meshInfoLabel.GetScale().y + 10;
 
 	subsetMaterialComboBox.Create("Subset Material: ");
 	subsetMaterialComboBox.SetSize(XMFLOAT2(200, hei));
@@ -504,11 +504,11 @@ void MeshWindow::Create(EditorComponent* editor)
 	morphTargetCombo.SetSize(XMFLOAT2(100, hei));
 	morphTargetCombo.SetPos(XMFLOAT2(x + 280, y += step));
 	morphTargetCombo.OnSelect([&](wi::gui::EventArgs args) {
-	    MeshComponent* mesh = wi::scene::GetScene().meshes.GetComponent(entity);
-	    if (mesh != nullptr && args.iValue < (int)mesh->targets.size())
-	    {
+		MeshComponent* mesh = wi::scene::GetScene().meshes.GetComponent(entity);
+		if (mesh != nullptr && args.iValue < (int)mesh->targets.size())
+		{
 			morphTargetSlider.SetValue(mesh->targets[args.iValue].weight);
-	    }
+		}
 	});
 	morphTargetCombo.SetTooltip("Choose a morph target to edit weight.");
 	AddWidget(&morphTargetCombo);
@@ -518,12 +518,12 @@ void MeshWindow::Create(EditorComponent* editor)
 	morphTargetSlider.SetSize(XMFLOAT2(100, hei));
 	morphTargetSlider.SetPos(XMFLOAT2(x + 280, y += step));
 	morphTargetSlider.OnSlide([&](wi::gui::EventArgs args) {
-	    MeshComponent* mesh = wi::scene::GetScene().meshes.GetComponent(entity);
-	    if (mesh != nullptr && morphTargetCombo.GetSelected() < (int)mesh->targets.size())
-	    {
+		MeshComponent* mesh = wi::scene::GetScene().meshes.GetComponent(entity);
+		if (mesh != nullptr && morphTargetCombo.GetSelected() < (int)mesh->targets.size())
+		{
 			mesh->targets[morphTargetCombo.GetSelected()].weight = args.fValue;
 			mesh->dirty_morph = true;
-	    }
+		}
 	});
 	AddWidget(&morphTargetSlider);
 
@@ -750,11 +750,11 @@ void MeshWindow::SetEntity(Entity entity, int subset)
 		morphTargetCombo.ClearItems();
 		for (size_t i = 0; i < mesh->targets.size(); i++)
 		{
-		    morphTargetCombo.AddItem(std::to_string(i).c_str());
+			morphTargetCombo.AddItem(std::to_string(i).c_str());
 		}
 		if (selected < mesh->targets.size())
 		{
-		    morphTargetCombo.SetSelected(selected);
+			morphTargetCombo.SetSelected(selected);
 		}
 		SetEnabled(true);
 
