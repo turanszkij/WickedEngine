@@ -285,7 +285,6 @@ PipelineState PSO_object
 	[OBJECTRENDERING_DOUBLESIDED_COUNT]
 	[OBJECTRENDERING_TESSELLATION_COUNT]
 	[OBJECTRENDERING_ALPHATEST_COUNT];
-PipelineState PSO_object_terrain[RENDERPASS_COUNT];
 PipelineState PSO_object_wire;
 PipelineState PSO_object_wire_tessellation;
 
@@ -806,7 +805,6 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_UNLIT], "objectPS_unlit.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_TRANSPARENT_UNLIT], "objectPS_transparent_unlit.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_WATER], "objectPS_water.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_TERRAIN], "objectPS_terrain.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_IMPOSTOR], "impostorPS.cso"); });
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_OBJECT_HOLOGRAM], "objectPS_hologram.cso"); });
@@ -824,7 +822,6 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_VOLUMETRICLIGHT_POINT], "volumetricLight_PointPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_VOLUMETRICLIGHT_SPOT], "volumetricLight_SpotPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_ENVMAP], "envMapPS.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_ENVMAP_TERRAIN], "envMapPS_terrain.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_ENVMAP_SKY_STATIC], "envMap_skyPS_static.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_ENVMAP_SKY_DYNAMIC], "envMap_skyPS_dynamic.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_CAPTUREIMPOSTOR_ALBEDO], "captureImpostorPS_albedo.cso"); });
@@ -839,7 +836,6 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_SHADOW_TRANSPARENT], "shadowPS_transparent.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_SHADOW_WATER], "shadowPS_water.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_VOXELIZER], "objectPS_voxelizer.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_VOXELIZER_TERRAIN], "objectPS_voxelizer_terrain.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_VOXEL], "voxelPS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::PS, shaders[PSTYPE_FORCEFIELDVISUALIZER], "forceFieldVisualizerPS.cso"); });
 	if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
@@ -1188,48 +1184,6 @@ void LoadShaders()
 				}
 			}
 		}
-	});
-
-	wi::jobsystem::Dispatch(ctx, RENDERPASS_COUNT, 1, [](wi::jobsystem::JobArgs args) {
-
-		SHADERTYPE realVS = GetVSTYPE((RENDERPASS) args.jobIndex, false, false, false);
-
-		PipelineStateDesc desc;
-		desc.rs = &rasterizers[RSTYPE_FRONT];
-		desc.bs = &blendStates[BSTYPE_OPAQUE];
-		desc.dss = &depthStencils[DSSTYPE_DEFAULT];
-		desc.vs = &shaders[realVS];
-
-		switch (args.jobIndex)
-		{
-		case RENDERPASS_MAIN:
-			desc.dss = &depthStencils[DSSTYPE_DEPTHREADEQUAL];
-			desc.ps = &shaders[PSTYPE_OBJECT_TERRAIN];
-			break;
-		case RENDERPASS_PREPASS:
-			desc.ps = &shaders[PSTYPE_OBJECT_PREPASS];
-			break;
-		case RENDERPASS_VOXELIZE:
-			desc.dss = &depthStencils[DSSTYPE_DEPTHDISABLED];
-			desc.rs = &rasterizers[RSTYPE_VOXELIZE];
-			desc.vs = &shaders[VSTYPE_VOXELIZER];
-			desc.gs = &shaders[GSTYPE_VOXELIZER];
-			desc.ps = &shaders[PSTYPE_VOXELIZER_TERRAIN];
-			break;
-		case RENDERPASS_ENVMAPCAPTURE:
-			desc.ps = &shaders[PSTYPE_ENVMAP_TERRAIN];
-			break;
-		case RENDERPASS_SHADOW:
-		case RENDERPASS_SHADOWCUBE:
-			desc.dss = &depthStencils[DSSTYPE_SHADOW];
-			desc.rs = &rasterizers[RSTYPE_SHADOW_DOUBLESIDED];
-			desc.ps = nullptr;
-			break;
-		default:
-			return;
-		}
-
-		device->CreatePipelineState(&desc, &PSO_object_terrain[args.jobIndex]);
 	});
 
 	// Clear custom shaders (Custom shaders coming from user will need to be handled by the user in case of shader reload):
@@ -2418,7 +2372,6 @@ void RenderMeshes(
 
 		const float tessF = mesh.GetTessellationFactor();
 		const bool tessellatorRequested = tessF > 0 && tessellation;
-		const bool terrain = mesh.IsTerrain();
 
 		if (forwardLightmaskRequest)
 		{
@@ -2462,10 +2415,6 @@ void RenderMeshes(
 					case RENDERPASS_MAIN:
 						pso = tessellatorRequested ? &PSO_object_wire_tessellation : &PSO_object_wire;
 					}
-				}
-				else if (mesh.IsTerrain())
-				{
-					pso = &PSO_object_terrain[renderPass];
 				}
 				else if (material.customShaderID >= 0 && material.customShaderID < (int)customShaders.size())
 				{

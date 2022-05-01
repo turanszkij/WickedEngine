@@ -33,11 +33,6 @@ public:
 	wi::gui::Button mergeButton;
 	wi::gui::Button optimizeButton;
 
-	wi::gui::CheckBox terrainCheckBox;
-	wi::gui::ComboBox terrainMat1Combo;
-	wi::gui::ComboBox terrainMat2Combo;
-	wi::gui::ComboBox terrainMat3Combo;
-
 	wi::gui::ComboBox morphTargetCombo;
 	wi::gui::Slider morphTargetSlider;
 

@@ -1,5 +1,6 @@
 This file contains changelog of wi::Archive versions
 
+79: removed terrain blend materials from mesh
 78: serialized stars parameter in weather
 77: serialized cloud shadow properties
 76: serialized LOD parameters

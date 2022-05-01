@@ -373,8 +373,12 @@ namespace wi::scene
 				archive >> vertex_uvset_1;
 			}
 
-			if (archive.GetVersion() >= 41)
+			if (archive.GetVersion() >= 41 && archive.GetVersion() < 79)
 			{
+				// These are no longer used:
+				Entity terrain_material1;
+				Entity terrain_material2;
+				Entity terrain_material3;
 				SerializeEntity(archive, terrain_material1, seri);
 				SerializeEntity(archive, terrain_material2, seri);
 				SerializeEntity(archive, terrain_material3, seri);
@@ -440,8 +444,12 @@ namespace wi::scene
 				archive << vertex_uvset_1;
 			}
 
-			if (archive.GetVersion() >= 41)
+			if (archive.GetVersion() >= 41 && archive.GetVersion() < 79)
 			{
+				// These are no longer used:
+				Entity terrain_material1;
+				Entity terrain_material2;
+				Entity terrain_material3;
 				SerializeEntity(archive, terrain_material1, seri);
 				SerializeEntity(archive, terrain_material2, seri);
 				SerializeEntity(archive, terrain_material3, seri);
