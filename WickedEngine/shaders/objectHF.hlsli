@@ -57,21 +57,6 @@ inline ShaderMaterial GetMaterial()
 #define texture_clearcoatnormalmap		bindless_textures[GetMaterial().texture_clearcoatnormalmap_index]
 #define texture_specularmap				bindless_textures[GetMaterial().texture_specularmap_index]
 
-#define texture_blend1_basecolormap		bindless_textures[GetMaterial1().texture_basecolormap_index]
-#define texture_blend1_normalmap		bindless_textures[GetMaterial1().texture_normalmap_index]
-#define texture_blend1_surfacemap		bindless_textures[GetMaterial1().texture_surfacemap_index]
-#define texture_blend1_emissivemap		bindless_textures[GetMaterial1().texture_emissivemap_index]
-
-#define texture_blend2_basecolormap		bindless_textures[GetMaterial2().texture_basecolormap_index]
-#define texture_blend2_normalmap		bindless_textures[GetMaterial2().texture_normalmap_index]
-#define texture_blend2_surfacemap		bindless_textures[GetMaterial2().texture_surfacemap_index]
-#define texture_blend2_emissivemap		bindless_textures[GetMaterial2().texture_emissivemap_index]
-
-#define texture_blend3_basecolormap		bindless_textures[GetMaterial3().texture_basecolormap_index]
-#define texture_blend3_normalmap		bindless_textures[GetMaterial3().texture_normalmap_index]
-#define texture_blend3_surfacemap		bindless_textures[GetMaterial3().texture_surfacemap_index]
-#define texture_blend3_emissivemap		bindless_textures[GetMaterial3().texture_emissivemap_index]
-
 uint load_entitytile(uint tileIndex)
 {
 #ifdef TRANSPARENT
