@@ -832,7 +832,10 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 
 				wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
 					mesh.CreateRenderData();
-					chunk_data.sphere.center = chunk_pos;
+					chunk_data.sphere.center = mesh.aabb.getCenter();
+					chunk_data.sphere.center.x += chunk_pos.x;
+					chunk_data.sphere.center.y += chunk_pos.y;
+					chunk_data.sphere.center.z += chunk_pos.z;
 					chunk_data.sphere.radius = mesh.aabb.getRadius();
 					});
 
