@@ -398,11 +398,6 @@ namespace wi::scene
 		};
 		mutable BLAS_STATE BLAS_state = BLAS_STATE_NEEDS_REBUILD;
 
-		// Only valid for 1 frame material component indices:
-		uint32_t terrain_material1_index = ~0u;
-		uint32_t terrain_material2_index = ~0u;
-		uint32_t terrain_material3_index = ~0u;
-
 		mutable bool dirty_morph = false;
 
 		inline void SetRenderable(bool value) { if (value) { _flags |= RENDERABLE; } else { _flags &= ~RENDERABLE; } }
