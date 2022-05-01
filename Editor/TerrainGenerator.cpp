@@ -624,6 +624,14 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 				assert(success);
 				device->SetName(&chunk_data.texture_normalMap, "chunk_data.texture_normalMap");
 
+				MaterialComponent* material = scene->materials.GetComponent(chunk_data.entity);
+				if (material != nullptr)
+				{
+					material->textures[MaterialComponent::BASECOLORMAP].resource.SetTexture(chunk_data.texture_baseColorMap);
+					material->textures[MaterialComponent::SURFACEMAP].resource.SetTexture(chunk_data.texture_surfaceMap);
+					material->textures[MaterialComponent::NORMALMAP].resource.SetTexture(chunk_data.texture_normalMap);
+				}
+
 				virtual_texture_updates.push_back(chunk);
 				virtual_texture_barriers_begin.push_back(GPUBarrier::Image(&chunk_data.texture_baseColorMap, desc.layout, ResourceState::UNORDERED_ACCESS));
 				virtual_texture_barriers_begin.push_back(GPUBarrier::Image(&chunk_data.texture_surfaceMap, desc.layout, ResourceState::UNORDERED_ACCESS));
@@ -675,14 +683,6 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 
 			const TextureDesc& desc = chunk_data.texture_baseColorMap.GetDesc();
 			device->Dispatch(desc.width / 8u, desc.height / 8u, 1, cmd);
-
-			MaterialComponent* material = scene->materials.GetComponent(chunk_data.entity);
-			if (material != nullptr)
-			{
-				material->textures[MaterialComponent::BASECOLORMAP].resource.SetTexture(chunk_data.texture_baseColorMap);
-				material->textures[MaterialComponent::SURFACEMAP].resource.SetTexture(chunk_data.texture_surfaceMap);
-				material->textures[MaterialComponent::NORMALMAP].resource.SetTexture(chunk_data.texture_normalMap);
-			}
 		}
 
 		device->Barrier(virtual_texture_barriers_end.data(), (uint32_t)virtual_texture_barriers_end.size(), cmd);
@@ -1043,6 +1043,8 @@ void TerrainGenerator::BakeVirtualTexturesToFiles()
 
 	wi::jobsystem::context ctx;
 
+	static const std::string extension = "PNG";
+
 	for (auto it = chunks.begin(); it != chunks.end(); it++)
 	{
 		const Chunk& chunk = it->first;
@@ -1066,7 +1068,7 @@ void TerrainGenerator::BakeVirtualTexturesToFiles()
 							tex.resource.SetFileData(std::move(filedata));
 							wi::jobsystem::Execute(ctx, [i, &tex, chunk](wi::jobsystem::JobArgs args) {
 								wi::vector<uint8_t> filedata_ktx2;
-								if (wi::helper::saveTextureToMemoryFile(tex.resource.GetFileData(), tex.resource.GetTexture().desc, "KTX2", filedata_ktx2))
+								if (wi::helper::saveTextureToMemoryFile(tex.resource.GetFileData(), tex.resource.GetTexture().desc, extension, filedata_ktx2))
 								{
 									tex.name = std::to_string(chunk.x) + "_" + std::to_string(chunk.z);
 									switch (i)
@@ -1083,7 +1085,7 @@ void TerrainGenerator::BakeVirtualTexturesToFiles()
 									default:
 										break;
 									}
-									tex.name += ".KTX2";
+									tex.name += "." + extension;
 									tex.resource = wi::resourcemanager::Load(tex.name, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA, filedata_ktx2.data(), filedata_ktx2.size());
 								}
 								});
