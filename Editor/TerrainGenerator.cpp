@@ -162,31 +162,31 @@ void TerrainGenerator::init()
 	ClearTransform();
 
 	wi::gui::Window::Create("TerraGen (Preview version)");
-	SetSize(XMFLOAT2(410, 590));
+	SetSize(XMFLOAT2(420, 590));
 
-	float xx = 150;
-	float yy = 0;
-	float stepstep = 25;
-	float heihei = 20;
+	float x = 160;
+	float y = 0;
+	float step = 25;
+	float hei = 20;
 
 	centerToCamCheckBox.Create("Center to Cam: ");
 	centerToCamCheckBox.SetTooltip("Automatically generate chunks around camera. This sets the center chunk to camera position.");
-	centerToCamCheckBox.SetSize(XMFLOAT2(heihei, heihei));
-	centerToCamCheckBox.SetPos(XMFLOAT2(xx, yy += stepstep));
+	centerToCamCheckBox.SetSize(XMFLOAT2(hei, hei));
+	centerToCamCheckBox.SetPos(XMFLOAT2(x, y += step));
 	centerToCamCheckBox.SetCheck(true);
 	AddWidget(&centerToCamCheckBox);
 
 	removalCheckBox.Create("Removal: ");
 	removalCheckBox.SetTooltip("Automatically remove chunks that are farther than generation distance around center chunk.");
-	removalCheckBox.SetSize(XMFLOAT2(heihei, heihei));
-	removalCheckBox.SetPos(XMFLOAT2(xx + 100, yy));
+	removalCheckBox.SetSize(XMFLOAT2(hei, hei));
+	removalCheckBox.SetPos(XMFLOAT2(x + 100, y));
 	removalCheckBox.SetCheck(true);
 	AddWidget(&removalCheckBox);
 
 	lodSlider.Create(0.0001f, 0.01f, 0.005f, 10000, "Mesh LOD Distance: ");
 	lodSlider.SetTooltip("Set the LOD (Level Of Detail) distance multiplier.\nLow values increase LOD detail in distance");
-	lodSlider.SetSize(XMFLOAT2(200, heihei));
-	lodSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	lodSlider.SetSize(XMFLOAT2(200, hei));
+	lodSlider.SetPos(XMFLOAT2(x, y += step));
 	lodSlider.OnSlide([this](wi::gui::EventArgs args) {
 		for (auto& it : chunks)
 		{
@@ -205,20 +205,20 @@ void TerrainGenerator::init()
 
 	texlodSlider.Create(0.01f, 0.05f, 0.01f, 10000, "Texture LOD Distance: ");
 	texlodSlider.SetTooltip("Set the LOD (Level Of Detail) distance multiplier.\nLow values increase LOD detail in distance");
-	texlodSlider.SetSize(XMFLOAT2(200, heihei));
-	texlodSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	texlodSlider.SetSize(XMFLOAT2(200, hei));
+	texlodSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&texlodSlider);
 
 	generationSlider.Create(0, 16, 12, 16, "Generation Distance: ");
 	generationSlider.SetTooltip("How far out chunks will be generated (value is in number of chunks)");
-	generationSlider.SetSize(XMFLOAT2(200, heihei));
-	generationSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	generationSlider.SetSize(XMFLOAT2(200, hei));
+	generationSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&generationSlider);
 
 	presetCombo.Create("Preset: ");
 	presetCombo.SetTooltip("Select a terrain preset");
-	presetCombo.SetSize(XMFLOAT2(200, heihei));
-	presetCombo.SetPos(XMFLOAT2(xx, yy += stepstep));
+	presetCombo.SetSize(XMFLOAT2(200, hei));
+	presetCombo.SetPos(XMFLOAT2(x, y += step));
 	presetCombo.AddItem("Hills", PRESET_HILLS);
 	presetCombo.AddItem("Islands", PRESET_ISLANDS);
 	presetCombo.AddItem("Mountains", PRESET_MOUNTAINS);
@@ -302,105 +302,105 @@ void TerrainGenerator::init()
 
 	seedSlider.Create(1, 12345, 3926, 12344, "Seed: ");
 	seedSlider.SetTooltip("Seed for terrain randomness");
-	seedSlider.SetSize(XMFLOAT2(200, heihei));
-	seedSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	seedSlider.SetSize(XMFLOAT2(200, hei));
+	seedSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&seedSlider);
 
 	bottomLevelSlider.Create(-100, 0, -60, 10000, "Bottom Level: ");
 	bottomLevelSlider.SetTooltip("Terrain mesh grid lowest level");
-	bottomLevelSlider.SetSize(XMFLOAT2(200, heihei));
-	bottomLevelSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	bottomLevelSlider.SetSize(XMFLOAT2(200, hei));
+	bottomLevelSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&bottomLevelSlider);
 
 	topLevelSlider.Create(0, 5000, 380, 10000, "Top Level: ");
 	topLevelSlider.SetTooltip("Terrain mesh grid topmost level");
-	topLevelSlider.SetSize(XMFLOAT2(200, heihei));
-	topLevelSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	topLevelSlider.SetSize(XMFLOAT2(200, hei));
+	topLevelSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&topLevelSlider);
 
 	perlinBlendSlider.Create(0, 1, 0.5f, 10000, "Perlin Blend: ");
 	perlinBlendSlider.SetTooltip("Amount of perlin noise to use");
-	perlinBlendSlider.SetSize(XMFLOAT2(200, heihei));
-	perlinBlendSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	perlinBlendSlider.SetSize(XMFLOAT2(200, hei));
+	perlinBlendSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&perlinBlendSlider);
 
 	perlinFrequencySlider.Create(0.0001f, 0.01f, 0.0008f, 10000, "Perlin Frequency: ");
 	perlinFrequencySlider.SetTooltip("Frequency for the perlin noise");
-	perlinFrequencySlider.SetSize(XMFLOAT2(200, heihei));
-	perlinFrequencySlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	perlinFrequencySlider.SetSize(XMFLOAT2(200, hei));
+	perlinFrequencySlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&perlinFrequencySlider);
 
 	perlinOctavesSlider.Create(1, 8, 6, 7, "Perlin Octaves: ");
 	perlinOctavesSlider.SetTooltip("Octave count for the perlin noise");
-	perlinOctavesSlider.SetSize(XMFLOAT2(200, heihei));
-	perlinOctavesSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	perlinOctavesSlider.SetSize(XMFLOAT2(200, hei));
+	perlinOctavesSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&perlinOctavesSlider);
 
 	voronoiBlendSlider.Create(0, 1, 0.5f, 10000, "Voronoi Blend: ");
 	voronoiBlendSlider.SetTooltip("Amount of voronoi to use for elevation");
-	voronoiBlendSlider.SetSize(XMFLOAT2(200, heihei));
-	voronoiBlendSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	voronoiBlendSlider.SetSize(XMFLOAT2(200, hei));
+	voronoiBlendSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&voronoiBlendSlider);
 
 	voronoiFrequencySlider.Create(0.0001f, 0.01f, 0.001f, 10000, "Voronoi Frequency: ");
 	voronoiFrequencySlider.SetTooltip("Voronoi can create distinctly elevated areas, the more cells there are, smaller the consecutive areas");
-	voronoiFrequencySlider.SetSize(XMFLOAT2(200, heihei));
-	voronoiFrequencySlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	voronoiFrequencySlider.SetSize(XMFLOAT2(200, hei));
+	voronoiFrequencySlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&voronoiFrequencySlider);
 
 	voronoiFadeSlider.Create(0, 100, 2.59f, 10000, "Voronoi Fade: ");
 	voronoiFadeSlider.SetTooltip("Fade out voronoi regions by distance from cell's center");
-	voronoiFadeSlider.SetSize(XMFLOAT2(200, heihei));
-	voronoiFadeSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	voronoiFadeSlider.SetSize(XMFLOAT2(200, hei));
+	voronoiFadeSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&voronoiFadeSlider);
 
 	voronoiShapeSlider.Create(0, 1, 0.7f, 10000, "Voronoi Shape: ");
 	voronoiShapeSlider.SetTooltip("How much the voronoi shape will be kept");
-	voronoiShapeSlider.SetSize(XMFLOAT2(200, heihei));
-	voronoiShapeSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	voronoiShapeSlider.SetSize(XMFLOAT2(200, hei));
+	voronoiShapeSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&voronoiShapeSlider);
 
 	voronoiFalloffSlider.Create(0, 8, 6, 10000, "Voronoi Falloff: ");
 	voronoiFalloffSlider.SetTooltip("Controls the falloff of the voronoi distance fade effect");
-	voronoiFalloffSlider.SetSize(XMFLOAT2(200, heihei));
-	voronoiFalloffSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	voronoiFalloffSlider.SetSize(XMFLOAT2(200, hei));
+	voronoiFalloffSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&voronoiFalloffSlider);
 
 	voronoiPerturbationSlider.Create(0, 1, 0.1f, 10000, "Voronoi Perturbation: ");
 	voronoiPerturbationSlider.SetTooltip("Controls the random look of voronoi region edges");
-	voronoiPerturbationSlider.SetSize(XMFLOAT2(200, heihei));
-	voronoiPerturbationSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	voronoiPerturbationSlider.SetSize(XMFLOAT2(200, hei));
+	voronoiPerturbationSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&voronoiPerturbationSlider);
 
 
 	heightmapButton.Create("Load Heightmap...");
 	heightmapButton.SetTooltip("Load a heightmap texture, where the red channel corresponds to terrain height and the resolution to dimensions.\nThe heightmap will be placed in the world center.");
-	heightmapButton.SetSize(XMFLOAT2(200, heihei));
-	heightmapButton.SetPos(XMFLOAT2(xx, yy += stepstep));
+	heightmapButton.SetSize(XMFLOAT2(200, hei));
+	heightmapButton.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&heightmapButton);
 
 	heightmapBlendSlider.Create(0, 1, 1, 10000, "Heightmap Blend: ");
 	heightmapBlendSlider.SetTooltip("Amount of displacement coming from the heightmap texture");
-	heightmapBlendSlider.SetSize(XMFLOAT2(200, heihei));
-	heightmapBlendSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	heightmapBlendSlider.SetSize(XMFLOAT2(200, hei));
+	heightmapBlendSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&heightmapBlendSlider);
 
 	region1Slider.Create(0, 8, 1, 10000, "Slope Region: ");
 	region1Slider.SetTooltip("The region's falloff power");
-	region1Slider.SetSize(XMFLOAT2(200, heihei));
-	region1Slider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	region1Slider.SetSize(XMFLOAT2(200, hei));
+	region1Slider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&region1Slider);
 
 	region2Slider.Create(0, 8, 2, 10000, "Low Altitude Region: ");
 	region2Slider.SetTooltip("The region's falloff power");
-	region2Slider.SetSize(XMFLOAT2(200, heihei));
-	region2Slider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	region2Slider.SetSize(XMFLOAT2(200, hei));
+	region2Slider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&region2Slider);
 
 	region3Slider.Create(0, 8, 8, 10000, "High Altitude Region: ");
 	region3Slider.SetTooltip("The region's falloff power");
-	region3Slider.SetSize(XMFLOAT2(200, heihei));
-	region3Slider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	region3Slider.SetSize(XMFLOAT2(200, hei));
+	region3Slider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&region3Slider);
 
 
@@ -605,7 +605,7 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 			}
 
 			uint32_t chunk_required_texture_resolution = uint32_t(max_texture_resolution / std::pow(2.0f, (float)std::max(0u, texture_lod)));
-			chunk_required_texture_resolution = std::max(16u, chunk_required_texture_resolution);
+			chunk_required_texture_resolution = std::max(8u, chunk_required_texture_resolution);
 			if (chunk_data.texture_baseColorMap.GetDesc().width != chunk_required_texture_resolution)
 			{
 				TextureDesc desc;

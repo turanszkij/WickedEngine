@@ -468,8 +468,10 @@ void MeshWindow::Create(EditorComponent* editor)
 	AddWidget(&optimizeButton);
 
 
-	// Right side:
 
+
+
+	// Right side:
 	x = 150;
 	y = meshInfoLabel.GetScale().y + 5;
 
