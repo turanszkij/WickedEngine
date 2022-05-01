@@ -75,7 +75,7 @@ namespace wi::scene
 
 		XMFLOAT3 GetPosition() const;
 		XMFLOAT4 GetRotation() const;
-		XMFLOAT3 GetScale() const;
+		__declspec(noinline) XMFLOAT3 GetScale() const;
 		XMVECTOR GetPositionV() const;
 		XMVECTOR GetRotationV() const;
 		XMVECTOR GetScaleV() const;
