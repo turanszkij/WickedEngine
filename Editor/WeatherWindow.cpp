@@ -605,7 +605,7 @@ void WeatherWindow::Create(EditorComponent* editor)
 
 
 	ktxConvButton.Create("KTX2 Convert");
-	ktxConvButton.SetTooltip("All material textures in the scene will be cinverted to KTX2 format.\nTHIS MIGHT TAKE LONG, SO GET YOURSELF A COFFEE OR TEA!");
+	ktxConvButton.SetTooltip("All material textures in the scene will be converted to KTX2 format.\nTHIS MIGHT TAKE LONG, SO GET YOURSELF A COFFEE OR TEA!");
 	ktxConvButton.SetSize(XMFLOAT2(colorPicker.GetScale().x, hei));
 	ktxConvButton.SetPos(XMFLOAT2(x, y += step));
 	ktxConvButton.OnClick([=](wi::gui::EventArgs args) {
