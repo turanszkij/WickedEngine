@@ -54,7 +54,6 @@ void AnimationWindow::Create(EditorComponent* editor)
 			else
 			{
 				animation->Play();
-				animation->amount = 0;
 			}
 		}
 	});
@@ -87,7 +86,7 @@ void AnimationWindow::Create(EditorComponent* editor)
 	timerSlider.SetTooltip("Set the animation timer by hand.");
 	AddWidget(&timerSlider);
 
-	amountSlider.Create(0, 1, 0, 100000, "Amount: ");
+	amountSlider.Create(0, 1, 1, 100000, "Amount: ");
 	amountSlider.SetSize(XMFLOAT2(250, hei));
 	amountSlider.SetPos(XMFLOAT2(x, y += step));
 	amountSlider.OnSlide([&](wi::gui::EventArgs args) {
@@ -169,7 +168,6 @@ void AnimationWindow::Update()
 		if (animation.IsPlaying())
 		{
 			playButton.SetText("Pause");
-			animation.amount = wi::math::Lerp(animation.amount, 1, 0.1f);
 		}
 		else
 		{
