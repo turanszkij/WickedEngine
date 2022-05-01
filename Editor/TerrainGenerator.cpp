@@ -549,12 +549,37 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 	virtual_texture_barriers_begin.clear();
 	virtual_texture_barriers_end.clear();
 
+	// Check whether there are any materials that would write to virtual textures:
 	uint32_t max_texture_resolution = 0;
-	Texture* base_texture = (Texture*)material_Base.textures[MaterialComponent::BASECOLORMAP].GetGPUResource();
-	if (base_texture != nullptr)
+	bool virtual_texture_available[MaterialComponent::TEXTURESLOT_COUNT] = {};
+	virtual_texture_available[MaterialComponent::SURFACEMAP] = true; // this is always needed to bake individual material properties
+	MaterialComponent* virtual_materials[4] = {
+		&material_Base,
+		&material_Slope,
+		&material_LowAltitude,
+		&material_HighAltitude,
+	};
+	for (auto& material : virtual_materials)
 	{
-		max_texture_resolution = std::max(max_texture_resolution, base_texture->GetDesc().width);
-		max_texture_resolution = std::max(max_texture_resolution, base_texture->GetDesc().height);
+		for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
+		{
+			switch (i)
+			{
+			case MaterialComponent::BASECOLORMAP:
+			case MaterialComponent::NORMALMAP:
+			case MaterialComponent::SURFACEMAP:
+				if (material->textures[i].resource.IsValid())
+				{
+					virtual_texture_available[i] = true;
+					const TextureDesc& desc = material->textures[i].resource.GetTexture().GetDesc();
+					max_texture_resolution = std::max(max_texture_resolution, desc.width);
+					max_texture_resolution = std::max(max_texture_resolution, desc.height);
+				}
+				break;
+			default:
+				break;
+			}
+		}
 	}
 
 	for (auto it = chunks.begin(); it != chunks.end();)
@@ -606,39 +631,34 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 
 			uint32_t chunk_required_texture_resolution = uint32_t(max_texture_resolution / std::pow(2.0f, (float)std::max(0u, texture_lod)));
 			chunk_required_texture_resolution = std::max(8u, chunk_required_texture_resolution);
-			if (chunk_data.texture_baseColorMap.GetDesc().width != chunk_required_texture_resolution)
+			if (chunk_data.virtual_texture_resolution != chunk_required_texture_resolution)
 			{
-				TextureDesc desc;
-				desc.width = chunk_required_texture_resolution;
-				desc.height = chunk_required_texture_resolution;
-				desc.format = Format::R8G8B8A8_UNORM;
-				desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-				bool success = device->CreateTexture(&desc, nullptr, &chunk_data.texture_baseColorMap);
-				assert(success);
-				device->SetName(&chunk_data.texture_baseColorMap, "chunk_data.texture_baseColorMap");
-				success = device->CreateTexture(&desc, nullptr, &chunk_data.texture_surfaceMap);
-				assert(success);
-				device->SetName(&chunk_data.texture_surfaceMap, "chunk_data.texture_surfaceMap");
-				//desc.format = Format::R8G8_UNORM;
-				success = device->CreateTexture(&desc, nullptr, &chunk_data.texture_normalMap);
-				assert(success);
-				device->SetName(&chunk_data.texture_normalMap, "chunk_data.texture_normalMap");
+				chunk_data.virtual_texture_resolution = chunk_required_texture_resolution;
 
 				MaterialComponent* material = scene->materials.GetComponent(chunk_data.entity);
 				if (material != nullptr)
 				{
-					material->textures[MaterialComponent::BASECOLORMAP].resource.SetTexture(chunk_data.texture_baseColorMap);
-					material->textures[MaterialComponent::SURFACEMAP].resource.SetTexture(chunk_data.texture_surfaceMap);
-					material->textures[MaterialComponent::NORMALMAP].resource.SetTexture(chunk_data.texture_normalMap);
-				}
+					for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
+					{
+						if (virtual_texture_available[i])
+						{
+							TextureDesc desc;
+							desc.width = chunk_required_texture_resolution;
+							desc.height = chunk_required_texture_resolution;
+							desc.format = Format::R8G8B8A8_UNORM;
+							desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+							Texture texture;
+							bool success = device->CreateTexture(&desc, nullptr, &texture);
+							assert(success);
 
-				virtual_texture_updates.push_back(chunk);
-				virtual_texture_barriers_begin.push_back(GPUBarrier::Image(&chunk_data.texture_baseColorMap, desc.layout, ResourceState::UNORDERED_ACCESS));
-				virtual_texture_barriers_begin.push_back(GPUBarrier::Image(&chunk_data.texture_surfaceMap, desc.layout, ResourceState::UNORDERED_ACCESS));
-				virtual_texture_barriers_begin.push_back(GPUBarrier::Image(&chunk_data.texture_normalMap, desc.layout, ResourceState::UNORDERED_ACCESS));
-				virtual_texture_barriers_end.push_back(GPUBarrier::Image(&chunk_data.texture_baseColorMap, ResourceState::UNORDERED_ACCESS, desc.layout));
-				virtual_texture_barriers_end.push_back(GPUBarrier::Image(&chunk_data.texture_surfaceMap, ResourceState::UNORDERED_ACCESS, desc.layout));
-				virtual_texture_barriers_end.push_back(GPUBarrier::Image(&chunk_data.texture_normalMap, ResourceState::UNORDERED_ACCESS, desc.layout));
+							material->textures[i].resource.SetTexture(texture);
+							virtual_texture_barriers_begin.push_back(GPUBarrier::Image(&material->textures[i].resource.GetTexture(), desc.layout, ResourceState::UNORDERED_ACCESS));
+							virtual_texture_barriers_end.push_back(GPUBarrier::Image(&material->textures[i].resource.GetTexture(), ResourceState::UNORDERED_ACCESS, desc.layout));
+						}
+					}
+
+					virtual_texture_updates.push_back(chunk);
+				}
 
 			}
 		}
@@ -675,15 +695,19 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 			};
 			device->BindResources(res, 0, arraysize(res), cmd);
 
-			const GPUResource* uavs[] = {
-				&chunk_data.texture_baseColorMap,
-				&chunk_data.texture_surfaceMap,
-				&chunk_data.texture_normalMap,
-			};
-			device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+			const MaterialComponent* material = scene->materials.GetComponent(chunk_data.entity);
+			if (material != nullptr)
+			{
+				for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
+				{
+					if (virtual_texture_available[i])
+					{
+						device->BindUAV(material->textures[i].GetGPUResource(), i, cmd);
+					}
+				}
+			}
 
-			const TextureDesc& desc = chunk_data.texture_baseColorMap.GetDesc();
-			device->Dispatch(desc.width / 8u, desc.height / 8u, 1, cmd);
+			device->Dispatch(chunk_data.virtual_texture_resolution / 8u, chunk_data.virtual_texture_resolution / 8u, 1, cmd);
 		}
 
 		device->Barrier(virtual_texture_barriers_end.data(), (uint32_t)virtual_texture_barriers_end.size(), cmd);

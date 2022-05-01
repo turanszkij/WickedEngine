@@ -375,7 +375,7 @@ void EditorComponent::Load()
 		{
 			// Customize terrain generator before it's initialized:
 			terragen.material_Base.SetRoughness(1);
-			terragen.material_Slope.SetRoughness(0.5f);
+			terragen.material_Slope.SetRoughness(0.1f);
 			terragen.material_LowAltitude.SetRoughness(1);
 			terragen.material_HighAltitude.SetRoughness(1);
 			terragen.material_Base.textures[MaterialComponent::BASECOLORMAP].name = "terrain/base.jpg";

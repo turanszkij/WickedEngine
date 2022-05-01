@@ -9,9 +9,10 @@ struct Terrain
 };
 ConstantBuffer<Terrain> terrain : register(b10);
 
+// These are expected to be in the same bind slots as corresponding MaterialComponent::TEXTURESLOT enums
 RWTexture2D<unorm float4> output_baseColorMap : register(u0);
-RWTexture2D<unorm float4> output_surfaceMap : register(u1);
-RWTexture2D<unorm float4> output_normalMap : register(u2);
+RWTexture2D<unorm float4> output_normalMap : register(u1);
+RWTexture2D<unorm float4> output_surfaceMap : register(u2);
 
 [numthreads(8, 8, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)

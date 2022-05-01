@@ -43,9 +43,7 @@ struct ChunkData
 	std::mt19937 prop_rand;
 	wi::Color region_weights[vertexCount] = {};
 	wi::graphics::Texture region_weights_texture;
-	wi::graphics::Texture texture_baseColorMap;
-	wi::graphics::Texture texture_surfaceMap;
-	wi::graphics::Texture texture_normalMap;
+	uint32_t virtual_texture_resolution = 0;
 	wi::primitive::Sphere sphere;
 };
 
