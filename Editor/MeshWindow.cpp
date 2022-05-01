@@ -1,6 +1,6 @@
 #include "stdafx.h"
-#include "MeshWindow.h"
 #include "Editor.h"
+#include "MeshWindow.h"
 
 #include "Utility/stb_image.h"
 
