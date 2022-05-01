@@ -16,9 +16,9 @@ RWTexture2D<unorm float4> output_normalMap : register(u2);
 [numthreads(8, 8, 1)]
 void main(uint3 DTid : SV_DispatchThreadID)
 {
-	float2 dim = 0;
-	output_baseColorMap.GetDimensions(dim.x, dim.y);
-	const float2 uv = (DTid.xy + 0.5f) / dim;
+	float2 output_dim = 0;
+	output_baseColorMap.GetDimensions(output_dim.x, output_dim.y);
+	const float2 uv = (DTid.xy + 0.5f) / output_dim;
 
 	float4 region_weights = region_weights_texture.SampleLevel(sampler_linear_clamp, uv, 0);
 
@@ -36,7 +36,12 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		[branch]
 		if (material.texture_basecolormap_index >= 0)
 		{
-			float4 baseColorMap = bindless_textures[material.texture_basecolormap_index].SampleLevel(sampler_linear_clamp, uv, 0);
+			Texture2D tex = bindless_textures[material.texture_basecolormap_index];
+			float2 dim = 0;
+			tex.GetDimensions(dim.x, dim.y);
+			float2 diff = dim / output_dim;
+			float lod = log2(max(diff.x, diff.y));
+			float4 baseColorMap = tex.SampleLevel(sampler_linear_clamp, uv, lod);
 			baseColor *= baseColorMap;
 		}
 		total_baseColor += baseColor * weight;
@@ -45,16 +50,26 @@ void main(uint3 DTid : SV_DispatchThreadID)
 		[branch]
 		if (material.texture_surfacemap_index >= 0)
 		{
-			float4 surfaceMap = bindless_textures[material.texture_surfacemap_index].SampleLevel(sampler_linear_clamp, uv, 0);
+			Texture2D tex = bindless_textures[material.texture_surfacemap_index];
+			float2 dim = 0;
+			tex.GetDimensions(dim.x, dim.y);
+			float2 diff = dim / output_dim;
+			float lod = log2(max(diff.x, diff.y));
+			float4 surfaceMap = tex.SampleLevel(sampler_linear_clamp, uv, lod);
 			surface *= surfaceMap;
 		}
 		total_surface += surface * weight;
-
+		
 		float2 normal = float2(0.5, 0.5);
 		[branch]
 		if (material.texture_normalmap_index >= 0)
 		{
-			float2 normalMap = bindless_textures[material.texture_normalmap_index].SampleLevel(sampler_linear_clamp, uv, 0).rg;
+			Texture2D tex = bindless_textures[material.texture_normalmap_index];
+			float2 dim = 0;
+			tex.GetDimensions(dim.x, dim.y);
+			float2 diff = dim / output_dim;
+			float lod = log2(max(diff.x, diff.y));
+			float2 normalMap = tex.SampleLevel(sampler_linear_clamp, uv, lod).rg;
 			normal = normalMap;
 		}
 		total_normal += normal * weight;
