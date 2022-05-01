@@ -102,6 +102,14 @@ struct TerrainGenerator : public wi::gui::Window
 	std::atomic_bool generation_cancelled;
 	float generation_time_budget_milliseconds = 12; // after this much time, the generation thread will exit. This can help avoid a very long running, resource consuming and slow cancellation generation
 
+	// Virtual texture updates will be batched like:
+	//	1) Execute all barriers (dst: UNORDERED_ACCESS)
+	//	2) Execute all compute shaders
+	//	3) Execute all barriers (dst: SHADER_RESOURCE)
+	wi::vector<Chunk> virtual_texture_updates;
+	wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_begin;
+	wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_end;
+
 	wi::gui::CheckBox centerToCamCheckBox;
 	wi::gui::CheckBox removalCheckBox;
 	wi::gui::Slider lodSlider;

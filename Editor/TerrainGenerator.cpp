@@ -543,9 +543,11 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 	}
 
 	const int removal_threshold = (int)generationSlider.GetValue() + 2;
-	GraphicsDevice* device = GetDevice();
-	CommandList cmd;
 	const float texlodMultiplier = texlodSlider.GetValue();
+	GraphicsDevice* device = GetDevice();
+	virtual_texture_updates.clear();
+	virtual_texture_barriers_begin.clear();
+	virtual_texture_barriers_end.clear();
 
 	uint32_t max_texture_resolution = 0;
 	Texture* base_texture = (Texture*)material_Base.textures[MaterialComponent::BASECOLORMAP].GetGPUResource();
@@ -584,52 +586,80 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 			}
 		}
 
-		// Virtual texture update:
-		uint32_t texture_lod = 0;
-		const float distsq = wi::math::DistanceSquared(camera.Eye, chunk_data.sphere.center);
-		const float radius = chunk_data.sphere.radius;
-		const float radiussq = radius * radius;
-		if (distsq < radiussq)
+		// Collect virtual texture update requests:
+		if (max_texture_resolution > 0)
 		{
-			texture_lod = 0;
-		}
-		else
-		{
-			const float dist = std::sqrt(distsq);
-			const float dist_to_sphere = dist - radius;
-			texture_lod = uint32_t(dist_to_sphere * texlodMultiplier);
-		}
-
-		uint32_t chunk_required_texture_resolution = uint32_t(max_texture_resolution / std::pow(2.0f, (float)std::max(0u, texture_lod)));
-		chunk_required_texture_resolution = std::max(16u, chunk_required_texture_resolution);
-		if (chunk_data.texture_baseColorMap.GetDesc().width != chunk_required_texture_resolution)
-		{
-			TextureDesc desc;
-			desc.width = chunk_required_texture_resolution;
-			desc.height = chunk_required_texture_resolution;
-			desc.format = Format::R8G8B8A8_UNORM;
-			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-			bool success = device->CreateTexture(&desc, nullptr, &chunk_data.texture_baseColorMap);
-			assert(success);
-			success = device->CreateTexture(&desc, nullptr, &chunk_data.texture_surfaceMap);
-			assert(success);
-			//desc.format = Format::R8G8_UNORM;
-			success = device->CreateTexture(&desc, nullptr, &chunk_data.texture_normalMap);
-			assert(success);
-
-			if (!cmd.IsValid())
+			uint32_t texture_lod = 0;
+			const float distsq = wi::math::DistanceSquared(camera.Eye, chunk_data.sphere.center);
+			const float radius = chunk_data.sphere.radius;
+			const float radiussq = radius * radius;
+			if (distsq < radiussq)
 			{
-				cmd = device->BeginCommandList();
-				device->EventBegin("TerrainVirtualTextureUpdate", cmd);
-				device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE), cmd);
-
-				ShaderMaterial materials[4];
-				material_Base.WriteShaderMaterial(&materials[0]);
-				material_Slope.WriteShaderMaterial(&materials[1]);
-				material_LowAltitude.WriteShaderMaterial(&materials[2]);
-				material_HighAltitude.WriteShaderMaterial(&materials[3]);
-				device->BindDynamicConstantBuffer(materials, 10, cmd);
+				texture_lod = 0;
 			}
+			else
+			{
+				const float dist = std::sqrt(distsq);
+				const float dist_to_sphere = dist - radius;
+				texture_lod = uint32_t(dist_to_sphere * texlodMultiplier);
+			}
+
+			uint32_t chunk_required_texture_resolution = uint32_t(max_texture_resolution / std::pow(2.0f, (float)std::max(0u, texture_lod)));
+			chunk_required_texture_resolution = std::max(16u, chunk_required_texture_resolution);
+			if (chunk_data.texture_baseColorMap.GetDesc().width != chunk_required_texture_resolution)
+			{
+				TextureDesc desc;
+				desc.width = chunk_required_texture_resolution;
+				desc.height = chunk_required_texture_resolution;
+				desc.format = Format::R8G8B8A8_UNORM;
+				desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+				bool success = device->CreateTexture(&desc, nullptr, &chunk_data.texture_baseColorMap);
+				assert(success);
+				device->SetName(&chunk_data.texture_baseColorMap, "chunk_data.texture_baseColorMap");
+				success = device->CreateTexture(&desc, nullptr, &chunk_data.texture_surfaceMap);
+				assert(success);
+				device->SetName(&chunk_data.texture_surfaceMap, "chunk_data.texture_surfaceMap");
+				//desc.format = Format::R8G8_UNORM;
+				success = device->CreateTexture(&desc, nullptr, &chunk_data.texture_normalMap);
+				assert(success);
+				device->SetName(&chunk_data.texture_normalMap, "chunk_data.texture_normalMap");
+
+				virtual_texture_updates.push_back(chunk);
+				virtual_texture_barriers_begin.push_back(GPUBarrier::Image(&chunk_data.texture_baseColorMap, desc.layout, ResourceState::UNORDERED_ACCESS));
+				virtual_texture_barriers_begin.push_back(GPUBarrier::Image(&chunk_data.texture_surfaceMap, desc.layout, ResourceState::UNORDERED_ACCESS));
+				virtual_texture_barriers_begin.push_back(GPUBarrier::Image(&chunk_data.texture_normalMap, desc.layout, ResourceState::UNORDERED_ACCESS));
+				virtual_texture_barriers_end.push_back(GPUBarrier::Image(&chunk_data.texture_baseColorMap, ResourceState::UNORDERED_ACCESS, desc.layout));
+				virtual_texture_barriers_end.push_back(GPUBarrier::Image(&chunk_data.texture_surfaceMap, ResourceState::UNORDERED_ACCESS, desc.layout));
+				virtual_texture_barriers_end.push_back(GPUBarrier::Image(&chunk_data.texture_normalMap, ResourceState::UNORDERED_ACCESS, desc.layout));
+
+			}
+		}
+
+		it++;
+	}
+
+	// Execute batched virtual texture updates:
+	if (!virtual_texture_updates.empty())
+	{
+		CommandList cmd = device->BeginCommandList();
+		device->EventBegin("TerrainVirtualTextureUpdate", cmd);
+		device->Barrier(virtual_texture_barriers_begin.data(), (uint32_t)virtual_texture_barriers_begin.size(), cmd);
+
+		device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE), cmd);
+
+		ShaderMaterial materials[4];
+		material_Base.WriteShaderMaterial(&materials[0]);
+		material_Slope.WriteShaderMaterial(&materials[1]);
+		material_LowAltitude.WriteShaderMaterial(&materials[2]);
+		material_HighAltitude.WriteShaderMaterial(&materials[3]);
+		device->BindDynamicConstantBuffer(materials, 10, cmd);
+
+		for (auto& chunk : virtual_texture_updates)
+		{
+			auto it = chunks.find(chunk);
+			if (it == chunks.end())
+				continue;
+			ChunkData& chunk_data = it->second;
 
 			const GPUResource* res[] = {
 				&chunk_data.region_weights_texture,
@@ -643,6 +673,7 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 			};
 			device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
 
+			const TextureDesc& desc = chunk_data.texture_baseColorMap.GetDesc();
 			device->Dispatch(desc.width / 8u, desc.height / 8u, 1, cmd);
 
 			MaterialComponent* material = scene->materials.GetComponent(chunk_data.entity);
@@ -654,11 +685,7 @@ void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camer
 			}
 		}
 
-		it++;
-	}
-
-	if (cmd.IsValid())
-	{
+		device->Barrier(virtual_texture_barriers_end.data(), (uint32_t)virtual_texture_barriers_end.size(), cmd);
 		device->EventEnd(cmd);
 	}
 
