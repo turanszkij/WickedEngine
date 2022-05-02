@@ -246,6 +246,7 @@ int main(int argc, char* argv[])
 		"ddgi_raytraceCS_rtapi.hlsl",
 		"ddgi_updateCS.hlsl",
 		"ddgi_updateCS_depth.hlsl",
+		"terrainVirtualTextureUpdateCS.hlsl",
 	};
 
 	shaders[static_cast<size_t>(ShaderStage::PS)] = {
@@ -275,12 +276,10 @@ int main(int argc, char* argv[])
 		"objectPS_transparent_pom.hlsl"					,
 		"objectPS_water.hlsl"							,
 		"objectPS_voxelizer.hlsl"						,
-		"objectPS_voxelizer_terrain.hlsl"				,
 		"objectPS_transparent.hlsl"						,
 		"objectPS_transparent_planarreflection.hlsl"	,
 		"objectPS_planarreflection.hlsl"				,
 		"objectPS_pom.hlsl"								,
-		"objectPS_terrain.hlsl"							,
 		"objectPS.hlsl"									,
 		"objectPS_hologram.hlsl"						,
 		"objectPS_paintradius.hlsl"						,
@@ -312,7 +311,6 @@ int main(int argc, char* argv[])
 		"envMap_skyPS_static.hlsl"						,
 		"envMap_skyPS_dynamic.hlsl"						,
 		"envMapPS.hlsl"									,
-		"envMapPS_terrain.hlsl"							,
 		"emittedparticlePS_soft_distortion.hlsl"		,
 		"downsampleDepthBuffer4xPS.hlsl"				,
 		"emittedparticlePS_simple.hlsl"				,

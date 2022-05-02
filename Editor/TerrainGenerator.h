@@ -29,27 +29,28 @@ namespace std
 	};
 }
 
+inline static const int chunk_width = 64 + 3; // + 3: filler vertices for lod apron and grid perimeter
+inline static const float chunk_half_width = (chunk_width - 1) * 0.5f;
+inline static const float chunk_width_rcp = 1.0f / (chunk_width - 1);
+inline static const uint32_t vertexCount = chunk_width * chunk_width;
+inline static const int max_lod = (int)std::log2(chunk_width - 3) + 1;
 struct ChunkData
 {
 	wi::ecs::Entity entity = wi::ecs::INVALID_ENTITY;
+	wi::ecs::Entity grass_entity = wi::ecs::INVALID_ENTITY;
 	wi::HairParticleSystem grass;
 	bool grass_exists = false;
 	std::mt19937 prop_rand;
+	wi::Color region_weights[vertexCount] = {};
+	wi::graphics::Texture region_weights_texture;
+	uint32_t virtual_texture_resolution = 0;
+	wi::primitive::Sphere sphere;
 };
 
 struct TerrainGenerator : public wi::gui::Window
 {
-	inline static const int chunk_width = 64 + 3; // + 3: filler vertices for lod apron and grid perimeter
-	inline static const float chunk_half_width = (chunk_width - 1) * 0.5f;
-	inline static const float chunk_width_rcp = 1.0f / (chunk_width - 1);
-	inline static const uint32_t vertexCount = chunk_width * chunk_width;
-	inline static const int max_lod = (int)std::log2(chunk_width - 3) + 1;
-	wi::scene::Scene* scene = &wi::scene::GetScene(); // by default it uses the global scene, but this can be changed
 	wi::ecs::Entity terrainEntity = wi::ecs::INVALID_ENTITY;
-	wi::ecs::Entity materialEntity_Base = wi::ecs::INVALID_ENTITY;
-	wi::ecs::Entity materialEntity_Slope = wi::ecs::INVALID_ENTITY;
-	wi::ecs::Entity materialEntity_LowAltitude = wi::ecs::INVALID_ENTITY;
-	wi::ecs::Entity materialEntity_HighAltitude = wi::ecs::INVALID_ENTITY;
+	wi::scene::Scene* scene = &wi::scene::GetScene(); // by default it uses the global scene, but this can be changed
 	wi::scene::MaterialComponent material_Base;
 	wi::scene::MaterialComponent material_Slope;
 	wi::scene::MaterialComponent material_LowAltitude;
@@ -99,9 +100,18 @@ struct TerrainGenerator : public wi::gui::Window
 	std::atomic_bool generation_cancelled;
 	float generation_time_budget_milliseconds = 12; // after this much time, the generation thread will exit. This can help avoid a very long running, resource consuming and slow cancellation generation
 
+	// Virtual texture updates will be batched like:
+	//	1) Execute all barriers (dst: UNORDERED_ACCESS)
+	//	2) Execute all compute shaders
+	//	3) Execute all barriers (dst: SHADER_RESOURCE)
+	wi::vector<Chunk> virtual_texture_updates;
+	wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_begin;
+	wi::vector<wi::graphics::GPUBarrier> virtual_texture_barriers_end;
+
 	wi::gui::CheckBox centerToCamCheckBox;
 	wi::gui::CheckBox removalCheckBox;
 	wi::gui::Slider lodSlider;
+	wi::gui::Slider texlodSlider;
 	wi::gui::Slider generationSlider;
 	wi::gui::ComboBox presetCombo;
 	wi::gui::Slider seedSlider;
@@ -130,8 +140,10 @@ struct TerrainGenerator : public wi::gui::Window
 	//	This will remove previously existing terrain
 	void Generation_Restart();
 	// This will run the actual generation tasks, call it once per frame
-	void Generation_Update();
+	void Generation_Update(const wi::scene::CameraComponent& camera);
 	// Tells the generation thread that it should be cancelled and blocks until that is confirmed
 	void Generation_Cancel();
+	// The virtual textures will be compressed and saved into resources. They can be serialized from there
+	void BakeVirtualTexturesToFiles();
 
 };

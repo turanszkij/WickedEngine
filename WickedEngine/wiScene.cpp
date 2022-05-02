@@ -2997,10 +2997,6 @@ namespace wi::scene
 
 			mesh._flags &= ~MeshComponent::TLAS_FORCE_DOUBLE_SIDED;
 
-			mesh.terrain_material1_index = (uint32_t)materials.GetIndex(mesh.terrain_material1);
-			mesh.terrain_material2_index = (uint32_t)materials.GetIndex(mesh.terrain_material2);
-			mesh.terrain_material3_index = (uint32_t)materials.GetIndex(mesh.terrain_material3);
-
 			// Update morph targets if needed:
 			if (mesh.dirty_morph && !mesh.targets.empty())
 			{
@@ -3060,9 +3056,6 @@ namespace wi::scene
 			geometry.vb_uvs = mesh.vb_uvs.descriptor_srv;
 			geometry.vb_atl = mesh.vb_atl.descriptor_srv;
 			geometry.vb_pre = mesh.so_pre.descriptor_srv;
-			geometry.blendmaterial1 = mesh.terrain_material1_index;
-			geometry.blendmaterial2 = mesh.terrain_material2_index;
-			geometry.blendmaterial3 = mesh.terrain_material3_index;
 			geometry.aabb_min = mesh.aabb._min;
 			geometry.aabb_max = mesh.aabb._max;
 			geometry.tessellation_factor = mesh.tessellationFactor;

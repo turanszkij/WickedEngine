@@ -159,10 +159,8 @@ struct ShaderGeometry
 	int vb_atl;
 	int vb_pre;
 
+	uint3 padding;
 	uint materialIndex;
-	uint blendmaterial1;
-	uint blendmaterial2;
-	uint blendmaterial3;
 
 	float3 aabb_min;
 	uint flags;
@@ -182,9 +180,6 @@ struct ShaderGeometry
 		vb_pre = -1;
 
 		materialIndex = 0;
-		blendmaterial1 = 0;
-		blendmaterial2 = 0;
-		blendmaterial3 = 0;
 
 		aabb_min = float3(0, 0, 0);
 		flags = 0;

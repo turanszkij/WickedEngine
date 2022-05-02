@@ -374,9 +374,8 @@ void EditorComponent::Load()
 		if (terragen.terrainEntity == INVALID_ENTITY)
 		{
 			// Customize terrain generator before it's initialized:
-			terragen.material_Base.SetUseVertexColors(true);
 			terragen.material_Base.SetRoughness(1);
-			terragen.material_Slope.SetRoughness(0.5f);
+			terragen.material_Slope.SetRoughness(0.1f);
 			terragen.material_LowAltitude.SetRoughness(1);
 			terragen.material_HighAltitude.SetRoughness(1);
 			terragen.material_Base.textures[MaterialComponent::BASECOLORMAP].name = "terrain/base.jpg";
@@ -750,6 +749,7 @@ void EditorComponent::Load()
 					wi::resourcemanager::Mode embed_mode = (wi::resourcemanager::Mode)saveModeComboBox.GetItemUserData(saveModeComboBox.GetSelected());
 					wi::resourcemanager::SetMode(embed_mode);
 
+					terragen.BakeVirtualTexturesToFiles();
 					scene.Serialize(archive);
 
 					if (dump_to_header)
@@ -1902,7 +1902,7 @@ void EditorComponent::Update(float dt)
 		pathTraceStatisticsLabel.SetText(ss);
 	}
 
-	terragen.Generation_Update();
+	terragen.Generation_Update(camera);
 
 	wi::profiler::EndRange(profrange);
 

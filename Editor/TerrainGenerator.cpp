@@ -5,6 +5,7 @@
 
 using namespace wi::ecs;
 using namespace wi::scene;
+using namespace wi::graphics;
 
 enum PRESET
 {
@@ -161,31 +162,31 @@ void TerrainGenerator::init()
 	ClearTransform();
 
 	wi::gui::Window::Create("TerraGen (Preview version)");
-	SetSize(XMFLOAT2(410, 560));
+	SetSize(XMFLOAT2(420, 590));
 
-	float xx = 150;
-	float yy = 0;
-	float stepstep = 25;
-	float heihei = 20;
+	float x = 160;
+	float y = 0;
+	float step = 25;
+	float hei = 20;
 
 	centerToCamCheckBox.Create("Center to Cam: ");
 	centerToCamCheckBox.SetTooltip("Automatically generate chunks around camera. This sets the center chunk to camera position.");
-	centerToCamCheckBox.SetSize(XMFLOAT2(heihei, heihei));
-	centerToCamCheckBox.SetPos(XMFLOAT2(xx, yy += stepstep));
+	centerToCamCheckBox.SetSize(XMFLOAT2(hei, hei));
+	centerToCamCheckBox.SetPos(XMFLOAT2(x, y += step));
 	centerToCamCheckBox.SetCheck(true);
 	AddWidget(&centerToCamCheckBox);
 
 	removalCheckBox.Create("Removal: ");
 	removalCheckBox.SetTooltip("Automatically remove chunks that are farther than generation distance around center chunk.");
-	removalCheckBox.SetSize(XMFLOAT2(heihei, heihei));
-	removalCheckBox.SetPos(XMFLOAT2(xx + 100, yy));
+	removalCheckBox.SetSize(XMFLOAT2(hei, hei));
+	removalCheckBox.SetPos(XMFLOAT2(x + 100, y));
 	removalCheckBox.SetCheck(true);
 	AddWidget(&removalCheckBox);
 
-	lodSlider.Create(0.0001f, 0.01f, 0.005f, 10000, "LOD Distance: ");
+	lodSlider.Create(0.0001f, 0.01f, 0.005f, 10000, "Mesh LOD Distance: ");
 	lodSlider.SetTooltip("Set the LOD (Level Of Detail) distance multiplier.\nLow values increase LOD detail in distance");
-	lodSlider.SetSize(XMFLOAT2(200, heihei));
-	lodSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	lodSlider.SetSize(XMFLOAT2(200, hei));
+	lodSlider.SetPos(XMFLOAT2(x, y += step));
 	lodSlider.OnSlide([this](wi::gui::EventArgs args) {
 		for (auto& it : chunks)
 		{
@@ -202,16 +203,22 @@ void TerrainGenerator::init()
 		});
 	AddWidget(&lodSlider);
 
+	texlodSlider.Create(0.01f, 0.05f, 0.01f, 10000, "Texture LOD Distance: ");
+	texlodSlider.SetTooltip("Set the LOD (Level Of Detail) distance multiplier.\nLow values increase LOD detail in distance");
+	texlodSlider.SetSize(XMFLOAT2(200, hei));
+	texlodSlider.SetPos(XMFLOAT2(x, y += step));
+	AddWidget(&texlodSlider);
+
 	generationSlider.Create(0, 16, 12, 16, "Generation Distance: ");
 	generationSlider.SetTooltip("How far out chunks will be generated (value is in number of chunks)");
-	generationSlider.SetSize(XMFLOAT2(200, heihei));
-	generationSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	generationSlider.SetSize(XMFLOAT2(200, hei));
+	generationSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&generationSlider);
 
 	presetCombo.Create("Preset: ");
 	presetCombo.SetTooltip("Select a terrain preset");
-	presetCombo.SetSize(XMFLOAT2(200, heihei));
-	presetCombo.SetPos(XMFLOAT2(xx, yy += stepstep));
+	presetCombo.SetSize(XMFLOAT2(200, hei));
+	presetCombo.SetPos(XMFLOAT2(x, y += step));
 	presetCombo.AddItem("Hills", PRESET_HILLS);
 	presetCombo.AddItem("Islands", PRESET_ISLANDS);
 	presetCombo.AddItem("Mountains", PRESET_MOUNTAINS);
@@ -295,105 +302,105 @@ void TerrainGenerator::init()
 
 	seedSlider.Create(1, 12345, 3926, 12344, "Seed: ");
 	seedSlider.SetTooltip("Seed for terrain randomness");
-	seedSlider.SetSize(XMFLOAT2(200, heihei));
-	seedSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	seedSlider.SetSize(XMFLOAT2(200, hei));
+	seedSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&seedSlider);
 
 	bottomLevelSlider.Create(-100, 0, -60, 10000, "Bottom Level: ");
 	bottomLevelSlider.SetTooltip("Terrain mesh grid lowest level");
-	bottomLevelSlider.SetSize(XMFLOAT2(200, heihei));
-	bottomLevelSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	bottomLevelSlider.SetSize(XMFLOAT2(200, hei));
+	bottomLevelSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&bottomLevelSlider);
 
 	topLevelSlider.Create(0, 5000, 380, 10000, "Top Level: ");
 	topLevelSlider.SetTooltip("Terrain mesh grid topmost level");
-	topLevelSlider.SetSize(XMFLOAT2(200, heihei));
-	topLevelSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	topLevelSlider.SetSize(XMFLOAT2(200, hei));
+	topLevelSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&topLevelSlider);
 
 	perlinBlendSlider.Create(0, 1, 0.5f, 10000, "Perlin Blend: ");
 	perlinBlendSlider.SetTooltip("Amount of perlin noise to use");
-	perlinBlendSlider.SetSize(XMFLOAT2(200, heihei));
-	perlinBlendSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	perlinBlendSlider.SetSize(XMFLOAT2(200, hei));
+	perlinBlendSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&perlinBlendSlider);
 
 	perlinFrequencySlider.Create(0.0001f, 0.01f, 0.0008f, 10000, "Perlin Frequency: ");
 	perlinFrequencySlider.SetTooltip("Frequency for the perlin noise");
-	perlinFrequencySlider.SetSize(XMFLOAT2(200, heihei));
-	perlinFrequencySlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	perlinFrequencySlider.SetSize(XMFLOAT2(200, hei));
+	perlinFrequencySlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&perlinFrequencySlider);
 
 	perlinOctavesSlider.Create(1, 8, 6, 7, "Perlin Octaves: ");
 	perlinOctavesSlider.SetTooltip("Octave count for the perlin noise");
-	perlinOctavesSlider.SetSize(XMFLOAT2(200, heihei));
-	perlinOctavesSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	perlinOctavesSlider.SetSize(XMFLOAT2(200, hei));
+	perlinOctavesSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&perlinOctavesSlider);
 
 	voronoiBlendSlider.Create(0, 1, 0.5f, 10000, "Voronoi Blend: ");
 	voronoiBlendSlider.SetTooltip("Amount of voronoi to use for elevation");
-	voronoiBlendSlider.SetSize(XMFLOAT2(200, heihei));
-	voronoiBlendSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	voronoiBlendSlider.SetSize(XMFLOAT2(200, hei));
+	voronoiBlendSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&voronoiBlendSlider);
 
 	voronoiFrequencySlider.Create(0.0001f, 0.01f, 0.001f, 10000, "Voronoi Frequency: ");
 	voronoiFrequencySlider.SetTooltip("Voronoi can create distinctly elevated areas, the more cells there are, smaller the consecutive areas");
-	voronoiFrequencySlider.SetSize(XMFLOAT2(200, heihei));
-	voronoiFrequencySlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	voronoiFrequencySlider.SetSize(XMFLOAT2(200, hei));
+	voronoiFrequencySlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&voronoiFrequencySlider);
 
 	voronoiFadeSlider.Create(0, 100, 2.59f, 10000, "Voronoi Fade: ");
 	voronoiFadeSlider.SetTooltip("Fade out voronoi regions by distance from cell's center");
-	voronoiFadeSlider.SetSize(XMFLOAT2(200, heihei));
-	voronoiFadeSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	voronoiFadeSlider.SetSize(XMFLOAT2(200, hei));
+	voronoiFadeSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&voronoiFadeSlider);
 
 	voronoiShapeSlider.Create(0, 1, 0.7f, 10000, "Voronoi Shape: ");
 	voronoiShapeSlider.SetTooltip("How much the voronoi shape will be kept");
-	voronoiShapeSlider.SetSize(XMFLOAT2(200, heihei));
-	voronoiShapeSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	voronoiShapeSlider.SetSize(XMFLOAT2(200, hei));
+	voronoiShapeSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&voronoiShapeSlider);
 
 	voronoiFalloffSlider.Create(0, 8, 6, 10000, "Voronoi Falloff: ");
 	voronoiFalloffSlider.SetTooltip("Controls the falloff of the voronoi distance fade effect");
-	voronoiFalloffSlider.SetSize(XMFLOAT2(200, heihei));
-	voronoiFalloffSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	voronoiFalloffSlider.SetSize(XMFLOAT2(200, hei));
+	voronoiFalloffSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&voronoiFalloffSlider);
 
 	voronoiPerturbationSlider.Create(0, 1, 0.1f, 10000, "Voronoi Perturbation: ");
 	voronoiPerturbationSlider.SetTooltip("Controls the random look of voronoi region edges");
-	voronoiPerturbationSlider.SetSize(XMFLOAT2(200, heihei));
-	voronoiPerturbationSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	voronoiPerturbationSlider.SetSize(XMFLOAT2(200, hei));
+	voronoiPerturbationSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&voronoiPerturbationSlider);
 
 
 	heightmapButton.Create("Load Heightmap...");
 	heightmapButton.SetTooltip("Load a heightmap texture, where the red channel corresponds to terrain height and the resolution to dimensions.\nThe heightmap will be placed in the world center.");
-	heightmapButton.SetSize(XMFLOAT2(200, heihei));
-	heightmapButton.SetPos(XMFLOAT2(xx, yy += stepstep));
+	heightmapButton.SetSize(XMFLOAT2(200, hei));
+	heightmapButton.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&heightmapButton);
 
 	heightmapBlendSlider.Create(0, 1, 1, 10000, "Heightmap Blend: ");
 	heightmapBlendSlider.SetTooltip("Amount of displacement coming from the heightmap texture");
-	heightmapBlendSlider.SetSize(XMFLOAT2(200, heihei));
-	heightmapBlendSlider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	heightmapBlendSlider.SetSize(XMFLOAT2(200, hei));
+	heightmapBlendSlider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&heightmapBlendSlider);
 
 	region1Slider.Create(0, 8, 1, 10000, "Slope Region: ");
 	region1Slider.SetTooltip("The region's falloff power");
-	region1Slider.SetSize(XMFLOAT2(200, heihei));
-	region1Slider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	region1Slider.SetSize(XMFLOAT2(200, hei));
+	region1Slider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&region1Slider);
 
 	region2Slider.Create(0, 8, 2, 10000, "Low Altitude Region: ");
 	region2Slider.SetTooltip("The region's falloff power");
-	region2Slider.SetSize(XMFLOAT2(200, heihei));
-	region2Slider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	region2Slider.SetSize(XMFLOAT2(200, hei));
+	region2Slider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&region2Slider);
 
 	region3Slider.Create(0, 8, 8, 10000, "High Altitude Region: ");
 	region3Slider.SetTooltip("The region's falloff power");
-	region3Slider.SetSize(XMFLOAT2(200, heihei));
-	region3Slider.SetPos(XMFLOAT2(xx, yy += stepstep));
+	region3Slider.SetSize(XMFLOAT2(200, hei));
+	region3Slider.SetPos(XMFLOAT2(x, y += step));
 	AddWidget(&region3Slider);
 
 
@@ -457,60 +464,11 @@ void TerrainGenerator::Generation_Restart()
 	Generation_Cancel();
 	generation_scene.Clear();
 
-	// If these already exist, save them before recreating:
-	//	(This is helpful if eg: someone edits them in the editor and then regenerates the terrain)
-	if (materialEntity_Base != INVALID_ENTITY)
-	{
-		MaterialComponent* material = scene->materials.GetComponent(materialEntity_Base);
-		if (material != nullptr)
-		{
-			material_Base = *material;
-		}
-	}
-	if (materialEntity_Slope != INVALID_ENTITY)
-	{
-		MaterialComponent* material = scene->materials.GetComponent(materialEntity_Slope);
-		if (material != nullptr)
-		{
-			material_Slope = *material;
-		}
-	}
-	if (materialEntity_LowAltitude != INVALID_ENTITY)
-	{
-		MaterialComponent* material = scene->materials.GetComponent(materialEntity_LowAltitude);
-		if (material != nullptr)
-		{
-			material_LowAltitude = *material;
-		}
-	}
-	if (materialEntity_HighAltitude != INVALID_ENTITY)
-	{
-		MaterialComponent* material = scene->materials.GetComponent(materialEntity_HighAltitude);
-		if (material != nullptr)
-		{
-			material_HighAltitude = *material;
-		}
-	}
-
 	chunks.clear();
 
 	scene->Entity_Remove(terrainEntity);
 	scene->transforms.Create(terrainEntity);
 	scene->names.Create(terrainEntity) = "terrain";
-
-	materialEntity_Base = scene->Entity_CreateMaterial("terrainMaterial_Base");
-	materialEntity_Slope = scene->Entity_CreateMaterial("terrainMaterial_Slope");
-	materialEntity_LowAltitude = scene->Entity_CreateMaterial("terrainMaterial_LowAltitude");
-	materialEntity_HighAltitude = scene->Entity_CreateMaterial("terrainMaterial_HighAltitude");
-	scene->Component_Attach(materialEntity_Base, terrainEntity);
-	scene->Component_Attach(materialEntity_Slope, terrainEntity);
-	scene->Component_Attach(materialEntity_LowAltitude, terrainEntity);
-	scene->Component_Attach(materialEntity_HighAltitude, terrainEntity);
-	// init/restore materials:
-	*scene->materials.GetComponent(materialEntity_Base) = material_Base;
-	*scene->materials.GetComponent(materialEntity_Slope) = material_Slope;
-	*scene->materials.GetComponent(materialEntity_LowAltitude) = material_LowAltitude;
-	*scene->materials.GetComponent(materialEntity_HighAltitude) = material_HighAltitude;
 
 	const uint32_t seed = (uint32_t)seedSlider.GetValue();
 	perlin.init(seed);
@@ -564,7 +522,7 @@ void TerrainGenerator::Generation_Restart()
 	}
 }
 
-void TerrainGenerator::Generation_Update()
+void TerrainGenerator::Generation_Update(const wi::scene::CameraComponent& camera)
 {
 	// The generation task is always cancelled every frame so we are sure that generation is not running at this point
 	Generation_Cancel();
@@ -580,20 +538,59 @@ void TerrainGenerator::Generation_Update()
 
 	if (centerToCamCheckBox.GetCheck())
 	{
-		const CameraComponent& camera = GetCamera();
 		center_chunk.x = (int)std::floor((camera.Eye.x + chunk_half_width) * chunk_width_rcp);
 		center_chunk.z = (int)std::floor((camera.Eye.z + chunk_half_width) * chunk_width_rcp);
 	}
 
-	// Chunk removal checks:
-	if (removalCheckBox.GetCheck())
+	const int removal_threshold = (int)generationSlider.GetValue() + 2;
+	const float texlodMultiplier = texlodSlider.GetValue();
+	GraphicsDevice* device = GetDevice();
+	virtual_texture_updates.clear();
+	virtual_texture_barriers_begin.clear();
+	virtual_texture_barriers_end.clear();
+
+	// Check whether there are any materials that would write to virtual textures:
+	uint32_t max_texture_resolution = 0;
+	bool virtual_texture_available[MaterialComponent::TEXTURESLOT_COUNT] = {};
+	virtual_texture_available[MaterialComponent::SURFACEMAP] = true; // this is always needed to bake individual material properties
+	MaterialComponent* virtual_materials[4] = {
+		&material_Base,
+		&material_Slope,
+		&material_LowAltitude,
+		&material_HighAltitude,
+	};
+	for (auto& material : virtual_materials)
 	{
-		const int removal_threshold = (int)generationSlider.GetValue() + 2;
-		for (auto it = chunks.begin(); it != chunks.end();)
+		for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
 		{
-			const Chunk& chunk = it->first;
-			ChunkData& chunk_data = it->second;
-			const int dist = std::max(std::abs(center_chunk.x - chunk.x), std::abs(center_chunk.z - chunk.z));
+			switch (i)
+			{
+			case MaterialComponent::BASECOLORMAP:
+			case MaterialComponent::NORMALMAP:
+			case MaterialComponent::SURFACEMAP:
+				if (material->textures[i].resource.IsValid())
+				{
+					virtual_texture_available[i] = true;
+					const TextureDesc& desc = material->textures[i].resource.GetTexture().GetDesc();
+					max_texture_resolution = std::max(max_texture_resolution, desc.width);
+					max_texture_resolution = std::max(max_texture_resolution, desc.height);
+				}
+				break;
+			default:
+				break;
+			}
+		}
+	}
+
+	for (auto it = chunks.begin(); it != chunks.end();)
+	{
+		const Chunk& chunk = it->first;
+		ChunkData& chunk_data = it->second;
+		const int dist = std::max(std::abs(center_chunk.x - chunk.x), std::abs(center_chunk.z - chunk.z));
+
+		// chunk removal:
+		if (removalCheckBox.GetCheck())
+		{
 			if (dist > removal_threshold)
 			{
 				scene->Entity_Remove(it->second.entity);
@@ -607,18 +604,115 @@ void TerrainGenerator::Generation_Update()
 				{
 					if (dist > 1)
 					{
-						wi::HairParticleSystem* grass = scene->hairs.GetComponent(chunk_data.entity);
-						if (grass != nullptr)
-						{
-							// remove this chunk's grass patch from the scene
-							scene->hairs.Remove(chunk_data.entity);
-							chunk_data.grass_exists = false; // grass can be generated here by generation thread...
-						}
+						scene->Entity_Remove(chunk_data.grass_entity);
+						chunk_data.grass_exists = false; // grass can be generated here by generation thread...
 					}
 				}
 			}
-			it++;
 		}
+
+		// Collect virtual texture update requests:
+		if (max_texture_resolution > 0)
+		{
+			uint32_t texture_lod = 0;
+			const float distsq = wi::math::DistanceSquared(camera.Eye, chunk_data.sphere.center);
+			const float radius = chunk_data.sphere.radius;
+			const float radiussq = radius * radius;
+			if (distsq < radiussq)
+			{
+				texture_lod = 0;
+			}
+			else
+			{
+				const float dist = std::sqrt(distsq);
+				const float dist_to_sphere = dist - radius;
+				texture_lod = uint32_t(dist_to_sphere * texlodMultiplier);
+			}
+
+			uint32_t chunk_required_texture_resolution = uint32_t(max_texture_resolution / std::pow(2.0f, (float)std::max(0u, texture_lod)));
+			chunk_required_texture_resolution = std::max(8u, chunk_required_texture_resolution);
+			if (chunk_data.virtual_texture_resolution != chunk_required_texture_resolution)
+			{
+				chunk_data.virtual_texture_resolution = chunk_required_texture_resolution;
+
+				MaterialComponent* material = scene->materials.GetComponent(chunk_data.entity);
+				if (material != nullptr)
+				{
+					for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
+					{
+						if (virtual_texture_available[i])
+						{
+							TextureDesc desc;
+							desc.width = chunk_required_texture_resolution;
+							desc.height = chunk_required_texture_resolution;
+							desc.format = Format::R8G8B8A8_UNORM;
+							desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+							Texture texture;
+							bool success = device->CreateTexture(&desc, nullptr, &texture);
+							assert(success);
+
+							material->textures[i].resource.SetTexture(texture);
+							virtual_texture_barriers_begin.push_back(GPUBarrier::Image(&material->textures[i].resource.GetTexture(), desc.layout, ResourceState::UNORDERED_ACCESS));
+							virtual_texture_barriers_end.push_back(GPUBarrier::Image(&material->textures[i].resource.GetTexture(), ResourceState::UNORDERED_ACCESS, desc.layout));
+						}
+					}
+
+					virtual_texture_updates.push_back(chunk);
+				}
+
+			}
+		}
+
+		it++;
+	}
+
+	// Execute batched virtual texture updates:
+	if (!virtual_texture_updates.empty())
+	{
+		CommandList cmd = device->BeginCommandList();
+		device->EventBegin("TerrainVirtualTextureUpdate", cmd);
+		auto range = wi::profiler::BeginRangeGPU("TerrainVirtualTextureUpdate", cmd);
+		device->Barrier(virtual_texture_barriers_begin.data(), (uint32_t)virtual_texture_barriers_begin.size(), cmd);
+
+		device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE), cmd);
+
+		ShaderMaterial materials[4];
+		material_Base.WriteShaderMaterial(&materials[0]);
+		material_Slope.WriteShaderMaterial(&materials[1]);
+		material_LowAltitude.WriteShaderMaterial(&materials[2]);
+		material_HighAltitude.WriteShaderMaterial(&materials[3]);
+		device->BindDynamicConstantBuffer(materials, 10, cmd);
+
+		for (auto& chunk : virtual_texture_updates)
+		{
+			auto it = chunks.find(chunk);
+			if (it == chunks.end())
+				continue;
+			ChunkData& chunk_data = it->second;
+
+			const GPUResource* res[] = {
+				&chunk_data.region_weights_texture,
+			};
+			device->BindResources(res, 0, arraysize(res), cmd);
+
+			const MaterialComponent* material = scene->materials.GetComponent(chunk_data.entity);
+			if (material != nullptr)
+			{
+				for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
+				{
+					if (virtual_texture_available[i])
+					{
+						device->BindUAV(material->textures[i].GetGPUResource(), i, cmd);
+					}
+				}
+			}
+
+			device->Dispatch(chunk_data.virtual_texture_resolution / 8u, chunk_data.virtual_texture_resolution / 8u, 1, cmd);
+		}
+
+		device->Barrier(virtual_texture_barriers_end.data(), (uint32_t)virtual_texture_barriers_end.size(), cmd);
+		wi::profiler::EndRange(range);
+		device->EventEnd(cmd);
 	}
 
 	// Start the generation on a background thread and keep it running until the next frame
@@ -667,24 +761,26 @@ void TerrainGenerator::Generation_Update()
 				transform.Translate(chunk_pos);
 				transform.UpdateTransform();
 
+				MaterialComponent& material = generation_scene.materials.Create(chunk_data.entity);
+				// material params will be 1 because they will be created from only texture maps
+				//	because region materials are blended together into one texture
+				material.SetRoughness(1);
+				material.SetMetalness(1);
+				material.SetReflectance(1);
+
 				MeshComponent& mesh = generation_scene.meshes.Create(chunk_data.entity);
 				object.meshID = chunk_data.entity;
 				mesh.indices = indices;
-				mesh.SetTerrain(true);
-				mesh.terrain_material1 = materialEntity_Slope;
-				mesh.terrain_material2 = materialEntity_LowAltitude;
-				mesh.terrain_material3 = materialEntity_HighAltitude;
 				for (auto& lod : lods)
 				{
 					mesh.subsets.emplace_back();
-					mesh.subsets.back().materialID = materialEntity_Base;
+					mesh.subsets.back().materialID = chunk_data.entity;
 					mesh.subsets.back().indexCount = lod.indexCount;
 					mesh.subsets.back().indexOffset = lod.indexOffset;
 				}
 				mesh.subsets_per_lod = 1;
 				mesh.vertex_positions.resize(vertexCount);
 				mesh.vertex_normals.resize(vertexCount);
-				mesh.vertex_colors.resize(vertexCount);
 				mesh.vertex_uvset_0.resize(vertexCount);
 
 				wi::HairParticleSystem grass = grass_properties;
@@ -763,9 +859,10 @@ void TerrainGenerator::Generation_Update()
 					materialBlendWeights.z *= weight_norm;
 					materialBlendWeights.w *= weight_norm;
 
+					chunk_data.region_weights[index] = wi::Color::fromFloat4(materialBlendWeights);
+
 					mesh.vertex_positions[index] = XMFLOAT3(x, height, z);
 					mesh.vertex_normals[index] = normal;
-					mesh.vertex_colors[index] = wi::Color::fromFloat4(materialBlendWeights);
 					const XMFLOAT2 uv = XMFLOAT2(x * chunk_width_rcp + 0.5f, z * chunk_width_rcp + 0.5f);
 					mesh.vertex_uvset_0[index] = uv;
 
@@ -788,16 +885,21 @@ void TerrainGenerator::Generation_Update()
 
 				wi::jobsystem::Execute(ctx, [&](wi::jobsystem::JobArgs args) {
 					mesh.CreateRenderData();
+					chunk_data.sphere.center = mesh.aabb.getCenter();
+					chunk_data.sphere.center.x += chunk_pos.x;
+					chunk_data.sphere.center.y += chunk_pos.y;
+					chunk_data.sphere.center.z += chunk_pos.z;
+					chunk_data.sphere.radius = mesh.aabb.getRadius();
 					});
 
 				// If there were any vertices in this chunk that could be valid for grass, store the grass particle system:
 				if (grass_valid_vertex_count.load() > 0)
 				{
+					chunk_data.grass_entity = CreateEntity();
 					chunk_data.grass = std::move(grass); // the grass will be added to the scene later, only when the chunk is close to the camera (center chunk's neighbors)
 					chunk_data.grass.meshID = chunk_data.entity;
 					chunk_data.grass.strandCount = grass_valid_vertex_count.load() * 3;
 					chunk_data.grass.viewDistance = chunk_width;
-					generation_scene.materials.Create(chunk_data.entity) = material_GrassParticle;
 				}
 
 				// Prop placement:
@@ -817,12 +919,9 @@ void TerrainGenerator::Generation_Update()
 						const XMFLOAT3& pos0 = mesh.vertex_positions[ind0];
 						const XMFLOAT3& pos1 = mesh.vertex_positions[ind1];
 						const XMFLOAT3& pos2 = mesh.vertex_positions[ind2];
-						const uint32_t& col0 = mesh.vertex_colors[ind0];
-						const uint32_t& col1 = mesh.vertex_colors[ind1];
-						const uint32_t& col2 = mesh.vertex_colors[ind2];
-						const XMFLOAT4 region0 = wi::Color(col0).toFloat4();
-						const XMFLOAT4 region1 = wi::Color(col1).toFloat4();
-						const XMFLOAT4 region2 = wi::Color(col2).toFloat4();
+						const XMFLOAT4 region0 = chunk_data.region_weights[ind0];
+						const XMFLOAT4 region1 = chunk_data.region_weights[ind1];
+						const XMFLOAT4 region2 = chunk_data.region_weights[ind2];
 						// random barycentric coords on the triangle:
 						float f = float_distr(chunk_data.prop_rand);
 						float g = float_distr(chunk_data.prop_rand);
@@ -863,6 +962,20 @@ void TerrainGenerator::Generation_Update()
 					}
 				}
 
+				// Create the blend weights texture for virtual texture update:
+				{
+					TextureDesc desc;
+					desc.width = (uint32_t)chunk_width;
+					desc.height = (uint32_t)chunk_width;
+					desc.format = Format::R8G8B8A8_UNORM;
+					desc.bind_flags = BindFlag::SHADER_RESOURCE;
+					SubresourceData data;
+					data.data_ptr = chunk_data.region_weights;
+					data.row_pitch = chunk_width * sizeof(chunk_data.region_weights[0]);
+					bool success = device->CreateTexture(&desc, &data, &chunk_data.region_weights_texture);
+					assert(success);
+				}
+
 				wi::jobsystem::Wait(ctx); // wait until mesh.CreateRenderData() async task finishes
 				generated_something = true;
 			}
@@ -880,13 +993,12 @@ void TerrainGenerator::Generation_Update()
 						if (!chunk_data.grass_exists)
 						{
 							// add patch for this chunk
-							wi::HairParticleSystem& grass = generation_scene.hairs.Create(chunk_data.entity);
+							wi::HairParticleSystem& grass = generation_scene.hairs.Create(chunk_data.grass_entity);
 							grass = chunk_data.grass;
-							const MeshComponent* mesh = generation_scene.meshes.GetComponent(chunk_data.entity);
-							if (mesh != nullptr)
-							{
-								grass.CreateRenderData(*mesh);
-							}
+							generation_scene.materials.Create(chunk_data.grass_entity) = material_GrassParticle;
+							generation_scene.transforms.Create(chunk_data.grass_entity);
+							generation_scene.names.Create(chunk_data.grass_entity) = "grass";
+							generation_scene.Component_Attach(chunk_data.grass_entity, chunk_data.entity, true);
 							chunk_data.grass_exists = true; // don't generate more grass here
 							generated_something = true;
 						}
@@ -946,4 +1058,85 @@ void TerrainGenerator::Generation_Cancel()
 	generation_cancelled.store(true); // tell the generation thread that work must be stopped
 	wi::jobsystem::Wait(generation_workload); // waits until generation thread exits
 	generation_cancelled.store(false); // the next generation can run
+}
+
+void TerrainGenerator::BakeVirtualTexturesToFiles()
+{
+	if (terrainEntity == INVALID_ENTITY)
+	{
+		return;
+	}
+
+	wi::jobsystem::context ctx;
+
+	static const std::string extension = "PNG";
+
+	for (auto it = chunks.begin(); it != chunks.end(); it++)
+	{
+		const Chunk& chunk = it->first;
+		ChunkData& chunk_data = it->second;
+		MaterialComponent* material = scene->materials.GetComponent(chunk_data.entity);
+		if (material != nullptr)
+		{
+			for (int i = 0; i < MaterialComponent::TEXTURESLOT_COUNT; ++i)
+			{
+				auto& tex = material->textures[i];
+				switch (i)
+				{
+				case MaterialComponent::BASECOLORMAP:
+				case MaterialComponent::SURFACEMAP:
+				case MaterialComponent::NORMALMAP:
+					if (tex.name.empty() && tex.GetGPUResource() != nullptr)
+					{
+						wi::vector<uint8_t> filedata;
+						if (wi::helper::saveTextureToMemory(tex.resource.GetTexture(), filedata))
+						{
+							tex.resource.SetFileData(std::move(filedata));
+							wi::jobsystem::Execute(ctx, [i, &tex, chunk](wi::jobsystem::JobArgs args) {
+								wi::vector<uint8_t> filedata_ktx2;
+								if (wi::helper::saveTextureToMemoryFile(tex.resource.GetFileData(), tex.resource.GetTexture().desc, extension, filedata_ktx2))
+								{
+									tex.name = std::to_string(chunk.x) + "_" + std::to_string(chunk.z);
+									switch (i)
+									{
+									case MaterialComponent::BASECOLORMAP:
+										tex.name += "_basecolormap";
+										break;
+									case MaterialComponent::SURFACEMAP:
+										tex.name += "_surfacemap";
+										break;
+									case MaterialComponent::NORMALMAP:
+										tex.name += "_normalmap";
+										break;
+									default:
+										break;
+									}
+									tex.name += "." + extension;
+									tex.resource = wi::resourcemanager::Load(tex.name, wi::resourcemanager::Flags::IMPORT_RETAIN_FILEDATA, filedata_ktx2.data(), filedata_ktx2.size());
+								}
+								});
+						}
+					}
+					break;
+				default:
+					break;
+				}
+			}
+		}
+	}
+
+	wi::helper::messageBox("Baking terrain virtual textures, this could take a while!", "Attention!");
+
+	wi::jobsystem::Wait(ctx);
+
+	for (auto it = chunks.begin(); it != chunks.end(); it++)
+	{
+		const Chunk& chunk = it->first;
+		ChunkData& chunk_data = it->second;
+		MaterialComponent* material = scene->materials.GetComponent(chunk_data.entity);
+		if (material != nullptr)
+		{
+			material->CreateRenderData();
+		}
+	}
 }

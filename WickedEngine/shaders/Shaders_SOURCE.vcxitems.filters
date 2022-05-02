@@ -551,9 +551,6 @@
     <FxCompile Include="$(MSBuildThisFileDirectory)objectPS_voxelizer.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)objectPS_voxelizer_terrain.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)objectPS_hologram.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
@@ -594,9 +591,6 @@
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)envMapPS.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)envMapPS_terrain.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)emittedparticlePS_soft_distortion.hlsl">
@@ -762,9 +756,6 @@
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)objectPS_pom.hlsl">
-      <Filter>PS</Filter>
-    </FxCompile>
-    <FxCompile Include="$(MSBuildThisFileDirectory)objectPS_terrain.hlsl">
       <Filter>PS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)objectPS_transparent.hlsl">
@@ -1050,6 +1041,9 @@
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)underwaterCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)terrainVirtualTextureUpdateCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>
