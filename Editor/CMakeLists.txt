@@ -70,3 +70,16 @@ add_custom_command(
 
 install(TARGETS WickedEngineEditor)
 
+if (UNIX)
+	# Installing icon and application "shortcut" on Linux
+	include(GNUInstallDirs)
+	install(FILES ${CMAKE_SOURCE_DIR}/Content/logo_small.png
+			RENAME wicked.png
+			DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/icons/")
+
+	configure_file("${CMAKE_SOURCE_DIR}/Editor/Linux/Installer/Distribution/WickedEngineEditor.template.desktop"
+			"${CMAKE_CURRENT_BINARY_DIR}/WickedEngineEditor.desktop")
+
+	install(FILES "${CMAKE_CURRENT_BINARY_DIR}/WickedEngineEditor.desktop"
+			DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/applications/")
+endif()
