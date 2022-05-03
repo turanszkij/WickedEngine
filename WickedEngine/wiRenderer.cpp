@@ -1031,6 +1031,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_DDGI_UPDATE], "ddgi_updateCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_DDGI_UPDATE_DEPTH], "ddgi_updateCS_depth.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE], "terrainVirtualTextureUpdateCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_MESHLET_PREPARE], "meshlet_prepareCS.cso"); });
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::HS, shaders[HSTYPE_OBJECT], "objectHS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::HS, shaders[HSTYPE_OBJECT_PREPASS], "objectHS_prepass.cso"); });
@@ -3654,6 +3655,30 @@ void UpdateRenderData(
 			}
 		}
 		wi::profiler::EndRange(range);
+	}
+
+	// Meshlets:
+	if(vis.scene->instanceArraySize > 0)
+	{
+		device->EventBegin("Meshlet prepare", cmd);
+		auto range = wi::profiler::BeginRangeGPU("Meshlet prepare", cmd);
+		device->BindComputeShader(&shaders[CSTYPE_MESHLET_PREPARE], cmd);
+
+		const GPUResource* uavs[] = {
+			&vis.scene->meshletBuffer,
+		};
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+
+		device->Dispatch((uint32_t)vis.scene->instanceArraySize, 1, 1, cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Buffer(&vis.scene->meshletBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+		wi::profiler::EndRange(range);
+		device->EventEnd(cmd);
 	}
 
 	device->EventEnd(cmd);

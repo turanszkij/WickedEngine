@@ -3,7 +3,7 @@
 #include "hairparticleHF.hlsli"
 #include "ShaderInterop_HairParticle.h"
 
-uint2 main(VertexToPixel input, out uint coverage : SV_Coverage) : SV_Target
+uint main(VertexToPixel input, out uint coverage : SV_Coverage) : SV_Target
 {
 	ShaderMaterial material = HairGetMaterial();
 

@@ -92,7 +92,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	const float2 uv = ((float2)pixel + 0.5) * GetCamera().internal_resolution_rcp;
 	const float3 P = reconstruct_position(uv, depth);
 
-	uint2 primitiveID = texture_primitiveID[pixel];
+	uint primitiveID = texture_primitiveID[pixel];
 
 	PrimitiveID prim;
 	prim.unpack(primitiveID);

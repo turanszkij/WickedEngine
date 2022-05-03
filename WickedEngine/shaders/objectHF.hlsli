@@ -1030,7 +1030,7 @@ PixelInput main(VertexInput input)
 
 // entry point:
 #ifdef PREPASS
-uint2 main(PixelInput input, in uint primitiveID : SV_PrimitiveID, out uint coverage : SV_Coverage) : SV_Target
+uint main(PixelInput input, in uint primitiveID : SV_PrimitiveID, out uint coverage : SV_Coverage) : SV_Target
 #else
 float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // PREPASS

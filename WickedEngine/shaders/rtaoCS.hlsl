@@ -17,7 +17,7 @@ groupshared float tile_Z[TILE_SIZE * TILE_SIZE];
 [numthreads(POSTPROCESS_BLOCKSIZE, POSTPROCESS_BLOCKSIZE, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID, uint groupIndex : SV_GroupIndex)
 {
-	uint2 primitiveID = texture_primitiveID[DTid.xy * 2];
+	uint primitiveID = texture_primitiveID[DTid.xy * 2];
 	if (!any(primitiveID))
 		return;
 

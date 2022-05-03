@@ -81,7 +81,7 @@ TextureCubeArray bindless_cubearrays[] : register(space8);
 Texture3D bindless_textures3D[] : register(space9);
 Texture2D<float> bindless_textures_float[] : register(space10);
 Texture2D<float2> bindless_textures_float2[] : register(space11);
-Texture2D<uint2> bindless_textures_uint2[] : register(space12);
+Texture2D<uint> bindless_textures_uint[] : register(space12);
 Texture2D<uint4> bindless_textures_uint4[] : register(space13);
 
 RWTexture2D<float4> bindless_rwtextures[] : register(space14);
@@ -113,6 +113,10 @@ inline ShaderGeometry load_geometry(uint geometryIndex)
 {
 	return bindless_buffers[GetScene().geometrybuffer].Load<ShaderGeometry>(geometryIndex * sizeof(ShaderGeometry));
 }
+inline ShaderMeshlet load_meshlet(uint meshletIndex)
+{
+	return bindless_buffers[GetScene().meshletbuffer].Load<ShaderMeshlet>(meshletIndex * sizeof(ShaderMeshlet));
+}
 inline ShaderMaterial load_material(uint materialIndex)
 {
 	return bindless_buffers[GetScene().materialbuffer].Load<ShaderMaterial>(materialIndex * sizeof(ShaderMaterial));
@@ -125,6 +129,40 @@ inline float4x4 load_entitymatrix(uint matrixIndex)
 {
 	return transpose(bindless_buffers[GetFrame().buffer_entitymatrixarray_index].Load<float4x4>(matrixIndex * sizeof(float4x4)));
 }
+
+struct PrimitiveID
+{
+	uint primitiveIndex;
+	uint instanceIndex;
+	uint subsetIndex;
+
+	inline uint pack()
+	{
+		// 1 bit valid flag (because full 0 means not written)
+		// 23 bit meshletIndex
+		// 8  bit meshletPrimitiveIndex
+		ShaderMeshInstance inst = load_instance(instanceIndex);
+		ShaderGeometry geometry = load_geometry(inst.geometryOffset + subsetIndex);
+		uint meshletIndex = inst.meshletOffset + geometry.meshletOffset + primitiveIndex / MESHLET_TRIANGLE_COUNT;
+		meshletIndex &= ~0u >> 9u; // mask 23 active bits
+		meshletIndex <<= 8u; // push 8 bits higher
+		uint meshletPrimitiveIndex = primitiveIndex % MESHLET_TRIANGLE_COUNT;
+		meshletPrimitiveIndex &= 0xFF; // mask 8 active bits
+		uint valid = (1u << 31u);
+		return (1u << 31u) | meshletIndex | meshletPrimitiveIndex;
+	}
+	inline void unpack(uint value)
+	{
+		value &= (~0u >> 1u); // remove valid flag
+		uint meshletPrimitiveIndex = value & 0xFF;
+		uint meshletIndex = (value >> 8u) & (~0u >> 9u);
+		ShaderMeshlet meshlet = load_meshlet(meshletIndex);
+		ShaderMeshInstance inst = load_instance(meshlet.instanceIndex);
+		primitiveIndex = meshlet.primitiveOffset + meshletPrimitiveIndex;
+		instanceIndex = meshlet.instanceIndex;
+		subsetIndex = meshlet.geometryIndex - inst.geometryOffset;
+	}
+};
 
 #define texture_globalenvmap bindless_cubemaps[GetScene().globalenvmap]
 #define texture_envmaparray bindless_cubearrays[GetScene().envmaparray]
@@ -146,7 +184,7 @@ inline float4x4 load_entitymatrix(uint matrixIndex)
 #define texture_depth bindless_textures_float[GetCamera().texture_depth_index]
 #define texture_depth_history bindless_textures_float[GetCamera().texture_depth_index_prev]
 #define texture_lineardepth bindless_textures_float[GetCamera().texture_lineardepth_index]
-#define texture_primitiveID bindless_textures_uint2[GetCamera().texture_primitiveID_index]
+#define texture_primitiveID bindless_textures_uint[GetCamera().texture_primitiveID_index]
 #define texture_velocity bindless_textures_float2[GetCamera().texture_velocity_index]
 #define texture_normal bindless_textures_float2[GetCamera().texture_normal_index]
 #define texture_roughness bindless_textures_float[GetCamera().texture_roughness_index]
@@ -676,10 +714,10 @@ inline float3 unpack_unitvector(in uint value)
 inline uint pack_utangent(in float4 value)
 {
 	uint retVal = 0;
-	retVal |= (uint)((value.x * 0.5 + 0.5) * 255.0) << 0u;
-	retVal |= (uint)((value.y * 0.5 + 0.5) * 255.0) << 8u;
-	retVal |= (uint)((value.z * 0.5 + 0.5) * 255.0) << 16u;
-	retVal |= (uint)((value.w * 0.5 + 0.5) * 255.0) << 24u;
+	retVal |= (uint)((value.x) * 255.0) << 0u;
+	retVal |= (uint)((value.y) * 255.0) << 8u;
+	retVal |= (uint)((value.z) * 255.0) << 16u;
+	retVal |= (uint)((value.w) * 255.0) << 24u;
 	return retVal;
 }
 inline float4 unpack_utangent(in uint value)

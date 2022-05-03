@@ -1667,6 +1667,20 @@ namespace wi::scene
 			bounds = AABB::Merge(bounds, group_bound);
 		}
 
+		// Meshlet buffer:
+		uint32_t meshletCount = meshletAllocator.load();
+		if(meshletBuffer.desc.size < meshletCount * sizeof(ShaderMeshlet))
+		{
+			GPUBufferDesc desc;
+			desc.stride = sizeof(ShaderMeshlet);
+			desc.size = desc.stride * meshletCount * 2; // *2 to grow fast
+			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+			desc.misc_flags = ResourceMiscFlag::BUFFER_RAW;
+			bool success = device->CreateBuffer(&desc, nullptr, &meshletBuffer);
+			assert(success);
+			device->SetName(&meshletBuffer, "meshletBuffer");
+		}
+
 		if (lightmap_refresh_needed.load())
 		{
 			SetAccelerationStructureUpdateRequested(true);
@@ -1853,6 +1867,7 @@ namespace wi::scene
 		shaderscene.instancebuffer = device->GetDescriptorIndex(&instanceBuffer, SubresourceType::SRV);
 		shaderscene.geometrybuffer = device->GetDescriptorIndex(&geometryBuffer, SubresourceType::SRV);
 		shaderscene.materialbuffer = device->GetDescriptorIndex(&materialBuffer, SubresourceType::SRV);
+		shaderscene.meshletbuffer = device->GetDescriptorIndex(&meshletBuffer, SubresourceType::SRV);
 		shaderscene.envmaparray = device->GetDescriptorIndex(&envmapArray, SubresourceType::SRV);
 		if (weather.skyMap.IsValid())
 		{
@@ -3065,6 +3080,8 @@ namespace wi::scene
 				geometry.flags |= SHADERMESH_FLAG_DOUBLE_SIDED;
 			}
 
+			mesh.meshletCount = 0;
+
 			uint32_t subsetIndex = 0;
 			for (auto& subset : mesh.subsets)
 			{
@@ -3108,6 +3125,9 @@ namespace wi::scene
 
 				geometry.indexOffset = subset.indexOffset;
 				geometry.materialIndex = subset.materialIndex;
+				geometry.meshletOffset = mesh.meshletCount;
+				geometry.meshletCount = triangle_count_to_meshlet_count(subset.indexCount / 3u);
+				mesh.meshletCount += geometry.meshletCount;
 				std::memcpy(geometryArrayMapped + mesh.geometryOffset + subsetIndex, &geometry, sizeof(geometry));
 				subsetIndex++;
 			}
@@ -3222,6 +3242,8 @@ namespace wi::scene
 	{
 		assert(objects.GetCount() == aabb_objects.GetCount());
 
+		meshletAllocator.store(0u);
+
 		parallel_bounds.clear();
 		parallel_bounds.resize((size_t)wi::jobsystem::DispatchGroupCount((uint32_t)objects.GetCount(), small_subtask_groupsize));
 		
@@ -3276,7 +3298,7 @@ namespace wi::scene
 				uint32_t transform_index = (uint32_t)transforms.GetIndex(entity);
 				const TransformComponent& transform = transforms[transform_index];
 
-				if (object.mesh_index != ~0u)
+				if (object.mesh_index != ~0ull)
 				{
 					const MeshComponent& mesh = meshes[object.mesh_index];
 
@@ -3382,6 +3404,8 @@ namespace wi::scene
 					inst.color = wi::math::CompressColor(object.color);
 					inst.emissive = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(object.emissiveColor.x * object.emissiveColor.w, object.emissiveColor.y * object.emissiveColor.w, object.emissiveColor.z * object.emissiveColor.w));
 					inst.geometryOffset = mesh.geometryOffset;
+					inst.geometryCount = (uint)mesh.subsets.size();
+					inst.meshletOffset = meshletAllocator.fetch_add(mesh.meshletCount);
 
 					std::memcpy(instanceArrayMapped + args.jobIndex, &inst, sizeof(inst)); // memcpy whole structure into mapped pointer to avoid read from uncached memory
 
@@ -3789,6 +3813,11 @@ namespace wi::scene
 
 					GraphicsDevice* device = wi::graphics::GetDevice();
 
+					uint32_t indexCount = (uint32_t)hair.primitiveBuffer.desc.size / (uint32_t)hair.primitiveBuffer.desc.stride;
+					uint32_t triangleCount = indexCount / 3u;
+					uint32_t meshletCount = triangle_count_to_meshlet_count(triangleCount);
+					uint32_t meshletOffset = meshletAllocator.fetch_add(meshletCount);
+
 					ShaderGeometry geometry;
 					geometry.init();
 					geometry.indexOffset = 0;
@@ -3798,6 +3827,8 @@ namespace wi::scene
 					geometry.vb_pre = device->GetDescriptorIndex(&hair.vertexBuffer_POS[1], SubresourceType::SRV);
 					geometry.vb_uvs = device->GetDescriptorIndex(&hair.vertexBuffer_UVS, SubresourceType::SRV);
 					geometry.flags = SHADERMESH_FLAG_DOUBLE_SIDED | SHADERMESH_FLAG_HAIRPARTICLE;
+					geometry.meshletOffset = 0;
+					geometry.meshletCount = meshletCount;
 
 					size_t geometryAllocation = geometryAllocator.fetch_add(1);
 					std::memcpy(geometryArrayMapped + geometryAllocation, &geometry, sizeof(geometry));
@@ -3809,6 +3840,8 @@ namespace wi::scene
 					inst.geometryOffset = (uint)geometryAllocation;
 					inst.emissive = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(1, 1, 1));
 					inst.color = wi::math::CompressColor(XMFLOAT4(1, 1, 1, 1));
+					inst.geometryCount = 1;
+					inst.meshletOffset = meshletOffset;
 
 					const size_t instanceIndex = objects.GetCount() + args.jobIndex;
 					std::memcpy(instanceArrayMapped + instanceIndex, &inst, sizeof(inst));
@@ -3871,6 +3904,11 @@ namespace wi::scene
 
 			GraphicsDevice* device = wi::graphics::GetDevice();
 
+			uint32_t indexCount = (uint32_t)emitter.primitiveBuffer.desc.size / (uint32_t)emitter.primitiveBuffer.desc.stride;
+			uint32_t triangleCount = indexCount / 3u;
+			uint32_t meshletCount = triangle_count_to_meshlet_count(triangleCount);
+			uint32_t meshletOffset = meshletAllocator.fetch_add(meshletCount);
+
 			ShaderGeometry geometry;
 			geometry.init();
 			geometry.indexOffset = 0;
@@ -3880,6 +3918,8 @@ namespace wi::scene
 			geometry.vb_uvs = device->GetDescriptorIndex(&emitter.vertexBuffer_UVS, SubresourceType::SRV);
 			geometry.vb_col = device->GetDescriptorIndex(&emitter.vertexBuffer_COL, SubresourceType::SRV);
 			geometry.flags = SHADERMESH_FLAG_DOUBLE_SIDED | SHADERMESH_FLAG_EMITTEDPARTICLE;
+			geometry.meshletOffset = 0;
+			geometry.meshletCount = meshletCount;
 
 			size_t geometryAllocation = geometryAllocator.fetch_add(1);
 			std::memcpy(geometryArrayMapped + geometryAllocation, &geometry, sizeof(geometry));
@@ -3891,6 +3931,8 @@ namespace wi::scene
 			inst.geometryOffset = (uint)geometryAllocation;
 			inst.emissive = wi::math::Pack_R11G11B10_FLOAT(XMFLOAT3(1, 1, 1));
 			inst.color = wi::math::CompressColor(XMFLOAT4(1, 1, 1, 1));
+			inst.geometryCount = 1;
+			inst.meshletOffset = meshletOffset;
 
 			const size_t instanceIndex = objects.GetCount() + hairs.GetCount() + args.jobIndex;
 			std::memcpy(instanceArrayMapped + instanceIndex, &inst, sizeof(inst));

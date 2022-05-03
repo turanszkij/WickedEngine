@@ -47,7 +47,7 @@ void RenderPath3D::ResizeBuffers()
 	}
 	{
 		TextureDesc desc;
-		desc.format = Format::R32G32_UINT;
+		desc.format = Format::R32_UINT;
 		desc.bind_flags = BindFlag::RENDER_TARGET | BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 		desc.width = internalResolution.x;
 		desc.height = internalResolution.y;
