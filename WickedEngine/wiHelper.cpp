@@ -549,6 +549,16 @@ namespace wi::helper
 			return;
 		}
 
+#ifdef PLATFORM_UWP
+
+		size_t found = path.rfind(rootdir);
+		if (found != std::string::npos)
+		{
+			path = path.substr(found + rootdir.length());
+		}
+
+#else
+
 		std::filesystem::path filepath = path;
 		std::filesystem::path rootpath = rootdir;
 		std::filesystem::path relative = std::filesystem::relative(path, rootdir);
@@ -557,11 +567,8 @@ namespace wi::helper
 			path = relative.string();
 		}
 
-		//size_t found = path.rfind(rootdir);
-		//if (found != std::string::npos)
-		//{
-		//	path = path.substr(found + rootdir.length());
-		//}
+#endif // PLATFORM_UWP
+
 	}
 
 	void MakePathAbsolute(std::string& path)
