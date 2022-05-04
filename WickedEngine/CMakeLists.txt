@@ -259,7 +259,10 @@ target_link_libraries(offlineshadercompiler
 		PUBLIC ${TARGET_NAME})
 
 install(TARGETS offlineshadercompiler
-		RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}/WickedEngine)
+		RUNTIME DESTINATION "${CMAKE_INSTALL_LIBDIR}/WickedEngine")
+
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/Content"
+		DESTINATION "${CMAKE_INSTALL_LIBDIR}/WickedEngine")
 
 #### LOCAL FOLDER INSTALLATION
 # Create importable target here
@@ -313,16 +316,3 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/shaders
 		PATTERN "hlsl6" EXCLUDE
 		PATTERN "*.vcxitems*" EXCLUDE
 		)
-
-		DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine/shaders/")
-
-install(FILES
-		shaders/ffx-shadows-dnsr/ffx_denoiser_shadows_filter.h
-		shaders/ffx-shadows-dnsr/ffx_denoiser_shadows_prepare.h
-		shaders/ffx-shadows-dnsr/ffx_denoiser_shadows_tileclassification.h
-		shaders/ffx-shadows-dnsr/ffx_denoiser_shadows_util.h
-		DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine/shaders/ffx-shadows-dnsr")
-install(FILES
-		shaders/ffx-fsr/ffx_a.h
-		shaders/ffx-fsr/ffx_fsr1.h
-		DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/WickedEngine/shaders/ffx-fsr")

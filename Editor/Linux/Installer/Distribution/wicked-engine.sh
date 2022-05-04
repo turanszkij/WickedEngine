@@ -4,4 +4,4 @@ echo "Starting Wicked Engine"
 
 cd $WICKED
 
-./WickedEngineEditor
+exec ./WickedEngineEditor $@

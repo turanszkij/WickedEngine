@@ -68,16 +68,39 @@ add_custom_command(
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/terrain ${CMAKE_CURRENT_BINARY_DIR}/terrain
 )
 
-install(TARGETS WickedEngineEditor)
+include(GNUInstallDirs)
+set(EDITOR_INSTALL_FOLDER "${CMAKE_INSTALL_LIBDIR}/WickedEngine/Editor")
 
+# wicked-engine.sh (cd install folder then execs editor)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/Linux/Installer/Distribution/wicked-engine.template.sh"
+		"${CMAKE_CURRENT_BINARY_DIR}/wicked-engine.sh")
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/wicked-engine.sh"
+		DESTINATION ${CMAKE_INSTALL_BINDIR}
+		PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ WORLD_EXECUTE WORLD_READ)
+
+# WickedEngineEditor executable
+install(TARGETS WickedEngineEditor RUNTIME DESTINATION ${EDITOR_INSTALL_FOLDER})
+
+# install editor assets
+# mandatory images and terrain folders
+install(DIRECTORY
+		"${CMAKE_CURRENT_SOURCE_DIR}/images"
+		"${CMAKE_CURRENT_SOURCE_DIR}/terrain"
+		DESTINATION ${EDITOR_INSTALL_FOLDER})
+# optional .ini .ico .lua
+install(FILES
+		${CMAKE_CURRENT_SOURCE_DIR}/config.ini
+		${CMAKE_CURRENT_SOURCE_DIR}/Editor.ico
+		${CMAKE_CURRENT_SOURCE_DIR}/startup.lua
+		DESTINATION ${EDITOR_INSTALL_FOLDER})
+
+# Installing icon and application "shortcut" on Linux
 if (UNIX)
-	# Installing icon and application "shortcut" on Linux
-	include(GNUInstallDirs)
 	install(FILES ${CMAKE_SOURCE_DIR}/Content/logo_small.png
 			RENAME wicked.png
 			DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/icons/")
 
-	configure_file("${CMAKE_SOURCE_DIR}/Editor/Linux/Installer/Distribution/WickedEngineEditor.template.desktop"
+	configure_file("${CMAKE_CURRENT_SOURCE_DIR}/Linux/Installer/Distribution/WickedEngineEditor.template.desktop"
 			"${CMAKE_CURRENT_BINARY_DIR}/WickedEngineEditor.desktop")
 
 	install(FILES "${CMAKE_CURRENT_BINARY_DIR}/WickedEngineEditor.desktop"
