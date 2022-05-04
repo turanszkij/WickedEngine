@@ -18,8 +18,7 @@ static const uint BVH_PRIMITIVE_FLAG_TRANSPARENT = 1 << 9;
 
 struct BVHPrimitive
 {
-	uint packed_prim;
-	uint padding;
+	uint2 packed_prim;
 	uint flags;
 	float x0;
 
@@ -41,7 +40,7 @@ struct BVHPrimitive
 	PrimitiveID primitiveID()
 	{
 		PrimitiveID prim;
-		prim.unpack(packed_prim);
+		prim.unpack2(packed_prim);
 		return prim;
 	}
 #endif // __cplusplus

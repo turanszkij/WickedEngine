@@ -284,7 +284,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 				surfelAliveBuffer[aliveCount] = newSurfelIndex;
 
 				SurfelData surfel_data = (SurfelData)0;
-				surfel_data.primitiveID = primitiveID;
+				surfel_data.primitiveID = prim.pack2();
 				surfel_data.bary = pack_half2(surface.bary.xy);
 				surfel_data.uid = surface.inst.uid;
 				surfel_data.inconsistency = 1;

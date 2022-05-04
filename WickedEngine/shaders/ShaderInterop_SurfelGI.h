@@ -53,8 +53,7 @@ struct Surfel
 // This per-surfel structure will store all additional persistent data per surfel that isn't needed at GI lookup
 struct SurfelData
 {
-	uint primitiveID;
-	uint padding;
+	uint2 primitiveID;
 	uint bary;
 	uint uid;
 

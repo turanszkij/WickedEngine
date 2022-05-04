@@ -136,6 +136,7 @@ struct PrimitiveID
 	uint instanceIndex;
 	uint subsetIndex;
 
+	// These packing methods require meshlet data, and pack into 32 bits:
 	inline uint pack()
 	{
 		// 1 bit valid flag (because full 0 means not written)
@@ -161,6 +162,22 @@ struct PrimitiveID
 		primitiveIndex = meshlet.primitiveOffset + meshletPrimitiveIndex;
 		instanceIndex = meshlet.instanceIndex;
 		subsetIndex = meshlet.geometryIndex - inst.geometryOffset;
+	}
+
+	// These packing methods don't need meshlets, but they are packed into 64 bits:
+	uint2 pack2()
+	{
+		// 1 bit valid flag
+		// 31 bit primitiveIndex
+		// 24 bit instanceIndex
+		// 8  bit subsetIndex
+		return uint2((1u << 31u) | primitiveIndex, (instanceIndex & 0xFFFFFF) | ((subsetIndex & 0xFF) << 24u));
+	}
+	void unpack2(uint2 value)
+	{
+		primitiveIndex = value.x & (~0u >> 1u);
+		instanceIndex = value.y & 0xFFFFFF;
+		subsetIndex = (value.y >> 24u) & 0xFF;
 	}
 };
 
