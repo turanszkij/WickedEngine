@@ -28,17 +28,13 @@
 
 PUSHCONSTANT(push, ObjectPushConstants);
 
-inline uint GetSubsetIndex()
-{
-	return push.GetSubsetIndex();
-}
 inline ShaderGeometry GetMesh()
 {
-	return load_geometry(push.GetMeshIndex() + push.GetSubsetIndex());
+	return load_geometry(push.geometryIndex);
 }
 inline ShaderMaterial GetMaterial()
 {
-	return load_material(push.GetMaterialIndex());
+	return load_material(push.materialIndex);
 }
 
 #define sampler_objectshader			bindless_samplers[GetFrame().sampler_objectshader_index]
@@ -1449,7 +1445,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	PrimitiveID prim;
 	prim.primitiveIndex = primitiveID;
 	prim.instanceIndex = input.instanceIndex;
-	prim.subsetIndex = GetSubsetIndex();
+	prim.subsetIndex = push.geometryIndex - load_instance(input.instanceIndex).geometryOffset;
 	return prim.pack();
 #else
 	return color;

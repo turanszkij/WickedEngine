@@ -2460,13 +2460,10 @@ void RenderMeshes(
 			assert(subsetIndex < 256u); // subsets must be represented as 8-bit
 
 			ObjectPushConstants push;
-			push.init(
-				mesh.geometryOffset,
-				(uint)subsetIndex,
-				subset.materialIndex,
-				instanceBufferDescriptorIndex,
-				instancedBatch.dataOffset
-			);
+			push.geometryIndex = mesh.geometryOffset + subsetIndex;
+			push.materialIndex = subset.materialIndex;
+			push.instances = instanceBufferDescriptorIndex;
+			push.instance_offset = (uint)instancedBatch.dataOffset;
 
 			if (pso_backside != nullptr)
 			{
@@ -5893,13 +5890,10 @@ void DrawDebugWorld(
 			device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PaintRadiusCB), cmd);
 
 			ObjectPushConstants push;
-			push.init(
-				mesh.geometryOffset,
-				x.subset,
-				subset.materialIndex,
-				device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV),
-				(uint32_t)mem.offset
-			);
+			push.geometryIndex = mesh.geometryOffset + x.subset;
+			push.materialIndex = subset.materialIndex;
+			push.instances = device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV);
+			push.instance_offset = (uint)mem.offset;
 			device->PushConstants(&push, sizeof(push), cmd);
 
 			device->DrawIndexedInstanced(subset.indexCount, 1, subset.indexOffset, 0, 0, cmd);
@@ -6498,12 +6492,10 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 					const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
 					ObjectPushConstants push;
-					push.init(
-						mesh.geometryOffset,
-						(uint)subsetIndex,
-						subset.materialIndex,
-						-1, 0
-					);
+					push.geometryIndex = mesh.geometryOffset + subsetIndex;
+					push.materialIndex = subset.materialIndex;
+					push.instances = -1;
+					push.instance_offset = 0;
 					device->PushConstants(&push, sizeof(push), cmd);
 
 					device->DrawIndexedInstanced(subset.indexCount, 1, subset.indexOffset, 0, 0, cmd);
