@@ -8,12 +8,12 @@ struct ShaderScene
 	int instancebuffer;
 	int geometrybuffer;
 	int materialbuffer;
-	int envmaparray;
+	int meshletbuffer;
 
+	int envmaparray;
 	int globalenvmap;
 	int padding0;
 	int padding1;
-	int padding2;
 
 	int TLAS;
 	int BVH_counter;
@@ -159,8 +159,10 @@ struct ShaderGeometry
 	int vb_atl;
 	int vb_pre;
 
-	uint3 padding;
 	uint materialIndex;
+	uint meshletOffset; // offset of this subset in meshlets
+	uint meshletCount;
+	uint padding;
 
 	float3 aabb_min;
 	uint flags;
@@ -180,12 +182,27 @@ struct ShaderGeometry
 		vb_pre = -1;
 
 		materialIndex = 0;
+		meshletOffset = 0;
+		meshletCount = 0;
 
 		aabb_min = float3(0, 0, 0);
 		flags = 0;
 		aabb_max = float3(0, 0, 0);
 		tessellation_factor = 0;
 	}
+};
+
+// 256 triangle batch of a ShaderGeometry
+static const uint MESHLET_TRIANGLE_COUNT = 256u;
+inline uint triangle_count_to_meshlet_count(uint triangleCount)
+{
+	return (triangleCount + MESHLET_TRIANGLE_COUNT - 1u) / MESHLET_TRIANGLE_COUNT;
+}
+struct ShaderMeshlet
+{
+	uint instanceIndex;
+	uint geometryIndex;
+	uint primitiveOffset;
 };
 
 struct ShaderTransform
@@ -226,10 +243,17 @@ struct ShaderMeshInstance
 	uint flags;
 	uint layerMask;
 	uint geometryOffset;
+
+	uint geometryCount;
 	uint color;
 	uint emissive;
 	int lightmap;
-	int padding;
+
+	uint meshletOffset; // offset in the global meshlet buffer for first subset
+	int padding0;
+	int padding1;
+	int padding2;
+
 	ShaderTransform transform;
 	ShaderTransform transformInverseTranspose; // This correctly handles non uniform scaling for normals
 	ShaderTransform transformPrev;
@@ -243,6 +267,8 @@ struct ShaderMeshInstance
 		emissive = ~0u;
 		lightmap = -1;
 		geometryOffset = 0;
+		geometryCount = 0;
+		meshletOffset = ~0u;
 		transform.init();
 		transformInverseTranspose.init();
 		transformPrev.init();
@@ -278,60 +304,10 @@ struct ShaderMeshInstancePointer
 
 struct ObjectPushConstants
 {
-	uint meshIndex_subsetIndex; // 24-bit mesh, 8-bit subset
+	uint geometryIndex;
 	uint materialIndex;
 	int instances;
 	uint instance_offset;
-
-	void init(
-		uint _meshIndex,
-		uint _subsetIndex,
-		uint _materialIndex,
-		int _instances,
-		uint _instance_offset
-	)
-	{
-		meshIndex_subsetIndex = 0;
-		meshIndex_subsetIndex |= _meshIndex & 0xFFFFFF;
-		meshIndex_subsetIndex |= (_subsetIndex & 0xFF) << 24u;
-		materialIndex = _materialIndex;
-		instances = _instances;
-		instance_offset = _instance_offset;
-	}
-	uint GetMeshIndex()
-	{
-		return meshIndex_subsetIndex & 0xFFFFFF;
-	}
-	uint GetSubsetIndex()
-	{
-		return (meshIndex_subsetIndex >> 24u) & 0xFF;
-	}
-	uint GetMaterialIndex()
-	{
-		return materialIndex;
-	}
-};
-
-struct PrimitiveID
-{
-	uint primitiveIndex;
-	uint instanceIndex;
-	uint subsetIndex;
-
-	uint2 pack()
-	{
-		// 1 bit valid flag
-		// 31 bit primitiveIndex
-		// 24 bit instanceIndex
-		// 8  bit subsetIndex
-		return uint2((1u << 31u) | primitiveIndex, (instanceIndex & 0xFFFFFF) | ((subsetIndex & 0xFF) << 24u));
-	}
-	void unpack(uint2 value)
-	{
-		primitiveIndex = value.x & (~0u >> 1u);
-		instanceIndex = value.y & 0xFFFFFF;
-		subsetIndex = (value.y >> 24u) & 0xFF;
-	}
 };
 
 // Warning: the size of this structure directly affects shader performance.

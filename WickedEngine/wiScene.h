@@ -388,6 +388,7 @@ namespace wi::scene
 		BufferView so_pre;
 		wi::vector<uint8_t> vertex_subsets;
 		uint32_t geometryOffset = 0;
+		uint32_t meshletCount = 0;
 
 		wi::graphics::RaytracingAccelerationStructure BLAS;
 		enum BLAS_STATE
@@ -1335,6 +1336,10 @@ namespace wi::scene
 		ShaderMaterial* materialArrayMapped = nullptr;
 		size_t materialArraySize = 0;
 		wi::graphics::GPUBuffer materialBuffer;
+
+		// Meshlets:
+		wi::graphics::GPUBuffer meshletBuffer;
+		std::atomic<uint32_t> meshletAllocator{ 0 };
 
 		// Occlusion query state:
 		wi::graphics::GPUQueryHeap queryHeap;

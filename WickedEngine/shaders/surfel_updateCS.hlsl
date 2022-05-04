@@ -26,7 +26,7 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	float radius = SURFEL_MAX_RADIUS;
 
 	PrimitiveID prim;
-	prim.unpack(surfel_data.primitiveID);
+	prim.unpack2(surfel_data.primitiveID);
 
 	Surface surface;
 	surface.init();

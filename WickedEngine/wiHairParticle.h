@@ -86,5 +86,7 @@ namespace wi
 		void Serialize(wi::Archive& archive, wi::ecs::EntitySerializer& seri);
 
 		static void Initialize();
+
+		constexpr uint32_t GetParticleCount() const { return strandCount * segmentCount; }
 	};
 }

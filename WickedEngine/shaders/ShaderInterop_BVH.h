@@ -35,12 +35,15 @@ struct BVHPrimitive
 	float3 v0() { return float3(x0, y0, z0); }
 	float3 v1() { return float3(x1, y1, z1); }
 	float3 v2() { return float3(x2, y2, z2); }
+
+#ifndef __cplusplus
 	PrimitiveID primitiveID()
 	{
 		PrimitiveID prim;
-		prim.unpack(packed_prim);
+		prim.unpack2(packed_prim);
 		return prim;
 	}
+#endif // __cplusplus
 };
 
 struct BVHNode

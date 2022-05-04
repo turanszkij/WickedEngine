@@ -43,7 +43,7 @@ namespace wi
 		bd.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 		bd.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
 
-		const uint32_t particleCount = strandCount * segmentCount;
+		const uint32_t particleCount = GetParticleCount();
 		if (particleCount > 0)
 		{
 			bd.stride = sizeof(PatchSimulationData);
@@ -218,7 +218,7 @@ namespace wi
 		aabb = AABB(_min, _max);
 		aabb = aabb.transform(world);
 
-		if (_flags & REBUILD_BUFFERS || !constantBuffer.IsValid() || (strandCount * segmentCount) != simulationBuffer.GetDesc().size / sizeof(PatchSimulationData))
+		if (_flags & REBUILD_BUFFERS || !constantBuffer.IsValid() || GetParticleCount() != simulationBuffer.GetDesc().size / sizeof(PatchSimulationData))
 		{
 			CreateRenderData(mesh);
 		}

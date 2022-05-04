@@ -7,9 +7,9 @@
 PUSHCONSTANT(push, VisibilityResolvePushConstants);
 
 #ifdef VISIBILITY_MSAA
-Texture2DMS<uint2> input_primitiveID : register(t0);
+Texture2DMS<uint> input_primitiveID : register(t0);
 #else
-Texture2D<uint2> input_primitiveID : register(t0);
+Texture2D<uint> input_primitiveID : register(t0);
 #endif // VISIBILITY_MSAA
 
 RWTexture2D<float> output_depth_mip0 : register(u0);
@@ -28,7 +28,7 @@ RWTexture2D<float2> output_velocity : register(u10);
 RWTexture2D<float2> output_normal : register(u11);
 RWTexture2D<unorm float> output_roughness : register(u12);
 #ifdef VISIBILITY_MSAA
-RWTexture2D<uint2> output_primitiveID : register(u13);
+RWTexture2D<uint> output_primitiveID : register(u13);
 #endif // VISIBILITY_MSAA
 
 [numthreads(16, 16, 1)]
@@ -40,7 +40,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 	const float2 clipspace = uv_to_clipspace(uv);
 	RayDesc ray = CreateCameraRay(clipspace);
 
-	uint2 primitiveID = input_primitiveID[pixel];
+	uint primitiveID = input_primitiveID[pixel];
 
 #ifdef VISIBILITY_MSAA
 	[branch]

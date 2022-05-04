@@ -1031,6 +1031,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_DDGI_UPDATE], "ddgi_updateCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_DDGI_UPDATE_DEPTH], "ddgi_updateCS_depth.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_TERRAIN_VIRTUALTEXTURE_UPDATE], "terrainVirtualTextureUpdateCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_MESHLET_PREPARE], "meshlet_prepareCS.cso"); });
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::HS, shaders[HSTYPE_OBJECT], "objectHS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::HS, shaders[HSTYPE_OBJECT_PREPASS], "objectHS_prepass.cso"); });
@@ -2459,13 +2460,10 @@ void RenderMeshes(
 			assert(subsetIndex < 256u); // subsets must be represented as 8-bit
 
 			ObjectPushConstants push;
-			push.init(
-				mesh.geometryOffset,
-				(uint)subsetIndex,
-				subset.materialIndex,
-				instanceBufferDescriptorIndex,
-				instancedBatch.dataOffset
-			);
+			push.geometryIndex = mesh.geometryOffset + subsetIndex;
+			push.materialIndex = subset.materialIndex;
+			push.instances = instanceBufferDescriptorIndex;
+			push.instance_offset = (uint)instancedBatch.dataOffset;
 
 			if (pso_backside != nullptr)
 			{
@@ -3654,6 +3652,30 @@ void UpdateRenderData(
 			}
 		}
 		wi::profiler::EndRange(range);
+	}
+
+	// Meshlets:
+	if(vis.scene->instanceArraySize > 0)
+	{
+		device->EventBegin("Meshlet prepare", cmd);
+		auto range = wi::profiler::BeginRangeGPU("Meshlet prepare", cmd);
+		device->BindComputeShader(&shaders[CSTYPE_MESHLET_PREPARE], cmd);
+
+		const GPUResource* uavs[] = {
+			&vis.scene->meshletBuffer,
+		};
+		device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+
+		device->Dispatch((uint32_t)vis.scene->instanceArraySize, 1, 1, cmd);
+
+		{
+			GPUBarrier barriers[] = {
+				GPUBarrier::Buffer(&vis.scene->meshletBuffer, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+			};
+			device->Barrier(barriers, arraysize(barriers), cmd);
+		}
+		wi::profiler::EndRange(range);
+		device->EventEnd(cmd);
 	}
 
 	device->EventEnd(cmd);
@@ -5868,13 +5890,10 @@ void DrawDebugWorld(
 			device->BindDynamicConstantBuffer(cb, CB_GETBINDSLOT(PaintRadiusCB), cmd);
 
 			ObjectPushConstants push;
-			push.init(
-				mesh.geometryOffset,
-				x.subset,
-				subset.materialIndex,
-				device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV),
-				(uint32_t)mem.offset
-			);
+			push.geometryIndex = mesh.geometryOffset + x.subset;
+			push.materialIndex = subset.materialIndex;
+			push.instances = device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV);
+			push.instance_offset = (uint)mem.offset;
 			device->PushConstants(&push, sizeof(push), cmd);
 
 			device->DrawIndexedInstanced(subset.indexCount, 1, subset.indexOffset, 0, 0, cmd);
@@ -6473,12 +6492,10 @@ void RefreshImpostors(const Scene& scene, CommandList cmd)
 					const MaterialComponent& material = *scene.materials.GetComponent(subset.materialID);
 
 					ObjectPushConstants push;
-					push.init(
-						mesh.geometryOffset,
-						(uint)subsetIndex,
-						subset.materialIndex,
-						-1, 0
-					);
+					push.geometryIndex = mesh.geometryOffset + subsetIndex;
+					push.materialIndex = subset.materialIndex;
+					push.instances = -1;
+					push.instance_offset = 0;
 					device->PushConstants(&push, sizeof(push), cmd);
 
 					device->DrawIndexedInstanced(subset.indexCount, 1, subset.indexOffset, 0, 0, cmd);
