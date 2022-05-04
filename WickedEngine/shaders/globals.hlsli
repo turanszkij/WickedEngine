@@ -139,24 +139,23 @@ struct PrimitiveID
 	// These packing methods require meshlet data, and pack into 32 bits:
 	inline uint pack()
 	{
-		// 1 bit valid flag (because full 0 means not written)
+		// 1 bit valid flag
 		// 23 bit meshletIndex
 		// 8  bit meshletPrimitiveIndex
 		ShaderMeshInstance inst = load_instance(instanceIndex);
 		ShaderGeometry geometry = load_geometry(inst.geometryOffset + subsetIndex);
 		uint meshletIndex = inst.meshletOffset + geometry.meshletOffset + primitiveIndex / MESHLET_TRIANGLE_COUNT;
 		meshletIndex &= ~0u >> 9u; // mask 23 active bits
-		meshletIndex <<= 8u; // push 8 bits higher
 		uint meshletPrimitiveIndex = primitiveIndex % MESHLET_TRIANGLE_COUNT;
 		meshletPrimitiveIndex &= 0xFF; // mask 8 active bits
-		uint valid = (1u << 31u);
-		return (1u << 31u) | meshletIndex | meshletPrimitiveIndex;
+		meshletPrimitiveIndex <<= 23u;
+		return (1u << 31u) | meshletPrimitiveIndex | meshletIndex;
 	}
 	inline void unpack(uint value)
 	{
-		value &= (~0u >> 1u); // remove valid flag
-		uint meshletPrimitiveIndex = value & 0xFF;
-		uint meshletIndex = (value >> 8u) & (~0u >> 9u);
+		value ^= 1u << 31u; // remove valid flag
+		uint meshletIndex = value & (~0u >> 9u);
+		uint meshletPrimitiveIndex = (value >> 23u) & 0xFF;
 		ShaderMeshlet meshlet = load_meshlet(meshletIndex);
 		ShaderMeshInstance inst = load_instance(meshlet.instanceIndex);
 		primitiveIndex = meshlet.primitiveOffset + meshletPrimitiveIndex;
