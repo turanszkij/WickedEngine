@@ -247,6 +247,7 @@ int main(int argc, char* argv[])
 		"ddgi_updateCS.hlsl",
 		"ddgi_updateCS_depth.hlsl",
 		"terrainVirtualTextureUpdateCS.hlsl",
+		"meshlet_prepareCS.hlsl",
 	};
 
 	shaders[static_cast<size_t>(ShaderStage::PS)] = {
