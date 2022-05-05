@@ -1099,18 +1099,19 @@ void RenderPath3D::Render() const
 
 		auto range = wi::profiler::BeginRangeGPU("Opaque Scene", cmd);
 
-		wi::renderer::VisibilityShade(rtMain, cmd);
-
-		Viewport vp;
-		vp.width = (float)depthBuffer_Main.GetDesc().width;
-		vp.height = (float)depthBuffer_Main.GetDesc().height;
-		device->BindViewports(1, &vp, cmd);
-
 		if (wi::renderer::GetRaytracedShadowsEnabled() || wi::renderer::GetScreenSpaceShadowsEnabled())
 		{
 			GPUBarrier barrier = GPUBarrier::Image(&rtShadow, rtShadow.desc.layout, ResourceState::SHADER_RESOURCE);
 			device->Barrier(&barrier, 1, cmd);
 		}
+
+		wi::renderer::VisibilityShade(rtMain, cmd);
+
+
+		Viewport vp;
+		vp.width = (float)depthBuffer_Main.GetDesc().width;
+		vp.height = (float)depthBuffer_Main.GetDesc().height;
+		device->BindViewports(1, &vp, cmd);
 
 		device->RenderPassBegin(&renderpass_main, cmd);
 

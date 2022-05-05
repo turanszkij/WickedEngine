@@ -321,6 +321,8 @@ struct Surface
 		if (geometry.vb_pos_nor_wind < 0)
 			return false;
 
+		material = load_material(geometry.materialIndex);
+
 		const uint startIndex = prim.primitiveIndex * 3 + geometry.indexOffset;
 		Buffer<uint> indexBuffer = bindless_ib[NonUniformResourceIndex(geometry.ib)];
 		i0 = indexBuffer[startIndex + 0];
@@ -336,7 +338,6 @@ struct Surface
 	}
 	void load_internal()
 	{
-		material = load_material(geometry.materialIndex);
 		SamplerState sam = bindless_samplers[GetFrame().sampler_objectshader_index];
 
 		const bool is_hairparticle = geometry.flags & SHADERMESH_FLAG_HAIRPARTICLE;
@@ -610,6 +611,24 @@ struct Surface
 		float3 P0 = mul(inst.transform.GetMatrix(), float4(p0, 1)).xyz;
 		float3 P1 = mul(inst.transform.GetMatrix(), float4(p1, 1)).xyz;
 		float3 P2 = mul(inst.transform.GetMatrix(), float4(p2, 1)).xyz;
+
+		//if (material.IsUsingWind())
+		//{
+		//	float3 n0 = unpack_unitvector(data0.w);
+		//	float3 n1 = unpack_unitvector(data1.w);
+		//	float3 n2 = unpack_unitvector(data2.w);
+		//	float3 N0 = normalize(mul((float3x3)inst.transformInverseTranspose.GetMatrix(), n0));
+		//	float3 N1 = normalize(mul((float3x3)inst.transformInverseTranspose.GetMatrix(), n1));
+		//	float3 N2 = normalize(mul((float3x3)inst.transformInverseTranspose.GetMatrix(), n2));
+
+		//	float wind0 = ((data0.w >> 24u) & 0xFF) / 255.0;
+		//	float wind1 = ((data1.w >> 24u) & 0xFF) / 255.0;
+		//	float wind2 = ((data2.w >> 24u) & 0xFF) / 255.0;
+
+		//	P0 += compute_wind(P0, wind0);
+		//	P1 += compute_wind(P1, wind1);
+		//	P2 += compute_wind(P2, wind2);
+		//}
 
 		bool is_backface;
 		bary = compute_barycentrics(rayOrigin, rayDirection, P0, P1, P2, hit_depth, is_backface);
