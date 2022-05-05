@@ -70,6 +70,8 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 
 			ApplyLighting(surface, lighting, color);
 
+			ApplyFog(length(surface.P - GetCamera().position), GetCamera().position, surface.V, color);
+
 			output[pixel] = float4(color.rgb, 1);
 			//output[pixel] = float4(surface.albedo, 1);
 		}
