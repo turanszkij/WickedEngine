@@ -608,8 +608,13 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 	{
 		// decals are enabled, loop through them first:
 		float4 decalAccumulation = 0;
+#ifdef __SHADER_STAGE_COMPUTE
+		const float3 P_dx = surface.P - QuadReadAcrossX(surface.P);
+		const float3 P_dy = surface.P - QuadReadAcrossY(surface.P);
+#else
 		const float3 P_dx = ddx_coarse(surface.P);
 		const float3 P_dy = ddy_coarse(surface.P);
+#endif // __SHADER_STAGE_COMPUTE
 
 		// Loop through decal buckets in the tile:
 		const uint first_item = GetFrame().decalarray_offset;

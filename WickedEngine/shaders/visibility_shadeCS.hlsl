@@ -4,16 +4,18 @@
 #include "brdf.hlsli"
 #include "raytracingHF.hlsli"
 
-#define DISABLE_DECALS
 #define SHADOW_MASK_ENABLED
 #include "objectHF.hlsli"
+
+#include "ffx-shadows-dnsr/ffx_denoiser_shadows_util.h"
 
 RWTexture2D<float4> output : register(u0);
 
 [numthreads(8, 8, 1)]
 void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
 {
-	uint2 pixel = DTid.xy;
+	//uint2 pixel = DTid.xy;
+	uint2 pixel = Gid.xy * 8 + remap_lane_8x8(groupIndex);
 
 	const float2 uv = ((float2)pixel + 0.5) * GetCamera().internal_resolution_rcp;
 	const float2 clipspace = uv_to_clipspace(uv);
