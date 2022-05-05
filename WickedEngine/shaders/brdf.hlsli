@@ -557,6 +557,8 @@ struct Surface
 		sss = material.subsurfaceScattering;
 		sss_inv = material.subsurfaceScattering_inv;
 
+		layerMask = material.layerMask;
+
 		update();
 	}
 
@@ -611,7 +613,7 @@ struct Surface
 
 		bary = compute_barycentrics(rayOrigin, rayDirection, P0, P1, P2, hit_depth);
 		P = rayOrigin + rayDirection * hit_depth;
-		V = rayDirection;
+		V = -rayDirection;
 
 		load_internal();
 		return true;
