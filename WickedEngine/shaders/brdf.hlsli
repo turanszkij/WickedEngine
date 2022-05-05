@@ -611,9 +611,14 @@ struct Surface
 		float3 P1 = mul(inst.transform.GetMatrix(), float4(p1, 1)).xyz;
 		float3 P2 = mul(inst.transform.GetMatrix(), float4(p2, 1)).xyz;
 
-		bary = compute_barycentrics(rayOrigin, rayDirection, P0, P1, P2, hit_depth);
+		bool is_backface;
+		bary = compute_barycentrics(rayOrigin, rayDirection, P0, P1, P2, hit_depth, is_backface);
 		P = rayOrigin + rayDirection * hit_depth;
 		V = -rayDirection;
+		if (is_backface)
+		{
+			flags |= SURFACE_FLAG_BACKFACE;
+		}
 
 		load_internal();
 		return true;

@@ -1060,6 +1060,24 @@ float2 compute_barycentrics(float3 rayOrigin, float3 rayDirection, float3 a, flo
 	t = dot(v0v2, qvec) * det_rcp;
 	return float2(u, v);
 }
+// Compute barycentric coordinates on triangle from a ray
+//	also outputs hit distance "t"
+//	also outputs backface flag
+float2 compute_barycentrics(float3 rayOrigin, float3 rayDirection, float3 a, float3 b, float3 c, out float t, out bool is_backface)
+{
+	float3 v0v1 = b - a;
+	float3 v0v2 = c - a;
+	float3 pvec = cross(rayDirection, v0v2);
+	float det = dot(v0v1, pvec);
+	is_backface = det > 0;
+	float det_rcp = rcp(det);
+	float3 tvec = rayOrigin - a;
+	float u = dot(tvec, pvec) * det_rcp;
+	float3 qvec = cross(tvec, v0v1);
+	float v = dot(rayDirection, qvec) * det_rcp;
+	t = dot(v0v2, qvec) * det_rcp;
+	return float2(u, v);
+}
 
 // Texture LOD computation things from https://github.com/EmbarkStudios/kajiya
 float twice_triangle_area(float3 p0, float3 p1, float3 p2)
