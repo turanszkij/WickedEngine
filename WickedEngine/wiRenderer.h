@@ -323,6 +323,10 @@ namespace wi::renderer
 		const VisibilityResolveOutputs& outputs,
 		wi::graphics::CommandList cmd
 	);
+	void VisibilityShade(
+		const wi::graphics::Texture& output,
+		wi::graphics::CommandList cmd
+	);
 
 	struct SurfelGIResources
 	{

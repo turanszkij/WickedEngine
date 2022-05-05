@@ -306,7 +306,12 @@ void RenderPath3D::ResizeBuffers()
 		device->CreateRenderPass(&desc, &renderpass_depthprepass);
 
 		desc.attachments.clear();
-		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtMain_render, RenderPassAttachment::LoadOp::DONTCARE));
+		desc.attachments.push_back(
+			RenderPassAttachment::RenderTarget(
+				&rtMain_render,
+				RenderPassAttachment::LoadOp::LOAD
+			)
+		);
 		desc.attachments.push_back(
 			RenderPassAttachment::DepthStencil(
 				&depthBuffer_Main,
@@ -1094,6 +1099,8 @@ void RenderPath3D::Render() const
 
 		auto range = wi::profiler::BeginRangeGPU("Opaque Scene", cmd);
 
+		wi::renderer::VisibilityShade(rtMain, cmd);
+
 		Viewport vp;
 		vp.width = (float)depthBuffer_Main.GetDesc().width;
 		vp.height = (float)depthBuffer_Main.GetDesc().height;
@@ -1107,7 +1114,7 @@ void RenderPath3D::Render() const
 
 		device->RenderPassBegin(&renderpass_main, cmd);
 
-		wi::renderer::DrawScene(visibility_main, RENDERPASS_MAIN, cmd, drawscene_flags);
+		//wi::renderer::DrawScene(visibility_main, RENDERPASS_MAIN, cmd, drawscene_flags);
 		wi::renderer::DrawSky(*scene, cmd);
 
 		wi::profiler::EndRange(range); // Opaque Scene

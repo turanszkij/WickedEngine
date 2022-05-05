@@ -1019,6 +1019,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_RESOLVE_MSAA], "visibility_resolveCS_MSAA.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_RESOLVE_FAST], "visibility_resolveCS_fast.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_RESOLVE_FAST_MSAA], "visibility_resolveCS_fast_MSAA.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_SHADE], "visibility_shadeCS.cso"); });
 
 	if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 	{
@@ -7798,6 +7799,42 @@ void VisibilityResolve(
 		barrier_stack.push_back(GPUBarrier::Image(outputs.primitiveID_resolved, ResourceState::UNORDERED_ACCESS, outputs.primitiveID_resolved->desc.layout));
 	}
 	barrier_stack_flush(cmd);
+
+	wi::profiler::EndRange(range);
+	device->EventEnd(cmd);
+}
+void VisibilityShade(
+	const Texture& output,
+	CommandList cmd
+)
+{
+	device->EventBegin("VisibilityShade", cmd);
+	auto range = wi::profiler::BeginRangeGPU("VisibilityShade", cmd);
+
+	device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SHADE], cmd);
+	BindCommonResources(cmd);
+
+	const GPUResource* uavs[] = {
+		&output,
+	};
+	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+	const TextureDesc& desc = output.GetDesc();
+	device->Dispatch((desc.width + 7u) / 8u, (desc.height + 7u) / 8u, 1, cmd);
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);
