@@ -1,13 +1,10 @@
-#define SURFACE_LOAD_MIPCONE
+#define SURFACE_LOAD_QUAD_DERIVATIVES
+#define SHADOW_MASK_ENABLED
 #include "globals.hlsli"
 #include "ShaderInterop_Renderer.h"
-#include "brdf.hlsli"
 #include "raytracingHF.hlsli"
-
-#define SHADOW_MASK_ENABLED
+#include "brdf.hlsli"
 #include "objectHF.hlsli"
-
-#include "ffx-shadows-dnsr/ffx_denoiser_shadows_util.h"
 
 RWTexture2D<float4> output : register(u0);
 
@@ -72,7 +69,7 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 
 			ApplyLighting(surface, lighting, color);
 
-			ApplyFog(length(surface.P - GetCamera().position), GetCamera().position, surface.V, color);
+			ApplyFog(surface.hit_depth, GetCamera().position, surface.V, color);
 
 			output[pixel] = float4(color.rgb, 1);
 			//output[pixel] = float4(surface.albedo, 1);

@@ -303,6 +303,12 @@ struct Surface
 	ShaderGeometry geometry;
 	ShaderMaterial material;
 	float2 bary;
+#ifdef SURFACE_LOAD_QUAD_DERIVATIVES
+	float2 bary_quad_x;
+	float2 bary_quad_y;
+	float3 P_dx;
+	float3 P_dy;
+#endif // SURFACE_LOAD_QUAD_DERIVATIVES
 	uint i0;
 	uint i1;
 	uint i2;
@@ -344,14 +350,10 @@ struct Surface
 		const bool is_emittedparticle = geometry.flags & SHADERMESH_FLAG_EMITTEDPARTICLE;
 		const bool simple_lighting = is_hairparticle || is_emittedparticle;
 
-		const float u = bary.x;
-		const float v = bary.y;
-		const float w = 1 - u - v;
-
 		float3 n0 = unpack_unitvector(data0.w);
 		float3 n1 = unpack_unitvector(data1.w);
 		float3 n2 = unpack_unitvector(data2.w);
-		N = mad(n0, w, mad(n1, u, n2 * v)); // n0 * w + n1 * u + n2 * v
+		N = attribute_at_bary(n0, n1, n2, bary);
 		N = mul((float3x3)inst.transformInverseTranspose.GetMatrix(), N);
 		N = normalize(N);
 		if ((flags & SURFACE_FLAG_BACKFACE) && !is_hairparticle && !is_emittedparticle)
@@ -377,6 +379,8 @@ struct Surface
 #endif // SURFACE_LOAD_MIPCONE
 
 		float4 uvsets = 0;
+		float4 uvsets_dx = 0;
+		float4 uvsets_dy = 0;
 		[branch]
 		if (geometry.vb_uvs >= 0)
 		{
@@ -384,13 +388,18 @@ struct Surface
 			const float4 uv0 = unpack_half4(buf.Load2(i0 * sizeof(uint2)));
 			const float4 uv1 = unpack_half4(buf.Load2(i1 * sizeof(uint2)));
 			const float4 uv2 = unpack_half4(buf.Load2(i2 * sizeof(uint2)));
-			uvsets = mad(uv0, w, mad(uv1, u, uv2 * v)); // uv0 * w + uv1 * u + uv2 * v
+			uvsets = attribute_at_bary(uv0, uv1, uv2, bary);
 			uvsets.xy = mad(uvsets.xy, material.texMulAdd.xy, material.texMulAdd.zw);
 
 #ifdef SURFACE_LOAD_MIPCONE
 			lod_constant0 = 0.5 * log2(twice_uv_area(uv0.xy, uv1.xy, uv2.xy) * triangle_constant);
 			lod_constant1 = 0.5 * log2(twice_uv_area(uv0.zw, uv1.zw, uv2.zw) * triangle_constant);
 #endif // SURFACE_LOAD_MIPCONE
+
+#ifdef SURFACE_LOAD_QUAD_DERIVATIVES
+			uvsets_dx = uvsets - attribute_at_bary(uv0, uv1, uv2, bary_quad_x);
+			uvsets_dy = uvsets - attribute_at_bary(uv0, uv1, uv2, bary_quad_y);
+#endif // SURFACE_LOAD_QUAD_DERIVATIVES
 		}
 
 		float4 baseColor = is_emittedparticle ? 1 : material.baseColor;
@@ -400,11 +409,17 @@ struct Surface
 		{
 			const float2 UV_baseColorMap = material.uvset_baseColorMap == 0 ? uvsets.xy : uvsets.zw;
 			Texture2D tex = bindless_textures[NonUniformResourceIndex(material.texture_basecolormap_index)];
+#ifdef SURFACE_LOAD_QUAD_DERIVATIVES
+			const float2 UV_baseColorMap_dx = material.uvset_baseColorMap == 0 ? uvsets_dx.xy : uvsets_dx.zw;
+			const float2 UV_baseColorMap_dy = material.uvset_baseColorMap == 0 ? uvsets_dy.xy : uvsets_dy.zw;
+			float4 baseColorMap = tex.SampleGrad(sam, UV_baseColorMap, UV_baseColorMap_dx, UV_baseColorMap_dy);
+#else
 			float lod = 0;
 #ifdef SURFACE_LOAD_MIPCONE
 			lod = compute_texture_lod(tex, material.uvset_baseColorMap == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
 #endif // SURFACE_LOAD_MIPCONE
 			float4 baseColorMap = tex.SampleLevel(sam, UV_baseColorMap, lod);
+#endif // SURFACE_LOAD_QUAD_DERIVATIVES
 			if ((GetFrame().options & OPTION_BIT_DISABLE_ALBEDO_MAPS) == 0)
 			{
 				baseColorMap.rgb = DEGAMMA(baseColorMap.rgb);
@@ -423,7 +438,7 @@ struct Surface
 			const float4 c0 = unpack_rgba(buf.Load(i0 * sizeof(uint)));
 			const float4 c1 = unpack_rgba(buf.Load(i1 * sizeof(uint)));
 			const float4 c2 = unpack_rgba(buf.Load(i2 * sizeof(uint)));
-			float4 vertexColor = mad(c0, w, mad(c1, u, c2 * v)); // c0 * w + c1 * u + c2 * v
+			float4 vertexColor = attribute_at_bary(c0, c1, c2, bary);
 			baseColor *= vertexColor;
 		}
 
@@ -433,11 +448,17 @@ struct Surface
 		{
 			const float2 UV_surfaceMap = material.uvset_surfaceMap == 0 ? uvsets.xy : uvsets.zw;
 			Texture2D tex = bindless_textures[NonUniformResourceIndex(material.texture_surfacemap_index)];
+#ifdef SURFACE_LOAD_QUAD_DERIVATIVES
+			const float2 UV_surfaceMap_dx = material.uvset_surfaceMap == 0 ? uvsets_dx.xy : uvsets_dx.zw;
+			const float2 UV_surfaceMap_dy = material.uvset_surfaceMap == 0 ? uvsets_dy.xy : uvsets_dy.zw;
+			surfaceMap = tex.SampleGrad(sam, UV_surfaceMap, UV_surfaceMap_dx, UV_surfaceMap_dy);
+#else
 			float lod = 0;
 #ifdef SURFACE_LOAD_MIPCONE
 			lod = compute_texture_lod(tex, material.uvset_surfaceMap == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
 #endif // SURFACE_LOAD_MIPCONE
 			surfaceMap = tex.SampleLevel(sam, UV_surfaceMap, lod);
+#endif // SURFACE_LOAD_QUAD_DERIVATIVES
 		}
 		if (simple_lighting)
 		{
@@ -450,11 +471,17 @@ struct Surface
 		{
 			const float2 UV_specularMap = material.uvset_specularMap == 0 ? uvsets.xy : uvsets.zw;
 			Texture2D tex = bindless_textures[NonUniformResourceIndex(material.texture_specularmap_index)];
+#ifdef SURFACE_LOAD_QUAD_DERIVATIVES
+			const float2 UV_specularMap_dx = material.uvset_specularMap == 0 ? uvsets_dx.xy : uvsets_dx.zw;
+			const float2 UV_specularMap_dy = material.uvset_specularMap == 0 ? uvsets_dy.xy : uvsets_dy.zw;
+			specularMap = tex.SampleGrad(sam, UV_specularMap, UV_specularMap_dx, UV_specularMap_dy);
+#else
 			float lod = 0;
 #ifdef SURFACE_LOAD_MIPCONE
 			lod = compute_texture_lod(tex, material.uvset_specularMap == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
 #endif // SURFACE_LOAD_MIPCONE
 			specularMap = tex.SampleLevel(sam, UV_specularMap, lod);
+#endif // SURFACE_LOAD_QUAD_DERIVATIVES
 			specularMap.rgb = DEGAMMA(specularMap.rgb);
 		}
 
@@ -472,11 +499,17 @@ struct Surface
 			{
 				const float2 UV_emissiveMap = material.uvset_emissiveMap == 0 ? uvsets.xy : uvsets.zw;
 				Texture2D tex = bindless_textures[NonUniformResourceIndex(material.texture_emissivemap_index)];
+#ifdef SURFACE_LOAD_QUAD_DERIVATIVES
+				const float2 UV_emissiveMap_dx = material.uvset_emissiveMap == 0 ? uvsets_dx.xy : uvsets_dx.zw;
+				const float2 UV_emissiveMap_dy = material.uvset_emissiveMap == 0 ? uvsets_dy.xy : uvsets_dy.zw;
+				float4 emissiveMap = tex.SampleGrad(sam, UV_emissiveMap, UV_emissiveMap_dx, UV_emissiveMap_dy);
+#else
 				float lod = 0;
 #ifdef SURFACE_LOAD_MIPCONE
 				lod = compute_texture_lod(tex, material.uvset_emissiveMap == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
 #endif // SURFACE_LOAD_MIPCONE
 				float4 emissiveMap = tex.SampleLevel(sam, UV_emissiveMap, lod);
+#endif // SURFACE_LOAD_QUAD_DERIVATIVES
 				emissiveMap.rgb = DEGAMMA(emissiveMap.rgb);
 				emissiveColor *= emissiveMap.rgb * emissiveMap.a;
 			}
@@ -492,11 +525,17 @@ struct Surface
 		{
 			const float2 UV_transmissionMap = material.uvset_transmissionMap == 0 ? uvsets.xy : uvsets.zw;
 			Texture2D tex = bindless_textures[NonUniformResourceIndex(material.texture_transmissionmap_index)];
+#ifdef SURFACE_LOAD_QUAD_DERIVATIVES
+			const float2 UV_transmissionMap_dx = material.uvset_transmissionMap == 0 ? uvsets_dx.xy : uvsets_dx.zw;
+			const float2 UV_transmissionMap_dy = material.uvset_transmissionMap == 0 ? uvsets_dy.xy : uvsets_dy.zw;
+			transmission *= tex.SampleGrad(sam, UV_transmissionMap, UV_transmissionMap_dx, UV_transmissionMap_dy).r;
+#else
 			float lod = 0;
 #ifdef SURFACE_LOAD_MIPCONE
 			lod = compute_texture_lod(tex, material.uvset_transmissionMap == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
 #endif // SURFACE_LOAD_MIPCONE
 			transmission *= tex.SampleLevel(sam, UV_transmissionMap, lod).r;
+#endif // SURFACE_LOAD_QUAD_DERIVATIVES
 		}
 
 		[branch]
@@ -504,11 +543,17 @@ struct Surface
 		{
 			const float2 UV_occlusionMap = material.uvset_occlusionMap == 0 ? uvsets.xy : uvsets.zw;
 			Texture2D tex = bindless_textures[NonUniformResourceIndex(material.texture_occlusionmap_index)];
+#ifdef SURFACE_LOAD_QUAD_DERIVATIVES
+			const float2 UV_occlusionMap_dx = material.uvset_occlusionMap == 0 ? uvsets_dx.xy : uvsets_dx.zw;
+			const float2 UV_occlusionMap_dy = material.uvset_occlusionMap == 0 ? uvsets_dy.xy : uvsets_dy.zw;
+			occlusion *= tex.SampleGrad(sam, UV_occlusionMap, UV_occlusionMap_dx, UV_occlusionMap_dy).r;
+#else
 			float lod = 0;
 #ifdef SURFACE_LOAD_MIPCONE
 			lod = compute_texture_lod(tex, material.uvset_occlusionMap == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
 #endif // SURFACE_LOAD_MIPCONE
 			occlusion *= tex.SampleLevel(sam, UV_occlusionMap, lod).r;
+#endif // SURFACE_LOAD_QUAD_DERIVATIVES
 		}
 
 		[branch]
@@ -518,7 +563,7 @@ struct Surface
 			const float4 t0 = unpack_utangent(buf.Load(i0 * sizeof(uint)));
 			const float4 t1 = unpack_utangent(buf.Load(i1 * sizeof(uint)));
 			const float4 t2 = unpack_utangent(buf.Load(i2 * sizeof(uint)));
-			float4 T = mad(t0, w, mad(t1, u, t2 * v)); // t0 * w + t1 * u + t2 * v
+			float4 T = attribute_at_bary(t0, t1, t2, bary);
 			T = T * 2 - 1;
 			T.xyz = mul((float3x3)inst.transformInverseTranspose.GetMatrix(), T.xyz);
 			T.xyz = normalize(T.xyz);
@@ -527,11 +572,17 @@ struct Surface
 
 			const float2 UV_normalMap = material.uvset_normalMap == 0 ? uvsets.xy : uvsets.zw;
 			Texture2D tex = bindless_textures[NonUniformResourceIndex(material.texture_normalmap_index)];
+#ifdef SURFACE_LOAD_QUAD_DERIVATIVES
+			const float2 UV_normalMap_dx = material.uvset_normalMap == 0 ? uvsets_dx.xy : uvsets_dx.zw;
+			const float2 UV_normalMap_dy = material.uvset_normalMap == 0 ? uvsets_dy.xy : uvsets_dy.zw;
+			const float3 normalMap = float3(tex.SampleGrad(sam, UV_normalMap, UV_normalMap_dx, UV_normalMap_dy).rg, 1) * 2 - 1;
+#else
 			float lod = 0;
 #ifdef SURFACE_LOAD_MIPCONE
 			lod = compute_texture_lod(tex, material.uvset_normalMap == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
 #endif // SURFACE_LOAD_MIPCONE
 			const float3 normalMap = float3(tex.SampleLevel(sam, UV_normalMap, lod).rg, 1) * 2 - 1;
+#endif // SURFACE_LOAD_QUAD_DERIVATIVES
 			N = normalize(lerp(N, mul(normalMap, TBN), material.normalMapStrength));
 		}
 
@@ -552,7 +603,7 @@ struct Surface
 			pre1 = asfloat(data1.xyz);
 			pre2 = asfloat(data2.xyz);
 		}
-		pre = mad(pre0, w, mad(pre1, u, pre2 * v)); // pre0 * w + pre1 * u + pre2 * v
+		pre = attribute_at_bary(pre0, pre1, pre2, bary);
 		pre = mul(inst.transformPrev.GetMatrix(), float4(pre, 1)).xyz;
 
 		sss = material.subsurfaceScattering;
@@ -576,7 +627,7 @@ struct Surface
 		float3 p0 = asfloat(data0.xyz);
 		float3 p1 = asfloat(data1.xyz);
 		float3 p2 = asfloat(data2.xyz);
-		P = mad(p0, w, mad(p1, u, p2 * v)); // p0 * w + p1 * u + p2 * v
+		P = attribute_at_bary(p0, p1, p2, bary);
 		P = mul(inst.transform.GetMatrix(), float4(P, 1)).xyz;
 
 		load_internal();
@@ -632,6 +683,13 @@ struct Surface
 		{
 			flags |= SURFACE_FLAG_BACKFACE;
 		}
+
+#ifdef SURFACE_LOAD_QUAD_DERIVATIVES
+		bary_quad_x = compute_barycentrics(rayOrigin, QuadReadAcrossX(rayDirection), P0, P1, P2);
+		bary_quad_y = compute_barycentrics(rayOrigin, QuadReadAcrossY(rayDirection), P0, P1, P2);
+		P_dx = P - attribute_at_bary(P0, P1, P2, bary_quad_x);
+		P_dy = P - attribute_at_bary(P0, P1, P2, bary_quad_y);
+#endif // SURFACE_LOAD_QUAD_DERIVATIVES
 
 		load_internal();
 		return true;
