@@ -663,6 +663,7 @@ struct Surface
 		float3 P1 = mul(inst.transform.GetMatrix(), float4(p1, 1)).xyz;
 		float3 P2 = mul(inst.transform.GetMatrix(), float4(p2, 1)).xyz;
 
+		[branch]
 		if (material.IsUsingWind())
 		{
 			float wind0 = ((data0.w >> 24u) & 0xFF) / 255.0;

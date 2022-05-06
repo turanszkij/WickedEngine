@@ -1191,20 +1191,28 @@ RayCone pixel_ray_cone_from_image_height(float image_height)
 
 float3 compute_wind(float3 position, float weight)
 {
-	const float time = GetTime();
-	position += time;
-	const ShaderWind wind = GetWeather().wind;
+	[branch]
+	if (weight > 0)
+	{
+		const float time = GetTime();
+		position += time;
+		const ShaderWind wind = GetWeather().wind;
 
-	float randomness_amount = 0;
-	randomness_amount += noise_gradient_3D(position.xyz);
-	randomness_amount += noise_gradient_3D(position.xyz * 0.1);
-	randomness_amount *= wind.randomness;
+		float randomness_amount = 0;
+		randomness_amount += noise_gradient_3D(position.xyz);
+		randomness_amount += noise_gradient_3D(position.xyz * 0.1);
+		randomness_amount *= wind.randomness;
 
-	float direction_amount = dot(position.xyz, wind.direction);
-	float waveoffset = mad(direction_amount, wind.wavesize, randomness_amount);
-	float3 wavedir = wind.direction * weight;
+		float direction_amount = dot(position.xyz, wind.direction);
+		float waveoffset = mad(direction_amount, wind.wavesize, randomness_amount);
+		float3 wavedir = wind.direction * weight;
 
-	return sin(mad(time, wind.speed, waveoffset)) * wavedir;
+		return sin(mad(time, wind.speed, waveoffset)) * wavedir;
+	}
+	else
+	{
+		return 0;
+	}
 }
 
 
