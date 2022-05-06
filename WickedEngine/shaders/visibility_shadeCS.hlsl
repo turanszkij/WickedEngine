@@ -9,10 +9,11 @@
 RWTexture2D<float4> output : register(u0);
 
 [numthreads(8, 8, 1)]
-void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
+void main(uint groupIndex : SV_GroupIndex, uint3 Gid : SV_GroupID)
 {
-	//uint2 pixel = DTid.xy;
-	uint2 pixel = Gid.xy * 8 + remap_lane_8x8(groupIndex);
+	// this is needed to have correct quad derivatives:
+	uint2 GTid = remap_lane_8x8(groupIndex);
+	uint2 pixel = Gid.xy * 8 + GTid;
 
 	const float2 uv = ((float2)pixel + 0.5) * GetCamera().internal_resolution_rcp;
 	const float2 clipspace = uv_to_clipspace(uv);
@@ -26,7 +27,6 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 
 		Surface surface;
 		surface.init();
-		surface.raycone = pixel_ray_cone_from_image_height(GetCamera().internal_resolution.y);
 
 		[branch]
 		if (surface.load(prim, ray.Origin, ray.Direction))

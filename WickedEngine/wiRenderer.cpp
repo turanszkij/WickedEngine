@@ -7768,8 +7768,8 @@ void VisibilityResolve(
 	device->PushConstants(&push, sizeof(push), cmd);
 
 	device->Dispatch(
-		(input_primitiveID.desc.width + 15) / 16,
-		(input_primitiveID.desc.height + 15) / 16,
+		(input_primitiveID.desc.width + 7u) / 8u,
+		(input_primitiveID.desc.height + 7u) / 8u,
 		1,
 		cmd
 	);

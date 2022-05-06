@@ -217,7 +217,7 @@ struct PrimitiveID
 //	a0 : attribute at triangle corner 0
 //	a1 : attribute at triangle corner 1
 //	a2 : attribute at triangle corner 2
-//  bary : (u,v) barycentrics; w is computed as 1 - u - w
+//  bary : (u,v) barycentrics [same as you get from raytracing]; w is computed as 1 - u - w
 //	computation can be also written as: p0 * w + p1 * u + p2 * v
 inline float attribute_at_bary(in float a0, in float a1, in float a2, in float2 bary)
 {
