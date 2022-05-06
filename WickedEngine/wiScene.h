@@ -146,6 +146,7 @@ namespace wi::scene
 			SHADERTYPE_PBR_CLOTH_CLEARCOAT,
 			SHADERTYPE_COUNT
 		} shaderType = SHADERTYPE_PBR;
+		static_assert(SHADERTYPE_COUNT == SHADERTYPE_BIN_COUNT, "These values must match!");
 
 		wi::enums::STENCILREF engineStencilRef = wi::enums::STENCILREF_DEFAULT;
 		uint8_t userStencilRef = 0;

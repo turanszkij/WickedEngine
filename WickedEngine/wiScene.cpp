@@ -274,6 +274,7 @@ namespace wi::scene
 		material.alphaTest = 1 - alphaRef;
 		material.layerMask = layerMask;
 		material.transmission = transmission;
+		material.shaderType = (uint)shaderType;
 
 		material.options = 0;
 		if (IsUsingVertexColors())

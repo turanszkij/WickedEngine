@@ -470,6 +470,7 @@ void RenderPath3D::ResizeBuffers()
 		device->CreateTexture(&desc, nullptr, &debugUAV);
 		device->SetName(&debugUAV, "debugUAV");
 	}
+	wi::renderer::CreateVisibilityResources(visibilityResources, internalResolution);
 	wi::renderer::CreateTiledLightResources(tiledLightResources, internalResolution);
 	wi::renderer::CreateTiledLightResources(tiledLightResources_planarReflection, XMUINT2(depthBuffer_Reflection.desc.width, depthBuffer_Reflection.desc.height));
 	wi::renderer::CreateLuminanceResources(luminanceResources, internalResolution);
@@ -672,6 +673,41 @@ void RenderPath3D::Update(float dt)
 	// Keep a copy of last frame's depth buffer for temporal disocclusion checks, so swap with current one every frame:
 	std::swap(depthBuffer_Copy, depthBuffer_Copy1);
 
+	visibilityResources.depthbuffer = &depthBuffer_Copy;
+	visibilityResources.lineardepth = &rtLinearDepth;
+	if (rtVelocity.IsValid())
+	{
+		visibilityResources.velocity = &rtVelocity;
+	}
+	else
+	{
+		visibilityResources.velocity = nullptr;
+	}
+	if (rtNormal.IsValid())
+	{
+		visibilityResources.normal = &rtNormal;
+	}
+	else
+	{
+		visibilityResources.normal = nullptr;
+	}
+	if (rtRoughness.IsValid())
+	{
+		visibilityResources.roughness = &rtRoughness;
+	}
+	else
+	{
+		visibilityResources.roughness = nullptr;
+	}
+	if (getMSAASampleCount() > 1)
+	{
+		visibilityResources.primitiveID_resolved = &rtPrimitiveID;
+	}
+	else
+	{
+		visibilityResources.primitiveID_resolved = nullptr;
+	}
+
 	camera->canvas.init(*this);
 	camera->width = (float)internalResolution.x;
 	camera->height = (float)internalResolution.y;
@@ -841,28 +877,9 @@ void RenderPath3D::Render() const
 			cmd
 		);
 
-		wi::renderer::VisibilityResolveOutputs vis_out = {};
-		vis_out.depthbuffer = &depthBuffer_Copy;
-		vis_out.lineardepth = &rtLinearDepth;
-		if (rtVelocity.IsValid())
-		{
-			vis_out.velocity = &rtVelocity;
-		}
-		if (rtNormal.IsValid())
-		{
-			vis_out.normal = &rtNormal;
-		}
-		if (rtRoughness.IsValid())
-		{
-			vis_out.roughness = &rtRoughness;
-		}
-		if (getMSAASampleCount() > 1)
-		{
-			vis_out.primitiveID_resolved = &rtPrimitiveID;
-		}
 		wi::renderer::VisibilityResolve(
+			visibilityResources,
 			rtPrimitiveID_render,
-			vis_out,
 			cmd
 		);
 
@@ -1105,7 +1122,11 @@ void RenderPath3D::Render() const
 			device->Barrier(&barrier, 1, cmd);
 		}
 
-		wi::renderer::VisibilityShade(rtMain, cmd);
+		wi::renderer::VisibilityShade(
+			visibilityResources,
+			rtMain,
+			cmd
+		);
 
 
 		Viewport vp;

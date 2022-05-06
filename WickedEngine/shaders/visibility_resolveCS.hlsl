@@ -31,6 +31,8 @@ RWTexture2D<unorm float> output_roughness : register(u12);
 RWTexture2D<uint> output_primitiveID : register(u13);
 #endif // VISIBILITY_MSAA
 
+RWStructuredBuffer<ShaderTypeBin> output_binning : register(u14);
+
 [numthreads(8, 8, 1)]
 void main(uint groupIndex : SV_GroupIndex, uint3 Gid : SV_GroupID)
 {
@@ -41,6 +43,9 @@ void main(uint groupIndex : SV_GroupIndex, uint3 Gid : SV_GroupID)
 	const float2 uv = ((float2)pixel + 0.5) * GetCamera().internal_resolution_rcp;
 	const float2 clipspace = uv_to_clipspace(uv);
 	RayDesc ray = CreateCameraRay(clipspace);
+
+	float3 rayDirection_quad_x = QuadReadAcrossX(ray.Direction);
+	float3 rayDirection_quad_y = QuadReadAcrossY(ray.Direction);
 
 	uint primitiveID = input_primitiveID[pixel];
 
@@ -64,7 +69,7 @@ void main(uint groupIndex : SV_GroupIndex, uint3 Gid : SV_GroupID)
 		surface.init();
 
 		[branch]
-		if (surface.load(prim, ray.Origin, ray.Direction))
+		if (surface.load(prim, ray.Origin, ray.Direction, rayDirection_quad_x, rayDirection_quad_y))
 		{
 			pre = surface.pre;
 			float4 tmp = mul(GetCamera().view_projection, float4(surface.P, 1));
@@ -83,6 +88,8 @@ void main(uint groupIndex : SV_GroupIndex, uint3 Gid : SV_GroupID)
 				output_roughness[pixel] = surface.roughness;
 			}
 #endif // VISIBILITY_FAST
+
+			InterlockedAdd(output_binning[surface.material.shaderType].count, 1);
 		}
 	}
 	else

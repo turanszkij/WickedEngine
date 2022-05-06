@@ -695,6 +695,50 @@ struct Surface
 		load_internal();
 		return true;
 	}
+	bool load(in PrimitiveID prim, in float3 rayOrigin, in float3 rayDirection, in float3 rayDirection_quad_x, in float3 rayDirection_quad_y)
+	{
+		if (!preload_internal(prim))
+			return false;
+
+		float3 p0 = asfloat(data0.xyz);
+		float3 p1 = asfloat(data1.xyz);
+		float3 p2 = asfloat(data2.xyz);
+		float3 P0 = mul(inst.transform.GetMatrix(), float4(p0, 1)).xyz;
+		float3 P1 = mul(inst.transform.GetMatrix(), float4(p1, 1)).xyz;
+		float3 P2 = mul(inst.transform.GetMatrix(), float4(p2, 1)).xyz;
+
+		[branch]
+		if (material.IsUsingWind())
+		{
+			float wind0 = ((data0.w >> 24u) & 0xFF) / 255.0;
+			float wind1 = ((data1.w >> 24u) & 0xFF) / 255.0;
+			float wind2 = ((data2.w >> 24u) & 0xFF) / 255.0;
+
+			// this is hella slow to do per pixel:
+			P0 += compute_wind(P0, wind0);
+			P1 += compute_wind(P1, wind1);
+			P2 += compute_wind(P2, wind2);
+		}
+
+		bool is_backface;
+		bary = compute_barycentrics(rayOrigin, rayDirection, P0, P1, P2, hit_depth, is_backface);
+		P = rayOrigin + rayDirection * hit_depth;
+		V = -rayDirection;
+		if (is_backface)
+		{
+			flags |= SURFACE_FLAG_BACKFACE;
+		}
+
+#ifdef SURFACE_LOAD_QUAD_DERIVATIVES
+		bary_quad_x = compute_barycentrics(rayOrigin, rayDirection_quad_x, P0, P1, P2);
+		bary_quad_y = compute_barycentrics(rayOrigin, rayDirection_quad_y, P0, P1, P2);
+		P_dx = P - attribute_at_bary(P0, P1, P2, bary_quad_x);
+		P_dy = P - attribute_at_bary(P0, P1, P2, bary_quad_y);
+#endif // SURFACE_LOAD_QUAD_DERIVATIVES
+
+		load_internal();
+		return true;
+	}
 };
 
 struct SurfaceToLight
