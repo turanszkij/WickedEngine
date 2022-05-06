@@ -14,9 +14,8 @@ RWTexture2D<float4> output : register(u0);
 [numthreads(64,	1, 1)]
 void main(uint DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uint3 Gid : SV_GroupID)
 {
-	//// this is needed to have correct quad derivatives:
-	//uint2 GTid = remap_lane_8x8(groupIndex);
-	//uint2 pixel = Gid.xy * 8 + GTid;
+	if (DTid.x >= bin.count)
+		return;
 
 	uint2 pixel = unpack_pixel(binned_pixels[bin.offset + DTid.x]);
 
@@ -24,13 +23,8 @@ void main(uint DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uint
 	const float2 clipspace = uv_to_clipspace(uv);
 	RayDesc ray = CreateCameraRay(clipspace);
 
-#if 0
-	float3 rayDirection_quad_x = QuadReadAcrossX(ray.Direction);
-	float3 rayDirection_quad_y = QuadReadAcrossY(ray.Direction);
-#else
 	float3 rayDirection_quad_x = CreateCameraRay(uv_to_clipspace(((float2)pixel + float2(1, 0) + 0.5) * GetCamera().internal_resolution_rcp)).Direction;
 	float3 rayDirection_quad_y = CreateCameraRay(uv_to_clipspace(((float2)pixel + float2(0, 1) + 0.5) * GetCamera().internal_resolution_rcp)).Direction;
-#endif
 
 	uint primitiveID = texture_primitiveID[pixel];
 	if (any(primitiveID))
