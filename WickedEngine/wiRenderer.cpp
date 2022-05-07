@@ -631,25 +631,37 @@ bool LoadShader(
 	Shader& shader,
 	const std::string& filename,
 	ShaderModel minshadermodel,
-	wi::vector<std::string> defines,
-	const std::string& sourcefilename
+	wi::vector<std::string> permutation_defines
 )
 {
 	std::string shaderbinaryfilename = SHADERPATH + filename;
 
+	if (!permutation_defines.empty())
+	{
+		std::string ext = wi::helper::GetExtensionFromFileName(shaderbinaryfilename);
+		shaderbinaryfilename = wi::helper::RemoveExtension(shaderbinaryfilename);
+		for (auto& def : permutation_defines)
+		{
+			shaderbinaryfilename += "_" + def;
+		}
+		shaderbinaryfilename += "." + ext;
+	}
+
+	if (device != nullptr)
+	{
 #ifdef SHADERDUMP_ENABLED
-	
-	// Loading shader from precompiled dump:
-	auto it = wiShaderDump::shaderdump.find(shaderbinaryfilename);
-	if (it != wiShaderDump::shaderdump.end())
-	{
-		return device->CreateShader(stage, it->second.data, it->second.size, &shader);
-	}
-	else
-	{
-		wi::backlog::post("shader dump doesn't contain shader: " + shaderbinaryfilename);
-	}
+		// Loading shader from precompiled dump:
+		auto it = wiShaderDump::shaderdump.find(shaderbinaryfilename);
+		if (it != wiShaderDump::shaderdump.end())
+		{
+			return device->CreateShader(stage, it->second.data, it->second.size, &shader);
+		}
+		else
+		{
+			wi::backlog::post("shader dump doesn't contain shader: " + shaderbinaryfilename);
+		}
 #endif // SHADERDUMP_ENABLED
+	}
 
 	wi::shadercompiler::RegisterShader(shaderbinaryfilename);
 
@@ -659,20 +671,12 @@ bool LoadShader(
 		input.format = device->GetShaderFormat();
 		input.stage = stage;
 		input.minshadermodel = minshadermodel;
-		input.defines = defines;
+		input.defines = permutation_defines;
 
 		std::string sourcedir = SHADERSOURCEPATH;
 		wi::helper::MakePathAbsolute(sourcedir);
 		input.include_directories.push_back(sourcedir);
-
-		if (sourcefilename.empty())
-		{
-			input.shadersourcefilename = wi::helper::ReplaceExtension(sourcedir + filename, "hlsl");
-		}
-		else
-		{
-			input.shadersourcefilename = sourcedir + sourcefilename;
-		}
+		input.shadersourcefilename = wi::helper::ReplaceExtension(sourcedir + filename, "hlsl");
 
 		wi::shadercompiler::CompilerOutput output;
 		wi::shadercompiler::Compile(input, output);
@@ -690,14 +694,17 @@ bool LoadShader(
 		}
 		else
 		{
-			wi::backlog::post("shader compile FAILED: " + shaderbinaryfilename + "\n" + output.error_message);
+			wi::backlog::post("shader compile FAILED: " + shaderbinaryfilename + "\n" + output.error_message, wi::backlog::LogLevel::Error);
 		}
 	}
 
-	wi::vector<uint8_t> buffer;
-	if (wi::helper::FileRead(shaderbinaryfilename, buffer))
+	if (device != nullptr)
 	{
-		return device->CreateShader(stage, buffer.data(), buffer.size(), &shader);
+		wi::vector<uint8_t> buffer;
+		if (wi::helper::FileRead(shaderbinaryfilename, buffer))
+		{
+			return device->CreateShader(stage, buffer.data(), buffer.size(), &shader);
+		}
 	}
 
 	return false;
@@ -1207,22 +1214,12 @@ void LoadShaders()
 
 	wi::jobsystem::Dispatch(ctx, MaterialComponent::SHADERTYPE_COUNT, 1, [](wi::jobsystem::JobArgs args) {
 
-		std::string filename = "visibility_shadeCS";
-		std::string sourcefilename = filename + ".hlsl";
-		for (auto& x : MaterialComponent::shaderTypeDefines[args.jobIndex])
-		{
-			filename += "_";
-			filename += x;
-		}
-		filename += ".cso";
-
 		LoadShader(
 			ShaderStage::CS,
 			shaders[CSTYPE_VISIBILITY_SHADE_PERMUTATION_BEGIN + args.jobIndex],
-			filename,
+			"visibility_shadeCS.cso",
 			ShaderModel::SM_6_0,
-			MaterialComponent::shaderTypeDefines[args.jobIndex],
-			sourcefilename
+			MaterialComponent::shaderTypeDefines[args.jobIndex] // permutation defines
 		);
 
 		});
