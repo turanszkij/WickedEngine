@@ -626,7 +626,14 @@ size_t GetShaderDumpCount()
 }
 #endif // SHADERDUMP
 
-bool LoadShader(ShaderStage stage, Shader& shader, const std::string& filename, ShaderModel minshadermodel)
+bool LoadShader(
+	ShaderStage stage,
+	Shader& shader,
+	const std::string& filename,
+	ShaderModel minshadermodel,
+	wi::vector<std::string> defines,
+	const std::string& sourcefilename
+)
 {
 	std::string shaderbinaryfilename = SHADERPATH + filename;
 
@@ -652,12 +659,20 @@ bool LoadShader(ShaderStage stage, Shader& shader, const std::string& filename, 
 		input.format = device->GetShaderFormat();
 		input.stage = stage;
 		input.minshadermodel = minshadermodel;
+		input.defines = defines;
 
 		std::string sourcedir = SHADERSOURCEPATH;
 		wi::helper::MakePathAbsolute(sourcedir);
 		input.include_directories.push_back(sourcedir);
 
-		input.shadersourcefilename = wi::helper::ReplaceExtension(sourcedir + filename, "hlsl");
+		if (sourcefilename.empty())
+		{
+			input.shadersourcefilename = wi::helper::ReplaceExtension(sourcedir + filename, "hlsl");
+		}
+		else
+		{
+			input.shadersourcefilename = sourcedir + sourcefilename;
+		}
 
 		wi::shadercompiler::CompilerOutput output;
 		wi::shadercompiler::Compile(input, output);
@@ -1021,7 +1036,6 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_RESOLVE_FAST_MSAA], "visibility_resolveCS_fast_MSAA.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_BINNING_OFFSETS], "visibility_binning_offsetsCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_BINNING_PLACEMENT], "visibility_binning_placementCS.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_SHADE], "visibility_shadeCS.cso"); });
 
 	if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 	{
@@ -1189,6 +1203,28 @@ void LoadShaders()
 			}
 		}
 	});
+
+	wi::jobsystem::Dispatch(ctx, MaterialComponent::SHADERTYPE_COUNT, 1, [](wi::jobsystem::JobArgs args) {
+
+		std::string filename = "visibility_shadeCS";
+		std::string sourcefilename = filename + ".hlsl";
+		for (auto& x : MaterialComponent::shaderTypeDefines[args.jobIndex])
+		{
+			filename += "_";
+			filename += x;
+		}
+		filename += ".cso";
+
+		LoadShader(
+			ShaderStage::CS,
+			shaders[CSTYPE_VISIBILITY_SHADE_PERMUTATION_BEGIN + args.jobIndex],
+			filename,
+			ShaderModel::SM_6_0,
+			MaterialComponent::shaderTypeDefines[args.jobIndex],
+			sourcefilename
+		);
+
+		});
 
 	// Clear custom shaders (Custom shaders coming from user will need to be handled by the user in case of shader reload):
 	customShaders.clear();
@@ -7855,7 +7891,6 @@ void VisibilityShade(
 	device->EventBegin("VisibilityShade", cmd);
 	auto range = wi::profiler::BeginRangeGPU("VisibilityShade", cmd);
 
-	device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SHADE], cmd);
 	BindCommonResources(cmd);
 
 	device->BindResource(&res.binned_pixels, 0, cmd);
@@ -7874,11 +7909,9 @@ void VisibilityShade(
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
-	//const TextureDesc& desc = output.GetDesc();
-	//device->Dispatch((desc.width + 7u) / 8u, (desc.height + 7u) / 8u, 1, cmd);
-
 	for (uint i = 0; i < MaterialComponent::SHADERTYPE_COUNT; ++i)
 	{
+		device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SHADE_PERMUTATION_BEGIN + i], cmd);
 		device->BindConstantBuffer(&res.binning, 10, cmd, i * sizeof(ShaderTypeBin));
 		device->DispatchIndirect(&res.binning, i * sizeof(ShaderTypeBin) + offsetof(ShaderTypeBin, dispatchX), cmd);
 	}

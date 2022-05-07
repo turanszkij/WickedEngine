@@ -65,7 +65,9 @@ namespace wi::renderer
 		wi::graphics::ShaderStage stage,
 		wi::graphics::Shader& shader,
 		const std::string& filename,
-		wi::graphics::ShaderModel minshadermodel = wi::graphics::ShaderModel::SM_6_0
+		wi::graphics::ShaderModel minshadermodel = wi::graphics::ShaderModel::SM_6_0,
+		wi::vector<std::string> defines = {},
+		const std::string & sourcefilename = {} // only specify if different from filename
 	);
 
 

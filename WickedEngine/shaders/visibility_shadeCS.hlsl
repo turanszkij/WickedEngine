@@ -53,7 +53,7 @@ void main(uint DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uint
 
 
 #ifdef PLANARREFLECTION
-			lighting.indirect.specular += PlanarReflection(surface, bumpColor.rg) * surface.F;
+			lighting.indirect.specular += PlanarReflection(surface, surface.N.xz) * surface.F;
 #endif
 
 			TiledLighting(surface, lighting);

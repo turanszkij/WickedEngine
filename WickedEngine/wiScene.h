@@ -148,6 +148,20 @@ namespace wi::scene
 		} shaderType = SHADERTYPE_PBR;
 		static_assert(SHADERTYPE_COUNT == SHADERTYPE_BIN_COUNT, "These values must match!");
 
+		inline static const wi::vector<std::string> shaderTypeDefines[] = {
+			{}, // SHADERTYPE_PBR,
+			{"PLANARREFLECTION"}, // SHADERTYPE_PBR_PLANARREFLECTION,
+			{"PARALLAXOCCLUSIONMAPPING"}, // SHADERTYPE_PBR_PARALLAXOCCLUSIONMAPPING,
+			{"BRDF_ANISOTROPIC"}, // SHADERTYPE_PBR_ANISOTROPIC,
+			{"WATER"}, // SHADERTYPE_WATER,
+			{"BRDF_CARTOON"}, // SHADERTYPE_CARTOON,
+			{"UNLIT"}, // SHADERTYPE_UNLIT,
+			{"BRDF_SHEEN"}, // SHADERTYPE_PBR_CLOTH,
+			{"BRDF_CLEARCOAT"}, // SHADERTYPE_PBR_CLEARCOAT,
+			{"BRDF_SHEEN", "BRDF_CLEARCOAT"}, // SHADERTYPE_PBR_CLOTH_CLEARCOAT,
+		};
+		static_assert(SHADERTYPE_COUNT == arraysize(shaderTypeDefines), "These values must match!");
+
 		wi::enums::STENCILREF engineStencilRef = wi::enums::STENCILREF_DEFAULT;
 		uint8_t userStencilRef = 0;
 		wi::enums::BLENDMODE userBlendMode = wi::enums::BLENDMODE_OPAQUE;
