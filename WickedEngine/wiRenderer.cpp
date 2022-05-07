@@ -1036,6 +1036,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_RESOLVE_FAST_MSAA], "visibility_resolveCS_fast_MSAA.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_BINNING_OFFSETS], "visibility_binning_offsetsCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_BINNING_PLACEMENT], "visibility_binning_placementCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_SKY], "visibility_skyCS.cso"); });
 
 	if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 	{
@@ -7700,12 +7701,12 @@ void CreateVisibilityResources(VisibilityResources& res, XMUINT2 resolution)
 {
 	GPUBufferDesc desc;
 	desc.stride = sizeof(ShaderTypeBin);
-	desc.size = desc.stride * MaterialComponent::SHADERTYPE_COUNT;
+	desc.size = desc.stride * (MaterialComponent::SHADERTYPE_COUNT + 1); // +1 for sky pixels
 	desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS | BindFlag::CONSTANT_BUFFER;
 	desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED | ResourceMiscFlag::INDIRECT_ARGS;
-	bool success = device->CreateBuffer(&desc, nullptr, &res.binning);
+	bool success = device->CreateBuffer(&desc, nullptr, &res.bins);
 	assert(success);
-	device->SetName(&res.binning, "binning");
+	device->SetName(&res.bins, "bins");
 
 	desc.stride = sizeof(uint);
 	desc.size = desc.stride * resolution.x * resolution.y;
@@ -7726,11 +7727,11 @@ void VisibilityResolve(
 
 	BindCommonResources(cmd);
 
-	barrier_stack.push_back(GPUBarrier::Buffer(&res.binning, ResourceState::CONSTANT_BUFFER | ResourceState::INDIRECT_ARGUMENT, ResourceState::UNORDERED_ACCESS));
+	barrier_stack.push_back(GPUBarrier::Buffer(&res.bins, ResourceState::CONSTANT_BUFFER | ResourceState::INDIRECT_ARGUMENT, ResourceState::UNORDERED_ACCESS));
 	barrier_stack.push_back(GPUBarrier::Buffer(&res.binned_pixels, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS));
 	barrier_stack_flush(cmd);
-	device->ClearUAV(&res.binning, 0, cmd);
-	barrier_stack.push_back(GPUBarrier::Memory(&res.binning));
+	device->ClearUAV(&res.bins, 0, cmd);
+	barrier_stack.push_back(GPUBarrier::Memory(&res.bins));
 	barrier_stack_flush(cmd);
 
 	const bool msaa = input_primitiveID.GetDesc().sample_count > 1;
@@ -7819,7 +7820,7 @@ void VisibilityResolve(
 	{
 		device->BindUAV(&unbind, 13, cmd);
 	}
-	device->BindUAV(&res.binning, 14, cmd);
+	device->BindUAV(&res.bins, 14, cmd);
 	barrier_stack_flush(cmd);
 
 	if (fast)
@@ -7867,7 +7868,7 @@ void VisibilityResolve(
 
 	device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_BINNING_OFFSETS], cmd);
 	device->Dispatch(1, 1, 1, cmd);
-	barrier_stack.push_back(GPUBarrier::Memory(&res.binning));
+	barrier_stack.push_back(GPUBarrier::Memory(&res.bins));
 	barrier_stack_flush(cmd);
 
 	device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_BINNING_PLACEMENT], cmd);
@@ -7903,18 +7904,24 @@ void VisibilityShade(
 	{
 		GPUBarrier barriers[] = {
 			GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS),
-			GPUBarrier::Buffer(&res.binning, ResourceState::UNORDERED_ACCESS, ResourceState::CONSTANT_BUFFER | ResourceState::INDIRECT_ARGUMENT),
+			GPUBarrier::Buffer(&res.bins, ResourceState::UNORDERED_ACCESS, ResourceState::CONSTANT_BUFFER | ResourceState::INDIRECT_ARGUMENT),
 			GPUBarrier::Buffer(&res.binned_pixels, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
 		};
 		device->Barrier(barriers, arraysize(barriers), cmd);
 	}
 
+	// material dispatches:
 	for (uint i = 0; i < MaterialComponent::SHADERTYPE_COUNT; ++i)
 	{
 		device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SHADE_PERMUTATION_BEGIN + i], cmd);
-		device->BindConstantBuffer(&res.binning, 10, cmd, i * sizeof(ShaderTypeBin));
-		device->DispatchIndirect(&res.binning, i * sizeof(ShaderTypeBin) + offsetof(ShaderTypeBin, dispatchX), cmd);
+		device->BindConstantBuffer(&res.bins, 10, cmd, i * sizeof(ShaderTypeBin));
+		device->DispatchIndirect(&res.bins, i * sizeof(ShaderTypeBin) + offsetof(ShaderTypeBin, dispatchX), cmd);
 	}
+
+	// sky dispatch:
+	device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SKY], cmd);
+	device->BindConstantBuffer(&res.bins, 10, cmd, MaterialComponent::SHADERTYPE_COUNT * sizeof(ShaderTypeBin));
+	device->DispatchIndirect(&res.bins, MaterialComponent::SHADERTYPE_COUNT * sizeof(ShaderTypeBin) + offsetof(ShaderTypeBin, dispatchX), cmd);
 
 	{
 		GPUBarrier barriers[] = {

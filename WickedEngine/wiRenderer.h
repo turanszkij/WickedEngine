@@ -312,7 +312,7 @@ namespace wi::renderer
 
 	struct VisibilityResources
 	{
-		wi::graphics::GPUBuffer binning;
+		wi::graphics::GPUBuffer bins;
 		wi::graphics::GPUBuffer binned_pixels;
 
 		// You can request any of these extra outputs to be written by VisibilityResolve:

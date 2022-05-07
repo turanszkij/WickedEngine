@@ -5,9 +5,9 @@
 #include "voxelConeTracingHF.hlsli"
 #include "skyHF.hlsli"
 
-#ifdef BRDF_CARTOON
+#ifdef CARTOON
 #define DISABLE_SOFT_SHADOWMAP
-#endif // BRDF_CARTOON
+#endif // CARTOON
 
 struct LightingPart
 {
@@ -380,17 +380,17 @@ inline float3 EnvironmentReflection_Global(in Surface surface)
 	float MIP = surface.roughness * GetFrame().envprobe_mipcount;
 	envColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(surface.R, 0), MIP).rgb * surface.F;
 
-#ifdef BRDF_SHEEN
+#ifdef SHEEN
 	envColor *= surface.sheen.albedoScaling;
 	MIP = surface.sheen.roughness * GetFrame().envprobe_mipcount;
 	envColor += texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(surface.R, 0), MIP).rgb * surface.sheen.color * surface.sheen.DFG;
-#endif // BRDF_SHEEN
+#endif // SHEEN
 
-#ifdef BRDF_CLEARCOAT
+#ifdef CLEARCOAT
 	envColor *= 1 - surface.clearcoat.F;
 	MIP = surface.clearcoat.roughness * GetFrame().envprobe_mipcount;
 	envColor += texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(surface.clearcoat.R, 0), MIP).rgb * surface.clearcoat.F;
-#endif // BRDF_CLEARCOAT
+#endif // CLEARCOAT
 
 #endif // ENVMAPRENDERING
 
@@ -418,13 +418,13 @@ inline float4 EnvironmentReflection_Local(in Surface surface, in ShaderEntity pr
 	float MIP = surface.roughness * GetFrame().envprobe_mipcount;
 	float3 envColor = texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(R_parallaxCorrected, probe.GetTextureIndex()), MIP).rgb * surface.F;
 
-#ifdef BRDF_SHEEN
+#ifdef SHEEN
 	envColor *= surface.sheen.albedoScaling;
 	MIP = surface.sheen.roughness * GetFrame().envprobe_mipcount;
 	envColor += texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(R_parallaxCorrected, probe.GetTextureIndex()), MIP).rgb * surface.sheen.color * surface.sheen.DFG;
-#endif // BRDF_SHEEN
+#endif // SHEEN
 
-#ifdef BRDF_CLEARCOAT
+#ifdef CLEARCOAT
 	RayLS = mul((float3x3)probeProjection, surface.clearcoat.R);
 	FirstPlaneIntersect = (float3(1, 1, 1) - clipSpacePos) / RayLS;
 	SecondPlaneIntersect = (-float3(1, 1, 1) - clipSpacePos) / RayLS;
@@ -436,7 +436,7 @@ inline float4 EnvironmentReflection_Local(in Surface surface, in ShaderEntity pr
 	envColor *= 1 - surface.clearcoat.F;
 	MIP = surface.clearcoat.roughness * GetFrame().envprobe_mipcount;
 	envColor += texture_envmaparray.SampleLevel(sampler_linear_clamp, float4(R_parallaxCorrected, probe.GetTextureIndex()), MIP).rgb * surface.clearcoat.F;
-#endif // BRDF_CLEARCOAT
+#endif // CLEARCOAT
 
 	// blend out if close to any cube edge:
 	float edgeBlend = 1 - pow(saturate(max(abs(clipSpacePos.x), max(abs(clipSpacePos.y), abs(clipSpacePos.z)))), 8);

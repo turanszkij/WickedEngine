@@ -1221,7 +1221,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // BRDF_ANISOTROPIC
 
 
-#ifdef BRDF_SHEEN
+#ifdef SHEEN
 	surface.sheen.color = GetMaterial().GetSheenColor();
 	surface.sheen.roughness = GetMaterial().sheenRoughness;
 
@@ -1239,10 +1239,10 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 		surface.sheen.roughness *= texture_sheenroughnessmap.Sample(sampler_objectshader, uvset_sheenRoughnessMap).a;
 	}
 #endif // OBJECTSHADER_USE_UVSETS
-#endif // BRDF_SHEEN
+#endif // SHEEN
 
 
-#ifdef BRDF_CLEARCOAT
+#ifdef CLEARCOAT
 	surface.clearcoat.factor = GetMaterial().clearcoat;
 	surface.clearcoat.roughness = GetMaterial().clearcoatRoughness;
 	surface.clearcoat.N = input.nor;
@@ -1274,7 +1274,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	surface.clearcoat.N = normalize(surface.clearcoat.N);
 
 #endif // OBJECTSHADER_USE_UVSETS
-#endif // BRDF_CLEARCOAT
+#endif // CLEARCOAT
 
 
 	surface.sss = GetMaterial().subsurfaceScattering;

@@ -1114,7 +1114,7 @@ void RenderPath3D::Render() const
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		auto range = wi::profiler::BeginRangeGPU("Opaque Scene", cmd);
+		//auto range = wi::profiler::BeginRangeGPU("Opaque Scene", cmd);
 
 		if (wi::renderer::GetRaytracedShadowsEnabled() || wi::renderer::GetScreenSpaceShadowsEnabled())
 		{
@@ -1137,9 +1137,9 @@ void RenderPath3D::Render() const
 		device->RenderPassBegin(&renderpass_main, cmd);
 
 		//wi::renderer::DrawScene(visibility_main, RENDERPASS_MAIN, cmd, drawscene_flags);
-		wi::renderer::DrawSky(*scene, cmd);
+		//wi::renderer::DrawSky(*scene, cmd);
 
-		wi::profiler::EndRange(range); // Opaque Scene
+		//wi::profiler::EndRange(range); // Opaque Scene
 
 		RenderOutline(cmd);
 

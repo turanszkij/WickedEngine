@@ -31,11 +31,19 @@ RWTexture2D<unorm float> output_roughness : register(u12);
 RWTexture2D<uint> output_primitiveID : register(u13);
 #endif // VISIBILITY_MSAA
 
-RWStructuredBuffer<ShaderTypeBin> output_binning : register(u14);
+RWStructuredBuffer<ShaderTypeBin> output_bins : register(u14);
+
+groupshared uint local_bin_counts[SHADERTYPE_BIN_COUNT + 1];
 
 [numthreads(8, 8, 1)]
 void main(uint groupIndex : SV_GroupIndex, uint3 Gid : SV_GroupID)
 {
+	if (groupIndex < SHADERTYPE_BIN_COUNT + 1)
+	{
+		local_bin_counts[groupIndex] = 0;
+	}
+	GroupMemoryBarrierWithGroupSync();
+
 	// this is needed to have correct quad derivatives:
 	uint2 GTid = remap_lane_8x8(groupIndex);
 	uint2 pixel = Gid.xy * 8 + GTid;
@@ -89,13 +97,14 @@ void main(uint groupIndex : SV_GroupIndex, uint3 Gid : SV_GroupID)
 			}
 #endif // VISIBILITY_FAST
 
-			InterlockedAdd(output_binning[surface.material.shaderType].count, 1);
+			InterlockedAdd(local_bin_counts[surface.material.shaderType], 1);
 		}
 	}
 	else
 	{
 		pre = ray.Origin + ray.Direction * GetCamera().z_far;
 		depth = 0;
+		InterlockedAdd(local_bin_counts[SHADERTYPE_BIN_COUNT], 1);
 	}
 
 #ifndef VISIBILITY_FAST
@@ -109,6 +118,12 @@ void main(uint groupIndex : SV_GroupIndex, uint3 Gid : SV_GroupID)
 		output_velocity[pixel] = velocity;
 	}
 #endif // VISIBILITY_FAST
+
+	GroupMemoryBarrierWithGroupSync();
+	if (groupIndex < SHADERTYPE_BIN_COUNT + 1)
+	{
+		InterlockedAdd(output_bins[groupIndex].count, local_bin_counts[groupIndex]);
+	}
 
 	// Downsample depths:
 	[branch]

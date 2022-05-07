@@ -1,11 +1,11 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Renderer.h"
 
-RWStructuredBuffer<ShaderTypeBin> output_binning : register(u14);
+RWStructuredBuffer<ShaderTypeBin> output_bins : register(u14);
 
 groupshared uint allocator;
 
-[numthreads(SHADERTYPE_BIN_COUNT, 1, 1)]
+[numthreads(SHADERTYPE_BIN_COUNT + 1, 1, 1)] // +1: sky
 void main(uint3 DTid : SV_DispatchThreadID)
 {
 	if (DTid.x == 0)
@@ -14,9 +14,9 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	}
 	GroupMemoryBarrierWithGroupSync();
 
-	InterlockedAdd(allocator, output_binning[DTid.x].count, output_binning[DTid.x].offset);
-	output_binning[DTid.x].dispatchX = (output_binning[DTid.x].count + 63u) / 64u;
-	output_binning[DTid.x].dispatchY = 1;
-	output_binning[DTid.x].dispatchZ = 1;
-	output_binning[DTid.x].count = 0;
+	InterlockedAdd(allocator, output_bins[DTid.x].count, output_bins[DTid.x].offset);
+	output_bins[DTid.x].dispatchX = (output_bins[DTid.x].count + 63u) / 64u;
+	output_bins[DTid.x].dispatchY = 1;
+	output_bins[DTid.x].dispatchZ = 1;
+	output_bins[DTid.x].count = 0;
 }

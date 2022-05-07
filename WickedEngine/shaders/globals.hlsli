@@ -212,6 +212,7 @@ struct PrimitiveID
 #define GOLDEN_RATIO 1.6180339887
 
 #define sqr(a)		((a)*(a))
+#define pow5(x) pow(x, 5)
 
 // attribute computation with barycentric interpolation
 //	a0 : attribute at triangle corner 0

@@ -155,7 +155,7 @@ struct ShaderTypeBin
 
 	uint4 padding2[14]; // force 256-byte alignment that's necessary for constant buffers :(
 };
-static const uint SHADERTYPE_BIN_COUNT = 10u;
+static const uint SHADERTYPE_BIN_COUNT = 10;
 
 static const uint SHADERMESH_FLAG_DOUBLE_SIDED = 1 << 0;
 static const uint SHADERMESH_FLAG_HAIRPARTICLE = 1 << 1;

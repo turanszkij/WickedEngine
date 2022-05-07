@@ -2,6 +2,6 @@
 #define OBJECTSHADER_LAYOUT_COMMON
 #define TILEDFORWARD
 #define TRANSPARENT
-#define BRDF_CARTOON
+#define CARTOON
 #include "objectHF.hlsli"
 
