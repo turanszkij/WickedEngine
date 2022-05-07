@@ -47,6 +47,7 @@ struct Surface
 	float3 N;				// world space normal
 	float3 V;				// world space view vector
 
+	float4 baseColor;
 	float3 albedo;			// diffuse light absorbtion value (rgb)
 	float3 f0;				// fresnel value (rgb) (reflectance at incidence angle, also known as specular color)
 	float roughness;		// roughness: [0:smooth -> 1:rough] (perceptual)
@@ -89,6 +90,7 @@ struct Surface
 		P = 0;
 		V = 0;
 		N = 0;
+		baseColor = 1;
 		albedo = 1;
 		f0 = 0;
 		roughness = 1;
@@ -123,11 +125,12 @@ struct Surface
 
 	inline void create(
 		in ShaderMaterial material,
-		in float4 baseColor,
+		in float4 _baseColor,
 		in float4 surfaceMap,
 		in float4 specularMap = 1
 	)
 	{
+		baseColor = _baseColor;
 		if (material.options & SHADERMATERIAL_OPTION_BIT_TRANSPARENT || material.alphaTest > 0)
 		{
 			opacity = baseColor.a;
@@ -374,7 +377,7 @@ struct Surface
 #endif // ANISOTROPIC
 		}
 
-		float4 baseColor = is_emittedparticle ? 1 : material.baseColor;
+		baseColor = is_emittedparticle ? 1 : material.baseColor;
 		baseColor *= unpack_rgba(inst.color);
 		[branch]
 		if (material.texture_basecolormap_index >= 0)
@@ -548,7 +551,7 @@ struct Surface
 		sheen.roughness = material.sheenRoughness;
 
 		[branch]
-		if (material.uvset_sheenColorMap >= 0)
+		if (material.texture_sheencolormap_index >= 0)
 		{
 			const float2 uv = material.uvset_sheenColorMap == 0 ? uvsets.xy : uvsets.zw;
 			Texture2D tex = bindless_textures[NonUniformResourceIndex(material.texture_sheencolormap_index)];
@@ -565,7 +568,7 @@ struct Surface
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
 		}
 		[branch]
-		if (material.uvset_sheenRoughnessMap >= 0)
+		if (material.texture_sheenroughnessmap_index >= 0)
 		{
 			const float2 uv = material.uvset_sheenRoughnessMap == 0 ? uvsets.xy : uvsets.zw;
 			Texture2D tex = bindless_textures[NonUniformResourceIndex(material.texture_sheenroughnessmap_index)];
@@ -590,7 +593,7 @@ struct Surface
 		clearcoat.N = facenormal;
 
 		[branch]
-		if (material.uvset_clearcoatMap >= 0)
+		if (material.texture_clearcoatmap_index >= 0)
 		{
 			const float2 uv = material.uvset_clearcoatMap == 0 ? uvsets.xy : uvsets.zw;
 			Texture2D tex = bindless_textures[NonUniformResourceIndex(material.texture_clearcoatmap_index)];
@@ -607,7 +610,7 @@ struct Surface
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
 		}
 		[branch]
-		if (material.uvset_clearcoatRoughnessMap >= 0)
+		if (material.texture_clearcoatroughnessmap_index >= 0)
 		{
 			const float2 uv = material.uvset_clearcoatRoughnessMap == 0 ? uvsets.xy : uvsets.zw;
 			Texture2D tex = bindless_textures[NonUniformResourceIndex(material.texture_clearcoatroughnessmap_index)];
@@ -624,7 +627,7 @@ struct Surface
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
 		}
 		[branch]
-		if (material.uvset_clearcoatNormalMap >= 0 && geometry.vb_tan >= 0) // also check that tan is valid! (for TBN)
+		if (material.texture_clearcoatnormalmap_index >= 0 && geometry.vb_tan >= 0) // also check that tan is valid! (for TBN)
 		{
 			const float2 uv = material.uvset_clearcoatNormalMap == 0 ? uvsets.xy : uvsets.zw;
 			Texture2D tex = bindless_textures[NonUniformResourceIndex(material.texture_clearcoatnormalmap_index)];

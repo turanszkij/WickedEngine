@@ -1408,15 +1408,12 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // WATER
 
 
-#ifdef UNLIT
-	lighting.direct.diffuse = 1;
-	lighting.indirect.diffuse = 0;
-	lighting.direct.specular = 0;
-	lighting.indirect.specular = 0;
-#endif // UNLIT
-
-
 	ApplyLighting(surface, lighting, color);
+
+
+#ifdef UNLIT
+	color = surface.baseColor;
+#endif // UNLIT
 
 
 #ifdef OBJECTSHADER_USE_POSITION3D

@@ -235,7 +235,7 @@ int main(int argc, char* argv[])
 		"visibility_resolveCS_fast_MSAA.hlsl",
 		"visibility_binning_offsetsCS.hlsl",
 		"visibility_binning_placementCS.hlsl",
-		"visibility_shadeCS.hlsl",
+		"visibility_skyCS.hlsl",
 		"surfel_coverageCS.hlsl",
 		"surfel_indirectprepareCS.hlsl",
 		"surfel_updateCS.hlsl",

@@ -76,18 +76,17 @@ void main(uint DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uint
 		surface.occlusion *= bindless_textures_float[GetCamera().texture_ao_index].SampleLevel(sampler_linear_clamp, surface.screenUV, 0).r;
 	}
 
-#ifdef UNLIT
-	lighting.direct.diffuse = 1;
-	lighting.indirect.diffuse = 0;
-	lighting.direct.specular = 0;
-	lighting.indirect.specular = 0;
-#endif // UNLIT
-
 	float4 color = 0;
 
 	ApplyLighting(surface, lighting, color);
 
+#ifdef UNLIT
+	color = surface.baseColor;
+#endif // UNLIT
+
 	ApplyFog(surface.hit_depth, GetCamera().position, surface.V, color);
+
+	color = max(0, color);
 
 	output[pixel] = float4(color.rgb, 1);
 
