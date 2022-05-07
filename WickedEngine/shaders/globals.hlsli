@@ -1308,14 +1308,14 @@ enum class ColorSpace
 
 #define NUM_PARALLAX_OCCLUSION_STEPS 32
 inline void ParallaxOcclusionMapping_Impl(
-	inout float4 uvsets,			 // uvsets to modify
-	in float3 V,					 // view vector (pointing towards camera)
-	in float3x3 TBN,				 // tangent basis matrix (same that is used for normal mapping)
-	in ShaderMaterial material,		 // material parameters
-	in Texture2D tex,				 // displacement map texture
-	in float2 uv,					 // uv to use for the disapllacement map
-	in float2 uv_dx,				 // horizontal derivative of displacement map uv
-	in float2 uv_dy					 // vertical derivative of displacement map uv
+	inout float4 uvsets,		// uvsets to modify
+	in float3 V,				// view vector (pointing towards camera)
+	in float3x3 TBN,			// tangent basis matrix (same that is used for normal mapping)
+	in ShaderMaterial material,	// material parameters
+	in Texture2D tex,			// displacement map texture
+	in float2 uv,				// uv to use for the disapllacement map
+	in float2 uv_dx,			// horizontal derivative of displacement map uv
+	in float2 uv_dy				// vertical derivative of displacement map uv
 )
 {
 	[branch]

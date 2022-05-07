@@ -355,7 +355,6 @@ inline float3 PlanarReflection(in Surface surface, in float2 bumpColor)
 	return 0;
 }
 
-#define NUM_PARALLAX_OCCLUSION_STEPS 32
 inline void ParallaxOcclusionMapping(inout float4 uvsets, in float3 V, in float3x3 TBN)
 {
 	float2 uv = GetMaterial().uvset_displacementMap == 0 ? uvsets.xy : uvsets.zw;
