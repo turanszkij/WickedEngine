@@ -1305,4 +1305,45 @@ enum class ColorSpace
 	HDR_LINEAR,		// HDR color space (16 bits per channel)
 };
 
+
+#define NUM_PARALLAX_OCCLUSION_STEPS 32
+inline void ParallaxOcclusionMapping_Impl(
+	inout float4 uvsets,			 // uvsets to modify
+	in float3 V,					 // view vector (pointing towards camera)
+	in float3x3 TBN,				 // tangent basis matrix (same that is used for normal mapping)
+	in ShaderMaterial material,		 // material parameters
+	in Texture2D tex,				 // displacement map texture
+	in float2 uv,					 // uv to use for the disapllacement map
+	in float2 uv_dx,				 // horizontal derivative of displacement map uv
+	in float2 uv_dy					 // vertical derivative of displacement map uv
+)
+{
+	[branch]
+	if (material.parallaxOcclusionMapping > 0 && material.uvset_displacementMap >= 0)
+	{
+		V = mul(TBN, V);
+		float layerHeight = 1.0 / NUM_PARALLAX_OCCLUSION_STEPS;
+		float curLayerHeight = 0;
+		float2 dtex = material.parallaxOcclusionMapping * V.xy / NUM_PARALLAX_OCCLUSION_STEPS;
+		float2 currentTextureCoords = uv;
+		float heightFromTexture = 1 - tex.SampleGrad(sampler_linear_wrap, currentTextureCoords, uv_dx, uv_dy).r;
+		uint iter = 0;
+		[loop]
+		while (heightFromTexture > curLayerHeight && iter < NUM_PARALLAX_OCCLUSION_STEPS)
+		{
+			curLayerHeight += layerHeight;
+			currentTextureCoords -= dtex;
+			heightFromTexture = 1 - tex.SampleGrad(sampler_linear_wrap, currentTextureCoords, uv_dx, uv_dy).r;
+			iter++;
+		}
+		float2 prevTCoords = currentTextureCoords + dtex;
+		float nextH = heightFromTexture - curLayerHeight;
+		float prevH = 1 - tex.SampleGrad(sampler_linear_wrap, prevTCoords, uv_dx, uv_dy).r - curLayerHeight + layerHeight;
+		float weight = nextH / (nextH - prevH);
+		float2 finalTextureCoords = mad(prevTCoords, weight, currentTextureCoords * (1.0 - weight));
+		float2 difference = finalTextureCoords - uv;
+		uvsets += difference.xyxy;
+	}
+}
+
 #endif // WI_SHADER_GLOBALS_HF

@@ -311,6 +311,62 @@ struct Surface
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
 		}
 
+		[branch]
+		if (geometry.vb_tan >= 0)
+		{
+			ByteAddressBuffer buf = bindless_buffers[NonUniformResourceIndex(geometry.vb_tan)];
+			const float4 t0 = unpack_utangent(buf.Load(i0 * sizeof(uint)));
+			const float4 t1 = unpack_utangent(buf.Load(i1 * sizeof(uint)));
+			const float4 t2 = unpack_utangent(buf.Load(i2 * sizeof(uint)));
+			float4 T = attribute_at_bary(t0, t1, t2, bary);
+			T = T * 2 - 1;
+			T.xyz = mul((float3x3)inst.transformInverseTranspose.GetMatrix(), T.xyz);
+			T.xyz = normalize(T.xyz);
+			const float3 B = normalize(cross(T.xyz, N) * T.w);
+			const float3x3 TBN = float3x3(T.xyz, B, N);
+
+#ifdef PARALLAXOCCLUSIONMAPPING
+			[branch]
+			if (material.texture_displacementmap_index >= 0)
+			{
+				const float2 UV_displacementMap = material.uvset_displacementMap == 0 ? uvsets.xy : uvsets.zw;
+				const float2 UV_displacementMap_dx = material.uvset_displacementMap == 0 ? uvsets_dx.xy : uvsets_dx.zw;
+				const float2 UV_displacementMap_dy = material.uvset_displacementMap == 0 ? uvsets_dy.xy : uvsets_dy.zw;
+				Texture2D tex = bindless_textures[NonUniformResourceIndex(material.texture_displacementmap_index)];
+				ParallaxOcclusionMapping_Impl(
+					uvsets,
+					V,
+					TBN,
+					material,
+					tex,
+					UV_displacementMap,
+					UV_displacementMap_dx,
+					UV_displacementMap_dy
+				);
+			}
+#endif // PARALLAXOCCLUSIONMAPPING
+
+			// Normal mapping:
+			[branch]
+			if (geometry.vb_tan >= 0 && material.texture_normalmap_index >= 0 && material.normalMapStrength > 0)
+			{
+				const float2 UV_normalMap = material.uvset_normalMap == 0 ? uvsets.xy : uvsets.zw;
+				Texture2D tex = bindless_textures[NonUniformResourceIndex(material.texture_normalmap_index)];
+#ifdef SURFACE_LOAD_QUAD_DERIVATIVES
+				const float2 UV_normalMap_dx = material.uvset_normalMap == 0 ? uvsets_dx.xy : uvsets_dx.zw;
+				const float2 UV_normalMap_dy = material.uvset_normalMap == 0 ? uvsets_dy.xy : uvsets_dy.zw;
+				const float3 normalMap = float3(tex.SampleGrad(sam, UV_normalMap, UV_normalMap_dx, UV_normalMap_dy).rg, 1) * 2 - 1;
+#else
+				float lod = 0;
+#ifdef SURFACE_LOAD_MIPCONE
+				lod = compute_texture_lod(tex, material.uvset_normalMap == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
+#endif // SURFACE_LOAD_MIPCONE
+				const float3 normalMap = float3(tex.SampleLevel(sam, UV_normalMap, lod).rg, 1) * 2 - 1;
+#endif // SURFACE_LOAD_QUAD_DERIVATIVES
+				N = normalize(lerp(N, mul(normalMap, TBN), material.normalMapStrength));
+			}
+		}
+
 		float4 baseColor = is_emittedparticle ? 1 : material.baseColor;
 		baseColor *= unpack_rgba(inst.color);
 		[branch]
@@ -463,36 +519,6 @@ struct Surface
 #endif // SURFACE_LOAD_MIPCONE
 			occlusion *= tex.SampleLevel(sam, UV_occlusionMap, lod).r;
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
-		}
-
-		[branch]
-		if (geometry.vb_tan >= 0 && material.texture_normalmap_index >= 0 && material.normalMapStrength > 0)
-		{
-			ByteAddressBuffer buf = bindless_buffers[NonUniformResourceIndex(geometry.vb_tan)];
-			const float4 t0 = unpack_utangent(buf.Load(i0 * sizeof(uint)));
-			const float4 t1 = unpack_utangent(buf.Load(i1 * sizeof(uint)));
-			const float4 t2 = unpack_utangent(buf.Load(i2 * sizeof(uint)));
-			float4 T = attribute_at_bary(t0, t1, t2, bary);
-			T = T * 2 - 1;
-			T.xyz = mul((float3x3)inst.transformInverseTranspose.GetMatrix(), T.xyz);
-			T.xyz = normalize(T.xyz);
-			const float3 B = normalize(cross(T.xyz, N) * T.w);
-			const float3x3 TBN = float3x3(T.xyz, B, N);
-
-			const float2 UV_normalMap = material.uvset_normalMap == 0 ? uvsets.xy : uvsets.zw;
-			Texture2D tex = bindless_textures[NonUniformResourceIndex(material.texture_normalmap_index)];
-#ifdef SURFACE_LOAD_QUAD_DERIVATIVES
-			const float2 UV_normalMap_dx = material.uvset_normalMap == 0 ? uvsets_dx.xy : uvsets_dx.zw;
-			const float2 UV_normalMap_dy = material.uvset_normalMap == 0 ? uvsets_dy.xy : uvsets_dy.zw;
-			const float3 normalMap = float3(tex.SampleGrad(sam, UV_normalMap, UV_normalMap_dx, UV_normalMap_dy).rg, 1) * 2 - 1;
-#else
-			float lod = 0;
-#ifdef SURFACE_LOAD_MIPCONE
-			lod = compute_texture_lod(tex, material.uvset_normalMap == 0 ? lod_constant0 : lod_constant1, ray_direction, surf_normal, cone_width);
-#endif // SURFACE_LOAD_MIPCONE
-			const float3 normalMap = float3(tex.SampleLevel(sam, UV_normalMap, lod).rg, 1) * 2 - 1;
-#endif // SURFACE_LOAD_QUAD_DERIVATIVES
-			N = normalize(lerp(N, mul(normalMap, TBN), material.normalMapStrength));
 		}
 
 		float3 pre0;

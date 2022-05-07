@@ -358,35 +358,20 @@ inline float3 PlanarReflection(in Surface surface, in float2 bumpColor)
 #define NUM_PARALLAX_OCCLUSION_STEPS 32
 inline void ParallaxOcclusionMapping(inout float4 uvsets, in float3 V, in float3x3 TBN)
 {
-	[branch]
-	if (GetMaterial().parallaxOcclusionMapping > 0 && GetMaterial().uvset_displacementMap >= 0)
-	{
-		V = mul(TBN, V);
-		float layerHeight = 1.0 / NUM_PARALLAX_OCCLUSION_STEPS;
-		float curLayerHeight = 0;
-		float2 dtex = GetMaterial().parallaxOcclusionMapping * V.xy / NUM_PARALLAX_OCCLUSION_STEPS;
-		float2 originalTextureCoords = GetMaterial().uvset_displacementMap == 0 ? uvsets.xy : uvsets.zw;
-		float2 currentTextureCoords = originalTextureCoords;
-		float2 derivX = ddx_coarse(currentTextureCoords);
-		float2 derivY = ddy_coarse(currentTextureCoords);
-		float heightFromTexture = 1 - texture_displacementmap.SampleGrad(sampler_linear_wrap, currentTextureCoords, derivX, derivY).r;
-		uint iter = 0;
-		[loop]
-		while (heightFromTexture > curLayerHeight && iter < NUM_PARALLAX_OCCLUSION_STEPS)
-		{
-			curLayerHeight += layerHeight;
-			currentTextureCoords -= dtex;
-			heightFromTexture = 1 - texture_displacementmap.SampleGrad(sampler_linear_wrap, currentTextureCoords, derivX, derivY).r;
-			iter++;
-		}
-		float2 prevTCoords = currentTextureCoords + dtex;
-		float nextH = heightFromTexture - curLayerHeight;
-		float prevH = 1 - texture_displacementmap.SampleGrad(sampler_linear_wrap, prevTCoords, derivX, derivY).r - curLayerHeight + layerHeight;
-		float weight = nextH / (nextH - prevH);
-		float2 finalTextureCoords = mad(prevTCoords, weight, currentTextureCoords * (1.0 - weight));
-		float2 difference = finalTextureCoords - originalTextureCoords;
-		uvsets += difference.xyxy;
-	}
+	float2 uv = GetMaterial().uvset_displacementMap == 0 ? uvsets.xy : uvsets.zw;
+	float2 uv_dx = ddx_coarse(uv);
+	float2 uv_dy = ddy_coarse(uv);
+
+	ParallaxOcclusionMapping_Impl(
+		uvsets,
+		V,
+		TBN,
+		GetMaterial(),
+		texture_displacementmap,
+		uv,
+		uv_dx,
+		uv_dy
+	);
 }
 
 inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
