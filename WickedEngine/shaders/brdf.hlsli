@@ -127,9 +127,9 @@ struct SurfaceToLight
 
 		F = F_Schlick(surface.f0, surface.f90, VdotH);
 
-		TdotL = dot(surface.T, L);
+		TdotL = dot(surface.T.xyz, L);
 		BdotL = dot(surface.B, L);
-		TdotH = dot(surface.T, H);
+		TdotH = dot(surface.T.xyz, H);
 		BdotH = dot(surface.B, H);
 
 #ifdef CARTOON
@@ -156,14 +156,14 @@ struct SurfaceToLight
 
 float3 BRDF_GetSpecular(in Surface surface, in SurfaceToLight surfaceToLight)
 {
-#ifdef BRDF_ANISOTROPIC
+#ifdef ANISOTROPIC
 	float D = D_GGX_Anisotropic(surface.at, surface.ab, surfaceToLight.TdotH, surfaceToLight.BdotH, surfaceToLight.NdotH);
 	float Vis = V_SmithGGXCorrelated_Anisotropic(surface.at, surface.ab, surface.TdotV, surface.BdotV,
 		surfaceToLight.TdotL, surfaceToLight.BdotL, surface.NdotV, surfaceToLight.NdotL);
 #else
 	float D = D_GGX(surface.roughnessBRDF, surfaceToLight.NdotH, surfaceToLight.H);
 	float Vis = V_SmithGGXCorrelated(surface.roughnessBRDF, surface.NdotV, surfaceToLight.NdotL);
-#endif // BRDF_ANISOTROPIC
+#endif // ANISOTROPIC
 
 	float3 specular = D * Vis * surfaceToLight.F;
 

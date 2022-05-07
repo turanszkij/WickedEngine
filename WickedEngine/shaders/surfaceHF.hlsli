@@ -57,7 +57,7 @@ struct Surface
 	float transmission;		// transmission factor
 	float2 pixel;			// pixel coordinate (used for randomization effects)
 	float2 screenUV;		// pixel coordinate in UV space [0 -> 1] (used for randomization effects)
-	float3 T;				// tangent
+	float4 T;				// tangent
 	float3 B;				// bitangent
 	float anisotropy;		// anisotropy factor [0 -> 1]
 	float4 sss;				// subsurface scattering color * amount
@@ -195,7 +195,7 @@ struct Surface
 		sheen.DFG = texture_sheenlut.SampleLevel(sampler_linear_clamp, float2(NdotV, sheen.roughness), 0).r;
 		sheen.albedoScaling = 1.0 - max3(sheen.color) * sheen.DFG;
 
-		TdotV = dot(T, V);
+		TdotV = dot(T.xyz, V);
 		BdotV = dot(B, V);
 		at = max(0, roughnessBRDF * (1 + anisotropy));
 		ab = max(0, roughnessBRDF * (1 - anisotropy));
@@ -318,11 +318,11 @@ struct Surface
 			const float4 t0 = unpack_utangent(buf.Load(i0 * sizeof(uint)));
 			const float4 t1 = unpack_utangent(buf.Load(i1 * sizeof(uint)));
 			const float4 t2 = unpack_utangent(buf.Load(i2 * sizeof(uint)));
-			float4 T = attribute_at_bary(t0, t1, t2, bary);
+			T = attribute_at_bary(t0, t1, t2, bary);
 			T = T * 2 - 1;
 			T.xyz = mul((float3x3)inst.transformInverseTranspose.GetMatrix(), T.xyz);
 			T.xyz = normalize(T.xyz);
-			const float3 B = normalize(cross(T.xyz, N) * T.w);
+			B = normalize(cross(T.xyz, N) * T.w);
 			const float3x3 TBN = float3x3(T.xyz, B, N);
 
 #ifdef PARALLAXOCCLUSIONMAPPING
@@ -365,6 +365,11 @@ struct Surface
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
 				N = normalize(lerp(N, mul(normalMap, TBN), material.normalMapStrength));
 			}
+
+#ifdef ANISOTROPIC
+			anisotropy = material.parallaxOcclusionMapping;
+			B = normalize(cross(T.xyz, N) * T.w); // Compute bitangent again after normal mapping
+#endif // ANISOTROPIC
 		}
 
 		float4 baseColor = is_emittedparticle ? 1 : material.baseColor;

@@ -1198,11 +1198,11 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // PREPASS
 
 
-#ifdef BRDF_ANISOTROPIC
+#ifdef ANISOTROPIC
 	surface.anisotropy = GetMaterial().parallaxOcclusionMapping;
-	surface.T = tangent.xyz;
+	surface.T = tangent;
 	surface.B = normalize(cross(tangent.xyz, surface.N) * tangent.w); // Compute bitangent again after normal mapping
-#endif // BRDF_ANISOTROPIC
+#endif // ANISOTROPIC
 
 
 #ifdef SHEEN
