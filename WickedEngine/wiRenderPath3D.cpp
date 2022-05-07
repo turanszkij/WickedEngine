@@ -1114,8 +1114,6 @@ void RenderPath3D::Render() const
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		//auto range = wi::profiler::BeginRangeGPU("Opaque Scene", cmd);
-
 		if (wi::renderer::GetRaytracedShadowsEnabled() || wi::renderer::GetScreenSpaceShadowsEnabled())
 		{
 			GPUBarrier barrier = GPUBarrier::Image(&rtShadow, rtShadow.desc.layout, ResourceState::SHADER_RESOURCE);
@@ -1128,7 +1126,6 @@ void RenderPath3D::Render() const
 			cmd
 		);
 
-
 		Viewport vp;
 		vp.width = (float)depthBuffer_Main.GetDesc().width;
 		vp.height = (float)depthBuffer_Main.GetDesc().height;
@@ -1136,9 +1133,9 @@ void RenderPath3D::Render() const
 
 		device->RenderPassBegin(&renderpass_main, cmd);
 
+		//auto range = wi::profiler::BeginRangeGPU("Opaque Scene", cmd);
 		//wi::renderer::DrawScene(visibility_main, RENDERPASS_MAIN, cmd, drawscene_flags);
 		//wi::renderer::DrawSky(*scene, cmd);
-
 		//wi::profiler::EndRange(range); // Opaque Scene
 
 		RenderOutline(cmd);
