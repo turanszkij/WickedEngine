@@ -68,6 +68,7 @@ struct Surface
 	uint uid_validate;
 	RayCone raycone;
 	float hit_depth;
+	float3 gi;
 
 	// These will be computed when calling Update():
 	float roughnessBRDF;	// roughness input for BRDF functions
@@ -106,6 +107,7 @@ struct Surface
 		layerMask = ~0;
 		facenormal = 0;
 		flags = 0;
+		gi = 0;
 
 		sheen.color = 0;
 		sheen.roughness = 0;
@@ -410,6 +412,21 @@ struct Surface
 			const float4 c2 = unpack_rgba(buf.Load(i2 * sizeof(uint)));
 			float4 vertexColor = attribute_at_bary(c0, c1, c2, bary);
 			baseColor *= vertexColor;
+		}
+
+		[branch]
+		if (inst.lightmap >= 0 && geometry.vb_atl >= 0)
+		{
+			ByteAddressBuffer buf = bindless_buffers[NonUniformResourceIndex(geometry.vb_atl)];
+			const float2 a0 = unpack_half2(buf.Load(i0 * sizeof(uint)));
+			const float2 a1 = unpack_half2(buf.Load(i1 * sizeof(uint)));
+			const float2 a2 = unpack_half2(buf.Load(i2 * sizeof(uint)));
+			float2 atlas = attribute_at_bary(a0, a1, a2, bary);
+
+			Texture2D<float4> tex = bindless_textures[NonUniformResourceIndex(inst.lightmap)];
+			gi = tex.SampleLevel(sampler_linear_clamp, atlas, 0).rgb;
+
+			flags |= SURFACE_FLAG_GI_APPLIED;
 		}
 
 		float4 surfaceMap = 1;

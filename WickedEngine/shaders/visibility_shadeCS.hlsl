@@ -41,13 +41,14 @@ void main(uint DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uint
 			surface.pixel = pixel.xy;
 			surface.screenUV = uv;
 
-			float3 ambient = GetAmbient(surface.N);
-			ambient = lerp(ambient, ambient * surface.sss.rgb, saturate(surface.sss.a));
+			if ((surface.flags & SURFACE_FLAG_GI_APPLIED) == 0)
+			{
+				float3 ambient = GetAmbient(surface.N);
+				surface.gi = lerp(ambient, ambient * surface.sss.rgb, saturate(surface.sss.a));
+			}
 
 			Lighting lighting;
-			lighting.create(0, 0, ambient, 0);
-
-			//LightMapping(surface.inst.lightmap, input.atl, lighting, surface);
+			lighting.create(0, 0, surface.gi, 0);
 
 			ApplyEmissive(surface, lighting);
 
