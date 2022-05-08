@@ -299,11 +299,14 @@ struct Surface
 		if (geometry.vb_uvs >= 0)
 		{
 			ByteAddressBuffer buf = bindless_buffers[NonUniformResourceIndex(geometry.vb_uvs)];
-			const float4 uv0 = unpack_half4(buf.Load2(i0 * sizeof(uint2)));
-			const float4 uv1 = unpack_half4(buf.Load2(i1 * sizeof(uint2)));
-			const float4 uv2 = unpack_half4(buf.Load2(i2 * sizeof(uint2)));
+			float4 uv0 = unpack_half4(buf.Load2(i0 * sizeof(uint2)));
+			float4 uv1 = unpack_half4(buf.Load2(i1 * sizeof(uint2)));
+			float4 uv2 = unpack_half4(buf.Load2(i2 * sizeof(uint2)));
+			// all three must be transformed, to have correct derivatives (not enough to only transform final uvsets):
+			uv0.xy = mad(uv0.xy, material.texMulAdd.xy, material.texMulAdd.zw);
+			uv1.xy = mad(uv1.xy, material.texMulAdd.xy, material.texMulAdd.zw);
+			uv2.xy = mad(uv2.xy, material.texMulAdd.xy, material.texMulAdd.zw);
 			uvsets = attribute_at_bary(uv0, uv1, uv2, bary);
-			uvsets.xy = mad(uvsets.xy, material.texMulAdd.xy, material.texMulAdd.zw);
 
 #ifdef SURFACE_LOAD_MIPCONE
 			lod_constant0 = 0.5 * log2(twice_uv_area(uv0.xy, uv1.xy, uv2.xy) * triangle_constant);
