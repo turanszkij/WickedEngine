@@ -65,7 +65,8 @@ namespace wi::renderer
 		wi::graphics::ShaderStage stage,
 		wi::graphics::Shader& shader,
 		const std::string& filename,
-		wi::graphics::ShaderModel minshadermodel = wi::graphics::ShaderModel::SM_6_0
+		wi::graphics::ShaderModel minshadermodel = wi::graphics::ShaderModel::SM_6_0,
+		wi::vector<std::string> permutation_defines = {}
 	);
 
 
@@ -308,8 +309,11 @@ namespace wi::renderer
 		wi::graphics::CommandList cmd
 	);
 
-	struct VisibilityResolveOutputs
+	struct VisibilityResources
 	{
+		wi::graphics::GPUBuffer bins;
+		wi::graphics::GPUBuffer binned_pixels;
+
 		// You can request any of these extra outputs to be written by VisibilityResolve:
 		const wi::graphics::Texture* depthbuffer = nullptr; // depth buffer that matches with post projection
 		const wi::graphics::Texture* lineardepth = nullptr; // depth buffer in linear space in [0,1] range
@@ -318,9 +322,15 @@ namespace wi::renderer
 		const wi::graphics::Texture* roughness = nullptr; // recommended format: R8_UNORM
 		const wi::graphics::Texture* primitiveID_resolved = nullptr; // resolved from MSAA texture_visibility input
 	};
+	void CreateVisibilityResources(VisibilityResources& res, XMUINT2 resolution);
 	void VisibilityResolve(
+		const VisibilityResources& res,
 		const wi::graphics::Texture& input_primitiveID, // can be MSAA
-		const VisibilityResolveOutputs& outputs,
+		wi::graphics::CommandList cmd
+	);
+	void VisibilityShade(
+		const VisibilityResources& res,
+		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd
 	);
 

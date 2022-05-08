@@ -123,7 +123,7 @@ struct ShaderMaterial
 	int			texture_clearcoatroughnessmap_index;
 	int			texture_clearcoatnormalmap_index;
 	int			texture_specularmap_index;
-	int			padding0;
+	uint		shaderType;
 
 #ifndef __cplusplus
 	float3 GetEmissive() { return Unpack_R11G11B10_FLOAT(emissive_r11g11b10); }
@@ -140,6 +140,22 @@ struct ShaderMaterial
 	inline bool IsCastingShadow() { return options & SHADERMATERIAL_OPTION_BIT_CAST_SHADOW; }
 	inline bool IsUnlit() { return options & SHADERMATERIAL_OPTION_BIT_UNLIT; }
 };
+
+// For binning shading based on shader types:
+struct ShaderTypeBin
+{
+	uint2 padding0;
+	uint offset;
+	uint count;
+
+	uint dispatchX;
+	uint dispatchY;
+	uint dispatchZ;
+	uint padding1;
+
+	uint4 padding2[14]; // force 256-byte alignment that's necessary for constant buffers :(
+};
+static const uint SHADERTYPE_BIN_COUNT = 10;
 
 static const uint SHADERMESH_FLAG_DOUBLE_SIDED = 1 << 0;
 static const uint SHADERMESH_FLAG_HAIRPARTICLE = 1 << 1;

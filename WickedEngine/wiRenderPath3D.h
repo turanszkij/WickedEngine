@@ -129,6 +129,7 @@ namespace wi
 		wi::renderer::BloomResources bloomResources;
 		wi::renderer::SurfelGIResources surfelGIResources;
 		wi::renderer::TemporalAAResources temporalAAResources;
+		wi::renderer::VisibilityResources visibilityResources;
 
 		mutable const wi::graphics::Texture* lastPostprocessRT = &rtPostprocess;
 		// Post-processes are ping-ponged, this function helps to obtain the last postprocess render target that was written

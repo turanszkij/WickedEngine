@@ -626,23 +626,42 @@ size_t GetShaderDumpCount()
 }
 #endif // SHADERDUMP
 
-bool LoadShader(ShaderStage stage, Shader& shader, const std::string& filename, ShaderModel minshadermodel)
+bool LoadShader(
+	ShaderStage stage,
+	Shader& shader,
+	const std::string& filename,
+	ShaderModel minshadermodel,
+	wi::vector<std::string> permutation_defines
+)
 {
 	std::string shaderbinaryfilename = SHADERPATH + filename;
 
+	if (!permutation_defines.empty())
+	{
+		std::string ext = wi::helper::GetExtensionFromFileName(shaderbinaryfilename);
+		shaderbinaryfilename = wi::helper::RemoveExtension(shaderbinaryfilename);
+		for (auto& def : permutation_defines)
+		{
+			shaderbinaryfilename += "_" + def;
+		}
+		shaderbinaryfilename += "." + ext;
+	}
+
+	if (device != nullptr)
+	{
 #ifdef SHADERDUMP_ENABLED
-	
-	// Loading shader from precompiled dump:
-	auto it = wiShaderDump::shaderdump.find(shaderbinaryfilename);
-	if (it != wiShaderDump::shaderdump.end())
-	{
-		return device->CreateShader(stage, it->second.data, it->second.size, &shader);
-	}
-	else
-	{
-		wi::backlog::post("shader dump doesn't contain shader: " + shaderbinaryfilename);
-	}
+		// Loading shader from precompiled dump:
+		auto it = wiShaderDump::shaderdump.find(shaderbinaryfilename);
+		if (it != wiShaderDump::shaderdump.end())
+		{
+			return device->CreateShader(stage, it->second.data, it->second.size, &shader);
+		}
+		else
+		{
+			wi::backlog::post("shader dump doesn't contain shader: " + shaderbinaryfilename);
+		}
 #endif // SHADERDUMP_ENABLED
+	}
 
 	wi::shadercompiler::RegisterShader(shaderbinaryfilename);
 
@@ -652,11 +671,11 @@ bool LoadShader(ShaderStage stage, Shader& shader, const std::string& filename, 
 		input.format = device->GetShaderFormat();
 		input.stage = stage;
 		input.minshadermodel = minshadermodel;
+		input.defines = permutation_defines;
 
 		std::string sourcedir = SHADERSOURCEPATH;
 		wi::helper::MakePathAbsolute(sourcedir);
 		input.include_directories.push_back(sourcedir);
-
 		input.shadersourcefilename = wi::helper::ReplaceExtension(sourcedir + filename, "hlsl");
 
 		wi::shadercompiler::CompilerOutput output;
@@ -675,14 +694,17 @@ bool LoadShader(ShaderStage stage, Shader& shader, const std::string& filename, 
 		}
 		else
 		{
-			wi::backlog::post("shader compile FAILED: " + shaderbinaryfilename + "\n" + output.error_message);
+			wi::backlog::post("shader compile FAILED: " + shaderbinaryfilename + "\n" + output.error_message, wi::backlog::LogLevel::Error);
 		}
 	}
 
-	wi::vector<uint8_t> buffer;
-	if (wi::helper::FileRead(shaderbinaryfilename, buffer))
+	if (device != nullptr)
 	{
-		return device->CreateShader(stage, buffer.data(), buffer.size(), &shader);
+		wi::vector<uint8_t> buffer;
+		if (wi::helper::FileRead(shaderbinaryfilename, buffer))
+		{
+			return device->CreateShader(stage, buffer.data(), buffer.size(), &shader);
+		}
 	}
 
 	return false;
@@ -1019,6 +1041,9 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_RESOLVE_MSAA], "visibility_resolveCS_MSAA.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_RESOLVE_FAST], "visibility_resolveCS_fast.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_RESOLVE_FAST_MSAA], "visibility_resolveCS_fast_MSAA.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_BINNING_OFFSETS], "visibility_binning_offsetsCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_BINNING_PLACEMENT], "visibility_binning_placementCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_SKY], "visibility_skyCS.cso"); });
 
 	if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 	{
@@ -1186,6 +1211,18 @@ void LoadShaders()
 			}
 		}
 	});
+
+	wi::jobsystem::Dispatch(ctx, MaterialComponent::SHADERTYPE_COUNT, 1, [](wi::jobsystem::JobArgs args) {
+
+		LoadShader(
+			ShaderStage::CS,
+			shaders[CSTYPE_VISIBILITY_SHADE_PERMUTATION_BEGIN + args.jobIndex],
+			"visibility_shadeCS.cso",
+			ShaderModel::SM_6_0,
+			MaterialComponent::shaderTypeDefines[args.jobIndex] // permutation defines
+		);
+
+		});
 
 	// Clear custom shaders (Custom shaders coming from user will need to be handled by the user in case of shader reload):
 	customShaders.clear();
@@ -7657,9 +7694,28 @@ void ComputeShadingRateClassification(
 	device->EventEnd(cmd);
 }
 
+void CreateVisibilityResources(VisibilityResources& res, XMUINT2 resolution)
+{
+	GPUBufferDesc desc;
+	desc.stride = sizeof(ShaderTypeBin);
+	desc.size = desc.stride * (MaterialComponent::SHADERTYPE_COUNT + 1); // +1 for sky pixels
+	desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS | BindFlag::CONSTANT_BUFFER;
+	desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED | ResourceMiscFlag::INDIRECT_ARGS;
+	bool success = device->CreateBuffer(&desc, nullptr, &res.bins);
+	assert(success);
+	device->SetName(&res.bins, "bins");
+
+	desc.stride = sizeof(uint);
+	desc.size = desc.stride * resolution.x * resolution.y;
+	desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+	desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
+	success = device->CreateBuffer(&desc, nullptr, &res.binned_pixels);
+	assert(success);
+	device->SetName(&res.binned_pixels, "binned_pixels");
+}
 void VisibilityResolve(
+	const VisibilityResources& res,
 	const Texture& input_primitiveID, // can be MSAA
-	const VisibilityResolveOutputs& outputs,
 	CommandList cmd
 )
 {
@@ -7668,6 +7724,16 @@ void VisibilityResolve(
 
 	BindCommonResources(cmd);
 
+	if (res.bins.IsValid())
+	{
+		barrier_stack.push_back(GPUBarrier::Buffer(&res.bins, ResourceState::CONSTANT_BUFFER | ResourceState::INDIRECT_ARGUMENT, ResourceState::UNORDERED_ACCESS));
+		barrier_stack.push_back(GPUBarrier::Buffer(&res.binned_pixels, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS));
+		barrier_stack_flush(cmd);
+		device->ClearUAV(&res.bins, 0, cmd);
+		barrier_stack.push_back(GPUBarrier::Memory(&res.bins));
+		barrier_stack_flush(cmd);
+	}
+
 	const bool msaa = input_primitiveID.GetDesc().sample_count > 1;
 	bool fast = true;
 
@@ -7675,15 +7741,15 @@ void VisibilityResolve(
 	GPUResource unbind;
 
 	VisibilityResolvePushConstants push = {};
-	if (outputs.depthbuffer)
+	if (res.depthbuffer)
 	{
 		push.options |= VISIBILITY_RESOLVE_DEPTH;
-		device->BindUAV(outputs.depthbuffer, 0, cmd, 0);
-		device->BindUAV(outputs.depthbuffer, 1, cmd, 1);
-		device->BindUAV(outputs.depthbuffer, 2, cmd, 2);
-		device->BindUAV(outputs.depthbuffer, 3, cmd, 3);
-		device->BindUAV(outputs.depthbuffer, 4, cmd, 4);
-		barrier_stack.push_back(GPUBarrier::Image(outputs.depthbuffer, outputs.depthbuffer->desc.layout, ResourceState::UNORDERED_ACCESS));
+		device->BindUAV(res.depthbuffer, 0, cmd, 0);
+		device->BindUAV(res.depthbuffer, 1, cmd, 1);
+		device->BindUAV(res.depthbuffer, 2, cmd, 2);
+		device->BindUAV(res.depthbuffer, 3, cmd, 3);
+		device->BindUAV(res.depthbuffer, 4, cmd, 4);
+		barrier_stack.push_back(GPUBarrier::Image(res.depthbuffer, res.depthbuffer->desc.layout, ResourceState::UNORDERED_ACCESS));
 	}
 	else
 	{
@@ -7693,15 +7759,15 @@ void VisibilityResolve(
 		device->BindUAV(&unbind, 3, cmd);
 		device->BindUAV(&unbind, 4, cmd);
 	}
-	if (outputs.lineardepth)
+	if (res.lineardepth)
 	{
 		push.options |= VISIBILITY_RESOLVE_LINEARDEPTH;
-		device->BindUAV(outputs.lineardepth, 5, cmd, 0);
-		device->BindUAV(outputs.lineardepth, 6, cmd, 1);
-		device->BindUAV(outputs.lineardepth, 7, cmd, 2);
-		device->BindUAV(outputs.lineardepth, 8, cmd, 3);
-		device->BindUAV(outputs.lineardepth, 9, cmd, 4);
-		barrier_stack.push_back(GPUBarrier::Image(outputs.lineardepth, outputs.lineardepth->desc.layout, ResourceState::UNORDERED_ACCESS));
+		device->BindUAV(res.lineardepth, 5, cmd, 0);
+		device->BindUAV(res.lineardepth, 6, cmd, 1);
+		device->BindUAV(res.lineardepth, 7, cmd, 2);
+		device->BindUAV(res.lineardepth, 8, cmd, 3);
+		device->BindUAV(res.lineardepth, 9, cmd, 4);
+		barrier_stack.push_back(GPUBarrier::Image(res.lineardepth, res.lineardepth->desc.layout, ResourceState::UNORDERED_ACCESS));
 	}
 	else
 	{
@@ -7711,49 +7777,50 @@ void VisibilityResolve(
 		device->BindUAV(&unbind, 8, cmd);
 		device->BindUAV(&unbind, 9, cmd);
 	}
-	if (outputs.velocity)
+	if (res.velocity)
 	{
 		fast = false;
 		push.options |= VISIBILITY_RESOLVE_VELOCITY;
-		device->BindUAV(outputs.velocity, 10, cmd);
-		barrier_stack.push_back(GPUBarrier::Image(outputs.velocity, outputs.velocity->desc.layout, ResourceState::UNORDERED_ACCESS));
+		device->BindUAV(res.velocity, 10, cmd);
+		barrier_stack.push_back(GPUBarrier::Image(res.velocity, res.velocity->desc.layout, ResourceState::UNORDERED_ACCESS));
 	}
 	else
 	{
 		device->BindUAV(&unbind, 10, cmd);
 	}
-	if (outputs.normal)
+	if (res.normal)
 	{
 		fast = false;
 		push.options |= VISIBILITY_RESOLVE_NORMAL;
-		device->BindUAV(outputs.normal, 11, cmd);
-		barrier_stack.push_back(GPUBarrier::Image(outputs.normal, outputs.normal->desc.layout, ResourceState::UNORDERED_ACCESS));
+		device->BindUAV(res.normal, 11, cmd);
+		barrier_stack.push_back(GPUBarrier::Image(res.normal, res.normal->desc.layout, ResourceState::UNORDERED_ACCESS));
 	}
 	else
 	{
 		device->BindUAV(&unbind, 11, cmd);
 	}
-	if (outputs.roughness)
+	if (res.roughness)
 	{
 		fast = false;
 		push.options |= VISIBILITY_RESOLVE_ROUGHNESS;
-		device->BindUAV(outputs.roughness, 12, cmd);
-		barrier_stack.push_back(GPUBarrier::Image(outputs.roughness, outputs.roughness->desc.layout, ResourceState::UNORDERED_ACCESS));
+		device->BindUAV(res.roughness, 12, cmd);
+		barrier_stack.push_back(GPUBarrier::Image(res.roughness, res.roughness->desc.layout, ResourceState::UNORDERED_ACCESS));
 	}
 	else
 	{
 		device->BindUAV(&unbind, 12, cmd);
 	}
-	if (outputs.primitiveID_resolved)
+	if (res.primitiveID_resolved)
 	{
 		push.options |= VISIBILITY_RESOLVE_PRIMITIVEID;
-		device->BindUAV(outputs.primitiveID_resolved, 13, cmd);
-		barrier_stack.push_back(GPUBarrier::Image(outputs.primitiveID_resolved, outputs.primitiveID_resolved->desc.layout, ResourceState::UNORDERED_ACCESS));
+		device->BindUAV(res.primitiveID_resolved, 13, cmd);
+		barrier_stack.push_back(GPUBarrier::Image(res.primitiveID_resolved, res.primitiveID_resolved->desc.layout, ResourceState::UNORDERED_ACCESS));
 	}
 	else
 	{
 		device->BindUAV(&unbind, 13, cmd);
 	}
+	device->BindUAV(&res.bins, 14, cmd);
 	barrier_stack_flush(cmd);
 
 	if (fast)
@@ -7767,37 +7834,104 @@ void VisibilityResolve(
 	device->PushConstants(&push, sizeof(push), cmd);
 
 	device->Dispatch(
-		(input_primitiveID.desc.width + 15) / 16,
-		(input_primitiveID.desc.height + 15) / 16,
+		(input_primitiveID.desc.width + 7u) / 8u,
+		(input_primitiveID.desc.height + 7u) / 8u,
 		1,
 		cmd
 	);
 
-	if (outputs.depthbuffer)
+	if (res.depthbuffer)
 	{
-		barrier_stack.push_back(GPUBarrier::Image(outputs.depthbuffer, ResourceState::UNORDERED_ACCESS, outputs.depthbuffer->desc.layout));
+		barrier_stack.push_back(GPUBarrier::Image(res.depthbuffer, ResourceState::UNORDERED_ACCESS, res.depthbuffer->desc.layout));
 	}
-	if (outputs.lineardepth)
+	if (res.lineardepth)
 	{
-		barrier_stack.push_back(GPUBarrier::Image(outputs.lineardepth, ResourceState::UNORDERED_ACCESS, outputs.lineardepth->desc.layout));
+		barrier_stack.push_back(GPUBarrier::Image(res.lineardepth, ResourceState::UNORDERED_ACCESS, res.lineardepth->desc.layout));
 	}
-	if (outputs.velocity)
+	if (res.velocity)
 	{
-		barrier_stack.push_back(GPUBarrier::Image(outputs.velocity, ResourceState::UNORDERED_ACCESS, outputs.velocity->desc.layout));
+		barrier_stack.push_back(GPUBarrier::Image(res.velocity, ResourceState::UNORDERED_ACCESS, res.velocity->desc.layout));
 	}
-	if (outputs.normal)
+	if (res.normal)
 	{
-		barrier_stack.push_back(GPUBarrier::Image(outputs.normal, ResourceState::UNORDERED_ACCESS, outputs.normal->desc.layout));
+		barrier_stack.push_back(GPUBarrier::Image(res.normal, ResourceState::UNORDERED_ACCESS, res.normal->desc.layout));
 	}
-	if (outputs.roughness)
+	if (res.roughness)
 	{
-		barrier_stack.push_back(GPUBarrier::Image(outputs.roughness, ResourceState::UNORDERED_ACCESS, outputs.roughness->desc.layout));
+		barrier_stack.push_back(GPUBarrier::Image(res.roughness, ResourceState::UNORDERED_ACCESS, res.roughness->desc.layout));
 	}
-	if (outputs.primitiveID_resolved)
+	if (res.primitiveID_resolved)
 	{
-		barrier_stack.push_back(GPUBarrier::Image(outputs.primitiveID_resolved, ResourceState::UNORDERED_ACCESS, outputs.primitiveID_resolved->desc.layout));
+		barrier_stack.push_back(GPUBarrier::Image(res.primitiveID_resolved, ResourceState::UNORDERED_ACCESS, res.primitiveID_resolved->desc.layout));
 	}
 	barrier_stack_flush(cmd);
+
+	if (res.bins.IsValid())
+	{
+		device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_BINNING_OFFSETS], cmd);
+		device->Dispatch(1, 1, 1, cmd);
+		barrier_stack.push_back(GPUBarrier::Memory(&res.bins));
+		barrier_stack_flush(cmd);
+
+		device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_BINNING_PLACEMENT], cmd);
+		device->BindUAV(&res.binned_pixels, 15, cmd);
+		device->Dispatch(
+			(input_primitiveID.desc.width + 7u) / 8u,
+			(input_primitiveID.desc.height + 7u) / 8u,
+			1,
+			cmd
+		);
+	}
+
+	wi::profiler::EndRange(range);
+	device->EventEnd(cmd);
+}
+void VisibilityShade(
+	const VisibilityResources& res,
+	const Texture& output,
+	CommandList cmd
+)
+{
+	device->EventBegin("VisibilityShade", cmd);
+	auto range = wi::profiler::BeginRangeGPU("VisibilityShade", cmd);
+
+	BindCommonResources(cmd);
+
+	device->BindResource(&res.binned_pixels, 0, cmd);
+
+	const GPUResource* uavs[] = {
+		&output,
+	};
+	device->BindUAVs(uavs, 0, arraysize(uavs), cmd);
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS),
+			GPUBarrier::Buffer(&res.bins, ResourceState::UNORDERED_ACCESS, ResourceState::CONSTANT_BUFFER | ResourceState::INDIRECT_ARGUMENT),
+			GPUBarrier::Buffer(&res.binned_pixels, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+	// material dispatches:
+	for (uint i = 0; i < MaterialComponent::SHADERTYPE_COUNT; ++i)
+	{
+		device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SHADE_PERMUTATION_BEGIN + i], cmd);
+		device->BindConstantBuffer(&res.bins, 10, cmd, i * sizeof(ShaderTypeBin));
+		device->DispatchIndirect(&res.bins, i * sizeof(ShaderTypeBin) + offsetof(ShaderTypeBin, dispatchX), cmd);
+	}
+
+	// sky dispatch:
+	device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SKY], cmd);
+	device->BindConstantBuffer(&res.bins, 10, cmd, MaterialComponent::SHADERTYPE_COUNT * sizeof(ShaderTypeBin));
+	device->DispatchIndirect(&res.bins, MaterialComponent::SHADERTYPE_COUNT * sizeof(ShaderTypeBin) + offsetof(ShaderTypeBin, dispatchX), cmd);
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);

@@ -4,6 +4,6 @@
 #define OUTPUT_GBUFFER
 #define TILEDFORWARD
 #define DISABLE_ALPHATEST
-#define BRDF_CLEARCOAT
+#define CLEARCOAT
 #include "objectHF.hlsli"
 

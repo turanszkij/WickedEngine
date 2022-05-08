@@ -1,13 +1,348 @@
 #include "WickedEngine.h"
 
 #include <iostream>
-#include <filesystem>
+#include <iomanip>
 #include <mutex>
 #include <string>
 
 std::mutex locker;
-wi::vector<std::string> shaders[static_cast<size_t>(wi::graphics::ShaderStage::Count)];
-wi::unordered_map<std::string, wi::graphics::ShaderModel> minshadermodels;
+struct ShaderEntry
+{
+	std::string name;
+	wi::graphics::ShaderStage stage = wi::graphics::ShaderStage::Count;
+	wi::graphics::ShaderModel minshadermodel = wi::graphics::ShaderModel::SM_5_0;
+	struct Permutation
+	{
+		wi::vector<std::string> defines;
+	};
+	wi::vector<Permutation> permutations;
+};
+wi::vector<ShaderEntry> shaders = {
+	{"hairparticle_simulateCS", wi::graphics::ShaderStage::CS},
+	{"hairparticle_finishUpdateCS", wi::graphics::ShaderStage::CS},
+	{"emittedparticle_simulateCS", wi::graphics::ShaderStage::CS},
+	{"generateMIPChainCubeCS_float4", wi::graphics::ShaderStage::CS},
+	{"generateMIPChainCubeCS_unorm4", wi::graphics::ShaderStage::CS},
+	{"generateMIPChainCubeArrayCS_float4", wi::graphics::ShaderStage::CS},
+	{"generateMIPChainCubeArrayCS_unorm4", wi::graphics::ShaderStage::CS},
+	{"generateMIPChain3DCS_float4", wi::graphics::ShaderStage::CS},
+	{"generateMIPChain3DCS_unorm4", wi::graphics::ShaderStage::CS},
+	{"generateMIPChain2DCS_float4", wi::graphics::ShaderStage::CS},
+	{"generateMIPChain2DCS_unorm4", wi::graphics::ShaderStage::CS},
+	{"blur_gaussian_float4CS", wi::graphics::ShaderStage::CS},
+	{"bloomseparateCS", wi::graphics::ShaderStage::CS},
+	{"depthoffield_mainCS", wi::graphics::ShaderStage::CS},
+	{"depthoffield_neighborhoodMaxCOCCS", wi::graphics::ShaderStage::CS},
+	{"depthoffield_prepassCS", wi::graphics::ShaderStage::CS},
+	{"depthoffield_upsampleCS", wi::graphics::ShaderStage::CS},
+	{"depthoffield_tileMaxCOC_verticalCS", wi::graphics::ShaderStage::CS},
+	{"depthoffield_tileMaxCOC_horizontalCS", wi::graphics::ShaderStage::CS},
+	{"voxelRadianceSecondaryBounceCS", wi::graphics::ShaderStage::CS},
+	{"voxelSceneCopyClearCS", wi::graphics::ShaderStage::CS},
+	{"voxelClearOnlyNormalCS", wi::graphics::ShaderStage::CS},
+	{"upsample_bilateral_float1CS", wi::graphics::ShaderStage::CS},
+	{"upsample_bilateral_float4CS", wi::graphics::ShaderStage::CS},
+	{"upsample_bilateral_unorm1CS", wi::graphics::ShaderStage::CS},
+	{"upsample_bilateral_unorm4CS", wi::graphics::ShaderStage::CS},
+	{"temporalaaCS", wi::graphics::ShaderStage::CS},
+	{"tileFrustumsCS", wi::graphics::ShaderStage::CS},
+	{"tonemapCS", wi::graphics::ShaderStage::CS},
+	{"underwaterCS", wi::graphics::ShaderStage::CS},
+	{"fsr_upscalingCS", wi::graphics::ShaderStage::CS},
+	{"fsr_sharpenCS", wi::graphics::ShaderStage::CS},
+	{"ssaoCS", wi::graphics::ShaderStage::CS},
+	{"rtreflectionCS", wi::graphics::ShaderStage::CS, wi::graphics::ShaderModel::SM_6_5},
+	{"ssr_tileMaxRoughness_horizontalCS", wi::graphics::ShaderStage::CS},
+	{"ssr_tileMaxRoughness_verticalCS", wi::graphics::ShaderStage::CS},
+	{"ssr_kickjobsCS", wi::graphics::ShaderStage::CS},
+	{"ssr_depthHierarchyCS", wi::graphics::ShaderStage::CS},
+	{"ssr_resolveCS", wi::graphics::ShaderStage::CS},
+	{"ssr_temporalCS", wi::graphics::ShaderStage::CS},
+	{"ssr_bilateralCS", wi::graphics::ShaderStage::CS},
+	{"ssr_raytraceCS", wi::graphics::ShaderStage::CS},
+	{"ssr_raytraceCS_cheap", wi::graphics::ShaderStage::CS},
+	{"ssr_raytraceCS_earlyexit", wi::graphics::ShaderStage::CS},
+	{"sharpenCS", wi::graphics::ShaderStage::CS},
+	{"skinningCS", wi::graphics::ShaderStage::CS},
+	{"resolveMSAADepthStencilCS", wi::graphics::ShaderStage::CS},
+	{"raytraceCS", wi::graphics::ShaderStage::CS},
+	{"raytraceCS_rtapi", wi::graphics::ShaderStage::CS, wi::graphics::ShaderModel::SM_6_5},
+	{"paint_textureCS", wi::graphics::ShaderStage::CS},
+	{"oceanUpdateDisplacementMapCS", wi::graphics::ShaderStage::CS},
+	{"oceanUpdateGradientFoldingCS", wi::graphics::ShaderStage::CS},
+	{"oceanSimulatorCS", wi::graphics::ShaderStage::CS},
+	{"msao_interleaveCS", wi::graphics::ShaderStage::CS},
+	{"msao_preparedepthbuffers1CS", wi::graphics::ShaderStage::CS},
+	{"msao_preparedepthbuffers2CS", wi::graphics::ShaderStage::CS},
+	{"msao_blurupsampleCS", wi::graphics::ShaderStage::CS},
+	{"msao_blurupsampleCS_blendout", wi::graphics::ShaderStage::CS},
+	{"msao_blurupsampleCS_premin", wi::graphics::ShaderStage::CS},
+	{"msao_blurupsampleCS_premin_blendout", wi::graphics::ShaderStage::CS},
+	{"msaoCS", wi::graphics::ShaderStage::CS},
+	{"motionblur_neighborhoodMaxVelocityCS", wi::graphics::ShaderStage::CS},
+	{"motionblur_tileMaxVelocity_horizontalCS", wi::graphics::ShaderStage::CS},
+	{"motionblur_tileMaxVelocity_verticalCS", wi::graphics::ShaderStage::CS},
+	{"luminancePass2CS", wi::graphics::ShaderStage::CS},
+	{"motionblur_kickjobsCS", wi::graphics::ShaderStage::CS},
+	{"motionblurCS", wi::graphics::ShaderStage::CS},
+	{"motionblurCS_cheap", wi::graphics::ShaderStage::CS},
+	{"motionblurCS_earlyexit", wi::graphics::ShaderStage::CS},
+	{"luminancePass1CS", wi::graphics::ShaderStage::CS},
+	{"lightShaftsCS", wi::graphics::ShaderStage::CS},
+	{"lightCullingCS_ADVANCED_DEBUG", wi::graphics::ShaderStage::CS},
+	{"lightCullingCS_DEBUG", wi::graphics::ShaderStage::CS},
+	{"lightCullingCS", wi::graphics::ShaderStage::CS},
+	{"lightCullingCS_ADVANCED", wi::graphics::ShaderStage::CS},
+	{"hbaoCS", wi::graphics::ShaderStage::CS},
+	{"gpusortlib_sortInnerCS", wi::graphics::ShaderStage::CS},
+	{"gpusortlib_sortStepCS", wi::graphics::ShaderStage::CS},
+	{"gpusortlib_kickoffSortCS", wi::graphics::ShaderStage::CS},
+	{"gpusortlib_sortCS", wi::graphics::ShaderStage::CS},
+	{"fxaaCS", wi::graphics::ShaderStage::CS},
+	{"filterEnvMapCS", wi::graphics::ShaderStage::CS},
+	{"fft_512x512_c2c_CS", wi::graphics::ShaderStage::CS},
+	{"fft_512x512_c2c_v2_CS", wi::graphics::ShaderStage::CS},
+	{"emittedparticle_sphpartitionCS", wi::graphics::ShaderStage::CS},
+	{"emittedparticle_sphpartitionoffsetsCS", wi::graphics::ShaderStage::CS},
+	{"emittedparticle_sphpartitionoffsetsresetCS", wi::graphics::ShaderStage::CS},
+	{"emittedparticle_simulateCS_SORTING", wi::graphics::ShaderStage::CS},
+	{"emittedparticle_simulateCS_SORTING_DEPTHCOLLISIONS", wi::graphics::ShaderStage::CS},
+	{"emittedparticle_sphdensityCS", wi::graphics::ShaderStage::CS},
+	{"emittedparticle_sphforceCS", wi::graphics::ShaderStage::CS},
+	{"emittedparticle_kickoffUpdateCS", wi::graphics::ShaderStage::CS},
+	{"emittedparticle_simulateCS_DEPTHCOLLISIONS", wi::graphics::ShaderStage::CS},
+	{"emittedparticle_emitCS", wi::graphics::ShaderStage::CS},
+	{"emittedparticle_emitCS_FROMMESH", wi::graphics::ShaderStage::CS},
+	{"emittedparticle_emitCS_volume", wi::graphics::ShaderStage::CS},
+	{"emittedparticle_finishUpdateCS", wi::graphics::ShaderStage::CS},
+	{"downsample4xCS", wi::graphics::ShaderStage::CS},
+	{"depthoffield_prepassCS_earlyexit", wi::graphics::ShaderStage::CS},
+	{"depthoffield_mainCS_cheap", wi::graphics::ShaderStage::CS},
+	{"depthoffield_mainCS_earlyexit", wi::graphics::ShaderStage::CS },
+	{"depthoffield_postfilterCS", wi::graphics::ShaderStage::CS },
+	{"depthoffield_kickjobsCS", wi::graphics::ShaderStage::CS },
+	{"copytexture2D_float4_borderexpandCS", wi::graphics::ShaderStage::CS },
+	{"copytexture2D_unorm4_borderexpandCS", wi::graphics::ShaderStage::CS },
+	{"copytexture2D_unorm4CS", wi::graphics::ShaderStage::CS },
+	{"copytexture2D_float4CS", wi::graphics::ShaderStage::CS },
+	{"chromatic_aberrationCS", wi::graphics::ShaderStage::CS },
+	{"bvh_hierarchyCS", wi::graphics::ShaderStage::CS },
+	{"bvh_primitivesCS", wi::graphics::ShaderStage::CS },
+	{"bvh_propagateaabbCS", wi::graphics::ShaderStage::CS },
+	{"blur_gaussian_wide_unorm1CS", wi::graphics::ShaderStage::CS },
+	{"blur_gaussian_wide_unorm4CS", wi::graphics::ShaderStage::CS },
+	{"blur_gaussian_unorm1CS", wi::graphics::ShaderStage::CS },
+	{"blur_gaussian_unorm4CS", wi::graphics::ShaderStage::CS },
+	{"blur_gaussian_wide_float1CS", wi::graphics::ShaderStage::CS },
+	{"blur_gaussian_wide_float3CS", wi::graphics::ShaderStage::CS },
+	{"blur_gaussian_wide_float4CS", wi::graphics::ShaderStage::CS },
+	{"blur_bilateral_wide_unorm4CS", wi::graphics::ShaderStage::CS },
+	{"blur_gaussian_float1CS", wi::graphics::ShaderStage::CS },
+	{"blur_gaussian_float3CS", wi::graphics::ShaderStage::CS },
+	{"blur_bilateral_unorm4CS", wi::graphics::ShaderStage::CS },
+	{"blur_bilateral_wide_float1CS", wi::graphics::ShaderStage::CS },
+	{"blur_bilateral_wide_float3CS", wi::graphics::ShaderStage::CS },
+	{"blur_bilateral_wide_float4CS", wi::graphics::ShaderStage::CS },
+	{"blur_bilateral_wide_unorm1CS", wi::graphics::ShaderStage::CS },
+	{"blur_bilateral_float1CS", wi::graphics::ShaderStage::CS },
+	{"blur_bilateral_float3CS", wi::graphics::ShaderStage::CS },
+	{"blur_bilateral_float4CS", wi::graphics::ShaderStage::CS },
+	{"blur_bilateral_unorm1CS", wi::graphics::ShaderStage::CS },
+	{"voxelSceneCopyClearCS_TemporalSmoothing", wi::graphics::ShaderStage::CS },
+	{"normalsfromdepthCS", wi::graphics::ShaderStage::CS },
+	{"volumetricCloud_shapenoiseCS", wi::graphics::ShaderStage::CS },
+	{"volumetricCloud_detailnoiseCS", wi::graphics::ShaderStage::CS },
+	{"volumetricCloud_curlnoiseCS", wi::graphics::ShaderStage::CS },
+	{"volumetricCloud_weathermapCS", wi::graphics::ShaderStage::CS },
+	{"volumetricCloud_renderCS", wi::graphics::ShaderStage::CS },
+	{"volumetricCloud_reprojectCS", wi::graphics::ShaderStage::CS },
+	{"volumetricCloud_temporalCS", wi::graphics::ShaderStage::CS },
+	{"shadingRateClassificationCS", wi::graphics::ShaderStage::CS },
+	{"shadingRateClassificationCS_DEBUG", wi::graphics::ShaderStage::CS },
+	{"skyAtmosphere_transmittanceLutCS", wi::graphics::ShaderStage::CS },
+	{"skyAtmosphere_skyViewLutCS", wi::graphics::ShaderStage::CS },
+	{"skyAtmosphere_multiScatteredLuminanceLutCS", wi::graphics::ShaderStage::CS },
+	{"skyAtmosphere_skyLuminanceLutCS", wi::graphics::ShaderStage::CS },
+	{"upsample_bilateral_uint4CS", wi::graphics::ShaderStage::CS },
+	{"screenspaceshadowCS", wi::graphics::ShaderStage::CS },
+	{"rtshadowCS", wi::graphics::ShaderStage::CS, wi::graphics::ShaderModel::SM_6_5 },
+	{"rtshadow_denoise_tileclassificationCS", wi::graphics::ShaderStage::CS },
+	{"rtshadow_denoise_filterCS", wi::graphics::ShaderStage::CS },
+	{"rtshadow_denoise_temporalCS", wi::graphics::ShaderStage::CS },
+	{"rtaoCS", wi::graphics::ShaderStage::CS, wi::graphics::ShaderModel::SM_6_5 },
+	{"rtao_denoise_tileclassificationCS", wi::graphics::ShaderStage::CS },
+	{"rtao_denoise_filterCS", wi::graphics::ShaderStage::CS },
+	{"visibility_resolveCS", wi::graphics::ShaderStage::CS },
+	{"visibility_resolveCS_MSAA", wi::graphics::ShaderStage::CS },
+	{"visibility_resolveCS_fast", wi::graphics::ShaderStage::CS },
+	{"visibility_resolveCS_fast_MSAA", wi::graphics::ShaderStage::CS },
+	{"visibility_binning_offsetsCS", wi::graphics::ShaderStage::CS },
+	{"visibility_binning_placementCS", wi::graphics::ShaderStage::CS },
+	{"visibility_skyCS", wi::graphics::ShaderStage::CS },
+	{"surfel_coverageCS", wi::graphics::ShaderStage::CS },
+	{"surfel_indirectprepareCS", wi::graphics::ShaderStage::CS },
+	{"surfel_updateCS", wi::graphics::ShaderStage::CS },
+	{"surfel_gridresetCS", wi::graphics::ShaderStage::CS },
+	{"surfel_gridoffsetsCS", wi::graphics::ShaderStage::CS },
+	{"surfel_binningCS", wi::graphics::ShaderStage::CS },
+	{"surfel_raytraceCS_rtapi", wi::graphics::ShaderStage::CS, wi::graphics::ShaderModel::SM_6_5 },
+	{"surfel_raytraceCS", wi::graphics::ShaderStage::CS },
+	{"surfel_integrateCS", wi::graphics::ShaderStage::CS },
+	{"ddgi_raytraceCS", wi::graphics::ShaderStage::CS },
+	{"ddgi_raytraceCS_rtapi", wi::graphics::ShaderStage::CS, wi::graphics::ShaderModel::SM_6_5 },
+	{"ddgi_updateCS", wi::graphics::ShaderStage::CS },
+	{"ddgi_updateCS_depth", wi::graphics::ShaderStage::CS },
+	{"terrainVirtualTextureUpdateCS", wi::graphics::ShaderStage::CS },
+	{"meshlet_prepareCS", wi::graphics::ShaderStage::CS },
+
+
+	{"emittedparticlePS_soft", wi::graphics::ShaderStage::PS },
+	{"imagePS", wi::graphics::ShaderStage::PS },
+	{"emittedparticlePS_soft_lighting", wi::graphics::ShaderStage::PS },
+	{"oceanSurfacePS", wi::graphics::ShaderStage::PS },
+	{"hairparticlePS", wi::graphics::ShaderStage::PS },
+	{"impostorPS", wi::graphics::ShaderStage::PS },
+	{"volumetricLight_SpotPS", wi::graphics::ShaderStage::PS },
+	{"volumetricLight_PointPS", wi::graphics::ShaderStage::PS },
+	{"volumetricLight_DirectionalPS", wi::graphics::ShaderStage::PS },
+	{"voxelPS", wi::graphics::ShaderStage::PS },
+	{"vertexcolorPS", wi::graphics::ShaderStage::PS },
+	{"upsample_bilateralPS", wi::graphics::ShaderStage::PS },
+	{"sunPS", wi::graphics::ShaderStage::PS },
+	{"skyPS_dynamic", wi::graphics::ShaderStage::PS },
+	{"skyPS_static", wi::graphics::ShaderStage::PS },
+	{"shadowPS_transparent", wi::graphics::ShaderStage::PS },
+	{"shadowPS_water", wi::graphics::ShaderStage::PS },
+	{"shadowPS_alphatest", wi::graphics::ShaderStage::PS },
+	{"renderlightmapPS", wi::graphics::ShaderStage::PS },
+	{"renderlightmapPS_rtapi", wi::graphics::ShaderStage::PS, wi::graphics::ShaderModel::SM_6_5 },
+	{"raytrace_debugbvhPS", wi::graphics::ShaderStage::PS },
+	{"outlinePS", wi::graphics::ShaderStage::PS },
+	{"oceanSurfaceSimplePS", wi::graphics::ShaderStage::PS },
+	{"objectPS_transparent_pom", wi::graphics::ShaderStage::PS },
+	{"objectPS_water", wi::graphics::ShaderStage::PS },
+	{"objectPS_voxelizer", wi::graphics::ShaderStage::PS },
+	{"objectPS_transparent", wi::graphics::ShaderStage::PS },
+	{"objectPS_transparent_planarreflection", wi::graphics::ShaderStage::PS },
+	{"objectPS_planarreflection", wi::graphics::ShaderStage::PS },
+	{"objectPS_pom", wi::graphics::ShaderStage::PS },
+	{"objectPS", wi::graphics::ShaderStage::PS },
+	{"objectPS_hologram", wi::graphics::ShaderStage::PS },
+	{"objectPS_paintradius", wi::graphics::ShaderStage::PS },
+	{"objectPS_simple", wi::graphics::ShaderStage::PS },
+	{"objectPS_debug", wi::graphics::ShaderStage::PS },
+	{"objectPS_prepass", wi::graphics::ShaderStage::PS },
+	{"objectPS_prepass_alphatest", wi::graphics::ShaderStage::PS },
+	{"objectPS_anisotropic", wi::graphics::ShaderStage::PS },
+	{"objectPS_transparent_anisotropic", wi::graphics::ShaderStage::PS },
+	{"objectPS_cloth", wi::graphics::ShaderStage::PS },
+	{"objectPS_transparent_cloth", wi::graphics::ShaderStage::PS },
+	{"objectPS_clearcoat", wi::graphics::ShaderStage::PS },
+	{"objectPS_transparent_clearcoat", wi::graphics::ShaderStage::PS },
+	{"objectPS_cloth_clearcoat", wi::graphics::ShaderStage::PS },
+	{"objectPS_transparent_cloth_clearcoat", wi::graphics::ShaderStage::PS },
+	{"objectPS_cartoon", wi::graphics::ShaderStage::PS },
+	{"objectPS_transparent_cartoon", wi::graphics::ShaderStage::PS },
+	{"objectPS_unlit", wi::graphics::ShaderStage::PS },
+	{"objectPS_transparent_unlit", wi::graphics::ShaderStage::PS },
+	{"lightVisualizerPS", wi::graphics::ShaderStage::PS },
+	{"lensFlarePS", wi::graphics::ShaderStage::PS },
+	{"impostorPS_wire", wi::graphics::ShaderStage::PS },
+	{"impostorPS_simple", wi::graphics::ShaderStage::PS },
+	{"impostorPS_prepass", wi::graphics::ShaderStage::PS },
+	{"hairparticlePS_simple", wi::graphics::ShaderStage::PS },
+	{"hairparticlePS_prepass", wi::graphics::ShaderStage::PS },
+	{"forceFieldVisualizerPS", wi::graphics::ShaderStage::PS },
+	{"fontPS", wi::graphics::ShaderStage::PS },
+	{"envMap_skyPS_static", wi::graphics::ShaderStage::PS },
+	{"envMap_skyPS_dynamic", wi::graphics::ShaderStage::PS },
+	{"envMapPS", wi::graphics::ShaderStage::PS },
+	{"emittedparticlePS_soft_distortion", wi::graphics::ShaderStage::PS },
+	{"downsampleDepthBuffer4xPS", wi::graphics::ShaderStage::PS },
+	{"emittedparticlePS_simple", wi::graphics::ShaderStage::PS },
+	{"cubeMapPS", wi::graphics::ShaderStage::PS },
+	{"circlePS", wi::graphics::ShaderStage::PS },
+	{"captureImpostorPS_normal", wi::graphics::ShaderStage::PS },
+	{"captureImpostorPS_surface", wi::graphics::ShaderStage::PS },
+	{"captureImpostorPS_albedo", wi::graphics::ShaderStage::PS },
+	{"ddgi_debugPS", wi::graphics::ShaderStage::PS },
+
+
+	{"hairparticleVS", wi::graphics::ShaderStage::VS },
+	{"emittedparticleVS", wi::graphics::ShaderStage::VS },
+	{"imageVS", wi::graphics::ShaderStage::VS },
+	{"fontVS", wi::graphics::ShaderStage::VS },
+	{"voxelVS", wi::graphics::ShaderStage::VS },
+	{"vertexcolorVS", wi::graphics::ShaderStage::VS },
+	{"volumetriclight_directionalVS", wi::graphics::ShaderStage::VS },
+	{"volumetriclight_pointVS", wi::graphics::ShaderStage::VS },
+	{"volumetriclight_spotVS", wi::graphics::ShaderStage::VS },
+	{"vSpotLightVS", wi::graphics::ShaderStage::VS },
+	{"vPointLightVS", wi::graphics::ShaderStage::VS },
+	{"sphereVS", wi::graphics::ShaderStage::VS },
+	{"skyVS", wi::graphics::ShaderStage::VS },
+	{"shadowVS_transparent", wi::graphics::ShaderStage::VS },
+	{"shadowVS", wi::graphics::ShaderStage::VS },
+	{"shadowVS_alphatest", wi::graphics::ShaderStage::VS },
+	{"postprocessVS", wi::graphics::ShaderStage::VS },
+	{"renderlightmapVS", wi::graphics::ShaderStage::VS },
+	{"raytrace_screenVS", wi::graphics::ShaderStage::VS },
+	{"oceanSurfaceVS", wi::graphics::ShaderStage::VS },
+	{"objectVS_simple", wi::graphics::ShaderStage::VS },
+	{"objectVS_voxelizer", wi::graphics::ShaderStage::VS },
+	{"objectVS_common", wi::graphics::ShaderStage::VS },
+	{"objectVS_common_tessellation", wi::graphics::ShaderStage::VS },
+	{"objectVS_prepass", wi::graphics::ShaderStage::VS },
+	{"objectVS_prepass_alphatest", wi::graphics::ShaderStage::VS },
+	{"objectVS_prepass_tessellation", wi::graphics::ShaderStage::VS },
+	{"objectVS_prepass_alphatest_tessellation", wi::graphics::ShaderStage::VS },
+	{"objectVS_simple_tessellation", wi::graphics::ShaderStage::VS },
+	{"objectVS_debug", wi::graphics::ShaderStage::VS },
+	{"lensFlareVS", wi::graphics::ShaderStage::VS },
+	{"impostorVS", wi::graphics::ShaderStage::VS },
+	{"forceFieldPointVisualizerVS", wi::graphics::ShaderStage::VS },
+	{"forceFieldPlaneVisualizerVS", wi::graphics::ShaderStage::VS },
+	{"envMap_skyVS", wi::graphics::ShaderStage::VS },
+	{"envMapVS", wi::graphics::ShaderStage::VS },
+	{"envMap_skyVS_emulation", wi::graphics::ShaderStage::VS },
+	{"envMapVS_emulation", wi::graphics::ShaderStage::VS },
+	{"cubeShadowVS", wi::graphics::ShaderStage::VS },
+	{"cubeShadowVS_alphatest", wi::graphics::ShaderStage::VS },
+	{"cubeShadowVS_emulation", wi::graphics::ShaderStage::VS },
+	{"cubeShadowVS_alphatest_emulation", wi::graphics::ShaderStage::VS },
+	{"cubeShadowVS_transparent", wi::graphics::ShaderStage::VS },
+	{"cubeShadowVS_transparent_emulation", wi::graphics::ShaderStage::VS },
+	{"occludeeVS", wi::graphics::ShaderStage::VS },
+	{"ddgi_debugVS", wi::graphics::ShaderStage::VS },
+
+
+	{"envMap_skyGS_emulation", wi::graphics::ShaderStage::GS },
+	{"envMapGS_emulation", wi::graphics::ShaderStage::GS },
+	{"cubeShadowGS_emulation", wi::graphics::ShaderStage::GS },
+	{"cubeShadowGS_alphatest_emulation", wi::graphics::ShaderStage::GS },
+	{"cubeShadowGS_transparent_emulation", wi::graphics::ShaderStage::GS },
+	{"voxelGS", wi::graphics::ShaderStage::GS },
+	{"objectGS_voxelizer", wi::graphics::ShaderStage::GS },
+
+
+	{"objectDS", wi::graphics::ShaderStage::DS },
+	{"objectDS_prepass", wi::graphics::ShaderStage::DS },
+	{"objectDS_prepass_alphatest", wi::graphics::ShaderStage::DS },
+	{"objectDS_simple", wi::graphics::ShaderStage::DS },
+
+
+	{"objectHS", wi::graphics::ShaderStage::HS },
+	{"objectHS_prepass", wi::graphics::ShaderStage::HS },
+	{"objectHS_prepass_alphatest", wi::graphics::ShaderStage::HS },
+	{"objectHS_simple", wi::graphics::ShaderStage::HS },
+
+
+	{"emittedparticleMS", wi::graphics::ShaderStage::MS },
+
+
+	{"rtreflectionLIB", wi::graphics::ShaderStage::LIB },
+};
+
 struct Target
 {
 	wi::graphics::ShaderFormat format;
@@ -74,347 +409,12 @@ int main(int argc, char* argv[])
 		std::cout << "No shader formats were specified, assuming command arguments: hlsl5 spirv hlsl6" << std::endl;
 	}
 
-	shaders[static_cast<size_t>(ShaderStage::CS)] = {
-		"hairparticle_simulateCS.hlsl"								,
-		"hairparticle_finishUpdateCS.hlsl"							,
-		"emittedparticle_simulateCS.hlsl"							,
-		"generateMIPChainCubeCS_float4.hlsl"						,
-		"generateMIPChainCubeCS_unorm4.hlsl"						,
-		"generateMIPChainCubeArrayCS_float4.hlsl"					,
-		"generateMIPChainCubeArrayCS_unorm4.hlsl"					,
-		"generateMIPChain3DCS_float4.hlsl"							,
-		"generateMIPChain3DCS_unorm4.hlsl"							,
-		"generateMIPChain2DCS_float4.hlsl"							,
-		"generateMIPChain2DCS_unorm4.hlsl"							,
-		"blur_gaussian_float4CS.hlsl"								,
-		"bloomseparateCS.hlsl"										,
-		"depthoffield_mainCS.hlsl"									,
-		"depthoffield_neighborhoodMaxCOCCS.hlsl"					,
-		"depthoffield_prepassCS.hlsl"								,
-		"depthoffield_upsampleCS.hlsl"								,
-		"depthoffield_tileMaxCOC_verticalCS.hlsl"					,
-		"depthoffield_tileMaxCOC_horizontalCS.hlsl"					,
-		"voxelRadianceSecondaryBounceCS.hlsl"						,
-		"voxelSceneCopyClearCS.hlsl"								,
-		"voxelClearOnlyNormalCS.hlsl"								,
-		"upsample_bilateral_float1CS.hlsl"							,
-		"upsample_bilateral_float4CS.hlsl"							,
-		"upsample_bilateral_unorm1CS.hlsl"							,
-		"upsample_bilateral_unorm4CS.hlsl"							,
-		"temporalaaCS.hlsl"											,
-		"tileFrustumsCS.hlsl"										,
-		"tonemapCS.hlsl"											,
-		"underwaterCS.hlsl"											,
-		"fsr_upscalingCS.hlsl"										,
-		"fsr_sharpenCS.hlsl"										,
-		"ssaoCS.hlsl"												,
-		"rtreflectionCS.hlsl"										,
-		"ssr_tileMaxRoughness_horizontalCS.hlsl"					,
-		"ssr_tileMaxRoughness_verticalCS.hlsl"						,
-		"ssr_kickjobsCS.hlsl"										,
-		"ssr_depthHierarchyCS.hlsl"									,
-		"ssr_resolveCS.hlsl"										,
-		"ssr_temporalCS.hlsl"										,
-		"ssr_bilateralCS.hlsl"										,
-		"ssr_raytraceCS.hlsl"										,
-		"ssr_raytraceCS_cheap.hlsl"									,
-		"ssr_raytraceCS_earlyexit.hlsl"								,
-		"sharpenCS.hlsl"											,
-		"skinningCS.hlsl"											,
-		"resolveMSAADepthStencilCS.hlsl"							,
-		"raytraceCS.hlsl"											,
-		"raytraceCS_rtapi.hlsl"										,
-		"paint_textureCS.hlsl"										,
-		"oceanUpdateDisplacementMapCS.hlsl"							,
-		"oceanUpdateGradientFoldingCS.hlsl"							,
-		"oceanSimulatorCS.hlsl"										,
-		"msao_interleaveCS.hlsl"									,
-		"msao_preparedepthbuffers1CS.hlsl"							,
-		"msao_preparedepthbuffers2CS.hlsl"							,
-		"msao_blurupsampleCS.hlsl"									,
-		"msao_blurupsampleCS_blendout.hlsl"							,
-		"msao_blurupsampleCS_premin.hlsl"							,
-		"msao_blurupsampleCS_premin_blendout.hlsl"					,
-		"msaoCS.hlsl"												,
-		"motionblur_neighborhoodMaxVelocityCS.hlsl"					,
-		"motionblur_tileMaxVelocity_horizontalCS.hlsl"				,
-		"motionblur_tileMaxVelocity_verticalCS.hlsl"				,
-		"luminancePass2CS.hlsl"										,
-		"motionblur_kickjobsCS.hlsl"								,
-		"motionblurCS.hlsl"											,
-		"motionblurCS_cheap.hlsl"									,
-		"motionblurCS_earlyexit.hlsl"								,
-		"luminancePass1CS.hlsl"										,
-		"lightShaftsCS.hlsl"										,
-		"lightCullingCS_ADVANCED_DEBUG.hlsl"						,
-		"lightCullingCS_DEBUG.hlsl"									,
-		"lightCullingCS.hlsl"										,
-		"lightCullingCS_ADVANCED.hlsl"								,
-		"hbaoCS.hlsl"												,
-		"gpusortlib_sortInnerCS.hlsl"								,
-		"gpusortlib_sortStepCS.hlsl"								,
-		"gpusortlib_kickoffSortCS.hlsl"								,
-		"gpusortlib_sortCS.hlsl"									,
-		"fxaaCS.hlsl"												,
-		"filterEnvMapCS.hlsl"										,
-		"fft_512x512_c2c_CS.hlsl"									,
-		"fft_512x512_c2c_v2_CS.hlsl"								,
-		"emittedparticle_sphpartitionCS.hlsl"						,
-		"emittedparticle_sphpartitionoffsetsCS.hlsl"				,
-		"emittedparticle_sphpartitionoffsetsresetCS.hlsl"			,
-		"emittedparticle_simulateCS_SORTING.hlsl"					,
-		"emittedparticle_simulateCS_SORTING_DEPTHCOLLISIONS.hlsl"	,
-		"emittedparticle_sphdensityCS.hlsl"							,
-		"emittedparticle_sphforceCS.hlsl"							,
-		"emittedparticle_kickoffUpdateCS.hlsl"						,
-		"emittedparticle_simulateCS_DEPTHCOLLISIONS.hlsl"			,
-		"emittedparticle_emitCS.hlsl"								,
-		"emittedparticle_emitCS_FROMMESH.hlsl"						,
-		"emittedparticle_emitCS_volume.hlsl"						,
-		"emittedparticle_finishUpdateCS.hlsl"						,
-		"downsample4xCS.hlsl"										,
-		"depthoffield_prepassCS_earlyexit.hlsl"						,
-		"depthoffield_mainCS_cheap.hlsl"							,
-		"depthoffield_mainCS_earlyexit.hlsl"						,
-		"depthoffield_postfilterCS.hlsl"							,
-		"depthoffield_kickjobsCS.hlsl"								,
-		"copytexture2D_float4_borderexpandCS.hlsl"					,
-		"copytexture2D_unorm4_borderexpandCS.hlsl"					,
-		"copytexture2D_unorm4CS.hlsl"								,
-		"copytexture2D_float4CS.hlsl"								,
-		"chromatic_aberrationCS.hlsl"								,
-		"bvh_hierarchyCS.hlsl"										,
-		"bvh_primitivesCS.hlsl"										,
-		"bvh_propagateaabbCS.hlsl"									,
-		"blur_gaussian_wide_unorm1CS.hlsl"							,
-		"blur_gaussian_wide_unorm4CS.hlsl"							,
-		"blur_gaussian_unorm1CS.hlsl"								,
-		"blur_gaussian_unorm4CS.hlsl"								,
-		"blur_gaussian_wide_float1CS.hlsl"							,
-		"blur_gaussian_wide_float3CS.hlsl"							,
-		"blur_gaussian_wide_float4CS.hlsl"							,
-		"blur_bilateral_wide_unorm4CS.hlsl"							,
-		"blur_gaussian_float1CS.hlsl"								,
-		"blur_gaussian_float3CS.hlsl"								,
-		"blur_bilateral_unorm4CS.hlsl"								,
-		"blur_bilateral_wide_float1CS.hlsl"							,
-		"blur_bilateral_wide_float3CS.hlsl"							,
-		"blur_bilateral_wide_float4CS.hlsl"							,
-		"blur_bilateral_wide_unorm1CS.hlsl"							,
-		"blur_bilateral_float1CS.hlsl"								,
-		"blur_bilateral_float3CS.hlsl"								,
-		"blur_bilateral_float4CS.hlsl"								,
-		"blur_bilateral_unorm1CS.hlsl"								,
-		"voxelSceneCopyClearCS_TemporalSmoothing.hlsl"				,
-		"normalsfromdepthCS.hlsl"									,
-		"volumetricCloud_shapenoiseCS.hlsl"							,
-		"volumetricCloud_detailnoiseCS.hlsl"						,
-		"volumetricCloud_curlnoiseCS.hlsl"							,
-		"volumetricCloud_weathermapCS.hlsl"							,
-		"volumetricCloud_renderCS.hlsl"								,
-		"volumetricCloud_reprojectCS.hlsl"							,
-		"volumetricCloud_temporalCS.hlsl"							,
-		"shadingRateClassificationCS.hlsl"							,
-		"shadingRateClassificationCS_DEBUG.hlsl"					,
-		"skyAtmosphere_transmittanceLutCS.hlsl"						,
-		"skyAtmosphere_skyViewLutCS.hlsl"							,
-		"skyAtmosphere_multiScatteredLuminanceLutCS.hlsl"			,
-		"skyAtmosphere_skyLuminanceLutCS.hlsl"						,
-		"upsample_bilateral_uint4CS.hlsl"							,
-		"screenspaceshadowCS.hlsl"									,
-		"rtshadowCS.hlsl"											,
-		"rtshadow_denoise_tileclassificationCS.hlsl"				,
-		"rtshadow_denoise_filterCS.hlsl"							,
-		"rtshadow_denoise_temporalCS.hlsl"							,
-		"rtaoCS.hlsl"												,
-		"rtao_denoise_tileclassificationCS.hlsl",
-		"rtao_denoise_filterCS.hlsl",
-		"visibility_resolveCS.hlsl",
-		"visibility_resolveCS_MSAA.hlsl",
-		"visibility_resolveCS_fast.hlsl",
-		"visibility_resolveCS_fast_MSAA.hlsl",
-		"surfel_coverageCS.hlsl",
-		"surfel_indirectprepareCS.hlsl",
-		"surfel_updateCS.hlsl",
-		"surfel_gridresetCS.hlsl",
-		"surfel_gridoffsetsCS.hlsl",
-		"surfel_binningCS.hlsl",
-		"surfel_raytraceCS_rtapi.hlsl",
-		"surfel_raytraceCS.hlsl",
-		"surfel_integrateCS.hlsl",
-		"ddgi_raytraceCS.hlsl",
-		"ddgi_raytraceCS_rtapi.hlsl",
-		"ddgi_updateCS.hlsl",
-		"ddgi_updateCS_depth.hlsl",
-		"terrainVirtualTextureUpdateCS.hlsl",
-		"meshlet_prepareCS.hlsl",
-	};
-
-	shaders[static_cast<size_t>(ShaderStage::PS)] = {
-		"emittedparticlePS_soft.hlsl"					,
-		"imagePS.hlsl"									,
-		"emittedparticlePS_soft_lighting.hlsl"			,
-		"oceanSurfacePS.hlsl"							,
-		"hairparticlePS.hlsl"							,
-		"impostorPS.hlsl"								,
-		"volumetricLight_SpotPS.hlsl"					,
-		"volumetricLight_PointPS.hlsl"					,
-		"volumetricLight_DirectionalPS.hlsl"			,
-		"voxelPS.hlsl"									,
-		"vertexcolorPS.hlsl"							,
-		"upsample_bilateralPS.hlsl"						,
-		"sunPS.hlsl"									,
-		"skyPS_dynamic.hlsl"							,
-		"skyPS_static.hlsl"								,
-		"shadowPS_transparent.hlsl"						,
-		"shadowPS_water.hlsl"							,
-		"shadowPS_alphatest.hlsl"						,
-		"renderlightmapPS.hlsl"							,
-		"renderlightmapPS_rtapi.hlsl"					,
-		"raytrace_debugbvhPS.hlsl"						,
-		"outlinePS.hlsl"								,
-		"oceanSurfaceSimplePS.hlsl"						,
-		"objectPS_transparent_pom.hlsl"					,
-		"objectPS_water.hlsl"							,
-		"objectPS_voxelizer.hlsl"						,
-		"objectPS_transparent.hlsl"						,
-		"objectPS_transparent_planarreflection.hlsl"	,
-		"objectPS_planarreflection.hlsl"				,
-		"objectPS_pom.hlsl"								,
-		"objectPS.hlsl"									,
-		"objectPS_hologram.hlsl"						,
-		"objectPS_paintradius.hlsl"						,
-		"objectPS_simple.hlsl"						,
-		"objectPS_debug.hlsl"							,
-		"objectPS_prepass.hlsl"							,
-		"objectPS_prepass_alphatest.hlsl"				,
-		"objectPS_anisotropic.hlsl"						,
-		"objectPS_transparent_anisotropic.hlsl"			,
-		"objectPS_cloth.hlsl"							,
-		"objectPS_transparent_cloth.hlsl"				,
-		"objectPS_clearcoat.hlsl"						,
-		"objectPS_transparent_clearcoat.hlsl"			,
-		"objectPS_cloth_clearcoat.hlsl"					,
-		"objectPS_transparent_cloth_clearcoat.hlsl"		,
-		"objectPS_cartoon.hlsl"							,
-		"objectPS_transparent_cartoon.hlsl"				,
-		"objectPS_unlit.hlsl"							,
-		"objectPS_transparent_unlit.hlsl"				,
-		"lightVisualizerPS.hlsl"						,
-		"lensFlarePS.hlsl"								,
-		"impostorPS_wire.hlsl"							,
-		"impostorPS_simple.hlsl"						,
-		"impostorPS_prepass.hlsl"						,
-		"hairparticlePS_simple.hlsl"					,
-		"hairparticlePS_prepass.hlsl"					,
-		"forceFieldVisualizerPS.hlsl"					,
-		"fontPS.hlsl"									,
-		"envMap_skyPS_static.hlsl"						,
-		"envMap_skyPS_dynamic.hlsl"						,
-		"envMapPS.hlsl"									,
-		"emittedparticlePS_soft_distortion.hlsl"		,
-		"downsampleDepthBuffer4xPS.hlsl"				,
-		"emittedparticlePS_simple.hlsl"				,
-		"cubeMapPS.hlsl"								,
-		"circlePS.hlsl"									,
-		"captureImpostorPS_normal.hlsl"					,
-		"captureImpostorPS_surface.hlsl"				,
-		"captureImpostorPS_albedo.hlsl"					,
-		"ddgi_debugPS.hlsl"					,
-	};
-
-	shaders[static_cast<size_t>(ShaderStage::VS)] = {
-		"hairparticleVS.hlsl"							,
-		"emittedparticleVS.hlsl"						,
-		"imageVS.hlsl"									,
-		"fontVS.hlsl"									,
-		"voxelVS.hlsl"									,
-		"vertexcolorVS.hlsl"							,
-		"volumetriclight_directionalVS.hlsl"			,
-		"volumetriclight_pointVS.hlsl"					,
-		"volumetriclight_spotVS.hlsl"					,
-		"vSpotLightVS.hlsl"								,
-		"vPointLightVS.hlsl"							,
-		"sphereVS.hlsl"									,
-		"skyVS.hlsl"									,
-		"shadowVS_transparent.hlsl"						,
-		"shadowVS.hlsl"									,
-		"shadowVS_alphatest.hlsl"						,
-		"postprocessVS.hlsl"							,
-		"renderlightmapVS.hlsl"							,
-		"raytrace_screenVS.hlsl"						,
-		"oceanSurfaceVS.hlsl"							,
-		"objectVS_simple.hlsl"							,
-		"objectVS_voxelizer.hlsl"						,
-		"objectVS_common.hlsl"							,
-		"objectVS_common_tessellation.hlsl"				,
-		"objectVS_prepass.hlsl"							,
-		"objectVS_prepass_alphatest.hlsl"				,
-		"objectVS_prepass_tessellation.hlsl"			,
-		"objectVS_prepass_alphatest_tessellation.hlsl"	,
-		"objectVS_simple_tessellation.hlsl"				,
-		"objectVS_debug.hlsl"							,
-		"lensFlareVS.hlsl"								,
-		"impostorVS.hlsl"								,
-		"forceFieldPointVisualizerVS.hlsl"				,
-		"forceFieldPlaneVisualizerVS.hlsl"				,
-		"envMap_skyVS.hlsl"								,
-		"envMapVS.hlsl"									,
-		"envMap_skyVS_emulation.hlsl"					,
-		"envMapVS_emulation.hlsl"						,
-		"cubeShadowVS.hlsl"								,
-		"cubeShadowVS_alphatest.hlsl"					,
-		"cubeShadowVS_emulation.hlsl"					,
-		"cubeShadowVS_alphatest_emulation.hlsl"			,
-		"cubeShadowVS_transparent.hlsl"					,
-		"cubeShadowVS_transparent_emulation.hlsl"		,
-		"occludeeVS.hlsl",
-		"ddgi_debugVS.hlsl",
-	};
-
-	shaders[static_cast<size_t>(ShaderStage::GS)] = {
-		"envMap_skyGS_emulation.hlsl"				,
-		"envMapGS_emulation.hlsl"					,
-		"cubeShadowGS_emulation.hlsl"				,
-		"cubeShadowGS_alphatest_emulation.hlsl"		,
-		"cubeShadowGS_transparent_emulation.hlsl"	,
-		"voxelGS.hlsl"								,
-		"objectGS_voxelizer.hlsl"					,
-	};
-
-	shaders[static_cast<size_t>(ShaderStage::DS)] = {
-		"objectDS.hlsl",
-		"objectDS_prepass.hlsl",
-		"objectDS_prepass_alphatest.hlsl",
-		"objectDS_simple.hlsl",
-	};
-
-	shaders[static_cast<size_t>(ShaderStage::HS)] = {
-		"objectHS.hlsl",
-		"objectHS_prepass.hlsl",
-		"objectHS_prepass_alphatest.hlsl",
-		"objectHS_simple.hlsl",
-	};
-
-	shaders[static_cast<size_t>(ShaderStage::AS)] = {
-
-	};
-
-	shaders[static_cast<size_t>(ShaderStage::MS)] = {
-		"emittedparticleMS.hlsl",
-	};
-
-	shaders[static_cast<size_t>(ShaderStage::LIB)] = {
-		"rtreflectionLIB.hlsl",
-	};
-
-	minshadermodels["renderlightmapPS_rtapi.hlsl"] = ShaderModel::SM_6_5;
-	minshadermodels["raytraceCS_rtapi.hlsl"] = ShaderModel::SM_6_5;
-	minshadermodels["rtshadowCS.hlsl"] = ShaderModel::SM_6_5;
-	minshadermodels["rtaoCS.hlsl"] = ShaderModel::SM_6_5;
-	minshadermodels["surfel_raytraceCS_rtapi.hlsl"] = ShaderModel::SM_6_5;
-	minshadermodels["ddgi_raytraceCS_rtapi.hlsl"] = ShaderModel::SM_6_5;
-	minshadermodels["rtreflectionCS.hlsl"] = ShaderModel::SM_6_5;
+	// permutations for visibility_shadeCS:
+	shaders.push_back({ "visibility_shadeCS", wi::graphics::ShaderStage::CS });
+	for (auto& x : wi::scene::MaterialComponent::shaderTypeDefines)
+	{
+		shaders.back().permutations.emplace_back().defines = x;
+	}
 
 	wi::jobsystem::Initialize();
 	wi::jobsystem::context ctx;
@@ -430,25 +430,35 @@ int main(int argc, char* argv[])
 		std::string SHADERPATH = target.dir;
 		wi::helper::DirectoryCreate(SHADERPATH);
 
-		for (int i = 0; i < static_cast<int>(ShaderStage::Count); ++i)
+		for (auto& shader : shaders)
 		{
 			if (target.format == ShaderFormat::HLSL5)
 			{
 				if (
-					i == static_cast<int>(ShaderStage::MS) ||
-					i == static_cast<int>(ShaderStage::AS) ||
-					i == static_cast<int>(ShaderStage::LIB)
+					shader.stage == ShaderStage::MS ||
+					shader.stage == ShaderStage::AS ||
+					shader.stage == ShaderStage::LIB
 					)
 				{
 					// shader stage not applicable to HLSL5
 					continue;
 				}
 			}
+			wi::vector<ShaderEntry::Permutation> permutations = shader.permutations;
+			if (permutations.empty())
+			{
+				permutations.emplace_back();
+			}
 
-			for (auto& shader : shaders[i])
+			for (auto permutation : permutations)
 			{
 				wi::jobsystem::Execute(ctx, [=](wi::jobsystem::JobArgs args) {
-					std::string shaderbinaryfilename = wi::helper::ReplaceExtension(SHADERPATH + shader, "cso");
+					std::string shaderbinaryfilename = SHADERPATH + shader.name;
+					for (auto& def : permutation.defines)
+					{
+						shaderbinaryfilename += "_" + def;
+					}
+					shaderbinaryfilename += ".cso";
 					if (!rebuild && !wi::shadercompiler::IsShaderOutdated(shaderbinaryfilename))
 					{
 						return;
@@ -456,16 +466,12 @@ int main(int argc, char* argv[])
 
 					wi::shadercompiler::CompilerInput input;
 					input.format = target.format;
-					input.stage = (wi::graphics::ShaderStage)i;
-					input.shadersourcefilename = SHADERSOURCEPATH + shader;
+					input.stage = shader.stage;
+					input.shadersourcefilename = SHADERSOURCEPATH + shader.name + ".hlsl";
 					input.include_directories.push_back(SHADERSOURCEPATH);
+					input.minshadermodel = shader.minshadermodel;
+					input.defines = permutation.defines;
 
-					auto it = minshadermodels.find(shader);
-					if (it != minshadermodels.end())
-					{
-						// increase min shader model only for specific shaders
-						input.minshadermodel = it->second;
-					}
 					if (input.minshadermodel > ShaderModel::SM_5_0 && target.format == ShaderFormat::HLSL5)
 					{
 						// if shader format cannot support shader model, then we cancel the task without returning error

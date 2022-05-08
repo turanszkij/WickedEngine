@@ -355,38 +355,22 @@ inline float3 PlanarReflection(in Surface surface, in float2 bumpColor)
 	return 0;
 }
 
-#define NUM_PARALLAX_OCCLUSION_STEPS 32
 inline void ParallaxOcclusionMapping(inout float4 uvsets, in float3 V, in float3x3 TBN)
 {
-	[branch]
-	if (GetMaterial().parallaxOcclusionMapping > 0 && GetMaterial().uvset_displacementMap >= 0)
-	{
-		V = mul(TBN, V);
-		float layerHeight = 1.0 / NUM_PARALLAX_OCCLUSION_STEPS;
-		float curLayerHeight = 0;
-		float2 dtex = GetMaterial().parallaxOcclusionMapping * V.xy / NUM_PARALLAX_OCCLUSION_STEPS;
-		float2 originalTextureCoords = GetMaterial().uvset_displacementMap == 0 ? uvsets.xy : uvsets.zw;
-		float2 currentTextureCoords = originalTextureCoords;
-		float2 derivX = ddx_coarse(currentTextureCoords);
-		float2 derivY = ddy_coarse(currentTextureCoords);
-		float heightFromTexture = 1 - texture_displacementmap.SampleGrad(sampler_linear_wrap, currentTextureCoords, derivX, derivY).r;
-		uint iter = 0;
-		[loop]
-		while (heightFromTexture > curLayerHeight && iter < NUM_PARALLAX_OCCLUSION_STEPS)
-		{
-			curLayerHeight += layerHeight;
-			currentTextureCoords -= dtex;
-			heightFromTexture = 1 - texture_displacementmap.SampleGrad(sampler_linear_wrap, currentTextureCoords, derivX, derivY).r;
-			iter++;
-		}
-		float2 prevTCoords = currentTextureCoords + dtex;
-		float nextH = heightFromTexture - curLayerHeight;
-		float prevH = 1 - texture_displacementmap.SampleGrad(sampler_linear_wrap, prevTCoords, derivX, derivY).r - curLayerHeight + layerHeight;
-		float weight = nextH / (nextH - prevH);
-		float2 finalTextureCoords = mad(prevTCoords, weight, currentTextureCoords * (1.0 - weight));
-		float2 difference = finalTextureCoords - originalTextureCoords;
-		uvsets += difference.xyxy;
-	}
+	float2 uv = GetMaterial().uvset_displacementMap == 0 ? uvsets.xy : uvsets.zw;
+	float2 uv_dx = ddx_coarse(uv);
+	float2 uv_dy = ddy_coarse(uv);
+
+	ParallaxOcclusionMapping_Impl(
+		uvsets,
+		V,
+		TBN,
+		GetMaterial(),
+		texture_displacementmap,
+		uv,
+		uv_dx,
+		uv_dy
+	);
 }
 
 inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
@@ -608,8 +592,13 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 	{
 		// decals are enabled, loop through them first:
 		float4 decalAccumulation = 0;
+#ifdef SURFACE_LOAD_QUAD_DERIVATIVES
+		const float3 P_dx = surface.P_dx;
+		const float3 P_dy = surface.P_dy;
+#else
 		const float3 P_dx = ddx_coarse(surface.P);
 		const float3 P_dy = ddy_coarse(surface.P);
+#endif // SURFACE_LOAD_QUAD_DERIVATIVES
 
 		// Loop through decal buckets in the tile:
 		const uint first_item = GetFrame().decalarray_offset;
@@ -1209,14 +1198,14 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // PREPASS
 
 
-#ifdef BRDF_ANISOTROPIC
+#ifdef ANISOTROPIC
 	surface.anisotropy = GetMaterial().parallaxOcclusionMapping;
-	surface.T = tangent.xyz;
+	surface.T = tangent;
 	surface.B = normalize(cross(tangent.xyz, surface.N) * tangent.w); // Compute bitangent again after normal mapping
-#endif // BRDF_ANISOTROPIC
+#endif // ANISOTROPIC
 
 
-#ifdef BRDF_SHEEN
+#ifdef SHEEN
 	surface.sheen.color = GetMaterial().GetSheenColor();
 	surface.sheen.roughness = GetMaterial().sheenRoughness;
 
@@ -1234,10 +1223,10 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 		surface.sheen.roughness *= texture_sheenroughnessmap.Sample(sampler_objectshader, uvset_sheenRoughnessMap).a;
 	}
 #endif // OBJECTSHADER_USE_UVSETS
-#endif // BRDF_SHEEN
+#endif // SHEEN
 
 
-#ifdef BRDF_CLEARCOAT
+#ifdef CLEARCOAT
 	surface.clearcoat.factor = GetMaterial().clearcoat;
 	surface.clearcoat.roughness = GetMaterial().clearcoatRoughness;
 	surface.clearcoat.N = input.nor;
@@ -1269,7 +1258,7 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 	surface.clearcoat.N = normalize(surface.clearcoat.N);
 
 #endif // OBJECTSHADER_USE_UVSETS
-#endif // BRDF_CLEARCOAT
+#endif // CLEARCOAT
 
 
 	surface.sss = GetMaterial().subsurfaceScattering;
@@ -1419,15 +1408,12 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // WATER
 
 
-#ifdef UNLIT
-	lighting.direct.diffuse = 1;
-	lighting.indirect.diffuse = 0;
-	lighting.direct.specular = 0;
-	lighting.indirect.specular = 0;
-#endif // UNLIT
-
-
 	ApplyLighting(surface, lighting, color);
+
+
+#ifdef UNLIT
+	color = surface.baseColor;
+#endif // UNLIT
 
 
 #ifdef OBJECTSHADER_USE_POSITION3D

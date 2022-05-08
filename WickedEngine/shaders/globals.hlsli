@@ -212,6 +212,30 @@ struct PrimitiveID
 #define GOLDEN_RATIO 1.6180339887
 
 #define sqr(a)		((a)*(a))
+#define pow5(x) pow(x, 5)
+
+// attribute computation with barycentric interpolation
+//	a0 : attribute at triangle corner 0
+//	a1 : attribute at triangle corner 1
+//	a2 : attribute at triangle corner 2
+//  bary : (u,v) barycentrics [same as you get from raytracing]; w is computed as 1 - u - w
+//	computation can be also written as: p0 * w + p1 * u + p2 * v
+inline float attribute_at_bary(in float a0, in float a1, in float a2, in float2 bary)
+{
+	return mad(a0, 1 - bary.x - bary.y, mad(a1, bary.x, a2 * bary.y));
+}
+inline float2 attribute_at_bary(in float2 a0, in float2 a1, in float2 a2, in float2 bary)
+{
+	return mad(a0, 1 - bary.x - bary.y, mad(a1, bary.x, a2 * bary.y));
+}
+inline float3 attribute_at_bary(in float3 a0, in float3 a1, in float3 a2, in float2 bary)
+{
+	return mad(a0, 1 - bary.x - bary.y, mad(a1, bary.x, a2 * bary.y));
+}
+inline float4 attribute_at_bary(in float4 a0, in float4 a1, in float4 a2, in float2 bary)
+{
+	return mad(a0, 1 - bary.x - bary.y, mad(a1, bary.x, a2 * bary.y));
+}
 
 inline bool is_saturated(float a) { return a == saturate(a); }
 inline bool is_saturated(float2 a) { return is_saturated(a.x) && is_saturated(a.y); }
@@ -810,6 +834,18 @@ inline float4 unpack_half4(in uint2 value)
 	return retVal;
 }
 
+inline uint pack_pixel(uint2 value)
+{
+	return (value.x & 0xFFFF) | ((value.y & 0xFFFF) << 16u);
+}
+inline uint2 unpack_pixel(uint value)
+{
+	uint2 retVal;
+	retVal.x = value & 0xFFFF;
+	retVal.y = (value >> 16u) & 0xFFFF;
+	return retVal;
+}
+
 
 // Expands a 10-bit integer into 30 bits
 // by inserting 2 zeros after each bit.
@@ -877,7 +913,24 @@ float3 decode_hemioct(float2 e)
 	return normalize(v);
 }
 
-
+// Source: https://github.com/GPUOpen-Effects/FidelityFX-Denoiser/blob/master/ffx-shadows-dnsr/ffx_denoiser_shadows_util.h
+//  LANE TO 8x8 MAPPING
+//  ===================
+//  00 01 08 09 10 11 18 19 
+//  02 03 0a 0b 12 13 1a 1b
+//  04 05 0c 0d 14 15 1c 1d
+//  06 07 0e 0f 16 17 1e 1f 
+//  20 21 28 29 30 31 38 39 
+//  22 23 2a 2b 32 33 3a 3b
+//  24 25 2c 2d 34 35 3c 3d
+//  26 27 2e 2f 36 37 3e 3f 
+uint bitfield_extract(uint src, uint off, uint bits) { uint mask = (1u << bits) - 1; return (src >> off) & mask; } // ABfe
+uint bitfield_insert(uint src, uint ins, uint bits) { uint mask = (1u << bits) - 1; return (ins & mask) | (src & (~mask)); } // ABfiM
+uint2 remap_lane_8x8(uint lane) {
+	return uint2(bitfield_insert(bitfield_extract(lane, 2u, 3u), lane, 1u)
+		, bitfield_insert(bitfield_extract(lane, 3u, 3u)
+			, bitfield_extract(lane, 1u, 2u), 2u));
+}
 
 
 static const float2x2 BayerMatrix2 =
@@ -1151,20 +1204,28 @@ RayCone pixel_ray_cone_from_image_height(float image_height)
 
 float3 compute_wind(float3 position, float weight)
 {
-	const float time = GetTime();
-	position += time;
-	const ShaderWind wind = GetWeather().wind;
+	[branch]
+	if (weight > 0)
+	{
+		const float time = GetTime();
+		position += time;
+		const ShaderWind wind = GetWeather().wind;
 
-	float randomness_amount = 0;
-	randomness_amount += noise_gradient_3D(position.xyz);
-	randomness_amount += noise_gradient_3D(position.xyz * 0.1);
-	randomness_amount *= wind.randomness;
+		float randomness_amount = 0;
+		randomness_amount += noise_gradient_3D(position.xyz);
+		randomness_amount += noise_gradient_3D(position.xyz * 0.1);
+		randomness_amount *= wind.randomness;
 
-	float direction_amount = dot(position.xyz, wind.direction);
-	float waveoffset = mad(direction_amount, wind.wavesize, randomness_amount);
-	float3 wavedir = wind.direction * weight;
+		float direction_amount = dot(position.xyz, wind.direction);
+		float waveoffset = mad(direction_amount, wind.wavesize, randomness_amount);
+		float3 wavedir = wind.direction * weight;
 
-	return sin(mad(time, wind.speed, waveoffset)) * wavedir;
+		return sin(mad(time, wind.speed, waveoffset)) * wavedir;
+	}
+	else
+	{
+		return 0;
+	}
 }
 
 
@@ -1243,5 +1304,46 @@ enum class ColorSpace
 	HDR10_ST2084,	// HDR10 color space (10 bits per channel)
 	HDR_LINEAR,		// HDR color space (16 bits per channel)
 };
+
+
+#define NUM_PARALLAX_OCCLUSION_STEPS 32
+inline void ParallaxOcclusionMapping_Impl(
+	inout float4 uvsets,		// uvsets to modify
+	in float3 V,				// view vector (pointing towards camera)
+	in float3x3 TBN,			// tangent basis matrix (same that is used for normal mapping)
+	in ShaderMaterial material,	// material parameters
+	in Texture2D tex,			// displacement map texture
+	in float2 uv,				// uv to use for the disapllacement map
+	in float2 uv_dx,			// horizontal derivative of displacement map uv
+	in float2 uv_dy				// vertical derivative of displacement map uv
+)
+{
+	[branch]
+	if (material.parallaxOcclusionMapping > 0 && material.uvset_displacementMap >= 0)
+	{
+		V = mul(TBN, V);
+		float layerHeight = 1.0 / NUM_PARALLAX_OCCLUSION_STEPS;
+		float curLayerHeight = 0;
+		float2 dtex = material.parallaxOcclusionMapping * V.xy / NUM_PARALLAX_OCCLUSION_STEPS;
+		float2 currentTextureCoords = uv;
+		float heightFromTexture = 1 - tex.SampleGrad(sampler_linear_wrap, currentTextureCoords, uv_dx, uv_dy).r;
+		uint iter = 0;
+		[loop]
+		while (heightFromTexture > curLayerHeight && iter < NUM_PARALLAX_OCCLUSION_STEPS)
+		{
+			curLayerHeight += layerHeight;
+			currentTextureCoords -= dtex;
+			heightFromTexture = 1 - tex.SampleGrad(sampler_linear_wrap, currentTextureCoords, uv_dx, uv_dy).r;
+			iter++;
+		}
+		float2 prevTCoords = currentTextureCoords + dtex;
+		float nextH = heightFromTexture - curLayerHeight;
+		float prevH = 1 - tex.SampleGrad(sampler_linear_wrap, prevTCoords, uv_dx, uv_dy).r - curLayerHeight + layerHeight;
+		float weight = nextH / (nextH - prevH);
+		float2 finalTextureCoords = mad(prevTCoords, weight, currentTextureCoords * (1.0 - weight));
+		float2 difference = finalTextureCoords - uv;
+		uvsets += difference.xyxy;
+	}
+}
 
 #endif // WI_SHADER_GLOBALS_HF

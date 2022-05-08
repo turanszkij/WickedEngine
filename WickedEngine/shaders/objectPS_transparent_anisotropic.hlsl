@@ -2,6 +2,6 @@
 #define OBJECTSHADER_LAYOUT_COMMON
 #define TILEDFORWARD
 #define TRANSPARENT
-#define BRDF_ANISOTROPIC
+#define ANISOTROPIC
 #include "objectHF.hlsli"
 

@@ -135,6 +135,9 @@
     <None Include="$(MSBuildThisFileDirectory)PixelPacking_R11G11B10.hlsli">
       <Filter>HF</Filter>
     </None>
+    <None Include="$(MSBuildThisFileDirectory)surfaceHF.hlsli">
+      <Filter>HF</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="$(MSBuildThisFileDirectory)hairparticle_simulateCS.hlsl">
@@ -1047,6 +1050,18 @@
       <Filter>CS</Filter>
     </FxCompile>
     <FxCompile Include="$(MSBuildThisFileDirectory)meshlet_prepareCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)visibility_shadeCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)visibility_binning_offsetsCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)visibility_binning_placementCS.hlsl">
+      <Filter>CS</Filter>
+    </FxCompile>
+    <FxCompile Include="$(MSBuildThisFileDirectory)visibility_skyCS.hlsl">
       <Filter>CS</Filter>
     </FxCompile>
   </ItemGroup>

@@ -306,7 +306,12 @@ void RenderPath3D::ResizeBuffers()
 		device->CreateRenderPass(&desc, &renderpass_depthprepass);
 
 		desc.attachments.clear();
-		desc.attachments.push_back(RenderPassAttachment::RenderTarget(&rtMain_render, RenderPassAttachment::LoadOp::DONTCARE));
+		desc.attachments.push_back(
+			RenderPassAttachment::RenderTarget(
+				&rtMain_render,
+				RenderPassAttachment::LoadOp::LOAD
+			)
+		);
 		desc.attachments.push_back(
 			RenderPassAttachment::DepthStencil(
 				&depthBuffer_Main,
@@ -464,6 +469,10 @@ void RenderPath3D::ResizeBuffers()
 
 		device->CreateTexture(&desc, nullptr, &debugUAV);
 		device->SetName(&debugUAV, "debugUAV");
+	}
+	if (visibilityResources.bins.IsValid()) // for now this is off by default, can be turned on manually
+	{
+		wi::renderer::CreateVisibilityResources(visibilityResources, internalResolution);
 	}
 	wi::renderer::CreateTiledLightResources(tiledLightResources, internalResolution);
 	wi::renderer::CreateTiledLightResources(tiledLightResources_planarReflection, XMUINT2(depthBuffer_Reflection.desc.width, depthBuffer_Reflection.desc.height));
@@ -667,6 +676,41 @@ void RenderPath3D::Update(float dt)
 	// Keep a copy of last frame's depth buffer for temporal disocclusion checks, so swap with current one every frame:
 	std::swap(depthBuffer_Copy, depthBuffer_Copy1);
 
+	visibilityResources.depthbuffer = &depthBuffer_Copy;
+	visibilityResources.lineardepth = &rtLinearDepth;
+	if (rtVelocity.IsValid())
+	{
+		visibilityResources.velocity = &rtVelocity;
+	}
+	else
+	{
+		visibilityResources.velocity = nullptr;
+	}
+	if (rtNormal.IsValid())
+	{
+		visibilityResources.normal = &rtNormal;
+	}
+	else
+	{
+		visibilityResources.normal = nullptr;
+	}
+	if (rtRoughness.IsValid())
+	{
+		visibilityResources.roughness = &rtRoughness;
+	}
+	else
+	{
+		visibilityResources.roughness = nullptr;
+	}
+	if (getMSAASampleCount() > 1)
+	{
+		visibilityResources.primitiveID_resolved = &rtPrimitiveID;
+	}
+	else
+	{
+		visibilityResources.primitiveID_resolved = nullptr;
+	}
+
 	camera->canvas.init(*this);
 	camera->width = (float)internalResolution.x;
 	camera->height = (float)internalResolution.y;
@@ -836,28 +880,9 @@ void RenderPath3D::Render() const
 			cmd
 		);
 
-		wi::renderer::VisibilityResolveOutputs vis_out = {};
-		vis_out.depthbuffer = &depthBuffer_Copy;
-		vis_out.lineardepth = &rtLinearDepth;
-		if (rtVelocity.IsValid())
-		{
-			vis_out.velocity = &rtVelocity;
-		}
-		if (rtNormal.IsValid())
-		{
-			vis_out.normal = &rtNormal;
-		}
-		if (rtRoughness.IsValid())
-		{
-			vis_out.roughness = &rtRoughness;
-		}
-		if (getMSAASampleCount() > 1)
-		{
-			vis_out.primitiveID_resolved = &rtPrimitiveID;
-		}
 		wi::renderer::VisibilityResolve(
+			visibilityResources,
 			rtPrimitiveID_render,
-			vis_out,
 			cmd
 		);
 
@@ -1092,25 +1117,35 @@ void RenderPath3D::Render() const
 			device->Barrier(barriers, arraysize(barriers), cmd);
 		}
 
-		auto range = wi::profiler::BeginRangeGPU("Opaque Scene", cmd);
-
-		Viewport vp;
-		vp.width = (float)depthBuffer_Main.GetDesc().width;
-		vp.height = (float)depthBuffer_Main.GetDesc().height;
-		device->BindViewports(1, &vp, cmd);
-
 		if (wi::renderer::GetRaytracedShadowsEnabled() || wi::renderer::GetScreenSpaceShadowsEnabled())
 		{
 			GPUBarrier barrier = GPUBarrier::Image(&rtShadow, rtShadow.desc.layout, ResourceState::SHADER_RESOURCE);
 			device->Barrier(&barrier, 1, cmd);
 		}
 
+		if (visibilityResources.bins.IsValid())
+		{
+			wi::renderer::VisibilityShade(
+				visibilityResources,
+				rtMain,
+				cmd
+			);
+		}
+
+		Viewport vp;
+		vp.width = (float)depthBuffer_Main.GetDesc().width;
+		vp.height = (float)depthBuffer_Main.GetDesc().height;
+		device->BindViewports(1, &vp, cmd);
+
 		device->RenderPassBegin(&renderpass_main, cmd);
 
-		wi::renderer::DrawScene(visibility_main, RENDERPASS_MAIN, cmd, drawscene_flags);
-		wi::renderer::DrawSky(*scene, cmd);
-
-		wi::profiler::EndRange(range); // Opaque Scene
+		if (!visibilityResources.bins.IsValid())
+		{
+			auto range = wi::profiler::BeginRangeGPU("Opaque Scene", cmd);
+			wi::renderer::DrawScene(visibility_main, RENDERPASS_MAIN, cmd, drawscene_flags);
+			wi::renderer::DrawSky(*scene, cmd);
+			wi::profiler::EndRange(range); // Opaque Scene
+		}
 
 		RenderOutline(cmd);
 

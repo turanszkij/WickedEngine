@@ -1,4 +1,4 @@
-#define SURFACE_LOAD_MIPCONE
+#define SURFACE_LOAD_QUAD_DERIVATIVES
 #include "globals.hlsli"
 #include "ShaderInterop_Renderer.h"
 #include "brdf.hlsli"
@@ -31,14 +31,29 @@ RWTexture2D<unorm float> output_roughness : register(u12);
 RWTexture2D<uint> output_primitiveID : register(u13);
 #endif // VISIBILITY_MSAA
 
-[numthreads(16, 16, 1)]
-void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uint3 Gid : SV_GroupID, uint3 GTid : SV_GroupThreadID)
+RWStructuredBuffer<ShaderTypeBin> output_bins : register(u14);
+
+groupshared uint local_bin_counts[SHADERTYPE_BIN_COUNT + 1];
+
+[numthreads(8, 8, 1)]
+void main(uint groupIndex : SV_GroupIndex, uint3 Gid : SV_GroupID)
 {
-	uint2 pixel = DTid.xy;
+	if (groupIndex < SHADERTYPE_BIN_COUNT + 1)
+	{
+		local_bin_counts[groupIndex] = 0;
+	}
+	GroupMemoryBarrierWithGroupSync();
+
+	// this is needed to have correct quad derivatives:
+	uint2 GTid = remap_lane_8x8(groupIndex);
+	uint2 pixel = Gid.xy * 8 + GTid;
 
 	const float2 uv = ((float2)pixel + 0.5) * GetCamera().internal_resolution_rcp;
 	const float2 clipspace = uv_to_clipspace(uv);
 	RayDesc ray = CreateCameraRay(clipspace);
+
+	float3 rayDirection_quad_x = QuadReadAcrossX(ray.Direction);
+	float3 rayDirection_quad_y = QuadReadAcrossY(ray.Direction);
 
 	uint primitiveID = input_primitiveID[pixel];
 
@@ -60,9 +75,9 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 
 		Surface surface;
 		surface.init();
-		surface.raycone = pixel_ray_cone_from_image_height(GetCamera().internal_resolution.y);
+
 		[branch]
-		if (surface.load(prim, ray.Origin, ray.Direction))
+		if (surface.load(prim, ray.Origin, ray.Direction, rayDirection_quad_x, rayDirection_quad_y))
 		{
 			pre = surface.pre;
 			float4 tmp = mul(GetCamera().view_projection, float4(surface.P, 1));
@@ -81,12 +96,15 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 				output_roughness[pixel] = surface.roughness;
 			}
 #endif // VISIBILITY_FAST
+
+			InterlockedAdd(local_bin_counts[surface.material.shaderType], 1);
 		}
 	}
 	else
 	{
 		pre = ray.Origin + ray.Direction * GetCamera().z_far;
 		depth = 0;
+		InterlockedAdd(local_bin_counts[SHADERTYPE_BIN_COUNT], 1);
 	}
 
 #ifndef VISIBILITY_FAST
@@ -100,6 +118,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uin
 		output_velocity[pixel] = velocity;
 	}
 #endif // VISIBILITY_FAST
+
+	GroupMemoryBarrierWithGroupSync();
+	if (groupIndex < SHADERTYPE_BIN_COUNT + 1)
+	{
+		InterlockedAdd(output_bins[groupIndex].count, local_bin_counts[groupIndex]);
+	}
 
 	// Downsample depths:
 	[branch]
