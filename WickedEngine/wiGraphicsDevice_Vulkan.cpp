@@ -374,28 +374,28 @@ namespace vulkan_internal
 	{
 		switch (value)
 		{
-		case wi::graphics::StencilOp::KEEP:
+		case StencilOp::KEEP:
 			return VK_STENCIL_OP_KEEP;
 			break;
-		case wi::graphics::StencilOp::ZERO:
+		case StencilOp::ZERO:
 			return VK_STENCIL_OP_ZERO;
 			break;
-		case wi::graphics::StencilOp::REPLACE:
+		case StencilOp::REPLACE:
 			return VK_STENCIL_OP_REPLACE;
 			break;
-		case wi::graphics::StencilOp::INCR_SAT:
+		case StencilOp::INCR_SAT:
 			return VK_STENCIL_OP_INCREMENT_AND_CLAMP;
 			break;
-		case wi::graphics::StencilOp::DECR_SAT:
+		case StencilOp::DECR_SAT:
 			return VK_STENCIL_OP_DECREMENT_AND_CLAMP;
 			break;
-		case wi::graphics::StencilOp::INVERT:
+		case StencilOp::INVERT:
 			return VK_STENCIL_OP_INVERT;
 			break;
-		case wi::graphics::StencilOp::INCR:
+		case StencilOp::INCR:
 			return VK_STENCIL_OP_INCREMENT_AND_WRAP;
 			break;
-		case wi::graphics::StencilOp::DECR:
+		case StencilOp::DECR:
 			return VK_STENCIL_OP_DECREMENT_AND_WRAP;
 			break;
 		default:
@@ -2259,7 +2259,7 @@ using namespace vulkan_internal;
 	}
 
 	// Engine functions
-	GraphicsDevice_Vulkan::GraphicsDevice_Vulkan(wi::platform::window_type window, ValidationMode validationMode_)
+	GraphicsDevice_Vulkan::GraphicsDevice_Vulkan(ValidationMode validationMode_)
 	{
 		wi::Timer timer;
 
@@ -6149,10 +6149,10 @@ using namespace vulkan_internal;
 				poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 				switch (queue)
 				{
-				case wi::graphics::QUEUE_GRAPHICS:
+				case QUEUE_GRAPHICS:
 					poolInfo.queueFamilyIndex = graphicsFamily;
 					break;
-				case wi::graphics::QUEUE_COMPUTE:
+				case QUEUE_COMPUTE:
 					poolInfo.queueFamilyIndex = computeFamily;
 					break;
 				default:

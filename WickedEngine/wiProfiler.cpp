@@ -67,7 +67,7 @@ namespace wi::profiler
 
 			ranges.reserve(100);
 
-			GraphicsDevice* device = wi::graphics::GetDevice();
+			GraphicsDevice* device = GetDevice();
 
 			GPUQueryHeapDesc desc;
 			desc.type = GpuQueryType::TIMESTAMP;
@@ -96,7 +96,7 @@ namespace wi::profiler
 
 		cpu_frame = BeginRangeCPU("CPU Frame");
 
-		GraphicsDevice* device = wi::graphics::GetDevice();
+		GraphicsDevice* device = GetDevice();
 		CommandList cmd = device->BeginCommandList();
 
 		device->QueryReset(
@@ -113,7 +113,7 @@ namespace wi::profiler
 		if (!ENABLED || !initialized)
 			return;
 
-		GraphicsDevice* device = wi::graphics::GetDevice();
+		GraphicsDevice* device = GetDevice();
 
 		// note: read the GPU Frame end range manually because it will be on a separate command list than start point:
 		auto& gpu_range = ranges[gpu_frame];
@@ -220,7 +220,7 @@ namespace wi::profiler
 		ranges[id].cmd = cmd;
 
 		ranges[id].gpuBegin[queryheap_idx] = nextQuery.fetch_add(1);
-		wi::graphics::GetDevice()->QueryEnd(&queryHeap, ranges[id].gpuBegin[queryheap_idx], cmd);
+		GetDevice()->QueryEnd(&queryHeap, ranges[id].gpuBegin[queryheap_idx], cmd);
 
 		lock.unlock();
 
@@ -250,7 +250,7 @@ namespace wi::profiler
 			else
 			{
 				ranges[id].gpuEnd[queryheap_idx] = nextQuery.fetch_add(1);
-				wi::graphics::GetDevice()->QueryEnd(&queryHeap, it->second.gpuEnd[queryheap_idx], it->second.cmd);
+				GetDevice()->QueryEnd(&queryHeap, it->second.gpuEnd[queryheap_idx], it->second.cmd);
 			}
 		}
 		else

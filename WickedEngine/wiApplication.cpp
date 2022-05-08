@@ -450,7 +450,7 @@ namespace wi
 			{
 #ifdef WICKEDENGINE_BUILD_VULKAN
 				wi::renderer::SetShaderPath(wi::renderer::GetShaderPath() + "spirv/");
-				graphicsDevice = std::make_unique<GraphicsDevice_Vulkan>(window, validationMode);
+				graphicsDevice = std::make_unique<GraphicsDevice_Vulkan>(validationMode);
 #endif
 			}
 			else if (use_dx12)

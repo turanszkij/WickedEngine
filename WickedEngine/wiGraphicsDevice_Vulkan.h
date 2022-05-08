@@ -282,7 +282,7 @@ namespace wi::graphics
 		wi::vector<VkSampler> immutable_samplers;
 
 	public:
-		GraphicsDevice_Vulkan(wi::platform::window_type window, ValidationMode validationMode = ValidationMode::Disabled);
+		GraphicsDevice_Vulkan(ValidationMode validationMode = ValidationMode::Disabled);
 		~GraphicsDevice_Vulkan() override;
 
 		bool CreateSwapChain(const SwapChainDesc* desc, wi::platform::window_type window, SwapChain* swapchain) const override;
