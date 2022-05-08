@@ -5,7 +5,6 @@
 #include "wiUnorderedMap.h"
 
 #include "Utility/stb_image.h"
-#define QOI_IMPLEMENTATION // TODO: Move this to wherever turanszkij did the STB_IMAGE_IMPLEMENTATION, yes im looking at you o-o
 #include "Utility/qoi.h"
 #include "Utility/tinyddsloader.h"
 #include "Utility/basis_universal/transcoder/basisu_transcoder.h"
@@ -516,97 +515,24 @@ namespace wi
 					else assert(0); // failed to load DDS
 
 				}
-				else if (!ext.compare("QOI"))
-				{
-					// Load QOI image
-					qoi_desc desc;
-					const int channelCount = 4;
-					void* rgba_pixels = qoi_decode(filedata, (int)filesize, &desc, channelCount);
-
-					if (rgba_pixels != nullptr)
-					{
-						TextureDesc tDesc;
-						tDesc.width = desc.width;
-						tDesc.height = desc.height;
-						tDesc.layout = ResourceState::SHADER_RESOURCE;
-
-						if (has_flag(flags, Flags::IMPORT_COLORGRADINGLUT))
-						{
-							if (tDesc.type != TextureDesc::Type::TEXTURE_2D ||
-								tDesc.width != 256 ||
-								tDesc.height != 16)
-							{
-								wi::helper::messageBox("The Dimensions must be 256 x 16 for color grading LUT!", "Error");
-							}
-							else
-							{
-								uint32_t data[16 * 16 * 16];
-								int pixel = 0;
-								for (int z = 0; z < 16; ++z)
-								{
-									for (int y = 0; y < 16; ++y)
-									{
-										for (int x = 0; x < 16; ++x)
-										{
-											int coord = x + y * 256 + z * 16;
-											data[pixel++] = ((uint32_t*)rgba_pixels)[coord];
-										}
-									}
-								}
-
-								tDesc.type = TextureDesc::Type::TEXTURE_3D;
-								tDesc.width = 16;
-								tDesc.height = 16;
-								tDesc.depth = 16;
-								tDesc.format = Format::R8G8B8A8_UNORM;
-								tDesc.bind_flags = BindFlag::SHADER_RESOURCE;
-								SubresourceData InitData;
-								InitData.data_ptr = data;
-								InitData.row_pitch = 16 * sizeof(uint32_t);
-								InitData.slice_pitch = 16 * InitData.row_pitch;
-								success = device->CreateTexture(&tDesc, &InitData, &resource->texture);
-								device->SetName(&resource->texture, name.c_str());
-							}
-						}
-						else
-						{
-							tDesc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-							tDesc.format = Format::R8G8B8A8_UNORM;
-							tDesc.mip_levels = (uint32_t)log2(std::max(tDesc.width, tDesc.width)) + 1;
-							tDesc.usage = Usage::DEFAULT;
-							tDesc.layout = ResourceState::SHADER_RESOURCE;
-
-							uint32_t mipwidth = tDesc.width;
-							wi::vector<SubresourceData> InitData(tDesc.mip_levels);
-							for (uint32_t mip = 0; mip < tDesc.mip_levels; ++mip)
-							{
-								InitData[mip].data_ptr = rgba_pixels; // attention! we don't fill the mips here correctly, just always point to the mip0 data by default. Mip levels will be created using compute shader when needed!
-								InitData[mip].row_pitch = static_cast<uint32_t>(mipwidth * channelCount);
-								mipwidth = std::max(1u, mipwidth / 2);
-							}
-
-							success = device->CreateTexture(&tDesc, InitData.data(), &resource->texture);
-							device->SetName(&resource->texture, name.c_str());
-
-							for (uint32_t i = 0; i < resource->texture.desc.mip_levels; ++i)
-							{
-								int subresource_index;
-								subresource_index = device->CreateSubresource(&resource->texture, SubresourceType::SRV, 0, 1, i, 1);
-								assert(subresource_index == i);
-								subresource_index = device->CreateSubresource(&resource->texture, SubresourceType::UAV, 0, 1, i, 1);
-								assert(subresource_index == i);
-							}
-						}
-						free(rgba_pixels);
-					}
-				}
 				else
 				{
-					// png, tga, jpg, etc. loader:
+					// qoi, png, tga, jpg, etc. loader:
 
 					const int channelCount = 4;
-					int width, height, bpp;
-					unsigned char* rgb = stbi_load_from_memory(filedata, (int)filesize, &width, &height, &bpp, channelCount);
+					int height, width, bpp; // stb_image
+					qoi_desc desc;
+					
+					void* rgb;
+					if (!ext.compare("QOI"))
+					{
+						rgb = qoi_decode(filedata, (int)filesize, &desc, channelCount);
+						// redefine width, height to avoid further conditionals
+						height = desc.height;
+						width = desc.width;
+					}
+					else
+						rgb = stbi_load_from_memory(filedata, (int)filesize, &height, &width, &bpp, channelCount);
 
 					if (rgb != nullptr)
 					{
@@ -683,7 +609,7 @@ namespace wi
 							}
 						}
 					}
-					stbi_image_free(rgb);
+					free(rgb);
 				}
 			}
 			break;
