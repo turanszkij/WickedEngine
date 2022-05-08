@@ -26,6 +26,7 @@ public:
 	wi::gui::CheckBox vsyncCheckBox;
 	wi::gui::ComboBox swapchainComboBox;
 	wi::gui::CheckBox occlusionCullingCheckBox;
+	wi::gui::CheckBox visibilityComputeShadingCheckBox;
 	wi::gui::Slider resolutionScaleSlider;
 	wi::gui::Slider GIBoostSlider;
 	wi::gui::CheckBox surfelGICheckBox;

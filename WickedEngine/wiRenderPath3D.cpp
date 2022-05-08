@@ -470,7 +470,10 @@ void RenderPath3D::ResizeBuffers()
 		device->CreateTexture(&desc, nullptr, &debugUAV);
 		device->SetName(&debugUAV, "debugUAV");
 	}
-	wi::renderer::CreateVisibilityResources(visibilityResources, internalResolution);
+	if (visibilityResources.bins.IsValid()) // for now this is off by default, can be turned on manually
+	{
+		wi::renderer::CreateVisibilityResources(visibilityResources, internalResolution);
+	}
 	wi::renderer::CreateTiledLightResources(tiledLightResources, internalResolution);
 	wi::renderer::CreateTiledLightResources(tiledLightResources_planarReflection, XMUINT2(depthBuffer_Reflection.desc.width, depthBuffer_Reflection.desc.height));
 	wi::renderer::CreateLuminanceResources(luminanceResources, internalResolution);
@@ -1120,11 +1123,14 @@ void RenderPath3D::Render() const
 			device->Barrier(&barrier, 1, cmd);
 		}
 
-		wi::renderer::VisibilityShade(
-			visibilityResources,
-			rtMain,
-			cmd
-		);
+		if (visibilityResources.bins.IsValid())
+		{
+			wi::renderer::VisibilityShade(
+				visibilityResources,
+				rtMain,
+				cmd
+			);
+		}
 
 		Viewport vp;
 		vp.width = (float)depthBuffer_Main.GetDesc().width;
@@ -1133,10 +1139,13 @@ void RenderPath3D::Render() const
 
 		device->RenderPassBegin(&renderpass_main, cmd);
 
-		//auto range = wi::profiler::BeginRangeGPU("Opaque Scene", cmd);
-		//wi::renderer::DrawScene(visibility_main, RENDERPASS_MAIN, cmd, drawscene_flags);
-		//wi::renderer::DrawSky(*scene, cmd);
-		//wi::profiler::EndRange(range); // Opaque Scene
+		if (!visibilityResources.bins.IsValid())
+		{
+			auto range = wi::profiler::BeginRangeGPU("Opaque Scene", cmd);
+			wi::renderer::DrawScene(visibility_main, RENDERPASS_MAIN, cmd, drawscene_flags);
+			wi::renderer::DrawSky(*scene, cmd);
+			wi::profiler::EndRange(range); // Opaque Scene
+		}
 
 		RenderOutline(cmd);
 

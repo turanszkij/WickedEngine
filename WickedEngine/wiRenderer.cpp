@@ -7724,12 +7724,15 @@ void VisibilityResolve(
 
 	BindCommonResources(cmd);
 
-	barrier_stack.push_back(GPUBarrier::Buffer(&res.bins, ResourceState::CONSTANT_BUFFER | ResourceState::INDIRECT_ARGUMENT, ResourceState::UNORDERED_ACCESS));
-	barrier_stack.push_back(GPUBarrier::Buffer(&res.binned_pixels, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS));
-	barrier_stack_flush(cmd);
-	device->ClearUAV(&res.bins, 0, cmd);
-	barrier_stack.push_back(GPUBarrier::Memory(&res.bins));
-	barrier_stack_flush(cmd);
+	if (res.bins.IsValid())
+	{
+		barrier_stack.push_back(GPUBarrier::Buffer(&res.bins, ResourceState::CONSTANT_BUFFER | ResourceState::INDIRECT_ARGUMENT, ResourceState::UNORDERED_ACCESS));
+		barrier_stack.push_back(GPUBarrier::Buffer(&res.binned_pixels, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS));
+		barrier_stack_flush(cmd);
+		device->ClearUAV(&res.bins, 0, cmd);
+		barrier_stack.push_back(GPUBarrier::Memory(&res.bins));
+		barrier_stack_flush(cmd);
+	}
 
 	const bool msaa = input_primitiveID.GetDesc().sample_count > 1;
 	bool fast = true;
@@ -7863,19 +7866,22 @@ void VisibilityResolve(
 	}
 	barrier_stack_flush(cmd);
 
-	device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_BINNING_OFFSETS], cmd);
-	device->Dispatch(1, 1, 1, cmd);
-	barrier_stack.push_back(GPUBarrier::Memory(&res.bins));
-	barrier_stack_flush(cmd);
+	if (res.bins.IsValid())
+	{
+		device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_BINNING_OFFSETS], cmd);
+		device->Dispatch(1, 1, 1, cmd);
+		barrier_stack.push_back(GPUBarrier::Memory(&res.bins));
+		barrier_stack_flush(cmd);
 
-	device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_BINNING_PLACEMENT], cmd);
-	device->BindUAV(&res.binned_pixels, 15, cmd);
-	device->Dispatch(
-		(input_primitiveID.desc.width + 7u) / 8u,
-		(input_primitiveID.desc.height + 7u) / 8u,
-		1,
-		cmd
-	);
+		device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_BINNING_PLACEMENT], cmd);
+		device->BindUAV(&res.binned_pixels, 15, cmd);
+		device->Dispatch(
+			(input_primitiveID.desc.width + 7u) / 8u,
+			(input_primitiveID.desc.height + 7u) / 8u,
+			1,
+			cmd
+		);
+	}
 
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);
