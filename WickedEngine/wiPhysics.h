@@ -58,4 +58,9 @@ namespace wi::physics
 		const XMFLOAT3& impulse,
 		const XMFLOAT3& at
 	);
+
+	void ApplyTorque(
+		const wi::scene::RigidBodyPhysicsComponent& physicscomponent,
+		const XMFLOAT3& torque
+	);
 }
