@@ -16,7 +16,7 @@
 #include "tinyddsloader.h"
 
 #define QOI_IMPLEMENTATION
-#include "Utility/qoi.h"
+#include "qoi.h"
 
 
 
