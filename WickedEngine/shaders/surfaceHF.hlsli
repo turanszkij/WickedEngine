@@ -70,6 +70,7 @@ struct Surface
 	RayCone raycone;
 	float hit_depth;
 	float3 gi;
+	float3 bumpColor;
 
 	// These will be computed when calling Update():
 	float roughnessBRDF;	// roughness input for BRDF functions
@@ -110,6 +111,7 @@ struct Surface
 		facenormal = 0;
 		flags = 0;
 		gi = 0;
+		bumpColor = 0;
 
 		sheen.color = 0;
 		sheen.roughness = 0;
@@ -372,6 +374,7 @@ struct Surface
 				const float3 normalMap = float3(tex.SampleLevel(sam, uv, lod).rg, 1) * 2 - 1;
 #endif // SURFACE_LOAD_QUAD_DERIVATIVES
 				N = normalize(lerp(N, mul(normalMap, TBN), material.normalMapStrength));
+				bumpColor = normalMap * material.normalMapStrength;
 			}
 
 #ifdef ANISOTROPIC
