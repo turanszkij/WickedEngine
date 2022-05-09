@@ -693,4 +693,15 @@ namespace wi::physics
 		}
 	}
 
+	void ApplyTorque(
+		const wi::scene::RigidBodyPhysicsComponent& physicscomponent,
+		const XMFLOAT3& torque
+	)
+	{
+		if (physicscomponent.physicsobject != nullptr)
+		{
+			btRigidBody* rigidbody = (btRigidBody*)physicscomponent.physicsobject;
+			rigidbody->applyTorque(btVector3(torque.x, torque.y, torque.z));
+		}
+	}
 }
