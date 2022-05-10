@@ -37,7 +37,7 @@ else ()
 	if((${SDL_VERSION_MAJOR} GREATER_EQUAL 2) AND (${SDL2_VERSION_MINOR} GREATER_EQUAL 0) AND (${SDL2_VERSION_PATCH} GREATER_EQUAL 14))
 		add_compile_definitions(SDL2_FEATURE_CONTROLLER_LED=1)
 	endif()
-endif()    
+endif()
 
 add_subdirectory(BULLET)
 add_subdirectory(LUA)
@@ -88,6 +88,7 @@ set(HEADER_FILES
 		wiMath_BindLua.h
 		wiNetwork.h
 		wiNetwork_BindLua.h
+		wiNoise.h
 		wiOcean.h
 		wiPhysics.h
 		wiPlatform.h
