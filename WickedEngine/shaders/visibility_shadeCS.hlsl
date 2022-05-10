@@ -106,7 +106,7 @@ void main(uint DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uint
 #ifdef PLANARREFLECTION
 	float2 bumpColor = unpack_half2(input_pixel_data_varying[bin_data_index].x);
 	lighting.indirect.specular += PlanarReflection(surface, bumpColor) * surface.F;
-#endif
+#endif // PLANARREFLECTION
 
 	TiledLighting(surface, lighting);
 
