@@ -125,6 +125,23 @@ struct Surface
 		hit_depth = 0;
 	}
 
+	inline void create(in ShaderMaterial material)
+	{
+		sss = material.subsurfaceScattering;
+		sss_inv = material.subsurfaceScattering_inv;
+
+		layerMask = material.layerMask;
+
+		if (material.IsReceiveShadow())
+		{
+			flags |= SURFACE_FLAG_RECEIVE_SHADOW;
+		}
+
+#ifdef ANISOTROPIC
+		anisotropy = material.parallaxOcclusionMapping;
+#endif // ANISOTROPIC
+	}
+
 	inline void create(
 		in ShaderMaterial material,
 		in float4 _baseColor,
@@ -171,10 +188,7 @@ struct Surface
 			f0 *= lerp(reflectance.xxx, baseColor.rgb, metalness);
 		}
 
-		if (material.IsReceiveShadow())
-		{
-			flags |= SURFACE_FLAG_RECEIVE_SHADOW;
-		}
+		create(material);
 	}
 
 	inline void update()
@@ -202,6 +216,7 @@ struct Surface
 		sheen.DFG = texture_sheenlut.SampleLevel(sampler_linear_clamp, float2(NdotV, sheen.roughness), 0).r;
 		sheen.albedoScaling = 1.0 - max3(sheen.color) * sheen.DFG;
 
+		B = normalize(cross(T.xyz, N) * T.w); // Compute bitangent again after normal mapping
 		TdotV = dot(T.xyz, V);
 		BdotV = dot(B, V);
 		at = max(0, roughnessBRDF * (1 + anisotropy));
@@ -244,6 +259,7 @@ struct Surface
 			return false;
 
 		material = load_material(geometry.materialIndex);
+		create(material);
 
 		const uint startIndex = prim.primitiveIndex * 3 + geometry.indexOffset;
 		Buffer<uint> indexBuffer = bindless_ib[NonUniformResourceIndex(geometry.ib)];
@@ -376,11 +392,6 @@ struct Surface
 				N = normalize(lerp(N, mul(normalMap, TBN), material.normalMapStrength));
 				bumpColor = normalMap * material.normalMapStrength;
 			}
-
-#ifdef ANISOTROPIC
-			anisotropy = material.parallaxOcclusionMapping;
-			B = normalize(cross(T.xyz, N) * T.w); // Compute bitangent again after normal mapping
-#endif // ANISOTROPIC
 		}
 
 		baseColor = is_emittedparticle ? 1 : material.baseColor;
@@ -678,11 +689,6 @@ struct Surface
 		pre = attribute_at_bary(pre0, pre1, pre2, bary);
 		pre = mul(inst.transformPrev.GetMatrix(), float4(pre, 1)).xyz;
 
-		sss = material.subsurfaceScattering;
-		sss_inv = material.subsurfaceScattering_inv;
-
-		layerMask = material.layerMask;
-
 		update();
 	}
 
@@ -735,6 +741,7 @@ struct Surface
 		float3 P1 = mul(inst.transform.GetMatrix(), float4(p1, 1)).xyz;
 		float3 P2 = mul(inst.transform.GetMatrix(), float4(p2, 1)).xyz;
 
+#ifndef SURFACE_LOAD_DISABLE_WIND
 		[branch]
 		if (material.IsUsingWind())
 		{
@@ -747,6 +754,7 @@ struct Surface
 			P1 += compute_wind(P1, wind1);
 			P2 += compute_wind(P2, wind2);
 		}
+#endif // SURFACE_LOAD_DISABLE_WIND
 
 		bool is_backface;
 		bary = compute_barycentrics(rayOrigin, rayDirection, P0, P1, P2, hit_depth, is_backface);
@@ -779,6 +787,7 @@ struct Surface
 		float3 P1 = mul(inst.transform.GetMatrix(), float4(p1, 1)).xyz;
 		float3 P2 = mul(inst.transform.GetMatrix(), float4(p2, 1)).xyz;
 
+#ifndef SURFACE_LOAD_DISABLE_WIND
 		[branch]
 		if (material.IsUsingWind())
 		{
@@ -791,6 +800,7 @@ struct Surface
 			P1 += compute_wind(P1, wind1);
 			P2 += compute_wind(P2, wind2);
 		}
+#endif // SURFACE_LOAD_DISABLE_WIND
 
 		bool is_backface;
 		bary = compute_barycentrics(rayOrigin, rayDirection, P0, P1, P2, hit_depth, is_backface);

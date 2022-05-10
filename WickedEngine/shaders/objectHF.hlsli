@@ -1069,10 +1069,10 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #if 0
 	float3x3 TBN = compute_tangent_frame(surface.N, surface.P, uvsets.xy);
 #else
-	float4 tangent = input.tan;
-	tangent.xyz = normalize(tangent.xyz);
-	float3 binormal = normalize(cross(tangent.xyz, surface.N) * tangent.w);
-	float3x3 TBN = float3x3(tangent.xyz, binormal, surface.N);
+	surface.T = input.tan;
+	surface.T.xyz = normalize(surface.T.xyz);
+	float3 binormal = normalize(cross(surface.T.xyz, surface.N) * surface.T.w);
+	float3x3 TBN = float3x3(surface.T.xyz, binormal, surface.N);
 #endif
 
 #ifdef POM
@@ -1200,8 +1200,6 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 
 #ifdef ANISOTROPIC
 	surface.anisotropy = GetMaterial().parallaxOcclusionMapping;
-	surface.T = tangent;
-	surface.B = normalize(cross(tangent.xyz, surface.N) * tangent.w); // Compute bitangent again after normal mapping
 #endif // ANISOTROPIC
 
 

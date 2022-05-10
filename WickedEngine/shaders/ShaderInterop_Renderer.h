@@ -777,19 +777,5 @@ struct SkinningPushConstants
 	int so_tan;
 };
 
-enum VisibilityResolveOptions
-{
-	VISIBILITY_RESOLVE_DEPTH = 1 << 0,
-	VISIBILITY_RESOLVE_LINEARDEPTH = 1 << 1,
-	VISIBILITY_RESOLVE_VELOCITY = 1 << 2,
-	VISIBILITY_RESOLVE_NORMAL = 1 << 3,
-	VISIBILITY_RESOLVE_ROUGHNESS = 1 << 4,
-	VISIBILITY_RESOLVE_PRIMITIVEID = 1 << 5,
-};
-struct VisibilityResolvePushConstants
-{
-	uint options;
-};
-
 
 #endif // WI_SHADERINTEROP_RENDERER_H

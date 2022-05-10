@@ -174,8 +174,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"rtao_denoise_filterCS", wi::graphics::ShaderStage::CS },
 	{"visibility_resolveCS", wi::graphics::ShaderStage::CS },
 	{"visibility_resolveCS_MSAA", wi::graphics::ShaderStage::CS },
-	{"visibility_resolveCS_fast", wi::graphics::ShaderStage::CS },
-	{"visibility_resolveCS_fast_MSAA", wi::graphics::ShaderStage::CS },
+	{"visibility_velocityCS", wi::graphics::ShaderStage::CS },
 	{"visibility_binning_offsetsCS", wi::graphics::ShaderStage::CS },
 	{"visibility_binning_placementCS", wi::graphics::ShaderStage::CS },
 	{"visibility_skyCS", wi::graphics::ShaderStage::CS },
@@ -407,6 +406,13 @@ int main(int argc, char* argv[])
 			{ ShaderFormat::SPIRV, "shaders/spirv/" },
 		};
 		std::cout << "No shader formats were specified, assuming command arguments: hlsl5 spirv hlsl6" << std::endl;
+	}
+
+	// permutations for visibility_surfaceCS:
+	shaders.push_back({ "visibility_surfaceCS", wi::graphics::ShaderStage::CS });
+	for (auto& x : wi::scene::MaterialComponent::shaderTypeDefines)
+	{
+		shaders.back().permutations.emplace_back().defines = x;
 	}
 
 	// permutations for visibility_shadeCS:

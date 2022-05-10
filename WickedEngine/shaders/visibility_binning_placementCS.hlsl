@@ -20,26 +20,30 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
 	uint2 GTid = remap_lane_8x8(groupIndex);
 	uint2 pixel = Gid.xy * 8 + GTid;
+	const bool pixel_valid = pixel.x < GetCamera().internal_resolution.x && pixel.y < GetCamera().internal_resolution.y;
 
 	uint bin_index = ~0u;
 
-	uint primitiveID = texture_primitiveID[pixel];
-	if (any(primitiveID))
+	if (pixel_valid)
 	{
-		PrimitiveID prim;
-		prim.unpack(primitiveID);
-
-		Surface surface;
-		surface.init();
-
-		if (surface.preload_internal(prim))
+		uint primitiveID = texture_primitiveID[pixel];
+		if (any(primitiveID))
 		{
-			bin_index = surface.material.shaderType;
+			PrimitiveID prim;
+			prim.unpack(primitiveID);
+
+			Surface surface;
+			surface.init();
+
+			if (surface.preload_internal(prim))
+			{
+				bin_index = surface.material.shaderType;
+			}
 		}
-	}
-	else
-	{
-		bin_index = SHADERTYPE_BIN_COUNT;
+		else
+		{
+			bin_index = SHADERTYPE_BIN_COUNT;
+		}
 	}
 
 	uint placement = 0;
@@ -56,6 +60,9 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	}
 	GroupMemoryBarrierWithGroupSync();
 
-	placement += local_bin_offsets[bin_index];
-	output_binned_pixels[placement] = pack_pixel(pixel);
+	if (pixel_valid)
+	{
+		placement += local_bin_offsets[bin_index];
+		output_binned_pixels[placement] = pack_pixel(pixel);
+	}
 }

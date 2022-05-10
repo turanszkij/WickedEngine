@@ -51,14 +51,14 @@ void RendererWindow::Create(EditorComponent* editor)
 	visibilityComputeShadingCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		if (args.bValue)
 		{
-			wi::renderer::CreateVisibilityResources(editor->renderPath->visibilityResources, editor->renderPath->GetInternalResolution());
+			editor->renderPath->visibility_shading_in_compute = true;
 		}
 		else
 		{
-			editor->renderPath->visibilityResources = {};
+			editor->renderPath->visibility_shading_in_compute = false;
 		}
 	});
-	visibilityComputeShadingCheckBox.SetCheck(false);
+	visibilityComputeShadingCheckBox.SetCheck(editor->renderPath->visibility_shading_in_compute);
 	AddWidget(&visibilityComputeShadingCheckBox);
 
 	resolutionScaleSlider.Create(0.25f, 2.0f, 1.0f, 7.0f, "Resolution Scale: ");

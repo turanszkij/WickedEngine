@@ -313,22 +313,30 @@ namespace wi::renderer
 	{
 		wi::graphics::GPUBuffer bins;
 		wi::graphics::GPUBuffer binned_pixels;
+		wi::graphics::GPUBuffer pixel_data_common;
+		wi::graphics::GPUBuffer pixel_data_varying;
+		wi::graphics::Texture texture_normals;
+		wi::graphics::Texture texture_roughness;
+		wi::graphics::Texture texture_velocity;
 
 		// You can request any of these extra outputs to be written by VisibilityResolve:
 		const wi::graphics::Texture* depthbuffer = nullptr; // depth buffer that matches with post projection
 		const wi::graphics::Texture* lineardepth = nullptr; // depth buffer in linear space in [0,1] range
-		const wi::graphics::Texture* velocity = nullptr; // recommended format: R16G16_FLOAT
-		const wi::graphics::Texture* normal = nullptr; // recommended format: R16G16_FLOAT
-		const wi::graphics::Texture* roughness = nullptr; // recommended format: R8_UNORM
 		const wi::graphics::Texture* primitiveID_resolved = nullptr; // resolved from MSAA texture_visibility input
 	};
 	void CreateVisibilityResources(VisibilityResources& res, XMUINT2 resolution);
-	void VisibilityResolve(
+	void Visibility_Prepare(
 		const VisibilityResources& res,
 		const wi::graphics::Texture& input_primitiveID, // can be MSAA
+		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd
 	);
-	void VisibilityShade(
+	void Visibility_Surface(
+		const VisibilityResources& res,
+		const wi::graphics::Texture& output,
+		wi::graphics::CommandList cmd
+	);
+	void Visibility_Shade(
 		const VisibilityResources& res,
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd
