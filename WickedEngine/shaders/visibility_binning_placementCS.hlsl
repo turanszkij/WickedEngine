@@ -1,15 +1,20 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Renderer.h"
-#include "brdf.hlsli"
+#include "surfaceHF.hlsli"
+#include "raytracingHF.hlsli"
 
-RWStructuredBuffer<ShaderTypeBin> output_bins : register(u14);
-RWStructuredBuffer<uint> output_binned_pixels : register(u15);
+Texture2D<float> texture_shadertypes : register(t0);
+
+RWStructuredBuffer<ShaderTypeBin> output_bins : register(u0);
+RWStructuredBuffer<uint> output_binned_pixels : register(u1);
+RWStructuredBuffer<uint4> output_pixel_payload_0 : register(u2);
+RWStructuredBuffer<uint4> output_pixel_payload_1 : register(u3);
 
 groupshared uint local_bin_counts[SHADERTYPE_BIN_COUNT + 1];
 groupshared uint local_bin_offsets[SHADERTYPE_BIN_COUNT + 1];
 
 [numthreads(8, 8, 1)]
-void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
+void main(uint2 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 {
 	if (groupIndex < SHADERTYPE_BIN_COUNT + 1)
 	{
@@ -18,32 +23,14 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	}
 	GroupMemoryBarrierWithGroupSync();
 
-	uint2 GTid = remap_lane_8x8(groupIndex);
-	uint2 pixel = Gid.xy * 8 + GTid;
+	uint2 pixel = DTid.xy;
 	const bool pixel_valid = pixel.x < GetCamera().internal_resolution.x && pixel.y < GetCamera().internal_resolution.y;
 
 	uint bin_index = ~0u;
 
 	if (pixel_valid)
 	{
-		uint primitiveID = texture_primitiveID[pixel];
-		if (any(primitiveID))
-		{
-			PrimitiveID prim;
-			prim.unpack(primitiveID);
-
-			Surface surface;
-			surface.init();
-
-			if (surface.preload_internal(prim))
-			{
-				bin_index = surface.material.shaderType;
-			}
-		}
-		else
-		{
-			bin_index = SHADERTYPE_BIN_COUNT;
-		}
+		bin_index = texture_shadertypes[pixel] * 255.0;
 	}
 
 	uint placement = 0;
@@ -64,5 +51,11 @@ void main(uint3 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	{
 		placement += local_bin_offsets[bin_index];
 		output_binned_pixels[placement] = pack_pixel(pixel);
+
+		if (bin_index < SHADERTYPE_BIN_COUNT)
+		{
+			uint pixel_index = flatten2D(pixel, GetCamera().internal_resolution);
+			output_pixel_payload_0[placement] = output_pixel_payload_1[pixel_index];
+		}
 	}
 }

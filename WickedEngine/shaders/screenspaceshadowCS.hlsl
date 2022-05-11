@@ -44,17 +44,12 @@ void main(uint3 DTid : SV_DispatchThreadID, uint3 Gid : SV_GroupID, uint3 GTid :
 #endif // RTSHADOW
 
 	float3 P = reconstruct_position(uv, depth);
-
-	PrimitiveID prim;
-	prim.unpack(texture_primitiveID[DTid.xy * 2]);
+	float3 N = decode_oct(texture_normal[DTid.xy * 2]);
 
 	Surface surface;
 	surface.init();
-	if (!surface.load(prim, P))
-	{
-		return;
-	}
-	float3 N = surface.facenormal;
+	surface.P = P;
+	surface.N = N;
 
 	const float2 bluenoise = blue_noise(DTid.xy).xy;
 

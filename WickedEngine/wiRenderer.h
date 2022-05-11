@@ -313,8 +313,8 @@ namespace wi::renderer
 	{
 		wi::graphics::GPUBuffer bins;
 		wi::graphics::GPUBuffer binned_pixels;
-		wi::graphics::GPUBuffer pixel_data_common;
-		wi::graphics::GPUBuffer pixel_data_varying;
+		wi::graphics::GPUBuffer pixel_payload_0;
+		wi::graphics::GPUBuffer pixel_payload_1;
 		wi::graphics::Texture texture_normals;
 		wi::graphics::Texture texture_roughness;
 		wi::graphics::Texture texture_velocity;

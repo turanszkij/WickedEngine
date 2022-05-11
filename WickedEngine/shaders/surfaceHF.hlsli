@@ -188,6 +188,10 @@ struct Surface
 			f0 *= lerp(reflectance.xxx, baseColor.rgb, metalness);
 		}
 
+#ifdef UNLIT
+		albedo = baseColor.rgb;
+#endif // UNLIT
+
 		create(material);
 	}
 
@@ -698,15 +702,22 @@ struct Surface
 			return false;
 
 		bary = barycentrics;
-		float u = bary.x;
-		float v = bary.y;
-		float w = 1 - u - v;
 
 		float3 p0 = asfloat(data0.xyz);
 		float3 p1 = asfloat(data1.xyz);
 		float3 p2 = asfloat(data2.xyz);
+
+#ifdef SURFACE_LOAD_QUAD_DERIVATIVES
+		float3 P0 = mul(inst.transform.GetMatrix(), float4(p0, 1)).xyz;
+		float3 P1 = mul(inst.transform.GetMatrix(), float4(p1, 1)).xyz;
+		float3 P2 = mul(inst.transform.GetMatrix(), float4(p2, 1)).xyz;
+		P = attribute_at_bary(P0, P1, P2, bary);
+		P_dx = P - attribute_at_bary(P0, P1, P2, bary_quad_x);
+		P_dy = P - attribute_at_bary(P0, P1, P2, bary_quad_y);
+#else
 		P = attribute_at_bary(p0, p1, p2, bary);
 		P = mul(inst.transform.GetMatrix(), float4(P, 1)).xyz;
+#endif // SURFACE_LOAD_QUAD_DERIVATIVES
 
 		load_internal();
 		return true;
