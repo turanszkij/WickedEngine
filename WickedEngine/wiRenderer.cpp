@@ -7882,8 +7882,6 @@ void Visibility_Prepare(
 		device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_BINNING_PLACEMENT], cmd);
 		device->BindResource(&res.texture_roughness, 0, cmd); // repurposed roughness for shadertypes
 		device->BindUAV(&res.binned_pixels, 1, cmd);
-		device->BindUAV(&res.pixel_payload_0, 2, cmd);
-		device->BindUAV(&res.pixel_payload_1, 3, cmd);
 		device->Dispatch(
 			(output.desc.width + 15u) / 16u,
 			(output.desc.height + 15u) / 16u,

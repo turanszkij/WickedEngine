@@ -1,7 +1,7 @@
 #include "globals.hlsli"
 #include "ShaderInterop_Renderer.h"
 
-RWStructuredBuffer<ShaderTypeBin> output_bins : register(u14);
+RWStructuredBuffer<ShaderTypeBin> output_bins : register(u0);
 
 groupshared uint allocator;
 

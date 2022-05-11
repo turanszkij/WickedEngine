@@ -176,6 +176,7 @@ wi::vector<ShaderEntry> shaders = {
 	{"visibility_resolveCS_MSAA", wi::graphics::ShaderStage::CS },
 	{"visibility_binning_offsetsCS", wi::graphics::ShaderStage::CS },
 	{"visibility_binning_placementCS", wi::graphics::ShaderStage::CS },
+	{"visibility_velocityCS", wi::graphics::ShaderStage::CS },
 	{"visibility_skyCS", wi::graphics::ShaderStage::CS },
 	{"surfel_coverageCS", wi::graphics::ShaderStage::CS },
 	{"surfel_indirectprepareCS", wi::graphics::ShaderStage::CS },
