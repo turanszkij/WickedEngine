@@ -1,3 +1,4 @@
+#define SURFACE_LOAD_DISABLE_WIND
 #include "globals.hlsli"
 #include "ShaderInterop_Renderer.h"
 #include "surfaceHF.hlsli"
