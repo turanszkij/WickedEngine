@@ -7847,8 +7847,8 @@ void Visibility_Prepare(
 		device->BindComputeShader(&shaders[msaa ? CSTYPE_VISIBILITY_RESOLVE_MSAA : CSTYPE_VISIBILITY_RESOLVE], cmd);
 
 		device->Dispatch(
-			(input_primitiveID.desc.width + 7u) / 8u,
-			(input_primitiveID.desc.height + 7u) / 8u,
+			(input_primitiveID.desc.width + 15u) / 16u,
+			(input_primitiveID.desc.height + 15u) / 16u,
 			1,
 			cmd
 		);
@@ -7890,8 +7890,8 @@ void Visibility_Prepare(
 		device->BindUAV(&res.pixel_payload_0, 2, cmd);
 		device->BindUAV(&res.pixel_payload_1, 3, cmd);
 		device->Dispatch(
-			(output.desc.width + 7u) / 8u,
-			(output.desc.height + 7u) / 8u,
+			(output.desc.width + 15u) / 16u,
+			(output.desc.height + 15u) / 16u,
 			1,
 			cmd
 		);

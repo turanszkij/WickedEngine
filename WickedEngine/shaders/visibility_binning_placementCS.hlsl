@@ -11,7 +11,7 @@ RWStructuredBuffer<uint> output_binned_pixels : register(u1);
 groupshared uint local_bin_counts[SHADERTYPE_BIN_COUNT + 1];
 groupshared uint local_bin_offsets[SHADERTYPE_BIN_COUNT + 1];
 
-[numthreads(8, 8, 1)]
+[numthreads(16, 16, 1)]
 void main(uint2 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 {
 	if (groupIndex < SHADERTYPE_BIN_COUNT + 1)

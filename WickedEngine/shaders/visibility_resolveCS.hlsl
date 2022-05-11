@@ -32,8 +32,8 @@ RWStructuredBuffer<ShaderTypeBin> output_bins : register(u14);
 
 groupshared uint local_bin_counts[SHADERTYPE_BIN_COUNT + 1];
 
-[numthreads(8, 8, 1)]
-void main(uint groupIndex : SV_GroupIndex, uint3 Gid : SV_GroupID)
+[numthreads(16, 16, 1)]
+void main(uint2 DTid : SV_DispatchThreadID, uint2 GTid : SV_GroupThreadID, uint groupIndex : SV_GroupIndex)
 {
 	if (groupIndex < SHADERTYPE_BIN_COUNT + 1)
 	{
@@ -41,8 +41,7 @@ void main(uint groupIndex : SV_GroupIndex, uint3 Gid : SV_GroupID)
 	}
 	GroupMemoryBarrierWithGroupSync();
 
-	uint2 GTid = remap_lane_8x8(groupIndex);
-	uint2 pixel = Gid.xy * 8 + GTid;
+	uint2 pixel = DTid.xy;
 	const bool pixel_valid = pixel.x < GetCamera().internal_resolution.x && pixel.y < GetCamera().internal_resolution.y;
 
 	const float2 uv = ((float2)pixel + 0.5) * GetCamera().internal_resolution_rcp;
