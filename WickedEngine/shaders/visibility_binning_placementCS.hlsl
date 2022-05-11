@@ -7,8 +7,6 @@ Texture2D<float> texture_shadertypes : register(t0);
 
 RWStructuredBuffer<ShaderTypeBin> output_bins : register(u0);
 RWStructuredBuffer<uint> output_binned_pixels : register(u1);
-RWStructuredBuffer<uint4> output_pixel_payload_0 : register(u2);
-RWStructuredBuffer<uint4> output_pixel_payload_1 : register(u3);
 
 groupshared uint local_bin_counts[SHADERTYPE_BIN_COUNT + 1];
 groupshared uint local_bin_offsets[SHADERTYPE_BIN_COUNT + 1];
@@ -51,11 +49,5 @@ void main(uint2 DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 	{
 		placement += local_bin_offsets[bin_index];
 		output_binned_pixels[placement] = pack_pixel(pixel);
-
-		if (bin_index < SHADERTYPE_BIN_COUNT)
-		{
-			uint pixel_index = flatten2D(pixel, GetCamera().internal_resolution);
-			output_pixel_payload_0[placement] = output_pixel_payload_1[pixel_index];
-		}
 	}
 }

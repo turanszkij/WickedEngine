@@ -1,4 +1,3 @@
-#define SURFACE_LOAD_DISABLE_WIND
 #define SURFACE_LOAD_QUAD_DERIVATIVES
 #include "globals.hlsli"
 #include "ShaderInterop_Renderer.h"
@@ -25,6 +24,11 @@ void main(uint DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uint
 	uint2 pixel = unpack_pixel(binned_pixels[bin_data_index]);
 
 	const float2 uv = ((float2)pixel + 0.5) * GetCamera().internal_resolution_rcp;
+	const float2 clipspace = uv_to_clipspace(uv);
+	RayDesc ray = CreateCameraRay(clipspace);
+
+	float3 rayDirection_quad_x = CreateCameraRay(uv_to_clipspace(((float2)pixel + float2(1, 0) + 0.5) * GetCamera().internal_resolution_rcp)).Direction;
+	float3 rayDirection_quad_y = CreateCameraRay(uv_to_clipspace(((float2)pixel + float2(0, 1) + 0.5) * GetCamera().internal_resolution_rcp)).Direction;
 
 	uint primitiveID = texture_primitiveID[pixel];
 	PrimitiveID prim;
@@ -33,13 +37,8 @@ void main(uint DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uint
 	Surface surface;
 	surface.init();
 
-	surface.bary = unpack_half2(output_pixel_payload_0[bin_data_index].x);
-	surface.bary_quad_x = unpack_half2(output_pixel_payload_0[bin_data_index].y);
-	surface.bary_quad_y = unpack_half2(output_pixel_payload_0[bin_data_index].z);
-	surface.flags = output_pixel_payload_0[bin_data_index].w;
-
 	[branch]
-	if (!surface.load(prim, surface.bary))
+	if (!surface.load(prim, ray.Origin, ray.Direction, rayDirection_quad_x, rayDirection_quad_y))
 	{
 		return;
 	}
@@ -68,6 +67,7 @@ void main(uint DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uint
 	output_roughness[pixel] = surface.roughness;
 #endif // CLEARCOAT
 
+	output_pixel_payload_0[bin_data_index].x = pack_half2(surface.bary);
 	output_pixel_payload_0[bin_data_index].y = Pack_R11G11B10_FLOAT(surface.albedo);
 	output_pixel_payload_0[bin_data_index].z = pack_rgba(float4(GAMMA(surface.f0), surface.occlusion));
 	output_pixel_payload_0[bin_data_index].w = Pack_R11G11B10_FLOAT(surface.emissiveColor);
