@@ -1042,6 +1042,7 @@ void LoadShaders()
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_BINNING_OFFSETS], "visibility_binning_offsetsCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_BINNING_PLACEMENT], "visibility_binning_placementCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_SKY], "visibility_skyCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_VELOCITY], "visibility_velocityCS.cso"); });
 
 	if (device->CheckCapability(GraphicsDeviceCapability::RAYTRACING))
 	{
@@ -7838,7 +7839,6 @@ void Visibility_Prepare(
 		{
 			device->BindUAV(&unbind, 13, cmd);
 		}
-		device->BindUAV(&res.texture_velocity, 10, cmd);
 		device->BindUAV(&res.texture_roughness, 11, cmd); // repurposed roughness for shadertypes
 		device->BindUAV(&res.pixel_payload_1, 12, cmd);
 		device->BindUAV(&res.bins, 14, cmd);
@@ -7892,6 +7892,20 @@ void Visibility_Prepare(
 		device->Dispatch(
 			(output.desc.width + 15u) / 16u,
 			(output.desc.height + 15u) / 16u,
+			1,
+			cmd
+		);
+		device->EventEnd(cmd);
+	}
+
+	// Velocity
+	{
+		device->EventBegin("Velocity", cmd);
+		device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_VELOCITY], cmd);
+		device->BindUAV(&res.texture_velocity, 0, cmd);
+		device->Dispatch(
+			(output.desc.width + 7u) / 8u,
+			(output.desc.height + 7u) / 8u,
 			1,
 			cmd
 		);

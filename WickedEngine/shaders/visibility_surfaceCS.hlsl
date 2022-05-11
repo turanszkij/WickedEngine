@@ -1,4 +1,5 @@
 #define SURFACE_LOAD_QUAD_DERIVATIVES
+#define SURFACE_LOAD_ENABLE_WIND
 #include "globals.hlsli"
 #include "ShaderInterop_Renderer.h"
 #include "raytracingHF.hlsli"

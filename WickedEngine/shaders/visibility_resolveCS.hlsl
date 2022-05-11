@@ -1,4 +1,3 @@
-#define SURFACE_LOAD_DISABLE_WIND
 #include "globals.hlsli"
 #include "ShaderInterop_Renderer.h"
 #include "surfaceHF.hlsli"
@@ -22,7 +21,6 @@ RWTexture2D<float> output_lineardepth_mip2 : register(u7);
 RWTexture2D<float> output_lineardepth_mip3 : register(u8);
 RWTexture2D<float> output_lineardepth_mip4 : register(u9);
 
-RWTexture2D<float2> output_velocity : register(u10);
 RWTexture2D<unorm float> output_shadertypes : register(u11);
 
 #ifdef VISIBILITY_MSAA
@@ -58,7 +56,6 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 GTid : SV_GroupThreadID, uint 
 	float depth = 0;
 	if (pixel_valid)
 	{
-		float3 pre;
 		[branch]
 		if (any(primitiveID))
 		{
@@ -74,7 +71,6 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 GTid : SV_GroupThreadID, uint 
 				float4 tmp = mul(GetCamera().view_projection, float4(surface.P, 1));
 				tmp.xyz /= tmp.w;
 				depth = tmp.z;
-				pre = surface.pre;
 
 				InterlockedAdd(local_bin_counts[surface.material.shaderType], 1);
 
@@ -83,16 +79,9 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 GTid : SV_GroupThreadID, uint 
 		}
 		else
 		{
-			pre = ray.Origin + ray.Direction * GetCamera().z_far;
 			InterlockedAdd(local_bin_counts[SHADERTYPE_BIN_COUNT], 1);
 			output_shadertypes[pixel] = SHADERTYPE_BIN_COUNT / 255.0;
 		}
-
-		float2 pos2D = clipspace;
-		float4 pos2DPrev = mul(GetCamera().previous_view_projection, float4(pre, 1));
-		pos2DPrev.xy /= pos2DPrev.w;
-		float2 velocity = ((pos2DPrev.xy - GetCamera().temporalaa_jitter_prev) - (pos2D.xy - GetCamera().temporalaa_jitter)) * float2(0.5, -0.5);
-		output_velocity[pixel] = velocity;
 	}
 
 	GroupMemoryBarrierWithGroupSync();

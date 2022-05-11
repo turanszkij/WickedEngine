@@ -752,7 +752,7 @@ struct Surface
 		float3 P1 = mul(inst.transform.GetMatrix(), float4(p1, 1)).xyz;
 		float3 P2 = mul(inst.transform.GetMatrix(), float4(p2, 1)).xyz;
 
-#ifndef SURFACE_LOAD_DISABLE_WIND
+#ifdef SURFACE_LOAD_ENABLE_WIND
 		[branch]
 		if (material.IsUsingWind())
 		{
@@ -765,7 +765,7 @@ struct Surface
 			P1 += compute_wind(P1, wind1);
 			P2 += compute_wind(P2, wind2);
 		}
-#endif // SURFACE_LOAD_DISABLE_WIND
+#endif // SURFACE_LOAD_ENABLE_WIND
 
 		bool is_backface;
 		bary = compute_barycentrics(rayOrigin, rayDirection, P0, P1, P2, hit_depth, is_backface);
@@ -798,7 +798,7 @@ struct Surface
 		float3 P1 = mul(inst.transform.GetMatrix(), float4(p1, 1)).xyz;
 		float3 P2 = mul(inst.transform.GetMatrix(), float4(p2, 1)).xyz;
 
-#ifndef SURFACE_LOAD_DISABLE_WIND
+#ifndef SURFACE_LOAD_ENABLE_WIND
 		[branch]
 		if (material.IsUsingWind())
 		{
@@ -811,7 +811,7 @@ struct Surface
 			P1 += compute_wind(P1, wind1);
 			P2 += compute_wind(P2, wind2);
 		}
-#endif // SURFACE_LOAD_DISABLE_WIND
+#endif // SURFACE_LOAD_ENABLE_WIND
 
 		bool is_backface;
 		bary = compute_barycentrics(rayOrigin, rayDirection, P0, P1, P2, hit_depth, is_backface);
