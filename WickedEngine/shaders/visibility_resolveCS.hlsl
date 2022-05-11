@@ -45,7 +45,7 @@ void main(uint groupIndex : SV_GroupIndex, uint3 Gid : SV_GroupID)
 
 	uint2 GTid = remap_lane_8x8(groupIndex);
 	uint2 pixel = Gid.xy * 8 + GTid;
-	const bool pixel_valid = pixel.x < GetCamera().internal_resolution.x&& pixel.y < GetCamera().internal_resolution.y;
+	const bool pixel_valid = pixel.x < GetCamera().internal_resolution.x && pixel.y < GetCamera().internal_resolution.y;
 
 	const float2 uv = ((float2)pixel + 0.5) * GetCamera().internal_resolution_rcp;
 	const float2 clipspace = uv_to_clipspace(uv);
