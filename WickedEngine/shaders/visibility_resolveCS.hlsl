@@ -45,6 +45,7 @@ void main(uint groupIndex : SV_GroupIndex, uint3 Gid : SV_GroupID)
 
 	uint2 GTid = remap_lane_8x8(groupIndex);
 	uint2 pixel = Gid.xy * 8 + GTid;
+	const bool pixel_valid = pixel.x < GetCamera().internal_resolution.x&& pixel.y < GetCamera().internal_resolution.y;
 
 	const float2 uv = ((float2)pixel + 0.5) * GetCamera().internal_resolution_rcp;
 	const float2 clipspace = uv_to_clipspace(uv);
@@ -56,52 +57,54 @@ void main(uint groupIndex : SV_GroupIndex, uint3 Gid : SV_GroupID)
 	output_primitiveID[pixel] = primitiveID;
 #endif // VISIBILITY_MSAA
 
-	float depth;
-	float3 pre;
-	[branch]
-	if (any(primitiveID))
+	float depth = 0;
+	if (pixel_valid)
 	{
-		PrimitiveID prim;
-		prim.unpack(primitiveID);
-
-		Surface surface;
-		surface.init();
-
-		float3 rayDirection_quad_x = QuadReadAcrossX(ray.Direction);
-		float3 rayDirection_quad_y = QuadReadAcrossY(ray.Direction);
-
+		float3 pre;
 		[branch]
-		if (surface.load(prim, ray.Origin, ray.Direction, rayDirection_quad_x, rayDirection_quad_y))
+		if (any(primitiveID))
 		{
-			float4 tmp = mul(GetCamera().view_projection, float4(surface.P, 1));
-			tmp.xyz /= tmp.w;
-			depth = tmp.z;
-			pre = surface.pre;
+			PrimitiveID prim;
+			prim.unpack(primitiveID);
 
-			InterlockedAdd(local_bin_counts[surface.material.shaderType], 1);
+			Surface surface;
+			surface.init();
 
-			uint pixel_index = flatten2D(pixel, GetCamera().internal_resolution);
-			output_pixel_payload_1[pixel_index].x = pack_half2(surface.bary);
-			output_pixel_payload_1[pixel_index].y = pack_half2(surface.bary_quad_x);
-			output_pixel_payload_1[pixel_index].z = pack_half2(surface.bary_quad_y);
-			output_pixel_payload_1[pixel_index].w = surface.flags;
+			float3 rayDirection_quad_x = QuadReadAcrossX(ray.Direction);
+			float3 rayDirection_quad_y = QuadReadAcrossY(ray.Direction);
 
-			output_shadertypes[pixel] = surface.material.shaderType / 255.0;
+			[branch]
+			if (surface.load(prim, ray.Origin, ray.Direction, rayDirection_quad_x, rayDirection_quad_y))
+			{
+				float4 tmp = mul(GetCamera().view_projection, float4(surface.P, 1));
+				tmp.xyz /= tmp.w;
+				depth = tmp.z;
+				pre = surface.pre;
+
+				InterlockedAdd(local_bin_counts[surface.material.shaderType], 1);
+
+				uint pixel_index = flatten2D(pixel, GetCamera().internal_resolution);
+				output_pixel_payload_1[pixel_index].x = pack_half2(surface.bary);
+				output_pixel_payload_1[pixel_index].y = pack_half2(surface.bary_quad_x);
+				output_pixel_payload_1[pixel_index].z = pack_half2(surface.bary_quad_y);
+				output_pixel_payload_1[pixel_index].w = surface.flags;
+
+				output_shadertypes[pixel] = surface.material.shaderType / 255.0;
+			}
 		}
-	}
-	else
-	{
-		depth = 0;
-		pre = ray.Origin + ray.Direction * GetCamera().z_far;
-		InterlockedAdd(local_bin_counts[SHADERTYPE_BIN_COUNT], 1);
-		output_shadertypes[pixel] = SHADERTYPE_BIN_COUNT / 255.0;
-	}
+		else
+		{
+			pre = ray.Origin + ray.Direction * GetCamera().z_far;
+			InterlockedAdd(local_bin_counts[SHADERTYPE_BIN_COUNT], 1);
+			output_shadertypes[pixel] = SHADERTYPE_BIN_COUNT / 255.0;
+		}
 
-	float2 pos2D = clipspace;
-	float4 pos2DPrev = mul(GetCamera().previous_view_projection, float4(pre, 1));
-	pos2DPrev.xy /= pos2DPrev.w;
-	float2 velocity = ((pos2DPrev.xy - GetCamera().temporalaa_jitter_prev) - (pos2D.xy - GetCamera().temporalaa_jitter)) * float2(0.5, -0.5);
-	output_velocity[pixel] = velocity;
+		float2 pos2D = clipspace;
+		float4 pos2DPrev = mul(GetCamera().previous_view_projection, float4(pre, 1));
+		pos2DPrev.xy /= pos2DPrev.w;
+		float2 velocity = ((pos2DPrev.xy - GetCamera().temporalaa_jitter_prev) - (pos2D.xy - GetCamera().temporalaa_jitter)) * float2(0.5, -0.5);
+		output_velocity[pixel] = velocity;
+	}
 
 	GroupMemoryBarrierWithGroupSync();
 	if (groupIndex < SHADERTYPE_BIN_COUNT + 1)
