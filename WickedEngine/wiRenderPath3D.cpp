@@ -206,6 +206,7 @@ void RenderPath3D::ResizeBuffers()
 		device->CreateTexture(&desc, nullptr, &rtShadingRate);
 		device->SetName(&rtShadingRate, "rtShadingRate");
 	}
+	rtVelocity = {};
 	rtAO = {};
 	rtShadow = {};
 	rtSSR = {};
@@ -588,6 +589,33 @@ void RenderPath3D::Update(float dt)
 		rtAO = {};
 	}
 
+	// Check whether velocity buffer is required:
+	if (
+		getMotionBlurEnabled() ||
+		wi::renderer::GetTemporalAAEnabled() ||
+		getSSREnabled() ||
+		getRaytracedReflectionEnabled() ||
+		wi::renderer::GetRaytracedShadowsEnabled() ||
+		getAO() == AO::AO_RTAO
+		)
+	{
+		if (!rtVelocity.IsValid())
+		{
+			TextureDesc desc;
+			desc.format = Format::R16G16_FLOAT;
+			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
+			desc.width = internalResolution.x;
+			desc.height = internalResolution.y;
+			desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
+			device->CreateTexture(&desc, nullptr, &rtVelocity);
+			device->SetName(&rtVelocity, "rtVelocity");
+		}
+	}
+	else
+	{
+		rtVelocity = {};
+	}
+
 	// Check whether shadow mask is required:
 	if(wi::renderer::GetScreenSpaceShadowsEnabled() || wi::renderer::GetRaytracedShadowsEnabled())
 	{
@@ -629,7 +657,7 @@ void RenderPath3D::Update(float dt)
 	camera->texture_primitiveID_index = device->GetDescriptorIndex(&rtPrimitiveID, SubresourceType::SRV);
 	camera->texture_depth_index = device->GetDescriptorIndex(&depthBuffer_Copy, SubresourceType::SRV);
 	camera->texture_lineardepth_index = device->GetDescriptorIndex(&rtLinearDepth, SubresourceType::SRV);
-	camera->texture_velocity_index = device->GetDescriptorIndex(&visibilityResources.texture_velocity, SubresourceType::SRV);
+	camera->texture_velocity_index = device->GetDescriptorIndex(&rtVelocity, SubresourceType::SRV);
 	camera->texture_normal_index = device->GetDescriptorIndex(&visibilityResources.texture_normals, SubresourceType::SRV);
 	camera->texture_roughness_index = device->GetDescriptorIndex(&visibilityResources.texture_roughness, SubresourceType::SRV);
 	camera->buffer_entitytiles_opaque_index = device->GetDescriptorIndex(&tiledLightResources.entityTiles_Opaque, SubresourceType::SRV);
@@ -809,6 +837,15 @@ void RenderPath3D::Render() const
 			rtMain,
 			cmd
 		);
+
+		if (rtVelocity.IsValid())
+		{
+			wi::renderer::Visibility_Velocity(
+				visibilityResources,
+				rtVelocity,
+				cmd
+			);
+		}
 
 		if (wi::renderer::GetSurfelGIEnabled())
 		{

@@ -317,7 +317,6 @@ namespace wi::renderer
 		wi::graphics::GPUBuffer pixel_payload_1;
 		wi::graphics::Texture texture_normals;
 		wi::graphics::Texture texture_roughness;
-		wi::graphics::Texture texture_velocity;
 
 		// You can request any of these extra outputs to be written by VisibilityResolve:
 		const wi::graphics::Texture* depthbuffer = nullptr; // depth buffer that matches with post projection
@@ -337,6 +336,11 @@ namespace wi::renderer
 		wi::graphics::CommandList cmd
 	);
 	void Visibility_Shade(
+		const VisibilityResources& res,
+		const wi::graphics::Texture& output,
+		wi::graphics::CommandList cmd
+	);
+	void Visibility_Velocity(
 		const VisibilityResources& res,
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd

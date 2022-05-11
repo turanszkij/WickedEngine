@@ -7754,10 +7754,6 @@ void CreateVisibilityResources(VisibilityResources& res, XMUINT2 resolution)
 		desc.format = Format::R8_UNORM;
 		device->CreateTexture(&desc, nullptr, &res.texture_roughness);
 		device->SetName(&res.texture_roughness, "res.texture_roughness");
-
-		desc.format = Format::R16G16_FLOAT;
-		device->CreateTexture(&desc, nullptr, &res.texture_velocity);
-		device->SetName(&res.texture_velocity, "res.texture_velocity");
 	}
 }
 void Visibility_Prepare(
@@ -7780,7 +7776,6 @@ void Visibility_Prepare(
 		barrier_stack.push_back(GPUBarrier::Buffer(&res.pixel_payload_1, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS));
 		barrier_stack.push_back(GPUBarrier::Image(&res.texture_normals, res.texture_normals.desc.layout, ResourceState::UNORDERED_ACCESS));
 		barrier_stack.push_back(GPUBarrier::Image(&res.texture_roughness, res.texture_roughness.desc.layout, ResourceState::UNORDERED_ACCESS));
-		barrier_stack.push_back(GPUBarrier::Image(&res.texture_velocity, res.texture_velocity.desc.layout, ResourceState::UNORDERED_ACCESS));
 		barrier_stack.push_back(GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS));
 		barrier_stack_flush(cmd);
 		device->ClearUAV(&res.bins, 0, cmd);
@@ -7898,20 +7893,6 @@ void Visibility_Prepare(
 		device->EventEnd(cmd);
 	}
 
-	// Velocity
-	{
-		device->EventBegin("Velocity", cmd);
-		device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_VELOCITY], cmd);
-		device->BindUAV(&res.texture_velocity, 0, cmd);
-		device->Dispatch(
-			(output.desc.width + 7u) / 8u,
-			(output.desc.height + 7u) / 8u,
-			1,
-			cmd
-		);
-		device->EventEnd(cmd);
-	}
-
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);
 }
@@ -7960,7 +7941,6 @@ void Visibility_Surface(
 
 	// Ending barriers:
 	//	These resources will be used by other post processing effects
-	barrier_stack.push_back(GPUBarrier::Image(&res.texture_velocity, ResourceState::UNORDERED_ACCESS, res.texture_velocity.desc.layout));
 	barrier_stack.push_back(GPUBarrier::Image(&res.texture_normals, ResourceState::UNORDERED_ACCESS, res.texture_normals.desc.layout));
 	barrier_stack.push_back(GPUBarrier::Image(&res.texture_roughness, ResourceState::UNORDERED_ACCESS, res.texture_roughness.desc.layout));
 	barrier_stack_flush(cmd);
@@ -8002,6 +7982,43 @@ void Visibility_Shade(
 		device->BindConstantBuffer(&res.bins, 10, cmd, i * sizeof(ShaderTypeBin));
 		device->DispatchIndirect(&res.bins, i * sizeof(ShaderTypeBin) + offsetof(ShaderTypeBin, dispatchX), cmd);
 	}
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&output, ResourceState::UNORDERED_ACCESS, output.desc.layout),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+	wi::profiler::EndRange(range);
+	device->EventEnd(cmd);
+}
+void Visibility_Velocity(
+	const VisibilityResources& res,
+	const Texture& output,
+	CommandList cmd
+)
+{
+	device->EventBegin("Visibility_Velocity", cmd);
+	auto range = wi::profiler::BeginRangeGPU("Visibility_Velocity", cmd);
+
+	BindCommonResources(cmd);
+
+	{
+		GPUBarrier barriers[] = {
+			GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS),
+		};
+		device->Barrier(barriers, arraysize(barriers), cmd);
+	}
+
+	device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_VELOCITY], cmd);
+	device->BindUAV(&output, 0, cmd);
+	device->Dispatch(
+		(output.desc.width + 7u) / 8u,
+		(output.desc.height + 7u) / 8u,
+		1,
+		cmd
+	);
 
 	{
 		GPUBarrier barriers[] = {
