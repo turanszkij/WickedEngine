@@ -7768,7 +7768,7 @@ void Visibility_Prepare(
 
 	BindCommonResources(cmd);
 
-	if (res.bins.IsValid())
+	// Beginning barriers, clears:
 	{
 		barrier_stack.push_back(GPUBarrier::Buffer(&res.bins, ResourceState::CONSTANT_BUFFER | ResourceState::INDIRECT_ARGUMENT, ResourceState::UNORDERED_ACCESS));
 		barrier_stack.push_back(GPUBarrier::Buffer(&res.binned_pixels, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS));
@@ -7784,6 +7784,8 @@ void Visibility_Prepare(
 	}
 
 	// Resolve:
+	//	PrimitiveID -> depth, lineardepth
+	//	Binning classification
 	{
 		device->EventBegin("Resolve", cmd);
 		const bool msaa = input_primitiveID.GetDesc().sample_count > 1;
@@ -7835,7 +7837,6 @@ void Visibility_Prepare(
 			device->BindUAV(&unbind, 13, cmd);
 		}
 		device->BindUAV(&res.texture_roughness, 11, cmd); // repurposed roughness for shadertypes
-		device->BindUAV(&res.pixel_payload_1, 12, cmd);
 		device->BindUAV(&res.bins, 14, cmd);
 		barrier_stack_flush(cmd);
 
@@ -7861,7 +7862,6 @@ void Visibility_Prepare(
 			barrier_stack.push_back(GPUBarrier::Image(res.primitiveID_resolved, ResourceState::UNORDERED_ACCESS, res.primitiveID_resolved->desc.layout));
 		}
 		barrier_stack.push_back(GPUBarrier::Image(&res.texture_roughness, ResourceState::UNORDERED_ACCESS, res.texture_roughness.desc.layout));
-		barrier_stack.push_back(GPUBarrier::Memory(&res.pixel_payload_1));
 		barrier_stack.push_back(GPUBarrier::Memory(&res.bins));
 		barrier_stack_flush(cmd);
 

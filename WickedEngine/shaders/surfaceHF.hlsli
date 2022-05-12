@@ -798,7 +798,7 @@ struct Surface
 		float3 P1 = mul(inst.transform.GetMatrix(), float4(p1, 1)).xyz;
 		float3 P2 = mul(inst.transform.GetMatrix(), float4(p2, 1)).xyz;
 
-#ifndef SURFACE_LOAD_ENABLE_WIND
+#ifdef SURFACE_LOAD_ENABLE_WIND
 		[branch]
 		if (material.IsUsingWind())
 		{
