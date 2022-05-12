@@ -22,16 +22,19 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	const uint2 GTid = remap_lane_8x8(groupIndex);
 	const uint2 tile = unpack_pixel(binned_tiles[bin.offset + Gid.x]);
 	const uint2 pixel = tile * VISIBILITY_BLOCKSIZE + GTid;
-	if (texture_shadertypes[pixel] != bin.shaderType) // Because we bin whole tiles, we check if the current pixel matches the tile's shaderType
-	{
-		return;
-	}
 
 	const float2 uv = ((float2)pixel + 0.5) * GetCamera().internal_resolution_rcp;
 	const float2 clipspace = uv_to_clipspace(uv);
 	RayDesc ray = CreateCameraRay(clipspace);
 	float3 rayDirection_quad_x = QuadReadAcrossX(ray.Direction);
 	float3 rayDirection_quad_y = QuadReadAcrossY(ray.Direction);
+
+	// Because we bin whole tiles, we check if the current pixel matches the tile's shaderType
+	//	Note: do this only AFTER broadcasting with QuadRead functions!
+	if (texture_shadertypes[pixel] != bin.shaderType)
+	{
+		return;
+	}
 
 	uint primitiveID = texture_primitiveID[pixel];
 	PrimitiveID prim;

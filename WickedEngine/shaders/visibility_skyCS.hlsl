@@ -13,7 +13,9 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
 	uint2 GTid = remap_lane_8x8(groupIndex);
 	uint2 pixel = unpack_pixel(binned_tiles[bin.offset + Gid.x]) * VISIBILITY_BLOCKSIZE + GTid;
-	if (texture_shadertypes[pixel] != bin.shaderType) // Because we bin whole tiles, we check if the current pixel matches the tile's shaderType
+
+	// Because we bin whole tiles, we check if the current pixel matches the tile's shaderType
+	if (texture_shadertypes[pixel] != bin.shaderType)
 	{
 		return;
 	}
