@@ -61,6 +61,7 @@ void main(uint DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uint
 #endif // UNLIT
 
 #ifdef CLEARCOAT
+	// Clearcoat must write out the top layer's normal and roughness to match the specs:
 	output_normal[pixel] = encode_oct(surface.clearcoat.N);
 	output_roughness[pixel] = surface.clearcoat.roughness;
 #else
@@ -90,6 +91,7 @@ void main(uint DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uint
 #endif // SHEEN
 
 #ifdef CLEARCOAT
+	// Because clearcoat had written out the top layer for sampling, the bottom layer is passed in the payload for lighting:
 	output_pixel_payload_1[bin_data_index].y = pack_half2(encode_oct(surface.N));
 	output_pixel_payload_1[bin_data_index].z = pack_rgba(float4(surface.roughness, 0, 0, 0));
 #endif // CLEARCOAT

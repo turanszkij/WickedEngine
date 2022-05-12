@@ -1,5 +1,5 @@
 #define SHADOW_MASK_ENABLED
-#define DISABLE_DECALS
+#define DISABLE_DECALS // decals were applied in surface shader
 //#define DISABLE_VOXELGI
 //#define DISABLE_ENVMAPS
 #include "globals.hlsli"
