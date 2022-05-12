@@ -769,16 +769,6 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 	[branch]
 	if (GetFrame().lightarray_count > 0)
 	{
-		uint4 shadow_mask_packed = 0;
-		const bool shadow_mask_enabled = GetFrame().options & OPTION_BIT_SHADOW_MASK && GetCamera().texture_rtshadow_index >= 0;
-#ifdef SHADOW_MASK_ENABLED
-		[branch]
-		if (shadow_mask_enabled)
-		{
-			shadow_mask_packed = bindless_textures_uint4[GetCamera().texture_rtshadow_index][surface.pixel / 2];
-		}
-#endif // SHADOW_MASK_ENABLED
-
 		// Loop through light buckets in the tile:
 		const uint first_item = GetFrame().lightarray_offset;
 		const uint last_item = first_item + GetFrame().lightarray_count - 1;
@@ -815,8 +805,9 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 						continue; // static lights will be skipped (they are used in lightmap baking)
 					}
 
-					float shadow_mask = 1;
 #ifdef SHADOW_MASK_ENABLED
+					const bool shadow_mask_enabled = (GetFrame().options & OPTION_BIT_SHADOW_MASK) && GetCamera().texture_rtshadow_index >= 0;
+					float shadow_mask = 1;
 					[branch]
 					if (shadow_mask_enabled && light.IsCastingShadow())
 					{
@@ -825,7 +816,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 						{
 							uint mask_shift = (shadow_index % 4) * 8;
 							uint mask_bucket = shadow_index / 4;
-							uint mask = (shadow_mask_packed[mask_bucket] >> mask_shift) & 0xFF;
+							uint mask = (bindless_textures_uint4[GetCamera().texture_rtshadow_index][surface.pixel / 2][mask_bucket] >> mask_shift) & 0xFF;
 							if (mask == 0)
 							{
 								continue;
@@ -833,6 +824,8 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 							shadow_mask = mask / 255.0;
 						}
 					}
+#else
+					const float shadow_mask = 1;
 #endif // SHADOW_MASK_ENABLED
 
 					switch (light.GetType())
