@@ -144,9 +144,10 @@ struct ShaderMaterial
 // For binning shading based on shader types:
 struct ShaderTypeBin
 {
-	uint2 padding0;
+	uint shaderType;
 	uint offset;
 	uint count;
+	uint padding;
 
 	uint dispatchX;
 	uint dispatchY;

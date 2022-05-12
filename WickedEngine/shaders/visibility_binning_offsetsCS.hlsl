@@ -19,4 +19,5 @@ void main(uint3 DTid : SV_DispatchThreadID)
 	output_bins[DTid.x].dispatchY = 1;
 	output_bins[DTid.x].dispatchZ = 1;
 	output_bins[DTid.x].count = 0;
+	output_bins[DTid.x].shaderType = DTid.x;
 }
