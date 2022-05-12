@@ -9,34 +9,34 @@ Texture2DMS<uint> input_primitiveID : register(t0);
 Texture2D<uint> input_primitiveID : register(t0);
 #endif // VISIBILITY_MSAA
 
-RWTexture2D<float> output_depth_mip0 : register(u0);
-RWTexture2D<float> output_depth_mip1 : register(u1);
-RWTexture2D<float> output_depth_mip2 : register(u2);
-RWTexture2D<float> output_depth_mip3 : register(u3);
-RWTexture2D<float> output_depth_mip4 : register(u4);
+groupshared uint local_bin_mask;
 
-RWTexture2D<float> output_lineardepth_mip0 : register(u5);
-RWTexture2D<float> output_lineardepth_mip1 : register(u6);
-RWTexture2D<float> output_lineardepth_mip2 : register(u7);
-RWTexture2D<float> output_lineardepth_mip3 : register(u8);
-RWTexture2D<float> output_lineardepth_mip4 : register(u9);
+RWStructuredBuffer<ShaderTypeBin> output_bins : register(u0);
+RWStructuredBuffer<uint> output_binned_tiles : register(u1);
+RWTexture2D<uint> output_shadertypes : register(u2);
 
-RWTexture2D<unorm float> output_shadertypes : register(u11);
+RWTexture2D<float> output_depth_mip0 : register(u3);
+RWTexture2D<float> output_depth_mip1 : register(u4);
+RWTexture2D<float> output_depth_mip2 : register(u5);
+RWTexture2D<float> output_depth_mip3 : register(u6);
+RWTexture2D<float> output_depth_mip4 : register(u7);
+
+RWTexture2D<float> output_lineardepth_mip0 : register(u8);
+RWTexture2D<float> output_lineardepth_mip1 : register(u9);
+RWTexture2D<float> output_lineardepth_mip2 : register(u10);
+RWTexture2D<float> output_lineardepth_mip3 : register(u11);
+RWTexture2D<float> output_lineardepth_mip4 : register(u12);
 
 #ifdef VISIBILITY_MSAA
 RWTexture2D<uint> output_primitiveID : register(u13);
 #endif // VISIBILITY_MSAA
 
-RWStructuredBuffer<ShaderTypeBin> output_bins : register(u14);
-
-groupshared uint local_bin_counts[SHADERTYPE_BIN_COUNT + 1];
-
-[numthreads(16, 16, 1)]
-void main(uint2 DTid : SV_DispatchThreadID, uint2 GTid : SV_GroupThreadID, uint groupIndex : SV_GroupIndex)
+[numthreads(VISIBILITY_BLOCKSIZE, VISIBILITY_BLOCKSIZE, 1)]
+void main(uint2 DTid : SV_DispatchThreadID, uint2 Gid : SV_GroupID, uint2 GTid : SV_GroupThreadID, uint groupIndex : SV_GroupIndex)
 {
-	if (groupIndex < SHADERTYPE_BIN_COUNT + 1)
+	if (groupIndex == 0)
 	{
-		local_bin_counts[groupIndex] = 0;
+		local_bin_mask = 0;
 	}
 	GroupMemoryBarrierWithGroupSync();
 
@@ -72,22 +72,29 @@ void main(uint2 DTid : SV_DispatchThreadID, uint2 GTid : SV_GroupThreadID, uint 
 				tmp.xyz /= tmp.w;
 				depth = tmp.z;
 
-				InterlockedAdd(local_bin_counts[surface.material.shaderType], 1);
+				InterlockedOr(local_bin_mask, 1u << surface.material.shaderType);
 
-				output_shadertypes[pixel] = surface.material.shaderType / 255.0;
+				output_shadertypes[pixel] = surface.material.shaderType;
 			}
 		}
 		else
 		{
-			InterlockedAdd(local_bin_counts[SHADERTYPE_BIN_COUNT], 1);
-			output_shadertypes[pixel] = SHADERTYPE_BIN_COUNT / 255.0;
+			InterlockedOr(local_bin_mask, 1u << SHADERTYPE_BIN_COUNT);
+			output_shadertypes[pixel] = SHADERTYPE_BIN_COUNT;
 		}
 	}
 
 	GroupMemoryBarrierWithGroupSync();
+	uint tile_index = pack_pixel(Gid.xy);
 	if (groupIndex < SHADERTYPE_BIN_COUNT + 1)
 	{
-		InterlockedAdd(output_bins[groupIndex].count, local_bin_counts[groupIndex]);
+		if (local_bin_mask & (1u << groupIndex))
+		{
+			uint bin_tile_list_offset = groupIndex * GetCamera().visibility_tilecount_flat;
+			uint tile_offset = 0;
+			InterlockedAdd(output_bins[groupIndex].count, 1, tile_offset);
+			output_binned_tiles[bin_tile_list_offset + tile_offset] = tile_index;
+		}
 	}
 
 	// Downsample depths:

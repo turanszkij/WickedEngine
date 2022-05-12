@@ -822,7 +822,6 @@ void RenderPath3D::Render() const
 		wi::renderer::Visibility_Prepare(
 			visibilityResources,
 			rtPrimitiveID_render,
-			rtMain,
 			cmd
 		);
 

@@ -580,12 +580,8 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 
 }
 
-inline void TiledLighting(inout Surface surface, inout Lighting lighting)
+inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint flatTileIndex)
 {
-	const uint2 tileIndex = uint2(floor(surface.pixel / TILED_CULLING_BLOCKSIZE));
-	const uint flatTileIndex = flatten2D(tileIndex, GetCamera().entity_culling_tilecount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
-
-
 #ifndef DISABLE_DECALS
 	[branch]
 	if (GetFrame().decalarray_count > 0)
@@ -874,6 +870,16 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 		surface.flags |= SURFACE_FLAG_GI_APPLIED;
 	}
 
+}
+inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint2 tileIndex)
+{
+	const uint flatTileIndex = flatten2D(tileIndex, GetCamera().entity_culling_tilecount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
+	TiledLighting(surface, lighting, flatTileIndex);
+}
+inline void TiledLighting(inout Surface surface, inout Lighting lighting)
+{
+	const uint2 tileIndex = uint2(floor(surface.pixel / TILED_CULLING_BLOCKSIZE));
+	TiledLighting(surface, lighting, tileIndex);
 }
 
 inline void ApplyFog(in float distance, float3 P, float3 V, inout float4 color)

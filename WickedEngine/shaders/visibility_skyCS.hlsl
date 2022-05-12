@@ -3,17 +3,20 @@
 #include "skyHF.hlsli"
 
 ConstantBuffer<ShaderTypeBin> bin : register(b10);
-StructuredBuffer<uint> binned_pixels : register(t0);
+StructuredBuffer<uint> binned_tiles : register(t0);
+Texture2D<uint> texture_shadertypes : register(t1);
 
 RWTexture2D<float4> output : register(u0);
 
-[numthreads(64, 1, 1)]
-void main(uint3 DTid : SV_DispatchThreadID)
+[numthreads(VISIBILITY_BLOCKSIZE, VISIBILITY_BLOCKSIZE, 1)]
+void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
-	if (DTid.x >= bin.count)
+	uint2 GTid = remap_lane_8x8(groupIndex);
+	uint2 pixel = unpack_pixel(binned_tiles[bin.offset + Gid.x]) * VISIBILITY_BLOCKSIZE + GTid;
+	if (texture_shadertypes[pixel] != bin.shaderType) // Because we bin whole tiles, we check if the current pixel matches the tile's shaderType
+	{
 		return;
-
-	uint2 pixel = unpack_pixel(binned_pixels[bin.offset + DTid.x]);
+	}
 
 	const float2 uv = ((float2)pixel + 0.5) * GetCamera().internal_resolution_rcp;
 	const float2 clipspace = uv_to_clipspace(uv);

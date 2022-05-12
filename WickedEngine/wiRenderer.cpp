@@ -1039,8 +1039,7 @@ void LoadShaders()
 
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_RESOLVE], "visibility_resolveCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_RESOLVE_MSAA], "visibility_resolveCS_MSAA.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_BINNING_OFFSETS], "visibility_binning_offsetsCS.cso"); });
-	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_BINNING_PLACEMENT], "visibility_binning_placementCS.cso"); });
+	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_INDIRECT_PREPARE], "visibility_indirect_prepareCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_SKY], "visibility_skyCS.cso"); });
 	wi::jobsystem::Execute(ctx, [](wi::jobsystem::JobArgs args) { LoadShader(ShaderStage::CS, shaders[CSTYPE_VISIBILITY_VELOCITY], "visibility_velocityCS.cso"); });
 
@@ -7444,6 +7443,8 @@ void BindCameraCB(
 
 	cb.entity_culling_tilecount = GetEntityCullingTileCount(cb.internal_resolution);
 	cb.sample_count = camera.sample_count;
+	cb.visibility_tilecount = GetVisibilityTileCount(cb.internal_resolution);
+	cb.visibility_tilecount_flat = cb.visibility_tilecount.x * cb.visibility_tilecount.y;
 
 	cb.texture_primitiveID_index = camera.texture_primitiveID_index;
 	cb.texture_depth_index = camera.texture_depth_index;
@@ -7706,10 +7707,11 @@ void ComputeShadingRateClassification(
 
 void CreateVisibilityResources(VisibilityResources& res, XMUINT2 resolution)
 {
+	res.tile_count = GetVisibilityTileCount(resolution);
 	{
 		GPUBufferDesc desc;
 		desc.stride = sizeof(ShaderTypeBin);
-		desc.size = desc.stride * (MaterialComponent::SHADERTYPE_COUNT + 1); // +1 for sky pixels
+		desc.size = desc.stride * (MaterialComponent::SHADERTYPE_COUNT + 1); // +1 for sky
 		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS | BindFlag::CONSTANT_BUFFER;
 		desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED | ResourceMiscFlag::INDIRECT_ARGS;
 		bool success = device->CreateBuffer(&desc, nullptr, &res.bins);
@@ -7717,28 +7719,12 @@ void CreateVisibilityResources(VisibilityResources& res, XMUINT2 resolution)
 		device->SetName(&res.bins, "res.bins");
 
 		desc.stride = sizeof(uint);
-		desc.size = desc.stride * resolution.x * resolution.y;
+		desc.size = desc.stride * res.tile_count.x * res.tile_count.y * (MaterialComponent::SHADERTYPE_COUNT + 1); // +1 for sky
 		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 		desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
-		success = device->CreateBuffer(&desc, nullptr, &res.binned_pixels);
+		success = device->CreateBuffer(&desc, nullptr, &res.binned_tiles);
 		assert(success);
-		device->SetName(&res.binned_pixels, "res.binned_pixels");
-
-		desc.stride = sizeof(uint4);
-		desc.size = desc.stride * resolution.x * resolution.y;
-		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-		desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
-		success = device->CreateBuffer(&desc, nullptr, &res.pixel_payload_0);
-		assert(success);
-		device->SetName(&res.pixel_payload_0, "res.pixel_payload_0");
-
-		desc.stride = sizeof(uint4);
-		desc.size = desc.stride * resolution.x * resolution.y;
-		desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-		desc.misc_flags = ResourceMiscFlag::BUFFER_STRUCTURED;
-		success = device->CreateBuffer(&desc, nullptr, &res.pixel_payload_1);
-		assert(success);
-		device->SetName(&res.pixel_payload_1, "res.pixel_payload_1");
+		device->SetName(&res.binned_tiles, "res.binned_tiles");
 	}
 	{
 		TextureDesc desc;
@@ -7754,12 +7740,21 @@ void CreateVisibilityResources(VisibilityResources& res, XMUINT2 resolution)
 		desc.format = Format::R8_UNORM;
 		device->CreateTexture(&desc, nullptr, &res.texture_roughness);
 		device->SetName(&res.texture_roughness, "res.texture_roughness");
+
+		desc.format = Format::R8_UINT;
+		device->CreateTexture(&desc, nullptr, &res.texture_shadertypes);
+		device->SetName(&res.texture_shadertypes, "res.texture_shadertypes");
+
+		desc.format = Format::R32G32B32A32_UINT;
+		device->CreateTexture(&desc, nullptr, &res.texture_payload_0);
+		device->SetName(&res.texture_payload_0, "res.texture_payload_0");
+		device->CreateTexture(&desc, nullptr, &res.texture_payload_1);
+		device->SetName(&res.texture_payload_1, "res.texture_payload_1");
 	}
 }
 void Visibility_Prepare(
 	const VisibilityResources& res,
 	const Texture& input_primitiveID, // can be MSAA
-	const Texture& output,
 	CommandList cmd
 )
 {
@@ -7771,12 +7766,10 @@ void Visibility_Prepare(
 	// Beginning barriers, clears:
 	{
 		barrier_stack.push_back(GPUBarrier::Buffer(&res.bins, ResourceState::CONSTANT_BUFFER | ResourceState::INDIRECT_ARGUMENT, ResourceState::UNORDERED_ACCESS));
-		barrier_stack.push_back(GPUBarrier::Buffer(&res.binned_pixels, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS));
-		barrier_stack.push_back(GPUBarrier::Buffer(&res.pixel_payload_0, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS));
-		barrier_stack.push_back(GPUBarrier::Buffer(&res.pixel_payload_1, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS));
+		barrier_stack.push_back(GPUBarrier::Buffer(&res.binned_tiles, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS));
+		barrier_stack.push_back(GPUBarrier::Image(&res.texture_shadertypes, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS));
 		barrier_stack.push_back(GPUBarrier::Image(&res.texture_normals, res.texture_normals.desc.layout, ResourceState::UNORDERED_ACCESS));
 		barrier_stack.push_back(GPUBarrier::Image(&res.texture_roughness, res.texture_roughness.desc.layout, ResourceState::UNORDERED_ACCESS));
-		barrier_stack.push_back(GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS));
 		barrier_stack_flush(cmd);
 		device->ClearUAV(&res.bins, 0, cmd);
 		barrier_stack.push_back(GPUBarrier::Memory(&res.bins));
@@ -7791,41 +7784,45 @@ void Visibility_Prepare(
 		const bool msaa = input_primitiveID.GetDesc().sample_count > 1;
 
 		device->BindResource(&input_primitiveID, 0, cmd);
-		GPUResource unbind;
 
+		device->BindUAV(&res.bins, 0, cmd);
+		device->BindUAV(&res.binned_tiles, 1, cmd);
+		device->BindUAV(&res.texture_shadertypes, 2, cmd);
+
+		GPUResource unbind;
 		if (res.depthbuffer)
 		{
-			device->BindUAV(res.depthbuffer, 0, cmd, 0);
-			device->BindUAV(res.depthbuffer, 1, cmd, 1);
-			device->BindUAV(res.depthbuffer, 2, cmd, 2);
-			device->BindUAV(res.depthbuffer, 3, cmd, 3);
-			device->BindUAV(res.depthbuffer, 4, cmd, 4);
+			device->BindUAV(res.depthbuffer, 3, cmd, 0);
+			device->BindUAV(res.depthbuffer, 4, cmd, 1);
+			device->BindUAV(res.depthbuffer, 5, cmd, 2);
+			device->BindUAV(res.depthbuffer, 6, cmd, 3);
+			device->BindUAV(res.depthbuffer, 7, cmd, 4);
 			barrier_stack.push_back(GPUBarrier::Image(res.depthbuffer, res.depthbuffer->desc.layout, ResourceState::UNORDERED_ACCESS));
 		}
 		else
 		{
-			device->BindUAV(&unbind, 0, cmd);
-			device->BindUAV(&unbind, 1, cmd);
-			device->BindUAV(&unbind, 2, cmd);
 			device->BindUAV(&unbind, 3, cmd);
 			device->BindUAV(&unbind, 4, cmd);
+			device->BindUAV(&unbind, 5, cmd);
+			device->BindUAV(&unbind, 6, cmd);
+			device->BindUAV(&unbind, 7, cmd);
 		}
 		if (res.lineardepth)
 		{
-			device->BindUAV(res.lineardepth, 5, cmd, 0);
-			device->BindUAV(res.lineardepth, 6, cmd, 1);
-			device->BindUAV(res.lineardepth, 7, cmd, 2);
-			device->BindUAV(res.lineardepth, 8, cmd, 3);
-			device->BindUAV(res.lineardepth, 9, cmd, 4);
+			device->BindUAV(res.lineardepth, 8, cmd, 0);
+			device->BindUAV(res.lineardepth, 9, cmd, 1);
+			device->BindUAV(res.lineardepth, 10, cmd, 2);
+			device->BindUAV(res.lineardepth, 11, cmd, 3);
+			device->BindUAV(res.lineardepth, 12, cmd, 4);
 			barrier_stack.push_back(GPUBarrier::Image(res.lineardepth, res.lineardepth->desc.layout, ResourceState::UNORDERED_ACCESS));
 		}
 		else
 		{
-			device->BindUAV(&unbind, 5, cmd);
-			device->BindUAV(&unbind, 6, cmd);
-			device->BindUAV(&unbind, 7, cmd);
 			device->BindUAV(&unbind, 8, cmd);
 			device->BindUAV(&unbind, 9, cmd);
+			device->BindUAV(&unbind, 10, cmd);
+			device->BindUAV(&unbind, 11, cmd);
+			device->BindUAV(&unbind, 12, cmd);
 		}
 		if (res.primitiveID_resolved)
 		{
@@ -7836,15 +7833,13 @@ void Visibility_Prepare(
 		{
 			device->BindUAV(&unbind, 13, cmd);
 		}
-		device->BindUAV(&res.texture_roughness, 11, cmd); // repurposed roughness for shadertypes
-		device->BindUAV(&res.bins, 14, cmd);
 		barrier_stack_flush(cmd);
 
 		device->BindComputeShader(&shaders[msaa ? CSTYPE_VISIBILITY_RESOLVE_MSAA : CSTYPE_VISIBILITY_RESOLVE], cmd);
 
 		device->Dispatch(
-			(input_primitiveID.desc.width + 15u) / 16u,
-			(input_primitiveID.desc.height + 15u) / 16u,
+			res.tile_count.x,
+			res.tile_count.y,
 			1,
 			cmd
 		);
@@ -7861,33 +7856,18 @@ void Visibility_Prepare(
 		{
 			barrier_stack.push_back(GPUBarrier::Image(res.primitiveID_resolved, ResourceState::UNORDERED_ACCESS, res.primitiveID_resolved->desc.layout));
 		}
-		barrier_stack.push_back(GPUBarrier::Image(&res.texture_roughness, ResourceState::UNORDERED_ACCESS, res.texture_roughness.desc.layout));
 		barrier_stack.push_back(GPUBarrier::Memory(&res.bins));
 		barrier_stack_flush(cmd);
 
 		device->EventEnd(cmd);
 	}
 
-	// Binning
+	// Indirect prepare:
 	{
-		device->EventBegin("Binning Offsets", cmd);
-		device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_BINNING_OFFSETS], cmd);
+		device->EventBegin("Indirect Prepare", cmd);
+		device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_INDIRECT_PREPARE], cmd);
 		device->BindUAV(&res.bins, 0, cmd);
 		device->Dispatch(1, 1, 1, cmd);
-		barrier_stack.push_back(GPUBarrier::Memory(&res.bins));
-		barrier_stack_flush(cmd);
-		device->EventEnd(cmd);
-
-		device->EventBegin("Binning Placement", cmd);
-		device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_BINNING_PLACEMENT], cmd);
-		device->BindResource(&res.texture_roughness, 0, cmd); // repurposed roughness for shadertypes
-		device->BindUAV(&res.binned_pixels, 1, cmd);
-		device->Dispatch(
-			(output.desc.width + 15u) / 16u,
-			(output.desc.height + 15u) / 16u,
-			1,
-			cmd
-		);
 		device->EventEnd(cmd);
 	}
 
@@ -7906,35 +7886,38 @@ void Visibility_Surface(
 	BindCommonResources(cmd);
 
 	// Sync up with Visibility_Prepare
+	barrier_stack.push_back(GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS));
 	barrier_stack.push_back(GPUBarrier::Image(&res.texture_roughness, res.texture_roughness.desc.layout, ResourceState::UNORDERED_ACCESS));
 	barrier_stack.push_back(GPUBarrier::Buffer(&res.bins, ResourceState::UNORDERED_ACCESS, ResourceState::CONSTANT_BUFFER | ResourceState::INDIRECT_ARGUMENT));
-	barrier_stack.push_back(GPUBarrier::Buffer(&res.binned_pixels, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
-	barrier_stack.push_back(GPUBarrier::Memory(&res.pixel_payload_0));
-	barrier_stack.push_back(GPUBarrier::Memory(&res.pixel_payload_1));
+	barrier_stack.push_back(GPUBarrier::Buffer(&res.binned_tiles, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
+	barrier_stack.push_back(GPUBarrier::Image(&res.texture_shadertypes, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
+	barrier_stack.push_back(GPUBarrier::Image(&res.texture_payload_0, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS));
+	barrier_stack.push_back(GPUBarrier::Image(&res.texture_payload_1, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS));
 	barrier_stack_flush(cmd);
 
-	device->BindResource(&res.binned_pixels, 0, cmd);
+	device->BindResource(&res.binned_tiles, 0, cmd);
+	device->BindResource(&res.texture_shadertypes, 1, cmd);
 	device->BindUAV(&output, 0, cmd);
-
-	// sky dispatch:
-	device->EventBegin("Sky", cmd);
-	device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SKY], cmd);
-	device->BindConstantBuffer(&res.bins, 10, cmd, MaterialComponent::SHADERTYPE_COUNT * sizeof(ShaderTypeBin));
-	device->DispatchIndirect(&res.bins, MaterialComponent::SHADERTYPE_COUNT * sizeof(ShaderTypeBin) + offsetof(ShaderTypeBin, dispatchX), cmd);
-	device->EventEnd(cmd);
+	device->BindUAV(&res.texture_normals, 1, cmd);
+	device->BindUAV(&res.texture_roughness, 2, cmd);
+	device->BindUAV(&res.texture_payload_0, 3, cmd);
+	device->BindUAV(&res.texture_payload_1, 4, cmd);
 
 	// surface dispatches per material type:
 	device->EventBegin("Surface parameters", cmd);
-	device->BindUAV(&res.texture_normals, 1, cmd);
-	device->BindUAV(&res.texture_roughness, 2, cmd);
-	device->BindUAV(&res.pixel_payload_0, 3, cmd);
-	device->BindUAV(&res.pixel_payload_1, 4, cmd);
 	for (uint i = 0; i < MaterialComponent::SHADERTYPE_COUNT; ++i)
 	{
 		device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SURFACE_PERMUTATION_BEGIN + i], cmd);
 		device->BindConstantBuffer(&res.bins, 10, cmd, i * sizeof(ShaderTypeBin));
 		device->DispatchIndirect(&res.bins, i * sizeof(ShaderTypeBin) + offsetof(ShaderTypeBin, dispatchX), cmd);
 	}
+	device->EventEnd(cmd);
+
+	// sky dispatch:
+	device->EventBegin("Sky", cmd);
+	device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SKY], cmd);
+	device->BindConstantBuffer(&res.bins, 10, cmd, MaterialComponent::SHADERTYPE_COUNT * sizeof(ShaderTypeBin));
+	device->DispatchIndirect(&res.bins, MaterialComponent::SHADERTYPE_COUNT * sizeof(ShaderTypeBin) + offsetof(ShaderTypeBin, dispatchX), cmd);
 	device->EventEnd(cmd);
 
 	// Ending barriers:
@@ -7957,18 +7940,10 @@ void Visibility_Shade(
 
 	BindCommonResources(cmd);
 
-	// Sync up with Visibility_Surface
-	{
-		GPUBarrier barriers[] = {
-			GPUBarrier::Buffer(&res.pixel_payload_0, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
-			GPUBarrier::Buffer(&res.pixel_payload_1, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE_COMPUTE),
-		};
-		device->Barrier(barriers, arraysize(barriers), cmd);
-	}
-
-	device->BindResource(&res.binned_pixels, 0, cmd);
-	device->BindResource(&res.pixel_payload_0, 1, cmd);
-	device->BindResource(&res.pixel_payload_1, 2, cmd);
+	device->BindResource(&res.binned_tiles, 0, cmd);
+	device->BindResource(&res.texture_shadertypes, 1, cmd);
+	device->BindResource(&res.texture_payload_0, 2, cmd);
+	device->BindResource(&res.texture_payload_1, 3, cmd);
 	device->BindUAV(&output, 0, cmd);
 
 	// shading dispatches per material type:

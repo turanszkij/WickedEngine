@@ -505,6 +505,8 @@ static const uint TILED_CULLING_BLOCKSIZE = 16;
 static const uint TILED_CULLING_THREADSIZE = 8;
 static const uint TILED_CULLING_GRANULARITY = TILED_CULLING_BLOCKSIZE / TILED_CULLING_THREADSIZE;
 
+static const uint VISIBILITY_BLOCKSIZE = 8;
+
 static const int impostorCaptureAngles = 36;
 
 // These option bits can be read from options constant buffer value:
@@ -638,6 +640,10 @@ struct CameraCB
 
 	uint3 entity_culling_tilecount;
 	uint sample_count;
+
+	uint2 visibility_tilecount;
+	uint visibility_tilecount_flat;
+	uint padding;
 
 	int texture_primitiveID_index;
 	int texture_depth_index;

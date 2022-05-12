@@ -7,29 +7,31 @@
 #include "objectHF.hlsli"
 
 ConstantBuffer<ShaderTypeBin> bin : register(b10);
-StructuredBuffer<uint> binned_pixels : register(t0);
+StructuredBuffer<uint> binned_tiles : register(t0);
+Texture2D<uint> texture_shadertypes : register(t1);
 
 RWTexture2D<float4> output : register(u0);
 RWTexture2D<float2> output_normal : register(u1);
 RWTexture2D<unorm float> output_roughness : register(u2);
-RWStructuredBuffer<uint4> output_pixel_payload_0 : register(u3);
-RWStructuredBuffer<uint4> output_pixel_payload_1 : register(u4);
+RWTexture2D<uint4> output_payload_0 : register(u3);
+RWTexture2D<uint4> output_payload_1 : register(u4);
 
-[numthreads(64, 1, 1)]
-void main(uint DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uint3 Gid : SV_GroupID)
+[numthreads(VISIBILITY_BLOCKSIZE, VISIBILITY_BLOCKSIZE, 1)]
+void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 {
-	if (DTid.x >= bin.count)
+	const uint2 GTid = remap_lane_8x8(groupIndex);
+	const uint2 tile = unpack_pixel(binned_tiles[bin.offset + Gid.x]);
+	const uint2 pixel = tile * VISIBILITY_BLOCKSIZE + GTid;
+	if (texture_shadertypes[pixel] != bin.shaderType) // Because we bin whole tiles, we check if the current pixel matches the tile's shaderType
+	{
 		return;
-
-	const uint bin_data_index = bin.offset + DTid.x;
-	uint2 pixel = unpack_pixel(binned_pixels[bin_data_index]);
+	}
 
 	const float2 uv = ((float2)pixel + 0.5) * GetCamera().internal_resolution_rcp;
 	const float2 clipspace = uv_to_clipspace(uv);
 	RayDesc ray = CreateCameraRay(clipspace);
-
-	float3 rayDirection_quad_x = CreateCameraRay(uv_to_clipspace(((float2)pixel + float2(1, 0) + 0.5) * GetCamera().internal_resolution_rcp)).Direction;
-	float3 rayDirection_quad_y = CreateCameraRay(uv_to_clipspace(((float2)pixel + float2(0, 1) + 0.5) * GetCamera().internal_resolution_rcp)).Direction;
+	float3 rayDirection_quad_x = QuadReadAcrossX(ray.Direction);
+	float3 rayDirection_quad_y = QuadReadAcrossY(ray.Direction);
 
 	uint primitiveID = texture_primitiveID[pixel];
 	PrimitiveID prim;
@@ -50,7 +52,7 @@ void main(uint DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uint
 	{
 		Lighting lighting;
 		lighting.create(0, 0, 0, 0);
-		TiledLighting(surface, lighting);
+		TiledLighting(surface, lighting, tile / 2);
 	}
 
 #ifdef UNLIT
@@ -76,26 +78,26 @@ void main(uint DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uint
 	payload_0.y = pack_rgba(float4(GAMMA(surface.f0), surface.roughness));
 	payload_0.z = pack_half2(encode_oct(surface.N));
 	payload_0.w = Pack_R11G11B10_FLOAT(surface.emissiveColor);
-	output_pixel_payload_0[bin_data_index] = payload_0;
+	output_payload_0[pixel] = payload_0;
 
 
 	// Pack secondary payload (surface parameters that are varying per shader type):
 
 #ifdef ANISOTROPIC
-	output_pixel_payload_1[bin_data_index].xy = pack_half4(surface.T);
+	output_payload_1[pixel].xy = pack_half4(surface.T);
 #endif // ANISOTROPIC
 
 #ifdef PLANARREFLECTION
-	output_pixel_payload_1[bin_data_index].x = pack_half2(surface.bumpColor.rg);
+	output_payload_1[pixel].x = pack_half2(surface.bumpColor.rg);
 #endif
 
 #ifdef SHEEN
-	output_pixel_payload_1[bin_data_index].x = pack_rgba(float4(surface.sheen.color, surface.sheen.roughness));
+	output_payload_1[pixel].x = pack_rgba(float4(surface.sheen.color, surface.sheen.roughness));
 #endif // SHEEN
 
 #ifdef CLEARCOAT
-	output_pixel_payload_1[bin_data_index].y = pack_half2(encode_oct(surface.clearcoat.N));
-	output_pixel_payload_1[bin_data_index].z = pack_rgba(float4(surface.clearcoat.roughness, 0, 0, 0));
+	output_payload_1[pixel].y = pack_half2(encode_oct(surface.clearcoat.N));
+	output_payload_1[pixel].z = pack_rgba(float4(surface.clearcoat.roughness, 0, 0, 0));
 #endif // CLEARCOAT
 
 }

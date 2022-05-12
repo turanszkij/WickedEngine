@@ -20,13 +20,19 @@ namespace wi::renderer
 	{
 		return (userStencilRef << 4) | static_cast<uint8_t>(engineStencilRef);
 	}
-
 	inline XMUINT3 GetEntityCullingTileCount(XMUINT2 internalResolution)
 	{
 		return XMUINT3(
 			(internalResolution.x + TILED_CULLING_BLOCKSIZE - 1) / TILED_CULLING_BLOCKSIZE,
 			(internalResolution.y + TILED_CULLING_BLOCKSIZE - 1) / TILED_CULLING_BLOCKSIZE,
 			1
+		);
+	}
+	inline XMUINT2 GetVisibilityTileCount(XMUINT2 internalResolution)
+	{
+		return XMUINT2(
+			(internalResolution.x + VISIBILITY_BLOCKSIZE - 1) / VISIBILITY_BLOCKSIZE,
+			(internalResolution.y + VISIBILITY_BLOCKSIZE - 1) / VISIBILITY_BLOCKSIZE
 		);
 	}
 
@@ -311,10 +317,12 @@ namespace wi::renderer
 
 	struct VisibilityResources
 	{
+		XMUINT2 tile_count = {};
 		wi::graphics::GPUBuffer bins;
-		wi::graphics::GPUBuffer binned_pixels;
-		wi::graphics::GPUBuffer pixel_payload_0;
-		wi::graphics::GPUBuffer pixel_payload_1;
+		wi::graphics::GPUBuffer binned_tiles;
+		wi::graphics::Texture texture_shadertypes;
+		wi::graphics::Texture texture_payload_0;
+		wi::graphics::Texture texture_payload_1;
 		wi::graphics::Texture texture_normals;
 		wi::graphics::Texture texture_roughness;
 
@@ -327,7 +335,6 @@ namespace wi::renderer
 	void Visibility_Prepare(
 		const VisibilityResources& res,
 		const wi::graphics::Texture& input_primitiveID, // can be MSAA
-		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd
 	);
 	void Visibility_Surface(
