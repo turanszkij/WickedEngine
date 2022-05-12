@@ -580,9 +580,9 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 
 }
 
-inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint flatTileIndex)
+
+inline void TiledDecals(inout Surface surface, uint flatTileIndex)
 {
-#ifndef DISABLE_DECALS
 	[branch]
 	if (GetFrame().decalarray_count > 0)
 	{
@@ -606,8 +606,10 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 		{
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 
+#ifndef ENTITY_TILE_UNIFORM
 			// This is the wave scalarizer from Improved Culling - Siggraph 2017 [Drobot]:
 			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
+#endif // ENTITY_TILE_UNIFORM
 
 			[loop]
 			while (bucket_bits != 0)
@@ -647,10 +649,10 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 						decalColor.a *= edgeBlend;
 						decalColor *= decal.GetColor();
 						// apply emissive:
-						lighting.direct.specular += max(0, decalColor.rgb * decal.GetEmissive() * edgeBlend);
+						surface.emissiveColor += max(0, decalColor.rgb * decal.GetEmissive() * edgeBlend);
 						// perform manual blending of decals:
 						//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
-						decalAccumulation.rgb = mad(1 - decalAccumulation.a, decalColor.a*decalColor.rgb, decalAccumulation.rgb);
+						decalAccumulation.rgb = mad(1 - decalAccumulation.a, decalColor.a * decalColor.rgb, decalAccumulation.rgb);
 						decalAccumulation.a = mad(1 - decalColor.a, decalAccumulation.a, decalColor.a);
 						[branch]
 						if (decalAccumulation.a >= 1.0)
@@ -673,8 +675,13 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 
 		surface.albedo.rgb = lerp(surface.albedo.rgb, decalAccumulation.rgb, decalAccumulation.a);
 	}
-#endif // DISABLE_DECALS
+}
 
+inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint flatTileIndex)
+{
+#ifndef DISABLE_DECALS
+	TiledDecals(surface, flatTileIndex);
+#endif // DISABLE_DECALS
 
 #ifndef DISABLE_ENVMAPS
 	// Apply environment maps:
@@ -694,8 +701,10 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 		{
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 
+#ifndef ENTITY_TILE_UNIFORM
 			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
 			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
+#endif // ENTITY_TILE_UNIFORM
 
 			[loop]
 			while (bucket_bits != 0)
@@ -780,8 +789,10 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint f
 		{
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 
+#ifndef ENTITY_TILE_UNIFORM
 			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
 			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
+#endif // ENTITY_TILE_UNIFORM
 
 			[loop]
 			while (bucket_bits != 0)
@@ -1356,11 +1367,6 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #endif // OBJECTSHADER_USE_ATLAS
 
 
-#ifdef OBJECTSHADER_USE_EMISSIVE
-	ApplyEmissive(surface, lighting);
-#endif // OBJECTSHADER_USE_EMISSIVE
-
-
 #ifdef PLANARREFLECTION
 	lighting.indirect.specular += PlanarReflection(surface, bumpColor.rg) * surface.F;
 #endif
@@ -1374,6 +1380,11 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #ifdef TILEDFORWARD
 	TiledLighting(surface, lighting);
 #endif // TILEDFORWARD
+
+
+#ifdef OBJECTSHADER_USE_EMISSIVE
+	ApplyEmissive(surface, lighting);
+#endif // OBJECTSHADER_USE_EMISSIVE
 
 
 #ifndef WATER

@@ -2,6 +2,7 @@
 #define DISABLE_DECALS // decals were applied in surface shader
 //#define DISABLE_VOXELGI
 //#define DISABLE_ENVMAPS
+#define ENTITY_TILE_UNIFORM
 #include "globals.hlsli"
 #include "ShaderInterop_Renderer.h"
 #include "raytracingHF.hlsli"

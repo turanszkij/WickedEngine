@@ -1,5 +1,6 @@
 #define SURFACE_LOAD_QUAD_DERIVATIVES
 #define SURFACE_LOAD_ENABLE_WIND
+#define ENTITY_TILE_UNIFORM
 #include "globals.hlsli"
 #include "ShaderInterop_Renderer.h"
 #include "raytracingHF.hlsli"
@@ -31,6 +32,7 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
 	// Because we bin whole tiles, we check if the current pixel matches the tile's shaderType
 	//	Note: do this only AFTER broadcasting with QuadRead functions!
+	[branch]
 	if (texture_shadertypes[pixel] != bin.shaderType)
 	{
 		return;
@@ -51,12 +53,8 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	surface.pixel = pixel.xy;
 	surface.screenUV = uv;
 
-	// decals only, lighting is not used:
-	{
-		Lighting lighting;
-		lighting.create(0, 0, 0, 0);
-		TiledLighting(surface, lighting, tile / 2);
-	}
+	TiledDecals(surface, flatten2D(tile / 2, GetCamera().entity_culling_tilecount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT);
+
 
 #ifdef UNLIT
 	float4 color = float4(surface.albedo, 1);
