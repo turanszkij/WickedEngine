@@ -60,6 +60,7 @@ void main(uint DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uint
 	return;
 #endif // UNLIT
 
+	// Write out sampleable attributes for post processing into textures:
 #ifdef CLEARCOAT
 	// Clearcoat must write out the top layer's normal and roughness to match the specs:
 	output_normal[pixel] = encode_oct(surface.clearcoat.N);
@@ -69,14 +70,16 @@ void main(uint DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uint
 	output_roughness[pixel] = surface.roughness;
 #endif // CLEARCOAT
 
-	output_pixel_payload_0[bin_data_index].x = pack_half2(surface.bary);
-	output_pixel_payload_0[bin_data_index].y = Pack_R11G11B10_FLOAT(surface.albedo);
-	output_pixel_payload_0[bin_data_index].z = pack_rgba(float4(GAMMA(surface.f0), surface.occlusion));
-	output_pixel_payload_0[bin_data_index].w = Pack_R11G11B10_FLOAT(surface.emissiveColor);
+	// Pack primary payload for shading:
+	uint4 payload_0;
+	payload_0.x = pack_rgba(float4(GAMMA(surface.albedo), surface.occlusion));
+	payload_0.y = pack_rgba(float4(GAMMA(surface.f0), surface.roughness));
+	payload_0.z = pack_half2(encode_oct(surface.N));
+	payload_0.w = Pack_R11G11B10_FLOAT(surface.emissiveColor);
+	output_pixel_payload_0[bin_data_index] = payload_0;
 
 
-
-	// Pack surface parameters that are varying per shader type:
+	// Pack secondary payload (surface parameters that are varying per shader type):
 
 #ifdef ANISOTROPIC
 	output_pixel_payload_1[bin_data_index].xy = pack_half4(surface.T);
@@ -91,9 +94,8 @@ void main(uint DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uint
 #endif // SHEEN
 
 #ifdef CLEARCOAT
-	// Because clearcoat had written out the top layer for sampling, the bottom layer is passed in the payload for lighting:
-	output_pixel_payload_1[bin_data_index].y = pack_half2(encode_oct(surface.N));
-	output_pixel_payload_1[bin_data_index].z = pack_rgba(float4(surface.roughness, 0, 0, 0));
+	output_pixel_payload_1[bin_data_index].y = pack_half2(encode_oct(surface.clearcoat.N));
+	output_pixel_payload_1[bin_data_index].z = pack_rgba(float4(surface.clearcoat.roughness, 0, 0, 0));
 #endif // CLEARCOAT
 
 }

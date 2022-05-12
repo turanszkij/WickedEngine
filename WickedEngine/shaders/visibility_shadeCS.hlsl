@@ -25,6 +25,8 @@ void main(uint DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uint
 	uint2 pixel = unpack_pixel(binned_pixels[bin_data_index]);
 
 	const float2 uv = ((float2)pixel + 0.5) * GetCamera().internal_resolution_rcp;
+	const float2 clipspace = uv_to_clipspace(uv);
+	RayDesc ray = CreateCameraRay(clipspace);
 
 	uint primitiveID = texture_primitiveID[pixel];
 	PrimitiveID prim;
@@ -33,30 +35,28 @@ void main(uint DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uint
 	Surface surface;
 	surface.init();
 
-	surface.bary = unpack_half2(input_pixel_payload_0[bin_data_index].x);
-
 	[branch]
-	if (!surface.load(prim, surface.bary))
+	if (!surface.load(prim, ray.Origin, ray.Direction))
 	{
 		return;
 	}
 
-	const float depth = texture_depth[pixel];
-	surface.P = reconstruct_position(uv, depth);
-	surface.V = GetCamera().position - surface.P;
-	surface.hit_depth = length(surface.V);
-	surface.V /= surface.hit_depth;
-
 	surface.pixel = pixel.xy;
 	surface.screenUV = uv;
-	surface.albedo = Unpack_R11G11B10_FLOAT(input_pixel_payload_0[bin_data_index].y);
+
+	// Unpack primary payload:
+	uint4 payload_0 = input_pixel_payload_0[bin_data_index];
+	float4 data0 = unpack_rgba(payload_0.x);
+	surface.albedo = DEGAMMA(data0.rgb);
+	surface.occlusion = data0.a;
+	float4 data1 = unpack_rgba(payload_0.y);
+	surface.f0 = DEGAMMA(data1.rgb);
+	surface.roughness = data1.a;
+	surface.N = decode_oct(unpack_half2(payload_0.z));
+	surface.emissiveColor = Unpack_R11G11B10_FLOAT(payload_0.w);
+
 	surface.opacity = 1;
 	surface.baseColor = float4(surface.albedo, surface.opacity);
-
-	float4 data0 = unpack_rgba(input_pixel_payload_0[bin_data_index].z);
-	surface.f0 = DEGAMMA(data0.rgb);
-	surface.occlusion = data0.a;
-	surface.emissiveColor = Unpack_R11G11B10_FLOAT(input_pixel_payload_0[bin_data_index].w);
 
 #ifdef ANISOTROPIC
 	surface.T = unpack_half4(input_pixel_payload_1[bin_data_index].xy);
@@ -69,13 +69,8 @@ void main(uint DTid : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex, uint
 #endif // SHEEN
 
 #ifdef CLEARCOAT
-	surface.N = decode_oct(unpack_half2(input_pixel_payload_1[bin_data_index].y));
-	surface.roughness = unpack_rgba(input_pixel_payload_1[bin_data_index].z).r;
-	surface.clearcoat.N = decode_oct(texture_normal[pixel].rg);
-	surface.clearcoat.roughness = texture_roughness[pixel].r;
-#else
-	surface.N = decode_oct(texture_normal[pixel].rg);
-	surface.roughness = texture_roughness[pixel].r;
+	surface.clearcoat.N = decode_oct(unpack_half2(input_pixel_payload_1[bin_data_index].y));
+	surface.clearcoat.roughness = unpack_rgba(input_pixel_payload_1[bin_data_index].z).r;
 #endif // CLEARCOAT
 
 	surface.update();

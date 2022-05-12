@@ -7915,10 +7915,6 @@ void Visibility_Surface(
 
 	device->BindResource(&res.binned_pixels, 0, cmd);
 	device->BindUAV(&output, 0, cmd);
-	device->BindUAV(&res.texture_normals, 1, cmd);
-	device->BindUAV(&res.texture_roughness, 2, cmd);
-	device->BindUAV(&res.pixel_payload_0, 3, cmd);
-	device->BindUAV(&res.pixel_payload_1, 4, cmd);
 
 	// sky dispatch:
 	device->EventBegin("Sky", cmd);
@@ -7929,6 +7925,10 @@ void Visibility_Surface(
 
 	// surface dispatches per material type:
 	device->EventBegin("Surface parameters", cmd);
+	device->BindUAV(&res.texture_normals, 1, cmd);
+	device->BindUAV(&res.texture_roughness, 2, cmd);
+	device->BindUAV(&res.pixel_payload_0, 3, cmd);
+	device->BindUAV(&res.pixel_payload_1, 4, cmd);
 	for (uint i = 0; i < MaterialComponent::SHADERTYPE_COUNT; ++i)
 	{
 		device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SURFACE_PERMUTATION_BEGIN + i], cmd);
