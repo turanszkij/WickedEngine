@@ -320,7 +320,6 @@ namespace wi::renderer
 		XMUINT2 tile_count = {};
 		wi::graphics::GPUBuffer bins;
 		wi::graphics::GPUBuffer binned_tiles;
-		wi::graphics::Texture texture_shadertypes;
 		wi::graphics::Texture texture_payload_0;
 		wi::graphics::Texture texture_payload_1;
 		wi::graphics::Texture texture_normals;

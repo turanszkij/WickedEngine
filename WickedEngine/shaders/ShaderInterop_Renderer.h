@@ -158,6 +158,23 @@ struct ShaderTypeBin
 };
 static const uint SHADERTYPE_BIN_COUNT = 10;
 
+struct VisibilityTile
+{
+	uint visibility_tile_id;
+	uint entity_tile_id;
+	uint execution_mask_0;
+	uint execution_mask_1;
+
+	inline bool check_thread_valid(uint groupIndex)
+	{
+		if (groupIndex < 32)
+		{
+			return execution_mask_0 & (1u << groupIndex);
+		}
+		return execution_mask_1 & (1u << (groupIndex - 32u));
+	}
+};
+
 static const uint SHADERMESH_FLAG_DOUBLE_SIDED = 1 << 0;
 static const uint SHADERMESH_FLAG_HAIRPARTICLE = 1 << 1;
 static const uint SHADERMESH_FLAG_EMITTEDPARTICLE = 1 << 2;
