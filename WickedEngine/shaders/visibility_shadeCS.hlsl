@@ -2,6 +2,8 @@
 #define DISABLE_DECALS // decals were applied in surface shader
 //#define DISABLE_VOXELGI
 //#define DISABLE_ENVMAPS
+//#define DISABLE_SOFT_SHADOWMAP
+//#define DISABLE_TRANSPARENT_SHADOWMAP
 #define ENTITY_TILE_UNIFORM
 #include "globals.hlsli"
 #include "ShaderInterop_Renderer.h"
@@ -89,15 +91,13 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	Lighting lighting;
 	lighting.create(0, 0, surface.gi, 0);
 
-	ApplyEmissive(surface, lighting);
-
 
 #ifdef PLANARREFLECTION
 	float2 bumpColor = unpack_half2(input_payload_1[pixel].x);
 	lighting.indirect.specular += PlanarReflection(surface, bumpColor) * surface.F;
 #endif // PLANARREFLECTION
 
-	TiledLighting(surface, lighting, tile / 2);
+	TiledLighting(surface, lighting, tile / VISIBILITY_TILED_CULLING_GRANULARITY);
 
 	[branch]
 	if (GetCamera().texture_ssr_index >= 0)

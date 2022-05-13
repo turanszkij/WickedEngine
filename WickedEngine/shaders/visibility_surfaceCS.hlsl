@@ -53,7 +53,7 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	surface.pixel = pixel.xy;
 	surface.screenUV = uv;
 
-	TiledDecals(surface, flatten2D(tile / 2, GetCamera().entity_culling_tilecount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT);
+	TiledDecals(surface, flatten2D(tile / VISIBILITY_TILED_CULLING_GRANULARITY, GetCamera().entity_culling_tilecount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT);
 
 
 #ifdef UNLIT

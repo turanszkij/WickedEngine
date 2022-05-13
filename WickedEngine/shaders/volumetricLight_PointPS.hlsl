@@ -47,7 +47,7 @@ float4 main(VertexToPixel input) : SV_TARGET
 		[branch]
 		if (light.IsCastingShadow())
 		{
-			attenuation *= shadow_cube(light, L, Lunnormalized);
+			attenuation *= shadow_cube(light, Lunnormalized);
 		}
 
 		// Evaluate sample height for height fog calculation, given 0 for V:

@@ -304,11 +304,6 @@ struct PixelInput
 // METHODS
 ////////////
 
-inline void ApplyEmissive(in Surface surface, inout Lighting lighting)
-{
-	lighting.direct.specular += surface.emissiveColor;
-}
-
 inline void LightMapping(in int lightmap, in float2 ATLAS, inout Lighting lighting, inout Surface surface)
 {
 	[branch]
@@ -1373,11 +1368,6 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #ifdef TILEDFORWARD
 	TiledLighting(surface, lighting);
 #endif // TILEDFORWARD
-
-
-#ifdef OBJECTSHADER_USE_EMISSIVE
-	ApplyEmissive(surface, lighting);
-#endif // OBJECTSHADER_USE_EMISSIVE
 
 
 #ifndef WATER
