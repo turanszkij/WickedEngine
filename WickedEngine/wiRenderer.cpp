@@ -3595,7 +3595,7 @@ void UpdateRenderData(
 		const SoftBodyPhysicsComponent& softbody = vis.scene->softbodies[i];
 
 		const MeshComponent* mesh = vis.scene->meshes.GetComponent(entity);
-		if (mesh != nullptr)
+		if (mesh != nullptr && mesh->streamoutBuffer.IsValid())
 		{
 			GraphicsDevice::GPUAllocation allocation = device->AllocateGPU(mesh->so_pos_nor_wind.size + mesh->so_tan.size, cmd);
 			std::memcpy(allocation.data, softbody.vertex_positions_simulation.data(), mesh->so_pos_nor_wind.size);
