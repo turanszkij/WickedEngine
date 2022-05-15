@@ -414,6 +414,15 @@ int main(int argc, char* argv[])
 		shaders.back().permutations.emplace_back().defines = x;
 	}
 
+	// permutations for visibility_surfaceCS REDUCED:
+	shaders.push_back({ "visibility_surfaceCS", wi::graphics::ShaderStage::CS });
+	for (auto& x : wi::scene::MaterialComponent::shaderTypeDefines)
+	{
+		auto defines = x;
+		defines.push_back("REDUCED");
+		shaders.back().permutations.emplace_back().defines = defines;
+	}
+
 	// permutations for visibility_shadeCS:
 	shaders.push_back({ "visibility_shadeCS", wi::graphics::ShaderStage::CS });
 	for (auto& x : wi::scene::MaterialComponent::shaderTypeDefines)
