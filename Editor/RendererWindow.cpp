@@ -45,7 +45,7 @@ void RendererWindow::Create(EditorComponent* editor)
 	AddWidget(&occlusionCullingCheckBox);
 
 	visibilityComputeShadingCheckBox.Create("VCS: ");
-	visibilityComputeShadingCheckBox.SetTooltip("Visibility Compute Shading (experimental)\nThis will shade the scene in compute shaders instead of pixel shaders\nThis could be faster in some circumstances (eg: dense small triangles)");
+	visibilityComputeShadingCheckBox.SetTooltip("Visibility Compute Shading (experimental)\nThis will shade the scene in compute shaders instead of pixel shaders\nThis has a higher initial performance cost, but it will be faster in high polygon scenes");
 	visibilityComputeShadingCheckBox.SetPos(XMFLOAT2(x + 120, y));
 	visibilityComputeShadingCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	visibilityComputeShadingCheckBox.OnClick([=](wi::gui::EventArgs args) {

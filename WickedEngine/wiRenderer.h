@@ -341,6 +341,10 @@ namespace wi::renderer
 		const wi::graphics::Texture& output,
 		wi::graphics::CommandList cmd
 	);
+	void Visibility_Surface_Reduced(
+		const VisibilityResources& res,
+		wi::graphics::CommandList cmd
+	);
 	void Visibility_Shade(
 		const VisibilityResources& res,
 		const wi::graphics::Texture& output,

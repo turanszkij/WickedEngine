@@ -1,6 +1,8 @@
-#define SURFACE_LOAD_QUAD_DERIVATIVES
-#define SURFACE_LOAD_ENABLE_WIND
 #define ENTITY_TILE_UNIFORM
+#define SURFACE_LOAD_QUAD_DERIVATIVES
+#ifndef REDUCED
+#define SURFACE_LOAD_ENABLE_WIND
+#endif // REDUCED
 #include "globals.hlsli"
 #include "ShaderInterop_Renderer.h"
 #include "raytracingHF.hlsli"
@@ -67,6 +69,8 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	output_roughness[pixel] = surface.roughness;
 #endif // CLEARCOAT
 
+
+#ifndef REDUCED
 	// Pack primary payload for shading:
 	uint4 payload_0;
 	payload_0.x = pack_rgba(float4(GAMMA(surface.albedo), surface.occlusion));
@@ -95,4 +99,5 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	output_payload_1[pixel].z = pack_rgba(float4(surface.clearcoat.roughness, 0, 0, 0));
 #endif // CLEARCOAT
 
+#endif // REDUCED
 }

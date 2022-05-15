@@ -831,11 +831,27 @@ void RenderPath3D::Render() const
 			cmd
 		);
 
-		wi::renderer::Visibility_Surface(
-			visibilityResources,
-			rtMain,
-			cmd
-		);
+		if (visibility_shading_in_compute)
+		{
+			wi::renderer::Visibility_Surface(
+				visibilityResources,
+				rtMain,
+				cmd
+			);
+		}
+		else if(
+			getSSREnabled() ||
+			getRaytracedReflectionEnabled() ||
+			wi::renderer::GetScreenSpaceShadowsEnabled() ||
+			wi::renderer::GetRaytracedShadowsEnabled()
+			)
+		{
+			// These post effects require surface normals and/or roughness
+			wi::renderer::Visibility_Surface_Reduced(
+				visibilityResources,
+				cmd
+			);
+		}
 
 		if (rtVelocity.IsValid())
 		{
@@ -1093,7 +1109,7 @@ void RenderPath3D::Render() const
 		{
 			auto range = wi::profiler::BeginRangeGPU("Opaque Scene", cmd);
 			wi::renderer::DrawScene(visibility_main, RENDERPASS_MAIN, cmd, drawscene_flags);
-			//wi::renderer::DrawSky(*scene, cmd);
+			wi::renderer::DrawSky(*scene, cmd);
 			wi::profiler::EndRange(range); // Opaque Scene
 		}
 

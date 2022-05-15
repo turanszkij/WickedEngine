@@ -1224,6 +1224,20 @@ void LoadShaders()
 
 	wi::jobsystem::Dispatch(ctx, MaterialComponent::SHADERTYPE_COUNT, 1, [](wi::jobsystem::JobArgs args) {
 
+		auto defines = MaterialComponent::shaderTypeDefines[args.jobIndex];
+		defines.push_back("REDUCED");
+		LoadShader(
+			ShaderStage::CS,
+			shaders[CSTYPE_VISIBILITY_SURFACE_REDUCED_PERMUTATION_BEGIN + args.jobIndex],
+			"visibility_surfaceCS.cso",
+			ShaderModel::SM_6_0,
+			defines // permutation defines
+		);
+
+		});
+
+	wi::jobsystem::Dispatch(ctx, MaterialComponent::SHADERTYPE_COUNT, 1, [](wi::jobsystem::JobArgs args) {
+
 		LoadShader(
 			ShaderStage::CS,
 			shaders[CSTYPE_VISIBILITY_SHADE_PERMUTATION_BEGIN + args.jobIndex],
@@ -7910,6 +7924,47 @@ void Visibility_Surface(
 	device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SKY], cmd);
 	device->BindConstantBuffer(&res.bins, 10, cmd, MaterialComponent::SHADERTYPE_COUNT * sizeof(ShaderTypeBin));
 	device->DispatchIndirect(&res.bins, MaterialComponent::SHADERTYPE_COUNT * sizeof(ShaderTypeBin) + offsetof(ShaderTypeBin, dispatchX), cmd);
+	device->EventEnd(cmd);
+
+	// Ending barriers:
+	//	These resources will be used by other post processing effects
+	barrier_stack.push_back(GPUBarrier::Image(&res.texture_normals, ResourceState::UNORDERED_ACCESS, res.texture_normals.desc.layout));
+	barrier_stack.push_back(GPUBarrier::Image(&res.texture_roughness, ResourceState::UNORDERED_ACCESS, res.texture_roughness.desc.layout));
+	barrier_stack_flush(cmd);
+
+	wi::profiler::EndRange(range);
+	device->EventEnd(cmd);
+}
+void Visibility_Surface_Reduced(
+	const VisibilityResources& res,
+	CommandList cmd
+)
+{
+	device->EventBegin("Visibility_Surface_Reduced", cmd);
+	auto range = wi::profiler::BeginRangeGPU("Visibility_Surface_Reduced", cmd);
+
+	BindCommonResources(cmd);
+
+	// Sync up with Visibility_Prepare
+	barrier_stack.push_back(GPUBarrier::Image(&res.texture_roughness, res.texture_roughness.desc.layout, ResourceState::UNORDERED_ACCESS));
+	barrier_stack.push_back(GPUBarrier::Buffer(&res.bins, ResourceState::UNORDERED_ACCESS, ResourceState::CONSTANT_BUFFER | ResourceState::INDIRECT_ARGUMENT));
+	barrier_stack.push_back(GPUBarrier::Buffer(&res.binned_tiles, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
+	barrier_stack_flush(cmd);
+
+	device->BindResource(&res.binned_tiles, 0, cmd);
+	device->BindUAV(&res.texture_normals, 1, cmd);
+	device->BindUAV(&res.texture_roughness, 2, cmd);
+
+	// surface dispatches per material type:
+	device->EventBegin("Surface parameters", cmd);
+	for (uint i = 0; i < MaterialComponent::SHADERTYPE_COUNT; ++i)
+	{
+		if (i == MaterialComponent::SHADERTYPE_UNLIT)
+			continue; // this won't need surface parameter write out
+		device->BindComputeShader(&shaders[CSTYPE_VISIBILITY_SURFACE_REDUCED_PERMUTATION_BEGIN + i], cmd);
+		device->BindConstantBuffer(&res.bins, 10, cmd, i * sizeof(ShaderTypeBin));
+		device->DispatchIndirect(&res.bins, i * sizeof(ShaderTypeBin) + offsetof(ShaderTypeBin, dispatchX), cmd);
+	}
 	device->EventEnd(cmd);
 
 	// Ending barriers:

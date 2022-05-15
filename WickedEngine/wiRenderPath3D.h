@@ -165,7 +165,7 @@ namespace wi
 		uint8_t instanceInclusionMask_Lightmap = 0xFF;
 		uint8_t instanceInclusionMask_DDGI = 0xFF;
 
-		bool visibility_shading_in_compute = true;
+		bool visibility_shading_in_compute = false;
 
 		const wi::graphics::Texture* GetDepthStencil() const override { return &depthBuffer_Main; }
 		const wi::graphics::Texture* GetGUIBlurredBackground() const override { return &rtGUIBlurredBackground[2]; }
