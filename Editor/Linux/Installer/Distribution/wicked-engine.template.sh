@@ -1,4 +1,4 @@
-#!/usr/bin/zsh
+#!/bin/sh
 
 echo "Starting Wicked Engine Editor"
 
