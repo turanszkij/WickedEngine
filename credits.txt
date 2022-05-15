@@ -36,6 +36,8 @@ Contributions:
 	- Fixes
 - Molasses https://github.com/MolassesLover
 	- Linux package files
+- Igor Alexey https://github.com/sororfortuna
+	- QOI image loader integration
 - Eddie Ataberk https://github.com/eddieataberk
 	- Physics improvements
 
