@@ -506,11 +506,8 @@ namespace wi::physics
 				if (IsSimulationEnabled() && !physicscomponent->IsKinematic())
 				{
 					TransformComponent& transform = *scene.transforms.GetComponent(entity);
-
-					btMotionState* motionState = rigidbody->getMotionState();
-					btTransform physicsTransform;
-
-					motionState->getWorldTransform(physicsTransform);
+	
+					btTransform physicsTransform = rigidbody->getWorldTransform();
 					btVector3 T = physicsTransform.getOrigin();
 					btQuaternion R = physicsTransform.getRotation();
 

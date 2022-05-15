@@ -1577,6 +1577,7 @@ namespace wi::scene
 		}
 
 		wi::jobsystem::context ctx;
+		wi::physics::RunPhysicsUpdateSystem(ctx, *this, dt);
 
 		// Scan mesh subset counts to allocate GPU geometry data:
 		geometryAllocator.store(0u);
@@ -1640,8 +1641,6 @@ namespace wi::scene
 		RunWeatherUpdateSystem(ctx);
 
 		wi::jobsystem::Wait(ctx); // dependencies
-
-		wi::physics::RunPhysicsUpdateSystem(ctx, *this, dt);
 
 		RunObjectUpdateSystem(ctx);
 
