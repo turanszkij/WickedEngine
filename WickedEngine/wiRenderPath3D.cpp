@@ -207,8 +207,6 @@ void RenderPath3D::ResizeBuffers()
 		device->SetName(&rtShadingRate, "rtShadingRate");
 	}
 	rtVelocity = {};
-	rtNormal = {};
-	rtRoughness = {};
 	rtAO = {};
 	rtShadow = {};
 	rtSSR = {};
@@ -470,10 +468,7 @@ void RenderPath3D::ResizeBuffers()
 		device->CreateTexture(&desc, nullptr, &debugUAV);
 		device->SetName(&debugUAV, "debugUAV");
 	}
-	if (visibilityResources.bins.IsValid()) // for now this is off by default, can be turned on manually
-	{
-		wi::renderer::CreateVisibilityResources(visibilityResources, internalResolution);
-	}
+	wi::renderer::CreateVisibilityResources(visibilityResources, internalResolution);
 	wi::renderer::CreateTiledLightResources(tiledLightResources, internalResolution);
 	wi::renderer::CreateTiledLightResources(tiledLightResources_planarReflection, XMUINT2(depthBuffer_Reflection.desc.width, depthBuffer_Reflection.desc.height));
 	wi::renderer::CreateLuminanceResources(luminanceResources, internalResolution);
@@ -594,38 +589,6 @@ void RenderPath3D::Update(float dt)
 		rtAO = {};
 	}
 
-	// Check whether normal and roughness buffers are required:
-	if (getSSREnabled() || getRaytracedReflectionEnabled())
-	{
-		if (!rtNormal.IsValid())
-		{
-			TextureDesc desc;
-			desc.format = Format::R16G16_FLOAT;
-			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-			desc.width = internalResolution.x;
-			desc.height = internalResolution.y;
-			desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
-			device->CreateTexture(&desc, nullptr, &rtNormal);
-			device->SetName(&rtNormal, "rtNormal");
-		}
-		if (!rtRoughness.IsValid())
-		{
-			TextureDesc desc;
-			desc.format = Format::R8_UNORM;
-			desc.bind_flags = BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
-			desc.width = internalResolution.x;
-			desc.height = internalResolution.y;
-			desc.layout = ResourceState::SHADER_RESOURCE_COMPUTE;
-			device->CreateTexture(&desc, nullptr, &rtRoughness);
-			device->SetName(&rtRoughness, "rtRoughness");
-		}
-	}
-	else
-	{
-		rtNormal = {};
-		rtRoughness = {};
-	}
-
 	// Check whether velocity buffer is required:
 	if (
 		getMotionBlurEnabled() ||
@@ -678,30 +641,6 @@ void RenderPath3D::Update(float dt)
 
 	visibilityResources.depthbuffer = &depthBuffer_Copy;
 	visibilityResources.lineardepth = &rtLinearDepth;
-	if (rtVelocity.IsValid())
-	{
-		visibilityResources.velocity = &rtVelocity;
-	}
-	else
-	{
-		visibilityResources.velocity = nullptr;
-	}
-	if (rtNormal.IsValid())
-	{
-		visibilityResources.normal = &rtNormal;
-	}
-	else
-	{
-		visibilityResources.normal = nullptr;
-	}
-	if (rtRoughness.IsValid())
-	{
-		visibilityResources.roughness = &rtRoughness;
-	}
-	else
-	{
-		visibilityResources.roughness = nullptr;
-	}
 	if (getMSAASampleCount() > 1)
 	{
 		visibilityResources.primitiveID_resolved = &rtPrimitiveID;
@@ -719,8 +658,8 @@ void RenderPath3D::Update(float dt)
 	camera->texture_depth_index = device->GetDescriptorIndex(&depthBuffer_Copy, SubresourceType::SRV);
 	camera->texture_lineardepth_index = device->GetDescriptorIndex(&rtLinearDepth, SubresourceType::SRV);
 	camera->texture_velocity_index = device->GetDescriptorIndex(&rtVelocity, SubresourceType::SRV);
-	camera->texture_normal_index = device->GetDescriptorIndex(&rtNormal, SubresourceType::SRV);
-	camera->texture_roughness_index = device->GetDescriptorIndex(&rtRoughness, SubresourceType::SRV);
+	camera->texture_normal_index = device->GetDescriptorIndex(&visibilityResources.texture_normals, SubresourceType::SRV);
+	camera->texture_roughness_index = device->GetDescriptorIndex(&visibilityResources.texture_roughness, SubresourceType::SRV);
 	camera->buffer_entitytiles_opaque_index = device->GetDescriptorIndex(&tiledLightResources.entityTiles_Opaque, SubresourceType::SRV);
 	camera->buffer_entitytiles_transparent_index = device->GetDescriptorIndex(&tiledLightResources.entityTiles_Transparent, SubresourceType::SRV);
 	camera->texture_reflection_index = device->GetDescriptorIndex(&rtReflection, SubresourceType::SRV);
@@ -880,11 +819,48 @@ void RenderPath3D::Render() const
 			cmd
 		);
 
-		wi::renderer::VisibilityResolve(
+		wi::renderer::Visibility_Prepare(
 			visibilityResources,
 			rtPrimitiveID_render,
 			cmd
 		);
+
+		wi::renderer::ComputeTiledLightCulling(
+			tiledLightResources,
+			debugUAV,
+			cmd
+		);
+
+		if (visibility_shading_in_compute)
+		{
+			wi::renderer::Visibility_Surface(
+				visibilityResources,
+				rtMain,
+				cmd
+			);
+		}
+		else if(
+			getSSREnabled() ||
+			getRaytracedReflectionEnabled() ||
+			wi::renderer::GetScreenSpaceShadowsEnabled() ||
+			wi::renderer::GetRaytracedShadowsEnabled()
+			)
+		{
+			// These post effects require surface normals and/or roughness
+			wi::renderer::Visibility_Surface_Reduced(
+				visibilityResources,
+				cmd
+			);
+		}
+
+		if (rtVelocity.IsValid())
+		{
+			wi::renderer::Visibility_Velocity(
+				visibilityResources,
+				rtVelocity,
+				cmd
+			);
+		}
 
 		if (wi::renderer::GetSurfelGIEnabled())
 		{
@@ -913,16 +889,6 @@ void RenderPath3D::Render() const
 				volumetriccloudResources,
 				cmd
 			);
-		}
-
-		{
-			auto range = wi::profiler::BeginRangeGPU("Entity Culling", cmd);
-			wi::renderer::ComputeTiledLightCulling(
-				tiledLightResources,
-				debugUAV,
-				cmd
-			);
-			wi::profiler::EndRange(range);
 		}
 
 		RenderSSR(cmd);
@@ -1123,9 +1089,9 @@ void RenderPath3D::Render() const
 			device->Barrier(&barrier, 1, cmd);
 		}
 
-		if (visibilityResources.bins.IsValid())
+		if (visibility_shading_in_compute)
 		{
-			wi::renderer::VisibilityShade(
+			wi::renderer::Visibility_Shade(
 				visibilityResources,
 				rtMain,
 				cmd
@@ -1139,7 +1105,7 @@ void RenderPath3D::Render() const
 
 		device->RenderPassBegin(&renderpass_main, cmd);
 
-		if (!visibilityResources.bins.IsValid())
+		if (!visibility_shading_in_compute)
 		{
 			auto range = wi::profiler::BeginRangeGPU("Opaque Scene", cmd);
 			wi::renderer::DrawScene(visibility_main, RENDERPASS_MAIN, cmd, drawscene_flags);

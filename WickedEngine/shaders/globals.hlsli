@@ -1313,7 +1313,7 @@ inline void ParallaxOcclusionMapping_Impl(
 	in float3x3 TBN,			// tangent basis matrix (same that is used for normal mapping)
 	in ShaderMaterial material,	// material parameters
 	in Texture2D tex,			// displacement map texture
-	in float2 uv,				// uv to use for the disapllacement map
+	in float2 uv,				// uv to use for the displacement map
 	in float2 uv_dx,			// horizontal derivative of displacement map uv
 	in float2 uv_dy				// vertical derivative of displacement map uv
 )
