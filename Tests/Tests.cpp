@@ -83,12 +83,14 @@ void TestsRenderer::Load()
 
 	static wi::audio::Sound sound;
 	static wi::audio::SoundInstance soundinstance;
-
 	static wi::gui::Button audioTest;
+	static wi::gui::Slider volume;
+	static wi::gui::Slider direction;
+
 	audioTest.Create("AudioTest");
 	audioTest.SetText("Play Test Audio");
 	audioTest.SetSize(XMFLOAT2(200, 20));
-	audioTest.SetPos(XMFLOAT2(10, 140));
+	audioTest.SetPos(XMFLOAT2(10, 110));
 	audioTest.SetColor(wi::Color(255, 205, 43, 200), wi::gui::IDLE);
 	audioTest.SetColor(wi::Color(255, 235, 173, 255), wi::gui::FOCUS);
 	audioTest.OnClick([&](wi::gui::EventArgs args) {
@@ -96,8 +98,9 @@ void TestsRenderer::Load()
 
 		if (!sound.IsValid())
 		{
-			wi::audio::CreateSound("sound/music.wav", &sound);
+			wi::audio::CreateSound("../Content/models/water.wav", &sound);
 			wi::audio::CreateSoundInstance(&sound, &soundinstance);
+			wi::audio::SetVolume(volume.GetValue() / 100.0f, &soundinstance);
 		}
 
 		if (playing)
@@ -116,11 +119,10 @@ void TestsRenderer::Load()
 	GetGUI().AddWidget(&audioTest);
 
 
-	static wi::gui::Slider volume;
 	volume.Create(0, 100, 50, 100, "Volume");
 	volume.SetText("Volume: ");
 	volume.SetSize(XMFLOAT2(100, 20));
-	volume.SetPos(XMFLOAT2(65, 170));
+	volume.SetPos(XMFLOAT2(65, 140));
 	volume.sprites_knob[wi::gui::IDLE].params.color = wi::Color(255, 205, 43, 200);
 	volume.sprites_knob[wi::gui::FOCUS].params.color = wi::Color(255, 235, 173, 255);
 	volume.sprites[wi::gui::IDLE].params.color = wi::math::Lerp(wi::Color::Transparent(), volume.sprites_knob[wi::gui::WIDGETSTATE::IDLE].params.color, 0.5f);
@@ -130,10 +132,25 @@ void TestsRenderer::Load()
 	});
 	GetGUI().AddWidget(&volume);
 
+	direction.Create(-1, 1, 0, 10000, "Direction");
+	direction.SetText("Direction: ");
+	direction.SetSize(XMFLOAT2(100, 20));
+	direction.SetPos(XMFLOAT2(65, 170));
+	direction.sprites_knob[wi::gui::IDLE].params.color = wi::Color(255, 205, 43, 200);
+	direction.sprites_knob[wi::gui::FOCUS].params.color = wi::Color(255, 235, 173, 255);
+	direction.sprites[wi::gui::IDLE].params.color = wi::math::Lerp(wi::Color::Transparent(), direction.sprites_knob[wi::gui::WIDGETSTATE::IDLE].params.color, 0.5f);
+	direction.sprites[wi::gui::FOCUS].params.color = wi::math::Lerp(wi::Color::Transparent(), direction.sprites_knob[wi::gui::WIDGETSTATE::FOCUS].params.color, 0.5f);
+	direction.OnSlide([](wi::gui::EventArgs args) {
+		wi::audio::SoundInstance3D instance3D;
+		instance3D.emitterPos = XMFLOAT3(args.fValue, 0, 0);
+		wi::audio::Update3D(&soundinstance, instance3D);
+		});
+	GetGUI().AddWidget(&direction);
+
 	testSelector.Create("TestSelector");
 	testSelector.SetText("Demo: ");
 	testSelector.SetSize(XMFLOAT2(140, 20));
-	testSelector.SetPos(XMFLOAT2(50, 200));
+	testSelector.SetPos(XMFLOAT2(50, 220));
 	testSelector.SetColor(wi::Color(255, 205, 43, 200), wi::gui::IDLE);
 	testSelector.SetColor(wi::Color(255, 235, 173, 255), wi::gui::FOCUS);
 	testSelector.AddItem("HelloWorld", HELLOWORLD);
