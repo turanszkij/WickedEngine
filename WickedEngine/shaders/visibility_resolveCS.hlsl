@@ -48,7 +48,7 @@ void main(uint2 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
 	const uint2 GTid = remap_lane_8x8(groupIndex);
 	const uint2 pixel = Gid.xy * VISIBILITY_BLOCKSIZE + GTid.xy;
-	const bool pixel_valid = pixel.x < GetCamera().internal_resolution.x && pixel.y < GetCamera().internal_resolution.y;
+	const bool pixel_valid = (pixel.x < GetCamera().internal_resolution.x) && (pixel.y < GetCamera().internal_resolution.y);
 
 	const float2 uv = ((float2)pixel + 0.5) * GetCamera().internal_resolution_rcp;
 	const float2 clipspace = uv_to_clipspace(uv);
@@ -61,6 +61,7 @@ void main(uint2 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 #endif // VISIBILITY_MSAA
 
 	float depth = 0;
+	uint bin = SHADERTYPE_BIN_COUNT;
 	if (pixel_valid)
 	{
 		[branch]
@@ -79,29 +80,23 @@ void main(uint2 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 				tmp.xyz /= tmp.w;
 				depth = tmp.z;
 
-				InterlockedOr(local_bin_mask, 1u << surface.material.shaderType);
-				if (groupIndex < 32)
-				{
-					InterlockedOr(local_bin_execution_mask_0[surface.material.shaderType], 1u << groupIndex);
-				}
-				else
-				{
-					InterlockedOr(local_bin_execution_mask_1[surface.material.shaderType], 1u << (groupIndex - 32u));
-				}
+				bin = surface.material.shaderType;
 			}
+		}
+		if (groupIndex < 32)
+		{
+			InterlockedOr(local_bin_execution_mask_0[bin], 1u << groupIndex);
 		}
 		else
 		{
-			InterlockedOr(local_bin_mask, 1u << SHADERTYPE_BIN_COUNT);
-			if (groupIndex < 32)
-			{
-				InterlockedOr(local_bin_execution_mask_0[SHADERTYPE_BIN_COUNT], 1u << groupIndex);
-			}
-			else
-			{
-				InterlockedOr(local_bin_execution_mask_1[SHADERTYPE_BIN_COUNT], 1u << (groupIndex - 32u));
-			}
+			InterlockedOr(local_bin_execution_mask_1[bin], 1u << (groupIndex - 32u));
 		}
+	}
+
+	uint wave_local_bin_mask = WaveActiveBitOr(1u << bin);
+	if (WaveIsFirstLane())
+	{
+		InterlockedOr(local_bin_mask, wave_local_bin_mask);
 	}
 
 	GroupMemoryBarrierWithGroupSync();

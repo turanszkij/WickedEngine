@@ -135,8 +135,13 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 
 	GroupMemoryBarrierWithGroupSync();
 
-	InterlockedMin(uMinDepth, asuint(depthMinUnrolled));
-	InterlockedMax(uMaxDepth, asuint(depthMaxUnrolled));
+	float wave_local_min = WaveActiveMin(depthMinUnrolled);
+	float wave_local_max = WaveActiveMax(depthMaxUnrolled);
+	if (WaveIsFirstLane())
+	{
+		InterlockedMin(uMinDepth, asuint(wave_local_min));
+		InterlockedMax(uMaxDepth, asuint(wave_local_max));
+	}
 
 	GroupMemoryBarrierWithGroupSync();
 
