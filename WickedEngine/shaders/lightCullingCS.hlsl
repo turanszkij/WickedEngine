@@ -209,7 +209,12 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		const uint __depthmaskcellindex = max(0, min(31, floor((realDepthVS - minDepthVS) * __depthRangeRecip)));
 		__depthmaskUnrolled |= 1u << __depthmaskcellindex;
 	}
-	InterlockedOr(uDepthMask, __depthmaskUnrolled);
+
+	uint wave_depth_mask = WaveActiveBitOr(__depthmaskUnrolled);
+	if (WaveIsFirstLane())
+	{
+		InterlockedOr(uDepthMask, wave_depth_mask);
+	}
 #endif
 
 	GroupMemoryBarrierWithGroupSync();
