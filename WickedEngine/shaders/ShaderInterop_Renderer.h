@@ -161,7 +161,7 @@ static const uint SHADERTYPE_BIN_COUNT = 10;
 struct VisibilityTile
 {
 	uint visibility_tile_id;
-	uint entity_tile_id;
+	uint entity_flat_tile_index;
 	uint execution_mask_0;
 	uint execution_mask_1;
 

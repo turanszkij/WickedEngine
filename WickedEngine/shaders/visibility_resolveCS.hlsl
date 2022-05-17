@@ -110,7 +110,7 @@ void main(uint2 Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 
 			VisibilityTile tile;
 			tile.visibility_tile_id = pack_pixel(Gid.xy);
-			tile.entity_tile_id = pack_pixel(Gid.xy / VISIBILITY_TILED_CULLING_GRANULARITY);
+			tile.entity_flat_tile_index = flatten2D(Gid.xy / VISIBILITY_TILED_CULLING_GRANULARITY, GetCamera().entity_culling_tilecount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
 			tile.execution_mask_0 = local_bin_execution_mask_0[groupIndex];
 			tile.execution_mask_1 = local_bin_execution_mask_1[groupIndex];
 			output_binned_tiles[bin_tile_list_offset + tile_offset] = tile;

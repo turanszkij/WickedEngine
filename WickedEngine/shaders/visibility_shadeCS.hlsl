@@ -92,7 +92,7 @@ void main(uint Gid : SV_GroupID, uint groupIndex : SV_GroupIndex)
 	lighting.indirect.specular += PlanarReflection(surface, bumpColor) * surface.F;
 #endif // PLANARREFLECTION
 
-	TiledLighting(surface, lighting, unpack_pixel(tile.entity_tile_id));
+	TiledLighting(surface, lighting, tile.entity_flat_tile_index);
 
 	[branch]
 	if (GetCamera().texture_ssr_index >= 0)
