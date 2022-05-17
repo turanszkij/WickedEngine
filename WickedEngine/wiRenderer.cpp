@@ -7777,8 +7777,6 @@ void Visibility_Prepare(
 	{
 		barrier_stack.push_back(GPUBarrier::Buffer(&res.bins, ResourceState::CONSTANT_BUFFER | ResourceState::INDIRECT_ARGUMENT, ResourceState::UNORDERED_ACCESS));
 		barrier_stack.push_back(GPUBarrier::Buffer(&res.binned_tiles, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS));
-		barrier_stack.push_back(GPUBarrier::Image(&res.texture_normals, res.texture_normals.desc.layout, ResourceState::UNORDERED_ACCESS));
-		barrier_stack.push_back(GPUBarrier::Image(&res.texture_roughness, res.texture_roughness.desc.layout, ResourceState::UNORDERED_ACCESS));
 		barrier_stack_flush(cmd);
 		device->ClearUAV(&res.bins, 0, cmd);
 		barrier_stack.push_back(GPUBarrier::Memory(&res.bins));
@@ -7879,6 +7877,10 @@ void Visibility_Prepare(
 		device->EventEnd(cmd);
 	}
 
+	barrier_stack.push_back(GPUBarrier::Buffer(&res.bins, ResourceState::UNORDERED_ACCESS, ResourceState::CONSTANT_BUFFER | ResourceState::INDIRECT_ARGUMENT));
+	barrier_stack.push_back(GPUBarrier::Buffer(&res.binned_tiles, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
+	barrier_stack_flush(cmd);
+
 	wi::profiler::EndRange(range);
 	device->EventEnd(cmd);
 }
@@ -7893,11 +7895,9 @@ void Visibility_Surface(
 
 	BindCommonResources(cmd);
 
-	// Sync up with Visibility_Prepare
 	barrier_stack.push_back(GPUBarrier::Image(&output, output.desc.layout, ResourceState::UNORDERED_ACCESS));
+	barrier_stack.push_back(GPUBarrier::Image(&res.texture_normals, res.texture_normals.desc.layout, ResourceState::UNORDERED_ACCESS));
 	barrier_stack.push_back(GPUBarrier::Image(&res.texture_roughness, res.texture_roughness.desc.layout, ResourceState::UNORDERED_ACCESS));
-	barrier_stack.push_back(GPUBarrier::Buffer(&res.bins, ResourceState::UNORDERED_ACCESS, ResourceState::CONSTANT_BUFFER | ResourceState::INDIRECT_ARGUMENT));
-	barrier_stack.push_back(GPUBarrier::Buffer(&res.binned_tiles, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
 	barrier_stack.push_back(GPUBarrier::Image(&res.texture_payload_0, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS));
 	barrier_stack.push_back(GPUBarrier::Image(&res.texture_payload_1, ResourceState::SHADER_RESOURCE, ResourceState::UNORDERED_ACCESS));
 	barrier_stack_flush(cmd);
@@ -7945,10 +7945,8 @@ void Visibility_Surface_Reduced(
 
 	BindCommonResources(cmd);
 
-	// Sync up with Visibility_Prepare
+	barrier_stack.push_back(GPUBarrier::Image(&res.texture_normals, res.texture_normals.desc.layout, ResourceState::UNORDERED_ACCESS));
 	barrier_stack.push_back(GPUBarrier::Image(&res.texture_roughness, res.texture_roughness.desc.layout, ResourceState::UNORDERED_ACCESS));
-	barrier_stack.push_back(GPUBarrier::Buffer(&res.bins, ResourceState::UNORDERED_ACCESS, ResourceState::CONSTANT_BUFFER | ResourceState::INDIRECT_ARGUMENT));
-	barrier_stack.push_back(GPUBarrier::Buffer(&res.binned_tiles, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
 	barrier_stack_flush(cmd);
 
 	device->BindResource(&res.binned_tiles, 0, cmd);
@@ -7986,6 +7984,10 @@ void Visibility_Shade(
 	auto range = wi::profiler::BeginRangeGPU("Visibility_Shade", cmd);
 
 	BindCommonResources(cmd);
+
+	barrier_stack.push_back(GPUBarrier::Image(&res.texture_payload_0, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
+	barrier_stack.push_back(GPUBarrier::Image(&res.texture_payload_1, ResourceState::UNORDERED_ACCESS, ResourceState::SHADER_RESOURCE));
+	barrier_stack_flush(cmd);
 
 	device->BindResource(&res.binned_tiles, 0, cmd);
 	device->BindResource(&res.texture_payload_0, 2, cmd);

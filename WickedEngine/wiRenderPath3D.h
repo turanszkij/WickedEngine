@@ -5,8 +5,6 @@
 #include "wiResourceManager.h"
 #include "wiScene.h"
 
-#include <memory>
-
 namespace wi
 {
 
