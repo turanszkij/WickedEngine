@@ -149,6 +149,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 	// Note: the following will be SGPR
 	AABB GroupAABB;			// frustum AABB around min-max depth in View Space
 	AABB GroupAABB_WS;		// frustum AABB in world space
+	if(WaveIsFirstLane())
 	{
 		// I construct an AABB around the minmax depth bounds to perform tighter culling:
 		// The frustum is asymmetric so we must consider all corners!
@@ -188,7 +189,6 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 		GroupAABB_WS = GroupAABB;
 		AABBtransform(GroupAABB_WS, GetCamera().inverse_view);
 	}
-	// Force these into SGPR with WaveReadLaneFirst(). For some reason the compiler didn't scalarize them for AMD
 	GroupAABB.c = WaveReadLaneFirst(GroupAABB.c);
 	GroupAABB.e = WaveReadLaneFirst(GroupAABB.e);
 	GroupAABB_WS.c = WaveReadLaneFirst(GroupAABB_WS.c);
@@ -223,6 +223,8 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 
 	GroupMemoryBarrierWithGroupSync();
 
+	const uint depth_mask = uDepthMask; // take out from groupshared into register
+
 	// Each thread will cull one entity until all entities have been culled:
 	for (i = groupIndex; i < entityCount; i += TILED_CULLING_THREADSIZE * TILED_CULLING_THREADSIZE)
 	{
@@ -246,7 +248,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 				if (SphereIntersectsAABB(sphere, GroupAABB)) // tighter fit than sphere-frustum culling
 				{
 #ifdef ADVANCED_CULLING
-					if (uDepthMask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
+					if (depth_mask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
 #endif
 					{
 						AppendEntity_Opaque(i);
@@ -269,7 +271,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 				if (SphereIntersectsAABB(sphere, GroupAABB)) // tighter fit than sphere-frustum culling
 				{
 #ifdef ADVANCED_CULLING
-					if (uDepthMask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
+					if (depth_mask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
 #endif
 					{
 						AppendEntity_Opaque(i);
@@ -306,7 +308,7 @@ void main(uint3 Gid : SV_GroupID, uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 				if (IntersectAABB(a, b))
 				{
 #ifdef ADVANCED_CULLING
-					if (uDepthMask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
+					if (depth_mask & ConstructEntityMask(minDepthVS, __depthRangeRecip, sphere))
 #endif
 					{
 						AppendEntity_Opaque(i);
