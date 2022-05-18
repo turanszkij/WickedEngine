@@ -1997,10 +1997,14 @@ namespace wi::gui
 		moveDragger.force_disable = force_disable;
 		resizeDragger_UpperLeft.force_disable = force_disable;
 		resizeDragger_BottomRight.force_disable = force_disable;
+		scrollbar_horizontal.force_disable = force_disable;
+		scrollbar_vertical.force_disable = force_disable;
 
 		moveDragger.Update(canvas, dt);
 		resizeDragger_UpperLeft.Update(canvas, dt);
 		resizeDragger_BottomRight.Update(canvas, dt);
+		scrollbar_horizontal.Update(canvas, dt);
+		scrollbar_vertical.Update(canvas, dt);
 
 		// Don't allow moving outside of screen:
 		if (parent == nullptr)
