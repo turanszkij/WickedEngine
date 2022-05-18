@@ -323,7 +323,7 @@ namespace wi::gui
 			SCROLLBAR_STATE_COUNT,
 		} scrollbar_state = SCROLLBAR_INACTIVE;
 		wi::Sprite sprites_knob[SCROLLBAR_STATE_COUNT];
-		float knob_inset_border = 0;
+		XMFLOAT2 knob_inset_border = {};
 
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;

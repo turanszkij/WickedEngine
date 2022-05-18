@@ -1776,10 +1776,10 @@ namespace wi::gui
 
 		for (int i = 0; i < arraysize(sprites_knob); ++i)
 		{
-			sprites_knob[i].params.pos.x = translation.x + knob_inset_border;
-			sprites_knob[i].params.pos.y = translation.y + knob_inset_border + scrollbar_delta;
-			sprites_knob[i].params.siz.x = scale.x - knob_inset_border * 2;
-			sprites_knob[i].params.siz.y = scrollbar_length - knob_inset_border * 2;
+			sprites_knob[i].params.pos.x = translation.x + knob_inset_border.x;
+			sprites_knob[i].params.pos.y = translation.y + knob_inset_border.y + scrollbar_delta;
+			sprites_knob[i].params.siz.x = scale.x - knob_inset_border.x * 2;
+			sprites_knob[i].params.siz.y = scrollbar_length - knob_inset_border.y * 2;
 		}
 	}
 	void ScrollBar::Render(const wi::Canvas& canvas, CommandList cmd) const
@@ -1887,7 +1887,7 @@ namespace wi::gui
 			scrollbar.sprites_knob[ScrollBar::SCROLLBAR_INACTIVE].params.color = wi::Color(140, 140, 140, 140);
 			scrollbar.sprites_knob[ScrollBar::SCROLLBAR_HOVER].params.color = wi::Color(180, 180, 180, 180);
 			scrollbar.sprites_knob[ScrollBar::SCROLLBAR_GRABBED].params.color = wi::Color::White();
-			scrollbar.knob_inset_border = 4;
+			scrollbar.knob_inset_border = XMFLOAT2(4, 2);
 			AddWidget(&scrollbar);
 		}
 		else
