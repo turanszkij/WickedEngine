@@ -304,6 +304,7 @@ namespace wi::gui
 		float list_length = 0;
 		float list_offset = 0;
 		float overscroll = 0;
+		bool vertical = true;
 
 	public:
 		// Set the list's length that will be scrollable and moving
@@ -339,7 +340,8 @@ namespace wi::gui
 		Button resizeDragger_BottomRight;
 		Button moveDragger;
 		Label label;
-		ScrollBar scrollbar;
+		ScrollBar scrollbar_vertical;
+		ScrollBar scrollbar_horizontal;
 		wi::vector<Widget*> widgets;
 		bool minimized = false;
 		Widget scrollable_area;
