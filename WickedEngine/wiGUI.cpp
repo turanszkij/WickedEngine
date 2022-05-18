@@ -1683,6 +1683,132 @@ namespace wi::gui
 
 
 
+	void ScrollBar::Update(const wi::Canvas& canvas, float dt)
+	{
+		if (!IsVisible())
+		{
+			return;
+		}
+
+		Widget::Update(canvas, dt);
+
+		if (IsEnabled())
+		{
+			if (state == FOCUS)
+			{
+				state = IDLE;
+			}
+			if (state == DEACTIVATING)
+			{
+				state = IDLE;
+			}
+			if (state == ACTIVE)
+			{
+				Deactivate();
+			}
+
+			Hitbox2D hitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y), XMFLOAT2(scale.x, scale.y));
+			Hitbox2D pointerHitbox = GetPointerHitbox();
+
+			if (state == IDLE && hitbox.intersects(pointerHitbox))
+			{
+				state = FOCUS;
+			}
+
+			bool clicked = false;
+			if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
+			{
+				clicked = true;
+			}
+
+			bool click_down = false;
+			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+			{
+				click_down = true;
+				if (state == FOCUS || state == DEACTIVATING)
+				{
+					// Keep pressed until mouse is released
+					Activate();
+				}
+			}
+			const float scrollbar_begin = translation.y;
+			const float scrollbar_end = scrollbar_begin + scale.y;
+			const float scrollbar_size = scrollbar_end - scrollbar_begin;
+			const float scrollbar_granularity = std::min(1.0f, scrollbar_size / std::max(1.0f, list_height));
+			scrollbar_height = std::max(scale.x * 2, scrollbar_size * scrollbar_granularity);
+
+			if (!click_down)
+			{
+				scrollbar_state = SCROLLBAR_INACTIVE;
+			}
+
+			if (hitbox.intersects(pointerHitbox))
+			{
+				if (clicked)
+				{
+					scrollbar_state = SCROLLBAR_GRABBED;
+				}
+				else if (!click_down)
+				{
+					scrollbar_state = SCROLLBAR_HOVER;
+					state = FOCUS;
+				}
+			}
+
+			if (scrollbar_state == SCROLLBAR_GRABBED)
+			{
+				Activate();
+				scrollbar_delta = pointerHitbox.pos.y - scrollbar_height * 0.5f - scrollbar_begin;
+			}
+
+			scrollbar_delta = wi::math::Clamp(scrollbar_delta, 0, scrollbar_size - scrollbar_height);
+			if (scrollbar_begin < scrollbar_end - scrollbar_height)
+			{
+				scrollbar_value = wi::math::InverseLerp(scrollbar_begin, scrollbar_end - scrollbar_height, scrollbar_begin + scrollbar_delta);
+			}
+			else
+			{
+				scrollbar_value = 0;
+			}
+
+			list_offset = -scrollbar_value * (list_height - scrollbar_size * 0.75f);
+		}
+	}
+	void ScrollBar::Render(const wi::Canvas& canvas, CommandList cmd) const
+	{
+		if (!IsVisible())
+		{
+			return;
+		}
+		// scrollbar background
+		wi::image::Params fx = sprites[state].params;
+		fx.pos = XMFLOAT3(translation.x, translation.y, 0);
+		fx.siz = XMFLOAT2(scale.x, scale.y);
+		fx.color = sprites[IDLE].params.color;
+		wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
+
+		// scrollbar
+		wi::Color scrollbar_color = wi::Color::fromFloat4(sprites[IDLE].params.color);
+		if (scrollbar_state == SCROLLBAR_HOVER)
+		{
+			scrollbar_color = wi::Color::fromFloat4(sprites[FOCUS].params.color);
+		}
+		else if (scrollbar_state == SCROLLBAR_GRABBED)
+		{
+			scrollbar_color = wi::Color::White();
+		}
+		wi::image::Draw(wi::texturehelper::getWhite()
+			, wi::image::Params(translation.x, translation.y + scrollbar_delta, scale.x, scrollbar_height, scrollbar_color), cmd);
+
+
+		//wi::image::Draw(wi::texturehelper::getWhite()
+		//	, wi::image::Params(translation.x, translation.y, scale.x, scale.y, wi::Color::Red()), cmd);
+
+	}
+
+
+
+
 	static const float windowcontrolSize = 20.0f;
 	void Window::Create(const std::string& name, bool window_controls)
 	{
@@ -1760,6 +1886,8 @@ namespace wi::gui
 				});
 			minimizeButton.SetTooltip("Minimize window");
 			AddWidget(&minimizeButton);
+
+			AddWidget(&scrollbar);
 		}
 		else
 		{
@@ -1775,11 +1903,18 @@ namespace wi::gui
 		SetVisible(true);
 		SetMinimized(false);
 	}
-	void Window::AddWidget(Widget* widget)
+	void Window::AddWidget(Widget* widget, bool scrollable)
 	{
 		widget->SetEnabled(this->IsEnabled());
 		widget->SetVisible(this->IsVisible());
-		widget->AttachTo(this);
+		if (scrollable)
+		{
+			widget->AttachTo(&scrollable_area);
+		}
+		else
+		{
+			widget->AttachTo(this);
+		}
 
 		widgets.push_back(widget);
 	}
@@ -1866,10 +2001,40 @@ namespace wi::gui
 			label.SetPos(XMFLOAT2(translation.x, translation.y));
 			label.AttachTo(this);
 		}
+		if (scrollbar.parent != nullptr)
+		{
+			scrollbar.Detach();
+			scrollbar.SetSize(XMFLOAT2(windowcontrolSize, scale.y - 2 - windowcontrolSize * 2));
+			scrollbar.SetPos(XMFLOAT2(translation.x + scale.x - windowcontrolSize, translation.y + 1 + windowcontrolSize));
+			scrollbar.AttachTo(this);
+		}
 
 		Hitbox2D pointerHitbox = GetPointerHitbox();
 
 		uint32_t priority = 0;
+
+		// Compute scrollable area:
+		scrollbar.list_height = 0;
+		for (auto& widget : widgets)
+		{
+			if (widget->parent == &scrollable_area)
+			{
+				scrollbar.list_height = std::max(scrollbar.list_height, widget->translation_local.y + widget->scale_local.y);
+			}
+		}
+		scrollable_area.ClearTransform();
+		scrollable_area.Translate(translation);
+		scrollable_area.Translate(XMFLOAT3(0, scrollbar.list_offset, 0));
+		scrollable_area.Update(canvas, dt);
+		scrollable_area.scissorRect = scissorRect;
+		scrollable_area.scissorRect.top += (int32_t)windowcontrolSize;
+		scrollable_area.scissorRect.right -= (int32_t)windowcontrolSize;
+
+		if (state == FOCUS)
+		{
+			// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
+			scrollbar.scrollbar_delta -= wi::input::GetPointer().z * 20;
+		}
 
 		bool focus = false;
 		for (auto& widget : widgets)
@@ -2808,37 +2973,36 @@ namespace wi::gui
 
 
 
-
-
 	constexpr float item_height() { return 20.0f; }
-	constexpr float tree_scrollbar_width() { return 12.0f; }
 	void TreeList::Create(const std::string& name)
 	{
 		SetName(name);
 		SetText(name);
 		OnSelect([](EventArgs args) {});
-		SetSize(XMFLOAT2(100, 20));
 
+		SetColor(wi::Color(100, 100, 100, 100), wi::gui::IDLE);
+		scrollbar.SetColor(wi::Color(100, 100, 100, 100), wi::gui::IDLE);
 		for (int i = FOCUS + 1; i < WIDGETSTATE_COUNT; ++i)
 		{
 			sprites[i].params.color = sprites[FOCUS].params.color;
+			scrollbar.sprites[i].params.color = sprites[FOCUS].params.color;
 		}
 		font.params.v_align = wi::font::WIFALIGN_CENTER;
 	}
 	float TreeList::GetItemOffset(int index) const
 	{
-		return 2 + list_offset + index * item_height();
+		return 2 + scrollbar.list_offset + index * item_height();
 	}
 	Hitbox2D TreeList::GetHitbox_ListArea() const
 	{
-		return Hitbox2D(XMFLOAT2(translation.x, translation.y + item_height() + 1), XMFLOAT2(scale.x - tree_scrollbar_width() - 1, scale.y - item_height() - 1));
+		return Hitbox2D(XMFLOAT2(translation.x, translation.y + item_height() + 1), XMFLOAT2(scale.x - scrollbar.scale.x - 1, scale.y - item_height() - 1));
 	}
 	Hitbox2D TreeList::GetHitbox_Item(int visible_count, int level) const
 	{
 		XMFLOAT2 pos = XMFLOAT2(translation.x + 2 + level * item_height(), translation.y + GetItemOffset(visible_count) + item_height() * 0.5f);
 		Hitbox2D hitbox;
 		hitbox.pos = XMFLOAT2(pos.x + item_height() * 0.5f + 2, pos.y - item_height() * 0.5f);
-		hitbox.siz = XMFLOAT2(scale.x - 2 - item_height() * 0.5f - 2 - level * item_height() - tree_scrollbar_width() - 2, item_height());
+		hitbox.siz = XMFLOAT2(scale.x - 2 - item_height() * 0.5f - 2 - level * item_height() - scrollbar.scale.x - 2, item_height());
 		return hitbox;
 	}
 	Hitbox2D TreeList::GetHitbox_ItemOpener(int visible_count, int level) const
@@ -2900,7 +3064,7 @@ namespace wi::gui
 			}
 
 			// compute control-list height
-			list_height = 0;
+			scrollbar.list_height = 0;
 			{
 				int parent_level = 0;
 				bool parent_open = true;
@@ -2912,65 +3076,31 @@ namespace wi::gui
 					}
 					parent_open = item.open;
 					parent_level = item.level;
-					list_height += item_height();
+					scrollbar.list_height += item_height();
 				}
 			}
 
-			const float scrollbar_begin = translation.y + item_height();
-			const float scrollbar_end = scrollbar_begin + scale.y - item_height();
-			const float scrollbar_size = scrollbar_end - scrollbar_begin;
-			const float scrollbar_granularity = std::min(1.0f, scrollbar_size / std::max(1.0f, list_height));
-			scrollbar_height = std::max(tree_scrollbar_width() * 2, scrollbar_size * scrollbar_granularity);
-
-			if (!click_down)
-			{
-				scrollbar_state = SCROLLBAR_INACTIVE;
-			}
-
-			Hitbox2D scroll_box;
-			scroll_box.pos = XMFLOAT2(translation.x + scale.x - tree_scrollbar_width(), translation.y + item_height() + 1);
-			scroll_box.siz = XMFLOAT2(tree_scrollbar_width(), scale.y - item_height() - 1);
-			if (scroll_box.intersects(pointerHitbox))
-			{
-				if (clicked)
-				{
-					scrollbar_state = SCROLLBAR_GRABBED;
-				}
-				else if (!click_down)
-				{
-					scrollbar_state = SCROLLBAR_HOVER;
-					state = FOCUS;
-				}
-			}
-
-			if (scrollbar_state == SCROLLBAR_GRABBED)
-			{
-				Activate();
-				scrollbar_delta = pointerHitbox.pos.y - scrollbar_height * 0.5f - scrollbar_begin;
-			}
 
 			if (state == FOCUS)
 			{
-				scrollbar_delta -= wi::input::GetPointer().z * 10;
+				// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
+				scrollbar.scrollbar_delta -= wi::input::GetPointer().z * 10;
 			}
-			scrollbar_delta = wi::math::Clamp(scrollbar_delta, 0, scrollbar_size - scrollbar_height);
-			if (scrollbar_begin < scrollbar_end - scrollbar_height)
+			const float scrollbar_width = 12;
+			scrollbar.SetSize(XMFLOAT2(scrollbar_width - 1, scale.y - 1 - item_height()));
+			scrollbar.SetPos(XMFLOAT2(translation.x + 1 + scale.x - scrollbar_width, translation.y + 1 + item_height()));
+			scrollbar.Update(canvas, dt);
+			if (scrollbar.GetState() > IDLE)
 			{
-				scrollbar_value = wi::math::InverseLerp(scrollbar_begin, scrollbar_end - scrollbar_height, scrollbar_begin + scrollbar_delta);
+				Deactivate();
 			}
-			else
-			{
-				scrollbar_value = 0;
-			}
-
-			list_offset = -scrollbar_value * (list_height - scrollbar_size * 0.75f);
 
 			Hitbox2D itemlist_box = GetHitbox_ListArea();
 
 			// control-list
 			item_highlight = -1;
 			opener_highlight = -1;
-			if (scrollbar_state == SCROLLBAR_INACTIVE)
+			if (scrollbar.GetState() == IDLE)
 			{
 				int i = -1;
 				int visible_count = 0;
@@ -3045,28 +3175,12 @@ namespace wi::gui
 
 		font.Draw(cmd);
 
-		// scrollbar background
-		wi::image::Params fx = sprites[state].params;
-		fx.pos = XMFLOAT3(translation.x + scale.x - tree_scrollbar_width(), translation.y + item_height() + 1, 0);
-		fx.siz = XMFLOAT2(tree_scrollbar_width(), scale.y - item_height() - 1);
-		fx.color = sprites[IDLE].params.color;
-		wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
-
-		// scrollbar
-		wi::Color scrollbar_color = wi::Color::fromFloat4(sprites[IDLE].params.color);
-		if (scrollbar_state == SCROLLBAR_HOVER)
-		{
-			scrollbar_color = wi::Color::fromFloat4(sprites[FOCUS].params.color);
-		}
-		else if (scrollbar_state == SCROLLBAR_GRABBED)
-		{
-			scrollbar_color = wi::Color::White();
-		}
-		wi::image::Draw(wi::texturehelper::getWhite()
-			, wi::image::Params(translation.x + scale.x - tree_scrollbar_width(), translation.y + item_height() + 1 + scrollbar_delta, tree_scrollbar_width(), scrollbar_height, scrollbar_color), cmd);
+		scrollbar.Render(canvas, cmd);
 
 		// list background
 		Hitbox2D itemlist_box = GetHitbox_ListArea();
+		wi::image::Params fx = sprites[state].params;
+		fx.color = sprites[IDLE].params.color;
 		fx.pos = XMFLOAT3(itemlist_box.pos.x, itemlist_box.pos.y, 0);
 		fx.siz = XMFLOAT2(itemlist_box.siz.x, itemlist_box.siz.y);
 		wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);

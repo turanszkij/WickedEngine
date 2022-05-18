@@ -100,7 +100,7 @@ namespace wi::gui
 		void SetImage(wi::Resource textureResource, WIDGETSTATE state = WIDGETSTATE_COUNT);
 
 		virtual void Update(const wi::Canvas& canvas, float dt);
-		virtual void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const = 0;
+		virtual void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const {}
 		virtual void RenderTooltip(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const;
 
 		wi::Sprite sprites[WIDGETSTATE_COUNT];
@@ -294,6 +294,28 @@ namespace wi::gui
 		void OnSelect(std::function<void(EventArgs args)> func);
 	};
 
+	// Generic scroll bar
+	class ScrollBar : public Widget
+	{
+	public:
+		enum SCROLLBAR_STATE
+		{
+			SCROLLBAR_INACTIVE,
+			SCROLLBAR_HOVER,
+			SCROLLBAR_GRABBED,
+			TREESTATE_COUNT,
+		} scrollbar_state = SCROLLBAR_INACTIVE;
+
+		float scrollbar_delta = 0;
+		float scrollbar_height = 0;
+		float scrollbar_value = 0;
+		float list_height = 0;
+		float list_offset = 0;
+
+		void Update(const wi::Canvas& canvas, float dt) override;
+		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
+	};
+
 	// Widget container
 	class Window :public Widget
 	{
@@ -304,12 +326,14 @@ namespace wi::gui
 		Button resizeDragger_BottomRight;
 		Button moveDragger;
 		Label label;
+		ScrollBar scrollbar;
 		wi::vector<Widget*> widgets;
 		bool minimized = false;
+		Widget scrollable_area;
 	public:
 		void Create(const std::string& name, bool window_controls = true);
 
-		void AddWidget(Widget* widget);
+		void AddWidget(Widget* widget, bool scrollable = true);
 		void RemoveWidget(Widget* widget);
 		void RemoveWidgets();
 
@@ -373,22 +397,10 @@ namespace wi::gui
 		};
 	protected:
 		std::function<void(EventArgs args)> onSelect;
-		float list_height = 0;
-		float list_offset = 0;
 		int item_highlight = -1;
 		int opener_highlight = -1;
 
-		enum SCROLLBAR_STATE
-		{
-			SCROLLBAR_INACTIVE,
-			SCROLLBAR_HOVER,
-			SCROLLBAR_GRABBED,
-			TREESTATE_COUNT,
-		} scrollbar_state = SCROLLBAR_INACTIVE;
-
-		float scrollbar_delta = 0;
-		float scrollbar_height = 0;
-		float scrollbar_value = 0;
+		ScrollBar scrollbar;
 
 		wi::primitive::Hitbox2D GetHitbox_ListArea() const;
 		wi::primitive::Hitbox2D GetHitbox_Item(int visible_count, int level) const;

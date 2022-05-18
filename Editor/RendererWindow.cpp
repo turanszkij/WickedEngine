@@ -11,7 +11,7 @@ void RendererWindow::Create(EditorComponent* editor)
 	wi::renderer::SetToDrawGridHelper(true);
 	wi::renderer::SetToDrawDebugCameras(true);
 
-	SetSize(XMFLOAT2(580, 600));
+	SetSize(XMFLOAT2(580, 300));
 
 	float x = 220, y = 5, step = 20, itemheight = 18;
 
