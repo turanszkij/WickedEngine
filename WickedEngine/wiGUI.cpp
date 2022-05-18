@@ -1734,8 +1734,8 @@ namespace wi::gui
 			const float scrollbar_begin = translation.y;
 			const float scrollbar_end = scrollbar_begin + scale.y;
 			const float scrollbar_size = scrollbar_end - scrollbar_begin;
-			const float scrollbar_granularity = std::min(1.0f, scrollbar_size / std::max(1.0f, list_height));
-			scrollbar_height = std::max(scale.x * 2, scrollbar_size * scrollbar_granularity);
+			const float scrollbar_granularity = std::min(1.0f, scrollbar_size / std::max(1.0f, list_length));
+			scrollbar_length = std::max(scale.x * 2, scrollbar_size * scrollbar_granularity);
 
 			if (!click_down)
 			{
@@ -1758,20 +1758,20 @@ namespace wi::gui
 			if (scrollbar_state == SCROLLBAR_GRABBED)
 			{
 				Activate();
-				scrollbar_delta = pointerHitbox.pos.y - scrollbar_height * 0.5f - scrollbar_begin;
+				scrollbar_delta = pointerHitbox.pos.y - scrollbar_length * 0.5f - scrollbar_begin;
 			}
 
-			scrollbar_delta = wi::math::Clamp(scrollbar_delta, 0, scrollbar_size - scrollbar_height);
-			if (scrollbar_begin < scrollbar_end - scrollbar_height)
+			scrollbar_delta = wi::math::Clamp(scrollbar_delta, 0, scrollbar_size - scrollbar_length);
+			if (scrollbar_begin < scrollbar_end - scrollbar_length)
 			{
-				scrollbar_value = wi::math::InverseLerp(scrollbar_begin, scrollbar_end - scrollbar_height, scrollbar_begin + scrollbar_delta);
+				scrollbar_value = wi::math::InverseLerp(scrollbar_begin, scrollbar_end - scrollbar_length, scrollbar_begin + scrollbar_delta);
 			}
 			else
 			{
 				scrollbar_value = 0;
 			}
 
-			list_offset = -scrollbar_value * (list_height - scrollbar_size * 0.75f);
+			list_offset = -scrollbar_value * (list_length - scrollbar_size * (1.0f - overscroll));
 		}
 	}
 	void ScrollBar::Render(const wi::Canvas& canvas, CommandList cmd) const
@@ -1798,13 +1798,15 @@ namespace wi::gui
 			scrollbar_color = wi::Color::White();
 		}
 		wi::image::Draw(wi::texturehelper::getWhite()
-			, wi::image::Params(translation.x, translation.y + scrollbar_delta, scale.x, scrollbar_height, scrollbar_color), cmd);
+			, wi::image::Params(translation.x, translation.y + scrollbar_delta, scale.x, scrollbar_length, scrollbar_color), cmd);
 
 
 		//wi::image::Draw(wi::texturehelper::getWhite()
 		//	, wi::image::Params(translation.x, translation.y, scale.x, scale.y, wi::Color::Red()), cmd);
 
 	}
+
+
 
 
 
@@ -2014,26 +2016,27 @@ namespace wi::gui
 		uint32_t priority = 0;
 
 		// Compute scrollable area:
-		scrollbar.list_height = 0;
+		float scroll_length = 0;
 		for (auto& widget : widgets)
 		{
 			if (widget->parent == &scrollable_area)
 			{
-				scrollbar.list_height = std::max(scrollbar.list_height, widget->translation_local.y + widget->scale_local.y);
+				scroll_length = std::max(scroll_length, widget->translation_local.y + widget->scale_local.y);
 			}
 		}
+		scrollbar.SetListLength(scroll_length);
 		scrollable_area.ClearTransform();
 		scrollable_area.Translate(translation);
-		scrollable_area.Translate(XMFLOAT3(0, scrollbar.list_offset, 0));
+		scrollable_area.Translate(XMFLOAT3(0, windowcontrolSize + scrollbar.GetOffset(), 0));
 		scrollable_area.Update(canvas, dt);
 		scrollable_area.scissorRect = scissorRect;
 		scrollable_area.scissorRect.top += (int32_t)windowcontrolSize;
 		scrollable_area.scissorRect.right -= (int32_t)windowcontrolSize;
-
-		if (state == FOCUS)
+		scrollable_area.scissorRect.bottom -= (int32_t)windowcontrolSize;
+		if (pointerHitbox.intersects(hitBox))
 		{
 			// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
-			scrollbar.scrollbar_delta -= wi::input::GetPointer().z * 20;
+			scrollbar.Scroll(wi::input::GetPointer().z * 20);
 		}
 
 		bool focus = false;
@@ -2152,7 +2155,14 @@ namespace wi::gui
 		for (size_t i = 0; i < widgets.size(); ++i)
 		{
 			const Widget* widget = widgets[widgets.size() - i - 1];
-			ApplyScissor(canvas, scissorRect, cmd);
+			if (widget->parent == nullptr)
+			{
+				ApplyScissor(canvas, scissorRect, cmd);
+			}
+			else
+			{
+				ApplyScissor(canvas, widget->parent->scissorRect, cmd);
+			}
 			widget->Render(canvas, cmd);
 		}
 
@@ -2188,6 +2198,8 @@ namespace wi::gui
 			if (x == &resizeDragger_UpperLeft)
 				continue;
 			if (x == &resizeDragger_BottomRight)
+				continue;
+			if (x == &scrollbar)
 				continue;
 			x->SetEnabled(value);
 		}
@@ -2343,7 +2355,7 @@ namespace wi::gui
 		SetColor(wi::Color(100, 100, 100, 100));
 
 		float x = 250;
-		float y = 110;
+		float y = 100;
 		float step = 20;
 
 		text_R.Create("R");
@@ -2426,7 +2438,7 @@ namespace wi::gui
 		AddWidget(&text_V);
 
 		alphaSlider.Create(0, 255, 255, 255, "");
-		alphaSlider.SetPos(XMFLOAT2(20, 230));
+		alphaSlider.SetPos(XMFLOAT2(20, y));
 		alphaSlider.SetSize(XMFLOAT2(150, 18));
 		alphaSlider.SetText("A: ");
 		alphaSlider.SetTooltip("Value for ALPHA - TRANSPARENCY channel (0-255)");
@@ -2912,7 +2924,7 @@ namespace wi::gui
 		{
 			XMStoreFloat4x4(&cb.g_xTransform,
 				XMMatrixScaling(sca, sca, 1) *
-				XMMatrixTranslation(translation.x + scale.x - 40 * sca, translation.y + 40, 0) *
+				XMMatrixTranslation(translation.x + scale.x - 40 * sca, translation.y + 50, 0) *
 				Projection
 			);
 			cb.g_xColor = final_color.toFloat4();
@@ -2988,10 +3000,12 @@ namespace wi::gui
 			scrollbar.sprites[i].params.color = sprites[FOCUS].params.color;
 		}
 		font.params.v_align = wi::font::WIFALIGN_CENTER;
+
+		scrollbar.SetOverScroll(0.25f);
 	}
 	float TreeList::GetItemOffset(int index) const
 	{
-		return 2 + scrollbar.list_offset + index * item_height();
+		return 2 + scrollbar.GetOffset() + index * item_height();
 	}
 	Hitbox2D TreeList::GetHitbox_ListArea() const
 	{
@@ -3064,7 +3078,7 @@ namespace wi::gui
 			}
 
 			// compute control-list height
-			scrollbar.list_height = 0;
+			float scroll_length = 0;
 			{
 				int parent_level = 0;
 				bool parent_open = true;
@@ -3076,15 +3090,16 @@ namespace wi::gui
 					}
 					parent_open = item.open;
 					parent_level = item.level;
-					scrollbar.list_height += item_height();
+					scroll_length += item_height();
 				}
 			}
+			scrollbar.SetListLength(scroll_length);
 
 
 			if (state == FOCUS)
 			{
 				// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
-				scrollbar.scrollbar_delta -= wi::input::GetPointer().z * 10;
+				scrollbar.Scroll(wi::input::GetPointer().z * 10);
 			}
 			const float scrollbar_width = 12;
 			scrollbar.SetSize(XMFLOAT2(scrollbar_width - 1, scale.y - 1 - item_height()));

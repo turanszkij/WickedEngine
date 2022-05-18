@@ -9,7 +9,7 @@ using namespace wi::scene;
 void MaterialWindow::Create(EditorComponent* editor)
 {
 	wi::gui::Window::Create("Material Window");
-	SetSize(XMFLOAT2(720, 620));
+	SetSize(XMFLOAT2(730, 620));
 
 	float x = 670, y = 0;
 	float hei = 18;

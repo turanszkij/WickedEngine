@@ -297,7 +297,7 @@ namespace wi::gui
 	// Generic scroll bar
 	class ScrollBar : public Widget
 	{
-	public:
+	protected:
 		enum SCROLLBAR_STATE
 		{
 			SCROLLBAR_INACTIVE,
@@ -307,10 +307,21 @@ namespace wi::gui
 		} scrollbar_state = SCROLLBAR_INACTIVE;
 
 		float scrollbar_delta = 0;
-		float scrollbar_height = 0;
+		float scrollbar_length = 0;
 		float scrollbar_value = 0;
-		float list_height = 0;
+		float list_length = 0;
 		float list_offset = 0;
+		float overscroll = 0;
+
+	public:
+		// Set the list's length that will be scrollable and moving
+		void SetListLength(float size) { list_length = size; }
+		// The scrolling offset that should be applied to the list items
+		float GetOffset() const { return list_offset; }
+		// This can be called by user for extra scrolling on top of base functionality
+		void Scroll(float amount) { scrollbar_delta -= amount; }
+		// How much the max scrolling will offset the list even further than it would be necessary for fitting
+		void SetOverScroll(float amount) { overscroll = amount; }
 
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
