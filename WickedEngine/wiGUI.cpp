@@ -1773,6 +1773,14 @@ namespace wi::gui
 
 			list_offset = -scrollbar_value * (list_length - scrollbar_size * (1.0f - overscroll));
 		}
+
+		for (int i = 0; i < arraysize(sprites_knob); ++i)
+		{
+			sprites_knob[i].params.pos.x = translation.x + knob_inset_border;
+			sprites_knob[i].params.pos.y = translation.y + knob_inset_border + scrollbar_delta;
+			sprites_knob[i].params.siz.x = scale.x - knob_inset_border * 2;
+			sprites_knob[i].params.siz.y = scrollbar_length - knob_inset_border * 2;
+		}
 	}
 	void ScrollBar::Render(const wi::Canvas& canvas, CommandList cmd) const
 	{
@@ -1787,22 +1795,8 @@ namespace wi::gui
 		fx.color = sprites[IDLE].params.color;
 		wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
 
-		// scrollbar
-		wi::Color scrollbar_color = wi::Color::fromFloat4(sprites[IDLE].params.color);
-		if (scrollbar_state == SCROLLBAR_HOVER)
-		{
-			scrollbar_color = wi::Color::fromFloat4(sprites[FOCUS].params.color);
-		}
-		else if (scrollbar_state == SCROLLBAR_GRABBED)
-		{
-			scrollbar_color = wi::Color::White();
-		}
-		wi::image::Draw(wi::texturehelper::getWhite()
-			, wi::image::Params(translation.x, translation.y + scrollbar_delta, scale.x, scrollbar_length, scrollbar_color), cmd);
-
-
-		//wi::image::Draw(wi::texturehelper::getWhite()
-		//	, wi::image::Params(translation.x, translation.y, scale.x, scale.y, wi::Color::Red()), cmd);
+		// scrollbar knob
+		sprites_knob[scrollbar_state].Draw(cmd);
 
 	}
 
@@ -1889,6 +1883,11 @@ namespace wi::gui
 			minimizeButton.SetTooltip("Minimize window");
 			AddWidget(&minimizeButton);
 
+			scrollbar.SetColor(wi::Color(80, 80, 80, 100), wi::gui::IDLE);
+			scrollbar.sprites_knob[ScrollBar::SCROLLBAR_INACTIVE].params.color = wi::Color(140, 140, 140, 140);
+			scrollbar.sprites_knob[ScrollBar::SCROLLBAR_HOVER].params.color = wi::Color(180, 180, 180, 180);
+			scrollbar.sprites_knob[ScrollBar::SCROLLBAR_GRABBED].params.color = wi::Color::White();
+			scrollbar.knob_inset_border = 4;
 			AddWidget(&scrollbar);
 		}
 		else
@@ -2993,7 +2992,6 @@ namespace wi::gui
 		OnSelect([](EventArgs args) {});
 
 		SetColor(wi::Color(100, 100, 100, 100), wi::gui::IDLE);
-		scrollbar.SetColor(wi::Color(100, 100, 100, 100), wi::gui::IDLE);
 		for (int i = FOCUS + 1; i < WIDGETSTATE_COUNT; ++i)
 		{
 			sprites[i].params.color = sprites[FOCUS].params.color;
@@ -3001,6 +2999,10 @@ namespace wi::gui
 		}
 		font.params.v_align = wi::font::WIFALIGN_CENTER;
 
+		scrollbar.SetColor(wi::Color(80, 80, 80, 100), wi::gui::IDLE);
+		scrollbar.sprites_knob[ScrollBar::SCROLLBAR_INACTIVE].params.color = wi::Color(140, 140, 140, 140);
+		scrollbar.sprites_knob[ScrollBar::SCROLLBAR_HOVER].params.color = wi::Color(180, 180, 180, 180);
+		scrollbar.sprites_knob[ScrollBar::SCROLLBAR_GRABBED].params.color = wi::Color::White();
 		scrollbar.SetOverScroll(0.25f);
 	}
 	float TreeList::GetItemOffset(int index) const

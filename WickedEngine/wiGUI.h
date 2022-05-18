@@ -298,14 +298,6 @@ namespace wi::gui
 	class ScrollBar : public Widget
 	{
 	protected:
-		enum SCROLLBAR_STATE
-		{
-			SCROLLBAR_INACTIVE,
-			SCROLLBAR_HOVER,
-			SCROLLBAR_GRABBED,
-			TREESTATE_COUNT,
-		} scrollbar_state = SCROLLBAR_INACTIVE;
-
 		float scrollbar_delta = 0;
 		float scrollbar_length = 0;
 		float scrollbar_value = 0;
@@ -322,6 +314,16 @@ namespace wi::gui
 		void Scroll(float amount) { scrollbar_delta -= amount; }
 		// How much the max scrolling will offset the list even further than it would be necessary for fitting
 		void SetOverScroll(float amount) { overscroll = amount; }
+
+		enum SCROLLBAR_STATE
+		{
+			SCROLLBAR_INACTIVE,
+			SCROLLBAR_HOVER,
+			SCROLLBAR_GRABBED,
+			SCROLLBAR_STATE_COUNT,
+		} scrollbar_state = SCROLLBAR_INACTIVE;
+		wi::Sprite sprites_knob[SCROLLBAR_STATE_COUNT];
+		float knob_inset_border = 0;
 
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
