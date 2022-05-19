@@ -3091,7 +3091,12 @@ namespace wi::gui
 	}
 	Hitbox2D TreeList::GetHitbox_ListArea() const
 	{
-		return Hitbox2D(XMFLOAT2(translation.x, translation.y + item_height() + 1), XMFLOAT2(scale.x - scrollbar.scale.x - 1, scale.y - item_height() - 1));
+		Hitbox2D retval = Hitbox2D(XMFLOAT2(translation.x, translation.y + item_height() + 1), XMFLOAT2(scale.x, scale.y - item_height() - 1));
+		if (scrollbar.IsScrollbarRequired())
+		{
+			retval.siz.x -= scrollbar.scale.x + 1;
+		}
+		return retval;
 	}
 	Hitbox2D TreeList::GetHitbox_Item(int visible_count, int level) const
 	{
