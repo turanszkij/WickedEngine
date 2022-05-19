@@ -11,14 +11,14 @@ void AnimationWindow::Create(EditorComponent* editor)
 	SetSize(XMFLOAT2(520, 140));
 
 	float x = 140;
-	float y = 10;
+	float y = 0;
 	float hei = 18;
 	float step = hei + 2;
 
 
 	animationsComboBox.Create("Animation: ");
 	animationsComboBox.SetSize(XMFLOAT2(300, hei));
-	animationsComboBox.SetPos(XMFLOAT2(x, y += step));
+	animationsComboBox.SetPos(XMFLOAT2(x, y));
 	animationsComboBox.SetEnabled(false);
 	animationsComboBox.OnSelect([&](wi::gui::EventArgs args) {
 		entity = wi::scene::GetScene().animations.GetEntity(args.iValue);

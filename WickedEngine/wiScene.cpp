@@ -1577,7 +1577,6 @@ namespace wi::scene
 		}
 
 		wi::jobsystem::context ctx;
-		wi::physics::RunPhysicsUpdateSystem(ctx, *this, dt);
 
 		// Scan mesh subset counts to allocate GPU geometry data:
 		geometryAllocator.store(0u);
@@ -1590,6 +1589,8 @@ namespace wi::scene
 			// Must not keep inactive TLAS instances, so zero them out for safety:
 			std::memset(TLAS_instancesMapped, 0, TLAS_instancesUpload->desc.size);
 		});
+
+		wi::physics::RunPhysicsUpdateSystem(ctx, *this, dt);
 
 		RunAnimationUpdateSystem(ctx);
 

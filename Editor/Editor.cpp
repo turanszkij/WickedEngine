@@ -1021,7 +1021,6 @@ void EditorComponent::Load()
 		RecordSelection(archive);
 
 		});
-	sceneGraphView.SetColor(wi::Color(100, 100, 100, 100), wi::gui::IDLE);
 	GetGUI().AddWidget(&sceneGraphView);
 
 

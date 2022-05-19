@@ -9,15 +9,15 @@ using namespace wi::scene;
 void DecalWindow::Create(EditorComponent* editor)
 {
 	wi::gui::Window::Create("Decal Window");
-	SetSize(XMFLOAT2(400, 200));
+	SetSize(XMFLOAT2(420, 200));
 
 	float x = 200;
-	float y = 5;
+	float y = 0;
 	float hei = 18;
 	float step = hei + 2;
 
 	placementCheckBox.Create("Decal Placement Enabled: ");
-	placementCheckBox.SetPos(XMFLOAT2(x, y += step));
+	placementCheckBox.SetPos(XMFLOAT2(x, y));
 	placementCheckBox.SetSize(XMFLOAT2(hei, hei));
 	placementCheckBox.SetCheck(false);
 	placementCheckBox.SetTooltip("Enable decal placement. Use the left mouse button to place decals to the scene.");

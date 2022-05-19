@@ -9,7 +9,7 @@ using namespace wi::scene;
 void TransformWindow::Create(EditorComponent* editor)
 {
 	wi::gui::Window::Create("Transform Window");
-	SetSize(XMFLOAT2(460, 180));
+	SetSize(XMFLOAT2(480, 200));
 
 	float x = 100;
 	float y = 0;
@@ -19,7 +19,7 @@ void TransformWindow::Create(EditorComponent* editor)
 
 	createButton.Create("Create New Transform");
 	createButton.SetTooltip("Create a new entity with only a trasform component");
-	createButton.SetPos(XMFLOAT2(x, y += step));
+	createButton.SetPos(XMFLOAT2(x, y));
 	createButton.SetSize(XMFLOAT2(350, hei));
 	createButton.OnClick([=](wi::gui::EventArgs args) {
 		Entity entity = CreateEntity();
