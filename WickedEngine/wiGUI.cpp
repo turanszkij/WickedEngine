@@ -1772,6 +1772,10 @@ namespace wi::gui
 				if (clicked)
 				{
 					scrollbar_state = SCROLLBAR_GRABBED;
+					grab_pos = pointerHitbox.pos;
+					grab_pos.x = wi::math::Clamp(grab_pos.x, scrollbar_begin + scrollbar_delta, scrollbar_begin + scrollbar_delta + scrollbar_length);
+					grab_pos.y = wi::math::Clamp(grab_pos.y, scrollbar_begin + scrollbar_delta, scrollbar_begin + scrollbar_delta + scrollbar_length);
+					grab_delta = scrollbar_delta;
 				}
 				else if (!click_down)
 				{
@@ -1785,11 +1789,11 @@ namespace wi::gui
 				Activate();
 				if (vertical)
 				{
-					scrollbar_delta = pointerHitbox.pos.y - scrollbar_length * 0.5f - scrollbar_begin;
+					scrollbar_delta = grab_delta + pointerHitbox.pos.y - grab_pos.y;
 				}
 				else
 				{
-					scrollbar_delta = pointerHitbox.pos.x - scrollbar_length * 0.5f - scrollbar_begin;
+					scrollbar_delta = grab_delta + pointerHitbox.pos.x - grab_pos.x;
 				}
 			}
 

@@ -305,6 +305,8 @@ namespace wi::gui
 		float list_offset = 0;
 		float overscroll = 0;
 		bool vertical = true;
+		XMFLOAT2 grab_pos = {};
+		float grab_delta = 0;
 
 	public:
 		// Set the list's length that will be scrollable and moving
