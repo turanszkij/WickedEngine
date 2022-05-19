@@ -316,6 +316,9 @@ namespace wi::gui
 		// This can be called by user for extra scrolling on top of base functionality
 		void Scroll(float amount) { scrollbar_delta -= amount; }
 		// How much the max scrolling will offset the list even further than it would be necessary for fitting
+		//	this value is in percent of a full scrollbar's worth of extra offset
+		//	0: no extra offset
+		//	1: full extra offset
 		void SetOverScroll(float amount) { overscroll = amount; }
 
 		enum SCROLLBAR_STATE
