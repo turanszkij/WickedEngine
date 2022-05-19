@@ -519,30 +519,31 @@ namespace wi::gui
 	}
 	void Widget::HitboxConstrain(wi::primitive::Hitbox2D& hb) const
 	{
+		Hitbox2D area = active_area;
+
+		float left = hb.pos.x;
+		float right = hb.pos.x + hb.siz.x;
+		float top = hb.pos.y;
+		float bottom = hb.pos.y + hb.siz.y;
+
+		float area_left = area.pos.x;
+		float area_right = area.pos.x + area.siz.x;
+		float area_top = area.pos.y;
+		float area_bottom = area.pos.y + area.siz.y;
+
+		bottom = std::min(bottom, area_bottom);
+		top = std::max(top, area_top);
+		left = std::max(left, area_left);
+		right = std::min(right, area_right);
+
+		hb.pos.x = left;
+		hb.pos.y = top;
+		hb.siz.x = std::max(0.0f, right - left);
+		hb.siz.y = std::max(0.0f, bottom - top);
+
 		if (parent != nullptr)
 		{
-			Hitbox2D area = active_area;
-			parent->HitboxConstrain(area);
-
-			float left = hb.pos.x;
-			float right = hb.pos.x + hb.siz.x;
-			float top = hb.pos.y;
-			float bottom = hb.pos.y + hb.siz.y;
-
-			float area_left = area.pos.x;
-			float area_right = area.pos.x + area.siz.x;
-			float area_top = area.pos.y;
-			float area_bottom = area.pos.y + area.siz.y;
-
-			bottom = std::min(bottom, area_bottom);
-			top = std::max(top, area_top);
-			left = std::max(left, area_left);
-			right = std::min(right, area_right);
-
-			hb.pos.x = left;
-			hb.pos.y = top;
-			hb.siz.x = right - left;
-			hb.siz.y = bottom - top;
+			parent->HitboxConstrain(hb);
 		}
 	}
 
@@ -2292,9 +2293,9 @@ namespace wi::gui
 		//scissorRect.top = (int32_t)(0);
 		//GraphicsDevice* device = wi::graphics::GetDevice();
 		//device->BindScissorRects(1, &scissorRect, cmd);
-		//wi::image::Draw(wi::texturehelper::getWhite(), wi::image::Params(scrollable_area.active_area.pos.x, scrollable_area.active_area.pos.y, scrollable_area.active_area.siz.x, scrollable_area.active_area.siz.y, wi::Color::Red()), cmd);
+		//wi::image::Draw(wi::texturehelper::getWhite(), wi::image::Params(scrollable_area.active_area.pos.x, scrollable_area.active_area.pos.y, scrollable_area.active_area.siz.x, scrollable_area.active_area.siz.y, wi::Color(255,0,255,100)), cmd);
 		//Hitbox2D p = scrollable_area.GetPointerHitbox();
-		//wi::image::Draw(wi::texturehelper::getWhite(), wi::image::Params(p.pos.x, p.pos.y, p.siz.x * 10, p.siz.y * 10, wi::Color::Red()), cmd);
+		//wi::image::Draw(wi::texturehelper::getWhite(), wi::image::Params(p.pos.x, p.pos.y, p.siz.x * 10, p.siz.y * 10, wi::Color(255,0,0,100)), cmd);
 	}
 	void Window::RenderTooltip(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const
 	{
