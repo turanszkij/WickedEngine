@@ -2156,13 +2156,7 @@ namespace wi::gui
 		bool focus = false;
 		for (auto& widget : widgets)
 		{
-			// These were already updated beforehand:
-			if (widget == &moveDragger)
-				continue;
-			if (widget == &resizeDragger_UpperLeft)
-				continue;
-			if (widget == &resizeDragger_BottomRight)
-				continue;
+			// Don't update these again:
 			if (widget == &scrollbar_horizontal)
 				continue;
 			if (widget == &scrollbar_vertical)
@@ -2194,7 +2188,7 @@ namespace wi::gui
 			return a->priority < b->priority;
 				});
 
-		if (GetState() == FOCUS && !focus) // when window is in focus, but other widgets aren't
+		if (pointerHitbox.intersects(hitBox) && !force_disable && !focus) // when window is in focus, but other widgets aren't
 		{
 			// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
 			scrollbar_vertical.Scroll(wi::input::GetPointer().z * 20);
