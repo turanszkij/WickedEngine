@@ -519,17 +519,15 @@ namespace wi::gui
 	}
 	void Widget::HitboxConstrain(wi::primitive::Hitbox2D& hb) const
 	{
-		Hitbox2D area = active_area;
-
 		float left = hb.pos.x;
 		float right = hb.pos.x + hb.siz.x;
 		float top = hb.pos.y;
 		float bottom = hb.pos.y + hb.siz.y;
 
-		float area_left = area.pos.x;
-		float area_right = area.pos.x + area.siz.x;
-		float area_top = area.pos.y;
-		float area_bottom = area.pos.y + area.siz.y;
+		float area_left = active_area.pos.x;
+		float area_right = active_area.pos.x + active_area.siz.x;
+		float area_top = active_area.pos.y;
+		float area_bottom = active_area.pos.y + active_area.siz.y;
 
 		bottom = std::min(bottom, area_bottom);
 		top = std::max(top, area_top);
