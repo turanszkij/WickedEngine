@@ -1947,6 +1947,8 @@ namespace wi::gui
 			scrollbar_vertical.sprites_knob[ScrollBar::SCROLLBAR_GRABBED].params.color = wi::Color::White();
 			scrollbar_vertical.knob_inset_border = XMFLOAT2(4, 2);
 			AddWidget(&scrollbar_vertical);
+
+			scrollable_area.AttachTo(this);
 		}
 		else
 		{
@@ -2096,10 +2098,12 @@ namespace wi::gui
 		}
 		scrollbar_horizontal.SetListLength(scroll_length_horizontal);
 		scrollbar_vertical.SetListLength(scroll_length_vertical);
+		scrollable_area.Detach();
 		scrollable_area.ClearTransform();
 		scrollable_area.Translate(translation);
 		scrollable_area.Translate(XMFLOAT3(scrollbar_horizontal.GetOffset(), windowcontrolSize + scrollbar_vertical.GetOffset(), 0));
 		scrollable_area.Update(canvas, dt);
+		scrollable_area.AttachTo(this);
 		scrollable_area.scissorRect = scissorRect;
 		scrollable_area.scissorRect.top += (int32_t)windowcontrolSize;
 		if (scrollbar_horizontal.IsScrollbarRequired())
