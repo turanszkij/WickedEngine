@@ -2151,7 +2151,7 @@ namespace wi::gui
 		scrollable_area.active_area.pos.y = float(scrollable_area.scissorRect.top);
 		scrollable_area.active_area.siz.x = float(scrollable_area.scissorRect.right) - float(scrollable_area.scissorRect.left);
 		scrollable_area.active_area.siz.y = float(scrollable_area.scissorRect.bottom) - float(scrollable_area.scissorRect.top);
-		if (pointerHitbox.intersects(hitBox))
+		if (GetState() == FOCUS)
 		{
 			// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
 			scrollbar_vertical.Scroll(wi::input::GetPointer().z * 20);
@@ -3235,7 +3235,7 @@ namespace wi::gui
 			scrollbar.SetListLength(scroll_length);
 
 
-			if (state == FOCUS)
+			if (GetState() == FOCUS)
 			{
 				// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
 				scrollbar.Scroll(wi::input::GetPointer().z * 10);
