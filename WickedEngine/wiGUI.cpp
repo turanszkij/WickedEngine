@@ -1938,7 +1938,7 @@ namespace wi::gui
 			scrollbar_horizontal.sprites_knob[ScrollBar::SCROLLBAR_INACTIVE].params.color = wi::Color(140, 140, 140, 140);
 			scrollbar_horizontal.sprites_knob[ScrollBar::SCROLLBAR_HOVER].params.color = wi::Color(180, 180, 180, 180);
 			scrollbar_horizontal.sprites_knob[ScrollBar::SCROLLBAR_GRABBED].params.color = wi::Color::White();
-			scrollbar_horizontal.knob_inset_border = XMFLOAT2(4, 2);
+			scrollbar_horizontal.knob_inset_border = XMFLOAT2(2, 4);
 			AddWidget(&scrollbar_horizontal);
 
 			scrollbar_vertical.SetColor(wi::Color(80, 80, 80, 100), wi::gui::IDLE);
