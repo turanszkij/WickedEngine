@@ -514,7 +514,7 @@ namespace wi::gui
 	{
 		XMFLOAT4 pointer = wi::input::GetPointer();
 		Hitbox2D hb = Hitbox2D(XMFLOAT2(pointer.x, pointer.y), XMFLOAT2(1, 1));
-		HitboxConstrain(hb);
+		HitboxConstrain(hb); // this is used to filter out pointer outside of active_area (outside of scissor basically)
 		return hb;
 	}
 	void Widget::HitboxConstrain(wi::primitive::Hitbox2D& hb) const
@@ -2173,10 +2173,10 @@ namespace wi::gui
 				widget->priority = ~0u;
 			}
 
-			if (widget->IsVisible() && widget->hitBox.intersects(pointerHitbox))
-			{
-				focus = true;
-			}
+			//if (widget->IsVisible() && widget->hitBox.intersects(pointerHitbox))
+			//{
+			//	focus = true;
+			//}
 			if (widget->GetState() > IDLE)
 			{
 				focus = true;
