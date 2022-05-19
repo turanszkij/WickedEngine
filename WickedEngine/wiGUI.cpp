@@ -1947,8 +1947,6 @@ namespace wi::gui
 			scrollbar_vertical.sprites_knob[ScrollBar::SCROLLBAR_GRABBED].params.color = wi::Color::White();
 			scrollbar_vertical.knob_inset_border = XMFLOAT2(4, 2);
 			AddWidget(&scrollbar_vertical);
-
-			scrollable_area.AttachTo(this);
 		}
 		else
 		{
