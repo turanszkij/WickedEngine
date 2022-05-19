@@ -301,6 +301,7 @@ namespace wi::gui
 		float scrollbar_delta = 0;
 		float scrollbar_length = 0;
 		float scrollbar_value = 0;
+		float scrollbar_granularity = 1;
 		float list_length = 0;
 		float list_offset = 0;
 		float overscroll = 0;
@@ -320,6 +321,8 @@ namespace wi::gui
 		//	0: no extra offset
 		//	1: full extra offset
 		void SetOverScroll(float amount) { overscroll = amount; }
+		// Check whether the scrollbar is required (when the items don't and scrolling could be used)
+		bool IsScrollbarRequired() const { return scrollbar_granularity < 1; }
 
 		enum SCROLLBAR_STATE
 		{

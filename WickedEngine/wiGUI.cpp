@@ -1743,7 +1743,6 @@ namespace wi::gui
 			float scrollbar_begin;
 			float scrollbar_end;
 			float scrollbar_size;
-			float scrollbar_granularity;
 
 			if (vertical)
 			{
@@ -1767,7 +1766,7 @@ namespace wi::gui
 				scrollbar_state = SCROLLBAR_INACTIVE;
 			}
 
-			if (hitbox.intersects(pointerHitbox))
+			if (IsScrollbarRequired() && hitbox.intersects(pointerHitbox))
 			{
 				if (clicked)
 				{
@@ -1837,6 +1836,9 @@ namespace wi::gui
 		{
 			return;
 		}
+		if (!IsScrollbarRequired())
+			return;
+
 		// scrollbar background
 		wi::image::Params fx = sprites[state].params;
 		fx.pos = XMFLOAT3(translation.x, translation.y, 0);
@@ -2100,8 +2102,14 @@ namespace wi::gui
 		scrollable_area.Update(canvas, dt);
 		scrollable_area.scissorRect = scissorRect;
 		scrollable_area.scissorRect.top += (int32_t)windowcontrolSize;
-		scrollable_area.scissorRect.right -= (int32_t)windowcontrolSize;
-		scrollable_area.scissorRect.bottom -= (int32_t)windowcontrolSize;
+		if (scrollbar_horizontal.IsScrollbarRequired())
+		{
+			scrollable_area.scissorRect.bottom -= (int32_t)windowcontrolSize;
+		}
+		if (scrollbar_vertical.IsScrollbarRequired())
+		{
+			scrollable_area.scissorRect.right -= (int32_t)windowcontrolSize;
+		}
 		if (pointerHitbox.intersects(hitBox))
 		{
 			// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
