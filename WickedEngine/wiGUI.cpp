@@ -197,6 +197,11 @@ namespace wi::gui
 			sprites[i].params.blendFlag = wi::enums::BLENDMODE_OPAQUE;
 			sprites[i].params.enableBackground();
 		}
+
+		active_area.pos.x = 0;
+		active_area.pos.y = 0;
+		active_area.siz.x = std::numeric_limits<float>::max();
+		active_area.siz.y = std::numeric_limits<float>::max();
 	}
 	void Widget::Update(const wi::Canvas& canvas, float dt)
 	{
@@ -233,10 +238,10 @@ namespace wi::gui
 		XMStoreFloat3(&translation, T);
 		XMStoreFloat3(&scale, S);
 
-		scissorRect.bottom = (int32_t)(translation.y + scale.y);
-		scissorRect.left = (int32_t)(translation.x);
-		scissorRect.right = (int32_t)(translation.x + scale.x);
-		scissorRect.top = (int32_t)(translation.y);
+		scissorRect.bottom = (int32_t)std::ceil(translation.y + scale.y);
+		scissorRect.left = (int32_t)std::floor(translation.x);
+		scissorRect.right = (int32_t)std::ceil(translation.x + scale.x);
+		scissorRect.top = (int32_t)std::floor(translation.y);
 
 		// default sprite and font placement:
 		for (int i = IDLE; i < WIDGETSTATE_COUNT; ++i)
@@ -508,7 +513,37 @@ namespace wi::gui
 	Hitbox2D Widget::GetPointerHitbox() const
 	{
 		XMFLOAT4 pointer = wi::input::GetPointer();
-		return Hitbox2D(XMFLOAT2(pointer.x, pointer.y), XMFLOAT2(1, 1));
+		Hitbox2D hb = Hitbox2D(XMFLOAT2(pointer.x, pointer.y), XMFLOAT2(1, 1));
+		HitboxConstrain(hb);
+		return hb;
+	}
+	void Widget::HitboxConstrain(wi::primitive::Hitbox2D& hb) const
+	{
+		if (parent != nullptr)
+		{
+			Hitbox2D area = active_area;
+			parent->HitboxConstrain(area);
+
+			float left = hb.pos.x;
+			float right = hb.pos.x + hb.siz.x;
+			float top = hb.pos.y;
+			float bottom = hb.pos.y + hb.siz.y;
+
+			float area_left = area.pos.x;
+			float area_right = area.pos.x + area.siz.x;
+			float area_top = area.pos.y;
+			float area_bottom = area.pos.y + area.siz.y;
+
+			bottom = std::min(bottom, area_bottom);
+			top = std::max(top, area_top);
+			left = std::max(left, area_left);
+			right = std::min(right, area_right);
+
+			hb.pos.x = left;
+			hb.pos.y = top;
+			hb.siz.x = right - left;
+			hb.siz.y = bottom - top;
+		}
 	}
 
 
@@ -994,10 +1029,10 @@ namespace wi::gui
 		valueInputField.SetPos(XMFLOAT2(translation.x + scale.x + 2, translation.y));
 		valueInputField.AttachTo(this);
 
-		scissorRect.bottom = (int32_t)(translation.y + scale.y);
-		scissorRect.left = (int32_t)(translation.x);
-		scissorRect.right = (int32_t)(translation.x + scale.x + 20 + scale.y * 2); // include the valueInputField
-		scissorRect.top = (int32_t)(translation.y);
+		scissorRect.bottom = (int32_t)std::ceil(translation.y + scale.y);
+		scissorRect.left = (int32_t)std::floor(translation.x);
+		scissorRect.right = (int32_t)std::ceil(translation.x + scale.x + 20 + scale.y * 2); // include the valueInputField
+		scissorRect.top = (int32_t)std::floor(translation.y);
 
 		for (int i = 0; i < WIDGETSTATE_COUNT; ++i)
 		{
@@ -2104,14 +2139,18 @@ namespace wi::gui
 		scrollable_area.AttachTo(this);
 		scrollable_area.scissorRect = scissorRect;
 		scrollable_area.scissorRect.top += (int32_t)windowcontrolSize;
-		if (scrollbar_horizontal.IsScrollbarRequired())
+		if (scrollbar_horizontal.parent != nullptr && scrollbar_horizontal.IsScrollbarRequired())
 		{
 			scrollable_area.scissorRect.bottom -= (int32_t)windowcontrolSize;
 		}
-		if (scrollbar_vertical.IsScrollbarRequired())
+		if (scrollbar_vertical.parent != nullptr && scrollbar_vertical.IsScrollbarRequired())
 		{
 			scrollable_area.scissorRect.right -= (int32_t)windowcontrolSize;
 		}
+		scrollable_area.active_area.pos.x = float(scrollable_area.scissorRect.left);
+		scrollable_area.active_area.pos.y = float(scrollable_area.scissorRect.top);
+		scrollable_area.active_area.siz.x = float(scrollable_area.scissorRect.right) - float(scrollable_area.scissorRect.left);
+		scrollable_area.active_area.siz.y = float(scrollable_area.scissorRect.bottom) - float(scrollable_area.scissorRect.top);
 		if (pointerHitbox.intersects(hitBox))
 		{
 			// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
@@ -2245,6 +2284,17 @@ namespace wi::gui
 			widget->Render(canvas, cmd);
 		}
 
+
+		//Rect scissorRect;
+		//scissorRect.bottom = (int32_t)(canvas.GetPhysicalHeight());
+		//scissorRect.left = (int32_t)(0);
+		//scissorRect.right = (int32_t)(canvas.GetPhysicalWidth());
+		//scissorRect.top = (int32_t)(0);
+		//GraphicsDevice* device = wi::graphics::GetDevice();
+		//device->BindScissorRects(1, &scissorRect, cmd);
+		//wi::image::Draw(wi::texturehelper::getWhite(), wi::image::Params(scrollable_area.active_area.pos.x, scrollable_area.active_area.pos.y, scrollable_area.active_area.siz.x, scrollable_area.active_area.siz.y, wi::Color::Red()), cmd);
+		//Hitbox2D p = scrollable_area.GetPointerHitbox();
+		//wi::image::Draw(wi::texturehelper::getWhite(), wi::image::Params(p.pos.x, p.pos.y, p.siz.x * 10, p.siz.y * 10, wi::Color::Red()), cmd);
 	}
 	void Window::RenderTooltip(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const
 	{

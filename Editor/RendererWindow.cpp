@@ -11,14 +11,15 @@ void RendererWindow::Create(EditorComponent* editor)
 	wi::renderer::SetToDrawGridHelper(true);
 	wi::renderer::SetToDrawDebugCameras(true);
 
-	SetSize(XMFLOAT2(580, 300));
+	SetSize(XMFLOAT2(580, 400));
 
-	float x = 220, y = 5, step = 20, itemheight = 18;
+	float step = 20, itemheight = 18;
+	float x = 220, y = 0;
 
 	vsyncCheckBox.Create("VSync: ");
 	vsyncCheckBox.SetTooltip("Toggle vertical sync");
 	vsyncCheckBox.SetScriptTip("SetVSyncEnabled(opt bool enabled)");
-	vsyncCheckBox.SetPos(XMFLOAT2(x, y += step));
+	vsyncCheckBox.SetPos(XMFLOAT2(x, y));
 	vsyncCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	vsyncCheckBox.SetCheck(editor->main->swapChain.desc.vsync);
 	vsyncCheckBox.OnClick([=](wi::gui::EventArgs args) {
@@ -529,11 +530,11 @@ void RendererWindow::Create(EditorComponent* editor)
 
 
 	// Visualizer toggles:
-	x = 540, y = 5;
+	x = 540, y = 0;
 
 	physicsDebugCheckBox.Create("Physics visualizer: ");
 	physicsDebugCheckBox.SetTooltip("Visualize the physics world");
-	physicsDebugCheckBox.SetPos(XMFLOAT2(x, y += step));
+	physicsDebugCheckBox.SetPos(XMFLOAT2(x, y));
 	physicsDebugCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	physicsDebugCheckBox.OnClick([](wi::gui::EventArgs args) {
 		wi::physics::SetDebugDrawEnabled(args.bValue);

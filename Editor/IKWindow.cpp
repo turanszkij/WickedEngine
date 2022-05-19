@@ -12,14 +12,14 @@ void IKWindow::Create(EditorComponent* editor)
 	SetSize(XMFLOAT2(400, 150));
 
 	float x = 120;
-	float y = 10;
+	float y = 0;
 	float siz = 200;
 	float hei = 18;
 	float step = hei + 2;
 
 	createButton.Create("Create");
 	createButton.SetTooltip("Create/Remove IK Component to selected entity");
-	createButton.SetPos(XMFLOAT2(x, y += step));
+	createButton.SetPos(XMFLOAT2(x, y));
 	createButton.SetSize(XMFLOAT2(siz, hei));
 	AddWidget(&createButton);
 

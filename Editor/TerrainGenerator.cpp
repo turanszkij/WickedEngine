@@ -172,7 +172,7 @@ void TerrainGenerator::init()
 	centerToCamCheckBox.Create("Center to Cam: ");
 	centerToCamCheckBox.SetTooltip("Automatically generate chunks around camera. This sets the center chunk to camera position.");
 	centerToCamCheckBox.SetSize(XMFLOAT2(hei, hei));
-	centerToCamCheckBox.SetPos(XMFLOAT2(x, y += step));
+	centerToCamCheckBox.SetPos(XMFLOAT2(x, y));
 	centerToCamCheckBox.SetCheck(true);
 	AddWidget(&centerToCamCheckBox);
 

@@ -11,13 +11,13 @@ void MaterialWindow::Create(EditorComponent* editor)
 	wi::gui::Window::Create("Material Window");
 	SetSize(XMFLOAT2(730, 620));
 
-	float x = 670, y = 0;
 	float hei = 18;
 	float step = hei + 2;
+	float x = 670, y = 0;
 
 	shadowReceiveCheckBox.Create("Receive Shadow: ");
 	shadowReceiveCheckBox.SetTooltip("Receives shadow or not?");
-	shadowReceiveCheckBox.SetPos(XMFLOAT2(540, y += step));
+	shadowReceiveCheckBox.SetPos(XMFLOAT2(540, y));
 	shadowReceiveCheckBox.SetSize(XMFLOAT2(hei, hei));
 	shadowReceiveCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		MaterialComponent* material = wi::scene::GetScene().materials.GetComponent(entity);
@@ -426,14 +426,14 @@ void MaterialWindow::Create(EditorComponent* editor)
 
 
 	// 
-	x = 10;
-	y = 0;
 	hei = 20;
 	step = hei + 2;
+	x = 10;
+	y = 0;
 
 	materialNameField.Create("MaterialName");
 	materialNameField.SetTooltip("Set a name for the material...");
-	materialNameField.SetPos(XMFLOAT2(10, y += step));
+	materialNameField.SetPos(XMFLOAT2(10, y));
 	materialNameField.SetSize(XMFLOAT2(300, hei));
 	materialNameField.OnInputAccepted([=](wi::gui::EventArgs args) {
 		NameComponent* name = wi::scene::GetScene().names.GetComponent(entity);

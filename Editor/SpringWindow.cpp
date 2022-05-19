@@ -12,14 +12,14 @@ void SpringWindow::Create(EditorComponent* editor)
 	SetSize(XMFLOAT2(460, 200));
 
 	float x = 150;
-	float y = 10;
+	float y = 0;
 	float siz = 200;
 	float hei = 18;
 	float step = hei + 2;
 
 	createButton.Create("Create");
 	createButton.SetTooltip("Create/Remove Spring Component to selected entity");
-	createButton.SetPos(XMFLOAT2(x, y += step));
+	createButton.SetPos(XMFLOAT2(x, y));
 	createButton.SetSize(XMFLOAT2(siz, hei));
 	AddWidget(&createButton);
 

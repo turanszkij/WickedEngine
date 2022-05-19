@@ -14,16 +14,16 @@ void PaintToolWindow::Create(EditorComponent* editor)
 	this->editor = editor;
 
 	wi::gui::Window::Create("Paint Tool Window");
-	SetSize(XMFLOAT2(400, 600));
+	SetSize(XMFLOAT2(410, 610));
 
 	float x = 100;
-	float y = 5;
+	float y = 0;
 	float hei = 20;
 	float step = hei + 4;
 
 	modeComboBox.Create("Mode: ");
 	modeComboBox.SetTooltip("Choose paint tool mode");
-	modeComboBox.SetPos(XMFLOAT2(x, y += step));
+	modeComboBox.SetPos(XMFLOAT2(x, y));
 	modeComboBox.SetSize(XMFLOAT2(200, hei));
 	modeComboBox.AddItem("Disabled");
 	modeComboBox.AddItem("Texture");

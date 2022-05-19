@@ -10,10 +10,10 @@ void EnvProbeWindow::Create(EditorComponent* editor)
 	wi::gui::Window::Create("Environment Probe Window");
 	SetSize(XMFLOAT2(300, 200));
 
-	float x = 100, y = 5, step = 35;
+	float x = 100, y = 0, step = 35;
 
 	realTimeCheckBox.Create("RealTime: ");
-	realTimeCheckBox.SetPos(XMFLOAT2(x, y += step));
+	realTimeCheckBox.SetPos(XMFLOAT2(x, y));
 	realTimeCheckBox.SetEnabled(false);
 	realTimeCheckBox.OnClick([&](wi::gui::EventArgs args) {
 		EnvironmentProbeComponent* probe = wi::scene::GetScene().probes.GetComponent(entity);
