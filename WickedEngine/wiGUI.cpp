@@ -2133,32 +2133,41 @@ namespace wi::gui
 		scrollable_area.Detach();
 		scrollable_area.ClearTransform();
 		scrollable_area.Translate(translation);
-		scrollable_area.Translate(XMFLOAT3(scrollbar_horizontal.GetOffset(), windowcontrolSize + scrollbar_vertical.GetOffset(), 0));
+		scrollable_area.Translate(XMFLOAT3(scrollbar_horizontal.GetOffset(), windowcontrolSize + 1 + scrollbar_vertical.GetOffset(), 0));
 		scrollable_area.Update(canvas, dt);
 		scrollable_area.AttachTo(this);
 		scrollable_area.scissorRect = scissorRect;
-		scrollable_area.scissorRect.top += (int32_t)windowcontrolSize;
+		scrollable_area.scissorRect.left += 1;
+		scrollable_area.scissorRect.top += (int32_t)windowcontrolSize + 1;
 		if (scrollbar_horizontal.parent != nullptr && scrollbar_horizontal.IsScrollbarRequired())
 		{
-			scrollable_area.scissorRect.bottom -= (int32_t)windowcontrolSize;
+			scrollable_area.scissorRect.bottom -= (int32_t)windowcontrolSize + 1;
 		}
 		if (scrollbar_vertical.parent != nullptr && scrollbar_vertical.IsScrollbarRequired())
 		{
-			scrollable_area.scissorRect.right -= (int32_t)windowcontrolSize;
+			scrollable_area.scissorRect.right -= (int32_t)windowcontrolSize + 1;
 		}
 		scrollable_area.active_area.pos.x = float(scrollable_area.scissorRect.left);
 		scrollable_area.active_area.pos.y = float(scrollable_area.scissorRect.top);
 		scrollable_area.active_area.siz.x = float(scrollable_area.scissorRect.right) - float(scrollable_area.scissorRect.left);
 		scrollable_area.active_area.siz.y = float(scrollable_area.scissorRect.bottom) - float(scrollable_area.scissorRect.top);
-		if (GetState() == FOCUS)
-		{
-			// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
-			scrollbar_vertical.Scroll(wi::input::GetPointer().z * 20);
-		}
+		
 
 		bool focus = false;
 		for (auto& widget : widgets)
 		{
+			// These were already updated beforehand:
+			if (widget == &moveDragger)
+				continue;
+			if (widget == &resizeDragger_UpperLeft)
+				continue;
+			if (widget == &resizeDragger_BottomRight)
+				continue;
+			if (widget == &scrollbar_horizontal)
+				continue;
+			if (widget == &scrollbar_vertical)
+				continue;
+
 			widget->force_disable = force_disable || focus;
 			widget->Update(canvas, dt);
 			widget->force_disable = false;
@@ -2173,10 +2182,6 @@ namespace wi::gui
 				widget->priority = ~0u;
 			}
 
-			//if (widget->IsVisible() && widget->hitBox.intersects(pointerHitbox))
-			//{
-			//	focus = true;
-			//}
 			if (widget->GetState() > IDLE)
 			{
 				focus = true;
@@ -2188,6 +2193,12 @@ namespace wi::gui
 			std::stable_sort(widgets.begin(), widgets.end(), [](const Widget* a, const Widget* b) {
 			return a->priority < b->priority;
 				});
+
+		if (GetState() == FOCUS && !focus) // when window is in focus, but other widgets aren't
+		{
+			// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
+			scrollbar_vertical.Scroll(wi::input::GetPointer().z * 20);
+		}
 
 		if (IsMinimized())
 		{
