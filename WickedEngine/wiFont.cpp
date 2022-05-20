@@ -18,6 +18,7 @@
 #include "Utility/stb_truetype.h"
 
 #include <fstream>
+#include <mutex>
 
 using namespace wi::graphics;
 using namespace wi::rectpacker;
@@ -144,9 +145,8 @@ namespace wi::font
 				if (glyph_lookup.count(hash) == 0)
 				{
 					// glyph not packed yet, so add to pending list:
-					glyphLock.lock();
+					std::scoped_lock locker(glyphLock);
 					pendingGlyphs.insert(hash);
-					glyphLock.unlock();
 					continue;
 				}
 
@@ -289,9 +289,9 @@ namespace wi::font
 		wi::backlog::post("wi::font Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
 
-	void UpdatePendingGlyphs()
+	void UpdateAtlas()
 	{
-		glyphLock.lock();
+		std::scoped_lock locker(glyphLock);
 
 		// If there are pending glyphs, render them and repack the atlas:
 		if (!pendingGlyphs.empty())
@@ -399,7 +399,6 @@ namespace wi::font
 			}
 		}
 
-		glyphLock.unlock();
 	}
 	const Texture* GetAtlas()
 	{
@@ -510,8 +509,6 @@ namespace wi::font
 
 			device->EventEnd(cmd);
 		}
-
-		UpdatePendingGlyphs();
 	}
 
 	void SetCanvas(const wi::Canvas& current_canvas)
@@ -546,74 +543,73 @@ namespace wi::font
 		Draw_internal(text.c_str(), text.length(), params, cmd);
 	}
 
-	float TextWidth(const char* text, const Params& params)
+	XMFLOAT2 TextSize(const char* text, const Params& params)
 	{
 		size_t text_length = strlen(text);
 		if (text_length == 0)
 		{
-			return 0;
+			return XMFLOAT2(0, 0);
 		}
-		return ParseText(text, text_length, params).size.x;
+		return ParseText(text, text_length, params).size;
 	}
-	float TextWidth(const wchar_t* text, const Params& params)
+	XMFLOAT2 TextSize(const wchar_t* text, const Params& params)
 	{
 		size_t text_length = wcslen(text);
 		if (text_length == 0)
 		{
-			return 0;
+			return XMFLOAT2(0, 0);
 		}
-		return ParseText(text, text_length, params).size.x;
+		return ParseText(text, text_length, params).size;
+	}
+	XMFLOAT2 TextSize(const std::string& text, const Params& params)
+	{
+		if (text.empty())
+		{
+			return XMFLOAT2(0, 0);
+		}
+		return ParseText(text.c_str(), text.length(), params).size;
+	}
+	XMFLOAT2 TextSize(const std::wstring& text, const Params& params)
+	{
+		if (text.empty())
+		{
+			return XMFLOAT2(0, 0);
+		}
+		return ParseText(text.c_str(), text.length(), params).size;
+	}
+
+	float TextWidth(const char* text, const Params& params)
+	{
+		return TextSize(text, params).x;
+	}
+	float TextWidth(const wchar_t* text, const Params& params)
+	{
+		return TextSize(text, params).x;
 	}
 	float TextWidth(const std::string& text, const Params& params)
 	{
-		if (text.empty())
-		{
-			return 0;
-		}
-		return ParseText(text.c_str(), text.length(), params).size.x;
+		return TextSize(text, params).x;
 	}
 	float TextWidth(const std::wstring& text, const Params& params)
 	{
-		if (text.empty())
-		{
-			return 0;
-		}
-		return ParseText(text.c_str(), text.length(), params).size.x;
+		return TextSize(text, params).x;
 	}
 
 	float TextHeight(const char* text, const Params& params)
 	{
-		size_t text_length = strlen(text);
-		if (text_length == 0)
-		{
-			return 0;
-		}
-		return ParseText(text, text_length, params).size.y;
+		return TextSize(text, params).y;
 	}
 	float TextHeight(const wchar_t* text, const Params& params)
 	{
-		size_t text_length = wcslen(text);
-		if (text_length == 0)
-		{
-			return 0;
-		}
-		return ParseText(text, text_length, params).size.y;
+		return TextSize(text, params).y;
 	}
 	float TextHeight(const std::string& text, const Params& params)
 	{
-		if (text.empty())
-		{
-			return 0;
-		}
-		return ParseText(text.c_str(), text.length(), params).size.y;
+		return TextSize(text, params).y;
 	}
 	float TextHeight(const std::wstring& text, const Params& params)
 	{
-		if (text.empty())
-		{
-			return 0;
-		}
-		return ParseText(text.c_str(), text.length(), params).size.y;
+		return TextSize(text, params).y;
 	}
 
 }

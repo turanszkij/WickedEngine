@@ -24,6 +24,10 @@ namespace wi
 		wi::font::Draw(text, params, cmd);
 	}
 
+	XMFLOAT2 SpriteFont::TextSize() const
+	{
+		return wi::font::TextSize(text, params);
+	}
 	float SpriteFont::TextWidth() const
 	{
 		return wi::font::TextWidth(text, params);
