@@ -35,11 +35,15 @@ using int4 = XMINT4;
 #define CBUFFER(name, slot) cbuffer name : register(PASTE(b, slot))
 #define CONSTANTBUFFER(name, type, slot) ConstantBuffer< type > name : register(PASTE(b, slot))
 
-#ifdef SPIRV
-#define PUSHCONSTANT(name, type) [[vk::push_constant]] type name;
+#ifndef SPIRV
+#ifdef __spirv__
+#define SPIRV
+#endif // __spirv__
 #endif // SPIRV
 
-#ifdef HLSL6
+#ifdef SPIRV
+#define PUSHCONSTANT(name, type) [[vk::push_constant]] type name;
+#else
 #define PUSHCONSTANT(name, type) ConstantBuffer<type> name : register(b999)
 #endif // HLSL6
 
