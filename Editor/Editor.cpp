@@ -948,7 +948,7 @@ void EditorComponent::Load()
 		helpLabel.Create("HelpLabel");
 		helpLabel.SetText(ss);
 		helpLabel.SetVisible(false);
-		helpLabel.SetColor(wi::Color(113, 183, 214, 100), wi::gui::WIDGETSTATE::IDLE);
+		helpLabel.SetColor(wi::Color(113, 183, 214, 100));
 		GetGUI().AddWidget(&helpLabel);
 	}
 

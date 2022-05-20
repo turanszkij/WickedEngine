@@ -714,11 +714,190 @@ namespace wi::gui
 
 
 
+
+	void ScrollBar::Update(const wi::Canvas& canvas, float dt)
+	{
+		if (!IsVisible())
+		{
+			return;
+		}
+
+		Widget::Update(canvas, dt);
+
+		if (scale.x > scale.y)
+		{
+			vertical = false;
+		}
+		else
+		{
+			vertical = true;
+		}
+
+		if (IsEnabled())
+		{
+			if (state == FOCUS)
+			{
+				state = IDLE;
+			}
+			if (state == DEACTIVATING)
+			{
+				state = IDLE;
+			}
+			if (state == ACTIVE)
+			{
+				Deactivate();
+			}
+
+			Hitbox2D hitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y), XMFLOAT2(scale.x, scale.y));
+			Hitbox2D pointerHitbox = GetPointerHitbox();
+
+			if (state == IDLE && hitbox.intersects(pointerHitbox))
+			{
+				state = FOCUS;
+			}
+
+			bool clicked = false;
+			if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
+			{
+				clicked = true;
+			}
+
+			bool click_down = false;
+			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
+			{
+				click_down = true;
+				if (state == FOCUS || state == DEACTIVATING)
+				{
+					// Keep pressed until mouse is released
+					Activate();
+				}
+			}
+			float scrollbar_begin;
+			float scrollbar_end;
+			float scrollbar_size;
+
+			if (vertical)
+			{
+				scrollbar_begin = translation.y;
+				scrollbar_end = scrollbar_begin + scale.y;
+				scrollbar_size = scrollbar_end - scrollbar_begin;
+				scrollbar_granularity = std::min(1.0f, scrollbar_size / std::max(1.0f, list_length));
+				scrollbar_length = std::max(scale.x * 2, scrollbar_size * scrollbar_granularity);
+			}
+			else
+			{
+				scrollbar_begin = translation.x;
+				scrollbar_end = scrollbar_begin + scale.x;
+				scrollbar_size = scrollbar_end - scrollbar_begin;
+				scrollbar_granularity = std::min(1.0f, scrollbar_size / std::max(1.0f, list_length));
+				scrollbar_length = std::max(scale.y * 2, scrollbar_size * scrollbar_granularity);
+			}
+
+			if (!click_down)
+			{
+				scrollbar_state = SCROLLBAR_INACTIVE;
+			}
+
+			if (IsScrollbarRequired() && hitbox.intersects(pointerHitbox))
+			{
+				if (clicked)
+				{
+					scrollbar_state = SCROLLBAR_GRABBED;
+					grab_pos = pointerHitbox.pos;
+					grab_pos.x = wi::math::Clamp(grab_pos.x, scrollbar_begin + scrollbar_delta, scrollbar_begin + scrollbar_delta + scrollbar_length);
+					grab_pos.y = wi::math::Clamp(grab_pos.y, scrollbar_begin + scrollbar_delta, scrollbar_begin + scrollbar_delta + scrollbar_length);
+					grab_delta = scrollbar_delta;
+				}
+				else if (!click_down)
+				{
+					scrollbar_state = SCROLLBAR_HOVER;
+					state = FOCUS;
+				}
+			}
+
+			if (scrollbar_state == SCROLLBAR_GRABBED)
+			{
+				Activate();
+				if (vertical)
+				{
+					scrollbar_delta = grab_delta + pointerHitbox.pos.y - grab_pos.y;
+				}
+				else
+				{
+					scrollbar_delta = grab_delta + pointerHitbox.pos.x - grab_pos.x;
+				}
+			}
+
+			scrollbar_delta = wi::math::Clamp(scrollbar_delta, 0, scrollbar_size - scrollbar_length);
+			if (scrollbar_begin < scrollbar_end - scrollbar_length)
+			{
+				scrollbar_value = wi::math::InverseLerp(scrollbar_begin, scrollbar_end - scrollbar_length, scrollbar_begin + scrollbar_delta);
+			}
+			else
+			{
+				scrollbar_value = 0;
+			}
+
+			list_offset = -scrollbar_value * (list_length - scrollbar_size * (1.0f - overscroll));
+		}
+
+		if (vertical)
+		{
+			for (int i = 0; i < arraysize(sprites_knob); ++i)
+			{
+				sprites_knob[i].params.pos.x = translation.x + knob_inset_border.x;
+				sprites_knob[i].params.pos.y = translation.y + knob_inset_border.y + scrollbar_delta;
+				sprites_knob[i].params.siz.x = scale.x - knob_inset_border.x * 2;
+				sprites_knob[i].params.siz.y = scrollbar_length - knob_inset_border.y * 2;
+			}
+		}
+		else
+		{
+			for (int i = 0; i < arraysize(sprites_knob); ++i)
+			{
+				sprites_knob[i].params.pos.x = translation.x + knob_inset_border.x + scrollbar_delta;
+				sprites_knob[i].params.pos.y = translation.y + knob_inset_border.y;
+				sprites_knob[i].params.siz.x = scrollbar_length - knob_inset_border.x * 2;
+				sprites_knob[i].params.siz.y = scale.y - knob_inset_border.y * 2;
+			}
+		}
+	}
+	void ScrollBar::Render(const wi::Canvas& canvas, CommandList cmd) const
+	{
+		if (!IsVisible())
+		{
+			return;
+		}
+		if (!IsScrollbarRequired())
+			return;
+
+		// scrollbar background
+		wi::image::Params fx = sprites[state].params;
+		fx.pos = XMFLOAT3(translation.x, translation.y, 0);
+		fx.siz = XMFLOAT2(scale.x, scale.y);
+		fx.color = sprites[IDLE].params.color;
+		wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
+
+		// scrollbar knob
+		sprites_knob[scrollbar_state].Draw(cmd);
+
+	}
+
+
+
+
 	void Label::Create(const std::string& name)
 	{
 		SetName(name);
 		SetText(name);
 		SetSize(XMFLOAT2(100, 20));
+
+		scrollbar.SetColor(wi::Color(80, 80, 80, 100), wi::gui::IDLE);
+		scrollbar.sprites_knob[ScrollBar::SCROLLBAR_INACTIVE].params.color = wi::Color(140, 140, 140, 140);
+		scrollbar.sprites_knob[ScrollBar::SCROLLBAR_HOVER].params.color = wi::Color(180, 180, 180, 180);
+		scrollbar.sprites_knob[ScrollBar::SCROLLBAR_GRABBED].params.color = wi::Color::White();
+		scrollbar.SetOverScroll(0.25f);
+		scrollbar.knob_inset_border = XMFLOAT2(4, 2);
 	}
 	void Label::Update(const wi::Canvas& canvas, float dt)
 	{
@@ -752,6 +931,31 @@ namespace wi::gui
 			font.params.posY = translation.y + scale.y * 0.5f;
 			break;
 		}
+
+		scrollbar.SetListLength(font.TextHeight());
+		scrollbar.ClearTransform();
+		scrollbar.SetPos(XMFLOAT2(translation.x + scale.x - scrollbar_width, translation.y));
+		scrollbar.SetSize(XMFLOAT2(scrollbar_width, scale.y));
+		scrollbar.Update(canvas, dt);
+
+		Hitbox2D pointerHitbox = GetPointerHitbox();
+		if (pointerHitbox.intersects(hitBox) && !force_disable)
+		{
+			state = FOCUS;
+			// This is outside scrollbar code, because it can also be scrolled if parent widget is only in focus
+			scrollbar.Scroll(wi::input::GetPointer().z * 20);
+		}
+		else
+		{
+			state = IDLE;
+		}
+
+		if (scrollbar.IsScrollbarRequired())
+		{
+			font.params.h_wrap = scale.x - scrollbar_width;
+		}
+
+		font.params.posY += scrollbar.GetOffset();
 	}
 	void Label::Render(const wi::Canvas& canvas, CommandList cmd) const
 	{
@@ -766,6 +970,8 @@ namespace wi::gui
 
 		sprites[state].Draw(cmd);
 		font.Draw(cmd);
+
+		scrollbar.Render(canvas, cmd);
 	}
 
 
@@ -1710,179 +1916,6 @@ namespace wi::gui
 	int ComboBox::GetSelected() const
 	{
 		return selected;
-	}
-
-
-
-
-
-
-	void ScrollBar::Update(const wi::Canvas& canvas, float dt)
-	{
-		if (!IsVisible())
-		{
-			return;
-		}
-
-		Widget::Update(canvas, dt);
-
-		if (scale.x > scale.y)
-		{
-			vertical = false;
-		}
-		else
-		{
-			vertical = true;
-		}
-
-		if (IsEnabled())
-		{
-			if (state == FOCUS)
-			{
-				state = IDLE;
-			}
-			if (state == DEACTIVATING)
-			{
-				state = IDLE;
-			}
-			if (state == ACTIVE)
-			{
-				Deactivate();
-			}
-
-			Hitbox2D hitbox = Hitbox2D(XMFLOAT2(translation.x, translation.y), XMFLOAT2(scale.x, scale.y));
-			Hitbox2D pointerHitbox = GetPointerHitbox();
-
-			if (state == IDLE && hitbox.intersects(pointerHitbox))
-			{
-				state = FOCUS;
-			}
-
-			bool clicked = false;
-			if (wi::input::Press(wi::input::MOUSE_BUTTON_LEFT))
-			{
-				clicked = true;
-			}
-
-			bool click_down = false;
-			if (wi::input::Down(wi::input::MOUSE_BUTTON_LEFT))
-			{
-				click_down = true;
-				if (state == FOCUS || state == DEACTIVATING)
-				{
-					// Keep pressed until mouse is released
-					Activate();
-				}
-			}
-			float scrollbar_begin;
-			float scrollbar_end;
-			float scrollbar_size;
-
-			if (vertical)
-			{
-				scrollbar_begin = translation.y;
-				scrollbar_end = scrollbar_begin + scale.y;
-				scrollbar_size = scrollbar_end - scrollbar_begin;
-				scrollbar_granularity = std::min(1.0f, scrollbar_size / std::max(1.0f, list_length));
-				scrollbar_length = std::max(scale.x * 2, scrollbar_size * scrollbar_granularity);
-			}
-			else
-			{
-				scrollbar_begin = translation.x;
-				scrollbar_end = scrollbar_begin + scale.x;
-				scrollbar_size = scrollbar_end - scrollbar_begin;
-				scrollbar_granularity = std::min(1.0f, scrollbar_size / std::max(1.0f, list_length));
-				scrollbar_length = std::max(scale.y * 2, scrollbar_size * scrollbar_granularity);
-			}
-
-			if (!click_down)
-			{
-				scrollbar_state = SCROLLBAR_INACTIVE;
-			}
-
-			if (IsScrollbarRequired() && hitbox.intersects(pointerHitbox))
-			{
-				if (clicked)
-				{
-					scrollbar_state = SCROLLBAR_GRABBED;
-					grab_pos = pointerHitbox.pos;
-					grab_pos.x = wi::math::Clamp(grab_pos.x, scrollbar_begin + scrollbar_delta, scrollbar_begin + scrollbar_delta + scrollbar_length);
-					grab_pos.y = wi::math::Clamp(grab_pos.y, scrollbar_begin + scrollbar_delta, scrollbar_begin + scrollbar_delta + scrollbar_length);
-					grab_delta = scrollbar_delta;
-				}
-				else if (!click_down)
-				{
-					scrollbar_state = SCROLLBAR_HOVER;
-					state = FOCUS;
-				}
-			}
-
-			if (scrollbar_state == SCROLLBAR_GRABBED)
-			{
-				Activate();
-				if (vertical)
-				{
-					scrollbar_delta = grab_delta + pointerHitbox.pos.y - grab_pos.y;
-				}
-				else
-				{
-					scrollbar_delta = grab_delta + pointerHitbox.pos.x - grab_pos.x;
-				}
-			}
-
-			scrollbar_delta = wi::math::Clamp(scrollbar_delta, 0, scrollbar_size - scrollbar_length);
-			if (scrollbar_begin < scrollbar_end - scrollbar_length)
-			{
-				scrollbar_value = wi::math::InverseLerp(scrollbar_begin, scrollbar_end - scrollbar_length, scrollbar_begin + scrollbar_delta);
-			}
-			else
-			{
-				scrollbar_value = 0;
-			}
-
-			list_offset = -scrollbar_value * (list_length - scrollbar_size * (1.0f - overscroll));
-		}
-
-		if (vertical)
-		{
-			for (int i = 0; i < arraysize(sprites_knob); ++i)
-			{
-				sprites_knob[i].params.pos.x = translation.x + knob_inset_border.x;
-				sprites_knob[i].params.pos.y = translation.y + knob_inset_border.y + scrollbar_delta;
-				sprites_knob[i].params.siz.x = scale.x - knob_inset_border.x * 2;
-				sprites_knob[i].params.siz.y = scrollbar_length - knob_inset_border.y * 2;
-			}
-		}
-		else
-		{
-			for (int i = 0; i < arraysize(sprites_knob); ++i)
-			{
-				sprites_knob[i].params.pos.x = translation.x + knob_inset_border.x + scrollbar_delta;
-				sprites_knob[i].params.pos.y = translation.y + knob_inset_border.y;
-				sprites_knob[i].params.siz.x = scrollbar_length - knob_inset_border.x * 2;
-				sprites_knob[i].params.siz.y = scale.y - knob_inset_border.y * 2;
-			}
-		}
-	}
-	void ScrollBar::Render(const wi::Canvas& canvas, CommandList cmd) const
-	{
-		if (!IsVisible())
-		{
-			return;
-		}
-		if (!IsScrollbarRequired())
-			return;
-
-		// scrollbar background
-		wi::image::Params fx = sprites[state].params;
-		fx.pos = XMFLOAT3(translation.x, translation.y, 0);
-		fx.siz = XMFLOAT2(scale.x, scale.y);
-		fx.color = sprites[IDLE].params.color;
-		wi::image::Draw(wi::texturehelper::getWhite(), fx, cmd);
-
-		// scrollbar knob
-		sprites_knob[scrollbar_state].Draw(cmd);
-
 	}
 
 

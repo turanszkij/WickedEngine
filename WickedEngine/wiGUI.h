@@ -152,10 +152,56 @@ namespace wi::gui
 		void OnDragEnd(std::function<void(EventArgs args)> func);
 	};
 
+	// Generic scroll bar
+	class ScrollBar : public Widget
+	{
+	protected:
+		float scrollbar_delta = 0;
+		float scrollbar_length = 0;
+		float scrollbar_value = 0;
+		float scrollbar_granularity = 1;
+		float list_length = 0;
+		float list_offset = 0;
+		float overscroll = 0;
+		bool vertical = true;
+		XMFLOAT2 grab_pos = {};
+		float grab_delta = 0;
+
+	public:
+		// Set the list's length that will be scrollable and moving
+		void SetListLength(float size) { list_length = size; }
+		// The scrolling offset that should be applied to the list items
+		float GetOffset() const { return list_offset; }
+		// This can be called by user for extra scrolling on top of base functionality
+		void Scroll(float amount) { scrollbar_delta -= amount; }
+		// How much the max scrolling will offset the list even further than it would be necessary for fitting
+		//	this value is in percent of a full scrollbar's worth of extra offset
+		//	0: no extra offset
+		//	1: full extra offset
+		void SetOverScroll(float amount) { overscroll = amount; }
+		// Check whether the scrollbar is required (when the items don't and scrolling could be used)
+		bool IsScrollbarRequired() const { return scrollbar_granularity < 1; }
+
+		enum SCROLLBAR_STATE
+		{
+			SCROLLBAR_INACTIVE,
+			SCROLLBAR_HOVER,
+			SCROLLBAR_GRABBED,
+			SCROLLBAR_STATE_COUNT,
+		} scrollbar_state = SCROLLBAR_INACTIVE;
+		wi::Sprite sprites_knob[SCROLLBAR_STATE_COUNT];
+		XMFLOAT2 knob_inset_border = {};
+
+		void Update(const wi::Canvas& canvas, float dt) override;
+		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
+	};
+
 	// Static box that holds text
 	class Label : public Widget
 	{
 	protected:
+		ScrollBar scrollbar;
+		float scrollbar_width = 18;
 	public:
 		void Create(const std::string& name);
 
@@ -295,50 +341,6 @@ namespace wi::gui
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 
 		void OnSelect(std::function<void(EventArgs args)> func);
-	};
-
-	// Generic scroll bar
-	class ScrollBar : public Widget
-	{
-	protected:
-		float scrollbar_delta = 0;
-		float scrollbar_length = 0;
-		float scrollbar_value = 0;
-		float scrollbar_granularity = 1;
-		float list_length = 0;
-		float list_offset = 0;
-		float overscroll = 0;
-		bool vertical = true;
-		XMFLOAT2 grab_pos = {};
-		float grab_delta = 0;
-
-	public:
-		// Set the list's length that will be scrollable and moving
-		void SetListLength(float size) { list_length = size; }
-		// The scrolling offset that should be applied to the list items
-		float GetOffset() const { return list_offset; }
-		// This can be called by user for extra scrolling on top of base functionality
-		void Scroll(float amount) { scrollbar_delta -= amount; }
-		// How much the max scrolling will offset the list even further than it would be necessary for fitting
-		//	this value is in percent of a full scrollbar's worth of extra offset
-		//	0: no extra offset
-		//	1: full extra offset
-		void SetOverScroll(float amount) { overscroll = amount; }
-		// Check whether the scrollbar is required (when the items don't and scrolling could be used)
-		bool IsScrollbarRequired() const { return scrollbar_granularity < 1; }
-
-		enum SCROLLBAR_STATE
-		{
-			SCROLLBAR_INACTIVE,
-			SCROLLBAR_HOVER,
-			SCROLLBAR_GRABBED,
-			SCROLLBAR_STATE_COUNT,
-		} scrollbar_state = SCROLLBAR_INACTIVE;
-		wi::Sprite sprites_knob[SCROLLBAR_STATE_COUNT];
-		XMFLOAT2 knob_inset_border = {};
-
-		void Update(const wi::Canvas& canvas, float dt) override;
-		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 	};
 
 	// Widget container
