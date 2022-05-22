@@ -143,6 +143,9 @@ namespace wi::gui
 	public:
 		void Create(const std::string& name);
 
+		wi::SpriteFont font_description;
+		void SetDescription(const std::string& desc) { font_description.SetText(desc); }
+
 		void Update(const wi::Canvas& canvas, float dt) override;
 		void Render(const wi::Canvas& canvas, wi::graphics::CommandList cmd) const override;
 

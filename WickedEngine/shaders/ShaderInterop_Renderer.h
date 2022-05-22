@@ -779,7 +779,8 @@ struct PaintTextureCB
 
 	float xPaintBrushFalloff;
 	uint xPaintBrushColor;
-	uint2 padding0;
+	uint xPaintReveal;
+	uint padding0;
 };
 
 CBUFFER(PaintRadiusCB, CBSLOT_RENDERER_MISC)

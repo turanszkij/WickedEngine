@@ -134,7 +134,6 @@ namespace wi::font
 				}
 			};
 
-			cursor.size.y = LINEBREAK_SIZE;
 			int code_prev = 0;
 			for (size_t i = 0; i < text_length; ++i)
 			{
@@ -213,7 +212,7 @@ namespace wi::font
 				}
 
 				cursor.size.x = std::max(cursor.size.x, cursor.pos.x);
-				cursor.size.y = std::max(cursor.size.y, cursor.pos.y);
+				cursor.size.y = std::max(cursor.size.y, cursor.pos.y + LINEBREAK_SIZE);
 			}
 
 			word_wrap();

@@ -560,6 +560,9 @@ namespace wi::gui
 
 		font.params.h_align = wi::font::WIFALIGN_CENTER;
 		font.params.v_align = wi::font::WIFALIGN_CENTER;
+
+		font_description.params = font.params;
+		font_description.params.h_align = wi::font::WIFALIGN_RIGHT;
 	}
 	void Button::Update(const wi::Canvas& canvas, float dt)
 	{
@@ -679,6 +682,9 @@ namespace wi::gui
 			font.params.posY = translation.y + scale.y * 0.5f;
 			break;
 		}
+
+		font_description.params.posX = translation.x - 2;
+		font_description.params.posY = translation.y + scale.y * 0.5f;
 	}
 	void Button::Render(const wi::Canvas& canvas, CommandList cmd) const
 	{
@@ -687,7 +693,7 @@ namespace wi::gui
 			return;
 		}
 
-		wi::Color color = GetColor();
+		font_description.Draw(cmd);
 
 		ApplyScissor(canvas, scissorRect, cmd);
 
@@ -1117,8 +1123,6 @@ namespace wi::gui
 		{
 			return;
 		}
-
-		wi::Color color = GetColor();
 
 		font_description.Draw(cmd);
 

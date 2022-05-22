@@ -16,7 +16,7 @@ void PaintToolWindow::Create(EditorComponent* editor)
 	wi::gui::Window::Create("Paint Tool Window");
 	SetSize(XMFLOAT2(410, 610));
 
-	float x = 100;
+	float x = 105;
 	float y = 0;
 	float hei = 20;
 	float step = hei + 4;
@@ -38,8 +38,6 @@ void PaintToolWindow::Create(EditorComponent* editor)
 	modeComboBox.AddItem("Wind weight (Alpha)");
 	modeComboBox.SetSelected(0);
 	modeComboBox.OnSelect([&](wi::gui::EventArgs args) {
-		textureSlotComboBox.SetEnabled(false);
-		saveTextureButton.SetEnabled(false);
 		switch (args.iValue)
 		{
 		case MODE_DISABLED:
@@ -47,8 +45,6 @@ void PaintToolWindow::Create(EditorComponent* editor)
 			break;
 		case MODE_TEXTURE:
 			infoLabel.SetText("In texture paint mode, you can paint on textures. Brush will be applied in texture space.\nREMEMBER to save texture when finished to save texture file!\nREMEMBER to save scene to retain new texture bindings on materials!");
-			textureSlotComboBox.SetEnabled(true);
-			saveTextureButton.SetEnabled(true);
 			break;
 		case MODE_VERTEXCOLOR:
 			infoLabel.SetText("In vertex color mode, you can paint colors on selected geometry (per vertex). \"Use vertex colors\" will be automatically enabled for the selected material, or all materials if the whole object is selected. If there is no vertexcolors vertex buffer, one will be created with white as default for every vertex.");
@@ -135,6 +131,12 @@ void PaintToolWindow::Create(EditorComponent* editor)
 	pressureCheckBox.SetCheck(false);
 	AddWidget(&pressureCheckBox);
 
+	colorPicker.Create("Color", false);
+	colorPicker.SetPos(XMFLOAT2(10, y += step));
+	AddWidget(&colorPicker);
+
+	y += colorPicker.GetScale().y;
+
 	textureSlotComboBox.Create("Texture Slot: ");
 	textureSlotComboBox.SetTooltip("Choose texture slot of the selected material to paint (texture paint mode only)");
 	textureSlotComboBox.SetPos(XMFLOAT2(x, y += step));
@@ -152,14 +154,12 @@ void PaintToolWindow::Create(EditorComponent* editor)
 	textureSlotComboBox.AddItem("ClearcoatRoughMap (R)", MaterialComponent::CLEARCOATROUGHNESSMAP);
 	textureSlotComboBox.AddItem("ClearcoatNormMap (R)", MaterialComponent::CLEARCOATNORMALMAP);
 	textureSlotComboBox.SetSelected(0);
-	textureSlotComboBox.SetEnabled(false);
 	AddWidget(&textureSlotComboBox);
 
 	saveTextureButton.Create("Save Texture");
 	saveTextureButton.SetTooltip("Save edited texture.");
 	saveTextureButton.SetSize(XMFLOAT2(200, hei));
 	saveTextureButton.SetPos(XMFLOAT2(x, y += step));
-	saveTextureButton.SetEnabled(false);
 	saveTextureButton.OnClick([this] (wi::gui::EventArgs args) {
 
 		Scene& scene = wi::scene::GetScene();
@@ -192,9 +192,67 @@ void PaintToolWindow::Create(EditorComponent* editor)
 	});
 	AddWidget(&saveTextureButton);
 
-	colorPicker.Create("Color", false);
-	colorPicker.SetPos(XMFLOAT2(10, y += step));
-	AddWidget(&colorPicker);
+	brushTextureButton.Create("");
+	brushTextureButton.SetDescription("Brush tex: ");
+	brushTextureButton.SetTooltip("Open an image to use as brush texture (splatting mode).\nSplat mode means that the texture will be relative to the brush position");
+	brushTextureButton.SetSize(XMFLOAT2(hei*2, hei*2));
+	brushTextureButton.SetPos(XMFLOAT2(x, y += step));
+	brushTextureButton.sprites[wi::gui::IDLE].params.color = wi::Color::White();
+	brushTextureButton.sprites[wi::gui::FOCUS].params.color = wi::Color::Gray();
+	brushTextureButton.sprites[wi::gui::ACTIVE].params.color = wi::Color::White();
+	brushTextureButton.sprites[wi::gui::DEACTIVATING].params.color = wi::Color::Gray();
+	brushTextureButton.OnClick([this](wi::gui::EventArgs args) {
+		if (brushTex.IsValid())
+		{
+			brushTex = {};
+			brushTextureButton.SetImage({});
+		}
+		else
+		{
+			wi::helper::FileDialogParams params;
+			params.type = wi::helper::FileDialogParams::OPEN;
+			params.description = "Texture";
+			params.extensions = wi::resourcemanager::GetSupportedImageExtensions();
+			wi::helper::FileDialog(params, [this](std::string fileName) {
+				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					brushTex = wi::resourcemanager::Load(fileName);
+					brushTextureButton.SetImage(brushTex);
+					});
+				});
+		}
+		});
+	AddWidget(&brushTextureButton);
+
+	revealTextureButton.Create("");
+	revealTextureButton.SetDescription("Reveal tex: ");
+	revealTextureButton.SetTooltip("Open an image to use as reveal mode texture.\nReveal mode means that the texture will use the UV of the mesh. It will be multiplied by brush tex.");
+	revealTextureButton.SetSize(XMFLOAT2(hei * 2, hei * 2));
+	revealTextureButton.SetPos(XMFLOAT2(x + 150, y));
+	revealTextureButton.sprites[wi::gui::IDLE].params.color = wi::Color::White();
+	revealTextureButton.sprites[wi::gui::FOCUS].params.color = wi::Color::Gray();
+	revealTextureButton.sprites[wi::gui::ACTIVE].params.color = wi::Color::White();
+	revealTextureButton.sprites[wi::gui::DEACTIVATING].params.color = wi::Color::Gray();
+	revealTextureButton.OnClick([this](wi::gui::EventArgs args) {
+		if (revealTex.IsValid())
+		{
+			revealTex = {};
+			revealTextureButton.SetImage({});
+		}
+		else
+		{
+			wi::helper::FileDialogParams params;
+			params.type = wi::helper::FileDialogParams::OPEN;
+			params.description = "Texture";
+			params.extensions = wi::resourcemanager::GetSupportedImageExtensions();
+			wi::helper::FileDialog(params, [this](std::string fileName) {
+				wi::eventhandler::Subscribe_Once(wi::eventhandler::EVENT_THREAD_SAFE_POINT, [=](uint64_t userdata) {
+					revealTex = wi::resourcemanager::Load(fileName);
+					revealTextureButton.SetImage(revealTex);
+					});
+				});
+		}
+		});
+	AddWidget(&revealTextureButton);
 
 	Translate(XMFLOAT3((float)editor->GetLogicalWidth() - 550, 50, 0));
 	SetVisible(false);
@@ -203,6 +261,21 @@ void PaintToolWindow::Create(EditorComponent* editor)
 void PaintToolWindow::Update(float dt)
 {
 	RecordHistory(false);
+
+	if (GetMode() == MODE_TEXTURE)
+	{
+		textureSlotComboBox.SetVisible(true);
+		saveTextureButton.SetVisible(true);
+		brushTextureButton.SetVisible(true);
+		revealTextureButton.SetVisible(true);
+	}
+	else
+	{
+		textureSlotComboBox.SetVisible(false);
+		saveTextureButton.SetVisible(false);
+		brushTextureButton.SetVisible(false);
+		revealTextureButton.SetVisible(false);
+	}
 
 	rot -= dt;
 	// by default, paint tool is on center of screen, this makes it easy to tweak radius with GUI:
@@ -308,7 +381,22 @@ void PaintToolWindow::Update(float dt)
 
 			device->BindComputeShader(wi::renderer::GetShader(wi::enums::CSTYPE_PAINT_TEXTURE), cmd);
 
-			device->BindResource(wi::texturehelper::getWhite(), 0, cmd);
+			if (brushTex.IsValid())
+			{
+				device->BindResource(&brushTex.GetTexture(), 0, cmd);
+			}
+			else
+			{
+				device->BindResource(wi::texturehelper::getWhite(), 0, cmd);
+			}
+			if (revealTex.IsValid())
+			{
+				device->BindResource(&revealTex.GetTexture(), 1, cmd);
+			}
+			else
+			{
+				device->BindResource(wi::texturehelper::getWhite(), 1, cmd);
+			}
 			device->BindUAV(&editTexture, 0, cmd);
 
 			PaintTextureCB cb;
@@ -317,6 +405,7 @@ void PaintToolWindow::Update(float dt)
 			cb.xPaintBrushAmount = amount;
 			cb.xPaintBrushFalloff = falloff;
 			cb.xPaintBrushColor = color.rgba;
+			cb.xPaintReveal = revealTex.IsValid() ? 1 : 0;
 			device->PushConstants(&cb, sizeof(cb), cmd);
 
 			const uint diameter = cb.xPaintBrushRadius * 2;
@@ -992,6 +1081,7 @@ void PaintToolWindow::RecordHistory(bool start, CommandList cmd)
 			Texture newTex;
 			TextureDesc desc = editTexture.GetDesc();
 			desc.format = Format::R8G8B8A8_UNORM; // force format to one that is writable by GPU
+			desc.bind_flags |= BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 			device->CreateTexture(&desc, nullptr, &newTex);
 			for (uint32_t i = 0; i < newTex.GetDesc().mip_levels; ++i)
 			{
