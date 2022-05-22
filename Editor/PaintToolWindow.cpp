@@ -1081,6 +1081,7 @@ void PaintToolWindow::RecordHistory(bool start, CommandList cmd)
 			Texture newTex;
 			TextureDesc desc = editTexture.GetDesc();
 			desc.format = Format::R8G8B8A8_UNORM; // force format to one that is writable by GPU
+			desc.bind_flags |= BindFlag::SHADER_RESOURCE | BindFlag::UNORDERED_ACCESS;
 			device->CreateTexture(&desc, nullptr, &newTex);
 			for (uint32_t i = 0; i < newTex.GetDesc().mip_levels; ++i)
 			{
