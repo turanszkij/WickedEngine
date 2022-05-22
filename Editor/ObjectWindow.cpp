@@ -261,7 +261,7 @@ void ObjectWindow::Create(EditorComponent* editor)
 	this->editor = editor;
 
 	wi::gui::Window::Create("Object Window");
-	SetSize(XMFLOAT2(660, 520));
+	SetSize(XMFLOAT2(670, 320));
 
 	float x = 200;
 	float y = 0;
@@ -270,7 +270,7 @@ void ObjectWindow::Create(EditorComponent* editor)
 
 	nameLabel.Create("NAMELABEL");
 	nameLabel.SetText("");
-	nameLabel.SetPos(XMFLOAT2(x - 30, y += step));
+	nameLabel.SetPos(XMFLOAT2(x - 30, y));
 	nameLabel.SetSize(XMFLOAT2(150, hei));
 	AddWidget(&nameLabel);
 

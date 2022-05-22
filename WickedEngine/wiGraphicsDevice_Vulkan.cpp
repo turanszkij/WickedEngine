@@ -3712,6 +3712,10 @@ using namespace vulkan_internal;
 		{
 			imageInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 		}
+		if (IsFormatTypeless(texture->desc.format))
+		{
+			imageInfo.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
+		}
 
 		if (families.size() > 1)
 		{

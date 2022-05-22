@@ -37,14 +37,14 @@ void CameraWindow::Create(EditorComponent* editor)
 	SetSize(XMFLOAT2(380, 360));
 
 	float x = 200;
-	float y = 10;
+	float y = 0;
 	float hei = 18;
 	float step = hei + 2;
 
 	farPlaneSlider.Create(100, 10000, 5000, 100000, "Far Plane: ");
 	farPlaneSlider.SetTooltip("Controls the camera's far clip plane, geometry farther than this will be clipped.");
 	farPlaneSlider.SetSize(XMFLOAT2(100, hei));
-	farPlaneSlider.SetPos(XMFLOAT2(x, y += step));
+	farPlaneSlider.SetPos(XMFLOAT2(x, y));
 	farPlaneSlider.SetValue(wi::scene::GetCamera().zFarP);
 	farPlaneSlider.OnSlide([&](wi::gui::EventArgs args) {
 		Scene& scene = wi::scene::GetScene();

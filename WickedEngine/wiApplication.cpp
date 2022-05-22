@@ -78,6 +78,9 @@ namespace wi
 			Initialize();
 			initialized = true;
 		}
+
+		wi::font::UpdateAtlas();
+
 		if (!wi::initializer::IsInitializeFinished())
 		{
 			// Until engine is not loaded, present initialization screen...

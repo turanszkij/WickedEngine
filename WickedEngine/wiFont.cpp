@@ -18,6 +18,7 @@
 #include "Utility/stb_truetype.h"
 
 #include <fstream>
+#include <mutex>
 
 using namespace wi::graphics;
 using namespace wi::rectpacker;
@@ -98,69 +99,73 @@ namespace wi::font
 		};
 		static wi::vector<FontStyle> fontStyles;
 
-		template<typename T>
-		uint32_t WriteVertices(FontVertex* vertexList, const T* text, Params params)
+		struct Cursor
 		{
-			const FontStyle& fontStyle = fontStyles[params.style];
-			const float fontScale = stbtt_ScaleForPixelHeight(&fontStyle.fontInfo, (float)params.size);
-
+			XMFLOAT2 pos = {};
+			XMFLOAT2 size = {};
 			uint32_t quadCount = 0;
-			float line = 0;
-			float pos = 0;
-			float pos_last_letter = 0;
 			size_t last_word_begin = 0;
 			bool start_new_word = false;
+		};
+
+		static thread_local wi::vector<FontVertex> vertexList;
+
+		template<typename T>
+		Cursor ParseText(const T* text, size_t text_length, Params params)
+		{
+			Cursor cursor;
+			const FontStyle& fontStyle = fontStyles[params.style];
+			const float fontScale = stbtt_ScaleForPixelHeight(&fontStyle.fontInfo, (float)params.size);
+			vertexList.clear();
 
 			auto word_wrap = [&] {
-				start_new_word = true;
-				if (last_word_begin > 0 && params.h_wrap >= 0 && pos >= params.h_wrap - 1)
+				cursor.start_new_word = true;
+				if (cursor.last_word_begin > 0 && params.h_wrap >= 0 && cursor.pos.x >= params.h_wrap - 1)
 				{
 					// Word ended and wrap detected, push down last word by one line:
-					float word_offset = vertexList[last_word_begin].pos.x;
-					for (size_t i = last_word_begin; i < quadCount * 4; ++i)
+					float word_offset = vertexList[cursor.last_word_begin].pos.x;
+					for (size_t i = cursor.last_word_begin; i < cursor.quadCount * 4; ++i)
 					{
 						vertexList[i].pos.x -= word_offset;
 						vertexList[i].pos.y += LINEBREAK_SIZE;
 					}
-					line += LINEBREAK_SIZE;
-					pos -= word_offset;
+					cursor.pos.x -= word_offset;
+					cursor.pos.y += LINEBREAK_SIZE;
 				}
 			};
 
 			int code_prev = 0;
-			size_t i = 0;
-			while (text[i] != 0)
+			for (size_t i = 0; i < text_length; ++i)
 			{
-				T character = text[i++];
+				T character = text[i];
 				int code = (int)character;
 				const int32_t hash = glyphhash(code, params.style, params.size);
 
 				if (glyph_lookup.count(hash) == 0)
 				{
 					// glyph not packed yet, so add to pending list:
-					glyphLock.lock();
+					std::scoped_lock locker(glyphLock);
 					pendingGlyphs.insert(hash);
-					glyphLock.unlock();
 					continue;
 				}
 
 				if (code == '\n')
 				{
 					word_wrap();
-					line += LINEBREAK_SIZE;
-					pos = 0;
+					cursor.pos.x = 0;
+					cursor.pos.y += LINEBREAK_SIZE;
 					code_prev = 0;
 				}
 				else if (code == ' ')
 				{
 					word_wrap();
-					pos += WHITESPACE_SIZE;
+					cursor.pos.x += WHITESPACE_SIZE;
 					code_prev = 0;
 				}
 				else if (code == '\t')
 				{
 					word_wrap();
-					pos += TAB_SIZE;
+					cursor.pos.x += TAB_SIZE;
 					code_prev = 0;
 				}
 				else
@@ -171,24 +176,26 @@ namespace wi::font
 					const float glyphOffsetX = glyph.x * params.scaling;
 					const float glyphOffsetY = glyph.y * params.scaling;
 
-					const size_t vertexID = size_t(quadCount) * 4;
+					const size_t vertexID = size_t(cursor.quadCount) * 4;
+					vertexList.resize(vertexID + 4);
+					cursor.quadCount++;
 
-					if (start_new_word)
+					if (cursor.start_new_word)
 					{
-						last_word_begin = vertexID;
+						cursor.last_word_begin = vertexID;
 					}
-					start_new_word = false;
+					cursor.start_new_word = false;
 
 					if (code_prev != 0)
 					{
 						int kern = stbtt_GetCodepointKernAdvance(&fontStyle.fontInfo, code_prev, code);
-						pos += kern * fontScale;
+						cursor.pos.x += kern * fontScale;
 					}
 					code_prev = code;
 
-					const float left = pos + glyphOffsetX;
+					const float left = cursor.pos.x + glyphOffsetX;
 					const float right = left + glyphWidth;
-					const float top = line + glyphOffsetY;
+					const float top = cursor.pos.y + glyphOffsetY;
 					const float bottom = top + glyphHeight;
 
 					vertexList[vertexID + 0].pos = float2(left, top);
@@ -201,17 +208,20 @@ namespace wi::font
 					vertexList[vertexID + 2].uv = float2(glyph.tc_left, glyph.tc_bottom);
 					vertexList[vertexID + 3].uv = float2(glyph.tc_right, glyph.tc_bottom);
 
-					pos += glyph.width * params.scaling + params.spacingX;
-					pos_last_letter = pos;
-
-					quadCount++;
+					cursor.pos.x += glyph.width * params.scaling + params.spacingX;
 				}
 
+				cursor.size.x = std::max(cursor.size.x, cursor.pos.x);
+				cursor.size.y = std::max(cursor.size.y, cursor.pos.y + LINEBREAK_SIZE);
 			}
 
 			word_wrap();
 
-			return quadCount;
+			return cursor;
+		}
+		void CommitText(void* vertexList_GPU)
+		{
+			std::memcpy(vertexList_GPU, vertexList.data(), sizeof(FontVertex) * vertexList.size());
 		}
 
 	}
@@ -278,9 +288,9 @@ namespace wi::font
 		wi::backlog::post("wi::font Initialized (" + std::to_string((int)std::round(timer.elapsed())) + " ms)");
 	}
 
-	void UpdatePendingGlyphs()
+	void UpdateAtlas()
 	{
-		glyphLock.lock();
+		std::scoped_lock locker(glyphLock);
 
 		// If there are pending glyphs, render them and repack the atlas:
 		if (!pendingGlyphs.empty())
@@ -388,7 +398,6 @@ namespace wi::font
 			}
 		}
 
-		glyphLock.unlock();
 	}
 	const Texture* GetAtlas()
 	{
@@ -423,76 +432,6 @@ namespace wi::font
 		return int(fontStyles.size() - 1);
 	}
 
-
-	template<typename T>
-	float TextWidth_internal(const T* text, const Params& params)
-	{
-		if (params.style >= (int)fontStyles.size())
-		{
-			return 0;
-		}
-
-		// TODO: account for word wrap
-		float maxWidth = 0;
-		float currentLineWidth = 0;
-		size_t i = 0;
-		while (text[i] != 0)
-		{
-			int code = (int)text[i++];
-			const int32_t hash = glyphhash(code, params.style, params.size);
-
-			if (glyph_lookup.count(hash) == 0)
-			{
-				// glyph not packed yet, we just continue (it will be added if it is actually rendered)
-				continue;
-			}
-
-			if (code == '\n')
-			{
-				currentLineWidth = 0;
-			}
-			else if (code == ' ')
-			{
-				currentLineWidth += WHITESPACE_SIZE;
-			}
-			else if (code == '\t')
-			{
-				currentLineWidth += TAB_SIZE;
-			}
-			else
-			{
-				const Glyph& glyph = glyph_lookup.at(hash);
-				currentLineWidth += glyph.width + float(params.spacingX) * params.scaling;
-			}
-			maxWidth = std::max(maxWidth, currentLineWidth);
-		}
-
-		return maxWidth;
-	}
-
-	template<typename T>
-	float TextHeight_internal(const T* text, const Params& params)
-	{
-		if (params.style >= (int)fontStyles.size())
-		{
-			return 0;
-		}
-
-		// TODO: account for word wrap
-		float height = LINEBREAK_SIZE;
-		size_t i = 0;
-		while (text[i] != 0)
-		{
-			int code = (int)text[i++];
-			if (code == '\n')
-			{
-				height += LINEBREAK_SIZE;
-			}
-		}
-
-		return height;
-	}
-
 	template<typename T>
 	void Draw_internal(const T* text, size_t text_length, const Params& params, CommandList cmd)
 	{
@@ -500,32 +439,29 @@ namespace wi::font
 		{
 			return;
 		}
+		Cursor cursor = ParseText(text, text_length, params);
 
 		Params newProps = params;
-
 		if (params.h_align == WIFALIGN_CENTER)
-			newProps.posX -= TextWidth_internal(text, newProps) / 2;
+			newProps.posX -= cursor.size.x / 2;
 		else if (params.h_align == WIFALIGN_RIGHT)
-			newProps.posX -= TextWidth_internal(text, newProps);
+			newProps.posX -= cursor.size.x;
 		if (params.v_align == WIFALIGN_CENTER)
-			newProps.posY -= TextHeight_internal(text, newProps) / 2;
+			newProps.posY -= cursor.size.y / 2;
 		else if (params.v_align == WIFALIGN_BOTTOM)
-			newProps.posY -= TextHeight_internal(text, newProps);
+			newProps.posY -= cursor.size.y;
 
-		GraphicsDevice* device = wi::graphics::GetDevice();
 
-		GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(FontVertex) * text_length * 4, cmd);
-		if (!mem.IsValid())
+		if (cursor.quadCount > 0)
 		{
-			return;
-		}
-		static thread_local wi::vector<FontVertex> textbuffer;
-		textbuffer.resize(text_length * 4);
-		const uint32_t quadCount = WriteVertices(textbuffer.data(), text, newProps);
-		std::memcpy(mem.data, textbuffer.data(), textbuffer.size() * sizeof(FontVertex)); // only allow writes into mapped GPU buffer memory to avoid uncached read by mistake
+			GraphicsDevice* device = wi::graphics::GetDevice();
+			GraphicsDevice::GPUAllocation mem = device->AllocateGPU(sizeof(FontVertex) * cursor.quadCount * 4, cmd);
+			if (!mem.IsValid())
+			{
+				return;
+			}
+			CommitText(mem.data);
 
-		if (quadCount > 0)
-		{
 			device->EventBegin("Font", cmd);
 
 			device->BindPipelineState(&PSO, cmd);
@@ -555,7 +491,7 @@ namespace wi::font
 				font_push.color = newProps.shadowColor.rgba;
 				device->PushConstants(&font_push, sizeof(font_push), cmd);
 
-				device->DrawInstanced(4, quadCount, 0, 0, cmd);
+				device->DrawInstanced(4, cursor.quadCount, 0, 0, cmd);
 			}
 
 			// font base render:
@@ -568,12 +504,10 @@ namespace wi::font
 			font_push.color = newProps.color.rgba;
 			device->PushConstants(&font_push, sizeof(font_push), cmd);
 
-			device->DrawInstanced(4, quadCount, 0, 0, cmd);
+			device->DrawInstanced(4, cursor.quadCount, 0, 0, cmd);
 
 			device->EventEnd(cmd);
 		}
-
-		UpdatePendingGlyphs();
 	}
 
 	void SetCanvas(const wi::Canvas& current_canvas)
@@ -608,38 +542,73 @@ namespace wi::font
 		Draw_internal(text.c_str(), text.length(), params, cmd);
 	}
 
+	XMFLOAT2 TextSize(const char* text, const Params& params)
+	{
+		size_t text_length = strlen(text);
+		if (text_length == 0)
+		{
+			return XMFLOAT2(0, 0);
+		}
+		return ParseText(text, text_length, params).size;
+	}
+	XMFLOAT2 TextSize(const wchar_t* text, const Params& params)
+	{
+		size_t text_length = wcslen(text);
+		if (text_length == 0)
+		{
+			return XMFLOAT2(0, 0);
+		}
+		return ParseText(text, text_length, params).size;
+	}
+	XMFLOAT2 TextSize(const std::string& text, const Params& params)
+	{
+		if (text.empty())
+		{
+			return XMFLOAT2(0, 0);
+		}
+		return ParseText(text.c_str(), text.length(), params).size;
+	}
+	XMFLOAT2 TextSize(const std::wstring& text, const Params& params)
+	{
+		if (text.empty())
+		{
+			return XMFLOAT2(0, 0);
+		}
+		return ParseText(text.c_str(), text.length(), params).size;
+	}
+
 	float TextWidth(const char* text, const Params& params)
 	{
-		return TextWidth_internal(text, params);
+		return TextSize(text, params).x;
 	}
 	float TextWidth(const wchar_t* text, const Params& params)
 	{
-		return TextWidth_internal(text, params);
+		return TextSize(text, params).x;
 	}
 	float TextWidth(const std::string& text, const Params& params)
 	{
-		return TextWidth_internal(text.c_str(), params);
+		return TextSize(text, params).x;
 	}
 	float TextWidth(const std::wstring& text, const Params& params)
 	{
-		return TextWidth_internal(text.c_str(), params);
+		return TextSize(text, params).x;
 	}
 
 	float TextHeight(const char* text, const Params& params)
 	{
-		return TextHeight_internal(text, params);
+		return TextSize(text, params).y;
 	}
 	float TextHeight(const wchar_t* text, const Params& params)
 	{
-		return TextHeight_internal(text, params);
+		return TextSize(text, params).y;
 	}
 	float TextHeight(const std::string& text, const Params& params)
 	{
-		return TextHeight_internal(text.c_str(), params);
+		return TextSize(text, params).y;
 	}
 	float TextHeight(const std::wstring& text, const Params& params)
 	{
-		return TextHeight_internal(text.c_str(), params);
+		return TextSize(text, params).y;
 	}
 
 }

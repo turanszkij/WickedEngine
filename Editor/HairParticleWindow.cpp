@@ -11,13 +11,13 @@ void HairParticleWindow::Create(EditorComponent* editor)
 	SetSize(XMFLOAT2(600, 260));
 
 	float x = 160;
-	float y = 10;
+	float y = 0;
 	float hei = 18;
 	float step = hei + 2;
 
 
 	addButton.Create("Add Hair Particle System");
-	addButton.SetPos(XMFLOAT2(x, y += step));
+	addButton.SetPos(XMFLOAT2(x, y));
 	addButton.SetSize(XMFLOAT2(200, hei));
 	addButton.OnClick([=](wi::gui::EventArgs args) {
 		Scene& scene = wi::scene::GetScene();

@@ -12,16 +12,16 @@ using namespace wi::scene;
 void LightWindow::Create(EditorComponent* editor)
 {
 	wi::gui::Window::Create("Light Window");
-	SetSize(XMFLOAT2(650, 500));
+	SetSize(XMFLOAT2(650, 300));
 
 	float x = 450;
-	float y = 20;
+	float y = 0;
 	float hei = 18;
 	float step = hei + 2;
 
 	energySlider.Create(0.1f, 64, 0, 100000, "Energy: ");
 	energySlider.SetSize(XMFLOAT2(100, hei));
-	energySlider.SetPos(XMFLOAT2(x, y += step));
+	energySlider.SetPos(XMFLOAT2(x, y));
 	energySlider.OnSlide([&](wi::gui::EventArgs args) {
 		LightComponent* light = wi::scene::GetScene().lights.GetComponent(entity);
 		if (light != nullptr)

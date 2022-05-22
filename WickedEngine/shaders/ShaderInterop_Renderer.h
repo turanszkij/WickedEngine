@@ -144,9 +144,10 @@ struct ShaderMaterial
 // For binning shading based on shader types:
 struct ShaderTypeBin
 {
-	uint2 padding0;
+	uint shaderType;
 	uint offset;
 	uint count;
+	uint padding;
 
 	uint dispatchX;
 	uint dispatchY;
@@ -156,6 +157,23 @@ struct ShaderTypeBin
 	uint4 padding2[14]; // force 256-byte alignment that's necessary for constant buffers :(
 };
 static const uint SHADERTYPE_BIN_COUNT = 10;
+
+struct VisibilityTile
+{
+	uint visibility_tile_id;
+	uint entity_flat_tile_index;
+	uint execution_mask_0;
+	uint execution_mask_1;
+
+	inline bool check_thread_valid(uint groupIndex)
+	{
+		if (groupIndex < 32)
+		{
+			return execution_mask_0 & (1u << groupIndex);
+		}
+		return execution_mask_1 & (1u << (groupIndex - 32u));
+	}
+};
 
 static const uint SHADERMESH_FLAG_DOUBLE_SIDED = 1 << 0;
 static const uint SHADERMESH_FLAG_HAIRPARTICLE = 1 << 1;
@@ -504,6 +522,9 @@ static const uint TILED_CULLING_BLOCKSIZE = 16;
 static const uint TILED_CULLING_THREADSIZE = 8;
 static const uint TILED_CULLING_GRANULARITY = TILED_CULLING_BLOCKSIZE / TILED_CULLING_THREADSIZE;
 
+static const uint VISIBILITY_BLOCKSIZE = 8;
+static const uint VISIBILITY_TILED_CULLING_GRANULARITY = TILED_CULLING_BLOCKSIZE / VISIBILITY_BLOCKSIZE;
+
 static const int impostorCaptureAngles = 36;
 
 // These option bits can be read from options constant buffer value:
@@ -638,6 +659,10 @@ struct CameraCB
 	uint3 entity_culling_tilecount;
 	uint sample_count;
 
+	uint2 visibility_tilecount;
+	uint visibility_tilecount_flat;
+	uint padding;
+
 	int texture_primitiveID_index;
 	int texture_depth_index;
 	int texture_lineardepth_index;
@@ -754,7 +779,8 @@ struct PaintTextureCB
 
 	float xPaintBrushFalloff;
 	uint xPaintBrushColor;
-	uint2 padding0;
+	uint xPaintReveal;
+	uint padding0;
 };
 
 CBUFFER(PaintRadiusCB, CBSLOT_RENDERER_MISC)
@@ -775,20 +801,6 @@ struct SkinningPushConstants
 
 	int so_pos_nor_wind;
 	int so_tan;
-};
-
-enum VisibilityResolveOptions
-{
-	VISIBILITY_RESOLVE_DEPTH = 1 << 0,
-	VISIBILITY_RESOLVE_LINEARDEPTH = 1 << 1,
-	VISIBILITY_RESOLVE_VELOCITY = 1 << 2,
-	VISIBILITY_RESOLVE_NORMAL = 1 << 3,
-	VISIBILITY_RESOLVE_ROUGHNESS = 1 << 4,
-	VISIBILITY_RESOLVE_PRIMITIVEID = 1 << 5,
-};
-struct VisibilityResolvePushConstants
-{
-	uint options;
 };
 
 

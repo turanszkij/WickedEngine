@@ -74,11 +74,18 @@ namespace wi::font
 
 	// Set canvas for the CommandList to handle DPI-aware font rendering on the current thread
 	void SetCanvas(const wi::Canvas& current_canvas);
+	// Call once per frame to update font atlas texture
+	void UpdateAtlas();
 
 	void Draw(const char* text, const Params& params, wi::graphics::CommandList cmd);
 	void Draw(const wchar_t* text, const Params& params, wi::graphics::CommandList cmd);
 	void Draw(const std::string& text, const Params& params, wi::graphics::CommandList cmd);
 	void Draw(const std::wstring& text, const Params& params, wi::graphics::CommandList cmd);
+
+	XMFLOAT2 TextSize(const char* text, const Params& params);
+	XMFLOAT2 TextSize(const wchar_t* text, const Params& params);
+	XMFLOAT2 TextSize(const std::string& text, const Params& params);
+	XMFLOAT2 TextSize(const std::wstring& text, const Params& params);
 
 	float TextWidth(const char* text, const Params& params);
 	float TextWidth(const wchar_t* text, const Params& params);

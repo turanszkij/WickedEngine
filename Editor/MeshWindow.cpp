@@ -14,7 +14,7 @@ using namespace wi::scene;
 void MeshWindow::Create(EditorComponent* editor)
 {
 	wi::gui::Window::Create("Mesh Window");
-	SetSize(XMFLOAT2(580, 580));
+	SetSize(XMFLOAT2(580, 380));
 
 	float x = 150;
 	float y = 0;
@@ -23,17 +23,17 @@ void MeshWindow::Create(EditorComponent* editor)
 
 	float infolabel_height = 190;
 	meshInfoLabel.Create("Mesh Info");
-	meshInfoLabel.SetPos(XMFLOAT2(x - 50, y += step));
+	meshInfoLabel.SetPos(XMFLOAT2(x - 50, y));
 	meshInfoLabel.SetSize(XMFLOAT2(450, infolabel_height));
 	meshInfoLabel.SetColor(wi::Color::Transparent());
 	AddWidget(&meshInfoLabel);
 
 	// Left side:
-	y = infolabel_height + 10;
+	y = infolabel_height + 5;
 
 	subsetComboBox.Create("Selected subset: ");
 	subsetComboBox.SetSize(XMFLOAT2(40, hei));
-	subsetComboBox.SetPos(XMFLOAT2(x, y += step));
+	subsetComboBox.SetPos(XMFLOAT2(x, y));
 	subsetComboBox.SetEnabled(false);
 	subsetComboBox.OnSelect([=](wi::gui::EventArgs args) {
 		Scene& scene = wi::scene::GetScene();
@@ -474,11 +474,11 @@ void MeshWindow::Create(EditorComponent* editor)
 
 	// Right side:
 	x = 150;
-	y = infolabel_height + 10;
+	y = infolabel_height + 5;
 
 	subsetMaterialComboBox.Create("Subset Material: ");
 	subsetMaterialComboBox.SetSize(XMFLOAT2(200, hei));
-	subsetMaterialComboBox.SetPos(XMFLOAT2(x + 180, y += step));
+	subsetMaterialComboBox.SetPos(XMFLOAT2(x + 180, y));
 	subsetMaterialComboBox.SetEnabled(false);
 	subsetMaterialComboBox.OnSelect([&](wi::gui::EventArgs args) {
 		Scene& scene = wi::scene::GetScene();

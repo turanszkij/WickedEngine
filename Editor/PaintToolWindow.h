@@ -22,6 +22,9 @@ class PaintToolWindow : public wi::gui::Window
 	wi::vector<SculptingIndex> sculpting_indices;
 	XMFLOAT3 sculpting_normal = XMFLOAT3(0, 0, 0);
 
+	wi::Resource brushTex;
+	wi::Resource revealTex;
+
 public:
 	void Create(EditorComponent* editor);
 
@@ -41,6 +44,8 @@ public:
 	wi::gui::ColorPicker colorPicker;
 	wi::gui::ComboBox textureSlotComboBox;
 	wi::gui::Button saveTextureButton;
+	wi::gui::Button brushTextureButton;
+	wi::gui::Button revealTextureButton;
 
 	void Update(float dt);
 	void DrawBrush() const;

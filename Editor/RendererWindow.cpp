@@ -11,14 +11,15 @@ void RendererWindow::Create(EditorComponent* editor)
 	wi::renderer::SetToDrawGridHelper(true);
 	wi::renderer::SetToDrawDebugCameras(true);
 
-	SetSize(XMFLOAT2(580, 600));
+	SetSize(XMFLOAT2(580, 400));
 
-	float x = 220, y = 5, step = 20, itemheight = 18;
+	float step = 20, itemheight = 18;
+	float x = 220, y = 0;
 
 	vsyncCheckBox.Create("VSync: ");
 	vsyncCheckBox.SetTooltip("Toggle vertical sync");
 	vsyncCheckBox.SetScriptTip("SetVSyncEnabled(opt bool enabled)");
-	vsyncCheckBox.SetPos(XMFLOAT2(x, y += step));
+	vsyncCheckBox.SetPos(XMFLOAT2(x, y));
 	vsyncCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	vsyncCheckBox.SetCheck(editor->main->swapChain.desc.vsync);
 	vsyncCheckBox.OnClick([=](wi::gui::EventArgs args) {
@@ -45,20 +46,20 @@ void RendererWindow::Create(EditorComponent* editor)
 	AddWidget(&occlusionCullingCheckBox);
 
 	visibilityComputeShadingCheckBox.Create("VCS: ");
-	visibilityComputeShadingCheckBox.SetTooltip("Visibility Compute Shading (experimental)\nThis will shade the scene in compute shaders instead of pixel shaders\nThis could be faster in some circumstances (eg: dense small triangles)");
+	visibilityComputeShadingCheckBox.SetTooltip("Visibility Compute Shading (experimental)\nThis will shade the scene in compute shaders instead of pixel shaders\nThis has a higher initial performance cost, but it will be faster in high polygon scenes");
 	visibilityComputeShadingCheckBox.SetPos(XMFLOAT2(x + 120, y));
 	visibilityComputeShadingCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	visibilityComputeShadingCheckBox.OnClick([=](wi::gui::EventArgs args) {
 		if (args.bValue)
 		{
-			wi::renderer::CreateVisibilityResources(editor->renderPath->visibilityResources, editor->renderPath->GetInternalResolution());
+			editor->renderPath->visibility_shading_in_compute = true;
 		}
 		else
 		{
-			editor->renderPath->visibilityResources = {};
+			editor->renderPath->visibility_shading_in_compute = false;
 		}
 	});
-	visibilityComputeShadingCheckBox.SetCheck(false);
+	visibilityComputeShadingCheckBox.SetCheck(editor->renderPath->visibility_shading_in_compute);
 	AddWidget(&visibilityComputeShadingCheckBox);
 
 	resolutionScaleSlider.Create(0.25f, 2.0f, 1.0f, 7.0f, "Resolution Scale: ");
@@ -529,11 +530,11 @@ void RendererWindow::Create(EditorComponent* editor)
 
 
 	// Visualizer toggles:
-	x = 540, y = 5;
+	x = 540, y = 0;
 
 	physicsDebugCheckBox.Create("Physics visualizer: ");
 	physicsDebugCheckBox.SetTooltip("Visualize the physics world");
-	physicsDebugCheckBox.SetPos(XMFLOAT2(x, y += step));
+	physicsDebugCheckBox.SetPos(XMFLOAT2(x, y));
 	physicsDebugCheckBox.SetSize(XMFLOAT2(itemheight, itemheight));
 	physicsDebugCheckBox.OnClick([](wi::gui::EventArgs args) {
 		wi::physics::SetDebugDrawEnabled(args.bValue);

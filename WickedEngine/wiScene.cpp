@@ -1590,6 +1590,8 @@ namespace wi::scene
 			std::memset(TLAS_instancesMapped, 0, TLAS_instancesUpload->desc.size);
 		});
 
+		wi::physics::RunPhysicsUpdateSystem(ctx, *this, dt);
+
 		RunAnimationUpdateSystem(ctx);
 
 		RunTransformUpdateSystem(ctx);
@@ -1640,8 +1642,6 @@ namespace wi::scene
 		RunWeatherUpdateSystem(ctx);
 
 		wi::jobsystem::Wait(ctx); // dependencies
-
-		wi::physics::RunPhysicsUpdateSystem(ctx, *this, dt);
 
 		RunObjectUpdateSystem(ctx);
 

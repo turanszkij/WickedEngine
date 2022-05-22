@@ -304,11 +304,6 @@ struct PixelInput
 // METHODS
 ////////////
 
-inline void ApplyEmissive(in Surface surface, inout Lighting lighting)
-{
-	lighting.direct.specular += surface.emissiveColor;
-}
-
 inline void LightMapping(in int lightmap, in float2 ATLAS, inout Lighting lighting, inout Surface surface)
 {
 	[branch]
@@ -580,13 +575,9 @@ inline void ForwardLighting(inout Surface surface, inout Lighting lighting)
 
 }
 
-inline void TiledLighting(inout Surface surface, inout Lighting lighting)
+
+inline void TiledDecals(inout Surface surface, uint flatTileIndex)
 {
-	const uint2 tileIndex = uint2(floor(surface.pixel / TILED_CULLING_BLOCKSIZE));
-	const uint flatTileIndex = flatten2D(tileIndex, GetCamera().entity_culling_tilecount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
-
-
-#ifndef DISABLE_DECALS
 	[branch]
 	if (GetFrame().decalarray_count > 0)
 	{
@@ -610,8 +601,10 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 		{
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 
+#ifndef ENTITY_TILE_UNIFORM
 			// This is the wave scalarizer from Improved Culling - Siggraph 2017 [Drobot]:
 			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
+#endif // ENTITY_TILE_UNIFORM
 
 			[loop]
 			while (bucket_bits != 0)
@@ -651,10 +644,10 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 						decalColor.a *= edgeBlend;
 						decalColor *= decal.GetColor();
 						// apply emissive:
-						lighting.direct.specular += max(0, decalColor.rgb * decal.GetEmissive() * edgeBlend);
+						surface.emissiveColor += max(0, decalColor.rgb * decal.GetEmissive() * edgeBlend);
 						// perform manual blending of decals:
 						//  NOTE: they are sorted top-to-bottom, but blending is performed bottom-to-top
-						decalAccumulation.rgb = mad(1 - decalAccumulation.a, decalColor.a*decalColor.rgb, decalAccumulation.rgb);
+						decalAccumulation.rgb = mad(1 - decalAccumulation.a, decalColor.a * decalColor.rgb, decalAccumulation.rgb);
 						decalAccumulation.a = mad(1 - decalColor.a, decalAccumulation.a, decalColor.a);
 						[branch]
 						if (decalAccumulation.a >= 1.0)
@@ -677,8 +670,13 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 
 		surface.albedo.rgb = lerp(surface.albedo.rgb, decalAccumulation.rgb, decalAccumulation.a);
 	}
-#endif // DISABLE_DECALS
+}
 
+inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint flatTileIndex)
+{
+#ifndef DISABLE_DECALS
+	TiledDecals(surface, flatTileIndex);
+#endif // DISABLE_DECALS
 
 #ifndef DISABLE_ENVMAPS
 	// Apply environment maps:
@@ -698,8 +696,10 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 		{
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 
+#ifndef ENTITY_TILE_UNIFORM
 			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
 			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
+#endif // ENTITY_TILE_UNIFORM
 
 			[loop]
 			while (bucket_bits != 0)
@@ -764,16 +764,6 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 	[branch]
 	if (GetFrame().lightarray_count > 0)
 	{
-		uint4 shadow_mask_packed = 0;
-		const bool shadow_mask_enabled = GetFrame().options & OPTION_BIT_SHADOW_MASK && GetCamera().texture_rtshadow_index >= 0;
-#ifdef SHADOW_MASK_ENABLED
-		[branch]
-		if (shadow_mask_enabled)
-		{
-			shadow_mask_packed = bindless_textures_uint4[GetCamera().texture_rtshadow_index][surface.pixel / 2];
-		}
-#endif // SHADOW_MASK_ENABLED
-
 		// Loop through light buckets in the tile:
 		const uint first_item = GetFrame().lightarray_offset;
 		const uint last_item = first_item + GetFrame().lightarray_count - 1;
@@ -784,8 +774,10 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 		{
 			uint bucket_bits = load_entitytile(flatTileIndex + bucket);
 
+#ifndef ENTITY_TILE_UNIFORM
 			// Bucket scalarizer - Siggraph 2017 - Improved Culling [Michal Drobot]:
 			bucket_bits = WaveReadLaneFirst(WaveActiveBitOr(bucket_bits));
+#endif // ENTITY_TILE_UNIFORM
 
 			[loop]
 			while (bucket_bits != 0)
@@ -808,8 +800,9 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 						continue; // static lights will be skipped (they are used in lightmap baking)
 					}
 
-					float shadow_mask = 1;
 #ifdef SHADOW_MASK_ENABLED
+					const bool shadow_mask_enabled = (GetFrame().options & OPTION_BIT_SHADOW_MASK) && GetCamera().texture_rtshadow_index >= 0;
+					float shadow_mask = 1;
 					[branch]
 					if (shadow_mask_enabled && light.IsCastingShadow())
 					{
@@ -818,7 +811,7 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 						{
 							uint mask_shift = (shadow_index % 4) * 8;
 							uint mask_bucket = shadow_index / 4;
-							uint mask = (shadow_mask_packed[mask_bucket] >> mask_shift) & 0xFF;
+							uint mask = (bindless_textures_uint4[GetCamera().texture_rtshadow_index][surface.pixel / 2][mask_bucket] >> mask_shift) & 0xFF;
 							if (mask == 0)
 							{
 								continue;
@@ -826,6 +819,8 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 							shadow_mask = mask / 255.0;
 						}
 					}
+#else
+					const float shadow_mask = 1;
 #endif // SHADOW_MASK_ENABLED
 
 					switch (light.GetType())
@@ -874,6 +869,16 @@ inline void TiledLighting(inout Surface surface, inout Lighting lighting)
 		surface.flags |= SURFACE_FLAG_GI_APPLIED;
 	}
 
+}
+inline void TiledLighting(inout Surface surface, inout Lighting lighting, uint2 tileIndex)
+{
+	const uint flatTileIndex = flatten2D(tileIndex, GetCamera().entity_culling_tilecount.xy) * SHADER_ENTITY_TILE_BUCKET_COUNT;
+	TiledLighting(surface, lighting, flatTileIndex);
+}
+inline void TiledLighting(inout Surface surface, inout Lighting lighting)
+{
+	const uint2 tileIndex = uint2(floor(surface.pixel / TILED_CULLING_BLOCKSIZE));
+	TiledLighting(surface, lighting, tileIndex);
 }
 
 inline void ApplyFog(in float distance, float3 P, float3 V, inout float4 color)
@@ -1069,10 +1074,10 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #if 0
 	float3x3 TBN = compute_tangent_frame(surface.N, surface.P, uvsets.xy);
 #else
-	float4 tangent = input.tan;
-	tangent.xyz = normalize(tangent.xyz);
-	float3 binormal = normalize(cross(tangent.xyz, surface.N) * tangent.w);
-	float3x3 TBN = float3x3(tangent.xyz, binormal, surface.N);
+	surface.T = input.tan;
+	surface.T.xyz = normalize(surface.T.xyz);
+	float3 binormal = normalize(cross(surface.T.xyz, surface.N) * surface.T.w);
+	float3x3 TBN = float3x3(surface.T.xyz, binormal, surface.N);
 #endif
 
 #ifdef POM
@@ -1200,8 +1205,6 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 
 #ifdef ANISOTROPIC
 	surface.anisotropy = GetMaterial().parallaxOcclusionMapping;
-	surface.T = tangent;
-	surface.B = normalize(cross(tangent.xyz, surface.N) * tangent.w); // Compute bitangent again after normal mapping
 #endif // ANISOTROPIC
 
 
@@ -1350,11 +1353,6 @@ float4 main(PixelInput input, in bool is_frontface : SV_IsFrontFace) : SV_Target
 #ifdef OBJECTSHADER_USE_ATLAS
 	LightMapping(load_instance(input.instanceIndex).lightmap, input.atl, lighting, surface);
 #endif // OBJECTSHADER_USE_ATLAS
-
-
-#ifdef OBJECTSHADER_USE_EMISSIVE
-	ApplyEmissive(surface, lighting);
-#endif // OBJECTSHADER_USE_EMISSIVE
 
 
 #ifdef PLANARREFLECTION

@@ -9,10 +9,10 @@ using namespace wi::graphics;
 void PostprocessWindow::Create(EditorComponent* editor)
 {
 	wi::gui::Window::Create("PostProcess Window");
-	SetSize(XMFLOAT2(420, 500));
+	SetSize(XMFLOAT2(420, 400));
 
 	float x = 150;
-	float y = 10;
+	float y = 0;
 	float hei = 18;
 	float step = hei + 2;
 
@@ -20,7 +20,7 @@ void PostprocessWindow::Create(EditorComponent* editor)
 	exposureSlider.SetTooltip("Set the tonemap exposure value");
 	exposureSlider.SetScriptTip("RenderPath3D::SetExposure(float value)");
 	exposureSlider.SetSize(XMFLOAT2(100, hei));
-	exposureSlider.SetPos(XMFLOAT2(x, y += step));
+	exposureSlider.SetPos(XMFLOAT2(x, y));
 	exposureSlider.SetValue(editor->renderPath->getExposure());
 	exposureSlider.OnSlide([=](wi::gui::EventArgs args) {
 		editor->renderPath->setExposure(args.fValue);

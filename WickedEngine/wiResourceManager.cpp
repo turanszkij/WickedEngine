@@ -532,7 +532,7 @@ namespace wi
 						width = desc.width;
 					}
 					else
-						rgb = stbi_load_from_memory(filedata, (int)filesize, &height, &width, &bpp, channelCount);
+						rgb = stbi_load_from_memory(filedata, (int)filesize, &width, &height, &bpp, channelCount);
 
 					if (rgb != nullptr)
 					{
