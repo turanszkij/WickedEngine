@@ -21,14 +21,14 @@ jobs:
         "../BUILD/x64/Release/OfflineShaderCompiler/OfflineShaderCompiler.exe" hlsl6 spirv shaderdump
         cd ..
         "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/MSBuild/Current/Bin/MSBuild.exe" WickedEngine.sln /t:rebuild /m /p:Configuration=Release /p:Platform=x64
-    
+
     - name: Move binaries
       shell: cmd
       run: |
         move BUILD\x64\Release\Editor_Windows\Editor_Windows.exe Editor\
-        
+
         move BUILD\x64\Release\Tests\Tests.exe Tests\
-        
+
     - name: Package Editor
       uses: actions/upload-artifact@v2
       with:
@@ -46,7 +46,7 @@ jobs:
           Editor/*.ico
           Editor/*.lua
           Editor/*.exe
-          
+
     - name: Package Tests
       uses: actions/upload-artifact@v2
       with:
@@ -66,7 +66,7 @@ jobs:
           Tests/*.ttf
           Tests/*.exe
 
-    
+
   linux:
     runs-on: ubuntu-20.04
     steps:
@@ -94,12 +94,12 @@ jobs:
         echo "---Rebuilding with ShaderDump---"
         make -B
 
-        
+
     - name: Move binaries
       run: |
         mv build/Editor/WickedEngineEditor Editor/
         mv build/Tests/Tests Tests/
-        
+
     - name: Package Editor
       uses: actions/upload-artifact@v2
       with:
@@ -117,7 +117,7 @@ jobs:
           Editor/*.ico
           Editor/*.lua
           Editor/WickedEngineEditor
-          
+
     - name: Package Tests
       uses: actions/upload-artifact@v2
       with:
@@ -137,7 +137,7 @@ jobs:
           Tests/*.ttf
           Tests/Tests
 
-  
+
   linux-steamdeck:
     runs-on: ubuntu-20.04
     steps:
@@ -163,12 +163,12 @@ jobs:
         echo "---Executing Containerized Build---"
         podman run --name sniper -v $PWD:/build gitlab.steamos.cloud/steamrt/sniper/sdk:latest /build/build.sh
         podman container rm sniper
-        
+
     - name: Move binaries
       run: |
         mv build/Editor/WickedEngineEditor Editor/
         mv build/Tests/Tests Tests/
-        
+
     - name: Package Editor
       uses: actions/upload-artifact@v2
       with:
@@ -186,7 +186,7 @@ jobs:
           Editor/*.ico
           Editor/*.lua
           Editor/WickedEngineEditor
-          
+
     - name: Package Tests
       uses: actions/upload-artifact@v2
       with:
