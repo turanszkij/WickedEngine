@@ -161,7 +161,7 @@ jobs:
         \nmake -B" > build.sh
         chmod +x build.sh
         echo "---Executing Containerized Build---"
-        podman run --name sniper -v $PWD:/build registry.gitlab.steamos.cloud/steamrt/sniper/sdk:latest /build/build.sh
+        podman run --name sniper -v $PWD:/build gitlab.steamos.cloud/steamrt/sniper/sdk:latest /build/build.sh
         podman container rm sniper
         
     - name: Move binaries
