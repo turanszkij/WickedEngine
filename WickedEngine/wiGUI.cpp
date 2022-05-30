@@ -190,7 +190,9 @@ namespace wi::gui
 		sprites[FOCUS].params.color = wi::Color::Gray();
 		sprites[ACTIVE].params.color = wi::Color::White();
 		sprites[DEACTIVATING].params.color = wi::Color::Gray();
-		font.params.shadowColor = wi::Color::fromFloat4(XMFLOAT4(0, 0, 0, 0.6f));
+		font.params.shadowColor = wi::Color::Black();
+		font.params.shadow_bolden = 0.2f;
+		font.params.shadow_softness = 0.2f;
 
 		for (int i = IDLE; i < WIDGETSTATE_COUNT; ++i)
 		{
