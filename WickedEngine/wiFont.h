@@ -26,7 +26,7 @@ namespace wi::font
 		float posY = 0;
 		int size = WIFONTSIZE_DEFAULT; // line height in DPI scaled units
 		float scaling = 1;
-		float spacingX = 1, spacingY = 1; // minimum spacing between characters
+		float spacingX = 0, spacingY = 0; // minimum spacing between characters
 		Alignment h_align, v_align;
 		wi::Color color;
 		wi::Color shadowColor;

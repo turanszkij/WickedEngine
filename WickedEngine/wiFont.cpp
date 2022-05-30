@@ -53,10 +53,6 @@ namespace wi::font
 			float tc_right;
 			float tc_top;
 			float tc_bottom;
-			float off_x;
-			float off_y;
-			float off_w;
-			float off_h;
 		};
 		static wi::unordered_map<int32_t, Glyph> glyph_lookup;
 		static wi::unordered_map<int32_t, rect_xywh> rect_lookup;
@@ -150,7 +146,6 @@ namespace wi::font
 				}
 			};
 
-			int code_prev = 0;
 			cursor.size.y = LINEBREAK_SIZE;
 			for (size_t i = 0; i < text_length; ++i)
 			{
@@ -171,26 +166,23 @@ namespace wi::font
 					word_wrap();
 					cursor.pos.x = 0;
 					cursor.pos.y += LINEBREAK_SIZE;
-					code_prev = 0;
 				}
 				else if (code == ' ')
 				{
 					word_wrap();
 					cursor.pos.x += WHITESPACE_SIZE;
-					code_prev = 0;
 				}
 				else if (code == '\t')
 				{
 					word_wrap();
 					cursor.pos.x += TAB_SIZE;
-					code_prev = 0;
 				}
 				else
 				{
 					const Glyph& glyph = glyph_lookup.at(hash);
 					const float glyphWidth = glyph.width * params.scaling;
 					const float glyphHeight = glyph.height * params.scaling;
-					const float glyphOffsetX = (glyph.x + glyph.off_x) * params.scaling;
+					const float glyphOffsetX = glyph.x * params.scaling;
 					const float glyphOffsetY = glyph.y * params.scaling;
 
 					const size_t vertexID = size_t(cursor.quadCount) * 4;
@@ -202,13 +194,6 @@ namespace wi::font
 						cursor.last_word_begin = vertexID;
 					}
 					cursor.start_new_word = false;
-
-					if (code_prev != 0)
-					{
-						int kern = stbtt_GetCodepointKernAdvance(&fontStyle.fontInfo, code_prev, code);
-						cursor.pos.x += kern * fontScale;
-					}
-					code_prev = code;
 
 					const float left = cursor.pos.x + glyphOffsetX;
 					const float right = left + glyphWidth;
@@ -225,7 +210,18 @@ namespace wi::font
 					vertexList[vertexID + 2].uv = float2(glyph.tc_left, glyph.tc_bottom);
 					vertexList[vertexID + 3].uv = float2(glyph.tc_right, glyph.tc_bottom);
 
-					cursor.pos.x += glyph.off_w * params.scaling + params.spacingX;
+					int advance, lsb;
+					stbtt_GetCodepointHMetrics(&fontStyle.fontInfo, code, &advance, &lsb);
+					cursor.pos.x += advance * fontScale * params.scaling;
+
+					cursor.pos.x += params.spacingX;
+
+					if (text_length > 1 && i < text_length - 1 && text[i + 1])
+					{
+						int code_next = (int)text[i + 1];
+						int kern = stbtt_GetCodepointKernAdvance(&fontStyle.fontInfo, code, code_next);
+						cursor.pos.x += kern * fontScale;
+					}
 				}
 
 				cursor.size.x = std::max(cursor.size.x, cursor.pos.x);
@@ -337,15 +333,6 @@ namespace wi::font
 				glyph.y = float(sdf.yoff) + float(fontStyle.ascent) * fontScaling;
 				glyph.width = float(sdf.width);
 				glyph.height = float(sdf.height);
-
-
-				// get bounding box for character (may be offset to account for chars that dip above or below the line
-				int left, top, right, bottom;
-				stbtt_GetCodepointBitmapBox(&fontStyle.fontInfo, code, fontScaling, fontScaling, &left, &top, &right, &bottom);
-				glyph.off_x = float(left);
-				glyph.off_y = float(top) + float(fontStyle.ascent) * fontScaling;
-				glyph.off_w = float(right - left);
-				glyph.off_h = float(bottom - top);
 			}
 			pendingGlyphs.clear();
 
@@ -391,12 +378,6 @@ namespace wi::font
 						uint8_t* src = sdf.bitmap.data() + row * sdf.width;
 						std::memcpy(dst, src, sdf.width);
 					}
-
-					//// Padding removal:
-					//rect.x += sdf.padding;
-					//rect.y += sdf.padding;
-					//rect.w -= sdf.padding * 2;
-					//rect.h -= sdf.padding * 2;
 
 					// Compute texture coordinates for the glyph:
 					glyph.tc_left = float(rect.x);
