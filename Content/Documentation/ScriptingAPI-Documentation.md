@@ -271,6 +271,11 @@ Gives you the ability to render text with a custom font.
 - SetColor(int colorHexCode)
 - SetShadowColor(Vector shadowcolor)
 - SetShadowColor(int colorHexCode)
+- SetBolden(float value)
+- SetSoftness(float value)
+- SetShadowBolden(float value)
+- SetShadowSoftness(float value)
+- SetShadowOffset(Vector value)
 - GetText() : string result
 - GetSize() : int result
 - GetPos() : Vector result
@@ -278,6 +283,11 @@ Gives you the ability to render text with a custom font.
 - GetAlign() : WIFALIGN halign,valign
 - GetColor() : Vector result
 - GetShadowColor() : Vector result
+- GetBolden() : float result
+- GetSoftness() : float result
+- GetShadowBolden() : float result
+- GetShadowSoftness() : float result
+- GetShadowOffset() : Vector result
 
 ### Texture
 Just holds texture information in VRAM.
