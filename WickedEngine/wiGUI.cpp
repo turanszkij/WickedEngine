@@ -1597,7 +1597,7 @@ namespace wi::gui
 
 			if (state == ACTIVE)
 			{
-				pointerHitbox = GetPointerHitbox(false);
+				pointerHitbox = GetPointerHitbox(false); // get the hitbox again, but this time it won't be constrained to parent
 				if (HasScrollbar())
 				{
 					if (combostate != COMBOSTATE_SELECTING && combostate != COMBOSTATE_INACTIVE)

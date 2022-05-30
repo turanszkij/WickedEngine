@@ -63,7 +63,7 @@ namespace wi::font
 		struct SDF
 		{
 			static constexpr int padding = 5;
-			static constexpr unsigned char onedge_value = FONT_SDF_ONEDGE_VALUE;
+			static constexpr unsigned char onedge_value = 180;
 			static constexpr float pixel_dist_scale = float(onedge_value) / float(padding);
 			int width;
 			int height;
@@ -503,7 +503,8 @@ namespace wi::font
 					* Projection
 				);
 				font.color = newProps.shadowColor.rgba;
-				font.sdf_threshold_bottom = wi::math::Lerp(FONT_SDF_THRESHOLD_TOP, 0, std::max(0.0f, newProps.shadow_softness));
+				font.sdf_threshold_top = wi::math::Lerp(float(SDF::onedge_value) / 255.0f, 0, std::max(0.0f, newProps.shadow_bolden));
+				font.sdf_threshold_bottom = wi::math::Lerp(font.sdf_threshold_top, 0, std::max(0.0f, newProps.shadow_softness));
 				device->BindDynamicConstantBuffer(font, CBSLOT_FONT, cmd);
 
 				device->DrawInstanced(4, cursor.quadCount, 0, 0, cmd);
@@ -515,7 +516,8 @@ namespace wi::font
 				* Projection
 			);
 			font.color = newProps.color.rgba;
-			font.sdf_threshold_bottom = wi::math::Lerp(FONT_SDF_THRESHOLD_TOP, 0, std::max(0.0f, newProps.softness));
+			font.sdf_threshold_top = wi::math::Lerp(float(SDF::onedge_value) / 255.0f, 0, std::max(0.0f, newProps.bolden));
+			font.sdf_threshold_bottom = wi::math::Lerp(font.sdf_threshold_top, 0, std::max(0.0f, newProps.softness));
 			device->BindDynamicConstantBuffer(font, CBSLOT_FONT, cmd);
 
 			device->DrawInstanced(4, cursor.quadCount, 0, 0, cmd);
