@@ -9,5 +9,9 @@ struct VertextoPixel
 
 float4 main(VertextoPixel input) : SV_TARGET
 {
-	return bindless_textures[font_push.texture_index].SampleLevel(sampler_linear_clamp, input.uv, 0).rrrr * unpack_rgba(font_push.color);
+	float dist = bindless_textures[font_push.texture_index].SampleLevel(sampler_linear_clamp, input.uv, 0).r;
+	float4 color = smoothstep(0.6, 0.75, dist) * unpack_rgba(font_push.color);
+	// outline:
+	color += smoothstep(0.1, 0.6, dist) * float4(0, 0, 0, 1);
+	return color;
 }

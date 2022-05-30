@@ -53,9 +53,25 @@ namespace wi::font
 			float tc_right;
 			float tc_top;
 			float tc_bottom;
+			float off_x;
+			float off_y;
+			float off_w;
+			float off_h;
 		};
 		static wi::unordered_map<int32_t, Glyph> glyph_lookup;
 		static wi::unordered_map<int32_t, rect_xywh> rect_lookup;
+		struct SDF
+		{
+			static constexpr int padding = 5;
+			static constexpr unsigned char onedge_value = 180;
+			static constexpr float pixel_dist_scale = float(onedge_value) / float(padding);
+			int width;
+			int height;
+			int xoff;
+			int yoff;
+			wi::vector<uint8_t> bitmap;
+		};
+		static wi::unordered_map<int32_t, SDF> sdf_lookup;
 		// pack glyph identifiers to a 32-bit hash:
 		//	height:	10 bits	(height supported: 0 - 1023)
 		//	style:	6 bits	(number of font styles supported: 0 - 63)
@@ -173,7 +189,7 @@ namespace wi::font
 					const Glyph& glyph = glyph_lookup.at(hash);
 					const float glyphWidth = glyph.width * params.scaling;
 					const float glyphHeight = glyph.height * params.scaling;
-					const float glyphOffsetX = glyph.x * params.scaling;
+					const float glyphOffsetX = (glyph.x + glyph.off_x) * params.scaling;
 					const float glyphOffsetY = glyph.y * params.scaling;
 
 					const size_t vertexID = size_t(cursor.quadCount) * 4;
@@ -208,7 +224,7 @@ namespace wi::font
 					vertexList[vertexID + 2].uv = float2(glyph.tc_left, glyph.tc_bottom);
 					vertexList[vertexID + 3].uv = float2(glyph.tc_right, glyph.tc_bottom);
 
-					cursor.pos.x += glyph.width * params.scaling + params.spacingX;
+					cursor.pos.x += glyph.off_w * params.scaling + params.spacingX;
 				}
 
 				cursor.size.x = std::max(cursor.size.x, cursor.pos.x);
@@ -295,42 +311,40 @@ namespace wi::font
 		// If there are pending glyphs, render them and repack the atlas:
 		if (!pendingGlyphs.empty())
 		{
-			// Pad the glyph rects in the atlas to avoid bleeding from nearby texels:
-			const int borderPadding = 1;
-
-			// Font resolution is upscaled to make it sharper:
-			const float upscaling = 2.0f;
-
 			for (int32_t hash : pendingGlyphs)
 			{
 				const int code = codefromhash(hash);
 				const int style = stylefromhash(hash);
-				const float height = (float)heightfromhash(hash) * upscaling;
+				const float height = (float)heightfromhash(hash);
 				FontStyle& fontStyle = fontStyles[style];
 
 				float fontScaling = stbtt_ScaleForPixelHeight(&fontStyle.fontInfo, height);
 
+				SDF& sdf = sdf_lookup[hash];
+				sdf.width = 0;
+				sdf.height = 0;
+				sdf.xoff = 0;
+				sdf.yoff = 0;
+				unsigned char* bitmap = stbtt_GetCodepointSDF(&fontStyle.fontInfo, fontScaling, code, sdf.padding, sdf.onedge_value, sdf.pixel_dist_scale, &sdf.width, &sdf.height, &sdf.xoff, &sdf.yoff);
+				sdf.bitmap.resize(sdf.width * sdf.height);
+				std::memcpy(sdf.bitmap.data(), bitmap, sdf.bitmap.size());
+				stbtt_FreeSDF(bitmap, nullptr);
+				rect_lookup[hash] = rect_xywh(0, 0, sdf.width, sdf.height);
+
+				Glyph& glyph = glyph_lookup[hash];
+				glyph.x = float(sdf.xoff);
+				glyph.y = float(sdf.yoff) + float(fontStyle.ascent) * fontScaling;
+				glyph.width = float(sdf.width);
+				glyph.height = float(sdf.height);
+
+
 				// get bounding box for character (may be offset to account for chars that dip above or below the line
 				int left, top, right, bottom;
 				stbtt_GetCodepointBitmapBox(&fontStyle.fontInfo, code, fontScaling, fontScaling, &left, &top, &right, &bottom);
-
-				// Glyph dimensions are calculated without padding:
-				Glyph& glyph = glyph_lookup[hash];
-				glyph.x = float(left);
-				glyph.y = float(top) + float(fontStyle.ascent) * fontScaling;
-				glyph.width = float(right - left);
-				glyph.height = float(bottom - top);
-
-				// Remove dpi upscaling:
-				glyph.x = glyph.x / upscaling;
-				glyph.y = glyph.y / upscaling;
-				glyph.width = glyph.width / upscaling;
-				glyph.height = glyph.height / upscaling;
-
-				// Add padding to the rectangle that will be packed in the atlas:
-				right += borderPadding * 2;
-				bottom += borderPadding * 2;
-				rect_lookup[hash] = rect_ltrb(left, top, right, bottom);
+				glyph.off_x = float(left);
+				glyph.off_y = float(top) + float(fontStyle.ascent) * fontScaling;
+				glyph.off_w = float(right - left);
+				glyph.off_h = float(bottom - top);
 			}
 			pendingGlyphs.clear();
 
@@ -364,22 +378,24 @@ namespace wi::font
 					const int32_t hash = it.first;
 					const wchar_t code = codefromhash(hash);
 					const int style = stylefromhash(hash);
-					const float height = (float)heightfromhash(hash) * upscaling;
+					const float height = (float)heightfromhash(hash);
 					const FontStyle& fontStyle = fontStyles[style];
 					rect_xywh& rect = it.second;
 					Glyph& glyph = glyph_lookup[hash];
+					SDF& sdf = sdf_lookup[hash];
 
-					// Remove border padding from the packed rectangle (we don't want to touch the border, it should stay transparent):
-					rect.x += borderPadding;
-					rect.y += borderPadding;
-					rect.w -= borderPadding * 2;
-					rect.h -= borderPadding * 2;
+					for (int row = 0; row < sdf.height; ++row)
+					{
+						uint8_t* dst = bitmap.data() + rect.x + (rect.y + row) * bitmapWidth;
+						uint8_t* src = sdf.bitmap.data() + row * sdf.width;
+						std::memcpy(dst, src, sdf.width);
+					}
 
-					float fontScaling = stbtt_ScaleForPixelHeight(&fontStyle.fontInfo, height);
-
-					// Render the glyph inside the CPU-side atlas:
-					int byteOffset = rect.x + (rect.y * bitmapWidth);
-					stbtt_MakeCodepointBitmap(&fontStyle.fontInfo, bitmap.data() + byteOffset, rect.w, rect.h, bitmapWidth, fontScaling, fontScaling, code);
+					//// Padding removal:
+					//rect.x += sdf.padding;
+					//rect.y += sdf.padding;
+					//rect.w -= sdf.padding * 2;
+					//rect.h -= sdf.padding * 2;
 
 					// Compute texture coordinates for the glyph:
 					glyph.tc_left = float(rect.x);
