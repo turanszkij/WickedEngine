@@ -151,6 +151,7 @@ namespace wi::font
 			};
 
 			int code_prev = 0;
+			cursor.size.y = LINEBREAK_SIZE;
 			for (size_t i = 0; i < text_length; ++i)
 			{
 				T character = text[i];
