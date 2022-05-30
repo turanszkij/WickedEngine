@@ -56,6 +56,18 @@ namespace wi::font
 		};
 		static wi::unordered_map<int32_t, Glyph> glyph_lookup;
 		static wi::unordered_map<int32_t, rect_xywh> rect_lookup;
+		struct SDF
+		{
+			static constexpr int padding = 5;
+			static constexpr unsigned char onedge_value = 180;
+			static constexpr float pixel_dist_scale = float(onedge_value) / float(padding);
+			int width;
+			int height;
+			int xoff;
+			int yoff;
+			wi::vector<uint8_t> bitmap;
+		};
+		static wi::unordered_map<int32_t, SDF> sdf_lookup;
 		// pack glyph identifiers to a 32-bit hash:
 		//	height:	10 bits	(height supported: 0 - 1023)
 		//	style:	6 bits	(number of font styles supported: 0 - 63)
@@ -134,7 +146,7 @@ namespace wi::font
 				}
 			};
 
-			int code_prev = 0;
+			cursor.size.y = LINEBREAK_SIZE;
 			for (size_t i = 0; i < text_length; ++i)
 			{
 				T character = text[i];
@@ -154,19 +166,16 @@ namespace wi::font
 					word_wrap();
 					cursor.pos.x = 0;
 					cursor.pos.y += LINEBREAK_SIZE;
-					code_prev = 0;
 				}
 				else if (code == ' ')
 				{
 					word_wrap();
 					cursor.pos.x += WHITESPACE_SIZE;
-					code_prev = 0;
 				}
 				else if (code == '\t')
 				{
 					word_wrap();
 					cursor.pos.x += TAB_SIZE;
-					code_prev = 0;
 				}
 				else
 				{
@@ -186,13 +195,6 @@ namespace wi::font
 					}
 					cursor.start_new_word = false;
 
-					if (code_prev != 0)
-					{
-						int kern = stbtt_GetCodepointKernAdvance(&fontStyle.fontInfo, code_prev, code);
-						cursor.pos.x += kern * fontScale;
-					}
-					code_prev = code;
-
 					const float left = cursor.pos.x + glyphOffsetX;
 					const float right = left + glyphWidth;
 					const float top = cursor.pos.y + glyphOffsetY;
@@ -208,7 +210,18 @@ namespace wi::font
 					vertexList[vertexID + 2].uv = float2(glyph.tc_left, glyph.tc_bottom);
 					vertexList[vertexID + 3].uv = float2(glyph.tc_right, glyph.tc_bottom);
 
-					cursor.pos.x += glyph.width * params.scaling + params.spacingX;
+					int advance, lsb;
+					stbtt_GetCodepointHMetrics(&fontStyle.fontInfo, code, &advance, &lsb);
+					cursor.pos.x += advance * fontScale * params.scaling;
+
+					cursor.pos.x += params.spacingX;
+
+					if (text_length > 1 && i < text_length - 1 && text[i + 1])
+					{
+						int code_next = (int)text[i + 1];
+						int kern = stbtt_GetCodepointKernAdvance(&fontStyle.fontInfo, code, code_next);
+						cursor.pos.x += kern * fontScale;
+					}
 				}
 
 				cursor.size.x = std::max(cursor.size.x, cursor.pos.x);
@@ -295,42 +308,31 @@ namespace wi::font
 		// If there are pending glyphs, render them and repack the atlas:
 		if (!pendingGlyphs.empty())
 		{
-			// Pad the glyph rects in the atlas to avoid bleeding from nearby texels:
-			const int borderPadding = 1;
-
-			// Font resolution is upscaled to make it sharper:
-			const float upscaling = 2.0f;
-
 			for (int32_t hash : pendingGlyphs)
 			{
 				const int code = codefromhash(hash);
 				const int style = stylefromhash(hash);
-				const float height = (float)heightfromhash(hash) * upscaling;
+				const float height = (float)heightfromhash(hash);
 				FontStyle& fontStyle = fontStyles[style];
 
 				float fontScaling = stbtt_ScaleForPixelHeight(&fontStyle.fontInfo, height);
 
-				// get bounding box for character (may be offset to account for chars that dip above or below the line
-				int left, top, right, bottom;
-				stbtt_GetCodepointBitmapBox(&fontStyle.fontInfo, code, fontScaling, fontScaling, &left, &top, &right, &bottom);
+				SDF& sdf = sdf_lookup[hash];
+				sdf.width = 0;
+				sdf.height = 0;
+				sdf.xoff = 0;
+				sdf.yoff = 0;
+				unsigned char* bitmap = stbtt_GetCodepointSDF(&fontStyle.fontInfo, fontScaling, code, sdf.padding, sdf.onedge_value, sdf.pixel_dist_scale, &sdf.width, &sdf.height, &sdf.xoff, &sdf.yoff);
+				sdf.bitmap.resize(sdf.width * sdf.height);
+				std::memcpy(sdf.bitmap.data(), bitmap, sdf.bitmap.size());
+				stbtt_FreeSDF(bitmap, nullptr);
+				rect_lookup[hash] = rect_xywh(0, 0, sdf.width, sdf.height);
 
-				// Glyph dimensions are calculated without padding:
 				Glyph& glyph = glyph_lookup[hash];
-				glyph.x = float(left);
-				glyph.y = float(top) + float(fontStyle.ascent) * fontScaling;
-				glyph.width = float(right - left);
-				glyph.height = float(bottom - top);
-
-				// Remove dpi upscaling:
-				glyph.x = glyph.x / upscaling;
-				glyph.y = glyph.y / upscaling;
-				glyph.width = glyph.width / upscaling;
-				glyph.height = glyph.height / upscaling;
-
-				// Add padding to the rectangle that will be packed in the atlas:
-				right += borderPadding * 2;
-				bottom += borderPadding * 2;
-				rect_lookup[hash] = rect_ltrb(left, top, right, bottom);
+				glyph.x = float(sdf.xoff);
+				glyph.y = float(sdf.yoff) + float(fontStyle.ascent) * fontScaling;
+				glyph.width = float(sdf.width);
+				glyph.height = float(sdf.height);
 			}
 			pendingGlyphs.clear();
 
@@ -364,22 +366,18 @@ namespace wi::font
 					const int32_t hash = it.first;
 					const wchar_t code = codefromhash(hash);
 					const int style = stylefromhash(hash);
-					const float height = (float)heightfromhash(hash) * upscaling;
+					const float height = (float)heightfromhash(hash);
 					const FontStyle& fontStyle = fontStyles[style];
 					rect_xywh& rect = it.second;
 					Glyph& glyph = glyph_lookup[hash];
+					SDF& sdf = sdf_lookup[hash];
 
-					// Remove border padding from the packed rectangle (we don't want to touch the border, it should stay transparent):
-					rect.x += borderPadding;
-					rect.y += borderPadding;
-					rect.w -= borderPadding * 2;
-					rect.h -= borderPadding * 2;
-
-					float fontScaling = stbtt_ScaleForPixelHeight(&fontStyle.fontInfo, height);
-
-					// Render the glyph inside the CPU-side atlas:
-					int byteOffset = rect.x + (rect.y * bitmapWidth);
-					stbtt_MakeCodepointBitmap(&fontStyle.fontInfo, bitmap.data() + byteOffset, rect.w, rect.h, bitmapWidth, fontScaling, fontScaling, code);
+					for (int row = 0; row < sdf.height; ++row)
+					{
+						uint8_t* dst = bitmap.data() + rect.x + (rect.y + row) * bitmapWidth;
+						uint8_t* src = sdf.bitmap.data() + row * sdf.width;
+						std::memcpy(dst, src, sdf.width);
+					}
 
 					// Compute texture coordinates for the glyph:
 					glyph.tc_left = float(rect.x);
@@ -467,10 +465,9 @@ namespace wi::font
 			device->BindPipelineState(&PSO, cmd);
 
 			FontConstants font;
-			FontPushConstants font_push;
-			font_push.buffer_index = device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV);
-			font_push.buffer_offset = (uint32_t)mem.offset;
-			font_push.texture_index = device->GetDescriptorIndex(&texture, SubresourceType::SRV);
+			font.buffer_index = device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV);
+			font.buffer_offset = (uint32_t)mem.offset;
+			font.texture_index = device->GetDescriptorIndex(&texture, SubresourceType::SRV);
 
 			// Asserts will check that a proper canvas was set for this cmd with wi::image::SetCanvas()
 			//	The canvas must be set to have dpi aware rendering
@@ -483,13 +480,13 @@ namespace wi::font
 			{
 				// font shadow render:
 				XMStoreFloat4x4(&font.transform,
-					XMMatrixTranslation((float)newProps.posX + 1, (float)newProps.posY + 1, 0)
+					XMMatrixTranslation((float)newProps.posX + newProps.shadow_offset_x, (float)newProps.posY + newProps.shadow_offset_y, 0)
 					* Projection
 				);
+				font.color = newProps.shadowColor.rgba;
+				font.sdf_threshold_top = wi::math::Lerp(float(SDF::onedge_value) / 255.0f, 0, std::max(0.0f, newProps.shadow_bolden));
+				font.sdf_threshold_bottom = wi::math::Lerp(font.sdf_threshold_top, 0, std::max(0.0f, newProps.shadow_softness));
 				device->BindDynamicConstantBuffer(font, CBSLOT_FONT, cmd);
-
-				font_push.color = newProps.shadowColor.rgba;
-				device->PushConstants(&font_push, sizeof(font_push), cmd);
 
 				device->DrawInstanced(4, cursor.quadCount, 0, 0, cmd);
 			}
@@ -499,10 +496,10 @@ namespace wi::font
 				XMMatrixTranslation((float)newProps.posX, (float)newProps.posY, 0)
 				* Projection
 			);
+			font.color = newProps.color.rgba;
+			font.sdf_threshold_top = wi::math::Lerp(float(SDF::onedge_value) / 255.0f, 0, std::max(0.0f, newProps.bolden));
+			font.sdf_threshold_bottom = wi::math::Lerp(font.sdf_threshold_top, 0, std::max(0.0f, newProps.softness));
 			device->BindDynamicConstantBuffer(font, CBSLOT_FONT, cmd);
-
-			font_push.color = newProps.color.rgba;
-			device->PushConstants(&font_push, sizeof(font_push), cmd);
 
 			device->DrawInstanced(4, cursor.quadCount, 0, 0, cmd);
 

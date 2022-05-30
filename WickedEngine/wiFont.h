@@ -26,12 +26,18 @@ namespace wi::font
 		float posY = 0;
 		int size = WIFONTSIZE_DEFAULT; // line height in DPI scaled units
 		float scaling = 1;
-		float spacingX = 1, spacingY = 1; // minimum spacing between characters
+		float spacingX = 0, spacingY = 0; // minimum spacing between characters
 		Alignment h_align, v_align;
 		wi::Color color;
 		wi::Color shadowColor;
 		float h_wrap = -1; // wrap start width (-1 default for no wrap)
 		int style = 0;
+		float softness = 0.1f; // value in [0,1] range
+		float bolden = 0; // value in [0,1] range
+		float shadow_softness = 0.5f; // value in [0,1] range
+		float shadow_bolden = 0.1f; // value in [0,1] range
+		float shadow_offset_x = 0; // offset for shadow under the text in logical canvas coordinates
+		float shadow_offset_y = 0; // offset for shadow under the text in logical canvas coordinates
 
 		Params(
 			float posX = 0,
