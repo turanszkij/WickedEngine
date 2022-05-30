@@ -15,6 +15,11 @@ namespace wi::lua
 		lunamethod(SpriteFont_BindLua, SetAlign),
 		lunamethod(SpriteFont_BindLua, SetColor),
 		lunamethod(SpriteFont_BindLua, SetShadowColor),
+		lunamethod(SpriteFont_BindLua, SetBolden),
+		lunamethod(SpriteFont_BindLua, SetSoftness),
+		lunamethod(SpriteFont_BindLua, SetShadowBolden),
+		lunamethod(SpriteFont_BindLua, SetShadowSoftness),
+		lunamethod(SpriteFont_BindLua, SetShadowOffset),
 
 		lunamethod(SpriteFont_BindLua, SetStyle),
 		lunamethod(SpriteFont_BindLua, SetText),
@@ -24,6 +29,11 @@ namespace wi::lua
 		lunamethod(SpriteFont_BindLua, GetAlign),
 		lunamethod(SpriteFont_BindLua, GetColor),
 		lunamethod(SpriteFont_BindLua, GetShadowColor),
+		lunamethod(SpriteFont_BindLua, GetBolden),
+		lunamethod(SpriteFont_BindLua, GetSoftness),
+		lunamethod(SpriteFont_BindLua, GetShadowBolden),
+		lunamethod(SpriteFont_BindLua, GetShadowSoftness),
+		lunamethod(SpriteFont_BindLua, GetShadowOffset),
 
 		{ NULL, NULL }
 	};
@@ -170,6 +180,72 @@ namespace wi::lua
 			wi::lua::SError(L, "SetShadowColor(Vector value) not enough arguments!");
 		return 0;
 	}
+	int SpriteFont_BindLua::SetBolden(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			float value = wi::lua::SGetFloat(L, 1);
+			font.params.bolden = value;
+		}
+		else
+			wi::lua::SError(L, "SetBolden(float value) not enough arguments!");
+		return 0;
+	}
+	int SpriteFont_BindLua::SetSoftness(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			float value = wi::lua::SGetFloat(L, 1);
+			font.params.softness = value;
+		}
+		else
+			wi::lua::SError(L, "SetSoftness(float value) not enough arguments!");
+		return 0;
+	}
+	int SpriteFont_BindLua::SetShadowBolden(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			float value = wi::lua::SGetFloat(L, 1);
+			font.params.shadow_bolden = value;
+		}
+		else
+			wi::lua::SError(L, "SetShadowBolden(float value) not enough arguments!");
+		return 0;
+	}
+	int SpriteFont_BindLua::SetShadowSoftness(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			float value = wi::lua::SGetFloat(L, 1);
+			font.params.shadow_softness = value;
+		}
+		else
+			wi::lua::SError(L, "SetShadowSoftness(float value) not enough arguments!");
+		return 0;
+	}
+	int SpriteFont_BindLua::SetShadowOffset(lua_State* L)
+	{
+		int argc = wi::lua::SGetArgCount(L);
+		if (argc > 0)
+		{
+			Vector_BindLua* param = Luna<Vector_BindLua>::lightcheck(L, 1);
+			if (param != nullptr)
+			{
+				font.params.shadow_offset_x = param->x;
+				font.params.shadow_offset_y = param->y;
+			}
+			else
+				wi::lua::SError(L, "SetShadowOffset(Vector pos) argument is not a vector!");
+		}
+		else
+			wi::lua::SError(L, "SetShadowOffset(Vector pos) not enough arguments!");
+		return 0;
+	}
 
 	int SpriteFont_BindLua::GetText(lua_State* L)
 	{
@@ -206,6 +282,32 @@ namespace wi::lua
 	int SpriteFont_BindLua::GetShadowColor(lua_State* L)
 	{
 		XMFLOAT4 C = font.params.color.toFloat4();
+		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(&C)));
+		return 1;
+	}
+	int SpriteFont_BindLua::GetBolden(lua_State* L)
+	{
+		wi::lua::SSetFloat(L, font.params.bolden);
+		return 1;
+	}
+	int SpriteFont_BindLua::GetSoftness(lua_State* L)
+	{
+		wi::lua::SSetFloat(L, font.params.softness);
+		return 1;
+	}
+	int SpriteFont_BindLua::GetShadowBolden(lua_State* L)
+	{
+		wi::lua::SSetFloat(L, font.params.shadow_bolden);
+		return 1;
+	}
+	int SpriteFont_BindLua::GetShadowSoftness(lua_State* L)
+	{
+		wi::lua::SSetFloat(L, font.params.shadow_softness);
+		return 1;
+	}
+	int SpriteFont_BindLua::GetShadowOffset(lua_State* L)
+	{
+		XMFLOAT4 C = XMFLOAT4(font.params.shadow_offset_x, font.params.shadow_offset_y, 0, 0);
 		Luna<Vector_BindLua>::push(L, new Vector_BindLua(XMLoadFloat4(&C)));
 		return 1;
 	}

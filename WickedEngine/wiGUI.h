@@ -120,7 +120,7 @@ namespace wi::gui
 		void Deactivate();
 
 		void ApplyScissor(const wi::Canvas& canvas, const wi::graphics::Rect rect, wi::graphics::CommandList cmd, bool constrain_to_parent = true) const;
-		wi::primitive::Hitbox2D GetPointerHitbox() const;
+		wi::primitive::Hitbox2D GetPointerHitbox(bool constrained = true) const;
 
 		wi::primitive::Hitbox2D active_area; // Pointer hitbox constrain area
 		void HitboxConstrain(wi::primitive::Hitbox2D& hb) const;

@@ -688,15 +688,21 @@ void TestsRenderer::RunFontTest()
 	font_aligned.params.size = 38;
 	font_aligned.params.shadowColor = wi::Color::Red();
 	font_aligned.params.h_align = wi::font::WIFALIGN_CENTER;
+	font_aligned.params.shadow_softness = 0.1f;
+	font_aligned.params.shadow_bolden = 0.5f;
 	font_aligned.SetText("Center aligned, red shadow, bigger");
 	AddFont(&font_aligned);
 
 	static wi::SpriteFont font_aligned2;
 	font_aligned2 = font_aligned;
+	font_aligned2.params.scaling = 0.6f;
 	font_aligned2.params.posY += font_aligned.TextHeight();
 	font_aligned2.params.shadowColor = wi::Color::Purple();
 	font_aligned2.params.h_align = wi::font::WIFALIGN_RIGHT;
-	font_aligned2.SetText("Right aligned, purple shadow");
+	font_aligned2.params.shadow_softness = 1;
+	font_aligned2.params.shadow_offset_x = 2;
+	font_aligned2.params.shadow_offset_y = 2;
+	font_aligned2.SetText("Right aligned, downscaled, purple soft shadow with offset");
 	AddFont(&font_aligned2);
 
 	std::string ss;
@@ -712,6 +718,7 @@ void TestsRenderer::RunFontTest()
 	}
 	static wi::SpriteFont font_japanese;
 	font_japanese = font_aligned2;
+	font_japanese.params.scaling = 1;
 	font_japanese.params.posY += font_aligned2.TextHeight();
 	font_japanese.params.style = wi::font::AddFontStyle("yumin.ttf");
 	font_japanese.params.shadowColor = wi::Color::Transparent();
