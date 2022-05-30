@@ -190,7 +190,7 @@ namespace wi::gui
 		sprites[FOCUS].params.color = wi::Color::Gray();
 		sprites[ACTIVE].params.color = wi::Color::White();
 		sprites[DEACTIVATING].params.color = wi::Color::Gray();
-		font.params.shadowColor = wi::Color::Black();
+		font.params.shadowColor = wi::Color::fromFloat4(XMFLOAT4(0, 0, 0, 0.6f));
 
 		for (int i = IDLE; i < WIDGETSTATE_COUNT; ++i)
 		{
@@ -510,11 +510,14 @@ namespace wi::gui
 		scissor.right = int32_t((float)scissor.right * scale);
 		device->BindScissorRects(1, &scissor, cmd);
 	}
-	Hitbox2D Widget::GetPointerHitbox() const
+	Hitbox2D Widget::GetPointerHitbox(bool constrained) const
 	{
 		XMFLOAT4 pointer = wi::input::GetPointer();
 		Hitbox2D hb = Hitbox2D(XMFLOAT2(pointer.x, pointer.y), XMFLOAT2(1, 1));
-		HitboxConstrain(hb); // this is used to filter out pointer outside of active_area (outside of scissor basically)
+		if (constrained)
+		{
+			HitboxConstrain(hb); // this is used to filter out pointer outside of active_area (outside of scissor basically)
+		}
 		return hb;
 	}
 	void Widget::HitboxConstrain(wi::primitive::Hitbox2D& hb) const
@@ -1594,6 +1597,7 @@ namespace wi::gui
 
 			if (state == ACTIVE)
 			{
+				pointerHitbox = GetPointerHitbox(false);
 				if (HasScrollbar())
 				{
 					if (combostate != COMBOSTATE_SELECTING && combostate != COMBOSTATE_INACTIVE)

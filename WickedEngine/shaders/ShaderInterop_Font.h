@@ -10,17 +10,19 @@ struct FontVertex
 
 struct FontConstants
 {
+	int buffer_index;
+	uint buffer_offset;
+	int texture_index;
+	uint color;
+
+	float3 padding;
+	float sdf_threshold_bottom;
+
 	float4x4 transform;
 };
 CONSTANTBUFFER(font, FontConstants, CBSLOT_FONT);
 
-struct FontPushConstants
-{
-	uint color;
-	int buffer_index;
-	uint buffer_offset;
-	int texture_index;
-};
-PUSHCONSTANT(font_push, FontPushConstants);
+static const int FONT_SDF_ONEDGE_VALUE = 180;
+static const float FONT_SDF_THRESHOLD_TOP = float(FONT_SDF_ONEDGE_VALUE) / 255.0f;
 
 #endif // WI_SHADERINTEROP_FONT_H

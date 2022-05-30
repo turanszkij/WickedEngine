@@ -63,7 +63,7 @@ namespace wi::font
 		struct SDF
 		{
 			static constexpr int padding = 5;
-			static constexpr unsigned char onedge_value = 180;
+			static constexpr unsigned char onedge_value = FONT_SDF_ONEDGE_VALUE;
 			static constexpr float pixel_dist_scale = float(onedge_value) / float(padding);
 			int width;
 			int height;
@@ -484,10 +484,9 @@ namespace wi::font
 			device->BindPipelineState(&PSO, cmd);
 
 			FontConstants font;
-			FontPushConstants font_push;
-			font_push.buffer_index = device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV);
-			font_push.buffer_offset = (uint32_t)mem.offset;
-			font_push.texture_index = device->GetDescriptorIndex(&texture, SubresourceType::SRV);
+			font.buffer_index = device->GetDescriptorIndex(&mem.buffer, SubresourceType::SRV);
+			font.buffer_offset = (uint32_t)mem.offset;
+			font.texture_index = device->GetDescriptorIndex(&texture, SubresourceType::SRV);
 
 			// Asserts will check that a proper canvas was set for this cmd with wi::image::SetCanvas()
 			//	The canvas must be set to have dpi aware rendering
@@ -500,13 +499,12 @@ namespace wi::font
 			{
 				// font shadow render:
 				XMStoreFloat4x4(&font.transform,
-					XMMatrixTranslation((float)newProps.posX + 1, (float)newProps.posY + 1, 0)
+					XMMatrixTranslation((float)newProps.posX + newProps.shadow_offset_x, (float)newProps.posY + newProps.shadow_offset_y, 0)
 					* Projection
 				);
+				font.color = newProps.shadowColor.rgba;
+				font.sdf_threshold_bottom = wi::math::Lerp(FONT_SDF_THRESHOLD_TOP, 0, std::max(0.0f, newProps.shadow_softness));
 				device->BindDynamicConstantBuffer(font, CBSLOT_FONT, cmd);
-
-				font_push.color = newProps.shadowColor.rgba;
-				device->PushConstants(&font_push, sizeof(font_push), cmd);
 
 				device->DrawInstanced(4, cursor.quadCount, 0, 0, cmd);
 			}
@@ -516,10 +514,9 @@ namespace wi::font
 				XMMatrixTranslation((float)newProps.posX, (float)newProps.posY, 0)
 				* Projection
 			);
+			font.color = newProps.color.rgba;
+			font.sdf_threshold_bottom = wi::math::Lerp(FONT_SDF_THRESHOLD_TOP, 0, std::max(0.0f, newProps.softness));
 			device->BindDynamicConstantBuffer(font, CBSLOT_FONT, cmd);
-
-			font_push.color = newProps.color.rgba;
-			device->PushConstants(&font_push, sizeof(font_push), cmd);
 
 			device->DrawInstanced(4, cursor.quadCount, 0, 0, cmd);
 
