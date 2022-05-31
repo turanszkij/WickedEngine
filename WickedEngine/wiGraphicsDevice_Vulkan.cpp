@@ -3751,7 +3751,11 @@ using namespace vulkan_internal;
 		{
 			VkBufferCreateInfo bufferInfo = {};
 			bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-			bufferInfo.size = imageInfo.extent.width * imageInfo.extent.height * imageInfo.extent.depth * imageInfo.arrayLayers *
+			bufferInfo.size =
+				imageInfo.extent.width *
+				imageInfo.extent.height *
+				imageInfo.extent.depth *
+				imageInfo.arrayLayers *
 				GetFormatStride(texture->desc.format);
 
 			allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
@@ -3810,9 +3814,26 @@ using namespace vulkan_internal;
 				for (uint32_t mip = 0; mip < desc->mip_levels; ++mip)
 				{
 					const SubresourceData& subresourceData = initial_data[initDataIdx++];
-					VkDeviceSize copySize = subresourceData.row_pitch * height * depth / GetFormatBlockSize(desc->format);
-					uint8_t* cpyaddr = (uint8_t*)cmd.uploadbuffer.mapped_data + copyOffset;
-					std::memcpy(cpyaddr, subresourceData.data_ptr, copySize);
+					const uint32_t block_size = GetFormatBlockSize(desc->format);
+					const uint32_t num_blocks_x = width / block_size;
+					const uint32_t num_blocks_y = height / block_size;
+					const uint32_t dst_rowpitch = num_blocks_x * GetFormatStride(desc->format);
+					const uint32_t dst_slicepitch = dst_rowpitch * num_blocks_y;
+					const uint32_t src_rowpitch = subresourceData.row_pitch;
+					const uint32_t src_slicepitch = subresourceData.slice_pitch;
+					for (uint32_t z = 0; z < depth; ++z)
+					{
+						uint8_t* dst_slice = (uint8_t*)cmd.uploadbuffer.mapped_data + copyOffset + dst_slicepitch * z;
+						uint8_t* src_slice = (uint8_t*)subresourceData.data_ptr + src_slicepitch * z;
+						for (uint32_t y = 0; y < num_blocks_y; ++y)
+						{
+							std::memcpy(
+								dst_slice + dst_rowpitch * y,
+								src_slice + src_rowpitch * y,
+								dst_rowpitch
+							);
+						}
+					}
 
 					VkBufferImageCopy copyRegion = {};
 					copyRegion.bufferOffset = copyOffset;
@@ -3831,13 +3852,13 @@ using namespace vulkan_internal;
 						depth
 					};
 
+					copyRegions.push_back(copyRegion);
+
+					copyOffset += dst_slicepitch * depth;
+
 					width = std::max(1u, width / 2);
 					height = std::max(1u, height / 2);
 					depth = std::max(1u, depth / 2);
-
-					copyRegions.push_back(copyRegion);
-
-					copyOffset += AlignTo(copySize, (VkDeviceSize)GetFormatStride(desc->format));
 				}
 			}
 
